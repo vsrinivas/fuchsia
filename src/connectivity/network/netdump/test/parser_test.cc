@@ -5,10 +5,11 @@
 #include "parser.h"
 
 #include <lib/mock-function/mock-function.h>
-#include <zxtest/zxtest.h>
 
 #include <iostream>
 #include <sstream>
+
+#include <zxtest/zxtest.h>
 
 namespace netdump::parser::test {
 
@@ -203,21 +204,21 @@ class TestParser : public Parser {
 
     env.error_loc = std::nullopt;
     // Just returns the string if no error location.
-    // The use of EXPECT_STR_EQ (which only allows C-strings) gives much nicer debug messages
+    // The use of EXPECT_STREQ (which only allows C-strings) gives much nicer debug messages
     // than EXPECT_EQ between `std::string`.
-    EXPECT_STR_EQ("spec", highlight_error("spec", &env).c_str());
+    EXPECT_STREQ("spec", highlight_error("spec", &env).c_str());
 
     std::stringstream expect_string1;
     env.error_loc = env.end();
     expect_string1 << "spec" << ANSI_HIGHLIGHT_ERROR << "*" << ANSI_RESET;
     // Reproduce spec string and append error marker if error location is at end.
-    EXPECT_STR_EQ(expect_string1.str().c_str(), highlight_error("spec", &env).c_str());
+    EXPECT_STREQ(expect_string1.str().c_str(), highlight_error("spec", &env).c_str());
 
     std::stringstream expect_string2;
     env.error_loc = env.begin();
     expect_string2 << ANSI_HIGHLIGHT_ERROR << TKZ.AND->get_term() << ANSI_RESET << " "
                    << TKZ.DNS->get_term() << " " << TKZ.DHCP->get_term();
-    EXPECT_STR_EQ(expect_string2.str().c_str(), highlight_error("spec", &env).c_str());
+    EXPECT_STREQ(expect_string2.str().c_str(), highlight_error("spec", &env).c_str());
 
     std::stringstream expect_string3;
     env.reset();
@@ -226,7 +227,7 @@ class TestParser : public Parser {
     --env;  // This Test error is highlighted by error location, not `env` state.
     expect_string3 << TKZ.AND->get_term() << " " << ANSI_HIGHLIGHT_ERROR << TKZ.DNS->get_term()
                    << ANSI_RESET << " " << TKZ.DHCP->get_term();
-    EXPECT_STR_EQ(expect_string3.str().c_str(), highlight_error("spec", &env).c_str());
+    EXPECT_STREQ(expect_string3.str().c_str(), highlight_error("spec", &env).c_str());
 
     std::stringstream expect_string4;
     env.reset();
@@ -235,7 +236,7 @@ class TestParser : public Parser {
     env.error_loc = env.cur();
     expect_string4 << TKZ.AND->get_term() << " " << TKZ.DNS->get_term() << " "
                    << ANSI_HIGHLIGHT_ERROR << TKZ.DHCP->get_term() << ANSI_RESET;
-    EXPECT_STR_EQ(expect_string4.str().c_str(), highlight_error("spec", &env).c_str());
+    EXPECT_STREQ(expect_string4.str().c_str(), highlight_error("spec", &env).c_str());
   }
 
   // Syntax logic tests.
@@ -243,9 +244,9 @@ class TestParser : public Parser {
     Environment env = TestEnv("mumble jumble");
     ExpectError(parse(&env, &bld_));
     // The error cause is `ERROR_UNKNOWN_KEYWORD`.
-    EXPECT_STR_EQ(ERROR_UNKNOWN_KEYWORD, env.error_cause.c_str());
+    EXPECT_STREQ(ERROR_UNKNOWN_KEYWORD, env.error_cause.c_str());
     // The string where the error occurred was `mumble`.
-    EXPECT_STR_EQ("mumble", (**env.error_loc)->get_term().c_str());
+    EXPECT_STREQ("mumble", (**env.error_loc)->get_term().c_str());
     // Invalid filter string with no known keywords should end up with no filter operation calls
     // after parsing.
     bld_.verify_and_clear_all();
@@ -269,14 +270,14 @@ class TestParser : public Parser {
     {
       Environment env = TestEnv("less -100");
       ExpectError(parse(&env, &bld_));
-      EXPECT_STR_EQ(ERROR_INVALID_LENGTH, env.error_cause.c_str());
-      EXPECT_STR_EQ("-100", (**env.error_loc)->get_term().c_str());
+      EXPECT_STREQ(ERROR_INVALID_LENGTH, env.error_cause.c_str());
+      EXPECT_STREQ("-100", (**env.error_loc)->get_term().c_str());
     }
     {
       Environment env = TestEnv("less onehundred");
       ExpectError(parse(&env, &bld_));
-      EXPECT_STR_EQ(ERROR_INVALID_LENGTH, env.error_cause.c_str());
-      EXPECT_STR_EQ("onehundred", (**env.error_loc)->get_term().c_str());
+      EXPECT_STREQ(ERROR_INVALID_LENGTH, env.error_cause.c_str());
+      EXPECT_STREQ("onehundred", (**env.error_loc)->get_term().c_str());
     }
   }
 
@@ -293,7 +294,7 @@ class TestParser : public Parser {
     bld_.stop_call_mocks();
     Environment env = TestEnv("not not not");
     ExpectError(parse(&env, &bld_));
-    EXPECT_STR_EQ(ERROR_UNEXPECTED_CONNECTIVE, env.error_cause.c_str());
+    EXPECT_STREQ(ERROR_UNEXPECTED_CONNECTIVE, env.error_cause.c_str());
     EXPECT_EQ(env.end() - 1, env.error_loc);  // Error location: "not not *not*"
   }
 
@@ -313,13 +314,13 @@ class TestParser : public Parser {
     bld_.stop_call_mocks();
     Environment env = TestEnv("less 25 and or greater 100");
     ExpectError(parse(&env, &bld_));
-    EXPECT_STR_EQ(ERROR_UNEXPECTED_CONNECTIVE, env.error_cause.c_str());
-    EXPECT_STR_EQ("or", (**env.error_loc)->get_term().c_str());
+    EXPECT_STREQ(ERROR_UNEXPECTED_CONNECTIVE, env.error_cause.c_str());
+    EXPECT_STREQ("or", (**env.error_loc)->get_term().c_str());
 
     env = TestEnv("less 25 greater 100");
     ExpectError(parse(&env, &bld_));
-    EXPECT_STR_EQ(ERROR_REQUIRED_CONNECTIVE, env.error_cause.c_str());
-    EXPECT_STR_EQ("greater", (**env.error_loc)->get_term().c_str());
+    EXPECT_STREQ(ERROR_REQUIRED_CONNECTIVE, env.error_cause.c_str());
+    EXPECT_STREQ("greater", (**env.error_loc)->get_term().c_str());
   }
 
   void ParenthesisTest() {
@@ -345,37 +346,37 @@ class TestParser : public Parser {
     bld_.stop_call_mocks();
     Environment env = TestEnv("( less 25 and ( greater 100 or ( greater 200 ) ) ) )");
     ExpectError(parse(&env, &bld_));
-    EXPECT_STR_EQ(ERROR_UNEXPECTED_R_PARENS, env.error_cause.c_str());
+    EXPECT_STREQ(ERROR_UNEXPECTED_R_PARENS, env.error_cause.c_str());
     EXPECT_EQ(env.end() - 1, env.error_loc);  // Error on last ")".
 
     env = TestEnv("less 25 or ( greater 100");
     ExpectError(parse(&env, &bld_));
-    EXPECT_STR_EQ(ERROR_UNMATCHED_L_PARENS, env.error_cause.c_str());
-    EXPECT_STR_EQ("(", (**env.error_loc)->get_term().c_str());
+    EXPECT_STREQ(ERROR_UNMATCHED_L_PARENS, env.error_cause.c_str());
+    EXPECT_STREQ("(", (**env.error_loc)->get_term().c_str());
 
     env = TestEnv("less 25 ( greater 100 )");
     ExpectError(parse(&env, &bld_));
-    EXPECT_STR_EQ(ERROR_REQUIRED_CONNECTIVE, env.error_cause.c_str());
-    EXPECT_STR_EQ("(", (**env.error_loc)->get_term().c_str());
+    EXPECT_STREQ(ERROR_REQUIRED_CONNECTIVE, env.error_cause.c_str());
+    EXPECT_STREQ("(", (**env.error_loc)->get_term().c_str());
 
     env = TestEnv("(");
     ExpectError(parse(&env, &bld_));
-    EXPECT_STR_EQ(ERROR_UNMATCHED_L_PARENS, env.error_cause.c_str());
-    EXPECT_STR_EQ("(", (**env.error_loc)->get_term().c_str());
+    EXPECT_STREQ(ERROR_UNMATCHED_L_PARENS, env.error_cause.c_str());
+    EXPECT_STREQ("(", (**env.error_loc)->get_term().c_str());
 
     env = TestEnv(")");
     ExpectError(parse(&env, &bld_));
-    EXPECT_STR_EQ(ERROR_UNEXPECTED_R_PARENS, env.error_cause.c_str());
-    EXPECT_STR_EQ(")", (**env.error_loc)->get_term().c_str());
+    EXPECT_STREQ(ERROR_UNEXPECTED_R_PARENS, env.error_cause.c_str());
+    EXPECT_STREQ(")", (**env.error_loc)->get_term().c_str());
 
     env = TestEnv("( ) ( ) ( ) ( ( ) ( ) ( ( ) ( ( ) ) ( ) ( ) )");
     ExpectError(parse(&env, &bld_));
-    EXPECT_STR_EQ(ERROR_UNEXPECTED_R_PARENS, env.error_cause.c_str());
+    EXPECT_STREQ(ERROR_UNEXPECTED_R_PARENS, env.error_cause.c_str());
     EXPECT_EQ(env.begin() + 1, env.error_loc);  // Error on second token, i.e. first ")".
 
     env = TestEnv("( ( ( ( ( ) ) ) ) )");
     ExpectError(parse(&env, &bld_));
-    EXPECT_STR_EQ(ERROR_UNEXPECTED_R_PARENS, env.error_cause.c_str());
+    EXPECT_STREQ(ERROR_UNEXPECTED_R_PARENS, env.error_cause.c_str());
     EXPECT_EQ(env.begin() + 5, env.error_loc);  // Error on first ")".
   }
 
@@ -398,53 +399,53 @@ class TestParser : public Parser {
     bld_.stop_call_mocks();
     Environment env = TestEnv("ether src deadbeefabcd");
     ExpectError(parse(&env, &bld_));
-    EXPECT_STR_EQ(ERROR_EXPECTED_HOST, env.error_cause.c_str());
-    EXPECT_STR_EQ("deadbeefabcd", (**env.error_loc)->get_term().c_str());
+    EXPECT_STREQ(ERROR_EXPECTED_HOST, env.error_cause.c_str());
+    EXPECT_STREQ("deadbeefabcd", (**env.error_loc)->get_term().c_str());
 
     env = TestEnv("ether host");
     ExpectError(parse(&env, &bld_));
-    EXPECT_STR_EQ(ERROR_EXPECTED_MAC, env.error_cause.c_str());
+    EXPECT_STREQ(ERROR_EXPECTED_MAC, env.error_cause.c_str());
     EXPECT_EQ(env.end(), env.error_loc);
 
     env = TestEnv("ether host de:ad");
     ExpectError(parse(&env, &bld_));
-    EXPECT_STR_EQ(ERROR_MAC_LENGTH, env.error_cause.c_str());
-    EXPECT_STR_EQ("de:ad", (**env.error_loc)->get_term().c_str());
+    EXPECT_STREQ(ERROR_MAC_LENGTH, env.error_cause.c_str());
+    EXPECT_STREQ("de:ad", (**env.error_loc)->get_term().c_str());
 
     env = TestEnv("ether host de:::::ad0102030405");
     ExpectError(parse(&env, &bld_));
-    EXPECT_STR_EQ(ERROR_MAC_LENGTH, env.error_cause.c_str());
-    EXPECT_STR_EQ("de:::::ad0102030405", (**env.error_loc)->get_term().c_str());
+    EXPECT_STREQ(ERROR_MAC_LENGTH, env.error_cause.c_str());
+    EXPECT_STREQ("de:::::ad0102030405", (**env.error_loc)->get_term().c_str());
 
     env = TestEnv("ether host address");
     ExpectError(parse(&env, &bld_));
-    EXPECT_STR_EQ(ERROR_MAC_LENGTH, env.error_cause.c_str());
-    EXPECT_STR_EQ("address", (**env.error_loc)->get_term().c_str());
+    EXPECT_STREQ(ERROR_MAC_LENGTH, env.error_cause.c_str());
+    EXPECT_STREQ("address", (**env.error_loc)->get_term().c_str());
 
     env = TestEnv("ether host addressofmac");  // 12 characters, so failure is on non-hex digits.
     ExpectError(parse(&env, &bld_));
-    EXPECT_STR_EQ(ERROR_EXPECTED_HEX, env.error_cause.c_str());
-    EXPECT_STR_EQ("addressofmac", (**env.error_loc)->get_term().c_str());
+    EXPECT_STREQ(ERROR_EXPECTED_HEX, env.error_cause.c_str());
+    EXPECT_STREQ("addressofmac", (**env.error_loc)->get_term().c_str());
 
     env = TestEnv("ether host 0xaabbccddeeff");
     ExpectError(parse(&env, &bld_));
-    EXPECT_STR_EQ(ERROR_MAC_LENGTH, env.error_cause.c_str());
-    EXPECT_STR_EQ("0xaabbccddeeff", (**env.error_loc)->get_term().c_str());
+    EXPECT_STREQ(ERROR_MAC_LENGTH, env.error_cause.c_str());
+    EXPECT_STREQ("0xaabbccddeeff", (**env.error_loc)->get_term().c_str());
 
     env = TestEnv("ether host 0x:aa:bb:cc:dd:ee:ff");
     ExpectError(parse(&env, &bld_));
-    EXPECT_STR_EQ(ERROR_MAC_LENGTH, env.error_cause.c_str());
-    EXPECT_STR_EQ("0x:aa:bb:cc:dd:ee:ff", (**env.error_loc)->get_term().c_str());
+    EXPECT_STREQ(ERROR_MAC_LENGTH, env.error_cause.c_str());
+    EXPECT_STREQ("0x:aa:bb:cc:dd:ee:ff", (**env.error_loc)->get_term().c_str());
 
     env = TestEnv("ether host aa-bb-cc-dd-ee-ff");
     ExpectError(parse(&env, &bld_));
-    EXPECT_STR_EQ(ERROR_MAC_LENGTH, env.error_cause.c_str());
-    EXPECT_STR_EQ("aa-bb-cc-dd-ee-ff", (**env.error_loc)->get_term().c_str());
+    EXPECT_STREQ(ERROR_MAC_LENGTH, env.error_cause.c_str());
+    EXPECT_STREQ("aa-bb-cc-dd-ee-ff", (**env.error_loc)->get_term().c_str());
 
     env = TestEnv("ether host 0x1122334455");  // 12 characters.
     ExpectError(parse(&env, &bld_));
-    EXPECT_STR_EQ(ERROR_EXPECTED_HEX, env.error_cause.c_str());
-    EXPECT_STR_EQ("0x1122334455", (**env.error_loc)->get_term().c_str());
+    EXPECT_STREQ(ERROR_EXPECTED_HEX, env.error_cause.c_str());
+    EXPECT_STREQ("0x1122334455", (**env.error_loc)->get_term().c_str());
   }
 
   void EthertypeTest() {
@@ -458,18 +459,18 @@ class TestParser : public Parser {
     bld_.stop_call_mocks();
     Environment env = TestEnv("ether arp");
     ExpectError(parse(&env, &bld_));
-    EXPECT_STR_EQ(ERROR_EXPECTED_ETH_FIELD, env.error_cause.c_str());
-    EXPECT_STR_EQ("arp", (**env.error_loc)->get_term().c_str());
+    EXPECT_STREQ(ERROR_EXPECTED_ETH_FIELD, env.error_cause.c_str());
+    EXPECT_STREQ("arp", (**env.error_loc)->get_term().c_str());
 
     env = TestEnv("ether");
     ExpectError(parse(&env, &bld_));
-    EXPECT_STR_EQ(ERROR_EXPECTED_ETH_FIELD, env.error_cause.c_str());
+    EXPECT_STREQ(ERROR_EXPECTED_ETH_FIELD, env.error_cause.c_str());
     EXPECT_EQ(env.end(), env.error_loc);
 
     env = TestEnv("ether proto lasers");
     ExpectError(parse(&env, &bld_));
-    EXPECT_STR_EQ(ERROR_EXPECTED_ETH_TYPE, env.error_cause.c_str());
-    EXPECT_STR_EQ("lasers", (**env.error_loc)->get_term().c_str());
+    EXPECT_STREQ(ERROR_EXPECTED_ETH_TYPE, env.error_cause.c_str());
+    EXPECT_STREQ("lasers", (**env.error_loc)->get_term().c_str());
   }
 
   void IpVersionTest() {
@@ -487,8 +488,8 @@ class TestParser : public Parser {
     bld_.stop_call_mocks();
     Environment env = TestEnv("proto ip6");
     ExpectError(parse(&env, &bld_));
-    EXPECT_STR_EQ(ERROR_EXPECTED_TRANSPORT, env.error_cause.c_str());
-    EXPECT_STR_EQ("ip6", (**env.error_loc)->get_term().c_str());
+    EXPECT_STREQ(ERROR_EXPECTED_TRANSPORT, env.error_cause.c_str());
+    EXPECT_STREQ("ip6", (**env.error_loc)->get_term().c_str());
   }
 
   void IpLengthTest() {
@@ -502,8 +503,8 @@ class TestParser : public Parser {
     bld_.stop_call_mocks();
     Environment env = TestEnv("ether proto less 400");
     ExpectError(parse(&env, &bld_));
-    EXPECT_STR_EQ(ERROR_EXPECTED_ETH_TYPE, env.error_cause.c_str());
-    EXPECT_STR_EQ("less", (**env.error_loc)->get_term().c_str());
+    EXPECT_STREQ(ERROR_EXPECTED_ETH_TYPE, env.error_cause.c_str());
+    EXPECT_STREQ("less", (**env.error_loc)->get_term().c_str());
   }
 
   void HostTest() {
@@ -525,23 +526,23 @@ class TestParser : public Parser {
     bld_.stop_call_mocks();
     Environment env = TestEnv("ip6 host");
     ExpectError(parse(&env, &bld_));
-    EXPECT_STR_EQ(ERROR_EXPECTED_IP_ADDR, env.error_cause.c_str());
+    EXPECT_STREQ(ERROR_EXPECTED_IP_ADDR, env.error_cause.c_str());
     EXPECT_EQ(env.end(), env.error_loc);
 
     env = TestEnv("ip host 1.1.1.1.1");
     ExpectError(parse(&env, &bld_));
-    EXPECT_STR_EQ(ERROR_EXPECTED_IP_ADDR, env.error_cause.c_str());
-    EXPECT_STR_EQ("1.1.1.1.1", (**env.error_loc)->get_term().c_str());
+    EXPECT_STREQ(ERROR_EXPECTED_IP_ADDR, env.error_cause.c_str());
+    EXPECT_STREQ("1.1.1.1.1", (**env.error_loc)->get_term().c_str());
 
     env = TestEnv("ip6 src host " + ipv4_addr_str);
     ExpectError(parse(&env, &bld_));
-    EXPECT_STR_EQ(ERROR_EXPECTED_IPV6_GOT_IPV4, env.error_cause.c_str());
-    EXPECT_STR_EQ(ipv4_addr_str.c_str(), (**env.error_loc)->get_term().c_str());
+    EXPECT_STREQ(ERROR_EXPECTED_IPV6_GOT_IPV4, env.error_cause.c_str());
+    EXPECT_STREQ(ipv4_addr_str.c_str(), (**env.error_loc)->get_term().c_str());
 
     env = TestEnv("ip4 src host " + ipv6_addr_str);
     ExpectError(parse(&env, &bld_));
-    EXPECT_STR_EQ(ERROR_EXPECTED_IPV4_GOT_IPV6, env.error_cause.c_str());
-    EXPECT_STR_EQ(ipv6_addr_str.c_str(), (**env.error_loc)->get_term().c_str());
+    EXPECT_STREQ(ERROR_EXPECTED_IPV4_GOT_IPV6, env.error_cause.c_str());
+    EXPECT_STREQ(ipv6_addr_str.c_str(), (**env.error_loc)->get_term().c_str());
   }
 
   void PortTest() {
@@ -561,24 +562,23 @@ class TestParser : public Parser {
     bld_.stop_call_mocks();
     Environment env = TestEnv("src " + ranges_str);
     ExpectError(parse(&env, &bld_));
-    EXPECT_STR_EQ(ERROR_EXPECTED_PORT, env.error_cause.c_str());
-    EXPECT_STR_EQ(ranges_str.c_str(), (**env.error_loc)->get_term().c_str());
+    EXPECT_STREQ(ERROR_EXPECTED_PORT, env.error_cause.c_str());
+    EXPECT_STREQ(ranges_str.c_str(), (**env.error_loc)->get_term().c_str());
 
     env = TestEnv("port");
     ExpectError(parse(&env, &bld_));
-    EXPECT_STR_EQ(ERROR_EXPECTED_PORT_VALUE, env.error_cause.c_str());
+    EXPECT_STREQ(ERROR_EXPECTED_PORT_VALUE, env.error_cause.c_str());
     EXPECT_EQ(env.end(), env.error_loc);
 
     env = TestEnv("port ,,,");
     ExpectError(parse(&env, &bld_));
-    EXPECT_STR_EQ((std::string(ERROR_INVALID_PORT) + " ''.").c_str(), env.error_cause.c_str());
-    EXPECT_STR_EQ(",,,", (**env.error_loc)->get_term().c_str());
+    EXPECT_STREQ((std::string(ERROR_INVALID_PORT) + " ''.").c_str(), env.error_cause.c_str());
+    EXPECT_STREQ(",,,", (**env.error_loc)->get_term().c_str());
 
     env = TestEnv("port 1,2,random,4");
     ExpectError(parse(&env, &bld_));
-    EXPECT_STR_EQ((std::string(ERROR_INVALID_PORT) + " 'random'.").c_str(),
-                  env.error_cause.c_str());
-    EXPECT_STR_EQ("1,2,random,4", (**env.error_loc)->get_term().c_str());
+    EXPECT_STREQ((std::string(ERROR_INVALID_PORT) + " 'random'.").c_str(), env.error_cause.c_str());
+    EXPECT_STREQ("1,2,random,4", (**env.error_loc)->get_term().c_str());
   }
 
   void TransTest() {
@@ -596,13 +596,13 @@ class TestParser : public Parser {
     bld_.stop_call_mocks();
     Environment env = TestEnv("proto");
     ExpectError(parse(&env, &bld_));
-    EXPECT_STR_EQ(ERROR_EXPECTED_TRANSPORT, env.error_cause.c_str());
+    EXPECT_STREQ(ERROR_EXPECTED_TRANSPORT, env.error_cause.c_str());
     EXPECT_EQ(env.end(), env.error_loc);
 
     env = TestEnv("ip proto transport");
     ExpectError(parse(&env, &bld_));
-    EXPECT_STR_EQ(ERROR_EXPECTED_TRANSPORT, env.error_cause.c_str());
-    EXPECT_STR_EQ("transport", (**env.error_loc)->get_term().c_str());
+    EXPECT_STREQ(ERROR_EXPECTED_TRANSPORT, env.error_cause.c_str());
+    EXPECT_STREQ("transport", (**env.error_loc)->get_term().c_str());
   }
 
   // Integration tests of full parsing of long filter strings.

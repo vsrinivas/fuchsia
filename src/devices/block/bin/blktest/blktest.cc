@@ -60,7 +60,7 @@ static void get_testdev(uint64_t* blk_size, uint64_t* blk_count, fbl::unique_fd*
 TEST(BlkdevTests, blkdev_test_simple) {
   uint64_t blk_size, blk_count;
   fbl::unique_fd fd;
-  ASSERT_NO_FATAL_FAILURES(get_testdev(&blk_size, &blk_count, &fd));
+  ASSERT_NO_FATAL_FAILURE(get_testdev(&blk_size, &blk_count, &fd));
   int64_t buffer_size = blk_size * 2;
 
   fbl::AllocChecker checker;
@@ -87,7 +87,7 @@ TEST(BlkdevTests, blkdev_test_simple) {
 TEST(BlkdevTests, blkdev_test_bad_requests) {
   uint64_t blk_size, blk_count;
   fbl::unique_fd fd;
-  ASSERT_NO_FATAL_FAILURES(get_testdev(&blk_size, &blk_count, &fd));
+  ASSERT_NO_FATAL_FAILURE(get_testdev(&blk_size, &blk_count, &fd));
 
   fbl::AllocChecker checker;
   std::unique_ptr<uint8_t[]> buf(new (&checker) uint8_t[blk_size * 4]);
@@ -133,7 +133,7 @@ TEST(BlkdevTests, blkdev_test_fifo_no_op) {
   // Get a FIFO connection to a blkdev and immediately close it
   uint64_t blk_size, blk_count;
   fbl::unique_fd fd;
-  ASSERT_NO_FATAL_FAILURES(get_testdev(&blk_size, &blk_count, &fd));
+  ASSERT_NO_FATAL_FAILURE(get_testdev(&blk_size, &blk_count, &fd));
 
   fdio_cpp::FdioCaller disk_connection(std::move(fd));
   zx::unowned_channel channel(disk_connection.borrow_channel());
@@ -157,7 +157,7 @@ TEST(BlkdevTests, blkdev_test_fifo_basic) {
   uint64_t blk_size, blk_count;
   // Set up the initial handshake connection with the blkdev
   fbl::unique_fd fd;
-  ASSERT_NO_FATAL_FAILURES(get_testdev(&blk_size, &blk_count, &fd));
+  ASSERT_NO_FATAL_FAILURE(get_testdev(&blk_size, &blk_count, &fd));
   fdio_cpp::FdioCaller disk_connection(std::move(fd));
   zx::unowned_channel channel(disk_connection.borrow_channel());
   zx_status_t status;
@@ -230,7 +230,7 @@ TEST(BlkdevTests, DISABLED_blkdev_test_fifo_whole_disk) {
   uint64_t blk_size, blk_count;
   // Set up the initial handshake connection with the blkdev
   fbl::unique_fd fd;
-  ASSERT_NO_FATAL_FAILURES(get_testdev(&blk_size, &blk_count, &fd));
+  ASSERT_NO_FATAL_FAILURE(get_testdev(&blk_size, &blk_count, &fd));
   fdio_cpp::FdioCaller disk_connection(std::move(fd));
   zx::unowned_channel channel(disk_connection.borrow_channel());
   zx_status_t status;
@@ -377,7 +377,7 @@ TEST(BlkdevTests, blkdev_test_fifo_multiple_vmo) {
   // Set up the initial handshake connection with the blkdev
   uint64_t blk_size, blk_count;
   fbl::unique_fd fd;
-  ASSERT_NO_FATAL_FAILURES(get_testdev(&blk_size, &blk_count, &fd));
+  ASSERT_NO_FATAL_FAILURE(get_testdev(&blk_size, &blk_count, &fd));
   fdio_cpp::FdioCaller disk_connection(std::move(fd));
   zx::unowned_channel channel(disk_connection.borrow_channel());
   zx_status_t status;
@@ -394,21 +394,21 @@ TEST(BlkdevTests, blkdev_test_fifo_multiple_vmo) {
   // Create multiple VMOs
   std::vector<TestVmoObject> objs(10);
   for (size_t i = 0; i < objs.size(); i++) {
-    ASSERT_NO_FATAL_FAILURES(CreateVmoHelper(*channel, objs[i], blk_size), "");
+    ASSERT_NO_FATAL_FAILURE(CreateVmoHelper(*channel, objs[i], blk_size), "");
   }
 
   for (size_t i = 0; i < objs.size(); i++) {
-    ASSERT_NO_FATAL_FAILURES(
+    ASSERT_NO_FATAL_FAILURE(
         WriteStripedVmoHelper(*client, objs[i], i, objs.size(), group, blk_size), "");
   }
 
   for (size_t i = 0; i < objs.size(); i++) {
-    ASSERT_NO_FATAL_FAILURES(
-        ReadStripedVmoHelper(*client, objs[i], i, objs.size(), group, blk_size), "");
+    ASSERT_NO_FATAL_FAILURE(ReadStripedVmoHelper(*client, objs[i], i, objs.size(), group, blk_size),
+                            "");
   }
 
   for (size_t i = 0; i < objs.size(); i++) {
-    ASSERT_NO_FATAL_FAILURES(CloseVmoHelper(*client, objs[i], group), "");
+    ASSERT_NO_FATAL_FAILURE(CloseVmoHelper(*client, objs[i], group), "");
   }
 
   ASSERT_EQ(fuchsia_hardware_block_BlockCloseFifo(channel->get(), &status), ZX_OK);
@@ -419,7 +419,7 @@ TEST(BlkdevTests, blkdev_test_fifo_multiple_vmo_multithreaded) {
   // Set up the initial handshake connection with the blkdev
   uint64_t kBlockSize, blk_count;
   fbl::unique_fd fd;
-  ASSERT_NO_FATAL_FAILURES(get_testdev(&kBlockSize, &blk_count, &fd));
+  ASSERT_NO_FATAL_FAILURE(get_testdev(&kBlockSize, &blk_count, &fd));
   fdio_cpp::FdioCaller disk_connection(std::move(fd));
   zx::unowned_channel channel(disk_connection.borrow_channel());
   zx_status_t status;
@@ -441,12 +441,12 @@ TEST(BlkdevTests, blkdev_test_fifo_multiple_vmo_multithreaded) {
     // Capture i by value to get the updated version each loop iteration.
     threads.push_back(std::thread([&, i]() {
       groupid_t group = static_cast<groupid_t>(i);
-      ASSERT_NO_FATAL_FAILURES(CreateVmoHelper(*channel, objs[i], kBlockSize), "");
-      ASSERT_NO_FATAL_FAILURES(
+      ASSERT_NO_FATAL_FAILURE(CreateVmoHelper(*channel, objs[i], kBlockSize), "");
+      ASSERT_NO_FATAL_FAILURE(
           WriteStripedVmoHelper(*client, objs[i], i, objs.size(), group, kBlockSize), "");
-      ASSERT_NO_FATAL_FAILURES(
+      ASSERT_NO_FATAL_FAILURE(
           ReadStripedVmoHelper(*client, objs[i], i, objs.size(), group, kBlockSize), "");
-      ASSERT_NO_FATAL_FAILURES(CloseVmoHelper(*client, objs[i], group), "");
+      ASSERT_NO_FATAL_FAILURE(CloseVmoHelper(*client, objs[i], group), "");
     }));
   }
 
@@ -463,7 +463,7 @@ TEST(BlkdevTests, DISABLED_blkdev_test_fifo_unclean_shutdown) {
   // Set up the blkdev
   uint64_t kBlockSize, blk_count;
   fbl::unique_fd fd;
-  ASSERT_NO_FATAL_FAILURES(get_testdev(&kBlockSize, &blk_count, &fd));
+  ASSERT_NO_FATAL_FAILURE(get_testdev(&kBlockSize, &blk_count, &fd));
 
   std::vector<TestVmoObject> objs(10);
   groupid_t group = 0;
@@ -482,7 +482,7 @@ TEST(BlkdevTests, DISABLED_blkdev_test_fifo_unclean_shutdown) {
 
     // Create multiple VMOs
     for (size_t i = 0; i < objs.size(); i++) {
-      ASSERT_NO_FATAL_FAILURES(CreateVmoHelper(*channel, objs[i], kBlockSize), "");
+      ASSERT_NO_FATAL_FAILURE(CreateVmoHelper(*channel, objs[i], kBlockSize), "");
     }
   }
 
@@ -504,18 +504,18 @@ TEST(BlkdevTests, DISABLED_blkdev_test_fifo_unclean_shutdown) {
     ASSERT_TRUE(client.is_ok());
 
     for (size_t i = 0; i < objs.size(); i++) {
-      ASSERT_NO_FATAL_FAILURES(CreateVmoHelper(*channel, objs[i], kBlockSize), "");
+      ASSERT_NO_FATAL_FAILURE(CreateVmoHelper(*channel, objs[i], kBlockSize), "");
     }
     for (size_t i = 0; i < objs.size(); i++) {
-      ASSERT_NO_FATAL_FAILURES(
+      ASSERT_NO_FATAL_FAILURE(
           WriteStripedVmoHelper(*client, objs[i], i, objs.size(), group, kBlockSize), "");
     }
     for (size_t i = 0; i < objs.size(); i++) {
-      ASSERT_NO_FATAL_FAILURES(
+      ASSERT_NO_FATAL_FAILURE(
           ReadStripedVmoHelper(*client, objs[i], i, objs.size(), group, kBlockSize), "");
     }
     for (size_t i = 0; i < objs.size(); i++) {
-      ASSERT_NO_FATAL_FAILURES(CloseVmoHelper(*client, objs[i], group), "");
+      ASSERT_NO_FATAL_FAILURE(CloseVmoHelper(*client, objs[i], group), "");
     }
 
     ASSERT_EQ(fuchsia_hardware_block_BlockCloseFifo(channel->get(), &status), ZX_OK);
@@ -528,7 +528,7 @@ TEST(BlkdevTests, blkdev_test_fifo_bad_client_vmoid) {
   // Set up the blkdev
   uint64_t kBlockSize, blk_count;
   fbl::unique_fd fd;
-  ASSERT_NO_FATAL_FAILURES(get_testdev(&kBlockSize, &blk_count, &fd));
+  ASSERT_NO_FATAL_FAILURE(get_testdev(&kBlockSize, &blk_count, &fd));
   fdio_cpp::FdioCaller disk_connection(std::move(fd));
   zx::unowned_channel channel(disk_connection.borrow_channel());
   zx_status_t status;
@@ -545,7 +545,7 @@ TEST(BlkdevTests, blkdev_test_fifo_bad_client_vmoid) {
 
   // Create a vmo
   TestVmoObject obj;
-  ASSERT_NO_FATAL_FAILURES(CreateVmoHelper(*channel, obj, kBlockSize), "");
+  ASSERT_NO_FATAL_FAILURE(CreateVmoHelper(*channel, obj, kBlockSize), "");
 
   // Bad request: Writing to the wrong vmoid
   block_fifo_request_t request;
@@ -566,7 +566,7 @@ TEST(BlkdevTests, blkdev_test_fifo_bad_client_unaligned_request) {
   // Set up the blkdev
   uint64_t kBlockSize, blk_count;
   fbl::unique_fd fd;
-  ASSERT_NO_FATAL_FAILURES(get_testdev(&kBlockSize, &blk_count, &fd));
+  ASSERT_NO_FATAL_FAILURE(get_testdev(&kBlockSize, &blk_count, &fd));
   fdio_cpp::FdioCaller disk_connection(std::move(fd));
   zx::unowned_channel channel(disk_connection.borrow_channel());
   zx_status_t status;
@@ -585,7 +585,7 @@ TEST(BlkdevTests, blkdev_test_fifo_bad_client_unaligned_request) {
   // be reading "kBlockSize" bytes from an offset below, and we want it
   // to fit within the bounds of the VMO.
   TestVmoObject obj;
-  ASSERT_NO_FATAL_FAILURES(CreateVmoHelper(*channel, obj, kBlockSize * 2), "");
+  ASSERT_NO_FATAL_FAILURE(CreateVmoHelper(*channel, obj, kBlockSize * 2), "");
 
   block_fifo_request_t request;
   request.group = group;
@@ -607,7 +607,7 @@ TEST(BlkdevTests, blkdev_test_fifo_bad_client_overflow) {
   // Set up the blkdev
   uint64_t kBlockSize, blk_count;
   fbl::unique_fd fd;
-  ASSERT_NO_FATAL_FAILURES(get_testdev(&kBlockSize, &blk_count, &fd));
+  ASSERT_NO_FATAL_FAILURE(get_testdev(&kBlockSize, &blk_count, &fd));
   fdio_cpp::FdioCaller disk_connection(std::move(fd));
   zx::unowned_channel channel(disk_connection.borrow_channel());
   zx_status_t status;
@@ -626,7 +626,7 @@ TEST(BlkdevTests, blkdev_test_fifo_bad_client_overflow) {
   // be reading "kBlockSize" bytes from an offset below, and we want it
   // to fit within the bounds of the VMO.
   TestVmoObject obj;
-  ASSERT_NO_FATAL_FAILURES(CreateVmoHelper(*channel, obj, kBlockSize * 2), "");
+  ASSERT_NO_FATAL_FAILURE(CreateVmoHelper(*channel, obj, kBlockSize * 2), "");
 
   block_fifo_request_t request;
   request.group = group;
@@ -672,7 +672,7 @@ TEST(BlkdevTests, blkdev_test_fifo_bad_client_bad_vmo) {
   // Set up the blkdev
   uint64_t kBlockSize, blk_count;
   fbl::unique_fd fd;
-  ASSERT_NO_FATAL_FAILURES(get_testdev(&kBlockSize, &blk_count, &fd));
+  ASSERT_NO_FATAL_FAILURE(get_testdev(&kBlockSize, &blk_count, &fd));
   fdio_cpp::FdioCaller disk_connection(std::move(fd));
   zx::unowned_channel channel(disk_connection.borrow_channel());
   zx_status_t status;

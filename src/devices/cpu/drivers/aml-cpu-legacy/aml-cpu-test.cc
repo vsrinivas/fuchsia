@@ -489,18 +489,18 @@ TEST_F(AmlCpuTestFixture, TestSetPerformanceState) {
 TEST_F(AmlCpuTestFixture, TestSetCpuInfo) {
   uint32_t test_cpu_version = 0x28200b02;
   dut_->SetCpuInfo(test_cpu_version);
-  ASSERT_NO_FATAL_FAILURES(ReadInspect(dut_->inspect_vmo()));
+  ASSERT_NO_FATAL_FAILURE(ReadInspect(dut_->inspect_vmo()));
   auto* cpu_info = hierarchy().GetByPath({"cpu_info_service"});
   ASSERT_TRUE(cpu_info);
 
   // cpu_major_revision : 40
-  ASSERT_NO_FATAL_FAILURES(
+  ASSERT_NO_FATAL_FAILURE(
       CheckProperty(cpu_info->node(), "cpu_major_revision", inspect::UintPropertyValue(40)));
   // cpu_minor_revision : 11
-  ASSERT_NO_FATAL_FAILURES(
+  ASSERT_NO_FATAL_FAILURE(
       CheckProperty(cpu_info->node(), "cpu_minor_revision", inspect::UintPropertyValue(11)));
   // cpu_package_id : 2
-  ASSERT_NO_FATAL_FAILURES(
+  ASSERT_NO_FATAL_FAILURE(
       CheckProperty(cpu_info->node(), "cpu_package_id", inspect::UintPropertyValue(2)));
 }
 

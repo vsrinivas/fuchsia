@@ -249,7 +249,7 @@ TEST(RadarUtilTest, RunTimed) {
   FakeRadarDevice device;
   EXPECT_OK(device.RunRadarUtil({"radarutil", "-t", "10s", "-v", "20", "-p", "1ms"}));
   EXPECT_EQ(device.GetRegisteredVmoCount(), 20);
-  ASSERT_NO_FATAL_FAILURES(device.Ok());
+  ASSERT_NO_FATAL_FAILURE(device.Ok());
 }
 
 TEST(RadarUtilTest, RunBurstCount) {
@@ -257,7 +257,7 @@ TEST(RadarUtilTest, RunBurstCount) {
   EXPECT_OK(device.RunRadarUtil({"radarutil", "-b", "50", "-v", "20", "-p", "1ms"}));
   EXPECT_EQ(device.GetRegisteredVmoCount(), 20);
   EXPECT_GE(device.GetBurstsSent(), 50);
-  ASSERT_NO_FATAL_FAILURES(device.Ok());
+  ASSERT_NO_FATAL_FAILURE(device.Ok());
 }
 
 TEST(RadarUtilTest, OutputToFile) {
@@ -290,7 +290,7 @@ TEST(RadarUtilTest, OutputToFile) {
   EXPECT_OK(device.RunRadarUtil({"radarutil", "-b", "20", "-o", "/path/to/test.txt"},
                                 &fake_file_provider));
   EXPECT_GE(device.GetBurstsSent(), 20);
-  ASSERT_NO_FATAL_FAILURES(device.Ok());
+  ASSERT_NO_FATAL_FAILURE(device.Ok());
 
   // Each burst should have an increasing ID inserted by the fake radar device.
   size_t last_burst_id;
@@ -319,7 +319,7 @@ TEST(RadarUtilTest, InjectError) {
 
   EXPECT_OK(device.RunRadarUtil({"radarutil", "-t", "10s", "-v", "20", "-p", "1ms"}));
   EXPECT_EQ(device.GetRegisteredVmoCount(), 20);
-  ASSERT_NO_FATAL_FAILURES(device.Ok());
+  ASSERT_NO_FATAL_FAILURE(device.Ok());
 }
 
 TEST(RadarUtilTest, Help) {

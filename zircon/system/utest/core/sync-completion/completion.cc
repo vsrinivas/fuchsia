@@ -145,11 +145,11 @@ void TestWait() {
 
   // Start the threads
   for (auto& thread : threads) {
-    ASSERT_NO_FATAL_FAILURES(thread.StartAndBlock("TestWait", &completion));
+    ASSERT_NO_FATAL_FAILURE(thread.StartAndBlock("TestWait", &completion));
   }
 
   // Wait until all of the threads have blocked, then signal the completion.
-  ASSERT_NO_FATAL_FAILURES(WaitForAllBlockedOnFutex(threads));
+  ASSERT_NO_FATAL_FAILURE(WaitForAllBlockedOnFutex(threads));
   sync_completion_signal(&completion);
 
   // Wait for the threads to finish, and verify that they received the proper
@@ -160,9 +160,9 @@ void TestWait() {
   }
 }
 
-TEST(SyncCompletionTest, SingleWait) { ASSERT_NO_FATAL_FAILURES(TestWait<1>()); }
+TEST(SyncCompletionTest, SingleWait) { ASSERT_NO_FATAL_FAILURE(TestWait<1>()); }
 
-TEST(SyncCompletionTest, MultiWait) { ASSERT_NO_FATAL_FAILURES(TestWait<kMultiWaitThreadCount>()); }
+TEST(SyncCompletionTest, MultiWait) { ASSERT_NO_FATAL_FAILURE(TestWait<kMultiWaitThreadCount>()); }
 
 template <size_t N>
 void TestWaitTimeout() {
@@ -172,7 +172,7 @@ void TestWaitTimeout() {
 
   // Start the threads
   for (auto& thread : threads) {
-    ASSERT_NO_FATAL_FAILURES(thread.StartAndBlock("TestWaitTimeout", &completion, deadline));
+    ASSERT_NO_FATAL_FAILURE(thread.StartAndBlock("TestWaitTimeout", &completion, deadline));
   }
 
   // Don't bother attempting to wait until threads have blocked; doing so will
@@ -186,10 +186,10 @@ void TestWaitTimeout() {
   }
 }
 
-TEST(SyncCompletionTest, TimeoutSingleWait) { ASSERT_NO_FATAL_FAILURES(TestWaitTimeout<1>()); }
+TEST(SyncCompletionTest, TimeoutSingleWait) { ASSERT_NO_FATAL_FAILURE(TestWaitTimeout<1>()); }
 
 TEST(SyncCompletionTest, TimeoutMultiWait) {
-  ASSERT_NO_FATAL_FAILURES(TestWaitTimeout<kMultiWaitThreadCount>());
+  ASSERT_NO_FATAL_FAILURE(TestWaitTimeout<kMultiWaitThreadCount>());
 }
 
 template <size_t N>
@@ -202,7 +202,7 @@ void TestPresignalWait() {
 
   // Start the threads
   for (auto& thread : threads) {
-    ASSERT_NO_FATAL_FAILURES(thread.StartAndBlock("TestPresignalWait", &completion));
+    ASSERT_NO_FATAL_FAILURE(thread.StartAndBlock("TestPresignalWait", &completion));
   }
 
   // Wait for the threads to finish, and verify that they received the proper
@@ -213,10 +213,10 @@ void TestPresignalWait() {
   }
 }
 
-TEST(SyncCompletionTest, PresignalSingleWait) { ASSERT_NO_FATAL_FAILURES(TestPresignalWait<1>()); }
+TEST(SyncCompletionTest, PresignalSingleWait) { ASSERT_NO_FATAL_FAILURE(TestPresignalWait<1>()); }
 
 TEST(SyncCompletionTest, PresignalMultiWait) {
-  ASSERT_NO_FATAL_FAILURES(TestPresignalWait<kMultiWaitThreadCount>());
+  ASSERT_NO_FATAL_FAILURE(TestPresignalWait<kMultiWaitThreadCount>());
 }
 
 template <size_t N>
@@ -230,11 +230,11 @@ void TestResetCycleWait() {
 
   // Start the threads
   for (auto& thread : threads) {
-    ASSERT_NO_FATAL_FAILURES(thread.StartAndBlock("TestResetCycleWait", &completion));
+    ASSERT_NO_FATAL_FAILURE(thread.StartAndBlock("TestResetCycleWait", &completion));
   }
 
   // Wait until all of the threads have blocked, then signal the completion.
-  ASSERT_NO_FATAL_FAILURES(WaitForAllBlockedOnFutex(threads));
+  ASSERT_NO_FATAL_FAILURE(WaitForAllBlockedOnFutex(threads));
   sync_completion_signal(&completion);
 
   // Wait for the threads to finish, and verify that they received the proper
@@ -245,12 +245,10 @@ void TestResetCycleWait() {
   }
 }
 
-TEST(SyncCompletionTest, ResetCycleSingleWait) {
-  ASSERT_NO_FATAL_FAILURES(TestResetCycleWait<1>());
-}
+TEST(SyncCompletionTest, ResetCycleSingleWait) { ASSERT_NO_FATAL_FAILURE(TestResetCycleWait<1>()); }
 
 TEST(SyncCompletionTest, ResetCycleMultiWait) {
-  ASSERT_NO_FATAL_FAILURES(TestResetCycleWait<kMultiWaitThreadCount>());
+  ASSERT_NO_FATAL_FAILURE(TestResetCycleWait<kMultiWaitThreadCount>());
 }
 
 // This test would flake if spurious wake ups from zx_futex_wake() were possible.
@@ -263,12 +261,12 @@ TEST(SyncCompletionTest, SignalRequeue) {
 
   // Start the threads and have them block on the completion.
   for (auto& thread : threads) {
-    ASSERT_NO_FATAL_FAILURES(
+    ASSERT_NO_FATAL_FAILURE(
         thread.StartAndBlock("TestSignalRequeue", &completion, zx::time::infinite()));
   }
 
   // Wait until all the threads have become blocked.
-  ASSERT_NO_FATAL_FAILURES(WaitForAllBlockedOnFutex(threads));
+  ASSERT_NO_FATAL_FAILURE(WaitForAllBlockedOnFutex(threads));
 
   // Move them over to a different futex using the re-queue hook.
   zx_futex_t futex = 0;
@@ -282,7 +280,7 @@ TEST(SyncCompletionTest, SignalRequeue) {
   // Requeue is an atomic action.  All of the threads should still be blocked on
   // a futex (the target futex this time);
   bool all_blocked;
-  ASSERT_NO_FATAL_FAILURES(CheckAllBlockedOnFutex(threads, &all_blocked));
+  ASSERT_NO_FATAL_FAILURE(CheckAllBlockedOnFutex(threads, &all_blocked));
   ASSERT_TRUE(all_blocked);
 
   // Now, wake the threads via the requeued futex
@@ -302,8 +300,8 @@ TEST(SyncCompletionTest, SpuriousWakeupHandled) {
   auto& thread = threads[0];
 
   // Start the test thread and wait until we know that it is blocked in the futex.
-  ASSERT_NO_FATAL_FAILURES(thread.StartAndBlock("SpuriousWakeupHandled", &completion));
-  ASSERT_NO_FATAL_FAILURES(WaitForAllBlockedOnFutex(threads));
+  ASSERT_NO_FATAL_FAILURE(thread.StartAndBlock("SpuriousWakeupHandled", &completion));
+  ASSERT_NO_FATAL_FAILURE(WaitForAllBlockedOnFutex(threads));
 
   // Peek under the implementation hood into the completion_t implementation,
   // and wake any threads waiting on the internal futex.  This should simulate a

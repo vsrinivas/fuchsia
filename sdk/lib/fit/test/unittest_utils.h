@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_ULIB_FIT_TEST_UNITTEST_UTILS_H_
-#define ZIRCON_SYSTEM_ULIB_FIT_TEST_UNITTEST_UTILS_H_
+#ifndef LIB_FIT_TEST_UNITTEST_UTILS_H_
+#define LIB_FIT_TEST_UNITTEST_UTILS_H_
 
 #include <stdlib.h>
 
@@ -16,7 +16,7 @@
 // failure.  zxtest's ASSERT_*() macros do "return;" on failure, which
 // doesn't work in functions with non-void return types, and it continues
 // running if the calling function doesn't check for failure with something
-// like ASSERT_NO_FATAL_FAILURES().
+// like ASSERT_NO_FATAL_FAILURE().
 //
 // Functions defined using zxtest's TEST() macro should use zxtest's
 // ASSERT_*() and EXPECT_*() assertions instead of ASSERT_CRITICAL().
@@ -28,4 +28,4 @@
     }                                                                            \
   } while (0)
 
-#endif  // ZIRCON_SYSTEM_ULIB_FIT_TEST_UNITTEST_UTILS_H_
+#endif  // LIB_FIT_TEST_UNITTEST_UTILS_H_

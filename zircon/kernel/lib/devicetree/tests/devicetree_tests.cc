@@ -58,7 +58,7 @@ void GetTestDataPath(std::string_view filename, std::filesystem::path& path) {
 
 void ReadTestData(std::string_view filename, uint8_t buff[kMaxSize]) {
   std::filesystem::path path;
-  ASSERT_NO_FATAL_FAILURES(GetTestDataPath(filename, path));
+  ASSERT_NO_FATAL_FAILURE(GetTestDataPath(filename, path));
 
   FILE* file = fopen(path.c_str(), "r");
   ASSERT_NOT_NULL(file, "failed to open %s: %s", path.c_str(), strerror(errno));
@@ -76,23 +76,23 @@ void ReadTestData(std::string_view filename, uint8_t buff[kMaxSize]) {
 TEST(DevicetreeTest, SplitNodeName) {
   {
     auto [name, unit_addr] = devicetree::SplitNodeName("abc");
-    EXPECT_STR_EQ("abc", name);
-    EXPECT_STR_EQ("", unit_addr);
+    EXPECT_STREQ("abc", name);
+    EXPECT_STREQ("", unit_addr);
   }
   {
     auto [name, unit_addr] = devicetree::SplitNodeName("abc@");
-    EXPECT_STR_EQ("abc", name);
-    EXPECT_STR_EQ("", unit_addr);
+    EXPECT_STREQ("abc", name);
+    EXPECT_STREQ("", unit_addr);
   }
   {
     auto [name, unit_addr] = devicetree::SplitNodeName("abc@def");
-    EXPECT_STR_EQ("abc", name);
-    EXPECT_STR_EQ("def", unit_addr);
+    EXPECT_STREQ("abc", name);
+    EXPECT_STREQ("def", unit_addr);
   }
   {
     auto [name, unit_addr] = devicetree::SplitNodeName("@def");
-    EXPECT_STR_EQ("", name);
-    EXPECT_STR_EQ("def", unit_addr);
+    EXPECT_STREQ("", name);
+    EXPECT_STREQ("def", unit_addr);
   }
 }
 
@@ -141,7 +141,7 @@ TEST(DevicetreeTest, NodesAreVisitedDepthFirst) {
       size_t size = path.size_slow();
       EXPECT_EQ(expected_sizes[seen], path.size_slow());
       if (size > 0) {
-        EXPECT_STR_EQ(expected_names[seen], path.back());
+        EXPECT_STREQ(expected_names[seen], path.back());
       }
     }
     ++seen;
@@ -179,7 +179,7 @@ TEST(DevicetreeTest, SubtreesArePruned) {
       size_t size = path.size_slow();
       EXPECT_EQ(expected_sizes[seen], size);
       if (size > 0) {
-        EXPECT_STR_EQ(expected_names[seen], path.back());
+        EXPECT_STREQ(expected_names[seen], path.back());
       }
     }
     return !pruned[seen++];
@@ -254,34 +254,34 @@ TEST(DevicetreeTest, PropertiesAreTranslated) {
         size_t size = path.size_slow();
         EXPECT_EQ(2, size);
         if (size > 0) {
-          EXPECT_STR_EQ("A", path.back());
+          EXPECT_STREQ("A", path.back());
         }
         EXPECT_EQ(props.end(), std::next(props.begin(), 2));  // 2 properties.
 
         auto prop1 = *props.begin();
-        EXPECT_STR_EQ("a1", prop1.name);
+        EXPECT_STREQ("a1", prop1.name);
         EXPECT_TRUE(prop1.value.AsBool());
         auto prop2 = *std::next(props.begin());
-        EXPECT_STR_EQ("a2", prop2.name);
-        EXPECT_STR_EQ("root", prop2.value.AsString());
+        EXPECT_STREQ("a2", prop2.name);
+        EXPECT_STREQ("root", prop2.value.AsString());
         break;
       }
       case 2: {  // B
         size_t size = path.size_slow();
         EXPECT_EQ(3, size);
         if (size > 0) {
-          EXPECT_STR_EQ("B", path.back());
+          EXPECT_STREQ("B", path.back());
         }
         EXPECT_EQ(props.end(), std::next(props.begin(), 3));  // 3 properties.
 
         auto prop1 = *props.begin();
-        EXPECT_STR_EQ("b1", prop1.name);
+        EXPECT_STREQ("b1", prop1.name);
         EXPECT_EQ(0x1, prop1.value.AsUint32());
         auto prop2 = *std::next(props.begin());
-        EXPECT_STR_EQ("b2", prop2.name);
+        EXPECT_STREQ("b2", prop2.name);
         EXPECT_EQ(0x10, prop2.value.AsUint32());
         auto prop3 = *std::next(props.begin(), 2);
-        EXPECT_STR_EQ("b3", prop3.name);
+        EXPECT_STREQ("b3", prop3.name);
         EXPECT_EQ(0x100, prop3.value.AsUint32());
         break;
       }
@@ -289,34 +289,34 @@ TEST(DevicetreeTest, PropertiesAreTranslated) {
         size_t size = path.size_slow();
         EXPECT_EQ(2, size);
         if (size > 0) {
-          EXPECT_STR_EQ("C", path.back());
+          EXPECT_STREQ("C", path.back());
         }
         EXPECT_EQ(props.end(), std::next(props.begin(), 2));  // 2 properties.
 
         auto prop1 = *props.begin();
-        EXPECT_STR_EQ("c1", prop1.name);
-        EXPECT_STR_EQ("hello", prop1.value.AsString());
+        EXPECT_STREQ("c1", prop1.name);
+        EXPECT_STREQ("hello", prop1.value.AsString());
         auto prop2 = *std::next(props.begin());
-        EXPECT_STR_EQ("c2", prop2.name);
-        EXPECT_STR_EQ("world", prop2.value.AsString());
+        EXPECT_STREQ("c2", prop2.name);
+        EXPECT_STREQ("world", prop2.value.AsString());
         break;
       }
       case 4: {  // D
         size_t size = path.size_slow();
         EXPECT_EQ(3, size);
         if (size > 0) {
-          EXPECT_STR_EQ("D", path.back());
+          EXPECT_STREQ("D", path.back());
         }
         EXPECT_EQ(props.end(), std::next(props.begin(), 3));  // 3 properties.
 
         auto prop1 = *props.begin();
-        EXPECT_STR_EQ("d1", prop1.name);
+        EXPECT_STREQ("d1", prop1.name);
         EXPECT_EQ(0x1000, prop1.value.AsUint64());
         auto prop2 = *std::next(props.begin());
-        EXPECT_STR_EQ("d2", prop2.name);
+        EXPECT_STREQ("d2", prop2.name);
         EXPECT_EQ(0x10000, prop2.value.AsUint64());
         auto prop3 = *std::next(props.begin(), 2);
-        EXPECT_STR_EQ("d3", prop3.name);
+        EXPECT_STREQ("d3", prop3.name);
         EXPECT_EQ(0x100000, prop3.value.AsUint64());
         break;
       }
@@ -373,7 +373,7 @@ TEST(DevicetreeTest, StringList) {
   i = 0;
   for (auto str : devicetree::StringList("one"sv)) {
     ++i;
-    EXPECT_STR_EQ("one", str);
+    EXPECT_STREQ("one", str);
   }
   EXPECT_EQ(i, 1);
 
@@ -381,13 +381,13 @@ TEST(DevicetreeTest, StringList) {
   for (auto str : devicetree::StringList("one\0two\0three"sv)) {
     switch (i++) {
       case 0:
-        EXPECT_STR_EQ("one", str);
+        EXPECT_STREQ("one", str);
         break;
       case 1:
-        EXPECT_STR_EQ("two", str);
+        EXPECT_STREQ("two", str);
         break;
       case 2:
-        EXPECT_STR_EQ("three", str);
+        EXPECT_STREQ("three", str);
         break;
     }
   }
@@ -397,10 +397,10 @@ TEST(DevicetreeTest, StringList) {
   for (auto str : devicetree::StringList("one\0\0two\0"sv)) {
     switch (i++) {
       case 0:
-        EXPECT_STR_EQ("one", str);
+        EXPECT_STREQ("one", str);
         break;
       case 2:
-        EXPECT_STR_EQ("two", str);
+        EXPECT_STREQ("two", str);
         break;
       default:
         EXPECT_EQ(0, str.size());
@@ -412,13 +412,13 @@ TEST(DevicetreeTest, StringList) {
   for (auto str : devicetree::StringList<'/'>("foo/bar/baz"sv)) {
     switch (i++) {
       case 0:
-        EXPECT_STR_EQ("foo", str);
+        EXPECT_STREQ("foo", str);
         break;
       case 1:
-        EXPECT_STR_EQ("bar", str);
+        EXPECT_STREQ("bar", str);
         break;
       case 3:
-        EXPECT_STR_EQ("baz", str);
+        EXPECT_STREQ("baz", str);
         break;
     }
   }

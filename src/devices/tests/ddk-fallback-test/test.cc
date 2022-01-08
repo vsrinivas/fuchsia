@@ -48,20 +48,20 @@ class FallbackTest : public zxtest::Test {
 
 TEST_F(FallbackTest, TestNotFallbackTakesPriority) {
   IsolatedDevmgr::Args args;
-  ASSERT_NO_FATAL_FAILURES(LaunchDevmgr(std::move(args)));
-  ASSERT_NO_FATAL_FAILURES(CheckDriverBound(false));
+  ASSERT_NO_FATAL_FAILURE(LaunchDevmgr(std::move(args)));
+  ASSERT_NO_FATAL_FAILURE(CheckDriverBound(false));
 }
 
 TEST_F(FallbackTest, TestFallbackBoundWhenAlone) {
   IsolatedDevmgr::Args args;
   args.driver_disable.push_back("ddk_not_fallback_test");
-  ASSERT_NO_FATAL_FAILURES(LaunchDevmgr(std::move(args)));
-  ASSERT_NO_FATAL_FAILURES(CheckDriverBound(true));
+  ASSERT_NO_FATAL_FAILURE(LaunchDevmgr(std::move(args)));
+  ASSERT_NO_FATAL_FAILURE(CheckDriverBound(true));
 }
 
 TEST_F(FallbackTest, TestFallbackBoundWhenEager) {
   IsolatedDevmgr::Args args;
   args.driver_bind_eager.push_back("ddk_fallback_test");
-  ASSERT_NO_FATAL_FAILURES(LaunchDevmgr(std::move(args)));
-  ASSERT_NO_FATAL_FAILURES(CheckDriverBound(true));
+  ASSERT_NO_FATAL_FAILURE(LaunchDevmgr(std::move(args)));
+  ASSERT_NO_FATAL_FAILURE(CheckDriverBound(true));
 }

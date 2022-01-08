@@ -340,7 +340,7 @@ TEST(Structs, decode_nested_nonnullable_structs_check_padding) {
 
     EXPECT_EQ(status, ZX_ERR_INVALID_ARGS);
     ASSERT_NOT_NULL(error);
-    EXPECT_STR_EQ(error, "non-zero padding bytes detected");
+    EXPECT_STREQ(error, "non-zero padding bytes detected");
   }
 }
 
@@ -567,7 +567,7 @@ TEST(UnknownEnvelope, NumUnknownHandlesOverflows) {
                             bytes, ArrayCount(bytes), handles, ArrayCount(handles), &error);
 
   EXPECT_EQ(status, ZX_ERR_INVALID_ARGS);
-  EXPECT_STR_EQ(error, "number of unknown handles overflows");
+  EXPECT_STREQ(error, "number of unknown handles overflows");
 }
 
 TEST(UnknownEnvelope, NumIncomingHandlesOverflows) {
@@ -588,7 +588,7 @@ TEST(UnknownEnvelope, NumIncomingHandlesOverflows) {
                             bytes, ArrayCount(bytes), handles, 0, &error);
 
   EXPECT_EQ(status, ZX_ERR_INVALID_ARGS);
-  EXPECT_STR_EQ(error, "number of incoming handles exceeds incoming handle array size");
+  EXPECT_STREQ(error, "number of incoming handles exceeds incoming handle array size");
 }
 #endif
 
@@ -610,7 +610,7 @@ TEST(UnknownEnvelope, NumUnknownHandlesExceedsUnknownArraySize) {
                             bytes, ArrayCount(bytes), nullptr, 0, &error);
 
   EXPECT_EQ(status, ZX_ERR_INVALID_ARGS);
-  EXPECT_STR_EQ(error, "number of unknown handles exceeds unknown handle array size");
+  EXPECT_STREQ(error, "number of unknown handles exceeds unknown handle array size");
 }
 #endif
 
@@ -765,7 +765,7 @@ TEST(FidlDecodeEtc, decode_invalid_handle_info) {
   EXPECT_EQ(status, ZX_ERR_INVALID_ARGS);
   ASSERT_NOT_NULL(error);
   const char expected_error_msg[] = "invalid handle detected in handle table";
-  EXPECT_STR_EQ(expected_error_msg, error, "wrong error msg");
+  EXPECT_STREQ(expected_error_msg, error, "wrong error msg");
 }
 
 TEST(FidlDecodeEtc, decode_single_present_handle_info_handle_rights_subtype_match) {

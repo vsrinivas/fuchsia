@@ -21,7 +21,7 @@ void RuntimeTestCase::SignalOnChannelReadable(fdf_handle_t ch, fdf_dispatcher_t*
 // static
 void RuntimeTestCase::WaitUntilReadReady(fdf_handle_t ch, fdf_dispatcher_t* dispatcher) {
   sync_completion_t read_completion;
-  ASSERT_NO_FATAL_FAILURES(SignalOnChannelReadable(ch, dispatcher, &read_completion));
+  ASSERT_NO_FATAL_FAILURE(SignalOnChannelReadable(ch, dispatcher, &read_completion));
   sync_completion_wait(&read_completion, ZX_TIME_INFINITE);
 }
 

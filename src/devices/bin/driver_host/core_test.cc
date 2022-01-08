@@ -150,7 +150,7 @@ TEST_F(CoreTest, RebindNoChildren) {
   zx_protocol_device_t ops = {};
   dev->set_ops(&ops);
 
-  ASSERT_NO_FATAL_FAILURES(Connect(dev));
+  ASSERT_NO_FATAL_FAILURE(Connect(dev));
 
   EXPECT_EQ(device_rebind(dev.get()), ZX_OK);
   EXPECT_EQ(coordinator_.bind_count(), 1);
@@ -179,13 +179,13 @@ TEST_F(CoreTest, RebindHasOneChild) {
     ops.unbind = [](void* ctx) { *static_cast<uint32_t*>(ctx) += 1; };
 
     ASSERT_OK(zx_device::Create(&ctx_, "parent", drv_.get(), &parent));
-    ASSERT_NO_FATAL_FAILURES(Connect(parent));
+    ASSERT_NO_FATAL_FAILURE(Connect(parent));
     parent->set_ops(&ops);
     parent->ctx = &unbind_count;
     {
       fbl::RefPtr<zx_device> child;
       ASSERT_OK(zx_device::Create(&ctx_, "child", drv_.get(), &child));
-      ASSERT_NO_FATAL_FAILURES(Connect(child));
+      ASSERT_NO_FATAL_FAILURE(Connect(child));
       child->set_ops(&ops);
       child->ctx = &unbind_count;
       parent->add_child(child.get());
@@ -193,7 +193,7 @@ TEST_F(CoreTest, RebindHasOneChild) {
 
       EXPECT_EQ(device_rebind(parent.get()), ZX_OK);
       EXPECT_EQ(coordinator_.bind_count(), 0);
-      ASSERT_NO_FATAL_FAILURES(UnbindDevice(child));
+      ASSERT_NO_FATAL_FAILURE(UnbindDevice(child));
       EXPECT_EQ(unbind_count, 1);
 
       child->set_flag(DEV_FLAG_DEAD);
@@ -225,14 +225,14 @@ TEST_F(CoreTest, RebindHasMultipleChildren) {
     ops.unbind = [](void* ctx) { *static_cast<uint32_t*>(ctx) += 1; };
 
     ASSERT_OK(zx_device::Create(&ctx_, "parent", drv_.get(), &parent));
-    ASSERT_NO_FATAL_FAILURES(Connect(parent));
+    ASSERT_NO_FATAL_FAILURE(Connect(parent));
     parent->set_ops(&ops);
     parent->ctx = &unbind_count;
     {
       std::array<fbl::RefPtr<zx_device>, 5> children;
       for (auto& child : children) {
         ASSERT_OK(zx_device::Create(&ctx_, "child", drv_.get(), &child));
-        ASSERT_NO_FATAL_FAILURES(Connect(child));
+        ASSERT_NO_FATAL_FAILURE(Connect(child));
         child->set_ops(&ops);
         child->ctx = &unbind_count;
         parent->add_child(child.get());
@@ -243,7 +243,7 @@ TEST_F(CoreTest, RebindHasMultipleChildren) {
 
       for (auto& child : children) {
         EXPECT_EQ(coordinator_.bind_count(), 0);
-        ASSERT_NO_FATAL_FAILURES(UnbindDevice(child));
+        ASSERT_NO_FATAL_FAILURE(UnbindDevice(child));
       }
 
       EXPECT_EQ(unbind_count, children.size());

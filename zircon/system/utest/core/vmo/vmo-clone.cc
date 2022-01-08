@@ -204,11 +204,11 @@ TEST(VmoCloneTestCase, Rights) {
 
   char oldname[ZX_MAX_NAME_LEN] = "bad";
   EXPECT_EQ(zx_object_get_property(vmo, ZX_PROP_NAME, oldname, sizeof(oldname)), ZX_OK);
-  EXPECT_STR_EQ(oldname, kOldVmoName, "original VMO name");
+  EXPECT_STREQ(oldname, kOldVmoName, "original VMO name");
 
   char newname[ZX_MAX_NAME_LEN] = "bad";
   EXPECT_EQ(zx_object_get_property(clone, ZX_PROP_NAME, newname, sizeof(newname)), ZX_OK);
-  EXPECT_STR_EQ(newname, kNewVmoName, "clone VMO name");
+  EXPECT_STREQ(newname, kNewVmoName, "clone VMO name");
 
   EXPECT_OK(zx_handle_close(vmo));
   EXPECT_EQ(GetHandleRights(clone), kNewVmoRights);

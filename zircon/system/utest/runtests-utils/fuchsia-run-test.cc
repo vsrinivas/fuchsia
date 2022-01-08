@@ -75,7 +75,7 @@ TEST(RunTests, RunTestDontPublishData) {
 
   const char* argv[] = {test_name.c_str(), nullptr};
   std::unique_ptr<Result> result = RunTest(argv, nullptr, test_name.c_str(), 0, nullptr);
-  EXPECT_STR_EQ(argv[0], result->name.c_str());
+  EXPECT_STREQ(argv[0], result->name.c_str());
   EXPECT_EQ(SUCCESS, result->launch_status);
   EXPECT_EQ(0, result->return_code);
   EXPECT_EQ(0, result->data_sinks.size());
@@ -89,7 +89,7 @@ TEST(RunTests, RunTestPublishData) {
   const fbl::String output_dir = JoinPath(test_dir.path(), "output");
   ASSERT_EQ(0, MkDirAll(output_dir));
   std::unique_ptr<Result> result = RunTest(argv, output_dir.c_str(), test_name.c_str(), 0, nullptr);
-  EXPECT_STR_EQ(argv[0], result->name.c_str());
+  EXPECT_STREQ(argv[0], result->name.c_str());
   EXPECT_EQ(SUCCESS, result->launch_status);
   EXPECT_EQ(0, result->return_code);
   EXPECT_EQ(1, result->data_sinks.size());
@@ -119,9 +119,9 @@ TEST(RunTests, RunDuplicateTestsPublishData) {
                        &num_failed, &results));
   EXPECT_EQ(0, num_failed);
   EXPECT_EQ(3, results.size());
-  EXPECT_STR_EQ(test_name.c_str(), results[0]->name.c_str());
-  EXPECT_STR_EQ(fbl::String::Concat({test_name, " (2)"}).c_str(), results[1]->name.c_str());
-  EXPECT_STR_EQ(fbl::String::Concat({test_name, " (3)"}).c_str(), results[2]->name.c_str());
+  EXPECT_STREQ(test_name.c_str(), results[0]->name.c_str());
+  EXPECT_STREQ(fbl::String::Concat({test_name, " (2)"}).c_str(), results[1]->name.c_str());
+  EXPECT_STREQ(fbl::String::Concat({test_name, " (3)"}).c_str(), results[2]->name.c_str());
 }
 
 TEST(RunTests, RunAllTestsPublishData) {
@@ -220,7 +220,7 @@ TEST(RunTests, RunTestRootDir) {
   {
     std::unique_ptr<Result> result = RunTest(argv, nullptr, test_name.c_str(), 0, nullptr);
 
-    EXPECT_STR_EQ(argv[0], result->name.c_str());
+    EXPECT_STREQ(argv[0], result->name.c_str());
     EXPECT_EQ(SUCCESS, result->launch_status);
     EXPECT_EQ(0, result->return_code);
   }

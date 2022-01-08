@@ -44,7 +44,7 @@ class SyBuckTestFixture : public zxtest::Test {
 TEST_F(SyBuckTestFixture, Init) {
   mock_i2c_.ExpectWrite({0x00}).ExpectReadStop({0xFF});
   EXPECT_OK(dut_.Init());
-  ASSERT_NO_FATAL_FAILURES(Verify());
+  ASSERT_NO_FATAL_FAILURE(Verify());
 }
 
 TEST_F(SyBuckTestFixture, ReadConfig) {
@@ -58,7 +58,7 @@ TEST_F(SyBuckTestFixture, ReadConfig) {
   EXPECT_EQ(params.num_steps, dut_.GetNumSteps());
   EXPECT_EQ(params.step_size_uv, dut_.GetVoltageStepUv());
 
-  ASSERT_NO_FATAL_FAILURES(Verify());
+  ASSERT_NO_FATAL_FAILURE(Verify());
 }
 
 TEST_F(SyBuckTestFixture, ReadConfigNull) {
@@ -68,7 +68,7 @@ TEST_F(SyBuckTestFixture, ReadConfigNull) {
   // Make sure nulls don't crash us.
   dut_.VregGetRegulatorParams(nullptr);
 
-  ASSERT_NO_FATAL_FAILURES(Verify());
+  ASSERT_NO_FATAL_FAILURE(Verify());
 }
 
 TEST_F(SyBuckTestFixture, SetStep) {
@@ -80,13 +80,13 @@ TEST_F(SyBuckTestFixture, SetStep) {
 
   EXPECT_OK(dut_.VregSetVoltageStep(4));
 
-  ASSERT_NO_FATAL_FAILURES(Verify());
+  ASSERT_NO_FATAL_FAILURE(Verify());
 }
 
 TEST_F(SyBuckTestFixture, GetStep) {
   mock_i2c_.ExpectWrite({0x00}).ExpectReadStop({0xFF});
   EXPECT_OK(dut_.Init());
-  ASSERT_NO_FATAL_FAILURES(Verify());
+  ASSERT_NO_FATAL_FAILURE(Verify());
 }
 
 TEST_F(SyBuckTestFixture, SetStepOutOfBounds) {
@@ -96,7 +96,7 @@ TEST_F(SyBuckTestFixture, SetStepOutOfBounds) {
   EXPECT_NOT_OK(dut_.VregSetVoltageStep(dut_.GetNumSteps()));
 
   EXPECT_OK(dut_.Init());
-  ASSERT_NO_FATAL_FAILURES(Verify());
+  ASSERT_NO_FATAL_FAILURE(Verify());
 }
 
 }  // namespace silergy

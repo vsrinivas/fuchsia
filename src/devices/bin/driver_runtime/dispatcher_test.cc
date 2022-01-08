@@ -112,7 +112,7 @@ void DispatcherTest::RegisterAsyncReadReply(fdf_handle_t read_channel, fdf_dispa
         {
           fbl::AutoLock auto_lock(lock);
 
-          ASSERT_NO_FATAL_FAILURES(AssertRead(channel_read->channel(), nullptr, 0, nullptr, 0));
+          ASSERT_NO_FATAL_FAILURE(AssertRead(channel_read->channel(), nullptr, 0, nullptr, 0));
           if (reply_channel != ZX_HANDLE_INVALID) {
             ASSERT_EQ(ZX_OK, fdf_channel_write(reply_channel, 0, nullptr, nullptr, 0, nullptr, 0));
           }
@@ -158,10 +158,10 @@ TEST_F(DispatcherTest, SyncDispatcherDirectCall) {
   loop_.JoinThreads();
 
   fdf_dispatcher_t* dispatcher;
-  ASSERT_NO_FATAL_FAILURES(CreateDispatcher(0, "scheduler_role", local_driver, &dispatcher));
+  ASSERT_NO_FATAL_FAILURE(CreateDispatcher(0, "scheduler_role", local_driver, &dispatcher));
 
   sync_completion_t read_completion;
-  ASSERT_NO_FATAL_FAILURES(SignalOnChannelReadable(local_ch_, dispatcher, &read_completion));
+  ASSERT_NO_FATAL_FAILURE(SignalOnChannelReadable(local_ch_, dispatcher, &read_completion));
 
   {
     driver_context::PushDriver(remote_driver);
@@ -183,10 +183,10 @@ TEST_F(DispatcherTest, SyncDispatcherCallOnLoop) {
   loop_.ResetQuit();
 
   fdf_dispatcher_t* dispatcher;
-  ASSERT_NO_FATAL_FAILURES(CreateDispatcher(0, "scheduler_role", driver, &dispatcher));
+  ASSERT_NO_FATAL_FAILURE(CreateDispatcher(0, "scheduler_role", driver, &dispatcher));
 
   sync_completion_t read_completion;
-  ASSERT_NO_FATAL_FAILURES(SignalOnChannelReadable(local_ch_, dispatcher, &read_completion));
+  ASSERT_NO_FATAL_FAILURE(SignalOnChannelReadable(local_ch_, dispatcher, &read_completion));
 
   {
     // Add the same driver to the thread's call stack.
@@ -210,17 +210,17 @@ TEST_F(DispatcherTest, SyncDispatcherCallOnLoop) {
 TEST_F(DispatcherTest, SyncDispatcherDisallowsParallelCallbacks) {
   const void* driver = CreateFakeDriver();
   fdf_dispatcher_t* dispatcher;
-  ASSERT_NO_FATAL_FAILURES(CreateDispatcher(0, "scheduler_role", driver, &dispatcher));
+  ASSERT_NO_FATAL_FAILURE(CreateDispatcher(0, "scheduler_role", driver, &dispatcher));
 
   // We shouldn't actually block on a dispatcher that doesn't have ALLOW_SYNC_CALLS set,
   // but this is just for synchronizing the test.
   sync_completion_t entered_callback;
   sync_completion_t complete_blocking_read;
-  ASSERT_NO_FATAL_FAILURES(
+  ASSERT_NO_FATAL_FAILURE(
       RegisterAsyncReadBlock(local_ch_, dispatcher, &entered_callback, &complete_blocking_read));
 
   sync_completion_t read_completion;
-  ASSERT_NO_FATAL_FAILURES(SignalOnChannelReadable(local_ch2_, dispatcher, &read_completion));
+  ASSERT_NO_FATAL_FAILURE(SignalOnChannelReadable(local_ch2_, dispatcher, &read_completion));
 
   {
     // This should make the callback run on the async loop, as it would be reentrant.
@@ -262,7 +262,7 @@ TEST_F(DispatcherTest, SyncDispatcherDisallowsParallelCallbacksReentrant) {
 
   const void* driver = CreateFakeDriver();
   fdf_dispatcher_t* dispatcher;
-  ASSERT_NO_FATAL_FAILURES(CreateDispatcher(0, "scheduler_role", driver, &dispatcher));
+  ASSERT_NO_FATAL_FAILURE(CreateDispatcher(0, "scheduler_role", driver, &dispatcher));
 
   struct ReadClient {
     fdf_handle_t channel;
@@ -275,9 +275,9 @@ TEST_F(DispatcherTest, SyncDispatcherDisallowsParallelCallbacksReentrant) {
 
   for (uint32_t i = 0; i < kNumClients; i++) {
     ASSERT_OK(fdf_channel_create(0, &local[i].channel, &remote[i]));
-    ASSERT_NO_FATAL_FAILURES(RegisterAsyncReadBlock(local[i].channel, dispatcher,
-                                                    &local[i].entered_callback,
-                                                    &local[i].complete_blocking_read));
+    ASSERT_NO_FATAL_FAILURE(RegisterAsyncReadBlock(local[i].channel, dispatcher,
+                                                   &local[i].entered_callback,
+                                                   &local[i].complete_blocking_read));
   }
 
   for (uint32_t i = 0; i < kNumClients; i++) {
@@ -331,8 +331,8 @@ TEST_F(DispatcherTest, SyncDispatcherDisallowsParallelCallbacksReentrant) {
 TEST_F(DispatcherTest, UnsyncDispatcherAllowsParallelCallbacks) {
   const void* driver = CreateFakeDriver();
   fdf_dispatcher_t* dispatcher;
-  ASSERT_NO_FATAL_FAILURES(CreateDispatcher(FDF_DISPATCHER_OPTION_UNSYNCHRONIZED, "scheduler_role",
-                                            driver, &dispatcher));
+  ASSERT_NO_FATAL_FAILURE(CreateDispatcher(FDF_DISPATCHER_OPTION_UNSYNCHRONIZED, "scheduler_role",
+                                           driver, &dispatcher));
 
   constexpr uint32_t kNumClients = 10;
 
@@ -403,8 +403,8 @@ TEST_F(DispatcherTest, UnsyncDispatcherAllowsParallelCallbacksReentrant) {
 
   const void* driver = CreateFakeDriver();
   fdf_dispatcher_t* dispatcher;
-  ASSERT_NO_FATAL_FAILURES(CreateDispatcher(FDF_DISPATCHER_OPTION_UNSYNCHRONIZED, "scheduler_role",
-                                            driver, &dispatcher));
+  ASSERT_NO_FATAL_FAILURE(CreateDispatcher(FDF_DISPATCHER_OPTION_UNSYNCHRONIZED, "scheduler_role",
+                                           driver, &dispatcher));
 
   std::vector<fdf_handle_t> local(kNumClients);
   std::vector<fdf_handle_t> remote(kNumClients);
@@ -464,15 +464,14 @@ TEST_F(DispatcherTest, UnsyncDispatcherAllowsParallelCallbacksReentrant) {
 TEST_F(DispatcherTest, AllowSyncCallsDoesNotDirectlyCall) {
   const void* blocking_driver = CreateFakeDriver();
   fdf_dispatcher_t* blocking_dispatcher;
-  ASSERT_NO_FATAL_FAILURES(CreateDispatcher(FDF_DISPATCHER_OPTION_ALLOW_SYNC_CALLS,
-                                            "scheduler_role", blocking_driver,
-                                            &blocking_dispatcher));
+  ASSERT_NO_FATAL_FAILURE(CreateDispatcher(FDF_DISPATCHER_OPTION_ALLOW_SYNC_CALLS, "scheduler_role",
+                                           blocking_driver, &blocking_dispatcher));
 
   // Queue a blocking request.
   sync_completion_t entered_callback;
   sync_completion_t complete_blocking_read;
-  ASSERT_NO_FATAL_FAILURES(RegisterAsyncReadBlock(remote_ch_, blocking_dispatcher,
-                                                  &entered_callback, &complete_blocking_read));
+  ASSERT_NO_FATAL_FAILURE(RegisterAsyncReadBlock(remote_ch_, blocking_dispatcher, &entered_callback,
+                                                 &complete_blocking_read));
 
   {
     // Simulate a driver writing a message to the driver with the blocking dispatcher.
@@ -498,13 +497,12 @@ TEST_F(DispatcherTest, AllowSyncCallsDoesNotDirectlyCall) {
 TEST_F(DispatcherTest, AllowSyncCallsDoesNotBlockGlobalLoop) {
   const void* driver = CreateFakeDriver();
   fdf_dispatcher_t* dispatcher;
-  ASSERT_NO_FATAL_FAILURES(CreateDispatcher(0, "scheduler_role", driver, &dispatcher));
+  ASSERT_NO_FATAL_FAILURE(CreateDispatcher(0, "scheduler_role", driver, &dispatcher));
 
   const void* blocking_driver = CreateFakeDriver();
   fdf_dispatcher_t* blocking_dispatcher;
-  ASSERT_NO_FATAL_FAILURES(CreateDispatcher(FDF_DISPATCHER_OPTION_ALLOW_SYNC_CALLS,
-                                            "scheduler_role", blocking_driver,
-                                            &blocking_dispatcher));
+  ASSERT_NO_FATAL_FAILURE(CreateDispatcher(FDF_DISPATCHER_OPTION_ALLOW_SYNC_CALLS, "scheduler_role",
+                                           blocking_driver, &blocking_dispatcher));
 
   fdf_handle_t blocking_local_ch, blocking_remote_ch;
   ASSERT_EQ(ZX_OK, fdf_channel_create(0, &blocking_local_ch, &blocking_remote_ch));
@@ -512,8 +510,8 @@ TEST_F(DispatcherTest, AllowSyncCallsDoesNotBlockGlobalLoop) {
   // Queue a blocking read.
   sync_completion_t entered_callback;
   sync_completion_t complete_blocking_read;
-  ASSERT_NO_FATAL_FAILURES(RegisterAsyncReadBlock(blocking_remote_ch, blocking_dispatcher,
-                                                  &entered_callback, &complete_blocking_read));
+  ASSERT_NO_FATAL_FAILURE(RegisterAsyncReadBlock(blocking_remote_ch, blocking_dispatcher,
+                                                 &entered_callback, &complete_blocking_read));
 
   // Write a message for the blocking dispatcher.
   {
@@ -525,7 +523,7 @@ TEST_F(DispatcherTest, AllowSyncCallsDoesNotBlockGlobalLoop) {
   ASSERT_OK(sync_completion_wait(&entered_callback, ZX_TIME_INFINITE));
 
   sync_completion_t read_completion;
-  ASSERT_NO_FATAL_FAILURES(SignalOnChannelReadable(remote_ch_, dispatcher, &read_completion));
+  ASSERT_NO_FATAL_FAILURE(SignalOnChannelReadable(remote_ch_, dispatcher, &read_completion));
 
   {
     // Write a message which will be read on the non-blocking dispatcher.
@@ -536,7 +534,7 @@ TEST_F(DispatcherTest, AllowSyncCallsDoesNotBlockGlobalLoop) {
   }
 
   ASSERT_OK(sync_completion_wait(&read_completion, ZX_TIME_INFINITE));
-  ASSERT_NO_FATAL_FAILURES(AssertRead(remote_ch_, nullptr, 0, nullptr, 0));
+  ASSERT_NO_FATAL_FAILURE(AssertRead(remote_ch_, nullptr, 0, nullptr, 0));
 
   // Signal and wait for the blocking read handler to return.
   sync_completion_signal(&complete_blocking_read);
@@ -556,11 +554,11 @@ TEST_F(DispatcherTest, ReentrancySimpleSendAndReply) {
   // Create a dispatcher for each end of the channel.
   const void* driver = CreateFakeDriver();
   fdf_dispatcher_t* dispatcher;
-  ASSERT_NO_FATAL_FAILURES(CreateDispatcher(0, "scheduler_role", driver, &dispatcher));
+  ASSERT_NO_FATAL_FAILURE(CreateDispatcher(0, "scheduler_role", driver, &dispatcher));
 
   const void* driver2 = CreateFakeDriver();
   fdf_dispatcher_t* dispatcher2;
-  ASSERT_NO_FATAL_FAILURES(CreateDispatcher(0, "scheduler_role", driver2, &dispatcher2));
+  ASSERT_NO_FATAL_FAILURE(CreateDispatcher(0, "scheduler_role", driver2, &dispatcher2));
 
   // Lock that is acquired by the first driver whenever it writes or reads from |local_ch_|.
   // We shouldn't need to lock in a synchronous dispatcher, but this is just for testing
@@ -570,9 +568,9 @@ TEST_F(DispatcherTest, ReentrancySimpleSendAndReply) {
   fbl::Mutex driver2_lock;
   sync_completion_t completion;
 
-  ASSERT_NO_FATAL_FAILURES(
+  ASSERT_NO_FATAL_FAILURE(
       RegisterAsyncReadSignal(local_ch_, dispatcher, &driver_lock, &completion));
-  ASSERT_NO_FATAL_FAILURES(
+  ASSERT_NO_FATAL_FAILURE(
       RegisterAsyncReadReply(remote_ch_, dispatcher2, &driver2_lock, remote_ch_));
 
   {
@@ -596,12 +594,12 @@ TEST_F(DispatcherTest, ReentrancyMultipleDriversAndDispatchers) {
   // Driver will own |local_ch_| and |local_ch2_|.
   const void* driver = CreateFakeDriver();
   fdf_dispatcher_t* dispatcher;
-  ASSERT_NO_FATAL_FAILURES(CreateDispatcher(0, "scheduler_role", driver, &dispatcher));
+  ASSERT_NO_FATAL_FAILURE(CreateDispatcher(0, "scheduler_role", driver, &dispatcher));
 
   // Driver2 will own |remote_ch_| and |remote_ch2_|.
   const void* driver2 = CreateFakeDriver();
   fdf_dispatcher_t* dispatcher2;
-  ASSERT_NO_FATAL_FAILURES(CreateDispatcher(0, "scheduler_role", driver2, &dispatcher2));
+  ASSERT_NO_FATAL_FAILURE(CreateDispatcher(0, "scheduler_role", driver2, &dispatcher2));
 
   // Lock that is acquired by the driver whenever it writes or reads from its channels.
   // We shouldn't need to lock in a synchronous dispatcher, but this is just for testing
@@ -611,9 +609,9 @@ TEST_F(DispatcherTest, ReentrancyMultipleDriversAndDispatchers) {
   fbl::Mutex driver2_lock;
   sync_completion_t completion;
 
-  ASSERT_NO_FATAL_FAILURES(
+  ASSERT_NO_FATAL_FAILURE(
       RegisterAsyncReadSignal(local_ch2_, dispatcher, &driver_lock, &completion));
-  ASSERT_NO_FATAL_FAILURES(
+  ASSERT_NO_FATAL_FAILURE(
       RegisterAsyncReadReply(remote_ch_, dispatcher2, &driver2_lock, remote_ch2_));
 
   {
@@ -635,7 +633,7 @@ TEST_F(DispatcherTest, ReentrancyMultipleDriversAndDispatchers) {
 TEST_F(DispatcherTest, ReentrancyOneDriverMultipleChannels) {
   const void* driver = CreateFakeDriver();
   fdf_dispatcher_t* dispatcher;
-  ASSERT_NO_FATAL_FAILURES(CreateDispatcher(0, "scheduler_role", driver, &dispatcher));
+  ASSERT_NO_FATAL_FAILURE(CreateDispatcher(0, "scheduler_role", driver, &dispatcher));
 
   // Lock that is acquired by the driver whenever it writes or reads from its channels.
   // We shouldn't need to lock in a synchronous dispatcher, but this is just for testing
@@ -644,9 +642,9 @@ TEST_F(DispatcherTest, ReentrancyOneDriverMultipleChannels) {
   fbl::Mutex driver_lock;
   sync_completion_t completion;
 
-  ASSERT_NO_FATAL_FAILURES(
+  ASSERT_NO_FATAL_FAILURE(
       RegisterAsyncReadSignal(local_ch2_, dispatcher, &driver_lock, &completion));
-  ASSERT_NO_FATAL_FAILURES(
+  ASSERT_NO_FATAL_FAILURE(
       RegisterAsyncReadReply(remote_ch_, dispatcher, &driver_lock, remote_ch2_));
 
   {
@@ -679,7 +677,7 @@ TEST_F(DispatcherTest, ReentrancyManyDrivers) {
   for (uint32_t i = 0; i < kNumDrivers; i++) {
     const void* driver = CreateFakeDriver();
     fdf_dispatcher_t* dispatcher;
-    ASSERT_NO_FATAL_FAILURES(CreateDispatcher(0, "scheduler_role", driver, &dispatcher));
+    ASSERT_NO_FATAL_FAILURE(CreateDispatcher(0, "scheduler_role", driver, &dispatcher));
 
     // Get the next driver's channel which is connected to the current driver's channel.
     // The last driver will be connected to the first driver.
@@ -689,15 +687,15 @@ TEST_F(DispatcherTest, ReentrancyManyDrivers) {
 
   // Signal once the first driver is called into.
   sync_completion_t completion;
-  ASSERT_NO_FATAL_FAILURES(RegisterAsyncReadSignal(ch_to_prev[0],
-                                                   static_cast<fdf_dispatcher_t*>(dispatchers_[0]),
-                                                   &driver_locks[0], &completion));
+  ASSERT_NO_FATAL_FAILURE(RegisterAsyncReadSignal(ch_to_prev[0],
+                                                  static_cast<fdf_dispatcher_t*>(dispatchers_[0]),
+                                                  &driver_locks[0], &completion));
 
   // Each driver will wait for a callback, then write a message to the next driver.
   for (uint32_t i = 1; i < kNumDrivers; i++) {
-    ASSERT_NO_FATAL_FAILURES(RegisterAsyncReadReply(ch_to_prev[i],
-                                                    static_cast<fdf_dispatcher_t*>(dispatchers_[i]),
-                                                    &driver_locks[i], ch_to_next[i]));
+    ASSERT_NO_FATAL_FAILURE(RegisterAsyncReadReply(ch_to_prev[i],
+                                                   static_cast<fdf_dispatcher_t*>(dispatchers_[i]),
+                                                   &driver_locks[i], ch_to_next[i]));
   }
 
   {
@@ -725,10 +723,10 @@ TEST_F(DispatcherTest, EmptyCallStack) {
   loop_.ResetQuit();
 
   fdf_dispatcher_t* dispatcher;
-  ASSERT_NO_FATAL_FAILURES(CreateDispatcher(0, "scheduler_role", CreateFakeDriver(), &dispatcher));
+  ASSERT_NO_FATAL_FAILURE(CreateDispatcher(0, "scheduler_role", CreateFakeDriver(), &dispatcher));
 
   sync_completion_t read_completion;
-  ASSERT_NO_FATAL_FAILURES(SignalOnChannelReadable(local_ch_, dispatcher, &read_completion));
+  ASSERT_NO_FATAL_FAILURE(SignalOnChannelReadable(local_ch_, dispatcher, &read_completion));
 
   {
     // Call without any recorded call stack.
@@ -749,7 +747,7 @@ TEST_F(DispatcherTest, EmptyCallStack) {
 // Tests that we can use the fdf_dispatcher_t as an async_dispatcher_t.
 TEST_F(DispatcherTest, AsyncDispatcher) {
   fdf_dispatcher_t* dispatcher;
-  ASSERT_NO_FATAL_FAILURES(CreateDispatcher(0, "scheduler_role", CreateFakeDriver(), &dispatcher));
+  ASSERT_NO_FATAL_FAILURE(CreateDispatcher(0, "scheduler_role", CreateFakeDriver(), &dispatcher));
 
   async_dispatcher_t* async_dispatcher = fdf_dispatcher_get_async_dispatcher(dispatcher);
   ASSERT_NOT_NULL(async_dispatcher);
@@ -764,7 +762,7 @@ TEST_F(DispatcherTest, AsyncDispatcher) {
 
 TEST_F(DispatcherTest, FromAsyncDispatcher) {
   fdf_dispatcher_t* dispatcher;
-  ASSERT_NO_FATAL_FAILURES(CreateDispatcher(0, "scheduler_role", CreateFakeDriver(), &dispatcher));
+  ASSERT_NO_FATAL_FAILURE(CreateDispatcher(0, "scheduler_role", CreateFakeDriver(), &dispatcher));
 
   async_dispatcher_t* async_dispatcher = fdf_dispatcher_get_async_dispatcher(dispatcher);
   ASSERT_NOT_NULL(async_dispatcher);

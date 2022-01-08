@@ -79,21 +79,21 @@ class Cr50SpiTest : public zxtest::Test,
 
   void TransmitVector(TransmitVectorRequestView request,
                       TransmitVectorCompleter::Sync& completer) override {
-    ASSERT_NO_FATAL_FAILURES(Exchange(request->data, nullptr));
+    ASSERT_NO_FATAL_FAILURE(Exchange(request->data, nullptr));
     completer.Reply(ZX_OK);
   }
   void ReceiveVector(ReceiveVectorRequestView request,
                      ReceiveVectorCompleter::Sync& completer) override {
     fidl::Arena<> alloc;
     fidl::VectorView<uint8_t> out(alloc, request->size);
-    ASSERT_NO_FATAL_FAILURES(Exchange(fidl::VectorView<uint8_t>(), &out));
+    ASSERT_NO_FATAL_FAILURE(Exchange(fidl::VectorView<uint8_t>(), &out));
     completer.Reply(ZX_OK, out);
   }
   void ExchangeVector(ExchangeVectorRequestView request,
                       ExchangeVectorCompleter::Sync& completer) override {
     fidl::Arena<> alloc;
     fidl::VectorView<uint8_t> out(alloc, request->txdata.count());
-    ASSERT_NO_FATAL_FAILURES(Exchange(request->txdata, &out));
+    ASSERT_NO_FATAL_FAILURE(Exchange(request->txdata, &out));
     completer.Reply(ZX_OK, out);
   }
 
@@ -187,21 +187,21 @@ class Cr50SpiTest : public zxtest::Test,
 };
 
 TEST_F(Cr50SpiTest, TestFirmwareVersion) {
-  ASSERT_NO_FATAL_FAILURES(CreateDevice(false));
+  ASSERT_NO_FATAL_FAILURE(CreateDevice(false));
   static const std::string kFirmwareVersion =
       "B2-C:0 RO_B:0.0.11/4d655eab RW_B:0.5.9/cr50_v1.9308_87_mp.547-af2f3d63";
-  ASSERT_NO_FATAL_FAILURES(ExpectFirmware(kFirmwareVersion));
+  ASSERT_NO_FATAL_FAILURE(ExpectFirmware(kFirmwareVersion));
   ASSERT_EQ(messages_.size(), 0);
 
   auto device = fake_root_->GetLatestChild();
   auto ctx = device->GetDeviceContext<cr50::spi::Cr50SpiDevice>();
-  ASSERT_NO_FATAL_FAILURES(ReadInspect(ctx->inspect()));
+  ASSERT_NO_FATAL_FAILURE(ReadInspect(ctx->inspect()));
   CheckProperty(hierarchy().node(), "fw-version", inspect::StringPropertyValue(kFirmwareVersion));
 }
 
 TEST_F(Cr50SpiTest, TestTpmRead) {
-  ASSERT_NO_FATAL_FAILURES(CreateDevice(false));
-  ASSERT_NO_FATAL_FAILURES(ExpectFirmware("hello firmware"));
+  ASSERT_NO_FATAL_FAILURE(CreateDevice(false));
+  ASSERT_NO_FATAL_FAILURE(ExpectFirmware("hello firmware"));
 
   fidl::ClientEnd<fuchsia_hardware_tpmimpl::TpmImpl> client_end;
   auto server = fidl::CreateEndpoints(&client_end);
@@ -223,8 +223,8 @@ TEST_F(Cr50SpiTest, TestTpmRead) {
 }
 
 TEST_F(Cr50SpiTest, TestTpmWrite) {
-  ASSERT_NO_FATAL_FAILURES(CreateDevice(false));
-  ASSERT_NO_FATAL_FAILURES(ExpectFirmware("hello firmware"));
+  ASSERT_NO_FATAL_FAILURE(CreateDevice(false));
+  ASSERT_NO_FATAL_FAILURE(ExpectFirmware("hello firmware"));
 
   fidl::ClientEnd<fuchsia_hardware_tpmimpl::TpmImpl> client_end;
   auto server = fidl::CreateEndpoints(&client_end);

@@ -96,7 +96,7 @@ TEST(ConsoleTestCase, Log) {
   ASSERT_OK(console->Log(std::move(log)));
 
   EXPECT_EQ(actual.size(), kExpectedLength);
-  EXPECT_STR_EQ(actual.c_str(), kExpectedBuffer);
+  EXPECT_STREQ(actual.c_str(), kExpectedBuffer);
 }
 
 // Verify that calling Log() does not write data to the TxSink if the tag is denied

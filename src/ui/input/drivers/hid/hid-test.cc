@@ -336,7 +336,7 @@ TEST_F(HidDeviceTest, BootMouseSendReportWithTime) {
 
   fake_hidbus_.SendReportWithTime(mouse_report, sizeof(mouse_report), callback_data.second);
   sync_completion_wait_deadline(&callback_data.first, zx::time::infinite().get());
-  ASSERT_NO_FATAL_FAILURES();
+  ASSERT_NO_FATAL_FAILURE();
 }
 
 TEST_F(HidDeviceTest, BootMouseSendReportInPieces) {

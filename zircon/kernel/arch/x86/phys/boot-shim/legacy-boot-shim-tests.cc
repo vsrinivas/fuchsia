@@ -91,8 +91,8 @@ TEST(X86LegacyBootShimTests, CmdlineItem) {
   EXPECT_GT(cmdline_payload.size(), info.cmdline.size());
   std::string_view cmdline_tail =
       cmdline_payload.substr(cmdline_payload.size() - info.cmdline.size());
-  EXPECT_STR_EQ(cmdline_tail.data(), info.cmdline.data(), "CMDLINE |%.*s|",
-                static_cast<int>(cmdline_payload.size()), cmdline_payload.data());
+  EXPECT_STREQ(cmdline_tail.data(), info.cmdline.data(), "CMDLINE |%.*s|",
+               static_cast<int>(cmdline_payload.size()), cmdline_payload.data());
 }
 
 TEST(X86LegacyBootShimTests, AcpiItems) {

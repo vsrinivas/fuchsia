@@ -68,7 +68,7 @@ void TestHelper::ExpectLogLines(std::initializer_list<std::string_view> expected
     if (expected_line.front() == ':') {
       line = line.substr(line.find_last_of(':'));
     }
-    EXPECT_STR_EQ(expected_line, line);
+    EXPECT_STREQ(expected_line, line);
   }
 }
 

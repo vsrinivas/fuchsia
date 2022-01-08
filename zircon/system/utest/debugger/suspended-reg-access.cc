@@ -151,7 +151,7 @@ TEST(SuspendedTests, SuspendedRegAccessTest) {
   while (true) {
     zx_nanosleep(zx_deadline_after(ZX_USEC(1)));
     ASSERT_EQ(zx_task_suspend_token(thread, &suspend_token), ZX_OK);
-    ASSERT_NO_FATAL_FAILURES(wait_thread_state(self_proc, thread, port, ZX_THREAD_SUSPENDED));
+    ASSERT_NO_FATAL_FAILURE(wait_thread_state(self_proc, thread, port, ZX_THREAD_SUSPENDED));
 
     read_inferior_gregs(thread, &regs);
     test_reg = regs.REG_ACCESS_TEST_REG;
@@ -162,7 +162,7 @@ TEST(SuspendedTests, SuspendedRegAccessTest) {
     // Resume and try again. Wait for the thread to actually resume before trying again to avoid
     // race conditions on notifications about thread state transitions.
     zx_handle_close(suspend_token);
-    ASSERT_NO_FATAL_FAILURES(wait_thread_state(self_proc, thread, port, ZX_THREAD_RUNNING));
+    ASSERT_NO_FATAL_FAILURE(wait_thread_state(self_proc, thread, port, ZX_THREAD_RUNNING));
   }
 
   uint64_t pc_value = extract_pc_reg(&regs);
@@ -251,7 +251,7 @@ void* suspended_in_syscall_reg_access_thread_func(void* arg_) {
   arg->sp.store(sp);
 
   suspended_in_syscall_reg_access_thread_func_helper(arg);
-  if (CURRENT_TEST_HAS_FATAL_FAILURES()) {
+  if (CURRENT_TEST_HAS_FATAL_FAILURE()) {
     return reinterpret_cast<void*>((uintptr_t)-1);
   }
 
@@ -329,7 +329,7 @@ void suspended_in_syscall_reg_access_worker(bool do_channel_call) {
 
   zx_handle_t token;
   ASSERT_EQ(zx_task_suspend_token(thread, &token), ZX_OK);
-  ASSERT_NO_FATAL_FAILURES(wait_thread_state(self_proc, thread, port, ZX_THREAD_SUSPENDED));
+  ASSERT_NO_FATAL_FAILURE(wait_thread_state(self_proc, thread, port, ZX_THREAD_SUSPENDED));
 
   zx_thread_state_general_regs_t regs;
   read_inferior_gregs(thread, &regs);
@@ -472,7 +472,7 @@ void suspended_in_exception_handler(inferior_data_t* data, const zx_port_packet_
         ASSERT_EQ(info.tid, suspend_data->thread_id);
 
         // Verify that the fault is at the PC we expected.
-        ASSERT_NO_FATAL_FAILURES(test_segv_pc(suspend_data->thread_handle));
+        ASSERT_NO_FATAL_FAILURE(test_segv_pc(suspend_data->thread_handle));
 
         // Suspend the thread before fixing the segv to verify register
         // access works while the thread is in an exception and suspended.
@@ -514,16 +514,16 @@ void suspended_in_exception_handler(inferior_data_t* data, const zx_port_packet_
 TEST(SuspendedTests, SuspendedInExceptionRegAccessTest) {
   springboard_t* sb;
   zx_handle_t inferior, channel;
-  ASSERT_NO_FATAL_FAILURES(setup_inferior(kTestInferiorChildName, &sb, &inferior, &channel));
+  ASSERT_NO_FATAL_FAILURE(setup_inferior(kTestInferiorChildName, &sb, &inferior, &channel));
 
-  ASSERT_NO_FATAL_FAILURES(start_inferior(sb));
-  ASSERT_NO_FATAL_FAILURES(verify_inferior_running(channel));
+  ASSERT_NO_FATAL_FAILURE(start_inferior(sb));
+  ASSERT_NO_FATAL_FAILURE(verify_inferior_running(channel));
 
   suspend_in_exception_data_t data;
   data.segv_count.store(0);
   data.suspend_count.store(0);
   data.resume_count.store(0);
-  ASSERT_NO_FATAL_FAILURES(get_inferior_thread_handle(channel, &data.thread_handle));
+  ASSERT_NO_FATAL_FAILURE(get_inferior_thread_handle(channel, &data.thread_handle));
 
   zx_info_handle_basic_t basic_info;
   zx_status_t status = zx_object_get_info(inferior, ZX_INFO_HANDLE_BASIC, &basic_info,
@@ -554,7 +554,7 @@ TEST(SuspendedTests, SuspendedInExceptionRegAccessTest) {
   // wait_inf_thread will process the crash and resume the inferior.
   recv_simple_response(channel, RESP_RECOVERED_FROM_CRASH);
 
-  ASSERT_NO_FATAL_FAILURES(shutdown_inferior(channel, inferior));
+  ASSERT_NO_FATAL_FAILURE(shutdown_inferior(channel, inferior));
 
   // Stop the waiter thread before closing the port that it's waiting on.
   join_wait_inf_thread(wait_inf_thread);

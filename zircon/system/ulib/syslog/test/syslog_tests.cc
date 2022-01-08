@@ -323,7 +323,7 @@ TEST(SyslogTests, test_log_reconfiguration) {
 TEST(SyslogTests, test_log_dont_dup) {
   // Remember the current lowest ununsed fd.
   int fd_before;
-  ASSERT_NO_FATAL_FAILURES(smallest_unused_fd(&fd_before));
+  ASSERT_NO_FATAL_FAILURE(smallest_unused_fd(&fd_before));
 
   // Create a logger
   fx_logger_t* logger;
@@ -338,7 +338,7 @@ TEST(SyslogTests, test_log_dont_dup) {
 
   // No fd must be taken by the logger.
   int fd_after;
-  ASSERT_NO_FATAL_FAILURES(smallest_unused_fd(&fd_after));
+  ASSERT_NO_FATAL_FAILURE(smallest_unused_fd(&fd_after));
   EXPECT_EQ(fd_before, fd_after);
 
   // Cleanup

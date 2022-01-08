@@ -157,7 +157,7 @@ void TestGetValidClock(const Fixture& fixture) {
     ASSERT_LE(round_to_usec(unpacked_clock_gettime), unpacked_gettimeofday);
   };
 
-  ASSERT_NO_FATAL_FAILURES(observe_clocks());
+  ASSERT_NO_FATAL_FAILURE(observe_clocks());
 
   ASSERT_EQ(Fixture::kBackstopTime, before);
   ASSERT_EQ(Fixture::kBackstopTime, unpacked_clock_gettime);
@@ -170,7 +170,7 @@ void TestGetValidClock(const Fixture& fixture) {
   ASSERT_OK(fixture.test_clock_set_value(start_time));
 
   // Now observe the clock via clock_gettime and make sure it all makes sense.
-  ASSERT_NO_FATAL_FAILURES(observe_clocks());
+  ASSERT_NO_FATAL_FAILURE(observe_clocks());
 
   // No observations can come before start_time
   ASSERT_LE(start_time.get(), before);
@@ -179,7 +179,7 @@ void TestGetValidClock(const Fixture& fixture) {
   ASSERT_LE(start_time.get(), after);
 
   // Ordering should match the order of query.
-  ASSERT_NO_FATAL_FAILURES(check_ordering());
+  ASSERT_NO_FATAL_FAILURE(check_ordering());
 
   // Jump the clock ahead by an absurd amount (let's use 7 days) and observe
   // again.  Make sure that clock_gettime is following along with us.  Same
@@ -187,13 +187,13 @@ void TestGetValidClock(const Fixture& fixture) {
   start_time += zx::sec(86400 * 7);
   ASSERT_OK(fixture.test_clock_set_value(start_time));
 
-  ASSERT_NO_FATAL_FAILURES(observe_clocks());
+  ASSERT_NO_FATAL_FAILURE(observe_clocks());
 
   ASSERT_LE(start_time.get(), before);
   ASSERT_LE(start_time.get(), unpacked_clock_gettime);
   ASSERT_LE(round_to_usec(start_time.get()), unpacked_gettimeofday);
   ASSERT_LE(start_time.get(), after);
-  ASSERT_NO_FATAL_FAILURES(check_ordering());
+  ASSERT_NO_FATAL_FAILURE(check_ordering());
 }
 
 TEST_F(NoUtcClockTestCase, GetTime) {
@@ -333,7 +333,7 @@ TEST_F(ReadWriteUtcClockTestCase, SetTime) {
   ASSERT_EQ(0, clock_settime(CLOCK_REALTIME, &ts));
 
   zx_clock_details_v1_t details;
-  ASSERT_NO_FATAL_FAILURES(test_clock_get_details(&details));
+  ASSERT_NO_FATAL_FAILURE(test_clock_get_details(&details));
 
   zx_time_t expected = unpack_timespec(ts);
   ASSERT_EQ(expected, details.ticks_to_synthetic.synthetic_offset);
@@ -348,7 +348,7 @@ TEST_F(ReadWriteUtcClockTestCase, SetTime) {
   ASSERT_EQ(0, settimeofday(&tv, NULL));
 
   zx_clock_details_v1_t details2;
-  ASSERT_NO_FATAL_FAILURES(test_clock_get_details(&details2));
+  ASSERT_NO_FATAL_FAILURE(test_clock_get_details(&details2));
 
   expected = unpack_timeval(tv);
   ASSERT_EQ(expected, details2.ticks_to_synthetic.synthetic_offset);

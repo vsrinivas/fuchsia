@@ -6,4 +6,4 @@
 
 #include <zxtest/zxtest.h>
 
-TEST(RunningOnBootFs, TestRootDirTest) { EXPECT_STR_EQ(getenv("TEST_ROOT_DIR"), "/boot"); }
+TEST(RunningOnBootFs, TestRootDirTest) { EXPECT_STREQ(getenv("TEST_ROOT_DIR"), "/boot"); }

@@ -511,13 +511,13 @@ TEST(ParsingTests, GoodAttributeValueHasCorrectContents) {
 
   std::unique_ptr<fidl::raw::Attribute> attribute =
       std::move(ast->type_decls.front()->attributes->attributes.front());
-  ASSERT_STR_EQ(attribute->maybe_name->span().data(), "foo");
+  ASSERT_STREQ(attribute->maybe_name->span().data(), "foo");
   ASSERT_TRUE(attribute->args.size() == 1);
 
   std::unique_ptr<fidl::raw::AttributeArg> arg = std::move(attribute->args[0]);
   auto arg_value = static_cast<fidl::raw::LiteralConstant*>(arg->value.get());
-  ASSERT_STR_EQ(static_cast<fidl::raw::StringLiteral*>(arg_value->literal.get())->MakeContents(),
-                "Bar");
+  ASSERT_STREQ(static_cast<fidl::raw::StringLiteral*>(arg_value->literal.get())->MakeContents(),
+               "Bar");
 }
 
 TEST(ParsingTests, GoodMultilineCommentHasCorrectContents) {
@@ -542,9 +542,8 @@ TEST(ParsingTests, GoodMultilineCommentHasCorrectContents) {
 
   std::unique_ptr<fidl::raw::AttributeArg> arg = std::move(attribute->args[0]);
   auto arg_value = static_cast<fidl::raw::LiteralConstant*>(arg->value.get());
-  ASSERT_STR_EQ(
-      static_cast<fidl::raw::DocCommentLiteral*>(arg_value->literal.get())->MakeContents(),
-      " A\n multiline\n comment!\n");
+  ASSERT_STREQ(static_cast<fidl::raw::DocCommentLiteral*>(arg_value->literal.get())->MakeContents(),
+               " A\n multiline\n comment!\n");
 }
 
 TEST(ParsingTests, WarnDocCommentBlankLineTest) {

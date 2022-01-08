@@ -43,11 +43,11 @@ protocol Example {
 
   const auto& success = result_union->members.at(0);
   ASSERT_NOT_NULL(success.maybe_used);
-  ASSERT_STR_EQ("response", std::string(success.maybe_used->name.data()).c_str());
+  ASSERT_STREQ("response", std::string(success.maybe_used->name.data()).c_str());
 
   const fidl::flat::Union::Member& error = result_union->members.at(1);
   ASSERT_NOT_NULL(error.maybe_used);
-  ASSERT_STR_EQ("err", std::string(error.maybe_used->name.data()).c_str());
+  ASSERT_STREQ("err", std::string(error.maybe_used->name.data()).c_str());
 
   ASSERT_NOT_NULL(error.maybe_used->type_ctor->type);
   ASSERT_EQ(error.maybe_used->type_ctor->type->kind, fidl::flat::Type::Kind::kPrimitive);

@@ -7,10 +7,10 @@
 #include <zxtest/zxtest.h>
 
 #define ASSERT_STRING_EQ(lhs, rhs, ...) \
-  ASSERT_STR_EQ(std::string(lhs).c_str(), std::string(rhs).c_str(), ##__VA_ARGS__)
+  ASSERT_STREQ(std::string(lhs).c_str(), std::string(rhs).c_str(), ##__VA_ARGS__)
 
 #define EXPECT_STRING_EQ(lhs, rhs, ...) \
-  EXPECT_STR_EQ(std::string(lhs).c_str(), std::string(rhs).c_str(), ##__VA_ARGS__)
+  EXPECT_STREQ(std::string(lhs).c_str(), std::string(rhs).c_str(), ##__VA_ARGS__)
 
 namespace cmdline {
 
@@ -399,10 +399,18 @@ TEST(ArgsParser, VectorTypes) {
   parser.AddSwitch("double_vector", 'd', "", &MyOptions::double_vector);
   parser.AddSwitch("char_vector", 'c', "", &MyOptions::char_vector);
 
-  const char* args[] = {
-      "program", "--string_vector=foo,bar,baz", "--int_vector=3", "--int_vector=7",
-      "-d", "1.5", "-d", "2.7", "--char_vector=x", "-c", "y", "--char_vector=z"
-  };
+  const char* args[] = {"program",
+                        "--string_vector=foo,bar,baz",
+                        "--int_vector=3",
+                        "--int_vector=7",
+                        "-d",
+                        "1.5",
+                        "-d",
+                        "2.7",
+                        "--char_vector=x",
+                        "-c",
+                        "y",
+                        "--char_vector=z"};
 
   MyOptions options;
   std::vector<std::string> params;
@@ -418,7 +426,7 @@ TEST(ArgsParser, VectorTypes) {
   const char* bad_args[] = {"program", "--int_vector=2.0"};
   status = parser.Parse(2, bad_args, &options, &params);
   EXPECT_TRUE(status.has_error());
-  EXPECT_STR_EQ("Expected only digits, found: 2.0", status.error_message());
+  EXPECT_STREQ("Expected only digits, found: 2.0", status.error_message());
 }
 
 }  // namespace

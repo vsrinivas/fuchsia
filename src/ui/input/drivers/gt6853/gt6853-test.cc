@@ -520,9 +520,9 @@ TEST_F(Gt6853Test, ConfigDownloadPanelType9364) {
 
   ASSERT_OK(Init());
 
-  EXPECT_STR_EQ(reinterpret_cast<const char*>(fake_i2c_.get_config_data().data()),
-                "Config number one");
-  EXPECT_STR_EQ(config_path, GT6853_CONFIG_9364_PATH);
+  EXPECT_STREQ(reinterpret_cast<const char*>(fake_i2c_.get_config_data().data()),
+               "Config number one");
+  EXPECT_STREQ(config_path, GT6853_CONFIG_9364_PATH);
   EXPECT_EQ(fake_i2c_.get_config_data().size(), 0x0304 - 121);
 }
 
@@ -549,9 +549,9 @@ TEST_F(Gt6853Test, ConfigDownloadPanelType9365) {
 
   ASSERT_OK(Init(4));  // kPanelTypeKdFiti9365
 
-  EXPECT_STR_EQ(reinterpret_cast<const char*>(fake_i2c_.get_config_data().data()),
-                "Config number zero");
-  EXPECT_STR_EQ(config_path, GT6853_CONFIG_9365_PATH);
+  EXPECT_STREQ(reinterpret_cast<const char*>(fake_i2c_.get_config_data().data()),
+               "Config number zero");
+  EXPECT_STREQ(config_path, GT6853_CONFIG_9365_PATH);
   EXPECT_EQ(fake_i2c_.get_config_data().size(), 0x0304 - 121);
 }
 
@@ -578,9 +578,9 @@ TEST_F(Gt6853Test, ConfigDownloadPanelType7703) {
 
   ASSERT_OK(Init(6));  // kPanelTypeBoeSit7703
 
-  EXPECT_STR_EQ(reinterpret_cast<const char*>(fake_i2c_.get_config_data().data()),
-                "Config number zero");
-  EXPECT_STR_EQ(config_path, GT6853_CONFIG_7703_PATH);
+  EXPECT_STREQ(reinterpret_cast<const char*>(fake_i2c_.get_config_data().data()),
+               "Config number zero");
+  EXPECT_STREQ(config_path, GT6853_CONFIG_7703_PATH);
   EXPECT_EQ(fake_i2c_.get_config_data().size(), 0x0304 - 121);
 }
 

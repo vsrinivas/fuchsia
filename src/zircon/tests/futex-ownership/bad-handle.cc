@@ -112,28 +112,28 @@ void LaunchTestCase(const char* test_case, zx_info_process_t* proc_info) {
 // where the futex value mismatched expectations.
 TEST(BadHandleTest, WaitBadHandleWithMismatchedValueDoesNotExit) {
   zx_info_process_t proc_info;
-  ASSERT_NO_FATAL_FAILURES(LaunchTestCase("no_match_wait", &proc_info));
+  ASSERT_NO_FATAL_FAILURE(LaunchTestCase("no_match_wait", &proc_info));
   // We should see ZX_ERR_BAD_STATE since the futex value mismatched
   ASSERT_EQ(proc_info.return_code, ZX_ERR_BAD_STATE);
 }
 
 TEST(BadHandleTest, WaitBadHandleWithMatchedValueExits) {
   zx_info_process_t proc_info;
-  ASSERT_NO_FATAL_FAILURES(LaunchTestCase("match_wait", &proc_info));
+  ASSERT_NO_FATAL_FAILURE(LaunchTestCase("match_wait", &proc_info));
   // We should see an exception kill due to the policy violation
   ASSERT_EQ(proc_info.return_code, ZX_TASK_RETCODE_EXCEPTION_KILL);
 }
 
 TEST(BadHandleTest, RequeueBadHandleWithMismatchedValueDoesNotExit) {
   zx_info_process_t proc_info;
-  ASSERT_NO_FATAL_FAILURES(LaunchTestCase("no_match_requeue", &proc_info));
+  ASSERT_NO_FATAL_FAILURE(LaunchTestCase("no_match_requeue", &proc_info));
   // We should see ZX_ERR_BAD_STATE since the futex value mismatched
   ASSERT_EQ(proc_info.return_code, ZX_ERR_BAD_STATE);
 }
 
 TEST(BadHandleTest, RequeueBadHandleWithMatchedValueExits) {
   zx_info_process_t proc_info;
-  ASSERT_NO_FATAL_FAILURES(LaunchTestCase("match_requeue", &proc_info));
+  ASSERT_NO_FATAL_FAILURE(LaunchTestCase("match_requeue", &proc_info));
   // We should see an exception kill due to the policy violation
   ASSERT_EQ(proc_info.return_code, ZX_TASK_RETCODE_EXCEPTION_KILL);
 }

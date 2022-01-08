@@ -384,7 +384,7 @@ class FixedOffsetBlockPartitionClientTest : public zxtest::Test {
     ASSERT_OK(RecursiveWaitForFile(devmgr_.devfs_root(), "sys/platform", &fd));
 
     constexpr uint8_t kEmptyType[GPT_GUID_LEN] = GUID_EMPTY_VALUE;
-    ASSERT_NO_FATAL_FAILURES(
+    ASSERT_NO_FATAL_FAILURE(
         BlockDevice::Create(devmgr_.devfs_root(), kEmptyType, 2, 512, &gpt_dev_));
     ASSERT_OK(fdio_get_service_handle(gpt_dev_->fd(),
                                       service_channel_.channel().reset_and_get_address()));
@@ -414,7 +414,7 @@ class FixedOffsetBlockPartitionClientTest : public zxtest::Test {
 };
 
 // Writes |data| to |client|.
-// Call with ASSERT_NO_FATAL_FAILURES().
+// Call with ASSERT_NO_FATAL_FAILURE().
 void Write(std::unique_ptr<paver::PartitionClient> client, std::string_view data) {
   // Write data to a VMO.
   zx::vmo vmo;
@@ -426,7 +426,7 @@ void Write(std::unique_ptr<paver::PartitionClient> client, std::string_view data
 }
 
 // Reads |size| bytes from |client| into |data|.
-// Call with ASSERT_NO_FATAL_FAILURES().
+// Call with ASSERT_NO_FATAL_FAILURE().
 void Read(std::unique_ptr<paver::PartitionClient> client, std::string* data, size_t size) {
   if (data->size() < size) {
     data->resize(size);
@@ -466,11 +466,11 @@ TEST_F(FixedOffsetBlockPartitionClientTest, DISABLED_ReadOffsetedPartition) {
   auto pauser = BlockWatcherPauser::Create(GetSvcRoot());
   ASSERT_OK(pauser);
 
-  ASSERT_NO_FATAL_FAILURES(Write(RawClient(), block0 + firmware));
+  ASSERT_NO_FATAL_FAILURE(Write(RawClient(), block0 + firmware));
 
   // Bootloader read should skip block 0.
   std::string actual;
-  ASSERT_NO_FATAL_FAILURES(Read(FixedOffsetClient(1, 0), &actual, 512));
+  ASSERT_NO_FATAL_FAILURE(Read(FixedOffsetClient(1, 0), &actual, 512));
   ASSERT_EQ(firmware, actual);
 }
 
@@ -481,12 +481,12 @@ TEST_F(FixedOffsetBlockPartitionClientTest, DISABLED_WriteOffsetdPartition) {
   auto pauser = BlockWatcherPauser::Create(GetSvcRoot());
   ASSERT_OK(pauser);
 
-  ASSERT_NO_FATAL_FAILURES(Write(RawClient(), block0 + block0));
-  ASSERT_NO_FATAL_FAILURES(Write(FixedOffsetClient(1, 0), firmware));
+  ASSERT_NO_FATAL_FAILURE(Write(RawClient(), block0 + block0));
+  ASSERT_NO_FATAL_FAILURE(Write(FixedOffsetClient(1, 0), firmware));
 
   // Bootloader write should have skipped block 0.
   std::string actual;
-  ASSERT_NO_FATAL_FAILURES(Read(RawClient(), &actual, 1024));
+  ASSERT_NO_FATAL_FAILURE(Read(RawClient(), &actual, 1024));
   ASSERT_EQ(block0 + firmware, actual);
 }
 
@@ -497,11 +497,11 @@ TEST_F(FixedOffsetBlockPartitionClientTest, ReadPartitionOffsetedBuffer) {
   auto pauser = BlockWatcherPauser::Create(GetSvcRoot());
   ASSERT_OK(pauser);
 
-  ASSERT_NO_FATAL_FAILURES(Write(RawClient(), initial));
+  ASSERT_NO_FATAL_FAILURE(Write(RawClient(), initial));
 
   // Bootloader should read to |actual| from offset 512
   std::string actual(2 * block_size, 'F');
-  ASSERT_NO_FATAL_FAILURES(Read(FixedOffsetClient(0, 1), &actual, block_size));
+  ASSERT_NO_FATAL_FAILURE(Read(FixedOffsetClient(0, 1), &actual, block_size));
   ASSERT_EQ(initial, actual.substr(block_size, block_size));
 }
 
@@ -513,12 +513,12 @@ TEST_F(FixedOffsetBlockPartitionClientTest, WritePartitionOffsetedBuffer) {
   auto pauser = BlockWatcherPauser::Create(GetSvcRoot());
   ASSERT_OK(pauser);
 
-  ASSERT_NO_FATAL_FAILURES(Write(RawClient(), initial));
-  ASSERT_NO_FATAL_FAILURES(Write(FixedOffsetClient(0, 1), firmware));
+  ASSERT_NO_FATAL_FAILURE(Write(RawClient(), initial));
+  ASSERT_NO_FATAL_FAILURE(Write(FixedOffsetClient(0, 1), firmware));
 
   // Bootloader should write only 'B' to storage
   std::string actual;
-  ASSERT_NO_FATAL_FAILURES(Read(RawClient(), &actual, block_size));
+  ASSERT_NO_FATAL_FAILURE(Read(RawClient(), &actual, block_size));
   ASSERT_EQ(firmware.substr(block_size), actual);
 }
 

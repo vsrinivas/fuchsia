@@ -168,7 +168,7 @@ class AcpiBatteryTest : public InspectTestHelper, public zxtest::Test {
   fidl::WireSyncClient<fuchsia_hardware_power::Source> source_client_;
 };
 
-TEST_F(AcpiBatteryTest, CheckBatteryInfo) { ASSERT_NO_FATAL_FAILURES(CheckInfo()); }
+TEST_F(AcpiBatteryTest, CheckBatteryInfo) { ASSERT_NO_FATAL_FAILURE(CheckInfo()); }
 
 TEST_F(AcpiBatteryTest, CheckSourceInfo) {
   auto res = source_client_->GetPowerInfo();
@@ -187,7 +187,7 @@ TEST_F(AcpiBatteryTest, CheckDataUpdated) {
 
   auto event = std::move(res->handle);
 
-  ASSERT_NO_FATAL_FAILURES(CheckInfo());
+  ASSERT_NO_FATAL_FAILURE(CheckInfo());
 
   zx_signals_t pending = 0;
   ASSERT_STATUS(event.wait_one(ZX_USER_SIGNAL_0, zx::time::infinite_past(), &pending),
@@ -214,13 +214,13 @@ TEST_F(AcpiBatteryTest, CheckDataUpdated) {
 }
 
 TEST_F(AcpiBatteryTest, InspectTest) {
-  ASSERT_NO_FATAL_FAILURES(ReadInspect(device_->GetDeviceContext<AcpiBattery>()->inspect_vmo()));
-  ASSERT_NO_FATAL_FAILURES(CheckProperty(hierarchy().node(), "model-number",
-                                         inspect::StringPropertyValue(kModelNumber)));
-  ASSERT_NO_FATAL_FAILURES(CheckProperty(hierarchy().node(), "serial-number",
-                                         inspect::StringPropertyValue(kSerialNumber)));
-  ASSERT_NO_FATAL_FAILURES(CheckProperty(hierarchy().node(), "battery-type",
-                                         inspect::StringPropertyValue(kBatteryType)));
+  ASSERT_NO_FATAL_FAILURE(ReadInspect(device_->GetDeviceContext<AcpiBattery>()->inspect_vmo()));
+  ASSERT_NO_FATAL_FAILURE(CheckProperty(hierarchy().node(), "model-number",
+                                        inspect::StringPropertyValue(kModelNumber)));
+  ASSERT_NO_FATAL_FAILURE(CheckProperty(hierarchy().node(), "serial-number",
+                                        inspect::StringPropertyValue(kSerialNumber)));
+  ASSERT_NO_FATAL_FAILURE(CheckProperty(hierarchy().node(), "battery-type",
+                                        inspect::StringPropertyValue(kBatteryType)));
 }
 
 }  // namespace acpi_battery::test

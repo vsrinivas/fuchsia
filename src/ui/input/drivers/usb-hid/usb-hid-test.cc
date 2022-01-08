@@ -56,7 +56,7 @@ void USBVirtualBus::InitUsbHid(fbl::String* devpath,
   config_descs.emplace_back(
       fidl::VectorView<usb_peripheral::wire::FunctionDescriptor>::FromExternal(function_descs));
 
-  ASSERT_NO_FATAL_FAILURES(SetupPeripheralDevice(std::move(device_desc), std::move(config_descs)));
+  ASSERT_NO_FATAL_FAILURE(SetupPeripheralDevice(std::move(device_desc), std::move(config_descs)));
 
   fbl::unique_fd fd(openat(devmgr_.devfs_root().get(), "class/input", O_RDONLY));
   while (fdio_watch_directory(fd.get(), WaitForAnyFile, ZX_TIME_INFINITE, devpath) != ZX_ERR_STOP) {
@@ -104,7 +104,7 @@ class UsbOneEndpointTest : public zxtest::Test {
         .interface_subclass = 0,
         .interface_protocol = USB_PROTOCOL_TEST_HID_ONE_ENDPOINT,
     };
-    ASSERT_NO_FATAL_FAILURES(bus_.InitUsbHid(&devpath_, usb_hid_function_desc));
+    ASSERT_NO_FATAL_FAILURE(bus_.InitUsbHid(&devpath_, usb_hid_function_desc));
 
     fbl::unique_fd fd_input(openat(bus_.GetRootFd(), devpath_.c_str(), O_RDWR));
     ASSERT_GT(fd_input.get(), 0);
@@ -116,10 +116,10 @@ class UsbOneEndpointTest : public zxtest::Test {
   }
 
   void TearDown() override {
-    ASSERT_NO_FATAL_FAILURES(bus_.ClearPeripheralDeviceFunctions());
+    ASSERT_NO_FATAL_FAILURE(bus_.ClearPeripheralDeviceFunctions());
 
     auto result2 = bus_.virtual_bus()->Disable();
-    ASSERT_NO_FATAL_FAILURES(ValidateResult(result2));
+    ASSERT_NO_FATAL_FAILURE(ValidateResult(result2));
   }
 
  protected:
@@ -136,7 +136,7 @@ class UsbTwoEndpointTest : public zxtest::Test {
         .interface_subclass = 0,
         .interface_protocol = USB_PROTOCOL_TEST_HID_TWO_ENDPOINT,
     };
-    ASSERT_NO_FATAL_FAILURES(bus_.InitUsbHid(&devpath_, usb_hid_function_desc));
+    ASSERT_NO_FATAL_FAILURE(bus_.InitUsbHid(&devpath_, usb_hid_function_desc));
 
     fbl::unique_fd fd_input(openat(bus_.GetRootFd(), devpath_.c_str(), O_RDWR));
     ASSERT_GT(fd_input.get(), 0);
@@ -148,10 +148,10 @@ class UsbTwoEndpointTest : public zxtest::Test {
   }
 
   void TearDown() override {
-    ASSERT_NO_FATAL_FAILURES(bus_.ClearPeripheralDeviceFunctions());
+    ASSERT_NO_FATAL_FAILURE(bus_.ClearPeripheralDeviceFunctions());
 
     auto result2 = bus_.virtual_bus()->Disable();
-    ASSERT_NO_FATAL_FAILURES(ValidateResult(result2));
+    ASSERT_NO_FATAL_FAILURE(ValidateResult(result2));
   }
 
  protected:
@@ -179,7 +179,7 @@ TEST_F(UsbOneEndpointTest, SetAndGetReport) {
   ASSERT_EQ(0xde, get_result->report[2]);
 }
 
-TEST_F(UsbOneEndpointTest, UnBind) { ASSERT_NO_FATAL_FAILURES(bus_.Unbind(devpath_)); }
+TEST_F(UsbOneEndpointTest, UnBind) { ASSERT_NO_FATAL_FAILURE(bus_.Unbind(devpath_)); }
 
 TEST_F(UsbTwoEndpointTest, SetAndGetReport) {
   uint8_t buf[sizeof(hid_boot_mouse_report_t)] = {0xab, 0xbc, 0xde};
@@ -200,7 +200,7 @@ TEST_F(UsbTwoEndpointTest, SetAndGetReport) {
   ASSERT_EQ(0xde, get_result->report[2]);
 }
 
-TEST_F(UsbTwoEndpointTest, UnBind) { ASSERT_NO_FATAL_FAILURES(bus_.Unbind(devpath_)); }
+TEST_F(UsbTwoEndpointTest, UnBind) { ASSERT_NO_FATAL_FAILURE(bus_.Unbind(devpath_)); }
 
 }  // namespace
 }  // namespace usb_virtual_bus

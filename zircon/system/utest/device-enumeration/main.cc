@@ -145,7 +145,7 @@ TEST_F(DeviceEnumerationTest, QemuArm64Test) {
       "sys/platform/pci/00:00.0",
   };
 
-  ASSERT_NO_FATAL_FAILURES(TestRunner(kDevicePaths, std::size(kDevicePaths)));
+  ASSERT_NO_FATAL_FAILURE(TestRunner(kDevicePaths, std::size(kDevicePaths)));
 }
 
 TEST_F(DeviceEnumerationTest, Vim3Test) {
@@ -197,7 +197,7 @@ TEST_F(DeviceEnumerationTest, Vim3Test) {
       "gpio-expander/ti-tca6408a/gpio-107",
   };
 
-  ASSERT_NO_FATAL_FAILURES(TestRunner(kDevicePaths, std::size(kDevicePaths)));
+  ASSERT_NO_FATAL_FAILURE(TestRunner(kDevicePaths, std::size(kDevicePaths)));
 }
 
 TEST_F(DeviceEnumerationTest, AstroTest) {
@@ -279,13 +279,13 @@ TEST_F(DeviceEnumerationTest, AstroTest) {
       "sys/platform/00:00:29",
   };
 
-  ASSERT_NO_FATAL_FAILURES(TestRunner(kDevicePaths, std::size(kDevicePaths)));
+  ASSERT_NO_FATAL_FAILURE(TestRunner(kDevicePaths, std::size(kDevicePaths)));
 
   static const char* kTouchscreenDevicePaths[] = {
       "gt92xx-touch/gt92xx HidDevice/hid-device/InputReport",
       "ft3x27-touch/focaltouch HidDevice/hid-device/InputReport",
   };
-  ASSERT_NO_FATAL_FAILURES(
+  ASSERT_NO_FATAL_FAILURE(
       WaitForOne(cpp20::span(kTouchscreenDevicePaths, std::size(kTouchscreenDevicePaths))));
 }
 
@@ -381,7 +381,7 @@ TEST_F(DeviceEnumerationTest, NelsonTest) {
       "brownout-protection/nelson-brownout-protection",
   };
 
-  ASSERT_NO_FATAL_FAILURES(TestRunner(kDevicePaths, std::size(kDevicePaths)));
+  ASSERT_NO_FATAL_FAILURE(TestRunner(kDevicePaths, std::size(kDevicePaths)));
 }
 
 TEST_F(DeviceEnumerationTest, SherlockTest) {
@@ -471,7 +471,7 @@ TEST_F(DeviceEnumerationTest, SherlockTest) {
       "sys/platform/05:00:2/aml-i2c/i2c/i2c-2-62",
   };
 
-  ASSERT_NO_FATAL_FAILURES(TestRunner(kDevicePaths, std::size(kDevicePaths)));
+  ASSERT_NO_FATAL_FAILURE(TestRunner(kDevicePaths, std::size(kDevicePaths)));
 }
 
 TEST_F(DeviceEnumerationTest, LuisTest) {
@@ -517,7 +517,7 @@ TEST_F(DeviceEnumerationTest, LuisTest) {
       "dwc2/dwc2/usb-peripheral/function-000",
   };
 
-  ASSERT_NO_FATAL_FAILURES(TestRunner(kDevicePaths, std::size(kDevicePaths)));
+  ASSERT_NO_FATAL_FAILURE(TestRunner(kDevicePaths, std::size(kDevicePaths)));
 }
 
 TEST_F(DeviceEnumerationTest, EveTest) {
@@ -533,7 +533,7 @@ TEST_F(DeviceEnumerationTest, EveTest) {
       "sys/platform/pci/00:19.2/i2c-bus-9d64/i2c/i2c-0-87/alc5514",   // Codec mics.
   };
 
-  ASSERT_NO_FATAL_FAILURES(TestRunner(kDevicePaths, std::size(kDevicePaths)));
+  ASSERT_NO_FATAL_FAILURE(TestRunner(kDevicePaths, std::size(kDevicePaths)));
 }
 
 TEST_F(DeviceEnumerationTest, NucTest) {
@@ -550,7 +550,7 @@ TEST_F(DeviceEnumerationTest, NucTest) {
       "pci-00:1f.6/e1000",
   };
 
-  ASSERT_NO_FATAL_FAILURES(TestRunner(kDevicePaths, std::size(kDevicePaths)));
+  ASSERT_NO_FATAL_FAILURE(TestRunner(kDevicePaths, std::size(kDevicePaths)));
 }
 
 TEST_F(DeviceEnumerationTest, NocturneTest) {
@@ -568,7 +568,7 @@ TEST_F(DeviceEnumerationTest, NocturneTest) {
       "sys/platform/pci/00:15.0/i2c-bus-9d60/000a/i2c-hid/hid-device/InputReport",
   };
 
-  ASSERT_NO_FATAL_FAILURES(TestRunner(kDevicePaths, std::size(kDevicePaths)));
+  ASSERT_NO_FATAL_FAILURE(TestRunner(kDevicePaths, std::size(kDevicePaths)));
 }
 
 TEST_F(DeviceEnumerationTest, QemuX64Q35Test) {
@@ -584,7 +584,7 @@ TEST_F(DeviceEnumerationTest, QemuX64Q35Test) {
       "sys/platform/platform-passthrough/acpi/acpi-KBD_/i8042-mouse/hid-device/InputReport",
   };
 
-  ASSERT_NO_FATAL_FAILURES(TestRunner(kDevicePaths, std::size(kDevicePaths)));
+  ASSERT_NO_FATAL_FAILURE(TestRunner(kDevicePaths, std::size(kDevicePaths)));
 
   if (!device_enumeration::IsAemuBoard()) {
     return;
@@ -612,7 +612,7 @@ TEST_F(DeviceEnumerationTest, QemuX64Q35Test) {
       "goldfish-control-2/goldfish-control/goldfish-display",
   };
 
-  ASSERT_NO_FATAL_FAILURES(TestRunner(kAemuDevicePaths, std::size(kAemuDevicePaths)));
+  ASSERT_NO_FATAL_FAILURE(TestRunner(kAemuDevicePaths, std::size(kAemuDevicePaths)));
 }
 
 }  // namespace

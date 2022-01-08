@@ -49,7 +49,7 @@ TEST_F(FakePcirootTests, GetPciPlatformInfo) {
   ASSERT_OK(pciroot().PcirootGetPciPlatformInfo(&info));
   ASSERT_EQ(pciroot().bus_start(), info.start_bus_num);
   ASSERT_EQ(pciroot().bus_end(), info.end_bus_num);
-  ASSERT_STR_EQ("fakroot", info.name);
+  ASSERT_STREQ("fakroot", info.name);
   pciroot().enable_get_pci_platform_info(false);
   ASSERT_STATUS(ZX_ERR_NOT_SUPPORTED, pciroot().PcirootGetPciPlatformInfo(&info));
 }

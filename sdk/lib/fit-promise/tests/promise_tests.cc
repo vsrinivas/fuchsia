@@ -67,7 +67,7 @@ TEST(PromiseTests, basics) {
       EXPECT_EQ(i * i / 2, result.value());
     } else {
       EXPECT_TRUE(result.is_error());
-      EXPECT_STR_EQ("square is odd", result.error());
+      EXPECT_STREQ("square is odd", result.error());
     }
   }
 }

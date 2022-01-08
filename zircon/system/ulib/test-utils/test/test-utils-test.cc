@@ -74,14 +74,14 @@ class TestProcess {
 
 TEST(TestUtils, ThreadException) {
   TestProcess test_process;
-  ASSERT_NO_FATAL_FAILURES(test_process.Init());
+  ASSERT_NO_FATAL_FAILURE(test_process.Init());
 
   zx::channel exception_channel;
   ASSERT_OK(test_process.thread().create_exception_channel(0, &exception_channel));
 
   zx_exception_info_t info;
   zx::exception exception;
-  ASSERT_NO_FATAL_FAILURES(test_process.CrashAndGetException(exception_channel, &info, &exception));
+  ASSERT_NO_FATAL_FAILURE(test_process.CrashAndGetException(exception_channel, &info, &exception));
 
   EXPECT_EQ(ZX_EXCP_FATAL_PAGE_FAULT, info.type);
 
@@ -108,14 +108,14 @@ TEST(TestUtils, ThreadException) {
 
 TEST(TestUtils, ProcessDebugException) {
   TestProcess test_process;
-  ASSERT_NO_FATAL_FAILURES(test_process.Init());
+  ASSERT_NO_FATAL_FAILURE(test_process.Init());
   zx::channel exception_channel;
   ASSERT_OK(test_process.process().create_exception_channel(ZX_EXCEPTION_CHANNEL_DEBUGGER,
                                                             &exception_channel));
 
   zx_exception_info_t info;
   zx::exception exception;
-  ASSERT_NO_FATAL_FAILURES(test_process.CrashAndGetException(exception_channel, &info, &exception));
+  ASSERT_NO_FATAL_FAILURE(test_process.CrashAndGetException(exception_channel, &info, &exception));
 
   // Make sure the DEBUGGER flag got passed through correctly - if it was, we
   // should get a THREAD_STARTING exception instead of a crash.

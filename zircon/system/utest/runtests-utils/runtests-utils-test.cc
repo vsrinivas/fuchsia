@@ -43,8 +43,8 @@ TEST(ParseTestNames, ParseTestNamesEmptyStrInMiddle) {
   fbl::Vector<fbl::String> parsed;
   ParseTestNames(input, &parsed);
   ASSERT_EQ(2, parsed.size());
-  EXPECT_STR_EQ("a", parsed[0].c_str());
-  EXPECT_STR_EQ("b", parsed[1].c_str());
+  EXPECT_STREQ("a", parsed[0].c_str());
+  EXPECT_STREQ("b", parsed[1].c_str());
 }
 
 TEST(ParseTestNames, ParseTestNamesTrailingComma) {
@@ -52,7 +52,7 @@ TEST(ParseTestNames, ParseTestNamesTrailingComma) {
   fbl::Vector<fbl::String> parsed;
   ParseTestNames(input, &parsed);
   ASSERT_EQ(1, parsed.size());
-  EXPECT_STR_EQ("a", parsed[0].c_str());
+  EXPECT_STREQ("a", parsed[0].c_str());
 }
 
 TEST(ParseTestNames, ParseTestNamesNormal) {
@@ -60,8 +60,8 @@ TEST(ParseTestNames, ParseTestNamesNormal) {
   fbl::Vector<fbl::String> parsed;
   ParseTestNames(input, &parsed);
   ASSERT_EQ(2, parsed.size());
-  EXPECT_STR_EQ("a", parsed[0].c_str());
-  EXPECT_STR_EQ("b", parsed[1].c_str());
+  EXPECT_STREQ("a", parsed[0].c_str());
+  EXPECT_STREQ("b", parsed[1].c_str());
 }
 
 TEST(IsInWhitelist, EmptyWhitelist) {
@@ -74,15 +74,11 @@ TEST(IsInWhitelist, NonemptyWhitelist) {
   EXPECT_TRUE(IsInWhitelist("a", whitelist));
 }
 
-TEST(JoinPath, JoinPathNoTrailingSlash) {
-  EXPECT_STR_EQ("a/b/c/d", JoinPath("a/b", "c/d").c_str());
-}
+TEST(JoinPath, JoinPathNoTrailingSlash) { EXPECT_STREQ("a/b/c/d", JoinPath("a/b", "c/d").c_str()); }
 
-TEST(JoinPath, JoinPathTrailingSlash) { EXPECT_STR_EQ("a/b/c/d", JoinPath("a/b/", "c/d").c_str()); }
+TEST(JoinPath, JoinPathTrailingSlash) { EXPECT_STREQ("a/b/c/d", JoinPath("a/b/", "c/d").c_str()); }
 
-TEST(JoinPath, JoinPathAbsoluteChild) {
-  EXPECT_STR_EQ("a/b/c/d", JoinPath("a/b/", "/c/d").c_str());
-}
+TEST(JoinPath, JoinPathAbsoluteChild) { EXPECT_STREQ("a/b/c/d", JoinPath("a/b/", "/c/d").c_str()); }
 
 TEST(MkDirAll, MkDirAllTooLong) {
   char too_long[PATH_MAX + 2];
@@ -146,7 +142,7 @@ TEST(WriteSummaryJSON, WriteSummaryJSONSucceeds) {
   }
 }
 )";
-  EXPECT_STR_EQ(kExpectedJSONOutput, buf.get());
+  EXPECT_STREQ(kExpectedJSONOutput, buf.get());
 }
 
 TEST(WriteSummaryJSON, WriteSummaryJSONSucceedsWithoutSyslogPath) {
@@ -176,7 +172,7 @@ TEST(WriteSummaryJSON, WriteSummaryJSONSucceedsWithoutSyslogPath) {
 }
 )";
 
-  EXPECT_STR_EQ(kExpectedJSONOutput, buf.get());
+  EXPECT_STREQ(kExpectedJSONOutput, buf.get());
 }
 
 TEST(ResolveGlobs, ResolveGlobsNoMatches) {
@@ -203,7 +199,7 @@ TEST(ResolveGlobs, ResolveGlobsMultipleMatches) {
   fbl::Vector<fbl::String> resolved;
   ASSERT_EQ(0, ResolveGlobs(globs, &resolved));
   ASSERT_EQ(2, resolved.size());
-  EXPECT_STR_EQ(existing_dir_path.c_str(), resolved[0].c_str());
+  EXPECT_STREQ(existing_dir_path.c_str(), resolved[0].c_str());
 }
 
 TEST(RunTest, RunTestSuccess) {
@@ -211,7 +207,7 @@ TEST(RunTest, RunTestSuccess) {
   fbl::String test_name = script_file.path();
   const char* argv[] = {test_name.c_str(), nullptr};
   std::unique_ptr<Result> result = RunTest(argv, nullptr, test_name.c_str(), 0, nullptr);
-  EXPECT_STR_EQ(argv[0], result->name.c_str());
+  EXPECT_STREQ(argv[0], result->name.c_str());
   EXPECT_EQ(SUCCESS, result->launch_status);
   EXPECT_EQ(0, result->return_code);
 }
@@ -223,7 +219,7 @@ TEST(RunTest, RunTestTimeout) {
   const char* inf_loop_argv[] = {inf_loop_name.c_str(), nullptr};
   std::unique_ptr<Result> result =
       RunTest(inf_loop_argv, nullptr, inf_loop_name.c_str(), 1, nullptr);
-  EXPECT_STR_EQ(inf_loop_argv[0], result->name.c_str());
+  EXPECT_STREQ(inf_loop_argv[0], result->name.c_str());
   EXPECT_EQ(TIMED_OUT, result->launch_status);
   EXPECT_EQ(0, result->return_code);
 
@@ -232,7 +228,7 @@ TEST(RunTest, RunTestTimeout) {
   fbl::String succeed_name = success_file.path();
   const char* succeed_argv[] = {succeed_name.c_str(), nullptr};
   result = RunTest(succeed_argv, nullptr, succeed_name.c_str(), 100000, nullptr);
-  EXPECT_STR_EQ(succeed_argv[0], result->name.c_str());
+  EXPECT_STREQ(succeed_argv[0], result->name.c_str());
   EXPECT_EQ(SUCCESS, result->launch_status);
   EXPECT_EQ(0, result->return_code);
 }
@@ -245,7 +241,7 @@ TEST(RunTest, RunTestFailure) {
 
   std::unique_ptr<Result> result = RunTest(argv, nullptr, test_name.c_str(), 0, nullptr);
 
-  EXPECT_STR_EQ(argv[0], result->name.c_str());
+  EXPECT_STREQ(argv[0], result->name.c_str());
   EXPECT_EQ(FAILED_NONZERO_RETURN_CODE, result->launch_status);
   EXPECT_EQ(77, result->return_code);
 }
@@ -254,7 +250,7 @@ TEST(RunTest, RunTestFailureToLoadFile) {
   const char* argv[] = {"i/do/not/exist/", nullptr};
 
   std::unique_ptr<Result> result = RunTest(argv, nullptr, argv[0], 0, nullptr);
-  EXPECT_STR_EQ(argv[0], result->name.c_str());
+  EXPECT_STREQ(argv[0], result->name.c_str());
   EXPECT_EQ(FAILED_TO_LAUNCH, result->launch_status);
 }
 
@@ -298,7 +294,7 @@ TEST(DiscoverTestsInDirGlobs, DiscoverTestsInDirGlobsFilter) {
   EXPECT_EQ(0, DiscoverTestsInDirGlobs({JoinPath(kMemFsRoot, "*")}, nullptr,
                                        {kHopefullyUniqueFileBasename}, &discovered_paths));
   EXPECT_EQ(1, discovered_paths.size());
-  EXPECT_STR_EQ(unique_file_name.c_str(), discovered_paths[0].c_str());
+  EXPECT_STREQ(unique_file_name.c_str(), discovered_paths[0].c_str());
 }
 
 TEST(DiscoverTestsInDirGlobs, DiscoverTestsInDirGlobsIgnore) {
@@ -311,7 +307,7 @@ TEST(DiscoverTestsInDirGlobs, DiscoverTestsInDirGlobsIgnore) {
   EXPECT_EQ(0, DiscoverTestsInDirGlobs({test_dir_a.path(), test_dir_b.path()},
                                        test_dir_b.basename(), {}, &discovered_paths));
   EXPECT_EQ(1, discovered_paths.size());
-  EXPECT_STR_EQ(a_name.c_str(), discovered_paths[0].c_str());
+  EXPECT_STREQ(a_name.c_str(), discovered_paths[0].c_str());
 }
 
 TEST(RunTests, RunTestsWithArguments) {
@@ -440,7 +436,7 @@ TEST(DiscoverAndRunTests, DiscoverAndRunTestsWithOutput) {
   EXPECT_TRUE(re2::RE2::FindAndConsume(&buf_for_fail, expected_fail_output_regex));
 
   auto outputs_end = buf_for_pass.length() < buf_for_fail.length() ? buf_for_pass : buf_for_fail;
-  EXPECT_STR_EQ("\n  ]\n}\n", outputs_end.data());
+  EXPECT_STREQ("\n  ]\n}\n", outputs_end.data());
 }
 
 // Passing an --output argument *and* a syslog file name should result in output being

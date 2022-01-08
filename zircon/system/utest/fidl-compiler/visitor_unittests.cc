@@ -7,6 +7,7 @@
 #include <fidl/parser.h>
 #include <fidl/source_file.h>
 #include <fidl/tree_visitor.h>
+
 #include <zxtest/zxtest.h>
 
 #include "examples.h"
@@ -48,7 +49,7 @@ class NoopTreeVisitor : public fidl::raw::DeclarationOrderTreeVisitor {
   const char* last_location_;
 };
 
-// Provides more useful context for string diff than EXPECT_STR_EQ, which shows
+// Provides more useful context for string diff than EXPECT_STREQ, which shows
 // a limited prefix.  When the string is long, and the difference is buried
 // past the limited prefix, the limited prefix doesn't give useful information.
 std::string targeted_diff(const char* expected, const char* actual, size_t size) {
@@ -124,7 +125,7 @@ protocol MyProtocol { // C15
     std::string d = targeted_diff(expected.c_str(), actual, output.size());
     d = "example.fidl: " + d;
 
-    EXPECT_STR_EQ(expected.c_str(), actual, "%s", d.c_str());
+    EXPECT_STREQ(expected.c_str(), actual, "%s", d.c_str());
   }
 }
 

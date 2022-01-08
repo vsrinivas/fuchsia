@@ -291,7 +291,7 @@ TEST_F(CobaltLoggerTest, LogHistogramReturnsTrueWhenServiceReturnsOk) {
   ASSERT_NO_FAILURES(StartServiceLoop(), "Failed to initialize the service async dispatchers.");
 
   ASSERT_TRUE(logger->Log(info, buckets.data(), buckets.size()));
-  ASSERT_NO_FATAL_FAILURES(checker_.Check());
+  ASSERT_NO_FATAL_FAILURE(checker_.Check());
   auto itr = GetStorage().histograms().find(info);
   ASSERT_NE(GetStorage().histograms().end(), itr);
   ASSERT_EQ(itr->second.size(), kBucketCount);
@@ -322,7 +322,7 @@ TEST_F(CobaltLoggerTest, LogHistogramReturnsFalseWhenFactoryServiceReturnsError)
   ASSERT_NO_FAILURES(StartServiceLoop(), "Failed to initialize the service async dispatchers.");
 
   ASSERT_FALSE(logger->Log(info, buckets.data(), buckets.size()));
-  ASSERT_NO_FATAL_FAILURES(checker_.Check());
+  ASSERT_NO_FATAL_FAILURE(checker_.Check());
   EXPECT_TRUE(GetStorage().histograms().empty());
   EXPECT_TRUE(GetStorage().counters().empty());
 }
@@ -346,7 +346,7 @@ TEST_F(CobaltLoggerTest, LogHistogramReturnsFalseWhenLoggerServiceReturnsError) 
   ASSERT_NO_FAILURES(StartServiceLoop(), "Failed to initialize the service async dispatchers.");
 
   ASSERT_FALSE(logger->Log(info, buckets.data(), buckets.size()));
-  ASSERT_NO_FATAL_FAILURES(checker_.Check());
+  ASSERT_NO_FATAL_FAILURE(checker_.Check());
 }
 
 TEST_F(CobaltLoggerTest, LogHistogramWaitsUntilServiceBecomesAvailable) {
@@ -376,7 +376,7 @@ TEST_F(CobaltLoggerTest, LogHistogramWaitsUntilServiceBecomesAvailable) {
   blocks_until_starts.join();
 
   ASSERT_TRUE(log_result);
-  ASSERT_NO_FATAL_FAILURES(checker_.Check());
+  ASSERT_NO_FATAL_FAILURE(checker_.Check());
   auto itr = GetStorage().histograms().find(info);
   ASSERT_NE(GetStorage().histograms().end(), itr);
   ASSERT_EQ(itr->second.size(), kBucketCount);
@@ -397,7 +397,7 @@ TEST_F(CobaltLoggerTest, LogCounterReturnsTrueWhenServiceReturnsOk) {
   ASSERT_NO_FAILURES(StartServiceLoop(), "Failed to initialize the service async dispatchers.");
 
   ASSERT_TRUE(logger->Log(info, kCounter));
-  ASSERT_NO_FATAL_FAILURES(checker_.Check());
+  ASSERT_NO_FATAL_FAILURE(checker_.Check());
   auto itr = GetStorage().counters().find(info);
   ASSERT_NE(GetStorage().counters().end(), itr);
 
@@ -416,7 +416,7 @@ TEST_F(CobaltLoggerTest, LogCounterReturnsFalseWhenFactoryServiceReturnsError) {
   ASSERT_NO_FAILURES(StartServiceLoop(), "Failed to initialize the service async dispatchers.");
 
   ASSERT_FALSE(logger->Log(info, kCounter));
-  ASSERT_NO_FATAL_FAILURES(checker_.Check());
+  ASSERT_NO_FATAL_FAILURE(checker_.Check());
   EXPECT_TRUE(GetStorage().histograms().empty());
   EXPECT_TRUE(GetStorage().counters().empty());
 }
@@ -434,7 +434,7 @@ TEST_F(CobaltLoggerTest, LogCounterReturnsFalseWhenLoggerServiceReturnsError) {
   ASSERT_NO_FAILURES(StartServiceLoop(), "Failed to initialize the service async dispatchers.");
 
   ASSERT_FALSE(logger->Log(info, kCounter));
-  ASSERT_NO_FATAL_FAILURES(checker_.Check());
+  ASSERT_NO_FATAL_FAILURE(checker_.Check());
 }
 
 TEST_F(CobaltLoggerTest, LogCounterWaitsUntilServiceBecomesAvailable) {
@@ -458,7 +458,7 @@ TEST_F(CobaltLoggerTest, LogCounterWaitsUntilServiceBecomesAvailable) {
   blocks_until_starts.join();
 
   ASSERT_TRUE(log_result.load());
-  ASSERT_NO_FATAL_FAILURES(checker_.Check());
+  ASSERT_NO_FATAL_FAILURE(checker_.Check());
   auto itr = GetStorage().counters().find(info);
   ASSERT_NE(GetStorage().counters().end(), itr);
 

@@ -43,7 +43,7 @@ constexpr auto CompatHashSize = [](auto&& elf) {
 };
 
 TEST(ElfldltlSymbolTests, CompatHashSize) {
-  ASSERT_NO_FATAL_FAILURES(TestAllFormats(CompatHashSize));
+  ASSERT_NO_FATAL_FAILURE(TestAllFormats(CompatHashSize));
 }
 
 constexpr auto GnuHashSize = [](auto&& elf) {
@@ -56,7 +56,7 @@ constexpr auto GnuHashSize = [](auto&& elf) {
   EXPECT_EQ(si.safe_symtab().size(), kTestSymbolCount);
 };
 
-TEST(ElfldltlSymbolTests, GnuHashSize) { ASSERT_NO_FATAL_FAILURES(TestAllFormats(GnuHashSize)); }
+TEST(ElfldltlSymbolTests, GnuHashSize) { ASSERT_NO_FATAL_FAILURE(TestAllFormats(GnuHashSize)); }
 
 constexpr auto LookupCompatHash = [](auto&& elf) {
   using Elf = std::decay_t<decltype(elf)>;
@@ -83,7 +83,7 @@ constexpr auto LookupCompatHash = [](auto&& elf) {
 };
 
 TEST(ElfldltlSymbolTests, LookupCompatHash) {
-  ASSERT_NO_FATAL_FAILURES(TestAllFormats(LookupCompatHash));
+  ASSERT_NO_FATAL_FAILURE(TestAllFormats(LookupCompatHash));
 }
 
 constexpr auto LookupGnuHash = [](auto&& elf) {
@@ -110,8 +110,6 @@ constexpr auto LookupGnuHash = [](auto&& elf) {
   EXPECT_EQ(foobar->value(), 3);
 };
 
-TEST(ElfldltlSymbolTests, LookupGnuHash) {
-  ASSERT_NO_FATAL_FAILURES(TestAllFormats(LookupGnuHash));
-}
+TEST(ElfldltlSymbolTests, LookupGnuHash) { ASSERT_NO_FATAL_FAILURE(TestAllFormats(LookupGnuHash)); }
 
 }  // namespace

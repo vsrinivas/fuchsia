@@ -146,7 +146,7 @@ class AssociativeContainerTestEnvironment : public TestEnvironment<TestEnvTraits
 
     EXPECT_EQ(OBJ_COUNT, Size(container));
     EXPECT_EQ(OBJ_COUNT, ObjType::live_obj_count());
-    ASSERT_NO_FATAL_FAILURES(ContainerChecker::SanityCheck(container));
+    ASSERT_NO_FATAL_FAILURE(ContainerChecker::SanityCheck(container));
   }
 
   void Populate(ContainerType& container, RefAction ref_action = RefAction::HoldSome) override {
@@ -154,23 +154,23 @@ class AssociativeContainerTestEnvironment : public TestEnvironment<TestEnvTraits
   }
 
   void DoInsertByKey(PopulateMethod populate_method) {
-    ASSERT_NO_FATAL_FAILURES(Populate(container(), populate_method));
-    ASSERT_NO_FATAL_FAILURES(TestEnvironment<TestEnvTraits>::Reset());
+    ASSERT_NO_FATAL_FAILURE(Populate(container(), populate_method));
+    ASSERT_NO_FATAL_FAILURE(TestEnvironment<TestEnvTraits>::Reset());
   }
 
   void InsertByKey() {
-    ASSERT_NO_FATAL_FAILURES(DoInsertByKey(PopulateMethod::AscendingKey));
-    ASSERT_NO_FATAL_FAILURES(TestEnvTraits::CheckCustomDeleteInvocations(OBJ_COUNT));
+    ASSERT_NO_FATAL_FAILURE(DoInsertByKey(PopulateMethod::AscendingKey));
+    ASSERT_NO_FATAL_FAILURE(TestEnvTraits::CheckCustomDeleteInvocations(OBJ_COUNT));
 
-    ASSERT_NO_FATAL_FAILURES(DoInsertByKey(PopulateMethod::DescendingKey));
-    ASSERT_NO_FATAL_FAILURES(TestEnvTraits::CheckCustomDeleteInvocations(2 * OBJ_COUNT));
+    ASSERT_NO_FATAL_FAILURE(DoInsertByKey(PopulateMethod::DescendingKey));
+    ASSERT_NO_FATAL_FAILURE(TestEnvTraits::CheckCustomDeleteInvocations(2 * OBJ_COUNT));
 
-    ASSERT_NO_FATAL_FAILURES(DoInsertByKey(PopulateMethod::RandomKey));
-    ASSERT_NO_FATAL_FAILURES(TestEnvTraits::CheckCustomDeleteInvocations(3 * OBJ_COUNT));
+    ASSERT_NO_FATAL_FAILURE(DoInsertByKey(PopulateMethod::RandomKey));
+    ASSERT_NO_FATAL_FAILURE(TestEnvTraits::CheckCustomDeleteInvocations(3 * OBJ_COUNT));
   }
 
   void DoFindByKey(PopulateMethod populate_method) {
-    ASSERT_NO_FATAL_FAILURES(Populate(container(), populate_method));
+    ASSERT_NO_FATAL_FAILURE(Populate(container(), populate_method));
 
     // Lookup the various items which should be in the collection by key.
     for (size_t i = 0; i < OBJ_COUNT; ++i) {
@@ -188,22 +188,22 @@ class AssociativeContainerTestEnvironment : public TestEnvironment<TestEnvTraits
     auto iter = const_container().find(kBannedKeyValue);
     EXPECT_FALSE(iter.IsValid());
 
-    ASSERT_NO_FATAL_FAILURES(TestEnvironment<TestEnvTraits>::Reset());
+    ASSERT_NO_FATAL_FAILURE(TestEnvironment<TestEnvTraits>::Reset());
   }
 
   void FindByKey() {
-    ASSERT_NO_FATAL_FAILURES(DoFindByKey(PopulateMethod::AscendingKey));
-    ASSERT_NO_FATAL_FAILURES(TestEnvTraits::CheckCustomDeleteInvocations(OBJ_COUNT));
+    ASSERT_NO_FATAL_FAILURE(DoFindByKey(PopulateMethod::AscendingKey));
+    ASSERT_NO_FATAL_FAILURE(TestEnvTraits::CheckCustomDeleteInvocations(OBJ_COUNT));
 
-    ASSERT_NO_FATAL_FAILURES(DoFindByKey(PopulateMethod::DescendingKey));
-    ASSERT_NO_FATAL_FAILURES(TestEnvTraits::CheckCustomDeleteInvocations(2 * OBJ_COUNT));
+    ASSERT_NO_FATAL_FAILURE(DoFindByKey(PopulateMethod::DescendingKey));
+    ASSERT_NO_FATAL_FAILURE(TestEnvTraits::CheckCustomDeleteInvocations(2 * OBJ_COUNT));
 
-    ASSERT_NO_FATAL_FAILURES(DoFindByKey(PopulateMethod::RandomKey));
-    ASSERT_NO_FATAL_FAILURES(TestEnvTraits::CheckCustomDeleteInvocations(3 * OBJ_COUNT));
+    ASSERT_NO_FATAL_FAILURE(DoFindByKey(PopulateMethod::RandomKey));
+    ASSERT_NO_FATAL_FAILURE(TestEnvTraits::CheckCustomDeleteInvocations(3 * OBJ_COUNT));
   }
 
   void DoEraseByKey(PopulateMethod populate_method, size_t already_erased) {
-    ASSERT_NO_FATAL_FAILURES(Populate(container(), populate_method));
+    ASSERT_NO_FATAL_FAILURE(Populate(container(), populate_method));
     size_t remaining = OBJ_COUNT;
     size_t erased = 0;
 
@@ -219,10 +219,9 @@ class AssociativeContainerTestEnvironment : public TestEnvironment<TestEnvTraits
       if (key & 1)
         continue;
 
-      ASSERT_NO_FATAL_FAILURES(
-          TestEnvTraits::CheckCustomDeleteInvocations(erased + already_erased));
-      ASSERT_NO_FATAL_FAILURES(TestEnvironment<TestEnvTraits>::DoErase(key, i, remaining));
-      ASSERT_NO_FATAL_FAILURES(
+      ASSERT_NO_FATAL_FAILURE(TestEnvTraits::CheckCustomDeleteInvocations(erased + already_erased));
+      ASSERT_NO_FATAL_FAILURE(TestEnvironment<TestEnvTraits>::DoErase(key, i, remaining));
+      ASSERT_NO_FATAL_FAILURE(
           TestEnvTraits::CheckCustomDeleteInvocations(++erased + already_erased));
       --remaining;
     }
@@ -237,23 +236,22 @@ class AssociativeContainerTestEnvironment : public TestEnvironment<TestEnvTraits
       KeyType key = objects()[i]->GetKey();
       EXPECT_TRUE(key & 1);
 
-      ASSERT_NO_FATAL_FAILURES(
-          TestEnvTraits::CheckCustomDeleteInvocations(erased + already_erased));
-      ASSERT_NO_FATAL_FAILURES(TestEnvironment<TestEnvTraits>::DoErase(key, i, remaining));
-      ASSERT_NO_FATAL_FAILURES(
+      ASSERT_NO_FATAL_FAILURE(TestEnvTraits::CheckCustomDeleteInvocations(erased + already_erased));
+      ASSERT_NO_FATAL_FAILURE(TestEnvironment<TestEnvTraits>::DoErase(key, i, remaining));
+      ASSERT_NO_FATAL_FAILURE(
           TestEnvTraits::CheckCustomDeleteInvocations(++erased + already_erased));
       --remaining;
     }
 
     EXPECT_EQ(0u, Size(container()));
 
-    ASSERT_NO_FATAL_FAILURES(TestEnvironment<TestEnvTraits>::Reset());
+    ASSERT_NO_FATAL_FAILURE(TestEnvironment<TestEnvTraits>::Reset());
   }
 
   void EraseByKey() {
-    ASSERT_NO_FATAL_FAILURES(DoEraseByKey(PopulateMethod::AscendingKey, 0));
-    ASSERT_NO_FATAL_FAILURES(DoEraseByKey(PopulateMethod::DescendingKey, OBJ_COUNT));
-    ASSERT_NO_FATAL_FAILURES(DoEraseByKey(PopulateMethod::RandomKey, 2 * OBJ_COUNT));
+    ASSERT_NO_FATAL_FAILURE(DoEraseByKey(PopulateMethod::AscendingKey, 0));
+    ASSERT_NO_FATAL_FAILURE(DoEraseByKey(PopulateMethod::DescendingKey, OBJ_COUNT));
+    ASSERT_NO_FATAL_FAILURE(DoEraseByKey(PopulateMethod::RandomKey, 2 * OBJ_COUNT));
   }
 
   void DoInsertOrFind(PopulateMethod populate_method, size_t already_destroyed) {
@@ -299,12 +297,12 @@ class AssociativeContainerTestEnvironment : public TestEnvironment<TestEnvTraits
       // If we have not tested passing a non-null iterator yet, reset the
       // environment and do the test again.
       if (!pass_iterator) {
-        ASSERT_NO_FATAL_FAILURES(TestEnvironment<TestEnvTraits>::Reset());
+        ASSERT_NO_FATAL_FAILURE(TestEnvironment<TestEnvTraits>::Reset());
       }
     }
 
     // The objects from the first test pass should have been deleted.
-    ASSERT_NO_FATAL_FAILURES(
+    ASSERT_NO_FATAL_FAILURE(
         TestEnvTraits::CheckCustomDeleteInvocations(already_destroyed + OBJ_COUNT));
 
     // Now go over the (populated) container and attempt to insert new
@@ -360,30 +358,30 @@ class AssociativeContainerTestEnvironment : public TestEnvironment<TestEnvTraits
         }
 
         // Release the object we failed to insert.
-        ASSERT_NO_FATAL_FAILURES(TestEnvTraits::CheckCustomDeleteInvocations(
+        ASSERT_NO_FATAL_FAILURE(TestEnvTraits::CheckCustomDeleteInvocations(
             already_destroyed + OBJ_COUNT + (OBJ_COUNT * pass_iterator) + i));
         TestEnvTraits::ReleaseObject(new_object);
-        ASSERT_NO_FATAL_FAILURES(TestEnvTraits::CheckCustomDeleteInvocations(
+        ASSERT_NO_FATAL_FAILURE(TestEnvTraits::CheckCustomDeleteInvocations(
             already_destroyed + OBJ_COUNT + (OBJ_COUNT * pass_iterator) + i + 1));
       }
     }
 
-    ASSERT_NO_FATAL_FAILURES(TestEnvironment<TestEnvTraits>::Reset());
-    ASSERT_NO_FATAL_FAILURES(
+    ASSERT_NO_FATAL_FAILURE(TestEnvironment<TestEnvTraits>::Reset());
+    ASSERT_NO_FATAL_FAILURE(
         TestEnvTraits::CheckCustomDeleteInvocations(already_destroyed + (4 * OBJ_COUNT)));
   }
 
   void InsertOrFind() {
     // Each time we run this test, we create and destroy 4 * OBJ_COUNT objects
-    ASSERT_NO_FATAL_FAILURES(DoInsertOrFind(PopulateMethod::AscendingKey, 0));
-    ASSERT_NO_FATAL_FAILURES(DoInsertOrFind(PopulateMethod::DescendingKey, 4 * OBJ_COUNT));
-    ASSERT_NO_FATAL_FAILURES(DoInsertOrFind(PopulateMethod::RandomKey, 8 * OBJ_COUNT));
+    ASSERT_NO_FATAL_FAILURE(DoInsertOrFind(PopulateMethod::AscendingKey, 0));
+    ASSERT_NO_FATAL_FAILURE(DoInsertOrFind(PopulateMethod::DescendingKey, 4 * OBJ_COUNT));
+    ASSERT_NO_FATAL_FAILURE(DoInsertOrFind(PopulateMethod::RandomKey, 8 * OBJ_COUNT));
   }
 
   template <typename CopyOrMoveUtil>
   void DoInsertOrReplace(size_t extra_elements, size_t already_destroyed) {
     ASSERT_EQ(0u, ObjType::live_obj_count());
-    ASSERT_NO_FATAL_FAILURES(Populate(container(), PopulateMethod::AscendingKey));
+    ASSERT_NO_FATAL_FAILURE(Populate(container(), PopulateMethod::AscendingKey));
 
     // Attempt to replace every element in the container with one that has
     // the same key.  Then attempt to replace some which were not in the
@@ -394,7 +392,7 @@ class AssociativeContainerTestEnvironment : public TestEnvironment<TestEnvTraits
       new_obj->SetKey(i);
 
       PtrType replaced = container().insert_or_replace(CopyOrMoveUtil::Op(new_obj));
-      ASSERT_NO_FATAL_FAILURES(ContainerChecker::SanityCheck(container()));
+      ASSERT_NO_FATAL_FAILURE(ContainerChecker::SanityCheck(container()));
 
       if (i < OBJ_COUNT) {
         EXPECT_EQ(OBJ_COUNT + 1, ObjType::live_obj_count());
@@ -411,7 +409,7 @@ class AssociativeContainerTestEnvironment : public TestEnvironment<TestEnvTraits
         EXPECT_EQ(OBJ_COUNT, container().size());
 
         // The replaced object should be gone now.
-        ASSERT_NO_FATAL_FAILURES(
+        ASSERT_NO_FATAL_FAILURE(
             TestEnvTraits::CheckCustomDeleteInvocations(already_destroyed + i + 1));
       } else {
         EXPECT_EQ(i + 1, ObjType::live_obj_count());
@@ -420,19 +418,19 @@ class AssociativeContainerTestEnvironment : public TestEnvironment<TestEnvTraits
 
         // We should have succeeded in inserting this object, so the delete count should not
         // have gone up.
-        ASSERT_NO_FATAL_FAILURES(
+        ASSERT_NO_FATAL_FAILURE(
             TestEnvTraits::CheckCustomDeleteInvocations(already_destroyed + OBJ_COUNT));
       }
     }
 
-    ASSERT_NO_FATAL_FAILURES(ContainerChecker::SanityCheck(container()));
+    ASSERT_NO_FATAL_FAILURE(ContainerChecker::SanityCheck(container()));
 
     while (!container().is_empty()) {
       PtrType ptr = container().erase(container().begin());
       TestEnvTraits::ReleaseObject(ptr);
     }
 
-    ASSERT_NO_FATAL_FAILURES(TestEnvTraits::CheckCustomDeleteInvocations(
+    ASSERT_NO_FATAL_FAILURE(TestEnvTraits::CheckCustomDeleteInvocations(
         already_destroyed + (2 * OBJ_COUNT) + extra_elements));
   }
 
@@ -442,9 +440,9 @@ class AssociativeContainerTestEnvironment : public TestEnvironment<TestEnvTraits
     constexpr size_t EXTRA_ELEMENTS = 10;
     constexpr size_t TOTAL_OBJS = (2 * OBJ_COUNT) + EXTRA_ELEMENTS;
 
-    ASSERT_NO_FATAL_FAILURES(DoInsertOrReplace<MoveUtil>(EXTRA_ELEMENTS, 0));
+    ASSERT_NO_FATAL_FAILURE(DoInsertOrReplace<MoveUtil>(EXTRA_ELEMENTS, 0));
     if (CopyUtil<PtrTraits>::CanCopy) {
-      ASSERT_NO_FATAL_FAILURES(DoInsertOrReplace<CopyUtil<PtrTraits>>(EXTRA_ELEMENTS, TOTAL_OBJS));
+      ASSERT_NO_FATAL_FAILURE(DoInsertOrReplace<CopyUtil<PtrTraits>>(EXTRA_ELEMENTS, TOTAL_OBJS));
     }
   }
 

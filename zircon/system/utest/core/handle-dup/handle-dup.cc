@@ -2,10 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/zx/event.h>
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/object.h>
+
 #include <fbl/vector.h>
-#include <lib/zx/event.h>
 #include <zxtest/zxtest.h>
 
 namespace {
@@ -50,9 +51,7 @@ void TestReplace() {
   ASSERT_STATUS(ZX_ERR_INVALID_ARGS, zx_handle_replace(event.release(), 0, nullptr));
 }
 
-TEST(HandleDup, Replace) {
-  ASSERT_NO_FATAL_FAILURES(TestReplace());
-}
+TEST(HandleDup, Replace) { ASSERT_NO_FATAL_FAILURE(TestReplace()); }
 
 #ifdef __clang__
 [[clang::no_sanitize("undefined")]]
@@ -67,8 +66,6 @@ void TestDuplicate() {
   ASSERT_STATUS(ZX_ERR_INVALID_ARGS, zx_handle_duplicate(event.get(), 0, nullptr));
 }
 
-TEST(HandleDup, Duplicate) {
-  ASSERT_NO_FATAL_FAILURES(TestDuplicate());
-}
+TEST(HandleDup, Duplicate) { ASSERT_NO_FATAL_FAILURE(TestDuplicate()); }
 
 }  // namespace

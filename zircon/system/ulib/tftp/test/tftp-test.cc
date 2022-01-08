@@ -98,14 +98,14 @@ TEST(TftpSetup, test_tftp_session_options) {
 bool verify_write_request(const test_state& ts) {
   auto msg = reinterpret_cast<tftp_msg*>(ts.out);
   EXPECT_EQ(msg->opcode, htons(OPCODE_WRQ), "opcode should be 2 (WRQ)");
-  EXPECT_STR_EQ(kRemoteFilename, msg->data, "bad filename");
+  EXPECT_STREQ(kRemoteFilename, msg->data, "bad filename");
   return true;
 }
 
 bool verify_read_request(const test_state& ts) {
   auto msg = reinterpret_cast<tftp_msg*>(ts.out);
   EXPECT_EQ(msg->opcode, htons(OPCODE_RRQ), "opcode should be 1 (RRQ)");
-  EXPECT_STR_EQ(kRemoteFilename, msg->data, "bad filename");
+  EXPECT_STREQ(kRemoteFilename, msg->data, "bad filename");
   return true;
 }
 
@@ -294,7 +294,7 @@ static void test_tftp_receive_request_unexpected(tftp_file_direction dir) {
   // We are unprepared to service a request after we have sent one out
   status = tftp_process_msg(ts.session, buf, sizeof(buf), ts.out, &ts.outlen, &ts.timeout, nullptr);
   EXPECT_EQ(TFTP_ERR_BAD_STATE, status, "receive should fail");
-  ASSERT_NO_FATAL_FAILURES(verify_response_opcode(ts, OPCODE_ERROR), "bad error response");
+  ASSERT_NO_FATAL_FAILURE(verify_response_opcode(ts, OPCODE_ERROR), "bad error response");
 }
 
 TEST(TftpReceiveWrq, test_tftp_receive_wrq_unexpected) {
@@ -315,7 +315,7 @@ static void test_tftp_receive_request_too_large(tftp_file_direction dir) {
   auto status =
       tftp_process_msg(ts.session, buf, sizeof(buf), ts.out, &ts.outlen, &ts.timeout, nullptr);
   EXPECT_LT(status, 0, "receive should fail");
-  ASSERT_NO_FATAL_FAILURES(verify_response_opcode(ts, OPCODE_ERROR), "bad error response");
+  ASSERT_NO_FATAL_FAILURE(verify_response_opcode(ts, OPCODE_ERROR), "bad error response");
 }
 
 TEST(TftpReceiveWrq, test_tftp_receive_wrq_too_large) {
@@ -340,7 +340,7 @@ static void test_tftp_receive_request_no_tsize(tftp_file_direction dir) {
   EXPECT_EQ(TFTP_ERR_BAD_STATE, status, "tftp session should fail");
   EXPECT_EQ(ERROR, ts.session->state, "tftp session in wrong state");
   EXPECT_EQ(0, ts.session->file_size, "tftp session bad file size");
-  ASSERT_NO_FATAL_FAILURES(verify_response_opcode(ts, OPCODE_ERROR), "bad error response");
+  ASSERT_NO_FATAL_FAILURE(verify_response_opcode(ts, OPCODE_ERROR), "bad error response");
 }
 
 TEST(TftpReceiveWrq, test_tftp_receive_wrq_no_tsize) {
@@ -356,12 +356,12 @@ static void test_tftp_receive_request_send_oack(tftp_file_direction dir) {
   ts.reset(1024, 1024, 1500);
   tftp_file_open_write_cb open_write_cb = [](const char* filename, size_t size,
                                              void* cookie) -> tftp_status {
-    EXPECT_STR_EQ(filename, kRemoteFilename, "bad remote filename in open_write callback");
+    EXPECT_STREQ(filename, kRemoteFilename, "bad remote filename in open_write callback");
     EXPECT_EQ(size, 1024, "bad file size");
     return 0;
   };
   tftp_file_open_read_cb open_read_cb = [](const char* filename, void* cookie) -> ssize_t {
-    EXPECT_STR_EQ(filename, kRemoteFilename, "bad remote filename in open_read callback");
+    EXPECT_STREQ(filename, kRemoteFilename, "bad remote filename in open_read callback");
     return 0;
   };
   tftp_file_interface ifc = {open_read_cb, open_write_cb, NULL, NULL, NULL};
@@ -388,7 +388,7 @@ static void test_tftp_receive_request_send_oack(tftp_file_direction dir) {
   EXPECT_EQ(DEFAULT_BLOCKSIZE, ts.session->block_size, "bad session: block size");
   EXPECT_EQ(DEFAULT_TIMEOUT, ts.session->timeout, "bad session: timeout");
   EXPECT_EQ(DEFAULT_WINDOWSIZE, ts.session->window_size, "bad session: window size");
-  ASSERT_NO_FATAL_FAILURES(verify_response_opcode(ts, OPCODE_OACK), "bad response");
+  ASSERT_NO_FATAL_FAILURE(verify_response_opcode(ts, OPCODE_OACK), "bad response");
 
   // The request was made from the client's perspective, so our state is the inverse
   tftp_file_direction our_direction = (dir == SEND_FILE) ? RECV_FILE : SEND_FILE;
@@ -458,7 +458,7 @@ static void test_tftp_receive_request_options(
   ASSERT_LT(buf_sz, (int)sizeof(buf), "insufficient space for request");
   status = tftp_process_msg(ts.session, buf, buf_sz, ts.out, &ts.outlen, &ts.timeout, nullptr);
   EXPECT_EQ(TFTP_NO_ERROR, status, "receive write request failed");
-  ASSERT_NO_FATAL_FAILURES(verify_response_opcode(ts, OPCODE_OACK), "bad response");
+  ASSERT_NO_FATAL_FAILURE(verify_response_opcode(ts, OPCODE_OACK), "bad response");
 
   const char* msg = static_cast<const char*>(ts.out);
   char opt_str[256];
@@ -718,7 +718,7 @@ static void test_tftp_receive_wrq_oack(const size_t file_size, const uint16_t* b
 
   EXPECT_EQ(ts.outlen, sizeof(tftp_data_msg) + block_size, "bad outlen");
   EXPECT_EQ(ts.timeout, timeout * 1000U, "timeout should be set");
-  ASSERT_NO_FATAL_FAILURES(verify_read_data(ts, td), "bad test data");
+  ASSERT_NO_FATAL_FAILURE(verify_read_data(ts, td), "bad test data");
 
   if (has_pending) {
     // Since pending is true, call for a second data packet to transmit
@@ -733,7 +733,7 @@ static void test_tftp_receive_wrq_oack(const size_t file_size, const uint16_t* b
 
     status = tftp_prepare_data(ts.session, ts.out, &ts.outlen, &ts.timeout, &td);
     EXPECT_EQ(ts.outlen, sizeof(tftp_data_msg) + block_size, "bad outlen");
-    ASSERT_NO_FATAL_FAILURES(verify_read_data(ts, td), "bad test data");
+    ASSERT_NO_FATAL_FAILURE(verify_read_data(ts, td), "bad test data");
     has_pending = (block_size + second_block_size < file_size) && (window_size > 2);
     EXPECT_EQ(has_pending, tftp_session_has_pending(ts.session),
               "Unexpected tftp_session_has_pending()");
@@ -886,7 +886,7 @@ TEST(TftpReceiveData, test_tftp_receive_data) {
   ts.reset(1024, 1024, 1500);
   tftp_file_interface ifc = {NULL,
                              [](const char* filename, size_t size, void* cookie) -> tftp_status {
-                               EXPECT_STR_EQ(filename, kRemoteFilename, "bad filename");
+                               EXPECT_STREQ(filename, kRemoteFilename, "bad filename");
                                EXPECT_EQ(size, 1024, "bad file size");
                                return 0;
                              },
@@ -906,7 +906,7 @@ TEST(TftpReceiveData, test_tftp_receive_data) {
       tftp_process_msg(ts.session, req_buf, req_buf_sz, ts.out, &ts.outlen, &ts.timeout, nullptr);
   ASSERT_EQ(TFTP_NO_ERROR, status, "receive write request failed");
   ASSERT_EQ(REQ_RECEIVED, ts.session->state, "tftp session in wrong state");
-  ASSERT_NO_FATAL_FAILURES(verify_response_opcode(ts, OPCODE_OACK), "bad response");
+  ASSERT_NO_FATAL_FAILURE(verify_response_opcode(ts, OPCODE_OACK), "bad response");
 
   uint8_t data_buf[516] = {
       0x00, 0x03,                          // Opcode (DATA)
@@ -922,8 +922,8 @@ TEST(TftpReceiveData, test_tftp_receive_data) {
   status = tftp_process_msg(ts.session, data_buf, sizeof(data_buf), ts.out, &ts.outlen, &ts.timeout,
                             &td);
   EXPECT_EQ(TFTP_NO_ERROR, status, "receive data failed");
-  ASSERT_NO_FATAL_FAILURES(verify_response_opcode(ts, OPCODE_ACK), "bad response");
-  ASSERT_NO_FATAL_FAILURES(verify_write_data(data_buf + 4, td), "bad write data");
+  ASSERT_NO_FATAL_FAILURE(verify_response_opcode(ts, OPCODE_ACK), "bad response");
+  ASSERT_NO_FATAL_FAILURE(verify_write_data(data_buf + 4, td), "bad write data");
   EXPECT_EQ(1, ts.session->block_number, "tftp session block number mismatch");
   EXPECT_EQ(0, ts.session->window_index, "tftp session window index mismatch");
 }
@@ -933,7 +933,7 @@ TEST(TftpReceiveData, test_tftp_receive_data_final_block) {
   ts.reset(1024, 1024, 1500);
   tftp_file_interface ifc = {NULL,
                              [](const char* filename, size_t size, void* cookie) -> tftp_status {
-                               EXPECT_STR_EQ(filename, kRemoteFilename, "bad filename");
+                               EXPECT_STREQ(filename, kRemoteFilename, "bad filename");
                                EXPECT_EQ(size, 1024, "bad file size");
                                return 0;
                              },
@@ -953,7 +953,7 @@ TEST(TftpReceiveData, test_tftp_receive_data_final_block) {
       tftp_process_msg(ts.session, req_buf, req_buf_sz, ts.out, &ts.outlen, &ts.timeout, nullptr);
   ASSERT_EQ(TFTP_NO_ERROR, status, "receive write request failed");
   ASSERT_EQ(REQ_RECEIVED, ts.session->state, "tftp session in wrong state");
-  ASSERT_NO_FATAL_FAILURES(verify_response_opcode(ts, OPCODE_OACK), "bad response");
+  ASSERT_NO_FATAL_FAILURE(verify_response_opcode(ts, OPCODE_OACK), "bad response");
 
   uint8_t data_buf[516] = {
       0x00, 0x03,                          // Opcode (DATA)
@@ -969,8 +969,8 @@ TEST(TftpReceiveData, test_tftp_receive_data_final_block) {
   status = tftp_process_msg(ts.session, data_buf, sizeof(data_buf), ts.out, &ts.outlen, &ts.timeout,
                             &td);
   ASSERT_EQ(TFTP_NO_ERROR, status, "receive data failed");
-  ASSERT_NO_FATAL_FAILURES(verify_response_opcode(ts, OPCODE_ACK), "bad response");
-  ASSERT_NO_FATAL_FAILURES(verify_write_data(data_buf + 4, td), "bad write data");
+  ASSERT_NO_FATAL_FAILURE(verify_response_opcode(ts, OPCODE_ACK), "bad response");
+  ASSERT_NO_FATAL_FAILURE(verify_write_data(data_buf + 4, td), "bad write data");
 
   // Update block number and first/last bytes of the data packet
   data_buf[3]++;
@@ -982,14 +982,14 @@ TEST(TftpReceiveData, test_tftp_receive_data_final_block) {
   status = tftp_process_msg(ts.session, data_buf, sizeof(data_buf), ts.out, &ts.outlen, &ts.timeout,
                             &td);
   EXPECT_EQ(TFTP_NO_ERROR, status, "receive data failed");
-  ASSERT_NO_FATAL_FAILURES(verify_response_opcode(ts, OPCODE_ACK), "bad response");
-  ASSERT_NO_FATAL_FAILURES(verify_write_data(data_buf + 4, td), "bad write data");
+  ASSERT_NO_FATAL_FAILURE(verify_response_opcode(ts, OPCODE_ACK), "bad response");
+  ASSERT_NO_FATAL_FAILURE(verify_write_data(data_buf + 4, td), "bad write data");
 
   // Last data packet. Empty, indicating end of data.
   data_buf[3]++;
   status = tftp_process_msg(ts.session, data_buf, 4, ts.out, &ts.outlen, &ts.timeout, nullptr);
   EXPECT_EQ(TFTP_TRANSFER_COMPLETED, status, "receive data failed");
-  ASSERT_NO_FATAL_FAILURES(verify_response_opcode(ts, OPCODE_ACK), "bad response");
+  ASSERT_NO_FATAL_FAILURE(verify_response_opcode(ts, OPCODE_ACK), "bad response");
 }
 
 TEST(TftpReceiveData, test_tftp_receive_data_blocksize) {
@@ -997,7 +997,7 @@ TEST(TftpReceiveData, test_tftp_receive_data_blocksize) {
   ts.reset(1024, 2048, 1500);
   tftp_file_interface ifc = {NULL,
                              [](const char* filename, size_t size, void* cookie) -> tftp_status {
-                               EXPECT_STR_EQ(filename, kRemoteFilename, "bad filename");
+                               EXPECT_STREQ(filename, kRemoteFilename, "bad filename");
                                EXPECT_EQ(size, 2048, "bad file size");
                                return 0;
                              },
@@ -1018,7 +1018,7 @@ TEST(TftpReceiveData, test_tftp_receive_data_blocksize) {
       tftp_process_msg(ts.session, req_buf, req_buf_sz, ts.out, &ts.outlen, &ts.timeout, nullptr);
   ASSERT_EQ(TFTP_NO_ERROR, status, "receive write request failed");
   ASSERT_EQ(REQ_RECEIVED, ts.session->state, "tftp session in wrong state");
-  ASSERT_NO_FATAL_FAILURES(verify_response_opcode(ts, OPCODE_OACK), "bad response");
+  ASSERT_NO_FATAL_FAILURE(verify_response_opcode(ts, OPCODE_OACK), "bad response");
 
   uint8_t data_buf[1028] = {
       0x00, 0x03,                          // Opcode (DATA)
@@ -1035,8 +1035,8 @@ TEST(TftpReceiveData, test_tftp_receive_data_blocksize) {
   status = tftp_process_msg(ts.session, data_buf, sizeof(data_buf), ts.out, &ts.outlen, &ts.timeout,
                             &td);
   EXPECT_EQ(TFTP_NO_ERROR, status, "receive data failed");
-  ASSERT_NO_FATAL_FAILURES(verify_response_opcode(ts, OPCODE_ACK), "bad response");
-  ASSERT_NO_FATAL_FAILURES(verify_write_data(data_buf + 4, td), "bad write data");
+  ASSERT_NO_FATAL_FAILURE(verify_response_opcode(ts, OPCODE_ACK), "bad response");
+  ASSERT_NO_FATAL_FAILURE(verify_write_data(data_buf + 4, td), "bad write data");
   EXPECT_EQ(1, ts.session->block_number, "tftp session block number mismatch");
   EXPECT_EQ(0, ts.session->window_index, "tftp session window index mismatch");
 }
@@ -1046,7 +1046,7 @@ TEST(TftpReceiveData, test_tftp_receive_data_windowsize) {
   ts.reset(1024, 1025, 1500);
   tftp_file_interface ifc = {NULL,
                              [](const char* filename, size_t size, void* cookie) -> tftp_status {
-                               EXPECT_STR_EQ(filename, kRemoteFilename, "bad filename");
+                               EXPECT_STREQ(filename, kRemoteFilename, "bad filename");
                                EXPECT_EQ(size, 1025, "bad file size");
                                return 0;
                              },
@@ -1067,7 +1067,7 @@ TEST(TftpReceiveData, test_tftp_receive_data_windowsize) {
       tftp_process_msg(ts.session, req_buf, req_buf_sz, ts.out, &ts.outlen, &ts.timeout, nullptr);
   ASSERT_EQ(TFTP_NO_ERROR, status, "receive write request failed");
   ASSERT_EQ(REQ_RECEIVED, ts.session->state, "tftp session in wrong state");
-  ASSERT_NO_FATAL_FAILURES(verify_response_opcode(ts, OPCODE_OACK), "bad response");
+  ASSERT_NO_FATAL_FAILURE(verify_response_opcode(ts, OPCODE_OACK), "bad response");
 
   uint8_t data_buf[516] = {
       0x00, 0x03,                          // Opcode (DATA)
@@ -1084,7 +1084,7 @@ TEST(TftpReceiveData, test_tftp_receive_data_windowsize) {
                             &td);
   EXPECT_EQ(TFTP_NO_ERROR, status, "receive data failed");
   EXPECT_EQ(0, ts.outlen, "no response expected");
-  ASSERT_NO_FATAL_FAILURES(verify_write_data(data_buf + 4, td), "bad write data");
+  ASSERT_NO_FATAL_FAILURE(verify_write_data(data_buf + 4, td), "bad write data");
   EXPECT_EQ(1, ts.session->block_number, "tftp session block number mismatch");
   EXPECT_EQ(1, ts.session->window_index, "tftp session window index mismatch");
 
@@ -1098,8 +1098,8 @@ TEST(TftpReceiveData, test_tftp_receive_data_windowsize) {
   status = tftp_process_msg(ts.session, data_buf, sizeof(data_buf), ts.out, &ts.outlen, &ts.timeout,
                             &td);
   EXPECT_EQ(TFTP_NO_ERROR, status, "receive data failed");
-  ASSERT_NO_FATAL_FAILURES(verify_response_opcode(ts, OPCODE_ACK), "bad response");
-  ASSERT_NO_FATAL_FAILURES(verify_write_data(data_buf + 4, td), "bad write data");
+  ASSERT_NO_FATAL_FAILURE(verify_response_opcode(ts, OPCODE_ACK), "bad response");
+  ASSERT_NO_FATAL_FAILURE(verify_write_data(data_buf + 4, td), "bad write data");
   EXPECT_EQ(2, ts.session->block_number, "tftp session block number mismatch");
   EXPECT_EQ(0, ts.session->window_index, "tftp session window index mismatch");
 }
@@ -1109,7 +1109,7 @@ TEST(TftpReceiveData, test_tftp_receive_data_skipped_block) {
   ts.reset(1024, 1024, 1500);
   tftp_file_interface ifc = {NULL,
                              [](const char* filename, size_t size, void* cookie) -> tftp_status {
-                               EXPECT_STR_EQ(filename, kRemoteFilename, "bad filename");
+                               EXPECT_STREQ(filename, kRemoteFilename, "bad filename");
                                EXPECT_EQ(size, 1024, "bad file size");
                                return 0;
                              },
@@ -1129,7 +1129,7 @@ TEST(TftpReceiveData, test_tftp_receive_data_skipped_block) {
       tftp_process_msg(ts.session, req_buf, req_buf_sz, ts.out, &ts.outlen, &ts.timeout, nullptr);
   ASSERT_EQ(TFTP_NO_ERROR, status, "receive write request failed");
   ASSERT_EQ(REQ_RECEIVED, ts.session->state, "tftp session in wrong state");
-  ASSERT_NO_FATAL_FAILURES(verify_response_opcode(ts, OPCODE_OACK), "bad response");
+  ASSERT_NO_FATAL_FAILURE(verify_response_opcode(ts, OPCODE_OACK), "bad response");
 
   // This is block 2, meaning we missed block 1 somehow.
   uint8_t data_buf[516] = {
@@ -1171,7 +1171,7 @@ TEST(TftpReceiveData, test_tftp_receive_data_windowsize_skipped_block) {
   ts.reset(1024, 2048, 1500);
   tftp_file_interface ifc = {NULL,
                              [](const char* filename, size_t size, void* cookie) -> tftp_status {
-                               EXPECT_STR_EQ(filename, kRemoteFilename, "bad filename");
+                               EXPECT_STREQ(filename, kRemoteFilename, "bad filename");
                                EXPECT_EQ(size, 2048, "bad file size");
                                return 0;
                              },
@@ -1192,7 +1192,7 @@ TEST(TftpReceiveData, test_tftp_receive_data_windowsize_skipped_block) {
       tftp_process_msg(ts.session, req_buf, req_buf_sz, ts.out, &ts.outlen, &ts.timeout, nullptr);
   ASSERT_EQ(TFTP_NO_ERROR, status, "receive write request failed");
   ASSERT_EQ(REQ_RECEIVED, ts.session->state, "tftp session in wrong state");
-  ASSERT_NO_FATAL_FAILURES(verify_response_opcode(ts, OPCODE_OACK), "bad response");
+  ASSERT_NO_FATAL_FAILURE(verify_response_opcode(ts, OPCODE_OACK), "bad response");
 
   uint8_t data_buf[516] = {
       0x00, 0x03,                          // Opcode (DATA)
@@ -1208,7 +1208,7 @@ TEST(TftpReceiveData, test_tftp_receive_data_windowsize_skipped_block) {
   status = tftp_process_msg(ts.session, data_buf, sizeof(data_buf), ts.out, &ts.outlen, &ts.timeout,
                             &td);
   EXPECT_EQ(TFTP_NO_ERROR, status, "receive data failed");
-  ASSERT_NO_FATAL_FAILURES(verify_write_data(data_buf + 4, td), "bad write data");
+  ASSERT_NO_FATAL_FAILURE(verify_write_data(data_buf + 4, td), "bad write data");
   EXPECT_EQ(1, ts.session->block_number, "tftp session block number mismatch");
   EXPECT_EQ(1, ts.session->window_index, "tftp session window index mismatch");
 
@@ -1222,7 +1222,7 @@ TEST(TftpReceiveData, test_tftp_receive_data_windowsize_skipped_block) {
   status = tftp_process_msg(ts.session, data_buf, sizeof(data_buf), ts.out, &ts.outlen, &ts.timeout,
                             &td);
   EXPECT_EQ(TFTP_NO_ERROR, status, "receive data failed");
-  ASSERT_NO_FATAL_FAILURES(verify_write_data(data_buf + 4, td), "bad write data");
+  ASSERT_NO_FATAL_FAILURE(verify_write_data(data_buf + 4, td), "bad write data");
   EXPECT_EQ(2, ts.session->block_number, "tftp session block number mismatch");
   EXPECT_EQ(2, ts.session->window_index, "tftp session window index mismatch");
 
@@ -1260,7 +1260,7 @@ TEST(TftpReceiveData, test_tftp_receive_data_block_wrapping) {
 
   tftp_file_interface ifc = {NULL, NULL, NULL, NULL, NULL};
   ifc.open_write = [](const char* filename, size_t size, void* cookie) -> tftp_status {
-    EXPECT_STR_EQ(filename, kRemoteFilename, "bad filename");
+    EXPECT_STREQ(filename, kRemoteFilename, "bad filename");
     EXPECT_EQ(size, kFileSize, "bad file size");
     return 0;
   };
@@ -1287,7 +1287,7 @@ TEST(TftpReceiveData, test_tftp_receive_data_block_wrapping) {
       tftp_process_msg(ts.session, req_buf, req_buf_sz, ts.out, &ts.outlen, &ts.timeout, nullptr);
   ASSERT_EQ(TFTP_NO_ERROR, status, "receive write request failed");
   ASSERT_EQ(REQ_RECEIVED, ts.session->state, "tftp session in wrong state");
-  ASSERT_NO_FATAL_FAILURES(verify_response_opcode(ts, OPCODE_OACK), "bad response");
+  ASSERT_NO_FATAL_FAILURE(verify_response_opcode(ts, OPCODE_OACK), "bad response");
 
   // Artificially advance to force block wrapping
   ts.session->block_number = kWrapAt;
@@ -1339,7 +1339,7 @@ TEST(TftpSendData, test_tftp_send_data_receive_ack) {
                             &td);
   ASSERT_EQ(TFTP_NO_ERROR, status, "receive error");
   EXPECT_EQ(ts.outlen, sizeof(tftp_data_msg) + DEFAULT_BLOCKSIZE, "bad outlen");
-  ASSERT_NO_FATAL_FAILURES(verify_read_data(ts, td), "bad test data");
+  ASSERT_NO_FATAL_FAILURE(verify_read_data(ts, td), "bad test data");
 
   uint8_t ack_buf[] = {
       0x00, 0x04,  // Opcode (ACK)
@@ -1357,7 +1357,7 @@ TEST(TftpSendData, test_tftp_send_data_receive_ack) {
   EXPECT_EQ(1, ts.session->block_number, "tftp session block number mismatch");
   EXPECT_EQ(1, ts.session->window_index, "tftp session window index mismatch");
   EXPECT_EQ(ts.outlen, sizeof(tftp_data_msg) + DEFAULT_BLOCKSIZE, "bad outlen");
-  ASSERT_NO_FATAL_FAILURES(verify_read_data(ts, td), "bad test data");
+  ASSERT_NO_FATAL_FAILURE(verify_read_data(ts, td), "bad test data");
 }
 
 TEST(TftpSendData, test_tftp_send_data_receive_final_ack) {
@@ -1384,7 +1384,7 @@ TEST(TftpSendData, test_tftp_send_data_receive_final_ack) {
                             &td);
   ASSERT_EQ(TFTP_NO_ERROR, status, "receive error");
   ASSERT_EQ(ts.outlen, sizeof(tftp_data_msg) + DEFAULT_BLOCKSIZE, "bad outlen");
-  ASSERT_NO_FATAL_FAILURES(verify_read_data(ts, td), "bad test data");
+  ASSERT_NO_FATAL_FAILURE(verify_read_data(ts, td), "bad test data");
 
   uint8_t ack_buf[] = {
       0x00, 0x04,  // Opcode (ACK)
@@ -1397,7 +1397,7 @@ TEST(TftpSendData, test_tftp_send_data_receive_final_ack) {
       tftp_process_msg(ts.session, ack_buf, sizeof(ack_buf), ts.out, &ts.outlen, &ts.timeout, &td);
   ASSERT_EQ(TFTP_NO_ERROR, status, "receive error");
   EXPECT_EQ(ts.outlen, sizeof(tftp_data_msg) + DEFAULT_BLOCKSIZE, "bad outlen");
-  ASSERT_NO_FATAL_FAILURES(verify_read_data(ts, td), "bad test data");
+  ASSERT_NO_FATAL_FAILURE(verify_read_data(ts, td), "bad test data");
 
   // second block
   ack_buf[3]++;
@@ -1438,7 +1438,7 @@ TEST(TftpSendData, test_tftp_send_data_receive_ack_skipped_block) {
                             &td);
   ASSERT_EQ(TFTP_NO_ERROR, status, "receive error");
   ASSERT_EQ(ts.outlen, sizeof(tftp_data_msg) + DEFAULT_BLOCKSIZE, "bad outlen");
-  ASSERT_NO_FATAL_FAILURES(verify_read_data(ts, td), "bad test data");
+  ASSERT_NO_FATAL_FAILURE(verify_read_data(ts, td), "bad test data");
 
   uint8_t ack_buf[] = {
       0x00, 0x04,  // Opcode (ACK)
@@ -1453,7 +1453,7 @@ TEST(TftpSendData, test_tftp_send_data_receive_ack_skipped_block) {
   EXPECT_EQ(0, ts.session->block_number, "tftp session block number mismatch");
   EXPECT_EQ(1, ts.session->window_index, "tftp window index mismatch");
   EXPECT_EQ(ts.outlen, sizeof(tftp_data_msg) + DEFAULT_BLOCKSIZE, "bad outlen");
-  ASSERT_NO_FATAL_FAILURES(verify_read_data(ts, td2), "bad test data");
+  ASSERT_NO_FATAL_FAILURE(verify_read_data(ts, td2), "bad test data");
 }
 
 TEST(TftpSendData, test_tftp_send_data_receive_ack_window_size) {
@@ -1485,7 +1485,7 @@ TEST(TftpSendData, test_tftp_send_data_receive_ack_window_size) {
   ASSERT_EQ(0, ts.session->block_number, "tftp session block number mismatch");
   ASSERT_EQ(1, ts.session->window_index, "tftp session window index mismatch");
   ASSERT_EQ(ts.outlen, sizeof(tftp_data_msg) + DEFAULT_BLOCKSIZE, "bad outlen");
-  ASSERT_NO_FATAL_FAILURES(verify_read_data(ts, td), "bad test data");
+  ASSERT_NO_FATAL_FAILURE(verify_read_data(ts, td), "bad test data");
   ASSERT_TRUE(tftp_session_has_pending(ts.session), "expected pending data to transmit");
 
   td.expected.block++;
@@ -1497,7 +1497,7 @@ TEST(TftpSendData, test_tftp_send_data_receive_ack_window_size) {
   ASSERT_EQ(0, ts.session->block_number, "tftp session block number mismatch");
   ASSERT_EQ(2, ts.session->window_index, "tftp session window index mismatch");
   ASSERT_EQ(ts.outlen, sizeof(tftp_data_msg) + DEFAULT_BLOCKSIZE, "bad outlen");
-  ASSERT_NO_FATAL_FAILURES(verify_read_data(ts, td), "bad test data");
+  ASSERT_NO_FATAL_FAILURE(verify_read_data(ts, td), "bad test data");
   ASSERT_FALSE(tftp_session_has_pending(ts.session), "expected to wait for ack");
 
   uint8_t ack_buf[] = {
@@ -1515,7 +1515,7 @@ TEST(TftpSendData, test_tftp_send_data_receive_ack_window_size) {
   EXPECT_EQ(2, ts.session->block_number, "tftp session block number mismatch");
   EXPECT_EQ(1, ts.session->window_index, "tftp session window index mismatch");
   EXPECT_EQ(ts.outlen, sizeof(tftp_data_msg) + DEFAULT_BLOCKSIZE, "bad outlen");
-  ASSERT_NO_FATAL_FAILURES(verify_read_data(ts, td), "bad test data");
+  ASSERT_NO_FATAL_FAILURE(verify_read_data(ts, td), "bad test data");
   EXPECT_TRUE(tftp_session_has_pending(ts.session), "expected pending data to transmit");
 }
 
@@ -1737,10 +1737,10 @@ static void test_tftp_open_should_wait(tftp_file_direction dir) {
   EXPECT_EQ(msg->err_code, htons(TFTP_ERR_CODE_BUSY));
   if (dir == SEND_FILE) {
     const char expected_err[] = "not ready to receive";
-    EXPECT_STR_EQ(expected_err, msg->msg, "bad error message");
+    EXPECT_STREQ(expected_err, msg->msg, "bad error message");
   } else {
     const char expected_err[] = "not ready to send";
-    EXPECT_STR_EQ(expected_err, msg->msg, "bad error message");
+    EXPECT_STREQ(expected_err, msg->msg, "bad error message");
   }
 }
 

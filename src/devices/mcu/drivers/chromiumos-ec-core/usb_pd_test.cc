@@ -37,7 +37,7 @@ class ChromiumosEcUsbPdTest : public ChromiumosEcTestBase {
                         });
 
     // Calls DdkInit on the cros-ec-core device.
-    ASSERT_NO_FATAL_FAILURES(InitDevice());
+    ASSERT_NO_FATAL_FAILURE(InitDevice());
 
     // Initialise the usbpd device.
     zx_device* usbpd_dev = ChromiumosEcTestBase::device_->zxdev()->GetLatestChild();

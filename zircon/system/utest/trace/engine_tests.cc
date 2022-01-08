@@ -598,7 +598,7 @@ Event(ts: <>, pt: <>, category: \"+enabled\", name: \"name\", Instant(scope: glo
     auto test_cstr = test_str.c_str();
     auto record_str = ts_squelcher->Squelch(records[i].ToString().c_str());
     auto record_cstr = record_str.c_str();
-    EXPECT_STR_EQ(test_cstr, record_cstr, "bad data record");
+    EXPECT_STREQ(test_cstr, record_cstr, "bad data record");
   }
 
   END_TRACE_TEST;
@@ -758,7 +758,7 @@ Event(ts: <>, pt: <>, category: \"+enabled\", name: \"name\", Instant(scope: glo
     auto test_cstr = test_str.c_str();
     auto record_str = ts_squelcher->Squelch(records[i].ToString().c_str());
     auto record_cstr = record_str.c_str();
-    EXPECT_STR_EQ(test_cstr, record_cstr, "bad data record");
+    EXPECT_STREQ(test_cstr, record_cstr, "bad data record");
   }
 
   END_TRACE_TEST;

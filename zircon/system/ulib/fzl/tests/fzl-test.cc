@@ -24,16 +24,16 @@ void AlmostEqual(T t0, T t1, T e) {
 }
 
 void TickConverter(zx::ticks ticks, zx::ticks err) {
-  ASSERT_NO_FATAL_FAILURES(
+  ASSERT_NO_FATAL_FAILURE(
       AlmostEqual(ticks.get(), fzl::NsToTicks(fzl::TicksToNs(ticks)).get(), err.get()));
-  ASSERT_NO_FATAL_FAILURES(
+  ASSERT_NO_FATAL_FAILURE(
       AlmostEqual(ticks.get(), ns_to_ticks(ticks_to_ns(ticks.get())), err.get()));
 }
 
 void NsConverter(zx::duration ns, zx::duration err) {
-  ASSERT_NO_FATAL_FAILURES(
+  ASSERT_NO_FATAL_FAILURE(
       AlmostEqual(ns.get(), fzl::TicksToNs(fzl::NsToTicks(ns)).get(), err.get()));
-  ASSERT_NO_FATAL_FAILURES(AlmostEqual(ns.get(), ticks_to_ns(ns_to_ticks(ns.get())), err.get()));
+  ASSERT_NO_FATAL_FAILURE(AlmostEqual(ns.get(), ticks_to_ns(ns_to_ticks(ns.get())), err.get()));
 }
 
 TEST(LibfzlTests, TimeTest) {
@@ -68,19 +68,19 @@ TEST(LibfzlTests, TimeTest) {
   zx::ticks tick_loss = std::max(zx::ticks(1 + (tps.get() / nps.get())), zx::ticks(1));
   zx::duration duration_loss = std::max(zx::duration(1 + (nps.get() / tps.get())), zx::duration(1));
 
-  ASSERT_NO_FATAL_FAILURES(TickConverter(zx::ticks(0), zx::ticks(0)));
-  ASSERT_NO_FATAL_FAILURES(TickConverter(zx::ticks(50), tick_loss));
-  ASSERT_NO_FATAL_FAILURES(TickConverter(zx::ticks(100), tick_loss));
-  ASSERT_NO_FATAL_FAILURES(TickConverter(zx::ticks(100000), tick_loss));
-  ASSERT_NO_FATAL_FAILURES(TickConverter(zx::ticks(1000000000), tick_loss));
-  ASSERT_NO_FATAL_FAILURES(TickConverter(zx::ticks(10000000000000), tick_loss));
+  ASSERT_NO_FATAL_FAILURE(TickConverter(zx::ticks(0), zx::ticks(0)));
+  ASSERT_NO_FATAL_FAILURE(TickConverter(zx::ticks(50), tick_loss));
+  ASSERT_NO_FATAL_FAILURE(TickConverter(zx::ticks(100), tick_loss));
+  ASSERT_NO_FATAL_FAILURE(TickConverter(zx::ticks(100000), tick_loss));
+  ASSERT_NO_FATAL_FAILURE(TickConverter(zx::ticks(1000000000), tick_loss));
+  ASSERT_NO_FATAL_FAILURE(TickConverter(zx::ticks(10000000000000), tick_loss));
 
-  ASSERT_NO_FATAL_FAILURES(NsConverter(zx::duration(0), zx::duration(0)));
-  ASSERT_NO_FATAL_FAILURES(NsConverter(zx::duration(50), duration_loss));
-  ASSERT_NO_FATAL_FAILURES(NsConverter(zx::duration(100), duration_loss));
-  ASSERT_NO_FATAL_FAILURES(NsConverter(zx::duration(100000), duration_loss));
-  ASSERT_NO_FATAL_FAILURES(NsConverter(zx::duration(1000000000), duration_loss));
-  ASSERT_NO_FATAL_FAILURES(NsConverter(zx::duration(10000000000000), duration_loss));
+  ASSERT_NO_FATAL_FAILURE(NsConverter(zx::duration(0), zx::duration(0)));
+  ASSERT_NO_FATAL_FAILURE(NsConverter(zx::duration(50), duration_loss));
+  ASSERT_NO_FATAL_FAILURE(NsConverter(zx::duration(100), duration_loss));
+  ASSERT_NO_FATAL_FAILURE(NsConverter(zx::duration(100000), duration_loss));
+  ASSERT_NO_FATAL_FAILURE(NsConverter(zx::duration(1000000000), duration_loss));
+  ASSERT_NO_FATAL_FAILURE(NsConverter(zx::duration(10000000000000), duration_loss));
 }
 
 TEST(LibfzlTests, FifoTest) {
@@ -153,7 +153,7 @@ TEST(LibfzlTests, FifoTest) {
     char str[8] = ".......";
     zx_status_t status = fifo_0.read_one(&str);
     ASSERT_EQ(status, ZX_OK);
-    ASSERT_STR_EQ("hi fifo", str);
+    ASSERT_STREQ("hi fifo", str);
   }
 
   // Signal & wait_one

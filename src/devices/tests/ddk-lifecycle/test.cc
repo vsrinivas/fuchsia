@@ -115,7 +115,7 @@ TEST_F(LifecycleTest, ChildPreRelease) {
     ASSERT_FALSE(result->result.is_err());
 
     // Wait for the child pre-release notification.
-    ASSERT_NO_FATAL_FAILURES(WaitPreRelease(child_id));
+    ASSERT_NO_FATAL_FAILURE(WaitPreRelease(child_id));
   }
 }
 
@@ -137,7 +137,7 @@ TEST_F(LifecycleTest, Init) {
   ASSERT_FALSE(init_result->result.is_err());
 
   // Wait for the child pre-release notification.
-  ASSERT_NO_FATAL_FAILURES(WaitPreRelease(child_id));
+  ASSERT_NO_FATAL_FAILURE(WaitPreRelease(child_id));
 }
 
 TEST_F(LifecycleTest, CloseAllConnectionsOnInstanceUnbind) {
@@ -158,7 +158,7 @@ TEST_F(LifecycleTest, CloseAllConnectionsOnInstanceUnbind) {
   ASSERT_OK(chan.wait_one(ZX_CHANNEL_PEER_CLOSED, zx::time::infinite(), &closed));
   ASSERT_TRUE(closed & ZX_CHANNEL_PEER_CLOSED);
   // Wait for the child pre-release notification.
-  ASSERT_NO_FATAL_FAILURES(WaitPreRelease(child_id));
+  ASSERT_NO_FATAL_FAILURE(WaitPreRelease(child_id));
 }
 
 TEST_F(LifecycleTest, ReadCallFailsDuringUnbind) {
@@ -223,5 +223,5 @@ TEST_F(LifecycleTest, FailedInit) {
   child_id = result->result.response().child_id;
 
   // Wait for the child pre-release notification.
-  ASSERT_NO_FATAL_FAILURES(WaitPreRelease(child_id));
+  ASSERT_NO_FATAL_FAILURE(WaitPreRelease(child_id));
 }

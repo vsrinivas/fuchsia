@@ -53,7 +53,7 @@ class FakeImx227Device : public Imx227Device {
     SetProtocols();
     ExpectInitPdev();
     ASSERT_OK(InitPdev());
-    ASSERT_NO_FATAL_FAILURES(VerifyAll());
+    ASSERT_NO_FATAL_FAILURE(VerifyAll());
   }
 
   void ExpectInitPdev() {
@@ -184,7 +184,7 @@ class Imx227DeviceTest : public zxtest::Test {
 
   void TearDown() override {
     dut().CameraSensor2DeInit();
-    ASSERT_NO_FATAL_FAILURES(dut().VerifyAll());
+    ASSERT_NO_FATAL_FAILURE(dut().VerifyAll());
   }
 
   FakeImx227Device& dut() { return dut_; }

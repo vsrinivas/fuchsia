@@ -93,7 +93,7 @@ constexpr auto NullObserverOneNullTest = [](auto&& elf) {
   EXPECT_EQ(0, diag.errors());
   EXPECT_EQ(1, diag.warnings());
   ASSERT_EQ(1, warnings.size());
-  EXPECT_STR_EQ(kNullWarning, warnings[0]);
+  EXPECT_STREQ(kNullWarning, warnings[0]);
 };
 
 TEST(ElfldltlPhdrTests, NullObserverOneNull) { TestAllFormats(NullObserverOneNullTest); }
@@ -115,9 +115,9 @@ constexpr auto NullObserverThreeNullsTest = [](auto&& elf) {
   EXPECT_EQ(0, diag.errors());
   EXPECT_EQ(3, diag.warnings());
   ASSERT_EQ(3, warnings.size());
-  EXPECT_STR_EQ(kNullWarning, warnings[0]);
-  EXPECT_STR_EQ(kNullWarning, warnings[1]);
-  EXPECT_STR_EQ(kNullWarning, warnings[2]);
+  EXPECT_STREQ(kNullWarning, warnings[0]);
+  EXPECT_STREQ(kNullWarning, warnings[1]);
+  EXPECT_STREQ(kNullWarning, warnings[2]);
 };
 
 TEST(ElfldltlPhdrTests, NullObserverThreeNulls) { TestAllFormats(NullObserverThreeNullsTest); }
@@ -186,8 +186,8 @@ constexpr auto SingletonObserverMultipleHeadersPerTypeTest = [](auto&& elf) {
   EXPECT_EQ(2, diag.warnings());
 
   ASSERT_EQ(warnings.size(), 2);
-  EXPECT_STR_EQ(warnings[0], "too many PT_GNU_RELRO headers; expected at most one");
-  EXPECT_STR_EQ(warnings[1], "too many PT_INTERP headers; expected at most one");
+  EXPECT_STREQ(warnings[0], "too many PT_GNU_RELRO headers; expected at most one");
+  EXPECT_STREQ(warnings[1], "too many PT_INTERP headers; expected at most one");
 };
 
 TEST(ElfldltlPhdrTests, SingletonObserverMultipleHeadersPerType) {
@@ -221,14 +221,14 @@ constexpr auto UnknownFlagsTest = [](auto&& elf) {
   EXPECT_EQ(4, diag.warnings());
 
   ASSERT_EQ(warnings.size(), 4);
-  EXPECT_STR_EQ(warnings[0],
-                "PT_DYNAMIC header has unrecognized flags (other than PF_R, PF_W, PF_X)");
-  EXPECT_STR_EQ(warnings[1],
-                "PT_INTERP header has unrecognized flags (other than PF_R, PF_W, PF_X)");
-  EXPECT_STR_EQ(warnings[2],
-                "PT_GNU_STACK header has unrecognized flags (other than PF_R, PF_W, PF_X)");
-  EXPECT_STR_EQ(warnings[3],
-                "PT_GNU_RELRO header has unrecognized flags (other than PF_R, PF_W, PF_X)");
+  EXPECT_STREQ(warnings[0],
+               "PT_DYNAMIC header has unrecognized flags (other than PF_R, PF_W, PF_X)");
+  EXPECT_STREQ(warnings[1],
+               "PT_INTERP header has unrecognized flags (other than PF_R, PF_W, PF_X)");
+  EXPECT_STREQ(warnings[2],
+               "PT_GNU_STACK header has unrecognized flags (other than PF_R, PF_W, PF_X)");
+  EXPECT_STREQ(warnings[3],
+               "PT_GNU_RELRO header has unrecognized flags (other than PF_R, PF_W, PF_X)");
 };
 
 TEST(ElfldltlPhdrTests, UnknownFlags) { TestAllFormats(UnknownFlagsTest); }
@@ -260,9 +260,9 @@ constexpr auto BadAlignmentTest = [](auto&& elf) {
   EXPECT_EQ(0, diag.warnings());
 
   ASSERT_EQ(errors.size(), 3);
-  EXPECT_STR_EQ(errors[0], "PT_INTERP header has `p_align` that is not zero or a power of two");
-  EXPECT_STR_EQ(errors[1], "PT_NOTE header has `p_align` that is not zero or a power of two");
-  EXPECT_STR_EQ(errors[2], "PT_GNU_RELRO header has `p_align` that is not zero or a power of two");
+  EXPECT_STREQ(errors[0], "PT_INTERP header has `p_align` that is not zero or a power of two");
+  EXPECT_STREQ(errors[1], "PT_NOTE header has `p_align` that is not zero or a power of two");
+  EXPECT_STREQ(errors[2], "PT_GNU_RELRO header has `p_align` that is not zero or a power of two");
 };
 
 TEST(ElfldltlPhdrTests, BadAlignment) { TestAllFormats(BadAlignmentTest); }
@@ -321,10 +321,10 @@ constexpr auto OffsetNotEquivVaddrTest = [](auto&& elf) {
   EXPECT_EQ(0, diag.warnings());
 
   ASSERT_EQ(2, errors.size());
-  EXPECT_STR_EQ(errors[0],
-                "PT_NOTE header has incongruent `p_offset` and `p_vaddr` modulo `p_align`");
-  EXPECT_STR_EQ(errors[1],
-                "PT_GNU_RELRO header has incongruent `p_offset` and `p_vaddr` modulo `p_align`");
+  EXPECT_STREQ(errors[0],
+               "PT_NOTE header has incongruent `p_offset` and `p_vaddr` modulo `p_align`");
+  EXPECT_STREQ(errors[1],
+               "PT_GNU_RELRO header has incongruent `p_offset` and `p_vaddr` modulo `p_align`");
 };
 
 TEST(ElfldltlPhdrTests, OffsetNotEquivVaddrVaddr) { TestAllFormats(OffsetNotEquivVaddrTest); }
@@ -565,7 +565,7 @@ constexpr auto StackObserverExecNotOkPhdrWithXTest = [](auto&& elf) {
   EXPECT_EQ(1, diag.errors());
   EXPECT_EQ(0, diag.warnings());
   ASSERT_EQ(errors.size(), 1);
-  EXPECT_STR_EQ(errors.front(), "executable stack not supported: PF_X is set");
+  EXPECT_STREQ(errors.front(), "executable stack not supported: PF_X is set");
 };
 
 TEST(ElfldltlPhdrTests, StackObserverExecNotOkPhdrWithX) {
@@ -613,7 +613,7 @@ constexpr auto StackObserverExecNotOkNoPhdrTest = [](auto&& elf) {
   EXPECT_EQ(1, diag.errors());
   EXPECT_EQ(0, diag.warnings());
   ASSERT_EQ(errors.size(), 1);
-  EXPECT_STR_EQ(errors.front(), "executable stack not supported: PT_GNU_STACK header required");
+  EXPECT_STREQ(errors.front(), "executable stack not supported: PT_GNU_STACK header required");
 };
 
 TEST(ElfldltlPhdrTests, StackObserverExecNotOkNoPhdr) {
@@ -638,7 +638,7 @@ constexpr auto StackObserverNonReadableTest = [](auto&& elf) {
   EXPECT_EQ(1, diag.errors());
   EXPECT_EQ(0, diag.warnings());
   ASSERT_EQ(errors.size(), 1);
-  EXPECT_STR_EQ(errors.front(), "stack is not readable: PF_R is not set");
+  EXPECT_STREQ(errors.front(), "stack is not readable: PF_R is not set");
 };
 
 TEST(ElfldltlPhdrTests, StackObserverNonReadable) { TestAllFormats(StackObserverNonReadableTest); }
@@ -661,7 +661,7 @@ constexpr auto StackObserverNonWritableTest = [](auto&& elf) {
   EXPECT_EQ(1, diag.errors());
   EXPECT_EQ(0, diag.warnings());
   ASSERT_EQ(errors.size(), 1);
-  EXPECT_STR_EQ(errors.front(), "stack is not writable: PF_W is not set");
+  EXPECT_STREQ(errors.front(), "stack is not writable: PF_W is not set");
 };
 
 TEST(ElfldltlPhdrTests, StackObserverNonWritable) { TestAllFormats(StackObserverNonWritableTest); }
@@ -708,7 +708,7 @@ constexpr auto MetadataObserverUnalignedVaddrTest = [](auto&& elf) {
   EXPECT_EQ(0, diag.warnings());
 
   ASSERT_EQ(errors.size(), 1);
-  EXPECT_STR_EQ(errors[0], "PT_INTERP header has `p_vaddr % p_align != 0`");
+  EXPECT_STREQ(errors[0], "PT_INTERP header has `p_vaddr % p_align != 0`");
 };
 
 TEST(ElfldltlPhdrTests, MetadataObserverUnalignedVaddr) {
@@ -739,7 +739,7 @@ constexpr auto MetadataObserverFileszNotEqMemszTest = [](auto&& elf) {
   EXPECT_EQ(1, diag.errors());
   EXPECT_EQ(0, diag.warnings());
   ASSERT_EQ(1, errors.size());
-  EXPECT_STR_EQ("PT_INTERP header has `p_filesz != p_memsz`", errors.front());
+  EXPECT_STREQ("PT_INTERP header has `p_filesz != p_memsz`", errors.front());
 };
 
 TEST(ElfldltlPhdrTests, MetadataObserverFileszNotEqMemsz) {
@@ -772,7 +772,7 @@ constexpr auto MetadataObserverIncompatibleEntrySizeTest = [](auto&& elf) {
   EXPECT_EQ(1, diag.errors());
   EXPECT_EQ(0, diag.warnings());
   ASSERT_EQ(1, errors.size());
-  EXPECT_STR_EQ("PT_DYNAMIC segment size is not a multiple of entry size", errors.front());
+  EXPECT_STREQ("PT_DYNAMIC segment size is not a multiple of entry size", errors.front());
 };
 
 TEST(ElfldltlPhdrTests, MetadataObserverIncompatibleEntrySize) {
@@ -803,8 +803,7 @@ constexpr auto MetadataObserverIncompatibleEntryAlignmentTest = [](auto&& elf) {
   EXPECT_EQ(1, diag.errors());
   EXPECT_EQ(0, diag.warnings());
   ASSERT_EQ(1, errors.size());
-  EXPECT_STR_EQ("PT_DYNAMIC segment alignment is not a multiple of entry alignment",
-                errors.front());
+  EXPECT_STREQ("PT_DYNAMIC segment alignment is not a multiple of entry alignment", errors.front());
 };
 
 TEST(ElfldltlPhdrTests, MetadataObserverIncompatibleAlignmentSize) {

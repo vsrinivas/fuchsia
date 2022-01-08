@@ -908,7 +908,7 @@ TEST_F(HidDevTest, InspectDeviceTypes) {
       root->node().get_property<inspect::StringPropertyValue>("device_types");
   ASSERT_NOT_NULL(device_types);
 
-  EXPECT_STR_EQ(device_types->value().c_str(), "touch,mouse");
+  EXPECT_STREQ(device_types->value().c_str(), "touch,mouse");
 }
 
 TEST_F(HidDevTest, GetInputReport) {

@@ -75,12 +75,12 @@ TEST_F(VmoTest, Basic) {
   size_t actual = 0u;
   ASSERT_OK(zxio_read(io, buffer, 8, 0, &actual));
   EXPECT_EQ(actual, 8);
-  EXPECT_STR_EQ("efghijkl", buffer);
+  EXPECT_STREQ("efghijkl", buffer);
   memset(buffer, 0, sizeof(buffer));
   actual = 0u;
   ASSERT_OK(zxio_read_at(io, 1u, buffer, 6, 0, &actual));
   EXPECT_EQ(actual, 6);
-  EXPECT_STR_EQ("bcdefg", buffer);
+  EXPECT_STREQ("bcdefg", buffer);
 
   size_t offset = 2u;
   ASSERT_OK(zxio_seek(io, ZXIO_SEEK_ORIGIN_START, 2, &offset));
@@ -88,7 +88,7 @@ TEST_F(VmoTest, Basic) {
   memset(buffer, 0, sizeof(buffer));
   actual = 0u;
   ASSERT_OK(zxio_read(io, buffer, 3, 0, &actual));
-  EXPECT_STR_EQ("cde", buffer);
+  EXPECT_STREQ("cde", buffer);
   ASSERT_STATUS(ZX_ERR_UNAVAILABLE, zxio_truncate(io, 0u));
   uint32_t flags = 0u;
   ASSERT_STATUS(ZX_ERR_NOT_SUPPORTED, zxio_flags_get(io, &flags));

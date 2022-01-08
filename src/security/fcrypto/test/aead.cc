@@ -88,8 +88,8 @@ void TestInitSeal(AEAD::Algorithm aead) {
   // Valid
   EXPECT_OK(sealer.InitSeal(aead, key, iv));
 }
-TEST(InitSeal, AES128_GCM) { ASSERT_NO_FATAL_FAILURES(TestInitSeal(AEAD::kAES128_GCM)); }
-TEST(InitSeal, AES128_GCM_SIV) { ASSERT_NO_FATAL_FAILURES(TestInitSeal(AEAD::kAES128_GCM_SIV)); }
+TEST(InitSeal, AES128_GCM) { ASSERT_NO_FATAL_FAILURE(TestInitSeal(AEAD::kAES128_GCM)); }
+TEST(InitSeal, AES128_GCM_SIV) { ASSERT_NO_FATAL_FAILURE(TestInitSeal(AEAD::kAES128_GCM_SIV)); }
 
 TEST(InitOpen, Uninitialized) {
   AEAD opener;
@@ -117,8 +117,8 @@ void TestInitOpen(AEAD::Algorithm aead) {
   // Valid
   EXPECT_OK(opener.InitOpen(aead, key, iv));
 }
-TEST(InitOpen, AES128_GCM) { ASSERT_NO_FATAL_FAILURES(TestInitOpen(AEAD::kAES128_GCM)); }
-TEST(InitOpen, AES128_GCM_SIV) { ASSERT_NO_FATAL_FAILURES(TestInitOpen(AEAD::kAES128_GCM_SIV)); }
+TEST(InitOpen, AES128_GCM) { ASSERT_NO_FATAL_FAILURE(TestInitOpen(AEAD::kAES128_GCM)); }
+TEST(InitOpen, AES128_GCM_SIV) { ASSERT_NO_FATAL_FAILURE(TestInitOpen(AEAD::kAES128_GCM_SIV)); }
 
 void TestSealData(AEAD::Algorithm aead) {
   AEAD sealer;
@@ -148,8 +148,8 @@ void TestSealData(AEAD::Algorithm aead) {
   sealer.Reset();
   EXPECT_STATUS(sealer.Seal(ptext, &nonce, &ctext), ZX_ERR_BAD_STATE);
 }
-TEST(SealData, AES128_GCM) { ASSERT_NO_FATAL_FAILURES(TestSealData(AEAD::kAES128_GCM)); }
-TEST(SealData, AES128_GCM_SIV) { ASSERT_NO_FATAL_FAILURES(TestSealData(AEAD::kAES128_GCM_SIV)); }
+TEST(SealData, AES128_GCM) { ASSERT_NO_FATAL_FAILURE(TestSealData(AEAD::kAES128_GCM)); }
+TEST(SealData, AES128_GCM_SIV) { ASSERT_NO_FATAL_FAILURE(TestSealData(AEAD::kAES128_GCM_SIV)); }
 
 void TestOpenData(AEAD::Algorithm aead) {
   Secret key;
@@ -207,8 +207,8 @@ void TestOpenData(AEAD::Algorithm aead) {
   opener.Reset();
   EXPECT_STATUS(opener.Open(nonce, ctext, &result), ZX_ERR_BAD_STATE);
 }
-TEST(OpenData, AES128_GCM) { ASSERT_NO_FATAL_FAILURES(TestOpenData(AEAD::kAES128_GCM)); }
-TEST(OpenData, AES128_GCM_SIV) { ASSERT_NO_FATAL_FAILURES(TestOpenData(AEAD::kAES128_GCM_SIV)); }
+TEST(OpenData, AES128_GCM) { ASSERT_NO_FATAL_FAILURE(TestOpenData(AEAD::kAES128_GCM)); }
+TEST(OpenData, AES128_GCM_SIV) { ASSERT_NO_FATAL_FAILURE(TestOpenData(AEAD::kAES128_GCM_SIV)); }
 
 // The following tests are taken from NIST's SP 800-38D.  The tests with non-byte non-standard IV
 // and tag lengths are omitted.  Of those remaining, the first non-failing test of each combination
@@ -239,7 +239,7 @@ void TestAes128Gcm_TC(const char* xkey, const char* xiv, const char* xct, const 
 }
 
 TEST(Aes128Gcm, TC01) {
-  ASSERT_NO_FATAL_FAILURES(TestAes128Gcm_TC(
+  ASSERT_NO_FATAL_FAILURE(TestAes128Gcm_TC(
       /* Key */ "cf063a34d4a9a76c2c86787d3f96db71",
       /* IV */ "113b9785971864c83b01c787",
       /* CT */ "",
@@ -250,7 +250,7 @@ TEST(Aes128Gcm, TC01) {
 
 // clang-format off
 TEST(Aes128Gcm, TC02) {
-  ASSERT_NO_FATAL_FAILURES(TestAes128Gcm_TC(
+  ASSERT_NO_FATAL_FAILURE(TestAes128Gcm_TC(
       /* Key */ "e98b72a9881a84ca6b76e0f43e68647a",
       /* IV */  "8b23299fde174053f3d652ba",
       /* CT */  "5a3c1cf1985dbb8bed818036fdd5ab42",
@@ -260,7 +260,7 @@ TEST(Aes128Gcm, TC02) {
 }
 
 TEST(Aes128Gcm, TC03) {
-  ASSERT_NO_FATAL_FAILURES(TestAes128Gcm_TC(
+  ASSERT_NO_FATAL_FAILURE(TestAes128Gcm_TC(
       /* Key */ "816e39070410cf2184904da03ea5075a",
       /* IV */  "32c367a3362613b27fc3e67e",
       /* CT */  "552ebe012e7bcf90fcef712f8344e8f1",
@@ -270,7 +270,7 @@ TEST(Aes128Gcm, TC03) {
 }
 
 TEST(Aes128Gcm, TC04) {
-  ASSERT_NO_FATAL_FAILURES(TestAes128Gcm_TC(
+  ASSERT_NO_FATAL_FAILURE(TestAes128Gcm_TC(
       /* Key */ "d9529840200e1c17725ab52c9c927637",
       /* IV */  "6e9a639d4aecc25530a8ad75",
       /* CT */  "6c779895e78179783c51ade1926436b9",
@@ -280,7 +280,7 @@ TEST(Aes128Gcm, TC04) {
 }
 
 TEST(Aes128Gcm, TC05) {
-  ASSERT_NO_FATAL_FAILURES(TestAes128Gcm_TC(
+  ASSERT_NO_FATAL_FAILURE(TestAes128Gcm_TC(
       /* Key */ "abbc49ee0bbe3d81afc2b6b84f70b748",
       /* IV */  "f11db9f7b99a59ed59ade66f",
       /* CT */  "ce2d76f834942c022044eebc91b461c0",
@@ -290,7 +290,7 @@ TEST(Aes128Gcm, TC05) {
 }
 
 TEST(Aes128Gcm, TC06) {
-  ASSERT_NO_FATAL_FAILURES(TestAes128Gcm_TC(
+  ASSERT_NO_FATAL_FAILURE(TestAes128Gcm_TC(
       /* Key */ "300b8ffab4368cc90f6d4063e4279f2a",
       /* IV */  "8e69fa64e871d0e98a183a49",
       /* CT */  "2d2292da61c280aff86767d25b75e814",
@@ -300,7 +300,7 @@ TEST(Aes128Gcm, TC06) {
 }
 
 TEST(Aes128Gcm, TC07) {
-  ASSERT_NO_FATAL_FAILURES(TestAes128Gcm_TC(
+  ASSERT_NO_FATAL_FAILURE(TestAes128Gcm_TC(
       /* Key */ "387218b246c1a8257748b56980e50c94",
       /* IV */  "dd7e014198672be39f95b69d",
       /* CT */  "cdba9e73eaf3d38eceb2b04a8d",
@@ -310,7 +310,7 @@ TEST(Aes128Gcm, TC07) {
 }
 
 TEST(Aes128Gcm, TC08) {
-  ASSERT_NO_FATAL_FAILURES(TestAes128Gcm_TC(
+  ASSERT_NO_FATAL_FAILURE(TestAes128Gcm_TC(
       /* Key */ "660eb76f3d8b6ec54e01b8a36263124b",
       /* IV */  "3d8cf16e262880ddfe0c86eb",
       /* CT */  "b1ee05f1415a61d7637e97c5f3",
@@ -320,7 +320,7 @@ TEST(Aes128Gcm, TC08) {
 }
 
 TEST(Aes128Gcm, TC09) {
-  ASSERT_NO_FATAL_FAILURES(TestAes128Gcm_TC(
+  ASSERT_NO_FATAL_FAILURE(TestAes128Gcm_TC(
       /* Key */ "c62dc36b9230e739179f3c58e7270ff9",
       /* IV */  "196a0572d8ff2fbd3522b6a5",
       /* CT */  "958062b331f05b3acaa1836fc2",
@@ -330,7 +330,7 @@ TEST(Aes128Gcm, TC09) {
 }
 
 TEST(Aes128Gcm, TC10) {
-  ASSERT_NO_FATAL_FAILURES(TestAes128Gcm_TC(
+  ASSERT_NO_FATAL_FAILURE(TestAes128Gcm_TC(
       /* Key */ "ef1da9dd794219ebf8f717d5a98ab0af",
       /* IV */  "3f3983dc63986e33d1b6bffc",
       /* CT */  "95ea05701481e915c72446c876",
@@ -340,7 +340,7 @@ TEST(Aes128Gcm, TC10) {
 }
 
 TEST(Aes128Gcm, TC11) {
-  ASSERT_NO_FATAL_FAILURES(TestAes128Gcm_TC(
+  ASSERT_NO_FATAL_FAILURE(TestAes128Gcm_TC(
       /* Key */ "77b55a5b37690c9b1b01a05820838e3e",
       /* IV */  "7a8e0d881f023a9954941037",
       /* CT */  "e0eb3359e443e1108ed4068969",
@@ -350,7 +350,7 @@ TEST(Aes128Gcm, TC11) {
 }
 
 TEST(Aes128Gcm, TC12) {
-  ASSERT_NO_FATAL_FAILURES(TestAes128Gcm_TC(
+  ASSERT_NO_FATAL_FAILURE(TestAes128Gcm_TC(
       /* Key */ "bfd414a6212958a607a0f5d3ab48471d",
       /* IV */  "86d8ea0ab8e40dcc481cd0e2",
       /* CT */  "62171db33193292d930bf6647347652c1ef33316d7feca99d54f1db4fcf513f8",
@@ -360,7 +360,7 @@ TEST(Aes128Gcm, TC12) {
 }
 
 TEST(Aes128Gcm, TC13) {
-  ASSERT_NO_FATAL_FAILURES(TestAes128Gcm_TC(
+  ASSERT_NO_FATAL_FAILURE(TestAes128Gcm_TC(
       /* Key */ "95bcde70c094f04e3dd8259cafd88ce8",
       /* IV */  "12cf097ad22380432ff40a5c",
       /* CT */  "8a023ba477f5b809bddcda8f55e09064d6d88aaec99c1e141212ea5b08503660",
@@ -370,7 +370,7 @@ TEST(Aes128Gcm, TC13) {
 }
 
 TEST(Aes128Gcm, TC14) {
-  ASSERT_NO_FATAL_FAILURES(TestAes128Gcm_TC(
+  ASSERT_NO_FATAL_FAILURE(TestAes128Gcm_TC(
       /* Key */ "f3e60720c7eff3af96a0e7b2a359c322",
       /* IV */  "8c9cb6af794f8c0fc4c8c06e",
       /* CT */  "73e308d968ead96cefc9337dea6952ac3afbe39d7d14d063b9f59ab89c3f6acc",
@@ -380,7 +380,7 @@ TEST(Aes128Gcm, TC14) {
 }
 
 TEST(Aes128Gcm, TC15) {
-  ASSERT_NO_FATAL_FAILURES(TestAes128Gcm_TC(
+  ASSERT_NO_FATAL_FAILURE(TestAes128Gcm_TC(
       /* Key */ "8453cf505f22445634b18680c1f6b0f3",
       /* IV */  "fab8e5ce90102286182ef690",
       /* CT */  "5475442af3ba2bd865ae082bc5e92ad7f42cd84b8c64daadcf18f0d4863b6172",
@@ -390,7 +390,7 @@ TEST(Aes128Gcm, TC15) {
 }
 
 TEST(Aes128Gcm, TC16) {
-  ASSERT_NO_FATAL_FAILURES(TestAes128Gcm_TC(
+  ASSERT_NO_FATAL_FAILURE(TestAes128Gcm_TC(
       /* Key */ "07a6be880a58f572dbc2ad74a56db8b6",
       /* IV */  "95fc6654e6dc3a8adf5e7a69",
       /* CT */  "095635c7e0eac0fc1059e67e1a936b6f72671121f96699fed520e5f8aff777f0",
@@ -400,7 +400,7 @@ TEST(Aes128Gcm, TC16) {
 }
 
 TEST(Aes128Gcm, TC17) {
-  ASSERT_NO_FATAL_FAILURES(TestAes128Gcm_TC(
+  ASSERT_NO_FATAL_FAILURE(TestAes128Gcm_TC(
       /* Key */ "93ae114052b7985d409a39a40df8c7ee",
       /* IV */  "8ad733a4a9b8330690238c42",
       /* CT */  "bbb5b672a479afca2b11adb0a4c762b698dd565908fee1d101f6a01d63332c91b85d7f03ac48a477897d512b4572f9042cb7ea",
@@ -410,7 +410,7 @@ TEST(Aes128Gcm, TC17) {
 }
 
 TEST(Aes128Gcm, TC18) {
-  ASSERT_NO_FATAL_FAILURES(TestAes128Gcm_TC(
+  ASSERT_NO_FATAL_FAILURE(TestAes128Gcm_TC(
       /* Key */ "bc22f3f05cc40db9311e4192966fee92",
       /* IV */  "134988e662343c06d3ab83db",
       /* CT */  "4c0168ab95d3a10ef25e5924108389365c67d97778995892d9fd46897384af61fc559212b3267e90fe4df7bfd1fbed46f4b9ee",
@@ -420,7 +420,7 @@ TEST(Aes128Gcm, TC18) {
 }
 
 TEST(Aes128Gcm, TC19) {
-  ASSERT_NO_FATAL_FAILURES(TestAes128Gcm_TC(
+  ASSERT_NO_FATAL_FAILURE(TestAes128Gcm_TC(
       /* Key */ "af57f42c60c0fc5a09adb81ab86ca1c3",
       /* IV */  "a2dc01871f37025dc0fc9a79",
       /* CT */  "b9a535864f48ea7b6b1367914978f9bfa087d854bb0e269bed8d279d2eea1210e48947338b22f9bad09093276a331e9c79c7f4",
@@ -430,7 +430,7 @@ TEST(Aes128Gcm, TC19) {
 }
 
 TEST(Aes128Gcm, TC20) {
-  ASSERT_NO_FATAL_FAILURES(TestAes128Gcm_TC(
+  ASSERT_NO_FATAL_FAILURE(TestAes128Gcm_TC(
       /* Key */ "f0305c7b513960533519473976f02beb",
       /* IV */  "1a7f6ea0e6c9aa5cf8b78b09",
       /* CT */  "30043bcbe2177ab25e4b00a92ee1cd80e9daaea0bc0a827fc5fcb84e7b07be6395582a5a14e768dde80a20dae0a8b1d8d1d29b",
@@ -440,7 +440,7 @@ TEST(Aes128Gcm, TC20) {
 }
 
 TEST(Aes128Gcm, TC21) {
-  ASSERT_NO_FATAL_FAILURES(TestAes128Gcm_TC(
+  ASSERT_NO_FATAL_FAILURE(TestAes128Gcm_TC(
       /* Key */ "da2bb7d581493d692380c77105590201",
       /* IV */  "44aa3e7856ca279d2eb020c6",
       /* CT */  "9290d430c9e89c37f0446dbd620c9a6b34b1274aeb6f911f75867efcf95b6feda69f1af4ee16c761b3c9aeac3da03aa9889c88",
@@ -477,7 +477,7 @@ void TestAes128GcmSiv_TC(const char* xpt, const char* xaad, const char* xkey, co
 
 // clang-format off
 TEST(Aes128GcmSiv, TC01) {
-  ASSERT_NO_FATAL_FAILURES(TestAes128GcmSiv_TC(
+  ASSERT_NO_FATAL_FAILURE(TestAes128GcmSiv_TC(
       /* Plaintext (0 bytes) */  "",
       /* AAD (0 bytes) */        "",
       /* Key */                  "01000000000000000000000000000000",
@@ -486,7 +486,7 @@ TEST(Aes128GcmSiv, TC01) {
 }
 
 TEST(Aes128GcmSiv, TC02) {
-  ASSERT_NO_FATAL_FAILURES(TestAes128GcmSiv_TC(
+  ASSERT_NO_FATAL_FAILURE(TestAes128GcmSiv_TC(
       /* Plaintext (8 bytes) */  "0100000000000000",
       /* AAD (0 bytes) */        "",
       /* Key */                  "01000000000000000000000000000000",
@@ -496,7 +496,7 @@ TEST(Aes128GcmSiv, TC02) {
 }
 
 TEST(Aes128GcmSiv, TC03) {
-  ASSERT_NO_FATAL_FAILURES(TestAes128GcmSiv_TC(
+  ASSERT_NO_FATAL_FAILURE(TestAes128GcmSiv_TC(
       /* Plaintext (12 bytes) */ "010000000000000000000000",
       /* AAD (0 bytes) */        "",
       /* Key */                  "01000000000000000000000000000000",
@@ -506,7 +506,7 @@ TEST(Aes128GcmSiv, TC03) {
 }
 
 TEST(Aes128GcmSiv, TC04) {
-  ASSERT_NO_FATAL_FAILURES(TestAes128GcmSiv_TC(
+  ASSERT_NO_FATAL_FAILURE(TestAes128GcmSiv_TC(
       /* Plaintext (16 bytes) */ "01000000000000000000000000000000",
       /* AAD (0 bytes) */        "",
       /* Key */                  "01000000000000000000000000000000",
@@ -516,7 +516,7 @@ TEST(Aes128GcmSiv, TC04) {
 }
 
 TEST(Aes128GcmSiv, TC05) {
-  ASSERT_NO_FATAL_FAILURES(TestAes128GcmSiv_TC(
+  ASSERT_NO_FATAL_FAILURE(TestAes128GcmSiv_TC(
       /* Plaintext (32 bytes) */ "01000000000000000000000000000000"
                                  "02000000000000000000000000000000",
       /* AAD (0 bytes) */        "",
@@ -528,7 +528,7 @@ TEST(Aes128GcmSiv, TC05) {
 }
 
 TEST(Aes128GcmSiv, TC06) {
-  ASSERT_NO_FATAL_FAILURES(TestAes128GcmSiv_TC(
+  ASSERT_NO_FATAL_FAILURE(TestAes128GcmSiv_TC(
       /* Plaintext (48 bytes) */ "01000000000000000000000000000000"
                                  "02000000000000000000000000000000"
                                  "03000000000000000000000000000000",
@@ -542,7 +542,7 @@ TEST(Aes128GcmSiv, TC06) {
 }
 
 TEST(Aes128GcmSiv, TC07) {
-  ASSERT_NO_FATAL_FAILURES(TestAes128GcmSiv_TC(
+  ASSERT_NO_FATAL_FAILURE(TestAes128GcmSiv_TC(
       /* Plaintext (64 bytes) */ "01000000000000000000000000000000"
                                  "02000000000000000000000000000000"
                                  "03000000000000000000000000000000"
@@ -558,7 +558,7 @@ TEST(Aes128GcmSiv, TC07) {
 }
 
 TEST(Aes128GcmSiv, TC08) {
-  ASSERT_NO_FATAL_FAILURES(TestAes128GcmSiv_TC(
+  ASSERT_NO_FATAL_FAILURE(TestAes128GcmSiv_TC(
       /* Plaintext (8 bytes) */  "0200000000000000",
       /* AAD (1 bytes) */        "01",
       /* Key */                  "01000000000000000000000000000000",
@@ -568,7 +568,7 @@ TEST(Aes128GcmSiv, TC08) {
 }
 
 TEST(Aes128GcmSiv, TC09) {
-  ASSERT_NO_FATAL_FAILURES(TestAes128GcmSiv_TC(
+  ASSERT_NO_FATAL_FAILURE(TestAes128GcmSiv_TC(
       /* Plaintext (12 bytes) */ "020000000000000000000000",
       /* AAD (1 bytes) */        "01",
       /* Key */                  "01000000000000000000000000000000",
@@ -578,7 +578,7 @@ TEST(Aes128GcmSiv, TC09) {
 }
 
 TEST(Aes128GcmSiv, TC10) {
-  ASSERT_NO_FATAL_FAILURES(TestAes128GcmSiv_TC(
+  ASSERT_NO_FATAL_FAILURE(TestAes128GcmSiv_TC(
       /* Plaintext (16 bytes) */ "02000000000000000000000000000000",
       /* AAD (1 bytes) */        "01",
       /* Key */                  "01000000000000000000000000000000",
@@ -588,7 +588,7 @@ TEST(Aes128GcmSiv, TC10) {
 }
 
 TEST(Aes128GcmSiv, TC11) {
-  ASSERT_NO_FATAL_FAILURES(TestAes128GcmSiv_TC(
+  ASSERT_NO_FATAL_FAILURE(TestAes128GcmSiv_TC(
       /* Plaintext (32 bytes) */ "02000000000000000000000000000000"
                                  "03000000000000000000000000000000",
       /* AAD (1 bytes) */        "01",
@@ -600,7 +600,7 @@ TEST(Aes128GcmSiv, TC11) {
 }
 
 TEST(Aes128GcmSiv, TC12) {
-  ASSERT_NO_FATAL_FAILURES(TestAes128GcmSiv_TC(
+  ASSERT_NO_FATAL_FAILURE(TestAes128GcmSiv_TC(
       /* Plaintext (48 bytes) */ "02000000000000000000000000000000"
                                  "03000000000000000000000000000000"
                                  "04000000000000000000000000000000",
@@ -614,7 +614,7 @@ TEST(Aes128GcmSiv, TC12) {
 }
 
 TEST(Aes128GcmSiv, TC13) {
-  ASSERT_NO_FATAL_FAILURES(TestAes128GcmSiv_TC(
+  ASSERT_NO_FATAL_FAILURE(TestAes128GcmSiv_TC(
       /* Plaintext (64 bytes) */ "02000000000000000000000000000000"
                                  "03000000000000000000000000000000"
                                  "04000000000000000000000000000000"
@@ -630,7 +630,7 @@ TEST(Aes128GcmSiv, TC13) {
 }
 
 TEST(Aes128GcmSiv, TC14) {
-  ASSERT_NO_FATAL_FAILURES(TestAes128GcmSiv_TC(
+  ASSERT_NO_FATAL_FAILURE(TestAes128GcmSiv_TC(
       /* Plaintext (4 bytes) */  "02000000",
       /* AAD (12 bytes) */       "010000000000000000000000",
       /* Key */                  "01000000000000000000000000000000",
@@ -640,7 +640,7 @@ TEST(Aes128GcmSiv, TC14) {
 }
 
 TEST(Aes128GcmSiv, TC15) {
-  ASSERT_NO_FATAL_FAILURES(TestAes128GcmSiv_TC(
+  ASSERT_NO_FATAL_FAILURE(TestAes128GcmSiv_TC(
       /* Plaintext (20 bytes) */ "03000000000000000000000000000000"
                                  "04000000",
       /* AAD (18 bytes) */       "01000000000000000000000000000000"
@@ -653,7 +653,7 @@ TEST(Aes128GcmSiv, TC15) {
 }
 
 TEST(Aes128GcmSiv, TC16) {
-  ASSERT_NO_FATAL_FAILURES(TestAes128GcmSiv_TC(
+  ASSERT_NO_FATAL_FAILURE(TestAes128GcmSiv_TC(
       /* Plaintext (18 bytes) */ "03000000000000000000000000000000"
                                  "0400",
       /* AAD (20 bytes) */       "01000000000000000000000000000000"
@@ -666,7 +666,7 @@ TEST(Aes128GcmSiv, TC16) {
 }
 
 TEST(Aes128GcmSiv, TC17) {
-  ASSERT_NO_FATAL_FAILURES(TestAes128GcmSiv_TC(
+  ASSERT_NO_FATAL_FAILURE(TestAes128GcmSiv_TC(
       /* Plaintext (0 bytes) */  "",
       /* AAD (0 bytes) */        "",
       /* Key */                  "e66021d5eb8e4f4066d4adb9c33560e4",
@@ -675,7 +675,7 @@ TEST(Aes128GcmSiv, TC17) {
 }
 
 TEST(Aes128GcmSiv, TC18) {
-  ASSERT_NO_FATAL_FAILURES(TestAes128GcmSiv_TC(
+  ASSERT_NO_FATAL_FAILURE(TestAes128GcmSiv_TC(
       /* Plaintext (3 bytes) */  "7a806c",
       /* AAD (5 bytes) */        "46bb91c3c5",
       /* Key */                  "36864200e0eaf5284d884a0e77d31646",
@@ -685,7 +685,7 @@ TEST(Aes128GcmSiv, TC18) {
 }
 
 TEST(Aes128GcmSiv, TC19) {
-  ASSERT_NO_FATAL_FAILURES(TestAes128GcmSiv_TC(
+  ASSERT_NO_FATAL_FAILURE(TestAes128GcmSiv_TC(
       /* Plaintext (6 bytes) */  "bdc66f146545",
       /* AAD (10 bytes) */       "fc880c94a95198874296",
       /* Key */                  "aedb64a6c590bc84d1a5e269e4b47801",
@@ -695,7 +695,7 @@ TEST(Aes128GcmSiv, TC19) {
 }
 
 TEST(Aes128GcmSiv, TC20) {
-  ASSERT_NO_FATAL_FAILURES(TestAes128GcmSiv_TC(
+  ASSERT_NO_FATAL_FAILURE(TestAes128GcmSiv_TC(
       /* Plaintext (9 bytes) */  "1177441f195495860f",
       /* AAD (15 bytes) */       "046787f3ea22c127aaf195d1894728",
       /* Key */                  "d5cc1fd161320b6920ce07787f86743b",
@@ -705,7 +705,7 @@ TEST(Aes128GcmSiv, TC20) {
 }
 
 TEST(Aes128GcmSiv, TC21) {
-  ASSERT_NO_FATAL_FAILURES(TestAes128GcmSiv_TC(
+  ASSERT_NO_FATAL_FAILURE(TestAes128GcmSiv_TC(
       /* Plaintext (12 bytes) */ "9f572c614b4745914474e7c7",
       /* AAD (20 bytes) */       "c9882e5386fd9f92ec489c8fde2be2cf"
                                  "97e74e93",
@@ -716,7 +716,7 @@ TEST(Aes128GcmSiv, TC21) {
 }
 
 TEST(Aes128GcmSiv, TC22) {
-  ASSERT_NO_FATAL_FAILURES(TestAes128GcmSiv_TC(
+  ASSERT_NO_FATAL_FAILURE(TestAes128GcmSiv_TC(
       /* Plaintext (15 bytes) */ "0d8c8451178082355c9e940fea2f58",
       /* AAD (25 bytes) */       "2950a70d5a1db2316fd568378da107b5"
                                  "2b0da55210cc1c1b0a",
@@ -727,7 +727,7 @@ TEST(Aes128GcmSiv, TC22) {
 }
 
 TEST(Aes128GcmSiv, TC23) {
-  ASSERT_NO_FATAL_FAILURES(TestAes128GcmSiv_TC(
+  ASSERT_NO_FATAL_FAILURE(TestAes128GcmSiv_TC(
       /* Plaintext (18 bytes) */ "6b3db4da3d57aa94842b9803a96e07fb"
                                  "6de7",
       /* AAD (30 bytes) */       "1860f762ebfbd08284e421702de0de18"
@@ -740,7 +740,7 @@ TEST(Aes128GcmSiv, TC23) {
 }
 
 TEST(Aes128GcmSiv, TC24) {
-  ASSERT_NO_FATAL_FAILURES(TestAes128GcmSiv_TC(
+  ASSERT_NO_FATAL_FAILURE(TestAes128GcmSiv_TC(
       /* Plaintext (21 bytes) */ "e42a3c02c25b64869e146d7b233987bd"
                                  "dfc240871d",
       /* AAD (35 bytes) */       "7576f7028ec6eb5ea7e298342a94d4b2"

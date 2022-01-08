@@ -324,7 +324,7 @@ void AllocatedWalkHelper(TestFlavor flavor) {
     // Make sure the region matches what we expect.  If not, tell the
     // callback to exit the walk operation early.
     check_region_match(r, &test_regions[pos]);
-    if (CURRENT_TEST_HAS_FATAL_FAILURES()) {
+    if (CURRENT_TEST_HAS_FATAL_FAILURE()) {
       return false;
     }
 
@@ -334,7 +334,7 @@ void AllocatedWalkHelper(TestFlavor flavor) {
     return (end) ? (pos != end) : true;
   };
 
-  ASSERT_NO_FATAL_FAILURES(alloc.WalkAllocatedRegions(f));
+  ASSERT_NO_FATAL_FAILURE(alloc.WalkAllocatedRegions(f));
   ASSERT_EQ(r_cnt, pos);
 
   // Test that exiting early works, no matter where we are in the region list.

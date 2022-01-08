@@ -89,7 +89,7 @@ TEST_F(LoggerTest, LogMessage) {
 
   std::unique_ptr<uint8_t[]> data_buf;
   uint32_t data_size;
-  ASSERT_NO_FATAL_FAILURES(
+  ASSERT_NO_FATAL_FAILURE(
       DecodeMessage(local_, fuchsia_driver_test_logger_LoggerLogMessageOrdinal,
                     &fuchsia_driver_test_logger_LoggerLogMessageRequestMessageTable, &data_buf,
                     &data_size),
@@ -107,7 +107,7 @@ void ValidateReceivedTestCase(const zx::channel& log_ch,
                               const fuchsia_driver_test_logger_TestCaseResult& want) {
   std::unique_ptr<uint8_t[]> data_buf;
   uint32_t data_size;
-  ASSERT_NO_FATAL_FAILURES(
+  ASSERT_NO_FATAL_FAILURE(
       DecodeMessage(log_ch, fuchsia_driver_test_logger_LoggerLogTestCaseOrdinal,
                     &fuchsia_driver_test_logger_LoggerLogTestCaseRequestMessageTable, &data_buf,
                     &data_size),
@@ -130,7 +130,7 @@ TEST_F(LoggerTest, LogEmptyTestCase) {
   logger_->OnTestCaseEnd(kFakeTestCase);
 
   auto want_result = fuchsia_driver_test_logger_TestCaseResult{};
-  ASSERT_NO_FATAL_FAILURES(ValidateReceivedTestCase(local_, want_result));
+  ASSERT_NO_FATAL_FAILURE(ValidateReceivedTestCase(local_, want_result));
 }
 
 TEST_F(LoggerTest, LogSingleTest) {
@@ -140,7 +140,7 @@ TEST_F(LoggerTest, LogSingleTest) {
 
   auto want_result = fuchsia_driver_test_logger_TestCaseResult{};
   want_result.passed = 1;
-  ASSERT_NO_FATAL_FAILURES(ValidateReceivedTestCase(local_, want_result));
+  ASSERT_NO_FATAL_FAILURE(ValidateReceivedTestCase(local_, want_result));
 }
 
 TEST_F(LoggerTest, LogMultipleTest) {
@@ -157,7 +157,7 @@ TEST_F(LoggerTest, LogMultipleTest) {
   want_result.passed = 3;
   want_result.failed = 2;
   want_result.skipped = 1;
-  ASSERT_NO_FATAL_FAILURES(ValidateReceivedTestCase(local_, want_result));
+  ASSERT_NO_FATAL_FAILURE(ValidateReceivedTestCase(local_, want_result));
 }
 
 }  // anonymous namespace

@@ -1162,7 +1162,7 @@ void encode_vector_with_huge_count() {
   EXPECT_EQ(status, ZX_ERR_INVALID_ARGS);
   EXPECT_NOT_NULL(error);
   const char expected_error_msg[] = "integer overflow calculating vector size";
-  EXPECT_STR_EQ(expected_error_msg, error, "wrong error msg");
+  EXPECT_STREQ(expected_error_msg, error, "wrong error msg");
   EXPECT_EQ(actual_handles, 0u);
 }
 

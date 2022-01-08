@@ -100,8 +100,8 @@ TEST(GoodixTest, Init) {
       .ExpectReadStop({0x05, 0x61});
 
   EXPECT_OK(device.Init());
-  ASSERT_NO_FATAL_FAILURES(reset_mock.VerifyAndClear());
-  ASSERT_NO_FATAL_FAILURES(intr_mock.VerifyAndClear());
+  ASSERT_NO_FATAL_FAILURE(reset_mock.VerifyAndClear());
+  ASSERT_NO_FATAL_FAILURE(intr_mock.VerifyAndClear());
 }
 
 TEST(GoodixTest, InitForceConfig) {
@@ -143,8 +143,8 @@ TEST(GoodixTest, InitForceConfig) {
       .ExpectReadStop({0x05, 0x61});
 
   EXPECT_OK(device.Init());
-  ASSERT_NO_FATAL_FAILURES(reset_mock.VerifyAndClear());
-  ASSERT_NO_FATAL_FAILURES(intr_mock.VerifyAndClear());
+  ASSERT_NO_FATAL_FAILURE(reset_mock.VerifyAndClear());
+  ASSERT_NO_FATAL_FAILURE(intr_mock.VerifyAndClear());
 }
 
 TEST(GoodixTest, TestReport) {
@@ -167,7 +167,7 @@ TEST(GoodixTest, TestReport) {
 
   ddk::I2cChannel i2c(mock_i2c.GetProto());
 
-  auto fake_parent = MockDevice::FakeRootParent();\
+  auto fake_parent = MockDevice::FakeRootParent();
   Gt92xxTest device(i2c, intr_mock.GetProto(), reset_mock.GetProto(), fake_parent.get());
   EXPECT_OK(device.StartThread());
   zx_nanosleep(zx_deadline_after(ZX_MSEC(10)));

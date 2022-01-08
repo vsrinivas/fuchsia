@@ -393,16 +393,16 @@ TEST_F(Tas27xxTest, CodecDaiFormat) {
   }
 
   // Check inspect state.
-  ASSERT_NO_FATAL_FAILURES(ReadInspect(codec->inspect().DuplicateVmo()));
+  ASSERT_NO_FATAL_FAILURE(ReadInspect(codec->inspect().DuplicateVmo()));
   auto* simple_codec = hierarchy().GetByPath({"simple_codec"});
   ASSERT_TRUE(simple_codec);
-  ASSERT_NO_FATAL_FAILURES(
+  ASSERT_NO_FATAL_FAILURE(
       CheckProperty(simple_codec->node(), "state", inspect::StringPropertyValue("created")));
-  ASSERT_NO_FATAL_FAILURES(
+  ASSERT_NO_FATAL_FAILURE(
       CheckProperty(simple_codec->node(), "start_time", inspect::IntPropertyValue(0)));
-  ASSERT_NO_FATAL_FAILURES(CheckProperty(simple_codec->node(), "manufacturer",
-                                         inspect::StringPropertyValue("Texas Instruments")));
-  ASSERT_NO_FATAL_FAILURES(
+  ASSERT_NO_FATAL_FAILURE(CheckProperty(simple_codec->node(), "manufacturer",
+                                        inspect::StringPropertyValue("Texas Instruments")));
+  ASSERT_NO_FATAL_FAILURE(
       CheckProperty(simple_codec->node(), "product", inspect::StringPropertyValue("TAS2770")));
 
   // Check setting DAI formats.

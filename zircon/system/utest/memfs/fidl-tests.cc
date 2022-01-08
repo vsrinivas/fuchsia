@@ -132,7 +132,7 @@ TEST(FidlTests, TestFidlQueryFilesystem) {
 
     // Sanity checks
     fuchsia_io_admin::wire::FilesystemInfo info;
-    ASSERT_NO_FATAL_FAILURES(QueryInfo("/fidltmp-basic", &info));
+    ASSERT_NO_FATAL_FAILURE(QueryInfo("/fidltmp-basic", &info));
 
     // These values are nonsense, but they're the nonsense we expect memfs to generate.
     ASSERT_EQ(info.total_bytes, UINT64_MAX);

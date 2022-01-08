@@ -231,7 +231,7 @@ void thread_start_test_exception_handler(inferior_data_t* data, const zx_port_pa
 
   // If a test failed detach now so that a thread isn't left waiting in
   // ZX_EXCP_THREAD_STARTING for a response.
-  if (CURRENT_TEST_HAS_FATAL_FAILURES()) {
+  if (CURRENT_TEST_HAS_FATAL_FAILURE()) {
     unbind_inferior(data);
   }
 }
@@ -248,7 +248,7 @@ int capture_regs_thread_func(void* arg) {
 TEST(ThreadStartTests, StoppedInThreadStartingRegAccessTest) {
   springboard_t* sb;
   zx_handle_t inferior, channel;
-  ASSERT_NO_FATAL_FAILURES(setup_inferior(kTestInferiorChildName, &sb, &inferior, &channel));
+  ASSERT_NO_FATAL_FAILURE(setup_inferior(kTestInferiorChildName, &sb, &inferior, &channel));
 
   // Attach to the inferior now because we want to see thread starting
   // exceptions.
@@ -264,13 +264,13 @@ TEST(ThreadStartTests, StoppedInThreadStartingRegAccessTest) {
       start_wait_inf_thread(inferior_data, thread_start_test_exception_handler, &test_state);
   EXPECT_NE(port, ZX_HANDLE_INVALID);
 
-  ASSERT_NO_FATAL_FAILURES(start_inferior(sb));
+  ASSERT_NO_FATAL_FAILURE(start_inferior(sb));
 
   // The first test happens here as the main thread starts.
   // This testing is done in |thread_start_test_exception_handler()|.
 
   // Make sure the program successfully started.
-  ASSERT_NO_FATAL_FAILURES(verify_inferior_running(channel));
+  ASSERT_NO_FATAL_FAILURE(verify_inferior_running(channel));
 
   get_inferior_load_addrs(channel, &test_state.inferior_libc_load_addr,
                           &test_state.inferior_exec_load_addr);
@@ -289,7 +289,7 @@ TEST(ThreadStartTests, StoppedInThreadStartingRegAccessTest) {
   // The remaining testing happens at this point as threads start.
   // This testing is done in |thread_start_test_exception_handler()|.
 
-  ASSERT_NO_FATAL_FAILURES(shutdown_inferior(channel, inferior));
+  ASSERT_NO_FATAL_FAILURE(shutdown_inferior(channel, inferior));
 
   // Stop the waiter thread before closing the port that it's waiting on.
   join_wait_inf_thread(wait_inf_thread);

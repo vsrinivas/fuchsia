@@ -166,7 +166,7 @@ class SdhciTest : public zxtest::Test {
 };
 
 TEST_F(SdhciTest, DdkLifecycle) {
-  ASSERT_NO_FATAL_FAILURES(CreateDut());
+  ASSERT_NO_FATAL_FAILURE(CreateDut());
 
   mock_sdhci_.ExpectGetBaseClock(100'000'000);
   EXPECT_OK(dut_->Init());
@@ -179,14 +179,14 @@ TEST_F(SdhciTest, DdkLifecycle) {
 }
 
 TEST_F(SdhciTest, BaseClockZero) {
-  ASSERT_NO_FATAL_FAILURES(CreateDut());
+  ASSERT_NO_FATAL_FAILURE(CreateDut());
 
   mock_sdhci_.ExpectGetBaseClock(0);
   EXPECT_NOT_OK(dut_->Init());
 }
 
 TEST_F(SdhciTest, BaseClockFromDriver) {
-  ASSERT_NO_FATAL_FAILURES(CreateDut());
+  ASSERT_NO_FATAL_FAILURE(CreateDut());
 
   mock_sdhci_.ExpectGetBaseClock(0xabcdef);
   EXPECT_OK(dut_->Init());
@@ -196,7 +196,7 @@ TEST_F(SdhciTest, BaseClockFromDriver) {
 }
 
 TEST_F(SdhciTest, BaseClockFromHardware) {
-  ASSERT_NO_FATAL_FAILURES(CreateDut());
+  ASSERT_NO_FATAL_FAILURE(CreateDut());
 
   Capabilities0::Get().FromValue(0).set_base_clock_frequency(104).WriteTo(&mmio_);
   EXPECT_OK(dut_->Init());
@@ -206,7 +206,7 @@ TEST_F(SdhciTest, BaseClockFromHardware) {
 }
 
 TEST_F(SdhciTest, HostInfo) {
-  ASSERT_NO_FATAL_FAILURES(CreateDut());
+  ASSERT_NO_FATAL_FAILURE(CreateDut());
 
   Capabilities1::Get()
       .FromValue(0)
@@ -233,7 +233,7 @@ TEST_F(SdhciTest, HostInfo) {
 }
 
 TEST_F(SdhciTest, HostInfoNoDma) {
-  ASSERT_NO_FATAL_FAILURES(CreateDut(SDHCI_QUIRK_NO_DMA));
+  ASSERT_NO_FATAL_FAILURE(CreateDut(SDHCI_QUIRK_NO_DMA));
 
   Capabilities1::Get().FromValue(0).set_sdr50_support(1).set_ddr50_support(1).WriteTo(&mmio_);
   Capabilities0::Get()
@@ -255,7 +255,7 @@ TEST_F(SdhciTest, HostInfoNoDma) {
 }
 
 TEST_F(SdhciTest, HostInfoNoTuning) {
-  ASSERT_NO_FATAL_FAILURES(CreateDut(SDHCI_QUIRK_NON_STANDARD_TUNING));
+  ASSERT_NO_FATAL_FAILURE(CreateDut(SDHCI_QUIRK_NON_STANDARD_TUNING));
 
   Capabilities1::Get().FromValue(0).WriteTo(&mmio_);
   Capabilities0::Get().FromValue(0).set_base_clock_frequency(1).WriteTo(&mmio_);
@@ -269,7 +269,7 @@ TEST_F(SdhciTest, HostInfoNoTuning) {
 }
 
 TEST_F(SdhciTest, SetSignalVoltage) {
-  ASSERT_NO_FATAL_FAILURES(CreateDut());
+  ASSERT_NO_FATAL_FAILURE(CreateDut());
 
   mock_sdhci_.ExpectGetBaseClock(100'000'000);
   Capabilities0::Get().FromValue(0).set_voltage_3v3_support(1).set_voltage_1v8_support(1).WriteTo(
@@ -297,13 +297,13 @@ TEST_F(SdhciTest, SetSignalVoltage) {
 }
 
 TEST_F(SdhciTest, SetSignalVoltageUnsupported) {
-  ASSERT_NO_FATAL_FAILURES(CreateDut());
+  ASSERT_NO_FATAL_FAILURE(CreateDut());
 
   EXPECT_NOT_OK(dut_->SdmmcSetSignalVoltage(SDMMC_VOLTAGE_V330));
 }
 
 TEST_F(SdhciTest, SetBusWidth) {
-  ASSERT_NO_FATAL_FAILURES(CreateDut());
+  ASSERT_NO_FATAL_FAILURE(CreateDut());
 
   mock_sdhci_.ExpectGetBaseClock(100'000'000);
   Capabilities0::Get().FromValue(0).set_bus_width_8_support(1).WriteTo(&mmio_);
@@ -326,13 +326,13 @@ TEST_F(SdhciTest, SetBusWidth) {
 }
 
 TEST_F(SdhciTest, SetBusWidthNotSupported) {
-  ASSERT_NO_FATAL_FAILURES(CreateDut());
+  ASSERT_NO_FATAL_FAILURE(CreateDut());
 
   EXPECT_NOT_OK(dut_->SdmmcSetBusWidth(SDMMC_BUS_WIDTH_EIGHT));
 }
 
 TEST_F(SdhciTest, SetBusFreq) {
-  ASSERT_NO_FATAL_FAILURES(CreateDut());
+  ASSERT_NO_FATAL_FAILURE(CreateDut());
 
   mock_sdhci_.ExpectGetBaseClock(100'000'000);
   EXPECT_OK(dut_->Init());
@@ -361,7 +361,7 @@ TEST_F(SdhciTest, SetBusFreq) {
 }
 
 TEST_F(SdhciTest, SetBusFreqTimeout) {
-  ASSERT_NO_FATAL_FAILURES(CreateDut());
+  ASSERT_NO_FATAL_FAILURE(CreateDut());
 
   mock_sdhci_.ExpectGetBaseClock(100'000'000);
   EXPECT_OK(dut_->Init());
@@ -375,7 +375,7 @@ TEST_F(SdhciTest, SetBusFreqTimeout) {
 }
 
 TEST_F(SdhciTest, SetBusFreqInternalClockEnable) {
-  ASSERT_NO_FATAL_FAILURES(CreateDut());
+  ASSERT_NO_FATAL_FAILURE(CreateDut());
 
   mock_sdhci_.ExpectGetBaseClock(100'000'000);
   EXPECT_OK(dut_->Init());
@@ -391,7 +391,7 @@ TEST_F(SdhciTest, SetBusFreqInternalClockEnable) {
 }
 
 TEST_F(SdhciTest, SetTiming) {
-  ASSERT_NO_FATAL_FAILURES(CreateDut());
+  ASSERT_NO_FATAL_FAILURE(CreateDut());
 
   EXPECT_OK(dut_->SdmmcSetTiming(SDMMC_TIMING_HS));
   EXPECT_TRUE(HostControl1::Get().ReadFrom(&mmio_).high_speed_enable());
@@ -419,15 +419,15 @@ TEST_F(SdhciTest, SetTiming) {
 }
 
 TEST_F(SdhciTest, HwReset) {
-  ASSERT_NO_FATAL_FAILURES(CreateDut());
+  ASSERT_NO_FATAL_FAILURE(CreateDut());
 
   mock_sdhci_.ExpectHwReset();
   dut_->SdmmcHwReset();
-  ASSERT_NO_FATAL_FAILURES(mock_sdhci_.VerifyAndClear());
+  ASSERT_NO_FATAL_FAILURE(mock_sdhci_.VerifyAndClear());
 }
 
 TEST_F(SdhciTest, RequestCommandOnly) {
-  ASSERT_NO_FATAL_FAILURES(CreateDut());
+  ASSERT_NO_FATAL_FAILURE(CreateDut());
 
   mock_sdhci_.ExpectGetBaseClock(100'000'000);
   EXPECT_OK(dut_->Init());
@@ -505,7 +505,7 @@ TEST_F(SdhciTest, RequestCommandOnly) {
 }
 
 TEST_F(SdhciTest, RequestWithData) {
-  ASSERT_NO_FATAL_FAILURES(CreateDut());
+  ASSERT_NO_FATAL_FAILURE(CreateDut());
 
   mock_sdhci_.ExpectGetBaseClock(100'000'000);
   EXPECT_OK(dut_->Init());
@@ -613,7 +613,7 @@ TEST_F(SdhciTest, RequestWithData) {
 }
 
 TEST_F(SdhciTest, RequestAbort) {
-  ASSERT_NO_FATAL_FAILURES(CreateDut());
+  ASSERT_NO_FATAL_FAILURE(CreateDut());
 
   mock_sdhci_.ExpectGetBaseClock(100'000'000);
   EXPECT_OK(dut_->Init());
@@ -655,7 +655,7 @@ TEST_F(SdhciTest, RequestAbort) {
 }
 
 TEST_F(SdhciTest, DmaRequest64Bit) {
-  ASSERT_NO_FATAL_FAILURES(CreateDut());
+  ASSERT_NO_FATAL_FAILURE(CreateDut());
 
   mock_sdhci_.ExpectGetBaseClock(100'000'000);
   Capabilities0::Get()
@@ -715,7 +715,7 @@ TEST_F(SdhciTest, DmaRequest64Bit) {
 }
 
 TEST_F(SdhciTest, DmaRequest32Bit) {
-  ASSERT_NO_FATAL_FAILURES(CreateDut());
+  ASSERT_NO_FATAL_FAILURE(CreateDut());
 
   mock_sdhci_.ExpectGetBaseClock(100'000'000);
   Capabilities0::Get()
@@ -772,7 +772,7 @@ TEST_F(SdhciTest, DmaRequest32Bit) {
 }
 
 TEST_F(SdhciTest, SdioInBandInterrupt) {
-  ASSERT_NO_FATAL_FAILURES(CreateDut());
+  ASSERT_NO_FATAL_FAILURE(CreateDut());
 
   mock_sdhci_.ExpectGetBaseClock(100'000'000);
   EXPECT_OK(dut_->Init());
@@ -798,7 +798,7 @@ TEST_F(SdhciTest, SdioInBandInterrupt) {
 }
 
 TEST_F(SdhciTest, DmaSplitOneBoundary) {
-  ASSERT_NO_FATAL_FAILURES(CreateDut(SDHCI_QUIRK_USE_DMA_BOUNDARY_ALIGNMENT, 0x0800'0000));
+  ASSERT_NO_FATAL_FAILURE(CreateDut(SDHCI_QUIRK_USE_DMA_BOUNDARY_ALIGNMENT, 0x0800'0000));
 
   mock_sdhci_.ExpectGetBaseClock(100'000'000);
   Capabilities0::Get()
@@ -859,7 +859,7 @@ TEST_F(SdhciTest, DmaSplitOneBoundary) {
 }
 
 TEST_F(SdhciTest, DmaSplitManyBoundaries) {
-  ASSERT_NO_FATAL_FAILURES(CreateDut(SDHCI_QUIRK_USE_DMA_BOUNDARY_ALIGNMENT, 0x100));
+  ASSERT_NO_FATAL_FAILURE(CreateDut(SDHCI_QUIRK_USE_DMA_BOUNDARY_ALIGNMENT, 0x100));
 
   mock_sdhci_.ExpectGetBaseClock(100'000'000);
   Capabilities0::Get()
@@ -919,7 +919,7 @@ TEST_F(SdhciTest, DmaSplitManyBoundaries) {
 }
 
 TEST_F(SdhciTest, DmaNoBoundaries) {
-  ASSERT_NO_FATAL_FAILURES(CreateDut());
+  ASSERT_NO_FATAL_FAILURE(CreateDut());
 
   mock_sdhci_.ExpectGetBaseClock(100'000'000);
   Capabilities0::Get()

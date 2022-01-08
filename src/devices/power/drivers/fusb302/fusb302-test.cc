@@ -94,17 +94,17 @@ class Fusb302TestFixture : public InspectTestHelper, public zxtest::Test {
 };
 
 TEST_F(Fusb302TestFixture, InspectTest) {
-  ASSERT_NO_FATAL_FAILURES(ReadInspect(dut_.inspect_vmo()));
+  ASSERT_NO_FATAL_FAILURE(ReadInspect(dut_.inspect_vmo()));
   auto* inspect_device_id = hierarchy().GetByPath({"DeviceId"});
   ASSERT_TRUE(inspect_device_id);
   // VersionId: 9
-  ASSERT_NO_FATAL_FAILURES(
+  ASSERT_NO_FATAL_FAILURE(
       CheckProperty(inspect_device_id->node(), "VersionId", inspect::UintPropertyValue(9)));
   // ProductId: 0
-  ASSERT_NO_FATAL_FAILURES(
+  ASSERT_NO_FATAL_FAILURE(
       CheckProperty(inspect_device_id->node(), "ProductId", inspect::UintPropertyValue(0)));
   // RevisionId: 1
-  ASSERT_NO_FATAL_FAILURES(
+  ASSERT_NO_FATAL_FAILURE(
       CheckProperty(inspect_device_id->node(), "RevisionId", inspect::UintPropertyValue(1)));
 
   auto* inspect_sink_policy_engine = hierarchy().GetByPath({"SinkPolicyEngine"});
@@ -114,40 +114,40 @@ TEST_F(Fusb302TestFixture, InspectTest) {
       inspect_sink_policy_engine->node().get_property<inspect::UintArrayValue>("Capabilities");
   EXPECT_TRUE(capabilities);
   // CurrentCapabilityIndex: UINT8_MAX
-  ASSERT_NO_FATAL_FAILURES(CheckProperty(inspect_sink_policy_engine->node(),
-                                         "CurrentCapabilityIndex",
-                                         inspect::UintPropertyValue(UINT8_MAX)));
+  ASSERT_NO_FATAL_FAILURE(CheckProperty(inspect_sink_policy_engine->node(),
+                                        "CurrentCapabilityIndex",
+                                        inspect::UintPropertyValue(UINT8_MAX)));
   // RequestedMaxCurrent_mA: kChargeInputDefaultCur
-  ASSERT_NO_FATAL_FAILURES(CheckProperty(inspect_sink_policy_engine->node(),
-                                         "RequestedMaxCurrent_mA",
-                                         inspect::UintPropertyValue(kChargeInputDefaultCur)));
+  ASSERT_NO_FATAL_FAILURE(CheckProperty(inspect_sink_policy_engine->node(),
+                                        "RequestedMaxCurrent_mA",
+                                        inspect::UintPropertyValue(kChargeInputDefaultCur)));
   // RequestedMaxVoltage_mV: kChargeInputDefaultVol
-  ASSERT_NO_FATAL_FAILURES(CheckProperty(inspect_sink_policy_engine->node(),
-                                         "RequestedMaxVoltage_mV",
-                                         inspect::UintPropertyValue(kChargeInputDefaultVol)));
+  ASSERT_NO_FATAL_FAILURE(CheckProperty(inspect_sink_policy_engine->node(),
+                                        "RequestedMaxVoltage_mV",
+                                        inspect::UintPropertyValue(kChargeInputDefaultVol)));
 
   auto* inspect_state_machine = hierarchy().GetByPath({"StateMachine"});
   ASSERT_TRUE(inspect_state_machine);
   // State: 0 (disabled)
-  ASSERT_NO_FATAL_FAILURES(
+  ASSERT_NO_FATAL_FAILURE(
       CheckProperty(inspect_state_machine->node(), "State", inspect::UintPropertyValue(0)));
 
   auto* inspect_hw_drp = hierarchy().GetByPath({"HardwareDRP"});
   ASSERT_TRUE(inspect_hw_drp);
   // PowerRole: false (sink)
-  ASSERT_NO_FATAL_FAILURES(
+  ASSERT_NO_FATAL_FAILURE(
       CheckProperty(inspect_hw_drp->node(), "PowerRole", inspect::BoolPropertyValue(false)));
   // DataRole: 1 (UFP)
-  ASSERT_NO_FATAL_FAILURES(
+  ASSERT_NO_FATAL_FAILURE(
       CheckProperty(inspect_hw_drp->node(), "DataRole", inspect::UintPropertyValue(1)));
   // SpecRev: 01 (kRev2)
-  ASSERT_NO_FATAL_FAILURES(
+  ASSERT_NO_FATAL_FAILURE(
       CheckProperty(inspect_hw_drp->node(), "SpecRev", inspect::UintPropertyValue(1)));
   // Polarity: false (CC1)
-  ASSERT_NO_FATAL_FAILURES(
+  ASSERT_NO_FATAL_FAILURE(
       CheckProperty(inspect_hw_drp->node(), "Polarity", inspect::BoolPropertyValue(false)));
   // TxState: 2 (success)
-  ASSERT_NO_FATAL_FAILURES(
+  ASSERT_NO_FATAL_FAILURE(
       CheckProperty(inspect_hw_drp->node(), "TxState", inspect::UintPropertyValue(2)));
 }
 

@@ -48,7 +48,7 @@ type MyStruct = struct {
 };
 )FIDL";
 
-  ASSERT_STR_EQ("PARSE_FAILED", Format(unformatted));
+  ASSERT_STREQ("PARSE_FAILED", Format(unformatted));
 }
 
 // Ensure that an already properly formatted alias declaration is not modified by another run
@@ -68,7 +68,7 @@ library foo.bar;
 alias MyAlias_Abcdefghijklmnopqr = bool;
 )FIDL";
 
-  ASSERT_STR_EQ(formatted, Format(unformatted));
+  ASSERT_STREQ(formatted, Format(unformatted));
   ASSERT_TRUE(fidl::utils::OnlyWhitespaceChanged(formatted, Format(unformatted)));
 }
 
@@ -89,7 +89,7 @@ alias MyAlias_Abcdefghijklmnopqrs
         = bool;
 )FIDL";
 
-  ASSERT_STR_EQ(formatted, Format(unformatted));
+  ASSERT_STREQ(formatted, Format(unformatted));
   ASSERT_TRUE(fidl::utils::OnlyWhitespaceChanged(formatted, Format(unformatted)));
 }
 
@@ -119,7 +119,7 @@ library foo.bar;
 alias MyAlias_Abcdefghijklmnopqr = bool;
 )FIDL";
 
-  ASSERT_STR_EQ(formatted, Format(unformatted));
+  ASSERT_STREQ(formatted, Format(unformatted));
   ASSERT_TRUE(fidl::utils::OnlyWhitespaceChanged(formatted, Format(unformatted)));
 }
 
@@ -135,7 +135,7 @@ library foo.bar;
 alias MyAlias_Abcdefghijklmnopqr = bool;
 )FIDL";
 
-  ASSERT_STR_EQ(formatted, Format(unformatted));
+  ASSERT_STREQ(formatted, Format(unformatted));
   ASSERT_TRUE(fidl::utils::OnlyWhitespaceChanged(formatted, Format(unformatted)));
 }
 
@@ -159,7 +159,7 @@ library foo.bar;
 alias MyAlias_Abcdefghijklmnopqr = bool;
 )FIDL";
 
-  ASSERT_STR_EQ(formatted, Format(unformatted));
+  ASSERT_STREQ(formatted, Format(unformatted));
   ASSERT_TRUE(fidl::utils::OnlyWhitespaceChanged(formatted, Format(unformatted)));
 }
 
@@ -185,7 +185,7 @@ library foo.bar;
 library foo.bar;
 )FIDL";
 
-  ASSERT_STR_EQ(formatted, Format(unformatted));
+  ASSERT_STREQ(formatted, Format(unformatted));
   ASSERT_TRUE(fidl::utils::OnlyWhitespaceChanged(formatted, Format(unformatted)));
 }
 
@@ -202,7 +202,7 @@ library foo.bar;
 library foo.bar;
 )FIDL";
 
-  ASSERT_STR_EQ(formatted, Format(unformatted));
+  ASSERT_STREQ(formatted, Format(unformatted));
   ASSERT_TRUE(fidl::utils::OnlyWhitespaceChanged(formatted, Format(unformatted)));
 }
 
@@ -227,7 +227,7 @@ library foo.bar;
 library foo.bar;
 )FIDL";
 
-  ASSERT_STR_EQ(formatted, Format(unformatted));
+  ASSERT_STREQ(formatted, Format(unformatted));
   ASSERT_TRUE(fidl::utils::OnlyWhitespaceChanged(formatted, Format(unformatted)));
 }
 TEST(NewFormatterTests, AttributesWithComment) {
@@ -251,7 +251,7 @@ TEST(NewFormatterTests, AttributesWithComment) {
 library foo.bar;
 )FIDL";
 
-  ASSERT_STR_EQ(formatted, Format(unformatted));
+  ASSERT_STREQ(formatted, Format(unformatted));
   ASSERT_TRUE(fidl::utils::OnlyWhitespaceChanged(formatted, Format(unformatted)));
 }
 
@@ -275,7 +275,7 @@ library foo.bar;
 library foo.bar;
 )FIDL";
 
-  ASSERT_STR_EQ(formatted, Format(unformatted));
+  ASSERT_STREQ(formatted, Format(unformatted));
   ASSERT_TRUE(fidl::utils::OnlyWhitespaceChanged(formatted, Format(unformatted)));
 }
 
@@ -293,7 +293,7 @@ TEST(NewFormatterTests, AttributesMinimalWhitespace) {
 library foo.bar;
 )FIDL";
 
-  ASSERT_STR_EQ(formatted, Format(unformatted));
+  ASSERT_STREQ(formatted, Format(unformatted));
   ASSERT_TRUE(fidl::utils::OnlyWhitespaceChanged(formatted, Format(unformatted)));
 }
 
@@ -319,7 +319,7 @@ bar
 library foo.bar;
 )FIDL";
 
-  ASSERT_STR_EQ(formatted, Format(unformatted));
+  ASSERT_STREQ(formatted, Format(unformatted));
   ASSERT_TRUE(fidl::utils::OnlyWhitespaceChanged(formatted, Format(unformatted)));
 }
 
@@ -346,7 +346,7 @@ protocol MyProtocol {
 };
 )FIDL";
 
-  ASSERT_STR_EQ(formatted, Format(unformatted));
+  ASSERT_STREQ(formatted, Format(unformatted));
   ASSERT_TRUE(fidl::utils::OnlyWhitespaceChanged(formatted, Format(unformatted)));
 }
 
@@ -371,7 +371,7 @@ type MyStruct = struct {
 };
 )FIDL";
 
-  ASSERT_STR_EQ(formatted, Format(unformatted));
+  ASSERT_STREQ(formatted, Format(unformatted));
   ASSERT_TRUE(fidl::utils::OnlyWhitespaceChanged(formatted, Format(unformatted)));
 }
 
@@ -400,7 +400,7 @@ type MyStruct = struct {
 };
 )FIDL";
 
-  ASSERT_STR_EQ(formatted, Format(unformatted));
+  ASSERT_STREQ(formatted, Format(unformatted));
   ASSERT_TRUE(fidl::utils::OnlyWhitespaceChanged(formatted, Format(unformatted)));
 }
 
@@ -427,7 +427,7 @@ type MyBits_Abcdefghijklmnopqrs = bits {
 };
 )FIDL";
 
-  ASSERT_STR_EQ(formatted, Format(unformatted));
+  ASSERT_STREQ(formatted, Format(unformatted));
   ASSERT_TRUE(fidl::utils::OnlyWhitespaceChanged(formatted, Format(unformatted)));
 }
 
@@ -455,7 +455,7 @@ type MyBits_Abcdefghijklmnopqrst
 };
 )FIDL";
 
-  ASSERT_STR_EQ(formatted, Format(unformatted));
+  ASSERT_STREQ(formatted, Format(unformatted));
   ASSERT_TRUE(fidl::utils::OnlyWhitespaceChanged(formatted, Format(unformatted)));
 }
 
@@ -479,7 +479,7 @@ type MyBits_Abcdefghij = flexible bits {
 };
 )FIDL";
 
-  ASSERT_STR_EQ(formatted, Format(unformatted));
+  ASSERT_STREQ(formatted, Format(unformatted));
   ASSERT_TRUE(fidl::utils::OnlyWhitespaceChanged(formatted, Format(unformatted)));
 }
 
@@ -521,7 +521,7 @@ type MyBits_Abcdefghijklmnopqrs = bits {
 };
 )FIDL";
 
-  ASSERT_STR_EQ(formatted, Format(unformatted));
+  ASSERT_STREQ(formatted, Format(unformatted));
   ASSERT_TRUE(fidl::utils::OnlyWhitespaceChanged(formatted, Format(unformatted)));
 }
 
@@ -541,7 +541,7 @@ type MyBits_Abcdefghijklmnopqrs = bits {
 };
 )FIDL";
 
-  ASSERT_STR_EQ(formatted, Format(unformatted));
+  ASSERT_STREQ(formatted, Format(unformatted));
   ASSERT_TRUE(fidl::utils::OnlyWhitespaceChanged(formatted, Format(unformatted)));
 }
 
@@ -582,7 +582,7 @@ type MyBits_Abcdefghijklmnopqrs = bits {
 };
 )FIDL";
 
-  ASSERT_STR_EQ(formatted, Format(unformatted));
+  ASSERT_STREQ(formatted, Format(unformatted));
   ASSERT_TRUE(fidl::utils::OnlyWhitespaceChanged(formatted, Format(unformatted)));
 }
 
@@ -621,7 +621,7 @@ const MY_ORS_ABCDEFG uint64 = 1 | 2 | 3;
 const MY_REF_ABCD uint64 = MY_UINT64_AB;
 )FIDL";
 
-  ASSERT_STR_EQ(formatted, Format(unformatted));
+  ASSERT_STREQ(formatted, Format(unformatted));
   ASSERT_TRUE(fidl::utils::OnlyWhitespaceChanged(formatted, Format(unformatted)));
 }
 TEST(NewFormatterTests, ConstUnformatted) {
@@ -660,7 +660,7 @@ const MY_ORS_ABCDEFG uint64 = 1 | 2 | 3;
 const MY_REF_ABCD uint64 = MY_UINT64_AB;
 )FIDL";
 
-  ASSERT_STR_EQ(formatted, Format(unformatted));
+  ASSERT_STREQ(formatted, Format(unformatted));
   ASSERT_TRUE(fidl::utils::OnlyWhitespaceChanged(formatted, Format(unformatted)));
 }
 
@@ -703,7 +703,7 @@ const MY_REF_ABCD uint64
         = MY_UINT64_ABC;
 )FIDL";
 
-  ASSERT_STR_EQ(formatted, Format(unformatted));
+  ASSERT_STREQ(formatted, Format(unformatted));
   ASSERT_TRUE(fidl::utils::OnlyWhitespaceChanged(formatted, Format(unformatted)));
 }
 
@@ -752,7 +752,7 @@ const MY_WAY_TOO_LONG_REF_ABCDEFGHIJKLMNO
         = MY_WAY_TOO_LONG_UINT64_ABCDEFGHIJKL;
 )FIDL";
 
-  ASSERT_STR_EQ(formatted, Format(unformatted));
+  ASSERT_STREQ(formatted, Format(unformatted));
   ASSERT_TRUE(fidl::utils::OnlyWhitespaceChanged(formatted, Format(unformatted)));
 }
 
@@ -782,7 +782,7 @@ library foo.bar;
 const MY_TRUE_ABCDEFGHIJKLM bool = true;
 )FIDL";
 
-  ASSERT_STR_EQ(formatted, Format(unformatted));
+  ASSERT_STREQ(formatted, Format(unformatted));
   ASSERT_TRUE(fidl::utils::OnlyWhitespaceChanged(formatted, Format(unformatted)));
 }
 
@@ -806,7 +806,7 @@ const MY_ORS_ABCDEFG uint64 = 1 | 2 | 3;
 const MY_REF_ABCD uint64 = MY_UINT64_AB;
 )FIDL";
 
-  ASSERT_STR_EQ(formatted, Format(unformatted));
+  ASSERT_STREQ(formatted, Format(unformatted));
   ASSERT_TRUE(fidl::utils::OnlyWhitespaceChanged(formatted, Format(unformatted)));
 }
 
@@ -890,7 +890,7 @@ const MY_ORS_ABCDEFG uint64 = 1 | 2 | 3;
 const MY_REF_ABCD uint64 = MY_UINT64_AB;
 )FIDL";
 
-  ASSERT_STR_EQ(formatted, Format(unformatted));
+  ASSERT_STREQ(formatted, Format(unformatted));
   ASSERT_TRUE(fidl::utils::OnlyWhitespaceChanged(formatted, Format(unformatted)));
 }
 
@@ -923,7 +923,7 @@ type MyEnum_Abcdefghij = enum : uint32 {
 };
 )FIDL";
 
-  ASSERT_STR_EQ(formatted, Format(unformatted));
+  ASSERT_STREQ(formatted, Format(unformatted));
   ASSERT_TRUE(fidl::utils::OnlyWhitespaceChanged(formatted, Format(unformatted)));
 }
 
@@ -958,7 +958,7 @@ type MyEnum_Abcdefghijk
 };
 )FIDL";
 
-  ASSERT_STR_EQ(formatted, Format(unformatted));
+  ASSERT_STREQ(formatted, Format(unformatted));
   ASSERT_TRUE(fidl::utils::OnlyWhitespaceChanged(formatted, Format(unformatted)));
 }
 
@@ -988,7 +988,7 @@ type MyEnum_Abc = strict enum : uint32 {
 };
 )FIDL";
 
-  ASSERT_STR_EQ(formatted, Format(unformatted));
+  ASSERT_STREQ(formatted, Format(unformatted));
   ASSERT_TRUE(fidl::utils::OnlyWhitespaceChanged(formatted, Format(unformatted)));
 }
 
@@ -1036,7 +1036,7 @@ type MyEnum_Abcdefghij = enum : uint32 {
 };
 )FIDL";
 
-  ASSERT_STR_EQ(formatted, Format(unformatted));
+  ASSERT_STREQ(formatted, Format(unformatted));
   ASSERT_TRUE(fidl::utils::OnlyWhitespaceChanged(formatted, Format(unformatted)));
 }
 
@@ -1058,7 +1058,7 @@ type MyEnum_Abcdefghij = enum : uint32 {
 };
 )FIDL";
 
-  ASSERT_STR_EQ(formatted, Format(unformatted));
+  ASSERT_STREQ(formatted, Format(unformatted));
   ASSERT_TRUE(fidl::utils::OnlyWhitespaceChanged(formatted, Format(unformatted)));
 }
 
@@ -1110,7 +1110,7 @@ type MyEnum_Abcdefghij = enum : uint32 {
 };
 )FIDL";
 
-  ASSERT_STR_EQ(formatted, Format(unformatted));
+  ASSERT_STREQ(formatted, Format(unformatted));
   ASSERT_TRUE(fidl::utils::OnlyWhitespaceChanged(formatted, Format(unformatted)));
 }
 
@@ -1129,7 +1129,7 @@ library foo.bar;
 type EmptyEnum = strict enum : uint8 {};
 )FIDL";
 
-  ASSERT_STR_EQ(formatted, Format(unformatted));
+  ASSERT_STREQ(formatted, Format(unformatted));
   ASSERT_TRUE(fidl::utils::OnlyWhitespaceChanged(formatted, Format(unformatted)));
 }
 
@@ -1150,7 +1150,7 @@ type EmptyEnum = strict enum : // Comment
         uint8 {};
 )FIDL";
 
-  ASSERT_STR_EQ(formatted, Format(unformatted));
+  ASSERT_STREQ(formatted, Format(unformatted));
   ASSERT_TRUE(fidl::utils::OnlyWhitespaceChanged(formatted, Format(unformatted)));
 }
 
@@ -1167,7 +1167,7 @@ library foo.bar;
 library foo.bar;
 )FIDL";
 
-  ASSERT_STR_EQ(formatted, Format(unformatted));
+  ASSERT_STREQ(formatted, Format(unformatted));
   ASSERT_TRUE(fidl::utils::OnlyWhitespaceChanged(formatted, Format(unformatted)));
 }
 
@@ -1183,7 +1183,7 @@ library my.overlong.severely.overflowing.name;
 library my.overlong.severely.overflowing.name;
 )FIDL";
 
-  ASSERT_STR_EQ(formatted, Format(unformatted));
+  ASSERT_STREQ(formatted, Format(unformatted));
   ASSERT_TRUE(fidl::utils::OnlyWhitespaceChanged(formatted, Format(unformatted)));
 }
 
@@ -1201,7 +1201,7 @@ TEST(NewFormatterTests, LibraryUnformatted) {
 library foo.bar;
 )FIDL";
 
-  ASSERT_STR_EQ(formatted, Format(unformatted));
+  ASSERT_STREQ(formatted, Format(unformatted));
   ASSERT_TRUE(fidl::utils::OnlyWhitespaceChanged(formatted, Format(unformatted)));
 }
 
@@ -1227,7 +1227,7 @@ TEST(NewFormatterTests, LibraryWithAllAnnotations) {
 library foo.bar;
 )FIDL";
 
-  ASSERT_STR_EQ(formatted, Format(unformatted));
+  ASSERT_STREQ(formatted, Format(unformatted));
   ASSERT_TRUE(fidl::utils::OnlyWhitespaceChanged(formatted, Format(unformatted)));
 }
 
@@ -1242,7 +1242,7 @@ TEST(NewFormatterTests, LibraryMinimalWhitespace) {
 library foo.bar;
 )FIDL";
 
-  ASSERT_STR_EQ(formatted, Format(unformatted));
+  ASSERT_STREQ(formatted, Format(unformatted));
   ASSERT_TRUE(fidl::utils::OnlyWhitespaceChanged(formatted, Format(unformatted)));
 }
 
@@ -1262,7 +1262,7 @@ bar
 library foo.bar;
 )FIDL";
 
-  ASSERT_STR_EQ(formatted, Format(unformatted));
+  ASSERT_STREQ(formatted, Format(unformatted));
   ASSERT_TRUE(fidl::utils::OnlyWhitespaceChanged(formatted, Format(unformatted)));
 }
 
@@ -1305,7 +1305,7 @@ resource_definition subtype_a : uint32 {
 };
 )FIDL";
 
-  ASSERT_STR_EQ(formatted, Format(unformatted));
+  ASSERT_STREQ(formatted, Format(unformatted));
   ASSERT_TRUE(fidl::utils::OnlyWhitespaceChanged(formatted, Format(unformatted)));
 }
 
@@ -1347,7 +1347,7 @@ resource_definition subtype_ab : uint32 {
 };
 )FIDL";
 
-  ASSERT_STR_EQ(formatted, Format(unformatted));
+  ASSERT_STREQ(formatted, Format(unformatted));
   ASSERT_TRUE(fidl::utils::OnlyWhitespaceChanged(formatted, Format(unformatted)));
 }
 
@@ -1387,7 +1387,7 @@ resource_definition subtype_a : uint32 {
 };
 )FIDL";
 
-  ASSERT_STR_EQ(formatted, Format(unformatted));
+  ASSERT_STREQ(formatted, Format(unformatted));
   ASSERT_TRUE(fidl::utils::OnlyWhitespaceChanged(formatted, Format(unformatted)));
 }
 
@@ -1452,7 +1452,7 @@ resource_definition subtype_a : uint32 {
 };
 )FIDL";
 
-  ASSERT_STR_EQ(formatted, Format(unformatted));
+  ASSERT_STREQ(formatted, Format(unformatted));
   ASSERT_TRUE(fidl::utils::OnlyWhitespaceChanged(formatted, Format(unformatted)));
 }
 
@@ -1479,7 +1479,7 @@ resource_definition subtype_a : uint32 {
 };
 )FIDL";
 
-  ASSERT_STR_EQ(formatted, Format(unformatted));
+  ASSERT_STREQ(formatted, Format(unformatted));
   ASSERT_TRUE(fidl::utils::OnlyWhitespaceChanged(formatted, Format(unformatted)));
 }
 
@@ -1543,7 +1543,7 @@ resource_definition subtype_a : uint32 {
 };
 )FIDL";
 
-  ASSERT_STR_EQ(formatted, Format(unformatted));
+  ASSERT_STREQ(formatted, Format(unformatted));
   ASSERT_TRUE(fidl::utils::OnlyWhitespaceChanged(formatted, Format(unformatted)));
 }
 
@@ -1574,7 +1574,7 @@ service MyPopulatedService_Abcdefghik {
 };
 )FIDL";
 
-  ASSERT_STR_EQ(formatted, Format(unformatted));
+  ASSERT_STREQ(formatted, Format(unformatted));
   ASSERT_TRUE(fidl::utils::OnlyWhitespaceChanged(formatted, Format(unformatted)));
 }
 
@@ -1604,7 +1604,7 @@ service MyPopulatedService_Abcdefghikl {
 };
 )FIDL";
 
-  ASSERT_STR_EQ(formatted, Format(unformatted));
+  ASSERT_STREQ(formatted, Format(unformatted));
   ASSERT_TRUE(fidl::utils::OnlyWhitespaceChanged(formatted, Format(unformatted)));
 }
 
@@ -1634,7 +1634,7 @@ service MyPopulatedService_Abcdefghikl {
 };
 )FIDL";
 
-  ASSERT_STR_EQ(formatted, Format(unformatted));
+  ASSERT_STREQ(formatted, Format(unformatted));
   ASSERT_TRUE(fidl::utils::OnlyWhitespaceChanged(formatted, Format(unformatted)));
 }
 
@@ -1683,7 +1683,7 @@ service MyPopulatedService_Abcdefghikl {
 };
 )FIDL";
 
-  ASSERT_STR_EQ(formatted, Format(unformatted));
+  ASSERT_STREQ(formatted, Format(unformatted));
   ASSERT_TRUE(fidl::utils::OnlyWhitespaceChanged(formatted, Format(unformatted)));
 }
 
@@ -1704,7 +1704,7 @@ service MyPopulatedService_Abcdefghikl {
 };
 )FIDL";
 
-  ASSERT_STR_EQ(formatted, Format(unformatted));
+  ASSERT_STREQ(formatted, Format(unformatted));
   ASSERT_TRUE(fidl::utils::OnlyWhitespaceChanged(formatted, Format(unformatted)));
 }
 
@@ -1757,7 +1757,7 @@ service MyPopulatedService_Abcdefghikl {
 };
 )FIDL";
 
-  ASSERT_STR_EQ(formatted, Format(unformatted));
+  ASSERT_STREQ(formatted, Format(unformatted));
   ASSERT_TRUE(fidl::utils::OnlyWhitespaceChanged(formatted, Format(unformatted)));
 }
 
@@ -1798,7 +1798,7 @@ type MyPopulatedStruct_Abcdef = struct {
 };
 )FIDL";
 
-  ASSERT_STR_EQ(formatted, Format(unformatted));
+  ASSERT_STREQ(formatted, Format(unformatted));
   ASSERT_TRUE(fidl::utils::OnlyWhitespaceChanged(formatted, Format(unformatted)));
 }
 
@@ -1857,7 +1857,7 @@ protocol Populated_Abcdefghijklmnopqrs {
 };
 )FIDL";
 
-  ASSERT_STR_EQ(formatted, Format(unformatted));
+  ASSERT_STREQ(formatted, Format(unformatted));
   ASSERT_TRUE(fidl::utils::OnlyWhitespaceChanged(formatted, Format(unformatted)));
 }
 
@@ -1918,7 +1918,7 @@ protocol Populated_Abcdefghijklmnopqrst {
 };
 )FIDL";
 
-  ASSERT_STR_EQ(formatted, Format(unformatted));
+  ASSERT_STREQ(formatted, Format(unformatted));
   ASSERT_TRUE(fidl::utils::OnlyWhitespaceChanged(formatted, Format(unformatted)));
 }
 
@@ -1980,7 +1980,7 @@ protocol Populated_Abcdefghijklmnopqrs {
 };
 )FIDL";
 
-  ASSERT_STR_EQ(formatted, Format(unformatted));
+  ASSERT_STREQ(formatted, Format(unformatted));
   ASSERT_TRUE(fidl::utils::OnlyWhitespaceChanged(formatted, Format(unformatted)));
 }
 
@@ -2080,7 +2080,7 @@ protocol Populated_Abcdefghijklmnopqrs {
 };
 )FIDL";
 
-  ASSERT_STR_EQ(formatted, Format(unformatted));
+  ASSERT_STREQ(formatted, Format(unformatted));
   ASSERT_TRUE(fidl::utils::OnlyWhitespaceChanged(formatted, Format(unformatted)));
 }
 
@@ -2112,7 +2112,7 @@ protocol Populated_Abcdefghijklmnopqrs {
 };
 )FIDL";
 
-  ASSERT_STR_EQ(formatted, Format(unformatted));
+  ASSERT_STREQ(formatted, Format(unformatted));
   ASSERT_TRUE(fidl::utils::OnlyWhitespaceChanged(formatted, Format(unformatted)));
 }
 
@@ -2241,7 +2241,7 @@ protocol Populated_Abcdefghijklmnopqrs {
 };
 )FIDL";
 
-  ASSERT_STR_EQ(formatted, Format(unformatted));
+  ASSERT_STREQ(formatted, Format(unformatted));
   ASSERT_TRUE(fidl::utils::OnlyWhitespaceChanged(formatted, Format(unformatted)));
 }
 
@@ -2334,7 +2334,7 @@ protocol Populated_Abcdefghijklmnopqrs {
 };
 )FIDL";
 
-  ASSERT_STR_EQ(formatted, Format(unformatted));
+  ASSERT_STREQ(formatted, Format(unformatted));
   ASSERT_TRUE(fidl::utils::OnlyWhitespaceChanged(formatted, Format(unformatted)));
 }
 
@@ -2439,7 +2439,7 @@ protocol Populated_Abcdefghijklmnopqrst {
 };
 )FIDL";
 
-  ASSERT_STR_EQ(formatted, Format(unformatted));
+  ASSERT_STREQ(formatted, Format(unformatted));
   ASSERT_TRUE(fidl::utils::OnlyWhitespaceChanged(formatted, Format(unformatted)));
 }
 
@@ -2533,7 +2533,7 @@ protocol Populated_Abcdefghijklmnopqrs {
 };
 )FIDL";
 
-  ASSERT_STR_EQ(formatted, Format(unformatted));
+  ASSERT_STREQ(formatted, Format(unformatted));
   ASSERT_TRUE(fidl::utils::OnlyWhitespaceChanged(formatted, Format(unformatted)));
 }
 
@@ -2667,7 +2667,7 @@ protocol Populated_Abcdefghijklmnopqrs {
 };
 )FIDL";
 
-  ASSERT_STR_EQ(formatted, Format(unformatted));
+  ASSERT_STREQ(formatted, Format(unformatted));
   ASSERT_TRUE(fidl::utils::OnlyWhitespaceChanged(formatted, Format(unformatted)));
 }
 
@@ -2716,7 +2716,7 @@ protocol Populated_Abcdefghijklmnopqrs {
 };
 )FIDL";
 
-  ASSERT_STR_EQ(formatted, Format(unformatted));
+  ASSERT_STREQ(formatted, Format(unformatted));
   ASSERT_TRUE(fidl::utils::OnlyWhitespaceChanged(formatted, Format(unformatted)));
 }
 
@@ -2890,7 +2890,7 @@ protocol Populated_Abcdefghijklmnopqrs {
 };
 )FIDL";
 
-  ASSERT_STR_EQ(formatted, Format(unformatted));
+  ASSERT_STREQ(formatted, Format(unformatted));
   ASSERT_TRUE(fidl::utils::OnlyWhitespaceChanged(formatted, Format(unformatted)));
 }
 
@@ -2922,7 +2922,7 @@ protocol MyProtocol {
 };
 )FIDL";
 
-  ASSERT_STR_EQ(formatted, Format(unformatted));
+  ASSERT_STREQ(formatted, Format(unformatted));
   ASSERT_TRUE(fidl::utils::OnlyWhitespaceChanged(formatted, Format(unformatted)));
 }
 
@@ -2968,7 +2968,7 @@ type MyPopulatedStruct_Abcdefg
 };
 )FIDL";
 
-  ASSERT_STR_EQ(formatted, Format(unformatted));
+  ASSERT_STREQ(formatted, Format(unformatted));
   ASSERT_TRUE(fidl::utils::OnlyWhitespaceChanged(formatted, Format(unformatted)));
 }
 
@@ -3009,7 +3009,7 @@ type MyStruct_Abcdef = resource struct {
 };
 )FIDL";
 
-  ASSERT_STR_EQ(formatted, Format(unformatted));
+  ASSERT_STREQ(formatted, Format(unformatted));
   ASSERT_TRUE(fidl::utils::OnlyWhitespaceChanged(formatted, Format(unformatted)));
 }
 
@@ -3073,7 +3073,7 @@ type MyPopulatedStruct_Abcdef = struct {
 };
 )FIDL";
 
-  ASSERT_STR_EQ(formatted, Format(unformatted));
+  ASSERT_STREQ(formatted, Format(unformatted));
   ASSERT_TRUE(fidl::utils::OnlyWhitespaceChanged(formatted, Format(unformatted)));
 }
 
@@ -3098,7 +3098,7 @@ type MyPopulatedStruct_Abcdef = struct {
 };
 )FIDL";
 
-  ASSERT_STR_EQ(formatted, Format(unformatted));
+  ASSERT_STREQ(formatted, Format(unformatted));
   ASSERT_TRUE(fidl::utils::OnlyWhitespaceChanged(formatted, Format(unformatted)));
 }
 
@@ -3167,7 +3167,7 @@ type MyPopulatedStruct_Abcdef = struct {
 };
 )FIDL";
 
-  ASSERT_STR_EQ(formatted, Format(unformatted));
+  ASSERT_STREQ(formatted, Format(unformatted));
   ASSERT_TRUE(fidl::utils::OnlyWhitespaceChanged(formatted, Format(unformatted)));
 }
 
@@ -3206,7 +3206,7 @@ type MyPopulatedTable_Abcdefgh = table {
 };
 )FIDL";
 
-  ASSERT_STR_EQ(formatted, Format(unformatted));
+  ASSERT_STREQ(formatted, Format(unformatted));
   ASSERT_TRUE(fidl::utils::OnlyWhitespaceChanged(formatted, Format(unformatted)));
 }
 
@@ -3246,7 +3246,7 @@ type MyPopulatedTable_Abcdefghi
 };
 )FIDL";
 
-  ASSERT_STR_EQ(formatted, Format(unformatted));
+  ASSERT_STREQ(formatted, Format(unformatted));
   ASSERT_TRUE(fidl::utils::OnlyWhitespaceChanged(formatted, Format(unformatted)));
 }
 
@@ -3285,7 +3285,7 @@ type MyPopulatedTable_Abcdefgh = table {
 };
 )FIDL";
 
-  ASSERT_STR_EQ(formatted, Format(unformatted));
+  ASSERT_STREQ(formatted, Format(unformatted));
   ASSERT_TRUE(fidl::utils::OnlyWhitespaceChanged(formatted, Format(unformatted)));
 }
 
@@ -3359,7 +3359,7 @@ type MyTable = table {
 };
 )FIDL";
 
-  ASSERT_STR_EQ(formatted, Format(unformatted));
+  ASSERT_STREQ(formatted, Format(unformatted));
   ASSERT_TRUE(fidl::utils::OnlyWhitespaceChanged(formatted, Format(unformatted)));
 }
 
@@ -3422,7 +3422,7 @@ type MyPopulatedTable_Abcdefgh = table {
 };
 )FIDL";
 
-  ASSERT_STR_EQ(formatted, Format(unformatted));
+  ASSERT_STREQ(formatted, Format(unformatted));
   ASSERT_TRUE(fidl::utils::OnlyWhitespaceChanged(formatted, Format(unformatted)));
 }
 
@@ -3446,7 +3446,7 @@ type MyPopulatedTable_Abcdefgh = table {
 };
 )FIDL";
 
-  ASSERT_STR_EQ(formatted, Format(unformatted));
+  ASSERT_STREQ(formatted, Format(unformatted));
   ASSERT_TRUE(fidl::utils::OnlyWhitespaceChanged(formatted, Format(unformatted)));
 }
 
@@ -3518,7 +3518,7 @@ type MyPopulatedTable_Abcdefgh = table {
 };
 )FIDL";
 
-  ASSERT_STR_EQ(formatted, Format(unformatted));
+  ASSERT_STREQ(formatted, Format(unformatted));
   ASSERT_TRUE(fidl::utils::OnlyWhitespaceChanged(formatted, Format(unformatted)));
 }
 
@@ -3553,7 +3553,7 @@ type MyUnion_Abcdefghijklmnopq = union {
 };
 )FIDL";
 
-  ASSERT_STR_EQ(formatted, Format(unformatted));
+  ASSERT_STREQ(formatted, Format(unformatted));
   ASSERT_TRUE(fidl::utils::OnlyWhitespaceChanged(formatted, Format(unformatted)));
 }
 
@@ -3590,7 +3590,7 @@ type MyUnion_Abcdefghijklmnopqr
 };
 )FIDL";
 
-  ASSERT_STR_EQ(formatted, Format(unformatted));
+  ASSERT_STREQ(formatted, Format(unformatted));
   ASSERT_TRUE(fidl::utils::OnlyWhitespaceChanged(formatted, Format(unformatted)));
 }
 
@@ -3625,7 +3625,7 @@ type MyUnion_A = strict resource union {
 };
 )FIDL";
 
-  ASSERT_STR_EQ(formatted, Format(unformatted));
+  ASSERT_STREQ(formatted, Format(unformatted));
   ASSERT_TRUE(fidl::utils::OnlyWhitespaceChanged(formatted, Format(unformatted)));
 }
 
@@ -3700,7 +3700,7 @@ type MyUnion = flexible resource union {
 };
 )FIDL";
 
-  ASSERT_STR_EQ(formatted, Format(unformatted));
+  ASSERT_STREQ(formatted, Format(unformatted));
   ASSERT_TRUE(fidl::utils::OnlyWhitespaceChanged(formatted, Format(unformatted)));
 }
 
@@ -3758,7 +3758,7 @@ type MyUnion_Abcdefgh = resource union {
 };
 )FIDL";
 
-  ASSERT_STR_EQ(formatted, Format(unformatted));
+  ASSERT_STREQ(formatted, Format(unformatted));
   ASSERT_TRUE(fidl::utils::OnlyWhitespaceChanged(formatted, Format(unformatted)));
 }
 
@@ -3781,7 +3781,7 @@ type MyUnion_Abcdefghijklmnopq = union {
 };
 )FIDL";
 
-  ASSERT_STR_EQ(formatted, Format(unformatted));
+  ASSERT_STREQ(formatted, Format(unformatted));
   ASSERT_TRUE(fidl::utils::OnlyWhitespaceChanged(formatted, Format(unformatted)));
 }
 
@@ -3843,7 +3843,7 @@ type MyUnion_Abcdefghijklmnopq = union {
 };
 )FIDL";
 
-  ASSERT_STR_EQ(formatted, Format(unformatted));
+  ASSERT_STREQ(formatted, Format(unformatted));
   ASSERT_TRUE(fidl::utils::OnlyWhitespaceChanged(formatted, Format(unformatted)));
 }
 
@@ -3864,7 +3864,7 @@ library foo.bar;
 using imported.abcdefhijklmnopqrstubwxy;
 )FIDL";
 
-  ASSERT_STR_EQ(formatted, Format(unformatted));
+  ASSERT_STREQ(formatted, Format(unformatted));
   ASSERT_TRUE(fidl::utils::OnlyWhitespaceChanged(formatted, Format(unformatted)));
 }
 
@@ -3884,7 +3884,7 @@ library foo.bar;
 using imported.abcdefhijklmnopqrstubwxy;
 )FIDL";
 
-  ASSERT_STR_EQ(formatted, Format(unformatted));
+  ASSERT_STREQ(formatted, Format(unformatted));
   ASSERT_TRUE(fidl::utils::OnlyWhitespaceChanged(formatted, Format(unformatted)));
 }
 
@@ -3904,7 +3904,7 @@ library foo.bar;
 using imported.abcdefhijklmnopqrstubwxyz;
 )FIDL";
 
-  ASSERT_STR_EQ(formatted, Format(unformatted));
+  ASSERT_STREQ(formatted, Format(unformatted));
   ASSERT_TRUE(fidl::utils::OnlyWhitespaceChanged(formatted, Format(unformatted)));
 }
 
@@ -3934,7 +3934,7 @@ library foo.bar;
 using imported.abcdefhijklmnopqrstubwxy;
 )FIDL";
 
-  ASSERT_STR_EQ(formatted, Format(unformatted));
+  ASSERT_STREQ(formatted, Format(unformatted));
   ASSERT_TRUE(fidl::utils::OnlyWhitespaceChanged(formatted, Format(unformatted)));
 }
 
@@ -3950,7 +3950,7 @@ library foo.bar;
 using imported.abcdefhijklmnopqrstubwxy;
 )FIDL";
 
-  ASSERT_STR_EQ(formatted, Format(unformatted));
+  ASSERT_STREQ(formatted, Format(unformatted));
   ASSERT_TRUE(fidl::utils::OnlyWhitespaceChanged(formatted, Format(unformatted)));
 }
 
@@ -3974,7 +3974,7 @@ library foo.bar;
 using imported.abcdefhijklmnopqrstubwxy;
 )FIDL";
 
-  ASSERT_STR_EQ(formatted, Format(unformatted));
+  ASSERT_STREQ(formatted, Format(unformatted));
   ASSERT_TRUE(fidl::utils::OnlyWhitespaceChanged(formatted, Format(unformatted)));
 }
 
@@ -3995,7 +3995,7 @@ library foo.bar;
 using baz.qux as abcdefghijklmnopqrstuv;
 )FIDL";
 
-  ASSERT_STR_EQ(formatted, Format(unformatted));
+  ASSERT_STREQ(formatted, Format(unformatted));
   ASSERT_TRUE(fidl::utils::OnlyWhitespaceChanged(formatted, Format(unformatted)));
 }
 
@@ -4015,7 +4015,7 @@ library foo.bar;
 using baz.qux as abcdefghijklmnopqrstuv;
 )FIDL";
 
-  ASSERT_STR_EQ(formatted, Format(unformatted));
+  ASSERT_STREQ(formatted, Format(unformatted));
   ASSERT_TRUE(fidl::utils::OnlyWhitespaceChanged(formatted, Format(unformatted)));
 }
 
@@ -4036,7 +4036,7 @@ using baz.qux
         as abcdefghijklmnopqrstuvw;
 )FIDL";
 
-  ASSERT_STR_EQ(formatted, Format(unformatted));
+  ASSERT_STREQ(formatted, Format(unformatted));
   ASSERT_TRUE(fidl::utils::OnlyWhitespaceChanged(formatted, Format(unformatted)));
 }
 
@@ -4052,7 +4052,7 @@ library foo.bar;
 using baz.qux as abcdefghijklmnopqrstuv;
 )FIDL";
 
-  ASSERT_STR_EQ(formatted, Format(unformatted));
+  ASSERT_STREQ(formatted, Format(unformatted));
   ASSERT_TRUE(fidl::utils::OnlyWhitespaceChanged(formatted, Format(unformatted)));
 }
 
@@ -4078,7 +4078,7 @@ library foo.bar;
 using baz.qux as abcdefghijklmnopqrstuv;
 )FIDL";
 
-  ASSERT_STR_EQ(formatted, Format(unformatted));
+  ASSERT_STREQ(formatted, Format(unformatted));
   ASSERT_TRUE(fidl::utils::OnlyWhitespaceChanged(formatted, Format(unformatted)));
 }
 
@@ -4156,7 +4156,7 @@ using // F
         ; // 11
 )FIDL";
 
-  ASSERT_STR_EQ(formatted, Format(unformatted));
+  ASSERT_STREQ(formatted, Format(unformatted));
   ASSERT_TRUE(fidl::utils::OnlyWhitespaceChanged(formatted, Format(unformatted)));
 }
 
@@ -4177,7 +4177,7 @@ library foo.bar; // C2
 using baz.qux; // C4
 )FIDL";
 
-  ASSERT_STR_EQ(formatted, Format(unformatted));
+  ASSERT_STREQ(formatted, Format(unformatted));
   ASSERT_TRUE(fidl::utils::OnlyWhitespaceChanged(formatted, Format(unformatted)));
 }
 
@@ -4199,7 +4199,7 @@ library foo.bar; // C2
 using baz.qux; // C4
 )FIDL";
 
-  ASSERT_STR_EQ(formatted, Format(unformatted));
+  ASSERT_STREQ(formatted, Format(unformatted));
   ASSERT_TRUE(fidl::utils::OnlyWhitespaceChanged(formatted, Format(unformatted)));
 }
 
@@ -4338,7 +4338,7 @@ service MyService { // C32
 }; // C35
 )FIDL";
 
-  ASSERT_STR_EQ(formatted, Format(unformatted));
+  ASSERT_STREQ(formatted, Format(unformatted));
   ASSERT_TRUE(fidl::utils::OnlyWhitespaceChanged(formatted, Format(unformatted)));
 }
 
@@ -4425,7 +4425,7 @@ type // C8
 // C12
 )FIDL";
 
-  ASSERT_STR_EQ(formatted, Format(unformatted));
+  ASSERT_STREQ(formatted, Format(unformatted));
   ASSERT_TRUE(fidl::utils::OnlyWhitespaceChanged(formatted, Format(unformatted)));
 }
 
@@ -4451,7 +4451,7 @@ MyStruct = struct {
         };
 )FIDL";
 
-  ASSERT_STR_EQ(formatted, Format(unformatted));
+  ASSERT_STREQ(formatted, Format(unformatted));
   ASSERT_TRUE(fidl::utils::OnlyWhitespaceChanged(formatted, Format(unformatted)));
 }
 
@@ -4586,7 +4586,7 @@ service MyService { // C32
 }; // C35
 )FIDL";
 
-  ASSERT_STR_EQ(formatted, Format(unformatted));
+  ASSERT_STREQ(formatted, Format(unformatted));
   ASSERT_TRUE(fidl::utils::OnlyWhitespaceChanged(formatted, Format(unformatted)));
 }
 
@@ -4721,7 +4721,7 @@ service MyService { // C32
 }; // C35
 )FIDL";
 
-  ASSERT_STR_EQ(formatted, Format(unformatted));
+  ASSERT_STREQ(formatted, Format(unformatted));
   ASSERT_TRUE(fidl::utils::OnlyWhitespaceChanged(formatted, Format(unformatted)));
 }
 
@@ -4856,7 +4856,7 @@ service MyService { // C32
 }; // C35
 )FIDL";
 
-  ASSERT_STR_EQ(formatted, Format(unformatted));
+  ASSERT_STREQ(formatted, Format(unformatted));
   ASSERT_TRUE(fidl::utils::OnlyWhitespaceChanged(formatted, Format(unformatted)));
 }
 
@@ -4991,7 +4991,7 @@ service MyService { // C32
 }; // C35
 )FIDL";
 
-  ASSERT_STR_EQ(formatted, Format(unformatted));
+  ASSERT_STREQ(formatted, Format(unformatted));
   ASSERT_TRUE(fidl::utils::OnlyWhitespaceChanged(formatted, Format(unformatted)));
 }
 
@@ -5156,7 +5156,7 @@ service MyService { // C32
 }; // C35
 )FIDL";
 
-  ASSERT_STR_EQ(formatted, Format(unformatted));
+  ASSERT_STREQ(formatted, Format(unformatted));
   ASSERT_TRUE(fidl::utils::OnlyWhitespaceChanged(formatted, Format(unformatted)));
 }
 
@@ -5184,7 +5184,7 @@ alias MyAlias_Abcdefghijklmnopqr = bool;
 const MY_TRUE_ABCDEFGHIJKLM bool = true;
 )FIDL";
 
-  ASSERT_STR_EQ(formatted, Format(unformatted));
+  ASSERT_STREQ(formatted, Format(unformatted));
   ASSERT_TRUE(fidl::utils::OnlyWhitespaceChanged(formatted, Format(unformatted)));
 }
 
@@ -5228,7 +5228,7 @@ alias MyAlias_Abcdefghijklmnopqr = bool;
 const MY_TRUE_ABCDEFGHIJKLM bool = true;
 )FIDL";
 
-  ASSERT_STR_EQ(formatted, Format(unformatted));
+  ASSERT_STREQ(formatted, Format(unformatted));
   ASSERT_TRUE(fidl::utils::OnlyWhitespaceChanged(formatted, Format(unformatted)));
 }
 
@@ -5282,7 +5282,7 @@ alias MyAlias_Abcdefghijklmnopqr = bool;
 const MY_TRUE_ABCDEFGHIJKLM bool = true;
 )FIDL";
 
-  ASSERT_STR_EQ(formatted, Format(unformatted));
+  ASSERT_STREQ(formatted, Format(unformatted));
   ASSERT_TRUE(fidl::utils::OnlyWhitespaceChanged(formatted, Format(unformatted)));
 }
 
@@ -5305,7 +5305,7 @@ alias constrained_handle
         = zx.handle:<VMO, RIGHTS_BASIC>;
 )FIDL";
 
-  ASSERT_STR_EQ(formatted, Format(unformatted));
+  ASSERT_STREQ(formatted, Format(unformatted));
   ASSERT_TRUE(fidl::utils::OnlyWhitespaceChanged(formatted, Format(unformatted)));
 }
 
@@ -5335,7 +5335,7 @@ type MyEnum = strict enum : uint16 {
 };
 )FIDL";
 
-  ASSERT_STR_EQ(formatted, Format(unformatted));
+  ASSERT_STREQ(formatted, Format(unformatted));
   ASSERT_TRUE(fidl::utils::OnlyWhitespaceChanged(formatted, Format(unformatted)));
 }
 
@@ -5364,7 +5364,7 @@ protocol Foo {
 };
 )FIDL";
 
-  ASSERT_STR_EQ(formatted, Format(unformatted));
+  ASSERT_STREQ(formatted, Format(unformatted));
 }
 
 TEST(NewFormatterTests, VectorWithInlineAttribute) {
@@ -5390,7 +5390,7 @@ type MyTable = struct {
 };
 )FIDL";
 
-  ASSERT_STR_EQ(formatted, Format(unformatted));
+  ASSERT_STREQ(formatted, Format(unformatted));
 }
 
 // Don't wrap if <8 chars have been used before the wrapping, as this will cause greater offsetting
@@ -5426,7 +5426,7 @@ type MyStruct = resource struct {
 };
 )FIDL";
 
-  ASSERT_STR_EQ(formatted, Format(unformatted));
+  ASSERT_STREQ(formatted, Format(unformatted));
   ASSERT_TRUE(fidl::utils::OnlyWhitespaceChanged(formatted, Format(unformatted)));
 }
 

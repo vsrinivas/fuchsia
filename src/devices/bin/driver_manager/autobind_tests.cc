@@ -14,7 +14,7 @@
 
 class AutobindTest : public MultipleDeviceTestCase {
   void SetUp() {
-    ASSERT_NO_FATAL_FAILURES(MultipleDeviceTestCase::SetUp());
+    ASSERT_NO_FATAL_FAILURE(MultipleDeviceTestCase::SetUp());
 
     auto bind_program = std::make_unique<zx_bind_inst_t[]>(1);
     bind_program[0] = BI_MATCH();
@@ -38,8 +38,8 @@ class AutobindTest : public MultipleDeviceTestCase {
 
 TEST_F(AutobindTest, SkipAutobindFlag) {
   size_t device_index;
-  ASSERT_NO_FATAL_FAILURES(AddDeviceSkipAutobind(platform_bus()->device, "skip_autobind",
-                                                 ZX_PROTOCOL_PCI, &device_index));
+  ASSERT_NO_FATAL_FAILURE(AddDeviceSkipAutobind(platform_bus()->device, "skip_autobind",
+                                                ZX_PROTOCOL_PCI, &device_index));
 
   coordinator_loop()->RunUntilIdle();
   // If autobind erroneously ran, we'd have a pending message for telling the driver host
@@ -48,8 +48,8 @@ TEST_F(AutobindTest, SkipAutobindFlag) {
 
 TEST_F(AutobindTest, NoSkipAutobindFlag) {
   size_t device_index;
-  ASSERT_NO_FATAL_FAILURES(AddDevice(platform_bus()->device, "no_skip_autobind", ZX_PROTOCOL_PCI,
-                                     /* driver */ "", &device_index));
+  ASSERT_NO_FATAL_FAILURE(AddDevice(platform_bus()->device, "no_skip_autobind", ZX_PROTOCOL_PCI,
+                                    /* driver */ "", &device_index));
 
   coordinator_loop()->RunUntilIdle();
   ASSERT_TRUE(device(device_index)->HasPendingMessages());

@@ -45,8 +45,8 @@ void probe_verify_region(void* start, size_t size, uint32_t access) {
 
   printf("prove_verify_region for addr: %lu, size: %lu\n", (size_t)start, size);
   for (void* probe_point : probe_points) {
-    ASSERT_NO_FATAL_FAILURES(probe_access(probe_point, AccessType::Rd, access & ZX_VM_PERM_READ));
-    ASSERT_NO_FATAL_FAILURES(probe_access(probe_point, AccessType::Wr, access & ZX_VM_PERM_WRITE));
+    ASSERT_NO_FATAL_FAILURE(probe_access(probe_point, AccessType::Rd, access & ZX_VM_PERM_READ));
+    ASSERT_NO_FATAL_FAILURE(probe_access(probe_point, AccessType::Wr, access & ZX_VM_PERM_WRITE));
   }
 }
 

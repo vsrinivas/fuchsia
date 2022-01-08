@@ -117,7 +117,7 @@ TEST(PrettyTests, format_size_fixed_test) {
     char* ret = format_size_fixed(str, sizeof(str), tc->input, tc->unit);
     snprintf(msg, sizeof(msg), "format_size_fixed(bytes=%zd, unit=%c)", tc->input,
              tc->unit == 0 ? '0' : tc->unit);
-    EXPECT_STR_EQ(tc->expected_output, str, "%s", msg);
+    EXPECT_STREQ(tc->expected_output, str, "%s", msg);
     // Should always return the input pointer.
     EXPECT_EQ(&(str[0]), ret, "%s", msg);
   }
@@ -214,7 +214,7 @@ TEST(PrettyTests, hexdump_very_ex_test) {
   ASSERT_NOT_NULL(f, "");
   hexdump_very_ex(input, sizeof(input), kTestDisplayAddr, hexdump_stdio_printf, f);
   fclose(f);
-  EXPECT_STR_EQ((const char*)output_buffer, expected, "");
+  EXPECT_STREQ((const char*)output_buffer, expected, "");
 }
 
 TEST(PrettyTests, hexdump8_very_ex_test) {
@@ -228,5 +228,5 @@ TEST(PrettyTests, hexdump8_very_ex_test) {
   ASSERT_NOT_NULL(f, "");
   hexdump8_very_ex(input, sizeof(input), kTestDisplayAddr, hexdump_stdio_printf, f);
   fclose(f);
-  EXPECT_STR_EQ((const char*)output_buffer, expected, "");
+  EXPECT_STREQ((const char*)output_buffer, expected, "");
 }

@@ -25,23 +25,23 @@ TEST(DriverHostTest, MkDevpath) {
   dev->vnode.reset();
 
   auto result = mkdevpath(*dev, nullptr, 0);
-  EXPECT_STR_EQ("", result);
+  EXPECT_STREQ("", result);
 
   std::vector<char> buf;
   result = mkdevpath(*dev, buf.data(), buf.size());
-  EXPECT_STR_EQ("", result);
+  EXPECT_STREQ("", result);
 
   buf.resize(sizeof(device_name));
   result = mkdevpath(*dev, buf.data(), buf.size());
-  EXPECT_STR_EQ(device_name, result);
+  EXPECT_STREQ(device_name, result);
 
   buf.resize(sizeof(device_name) * 2);
   result = mkdevpath(*dev, buf.data(), buf.size());
-  EXPECT_STR_EQ(device_name, result);
+  EXPECT_STREQ(device_name, result);
 
   buf.resize(sizeof(device_name) / 2);
   result = mkdevpath(*dev, buf.data(), buf.size());
-  EXPECT_STR_EQ("...", result);
+  EXPECT_STREQ("...", result);
 }
 
 }  // namespace

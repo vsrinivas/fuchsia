@@ -90,7 +90,7 @@ void CreateFakeSmbios(smbios::EntryPoint2_1* ep, fbl::Array<uint8_t>* structs) {
 TEST(SmbiosTestCase, WalkStructs) {
   smbios::EntryPoint2_1 ep;
   fbl::Array<uint8_t> structs;
-  ASSERT_NO_FATAL_FAILURES(CreateFakeSmbios(&ep, &structs));
+  ASSERT_NO_FATAL_FAILURE(CreateFakeSmbios(&ep, &structs));
 
   bool tables_seen[2] = {};
   auto walk_cb = [&ep, &tables_seen](smbios::SpecVersion version, const smbios::Header* h,
@@ -117,7 +117,7 @@ TEST(SmbiosTestCase, WalkStructs) {
 TEST(SmbiosTestCase, WalkStructsEarlyStop) {
   smbios::EntryPoint2_1 ep;
   fbl::Array<uint8_t> structs;
-  ASSERT_NO_FATAL_FAILURES(CreateFakeSmbios(&ep, &structs));
+  ASSERT_NO_FATAL_FAILURE(CreateFakeSmbios(&ep, &structs));
 
   auto walk_cb = [](smbios::SpecVersion version, const smbios::Header* h,
                     const smbios::StringTable& st) {
@@ -139,7 +139,7 @@ TEST(SmbiosTestCase, WalkStructsEarlyStop) {
 TEST(SmbiosTestCase, GetString) {
   smbios::EntryPoint2_1 ep;
   fbl::Array<uint8_t> structs;
-  ASSERT_NO_FATAL_FAILURES(CreateFakeSmbios(&ep, &structs));
+  ASSERT_NO_FATAL_FAILURE(CreateFakeSmbios(&ep, &structs));
 
   auto walk_cb = [](smbios::SpecVersion version, const smbios::Header* h,
                     const smbios::StringTable& st) {
@@ -147,18 +147,18 @@ TEST(SmbiosTestCase, GetString) {
       case smbios::StructType::BiosInfo: {
         const char* str = nullptr;
         EXPECT_OK(st.GetString(0, &str));
-        EXPECT_STR_EQ("<null>", str);
+        EXPECT_STREQ("<null>", str);
         EXPECT_OK(st.GetString(1, &str));
-        EXPECT_STR_EQ(BIOS_STRING1, str);
+        EXPECT_STREQ(BIOS_STRING1, str);
         EXPECT_OK(st.GetString(2, &str));
-        EXPECT_STR_EQ(BIOS_STRING2, str);
+        EXPECT_STREQ(BIOS_STRING2, str);
         EXPECT_EQ(ZX_ERR_NOT_FOUND, st.GetString(3, &str));
         break;
       }
       case smbios::StructType::SystemInfo: {
         const char* str = nullptr;
         EXPECT_OK(st.GetString(0, &str));
-        EXPECT_STR_EQ("<null>", str);
+        EXPECT_STREQ("<null>", str);
         EXPECT_EQ(ZX_ERR_NOT_FOUND, st.GetString(1, &str));
         break;
       }

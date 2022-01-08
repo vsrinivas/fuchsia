@@ -117,7 +117,7 @@ void dyn_break_on_load_test_handler(inferior_data_t* data, const zx_port_packet_
 TEST(DynBreakOnLoadTests, DynBreakOnLoadTest) {
   springboard_t* sb;
   zx_handle_t inferior, channel;
-  ASSERT_NO_FATAL_FAILURES(setup_inferior(kTestDynBreakOnLoad, &sb, &inferior, &channel));
+  ASSERT_NO_FATAL_FAILURE(setup_inferior(kTestDynBreakOnLoad, &sb, &inferior, &channel));
 
   dyn_break_on_load_state_t test_state = {};
   test_state.process_handle = inferior;
@@ -141,12 +141,12 @@ TEST(DynBreakOnLoadTests, DynBreakOnLoadTest) {
       start_wait_inf_thread(inferior_data, dyn_break_on_load_test_handler, &test_state);
   EXPECT_NE(port, ZX_HANDLE_INVALID);
 
-  ASSERT_NO_FATAL_FAILURES(start_inferior(sb));
+  ASSERT_NO_FATAL_FAILURE(start_inferior(sb));
 
   // The remaining testing happens at this point as threads start.
   // This testing is done in |dyn_break_on_load_test_handler()|.
 
-  ASSERT_NO_FATAL_FAILURES(shutdown_inferior(channel, inferior));
+  ASSERT_NO_FATAL_FAILURE(shutdown_inferior(channel, inferior));
 
   // Stop the waiter thread before closing the port that it's waiting on.
   join_wait_inf_thread(wait_inf_thread);

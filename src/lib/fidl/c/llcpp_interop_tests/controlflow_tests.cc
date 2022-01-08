@@ -82,12 +82,12 @@ TEST(ControlFlowTest, ServerShutdown) {
   for (uint32_t i = 0; i < kNumIterations; i++) {
     zx::channel client_chan, server_chan;
     ASSERT_OK(zx::channel::create(0, &client_chan, &server_chan));
-    ASSERT_NO_FATAL_FAILURES(SpinUp(std::move(server_chan), &server_impl, loop.get()));
+    ASSERT_NO_FATAL_FAILURE(SpinUp(std::move(server_chan), &server_impl, loop.get()));
 
     // Send the shutdown message
     ASSERT_OK(fidl_test_llcpp_controlflow_ControlFlowShutdown(client_chan.get()));
 
-    ASSERT_NO_FATAL_FAILURES(WaitUntilNextIteration(loop->dispatcher()));
+    ASSERT_NO_FATAL_FAILURE(WaitUntilNextIteration(loop->dispatcher()));
 
     // Read-out the epitaph and check that epitaph error code is ZX_OK
     {
@@ -127,14 +127,14 @@ TEST(ControlFlowTest, NoReplyMustSendEpitaph) {
   for (uint32_t i = 0; i < kNumIterations; i++) {
     zx::channel client_chan, server_chan;
     ASSERT_OK(zx::channel::create(0, &client_chan, &server_chan));
-    ASSERT_NO_FATAL_FAILURES(SpinUp(std::move(server_chan), &server_impl, loop.get()));
+    ASSERT_NO_FATAL_FAILURE(SpinUp(std::move(server_chan), &server_impl, loop.get()));
 
     // Send the epitaph request message
     ASSERT_EQ(fidl_test_llcpp_controlflow_ControlFlowNoReplyMustSendAccessDeniedEpitaph(
                   client_chan.get()),
               ZX_OK);
 
-    ASSERT_NO_FATAL_FAILURES(WaitUntilNextIteration(loop->dispatcher()));
+    ASSERT_NO_FATAL_FAILURE(WaitUntilNextIteration(loop->dispatcher()));
 
     // Read-out the epitaph and check the error code
     {
@@ -174,7 +174,7 @@ TEST(ControlFlowTest, MustSendEpitaph) {
   for (uint32_t i = 0; i < kNumIterations; i++) {
     zx::channel client_chan, server_chan;
     ASSERT_OK(zx::channel::create(0, &client_chan, &server_chan));
-    ASSERT_NO_FATAL_FAILURES(SpinUp(std::move(server_chan), &server_impl, loop.get()));
+    ASSERT_NO_FATAL_FAILURE(SpinUp(std::move(server_chan), &server_impl, loop.get()));
 
     // Manually write the epitaph request message, since the epitaph will cause the C bindings
     // to fail.
@@ -183,7 +183,7 @@ TEST(ControlFlowTest, MustSendEpitaph) {
                          fidl_test_llcpp_controlflow_ControlFlowMustSendAccessDeniedEpitaphOrdinal);
     ASSERT_OK(client_chan.write(0, &request, sizeof(request), nullptr, 0));
 
-    ASSERT_NO_FATAL_FAILURES(WaitUntilNextIteration(loop->dispatcher()));
+    ASSERT_NO_FATAL_FAILURE(WaitUntilNextIteration(loop->dispatcher()));
 
     // Read-out the epitaph and check the error code
     {

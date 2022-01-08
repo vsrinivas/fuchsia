@@ -13,7 +13,7 @@ class ResumeTestCase : public MultipleDeviceTestCase {
 // Verify the device transitions in and out of the resuming state.
 void ResumeTestCase::StateTest(zx_status_t resume_status, Device::State want_device_state) {
   size_t index;
-  ASSERT_NO_FATAL_FAILURES(
+  ASSERT_NO_FATAL_FAILURE(
       AddDevice(platform_bus()->device, "device", 0 /* protocol id */, "", &index));
 
   // Mark all devices suspended.
@@ -21,20 +21,20 @@ void ResumeTestCase::StateTest(zx_status_t resume_status, Device::State want_dev
   coordinator().sys_device()->proxy()->set_state(Device::State::kSuspended);
   platform_bus()->device->set_state(Device::State::kSuspended);
   device(index)->device->set_state(Device::State::kSuspended);
-  ASSERT_NO_FATAL_FAILURES(DoResume(SystemPowerState::kFullyOn));
+  ASSERT_NO_FATAL_FAILURE(DoResume(SystemPowerState::kFullyOn));
 
-  ASSERT_NO_FATAL_FAILURES(
+  ASSERT_NO_FATAL_FAILURE(
       sys_proxy()->CheckResumeReceivedAndReply(SystemPowerState::kFullyOn, ZX_OK));
   coordinator_loop()->RunUntilIdle();
-  ASSERT_NO_FATAL_FAILURES(
+  ASSERT_NO_FATAL_FAILURE(
       platform_bus()->CheckResumeReceivedAndReply(SystemPowerState::kFullyOn, ZX_OK));
   coordinator_loop()->RunUntilIdle();
   // Check for the resume message without replying.
-  ASSERT_NO_FATAL_FAILURES(device(index)->CheckResumeReceived(SystemPowerState::kFullyOn));
+  ASSERT_NO_FATAL_FAILURE(device(index)->CheckResumeReceived(SystemPowerState::kFullyOn));
 
   ASSERT_EQ(device(index)->device->state(), Device::State::kResuming);
 
-  ASSERT_NO_FATAL_FAILURES(device(index)->SendResumeReply(resume_status));
+  ASSERT_NO_FATAL_FAILURE(device(index)->SendResumeReply(resume_status));
   coordinator_loop()->RunUntilIdle();
 
   ASSERT_EQ(device(index)->device->state(), want_device_state);
@@ -63,7 +63,7 @@ void ResumeTestCase::ResumeTest(SystemPowerState target_state) {
       size_t index = devices[desc.parent_desc_index].index;
       parent = device(index)->device;
     }
-    ASSERT_NO_FATAL_FAILURES(AddDevice(parent, desc.name, 0 /* protocol id */, "", &desc.index));
+    ASSERT_NO_FATAL_FAILURE(AddDevice(parent, desc.name, 0 /* protocol id */, "", &desc.index));
   }
 
   // Mark all devices suspended. Otherwise resume will fail
@@ -82,16 +82,16 @@ void ResumeTestCase::ResumeTest(SystemPowerState target_state) {
     }
   }
 
-  ASSERT_NO_FATAL_FAILURES(DoResume(target_state));
+  ASSERT_NO_FATAL_FAILURE(DoResume(target_state));
   coordinator_loop()->RunUntilIdle();
 
   ASSERT_TRUE(sys_proxy()->HasPendingMessages());
-  ASSERT_NO_FATAL_FAILURES(sys_proxy()->CheckResumeReceivedAndReply(target_state, ZX_OK));
+  ASSERT_NO_FATAL_FAILURE(sys_proxy()->CheckResumeReceivedAndReply(target_state, ZX_OK));
   coordinator_loop()->RunUntilIdle();
   ASSERT_EQ(coordinator().sys_device()->state(), Device::State::kActive);
 
   ASSERT_TRUE(platform_bus()->HasPendingMessages());
-  ASSERT_NO_FATAL_FAILURES(platform_bus()->CheckResumeReceivedAndReply(target_state, ZX_OK));
+  ASSERT_NO_FATAL_FAILURE(platform_bus()->CheckResumeReceivedAndReply(target_state, ZX_OK));
   coordinator_loop()->RunUntilIdle();
   ASSERT_EQ(platform_bus()->device->state(), Device::State::kActive);
 
@@ -107,8 +107,7 @@ void ResumeTestCase::ResumeTest(SystemPowerState target_state) {
       if (!device(desc.index)->HasPendingMessages()) {
         continue;
       }
-      ASSERT_NO_FATAL_FAILURES(
-          device(desc.index)->CheckResumeReceivedAndReply(target_state, ZX_OK));
+      ASSERT_NO_FATAL_FAILURE(device(desc.index)->CheckResumeReceivedAndReply(target_state, ZX_OK));
       coordinator_loop()->RunUntilIdle();
 
       size_t parent_index = devices[i].parent_desc_index;
@@ -141,13 +140,13 @@ void ResumeTestCase::ResumeTest(SystemPowerState target_state) {
 }
 
 TEST_F(ResumeTestCase, FullyOnCheckOrder) {
-  ASSERT_NO_FATAL_FAILURES(ResumeTest(SystemPowerState::kFullyOn));
+  ASSERT_NO_FATAL_FAILURE(ResumeTest(SystemPowerState::kFullyOn));
 }
 
 TEST_F(ResumeTestCase, ResumeSuccess) {
-  ASSERT_NO_FATAL_FAILURES(StateTest(ZX_OK, Device::State::kActive));
+  ASSERT_NO_FATAL_FAILURE(StateTest(ZX_OK, Device::State::kActive));
 }
 
 TEST_F(ResumeTestCase, ResumeFail) {
-  ASSERT_NO_FATAL_FAILURES(StateTest(ZX_ERR_BAD_STATE, Device::State::kSuspended));
+  ASSERT_NO_FATAL_FAILURE(StateTest(ZX_ERR_BAD_STATE, Device::State::kSuspended));
 }

@@ -57,7 +57,7 @@ constexpr auto MissingTerminatorTest = [](auto&& elf) {
   EXPECT_EQ(1, diag.errors());
   EXPECT_EQ(0, diag.warnings());
   ASSERT_GE(errors.size(), 1);
-  EXPECT_STR_EQ(errors.front(), "missing DT_NULL terminator in PT_DYNAMIC");
+  EXPECT_STREQ(errors.front(), "missing DT_NULL terminator in PT_DYNAMIC");
 };
 
 TEST(ElfldltlDynamicTests, MissingTerminator) { TestAllFormats(MissingTerminatorTest); }
@@ -94,7 +94,7 @@ constexpr auto RejectTextrelTest = [](auto&& elf) {
   EXPECT_EQ(1, diag.errors());
   EXPECT_EQ(0, diag.warnings());
   ASSERT_GE(errors.size(), 1);
-  EXPECT_STR_EQ(errors.front(), elfldltl::DynamicTextrelRejectObserver::Message());
+  EXPECT_STREQ(errors.front(), elfldltl::DynamicTextrelRejectObserver::Message());
 };
 
 TEST(ElfldltlDynamicTests, RejectTextrel) { TestAllFormats(RejectTextrelTest); }
@@ -1119,7 +1119,7 @@ constexpr auto SymbolInfoObserverFullValidTest = [](auto&& elf) {
   EXPECT_EQ(info.strtab().size(), test_image.test_syms().strtab().size());
   EXPECT_EQ(info.strtab(), test_image.test_syms().strtab());
   EXPECT_EQ(info.safe_symtab().size(), test_image.test_syms().symtab().size());
-  EXPECT_STR_EQ(info.soname(), "libfoo.so");
+  EXPECT_STREQ(info.soname(), "libfoo.so");
   EXPECT_TRUE(info.compat_hash());
   EXPECT_TRUE(info.gnu_hash());
 };

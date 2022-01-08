@@ -41,15 +41,15 @@ TEST(ElfldltlDiagnosticsTests, OneString) {
   auto diag = elfldltl::OneStringDiagnostics(error);
 
   EXPECT_FALSE(diag.FormatError("first error"));
-  EXPECT_STR_EQ(error, "first error");
+  EXPECT_STREQ(error, "first error");
   EXPECT_EQ(1, diag.errors());
 
   EXPECT_FALSE(diag.FormatError("second error"));
-  EXPECT_STR_EQ(error, "second error");
+  EXPECT_STREQ(error, "second error");
   EXPECT_EQ(2, diag.errors());
 
   EXPECT_FALSE(diag.FormatWarning("warning"));
-  EXPECT_STR_EQ(error, "warning");
+  EXPECT_STREQ(error, "warning");
   EXPECT_EQ(1, diag.warnings());
   EXPECT_EQ(2, diag.errors());
 }
@@ -78,9 +78,9 @@ TEST(ElfldltlDiagnosticsTests, CollectStrings) {
   EXPECT_EQ(2, diag.errors());
 
   ASSERT_GE(errors.size(), 3);
-  EXPECT_STR_EQ(errors[0], "first error");
-  EXPECT_STR_EQ(errors[1], "second error");
-  EXPECT_STR_EQ(errors[2], "warning");
+  EXPECT_STREQ(errors[0], "first error");
+  EXPECT_STREQ(errors[1], "second error");
+  EXPECT_STREQ(errors[2], "warning");
 }
 
 TEST(ElfldltlDiagnosticsTests, Ostream) {
@@ -101,10 +101,10 @@ TEST(ElfldltlDiagnosticsTests, Ostream) {
   EXPECT_EQ(1, diag.warnings());
   EXPECT_EQ(2, diag.errors());
 
-  EXPECT_STR_EQ(sstr.str(),
-                "a1:first error\n"
-                "a1:second error\n"
-                "a1:warning\n");
+  EXPECT_STREQ(sstr.str(),
+               "a1:first error\n"
+               "a1:second error\n"
+               "a1:warning\n");
 }
 
 }  // namespace

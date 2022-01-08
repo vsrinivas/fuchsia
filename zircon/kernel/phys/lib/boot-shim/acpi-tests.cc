@@ -56,13 +56,13 @@ void AcpiUartTest(const acpi_lite::AcpiParserInterface* parser, const T& expecte
 }
 
 TEST(BootShimTests, AcpiUartNone) {
-  ASSERT_NO_FATAL_FAILURES(AcpiUartTest(nullptr, std::monostate{}));
+  ASSERT_NO_FATAL_FAILURE(AcpiUartTest(nullptr, std::monostate{}));
 }
 
 TEST(BootShimTests, AcpiUartAtlas) {
   constexpr dcfg_simple_t kAtlasUart = {.mmio_phys = 0xfe03'4000};
   auto parser = acpi_lite::testing::PixelbookAtlasAcpiParser();
-  ASSERT_NO_FATAL_FAILURES(AcpiUartTest(&parser, kAtlasUart));
+  ASSERT_NO_FATAL_FAILURE(AcpiUartTest(&parser, kAtlasUart));
 }
 
 TEST(BootShimTests, AcpiUartNuc) {
@@ -71,7 +71,7 @@ TEST(BootShimTests, AcpiUartNuc) {
   auto result = acpi_lite::AcpiParser::Init(reader, reader.rsdp());
   ASSERT_TRUE(result.is_ok());
   auto& parser = result.value();
-  ASSERT_NO_FATAL_FAILURES(AcpiUartTest(&parser, kNucUart));
+  ASSERT_NO_FATAL_FAILURE(AcpiUartTest(&parser, kNucUart));
 }
 
 void AcpiRsdpTest(acpi_lite::testing::FakePhysMemReader mem_reader, uint64_t expected_rsdp) {
@@ -87,16 +87,16 @@ TEST(BootShimTests, AcpiRsdpNone) {
 }
 
 TEST(BootShimTests, AcpiRsdpQemu) {
-  ASSERT_NO_FATAL_FAILURES(AcpiRsdpTest(acpi_lite::testing::QemuPhysMemReader(), 0xf'5860));
+  ASSERT_NO_FATAL_FAILURE(AcpiRsdpTest(acpi_lite::testing::QemuPhysMemReader(), 0xf'5860));
 }
 
 TEST(BootShimTests, AcpiRsdpFuchsiaHypervisor) {
-  ASSERT_NO_FATAL_FAILURES(
+  ASSERT_NO_FATAL_FAILURE(
       AcpiRsdpTest(acpi_lite::testing::FuchsiaHypervisorPhysMemReader(), 0xe'0000));
 }
 
 TEST(BootShimTests, AcpiRsdpNuc) {
-  ASSERT_NO_FATAL_FAILURES(
+  ASSERT_NO_FATAL_FAILURE(
       AcpiRsdpTest(acpi_lite::testing::IntelNuc7i5dnPhysMemReader(), 0x7fa2'9000));
 }
 

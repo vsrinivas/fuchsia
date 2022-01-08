@@ -80,7 +80,7 @@ void WaitForKernelState(const zx::thread& thread, zx_thread_state_t target_state
 
   EXPECT_OK(wait_res);
   // Verify that any of the helpers methods called has no assertion failures.
-  ASSERT_NO_FATAL_FAILURES();
+  ASSERT_NO_FATAL_FAILURE();
   ASSERT_EQ(state, target_state);
 }
 
@@ -121,7 +121,7 @@ class TestThread {
     // We should only do this after state_ is State::kAboutToWait,
     // otherwise it could return when the thread has temporarily
     // blocked on a libc-internal futex.
-    ASSERT_NO_FATAL_FAILURES(WaitForKernelState(thread_handle_, ZX_THREAD_STATE_BLOCKED_FUTEX));
+    ASSERT_NO_FATAL_FAILURE(WaitForKernelState(thread_handle_, ZX_THREAD_STATE_BLOCKED_FUTEX));
 
     // This could also fail if futex_wait() gets a spurious wakeup.
     EXPECT_EQ(state(), State::kAboutToWait, "Wrong thread state.");
@@ -144,7 +144,7 @@ class TestThread {
 
   void CheckIsBlockedOnFutex() const {
     zx_thread_state_t state;
-    ASSERT_NO_FATAL_FAILURES(GetThreadState(thread_handle_, &state));
+    ASSERT_NO_FATAL_FAILURE(GetThreadState(thread_handle_, &state));
     ASSERT_EQ(state, ZX_THREAD_STATE_BLOCKED_FUTEX);
   }
 
@@ -252,7 +252,7 @@ TEST(FutexTest, Wakeup) {
   zx_futex_t futex{1};
   TestThread thread;
 
-  ASSERT_NO_FATAL_FAILURES(thread.Start(&futex));
+  ASSERT_NO_FATAL_FAILURE(thread.Start(&futex));
 
   // Clean up on exit.
   auto cleanup = fit::defer([&thread, &futex]() {
@@ -261,7 +261,7 @@ TEST(FutexTest, Wakeup) {
   });
 
   ASSERT_OK(zx_futex_wake(&futex, kThreadWakeAllCount));
-  ASSERT_NO_FATAL_FAILURES(thread.WaitUntilWoken());
+  ASSERT_NO_FATAL_FAILURE(thread.WaitUntilWoken());
   ASSERT_OK(thread.wait_result());
 }
 
@@ -281,7 +281,7 @@ TEST(FutexTest, WakeupLimit) {
   });
 
   for (auto& t : threads) {
-    ASSERT_NO_FATAL_FAILURES(t.Start(&futex));
+    ASSERT_NO_FATAL_FAILURE(t.Start(&futex));
   }
 
   ASSERT_OK(zx_futex_wake(&futex, kWakeCount));
@@ -289,15 +289,15 @@ TEST(FutexTest, WakeupLimit) {
   // Test that exactly |kWakeCount| threads wake up from the queue.  We do not know
   // which threads are going to wake up, just that two threads are going to
   // wake up.
-  ASSERT_NO_FATAL_FAILURES(AssertWokeThreadCount(threads, std::size(threads), 2));
+  ASSERT_NO_FATAL_FAILURE(AssertWokeThreadCount(threads, std::size(threads), 2));
 
   // Clean up: Wake the remaining threads so that they can exit.
   ASSERT_OK(zx_futex_wake(&futex, kThreadWakeAllCount));
-  ASSERT_NO_FATAL_FAILURES(AssertWokeThreadCount(threads, std::size(threads), std::size(threads)));
+  ASSERT_NO_FATAL_FAILURE(AssertWokeThreadCount(threads, std::size(threads), std::size(threads)));
 
   for (auto& t : threads) {
     ASSERT_OK(t.wait_result());
-    ASSERT_NO_FATAL_FAILURES(t.Shutdown());
+    ASSERT_NO_FATAL_FAILURE(t.Shutdown());
   }
 
   cleanup.cancel();
@@ -319,24 +319,24 @@ TEST(FutexTest, WakeupAddress) {
     }
   });
 
-  ASSERT_NO_FATAL_FAILURES(threads[0].Start(&futexes[0]));
-  ASSERT_NO_FATAL_FAILURES(threads[1].Start(&futexes[1]));
+  ASSERT_NO_FATAL_FAILURE(threads[0].Start(&futexes[0]));
+  ASSERT_NO_FATAL_FAILURE(threads[1].Start(&futexes[1]));
 
   ASSERT_OK(zx_futex_wake(&futexes[2], kThreadWakeAllCount));
-  ASSERT_NO_FATAL_FAILURES(threads[0].CheckIsBlockedOnFutex());
-  ASSERT_NO_FATAL_FAILURES(threads[1].CheckIsBlockedOnFutex());
+  ASSERT_NO_FATAL_FAILURE(threads[0].CheckIsBlockedOnFutex());
+  ASSERT_NO_FATAL_FAILURE(threads[1].CheckIsBlockedOnFutex());
 
   ASSERT_OK(zx_futex_wake(&futexes[0], kThreadWakeAllCount));
-  ASSERT_NO_FATAL_FAILURES(threads[0].WaitUntilWoken());
-  ASSERT_NO_FATAL_FAILURES(threads[1].CheckIsBlockedOnFutex());
+  ASSERT_NO_FATAL_FAILURE(threads[0].WaitUntilWoken());
+  ASSERT_NO_FATAL_FAILURE(threads[1].CheckIsBlockedOnFutex());
 
   // Clean up: Wake the remaining thread so that it can exit.
   ASSERT_OK(zx_futex_wake(&futexes[1], kThreadWakeAllCount));
-  ASSERT_NO_FATAL_FAILURES(threads[1].WaitUntilWoken());
+  ASSERT_NO_FATAL_FAILURE(threads[1].WaitUntilWoken());
 
   for (auto& t : threads) {
     ASSERT_OK(t.wait_result());
-    ASSERT_NO_FATAL_FAILURES(t.Shutdown());
+    ASSERT_NO_FATAL_FAILURE(t.Shutdown());
   }
 
   cleanup.cancel();
@@ -374,25 +374,25 @@ TEST(FutexTest, Requeue) {
   });
 
   for (auto& t : threads) {
-    ASSERT_NO_FATAL_FAILURES(t.Start(&futex_value1));
+    ASSERT_NO_FATAL_FAILURE(t.Start(&futex_value1));
   }
 
   ASSERT_OK(zx_futex_requeue(&futex_value1, 3, 100, &futex_value2, 2, ZX_HANDLE_INVALID));
 
   // 3 of the threads should have been woken.
-  ASSERT_NO_FATAL_FAILURES(AssertWokeThreadCount(threads, std::size(threads), 3));
+  ASSERT_NO_FATAL_FAILURE(AssertWokeThreadCount(threads, std::size(threads), 3));
 
   // Since 2 of the threads should have been requeued, waking all the
   // threads on futex_value2 should wake 2 more threads.
   ASSERT_OK(zx_futex_wake(&futex_value2, kThreadWakeAllCount));
-  ASSERT_NO_FATAL_FAILURES(AssertWokeThreadCount(threads, std::size(threads), 5));
+  ASSERT_NO_FATAL_FAILURE(AssertWokeThreadCount(threads, std::size(threads), 5));
 
   // Clean up: Wake the remaining thread so that it can exit.
   ASSERT_OK(zx_futex_wake(&futex_value1, 1));
-  ASSERT_NO_FATAL_FAILURES(AssertWokeThreadCount(threads, std::size(threads), std::size(threads)));
+  ASSERT_NO_FATAL_FAILURE(AssertWokeThreadCount(threads, std::size(threads), std::size(threads)));
 
   for (auto& t : threads) {
-    ASSERT_NO_FATAL_FAILURES(t.Shutdown());
+    ASSERT_NO_FATAL_FAILURE(t.Shutdown());
   }
 
   cleanup.cancel();
@@ -415,26 +415,26 @@ TEST(FutexTest, RequeueUnqueuedOnTimeout) {
     }
   });
 
-  ASSERT_NO_FATAL_FAILURES(threads[0].Start(&futex_value1, zx::msec(300)));
+  ASSERT_NO_FATAL_FAILURE(threads[0].Start(&futex_value1, zx::msec(300)));
   ASSERT_OK(zx_futex_requeue(&futex_value1, 0, 100, &futex_value2, kThreadWakeAllCount,
                              ZX_HANDLE_INVALID));
-  ASSERT_NO_FATAL_FAILURES(threads[1].Start(&futex_value2));
+  ASSERT_NO_FATAL_FAILURE(threads[1].Start(&futex_value2));
 
   // thread 0 and 1 should now both be waiting on futex_value2.  Thread 0
   // should timeout in a short while, but thread 1 should still be waiting.
 
-  ASSERT_NO_FATAL_FAILURES(threads[0].WaitUntilWoken());
+  ASSERT_NO_FATAL_FAILURE(threads[0].WaitUntilWoken());
   ASSERT_EQ(threads[0].wait_result(), ZX_ERR_TIMED_OUT);
-  ASSERT_NO_FATAL_FAILURES(threads[1].CheckIsBlockedOnFutex());
+  ASSERT_NO_FATAL_FAILURE(threads[1].CheckIsBlockedOnFutex());
 
   // thread 0 should have removed itself from futex_value2's wait queue,
   // so only thread 1 should be waiting on futex_value2.  We can test that
   // by doing futex_wake() with count=1.
   ASSERT_OK(zx_futex_wake(&futex_value2, 1));
-  ASSERT_NO_FATAL_FAILURES(threads[1].WaitUntilWoken());
+  ASSERT_NO_FATAL_FAILURE(threads[1].WaitUntilWoken());
 
   for (auto& t : threads) {
-    ASSERT_NO_FATAL_FAILURES(t.Shutdown());
+    ASSERT_NO_FATAL_FAILURE(t.Shutdown());
   }
 
   cleanup.cancel();
@@ -455,22 +455,22 @@ TEST(FutexTest, ThreadSuspended) {
     thread.Shutdown();
   });
 
-  ASSERT_NO_FATAL_FAILURES(thread.Start(&futex_value1));
+  ASSERT_NO_FATAL_FAILURE(thread.Start(&futex_value1));
 
   zx::suspend_token suspend_token;
   ASSERT_OK(thread.thread().suspend(&suspend_token));
 
   // Wait until the thread is suspended.
-  ASSERT_NO_FATAL_FAILURES(WaitForKernelState(thread.thread(), ZX_THREAD_STATE_SUSPENDED));
+  ASSERT_NO_FATAL_FAILURE(WaitForKernelState(thread.thread(), ZX_THREAD_STATE_SUSPENDED));
   ASSERT_OK(zx_handle_close(suspend_token.release()));
 
   // Wait some time for the thread to resume and execute.
-  ASSERT_NO_FATAL_FAILURES(WaitForKernelState(thread.thread(), ZX_THREAD_STATE_BLOCKED_FUTEX));
-  ASSERT_NO_FATAL_FAILURES(thread.CheckIsBlockedOnFutex());
+  ASSERT_NO_FATAL_FAILURE(WaitForKernelState(thread.thread(), ZX_THREAD_STATE_BLOCKED_FUTEX));
+  ASSERT_NO_FATAL_FAILURE(thread.CheckIsBlockedOnFutex());
 
   ASSERT_OK(zx_futex_wake(&futex_value1, 1));
-  ASSERT_NO_FATAL_FAILURES(AssertWokeThreadCount(&thread, 1, 1));
-  ASSERT_NO_FATAL_FAILURES(thread.Shutdown());
+  ASSERT_NO_FATAL_FAILURE(AssertWokeThreadCount(&thread, 1, 1));
+  ASSERT_NO_FATAL_FAILURE(thread.Shutdown());
 
   cleanup.cancel();
 }
@@ -584,9 +584,9 @@ TEST(FutexTest, EventSignaling) {
       },
       &event, "thread 3");
 
-  ASSERT_NO_FATAL_FAILURES(WaitUntilThreadBlockedOnFutex(thread1));
-  ASSERT_NO_FATAL_FAILURES(WaitUntilThreadBlockedOnFutex(thread2));
-  ASSERT_NO_FATAL_FAILURES(WaitUntilThreadBlockedOnFutex(thread3));
+  ASSERT_NO_FATAL_FAILURE(WaitUntilThreadBlockedOnFutex(thread1));
+  ASSERT_NO_FATAL_FAILURE(WaitUntilThreadBlockedOnFutex(thread2));
+  ASSERT_NO_FATAL_FAILURE(WaitUntilThreadBlockedOnFutex(thread3));
 
   log("signaling event\n");
   event.Signal();

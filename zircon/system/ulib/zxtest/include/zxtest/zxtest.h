@@ -36,12 +36,12 @@ static inline void unittest_fails(void) {}
 //    ASSERT/EXPECT_NOT_NULL
 //    ASSERT/EXPECT_BYTES_EQ
 //    ASSERT/EXPECT_BYTES_NE
-//    ASSERT/EXPECT_STR_EQ
-//    ASSERT/EXPECT_STR_NE
+//    ASSERT/EXPECT_STREQ
+//    ASSERT/EXPECT_STRNE
 //    ASSERT/EXPECT_SUBSTR
 //    ASSERT/EXPECT_NOT_SUBSTR
 //    CURRENT_TEST_HAS_FAILURES
-//    CURRENT_TEST_HAS_FATAL_FAILURES
+//    CURRENT_TEST_HAS_FATAL_FAILURE
 //  * There are no matchers allowed in this library.
 //  * All assertions must happen in the main thread, unless the user provides synchronization
 //    for accessing the library.
@@ -102,19 +102,19 @@ static inline void unittest_fails(void) {}
   LIB_ZXTEST_CHECK_VAR(LIB_ZXTEST_GE, val2, val1, false, __FILE__, __LINE__, \
                        "Expected " #val1 " >= " #val2 ".", ##__VA_ARGS__)
 
-#define ASSERT_STR_EQ(val2, val1, ...)                                         \
+#define ASSERT_STREQ(val2, val1, ...)                                          \
   LIB_ZXTEST_CHECK_VAR(LIB_ZXTEST_STREQ, val2, val1, true, __FILE__, __LINE__, \
                        "Expected strings " #val1 " == " #val2 ".", ##__VA_ARGS__)
 
-#define EXPECT_STR_EQ(val2, val1, ...)                                          \
+#define EXPECT_STREQ(val2, val1, ...)                                           \
   LIB_ZXTEST_CHECK_VAR(LIB_ZXTEST_STREQ, val2, val1, false, __FILE__, __LINE__, \
                        "Expected strings " #val1 " == " #val2 ".", ##__VA_ARGS__)
 
-#define ASSERT_STR_NE(val2, val1, ...)                                         \
+#define ASSERT_STRNE(val2, val1, ...)                                          \
   LIB_ZXTEST_CHECK_VAR(LIB_ZXTEST_STRNE, val2, val1, true, __FILE__, __LINE__, \
                        "Expected strings " #val1 " != " #val2 ".", ##__VA_ARGS__)
 
-#define EXPECT_STR_NE(val2, val1, ...)                                          \
+#define EXPECT_STRNE(val2, val1, ...)                                           \
   LIB_ZXTEST_CHECK_VAR(LIB_ZXTEST_STRNE, val2, val1, false, __FILE__, __LINE__, \
                        "Expected strings " #val1 " != " #val2 ".", ##__VA_ARGS__)
 
@@ -225,14 +225,14 @@ static inline void unittest_fails(void) {}
 
 #define ADD_FATAL_FAILURE(...) LIB_ZXTEST_FAIL_NO_RETURN(true, "", ##__VA_ARGS__)
 
-#define ASSERT_NO_FATAL_FAILURES(statement, ...)                                                 \
+#define ASSERT_NO_FATAL_FAILURE(statement, ...)                                                  \
   do {                                                                                           \
     statement;                                                                                   \
     LIB_ZXTEST_ASSERT_ERROR(LIB_ZXTEST_ABORT_IF_ERROR, true,                                     \
                             "Test registered fatal failures in " #statement ".", ##__VA_ARGS__); \
   } while (0)
 
-#define EXPECT_NO_FATAL_FAILURES(statement, ...)                                                 \
+#define EXPECT_NO_FATAL_FAILURE(statement, ...)                                                  \
   do {                                                                                           \
     statement;                                                                                   \
     LIB_ZXTEST_ASSERT_ERROR(LIB_ZXTEST_ABORT_IF_ERROR, false,                                    \
@@ -286,6 +286,6 @@ static inline void unittest_fails(void) {}
 #define CURRENT_TEST_HAS_FAILURES() LIB_ZXTEST_TEST_HAS_ERRORS
 
 // Evaluates to true if the current test has ASSERT failures only.
-#define CURRENT_TEST_HAS_FATAL_FAILURES() LIB_ZXTEST_ABORT_IF_ERROR
+#define CURRENT_TEST_HAS_FATAL_FAILURE() LIB_ZXTEST_ABORT_IF_ERROR
 
 #endif  // ZXTEST_ZXTEST_H_

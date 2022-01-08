@@ -66,7 +66,7 @@ TEST(BridgeTests, bridge_construction_and_assignment) {
       fpromise::run_single_threaded(bridge.consumer.promise());
   EXPECT_FALSE(bridge.consumer);
   EXPECT_EQ(fpromise::result_state::error, result.state());
-  EXPECT_STR_EQ("Test", result.error());
+  EXPECT_STREQ("Test", result.error());
 }
 
 TEST(BridgeTests, completer_construction_and_assignment) {
@@ -91,7 +91,7 @@ TEST(BridgeTests, completer_construction_and_assignment) {
       fpromise::run_single_threaded(bridge.consumer.promise());
   EXPECT_FALSE(bridge.consumer);
   EXPECT_EQ(fpromise::result_state::error, result.state());
-  EXPECT_STR_EQ("Test", result.error());
+  EXPECT_STREQ("Test", result.error());
 
   // Can move-construct from empty.
   fpromise::completer<int, const char*> completer3(std::move(completer2));
@@ -119,7 +119,7 @@ TEST(BridgeTests, completer_abandon) {
         fpromise::run_single_threaded(bridge.consumer.promise_or(fpromise::error("Abandoned")));
     EXPECT_FALSE(bridge.consumer);
     EXPECT_EQ(fpromise::result_state::error, result.state());
-    EXPECT_STR_EQ("Abandoned", result.error());
+    EXPECT_STREQ("Abandoned", result.error());
   }
 
   // completer is discarded
@@ -136,7 +136,7 @@ TEST(BridgeTests, completer_abandon) {
         fpromise::run_single_threaded(bridge.consumer.promise_or(fpromise::error("Abandoned")));
     EXPECT_FALSE(bridge.consumer);
     EXPECT_EQ(fpromise::result_state::error, result.state());
-    EXPECT_STR_EQ("Abandoned", result.error());
+    EXPECT_STREQ("Abandoned", result.error());
   }
 }
 
@@ -203,7 +203,7 @@ TEST(BridgeTests, completer_complete) {
         fpromise::run_single_threaded(bridge.consumer.promise());
     EXPECT_FALSE(bridge.consumer);
     EXPECT_EQ(fpromise::result_state::error, result.state());
-    EXPECT_STR_EQ("Test", result.error());
+    EXPECT_STREQ("Test", result.error());
   }
 
   // complete_or_abandon(fpromise::ok(...))
@@ -237,7 +237,7 @@ TEST(BridgeTests, completer_complete) {
         fpromise::run_single_threaded(bridge.consumer.promise());
     EXPECT_FALSE(bridge.consumer);
     EXPECT_EQ(fpromise::result_state::error, result.state());
-    EXPECT_STR_EQ("Test", result.error());
+    EXPECT_STREQ("Test", result.error());
   }
 
   // complete_or_abandon(fpromise::pending())
@@ -254,7 +254,7 @@ TEST(BridgeTests, completer_complete) {
         fpromise::run_single_threaded(bridge.consumer.promise_or(fpromise::error("Abandoned")));
     EXPECT_FALSE(bridge.consumer);
     EXPECT_EQ(fpromise::result_state::error, result.state());
-    EXPECT_STR_EQ("Abandoned", result.error());
+    EXPECT_STREQ("Abandoned", result.error());
   }
 }
 
@@ -357,7 +357,7 @@ TEST(BridgeTests, consumer_construction_and_assignment) {
   fpromise::result<int, const char*> result = fpromise::run_single_threaded(consumer.promise());
   EXPECT_FALSE(consumer);
   EXPECT_EQ(fpromise::result_state::error, result.state());
-  EXPECT_STR_EQ("Test", result.error());
+  EXPECT_STREQ("Test", result.error());
 
   // Can move-construct from empty.
   fpromise::consumer<int, const char*> consumer3(std::move(consumer2));
@@ -471,7 +471,7 @@ TEST(BridgeTests, consumer_promise) {
 
     fpromise::result<int, const char*> result = fpromise::run_single_threaded(std::move(promise));
     EXPECT_EQ(fpromise::result_state::error, result.state());
-    EXPECT_STR_EQ("Abandoned", result.error());
+    EXPECT_STREQ("Abandoned", result.error());
   }
 }
 

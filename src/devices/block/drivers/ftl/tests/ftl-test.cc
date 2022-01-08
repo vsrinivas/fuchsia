@@ -267,7 +267,7 @@ void FtlTest::SingleLoop(PageCount write_size) {
   }
 
   ASSERT_OK(volume_->Flush());
-  ASSERT_NO_FATAL_FAILURES(CheckVolume(write_size, ftl_.num_pages()));
+  ASSERT_NO_FATAL_FAILURE(CheckVolume(write_size, ftl_.num_pages()));
 
   // Randomly rewrite half the pages in the volume.
   for (uint32_t i = 0; i < ftl_.num_pages() / 2; i++) {
@@ -277,12 +277,12 @@ void FtlTest::SingleLoop(PageCount write_size) {
     ASSERT_OK(volume_->Write(page, 1, page_buffer_.data()));
   }
 
-  ASSERT_NO_FATAL_FAILURES(CheckVolume(write_size, ftl_.num_pages()));
+  ASSERT_NO_FATAL_FAILURE(CheckVolume(write_size, ftl_.num_pages()));
 
   // Detach and re-add test volume without erasing the media.
   ASSERT_OK(volume_->Unmount());
   ASSERT_TRUE(ftl_.ReAttach());
-  ASSERT_NO_FATAL_FAILURES(CheckVolume(write_size, ftl_.num_pages()));
+  ASSERT_NO_FATAL_FAILURE(CheckVolume(write_size, ftl_.num_pages()));
 
   ASSERT_OK(volume_->Unmount());
 }
@@ -328,7 +328,7 @@ TEST_F(FtlTest, SinglePass) { SingleLoop(5); }
 
 TEST_F(FtlTest, MultiplePass) {
   for (int i = 1; i < 7; i++) {
-    ASSERT_NO_FATAL_FAILURES(SingleLoop(i * 3), "i: %d", i);
+    ASSERT_NO_FATAL_FAILURE(SingleLoop(i * 3), "i: %d", i);
   }
 }
 
@@ -367,7 +367,7 @@ TEST_F(FtlExtendTest, ExtendVolume) {
 
   const int kWriteSize = 5;
   uint32_t original_size = ftl_.num_pages();
-  ASSERT_NO_FATAL_FAILURES(SingleLoop(kWriteSize));
+  ASSERT_NO_FATAL_FAILURE(SingleLoop(kWriteSize));
 
   // Double the volume size.
 
@@ -376,12 +376,12 @@ TEST_F(FtlExtendTest, ExtendVolume) {
   ASSERT_TRUE(ftl_.ReAttach());
 
   // Verify the contents of the first half of the volume.
-  ASSERT_NO_FATAL_FAILURES(CheckVolume(kWriteSize, original_size));
+  ASSERT_NO_FATAL_FAILURE(CheckVolume(kWriteSize, original_size));
 
   // Now make sure the whole volume works as expected.
   SetUpBaseTest();
   EXPECT_GT(ftl_.num_pages(), original_size);
-  ASSERT_NO_FATAL_FAILURES(SingleLoop(kWriteSize));
+  ASSERT_NO_FATAL_FAILURE(SingleLoop(kWriteSize));
 }
 
 TEST_F(FtlExtendTest, ReduceReservedBlocks) {
@@ -398,19 +398,19 @@ TEST_F(FtlExtendTest, ReduceReservedBlocks) {
   // Start by writing to the regular volume.
   const int kWriteSize = 5;
   uint32_t original_size = ftl_.num_pages();
-  ASSERT_NO_FATAL_FAILURES(SingleLoop(kWriteSize));
+  ASSERT_NO_FATAL_FAILURE(SingleLoop(kWriteSize));
 
   // Reduce the number of reserved blocks.
   driver->set_max_bad_blocks(kDefaultOptions.max_bad_blocks / 2);
   ASSERT_TRUE(ftl_.ReAttach());
 
   // Verify the contents of the first part of the volume.
-  ASSERT_NO_FATAL_FAILURES(CheckVolume(kWriteSize, original_size));
+  ASSERT_NO_FATAL_FAILURE(CheckVolume(kWriteSize, original_size));
 
   // Now make sure the whole volume works as expected.
   SetUpBaseTest();
   EXPECT_GT(ftl_.num_pages(), original_size);
-  ASSERT_NO_FATAL_FAILURES(SingleLoop(kWriteSize));
+  ASSERT_NO_FATAL_FAILURE(SingleLoop(kWriteSize));
 }
 
 TEST_F(FtlExtendTest, ReduceReservedBlocksFailure) {
@@ -424,7 +424,7 @@ TEST_F(FtlExtendTest, ReduceReservedBlocksFailure) {
 
   // Start by writing to the regular volume.
   const int kWriteSize = 5;
-  ASSERT_NO_FATAL_FAILURES(SingleLoop(kWriteSize));
+  ASSERT_NO_FATAL_FAILURE(SingleLoop(kWriteSize));
 
   // Reduce the number of reserved blocks.
   driver->set_max_bad_blocks(kDefaultOptions.max_bad_blocks / 2);
@@ -572,7 +572,7 @@ TEST_F(FtlUpgradeTest, UpgradesToVersion2) {
   ASSERT_TRUE(ftl_.ReAttach());
 
   // Verify the contents of the volume.
-  ASSERT_NO_FATAL_FAILURES(CheckVolume(kWriteSize, ftl_.num_pages()));
+  ASSERT_NO_FATAL_FAILURE(CheckVolume(kWriteSize, ftl_.num_pages()));
 
   // Verify that the volume is usable and that reading the new format from disk works.
   ASSERT_OK(volume_->Unmount());
@@ -695,9 +695,9 @@ TEST_F(FtlBadBlockTest, FtlSucceedsAfterContinousFailures) {
   // One page at a time.
   SingleLoop(1);
 
-  ASSERT_NO_FATAL_FAILURES(CheckVolume(1, ftl_.num_pages()));
+  ASSERT_NO_FATAL_FAILURE(CheckVolume(1, ftl_.num_pages()));
   ASSERT_TRUE(ftl_.ReAttach());
-  ASSERT_NO_FATAL_FAILURES(CheckVolume(1, ftl_.num_pages()));
+  ASSERT_NO_FATAL_FAILURE(CheckVolume(1, ftl_.num_pages()));
 }
 
 }  // namespace

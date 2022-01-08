@@ -70,7 +70,7 @@ TEST(SequencerTests, sequencing_tasks) {
   executor.run();
 
   // Evaluate the promises and check the execution order.
-  EXPECT_STR_EQ(":z1:a:a2:z2:b:b2:c:b2:d:b2:e:b2:b3", str.c_str());
+  EXPECT_STREQ(":z1:a:a2:z2:b:b2:c:b2:d:b2:e:b2:b3", str.c_str());
 }
 
 TEST(SequencerTests, thread_safety) {

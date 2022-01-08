@@ -16,7 +16,7 @@
 // failure.  zxtest's ASSERT_*() macros do "return;" on failure, which
 // doesn't work in functions with non-void return types, and it continues
 // running if the calling function doesn't check for failure with something
-// like ASSERT_NO_FATAL_FAILURES().
+// like ASSERT_NO_FATAL_FAILURE().
 //
 // Functions defined using zxtest's TEST() macro should use zxtest's
 // ASSERT_*() and EXPECT_*() assertions instead of ASSERT_CRITICAL().

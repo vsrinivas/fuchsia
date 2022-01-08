@@ -76,7 +76,7 @@ TEST(PerfTestRunner, TestResults) {
   // The output should have time values for the number of runs we requested.
   auto* test_case = &(*test_cases)[0];
   EXPECT_EQ(test_case->values.size(), kRunCount);
-  EXPECT_STR_EQ(test_case->label.c_str(), "no_op_example_test");
+  EXPECT_STREQ(test_case->label.c_str(), "no_op_example_test");
   EXPECT_TRUE(check_times(test_case));
   EXPECT_EQ(test_case->bytes_processed_per_run, 0);
 }
@@ -149,9 +149,9 @@ TEST(PerfTestRunner, TestMultistepTest) {
   EXPECT_TRUE(
       perftest::internal::RunTests("test-suite", &test_list, kRunCount, "", out.fp(), &results));
   ASSERT_EQ(results.results()->size(), 3);
-  EXPECT_STR_EQ((*results.results())[0].label.c_str(), "example_test.step1");
-  EXPECT_STR_EQ((*results.results())[1].label.c_str(), "example_test.step2");
-  EXPECT_STR_EQ((*results.results())[2].label.c_str(), "example_test.step3");
+  EXPECT_STREQ((*results.results())[0].label.c_str(), "example_test.step1");
+  EXPECT_STREQ((*results.results())[1].label.c_str(), "example_test.step2");
+  EXPECT_STREQ((*results.results())[2].label.c_str(), "example_test.step3");
   for (auto& test_case : *results.results()) {
     EXPECT_EQ(test_case.values.size(), kRunCount);
     EXPECT_TRUE(check_times(&test_case));
@@ -286,9 +286,9 @@ TEST(PerfTestRunner, TestBytesProcessedParameterMultistep) {
       perftest::internal::RunTests("test-suite", &test_list, kRunCount, "", out.fp(), &results));
   auto* test_cases = results.results();
   ASSERT_EQ(test_cases->size(), 3);
-  EXPECT_STR_EQ((*test_cases)[0].label.c_str(), "throughput_test");
-  EXPECT_STR_EQ((*test_cases)[1].label.c_str(), "throughput_test.step1");
-  EXPECT_STR_EQ((*test_cases)[2].label.c_str(), "throughput_test.step2");
+  EXPECT_STREQ((*test_cases)[0].label.c_str(), "throughput_test");
+  EXPECT_STREQ((*test_cases)[1].label.c_str(), "throughput_test.step1");
+  EXPECT_STREQ((*test_cases)[2].label.c_str(), "throughput_test.step2");
   EXPECT_EQ((*test_cases)[0].bytes_processed_per_run, 1234);
   EXPECT_EQ((*test_cases)[1].bytes_processed_per_run, 0);
   EXPECT_EQ((*test_cases)[2].bytes_processed_per_run, 0);
@@ -314,9 +314,9 @@ TEST(PerfTestRunner, TestRunningInSortedOrder) {
   auto* test_cases = results.results();
   ASSERT_EQ(test_cases->size(), 3);
   // Check that the tests are reported as being run in sorted order.
-  EXPECT_STR_EQ((*test_cases)[0].label.c_str(), "test1");
-  EXPECT_STR_EQ((*test_cases)[1].label.c_str(), "test2");
-  EXPECT_STR_EQ((*test_cases)[2].label.c_str(), "test3");
+  EXPECT_STREQ((*test_cases)[0].label.c_str(), "test1");
+  EXPECT_STREQ((*test_cases)[1].label.c_str(), "test2");
+  EXPECT_STREQ((*test_cases)[2].label.c_str(), "test3");
 }
 
 // Test the option for running tests in a randomized order.
@@ -346,9 +346,9 @@ TEST(PerfTestRunner, TestRunningInRandomOrder) {
     std::vector<std::string> names_sorted = names;
     std::sort(names_sorted.begin(), names_sorted.end());
     EXPECT_EQ(names_sorted.size(), 3);
-    EXPECT_STR_EQ(names_sorted[0].c_str(), "test1");
-    EXPECT_STR_EQ(names_sorted[1].c_str(), "test2");
-    EXPECT_STR_EQ(names_sorted[2].c_str(), "test3");
+    EXPECT_STREQ(names_sorted[0].c_str(), "test1");
+    EXPECT_STREQ(names_sorted[1].c_str(), "test2");
+    EXPECT_STREQ(names_sorted[2].c_str(), "test3");
 
     return names;
   };
@@ -378,8 +378,8 @@ TEST(PerfTestRunner, TestParsingCommandArgs) {
   perftest::internal::CommandArgs args;
   perftest::internal::ParseCommandArgs(std::size(argv), const_cast<char**>(argv), &args);
   EXPECT_EQ(args.run_count, 123);
-  EXPECT_STR_EQ(args.output_filename, "dest_file");
-  EXPECT_STR_EQ(args.filter_regex, "some_regex");
+  EXPECT_STREQ(args.output_filename, "dest_file");
+  EXPECT_STREQ(args.filter_regex, "some_regex");
   EXPECT_TRUE(args.quiet);
 #if defined(__Fuchsia__)
   EXPECT_TRUE(args.enable_tracing);

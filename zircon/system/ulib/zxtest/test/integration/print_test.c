@@ -203,7 +203,7 @@ TEST(CPrintTest, LongDouble) {
 TEST(CPrintTest, Str) {
   const char* a = "MyStr";
 
-  ASSERT_STR_EQ(a, "MyStr");
+  ASSERT_STREQ(a, "MyStr");
 
   const char* n = NULL;
 

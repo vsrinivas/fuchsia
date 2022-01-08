@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fstream>
-
 #include <fidl/diagnostics_json.h>
+
+#include <fstream>
 
 #include "error_test.h"
 #include "test_library.h"
@@ -16,7 +16,7 @@ namespace {
 
 using diagnostics::Diagnostic;
 
-#define ASSERT_JSON(DIAGS, JSON) ASSERT_NO_FATAL_FAILURES(ExpectJson(DIAGS, JSON))
+#define ASSERT_JSON(DIAGS, JSON) ASSERT_NO_FATAL_FAILURE(ExpectJson(DIAGS, JSON))
 
 void ExpectJson(std::vector<Diagnostic*> diagnostics, std::string expected_json) {
   std::string actual_json = DiagnosticsJson(diagnostics).Produce().str();

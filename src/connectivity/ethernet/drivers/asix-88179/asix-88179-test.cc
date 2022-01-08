@@ -59,7 +59,7 @@ void USBVirtualBus::InitUsbAx88179(fbl::String* dev_path, fbl::String* test_func
   config_desc =
       fidl::VectorView<usb_peripheral::wire::FunctionDescriptor>::FromExternal(function_descs);
   config_descs.push_back(std::move(config_desc));
-  ASSERT_NO_FATAL_FAILURES(SetupPeripheralDevice(std::move(device_desc), std::move(config_descs)));
+  ASSERT_NO_FATAL_FAILURE(SetupPeripheralDevice(std::move(device_desc), std::move(config_descs)));
 
   fbl::unique_fd fd(openat(devmgr_.devfs_root().get(), "class/ethernet", O_RDONLY));
   while (fdio_watch_directory(fd.get(), usb_virtual_bus::WaitForAnyFile, ZX_TIME_INFINITE,
@@ -78,14 +78,14 @@ void USBVirtualBus::InitUsbAx88179(fbl::String* dev_path, fbl::String* test_func
 class UsbAx88179Test : public zxtest::Test {
  public:
   void SetUp() override {
-    ASSERT_NO_FATAL_FAILURES(bus_.InitUsbAx88179(&dev_path_, &test_function_path_));
+    ASSERT_NO_FATAL_FAILURE(bus_.InitUsbAx88179(&dev_path_, &test_function_path_));
   }
 
   void TearDown() override {
-    ASSERT_NO_FATAL_FAILURES(bus_.ClearPeripheralDeviceFunctions());
+    ASSERT_NO_FATAL_FAILURE(bus_.ClearPeripheralDeviceFunctions());
 
     auto result2 = bus_.virtual_bus()->Disable();
-    ASSERT_NO_FATAL_FAILURES(usb_virtual_bus::ValidateResult(result2));
+    ASSERT_NO_FATAL_FAILURE(usb_virtual_bus::ValidateResult(result2));
   }
 
   void ConnectEthernetClient() {
@@ -165,35 +165,35 @@ class UsbAx88179Test : public zxtest::Test {
   zx::fifo tx_fifo_;
 };
 
-TEST_F(UsbAx88179Test, SetupShutdownTest) { ASSERT_NO_FATAL_FAILURES(); }
+TEST_F(UsbAx88179Test, SetupShutdownTest) { ASSERT_NO_FATAL_FAILURE(); }
 
 TEST_F(UsbAx88179Test, OfflineByDefault) {
-  ASSERT_NO_FATAL_FAILURES(ConnectEthernetClient());
+  ASSERT_NO_FATAL_FAILURE(ConnectEthernetClient());
 
-  ASSERT_NO_FATAL_FAILURES(StartDevice());
+  ASSERT_NO_FATAL_FAILURE(StartDevice());
 
   ASSERT_FALSE(GetDeviceStatus() & ethernet::wire::DeviceStatus::kOnline);
 }
 
 TEST_F(UsbAx88179Test, SetOnlineAfterStart) {
-  ASSERT_NO_FATAL_FAILURES(ConnectEthernetClient());
+  ASSERT_NO_FATAL_FAILURE(ConnectEthernetClient());
 
-  ASSERT_NO_FATAL_FAILURES(StartDevice());
+  ASSERT_NO_FATAL_FAILURE(StartDevice());
 
-  ASSERT_NO_FATAL_FAILURES(SetDeviceOnline());
+  ASSERT_NO_FATAL_FAILURE(SetDeviceOnline());
 
-  ASSERT_NO_FATAL_FAILURES(ExpectStatusOnline());
+  ASSERT_NO_FATAL_FAILURE(ExpectStatusOnline());
 }
 
 // This is for https://fxbug.dev/40786#c41.
 TEST_F(UsbAx88179Test, SetOnlineBeforeStart) {
-  ASSERT_NO_FATAL_FAILURES(ConnectEthernetClient());
+  ASSERT_NO_FATAL_FAILURE(ConnectEthernetClient());
 
-  ASSERT_NO_FATAL_FAILURES(SetDeviceOnline());
+  ASSERT_NO_FATAL_FAILURE(SetDeviceOnline());
 
-  ASSERT_NO_FATAL_FAILURES(StartDevice());
+  ASSERT_NO_FATAL_FAILURE(StartDevice());
 
-  ASSERT_NO_FATAL_FAILURES(ExpectStatusOnline());
+  ASSERT_NO_FATAL_FAILURE(ExpectStatusOnline());
 }
 
 }  // namespace

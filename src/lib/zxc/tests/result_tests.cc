@@ -61,22 +61,10 @@ static_assert(std::is_constructible_v<fitx::result<fitx::failed, int>, fitx::err
 
 // Ensure that success/error types and helpers do not return references to their arguments when
 // deducing the value/error types.
-[[maybe_unused]]
-constexpr auto return_success(int value) {
-  return fitx::success(value);
-}
-[[maybe_unused]]
-constexpr auto return_error(int value) {
-  return fitx::error(value);
-}
-[[maybe_unused]]
-constexpr auto return_ok(int value) {
-  return fitx::ok(value);
-}
-[[maybe_unused]]
-constexpr auto return_as_error(int value) {
-  return fitx::as_error(value);
-}
+[[maybe_unused]] constexpr auto return_success(int value) { return fitx::success(value); }
+[[maybe_unused]] constexpr auto return_error(int value) { return fitx::error(value); }
+[[maybe_unused]] constexpr auto return_ok(int value) { return fitx::ok(value); }
+[[maybe_unused]] constexpr auto return_as_error(int value) { return fitx::as_error(value); }
 static_assert(std::is_same_v<fitx::success<int>, decltype(return_success(10))>);
 static_assert(std::is_same_v<fitx::error<int>, decltype(return_error(10))>);
 static_assert(std::is_same_v<fitx::success<int>, decltype(return_ok(10))>);
@@ -1036,22 +1024,22 @@ TEST(LibZxCommon, ErrorResults) {
 TEST(LibZxCommon, StatusString) {
   {
     zx::status<> status = zx::ok();
-    EXPECT_STR_EQ(status.status_string(), zx_status_get_string(ZX_OK));
+    EXPECT_STREQ(status.status_string(), zx_status_get_string(ZX_OK));
   }
 
   {
     zx::status<> status = zx::error(ZX_ERR_NO_MEMORY);
-    EXPECT_STR_EQ(status.status_string(), zx_status_get_string(ZX_ERR_NO_MEMORY));
+    EXPECT_STREQ(status.status_string(), zx_status_get_string(ZX_ERR_NO_MEMORY));
   }
 
   {
     zx::status<int> status = zx::ok(10);
-    EXPECT_STR_EQ(status.status_string(), zx_status_get_string(ZX_OK));
+    EXPECT_STREQ(status.status_string(), zx_status_get_string(ZX_OK));
   }
 
   {
     zx::status<int> status = zx::error(ZX_ERR_NO_MEMORY);
-    EXPECT_STR_EQ(status.status_string(), zx_status_get_string(ZX_ERR_NO_MEMORY));
+    EXPECT_STREQ(status.status_string(), zx_status_get_string(ZX_ERR_NO_MEMORY));
   }
 }
 
@@ -1068,13 +1056,13 @@ TEST(LibZxCommon, AugmentError) {
   {
     fitx::result<std::string> result = fitx::error("Bad outcome!");
     result += fitx::error("More details!");
-    EXPECT_STR_EQ(result.error_value(), "Bad outcome!More details!");
+    EXPECT_STREQ(result.error_value(), "Bad outcome!More details!");
   }
 
   {
     fitx::result<std::string, int> result = fitx::error("Bad outcome!");
     result += fitx::error("More details!");
-    EXPECT_STR_EQ(result.error_value(), "Bad outcome!More details!");
+    EXPECT_STREQ(result.error_value(), "Bad outcome!More details!");
   }
 
   {
@@ -1083,7 +1071,7 @@ TEST(LibZxCommon, AugmentError) {
 
     result += fitx::error("More details!");
     ASSERT_EQ(1, result.error_value().details.size());
-    EXPECT_STR_EQ(result.error_value().details[0], "More details!");
+    EXPECT_STREQ(result.error_value().details[0], "More details!");
   }
 
   {
@@ -1092,7 +1080,7 @@ TEST(LibZxCommon, AugmentError) {
 
     result += fitx::error("More details!");
     ASSERT_EQ(1, result.error_value().details.size());
-    EXPECT_STR_EQ(result.error_value().details[0], "More details!");
+    EXPECT_STREQ(result.error_value().details[0], "More details!");
   }
 }
 
@@ -1182,7 +1170,6 @@ TEST(LibZxCommon, MakeStatusWithReferenceType) {
     ASSERT_TRUE(status.is_error());
     ASSERT_EQ(status.error_value(), ZX_ERR_INVALID_ARGS);
   }
-
 }
 
 TEST(LibZxCommon, MakeStatusWithMoveOnlyType) {

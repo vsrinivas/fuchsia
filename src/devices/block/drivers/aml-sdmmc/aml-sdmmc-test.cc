@@ -482,7 +482,7 @@ TEST_F(AmlSdmmcTest, AdjDelayTuningAllFail) {
   const auto* tuning_results =
       root->node().get_property<inspect::StringPropertyValue>("tuning_results");
   ASSERT_NOT_NULL(tuning_results);
-  EXPECT_STR_EQ(tuning_results->value(), "failed");
+  EXPECT_STREQ(tuning_results->value(), "failed");
 }
 
 TEST_F(AmlSdmmcTest, DelayLineTuningNoWindowWrap) {
@@ -532,8 +532,8 @@ TEST_F(AmlSdmmcTest, DelayLineTuningNoWindowWrap) {
   const auto* tuning_results =
       root->node().get_property<inspect::StringPropertyValue>("tuning_results_adj_delay_0");
   ASSERT_NOT_NULL(tuning_results);
-  EXPECT_STR_EQ(tuning_results->value(),
-                "|-----------||||||||||---------------------||-------------------");
+  EXPECT_STREQ(tuning_results->value(),
+               "|-----------||||||||||---------------------||-------------------");
 
   const auto* max_delay = root->node().get_property<inspect::UintPropertyValue>("max_delay");
   ASSERT_NOT_NULL(max_delay);
@@ -592,8 +592,8 @@ TEST_F(AmlSdmmcTest, DelayLineTuningWindowWrap) {
   const auto* tuning_results =
       root->node().get_property<inspect::StringPropertyValue>("tuning_results_adj_delay_0");
   ASSERT_NOT_NULL(tuning_results);
-  EXPECT_STR_EQ(tuning_results->value(),
-                "|||||||||||||||-----------|||||||||||||||||||---------||||||||||");
+  EXPECT_STREQ(tuning_results->value(),
+               "|||||||||||||||-----------|||||||||||||||||||---------||||||||||");
 
   const auto* max_delay = root->node().get_property<inspect::UintPropertyValue>("max_delay");
   ASSERT_NOT_NULL(max_delay);
@@ -631,8 +631,8 @@ TEST_F(AmlSdmmcTest, DelayLineTuningAllFail) {
   const auto* tuning_results =
       root->node().get_property<inspect::StringPropertyValue>("tuning_results_adj_delay_0");
   ASSERT_NOT_NULL(tuning_results);
-  EXPECT_STR_EQ(tuning_results->value(),
-                "----------------------------------------------------------------");
+  EXPECT_STREQ(tuning_results->value(),
+               "----------------------------------------------------------------");
 
   const auto* max_delay = root->node().get_property<inspect::UintPropertyValue>("max_delay");
   ASSERT_NOT_NULL(max_delay);
@@ -691,8 +691,8 @@ TEST_F(AmlSdmmcTest, NewDelayLineTuningAllPass) {
   const auto* tuning_results =
       root->node().get_property<inspect::StringPropertyValue>("tuning_results_adj_delay_0");
   ASSERT_NOT_NULL(tuning_results);
-  EXPECT_STR_EQ(tuning_results->value(),
-                "||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||");
+  EXPECT_STREQ(tuning_results->value(),
+               "||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||");
 
   const auto* distance =
       root->node().get_property<inspect::UintPropertyValue>("distance_to_failing_point");
@@ -764,8 +764,8 @@ TEST_F(AmlSdmmcTest, NewDelayLineTuningFallBackToOld) {
   const auto* tuning_results =
       root->node().get_property<inspect::StringPropertyValue>("tuning_results_adj_delay_4");
   ASSERT_NOT_NULL(tuning_results);
-  EXPECT_STR_EQ(tuning_results->value(),
-                "||||||||||||||||||||||||||||||||||||||||||||||||||--------------");
+  EXPECT_STREQ(tuning_results->value(),
+               "||||||||||||||||||||||||||||||||||||||||||||||||||--------------");
 
   const auto* distance =
       root->node().get_property<inspect::UintPropertyValue>("distance_to_failing_point");
@@ -834,8 +834,8 @@ TEST_F(AmlSdmmcTest, NewDelayLineTuningCheckOldUseNew) {
   const auto* tuning_results =
       root->node().get_property<inspect::StringPropertyValue>("tuning_results_adj_delay_2");
   ASSERT_NOT_NULL(tuning_results);
-  EXPECT_STR_EQ(tuning_results->value(),
-                "||||||||||||||||||||||||||||||||-|||||||||||||||||||||||||||||||");
+  EXPECT_STREQ(tuning_results->value(),
+               "||||||||||||||||||||||||||||||||-|||||||||||||||||||||||||||||||");
 
   const auto* distance =
       root->node().get_property<inspect::UintPropertyValue>("distance_to_failing_point");
@@ -906,8 +906,8 @@ TEST_F(AmlSdmmcTest, NewDelayLineTuningEvenDivider) {
   const auto* tuning_results =
       root->node().get_property<inspect::StringPropertyValue>("tuning_results_adj_delay_4");
   ASSERT_NOT_NULL(tuning_results);
-  EXPECT_STR_EQ(tuning_results->value(),
-                "||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||");
+  EXPECT_STREQ(tuning_results->value(),
+               "||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||");
 
   const auto* distance =
       root->node().get_property<inspect::UintPropertyValue>("distance_to_failing_point");
@@ -977,8 +977,8 @@ TEST_F(AmlSdmmcTest, NewDelayLineTuningOddDivider) {
   const auto* tuning_results =
       root->node().get_property<inspect::StringPropertyValue>("tuning_results_adj_delay_7");
   ASSERT_NOT_NULL(tuning_results);
-  EXPECT_STR_EQ(tuning_results->value(),
-                "||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||");
+  EXPECT_STREQ(tuning_results->value(),
+               "||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||");
 
   const auto* distance =
       root->node().get_property<inspect::UintPropertyValue>("distance_to_failing_point");

@@ -119,9 +119,9 @@ TEST(DebugDataTests, PublishData) {
   std::unique_ptr<fs::SynchronousVfs> vfs;
   zx::channel client;
   DebugData svc;
-  ASSERT_NO_FATAL_FAILURES(svc.Serve(loop.dispatcher(), &vfs, &client));
+  ASSERT_NO_FATAL_FAILURE(svc.Serve(loop.dispatcher(), &vfs, &client));
 
-  ASSERT_NO_FATAL_FAILURES(RunHelperWithSvc("publish_data", std::move(client), 0));
+  ASSERT_NO_FATAL_FAILURE(RunHelperWithSvc("publish_data", std::move(client), 0));
 
   ASSERT_OK(loop.RunUntilIdle());
 
@@ -137,7 +137,7 @@ TEST(DebugDataTests, PublishData) {
 }
 
 TEST(DebugDataTests, PublishDataWithoutSvc) {
-  ASSERT_NO_FATAL_FAILURES(RunHelperWithoutSvc("publish_data", 0));
+  ASSERT_NO_FATAL_FAILURE(RunHelperWithoutSvc("publish_data", 0));
 }
 
 TEST(DebugDataTests, LoadConfig) {
@@ -145,7 +145,7 @@ TEST(DebugDataTests, LoadConfig) {
   std::unique_ptr<fs::SynchronousVfs> vfs;
   zx::channel client;
   DebugData svc;
-  ASSERT_NO_FATAL_FAILURES(svc.Serve(loop.dispatcher(), &vfs, &client));
+  ASSERT_NO_FATAL_FAILURE(svc.Serve(loop.dispatcher(), &vfs, &client));
   ASSERT_OK(loop.StartThread("debugdata"));
 
   zx::vmo vmo;
@@ -154,7 +154,7 @@ TEST(DebugDataTests, LoadConfig) {
 
   svc.configs.emplace(kTestName, std::move(vmo));
 
-  ASSERT_NO_FATAL_FAILURES(RunHelperWithSvc("load_config", std::move(client), 0));
+  ASSERT_NO_FATAL_FAILURE(RunHelperWithSvc("load_config", std::move(client), 0));
 
   loop.Shutdown();
   vfs.reset();
@@ -165,17 +165,17 @@ TEST(DebugDataTests, LoadConfigNotFound) {
   std::unique_ptr<fs::SynchronousVfs> vfs;
   zx::channel client;
   DebugData svc;
-  ASSERT_NO_FATAL_FAILURES(svc.Serve(loop.dispatcher(), &vfs, &client));
+  ASSERT_NO_FATAL_FAILURE(svc.Serve(loop.dispatcher(), &vfs, &client));
   ASSERT_OK(loop.StartThread("debugdata"));
 
-  ASSERT_NO_FATAL_FAILURES(RunHelperWithSvc("load_config", std::move(client), ZX_ERR_PEER_CLOSED));
+  ASSERT_NO_FATAL_FAILURE(RunHelperWithSvc("load_config", std::move(client), ZX_ERR_PEER_CLOSED));
 
   loop.Shutdown();
   vfs.reset();
 }
 
 TEST(DebugDataTests, LoadConfigWithoutSvc) {
-  ASSERT_NO_FATAL_FAILURES(RunHelperWithoutSvc("load_config", ZX_ERR_BAD_HANDLE));
+  ASSERT_NO_FATAL_FAILURE(RunHelperWithoutSvc("load_config", ZX_ERR_BAD_HANDLE));
 }
 
 // debugdata.cc cannot use LLCPP (because it allocates with new/delete) so

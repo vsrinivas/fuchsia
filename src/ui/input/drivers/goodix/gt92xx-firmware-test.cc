@@ -275,8 +275,8 @@ TEST_F(GoodixTest, FirmwareTest) {
   EXPECT_TRUE(i2c.FirmwareWritten());
   EXPECT_EQ(i2c.CurrentState(), FakeTouchDevice::kReady);
 
-  ASSERT_NO_FATAL_FAILURES(reset.VerifyAndClear());
-  ASSERT_NO_FATAL_FAILURES(intr.VerifyAndClear());
+  ASSERT_NO_FATAL_FAILURE(reset.VerifyAndClear());
+  ASSERT_NO_FATAL_FAILURE(intr.VerifyAndClear());
 }
 
 TEST_F(GoodixTest, FirmwareCurrent) {
@@ -298,8 +298,8 @@ TEST_F(GoodixTest, FirmwareCurrent) {
   EXPECT_FALSE(i2c.FirmwareWritten());
   EXPECT_EQ(i2c.CurrentState(), FakeTouchDevice::kIdle);
 
-  ASSERT_NO_FATAL_FAILURES(reset.VerifyAndClear());
-  ASSERT_NO_FATAL_FAILURES(intr.VerifyAndClear());
+  ASSERT_NO_FATAL_FAILURE(reset.VerifyAndClear());
+  ASSERT_NO_FATAL_FAILURE(intr.VerifyAndClear());
 }
 
 TEST_F(GoodixTest, FirmwareNotApplicable) {
@@ -322,8 +322,8 @@ TEST_F(GoodixTest, FirmwareNotApplicable) {
   EXPECT_FALSE(i2c.FirmwareWritten());
   EXPECT_EQ(i2c.CurrentState(), FakeTouchDevice::kIdle);
 
-  ASSERT_NO_FATAL_FAILURES(reset.VerifyAndClear());
-  ASSERT_NO_FATAL_FAILURES(intr.VerifyAndClear());
+  ASSERT_NO_FATAL_FAILURE(reset.VerifyAndClear());
+  ASSERT_NO_FATAL_FAILURE(intr.VerifyAndClear());
 }
 
 TEST_F(GoodixTest, ForceFirmwareUpdate) {
@@ -360,8 +360,8 @@ TEST_F(GoodixTest, ForceFirmwareUpdate) {
   EXPECT_TRUE(i2c.FirmwareWritten());
   EXPECT_EQ(i2c.CurrentState(), FakeTouchDevice::kReady);
 
-  ASSERT_NO_FATAL_FAILURES(reset.VerifyAndClear());
-  ASSERT_NO_FATAL_FAILURES(intr.VerifyAndClear());
+  ASSERT_NO_FATAL_FAILURE(reset.VerifyAndClear());
+  ASSERT_NO_FATAL_FAILURE(intr.VerifyAndClear());
 }
 
 TEST_F(GoodixTest, BadFirmwareChecksum) {
@@ -381,8 +381,8 @@ TEST_F(GoodixTest, BadFirmwareChecksum) {
   EXPECT_FALSE(i2c.FirmwareWritten());
   EXPECT_EQ(i2c.CurrentState(), FakeTouchDevice::kIdle);
 
-  ASSERT_NO_FATAL_FAILURES(reset.VerifyAndClear());
-  ASSERT_NO_FATAL_FAILURES(intr.VerifyAndClear());
+  ASSERT_NO_FATAL_FAILURE(reset.VerifyAndClear());
+  ASSERT_NO_FATAL_FAILURE(intr.VerifyAndClear());
 }
 
 TEST_F(GoodixTest, ReadbackCheckFail) {
@@ -406,8 +406,8 @@ TEST_F(GoodixTest, ReadbackCheckFail) {
   EXPECT_TRUE(i2c.FirmwareWritten());
   EXPECT_EQ(i2c.CurrentState(), FakeTouchDevice::kReadingDspIsp);
 
-  ASSERT_NO_FATAL_FAILURES(reset.VerifyAndClear());
-  ASSERT_NO_FATAL_FAILURES(intr.VerifyAndClear());
+  ASSERT_NO_FATAL_FAILURE(reset.VerifyAndClear());
+  ASSERT_NO_FATAL_FAILURE(intr.VerifyAndClear());
 }
 
 }  // namespace goodix

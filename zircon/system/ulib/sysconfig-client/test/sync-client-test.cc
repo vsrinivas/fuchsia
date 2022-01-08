@@ -147,7 +147,7 @@ void ValidateBuffer(void* buffer, size_t size, uint8_t expected = 0x5c) {
 
 class SyncClientTest : public zxtest::Test {
  protected:
-  SyncClientTest() { ASSERT_NO_FATAL_FAILURES(SkipBlockDevice::Create(kNandInfo, &device_)); }
+  SyncClientTest() { ASSERT_NO_FATAL_FAILURE(SkipBlockDevice::Create(kNandInfo, &device_)); }
 
   void ValidateWritten(size_t offset, size_t size, uint8_t expected = 0x4a) {
     for (size_t block = 4; block < 5; block++) {
@@ -197,11 +197,11 @@ TEST_F(SyncClientTest, WritePartitionSysconfig) {
   ASSERT_OK(sysconfig::SyncClient::Create(device_->devfs_root(), &client));
 
   zx::vmo vmo;
-  ASSERT_NO_FATAL_FAILURES(CreatePayload(60 * kKilobyte, &vmo));
+  ASSERT_NO_FATAL_FAILURE(CreatePayload(60 * kKilobyte, &vmo));
   ASSERT_OK(client->WritePartition(PartitionType::kSysconfig, vmo, 0));
 
-  ASSERT_NO_FATAL_FAILURES(ValidateWritten(0, 60 * kKilobyte));
-  ASSERT_NO_FATAL_FAILURES(ValidateUnwritten(60 * kKilobyte, 196 * kKilobyte));
+  ASSERT_NO_FATAL_FAILURE(ValidateWritten(0, 60 * kKilobyte));
+  ASSERT_NO_FATAL_FAILURE(ValidateUnwritten(60 * kKilobyte, 196 * kKilobyte));
 }
 
 TEST_F(SyncClientTest, WritePartitionAbrMetadata) {
@@ -209,12 +209,12 @@ TEST_F(SyncClientTest, WritePartitionAbrMetadata) {
   ASSERT_OK(sysconfig::SyncClient::Create(device_->devfs_root(), &client));
 
   zx::vmo vmo;
-  ASSERT_NO_FATAL_FAILURES(CreatePayload(4 * kKilobyte, &vmo));
+  ASSERT_NO_FATAL_FAILURE(CreatePayload(4 * kKilobyte, &vmo));
   ASSERT_OK(client->WritePartition(PartitionType::kABRMetadata, vmo, 0));
 
-  ASSERT_NO_FATAL_FAILURES(ValidateUnwritten(0, 60 * kKilobyte));
-  ASSERT_NO_FATAL_FAILURES(ValidateWritten(60 * kKilobyte, 4 * kKilobyte));
-  ASSERT_NO_FATAL_FAILURES(ValidateUnwritten(64 * kKilobyte, 192 * kKilobyte));
+  ASSERT_NO_FATAL_FAILURE(ValidateUnwritten(0, 60 * kKilobyte));
+  ASSERT_NO_FATAL_FAILURE(ValidateWritten(60 * kKilobyte, 4 * kKilobyte));
+  ASSERT_NO_FATAL_FAILURE(ValidateUnwritten(64 * kKilobyte, 192 * kKilobyte));
 }
 
 TEST_F(SyncClientTest, WritePartitionVbMetaA) {
@@ -222,12 +222,12 @@ TEST_F(SyncClientTest, WritePartitionVbMetaA) {
   ASSERT_OK(sysconfig::SyncClient::Create(device_->devfs_root(), &client));
 
   zx::vmo vmo;
-  ASSERT_NO_FATAL_FAILURES(CreatePayload(64 * kKilobyte, &vmo));
+  ASSERT_NO_FATAL_FAILURE(CreatePayload(64 * kKilobyte, &vmo));
   ASSERT_OK(client->WritePartition(PartitionType::kVerifiedBootMetadataA, vmo, 0));
 
-  ASSERT_NO_FATAL_FAILURES(ValidateUnwritten(0, 64 * kKilobyte));
-  ASSERT_NO_FATAL_FAILURES(ValidateWritten(64 * kKilobyte, 64 * kKilobyte));
-  ASSERT_NO_FATAL_FAILURES(ValidateUnwritten(128 * kKilobyte, 128 * kKilobyte));
+  ASSERT_NO_FATAL_FAILURE(ValidateUnwritten(0, 64 * kKilobyte));
+  ASSERT_NO_FATAL_FAILURE(ValidateWritten(64 * kKilobyte, 64 * kKilobyte));
+  ASSERT_NO_FATAL_FAILURE(ValidateUnwritten(128 * kKilobyte, 128 * kKilobyte));
 }
 
 TEST_F(SyncClientTest, WritePartitionVbMetaB) {
@@ -235,12 +235,12 @@ TEST_F(SyncClientTest, WritePartitionVbMetaB) {
   ASSERT_OK(sysconfig::SyncClient::Create(device_->devfs_root(), &client));
 
   zx::vmo vmo;
-  ASSERT_NO_FATAL_FAILURES(CreatePayload(64 * kKilobyte, &vmo));
+  ASSERT_NO_FATAL_FAILURE(CreatePayload(64 * kKilobyte, &vmo));
   ASSERT_OK(client->WritePartition(PartitionType::kVerifiedBootMetadataB, vmo, 0));
 
-  ASSERT_NO_FATAL_FAILURES(ValidateUnwritten(0, 128 * kKilobyte));
-  ASSERT_NO_FATAL_FAILURES(ValidateWritten(128 * kKilobyte, 64 * kKilobyte));
-  ASSERT_NO_FATAL_FAILURES(ValidateUnwritten(192 * kKilobyte, 64 * kKilobyte));
+  ASSERT_NO_FATAL_FAILURE(ValidateUnwritten(0, 128 * kKilobyte));
+  ASSERT_NO_FATAL_FAILURE(ValidateWritten(128 * kKilobyte, 64 * kKilobyte));
+  ASSERT_NO_FATAL_FAILURE(ValidateUnwritten(192 * kKilobyte, 64 * kKilobyte));
 }
 
 TEST_F(SyncClientTest, WritePartitionVbMetaR) {
@@ -248,11 +248,11 @@ TEST_F(SyncClientTest, WritePartitionVbMetaR) {
   ASSERT_OK(sysconfig::SyncClient::Create(device_->devfs_root(), &client));
 
   zx::vmo vmo;
-  ASSERT_NO_FATAL_FAILURES(CreatePayload(64 * kKilobyte, &vmo));
+  ASSERT_NO_FATAL_FAILURE(CreatePayload(64 * kKilobyte, &vmo));
   ASSERT_OK(client->WritePartition(PartitionType::kVerifiedBootMetadataR, vmo, 0));
 
-  ASSERT_NO_FATAL_FAILURES(ValidateUnwritten(0, 192 * kKilobyte));
-  ASSERT_NO_FATAL_FAILURES(ValidateWritten(192 * kKilobyte, 64 * kKilobyte));
+  ASSERT_NO_FATAL_FAILURE(ValidateUnwritten(0, 192 * kKilobyte));
+  ASSERT_NO_FATAL_FAILURE(ValidateWritten(192 * kKilobyte, 64 * kKilobyte));
 }
 
 TEST_F(SyncClientTest, ReadPartitionSysconfig) {
@@ -262,9 +262,9 @@ TEST_F(SyncClientTest, ReadPartitionSysconfig) {
   fzl::OwnedVmoMapper mapper;
   ASSERT_OK(mapper.CreateAndMap(fbl::round_up(60 * kKilobyte, zx_system_get_page_size()), "test"));
 
-  ASSERT_NO_FATAL_FAILURES(WriteData(0, 60 * kKilobyte));
+  ASSERT_NO_FATAL_FAILURE(WriteData(0, 60 * kKilobyte));
   ASSERT_OK(client->ReadPartition(PartitionType::kSysconfig, mapper.vmo(), 0));
-  ASSERT_NO_FATAL_FAILURES(ValidateBuffer(mapper.start(), 60 * kKilobyte));
+  ASSERT_NO_FATAL_FAILURE(ValidateBuffer(mapper.start(), 60 * kKilobyte));
 }
 
 TEST_F(SyncClientTest, ReadPartitionAbrMetadata) {
@@ -274,9 +274,9 @@ TEST_F(SyncClientTest, ReadPartitionAbrMetadata) {
   fzl::OwnedVmoMapper mapper;
   ASSERT_OK(mapper.CreateAndMap(fbl::round_up(4 * kKilobyte, zx_system_get_page_size()), "test"));
 
-  ASSERT_NO_FATAL_FAILURES(WriteData(60 * kKilobyte, 4 * kKilobyte));
+  ASSERT_NO_FATAL_FAILURE(WriteData(60 * kKilobyte, 4 * kKilobyte));
   ASSERT_OK(client->ReadPartition(PartitionType::kABRMetadata, mapper.vmo(), 0));
-  ASSERT_NO_FATAL_FAILURES(ValidateBuffer(mapper.start(), 4 * kKilobyte));
+  ASSERT_NO_FATAL_FAILURE(ValidateBuffer(mapper.start(), 4 * kKilobyte));
 }
 
 TEST_F(SyncClientTest, ReadPartitionVbMetaA) {
@@ -286,9 +286,9 @@ TEST_F(SyncClientTest, ReadPartitionVbMetaA) {
   fzl::OwnedVmoMapper mapper;
   ASSERT_OK(mapper.CreateAndMap(fbl::round_up(64 * kKilobyte, zx_system_get_page_size()), "test"));
 
-  ASSERT_NO_FATAL_FAILURES(WriteData(64 * kKilobyte, 64 * kKilobyte));
+  ASSERT_NO_FATAL_FAILURE(WriteData(64 * kKilobyte, 64 * kKilobyte));
   ASSERT_OK(client->ReadPartition(PartitionType::kVerifiedBootMetadataA, mapper.vmo(), 0));
-  ASSERT_NO_FATAL_FAILURES(ValidateBuffer(mapper.start(), 64 * kKilobyte));
+  ASSERT_NO_FATAL_FAILURE(ValidateBuffer(mapper.start(), 64 * kKilobyte));
 }
 
 TEST_F(SyncClientTest, ReadPartitionVbMetaB) {
@@ -298,9 +298,9 @@ TEST_F(SyncClientTest, ReadPartitionVbMetaB) {
   fzl::OwnedVmoMapper mapper;
   ASSERT_OK(mapper.CreateAndMap(fbl::round_up(64 * kKilobyte, zx_system_get_page_size()), "test"));
 
-  ASSERT_NO_FATAL_FAILURES(WriteData(128 * kKilobyte, 64 * kKilobyte));
+  ASSERT_NO_FATAL_FAILURE(WriteData(128 * kKilobyte, 64 * kKilobyte));
   ASSERT_OK(client->ReadPartition(PartitionType::kVerifiedBootMetadataB, mapper.vmo(), 0));
-  ASSERT_NO_FATAL_FAILURES(ValidateBuffer(mapper.start(), 64 * kKilobyte));
+  ASSERT_NO_FATAL_FAILURE(ValidateBuffer(mapper.start(), 64 * kKilobyte));
 }
 
 TEST_F(SyncClientTest, ReadPartitionVbMetaR) {
@@ -310,9 +310,9 @@ TEST_F(SyncClientTest, ReadPartitionVbMetaR) {
   fzl::OwnedVmoMapper mapper;
   ASSERT_OK(mapper.CreateAndMap(fbl::round_up(64 * kKilobyte, zx_system_get_page_size()), "test"));
 
-  ASSERT_NO_FATAL_FAILURES(WriteData(192 * kKilobyte, 64 * kKilobyte));
+  ASSERT_NO_FATAL_FAILURE(WriteData(192 * kKilobyte, 64 * kKilobyte));
   ASSERT_OK(client->ReadPartition(PartitionType::kVerifiedBootMetadataR, mapper.vmo(), 0));
-  ASSERT_NO_FATAL_FAILURES(ValidateBuffer(mapper.start(), 64 * kKilobyte));
+  ASSERT_NO_FATAL_FAILURE(ValidateBuffer(mapper.start(), 64 * kKilobyte));
 }
 
 TEST_F(SyncClientTest, GetPartitionSizeSysconfig) {
@@ -514,7 +514,7 @@ void SyncClientTest::TestLayoutUpdate(const std::optional<sysconfig_header> curr
 
   for (auto item : validation_data) {
     auto content_size = std::min(item.old_info.size, item.new_info.size);
-    ASSERT_NO_FATAL_FAILURES(ValidateWritten(item.new_info.offset, content_size, item.expected));
+    ASSERT_NO_FATAL_FAILURE(ValidateWritten(item.new_info.offset, content_size, item.expected));
     size_t part_size, part_offset;
     ASSERT_OK(client->GetPartitionSize(item.name, &part_size));
     ASSERT_EQ(part_size, item.new_info.size);
@@ -526,7 +526,7 @@ void SyncClientTest::TestLayoutUpdate(const std::optional<sysconfig_header> curr
     ASSERT_OK(vmo.CreateAndMap(std::max(part_size, static_cast<size_t>(kPageSize)), "",
                                ZX_VM_PERM_READ | ZX_VM_PERM_WRITE));
     ASSERT_OK(client->ReadPartition(item.name, vmo.vmo(), 0));
-    ASSERT_NO_FATAL_FAILURES(ValidateBuffer(vmo.start(), content_size, item.expected));
+    ASSERT_NO_FATAL_FAILURE(ValidateBuffer(vmo.start(), content_size, item.expected));
   }
 }
 
@@ -661,7 +661,7 @@ void SyncClientBufferedTest::TestWrite(const std::vector<PartitionInfo>& parts_t
   // Write something to cache.
   for (auto& part : parts_to_test_write) {
     zx::vmo vmo;
-    ASSERT_NO_FATAL_FAILURES(
+    ASSERT_NO_FATAL_FAILURE(
         CreatePayload(part.partition_size, &vmo, part.write_value ? *part.write_value : 0x4a));
     ASSERT_OK(sync_client_buffered.WritePartition(part.partition, vmo, 0));
   }
@@ -676,12 +676,12 @@ void SyncClientBufferedTest::TestWrite(const std::vector<PartitionInfo>& parts_t
   }
 
   // Verify that nothing is written to memory yet.
-  ASSERT_NO_FATAL_FAILURES(ValidateMemory({}));
+  ASSERT_NO_FATAL_FAILURE(ValidateMemory({}));
 
   ASSERT_OK(sync_client_buffered.Flush());
 
   // Veiry that memory is correctly written after flushing
-  ASSERT_NO_FATAL_FAILURES(ValidateMemory(parts_to_test_write));
+  ASSERT_NO_FATAL_FAILURE(ValidateMemory(parts_to_test_write));
 }
 
 constexpr SyncClientBufferedTest::PartitionInfo kLegacySysconfigPartitionInfo = {
@@ -725,7 +725,7 @@ void SyncClientBufferedTest::TestRead(const std::vector<PartitionInfo>& parts_to
   // Write something to cache.
   for (auto& part : parts_to_test_read) {
     zx::vmo vmo;
-    ASSERT_NO_FATAL_FAILURES(
+    ASSERT_NO_FATAL_FAILURE(
         CreatePayload(part.partition_size, &vmo, part.write_value ? *part.write_value : 0x4a));
     ASSERT_OK(sync_client_buffered.WritePartition(part.partition, vmo, 0));
   }
@@ -736,7 +736,7 @@ void SyncClientBufferedTest::TestRead(const std::vector<PartitionInfo>& parts_to
     ASSERT_OK(mapper.CreateAndMap(part.partition_size, "test"));
     ASSERT_OK(sync_client_buffered.ReadPartition(part.partition, mapper.vmo(), 0));
     uint8_t expected = part.write_value ? *part.write_value : 0x4a;
-    ASSERT_NO_FATAL_FAILURES(ValidateReadBuffer(mapper.start(), part.partition_size, expected));
+    ASSERT_NO_FATAL_FAILURE(ValidateReadBuffer(mapper.start(), part.partition_size, expected));
   }
 
   ASSERT_OK(sync_client_buffered.Flush());
@@ -747,12 +747,12 @@ void SyncClientBufferedTest::TestRead(const std::vector<PartitionInfo>& parts_to
     ASSERT_OK(mapper.CreateAndMap(part.partition_size, "test"));
     ASSERT_OK(sync_client_buffered.ReadPartition(part.partition, mapper.vmo(), 0));
     uint8_t expected = part.write_value ? *part.write_value : 0x4a;
-    ASSERT_NO_FATAL_FAILURES(ValidateReadBuffer(mapper.start(), part.partition_size, expected));
+    ASSERT_NO_FATAL_FAILURE(ValidateReadBuffer(mapper.start(), part.partition_size, expected));
   }
 
   // Overwrite the memory with new data directly.
   for (auto& part : parts_to_test_read) {
-    ASSERT_NO_FATAL_FAILURES(WriteData(part.partition_offset, part.partition_size));
+    ASSERT_NO_FATAL_FAILURE(WriteData(part.partition_offset, part.partition_size));
   }
 
   // Verify that new data from memory is correctly read.
@@ -760,7 +760,7 @@ void SyncClientBufferedTest::TestRead(const std::vector<PartitionInfo>& parts_to
     fzl::OwnedVmoMapper mapper;
     ASSERT_OK(mapper.CreateAndMap(part.partition_size, "test"));
     ASSERT_OK(sync_client_buffered.ReadPartition(part.partition, mapper.vmo(), 0));
-    ASSERT_NO_FATAL_FAILURES(ValidateReadBuffer(mapper.start(), part.partition_size, 0x5c));
+    ASSERT_NO_FATAL_FAILURE(ValidateReadBuffer(mapper.start(), part.partition_size, 0x5c));
   }
 }
 
@@ -829,7 +829,7 @@ void SyncClientBufferedTest::TestWriteWithHeader(
     }
     auto subpartition_info = GetSubpartitionInfo(header, part.partition);
     zx::vmo vmo;
-    ASSERT_NO_FATAL_FAILURES(
+    ASSERT_NO_FATAL_FAILURE(
         CreatePayload(subpartition_info.size, &vmo, part.write_value ? *part.write_value : 0x4a));
     ASSERT_OK(sync_client_buffered.WritePartition(part.partition, vmo, 0));
   }
@@ -850,7 +850,7 @@ void SyncClientBufferedTest::TestWriteWithHeader(
   // make a dummy header partition to exempt it from validation
   parts_copy.push_back({.partition_offset = 0, .partition_size = 4 * kKilobyte, .write_value = {}});
 
-  ASSERT_NO_FATAL_FAILURES(ValidateMemory(parts_copy));
+  ASSERT_NO_FATAL_FAILURE(ValidateMemory(parts_copy));
 }
 
 TEST_F(SyncClientBufferedTest, WritePartitionSysconfigWithHeader) {
@@ -907,12 +907,12 @@ TEST_F(SyncClientBufferedTest, AbrWearLevelingUnsupportedLayout) {
   ASSERT_OK(astro_client.GetPartitionSize(PartitionType::kABRMetadata, &partition_size));
 
   zx::vmo vmo;
-  ASSERT_NO_FATAL_FAILURES(CreatePayload(partition_size, &vmo, 0xa5));
+  ASSERT_NO_FATAL_FAILURE(CreatePayload(partition_size, &vmo, 0xa5));
   ASSERT_OK(astro_client.WritePartition(PartitionType::kABRMetadata, vmo, 0));
   ASSERT_OK(astro_client.Flush());
 
   // The new abr data should still be at the 16th page as it will use default flush.
-  ASSERT_NO_FATAL_FAILURES(
+  ASSERT_NO_FATAL_FAILURE(
       ValidateMemory({{PartitionType::kABRMetadata, 60 * kKilobyte, 4 * kKilobyte, 0xa5}}));
 
   fzl::OwnedVmoMapper mapper;
@@ -920,7 +920,7 @@ TEST_F(SyncClientBufferedTest, AbrWearLevelingUnsupportedLayout) {
   ASSERT_OK(astro_client.ReadPartition(PartitionType::kABRMetadata, mapper.vmo(), 0));
   abr_metadata_ext abr_data;
   memcpy(&abr_data, mapper.start(), sizeof(abr_metadata_ext));
-  ASSERT_NO_FATAL_FAILURES(VerifyAbrMetaDataPage(abr_data, 0xa5, VerifyAbrPageMagic::OFF));
+  ASSERT_NO_FATAL_FAILURE(VerifyAbrMetaDataPage(abr_data, 0xa5, VerifyAbrPageMagic::OFF));
 }
 
 sysconfig_header WriteHeaderSupportingAbrWearLeveling(void* memory) {
@@ -946,7 +946,7 @@ TEST_F(SyncClientBufferedTest, AbrWearLeveling) {
   for (uint8_t i = 0; i < num_pages; i++) {
     zx::vmo vmo;
     // Fill the payload with value |i+1|.
-    ASSERT_NO_FATAL_FAILURES(CreatePayload(abr_part_size, &vmo, i + 1));
+    ASSERT_NO_FATAL_FAILURE(CreatePayload(abr_part_size, &vmo, i + 1));
     ASSERT_OK(astro_client.WritePartition(PartitionType::kABRMetadata, vmo, 0));
     ASSERT_OK(astro_client.Flush());
     ASSERT_EQ(astro_client.GetEraseCount(), 0);
@@ -959,7 +959,7 @@ TEST_F(SyncClientBufferedTest, AbrWearLeveling) {
     auto abr_subpart = memory + header.abr_metadata.offset;
     for (uint8_t j = 0; j <= i; j++) {
       memcpy(&abr_data, abr_subpart + j * kPageSize, sizeof(abr_data));
-      ASSERT_NO_FATAL_FAILURES(VerifyAbrMetaDataPage(abr_data, j + 1));
+      ASSERT_NO_FATAL_FAILURE(VerifyAbrMetaDataPage(abr_data, j + 1));
     }
     // 2. Pages after stay empty.
     for (uint8_t j = i + 1; j < num_pages; j++) {
@@ -972,12 +972,12 @@ TEST_F(SyncClientBufferedTest, AbrWearLeveling) {
     ASSERT_OK(astro_client.ReadPartition(PartitionType::kABRMetadata, mapper.vmo(), 0));
 
     memcpy(&abr_data, mapper.start(), sizeof(abr_metadata_ext));
-    ASSERT_NO_FATAL_FAILURES(VerifyAbrMetaDataPage(abr_data, i + 1));
+    ASSERT_NO_FATAL_FAILURE(VerifyAbrMetaDataPage(abr_data, i + 1));
   }
 
   // Verify that the |num_pages + 1|th write should introduce an erase.
   zx::vmo vmo;
-  ASSERT_NO_FATAL_FAILURES(CreatePayload(abr_part_size, &vmo, 0xAB));
+  ASSERT_NO_FATAL_FAILURE(CreatePayload(abr_part_size, &vmo, 0xAB));
   ASSERT_OK(astro_client.WritePartition(PartitionType::kABRMetadata, vmo, 0));
   ASSERT_OK(astro_client.Flush());
   ASSERT_EQ(astro_client.GetEraseCount(), 1);
@@ -989,7 +989,7 @@ TEST_F(SyncClientBufferedTest, AbrWearLeveling) {
 
   abr_metadata_ext abr_data;
   memcpy(&abr_data, mapper.start(), sizeof(abr_metadata_ext));
-  ASSERT_NO_FATAL_FAILURES(VerifyAbrMetaDataPage(abr_data, 0xAB));
+  ASSERT_NO_FATAL_FAILURE(VerifyAbrMetaDataPage(abr_data, 0xAB));
 }
 
 TEST_F(SyncClientBufferedTest, AbrWearLevelingMultiplePartitionsModifiedInCache) {
@@ -1003,14 +1003,14 @@ TEST_F(SyncClientBufferedTest, AbrWearLevelingMultiplePartitionsModifiedInCache)
     zx::vmo vmo;
     size_t part_size;
     ASSERT_OK(astro_client.GetPartitionSize(partition, &part_size));
-    ASSERT_NO_FATAL_FAILURES(CreatePayload(part_size, &vmo, data));
+    ASSERT_NO_FATAL_FAILURE(CreatePayload(part_size, &vmo, data));
     ASSERT_OK(astro_client.WritePartition(partition, vmo, 0));
   };
 
   // Write multiple sub-partitions: vb_a, vb_r and abr
-  ASSERT_NO_FATAL_FAILURES(write_partition(PartitionType::kVerifiedBootMetadataA, 0xAB));
-  ASSERT_NO_FATAL_FAILURES(write_partition(PartitionType::kVerifiedBootMetadataR, 0xCD));
-  ASSERT_NO_FATAL_FAILURES(write_partition(PartitionType::kABRMetadata, 0xEF));
+  ASSERT_NO_FATAL_FAILURE(write_partition(PartitionType::kVerifiedBootMetadataA, 0xAB));
+  ASSERT_NO_FATAL_FAILURE(write_partition(PartitionType::kVerifiedBootMetadataR, 0xCD));
+  ASSERT_NO_FATAL_FAILURE(write_partition(PartitionType::kABRMetadata, 0xEF));
 
   // Verify that for flushing changes more than just abr metadata introduce an erase
   ASSERT_EQ(astro_client.GetEraseCount(), 0);
@@ -1026,10 +1026,10 @@ TEST_F(SyncClientBufferedTest, AbrWearLevelingMultiplePartitionsModifiedInCache)
 
   abr_metadata_ext abr_data;
   memcpy(&abr_data, mapper.start(), sizeof(abr_metadata_ext));
-  ASSERT_NO_FATAL_FAILURES(VerifyAbrMetaDataPage(abr_data, 0xEF));
+  ASSERT_NO_FATAL_FAILURE(VerifyAbrMetaDataPage(abr_data, 0xEF));
 
   // Veiry that all partition are written correctly
-  ASSERT_NO_FATAL_FAILURES(ValidateMemory(
+  ASSERT_NO_FATAL_FAILURE(ValidateMemory(
       {// a place holder header partition to exempt it from validation
        {.partition_offset = 0, .partition_size = 4 * kKilobyte, .write_value = {}},
        // dont care sysconfig
@@ -1049,7 +1049,7 @@ TEST_F(SyncClientBufferedTest, AbrWearLevelingMultiplePartitionsModifiedInCache)
   // Introduces an additional abr writes.
   // Since we just performed a reset flush, there should be enough empty pages for the
   // write. It shouldn't introduce additional erase.
-  ASSERT_NO_FATAL_FAILURES(write_partition(PartitionType::kABRMetadata, 0x01));
+  ASSERT_NO_FATAL_FAILURE(write_partition(PartitionType::kABRMetadata, 0x01));
 
   ASSERT_OK(astro_client.Flush());
   ASSERT_EQ(astro_client.GetEraseCount(), 1);
@@ -1057,7 +1057,7 @@ TEST_F(SyncClientBufferedTest, AbrWearLevelingMultiplePartitionsModifiedInCache)
   // Read back the new abr meta and validate it is correct.
   ASSERT_OK(astro_client.ReadPartition(PartitionType::kABRMetadata, mapper.vmo(), 0));
   memcpy(&abr_data, mapper.start(), sizeof(abr_metadata_ext));
-  ASSERT_NO_FATAL_FAILURES(VerifyAbrMetaDataPage(abr_data, 0x1));
+  ASSERT_NO_FATAL_FAILURE(VerifyAbrMetaDataPage(abr_data, 0x1));
 }
 
 TEST_F(SyncClientBufferedTest, AbrWearLevelingDefaultToFirstPage) {
@@ -1081,7 +1081,7 @@ TEST_F(SyncClientBufferedTest, AbrWearLevelingDefaultToFirstPage) {
 
   abr_metadata_ext abr_data;
   memcpy(&abr_data, mapper.start(), sizeof(abr_metadata_ext));
-  ASSERT_NO_FATAL_FAILURES(VerifyAbrMetaDataPage(abr_data, 0x1, VerifyAbrPageMagic::OFF));
+  ASSERT_NO_FATAL_FAILURE(VerifyAbrMetaDataPage(abr_data, 0x1, VerifyAbrPageMagic::OFF));
 }
 
 TEST_F(SyncClientBufferedTest, ValidateAbrMetadataInStorageFail) {
@@ -1098,7 +1098,7 @@ TEST_F(SyncClientBufferedTest, ValidateAbrMetadataInStorageFail) {
   for (uint8_t i = 0; i < num_pages; i++) {
     zx::vmo vmo;
     // Fill the payload with value |i+1|.
-    ASSERT_NO_FATAL_FAILURES(CreatePayload(abr_part_size, &vmo, i + 1));
+    ASSERT_NO_FATAL_FAILURE(CreatePayload(abr_part_size, &vmo, i + 1));
     ASSERT_OK(astro_client.WritePartition(PartitionType::kABRMetadata, vmo, 0));
     ASSERT_OK(astro_client.Flush());
 

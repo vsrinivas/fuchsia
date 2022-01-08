@@ -241,8 +241,8 @@ BASIC_ABI [[noreturn]] void CrashWithIcfPrevented2() { CRASH_WITH_UNIQUE_BACKTRA
 
 TEST(ZirconInternalUniqueBacktraceTests, CrashWithIcfExpected) {
   uintptr_t crash1 = 0, crash2 = 0;
-  ASSERT_NO_FATAL_FAILURES(CatchCrash(CrashWithIcfExpected1, crash1));
-  ASSERT_NO_FATAL_FAILURES(CatchCrash(CrashWithIcfExpected2, crash2));
+  ASSERT_NO_FATAL_FAILURE(CatchCrash(CrashWithIcfExpected1, crash1));
+  ASSERT_NO_FATAL_FAILURE(CatchCrash(CrashWithIcfExpected2, crash2));
   if (kIcfExpected) {
     EXPECT_EQ(crash1, crash2);
   }
@@ -250,8 +250,8 @@ TEST(ZirconInternalUniqueBacktraceTests, CrashWithIcfExpected) {
 
 TEST(ZirconInternalUniqueBacktraceTests, CrashWithIcfPrevented) {
   uintptr_t crash1 = 0, crash2 = 0;
-  ASSERT_NO_FATAL_FAILURES(CatchCrash(CrashWithIcfPrevented1, crash1));
-  ASSERT_NO_FATAL_FAILURES(CatchCrash(CrashWithIcfPrevented2, crash2));
+  ASSERT_NO_FATAL_FAILURE(CatchCrash(CrashWithIcfPrevented1, crash1));
+  ASSERT_NO_FATAL_FAILURE(CatchCrash(CrashWithIcfPrevented2, crash2));
   EXPECT_NE(crash1, crash2);
 }
 
@@ -322,8 +322,8 @@ TEST(ZirconInternalUniqueBacktraceTests, BasicAbiIndirectIcfExpected) {
 
 TEST(ZirconInternalUniqueBacktraceTests, CrashWithIndirectIcfExpected) {
   uintptr_t crash1 = 0, crash2 = 0;
-  ASSERT_NO_FATAL_FAILURES(CatchCrash(CrashWithIndirectIcfExpected1, crash1));
-  ASSERT_NO_FATAL_FAILURES(CatchCrash(CrashWithIndirectIcfExpected2, crash2));
+  ASSERT_NO_FATAL_FAILURE(CatchCrash(CrashWithIndirectIcfExpected1, crash1));
+  ASSERT_NO_FATAL_FAILURE(CatchCrash(CrashWithIndirectIcfExpected2, crash2));
   if (kIcfExpected) {
     EXPECT_EQ(crash1, crash2);
   }
@@ -331,15 +331,15 @@ TEST(ZirconInternalUniqueBacktraceTests, CrashWithIndirectIcfExpected) {
 
 TEST(ZirconInternalUniqueBacktraceTests, CrashWithIndirectIcfPreventedDirectly) {
   uintptr_t crash1 = 0, crash2 = 0;
-  ASSERT_NO_FATAL_FAILURES(CatchCrash(CrashWithIndirectIcfPreventedDirectly1, crash1));
-  ASSERT_NO_FATAL_FAILURES(CatchCrash(CrashWithIndirectIcfPreventedDirectly2, crash2));
+  ASSERT_NO_FATAL_FAILURE(CatchCrash(CrashWithIndirectIcfPreventedDirectly1, crash1));
+  ASSERT_NO_FATAL_FAILURE(CatchCrash(CrashWithIndirectIcfPreventedDirectly2, crash2));
   EXPECT_NE(crash1, crash2);
 }
 
 TEST(ZirconInternalUniqueBacktraceTests, CrashWithIndirectIcfPreventedIndirectly) {
   uintptr_t crash1 = 0, crash2 = 0;
-  ASSERT_NO_FATAL_FAILURES(CatchCrash(CrashWithIndirectIcfPreventedIndirectly1, crash1));
-  ASSERT_NO_FATAL_FAILURES(CatchCrash(CrashWithIndirectIcfPreventedIndirectly2, crash2));
+  ASSERT_NO_FATAL_FAILURE(CatchCrash(CrashWithIndirectIcfPreventedIndirectly1, crash1));
+  ASSERT_NO_FATAL_FAILURE(CatchCrash(CrashWithIndirectIcfPreventedIndirectly2, crash2));
   EXPECT_NE(crash1, crash2);
 }
 

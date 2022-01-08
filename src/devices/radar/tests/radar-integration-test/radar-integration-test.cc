@@ -198,7 +198,7 @@ TEST_F(RadarIntegrationTest, BurstFormat) {
 
   std::array<uint8_t, kBurstSize> burst;
   ASSERT_OK(vmo.read(burst.data(), 0, burst.size()));
-  ASSERT_NO_FATAL_FAILURES(CheckBurst(burst));
+  ASSERT_NO_FATAL_FAILURE(CheckBurst(burst));
 
   {
     fidl::VectorView<uint32_t> vmo_id(allocator, 1);

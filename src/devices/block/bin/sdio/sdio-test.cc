@@ -185,7 +185,7 @@ TEST_F(SdioTest, ReadStress) {
   };
 
   for (const wire::SdioRwTxn& txn : get_txns()) {
-    ASSERT_NO_FATAL_FAILURES(ExpectTxnsEqual(txn, kExpectedTxn));
+    ASSERT_NO_FATAL_FAILURE(ExpectTxnsEqual(txn, kExpectedTxn));
   }
 }
 
@@ -206,7 +206,7 @@ TEST_F(SdioTest, ReadStressDma) {
   };
 
   for (const wire::SdioRwTxn& txn : get_txns()) {
-    ASSERT_NO_FATAL_FAILURES(ExpectTxnsEqual(txn, kExpectedTxn));
+    ASSERT_NO_FATAL_FAILURE(ExpectTxnsEqual(txn, kExpectedTxn));
   }
 }
 
@@ -227,7 +227,7 @@ TEST_F(SdioTest, ReadStressFifo) {
   };
 
   for (const wire::SdioRwTxn& txn : get_txns()) {
-    ASSERT_NO_FATAL_FAILURES(ExpectTxnsEqual(txn, kExpectedTxn));
+    ASSERT_NO_FATAL_FAILURE(ExpectTxnsEqual(txn, kExpectedTxn));
   }
 }
 
@@ -248,7 +248,7 @@ TEST_F(SdioTest, ReadStressDmaFifo) {
   };
 
   for (const wire::SdioRwTxn& txn : get_txns()) {
-    ASSERT_NO_FATAL_FAILURES(ExpectTxnsEqual(txn, kExpectedTxn));
+    ASSERT_NO_FATAL_FAILURE(ExpectTxnsEqual(txn, kExpectedTxn));
   }
 }
 
@@ -269,7 +269,7 @@ TEST_F(SdioTest, ReadStressFifoDma) {
   };
 
   for (const wire::SdioRwTxn& txn : get_txns()) {
-    ASSERT_NO_FATAL_FAILURES(ExpectTxnsEqual(txn, kExpectedTxn));
+    ASSERT_NO_FATAL_FAILURE(ExpectTxnsEqual(txn, kExpectedTxn));
   }
 }
 
@@ -289,13 +289,13 @@ TEST_F(SdioTest, ReadStressSizeTooBig) {
 }
 
 TEST_F(SdioTest, GetTxnStats) {
-  EXPECT_STR_EQ(GetTxnStats(zx::sec(2), 100).c_str(), "2.000 s (50.000 B/s)");
-  EXPECT_STR_EQ(GetTxnStats(zx::msec(2), 100).c_str(), "2.000 ms (50.000 kB/s)");
-  EXPECT_STR_EQ(GetTxnStats(zx::usec(2), 100).c_str(), "2.000 us (50.000 MB/s)");
-  EXPECT_STR_EQ(GetTxnStats(zx::nsec(2), 100).c_str(), "2 ns (50.000 GB/s)");
-  EXPECT_STR_EQ(GetTxnStats(zx::usec(-2), 100).c_str(), "-2000 ns (-50000000.000 B/s)");
-  EXPECT_STR_EQ(GetTxnStats(zx::usec(2), 0).c_str(), "2.000 us (0.000 B/s)");
-  EXPECT_STR_EQ(GetTxnStats(zx::nsec(0), 100).c_str(), "0 ns");
+  EXPECT_STREQ(GetTxnStats(zx::sec(2), 100).c_str(), "2.000 s (50.000 B/s)");
+  EXPECT_STREQ(GetTxnStats(zx::msec(2), 100).c_str(), "2.000 ms (50.000 kB/s)");
+  EXPECT_STREQ(GetTxnStats(zx::usec(2), 100).c_str(), "2.000 us (50.000 MB/s)");
+  EXPECT_STREQ(GetTxnStats(zx::nsec(2), 100).c_str(), "2 ns (50.000 GB/s)");
+  EXPECT_STREQ(GetTxnStats(zx::usec(-2), 100).c_str(), "-2000 ns (-50000000.000 B/s)");
+  EXPECT_STREQ(GetTxnStats(zx::usec(2), 0).c_str(), "2.000 us (0.000 B/s)");
+  EXPECT_STREQ(GetTxnStats(zx::nsec(0), 100).c_str(), "0 ns");
 }
 
 }  // namespace sdio

@@ -123,7 +123,7 @@ TEST(ServiceProxyDirTest, Simple) {
                                             response_buffer, sizeof(response_buffer),
                                             &response_size));
     ASSERT_EQ(strlen(kProxyEchoString), response_size);
-    ASSERT_STR_EQ(kProxyEchoString, response_buffer);
+    ASSERT_STREQ(kProxyEchoString, response_buffer);
   }
 
   // Second check the service that's being proxied by the proxy.
@@ -163,7 +163,7 @@ TEST(ServiceProxyDirTest, Simple) {
                                             response_buffer, sizeof(response_buffer),
                                             &response_size));
     ASSERT_EQ(strlen(kEchoString), response_size);
-    ASSERT_STR_EQ(kEchoString, response_buffer);
+    ASSERT_STREQ(kEchoString, response_buffer);
   }
 
   loop.Shutdown();

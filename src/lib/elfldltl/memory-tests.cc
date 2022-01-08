@@ -35,7 +35,7 @@ TEST(ElfldltlDirectMemoryTests, FileApi) {
   auto array = file.ReadArrayFromFile<char, 32>(16, 4);
   ASSERT_TRUE(array.has_value());
   EXPECT_EQ(4, array->size());
-  EXPECT_STR_EQ(std::string_view(array->data(), array->size()), "Data");
+  EXPECT_STREQ(std::string_view(array->data(), array->size()), "Data");
 
   auto array2 = file.ReadArrayFromFile<uint16_t, 32>(20, 2);
   ASSERT_TRUE(array2.has_value());
@@ -55,7 +55,7 @@ TEST(ElfldltlDirectMemoryTests, MemoryApi) {
   auto array = file.ReadArray<char>(kBaseAddress + 16, 4);
   ASSERT_TRUE(array.has_value());
   EXPECT_EQ(4, array->size());
-  EXPECT_STR_EQ(std::string_view(array->data(), array->size()), "Data");
+  EXPECT_STREQ(std::string_view(array->data(), array->size()), "Data");
 
   auto bad_address_low = file.ReadArray<uint64_t>(kBaseAddress - 4, 16);
   EXPECT_FALSE(bad_address_low.has_value());

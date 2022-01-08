@@ -120,15 +120,15 @@ class ChromeosAcpiTest : public InspectTestHelper, public zxtest::Test {
   fidl::WireSyncClient<fuchsia_acpi_chromeos::Device> fidl_client_;
 };
 
-TEST_F(ChromeosAcpiTest, NoMethodsTest) { ASSERT_NO_FATAL_FAILURES(CreateDevice()); }
+TEST_F(ChromeosAcpiTest, NoMethodsTest) { ASSERT_NO_FATAL_FAILURE(CreateDevice()); }
 
 TEST_F(ChromeosAcpiTest, HardwareIDTest) {
   std::vector<std::string> args{std::string("ATLAS 1234")};
   values_.emplace("HWID", ToPackage(args));
 
-  ASSERT_NO_FATAL_FAILURES(CreateDevice());
+  ASSERT_NO_FATAL_FAILURE(CreateDevice());
   auto device = GetDevice();
-  ASSERT_NO_FATAL_FAILURES(ReadInspect(device->inspect_vmo()));
+  ASSERT_NO_FATAL_FAILURE(ReadInspect(device->inspect_vmo()));
   CheckProperty(hierarchy().node(), "method-list", inspect::StringPropertyValue("HWID"));
   CheckProperty(hierarchy().node(), "hwid", inspect::StringPropertyValue(*args.begin()));
 }
@@ -137,9 +137,9 @@ TEST_F(ChromeosAcpiTest, ROFirmwareIDTest) {
   std::vector<std::string> args{std::string("Google_Atlas.11827.162.2021_08_03_1442")};
   values_.emplace("FRID", ToPackage(args));
 
-  ASSERT_NO_FATAL_FAILURES(CreateDevice());
+  ASSERT_NO_FATAL_FAILURE(CreateDevice());
   auto device = GetDevice();
-  ASSERT_NO_FATAL_FAILURES(ReadInspect(device->inspect_vmo()));
+  ASSERT_NO_FATAL_FAILURE(ReadInspect(device->inspect_vmo()));
   CheckProperty(hierarchy().node(), "method-list", inspect::StringPropertyValue("FRID"));
   CheckProperty(hierarchy().node(), "ro-fwid", inspect::StringPropertyValue(*args.begin()));
 }
@@ -148,9 +148,9 @@ TEST_F(ChromeosAcpiTest, RWFirmwareIDTest) {
   std::vector<std::string> args{std::string("Google_Atlas.11827.162.2021_08_05_0000")};
   values_.emplace("FWID", ToPackage(args));
 
-  ASSERT_NO_FATAL_FAILURES(CreateDevice());
+  ASSERT_NO_FATAL_FAILURE(CreateDevice());
   auto device = GetDevice();
-  ASSERT_NO_FATAL_FAILURES(ReadInspect(device->inspect_vmo()));
+  ASSERT_NO_FATAL_FAILURE(ReadInspect(device->inspect_vmo()));
   CheckProperty(hierarchy().node(), "method-list", inspect::StringPropertyValue("FWID"));
   CheckProperty(hierarchy().node(), "rw-fwid", inspect::StringPropertyValue(*args.begin()));
 }
@@ -159,9 +159,9 @@ TEST_F(ChromeosAcpiTest, NvramLocationTest) {
   std::vector<uint64_t> args{10, 20};
   values_.emplace("VBNV", ToPackage(args));
 
-  ASSERT_NO_FATAL_FAILURES(CreateDevice());
+  ASSERT_NO_FATAL_FAILURE(CreateDevice());
   auto device = GetDevice();
-  ASSERT_NO_FATAL_FAILURES(ReadInspect(device->inspect_vmo()));
+  ASSERT_NO_FATAL_FAILURE(ReadInspect(device->inspect_vmo()));
   CheckProperty(hierarchy().node(), "method-list", inspect::StringPropertyValue("VBNV"));
   CheckProperty(hierarchy().node(), "nvram-data-base", inspect::UintPropertyValue(10));
   CheckProperty(hierarchy().node(), "nvram-data-size", inspect::UintPropertyValue(20));
@@ -171,9 +171,9 @@ TEST_F(ChromeosAcpiTest, FlashmapBaseTest) {
   std::vector<uint64_t> args{0xfffe1234};
   values_.emplace("FMAP", ToPackage(args));
 
-  ASSERT_NO_FATAL_FAILURES(CreateDevice());
+  ASSERT_NO_FATAL_FAILURE(CreateDevice());
   auto device = GetDevice();
-  ASSERT_NO_FATAL_FAILURES(ReadInspect(device->inspect_vmo()));
+  ASSERT_NO_FATAL_FAILURE(ReadInspect(device->inspect_vmo()));
   CheckProperty(hierarchy().node(), "method-list", inspect::StringPropertyValue("FMAP"));
   CheckProperty(hierarchy().node(), "flashmap-addr", inspect::UintPropertyValue(*args.begin()));
 }
@@ -189,7 +189,7 @@ TEST_F(ChromeosAcpiTest, NvdataVersionTestV2) {
   std::vector<cpp20::span<uint8_t>> entries{
       cpp20::span(reinterpret_cast<uint8_t*>(&data), sizeof(data))};
   values_.emplace("VDAT", ToPackage(entries));
-  ASSERT_NO_FATAL_FAILURES(CreateDevice());
+  ASSERT_NO_FATAL_FAILURE(CreateDevice());
 
   auto result = fidl_client_->GetNvdataVersion();
   ASSERT_OK(result.status());
@@ -207,7 +207,7 @@ TEST_F(ChromeosAcpiTest, NvdataVersionTestV1) {
   std::vector<cpp20::span<uint8_t>> entries{
       cpp20::span(reinterpret_cast<uint8_t*>(&data), sizeof(data))};
   values_.emplace("VDAT", ToPackage(entries));
-  ASSERT_NO_FATAL_FAILURES(CreateDevice());
+  ASSERT_NO_FATAL_FAILURE(CreateDevice());
 
   auto result = fidl_client_->GetNvdataVersion();
   ASSERT_OK(result.status());
@@ -217,7 +217,7 @@ TEST_F(ChromeosAcpiTest, NvdataVersionTestV1) {
 TEST_F(ChromeosAcpiTest, ActiveAPFirmwareTest) {
   std::vector<uint64_t> args{0, 1, 0, 0, 0};
   values_.emplace("BINF", ToPackage(args));
-  ASSERT_NO_FATAL_FAILURES(CreateDevice());
+  ASSERT_NO_FATAL_FAILURE(CreateDevice());
 
   auto result = fidl_client_->GetActiveApFirmware();
   ASSERT_OK(result.status());

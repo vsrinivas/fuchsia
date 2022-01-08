@@ -190,7 +190,7 @@ TEST_F(IommuTest, NoIommus) {
   DmarBuilder dmar;
   // Expect an empty set of descriptors.
   std::vector<Desc> expected = {};
-  ASSERT_NO_FATAL_FAILURES(RunTest(dmar.Build(), expected));
+  ASSERT_NO_FATAL_FAILURE(RunTest(dmar.Build(), expected));
 }
 
 TEST_F(IommuTest, SimpleWholeSegment) {
@@ -201,7 +201,7 @@ TEST_F(IommuTest, SimpleWholeSegment) {
       // Expect no scopes or regions.
       {hu0, {}, {}},
   };
-  ASSERT_NO_FATAL_FAILURES(RunTest(dmar.Build(), expected));
+  ASSERT_NO_FATAL_FAILURE(RunTest(dmar.Build(), expected));
 }
 
 TEST_F(IommuTest, SimplePartialSegment) {
@@ -213,7 +213,7 @@ TEST_F(IommuTest, SimplePartialSegment) {
       // Expect our single scope.
       {hu0, {scope0}, {}},
   };
-  ASSERT_NO_FATAL_FAILURES(RunTest(dmar.Build(), expected));
+  ASSERT_NO_FATAL_FAILURE(RunTest(dmar.Build(), expected));
 }
 
 TEST_F(IommuTest, WholeSegmentScopes) {
@@ -234,7 +234,7 @@ TEST_F(IommuTest, WholeSegmentScopes) {
       // Whole scope of unit 2 should only pick up the scopes from matching pci_segment of unit 1
       {hu2, {scope2, scope3}, {}},
   };
-  ASSERT_NO_FATAL_FAILURES(RunTest(dmar.Build(), expected));
+  ASSERT_NO_FATAL_FAILURE(RunTest(dmar.Build(), expected));
 }
 
 TEST_F(IommuTest, WholeSegmentReservedRegion) {
@@ -253,7 +253,7 @@ TEST_F(IommuTest, WholeSegmentReservedRegion) {
       // hu1 is a different pci segment and should not have any reserved mem
       {hu1, {}, {}},
   };
-  ASSERT_NO_FATAL_FAILURES(RunTest(dmar.Build(), expected));
+  ASSERT_NO_FATAL_FAILURE(RunTest(dmar.Build(), expected));
 }
 
 TEST_F(IommuTest, PartialSegmentReservedRegion) {
@@ -270,7 +270,7 @@ TEST_F(IommuTest, PartialSegmentReservedRegion) {
       // only the single matching scope should have been included
       {hu0, {scope0, scope1}, {{mem0, {scope0}}}},
   };
-  ASSERT_NO_FATAL_FAILURES(RunTest(dmar.Build(), expected));
+  ASSERT_NO_FATAL_FAILURE(RunTest(dmar.Build(), expected));
 }
 
 TEST_F(IommuTest, NoMatchingReservedScopes) {
@@ -286,7 +286,7 @@ TEST_F(IommuTest, NoMatchingReservedScopes) {
       // we should end up with no reserved memory at all.
       {hu0, {scope0}, {}},
   };
-  ASSERT_NO_FATAL_FAILURES(RunTest(dmar.Build(), expected));
+  ASSERT_NO_FATAL_FAILURE(RunTest(dmar.Build(), expected));
 }
 
 }  // namespace x86

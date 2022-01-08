@@ -4,6 +4,7 @@
 
 #include <lib/zircon-internal/default_stack_size.h>
 #include <pthread.h>
+
 #include <zxtest/zxtest.h>
 
 namespace {
@@ -23,8 +24,8 @@ void FetchStackSize(pthread_t thread, size_t* out_size) {
 
 TEST(StackSizeTests, MainThreadStackSize) {
   size_t size;
-  ASSERT_NO_FATAL_FAILURES(FetchStackSize(pthread_self(), &size),
-                           "Cannot retrieve main thread's stack size");
+  ASSERT_NO_FATAL_FAILURE(FetchStackSize(pthread_self(), &size),
+                          "Cannot retrieve main thread's stack size");
   EXPECT_EQ(kExpectedSize, size);
 }
 
@@ -42,6 +43,7 @@ class PthreadLockGuard {
     }
     mtx_ = nullptr;
   }
+
  private:
   pthread_mutex_t* mtx_ = nullptr;
 };
@@ -51,14 +53,16 @@ TEST(StackSizeTests, NewThreadStackSize) {
   PthreadLockGuard lock(&mtx);
   pthread_t th;
   ASSERT_EQ(0, pthread_create(
-                   &th, nullptr, [](void* arg) -> void* {
-                       pthread_mutex_t* mtx = reinterpret_cast<pthread_mutex_t*>(arg);
-                       PthreadLockGuard lock(mtx);
-                       return nullptr;
-                   }, &mtx));
+                   &th, nullptr,
+                   [](void* arg) -> void* {
+                     pthread_mutex_t* mtx = reinterpret_cast<pthread_mutex_t*>(arg);
+                     PthreadLockGuard lock(mtx);
+                     return nullptr;
+                   },
+                   &mtx));
 
   size_t size;
-  ASSERT_NO_FATAL_FAILURES(FetchStackSize(th, &size), "Cannot retrieve new thread's stack size");
+  ASSERT_NO_FATAL_FAILURE(FetchStackSize(th, &size), "Cannot retrieve new thread's stack size");
   EXPECT_EQ(kExpectedSize, size);
   lock.Reset();
 

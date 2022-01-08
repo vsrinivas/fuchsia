@@ -40,7 +40,7 @@ static inline void InitPageTaggedVmo(uint32_t page_count, zx::vmo* vmo) {
   status = zx::vmo::create(page_count * zx_system_get_page_size(), ZX_VMO_RESIZABLE, vmo);
   ASSERT_OK(status, "create failed");
   for (unsigned i = 0; i < page_count; i++) {
-    ASSERT_NO_FATAL_FAILURES(VmoWrite(*vmo, i + 1, i * zx_system_get_page_size()));
+    ASSERT_NO_FATAL_FAILURE(VmoWrite(*vmo, i + 1, i * zx_system_get_page_size()));
   }
 }
 

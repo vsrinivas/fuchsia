@@ -31,7 +31,7 @@ class HashTableChecker {
     // of the total size of the HashTable in the process.
     size_t total_size = 0;
     for (size_t i = 0; i < ContainerType::kNumBuckets; ++i) {
-      ASSERT_NO_FATAL_FAILURES(BucketChecker::SanityCheck(container.buckets_[i]));
+      ASSERT_NO_FATAL_FAILURE(BucketChecker::SanityCheck(container.buckets_[i]));
       total_size += SizeUtils<BucketType>::size(container.buckets_[i]);
 
       // For every element in the bucket, make sure that the bucket index

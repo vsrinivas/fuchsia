@@ -102,8 +102,8 @@ TEST_F(ChannelTest, CreateAndDestroy) {}
 
 TEST_F(ChannelTest, WriteReadEmptyMessage) {
   ASSERT_EQ(ZX_OK, fdf_channel_write(local_.get(), 0, nullptr, nullptr, 0, nullptr, 0));
-  ASSERT_NO_FATAL_FAILURES(WaitUntilReadReady(remote_.get()));
-  ASSERT_NO_FATAL_FAILURES(AssertRead(remote_.get(), nullptr, 0, nullptr, 0));
+  ASSERT_NO_FATAL_FAILURE(WaitUntilReadReady(remote_.get()));
+  ASSERT_NO_FATAL_FAILURE(AssertRead(remote_.get(), nullptr, 0, nullptr, 0));
 }
 
 // Tests writing and reading an array of numbers.
@@ -114,8 +114,8 @@ TEST_F(ChannelTest, WriteData) {
   AllocateTestData(arena_.get(), kNumBytes, &data);
 
   ASSERT_EQ(ZX_OK, fdf_channel_write(local_.get(), 0, arena_.get(), data, kNumBytes, NULL, 0));
-  ASSERT_NO_FATAL_FAILURES(WaitUntilReadReady(remote_.get()));
-  ASSERT_NO_FATAL_FAILURES(AssertRead(remote_.get(), data, kNumBytes, nullptr, 0));
+  ASSERT_NO_FATAL_FAILURE(WaitUntilReadReady(remote_.get()));
+  ASSERT_NO_FATAL_FAILURE(AssertRead(remote_.get(), data, kNumBytes, nullptr, 0));
 }
 
 // Tests that transferring zircon handles are allowed.
@@ -131,8 +131,8 @@ TEST_F(ChannelTest, WriteZirconHandle) {
 
   EXPECT_OK(fdf_channel_write(local_.get(), 0, arena_.get(), nullptr, 0, handles, 1));
 
-  ASSERT_NO_FATAL_FAILURES(WaitUntilReadReady(remote_.get()));
-  ASSERT_NO_FATAL_FAILURES(AssertRead(remote_.get(), nullptr, 0, handles, 1));
+  ASSERT_NO_FATAL_FAILURE(WaitUntilReadReady(remote_.get()));
+  ASSERT_NO_FATAL_FAILURE(AssertRead(remote_.get(), nullptr, 0, handles, 1));
 }
 
 // Tests reading channel handles from a channel message, and writing to
@@ -156,7 +156,7 @@ TEST_F(ChannelTest, WriteToTransferredChannels) {
                                      channels_to_transfer, kNumChannels));
 
   // Retrieve the transferred channels.
-  ASSERT_NO_FATAL_FAILURES(WaitUntilReadReady(remote_.get()));
+  ASSERT_NO_FATAL_FAILURE(WaitUntilReadReady(remote_.get()));
   fdf_arena_t* read_arena;
   zx_handle_t* handles;
   uint32_t num_handles;
@@ -172,8 +172,8 @@ TEST_F(ChannelTest, WriteToTransferredChannels) {
   AllocateTestData(read_arena, kNumBytes, &data);
   ASSERT_EQ(ZX_OK, fdf_channel_write(handles[1], 0, read_arena, data, kNumBytes, NULL, 0));
 
-  ASSERT_NO_FATAL_FAILURES(WaitUntilReadReady(b0));
-  ASSERT_NO_FATAL_FAILURES(AssertRead(b0, data, kNumBytes, nullptr, 0));
+  ASSERT_NO_FATAL_FAILURE(WaitUntilReadReady(b0));
+  ASSERT_NO_FATAL_FAILURE(AssertRead(b0, data, kNumBytes, nullptr, 0));
 
   fdf_handle_close(a0);
   fdf_handle_close(a1);
@@ -200,7 +200,7 @@ TEST_F(ChannelTest, WaitAsyncBeforeWrite) {
 
   sync_completion_wait(&read_completion, ZX_TIME_INFINITE);
 
-  ASSERT_NO_FATAL_FAILURES(AssertRead(remote_.get(), data, kNumBytes, nullptr, 0));
+  ASSERT_NO_FATAL_FAILURE(AssertRead(remote_.get(), data, kNumBytes, nullptr, 0));
 }
 
 // Tests reading multiple channel messages from within one read callback.
@@ -223,8 +223,8 @@ TEST_F(ChannelTest, ReadMultiple) {
   auto channel_read = std::make_unique<fdf::ChannelRead>(
       remote_.get(), 0,
       [&](fdf_dispatcher_t* dispatcher, fdf::ChannelRead* channel_read, fdf_status_t status) {
-        ASSERT_NO_FATAL_FAILURES(AssertRead(remote_.get(), data, kFirstMsgNumBytes, nullptr, 0));
-        ASSERT_NO_FATAL_FAILURES(AssertRead(remote_.get(), data2, kSecondMsgNumBytes, nullptr, 0));
+        ASSERT_NO_FATAL_FAILURE(AssertRead(remote_.get(), data, kFirstMsgNumBytes, nullptr, 0));
+        ASSERT_NO_FATAL_FAILURE(AssertRead(remote_.get(), data2, kSecondMsgNumBytes, nullptr, 0));
         // There should be no more messages.
         ASSERT_EQ(ZX_ERR_SHOULD_WAIT,
                   fdf_channel_read(remote_.get(), 0, nullptr, nullptr, nullptr, nullptr, nullptr));
@@ -249,7 +249,7 @@ TEST_F(ChannelTest, ReRegisterReadHandler) {
   auto channel_read = std::make_unique<fdf::ChannelRead>(
       remote_.get(), 0,
       [&](fdf_dispatcher_t* dispatcher, fdf::ChannelRead* channel_read, fdf_status_t status) {
-        ASSERT_NO_FATAL_FAILURES(
+        ASSERT_NO_FATAL_FAILURE(
             AssertRead(remote_.get(), test_data[completed_reads].data(), kDataSize, nullptr, 0));
         completed_reads++;
         if (completed_reads == kNumReads) {
@@ -351,8 +351,8 @@ TEST_F(ChannelTest, ReadRemainingMessagesWhenPeerIsClosed) {
 
   local_.reset();
 
-  ASSERT_NO_FATAL_FAILURES(WaitUntilReadReady(remote_.get()));
-  ASSERT_NO_FATAL_FAILURES(AssertRead(remote_.get(), data, 64, nullptr, 0));
+  ASSERT_NO_FATAL_FAILURE(WaitUntilReadReady(remote_.get()));
+  ASSERT_NO_FATAL_FAILURE(AssertRead(remote_.get(), data, 64, nullptr, 0));
 }
 
 // Tests that read provides ownership of an arena.
@@ -363,8 +363,8 @@ TEST_F(ChannelTest, ReadArenaOwnership) {
   arena_.reset();
 
   fdf_arena_t* read_arena;
-  ASSERT_NO_FATAL_FAILURES(WaitUntilReadReady(remote_.get()));
-  ASSERT_NO_FATAL_FAILURES(AssertRead(remote_.get(), data, 64, nullptr, 0, &read_arena));
+  ASSERT_NO_FATAL_FAILURE(WaitUntilReadReady(remote_.get()));
+  ASSERT_NO_FATAL_FAILURE(AssertRead(remote_.get(), data, 64, nullptr, 0, &read_arena));
 
   // Re-use the arena provided by the read call.
   data = read_arena->Allocate(64);
@@ -372,8 +372,8 @@ TEST_F(ChannelTest, ReadArenaOwnership) {
 
   fdf_arena_destroy(read_arena);
 
-  ASSERT_NO_FATAL_FAILURES(WaitUntilReadReady(local_.get()));
-  ASSERT_NO_FATAL_FAILURES(AssertRead(local_.get(), data, 64, nullptr, 0));
+  ASSERT_NO_FATAL_FAILURE(WaitUntilReadReady(local_.get()));
+  ASSERT_NO_FATAL_FAILURE(AssertRead(local_.get(), data, 64, nullptr, 0));
 }
 
 // This test was adapted from the Zircon Channel test of the same name.
@@ -727,7 +727,7 @@ void ReplyAndWait(const Message& request, uint32_t message_count, fdf::Channel s
   std::vector<fdf::Channel::ReadReturn> live_requests;
 
   for (uint32_t i = 0; i < message_count; ++i) {
-    ASSERT_NO_FATAL_FAILURES(RuntimeTestCase::WaitUntilReadReady(svc.get(), fdf_dispatcher));
+    ASSERT_NO_FATAL_FAILURE(RuntimeTestCase::WaitUntilReadReady(svc.get(), fdf_dispatcher));
     auto read_return = svc.Read(0);
     if (read_return.is_error()) {
       *error = "Failed to read request.";
@@ -809,7 +809,7 @@ TEST_F(ChannelTest, CallBytesFitIsOk) {
 
   Message request(4, 0);
 
-  ASSERT_NO_FATAL_FAILURES((SuccessfulChannelCall<kReplyDataSize, kReplyHandleCount>(
+  ASSERT_NO_FATAL_FAILURE((SuccessfulChannelCall<kReplyDataSize, kReplyHandleCount>(
       std::move(local_), std::move(remote_), &loop_, arena_, request)));
 }
 
@@ -824,7 +824,7 @@ TEST_F(ChannelTest, CallHandlesFitIsOk) {
 
   Message request = Message(0, handles);
 
-  ASSERT_NO_FATAL_FAILURES((SuccessfulChannelCall<kReplyDataSize, kReplyHandleCount>(
+  ASSERT_NO_FATAL_FAILURE((SuccessfulChannelCall<kReplyDataSize, kReplyHandleCount>(
       std::move(local_), std::move(remote_), &loop_, arena_, request)));
 }
 
@@ -839,7 +839,7 @@ TEST_F(ChannelTest, CallHandleAndBytesFitsIsOk) {
 
   Message request = Message(2, handles);
 
-  ASSERT_NO_FATAL_FAILURES((SuccessfulChannelCall<kReplyDataSize, kReplyHandleCount>(
+  ASSERT_NO_FATAL_FAILURE((SuccessfulChannelCall<kReplyDataSize, kReplyHandleCount>(
       std::move(local_), std::move(remote_), &loop_, arena_, request)));
 }
 
@@ -1088,7 +1088,7 @@ TEST_F(ChannelTest, ReadToClosedHandle) {
 TEST_F(ChannelTest, ReadNullArenaWithData) {
   void* data = arena_.Allocate(64);
   ASSERT_EQ(ZX_OK, fdf_channel_write(local_.get(), 0, arena_.get(), data, 64, NULL, 0));
-  ASSERT_NO_FATAL_FAILURES(WaitUntilReadReady(remote_.get()));
+  ASSERT_NO_FATAL_FAILURE(WaitUntilReadReady(remote_.get()));
   void* out_data;
   uint32_t num_bytes;
   ASSERT_EQ(ZX_ERR_INVALID_ARGS,
@@ -1107,7 +1107,7 @@ TEST_F(ChannelTest, ReadNullArenaWithHandles) {
   handles[0] = transfer_ch_remote;
 
   ASSERT_EQ(ZX_OK, fdf_channel_write(local_.get(), 0, arena_.get(), nullptr, 0, handles, 1));
-  ASSERT_NO_FATAL_FAILURES(WaitUntilReadReady(remote_.get()));
+  ASSERT_NO_FATAL_FAILURE(WaitUntilReadReady(remote_.get()));
   fdf_handle_t* read_handles;
   uint32_t num_handles;
   EXPECT_EQ(ZX_ERR_INVALID_ARGS, fdf_channel_read(remote_.get(), 0, nullptr, nullptr, nullptr,
@@ -1170,7 +1170,7 @@ TEST_F(ChannelTest, WaitAsyncAlreadyWaiting) {
 
   EXPECT_OK(fdf_channel_write(remote_.get(), 0, nullptr, nullptr, 0, nullptr, 0));
 
-  ASSERT_NO_FATAL_FAILURES(WaitUntilReadReady(local_.get()));
+  ASSERT_NO_FATAL_FAILURE(WaitUntilReadReady(local_.get()));
 }
 
 //
@@ -1341,7 +1341,7 @@ TEST_F(ChannelTest, CallNotifiedOnPeerClosed) {
           driver_context::PushDriver(CreateFakeDriver());
 
           // Wait until call message is received.
-          ASSERT_NO_FATAL_FAILURES(WaitUntilReadReady(svc.get()));
+          ASSERT_NO_FATAL_FAILURE(WaitUntilReadReady(svc.get()));
           // Close the peer.
           svc.reset();
         },

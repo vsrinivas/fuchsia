@@ -70,7 +70,7 @@ TEST(EventThreadTests, TestVthreadDurationBegin) {
 
   ASSERT_TRUE(fixture.StopTracing());
 
-  ASSERT_NO_FATAL_FAILURES(
+  ASSERT_NO_FATAL_FAILURE(
       fixture.CompareBuffer("\
 String(index: 1, \"+enabled\")\n\
 String(index: 2, \"process\")\n\
@@ -98,7 +98,7 @@ TEST(EventThreadTests, TestVthreadDurationEnd) {
 
   ASSERT_TRUE(fixture.StopTracing());
 
-  ASSERT_NO_FATAL_FAILURES(
+  ASSERT_NO_FATAL_FAILURE(
       fixture.CompareBuffer("\
 String(index: 1, \"+enabled\")\n\
 String(index: 2, \"process\")\n\
@@ -126,7 +126,7 @@ TEST(EventThreadTests, TestVthreadFlowBegin) {
 
   ASSERT_TRUE(fixture.StopTracing());
 
-  ASSERT_NO_FATAL_FAILURES(
+  ASSERT_NO_FATAL_FAILURE(
       fixture.CompareBuffer("\
 String(index: 1, \"+enabled\")\n\
 String(index: 2, \"process\")\n\
@@ -154,7 +154,7 @@ TEST(EventThreadTests, TestVthreadFlowStep) {
 
   ASSERT_TRUE(fixture.StopTracing());
 
-  ASSERT_NO_FATAL_FAILURES(
+  ASSERT_NO_FATAL_FAILURE(
       fixture.CompareBuffer("\
 String(index: 1, \"+enabled\")\n\
 String(index: 2, \"process\")\n\
@@ -182,7 +182,7 @@ TEST(EventThreadTests, TestVthreadFlowEnd) {
 
   ASSERT_TRUE(fixture.StopTracing());
 
-  ASSERT_NO_FATAL_FAILURES(
+  ASSERT_NO_FATAL_FAILURE(
       fixture.CompareBuffer("\
 String(index: 1, \"+enabled\")\n\
 String(index: 2, \"process\")\n\
@@ -210,7 +210,7 @@ TEST(EventThreadTests, TestVthreadCounter) {
 
   ASSERT_TRUE(fixture.StopTracing());
 
-  ASSERT_NO_FATAL_FAILURES(
+  ASSERT_NO_FATAL_FAILURE(
       fixture.CompareBuffer("\
 String(index: 1, \"+enabled\")\n\
 String(index: 2, \"process\")\n\

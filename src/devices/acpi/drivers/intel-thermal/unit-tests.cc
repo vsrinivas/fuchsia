@@ -131,8 +131,8 @@ class IntelThermalTest : public InspectTestHelper, public zxtest::Test {
 
 TEST_F(IntelThermalTest, InspectTest) {
   auto* device = device_->GetDeviceContext<IntelThermal>();
-  ASSERT_NO_FATAL_FAILURES(ReadInspect(device->inspect_vmo()));
-  ASSERT_NO_FATAL_FAILURES(
+  ASSERT_NO_FATAL_FAILURE(ReadInspect(device->inspect_vmo()));
+  ASSERT_NO_FATAL_FAILURE(
       CheckProperty(hierarchy().node(), "description", inspect::StringPropertyValue(kAmbientStr)));
 }
 

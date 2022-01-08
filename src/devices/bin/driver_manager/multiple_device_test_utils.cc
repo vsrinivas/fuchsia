@@ -216,7 +216,7 @@ void MultipleDeviceTestCase::SetUp() {
   // Start the mock server thread.
   ASSERT_OK(mock_server_loop_.StartThread("mock-admin-server"));
 
-  ASSERT_NO_FATAL_FAILURES(InitializeCoordinator(&coordinator()));
+  ASSERT_NO_FATAL_FAILURE(InitializeCoordinator(&coordinator()));
 
   {
     auto client_end = fidl::CreateEndpoints(&driver_host_server_);
@@ -229,9 +229,9 @@ void MultipleDeviceTestCase::SetUp() {
   // Set up the sys device proxy, inside of the driver_host
   ASSERT_OK(coordinator().PrepareProxy(coordinator().sys_device(), driver_host_));
   coordinator_loop_.RunUntilIdle();
-  ASSERT_NO_FATAL_FAILURES(CheckCreateDeviceReceived(driver_host_server_, kSystemDriverPath,
-                                                     &sys_proxy()->coordinator_client,
-                                                     &sys_proxy()->controller_server));
+  ASSERT_NO_FATAL_FAILURE(CheckCreateDeviceReceived(driver_host_server_, kSystemDriverPath,
+                                                    &sys_proxy()->coordinator_client,
+                                                    &sys_proxy()->controller_server));
   coordinator_loop_.RunUntilIdle();
 
   // Create a child of the sys_device (an equivalent of the platform bus)
@@ -255,7 +255,7 @@ void MultipleDeviceTestCase::SetUp() {
     ASSERT_OK(status);
     coordinator_loop_.RunUntilIdle();
 
-    ASSERT_NO_FATAL_FAILURES(platform_bus()->CheckInitReceivedAndReply());
+    ASSERT_NO_FATAL_FAILURE(platform_bus()->CheckInitReceivedAndReply());
     coordinator_loop()->RunUntilIdle();
   }
 
@@ -325,7 +325,7 @@ void MultipleDeviceTestCase::AddDevice(const fbl::RefPtr<Device>& parent, const 
   *index = devices_.size() - 1;
 
   if (reply_to_init) {
-    ASSERT_NO_FATAL_FAILURES(device(*index)->CheckInitReceivedAndReply());
+    ASSERT_NO_FATAL_FAILURE(device(*index)->CheckInitReceivedAndReply());
     coordinator_loop()->RunUntilIdle();
   }
 }
@@ -362,7 +362,7 @@ void MultipleDeviceTestCase::AddDeviceSkipAutobind(const fbl::RefPtr<Device>& pa
   devices_.push_back(std::move(state));
   *index = devices_.size() - 1;
 
-  ASSERT_NO_FATAL_FAILURES(device(*index)->CheckInitReceivedAndReply());
+  ASSERT_NO_FATAL_FAILURE(device(*index)->CheckInitReceivedAndReply());
   coordinator_loop()->RunUntilIdle();
 }
 

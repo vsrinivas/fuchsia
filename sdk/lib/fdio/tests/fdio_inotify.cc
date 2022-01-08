@@ -346,7 +346,7 @@ TEST_F(InotifyAddFilter, AddMultipleFilters) {
   EXPECT_EQ(create_event->mask, IN_CREATE);
   EXPECT_EQ(create_event->wd, kEvent.wd);
   EXPECT_EQ(create_event->cookie, kEvent.cookie);
-  EXPECT_STR_EQ(std::string(create_event->name), kTestFileName);
+  EXPECT_STREQ(std::string(create_event->name), kTestFileName);
 #endif  // !defined(__Fuchsia__)
 
   std::optional open_event = iter.Next();
@@ -354,7 +354,7 @@ TEST_F(InotifyAddFilter, AddMultipleFilters) {
   EXPECT_EQ(open_event->mask, IN_OPEN);
   EXPECT_EQ(open_event->wd, kEvent.wd);
   EXPECT_EQ(open_event->cookie, kEvent.cookie);
-  EXPECT_STR_EQ(std::string(open_event->name), kTestFileName);
+  EXPECT_STREQ(std::string(open_event->name), kTestFileName);
   EXPECT_TRUE(iter.Done(), "consumed %ld of %ld bytes", iter.offset(), bytes_read);
 }
 

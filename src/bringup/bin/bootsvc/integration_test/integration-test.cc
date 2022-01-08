@@ -103,8 +103,8 @@ TEST(BootsvcIntegrationTest, Namespace) {
   }
 
   ASSERT_EQ(ns->count, 2);
-  EXPECT_STR_EQ(ns->path[0], "/boot");
-  EXPECT_STR_EQ(ns->path[1], "/svc");
+  EXPECT_STREQ(ns->path[0], "/boot");
+  EXPECT_STREQ(ns->path[1], "/svc");
   free(ns);
 
   // /boot should be RX and /svc should be RW. The call to fdio_open_fd should fail if that is not
@@ -193,8 +193,8 @@ TEST(BootsvcIntegrationTest, BootfsFileTimes) {
 // that we can test the parsing on bootsvc.next.
 TEST(BootsvcIntegrationTest, Arguments) {
   ASSERT_EQ(arguments.size(), 2);
-  EXPECT_STR_EQ(arguments[0].c_str(), "bin/bootsvc-integration-test");
-  EXPECT_STR_EQ(arguments[1].c_str(), "testargument");
+  EXPECT_STREQ(arguments[0].c_str(), "bin/bootsvc-integration-test");
+  EXPECT_STREQ(arguments[1].c_str(), "testargument");
 }
 
 // Make sure the fuchsia.boot.FactoryItems service works

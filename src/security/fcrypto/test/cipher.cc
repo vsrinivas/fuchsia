@@ -74,7 +74,7 @@ void TestInitEncrypt(Cipher::Algorithm cipher) {
   EXPECT_OK(encrypt.InitEncrypt(cipher, key, iv));
   EXPECT_OK(encrypt.InitEncrypt(cipher, key, iv, zx_system_get_page_size()));
 }
-TEST(InitEncrypt, AES256_XTS) { ASSERT_NO_FATAL_FAILURES(TestInitEncrypt(Cipher::kAES256_XTS)); }
+TEST(InitEncrypt, AES256_XTS) { ASSERT_NO_FATAL_FAILURE(TestInitEncrypt(Cipher::kAES256_XTS)); }
 
 TEST(InitDecrypt, Uninitialized) {
   Cipher decrypt;
@@ -107,7 +107,7 @@ void TestInitDecrypt(Cipher::Algorithm cipher) {
   EXPECT_OK(decrypt.InitDecrypt(cipher, key, iv));
   EXPECT_OK(decrypt.InitDecrypt(cipher, key, iv, zx_system_get_page_size()));
 }
-TEST(InitDecrypt, AES256_XTS) { ASSERT_NO_FATAL_FAILURES(TestInitDecrypt(Cipher::kAES256_XTS)); }
+TEST(InitDecrypt, AES256_XTS) { ASSERT_NO_FATAL_FAILURE(TestInitDecrypt(Cipher::kAES256_XTS)); }
 
 void TestEncryptStream(Cipher::Algorithm cipher) {
   size_t len = zx_system_get_page_size();
@@ -139,9 +139,7 @@ void TestEncryptStream(Cipher::Algorithm cipher) {
   encrypt.Reset();
   EXPECT_STATUS(encrypt.Encrypt(ptext.get(), len, ctext), ZX_ERR_BAD_STATE);
 }
-TEST(EncryptStream, AES256_XTS) {
-  ASSERT_NO_FATAL_FAILURES(TestEncryptStream(Cipher::kAES256_XTS));
-}
+TEST(EncryptStream, AES256_XTS) { ASSERT_NO_FATAL_FAILURE(TestEncryptStream(Cipher::kAES256_XTS)); }
 
 void TestEncryptRandomAccess(Cipher::Algorithm cipher) {
   size_t len = zx_system_get_page_size();
@@ -177,7 +175,7 @@ void TestEncryptRandomAccess(Cipher::Algorithm cipher) {
   EXPECT_STATUS(encrypt.Encrypt(ptext.get(), len, ctext), ZX_ERR_BAD_STATE);
 }
 TEST(EncryptRandomAccess, AES256_XTS) {
-  ASSERT_NO_FATAL_FAILURES(TestEncryptRandomAccess(Cipher::kAES256_XTS));
+  ASSERT_NO_FATAL_FAILURE(TestEncryptRandomAccess(Cipher::kAES256_XTS));
 }
 
 void TestDecryptStream(Cipher::Algorithm cipher) {
@@ -240,9 +238,7 @@ void TestDecryptStream(Cipher::Algorithm cipher) {
   decrypt.Reset();
   EXPECT_STATUS(decrypt.Decrypt(ctext, len, result), ZX_ERR_BAD_STATE);
 }
-TEST(DecryptStream, AES256_XTS) {
-  ASSERT_NO_FATAL_FAILURES(TestDecryptStream(Cipher::kAES256_XTS));
-}
+TEST(DecryptStream, AES256_XTS) { ASSERT_NO_FATAL_FAILURE(TestDecryptStream(Cipher::kAES256_XTS)); }
 
 void TestDecryptRandomAccess(Cipher::Algorithm cipher) {
   size_t len = zx_system_get_page_size();
@@ -306,7 +302,7 @@ void TestDecryptRandomAccess(Cipher::Algorithm cipher) {
   EXPECT_STATUS(decrypt.Decrypt(ctext, 0, len, result), ZX_ERR_BAD_STATE);
 }
 TEST(DecryptRandomAccess, AES256_XTS) {
-  ASSERT_NO_FATAL_FAILURES(TestDecryptRandomAccess(Cipher::kAES256_XTS));
+  ASSERT_NO_FATAL_FAILURE(TestDecryptRandomAccess(Cipher::kAES256_XTS));
 }
 
 // The following tests are taken from NIST's SP 800-38E.  The non-byte aligned tests vectors are
@@ -338,7 +334,7 @@ void TestSP800_TC(Cipher::Algorithm cipher, const char* xkey, const char* xiv, c
 
 // See https://csrc.nist.gov/CSRC/media/Projects/Cryptographic-Algorithm-Validation-Program/documents/aes/XTSTestVectors.zip
 TEST(SP800_38E, TC010) {
-  ASSERT_NO_FATAL_FAILURES(TestSP800_TC(Cipher::kAES256_XTS,
+  ASSERT_NO_FATAL_FAILURE(TestSP800_TC(Cipher::kAES256_XTS,
         // key
         "5d4240766e71216ab73da19ea88027488759c3c83aad8223bcb60ad5559f913d1fa858154fbb8217c04ca352b22e492cf9ea81d1a87838125c90a1340d04f8cf",
         // iv
@@ -350,7 +346,7 @@ TEST(SP800_38E, TC010) {
 }
 
 TEST(SP800_38E, TC020) {
-  ASSERT_NO_FATAL_FAILURES(TestSP800_TC(Cipher::kAES256_XTS,
+  ASSERT_NO_FATAL_FAILURE(TestSP800_TC(Cipher::kAES256_XTS,
         // key
         "c9032290ea6c1b8fe8448fdb6e7e48ef0d81c1a0bc84a9052e40807e515733ed93e55838a88ff1c78509c62afb26d52a8ff687846601b0930771e6df1d1f3c4d",
         // iv
@@ -362,7 +358,7 @@ TEST(SP800_38E, TC020) {
 }
 
 TEST(SP800_38E, TC030) {
-  ASSERT_NO_FATAL_FAILURES(TestSP800_TC(Cipher::kAES256_XTS,
+  ASSERT_NO_FATAL_FAILURE(TestSP800_TC(Cipher::kAES256_XTS,
         // key
         "d9dd2f932b39b82c666352b104b15b31f714cde49d9d2e019aa1e73db3818b8eddaf4f47f6f1fc173eec2e0c30674803de8780f945d8005d9fe995785912354b",
         // iv
@@ -374,7 +370,7 @@ TEST(SP800_38E, TC030) {
 }
 
 TEST(SP800_38E, TC040) {
-  ASSERT_NO_FATAL_FAILURES(TestSP800_TC(Cipher::kAES256_XTS,
+  ASSERT_NO_FATAL_FAILURE(TestSP800_TC(Cipher::kAES256_XTS,
         // key
         "d77104e5756ca260c3c5912439b7f8c81716d5c4a457e24d104ae50b40167a80ff03e0682729d824dfa8c84c794b80303dc9ff0585088ee6532565bec63ad7c2",
         // iv
@@ -386,7 +382,7 @@ TEST(SP800_38E, TC040) {
 }
 
 TEST(SP800_38E, TC050) {
-  ASSERT_NO_FATAL_FAILURES(TestSP800_TC(Cipher::kAES256_XTS,
+  ASSERT_NO_FATAL_FAILURE(TestSP800_TC(Cipher::kAES256_XTS,
         // key
         "0406cefa3e16325e0b820591b5d45bbf21164b521ded97628835f2d3be7ecca18d1ba0e5d47f10b969420f59c02e731161a2a262b55b5f35f6f8ef365159f50d",
         // iv
@@ -398,7 +394,7 @@ TEST(SP800_38E, TC050) {
 }
 
 TEST(SP800_38E, TC060) {
-  ASSERT_NO_FATAL_FAILURES(TestSP800_TC(Cipher::kAES256_XTS,
+  ASSERT_NO_FATAL_FAILURE(TestSP800_TC(Cipher::kAES256_XTS,
         // key
         "bade4d98d950bc1c0f9af6c0449df05955ad9db136fdab98b07f359b3a3781d44ccd04a9bdbf2191099dd74705811c9cbf26173dba5ca9c1c89566f061d0c943",
         // iv
@@ -410,7 +406,7 @@ TEST(SP800_38E, TC060) {
 }
 
 TEST(SP800_38E, TC070) {
-  ASSERT_NO_FATAL_FAILURES(TestSP800_TC(Cipher::kAES256_XTS,
+  ASSERT_NO_FATAL_FAILURE(TestSP800_TC(Cipher::kAES256_XTS,
         // key
         "b353e17f495d6b6a24357a6a6c30372d8e6d79923f0e0b62224af47240123ed909f5a94a299a0cbda4ba99e864698803101507e7027041fe04eed90336d89c76",
         // iv
@@ -422,7 +418,7 @@ TEST(SP800_38E, TC070) {
 }
 
 TEST(SP800_38E, TC080) {
-  ASSERT_NO_FATAL_FAILURES(TestSP800_TC(Cipher::kAES256_XTS,
+  ASSERT_NO_FATAL_FAILURE(TestSP800_TC(Cipher::kAES256_XTS,
         // key
         "2c7ca38b0445ca7345c53d05e433a84e93617723ec4f22a9e3c4d822fdda9a88748d653b83ea170668fae1b22525afd3aa78e1f09106a22d640d853524a80b5a",
         // iv
@@ -434,7 +430,7 @@ TEST(SP800_38E, TC080) {
 }
 
 TEST(SP800_38E, TC090) {
-  ASSERT_NO_FATAL_FAILURES(TestSP800_TC(Cipher::kAES256_XTS,
+  ASSERT_NO_FATAL_FAILURE(TestSP800_TC(Cipher::kAES256_XTS,
         // key
         "9051e843a1a216c0bbad5d67e2e30ee414ae0ec29675deca56507ef011ba7f3f273edd58ea12c02ad03ebe2405702a0b8ac33016d216e22af0f1141998ea488b",
         // iv
@@ -446,7 +442,7 @@ TEST(SP800_38E, TC090) {
 }
 
 TEST(SP800_38E, TC100) {
-  ASSERT_NO_FATAL_FAILURES(TestSP800_TC(Cipher::kAES256_XTS,
+  ASSERT_NO_FATAL_FAILURE(TestSP800_TC(Cipher::kAES256_XTS,
         // key
         "198363340a2c104edecef6ada540a9c3a752c4fdcab8d16fff1823d98d959389b92bfd43a9df083600e07f712d6f04a20456d452ec6cb7e836da36581ff7ea33",
         // iv
@@ -458,7 +454,7 @@ TEST(SP800_38E, TC100) {
 }
 
 TEST(SP800_38E, TC110) {
-  ASSERT_NO_FATAL_FAILURES(TestSP800_TC(Cipher::kAES256_XTS,
+  ASSERT_NO_FATAL_FAILURE(TestSP800_TC(Cipher::kAES256_XTS,
         // key
         "6b1984c24e7eb6628e3a11c9ccd2594033a3a0d9016eae65c2f24e09b9a66e9fe9d163a506dfbccf2d93e8991e2fc560e10435b890b5889a5003e4bf817dc3e0",
         // iv
@@ -470,7 +466,7 @@ TEST(SP800_38E, TC110) {
 }
 
 TEST(SP800_38E, TC120) {
-  ASSERT_NO_FATAL_FAILURES(TestSP800_TC(Cipher::kAES256_XTS,
+  ASSERT_NO_FATAL_FAILURE(TestSP800_TC(Cipher::kAES256_XTS,
         // key
         "10c2e0ee117d7c83bcc1422b1c75445fdca94530eac7c9292e76a2766766368d7f852c6f6b25e8448e9e315b761dcb1a31290b643535a66de5c2bc1e5e3978f7",
         // iv
@@ -482,7 +478,7 @@ TEST(SP800_38E, TC120) {
 }
 
 TEST(SP800_38E, TC130) {
-  ASSERT_NO_FATAL_FAILURES(TestSP800_TC(Cipher::kAES256_XTS,
+  ASSERT_NO_FATAL_FAILURE(TestSP800_TC(Cipher::kAES256_XTS,
         // key
         "43401c1696961f2cfa7f2f825c0bd08683219ef7a3b8f2352c6a27afa14424de31ceb11b0983b981b3cc59f712d7513bbd78b97724544fba99a7370698c1f586",
         // iv
@@ -494,7 +490,7 @@ TEST(SP800_38E, TC130) {
 }
 
 TEST(SP800_38E, TC140) {
-  ASSERT_NO_FATAL_FAILURES(TestSP800_TC(Cipher::kAES256_XTS,
+  ASSERT_NO_FATAL_FAILURE(TestSP800_TC(Cipher::kAES256_XTS,
         // key
         "1e30686246d41359c6b98bc474ca7c70bfd1b1167183d099443b50050b9abc031d2491249b64dae81532d55e5ec4b8fc0942956b8016e70c05c07c2f9281294a",
         // iv
@@ -506,7 +502,7 @@ TEST(SP800_38E, TC140) {
 }
 
 TEST(SP800_38E, TC150) {
-  ASSERT_NO_FATAL_FAILURES(TestSP800_TC(Cipher::kAES256_XTS,
+  ASSERT_NO_FATAL_FAILURE(TestSP800_TC(Cipher::kAES256_XTS,
         // key
         "b4713941c6a4ffdbfe2bffdcca09631911e91f1260e650d389803b1aa89f5789fb8ead890218105b63c6d8af1cdaecb8da8c807a16e97ebdab860c169431f596",
         // iv
@@ -518,7 +514,7 @@ TEST(SP800_38E, TC150) {
 }
 
 TEST(SP800_38E, TC160) {
-  ASSERT_NO_FATAL_FAILURES(TestSP800_TC(Cipher::kAES256_XTS,
+  ASSERT_NO_FATAL_FAILURE(TestSP800_TC(Cipher::kAES256_XTS,
         // key
         "02f5f16166ff196ecbd88d90ece619f1815e6dcfce2827a407fe1201c4a4c82956318912d9c7a6e12ab2f69e17b83c0ec42fc9abb25629e66c37b8583c2ef9bb",
         // iv
@@ -530,7 +526,7 @@ TEST(SP800_38E, TC160) {
 }
 
 TEST(SP800_38E, TC170) {
-  ASSERT_NO_FATAL_FAILURES(TestSP800_TC(Cipher::kAES256_XTS,
+  ASSERT_NO_FATAL_FAILURE(TestSP800_TC(Cipher::kAES256_XTS,
         // key
         "b67995bece5a587ffdfa9d63ce82700eabaec701312aac591ae4c13045b17832fbffb96fe953be24ad4e22ac146eff566453fb9abec7c80b7d4f849dba96ec2d",
         // iv
@@ -542,7 +538,7 @@ TEST(SP800_38E, TC170) {
 }
 
 TEST(SP800_38E, TC180) {
-  ASSERT_NO_FATAL_FAILURES(TestSP800_TC(Cipher::kAES256_XTS,
+  ASSERT_NO_FATAL_FAILURE(TestSP800_TC(Cipher::kAES256_XTS,
         // key
         "4324b0fcdcfedc5af7f8170c157ef68680197f5901fb5f3c9b9f85db8319293066a4e1a61c5943865e7b2de129dd3a6db5d8865ac55722399a58822c4e51d0df",
         // iv
@@ -554,7 +550,7 @@ TEST(SP800_38E, TC180) {
 }
 
 TEST(SP800_38E, TC190) {
-  ASSERT_NO_FATAL_FAILURES(TestSP800_TC(Cipher::kAES256_XTS,
+  ASSERT_NO_FATAL_FAILURE(TestSP800_TC(Cipher::kAES256_XTS,
         // key
         "458dfebe5a6e381da894a1551b95467f19fd475be6a61930ea7707c4f21f88cddd7283c59cc4211af68cc4273ab0e31bf24bee161a5690c754f46ee6392eb6fd",
         // iv
@@ -566,7 +562,7 @@ TEST(SP800_38E, TC190) {
 }
 
 TEST(SP800_38E, TC200) {
-  ASSERT_NO_FATAL_FAILURES(TestSP800_TC(Cipher::kAES256_XTS,
+  ASSERT_NO_FATAL_FAILURE(TestSP800_TC(Cipher::kAES256_XTS,
         // key
         "28ab33a47b32dbe9ac4e33a7dd3bdea0fc47deae790c3f5c24cc4e97229ce0c0a15160ff5cc544e2b4e03b4ccd55cc685e93e4ddb2fad8879d0774e92780c521",
         // iv

@@ -335,7 +335,7 @@ TEST(MiscTestCase, BindDevices) {
   InspectManager inspect_manager(loop.dispatcher());
   Coordinator coordinator(NullConfig(), &inspect_manager, loop.dispatcher(), loop.dispatcher());
 
-  ASSERT_NO_FATAL_FAILURES(InitializeCoordinator(&coordinator));
+  ASSERT_NO_FATAL_FAILURE(InitializeCoordinator(&coordinator));
 
   // Add the device.
   auto controller_endpoints = fidl::CreateEndpoints<fuchsia_device_manager::DeviceController>();
@@ -374,7 +374,7 @@ TEST(MiscTestCase, BindDevices) {
   ASSERT_OK(status);
 
   // Check the BindDriver request.
-  ASSERT_NO_FATAL_FAILURES(
+  ASSERT_NO_FATAL_FAILURE(
       CheckBindDriverReceived(controller_endpoints->server, fidl::StringView(kDriverPath)));
   loop.RunUntilIdle();
 
@@ -390,7 +390,7 @@ TEST(MiscTestCase, TestOutput) {
   InspectManager inspect_manager(loop.dispatcher());
   Coordinator coordinator(NullConfig(), &inspect_manager, loop.dispatcher(), loop.dispatcher());
 
-  ASSERT_NO_FATAL_FAILURES(InitializeCoordinator(&coordinator));
+  ASSERT_NO_FATAL_FAILURE(InitializeCoordinator(&coordinator));
 
   // Add the device.
   auto controller_endpoints = fidl::CreateEndpoints<fuchsia_device_manager::DeviceController>();
@@ -436,7 +436,7 @@ TEST(MiscTestCase, TestOutput) {
   // Check the BindDriver request.
   zx::status test_endpoints = fidl::CreateEndpoints<fuchsia_driver_test_logger::Logger>();
   ASSERT_OK(test_endpoints.status_value());
-  ASSERT_NO_FATAL_FAILURES(
+  ASSERT_NO_FATAL_FAILURE(
       BindDriverTestOutput(controller_endpoints->server, std::move(test_endpoints->server)));
   loop.RunUntilIdle();
 
@@ -469,7 +469,7 @@ TEST(MiscTestCase, TestOutput) {
 
 void CompareStrProperty(const fuchsia_device_manager::wire::DeviceStrProperty expected,
                         const StrProperty actual) {
-  ASSERT_STR_EQ(expected.key.get(), actual.key);
+  ASSERT_STREQ(expected.key.get(), actual.key);
 
   if (expected.value.is_int_value()) {
     auto* value = std::get_if<uint32_t>(&actual.value);
@@ -478,7 +478,7 @@ void CompareStrProperty(const fuchsia_device_manager::wire::DeviceStrProperty ex
   } else if (expected.value.is_str_value()) {
     auto* value = std::get_if<std::string>(&actual.value);
     ASSERT_TRUE(value);
-    ASSERT_STR_EQ(expected.value.str_value(), *value);
+    ASSERT_STREQ(expected.value.str_value(), *value);
   } else if (expected.value.is_bool_value()) {
     auto* value = std::get_if<bool>(&actual.value);
     ASSERT_TRUE(value);
@@ -496,7 +496,7 @@ void AddDeviceWithProperties(const fuchsia_device_manager::wire::DeviceProperty*
   InspectManager inspect_manager(loop.dispatcher());
   Coordinator coordinator(NullConfig(), &inspect_manager, loop.dispatcher(), loop.dispatcher());
 
-  ASSERT_NO_FATAL_FAILURES(InitializeCoordinator(&coordinator));
+  ASSERT_NO_FATAL_FAILURE(InitializeCoordinator(&coordinator));
 
   auto controller_endpoints = fidl::CreateEndpoints<fuchsia_device_manager::DeviceController>();
   ASSERT_OK(controller_endpoints.status_value());
@@ -567,7 +567,7 @@ TEST(MiscTestCase, InvalidStringProperties) {
   InspectManager inspect_manager(loop.dispatcher());
   Coordinator coordinator(NullConfig(), &inspect_manager, loop.dispatcher(), loop.dispatcher());
 
-  ASSERT_NO_FATAL_FAILURES(InitializeCoordinator(&coordinator));
+  ASSERT_NO_FATAL_FAILURE(InitializeCoordinator(&coordinator));
 
   auto controller_endpoints = fidl::CreateEndpoints<fuchsia_device_manager::DeviceController>();
   ASSERT_OK(controller_endpoints.status_value());
@@ -614,7 +614,7 @@ TEST(MiscTestCase, DeviceAlreadyBoundFromDriverIndex) {
   Coordinator coordinator(std::move(config), &inspect_manager, loop.dispatcher(),
                           loop.dispatcher());
 
-  ASSERT_NO_FATAL_FAILURES(InitializeCoordinator(&coordinator));
+  ASSERT_NO_FATAL_FAILURE(InitializeCoordinator(&coordinator));
 
   // Add the device.
   auto controller_endpoints = fidl::CreateEndpoints<fuchsia_device_manager::DeviceController>();

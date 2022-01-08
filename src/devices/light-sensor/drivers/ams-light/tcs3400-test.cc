@@ -673,7 +673,7 @@ TEST_F(Tcs3400Test, FeatureReport) {
   ASSERT_TRUE(client.client_end().is_valid());
 
   Tcs3400FeatureReport report;
-  ASSERT_NO_FATAL_FAILURES(GetFeatureReport(client, &report));
+  ASSERT_NO_FATAL_FAILURE(GetFeatureReport(client, &report));
 
   // Check the default report values.
   EXPECT_EQ(report.reporting_state,
@@ -718,7 +718,7 @@ TEST_F(Tcs3400Test, FeatureReport) {
   EXPECT_EQ(fake_i2c_.GetRegisterLastWrite(TCS_I2C_ATIME), 156);
   EXPECT_EQ(fake_i2c_.GetRegisterAtIndex(1, TCS_I2C_ENABLE), 0b0001'0011);
 
-  ASSERT_NO_FATAL_FAILURES(GetFeatureReport(client, &report));
+  ASSERT_NO_FATAL_FAILURE(GetFeatureReport(client, &report));
   EXPECT_EQ(report.report_interval_us, 1'000);
   EXPECT_EQ(report.reporting_state,
             fuchsia_input_report::wire::SensorReportingState::kReportAllEvents);
@@ -745,7 +745,7 @@ TEST_F(Tcs3400Test, SetInvalidFeatureReport) {
   }
 
   Tcs3400FeatureReport report;
-  ASSERT_NO_FATAL_FAILURES(GetFeatureReport(client, &report));
+  ASSERT_NO_FATAL_FAILURE(GetFeatureReport(client, &report));
   // Make sure the feature report wasn't affected by the bad call.
   EXPECT_EQ(report.sensitivity, 16);
   EXPECT_EQ(report.report_interval_us, 0);
@@ -761,7 +761,7 @@ TEST_F(Tcs3400Test, SetInvalidFeatureReport) {
     EXPECT_TRUE(response->result.is_err());
   }
 
-  ASSERT_NO_FATAL_FAILURES(GetFeatureReport(client, &report));
+  ASSERT_NO_FATAL_FAILURE(GetFeatureReport(client, &report));
   EXPECT_EQ(report.sensitivity, 16);
 
   constexpr Tcs3400FeatureReport kInvalidThresholdHigh = {
@@ -776,7 +776,7 @@ TEST_F(Tcs3400Test, SetInvalidFeatureReport) {
     EXPECT_TRUE(response->result.is_err());
   }
 
-  ASSERT_NO_FATAL_FAILURES(GetFeatureReport(client, &report));
+  ASSERT_NO_FATAL_FAILURE(GetFeatureReport(client, &report));
   EXPECT_EQ(report.threshold_high, 0xffff);
   EXPECT_EQ(report.sensitivity, 16);
 
@@ -804,7 +804,7 @@ TEST_F(Tcs3400Test, SetInvalidFeatureReport) {
     EXPECT_TRUE(response->result.is_err());
   }
 
-  ASSERT_NO_FATAL_FAILURES(GetFeatureReport(client, &report));
+  ASSERT_NO_FATAL_FAILURE(GetFeatureReport(client, &report));
   EXPECT_EQ(report.threshold_high, 0xffff);
   EXPECT_EQ(report.threshold_low, 0x0000);
   EXPECT_EQ(report.sensitivity, 16);

@@ -28,7 +28,7 @@ static void check_file_contents(FILE* f, char* expected) {
   memset(buf, 0, file_size);
   fseek(f, 0, SEEK_SET);
   fread(buf, file_size, 1, f);
-  EXPECT_STR_EQ((const char*)(buf), expected, "file doesn't match expected value");
+  EXPECT_STREQ((const char*)(buf), expected, "file doesn't match expected value");
 }
 
 TEST(LogTestCase, LogToFileWithSeverity) {
@@ -291,14 +291,14 @@ TEST(LogTestCase, LogToLoggerWithSeverity) {
       memcpy(tag_buf, data_ptr, tag_size);
       data_ptr += tag_size;
 
-      EXPECT_STR_EQ(*tag_iterator, tag_buf, "tag in message doesn't match expected value");
+      EXPECT_STREQ(*tag_iterator, tag_buf, "tag in message doesn't match expected value");
 
       tag_iterator++;
     }
     EXPECT_EQ(0, *data_ptr, "more tags than expected");
     data_ptr++;
-    EXPECT_STR_EQ((const char*)expected_msg, data_ptr,
-                  "received message doesn't match expected value");
+    EXPECT_STREQ((const char*)expected_msg, data_ptr,
+                 "received message doesn't match expected value");
 
     log_destroy_logger_writer(log_writer);
   }

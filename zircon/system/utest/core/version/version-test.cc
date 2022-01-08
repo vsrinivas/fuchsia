@@ -27,7 +27,7 @@ TEST(VersionTest, StdStringView) {
   std::string_view sv = zx_system_get_version_string();
   EXPECT_EQ(sv.size(), zxsv.length);
   EXPECT_EQ(sv.data(), zxsv.c_str);
-  EXPECT_STR_EQ(sv.data(), zxsv.c_str);
+  EXPECT_STREQ(sv.data(), zxsv.c_str);
   EXPECT_TRUE(sv == zxsv.c_str);
 }
 
@@ -38,7 +38,7 @@ TEST(VersionTest, StdU8StringView) {
   static_assert(sizeof(char8_t) == sizeof(char));
   EXPECT_EQ(sv.size(), zxsv.length);
   EXPECT_EQ(sv.data(), reinterpret_cast<const char8_t*>(zxsv.c_str));
-  EXPECT_STR_EQ(reinterpret_cast<const char*>(sv.data()), zxsv.c_str);
+  EXPECT_STREQ(reinterpret_cast<const char*>(sv.data()), zxsv.c_str);
   EXPECT_TRUE(sv == reinterpret_cast<const char8_t*>(zxsv.c_str));
 }
 #endif
@@ -47,7 +47,7 @@ TEST(VersionTest, StdString) {
   zx_string_view_t zxsv = zx_system_get_version_string();
   std::string s = zx_system_get_version_string();
   EXPECT_EQ(s.size(), zxsv.length);
-  EXPECT_STR_EQ(s.c_str(), zxsv.c_str);
+  EXPECT_STREQ(s.c_str(), zxsv.c_str);
   EXPECT_TRUE(s == zxsv.c_str);
 }
 
@@ -57,7 +57,7 @@ TEST(VersionTest, CXX14StdString) {
   zx_string_view_t zxsv = zx_system_get_version_string();
   std::string s = AssignSystemGetVersionString();
   EXPECT_EQ(s.size(), zxsv.length);
-  EXPECT_STR_EQ(s.c_str(), zxsv.c_str);
+  EXPECT_STREQ(s.c_str(), zxsv.c_str);
   EXPECT_TRUE(s == zxsv.c_str);
 
   EXPECT_TRUE(ReturnSystemGetVersionString() == s);

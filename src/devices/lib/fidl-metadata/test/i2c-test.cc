@@ -48,7 +48,7 @@ TEST(I2cMetadataTest, TestEncodeNoPlatformIDs) {
       .address = 0x01,
   }};
 
-  ASSERT_NO_FATAL_FAILURES(check_encodes(kI2cChannels));
+  ASSERT_NO_FATAL_FAILURE(check_encodes(kI2cChannels));
 }
 
 TEST(I2cMetadataTest, TestEncodeManyChannels) {
@@ -79,9 +79,9 @@ TEST(I2cMetadataTest, TestEncodeManyChannels) {
       },
   };
 
-  ASSERT_NO_FATAL_FAILURES(check_encodes(kI2cChannels));
+  ASSERT_NO_FATAL_FAILURE(check_encodes(kI2cChannels));
 }
 
 TEST(I2cMetadataTest, TestEncodeNoChannels) {
-  ASSERT_NO_FATAL_FAILURES(check_encodes(cpp20::span<const fidl_metadata::i2c::Channel>()));
+  ASSERT_NO_FATAL_FAILURE(check_encodes(cpp20::span<const fidl_metadata::i2c::Channel>()));
 }

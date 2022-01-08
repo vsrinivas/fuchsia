@@ -68,8 +68,8 @@ void VolumeCreate(const fbl::unique_fd& fd, const fbl::unique_fd& devfs_root,
 
 void TestInit(Volume::Version version, bool fvm) {
   TestDevice device;
-  ASSERT_NO_FATAL_FAILURES(device.SetupDevmgr());
-  ASSERT_NO_FATAL_FAILURES(device.Create(kDeviceSize, kBlockSize, fvm, version));
+  ASSERT_NO_FATAL_FAILURE(device.SetupDevmgr());
+  ASSERT_NO_FATAL_FAILURE(device.Create(kDeviceSize, kBlockSize, fvm, version));
 
   // Invalid arguments
   fbl::unique_fd bad_fd;
@@ -88,8 +88,8 @@ DEFINE_EACH_DEVICE(VolumeTest, TestInit)
 
 void TestCreate(Volume::Version version, bool fvm) {
   TestDevice device;
-  ASSERT_NO_FATAL_FAILURES(device.SetupDevmgr());
-  ASSERT_NO_FATAL_FAILURES(device.Create(kDeviceSize, kBlockSize, fvm, version));
+  ASSERT_NO_FATAL_FAILURE(device.SetupDevmgr());
+  ASSERT_NO_FATAL_FAILURE(device.Create(kDeviceSize, kBlockSize, fvm, version));
 
   // Invalid file descriptor
   fbl::unique_fd bad_fd;
@@ -107,8 +107,8 @@ DEFINE_EACH_DEVICE(VolumeTest, TestCreate)
 
 void TestUnlock(Volume::Version version, bool fvm) {
   TestDevice device;
-  ASSERT_NO_FATAL_FAILURES(device.SetupDevmgr());
-  ASSERT_NO_FATAL_FAILURES(device.Create(kDeviceSize, kBlockSize, fvm, version));
+  ASSERT_NO_FATAL_FAILURE(device.SetupDevmgr());
+  ASSERT_NO_FATAL_FAILURE(device.Create(kDeviceSize, kBlockSize, fvm, version));
 
   // Invalid device
   std::unique_ptr<FdioVolume> volume;
@@ -119,7 +119,7 @@ void TestUnlock(Volume::Version version, bool fvm) {
   EXPECT_ZX(FdioVolume::Unlock(std::move(bad_fd), device.key(), 0, &volume), ZX_ERR_INVALID_ARGS);
 
   // Bad key
-  ASSERT_NO_FATAL_FAILURES(
+  ASSERT_NO_FATAL_FAILURE(
       VolumeCreate(device.parent(), device.devfs_root(), device.key(), fvm, ZX_OK));
 
   crypto::Secret bad_key;
@@ -144,7 +144,7 @@ void TestUnlock(Volume::Version version, bool fvm) {
     // On FVM, the trailing reserved blocks may just be to pad to a slice, and not have any
     // metdata.  Start from the end and iterate backward to ensure the last block corrupted has
     // metadata.
-    ASSERT_NO_FATAL_FAILURES(device.Corrupt(num_blocks - 1 - i, 0));
+    ASSERT_NO_FATAL_FAILURE(device.Corrupt(num_blocks - 1 - i, 0));
     lseek(parent.get(), off, SEEK_SET);
     read(parent.get(), before, sizeof(before));
 
@@ -168,8 +168,8 @@ DEFINE_EACH_DEVICE(VolumeTest, TestUnlock)
 
 void TestEnroll(Volume::Version version, bool fvm) {
   TestDevice device;
-  ASSERT_NO_FATAL_FAILURES(device.SetupDevmgr());
-  ASSERT_NO_FATAL_FAILURES(device.Bind(version, fvm));
+  ASSERT_NO_FATAL_FAILURE(device.SetupDevmgr());
+  ASSERT_NO_FATAL_FAILURE(device.Bind(version, fvm));
 
   std::unique_ptr<FdioVolume> volume;
   ASSERT_OK(FdioVolume::Unlock(device.parent(), device.key(), 0, &volume));
@@ -193,8 +193,8 @@ DEFINE_EACH_DEVICE(VolumeTest, TestEnroll)
 
 void TestRevoke(Volume::Version version, bool fvm) {
   TestDevice device;
-  ASSERT_NO_FATAL_FAILURES(device.SetupDevmgr());
-  ASSERT_NO_FATAL_FAILURES(device.Bind(version, fvm));
+  ASSERT_NO_FATAL_FAILURE(device.SetupDevmgr());
+  ASSERT_NO_FATAL_FAILURE(device.Bind(version, fvm));
 
   std::unique_ptr<FdioVolume> volume;
   ASSERT_OK(FdioVolume::Unlock(device.parent(), device.key(), 0, &volume));
@@ -213,8 +213,8 @@ DEFINE_EACH_DEVICE(VolumeTest, TestRevoke)
 
 void TestShred(Volume::Version version, bool fvm) {
   TestDevice device;
-  ASSERT_NO_FATAL_FAILURES(device.SetupDevmgr());
-  ASSERT_NO_FATAL_FAILURES(device.Bind(version, fvm));
+  ASSERT_NO_FATAL_FAILURE(device.SetupDevmgr());
+  ASSERT_NO_FATAL_FAILURE(device.Bind(version, fvm));
 
   std::unique_ptr<FdioVolume> volume;
   ASSERT_OK(FdioVolume::Unlock(device.parent(), device.key(), 0, &volume));
@@ -231,8 +231,8 @@ DEFINE_EACH_DEVICE(VolumeTest, TestShred)
 
 void TestFormatThroughDriver(Volume::Version version, bool fvm) {
   TestDevice device;
-  ASSERT_NO_FATAL_FAILURES(device.SetupDevmgr());
-  ASSERT_NO_FATAL_FAILURES(device.Create(kDeviceSize, kBlockSize, fvm, version));
+  ASSERT_NO_FATAL_FAILURE(device.SetupDevmgr());
+  ASSERT_NO_FATAL_FAILURE(device.Create(kDeviceSize, kBlockSize, fvm, version));
 
   zxcrypt::VolumeManager manager(device.parent(), device.devfs_root());
   zx::channel chan;
@@ -255,8 +255,8 @@ DEFINE_EACH_DEVICE(VolumeTest, TestFormatThroughDriver)
 
 void TestShredThroughDriver(Volume::Version version, bool fvm) {
   TestDevice device;
-  ASSERT_NO_FATAL_FAILURES(device.SetupDevmgr());
-  ASSERT_NO_FATAL_FAILURES(device.Bind(version, fvm));
+  ASSERT_NO_FATAL_FAILURE(device.SetupDevmgr());
+  ASSERT_NO_FATAL_FAILURE(device.Bind(version, fvm));
 
   zxcrypt::VolumeManager manager(device.parent(), device.devfs_root());
   zx::channel chan;
@@ -274,8 +274,8 @@ DEFINE_EACH_DEVICE(VolumeTest, TestShredThroughDriver)
 
 void TestShredThroughDriverLocked(Volume::Version version, bool fvm) {
   TestDevice device;
-  ASSERT_NO_FATAL_FAILURES(device.SetupDevmgr());
-  ASSERT_NO_FATAL_FAILURES(device.Bind(version, fvm));
+  ASSERT_NO_FATAL_FAILURE(device.SetupDevmgr());
+  ASSERT_NO_FATAL_FAILURE(device.Bind(version, fvm));
 
   zxcrypt::VolumeManager manager(device.parent(), device.devfs_root());
   zx::channel chan;

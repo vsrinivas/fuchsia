@@ -95,9 +95,9 @@ void TestDevice::SetupDevmgr() {
 void TestDevice::Create(size_t device_size, size_t block_size, bool fvm, Volume::Version version) {
   ASSERT_LT(device_size, SSIZE_MAX);
   if (fvm) {
-    ASSERT_NO_FATAL_FAILURES(CreateFvmPart(device_size, block_size));
+    ASSERT_NO_FATAL_FAILURE(CreateFvmPart(device_size, block_size));
   } else {
-    ASSERT_NO_FATAL_FAILURES(CreateRamdisk(device_size, block_size));
+    ASSERT_NO_FATAL_FAILURE(CreateRamdisk(device_size, block_size));
   }
 
   crypto::digest::Algorithm digest;
@@ -117,7 +117,7 @@ void TestDevice::Create(size_t device_size, size_t block_size, bool fvm, Volume:
 }
 
 void TestDevice::Bind(Volume::Version version, bool fvm) {
-  ASSERT_NO_FATAL_FAILURES(Create(kDeviceSize, kBlockSize, fvm, version));
+  ASSERT_NO_FATAL_FAILURE(Create(kDeviceSize, kBlockSize, fvm, version));
 
   zxcrypt::VolumeManager volume_manager(parent(), devfs_root());
   zx::channel zxc_client_chan;
@@ -125,7 +125,7 @@ void TestDevice::Bind(Volume::Version version, bool fvm) {
   EncryptedVolumeClient volume_client(std::move(zxc_client_chan));
   ASSERT_OK(volume_client.Format(key_.get(), key_.len(), 0));
 
-  ASSERT_NO_FATAL_FAILURES(Connect());
+  ASSERT_NO_FATAL_FAILURE(Connect());
 }
 
 void TestDevice::BindFvmDriver() {
@@ -175,7 +175,7 @@ void TestDevice::Rebind() {
     ASSERT_EQ(ramdisk_rebind(ramdisk_), ZX_OK);
     parent_caller_.reset(ramdisk_get_block_fd(ramdisk_));
   }
-  ASSERT_NO_FATAL_FAILURES(Connect());
+  ASSERT_NO_FATAL_FAILURE(Connect());
 }
 
 void TestDevice::SleepUntil(uint64_t num, bool deferred) {
@@ -315,13 +315,13 @@ void TestDevice::CreateFvmPart(size_t device_size, size_t block_size) {
   fvm::Header fvm_header =
       fvm::Header::FromSliceCount(fvm::kMaxUsablePartitions, slice_count, fvm::kBlockSize);
 
-  ASSERT_NO_FATAL_FAILURES(CreateRamdisk(fvm_header.fvm_partition_size, block_size));
+  ASSERT_NO_FATAL_FAILURE(CreateRamdisk(fvm_header.fvm_partition_size, block_size));
 
   // Format the ramdisk as FVM
   ASSERT_OK(fvm_init(ramdisk_get_block_fd(ramdisk_), fvm::kBlockSize));
 
   // Bind the FVM driver to the now-formatted disk
-  ASSERT_NO_FATAL_FAILURES(BindFvmDriver());
+  ASSERT_NO_FATAL_FAILURE(BindFvmDriver());
 
   // Wait for the FVM driver to expose a block device, then open it
   char path[PATH_MAX];

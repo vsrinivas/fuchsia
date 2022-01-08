@@ -141,7 +141,7 @@ TEST(NelsonBrownoutProtectionTest, Test) {
   while (codec->agl_enabled()) {
   }
 
-  ASSERT_NO_FATAL_FAILURES(alert_gpio.VerifyAndClear());
+  ASSERT_NO_FATAL_FAILURE(alert_gpio.VerifyAndClear());
 }
 
 }  // namespace brownout_protection

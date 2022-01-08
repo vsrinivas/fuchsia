@@ -187,68 +187,68 @@ TEST(ParsingTests, ParsingLongStrings) {
   EXPECT_FALSE(uart::internal::ParseInts(longoverflow, &u64));
 }
 
-TEST(ParsingTests, OneUint8) { ASSERT_NO_FATAL_FAILURES(TestOneUint<uint8_t>()); }
+TEST(ParsingTests, OneUint8) { ASSERT_NO_FATAL_FAILURE(TestOneUint<uint8_t>()); }
 
-TEST(ParsingTests, OneUint16) { ASSERT_NO_FATAL_FAILURES(TestOneUint<uint16_t>()); }
+TEST(ParsingTests, OneUint16) { ASSERT_NO_FATAL_FAILURE(TestOneUint<uint16_t>()); }
 
-TEST(ParsingTests, OneUint32) { ASSERT_NO_FATAL_FAILURES(TestOneUint<uint32_t>()); }
+TEST(ParsingTests, OneUint32) { ASSERT_NO_FATAL_FAILURE(TestOneUint<uint32_t>()); }
 
-TEST(ParsingTests, OneUint64) { ASSERT_NO_FATAL_FAILURES(TestOneUint<uint64_t>()); }
+TEST(ParsingTests, OneUint64) { ASSERT_NO_FATAL_FAILURE(TestOneUint<uint64_t>()); }
 
 TEST(ParsingTests, TwoUint8s) {
   auto test = TestTwoUints<uint8_t, uint8_t>;
-  ASSERT_NO_FATAL_FAILURES(test());
+  ASSERT_NO_FATAL_FAILURE(test());
 }
 
 TEST(ParsingTests, Uint8AndUint16) {
   auto test = TestTwoUints<uint8_t, uint16_t>;
-  ASSERT_NO_FATAL_FAILURES(test());
+  ASSERT_NO_FATAL_FAILURE(test());
 }
 
 TEST(ParsingTests, Uint8AndUint32) {
   auto test = TestTwoUints<uint8_t, uint32_t>;
-  ASSERT_NO_FATAL_FAILURES(test());
+  ASSERT_NO_FATAL_FAILURE(test());
 }
 
 TEST(ParsingTests, Uint8AndUint64) {
   auto test = TestTwoUints<uint8_t, uint32_t>;
-  ASSERT_NO_FATAL_FAILURES(test());
+  ASSERT_NO_FATAL_FAILURE(test());
 }
 
 TEST(ParsingTests, TwoUint16s) {
   auto test = TestTwoUints<uint16_t, uint16_t>;
-  ASSERT_NO_FATAL_FAILURES(test());
+  ASSERT_NO_FATAL_FAILURE(test());
 }
 
 TEST(ParsingTests, Uint16AndUint32) {
   auto test = TestTwoUints<uint16_t, uint32_t>;
-  ASSERT_NO_FATAL_FAILURES(test());
+  ASSERT_NO_FATAL_FAILURE(test());
 }
 
 TEST(ParsingTests, Uint16AndUint64) {
   auto test = TestTwoUints<uint16_t, uint64_t>;
-  ASSERT_NO_FATAL_FAILURES(test());
+  ASSERT_NO_FATAL_FAILURE(test());
 }
 
 TEST(ParsingTests, TwoUint32s) {
   auto test = TestTwoUints<uint32_t, uint32_t>;
-  ASSERT_NO_FATAL_FAILURES(test());
+  ASSERT_NO_FATAL_FAILURE(test());
 }
 
 TEST(ParsingTests, Uint32AndUint64) {
   auto test = TestTwoUints<uint32_t, uint64_t>;
-  ASSERT_NO_FATAL_FAILURES(test());
+  ASSERT_NO_FATAL_FAILURE(test());
 }
 
 TEST(ParsingTests, TwoUint64s) {
   auto test = TestTwoUints<uint64_t, uint64_t>;
-  ASSERT_NO_FATAL_FAILURES(test());
+  ASSERT_NO_FATAL_FAILURE(test());
 }
 
 TEST(ParsingTests, Ns8250MmioDriver) {
   auto driver = uart::ns8250::MmioDriver::MaybeCreate(kX86 ? "mmio,0xa,0xb" : "ns8250,0xa,0xb");
   ASSERT_TRUE(driver.has_value());
-  EXPECT_STR_EQ(kX86 ? "mmio" : "ns8250", driver->config_name());
+  EXPECT_STREQ(kX86 ? "mmio" : "ns8250", driver->config_name());
   const dcfg_simple_t& config = driver->config();
   EXPECT_EQ(0xa, config.mmio_phys);
   EXPECT_EQ(0xb, config.irq);
@@ -257,7 +257,7 @@ TEST(ParsingTests, Ns8250MmioDriver) {
 TEST(ParsingTests, Ns8250PioDriver) {
   auto driver = uart::ns8250::PioDriver::MaybeCreate("ioport,0xa,0xb");
   ASSERT_TRUE(driver.has_value());
-  EXPECT_STR_EQ("ioport", driver->config_name());
+  EXPECT_STREQ("ioport", driver->config_name());
   const dcfg_simple_pio_t& config = driver->config();
   EXPECT_EQ(0xa, config.base);
   EXPECT_EQ(0xb, config.irq);
@@ -266,7 +266,7 @@ TEST(ParsingTests, Ns8250PioDriver) {
 TEST(ParsingTests, Ns8250LegacyDriver) {
   auto driver = uart::ns8250::PioDriver::MaybeCreate("legacy");
   ASSERT_TRUE(driver.has_value());
-  EXPECT_STR_EQ("ioport", driver->config_name());
+  EXPECT_STREQ("ioport", driver->config_name());
   const dcfg_simple_pio_t& config = driver->config();
   EXPECT_EQ(0x3f8, config.base);
   EXPECT_EQ(4, config.irq);
@@ -275,7 +275,7 @@ TEST(ParsingTests, Ns8250LegacyDriver) {
 TEST(ParsingTests, Pl011Driver) {
   auto driver = uart::pl011::Driver::MaybeCreate("pl011,0xa,0xb");
   ASSERT_TRUE(driver.has_value());
-  EXPECT_STR_EQ("pl011", driver->config_name());
+  EXPECT_STREQ("pl011", driver->config_name());
   const dcfg_simple_t& config = driver->config();
   EXPECT_EQ(0xa, config.mmio_phys);
   EXPECT_EQ(0xb, config.irq);
@@ -284,7 +284,7 @@ TEST(ParsingTests, Pl011Driver) {
 TEST(ParsingTests, Pl011QemuDriver) {
   auto driver = uart::pl011::Driver::MaybeCreate("qemu");
   ASSERT_TRUE(driver.has_value());
-  EXPECT_STR_EQ("pl011", driver->config_name());
+  EXPECT_STREQ("pl011", driver->config_name());
   const dcfg_simple_t& config = driver->config();
   EXPECT_EQ(0x09000000, config.mmio_phys);
   EXPECT_EQ(33, config.irq);
@@ -293,7 +293,7 @@ TEST(ParsingTests, Pl011QemuDriver) {
 TEST(ParsingTests, AmlogicDriver) {
   auto driver = uart::amlogic::Driver::MaybeCreate("amlogic,0xa,0xb");
   ASSERT_TRUE(driver.has_value());
-  EXPECT_STR_EQ("amlogic", driver->config_name());
+  EXPECT_STREQ("amlogic", driver->config_name());
   const dcfg_simple_t& config = driver->config();
   EXPECT_EQ(0xa, config.mmio_phys);
   EXPECT_EQ(0xb, config.irq);

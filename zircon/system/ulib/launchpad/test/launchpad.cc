@@ -187,7 +187,7 @@ TEST(LaunchpadTest, ProcessCreateFailure) {
   launchpad_t* lp;
   EXPECT_STATUS(launchpad_create_with_jobs(ZX_HANDLE_INVALID, ZX_HANDLE_INVALID, "", &lp),
                 ZX_ERR_BAD_HANDLE);
-  EXPECT_STR_EQ(launchpad_error_message(lp), "create: zx_process_create() failed");
+  EXPECT_STREQ(launchpad_error_message(lp), "create: zx_process_create() failed");
   launchpad_destroy(lp);
 }
 

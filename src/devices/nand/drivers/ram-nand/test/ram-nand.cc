@@ -39,13 +39,13 @@ TEST(RamNandTest, TrivialLifetime) {
     NandDevice device(params);
 
     ASSERT_OK(device.Init(name, zx::vmo()));
-    EXPECT_STR_EQ("ram-nand-0", name);
+    EXPECT_STREQ("ram-nand-0", name);
   }
   {
     NandDevice device(params);
 
     ASSERT_OK(device.Init(name, zx::vmo()));
-    EXPECT_STR_EQ("ram-nand-1", name);
+    EXPECT_STREQ("ram-nand-1", name);
   }
 }
 

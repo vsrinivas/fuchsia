@@ -133,7 +133,7 @@ class HidButtonsDeviceTest : public HidButtonsDevice {
 
   void VerifyAndClearGpios() {
     for (auto& gpio : gpio_mocks_) {
-      ASSERT_NO_FATAL_FAILURES(gpio.VerifyAndClear());
+      ASSERT_NO_FATAL_FAILURE(gpio.VerifyAndClear());
     }
   }
 
@@ -245,7 +245,7 @@ TEST(HidButtonsTest, DirectButtonBind) {
                             std::size(buttons_direct)));
 
   device.ShutDownTest();
-  ASSERT_NO_FATAL_FAILURES(device.VerifyAndClearGpios());
+  ASSERT_NO_FATAL_FAILURE(device.VerifyAndClearGpios());
 }
 
 TEST(HidButtonsTest, DirectButtonPush) {
@@ -263,7 +263,7 @@ TEST(HidButtonsTest, DirectButtonPush) {
   device.DebounceWait();
 
   device.ShutDownTest();
-  ASSERT_NO_FATAL_FAILURES(device.VerifyAndClearGpios());
+  ASSERT_NO_FATAL_FAILURE(device.VerifyAndClearGpios());
 }
 
 TEST(HidButtonsTest, DirectButtonUnpushedReport) {
@@ -293,7 +293,7 @@ TEST(HidButtonsTest, DirectButtonUnpushedReport) {
   device.HidbusStart(&protocol);
 
   device.ShutDownTest();
-  ASSERT_NO_FATAL_FAILURES(device.VerifyAndClearGpios());
+  ASSERT_NO_FATAL_FAILURE(device.VerifyAndClearGpios());
 }
 
 TEST(HidButtonsTest, DirectButtonPushedReport) {
@@ -323,7 +323,7 @@ TEST(HidButtonsTest, DirectButtonPushedReport) {
   device.HidbusStart(&protocol);
 
   device.ShutDownTest();
-  ASSERT_NO_FATAL_FAILURES(device.VerifyAndClearGpios());
+  ASSERT_NO_FATAL_FAILURE(device.VerifyAndClearGpios());
 }
 
 TEST(HidButtonsTest, DirectButtonPushUnpushPush) {
@@ -359,7 +359,7 @@ TEST(HidButtonsTest, DirectButtonPushUnpushPush) {
   device.DebounceWait();
 
   device.ShutDownTest();
-  ASSERT_NO_FATAL_FAILURES(device.VerifyAndClearGpios());
+  ASSERT_NO_FATAL_FAILURE(device.VerifyAndClearGpios());
 }
 
 TEST(HidButtonsTest, DirectButtonFlaky) {
@@ -386,7 +386,7 @@ TEST(HidButtonsTest, DirectButtonFlaky) {
   device.DebounceWait();
 
   device.ShutDownTest();
-  ASSERT_NO_FATAL_FAILURES(device.VerifyAndClearGpios());
+  ASSERT_NO_FATAL_FAILURE(device.VerifyAndClearGpios());
 }
 
 TEST(HidButtonsTest, MatrixButtonBind) {
@@ -395,7 +395,7 @@ TEST(HidButtonsTest, MatrixButtonBind) {
                             std::size(buttons_matrix)));
 
   device.ShutDownTest();
-  ASSERT_NO_FATAL_FAILURES(device.VerifyAndClearGpios());
+  ASSERT_NO_FATAL_FAILURE(device.VerifyAndClearGpios());
 }
 
 TEST(HidButtonsTest, MatrixButtonPush) {
@@ -445,7 +445,7 @@ TEST(HidButtonsTest, MatrixButtonPush) {
   device.HidbusStart(&protocol);
 
   device.ShutDownTest();
-  ASSERT_NO_FATAL_FAILURES(device.VerifyAndClearGpios());
+  ASSERT_NO_FATAL_FAILURE(device.VerifyAndClearGpios());
 }
 
 TEST(HidButtonsTest, DuplicateReports) {
@@ -506,7 +506,7 @@ TEST(HidButtonsTest, DuplicateReports) {
   device.HidbusStart(&protocol);
 
   device.ShutDownTest();
-  ASSERT_NO_FATAL_FAILURES(device.VerifyAndClearGpios());
+  ASSERT_NO_FATAL_FAILURE(device.VerifyAndClearGpios());
 }
 
 TEST(HidButtonsTest, CamMute) {
@@ -559,7 +559,7 @@ TEST(HidButtonsTest, CamMute) {
   device.DebounceWait();
 
   device.ShutDownTest();
-  ASSERT_NO_FATAL_FAILURES(device.VerifyAndClearGpios());
+  ASSERT_NO_FATAL_FAILURE(device.VerifyAndClearGpios());
 }
 
 TEST(HidButtonsTest, PollOneButton) {
@@ -599,7 +599,7 @@ TEST(HidButtonsTest, PollOneButton) {
   device.DebounceWait();
 
   device.ShutDownTest();
-  ASSERT_NO_FATAL_FAILURES(device.VerifyAndClearGpios());
+  ASSERT_NO_FATAL_FAILURE(device.VerifyAndClearGpios());
 
   ASSERT_EQ(reports.size(), 4);
 

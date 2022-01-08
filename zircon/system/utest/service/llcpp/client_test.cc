@@ -192,7 +192,7 @@ struct ::fidl::internal::ProtocolDetails<MockProtocol> {
 // Test compile time path concatenation.
 TEST(SingletonService, DefaultPath) {
   constexpr auto path = ::fidl::DiscoverableProtocolDefaultPath<MockProtocol>;
-  ASSERT_STR_EQ(path, "/svc/mock", "protocol path should be /svc/mock");
+  ASSERT_STREQ(path, "/svc/mock", "protocol path should be /svc/mock");
 }
 
 // Using a local filesystem, test that |service::ConnectAt| successfully sends
@@ -247,8 +247,8 @@ TEST_F(ClientTest, CloneServiceDirectory) {
   auto echo = fidl::BindSyncClient(std::move(*client_end));
   auto result = echo->EchoString("foo");
   ASSERT_OK(result.status());
-  ASSERT_STR_EQ(std::string(result->response.data(), result->response.size()).c_str(),
-                "default-foo: foo");
+  ASSERT_STREQ(std::string(result->response.data(), result->response.size()).c_str(),
+               "default-foo: foo");
 }
 
 TEST(CloneService, Error) {

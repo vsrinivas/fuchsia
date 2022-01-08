@@ -141,7 +141,7 @@ TEST(ChannelInternalTest, TransferChannelWithPendingCallInSourceProcess) {
     });
 
     ASSERT_OK(remote.wait_one(ZX_CHANNEL_READABLE, zx::time::infinite(), nullptr));
-    ASSERT_NO_FATAL_FAILURES(
+    ASSERT_NO_FATAL_FAILURE(
         WaitForThreadState(caller_thread_handle.load(), ZX_THREAD_STATE_BLOCKED_CHANNEL));
 
     // Read the message from the test thread.

@@ -133,7 +133,7 @@ TEST(Walker, validate_v2_walker_recursive_struct_max_out_of_line_depth) {
   auto status = internal__fidl_validate__v2__may_break(&fidl_test_coding_RecursiveOptionalTable,
                                                        &message[0], sizeof(message), 0, &error);
   EXPECT_EQ(status, ZX_ERR_INVALID_ARGS);
-  EXPECT_STR_EQ(error, "recursion depth exceeded");
+  EXPECT_STREQ(error, "recursion depth exceeded");
 
   // Reduce the max recursion depth by 1.
   status =
@@ -166,7 +166,7 @@ TEST(Walker, validate_v2_walker_table_max_out_of_line_depth_exceeded) {
   auto status = internal__fidl_validate__v2__may_break(&fidl_test_coding_RecursiveTableTable,
                                                        &message[0], sizeof(message), 0, &error);
   EXPECT_EQ(status, ZX_ERR_INVALID_ARGS);
-  EXPECT_STR_EQ(error, "recursion depth exceeded");
+  EXPECT_STREQ(error, "recursion depth exceeded");
 }
 
 // TODO(fxbug.dev/52382): Move this test to GIDL.
@@ -344,7 +344,7 @@ TEST(Structs, validate_v2_nested_nonnullable_structs_check_padding) {
 
     EXPECT_EQ(status, ZX_ERR_INVALID_ARGS);
     ASSERT_NOT_NULL(error);
-    EXPECT_STR_EQ(error, "non-zero padding bytes detected");
+    EXPECT_STREQ(error, "non-zero padding bytes detected");
   }
 }
 
@@ -460,7 +460,7 @@ TEST(Xunions, validate_v2_empty_nonnullable_xunion) {
       &fidl_test_coding_SampleXUnionStructTable, &message, sizeof(fidl_xunion_v2_t), 0, &error);
   EXPECT_EQ(status, ZX_ERR_INVALID_ARGS);
   EXPECT_NOT_NULL(error);
-  EXPECT_STR_EQ(error, "non-nullable xunion is absent");
+  EXPECT_STREQ(error, "non-nullable xunion is absent");
 }
 
 TEST(Xunions, validate_v2_empty_nullable_xunion_nonzero_ordinal) {
@@ -473,7 +473,7 @@ TEST(Xunions, validate_v2_empty_nullable_xunion_nonzero_ordinal) {
                                              &message, sizeof(fidl_xunion_v2_t), 0, &error);
   EXPECT_EQ(status, ZX_ERR_INVALID_ARGS);
   EXPECT_NOT_NULL(error);
-  EXPECT_STR_EQ(error, "empty xunion must have zero as ordinal");
+  EXPECT_STREQ(error, "empty xunion must have zero as ordinal");
 }
 
 TEST(Xunions, validate_v2_nonempty_xunion_zero_ordinal) {
@@ -485,7 +485,7 @@ TEST(Xunions, validate_v2_nonempty_xunion_zero_ordinal) {
       &fidl_test_coding_SampleXUnionStructTable, &message, sizeof(SampleXUnionV2Struct), 0, &error);
   EXPECT_EQ(status, ZX_ERR_INVALID_ARGS);
   EXPECT_NOT_NULL(error);
-  EXPECT_STR_EQ(error, "xunion with zero as ordinal must be empty");
+  EXPECT_STREQ(error, "xunion with zero as ordinal must be empty");
 }
 
 TEST(Xunions, validate_v2_nonempty_nullable_xunion_zero_ordinal) {
@@ -498,7 +498,7 @@ TEST(Xunions, validate_v2_nonempty_nullable_xunion_zero_ordinal) {
       sizeof(SampleNullableXUnionV2Struct), 0, &error);
   EXPECT_EQ(status, ZX_ERR_INVALID_ARGS);
   EXPECT_NOT_NULL(error);
-  EXPECT_STR_EQ(error, "xunion with zero as ordinal must be empty");
+  EXPECT_STREQ(error, "xunion with zero as ordinal must be empty");
 }
 
 TEST(Xunions, validate_v2_strict_xunion_unknown_ordinal) {
@@ -515,7 +515,7 @@ TEST(Xunions, validate_v2_strict_xunion_unknown_ordinal) {
       &fidl_test_coding_SampleStrictXUnionStructTable, bytes, sizeof(bytes), 0, &error);
   EXPECT_EQ(status, ZX_ERR_INVALID_ARGS);
   EXPECT_NOT_NULL(error);
-  EXPECT_STR_EQ(error, "strict xunion has unknown ordinal");
+  EXPECT_STREQ(error, "strict xunion has unknown ordinal");
 }
 
 TEST(Xunions, validate_v2_flexible_xunion_unknown_ordinal) {
@@ -545,7 +545,7 @@ TEST(Primitives, validate_v2_invalid_bool) {
   auto status = internal__fidl_validate__v2__may_break(&fidl_test_coding_BoolStructTable, data,
                                                        sizeof(data), 0, &error);
   EXPECT_EQ(status, ZX_ERR_INVALID_ARGS);
-  EXPECT_STR_EQ(error, "not a valid bool value");
+  EXPECT_STREQ(error, "not a valid bool value");
 }
 
 TEST(Bits, validate_v2_zero_16bit_bits) {
@@ -581,7 +581,7 @@ TEST(Bits, validate_v2_invalid_16bit_bits) {
   auto status = internal__fidl_validate__v2__may_break(&fidl_test_coding_Int16BitsStructTable,
                                                        &message, sizeof(message), 0, &error);
   EXPECT_EQ(status, ZX_ERR_INVALID_ARGS);
-  EXPECT_STR_EQ(error, "not a valid bits member");
+  EXPECT_STREQ(error, "not a valid bits member");
 }
 
 TEST(Bits, validate_v2_zero_32bit_bits) {
@@ -619,7 +619,7 @@ TEST(Bits, validate_v2_invalid_32bit_bits) {
   auto status = internal__fidl_validate__v2__may_break(&fidl_test_coding_Int32BitsStructTable,
                                                        &message, sizeof(message), 0, &error);
   EXPECT_EQ(status, ZX_ERR_INVALID_ARGS);
-  EXPECT_STR_EQ(error, "not a valid bits member");
+  EXPECT_STREQ(error, "not a valid bits member");
 }
 
 template <typename T>
@@ -659,7 +659,7 @@ void TestInvalidEnum(const fidl_type_t* coding_table) {
     auto status =
         internal__fidl_validate__v2__may_break(coding_table, &message, sizeof(message), 0, &error);
     EXPECT_EQ(status, ZX_ERR_INVALID_ARGS);
-    EXPECT_STR_EQ(error, "not a valid enum member");
+    EXPECT_STREQ(error, "not a valid enum member");
   }
 }
 

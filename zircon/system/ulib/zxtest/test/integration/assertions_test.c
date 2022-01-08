@@ -239,44 +239,44 @@ TEST(ZxTestCAssertionTest, AssertGEFailureFatal) {
 
 TEST(ZxTestCAssertionTest, AssertStrEq) {
   TEST_EXPECTATION(CHECKPOINT_REACHED, NO_ERRORS,
-                   "ASSERT/EXPECT_STR_EQ aborted test execution on success.");
+                   "ASSERT/EXPECT_STREQ aborted test execution on success.");
   const char* str1 = "a";
   const char* str2 = "a";
 
-  EXPECT_STR_EQ(str1, str2, "ASSERT_STR_EQ failed to identify equal strings.");
-  EXPECT_STR_EQ(str1, str1, "ASSERT_STR_EQ failed to identify equal strings.");
-  ASSERT_STR_EQ(str1, str2, "ASSERT_STR_EQ failed to identify equal strings.");
-  ASSERT_STR_EQ(str1, str1, "ASSERT_STR_EQ failed to identify equal strings.");
+  EXPECT_STREQ(str1, str2, "ASSERT_STREQ failed to identify equal strings.");
+  EXPECT_STREQ(str1, str1, "ASSERT_STREQ failed to identify equal strings.");
+  ASSERT_STREQ(str1, str2, "ASSERT_STREQ failed to identify equal strings.");
+  ASSERT_STREQ(str1, str1, "ASSERT_STREQ failed to identify equal strings.");
   TEST_CHECKPOINT();
 }
 
 TEST(ZxTestCAssertionTest, AssertStrNe) {
   TEST_EXPECTATION(CHECKPOINT_REACHED, NO_ERRORS,
-                   "ASSERT/EXPECT_STR_EQ aborted test execution on success.");
+                   "ASSERT/EXPECT_STREQ aborted test execution on success.");
   const char* str1 = "a";
   const char* str2 = "b";
 
-  EXPECT_STR_NE(str1, str2, "EXPECT_STR_NE failed to identify different strings.");
-  ASSERT_STR_NE(str1, str2, "ASSERT_STR_NE failed to identify different strings.");
+  EXPECT_STRNE(str1, str2, "EXPECT_STRNE failed to identify different strings.");
+  ASSERT_STRNE(str1, str2, "ASSERT_STRNE failed to identify different strings.");
   TEST_CHECKPOINT();
 }
 
 TEST(ZxTestCAssertionTest, AssertStrEqFailure) {
-  TEST_EXPECTATION(CHECKPOINT_REACHED, HAS_ERRORS, "EXPECT_STR_EQ aborted test execution.");
+  TEST_EXPECTATION(CHECKPOINT_REACHED, HAS_ERRORS, "EXPECT_STREQ aborted test execution.");
   const char* str1 = "a";
   const char* str2 = "b";
 
-  EXPECT_STR_EQ(str1, str2, "ASSERT_STR_EQ failed to identify equal strings.");
+  EXPECT_STREQ(str1, str2, "ASSERT_STREQ failed to identify equal strings.");
   TEST_CHECKPOINT();
 }
 
 TEST(ZxTestCAssertionTest, AssertStrEqFatalFailure) {
   TEST_EXPECTATION(CHECKPOINT_NOT_REACHED, HAS_ERRORS,
-                   "ASSERT/EXPECT_STR_EQ aborted test execution on success.");
+                   "ASSERT/EXPECT_STREQ aborted test execution on success.");
   const char* str1 = "a";
   const char* str2 = "b";
 
-  ASSERT_STR_EQ(str1, str2, "ASSERT_STR_EQ failed to identify equal strings.");
+  ASSERT_STREQ(str1, str2, "ASSERT_STREQ failed to identify equal strings.");
   TEST_CHECKPOINT();
 }
 
@@ -597,15 +597,15 @@ static void HelperFnFatal(bool fail) { ASSERT_FALSE(fail, "Expected to fail."); 
 TEST(ZxTestCAssertionTest, AssertNoFatalFailureWithFatalFailure) {
   TEST_EXPECTATION(CHECKPOINT_NOT_REACHED, HAS_ERRORS,
                    "Failed to abort test execution on helper fatal failure.");
-  ASSERT_NO_FATAL_FAILURES(HelperFnFatal(true), "HelperFnFatal had a failure. This is expected.");
+  ASSERT_NO_FATAL_FAILURE(HelperFnFatal(true), "HelperFnFatal had a failure. This is expected.");
   TEST_CHECKPOINT();
 }
 
 TEST(ZxTestCAssertionTest, AssertNoFatalFailureWithoutFailure) {
   TEST_EXPECTATION(CHECKPOINT_REACHED, NO_ERRORS,
                    "Aborted test execution on helper with no failures.");
-  ASSERT_NO_FATAL_FAILURES(HelperFnFatal(false),
-                           "HelperFnFatal had a failure. This is not expected.");
+  ASSERT_NO_FATAL_FAILURE(HelperFnFatal(false),
+                          "HelperFnFatal had a failure. This is not expected.");
   TEST_CHECKPOINT();
 }
 
@@ -613,7 +613,7 @@ static void HelperFn(bool fail) { EXPECT_FALSE(fail, "Expected to fail."); }
 
 TEST(ZxTestCAssertionTest, AssertNoFatalFailureWithFailure) {
   TEST_EXPECTATION(CHECKPOINT_REACHED, HAS_ERRORS, "Aborted test execution on helper failure.");
-  ASSERT_NO_FATAL_FAILURES(HelperFn(true), "HelperFn had a failure. This is expected.");
+  ASSERT_NO_FATAL_FAILURE(HelperFn(true), "HelperFn had a failure. This is expected.");
   TEST_CHECKPOINT();
 }
 
@@ -727,7 +727,7 @@ static int HasExpects(void) {
 
 TEST(ZxTestCAssertionTest, NonVoidHelperTestNonFatalFailures) {
   TEST_EXPECTATION(CHECKPOINT_REACHED, HAS_ERRORS, "Failed to propagate assertion error.");
-  ASSERT_NO_FATAL_FAILURES(HasExpects());
+  ASSERT_NO_FATAL_FAILURE(HasExpects());
   TEST_CHECKPOINT();
 }
 
@@ -740,14 +740,14 @@ TEST(ZxTestCAssertionTest, AssertNoFailures) {
 TEST(ZxTestCAssertionTest, AddFailure) {
   TEST_EXPECTATION(CHECKPOINT_REACHED, HAS_ERRORS, "Failed to detect non fatal failure");
   ADD_FAILURE("Something went wrong.");
-  ASSERT_NO_FATAL_FAILURES();
+  ASSERT_NO_FATAL_FAILURE();
   TEST_CHECKPOINT();
 }
 
 TEST(ZxTestCAssertionTest, AddFatalFailure) {
   TEST_EXPECTATION(CHECKPOINT_NOT_REACHED, HAS_ERRORS, "Failed to detect fatal failure");
   ADD_FATAL_FAILURE("Something went wrong.");
-  ASSERT_NO_FATAL_FAILURES();
+  ASSERT_NO_FATAL_FAILURE();
   TEST_CHECKPOINT();
 }
 
@@ -773,14 +773,14 @@ TEST(ZxTestCAssertionTest, CurrentTestHasFailuresDetectsFatalFailures) {
 TEST(ZxTestCAssertionTest, CurrentTestHasFatalFailuresIgnoresNonFatalFailures) {
   TEST_EXPECTATION(CHECKPOINT_REACHED, HAS_ERRORS, "Failed to detect failure");
   EXPECT_TRUE(false);
-  ASSERT_FALSE(CURRENT_TEST_HAS_FATAL_FAILURES());
+  ASSERT_FALSE(CURRENT_TEST_HAS_FATAL_FAILURE());
   TEST_CHECKPOINT();
 }
 
 TEST(ZxTestCAssertionTest, CurrentTestHasFatalFailuresDetectsFatalFailures) {
   TEST_EXPECTATION(CHECKPOINT_REACHED, HAS_ERRORS, "Failed to detect failure");
   AssertFail();
-  ASSERT_TRUE(CURRENT_TEST_HAS_FATAL_FAILURES());
+  ASSERT_TRUE(CURRENT_TEST_HAS_FATAL_FAILURE());
   TEST_CHECKPOINT();
 }
 

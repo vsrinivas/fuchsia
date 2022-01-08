@@ -45,7 +45,7 @@ void handle_expected_page_fault(zx_handle_t inferior, const zx_exception_info_t*
   dump_inferior_regs(thread.get());
 
   // Verify that the fault is at the PC we expected.
-  ASSERT_NO_FATAL_FAILURES(test_segv_pc(thread.get()));
+  ASSERT_NO_FATAL_FAILURE(test_segv_pc(thread.get()));
 
   // Do some tests that require a suspended inferior.
   test_memory_ops(inferior, thread.get());
@@ -114,7 +114,7 @@ void debugger_test_exception_handler(inferior_data_t* data, const zx_port_packet
 
       case ZX_EXCP_FATAL_PAGE_FAULT:
         ASSERT_NOT_NULL(segv_count);
-        ASSERT_NO_FATAL_FAILURES(
+        ASSERT_NO_FATAL_FAILURE(
             handle_expected_page_fault(data->inferior, &info, std::move(exception), segv_count));
         break;
 
@@ -129,7 +129,7 @@ void debugger_test_exception_handler(inferior_data_t* data, const zx_port_packet
 TEST(DebuggerTests, DebuggerTest) {
   springboard_t* sb;
   zx_handle_t inferior, channel;
-  ASSERT_NO_FATAL_FAILURES(setup_inferior(kTestInferiorChildName, &sb, &inferior, &channel));
+  ASSERT_NO_FATAL_FAILURE(setup_inferior(kTestInferiorChildName, &sb, &inferior, &channel));
 
   std::atomic<int> segv_count;
 
@@ -143,8 +143,8 @@ TEST(DebuggerTests, DebuggerTest) {
   EXPECT_NE(port, ZX_HANDLE_INVALID);
   expect_debugger_attached_eq(inferior, true, "debugger should appear attached");
 
-  ASSERT_NO_FATAL_FAILURES(start_inferior(sb));
-  ASSERT_NO_FATAL_FAILURES(verify_inferior_running(channel));
+  ASSERT_NO_FATAL_FAILURE(start_inferior(sb));
+  ASSERT_NO_FATAL_FAILURE(verify_inferior_running(channel));
 
   segv_count.store(0);
   send_simple_request(channel, RQST_CRASH_AND_RECOVER_TEST);
@@ -153,7 +153,7 @@ TEST(DebuggerTests, DebuggerTest) {
 
   expect_debugger_attached_eq(inferior, true, "debugger should still appear attached");
 
-  ASSERT_NO_FATAL_FAILURES(shutdown_inferior(channel, inferior));
+  ASSERT_NO_FATAL_FAILURE(shutdown_inferior(channel, inferior));
 
   // When a process terminates it closes its exception channels.
   expect_debugger_attached_eq(inferior, false, "debugger should no longer appear attached");
@@ -171,7 +171,7 @@ TEST(DebuggerTests, DebuggerTest) {
 TEST(DebuggerTests, DebuggerThreadListTest) {
   springboard_t* sb;
   zx_handle_t inferior, channel;
-  ASSERT_NO_FATAL_FAILURES(setup_inferior(kTestInferiorChildName, &sb, &inferior, &channel));
+  ASSERT_NO_FATAL_FAILURE(setup_inferior(kTestInferiorChildName, &sb, &inferior, &channel));
 
   zx_handle_t port = ZX_HANDLE_INVALID;
   EXPECT_EQ(zx_port_create(0, &port), ZX_OK);
@@ -181,8 +181,8 @@ TEST(DebuggerTests, DebuggerThreadListTest) {
       start_wait_inf_thread(inferior_data, debugger_test_exception_handler, NULL);
   EXPECT_NE(port, ZX_HANDLE_INVALID);
 
-  ASSERT_NO_FATAL_FAILURES(start_inferior(sb));
-  ASSERT_NO_FATAL_FAILURES(verify_inferior_running(channel));
+  ASSERT_NO_FATAL_FAILURE(start_inferior(sb));
+  ASSERT_NO_FATAL_FAILURE(verify_inferior_running(channel));
 
   send_simple_request(channel, RQST_START_LOOPING_THREADS);
   recv_simple_response(channel, RESP_THREADS_STARTED);
@@ -212,7 +212,7 @@ TEST(DebuggerTests, DebuggerThreadListTest) {
 
   free(threads);
 
-  ASSERT_NO_FATAL_FAILURES(shutdown_inferior(channel, inferior));
+  ASSERT_NO_FATAL_FAILURE(shutdown_inferior(channel, inferior));
 
   // Stop the waiter thread before closing the port that it's waiting on.
   join_wait_inf_thread(wait_inf_thread);

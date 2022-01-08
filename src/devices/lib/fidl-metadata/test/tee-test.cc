@@ -57,7 +57,7 @@ static void check_encodes(
 TEST(TeeMetadataTest, TestEncodeNoTrustedApps) {
   static tee_thread_config_t tee_thread_cfg[] = {{"fuchsia.tee.media", 1, {}}};
 
-  ASSERT_NO_FATAL_FAILURES(check_encodes(1, tee_thread_cfg));
+  ASSERT_NO_FATAL_FAILURE(check_encodes(1, tee_thread_cfg));
 }
 
 TEST(TeeMetadataTest, TestEncodeManyThreads) {
@@ -71,10 +71,10 @@ TEST(TeeMetadataTest, TestEncodeManyThreads) {
        {{0x01020304, 0x1000, 0x1234, {0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08}},
         {0x01020304, 0x1001, 0x1235, {0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08}}}}};
 
-  ASSERT_NO_FATAL_FAILURES(check_encodes(1, tee_thread_cfg));
+  ASSERT_NO_FATAL_FAILURE(check_encodes(1, tee_thread_cfg));
 }
 
 TEST(TeeMetadataTest, TestEncodeNoCustomThreads) {
-  ASSERT_NO_FATAL_FAILURES(
+  ASSERT_NO_FATAL_FAILURE(
       check_encodes(1, cpp20::span<const fidl_metadata::tee::CustomThreadConfig>()));
 }

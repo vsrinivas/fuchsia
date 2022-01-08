@@ -95,7 +95,7 @@ TEST(UnistdTest, LinkAtFollow) {
   const std::string file_abs = fxl::Concatenate({root_abs, "/", "file"});
   ASSERT_TRUE(fbl::unique_fd(creat(file_abs.c_str(), 0666)), "%s", strerror(errno));
   auto cleanup_file = fit::defer([&file_abs]() {
-    // This must be an ASSERT_* so that errors can be caught by ASSERT_NO_FATAL_FAILURES below.
+    // This must be an ASSERT_* so that errors can be caught by ASSERT_NO_FATAL_FAILURE below.
     ASSERT_EQ(0, unlink(file_abs.c_str()), "%s", strerror(errno));
   });
 
@@ -121,18 +121,18 @@ TEST(UnistdTest, LinkAtFollow) {
 
   ASSERT_EQ(0, linkat(AT_FDCWD, sym_abs.c_str(), AT_FDCWD, hard_abs.c_str(), 0), "%s",
             strerror(errno));
-  ASSERT_NO_FATAL_FAILURES(expect_file_type_and_unlink(hard_abs.c_str(), S_IFLNK));
+  ASSERT_NO_FATAL_FAILURE(expect_file_type_and_unlink(hard_abs.c_str(), S_IFLNK));
 
   ASSERT_EQ(0, linkat(AT_FDCWD, sym_abs.c_str(), AT_FDCWD, hard_abs.c_str(), AT_SYMLINK_FOLLOW),
             "%s", strerror(errno));
-  ASSERT_NO_FATAL_FAILURES(expect_file_type_and_unlink(hard_abs.c_str(), S_IFREG));
+  ASSERT_NO_FATAL_FAILURE(expect_file_type_and_unlink(hard_abs.c_str(), S_IFREG));
 
   // Make our symlink dangling by removing its target.
-  ASSERT_NO_FATAL_FAILURES(cleanup_file.call());
+  ASSERT_NO_FATAL_FAILURE(cleanup_file.call());
 
   ASSERT_EQ(0, linkat(AT_FDCWD, sym_abs.c_str(), AT_FDCWD, hard_abs.c_str(), 0), "%s",
             strerror(errno));
-  ASSERT_NO_FATAL_FAILURES(expect_file_type_and_unlink(hard_abs.c_str(), S_IFLNK));
+  ASSERT_NO_FATAL_FAILURE(expect_file_type_and_unlink(hard_abs.c_str(), S_IFLNK));
 
   ASSERT_EQ(-1, linkat(AT_FDCWD, sym_abs.c_str(), AT_FDCWD, hard_abs.c_str(), AT_SYMLINK_FOLLOW));
   EXPECT_EQ(ENOENT, errno, "%s", strerror(errno));

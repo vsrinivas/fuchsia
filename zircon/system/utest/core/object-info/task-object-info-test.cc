@@ -48,43 +48,43 @@ constexpr auto handle_provider = []() -> const zx::process& {
 };
 
 TEST(TaskGetInfoTest, InfoTaskStatsInvalidHandleFails) {
-  ASSERT_NO_FATAL_FAILURES(
+  ASSERT_NO_FATAL_FAILURE(
       (CheckInvalidHandleFails<zx_info_task_stats_t>(ZX_INFO_TASK_STATS, 1, handle_provider)));
 }
 
 TEST(TaskGetInfoTest, InfoTaskStatsNullAvailSucceeds) {
   ASSERT_TRUE(handle_provider().is_valid());
-  ASSERT_NO_FATAL_FAILURES(
+  ASSERT_NO_FATAL_FAILURE(
       (CheckNullAvailSuceeds<zx_info_task_stats_t>(ZX_INFO_TASK_STATS, 1, handle_provider)));
 }
 
 TEST(TaskGetInfoTest, InfoTaskStatsNullActualSucceeds) {
-  ASSERT_NO_FATAL_FAILURES(
+  ASSERT_NO_FATAL_FAILURE(
       (CheckNullActualSuceeds<zx_info_task_stats_t>(ZX_INFO_TASK_STATS, 1, handle_provider)));
 }
 
 TEST(TaskGetInfoTest, InfoTaskStatsNullActualAndAvailSucceeds) {
-  ASSERT_NO_FATAL_FAILURES((CheckNullActualAndAvailSuceeds<zx_info_task_stats_t>(
+  ASSERT_NO_FATAL_FAILURE((CheckNullActualAndAvailSuceeds<zx_info_task_stats_t>(
       ZX_INFO_TASK_STATS, 1, handle_provider)));
 }
 
 TEST(TaskGetInfoTest, InfoTaskStatsInvalidBufferPointerFails) {
-  ASSERT_NO_FATAL_FAILURES(
+  ASSERT_NO_FATAL_FAILURE(
       (CheckNullActualSuceeds<zx_info_task_stats_t>(ZX_INFO_TASK_STATS, 1, handle_provider)));
 }
 
 TEST(TaskGetInfoTest, InfoTaskStatsBadActualgIsInvalidArg) {
-  ASSERT_NO_FATAL_FAILURES(
+  ASSERT_NO_FATAL_FAILURE(
       (CheckNullActualSuceeds<zx_info_task_stats_t>(ZX_INFO_TASK_STATS, 1, handle_provider)));
 }
 
 TEST(TaskGetInfoTest, InfoTaskStatsBadAvailIsInvalidArg) {
-  ASSERT_NO_FATAL_FAILURES(
+  ASSERT_NO_FATAL_FAILURE(
       (CheckNullActualSuceeds<zx_info_task_stats_t>(ZX_INFO_TASK_STATS, 1, handle_provider)));
 }
 
 TEST(TaskGetInfoTest, InfoTaskStatsZeroSizedBufferIsTooSmall) {
-  ASSERT_NO_FATAL_FAILURES(
+  ASSERT_NO_FATAL_FAILURE(
       (CheckZeroSizeBufferFails<zx_info_task_stats_t>(ZX_INFO_TASK_STATS, handle_provider)));
 }
 
@@ -94,7 +94,7 @@ constexpr auto job_provider = []() -> const zx::job& {
 };
 
 TEST(TaskGetInfoTest, InfoTaskStatsJobHandleIsBadHandle) {
-  ASSERT_NO_FATAL_FAILURES(
+  ASSERT_NO_FATAL_FAILURE(
       CheckWrongHandleTypeFails<zx_info_task_stats_t>(ZX_INFO_TASK_STATS, 1, job_provider));
 }
 
@@ -104,7 +104,7 @@ constexpr auto thread_provider = []() -> const zx::thread& {
 };
 
 TEST(TaskGetInfoTest, InfoTaskStatsThreadHandleIsBadHandle) {
-  ASSERT_NO_FATAL_FAILURES(
+  ASSERT_NO_FATAL_FAILURE(
       CheckWrongHandleTypeFails<zx_info_task_stats_t>(ZX_INFO_TASK_STATS, 1, thread_provider));
 }
 
@@ -114,12 +114,12 @@ TEST(TaskGetInfoTest, InfoTaskRuntimeWrongType) {
 
   auto event_provider = [&]() -> const zx::event& { return event; };
 
-  ASSERT_NO_FATAL_FAILURES(
+  ASSERT_NO_FATAL_FAILURE(
       CheckWrongHandleTypeFails<zx_info_task_runtime_t>(ZX_INFO_TASK_RUNTIME, 1, event_provider));
 }
 
 TEST(TaskGetInfoTest, InfoTaskRuntimeInvalidHandle) {
-  ASSERT_NO_FATAL_FAILURES(
+  ASSERT_NO_FATAL_FAILURE(
       CheckInvalidHandleFails<zx_info_task_runtime_t>(ZX_INFO_TASK_RUNTIME, 1, thread_provider));
 }
 

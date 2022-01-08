@@ -27,7 +27,7 @@ TEST(AsmHeader, Output) {
                              .Register<TestReg32>("TR32_")
                              .Macro("TR32_FIELD1_VALUE", 1234u)
                              .Output("test/reg32.h");
-  EXPECT_STR_EQ(R"(// This file is generated.  DO NOT EDIT!
+  EXPECT_STREQ(R"(// This file is generated.  DO NOT EDIT!
 
 #ifndef _TEST_REG32_H_
 #define _TEST_REG32_H_ 1
@@ -51,7 +51,7 @@ TEST(AsmHeader, Output) {
 
 #endif  // _TEST_REG32_H_
 )",
-                contents);
+               contents);
 }
 
 }  // namespace

@@ -114,11 +114,11 @@ TEST(ElfldltlNoteTests, BuildId) {
 
     std::string str;
     note.HexDump([&str](char c) { str += c; });
-    EXPECT_STR_EQ(str, "0102030405060708");
+    EXPECT_STREQ(str, "0102030405060708");
 
     StringFile sf;
     note.HexDump(sf.file());
-    EXPECT_STR_EQ(std::move(sf).contents(), "0102030405060708");
+    EXPECT_STREQ(std::move(sf).contents(), "0102030405060708");
   }
   EXPECT_EQ(count, size_t{1});
 }

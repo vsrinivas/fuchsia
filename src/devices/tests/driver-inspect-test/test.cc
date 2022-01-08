@@ -78,9 +78,9 @@ TEST_F(InspectTestCase, ReadInspectData) {
 
   // Check initial inspect data
   zx::vmo inspect_vmo(out_vmo);
-  ASSERT_NO_FATAL_FAILURES(ReadInspect(inspect_vmo));
+  ASSERT_NO_FATAL_FAILURE(ReadInspect(inspect_vmo));
   // testBeforeDdkAdd: "OK"
-  ASSERT_NO_FATAL_FAILURES(
+  ASSERT_NO_FATAL_FAILURE(
       CheckProperty(hierarchy().node(), "testBeforeDdkAdd", inspect::StringPropertyValue("OK")));
 
   // Call test-driver to modify inspect data
@@ -93,12 +93,12 @@ TEST_F(InspectTestCase, ReadInspectData) {
   ASSERT_OK(fdio_get_vmo_clone(fd.get(), &out_vmo));
   ASSERT_NE(out_vmo, ZX_HANDLE_INVALID);
   inspect_vmo = zx::vmo(out_vmo);
-  ASSERT_NO_FATAL_FAILURES(ReadInspect(inspect_vmo));
+  ASSERT_NO_FATAL_FAILURE(ReadInspect(inspect_vmo));
   // Previous values
-  ASSERT_NO_FATAL_FAILURES(
+  ASSERT_NO_FATAL_FAILURE(
       CheckProperty(hierarchy().node(), "testBeforeDdkAdd", inspect::StringPropertyValue("OK")));
   // New addition - testModify: "OK"
-  ASSERT_NO_FATAL_FAILURES(
+  ASSERT_NO_FATAL_FAILURE(
       CheckProperty(hierarchy().node(), "testModify", inspect::StringPropertyValue("OK")));
 }
 

@@ -456,14 +456,14 @@ TEST(VmoZeroTestCase, ResizeOverHiddenMarkers) {
                              zx_system_get_page_size(), &sibling));
 
   // The sibling should see the zeros.
-  ASSERT_NO_FATAL_FAILURES(VmoCheck(sibling, 0, 0));
+  ASSERT_NO_FATAL_FAILURE(VmoCheck(sibling, 0, 0));
 
   // Finally resize the VMO such that only our sibling sees the range in the parent that contains
   // that zero marker. In doing this resize the marker should not be freed.
   ASSERT_OK(vmo.set_size(zx_system_get_page_size()));
 
   // Check that the sibling still correctly sees zero.
-  ASSERT_NO_FATAL_FAILURES(VmoCheck(sibling, 0, 0));
+  ASSERT_NO_FATAL_FAILURE(VmoCheck(sibling, 0, 0));
 
   // Writing to the sibling should commit a fresh zero page due to the marker, and should not
   // attempt to refork the page from the root.

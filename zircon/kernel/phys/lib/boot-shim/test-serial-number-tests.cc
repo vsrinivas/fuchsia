@@ -46,7 +46,7 @@ TEST(BootShimTests, TestSerialNumberItem) {
   EXPECT_TRUE(zbi.take_error().is_ok());
 
   EXPECT_EQ(serial_payload_count, 1);
-  EXPECT_STR_EQ(serial_payload, "xyz");
+  EXPECT_STREQ(serial_payload, "xyz");
 }
 
 TEST(BootShimTests, TestSerialNumberItemNoSwitch) {
@@ -104,7 +104,7 @@ TEST(BootShimTests, TestSerialNumberItemHwPresent) {
   EXPECT_TRUE(zbi.take_error().is_ok());
 
   EXPECT_EQ(serial_payload_count, 1);
-  EXPECT_STR_EQ(serial_payload, "pdq");
+  EXPECT_STREQ(serial_payload, "pdq");
 }
 
 }  // namespace

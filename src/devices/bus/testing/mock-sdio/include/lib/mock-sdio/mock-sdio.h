@@ -27,7 +27,7 @@ namespace mock_sdio {
 // SomeDriver dut(sdio.GetProto());
 //
 // EXPECT_OK(dut.SomeMethod());
-// ASSERT_NO_FATAL_FAILURES(sdio.VerifyAndClear());
+// ASSERT_NO_FATAL_FAILURE(sdio.VerifyAndClear());
 
 class MockSdio : ddk::SdioProtocol<MockSdio> {
  public:

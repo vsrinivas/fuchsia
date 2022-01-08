@@ -34,8 +34,8 @@ namespace {
 
 void TestBind(Volume::Version version, bool fvm) {
   TestDevice device;
-  ASSERT_NO_FATAL_FAILURES(device.SetupDevmgr());
-  ASSERT_NO_FATAL_FAILURES(device.Bind(version, fvm));
+  ASSERT_NO_FATAL_FAILURE(device.SetupDevmgr());
+  ASSERT_NO_FATAL_FAILURE(device.Bind(version, fvm));
 }
 DEFINE_EACH_DEVICE(ZxcryptTest, TestBind)
 
@@ -45,8 +45,8 @@ DEFINE_EACH_DEVICE(ZxcryptTest, TestBind)
 // Device::DdkGetSize tests
 void TestDdkGetSize(Volume::Version version, bool fvm) {
   TestDevice device;
-  ASSERT_NO_FATAL_FAILURES(device.SetupDevmgr());
-  ASSERT_NO_FATAL_FAILURES(device.Bind(version, fvm));
+  ASSERT_NO_FATAL_FAILURE(device.SetupDevmgr());
+  ASSERT_NO_FATAL_FAILURE(device.Bind(version, fvm));
   fbl::unique_fd parent = device.parent();
   fbl::unique_fd zxcrypt = device.zxcrypt();
 
@@ -63,8 +63,8 @@ DEFINE_EACH_DEVICE(ZxcryptTest, TestDdkGetSize)
 // FIDL tests
 void TestBlockGetInfo(Volume::Version version, bool fvm) {
   TestDevice device;
-  ASSERT_NO_FATAL_FAILURES(device.SetupDevmgr());
-  ASSERT_NO_FATAL_FAILURES(device.Bind(version, fvm));
+  ASSERT_NO_FATAL_FAILURE(device.SetupDevmgr());
+  ASSERT_NO_FATAL_FAILURE(device.Bind(version, fvm));
 
   fuchsia_hardware_block_BlockInfo parent_blk, zxcrypt_blk;
   zx_status_t status;
@@ -85,8 +85,8 @@ DEFINE_EACH_DEVICE(ZxcryptTest, TestBlockGetInfo)
 
 void TestBlockFvmQuery(Volume::Version version, bool fvm) {
   TestDevice device;
-  ASSERT_NO_FATAL_FAILURES(device.SetupDevmgr());
-  ASSERT_NO_FATAL_FAILURES(device.Bind(version, fvm));
+  ASSERT_NO_FATAL_FAILURE(device.SetupDevmgr());
+  ASSERT_NO_FATAL_FAILURE(device.Bind(version, fvm));
   auto parent = device.parent_channel();
   auto zxcrypt = device.zxcrypt_channel();
 
@@ -162,16 +162,16 @@ void QueryLeadingFvmSlice(const TestDevice& device, bool fvm) {
 
 void TestBlockFvmVSliceQuery(Volume::Version version, bool fvm) {
   TestDevice device;
-  ASSERT_NO_FATAL_FAILURES(device.SetupDevmgr());
-  ASSERT_NO_FATAL_FAILURES(device.Bind(version, fvm));
-  ASSERT_NO_FATAL_FAILURES(QueryLeadingFvmSlice(device, fvm));
+  ASSERT_NO_FATAL_FAILURE(device.SetupDevmgr());
+  ASSERT_NO_FATAL_FAILURE(device.Bind(version, fvm));
+  ASSERT_NO_FATAL_FAILURE(QueryLeadingFvmSlice(device, fvm));
 }
 DEFINE_EACH_DEVICE(ZxcryptTest, TestBlockFvmVSliceQuery)
 
 void TestBlockFvmShrinkAndExtend(Volume::Version version, bool fvm) {
   TestDevice device;
-  ASSERT_NO_FATAL_FAILURES(device.SetupDevmgr());
-  ASSERT_NO_FATAL_FAILURES(device.Bind(version, fvm));
+  ASSERT_NO_FATAL_FAILURE(device.SetupDevmgr());
+  ASSERT_NO_FATAL_FAILURE(device.Bind(version, fvm));
   auto zxcrypt = device.zxcrypt_channel();
 
   uint64_t offset = 1;
@@ -191,13 +191,13 @@ void TestBlockFvmShrinkAndExtend(Volume::Version version, bool fvm) {
     ASSERT_EQ(fuchsia_hardware_block_volume_VolumeShrink(zxcrypt->get(), offset, length, &status),
               ZX_OK);
     ASSERT_EQ(status, ZX_OK);
-    ASSERT_NO_FATAL_FAILURES(QueryLeadingFvmSlice(device, fvm));
+    ASSERT_NO_FATAL_FAILURE(QueryLeadingFvmSlice(device, fvm));
 
     // Extend the FVM partition and make sure the change in size is reflected
     ASSERT_EQ(fuchsia_hardware_block_volume_VolumeExtend(zxcrypt->get(), offset, length, &status),
               ZX_OK);
     ASSERT_EQ(status, ZX_OK);
-    ASSERT_NO_FATAL_FAILURES(QueryLeadingFvmSlice(device, fvm));
+    ASSERT_NO_FATAL_FAILURE(QueryLeadingFvmSlice(device, fvm));
   }
 }
 DEFINE_EACH_DEVICE(ZxcryptTest, TestBlockFvmShrinkAndExtend)
@@ -205,57 +205,57 @@ DEFINE_EACH_DEVICE(ZxcryptTest, TestBlockFvmShrinkAndExtend)
 // Device::DdkIotxnQueue tests
 void TestFdZeroLength(Volume::Version version, bool fvm) {
   TestDevice device;
-  ASSERT_NO_FATAL_FAILURES(device.SetupDevmgr());
-  ASSERT_NO_FATAL_FAILURES(device.Bind(version, fvm));
+  ASSERT_NO_FATAL_FAILURE(device.SetupDevmgr());
+  ASSERT_NO_FATAL_FAILURE(device.Bind(version, fvm));
 
-  ASSERT_NO_FATAL_FAILURES(device.WriteFd(0, 0));
-  ASSERT_NO_FATAL_FAILURES(device.ReadFd(0, 0));
+  ASSERT_NO_FATAL_FAILURE(device.WriteFd(0, 0));
+  ASSERT_NO_FATAL_FAILURE(device.ReadFd(0, 0));
 }
 DEFINE_EACH_DEVICE(ZxcryptTest, TestFdZeroLength)
 
 void TestFdFirstBlock(Volume::Version version, bool fvm) {
   TestDevice device;
-  ASSERT_NO_FATAL_FAILURES(device.SetupDevmgr());
-  ASSERT_NO_FATAL_FAILURES(device.Bind(version, fvm));
+  ASSERT_NO_FATAL_FAILURE(device.SetupDevmgr());
+  ASSERT_NO_FATAL_FAILURE(device.Bind(version, fvm));
   size_t one = device.block_size();
 
-  ASSERT_NO_FATAL_FAILURES(device.WriteFd(0, one));
-  ASSERT_NO_FATAL_FAILURES(device.ReadFd(0, one));
+  ASSERT_NO_FATAL_FAILURE(device.WriteFd(0, one));
+  ASSERT_NO_FATAL_FAILURE(device.ReadFd(0, one));
 }
 DEFINE_EACH_DEVICE(ZxcryptTest, TestFdFirstBlock)
 
 void TestFdLastBlock(Volume::Version version, bool fvm) {
   TestDevice device;
-  ASSERT_NO_FATAL_FAILURES(device.SetupDevmgr());
-  ASSERT_NO_FATAL_FAILURES(device.Bind(version, fvm));
+  ASSERT_NO_FATAL_FAILURE(device.SetupDevmgr());
+  ASSERT_NO_FATAL_FAILURE(device.Bind(version, fvm));
   size_t n = device.size();
   size_t one = device.block_size();
 
-  ASSERT_NO_FATAL_FAILURES(device.WriteFd(n - one, one));
-  ASSERT_NO_FATAL_FAILURES(device.ReadFd(n - one, one));
+  ASSERT_NO_FATAL_FAILURE(device.WriteFd(n - one, one));
+  ASSERT_NO_FATAL_FAILURE(device.ReadFd(n - one, one));
 }
 DEFINE_EACH_DEVICE(ZxcryptTest, TestFdLastBlock)
 
 void TestFdAllBlocks(Volume::Version version, bool fvm) {
   TestDevice device;
-  ASSERT_NO_FATAL_FAILURES(device.SetupDevmgr());
-  ASSERT_NO_FATAL_FAILURES(device.Bind(version, fvm));
+  ASSERT_NO_FATAL_FAILURE(device.SetupDevmgr());
+  ASSERT_NO_FATAL_FAILURE(device.Bind(version, fvm));
   size_t n = device.size();
 
-  ASSERT_NO_FATAL_FAILURES(device.WriteFd(0, n));
-  ASSERT_NO_FATAL_FAILURES(device.ReadFd(0, n));
+  ASSERT_NO_FATAL_FAILURE(device.WriteFd(0, n));
+  ASSERT_NO_FATAL_FAILURE(device.ReadFd(0, n));
 }
 DEFINE_EACH_DEVICE(ZxcryptTest, TestFdAllBlocks)
 
 void TestFdUnaligned(Volume::Version version, bool fvm) {
   TestDevice device;
-  ASSERT_NO_FATAL_FAILURES(device.SetupDevmgr());
-  ASSERT_NO_FATAL_FAILURES(device.Bind(version, fvm));
+  ASSERT_NO_FATAL_FAILURE(device.SetupDevmgr());
+  ASSERT_NO_FATAL_FAILURE(device.Bind(version, fvm));
   size_t one = device.block_size();
   ssize_t one_s = static_cast<ssize_t>(one);
 
-  ASSERT_NO_FATAL_FAILURES(device.WriteFd(one, one));
-  ASSERT_NO_FATAL_FAILURES(device.ReadFd(one, one));
+  ASSERT_NO_FATAL_FAILURE(device.WriteFd(one, one));
+  ASSERT_NO_FATAL_FAILURE(device.ReadFd(one, one));
 
   EXPECT_EQ(device.lseek(one - 1), one_s - 1);
   EXPECT_LT(device.write(one, one), 0);
@@ -277,8 +277,8 @@ DEFINE_EACH_DEVICE(ZxcryptTest, TestFdUnaligned)
 
 void TestFdOutOfBounds(Volume::Version version, bool fvm) {
   TestDevice device;
-  ASSERT_NO_FATAL_FAILURES(device.SetupDevmgr());
-  ASSERT_NO_FATAL_FAILURES(device.Bind(version, fvm));
+  ASSERT_NO_FATAL_FAILURE(device.SetupDevmgr());
+  ASSERT_NO_FATAL_FAILURE(device.Bind(version, fvm));
   size_t n = device.size();
   ssize_t n_s = static_cast<ssize_t>(n);
 
@@ -288,7 +288,7 @@ void TestFdOutOfBounds(Volume::Version version, bool fvm) {
   size_t two = one + one;
   ssize_t two_s = static_cast<ssize_t>(two);
 
-  ASSERT_NO_FATAL_FAILURES(device.WriteFd(0, one));
+  ASSERT_NO_FATAL_FAILURE(device.WriteFd(0, one));
 
   EXPECT_EQ(device.lseek(n), n_s);
   EXPECT_NE(device.write(n, one), one_s);
@@ -302,7 +302,7 @@ void TestFdOutOfBounds(Volume::Version version, bool fvm) {
   EXPECT_EQ(device.lseek(one), one_s);
   EXPECT_NE(device.write(one, n), n_s);
 
-  ASSERT_NO_FATAL_FAILURES(device.ReadFd(0, one));
+  ASSERT_NO_FATAL_FAILURE(device.ReadFd(0, one));
 
   EXPECT_EQ(device.lseek(n), n_s);
   EXPECT_NE(device.read(n, one), one_s);
@@ -320,41 +320,41 @@ DEFINE_EACH_DEVICE(ZxcryptTest, TestFdOutOfBounds)
 
 void TestFdOneToMany(Volume::Version version, bool fvm) {
   TestDevice device;
-  ASSERT_NO_FATAL_FAILURES(device.SetupDevmgr());
-  ASSERT_NO_FATAL_FAILURES(device.Bind(version, fvm));
+  ASSERT_NO_FATAL_FAILURE(device.SetupDevmgr());
+  ASSERT_NO_FATAL_FAILURE(device.Bind(version, fvm));
   size_t n = device.size();
   size_t one = device.block_size();
 
-  ASSERT_NO_FATAL_FAILURES(device.WriteFd(0, n));
-  ASSERT_NO_FATAL_FAILURES(device.Rebind());
+  ASSERT_NO_FATAL_FAILURE(device.WriteFd(0, n));
+  ASSERT_NO_FATAL_FAILURE(device.Rebind());
 
   for (size_t off = 0; off < n; off += one) {
-    ASSERT_NO_FATAL_FAILURES(device.ReadFd(off, one));
+    ASSERT_NO_FATAL_FAILURE(device.ReadFd(off, one));
   }
 }
 DEFINE_EACH_DEVICE(ZxcryptTest, TestFdOneToMany)
 
 void TestFdManyToOne(Volume::Version version, bool fvm) {
   TestDevice device;
-  ASSERT_NO_FATAL_FAILURES(device.SetupDevmgr());
-  ASSERT_NO_FATAL_FAILURES(device.Bind(version, fvm));
+  ASSERT_NO_FATAL_FAILURE(device.SetupDevmgr());
+  ASSERT_NO_FATAL_FAILURE(device.Bind(version, fvm));
   size_t n = device.size();
   size_t one = device.block_size();
 
   for (size_t off = 0; off < n; off += one) {
-    ASSERT_NO_FATAL_FAILURES(device.WriteFd(off, one));
+    ASSERT_NO_FATAL_FAILURE(device.WriteFd(off, one));
   }
 
-  ASSERT_NO_FATAL_FAILURES(device.Rebind());
-  ASSERT_NO_FATAL_FAILURES(device.ReadFd(0, n));
+  ASSERT_NO_FATAL_FAILURE(device.Rebind());
+  ASSERT_NO_FATAL_FAILURE(device.ReadFd(0, n));
 }
 DEFINE_EACH_DEVICE(ZxcryptTest, TestFdManyToOne)
 
 // Device::BlockWrite and Device::BlockRead tests
 void TestVmoZeroLength(Volume::Version version, bool fvm) {
   TestDevice device;
-  ASSERT_NO_FATAL_FAILURES(device.SetupDevmgr());
-  ASSERT_NO_FATAL_FAILURES(device.Bind(version, fvm));
+  ASSERT_NO_FATAL_FAILURE(device.SetupDevmgr());
+  ASSERT_NO_FATAL_FAILURE(device.Bind(version, fvm));
 
   // Zero length is illegal for the block fifo
   EXPECT_ZX(device.block_fifo_txn(BLOCKIO_WRITE, 0, 0), ZX_ERR_INVALID_ARGS);
@@ -364,50 +364,50 @@ DEFINE_EACH_DEVICE(ZxcryptTest, TestVmoZeroLength)
 
 void TestVmoFirstBlock(Volume::Version version, bool fvm) {
   TestDevice device;
-  ASSERT_NO_FATAL_FAILURES(device.SetupDevmgr());
-  ASSERT_NO_FATAL_FAILURES(device.Bind(version, fvm));
+  ASSERT_NO_FATAL_FAILURE(device.SetupDevmgr());
+  ASSERT_NO_FATAL_FAILURE(device.Bind(version, fvm));
 
-  ASSERT_NO_FATAL_FAILURES(device.WriteVmo(0, 1));
-  ASSERT_NO_FATAL_FAILURES(device.ReadVmo(0, 1));
+  ASSERT_NO_FATAL_FAILURE(device.WriteVmo(0, 1));
+  ASSERT_NO_FATAL_FAILURE(device.ReadVmo(0, 1));
 }
 DEFINE_EACH_DEVICE(ZxcryptTest, TestVmoFirstBlock)
 
 void TestVmoLastBlock(Volume::Version version, bool fvm) {
   TestDevice device;
-  ASSERT_NO_FATAL_FAILURES(device.SetupDevmgr());
-  ASSERT_NO_FATAL_FAILURES(device.Bind(version, fvm));
+  ASSERT_NO_FATAL_FAILURE(device.SetupDevmgr());
+  ASSERT_NO_FATAL_FAILURE(device.Bind(version, fvm));
   size_t n = device.block_count();
 
-  ASSERT_NO_FATAL_FAILURES(device.WriteVmo(n - 1, 1));
-  ASSERT_NO_FATAL_FAILURES(device.ReadVmo(n - 1, 1));
+  ASSERT_NO_FATAL_FAILURE(device.WriteVmo(n - 1, 1));
+  ASSERT_NO_FATAL_FAILURE(device.ReadVmo(n - 1, 1));
 }
 DEFINE_EACH_DEVICE(ZxcryptTest, TestVmoLastBlock)
 
 void TestVmoAllBlocks(Volume::Version version, bool fvm) {
   TestDevice device;
-  ASSERT_NO_FATAL_FAILURES(device.SetupDevmgr());
-  ASSERT_NO_FATAL_FAILURES(device.Bind(version, fvm));
+  ASSERT_NO_FATAL_FAILURE(device.SetupDevmgr());
+  ASSERT_NO_FATAL_FAILURE(device.Bind(version, fvm));
   size_t n = device.block_count();
 
-  ASSERT_NO_FATAL_FAILURES(device.WriteVmo(0, n));
-  ASSERT_NO_FATAL_FAILURES(device.ReadVmo(0, n));
+  ASSERT_NO_FATAL_FAILURE(device.WriteVmo(0, n));
+  ASSERT_NO_FATAL_FAILURE(device.ReadVmo(0, n));
 }
 DEFINE_EACH_DEVICE(ZxcryptTest, TestVmoAllBlocks)
 
 void TestVmoOutOfBounds(Volume::Version version, bool fvm) {
   TestDevice device;
-  ASSERT_NO_FATAL_FAILURES(device.SetupDevmgr());
-  ASSERT_NO_FATAL_FAILURES(device.Bind(version, fvm));
+  ASSERT_NO_FATAL_FAILURE(device.SetupDevmgr());
+  ASSERT_NO_FATAL_FAILURE(device.Bind(version, fvm));
   size_t n = device.block_count();
 
-  ASSERT_NO_FATAL_FAILURES(device.WriteVmo(0, 1));
+  ASSERT_NO_FATAL_FAILURE(device.WriteVmo(0, 1));
 
   EXPECT_ZX(device.block_fifo_txn(BLOCKIO_WRITE, n, 1), ZX_ERR_OUT_OF_RANGE);
   EXPECT_ZX(device.block_fifo_txn(BLOCKIO_WRITE, n - 1, 2), ZX_ERR_OUT_OF_RANGE);
   EXPECT_ZX(device.block_fifo_txn(BLOCKIO_WRITE, 2, n - 1), ZX_ERR_OUT_OF_RANGE);
   EXPECT_ZX(device.block_fifo_txn(BLOCKIO_WRITE, 1, n), ZX_ERR_OUT_OF_RANGE);
 
-  ASSERT_NO_FATAL_FAILURES(device.ReadVmo(0, 1));
+  ASSERT_NO_FATAL_FAILURE(device.ReadVmo(0, 1));
 
   EXPECT_ZX(device.block_fifo_txn(BLOCKIO_READ, n, 1), ZX_ERR_OUT_OF_RANGE);
   EXPECT_ZX(device.block_fifo_txn(BLOCKIO_READ, n - 1, 2), ZX_ERR_OUT_OF_RANGE);
@@ -418,38 +418,38 @@ DEFINE_EACH_DEVICE(ZxcryptTest, TestVmoOutOfBounds)
 
 void TestVmoOneToMany(Volume::Version version, bool fvm) {
   TestDevice device;
-  ASSERT_NO_FATAL_FAILURES(device.SetupDevmgr());
-  ASSERT_NO_FATAL_FAILURES(device.Bind(version, fvm));
+  ASSERT_NO_FATAL_FAILURE(device.SetupDevmgr());
+  ASSERT_NO_FATAL_FAILURE(device.Bind(version, fvm));
   size_t n = device.block_count();
 
-  ASSERT_NO_FATAL_FAILURES(device.WriteVmo(0, n));
-  ASSERT_NO_FATAL_FAILURES(device.Rebind());
+  ASSERT_NO_FATAL_FAILURE(device.WriteVmo(0, n));
+  ASSERT_NO_FATAL_FAILURE(device.Rebind());
   for (size_t off = 0; off < n; ++off) {
-    ASSERT_NO_FATAL_FAILURES(device.ReadVmo(off, 1));
+    ASSERT_NO_FATAL_FAILURE(device.ReadVmo(off, 1));
   }
 }
 DEFINE_EACH_DEVICE(ZxcryptTest, TestVmoOneToMany)
 
 void TestVmoManyToOne(Volume::Version version, bool fvm) {
   TestDevice device;
-  ASSERT_NO_FATAL_FAILURES(device.SetupDevmgr());
-  ASSERT_NO_FATAL_FAILURES(device.Bind(version, fvm));
+  ASSERT_NO_FATAL_FAILURE(device.SetupDevmgr());
+  ASSERT_NO_FATAL_FAILURE(device.Bind(version, fvm));
   size_t n = device.block_count();
 
   for (size_t off = 0; off < n; ++off) {
-    ASSERT_NO_FATAL_FAILURES(device.WriteVmo(off, 1));
+    ASSERT_NO_FATAL_FAILURE(device.WriteVmo(off, 1));
   }
 
-  ASSERT_NO_FATAL_FAILURES(device.Rebind());
-  ASSERT_NO_FATAL_FAILURES(device.ReadVmo(0, n));
+  ASSERT_NO_FATAL_FAILURE(device.Rebind());
+  ASSERT_NO_FATAL_FAILURE(device.ReadVmo(0, n));
 }
 DEFINE_EACH_DEVICE(ZxcryptTest, TestVmoManyToOne)
 
 // Disabled due to flakiness (see fxbug.dev/31974).
 void DISABLED_TestVmoStall(Volume::Version version, bool fvm) {
   TestDevice device;
-  ASSERT_NO_FATAL_FAILURES(device.SetupDevmgr());
-  ASSERT_NO_FATAL_FAILURES(device.Bind(version, fvm));
+  ASSERT_NO_FATAL_FAILURE(device.SetupDevmgr());
+  ASSERT_NO_FATAL_FAILURE(device.Bind(version, fvm));
   auto zxcrypt = device.zxcrypt_channel();
 
   // The device can have up to 4 * max_transfer_size bytes in flight before it begins queuing them
@@ -471,16 +471,16 @@ void DISABLED_TestVmoStall(Volume::Version version, bool fvm) {
     requests[i].vmo_offset = 0;
   }
 
-  ASSERT_NO_FATAL_FAILURES(device.SleepUntil(max, true /* defer transactions */));
+  ASSERT_NO_FATAL_FAILURE(device.SleepUntil(max, true /* defer transactions */));
   EXPECT_EQ(device.block_fifo_txn(requests.get(), num), ZX_OK);
-  ASSERT_NO_FATAL_FAILURES(device.WakeUp());
+  ASSERT_NO_FATAL_FAILURE(device.WakeUp());
 }
 DEFINE_EACH_DEVICE(ZxcryptTest, DISABLED_TestVmoStall)
 
 void TestWriteAfterFvmExtend(Volume::Version version) {
   TestDevice device;
-  ASSERT_NO_FATAL_FAILURES(device.SetupDevmgr());
-  ASSERT_NO_FATAL_FAILURES(device.Bind(version, true));
+  ASSERT_NO_FATAL_FAILURE(device.SetupDevmgr());
+  ASSERT_NO_FATAL_FAILURE(device.Bind(version, true));
   auto zxcrypt = device.zxcrypt_channel();
 
   size_t n = device.size();
@@ -513,8 +513,8 @@ DEFINE_EACH(ZxcryptTest, TestWriteAfterFvmExtend)
 
 void TestUnalignedVmoOffset(Volume::Version version, bool fvm) {
   TestDevice device;
-  ASSERT_NO_FATAL_FAILURES(device.SetupDevmgr());
-  ASSERT_NO_FATAL_FAILURES(device.Bind(version, fvm));
+  ASSERT_NO_FATAL_FAILURE(device.SetupDevmgr());
+  ASSERT_NO_FATAL_FAILURE(device.Bind(version, fvm));
 
   block_fifo_request_t request{
       .opcode = BLOCKIO_READ,

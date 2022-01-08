@@ -28,7 +28,7 @@ class ChromiumosEcCoreTest : public ChromiumosEcTestBase {
     bool found = false;
     // The driver populates inspect properties asynchronously, so poll until we see it get set.
     while (!found) {
-      ASSERT_NO_FATAL_FAILURES(ReadInspect(device_->inspect()));
+      ASSERT_NO_FATAL_FAILURE(ReadInspect(device_->inspect()));
       found = hierarchy().GetByPath({kNodeCore})->node().get_property<T>(prop_name);
     }
   }
@@ -36,13 +36,13 @@ class ChromiumosEcCoreTest : public ChromiumosEcTestBase {
   void WaitAndCheckProperty(const char* prop_name, const char* value) {
     WaitForCoreProperty<inspect::StringPropertyValue>(prop_name);
     auto& node = hierarchy().GetByPath({kNodeCore})->node();
-    ASSERT_NO_FATAL_FAILURES(CheckProperty(node, prop_name, inspect::StringPropertyValue(value)));
+    ASSERT_NO_FATAL_FAILURE(CheckProperty(node, prop_name, inspect::StringPropertyValue(value)));
   }
 
   void WaitAndCheckProperty(const char* prop_name, unsigned int value) {
     WaitForCoreProperty<inspect::UintPropertyValue>(prop_name);
     auto& node = hierarchy().GetByPath({kNodeCore})->node();
-    ASSERT_NO_FATAL_FAILURES(CheckProperty(node, prop_name, inspect::UintPropertyValue(value)));
+    ASSERT_NO_FATAL_FAILURE(CheckProperty(node, prop_name, inspect::UintPropertyValue(value)));
   }
 };
 
@@ -64,9 +64,9 @@ TEST_F(ChromiumosEcCoreTest, TestGetVersionInspect) {
       });
   InitDevice();
 
-  ASSERT_NO_FATAL_FAILURES(WaitAndCheckProperty(kPropVersionRo, "A read-only version string"));
-  ASSERT_NO_FATAL_FAILURES(WaitAndCheckProperty(kPropVersionRw, "A read-write version string"));
-  ASSERT_NO_FATAL_FAILURES(WaitAndCheckProperty(kPropCurrentImage, 2));
+  ASSERT_NO_FATAL_FAILURE(WaitAndCheckProperty(kPropVersionRo, "A read-only version string"));
+  ASSERT_NO_FATAL_FAILURE(WaitAndCheckProperty(kPropVersionRw, "A read-write version string"));
+  ASSERT_NO_FATAL_FAILURE(WaitAndCheckProperty(kPropCurrentImage, 2));
 }
 
 // Test inspect attributes populated by EC_CMD_GET_BUILD_INFO.
@@ -81,7 +81,7 @@ TEST_F(ChromiumosEcCoreTest, TestBuildInfoInspect) {
       });
 
   InitDevice();
-  ASSERT_NO_FATAL_FAILURES(WaitAndCheckProperty(kPropBuildInfo, "Build info for the EC"));
+  ASSERT_NO_FATAL_FAILURE(WaitAndCheckProperty(kPropBuildInfo, "Build info for the EC"));
 }
 
 // Test inspect attributes populated by EC_CMD_GET_CHIP_INFO.
@@ -99,9 +99,9 @@ TEST_F(ChromiumosEcCoreTest, TestGetChipInfoInspect) {
       });
   InitDevice();
 
-  ASSERT_NO_FATAL_FAILURES(WaitAndCheckProperty(kPropChipVendor, "ACME Corp"));
-  ASSERT_NO_FATAL_FAILURES(WaitAndCheckProperty(kPropChipName, "Foobar"));
-  ASSERT_NO_FATAL_FAILURES(WaitAndCheckProperty(kPropChipRevision, "2B"));
+  ASSERT_NO_FATAL_FAILURE(WaitAndCheckProperty(kPropChipVendor, "ACME Corp"));
+  ASSERT_NO_FATAL_FAILURE(WaitAndCheckProperty(kPropChipName, "Foobar"));
+  ASSERT_NO_FATAL_FAILURE(WaitAndCheckProperty(kPropChipRevision, "2B"));
 }
 
 // Test inspect attributes populated by EC_CMD_GET_BOARD_VERSION
@@ -116,7 +116,7 @@ TEST_F(ChromiumosEcCoreTest, TestBoardVersionInspect) {
       });
 
   InitDevice();
-  ASSERT_NO_FATAL_FAILURES(WaitAndCheckProperty(kPropBoardVersion, 65));
+  ASSERT_NO_FATAL_FAILURE(WaitAndCheckProperty(kPropBoardVersion, 65));
 }
 
 // Test feature inspect attributes.
@@ -124,6 +124,6 @@ TEST_F(ChromiumosEcCoreTest, TestFeaturesInspect) {
   fake_ec_.SetFeatures({EC_FEATURE_LIMITED, EC_FEATURE_GPIO});
   InitDevice();
 
-  ASSERT_NO_FATAL_FAILURES(WaitAndCheckProperty(kPropFeatures, "LIMITED, GPIO"));
+  ASSERT_NO_FATAL_FAILURE(WaitAndCheckProperty(kPropFeatures, "LIMITED, GPIO"));
 }
 }  // namespace chromiumos_ec_core

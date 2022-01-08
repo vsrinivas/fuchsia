@@ -228,16 +228,16 @@ TEST_F(AudioStreamInTest, Inspect) {
   ASSERT_OK(props.status());
 
   // Check inspect state.
-  ASSERT_NO_FATAL_FAILURES(ReadInspect(server->inspect().DuplicateVmo()));
+  ASSERT_NO_FATAL_FAILURE(ReadInspect(server->inspect().DuplicateVmo()));
   auto* simple_audio = hierarchy().GetByPath({"simple_audio_stream"});
   ASSERT_TRUE(simple_audio);
-  ASSERT_NO_FATAL_FAILURES(
+  ASSERT_NO_FATAL_FAILURE(
       CheckProperty(simple_audio->node(), "state", inspect::StringPropertyValue("created")));
-  ASSERT_NO_FATAL_FAILURES(
+  ASSERT_NO_FATAL_FAILURE(
       CheckProperty(hierarchy().node(), "status_time", inspect::IntPropertyValue(0)));
-  ASSERT_NO_FATAL_FAILURES(
+  ASSERT_NO_FATAL_FAILURE(
       CheckProperty(hierarchy().node(), "dma_status", inspect::UintPropertyValue(0)));
-  ASSERT_NO_FATAL_FAILURES(
+  ASSERT_NO_FATAL_FAILURE(
       CheckProperty(hierarchy().node(), "pdm_status", inspect::UintPropertyValue(0)));
 
   server->DdkAsyncRemove();

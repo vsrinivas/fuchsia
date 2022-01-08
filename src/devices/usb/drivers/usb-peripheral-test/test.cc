@@ -97,27 +97,27 @@ void control_interrupt_test(size_t transfer_size) {
 
 // Test control and interrupt requests with 8 byte transfer size.
 TEST(UsbPeripheral, control_interrupt_test_8) {
-  ASSERT_NO_FATAL_FAILURES(control_interrupt_test(8));
+  ASSERT_NO_FATAL_FAILURE(control_interrupt_test(8));
 }
 
 // Test control and interrupt requests with 64 byte transfer size.
 TEST(UsbPeripheral, control_interrupt_test_64) {
-  ASSERT_NO_FATAL_FAILURES(control_interrupt_test(64));
+  ASSERT_NO_FATAL_FAILURE(control_interrupt_test(64));
 }
 
 // Test control and interrupt requests with 100 byte transfer size.
 TEST(UsbPeripheral, control_interrupt_test_100) {
-  ASSERT_NO_FATAL_FAILURES(control_interrupt_test(100));
+  ASSERT_NO_FATAL_FAILURE(control_interrupt_test(100));
 }
 
 // Test control and interrupt requests with 256 byte transfer size.
 TEST(UsbPeripheral, control_interrupt_test_256) {
-  ASSERT_NO_FATAL_FAILURES(control_interrupt_test(256));
+  ASSERT_NO_FATAL_FAILURE(control_interrupt_test(256));
 }
 
 // Test control and interrupt requests with 1000 byte transfer size.
 TEST(UsbPeripheral, control_interrupt_test_1000) {
-  ASSERT_NO_FATAL_FAILURES(control_interrupt_test(1000));
+  ASSERT_NO_FATAL_FAILURE(control_interrupt_test(1000));
 }
 
 // Tests bulk OUT and IN transfers.

@@ -810,10 +810,10 @@ class TestEnvironment : public TestEnvironmentSpecialized<TestEnvTraits> {
     EXPECT_EQ(OBJ_COUNT, Size(container()));
 
     // Test iterator
-    ASSERT_NO_FATAL_FAILURES(DoReverseIterate(container().begin(), container().end()));
+    ASSERT_NO_FATAL_FAILURE(DoReverseIterate(container().begin(), container().end()));
 
     // Test const_iterator
-    ASSERT_NO_FATAL_FAILURES(DoReverseIterate(container().cbegin(), container().cend()));
+    ASSERT_NO_FATAL_FAILURE(DoReverseIterate(container().cbegin(), container().cend()));
 
     // None of the objects should have been destroyed during this test.
     TestEnvTraits::CheckCustomDeleteInvocations(0);
@@ -887,8 +887,8 @@ class TestEnvironment : public TestEnvironmentSpecialized<TestEnvTraits> {
         obj.Visit();
       }
 
-      ASSERT_NO_FATAL_FAILURES(ContainerChecker::SanityCheck(container()));
-      ASSERT_NO_FATAL_FAILURES(ContainerChecker::SanityCheck(other_container));
+      ASSERT_NO_FATAL_FAILURE(ContainerChecker::SanityCheck(container()));
+      ASSERT_NO_FATAL_FAILURE(ContainerChecker::SanityCheck(other_container));
 
       container().swap(other_container);
 
@@ -902,8 +902,8 @@ class TestEnvironment : public TestEnvironmentSpecialized<TestEnvTraits> {
         obj.Visit();
       }
 
-      ASSERT_NO_FATAL_FAILURES(ContainerChecker::SanityCheck(container()));
-      ASSERT_NO_FATAL_FAILURES(ContainerChecker::SanityCheck(other_container));
+      ASSERT_NO_FATAL_FAILURE(ContainerChecker::SanityCheck(container()));
+      ASSERT_NO_FATAL_FAILURE(ContainerChecker::SanityCheck(other_container));
 
       // Swap back to check the case where container() was empty, but other_container
       // had elements.
@@ -917,8 +917,8 @@ class TestEnvironment : public TestEnvironmentSpecialized<TestEnvTraits> {
       for (const auto& obj : container())
         EXPECT_EQ(2u, obj.visited_count());
 
-      ASSERT_NO_FATAL_FAILURES(ContainerChecker::SanityCheck(container()));
-      ASSERT_NO_FATAL_FAILURES(ContainerChecker::SanityCheck(other_container));
+      ASSERT_NO_FATAL_FAILURE(ContainerChecker::SanityCheck(container()));
+      ASSERT_NO_FATAL_FAILURE(ContainerChecker::SanityCheck(other_container));
 
       // Nothing should have been deleted yet.
       TestEnvTraits::CheckCustomDeleteInvocations(0);
@@ -952,8 +952,8 @@ class TestEnvironment : public TestEnvironmentSpecialized<TestEnvTraits> {
       EXPECT_EQ(OBJ_COUNT, Size(container()));
       EXPECT_EQ(OTHER_COUNT, Size(other_container));
 
-      ASSERT_NO_FATAL_FAILURES(ContainerChecker::SanityCheck(container()));
-      ASSERT_NO_FATAL_FAILURES(ContainerChecker::SanityCheck(other_container));
+      ASSERT_NO_FATAL_FAILURE(ContainerChecker::SanityCheck(container()));
+      ASSERT_NO_FATAL_FAILURE(ContainerChecker::SanityCheck(other_container));
 
       // Visit everything in container() once, and everything in
       // other_container twice.
@@ -980,8 +980,8 @@ class TestEnvironment : public TestEnvironmentSpecialized<TestEnvTraits> {
       EXPECT_EQ(OBJ_COUNT, Size(other_container));
       EXPECT_EQ(OTHER_COUNT, Size(container()));
 
-      ASSERT_NO_FATAL_FAILURES(ContainerChecker::SanityCheck(container()));
-      ASSERT_NO_FATAL_FAILURES(ContainerChecker::SanityCheck(other_container));
+      ASSERT_NO_FATAL_FAILURE(ContainerChecker::SanityCheck(container()));
+      ASSERT_NO_FATAL_FAILURE(ContainerChecker::SanityCheck(other_container));
 
       // Everything in container() should have been visited twice so far,
       // while everything in other_container should have been visited
@@ -998,8 +998,8 @@ class TestEnvironment : public TestEnvironmentSpecialized<TestEnvTraits> {
       EXPECT_EQ(OBJ_COUNT, Size(container()));
       EXPECT_EQ(OTHER_COUNT, Size(other_container));
 
-      ASSERT_NO_FATAL_FAILURES(ContainerChecker::SanityCheck(container()));
-      ASSERT_NO_FATAL_FAILURES(ContainerChecker::SanityCheck(other_container));
+      ASSERT_NO_FATAL_FAILURE(ContainerChecker::SanityCheck(container()));
+      ASSERT_NO_FATAL_FAILURE(ContainerChecker::SanityCheck(other_container));
 
       for (auto& obj : container())
         EXPECT_EQ(1u, obj.visited_count());
@@ -1044,7 +1044,7 @@ class TestEnvironment : public TestEnvironmentSpecialized<TestEnvTraits> {
       obj.Visit();
     }
 
-    ASSERT_NO_FATAL_FAILURES(ContainerChecker::SanityCheck(container()));
+    ASSERT_NO_FATAL_FAILURE(ContainerChecker::SanityCheck(container()));
 
     // Move its contents to a new container by explicitly invoking the Rvalue
     // constructor.
@@ -1065,8 +1065,8 @@ class TestEnvironment : public TestEnvironmentSpecialized<TestEnvTraits> {
       obj.Visit();
     }
 
-    ASSERT_NO_FATAL_FAILURES(ContainerChecker::SanityCheck(container()));
-    ASSERT_NO_FATAL_FAILURES(ContainerChecker::SanityCheck(other_container));
+    ASSERT_NO_FATAL_FAILURE(ContainerChecker::SanityCheck(container()));
+    ASSERT_NO_FATAL_FAILURE(ContainerChecker::SanityCheck(other_container));
 
     // Move the contents again, this time using move-initialization which implicitly
     // invokes the Rvalue constructor.
@@ -1087,9 +1087,9 @@ class TestEnvironment : public TestEnvironmentSpecialized<TestEnvTraits> {
       obj.Visit();
     }
 
-    ASSERT_NO_FATAL_FAILURES(ContainerChecker::SanityCheck(container()));
-    ASSERT_NO_FATAL_FAILURES(ContainerChecker::SanityCheck(other_container));
-    ASSERT_NO_FATAL_FAILURES(ContainerChecker::SanityCheck(another_container));
+    ASSERT_NO_FATAL_FAILURE(ContainerChecker::SanityCheck(container()));
+    ASSERT_NO_FATAL_FAILURE(ContainerChecker::SanityCheck(other_container));
+    ASSERT_NO_FATAL_FAILURE(ContainerChecker::SanityCheck(another_container));
 
     // Move the contents of the final container back to the internal container.  If we
     // are testing managed pointer types, put some objects into the internal
@@ -1113,9 +1113,9 @@ class TestEnvironment : public TestEnvironmentSpecialized<TestEnvTraits> {
       EXPECT_EQ(0u, obj.visited_count());
     }
 
-    ASSERT_NO_FATAL_FAILURES(ContainerChecker::SanityCheck(container()));
-    ASSERT_NO_FATAL_FAILURES(ContainerChecker::SanityCheck(other_container));
-    ASSERT_NO_FATAL_FAILURES(ContainerChecker::SanityCheck(another_container));
+    ASSERT_NO_FATAL_FAILURE(ContainerChecker::SanityCheck(container()));
+    ASSERT_NO_FATAL_FAILURE(ContainerChecker::SanityCheck(other_container));
+    ASSERT_NO_FATAL_FAILURE(ContainerChecker::SanityCheck(another_container));
 
     // No objects should have been deleted yet.
     TestEnvTraits::CheckCustomDeleteInvocations(0);
@@ -1139,9 +1139,9 @@ class TestEnvironment : public TestEnvironmentSpecialized<TestEnvTraits> {
       EXPECT_EQ(objects()[obj.value()], &obj);
     }
 
-    ASSERT_NO_FATAL_FAILURES(ContainerChecker::SanityCheck(container()));
-    ASSERT_NO_FATAL_FAILURES(ContainerChecker::SanityCheck(other_container));
-    ASSERT_NO_FATAL_FAILURES(ContainerChecker::SanityCheck(another_container));
+    ASSERT_NO_FATAL_FAILURE(ContainerChecker::SanityCheck(container()));
+    ASSERT_NO_FATAL_FAILURE(ContainerChecker::SanityCheck(other_container));
+    ASSERT_NO_FATAL_FAILURE(ContainerChecker::SanityCheck(another_container));
   }
 
   void Scope() {
@@ -1220,8 +1220,8 @@ class TestEnvironment : public TestEnvironmentSpecialized<TestEnvTraits> {
       EXPECT_TRUE(other_iter == other_container.end());
     }
 
-    ASSERT_NO_FATAL_FAILURES(ContainerChecker::SanityCheck(container()));
-    ASSERT_NO_FATAL_FAILURES(ContainerChecker::SanityCheck(other_container));
+    ASSERT_NO_FATAL_FAILURE(ContainerChecker::SanityCheck(container()));
+    ASSERT_NO_FATAL_FAILURE(ContainerChecker::SanityCheck(other_container));
 
     // Clear the internal container.  No objects should go away and the other
     // container should be un-affected
@@ -1359,9 +1359,9 @@ class TestEnvironment : public TestEnvironmentSpecialized<TestEnvTraits> {
       EXPECT_TRUE(iter3 == tagged3.end());
     }
 
-    ASSERT_NO_FATAL_FAILURES(ContainerChecker::SanityCheck(tagged1));
-    ASSERT_NO_FATAL_FAILURES(ContainerChecker::SanityCheck(tagged2));
-    ASSERT_NO_FATAL_FAILURES(ContainerChecker::SanityCheck(tagged3));
+    ASSERT_NO_FATAL_FAILURE(ContainerChecker::SanityCheck(tagged1));
+    ASSERT_NO_FATAL_FAILURE(ContainerChecker::SanityCheck(tagged2));
+    ASSERT_NO_FATAL_FAILURE(ContainerChecker::SanityCheck(tagged3));
 
     // Clear the internal container.  No objects should go away and the other
     // containers should be un-affected

@@ -90,7 +90,7 @@ TEST(AmlNnaTest, InitT931) {
   mock_regs.hiu_regs_[0x72].ExpectRead(0x00000000).ExpectWrite(0x700);
   mock_regs.hiu_regs_[0x72].ExpectRead(0x00000000).ExpectWrite(0x7000000);
 
-  ASSERT_NO_FATAL_FAILURES(mock_regs.CreateDeviceAndVerify(T931NnaBlock));
+  ASSERT_NO_FATAL_FAILURE(mock_regs.CreateDeviceAndVerify(T931NnaBlock));
 }
 
 TEST(AmlNnaTest, InitS905d3) {
@@ -108,7 +108,7 @@ TEST(AmlNnaTest, InitS905d3) {
   mock_regs.hiu_regs_[0x72].ExpectRead(0x00000000).ExpectWrite(0x700);
   mock_regs.hiu_regs_[0x72].ExpectRead(0x00000000).ExpectWrite(0x7000000);
 
-  ASSERT_NO_FATAL_FAILURES(mock_regs.CreateDeviceAndVerify(S905d3NnaBlock));
+  ASSERT_NO_FATAL_FAILURE(mock_regs.CreateDeviceAndVerify(S905d3NnaBlock));
 }
 
 }  // namespace aml_nna

@@ -579,14 +579,14 @@ void PerformChannelCallWithSmallBuffer(const zx::channel& local, const zx::chann
 
   ASSERT_EQ(remote.wait_one(ZX_CHANNEL_READABLE, zx::time::infinite_past(), nullptr),
             ZX_ERR_TIMED_OUT);
-  ASSERT_NO_FATAL_FAILURES(WriteDataAndHandles(local, event, reply_byte_size, reply_handle_count));
+  ASSERT_NO_FATAL_FAILURE(WriteDataAndHandles(local, event, reply_byte_size, reply_handle_count));
   ASSERT_EQ(remote.read(ZX_CHANNEL_READ_MAY_DISCARD, buffer_ptr, handles_ptr, ByteBufferSize,
                         HandleCount, actual_bytes, actual_handles),
             ZX_ERR_BUFFER_TOO_SMALL);
   ASSERT_EQ(remote.wait_one(ZX_CHANNEL_READABLE, zx::time::infinite_past(), nullptr),
             ZX_ERR_TIMED_OUT);
   // At the end, only one handle should remain.
-  ASSERT_NO_FATAL_FAILURES(CheckHandleCount(event, 1));
+  ASSERT_NO_FATAL_FAILURE(CheckHandleCount(event, 1));
 }
 
 TEST(ChannelTest, ReadMayDiscardWithNullBuffersReturnsBufferTooSmall) {
@@ -599,7 +599,7 @@ TEST(ChannelTest, ReadMayDiscardWithNullBuffersReturnsBufferTooSmall) {
   uint32_t actual_bytes = 0;
   uint32_t actual_handle_count = 0;
 
-  ASSERT_NO_FATAL_FAILURES((PerformChannelCallWithSmallBuffer<kDataSize, kHandleCount, true>(
+  ASSERT_NO_FATAL_FAILURE((PerformChannelCallWithSmallBuffer<kDataSize, kHandleCount, true>(
       local, remote, kDataSize + 1, kHandleCount + 1, &actual_bytes, &actual_handle_count)));
 
   EXPECT_EQ(kHandleCount + 1, actual_handle_count);
@@ -616,7 +616,7 @@ TEST(ChannelTest, ReadMayDiscardWithNullBufferDiscardsDataReturnsBufferTooSmall)
   uint32_t actual_bytes = 0;
   uint32_t actual_handle_count = 0;
 
-  ASSERT_NO_FATAL_FAILURES((PerformChannelCallWithSmallBuffer<kDataSize, kHandleCount, true>(
+  ASSERT_NO_FATAL_FAILURE((PerformChannelCallWithSmallBuffer<kDataSize, kHandleCount, true>(
       local, remote, kDataSize + 1, kHandleCount, &actual_bytes, &actual_handle_count)));
 
   EXPECT_EQ(kHandleCount, actual_handle_count);
@@ -633,7 +633,7 @@ TEST(ChannelTest, ReadMayDiscardWithNullBufferDiscardHandlesReturnsBufferTooSmal
   uint32_t actual_bytes = 0;
   uint32_t actual_handle_count = 0;
 
-  ASSERT_NO_FATAL_FAILURES((PerformChannelCallWithSmallBuffer<kDataSize, kHandleCount, true>(
+  ASSERT_NO_FATAL_FAILURE((PerformChannelCallWithSmallBuffer<kDataSize, kHandleCount, true>(
       local, remote, kDataSize, kHandleCount + 1, &actual_bytes, &actual_handle_count)));
 
   EXPECT_EQ(kHandleCount + 1, actual_handle_count);
@@ -650,7 +650,7 @@ TEST(ChannelTest, ReadMayDiscardWithZeroSizeBuffersDiscardHandlesAndDataReturnsB
   uint32_t actual_bytes = 0;
   uint32_t actual_handle_count = 0;
 
-  ASSERT_NO_FATAL_FAILURES((PerformChannelCallWithSmallBuffer<kDataSize, kHandleCount, true>(
+  ASSERT_NO_FATAL_FAILURE((PerformChannelCallWithSmallBuffer<kDataSize, kHandleCount, true>(
       local, remote, kDataSize + 1, kHandleCount + 1, &actual_bytes, &actual_handle_count)));
 
   EXPECT_EQ(kHandleCount + 1, actual_handle_count);
@@ -667,7 +667,7 @@ TEST(ChannelTest, ReadMayDiscardWithSmallerBufferDiscardHandlesAndDateReturnsBuf
   uint32_t actual_bytes = 0;
   uint32_t actual_handle_count = 0;
 
-  ASSERT_NO_FATAL_FAILURES((PerformChannelCallWithSmallBuffer<kDataSize, kHandleCount>(
+  ASSERT_NO_FATAL_FAILURE((PerformChannelCallWithSmallBuffer<kDataSize, kHandleCount>(
       local, remote, kDataSize + 1, kHandleCount + 1, &actual_bytes, &actual_handle_count)));
 
   EXPECT_EQ(kHandleCount + 1, actual_handle_count);
@@ -986,7 +986,7 @@ TEST(ChannelTest, CallBytesFitIsOk) {
   zx::channel remote;
   ASSERT_OK(zx::channel::create(0, &local, &remote));
 
-  ASSERT_NO_FATAL_FAILURES((SuccessfullChannelCall<kReplyDataSize, kReplyHandleCount>(
+  ASSERT_NO_FATAL_FAILURE((SuccessfullChannelCall<kReplyDataSize, kReplyHandleCount>(
       std::move(local), std::move(remote), request)));
 }
 
@@ -1003,7 +1003,7 @@ TEST(ChannelTest, CallHandlesFitIsOk) {
 
   Message request = Message(0, 1);
   request.handles[0] = event.release();
-  ASSERT_NO_FATAL_FAILURES((SuccessfullChannelCall<kReplyDataSize, kReplyHandleCount>(
+  ASSERT_NO_FATAL_FAILURE((SuccessfullChannelCall<kReplyDataSize, kReplyHandleCount>(
       std::move(local), std::move(remote), request)));
 }
 
@@ -1021,7 +1021,7 @@ TEST(ChannelTest, CallHandleAndBytesFitsIsOk) {
   Message request = Message(2, 1);
   request.handles[0] = event.release();
 
-  ASSERT_NO_FATAL_FAILURES((SuccessfullChannelCall<kReplyDataSize, kReplyHandleCount>(
+  ASSERT_NO_FATAL_FAILURE((SuccessfullChannelCall<kReplyDataSize, kReplyHandleCount>(
       std::move(local), std::move(remote), request)));
 }
 

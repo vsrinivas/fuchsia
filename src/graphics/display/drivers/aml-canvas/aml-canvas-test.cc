@@ -163,7 +163,7 @@ TEST_F(AmlCanvasTest, DdkLifecyle) { TestLifecycle(); }
 TEST_F(AmlCanvasTest, CanvasConfigFreeSingle) {
   SetRegisterExpectations();
   EXPECT_OK(CreateNewCanvas());
-  ASSERT_NO_FATAL_FAILURES(VerifyAll());
+  ASSERT_NO_FATAL_FAILURE(VerifyAll());
 
   EXPECT_OK(FreeAllCanvases());
 }
@@ -173,7 +173,7 @@ TEST_F(AmlCanvasTest, CanvasConfigFreeMultipleSequential) {
   for (int i = 0; i < 5; i++) {
     SetRegisterExpectations();
     EXPECT_OK(CreateNewCanvas());
-    ASSERT_NO_FATAL_FAILURES(VerifyAll());
+    ASSERT_NO_FATAL_FAILURE(VerifyAll());
   }
 
   // Free all 5 canvases created above.
@@ -185,7 +185,7 @@ TEST_F(AmlCanvasTest, CanvasConfigFreeMultipleInterleaved) {
   for (int i = 0; i < 5; i++) {
     SetRegisterExpectations();
     EXPECT_OK(CreateNewCanvas());
-    ASSERT_NO_FATAL_FAILURES(VerifyAll());
+    ASSERT_NO_FATAL_FAILURE(VerifyAll());
   }
 
   // Free canvas index 1, so the next one created has index 1.
@@ -193,14 +193,14 @@ TEST_F(AmlCanvasTest, CanvasConfigFreeMultipleInterleaved) {
 
   SetRegisterExpectations(1);
   EXPECT_OK(CreateNewCanvas());
-  ASSERT_NO_FATAL_FAILURES(VerifyAll());
+  ASSERT_NO_FATAL_FAILURE(VerifyAll());
 
   // Free canvas index 3, so the next one created has index 3.
   EXPECT_OK(FreeCanvas(3));
 
   SetRegisterExpectations(3);
   EXPECT_OK(CreateNewCanvas());
-  ASSERT_NO_FATAL_FAILURES(VerifyAll());
+  ASSERT_NO_FATAL_FAILURE(VerifyAll());
 
   EXPECT_OK(FreeAllCanvases());
 }
@@ -215,7 +215,7 @@ TEST_F(AmlCanvasTest, CanvasConfigMaxLimit) {
   for (size_t i = 0; i < kNumCanvasEntries; i++) {
     SetRegisterExpectations();
     EXPECT_OK(CreateNewCanvas());
-    ASSERT_NO_FATAL_FAILURES(VerifyAll());
+    ASSERT_NO_FATAL_FAILURE(VerifyAll());
   }
 
   // Try to create another canvas, and verify that it fails.

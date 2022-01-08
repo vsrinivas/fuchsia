@@ -21,13 +21,13 @@ std::string StringFrom(const T& from) {
 
 TEST(CharsFromTests, Onlcr) {
   // Works on string constants (char[N]).
-  EXPECT_STR_EQ(StringFrom(uart::CharsFrom("hello\n")), "hello\r\n");
+  EXPECT_STREQ(StringFrom(uart::CharsFrom("hello\n")), "hello\r\n");
 
   // Works on std::string_view.
-  EXPECT_STR_EQ(StringFrom(uart::CharsFrom("foo\nbar"sv)), "foo\r\nbar");
+  EXPECT_STREQ(StringFrom(uart::CharsFrom("foo\nbar"sv)), "foo\r\nbar");
 
   // Works on std::string.
-  EXPECT_STR_EQ(StringFrom(uart::CharsFrom("\nbye\n"s)), "\r\nbye\r\n");
+  EXPECT_STREQ(StringFrom(uart::CharsFrom("\nbye\n"s)), "\r\nbye\r\n");
 }
 
 }  // namespace

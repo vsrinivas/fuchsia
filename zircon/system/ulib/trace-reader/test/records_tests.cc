@@ -61,7 +61,7 @@ TEST(TraceRecords, ProcessThread) {
   EXPECT_TRUE(trace::ProcessThread() < trace::ProcessThread(1, 2));
   EXPECT_FALSE(trace::ProcessThread(1, 2) < trace::ProcessThread());
 
-  EXPECT_STR_EQ("1/2", trace::ProcessThread(1, 2).ToString().c_str());
+  EXPECT_STREQ("1/2", trace::ProcessThread(1, 2).ToString().c_str());
 }
 
 TEST(TraceRecords, ArgumentValue) {
@@ -80,19 +80,19 @@ TEST(TraceRecords, ArgumentValue) {
     EXPECT_EQ(trace::ArgumentType::kNull, av.type());
   }
 
-  EXPECT_STR_EQ("null", av.ToString().c_str());
+  EXPECT_STREQ("null", av.ToString().c_str());
 
   // bool
 
   av = trace::ArgumentValue::MakeBool(false);
   EXPECT_EQ(trace::ArgumentType::kBool, av.type());
   EXPECT_FALSE(av.GetBool());
-  EXPECT_STR_EQ("bool(false)", av.ToString().c_str());
+  EXPECT_STREQ("bool(false)", av.ToString().c_str());
 
   av = trace::ArgumentValue::MakeBool(true);
   EXPECT_EQ(trace::ArgumentType::kBool, av.type());
   EXPECT_TRUE(av.GetBool());
-  EXPECT_STR_EQ("bool(true)", av.ToString().c_str());
+  EXPECT_STREQ("bool(true)", av.ToString().c_str());
 
   {
     trace::ArgumentValue m(std::move(av));
@@ -128,7 +128,7 @@ TEST(TraceRecords, ArgumentValue) {
     EXPECT_EQ(INT32_MAX, av.GetInt32());
   }
 
-  EXPECT_STR_EQ("int32(2147483647)", av.ToString().c_str());
+  EXPECT_STREQ("int32(2147483647)", av.ToString().c_str());
 
   // uint32
 
@@ -152,7 +152,7 @@ TEST(TraceRecords, ArgumentValue) {
     EXPECT_EQ(UINT32_MAX, av.GetUint32());
   }
 
-  EXPECT_STR_EQ("uint32(4294967295)", av.ToString().c_str());
+  EXPECT_STREQ("uint32(4294967295)", av.ToString().c_str());
 
   // int64
 
@@ -176,7 +176,7 @@ TEST(TraceRecords, ArgumentValue) {
     EXPECT_EQ(INT64_MAX, av.GetInt64());
   }
 
-  EXPECT_STR_EQ("int64(9223372036854775807)", av.ToString().c_str());
+  EXPECT_STREQ("int64(9223372036854775807)", av.ToString().c_str());
 
   // uint64
 
@@ -200,7 +200,7 @@ TEST(TraceRecords, ArgumentValue) {
     EXPECT_EQ(UINT64_MAX, av.GetUint64());
   }
 
-  EXPECT_STR_EQ("uint64(18446744073709551615)", av.ToString().c_str());
+  EXPECT_STREQ("uint64(18446744073709551615)", av.ToString().c_str());
 
   // double
 
@@ -220,7 +220,7 @@ TEST(TraceRecords, ArgumentValue) {
     EXPECT_EQ(-3.14, av.GetDouble());
   }
 
-  EXPECT_STR_EQ("double(-3.140000)", av.ToString().c_str());
+  EXPECT_STREQ("double(-3.140000)", av.ToString().c_str());
 
   // string
 
@@ -240,7 +240,7 @@ TEST(TraceRecords, ArgumentValue) {
     EXPECT_TRUE(av.GetString() == "Hello World!");
   }
 
-  EXPECT_STR_EQ("string(\"Hello World!\")", av.ToString().c_str());
+  EXPECT_STREQ("string(\"Hello World!\")", av.ToString().c_str());
 
   // pointer
 
@@ -264,7 +264,7 @@ TEST(TraceRecords, ArgumentValue) {
     EXPECT_EQ(UINTPTR_MAX, av.GetPointer());
   }
 
-  EXPECT_STR_EQ("pointer(0xffffffffffffffff)", av.ToString().c_str());
+  EXPECT_STREQ("pointer(0xffffffffffffffff)", av.ToString().c_str());
 
   // koid
 
@@ -288,7 +288,7 @@ TEST(TraceRecords, ArgumentValue) {
     EXPECT_EQ(UINT64_MAX, av.GetKoid());
   }
 
-  EXPECT_STR_EQ("koid(18446744073709551615)", av.ToString().c_str());
+  EXPECT_STREQ("koid(18446744073709551615)", av.ToString().c_str());
 }
 
 TEST(TraceRecords, Argument) {
@@ -308,7 +308,7 @@ TEST(TraceRecords, Argument) {
   EXPECT_TRUE(a.name() == "name");
   EXPECT_EQ(123, a.value().GetInt32());
 
-  EXPECT_STR_EQ("name: int32(123)", a.ToString().c_str());
+  EXPECT_STREQ("name: int32(123)", a.ToString().c_str());
 }
 
 TEST(TraceRecords, MetadataData) {
@@ -330,7 +330,7 @@ TEST(TraceRecords, MetadataData) {
     EXPECT_EQ(1, d.GetProviderInfo().id);
     EXPECT_TRUE(d.GetProviderInfo().name == "provider");
 
-    EXPECT_STR_EQ("ProviderInfo(id: 1, name: \"provider\")", d.ToString().c_str());
+    EXPECT_STREQ("ProviderInfo(id: 1, name: \"provider\")", d.ToString().c_str());
   }
 
   // provider section
@@ -348,7 +348,7 @@ TEST(TraceRecords, MetadataData) {
     EXPECT_EQ(trace::MetadataType::kProviderSection, d.type());
     EXPECT_EQ(1, d.GetProviderSection().id);
 
-    EXPECT_STR_EQ("ProviderSection(id: 1)", d.ToString().c_str());
+    EXPECT_STREQ("ProviderSection(id: 1)", d.ToString().c_str());
   }
 }
 
@@ -368,7 +368,7 @@ TEST(TraceRecords, EventData) {
     EXPECT_EQ(trace::EventType::kInstant, d.type());
     EXPECT_EQ(trace::EventScope::kGlobal, d.GetInstant().scope);
 
-    EXPECT_STR_EQ("Instant(scope: global)", d.ToString().c_str());
+    EXPECT_STREQ("Instant(scope: global)", d.ToString().c_str());
   }
 
   // counter
@@ -386,7 +386,7 @@ TEST(TraceRecords, EventData) {
     EXPECT_EQ(trace::EventType::kCounter, d.type());
     EXPECT_EQ(123, d.GetCounter().id);
 
-    EXPECT_STR_EQ("Counter(id: 123)", d.ToString().c_str());
+    EXPECT_STREQ("Counter(id: 123)", d.ToString().c_str());
   }
 
   // duration begin
@@ -404,7 +404,7 @@ TEST(TraceRecords, EventData) {
     EXPECT_EQ(trace::EventType::kDurationBegin, d.type());
     EXPECT_NOT_NULL(&d.GetDurationBegin());
 
-    EXPECT_STR_EQ("DurationBegin", d.ToString().c_str());
+    EXPECT_STREQ("DurationBegin", d.ToString().c_str());
   }
 
   // duration end
@@ -422,7 +422,7 @@ TEST(TraceRecords, EventData) {
     EXPECT_EQ(trace::EventType::kDurationEnd, d.type());
     EXPECT_NOT_NULL(&d.GetDurationEnd());
 
-    EXPECT_STR_EQ("DurationEnd", d.ToString().c_str());
+    EXPECT_STREQ("DurationEnd", d.ToString().c_str());
   }
 
   // duration complete
@@ -440,7 +440,7 @@ TEST(TraceRecords, EventData) {
     EXPECT_EQ(trace::EventType::kDurationComplete, d.type());
     EXPECT_EQ(123, d.GetDurationComplete().end_time);
 
-    EXPECT_STR_EQ("DurationComplete(end_ts: 123)", d.ToString().c_str());
+    EXPECT_STREQ("DurationComplete(end_ts: 123)", d.ToString().c_str());
   }
 
   // async begin
@@ -458,7 +458,7 @@ TEST(TraceRecords, EventData) {
     EXPECT_EQ(trace::EventType::kAsyncBegin, d.type());
     EXPECT_EQ(123, d.GetAsyncBegin().id);
 
-    EXPECT_STR_EQ("AsyncBegin(id: 123)", d.ToString().c_str());
+    EXPECT_STREQ("AsyncBegin(id: 123)", d.ToString().c_str());
   }
 
   // async instant
@@ -476,7 +476,7 @@ TEST(TraceRecords, EventData) {
     EXPECT_EQ(trace::EventType::kAsyncInstant, d.type());
     EXPECT_EQ(123, d.GetAsyncInstant().id);
 
-    EXPECT_STR_EQ("AsyncInstant(id: 123)", d.ToString().c_str());
+    EXPECT_STREQ("AsyncInstant(id: 123)", d.ToString().c_str());
   }
 
   // async end
@@ -494,7 +494,7 @@ TEST(TraceRecords, EventData) {
     EXPECT_EQ(trace::EventType::kAsyncEnd, d.type());
     EXPECT_EQ(123, d.GetAsyncEnd().id);
 
-    EXPECT_STR_EQ("AsyncEnd(id: 123)", d.ToString().c_str());
+    EXPECT_STREQ("AsyncEnd(id: 123)", d.ToString().c_str());
   }
 
   // flow begin
@@ -512,7 +512,7 @@ TEST(TraceRecords, EventData) {
     EXPECT_EQ(trace::EventType::kFlowBegin, d.type());
     EXPECT_EQ(123, d.GetFlowBegin().id);
 
-    EXPECT_STR_EQ("FlowBegin(id: 123)", d.ToString().c_str());
+    EXPECT_STREQ("FlowBegin(id: 123)", d.ToString().c_str());
   }
 
   // flow step
@@ -530,7 +530,7 @@ TEST(TraceRecords, EventData) {
     EXPECT_EQ(trace::EventType::kFlowStep, d.type());
     EXPECT_EQ(123, d.GetFlowStep().id);
 
-    EXPECT_STR_EQ("FlowStep(id: 123)", d.ToString().c_str());
+    EXPECT_STREQ("FlowStep(id: 123)", d.ToString().c_str());
   }
 
   // flow end
@@ -548,7 +548,7 @@ TEST(TraceRecords, EventData) {
     EXPECT_EQ(trace::EventType::kFlowEnd, d.type());
     EXPECT_EQ(123, d.GetFlowEnd().id);
 
-    EXPECT_STR_EQ("FlowEnd(id: 123)", d.ToString().c_str());
+    EXPECT_STREQ("FlowEnd(id: 123)", d.ToString().c_str());
   }
 }
 
@@ -572,7 +572,7 @@ TEST(TraceRecords, Record) {
     EXPECT_EQ(trace::MetadataType::kProviderSection, r.GetMetadata().type());
     EXPECT_EQ(123, r.GetMetadata().content.GetProviderSection().id);
 
-    EXPECT_STR_EQ("Metadata(content: ProviderSection(id: 123))", r.ToString().c_str());
+    EXPECT_STREQ("Metadata(content: ProviderSection(id: 123))", r.ToString().c_str());
   }
 
   // initialization
@@ -590,7 +590,7 @@ TEST(TraceRecords, Record) {
     EXPECT_EQ(trace::RecordType::kInitialization, r.type());
     EXPECT_EQ(123, r.GetInitialization().ticks_per_second);
 
-    EXPECT_STR_EQ("Initialization(ticks_per_second: 123)", r.ToString().c_str());
+    EXPECT_STREQ("Initialization(ticks_per_second: 123)", r.ToString().c_str());
   }
 
   // string
@@ -611,7 +611,7 @@ TEST(TraceRecords, Record) {
     EXPECT_EQ(123, r.GetString().index);
     EXPECT_TRUE(r.GetString().string == "hi!");
 
-    EXPECT_STR_EQ("String(index: 123, \"hi!\")", r.ToString().c_str());
+    EXPECT_STREQ("String(index: 123, \"hi!\")", r.ToString().c_str());
   }
 
   // thread
@@ -635,7 +635,7 @@ TEST(TraceRecords, Record) {
     EXPECT_EQ(4, r.GetThread().process_thread.process_koid());
     EXPECT_EQ(5, r.GetThread().process_thread.thread_koid());
 
-    EXPECT_STR_EQ("Thread(index: 123, 4/5)", r.ToString().c_str());
+    EXPECT_STREQ("Thread(index: 123, 4/5)", r.ToString().c_str());
   }
 
   // event
@@ -692,7 +692,7 @@ TEST(TraceRecords, Record) {
     EXPECT_TRUE(r.GetEvent().arguments[1].name() == "arg2");
     EXPECT_EQ(-3.14, r.GetEvent().arguments[1].value().GetDouble());
 
-    EXPECT_STR_EQ(
+    EXPECT_STREQ(
         "Event(ts: 123, pt: 4/5, category: \"category\", name: \"name\", "
         "AsyncBegin(id: 678), {arg1: int32(11), arg2: double(-3.140000)})",
         r.ToString().c_str());
@@ -708,23 +708,23 @@ TEST(TraceRecords, Record) {
     EXPECT_EQ(trace::RecordType::kBlob, r.type());
     EXPECT_EQ(TRACE_BLOB_TYPE_DATA, r.GetBlob().type);
     EXPECT_EQ(sizeof(blob), r.GetBlob().blob_size);
-    EXPECT_STR_EQ(blob, reinterpret_cast<const char*>(r.GetBlob().blob));
+    EXPECT_STREQ(blob, reinterpret_cast<const char*>(r.GetBlob().blob));
 
     trace::Record m(std::move(r));
     EXPECT_EQ(trace::RecordType::kBlob, m.type());
     EXPECT_EQ(TRACE_BLOB_TYPE_DATA, m.GetBlob().type);
     EXPECT_EQ(sizeof(blob), m.GetBlob().blob_size);
-    EXPECT_STR_EQ(blob, reinterpret_cast<const char*>(m.GetBlob().blob));
+    EXPECT_STREQ(blob, reinterpret_cast<const char*>(m.GetBlob().blob));
 
     r = std::move(m);
     EXPECT_EQ(trace::RecordType::kBlob, r.type());
     EXPECT_EQ(TRACE_BLOB_TYPE_DATA, r.GetBlob().type);
     EXPECT_EQ(sizeof(blob), r.GetBlob().blob_size);
-    EXPECT_STR_EQ(blob, reinterpret_cast<const char*>(r.GetBlob().blob));
+    EXPECT_STREQ(blob, reinterpret_cast<const char*>(r.GetBlob().blob));
 
     auto expected =
         fbl::StringPrintf("Blob(name: %s, size: %zu, preview: %s)", name, sizeof(blob), preview);
-    EXPECT_STR_EQ(expected.c_str(), r.ToString().c_str());
+    EXPECT_STREQ(expected.c_str(), r.ToString().c_str());
   }
 
   // kernel object
@@ -767,7 +767,7 @@ TEST(TraceRecords, Record) {
     EXPECT_TRUE(r.GetKernelObject().arguments[1].name() == "arg2");
     EXPECT_EQ(-3.14, r.GetKernelObject().arguments[1].value().GetDouble());
 
-    EXPECT_STR_EQ(
+    EXPECT_STREQ(
         "KernelObject(koid: 123, type: vmo, name: \"name\", "
         "{arg1: int32(11), arg2: double(-3.140000)})",
         r.ToString().c_str());
@@ -814,7 +814,7 @@ TEST(TraceRecords, Record) {
     EXPECT_EQ(9, r.GetContextSwitch().outgoing_thread_priority);
     EXPECT_EQ(10, r.GetContextSwitch().incoming_thread_priority);
 
-    EXPECT_STR_EQ(
+    EXPECT_STREQ(
         "ContextSwitch(ts: 123, cpu: 4, os: suspended, opt: 5/6, ipt: 7/8, oprio: 9, iprio: 10)",
         r.ToString().c_str());
   }
@@ -843,7 +843,7 @@ TEST(TraceRecords, Record) {
     EXPECT_EQ(5, r.GetLog().process_thread.thread_koid());
     EXPECT_TRUE(r.GetLog().message == "log message");
 
-    EXPECT_STR_EQ("Log(ts: 123, pt: 4/5, \"log message\")", r.ToString().c_str());
+    EXPECT_STREQ("Log(ts: 123, pt: 4/5, \"log message\")", r.ToString().c_str());
   }
 
   // large blob
@@ -875,7 +875,7 @@ TEST(TraceRecords, Record) {
     EXPECT_EQ(-3.14,
               cpp17::get<Format>(r.GetLargeRecord().GetBlob()).arguments[1].value().GetDouble());
     EXPECT_EQ(sizeof(blob), cpp17::get<Format>(r.GetLargeRecord().GetBlob()).blob_size);
-    EXPECT_STR_EQ(
+    EXPECT_STREQ(
         blob, reinterpret_cast<const char*>(cpp17::get<Format>(r.GetLargeRecord().GetBlob()).blob));
 
     trace::Record m(std::move(r));
@@ -894,7 +894,7 @@ TEST(TraceRecords, Record) {
     EXPECT_EQ(-3.14,
               cpp17::get<Format>(m.GetLargeRecord().GetBlob()).arguments[1].value().GetDouble());
     EXPECT_EQ(sizeof(blob), cpp17::get<Format>(m.GetLargeRecord().GetBlob()).blob_size);
-    EXPECT_STR_EQ(
+    EXPECT_STREQ(
         blob, reinterpret_cast<const char*>(cpp17::get<Format>(m.GetLargeRecord().GetBlob()).blob));
 
     r = std::move(m);
@@ -913,7 +913,7 @@ TEST(TraceRecords, Record) {
     EXPECT_EQ(-3.14,
               cpp17::get<Format>(r.GetLargeRecord().GetBlob()).arguments[1].value().GetDouble());
     EXPECT_EQ(sizeof(blob), cpp17::get<Format>(r.GetLargeRecord().GetBlob()).blob_size);
-    EXPECT_STR_EQ(
+    EXPECT_STREQ(
         blob, reinterpret_cast<const char*>(cpp17::get<Format>(r.GetLargeRecord().GetBlob()).blob));
 
     auto expected = fbl::StringPrintf(
@@ -921,7 +921,7 @@ TEST(TraceRecords, Record) {
         "ts: 123, pt: 4/5, {arg1: int32(11), arg2: double(-3.140000)}, "
         "size: %zu, preview: %s))",
         sizeof(blob), preview);
-    EXPECT_STR_EQ(expected.c_str(), r.ToString().c_str());
+    EXPECT_STREQ(expected.c_str(), r.ToString().c_str());
   }
 }
 

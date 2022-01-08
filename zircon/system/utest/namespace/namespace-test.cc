@@ -58,7 +58,7 @@ void CreateNamespaceHelper(fdio_ns_t** out) {
 // Tests destruction of the namespace while no clients exist.
 TEST(NamespaceTest, Destroy) {
   fdio_ns_t* ns;
-  ASSERT_NO_FATAL_FAILURES(CreateNamespaceHelper(&ns));
+  ASSERT_NO_FATAL_FAILURE(CreateNamespaceHelper(&ns));
   ASSERT_OK(fdio_ns_destroy(ns));
 }
 
@@ -66,7 +66,7 @@ TEST(NamespaceTest, Destroy) {
 // Destruction should still occur, but after the connection is closed.
 TEST(NamespaceTest, DestroyWhileInUse) {
   fdio_ns_t* ns;
-  ASSERT_NO_FATAL_FAILURES(CreateNamespaceHelper(&ns));
+  ASSERT_NO_FATAL_FAILURE(CreateNamespaceHelper(&ns));
 
   fbl::unique_fd fd(fdio_ns_opendir(ns));
   ASSERT_GE(fd.get(), 0, "Couldn't open root");
@@ -156,7 +156,7 @@ TEST(NamespaceTest, ExportRoot) {
   fdio_flat_namespace_t* flat = nullptr;
   ASSERT_OK(fdio_ns_export(ns, &flat));
   ASSERT_EQ(flat->count, 1);
-  ASSERT_STR_EQ(flat->path[0], "/");
+  ASSERT_STREQ(flat->path[0], "/");
 
   fdio_ns_free_flat_ns(flat);
   ASSERT_OK(fdio_ns_destroy(ns));
@@ -165,7 +165,7 @@ TEST(NamespaceTest, ExportRoot) {
 // Tests exporting a namespace with multiple entries.
 TEST(NamespaceTest, Export) {
   fdio_ns_t* ns;
-  ASSERT_NO_FATAL_FAILURES(CreateNamespaceHelper(&ns));
+  ASSERT_NO_FATAL_FAILURE(CreateNamespaceHelper(&ns));
 
   // Actually create the flat namespace.
   fdio_flat_namespace_t* flat = nullptr;
@@ -174,7 +174,7 @@ TEST(NamespaceTest, Export) {
   // Validate the contents match the initialized mapping.
   ASSERT_EQ(flat->count, std::size(NS));
   for (unsigned n = 0; n < std::size(NS); n++) {
-    ASSERT_STR_EQ(flat->path[n], NS[n].local);
+    ASSERT_STREQ(flat->path[n], NS[n].local);
   }
 
   fdio_ns_free_flat_ns(flat);
@@ -187,7 +187,7 @@ TEST(NamespaceTest, Chdir) {
   ASSERT_OK(fdio_ns_get_installed(&old_ns));
 
   fdio_ns_t* ns;
-  ASSERT_NO_FATAL_FAILURES(CreateNamespaceHelper(&ns));
+  ASSERT_NO_FATAL_FAILURE(CreateNamespaceHelper(&ns));
   ASSERT_OK(fdio_ns_chdir(ns));
 
   DIR* dir;
@@ -196,24 +196,24 @@ TEST(NamespaceTest, Chdir) {
   // should show "bin", "lib", "fake" -- our rootdir
   ASSERT_TRUE((dir = opendir(".")));
   ASSERT_NOT_NULL((de = readdir(dir)));
-  EXPECT_STR_EQ(de->d_name, ".");
+  EXPECT_STREQ(de->d_name, ".");
   ASSERT_NOT_NULL((de = readdir(dir)));
-  EXPECT_STR_EQ(de->d_name, "bin");
+  EXPECT_STREQ(de->d_name, "bin");
   ASSERT_NOT_NULL((de = readdir(dir)));
-  EXPECT_STR_EQ(de->d_name, "lib");
+  EXPECT_STREQ(de->d_name, "lib");
   ASSERT_NOT_NULL((de = readdir(dir)));
-  EXPECT_STR_EQ(de->d_name, "fake");
+  EXPECT_STREQ(de->d_name, "fake");
   ASSERT_NULL((de = readdir(dir)));
   ASSERT_EQ(closedir(dir), 0);
 
   // should show "fake" directory, containing parent's pre-allocated tmp dir.
   ASSERT_TRUE((dir = opendir("fake")));
   ASSERT_TRUE((de = readdir(dir)));
-  ASSERT_STR_EQ(de->d_name, ".");
+  ASSERT_STREQ(de->d_name, ".");
   ASSERT_TRUE((de = readdir(dir)));
-  ASSERT_STR_EQ(de->d_name, "dev");
+  ASSERT_STREQ(de->d_name, "dev");
   ASSERT_TRUE((de = readdir(dir)));
-  ASSERT_STR_EQ(de->d_name, "tmp");
+  ASSERT_STREQ(de->d_name, "tmp");
   ASSERT_EQ(closedir(dir), 0);
 
   // Try doing some basic file ops within the namespace
@@ -365,12 +365,12 @@ TEST(NamespaceTest, Readdir) {
   struct dirent* de;
   ASSERT_TRUE((dir = opendir(".")));
   ASSERT_NOT_NULL((de = readdir(dir)));
-  ASSERT_STR_EQ(de->d_name, ".");
+  ASSERT_STREQ(de->d_name, ".");
 
   for (size_t i = 0; i < kNumChildren; i++) {
     std::string expected_name = std::string("test_") + std::to_string(i);
     ASSERT_NOT_NULL((de = readdir(dir)));
-    EXPECT_STR_EQ(de->d_name, expected_name.c_str());
+    EXPECT_STREQ(de->d_name, expected_name.c_str());
   }
   ASSERT_NULL((de = readdir(dir)));
   ASSERT_EQ(closedir(dir), 0);

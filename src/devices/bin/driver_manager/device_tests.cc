@@ -16,7 +16,7 @@ class DeviceChildIteratorTest : public MultipleDeviceTestCase {};
 
 TEST_F(DeviceChildIteratorTest, Empty) {
   size_t parent_index;
-  ASSERT_NO_FATAL_FAILURES(
+  ASSERT_NO_FATAL_FAILURE(
       AddDevice(platform_bus()->device, "parent-device", 0 /* protocol id */, "", &parent_index));
   coordinator_loop()->RunUntilIdle();
   ASSERT_TRUE(device(parent_index)->device->children().is_empty());
@@ -24,10 +24,10 @@ TEST_F(DeviceChildIteratorTest, Empty) {
 
 TEST_F(DeviceChildIteratorTest, OneChild) {
   size_t parent_index;
-  ASSERT_NO_FATAL_FAILURES(
+  ASSERT_NO_FATAL_FAILURE(
       AddDevice(platform_bus()->device, "parent-device", 0 /* protocol id */, "", &parent_index));
   size_t child_index;
-  ASSERT_NO_FATAL_FAILURES(
+  ASSERT_NO_FATAL_FAILURE(
       AddDevice(device(parent_index)->device, "child-device", 0, "", &child_index));
   coordinator_loop()->RunUntilIdle();
   ASSERT_FALSE(device(parent_index)->device->children().is_empty());
@@ -39,14 +39,14 @@ TEST_F(DeviceChildIteratorTest, OneChild) {
 
 TEST_F(DeviceChildIteratorTest, MultipleChildren) {
   size_t parent_index;
-  ASSERT_NO_FATAL_FAILURES(
+  ASSERT_NO_FATAL_FAILURE(
       AddDevice(platform_bus()->device, "parent-device", 0 /* protocol id */, "", &parent_index));
 
   constexpr size_t kChildren = 10;
   size_t children_index[kChildren] = {0};
   for (size_t i = 0; i < kChildren; i++) {
     fbl::String name = fbl::StringPrintf("child-device-%02zu", i);
-    ASSERT_NO_FATAL_FAILURES(
+    ASSERT_NO_FATAL_FAILURE(
         AddDevice(device(parent_index)->device, name.data(), 0, "", &children_index[i]));
   }
 

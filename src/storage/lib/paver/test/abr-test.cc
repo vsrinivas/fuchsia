@@ -123,7 +123,7 @@ class ChromebookX64AbrTests : public zxtest::Test {
     fbl::unique_fd fd;
     ASSERT_OK(RecursiveWaitForFile(devmgr_.devfs_root(), "sys/platform", &fd));
     ASSERT_OK(RecursiveWaitForFile(devmgr_.devfs_root(), "sys/platform/00:00:2d/ramctl", &fd));
-    ASSERT_NO_FATAL_FAILURES(
+    ASSERT_NO_FATAL_FAILURE(
         BlockDevice::Create(devmgr_.devfs_root(), kEmptyType, kDiskBlocks, kBlockSize, &disk_));
     fake_svc_.fake_boot_args().GetArgumentsMap().emplace("zvb.current_slot", "_a");
     dispatcher_.StartThread("abr-svc-test-loop");
@@ -221,13 +221,13 @@ class ChromebookX64AbrTests : public zxtest::Test {
 };
 
 TEST_F(ChromebookX64AbrTests, CreateSucceeds) {
-  ASSERT_NO_FATAL_FAILURES(SetupPartitions(kAbrSlotIndexA));
+  ASSERT_NO_FATAL_FAILURE(SetupPartitions(kAbrSlotIndexA));
   auto client = GetAbrClient();
   ASSERT_OK(client.status_value());
 }
 
 TEST_F(ChromebookX64AbrTests, QueryActiveSucceeds) {
-  ASSERT_NO_FATAL_FAILURES(SetupPartitions(kAbrSlotIndexA));
+  ASSERT_NO_FATAL_FAILURE(SetupPartitions(kAbrSlotIndexA));
   auto client = GetAbrClient();
   ASSERT_OK(client.status_value());
 
@@ -238,7 +238,7 @@ TEST_F(ChromebookX64AbrTests, QueryActiveSucceeds) {
 }
 
 TEST_F(ChromebookX64AbrTests, GetSlotInfoSucceeds) {
-  ASSERT_NO_FATAL_FAILURES(SetupPartitions(kAbrSlotIndexB));
+  ASSERT_NO_FATAL_FAILURE(SetupPartitions(kAbrSlotIndexB));
   auto client = GetAbrClient();
   ASSERT_OK(client.status_value());
   auto info = client->GetSlotInfo(kAbrSlotIndexB);
@@ -250,7 +250,7 @@ TEST_F(ChromebookX64AbrTests, GetSlotInfoSucceeds) {
 }
 
 TEST_F(ChromebookX64AbrTests, AbrAlwaysMarksRSuccessful) {
-  ASSERT_NO_FATAL_FAILURES(SetupPartitions(kAbrSlotIndexA));
+  ASSERT_NO_FATAL_FAILURE(SetupPartitions(kAbrSlotIndexA));
   auto client = GetAbrClient();
   ASSERT_OK(client.status_value());
   // Force a write to the A/B/R data by marking a slot successful and then marking it unbootable.
@@ -283,7 +283,7 @@ class CurrentSlotUuidTest : public zxtest::Test {
     ASSERT_OK(IsolatedDevmgr::Create(&args, &devmgr_));
     fbl::unique_fd fd;
     ASSERT_OK(RecursiveWaitForFile(devmgr_.devfs_root(), "sys/platform/00:00:2d/ramctl", &fd));
-    ASSERT_NO_FATAL_FAILURES(
+    ASSERT_NO_FATAL_FAILURE(
         BlockDevice::Create(devmgr_.devfs_root(), kEmptyType, kDiskBlocks, kBlockSize, &disk_));
   }
 
@@ -310,7 +310,7 @@ class CurrentSlotUuidTest : public zxtest::Test {
 };
 
 TEST_F(CurrentSlotUuidTest, TestZirconAIsSlotA) {
-  ASSERT_NO_FATAL_FAILURES(CreateDiskWithPartition("zircon-a"));
+  ASSERT_NO_FATAL_FAILURE(CreateDiskWithPartition("zircon-a"));
 
   auto result = abr::PartitionUuidToConfiguration(devmgr_.devfs_root(), uuid::Uuid(kTestUuid));
   ASSERT_TRUE(result.is_ok());
@@ -318,7 +318,7 @@ TEST_F(CurrentSlotUuidTest, TestZirconAIsSlotA) {
 }
 
 TEST_F(CurrentSlotUuidTest, TestZirconAWithUnderscore) {
-  ASSERT_NO_FATAL_FAILURES(CreateDiskWithPartition("zircon_a"));
+  ASSERT_NO_FATAL_FAILURE(CreateDiskWithPartition("zircon_a"));
 
   auto result = abr::PartitionUuidToConfiguration(devmgr_.devfs_root(), uuid::Uuid(kTestUuid));
   ASSERT_TRUE(result.is_ok());
@@ -326,7 +326,7 @@ TEST_F(CurrentSlotUuidTest, TestZirconAWithUnderscore) {
 }
 
 TEST_F(CurrentSlotUuidTest, TestZirconAMixedCase) {
-  ASSERT_NO_FATAL_FAILURES(CreateDiskWithPartition("ZiRcOn-A"));
+  ASSERT_NO_FATAL_FAILURE(CreateDiskWithPartition("ZiRcOn-A"));
 
   auto result = abr::PartitionUuidToConfiguration(devmgr_.devfs_root(), uuid::Uuid(kTestUuid));
   ASSERT_TRUE(result.is_ok());
@@ -334,7 +334,7 @@ TEST_F(CurrentSlotUuidTest, TestZirconAMixedCase) {
 }
 
 TEST_F(CurrentSlotUuidTest, TestZirconB) {
-  ASSERT_NO_FATAL_FAILURES(CreateDiskWithPartition("zircon_b"));
+  ASSERT_NO_FATAL_FAILURE(CreateDiskWithPartition("zircon_b"));
 
   auto result = abr::PartitionUuidToConfiguration(devmgr_.devfs_root(), uuid::Uuid(kTestUuid));
   ASSERT_TRUE(result.is_ok());
@@ -342,7 +342,7 @@ TEST_F(CurrentSlotUuidTest, TestZirconB) {
 }
 
 TEST_F(CurrentSlotUuidTest, TestZirconR) {
-  ASSERT_NO_FATAL_FAILURES(CreateDiskWithPartition("ZIRCON-R"));
+  ASSERT_NO_FATAL_FAILURE(CreateDiskWithPartition("ZIRCON-R"));
 
   auto result = abr::PartitionUuidToConfiguration(devmgr_.devfs_root(), uuid::Uuid(kTestUuid));
   ASSERT_TRUE(result.is_ok());
@@ -350,7 +350,7 @@ TEST_F(CurrentSlotUuidTest, TestZirconR) {
 }
 
 TEST_F(CurrentSlotUuidTest, TestInvalid) {
-  ASSERT_NO_FATAL_FAILURES(CreateDiskWithPartition("ZERCON-R"));
+  ASSERT_NO_FATAL_FAILURE(CreateDiskWithPartition("ZERCON-R"));
 
   auto result = abr::PartitionUuidToConfiguration(devmgr_.devfs_root(), uuid::Uuid(kTestUuid));
   ASSERT_TRUE(result.is_error());

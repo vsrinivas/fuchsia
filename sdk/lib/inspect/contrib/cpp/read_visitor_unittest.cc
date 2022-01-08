@@ -147,8 +147,8 @@ TEST(ReaderTest, VisitPropertiesRecursive) {
   EXPECT_FALSE(found_other_match);
   ASSERT_TRUE(v4_result.is_ok());
   ASSERT_TRUE(v5_result.is_ok());
-  EXPECT_STR_EQ("Hello", v4_result.value());
-  EXPECT_STR_EQ("Goodbye", v5_result.value());
+  EXPECT_STREQ("Hello", v4_result.value());
+  EXPECT_STREQ("Goodbye", v5_result.value());
 }
 
 TEST(ReaderTest, VisitPropertiesAllRecursive) {

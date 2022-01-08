@@ -191,7 +191,7 @@ void TransferTestCommon(TransferTestFlavor flavor) {
 
   // Now go ahead and run, passing it the clock we created (if any)
   TargetProcess target_process;
-  ASSERT_NO_FATAL_FAILURES(target_process.Run(std::move(the_clock)));
+  ASSERT_NO_FATAL_FAILURE(target_process.Run(std::move(the_clock)));
 
   // At this point, the process should have already sent us a response in the
   // control channel and exited.  Go ahead and read the response now.

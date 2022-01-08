@@ -27,7 +27,7 @@ acpi_lid::AcpiObjectEvalFunc CreateFakeAcpiEvalFn(AcpiState* state) {
   return [state](ACPI_HANDLE handle, ACPI_STRING pathname, ACPI_OBJECT_LIST* external_params,
                  ACPI_BUFFER* return_buffer, ACPI_OBJECT_TYPE return_type) {
     EXPECT_EQ(return_type, ACPI_TYPE_INTEGER, "");
-    EXPECT_STR_EQ(pathname, "_LID");
+    EXPECT_STREQ(pathname, "_LID");
     static_cast<ACPI_OBJECT*>(return_buffer->Pointer)->Integer.Value = state->lid_state;
     return AE_OK;
   };

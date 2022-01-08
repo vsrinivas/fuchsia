@@ -172,14 +172,14 @@ TEST(UsbTests, usb_isoch_loopback_test) {
   ASSERT_EQ(fuchsia_hardware_usb_tester_DeviceIsochLoopback(dev_svc, &params, &status, &result),
             ZX_OK, "failed to call DeviceIsochLoopback");
   ASSERT_EQ(status, ZX_OK, "%s", err_msg1);
-  ASSERT_NO_FATAL_FAILURES(usb_isoch_verify_result(&result), "%s", err_msg1);
+  ASSERT_NO_FATAL_FAILURE(usb_isoch_verify_result(&result), "%s", err_msg1);
 
   char err_msg2[] = "isoch loopback failed: USB_TESTER_DATA_PATTERN_RANDOM 64 K";
   params.data_pattern = fuchsia_hardware_usb_tester_DataPatternType_RANDOM;
   ASSERT_EQ(fuchsia_hardware_usb_tester_DeviceIsochLoopback(dev_svc, &params, &status, &result),
             ZX_OK, "failed to call DeviceIsochLoopback");
   ASSERT_EQ(status, ZX_OK, "%s", err_msg2);
-  ASSERT_NO_FATAL_FAILURES(usb_isoch_verify_result(&result), "%s", err_msg2);
+  ASSERT_NO_FATAL_FAILURE(usb_isoch_verify_result(&result), "%s", err_msg2);
 
   close(dev_svc);
 }
@@ -210,8 +210,8 @@ TEST(UsbTests, usb_callbacks_opt_out_test) {
   ASSERT_EQ(fuchsia_hardware_usb_tester_DeviceIsochLoopback(dev_svc, &params, &status, &result),
             ZX_OK, "failed to call DeviceIsochLoopback");
   ASSERT_EQ(status, ZX_OK, "");
-  ASSERT_NO_FATAL_FAILURES(usb_isoch_verify_result(&result),
-                           "callbacks test failed: 10 reqs per callback");
+  ASSERT_NO_FATAL_FAILURE(usb_isoch_verify_result(&result),
+                          "callbacks test failed: 10 reqs per callback");
 
   close(dev_svc);
 }

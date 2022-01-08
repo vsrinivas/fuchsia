@@ -791,58 +791,58 @@ TEST(VmoTestCase, Rights) {
   zx_handle_close(vmo2);
 
   // full perm test
-  ASSERT_NO_FATAL_FAILURES(ChildPermsTestHelper(vmo));
-  ASSERT_NO_FATAL_FAILURES(RightsTestMapHelper(vmo, len, 0, true, 0));
-  ASSERT_NO_FATAL_FAILURES(RightsTestMapHelper(vmo, len, ZX_VM_PERM_READ, true, 0));
-  ASSERT_NO_FATAL_FAILURES(
+  ASSERT_NO_FATAL_FAILURE(ChildPermsTestHelper(vmo));
+  ASSERT_NO_FATAL_FAILURE(RightsTestMapHelper(vmo, len, 0, true, 0));
+  ASSERT_NO_FATAL_FAILURE(RightsTestMapHelper(vmo, len, ZX_VM_PERM_READ, true, 0));
+  ASSERT_NO_FATAL_FAILURE(
       RightsTestMapHelper(vmo, len, ZX_VM_PERM_WRITE, false, ZX_ERR_INVALID_ARGS));
-  ASSERT_NO_FATAL_FAILURES(
+  ASSERT_NO_FATAL_FAILURE(
       RightsTestMapHelper(vmo, len, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, true, 0));
 
   // try most of the permutations of mapping and clone a vmo with various rights dropped
   vmo2 = ZX_HANDLE_INVALID;
   zx_handle_duplicate(vmo, ZX_RIGHT_READ | ZX_RIGHT_WRITE | ZX_RIGHT_DUPLICATE, &vmo2);
-  ASSERT_NO_FATAL_FAILURES(ChildPermsTestHelper(vmo2));
-  ASSERT_NO_FATAL_FAILURES(RightsTestMapHelper(vmo2, len, 0, false, ZX_ERR_ACCESS_DENIED));
-  ASSERT_NO_FATAL_FAILURES(
+  ASSERT_NO_FATAL_FAILURE(ChildPermsTestHelper(vmo2));
+  ASSERT_NO_FATAL_FAILURE(RightsTestMapHelper(vmo2, len, 0, false, ZX_ERR_ACCESS_DENIED));
+  ASSERT_NO_FATAL_FAILURE(
       RightsTestMapHelper(vmo2, len, ZX_VM_PERM_READ, false, ZX_ERR_ACCESS_DENIED));
-  ASSERT_NO_FATAL_FAILURES(
+  ASSERT_NO_FATAL_FAILURE(
       RightsTestMapHelper(vmo2, len, ZX_VM_PERM_WRITE, false, ZX_ERR_ACCESS_DENIED));
-  ASSERT_NO_FATAL_FAILURES(RightsTestMapHelper(vmo2, len, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, false,
-                                               ZX_ERR_ACCESS_DENIED));
+  ASSERT_NO_FATAL_FAILURE(RightsTestMapHelper(vmo2, len, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, false,
+                                              ZX_ERR_ACCESS_DENIED));
   zx_handle_close(vmo2);
 
   vmo2 = ZX_HANDLE_INVALID;
   zx_handle_duplicate(vmo, ZX_RIGHT_READ | ZX_RIGHT_MAP | ZX_RIGHT_DUPLICATE, &vmo2);
-  ASSERT_NO_FATAL_FAILURES(ChildPermsTestHelper(vmo2));
-  ASSERT_NO_FATAL_FAILURES(RightsTestMapHelper(vmo2, len, 0, true, 0));
-  ASSERT_NO_FATAL_FAILURES(RightsTestMapHelper(vmo2, len, ZX_VM_PERM_READ, true, 0));
-  ASSERT_NO_FATAL_FAILURES(
+  ASSERT_NO_FATAL_FAILURE(ChildPermsTestHelper(vmo2));
+  ASSERT_NO_FATAL_FAILURE(RightsTestMapHelper(vmo2, len, 0, true, 0));
+  ASSERT_NO_FATAL_FAILURE(RightsTestMapHelper(vmo2, len, ZX_VM_PERM_READ, true, 0));
+  ASSERT_NO_FATAL_FAILURE(
       RightsTestMapHelper(vmo2, len, ZX_VM_PERM_WRITE, false, ZX_ERR_INVALID_ARGS));
-  ASSERT_NO_FATAL_FAILURES(RightsTestMapHelper(vmo2, len, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, false,
-                                               ZX_ERR_ACCESS_DENIED));
+  ASSERT_NO_FATAL_FAILURE(RightsTestMapHelper(vmo2, len, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, false,
+                                              ZX_ERR_ACCESS_DENIED));
   zx_handle_close(vmo2);
 
   vmo2 = ZX_HANDLE_INVALID;
   zx_handle_duplicate(vmo, ZX_RIGHT_WRITE | ZX_RIGHT_MAP | ZX_RIGHT_DUPLICATE, &vmo2);
-  ASSERT_NO_FATAL_FAILURES(RightsTestMapHelper(vmo2, len, 0, true, 0));
-  ASSERT_NO_FATAL_FAILURES(
+  ASSERT_NO_FATAL_FAILURE(RightsTestMapHelper(vmo2, len, 0, true, 0));
+  ASSERT_NO_FATAL_FAILURE(
       RightsTestMapHelper(vmo2, len, ZX_VM_PERM_READ, false, ZX_ERR_ACCESS_DENIED));
-  ASSERT_NO_FATAL_FAILURES(
+  ASSERT_NO_FATAL_FAILURE(
       RightsTestMapHelper(vmo2, len, ZX_VM_PERM_WRITE, false, ZX_ERR_INVALID_ARGS));
-  ASSERT_NO_FATAL_FAILURES(RightsTestMapHelper(vmo2, len, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, false,
-                                               ZX_ERR_ACCESS_DENIED));
+  ASSERT_NO_FATAL_FAILURE(RightsTestMapHelper(vmo2, len, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, false,
+                                              ZX_ERR_ACCESS_DENIED));
   zx_handle_close(vmo2);
 
   vmo2 = ZX_HANDLE_INVALID;
   zx_handle_duplicate(vmo, ZX_RIGHT_READ | ZX_RIGHT_WRITE | ZX_RIGHT_MAP | ZX_RIGHT_DUPLICATE,
                       &vmo2);
-  ASSERT_NO_FATAL_FAILURES(ChildPermsTestHelper(vmo2));
-  ASSERT_NO_FATAL_FAILURES(RightsTestMapHelper(vmo2, len, 0, true, 0));
-  ASSERT_NO_FATAL_FAILURES(RightsTestMapHelper(vmo2, len, ZX_VM_PERM_READ, true, 0));
-  ASSERT_NO_FATAL_FAILURES(
+  ASSERT_NO_FATAL_FAILURE(ChildPermsTestHelper(vmo2));
+  ASSERT_NO_FATAL_FAILURE(RightsTestMapHelper(vmo2, len, 0, true, 0));
+  ASSERT_NO_FATAL_FAILURE(RightsTestMapHelper(vmo2, len, ZX_VM_PERM_READ, true, 0));
+  ASSERT_NO_FATAL_FAILURE(
       RightsTestMapHelper(vmo2, len, ZX_VM_PERM_WRITE, false, ZX_ERR_INVALID_ARGS));
-  ASSERT_NO_FATAL_FAILURES(
+  ASSERT_NO_FATAL_FAILURE(
       RightsTestMapHelper(vmo2, len, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, true, 0));
   zx_handle_close(vmo2);
 
@@ -853,7 +853,7 @@ TEST(VmoTestCase, Rights) {
   char get_name[ZX_MAX_NAME_LEN];
   status = zx_object_get_property(vmo, ZX_PROP_NAME, get_name, sizeof(get_name));
   EXPECT_OK(status, "get_property");
-  EXPECT_STR_EQ(set_name, get_name, "vmo name");
+  EXPECT_STREQ(set_name, get_name, "vmo name");
 
   // close the handle
   status = zx_handle_close(vmo);
@@ -906,100 +906,100 @@ TEST(VmoTestCase, RightsExec) {
             (kExpectedRights | ZX_RIGHT_EXECUTE) & GetHandleRights(vmo));
 
   // full perm test
-  ASSERT_NO_FATAL_FAILURES(ChildPermsTestHelper(vmo));
-  ASSERT_NO_FATAL_FAILURES(RightsTestMapHelper(vmo, len, 0, true, 0));
-  ASSERT_NO_FATAL_FAILURES(RightsTestMapHelper(vmo, len, ZX_VM_PERM_READ, true, 0));
-  ASSERT_NO_FATAL_FAILURES(
+  ASSERT_NO_FATAL_FAILURE(ChildPermsTestHelper(vmo));
+  ASSERT_NO_FATAL_FAILURE(RightsTestMapHelper(vmo, len, 0, true, 0));
+  ASSERT_NO_FATAL_FAILURE(RightsTestMapHelper(vmo, len, ZX_VM_PERM_READ, true, 0));
+  ASSERT_NO_FATAL_FAILURE(
       RightsTestMapHelper(vmo, len, ZX_VM_PERM_WRITE, false, ZX_ERR_INVALID_ARGS));
-  ASSERT_NO_FATAL_FAILURES(
+  ASSERT_NO_FATAL_FAILURE(
       RightsTestMapHelper(vmo, len, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, true, 0));
-  ASSERT_NO_FATAL_FAILURES(RightsTestMapHelper(
+  ASSERT_NO_FATAL_FAILURE(RightsTestMapHelper(
       vmo, len, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE | ZX_VM_PERM_EXECUTE, true, 0));
-  ASSERT_NO_FATAL_FAILURES(
+  ASSERT_NO_FATAL_FAILURE(
       RightsTestMapHelper(vmo, len, ZX_VM_PERM_READ | ZX_VM_PERM_EXECUTE, true, 0));
 
   // try most of the permutations of mapping and clone a vmo with various rights dropped
   vmo2 = ZX_HANDLE_INVALID;
   zx_handle_duplicate(vmo, ZX_RIGHT_READ | ZX_RIGHT_WRITE | ZX_RIGHT_EXECUTE | ZX_RIGHT_DUPLICATE,
                       &vmo2);
-  ASSERT_NO_FATAL_FAILURES(ChildPermsTestHelper(vmo2));
-  ASSERT_NO_FATAL_FAILURES(RightsTestMapHelper(vmo2, len, 0, false, ZX_ERR_ACCESS_DENIED));
-  ASSERT_NO_FATAL_FAILURES(
+  ASSERT_NO_FATAL_FAILURE(ChildPermsTestHelper(vmo2));
+  ASSERT_NO_FATAL_FAILURE(RightsTestMapHelper(vmo2, len, 0, false, ZX_ERR_ACCESS_DENIED));
+  ASSERT_NO_FATAL_FAILURE(
       RightsTestMapHelper(vmo2, len, ZX_VM_PERM_READ, false, ZX_ERR_ACCESS_DENIED));
-  ASSERT_NO_FATAL_FAILURES(
+  ASSERT_NO_FATAL_FAILURE(
       RightsTestMapHelper(vmo2, len, ZX_VM_PERM_WRITE, false, ZX_ERR_ACCESS_DENIED));
-  ASSERT_NO_FATAL_FAILURES(RightsTestMapHelper(vmo2, len, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, false,
-                                               ZX_ERR_ACCESS_DENIED));
-  ASSERT_NO_FATAL_FAILURES(
+  ASSERT_NO_FATAL_FAILURE(RightsTestMapHelper(vmo2, len, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, false,
+                                              ZX_ERR_ACCESS_DENIED));
+  ASSERT_NO_FATAL_FAILURE(
       RightsTestMapHelper(vmo2, len, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE | ZX_VM_PERM_EXECUTE, false,
                           ZX_ERR_ACCESS_DENIED));
-  ASSERT_NO_FATAL_FAILURES(RightsTestMapHelper(vmo2, len, ZX_VM_PERM_READ | ZX_VM_PERM_EXECUTE,
-                                               false, ZX_ERR_ACCESS_DENIED));
+  ASSERT_NO_FATAL_FAILURE(RightsTestMapHelper(vmo2, len, ZX_VM_PERM_READ | ZX_VM_PERM_EXECUTE,
+                                              false, ZX_ERR_ACCESS_DENIED));
   zx_handle_close(vmo2);
 
   vmo2 = ZX_HANDLE_INVALID;
   zx_handle_duplicate(vmo, ZX_RIGHT_READ | ZX_RIGHT_MAP | ZX_RIGHT_DUPLICATE, &vmo2);
-  ASSERT_NO_FATAL_FAILURES(ChildPermsTestHelper(vmo2));
-  ASSERT_NO_FATAL_FAILURES(RightsTestMapHelper(vmo2, len, 0, true, 0));
-  ASSERT_NO_FATAL_FAILURES(RightsTestMapHelper(vmo2, len, ZX_VM_PERM_READ, true, 0));
-  ASSERT_NO_FATAL_FAILURES(
+  ASSERT_NO_FATAL_FAILURE(ChildPermsTestHelper(vmo2));
+  ASSERT_NO_FATAL_FAILURE(RightsTestMapHelper(vmo2, len, 0, true, 0));
+  ASSERT_NO_FATAL_FAILURE(RightsTestMapHelper(vmo2, len, ZX_VM_PERM_READ, true, 0));
+  ASSERT_NO_FATAL_FAILURE(
       RightsTestMapHelper(vmo2, len, ZX_VM_PERM_WRITE, false, ZX_ERR_INVALID_ARGS));
-  ASSERT_NO_FATAL_FAILURES(RightsTestMapHelper(vmo2, len, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, false,
-                                               ZX_ERR_ACCESS_DENIED));
-  ASSERT_NO_FATAL_FAILURES(
+  ASSERT_NO_FATAL_FAILURE(RightsTestMapHelper(vmo2, len, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, false,
+                                              ZX_ERR_ACCESS_DENIED));
+  ASSERT_NO_FATAL_FAILURE(
       RightsTestMapHelper(vmo2, len, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE | ZX_VM_PERM_EXECUTE, false,
                           ZX_ERR_ACCESS_DENIED));
-  ASSERT_NO_FATAL_FAILURES(RightsTestMapHelper(vmo2, len, ZX_VM_PERM_READ | ZX_VM_PERM_EXECUTE,
-                                               false, ZX_ERR_ACCESS_DENIED));
+  ASSERT_NO_FATAL_FAILURE(RightsTestMapHelper(vmo2, len, ZX_VM_PERM_READ | ZX_VM_PERM_EXECUTE,
+                                              false, ZX_ERR_ACCESS_DENIED));
   zx_handle_close(vmo2);
 
   vmo2 = ZX_HANDLE_INVALID;
   zx_handle_duplicate(vmo, ZX_RIGHT_WRITE | ZX_RIGHT_MAP | ZX_RIGHT_DUPLICATE, &vmo2);
-  ASSERT_NO_FATAL_FAILURES(RightsTestMapHelper(vmo2, len, 0, true, 0));
-  ASSERT_NO_FATAL_FAILURES(
+  ASSERT_NO_FATAL_FAILURE(RightsTestMapHelper(vmo2, len, 0, true, 0));
+  ASSERT_NO_FATAL_FAILURE(
       RightsTestMapHelper(vmo2, len, ZX_VM_PERM_READ, false, ZX_ERR_ACCESS_DENIED));
-  ASSERT_NO_FATAL_FAILURES(
+  ASSERT_NO_FATAL_FAILURE(
       RightsTestMapHelper(vmo2, len, ZX_VM_PERM_WRITE, false, ZX_ERR_INVALID_ARGS));
-  ASSERT_NO_FATAL_FAILURES(RightsTestMapHelper(vmo2, len, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, false,
-                                               ZX_ERR_ACCESS_DENIED));
-  ASSERT_NO_FATAL_FAILURES(
+  ASSERT_NO_FATAL_FAILURE(RightsTestMapHelper(vmo2, len, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, false,
+                                              ZX_ERR_ACCESS_DENIED));
+  ASSERT_NO_FATAL_FAILURE(
       RightsTestMapHelper(vmo2, len, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE | ZX_VM_PERM_EXECUTE, false,
                           ZX_ERR_ACCESS_DENIED));
-  ASSERT_NO_FATAL_FAILURES(RightsTestMapHelper(vmo2, len, ZX_VM_PERM_READ | ZX_VM_PERM_EXECUTE,
-                                               false, ZX_ERR_ACCESS_DENIED));
+  ASSERT_NO_FATAL_FAILURE(RightsTestMapHelper(vmo2, len, ZX_VM_PERM_READ | ZX_VM_PERM_EXECUTE,
+                                              false, ZX_ERR_ACCESS_DENIED));
   zx_handle_close(vmo2);
 
   vmo2 = ZX_HANDLE_INVALID;
   zx_handle_duplicate(vmo, ZX_RIGHT_READ | ZX_RIGHT_WRITE | ZX_RIGHT_MAP | ZX_RIGHT_DUPLICATE,
                       &vmo2);
-  ASSERT_NO_FATAL_FAILURES(ChildPermsTestHelper(vmo2));
-  ASSERT_NO_FATAL_FAILURES(RightsTestMapHelper(vmo2, len, 0, true, 0));
-  ASSERT_NO_FATAL_FAILURES(RightsTestMapHelper(vmo2, len, ZX_VM_PERM_READ, true, 0));
-  ASSERT_NO_FATAL_FAILURES(
+  ASSERT_NO_FATAL_FAILURE(ChildPermsTestHelper(vmo2));
+  ASSERT_NO_FATAL_FAILURE(RightsTestMapHelper(vmo2, len, 0, true, 0));
+  ASSERT_NO_FATAL_FAILURE(RightsTestMapHelper(vmo2, len, ZX_VM_PERM_READ, true, 0));
+  ASSERT_NO_FATAL_FAILURE(
       RightsTestMapHelper(vmo2, len, ZX_VM_PERM_WRITE, false, ZX_ERR_INVALID_ARGS));
-  ASSERT_NO_FATAL_FAILURES(
+  ASSERT_NO_FATAL_FAILURE(
       RightsTestMapHelper(vmo2, len, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, true, 0));
-  ASSERT_NO_FATAL_FAILURES(
+  ASSERT_NO_FATAL_FAILURE(
       RightsTestMapHelper(vmo2, len, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE | ZX_VM_PERM_EXECUTE, false,
                           ZX_ERR_ACCESS_DENIED));
-  ASSERT_NO_FATAL_FAILURES(RightsTestMapHelper(vmo2, len, ZX_VM_PERM_READ | ZX_VM_PERM_EXECUTE,
-                                               false, ZX_ERR_ACCESS_DENIED));
+  ASSERT_NO_FATAL_FAILURE(RightsTestMapHelper(vmo2, len, ZX_VM_PERM_READ | ZX_VM_PERM_EXECUTE,
+                                              false, ZX_ERR_ACCESS_DENIED));
   zx_handle_close(vmo2);
 
   vmo2 = ZX_HANDLE_INVALID;
   zx_handle_duplicate(vmo, ZX_RIGHT_READ | ZX_RIGHT_EXECUTE | ZX_RIGHT_MAP | ZX_RIGHT_DUPLICATE,
                       &vmo2);
-  ASSERT_NO_FATAL_FAILURES(ChildPermsTestHelper(vmo2));
-  ASSERT_NO_FATAL_FAILURES(RightsTestMapHelper(vmo2, len, 0, true, 0));
-  ASSERT_NO_FATAL_FAILURES(RightsTestMapHelper(vmo2, len, ZX_VM_PERM_READ, true, 0));
-  ASSERT_NO_FATAL_FAILURES(
+  ASSERT_NO_FATAL_FAILURE(ChildPermsTestHelper(vmo2));
+  ASSERT_NO_FATAL_FAILURE(RightsTestMapHelper(vmo2, len, 0, true, 0));
+  ASSERT_NO_FATAL_FAILURE(RightsTestMapHelper(vmo2, len, ZX_VM_PERM_READ, true, 0));
+  ASSERT_NO_FATAL_FAILURE(
       RightsTestMapHelper(vmo2, len, ZX_VM_PERM_WRITE, false, ZX_ERR_INVALID_ARGS));
-  ASSERT_NO_FATAL_FAILURES(RightsTestMapHelper(vmo2, len, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, false,
-                                               ZX_ERR_ACCESS_DENIED));
-  ASSERT_NO_FATAL_FAILURES(
+  ASSERT_NO_FATAL_FAILURE(RightsTestMapHelper(vmo2, len, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, false,
+                                              ZX_ERR_ACCESS_DENIED));
+  ASSERT_NO_FATAL_FAILURE(
       RightsTestMapHelper(vmo2, len, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE | ZX_VM_PERM_EXECUTE, false,
                           ZX_ERR_ACCESS_DENIED));
-  ASSERT_NO_FATAL_FAILURES(
+  ASSERT_NO_FATAL_FAILURE(
       RightsTestMapHelper(vmo, len, ZX_VM_PERM_READ | ZX_VM_PERM_EXECUTE, true, 0));
   zx_handle_close(vmo2);
 
@@ -1007,16 +1007,16 @@ TEST(VmoTestCase, RightsExec) {
   zx_handle_duplicate(
       vmo, ZX_RIGHT_READ | ZX_RIGHT_WRITE | ZX_RIGHT_EXECUTE | ZX_RIGHT_MAP | ZX_RIGHT_DUPLICATE,
       &vmo2);
-  ASSERT_NO_FATAL_FAILURES(ChildPermsTestHelper(vmo2));
-  ASSERT_NO_FATAL_FAILURES(RightsTestMapHelper(vmo2, len, 0, true, 0));
-  ASSERT_NO_FATAL_FAILURES(RightsTestMapHelper(vmo2, len, ZX_VM_PERM_READ, true, 0));
-  ASSERT_NO_FATAL_FAILURES(
+  ASSERT_NO_FATAL_FAILURE(ChildPermsTestHelper(vmo2));
+  ASSERT_NO_FATAL_FAILURE(RightsTestMapHelper(vmo2, len, 0, true, 0));
+  ASSERT_NO_FATAL_FAILURE(RightsTestMapHelper(vmo2, len, ZX_VM_PERM_READ, true, 0));
+  ASSERT_NO_FATAL_FAILURE(
       RightsTestMapHelper(vmo2, len, ZX_VM_PERM_WRITE, false, ZX_ERR_INVALID_ARGS));
-  ASSERT_NO_FATAL_FAILURES(
+  ASSERT_NO_FATAL_FAILURE(
       RightsTestMapHelper(vmo2, len, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, true, 0));
-  ASSERT_NO_FATAL_FAILURES(RightsTestMapHelper(
+  ASSERT_NO_FATAL_FAILURE(RightsTestMapHelper(
       vmo2, len, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE | ZX_VM_PERM_EXECUTE, true, 0));
-  ASSERT_NO_FATAL_FAILURES(
+  ASSERT_NO_FATAL_FAILURE(
       RightsTestMapHelper(vmo, len, ZX_VM_PERM_READ | ZX_VM_PERM_EXECUTE, true, 0));
 
   // close the handles

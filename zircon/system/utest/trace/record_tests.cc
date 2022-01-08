@@ -302,13 +302,13 @@ TEST(Records, arg_value_null_ending_test) {
   // is not included in the string argument values.
   const auto& literal_arg = records[7].GetEvent().arguments[0].value().GetString();
   EXPECT_EQ(literal_arg.length(), 7);
-  EXPECT_STR_EQ(literal_arg.c_str(), "literal");
+  EXPECT_STREQ(literal_arg.c_str(), "literal");
   const auto& terminated_arg = records[8].GetEvent().arguments[0].value().GetString();
   EXPECT_EQ(terminated_arg.length(), 4);
-  EXPECT_STR_EQ(terminated_arg.c_str(), "1234");
+  EXPECT_STREQ(terminated_arg.c_str(), "1234");
   const auto& unterminated_arg = records[9].GetEvent().arguments[0].value().GetString();
   EXPECT_EQ(unterminated_arg.length(), 5);
-  EXPECT_STR_EQ(unterminated_arg.c_str(), "12345");
+  EXPECT_STREQ(unterminated_arg.c_str(), "12345");
 
   END_TRACE_TEST;
 }

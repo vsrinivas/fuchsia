@@ -59,7 +59,7 @@ TEST(Bti, NameSupport) {
   ASSERT_LE(strlen(normal_name), (ZX_MAX_NAME_LEN - 1), "normal_name would be truncated");
   ASSERT_OK(bti.set_property(ZX_PROP_NAME, normal_name, sizeof(normal_name)));
   ASSERT_OK(bti.get_property(ZX_PROP_NAME, name_buffer, sizeof(name_buffer)));
-  ASSERT_STR_EQ(normal_name, name_buffer);
+  ASSERT_STREQ(normal_name, name_buffer);
 
   // Setting the name to long_name should succeed, but the result will be truncated.
   const char long_name[] =
@@ -76,7 +76,7 @@ TEST(Bti, NameSupport) {
   ASSERT_LE(strlen(empty_name), (ZX_MAX_NAME_LEN - 1), "empty_name would be truncated");
   ASSERT_OK(bti.set_property(ZX_PROP_NAME, empty_name, sizeof(empty_name)));
   ASSERT_OK(bti.get_property(ZX_PROP_NAME, name_buffer, sizeof(name_buffer)));
-  ASSERT_STR_EQ(empty_name, name_buffer);
+  ASSERT_STREQ(empty_name, name_buffer);
 }
 
 void bti_pin_test_helper(bool contiguous_vmo) {

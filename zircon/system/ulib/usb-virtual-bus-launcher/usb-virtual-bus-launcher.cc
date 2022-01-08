@@ -50,7 +50,7 @@ USBVirtualBusBase::USBVirtualBusBase() {
       fidl::BindSyncClient<fuchsia_hardware_usb_virtual_bus::Bus>(std::move(virtual_bus));
 
   auto enable_result = virtual_bus_->Enable();
-  ASSERT_NO_FATAL_FAILURES(ValidateResult(enable_result));
+  ASSERT_NO_FATAL_FAILURE(ValidateResult(enable_result));
 
   fd.reset(openat(devmgr_.devfs_root().get(), "class/usb-peripheral", O_RDONLY));
   fbl::String devpath;
@@ -66,7 +66,7 @@ USBVirtualBusBase::USBVirtualBusBase() {
   peripheral_ =
       fidl::BindSyncClient<fuchsia_hardware_usb_peripheral::Device>(std::move(peripheral));
 
-  ASSERT_NO_FATAL_FAILURES(ClearPeripheralDeviceFunctions());
+  ASSERT_NO_FATAL_FAILURE(ClearPeripheralDeviceFunctions());
 }
 
 int USBVirtualBusBase::GetRootFd() { return devmgr_.devfs_root().get(); }
@@ -90,7 +90,7 @@ void USBVirtualBusBase::SetupPeripheralDevice(DeviceDescriptor&& device_desc,
   ASSERT_TRUE(watcher.all_functions_registered());
 
   auto connect_result = virtual_bus_->Connect();
-  ASSERT_NO_FATAL_FAILURES(ValidateResult(connect_result));
+  ASSERT_NO_FATAL_FAILURE(ValidateResult(connect_result));
 }
 
 void USBVirtualBusBase::ClearPeripheralDeviceFunctions() {

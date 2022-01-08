@@ -60,10 +60,10 @@ template <bool NON_ROOT_VMAR>
 void CreateHelper(std::unique_ptr<fzl::ResizeableVmoMapper>* out_mapper, uint64_t size,
                   const char* name, zx_vm_option_t map_options = ZX_VM_PERM_READ | ZX_VM_PERM_WRITE,
                   uint32_t cache_policy = 0) {
-  ASSERT_NO_FATAL_FAILURES(
+  ASSERT_NO_FATAL_FAILURE(
       UncheckedCreateHelper<NON_ROOT_VMAR>(out_mapper, size, name, map_options, cache_policy));
   ASSERT_NOT_NULL(*out_mapper);
-  ASSERT_NO_FATAL_FAILURES(ValidateCreateHelper(**out_mapper, size));
+  ASSERT_NO_FATAL_FAILURE(ValidateCreateHelper(**out_mapper, size));
 }
 
 template <bool NON_ROOT_VMAR>
@@ -80,7 +80,7 @@ void CreateAndMapHelper(fzl::ResizeableVmoMapper* inout_mapper, uint64_t size, c
   zx_status_t status;
   status = inout_mapper->CreateAndMap(size, name, map_options, std::move(manager), cache_policy);
   ASSERT_EQ(status, ZX_OK);
-  ASSERT_NO_FATAL_FAILURES(ValidateCreateHelper(*inout_mapper, size));
+  ASSERT_NO_FATAL_FAILURE(ValidateCreateHelper(*inout_mapper, size));
 }
 
 template <bool NON_ROOT_VMAR>
@@ -96,20 +96,20 @@ void MapHelper(fzl::ResizeableVmoMapper* inout_mapper, zx::vmo vmo, uint64_t siz
   zx_status_t status;
   status = inout_mapper->Map(std::move(vmo), size, map_options, std::move(manager));
   ASSERT_EQ(status, ZX_OK);
-  ASSERT_NO_FATAL_FAILURES(ValidateCreateHelper(*inout_mapper, size));
+  ASSERT_NO_FATAL_FAILURE(ValidateCreateHelper(*inout_mapper, size));
 }
 
 template <bool NON_ROOT_VMAR>
 void CreateTest() {
   std::unique_ptr<fzl::ResizeableVmoMapper> mapper;
-  ASSERT_NO_FATAL_FAILURES(
+  ASSERT_NO_FATAL_FAILURE(
       CreateHelper<NON_ROOT_VMAR>(&mapper, zx_system_get_page_size(), vmo_name));
 }
 
 template <bool NON_ROOT_VMAR>
 void CreateAndMapTest() {
   fzl::ResizeableVmoMapper mapper;
-  ASSERT_NO_FATAL_FAILURES(
+  ASSERT_NO_FATAL_FAILURE(
       CreateAndMapHelper<NON_ROOT_VMAR>(&mapper, zx_system_get_page_size(), vmo_name));
 }
 
@@ -125,14 +125,14 @@ void MapTest() {
   ASSERT_EQ(status, ZX_OK);
 
   fzl::ResizeableVmoMapper mapper;
-  ASSERT_NO_FATAL_FAILURES(
+  ASSERT_NO_FATAL_FAILURE(
       MapHelper<NON_ROOT_VMAR>(&mapper, std::move(vmo), zx_system_get_page_size()));
 }
 
 template <bool NON_ROOT_VMAR>
 void MoveTest() {
   fzl::ResizeableVmoMapper mapper1;
-  ASSERT_NO_FATAL_FAILURES(
+  ASSERT_NO_FATAL_FAILURE(
       CreateAndMapHelper<NON_ROOT_VMAR>(&mapper1, zx_system_get_page_size(), vmo_name));
 
   // Move by construction
@@ -160,7 +160,7 @@ void MoveTest() {
   ASSERT_EQ(mapper2.start(), orig_start);
   ASSERT_EQ(mapper2.size(), orig_size);
   ASSERT_EQ(mapper2.manager().get(), orig_manager);
-  ASSERT_NO_FATAL_FAILURES(ValidateCreateHelper(mapper2, orig_size));
+  ASSERT_NO_FATAL_FAILURE(ValidateCreateHelper(mapper2, orig_size));
 
   // Move by assignment
   mapper1 = std::move(mapper2);
@@ -174,13 +174,13 @@ void MoveTest() {
   ASSERT_EQ(mapper1.start(), orig_start);
   ASSERT_EQ(mapper1.size(), orig_size);
   ASSERT_EQ(mapper1.manager().get(), orig_manager);
-  ASSERT_NO_FATAL_FAILURES(ValidateCreateHelper(mapper1, orig_size));
+  ASSERT_NO_FATAL_FAILURE(ValidateCreateHelper(mapper1, orig_size));
 }
 
 template <bool NON_ROOT_VMAR>
 void ReadTest() {
   std::unique_ptr<fzl::ResizeableVmoMapper> mapper;
-  ASSERT_NO_FATAL_FAILURES(
+  ASSERT_NO_FATAL_FAILURE(
       CreateHelper<NON_ROOT_VMAR>(&mapper, zx_system_get_page_size(), vmo_name));
 
   std::vector<uint8_t> bytes(zx_system_get_page_size());
@@ -197,7 +197,7 @@ void ReadTest() {
 template <bool NON_ROOT_VMAR>
 void WriteMappingTest() {
   std::unique_ptr<fzl::ResizeableVmoMapper> mapper;
-  ASSERT_NO_FATAL_FAILURES(
+  ASSERT_NO_FATAL_FAILURE(
       CreateHelper<NON_ROOT_VMAR>(&mapper, zx_system_get_page_size(), vmo_name));
 
   auto data = static_cast<uint8_t*>(mapper->start());
@@ -215,7 +215,7 @@ void WriteMappingTest() {
 template <bool NON_ROOT_VMAR>
 void ReadMappingTest() {
   std::unique_ptr<fzl::ResizeableVmoMapper> mapper;
-  ASSERT_NO_FATAL_FAILURES(
+  ASSERT_NO_FATAL_FAILURE(
       CreateHelper<NON_ROOT_VMAR>(&mapper, zx_system_get_page_size(), vmo_name));
 
   std::vector<uint8_t> bytes(zx_system_get_page_size());
@@ -232,7 +232,7 @@ void ReadMappingTest() {
 template <bool NON_ROOT_VMAR>
 void EmptyNameTest() {
   std::unique_ptr<fzl::ResizeableVmoMapper> mapper;
-  ASSERT_NO_FATAL_FAILURES(
+  ASSERT_NO_FATAL_FAILURE(
       UncheckedCreateHelper<NON_ROOT_VMAR>(&mapper, zx_system_get_page_size(), ""));
   ASSERT_NOT_NULL(mapper);
 
@@ -247,7 +247,7 @@ void EmptyNameTest() {
 template <bool NON_ROOT_VMAR>
 void NullptrNameTest() {
   std::unique_ptr<fzl::ResizeableVmoMapper> mapper;
-  ASSERT_NO_FATAL_FAILURES(
+  ASSERT_NO_FATAL_FAILURE(
       UncheckedCreateHelper<NON_ROOT_VMAR>(&mapper, zx_system_get_page_size(), nullptr));
   ASSERT_NOT_NULL(mapper);
 
@@ -266,7 +266,7 @@ void LongNameTest() {
   long_name[zx_system_get_page_size() - 1] = 0;
 
   std::unique_ptr<fzl::ResizeableVmoMapper> mapper;
-  ASSERT_NO_FATAL_FAILURES(
+  ASSERT_NO_FATAL_FAILURE(
       UncheckedCreateHelper<NON_ROOT_VMAR>(&mapper, zx_system_get_page_size(), long_name.data()));
   ASSERT_NOT_NULL(mapper);
 
@@ -290,7 +290,7 @@ void GoodSizesTest() {
 
   for (size_t size : sizes) {
     std::unique_ptr<fzl::ResizeableVmoMapper> mapper;
-    ASSERT_NO_FATAL_FAILURES(CreateHelper<NON_ROOT_VMAR>(&mapper, size, vmo_name));
+    ASSERT_NO_FATAL_FAILURE(CreateHelper<NON_ROOT_VMAR>(&mapper, size, vmo_name));
   }
 }
 
@@ -298,11 +298,11 @@ template <bool NON_ROOT_VMAR>
 void BadSizesTest() {
   // Size 0 should fail.
   std::unique_ptr<fzl::ResizeableVmoMapper> mapper;
-  ASSERT_NO_FATAL_FAILURES(UncheckedCreateHelper<NON_ROOT_VMAR>(&mapper, 0, vmo_name));
+  ASSERT_NO_FATAL_FAILURE(UncheckedCreateHelper<NON_ROOT_VMAR>(&mapper, 0, vmo_name));
   ASSERT_NULL(mapper);
 
   // So should an aburdly big request.
-  ASSERT_NO_FATAL_FAILURES(UncheckedCreateHelper<NON_ROOT_VMAR>(&mapper, SIZE_MAX, vmo_name));
+  ASSERT_NO_FATAL_FAILURE(UncheckedCreateHelper<NON_ROOT_VMAR>(&mapper, SIZE_MAX, vmo_name));
   ASSERT_NULL(mapper);
 }
 
@@ -311,7 +311,7 @@ void GoodShrinkTest() {
   size_t size = zx_system_get_page_size() * zx_system_get_page_size();
 
   std::unique_ptr<fzl::ResizeableVmoMapper> mapper;
-  ASSERT_NO_FATAL_FAILURES(CreateHelper<NON_ROOT_VMAR>(&mapper, size, vmo_name));
+  ASSERT_NO_FATAL_FAILURE(CreateHelper<NON_ROOT_VMAR>(&mapper, size, vmo_name));
 
   while (size > 2 * zx_system_get_page_size()) {
     // The current size.
@@ -335,7 +335,7 @@ void BadShrinkTest() {
   const size_t size = 16 * zx_system_get_page_size();
 
   std::unique_ptr<fzl::ResizeableVmoMapper> mapper;
-  ASSERT_NO_FATAL_FAILURES(CreateHelper<NON_ROOT_VMAR>(&mapper, size, vmo_name));
+  ASSERT_NO_FATAL_FAILURE(CreateHelper<NON_ROOT_VMAR>(&mapper, size, vmo_name));
 
   // Shrinking to 0 should fail.
   zx_status_t status = mapper->Shrink(0);
@@ -359,7 +359,7 @@ void AlignedGoodGrowTest() {
   const size_t grow_size = 2 * zx_system_get_page_size();
 
   std::unique_ptr<fzl::ResizeableVmoMapper> mapper;
-  ASSERT_NO_FATAL_FAILURES(CreateHelper<NON_ROOT_VMAR>(&mapper, original_size, vmo_name));
+  ASSERT_NO_FATAL_FAILURE(CreateHelper<NON_ROOT_VMAR>(&mapper, original_size, vmo_name));
 
   // Growing to the current size should always succeed.
   zx_status_t status = mapper->Grow(mapper->size());
@@ -386,7 +386,7 @@ void UnalignedGoodGrowTest() {
   const size_t rounded_grow_size = 3 * zx_system_get_page_size();
 
   std::unique_ptr<fzl::ResizeableVmoMapper> mapper;
-  ASSERT_NO_FATAL_FAILURES(CreateHelper<NON_ROOT_VMAR>(&mapper, original_size, vmo_name));
+  ASSERT_NO_FATAL_FAILURE(CreateHelper<NON_ROOT_VMAR>(&mapper, original_size, vmo_name));
 
   // Growing to the current size should always succeed.
   zx_status_t status = mapper->Grow(mapper->size());
@@ -412,7 +412,7 @@ void BadGrowTest() {
   const size_t grow_size = zx_system_get_page_size();
 
   std::unique_ptr<fzl::ResizeableVmoMapper> mapper;
-  ASSERT_NO_FATAL_FAILURES(CreateHelper<NON_ROOT_VMAR>(&mapper, original_size, vmo_name));
+  ASSERT_NO_FATAL_FAILURE(CreateHelper<NON_ROOT_VMAR>(&mapper, original_size, vmo_name));
 
   // Growing from 2 pages to 1 should fail.
   zx_status_t status = mapper->Grow(grow_size);

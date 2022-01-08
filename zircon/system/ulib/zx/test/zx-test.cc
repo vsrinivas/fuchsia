@@ -115,7 +115,7 @@ TEST(ZxTestCase, SetGetProperty) {
 
   char read_name[ZX_MAX_NAME_LEN];
   EXPECT_OK(object.get_property(ZX_PROP_NAME, read_name, sizeof(read_name)));
-  EXPECT_STR_EQ(name, read_name);
+  EXPECT_STREQ(name, read_name);
 }
 
 TEST(ZxTestCase, Event) {
@@ -470,7 +470,7 @@ TEST(ZxTestCase, ThreadSelf) {
   zx_handle_t raw = zx_thread_self();
   ASSERT_OK(validate_handle(raw));
 
-  ASSERT_NO_FATAL_FAILURES(IsValidHandle<zx::thread>(*zx::thread::self()));
+  ASSERT_NO_FATAL_FAILURE(IsValidHandle<zx::thread>(*zx::thread::self()));
   EXPECT_OK(validate_handle(raw));
 
   // This does not compile:
@@ -535,7 +535,7 @@ TEST(ZxTestCase, ProcessSelf) {
   zx_handle_t raw = zx_process_self();
   ASSERT_OK(validate_handle(raw));
 
-  ASSERT_NO_FATAL_FAILURES(IsValidHandle<zx::process>(*zx::process::self()));
+  ASSERT_NO_FATAL_FAILURE(IsValidHandle<zx::process>(*zx::process::self()));
   EXPECT_OK(validate_handle(raw));
 
   // This does not compile:
@@ -546,7 +546,7 @@ TEST(ZxTestCase, VmarRootSelf) {
   zx_handle_t raw = zx_vmar_root_self();
   ASSERT_OK(validate_handle(raw));
 
-  ASSERT_NO_FATAL_FAILURES(IsValidHandle<zx::vmar>(*zx::vmar::root_self()));
+  ASSERT_NO_FATAL_FAILURE(IsValidHandle<zx::vmar>(*zx::vmar::root_self()));
   EXPECT_OK(validate_handle(raw));
 
   // This does not compile:
@@ -557,7 +557,7 @@ TEST(ZxTestCase, JobDefault) {
   zx_handle_t raw = zx_job_default();
   ASSERT_OK(validate_handle(raw));
 
-  ASSERT_NO_FATAL_FAILURES(IsValidHandle<zx::job>(*zx::job::default_job()));
+  ASSERT_NO_FATAL_FAILURE(IsValidHandle<zx::job>(*zx::job::default_job()));
   EXPECT_OK(validate_handle(raw));
 
   // This does not compile:
@@ -581,7 +581,7 @@ TEST(ZxTestCase, Unowned) {
   {
     zx::unowned<zx::event> unowned(handle.get());
     EXPECT_EQ(unowned->get(), handle.get());
-    ASSERT_NO_FATAL_FAILURES(IsValidHandle<zx::event>(*unowned));
+    ASSERT_NO_FATAL_FAILURE(IsValidHandle<zx::event>(*unowned));
   }
   ASSERT_OK(validate_handle(handle.get()));
 
@@ -589,26 +589,26 @@ TEST(ZxTestCase, Unowned) {
   {
     zx::unowned<zx::event> unowned(handle);
     EXPECT_EQ(unowned->get(), handle.get());
-    ASSERT_NO_FATAL_FAILURES(IsValidHandle<zx::event>(*unowned));
+    ASSERT_NO_FATAL_FAILURE(IsValidHandle<zx::event>(*unowned));
   }
   ASSERT_OK(validate_handle(handle.get()));
 
   // Verify that unowned<T>(const unowned<T>&) doesn't close on teardown.
   {
     zx::unowned<zx::event> unowned(handle);
-    ASSERT_NO_FATAL_FAILURES(IsValidHandle<zx::event>(*unowned));
+    ASSERT_NO_FATAL_FAILURE(IsValidHandle<zx::event>(*unowned));
 
     zx::unowned<zx::event> unowned2(unowned);
     EXPECT_EQ(unowned->get(), unowned2->get());
-    ASSERT_NO_FATAL_FAILURES(IsValidHandle<zx::event>(*unowned2));
-    ASSERT_NO_FATAL_FAILURES(IsValidHandle<zx::event>(*unowned));
+    ASSERT_NO_FATAL_FAILURE(IsValidHandle<zx::event>(*unowned2));
+    ASSERT_NO_FATAL_FAILURE(IsValidHandle<zx::event>(*unowned));
   }
   ASSERT_OK(validate_handle(handle.get()));
 
   // Verify copy-assignment from unowned<> to unowned<> doesn't close.
   {
     zx::unowned<zx::event> unowned(handle);
-    ASSERT_NO_FATAL_FAILURES(IsValidHandle<zx::event>(*unowned));
+    ASSERT_NO_FATAL_FAILURE(IsValidHandle<zx::event>(*unowned));
 
     zx::unowned<zx::event> unowned2;
     ASSERT_FALSE(unowned2->is_valid());
@@ -616,19 +616,19 @@ TEST(ZxTestCase, Unowned) {
     const zx::unowned<zx::event>& assign_ref = unowned2 = unowned;
     EXPECT_EQ(assign_ref->get(), unowned2->get());
     EXPECT_EQ(unowned->get(), unowned2->get());
-    ASSERT_NO_FATAL_FAILURES(IsValidHandle<zx::event>(*unowned2));
-    ASSERT_NO_FATAL_FAILURES(IsValidHandle<zx::event>(*unowned));
+    ASSERT_NO_FATAL_FAILURE(IsValidHandle<zx::event>(*unowned2));
+    ASSERT_NO_FATAL_FAILURE(IsValidHandle<zx::event>(*unowned));
   }
   ASSERT_OK(validate_handle(handle.get()));
 
   // Verify move from unowned<> to unowned<> doesn't close on teardown.
   {
     zx::unowned<zx::event> unowned(handle);
-    ASSERT_NO_FATAL_FAILURES(IsValidHandle<zx::event>(*unowned));
+    ASSERT_NO_FATAL_FAILURE(IsValidHandle<zx::event>(*unowned));
 
     zx::unowned<zx::event> unowned2(static_cast<zx::unowned<zx::event>&&>(unowned));
     EXPECT_EQ(unowned2->get(), handle.get());
-    ASSERT_NO_FATAL_FAILURES(IsValidHandle<zx::event>(*unowned2));
+    ASSERT_NO_FATAL_FAILURE(IsValidHandle<zx::event>(*unowned2));
     EXPECT_FALSE(unowned->is_valid());
   }
   ASSERT_OK(validate_handle(handle.get()));
@@ -636,7 +636,7 @@ TEST(ZxTestCase, Unowned) {
   // Verify move-assignment from unowned<> to unowned<> doesn't close.
   {
     zx::unowned<zx::event> unowned(handle);
-    ASSERT_NO_FATAL_FAILURES(IsValidHandle<zx::event>(*unowned));
+    ASSERT_NO_FATAL_FAILURE(IsValidHandle<zx::event>(*unowned));
 
     zx::unowned<zx::event> unowned2;
     ASSERT_FALSE(unowned2->is_valid());
@@ -644,7 +644,7 @@ TEST(ZxTestCase, Unowned) {
     const zx::unowned<zx::event>& assign_ref = unowned2 =
         static_cast<zx::unowned<zx::event>&&>(unowned);
     EXPECT_EQ(assign_ref->get(), unowned2->get());
-    ASSERT_NO_FATAL_FAILURES(IsValidHandle<zx::event>(*unowned2));
+    ASSERT_NO_FATAL_FAILURE(IsValidHandle<zx::event>(*unowned2));
     EXPECT_FALSE(unowned->is_valid());
   }
   ASSERT_OK(validate_handle(handle.get()));
@@ -652,14 +652,14 @@ TEST(ZxTestCase, Unowned) {
   // Verify move-assignment into non-empty unowned<>  doesn't close.
   {
     zx::unowned<zx::event> unowned(handle);
-    ASSERT_NO_FATAL_FAILURES(IsValidHandle<zx::event>(*unowned));
+    ASSERT_NO_FATAL_FAILURE(IsValidHandle<zx::event>(*unowned));
 
     zx::unowned<zx::event> unowned2(handle);
-    ASSERT_NO_FATAL_FAILURES(IsValidHandle<zx::event>(*unowned2));
+    ASSERT_NO_FATAL_FAILURE(IsValidHandle<zx::event>(*unowned2));
 
     unowned2 = static_cast<zx::unowned<zx::event>&&>(unowned);
     EXPECT_EQ(unowned2->get(), handle.get());
-    ASSERT_NO_FATAL_FAILURES(IsValidHandle<zx::event>(*unowned2));
+    ASSERT_NO_FATAL_FAILURE(IsValidHandle<zx::event>(*unowned2));
     EXPECT_FALSE(unowned->is_valid());
   }
   ASSERT_OK(validate_handle(handle.get()));
@@ -667,7 +667,7 @@ TEST(ZxTestCase, Unowned) {
   // Explicitly verify dereference operator allows methods to be called.
   {
     zx::unowned<zx::event> unowned(handle);
-    ASSERT_NO_FATAL_FAILURES(IsValidHandle<zx::event>(*unowned));
+    ASSERT_NO_FATAL_FAILURE(IsValidHandle<zx::event>(*unowned));
 
     const zx::event& event_ref = *unowned;
     zx::event duplicate;
@@ -678,7 +678,7 @@ TEST(ZxTestCase, Unowned) {
   // Explicitly verify member access operator allows methods to be called.
   {
     zx::unowned<zx::event> unowned(handle);
-    ASSERT_NO_FATAL_FAILURES(IsValidHandle<zx::event>(*unowned));
+    ASSERT_NO_FATAL_FAILURE(IsValidHandle<zx::event>(*unowned));
 
     zx::event duplicate;
     EXPECT_OK(unowned->duplicate(ZX_RIGHT_SAME_RIGHTS, &duplicate));

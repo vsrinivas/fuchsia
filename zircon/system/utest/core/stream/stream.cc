@@ -196,7 +196,7 @@ TEST(StreamTestCase, ReadV) {
   vec.capacity = 7u;
   ASSERT_OK(stream.readv(0, &vec, 1, &actual));
   EXPECT_EQ(7u, actual);
-  EXPECT_STR_EQ("abcdefg", buffer);
+  EXPECT_STREQ("abcdefg", buffer);
   memset(buffer, 0, sizeof(buffer));
 
   ASSERT_EQ(ZX_ERR_INVALID_ARGS, stream.readv(24098, &vec, 1, &actual));
@@ -205,7 +205,7 @@ TEST(StreamTestCase, ReadV) {
 
   vec.capacity = 3u;
   ASSERT_OK(stream.readv(0, &vec, 1, nullptr));
-  EXPECT_STR_EQ("hij", buffer);
+  EXPECT_STREQ("hij", buffer);
   memset(buffer, 0, sizeof(buffer));
 
   vec.buffer = nullptr;
@@ -240,7 +240,7 @@ TEST(StreamTestCase, ReadV) {
   actual = 42u;
   ASSERT_OK(stream.readv(0, &vec, 1, &actual));
   EXPECT_EQ(6u, actual);
-  EXPECT_STR_EQ("abcdef", buffer);
+  EXPECT_STREQ("abcdef", buffer);
   memset(buffer, 0, sizeof(buffer));
 
   content_size = 26u;
@@ -254,7 +254,7 @@ TEST(StreamTestCase, ReadV) {
   ASSERT_OK(stream.seek(ZX_STREAM_SEEK_ORIGIN_START, 0, nullptr));
   ASSERT_OK(stream.readv(0, multivec, kVectorCount, &actual));
   EXPECT_EQ(kVectorCount, actual);
-  EXPECT_STR_EQ("gfedcba", buffer);
+  EXPECT_STREQ("gfedcba", buffer);
   memset(buffer, 0, sizeof(buffer));
 }
 
@@ -286,7 +286,7 @@ TEST(StreamTestCase, WriteV) {
   vec.capacity = 7u;
   ASSERT_OK(stream.writev(0, &vec, 1, &actual));
   EXPECT_EQ(7u, actual);
-  EXPECT_STR_EQ("0123456hijklmnopqrstuvwxyz", GetData(vmo).c_str());
+  EXPECT_STREQ("0123456hijklmnopqrstuvwxyz", GetData(vmo).c_str());
   ASSERT_OK(vmo.write(kAlphabet, 0u, strlen(kAlphabet)));
 
   ASSERT_EQ(ZX_ERR_INVALID_ARGS, stream.writev(24098, &vec, 1, &actual));
@@ -295,7 +295,7 @@ TEST(StreamTestCase, WriteV) {
 
   vec.capacity = 3u;
   ASSERT_OK(stream.writev(0, &vec, 1, nullptr));
-  EXPECT_STR_EQ("abcdefg012klmnopqrstuvwxyz", GetData(vmo).c_str());
+  EXPECT_STREQ("abcdefg012klmnopqrstuvwxyz", GetData(vmo).c_str());
   ASSERT_OK(vmo.write(kAlphabet, 0u, strlen(kAlphabet)));
 
   vec.buffer = nullptr;
@@ -320,7 +320,7 @@ TEST(StreamTestCase, WriteV) {
   ASSERT_OK(stream.seek(ZX_STREAM_SEEK_ORIGIN_START, 0, nullptr));
   ASSERT_OK(stream.writev(0, multivec, kVectorCount, &actual));
   EXPECT_EQ(kVectorCount, actual);
-  EXPECT_STR_EQ("6543210hijklmnopqrstuvwxyz", GetData(vmo).c_str());
+  EXPECT_STREQ("6543210hijklmnopqrstuvwxyz", GetData(vmo).c_str());
   ASSERT_OK(vmo.write(kAlphabet, 0u, strlen(kAlphabet)));
 }
 
@@ -349,14 +349,14 @@ TEST(StreamTestCase, WriteExtendsContentSize) {
   vec.capacity = 7u;
   ASSERT_OK(stream.writev(0, &vec, 1, &actual));
   EXPECT_EQ(7u, actual);
-  EXPECT_STR_EQ("0123456hijklmnopqrstuvwxyz", GetData(vmo).c_str());
+  EXPECT_STREQ("0123456hijklmnopqrstuvwxyz", GetData(vmo).c_str());
   EXPECT_EQ(7u, GetContentSize(vmo));
   ASSERT_OK(vmo.write(kAlphabet, 0u, strlen(kAlphabet)));
 
   vec.capacity = 2u;
   ASSERT_OK(stream.writev(0, &vec, 1, &actual));
   EXPECT_EQ(2u, actual);
-  EXPECT_STR_EQ("abcdefg01jklmnopqrstuvwxyz", GetData(vmo).c_str());
+  EXPECT_STREQ("abcdefg01jklmnopqrstuvwxyz", GetData(vmo).c_str());
   EXPECT_EQ(9u, GetContentSize(vmo));
   ASSERT_OK(vmo.write(kAlphabet, 0u, strlen(kAlphabet)));
 
@@ -376,7 +376,7 @@ TEST(StreamTestCase, WriteExtendsContentSize) {
 
   char scratch[17] = {};
   ASSERT_OK(vmo.read(scratch, 4090u, 6u));
-  EXPECT_STR_EQ("012345", scratch);
+  EXPECT_STREQ("012345", scratch);
 
   actual = 9823u;
   ASSERT_EQ(ZX_ERR_NO_SPACE, stream.writev(0, &vec, 1, &actual));
@@ -443,7 +443,7 @@ TEST(StreamTestCase, ReadVAt) {
   vec.capacity = 7u;
   ASSERT_OK(stream.readv_at(0, 24u, &vec, 1, &actual));
   EXPECT_EQ(2u, actual);
-  EXPECT_STR_EQ("yz", buffer);
+  EXPECT_STREQ("yz", buffer);
   memset(buffer, 0, sizeof(buffer));
 
   zx_off_t seek = 39u;
@@ -452,12 +452,12 @@ TEST(StreamTestCase, ReadVAt) {
 
   ASSERT_OK(stream.readv_at(0, 36u, &vec, 1, &actual));
   EXPECT_EQ(0u, actual);
-  EXPECT_STR_EQ("", buffer);
+  EXPECT_STREQ("", buffer);
   memset(buffer, 0, sizeof(buffer));
 
   ASSERT_OK(stream.readv_at(0, 3645651u, &vec, 1, &actual));
   EXPECT_EQ(0u, actual);
-  EXPECT_STR_EQ("", buffer);
+  EXPECT_STREQ("", buffer);
   memset(buffer, 0, sizeof(buffer));
 }
 
@@ -480,7 +480,7 @@ TEST(StreamTestCase, WriteVAt) {
   vec.capacity = 3u;
   ASSERT_OK(stream.writev_at(0, 7, &vec, 1, &actual));
   EXPECT_EQ(3u, actual);
-  EXPECT_STR_EQ("abcdefg012klmnopqrstuvwxyz", GetData(vmo).c_str());
+  EXPECT_STREQ("abcdefg012klmnopqrstuvwxyz", GetData(vmo).c_str());
   ASSERT_OK(vmo.write(kAlphabet, 0u, strlen(kAlphabet)));
 
   zx_off_t seek = 39u;
@@ -560,7 +560,7 @@ TEST(StreamTestCase, Append) {
   size_t actual = 42u;
   ASSERT_OK(stream.writev(ZX_STREAM_APPEND, &vec, 1, &actual));
   EXPECT_EQ(7u, actual);
-  EXPECT_STR_EQ("abcdefghijklmnopqrstuvwxyz0123456", GetData(vmo).c_str());
+  EXPECT_STREQ("abcdefghijklmnopqrstuvwxyz0123456", GetData(vmo).c_str());
 
   {
     zx_info_stream_t info{};

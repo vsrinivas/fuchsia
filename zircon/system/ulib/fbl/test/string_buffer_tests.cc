@@ -2,14 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <string_view>
+
 #include <fbl/string_buffer.h>
 #include <zxtest/zxtest.h>
 
-#include <string_view>
-
 #define EXPECT_DATA_AND_LENGTH(expected, actual)  \
   do {                                            \
-    EXPECT_STR_EQ(expected, actual.data());       \
+    EXPECT_STREQ(expected, actual.data());        \
     EXPECT_EQ(strlen(expected), actual.length()); \
   } while (false)
 
@@ -41,17 +41,17 @@ TEST(StringBufferTest, EmptyString) {
   {
     fbl::StringBuffer<0u> empty;
 
-    EXPECT_STR_EQ("", empty.data());
-    EXPECT_STR_EQ("", empty.c_str());
+    EXPECT_STREQ("", empty.data());
+    EXPECT_STREQ("", empty.c_str());
 
     EXPECT_EQ(0u, empty.length());
     EXPECT_EQ(0u, empty.size());
     EXPECT_TRUE(empty.empty());
     EXPECT_EQ(0u, empty.capacity());
 
-    EXPECT_STR_EQ("", empty.begin());
+    EXPECT_STREQ("", empty.begin());
     EXPECT_EQ(0u, empty.end() - empty.begin());
-    EXPECT_STR_EQ("", empty.cbegin());
+    EXPECT_STREQ("", empty.cbegin());
     EXPECT_EQ(0u, empty.cend() - empty.cbegin());
 
     EXPECT_EQ(0, empty[0u]);
@@ -60,17 +60,17 @@ TEST(StringBufferTest, EmptyString) {
   {
     fbl::StringBuffer<16u> empty;
 
-    EXPECT_STR_EQ("", empty.data());
-    EXPECT_STR_EQ("", empty.c_str());
+    EXPECT_STREQ("", empty.data());
+    EXPECT_STREQ("", empty.c_str());
 
     EXPECT_EQ(0u, empty.length());
     EXPECT_EQ(0u, empty.size());
     EXPECT_TRUE(empty.empty());
     EXPECT_EQ(16u, empty.capacity());
 
-    EXPECT_STR_EQ("", empty.begin());
+    EXPECT_STREQ("", empty.begin());
     EXPECT_EQ(0u, empty.end() - empty.begin());
-    EXPECT_STR_EQ("", empty.cbegin());
+    EXPECT_STREQ("", empty.cbegin());
     EXPECT_EQ(0u, empty.cend() - empty.cbegin());
 
     EXPECT_EQ(0, empty[0u]);
@@ -92,17 +92,17 @@ TEST(StringBufferTest, Append) {
         .Append(std::string_view("zzzzz", 3u))
         .Append(fbl::String("zzzzz"));
 
-    EXPECT_STR_EQ("abcdefghijklmnop", str.data());
-    EXPECT_STR_EQ("abcdefghijklmnop", str.c_str());
+    EXPECT_STREQ("abcdefghijklmnop", str.data());
+    EXPECT_STREQ("abcdefghijklmnop", str.c_str());
 
     EXPECT_EQ(16u, str.length());
     EXPECT_EQ(16u, str.size());
     EXPECT_FALSE(str.empty());
     EXPECT_EQ(16u, str.capacity());
 
-    EXPECT_STR_EQ("abcdefghijklmnop", str.begin());
+    EXPECT_STREQ("abcdefghijklmnop", str.begin());
     EXPECT_EQ(16u, str.end() - str.begin());
-    EXPECT_STR_EQ("abcdefghijklmnop", str.cbegin());
+    EXPECT_STREQ("abcdefghijklmnop", str.cbegin());
     EXPECT_EQ(16u, str.cend() - str.cbegin());
 
     EXPECT_EQ('b', str[1u]);
@@ -200,20 +200,20 @@ TEST(StringBufferTest, Resize) {
   fbl::StringBuffer<16u> str;
 
   str.Resize(4u, 'x');
-  EXPECT_STR_EQ("xxxx", str.data());
+  EXPECT_STREQ("xxxx", str.data());
   EXPECT_EQ(4u, str.length());
 
   str.Resize(8u, 'y');
-  EXPECT_STR_EQ("xxxxyyyy", str.data());
+  EXPECT_STREQ("xxxxyyyy", str.data());
   EXPECT_EQ(8u, str.length());
 
   str.Resize(16u);
-  EXPECT_STR_EQ("xxxxyyyy", str.data());
+  EXPECT_STREQ("xxxxyyyy", str.data());
   EXPECT_EQ(0, memcmp("xxxxyyyy\0\0\0\0\0\0\0\0\0", str.data(), str.length() + 1));
   EXPECT_EQ(16u, str.length());
 
   str.Resize(0u);
-  EXPECT_STR_EQ("", str.data());
+  EXPECT_STREQ("", str.data());
   EXPECT_EQ(0u, str.length());
 }
 
@@ -222,7 +222,7 @@ TEST(StringBufferTest, Clear) {
   str.Append("abcdef");
 
   str.Clear();
-  EXPECT_STR_EQ("", str.data());
+  EXPECT_STREQ("", str.data());
   EXPECT_EQ(0u, str.length());
 }
 

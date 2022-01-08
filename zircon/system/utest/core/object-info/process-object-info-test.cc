@@ -467,84 +467,84 @@ TEST_F(ProcessGetInfoTest, InfoProcessHandleTableSelf) {
 }
 
 TEST_F(ProcessGetInfoTest, InfoProcessHandleTableInvalidHandleFails) {
-  ASSERT_NO_FATAL_FAILURES((CheckInvalidHandleFails<zx_info_handle_extended_t>(
+  ASSERT_NO_FATAL_FAILURE((CheckInvalidHandleFails<zx_info_handle_extended_t>(
       ZX_INFO_HANDLE_TABLE, 1, GetHandleProvider())));
 }
 
 TEST_F(ProcessGetInfoTest, InfoProcessHandleTableNullAvailSuceeds) {
-  ASSERT_NO_FATAL_FAILURES((CheckNullAvailSuceeds<zx_info_handle_extended_t>(
-      ZX_INFO_HANDLE_TABLE, 1, GetHandleProvider())));
+  ASSERT_NO_FATAL_FAILURE((CheckNullAvailSuceeds<zx_info_handle_extended_t>(ZX_INFO_HANDLE_TABLE, 1,
+                                                                            GetHandleProvider())));
 }
 
 TEST_F(ProcessGetInfoTest, InfoProcessHandleTableNullActualAvailSuceeds) {
-  ASSERT_NO_FATAL_FAILURES((CheckNullActualAndAvailSuceeds<zx_info_handle_extended_t>(
+  ASSERT_NO_FATAL_FAILURE((CheckNullActualAndAvailSuceeds<zx_info_handle_extended_t>(
       ZX_INFO_HANDLE_TABLE, 1, GetHandleProvider())));
 }
 
 TEST_F(ProcessGetInfoTest, InfoProcessHandleTableInvalidBufferPointerFails) {
-  ASSERT_NO_FATAL_FAILURES((CheckNullActualSuceeds<zx_info_handle_extended_t>(
+  ASSERT_NO_FATAL_FAILURE((CheckNullActualSuceeds<zx_info_handle_extended_t>(
       ZX_INFO_HANDLE_TABLE, 1, GetHandleProvider())));
 }
 
 TEST_F(ProcessGetInfoTest, InfoProcessMapsOnSelfFails) {
-  ASSERT_NO_FATAL_FAILURES(
+  ASSERT_NO_FATAL_FAILURE(
       (CheckSelfInfoSuceeds<zx_info_maps_t>(ZX_INFO_PROCESS_MAPS, 1, process_provider())));
 }
 
 TEST_F(ProcessGetInfoTest, InfoProcessMapsInvalidHandleFails) {
-  ASSERT_NO_FATAL_FAILURES(
+  ASSERT_NO_FATAL_FAILURE(
       (CheckInvalidHandleFails<zx_info_maps_t>(ZX_INFO_PROCESS_MAPS, 1, GetHandleProvider())));
 }
 
 TEST_F(ProcessGetInfoTest, InfoProcessMapsNullAvailSucceeds) {
-  ASSERT_NO_FATAL_FAILURES(
+  ASSERT_NO_FATAL_FAILURE(
       (CheckNullAvailSuceeds<zx_info_maps_t>(ZX_INFO_PROCESS_MAPS, 1, GetHandleProvider())));
 }
 
 TEST_F(ProcessGetInfoTest, InfoProcessMapsNullActualSucceeds) {
-  ASSERT_NO_FATAL_FAILURES(
+  ASSERT_NO_FATAL_FAILURE(
       (CheckNullActualSuceeds<zx_info_maps_t>(ZX_INFO_PROCESS_MAPS, 1, GetHandleProvider())));
 }
 
 TEST_F(ProcessGetInfoTest, InfoProcessMapsNullActualAndAvailSucceeds) {
-  ASSERT_NO_FATAL_FAILURES((CheckNullActualAndAvailSuceeds<zx_info_maps_t>(ZX_INFO_PROCESS_MAPS, 1,
-                                                                           GetHandleProvider())));
+  ASSERT_NO_FATAL_FAILURE((CheckNullActualAndAvailSuceeds<zx_info_maps_t>(ZX_INFO_PROCESS_MAPS, 1,
+                                                                          GetHandleProvider())));
 }
 
 TEST_F(ProcessGetInfoTest, InfoProcessMapsInvalidBufferPointerFails) {
-  ASSERT_NO_FATAL_FAILURES(
+  ASSERT_NO_FATAL_FAILURE(
       (CheckNullActualSuceeds<zx_info_maps_t>(ZX_INFO_PROCESS_MAPS, 1, GetHandleProvider())));
 }
 
 TEST_F(ProcessGetInfoTest, InfoProcessMapsBadActualgIsInvalidArg) {
-  ASSERT_NO_FATAL_FAILURES(
+  ASSERT_NO_FATAL_FAILURE(
       (CheckNullActualSuceeds<zx_info_maps_t>(ZX_INFO_PROCESS_MAPS, 1, GetHandleProvider())));
 }
 
 TEST_F(ProcessGetInfoTest, InfoProcessMapsBadAvailIsInvalidArg) {
-  ASSERT_NO_FATAL_FAILURES(
+  ASSERT_NO_FATAL_FAILURE(
       (CheckNullActualSuceeds<zx_info_maps_t>(ZX_INFO_PROCESS_MAPS, 1, GetHandleProvider())));
 }
 
 TEST_F(ProcessGetInfoTest, InfoProcessMapsZeroSizedBufferIsOk) {
-  ASSERT_NO_FATAL_FAILURES(
+  ASSERT_NO_FATAL_FAILURE(
       (CheckZeroSizeBufferSucceeds<zx_info_maps_t>(ZX_INFO_PROCESS_MAPS, GetHandleProvider())));
 }
 
 TEST_F(ProcessGetInfoTest, InfoProcessMapsSmallBufferIsOk) {
   // We use only one entry count, because we know that the process created at the fixture has more
   // mappings.
-  ASSERT_NO_FATAL_FAILURES(
+  ASSERT_NO_FATAL_FAILURE(
       (CheckSmallBufferSucceeds<zx_info_maps_t>(ZX_INFO_PROCESS_MAPS, 1, GetHandleProvider())));
 }
 
 TEST_F(ProcessGetInfoTest, InfoProcessMapsPartiallyUnmappedBufferIsInvalidArgs) {
-  ASSERT_NO_FATAL_FAILURES((CheckPartiallyUnmappedBufferIsError<zx_info_maps_t>(
+  ASSERT_NO_FATAL_FAILURE((CheckPartiallyUnmappedBufferIsError<zx_info_maps_t>(
       ZX_INFO_PROCESS_MAPS, GetHandleProvider(), ZX_ERR_INVALID_ARGS)));
 }
 
 TEST_F(ProcessGetInfoTest, InfoProcessMapsRequiresInspectRights) {
-  ASSERT_NO_FATAL_FAILURES(CheckMissingRightsFail<zx_info_maps_t>(
+  ASSERT_NO_FATAL_FAILURE(CheckMissingRightsFail<zx_info_maps_t>(
       ZX_INFO_PROCESS_MAPS, 32, ZX_RIGHT_INSPECT, GetHandleProvider()));
 }
 
@@ -554,7 +554,7 @@ constexpr auto job_provider = []() -> const zx::job& {
 };
 
 TEST_F(ProcessGetInfoTest, InfoProcessMapsJobHandleIsBadHandle) {
-  ASSERT_NO_FATAL_FAILURES(
+  ASSERT_NO_FATAL_FAILURE(
       CheckWrongHandleTypeFails<zx_info_maps_t>(ZX_INFO_PROCESS_MAPS, 32, job_provider));
 }
 
@@ -564,7 +564,7 @@ constexpr auto thread_provider = []() -> const zx::thread& {
 };
 
 TEST_F(ProcessGetInfoTest, InfoProcessMapsThreadHandleIsBadHandle) {
-  ASSERT_NO_FATAL_FAILURES(
+  ASSERT_NO_FATAL_FAILURE(
       CheckWrongHandleTypeFails<zx_info_maps_t>(ZX_INFO_PROCESS_MAPS, 32, thread_provider));
 }
 
@@ -680,169 +680,169 @@ TEST_F(ProcessGetInfoTest, InfoProcessVmosSmokeTest) {
 }
 
 TEST_F(ProcessGetInfoTest, InfoProcessVmosOnSelfFails) {
-  ASSERT_NO_FATAL_FAILURES(
+  ASSERT_NO_FATAL_FAILURE(
       (CheckSelfInfoSuceeds<zx_info_vmo_t>(ZX_INFO_PROCESS_VMOS, 1, process_provider())));
 }
 
 TEST_F(ProcessGetInfoTest, InfoProcessVmosInvalidHandleFails) {
-  ASSERT_NO_FATAL_FAILURES(
+  ASSERT_NO_FATAL_FAILURE(
       (CheckInvalidHandleFails<zx_info_vmo_t>(ZX_INFO_PROCESS_VMOS, 1, GetHandleProvider())));
 }
 
 TEST_F(ProcessGetInfoTest, InfoProcessVmosNullAvailSucceeds) {
-  ASSERT_NO_FATAL_FAILURES(
+  ASSERT_NO_FATAL_FAILURE(
       (CheckNullAvailSuceeds<zx_info_vmo_t>(ZX_INFO_PROCESS_VMOS, 1, GetHandleProvider())));
 }
 
 TEST_F(ProcessGetInfoTest, InfoProcessVmosNullActualSucceeds) {
-  ASSERT_NO_FATAL_FAILURES(
+  ASSERT_NO_FATAL_FAILURE(
       (CheckNullActualSuceeds<zx_info_vmo_t>(ZX_INFO_PROCESS_VMOS, 1, GetHandleProvider())));
 }
 
 TEST_F(ProcessGetInfoTest, InfoProcessVmosNullActualAndAvailSucceeds) {
-  ASSERT_NO_FATAL_FAILURES((
+  ASSERT_NO_FATAL_FAILURE((
       CheckNullActualAndAvailSuceeds<zx_info_vmo_t>(ZX_INFO_PROCESS_VMOS, 1, GetHandleProvider())));
 }
 
 TEST_F(ProcessGetInfoTest, InfoProcessVmosInvalidBufferPointerFails) {
-  ASSERT_NO_FATAL_FAILURES(
+  ASSERT_NO_FATAL_FAILURE(
       (CheckNullActualSuceeds<zx_info_vmo_t>(ZX_INFO_PROCESS_VMOS, 1, GetHandleProvider())));
 }
 
 TEST_F(ProcessGetInfoTest, InfoProcessVmosBadActualgIsInvalidArg) {
-  ASSERT_NO_FATAL_FAILURES(
+  ASSERT_NO_FATAL_FAILURE(
       (CheckNullActualSuceeds<zx_info_vmo_t>(ZX_INFO_PROCESS_VMOS, 1, GetHandleProvider())));
 }
 
 TEST_F(ProcessGetInfoTest, InfoProcessVmosBadAvailIsInvalidArg) {
-  ASSERT_NO_FATAL_FAILURES(
+  ASSERT_NO_FATAL_FAILURE(
       (CheckNullActualSuceeds<zx_info_vmo_t>(ZX_INFO_PROCESS_VMOS, 1, GetHandleProvider())));
 }
 
 TEST_F(ProcessGetInfoTest, InfoProcessVmosZeroSizedBufferIsOk) {
-  ASSERT_NO_FATAL_FAILURES(
+  ASSERT_NO_FATAL_FAILURE(
       (CheckZeroSizeBufferSucceeds<zx_info_vmo_t>(ZX_INFO_PROCESS_VMOS, GetHandleProvider())));
 }
 
 TEST_F(ProcessGetInfoTest, InfoProcessVmosSmallBufferIsOk) {
   // We use only one entry count, because we know that the process created at the fixture has more
   // mappings.
-  ASSERT_NO_FATAL_FAILURES(
+  ASSERT_NO_FATAL_FAILURE(
       (CheckSmallBufferSucceeds<zx_info_vmo_t>(ZX_INFO_PROCESS_VMOS, 1, GetHandleProvider())));
 }
 
 TEST_F(ProcessGetInfoTest, InfoProcessVmosPartiallyUnmappedBufferIsInvalidArgs) {
-  ASSERT_NO_FATAL_FAILURES((CheckPartiallyUnmappedBufferIsError<zx_info_vmo_t>(
+  ASSERT_NO_FATAL_FAILURE((CheckPartiallyUnmappedBufferIsError<zx_info_vmo_t>(
       ZX_INFO_PROCESS_VMOS, GetHandleProvider(), ZX_ERR_INVALID_ARGS)));
 }
 
 TEST_F(ProcessGetInfoTest, InfoProcessVmosRequiresInspectRights) {
-  ASSERT_NO_FATAL_FAILURES(CheckMissingRightsFail<zx_info_vmo_t>(
+  ASSERT_NO_FATAL_FAILURE(CheckMissingRightsFail<zx_info_vmo_t>(
       ZX_INFO_PROCESS_VMOS, 32, ZX_RIGHT_INSPECT, GetHandleProvider()));
 }
 
 TEST_F(ProcessGetInfoTest, InfoProcessVmosJobHandleIsBadHandle) {
-  ASSERT_NO_FATAL_FAILURES(
+  ASSERT_NO_FATAL_FAILURE(
       CheckWrongHandleTypeFails<zx_info_vmo_t>(ZX_INFO_PROCESS_VMOS, 32, job_provider));
 }
 
 TEST_F(ProcessGetInfoTest, InfoProcessVmosThreadHandleIsBadHandle) {
-  ASSERT_NO_FATAL_FAILURES(
+  ASSERT_NO_FATAL_FAILURE(
       CheckWrongHandleTypeFails<zx_info_vmo_t>(ZX_INFO_PROCESS_VMOS, 32, thread_provider));
 }
 
 TEST_F(ProcessGetInfoTest, InfoHandleBasicOnSelfSuceeds) {
-  ASSERT_NO_FATAL_FAILURES(
+  ASSERT_NO_FATAL_FAILURE(
       (CheckSelfInfoSuceeds<zx_info_handle_basic_t>(ZX_INFO_HANDLE_BASIC, 1, process_provider())));
 }
 
 TEST_F(ProcessGetInfoTest, InfoHandleBasicInvalidHandleFails) {
-  ASSERT_NO_FATAL_FAILURES((CheckInvalidHandleFails<zx_info_handle_basic_t>(ZX_INFO_HANDLE_BASIC, 1,
-                                                                            GetHandleProvider())));
+  ASSERT_NO_FATAL_FAILURE((CheckInvalidHandleFails<zx_info_handle_basic_t>(ZX_INFO_HANDLE_BASIC, 1,
+                                                                           GetHandleProvider())));
 }
 
 TEST_F(ProcessGetInfoTest, InfoHandleBasicNullAvailSucceeds) {
-  ASSERT_NO_FATAL_FAILURES((
+  ASSERT_NO_FATAL_FAILURE((
       CheckNullAvailSuceeds<zx_info_handle_basic_t>(ZX_INFO_HANDLE_BASIC, 1, GetHandleProvider())));
 }
 
 TEST_F(ProcessGetInfoTest, InfoHandleBasicNullActualSucceeds) {
-  ASSERT_NO_FATAL_FAILURES((CheckNullActualSuceeds<zx_info_handle_basic_t>(ZX_INFO_HANDLE_BASIC, 1,
-                                                                           GetHandleProvider())));
+  ASSERT_NO_FATAL_FAILURE((CheckNullActualSuceeds<zx_info_handle_basic_t>(ZX_INFO_HANDLE_BASIC, 1,
+                                                                          GetHandleProvider())));
 }
 
 TEST_F(ProcessGetInfoTest, InfoHandleBasicNullActualAndAvailSucceeds) {
-  ASSERT_NO_FATAL_FAILURES((CheckNullActualAndAvailSuceeds<zx_info_handle_basic_t>(
+  ASSERT_NO_FATAL_FAILURE((CheckNullActualAndAvailSuceeds<zx_info_handle_basic_t>(
       ZX_INFO_HANDLE_BASIC, 1, GetHandleProvider())));
 }
 
 TEST_F(ProcessGetInfoTest, InfoHandleBasicInvalidBufferPointerFails) {
-  ASSERT_NO_FATAL_FAILURES((CheckNullActualSuceeds<zx_info_handle_basic_t>(ZX_INFO_HANDLE_BASIC, 1,
-                                                                           GetHandleProvider())));
+  ASSERT_NO_FATAL_FAILURE((CheckNullActualSuceeds<zx_info_handle_basic_t>(ZX_INFO_HANDLE_BASIC, 1,
+                                                                          GetHandleProvider())));
 }
 
 TEST_F(ProcessGetInfoTest, InfoHandleBasicBadActualgIsInvalidArg) {
-  ASSERT_NO_FATAL_FAILURES((CheckNullActualSuceeds<zx_info_handle_basic_t>(ZX_INFO_HANDLE_BASIC, 1,
-                                                                           GetHandleProvider())));
+  ASSERT_NO_FATAL_FAILURE((CheckNullActualSuceeds<zx_info_handle_basic_t>(ZX_INFO_HANDLE_BASIC, 1,
+                                                                          GetHandleProvider())));
 }
 
 TEST_F(ProcessGetInfoTest, InfoHandleBasicBadAvailIsInvalidArg) {
-  ASSERT_NO_FATAL_FAILURES((CheckNullActualSuceeds<zx_info_handle_basic_t>(ZX_INFO_HANDLE_BASIC, 1,
-                                                                           GetHandleProvider())));
+  ASSERT_NO_FATAL_FAILURE((CheckNullActualSuceeds<zx_info_handle_basic_t>(ZX_INFO_HANDLE_BASIC, 1,
+                                                                          GetHandleProvider())));
 }
 
 TEST_F(ProcessGetInfoTest, InfoHandleBasicZeroSizedFails) {
-  ASSERT_NO_FATAL_FAILURES((
+  ASSERT_NO_FATAL_FAILURE((
       CheckZeroSizeBufferFails<zx_info_handle_basic_t>(ZX_INFO_HANDLE_BASIC, GetHandleProvider())));
 }
 
 TEST_F(ProcessGetInfoTest, InfoProcessOnSelfSuceeds) {
-  ASSERT_NO_FATAL_FAILURES(
+  ASSERT_NO_FATAL_FAILURE(
       (CheckSelfInfoSuceeds<zx_info_process_t>(ZX_INFO_PROCESS, 1, process_provider())));
 }
 
 TEST_F(ProcessGetInfoTest, InfoProcessInvalidHandleFails) {
-  ASSERT_NO_FATAL_FAILURES(
+  ASSERT_NO_FATAL_FAILURE(
       (CheckInvalidHandleFails<zx_info_process_t>(ZX_INFO_PROCESS, 1, GetHandleProvider())));
 }
 
 TEST_F(ProcessGetInfoTest, InfoProcessNullAvailSucceeds) {
-  ASSERT_NO_FATAL_FAILURES(
+  ASSERT_NO_FATAL_FAILURE(
       (CheckNullAvailSuceeds<zx_info_process_t>(ZX_INFO_PROCESS, 1, GetHandleProvider())));
 }
 
 TEST_F(ProcessGetInfoTest, InfoProcessNullActualSucceeds) {
-  ASSERT_NO_FATAL_FAILURES(
+  ASSERT_NO_FATAL_FAILURE(
       (CheckNullActualSuceeds<zx_info_process_t>(ZX_INFO_PROCESS, 1, GetHandleProvider())));
 }
 
 TEST_F(ProcessGetInfoTest, InfoProcessNullActualAndAvailSucceeds) {
-  ASSERT_NO_FATAL_FAILURES(
+  ASSERT_NO_FATAL_FAILURE(
       (CheckNullActualAndAvailSuceeds<zx_info_process_t>(ZX_INFO_PROCESS, 1, GetHandleProvider())));
 }
 
 TEST_F(ProcessGetInfoTest, InfoProcessInvalidBufferPointerFails) {
-  ASSERT_NO_FATAL_FAILURES(
+  ASSERT_NO_FATAL_FAILURE(
       (CheckNullActualSuceeds<zx_info_process_t>(ZX_INFO_PROCESS, 1, GetHandleProvider())));
 }
 
 TEST_F(ProcessGetInfoTest, InfoProcessBadActualgIsInvalidArg) {
-  ASSERT_NO_FATAL_FAILURES(
+  ASSERT_NO_FATAL_FAILURE(
       (CheckNullActualSuceeds<zx_info_process_t>(ZX_INFO_PROCESS, 1, GetHandleProvider())));
 }
 
 TEST_F(ProcessGetInfoTest, InfoProcessBadAvailIsInvalidArg) {
-  ASSERT_NO_FATAL_FAILURES(
+  ASSERT_NO_FATAL_FAILURE(
       (CheckNullActualSuceeds<zx_info_process_t>(ZX_INFO_PROCESS, 1, GetHandleProvider())));
 }
 
 TEST_F(ProcessGetInfoTest, InfoProcessZeroSizedBufferFails) {
-  ASSERT_NO_FATAL_FAILURES(
+  ASSERT_NO_FATAL_FAILURE(
       (CheckZeroSizeBufferFails<zx_info_process_t>(ZX_INFO_PROCESS, GetHandleProvider())));
 }
 
 TEST_F(ProcessGetInfoTest, InfoProcessJobHandleIsBadHandle) {
-  ASSERT_NO_FATAL_FAILURES(
+  ASSERT_NO_FATAL_FAILURE(
       CheckWrongHandleTypeFails<zx_info_process_t>(ZX_INFO_PROCESS, 32, job_provider));
 }
 
@@ -853,52 +853,52 @@ TEST_F(ProcessGetInfoTest, InfoProcessJobHandleIsBadHandle) {
 // avail > 1, but the test process only has one thread and it's not trivial to
 // add more.
 TEST_F(ProcessGetInfoTest, InfoProcessThreadHandleIsBadHandle) {
-  ASSERT_NO_FATAL_FAILURES(
+  ASSERT_NO_FATAL_FAILURE(
       CheckWrongHandleTypeFails<zx_info_process_t>(ZX_INFO_PROCESS, 32, thread_provider));
 }
 
 TEST_F(ProcessGetInfoTest, InfoProcessThreadsSelfSuceeds) {
-  ASSERT_NO_FATAL_FAILURES(
+  ASSERT_NO_FATAL_FAILURE(
       (CheckSelfInfoSuceeds<zx_koid_t>(ZX_INFO_PROCESS_THREADS, 1, process_provider())));
 }
 
 TEST_F(ProcessGetInfoTest, InfoProcessThreadsInvalidHandleFails) {
-  ASSERT_NO_FATAL_FAILURES(
+  ASSERT_NO_FATAL_FAILURE(
       (CheckInvalidHandleFails<zx_koid_t>(ZX_INFO_PROCESS_THREADS, 1, GetHandleProvider())));
 }
 
 TEST_F(ProcessGetInfoTest, InfoProcessThreadsNullAvailSucceeds) {
-  ASSERT_NO_FATAL_FAILURES(
+  ASSERT_NO_FATAL_FAILURE(
       (CheckNullAvailSuceeds<zx_koid_t>(ZX_INFO_PROCESS_THREADS, 1, GetHandleProvider())));
 }
 
 TEST_F(ProcessGetInfoTest, InfoProcessThreadsNullActualSucceeds) {
-  ASSERT_NO_FATAL_FAILURES(
+  ASSERT_NO_FATAL_FAILURE(
       (CheckNullActualSuceeds<zx_koid_t>(ZX_INFO_PROCESS_THREADS, 1, GetHandleProvider())));
 }
 
 TEST_F(ProcessGetInfoTest, InfoProcessThreadsNullActualAndAvailSucceeds) {
-  ASSERT_NO_FATAL_FAILURES(
+  ASSERT_NO_FATAL_FAILURE(
       (CheckNullActualAndAvailSuceeds<zx_koid_t>(ZX_INFO_PROCESS_THREADS, 1, GetHandleProvider())));
 }
 
 TEST_F(ProcessGetInfoTest, InfoProcessThreadsInvalidBufferPointerFails) {
-  ASSERT_NO_FATAL_FAILURES(
+  ASSERT_NO_FATAL_FAILURE(
       (CheckNullActualSuceeds<zx_koid_t>(ZX_INFO_PROCESS_THREADS, 1, GetHandleProvider())));
 }
 
 TEST_F(ProcessGetInfoTest, InfoProcessThreadsBadActualgIsInvalidArg) {
-  ASSERT_NO_FATAL_FAILURES(
+  ASSERT_NO_FATAL_FAILURE(
       (CheckNullActualSuceeds<zx_koid_t>(ZX_INFO_PROCESS_THREADS, 1, GetHandleProvider())));
 }
 
 TEST_F(ProcessGetInfoTest, InfoProcessThreadsBadAvailIsInvalidArg) {
-  ASSERT_NO_FATAL_FAILURES(
+  ASSERT_NO_FATAL_FAILURE(
       (CheckNullActualSuceeds<zx_koid_t>(ZX_INFO_PROCESS_THREADS, 1, GetHandleProvider())));
 }
 
 TEST_F(ProcessGetInfoTest, InfoProcessThreadsZeroSizedBufferSucceeds) {
-  ASSERT_NO_FATAL_FAILURES(
+  ASSERT_NO_FATAL_FAILURE(
       (CheckZeroSizeBufferSucceeds<zx_koid_t>(ZX_INFO_PROCESS_THREADS, GetHandleProvider())));
 }
 

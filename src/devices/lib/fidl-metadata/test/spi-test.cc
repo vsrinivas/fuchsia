@@ -48,7 +48,7 @@ TEST(SpiMetadataTest, TestEncodeNoPlatformIDs) {
       .cs = 0,
   }};
 
-  ASSERT_NO_FATAL_FAILURES(check_encodes(kSpiChannels));
+  ASSERT_NO_FATAL_FAILURE(check_encodes(kSpiChannels));
 }
 
 TEST(SpiMetadataTest, TestEncodeManyChannels) {
@@ -79,9 +79,9 @@ TEST(SpiMetadataTest, TestEncodeManyChannels) {
       },
   };
 
-  ASSERT_NO_FATAL_FAILURES(check_encodes(kSpiChannels));
+  ASSERT_NO_FATAL_FAILURE(check_encodes(kSpiChannels));
 }
 
 TEST(SpiMetadataTest, TestEncodeNoChannels) {
-  ASSERT_NO_FATAL_FAILURES(check_encodes(cpp20::span<const fidl_metadata::spi::Channel>()));
+  ASSERT_NO_FATAL_FAILURE(check_encodes(cpp20::span<const fidl_metadata::spi::Channel>()));
 }

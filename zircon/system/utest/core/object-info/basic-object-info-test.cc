@@ -2,14 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "helper.h"
-
 #include <lib/zx/event.h>
 #include <lib/zx/process.h>
 #include <zircon/status.h>
 #include <zircon/syscalls/object.h>
 
 #include <zxtest/zxtest.h>
+
+#include "helper.h"
 
 namespace object_info_test {
 namespace {
@@ -82,7 +82,7 @@ TEST(ObjectGetInfoTest, HandleCountCorrectness) {
 constexpr auto provider = []() { return zx::handle(); };
 
 TEST(ObjectGetInfoTest, InvalidHandleFails) {
-  ASSERT_NO_FATAL_FAILURES((CheckInvalidHandleFails<void*>(ZX_INFO_HANDLE_VALID, 1, provider)));
+  ASSERT_NO_FATAL_FAILURE((CheckInvalidHandleFails<void*>(ZX_INFO_HANDLE_VALID, 1, provider)));
 }
 
 }  // namespace

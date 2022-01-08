@@ -30,7 +30,7 @@ class PtyTestCase : public zxtest::Test {
 
   void SetUp() override {
     ASSERT_OK(loop_.StartThread("pty-test"));
-    ASSERT_NO_FATAL_FAILURES(CreateNewServer(&server_));
+    ASSERT_NO_FATAL_FAILURE(CreateNewServer(&server_));
   }
   void TearDown() override {
     sync_completion_t completion;
@@ -213,7 +213,7 @@ TEST_F(PtyTestCase, ServerWithNoClientsInitialConditions) {
     }
   };
 
-  ASSERT_NO_FATAL_FAILURES(check_state());
+  ASSERT_NO_FATAL_FAILURE(check_state());
 
   // Create a client and close it, then make sure we're back in the initial
   // state
@@ -225,7 +225,7 @@ TEST_F(PtyTestCase, ServerWithNoClientsInitialConditions) {
   ASSERT_OK(
       event.wait_one(fuchsia_device::wire::kDeviceSignalHangup, zx::time::infinite(), nullptr));
 
-  ASSERT_NO_FATAL_FAILURES(check_state());
+  ASSERT_NO_FATAL_FAILURE(check_state());
 }
 
 // Verify a server with a client has the right state
@@ -532,7 +532,7 @@ TEST_F(PtyTestCase, ClientReadEventsClears) {
       ZX_ERR_TIMED_OUT);
 
   // Write a ^C byte from the server to trigger a cooked-mode event
-  ASSERT_NO_FATAL_FAILURES(WriteCtrlC(&server));
+  ASSERT_NO_FATAL_FAILURE(WriteCtrlC(&server));
 
   ASSERT_OK(control_event.wait_one(fuchsia_hardware_pty::wire::kSignalEvent, zx::time::infinite(),
                                    nullptr));
@@ -565,7 +565,7 @@ TEST_F(PtyTestCase, EventsSentWithNoControllingClient) {
   ASSERT_OK(OpenClient(&server, 1, &active_client));
 
   // Write a ^C byte from the server to trigger a cooked-mode event
-  ASSERT_NO_FATAL_FAILURES(WriteCtrlC(&server));
+  ASSERT_NO_FATAL_FAILURE(WriteCtrlC(&server));
 
   // Connect a control client to inspect the event
   Connection control_client;
@@ -1053,8 +1053,8 @@ TEST_F(PtyTestCase, ClientsHaveIndependentFifos) {
                   ZX_ERR_TIMED_OUT);
   };
 
-  ASSERT_NO_FATAL_FAILURES(check_client(&other_client, kOtherClientByte));
-  ASSERT_NO_FATAL_FAILURES(check_client(&control_client, kControlClientByte));
+  ASSERT_NO_FATAL_FAILURE(check_client(&other_client, kOtherClientByte));
+  ASSERT_NO_FATAL_FAILURE(check_client(&control_client, kControlClientByte));
 }
 
 }  // namespace

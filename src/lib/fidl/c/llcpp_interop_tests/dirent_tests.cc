@@ -612,7 +612,7 @@ TEST(DirentServerTest, CFlavorSendOnDirents) {
   fidl::WireEventSender<gen::DirEntTestInterface> event_sender(std::move(server_chan));
   auto status = event_sender.OnDirents(fidl::VectorView<gen::wire::DirEnt>::FromExternal(dirents));
   ASSERT_OK(status);
-  ASSERT_NO_FATAL_FAILURES(AssertReadOnDirentsEvent(std::move(client_chan), dirents));
+  ASSERT_NO_FATAL_FAILURE(AssertReadOnDirentsEvent(std::move(client_chan), dirents));
 }
 
 TEST(DirentServerTest, CallerAllocateSendOnDirents) {
@@ -630,7 +630,7 @@ TEST(DirentServerTest, CallerAllocateSendOnDirents) {
   auto status = event_sender.OnDirents(buffer->view(),
                                        fidl::VectorView<gen::wire::DirEnt>::FromExternal(dirents));
   ASSERT_OK(status);
-  ASSERT_NO_FATAL_FAILURES(AssertReadOnDirentsEvent(std::move(client_chan), dirents));
+  ASSERT_NO_FATAL_FAILURE(AssertReadOnDirentsEvent(std::move(client_chan), dirents));
 }
 
 // Parameterized tests

@@ -91,7 +91,7 @@ TEST_F(MbrDeviceTest, DeviceCreation) {
   ASSERT_EQ(devices.size(), 2);
 
   ASSERT_NOT_NULL(devices[0].get());
-  EXPECT_STR_EQ(devices[0]->Name().c_str(), "part-000");
+  EXPECT_STREQ(devices[0]->Name().c_str(), "part-000");
   guid_t guid;
   EXPECT_OK(devices[0]->BlockPartitionGetGuid(GUIDTYPE_TYPE, &guid));
   {
@@ -100,7 +100,7 @@ TEST_F(MbrDeviceTest, DeviceCreation) {
   }
 
   ASSERT_NOT_NULL(devices[1].get());
-  EXPECT_STR_EQ(devices[1]->Name().c_str(), "part-001");
+  EXPECT_STREQ(devices[1]->Name().c_str(), "part-001");
   EXPECT_OK(devices[1]->BlockPartitionGetGuid(GUIDTYPE_TYPE, &guid));
   {
     uint8_t expected_guid[GPT_GUID_LEN] = GUID_DATA_VALUE;

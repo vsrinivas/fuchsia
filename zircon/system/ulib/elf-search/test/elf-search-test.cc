@@ -99,10 +99,10 @@ void MakeELF(Module* mod) {
   ASSERT_OK(zx::vmo::create(size, 0, &mod->vmo));
   EXPECT_OK(mod->vmo.set_property(ZX_PROP_NAME, mod->name.data(), mod->name.size()));
   EXPECT_OK(mod->vmo.replace_as_executable(zx::resource(), &mod->vmo));
-  ASSERT_NO_FATAL_FAILURES(WriteHeaders(mod->phdrs, mod->vmo));
+  ASSERT_NO_FATAL_FAILURE(WriteHeaders(mod->phdrs, mod->vmo));
   for (const auto& phdr : mod->phdrs) {
     if (phdr.p_type == PT_NOTE) {
-      ASSERT_NO_FATAL_FAILURES(WriteBuildID(mod->build_id, mod->vmo, phdr.p_offset));
+      ASSERT_NO_FATAL_FAILURE(WriteBuildID(mod->build_id, mod->vmo, phdr.p_offset));
     }
   }
 }
@@ -171,7 +171,7 @@ TEST(ElfSearchTest, ForEachModule) {
 
   uintptr_t base, entry;
   for (auto& mod : mods) {
-    ASSERT_NO_FATAL_FAILURES(MakeELF(&mod));
+    ASSERT_NO_FATAL_FAILURE(MakeELF(&mod));
     if (mod.name == "mod3") {
       // Handle mod3's string table.
       EXPECT_OK(mods[3].vmo.write(&mod3_dyns, 0x1800, sizeof(mod3_dyns)));
@@ -208,14 +208,14 @@ TEST(ElfSearchTest, ForEachModule) {
         ++matchCount;
         char name[ZX_MAX_NAME_LEN];
         zx_koid_t vmo_koid = 0;
-        ASSERT_NO_FATAL_FAILURES(GetKoid(mod.vmo, &vmo_koid));
+        ASSERT_NO_FATAL_FAILURE(GetKoid(mod.vmo, &vmo_koid));
         if (mod.name != "mod3") {
           snprintf(name, sizeof(name), "<VMO#%" PRIu64 "=%.*s>", vmo_koid,
                    static_cast<int>(mod.name.size()), mod.name.data());
         } else {
           snprintf(name, sizeof(name), "%s", mod3_soname);
         }
-        EXPECT_STR_EQ(info.name, name);
+        EXPECT_STREQ(info.name, name);
         EXPECT_EQ(mod.phdrs.size(), info.phdrs.size(), "expected same number of phdrs");
       }
     }

@@ -727,7 +727,7 @@ TEST(RegisterTestCase, Print) {
         "RsvdZ[11:0]: 0xfff (4095)",
     };
     reg.Print([&](const char* buf) {
-      EXPECT_STR_EQ(expected[call_count], buf, "mismatch");
+      EXPECT_STREQ(expected[call_count], buf, "mismatch");
       call_count++;
     });
     EXPECT_EQ(std::size(expected), call_count);
@@ -750,7 +750,7 @@ TEST(RegisterTestCase, Print) {
         "unknown set bits: 0x80000fff",
     };
     reg.Print([&](const char* buf) {
-      EXPECT_STR_EQ(expected[call_count], buf, "mismatch");
+      EXPECT_STREQ(expected[call_count], buf, "mismatch");
       call_count++;
     });
     EXPECT_EQ(std::size(expected), call_count);
@@ -784,7 +784,7 @@ TEST(RegisterTestCase, ForEachField) {
                                         uint32_t low_bit) {
     ASSERT_LT(call_idx, std::size(expected_calls));
     auto& expected = expected_calls[call_idx++];
-    EXPECT_STR_EQ(name, expected.name);
+    EXPECT_STREQ(name, expected.name);
     EXPECT_EQ(value, expected.value);
     EXPECT_EQ(high_bit, expected.high_bit);
     EXPECT_EQ(low_bit, expected.low_bit);

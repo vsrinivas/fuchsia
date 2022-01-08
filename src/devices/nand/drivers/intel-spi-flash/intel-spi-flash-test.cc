@@ -92,7 +92,7 @@ class SpiFlashTest : public zxtest::Test {
   }
 
   void TearDown() override {
-    ASSERT_NO_FATAL_FAILURES(UnbindDevice());
+    ASSERT_NO_FATAL_FAILURE(UnbindDevice());
     {
       std::scoped_lock lock(mutex_);
       stop_ = true;

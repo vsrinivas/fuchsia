@@ -148,57 +148,57 @@ void Peering(const Handle& handle) {
 TEST(TraitsTestCase, EventTraits) {
   zx::event event;
   ASSERT_OK(zx::event::create(0u, &event));
-  ASSERT_NO_FATAL_FAILURES(Duplicating(event));
-  ASSERT_NO_FATAL_FAILURES(GetChild(event));
-  ASSERT_NO_FATAL_FAILURES(SetProfile(event));
-  ASSERT_NO_FATAL_FAILURES(UserSignaling(event));
-  ASSERT_NO_FATAL_FAILURES(Waiting(event));
-  ASSERT_NO_FATAL_FAILURES(Peering(event));
+  ASSERT_NO_FATAL_FAILURE(Duplicating(event));
+  ASSERT_NO_FATAL_FAILURE(GetChild(event));
+  ASSERT_NO_FATAL_FAILURE(SetProfile(event));
+  ASSERT_NO_FATAL_FAILURE(UserSignaling(event));
+  ASSERT_NO_FATAL_FAILURE(Waiting(event));
+  ASSERT_NO_FATAL_FAILURE(Peering(event));
 }
 
 TEST(TraitsTestCase, ThreadTraits) {
   zx::thread thread;
   ASSERT_OK(zx::thread::create(*zx::process::self(), "", 0u, 0u, &thread));
-  ASSERT_NO_FATAL_FAILURES(Duplicating(thread));
-  ASSERT_NO_FATAL_FAILURES(GetChild(thread));
-  ASSERT_NO_FATAL_FAILURES(SetProfile(thread));
-  ASSERT_NO_FATAL_FAILURES(UserSignaling(thread));
-  ASSERT_NO_FATAL_FAILURES(Waiting(thread));
-  ASSERT_NO_FATAL_FAILURES(Peering(thread));
+  ASSERT_NO_FATAL_FAILURE(Duplicating(thread));
+  ASSERT_NO_FATAL_FAILURE(GetChild(thread));
+  ASSERT_NO_FATAL_FAILURE(SetProfile(thread));
+  ASSERT_NO_FATAL_FAILURE(UserSignaling(thread));
+  ASSERT_NO_FATAL_FAILURE(Waiting(thread));
+  ASSERT_NO_FATAL_FAILURE(Peering(thread));
 }
 
 TEST(TraitsTestCase, ProcessTraits) {
   zx::process process;
   zx::vmar vmar;
   ASSERT_OK(zx::process::create(*zx::job::default_job(), "", 0u, 0u, &process, &vmar));
-  ASSERT_NO_FATAL_FAILURES(Duplicating(process));
-  ASSERT_NO_FATAL_FAILURES(GetChild(process));
-  ASSERT_NO_FATAL_FAILURES(SetProfile(process));
-  ASSERT_NO_FATAL_FAILURES(UserSignaling(process));
-  ASSERT_NO_FATAL_FAILURES(Waiting(process));
-  ASSERT_NO_FATAL_FAILURES(Peering(process));
+  ASSERT_NO_FATAL_FAILURE(Duplicating(process));
+  ASSERT_NO_FATAL_FAILURE(GetChild(process));
+  ASSERT_NO_FATAL_FAILURE(SetProfile(process));
+  ASSERT_NO_FATAL_FAILURE(UserSignaling(process));
+  ASSERT_NO_FATAL_FAILURE(Waiting(process));
+  ASSERT_NO_FATAL_FAILURE(Peering(process));
 }
 
 TEST(TraitsTestCase, JobTraits) {
   zx::job job;
   ASSERT_OK(zx::job::create(*zx::job::default_job(), 0u, &job));
-  ASSERT_NO_FATAL_FAILURES(Duplicating(job));
-  ASSERT_NO_FATAL_FAILURES(GetChild(job));
-  ASSERT_NO_FATAL_FAILURES(SetProfile(job));
-  ASSERT_NO_FATAL_FAILURES(UserSignaling(job));
-  ASSERT_NO_FATAL_FAILURES(Waiting(job));
-  ASSERT_NO_FATAL_FAILURES(Peering(job));
+  ASSERT_NO_FATAL_FAILURE(Duplicating(job));
+  ASSERT_NO_FATAL_FAILURE(GetChild(job));
+  ASSERT_NO_FATAL_FAILURE(SetProfile(job));
+  ASSERT_NO_FATAL_FAILURE(UserSignaling(job));
+  ASSERT_NO_FATAL_FAILURE(Waiting(job));
+  ASSERT_NO_FATAL_FAILURE(Peering(job));
 }
 
 TEST(TraitsTestCase, VmoTraits) {
   zx::vmo vmo;
   ASSERT_OK(zx::vmo::create(4096u, 0u, &vmo));
-  ASSERT_NO_FATAL_FAILURES(Duplicating(vmo));
-  ASSERT_NO_FATAL_FAILURES(GetChild(vmo));
-  ASSERT_NO_FATAL_FAILURES(SetProfile(vmo));
-  ASSERT_NO_FATAL_FAILURES(UserSignaling(vmo));
-  ASSERT_NO_FATAL_FAILURES(Waiting(vmo));
-  ASSERT_NO_FATAL_FAILURES(Peering(vmo));
+  ASSERT_NO_FATAL_FAILURE(Duplicating(vmo));
+  ASSERT_NO_FATAL_FAILURE(GetChild(vmo));
+  ASSERT_NO_FATAL_FAILURE(SetProfile(vmo));
+  ASSERT_NO_FATAL_FAILURE(UserSignaling(vmo));
+  ASSERT_NO_FATAL_FAILURE(Waiting(vmo));
+  ASSERT_NO_FATAL_FAILURE(Peering(vmo));
 }
 
 TEST(TraitsTestCase, BtiTraits) {
@@ -228,45 +228,45 @@ TEST(TraitsTestCase, ResourceTraits) {
 TEST(TraitsTestCase, TimerTraits) {
   zx::timer timer;
   ASSERT_OK(zx::timer::create(0u, ZX_CLOCK_MONOTONIC, &timer));
-  ASSERT_NO_FATAL_FAILURES(Duplicating(timer));
-  ASSERT_NO_FATAL_FAILURES(GetChild(timer));
-  ASSERT_NO_FATAL_FAILURES(SetProfile(timer));
-  ASSERT_NO_FATAL_FAILURES(UserSignaling(timer));
-  ASSERT_NO_FATAL_FAILURES(Waiting(timer));
-  ASSERT_NO_FATAL_FAILURES(Peering(timer));
+  ASSERT_NO_FATAL_FAILURE(Duplicating(timer));
+  ASSERT_NO_FATAL_FAILURE(GetChild(timer));
+  ASSERT_NO_FATAL_FAILURE(SetProfile(timer));
+  ASSERT_NO_FATAL_FAILURE(UserSignaling(timer));
+  ASSERT_NO_FATAL_FAILURE(Waiting(timer));
+  ASSERT_NO_FATAL_FAILURE(Peering(timer));
 }
 
 TEST(TraitsTestCase, ChannelTraits) {
   zx::channel channel, channel2;
   ASSERT_OK(zx::channel::create(0u, &channel, &channel2));
-  ASSERT_NO_FATAL_FAILURES(Duplicating(channel));
-  ASSERT_NO_FATAL_FAILURES(GetChild(channel));
-  ASSERT_NO_FATAL_FAILURES(SetProfile(channel));
-  ASSERT_NO_FATAL_FAILURES(UserSignaling(channel));
-  ASSERT_NO_FATAL_FAILURES(Waiting(channel));
-  ASSERT_NO_FATAL_FAILURES(Peering(channel));
+  ASSERT_NO_FATAL_FAILURE(Duplicating(channel));
+  ASSERT_NO_FATAL_FAILURE(GetChild(channel));
+  ASSERT_NO_FATAL_FAILURE(SetProfile(channel));
+  ASSERT_NO_FATAL_FAILURE(UserSignaling(channel));
+  ASSERT_NO_FATAL_FAILURE(Waiting(channel));
+  ASSERT_NO_FATAL_FAILURE(Peering(channel));
 }
 
 TEST(TraitsTestCase, EventPairTraits) {
   zx::eventpair eventpair, eventpair2;
   ASSERT_OK(zx::eventpair::create(0u, &eventpair, &eventpair2));
-  ASSERT_NO_FATAL_FAILURES(Duplicating(eventpair));
-  ASSERT_NO_FATAL_FAILURES(GetChild(eventpair));
-  ASSERT_NO_FATAL_FAILURES(SetProfile(eventpair));
-  ASSERT_NO_FATAL_FAILURES(UserSignaling(eventpair));
-  ASSERT_NO_FATAL_FAILURES(Waiting(eventpair));
-  ASSERT_NO_FATAL_FAILURES(Peering(eventpair));
+  ASSERT_NO_FATAL_FAILURE(Duplicating(eventpair));
+  ASSERT_NO_FATAL_FAILURE(GetChild(eventpair));
+  ASSERT_NO_FATAL_FAILURE(SetProfile(eventpair));
+  ASSERT_NO_FATAL_FAILURE(UserSignaling(eventpair));
+  ASSERT_NO_FATAL_FAILURE(Waiting(eventpair));
+  ASSERT_NO_FATAL_FAILURE(Peering(eventpair));
 }
 
 TEST(TraitsTestCase, FifoTraits) {
   zx::fifo fifo, fifo2;
   ASSERT_OK(zx::fifo::create(16u, 16u, 0u, &fifo, &fifo2));
-  ASSERT_NO_FATAL_FAILURES(Duplicating(fifo));
-  ASSERT_NO_FATAL_FAILURES(GetChild(fifo));
-  ASSERT_NO_FATAL_FAILURES(SetProfile(fifo));
-  ASSERT_NO_FATAL_FAILURES(UserSignaling(fifo));
-  ASSERT_NO_FATAL_FAILURES(Waiting(fifo));
-  ASSERT_NO_FATAL_FAILURES(Peering(fifo));
+  ASSERT_NO_FATAL_FAILURE(Duplicating(fifo));
+  ASSERT_NO_FATAL_FAILURE(GetChild(fifo));
+  ASSERT_NO_FATAL_FAILURE(SetProfile(fifo));
+  ASSERT_NO_FATAL_FAILURE(UserSignaling(fifo));
+  ASSERT_NO_FATAL_FAILURE(Waiting(fifo));
+  ASSERT_NO_FATAL_FAILURE(Peering(fifo));
 }
 
 TEST(TraitsTestCase, DebugLogTraits) {
@@ -277,12 +277,12 @@ TEST(TraitsTestCase, DebugLogTraits) {
   zx::debuglog debuglog;
   ASSERT_OK(fuchsia_boot_WriteOnlyLogGet(local.get(), debuglog.reset_and_get_address()));
 
-  ASSERT_NO_FATAL_FAILURES(Duplicating(debuglog));
-  ASSERT_NO_FATAL_FAILURES(GetChild(debuglog));
-  ASSERT_NO_FATAL_FAILURES(SetProfile(debuglog));
-  ASSERT_NO_FATAL_FAILURES(UserSignaling(debuglog));
-  ASSERT_NO_FATAL_FAILURES(Waiting(debuglog));
-  ASSERT_NO_FATAL_FAILURES(Peering(debuglog));
+  ASSERT_NO_FATAL_FAILURE(Duplicating(debuglog));
+  ASSERT_NO_FATAL_FAILURE(GetChild(debuglog));
+  ASSERT_NO_FATAL_FAILURE(SetProfile(debuglog));
+  ASSERT_NO_FATAL_FAILURE(UserSignaling(debuglog));
+  ASSERT_NO_FATAL_FAILURE(Waiting(debuglog));
+  ASSERT_NO_FATAL_FAILURE(Peering(debuglog));
 }
 
 TEST(TraitsTestCase, PmtTraits) {
@@ -300,35 +300,35 @@ TEST(TraitsTestCase, PmtTraits) {
 TEST(TraitsTestCase, SocketTraits) {
   zx::socket socket, socket2;
   ASSERT_OK(zx::socket::create(0u, &socket, &socket2));
-  ASSERT_NO_FATAL_FAILURES(Duplicating(socket));
-  ASSERT_NO_FATAL_FAILURES(GetChild(socket));
-  ASSERT_NO_FATAL_FAILURES(SetProfile(socket));
-  ASSERT_NO_FATAL_FAILURES(UserSignaling(socket));
-  ASSERT_NO_FATAL_FAILURES(Waiting(socket));
-  ASSERT_NO_FATAL_FAILURES(Peering(socket));
+  ASSERT_NO_FATAL_FAILURE(Duplicating(socket));
+  ASSERT_NO_FATAL_FAILURE(GetChild(socket));
+  ASSERT_NO_FATAL_FAILURE(SetProfile(socket));
+  ASSERT_NO_FATAL_FAILURE(UserSignaling(socket));
+  ASSERT_NO_FATAL_FAILURE(Waiting(socket));
+  ASSERT_NO_FATAL_FAILURE(Peering(socket));
 }
 
 TEST(TraitsTestCase, PortTraits) {
   zx::port port;
   ASSERT_OK(zx::port::create(0u, &port));
-  ASSERT_NO_FATAL_FAILURES(Duplicating(port));
-  ASSERT_NO_FATAL_FAILURES(GetChild(port));
-  ASSERT_NO_FATAL_FAILURES(SetProfile(port));
-  ASSERT_NO_FATAL_FAILURES(UserSignaling(port));
-  ASSERT_NO_FATAL_FAILURES(Waiting(port));
-  ASSERT_NO_FATAL_FAILURES(Peering(port));
+  ASSERT_NO_FATAL_FAILURE(Duplicating(port));
+  ASSERT_NO_FATAL_FAILURE(GetChild(port));
+  ASSERT_NO_FATAL_FAILURE(SetProfile(port));
+  ASSERT_NO_FATAL_FAILURE(UserSignaling(port));
+  ASSERT_NO_FATAL_FAILURE(Waiting(port));
+  ASSERT_NO_FATAL_FAILURE(Peering(port));
 }
 
 TEST(TraitsTestCase, VmarTraits) {
   zx::vmar vmar;
   uintptr_t addr;
   ASSERT_OK(zx::vmar::root_self()->allocate(0u, 0u, 4096u, &vmar, &addr));
-  ASSERT_NO_FATAL_FAILURES(Duplicating(vmar));
-  ASSERT_NO_FATAL_FAILURES(GetChild(vmar));
-  ASSERT_NO_FATAL_FAILURES(SetProfile(vmar));
-  ASSERT_NO_FATAL_FAILURES(UserSignaling(vmar));
-  ASSERT_NO_FATAL_FAILURES(Waiting(vmar));
-  ASSERT_NO_FATAL_FAILURES(Peering(vmar));
+  ASSERT_NO_FATAL_FAILURE(Duplicating(vmar));
+  ASSERT_NO_FATAL_FAILURE(GetChild(vmar));
+  ASSERT_NO_FATAL_FAILURE(SetProfile(vmar));
+  ASSERT_NO_FATAL_FAILURE(UserSignaling(vmar));
+  ASSERT_NO_FATAL_FAILURE(Waiting(vmar));
+  ASSERT_NO_FATAL_FAILURE(Peering(vmar));
 }
 
 TEST(TraitsTestCase, InterruptTraits) {
@@ -385,12 +385,12 @@ TEST(TraitsTestCase, ExceptionTraits) {
   ASSERT_OK(exception_channel.read(0, &info, exception.reset_and_get_address(), sizeof(info), 1,
                                    nullptr, nullptr));
 
-  ASSERT_NO_FATAL_FAILURES(Duplicating(exception));
-  ASSERT_NO_FATAL_FAILURES(GetChild(exception));
-  ASSERT_NO_FATAL_FAILURES(SetProfile(exception));
-  ASSERT_NO_FATAL_FAILURES(UserSignaling(exception));
-  ASSERT_NO_FATAL_FAILURES(Waiting(exception));
-  ASSERT_NO_FATAL_FAILURES(Peering(exception));
+  ASSERT_NO_FATAL_FAILURE(Duplicating(exception));
+  ASSERT_NO_FATAL_FAILURE(GetChild(exception));
+  ASSERT_NO_FATAL_FAILURE(SetProfile(exception));
+  ASSERT_NO_FATAL_FAILURE(UserSignaling(exception));
+  ASSERT_NO_FATAL_FAILURE(Waiting(exception));
+  ASSERT_NO_FATAL_FAILURE(Peering(exception));
 
   ASSERT_OK(test_exceptions::ExitExceptionZxThread(std::move(exception)));
   ASSERT_OK(thread.wait_one(ZX_THREAD_TERMINATED, zx::time::infinite(), nullptr));

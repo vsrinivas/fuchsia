@@ -2,10 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/zx/eventpair.h>
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/object.h>
+
 #include <fbl/vector.h>
-#include <lib/zx/eventpair.h>
 #include <zxtest/zxtest.h>
 
 namespace {
@@ -36,7 +37,7 @@ TEST(HandleCloseTest, Many) {
 
   // Verify all the peers of the eventpair were indeed closed.
   for (const auto& eventpair : eventpair_1) {
-    ASSERT_NO_FATAL_FAILURES(PeerWasClosed(eventpair));
+    ASSERT_NO_FATAL_FAILURE(PeerWasClosed(eventpair));
   }
 }
 
@@ -59,7 +60,7 @@ TEST(HandleCloseTest, ManyInvalidHandlesShouldNotFail) {
 
   // Verify all the peers of the eventpair were indeed closed.
   for (const auto& eventpair : eventpair_1) {
-    ASSERT_NO_FATAL_FAILURES(PeerWasClosed(eventpair));
+    ASSERT_NO_FATAL_FAILURE(PeerWasClosed(eventpair));
   }
 }
 
@@ -88,7 +89,7 @@ TEST(HandleCloseTest, ManyDuplicateTest) {
   // Assert that every handle in the preceding close call was in
   // fact closed, by waiting on the PEER_CLOSED signal.
   for (const auto& eventpair : eventpair_1) {
-    ASSERT_NO_FATAL_FAILURES(PeerWasClosed(eventpair));
+    ASSERT_NO_FATAL_FAILURE(PeerWasClosed(eventpair));
   }
 }
 

@@ -5,17 +5,17 @@
 #ifndef ZIRCON_SYSTEM_UTEST_FIDL_COMPILER_ERROR_TEST_H_
 #define ZIRCON_SYSTEM_UTEST_FIDL_COMPILER_ERROR_TEST_H_
 
-#define ASSERT_COMPILED(library)                  \
-  {                                               \
-    TestLibrary& library_ref = (library);         \
-    if (!library_ref.Compile()) {                 \
-      const auto& errors = library_ref.errors();  \
-      EXPECT_EQ(errors.size(), 0);                \
-      for (const auto& error : errors) {          \
-        EXPECT_STR_EQ("", error->def.msg.data()); \
-      }                                           \
-      FAIL("stopping test, compilation failed");  \
-    }                                             \
+#define ASSERT_COMPILED(library)                 \
+  {                                              \
+    TestLibrary& library_ref = (library);        \
+    if (!library_ref.Compile()) {                \
+      const auto& errors = library_ref.errors(); \
+      EXPECT_EQ(errors.size(), 0);               \
+      for (const auto& error : errors) {         \
+        EXPECT_STREQ("", error->def.msg.data()); \
+      }                                          \
+      FAIL("stopping test, compilation failed"); \
+    }                                            \
   }
 
 #define ASSERT_ERRORED_DURING_COMPILE(library, error) \
@@ -45,9 +45,9 @@
   }
 
 #define ASSERT_ERR(actual_err, err_def, ...) \
-  ASSERT_STR_EQ(actual_err->def.msg.data(), err_def.msg.data(), ##__VA_ARGS__)
+  ASSERT_STREQ(actual_err->def.msg.data(), err_def.msg.data(), ##__VA_ARGS__)
 
 #define EXPECT_ERR(actual_err, err_def, ...) \
-  EXPECT_STR_EQ(actual_err->def.msg.data(), err_def.msg.data(), ##__VA_ARGS__)
+  EXPECT_STREQ(actual_err->def.msg.data(), err_def.msg.data(), ##__VA_ARGS__)
 
 #endif  // ZIRCON_SYSTEM_UTEST_FIDL_COMPILER_ERROR_TEST_H_

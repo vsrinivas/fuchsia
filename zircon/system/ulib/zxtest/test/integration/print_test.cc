@@ -47,5 +47,5 @@ TEST(PrintTest, Double) {
 TEST(PrintTest, Str) {
   const char* a = "MyStr";
 
-  ASSERT_STR_EQ(a, "MyStr");
+  ASSERT_STREQ(a, "MyStr");
 }

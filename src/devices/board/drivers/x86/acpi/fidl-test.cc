@@ -34,12 +34,12 @@ void CheckEq(ACPI_OBJECT value, ACPI_OBJECT expected) {
       break;
     case ACPI_TYPE_STRING:
       ASSERT_EQ(value.String.Length, expected.String.Length);
-      ASSERT_STR_EQ(value.String.Pointer, expected.String.Pointer);
+      ASSERT_STREQ(value.String.Pointer, expected.String.Pointer);
       break;
     case ACPI_TYPE_PACKAGE:
       ASSERT_EQ(value.Package.Count, expected.Package.Count);
       for (size_t i = 0; i < value.Package.Count; i++) {
-        ASSERT_NO_FATAL_FAILURES(CheckEq(value.Package.Elements[i], expected.Package.Elements[i]));
+        ASSERT_NO_FATAL_FAILURE(CheckEq(value.Package.Elements[i], expected.Package.Elements[i]));
       }
       break;
     case ACPI_TYPE_BUFFER:
@@ -83,7 +83,7 @@ void CheckEq(facpi::Object value, facpi::Object expected) {
       auto &exp_list = expected.package_val().value;
       ASSERT_EQ(val_list.count(), exp_list.count());
       for (size_t i = 0; i < val_list.count(); i++) {
-        ASSERT_NO_FATAL_FAILURES(CheckEq(val_list[i], exp_list[i]));
+        ASSERT_NO_FATAL_FAILURE(CheckEq(val_list[i], exp_list[i]));
       }
       break;
     }
@@ -146,9 +146,9 @@ class FidlEvaluateObjectTest : public zxtest::Test {
 };
 
 TEST_F(FidlEvaluateObjectTest, TestCantEvaluateParent) {
-  ASSERT_NO_FATAL_FAILURES(InsertDeviceBelow("\\", std::make_unique<Device>("_SB_")));
-  ASSERT_NO_FATAL_FAILURES(InsertDeviceBelow("\\_SB_", std::make_unique<Device>("PCI0")));
-  ASSERT_NO_FATAL_FAILURES(InsertDeviceBelow("\\_SB_.PCI0", std::make_unique<Device>("I2C0")));
+  ASSERT_NO_FATAL_FAILURE(InsertDeviceBelow("\\", std::make_unique<Device>("_SB_")));
+  ASSERT_NO_FATAL_FAILURE(InsertDeviceBelow("\\_SB_", std::make_unique<Device>("PCI0")));
+  ASSERT_NO_FATAL_FAILURE(InsertDeviceBelow("\\_SB_.PCI0", std::make_unique<Device>("I2C0")));
 
   acpi::EvaluateObjectFidlHelper helper(
       &acpi_, acpi_.GetDeviceRoot()->FindByPath("\\_SB_.PCI0.I2C0"), "\\_SB_.PCI0",
@@ -159,9 +159,9 @@ TEST_F(FidlEvaluateObjectTest, TestCantEvaluateParent) {
 }
 
 TEST_F(FidlEvaluateObjectTest, TestCantEvaluateSibling) {
-  ASSERT_NO_FATAL_FAILURES(InsertDeviceBelow("\\", std::make_unique<Device>("_SB_")));
-  ASSERT_NO_FATAL_FAILURES(InsertDeviceBelow("\\_SB_", std::make_unique<Device>("PCI0")));
-  ASSERT_NO_FATAL_FAILURES(InsertDeviceBelow("\\_SB_", std::make_unique<Device>("PCI1")));
+  ASSERT_NO_FATAL_FAILURE(InsertDeviceBelow("\\", std::make_unique<Device>("_SB_")));
+  ASSERT_NO_FATAL_FAILURE(InsertDeviceBelow("\\_SB_", std::make_unique<Device>("PCI0")));
+  ASSERT_NO_FATAL_FAILURE(InsertDeviceBelow("\\_SB_", std::make_unique<Device>("PCI1")));
 
   acpi::EvaluateObjectFidlHelper helper(&acpi_, acpi_.GetDeviceRoot()->FindByPath("\\_SB_.PCI1"),
                                         "\\_SB_.PCI0", EvaluateObjectMode::kPlainObject,
@@ -172,9 +172,9 @@ TEST_F(FidlEvaluateObjectTest, TestCantEvaluateSibling) {
 }
 
 TEST_F(FidlEvaluateObjectTest, TestCanEvaluateChild) {
-  ASSERT_NO_FATAL_FAILURES(InsertDeviceBelow("\\", std::make_unique<Device>("_SB_")));
-  ASSERT_NO_FATAL_FAILURES(InsertDeviceBelow("\\_SB_", std::make_unique<Device>("PCI0")));
-  ASSERT_NO_FATAL_FAILURES(InsertDeviceBelow("\\_SB_.PCI0", std::make_unique<Device>("I2C0")));
+  ASSERT_NO_FATAL_FAILURE(InsertDeviceBelow("\\", std::make_unique<Device>("_SB_")));
+  ASSERT_NO_FATAL_FAILURE(InsertDeviceBelow("\\_SB_", std::make_unique<Device>("PCI0")));
+  ASSERT_NO_FATAL_FAILURE(InsertDeviceBelow("\\_SB_.PCI0", std::make_unique<Device>("I2C0")));
 
   acpi::EvaluateObjectFidlHelper helper(&acpi_, acpi_.GetDeviceRoot()->FindByPath("\\_SB_.PCI0"),
                                         "I2C0", EvaluateObjectMode::kPlainObject,
@@ -199,13 +199,13 @@ TEST_F(FidlEvaluateObjectTest, TestDecodeInteger) {
 
   auto status = helper.DecodeObject(obj, &out);
   ASSERT_OK(status.status_value());
-  ASSERT_NO_FATAL_FAILURES(CheckEq(out, ACPI_OBJECT{
-                                            .Integer =
-                                                {
-                                                    .Type = ACPI_TYPE_INTEGER,
-                                                    .Value = 42,
-                                                },
-                                        }));
+  ASSERT_NO_FATAL_FAILURE(CheckEq(out, ACPI_OBJECT{
+                                           .Integer =
+                                               {
+                                                   .Type = ACPI_TYPE_INTEGER,
+                                                   .Value = 42,
+                                               },
+                                       }));
 }
 
 TEST_F(FidlEvaluateObjectTest, TestDecodeString) {
@@ -219,14 +219,14 @@ TEST_F(FidlEvaluateObjectTest, TestDecodeString) {
   obj.set_string_val(alloc, "test string");
   auto status = helper.DecodeObject(obj, &out);
   ASSERT_OK(status.status_value());
-  ASSERT_NO_FATAL_FAILURES(CheckEq(out, ACPI_OBJECT{
-                                            .String =
-                                                {
-                                                    .Type = ACPI_TYPE_STRING,
-                                                    .Length = 11,
-                                                    .Pointer = const_cast<char *>("test string"),
-                                                },
-                                        }));
+  ASSERT_NO_FATAL_FAILURE(CheckEq(out, ACPI_OBJECT{
+                                           .String =
+                                               {
+                                                   .Type = ACPI_TYPE_STRING,
+                                                   .Length = 11,
+                                                   .Pointer = const_cast<char *>("test string"),
+                                               },
+                                       }));
 }
 
 TEST_F(FidlEvaluateObjectTest, TestDecodeBuffer) {
@@ -242,14 +242,14 @@ TEST_F(FidlEvaluateObjectTest, TestDecodeBuffer) {
                                                                     std::size(kBuffer)));
   auto status = helper.DecodeObject(obj, &out);
   ASSERT_OK(status.status_value());
-  ASSERT_NO_FATAL_FAILURES(CheckEq(out, ACPI_OBJECT{
-                                            .Buffer =
-                                                {
-                                                    .Type = ACPI_TYPE_BUFFER,
-                                                    .Length = std::size(kBuffer),
-                                                    .Pointer = const_cast<uint8_t *>(kBuffer),
-                                                },
-                                        }));
+  ASSERT_NO_FATAL_FAILURE(CheckEq(out, ACPI_OBJECT{
+                                           .Buffer =
+                                               {
+                                                   .Type = ACPI_TYPE_BUFFER,
+                                                   .Length = std::size(kBuffer),
+                                                   .Pointer = const_cast<uint8_t *>(kBuffer),
+                                               },
+                                       }));
 }
 
 TEST_F(FidlEvaluateObjectTest, TestDecodePowerResource) {
@@ -266,14 +266,14 @@ TEST_F(FidlEvaluateObjectTest, TestDecodePowerResource) {
   obj.set_power_resource_val(alloc, power);
   auto status = helper.DecodeObject(obj, &out);
   ASSERT_OK(status.status_value());
-  ASSERT_NO_FATAL_FAILURES(CheckEq(out, ACPI_OBJECT{
-                                            .PowerResource =
-                                                {
-                                                    .Type = ACPI_TYPE_POWER,
-                                                    .SystemLevel = 32,
-                                                    .ResourceOrder = 9,
-                                                },
-                                        }));
+  ASSERT_NO_FATAL_FAILURE(CheckEq(out, ACPI_OBJECT{
+                                           .PowerResource =
+                                               {
+                                                   .Type = ACPI_TYPE_POWER,
+                                                   .SystemLevel = 32,
+                                                   .ResourceOrder = 9,
+                                               },
+                                       }));
 }
 
 TEST_F(FidlEvaluateObjectTest, TestDecodeProcessorVal) {
@@ -291,21 +291,21 @@ TEST_F(FidlEvaluateObjectTest, TestDecodeProcessorVal) {
   obj.set_processor_val(alloc, processor);
   auto status = helper.DecodeObject(obj, &out);
   ASSERT_OK(status.status_value());
-  ASSERT_NO_FATAL_FAILURES(CheckEq(out, ACPI_OBJECT{
-                                            .Processor =
-                                                {
-                                                    .Type = ACPI_TYPE_PROCESSOR,
-                                                    .ProcId = 7,
-                                                    .PblkAddress = 0xd00dfeed,
-                                                    .PblkLength = 0xabc,
-                                                },
-                                        }));
+  ASSERT_NO_FATAL_FAILURE(CheckEq(out, ACPI_OBJECT{
+                                           .Processor =
+                                               {
+                                                   .Type = ACPI_TYPE_PROCESSOR,
+                                                   .ProcId = 7,
+                                                   .PblkAddress = 0xd00dfeed,
+                                                   .PblkLength = 0xabc,
+                                               },
+                                       }));
 }
 
 TEST_F(FidlEvaluateObjectTest, TestDecodeReference) {
-  ASSERT_NO_FATAL_FAILURES(InsertDeviceBelow("\\", std::make_unique<Device>("_SB_")));
-  ASSERT_NO_FATAL_FAILURES(InsertDeviceBelow("\\_SB_", std::make_unique<Device>("PCI0")));
-  ASSERT_NO_FATAL_FAILURES(InsertDeviceBelow("\\_SB_.PCI0", std::make_unique<Device>("I2C0")));
+  ASSERT_NO_FATAL_FAILURE(InsertDeviceBelow("\\", std::make_unique<Device>("_SB_")));
+  ASSERT_NO_FATAL_FAILURE(InsertDeviceBelow("\\_SB_", std::make_unique<Device>("PCI0")));
+  ASSERT_NO_FATAL_FAILURE(InsertDeviceBelow("\\_SB_.PCI0", std::make_unique<Device>("I2C0")));
 
   acpi::EvaluateObjectFidlHelper helper(&acpi_, acpi_.GetDeviceRoot()->FindByPath("\\_SB_"),
                                         "\\_SB_", EvaluateObjectMode::kPlainObject,
@@ -320,7 +320,7 @@ TEST_F(FidlEvaluateObjectTest, TestDecodeReference) {
 
   auto status = helper.DecodeObject(obj, &out);
   ASSERT_OK(status.status_value());
-  ASSERT_NO_FATAL_FAILURES(
+  ASSERT_NO_FATAL_FAILURE(
       CheckEq(out, ACPI_OBJECT{
                        .Reference =
                            {
@@ -332,9 +332,9 @@ TEST_F(FidlEvaluateObjectTest, TestDecodeReference) {
 }
 
 TEST_F(FidlEvaluateObjectTest, TestDecodeParentReferenceFails) {
-  ASSERT_NO_FATAL_FAILURES(InsertDeviceBelow("\\", std::make_unique<Device>("_SB_")));
-  ASSERT_NO_FATAL_FAILURES(InsertDeviceBelow("\\_SB_", std::make_unique<Device>("PCI0")));
-  ASSERT_NO_FATAL_FAILURES(InsertDeviceBelow("\\_SB_.PCI0", std::make_unique<Device>("I2C0")));
+  ASSERT_NO_FATAL_FAILURE(InsertDeviceBelow("\\", std::make_unique<Device>("_SB_")));
+  ASSERT_NO_FATAL_FAILURE(InsertDeviceBelow("\\_SB_", std::make_unique<Device>("PCI0")));
+  ASSERT_NO_FATAL_FAILURE(InsertDeviceBelow("\\_SB_.PCI0", std::make_unique<Device>("I2C0")));
 
   acpi::EvaluateObjectFidlHelper helper(&acpi_, acpi_.GetDeviceRoot()->FindByPath("\\_SB_"),
                                         "\\_SB_", EvaluateObjectMode::kPlainObject,
@@ -395,7 +395,7 @@ TEST_F(FidlEvaluateObjectTest, TestDecodePackage) {
           },
   };
 
-  ASSERT_NO_FATAL_FAILURES(CheckEq(out, expected));
+  ASSERT_NO_FATAL_FAILURE(CheckEq(out, expected));
 }
 
 TEST_F(FidlEvaluateObjectTest, TestDecodeParameters) {
@@ -425,7 +425,7 @@ TEST_F(FidlEvaluateObjectTest, TestDecodeParameters) {
   auto value = std::move(result.value());
   ASSERT_EQ(value.size(), std::size(expected));
   for (size_t i = 0; i < std::size(expected); i++) {
-    ASSERT_NO_FATAL_FAILURES(CheckEq(value[i], expected[i]), "param %zd", i);
+    ASSERT_NO_FATAL_FAILURE(CheckEq(value[i], expected[i]), "param %zd", i);
   }
 }
 
@@ -440,7 +440,7 @@ TEST_F(FidlEvaluateObjectTest, TestEncodeInt) {
 
   facpi::Object expected;
   expected.set_integer_val(alloc, 320);
-  ASSERT_NO_FATAL_FAILURES(CheckEq(result.value(), expected));
+  ASSERT_NO_FATAL_FAILURE(CheckEq(result.value(), expected));
 }
 
 TEST_F(FidlEvaluateObjectTest, TestEncodeString) {
@@ -458,7 +458,7 @@ TEST_F(FidlEvaluateObjectTest, TestEncodeString) {
 
   facpi::Object expected;
   expected.set_string_val(alloc, "abc");
-  ASSERT_NO_FATAL_FAILURES(CheckEq(result.value(), expected));
+  ASSERT_NO_FATAL_FAILURE(CheckEq(result.value(), expected));
 }
 
 TEST_F(FidlEvaluateObjectTest, TestEncodeBuffer) {
@@ -478,7 +478,7 @@ TEST_F(FidlEvaluateObjectTest, TestEncodeBuffer) {
   facpi::Object expected;
   expected.set_buffer_val(alloc, fidl::VectorView<uint8_t>::FromExternal(
                                      const_cast<uint8_t *>(kBuffer), std::size(kBuffer)));
-  ASSERT_NO_FATAL_FAILURES(CheckEq(result.value(), expected));
+  ASSERT_NO_FATAL_FAILURE(CheckEq(result.value(), expected));
 }
 
 TEST_F(FidlEvaluateObjectTest, TestEncodeProcessorVal) {
@@ -505,13 +505,13 @@ TEST_F(FidlEvaluateObjectTest, TestEncodeProcessorVal) {
   processor.id = 7;
   expected.set_processor_val(alloc, processor);
 
-  ASSERT_NO_FATAL_FAILURES(CheckEq(result.value(), expected));
+  ASSERT_NO_FATAL_FAILURE(CheckEq(result.value(), expected));
 }
 
 TEST_F(FidlEvaluateObjectTest, TestEncodeReference) {
-  ASSERT_NO_FATAL_FAILURES(InsertDeviceBelow("\\", std::make_unique<Device>("_SB_")));
-  ASSERT_NO_FATAL_FAILURES(InsertDeviceBelow("\\_SB_", std::make_unique<Device>("PCI0")));
-  ASSERT_NO_FATAL_FAILURES(InsertDeviceBelow("\\_SB_.PCI0", std::make_unique<Device>("I2C0")));
+  ASSERT_NO_FATAL_FAILURE(InsertDeviceBelow("\\", std::make_unique<Device>("_SB_")));
+  ASSERT_NO_FATAL_FAILURE(InsertDeviceBelow("\\_SB_", std::make_unique<Device>("PCI0")));
+  ASSERT_NO_FATAL_FAILURE(InsertDeviceBelow("\\_SB_.PCI0", std::make_unique<Device>("I2C0")));
 
   acpi::EvaluateObjectFidlHelper helper(&acpi_, acpi_.GetDeviceRoot()->FindByPath("\\_SB_"),
                                         "\\_SB_", EvaluateObjectMode::kPlainObject,
@@ -530,13 +530,13 @@ TEST_F(FidlEvaluateObjectTest, TestEncodeReference) {
 
   auto result = helper.EncodeObject(alloc, &obj);
   ASSERT_OK(result.zx_status_value());
-  ASSERT_NO_FATAL_FAILURES(CheckEq(result.value(), expected));
+  ASSERT_NO_FATAL_FAILURE(CheckEq(result.value(), expected));
 }
 
 TEST_F(FidlEvaluateObjectTest, TestEncodeParentReferenceFails) {
-  ASSERT_NO_FATAL_FAILURES(InsertDeviceBelow("\\", std::make_unique<Device>("_SB_")));
-  ASSERT_NO_FATAL_FAILURES(InsertDeviceBelow("\\_SB_", std::make_unique<Device>("PCI0")));
-  ASSERT_NO_FATAL_FAILURES(InsertDeviceBelow("\\_SB_.PCI0", std::make_unique<Device>("I2C0")));
+  ASSERT_NO_FATAL_FAILURE(InsertDeviceBelow("\\", std::make_unique<Device>("_SB_")));
+  ASSERT_NO_FATAL_FAILURE(InsertDeviceBelow("\\_SB_", std::make_unique<Device>("PCI0")));
+  ASSERT_NO_FATAL_FAILURE(InsertDeviceBelow("\\_SB_.PCI0", std::make_unique<Device>("I2C0")));
 
   acpi::EvaluateObjectFidlHelper helper(&acpi_, acpi_.GetDeviceRoot()->FindByPath("\\_SB_"),
                                         "\\_SB_", EvaluateObjectMode::kPlainObject,
@@ -592,7 +592,7 @@ TEST_F(FidlEvaluateObjectTest, TestEncodePackage) {
   list.value = fidl::VectorView<facpi::Object>::FromExternal(elements);
   expected.set_package_val(alloc, list);
 
-  ASSERT_NO_FATAL_FAILURES(CheckEq(result.value(), expected));
+  ASSERT_NO_FATAL_FAILURE(CheckEq(result.value(), expected));
 }
 
 TEST_F(FidlEvaluateObjectTest, TestEncodeReturnValue) {
@@ -609,7 +609,7 @@ TEST_F(FidlEvaluateObjectTest, TestEncodeReturnValue) {
   // Expect a value of this size to be encoded in-line.
   fuchsia_hardware_acpi::wire::Object expected;
   expected.set_integer_val(alloc, 47);
-  ASSERT_NO_FATAL_FAILURES(CheckEq(object.object(), expected));
+  ASSERT_NO_FATAL_FAILURE(CheckEq(object.object(), expected));
 }
 
 TEST_F(FidlEvaluateObjectTest, TestEncodeMmioResource) {

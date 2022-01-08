@@ -138,7 +138,7 @@ TEST(PthreadDetach, Idempotent) {
   // Create a |Thread|, and assert that the construction of the
   // pthread_t had no fatal errors.
   Thread thread{&gate};
-  ASSERT_NO_FATAL_FAILURES();
+  ASSERT_NO_FATAL_FAILURE();
 
   // Now that our thread has been successfully created, run our main test from
   // within the scope of the lambda.  If the test encounters a fatal failure and
@@ -148,7 +148,7 @@ TEST(PthreadDetach, Idempotent) {
     // Ten is an arbitrary number greater than 1, to exercise the
     // behavior a few times.
     for (int count = 0; count < 10; ++count) {
-      ASSERT_NO_FATAL_FAILURES(gate.Send(Operation::kDetach));
+      ASSERT_NO_FATAL_FAILURE(gate.Send(Operation::kDetach));
     }
     gate.Send(Operation::kExit);
   };

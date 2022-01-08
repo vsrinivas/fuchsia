@@ -90,7 +90,7 @@ class RegistersDeviceTest : public zxtest::Test {
 
   void TearDown() override {
     for (uint32_t i = 0; i < mock_mmio_.size(); i++) {
-      ASSERT_NO_FATAL_FAILURES(mock_mmio_[i]->VerifyAll());
+      ASSERT_NO_FATAL_FAILURE(mock_mmio_[i]->VerifyAll());
     }
   }
 

@@ -97,7 +97,7 @@ TEST_F(I2cChildTest, Write3BytesOnce) {
   // Allocate using new as the mock DDK takes ownership of the child.
   auto server = new I2cTestChild(fake_root_.get(), std::move(bus), 0);
   fidl::WireSyncClient<fuchsia_hardware_i2c::Device2> client_wrap;
-  ASSERT_NO_FATAL_FAILURES(StartFidl(server, &client_wrap));
+  ASSERT_NO_FATAL_FAILURE(StartFidl(server, &client_wrap));
 
   bool is_write[] = {true};  // 1 write segment.
   auto segments_is_write = fidl::VectorView<bool>::FromExternal(is_write);
@@ -145,7 +145,7 @@ TEST_F(I2cChildTest, Read3BytesOnce) {
   // Allocate using new as the mock DDK takes ownership of the child.
   auto server = new I2cTestChild(fake_root_.get(), std::move(bus), 0);
   fidl::WireSyncClient<fuchsia_hardware_i2c::Device2> client_wrap;
-  ASSERT_NO_FATAL_FAILURES(StartFidl(server, &client_wrap));
+  ASSERT_NO_FATAL_FAILURE(StartFidl(server, &client_wrap));
 
   bool is_write[] = {false};  // 1 read segment.
   auto segments_is_write = fidl::VectorView<bool>::FromExternal(is_write);
@@ -202,7 +202,7 @@ TEST_F(I2cChildTest, Write1ByteOnceRead1Byte3Times) {
   // Allocate using new as the mock DDK takes ownership of the child.
   auto server = new I2cTestChild(fake_root_.get(), std::move(bus), 0);
   fidl::WireSyncClient<fuchsia_hardware_i2c::Device2> client_wrap;
-  ASSERT_NO_FATAL_FAILURES(StartFidl(server, &client_wrap));
+  ASSERT_NO_FATAL_FAILURE(StartFidl(server, &client_wrap));
 
   bool is_write[] = {true, false, false, false};  // 1 write, 3 reads.
   auto segments_is_write = fidl::VectorView<bool>::FromExternal(is_write);
@@ -241,7 +241,7 @@ TEST_F(I2cChildTest, BadTransfers) {
   auto server = new I2cTestChild(fake_root_.get(),
                                  fbl::AdoptRef<I2cBus>(new I2cBus(fake_root_.get(), i2c, 0)), 0);
   fidl::WireSyncClient<fuchsia_hardware_i2c::Device2> client_wrap;
-  ASSERT_NO_FATAL_FAILURES(StartFidl(server, &client_wrap));
+  ASSERT_NO_FATAL_FAILURE(StartFidl(server, &client_wrap));
 
   {
     // 2 write segments, inconsistent with 1 segment write below.

@@ -49,7 +49,7 @@ class FvmTest : public zxtest::Test {
   void CreateRamdisk() { CreateRamdiskWithBlockCount(); }
 
   void CreateRamdiskWithBlockCount(size_t block_count = kBlockCount) {
-    ASSERT_NO_FATAL_FAILURES(
+    ASSERT_NO_FATAL_FAILURE(
         BlockDevice::Create(devmgr_.devfs_root(), kFvmType, block_count, &device_));
     ASSERT_TRUE(device_);
   }

@@ -32,10 +32,10 @@ static_assert(kFooSv.data() == kFoo.data());
 static_assert(kFooSv.size() == kFoo.size());
 
 TEST(ElfldltlInternalTests, ConstString) {
-  EXPECT_STR_EQ(std::string_view(kFoo), "foo");
-  EXPECT_STR_EQ(std::string_view(kFoobar), "foobar");
-  EXPECT_STR_EQ(std::string_view(kFoobarbaz), "foobarbaz");
-  EXPECT_STR_EQ(kFooSv, "foo");
+  EXPECT_STREQ(std::string_view(kFoo), "foo");
+  EXPECT_STREQ(std::string_view(kFoobar), "foobar");
+  EXPECT_STREQ(std::string_view(kFoobarbaz), "foobarbaz");
+  EXPECT_STREQ(kFooSv, "foo");
 }
 
 }  // namespace

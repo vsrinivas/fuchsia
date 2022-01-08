@@ -254,10 +254,10 @@ TEST(AmlBadBlockTest, GetBadBlockListWithEntriesTest) {
                     reinterpret_cast<uint8_t*>(expected.data()), expected.size() * sizeof(uint32_t),
                     "");
   };
-  ASSERT_NO_FATAL_FAILURES(check_expected(4, 10, {4, 8}));
-  ASSERT_NO_FATAL_FAILURES(check_expected(5, 10, {8}));
-  ASSERT_NO_FATAL_FAILURES(check_expected(4, 7, {4}));
-  ASSERT_NO_FATAL_FAILURES(check_expected(9, 11, {}));
+  ASSERT_NO_FATAL_FAILURE(check_expected(4, 10, {4, 8}));
+  ASSERT_NO_FATAL_FAILURE(check_expected(5, 10, {8}));
+  ASSERT_NO_FATAL_FAILURE(check_expected(4, 7, {4}));
+  ASSERT_NO_FATAL_FAILURE(check_expected(9, 11, {}));
 }
 
 TEST(AmlBadBlockTest, FindBadBlockSecondBlockTest) {

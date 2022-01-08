@@ -21,11 +21,11 @@
 
 #define DECL_NAME(D) static_cast<const std::string>(D->name.decl_name()).c_str()
 
-#define ASSERT_DECL_NAME(D, N) ASSERT_STR_EQ(N, DECL_NAME(D));
+#define ASSERT_DECL_NAME(D, N) ASSERT_STREQ(N, DECL_NAME(D));
 
 #define ASSERT_MANGLED_DECL_NAME(D, N) ASSERT_SUBSTR(DECL_NAME(D), N);
 
-#define ASSERT_DECL_FQ_NAME(D, N) ASSERT_STR_EQ(N, fidl::NameFlatName(D->name).c_str());
+#define ASSERT_DECL_FQ_NAME(D, N) ASSERT_STREQ(N, fidl::NameFlatName(D->name).c_str());
 
 namespace {
 

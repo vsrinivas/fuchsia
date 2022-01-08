@@ -153,7 +153,7 @@ TEST(DdktlEthernet, EthernetIfc) {
   ethernet_ifc_status(&ifc, 0);
   ethernet_ifc_recv(&ifc, nullptr, 0, 0);
 
-  ASSERT_NO_FATAL_FAILURES(dev.VerifyCalls());
+  ASSERT_NO_FATAL_FAILURE(dev.VerifyCalls());
 }
 
 TEST(DdktlEthernet, EthernetIfcClient) {
@@ -164,7 +164,7 @@ TEST(DdktlEthernet, EthernetIfcClient) {
   client.Status(0);
   client.Recv(nullptr, 0, 0);
 
-  ASSERT_NO_FATAL_FAILURES(dev.VerifyCalls());
+  ASSERT_NO_FATAL_FAILURE(dev.VerifyCalls());
 }
 
 TEST(DdktlEthernet, EthernetImplProtocol) {
@@ -187,7 +187,7 @@ TEST(DdktlEthernet, EthernetImplProtocol) {
   ethernet_impl_queue_tx(&proto, 0, &netbuf, nullptr, nullptr);
   EXPECT_EQ(ZX_OK, ethernet_impl_set_param(&proto, 0, 0, nullptr, 0), "");
 
-  ASSERT_NO_FATAL_FAILURES(dev.VerifyCalls());
+  ASSERT_NO_FATAL_FAILURE(dev.VerifyCalls());
 }
 
 TEST(DdktlEthernet, EthernetImplProtocolClient) {
@@ -213,7 +213,7 @@ TEST(DdktlEthernet, EthernetImplProtocolClient) {
   client.QueueTx(0, &netbuf, nullptr, nullptr);
   EXPECT_EQ(ZX_OK, client.SetParam(0, 0, nullptr, 0));
 
-  ASSERT_NO_FATAL_FAILURES(protocol_dev.VerifyCalls());
+  ASSERT_NO_FATAL_FAILURE(protocol_dev.VerifyCalls());
 }
 
 TEST(DdktlEthernet, EthernetImplProtocolIfcClient) {
@@ -234,7 +234,7 @@ TEST(DdktlEthernet, EthernetImplProtocolIfcClient) {
   // Execute the EthernetIfc methods
   ASSERT_TRUE(protocol_dev.TestIfc(), "");
   // Verify that they were called
-  ASSERT_NO_FATAL_FAILURES(ifc_dev.VerifyCalls());
+  ASSERT_NO_FATAL_FAILURE(ifc_dev.VerifyCalls());
 }
 
 }  // namespace

@@ -154,7 +154,7 @@ TEST(BasicTypesTest, RawChannelCallStruct) {
   ASSERT_OK(zx::channel::create(0, &client, &server));
 
   async_loop_t* loop = nullptr;
-  ASSERT_NO_FATAL_FAILURES(SpinUpAsyncCServerHelper(std::move(server), &loop));
+  ASSERT_NO_FATAL_FAILURE(SpinUpAsyncCServerHelper(std::move(server), &loop));
 
   fidl::WireRequest<basictypes::TestInterface::ConsumeSimpleStruct> request;
   FillRequestHandles handles;
@@ -183,7 +183,7 @@ TEST(BasicTypesTest, RawChannelCallStructWithTimeout) {
   ASSERT_OK(zx::channel::create(0, &client, &server));
 
   async_loop_t* loop = nullptr;
-  ASSERT_NO_FATAL_FAILURES(SpinUpAsyncCServerHelper(std::move(server), &loop));
+  ASSERT_NO_FATAL_FAILURE(SpinUpAsyncCServerHelper(std::move(server), &loop));
 
   fidl::WireRequest<basictypes::TestInterface::ConsumeSimpleStruct> request;
   FillRequestHandles handles;
@@ -208,7 +208,7 @@ TEST(BasicTypesTest, SyncCallStruct) {
   ASSERT_OK(zx::channel::create(0, &client, &server));
 
   async_loop_t* loop = nullptr;
-  ASSERT_NO_FATAL_FAILURES(SpinUpAsyncCServerHelper(std::move(server), &loop));
+  ASSERT_NO_FATAL_FAILURE(SpinUpAsyncCServerHelper(std::move(server), &loop));
 
   // generated interface API
   fidl::WireSyncClient<basictypes::TestInterface> test(std::move(client));
@@ -252,7 +252,7 @@ TEST(BasicTypesTest, SyncCallerAllocateCallStruct) {
   ASSERT_OK(zx::channel::create(0, &client, &server));
 
   async_loop_t* loop = nullptr;
-  ASSERT_NO_FATAL_FAILURES(SpinUpAsyncCServerHelper(std::move(server), &loop));
+  ASSERT_NO_FATAL_FAILURE(SpinUpAsyncCServerHelper(std::move(server), &loop));
 
   // generated interface API
   fidl::WireSyncClient<basictypes::TestInterface> test(std::move(client));
@@ -342,7 +342,7 @@ TEST(BasicTypesTest, ServerStruct) {
   zx::channel client_chan, server_chan;
   ASSERT_OK(zx::channel::create(0, &client_chan, &server_chan));
   std::unique_ptr<async::Loop> loop;
-  ASSERT_NO_FATAL_FAILURES(SpinUp(std::move(server_chan), &server_impl, &loop));
+  ASSERT_NO_FATAL_FAILURE(SpinUp(std::move(server_chan), &server_impl, &loop));
 
   fidl_test_llcpp_basictypes_SimpleStruct simple_struct = {};
   simple_struct.field = 123;

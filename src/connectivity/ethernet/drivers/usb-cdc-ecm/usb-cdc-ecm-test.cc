@@ -124,8 +124,7 @@ class USBVirtualBus : public usb_virtual_bus_base::USBVirtualBusBase {
     config_descs.emplace_back(
         fidl::VectorView<usb_peripheral::wire::FunctionDescriptor>::FromExternal(function_descs));
 
-    ASSERT_NO_FATAL_FAILURES(
-        SetupPeripheralDevice(std::move(device_desc), std::move(config_descs)));
+    ASSERT_NO_FATAL_FAILURE(SetupPeripheralDevice(std::move(device_desc), std::move(config_descs)));
 
     fbl::unique_fd fd(openat(devmgr_.devfs_root().get(), "class/ethernet", O_RDONLY));
     DevicePaths device_paths;
@@ -257,12 +256,12 @@ class EthernetInterface {
 class UsbCdcEcmTest : public zxtest::Test {
  public:
   void SetUp() override {
-    ASSERT_NO_FATAL_FAILURES(bus_.InitUsbCdcEcm(&peripheral_path_, &host_path_));
+    ASSERT_NO_FATAL_FAILURE(bus_.InitUsbCdcEcm(&peripheral_path_, &host_path_));
   }
 
   void TearDown() override {
-    ASSERT_NO_FATAL_FAILURES(bus_.ClearPeripheralDeviceFunctions());
-    ASSERT_NO_FATAL_FAILURES(ValidateResult(bus_.virtual_bus()->Disable()));
+    ASSERT_NO_FATAL_FAILURE(bus_.ClearPeripheralDeviceFunctions());
+    ASSERT_NO_FATAL_FAILURE(ValidateResult(bus_.virtual_bus()->Disable()));
   }
 
  protected:
@@ -297,7 +296,7 @@ TEST_F(UsbCdcEcmTest, PeripheralTransmitsToHost) {
     fill_data++;
   }
 
-  ASSERT_NO_FATAL_FAILURES();
+  ASSERT_NO_FATAL_FAILURE();
 }
 
 // Test sending data from host to peripheral.
@@ -326,7 +325,7 @@ TEST_F(UsbCdcEcmTest, HostTransmitsToPeripheral) {
     fill_data++;
   }
 
-  ASSERT_NO_FATAL_FAILURES();
+  ASSERT_NO_FATAL_FAILURE();
 }
 
 }  // namespace

@@ -55,7 +55,7 @@ void USBVirtualBus::InitUsbCdcAcm(fbl::String* devpath) {
   config_descs.emplace_back(
       fidl::VectorView<usb_peripheral::wire::FunctionDescriptor>::FromExternal(function_descs));
 
-  ASSERT_NO_FATAL_FAILURES(SetupPeripheralDevice(std::move(device_desc), std::move(config_descs)));
+  ASSERT_NO_FATAL_FAILURE(SetupPeripheralDevice(std::move(device_desc), std::move(config_descs)));
 
   fbl::unique_fd fd(openat(devmgr_.devfs_root().get(), "class/serial", O_RDONLY));
   while (fdio_watch_directory(fd.get(), WaitForAnyFile, ZX_TIME_INFINITE, devpath) != ZX_ERR_STOP) {
@@ -65,13 +65,13 @@ void USBVirtualBus::InitUsbCdcAcm(fbl::String* devpath) {
 
 class UsbCdcAcmTest : public zxtest::Test {
  public:
-  void SetUp() override { ASSERT_NO_FATAL_FAILURES(bus_.InitUsbCdcAcm(&devpath_)); }
+  void SetUp() override { ASSERT_NO_FATAL_FAILURE(bus_.InitUsbCdcAcm(&devpath_)); }
 
   void TearDown() override {
-    ASSERT_NO_FATAL_FAILURES(bus_.ClearPeripheralDeviceFunctions());
+    ASSERT_NO_FATAL_FAILURE(bus_.ClearPeripheralDeviceFunctions());
 
     auto result2 = bus_.virtual_bus()->Disable();
-    ASSERT_NO_FATAL_FAILURES(ValidateResult(result2));
+    ASSERT_NO_FATAL_FAILURE(ValidateResult(result2));
   }
 
   zx_status_t ReadWithTimeout(int fd, void* data, size_t size, size_t* actual) {

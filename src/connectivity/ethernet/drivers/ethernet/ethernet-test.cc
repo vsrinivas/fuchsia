@@ -242,7 +242,7 @@ TEST(EthernetTest, StartTest) {
   ASSERT_NOT_OK(result->status);
 
   // test valid case
-  ASSERT_NO_FATAL_FAILURES(test.Start());
+  ASSERT_NO_FATAL_FAILURE(test.Start());
 
   // test client interfaces
   EXPECT_TRUE(test.tester.ethmac().TestIfc());
@@ -252,7 +252,7 @@ TEST(EthernetTest, GetStatusTest) {
   EthernetDeviceTest test;
 
   // Start device.
-  ASSERT_NO_FATAL_FAILURES(test.Start());
+  ASSERT_NO_FATAL_FAILURE(test.Start());
 
   // Set mock ethmac status.
   EXPECT_TRUE(test.tester.ethmac().SetStatus(1));

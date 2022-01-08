@@ -402,7 +402,7 @@ TEST(UsingTests, WarnTooManyProvidedLibraries) {
 
   auto unused = shared.all_libraries.Unused(library.library());
   ASSERT_EQ(1, unused.size());
-  ASSERT_STR_EQ("not.used", fidl::NameLibrary(*unused.begin()).c_str());
+  ASSERT_STREQ("not.used", fidl::NameLibrary(*unused.begin()).c_str());
 }
 
 TEST(UsingTests, BadFilesDisagreeOnLibraryName) {

@@ -16,9 +16,9 @@ TEST(VirtualSourceTests, AddLine) {
   fidl::SourceSpan two = file.AddLine("two");
   fidl::SourceSpan three = file.AddLine("three");
 
-  EXPECT_STR_EQ(std::string(one.data()).c_str(), "one");
-  EXPECT_STR_EQ(std::string(two.data()).c_str(), "two");
-  EXPECT_STR_EQ(std::string(three.data()).c_str(), "three");
+  EXPECT_STREQ(std::string(one.data()).c_str(), "one");
+  EXPECT_STREQ(std::string(two.data()).c_str(), "two");
+  EXPECT_STREQ(std::string(three.data()).c_str(), "three");
 }
 
 TEST(VirtualSourceTests, LineContaining) {

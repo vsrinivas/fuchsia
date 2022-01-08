@@ -85,7 +85,7 @@ void USBVirtualBus::InitUsbVirtualBus(fidl::WireSyncClient<virtualbustest::BusTe
   config_descs.emplace_back(
       fidl::VectorView<usb_peripheral::wire::FunctionDescriptor>::FromExternal(function_descs));
 
-  ASSERT_NO_FATAL_FAILURES(SetupPeripheralDevice(std::move(device_desc), std::move(config_descs)));
+  ASSERT_NO_FATAL_FAILURE(SetupPeripheralDevice(std::move(device_desc), std::move(config_descs)));
 
   fbl::unique_fd fd(openat(devmgr_.devfs_root().get(), "class/virtual-bus-test", O_RDONLY));
 
@@ -101,11 +101,11 @@ void USBVirtualBus::InitUsbVirtualBus(fidl::WireSyncClient<virtualbustest::BusTe
 
 class VirtualBusTest : public zxtest::Test {
  public:
-  void SetUp() override { ASSERT_NO_FATAL_FAILURES(bus_.InitUsbVirtualBus(&test_)); }
+  void SetUp() override { ASSERT_NO_FATAL_FAILURE(bus_.InitUsbVirtualBus(&test_)); }
 
   void TearDown() override {
-    ASSERT_NO_FATAL_FAILURES(bus_.ClearPeripheralDeviceFunctions());
-    ASSERT_NO_FATAL_FAILURES(ValidateResult(bus_.virtual_bus()->Disable()));
+    ASSERT_NO_FATAL_FAILURE(bus_.ClearPeripheralDeviceFunctions());
+    ASSERT_NO_FATAL_FAILURE(ValidateResult(bus_.virtual_bus()->Disable()));
   }
 
  protected:
@@ -115,7 +115,7 @@ class VirtualBusTest : public zxtest::Test {
 
 TEST_F(VirtualBusTest, ShortTransfer) {
   ASSERT_TRUE(test_->RunShortPacketTest()->success);
-  ASSERT_NO_FATAL_FAILURES();
+  ASSERT_NO_FATAL_FAILURE();
 }
 
 }  // namespace

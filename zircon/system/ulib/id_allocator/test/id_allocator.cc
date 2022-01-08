@@ -47,8 +47,8 @@ TEST(IdAllocatorTests, TestInitializedEmpty) {
   ida = nullptr;
   ASSERT_EQ(IdAllocator::Create(1, &ida), ZX_OK);
 
-  ASSERT_NO_FATAL_FAILURES(AllocHelper(ida, &id, __func__));
-  ASSERT_NO_FATAL_FAILURES(FreeHelper(ida, id, __func__));
+  ASSERT_NO_FATAL_FAILURE(AllocHelper(ida, &id, __func__));
+  ASSERT_NO_FATAL_FAILURE(FreeHelper(ida, id, __func__));
 }
 
 // Simple allocate and free test
@@ -58,8 +58,8 @@ TEST(IdAllocatorTests, TestSingleAlloc) {
   ASSERT_EQ(IdAllocator::Create(128, &ida), ZX_OK);
   ASSERT_EQ(ida->Size(), 128U, "get size failed");
 
-  ASSERT_NO_FATAL_FAILURES(AllocHelper(ida, &id, __func__));
-  ASSERT_NO_FATAL_FAILURES(FreeHelper(ida, id, __func__));
+  ASSERT_NO_FATAL_FAILURE(AllocHelper(ida, &id, __func__));
+  ASSERT_NO_FATAL_FAILURE(FreeHelper(ida, id, __func__));
 }
 
 // Simple MarkAllocated and free test
@@ -68,8 +68,8 @@ TEST(IdAllocatorTests, TestSingleMarkAllocated) {
   ASSERT_EQ(IdAllocator::Create(128, &ida), ZX_OK);
   ASSERT_EQ(ida->Size(), 128U, "get size failed");
 
-  ASSERT_NO_FATAL_FAILURES(MarkAllocatedHelper(ida, 2, __func__));
-  ASSERT_NO_FATAL_FAILURES(FreeHelper(ida, 2, __func__));
+  ASSERT_NO_FATAL_FAILURE(MarkAllocatedHelper(ida, 2, __func__));
+  ASSERT_NO_FATAL_FAILURE(FreeHelper(ida, 2, __func__));
 }
 
 // Try to MarkAllocated id twice. Check if second attempt returns
@@ -79,10 +79,10 @@ TEST(IdAllocatorTests, TestMarkAllocatedTwice) {
   ASSERT_EQ(IdAllocator::Create(128, &ida), ZX_OK);
   ASSERT_EQ(ida->Size(), 128U, "get size failed");
 
-  ASSERT_NO_FATAL_FAILURES(MarkAllocatedHelper(ida, 2, __func__));
+  ASSERT_NO_FATAL_FAILURE(MarkAllocatedHelper(ida, 2, __func__));
 
   ASSERT_NE(ida->MarkAllocated(2), ZX_OK, "set bit again failed");
-  ASSERT_NO_FATAL_FAILURES(FreeHelper(ida, 2, __func__));
+  ASSERT_NO_FATAL_FAILURE(FreeHelper(ida, 2, __func__));
 }
 
 // Try to free an allocated id twice. Check if second attempt returns
@@ -92,8 +92,8 @@ TEST(IdAllocatorTests, TestFreeTwice) {
   ASSERT_EQ(IdAllocator::Create(128, &ida), ZX_OK);
   ASSERT_EQ(ida->Size(), 128U, "get size failed");
 
-  ASSERT_NO_FATAL_FAILURES(MarkAllocatedHelper(ida, 2, __func__));
-  ASSERT_NO_FATAL_FAILURES(FreeHelper(ida, 2, __func__));
+  ASSERT_NO_FATAL_FAILURE(MarkAllocatedHelper(ida, 2, __func__));
+  ASSERT_NO_FATAL_FAILURE(FreeHelper(ida, 2, __func__));
   ASSERT_NE(ida->Free(2), ZX_OK, " second free failed");
   ASSERT_FALSE(ida->IsBusy(2), " busy check failed");
 }
@@ -107,16 +107,16 @@ TEST(IdAllocatorTests, TestAllocInterleaved) {
 
   ASSERT_FALSE(ida->IsBusy(2), "get bit with null");
 
-  ASSERT_NO_FATAL_FAILURES(MarkAllocatedHelper(ida, 2, __func__));
-  ASSERT_NO_FATAL_FAILURES(AllocHelper(ida, &id, __func__));
+  ASSERT_NO_FATAL_FAILURE(MarkAllocatedHelper(ida, 2, __func__));
+  ASSERT_NO_FATAL_FAILURE(AllocHelper(ida, &id, __func__));
   ASSERT_EQ(id, 0, " alloc0 failed");
-  ASSERT_NO_FATAL_FAILURES(AllocHelper(ida, &id, __func__));
+  ASSERT_NO_FATAL_FAILURE(AllocHelper(ida, &id, __func__));
   ASSERT_EQ(id, 1, " alloc1 failed");
-  ASSERT_NO_FATAL_FAILURES(AllocHelper(ida, &id, __func__));
+  ASSERT_NO_FATAL_FAILURE(AllocHelper(ida, &id, __func__));
   ASSERT_EQ(id, 3, " alloc3 failed");
 
-  ASSERT_NO_FATAL_FAILURES(MarkAllocatedHelper(ida, 4, "MarkAllocated4 failed"));
-  ASSERT_NO_FATAL_FAILURES(AllocHelper(ida, &id, __func__));
+  ASSERT_NO_FATAL_FAILURE(MarkAllocatedHelper(ida, 4, "MarkAllocated4 failed"));
+  ASSERT_NO_FATAL_FAILURE(AllocHelper(ida, &id, __func__));
   ASSERT_EQ(id, 5, " alloc5 failed");
 }
 
@@ -128,7 +128,7 @@ void AllocAllHelper(std::unique_ptr<IdAllocator>& ida, size_t size) {
   size_t id;
 
   for (size_t i = 0; i < size; i++) {
-    ASSERT_NO_FATAL_FAILURES(AllocHelper(ida, &id, __func__));
+    ASSERT_NO_FATAL_FAILURE(AllocHelper(ida, &id, __func__));
     ASSERT_EQ(id, i, " alloc all failed");
   }
 
@@ -141,15 +141,15 @@ void FreeAllHelper(std::unique_ptr<IdAllocator>& ida, size_t size) {
   ASSERT_EQ(ida->Size(), size, "get size failed");
 
   for (size_t i = 0; i < size; i++) {
-    ASSERT_NO_FATAL_FAILURES(FreeHelper(ida, i, __func__));
+    ASSERT_NO_FATAL_FAILURE(FreeHelper(ida, i, __func__));
   }
 }
 
 // Cross check if allocator size matches the given size,
 // allocate and then free all ids
 void AllocFreeAllHelper(std::unique_ptr<IdAllocator>& ida, size_t size) {
-  ASSERT_NO_FATAL_FAILURES(AllocAllHelper(ida, size));
-  ASSERT_NO_FATAL_FAILURES(FreeAllHelper(ida, size));
+  ASSERT_NO_FATAL_FAILURE(AllocAllHelper(ida, size));
+  ASSERT_NO_FATAL_FAILURE(FreeAllHelper(ida, size));
 }
 
 // Test allocating and then freeing all the ids for a given size
@@ -160,8 +160,8 @@ void TestAllocAll() {
   ASSERT_EQ(IdAllocator::Create(Size, &ida), ZX_OK);
   ASSERT_EQ(ida->Size(), Size, "get size failed");
 
-  ASSERT_NO_FATAL_FAILURES(AllocFreeAllHelper(ida, Size));
-  ASSERT_NO_FATAL_FAILURES(AllocAllHelper(ida, Size));
+  ASSERT_NO_FATAL_FAILURE(AllocFreeAllHelper(ida, Size));
+  ASSERT_NO_FATAL_FAILURE(AllocAllHelper(ida, Size));
 }
 
 // Test allocating and then resetting all the ids for a given
@@ -175,39 +175,39 @@ void TestReset() {
   ASSERT_EQ(IdAllocator::Create(size, &ida), ZX_OK);
   ASSERT_EQ(ida->Size(), size, "get size failed");
 
-  ASSERT_NO_FATAL_FAILURES(AllocAllHelper(ida, size));
+  ASSERT_NO_FATAL_FAILURE(AllocAllHelper(ida, size));
 
   // Reset() with same size should free all ids
   ASSERT_EQ(ida->Reset(size), ZX_OK);
   ASSERT_EQ(ida->Size(), size, "get size failed");
-  ASSERT_NO_FATAL_FAILURES(AllocFreeAllHelper(ida, size));
+  ASSERT_NO_FATAL_FAILURE(AllocFreeAllHelper(ida, size));
 
-  ASSERT_NO_FATAL_FAILURES(AllocAllHelper(ida, size));
+  ASSERT_NO_FATAL_FAILURE(AllocAllHelper(ida, size));
   size = size / 2;
   // Reset() with smaller size should shrink and then free all ids
   ASSERT_EQ(ida->Reset(size), ZX_OK);
   ASSERT_EQ(ida->Size(), size, "get size failed");
-  ASSERT_NO_FATAL_FAILURES(AllocFreeAllHelper(ida, size));
+  ASSERT_NO_FATAL_FAILURE(AllocFreeAllHelper(ida, size));
 
-  ASSERT_NO_FATAL_FAILURES(AllocAllHelper(ida, size));
+  ASSERT_NO_FATAL_FAILURE(AllocAllHelper(ida, size));
   // Reset() with larger size should grow and then free all ids
   size = size * 3;
   ASSERT_EQ(ida->Reset(size), ZX_OK);
   ASSERT_EQ(ida->Size(), size, "get size failed");
-  ASSERT_NO_FATAL_FAILURES(AllocFreeAllHelper(ida, size));
+  ASSERT_NO_FATAL_FAILURE(AllocFreeAllHelper(ida, size));
 
   size = 0;
   ASSERT_EQ(ida->Reset(size), ZX_OK);
   ASSERT_EQ(ida->Size(), size, "get size failed");
-  ASSERT_NO_FATAL_FAILURES(AllocFreeAllHelper(ida, size));
+  ASSERT_NO_FATAL_FAILURE(AllocFreeAllHelper(ida, size));
 }
 
 // MarkAllocatedate ids at start, mid and end of a given range. This will help
 // us to validate that we haven't corrupted id states during Grow.
 void BoundaryMarkAllocated(std::unique_ptr<IdAllocator>& ida, size_t start, size_t end) {
-  ASSERT_NO_FATAL_FAILURES(MarkAllocatedHelper(ida, start, "start MarkAllocated"));
-  ASSERT_NO_FATAL_FAILURES(MarkAllocatedHelper(ida, (start + end) / 2, "mid MarkAllocated"));
-  ASSERT_NO_FATAL_FAILURES(MarkAllocatedHelper(ida, end, "end MarkAllocated"));
+  ASSERT_NO_FATAL_FAILURE(MarkAllocatedHelper(ida, start, "start MarkAllocated"));
+  ASSERT_NO_FATAL_FAILURE(MarkAllocatedHelper(ida, (start + end) / 2, "mid MarkAllocated"));
+  ASSERT_NO_FATAL_FAILURE(MarkAllocatedHelper(ida, end, "end MarkAllocated"));
 }
 
 // Check ids at start, mid and end of a given range stay allocated.
@@ -221,9 +221,9 @@ void BoundaryCheck(std::unique_ptr<IdAllocator>& ida, size_t start, size_t end) 
 
 // Free ids at start, mid and end of a given range stay allocated.
 void BoundaryFree(std::unique_ptr<IdAllocator>& ida, size_t start, size_t end) {
-  ASSERT_NO_FATAL_FAILURES(FreeHelper(ida, start, "start free"));
-  ASSERT_NO_FATAL_FAILURES(FreeHelper(ida, (start + end) / 2, "mid free"));
-  ASSERT_NO_FATAL_FAILURES(FreeHelper(ida, end, "end free"));
+  ASSERT_NO_FATAL_FAILURE(FreeHelper(ida, start, "start free"));
+  ASSERT_NO_FATAL_FAILURE(FreeHelper(ida, (start + end) / 2, "mid free"));
+  ASSERT_NO_FATAL_FAILURE(FreeHelper(ida, end, "end free"));
 }
 
 // Grow [and reset] an allocator. Check if
@@ -236,31 +236,31 @@ void TestGrowReset() {
   ASSERT_EQ(ida->Size(), InitSize, "get size");
 
   // Allocate "few" ids before we grow an allocator
-  ASSERT_NO_FATAL_FAILURES(BoundaryMarkAllocated(ida, 0, InitSize - 1));
+  ASSERT_NO_FATAL_FAILURE(BoundaryMarkAllocated(ida, 0, InitSize - 1));
   if (Reset) {
     ASSERT_EQ(ida->Reset(Phase1Size), ZX_OK, "reset phase1 failed");
   } else {
     ASSERT_EQ(ida->Grow(Phase1Size), ZX_OK, "grow phase1 failed");
     // Check if the allocated ids before Grow are still allocated
-    ASSERT_NO_FATAL_FAILURES(BoundaryCheck(ida, 0, InitSize - 1));
+    ASSERT_NO_FATAL_FAILURE(BoundaryCheck(ida, 0, InitSize - 1));
     // Free allocated ids
-    ASSERT_NO_FATAL_FAILURES(BoundaryFree(ida, 0, InitSize - 1));
+    ASSERT_NO_FATAL_FAILURE(BoundaryFree(ida, 0, InitSize - 1));
   }
   // Check if Grow really worked by allocating and freeing all ids
-  ASSERT_NO_FATAL_FAILURES(AllocFreeAllHelper(ida, Phase1Size));
+  ASSERT_NO_FATAL_FAILURE(AllocFreeAllHelper(ida, Phase1Size));
 
   // Rinse and repeat. The following block ensures that we can grow
   // from phase1 to phase2 with before and after size aligned and
   // unaligned to 64.
-  ASSERT_NO_FATAL_FAILURES(BoundaryMarkAllocated(ida, InitSize, Phase1Size - 1));
+  ASSERT_NO_FATAL_FAILURE(BoundaryMarkAllocated(ida, InitSize, Phase1Size - 1));
   if (Reset) {
     ASSERT_EQ(ida->Reset(Phase2Size), ZX_OK, "reset phase2 failed");
   } else {
     ASSERT_EQ(ida->Grow(Phase2Size), ZX_OK, "grow phase2 failed");
-    ASSERT_NO_FATAL_FAILURES(BoundaryCheck(ida, InitSize, Phase1Size - 1));
-    ASSERT_NO_FATAL_FAILURES(BoundaryFree(ida, InitSize, Phase1Size - 1));
+    ASSERT_NO_FATAL_FAILURE(BoundaryCheck(ida, InitSize, Phase1Size - 1));
+    ASSERT_NO_FATAL_FAILURE(BoundaryFree(ida, InitSize, Phase1Size - 1));
   }
-  ASSERT_NO_FATAL_FAILURES(AllocFreeAllHelper(ida, Phase2Size));
+  ASSERT_NO_FATAL_FAILURE(AllocFreeAllHelper(ida, Phase2Size));
 }
 
 template <size_t StepSize, size_t MaxId>
@@ -303,31 +303,31 @@ void TestShrinkReset() {
   ASSERT_EQ(ida->Size(), InitSize, "get size");
 
   // Allocate "few" ids before we shrink an allocator
-  ASSERT_NO_FATAL_FAILURES(BoundaryMarkAllocated(ida, 0, Phase1Size - 1));
+  ASSERT_NO_FATAL_FAILURE(BoundaryMarkAllocated(ida, 0, Phase1Size - 1));
   if (Reset) {
     ASSERT_EQ(ida->Reset(Phase1Size), ZX_OK, "reset phase1 failed");
   } else {
     ASSERT_EQ(ida->Shrink(Phase1Size), ZX_OK, "shrink phase1 failed");
     // Check if the allocated ids before Shrink are still allocated
-    ASSERT_NO_FATAL_FAILURES(BoundaryCheck(ida, 0, Phase1Size - 1));
+    ASSERT_NO_FATAL_FAILURE(BoundaryCheck(ida, 0, Phase1Size - 1));
     // Free allocated ids
-    ASSERT_NO_FATAL_FAILURES(BoundaryFree(ida, 0, Phase1Size - 1));
+    ASSERT_NO_FATAL_FAILURE(BoundaryFree(ida, 0, Phase1Size - 1));
   }
   // Check if shrink really worked by allocating and freeing all ids
-  ASSERT_NO_FATAL_FAILURES(AllocFreeAllHelper(ida, Phase1Size));
+  ASSERT_NO_FATAL_FAILURE(AllocFreeAllHelper(ida, Phase1Size));
 
   // Rinse and repeat. The following block ensures that we can shrink
   // from phase1 to phase2 with before and after size aligned and
   // unaligned to 64.
-  ASSERT_NO_FATAL_FAILURES(BoundaryMarkAllocated(ida, 0, Phase2Size - 1));
+  ASSERT_NO_FATAL_FAILURE(BoundaryMarkAllocated(ida, 0, Phase2Size - 1));
   if (Reset) {
     ASSERT_EQ(ida->Reset(Phase2Size), ZX_OK, "reset phase1 failed");
   } else {
     ASSERT_EQ(ida->Shrink(Phase2Size), ZX_OK, "shrink phase2 failed");
-    ASSERT_NO_FATAL_FAILURES(BoundaryCheck(ida, 0, Phase2Size - 1));
-    ASSERT_NO_FATAL_FAILURES(BoundaryFree(ida, 0, Phase2Size - 1));
+    ASSERT_NO_FATAL_FAILURE(BoundaryCheck(ida, 0, Phase2Size - 1));
+    ASSERT_NO_FATAL_FAILURE(BoundaryFree(ida, 0, Phase2Size - 1));
   }
-  ASSERT_NO_FATAL_FAILURES(AllocFreeAllHelper(ida, Phase2Size));
+  ASSERT_NO_FATAL_FAILURE(AllocFreeAllHelper(ida, Phase2Size));
 }
 
 template <size_t StepSize, size_t MaxId>
@@ -335,7 +335,7 @@ void TestShrinkSteps() {
   std::unique_ptr<IdAllocator> ida;
   ASSERT_EQ(IdAllocator::Create(MaxId, &ida), ZX_OK);
   ASSERT_EQ(ida->Size(), MaxId, "get size");
-  ASSERT_NO_FATAL_FAILURES(AllocAllHelper(ida, MaxId));
+  ASSERT_NO_FATAL_FAILURE(AllocAllHelper(ida, MaxId));
 
   for (size_t i = MaxId - 1, step = 0; i > 0; i--) {
     zx_status_t ret = ida->Free(i);

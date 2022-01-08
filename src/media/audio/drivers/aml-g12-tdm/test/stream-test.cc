@@ -2089,16 +2089,16 @@ TEST_F(AmlG12TdmTest, Inspect) {
   client->CreateRingBuffer(std::move(format), std::move(remote));
 
   // Check inspect state.
-  ASSERT_NO_FATAL_FAILURES(ReadInspect(test_dev->inspect().DuplicateVmo()));
+  ASSERT_NO_FATAL_FAILURE(ReadInspect(test_dev->inspect().DuplicateVmo()));
   auto* simple_audio = hierarchy().GetByPath({"simple_audio_stream"});
   ASSERT_TRUE(simple_audio);
-  ASSERT_NO_FATAL_FAILURES(
+  ASSERT_NO_FATAL_FAILURE(
       CheckProperty(simple_audio->node(), "state", inspect::StringPropertyValue("created")));
-  ASSERT_NO_FATAL_FAILURES(
+  ASSERT_NO_FATAL_FAILURE(
       CheckProperty(hierarchy().node(), "status_time", inspect::IntPropertyValue(0)));
-  ASSERT_NO_FATAL_FAILURES(
+  ASSERT_NO_FATAL_FAILURE(
       CheckProperty(hierarchy().node(), "dma_status", inspect::UintPropertyValue(0)));
-  ASSERT_NO_FATAL_FAILURES(
+  ASSERT_NO_FATAL_FAILURE(
       CheckProperty(hierarchy().node(), "tdm_status", inspect::UintPropertyValue(0)));
 
   child_dev->UnbindOp();

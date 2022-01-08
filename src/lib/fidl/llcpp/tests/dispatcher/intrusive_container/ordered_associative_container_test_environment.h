@@ -91,9 +91,9 @@ class OrderedAssociativeContainerTestEnvironment
   }
 
   void OrderedIter() {
-    ASSERT_NO_FATAL_FAILURES(DoOrderedIter(PopulateMethod::AscendingKey));
-    ASSERT_NO_FATAL_FAILURES(DoOrderedIter(PopulateMethod::DescendingKey));
-    ASSERT_NO_FATAL_FAILURES(DoOrderedIter(PopulateMethod::RandomKey));
+    ASSERT_NO_FATAL_FAILURE(DoOrderedIter(PopulateMethod::AscendingKey));
+    ASSERT_NO_FATAL_FAILURE(DoOrderedIter(PopulateMethod::DescendingKey));
+    ASSERT_NO_FATAL_FAILURE(DoOrderedIter(PopulateMethod::RandomKey));
   }
 
   void DoOrderedReverseIter(PopulateMethod populate_method) {
@@ -123,9 +123,9 @@ class OrderedAssociativeContainerTestEnvironment
   }
 
   void OrderedReverseIter() {
-    ASSERT_NO_FATAL_FAILURES(DoOrderedReverseIter(PopulateMethod::AscendingKey));
-    ASSERT_NO_FATAL_FAILURES(DoOrderedReverseIter(PopulateMethod::DescendingKey));
-    ASSERT_NO_FATAL_FAILURES(DoOrderedReverseIter(PopulateMethod::RandomKey));
+    ASSERT_NO_FATAL_FAILURE(DoOrderedReverseIter(PopulateMethod::AscendingKey));
+    ASSERT_NO_FATAL_FAILURE(DoOrderedReverseIter(PopulateMethod::DescendingKey));
+    ASSERT_NO_FATAL_FAILURE(DoOrderedReverseIter(PopulateMethod::RandomKey));
   }
 
   template <typename BoundTraits>
@@ -193,26 +193,26 @@ class OrderedAssociativeContainerTestEnvironment
 
   void UpperBound() {
     using NonConstBoundTraits = UpperBoundTraits<NonConstTraits>;
-    ASSERT_NO_FATAL_FAILURES(DoBoundTest<NonConstBoundTraits>(PopulateMethod::AscendingKey));
-    ASSERT_NO_FATAL_FAILURES(DoBoundTest<NonConstBoundTraits>(PopulateMethod::DescendingKey));
-    ASSERT_NO_FATAL_FAILURES(DoBoundTest<NonConstBoundTraits>(PopulateMethod::RandomKey));
+    ASSERT_NO_FATAL_FAILURE(DoBoundTest<NonConstBoundTraits>(PopulateMethod::AscendingKey));
+    ASSERT_NO_FATAL_FAILURE(DoBoundTest<NonConstBoundTraits>(PopulateMethod::DescendingKey));
+    ASSERT_NO_FATAL_FAILURE(DoBoundTest<NonConstBoundTraits>(PopulateMethod::RandomKey));
 
     using ConstBoundTraits = UpperBoundTraits<ConstTraits>;
-    ASSERT_NO_FATAL_FAILURES(DoBoundTest<ConstBoundTraits>(PopulateMethod::AscendingKey));
-    ASSERT_NO_FATAL_FAILURES(DoBoundTest<ConstBoundTraits>(PopulateMethod::DescendingKey));
-    ASSERT_NO_FATAL_FAILURES(DoBoundTest<ConstBoundTraits>(PopulateMethod::RandomKey));
+    ASSERT_NO_FATAL_FAILURE(DoBoundTest<ConstBoundTraits>(PopulateMethod::AscendingKey));
+    ASSERT_NO_FATAL_FAILURE(DoBoundTest<ConstBoundTraits>(PopulateMethod::DescendingKey));
+    ASSERT_NO_FATAL_FAILURE(DoBoundTest<ConstBoundTraits>(PopulateMethod::RandomKey));
   }
 
   void LowerBound() {
     using NonConstBoundTraits = LowerBoundTraits<NonConstTraits>;
-    ASSERT_NO_FATAL_FAILURES(DoBoundTest<NonConstBoundTraits>(PopulateMethod::AscendingKey));
-    ASSERT_NO_FATAL_FAILURES(DoBoundTest<NonConstBoundTraits>(PopulateMethod::DescendingKey));
-    ASSERT_NO_FATAL_FAILURES(DoBoundTest<NonConstBoundTraits>(PopulateMethod::RandomKey));
+    ASSERT_NO_FATAL_FAILURE(DoBoundTest<NonConstBoundTraits>(PopulateMethod::AscendingKey));
+    ASSERT_NO_FATAL_FAILURE(DoBoundTest<NonConstBoundTraits>(PopulateMethod::DescendingKey));
+    ASSERT_NO_FATAL_FAILURE(DoBoundTest<NonConstBoundTraits>(PopulateMethod::RandomKey));
 
     using ConstBoundTraits = LowerBoundTraits<ConstTraits>;
-    ASSERT_NO_FATAL_FAILURES(DoBoundTest<ConstBoundTraits>(PopulateMethod::AscendingKey));
-    ASSERT_NO_FATAL_FAILURES(DoBoundTest<ConstBoundTraits>(PopulateMethod::DescendingKey));
-    ASSERT_NO_FATAL_FAILURES(DoBoundTest<ConstBoundTraits>(PopulateMethod::RandomKey));
+    ASSERT_NO_FATAL_FAILURE(DoBoundTest<ConstBoundTraits>(PopulateMethod::AscendingKey));
+    ASSERT_NO_FATAL_FAILURE(DoBoundTest<ConstBoundTraits>(PopulateMethod::DescendingKey));
+    ASSERT_NO_FATAL_FAILURE(DoBoundTest<ConstBoundTraits>(PopulateMethod::RandomKey));
   }
 
  private:

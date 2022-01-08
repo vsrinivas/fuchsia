@@ -283,14 +283,14 @@ class PaverServiceSkipBlockTest : public PaverServiceTest {
  public:
   // Initializes the RAM NAND device.
   void InitializeRamNand(const fuchsia_hardware_nand_RamNandInfo& nand_info = kNandInfo) {
-    ASSERT_NO_FATAL_FAILURES(SpawnIsolatedDevmgr(nand_info));
-    ASSERT_NO_FATAL_FAILURES(WaitForDevices());
+    ASSERT_NO_FATAL_FAILURE(SpawnIsolatedDevmgr(nand_info));
+    ASSERT_NO_FATAL_FAILURE(WaitForDevices());
   }
 
  protected:
   void SpawnIsolatedDevmgr(const fuchsia_hardware_nand_RamNandInfo& nand_info) {
     ASSERT_EQ(device_.get(), nullptr);
-    ASSERT_NO_FATAL_FAILURES(SkipBlockDevice::Create(nand_info, &device_));
+    ASSERT_NO_FATAL_FAILURE(SkipBlockDevice::Create(nand_info, &device_));
     static_cast<paver::Paver*>(provider_ctx_)->set_dispatcher(loop_.dispatcher());
     static_cast<paver::Paver*>(provider_ctx_)->set_devfs_root(device_->devfs_root());
     static_cast<paver::Paver*>(provider_ctx_)->set_svc_root(std::move(fake_svc_.svc_chan()));
@@ -447,46 +447,46 @@ void ComputeCrc(AbrData* data) {
 }
 
 TEST_F(PaverServiceSkipBlockTest, InitializeAbr) {
-  ASSERT_NO_FATAL_FAILURES(InitializeRamNand());
+  ASSERT_NO_FATAL_FAILURE(InitializeRamNand());
 
   AbrData abr_data = {};
   memset(&abr_data, 0x3d, sizeof(abr_data));
   SetAbr(abr_data);
 
-  ASSERT_NO_FATAL_FAILURES(FindBootManager());
+  ASSERT_NO_FATAL_FAILURE(FindBootManager());
 
   auto result = boot_manager_->QueryActiveConfiguration();
   ASSERT_OK(result.status());
 }
 
 TEST_F(PaverServiceSkipBlockTest, InitializeAbrAlreadyValid) {
-  ASSERT_NO_FATAL_FAILURES(InitializeRamNand());
+  ASSERT_NO_FATAL_FAILURE(InitializeRamNand());
 
   AbrData abr_data = kAbrData;
   ComputeCrc(&abr_data);
   SetAbr(abr_data);
 
-  ASSERT_NO_FATAL_FAILURES(FindBootManager());
+  ASSERT_NO_FATAL_FAILURE(FindBootManager());
 
   auto result = boot_manager_->QueryActiveConfiguration();
   ASSERT_OK(result.status());
 }
 
 TEST_F(PaverServiceSkipBlockTest, QueryActiveConfigurationInvalidAbr) {
-  ASSERT_NO_FATAL_FAILURES(InitializeRamNand());
+  ASSERT_NO_FATAL_FAILURE(InitializeRamNand());
 
   AbrData abr_data = {};
   memset(&abr_data, 0x3d, sizeof(abr_data));
   SetAbr(abr_data);
 
-  ASSERT_NO_FATAL_FAILURES(FindBootManager());
+  ASSERT_NO_FATAL_FAILURE(FindBootManager());
 
   auto result = boot_manager_->QueryActiveConfiguration();
   ASSERT_OK(result.status());
 }
 
 TEST_F(PaverServiceSkipBlockTest, QueryActiveConfigurationBothPriority0) {
-  ASSERT_NO_FATAL_FAILURES(InitializeRamNand());
+  ASSERT_NO_FATAL_FAILURE(InitializeRamNand());
 
   AbrData abr_data = kAbrData;
   abr_data.slot_data[0].priority = 0;
@@ -494,7 +494,7 @@ TEST_F(PaverServiceSkipBlockTest, QueryActiveConfigurationBothPriority0) {
   ComputeCrc(&abr_data);
   SetAbr(abr_data);
 
-  ASSERT_NO_FATAL_FAILURES(FindBootManager());
+  ASSERT_NO_FATAL_FAILURE(FindBootManager());
 
   auto result = boot_manager_->QueryActiveConfiguration();
   ASSERT_OK(result.status());
@@ -503,13 +503,13 @@ TEST_F(PaverServiceSkipBlockTest, QueryActiveConfigurationBothPriority0) {
 }
 
 TEST_F(PaverServiceSkipBlockTest, QueryActiveConfigurationSlotB) {
-  ASSERT_NO_FATAL_FAILURES(InitializeRamNand());
+  ASSERT_NO_FATAL_FAILURE(InitializeRamNand());
 
   AbrData abr_data = kAbrData;
   ComputeCrc(&abr_data);
   SetAbr(abr_data);
 
-  ASSERT_NO_FATAL_FAILURES(FindBootManager());
+  ASSERT_NO_FATAL_FAILURE(FindBootManager());
 
   auto result = boot_manager_->QueryActiveConfiguration();
   ASSERT_OK(result.status());
@@ -518,7 +518,7 @@ TEST_F(PaverServiceSkipBlockTest, QueryActiveConfigurationSlotB) {
 }
 
 TEST_F(PaverServiceSkipBlockTest, QueryActiveConfigurationSlotA) {
-  ASSERT_NO_FATAL_FAILURES(InitializeRamNand());
+  ASSERT_NO_FATAL_FAILURE(InitializeRamNand());
 
   AbrData abr_data = kAbrData;
   abr_data.slot_data[0].priority = 2;
@@ -526,7 +526,7 @@ TEST_F(PaverServiceSkipBlockTest, QueryActiveConfigurationSlotA) {
   ComputeCrc(&abr_data);
   SetAbr(abr_data);
 
-  ASSERT_NO_FATAL_FAILURES(FindBootManager());
+  ASSERT_NO_FATAL_FAILURE(FindBootManager());
 
   auto result = boot_manager_->QueryActiveConfiguration();
   ASSERT_OK(result.status());
@@ -536,13 +536,13 @@ TEST_F(PaverServiceSkipBlockTest, QueryActiveConfigurationSlotA) {
 
 void PaverServiceSkipBlockTest::TestQueryConfigurationLastSetActive(
     fuchsia_paver::wire::Configuration this_slot, fuchsia_paver::wire::Configuration other_slot) {
-  ASSERT_NO_FATAL_FAILURES(InitializeRamNand());
+  ASSERT_NO_FATAL_FAILURE(InitializeRamNand());
 
   AbrData abr_data = kAbrData;
   ComputeCrc(&abr_data);
   SetAbr(abr_data);
 
-  ASSERT_NO_FATAL_FAILURES(FindBootManager());
+  ASSERT_NO_FATAL_FAILURE(FindBootManager());
 
   // Set both slots to the active state.
   {
@@ -629,13 +629,13 @@ TEST_F(PaverServiceSkipBlockTest, QueryConfigurationLastSetActiveSlotB) {
 }
 
 TEST_F(PaverServiceSkipBlockTest, QueryCurrentConfigurationSlotA) {
-  ASSERT_NO_FATAL_FAILURES(InitializeRamNand());
+  ASSERT_NO_FATAL_FAILURE(InitializeRamNand());
 
   AbrData abr_data = kAbrData;
   ComputeCrc(&abr_data);
   SetAbr(abr_data);
 
-  ASSERT_NO_FATAL_FAILURES(FindBootManager());
+  ASSERT_NO_FATAL_FAILURE(FindBootManager());
 
   auto result = boot_manager_->QueryCurrentConfiguration();
   ASSERT_OK(result.status());
@@ -644,14 +644,14 @@ TEST_F(PaverServiceSkipBlockTest, QueryCurrentConfigurationSlotA) {
 }
 
 TEST_F(PaverServiceSkipBlockTest, QueryCurrentConfigurationSlotB) {
-  ASSERT_NO_FATAL_FAILURES(InitializeRamNand());
+  ASSERT_NO_FATAL_FAILURE(InitializeRamNand());
   fake_svc_.fake_boot_args().SetArgResponse("-b");
 
   AbrData abr_data = kAbrData;
   ComputeCrc(&abr_data);
   SetAbr(abr_data);
 
-  ASSERT_NO_FATAL_FAILURES(FindBootManager());
+  ASSERT_NO_FATAL_FAILURE(FindBootManager());
 
   auto result = boot_manager_->QueryCurrentConfiguration();
   ASSERT_OK(result.status());
@@ -660,14 +660,14 @@ TEST_F(PaverServiceSkipBlockTest, QueryCurrentConfigurationSlotB) {
 }
 
 TEST_F(PaverServiceSkipBlockTest, QueryCurrentConfigurationSlotR) {
-  ASSERT_NO_FATAL_FAILURES(InitializeRamNand());
+  ASSERT_NO_FATAL_FAILURE(InitializeRamNand());
   fake_svc_.fake_boot_args().SetArgResponse("-r");
 
   AbrData abr_data = kAbrData;
   ComputeCrc(&abr_data);
   SetAbr(abr_data);
 
-  ASSERT_NO_FATAL_FAILURES(FindBootManager());
+  ASSERT_NO_FATAL_FAILURE(FindBootManager());
 
   auto result = boot_manager_->QueryCurrentConfiguration();
   ASSERT_OK(result.status());
@@ -676,27 +676,27 @@ TEST_F(PaverServiceSkipBlockTest, QueryCurrentConfigurationSlotR) {
 }
 
 TEST_F(PaverServiceSkipBlockTest, QueryCurrentConfigurationSlotInvalid) {
-  ASSERT_NO_FATAL_FAILURES(InitializeRamNand());
+  ASSERT_NO_FATAL_FAILURE(InitializeRamNand());
   fake_svc_.fake_boot_args().SetArgResponse("");
 
   AbrData abr_data = kAbrData;
   ComputeCrc(&abr_data);
   SetAbr(abr_data);
 
-  ASSERT_NO_FATAL_FAILURES(FindBootManager());
+  ASSERT_NO_FATAL_FAILURE(FindBootManager());
 
   auto result = boot_manager_->QueryCurrentConfiguration();
   ASSERT_STATUS(result, ZX_ERR_PEER_CLOSED);
 }
 
 TEST_F(PaverServiceSkipBlockTest, QueryConfigurationStatusHealthy) {
-  ASSERT_NO_FATAL_FAILURES(InitializeRamNand());
+  ASSERT_NO_FATAL_FAILURE(InitializeRamNand());
 
   auto abr_data = kAbrData;
   ComputeCrc(&abr_data);
   SetAbr(abr_data);
 
-  ASSERT_NO_FATAL_FAILURES(FindBootManager());
+  ASSERT_NO_FATAL_FAILURE(FindBootManager());
 
   auto result = boot_manager_->QueryConfigurationStatus(fuchsia_paver::wire::Configuration::kB);
   ASSERT_OK(result.status());
@@ -705,14 +705,14 @@ TEST_F(PaverServiceSkipBlockTest, QueryConfigurationStatusHealthy) {
 }
 
 TEST_F(PaverServiceSkipBlockTest, QueryConfigurationStatusPending) {
-  ASSERT_NO_FATAL_FAILURES(InitializeRamNand());
+  ASSERT_NO_FATAL_FAILURE(InitializeRamNand());
   AbrData abr_data = kAbrData;
   abr_data.slot_data[1].successful_boot = 0;
   abr_data.slot_data[1].tries_remaining = 1;
   ComputeCrc(&abr_data);
   SetAbr(abr_data);
 
-  ASSERT_NO_FATAL_FAILURES(FindBootManager());
+  ASSERT_NO_FATAL_FAILURE(FindBootManager());
 
   auto result = boot_manager_->QueryConfigurationStatus(fuchsia_paver::wire::Configuration::kB);
   ASSERT_OK(result.status());
@@ -721,12 +721,12 @@ TEST_F(PaverServiceSkipBlockTest, QueryConfigurationStatusPending) {
 }
 
 TEST_F(PaverServiceSkipBlockTest, QueryConfigurationStatusUnbootable) {
-  ASSERT_NO_FATAL_FAILURES(InitializeRamNand());
+  ASSERT_NO_FATAL_FAILURE(InitializeRamNand());
   AbrData abr_data = kAbrData;
   ComputeCrc(&abr_data);
   SetAbr(abr_data);
 
-  ASSERT_NO_FATAL_FAILURES(FindBootManager());
+  ASSERT_NO_FATAL_FAILURE(FindBootManager());
 
   auto result = boot_manager_->QueryConfigurationStatus(fuchsia_paver::wire::Configuration::kA);
   ASSERT_OK(result.status());
@@ -736,7 +736,7 @@ TEST_F(PaverServiceSkipBlockTest, QueryConfigurationStatusUnbootable) {
 }
 
 TEST_F(PaverServiceSkipBlockTest, SetConfigurationActive) {
-  ASSERT_NO_FATAL_FAILURES(InitializeRamNand());
+  ASSERT_NO_FATAL_FAILURE(InitializeRamNand());
   AbrData abr_data = kAbrData;
   ComputeCrc(&abr_data);
   SetAbr(abr_data);
@@ -746,7 +746,7 @@ TEST_F(PaverServiceSkipBlockTest, SetConfigurationActive) {
   abr_data.slot_data[0].successful_boot = 0;
   ComputeCrc(&abr_data);
 
-  ASSERT_NO_FATAL_FAILURES(FindBootManager());
+  ASSERT_NO_FATAL_FAILURE(FindBootManager());
 
   {
     auto result = boot_manager_->SetConfigurationActive(fuchsia_paver::wire::Configuration::kA);
@@ -765,7 +765,7 @@ TEST_F(PaverServiceSkipBlockTest, SetConfigurationActive) {
 }
 
 TEST_F(PaverServiceSkipBlockTest, SetConfigurationActiveRollover) {
-  ASSERT_NO_FATAL_FAILURES(InitializeRamNand());
+  ASSERT_NO_FATAL_FAILURE(InitializeRamNand());
   AbrData abr_data = kAbrData;
   abr_data.slot_data[1].priority = kAbrMaxPriority;
   ComputeCrc(&abr_data);
@@ -777,7 +777,7 @@ TEST_F(PaverServiceSkipBlockTest, SetConfigurationActiveRollover) {
   abr_data.slot_data[0].successful_boot = 0;
   ComputeCrc(&abr_data);
 
-  ASSERT_NO_FATAL_FAILURES(FindBootManager());
+  ASSERT_NO_FATAL_FAILURE(FindBootManager());
 
   {
     auto result = boot_manager_->SetConfigurationActive(fuchsia_paver::wire::Configuration::kA);
@@ -795,7 +795,7 @@ TEST_F(PaverServiceSkipBlockTest, SetConfigurationActiveRollover) {
 }
 
 TEST_F(PaverServiceSkipBlockTest, SetConfigurationUnbootableSlotA) {
-  ASSERT_NO_FATAL_FAILURES(InitializeRamNand());
+  ASSERT_NO_FATAL_FAILURE(InitializeRamNand());
   AbrData abr_data = kAbrData;
   abr_data.slot_data[0].priority = 2;
   abr_data.slot_data[0].tries_remaining = 3;
@@ -807,7 +807,7 @@ TEST_F(PaverServiceSkipBlockTest, SetConfigurationUnbootableSlotA) {
   abr_data.slot_data[0].successful_boot = 0;
   ComputeCrc(&abr_data);
 
-  ASSERT_NO_FATAL_FAILURES(FindBootManager());
+  ASSERT_NO_FATAL_FAILURE(FindBootManager());
 
   {
     auto result = boot_manager_->SetConfigurationUnbootable(fuchsia_paver::wire::Configuration::kA);
@@ -826,7 +826,7 @@ TEST_F(PaverServiceSkipBlockTest, SetConfigurationUnbootableSlotA) {
 }
 
 TEST_F(PaverServiceSkipBlockTest, SetConfigurationUnbootableSlotB) {
-  ASSERT_NO_FATAL_FAILURES(InitializeRamNand());
+  ASSERT_NO_FATAL_FAILURE(InitializeRamNand());
   AbrData abr_data = kAbrData;
   abr_data.slot_data[1].tries_remaining = 3;
   abr_data.slot_data[1].successful_boot = 0;
@@ -837,7 +837,7 @@ TEST_F(PaverServiceSkipBlockTest, SetConfigurationUnbootableSlotB) {
   abr_data.slot_data[1].successful_boot = 0;
   ComputeCrc(&abr_data);
 
-  ASSERT_NO_FATAL_FAILURES(FindBootManager());
+  ASSERT_NO_FATAL_FAILURE(FindBootManager());
 
   {
     auto result = boot_manager_->SetConfigurationUnbootable(fuchsia_paver::wire::Configuration::kB);
@@ -856,7 +856,7 @@ TEST_F(PaverServiceSkipBlockTest, SetConfigurationUnbootableSlotB) {
 }
 
 TEST_F(PaverServiceSkipBlockTest, SetConfigurationHealthySlotA) {
-  ASSERT_NO_FATAL_FAILURES(InitializeRamNand());
+  ASSERT_NO_FATAL_FAILURE(InitializeRamNand());
   AbrData abr_data = kAbrData;
   abr_data.slot_data[0].priority = kAbrMaxPriority;
   abr_data.slot_data[0].tries_remaining = 0;
@@ -867,7 +867,7 @@ TEST_F(PaverServiceSkipBlockTest, SetConfigurationHealthySlotA) {
   ComputeCrc(&abr_data);
   SetAbr(abr_data);
 
-  ASSERT_NO_FATAL_FAILURES(FindBootManager());
+  ASSERT_NO_FATAL_FAILURE(FindBootManager());
 
   {
     auto result = boot_manager_->SetConfigurationHealthy(fuchsia_paver::wire::Configuration::kA);
@@ -886,14 +886,14 @@ TEST_F(PaverServiceSkipBlockTest, SetConfigurationHealthySlotA) {
 }
 
 TEST_F(PaverServiceSkipBlockTest, SetConfigurationHealthySlotB) {
-  ASSERT_NO_FATAL_FAILURES(InitializeRamNand());
+  ASSERT_NO_FATAL_FAILURE(InitializeRamNand());
   AbrData abr_data = kAbrData;
   ComputeCrc(&abr_data);
   SetAbr(abr_data);
 
   ComputeCrc(&abr_data);
 
-  ASSERT_NO_FATAL_FAILURES(FindBootManager());
+  ASSERT_NO_FATAL_FAILURE(FindBootManager());
 
   {
     auto result = boot_manager_->SetConfigurationHealthy(fuchsia_paver::wire::Configuration::kB);
@@ -912,12 +912,12 @@ TEST_F(PaverServiceSkipBlockTest, SetConfigurationHealthySlotB) {
 }
 
 TEST_F(PaverServiceSkipBlockTest, SetConfigurationHealthySlotR) {
-  ASSERT_NO_FATAL_FAILURES(InitializeRamNand());
+  ASSERT_NO_FATAL_FAILURE(InitializeRamNand());
   AbrData abr_data = kAbrData;
   ComputeCrc(&abr_data);
   SetAbr(abr_data);
 
-  ASSERT_NO_FATAL_FAILURES(FindBootManager());
+  ASSERT_NO_FATAL_FAILURE(FindBootManager());
 
   auto result =
       boot_manager_->SetConfigurationHealthy(fuchsia_paver::wire::Configuration::kRecovery);
@@ -926,7 +926,7 @@ TEST_F(PaverServiceSkipBlockTest, SetConfigurationHealthySlotR) {
 }
 
 TEST_F(PaverServiceSkipBlockTest, SetConfigurationHealthyBothUnknown) {
-  ASSERT_NO_FATAL_FAILURES(InitializeRamNand());
+  ASSERT_NO_FATAL_FAILURE(InitializeRamNand());
   AbrData abr_data = kAbrData;
   abr_data.slot_data[0].priority = kAbrMaxPriority;
   abr_data.slot_data[0].tries_remaining = 3;
@@ -942,7 +942,7 @@ TEST_F(PaverServiceSkipBlockTest, SetConfigurationHealthyBothUnknown) {
   abr_data.slot_data[1].tries_remaining = kAbrMaxTriesRemaining;
   ComputeCrc(&abr_data);
 
-  ASSERT_NO_FATAL_FAILURES(FindBootManager());
+  ASSERT_NO_FATAL_FAILURE(FindBootManager());
 
   {
     auto result = boot_manager_->SetConfigurationHealthy(fuchsia_paver::wire::Configuration::kA);
@@ -961,7 +961,7 @@ TEST_F(PaverServiceSkipBlockTest, SetConfigurationHealthyBothUnknown) {
 }
 
 TEST_F(PaverServiceSkipBlockTest, SetConfigurationHealthyOtherHealthy) {
-  ASSERT_NO_FATAL_FAILURES(InitializeRamNand());
+  ASSERT_NO_FATAL_FAILURE(InitializeRamNand());
   AbrData abr_data = kAbrData;
   abr_data.slot_data[0].priority = kAbrMaxPriority - 1;
   abr_data.slot_data[0].tries_remaining = 0;
@@ -978,7 +978,7 @@ TEST_F(PaverServiceSkipBlockTest, SetConfigurationHealthyOtherHealthy) {
   abr_data.slot_data[1].successful_boot = 1;
   ComputeCrc(&abr_data);
 
-  ASSERT_NO_FATAL_FAILURES(FindBootManager());
+  ASSERT_NO_FATAL_FAILURE(FindBootManager());
 
   {
     auto result = boot_manager_->SetConfigurationHealthy(fuchsia_paver::wire::Configuration::kB);
@@ -997,12 +997,12 @@ TEST_F(PaverServiceSkipBlockTest, SetConfigurationHealthyOtherHealthy) {
 }
 
 TEST_F(PaverServiceSkipBlockTest, SetUnbootableConfigurationHealthy) {
-  ASSERT_NO_FATAL_FAILURES(InitializeRamNand());
+  ASSERT_NO_FATAL_FAILURE(InitializeRamNand());
   AbrData abr_data = kAbrData;
   ComputeCrc(&abr_data);
   SetAbr(abr_data);
 
-  ASSERT_NO_FATAL_FAILURES(FindBootManager());
+  ASSERT_NO_FATAL_FAILURE(FindBootManager());
 
   auto result = boot_manager_->SetConfigurationHealthy(fuchsia_paver::wire::Configuration::kA);
   ASSERT_OK(result.status());
@@ -1010,7 +1010,7 @@ TEST_F(PaverServiceSkipBlockTest, SetUnbootableConfigurationHealthy) {
 }
 
 TEST_F(PaverServiceSkipBlockTest, BootManagerBuffered) {
-  ASSERT_NO_FATAL_FAILURES(InitializeRamNand());
+  ASSERT_NO_FATAL_FAILURE(InitializeRamNand());
   AbrData abr_data = kAbrData;
   // Successful slot b, active slot a. Like what happen after a reboot following an OTA.
   abr_data.slot_data[0].tries_remaining = 3;
@@ -1019,7 +1019,7 @@ TEST_F(PaverServiceSkipBlockTest, BootManagerBuffered) {
   ComputeCrc(&abr_data);
   SetAbr(abr_data);
 
-  ASSERT_NO_FATAL_FAILURES(FindBootManager());
+  ASSERT_NO_FATAL_FAILURE(FindBootManager());
 
   {
     auto result = boot_manager_->QueryActiveConfiguration();
@@ -1061,12 +1061,12 @@ TEST_F(PaverServiceSkipBlockTest, BootManagerBuffered) {
 }
 
 TEST_F(PaverServiceSkipBlockTest, WriteAssetKernelConfigA) {
-  ASSERT_NO_FATAL_FAILURES(InitializeRamNand());
+  ASSERT_NO_FATAL_FAILURE(InitializeRamNand());
 
   fuchsia_mem::wire::Buffer payload;
   CreatePayload(2 * kPagesPerBlock, &payload);
 
-  ASSERT_NO_FATAL_FAILURES(FindDataSink());
+  ASSERT_NO_FATAL_FAILURE(FindDataSink());
   auto result = data_sink_->WriteAsset(fuchsia_paver::wire::Configuration::kA,
                                        fuchsia_paver::wire::Asset::kKernel, std::move(payload));
   ASSERT_OK(result.status());
@@ -1076,12 +1076,12 @@ TEST_F(PaverServiceSkipBlockTest, WriteAssetKernelConfigA) {
 }
 
 TEST_F(PaverServiceSkipBlockTest, WriteAssetKernelConfigB) {
-  ASSERT_NO_FATAL_FAILURES(InitializeRamNand());
+  ASSERT_NO_FATAL_FAILURE(InitializeRamNand());
 
   fuchsia_mem::wire::Buffer payload;
   CreatePayload(2 * kPagesPerBlock, &payload);
 
-  ASSERT_NO_FATAL_FAILURES(FindDataSink());
+  ASSERT_NO_FATAL_FAILURE(FindDataSink());
   auto result = data_sink_->WriteAsset(fuchsia_paver::wire::Configuration::kB,
                                        fuchsia_paver::wire::Asset::kKernel, std::move(payload));
   ASSERT_OK(result.status());
@@ -1092,12 +1092,12 @@ TEST_F(PaverServiceSkipBlockTest, WriteAssetKernelConfigB) {
 }
 
 TEST_F(PaverServiceSkipBlockTest, WriteAssetKernelConfigRecovery) {
-  ASSERT_NO_FATAL_FAILURES(InitializeRamNand());
+  ASSERT_NO_FATAL_FAILURE(InitializeRamNand());
 
   fuchsia_mem::wire::Buffer payload;
   CreatePayload(2 * kPagesPerBlock, &payload);
 
-  ASSERT_NO_FATAL_FAILURES(FindDataSink());
+  ASSERT_NO_FATAL_FAILURE(FindDataSink());
   auto result = data_sink_->WriteAsset(fuchsia_paver::wire::Configuration::kRecovery,
                                        fuchsia_paver::wire::Asset::kKernel, std::move(payload));
   ASSERT_OK(result.status());
@@ -1107,12 +1107,12 @@ TEST_F(PaverServiceSkipBlockTest, WriteAssetKernelConfigRecovery) {
 }
 
 TEST_F(PaverServiceSkipBlockTest, WriteAssetVbMetaConfigA) {
-  ASSERT_NO_FATAL_FAILURES(InitializeRamNand());
+  ASSERT_NO_FATAL_FAILURE(InitializeRamNand());
 
   fuchsia_mem::wire::Buffer payload;
   CreatePayload(32, &payload);
 
-  ASSERT_NO_FATAL_FAILURES(FindDataSink());
+  ASSERT_NO_FATAL_FAILURE(FindDataSink());
   auto result =
       data_sink_->WriteAsset(fuchsia_paver::wire::Configuration::kA,
                              fuchsia_paver::wire::Asset::kVerifiedBootMetadata, std::move(payload));
@@ -1127,12 +1127,12 @@ TEST_F(PaverServiceSkipBlockTest, WriteAssetVbMetaConfigA) {
 }
 
 TEST_F(PaverServiceSkipBlockTest, WriteAssetVbMetaConfigB) {
-  ASSERT_NO_FATAL_FAILURES(InitializeRamNand());
+  ASSERT_NO_FATAL_FAILURE(InitializeRamNand());
 
   fuchsia_mem::wire::Buffer payload;
   CreatePayload(32, &payload);
 
-  ASSERT_NO_FATAL_FAILURES(FindDataSink());
+  ASSERT_NO_FATAL_FAILURE(FindDataSink());
   auto result =
       data_sink_->WriteAsset(fuchsia_paver::wire::Configuration::kB,
                              fuchsia_paver::wire::Asset::kVerifiedBootMetadata, std::move(payload));
@@ -1147,12 +1147,12 @@ TEST_F(PaverServiceSkipBlockTest, WriteAssetVbMetaConfigB) {
 }
 
 TEST_F(PaverServiceSkipBlockTest, WriteAssetVbMetaConfigRecovery) {
-  ASSERT_NO_FATAL_FAILURES(InitializeRamNand());
+  ASSERT_NO_FATAL_FAILURE(InitializeRamNand());
 
   fuchsia_mem::wire::Buffer payload;
   CreatePayload(32, &payload);
 
-  ASSERT_NO_FATAL_FAILURES(FindDataSink());
+  ASSERT_NO_FATAL_FAILURE(FindDataSink());
   auto result =
       data_sink_->WriteAsset(fuchsia_paver::wire::Configuration::kRecovery,
                              fuchsia_paver::wire::Asset::kVerifiedBootMetadata, std::move(payload));
@@ -1167,7 +1167,7 @@ TEST_F(PaverServiceSkipBlockTest, WriteAssetVbMetaConfigRecovery) {
 }
 
 TEST_F(PaverServiceSkipBlockTest, AbrWearLevelingLayoutNotUpdated) {
-  ASSERT_NO_FATAL_FAILURES(InitializeRamNand());
+  ASSERT_NO_FATAL_FAILURE(InitializeRamNand());
   // Enable write-caching + abr metadata wear-leveling
   fake_svc_.fake_boot_args().SetAstroSysConfigAbrWearLeveling(true);
 
@@ -1184,7 +1184,7 @@ TEST_F(PaverServiceSkipBlockTest, AbrWearLevelingLayoutNotUpdated) {
 
   // Layout will not be updated as A/B state does not meet requirement.
   // (one successful slot + one unbootable slot)
-  ASSERT_NO_FATAL_FAILURES(FindBootManager());
+  ASSERT_NO_FATAL_FAILURE(FindBootManager());
 
   {
     auto result = boot_manager_->QueryActiveConfiguration();
@@ -1253,7 +1253,7 @@ AbrData GetAbrWearlevelingSupportingLayout() {
 }
 
 TEST_F(PaverServiceSkipBlockTest, AbrWearLevelingLayoutUpdated) {
-  ASSERT_NO_FATAL_FAILURES(InitializeRamNand());
+  ASSERT_NO_FATAL_FAILURE(InitializeRamNand());
   // Enable write-caching + abr metadata wear-leveling
   fake_svc_.fake_boot_args().SetAstroSysConfigAbrWearLeveling(true);
 
@@ -1262,7 +1262,7 @@ TEST_F(PaverServiceSkipBlockTest, AbrWearLevelingLayoutUpdated) {
   SetAbr(abr_data);
 
   // Layout will be updated. Since A/B state is one successful + one unbootable
-  ASSERT_NO_FATAL_FAILURES(FindBootManager());
+  ASSERT_NO_FATAL_FAILURE(FindBootManager());
 
   {
     auto result = boot_manager_->QueryActiveConfiguration();
@@ -1313,9 +1313,9 @@ TEST_F(PaverServiceSkipBlockTest, AbrWearLevelingLayoutUpdated) {
 }
 
 TEST_F(PaverServiceSkipBlockTest, WriteAssetBuffered) {
-  ASSERT_NO_FATAL_FAILURES(InitializeRamNand());
+  ASSERT_NO_FATAL_FAILURE(InitializeRamNand());
 
-  ASSERT_NO_FATAL_FAILURES(FindDataSink());
+  ASSERT_NO_FATAL_FAILURE(FindDataSink());
   fuchsia_paver::wire::Configuration configs[] = {fuchsia_paver::wire::Configuration::kA,
                                                   fuchsia_paver::wire::Configuration::kB,
                                                   fuchsia_paver::wire::Configuration::kRecovery};
@@ -1337,12 +1337,12 @@ TEST_F(PaverServiceSkipBlockTest, WriteAssetBuffered) {
 }
 
 TEST_F(PaverServiceSkipBlockTest, WriteAssetTwice) {
-  ASSERT_NO_FATAL_FAILURES(InitializeRamNand());
+  ASSERT_NO_FATAL_FAILURE(InitializeRamNand());
 
   fuchsia_mem::wire::Buffer payload;
   CreatePayload(2 * kPagesPerBlock, &payload);
 
-  ASSERT_NO_FATAL_FAILURES(FindDataSink());
+  ASSERT_NO_FATAL_FAILURE(FindDataSink());
   {
     auto result = data_sink_->WriteAsset(fuchsia_paver::wire::Configuration::kA,
                                          fuchsia_paver::wire::Asset::kKernel, std::move(payload));
@@ -1363,9 +1363,9 @@ TEST_F(PaverServiceSkipBlockTest, WriteAssetTwice) {
 }
 
 TEST_F(PaverServiceSkipBlockTest, WriteFirmwareConfigASupported) {
-  ASSERT_NO_FATAL_FAILURES(InitializeRamNand());
+  ASSERT_NO_FATAL_FAILURE(InitializeRamNand());
 
-  ASSERT_NO_FATAL_FAILURES(FindDataSink());
+  ASSERT_NO_FATAL_FAILURE(FindDataSink());
   fuchsia_mem::wire::Buffer payload;
   CreatePayload(4 * kPagesPerBlock, &payload);
   auto result = data_sink_->WriteFirmware(fuchsia_paver::wire::Configuration::kA,
@@ -1379,9 +1379,9 @@ TEST_F(PaverServiceSkipBlockTest, WriteFirmwareConfigASupported) {
 }
 
 TEST_F(PaverServiceSkipBlockTest, WriteFirmwareUnsupportedConfigBFallBackToA) {
-  ASSERT_NO_FATAL_FAILURES(InitializeRamNand());
+  ASSERT_NO_FATAL_FAILURE(InitializeRamNand());
 
-  ASSERT_NO_FATAL_FAILURES(FindDataSink());
+  ASSERT_NO_FATAL_FAILURE(FindDataSink());
   fuchsia_mem::wire::Buffer payload;
   CreatePayload(4 * kPagesPerBlock, &payload);
   auto result = data_sink_->WriteFirmware(fuchsia_paver::wire::Configuration::kB,
@@ -1395,9 +1395,9 @@ TEST_F(PaverServiceSkipBlockTest, WriteFirmwareUnsupportedConfigBFallBackToA) {
 }
 
 TEST_F(PaverServiceSkipBlockTest, WriteFirmwareUnsupportedConfigR) {
-  ASSERT_NO_FATAL_FAILURES(InitializeRamNand());
+  ASSERT_NO_FATAL_FAILURE(InitializeRamNand());
 
-  ASSERT_NO_FATAL_FAILURES(FindDataSink());
+  ASSERT_NO_FATAL_FAILURE(FindDataSink());
   fuchsia_mem::wire::Buffer payload;
   CreatePayload(4 * kPagesPerBlock, &payload);
   auto result = data_sink_->WriteFirmware(fuchsia_paver::wire::Configuration::kRecovery,
@@ -1414,8 +1414,8 @@ TEST_F(PaverServiceSkipBlockTest, WriteFirmwareBl2ConfigASupported) {
   constexpr size_t kBl2StartByte = kBl2FirstBlock * kPageSize * kPagesPerBlock;
   constexpr size_t kBl2SkipLength = 4096;
 
-  ASSERT_NO_FATAL_FAILURES(InitializeRamNand());
-  ASSERT_NO_FATAL_FAILURES(FindDataSink());
+  ASSERT_NO_FATAL_FAILURE(InitializeRamNand());
+  ASSERT_NO_FATAL_FAILURE(FindDataSink());
 
   WriteDataBytes(kBl2StartByte, kBl2SkipLength, 0xC6);
   fuchsia_mem::wire::Buffer payload;
@@ -1433,10 +1433,10 @@ TEST_F(PaverServiceSkipBlockTest, WriteFirmwareBl2UnsupportedConfigBFallBackToA)
   constexpr size_t kBl2StartByte = kBl2FirstBlock * kPageSize * kPagesPerBlock;
   constexpr size_t kBl2SkipLength = 4096;
 
-  ASSERT_NO_FATAL_FAILURES(InitializeRamNand());
+  ASSERT_NO_FATAL_FAILURE(InitializeRamNand());
   WriteDataBytes(kBl2StartByte, kBl2SkipLength, 0xC6);
 
-  ASSERT_NO_FATAL_FAILURES(FindDataSink());
+  ASSERT_NO_FATAL_FAILURE(FindDataSink());
   fuchsia_mem::wire::Buffer payload;
   CreatePayload(kBl2ImagePages, &payload);
   auto result = data_sink_->WriteFirmware(fuchsia_paver::wire::Configuration::kB,
@@ -1452,10 +1452,10 @@ TEST_F(PaverServiceSkipBlockTest, WriteFirmwareBl2UnsupportedConfigR) {
   constexpr size_t kBl2StartByte = kBl2FirstBlock * kPageSize * kPagesPerBlock;
   constexpr size_t kBl2SkipLength = 4096;
 
-  ASSERT_NO_FATAL_FAILURES(InitializeRamNand());
+  ASSERT_NO_FATAL_FAILURE(InitializeRamNand());
   WriteDataBytes(kBl2StartByte, kBl2SkipLength, 0xC6);
 
-  ASSERT_NO_FATAL_FAILURES(FindDataSink());
+  ASSERT_NO_FATAL_FAILURE(FindDataSink());
   fuchsia_mem::wire::Buffer payload;
   CreatePayload(kBl2ImagePages, &payload);
   auto result = data_sink_->WriteFirmware(fuchsia_paver::wire::Configuration::kRecovery,
@@ -1467,7 +1467,7 @@ TEST_F(PaverServiceSkipBlockTest, WriteFirmwareBl2UnsupportedConfigR) {
 }
 
 TEST_F(PaverServiceSkipBlockTest, WriteFirmwareUnsupportedType) {
-  ASSERT_NO_FATAL_FAILURES(InitializeRamNand());
+  ASSERT_NO_FATAL_FAILURE(InitializeRamNand());
 
   constexpr fuchsia_paver::wire::Configuration kAllConfigs[] = {
       fuchsia_paver::wire::Configuration::kA,
@@ -1475,7 +1475,7 @@ TEST_F(PaverServiceSkipBlockTest, WriteFirmwareUnsupportedType) {
       fuchsia_paver::wire::Configuration::kRecovery,
   };
 
-  ASSERT_NO_FATAL_FAILURES(FindDataSink());
+  ASSERT_NO_FATAL_FAILURE(FindDataSink());
   for (auto config : kAllConfigs) {
     fuchsia_mem::wire::Buffer payload;
     CreatePayload(4 * kPagesPerBlock, &payload);
@@ -1494,9 +1494,9 @@ TEST_F(PaverServiceSkipBlockTest, WriteFirmwareError) {
   // the partitioner initializes properly but then fails when trying to find it.
   fuchsia_hardware_nand_RamNandInfo info = kNandInfo;
   info.partition_map.partitions[1].hidden = true;
-  ASSERT_NO_FATAL_FAILURES(InitializeRamNand(info));
+  ASSERT_NO_FATAL_FAILURE(InitializeRamNand(info));
 
-  ASSERT_NO_FATAL_FAILURES(FindDataSink());
+  ASSERT_NO_FATAL_FAILURE(FindDataSink());
   fuchsia_mem::wire::Buffer payload;
   CreatePayload(4 * kPagesPerBlock, &payload);
   auto result = data_sink_->WriteFirmware(fuchsia_paver::wire::Configuration::kA,
@@ -1509,11 +1509,11 @@ TEST_F(PaverServiceSkipBlockTest, WriteFirmwareError) {
 }
 
 TEST_F(PaverServiceSkipBlockTest, ReadAssetKernelConfigA) {
-  ASSERT_NO_FATAL_FAILURES(InitializeRamNand());
+  ASSERT_NO_FATAL_FAILURE(InitializeRamNand());
 
   WriteData(8 * kPagesPerBlock, 2 * kPagesPerBlock, 0x4a);
 
-  ASSERT_NO_FATAL_FAILURES(FindDataSink());
+  ASSERT_NO_FATAL_FAILURE(FindDataSink());
   auto result = data_sink_->ReadAsset(fuchsia_paver::wire::Configuration::kA,
                                       fuchsia_paver::wire::Asset::kKernel);
   ASSERT_OK(result.status());
@@ -1522,11 +1522,11 @@ TEST_F(PaverServiceSkipBlockTest, ReadAssetKernelConfigA) {
 }
 
 TEST_F(PaverServiceSkipBlockTest, ReadAssetKernelConfigB) {
-  ASSERT_NO_FATAL_FAILURES(InitializeRamNand());
+  ASSERT_NO_FATAL_FAILURE(InitializeRamNand());
 
   WriteData(10 * kPagesPerBlock, 2 * kPagesPerBlock, 0x4a);
 
-  ASSERT_NO_FATAL_FAILURES(FindDataSink());
+  ASSERT_NO_FATAL_FAILURE(FindDataSink());
   auto result = data_sink_->ReadAsset(fuchsia_paver::wire::Configuration::kB,
                                       fuchsia_paver::wire::Asset::kKernel);
   ASSERT_OK(result.status());
@@ -1535,11 +1535,11 @@ TEST_F(PaverServiceSkipBlockTest, ReadAssetKernelConfigB) {
 }
 
 TEST_F(PaverServiceSkipBlockTest, ReadAssetKernelConfigRecovery) {
-  ASSERT_NO_FATAL_FAILURES(InitializeRamNand());
+  ASSERT_NO_FATAL_FAILURE(InitializeRamNand());
 
   WriteData(12 * kPagesPerBlock, 2 * kPagesPerBlock, 0x4a);
 
-  ASSERT_NO_FATAL_FAILURES(FindDataSink());
+  ASSERT_NO_FATAL_FAILURE(FindDataSink());
   auto result = data_sink_->ReadAsset(fuchsia_paver::wire::Configuration::kRecovery,
                                       fuchsia_paver::wire::Asset::kKernel);
   ASSERT_OK(result.status());
@@ -1548,11 +1548,11 @@ TEST_F(PaverServiceSkipBlockTest, ReadAssetKernelConfigRecovery) {
 }
 
 TEST_F(PaverServiceSkipBlockTest, ReadAssetVbMetaConfigA) {
-  ASSERT_NO_FATAL_FAILURES(InitializeRamNand());
+  ASSERT_NO_FATAL_FAILURE(InitializeRamNand());
 
   WriteData(14 * kPagesPerBlock + 32, 32, 0x4a);
 
-  ASSERT_NO_FATAL_FAILURES(FindDataSink());
+  ASSERT_NO_FATAL_FAILURE(FindDataSink());
   auto result = data_sink_->ReadAsset(fuchsia_paver::wire::Configuration::kA,
                                       fuchsia_paver::wire::Asset::kVerifiedBootMetadata);
   ASSERT_OK(result.status());
@@ -1561,11 +1561,11 @@ TEST_F(PaverServiceSkipBlockTest, ReadAssetVbMetaConfigA) {
 }
 
 TEST_F(PaverServiceSkipBlockTest, ReadAssetVbMetaConfigB) {
-  ASSERT_NO_FATAL_FAILURES(InitializeRamNand());
+  ASSERT_NO_FATAL_FAILURE(InitializeRamNand());
 
   WriteData(14 * kPagesPerBlock + 64, 32, 0x4a);
 
-  ASSERT_NO_FATAL_FAILURES(FindDataSink());
+  ASSERT_NO_FATAL_FAILURE(FindDataSink());
   auto result = data_sink_->ReadAsset(fuchsia_paver::wire::Configuration::kB,
                                       fuchsia_paver::wire::Asset::kVerifiedBootMetadata);
   ASSERT_OK(result.status());
@@ -1574,11 +1574,11 @@ TEST_F(PaverServiceSkipBlockTest, ReadAssetVbMetaConfigB) {
 }
 
 TEST_F(PaverServiceSkipBlockTest, ReadAssetVbMetaConfigRecovery) {
-  ASSERT_NO_FATAL_FAILURES(InitializeRamNand());
+  ASSERT_NO_FATAL_FAILURE(InitializeRamNand());
 
   WriteData(14 * kPagesPerBlock + 96, 32, 0x4a);
 
-  ASSERT_NO_FATAL_FAILURES(FindDataSink());
+  ASSERT_NO_FATAL_FAILURE(FindDataSink());
   auto result = data_sink_->ReadAsset(fuchsia_paver::wire::Configuration::kRecovery,
                                       fuchsia_paver::wire::Asset::kVerifiedBootMetadata);
   ASSERT_OK(result.status());
@@ -1587,7 +1587,7 @@ TEST_F(PaverServiceSkipBlockTest, ReadAssetVbMetaConfigRecovery) {
 }
 
 TEST_F(PaverServiceSkipBlockTest, ReadAssetZbiSize) {
-  ASSERT_NO_FATAL_FAILURES(InitializeRamNand());
+  ASSERT_NO_FATAL_FAILURE(InitializeRamNand());
 
   zbi_header_t container;
   container.type = ZBI_TYPE_CONTAINER;
@@ -1599,7 +1599,7 @@ TEST_F(PaverServiceSkipBlockTest, ReadAssetZbiSize) {
 
   WriteDataBytes(8 * kPagesPerBlock * kPageSize, &container, sizeof(container));
 
-  ASSERT_NO_FATAL_FAILURES(FindDataSink());
+  ASSERT_NO_FATAL_FAILURE(FindDataSink());
   auto result = data_sink_->ReadAsset(fuchsia_paver::wire::Configuration::kA,
                                       fuchsia_paver::wire::Asset::kKernel);
   ASSERT_OK(result.status());
@@ -1608,12 +1608,12 @@ TEST_F(PaverServiceSkipBlockTest, ReadAssetZbiSize) {
 }
 
 TEST_F(PaverServiceSkipBlockTest, WriteBootloader) {
-  ASSERT_NO_FATAL_FAILURES(InitializeRamNand());
+  ASSERT_NO_FATAL_FAILURE(InitializeRamNand());
 
   fuchsia_mem::wire::Buffer payload;
   CreatePayload(4 * kPagesPerBlock, &payload);
 
-  ASSERT_NO_FATAL_FAILURES(FindDataSink());
+  ASSERT_NO_FATAL_FAILURE(FindDataSink());
   auto result = data_sink_->WriteBootloader(std::move(payload));
   ASSERT_OK(result.status());
   ASSERT_OK(result.value().status);
@@ -1624,7 +1624,7 @@ TEST_F(PaverServiceSkipBlockTest, WriteBootloader) {
 // Normally the last page would be overwritten with 0s, but because the actual payload is identical,
 // we don't actually pave the image, so the extra page stays as 0xFF.
 TEST_F(PaverServiceSkipBlockTest, WriteBootloaderNotAligned) {
-  ASSERT_NO_FATAL_FAILURES(InitializeRamNand());
+  ASSERT_NO_FATAL_FAILURE(InitializeRamNand());
 
   fuchsia_mem::wire::Buffer payload;
   CreatePayload(4 * kPagesPerBlock - 1, &payload);
@@ -1632,7 +1632,7 @@ TEST_F(PaverServiceSkipBlockTest, WriteBootloaderNotAligned) {
   WriteData(4 * kPagesPerBlock, 4 * kPagesPerBlock - 1, 0x4a);
   WriteData(8 * kPagesPerBlock - 1, 1, 0xff);
 
-  ASSERT_NO_FATAL_FAILURES(FindDataSink());
+  ASSERT_NO_FATAL_FAILURE(FindDataSink());
   auto result = data_sink_->WriteBootloader(std::move(payload));
   ASSERT_OK(result.status());
   ASSERT_OK(result.value().status);
@@ -1649,9 +1649,9 @@ TEST_F(PaverServiceSkipBlockTest, WriteVolumes) {
 }
 
 TEST_F(PaverServiceSkipBlockTest, WipeVolumeEmptyFvm) {
-  ASSERT_NO_FATAL_FAILURES(InitializeRamNand());
+  ASSERT_NO_FATAL_FAILURE(InitializeRamNand());
 
-  ASSERT_NO_FATAL_FAILURES(FindDataSink());
+  ASSERT_NO_FATAL_FAILURE(FindDataSink());
   auto result = data_sink_->WipeVolume();
   ASSERT_OK(result.status());
   ASSERT_TRUE(result->result.is_response());
@@ -1668,14 +1668,14 @@ void CheckGuid(const fbl::unique_fd& device, const uint8_t type[GPT_GUID_LEN]) {
 }
 
 TEST_F(PaverServiceSkipBlockTest, WipeVolumeCreatesFvm) {
-  ASSERT_NO_FATAL_FAILURES(InitializeRamNand());
+  ASSERT_NO_FATAL_FAILURE(InitializeRamNand());
 
   constexpr size_t kBufferSize = 8192;
   char buffer[kBufferSize];
   memset(buffer, 'a', kBufferSize);
   EXPECT_EQ(kBufferSize, pwrite(fvm_.get(), buffer, kBufferSize, 0));
 
-  ASSERT_NO_FATAL_FAILURES(FindDataSink());
+  ASSERT_NO_FATAL_FAILURE(FindDataSink());
   auto result = data_sink_->WipeVolume();
   ASSERT_OK(result.status());
   ASSERT_TRUE(result->result.is_response());
@@ -1735,7 +1735,7 @@ void PaverServiceSkipBlockTest::TestSysconfigWriteBufferedClient(uint32_t offset
     ASSERT_OK(result.status());
     ASSERT_OK(result.value().status);
     // Without flushing, data in the storage should remain unchanged.
-    ASSERT_NO_FATAL_FAILURES(
+    ASSERT_NO_FATAL_FAILURE(
         ValidateUnwrittenPages(14 * kPagesPerBlock + offset_in_pages, sysconfig_pages));
   }
 
@@ -1743,7 +1743,7 @@ void PaverServiceSkipBlockTest::TestSysconfigWriteBufferedClient(uint32_t offset
     auto result = sysconfig_->Flush();
     ASSERT_OK(result.status());
     ASSERT_OK(result.value().status);
-    ASSERT_NO_FATAL_FAILURES(
+    ASSERT_NO_FATAL_FAILURE(
         ValidateWrittenPages(14 * kPagesPerBlock + offset_in_pages, sysconfig_pages));
   }
 
@@ -1752,23 +1752,23 @@ void PaverServiceSkipBlockTest::TestSysconfigWriteBufferedClient(uint32_t offset
     auto result = sysconfig_->Read();
     ASSERT_OK(result.status());
     ASSERT_TRUE(result->result.is_response());
-    ASSERT_NO_FATAL_FAILURES(ValidateWritten(result->result.response().data, sysconfig_pages));
+    ASSERT_NO_FATAL_FAILURE(ValidateWritten(result->result.response().data, sysconfig_pages));
   }
 }
 
 TEST_F(PaverServiceSkipBlockTest, SysconfigWriteWithBufferredClientLayoutNotUpdated) {
-  ASSERT_NO_FATAL_FAILURES(InitializeRamNand());
+  ASSERT_NO_FATAL_FAILURE(InitializeRamNand());
 
   // Enable write-caching + abr metadata wear-leveling
   fake_svc_.fake_boot_args().SetAstroSysConfigAbrWearLeveling(true);
 
-  ASSERT_NO_FATAL_FAILURES(FindSysconfig());
+  ASSERT_NO_FATAL_FAILURE(FindSysconfig());
 
-  ASSERT_NO_FATAL_FAILURES(TestSysconfigWriteBufferedClient(0, 15 * 2));
+  ASSERT_NO_FATAL_FAILURE(TestSysconfigWriteBufferedClient(0, 15 * 2));
 }
 
 TEST_F(PaverServiceSkipBlockTest, SysconfigWriteWithBufferredClientLayoutUpdated) {
-  ASSERT_NO_FATAL_FAILURES(InitializeRamNand());
+  ASSERT_NO_FATAL_FAILURE(InitializeRamNand());
 
   // Enable write-caching + abr metadata wear-leveling
   fake_svc_.fake_boot_args().SetAstroSysConfigAbrWearLeveling(true);
@@ -1776,9 +1776,9 @@ TEST_F(PaverServiceSkipBlockTest, SysconfigWriteWithBufferredClientLayoutUpdated
   auto abr_data = GetAbrWearlevelingSupportingLayout();
   SetAbr(abr_data);
 
-  ASSERT_NO_FATAL_FAILURES(FindSysconfig());
+  ASSERT_NO_FATAL_FAILURE(FindSysconfig());
 
-  ASSERT_NO_FATAL_FAILURES(TestSysconfigWriteBufferedClient(2, 5 * 2));
+  ASSERT_NO_FATAL_FAILURE(TestSysconfigWriteBufferedClient(2, 5 * 2));
 }
 
 void PaverServiceSkipBlockTest::TestSysconfigWipeBufferedClient(uint32_t offset_in_pages,
@@ -1788,7 +1788,7 @@ void PaverServiceSkipBlockTest::TestSysconfigWipeBufferedClient(uint32_t offset_
     ASSERT_OK(result.status());
     ASSERT_OK(result.value().status);
     // Without flushing, data in the storage should remain unchanged.
-    ASSERT_NO_FATAL_FAILURES(
+    ASSERT_NO_FATAL_FAILURE(
         ValidateUnwrittenPages(14 * kPagesPerBlock + offset_in_pages, sysconfig_pages));
   }
 
@@ -1796,24 +1796,24 @@ void PaverServiceSkipBlockTest::TestSysconfigWipeBufferedClient(uint32_t offset_
     auto result = sysconfig_->Flush();
     ASSERT_OK(result.status());
     ASSERT_OK(result.value().status);
-    ASSERT_NO_FATAL_FAILURES(AssertContents(14 * kSkipBlockSize + offset_in_pages * kPageSize,
-                                            sysconfig_pages * kPageSize, 0));
+    ASSERT_NO_FATAL_FAILURE(AssertContents(14 * kSkipBlockSize + offset_in_pages * kPageSize,
+                                           sysconfig_pages * kPageSize, 0));
   }
 }
 
 TEST_F(PaverServiceSkipBlockTest, SysconfigWipeWithBufferredClientLayoutNotUpdated) {
-  ASSERT_NO_FATAL_FAILURES(InitializeRamNand());
+  ASSERT_NO_FATAL_FAILURE(InitializeRamNand());
 
   // Enable write-caching + abr metadata wear-leveling
   fake_svc_.fake_boot_args().SetAstroSysConfigAbrWearLeveling(true);
 
-  ASSERT_NO_FATAL_FAILURES(FindSysconfig());
+  ASSERT_NO_FATAL_FAILURE(FindSysconfig());
 
-  ASSERT_NO_FATAL_FAILURES(TestSysconfigWipeBufferedClient(0, 15 * 2));
+  ASSERT_NO_FATAL_FAILURE(TestSysconfigWipeBufferedClient(0, 15 * 2));
 }
 
 TEST_F(PaverServiceSkipBlockTest, SysconfigWipeWithBufferredClientLayoutUpdated) {
-  ASSERT_NO_FATAL_FAILURES(InitializeRamNand());
+  ASSERT_NO_FATAL_FAILURE(InitializeRamNand());
 
   // Enable write-caching + abr metadata wear-leveling
   fake_svc_.fake_boot_args().SetAstroSysConfigAbrWearLeveling(true);
@@ -1821,9 +1821,9 @@ TEST_F(PaverServiceSkipBlockTest, SysconfigWipeWithBufferredClientLayoutUpdated)
   auto abr_data = GetAbrWearlevelingSupportingLayout();
   SetAbr(abr_data);
 
-  ASSERT_NO_FATAL_FAILURES(FindSysconfig());
+  ASSERT_NO_FATAL_FAILURE(FindSysconfig());
 
-  ASSERT_NO_FATAL_FAILURES(TestSysconfigWipeBufferedClient(2, 5 * 2));
+  ASSERT_NO_FATAL_FAILURE(TestSysconfigWipeBufferedClient(2, 5 * 2));
 }
 
 constexpr uint8_t kEmptyType[GPT_GUID_LEN] = GUID_EMPTY_VALUE;
@@ -1831,7 +1831,7 @@ constexpr uint8_t kEmptyType[GPT_GUID_LEN] = GUID_EMPTY_VALUE;
 #if defined(__x86_64__)
 class PaverServiceBlockTest : public PaverServiceTest {
  public:
-  PaverServiceBlockTest() { ASSERT_NO_FATAL_FAILURES(SpawnIsolatedDevmgr()); }
+  PaverServiceBlockTest() { ASSERT_NO_FATAL_FAILURE(SpawnIsolatedDevmgr()); }
 
  protected:
   void SpawnIsolatedDevmgr() {
@@ -1867,13 +1867,13 @@ TEST_F(PaverServiceBlockTest, DISABLED_InitializePartitionTables) {
   std::unique_ptr<BlockDevice> gpt_dev;
   // 32GiB disk.
   constexpr uint64_t block_count = (32LU << 30) / kBlockSize;
-  ASSERT_NO_FATAL_FAILURES(
+  ASSERT_NO_FATAL_FAILURE(
       BlockDevice::Create(devmgr_.devfs_root(), kEmptyType, block_count, &gpt_dev));
 
   zx::channel gpt_chan;
   ASSERT_OK(fdio_fd_clone(gpt_dev->fd(), gpt_chan.reset_and_get_address()));
 
-  ASSERT_NO_FATAL_FAILURES(UseBlockDevice(std::move(gpt_chan)));
+  ASSERT_NO_FATAL_FAILURE(UseBlockDevice(std::move(gpt_chan)));
 
   auto result = data_sink_->InitializePartitionTables();
   ASSERT_OK(result.status());
@@ -1884,15 +1884,15 @@ TEST_F(PaverServiceBlockTest, DISABLED_InitializePartitionTablesMultipleDevices)
   std::unique_ptr<BlockDevice> gpt_dev1, gpt_dev2;
   // 32GiB disk.
   constexpr uint64_t block_count = (32LU << 30) / kBlockSize;
-  ASSERT_NO_FATAL_FAILURES(
+  ASSERT_NO_FATAL_FAILURE(
       BlockDevice::Create(devmgr_.devfs_root(), kEmptyType, block_count, &gpt_dev1));
-  ASSERT_NO_FATAL_FAILURES(
+  ASSERT_NO_FATAL_FAILURE(
       BlockDevice::Create(devmgr_.devfs_root(), kEmptyType, block_count, &gpt_dev2));
 
   zx::channel gpt_chan;
   ASSERT_OK(fdio_fd_clone(gpt_dev1->fd(), gpt_chan.reset_and_get_address()));
 
-  ASSERT_NO_FATAL_FAILURES(UseBlockDevice(std::move(gpt_chan)));
+  ASSERT_NO_FATAL_FAILURE(UseBlockDevice(std::move(gpt_chan)));
 
   auto result = data_sink_->InitializePartitionTables();
   ASSERT_OK(result.status());
@@ -1903,13 +1903,13 @@ TEST_F(PaverServiceBlockTest, DISABLED_WipePartitionTables) {
   std::unique_ptr<BlockDevice> gpt_dev;
   // 32GiB disk.
   constexpr uint64_t block_count = (32LU << 30) / kBlockSize;
-  ASSERT_NO_FATAL_FAILURES(
+  ASSERT_NO_FATAL_FAILURE(
       BlockDevice::Create(devmgr_.devfs_root(), kEmptyType, block_count, &gpt_dev));
 
   zx::channel gpt_chan;
   ASSERT_OK(fdio_fd_clone(gpt_dev->fd(), gpt_chan.reset_and_get_address()));
 
-  ASSERT_NO_FATAL_FAILURES(UseBlockDevice(std::move(gpt_chan)));
+  ASSERT_NO_FATAL_FAILURE(UseBlockDevice(std::move(gpt_chan)));
 
   auto result = data_sink_->InitializePartitionTables();
   ASSERT_OK(result.status());
@@ -1924,13 +1924,13 @@ TEST_F(PaverServiceBlockTest, DISABLED_WipeVolume) {
   std::unique_ptr<BlockDevice> gpt_dev;
   // 32GiB disk.
   constexpr uint64_t block_count = (32LU << 30) / kBlockSize;
-  ASSERT_NO_FATAL_FAILURES(
+  ASSERT_NO_FATAL_FAILURE(
       BlockDevice::Create(devmgr_.devfs_root(), kEmptyType, block_count, &gpt_dev));
 
   zx::channel gpt_chan;
   ASSERT_OK(fdio_fd_clone(gpt_dev->fd(), gpt_chan.reset_and_get_address()));
 
-  ASSERT_NO_FATAL_FAILURES(UseBlockDevice(std::move(gpt_chan)));
+  ASSERT_NO_FATAL_FAILURE(UseBlockDevice(std::move(gpt_chan)));
 
   auto result = data_sink_->InitializePartitionTables();
   ASSERT_OK(result.status());
@@ -1968,7 +1968,7 @@ class PaverServiceGptDeviceTest : public PaverServiceTest {
     SpawnIsolatedDevmgr(board_name);
     block_count_ = block_count;
     block_size_ = block_size;
-    ASSERT_NO_FATAL_FAILURES(
+    ASSERT_NO_FATAL_FAILURE(
         BlockDevice::Create(devmgr_.devfs_root(), kEmptyType, block_count, block_size, &gpt_dev_));
   }
 
@@ -2025,7 +2025,7 @@ class PaverServiceGptDeviceTest : public PaverServiceTest {
 
 class PaverServiceLuisTest : public PaverServiceGptDeviceTest {
  public:
-  PaverServiceLuisTest() { ASSERT_NO_FATAL_FAILURES(InitializeGptDevice("luis", 0x748034, 512)); }
+  PaverServiceLuisTest() { ASSERT_NO_FATAL_FAILURE(InitializeGptDevice("luis", 0x748034, 512)); }
 
   void InitializeLuisGPTPartitions() {
     constexpr uint8_t kDummyType[GPT_GUID_LEN] = {0xaf, 0x3d, 0xc6, 0x0f, 0x83, 0x84, 0x72, 0x47,
@@ -2033,12 +2033,12 @@ class PaverServiceLuisTest : public PaverServiceGptDeviceTest {
     const std::vector<PartitionDescription> kLuisStartingPartitions = {
         {GPT_DURABLE_BOOT_NAME, kDummyType, 0x10400, 0x10000},
     };
-    ASSERT_NO_FATAL_FAILURES(InitializeStartingGPTPartitions(kLuisStartingPartitions));
+    ASSERT_NO_FATAL_FAILURE(InitializeStartingGPTPartitions(kLuisStartingPartitions));
   }
 };
 
 TEST_F(PaverServiceLuisTest, CreateAbr) {
-  ASSERT_NO_FATAL_FAILURES(InitializeLuisGPTPartitions());
+  ASSERT_NO_FATAL_FAILURE(InitializeLuisGPTPartitions());
   std::shared_ptr<paver::Context> context;
   fidl::ClientEnd<fuchsia_io::Directory> svc_root = GetSvcRoot();
   EXPECT_OK(
@@ -2046,7 +2046,7 @@ TEST_F(PaverServiceLuisTest, CreateAbr) {
 }
 
 TEST_F(PaverServiceLuisTest, SysconfigNotSupportedAndFailWithPeerClosed) {
-  ASSERT_NO_FATAL_FAILURES(InitializeLuisGPTPartitions());
+  ASSERT_NO_FATAL_FAILURE(InitializeLuisGPTPartitions());
   zx::channel sysconfig_local, sysconfig_remote;
   ASSERT_OK(zx::channel::create(0, &sysconfig_local, &sysconfig_remote));
   auto result = client_->FindSysconfig(std::move(sysconfig_remote));

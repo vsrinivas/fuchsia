@@ -5,8 +5,8 @@
 #include <sdk/lib/inspect/testing/cpp/zxtest/inspect.h>
 #include <zxtest/zxtest.h>
 
-#include "{{PROJECT_PATH}}/{{snake_case PROJECT_NAME}}.h"
 #include "src/devices/testing/mock-ddk/mock-device.h"
+#include "{{PROJECT_PATH}}/{{snake_case PROJECT_NAME}}.h"
 
 namespace {{snake_case PROJECT_NAME}} {
 
@@ -35,15 +35,15 @@ TEST_F({{pascal_case PROJECT_NAME}}Test, LifetimeTest) {
 TEST_F({{pascal_case PROJECT_NAME}}Test, InspectTest) {
   auto device = new {{pascal_case PROJECT_NAME}}(fake_root_.get());
   // Verify is_bound = false.
-  ASSERT_NO_FATAL_FAILURES(ReadInspect(device->inspect_vmo()));
-  ASSERT_NO_FATAL_FAILURES(
+  ASSERT_NO_FATAL_FAILURE(ReadInspect(device->inspect_vmo()));
+  ASSERT_NO_FATAL_FAILURE(
       CheckProperty(hierarchy().node(), "is_bound", inspect::BoolPropertyValue(false)));
 
   ASSERT_OK(device->Bind());
 
   // Verify is_bound = true.
-  ASSERT_NO_FATAL_FAILURES(ReadInspect(device->inspect_vmo()));
-  ASSERT_NO_FATAL_FAILURES(
+  ASSERT_NO_FATAL_FAILURE(ReadInspect(device->inspect_vmo()));
+  ASSERT_NO_FATAL_FAILURE(
       CheckProperty(hierarchy().node(), "is_bound", inspect::BoolPropertyValue(true)));
 
   device->zxdev()->InitOp();

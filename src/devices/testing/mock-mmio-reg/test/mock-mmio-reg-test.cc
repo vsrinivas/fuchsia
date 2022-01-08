@@ -28,8 +28,8 @@ TEST(MockMmioReg, CopyFrom) {
 
   dut_2.CopyFrom32(dut_1, 0x10, 0x40, 4);
 
-  ASSERT_NO_FATAL_FAILURES(reg_region_1.VerifyAll());
-  ASSERT_NO_FATAL_FAILURES(reg_region_2.VerifyAll());
+  ASSERT_NO_FATAL_FAILURE(reg_region_1.VerifyAll());
+  ASSERT_NO_FATAL_FAILURE(reg_region_2.VerifyAll());
 }
 
 TEST(MockMmioReg, View) {
@@ -53,7 +53,7 @@ TEST(MockMmioReg, View) {
   dut_view_1.Write32(0x6ba7d0af, 0x40);
   dut_view_2.Write32(0x0164bff2, 0);
 
-  ASSERT_NO_FATAL_FAILURES(reg_region.VerifyAll());
+  ASSERT_NO_FATAL_FAILURE(reg_region.VerifyAll());
 }
 
 }  // namespace ddk_mock_test

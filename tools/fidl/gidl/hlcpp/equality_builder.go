@@ -55,7 +55,7 @@ func (b *equalityCheckBuilder) assertEquals(actual, expected string) {
 	b.write("ASSERT_EQ(%s, %s);\n", actual, expected)
 }
 func (b *equalityCheckBuilder) assertStringEquals(actual, expected string) {
-	b.write("ASSERT_STR_EQ(%s, %s);\n", actual, expected)
+	b.write("ASSERT_STREQ(%s, %s);\n", actual, expected)
 }
 func (b *equalityCheckBuilder) assertNotEquals(actual, expected string) {
 	b.write("ASSERT_NE(%s, %s);\n", actual, expected)

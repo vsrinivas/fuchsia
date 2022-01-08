@@ -46,8 +46,8 @@ TEST(UtilTest, TestSplitString) {
     EXPECT_EQ(actual.size(), expected.size(), "Input: %.*s", static_cast<int>(input.size()),
               input.data());
     for (size_t i = 0; i < std::min(actual.size(), expected.size()); ++i) {
-      EXPECT_STR_EQ(actual[i], expected[i], "Input: %.*s", static_cast<int>(input.size()),
-                    input.data());
+      EXPECT_STREQ(actual[i], expected[i], "Input: %.*s", static_cast<int>(input.size()),
+                   input.data());
     }
   }
 }

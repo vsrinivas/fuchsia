@@ -190,7 +190,7 @@ void TestRfc4231_TC(const char* xkey, const char* xdata, const char* xhmac) {
 
 // clang-format off
 TEST(Rfc4231, TC1) {
-  ASSERT_NO_FATAL_FAILURES(TestRfc4231_TC(
+  ASSERT_NO_FATAL_FAILURE(TestRfc4231_TC(
     /* Key */    "0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b"
                  "0b0b0b0b",                        // 20 bytes
     /* Data */   "4869205468657265",                // "Hi There"
@@ -199,7 +199,7 @@ TEST(Rfc4231, TC1) {
 }
 
 TEST(Rfc4231, TC2) {
-  ASSERT_NO_FATAL_FAILURES(TestRfc4231_TC(
+  ASSERT_NO_FATAL_FAILURE(TestRfc4231_TC(
     /* Key */    "4a656665",                        // "Jefe"
     /* Data */   "7768617420646f2079612077616e7420" // "what do ya want "
                  "666f72206e6f7468696e673f",        // "for nothing?"
@@ -208,7 +208,7 @@ TEST(Rfc4231, TC2) {
 }
 
 TEST(Rfc4231, TC3) {
-  ASSERT_NO_FATAL_FAILURES(TestRfc4231_TC(
+  ASSERT_NO_FATAL_FAILURE(TestRfc4231_TC(
     /* Key */    "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
                  "aaaaaaaa",                        // 20 bytes
     /* Data */   "dddddddddddddddddddddddddddddddd"
@@ -220,7 +220,7 @@ TEST(Rfc4231, TC3) {
 }
 
 TEST(Rfc4231, TC4) {
-  ASSERT_NO_FATAL_FAILURES(TestRfc4231_TC(
+  ASSERT_NO_FATAL_FAILURE(TestRfc4231_TC(
     /* Key */    "0102030405060708090a0b0c0d0e0f10"
                  "111213141516171819",              // 25 bytes
     /* Data */   "cdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcd"
@@ -232,7 +232,7 @@ TEST(Rfc4231, TC4) {
 }
 
 TEST(Rfc4231, TC5) {
-  ASSERT_NO_FATAL_FAILURES(TestRfc4231_TC(
+  ASSERT_NO_FATAL_FAILURE(TestRfc4231_TC(
     /* Key */
     /* Key */    "0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c"
                  "0c0c0c0c",                        // 20 bytes
@@ -242,7 +242,7 @@ TEST(Rfc4231, TC5) {
 }
 
 TEST(Rfc4231, TC6) {
-  ASSERT_NO_FATAL_FAILURES(TestRfc4231_TC(
+  ASSERT_NO_FATAL_FAILURE(TestRfc4231_TC(
     /* Key */    "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
                  "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
                  "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
@@ -261,7 +261,7 @@ TEST(Rfc4231, TC6) {
 }
 
 TEST(Rfc4231, TC7) {
-  ASSERT_NO_FATAL_FAILURES(TestRfc4231_TC(
+  ASSERT_NO_FATAL_FAILURE(TestRfc4231_TC(
     /* Key */    "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
                  "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
                  "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"

@@ -13,12 +13,12 @@ template <class... Elf>
 struct TestAllFormatsHelper {
   template <typename Test>
   void OneTest(Test&& test) const {
-    ASSERT_NO_FATAL_FAILURES((test(Elf{}), ...));
+    ASSERT_NO_FATAL_FAILURE((test(Elf{}), ...));
   }
 
   template <typename... Test>
   void operator()(Test&&... tests) const {
-    ASSERT_NO_FATAL_FAILURES((OneTest(tests), ...));
+    ASSERT_NO_FATAL_FAILURE((OneTest(tests), ...));
   }
 };
 

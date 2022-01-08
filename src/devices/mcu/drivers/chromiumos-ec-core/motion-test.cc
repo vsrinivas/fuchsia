@@ -76,7 +76,7 @@ class ChromiumosEcMotionTest : public ChromiumosEcTestBase {
         });
 
     // Calls DdkInit on the cros-ec-core device.
-    ASSERT_NO_FATAL_FAILURES(InitDevice());
+    ASSERT_NO_FATAL_FAILURE(InitDevice());
 
     // Initialise the motion device.
     zx_device* motion_dev = device_->zxdev()->GetLatestChild();

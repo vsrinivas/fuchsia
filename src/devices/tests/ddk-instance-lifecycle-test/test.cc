@@ -102,7 +102,7 @@ void InstanceLifecycleTest::WaitForEvent(fidl::UnownedClientEnd<Lifecycle> lifec
 void InstanceLifecycleTest::VerifyPostOpenLifecycleViaRemove(
     fidl::UnownedClientEnd<Lifecycle> lifecycle_chan,
     fidl::ClientEnd<InstanceDevice> instance_client) {
-  ASSERT_NO_FATAL_FAILURES(WaitForEvent(lifecycle_chan, Event::Open));
+  ASSERT_NO_FATAL_FAILURE(WaitForEvent(lifecycle_chan, Event::Open));
 
   auto endpoints = fidl::CreateEndpoints<Lifecycle>();
   ASSERT_OK(endpoints.status_value());
@@ -124,16 +124,16 @@ void InstanceLifecycleTest::VerifyPostOpenLifecycleViaRemove(
   }
 
   // We should see unbind, followed by close, then release.
-  ASSERT_NO_FATAL_FAILURES(WaitForEvent(lifecycle_chan, Event::Unbind));
-  ASSERT_NO_FATAL_FAILURES(WaitForEvent(instance_lifecycle_chan, Event::Close));
-  ASSERT_NO_FATAL_FAILURES(WaitForEvent(instance_lifecycle_chan, Event::Release));
-  ASSERT_NO_FATAL_FAILURES(WaitForEvent(lifecycle_chan, Event::Release));
+  ASSERT_NO_FATAL_FAILURE(WaitForEvent(lifecycle_chan, Event::Unbind));
+  ASSERT_NO_FATAL_FAILURE(WaitForEvent(instance_lifecycle_chan, Event::Close));
+  ASSERT_NO_FATAL_FAILURE(WaitForEvent(instance_lifecycle_chan, Event::Release));
+  ASSERT_NO_FATAL_FAILURE(WaitForEvent(lifecycle_chan, Event::Release));
 }
 
 void InstanceLifecycleTest::VerifyPostOpenLifecycleViaClose(
     fidl::UnownedClientEnd<Lifecycle> lifecycle_chan,
     fidl::ClientEnd<InstanceDevice> instance_client) {
-  ASSERT_NO_FATAL_FAILURES(WaitForEvent(lifecycle_chan, Event::Open));
+  ASSERT_NO_FATAL_FAILURE(WaitForEvent(lifecycle_chan, Event::Open));
 
   auto endpoints = fidl::CreateEndpoints<Lifecycle>();
   ASSERT_OK(endpoints.status_value());
@@ -150,8 +150,8 @@ void InstanceLifecycleTest::VerifyPostOpenLifecycleViaClose(
 
   // Close the connection to the instance.
   instance_client.reset();
-  ASSERT_NO_FATAL_FAILURES(WaitForEvent(instance_lifecycle_chan, Event::Close));
-  ASSERT_NO_FATAL_FAILURES(WaitForEvent(instance_lifecycle_chan, Event::Release));
+  ASSERT_NO_FATAL_FAILURE(WaitForEvent(instance_lifecycle_chan, Event::Close));
+  ASSERT_NO_FATAL_FAILURE(WaitForEvent(instance_lifecycle_chan, Event::Release));
   ASSERT_FALSE(AreEventsPending(lifecycle_chan));
 }
 
@@ -179,7 +179,7 @@ TEST_F(InstanceLifecycleTest, NonPipelinedClientClose) {
         fdio_get_service_handle(fd.release(), instance_client.channel().reset_and_get_address()));
   }
 
-  ASSERT_NO_FATAL_FAILURES(
+  ASSERT_NO_FATAL_FAILURE(
       VerifyPostOpenLifecycleViaClose(lifecycle_chan, std::move(instance_client)));
 }
 
@@ -199,7 +199,7 @@ TEST_F(InstanceLifecycleTest, PipelinedClientClose) {
   ASSERT_OK(result.status());
   ASSERT_FALSE(result->result.is_err());
 
-  ASSERT_NO_FATAL_FAILURES(
+  ASSERT_NO_FATAL_FAILURE(
       VerifyPostOpenLifecycleViaClose(lifecycle_chan, std::move(instance_client)));
 }
 
@@ -227,7 +227,7 @@ TEST_F(InstanceLifecycleTest, NonPipelinedClientRemoveAndClose) {
         fdio_get_service_handle(fd.release(), instance_client.channel().reset_and_get_address()));
   }
 
-  ASSERT_NO_FATAL_FAILURES(
+  ASSERT_NO_FATAL_FAILURE(
       VerifyPostOpenLifecycleViaRemove(lifecycle_chan, std::move(instance_client)));
 }
 
@@ -247,7 +247,7 @@ TEST_F(InstanceLifecycleTest, PipelinedClientRemoveAndClose) {
   ASSERT_OK(result.status());
   ASSERT_FALSE(result->result.is_err());
 
-  ASSERT_NO_FATAL_FAILURES(
+  ASSERT_NO_FATAL_FAILURE(
       VerifyPostOpenLifecycleViaRemove(lifecycle_chan, std::move(instance_client)));
 }
 

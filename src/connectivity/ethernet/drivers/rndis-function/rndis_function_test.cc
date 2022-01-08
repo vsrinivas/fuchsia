@@ -668,5 +668,5 @@ TEST_F(RndisFunctionTest, OidVendorDescription) {
   char description[100];
   size_t actual;
   QueryOid(OID_GEN_VENDOR_DESCRIPTION, &description, sizeof(description), &actual);
-  EXPECT_STR_EQ(description, "Google");
+  EXPECT_STREQ(description, "Google");
 }

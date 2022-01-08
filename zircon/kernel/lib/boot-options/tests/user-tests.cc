@@ -119,7 +119,7 @@ void CompareValues(const OptionType& lhs, const OptionType& rhs) {
 template <>
 void CompareValues<SmallString>(const SmallString& lhs, const SmallString& rhs) {
   // SmallStrings are null-terminated.
-  EXPECT_STR_EQ(lhs.data(), rhs.data());
+  EXPECT_STREQ(lhs.data(), rhs.data());
 }
 
 template <>
@@ -178,99 +178,97 @@ void TestUnparsing(std::string_view name, OptionType value, std::string_view exp
 }
 
 TEST(ParsingTests, DefaultBoolValue) {
-  ASSERT_NO_FATAL_FAILURES(TestParsing<bool>("test.option.bool", "", false));
+  ASSERT_NO_FATAL_FAILURE(TestParsing<bool>("test.option.bool", "", false));
 }
 
 TEST(ParsingTests, FalseyBoolValues) {
-  ASSERT_NO_FATAL_FAILURES(
+  ASSERT_NO_FATAL_FAILURE(
       TestUnparsing<bool>("test.option.bool", false, "test.option.bool=false\n"));
 
-  ASSERT_NO_FATAL_FAILURES(TestParsing<bool>("test.option.bool", "test.option.bool=0", false));
+  ASSERT_NO_FATAL_FAILURE(TestParsing<bool>("test.option.bool", "test.option.bool=0", false));
 
-  ASSERT_NO_FATAL_FAILURES(TestParsing<bool>("test.option.bool", "test.option.bool=off", false));
+  ASSERT_NO_FATAL_FAILURE(TestParsing<bool>("test.option.bool", "test.option.bool=off", false));
 }
 
 TEST(ParsingTests, TruthyBoolValues) {
-  ASSERT_NO_FATAL_FAILURES(TestParsing<bool>("test.option.bool", "test.option.bool=true", true));
+  ASSERT_NO_FATAL_FAILURE(TestParsing<bool>("test.option.bool", "test.option.bool=true", true));
 
   // A truthy value is by definition anything that isn't falsey (see above).
-  ASSERT_NO_FATAL_FAILURES(TestParsing<bool>("test.option.bool", "test.option.bool=", true));
-  ASSERT_NO_FATAL_FAILURES(
-      TestParsing<bool>("test.option.bool", "test.option.bool=anything", true));
+  ASSERT_NO_FATAL_FAILURE(TestParsing<bool>("test.option.bool", "test.option.bool=", true));
+  ASSERT_NO_FATAL_FAILURE(TestParsing<bool>("test.option.bool", "test.option.bool=anything", true));
 }
 
 TEST(UnparsingTests, FalseBoolValue) {
-  ASSERT_NO_FATAL_FAILURES(
+  ASSERT_NO_FATAL_FAILURE(
       TestUnparsing<bool>("test.option.bool", false, "test.option.bool=false\n"));
 }
 
 TEST(UnparsingTests, TrueBoolValue) {
-  ASSERT_NO_FATAL_FAILURES(
-      TestUnparsing<bool>("test.option.bool", true, "test.option.bool=true\n"));
+  ASSERT_NO_FATAL_FAILURE(TestUnparsing<bool>("test.option.bool", true, "test.option.bool=true\n"));
 }
 
 TEST(ParsingTests, DefaultUint32Value) {
-  ASSERT_NO_FATAL_FAILURES(TestParsing<uint32_t>("test.option.uint32", "", 123));
+  ASSERT_NO_FATAL_FAILURE(TestParsing<uint32_t>("test.option.uint32", "", 123));
 }
 
 TEST(ParsingTests, BasicUint32Value) {
-  ASSERT_NO_FATAL_FAILURES(
+  ASSERT_NO_FATAL_FAILURE(
       TestParsing<uint32_t>("test.option.uint32", "test.option.uint32=123", 123));
 }
 
 TEST(ParsingTests, HexUint32Value) {
-  ASSERT_NO_FATAL_FAILURES(
+  ASSERT_NO_FATAL_FAILURE(
       TestParsing<uint32_t>("test.option.uint32", "test.option.uint32=0x123", 0x123));
 }
 
 TEST(ParsingTests, NegativeUint32Value) {
-  ASSERT_NO_FATAL_FAILURES(
+  ASSERT_NO_FATAL_FAILURE(
       TestParsing<uint32_t>("test.option.uint32", "test.option.uint32=-123", ~uint32_t{123} + 1));
 }
 
 TEST(UnparsingTests, BasicUint32Value) {
-  ASSERT_NO_FATAL_FAILURES(
+  ASSERT_NO_FATAL_FAILURE(
       TestUnparsing<uint32_t>("test.option.uint32", 123, "test.option.uint32=0x7b\n"));
 }
 
 TEST(ParsingTests, DefaultUint64Value) {
-  ASSERT_NO_FATAL_FAILURES(TestParsing<uint64_t>("test.option.uint64", "", 456));
+  ASSERT_NO_FATAL_FAILURE(TestParsing<uint64_t>("test.option.uint64", "", 456));
 }
 
 TEST(ParsingTests, BasicUint64Value) {
-  ASSERT_NO_FATAL_FAILURES(
+  ASSERT_NO_FATAL_FAILURE(
       TestParsing<uint64_t>("test.option.uint64", "test.option.uint64=456", 456));
 }
 
 TEST(ParsingTests, HexUint64Value) {
-  ASSERT_NO_FATAL_FAILURES(
+  ASSERT_NO_FATAL_FAILURE(
       TestParsing<uint64_t>("test.option.uint64", "test.option.uint64=0x456", 0x456));
 }
 
 TEST(ParsingTests, NegativeUint64Value) {
-  ASSERT_NO_FATAL_FAILURES(
+  ASSERT_NO_FATAL_FAILURE(
       TestParsing<uint64_t>("test.option.uint64", "test.option.uint64=-456", ~uint64_t{456} + 1));
 }
 
 TEST(ParsingTests, LargeUint64Value) {
-  ASSERT_NO_FATAL_FAILURES(TestParsing<uint64_t>(
+  ASSERT_NO_FATAL_FAILURE(TestParsing<uint64_t>(
       "test.option.uint64", "test.option.uint64=0x87654321012345678", 0x7654321012345678));
 }
 
 TEST(UnparsingTests, BasicUint64Value) {
-  ASSERT_NO_FATAL_FAILURES(
+  ASSERT_NO_FATAL_FAILURE(
       TestUnparsing<uint64_t>("test.option.uint64", 456, "test.option.uint64=0x1c8\n"));
 }
 
 TEST(ParsingTests, DefaultSmallStringValue) {
-  ASSERT_NO_FATAL_FAILURES(
+  ASSERT_NO_FATAL_FAILURE(
       TestParsing<SmallString>("test.option.smallstring", "",
                                {'t', 'e', 's', 't', '-', 'd', 'e', 'f', 'a', 'u', 'l', 't', '-',
                                 'v', 'a', 'l', 'u', 'e', '\0'}));
 }
 
 TEST(ParsingTests, BasicSmallStringValue) {
-  ASSERT_NO_FATAL_FAILURES(
+  ASSERT_NO_FATAL_FAILURE(
       TestParsing<SmallString>("test.option.smallstring", "test.option.smallstring=new-value",
                                {'n', 'e', 'w', '-', 'v', 'a', 'l', 'u', 'e', '\0'}));
 }
@@ -292,112 +290,112 @@ TEST(ParsingTests, LargeSmallStringValue) {
       'a', 'b', 'c', '\0',                                                    //
   };
 
-  ASSERT_NO_FATAL_FAILURES(TestParsing<SmallString>("test.option.smallstring",
-                                                    "test.option.smallstring="  // Seven alphabets.
-                                                    "abcdefghijklmnopqrstuvwxyz"
-                                                    "abcdefghijklmnopqrstuvwxyz"
-                                                    "abcdefghijklmnopqrstuvwxyz"
-                                                    "abcdefghijklmnopqrstuvwxyz"
-                                                    "abcdefghijklmnopqrstuvwxyz"
-                                                    "abcdefghijklmnopqrstuvwxyz"
-                                                    "abcdefghijklmnopqrstuvwxyz",
-                                                    kSevenAlphabetsTruncated));
+  ASSERT_NO_FATAL_FAILURE(TestParsing<SmallString>("test.option.smallstring",
+                                                   "test.option.smallstring="  // Seven alphabets.
+                                                   "abcdefghijklmnopqrstuvwxyz"
+                                                   "abcdefghijklmnopqrstuvwxyz"
+                                                   "abcdefghijklmnopqrstuvwxyz"
+                                                   "abcdefghijklmnopqrstuvwxyz"
+                                                   "abcdefghijklmnopqrstuvwxyz"
+                                                   "abcdefghijklmnopqrstuvwxyz"
+                                                   "abcdefghijklmnopqrstuvwxyz",
+                                                   kSevenAlphabetsTruncated));
 }
 
 TEST(UnparsingTests, BasicSmallStringValue) {
-  ASSERT_NO_FATAL_FAILURES(TestUnparsing<SmallString>(
+  ASSERT_NO_FATAL_FAILURE(TestUnparsing<SmallString>(
       "test.option.smallstring", {'n', 'e', 'w', '-', 'v', 'a', 'l', 'u', 'e', '\0'},
       "test.option.smallstring=new-value\n"));
 }
 
 TEST(ParsingTests, DefaultEnumValue) {
-  ASSERT_NO_FATAL_FAILURES(TestParsing<TestEnum>("test.option.enum", "", TestEnum::kDefault));
-  ASSERT_NO_FATAL_FAILURES(
+  ASSERT_NO_FATAL_FAILURE(TestParsing<TestEnum>("test.option.enum", "", TestEnum::kDefault));
+  ASSERT_NO_FATAL_FAILURE(
       TestParsing<TestEnum>("test.option.enum", "test.option.enum=notanenum", TestEnum::kDefault));
 }
 
 TEST(ParsingTests, BasicEnumValues) {
-  ASSERT_NO_FATAL_FAILURES(
+  ASSERT_NO_FATAL_FAILURE(
       TestParsing<TestEnum>("test.option.enum", "test.option.enum=default", TestEnum::kDefault));
 
-  ASSERT_NO_FATAL_FAILURES(
+  ASSERT_NO_FATAL_FAILURE(
       TestParsing<TestEnum>("test.option.enum", "test.option.enum=value1", TestEnum::kValue1));
 
-  ASSERT_NO_FATAL_FAILURES(
+  ASSERT_NO_FATAL_FAILURE(
       TestParsing<TestEnum>("test.option.enum", "test.option.enum=value2", TestEnum::kValue2));
 }
 
 TEST(ParsingTests, UnknownEnumValue) {
-  ASSERT_NO_FATAL_FAILURES(
+  ASSERT_NO_FATAL_FAILURE(
       TestParsing<TestEnum>("test.option.enum", "test.option.enum=unknown", TestEnum::kDefault));
 }
 
 TEST(UnparsingTests, BasicEnumValues) {
-  ASSERT_NO_FATAL_FAILURES(TestUnparsing<TestEnum>("test.option.enum", TestEnum::kDefault,
-                                                   "test.option.enum=default\n"));
+  ASSERT_NO_FATAL_FAILURE(TestUnparsing<TestEnum>("test.option.enum", TestEnum::kDefault,
+                                                  "test.option.enum=default\n"));
 
-  ASSERT_NO_FATAL_FAILURES(
+  ASSERT_NO_FATAL_FAILURE(
       TestUnparsing<TestEnum>("test.option.enum", TestEnum::kValue1, "test.option.enum=value1\n"));
 
-  ASSERT_NO_FATAL_FAILURES(
+  ASSERT_NO_FATAL_FAILURE(
       TestUnparsing<TestEnum>("test.option.enum", TestEnum::kValue2, "test.option.enum=value2\n"));
 }
 
 TEST(ParsingTests, DefaultStructValue) {
-  ASSERT_NO_FATAL_FAILURES(TestParsing<TestStruct>("test.option.struct", "", {}));
-  ASSERT_NO_FATAL_FAILURES(
+  ASSERT_NO_FATAL_FAILURE(TestParsing<TestStruct>("test.option.struct", "", {}));
+  ASSERT_NO_FATAL_FAILURE(
       TestParsing<TestStruct>("test.option.struct", "test.option.struct=notvalidthingy", {}));
 }
 
 TEST(ParsingTests, BasicStructValue) {
-  ASSERT_NO_FATAL_FAILURES(
+  ASSERT_NO_FATAL_FAILURE(
       TestParsing<TestStruct>("test.option.struct", "test.option.struct=test", {.present = true}));
 }
 
 TEST(ParsingTests, UnparsableStructValue) {
-  ASSERT_NO_FATAL_FAILURES(TestParsing<TestStruct>(
+  ASSERT_NO_FATAL_FAILURE(TestParsing<TestStruct>(
       // We expect no change from the default value.
       "test.option.struct", "test.option.struct=unparsable", {}));
 }
 
 TEST(UnparsingTests, BasicStructValue) {
-  ASSERT_NO_FATAL_FAILURES(TestUnparsing<TestStruct>("test.option.struct", {.present = true},
-                                                     "test.option.struct=test\n"));
+  ASSERT_NO_FATAL_FAILURE(TestUnparsing<TestStruct>("test.option.struct", {.present = true},
+                                                    "test.option.struct=test\n"));
 }
 
 TEST(UnparsingTests, EmptyStructValue) {
-  ASSERT_NO_FATAL_FAILURES(
+  ASSERT_NO_FATAL_FAILURE(
       TestUnparsing<TestStruct>("test.option.struct", {}, "test.option.struct=test\n"));
 }
 
 TEST(ParsingTests, DefaultRedatedHexValue) {
-  ASSERT_NO_FATAL_FAILURES(TestParsing<RedactedHex>("test.option.redacted_hex", "", {}));
-  ASSERT_NO_FATAL_FAILURES(TestParsing<RedactedHex>("test.option.redacted_hex",
-                                                    "test.option.redacted_hex=THISISNOTHEX", {}));
+  ASSERT_NO_FATAL_FAILURE(TestParsing<RedactedHex>("test.option.redacted_hex", "", {}));
+  ASSERT_NO_FATAL_FAILURE(TestParsing<RedactedHex>("test.option.redacted_hex",
+                                                   "test.option.redacted_hex=THISISNOTHEX", {}));
 }
 
 TEST(ParsingTests, BasicRedatedHexValue) {
   // If we inline, the string will point to rodata, which will result in a
   // segmentation fault on redaction.
   const char to_set[] = "test.option.redacted_hex=abc123";
-  ASSERT_NO_FATAL_FAILURES(TestParsing<RedactedHex>("test.option.redacted_hex", to_set,
-                                                    {
-                                                        .hex = {'a', 'b', 'c', '1', '2', '3', '\0'},
-                                                        .len = 6,
-                                                    }));
-  EXPECT_STR_EQ("test.option.redacted_hex=xxxxxx", to_set);
+  ASSERT_NO_FATAL_FAILURE(TestParsing<RedactedHex>("test.option.redacted_hex", to_set,
+                                                   {
+                                                       .hex = {'a', 'b', 'c', '1', '2', '3', '\0'},
+                                                       .len = 6,
+                                                   }));
+  EXPECT_STREQ("test.option.redacted_hex=xxxxxx", to_set);
 }
 
 TEST(ParsingTests, NonHexRedatedHexValue) {
   // We expect neither the updating of the BootOptions member nor redaction
   // when non-hex characters are present (e.g., 'x', 'y', or 'z').
   const char to_set[] = "test.option.redacted_hex=xyz123";
-  ASSERT_NO_FATAL_FAILURES(TestParsing<RedactedHex>("test.option.redacted_hex", to_set, {}));
-  EXPECT_STR_EQ("test.option.redacted_hex=xyz123", to_set);
+  ASSERT_NO_FATAL_FAILURE(TestParsing<RedactedHex>("test.option.redacted_hex", to_set, {}));
+  EXPECT_STREQ("test.option.redacted_hex=xyz123", to_set);
 }
 
 TEST(UnparsingTests, BasicRedatedHexValue) {
-  ASSERT_NO_FATAL_FAILURES(
+  ASSERT_NO_FATAL_FAILURE(
       TestUnparsing<RedactedHex>("test.option.redacted_hex",
                                  {
                                      .hex = {'a', 'b', 'c', '1', '2', '3', '\0'},
@@ -407,7 +405,7 @@ TEST(UnparsingTests, BasicRedatedHexValue) {
 }
 
 TEST(UnparsingTests, EmptyRedatedHexValue) {
-  ASSERT_NO_FATAL_FAILURES(
+  ASSERT_NO_FATAL_FAILURE(
       TestUnparsing<RedactedHex>("test.option.redacted_hex", {}, "test.option.redacted_hex=\n"));
 }
 
@@ -517,12 +515,12 @@ TEST(BootOptionTests, StringSanitization) {
 }
 
 TEST(ParsingTests, EmptyRamReservation) {
-  ASSERT_NO_FATAL_FAILURES(TestParsing<std::optional<RamReservation>>(
+  ASSERT_NO_FATAL_FAILURE(TestParsing<std::optional<RamReservation>>(
       "kernel.test.ram.reserve", "kernel.test.ram.reserve=", std::nullopt));
 }
 
 TEST(UnparsingTests, EmptyRamReservation) {
-  ASSERT_NO_FATAL_FAILURES(TestUnparsing<std::optional<RamReservation>>(
+  ASSERT_NO_FATAL_FAILURE(TestUnparsing<std::optional<RamReservation>>(
       "kernel.test.ram.reserve", std::nullopt, "kernel.test.ram.reserve=\n"));
 }
 
@@ -533,23 +531,23 @@ constexpr RamReservation kTestRamReservationWithPaddr = {
 };
 
 TEST(ParsingTests, RamReservation) {
-  ASSERT_NO_FATAL_FAILURES(TestParsing<std::optional<RamReservation>>(
+  ASSERT_NO_FATAL_FAILURE(TestParsing<std::optional<RamReservation>>(
       "kernel.test.ram.reserve", "kernel.test.ram.reserve=0x8000", kTestRamReservation));
 }
 
 TEST(UnparsingTests, RamReservation) {
-  ASSERT_NO_FATAL_FAILURES(TestUnparsing<std::optional<RamReservation>>(
+  ASSERT_NO_FATAL_FAILURE(TestUnparsing<std::optional<RamReservation>>(
       "kernel.test.ram.reserve", kTestRamReservation, "kernel.test.ram.reserve=0x8000\n"));
 }
 
 TEST(ParsingTests, RamReservationWithPaddr) {
-  ASSERT_NO_FATAL_FAILURES(TestParsing<std::optional<RamReservation>>(
+  ASSERT_NO_FATAL_FAILURE(TestParsing<std::optional<RamReservation>>(
       "kernel.test.ram.reserve", "kernel.test.ram.reserve=0x8000,0x1234000",
       kTestRamReservationWithPaddr));
 }
 
 TEST(UnparsingTests, RamReservationWithPaddr) {
-  ASSERT_NO_FATAL_FAILURES(TestUnparsing<std::optional<RamReservation>>(
+  ASSERT_NO_FATAL_FAILURE(TestUnparsing<std::optional<RamReservation>>(
       "kernel.test.ram.reserve", kTestRamReservationWithPaddr,
       "kernel.test.ram.reserve=0x8000,0x1234000\n"));
 }

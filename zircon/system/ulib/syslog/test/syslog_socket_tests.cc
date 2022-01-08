@@ -62,7 +62,7 @@ void output_compare_helper(zx::socket local, fx_log_severity_t severity, const c
   ASSERT_EQ(0, packet.data[pos]);
   pos++;
   const char* file = severity > FX_LOG_INFO ? kFilePath : kFileName;
-  EXPECT_STR_EQ(fbl::StringPrintf("[%s(%d)] %s", file, line, msg), packet.data + pos, "");
+  EXPECT_STREQ(fbl::StringPrintf("[%s(%d)] %s", file, line, msg), packet.data + pos, "");
 }
 
 }  // namespace

@@ -92,7 +92,7 @@ TEST(Handles, close_multiple_present_handles_with_some_invalid) {
   // in the message must still be closed despite the error.
   EXPECT_EQ(status, ZX_ERR_INVALID_ARGS);
   const char expected_error_msg[] = "message is missing a non-nullable handle";
-  EXPECT_STR_EQ(expected_error_msg, error, "wrong error msg");
+  EXPECT_STREQ(expected_error_msg, error, "wrong error msg");
 
   // Second channel should remain valid, since it was inaccessible to fidl_close_handles
   helper_expect_peer_invalid(channels_1[0].get());

@@ -7,8 +7,8 @@
 #include <sdk/lib/inspect/testing/cpp/zxtest/inspect.h>
 #include <zxtest/zxtest.h>
 
-#include "tools/create/goldens/my-driver-cpp/my_driver_cpp.h"
 #include "src/devices/testing/mock-ddk/mock-device.h"
+#include "tools/create/goldens/my-driver-cpp/my_driver_cpp.h"
 
 namespace my_driver_cpp {
 
@@ -37,15 +37,15 @@ TEST_F(MyDriverCppTest, LifetimeTest) {
 TEST_F(MyDriverCppTest, InspectTest) {
   auto device = new MyDriverCpp(fake_root_.get());
   // Verify is_bound = false.
-  ASSERT_NO_FATAL_FAILURES(ReadInspect(device->inspect_vmo()));
-  ASSERT_NO_FATAL_FAILURES(
+  ASSERT_NO_FATAL_FAILURE(ReadInspect(device->inspect_vmo()));
+  ASSERT_NO_FATAL_FAILURE(
       CheckProperty(hierarchy().node(), "is_bound", inspect::BoolPropertyValue(false)));
 
   ASSERT_OK(device->Bind());
 
   // Verify is_bound = true.
-  ASSERT_NO_FATAL_FAILURES(ReadInspect(device->inspect_vmo()));
-  ASSERT_NO_FATAL_FAILURES(
+  ASSERT_NO_FATAL_FAILURE(ReadInspect(device->inspect_vmo()));
+  ASSERT_NO_FATAL_FAILURE(
       CheckProperty(hierarchy().node(), "is_bound", inspect::BoolPropertyValue(true)));
 
   device->zxdev()->InitOp();

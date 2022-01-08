@@ -29,12 +29,12 @@ TEST(PerfTestResults, TestJsonOutput) {
   FILE* fp = fmemopen(buf, sizeof(buf), "w+");
   ASSERT_TRUE(fp);
   results.WriteJSON(fp);
-  ASSERT_NO_FATAL_FAILURES(FixUpFileBuffer(fp, buf, sizeof(buf)));
+  ASSERT_NO_FATAL_FAILURE(FixUpFileBuffer(fp, buf, sizeof(buf)));
 
   // Test the JSON output.
   const char* expected =
       R"JSON([{"label":"ExampleNullSyscall","test_suite":"results_test","unit":"nanoseconds","values":[101.000000,102.000000,103.000000,104.000000,105.000000]}])JSON";
-  EXPECT_STR_EQ(expected, buf, "");
+  EXPECT_STREQ(expected, buf, "");
 }
 
 TEST(PerfTestResults, TestSummaryStatistics) {
@@ -67,8 +67,8 @@ TEST(PerfTestResults, TestJsonStringEscaping) {
   FILE* fp = fmemopen(buf, sizeof(buf), "w+");
   ASSERT_TRUE(fp);
   perftest::WriteJSONString(fp, "foo \"bar\" \\ \n \xff");
-  ASSERT_NO_FATAL_FAILURES(FixUpFileBuffer(fp, buf, sizeof(buf)));
+  ASSERT_NO_FATAL_FAILURE(FixUpFileBuffer(fp, buf, sizeof(buf)));
 
   const char* expected = "\"foo \\\"bar\\\" \\\\ \\u000a \\u00ff\"";
-  EXPECT_STR_EQ(expected, buf, "");
+  EXPECT_STREQ(expected, buf, "");
 }

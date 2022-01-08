@@ -199,10 +199,10 @@ TEST(LogListenerTests, TestLog) {
   ASSERT_EQ(ZX_OK, ReceiveLogMessage(listener));
 
   fflush(buf_file);
-  ASSERT_STR_EQ(R"([00093.892493][1024][1034][] INFO: my message
+  ASSERT_STREQ(R"([00093.892493][1024][1034][] INFO: my message
 [00093.892493][1024][1034][tag123] INFO: my message
 )",
-                buf);
+               buf);
 
   LogMessage msg3("my message", {"tag123", "tag2"});
   ASSERT_EQ(ZX_OK, SendLogMessage(listener, std::move(msg3)));
@@ -210,11 +210,11 @@ TEST(LogListenerTests, TestLog) {
   ASSERT_EQ(ZX_OK, ReceiveLogMessage(listener));
 
   fflush(buf_file);
-  ASSERT_STR_EQ(R"([00093.892493][1024][1034][] INFO: my message
+  ASSERT_STREQ(R"([00093.892493][1024][1034][] INFO: my message
 [00093.892493][1024][1034][tag123] INFO: my message
 [00093.892493][1024][1034][tag123, tag2] INFO: my message
 )",
-                buf);
+               buf);
 }
 
 TEST(LogListenerTests, TestLogMany) {
@@ -240,10 +240,10 @@ TEST(LogListenerTests, TestLogMany) {
   ASSERT_EQ(ZX_OK, ReceiveLogMessages(listener));
   fflush(buf_file);
 
-  ASSERT_STR_EQ(R"([00093.892493][1024][1034][] INFO: my message
+  ASSERT_STREQ(R"([00093.892493][1024][1034][] INFO: my message
 [00093.892493][1024][1034][tag1, tag2] INFO: my message2
 )",
-                buf);
+               buf);
   LogMessage msg3("my message", {"tag1"});
   msgs.reset();
   msgs.push_back(std::move(msg3));
@@ -252,11 +252,11 @@ TEST(LogListenerTests, TestLogMany) {
   ASSERT_EQ(ZX_OK, ReceiveLogMessages(listener));
 
   fflush(buf_file);
-  ASSERT_STR_EQ(R"([00093.892493][1024][1034][] INFO: my message
+  ASSERT_STREQ(R"([00093.892493][1024][1034][] INFO: my message
 [00093.892493][1024][1034][tag1, tag2] INFO: my message2
 [00093.892493][1024][1034][tag1] INFO: my message
 )",
-                buf);
+               buf);
 }
 
 TEST(LogListenerTests, TestDroppedLogs) {
@@ -298,7 +298,7 @@ TEST(LogListenerTests, TestDroppedLogs) {
   ASSERT_EQ(ZX_OK, ReceiveLogMessage(listener));
 
   fflush(buf_file);
-  ASSERT_STR_EQ(R"([00093.892493][1024][1034][] INFO: my message1
+  ASSERT_STREQ(R"([00093.892493][1024][1034][] INFO: my message1
 [00093.892493][1024][1034][] WARNING: Dropped logs count:1
 [00093.892493][1024][1034][] INFO: my message2
 [00093.892493][1011][1034][] INFO: my message3
@@ -309,7 +309,7 @@ TEST(LogListenerTests, TestDroppedLogs) {
 [00093.892493][1024][1034][] INFO: my message6
 [00093.892493][1024][1034][] WARNING: Dropped logs count:2
 )",
-                buf);
+               buf);
 }
 
 TEST(LogListenerTests, TestBadOutputFile) {
@@ -329,7 +329,7 @@ TEST(LogListenerTests, TestBadOutputFile) {
   ASSERT_EQ(ZX_OK, SendLogMessage(listener, std::move(msg1)));
   ASSERT_EQ(ZX_OK, log_listener->RunUntilIdle());
 
-  ASSERT_STR_EQ("", buf);
+  ASSERT_STREQ("", buf);
 }
 
 }  // namespace

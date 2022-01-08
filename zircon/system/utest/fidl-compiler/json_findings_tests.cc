@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fstream>
-
 #include <fidl/findings_json.h>
 #include <fidl/template_string.h>
 #include <fidl/utils.h>
+
+#include <fstream>
 
 #include "test_library.h"
 #include "unittest_helpers.h"
@@ -15,8 +15,8 @@ namespace fidl {
 
 namespace {
 
-#define ASSERT_JSON(TEST, JSON)                    \
-  ASSERT_NO_FATAL_FAILURES(TEST.ExpectJson(JSON)); \
+#define ASSERT_JSON(TEST, JSON)                   \
+  ASSERT_NO_FATAL_FAILURE(TEST.ExpectJson(JSON)); \
   TEST.Reset()
 
 void FindingsEmitThisJson(Findings& findings, std::string expected_json) {
@@ -519,7 +519,7 @@ protocol TestProtocol {
   Findings findings;
   ASSERT_FALSE(library->Lint(&findings));
 
-  ASSERT_NO_FATAL_FAILURES(FindingsEmitThisJson(findings, R"JSON([
+  ASSERT_NO_FATAL_FAILURE(FindingsEmitThisJson(findings, R"JSON([
   {
     "category": "fidl-lint/event-names-must-start-with-on",
     "message": "Event names must start with 'On'",

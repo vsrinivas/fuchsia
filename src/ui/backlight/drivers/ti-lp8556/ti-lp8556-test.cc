@@ -105,8 +105,8 @@ class Lp8556DeviceTest : public zxtest::Test, public inspect::InspectTestHelper 
     }
     EXPECT_OK(dev_->SetBacklightState(power, brightness));
 
-    ASSERT_NO_FATAL_FAILURES(mock_regs_[BrightnessStickyReg::Get().addr()].VerifyAndClear());
-    ASSERT_NO_FATAL_FAILURES(mock_i2c_.VerifyAndClear());
+    ASSERT_NO_FATAL_FAILURE(mock_regs_[BrightnessStickyReg::Get().addr()].VerifyAndClear());
+    ASSERT_NO_FATAL_FAILURE(mock_i2c_.VerifyAndClear());
   }
 
  protected:
@@ -197,8 +197,8 @@ TEST_F(Lp8556DeviceTest, InitRegisters) {
 
   EXPECT_OK(dev_->Init());
 
-  ASSERT_NO_FATAL_FAILURES(mock_regs_[BrightnessStickyReg::Get().addr()].VerifyAndClear());
-  ASSERT_NO_FATAL_FAILURES(mock_i2c_.VerifyAndClear());
+  ASSERT_NO_FATAL_FAILURE(mock_regs_[BrightnessStickyReg::Get().addr()].VerifyAndClear());
+  ASSERT_NO_FATAL_FAILURE(mock_i2c_.VerifyAndClear());
 }
 
 TEST_F(Lp8556DeviceTest, InitNoRegisters) {
@@ -218,8 +218,8 @@ TEST_F(Lp8556DeviceTest, InitNoRegisters) {
 
   EXPECT_OK(dev_->Init());
 
-  ASSERT_NO_FATAL_FAILURES(mock_regs_[BrightnessStickyReg::Get().addr()].VerifyAndClear());
-  ASSERT_NO_FATAL_FAILURES(mock_i2c_.VerifyAndClear());
+  ASSERT_NO_FATAL_FAILURE(mock_regs_[BrightnessStickyReg::Get().addr()].VerifyAndClear());
+  ASSERT_NO_FATAL_FAILURE(mock_i2c_.VerifyAndClear());
 }
 
 TEST_F(Lp8556DeviceTest, InitInvalidRegisters) {
@@ -239,8 +239,8 @@ TEST_F(Lp8556DeviceTest, InitInvalidRegisters) {
 
   EXPECT_NOT_OK(dev_->Init());
 
-  ASSERT_NO_FATAL_FAILURES(mock_regs_[BrightnessStickyReg::Get().addr()].VerifyAndClear());
-  ASSERT_NO_FATAL_FAILURES(mock_i2c_.VerifyAndClear());
+  ASSERT_NO_FATAL_FAILURE(mock_regs_[BrightnessStickyReg::Get().addr()].VerifyAndClear());
+  ASSERT_NO_FATAL_FAILURE(mock_i2c_.VerifyAndClear());
 }
 
 TEST_F(Lp8556DeviceTest, InitTooManyRegisters) {
@@ -258,8 +258,8 @@ TEST_F(Lp8556DeviceTest, InitTooManyRegisters) {
 
   EXPECT_NOT_OK(dev_->Init());
 
-  ASSERT_NO_FATAL_FAILURES(mock_regs_[BrightnessStickyReg::Get().addr()].VerifyAndClear());
-  ASSERT_NO_FATAL_FAILURES(mock_i2c_.VerifyAndClear());
+  ASSERT_NO_FATAL_FAILURE(mock_regs_[BrightnessStickyReg::Get().addr()].VerifyAndClear());
+  ASSERT_NO_FATAL_FAILURE(mock_i2c_.VerifyAndClear());
 }
 
 TEST_F(Lp8556DeviceTest, OverwriteStickyRegister) {
@@ -321,8 +321,8 @@ TEST_F(Lp8556DeviceTest, OverwriteStickyRegister) {
   EXPECT_TRUE(result.ok());
   EXPECT_FALSE(result.value().result.is_err());
 
-  ASSERT_NO_FATAL_FAILURES(mock_regs_[BrightnessStickyReg::Get().addr()].VerifyAndClear());
-  ASSERT_NO_FATAL_FAILURES(mock_i2c_.VerifyAndClear());
+  ASSERT_NO_FATAL_FAILURE(mock_regs_[BrightnessStickyReg::Get().addr()].VerifyAndClear());
+  ASSERT_NO_FATAL_FAILURE(mock_i2c_.VerifyAndClear());
 }
 
 TEST_F(Lp8556DeviceTest, ReadDefaultCurrentScale) {
@@ -363,8 +363,8 @@ TEST_F(Lp8556DeviceTest, ReadDefaultCurrentScale) {
   EXPECT_TRUE(
       FloatNear(result.value().result.response().scale, static_cast<double>(0xe05) / 0xfff));
 
-  ASSERT_NO_FATAL_FAILURES(mock_regs_[BrightnessStickyReg::Get().addr()].VerifyAndClear());
-  ASSERT_NO_FATAL_FAILURES(mock_i2c_.VerifyAndClear());
+  ASSERT_NO_FATAL_FAILURE(mock_regs_[BrightnessStickyReg::Get().addr()].VerifyAndClear());
+  ASSERT_NO_FATAL_FAILURE(mock_i2c_.VerifyAndClear());
 }
 
 TEST_F(Lp8556DeviceTest, SetCurrentScale) {
@@ -414,8 +414,8 @@ TEST_F(Lp8556DeviceTest, SetCurrentScale) {
   EXPECT_TRUE(
       FloatNear(get_result.value().result.response().scale, static_cast<double>(0x2ab) / 0xfff));
 
-  ASSERT_NO_FATAL_FAILURES(mock_regs_[BrightnessStickyReg::Get().addr()].VerifyAndClear());
-  ASSERT_NO_FATAL_FAILURES(mock_i2c_.VerifyAndClear());
+  ASSERT_NO_FATAL_FAILURE(mock_regs_[BrightnessStickyReg::Get().addr()].VerifyAndClear());
+  ASSERT_NO_FATAL_FAILURE(mock_i2c_.VerifyAndClear());
 }
 
 TEST_F(Lp8556DeviceTest, SetAbsoluteBrightnessScaleReset) {
@@ -485,8 +485,8 @@ TEST_F(Lp8556DeviceTest, SetAbsoluteBrightnessScaleReset) {
   EXPECT_TRUE(absolute_result_2.ok());
   EXPECT_FALSE(absolute_result_2.value().result.is_err());
 
-  ASSERT_NO_FATAL_FAILURES(mock_regs_[BrightnessStickyReg::Get().addr()].VerifyAndClear());
-  ASSERT_NO_FATAL_FAILURES(mock_i2c_.VerifyAndClear());
+  ASSERT_NO_FATAL_FAILURE(mock_regs_[BrightnessStickyReg::Get().addr()].VerifyAndClear());
+  ASSERT_NO_FATAL_FAILURE(mock_i2c_.VerifyAndClear());
 }
 
 TEST_F(Lp8556DeviceTest, Inspect) {

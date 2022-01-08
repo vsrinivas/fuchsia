@@ -276,7 +276,7 @@ TEST(AmlSpiTest, Exchange) {
 
   EXPECT_FALSE(bind.ControllerReset());
 
-  ASSERT_NO_FATAL_FAILURES(bind.gpio().VerifyAndClear());
+  ASSERT_NO_FATAL_FAILURE(bind.gpio().VerifyAndClear());
 }
 
 TEST(AmlSpiTest, RegisterVmo) {
@@ -348,7 +348,7 @@ TEST(AmlSpiTest, Transmit) {
 
   EXPECT_FALSE(bind.ControllerReset());
 
-  ASSERT_NO_FATAL_FAILURES(bind.gpio().VerifyAndClear());
+  ASSERT_NO_FATAL_FAILURE(bind.gpio().VerifyAndClear());
 }
 
 TEST(AmlSpiTest, ReceiveVmo) {
@@ -385,7 +385,7 @@ TEST(AmlSpiTest, ReceiveVmo) {
 
   EXPECT_FALSE(bind.ControllerReset());
 
-  ASSERT_NO_FATAL_FAILURES(bind.gpio().VerifyAndClear());
+  ASSERT_NO_FATAL_FAILURE(bind.gpio().VerifyAndClear());
 }
 
 TEST(AmlSpiTest, ExchangeVmo) {
@@ -427,7 +427,7 @@ TEST(AmlSpiTest, ExchangeVmo) {
 
   EXPECT_FALSE(bind.ControllerReset());
 
-  ASSERT_NO_FATAL_FAILURES(bind.gpio().VerifyAndClear());
+  ASSERT_NO_FATAL_FAILURE(bind.gpio().VerifyAndClear());
 }
 
 TEST(AmlSpiTest, TransfersOutOfRange) {
@@ -475,7 +475,7 @@ TEST(AmlSpiTest, TransfersOutOfRange) {
   EXPECT_NOT_OK(spi0.SpiImplReceiveVmo(1, 1, 4, 1));
   EXPECT_NOT_OK(spi0.SpiImplReceiveVmo(1, 1, 5, 1));
 
-  ASSERT_NO_FATAL_FAILURES(bind.gpio().VerifyAndClear());
+  ASSERT_NO_FATAL_FAILURE(bind.gpio().VerifyAndClear());
 }
 
 TEST(AmlSpiTest, VmoBadRights) {
@@ -511,7 +511,7 @@ TEST(AmlSpiTest, VmoBadRights) {
   EXPECT_EQ(spi1.SpiImplExchangeVmo(0, 1, 0, 1, 128, 128), ZX_ERR_ACCESS_DENIED);
   EXPECT_EQ(spi1.SpiImplReceiveVmo(0, 1, 0, 128), ZX_ERR_ACCESS_DENIED);
 
-  ASSERT_NO_FATAL_FAILURES(bind.gpio().VerifyAndClear());
+  ASSERT_NO_FATAL_FAILURE(bind.gpio().VerifyAndClear());
 }
 
 TEST(AmlSpiTest, Exchange64BitWords) {
@@ -550,7 +550,7 @@ TEST(AmlSpiTest, Exchange64BitWords) {
 
   EXPECT_FALSE(bind.ControllerReset());
 
-  ASSERT_NO_FATAL_FAILURES(bind.gpio().VerifyAndClear());
+  ASSERT_NO_FATAL_FAILURE(bind.gpio().VerifyAndClear());
 }
 
 TEST(AmlSpiTest, Exchange64Then8BitWords) {
@@ -586,7 +586,7 @@ TEST(AmlSpiTest, Exchange64Then8BitWords) {
 
   EXPECT_FALSE(bind.ControllerReset());
 
-  ASSERT_NO_FATAL_FAILURES(bind.gpio().VerifyAndClear());
+  ASSERT_NO_FATAL_FAILURE(bind.gpio().VerifyAndClear());
 }
 
 TEST(AmlSpiTest, ExchangeResetsController) {
@@ -636,7 +636,7 @@ TEST(AmlSpiTest, ExchangeResetsController) {
   EXPECT_EQ(rx_actual, 8);
   EXPECT_TRUE(bind.ControllerReset());
 
-  ASSERT_NO_FATAL_FAILURES(bind.gpio().VerifyAndClear());
+  ASSERT_NO_FATAL_FAILURE(bind.gpio().VerifyAndClear());
 }
 
 TEST(AmlSpiTest, ExchangeWithNoResetFragment) {
@@ -685,7 +685,7 @@ TEST(AmlSpiTest, ExchangeWithNoResetFragment) {
   EXPECT_EQ(rx_actual, 8);
   EXPECT_FALSE(bind.ControllerReset());
 
-  ASSERT_NO_FATAL_FAILURES(bind.gpio().VerifyAndClear());
+  ASSERT_NO_FATAL_FAILURE(bind.gpio().VerifyAndClear());
 }
 
 TEST(AmlSpiTest, ReleaseVmos) {

@@ -23,7 +23,7 @@ void ReadWrite(zxio_t* io) {
   actual = 0u;
   ASSERT_OK(zxio_read(io, buffer, 1024, 0, &actual));
   EXPECT_EQ(actual, 2u);
-  EXPECT_STR_EQ("cd", buffer);
+  EXPECT_STREQ("cd", buffer);
   memset(buffer, 0, sizeof(buffer));
 
   actual = 2;
@@ -33,7 +33,7 @@ void ReadWrite(zxio_t* io) {
   actual = 0u;
   ASSERT_OK(zxio_read_at(io, 1, buffer, 1024, 0, &actual));
   EXPECT_EQ(actual, 3u);
-  EXPECT_STR_EQ("xyd", buffer);
+  EXPECT_STREQ("xyd", buffer);
   memset(buffer, 0, sizeof(buffer));
 }
 

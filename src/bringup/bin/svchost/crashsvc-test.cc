@@ -67,7 +67,7 @@ void CreateMiniProcess(const zx::job& job, zx::process* process, zx::thread* thr
 // Creates a mini-process under |job| and tells it to crash.
 void CreateAndCrashProcess(const zx::job& job, zx::process* process, zx::thread* thread) {
   zx::channel command_channel;
-  ASSERT_NO_FATAL_FAILURES(CreateMiniProcess(job, process, thread, &command_channel));
+  ASSERT_NO_FATAL_FAILURE(CreateMiniProcess(job, process, thread, &command_channel));
 
   // Use mini_process_cmd_send() here to send but not wait for a response
   // so we can handle the exception.
@@ -79,7 +79,7 @@ void CreateAndCrashProcess(const zx::job& job, zx::process* process, zx::thread*
 // Blocks until the mini-process thread has successfully resumed.
 void CreateAndBacktraceProcess(const zx::job& job, zx::process* process, zx::thread* thread) {
   zx::channel command_channel;
-  ASSERT_NO_FATAL_FAILURES(CreateMiniProcess(job, process, thread, &command_channel));
+  ASSERT_NO_FATAL_FAILURE(CreateMiniProcess(job, process, thread, &command_channel));
 
   // Use mini_process_cmd() here to send and block until we get a response.
   printf("Intentionally dumping test thread '%s', the following dump is expected\n", kTaskName);
@@ -103,7 +103,7 @@ TEST(crashsvc, ThreadCrashNoExceptionHandler) {
 
   zx::process process;
   zx::thread thread;
-  ASSERT_NO_FATAL_FAILURES(CreateAndCrashProcess(job, &process, &thread));
+  ASSERT_NO_FATAL_FAILURE(CreateAndCrashProcess(job, &process, &thread));
 
   // crashsvc should pass exception handling up the chain when done. Once we
   // get the exception, kill the job which will stop exception handling and
@@ -128,7 +128,7 @@ TEST(crashsvc, ThreadBacktraceNoExceptionHandler) {
 
   zx::process process;
   zx::thread thread;
-  ASSERT_NO_FATAL_FAILURES(CreateAndBacktraceProcess(job, &process, &thread));
+  ASSERT_NO_FATAL_FAILURE(CreateAndBacktraceProcess(job, &process, &thread));
 
   // The backtrace request exception should not make it out of crashsvc.
   ASSERT_EQ(exception_channel.wait_one(ZX_CHANNEL_READABLE, zx::time(0), nullptr),
@@ -148,7 +148,7 @@ void AnalyzeCrash(async::Loop* loop, const zx::job& parent_job, const zx::job& j
 
   zx::process process;
   zx::thread thread;
-  ASSERT_NO_FATAL_FAILURES(CreateAndCrashProcess(job, &process, &thread));
+  ASSERT_NO_FATAL_FAILURE(CreateAndCrashProcess(job, &process, &thread));
 
   // Run the loop until the exception filters up to our job handler.
   async::Wait wait(exception_channel.get(), ZX_CHANNEL_READABLE, 0, [&loop](...) { loop->Quit(); });
@@ -258,13 +258,13 @@ TEST(crashsvc, ExceptionHandlerSuccess) {
   FakeService test_svc(loop.dispatcher());
 
   Jobs jobs;
-  ASSERT_NO_FATAL_FAILURES(GetTestJobs(&jobs));
+  ASSERT_NO_FATAL_FAILURE(GetTestJobs(&jobs));
 
   // Start crashsvc.
   thrd_t cthread;
   ASSERT_OK(start_crashsvc(std::move(jobs.job_copy), test_svc.service_channel().get(), &cthread));
 
-  ASSERT_NO_FATAL_FAILURES(AnalyzeCrash(&loop, jobs.parent_job, jobs.job));
+  ASSERT_NO_FATAL_FAILURE(AnalyzeCrash(&loop, jobs.parent_job, jobs.job));
   EXPECT_EQ(test_svc.exception_handler().exception_count(), 1);
 
   // Kill the test job so that the exception doesn't bubble outside of this test.
@@ -277,7 +277,7 @@ TEST(crashsvc, ExceptionHandlerAsync) {
   FakeService test_svc(loop.dispatcher());
 
   Jobs jobs;
-  ASSERT_NO_FATAL_FAILURES(GetTestJobs(&jobs));
+  ASSERT_NO_FATAL_FAILURE(GetTestJobs(&jobs));
 
   // We tell the stub exception handler to not respond immediately to test that this does not block
   // crashsvc from further processing other exceptions.
@@ -287,10 +287,10 @@ TEST(crashsvc, ExceptionHandlerAsync) {
   thrd_t cthread;
   ASSERT_OK(start_crashsvc(std::move(jobs.job_copy), test_svc.service_channel().get(), &cthread));
 
-  ASSERT_NO_FATAL_FAILURES(AnalyzeCrash(&loop, jobs.parent_job, jobs.job));
-  ASSERT_NO_FATAL_FAILURES(AnalyzeCrash(&loop, jobs.parent_job, jobs.job));
-  ASSERT_NO_FATAL_FAILURES(AnalyzeCrash(&loop, jobs.parent_job, jobs.job));
-  ASSERT_NO_FATAL_FAILURES(AnalyzeCrash(&loop, jobs.parent_job, jobs.job));
+  ASSERT_NO_FATAL_FAILURE(AnalyzeCrash(&loop, jobs.parent_job, jobs.job));
+  ASSERT_NO_FATAL_FAILURE(AnalyzeCrash(&loop, jobs.parent_job, jobs.job));
+  ASSERT_NO_FATAL_FAILURE(AnalyzeCrash(&loop, jobs.parent_job, jobs.job));
+  ASSERT_NO_FATAL_FAILURE(AnalyzeCrash(&loop, jobs.parent_job, jobs.job));
   EXPECT_EQ(test_svc.exception_handler().exception_count(), 4);
 
   // We now tell the stub exception handler to respond all the pending requests it had, which would
@@ -307,17 +307,17 @@ TEST(crashsvc, MultipleThreadExceptionHandler) {
   FakeService test_svc(loop.dispatcher());
 
   Jobs jobs;
-  ASSERT_NO_FATAL_FAILURES(GetTestJobs(&jobs));
+  ASSERT_NO_FATAL_FAILURE(GetTestJobs(&jobs));
 
   // Start crashsvc.
   thrd_t cthread;
   ASSERT_OK(start_crashsvc(std::move(jobs.job_copy), test_svc.service_channel().get(), &cthread));
 
   // Make sure crashsvc continues to loop no matter what the exception handler does.
-  ASSERT_NO_FATAL_FAILURES(AnalyzeCrash(&loop, jobs.parent_job, jobs.job));
-  ASSERT_NO_FATAL_FAILURES(AnalyzeCrash(&loop, jobs.parent_job, jobs.job));
-  ASSERT_NO_FATAL_FAILURES(AnalyzeCrash(&loop, jobs.parent_job, jobs.job));
-  ASSERT_NO_FATAL_FAILURES(AnalyzeCrash(&loop, jobs.parent_job, jobs.job));
+  ASSERT_NO_FATAL_FAILURE(AnalyzeCrash(&loop, jobs.parent_job, jobs.job));
+  ASSERT_NO_FATAL_FAILURE(AnalyzeCrash(&loop, jobs.parent_job, jobs.job));
+  ASSERT_NO_FATAL_FAILURE(AnalyzeCrash(&loop, jobs.parent_job, jobs.job));
+  ASSERT_NO_FATAL_FAILURE(AnalyzeCrash(&loop, jobs.parent_job, jobs.job));
   EXPECT_EQ(test_svc.exception_handler().exception_count(), 4);
 
   // Kill the test job so that the exception doesn't bubble outside of this test.
@@ -330,7 +330,7 @@ TEST(crashsvc, ThreadBacktraceExceptionHandler) {
   FakeService test_svc(loop.dispatcher());
 
   Jobs jobs;
-  ASSERT_NO_FATAL_FAILURES(GetTestJobs(&jobs));
+  ASSERT_NO_FATAL_FAILURE(GetTestJobs(&jobs));
 
   // Start crashsvc.
   thrd_t cthread;
@@ -339,7 +339,7 @@ TEST(crashsvc, ThreadBacktraceExceptionHandler) {
   // Creates a process that triggers the backtrace request.
   zx::process process;
   zx::thread thread;
-  ASSERT_NO_FATAL_FAILURES(CreateAndBacktraceProcess(jobs.job, &process, &thread));
+  ASSERT_NO_FATAL_FAILURE(CreateAndBacktraceProcess(jobs.job, &process, &thread));
 
   // Thread backtrace requests shouldn't be sent out to the exception handler.
   EXPECT_EQ(test_svc.exception_handler().exception_count(), 0);

@@ -277,7 +277,7 @@ TEST_P(VirtioVersionTests, Start) {
   EXPECT_FALSE(backend().tx_ring_started());
   EXPECT_EQ(backend().DeviceState(), FakeBackend::State::DEVICE_STATUS_ACK);
 
-  ASSERT_NO_FATAL_FAILURES(StartDevice());
+  ASSERT_NO_FATAL_FAILURE(StartDevice());
 
   EXPECT_TRUE(backend().rx_ring_started());
   EXPECT_TRUE(backend().tx_ring_started());
@@ -290,8 +290,8 @@ TEST_P(VirtioVersionTests, Start) {
 }
 
 TEST_F(NetworkDeviceTests, Stop) {
-  ASSERT_NO_FATAL_FAILURES(StartDevice());
-  ASSERT_NO_FATAL_FAILURES(PrepareVmo());
+  ASSERT_NO_FATAL_FAILURE(StartDevice());
+  ASSERT_NO_FATAL_FAILURE(PrepareVmo());
 
   constexpr buffer_region_t kDummyRegion = {
       .vmo = kVmoId,
@@ -388,8 +388,8 @@ TEST_F(NetworkDeviceTests, UpdateStatus) {
 }
 
 TEST_P(VirtioVersionTests, Rx) {
-  ASSERT_NO_FATAL_FAILURES(StartDevice());
-  ASSERT_NO_FATAL_FAILURES(PrepareVmo());
+  ASSERT_NO_FATAL_FAILURE(StartDevice());
+  ASSERT_NO_FATAL_FAILURE(PrepareVmo());
   const rx_space_buffer_t rx_space[] = {
       {
           .id = 1,
@@ -452,8 +452,8 @@ TEST_P(VirtioVersionTests, Rx) {
 }
 
 TEST_P(VirtioVersionTests, Tx) {
-  ASSERT_NO_FATAL_FAILURES(StartDevice());
-  ASSERT_NO_FATAL_FAILURES(PrepareVmo());
+  ASSERT_NO_FATAL_FAILURE(StartDevice());
+  ASSERT_NO_FATAL_FAILURE(PrepareVmo());
   const uint16_t header_len = device().virtio_header_len();
   const buffer_region_t buffer_regions[] = {
       {

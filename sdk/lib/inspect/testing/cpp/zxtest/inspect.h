@@ -23,7 +23,7 @@ namespace inspect {
 //  };
 //
 //  TEST_F(ExampleTest, CheckInspectVmo) {
-//    ASSERT_NO_FATAL_FAILURES(ReadInspect(inspect_vmo()));
+//    ASSERT_NO_FATAL_FAILURE(ReadInspect(inspect_vmo()));
 //    CheckProperty(
 //      hierarchy().node(), "root_property1", inspect::StringPropertyValue("OK")));
 //    auto* genX_node = hierarchy().GetByPath({"child", "grandchild"});

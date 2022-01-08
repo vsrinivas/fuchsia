@@ -39,19 +39,19 @@ TEST_F(EthertapTests, TestLongNameMatches) {
   const char* long_name = "012345678901234567890123456789";
   ASSERT_EQ(strlen(long_name), fuchsia_hardware_ethertap::wire::kMaxNameLength);
 
-  ASSERT_NO_FATAL_FAILURES(OpenDevice(long_name));
-  ASSERT_STR_EQ(long_name, tap_device()->name());
+  ASSERT_NO_FATAL_FAILURE(OpenDevice(long_name));
+  ASSERT_STREQ(long_name, tap_device()->name());
 }
 
 TEST_F(EthertapTests, TestShortNameMatches) {
   const char* short_name = "abc";
-  ASSERT_NO_FATAL_FAILURES(OpenDevice(short_name));
-  ASSERT_STR_EQ(short_name, tap_device()->name());
+  ASSERT_NO_FATAL_FAILURE(OpenDevice(short_name));
+  ASSERT_STREQ(short_name, tap_device()->name());
 }
 
 // This tests triggering the unbind hook via DdkAsyncRemove and verifying the unbind reply occurs.
 TEST_F(EthertapTests, UnbindSignalsWorkerThread) {
-  ASSERT_NO_FATAL_FAILURES(OpenDevice(""));
+  ASSERT_NO_FATAL_FAILURE(OpenDevice(""));
   // This should run the device unbind hook, which signals the worker thread to reply to the
   // unbind txn and exit.
 

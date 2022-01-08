@@ -301,7 +301,7 @@ TEST_F(SkipBlockTest, GrowBadBlock) {
   op.block_count = 1;
 
   bool bad_block_grown;
-  ASSERT_NO_FATAL_FAILURES(Write(std::move(op), &bad_block_grown));
+  ASSERT_NO_FATAL_FAILURE(Write(std::move(op), &bad_block_grown));
   ASSERT_TRUE(bad_block_grown);
   ASSERT_EQ(bad_block().grown_bad_blocks().size(), 1);
   ASSERT_EQ(bad_block().grown_bad_blocks()[0], 5);
@@ -330,7 +330,7 @@ TEST_F(SkipBlockTest, GrowMultipleBadBlock) {
   op.block_count = 1;
 
   bool bad_block_grown;
-  ASSERT_NO_FATAL_FAILURES(Write(std::move(op), &bad_block_grown));
+  ASSERT_NO_FATAL_FAILURE(Write(std::move(op), &bad_block_grown));
   ASSERT_TRUE(bad_block_grown);
   ASSERT_EQ(bad_block().grown_bad_blocks().size(), 2);
   ASSERT_EQ(bad_block().grown_bad_blocks()[0], 5);
@@ -354,7 +354,7 @@ TEST_F(SkipBlockTest, MappingFailure) {
   op.block_count = 1;
 
   bool bad_block_grown;
-  ASSERT_NO_FATAL_FAILURES(Write(std::move(op), &bad_block_grown, ZX_ERR_IO));
+  ASSERT_NO_FATAL_FAILURE(Write(std::move(op), &bad_block_grown, ZX_ERR_IO));
   ASSERT_FALSE(bad_block_grown);
   ASSERT_EQ(bad_block().grown_bad_blocks().size(), 0);
   ASSERT_EQ(nand().last_op(), NAND_OP_WRITE);
@@ -374,7 +374,7 @@ TEST_F(SkipBlockTest, WriteBytesEraseWriteMode) {
   nand().set_result(ZX_OK);
 
   zx::vmo vmo;
-  ASSERT_NO_FATAL_FAILURES(CreatePayload(20 * kPageSize, &vmo));
+  ASSERT_NO_FATAL_FAILURE(CreatePayload(20 * kPageSize, &vmo));
   fzl::VmoMapper mapper;
   ASSERT_OK(mapper.Map(vmo, 0, 0, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE));
   auto start = static_cast<uint8_t*>(nand().mapper().start()) + 5 * kBlockSize;
@@ -387,13 +387,13 @@ TEST_F(SkipBlockTest, WriteBytesEraseWriteMode) {
   op.mode = nand::WriteBytesMode::kEraseWrite;
 
   bool bad_block_grown;
-  ASSERT_NO_FATAL_FAILURES(WriteBytes(std::move(op), &bad_block_grown));
+  ASSERT_NO_FATAL_FAILURE(WriteBytes(std::move(op), &bad_block_grown));
   ASSERT_FALSE(bad_block_grown);
   ASSERT_EQ(bad_block().grown_bad_blocks().size(), 0);
   ASSERT_EQ(nand().last_op(), NAND_OP_WRITE);
-  ASSERT_NO_FATAL_FAILURES(ValidateWritten(110 * kPageSize, 20 * kPageSize));
-  ASSERT_NO_FATAL_FAILURES(ValidateUnwritten(100 * kPageSize, 10 * kPageSize));
-  ASSERT_NO_FATAL_FAILURES(ValidateUnwritten(130 * kPageSize, 10 * kPageSize));
+  ASSERT_NO_FATAL_FAILURE(ValidateWritten(110 * kPageSize, 20 * kPageSize));
+  ASSERT_NO_FATAL_FAILURE(ValidateUnwritten(100 * kPageSize, 10 * kPageSize));
+  ASSERT_NO_FATAL_FAILURE(ValidateUnwritten(130 * kPageSize, 10 * kPageSize));
 }
 
 TEST_F(SkipBlockTest, ReadSuccess) {
@@ -409,7 +409,7 @@ TEST_F(SkipBlockTest, ReadSuccess) {
   op.block = 5;
   op.block_count = 1;
 
-  ASSERT_NO_FATAL_FAILURES(Read(std::move(op), ZX_OK));
+  ASSERT_NO_FATAL_FAILURE(Read(std::move(op), ZX_OK));
   ASSERT_EQ(bad_block().grown_bad_blocks().size(), 0);
   ASSERT_EQ(nand().last_op(), NAND_OP_READ);
 }
@@ -427,7 +427,7 @@ TEST_F(SkipBlockTest, ReadFailure) {
   op.block = 7;
   op.block_count = 1;
 
-  ASSERT_NO_FATAL_FAILURES(Read(std::move(op), ZX_ERR_IO));
+  ASSERT_NO_FATAL_FAILURE(Read(std::move(op), ZX_ERR_IO));
   ASSERT_EQ(bad_block().grown_bad_blocks().size(), 0);
   ASSERT_EQ(nand().last_op(), NAND_OP_READ);
 }
@@ -453,7 +453,7 @@ TEST_F(SkipBlockTest, ReadMultipleCopies) {
   op.block = 1;
   op.block_count = 1;
 
-  ASSERT_NO_FATAL_FAILURES(Read(std::move(op)));
+  ASSERT_NO_FATAL_FAILURE(Read(std::move(op)));
   ASSERT_EQ(bad_block().grown_bad_blocks().size(), 0);
   ASSERT_EQ(nand().last_op(), NAND_OP_READ);
 }
@@ -481,7 +481,7 @@ TEST_F(SkipBlockTest, ReadMultipleCopiesNoneSucceeds) {
   op.block = 0;
   op.block_count = 1;
 
-  ASSERT_NO_FATAL_FAILURES(Read(std::move(op), ZX_ERR_IO));
+  ASSERT_NO_FATAL_FAILURE(Read(std::move(op), ZX_ERR_IO));
   ASSERT_EQ(bad_block().grown_bad_blocks().size(), 0);
   ASSERT_EQ(nand().last_op(), NAND_OP_READ);
 }
@@ -500,7 +500,7 @@ TEST_F(SkipBlockTest, WriteBytesSingleBlockNoOffset) {
   constexpr size_t kNandOffset = 5 * kBlockSize;
 
   zx::vmo vmo;
-  ASSERT_NO_FATAL_FAILURES(CreatePayload(kSize, &vmo));
+  ASSERT_NO_FATAL_FAILURE(CreatePayload(kSize, &vmo));
   nand::WriteBytesOperation op = {};
   op.vmo = std::move(vmo);
   op.offset = kNandOffset;
@@ -508,12 +508,12 @@ TEST_F(SkipBlockTest, WriteBytesSingleBlockNoOffset) {
   op.mode = nand::WriteBytesMode::kReadModifyEraseWrite;
 
   bool bad_block_grown;
-  ASSERT_NO_FATAL_FAILURES(WriteBytes(std::move(op), &bad_block_grown));
+  ASSERT_NO_FATAL_FAILURE(WriteBytes(std::move(op), &bad_block_grown));
   ASSERT_FALSE(bad_block_grown);
   ASSERT_EQ(bad_block().grown_bad_blocks().size(), 0);
   ASSERT_EQ(nand().last_op(), NAND_OP_WRITE);
-  ASSERT_NO_FATAL_FAILURES(ValidateWritten(kNandOffset, kSize));
-  ASSERT_NO_FATAL_FAILURES(ValidateUnwritten(kNandOffset + kSize, kPageSize));
+  ASSERT_NO_FATAL_FAILURE(ValidateWritten(kNandOffset, kSize));
+  ASSERT_NO_FATAL_FAILURE(ValidateUnwritten(kNandOffset + kSize, kPageSize));
 }
 
 TEST_F(SkipBlockTest, WriteBytesSingleBlockWithOffset) {
@@ -531,7 +531,7 @@ TEST_F(SkipBlockTest, WriteBytesSingleBlockWithOffset) {
   constexpr size_t kNandOffset = 5 * kBlockSize;
 
   zx::vmo vmo;
-  ASSERT_NO_FATAL_FAILURES(CreatePayload(kSize, &vmo));
+  ASSERT_NO_FATAL_FAILURE(CreatePayload(kSize, &vmo));
   nand::WriteBytesOperation op = {};
   op.vmo = std::move(vmo);
   op.offset = kNandOffset + kOffset;
@@ -539,13 +539,13 @@ TEST_F(SkipBlockTest, WriteBytesSingleBlockWithOffset) {
   op.mode = nand::WriteBytesMode::kReadModifyEraseWrite;
 
   bool bad_block_grown;
-  ASSERT_NO_FATAL_FAILURES(WriteBytes(std::move(op), &bad_block_grown));
+  ASSERT_NO_FATAL_FAILURE(WriteBytes(std::move(op), &bad_block_grown));
   ASSERT_FALSE(bad_block_grown);
   ASSERT_EQ(bad_block().grown_bad_blocks().size(), 0);
   ASSERT_EQ(nand().last_op(), NAND_OP_WRITE);
-  ASSERT_NO_FATAL_FAILURES(ValidateUnwritten(kNandOffset, kPageSize));
-  ASSERT_NO_FATAL_FAILURES(ValidateWritten(kNandOffset + kOffset, kSize));
-  ASSERT_NO_FATAL_FAILURES(ValidateUnwritten(kNandOffset + kOffset + kSize, kPageSize));
+  ASSERT_NO_FATAL_FAILURE(ValidateUnwritten(kNandOffset, kPageSize));
+  ASSERT_NO_FATAL_FAILURE(ValidateWritten(kNandOffset + kOffset, kSize));
+  ASSERT_NO_FATAL_FAILURE(ValidateUnwritten(kNandOffset + kOffset + kSize, kPageSize));
 }
 
 TEST_F(SkipBlockTest, WriteBytesMultipleBlocks) {
@@ -569,7 +569,7 @@ TEST_F(SkipBlockTest, WriteBytesMultipleBlocks) {
   constexpr size_t kNandOffset = 4 * kBlockSize;
 
   zx::vmo vmo;
-  ASSERT_NO_FATAL_FAILURES(CreatePayload(kSize, &vmo));
+  ASSERT_NO_FATAL_FAILURE(CreatePayload(kSize, &vmo));
   nand::WriteBytesOperation op = {};
   op.vmo = std::move(vmo);
   op.offset = kNandOffset + kOffset;
@@ -577,13 +577,13 @@ TEST_F(SkipBlockTest, WriteBytesMultipleBlocks) {
   op.mode = nand::WriteBytesMode::kReadModifyEraseWrite;
 
   bool bad_block_grown;
-  ASSERT_NO_FATAL_FAILURES(WriteBytes(std::move(op), &bad_block_grown));
+  ASSERT_NO_FATAL_FAILURE(WriteBytes(std::move(op), &bad_block_grown));
   ASSERT_FALSE(bad_block_grown);
   ASSERT_EQ(bad_block().grown_bad_blocks().size(), 0);
   ASSERT_EQ(nand().last_op(), NAND_OP_WRITE);
-  ASSERT_NO_FATAL_FAILURES(ValidateUnwritten(kNandOffset, kPageSize));
-  ASSERT_NO_FATAL_FAILURES(ValidateWritten(kNandOffset + kOffset, kSize));
-  ASSERT_NO_FATAL_FAILURES(ValidateUnwritten(kNandOffset + kOffset + kSize, kPageSize));
+  ASSERT_NO_FATAL_FAILURE(ValidateUnwritten(kNandOffset, kPageSize));
+  ASSERT_NO_FATAL_FAILURE(ValidateWritten(kNandOffset + kOffset, kSize));
+  ASSERT_NO_FATAL_FAILURE(ValidateUnwritten(kNandOffset + kOffset + kSize, kPageSize));
 }
 
 TEST_F(SkipBlockTest, WriteBytesAligned) {
@@ -602,7 +602,7 @@ TEST_F(SkipBlockTest, WriteBytesAligned) {
   constexpr size_t kNandOffset = 4 * kBlockSize;
 
   zx::vmo vmo;
-  ASSERT_NO_FATAL_FAILURES(CreatePayload(kSize, &vmo));
+  ASSERT_NO_FATAL_FAILURE(CreatePayload(kSize, &vmo));
   nand::WriteBytesOperation op = {};
   op.vmo = std::move(vmo);
   op.offset = kNandOffset;
@@ -610,11 +610,11 @@ TEST_F(SkipBlockTest, WriteBytesAligned) {
   op.mode = nand::WriteBytesMode::kReadModifyEraseWrite;
 
   bool bad_block_grown;
-  ASSERT_NO_FATAL_FAILURES(WriteBytes(std::move(op), &bad_block_grown));
+  ASSERT_NO_FATAL_FAILURE(WriteBytes(std::move(op), &bad_block_grown));
   ASSERT_FALSE(bad_block_grown);
   ASSERT_EQ(bad_block().grown_bad_blocks().size(), 0);
   ASSERT_EQ(nand().last_op(), NAND_OP_WRITE);
-  ASSERT_NO_FATAL_FAILURES(ValidateWritten(kNandOffset, kSize));
+  ASSERT_NO_FATAL_FAILURE(ValidateWritten(kNandOffset, kSize));
 }
 
 TEST_F(SkipBlockTest, WriteBytesWithoutErase) {
@@ -628,7 +628,7 @@ TEST_F(SkipBlockTest, WriteBytesWithoutErase) {
   constexpr size_t kNandOffset = 5 * kBlockSize + kPageSize;
 
   zx::vmo vmo;
-  ASSERT_NO_FATAL_FAILURES(CreatePayload(kSize, &vmo));
+  ASSERT_NO_FATAL_FAILURE(CreatePayload(kSize, &vmo));
   nand::WriteBytesOperation op = {};
   op.vmo = std::move(vmo);
   op.offset = kNandOffset;
@@ -636,10 +636,10 @@ TEST_F(SkipBlockTest, WriteBytesWithoutErase) {
   // The option doesn't have effect, but we still need to give a valid value.
   op.mode = nand::WriteBytesMode::kReadModifyEraseWrite;
 
-  ASSERT_NO_FATAL_FAILURES(WriteBytesWithoutErase(std::move(op)));
+  ASSERT_NO_FATAL_FAILURE(WriteBytesWithoutErase(std::move(op)));
   ASSERT_EQ(bad_block().grown_bad_blocks().size(), 0);
   ASSERT_EQ(nand().last_op(), NAND_OP_WRITE);
-  ASSERT_NO_FATAL_FAILURES(ValidateWritten(kNandOffset, kSize));
+  ASSERT_NO_FATAL_FAILURE(ValidateWritten(kNandOffset, kSize));
 }
 
 TEST_F(SkipBlockTest, GrownMultipleBadBlocksWriteBytesWithoutEraseFollowedByWriteBytes) {
@@ -680,11 +680,11 @@ TEST_F(SkipBlockTest, GrownMultipleBadBlocksWriteBytesWithoutEraseFollowedByWrit
     op.vmo = std::move(dup);
     op.block = 5;
     op.block_count = 1;
-    ASSERT_NO_FATAL_FAILURES(Read(std::move(op), ZX_OK));
+    ASSERT_NO_FATAL_FAILURE(Read(std::move(op), ZX_OK));
   }
 
   zx::vmo data;
-  ASSERT_NO_FATAL_FAILURES(CreatePayload(kSize, &data));
+  ASSERT_NO_FATAL_FAILURE(CreatePayload(kSize, &data));
   fzl::VmoMapper mapper;
   ASSERT_OK(mapper.Map(data, 0, 0, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE));
   // Update the backed up data with the new data.
@@ -698,7 +698,7 @@ TEST_F(SkipBlockTest, GrownMultipleBadBlocksWriteBytesWithoutEraseFollowedByWrit
     op.size = kSize;
     // The option doesn't have effect, but we still need to give a valid value.
     op.mode = nand::WriteBytesMode::kReadModifyEraseWrite;
-    ASSERT_NO_FATAL_FAILURES(WriteBytesWithoutErase(std::move(op), ZX_ERR_IO));
+    ASSERT_NO_FATAL_FAILURE(WriteBytesWithoutErase(std::move(op), ZX_ERR_IO));
   }
 
   // Fall back writes on the minimal block range.
@@ -710,7 +710,7 @@ TEST_F(SkipBlockTest, GrownMultipleBadBlocksWriteBytesWithoutEraseFollowedByWrit
     // The option doesn't have effect, but we still need to give a valid value.
     op.mode = nand::WriteBytesMode::kReadModifyEraseWrite;
     bool bad_block_grown;
-    ASSERT_NO_FATAL_FAILURES(WriteBytes(std::move(op), &bad_block_grown));
+    ASSERT_NO_FATAL_FAILURE(WriteBytes(std::move(op), &bad_block_grown));
     ASSERT_TRUE(bad_block_grown);
     ASSERT_EQ(bad_block().grown_bad_blocks().size(), 2);
     ASSERT_EQ(bad_block().grown_bad_blocks()[0], 5);
@@ -719,9 +719,9 @@ TEST_F(SkipBlockTest, GrownMultipleBadBlocksWriteBytesWithoutEraseFollowedByWrit
   }
 
   // Validate content, expected to be at block 7.
-  ASSERT_NO_FATAL_FAILURES(ValidateWritten(7 * kBlockSize + kPageSize, kSize));
-  ASSERT_NO_FATAL_FAILURES(ValidateUnwritten(7 * kBlockSize, kPageSize));
-  ASSERT_NO_FATAL_FAILURES(
+  ASSERT_NO_FATAL_FAILURE(ValidateWritten(7 * kBlockSize + kPageSize, kSize));
+  ASSERT_NO_FATAL_FAILURE(ValidateUnwritten(7 * kBlockSize, kPageSize));
+  ASSERT_NO_FATAL_FAILURE(
       ValidateUnwritten(7 * kBlockSize + 2 * kPageSize, kBlockSize - 2 * kPageSize));
 }
 
@@ -729,7 +729,7 @@ TEST_F(SkipBlockTest, GetPartitionInfo) {
   ASSERT_OK(nand::SkipBlockDevice::Create(nullptr, parent()));
 
   nand::PartitionInfo info;
-  ASSERT_NO_FATAL_FAILURES(GetPartitionInfo(&info));
+  ASSERT_NO_FATAL_FAILURE(GetPartitionInfo(&info));
   ASSERT_EQ(info.block_size_bytes, kBlockSize);
   ASSERT_EQ(info.partition_block_count, kNumBlocks);
 }
@@ -758,23 +758,23 @@ TEST_F(SkipBlockTest, WriteMultipleCopies) {
   nand().set_result(ZX_OK);
 
   zx::vmo vmo;
-  ASSERT_NO_FATAL_FAILURES(CreatePayload(kBlockSize, &vmo));
+  ASSERT_NO_FATAL_FAILURE(CreatePayload(kBlockSize, &vmo));
   nand::ReadWriteOperation op = {};
   op.vmo = std::move(vmo);
   op.block = 1;
   op.block_count = 1;
 
   bool bad_block_grown;
-  ASSERT_NO_FATAL_FAILURES(Write(std::move(op), &bad_block_grown));
+  ASSERT_NO_FATAL_FAILURE(Write(std::move(op), &bad_block_grown));
   ASSERT_TRUE(bad_block_grown);
   ASSERT_EQ(bad_block().grown_bad_blocks().size(), 2);
   ASSERT_EQ(bad_block().grown_bad_blocks()[0], 1);
   ASSERT_EQ(bad_block().grown_bad_blocks()[1], 6);
   ASSERT_EQ(nand().last_op(), NAND_OP_WRITE);
-  ASSERT_NO_FATAL_FAILURES(ValidateUnwritten(kBlockSize * 1, kBlockSize));
-  ASSERT_NO_FATAL_FAILURES(ValidateWritten(kBlockSize * 2, kBlockSize));
-  ASSERT_NO_FATAL_FAILURES(ValidateUnwritten(kBlockSize * 6, kBlockSize));
-  ASSERT_NO_FATAL_FAILURES(ValidateWritten(kBlockSize * 7, kBlockSize));
+  ASSERT_NO_FATAL_FAILURE(ValidateUnwritten(kBlockSize * 1, kBlockSize));
+  ASSERT_NO_FATAL_FAILURE(ValidateWritten(kBlockSize * 2, kBlockSize));
+  ASSERT_NO_FATAL_FAILURE(ValidateUnwritten(kBlockSize * 6, kBlockSize));
+  ASSERT_NO_FATAL_FAILURE(ValidateWritten(kBlockSize * 7, kBlockSize));
 }
 
 // This test attempts to write 2 copies of two blocks to a partition that is 10 blocks wide.
@@ -810,23 +810,23 @@ TEST_F(SkipBlockTest, WriteMultipleCopiesMultipleBlocks) {
   nand().set_result(ZX_OK);
 
   zx::vmo vmo;
-  ASSERT_NO_FATAL_FAILURES(CreatePayload(kBlockSize * 2, &vmo));
+  ASSERT_NO_FATAL_FAILURE(CreatePayload(kBlockSize * 2, &vmo));
   nand::ReadWriteOperation op = {};
   op.vmo = std::move(vmo);
   op.block = 1;
   op.block_count = 2;
 
   bool bad_block_grown;
-  ASSERT_NO_FATAL_FAILURES(Write(std::move(op), &bad_block_grown));
+  ASSERT_NO_FATAL_FAILURE(Write(std::move(op), &bad_block_grown));
   ASSERT_TRUE(bad_block_grown);
   ASSERT_EQ(bad_block().grown_bad_blocks().size(), 2);
   ASSERT_EQ(bad_block().grown_bad_blocks()[0], 1);
   ASSERT_EQ(bad_block().grown_bad_blocks()[1], 6);
   ASSERT_EQ(nand().last_op(), NAND_OP_WRITE);
-  ASSERT_NO_FATAL_FAILURES(ValidateUnwritten(kBlockSize * 1, kBlockSize));
-  ASSERT_NO_FATAL_FAILURES(ValidateWritten(kBlockSize * 2, kBlockSize * 2));
-  ASSERT_NO_FATAL_FAILURES(ValidateUnwritten(kBlockSize * 6, kBlockSize));
-  ASSERT_NO_FATAL_FAILURES(ValidateWritten(kBlockSize * 7, kBlockSize * 2));
+  ASSERT_NO_FATAL_FAILURE(ValidateUnwritten(kBlockSize * 1, kBlockSize));
+  ASSERT_NO_FATAL_FAILURE(ValidateWritten(kBlockSize * 2, kBlockSize * 2));
+  ASSERT_NO_FATAL_FAILURE(ValidateUnwritten(kBlockSize * 6, kBlockSize));
+  ASSERT_NO_FATAL_FAILURE(ValidateWritten(kBlockSize * 7, kBlockSize * 2));
 }
 
 // This test attempts to write 4 copies of a single block to a partition that is 4 blocks wide.
@@ -857,23 +857,23 @@ TEST_F(SkipBlockTest, WriteMultipleCopiesOneSucceeds) {
   nand().set_result(ZX_ERR_IO);
 
   zx::vmo vmo;
-  ASSERT_NO_FATAL_FAILURES(CreatePayload(kBlockSize, &vmo));
+  ASSERT_NO_FATAL_FAILURE(CreatePayload(kBlockSize, &vmo));
   nand::ReadWriteOperation op = {};
   op.vmo = std::move(vmo);
   op.block = 0;
   op.block_count = 1;
 
   bool bad_block_grown;
-  ASSERT_NO_FATAL_FAILURES(Write(std::move(op), &bad_block_grown));
+  ASSERT_NO_FATAL_FAILURE(Write(std::move(op), &bad_block_grown));
   ASSERT_TRUE(bad_block_grown);
   ASSERT_EQ(bad_block().grown_bad_blocks().size(), 3);
   ASSERT_EQ(bad_block().grown_bad_blocks()[0], 0);
   ASSERT_EQ(bad_block().grown_bad_blocks()[1], 1);
   ASSERT_EQ(bad_block().grown_bad_blocks()[2], 3);
   ASSERT_EQ(nand().last_op(), NAND_OP_WRITE);
-  ASSERT_NO_FATAL_FAILURES(ValidateUnwritten(0, kBlockSize * 2));
-  ASSERT_NO_FATAL_FAILURES(ValidateWritten(kBlockSize * 2, kBlockSize));
-  ASSERT_NO_FATAL_FAILURES(ValidateUnwritten(kBlockSize * 3, kBlockSize));
+  ASSERT_NO_FATAL_FAILURE(ValidateUnwritten(0, kBlockSize * 2));
+  ASSERT_NO_FATAL_FAILURE(ValidateWritten(kBlockSize * 2, kBlockSize));
+  ASSERT_NO_FATAL_FAILURE(ValidateUnwritten(kBlockSize * 3, kBlockSize));
 }
 
 // This test attempts to write 4 copies of a single block. The copies live in blocks 0, 1, 2, and 3.
@@ -896,14 +896,14 @@ TEST_F(SkipBlockTest, WriteMultipleCopiesNoneSucceeds) {
   nand().set_result(ZX_ERR_IO);
 
   zx::vmo vmo;
-  ASSERT_NO_FATAL_FAILURES(CreatePayload(kBlockSize, &vmo));
+  ASSERT_NO_FATAL_FAILURE(CreatePayload(kBlockSize, &vmo));
   nand::ReadWriteOperation op = {};
   op.vmo = std::move(vmo);
   op.block = 0;
   op.block_count = 1;
 
   bool bad_block_grown;
-  ASSERT_NO_FATAL_FAILURES(Write(std::move(op), &bad_block_grown, ZX_ERR_IO));
+  ASSERT_NO_FATAL_FAILURE(Write(std::move(op), &bad_block_grown, ZX_ERR_IO));
   ASSERT_TRUE(bad_block_grown);
   ASSERT_EQ(bad_block().grown_bad_blocks().size(), 4);
   ASSERT_EQ(bad_block().grown_bad_blocks()[0], 0);
@@ -911,5 +911,5 @@ TEST_F(SkipBlockTest, WriteMultipleCopiesNoneSucceeds) {
   ASSERT_EQ(bad_block().grown_bad_blocks()[2], 2);
   ASSERT_EQ(bad_block().grown_bad_blocks()[3], 3);
   ASSERT_EQ(nand().last_op(), NAND_OP_ERASE);
-  ASSERT_NO_FATAL_FAILURES(ValidateUnwritten(0, kBlockSize * 4));
+  ASSERT_NO_FATAL_FAILURE(ValidateUnwritten(0, kBlockSize * 4));
 }

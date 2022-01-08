@@ -347,7 +347,7 @@ static void wait_inferior_thread_worker(inferior_data_t* inferior_data,
 
   while (true) {
     zx_port_packet_t packet;
-    ASSERT_NO_FATAL_FAILURES(read_packet(port, &packet));
+    ASSERT_NO_FATAL_FAILURE(read_packet(port, &packet));
 
     // Is the inferior gone?
     if (packet.key == pid) {
@@ -400,7 +400,7 @@ static void wait_inferior_thread_worker(inferior_data_t* inferior_data,
 
     // Check whether the handler() call above had any zxtest assertion
     // failures.
-    ASSERT_FALSE(CURRENT_TEST_HAS_FATAL_FAILURES());
+    ASSERT_FALSE(CURRENT_TEST_HAS_FATAL_FAILURE());
   }
 }
 
@@ -419,7 +419,7 @@ static int wait_inferior_thread_func(void* arg) {
 
   wait_inferior_thread_worker(inferior_data, handler, handler_arg);
 
-  return CURRENT_TEST_HAS_FATAL_FAILURES() ? -1 : 0;
+  return CURRENT_TEST_HAS_FATAL_FAILURE() ? -1 : 0;
 }
 
 thrd_t start_wait_inf_thread(inferior_data_t* inferior_data,

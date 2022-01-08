@@ -66,7 +66,7 @@ TEST(NandPartUtilsTest, SanitizeSinglePartitionMapTest) {
   *pmap = MakePartitionMap(1);
   pmap->partitions[0] = MakePartition(0, 9);
   ASSERT_OK(SanitizePartitionMap(pmap, kNandInfo));
-  ASSERT_NO_FATAL_FAILURES(ValidatePartition(pmap, 0, 0, 4));
+  ASSERT_NO_FATAL_FAILURE(ValidatePartition(pmap, 0, 0, 4));
 }
 
 TEST(NandPartUtilsTest, SanitizeMultiplePartitionMapTest) {
@@ -79,9 +79,9 @@ TEST(NandPartUtilsTest, SanitizeMultiplePartitionMapTest) {
   pmap->partitions[2] = MakePartition(8, 9);
 
   ASSERT_OK(SanitizePartitionMap(pmap, kNandInfo));
-  ASSERT_NO_FATAL_FAILURES(ValidatePartition(pmap, 0, 0, 1));
-  ASSERT_NO_FATAL_FAILURES(ValidatePartition(pmap, 1, 2, 3));
-  ASSERT_NO_FATAL_FAILURES(ValidatePartition(pmap, 2, 4, 4));
+  ASSERT_NO_FATAL_FAILURE(ValidatePartition(pmap, 0, 0, 1));
+  ASSERT_NO_FATAL_FAILURE(ValidatePartition(pmap, 1, 2, 3));
+  ASSERT_NO_FATAL_FAILURE(ValidatePartition(pmap, 2, 4, 4));
 }
 
 TEST(NandPartUtilsTest, SanitizeMultiplePartitionMapOutOfOrderTest) {
@@ -93,8 +93,8 @@ TEST(NandPartUtilsTest, SanitizeMultiplePartitionMapOutOfOrderTest) {
   pmap->partitions[1] = MakePartition(0, 3);
 
   ASSERT_OK(SanitizePartitionMap(pmap, kNandInfo));
-  ASSERT_NO_FATAL_FAILURES(ValidatePartition(pmap, 0, 0, 1));
-  ASSERT_NO_FATAL_FAILURES(ValidatePartition(pmap, 1, 2, 4));
+  ASSERT_NO_FATAL_FAILURE(ValidatePartition(pmap, 0, 0, 1));
+  ASSERT_NO_FATAL_FAILURE(ValidatePartition(pmap, 1, 2, 4));
 }
 
 TEST(NandPartUtilsTest, SanitizeMultiplePartitionMapOverlappingTest) {

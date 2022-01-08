@@ -96,7 +96,7 @@ class SequenceContainerTestEnvironment : public TestEnvironment<TestEnvTraits> {
 
     EXPECT_EQ(OBJ_COUNT, Size(container));
     EXPECT_EQ(OBJ_COUNT, ObjType::live_obj_count());
-    ASSERT_NO_FATAL_FAILURES(ContainerChecker::SanityCheck(container));
+    ASSERT_NO_FATAL_FAILURE(ContainerChecker::SanityCheck(container));
   }
 
   void PushFront() {
@@ -600,48 +600,48 @@ class SequenceContainerTestEnvironment : public TestEnvironment<TestEnvTraits> {
     EXPECT_EQ(0u, Size(container()));
 
     // Populate the source list.
-    ASSERT_NO_FATAL_FAILURES(FillN(0, LIST_COUNT));
+    ASSERT_NO_FATAL_FAILURE(FillN(0, LIST_COUNT));
     EXPECT_EQ(LIST_COUNT, Size(container()));
 
     // Splice into end of empty target list.
     target.splice(target.end(), container());
     static const size_t expected_1[] = {0, 1};
-    ASSERT_NO_FATAL_FAILURES(BidirectionalEquals(target, expected_1, std::size(expected_1)));
+    ASSERT_NO_FATAL_FAILURE(BidirectionalEquals(target, expected_1, std::size(expected_1)));
     EXPECT_EQ(0u, Size(container()));
 
     // Populate the source list again.
-    ASSERT_NO_FATAL_FAILURES(FillN(LIST_COUNT, LIST_COUNT * 2));
+    ASSERT_NO_FATAL_FAILURE(FillN(LIST_COUNT, LIST_COUNT * 2));
     EXPECT_EQ(LIST_COUNT, Size(container()));
 
     // Splice into end of non-empty target list.
     target.splice(target.end(), container());
     static const size_t expected_2[] = {0, 1, 2, 3};
-    ASSERT_NO_FATAL_FAILURES(BidirectionalEquals(target, expected_2, std::size(expected_2)));
+    ASSERT_NO_FATAL_FAILURE(BidirectionalEquals(target, expected_2, std::size(expected_2)));
     EXPECT_EQ(0u, Size(container()));
 
     // Populate the source list again.
-    ASSERT_NO_FATAL_FAILURES(FillN(LIST_COUNT * 2, LIST_COUNT * 3));
+    ASSERT_NO_FATAL_FAILURE(FillN(LIST_COUNT * 2, LIST_COUNT * 3));
     EXPECT_EQ(LIST_COUNT, Size(container()));
 
     // Splice into start of non-empty target list.
     target.splice(target.begin(), container());
     static const size_t expected_3[] = {4, 5, 0, 1, 2, 3};
-    ASSERT_NO_FATAL_FAILURES(BidirectionalEquals(target, expected_3, std::size(expected_3)));
+    ASSERT_NO_FATAL_FAILURE(BidirectionalEquals(target, expected_3, std::size(expected_3)));
     EXPECT_EQ(0u, Size(container()));
 
     // Populate the source list again.
-    ASSERT_NO_FATAL_FAILURES(FillN(LIST_COUNT * 3, LIST_COUNT * 4));
+    ASSERT_NO_FATAL_FAILURE(FillN(LIST_COUNT * 3, LIST_COUNT * 4));
     EXPECT_EQ(LIST_COUNT, Size(container()));
 
     // Splice into second element of non-empty target list.
     target.splice(++target.begin(), container());
     static const size_t expected_4[] = {4, 6, 7, 5, 0, 1, 2, 3};
-    ASSERT_NO_FATAL_FAILURES(BidirectionalEquals(target, expected_4, std::size(expected_4)));
+    ASSERT_NO_FATAL_FAILURE(BidirectionalEquals(target, expected_4, std::size(expected_4)));
     EXPECT_EQ(0u, Size(container()));
 
     // Splice empty source into end of non-empty target list.
     target.splice(target.end(), container());
-    ASSERT_NO_FATAL_FAILURES(BidirectionalEquals(target, expected_4, std::size(expected_4)));
+    ASSERT_NO_FATAL_FAILURE(BidirectionalEquals(target, expected_4, std::size(expected_4)));
     EXPECT_EQ(0u, Size(container()));
 
     // No objects should have been deleted yet.
@@ -710,8 +710,8 @@ class SequenceContainerTestEnvironment : public TestEnvironment<TestEnvTraits> {
   }
 
   void SplitAfter() {
-    ASSERT_NO_FATAL_FAILURES(SplitAfterHelper<SplitAfterFlavor::Iterator>());
-    ASSERT_NO_FATAL_FAILURES(SplitAfterHelper<SplitAfterFlavor::ObjectReference>());
+    ASSERT_NO_FATAL_FAILURE(SplitAfterHelper<SplitAfterFlavor::Iterator>());
+    ASSERT_NO_FATAL_FAILURE(SplitAfterHelper<SplitAfterFlavor::ObjectReference>());
   }
 
   template <typename IterType>
@@ -748,10 +748,10 @@ class SequenceContainerTestEnvironment : public TestEnvironment<TestEnvTraits> {
     EXPECT_EQ(OBJ_COUNT, Size(container()));
 
     // Test iterator
-    ASSERT_NO_FATAL_FAILURES(DoSeqIterate(container().begin(), container().end()));
+    ASSERT_NO_FATAL_FAILURE(DoSeqIterate(container().begin(), container().end()));
 
     // Test const_iterator
-    ASSERT_NO_FATAL_FAILURES(DoSeqIterate(container().cbegin(), container().cend()));
+    ASSERT_NO_FATAL_FAILURE(DoSeqIterate(container().cbegin(), container().cend()));
 
     // Iterate using the range-based for loop syntax
     size_t i = 0;
@@ -824,17 +824,17 @@ class SequenceContainerTestEnvironment : public TestEnvironment<TestEnvTraits> {
     EXPECT_EQ(OBJ_COUNT, Size(container()));
 
     // Test iterator
-    ASSERT_NO_FATAL_FAILURES(DoSeqReverseIterate(container().begin(), container().end()));
+    ASSERT_NO_FATAL_FAILURE(DoSeqReverseIterate(container().begin(), container().end()));
 
     // Test const_iterator
-    ASSERT_NO_FATAL_FAILURES(DoSeqReverseIterate(container().cbegin(), container().cend()));
+    ASSERT_NO_FATAL_FAILURE(DoSeqReverseIterate(container().cbegin(), container().cend()));
 
     // This test should delete no objects
     TestEnvTraits::CheckCustomDeleteInvocations(0);
   }
 
   void ReplaceIfCopy() {
-    ASSERT_NO_FATAL_FAILURES(ContainerChecker::SanityCheck(container()));
+    ASSERT_NO_FATAL_FAILURE(ContainerChecker::SanityCheck(container()));
 
     // Try (and fail) to replace an element in an empty container.
     {
@@ -847,7 +847,7 @@ class SequenceContainerTestEnvironment : public TestEnvironment<TestEnvTraits> {
       PtrType replaced =
           container().replace_if([](const ObjType& obj) -> bool { return true; }, new_obj);
 
-      ASSERT_NO_FATAL_FAILURES(ContainerChecker::SanityCheck(container()));
+      ASSERT_NO_FATAL_FAILURE(ContainerChecker::SanityCheck(container()));
       ASSERT_NOT_NULL(new_obj);
       EXPECT_NULL(replaced);
       EXPECT_EQ(raw_obj, PtrTraits::GetRaw(new_obj));
@@ -873,7 +873,7 @@ class SequenceContainerTestEnvironment : public TestEnvironment<TestEnvTraits> {
 
       container().push_front(std::move(new_obj));
     }
-    ASSERT_NO_FATAL_FAILURES(ContainerChecker::SanityCheck(container()));
+    ASSERT_NO_FATAL_FAILURE(ContainerChecker::SanityCheck(container()));
 
     // Replace all of the members of the contianer with new members which
     // have a value never created during the populate phase.
@@ -886,7 +886,7 @@ class SequenceContainerTestEnvironment : public TestEnvironment<TestEnvTraits> {
       PtrType replaced = container().replace_if(
           [i](const ObjType& obj) -> bool { return (obj.value() == i); }, new_obj);
 
-      ASSERT_NO_FATAL_FAILURES(ContainerChecker::SanityCheck(container()));
+      ASSERT_NO_FATAL_FAILURE(ContainerChecker::SanityCheck(container()));
       ASSERT_NOT_NULL(replaced);
       EXPECT_TRUE(new_obj->ContainerTraits::ContainableBaseClass::InContainer());
       EXPECT_FALSE(replaced->ContainerTraits::ContainableBaseClass::InContainer());
@@ -910,7 +910,7 @@ class SequenceContainerTestEnvironment : public TestEnvironment<TestEnvTraits> {
 
       PtrType replaced = container().replace_if(
           [i](const ObjType& obj) -> bool { return (obj.value() == i); }, new_obj);
-      ASSERT_NO_FATAL_FAILURES(ContainerChecker::SanityCheck(container()));
+      ASSERT_NO_FATAL_FAILURE(ContainerChecker::SanityCheck(container()));
 
       ASSERT_NULL(replaced);
       EXPECT_FALSE(new_obj->ContainerTraits::ContainableBaseClass::InContainer());
@@ -932,7 +932,7 @@ class SequenceContainerTestEnvironment : public TestEnvironment<TestEnvTraits> {
       ++i;
     }
     EXPECT_EQ(0, ObjType::live_obj_count());
-    ASSERT_NO_FATAL_FAILURES(ContainerChecker::SanityCheck(container()));
+    ASSERT_NO_FATAL_FAILURE(ContainerChecker::SanityCheck(container()));
 
     // Now all of the objects we created during the test should be gone.
     TestEnvTraits::CheckCustomDeleteInvocations((3 * OBJ_COUNT) + 1);
@@ -1041,7 +1041,7 @@ class SequenceContainerTestEnvironment : public TestEnvironment<TestEnvTraits> {
   }
 
   void ReplaceCopy() {
-    ASSERT_NO_FATAL_FAILURES(ContainerChecker::SanityCheck(container()));
+    ASSERT_NO_FATAL_FAILURE(ContainerChecker::SanityCheck(container()));
 
     // Populate our container.
     for (size_t i = 0; i < OBJ_COUNT; ++i) {
@@ -1053,7 +1053,7 @@ class SequenceContainerTestEnvironment : public TestEnvironment<TestEnvTraits> {
 
       container().push_front(std::move(new_obj));
     }
-    ASSERT_NO_FATAL_FAILURES(ContainerChecker::SanityCheck(container()));
+    ASSERT_NO_FATAL_FAILURE(ContainerChecker::SanityCheck(container()));
 
     // Replace all of the members of the contianer with new members which
     // have a value never created during the populate phase.
@@ -1071,7 +1071,7 @@ class SequenceContainerTestEnvironment : public TestEnvironment<TestEnvTraits> {
 
       PtrType replaced = container().replace(*iter, new_obj);
 
-      ASSERT_NO_FATAL_FAILURES(ContainerChecker::SanityCheck(container()));
+      ASSERT_NO_FATAL_FAILURE(ContainerChecker::SanityCheck(container()));
       ASSERT_NOT_NULL(replaced);
       EXPECT_TRUE(new_obj->ContainerTraits::ContainableBaseClass::InContainer());
       EXPECT_FALSE(replaced->ContainerTraits::ContainableBaseClass::InContainer());
@@ -1093,7 +1093,7 @@ class SequenceContainerTestEnvironment : public TestEnvironment<TestEnvTraits> {
       ++i;
     }
     EXPECT_EQ(0, ObjType::live_obj_count());
-    ASSERT_NO_FATAL_FAILURES(ContainerChecker::SanityCheck(container()));
+    ASSERT_NO_FATAL_FAILURE(ContainerChecker::SanityCheck(container()));
     TestEnvTraits::CheckCustomDeleteInvocations(2 * OBJ_COUNT);
   }
 

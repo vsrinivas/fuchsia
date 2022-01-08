@@ -21,7 +21,7 @@ TEST(Binding, CreateStringPropertyValues) {
   std::string str_val = "magpie";
   zx_device_str_prop_val str_prop_val = str_prop_str_val(str_val.c_str());
   ASSERT_EQ(ZX_DEVICE_PROPERTY_VALUE_STRING, str_prop_val.value_type);
-  ASSERT_STR_EQ(str_val, str_prop_val.value.str_val);
+  ASSERT_STREQ(str_val, str_prop_val.value.str_val);
 }
 
 }  // namespace

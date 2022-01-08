@@ -308,10 +308,10 @@ class AmlCpuTestFixture : public InspectTestHelper, public zxtest::Test {
 
  protected:
   void VerifyAll() {
-    ASSERT_NO_FATAL_FAILURES(pll_clock_.VerifyAndClear());
-    ASSERT_NO_FATAL_FAILURES(cpu_clock_.VerifyAndClear());
-    ASSERT_NO_FATAL_FAILURES(scaler_clock_.VerifyAndClear());
-    ASSERT_NO_FATAL_FAILURES(power_.VerifyAndClear());
+    ASSERT_NO_FATAL_FAILURE(pll_clock_.VerifyAndClear());
+    ASSERT_NO_FATAL_FAILURE(cpu_clock_.VerifyAndClear());
+    ASSERT_NO_FATAL_FAILURE(scaler_clock_.VerifyAndClear());
+    ASSERT_NO_FATAL_FAILURE(power_.VerifyAndClear());
   }
 
   ddk::MockClock pll_clock_;
@@ -356,7 +356,7 @@ TEST_F(AmlCpuTestFixture, TestGetPerformanceStateInfo) {
     EXPECT_TRUE(pstateInfo->result.is_err());
   }
 
-  ASSERT_NO_FATAL_FAILURES(VerifyAll());
+  ASSERT_NO_FATAL_FAILURE(VerifyAll());
 }
 
 TEST_F(AmlCpuTestFixture, TestSetPerformanceState) {
@@ -389,24 +389,24 @@ TEST_F(AmlCpuTestFixture, TestSetPerformanceState) {
   EXPECT_OK(result);
   EXPECT_EQ(out_state, max_pstate_index);
 
-  ASSERT_NO_FATAL_FAILURES(VerifyAll());
+  ASSERT_NO_FATAL_FAILURE(VerifyAll());
 }
 
 TEST_F(AmlCpuTestFixture, TestSetCpuInfo) {
   uint32_t test_cpu_version = 0x28200b02;
   dut_.SetCpuInfo(test_cpu_version);
-  ASSERT_NO_FATAL_FAILURES(ReadInspect(dut_.inspect_vmo()));
+  ASSERT_NO_FATAL_FAILURE(ReadInspect(dut_.inspect_vmo()));
   auto* cpu_info = hierarchy().GetByPath({"cpu_info_service"});
   ASSERT_TRUE(cpu_info);
 
   // cpu_major_revision : 40
-  ASSERT_NO_FATAL_FAILURES(
+  ASSERT_NO_FATAL_FAILURE(
       CheckProperty(cpu_info->node(), "cpu_major_revision", inspect::UintPropertyValue(40)));
   // cpu_minor_revision : 11
-  ASSERT_NO_FATAL_FAILURES(
+  ASSERT_NO_FATAL_FAILURE(
       CheckProperty(cpu_info->node(), "cpu_minor_revision", inspect::UintPropertyValue(11)));
   // cpu_package_id : 2
-  ASSERT_NO_FATAL_FAILURES(
+  ASSERT_NO_FATAL_FAILURE(
       CheckProperty(cpu_info->node(), "cpu_package_id", inspect::UintPropertyValue(2)));
 }
 

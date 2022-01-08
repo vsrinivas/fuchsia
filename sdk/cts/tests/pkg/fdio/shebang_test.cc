@@ -56,7 +56,7 @@ class ShebangTest : public ::zxtest::Test {
     EXPECT_EQ(status, ZX_OK);
     EXPECT_EQ(actual, strlen(expected));
     buf[actual] = '\0';
-    ASSERT_STR_EQ(buf, expected);
+    ASSERT_STREQ(buf, expected);
   }
 };
 

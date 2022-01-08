@@ -10,21 +10,21 @@ class SuspendTestCase : public MultipleDeviceTestCase {
   void StateTest(zx_status_t suspend_status, Device::State want_device_state);
 };
 TEST_F(SuspendTestCase, Poweroff) {
-  ASSERT_NO_FATAL_FAILURES(SuspendTest(DEVICE_SUSPEND_FLAG_POWEROFF));
+  ASSERT_NO_FATAL_FAILURE(SuspendTest(DEVICE_SUSPEND_FLAG_POWEROFF));
 }
 
 TEST_F(SuspendTestCase, Reboot) {
-  ASSERT_NO_FATAL_FAILURES(SuspendTest(DEVICE_SUSPEND_FLAG_REBOOT));
+  ASSERT_NO_FATAL_FAILURE(SuspendTest(DEVICE_SUSPEND_FLAG_REBOOT));
 }
 
 TEST_F(SuspendTestCase, RebootWithFlags) {
-  ASSERT_NO_FATAL_FAILURES(SuspendTest(DEVICE_SUSPEND_FLAG_REBOOT_BOOTLOADER));
+  ASSERT_NO_FATAL_FAILURE(SuspendTest(DEVICE_SUSPEND_FLAG_REBOOT_BOOTLOADER));
 }
 
-TEST_F(SuspendTestCase, Mexec) { ASSERT_NO_FATAL_FAILURES(SuspendTest(DEVICE_SUSPEND_FLAG_MEXEC)); }
+TEST_F(SuspendTestCase, Mexec) { ASSERT_NO_FATAL_FAILURE(SuspendTest(DEVICE_SUSPEND_FLAG_MEXEC)); }
 
 TEST_F(SuspendTestCase, SuspendToRam) {
-  ASSERT_NO_FATAL_FAILURES(SuspendTest(DEVICE_SUSPEND_FLAG_SUSPEND_RAM));
+  ASSERT_NO_FATAL_FAILURE(SuspendTest(DEVICE_SUSPEND_FLAG_SUSPEND_RAM));
 }
 
 // Verify the suspend order is correct
@@ -49,10 +49,10 @@ void SuspendTestCase::SuspendTest(uint32_t flags) {
       size_t index = devices[desc.parent_desc_index].index;
       parent = device(index)->device;
     }
-    ASSERT_NO_FATAL_FAILURES(AddDevice(parent, desc.name, 0 /* protocol id */, "", &desc.index));
+    ASSERT_NO_FATAL_FAILURE(AddDevice(parent, desc.name, 0 /* protocol id */, "", &desc.index));
   }
 
-  ASSERT_NO_FATAL_FAILURES(DoSuspend(flags));
+  ASSERT_NO_FATAL_FAILURE(DoSuspend(flags));
 
   size_t num_to_suspend = std::size(devices);
   while (num_to_suspend > 0) {
@@ -73,7 +73,7 @@ void SuspendTestCase::SuspendTest(uint32_t flags) {
         continue;
       }
 
-      ASSERT_NO_FATAL_FAILURES(device(desc.index)->CheckSuspendReceivedAndReply(flags, ZX_OK));
+      ASSERT_NO_FATAL_FAILURE(device(desc.index)->CheckSuspendReceivedAndReply(flags, ZX_OK));
 
       // Make sure all descendants of this device are already suspended.
       // We just need to check immediate children since this will
@@ -94,32 +94,32 @@ void SuspendTestCase::SuspendTest(uint32_t flags) {
     coordinator_loop()->RunUntilIdle();
   }
 
-  ASSERT_NO_FATAL_FAILURES(platform_bus()->CheckSuspendReceivedAndReply(flags, ZX_OK));
+  ASSERT_NO_FATAL_FAILURE(platform_bus()->CheckSuspendReceivedAndReply(flags, ZX_OK));
 }
 
 TEST_F(SuspendTestCase, SuspendSuccess) {
-  ASSERT_NO_FATAL_FAILURES(StateTest(ZX_OK, Device::State::kSuspended));
+  ASSERT_NO_FATAL_FAILURE(StateTest(ZX_OK, Device::State::kSuspended));
 }
 
 TEST_F(SuspendTestCase, SuspendFail) {
-  ASSERT_NO_FATAL_FAILURES(StateTest(ZX_ERR_BAD_STATE, Device::State::kActive));
+  ASSERT_NO_FATAL_FAILURE(StateTest(ZX_ERR_BAD_STATE, Device::State::kActive));
 }
 
 // Verify the device transitions in and out of the suspending state.
 void SuspendTestCase::StateTest(zx_status_t suspend_status, Device::State want_device_state) {
   size_t index;
-  ASSERT_NO_FATAL_FAILURES(
+  ASSERT_NO_FATAL_FAILURE(
       AddDevice(platform_bus()->device, "device", 0 /* protocol id */, "", &index));
 
   const uint32_t flags = DEVICE_SUSPEND_FLAG_POWEROFF;
-  ASSERT_NO_FATAL_FAILURES(DoSuspend(flags));
+  ASSERT_NO_FATAL_FAILURE(DoSuspend(flags));
 
   // Check for the suspend message without replying.
-  ASSERT_NO_FATAL_FAILURES(device(index)->CheckSuspendReceived(flags));
+  ASSERT_NO_FATAL_FAILURE(device(index)->CheckSuspendReceived(flags));
 
   ASSERT_EQ(device(index)->device->state(), Device::State::kSuspending);
 
-  ASSERT_NO_FATAL_FAILURES(device(index)->SendSuspendReply(suspend_status));
+  ASSERT_NO_FATAL_FAILURE(device(index)->SendSuspendReply(suspend_status));
   coordinator_loop()->RunUntilIdle();
 
   ASSERT_EQ(device(index)->device->state(), want_device_state);

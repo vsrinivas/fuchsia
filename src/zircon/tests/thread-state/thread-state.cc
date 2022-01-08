@@ -450,7 +450,7 @@ TEST(ThreadStateTests, sleeping_test) {
   zx_handle_t child, channel;
   start_test_child(zx_job_default(), test_child_name, &child, &channel);
   zx_handle_t thread;
-  ASSERT_NO_FATAL_FAILURES(get_child_thread(channel, &thread));
+  ASSERT_NO_FATAL_FAILURE(get_child_thread(channel, &thread));
 
   send_msg(channel, MSG_SLEEP_TEST);
 
@@ -467,7 +467,7 @@ TEST(ThreadStateTests, futex_test) {
   zx_handle_t child, channel;
   start_test_child(zx_job_default(), test_child_name, &child, &channel);
   zx_handle_t thread;
-  ASSERT_NO_FATAL_FAILURES(get_child_thread(channel, &thread));
+  ASSERT_NO_FATAL_FAILURE(get_child_thread(channel, &thread));
 
   send_msg_with_handles(channel, MSG_FUTEX_TEST, nullptr, 0);
 
@@ -481,7 +481,7 @@ TEST(ThreadStateTests, port_test) {
   zx_handle_t child, channel;
   start_test_child(zx_job_default(), test_child_name, &child, &channel);
   zx_handle_t thread;
-  ASSERT_NO_FATAL_FAILURES(get_child_thread(channel, &thread));
+  ASSERT_NO_FATAL_FAILURE(get_child_thread(channel, &thread));
 
   zx_handle_t port;
   ASSERT_EQ(zx_port_create(0, &port), ZX_OK);
@@ -497,7 +497,7 @@ TEST(ThreadStateTests, port_test) {
 
   // The child sends a pass/fail message back as extra verification that
   // things went correctly on that side.
-  ASSERT_NO_FATAL_FAILURES(recv_specific_msg(channel, MSG_PASS));
+  ASSERT_NO_FATAL_FAILURE(recv_specific_msg(channel, MSG_PASS));
 
   zx_handle_close(port);
   terminate_process(child);
@@ -508,7 +508,7 @@ TEST(ThreadStateTests, channel_test) {
   zx_handle_t child, channel;
   start_test_child(zx_job_default(), test_child_name, &child, &channel);
   zx_handle_t thread;
-  ASSERT_NO_FATAL_FAILURES(get_child_thread(channel, &thread));
+  ASSERT_NO_FATAL_FAILURE(get_child_thread(channel, &thread));
 
   zx_handle_t our_channel, their_channel;
   ASSERT_EQ(zx_channel_create(0, &our_channel, &their_channel), ZX_OK);
@@ -522,7 +522,7 @@ TEST(ThreadStateTests, channel_test) {
 
   // The child sends a pass/fail message back as extra verification that
   // things went correctly on that side.
-  ASSERT_NO_FATAL_FAILURES(recv_specific_msg(channel, MSG_PASS));
+  ASSERT_NO_FATAL_FAILURE(recv_specific_msg(channel, MSG_PASS));
 
   terminate_process(child);
 }
@@ -532,7 +532,7 @@ TEST(ThreadStateTests, wait_one_test) {
   zx_handle_t child, channel;
   start_test_child(zx_job_default(), test_child_name, &child, &channel);
   zx_handle_t thread;
-  ASSERT_NO_FATAL_FAILURES(get_child_thread(channel, &thread));
+  ASSERT_NO_FATAL_FAILURE(get_child_thread(channel, &thread));
 
   zx_handle_t h[2];
   ASSERT_EQ(zx_eventpair_create(0, &h[0], &h[1]), ZX_OK);
@@ -541,7 +541,7 @@ TEST(ThreadStateTests, wait_one_test) {
 
   // Don't continue until we see MSG_PROCEED, that tells us the child has
   // received the message and isn't in a wait_one/wait_many syscall.
-  ASSERT_NO_FATAL_FAILURES(recv_specific_msg(channel, MSG_PROCEED));
+  ASSERT_NO_FATAL_FAILURE(recv_specific_msg(channel, MSG_PROCEED));
 
   wait_thread_blocked(thread, ZX_THREAD_STATE_BLOCKED_WAIT_ONE);
 
@@ -550,7 +550,7 @@ TEST(ThreadStateTests, wait_one_test) {
 
   // The child sends a pass/fail message back as extra verification that
   // things went correctly on that side.
-  ASSERT_NO_FATAL_FAILURES(recv_specific_msg(channel, MSG_PASS));
+  ASSERT_NO_FATAL_FAILURE(recv_specific_msg(channel, MSG_PASS));
 
   terminate_process(child);
 }
@@ -560,7 +560,7 @@ TEST(ThreadStateTests, wait_many_test) {
   zx_handle_t child, channel;
   start_test_child(zx_job_default(), test_child_name, &child, &channel);
   zx_handle_t thread;
-  ASSERT_NO_FATAL_FAILURES(get_child_thread(channel, &thread));
+  ASSERT_NO_FATAL_FAILURE(get_child_thread(channel, &thread));
 
   uint32_t num_handles = NUM_WAIT_MANY_HANDLES;
   zx_handle_t h[2][num_handles];
@@ -572,7 +572,7 @@ TEST(ThreadStateTests, wait_many_test) {
 
   // Don't continue until we see MSG_PROCEED, that tells us the child has
   // received the message and isn't in a wait_one/wait_many syscall.
-  ASSERT_NO_FATAL_FAILURES(recv_specific_msg(channel, MSG_PROCEED));
+  ASSERT_NO_FATAL_FAILURE(recv_specific_msg(channel, MSG_PROCEED));
 
   wait_thread_blocked(thread, ZX_THREAD_STATE_BLOCKED_WAIT_MANY);
 
@@ -583,7 +583,7 @@ TEST(ThreadStateTests, wait_many_test) {
 
   // The child sends a pass/fail message back as extra verification that
   // things went correctly on that side.
-  ASSERT_NO_FATAL_FAILURES(recv_specific_msg(channel, MSG_PASS));
+  ASSERT_NO_FATAL_FAILURE(recv_specific_msg(channel, MSG_PASS));
 
   terminate_process(child);
 }
@@ -595,13 +595,13 @@ TEST(ThreadStateTests, wait_many_no_objects_test) {
   zx_handle_t child, channel;
   start_test_child(zx_job_default(), test_child_name, &child, &channel);
   zx_handle_t thread;
-  ASSERT_NO_FATAL_FAILURES(get_child_thread(channel, &thread));
+  ASSERT_NO_FATAL_FAILURE(get_child_thread(channel, &thread));
 
   send_msg(channel, MSG_WAIT_MANY_TEST);
 
   // Don't continue until we see MSG_PROCEED, that tells us the child has
   // received the message and isn't in a wait_one/wait_many syscall.
-  ASSERT_NO_FATAL_FAILURES(recv_specific_msg(channel, MSG_PROCEED));
+  ASSERT_NO_FATAL_FAILURE(recv_specific_msg(channel, MSG_PROCEED));
 
   wait_thread_blocked(thread, ZX_THREAD_STATE_BLOCKED_WAIT_MANY);
 
@@ -615,7 +615,7 @@ TEST(ThreadStateTests, interrupt_test) {
   zx_handle_t child, channel;
   start_test_child(zx_job_default(), test_child_name, &child, &channel);
   zx_handle_t thread;
-  ASSERT_NO_FATAL_FAILURES(get_child_thread(channel, &thread));
+  ASSERT_NO_FATAL_FAILURE(get_child_thread(channel, &thread));
 
   zx_handle_t interrupt;
   // Creating a virtual interrupt does not require a valid handle.
@@ -632,7 +632,7 @@ TEST(ThreadStateTests, interrupt_test) {
 
   // The child sends a pass/fail message back as extra verification that
   // things went correctly on that side.
-  ASSERT_NO_FATAL_FAILURES(recv_specific_msg(channel, MSG_PASS));
+  ASSERT_NO_FATAL_FAILURE(recv_specific_msg(channel, MSG_PASS));
 
   zx_handle_close(interrupt);
   terminate_process(child);

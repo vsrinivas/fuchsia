@@ -151,13 +151,13 @@ class IntelGspiTest : public zxtest::Test {
   size_t bytes_transmitted_ = 0;
 };
 
-TEST_F(IntelGspiTest, TestCreateAndTearDown) { ASSERT_NO_FATAL_FAILURES(CreateDevice(true)); }
+TEST_F(IntelGspiTest, TestCreateAndTearDown) { ASSERT_NO_FATAL_FAILURE(CreateDevice(true)); }
 
 TEST_F(IntelGspiTest, TestRx) {
   static const std::vector<uint8_t> kTestData{0xd0, 0x0d, 0xfe, 0xed};
 
   rx_data_ = kTestData;
-  ASSERT_NO_FATAL_FAILURES(CreateDevice(true));
+  ASSERT_NO_FATAL_FAILURE(CreateDevice(true));
   ddk::SpiImplProtocolClient client(gspi_);
   uint8_t data[4];
   size_t actual;
@@ -169,7 +169,7 @@ TEST_F(IntelGspiTest, TestRx) {
 TEST_F(IntelGspiTest, TestTx) {
   static const std::vector<uint8_t> kTestData{0xd0, 0x0d, 0xfe, 0xed};
   rx_data_.resize(kTestData.size());
-  ASSERT_NO_FATAL_FAILURES(CreateDevice(true));
+  ASSERT_NO_FATAL_FAILURE(CreateDevice(true));
   ddk::SpiImplProtocolClient client(gspi_);
   size_t actual;
   ASSERT_OK(client.Exchange(0, kTestData.data(), kTestData.size(), nullptr, 0, &actual));
@@ -184,7 +184,7 @@ TEST_F(IntelGspiTest, TestBigTransaction) {
   }
 
   rx_data_ = kTestData;
-  ASSERT_NO_FATAL_FAILURES(CreateDevice(true));
+  ASSERT_NO_FATAL_FAILURE(CreateDevice(true));
   ddk::SpiImplProtocolClient client(gspi_);
   uint8_t data[128];
   size_t actual;

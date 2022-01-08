@@ -253,14 +253,14 @@ TEST_F(SimpleCodecTest, Inspect) {
   codec_client.Bind(std::move(channel_local));
 
   // Check inspect state.
-  ASSERT_NO_FATAL_FAILURES(ReadInspect(codec->inspect().DuplicateVmo()));
+  ASSERT_NO_FATAL_FAILURE(ReadInspect(codec->inspect().DuplicateVmo()));
   auto* simple_codec = hierarchy().GetByPath({"simple_codec"});
   ASSERT_TRUE(simple_codec);
-  ASSERT_NO_FATAL_FAILURES(
+  ASSERT_NO_FATAL_FAILURE(
       CheckProperty(simple_codec->node(), "state", inspect::StringPropertyValue("created")));
-  ASSERT_NO_FATAL_FAILURES(
+  ASSERT_NO_FATAL_FAILURE(
       CheckProperty(simple_codec->node(), "start_time", inspect::IntPropertyValue(0)));
-  ASSERT_NO_FATAL_FAILURES(
+  ASSERT_NO_FATAL_FAILURE(
       CheckProperty(simple_codec->node(), "unique_id", inspect::StringPropertyValue("test id")));
 }
 
@@ -290,14 +290,14 @@ TEST_F(SimpleCodecTest, InspectNoUniqueId) {
   codec_client.Bind(std::move(channel_local));
 
   // Check inspect state.
-  ASSERT_NO_FATAL_FAILURES(ReadInspect(codec->inspect().DuplicateVmo()));
+  ASSERT_NO_FATAL_FAILURE(ReadInspect(codec->inspect().DuplicateVmo()));
   auto* simple_codec = hierarchy().GetByPath({"simple_codec"});
   ASSERT_TRUE(simple_codec);
-  ASSERT_NO_FATAL_FAILURES(
+  ASSERT_NO_FATAL_FAILURE(
       CheckProperty(simple_codec->node(), "state", inspect::StringPropertyValue("created")));
-  ASSERT_NO_FATAL_FAILURES(
+  ASSERT_NO_FATAL_FAILURE(
       CheckProperty(simple_codec->node(), "start_time", inspect::IntPropertyValue(0)));
-  ASSERT_NO_FATAL_FAILURES(
+  ASSERT_NO_FATAL_FAILURE(
       CheckProperty(simple_codec->node(), "unique_id",
                     inspect::StringPropertyValue(std::to_string(kTestInstanceCount))));
 }

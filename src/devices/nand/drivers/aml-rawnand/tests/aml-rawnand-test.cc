@@ -412,7 +412,7 @@ TEST(AmlRawnand, ReadPage) {
   page.data.back() = 0xAA;
   page.info.front().info_bytes = 0x1234;
   page.info.back().info_bytes = 0xABCD;
-  ASSERT_NO_FATAL_FAILURES(nand->SetFakePage(5, page));
+  ASSERT_NO_FATAL_FAILURE(nand->SetFakePage(5, page));
 
   std::vector<uint8_t> data(kTestNandWriteSize);
   std::vector<uint16_t> oob(kDefaultNumUserBytes / 2);  // /2 for 16-bit values.
@@ -439,7 +439,7 @@ TEST(AmlRawnand, ReadPageDataOnly) {
   NandPage page;
   page.data.front() = 0x55;
   page.data.back() = 0xAA;
-  ASSERT_NO_FATAL_FAILURES(nand->SetFakePage(5, page));
+  ASSERT_NO_FATAL_FAILURE(nand->SetFakePage(5, page));
 
   std::vector<uint8_t> data(kTestNandWriteSize);
   size_t data_bytes_read = 0;
@@ -460,7 +460,7 @@ TEST(AmlRawnand, ReadPageOobOnly) {
   NandPage page;
   page.info.front().info_bytes = 0x1234;
   page.info.back().info_bytes = 0xABCD;
-  ASSERT_NO_FATAL_FAILURES(nand->SetFakePage(5, page));
+  ASSERT_NO_FATAL_FAILURE(nand->SetFakePage(5, page));
 
   std::vector<uint16_t> oob(kDefaultNumUserBytes / 2);
   size_t oob_bytes_read = 0;
@@ -486,7 +486,7 @@ TEST(AmlRawnand, ReadErasedPage) {
     info.ecc.eccerr_cnt = AML_ECC_UNCORRECTABLE_CNT;
     info.zero_bits = 0;
   }
-  ASSERT_NO_FATAL_FAILURES(nand->SetFakePage(5, page));
+  ASSERT_NO_FATAL_FAILURE(nand->SetFakePage(5, page));
 
   std::vector<uint8_t> data(kTestNandWriteSize);
   std::vector<uint16_t> oob(kDefaultNumUserBytes / 2);  // /2 for 16-bit values.
@@ -537,7 +537,7 @@ TEST(AmlRawnand, PartialErasedPage) {
   page.info.front().ecc.eccerr_cnt = 0;
   page.info.front().zero_bits = AML_ECC_UNCORRECTABLE_CNT;
 
-  ASSERT_NO_FATAL_FAILURES(nand->SetFakePage(5, page));
+  ASSERT_NO_FATAL_FAILURE(nand->SetFakePage(5, page));
 
   std::vector<uint8_t> data(kTestNandWriteSize);
   std::vector<uint16_t> oob(kDefaultNumUserBytes / 2);  // /2 for 16-bit values.
@@ -572,7 +572,7 @@ TEST(AmlRawnand, ErasedPageAllOnes) {
   page.data[0] = 0xFE;
   page.info[0].zero_bits = 1;
 
-  ASSERT_NO_FATAL_FAILURES(nand->SetFakePage(5, page));
+  ASSERT_NO_FATAL_FAILURE(nand->SetFakePage(5, page));
 
   std::vector<uint8_t> data(kTestNandWriteSize);
   std::vector<uint16_t> oob(kDefaultNumUserBytes / 2);  // /2 for 16-bit values.

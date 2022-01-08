@@ -183,7 +183,7 @@ TEST_F(IntelRtcTest, TestReadWriteBinary24Hr) {
   ASSERT_EQ(time.day, 5);
 
   device_->WriteTime(time);
-  ASSERT_NO_FATAL_FAILURES(ExpectTime(time, /*bcd=*/false, /*is_24hr=*/true));
+  ASSERT_NO_FATAL_FAILURE(ExpectTime(time, /*bcd=*/false, /*is_24hr=*/true));
 }
 
 TEST_F(IntelRtcTest, TestReadWriteBcd24Hr) {
@@ -200,7 +200,7 @@ TEST_F(IntelRtcTest, TestReadWriteBcd24Hr) {
   ASSERT_EQ(time.day, 5);
 
   device_->WriteTime(time);
-  ASSERT_NO_FATAL_FAILURES(ExpectTime(time, /*bcd=*/true, /*is_24hr=*/true));
+  ASSERT_NO_FATAL_FAILURE(ExpectTime(time, /*bcd=*/true, /*is_24hr=*/true));
 }
 
 TEST_F(IntelRtcTest, TestReadWriteBinary12Hr) {
@@ -216,7 +216,7 @@ TEST_F(IntelRtcTest, TestReadWriteBinary12Hr) {
   ASSERT_EQ(time.month, 8);
   ASSERT_EQ(time.day, 5);
   device_->WriteTime(time);
-  ASSERT_NO_FATAL_FAILURES(ExpectTime(time, /*bcd=*/false, /*is_24hr=*/false));
+  ASSERT_NO_FATAL_FAILURE(ExpectTime(time, /*bcd=*/false, /*is_24hr=*/false));
 }
 
 TEST_F(IntelRtcTest, TestReadWriteBcd12Hr) {
@@ -232,7 +232,7 @@ TEST_F(IntelRtcTest, TestReadWriteBcd12Hr) {
   ASSERT_EQ(time.month, 8);
   ASSERT_EQ(time.day, 5);
   device_->WriteTime(time);
-  ASSERT_NO_FATAL_FAILURES(ExpectTime(time, /*bcd=*/true, /*is_24hr=*/false));
+  ASSERT_NO_FATAL_FAILURE(ExpectTime(time, /*bcd=*/true, /*is_24hr=*/false));
 }
 
 TEST_F(IntelRtcTest, TestReadWrite12HrMidnight) {
@@ -248,7 +248,7 @@ TEST_F(IntelRtcTest, TestReadWrite12HrMidnight) {
   ASSERT_EQ(time.month, 8);
   ASSERT_EQ(time.day, 5);
   device_->WriteTime(time);
-  ASSERT_NO_FATAL_FAILURES(ExpectTime(time, /*bcd=*/false, /*is_24hr=*/false));
+  ASSERT_NO_FATAL_FAILURE(ExpectTime(time, /*bcd=*/false, /*is_24hr=*/false));
 }
 
 TEST_F(IntelRtcTest, TestReadWaitsForUpdate) {
@@ -263,7 +263,7 @@ TEST_F(IntelRtcTest, TestReadWaitsForUpdate) {
 TEST_F(IntelRtcTest, TestNvramGetSize) {
   CreateDevice(1);
   fidl::WireSyncClient<fuchsia_hardware_nvram::Device> client;
-  ASSERT_NO_FATAL_FAILURES(ServeNvram(&client));
+  ASSERT_NO_FATAL_FAILURE(ServeNvram(&client));
 
   auto result = client->GetSize();
   ASSERT_OK(result.status());
@@ -273,7 +273,7 @@ TEST_F(IntelRtcTest, TestNvramGetSize) {
 TEST_F(IntelRtcTest, TestNvramWrite) {
   CreateDevice(1);
   fidl::WireSyncClient<fuchsia_hardware_nvram::Device> client;
-  ASSERT_NO_FATAL_FAILURES(ServeNvram(&client));
+  ASSERT_NO_FATAL_FAILURE(ServeNvram(&client));
 
   std::vector<uint8_t> my_data = {1, 2, 3, 4};
   auto result = client->Write(0, fidl::VectorView<uint8_t>::FromExternal(my_data));
@@ -286,7 +286,7 @@ TEST_F(IntelRtcTest, TestNvramWrite) {
 TEST_F(IntelRtcTest, TestNvramRead) {
   CreateDevice(1);
   fidl::WireSyncClient<fuchsia_hardware_nvram::Device> client;
-  ASSERT_NO_FATAL_FAILURES(ServeNvram(&client));
+  ASSERT_NO_FATAL_FAILURE(ServeNvram(&client));
   std::vector<uint8_t> my_data = {7, 8, 42, 10};
   memcpy(&registers_[kNvramStart + 30], my_data.data(), my_data.size());
 
@@ -302,7 +302,7 @@ TEST_F(IntelRtcTest, TestNvramRead) {
 TEST_F(IntelRtcTest, TestNvramWriteAcrossBanks) {
   CreateDevice(2);
   fidl::WireSyncClient<fuchsia_hardware_nvram::Device> client;
-  ASSERT_NO_FATAL_FAILURES(ServeNvram(&client));
+  ASSERT_NO_FATAL_FAILURE(ServeNvram(&client));
 
   std::vector<uint8_t> my_data = {1, 2, 3, 4};
   auto result = client->Write(112, fidl::VectorView<uint8_t>::FromExternal(my_data));
@@ -315,7 +315,7 @@ TEST_F(IntelRtcTest, TestNvramWriteAcrossBanks) {
 TEST_F(IntelRtcTest, TestNvramReadAcrossBanks) {
   CreateDevice(2);
   fidl::WireSyncClient<fuchsia_hardware_nvram::Device> client;
-  ASSERT_NO_FATAL_FAILURES(ServeNvram(&client));
+  ASSERT_NO_FATAL_FAILURE(ServeNvram(&client));
   std::vector<uint8_t> my_data = {7, 8, 42, 10};
   memcpy(&registers_[kNvramStart + 112], my_data.data(), my_data.size());
 
@@ -331,7 +331,7 @@ TEST_F(IntelRtcTest, TestNvramReadAcrossBanks) {
 TEST_F(IntelRtcTest, TestNvramOutOfBounds) {
   CreateDevice(1);
   fidl::WireSyncClient<fuchsia_hardware_nvram::Device> client;
-  ASSERT_NO_FATAL_FAILURES(ServeNvram(&client));
+  ASSERT_NO_FATAL_FAILURE(ServeNvram(&client));
 
   {
     auto result = client->Read(400, 4);

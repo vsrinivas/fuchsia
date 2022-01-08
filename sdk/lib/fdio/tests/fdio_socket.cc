@@ -206,8 +206,8 @@ TEST_F(TcpSocketTest, CloseZXSocketOnTransfer) {
 // fails with ZX_ERR_SHOULD_WAIT, and this may lead to bogus EAGAIN even if some
 // data has actually been read.
 TEST_F(TcpSocketTest, RecvmsgNonblockBoundary) {
-  ASSERT_NO_FATAL_FAILURES(set_connected());
-  ASSERT_NO_FATAL_FAILURES(set_nonblocking_io());
+  ASSERT_NO_FATAL_FAILURE(set_connected());
+  ASSERT_NO_FATAL_FAILURE(set_nonblocking_io());
 
   // Write 4 bytes of data to socket.
   size_t actual;
@@ -244,8 +244,8 @@ TEST_F(TcpSocketTest, RecvmsgNonblockBoundary) {
 
 // Make sure we can successfully read zero bytes if we pass a zero sized input buffer.
 TEST_F(TcpSocketTest, RecvmsgEmptyBuffer) {
-  ASSERT_NO_FATAL_FAILURES(set_connected());
-  ASSERT_NO_FATAL_FAILURES(set_nonblocking_io());
+  ASSERT_NO_FATAL_FAILURE(set_connected());
+  ASSERT_NO_FATAL_FAILURE(set_nonblocking_io());
 
   // Write 4 bytes of data to socket.
   size_t actual;
@@ -266,8 +266,8 @@ TEST_F(TcpSocketTest, RecvmsgEmptyBuffer) {
 // with ZX_ERR_SHOULD_WAIT, but the sendmsg should report first segment length
 // rather than failing with EAGAIN.
 TEST_F(TcpSocketTest, SendmsgNonblockBoundary) {
-  ASSERT_NO_FATAL_FAILURES(set_connected());
-  ASSERT_NO_FATAL_FAILURES(set_nonblocking_io());
+  ASSERT_NO_FATAL_FAILURE(set_connected());
+  ASSERT_NO_FATAL_FAILURE(set_nonblocking_io());
 
   const size_t memlength = 65536;
   std::unique_ptr<uint8_t[]> memchunk(new uint8_t[memlength]);
@@ -303,7 +303,7 @@ TEST_F(TcpSocketTest, SendmsgNonblockBoundary) {
 }
 
 TEST_F(TcpSocketTest, WaitBeginEndConnecting) {
-  ASSERT_NO_FATAL_FAILURES(set_nonblocking_io());
+  ASSERT_NO_FATAL_FAILURE(set_nonblocking_io());
 
   // Like set_connected, but does not advance to the connected state.
   mutable_server().SetOnConnect([](zx::socket& peer, Server::ConnectCompleter::Sync& completer) {
@@ -381,7 +381,7 @@ TEST_F(TcpSocketTest, WaitBeginEndConnecting) {
 }
 
 TEST_F(TcpSocketTest, WaitBeginEndConnected) {
-  ASSERT_NO_FATAL_FAILURES(set_connected());
+  ASSERT_NO_FATAL_FAILURE(set_connected());
   fdio_t* io = fdio_unsafe_fd_to_io(client_fd().get());
   auto release = fit::defer([io]() { fdio_unsafe_release(io); });
 
@@ -467,7 +467,7 @@ TEST_F(TcpSocketTest, GetReadBufferAvailable) {
 }
 
 TEST_F(TcpSocketTest, PollNoEvents) {
-  ASSERT_NO_FATAL_FAILURES(set_connected());
+  ASSERT_NO_FATAL_FAILURE(set_connected());
   struct pollfd pfds[] = {
       {
           .fd = client_fd().get(),
@@ -480,7 +480,7 @@ TEST_F(TcpSocketTest, PollNoEvents) {
 
 using UdpSocketTest = BaseTest<ZX_SOCKET_DATAGRAM>;
 TEST_F(UdpSocketTest, DatagramSendMsg) {
-  ASSERT_NO_FATAL_FAILURES(set_connected());
+  ASSERT_NO_FATAL_FAILURE(set_connected());
 
   {
     const struct msghdr msg = {};
@@ -639,12 +639,12 @@ class TcpSocketTimeoutTest : public TcpSocketTest {
 };
 
 TEST_F(TcpSocketTimeoutTest, Rcv) {
-  ASSERT_NO_FATAL_FAILURES(set_connected());
+  ASSERT_NO_FATAL_FAILURE(set_connected());
   timeout<SO_RCVTIMEO>(mutable_client_fd(), mutable_server_socket());
 }
 
 TEST_F(TcpSocketTimeoutTest, Snd) {
-  ASSERT_NO_FATAL_FAILURES(set_connected());
+  ASSERT_NO_FATAL_FAILURE(set_connected());
   server().FillPeerSocket();
   timeout<SO_SNDTIMEO>(mutable_client_fd(), mutable_server_socket());
 }

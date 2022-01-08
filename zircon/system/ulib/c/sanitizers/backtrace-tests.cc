@@ -220,74 +220,74 @@ class Collector {
 
 TEST(SanitizerFastBacktraceTests, BacktraceByFramePointer) {
   Collector bt(kByFramePointer);
-  ASSERT_NO_FATAL_FAILURES(bt.Collect());
-  ASSERT_NO_FATAL_FAILURES(bt.Check());
+  ASSERT_NO_FATAL_FAILURE(bt.Collect());
+  ASSERT_NO_FATAL_FAILURE(bt.Check());
 }
 
 TEST(SanitizerFastBacktraceTests, BacktraceByShadowCallStack) {
   Collector bt(kByShadowCallStack);
-  ASSERT_NO_FATAL_FAILURES(bt.Collect());
-  ASSERT_NO_FATAL_FAILURES(bt.Check());
+  ASSERT_NO_FATAL_FAILURE(bt.Collect());
+  ASSERT_NO_FATAL_FAILURE(bt.Check());
 }
 
 TEST(SanitizerFastBacktraceTests, BacktraceByUnwind) {
   Collector bt(kByUnwind);
-  ASSERT_NO_FATAL_FAILURES(bt.Collect());
-  ASSERT_NO_FATAL_FAILURES(bt.Check());
+  ASSERT_NO_FATAL_FAILURE(bt.Collect());
+  ASSERT_NO_FATAL_FAILURE(bt.Check());
 }
 
 TEST(SanitizerFastBacktraceTests, C11ThreadBacktraceByFramePointer) {
   Collector bt(kByFramePointer);
-  ASSERT_NO_FATAL_FAILURES(bt.CollectC11Thread());
-  ASSERT_NO_FATAL_FAILURES(bt.Check());
+  ASSERT_NO_FATAL_FAILURE(bt.CollectC11Thread());
+  ASSERT_NO_FATAL_FAILURE(bt.Check());
 }
 
 TEST(SanitizerFastBacktraceTests, C11ThreadBacktraceByShadowCallStack) {
   Collector bt(kByShadowCallStack);
-  ASSERT_NO_FATAL_FAILURES(bt.CollectC11Thread());
-  ASSERT_NO_FATAL_FAILURES(bt.Check());
+  ASSERT_NO_FATAL_FAILURE(bt.CollectC11Thread());
+  ASSERT_NO_FATAL_FAILURE(bt.Check());
 }
 
 TEST(SanitizerFastBacktraceTests, C11ThreadBacktraceByUnwind) {
   Collector bt(kByUnwind);
-  ASSERT_NO_FATAL_FAILURES(bt.CollectC11Thread());
-  ASSERT_NO_FATAL_FAILURES(bt.Check());
+  ASSERT_NO_FATAL_FAILURE(bt.CollectC11Thread());
+  ASSERT_NO_FATAL_FAILURE(bt.Check());
 }
 
 TEST(SanitizerFastBacktraceTests, PThreadBacktraceByFramePointer) {
   Collector bt(kByFramePointer);
-  ASSERT_NO_FATAL_FAILURES(bt.CollectPThread());
-  ASSERT_NO_FATAL_FAILURES(bt.Check());
+  ASSERT_NO_FATAL_FAILURE(bt.CollectPThread());
+  ASSERT_NO_FATAL_FAILURE(bt.Check());
 }
 
 TEST(SanitizerFastBacktraceTests, PThreadBacktraceByShadowCallStack) {
   Collector bt(kByShadowCallStack);
-  ASSERT_NO_FATAL_FAILURES(bt.CollectPThread());
-  ASSERT_NO_FATAL_FAILURES(bt.Check());
+  ASSERT_NO_FATAL_FAILURE(bt.CollectPThread());
+  ASSERT_NO_FATAL_FAILURE(bt.Check());
 }
 
 TEST(SanitizerFastBacktraceTests, PThreadBacktraceByUnwind) {
   Collector bt(kByUnwind);
-  ASSERT_NO_FATAL_FAILURES(bt.CollectPThread());
-  ASSERT_NO_FATAL_FAILURES(bt.Check());
+  ASSERT_NO_FATAL_FAILURE(bt.CollectPThread());
+  ASSERT_NO_FATAL_FAILURE(bt.Check());
 }
 
 TEST(SanitizerFastBacktraceTests, CppThreadBacktraceByFramePointer) {
   Collector bt(kByFramePointer);
-  ASSERT_NO_FATAL_FAILURES(bt.CollectCppThread());
-  ASSERT_NO_FATAL_FAILURES(bt.Check());
+  ASSERT_NO_FATAL_FAILURE(bt.CollectCppThread());
+  ASSERT_NO_FATAL_FAILURE(bt.Check());
 }
 
 TEST(SanitizerFastBacktraceTests, CppThreadBacktraceByShadowCallStack) {
   Collector bt(kByShadowCallStack);
-  ASSERT_NO_FATAL_FAILURES(bt.CollectCppThread());
-  ASSERT_NO_FATAL_FAILURES(bt.Check());
+  ASSERT_NO_FATAL_FAILURE(bt.CollectCppThread());
+  ASSERT_NO_FATAL_FAILURE(bt.Check());
 }
 
 TEST(SanitizerFastBacktraceTests, CppThreadBacktraceByUnwind) {
   Collector bt(kByUnwind);
-  ASSERT_NO_FATAL_FAILURES(bt.CollectCppThread());
-  ASSERT_NO_FATAL_FAILURES(bt.Check());
+  ASSERT_NO_FATAL_FAILURE(bt.CollectCppThread());
+  ASSERT_NO_FATAL_FAILURE(bt.Check());
 }
 
 void ExpectMatch(Collector& fp_collector, Collector& scs_collector, Collector& unw_collector,
@@ -375,57 +375,57 @@ void ExpectMatch(Collector& fp_collector, Collector& scs_collector, Collector& u
 
 TEST(SanitizerFastBacktraceTests, BacktraceMethodsMatch) {
   Collector fp(kByFramePointer);
-  ASSERT_NO_FATAL_FAILURES(fp.Collect());
+  ASSERT_NO_FATAL_FAILURE(fp.Collect());
 
   Collector scs(kByShadowCallStack);
-  ASSERT_NO_FATAL_FAILURES(scs.Collect());
+  ASSERT_NO_FATAL_FAILURE(scs.Collect());
 
   Collector unw(kByUnwind);
-  ASSERT_NO_FATAL_FAILURES(unw.Collect());
+  ASSERT_NO_FATAL_FAILURE(unw.Collect());
 
   // The sole difference should be the return address for this frame itself,
   // where the different Collect() call sites are.  Additionally, the initial
   // thread's callers outside this file might omit the frame pointers.
-  ASSERT_NO_FATAL_FAILURES(ExpectMatch(fp, scs, unw, 1, kIncompleteFramePointers));
+  ASSERT_NO_FATAL_FAILURE(ExpectMatch(fp, scs, unw, 1, kIncompleteFramePointers));
 }
 
 TEST(SanitizerFastBacktraceTests, C11ThreadBacktraceMethodsMatch) {
   Collector fp(kByFramePointer);
-  ASSERT_NO_FATAL_FAILURES(fp.CollectC11Thread());
+  ASSERT_NO_FATAL_FAILURE(fp.CollectC11Thread());
 
   Collector scs(kByShadowCallStack);
-  ASSERT_NO_FATAL_FAILURES(scs.CollectC11Thread());
+  ASSERT_NO_FATAL_FAILURE(scs.CollectC11Thread());
 
   Collector unw(kByUnwind);
-  ASSERT_NO_FATAL_FAILURES(unw.CollectC11Thread());
+  ASSERT_NO_FATAL_FAILURE(unw.CollectC11Thread());
 
-  ASSERT_NO_FATAL_FAILURES(ExpectMatch(fp, scs, unw));
+  ASSERT_NO_FATAL_FAILURE(ExpectMatch(fp, scs, unw));
 }
 
 TEST(SanitizerFastBacktraceTests, PThreadBacktraceMethodsMatch) {
   Collector fp(kByFramePointer);
-  ASSERT_NO_FATAL_FAILURES(fp.CollectPThread());
+  ASSERT_NO_FATAL_FAILURE(fp.CollectPThread());
 
   Collector scs(kByShadowCallStack);
-  ASSERT_NO_FATAL_FAILURES(scs.CollectPThread());
+  ASSERT_NO_FATAL_FAILURE(scs.CollectPThread());
 
   Collector unw(kByUnwind);
-  ASSERT_NO_FATAL_FAILURES(unw.CollectPThread());
+  ASSERT_NO_FATAL_FAILURE(unw.CollectPThread());
 
-  ASSERT_NO_FATAL_FAILURES(ExpectMatch(fp, scs, unw));
+  ASSERT_NO_FATAL_FAILURE(ExpectMatch(fp, scs, unw));
 }
 
 TEST(SanitizerFastBacktraceTests, CppThreadBacktraceMethodsMatch) {
   Collector fp(kByFramePointer);
-  ASSERT_NO_FATAL_FAILURES(fp.CollectCppThread());
+  ASSERT_NO_FATAL_FAILURE(fp.CollectCppThread());
 
   Collector scs(kByShadowCallStack);
-  ASSERT_NO_FATAL_FAILURES(scs.CollectCppThread());
+  ASSERT_NO_FATAL_FAILURE(scs.CollectCppThread());
 
   Collector unw(kByUnwind);
-  ASSERT_NO_FATAL_FAILURES(unw.CollectCppThread());
+  ASSERT_NO_FATAL_FAILURE(unw.CollectCppThread());
 
-  ASSERT_NO_FATAL_FAILURES(ExpectMatch(fp, scs, unw));
+  ASSERT_NO_FATAL_FAILURE(ExpectMatch(fp, scs, unw));
 }
 
 }  // namespace

@@ -144,7 +144,7 @@ TEST_F(DirV2, Enumerate) {
   EXPECT_EQ(ZXIO_OPERATION_ENUMERATE, entry->abilities);
   EXPECT_TRUE(entry->has.id);
   EXPECT_EQ(0, entry->id);
-  EXPECT_STR_EQ("zero", entry->name);
+  EXPECT_STREQ("zero", entry->name);
   EXPECT_EQ(strlen(entry->name), entry->name_length);
 
   ASSERT_OK(zxio_dirent_iterator_next(&iterator, &entry));
@@ -154,7 +154,7 @@ TEST_F(DirV2, Enumerate) {
   EXPECT_EQ(ZXIO_OPERATION_READ_BYTES, entry->abilities);
   EXPECT_TRUE(entry->has.id);
   EXPECT_EQ(1, entry->id);
-  EXPECT_STR_EQ("one", entry->name);
+  EXPECT_STREQ("one", entry->name);
   EXPECT_EQ(strlen(entry->name), entry->name_length);
 
   ASSERT_EQ(ZX_ERR_NOT_FOUND, zxio_dirent_iterator_next(&iterator, &entry));

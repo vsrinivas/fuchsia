@@ -95,7 +95,7 @@ TEST_F(PinnedVmoTester, PinRangeTest) {
   EXPECT_OK(pinned_vmo_.PinRange(zx_system_get_page_size(), zx_system_get_page_size() * 4, vmo_,
                                  *zx::unowned_bti(bti_), ZX_BTI_PERM_READ | ZX_BTI_PERM_WRITE));
   EXPECT_EQ(pinned_vmo_.region_count(), 4);
-  ASSERT_NO_FATAL_FAILURES(CheckPinned());
+  ASSERT_NO_FATAL_FAILURE(CheckPinned());
 }
 
 TEST_F(PinnedVmoTester, FailPinRangeTest) {

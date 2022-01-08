@@ -60,12 +60,12 @@ TEST_F(VmoFileNonZeroOffsetTest, Basic) {
   size_t actual = 0u;
   ASSERT_OK(zxio_read(io, buffer, 8, 0, &actual));
   EXPECT_EQ(actual, 8);
-  EXPECT_STR_EQ("hijklmno", buffer);
+  EXPECT_STREQ("hijklmno", buffer);
   memset(buffer, 0, sizeof(buffer));
   actual = 0u;
   ASSERT_OK(zxio_read_at(io, 1u, buffer, 6, 0, &actual));
   EXPECT_EQ(actual, 6);
-  EXPECT_STR_EQ("fghijk", buffer);
+  EXPECT_STREQ("fghijk", buffer);
   ASSERT_STATUS(ZX_ERR_WRONG_TYPE, zxio_write(io, buffer, sizeof(buffer), 0, &actual));
   ASSERT_STATUS(ZX_ERR_WRONG_TYPE, zxio_write_at(io, 0u, buffer, sizeof(buffer), 0, &actual));
   size_t offset = 2u;
@@ -74,7 +74,7 @@ TEST_F(VmoFileNonZeroOffsetTest, Basic) {
   memset(buffer, 0, sizeof(buffer));
   actual = 0u;
   ASSERT_OK(zxio_read(io, buffer, 3, 0, &actual));
-  EXPECT_STR_EQ("ghi", buffer);
+  EXPECT_STREQ("ghi", buffer);
   ASSERT_STATUS(ZX_ERR_NOT_SUPPORTED, zxio_truncate(io, 0u));
   uint32_t flags = 0u;
   ASSERT_STATUS(ZX_ERR_NOT_SUPPORTED, zxio_flags_get(io, &flags));

@@ -229,11 +229,11 @@ TEST(FidlTestCase, DirectoryWatcherExisting) {
     uint8_t event = 0;
     ASSERT_NO_FAILURES(ReadEvent(&wb, watcher, &name, &event));
     if (event == fio::wire::kWatchEventIdle) {
-      ASSERT_STR_EQ(name, "");
+      ASSERT_STREQ(name, "");
       break;
     }
     ASSERT_EQ(event, fio::wire::kWatchEventExisting);
-    ASSERT_STR_NE(name, "");
+    ASSERT_STRNE(name, "");
   }
 }
 
