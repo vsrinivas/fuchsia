@@ -42,6 +42,24 @@ pub struct InputEvent {
     pub handled: Handled,
 }
 
+/// An [`UnhandledInputEvent`] is like an [`InputEvent`], except that the data represents an
+/// event that has not been handled.
+/// * Event producers must not use this type to carry data for an event that was already
+///   handled.
+/// * Event consumers should assume that the event has not been handled.
+#[derive(Clone, Debug, PartialEq)]
+pub struct UnhandledInputEvent {
+    /// The `device_event` contains the device-specific input event information.
+    pub device_event: InputDeviceEvent,
+
+    /// The `device_descriptor` contains static information about the device that generated the
+    /// input event.
+    pub device_descriptor: InputDeviceDescriptor,
+
+    /// The time in nanoseconds when the event was first recorded.
+    pub event_time: EventTime,
+}
+
 /// An [`InputDeviceEvent`] represents an input event from an input device.
 ///
 /// [`InputDeviceEvent`]s contain more context than the raw [`InputReport`] they are parsed from.
@@ -272,9 +290,63 @@ pub fn event_time_or_now(event_time: Option<i64>) -> EventTime {
     }
 }
 
+impl std::convert::From<UnhandledInputEvent> for InputEvent {
+    fn from(event: UnhandledInputEvent) -> Self {
+        Self {
+            device_event: event.device_event,
+            device_descriptor: event.device_descriptor,
+            event_time: event.event_time,
+            handled: Handled::No,
+        }
+    }
+}
+
+// Fallible conversion from an InputEvent to an UnhandledInputEvent.
+//
+// Useful to adapt various functions in the [`testing_utilities`] module
+// to work with tests for [`UnhandledInputHandler`]s.
+//
+// Production code however, should probably just match on the [`InputEvent`].
+#[cfg(test)]
+impl std::convert::TryFrom<InputEvent> for UnhandledInputEvent {
+    type Error = anyhow::Error;
+    fn try_from(event: InputEvent) -> Result<UnhandledInputEvent, Self::Error> {
+        match event.handled {
+            Handled::Yes => {
+                Err(format_err!("Attempted to treat a handled InputEvent as unhandled"))
+            }
+            Handled::No => Ok(UnhandledInputEvent {
+                device_event: event.device_event,
+                device_descriptor: event.device_descriptor,
+                event_time: event.event_time,
+            }),
+        }
+    }
+}
+
+impl InputEvent {
+    /// Marks the event as handled, if `predicate` is `true`.
+    /// Otherwise, leaves the event unchanged.
+    pub(crate) fn into_handled_if(self, predicate: bool) -> Self {
+        if predicate {
+            Self { handled: Handled::Yes, ..self }
+        } else {
+            self
+        }
+    }
+
+    /// Marks the event as handled.
+    pub(crate) fn into_handled(self) -> Self {
+        Self { handled: Handled::Yes, ..self }
+    }
+}
+
 #[cfg(test)]
 mod tests {
-    use {super::*, fidl::endpoints::spawn_stream_handler};
+    use {
+        super::*, fidl::endpoints::spawn_stream_handler, matches::assert_matches,
+        std::convert::TryFrom as _, test_case::test_case,
+    };
 
     #[test]
     fn max_event_time() {
@@ -561,5 +633,101 @@ mod tests {
         assert!(is_device_type(&input_device_proxy, InputDeviceType::Mouse).await);
         assert!(is_device_type(&input_device_proxy, InputDeviceType::Touch).await);
         assert!(is_device_type(&input_device_proxy, InputDeviceType::Keyboard).await);
+    }
+
+    #[fuchsia::test]
+    fn unhandled_to_generic_conversion_sets_handled_flag_to_no() {
+        assert_eq!(
+            InputEvent::from(UnhandledInputEvent {
+                device_event: InputDeviceEvent::Fake,
+                device_descriptor: InputDeviceDescriptor::Fake,
+                event_time: 1,
+            })
+            .handled,
+            Handled::No
+        );
+    }
+
+    #[fuchsia::test]
+    fn unhandled_to_generic_conversion_preserves_fields() {
+        assert_matches!(
+            InputEvent::from(UnhandledInputEvent {
+                device_event: InputDeviceEvent::Fake,
+                device_descriptor: InputDeviceDescriptor::Fake,
+                event_time: 1,
+            }),
+            InputEvent {
+                device_event: InputDeviceEvent::Fake,
+                device_descriptor: InputDeviceDescriptor::Fake,
+                event_time: 1,
+                handled: _,
+            }
+        );
+    }
+
+    #[fuchsia::test]
+    fn generic_to_unhandled_conversion_fails_for_handled_events() {
+        assert_matches!(
+            UnhandledInputEvent::try_from(InputEvent {
+                device_event: InputDeviceEvent::Fake,
+                device_descriptor: InputDeviceDescriptor::Fake,
+                event_time: 1,
+                handled: Handled::Yes,
+            }),
+            Err(_)
+        )
+    }
+
+    #[fuchsia::test]
+    fn generic_to_unhandled_conversion_preserves_fields_for_unhandled_events() {
+        assert_matches!(
+            UnhandledInputEvent::try_from(InputEvent {
+                device_event: InputDeviceEvent::Fake,
+                device_descriptor: InputDeviceDescriptor::Fake,
+                event_time: 1,
+                handled: Handled::No,
+            }),
+            Ok(UnhandledInputEvent {
+                device_event: InputDeviceEvent::Fake,
+                device_descriptor: InputDeviceDescriptor::Fake,
+                event_time: 1
+            })
+        )
+    }
+
+    #[test_case(Handled::No; "initially not handled")]
+    #[test_case(Handled::Yes; "initially handled")]
+    fn into_handled_if_yields_handled_yes_on_true(initially_handled: Handled) {
+        let event = InputEvent {
+            device_event: InputDeviceEvent::Fake,
+            device_descriptor: InputDeviceDescriptor::Fake,
+            event_time: 1,
+            handled: initially_handled,
+        };
+        assert_eq!(event.into_handled_if(true).handled, Handled::Yes);
+    }
+
+    #[test_case(Handled::No; "initially not handled")]
+    #[test_case(Handled::Yes; "initially handled")]
+    fn into_handled_if_leaves_handled_unchanged_on_false(initially_handled: Handled) {
+        let event = InputEvent {
+            device_event: InputDeviceEvent::Fake,
+            device_descriptor: InputDeviceDescriptor::Fake,
+            event_time: 1,
+            handled: initially_handled.clone(),
+        };
+        assert_eq!(event.into_handled_if(false).handled, initially_handled);
+    }
+
+    #[test_case(Handled::No; "initially not handled")]
+    #[test_case(Handled::Yes; "initially handled")]
+    fn into_handled_yields_handled_yes(initially_handled: Handled) {
+        let event = InputEvent {
+            device_event: InputDeviceEvent::Fake,
+            device_descriptor: InputDeviceDescriptor::Fake,
+            event_time: 1,
+            handled: initially_handled,
+        };
+        assert_eq!(event.into_handled().handled, Handled::Yes);
     }
 }

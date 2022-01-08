@@ -7,7 +7,7 @@
 //! See [KeymapHandler] for details.
 
 use crate::input_device;
-use crate::input_handler::InputHandler;
+use crate::input_handler::UnhandledInputHandler;
 use crate::keyboard_binding;
 use async_trait::async_trait;
 use fuchsia_syslog::fx_log_debug;
@@ -32,23 +32,24 @@ pub struct KeymapHandler {
 /// This trait implementation allows the [KeymapHandler] to be hooked up into the input
 /// pipeline.
 #[async_trait(?Send)]
-impl InputHandler for KeymapHandler {
-    async fn handle_input_event(
+impl UnhandledInputHandler for KeymapHandler {
+    async fn handle_unhandled_input_event(
         self: Rc<Self>,
-        input_event: input_device::InputEvent,
+        input_event: input_device::UnhandledInputEvent,
     ) -> Vec<input_device::InputEvent> {
         match input_event {
             // Decorate a keyboard event with key meaning.
-            input_device::InputEvent {
+            input_device::UnhandledInputEvent {
                 device_event: input_device::InputDeviceEvent::Keyboard(event),
                 device_descriptor,
                 event_time,
-                handled,
-            } if handled == input_device::Handled::No => {
-                self.process_keyboard_event(event, device_descriptor, event_time, handled)
-            }
+            } => vec![input_device::InputEvent::from(self.process_keyboard_event(
+                event,
+                device_descriptor,
+                event_time,
+            ))],
             // Pass other events unchanged.
-            _ => vec![input_event],
+            _ => vec![input_device::InputEvent::from(input_event)],
         }
     }
 }
@@ -65,8 +66,7 @@ impl KeymapHandler {
         event: keyboard_binding::KeyboardEvent,
         device_descriptor: input_device::InputDeviceDescriptor,
         event_time: input_device::EventTime,
-        handled: input_device::Handled,
-    ) -> Vec<input_device::InputEvent> {
+    ) -> input_device::UnhandledInputEvent {
         let (key, event_type) = (event.get_key(), event.get_event_type());
         fx_log_debug!(
             concat!(
@@ -86,56 +86,60 @@ impl KeymapHandler {
             &*self.modifier_state.borrow(),
             &*self.lock_state.borrow(),
         );
-        vec![input_device::InputEvent {
+        input_device::UnhandledInputEvent {
             device_event: input_device::InputDeviceEvent::Keyboard(
                 event.clone().into_with_key_meaning(key_meaning),
             ),
             device_descriptor,
             event_time,
-            handled: handled,
-        }]
+        }
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-
     use crate::{consumer_controls_binding, testing_utilities};
     use fuchsia_async as fasync;
+    use std::convert::TryFrom as _;
 
-    // A mod-specific version of `testing_utilities::create_keyboard_event` with `handled`.
-    fn create_keyboard_event_with_handled(
+    // A mod-specific version of `testing_utilities::create_keyboard_event`.
+    fn create_unhandled_keyboard_event(
         key: fidl_fuchsia_input::Key,
         event_type: fidl_fuchsia_ui_input3::KeyEventType,
         keymap: Option<String>,
-        handled: input_device::Handled,
-    ) -> input_device::InputEvent {
+    ) -> input_device::UnhandledInputEvent {
         let device_descriptor = input_device::InputDeviceDescriptor::Keyboard(
             keyboard_binding::KeyboardDeviceDescriptor {
                 keys: vec![fidl_fuchsia_input::Key::A, fidl_fuchsia_input::Key::B],
             },
         );
         let (_, event_time_u64) = testing_utilities::event_times();
-        testing_utilities::create_keyboard_event_with_handled(
+        input_device::UnhandledInputEvent::try_from(testing_utilities::create_keyboard_event(
             key,
             event_type,
             /* modifiers= */ None,
             event_time_u64,
             &device_descriptor,
             keymap,
-            None,
-            handled,
-        )
+        ))
+        .unwrap()
     }
 
-    // A mod-specific version of `testing_utilities::create_keyboard_event`.
-    fn create_keyboard_event(
-        key: fidl_fuchsia_input::Key,
-        event_type: fidl_fuchsia_ui_input3::KeyEventType,
-        keymap: Option<String>,
-    ) -> input_device::InputEvent {
-        create_keyboard_event_with_handled(key, event_type, keymap, input_device::Handled::No)
+    // A mod-specific version of `testing_utilities::create_consumer_controls_event`.
+    fn create_unhandled_consumer_controls_event(
+        pressed_buttons: Vec<fidl_fuchsia_input_report::ConsumerControlButton>,
+        event_time: input_device::EventTime,
+        device_descriptor: &input_device::InputDeviceDescriptor,
+    ) -> input_device::UnhandledInputEvent {
+        input_device::UnhandledInputEvent::try_from(
+            testing_utilities::create_consumer_controls_event(
+                pressed_buttons,
+                event_time,
+                device_descriptor,
+            ),
+        )
+        .unwrap()
     }
 
     fn get_key_meaning(
@@ -156,12 +160,12 @@ mod tests {
         // async test execution.
         #[derive(Debug)]
         struct TestCase {
-            events: Vec<input_device::InputEvent>,
+            events: Vec<input_device::UnhandledInputEvent>,
             expected: Vec<Option<fidl_fuchsia_ui_input3::KeyMeaning>>,
         }
         let tests: Vec<TestCase> = vec![
             TestCase {
-                events: vec![create_keyboard_event(
+                events: vec![create_unhandled_keyboard_event(
                     fidl_fuchsia_input::Key::A,
                     fidl_fuchsia_ui_input3::KeyEventType::Pressed,
                     Some("US_QWERTY".into()),
@@ -172,7 +176,7 @@ mod tests {
             },
             TestCase {
                 // A non-keyboard event.
-                events: vec![testing_utilities::create_consumer_controls_event(
+                events: vec![create_unhandled_consumer_controls_event(
                     vec![],
                     0,
                     &input_device::InputDeviceDescriptor::ConsumerControls(
@@ -185,12 +189,12 @@ mod tests {
             },
             TestCase {
                 events: vec![
-                    create_keyboard_event(
+                    create_unhandled_keyboard_event(
                         fidl_fuchsia_input::Key::LeftShift,
                         fidl_fuchsia_ui_input3::KeyEventType::Pressed,
                         Some("US_QWERTY".into()),
                     ),
-                    create_keyboard_event(
+                    create_unhandled_keyboard_event(
                         fidl_fuchsia_input::Key::A,
                         fidl_fuchsia_ui_input3::KeyEventType::Pressed,
                         Some("US_QWERTY".into()),
@@ -203,12 +207,12 @@ mod tests {
             },
             TestCase {
                 events: vec![
-                    create_keyboard_event(
+                    create_unhandled_keyboard_event(
                         fidl_fuchsia_input::Key::Tab,
                         fidl_fuchsia_ui_input3::KeyEventType::Pressed,
                         Some("US_QWERTY".into()),
                     ),
-                    create_keyboard_event(
+                    create_unhandled_keyboard_event(
                         fidl_fuchsia_input::Key::A,
                         fidl_fuchsia_ui_input3::KeyEventType::Pressed,
                         Some("US_QWERTY".into()),
@@ -221,41 +225,6 @@ mod tests {
                     Some(fidl_fuchsia_ui_input3::KeyMeaning::Codepoint(97)), // a
                 ],
             },
-            TestCase {
-                events: vec![
-                    create_keyboard_event_with_handled(
-                        fidl_fuchsia_input::Key::A,
-                        fidl_fuchsia_ui_input3::KeyEventType::Pressed,
-                        Some("US_QWERTY".into()),
-                        input_device::Handled::Yes,
-                    ),
-                    create_keyboard_event_with_handled(
-                        fidl_fuchsia_input::Key::LeftShift,
-                        fidl_fuchsia_ui_input3::KeyEventType::Pressed,
-                        Some("US_QWERTY".into()),
-                        input_device::Handled::Yes,
-                    ),
-                    create_keyboard_event_with_handled(
-                        fidl_fuchsia_input::Key::A,
-                        fidl_fuchsia_ui_input3::KeyEventType::Pressed,
-                        Some("US_QWERTY".into()),
-                        input_device::Handled::Yes,
-                    ),
-                    create_keyboard_event_with_handled(
-                        fidl_fuchsia_input::Key::Tab,
-                        fidl_fuchsia_ui_input3::KeyEventType::Pressed,
-                        Some("US_QWERTY".into()),
-                        input_device::Handled::Yes,
-                    ),
-                    create_keyboard_event_with_handled(
-                        fidl_fuchsia_input::Key::A,
-                        fidl_fuchsia_ui_input3::KeyEventType::Pressed,
-                        Some("US_QWERTY".into()),
-                        input_device::Handled::Yes,
-                    ),
-                ],
-                expected: vec![None; 5],
-            },
         ];
         for test in &tests {
             let mut actual: Vec<Option<fidl_fuchsia_ui_input3::KeyMeaning>> = vec![];
@@ -263,7 +232,7 @@ mod tests {
             for event in &test.events {
                 let mut result = handler
                     .clone()
-                    .handle_input_event(event.clone())
+                    .handle_unhandled_input_event(event.clone())
                     .await
                     .iter()
                     .map(get_key_meaning)

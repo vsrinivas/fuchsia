@@ -4,7 +4,7 @@
 
 use crate::autorepeater;
 use crate::input_device;
-use crate::input_handler::InputHandler;
+use crate::input_handler::UnhandledInputHandler;
 use anyhow::{Context, Error, Result};
 use async_trait::async_trait;
 use fidl_fuchsia_input as finput;
@@ -32,21 +32,20 @@ pub struct TextSettingsHandler {
 }
 
 #[async_trait(?Send)]
-impl InputHandler for TextSettingsHandler {
-    async fn handle_input_event(
+impl UnhandledInputHandler for TextSettingsHandler {
+    async fn handle_unhandled_input_event(
         self: Rc<Self>,
-        input_event: input_device::InputEvent,
+        unhandled_input_event: input_device::UnhandledInputEvent,
     ) -> Vec<input_device::InputEvent> {
-        match input_event {
-            input_device::InputEvent {
+        match unhandled_input_event {
+            input_device::UnhandledInputEvent {
                 device_event: input_device::InputDeviceEvent::Keyboard(mut event),
                 device_descriptor,
                 event_time,
-                handled,
-            } if handled == input_device::Handled::No => {
+            } => {
                 let keymap_id = self.get_keymap_name();
                 fx_log_debug!(
-                    "text_settings_handler::Instance::handle_input_event: keymap_id = {:?}",
+                    "text_settings_handler::Instance::handle_unhandled_input_event: keymap_id = {:?}",
                     &keymap_id
                 );
                 event = event
@@ -60,7 +59,7 @@ impl InputHandler for TextSettingsHandler {
                 }]
             }
             // Pass a non-keyboard event through.
-            _ => vec![input_event],
+            _ => vec![input_device::InputEvent::from(unhandled_input_event)],
         }
     }
 }
@@ -159,22 +158,21 @@ mod tests {
     use fidl_fuchsia_ui_input3;
     use fuchsia_async as fasync;
     use fuchsia_zircon as zx;
+    use std::convert::TryFrom as _;
 
     fn input_event_from(
         keyboard_event: keyboard_binding::KeyboardEvent,
-        handled: input_device::Handled,
     ) -> input_device::InputEvent {
         testing_utilities::create_input_event(
             keyboard_event,
             &input_device::InputDeviceDescriptor::Fake,
             42 as input_device::EventTime,
-            handled,
+            input_device::Handled::No,
         )
     }
 
     fn key_event_with_settings(
         keymap: Option<String>,
-        handled: input_device::Handled,
         settings: autorepeater::Settings,
     ) -> input_device::InputEvent {
         let keyboard_event = keyboard_binding::KeyboardEvent::new(
@@ -183,19 +181,20 @@ mod tests {
         )
         .into_with_keymap(keymap)
         .into_with_autorepeat_settings(Some(settings));
-        input_event_from(keyboard_event, handled)
+        input_event_from(keyboard_event)
     }
 
-    fn key_event(
-        keymap: Option<String>,
-        handled: input_device::Handled,
-    ) -> input_device::InputEvent {
+    fn key_event(keymap: Option<String>) -> input_device::InputEvent {
         let keyboard_event = keyboard_binding::KeyboardEvent::new(
             fidl_fuchsia_input::Key::A,
             fidl_fuchsia_ui_input3::KeyEventType::Pressed,
         )
         .into_with_keymap(keymap);
-        input_event_from(keyboard_event, handled)
+        input_event_from(keyboard_event)
+    }
+
+    fn unhandled_key_event() -> input_device::UnhandledInputEvent {
+        input_device::UnhandledInputEvent::try_from(key_event(None)).unwrap()
     }
 
     #[fasync::run_singlethreaded(test)]
@@ -204,50 +203,26 @@ mod tests {
         struct Test {
             keymap_id: Option<finput::KeymapId>,
             expected: Option<String>,
-            handled: input_device::Handled,
         }
         let tests = vec![
-            Test {
-                keymap_id: None,
-                expected: Some("US_QWERTY".to_owned()),
-                handled: input_device::Handled::No,
-            },
+            Test { keymap_id: None, expected: Some("US_QWERTY".to_owned()) },
             Test {
                 keymap_id: Some(finput::KeymapId::UsQwerty),
                 expected: Some("US_QWERTY".to_owned()),
-                handled: input_device::Handled::No,
             },
             Test {
                 keymap_id: Some(finput::KeymapId::FrAzerty),
                 expected: Some("FR_AZERTY".to_owned()),
-                handled: input_device::Handled::No,
             },
             Test {
                 keymap_id: Some(finput::KeymapId::UsDvorak),
                 expected: Some("US_DVORAK".to_owned()),
-                handled: input_device::Handled::No,
-            },
-            Test { keymap_id: None, expected: None, handled: input_device::Handled::Yes },
-            Test {
-                keymap_id: Some(finput::KeymapId::UsQwerty),
-                expected: None,
-                handled: input_device::Handled::Yes,
-            },
-            Test {
-                keymap_id: Some(finput::KeymapId::FrAzerty),
-                expected: None,
-                handled: input_device::Handled::Yes,
-            },
-            Test {
-                keymap_id: Some(finput::KeymapId::UsDvorak),
-                expected: None,
-                handled: input_device::Handled::Yes,
             },
         ];
         for test in tests {
             let handler = TextSettingsHandler::new(test.keymap_id.clone(), None);
-            let expected = key_event(test.expected.clone(), test.handled.clone());
-            let result = handler.handle_input_event(key_event(None, test.handled.clone())).await;
+            let expected = key_event(test.expected.clone());
+            let result = handler.handle_unhandled_input_event(unhandled_key_event()).await;
             assert_eq!(vec![expected], result, "for: {:?}", &test);
         }
     }
@@ -299,13 +274,9 @@ mod tests {
         let deadline = fuchsia_async::Time::after(zx::Duration::from_seconds(5));
         let autorepeat: autorepeater::Settings = Default::default();
         loop {
-            let result = handler
-                .clone()
-                .handle_input_event(key_event(None, input_device::Handled::No))
-                .await;
+            let result = handler.clone().handle_unhandled_input_event(unhandled_key_event()).await;
             let expected = key_event_with_settings(
                 Some("FR_AZERTY".to_owned()),
-                input_device::Handled::No,
                 autorepeat
                     .clone()
                     .into_with_delay(zx::Duration::from_nanos(43))

@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::{input_device, input_handler::InputHandler, mouse_binding, utils::Position},
+    crate::{input_device, input_handler::UnhandledInputHandler, mouse_binding, utils::Position},
     async_trait::async_trait,
     fuchsia_syslog::{fx_log_debug, fx_log_warn},
     std::{
@@ -27,13 +27,13 @@ struct RelativeMouseEvent {
     handled: input_device::Handled,
 }
 
-impl TryFrom<input_device::InputEvent> for RelativeMouseEvent {
-    type Error = input_device::InputEvent;
+impl TryFrom<input_device::UnhandledInputEvent> for RelativeMouseEvent {
+    type Error = input_device::UnhandledInputEvent;
     fn try_from(
-        input_event: input_device::InputEvent,
-    ) -> Result<RelativeMouseEvent, input_device::InputEvent> {
-        match input_event {
-            input_device::InputEvent {
+        unhandled_input_event: input_device::UnhandledInputEvent,
+    ) -> Result<RelativeMouseEvent, Self::Error> {
+        match unhandled_input_event {
+            input_device::UnhandledInputEvent {
                 device_event:
                     input_device::InputDeviceEvent::Mouse(mouse_binding::MouseEvent {
                         location: mouse_binding::MouseLocation::Relative(position),
@@ -42,16 +42,15 @@ impl TryFrom<input_device::InputEvent> for RelativeMouseEvent {
                     }),
                 device_descriptor: input_device::InputDeviceDescriptor::Mouse(mouse_descriptor),
                 event_time,
-                handled,
             } => Ok(RelativeMouseEvent {
                 displacement: position,
                 phase,
                 pressed_buttons: buttons,
                 mouse_descriptor,
                 event_time,
-                handled,
+                handled: input_device::Handled::No,
             }),
-            _ => Err(input_event),
+            _ => Err(unhandled_input_event),
         }
     }
 }
@@ -160,21 +159,18 @@ pub struct ClickDragHandler {
 }
 
 #[async_trait(?Send)]
-impl InputHandler for ClickDragHandler {
-    async fn handle_input_event(
+impl UnhandledInputHandler for ClickDragHandler {
+    async fn handle_unhandled_input_event(
         self: Rc<Self>,
-        input_event: input_device::InputEvent,
+        unhandled_input_event: input_device::UnhandledInputEvent,
     ) -> Vec<input_device::InputEvent> {
-        match RelativeMouseEvent::try_from(input_event) {
-            Err(event) => vec![event],
-            Ok(handled_event @ RelativeMouseEvent { handled: input_device::Handled::Yes, .. }) => {
-                vec![input_device::InputEvent::from(handled_event)]
-            }
+        match RelativeMouseEvent::try_from(unhandled_input_event) {
             Ok(converted_event) => self
                 .process_event(converted_event)
                 .into_iter()
                 .map(input_device::InputEvent::from)
                 .collect(),
+            Err(original_event) => vec![input_device::InputEvent::from(original_event)],
         }
     }
 }
@@ -353,7 +349,7 @@ impl ClickDragHandler {
 
 #[cfg(test)]
 mod tests {
-    use {super::*, maplit::hashset};
+    use {super::*, maplit::hashset, test_case::test_case};
 
     const DEVICE_DESCRIPTOR: input_device::InputDeviceDescriptor =
         input_device::InputDeviceDescriptor::Mouse(mouse_binding::MouseDeviceDescriptor {
@@ -372,424 +368,273 @@ mod tests {
 
     fn make_unhandled_input_event(
         mouse_event: mouse_binding::MouseEvent,
-    ) -> input_device::InputEvent {
+    ) -> input_device::UnhandledInputEvent {
         let event_time = NEXT_EVENT_TIME.with(|t| {
             let old = t.get();
             t.set(old + 1);
             old
         });
-        input_device::InputEvent {
+        input_device::UnhandledInputEvent {
             device_event: input_device::InputDeviceEvent::Mouse(mouse_event),
             device_descriptor: DEVICE_DESCRIPTOR.clone(),
             event_time,
-            handled: input_device::Handled::No,
         }
     }
 
-    mod unhandled_events {
-        use {super::*, test_case::test_case};
+    #[fuchsia::test(allow_stalls = false)]
+    async fn button_down_is_passed_through_when_no_button_was_previously_clicked() {
+        let handler = ClickDragHandler::new(CLICK_TO_DRAG_THRESHOLD);
+        let event = make_unhandled_input_event(mouse_binding::MouseEvent {
+            location: mouse_binding::MouseLocation::Relative(Position::zero()),
+            phase: mouse_binding::MousePhase::Down,
+            buttons: hashset! {0},
+        });
+        assert_eq!(
+            handler.handle_unhandled_input_event(event.clone()).await.as_slice(),
+            [event.into()]
+        );
+    }
 
-        #[fuchsia::test(allow_stalls = false)]
-        async fn button_down_is_passed_through_when_no_button_was_previously_clicked() {
-            let handler = ClickDragHandler::new(CLICK_TO_DRAG_THRESHOLD);
-            let event = make_unhandled_input_event(mouse_binding::MouseEvent {
-                location: mouse_binding::MouseLocation::Relative(Position::zero()),
-                phase: mouse_binding::MousePhase::Down,
-                buttons: hashset! {0},
-            });
-            assert_eq!(handler.handle_input_event(event.clone()).await.as_slice(), [event]);
-        }
+    #[fuchsia::test(allow_stalls = false)]
+    async fn move_event_is_passed_through_when_no_button_is_clicked() {
+        let handler = ClickDragHandler::new(CLICK_TO_DRAG_THRESHOLD);
+        let event = make_unhandled_input_event(mouse_binding::MouseEvent {
+            location: mouse_binding::MouseLocation::Relative(Position {
+                x: SMALL_MOTION,
+                y: SMALL_MOTION,
+            }),
+            phase: mouse_binding::MousePhase::Move,
+            buttons: hashset! {},
+        });
+        assert_eq!(
+            handler.handle_unhandled_input_event(event.clone()).await.as_slice(),
+            [event.into()]
+        );
+    }
 
-        #[fuchsia::test(allow_stalls = false)]
-        async fn move_event_is_passed_through_when_no_button_is_clicked() {
-            let handler = ClickDragHandler::new(CLICK_TO_DRAG_THRESHOLD);
-            let event = make_unhandled_input_event(mouse_binding::MouseEvent {
-                location: mouse_binding::MouseLocation::Relative(Position {
-                    x: SMALL_MOTION,
-                    y: SMALL_MOTION,
-                }),
-                phase: mouse_binding::MousePhase::Move,
-                buttons: hashset! {},
-            });
-            assert_eq!(handler.handle_input_event(event.clone()).await.as_slice(), [event]);
-        }
+    #[fuchsia::test(allow_stalls = false)]
+    async fn button_down_then_small_motion_yields_no_move_events() {
+        let handler = ClickDragHandler::new(CLICK_TO_DRAG_THRESHOLD);
+        let button_down_event = make_unhandled_input_event(mouse_binding::MouseEvent {
+            location: mouse_binding::MouseLocation::Relative(Position::zero()),
+            phase: mouse_binding::MousePhase::Down,
+            buttons: hashset! {0},
+        });
+        let move_event = make_unhandled_input_event(mouse_binding::MouseEvent {
+            location: mouse_binding::MouseLocation::Relative(Position { x: 0.0, y: SMALL_MOTION }),
+            phase: mouse_binding::MousePhase::Move,
+            buttons: hashset! {0},
+        });
 
-        #[fuchsia::test(allow_stalls = false)]
-        async fn button_down_then_small_motion_yields_no_move_events() {
-            let handler = ClickDragHandler::new(CLICK_TO_DRAG_THRESHOLD);
-            let button_down_event = make_unhandled_input_event(mouse_binding::MouseEvent {
-                location: mouse_binding::MouseLocation::Relative(Position::zero()),
-                phase: mouse_binding::MousePhase::Down,
-                buttons: hashset! {0},
-            });
-            let move_event = make_unhandled_input_event(mouse_binding::MouseEvent {
-                location: mouse_binding::MouseLocation::Relative(Position {
-                    x: 0.0,
-                    y: SMALL_MOTION,
-                }),
-                phase: mouse_binding::MousePhase::Move,
-                buttons: hashset! {0},
-            });
+        // Intermediate values verified by
+        // * button_down_is_passed_through_when_no_button_was_previously_clicked()
+        handler.clone().handle_unhandled_input_event(button_down_event).await;
+        assert_eq!(handler.clone().handle_unhandled_input_event(move_event).await.as_slice(), []);
+    }
 
-            // Intermediate values verified by
-            // * button_down_is_passed_through_when_no_button_was_previously_clicked()
-            handler.clone().handle_input_event(button_down_event).await;
-            assert_eq!(handler.clone().handle_input_event(move_event).await.as_slice(), []);
-        }
+    #[fuchsia::test(allow_stalls = false)]
+    async fn button_down_then_small_motion_then_button_up_yields_handled_move_and_unhandled_button_up(
+    ) {
+        let handler = ClickDragHandler::new(CLICK_TO_DRAG_THRESHOLD);
+        let button_down_event = make_unhandled_input_event(mouse_binding::MouseEvent {
+            location: mouse_binding::MouseLocation::Relative(Position::zero()),
+            phase: mouse_binding::MousePhase::Down,
+            buttons: hashset! {0},
+        });
+        let move_event = make_unhandled_input_event(mouse_binding::MouseEvent {
+            location: mouse_binding::MouseLocation::Relative(Position { x: 0.0, y: SMALL_MOTION }),
+            phase: mouse_binding::MousePhase::Move,
+            buttons: hashset! {0},
+        });
+        let button_up_event = make_unhandled_input_event(mouse_binding::MouseEvent {
+            location: mouse_binding::MouseLocation::Relative(Position::zero()),
+            phase: mouse_binding::MousePhase::Up,
+            buttons: hashset! {},
+        });
 
-        #[fuchsia::test(allow_stalls = false)]
-        async fn button_down_then_small_motion_then_button_up_yields_handled_move_and_unhandled_button_up(
-        ) {
-            let handler = ClickDragHandler::new(CLICK_TO_DRAG_THRESHOLD);
-            let button_down_event = make_unhandled_input_event(mouse_binding::MouseEvent {
-                location: mouse_binding::MouseLocation::Relative(Position::zero()),
-                phase: mouse_binding::MousePhase::Down,
-                buttons: hashset! {0},
-            });
-            let move_event = make_unhandled_input_event(mouse_binding::MouseEvent {
-                location: mouse_binding::MouseLocation::Relative(Position {
-                    x: 0.0,
-                    y: SMALL_MOTION,
-                }),
-                phase: mouse_binding::MousePhase::Move,
-                buttons: hashset! {0},
-            });
-            let button_up_event = make_unhandled_input_event(mouse_binding::MouseEvent {
-                location: mouse_binding::MouseLocation::Relative(Position::zero()),
-                phase: mouse_binding::MousePhase::Up,
-                buttons: hashset! {},
-            });
+        // Intermediate values verified by
+        // * button_down_is_passed_through_when_no_button_was_previously_clicked()
+        // * button_down_then_small_motion_yields_no_move_events()
+        handler.clone().handle_unhandled_input_event(button_down_event).await;
+        handler.clone().handle_unhandled_input_event(move_event.clone()).await;
+        assert_eq!(
+            handler.clone().handle_unhandled_input_event(button_up_event.clone()).await.as_slice(),
+            [
+                input_device::InputEvent {
+                    handled: input_device::Handled::Yes,
+                    ..move_event.into()
+                },
+                button_up_event.into()
+            ]
+        );
+    }
 
-            // Intermediate values verified by
-            // * button_down_is_passed_through_when_no_button_was_previously_clicked()
-            // * button_down_then_small_motion_yields_no_move_events()
-            handler.clone().handle_input_event(button_down_event).await;
-            handler.clone().handle_input_event(move_event.clone()).await;
-            assert_eq!(
-                handler.clone().handle_input_event(button_up_event.clone()).await.as_slice(),
-                [
-                    input_device::InputEvent { handled: input_device::Handled::Yes, ..move_event },
-                    button_up_event
-                ]
-            );
-        }
+    #[test_case(Position { x: -LARGE_MOTION, y: 0.0 }; "leftwards")]
+    #[test_case(Position { x: LARGE_MOTION, y: 0.0 }; "rightwards")]
+    #[test_case(Position { x: 0.0, y: -LARGE_MOTION }; "upwards")]
+    #[test_case(Position { x: 0.0, y: LARGE_MOTION }; "downwards")]
+    #[test_case(Position { x: DIAGONAL_LARGE_MOTION, y: DIAGONAL_LARGE_MOTION }; "diagonal")]
+    #[fuchsia::test(allow_stalls = false)]
+    async fn button_down_then_large_motion_yields_large_motion(position: Position) {
+        let handler = ClickDragHandler::new(CLICK_TO_DRAG_THRESHOLD);
+        let button_down_event = make_unhandled_input_event(mouse_binding::MouseEvent {
+            location: mouse_binding::MouseLocation::Relative(Position::zero()),
+            phase: mouse_binding::MousePhase::Down,
+            buttons: hashset! {0},
+        });
+        let move_event = make_unhandled_input_event(mouse_binding::MouseEvent {
+            location: mouse_binding::MouseLocation::Relative(position),
+            phase: mouse_binding::MousePhase::Move,
+            buttons: hashset! {0},
+        });
 
-        #[test_case(Position { x: -LARGE_MOTION, y: 0.0 }; "leftwards")]
-        #[test_case(Position { x: LARGE_MOTION, y: 0.0 }; "rightwards")]
-        #[test_case(Position { x: 0.0, y: -LARGE_MOTION }; "upwards")]
-        #[test_case(Position { x: 0.0, y: LARGE_MOTION }; "downwards")]
-        #[test_case(Position { x: DIAGONAL_LARGE_MOTION, y: DIAGONAL_LARGE_MOTION }; "diagonal")]
-        #[fuchsia::test(allow_stalls = false)]
-        async fn button_down_then_large_motion_yields_large_motion(position: Position) {
-            let handler = ClickDragHandler::new(CLICK_TO_DRAG_THRESHOLD);
-            let button_down_event = make_unhandled_input_event(mouse_binding::MouseEvent {
-                location: mouse_binding::MouseLocation::Relative(Position::zero()),
-                phase: mouse_binding::MousePhase::Down,
-                buttons: hashset! {0},
-            });
-            let move_event = make_unhandled_input_event(mouse_binding::MouseEvent {
-                location: mouse_binding::MouseLocation::Relative(position),
-                phase: mouse_binding::MousePhase::Move,
-                buttons: hashset! {0},
-            });
+        // Intermediate values verified by
+        // * button_down_is_passed_through_when_no_button_was_previously_clicked()
+        handler.clone().handle_unhandled_input_event(button_down_event).await;
+        assert_eq!(
+            handler.clone().handle_unhandled_input_event(move_event.clone()).await.as_slice(),
+            [move_event.into()]
+        );
+    }
 
-            // Intermediate values verified by
-            // * button_down_is_passed_through_when_no_button_was_previously_clicked()
-            handler.clone().handle_input_event(button_down_event).await;
-            assert_eq!(
-                handler.clone().handle_input_event(move_event.clone()).await.as_slice(),
-                [move_event]
-            );
-        }
+    #[fuchsia::test(allow_stalls = false)]
+    async fn button_up_after_botton_down_and_large_motion_does_not_replay_motion() {
+        let handler = ClickDragHandler::new(CLICK_TO_DRAG_THRESHOLD);
+        let button_down_event = make_unhandled_input_event(mouse_binding::MouseEvent {
+            location: mouse_binding::MouseLocation::Relative(Position::zero()),
+            phase: mouse_binding::MousePhase::Down,
+            buttons: hashset! {0},
+        });
+        let move_event = make_unhandled_input_event(mouse_binding::MouseEvent {
+            location: mouse_binding::MouseLocation::Relative(Position { x: 0.0, y: LARGE_MOTION }),
+            phase: mouse_binding::MousePhase::Move,
+            buttons: hashset! {0},
+        });
+        let button_up_event = make_unhandled_input_event(mouse_binding::MouseEvent {
+            location: mouse_binding::MouseLocation::Relative(Position::zero()),
+            phase: mouse_binding::MousePhase::Up,
+            buttons: hashset! {},
+        });
 
-        #[fuchsia::test(allow_stalls = false)]
-        async fn button_up_after_botton_down_and_large_motion_does_not_replay_motion() {
-            let handler = ClickDragHandler::new(CLICK_TO_DRAG_THRESHOLD);
-            let button_down_event = make_unhandled_input_event(mouse_binding::MouseEvent {
-                location: mouse_binding::MouseLocation::Relative(Position::zero()),
-                phase: mouse_binding::MousePhase::Down,
-                buttons: hashset! {0},
-            });
-            let move_event = make_unhandled_input_event(mouse_binding::MouseEvent {
-                location: mouse_binding::MouseLocation::Relative(Position {
-                    x: 0.0,
-                    y: LARGE_MOTION,
-                }),
-                phase: mouse_binding::MousePhase::Move,
-                buttons: hashset! {0},
-            });
-            let button_up_event = make_unhandled_input_event(mouse_binding::MouseEvent {
-                location: mouse_binding::MouseLocation::Relative(Position::zero()),
-                phase: mouse_binding::MousePhase::Up,
-                buttons: hashset! {},
-            });
+        // Intermediate values verified by
+        // * button_down_is_passed_through_when_no_button_was_previously_clicked()
+        // * button_down_then_large_motion_yields_large_motion()
+        handler.clone().handle_unhandled_input_event(button_down_event).await;
+        handler.clone().handle_unhandled_input_event(move_event.clone()).await;
+        assert_eq!(
+            handler.clone().handle_unhandled_input_event(button_up_event.clone()).await.as_slice(),
+            [button_up_event.into()]
+        );
+    }
 
-            // Intermediate values verified by
-            // * button_down_is_passed_through_when_no_button_was_previously_clicked()
-            // * button_down_then_large_motion_yields_large_motion()
-            handler.clone().handle_input_event(button_down_event).await;
-            handler.clone().handle_input_event(move_event.clone()).await;
-            assert_eq!(
-                handler.clone().handle_input_event(button_up_event.clone()).await.as_slice(),
-                [button_up_event]
-            );
-        }
+    #[fuchsia::test(allow_stalls = false)]
+    async fn button_down_then_two_motions_summing_past_drag_threshold_yields_motions() {
+        let handler = ClickDragHandler::new(CLICK_TO_DRAG_THRESHOLD);
+        let button_down_event = make_unhandled_input_event(mouse_binding::MouseEvent {
+            location: mouse_binding::MouseLocation::Relative(Position::zero()),
+            phase: mouse_binding::MousePhase::Down,
+            buttons: hashset! {0},
+        });
+        let first_move_event = make_unhandled_input_event(mouse_binding::MouseEvent {
+            location: mouse_binding::MouseLocation::Relative(Position { x: 0.0, y: HALF_MOTION }),
+            phase: mouse_binding::MousePhase::Move,
+            buttons: hashset! {0},
+        });
+        let second_move_event = make_unhandled_input_event(mouse_binding::MouseEvent {
+            location: mouse_binding::MouseLocation::Relative(Position { x: 0.0, y: HALF_MOTION }),
+            phase: mouse_binding::MousePhase::Move,
+            buttons: hashset! {0},
+        });
 
-        #[fuchsia::test(allow_stalls = false)]
-        async fn button_down_then_two_motions_summing_past_drag_threshold_yields_motions() {
-            let handler = ClickDragHandler::new(CLICK_TO_DRAG_THRESHOLD);
-            let button_down_event = make_unhandled_input_event(mouse_binding::MouseEvent {
-                location: mouse_binding::MouseLocation::Relative(Position::zero()),
-                phase: mouse_binding::MousePhase::Down,
-                buttons: hashset! {0},
-            });
-            let first_move_event = make_unhandled_input_event(mouse_binding::MouseEvent {
-                location: mouse_binding::MouseLocation::Relative(Position {
-                    x: 0.0,
-                    y: HALF_MOTION,
-                }),
-                phase: mouse_binding::MousePhase::Move,
-                buttons: hashset! {0},
-            });
-            let second_move_event = make_unhandled_input_event(mouse_binding::MouseEvent {
-                location: mouse_binding::MouseLocation::Relative(Position {
-                    x: 0.0,
-                    y: HALF_MOTION,
-                }),
-                phase: mouse_binding::MousePhase::Move,
-                buttons: hashset! {0},
-            });
+        // Intermediate values verified by
+        // * button_down_is_passed_through_when_no_button_was_previously_clicked()
+        // * button_down_then_small_motion_yields_no_move_events()
+        handler.clone().handle_unhandled_input_event(button_down_event).await;
+        handler.clone().handle_unhandled_input_event(first_move_event.clone()).await;
 
-            // Intermediate values verified by
-            // * button_down_is_passed_through_when_no_button_was_previously_clicked()
-            // * button_down_then_small_motion_yields_no_move_events()
-            handler.clone().handle_input_event(button_down_event).await;
-            handler.clone().handle_input_event(first_move_event.clone()).await;
+        // In the future, it might be necessary to compress the events to save
+        // memory. If that happens, the logic below will need to validate the total
+        // displacement, instead of each event.
+        assert_eq!(
+            handler
+                .clone()
+                .handle_unhandled_input_event(second_move_event.clone())
+                .await
+                .as_slice(),
+            [first_move_event.into(), second_move_event.into()]
+        );
+    }
 
-            // In the future, it might be necessary to compress the events to save
-            // memory. If that happens, the logic below will need to validate the total
-            // displacement, instead of each event.
-            assert_eq!(
-                handler.clone().handle_input_event(second_move_event.clone()).await.as_slice(),
-                [first_move_event, second_move_event]
-            );
-        }
+    #[fuchsia::test(allow_stalls = false)]
+    async fn move_events_continue_after_drag_is_recognized() {
+        let handler = ClickDragHandler::new(CLICK_TO_DRAG_THRESHOLD);
+        let button_down_event = make_unhandled_input_event(mouse_binding::MouseEvent {
+            location: mouse_binding::MouseLocation::Relative(Position::zero()),
+            phase: mouse_binding::MousePhase::Down,
+            buttons: hashset! {0},
+        });
+        let first_move_event = make_unhandled_input_event(mouse_binding::MouseEvent {
+            location: mouse_binding::MouseLocation::Relative(Position { x: 0.0, y: HALF_MOTION }),
+            phase: mouse_binding::MousePhase::Move,
+            buttons: hashset! {0},
+        });
+        let second_move_event = make_unhandled_input_event(mouse_binding::MouseEvent {
+            location: mouse_binding::MouseLocation::Relative(Position { x: 0.0, y: HALF_MOTION }),
+            phase: mouse_binding::MousePhase::Move,
+            buttons: hashset! {0},
+        });
+        let third_move_event = make_unhandled_input_event(mouse_binding::MouseEvent {
+            location: mouse_binding::MouseLocation::Relative(Position { x: 0.0, y: HALF_MOTION }),
+            phase: mouse_binding::MousePhase::Move,
+            buttons: hashset! {0},
+        });
 
-        #[fuchsia::test(allow_stalls = false)]
-        async fn move_events_continue_after_drag_is_recognized() {
-            let handler = ClickDragHandler::new(CLICK_TO_DRAG_THRESHOLD);
-            let button_down_event = make_unhandled_input_event(mouse_binding::MouseEvent {
-                location: mouse_binding::MouseLocation::Relative(Position::zero()),
-                phase: mouse_binding::MousePhase::Down,
-                buttons: hashset! {0},
-            });
-            let first_move_event = make_unhandled_input_event(mouse_binding::MouseEvent {
-                location: mouse_binding::MouseLocation::Relative(Position {
-                    x: 0.0,
-                    y: HALF_MOTION,
-                }),
-                phase: mouse_binding::MousePhase::Move,
-                buttons: hashset! {0},
-            });
-            let second_move_event = make_unhandled_input_event(mouse_binding::MouseEvent {
-                location: mouse_binding::MouseLocation::Relative(Position {
-                    x: 0.0,
-                    y: HALF_MOTION,
-                }),
-                phase: mouse_binding::MousePhase::Move,
-                buttons: hashset! {0},
-            });
-            let third_move_event = make_unhandled_input_event(mouse_binding::MouseEvent {
-                location: mouse_binding::MouseLocation::Relative(Position {
-                    x: 0.0,
-                    y: HALF_MOTION,
-                }),
-                phase: mouse_binding::MousePhase::Move,
-                buttons: hashset! {0},
-            });
+        // Intermediate values verified by
+        // * button_down_is_passed_through_when_no_button_was_previously_clicked()
+        // * button_down_then_two_motions_summing_past_drag_threshold_yields_motions()
+        handler.clone().handle_unhandled_input_event(button_down_event).await;
+        handler.clone().handle_unhandled_input_event(first_move_event.clone()).await;
+        handler.clone().handle_unhandled_input_event(second_move_event.clone()).await;
+        assert_eq!(
+            handler.clone().handle_unhandled_input_event(third_move_event.clone()).await.as_slice(),
+            [third_move_event.into()]
+        );
+    }
 
-            // Intermediate values verified by
-            // * button_down_is_passed_through_when_no_button_was_previously_clicked()
-            // * button_down_then_two_motions_summing_past_drag_threshold_yields_motions()
-            handler.clone().handle_input_event(button_down_event).await;
-            handler.clone().handle_input_event(first_move_event.clone()).await;
-            handler.clone().handle_input_event(second_move_event.clone()).await;
-            assert_eq!(
-                handler.clone().handle_input_event(third_move_event.clone()).await.as_slice(),
-                [third_move_event]
-            );
-        }
-
-        #[test_case(Position { x: -2.0, y: 0.0 },
+    #[test_case(Position { x: -2.0, y: 0.0 },
                     Position { x: CLICK_TO_DRAG_THRESHOLD + 1.0, y: 0.0}; "horizontal")]
-        #[test_case(Position { x: 0.0, y: -2.0 },
+    #[test_case(Position { x: 0.0, y: -2.0 },
                     Position { x: 0.0, y: CLICK_TO_DRAG_THRESHOLD + 1.0}; "vertical")]
-        #[fuchsia::test(allow_stalls = false)]
-        async fn back_and_forth_motion_does_not_spuriously_yield_move_events(
-            first_motion: Position,
-            second_motion: Position,
-        ) {
-            let handler = ClickDragHandler::new(CLICK_TO_DRAG_THRESHOLD);
-            let button_down_event = make_unhandled_input_event(mouse_binding::MouseEvent {
-                location: mouse_binding::MouseLocation::Relative(Position::zero()),
-                phase: mouse_binding::MousePhase::Down,
-                buttons: hashset! {0},
-            });
-            let first_move_event = make_unhandled_input_event(mouse_binding::MouseEvent {
-                location: mouse_binding::MouseLocation::Relative(first_motion),
-                phase: mouse_binding::MousePhase::Move,
-                buttons: hashset! {0},
-            });
-            let second_move_event = make_unhandled_input_event(mouse_binding::MouseEvent {
-                location: mouse_binding::MouseLocation::Relative(second_motion),
-                phase: mouse_binding::MousePhase::Move,
-                buttons: hashset! {0},
-            });
+    #[fuchsia::test(allow_stalls = false)]
+    async fn back_and_forth_motion_does_not_spuriously_yield_move_events(
+        first_motion: Position,
+        second_motion: Position,
+    ) {
+        let handler = ClickDragHandler::new(CLICK_TO_DRAG_THRESHOLD);
+        let button_down_event = make_unhandled_input_event(mouse_binding::MouseEvent {
+            location: mouse_binding::MouseLocation::Relative(Position::zero()),
+            phase: mouse_binding::MousePhase::Down,
+            buttons: hashset! {0},
+        });
+        let first_move_event = make_unhandled_input_event(mouse_binding::MouseEvent {
+            location: mouse_binding::MouseLocation::Relative(first_motion),
+            phase: mouse_binding::MousePhase::Move,
+            buttons: hashset! {0},
+        });
+        let second_move_event = make_unhandled_input_event(mouse_binding::MouseEvent {
+            location: mouse_binding::MouseLocation::Relative(second_motion),
+            phase: mouse_binding::MousePhase::Move,
+            buttons: hashset! {0},
+        });
 
-            // Intermediate values verified by
-            // * button_down_is_passed_through_when_no_button_was_previously_clicked()
-            // * button_down_then_small_motion_yields_no_move_events()
-            handler.clone().handle_input_event(button_down_event).await;
-            handler.clone().handle_input_event(first_move_event.clone()).await;
-            assert_eq!(handler.clone().handle_input_event(second_move_event).await.as_slice(), []);
-        }
-    }
-
-    mod handled_events {
-        use {super::*, test_case::test_case};
-
-        fn make_handled_input_event(
-            mouse_event: mouse_binding::MouseEvent,
-        ) -> input_device::InputEvent {
-            input_device::InputEvent {
-                handled: input_device::Handled::Yes,
-                ..make_unhandled_input_event(mouse_event)
-            }
-        }
-
-        // Handled move events should be passed through as `Handled::Yes`. This is true
-        // regardless of whether or not a similar `Handled::No` motion would have been
-        // large enough to disambiguate between a click and a drag.
-        #[test_case(Position { x: SMALL_MOTION, y: 0.0 }; "small motion")]
-        #[test_case(Position { x: LARGE_MOTION, y: 0.0 }; "large motion")]
-        #[fuchsia::test(allow_stalls = false)]
-        async fn button_down_then_handled_motion_yields_handled_move_event(position: Position) {
-            let handler = ClickDragHandler::new(CLICK_TO_DRAG_THRESHOLD);
-            let button_down_event = make_unhandled_input_event(mouse_binding::MouseEvent {
-                location: mouse_binding::MouseLocation::Relative(Position::zero()),
-                phase: mouse_binding::MousePhase::Down,
-                buttons: hashset! {0},
-            });
-            let move_event = make_handled_input_event(mouse_binding::MouseEvent {
-                location: mouse_binding::MouseLocation::Relative(position),
-                phase: mouse_binding::MousePhase::Move,
-                buttons: hashset! {0},
-            });
-
-            // Intermediate values verified by
-            // * super::unhanded_events::
-            //      button_down_is_passed_through_when_no_button_was_previously_clicked()
-            handler.clone().handle_input_event(button_down_event).await;
-            assert_eq!(
-                handler.clone().handle_input_event(move_event.clone()).await.as_slice(),
-                [move_event]
-            );
-        }
-
-        #[fuchsia::test(allow_stalls = false)]
-        async fn handled_motion_does_not_count_towards_drag_threshold() {
-            let handler = ClickDragHandler::new(CLICK_TO_DRAG_THRESHOLD);
-            let button_down_event = make_unhandled_input_event(mouse_binding::MouseEvent {
-                location: mouse_binding::MouseLocation::Relative(Position::zero()),
-                phase: mouse_binding::MousePhase::Down,
-                buttons: hashset! {0},
-            });
-            let handled_move_event = make_handled_input_event(mouse_binding::MouseEvent {
-                location: mouse_binding::MouseLocation::Relative(Position {
-                    x: 0.0,
-                    y: HALF_MOTION,
-                }),
-                phase: mouse_binding::MousePhase::Move,
-                buttons: hashset! {0},
-            });
-            let unhandled_move_event = make_unhandled_input_event(mouse_binding::MouseEvent {
-                location: mouse_binding::MouseLocation::Relative(Position {
-                    x: 0.0,
-                    y: HALF_MOTION,
-                }),
-                phase: mouse_binding::MousePhase::Move,
-                buttons: hashset! {0},
-            });
-
-            // Intermediate values verified by
-            // * super::unhanded_events::
-            //      button_down_is_passed_through_when_no_button_was_previously_clicked()
-            // * button_down_then_handled_motion_yields_handled_move_event()
-            handler.clone().handle_input_event(button_down_event).await;
-            handler.clone().handle_input_event(handled_move_event).await;
-            assert_eq!(
-                handler.clone().handle_input_event(unhandled_move_event.clone()).await.as_slice(),
-                []
-            );
-        }
-
-        #[fuchsia::test(allow_stalls = false)]
-        async fn handled_motion_does_not_clear_motion_history() {
-            let handler = ClickDragHandler::new(CLICK_TO_DRAG_THRESHOLD);
-            let button_down_event = make_unhandled_input_event(mouse_binding::MouseEvent {
-                location: mouse_binding::MouseLocation::Relative(Position::zero()),
-                phase: mouse_binding::MousePhase::Down,
-                buttons: hashset! {0},
-            });
-            let first_unhandled_move_event =
-                make_unhandled_input_event(mouse_binding::MouseEvent {
-                    location: mouse_binding::MouseLocation::Relative(Position {
-                        x: 0.0,
-                        y: HALF_MOTION,
-                    }),
-                    phase: mouse_binding::MousePhase::Move,
-                    buttons: hashset! {0},
-                });
-            let handled_move_event = make_handled_input_event(mouse_binding::MouseEvent {
-                location: mouse_binding::MouseLocation::Relative(Position {
-                    x: 0.0,
-                    y: HALF_MOTION,
-                }),
-                phase: mouse_binding::MousePhase::Move,
-                buttons: hashset! {0},
-            });
-            let second_unhandled_move_event =
-                make_unhandled_input_event(mouse_binding::MouseEvent {
-                    location: mouse_binding::MouseLocation::Relative(Position {
-                        x: 0.0,
-                        y: HALF_MOTION,
-                    }),
-                    phase: mouse_binding::MousePhase::Move,
-                    buttons: hashset! {0},
-                });
-
-            // Intermediate values verified by
-            // * super::unhanded_events::
-            //       button_down_is_passed_through_when_no_button_was_previously_clicked()
-            // * super::unhandled_events::
-            //       button_down_then_small_motion_yields_no_move_events()
-            // * button_down_then_handled_motion_yields_handled_move_event()
-
-            handler.clone().handle_input_event(button_down_event).await;
-            handler.clone().handle_input_event(first_unhandled_move_event.clone()).await;
-            handler.clone().handle_input_event(handled_move_event).await;
-
-            // In the future, it might be necessary to compress the events to save
-            // memory. If that happens, the logic below will need to validate the total
-            // displacement, instead of each event.
-            assert_eq!(
-                handler
-                    .clone()
-                    .handle_input_event(second_unhandled_move_event.clone())
-                    .await
-                    .as_slice(),
-                [first_unhandled_move_event, second_unhandled_move_event]
-            );
-        }
+        // Intermediate values verified by
+        // * button_down_is_passed_through_when_no_button_was_previously_clicked()
+        // * button_down_then_small_motion_yields_no_move_events()
+        handler.clone().handle_unhandled_input_event(button_down_event).await;
+        handler.clone().handle_unhandled_input_event(first_move_event.clone()).await;
+        assert_eq!(
+            handler.clone().handle_unhandled_input_event(second_move_event).await.as_slice(),
+            []
+        );
     }
 }

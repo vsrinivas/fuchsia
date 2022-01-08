@@ -4,7 +4,7 @@
 
 use {
     crate::input_device,
-    crate::input_handler::InputHandler,
+    crate::input_handler::UnhandledInputHandler,
     crate::touch_binding,
     crate::utils::{Position, Size},
     anyhow::{Context, Error, Result},
@@ -57,35 +57,36 @@ struct TouchInjectorHandlerInner {
 }
 
 #[async_trait(?Send)]
-impl InputHandler for TouchInjectorHandler {
-    async fn handle_input_event(
+impl UnhandledInputHandler for TouchInjectorHandler {
+    async fn handle_unhandled_input_event(
         self: Rc<Self>,
-        mut input_event: input_device::InputEvent,
+        unhandled_input_event: input_device::UnhandledInputEvent,
     ) -> Vec<input_device::InputEvent> {
-        if let input_device::InputEvent {
-            device_event: input_device::InputDeviceEvent::Touch(ref touch_event),
-            device_descriptor:
-                input_device::InputDeviceDescriptor::Touch(ref touch_device_descriptor),
-            event_time,
-            handled: input_device::Handled::No,
-        } = input_event
-        {
-            // Create a new injector if this is the first time seeing device_id.
-            if let Err(e) = self.ensure_injector_registered(&touch_device_descriptor).await {
-                fx_log_err!("{}", e);
-            }
+        match unhandled_input_event {
+            input_device::UnhandledInputEvent {
+                device_event: input_device::InputDeviceEvent::Touch(ref touch_event),
+                device_descriptor:
+                    input_device::InputDeviceDescriptor::Touch(ref touch_device_descriptor),
+                event_time,
+            } => {
+                // Create a new injector if this is the first time seeing device_id.
+                if let Err(e) = self.ensure_injector_registered(&touch_device_descriptor).await {
+                    fx_log_err!("{}", e);
+                }
 
-            // Handle the event.
-            if let Err(e) =
-                self.send_event_to_scenic(&touch_event, &touch_device_descriptor, event_time).await
-            {
-                fx_log_err!("{}", e);
-            }
+                // Handle the event.
+                if let Err(e) = self
+                    .send_event_to_scenic(&touch_event, &touch_device_descriptor, event_time)
+                    .await
+                {
+                    fx_log_err!("{}", e);
+                }
 
-            // Consume the input event.
-            input_event.handled = input_device::Handled::Yes
+                // Consume the input event.
+                vec![input_device::InputEvent::from(unhandled_input_event).into_handled()]
+            }
+            _ => vec![input_device::InputEvent::from(unhandled_input_event)],
         }
-        vec![input_event]
     }
 }
 
@@ -390,6 +391,7 @@ mod tests {
         futures::StreamExt,
         maplit::hashmap,
         matches::assert_matches,
+        std::convert::TryFrom as _,
     };
 
     const TOUCH_ID: u32 = 1;
@@ -619,16 +621,17 @@ mod tests {
         let event_time = zx::Time::get_monotonic().into_nanos() as input_device::EventTime;
         let contact = create_touch_contact(TOUCH_ID, Position { x: 20.0, y: 40.0 });
         let descriptor = get_touch_device_descriptor();
-        let input_event = create_touch_event(
+        let input_event = input_device::UnhandledInputEvent::try_from(create_touch_event(
             hashmap! {
                 fidl_ui_input::PointerEventPhase::Add
                     => vec![contact.clone()],
             },
             event_time,
             &descriptor,
-        );
+        ))
+        .unwrap();
         // Handle event.
-        let handle_event_fut = touch_handler.handle_input_event(input_event);
+        let handle_event_fut = touch_handler.handle_unhandled_input_event(input_event);
 
         // Declare expected event.
         let expected_event = create_touch_pointer_sample_event(
@@ -640,7 +643,7 @@ mod tests {
 
         // Create a channel for the the registered device's handle to be forwarded to the
         // DeviceRequestStream handler. This allows the registry_fut to complete and allows
-        // handle_input_event() to continue.
+        // handle_unhandled_input_event() to continue.
         let (injector_stream_sender, injector_stream_receiver) =
             futures::channel::oneshot::channel::<pointerinjector::DeviceRequestStream>();
         let registry_fut = handle_registry_request_stream(

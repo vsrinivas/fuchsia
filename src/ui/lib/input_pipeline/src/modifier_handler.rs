@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::input_device::{Handled, InputDeviceEvent, InputEvent};
-use crate::input_handler::InputHandler;
+use crate::input_device::{Handled, InputDeviceEvent, InputEvent, UnhandledInputEvent};
+use crate::input_handler::UnhandledInputHandler;
 use async_trait::async_trait;
 use fuchsia_syslog::fx_log_debug;
 use keymaps::{LockStateKeys, ModifierState};
@@ -29,15 +29,17 @@ pub struct ModifierHandler {
 }
 
 #[async_trait(?Send)]
-impl InputHandler for ModifierHandler {
-    async fn handle_input_event(self: Rc<Self>, input_event: InputEvent) -> Vec<InputEvent> {
-        match input_event {
-            InputEvent {
+impl UnhandledInputHandler for ModifierHandler {
+    async fn handle_unhandled_input_event(
+        self: Rc<Self>,
+        unhandled_input_event: UnhandledInputEvent,
+    ) -> Vec<InputEvent> {
+        match unhandled_input_event {
+            UnhandledInputEvent {
                 device_event: InputDeviceEvent::Keyboard(mut event),
                 device_descriptor,
                 event_time,
-                handled,
-            } if handled == Handled::No => {
+            } => {
                 self.modifier_state.borrow_mut().update(event.get_event_type(), event.get_key());
                 self.lock_state.borrow_mut().update(event.get_event_type(), event.get_key());
                 event = event
@@ -51,11 +53,8 @@ impl InputHandler for ModifierHandler {
                     handled: Handled::No,
                 }]
             }
-            // Pass other events through:
-            //   - Handled::Yes events are propagated as an input pipeline
-            //     invariant.
-            //   - All other events are propagated.
-            _ => vec![input_event],
+            // Pass other events through.
+            _ => vec![InputEvent::from(unhandled_input_event)],
         }
     }
 }
@@ -73,39 +72,35 @@ impl ModifierHandler {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::input_device::{EventTime, InputDeviceDescriptor, InputDeviceEvent};
+    use crate::input_device::{EventTime, InputDeviceDescriptor, InputDeviceEvent, InputEvent};
     use crate::keyboard_binding::KeyboardEvent;
     use crate::testing_utilities::diff_input_events;
     use fidl_fuchsia_input::Key;
     use fidl_fuchsia_ui_input3::{KeyEventType, LockState, Modifiers};
     use fuchsia_async as fasync;
 
-    fn get_fake_input_event(event: KeyboardEvent, handled: Handled) -> InputEvent {
-        InputEvent {
+    fn get_unhandled_input_event(event: KeyboardEvent) -> UnhandledInputEvent {
+        UnhandledInputEvent {
             device_event: InputDeviceEvent::Keyboard(event),
             event_time: 42 as EventTime,
             device_descriptor: InputDeviceDescriptor::Fake,
-            handled,
         }
     }
 
     #[fasync::run_singlethreaded(test)]
     async fn test_decoration() {
         let handler = ModifierHandler::new();
-        let input_event = get_fake_input_event(
-            KeyboardEvent::new(Key::CapsLock, KeyEventType::Pressed),
-            Handled::No,
-        );
-        let result = handler.handle_input_event(input_event.clone()).await;
+        let input_event =
+            get_unhandled_input_event(KeyboardEvent::new(Key::CapsLock, KeyEventType::Pressed));
+        let result = handler.handle_unhandled_input_event(input_event.clone()).await;
 
-        let expected = get_fake_input_event(
+        // This handler decorates, but does not handle the key. Hence,
+        // the key remains unhandled.
+        let expected = InputEvent::from(get_unhandled_input_event(
             KeyboardEvent::new(Key::CapsLock, KeyEventType::Pressed)
                 .into_with_modifiers(Some(Modifiers::CapsLock))
                 .into_with_lock_state(Some(LockState::CapsLock)),
-            // This handler decorates, but does not handle the key. Hence,
-            // the key remains unhandled.
-            Handled::No,
-        );
+        ));
         assert_eq!(vec![expected], result);
     }
 
@@ -117,60 +112,49 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn test_modifier_press_lock_release() {
         let input_events = vec![
-            get_fake_input_event(
-                KeyboardEvent::new(Key::CapsLock, KeyEventType::Pressed),
-                Handled::No,
-            ),
-            get_fake_input_event(
-                KeyboardEvent::new(Key::CapsLock, KeyEventType::Released),
-                Handled::No,
-            ),
-            get_fake_input_event(
-                KeyboardEvent::new(Key::CapsLock, KeyEventType::Pressed),
-                Handled::No,
-            ),
-            get_fake_input_event(
-                KeyboardEvent::new(Key::CapsLock, KeyEventType::Released),
-                Handled::No,
-            ),
+            get_unhandled_input_event(KeyboardEvent::new(Key::CapsLock, KeyEventType::Pressed)),
+            get_unhandled_input_event(KeyboardEvent::new(Key::CapsLock, KeyEventType::Released)),
+            get_unhandled_input_event(KeyboardEvent::new(Key::CapsLock, KeyEventType::Pressed)),
+            get_unhandled_input_event(KeyboardEvent::new(Key::CapsLock, KeyEventType::Released)),
         ];
 
         let handler = ModifierHandler::new();
         let clone_handler = move || handler.clone();
         let result = futures::future::join_all(
-            input_events.into_iter().map(|e| async { clone_handler().handle_input_event(e).await }),
+            input_events
+                .into_iter()
+                .map(|e| async { clone_handler().handle_unhandled_input_event(e).await }),
         )
         .await
         .into_iter()
         .flatten()
         .collect::<Vec<InputEvent>>();
 
-        let expected = vec![
-            get_fake_input_event(
+        let expected = IntoIterator::into_iter([
+            get_unhandled_input_event(
                 KeyboardEvent::new(Key::CapsLock, KeyEventType::Pressed)
                     .into_with_modifiers(Some(Modifiers::CapsLock))
                     .into_with_lock_state(Some(LockState::CapsLock)),
-                Handled::No,
             ),
-            get_fake_input_event(
+            get_unhandled_input_event(
                 KeyboardEvent::new(Key::CapsLock, KeyEventType::Released)
                     .into_with_modifiers(Some(Modifiers::from_bits_allow_unknown(0)))
                     .into_with_lock_state(Some(LockState::CapsLock)),
-                Handled::No,
             ),
-            get_fake_input_event(
+            get_unhandled_input_event(
                 KeyboardEvent::new(Key::CapsLock, KeyEventType::Pressed)
                     .into_with_modifiers(Some(Modifiers::CapsLock))
                     .into_with_lock_state(Some(LockState::CapsLock)),
-                Handled::No,
             ),
-            get_fake_input_event(
+            get_unhandled_input_event(
                 KeyboardEvent::new(Key::CapsLock, KeyEventType::Released)
                     .into_with_modifiers(Some(Modifiers::from_bits_allow_unknown(0)))
                     .into_with_lock_state(Some(LockState::from_bits_allow_unknown(0))),
-                Handled::No,
             ),
-        ];
+        ])
+        .map(InputEvent::from)
+        .collect::<Vec<_>>();
+
         assert_eq!(expected, result, "diff:\n{}", diff_input_events(&expected, &result));
     }
 
@@ -183,67 +167,48 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn repeated_modifier_key() {
         let input_events = vec![
-            get_fake_input_event(
-                KeyboardEvent::new(Key::CapsLock, KeyEventType::Pressed),
-                Handled::No,
-            ),
-            get_fake_input_event(
-                KeyboardEvent::new(Key::CapsLock, KeyEventType::Released),
-                Handled::No,
-            ),
-            get_fake_input_event(KeyboardEvent::new(Key::A, KeyEventType::Pressed), Handled::No),
-            get_fake_input_event(KeyboardEvent::new(Key::A, KeyEventType::Released), Handled::No),
+            get_unhandled_input_event(KeyboardEvent::new(Key::CapsLock, KeyEventType::Pressed)),
+            get_unhandled_input_event(KeyboardEvent::new(Key::CapsLock, KeyEventType::Released)),
+            get_unhandled_input_event(KeyboardEvent::new(Key::A, KeyEventType::Pressed)),
+            get_unhandled_input_event(KeyboardEvent::new(Key::A, KeyEventType::Released)),
         ];
 
         let handler = ModifierHandler::new();
         let clone_handler = move || handler.clone();
         let result = futures::future::join_all(
-            input_events.into_iter().map(|e| async { clone_handler().handle_input_event(e).await }),
+            input_events
+                .into_iter()
+                .map(|e| async { clone_handler().handle_unhandled_input_event(e).await }),
         )
         .await
         .into_iter()
         .flatten()
         .collect::<Vec<InputEvent>>();
 
-        let expected = vec![
-            get_fake_input_event(
+        let expected = IntoIterator::into_iter([
+            get_unhandled_input_event(
                 KeyboardEvent::new(Key::CapsLock, KeyEventType::Pressed)
                     .into_with_modifiers(Some(Modifiers::CapsLock))
                     .into_with_lock_state(Some(LockState::CapsLock)),
-                Handled::No,
             ),
-            get_fake_input_event(
+            get_unhandled_input_event(
                 KeyboardEvent::new(Key::CapsLock, KeyEventType::Released)
                     .into_with_modifiers(Some(Modifiers::from_bits_allow_unknown(0)))
                     .into_with_lock_state(Some(LockState::CapsLock)),
-                Handled::No,
             ),
-            get_fake_input_event(
+            get_unhandled_input_event(
                 KeyboardEvent::new(Key::A, KeyEventType::Pressed)
                     .into_with_modifiers(Some(Modifiers::from_bits_allow_unknown(0)))
                     .into_with_lock_state(Some(LockState::CapsLock)),
-                Handled::No,
             ),
-            get_fake_input_event(
+            get_unhandled_input_event(
                 KeyboardEvent::new(Key::A, KeyEventType::Released)
                     .into_with_modifiers(Some(Modifiers::from_bits_allow_unknown(0)))
                     .into_with_lock_state(Some(LockState::CapsLock)),
-                Handled::No,
             ),
-        ];
+        ])
+        .map(InputEvent::from)
+        .collect::<Vec<_>>();
         assert_eq!(expected, result, "\n\ndiff:\n{}", diff_input_events(&expected, &result));
-    }
-
-    #[fasync::run_singlethreaded(test)]
-    async fn test_decoration_handled() {
-        let handler = ModifierHandler::new();
-        let input_event = get_fake_input_event(
-            KeyboardEvent::new(Key::CapsLock, KeyEventType::Pressed),
-            Handled::Yes,
-        );
-        let result = handler.handle_input_event(input_event.clone()).await;
-
-        let expected = input_event.clone();
-        assert_eq!(vec![expected], result);
     }
 }

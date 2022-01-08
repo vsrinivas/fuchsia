@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::input_handler::InputHandler,
+    crate::input_handler::UnhandledInputHandler,
     crate::{consumer_controls_binding, input_device},
     anyhow::{Context, Error},
     async_trait::async_trait,
@@ -33,31 +33,32 @@ struct MediaButtonsHandlerInner {
 }
 
 #[async_trait(?Send)]
-impl InputHandler for MediaButtonsHandler {
-    async fn handle_input_event(
+impl UnhandledInputHandler for MediaButtonsHandler {
+    async fn handle_unhandled_input_event(
         self: Rc<Self>,
-        mut input_event: input_device::InputEvent,
+        unhandled_input_event: input_device::UnhandledInputEvent,
     ) -> Vec<input_device::InputEvent> {
-        if let input_device::InputEvent {
-            device_event: input_device::InputDeviceEvent::ConsumerControls(ref media_buttons_event),
-            device_descriptor: input_device::InputDeviceDescriptor::ConsumerControls(_),
-            event_time: _,
-            handled: input_device::Handled::No,
-        } = input_event
-        {
-            let media_buttons_event = Self::create_media_buttons_event(media_buttons_event);
+        match unhandled_input_event {
+            input_device::UnhandledInputEvent {
+                device_event:
+                    input_device::InputDeviceEvent::ConsumerControls(ref media_buttons_event),
+                device_descriptor: input_device::InputDeviceDescriptor::ConsumerControls(_),
+                event_time: _,
+            } => {
+                let media_buttons_event = Self::create_media_buttons_event(media_buttons_event);
 
-            // Send the event if the media buttons are supported.
-            self.send_event_to_listeners(&media_buttons_event).await;
+                // Send the event if the media buttons are supported.
+                self.send_event_to_listeners(&media_buttons_event).await;
 
-            // Store the sent event.
-            let mut inner = self.inner.lock().await;
-            inner.last_event = Some(media_buttons_event);
+                // Store the sent event.
+                let mut inner = self.inner.lock().await;
+                inner.last_event = Some(media_buttons_event);
 
-            // Consume the input event.
-            input_event.handled = input_device::Handled::Yes
+                // Consume the input event.
+                vec![input_device::InputEvent::from(unhandled_input_event).into_handled()]
+            }
+            _ => vec![input_device::InputEvent::from(unhandled_input_event)],
         }
-        vec![input_event]
     }
 }
 
@@ -278,6 +279,7 @@ mod tests {
             vec![create_ui_input_media_buttons_event(Some(0), Some(true), Some(true), Some(true))];
 
         // Assert registered listener receives event.
+        use crate::input_handler::InputHandler as _; // Adapt UnhandledInputHandler to InputHandler
         assert_input_event_sequence_generates_media_buttons_events!(
             input_handler: media_buttons_handler,
             input_events: input_events,
@@ -319,6 +321,7 @@ mod tests {
         )];
 
         // Assert registered listeners receives event.
+        use crate::input_handler::InputHandler as _; // Adapt UnhandledInputHandler to InputHandler
         assert_input_event_sequence_generates_media_buttons_events!(
             input_handler: media_buttons_handler,
             input_events: input_events,
@@ -326,40 +329,5 @@ mod tests {
             media_buttons_listener_request_stream:
                 vec![first_listener_stream, second_listener_stream],
         );
-    }
-
-    #[fasync::run_singlethreaded(test)]
-    async fn handler_ignores_handled_events() {
-        let media_buttons_handler = MediaButtonsHandler::new();
-        let device_listener_proxy =
-            spawn_device_listener_registry_server(media_buttons_handler.clone());
-
-        // Register a listener.
-        let (listener, listener_stream) =
-            fidl::endpoints::create_request_stream::<fidl_ui_policy::MediaButtonsListenerMarker>()
-                .unwrap();
-        let _ = device_listener_proxy.register_listener(listener).await;
-
-        // Setup events and expectations.
-        let descriptor = testing_utilities::consumer_controls_device_descriptor();
-        let event_time = zx::Time::get_monotonic().into_nanos() as input_device::EventTime;
-        let input_events = vec![testing_utilities::create_consumer_controls_event_with_handled(
-            vec![
-                fidl_input_report::ConsumerControlButton::VolumeUp,
-                fidl_input_report::ConsumerControlButton::VolumeDown,
-                fidl_input_report::ConsumerControlButton::Pause,
-                fidl_input_report::ConsumerControlButton::MicMute,
-                fidl_input_report::ConsumerControlButton::CameraDisable,
-            ],
-            event_time,
-            &descriptor,
-            input_device::Handled::Yes,
-        )];
-        testing_utilities::assert_handler_ignores_input_event_sequence(
-            media_buttons_handler,
-            input_events,
-            listener_stream,
-        )
-        .await;
     }
 }

@@ -4,7 +4,7 @@
 
 use {
     crate::input_device,
-    crate::input_handler::InputHandler,
+    crate::input_handler::UnhandledInputHandler,
     anyhow::Error,
     async_trait::async_trait,
     fidl_fuchsia_input::Key,
@@ -20,32 +20,31 @@ pub struct ShortcutHandler {
 }
 
 #[async_trait(?Send)]
-impl InputHandler for ShortcutHandler {
-    async fn handle_input_event(
+impl UnhandledInputHandler for ShortcutHandler {
+    async fn handle_unhandled_input_event(
         self: Rc<Self>,
-        mut input_event: input_device::InputEvent,
+        unhandled_input_event: input_device::UnhandledInputEvent,
     ) -> Vec<input_device::InputEvent> {
-        if let input_device::InputEvent {
-            device_event: input_device::InputDeviceEvent::Keyboard(ref keyboard_device_event),
-            device_descriptor: input_device::InputDeviceDescriptor::Keyboard(_),
-            event_time,
-            handled: input_device::Handled::No,
-        } = input_event
-        {
-            let key_event = create_key_event(
-                &keyboard_device_event.get_key(),
-                keyboard_device_event.get_event_type().clone(),
-                keyboard_device_event.get_modifiers().clone(),
-                keyboard_device_event.get_lock_state().clone(),
+        match unhandled_input_event {
+            input_device::UnhandledInputEvent {
+                device_event: input_device::InputDeviceEvent::Keyboard(ref keyboard_device_event),
+                device_descriptor: input_device::InputDeviceDescriptor::Keyboard(_),
                 event_time,
-            );
-            // If either pressed_keys or released_keys
-            // triggered a shortcut, consume the event
-            if handle_key_event(key_event, &self.manager).await {
-                input_event.handled = input_device::Handled::Yes
+            } => {
+                let key_event = create_key_event(
+                    &keyboard_device_event.get_key(),
+                    keyboard_device_event.get_event_type().clone(),
+                    keyboard_device_event.get_modifiers().clone(),
+                    keyboard_device_event.get_lock_state().clone(),
+                    event_time,
+                );
+
+                // If either pressed_keys or released_keys triggered a shortcut, consume the event
+                let handled = handle_key_event(key_event, &self.manager).await;
+                vec![input_device::InputEvent::from(unhandled_input_event).into_handled_if(handled)]
             }
+            _ => vec![input_device::InputEvent::from(unhandled_input_event)],
         }
-        vec![input_event]
     }
 }
 
@@ -135,28 +134,22 @@ mod tests {
         ShortcutHandler::new(shortcut_manager_proxy).expect("Failed to create ShortcutHandler.")
     }
 
-    /// Sends a pressed key event to the ShortcutHandler with `handled`.
-    async fn press_key_with_handled(
-        pressed_key3: fidl_fuchsia_input::Key,
+    fn create_unhandled_keyboard_event(
+        key3: fidl_fuchsia_input::Key,
+        event_type: fidl_fuchsia_ui_input3::KeyEventType,
         modifiers: Option<fidl_ui_input3::Modifiers>,
         event_time: input_device::EventTime,
-        shortcut_handler: Rc<ShortcutHandler>,
-        handled: input_device::Handled,
-    ) -> Vec<input_device::InputEvent> {
+    ) -> input_device::UnhandledInputEvent {
         let device_descriptor = input_device::InputDeviceDescriptor::Keyboard(
-            keyboard_binding::KeyboardDeviceDescriptor { keys: vec![pressed_key3] },
+            keyboard_binding::KeyboardDeviceDescriptor { keys: vec![key3] },
         );
-        let input_event = testing_utilities::create_keyboard_event_with_handled(
-            pressed_key3,
-            fidl_fuchsia_ui_input3::KeyEventType::Pressed,
-            modifiers,
+        let keyboard_event =
+            keyboard_binding::KeyboardEvent::new(key3, event_type).into_with_modifiers(modifiers);
+        input_device::UnhandledInputEvent {
+            device_event: input_device::InputDeviceEvent::Keyboard(keyboard_event),
+            device_descriptor,
             event_time,
-            &device_descriptor,
-            /* keymap= */ None,
-            None,
-            handled,
-        );
-        shortcut_handler.handle_input_event(input_event).await
+        }
     }
 
     /// Sends a pressed key event to the ShortcutHandler.
@@ -166,14 +159,13 @@ mod tests {
         event_time: input_device::EventTime,
         shortcut_handler: Rc<ShortcutHandler>,
     ) -> Vec<input_device::InputEvent> {
-        press_key_with_handled(
+        let input_event = create_unhandled_keyboard_event(
             pressed_key3,
+            fidl_fuchsia_ui_input3::KeyEventType::Pressed,
             modifiers,
             event_time,
-            shortcut_handler,
-            input_device::Handled::No,
-        )
-        .await
+        );
+        shortcut_handler.handle_unhandled_input_event(input_event).await
     }
 
     /// Sends a release key event to the ShortcutHandler.
@@ -183,18 +175,13 @@ mod tests {
         event_time: input_device::EventTime,
         shortcut_handler: Rc<ShortcutHandler>,
     ) -> Vec<input_device::InputEvent> {
-        let device_descriptor = input_device::InputDeviceDescriptor::Keyboard(
-            keyboard_binding::KeyboardDeviceDescriptor { keys: vec![released_key3] },
-        );
-        let input_event = testing_utilities::create_keyboard_event(
+        let input_event = create_unhandled_keyboard_event(
             released_key3,
             fidl_fuchsia_ui_input3::KeyEventType::Released,
             modifiers,
             event_time,
-            &device_descriptor,
-            /* keymap= */ None,
         );
-        shortcut_handler.handle_input_event(input_event).await
+        shortcut_handler.handle_unhandled_input_event(input_event).await
     }
 
     /// Tests that a press key event is not consumed if it is not a shortcut.
@@ -284,26 +271,6 @@ mod tests {
             Some(fidl_ui_input3::Modifiers::CapsLock),
             event_time,
             shortcut_handler,
-        )
-        .await;
-        assert_matches!(
-            handle_result.as_slice(),
-            [input_device::InputEvent { handled: input_device::Handled::Yes, .. }]
-        );
-    }
-
-    /// Tests that a `handled` press key shortcut is ignored.
-    /// TODO(fxb/89720): Verify that handler doesn't send a message to the shortcut manager
-    #[fasync::run_singlethreaded(test)]
-    async fn handled_press_key_ignores_shortcut() {
-        let event_time = zx::Time::get_monotonic().into_nanos() as input_device::EventTime;
-        let shortcut_handler = create_shortcut_handler(true, false);
-        let handle_result = press_key_with_handled(
-            fidl_fuchsia_input::Key::CapsLock,
-            Some(fidl_ui_input3::Modifiers::CapsLock),
-            event_time,
-            shortcut_handler,
-            input_device::Handled::Yes,
         )
         .await;
         assert_matches!(

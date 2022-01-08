@@ -5,7 +5,7 @@
 use {
     crate::consumer_controls_binding::ConsumerControlsEvent,
     crate::input_device,
-    crate::input_handler::InputHandler,
+    crate::input_handler::UnhandledInputHandler,
     anyhow::{anyhow, Context as _, Error},
     async_trait::async_trait,
     async_utils::hanging_get::server::HangingGet,
@@ -344,20 +344,19 @@ impl FactoryResetHandler {
 }
 
 #[async_trait(?Send)]
-impl InputHandler for FactoryResetHandler {
+impl UnhandledInputHandler for FactoryResetHandler {
     /// This InputHandler doesn't consume any input events. It just passes them on to the next handler in the pipeline.
     /// Since it doesn't need exclusive access to the events this seems like the best way to avoid handlers further
     /// down the pipeline missing events that they need.
-    async fn handle_input_event(
+    async fn handle_unhandled_input_event(
         self: Rc<Self>,
-        input_event: input_device::InputEvent,
+        unhandled_input_event: input_device::UnhandledInputEvent,
     ) -> Vec<input_device::InputEvent> {
-        match input_event {
-            input_device::InputEvent {
+        match unhandled_input_event {
+            input_device::UnhandledInputEvent {
                 device_event: input_device::InputDeviceEvent::ConsumerControls(ref event),
                 device_descriptor: input_device::InputDeviceDescriptor::ConsumerControls(_),
                 event_time: _,
-                handled: input_device::Handled::No,
             } => {
                 match self.factory_reset_state() {
                     FactoryResetState::Idle => {
@@ -380,7 +379,7 @@ impl InputHandler for FactoryResetHandler {
             _ => (),
         };
 
-        vec![input_event]
+        vec![input_device::InputEvent::from(unhandled_input_event)]
     }
 }
 
@@ -463,29 +462,27 @@ mod tests {
         ])
     }
 
-    fn create_non_reset_input_event() -> input_device::InputEvent {
+    fn create_non_reset_input_event() -> input_device::UnhandledInputEvent {
         let device_event = input_device::InputDeviceEvent::ConsumerControls(
             create_non_reset_consumer_controls_event(),
         );
 
-        input_device::InputEvent {
+        input_device::UnhandledInputEvent {
             device_event,
             device_descriptor: create_input_device_descriptor(),
             event_time: Time::now().into_nanos() as u64,
-            handled: input_device::Handled::No,
         }
     }
 
-    fn create_reset_input_event() -> input_device::InputEvent {
+    fn create_reset_input_event() -> input_device::UnhandledInputEvent {
         let device_event = input_device::InputDeviceEvent::ConsumerControls(
             create_reset_consumer_controls_event(),
         );
 
-        input_device::InputEvent {
+        input_device::UnhandledInputEvent {
             device_event,
             device_descriptor: create_input_device_descriptor(),
             event_time: Time::now().into_nanos() as u64,
-            handled: input_device::Handled::No,
         }
     }
 
@@ -544,7 +541,8 @@ mod tests {
 
         // Send a reset event
         let reset_event = create_reset_input_event();
-        let handle_input_event_fut = reset_handler.clone().handle_input_event(reset_event);
+        let handle_input_event_fut =
+            reset_handler.clone().handle_unhandled_input_event(reset_event);
         pin_mut!(handle_input_event_fut);
         assert!(executor.run_until_stalled(&mut handle_input_event_fut).is_ready());
 
@@ -600,7 +598,7 @@ mod tests {
 
         // Send reset event
         let reset_event = create_reset_input_event();
-        reset_handler.clone().handle_input_event(reset_event).await;
+        reset_handler.clone().handle_unhandled_input_event(reset_event).await;
 
         // State should still be Disallow
         assert_eq!(reset_handler.factory_reset_state(), FactoryResetState::Disallowed);
@@ -719,7 +717,7 @@ mod tests {
 
         // Send reset event
         let reset_event = create_reset_input_event();
-        reset_handler.clone().handle_input_event(reset_event).await;
+        reset_handler.clone().handle_unhandled_input_event(reset_event).await;
 
         // State should now be ButtonCountdown and scheduled_reset_time should be None
         let reset_state = countdown_proxy.watch().await.expect("Failed to get countdown state");
@@ -751,7 +749,7 @@ mod tests {
 
         // Send reset event
         let reset_event = create_reset_input_event();
-        reset_handler.clone().handle_input_event(reset_event).await;
+        reset_handler.clone().handle_unhandled_input_event(reset_event).await;
 
         // State should now be ButtonCountdown and scheduled_reset_time should be None
         let reset_state = countdown_proxy.watch().await.expect("Failed to get countdown state");
@@ -791,7 +789,7 @@ mod tests {
 
         // Send reset event
         let reset_event = create_reset_input_event();
-        reset_handler.clone().handle_input_event(reset_event).await;
+        reset_handler.clone().handle_unhandled_input_event(reset_event).await;
 
         // State should now be ButtonCountdown and scheduled_reset_time should be None
         let reset_state = countdown_proxy.watch().await.expect("Failed to get countdown state");
@@ -803,7 +801,7 @@ mod tests {
 
         // Pass in an event to simulate releasing the reset button
         let non_reset_event = create_non_reset_input_event();
-        reset_handler.clone().handle_input_event(non_reset_event).await;
+        reset_handler.clone().handle_unhandled_input_event(non_reset_event).await;
 
         // State should now be in Idle and scheduled_reset_time should be None
         let reset_state = countdown_proxy.watch().await.expect("Failed to get countdown state");
@@ -823,7 +821,7 @@ mod tests {
 
         // Send reset event
         let reset_event = create_reset_input_event();
-        reset_handler.clone().handle_input_event(reset_event).await;
+        reset_handler.clone().handle_unhandled_input_event(reset_event).await;
 
         // State should now be ButtonCountdown and scheduled_reset_time should be None
         let reset_state = countdown_proxy.watch().await.expect("Failed to get countdown state");
@@ -843,42 +841,11 @@ mod tests {
 
         // Pass in an event to simulate releasing the reset button
         let non_reset_event = create_non_reset_input_event();
-        reset_handler.clone().handle_input_event(non_reset_event).await;
+        reset_handler.clone().handle_unhandled_input_event(non_reset_event).await;
 
         // State should now be in Idle and scheduled_reset_time should be None
         let reset_state = countdown_proxy.watch().await.expect("Failed to get countdown state");
         assert!(reset_state.scheduled_reset_time.is_none());
         assert_eq!(reset_handler.factory_reset_state(), FactoryResetState::Idle);
-    }
-
-    #[fuchsia::test]
-    fn factory_reset_handler_ignores_handled_events() -> Result<(), Error> {
-        let mut executor = TestExecutor::new_with_fake_time().unwrap();
-        let reset_handler = FactoryResetHandler::new();
-        let countdown_proxy = create_factory_reset_countdown_proxy(reset_handler.clone());
-
-        // The initial state should be no scheduled reset time and the
-        // FactoryRestHandler state should be FactoryResetState::Idle
-        let countdown_state = get_countdown_state(&countdown_proxy, &mut executor);
-        let handler_state = reset_handler.factory_reset_state();
-        assert!(countdown_state.scheduled_reset_time.is_none());
-        assert_eq!(handler_state, FactoryResetState::Idle);
-
-        // Send a "handled" reset event
-        let mut reset_event = create_reset_input_event();
-        reset_event.handled = input_device::Handled::Yes;
-        let handle_input_event_fut = reset_handler.clone().handle_input_event(reset_event);
-        pin_mut!(handle_input_event_fut);
-        assert!(executor.run_until_stalled(&mut handle_input_event_fut).is_ready());
-
-        // The state should not change.
-        let countdown_state_fut =
-            async move { countdown_proxy.watch().await.expect("Failed to get countdown state") };
-        pin_mut!(countdown_state_fut);
-        assert_matches!(executor.run_until_stalled(&mut countdown_state_fut), Poll::Pending);
-        let handler_state = reset_handler.factory_reset_state();
-        assert_eq!(handler_state, FactoryResetState::Idle);
-
-        Ok(())
     }
 }

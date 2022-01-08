@@ -36,9 +36,9 @@
 //! See the documentation for [Handler] for some more detail.
 
 use crate::input_device::{
-    EventTime, Handled, InputDeviceDescriptor, InputDeviceEvent, InputEvent,
+    EventTime, Handled, InputDeviceDescriptor, InputDeviceEvent, InputEvent, UnhandledInputEvent,
 };
-use crate::input_handler::InputHandler;
+use crate::input_handler::UnhandledInputHandler;
 use crate::keyboard_binding::KeyboardEvent;
 use async_trait::async_trait;
 use core::fmt;
@@ -86,7 +86,6 @@ struct StoredEvent {
     event: KeyboardEvent,
     device_descriptor: InputDeviceDescriptor,
     event_time: EventTime,
-    handled: Handled,
 }
 
 impl fmt::Display for StoredEvent {
@@ -104,7 +103,7 @@ impl Into<InputEvent> for StoredEvent {
             device_event: InputDeviceEvent::Keyboard(self.event),
             device_descriptor: self.device_descriptor,
             event_time: self.event_time,
-            handled: self.handled,
+            handled: Handled::No,
         }
     }
 }
@@ -138,7 +137,6 @@ impl StoredEvent {
             event,
             device_descriptor: self.device_descriptor,
             event_time: self.event_time,
-            handled: self.handled,
         }
     }
 
@@ -299,9 +297,12 @@ pub struct Handler {
 /// This trait implementation allows the [Handler] to be hooked up into the input
 /// pipeline.
 #[async_trait(?Send)]
-impl InputHandler for Handler {
-    async fn handle_input_event(self: Rc<Self>, input_event: InputEvent) -> Vec<InputEvent> {
-        self.handle_input_event_internal(input_event)
+impl UnhandledInputHandler for Handler {
+    async fn handle_unhandled_input_event(
+        self: Rc<Self>,
+        unhandled_input_event: UnhandledInputEvent,
+    ) -> Vec<InputEvent> {
+        self.handle_unhandled_input_event_internal(unhandled_input_event)
     }
 }
 
@@ -318,15 +319,17 @@ impl Handler {
         Rc::new(handler)
     }
 
-    fn handle_input_event_internal(self: Rc<Self>, input_event: InputEvent) -> Vec<InputEvent> {
-        match input_event {
-            InputEvent {
+    fn handle_unhandled_input_event_internal(
+        self: Rc<Self>,
+        unhandled_input_event: UnhandledInputEvent,
+    ) -> Vec<InputEvent> {
+        match unhandled_input_event {
+            UnhandledInputEvent {
                 device_event: InputDeviceEvent::Keyboard(event),
                 device_descriptor,
                 event_time,
-                handled,
-            } if handled == Handled::No => {
-                let event = StoredEvent { event, device_descriptor, event_time, handled };
+            } => {
+                let event = StoredEvent { event, device_descriptor, event_time };
                 // Separated into two statements to ensure the logs are not truncated.
                 fx_log_debug!("state: {:?}", self.state.borrow());
                 fx_log_debug!("event: {}", &event);
@@ -336,7 +339,7 @@ impl Handler {
             }
 
             // Pass other events unchanged.
-            _ => vec![input_event],
+            _ => vec![InputEvent::from(unhandled_input_event)],
         }
     }
 
@@ -746,15 +749,15 @@ mod tests {
     use crate::testing_utilities;
     use fidl_fuchsia_input::Key;
     use fidl_fuchsia_ui_input3::{KeyEventType, KeyMeaning};
+    use std::convert::TryFrom as _;
 
-    // Creates a new keyboard event for testing with handled state.
-    fn new_event_with_handled(
+    // Creates a new keyboard event for testing.
+    fn new_event(
         key: Key,
         event_type: KeyEventType,
         key_meaning: Option<KeyMeaning>,
-        handled: Handled,
-    ) -> InputEvent {
-        testing_utilities::create_keyboard_event_with_handled(
+    ) -> UnhandledInputEvent {
+        UnhandledInputEvent::try_from(testing_utilities::create_keyboard_event_with_handled(
             key,
             event_type,
             /*modifiers=*/ None,
@@ -762,17 +765,9 @@ mod tests {
             &InputDeviceDescriptor::Fake,
             /*keymap=*/ None,
             key_meaning,
-            handled,
-        )
-    }
-
-    // Creates a new keyboard event for testing.
-    fn new_event(
-        key: Key,
-        event_type: KeyEventType,
-        key_meaning: Option<KeyMeaning>,
-    ) -> InputEvent {
-        new_event_with_handled(key, event_type, key_meaning, Handled::No)
+            /*handled=*/ Handled::No,
+        ))
+        .unwrap()
     }
 
     // Tests some common keyboard input use cases with dead keys actuation.
@@ -789,10 +784,10 @@ mod tests {
             name: &'static str,
             // The sequence of input events at the input of the dead keys
             // handler.
-            inputs: Vec<InputEvent>,
+            inputs: Vec<UnhandledInputEvent>,
             // The expected sequence of input events, after being transformed
             // by the dead keys handler.
-            expected: Vec<InputEvent>,
+            expected: Vec<UnhandledInputEvent>,
         }
         let tests: Vec<TestCase> = vec![
             TestCase {
@@ -1217,57 +1212,6 @@ mod tests {
                     ),
                 ],
             },
-            TestCase {
-                name: "'handled' circumflex is ignored- dead key first, then live key",
-                inputs: vec![
-                    new_event_with_handled(
-                        Key::Key5,
-                        KeyEventType::Pressed,
-                        Some(KeyMeaning::Codepoint(CIRCUMFLEX as u32)),
-                        Handled::Yes,
-                    ),
-                    new_event_with_handled(
-                        Key::Key5,
-                        KeyEventType::Released,
-                        Some(KeyMeaning::Codepoint(CIRCUMFLEX as u32)),
-                        Handled::Yes,
-                    ),
-                    new_event(
-                        Key::A,
-                        KeyEventType::Pressed,
-                        Some(KeyMeaning::Codepoint('A' as u32)),
-                    ),
-                    new_event(
-                        Key::A,
-                        KeyEventType::Released,
-                        Some(KeyMeaning::Codepoint('A' as u32)),
-                    ),
-                ],
-                expected: vec![
-                    new_event_with_handled(
-                        Key::Key5,
-                        KeyEventType::Pressed,
-                        Some(KeyMeaning::Codepoint(CIRCUMFLEX as u32)),
-                        Handled::Yes,
-                    ),
-                    new_event_with_handled(
-                        Key::Key5,
-                        KeyEventType::Released,
-                        Some(KeyMeaning::Codepoint(CIRCUMFLEX as u32)),
-                        Handled::Yes,
-                    ),
-                    new_event(
-                        Key::A,
-                        KeyEventType::Pressed,
-                        Some(KeyMeaning::Codepoint('A' as u32)),
-                    ),
-                    new_event(
-                        Key::A,
-                        KeyEventType::Released,
-                        Some(KeyMeaning::Codepoint('A' as u32)),
-                    ),
-                ],
-            },
         ];
 
         let loader = icu_data::Loader::new().unwrap();
@@ -1275,11 +1219,16 @@ mod tests {
         for test in tests {
             let actuals: Vec<InputEvent> = test
                 .inputs
-                .iter()
-                .map(|event| handler.clone().handle_input_event_internal(event.clone()))
+                .into_iter()
+                .map(|event| handler.clone().handle_unhandled_input_event_internal(event))
                 .flatten()
                 .collect();
-            assert_eq!(test.expected, actuals, "in test: {}", test.name);
+            assert_eq!(
+                test.expected.into_iter().map(InputEvent::from).collect::<Vec<_>>(),
+                actuals,
+                "in test: {}",
+                test.name
+            );
         }
     }
 }
