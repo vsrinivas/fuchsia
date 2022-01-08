@@ -113,23 +113,23 @@ func TestSubprocessTester(t *testing.T) {
 	}
 
 	cases := []struct {
-		name          string
-		test          build.Test
-		runErrs       []error
-		wantErr       bool
-		wantCmd       []string
-		wantDataSinks runtests.DataSinkMap
+		name           string
+		test           build.Test
+		runErrs        []error
+		expectedResult runtests.TestResult
+		wantCmd        []string
+		wantDataSinks  runtests.DataSinkMap
 	}{
 		{
-			name:    "no path",
-			test:    build.Test{},
-			wantErr: true,
+			name:           "no path",
+			test:           build.Test{},
+			expectedResult: runtests.TestFailure,
 		},
 		{
-			name:    "test passes with profile",
-			test:    build.Test{Path: passingTest},
-			wantErr: false,
-			wantCmd: []string{passingTest},
+			name:           "test passes with profile",
+			test:           build.Test{Path: passingTest},
+			expectedResult: runtests.TestSuccess,
+			wantCmd:        []string{passingTest},
 			wantDataSinks: runtests.DataSinkMap{
 				"llvm-profile": []runtests.DataSink{
 					{
@@ -141,18 +141,18 @@ func TestSubprocessTester(t *testing.T) {
 			},
 		},
 		{
-			name:          "test passes without profile",
-			test:          build.Test{Path: "uninstrumented_test"},
-			wantErr:       false,
-			wantCmd:       []string{"uninstrumented_test"},
-			wantDataSinks: nil,
+			name:           "test passes without profile",
+			test:           build.Test{Path: "uninstrumented_test"},
+			expectedResult: runtests.TestSuccess,
+			wantCmd:        []string{"uninstrumented_test"},
+			wantDataSinks:  nil,
 		},
 		{
-			name:    "test fails",
-			test:    build.Test{Path: failingTest},
-			runErrs: []error{fmt.Errorf("test failed")},
-			wantErr: true,
-			wantCmd: []string{failingTest},
+			name:           "test fails",
+			test:           build.Test{Path: failingTest},
+			runErrs:        []error{fmt.Errorf("test failed")},
+			expectedResult: runtests.TestFailure,
+			wantCmd:        []string{failingTest},
 			wantDataSinks: runtests.DataSinkMap{
 				"llvm-profile": []runtests.DataSink{
 					{
@@ -175,13 +175,14 @@ func TestSubprocessTester(t *testing.T) {
 			}
 			outDir := filepath.Join(tmpDir, c.test.Path)
 			testResult, err := tester.Test(context.Background(), testsharder.Test{Test: c.test}, ioutil.Discard, ioutil.Discard, outDir)
-			if gotErr := (err != nil); gotErr != c.wantErr {
-				t.Errorf("tester.Test got error: %s, want error: %t", err, c.wantErr)
+			if err != nil {
+				t.Errorf("tester.Test got error: %s, want nil", err)
 			}
-			if err == nil {
-				if _, statErr := os.Stat(outDir); statErr != nil {
-					t.Error("tester.Test did not create a readable outDir:", statErr)
-				}
+			if c.expectedResult != testResult.Result {
+				t.Errorf("tester.Test got result: %s, want: %s", testResult.Result, c.expectedResult)
+			}
+			if _, statErr := os.Stat(outDir); statErr != nil {
+				t.Error("tester.Test did not create a readable outDir:", statErr)
 			}
 			if diff := cmp.Diff(c.wantCmd, runner.lastCmd); diff != "" {
 				t.Errorf("Unexpected command run (-want +got):\n%s", diff)
@@ -220,32 +221,41 @@ func (*fakeDataSinkCopier) Close() error {
 
 func TestFFXTester(t *testing.T) {
 	cases := []struct {
-		name         string
-		experimental bool
-		runV2        bool
-		sshRunErrs   []error
-		wantErr      bool
+		name           string
+		experimental   bool
+		runV2          bool
+		sshRunErrs     []error
+		expectedResult runtests.TestResult
 	}{
 		{
-			name:         "run v1 tests with ssh",
-			experimental: true,
-			sshRunErrs:   []error{nil},
+			name:           "run v1 tests with ssh",
+			experimental:   true,
+			sshRunErrs:     []error{nil},
+			expectedResult: runtests.TestSuccess,
 		},
 		{
-			name:         "run v2 tests with ffx",
-			experimental: true,
-			runV2:        true,
+			name:           "run v2 tests with ffx",
+			experimental:   true,
+			runV2:          true,
+			expectedResult: runtests.TestSuccess,
 		},
 		{
-			name:         "ffx test fails",
-			experimental: true,
-			runV2:        true,
-			wantErr:      true,
+			name:           "ffx test fails",
+			experimental:   true,
+			runV2:          true,
+			expectedResult: runtests.TestFailure,
 		},
 		{
-			name:       "run v2 tests with ssh if ffx not experimental",
-			runV2:      true,
-			sshRunErrs: []error{nil},
+			name:           "run v2 tests with ssh if ffx not experimental",
+			runV2:          true,
+			sshRunErrs:     []error{nil},
+			expectedResult: runtests.TestSuccess,
+		},
+		{
+			name:           "ffx test times out",
+			experimental:   true,
+			runV2:          true,
+			expectedResult: runtests.TestTimeout,
 		},
 	}
 	for _, c := range cases {
@@ -261,9 +271,14 @@ func TestFFXTester(t *testing.T) {
 				connectionErrorRetryBackoff: &retry.ZeroBackoff{},
 				useRuntests:                 true,
 			}
-			outcome := ffxutil.TestPassed
-			if c.wantErr {
+			var outcome string
+			switch c.expectedResult {
+			case runtests.TestSuccess:
+				outcome = ffxutil.TestPassed
+			case runtests.TestFailure:
 				outcome = ffxutil.TestFailed
+			case runtests.TestTimeout:
+				outcome = ffxutil.TestTimedOut
 			}
 			ffx := &ffxutil.MockFFXInstance{TestOutcome: outcome}
 			tester = NewFFXTester(ffx, tester, "", c.experimental)
@@ -286,12 +301,8 @@ func TestFFXTester(t *testing.T) {
 			if err != nil {
 				t.Errorf("tester.Test got unexpected error: %s", err)
 			}
-			expectedResult := runtests.TestSuccess
-			if c.wantErr {
-				expectedResult = runtests.TestFailure
-			}
-			if testResult.Result != expectedResult {
-				t.Errorf("tester.Test got result: %s, want result: %s", testResult.Result, expectedResult)
+			if testResult.Result != c.expectedResult {
+				t.Errorf("tester.Test got result: %s, want result: %s", testResult.Result, c.expectedResult)
 			}
 
 			if c.runV2 && c.experimental {
@@ -338,7 +349,7 @@ func TestSSHTester(t *testing.T) {
 		runErrs         []error
 		reconErrs       []error
 		copierReconErrs []error
-		wantErr         bool
+		expectedResult  runtests.TestResult
 		wantConnErr     bool
 		runSnapshot     bool
 		useRuntests     bool
@@ -347,34 +358,32 @@ func TestSSHTester(t *testing.T) {
 		{
 			name:    "success",
 			runErrs: []error{nil},
-			wantErr: false,
 		},
 		{
-			name:    "test failure",
-			runErrs: []error{fmt.Errorf("test failed")},
-			wantErr: true,
+			name:           "test failure",
+			runErrs:        []error{fmt.Errorf("test failed")},
+			expectedResult: runtests.TestFailure,
 		},
 		{
-			name:      "connection error retry and test failure",
-			runErrs:   []error{sshutil.ConnectionError{}, fmt.Errorf("test failed")},
-			reconErrs: []error{nil},
-			wantErr:   true,
+			name:           "connection error retry and test failure",
+			runErrs:        []error{sshutil.ConnectionError{}, fmt.Errorf("test failed")},
+			reconErrs:      []error{nil},
+			expectedResult: runtests.TestFailure,
 		},
 		{
 			name:      "reconnect succeeds then fails",
 			runErrs:   []error{sshutil.ConnectionError{}, sshutil.ConnectionError{}},
 			reconErrs: []error{nil, fmt.Errorf("reconnect failed")},
-			wantErr:   true,
 			// Make sure we return the original ConnectionError and not the error from the failed
 			// reconnect attempt. This is important because the code that calls Test() in a loop
 			// aborts the loop when it sees an ConnectionError.
 			wantConnErr: true,
 		},
 		{
-			name:      "reconnect succeeds thrice",
-			runErrs:   []error{sshutil.ConnectionError{}, sshutil.ConnectionError{}, sshutil.ConnectionError{}},
-			reconErrs: []error{nil, nil, nil},
-			wantErr:   true,
+			name:           "reconnect succeeds thrice",
+			runErrs:        []error{sshutil.ConnectionError{}, sshutil.ConnectionError{}, sshutil.ConnectionError{}},
+			reconErrs:      []error{nil, nil, nil},
+			expectedResult: runtests.TestFailure,
 			// Reconnection succeeds so we don't want the caller to see a ConnectionError.
 			wantConnErr: false,
 		},
@@ -382,8 +391,6 @@ func TestSSHTester(t *testing.T) {
 			name:        "reconnect before snapshot",
 			runErrs:     []error{nil, sshutil.ConnectionError{}, nil},
 			reconErrs:   []error{nil},
-			wantErr:     false,
-			wantConnErr: false,
 			runSnapshot: true,
 		},
 		{
@@ -396,6 +403,11 @@ func TestSSHTester(t *testing.T) {
 			runErrs:     []error{nil},
 			useRuntests: true,
 			runV2:       true,
+		},
+		{
+			name:           "test timeout",
+			runErrs:        []error{&exitError{fmt.Errorf("timeout"), timeoutExitCode}},
+			expectedResult: runtests.TestTimeout,
 		},
 	}
 	for _, c := range cases {
@@ -426,28 +438,26 @@ func TestSSHTester(t *testing.T) {
 				Test:         build.Test{PackageURL: "fuchsia-pkg://foo"},
 				Runs:         1,
 				RunAlgorithm: testsharder.StopOnSuccess,
+				Timeout:      time.Second,
 			}
 			if c.runV2 {
 				test.Test = build.Test{PackageURL: "fuchsia-pkg://foo#meta/bar.cm"}
 			}
 			testResult, err := tester.Test(context.Background(), test, ioutil.Discard, ioutil.Discard, "unused-out-dir")
 			expectedResult := runtests.TestSuccess
-			if c.wantErr {
-				expectedResult = runtests.TestFailure
+			if c.expectedResult != "" {
+				expectedResult = c.expectedResult
 			}
-			if err == nil {
-				if c.wantErr {
-					t.Errorf("tester.Test got nil error, want non-nil error")
-				}
-			} else {
-				if !c.wantErr {
+			if err == nil && c.wantConnErr {
+				t.Errorf("tester.Test got nil error, want non-nil error")
+			} else if err != nil {
+				if !c.wantConnErr {
 					t.Errorf("tester.Test got error: %s, want nil", err)
-				}
-				if isConnErr := sshutil.IsConnectionError(err); isConnErr != c.wantConnErr {
-					t.Errorf("got isConnErr: %t, want: %t", isConnErr, c.wantConnErr)
+				} else if !sshutil.IsConnectionError(err) {
+					t.Errorf("tester.Test got error: %s. want conn err", err)
 				}
 			}
-			if testResult.Result != expectedResult {
+			if !c.wantConnErr && testResult.Result != expectedResult {
 				t.Errorf("got test result: %s, want: %s", testResult.Result, expectedResult)
 			}
 
@@ -589,18 +599,24 @@ func (ctx *fakeContext) Value(key interface{}) interface{} {
 
 func TestSerialTester(t *testing.T) {
 	cases := []struct {
-		name      string
-		wantErr   bool
-		wantRetry bool
+		name           string
+		expectedResult runtests.TestResult
+		wantErr        bool
+		wantRetry      bool
 	}{
 		{
-			name: "test passes",
+			name:           "test passes",
+			expectedResult: runtests.TestSuccess,
 		}, {
-			name:    "test fails",
+			name:           "test fails",
+			expectedResult: runtests.TestFailure,
+		}, {
+			name:           "test does not start on first try",
+			expectedResult: runtests.TestSuccess,
+			wantRetry:      true,
+		}, {
+			name:    "test returns fatal err",
 			wantErr: true,
-		}, {
-			name:      "test does not start on first try",
-			wantRetry: true,
 		},
 	}
 
@@ -632,11 +648,15 @@ func TestSerialTester(t *testing.T) {
 				return &fakeTestStartedContext, fakeTestStartedCancel
 			}
 
-			errs := make(chan error)
+			type testResult struct {
+				result *TestResult
+				err    error
+			}
+			results := make(chan testResult)
 			var stdout bytes.Buffer
 			go func() {
-				_, err := tester.Test(ctx, test, &stdout, ioutil.Discard, "unused-out-dir")
-				errs <- err
+				result, err := tester.Test(ctx, test, &stdout, ioutil.Discard, "unused-out-dir")
+				results <- testResult{result, err}
 			}()
 
 			expectedTries := 1
@@ -669,39 +689,47 @@ func TestSerialTester(t *testing.T) {
 				go func() {
 					if b, err := io.ReadAll(serial); err != nil {
 						fmt.Println(err)
-						errs <- fmt.Errorf("error reading from serial: %w", err)
+						results <- testResult{nil, fmt.Errorf("error reading from serial: %w", err)}
 					} else if string(b) != expectedCmd || string(b) != "" {
-						errs <- fmt.Errorf("unexpected serial input: %s", string(buff))
+						results <- testResult{nil, fmt.Errorf("unexpected serial input: %s", string(buff))}
 					}
 				}()
 			}
 
 			// At this point, the tester will be blocked reading from the socket.
 			started := runtests.StartedSignature + test.Name
-			if _, err := io.WriteString(serial, started); err != nil {
-				t.Errorf("failed to write %s to serial", started)
+			testStatus := runtests.SuccessSignature
+			if tc.expectedResult == runtests.TestFailure {
+				testStatus = runtests.FailureSignature
 			}
-			testResult := runtests.SuccessSignature
+			testReturn := testStatus + test.Name
+
 			if tc.wantErr {
-				testResult = runtests.FailureSignature
-			}
-			testReturn := testResult + test.Name
-			if _, err := io.WriteString(serial, testReturn); err != nil {
-				t.Errorf("failed to write %s to serial", testReturn)
+				// Close the serial connection so that the tester returns a fatal error.
+				serial.Close()
+			} else {
+				if _, err := io.WriteString(serial, started); err != nil {
+					t.Errorf("failed to write %s to serial", started)
+				}
+				if _, err := io.WriteString(serial, testReturn); err != nil {
+					t.Errorf("failed to write %s to serial", testReturn)
+				}
 			}
 
 			select {
-			case err := <-errs:
-				if tc.wantErr {
-					if err == nil {
-						t.Error("test unexpectedly passed")
-					}
-				} else if err != nil {
-					t.Error("test unexpectedly failed")
+			case r := <-results:
+				if gotErr := r.err != nil; gotErr != tc.wantErr {
+					t.Errorf("test got err: %s, want err: %t", r.err, tc.wantErr)
+				}
+				if !tc.wantErr && r.result == nil {
+					t.Error("got nil test result")
+				}
+				if !tc.wantErr && tc.expectedResult != r.result.Result {
+					t.Errorf("test got result: %s, want: %s", r.result.Result, tc.expectedResult)
 				}
 			}
 			stdoutBytes := stdout.Bytes()
-			if !bytes.Contains(stdoutBytes, []byte(started+testReturn)) {
+			if !tc.wantErr && !bytes.Contains(stdoutBytes, []byte(started+testReturn)) {
 				t.Errorf("Expected stdout to contain %q, got %q", started+testReturn, string(stdoutBytes))
 			}
 		})

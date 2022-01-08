@@ -27,6 +27,9 @@ const (
 
 	// TestFailure represents a failed test.
 	TestFailure TestResult = "FAIL"
+
+	// TestTimeout represents a timed out test.
+	TestTimeout TestResult = "TIMED_OUT"
 )
 
 // TestSummary is a summary of a suite of test runs. It represents the output

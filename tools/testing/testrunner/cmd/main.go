@@ -8,7 +8,6 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"errors"
 	"flag"
 	"fmt"
 	"io"
@@ -562,39 +561,41 @@ func runTestOnce(
 	}()
 
 	result := testrunner.BaseTestResultFromTest(test)
+	// In the case of a timeout, store whether it hit the inner or outer test
+	// timeout.
+	var timeout time.Duration
 	var err error
 	select {
 	case res := <-ch:
 		result = res.result
 		err = res.err
+		timeout = test.Timeout
 	case <-timeoutCh:
-		err = &testrunner.TimeoutError{outerTestTimeout}
+		result.Result = runtests.TestTimeout
+		timeout = outerTestTimeout
 		cancelTest()
 	}
 
-	// TODO(ihuh): Only return fatal errors from Test(). Log non-fatal errors
-	// based on the TestResult.Result.
 	if err != nil {
-		if ctx.Err() != nil {
-			// testrunner is shutting down, give up running tests and don't
-			// report this test result as it may have been impacted by the
-			// context cancelation.
-			return nil, err
-		}
-		var errFatal testrunner.FatalError
-		if errors.As(err, &errFatal) {
-			// The tester encountered a fatal condition and cannot run any more
-			// tests.
-			return nil, err
-		}
-		var timeoutErr *testrunner.TimeoutError
-		if errors.As(err, &timeoutErr) {
-			// TODO(fxbug.dev/49266): Emit a different "Timeout" result if the
-			// test timed out.
-			logger.Errorf(ctx, "Test %s timed out after %s", test.Name, timeoutErr.Timeout)
-		} else {
-			logger.Errorf(ctx, "Error running test %s: %s", test.Name, err)
-		}
+		// The tester encountered a fatal condition and cannot run any more
+		// tests.
+		return nil, err
+	}
+	if !result.Passed() && ctx.Err() != nil {
+		// testrunner is shutting down, give up running tests and don't
+		// report this test result as it may have been impacted by the
+		// context cancelation.
+		return nil, ctx.Err()
+	}
+
+	switch result.Result {
+	case runtests.TestFailure:
+		logger.Errorf(ctx, "Test %s failed: %s", test.Name, result.FailReason)
+	case runtests.TestTimeout:
+		logger.Errorf(ctx, "Test %s timed out after %s", test.Name, timeout)
+		// TODO(fxbug.dev/49266): Remove once downstream consumers can handle different
+		// result statuses.
+		result.Result = runtests.TestFailure
 	}
 
 	endTime := clock.Now(ctx)

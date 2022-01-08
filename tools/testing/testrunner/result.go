@@ -23,6 +23,9 @@ type TestResult struct {
 	// Result describes whether the test passed or failed.
 	Result runtests.TestResult
 
+	// FailReason is the error message from a failed test.
+	FailReason string
+
 	// Cases describes individual test cases.
 	Cases []testparser.TestCaseResult
 

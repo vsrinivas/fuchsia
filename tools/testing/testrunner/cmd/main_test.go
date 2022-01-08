@@ -7,7 +7,6 @@ package main
 import (
 	"bytes"
 	"context"
-	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -37,13 +36,8 @@ const (
 	closeFunc       = "Close"
 )
 
-// When returned by Test(), errFatal should cause testrunner to stop running any
-// more tests.
-var errFatal = testrunner.NewFatalError(errors.New("fatal error occurred"))
-
 type fakeTester struct {
-	testErr   error
-	runTest   func(context.Context, testsharder.Test, io.Writer, io.Writer) error
+	runTest   func(context.Context, testsharder.Test, io.Writer, io.Writer) (runtests.TestResult, error)
 	funcCalls []string
 	outDirs   map[string]bool
 }
@@ -54,22 +48,20 @@ func (t *fakeTester) Test(ctx context.Context, test testsharder.Test, stdout, st
 		t.outDirs = make(map[string]bool)
 	}
 	t.outDirs[outDir] = true
+	result := runtests.TestSuccess
 	var err error
 	if t.runTest != nil {
-		err = t.runTest(ctx, test, stdout, stderr)
+		result, err = t.runTest(ctx, test, stdout, stderr)
 	}
-	if err == nil {
-		err = t.testErr
-	}
-	result := runtests.TestSuccess
 	if err != nil {
-		result = runtests.TestFailure
+		return nil, err
 	}
+
 	return &testrunner.TestResult{
 		Name:    test.Name,
 		GNLabel: test.Label,
 		Result:  result,
-	}, err
+	}, nil
 }
 
 func (t *fakeTester) Close() error {
@@ -265,7 +257,7 @@ func TestRunAndOutputTests(t *testing.T) {
 		// Mapping from relative filepath within the results dir to expected contents.
 		expectedOutputs map[string]string
 		// The error value that the function should return, as determined by errors.Is().
-		expectedErr error
+		wantErr bool
 	}{
 		{
 			name: "no tests",
@@ -666,7 +658,7 @@ func TestRunAndOutputTests(t *testing.T) {
 				succeededTest("bar", 0, defaultDuration),
 				succeededTest("foo", 1, defaultDuration),
 			},
-			expectedErr: errFatal,
+			wantErr: true,
 		},
 		{
 			name: "collects stdio",
@@ -736,7 +728,7 @@ func TestRunAndOutputTests(t *testing.T) {
 
 			runCounts := make(map[string]int)
 			testerForTest := func(testsharder.Test) (testrunner.Tester, *[]runtests.DataSinkReference, error) {
-				return &fakeTester{runTest: func(ctx context.Context, test testsharder.Test, stdout, stderr io.Writer) error {
+				return &fakeTester{runTest: func(ctx context.Context, test testsharder.Test, stdout, stderr io.Writer) (runtests.TestResult, error) {
 					runIndex := runCounts[test.Name]
 					runCounts[test.Name]++
 					behavior := tc.behavior[fmt.Sprintf("%s/%d", test.Name, runIndex)]
@@ -756,11 +748,11 @@ func TestRunAndOutputTests(t *testing.T) {
 						c := make(chan struct{})
 						t.Cleanup(func() { close(c) })
 						<-c
-						return fmt.Errorf("killed")
+						return runtests.TestTimeout, nil
 					} else if behavior.fatal {
-						return errFatal
+						return "", fmt.Errorf("fatal error")
 					} else if behavior.fail {
-						return fmt.Errorf("test failed")
+						return runtests.TestFailure, nil
 					}
 
 					if timeout > 0 && behavior.duration >= timeout {
@@ -772,7 +764,7 @@ func TestRunAndOutputTests(t *testing.T) {
 						// triggering.
 						<-ctx.Done()
 					}
-					return nil
+					return runtests.TestSuccess, nil
 				}}, &[]runtests.DataSinkReference{}, nil
 			}
 
@@ -780,8 +772,8 @@ func TestRunAndOutputTests(t *testing.T) {
 			outputs := testrunner.CreateTestOutputs(tap.NewProducer(io.Discard), resultsDir)
 
 			err := runAndOutputTests(ctx, tc.tests, testerForTest, outputs, mkdtemp(t, "outputs"))
-			if !errors.Is(err, tc.expectedErr) {
-				t.Errorf("Wrong error; expected %s, got %s", err, tc.expectedErr)
+			if tc.wantErr != (err != nil) {
+				t.Errorf("want err: %t, got %s", tc.wantErr, err)
 			}
 			opts := cmp.Options{
 				cmpopts.EquateEmpty(),

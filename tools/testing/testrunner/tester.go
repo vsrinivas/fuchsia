@@ -79,34 +79,6 @@ type Tester interface {
 	RunSnapshot(context.Context, string) error
 }
 
-// FatalError is a thin wrapper around another error. If returned by a tester's
-// Test() function, it indicates that the tester encountered a fatal error
-// condition and that testrunner should exit early with a non-zero exit code
-// rather than continuing to run tests.
-type FatalError struct {
-	error
-}
-
-func NewFatalError(err error) FatalError {
-	return FatalError{err}
-}
-
-func (e FatalError) Unwrap() error {
-	return e.error
-}
-
-// TimeoutError should be returned by a Test() function to indicate that the
-// test timed out. It is up to each tester to enforce timeouts, since the
-// process for gracefully cleaning up after a timeout differs depending on how
-// the tests are run.
-type TimeoutError struct {
-	Timeout time.Duration
-}
-
-func (e *TimeoutError) Error() string {
-	return fmt.Sprintf("test killed because timeout reached (%s)", e.Timeout)
-}
-
 // For testability
 type cmdRunner interface {
 	Run(ctx context.Context, command []string, stdout, stderr io.Writer) error
@@ -187,11 +159,13 @@ func NewSubprocessTester(dir string, env []string, localOutputDir string) Tester
 func (t *SubprocessTester) Test(ctx context.Context, test testsharder.Test, stdout io.Writer, stderr io.Writer, outDir string) (*TestResult, error) {
 	testResult := BaseTestResultFromTest(test)
 	if test.Path == "" {
-		return testResult, fmt.Errorf("test %q has no `path` set", test.Name)
+		testResult.FailReason = fmt.Sprintf("test %q has no `path` set", test.Name)
+		return testResult, nil
 	}
 	// Some tests read TestOutDirEnvKey so ensure they get their own output dir.
 	if err := os.MkdirAll(outDir, 0o770); err != nil {
-		return testResult, err
+		testResult.FailReason = err.Error()
+		return testResult, nil
 	}
 
 	// Might as well emit any profiles directly to the output directory.
@@ -223,7 +197,9 @@ func (t *SubprocessTester) Test(ctx context.Context, test testsharder.Test, stdo
 	if err == nil {
 		testResult.Result = runtests.TestSuccess
 	} else if errors.Is(err, context.DeadlineExceeded) {
-		err = &TimeoutError{test.Timeout}
+		testResult.Result = runtests.TestTimeout
+	} else {
+		testResult.FailReason = err.Error()
 	}
 
 	if exists, profileErr := osmisc.FileExists(profileAbs); profileErr != nil {
@@ -247,7 +223,7 @@ func (t *SubprocessTester) Test(ctx context.Context, test testsharder.Test, stdo
 			logger.Warningf(ctx, "failed to read module build IDs from %q", test.Path)
 		}
 	}
-	return testResult, err
+	return testResult, nil
 }
 
 func (t *SubprocessTester) EnsureSinks(ctx context.Context, sinkRefs []runtests.DataSinkReference, _ *TestOutputs) error {
@@ -351,14 +327,17 @@ func (t *FFXTester) Test(ctx context.Context, test testsharder.Test, stdout, std
 			test.PackageURL: test,
 		}
 		if err != nil {
-			return baseTestResult, err
+			baseTestResult.FailReason = err.Error()
+			return baseTestResult, nil
 		}
 		testResults, err := t.processTestResult(ffxTestResult, testsByURL)
 		if err != nil {
-			return baseTestResult, err
+			baseTestResult.FailReason = err.Error()
+			return baseTestResult, nil
 		}
 		if len(testResults) != 1 {
-			return baseTestResult, fmt.Errorf("expected 1 test result, got %d", len(testResults))
+			baseTestResult.FailReason = fmt.Sprintf("expected 1 test result, got %d", len(testResults))
+			return baseTestResult, nil
 		}
 		return testResults[0], nil
 	}
@@ -412,6 +391,8 @@ func (t *FFXTester) processTestResult(runResult *ffxutil.TestRunResult, testsByU
 		switch suiteResult.Outcome {
 		case ffxutil.TestPassed:
 			testResult.Result = runtests.TestSuccess
+		case ffxutil.TestTimedOut:
+			testResult.Result = runtests.TestTimeout
 		default:
 			testResult.Result = runtests.TestFailure
 		}
@@ -526,14 +507,28 @@ func (t *FuchsiaSSHTester) reconnect(ctx context.Context) error {
 	return nil
 }
 
+// for testability
+type exitError struct {
+	error
+	exitStatus int
+}
+
+func (e *exitError) ExitStatus() int {
+	if exitErr, ok := e.error.(*ssh.ExitError); ok {
+		return exitErr.Waitmsg.ExitStatus()
+	}
+	return e.exitStatus
+}
+
 func (t *FuchsiaSSHTester) isTimeoutError(test testsharder.Test, err error) bool {
 	if test.Timeout <= 0 {
 		return false
 	}
-	if exitErr, ok := err.(*ssh.ExitError); ok {
-		return exitErr.Waitmsg.ExitStatus() == timeoutExitCode
+	exitErr, ok := err.(*exitError)
+	if !ok {
+		exitErr = &exitError{error: err}
 	}
-	return false
+	return exitErr.ExitStatus() == timeoutExitCode
 }
 
 func (t *FuchsiaSSHTester) runSSHCommandWithRetry(ctx context.Context, command []string, stdout, stderr io.Writer) error {
@@ -570,7 +565,8 @@ func (t *FuchsiaSSHTester) Test(ctx context.Context, test testsharder.Test, stdo
 	testResult := BaseTestResultFromTest(test)
 	command, err := commandForTest(&test, t.useRuntests, dataOutputDir, test.Timeout)
 	if err != nil {
-		return testResult, err
+		testResult.FailReason = err.Error()
+		return testResult, nil
 	}
 	testErr := t.runSSHCommandWithRetry(ctx, command, stdout, stderr)
 	if testErr == nil {
@@ -584,11 +580,15 @@ func (t *FuchsiaSSHTester) Test(ctx context.Context, test testsharder.Test, stdo
 		// If we continue to experience a connection error after several retries
 		// then the device has likely become unresponsive and there's no use in
 		// continuing to try to run tests, so mark the error as fatal.
-		return testResult, FatalError{testErr}
+		return nil, testErr
 	}
 
 	if t.isTimeoutError(test, testErr) {
-		testErr = &TimeoutError{test.Timeout}
+		testResult.Result = runtests.TestTimeout
+	} else if testErr != nil {
+		testResult.FailReason = testErr.Error()
+	} else {
+		testResult.Result = runtests.TestSuccess
 	}
 
 	var sinkErr error
@@ -606,10 +606,11 @@ func (t *FuchsiaSSHTester) Test(ctx context.Context, test testsharder.Test, stdo
 		}
 	}
 
-	if testErr != nil {
-		return testResult, testErr
+	if testErr == nil && sinkErr != nil {
+		testResult.Result = runtests.TestFailure
+		testResult.FailReason = sinkErr.Error()
 	}
-	return testResult, sinkErr
+	return testResult, nil
 }
 
 func (t *FuchsiaSSHTester) EnsureSinks(ctx context.Context, sinkRefs []runtests.DataSinkReference, outputs *TestOutputs) error {
@@ -873,7 +874,8 @@ func (t *FuchsiaSerialTester) Test(ctx context.Context, test testsharder.Test, s
 	testResult := BaseTestResultFromTest(test)
 	command, err := commandForTest(&test, true, "", test.Timeout)
 	if err != nil {
-		return testResult, err
+		testResult.FailReason = err.Error()
+		return testResult, nil
 	}
 	logger.Debugf(ctx, "starting: %s", command)
 
@@ -887,7 +889,7 @@ func (t *FuchsiaSerialTester) Test(ctx context.Context, test testsharder.Test, s
 	var readErr error
 	for i := 0; i < startSerialCommandMaxAttempts; i++ {
 		if err := serial.RunCommands(ctx, t.socket, []serial.Command{{Cmd: command}}); err != nil {
-			return testResult, FatalError{fmt.Errorf("failed to write to serial socket: %w", err)}
+			return nil, fmt.Errorf("failed to write to serial socket: %w", err)
 		}
 		startedCtx, cancel := newTestStartedContext(ctx)
 		startedStr := runtests.StartedSignature + test.Name
@@ -907,7 +909,7 @@ func (t *FuchsiaSerialTester) Test(ctx context.Context, test testsharder.Test, s
 			constants.FailedToStartSerialTestMsg, startSerialCommandMaxAttempts, readErr)
 		// In practice, repeated failure to run a test means that the device has
 		// become unresponsive and we won't have any luck running later tests.
-		return testResult, FatalError{err}
+		return nil, err
 	}
 
 	t.socket.SetIOTimeout(test.Timeout + 30*time.Second)
@@ -917,9 +919,11 @@ func (t *FuchsiaSerialTester) Test(ctx context.Context, test testsharder.Test, s
 		// Writes to stdout as it reads from the above reader.
 		stdout)
 	if success, err := runtests.TestPassed(ctx, testOutputReader, test.Name); err != nil {
-		return testResult, err
+		testResult.FailReason = err.Error()
+		return testResult, nil
 	} else if !success {
-		return testResult, fmt.Errorf("test failed")
+		testResult.FailReason = "test failed"
+		return testResult, nil
 	}
 	testResult.Result = runtests.TestSuccess
 	return testResult, nil
