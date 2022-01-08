@@ -3,10 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    moniker::{
-        AbsoluteMoniker, AbsoluteMonikerBase, ChildMonikerBase, PartialAbsoluteMoniker,
-        PartialChildMoniker,
-    },
+    moniker::{AbsoluteMonikerBase, ChildMonikerBase, PartialAbsoluteMoniker, PartialChildMoniker},
     std::{fmt, fmt::Display},
 };
 
@@ -62,21 +59,6 @@ impl Display for NodePath {
 impl From<PartialAbsoluteMoniker> for NodePath {
     fn from(moniker: PartialAbsoluteMoniker) -> Self {
         Self::new(moniker.path().clone())
-    }
-}
-
-impl From<AbsoluteMoniker> for NodePath {
-    fn from(moniker: AbsoluteMoniker) -> Self {
-        Self::new(
-            moniker.path().into_iter().map(|child_moniker| child_moniker.to_partial()).collect(),
-        )
-    }
-}
-
-impl From<Vec<&str>> for NodePath {
-    fn from(components: Vec<&str>) -> Self {
-        let moniker: AbsoluteMoniker = components.into();
-        moniker.into()
     }
 }
 

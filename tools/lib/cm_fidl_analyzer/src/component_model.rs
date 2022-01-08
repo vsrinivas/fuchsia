@@ -167,9 +167,10 @@ impl ModelBuilderForAnalyzer {
 
                 Self::add_descendants(&root_instance, &decls_by_url, &mut model, &mut result);
 
-                model
-                    .instances
-                    .insert(NodePath::from(root_instance.abs_moniker().clone()), root_instance);
+                model.instances.insert(
+                    NodePath::from(root_instance.partial_abs_moniker().clone()),
+                    root_instance,
+                );
 
                 result.model = Some(Arc::new(model));
             }
@@ -199,7 +200,7 @@ impl ModelBuilderForAnalyzer {
                     if child.name.is_empty() {
                         result.errors.push(anyhow!(BuildAnalyzerModelError::InvalidChildDecl(
                             absolute_url.to_string(),
-                            NodePath::from(instance.abs_moniker().clone()).to_string(),
+                            NodePath::from(instance.partial_abs_moniker().clone()).to_string(),
                         )));
                         continue;
                     }
@@ -222,7 +223,7 @@ impl ModelBuilderForAnalyzer {
                                 );
 
                                 model.instances.insert(
-                                    NodePath::from(child_instance.abs_moniker().clone()),
+                                    NodePath::from(child_instance.partial_abs_moniker().clone()),
                                     child_instance,
                                 );
                             }
@@ -233,7 +234,7 @@ impl ModelBuilderForAnalyzer {
                         None => result.errors.push(anyhow!(
                             BuildAnalyzerModelError::ComponentDeclNotFound(
                                 absolute_url.to_string(),
-                                NodePath::from(instance.abs_moniker().clone()).to_string(),
+                                NodePath::from(instance.partial_abs_moniker().clone()).to_string(),
                             )
                         )),
                     };
