@@ -266,7 +266,7 @@ async fn main_inner_async(startup_time: Instant, args: Args) -> Result<(), Error
         }
     };
 
-    let font_resolver_fb = {
+    let font_resolver_cb = {
         let package_fetcher = Arc::clone(&package_fetcher);
         let cobalt_sender = cobalt_sender.clone();
         move |stream| {
@@ -311,7 +311,7 @@ async fn main_inner_async(startup_time: Instant, args: Args) -> Result<(), Error
     let mut fs = ServiceFs::new();
     fs.dir("svc")
         .add_fidl_service(resolver_cb)
-        .add_fidl_service(font_resolver_fb)
+        .add_fidl_service(font_resolver_cb)
         .add_fidl_service(repo_cb)
         .add_fidl_service(rewrite_cb);
 
