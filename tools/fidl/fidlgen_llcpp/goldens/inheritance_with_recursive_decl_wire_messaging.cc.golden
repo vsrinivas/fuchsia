@@ -79,9 +79,8 @@ namespace test_inheritancewithrecursivedecl {
       ::fidl::internal::ChannelTransport>
       _request_message(::fidl::internal::AllowUnownedInputRef{},
                        &_request_object);
-  fidl::WriteOptions write_options = {};
   return ::fidl::internal::ClientBase::SendOneWay(
-      _request_message.GetOutgoingMessage(), std::move(write_options));
+      _request_message.GetOutgoingMessage());
 }
 ::fidl::Result fidl::internal::
     WireClientImpl<::test_inheritancewithrecursivedecl::Parent>::First(
@@ -94,9 +93,8 @@ namespace test_inheritancewithrecursivedecl {
       ::fidl::WireRequest<::test_inheritancewithrecursivedecl::Parent::First>>
       _request_message(_buffer_span.data, _buffer_span.capacity,
                        &_request_object);
-  fidl::WriteOptions write_options = {};
   return ::fidl::internal::ClientBase::SendOneWay(
-      _request_message.GetOutgoingMessage(), std::move(write_options));
+      _request_message.GetOutgoingMessage());
 }
 ::fidl::Result fidl::internal::WireWeakOnewayBufferClientImpl<
     ::test_inheritancewithrecursivedecl::Parent>::
@@ -396,9 +394,8 @@ namespace test_inheritancewithrecursivedecl {
       ::fidl::internal::ChannelTransport>
       _request_message(::fidl::internal::AllowUnownedInputRef{},
                        &_request_object);
-  fidl::WriteOptions write_options = {};
   return ::fidl::internal::ClientBase::SendOneWay(
-      _request_message.GetOutgoingMessage(), std::move(write_options));
+      _request_message.GetOutgoingMessage());
 }
 ::fidl::Result fidl::internal::
     WireClientImpl<::test_inheritancewithrecursivedecl::Child>::First(
@@ -411,9 +408,8 @@ namespace test_inheritancewithrecursivedecl {
       ::fidl::WireRequest<::test_inheritancewithrecursivedecl::Child::First>>
       _request_message(_buffer_span.data, _buffer_span.capacity,
                        &_request_object);
-  fidl::WriteOptions write_options = {};
   return ::fidl::internal::ClientBase::SendOneWay(
-      _request_message.GetOutgoingMessage(), std::move(write_options));
+      _request_message.GetOutgoingMessage());
 }
 ::fidl::Result fidl::internal::
     WireClientImpl<::test_inheritancewithrecursivedecl::Child>::Second(
@@ -427,9 +423,8 @@ namespace test_inheritancewithrecursivedecl {
       ::fidl::internal::ChannelTransport>
       _request_message(::fidl::internal::AllowUnownedInputRef{},
                        &_request_object);
-  fidl::WriteOptions write_options = {};
   return ::fidl::internal::ClientBase::SendOneWay(
-      _request_message.GetOutgoingMessage(), std::move(write_options));
+      _request_message.GetOutgoingMessage());
 }
 ::fidl::Result fidl::internal::
     WireClientImpl<::test_inheritancewithrecursivedecl::Child>::Second(
@@ -442,9 +437,8 @@ namespace test_inheritancewithrecursivedecl {
       ::fidl::WireRequest<::test_inheritancewithrecursivedecl::Child::Second>>
       _request_message(_buffer_span.data, _buffer_span.capacity,
                        &_request_object);
-  fidl::WriteOptions write_options = {};
   return ::fidl::internal::ClientBase::SendOneWay(
-      _request_message.GetOutgoingMessage(), std::move(write_options));
+      _request_message.GetOutgoingMessage());
 }
 ::fidl::Result fidl::internal::WireWeakOnewayBufferClientImpl<
     ::test_inheritancewithrecursivedecl::Child>::

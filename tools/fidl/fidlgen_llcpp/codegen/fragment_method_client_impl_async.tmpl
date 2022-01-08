@@ -17,12 +17,10 @@
   {{- else }}
     // The request and callback are allocated on the heap.
   {{- end }}
-  void {{ .Name }}({{- if eq .Transport.Name "Driver"}}fdf::Arena arena,{{ end }}
-                    {{ RenderParams .RequestArgs
-                    (printf "::fidl::WireClientCallback<%s> _cb" .Marker) }});
+  void {{ .Name }}({{ RenderParams .RequestArgs
+                   (printf "::fidl::WireClientCallback<%s> _cb" .Marker) }});
 
-  void {{ .Name }}({{- if eq .Transport.Name "Driver"}}fdf::Arena arena,{{ end }}
-                   {{ RenderParams .RequestArgs
+  void {{ .Name }}({{ RenderParams .RequestArgs
                    (printf "::fit::callback<void (%s* response)> _cb" .WireResponse) }});
 
   {{- /* Async caller-allocate flavor */}}
@@ -35,7 +33,6 @@
   // Ownership of |_context| is given unsafely to the binding until |OnError|
   // or |OnReply| are called on it.
   void {{ .Name }}(
-       {{- if eq .Transport.Name "Driver"}}fdf::Arena arena,{{ end }}
         {{- if .RequestArgs }}
           {{ RenderParams "::fidl::BufferSpan _request_buffer"
                           .RequestArgs
@@ -52,7 +49,6 @@
 
   {{- /* Async managed flavor */}}
   void {{ .Protocol.WireClientImpl.NoLeading }}::{{ .Name }}(
-                    {{- if eq .Transport.Name "Driver"}}fdf::Arena arena,{{ end }}
                     {{ RenderParams .RequestArgs
                     (printf "::fidl::WireClientCallback<%s> _cb" .Marker) }}) {
     using Callback = decltype(_cb);
@@ -75,17 +71,10 @@
     FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
     ::fidl::OwnedEncodedMessage<{{ .WireRequest }}, {{ .Transport.Type }}> _request_message(
           ::fidl::internal::AllowUnownedInputRef{}, &_request);
-    fidl::WriteOptions write_options = {};
-    {{- if eq .Transport.Name "Driver" }}
-    write_options.outgoing_transport_context =
-      ::fidl::internal::OutgoingTransportContext::Create<::fidl::internal::DriverTransport>(arena.release());
-    {{- end }}
-    ::fidl::internal::ClientBase::SendTwoWay(_request_message.GetOutgoingMessage(), _context,
-                                             std::move(write_options));
+    ::fidl::internal::ClientBase::SendTwoWay(_request_message.GetOutgoingMessage(), _context);
   }
 
   void {{ .Protocol.WireClientImpl.NoLeading }}::{{ .Name }}(
-    {{- if eq .Transport.Name "Driver"}}fdf::Arena arena,{{ end }}
     {{ RenderParams .RequestArgs
       (printf "::fit::callback<void (%s* response)> _cb" .WireResponse) }}) {
     using Callback = decltype(_cb);
@@ -111,19 +100,12 @@
     FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
     ::fidl::OwnedEncodedMessage<{{ .WireRequest }}, {{ .Transport.Type }}> _request_message(
     ::fidl::internal::AllowUnownedInputRef{}, &_request);
-    fidl::WriteOptions write_options = {};
-    {{- if eq .Transport.Name "Driver" }}
-    write_options.outgoing_transport_context =
-      ::fidl::internal::OutgoingTransportContext::Create<::fidl::internal::DriverTransport>(arena.release());
-    {{- end }}
-    ::fidl::internal::ClientBase::SendTwoWay(_request_message.GetOutgoingMessage(), _context,
-                                             std::move(write_options));
+    ::fidl::internal::ClientBase::SendTwoWay(_request_message.GetOutgoingMessage(), _context);
   }
 
 
   {{- /* Async caller-allocate flavor */}}
   void {{ .Protocol.WireClientImpl.NoLeading }}::{{ .Name }}(
-      {{- if eq .Transport.Name "Driver"}}fdf::Arena arena,{{ end }}
       {{- if .RequestArgs }}
         {{ RenderParams "::fidl::BufferSpan _request_buffer"
                         .RequestArgs
@@ -140,13 +122,7 @@
       ::fidl::OwnedEncodedMessage<{{ .WireRequest }}, {{ .Transport.Type }}> _request_message(
           ::fidl::internal::AllowUnownedInputRef{}, &_request);
     {{- end }}
-    fidl::WriteOptions write_options = {};
-    {{- if eq .Transport.Name "Driver" }}
-    write_options.outgoing_transport_context =
-      ::fidl::internal::OutgoingTransportContext::Create<::fidl::internal::DriverTransport>(arena.release());
-    {{- end }}
-    ::fidl::internal::ClientBase::SendTwoWay(_request_message.GetOutgoingMessage(), _context,
-                                             std::move(write_options));
+    ::fidl::internal::ClientBase::SendTwoWay(_request_message.GetOutgoingMessage(), _context);
   }
 
   {{- EndifFuchsia -}}

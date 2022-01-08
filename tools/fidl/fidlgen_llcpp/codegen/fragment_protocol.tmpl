@@ -152,7 +152,11 @@ extern "C" const fidl_type_t {{ .Response.WireCodingTable.Name }};
 {{ "" }}
 {{- end }}
 
+{{- if eq .Transport.Name "Driver" }}
+{{ template "Protocol:ClientImpl:driver/MessagingSource" . }}
+{{- else }}
 {{ template "Protocol:ClientImpl:MessagingSource" . }}
+{{- end }}
 
 {{ template "Protocol:EventHandler:MessagingSource" . }}
 

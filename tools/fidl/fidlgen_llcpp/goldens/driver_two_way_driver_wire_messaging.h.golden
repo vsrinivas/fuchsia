@@ -8,11 +8,11 @@
 
 #ifdef __Fuchsia__
 
-#include <lib/fidl/llcpp/client.h>
 #include <lib/fidl/llcpp/connect_service.h>
 #include <lib/fidl/llcpp/server.h>
 #include <lib/fidl/llcpp/service_handler_interface.h>
 #include <lib/fidl/llcpp/sync_call.h>
+#include <lib/fidl_driver/cpp/client.h>
 
 #endif  // __Fuchsia__
 
@@ -333,36 +333,9 @@ static_assert(offsetof(::fidl::WireResponse<::test_drivertwoway::TwoWay::Add>,
 }  // namespace fidl
 
 template <>
-class ::fidl::internal::WireClientImpl<::test_drivertwoway::TwoWay> final
-    : public ::fidl::internal::ClientBase {
- public:
-  // Asynchronous variant of |TwoWay.Add()|.
-  // Allocates 24 bytes of request buffer on the stack. The callback is stored
-  // on the heap.
-  void Add(fdf::Arena arena, uint16_t addend1, uint16_t addend2,
-           ::fidl::WireClientCallback<::test_drivertwoway::TwoWay::Add> _cb);
-
-  void Add(
-      fdf::Arena arena, uint16_t addend1, uint16_t addend2,
-      ::fit::callback<void(
-          ::fidl::WireResponse<::test_drivertwoway::TwoWay::Add>* response)>
-          _cb);
-
-  // Asynchronous variant of |TwoWay.Add()|.
-  // Caller provides the backing storage for FIDL message via request buffer.
-  // Ownership of |_context| is given unsafely to the binding until |OnError|
-  // or |OnReply| are called on it.
-  void Add(
-      fdf::Arena arena, ::fidl::BufferSpan _request_buffer, uint16_t addend1,
-      uint16_t addend2,
-      ::fidl::WireResponseContext<::test_drivertwoway::TwoWay::Add>* _context);
-  WireClientImpl() = default;
-};
-
-template <>
 class ::fidl::internal::WireWeakOnewayBufferClientImpl<
     ::test_drivertwoway::TwoWay>
-    : public ::fidl::internal::BufferClientImplBase {
+    : public ::fdf::internal::BufferClientImplBase {
  public:
   using BufferClientImplBase::BufferClientImplBase;
 };
@@ -374,6 +347,16 @@ class ::fidl::internal::WireWeakAsyncBufferClientImpl<
                 ::test_drivertwoway::TwoWay> {
  public:
   using WireWeakOnewayBufferClientImpl::WireWeakOnewayBufferClientImpl;
+
+  // Caller provides the backing storage for FIDL message.
+  void Add(uint16_t addend1, uint16_t addend2,
+           ::fidl::WireClientCallback<::test_drivertwoway::TwoWay::Add> _cb);
+
+  // Caller provides the backing storage for FIDL message.
+  void Add(uint16_t addend1, uint16_t addend2,
+           ::fit::callback<
+               void(::fidl::WireResponse<::test_drivertwoway::TwoWay::Add>*)>
+               _cb);
 
   // Caller provides the backing storage for FIDL message.
   void Add(

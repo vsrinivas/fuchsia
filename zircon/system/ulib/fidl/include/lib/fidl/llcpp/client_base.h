@@ -248,11 +248,12 @@ namespace internal {
 // handling and teardown, and asynchronous transaction tracking. Users should not directly interact
 // with this class. |ClientBase| objects must be managed via std::shared_ptr.
 class ClientBase {
- protected:
+ public:
   // Creates an unbound ClientBase. Bind() must be called before any other APIs are invoked.
   ClientBase() = default;
   virtual ~ClientBase() = default;
 
+ protected:
   // Neither copyable nor movable.
   ClientBase(const ClientBase& other) = delete;
   ClientBase& operator=(const ClientBase& other) = delete;

@@ -44,9 +44,8 @@ namespace test_service {
       ::fidl::internal::ChannelTransport>
       _request_message(::fidl::internal::AllowUnownedInputRef{},
                        &_request_object);
-  fidl::WriteOptions write_options = {};
   return ::fidl::internal::ClientBase::SendOneWay(
-      _request_message.GetOutgoingMessage(), std::move(write_options));
+      _request_message.GetOutgoingMessage());
 }
 ::fidl::Result fidl::internal::WireWeakOnewayBufferClientImpl<
     ::test_service::SecondProtocol>::MethodOnSecond() {
@@ -230,9 +229,8 @@ fidl::internal::WireClientImpl<::test_service::FirstProtocol>::MethodOnFirst() {
       ::fidl::internal::ChannelTransport>
       _request_message(::fidl::internal::AllowUnownedInputRef{},
                        &_request_object);
-  fidl::WriteOptions write_options = {};
   return ::fidl::internal::ClientBase::SendOneWay(
-      _request_message.GetOutgoingMessage(), std::move(write_options));
+      _request_message.GetOutgoingMessage());
 }
 ::fidl::Result fidl::internal::WireWeakOnewayBufferClientImpl<
     ::test_service::FirstProtocol>::MethodOnFirst() {

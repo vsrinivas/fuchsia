@@ -1,0 +1,48 @@
+{{/*
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+*/}}
+
+{{- define "Protocol:ClientImpl:driver/MessagingHeader" }}
+{{- IfdefFuchsia -}}
+{{- EnsureNamespace "" }}
+
+template<>
+class {{ .WireWeakOnewayBufferClientImpl }} : public ::fdf::internal::BufferClientImplBase {
+ public:
+  using BufferClientImplBase::BufferClientImplBase;
+
+  {{- range .OneWayMethods }}
+    {{- template "Method:ClientImplOnewayBuffer:driver/MessagingHeader" . }}
+  {{- end }}
+};
+
+template<>
+class {{ .WireWeakAsyncBufferClientImpl }} final : public {{ .WireWeakOnewayBufferClientImpl }} {
+ public:
+  using {{ .WireWeakOnewayBufferClientImpl.Self }}::{{ .WireWeakOnewayBufferClientImpl.Self }};
+
+  {{- range .TwoWayMethods }}
+    {{- template "Method:ClientImplAsyncBuffer:driver/MessagingHeader" . }}
+  {{- end }}
+};
+
+{{- EndifFuchsia -}}
+{{- end }}
+
+
+
+{{- define "Protocol:ClientImpl:driver/MessagingSource" }}
+  {{- IfdefFuchsia -}}
+  {{ EnsureNamespace ""}}
+
+  {{- range .OneWayMethods }}
+    {{- template "Method:ClientImplOnewayBuffer:driver/MessagingSource" . }}
+  {{- end }}
+  {{- range .TwoWayMethods }}
+    {{- template "Method:ClientImplAsyncBuffer:driver/MessagingSource" . }}
+  {{- end }}
+
+  {{- EndifFuchsia -}}
+{{- end }}

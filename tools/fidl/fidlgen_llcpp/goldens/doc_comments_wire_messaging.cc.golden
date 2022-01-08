@@ -50,9 +50,8 @@ fidl::internal::WireClientImpl<::test_doccomments::Interface>::Method() {
       ::fidl::internal::ChannelTransport>
       _request_message(::fidl::internal::AllowUnownedInputRef{},
                        &_request_object);
-  fidl::WriteOptions write_options = {};
   return ::fidl::internal::ClientBase::SendOneWay(
-      _request_message.GetOutgoingMessage(), std::move(write_options));
+      _request_message.GetOutgoingMessage());
 }
 ::fidl::Result fidl::internal::WireWeakOnewayBufferClientImpl<
     ::test_doccomments::Interface>::Method() {

@@ -1,0 +1,91 @@
+{{/*
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+*/}}
+
+
+{{- define "Method:ClientImplAsyncBuffer:driver/MessagingHeader" }}
+
+{{ .Docs }}
+{{- if .DocComments }}
+//
+{{- end }}
+// Caller provides the backing storage for FIDL message.
+void {{ .Name }}({{ RenderParams .RequestArgs
+                    (printf "::fidl::WireClientCallback<%s> _cb" .Marker) }});
+
+{{ .Docs }}
+{{- if .DocComments }}
+//
+{{- end }}
+// Caller provides the backing storage for FIDL message.
+void {{ .Name }}({{ RenderParams .RequestArgs
+                    (printf "::fit::callback<void (%s*)> _cb" .WireResponse) }});
+
+{{ template "Method:ClientImplAsyncBuffer:MessagingHeader" . }}
+
+{{ end }}
+
+
+{{- define "Method:ClientImplAsyncBuffer:driver/MessagingSource" }}
+
+void {{ .Protocol.WireWeakAsyncBufferClientImpl.NoLeading }}::{{ .Name }}(
+    {{- RenderParams .RequestArgs (printf "::fidl::WireClientCallback<%s> _cb" .Marker) }}) {
+  using Callback = decltype(_cb);
+  class ResponseContext final : public {{ .WireResponseContext }} {
+  public:
+    ResponseContext(Callback cb) : cb_(std::move(cb)) {}
+
+    void OnResult({{ .WireUnownedResult }}& result) override {
+      cb_(result);
+      delete this;
+    }
+
+  private:
+    Callback cb_;
+  };
+  auto* _context = new ResponseContext(std::move(_cb));
+
+  {{ .Name }}({{ RenderForwardParams .RequestArgs "_context" }});
+}
+
+void {{ .Protocol.WireWeakAsyncBufferClientImpl.NoLeading }}::{{ .Name }}(
+  {{- RenderParams .RequestArgs (printf "::fit::callback<void (%s*)> _cb" .WireResponse) }}) {
+  using Callback = decltype(_cb);
+  class ResponseContext final : public {{ .WireResponseContext }} {
+  public:
+    ResponseContext(Callback cb) : cb_(std::move(cb)) {}
+
+    void OnResult({{ .WireUnownedResult }}& result) override {
+      if (result.ok()) {
+        ::fidl::WireResponse<{{ .Marker }}>* response = result.Unwrap();
+        cb_(response);
+      }
+      delete this;
+    }
+
+  private:
+    Callback cb_;
+  };
+  auto* _context = new ResponseContext(std::move(_cb));
+
+  {{ .Name }}({{ RenderForwardParams .RequestArgs "_context" }});
+}
+
+void {{ .Protocol.WireWeakAsyncBufferClientImpl.NoLeading }}::{{ .Name }}(
+    {{- RenderParams .RequestArgs (printf "%s* _context" .WireResponseContext) }}) {
+  constexpr uint32_t _buffer_size = ::fidl::AsyncClientMethodBufferSizeInChannel<{{ .Marker }}>();
+  uint8_t* _buffer = static_cast<uint8_t*>(_arena().Allocate(_buffer_size));
+
+  {{ .WireRequest }} _request{ {{ RenderForwardParams .RequestArgs }} };
+  ::fidl::UnownedEncodedMessage<{{ .WireRequest }}, {{ .Transport.Type }}> _request_message(
+      _buffer, _buffer_size, &_request);
+  fidl::WriteOptions _options = {};
+  _options.outgoing_transport_context =
+      ::fidl::internal::OutgoingTransportContext::Create<::fidl::internal::DriverTransport>(
+          _arena().release());
+  _client_base()->SendTwoWay(_request_message.GetOutgoingMessage(), _context, std::move(_options));
+}
+
+{{- end }}

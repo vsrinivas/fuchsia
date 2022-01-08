@@ -21,7 +21,7 @@ fidl/{{ .LibraryDots }}/cpp/driver/wire_messaging.h
   #include <lib/fidl_driver/cpp/wire_messaging.h>
 
   {{ IfdefFuchsia }}
-    #include <lib/fidl/llcpp/client.h>
+    #include <lib/fidl_driver/cpp/client.h>
     #include <lib/fidl/llcpp/connect_service.h>
     #include <lib/fidl/llcpp/server.h>
     #include <lib/fidl/llcpp/service_handler_interface.h>
@@ -48,7 +48,7 @@ fidl/{{ .LibraryDots }}/cpp/driver/wire_messaging.h
   {{- end }}
 
   {{- range (call .ProtocolsForTransport "Driver") }}
-    {{ template "Protocol:ClientImpl:MessagingHeader" . }}
+    {{ template "Protocol:ClientImpl:driver/MessagingHeader" . }}
   {{- end }}
 
   {{ EndOfFile }}

@@ -105,10 +105,8 @@ void fidl::internal::WireClientImpl<::test_error::Example>::Foo(
   ::fidl::OwnedEncodedMessage<::fidl::WireRequest<::test_error::Example::Foo>,
                               ::fidl::internal::ChannelTransport>
       _request_message(::fidl::internal::AllowUnownedInputRef{}, &_request);
-  fidl::WriteOptions write_options = {};
   ::fidl::internal::ClientBase::SendTwoWay(
-      _request_message.GetOutgoingMessage(), _context,
-      std::move(write_options));
+      _request_message.GetOutgoingMessage(), _context);
 }
 
 void fidl::internal::WireClientImpl<::test_error::Example>::Foo(
@@ -142,10 +140,8 @@ void fidl::internal::WireClientImpl<::test_error::Example>::Foo(
   ::fidl::OwnedEncodedMessage<::fidl::WireRequest<::test_error::Example::Foo>,
                               ::fidl::internal::ChannelTransport>
       _request_message(::fidl::internal::AllowUnownedInputRef{}, &_request);
-  fidl::WriteOptions write_options = {};
   ::fidl::internal::ClientBase::SendTwoWay(
-      _request_message.GetOutgoingMessage(), _context,
-      std::move(write_options));
+      _request_message.GetOutgoingMessage(), _context);
 }
 void fidl::internal::WireClientImpl<::test_error::Example>::Foo(
     ::fidl::BufferSpan _request_buffer, ::fidl::StringView s,
@@ -155,10 +151,8 @@ void fidl::internal::WireClientImpl<::test_error::Example>::Foo(
   ::fidl::UnownedEncodedMessage<::fidl::WireRequest<::test_error::Example::Foo>>
       _request_message(_request_buffer.data, _request_buffer.capacity,
                        &_request);
-  fidl::WriteOptions write_options = {};
   ::fidl::internal::ClientBase::SendTwoWay(
-      _request_message.GetOutgoingMessage(), _context,
-      std::move(write_options));
+      _request_message.GetOutgoingMessage(), _context);
 }
 ::fidl::WireResult<::test_error::Example::Foo> fidl::internal::WireClientImpl<
     ::test_error::Example>::Foo_Sync(::fidl::StringView s) {

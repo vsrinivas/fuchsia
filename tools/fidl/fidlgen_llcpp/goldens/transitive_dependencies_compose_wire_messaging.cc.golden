@@ -126,10 +126,8 @@ void fidl::internal::WireClientImpl<::test_transitivedependenciescompose::Top>::
       ::fidl::WireRequest<::test_transitivedependenciescompose::Top::GetFoo>,
       ::fidl::internal::ChannelTransport>
       _request_message(::fidl::internal::AllowUnownedInputRef{}, &_request);
-  fidl::WriteOptions write_options = {};
   ::fidl::internal::ClientBase::SendTwoWay(
-      _request_message.GetOutgoingMessage(), _context,
-      std::move(write_options));
+      _request_message.GetOutgoingMessage(), _context);
 }
 
 void fidl::internal::WireClientImpl<::test_transitivedependenciescompose::Top>::
@@ -167,10 +165,8 @@ void fidl::internal::WireClientImpl<::test_transitivedependenciescompose::Top>::
       ::fidl::WireRequest<::test_transitivedependenciescompose::Top::GetFoo>,
       ::fidl::internal::ChannelTransport>
       _request_message(::fidl::internal::AllowUnownedInputRef{}, &_request);
-  fidl::WriteOptions write_options = {};
   ::fidl::internal::ClientBase::SendTwoWay(
-      _request_message.GetOutgoingMessage(), _context,
-      std::move(write_options));
+      _request_message.GetOutgoingMessage(), _context);
 }
 void fidl::internal::WireClientImpl<::test_transitivedependenciescompose::Top>::
     GetFoo(::fidl::WireResponseContext<
@@ -183,10 +179,8 @@ void fidl::internal::WireClientImpl<::test_transitivedependenciescompose::Top>::
       ::fidl::WireRequest<::test_transitivedependenciescompose::Top::GetFoo>,
       ::fidl::internal::ChannelTransport>
       _request_message(::fidl::internal::AllowUnownedInputRef{}, &_request);
-  fidl::WriteOptions write_options = {};
   ::fidl::internal::ClientBase::SendTwoWay(
-      _request_message.GetOutgoingMessage(), _context,
-      std::move(write_options));
+      _request_message.GetOutgoingMessage(), _context);
 }
 ::fidl::WireResult<::test_transitivedependenciescompose::Top::GetFoo>
 fidl::internal::WireClientImpl<

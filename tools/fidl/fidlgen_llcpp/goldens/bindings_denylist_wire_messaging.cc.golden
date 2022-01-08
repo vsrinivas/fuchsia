@@ -102,10 +102,8 @@ void fidl::internal::WireClientImpl<
                               LibfuzzerNeedsNonemptyProtocol>,
       ::fidl::internal::ChannelTransport>
       _request_message(::fidl::internal::AllowUnownedInputRef{}, &_request);
-  fidl::WriteOptions write_options = {};
   ::fidl::internal::ClientBase::SendTwoWay(
-      _request_message.GetOutgoingMessage(), _context,
-      std::move(write_options));
+      _request_message.GetOutgoingMessage(), _context);
 }
 
 void fidl::internal::WireClientImpl<
@@ -149,10 +147,8 @@ void fidl::internal::WireClientImpl<
                               LibfuzzerNeedsNonemptyProtocol>,
       ::fidl::internal::ChannelTransport>
       _request_message(::fidl::internal::AllowUnownedInputRef{}, &_request);
-  fidl::WriteOptions write_options = {};
   ::fidl::internal::ClientBase::SendTwoWay(
-      _request_message.GetOutgoingMessage(), _context,
-      std::move(write_options));
+      _request_message.GetOutgoingMessage(), _context);
 }
 void fidl::internal::WireClientImpl<
     ::test_bindingsdenylist::OnlyLibfuzzerAndDeps>::
@@ -170,10 +166,8 @@ void fidl::internal::WireClientImpl<
                               LibfuzzerNeedsNonemptyProtocol>,
       ::fidl::internal::ChannelTransport>
       _request_message(::fidl::internal::AllowUnownedInputRef{}, &_request);
-  fidl::WriteOptions write_options = {};
   ::fidl::internal::ClientBase::SendTwoWay(
-      _request_message.GetOutgoingMessage(), _context,
-      std::move(write_options));
+      _request_message.GetOutgoingMessage(), _context);
 }
 ::fidl::WireResult<::test_bindingsdenylist::OnlyLibfuzzerAndDeps::
                        LibfuzzerNeedsNonemptyProtocol>

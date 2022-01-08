@@ -169,9 +169,8 @@ fidl::internal::WireClientImpl<::test_emptystruct::EmptyProtocol>::Send(
       ::fidl::internal::ChannelTransport>
       _request_message(::fidl::internal::AllowUnownedInputRef{},
                        &_request_object);
-  fidl::WriteOptions write_options = {};
   return ::fidl::internal::ClientBase::SendOneWay(
-      _request_message.GetOutgoingMessage(), std::move(write_options));
+      _request_message.GetOutgoingMessage());
 }
 ::fidl::Result
 fidl::internal::WireClientImpl<::test_emptystruct::EmptyProtocol>::Send(
@@ -182,9 +181,8 @@ fidl::internal::WireClientImpl<::test_emptystruct::EmptyProtocol>::Send(
       ::fidl::WireRequest<::test_emptystruct::EmptyProtocol::Send>>
       _request_message(_buffer_span.data, _buffer_span.capacity,
                        &_request_object);
-  fidl::WriteOptions write_options = {};
   return ::fidl::internal::ClientBase::SendOneWay(
-      _request_message.GetOutgoingMessage(), std::move(write_options));
+      _request_message.GetOutgoingMessage());
 }
 void fidl::internal::WireClientImpl<::test_emptystruct::EmptyProtocol>::
     SendAndReceive(const ::test_emptystruct::wire::Empty& e,
@@ -217,10 +215,8 @@ void fidl::internal::WireClientImpl<::test_emptystruct::EmptyProtocol>::
       ::fidl::WireRequest<::test_emptystruct::EmptyProtocol::SendAndReceive>,
       ::fidl::internal::ChannelTransport>
       _request_message(::fidl::internal::AllowUnownedInputRef{}, &_request);
-  fidl::WriteOptions write_options = {};
   ::fidl::internal::ClientBase::SendTwoWay(
-      _request_message.GetOutgoingMessage(), _context,
-      std::move(write_options));
+      _request_message.GetOutgoingMessage(), _context);
 }
 
 void fidl::internal::WireClientImpl<::test_emptystruct::EmptyProtocol>::
@@ -260,10 +256,8 @@ void fidl::internal::WireClientImpl<::test_emptystruct::EmptyProtocol>::
       ::fidl::WireRequest<::test_emptystruct::EmptyProtocol::SendAndReceive>,
       ::fidl::internal::ChannelTransport>
       _request_message(::fidl::internal::AllowUnownedInputRef{}, &_request);
-  fidl::WriteOptions write_options = {};
   ::fidl::internal::ClientBase::SendTwoWay(
-      _request_message.GetOutgoingMessage(), _context,
-      std::move(write_options));
+      _request_message.GetOutgoingMessage(), _context);
 }
 void fidl::internal::WireClientImpl<::test_emptystruct::EmptyProtocol>::
     SendAndReceive(
@@ -278,10 +272,8 @@ void fidl::internal::WireClientImpl<::test_emptystruct::EmptyProtocol>::
       ::fidl::WireRequest<::test_emptystruct::EmptyProtocol::SendAndReceive>>
       _request_message(_request_buffer.data, _request_buffer.capacity,
                        &_request);
-  fidl::WriteOptions write_options = {};
   ::fidl::internal::ClientBase::SendTwoWay(
-      _request_message.GetOutgoingMessage(), _context,
-      std::move(write_options));
+      _request_message.GetOutgoingMessage(), _context);
 }
 ::fidl::WireResult<::test_emptystruct::EmptyProtocol::SendAndReceive>
 fidl::internal::WireClientImpl<::test_emptystruct::EmptyProtocol>::

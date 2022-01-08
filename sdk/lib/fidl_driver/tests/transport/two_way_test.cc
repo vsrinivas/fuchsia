@@ -5,6 +5,7 @@
 #include <fidl/test.transport/cpp/driver/wire.h>
 #include <lib/fdf/cpp/dispatcher.h>
 #include <lib/fdf/internal.h>
+#include <lib/fidl_driver/cpp/client.h>
 #include <lib/fit/defer.h>
 #include <zircon/errors.h>
 
@@ -41,17 +42,20 @@ TEST(DriverTransport, DISABLED_TwoWayAsync) {
   auto server = std::make_shared<TestServer>();
   fidl::BindServer(dispatcher->async_dispatcher(), std::move(server_end), server);
 
-  fidl::WireSharedClient<test_transport::TransportTest> client;
-  client.Bind(std::move(client_end), dispatcher->async_dispatcher());
+  fdf::WireSharedClient<test_transport::TransportTest> client;
+  client.Bind(std::move(client_end), dispatcher->get());
   auto arena = fdf::Arena::Create(0, "");
   ASSERT_OK(arena.status_value());
   sync_completion_t done;
-  client->TwoWay(std::move(*arena), kRequestPayload,
-                 [&done](fidl::WireUnownedResult<::test_transport::TransportTest::TwoWay>& result) {
-                   ASSERT_OK(result.status());
-                   ASSERT_EQ(kResponsePayload, result->payload);
-                   sync_completion_signal(&done);
-                 });
+  // TODO(fxbug.dev/91107): Consider taking |const fdf::Arena&| or similar.
+  // The arena is consumed after a single call.
+  client.buffer(std::move(*arena))
+      ->TwoWay(kRequestPayload,
+               [&done](fidl::WireUnownedResult<::test_transport::TransportTest::TwoWay>& result) {
+                 ASSERT_OK(result.status());
+                 ASSERT_EQ(kResponsePayload, result->payload);
+                 sync_completion_signal(&done);
+               });
 
   ASSERT_OK(sync_completion_wait(&done, ZX_TIME_INFINITE));
 }

@@ -52,11 +52,9 @@ class {{ .WireWeakAsyncBufferClientImpl }} final : public {{ .WireWeakOnewayBuff
   {{- range .ClientMethods }}
     {{- template "Method:ClientImpl:MessagingSource" . }}
   {{- end }}
-
   {{- range .OneWayMethods }}
     {{- template "Method:ClientImplOnewayBuffer:MessagingSource" . }}
   {{- end }}
-
   {{- range .TwoWayMethods }}
     {{- template "Method:ClientImplAsyncBuffer:MessagingSource" . }}
   {{- end }}

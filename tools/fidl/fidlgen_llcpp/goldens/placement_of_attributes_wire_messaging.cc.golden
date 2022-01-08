@@ -81,9 +81,8 @@ namespace test_placementofattributes {
       ::fidl::internal::ChannelTransport>
       _request_message(::fidl::internal::AllowUnownedInputRef{},
                        &_request_object);
-  fidl::WriteOptions write_options = {};
   return ::fidl::internal::ClientBase::SendOneWay(
-      _request_message.GetOutgoingMessage(), std::move(write_options));
+      _request_message.GetOutgoingMessage());
 }
 ::fidl::Result fidl::internal::
     WireClientImpl<::test_placementofattributes::ExampleProtocol>::Method(
@@ -95,9 +94,8 @@ namespace test_placementofattributes {
       ::test_placementofattributes::ExampleProtocol::Method>>
       _request_message(_buffer_span.data, _buffer_span.capacity,
                        &_request_object);
-  fidl::WriteOptions write_options = {};
   return ::fidl::internal::ClientBase::SendOneWay(
-      _request_message.GetOutgoingMessage(), std::move(write_options));
+      _request_message.GetOutgoingMessage());
 }
 ::fidl::Result fidl::internal::WireWeakOnewayBufferClientImpl<
     ::test_placementofattributes::ExampleProtocol>::

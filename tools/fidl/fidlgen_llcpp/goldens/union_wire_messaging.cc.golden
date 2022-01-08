@@ -243,10 +243,8 @@ void fidl::internal::WireClientImpl<::test_union::TestProtocol>::
                               StrictXUnionHenceResponseMayBeStackAllocated>,
       ::fidl::internal::ChannelTransport>
       _request_message(::fidl::internal::AllowUnownedInputRef{}, &_request);
-  fidl::WriteOptions write_options = {};
   ::fidl::internal::ClientBase::SendTwoWay(
-      _request_message.GetOutgoingMessage(), _context,
-      std::move(write_options));
+      _request_message.GetOutgoingMessage(), _context);
 }
 
 void fidl::internal::WireClientImpl<::test_union::TestProtocol>::
@@ -291,10 +289,8 @@ void fidl::internal::WireClientImpl<::test_union::TestProtocol>::
                               StrictXUnionHenceResponseMayBeStackAllocated>,
       ::fidl::internal::ChannelTransport>
       _request_message(::fidl::internal::AllowUnownedInputRef{}, &_request);
-  fidl::WriteOptions write_options = {};
   ::fidl::internal::ClientBase::SendTwoWay(
-      _request_message.GetOutgoingMessage(), _context,
-      std::move(write_options));
+      _request_message.GetOutgoingMessage(), _context);
 }
 void fidl::internal::WireClientImpl<::test_union::TestProtocol>::
     StrictXUnionHenceResponseMayBeStackAllocated(
@@ -311,10 +307,8 @@ void fidl::internal::WireClientImpl<::test_union::TestProtocol>::
                               StrictXUnionHenceResponseMayBeStackAllocated>,
       ::fidl::internal::ChannelTransport>
       _request_message(::fidl::internal::AllowUnownedInputRef{}, &_request);
-  fidl::WriteOptions write_options = {};
   ::fidl::internal::ClientBase::SendTwoWay(
-      _request_message.GetOutgoingMessage(), _context,
-      std::move(write_options));
+      _request_message.GetOutgoingMessage(), _context);
 }
 ::fidl::WireResult<
     ::test_union::TestProtocol::StrictXUnionHenceResponseMayBeStackAllocated>
@@ -388,10 +382,8 @@ void fidl::internal::WireClientImpl<::test_union::TestProtocol>::
                               FlexibleXUnionHenceResponseMustBeHeapAllocated>,
       ::fidl::internal::ChannelTransport>
       _request_message(::fidl::internal::AllowUnownedInputRef{}, &_request);
-  fidl::WriteOptions write_options = {};
   ::fidl::internal::ClientBase::SendTwoWay(
-      _request_message.GetOutgoingMessage(), _context,
-      std::move(write_options));
+      _request_message.GetOutgoingMessage(), _context);
 }
 
 void fidl::internal::WireClientImpl<::test_union::TestProtocol>::
@@ -437,10 +429,8 @@ void fidl::internal::WireClientImpl<::test_union::TestProtocol>::
                               FlexibleXUnionHenceResponseMustBeHeapAllocated>,
       ::fidl::internal::ChannelTransport>
       _request_message(::fidl::internal::AllowUnownedInputRef{}, &_request);
-  fidl::WriteOptions write_options = {};
   ::fidl::internal::ClientBase::SendTwoWay(
-      _request_message.GetOutgoingMessage(), _context,
-      std::move(write_options));
+      _request_message.GetOutgoingMessage(), _context);
 }
 void fidl::internal::WireClientImpl<::test_union::TestProtocol>::
     FlexibleXUnionHenceResponseMustBeHeapAllocated(
@@ -457,10 +447,8 @@ void fidl::internal::WireClientImpl<::test_union::TestProtocol>::
                               FlexibleXUnionHenceResponseMustBeHeapAllocated>,
       ::fidl::internal::ChannelTransport>
       _request_message(::fidl::internal::AllowUnownedInputRef{}, &_request);
-  fidl::WriteOptions write_options = {};
   ::fidl::internal::ClientBase::SendTwoWay(
-      _request_message.GetOutgoingMessage(), _context,
-      std::move(write_options));
+      _request_message.GetOutgoingMessage(), _context);
 }
 ::fidl::WireResult<
     ::test_union::TestProtocol::FlexibleXUnionHenceResponseMustBeHeapAllocated>

@@ -12,7 +12,6 @@
   {{- end }}
   // {{- template "Method:ClientAllocationComment:Helper" . }}
   ::fidl::Result {{ .Name }}(
-    {{- if eq .Transport.Name "Driver"}}fdf::Arena arena,{{ end }}
     {{ RenderParams .RequestArgs }});
 
   {{- /* Caller-allocate flavor */}}
@@ -23,7 +22,6 @@
     {{- end }}
     // Caller provides the backing storage for FIDL message via request buffer.
     ::fidl::Result {{ .Name }}(
-      {{- if eq .Transport.Name "Driver"}}fdf::Arena arena,{{ end }}
       {{- template "Method:ClientImplSyncCallerAllocateArguments:Helper" . }});
   {{- end }}
 {{- end }}
@@ -34,36 +32,22 @@
 
   {{- /* Managed flavor */}}
   ::fidl::Result {{ .Protocol.WireClientImpl.NoLeading }}::{{ .Name }}(
-        {{- if eq .Transport.Name "Driver"}}fdf::Arena arena,{{ end }}
         {{ RenderParams .RequestArgs }}) {
     FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
     {{ .WireRequest }} _request_object{ {{ RenderForwardParams .RequestArgs }} };
     ::fidl::OwnedEncodedMessage<{{ .WireRequest }}, {{ .Transport.Type }}> _request_message(
         ::fidl::internal::AllowUnownedInputRef{}, &_request_object);
-    fidl::WriteOptions write_options = {};
-    {{- if eq .Transport.Name "Driver" }}
-    write_options.outgoing_transport_context =
-      ::fidl::internal::OutgoingTransportContext::Create<::fidl::internal::DriverTransport>(arena.release());
-    {{- end }}
-    return ::fidl::internal::ClientBase::SendOneWay(
-      _request_message.GetOutgoingMessage(), std::move(write_options));
+    return ::fidl::internal::ClientBase::SendOneWay(_request_message.GetOutgoingMessage());
   }
 
   {{- /* Caller-allocate flavor */}}
   {{- if .RequestArgs }}
     ::fidl::Result {{ .Protocol.WireClientImpl.NoLeading }}::{{ .Name }}(
-         {{- if eq .Transport.Name "Driver"}}fdf::Arena arena,{{ end }}
          {{- template "Method:ClientImplSyncCallerAllocateArguments:Helper" . }}) {
       {{ .WireRequest }} _request_object{ {{ RenderForwardParams .RequestArgs }} };
       ::fidl::UnownedEncodedMessage<{{ .WireRequest }}> _request_message(
           _buffer_span.data, _buffer_span.capacity, &_request_object);
-      fidl::WriteOptions write_options = {};
-      {{- if eq .Transport.Name "Driver" }}
-      write_options.outgoing_transport_context =
-        ::fidl::internal::OutgoingTransportContext::Create<::fidl::internal::DriverTransport>(arena.release());
-      {{- end }}
-      return ::fidl::internal::ClientBase::SendOneWay(
-        _request_message.GetOutgoingMessage(), std::move(write_options));
+      return ::fidl::internal::ClientBase::SendOneWay(_request_message.GetOutgoingMessage());
     }
   {{- end }}
 

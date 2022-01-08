@@ -236,10 +236,8 @@ void fidl::internal::WireClientImpl<::test_requestflexibleenvelope::Protocol>::
                               RequestStrictResponseFlexible>,
       ::fidl::internal::ChannelTransport>
       _request_message(::fidl::internal::AllowUnownedInputRef{}, &_request);
-  fidl::WriteOptions write_options = {};
   ::fidl::internal::ClientBase::SendTwoWay(
-      _request_message.GetOutgoingMessage(), _context,
-      std::move(write_options));
+      _request_message.GetOutgoingMessage(), _context);
 }
 
 void fidl::internal::WireClientImpl<::test_requestflexibleenvelope::Protocol>::
@@ -283,10 +281,8 @@ void fidl::internal::WireClientImpl<::test_requestflexibleenvelope::Protocol>::
                               RequestStrictResponseFlexible>,
       ::fidl::internal::ChannelTransport>
       _request_message(::fidl::internal::AllowUnownedInputRef{}, &_request);
-  fidl::WriteOptions write_options = {};
   ::fidl::internal::ClientBase::SendTwoWay(
-      _request_message.GetOutgoingMessage(), _context,
-      std::move(write_options));
+      _request_message.GetOutgoingMessage(), _context);
 }
 void fidl::internal::WireClientImpl<::test_requestflexibleenvelope::Protocol>::
     RequestStrictResponseFlexible(
@@ -303,10 +299,8 @@ void fidl::internal::WireClientImpl<::test_requestflexibleenvelope::Protocol>::
       ::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>>
       _request_message(_request_buffer.data, _request_buffer.capacity,
                        &_request);
-  fidl::WriteOptions write_options = {};
   ::fidl::internal::ClientBase::SendTwoWay(
-      _request_message.GetOutgoingMessage(), _context,
-      std::move(write_options));
+      _request_message.GetOutgoingMessage(), _context);
 }
 ::fidl::WireResult<
     ::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>
@@ -380,10 +374,8 @@ void fidl::internal::WireClientImpl<::test_requestflexibleenvelope::Protocol>::
                               RequestFlexibleResponseStrict>,
       ::fidl::internal::ChannelTransport>
       _request_message(::fidl::internal::AllowUnownedInputRef{}, &_request);
-  fidl::WriteOptions write_options = {};
   ::fidl::internal::ClientBase::SendTwoWay(
-      _request_message.GetOutgoingMessage(), _context,
-      std::move(write_options));
+      _request_message.GetOutgoingMessage(), _context);
 }
 
 void fidl::internal::WireClientImpl<::test_requestflexibleenvelope::Protocol>::
@@ -427,10 +419,8 @@ void fidl::internal::WireClientImpl<::test_requestflexibleenvelope::Protocol>::
                               RequestFlexibleResponseStrict>,
       ::fidl::internal::ChannelTransport>
       _request_message(::fidl::internal::AllowUnownedInputRef{}, &_request);
-  fidl::WriteOptions write_options = {};
   ::fidl::internal::ClientBase::SendTwoWay(
-      _request_message.GetOutgoingMessage(), _context,
-      std::move(write_options));
+      _request_message.GetOutgoingMessage(), _context);
 }
 void fidl::internal::WireClientImpl<::test_requestflexibleenvelope::Protocol>::
     RequestFlexibleResponseStrict(
@@ -447,10 +437,8 @@ void fidl::internal::WireClientImpl<::test_requestflexibleenvelope::Protocol>::
       ::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>>
       _request_message(_request_buffer.data, _request_buffer.capacity,
                        &_request);
-  fidl::WriteOptions write_options = {};
   ::fidl::internal::ClientBase::SendTwoWay(
-      _request_message.GetOutgoingMessage(), _context,
-      std::move(write_options));
+      _request_message.GetOutgoingMessage(), _context);
 }
 ::fidl::WireResult<
     ::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>

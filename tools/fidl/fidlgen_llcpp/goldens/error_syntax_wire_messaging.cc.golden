@@ -240,10 +240,8 @@ void fidl::internal::WireClientImpl<
                               ComposedCallWhichMayFail>,
       ::fidl::internal::ChannelTransport>
       _request_message(::fidl::internal::AllowUnownedInputRef{}, &_request);
-  fidl::WriteOptions write_options = {};
   ::fidl::internal::ClientBase::SendTwoWay(
-      _request_message.GetOutgoingMessage(), _context,
-      std::move(write_options));
+      _request_message.GetOutgoingMessage(), _context);
 }
 
 void fidl::internal::WireClientImpl<
@@ -289,10 +287,8 @@ void fidl::internal::WireClientImpl<
                               ComposedCallWhichMayFail>,
       ::fidl::internal::ChannelTransport>
       _request_message(::fidl::internal::AllowUnownedInputRef{}, &_request);
-  fidl::WriteOptions write_options = {};
   ::fidl::internal::ClientBase::SendTwoWay(
-      _request_message.GetOutgoingMessage(), _context,
-      std::move(write_options));
+      _request_message.GetOutgoingMessage(), _context);
 }
 void fidl::internal::WireClientImpl<
     ::test_errorsyntax::ExampleUseOfErrorSyntax>::
@@ -309,10 +305,8 @@ void fidl::internal::WireClientImpl<
       ::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>>
       _request_message(_request_buffer.data, _request_buffer.capacity,
                        &_request);
-  fidl::WriteOptions write_options = {};
   ::fidl::internal::ClientBase::SendTwoWay(
-      _request_message.GetOutgoingMessage(), _context,
-      std::move(write_options));
+      _request_message.GetOutgoingMessage(), _context);
 }
 ::fidl::WireResult<
     ::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>
@@ -387,10 +381,8 @@ void fidl::internal::WireClientImpl<
           ::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>,
       ::fidl::internal::ChannelTransport>
       _request_message(::fidl::internal::AllowUnownedInputRef{}, &_request);
-  fidl::WriteOptions write_options = {};
   ::fidl::internal::ClientBase::SendTwoWay(
-      _request_message.GetOutgoingMessage(), _context,
-      std::move(write_options));
+      _request_message.GetOutgoingMessage(), _context);
 }
 
 void fidl::internal::WireClientImpl<
@@ -435,10 +427,8 @@ void fidl::internal::WireClientImpl<
           ::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>,
       ::fidl::internal::ChannelTransport>
       _request_message(::fidl::internal::AllowUnownedInputRef{}, &_request);
-  fidl::WriteOptions write_options = {};
   ::fidl::internal::ClientBase::SendTwoWay(
-      _request_message.GetOutgoingMessage(), _context,
-      std::move(write_options));
+      _request_message.GetOutgoingMessage(), _context);
 }
 void fidl::internal::WireClientImpl<
     ::test_errorsyntax::ExampleUseOfErrorSyntax>::
@@ -455,10 +445,8 @@ void fidl::internal::WireClientImpl<
       ::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>>
       _request_message(_request_buffer.data, _request_buffer.capacity,
                        &_request);
-  fidl::WriteOptions write_options = {};
   ::fidl::internal::ClientBase::SendTwoWay(
-      _request_message.GetOutgoingMessage(), _context,
-      std::move(write_options));
+      _request_message.GetOutgoingMessage(), _context);
 }
 ::fidl::WireResult<
     ::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>
