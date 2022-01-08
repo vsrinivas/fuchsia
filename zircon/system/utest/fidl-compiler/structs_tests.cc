@@ -276,6 +276,7 @@ TEST(StructsTests, BadTypeCannotBeBoxed) {
     std::string fidl_library = "library example;\nusing zx;\n\n" + definition + "\n";
     auto library = WithLibraryZx(fidl_library);
     ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrCannotBeBoxed);
+    EXPECT_TRUE(library.errors()[0]->span.has_value());
   }
 }
 

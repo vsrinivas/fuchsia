@@ -335,7 +335,7 @@ bool BoxTypeTemplate::Create(const LibraryMediator& lib,
   if (!lib.ResolveParamAsType(this, unresolved_args.parameters->items[0], &boxed_type))
     return false;
   if (!IsStruct(boxed_type))
-    return FailNoSpan(ErrCannotBeBoxed, boxed_type->name);
+    return Fail(ErrCannotBeBoxed, unresolved_args.parameters->items[0]->span, boxed_type->name);
   const auto* inner = static_cast<const IdentifierType*>(boxed_type);
   if (inner->nullability == types::Nullability::kNullable) {
     return Fail(ErrBoxedTypeCannotBeNullable, unresolved_args.parameters->items[0]->span);
