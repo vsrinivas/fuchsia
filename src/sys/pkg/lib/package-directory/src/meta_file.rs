@@ -18,10 +18,8 @@ use {
     once_cell::sync::OnceCell,
     std::sync::Arc,
     vfs::{
-        common::{rights_to_posix_mode_bits, send_on_open_with_error},
-        directory::entry::EntryInfo,
-        execution_scope::ExecutionScope,
-        path::Path as VfsPath,
+        common::send_on_open_with_error, directory::entry::EntryInfo,
+        execution_scope::ExecutionScope, path::Path as VfsPath,
     },
 };
 
@@ -199,8 +197,7 @@ impl vfs::file::File for MetaFile {
 
     async fn get_attrs(&self) -> Result<NodeAttributes, zx::Status> {
         Ok(NodeAttributes {
-            mode: MODE_TYPE_FILE
-                | rights_to_posix_mode_bits(/*r*/ true, /*w*/ false, /*x*/ false),
+            mode: MODE_TYPE_FILE,
             id: 1,
             content_size: self.location.length,
             storage_size: self.location.length,
@@ -523,8 +520,7 @@ mod tests {
         assert_eq!(
             File::get_attrs(&meta_file).await,
             Ok(NodeAttributes {
-                mode: MODE_TYPE_FILE
-                    | rights_to_posix_mode_bits(/*r*/ true, /*w*/ false, /*x*/ false),
+                mode: MODE_TYPE_FILE,
                 id: 1,
                 content_size: meta_file.location.length,
                 storage_size: meta_file.location.length,

@@ -93,8 +93,8 @@ async fn get_attr_per_package_source(source: PackageSource) {
             open_flags: OPEN_RIGHT_READABLE | OPEN_RIGHT_EXECUTABLE,
             expected_mode: MODE_TYPE_DIRECTORY
                 | if source.is_pkgdir() {
-                    // TODO(fxbug.dev/86430): match pkgfs or set to 0
-                    0o400
+                    // "mode protection bits not set"
+                    0
                 } else {
                     0o755
                 },
@@ -114,8 +114,8 @@ async fn get_attr_per_package_source(source: PackageSource) {
         Args {
             expected_mode: MODE_TYPE_DIRECTORY
                 | if source.is_pkgdir() {
-                    // TODO(fxbug.dev/86430): match pkgfs or set to 0
-                    0o500
+                    // "mode protection bits not set"
+                    0
                 } else {
                     0o755
                 },
@@ -150,8 +150,8 @@ async fn get_attr_per_package_source(source: PackageSource) {
             open_mode: MODE_TYPE_FILE,
             expected_mode: MODE_TYPE_FILE
                 | if source.is_pkgdir() {
-                    // TODO(fxbug.dev/86430): match pkgfs or set to 0
-                    0o400
+                    // "mode protection bits not set"
+                    0
                 } else {
                     0o644
                 },
@@ -174,8 +174,8 @@ async fn get_attr_per_package_source(source: PackageSource) {
             open_mode: MODE_TYPE_DIRECTORY,
             expected_mode: MODE_TYPE_DIRECTORY
                 | if source.is_pkgdir() {
-                    // TODO(fxbug.dev/86430): match pkgfs or set to 0
-                    0o400
+                    // "mode protection bits not set"
+                    0
                 } else {
                     0o755
                 },
@@ -197,8 +197,8 @@ async fn get_attr_per_package_source(source: PackageSource) {
         Args {
             expected_mode: MODE_TYPE_DIRECTORY
                 | if source.is_pkgdir() {
-                    // TODO(fxbug.dev/86430): match pkgfs or set to 0
-                    0o400
+                    // "mode protection bits not set"
+                    0
                 } else {
                     0o755
                 },
@@ -220,8 +220,8 @@ async fn get_attr_per_package_source(source: PackageSource) {
         Args {
             expected_mode: MODE_TYPE_FILE
                 | if source.is_pkgdir() {
-                    // TODO(fxbug.dev/86430): match pkgfs or set to 0
-                    0o400
+                    // "mode protection bits not set"
+                    0
                 } else {
                     0o644
                 },

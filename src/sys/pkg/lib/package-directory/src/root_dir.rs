@@ -28,7 +28,7 @@ use {
     once_cell::sync::OnceCell,
     std::{collections::HashMap, sync::Arc},
     vfs::{
-        common::{rights_to_posix_mode_bits, send_on_open_with_error},
+        common::send_on_open_with_error,
         directory::{
             connection::{io1::DerivedConnection, util::OpenDirectory},
             entry::EntryInfo,
@@ -329,8 +329,7 @@ impl vfs::directory::entry_container::Directory for RootDir {
 
     async fn get_attrs(&self) -> Result<NodeAttributes, zx::Status> {
         Ok(NodeAttributes {
-            mode: MODE_TYPE_DIRECTORY
-                | rights_to_posix_mode_bits(/*r*/ true, /*w*/ false, /*x*/ false),
+            mode: MODE_TYPE_DIRECTORY,
             id: 1,
             content_size: 0,
             storage_size: 0,
@@ -496,8 +495,7 @@ mod tests {
         assert_eq!(
             Directory::get_attrs(&root_dir).await.unwrap(),
             NodeAttributes {
-                mode: MODE_TYPE_DIRECTORY
-                    | rights_to_posix_mode_bits(/*r*/ true, /*w*/ false, /*x*/ false),
+                mode: MODE_TYPE_DIRECTORY,
                 id: 1,
                 content_size: 0,
                 storage_size: 0,

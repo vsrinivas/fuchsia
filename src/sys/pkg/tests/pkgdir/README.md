@@ -200,3 +200,7 @@ pkgfs only supports reading that file with `Read()`, not `ReadAt()`.
 package-directory supports `Seek()` on meta-as-file.
 
 pkgfs only supports reading from the beginning of that file.
+
+### mode protection bits not set
+
+When `GetAttrs()` is called, package-directory always returns 0 for the [mode protection bits](https://cs.opensource.google/fuchsia/fuchsia/+/main:sdk/fidl/fuchsia.io/directory.fidl;l=97;drc=1cc9164ebb39d1c4b070e23f3808216403fcb526) of [NodeAttributes.mode](https://cs.opensource.google/fuchsia/fuchsia/+/main:sdk/fidl/fuchsia.io/node.fidl;l=91;drc=7fab2b7a07b1ab6c3d190cdf07daed196e3f4168), whereas pkgfs returns 0o755 for directories and 0o644 for files.

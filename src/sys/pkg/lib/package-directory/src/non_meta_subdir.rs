@@ -16,7 +16,7 @@ use {
     fuchsia_zircon as zx,
     std::sync::Arc,
     vfs::{
-        common::{rights_to_posix_mode_bits, send_on_open_with_error},
+        common::send_on_open_with_error,
         directory::{
             connection::{io1::DerivedConnection, util::OpenDirectory},
             entry::EntryInfo,
@@ -148,8 +148,7 @@ impl vfs::directory::entry_container::Directory for NonMetaSubdir {
 
     async fn get_attrs(&self) -> Result<NodeAttributes, zx::Status> {
         Ok(NodeAttributes {
-            mode: MODE_TYPE_DIRECTORY
-                | rights_to_posix_mode_bits(/*r*/ true, /*w*/ false, /*x*/ true),
+            mode: MODE_TYPE_DIRECTORY,
             id: 1,
             content_size: 0,
             storage_size: 0,
@@ -206,8 +205,7 @@ mod tests {
         assert_eq!(
             sub_dir.get_attrs().await.unwrap(),
             NodeAttributes {
-                mode: MODE_TYPE_DIRECTORY
-                    | rights_to_posix_mode_bits(/*r*/ true, /*w*/ false, /*x*/ true),
+                mode: MODE_TYPE_DIRECTORY,
                 id: 1,
                 content_size: 0,
                 storage_size: 0,
