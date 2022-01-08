@@ -50,7 +50,6 @@
 
 #include <fidl/fuchsia.wlan.ieee80211/cpp/wire.h>
 #include <fuchsia/hardware/wlan/softmac/c/banjo.h>
-#include <fuchsia/wlan/ieee80211/c/banjo.h>
 #include <fuchsia/wlan/internal/c/banjo.h>
 #include <lib/ddk/device.h>
 #include <lib/ddk/driver.h>
@@ -660,7 +659,7 @@ zx_status_t mac_configure_assoc(void* ctx, uint32_t options, const wlan_assoc_ct
 }
 
 zx_status_t mac_clear_assoc(void* ctx, uint32_t options,
-                            const uint8_t peer_addr[fuchsia_wlan_ieee80211_MAC_ADDR_LEN]) {
+                            const uint8_t peer_addr[fuchsia_wlan_ieee80211::wire::kMacAddrLen]) {
   IWL_INFO(ctx, "Disassociating ...\n");
 
   const auto mvmvif = reinterpret_cast<struct iwl_mvm_vif*>(ctx);
@@ -777,23 +776,6 @@ zx_status_t mac_init(void* ctx, struct iwl_trans* drvdata, zx_device_t* zxdev, u
   return status;
 }
 
-// TODO (fxbug.dev/63618) - to be removed.
-wlan_softmac_protocol_ops_t wlan_softmac_ops = {
-    .query = mac_query,
-    .start = mac_start,
-    .stop = mac_stop,
-    .queue_tx = mac_queue_tx,
-    .set_channel = mac_set_channel,
-    .configure_bss = mac_configure_bss,
-    .enable_beaconing = mac_enable_beaconing,
-    .configure_beacon = mac_configure_beacon,
-    .set_key = mac_set_key,
-    .configure_assoc = mac_configure_assoc,
-    .clear_assoc = mac_clear_assoc,
-    .start_passive_scan = mac_start_passive_scan,
-    .start_active_scan = mac_start_active_scan,
-};
-
 void mac_unbind(void* ctx) {
   const auto mvmvif = reinterpret_cast<struct iwl_mvm_vif*>(ctx);
 
@@ -816,13 +798,6 @@ void mac_release(void* ctx) {
 
   free(mvmvif);
 }
-
-// //TODO (fxbug.dev/63618) - to be removed.
-zx_protocol_device_t device_mac_ops = {
-    .version = DEVICE_OPS_VERSION,
-    .unbind = mac_unbind,
-    .release = mac_release,
-};
 
 /////////////////////////////////////       PHY       //////////////////////////////////////////////
 

@@ -1,28 +1,33 @@
-// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// To test PHY and MAC device callback functions.
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/wlan-softmac-device.h"
 
-#include <fuchsia/wlan/common/cpp/banjo.h>
-#include <fuchsia/wlan/ieee80211/c/banjo.h>
-#include <fuchsia/wlan/internal/cpp/banjo.h>
+#include <fidl/fuchsia.wlan.ieee80211/cpp/wire_types.h>
+#include <fuchsia/hardware/wlan/associnfo/cpp/banjo.h>
+#include <fuchsia/hardware/wlan/softmac/cpp/banjo.h>
+#include <fuchsia/wlan/ieee80211/c/fidl.h>
 #include <lib/mock-function/mock-function.h>
-#include <zircon/listnode.h>
+#include <lib/zx/channel.h>
+#include <stdlib.h>
+#include <zircon/errors.h>
 #include <zircon/syscalls.h>
+#include <zircon/types.h>
 
 #include <iterator>
 #include <list>
+#include <memory>
 
 #include <zxtest/zxtest.h>
 
 extern "C" {
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-nvm-parse.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm/mvm.h"
-}
+}  // extern "C"
 
-#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/ieee80211.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/mvm-mlme.h"
-#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/wlanphy-impl-device.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/scoped_utils.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/test/mock-trans.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/test/single-ap-test.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/test/wlan-pkt-builder.h"
@@ -30,9 +35,24 @@ extern "C" {
 namespace wlan::testing {
 namespace {
 
-static constexpr size_t kListenInterval = 100;
+constexpr size_t kListenInterval = 100;
+constexpr uint8_t kInvalidBandIdFillByte = 0xa5;
+constexpr wlan_info_band_t kInvalidBandId = 0xa5a5a5a5;
+constexpr zx_handle_t kDummyMlmeChannel = 73939133;  // An arbitrary value not ZX_HANDLE_INVALID
 
-typedef mock_function::MockFunction<void, void*, const wlan_rx_packet_t*> recv_cb_t;
+using recv_cb_t = mock_function::MockFunction<void, void*, const wlan_rx_packet_t*>;
+
+// Short-cut to access the iwl_cfg80211_rates[] structure and convert it to 802.11 rate.
+//
+// Args:
+//   index: the index of iwl_cfg80211_rates[].
+//
+// Returns:
+//   the 802.11 rate.
+//
+static unsigned expected_rate(size_t index) {
+  return cfg_rates_to_80211(iwl_cfg80211_rates[index]);
+}
 
 // The wrapper used by wlan_softmac_ifc_t.recv() to call mock-up.
 void recv_wrapper(void* cookie, const wlan_rx_packet_t* packet) {
@@ -40,32 +60,28 @@ void recv_wrapper(void* cookie, const wlan_rx_packet_t* packet) {
   recv->Call(cookie, packet);
 }
 
-class WlanDeviceTest : public SingleApTest {
+class WlanSoftmacDeviceTest : public SingleApTest {
  public:
-  WlanDeviceTest()
-      : mvmvif_sta_{
-            .mvm = iwl_trans_get_mvm(sim_trans_.iwl_trans()),
-            .mac_role = WLAN_INFO_MAC_ROLE_CLIENT,
-            .bss_conf =
-                {
-                    .beacon_int = kListenInterval,
-                },
-        } {
-    device_ = sim_trans_.sim_device();
+  WlanSoftmacDeviceTest() {
+    mvmvif_.reset(reinterpret_cast<struct iwl_mvm_vif*>(calloc(1, sizeof(struct iwl_mvm_vif))));
+    mvmvif_->mvm = iwl_trans_get_mvm(sim_trans_.iwl_trans());
+    mvmvif_->mlme_channel = kDummyMlmeChannel;
+    mvmvif_->mac_role = WLAN_INFO_MAC_ROLE_CLIENT;
+    mvmvif_->bss_conf = {.beacon_int = kListenInterval};
+
+    device_ = std::make_unique<::wlan::iwlwifi::WlanSoftmacDevice>(nullptr, sim_trans_.iwl_trans(),
+                                                                   0, mvmvif_.get());
   }
-  ~WlanDeviceTest() {}
+  ~WlanSoftmacDeviceTest() override {}
 
  protected:
-  static constexpr zx_handle_t mlme_channel_ =
-      73939133;  // An arbitrary value not ZX_HANDLE_INVALID
-  static constexpr uint8_t kInvalidBandIdFillByte = 0xa5;
-  static constexpr wlan_info_band_t kInvalidBandId = 0xa5a5a5a5;
-  struct iwl_mvm_vif mvmvif_sta_;  // The mvm_vif settings for station role.
-  wlan::iwlwifi::WlanphyImplDevice* device_;
+  wlan::iwlwifi::unique_free_ptr<struct iwl_mvm_vif> mvmvif_;
+  std::unique_ptr<::wlan::iwlwifi::WlanSoftmacDevice> device_;
 };
 
 //////////////////////////////////// Helper Functions  /////////////////////////////////////////////
-TEST_F(WlanDeviceTest, ComposeBandList) {
+
+TEST_F(WlanSoftmacDeviceTest, ComposeBandList) {
   struct iwl_nvm_data nvm_data;
   wlan_info_band_t bands[WLAN_INFO_BAND_COUNT];
 
@@ -102,19 +118,7 @@ TEST_F(WlanDeviceTest, ComposeBandList) {
   EXPECT_EQ(WLAN_INFO_BAND_FIVE_GHZ, bands[1]);
 }
 
-// Short-cut to access the iwl_cfg80211_rates[] structure and convert it to 802.11 rate.
-//
-// Args:
-//   index: the index of iwl_cfg80211_rates[].
-//
-// Returns:
-//   the 802.11 rate.
-//
-static unsigned expected_rate(size_t index) {
-  return cfg_rates_to_80211(iwl_cfg80211_rates[index]);
-}
-
-TEST_F(WlanDeviceTest, FillBandInfos) {
+TEST_F(WlanSoftmacDeviceTest, FillBandInfos) {
   // The default 'nvm_data' is loaded from test/sim-default-nvm.cc.
 
   wlan_info_band_t bands[WLAN_INFO_BAND_COUNT] = {
@@ -145,7 +149,7 @@ TEST_F(WlanDeviceTest, FillBandInfos) {
   EXPECT_EQ(165, exp_band_info->supported_channels.channels[24]);
 }
 
-TEST_F(WlanDeviceTest, FillBandInfosOnly5GHz) {
+TEST_F(WlanSoftmacDeviceTest, FillBandInfosOnly5GHz) {
   // The default 'nvm_data' is loaded from test/sim-default-nvm.cc.
 
   wlan_info_band_t bands[WLAN_INFO_BAND_COUNT] = {
@@ -172,20 +176,13 @@ TEST_F(WlanDeviceTest, FillBandInfosOnly5GHz) {
   EXPECT_EQ(0, exp_band_info->supported_channels.channels[0]);
 }
 
-/////////////////////////////////////       MAC       //////////////////////////////////////////////
-
-TEST_F(WlanDeviceTest, MacQuery) {
+TEST_F(WlanSoftmacDeviceTest, Query) {
   // Test input null pointers
   uint32_t options = 0;
-  void* whatever = &options;
-  ASSERT_EQ(ZX_ERR_INVALID_ARGS, wlan_softmac_ops.query(nullptr, options, nullptr));
-  ASSERT_EQ(ZX_ERR_INVALID_ARGS, wlan_softmac_ops.query(whatever, options, nullptr));
-  ASSERT_EQ(
-      ZX_ERR_INVALID_ARGS,
-      wlan_softmac_ops.query(nullptr, options, reinterpret_cast<wlan_softmac_info*>(whatever)));
+  ASSERT_EQ(ZX_ERR_INVALID_ARGS, device_->WlanSoftmacQuery(options, nullptr));
 
   wlan_softmac_info_t info = {};
-  ASSERT_EQ(ZX_OK, wlan_softmac_ops.query(&mvmvif_sta_, options, &info));
+  ASSERT_EQ(ZX_OK, device_->WlanSoftmacQuery(options, &info));
   EXPECT_EQ(WLAN_INFO_MAC_ROLE_CLIENT, info.mac_role);
 
   //
@@ -202,230 +199,71 @@ TEST_F(WlanDeviceTest, MacQuery) {
   EXPECT_EQ(165, info.bands[1].supported_channels.channels[24]);
 }
 
-TEST_F(WlanDeviceTest, MacStart) {
+TEST_F(WlanSoftmacDeviceTest, MacStart) {
   // Test input null pointers
   wlan_softmac_ifc_protocol_ops_t proto_ops = {
       .recv = recv_wrapper,
   };
   wlan_softmac_ifc_protocol_t ifc = {.ops = &proto_ops};
-  zx_handle_t mlme_channel;
-  ASSERT_EQ(wlan_softmac_ops.start(nullptr, &ifc, &mlme_channel), ZX_ERR_INVALID_ARGS);
-  ASSERT_EQ(wlan_softmac_ops.start(&mvmvif_sta_, nullptr, &mlme_channel), ZX_ERR_INVALID_ARGS);
-  ASSERT_EQ(wlan_softmac_ops.start(&mvmvif_sta_, &ifc, nullptr), ZX_ERR_INVALID_ARGS);
+  zx::channel mlme_channel;
+  ASSERT_EQ(ZX_ERR_INVALID_ARGS, device_->WlanSoftmacStart(nullptr, &mlme_channel));
+  ASSERT_EQ(ZX_ERR_INVALID_ARGS, device_->WlanSoftmacStart(&ifc, nullptr));
 
   // Test callback function
   recv_cb_t mock_recv;  // To mock up the wlan_softmac_ifc_t.recv().
-  mvmvif_sta_.mlme_channel = mlme_channel_;
-  ASSERT_EQ(wlan_softmac_ops.start(&mvmvif_sta_, &ifc, &mlme_channel), ZX_OK);
+  mlme_channel = zx::channel(static_cast<zx_handle_t>(0xF000));
+  ASSERT_EQ(ZX_OK, device_->WlanSoftmacStart(&ifc, &mlme_channel));
   // Expect the above line would copy the 'ifc'. Then set expectation below and fire test.
   mock_recv.ExpectCall(&mock_recv, nullptr);
-  mvmvif_sta_.ifc.ops->recv(&mock_recv, nullptr);
+  mvmvif_->ifc.ops->recv(&mock_recv, nullptr);
   mock_recv.VerifyAndClear();
 }
 
-TEST_F(WlanDeviceTest, MacStartSmeChannel) {
+TEST_F(WlanSoftmacDeviceTest, MacStartSmeChannel) {
   // The normal case. A channel will be transferred to MLME.
-  constexpr zx_handle_t from_devmgr = mlme_channel_;
-  mvmvif_sta_.mlme_channel = from_devmgr;
+  constexpr zx_handle_t kChannelOne = static_cast<zx_handle_t>(0xF001);
+  constexpr zx_handle_t kChannelTwo = static_cast<zx_handle_t>(0xF002);
+  mvmvif_->mlme_channel = kChannelOne;
   wlan_softmac_ifc_protocol_ops_t proto_ops = {
       .recv = recv_wrapper,
   };
   wlan_softmac_ifc_protocol_t ifc = {.ops = &proto_ops};
-  zx_handle_t mlme_channel;
-  ASSERT_EQ(wlan_softmac_ops.start(&mvmvif_sta_, &ifc, &mlme_channel), ZX_OK);
-  ASSERT_EQ(mlme_channel, from_devmgr);                    // The channel handle is returned.
-  ASSERT_EQ(mvmvif_sta_.mlme_channel, ZX_HANDLE_INVALID);  // Driver no longer holds the ownership.
+  zx::channel mlme_channel(kChannelTwo);
+  ASSERT_EQ(ZX_OK, device_->WlanSoftmacStart(&ifc, &mlme_channel));
+  ASSERT_EQ(mlme_channel.get(), kChannelOne);           // The channel handle is returned.
+  ASSERT_EQ(mvmvif_->mlme_channel, ZX_HANDLE_INVALID);  // Driver no longer holds the ownership.
 
   // Since the driver no longer owns the handle, the start should fail.
-  ASSERT_EQ(wlan_softmac_ops.start(&mvmvif_sta_, &ifc, &mlme_channel), ZX_ERR_ALREADY_BOUND);
+  ASSERT_EQ(ZX_ERR_ALREADY_BOUND, device_->WlanSoftmacStart(&ifc, &mlme_channel));
 }
 
-TEST_F(WlanDeviceTest, MacRelease) {
-  // Allocate an instance so that we can free that in mac_release().
-  struct iwl_mvm_vif* mvmvif =
-      reinterpret_cast<struct iwl_mvm_vif*>(calloc(1, sizeof(struct iwl_mvm_vif)));
-
+TEST_F(WlanSoftmacDeviceTest, Release) {
   // Create a channel. Let this test case holds one end while driver holds the other end.
   char dummy[1];
   zx_handle_t case_end;
-  ASSERT_EQ(zx_channel_create(0 /* option */, &case_end, &mvmvif->mlme_channel), ZX_OK);
+  ASSERT_EQ(zx_channel_create(0 /* option */, &case_end, &mvmvif_->mlme_channel), ZX_OK);
   ASSERT_EQ(zx_channel_write(case_end, 0 /* option */, dummy, sizeof(dummy), nullptr, 0), ZX_OK);
 
   // Call release and the sme channel should be closed so that we will get a peer-close error while
   // trying to write any data to it.
-  device_mac_ops.release(mvmvif);
+  mvmvif_.release();
+  device_.release()->DdkRelease();
   ASSERT_EQ(zx_channel_write(case_end, 0 /* option */, dummy, sizeof(dummy), nullptr, 0),
             ZX_ERR_PEER_CLOSED);
 }
 
-/////////////////////////////////////       PHY       //////////////////////////////////////////////
-
-TEST_F(WlanDeviceTest, PhyQuery) {
-  wlanphy_impl_info_t info = {};
-
-  // Test input null pointers
-  ASSERT_EQ(ZX_ERR_INVALID_ARGS, device_->WlanphyImplQuery(nullptr));
-  ASSERT_EQ(ZX_OK, device_->WlanphyImplQuery(&info));
-
-  // Normal case
-  ASSERT_EQ(ZX_OK, device_->WlanphyImplQuery(&info));
-  EXPECT_EQ(WLAN_INFO_MAC_ROLE_CLIENT, info.supported_mac_roles);
-}
-
-TEST_F(WlanDeviceTest, PhyPartialCreateCleanup) {
-  wlanphy_impl_create_iface_req_t req = {
-      .role = WLAN_INFO_MAC_ROLE_CLIENT,
-      .mlme_channel = mlme_channel_,
-  };
-  uint16_t iface_id;
-  struct iwl_trans* iwl_trans = sim_trans_.iwl_trans();
-
-  // Test input null pointers
-  ASSERT_OK(phy_create_iface(iwl_trans, &req, &iface_id));
-
-  // Ensure mvmvif got created and indexed.
-  struct iwl_mvm* mvm = iwl_trans_get_mvm(iwl_trans);
-  ASSERT_NOT_NULL(mvm->mvmvif[iface_id]);
-
-  // Ensure partial create failure removes it from the index.
-  phy_create_iface_undo(iwl_trans, iface_id);
-  ASSERT_NULL(mvm->mvmvif[iface_id]);
-}
-
-TEST_F(WlanDeviceTest, PhyCreateDestroySingleInterface) {
-  wlanphy_impl_create_iface_req_t req = {
-      .role = WLAN_INFO_MAC_ROLE_CLIENT,
-      .mlme_channel = mlme_channel_,
-  };
-  uint16_t iface_id;
-
-  // Test input null pointers
-  ASSERT_EQ(device_->WlanphyImplCreateIface(nullptr, &iface_id), ZX_ERR_INVALID_ARGS);
-  ASSERT_EQ(device_->WlanphyImplCreateIface(&req, nullptr), ZX_ERR_INVALID_ARGS);
-  ASSERT_EQ(device_->WlanphyImplCreateIface(nullptr, nullptr), ZX_ERR_INVALID_ARGS);
-
-  // Test invalid inputs
-  ASSERT_EQ(device_->WlanphyImplDestroyIface(MAX_NUM_MVMVIF), ZX_ERR_INVALID_ARGS);
-  ASSERT_EQ(device_->WlanphyImplDestroyIface(0), ZX_ERR_NOT_FOUND);  // hasn't been added yet.
-
-  // To verify the internal state of MVM driver.
-  struct iwl_mvm* mvm = iwl_trans_get_mvm(sim_trans_.iwl_trans());
-
-  // Add interface
-  ASSERT_EQ(device_->WlanphyImplCreateIface(&req, &iface_id), ZX_OK);
-  ASSERT_EQ(iface_id, 0);  // the first interface should have id 0.
-  struct iwl_mvm_vif* mvmvif = mvm->mvmvif[iface_id];
-  ASSERT_NE(mvmvif, nullptr);
-  ASSERT_EQ(mvmvif->mac_role, WLAN_INFO_MAC_ROLE_CLIENT);
-  // Count includes phy device in addition to the newly created mac device.
-  ASSERT_EQ(fake_parent_->descendant_count(), 2);
-  device_->parent()->GetLatestChild()->InitOp();
-
-  // Remove interface
-  ASSERT_EQ(device_->WlanphyImplDestroyIface(0), ZX_OK);
-  mock_ddk::ReleaseFlaggedDevices(fake_parent_.get());
-  ASSERT_EQ(mvm->mvmvif[iface_id], nullptr);
-  ASSERT_EQ(fake_parent_->descendant_count(), 1);
-}
-
-TEST_F(WlanDeviceTest, PhyCreateDestroyMultipleInterfaces) {
-  wlanphy_impl_create_iface_req_t req = {
-      .role = WLAN_INFO_MAC_ROLE_CLIENT,
-      .mlme_channel = mlme_channel_,
-  };
-  uint16_t iface_id;
-  struct iwl_trans* iwl_trans = sim_trans_.iwl_trans();
-  struct iwl_mvm* mvm = iwl_trans_get_mvm(iwl_trans);  // To verify the internal state of MVM driver
-
-  // Add 1st interface
-  ASSERT_EQ(device_->WlanphyImplCreateIface(&req, &iface_id), ZX_OK);
-  ASSERT_EQ(iface_id, 0);
-  ASSERT_EQ(mvm->mvmvif[iface_id]->mac_role, WLAN_INFO_MAC_ROLE_CLIENT);
-  ASSERT_EQ(fake_parent_->descendant_count(), 2);
-  device_->parent()->GetLatestChild()->InitOp();
-
-  // Add 2nd interface
-  ASSERT_EQ(device_->WlanphyImplCreateIface(&req, &iface_id), ZX_OK);
-  ASSERT_EQ(iface_id, 1);
-  ASSERT_NE(mvm->mvmvif[iface_id], nullptr);
-  ASSERT_EQ(mvm->mvmvif[iface_id]->mac_role, WLAN_INFO_MAC_ROLE_CLIENT);
-  ASSERT_EQ(fake_parent_->descendant_count(), 3);
-  device_->parent()->GetLatestChild()->InitOp();
-
-  // Add 3rd interface
-  ASSERT_EQ(device_->WlanphyImplCreateIface(&req, &iface_id), ZX_OK);
-  ASSERT_EQ(iface_id, 2);
-  ASSERT_NE(mvm->mvmvif[iface_id], nullptr);
-  ASSERT_EQ(mvm->mvmvif[iface_id]->mac_role, WLAN_INFO_MAC_ROLE_CLIENT);
-  ASSERT_EQ(fake_parent_->descendant_count(), 4);
-  device_->parent()->GetLatestChild()->InitOp();
-
-  // Remove the 2nd interface
-  ASSERT_EQ(device_->WlanphyImplDestroyIface(1), ZX_OK);
-  mock_ddk::ReleaseFlaggedDevices(fake_parent_.get());
-  ASSERT_EQ(mvm->mvmvif[1], nullptr);
-  ASSERT_EQ(fake_parent_->descendant_count(), 3);
-
-  // Add a new interface and it should be the 2nd one.
-  ASSERT_EQ(device_->WlanphyImplCreateIface(&req, &iface_id), ZX_OK);
-  ASSERT_EQ(iface_id, 1);
-  ASSERT_NE(mvm->mvmvif[iface_id], nullptr);
-  ASSERT_EQ(mvm->mvmvif[iface_id]->mac_role, WLAN_INFO_MAC_ROLE_CLIENT);
-  ASSERT_EQ(fake_parent_->descendant_count(), 4);
-  device_->parent()->GetLatestChild()->InitOp();
-
-  // Add 4th interface
-  ASSERT_EQ(device_->WlanphyImplCreateIface(&req, &iface_id), ZX_OK);
-  ASSERT_EQ(iface_id, 3);
-  ASSERT_NE(mvm->mvmvif[iface_id], nullptr);
-  ASSERT_EQ(mvm->mvmvif[iface_id]->mac_role, WLAN_INFO_MAC_ROLE_CLIENT);
-  ASSERT_EQ(fake_parent_->descendant_count(), 5);
-  device_->parent()->GetLatestChild()->InitOp();
-
-  // Add 5th interface and it should fail
-  ASSERT_EQ(device_->WlanphyImplCreateIface(&req, &iface_id), ZX_ERR_NO_RESOURCES);
-  ASSERT_EQ(fake_parent_->descendant_count(), 5);
-
-  // Remove the 2nd interface
-  ASSERT_EQ(device_->WlanphyImplDestroyIface(1), ZX_OK);
-  mock_ddk::ReleaseFlaggedDevices(fake_parent_.get());
-  ASSERT_EQ(mvm->mvmvif[1], nullptr);
-  ASSERT_EQ(fake_parent_->descendant_count(), 4);
-
-  // Remove the 3rd interface
-  ASSERT_EQ(device_->WlanphyImplDestroyIface(2), ZX_OK);
-  mock_ddk::ReleaseFlaggedDevices(fake_parent_.get());
-  ASSERT_EQ(mvm->mvmvif[2], nullptr);
-  ASSERT_EQ(fake_parent_->descendant_count(), 3);
-
-  // Remove the 4th interface
-  ASSERT_EQ(device_->WlanphyImplDestroyIface(3), ZX_OK);
-  mock_ddk::ReleaseFlaggedDevices(fake_parent_.get());
-  ASSERT_EQ(mvm->mvmvif[3], nullptr);
-  ASSERT_EQ(fake_parent_->descendant_count(), 2);
-
-  // Remove the 1st interface
-  ASSERT_EQ(device_->WlanphyImplDestroyIface(0), ZX_OK);
-  mock_ddk::ReleaseFlaggedDevices(fake_parent_.get());
-  ASSERT_EQ(mvm->mvmvif[0], nullptr);
-  ASSERT_EQ(fake_parent_->descendant_count(), 1);
-
-  // Remove the 1st interface again and it should fail.
-  ASSERT_EQ(device_->WlanphyImplDestroyIface(0), ZX_ERR_NOT_FOUND);
-  ASSERT_EQ(fake_parent_->descendant_count(), 1);
-}
-
 // The class for WLAN device MAC testing.
 //
-class MacInterfaceTest : public WlanDeviceTest, public MockTrans {
+class MacInterfaceTest : public WlanSoftmacDeviceTest, public MockTrans {
  public:
   MacInterfaceTest() : ifc_{ .ops = &proto_ops_, } , proto_ops_{ .recv = recv_wrapper, } {
-    mvmvif_sta_.mlme_channel = mlme_channel_;
-    zx_handle_t mlme_channel;
-    ASSERT_EQ(wlan_softmac_ops.start(&mvmvif_sta_, &ifc_, &mlme_channel), ZX_OK);
+    zx_handle_t wlanphy_impl_channel = mvmvif_->mlme_channel;
+    zx::channel mlme_channel;
+    ASSERT_EQ(ZX_OK, device_->WlanSoftmacStart(&ifc_, &mlme_channel));
+    ASSERT_EQ(wlanphy_impl_channel, mlme_channel);
 
     // Add the interface to MVM instance.
-    mvmvif_sta_.mvm->mvmvif[0] = &mvmvif_sta_;
+    mvmvif_->mvm->mvmvif[0] = mvmvif_.get();
   }
 
   ~MacInterfaceTest() {
@@ -439,7 +277,7 @@ class MacInterfaceTest : public WlanDeviceTest, public MockTrans {
     // Stop the MAC to free resources we allocated.
     // This must be called after we verify the expected commands and restore the mock command
     // callback so that the stop command doesn't mess up the test case expectation.
-    wlan_softmac_ops.stop(&mvmvif_sta_);
+    device_->WlanSoftmacStop();
     VerifyStaHasBeenRemoved();
   }
 
@@ -482,30 +320,31 @@ class MacInterfaceTest : public WlanDeviceTest, public MockTrans {
  protected:
   zx_status_t SetChannel(const wlan_channel_t* channel) {
     uint32_t option = 0;
-    return wlan_softmac_ops.set_channel(&mvmvif_sta_, option, channel);
+    return device_->WlanSoftmacSetChannel(option, channel);
   }
 
   zx_status_t ConfigureBss(const bss_config_t* config) {
     uint32_t option = 0;
-    return wlan_softmac_ops.configure_bss(&mvmvif_sta_, option, config);
+    return device_->WlanSoftmacConfigureBss(option, config);
   }
 
   zx_status_t ConfigureAssoc(const wlan_assoc_ctx_t* config) {
     uint32_t option = 0;
-    return wlan_softmac_ops.configure_assoc(&mvmvif_sta_, option, config);
+    return device_->WlanSoftmacConfigureAssoc(option, config);
   }
 
   zx_status_t ClearAssoc() {
     uint32_t option = 0;
-    uint8_t peer_addr[fuchsia_wlan_ieee80211_MAC_ADDR_LEN];  // Not used since all info were
-                                                             // saved in mvmvif_sta_ already.
-    return wlan_softmac_ops.clear_assoc(&mvmvif_sta_, option, peer_addr);
+    uint8_t
+        peer_addr[::fuchsia_wlan_ieee80211::wire::kMacAddrLen];  // Not used since all info were
+                                                                 // saved in mvmvif_sta_ already.
+    return device_->WlanSoftmacClearAssoc(option, peer_addr);
   }
 
   zx_status_t SetKey(const wlan_key_config_t* key_config) {
     uint32_t option = 0;
     IWL_INFO(nullptr, "Calling set_key");
-    return wlan_softmac_ops.set_key(&mvmvif_sta_, option, key_config);
+    return device_->WlanSoftmacSetKey(option, key_config);
   }
   // The following functions are for mocking up the firmware commands.
   //
@@ -561,7 +400,7 @@ class MacInterfaceTest : public WlanDeviceTest, public MockTrans {
   }
 
   void VerifyStaHasBeenRemoved() {
-    auto mvm = mvmvif_sta_.mvm;
+    auto mvm = mvmvif_->mvm;
 
     for (size_t i = 0; i < std::size(mvm->fw_id_to_mac_id); i++) {
       struct iwl_mvm_sta* mvm_sta = mvm->fw_id_to_mac_id[i];
@@ -607,9 +446,9 @@ TEST_F(MacInterfaceTest, TestSetChannel) {
       MockCommand(WIDE_ID(LONG_GROUP, MAC_PM_POWER_TABLE)),
   }));
 
-  mvmvif_sta_.csa_bcn_pending = true;  // Expect to be clear because this is client role.
+  mvmvif_->csa_bcn_pending = true;  // Expect to be clear because this is client role.
   ASSERT_EQ(ZX_OK, SetChannel(&kChannel));
-  EXPECT_EQ(false, mvmvif_sta_.csa_bcn_pending);
+  EXPECT_EQ(false, mvmvif_->csa_bcn_pending);
 }
 
 // Test call set_channel() multiple times.
@@ -645,7 +484,7 @@ TEST_F(MacInterfaceTest, TestSetChannelWithUnsupportedRole) {
       MockCommand(WIDE_ID(LONG_GROUP, PHY_CONTEXT_CMD)),  // for change_chanctx
   }));
 
-  mvmvif_sta_.mac_role = WLAN_INFO_MAC_ROLE_AP;
+  mvmvif_->mac_role = WLAN_INFO_MAC_ROLE_AP;
   ASSERT_EQ(ZX_ERR_NOT_SUPPORTED, SetChannel(&kChannel));
 }
 
@@ -653,27 +492,27 @@ TEST_F(MacInterfaceTest, TestSetChannelWithUnsupportedRole) {
 TEST_F(MacInterfaceTest, DuplicateSetChannel) {
   ASSERT_EQ(ZX_OK, SetChannel(&kChannel));
   ASSERT_EQ(ZX_OK, ConfigureBss(&kBssConfig));
-  struct iwl_mvm_sta* mvm_sta = mvmvif_sta_.mvm->fw_id_to_mac_id[mvmvif_sta_.ap_sta_id];
-  struct iwl_mvm_phy_ctxt* phy_ctxt = mvmvif_sta_.phy_ctxt;
+  struct iwl_mvm_sta* mvm_sta = mvmvif_->mvm->fw_id_to_mac_id[mvmvif_->ap_sta_id];
+  struct iwl_mvm_phy_ctxt* phy_ctxt = mvmvif_->phy_ctxt;
   ASSERT_NE(nullptr, phy_ctxt);
   ASSERT_EQ(IWL_STA_NONE, mvm_sta->sta_state);
   // Call SetChannel() again. This should return the same phy context but ConfigureBss()
   // should setup a new STA.
   ASSERT_EQ(ZX_OK, SetChannel(&kChannel));
-  struct iwl_mvm_phy_ctxt* new_phy_ctxt = mvmvif_sta_.phy_ctxt;
+  struct iwl_mvm_phy_ctxt* new_phy_ctxt = mvmvif_->phy_ctxt;
   ASSERT_NE(nullptr, new_phy_ctxt);
   ASSERT_EQ(phy_ctxt, new_phy_ctxt);
   ASSERT_EQ(ZX_OK, ConfigureBss(&kBssConfig));
-  struct iwl_mvm_sta* new_mvm_sta = mvmvif_sta_.mvm->fw_id_to_mac_id[mvmvif_sta_.ap_sta_id];
+  struct iwl_mvm_sta* new_mvm_sta = mvmvif_->mvm->fw_id_to_mac_id[mvmvif_->ap_sta_id];
   // Now Associate and disassociate - this should release and reset the phy ctxt.
   ASSERT_EQ(ZX_OK, ConfigureAssoc(&kAssocCtx));
   ASSERT_EQ(IWL_STA_AUTHORIZED, new_mvm_sta->sta_state);
-  ASSERT_EQ(true, mvmvif_sta_.bss_conf.assoc);
-  ASSERT_EQ(kListenInterval, mvmvif_sta_.bss_conf.listen_interval);
+  ASSERT_EQ(true, mvmvif_->bss_conf.assoc);
+  ASSERT_EQ(kListenInterval, mvmvif_->bss_conf.listen_interval);
 
   ASSERT_EQ(ZX_OK, ClearAssoc());
-  ASSERT_EQ(nullptr, mvmvif_sta_.phy_ctxt);
-  ASSERT_EQ(IWL_MVM_INVALID_STA, mvmvif_sta_.ap_sta_id);
+  ASSERT_EQ(nullptr, mvmvif_->phy_ctxt);
+  ASSERT_EQ(IWL_MVM_INVALID_STA, mvmvif_->ap_sta_id);
 }
 
 // Test ConfigureBss()
@@ -691,8 +530,8 @@ TEST_F(MacInterfaceTest, TestConfigureBss) {
 
   ASSERT_EQ(ZX_OK, ConfigureBss(&kBssConfig));
   // Ensure the BSSID was copied into mvmvif
-  ASSERT_EQ(memcmp(mvmvif_sta_.bss_conf.bssid, kBssConfig.bssid, ETH_ALEN), 0);
-  ASSERT_EQ(memcmp(mvmvif_sta_.bssid, kBssConfig.bssid, ETH_ALEN), 0);
+  ASSERT_EQ(memcmp(mvmvif_->bss_conf.bssid, kBssConfig.bssid, ETH_ALEN), 0);
+  ASSERT_EQ(memcmp(mvmvif_->bssid, kBssConfig.bssid, ETH_ALEN), 0);
 }
 
 // Test duplicate BSS config.
@@ -733,15 +572,15 @@ TEST_F(MacInterfaceTest, TestExceptionHandling) {
   ASSERT_EQ(ZX_OK, SetChannel(&kChannel));
 
   // Test the beacon interval checking.
-  mvmvif_sta_.bss_conf.beacon_int = 0;
+  mvmvif_->bss_conf.beacon_int = 0;
   EXPECT_EQ(ZX_ERR_INVALID_ARGS, ConfigureBss(&kBssConfig));
-  mvmvif_sta_.bss_conf.beacon_int = 16;  // which just passes the check.
+  mvmvif_->bss_conf.beacon_int = 16;  // which just passes the check.
 
   // Test the phy_ctxt checking.
-  auto backup_phy_ctxt = mvmvif_sta_.phy_ctxt;
-  mvmvif_sta_.phy_ctxt = nullptr;
+  auto backup_phy_ctxt = mvmvif_->phy_ctxt;
+  mvmvif_->phy_ctxt = nullptr;
   EXPECT_EQ(ZX_ERR_BAD_STATE, ConfigureBss(&kBssConfig));
-  mvmvif_sta_.phy_ctxt = backup_phy_ctxt;
+  mvmvif_->phy_ctxt = backup_phy_ctxt;
 
   // Test the case we run out of slots for STA.
   //
@@ -750,11 +589,11 @@ TEST_F(MacInterfaceTest, TestExceptionHandling) {
   //
   for (size_t i = 0; i < IWL_MVM_STATION_COUNT - 1; i++) {
     // Pretent the STA is not assigned so that we can add it again.
-    mvmvif_sta_.ap_sta_id = IWL_MVM_INVALID_STA;
+    mvmvif_->ap_sta_id = IWL_MVM_INVALID_STA;
     ASSERT_EQ(ZX_OK, ConfigureBss(&kBssConfig));
   }
   // However, the last one should fail because we run out of all slots in fw_id_to_mac_id[].
-  mvmvif_sta_.ap_sta_id = IWL_MVM_INVALID_STA;
+  mvmvif_->ap_sta_id = IWL_MVM_INVALID_STA;
   ASSERT_EQ(ZX_OK, ConfigureBss(&kBssConfig));
 }
 
@@ -763,19 +602,19 @@ TEST_F(MacInterfaceTest, TestExceptionHandling) {
 TEST_F(MacInterfaceTest, AssociateToOpenNetwork) {
   ASSERT_EQ(ZX_OK, SetChannel(&kChannel));
   ASSERT_EQ(ZX_OK, ConfigureBss(&kBssConfig));
-  struct iwl_mvm_sta* mvm_sta = mvmvif_sta_.mvm->fw_id_to_mac_id[mvmvif_sta_.ap_sta_id];
+  struct iwl_mvm_sta* mvm_sta = mvmvif_->mvm->fw_id_to_mac_id[mvmvif_->ap_sta_id];
   ASSERT_EQ(IWL_STA_NONE, mvm_sta->sta_state);
-  struct iwl_mvm* mvm = mvmvif_sta_.mvm;
+  struct iwl_mvm* mvm = mvmvif_->mvm;
   ASSERT_GT(list_length(&mvm->time_event_list), 0);
 
   ASSERT_EQ(ZX_OK, ConfigureAssoc(&kAssocCtx));
   ASSERT_EQ(IWL_STA_AUTHORIZED, mvm_sta->sta_state);
-  ASSERT_EQ(true, mvmvif_sta_.bss_conf.assoc);
-  ASSERT_EQ(kListenInterval, mvmvif_sta_.bss_conf.listen_interval);
+  ASSERT_EQ(true, mvmvif_->bss_conf.assoc);
+  ASSERT_EQ(kListenInterval, mvmvif_->bss_conf.listen_interval);
 
   ASSERT_EQ(ZX_OK, ClearAssoc());
-  ASSERT_EQ(nullptr, mvmvif_sta_.phy_ctxt);
-  ASSERT_EQ(IWL_MVM_INVALID_STA, mvmvif_sta_.ap_sta_id);
+  ASSERT_EQ(nullptr, mvmvif_->phy_ctxt);
+  ASSERT_EQ(IWL_MVM_INVALID_STA, mvmvif_->ap_sta_id);
   ASSERT_EQ(list_length(&mvm->time_event_list), 0);
 }
 
@@ -789,14 +628,14 @@ TEST_F(MacInterfaceTest, ClearAssocAfterClearAssoc) {
 TEST_F(MacInterfaceTest, ClearAssocAfterNoAssoc) {
   ASSERT_EQ(ZX_OK, SetChannel(&kChannel));
   ASSERT_EQ(ZX_OK, ConfigureBss(&kBssConfig));
-  struct iwl_mvm_sta* mvm_sta = mvmvif_sta_.mvm->fw_id_to_mac_id[mvmvif_sta_.ap_sta_id];
+  struct iwl_mvm_sta* mvm_sta = mvmvif_->mvm->fw_id_to_mac_id[mvmvif_->ap_sta_id];
   ASSERT_EQ(IWL_STA_NONE, mvm_sta->sta_state);
-  struct iwl_mvm* mvm = mvmvif_sta_.mvm;
+  struct iwl_mvm* mvm = mvmvif_->mvm;
   ASSERT_GT(list_length(&mvm->time_event_list), 0);
 
   ASSERT_EQ(ZX_OK, ClearAssoc());
-  ASSERT_EQ(nullptr, mvmvif_sta_.phy_ctxt);
-  ASSERT_EQ(IWL_MVM_INVALID_STA, mvmvif_sta_.ap_sta_id);
+  ASSERT_EQ(nullptr, mvmvif_->phy_ctxt);
+  ASSERT_EQ(IWL_MVM_INVALID_STA, mvmvif_->ap_sta_id);
   ASSERT_EQ(list_length(&mvm->time_event_list), 0);
   // Call ClearAssoc() again to check if it is handled correctly.
   ASSERT_NE(ZX_OK, ClearAssoc());
@@ -807,8 +646,8 @@ TEST_F(MacInterfaceTest, AssociateToOpenNetworkNullStation) {
   ConfigureBss(&kBssConfig);
 
   // Replace the STA pointer with NULL and expect the association will fail.
-  auto org = mvmvif_sta_.mvm->fw_id_to_mac_id[mvmvif_sta_.ap_sta_id];
-  mvmvif_sta_.mvm->fw_id_to_mac_id[mvmvif_sta_.ap_sta_id] = nullptr;
+  auto org = mvmvif_->mvm->fw_id_to_mac_id[mvmvif_->ap_sta_id];
+  mvmvif_->mvm->fw_id_to_mac_id[mvmvif_->ap_sta_id] = nullptr;
 
   ASSERT_EQ(ZX_ERR_BAD_STATE, ConfigureAssoc(&kAssocCtx));
 
@@ -816,29 +655,29 @@ TEST_F(MacInterfaceTest, AssociateToOpenNetworkNullStation) {
   ASSERT_EQ(ZX_ERR_BAD_STATE, ClearAssoc());
 
   // We have to recover the pointer so that the MAC stop function can recycle the memory.
-  mvmvif_sta_.mvm->fw_id_to_mac_id[mvmvif_sta_.ap_sta_id] = org;
+  mvmvif_->mvm->fw_id_to_mac_id[mvmvif_->ap_sta_id] = org;
 }
 
 TEST_F(MacInterfaceTest, ClearAssocAfterFailedAssoc) {
   SetChannel(&kChannel);
   ConfigureBss(&kBssConfig);
 
-  struct iwl_mvm* mvm = mvmvif_sta_.mvm;
+  struct iwl_mvm* mvm = mvmvif_->mvm;
   ASSERT_GT(list_length(&mvm->time_event_list), 0);
   // Replace the STA pointer with NULL and expect the association will fail.
-  auto org = mvmvif_sta_.mvm->fw_id_to_mac_id[mvmvif_sta_.ap_sta_id];
-  mvmvif_sta_.mvm->fw_id_to_mac_id[mvmvif_sta_.ap_sta_id] = nullptr;
+  auto org = mvmvif_->mvm->fw_id_to_mac_id[mvmvif_->ap_sta_id];
+  mvmvif_->mvm->fw_id_to_mac_id[mvmvif_->ap_sta_id] = nullptr;
 
   ASSERT_EQ(ZX_ERR_BAD_STATE, ConfigureAssoc(&kAssocCtx));
   // Now put back the original STA pointer so ClearAssoc runs and also
   // to recycle allocated memory
-  mvmvif_sta_.mvm->fw_id_to_mac_id[mvmvif_sta_.ap_sta_id] = org;
+  mvmvif_->mvm->fw_id_to_mac_id[mvmvif_->ap_sta_id] = org;
   ASSERT_GT(list_length(&mvm->time_event_list), 0);
 
   // Expect error while disassociating a non-existing association.
   ASSERT_EQ(ZX_OK, ClearAssoc());
-  ASSERT_EQ(nullptr, mvmvif_sta_.phy_ctxt);
-  ASSERT_EQ(IWL_MVM_INVALID_STA, mvmvif_sta_.ap_sta_id);
+  ASSERT_EQ(nullptr, mvmvif_->phy_ctxt);
+  ASSERT_EQ(IWL_MVM_INVALID_STA, mvmvif_->ap_sta_id);
   ASSERT_EQ(list_length(&mvm->time_event_list), 0);
   // Call ClearAssoc() again to check if it is handled correctly.
   ASSERT_NE(ZX_OK, ClearAssoc());
@@ -859,15 +698,15 @@ TEST_F(MacInterfaceTest, SetKeysTest) {
   constexpr uint8_t kIeeeOui[] = {0x00, 0x0F, 0xAC};
   ASSERT_EQ(ZX_OK, SetChannel(&kChannel));
   ASSERT_EQ(ZX_OK, ConfigureBss(&kBssConfig));
-  struct iwl_mvm_sta* mvm_sta = mvmvif_sta_.mvm->fw_id_to_mac_id[mvmvif_sta_.ap_sta_id];
+  struct iwl_mvm_sta* mvm_sta = mvmvif_->mvm->fw_id_to_mac_id[mvmvif_->ap_sta_id];
   ASSERT_EQ(IWL_STA_NONE, mvm_sta->sta_state);
-  struct iwl_mvm* mvm = mvmvif_sta_.mvm;
+  struct iwl_mvm* mvm = mvmvif_->mvm;
   ASSERT_GT(list_length(&mvm->time_event_list), 0);
 
   ASSERT_EQ(ZX_OK, ConfigureAssoc(&kAssocCtx));
   ASSERT_EQ(IWL_STA_AUTHORIZED, mvm_sta->sta_state);
-  ASSERT_EQ(true, mvmvif_sta_.bss_conf.assoc);
-  ASSERT_EQ(kListenInterval, mvmvif_sta_.bss_conf.listen_interval);
+  ASSERT_EQ(true, mvmvif_->bss_conf.assoc);
+  ASSERT_EQ(kListenInterval, mvmvif_->bss_conf.listen_interval);
 
   char keybuf[sizeof(wlan_key_config_t) + 16];
   wlan_key_config_t* key_config = (wlan_key_config_t*)keybuf;
@@ -887,8 +726,8 @@ TEST_F(MacInterfaceTest, SetKeysTest) {
   // Expect bit 1 to be set as well.
   ASSERT_EQ(*mvm->fw_key_table, 0x3);
   ASSERT_EQ(ZX_OK, ClearAssoc());
-  ASSERT_EQ(nullptr, mvmvif_sta_.phy_ctxt);
-  ASSERT_EQ(IWL_MVM_INVALID_STA, mvmvif_sta_.ap_sta_id);
+  ASSERT_EQ(nullptr, mvmvif_->phy_ctxt);
+  ASSERT_EQ(IWL_MVM_INVALID_STA, mvmvif_->ap_sta_id);
   ASSERT_EQ(list_length(&mvm->time_event_list), 0);
   // Both the keys should have been deleted.
   ASSERT_EQ(*mvm->fw_key_table, 0x0);
@@ -903,7 +742,7 @@ TEST_F(MacInterfaceTest, TxPktTooLong) {
   WlanPktBuilder builder;
   std::shared_ptr<WlanPktBuilder::WlanPkt> wlan_pkt = builder.build();
   wlan_pkt->wlan_pkt()->mac_frame_size = WLAN_MSDU_MAX_LEN + 1;
-  ASSERT_EQ(ZX_ERR_INVALID_ARGS, wlan_softmac_ops.queue_tx(&mvmvif_sta_, 0, wlan_pkt->wlan_pkt()));
+  ASSERT_EQ(ZX_ERR_INVALID_ARGS, device_->WlanSoftmacQueueTx(0, wlan_pkt->wlan_pkt()));
   unbindTx();
 }
 
@@ -913,12 +752,12 @@ TEST_F(MacInterfaceTest, TxPktNotSupportedRole) {
   BIND_TEST(sim_trans_.iwl_trans());
 
   // Set to an unsupported role.
-  mvmvif_sta_.mac_role = WLAN_INFO_MAC_ROLE_AP;
+  mvmvif_->mac_role = WLAN_INFO_MAC_ROLE_AP;
 
   bindTx(tx_wrapper);
   WlanPktBuilder builder;
   std::shared_ptr<WlanPktBuilder::WlanPkt> wlan_pkt = builder.build();
-  ASSERT_EQ(ZX_ERR_INVALID_ARGS, wlan_softmac_ops.queue_tx(&mvmvif_sta_, 0, wlan_pkt->wlan_pkt()));
+  ASSERT_EQ(ZX_ERR_INVALID_ARGS, device_->WlanSoftmacQueueTx(0, wlan_pkt->wlan_pkt()));
   unbindTx();
 }
 
@@ -932,7 +771,7 @@ TEST_F(MacInterfaceTest, TxPkt) {
   WlanPktBuilder builder;
   std::shared_ptr<WlanPktBuilder::WlanPkt> wlan_pkt = builder.build();
   mock_tx_.ExpectCall(ZX_OK, wlan_pkt->len(), WIDE_ID(0, TX_CMD), IWL_MVM_DQA_MIN_MGMT_QUEUE);
-  ASSERT_EQ(ZX_OK, wlan_softmac_ops.queue_tx(&mvmvif_sta_, 0, wlan_pkt->wlan_pkt()));
+  ASSERT_EQ(ZX_OK, device_->WlanSoftmacQueueTx(0, wlan_pkt->wlan_pkt()));
   unbindTx();
 }
 

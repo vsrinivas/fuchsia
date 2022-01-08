@@ -25,9 +25,6 @@ extern "C" {
 // A reasonable key length is <= 256 bits.
 #define WLAN_MAX_KEY_LEN ((size_t)(256 / 8))
 
-extern wlan_softmac_protocol_ops_t wlan_softmac_ops;
-extern zx_protocol_device_t device_mac_ops;  // for testing only
-
 // for testing
 size_t compose_band_list(const struct iwl_nvm_data* nvm_data,
                          wlan_info_band_t bands[WLAN_INFO_BAND_COUNT]);
