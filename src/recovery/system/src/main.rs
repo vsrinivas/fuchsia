@@ -61,10 +61,11 @@ mod keyboard;
 mod keys;
 mod proxy_view_assistant;
 
-use fdr::{FactoryResetState, ResetEvent};
+use crate::button::{Button, ButtonMessages};
+use crate::keyboard::{KeyboardMessages, KeyboardViewAssistant};
+use crate::proxy_view_assistant::{ProxyMessages, ProxyViewAssistant};
 
-use crate::button::Button;
-use crate::proxy_view_assistant::ProxyViewAssistant;
+use fdr::{FactoryResetState, ResetEvent};
 
 fn raster_for_circle(center: Point, radius: Coord, render_context: &mut RenderContext) -> Raster {
     let path = path_for_circle(center, radius, render_context);
@@ -189,7 +190,6 @@ impl RenderResources {
         let logo_edge = min_dimension * 0.24;
         let text_size = min_dimension / 10.0;
         let top_margin = 0.255;
-
         let body_text_size = min_dimension / 18.0;
         let button_text_size = min_dimension / 14.0;
         let countdown_text_size = min_dimension / 6.0;
@@ -285,7 +285,6 @@ impl RenderResources {
                 },
             );
         }
-
         let mut scene = builder.build();
         let mut x = 40.0;
         for i in 0..buttons.len() {
@@ -329,7 +328,6 @@ impl RecoveryViewAssistant {
         RecoveryViewAssistant::setup(app_context, view_key)?;
 
         let face = load_font(PathBuf::from("/pkg/data/fonts/Roboto-Regular.ttf"))?;
-
         Ok(RecoveryViewAssistant {
             face,
             heading: heading,
@@ -596,6 +594,69 @@ impl ViewAssistant for RecoveryViewAssistant {
                     self.app_context.request_render(self.view_key);
                 }
             }
+        } else if let Some(message) = message.downcast_ref::<KeyboardMessages>() {
+            match message {
+                KeyboardMessages::NoInput => {}
+                KeyboardMessages::Result(WIFI_SSID, result) => {
+                    self.wifi_ssid = if result.len() == 0 { None } else { Some(result.clone()) };
+                }
+                KeyboardMessages::Result(WIFI_PASSWORD, result) => {
+                    // Allow empty passwords
+                    self.wifi_password = Some(result.clone());
+                }
+                KeyboardMessages::Result(_, _) => {}
+            }
+            if let Some(resources) = self.render_resources.as_mut() {
+                let scene = &mut resources.scene;
+                if resources.buttons.len() >= 3 {
+                    let button = &mut resources.buttons[2];
+                    button.set_focused(
+                        scene,
+                        self.wifi_ssid.is_some() && self.wifi_password.is_some(),
+                    );
+                }
+            }
+        } else if let Some(message) = message.downcast_ref::<ButtonMessages>() {
+            match message {
+                ButtonMessages::Pressed(_, label) => {
+                    if label == WIFI_CONNECT {
+                        if let (Some(ssid), Some(password)) = (&self.wifi_ssid, &self.wifi_password)
+                        {
+                            fasync::Task::local(connect_to_wifi(ssid.clone(), password.clone()))
+                                .detach();
+                        }
+                    } else {
+                        let mut entry_text = String::new();
+                        let mut field_text = "";
+                        match label.as_ref() {
+                            WIFI_SSID => {
+                                field_text = WIFI_SSID;
+                                if let Some(ssid) = &self.wifi_ssid {
+                                    entry_text = ssid.clone();
+                                }
+                            }
+                            WIFI_PASSWORD => {
+                                field_text = WIFI_PASSWORD;
+                                if let Some(password) = &self.wifi_password {
+                                    entry_text = password.clone();
+                                }
+                            }
+                            _ => {}
+                        }
+                        // Fire up a new keyboard
+                        let mut view_assistant_ptr = Box::new(
+                            KeyboardViewAssistant::new(self.app_context.clone(), self.view_key)
+                                .unwrap(),
+                        );
+                        view_assistant_ptr.set_field_name(field_text);
+                        view_assistant_ptr.set_text_field(entry_text);
+                        self.app_context.queue_message(
+                            MessageTarget::View(self.view_key),
+                            make_message(ProxyMessages::NewViewAssistant(Some(view_assistant_ptr))),
+                        );
+                    }
+                }
+            }
         }
     }
 
@@ -649,7 +710,6 @@ impl ViewAssistant for RecoveryViewAssistant {
         _event: &input::Event,
         pointer_event: &input::pointer::Event,
     ) -> Result<(), Error> {
-        //println!("Main: handle_pointer_event");
         if let Some(render_resources) = self.render_resources.as_mut() {
             for button in &mut render_resources.buttons {
                 button.handle_pointer_event(&mut render_resources.scene, context, &pointer_event);
@@ -704,6 +764,11 @@ impl ViewAssistant for RecoveryViewAssistant {
 
         Ok(())
     }
+}
+
+async fn connect_to_wifi(_ssid: String, _password: String) {
+    // TODO(kpt): This is a place holder for the real WiFi connection when it is written
+    println!("Connect to WiFi");
 }
 
 /// Determines whether or not fdr is enabled.
