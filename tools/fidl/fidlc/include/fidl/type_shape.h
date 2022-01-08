@@ -114,9 +114,6 @@ struct FieldShape {
   void SetOffset(uint32_t updated_offset) { offset = updated_offset; }
   void SetPadding(uint32_t updated_padding) { padding = updated_padding; }
 
-  // Returns another FieldShape whose offsets accounts for an extra transaction header.
-  FieldShape PrependTransactionHeader() const;
-
   uint32_t offset = 0;
   uint32_t padding = 0;
 };

@@ -98,7 +98,7 @@ class JSONGenerator : public utils::JsonWriter<JSONGenerator> {
   void Generate(const flat::Service::Member& value);
   void Generate(const flat::Struct& value);
   void Generate(const flat::Struct* value);
-  void Generate(const flat::Struct::Member& value, bool is_request_or_response = false);
+  void Generate(const flat::Struct::Member& value);
   void Generate(const flat::Table& value);
   void Generate(const flat::Table::Member& value);
   void Generate(const flat::Union& value);
@@ -147,9 +147,7 @@ class JSONGenerator : public utils::JsonWriter<JSONGenerator> {
   void GenerateExternalDeclarationsMember(const flat::Library* library,
                                           Position position = Position::kSubsequent);
   void GenerateTypeShapes(const flat::Object& object);
-  void GenerateTypeShapes(std::string prefix, const flat::Struct* value);
-  void GenerateFieldShapes(const flat::Struct::Member& struct_member,
-                           bool is_request_or_response = false);
+  void GenerateFieldShapes(const flat::Struct::Member& struct_member);
 
   const flat::Library* library_;
   std::ostringstream json_file_;

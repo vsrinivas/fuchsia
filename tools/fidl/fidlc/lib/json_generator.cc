@@ -575,7 +575,7 @@ void JSONGenerator::Generate(const flat::Struct& value) {
 
 void JSONGenerator::Generate(const flat::Struct* value) { Generate(*value); }
 
-void JSONGenerator::Generate(const flat::Struct::Member& value, bool is_request_or_response) {
+void JSONGenerator::Generate(const flat::Struct::Member& value) {
   GenerateObject([&]() {
     GenerateTypeAndFromTypeAlias(value.type_ctor.get(), Position::kFirst);
     GenerateObjectMember("name", value.name);
@@ -584,7 +584,7 @@ void JSONGenerator::Generate(const flat::Struct::Member& value, bool is_request_
       GenerateObjectMember("maybe_attributes", value.attributes);
     if (value.maybe_default_value)
       GenerateObjectMember("maybe_default_value", value.maybe_default_value);
-    GenerateFieldShapes(value, is_request_or_response);
+    GenerateFieldShapes(value);
   });
 }
 
@@ -796,34 +796,12 @@ void JSONGenerator::GenerateTypeShapes(const flat::Object& object) {
   GenerateObjectMember("type_shape_v2", TypeShape(object, WireFormat::kV2));
 }
 
-void JSONGenerator::GenerateTypeShapes(std::string prefix, const flat::Struct* value) {
-  assert((!value || (value && value->is_request_or_response)) &&
-         "non-null value must be a request/response");
-  if (prefix.size() > 0) {
-    prefix.push_back('_');
-  }
-
-  auto typeshapeV1 = value ? TypeShape(value, WireFormat::kV1NoEe).PrependTransactionHeader()
-                           : TypeShape::ForEmptyPayload();
-  GenerateObjectMember(prefix + "type_shape_v1", typeshapeV1);
-  auto typeshapeV2 = value ? TypeShape(value, WireFormat::kV2).PrependTransactionHeader()
-                           : TypeShape::ForEmptyPayload();
-  GenerateObjectMember(prefix + "type_shape_v2", typeshapeV2);
-}
-
-void JSONGenerator::GenerateFieldShapes(const flat::Struct::Member& struct_member,
-                                        bool is_request_or_response) {
+void JSONGenerator::GenerateFieldShapes(const flat::Struct::Member& struct_member) {
   // NOTE: while the transition for fxbug.dev/7024 is ongoing, we need to treat request/responses
   // specially as before, but this will be removed once the transition is complete
   auto v1 = FieldShape(struct_member, WireFormat::kV1NoEe);
-  if (is_request_or_response) {
-    v1 = v1.PrependTransactionHeader();
-  }
   GenerateObjectMember("field_shape_v1", v1);
   auto v2 = FieldShape(struct_member, WireFormat::kV2);
-  if (is_request_or_response) {
-    v2 = v2.PrependTransactionHeader();
-  }
   GenerateObjectMember("field_shape_v2", v2);
 }
 

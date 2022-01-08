@@ -818,11 +818,7 @@ class HasPaddingVisitor final : public TypeShapeVisitor<bool> {
     auto element_has_trailing_padding = [&] {
       // A vector will always have padding out-of-line for its contents unless its element_type's
       // natural size is a multiple of 8.
-      if (Padding(UnalignedSize(object.element_type, wire_format()), 8) == 0) {
-        return false;
-      }
-
-      return true;
+      return Padding(UnalignedSize(object.element_type, wire_format()), 8) != 0;
     };
 
     return element_has_trailing_padding() || element_has_innate_padding();
@@ -1227,7 +1223,7 @@ FieldShape::FieldShape(const flat::StructMember& member, const WireFormat wire_f
 
   // Our parent struct must have at least one member if fieldshape() on a member is being
   // called.
-  assert(parent.members.size());
+  assert(!parent.members.empty());
   const std::vector<flat::StructMember>& members = parent.members;
 
   for (size_t i = 0; i < members.size(); i++) {
@@ -1256,14 +1252,7 @@ FieldShape::FieldShape(const flat::TableMemberUsed& member, const WireFormat wir
     : padding(::Padding(UnalignedSize(member, wire_format), 8)) {}
 
 FieldShape::FieldShape(const flat::UnionMemberUsed& member, const WireFormat wire_format)
-    : offset(0u),
-      padding(
+    : padding(
           ::Padding(UnalignedSize(member, wire_format), Alignment(member.parent, wire_format))) {}
-
-FieldShape FieldShape::PrependTransactionHeader() const {
-  FieldShape fieldshape = *this;
-  fieldshape.offset += kSizeOfTransactionHeader;
-  return fieldshape;
-}
 
 }  // namespace fidl
