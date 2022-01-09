@@ -718,7 +718,8 @@ reader_ctx::OnResult(fidl::WireUnownedResult<FIR::InputReportsReader::ReadInputR
   //
   // Initiate another async read
   //
-  (void)reader->ReadInputReports(this);
+  fidl::AsyncClientBuffer<FIR::InputReportsReader::ReadInputReports> fidl_buffer;
+  reader.buffer(fidl_buffer.view())->ReadInputReports(this);
 
   //
   // Get the reports vector view
