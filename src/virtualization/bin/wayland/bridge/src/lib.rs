@@ -24,4 +24,3 @@ pub mod shm;
 pub mod subcompositor;
 pub mod viewporter;
 pub mod xdg_shell;
-pub mod xdg_shell_unstable;

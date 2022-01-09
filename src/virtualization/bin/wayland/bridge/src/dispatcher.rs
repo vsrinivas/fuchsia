@@ -7,7 +7,6 @@ use {
         alpha_compositing::*, aura_shell::*, compositor::*, data_device_manager::*, display::*,
         linux_dmabuf::*, object::*, output::*, registry::*, seat::*, secure_output::*, shm::*,
         subcompositor::*, viewporter::*, xdg_shell::*,
-        xdg_shell_unstable::XdgShell as XdgShellUnstable,
     },
     anyhow::Error,
     fuchsia_zircon::{self as zx, HandleBased},
@@ -21,7 +20,6 @@ use {
     zcr_alpha_compositing_v1::ZcrAlphaCompositingV1,
     zcr_secure_output_v1::ZcrSecureOutputV1,
     zwp_linux_dmabuf_v1::ZwpLinuxDmabufV1,
-    zxdg_shell_v6::ZxdgShellV6,
 };
 
 /// The main FIDL server that listens for incoming client connection
@@ -88,10 +86,6 @@ impl WaylandDispatcher {
         });
         registry.add_global(WlDataDeviceManager, move |_, _, _| {
             Ok(Box::new(RequestDispatcher::new(DataDeviceManager::new())))
-        });
-        registry.add_global(ZxdgShellV6, move |_, _, _| {
-            let xdg_shell = XdgShellUnstable::new();
-            Ok(Box::new(RequestDispatcher::new(xdg_shell)))
         });
         registry.add_global(XdgWmBase, move |_, _, _| {
             let xdg_shell = XdgShell::new();

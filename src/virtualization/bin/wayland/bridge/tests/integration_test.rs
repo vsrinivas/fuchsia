@@ -18,7 +18,6 @@ mod test {
     use zcr_alpha_compositing_v1::ZcrAlphaCompositingV1;
     use zcr_secure_output_v1::ZcrSecureOutputV1;
     use zwp_linux_dmabuf_v1::ZwpLinuxDmabufV1;
-    use zxdg_shell_v6::ZxdgShellV6;
 
     async fn expect_global_with_name<I: Interface>(
         expect_name: u32,
@@ -93,13 +92,12 @@ mod test {
             expect_global_with_name::<WlSeat>(3, &client_channel).await;
             expect_global_with_name::<WlShm>(4, &client_channel).await;
             expect_global_with_name::<WlDataDeviceManager>(5, &client_channel).await;
-            expect_global_with_name::<ZxdgShellV6>(6, &client_channel).await;
-            expect_global_with_name::<XdgWmBase>(7, &client_channel).await;
-            expect_global_with_name::<ZwpLinuxDmabufV1>(8, &client_channel).await;
-            expect_global_with_name::<ZcrAlphaCompositingV1>(9, &client_channel).await;
-            expect_global_with_name::<ZcrSecureOutputV1>(10, &client_channel).await;
-            expect_global_with_name::<WpViewporter>(11, &client_channel).await;
-            expect_global_with_name::<ZauraShell>(12, &client_channel).await;
+            expect_global_with_name::<XdgWmBase>(6, &client_channel).await;
+            expect_global_with_name::<ZwpLinuxDmabufV1>(7, &client_channel).await;
+            expect_global_with_name::<ZcrAlphaCompositingV1>(8, &client_channel).await;
+            expect_global_with_name::<ZcrSecureOutputV1>(9, &client_channel).await;
+            expect_global_with_name::<WpViewporter>(10, &client_channel).await;
+            expect_global_with_name::<ZauraShell>(11, &client_channel).await;
 
             // Expect callback::done for the sync
             let mut buffer = zx::MessageBuf::new();

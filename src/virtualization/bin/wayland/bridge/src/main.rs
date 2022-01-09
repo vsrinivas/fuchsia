@@ -39,7 +39,6 @@ mod shm;
 mod subcompositor;
 mod viewporter;
 mod xdg_shell;
-mod xdg_shell_unstable;
 
 fn spawn_wayland_dispatcher_service(mut stream: WaylandDispatcherRequestStream, display: Display) {
     fasync::Task::local(

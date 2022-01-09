@@ -13,7 +13,6 @@ group("protocols") {
     ":zcr_alpha_compositing_v1",
     ":zcr_secure_output_v1",
     ":zwp_linux_dmabuf_v1",
-    ":zxdg_shell_v6",
   ]
 }
 
@@ -27,11 +26,6 @@ wayland_protocol("wp_viewporter") {
 
 wayland_protocol("xdg_shell") {
   protocol = "third_party/freedesktop.org/stable/xdg-shell/xdg-shell.xml"
-}
-
-wayland_protocol("zxdg_shell_v6") {
-  protocol =
-      "third_party/freedesktop.org/unstable/xdg-shell/xdg-shell-unstable-v6.xml"
 }
 
 wayland_protocol("zwp_linux_dmabuf_v1") {
