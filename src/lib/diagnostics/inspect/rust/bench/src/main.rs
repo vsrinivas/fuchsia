@@ -521,9 +521,9 @@ macro_rules! reader_bench_fn {
 
 reader_tree_uncontended_bench_fn!(uncontended_snapshot_tree_4k, 4096, "UncontendedSnapshotTree/4K");
 reader_tree_uncontended_bench_fn!(
-    uncontended_snapshot_tree_64k,
+    uncontended_snapshot_tree_16k,
     4096 * 4,
-    "UncontendedSnapshotTree/64K"
+    "UncontendedSnapshotTree/16K"
 );
 reader_tree_uncontended_bench_fn!(
     uncontended_snapshot_tree_256k,
@@ -543,10 +543,10 @@ reader_tree_bench_fn!(snapshot_tree_4k_1khz, 4096, 1000, "SnapshotTree/4K/1khz")
 reader_tree_bench_fn!(snapshot_tree_4k_10khz, 4096, 10000, "SnapshotTree/4K/10khz");
 reader_tree_bench_fn!(snapshot_tree_4k_100khz, 4096, 100000, "SnapshotTree/4K/100khz");
 reader_tree_bench_fn!(snapshot_tree_4k_1mhz, 4096, 1000000, "SnapshotTree/4K/1mhz");
-reader_tree_bench_fn!(snapshot_tree_64k_1hz, 4096 * 4, 1, "SnapshotTree/64K/1hz");
-reader_tree_bench_fn!(snapshot_tree_64k_10hz, 4096 * 4, 10, "SnapshotTree/64K/10hz");
-reader_tree_bench_fn!(snapshot_tree_64k_100hz, 4096 * 4, 100, "SnapshotTree/64K/100hz");
-reader_tree_bench_fn!(snapshot_tree_64k_1khz, 4096 * 4, 1000, "SnapshotTree/64K/1khz");
+reader_tree_bench_fn!(snapshot_tree_16k_1hz, 4096 * 4, 1, "SnapshotTree/16K/1hz");
+reader_tree_bench_fn!(snapshot_tree_16k_10hz, 4096 * 4, 10, "SnapshotTree/16K/10hz");
+reader_tree_bench_fn!(snapshot_tree_16k_100hz, 4096 * 4, 100, "SnapshotTree/16K/100hz");
+reader_tree_bench_fn!(snapshot_tree_16k_1khz, 4096 * 4, 1000, "SnapshotTree/16K/1khz");
 reader_tree_bench_fn!(snapshot_tree_256k_1hz, 4096 * 64, 1, "SnapshotTree/256K/1hz");
 reader_tree_bench_fn!(snapshot_tree_256k_10hz, 4096 * 64, 10, "SnapshotTree/256K/10hz");
 reader_tree_bench_fn!(snapshot_tree_256k_100hz, 4096 * 64, 100, "SnapshotTree/256K/100hz");
@@ -599,10 +599,10 @@ async fn reader_benchmark(iterations: usize) {
     snapshot_tree_4k_10khz(iterations).await;
     snapshot_tree_4k_100khz(iterations).await;
     snapshot_tree_4k_1mhz(iterations).await;
-    snapshot_tree_64k_1hz(iterations).await;
-    snapshot_tree_64k_10hz(iterations).await;
-    snapshot_tree_64k_100hz(iterations).await;
-    snapshot_tree_64k_1khz(iterations).await;
+    snapshot_tree_16k_1hz(iterations).await;
+    snapshot_tree_16k_10hz(iterations).await;
+    snapshot_tree_16k_100hz(iterations).await;
+    snapshot_tree_16k_1khz(iterations).await;
     snapshot_tree_256k_1hz(iterations).await;
     snapshot_tree_256k_10hz(iterations).await;
     snapshot_tree_256k_100hz(iterations).await;
@@ -613,7 +613,7 @@ async fn reader_benchmark(iterations: usize) {
     snapshot_tree_1m_1khz(iterations).await;
 
     uncontended_snapshot_tree_4k(iterations).await;
-    uncontended_snapshot_tree_64k(iterations).await;
+    uncontended_snapshot_tree_16k(iterations).await;
     uncontended_snapshot_tree_256k(iterations).await;
     uncontended_snapshot_tree_1m(iterations).await;
 }
