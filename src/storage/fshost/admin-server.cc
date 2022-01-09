@@ -4,6 +4,7 @@
 
 #include "src/storage/fshost/admin-server.h"
 
+#include <fidl/fuchsia.device/cpp/wire.h>
 #include <lib/async/default.h>
 #include <lib/fdio/fd.h>
 #include <lib/fidl-async/cpp/bind.h>
@@ -42,6 +43,20 @@ void AdminServer::Shutdown(ShutdownRequestView request, ShutdownCompleter::Sync&
 }
 
 void AdminServer::Mount(MountRequestView request, MountCompleter::Sync& completer) {
+  std::string device_path;
+  if (auto result = fidl::WireCall(fidl::UnownedClientEnd<fuchsia_device::Controller>(
+                                       request->device.channel().borrow()))
+                        ->GetTopologicalPath();
+      result.status() != ZX_OK) {
+    FX_LOGS(WARNING) << "Unable to get device topological path (FIDL error): "
+                     << zx_status_get_string(result.status());
+  } else if (result->result.is_err()) {
+    FX_LOGS(WARNING) << "Unable to get device topological path: "
+                     << zx_status_get_string(result->result.err());
+  } else {
+    device_path = result->result.response().path.get();
+  }
+
   fbl::unique_fd fd;
   if (zx_status_t status =
           fdio_fd_create(request->device.TakeChannel().release(), fd.reset_and_get_address());
@@ -74,9 +89,10 @@ void AdminServer::Mount(MountRequestView request, MountCompleter::Sync& complete
   // up with a deadlock.  To avoid this, spawn a separate thread.  Unfortunately, this isn't
   // thread-safe if we're shutting down, but since mounting is a debug only thing for now, we don't
   // worry about it.
-  std::thread thread([name = std::move(name), completer = completer.ToAsync(),
-                      options = std::move(options), fd = std::move(fd), df = std::move(df),
-                      fs_manager = fs_manager_, dispatcher]() mutable {
+  std::thread thread([device_path = std::move(device_path), name = std::move(name),
+                      completer = completer.ToAsync(), options = std::move(options),
+                      fd = std::move(fd), df = std::move(df), fs_manager = fs_manager_,
+                      dispatcher]() mutable {
     auto mounted_filesystem_or =
         fs_management::Mount(std::move(fd), nullptr, df, options, launch_logs_async);
     if (mounted_filesystem_or.is_error()) {
@@ -87,10 +103,11 @@ void AdminServer::Mount(MountRequestView request, MountCompleter::Sync& complete
 
     // fs_manager isn't thread-safe, so we have to post back on to the async loop to attach the
     // mount.
-    async::PostTask(dispatcher, [export_root = std::move(*mounted_filesystem_or).TakeExportRoot(),
+    async::PostTask(dispatcher, [device_path = std::move(device_path),
+                                 export_root = std::move(*mounted_filesystem_or).TakeExportRoot(),
                                  name = std::move(name), fs_manager,
                                  completer = std::move(completer)]() mutable {
-      if (zx_status_t status = fs_manager->AttachMount(std::move(export_root), name);
+      if (zx_status_t status = fs_manager->AttachMount(device_path, std::move(export_root), name);
           status != ZX_OK) {
         FX_LOGS(WARNING) << "Failed to attach mount: " << zx_status_get_string(status);
         completer.ReplyError(status);
@@ -110,6 +127,15 @@ void AdminServer::Unmount(UnmountRequestView request, UnmountCompleter::Sync& co
     completer.ReplyError(status);
   } else {
     completer.ReplySuccess();
+  }
+}
+
+void AdminServer::GetDevicePath(GetDevicePathRequestView request,
+                                GetDevicePathCompleter::Sync& completer) {
+  if (auto device_path_or = fs_manager_->GetDevicePath(request->fs_id); device_path_or.is_error()) {
+    completer.ReplyError(device_path_or.status_value());
+  } else {
+    completer.ReplySuccess(fidl::StringView::FromExternal(*device_path_or));
   }
 }
 

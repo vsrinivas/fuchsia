@@ -55,4 +55,11 @@ protocol Admin {
     Unmount(struct {
         name string:fuchsia.io.MAX_FILENAME;
     }) -> (struct {}) error zx.status;
+
+    /// Returns the device path for the filesystem with the given fs_id.
+    GetDevicePath(struct {
+        fs_id uint64;
+    }) -> (struct {
+        path string:fuchsia.io.MAX_PATH;
+    }) error zx.status;
 };

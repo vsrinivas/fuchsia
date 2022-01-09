@@ -64,6 +64,15 @@ const char* ReportReasonStr(const FsManager::ReportReason& reason) {
   }
 }
 
+zx::status<uint64_t> GetFsId(fidl::UnownedClientEnd<fuchsia_io_admin::DirectoryAdmin> root) {
+  auto result = fidl::WireCall(root)->QueryFilesystem();
+  if (!result.ok())
+    return zx::error(result.status());
+  if (result->s != ZX_OK)
+    return zx::error(result->s);
+  return zx::ok(result->info->fs_id);
+}
+
 }  // namespace
 
 FsManager::MountedFilesystem::~MountedFilesystem() {
@@ -230,8 +239,8 @@ zx_status_t FsManager::Initialize(
 
 void FsManager::FlushMetrics() { mutable_metrics()->Flush(); }
 
-zx::status<> FsManager::InstallFs(MountPoint point, zx::channel export_root_directory,
-                                  zx::channel root_directory) {
+zx::status<> FsManager::InstallFs(MountPoint point, std::string_view device_path,
+                                  zx::channel export_root_directory, zx::channel root_directory) {
   // Hold the shutdown lock for the entire duration of the install to avoid racing with shutdown on
   // adding/removing the remote mount.
   std::lock_guard guard(lock_);
@@ -245,6 +254,11 @@ zx::status<> FsManager::InstallFs(MountPoint point, zx::channel export_root_dire
     return zx::error(ZX_ERR_BAD_STATE);
   }
   node->second.export_root = std::move(export_root_directory);
+  if (!device_path.empty()) {
+    device_paths_[GetFsId(fidl::UnownedClientEnd<fuchsia_io_admin::DirectoryAdmin>(
+                              root_directory.borrow()))
+                      .value_or(0)] = device_path;
+  }
   if (zx_status_t status =
           root_vfs_->InstallRemote(node->second.root_directory, std::move(root_directory));
       status != ZX_OK) {
@@ -489,7 +503,8 @@ void FsManager::FileReport(ReportReason reason) {
   t.detach();
 }
 
-zx_status_t FsManager::AttachMount(fidl::ClientEnd<fuchsia_io_admin::DirectoryAdmin> export_root,
+zx_status_t FsManager::AttachMount(std::string_view device_path,
+                                   fidl::ClientEnd<fuchsia_io_admin::DirectoryAdmin> export_root,
                                    std::string_view name) {
   auto root_or = fs_management::FsRootHandle(export_root);
   if (root_or.is_error()) {
@@ -504,9 +519,12 @@ zx_status_t FsManager::AttachMount(fidl::ClientEnd<fuchsia_io_admin::DirectoryAd
     return status;
   }
 
+  uint64_t fs_id = GetFsId(*root_or).value_or(0);
   vnode->SetRemote(fidl::ClientEnd<fuchsia_io::Directory>(root_or->TakeChannel()));
   mounted_filesystems_.emplace(
-      std::make_unique<MountedFilesystem>(name, std::move(export_root), std::move(vnode)));
+      std::make_unique<MountedFilesystem>(name, std::move(export_root), std::move(vnode), fs_id));
+  if (!device_path.empty())
+    device_paths_.emplace(fs_id, device_path);
   return ZX_OK;
 }
 
@@ -514,9 +532,18 @@ zx_status_t FsManager::DetachMount(std::string_view name) {
   if (auto iter = mounted_filesystems_.find(name); iter == mounted_filesystems_.end()) {
     return ZX_ERR_NOT_FOUND;
   } else {
+    device_paths_.erase((*iter)->fs_id());
     mounted_filesystems_.erase(iter);
   }
   return mount_nodes_[MountPoint::kMnt].root_directory->Unlink(name, false);
+}
+
+zx::status<std::string> FsManager::GetDevicePath(uint64_t fs_id) const {
+  auto iter = device_paths_.find(fs_id);
+  if (iter == device_paths_.end())
+    return zx::error(ZX_ERR_NOT_FOUND);
+  else
+    return zx::ok(iter->second);
 }
 
 }  // namespace fshost

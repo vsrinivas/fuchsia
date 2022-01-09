@@ -6,12 +6,15 @@ executable("df") {
   configs += [ "//build/config:all_source" ]
   sources = [ "main.cc" ]
   deps = [
+    "//sdk/fidl/fuchsia.fshost:fuchsia.fshost_llcpp",
     "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
     "//sdk/fidl/fuchsia.io.admin:fuchsia.io.admin_llcpp",
     "//sdk/lib/fdio",
+    "//src/storage/fshost:headers",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/fdio-caller",
     "//zircon/system/ulib/fzl",
+    "//zircon/system/ulib/service:service-llcpp",
     "//zircon/system/ulib/zx",
   ]
 }

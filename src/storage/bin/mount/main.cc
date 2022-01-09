@@ -15,6 +15,8 @@
 
 #include <fbl/unique_fd.h>
 
+#include "src/storage/fshost/constants.h"
+
 int usage(void) {
   fprintf(stderr,
           "usage: mount [ <option>* ] devicepath <mount-path>\n"
@@ -97,8 +99,7 @@ int parse_args(int argc, char** argv, fidl::AnyArena& arena,
 int main(int argc, char** argv) {
   char* devicepath;
   std::string mount_name;
-  std::string fshost_path =
-      "/hub-v2/children/bootstrap/children/fshost/exec/out/svc/fuchsia.fshost.Admin";
+  std::string fshost_path(fshost::kHubAdminServicePath);
   fidl::Arena arena;
   fuchsia_fshost::wire::MountOptions options;
   if (int r = parse_args(argc, argv, arena, options, &devicepath, &mount_name, fshost_path)) {

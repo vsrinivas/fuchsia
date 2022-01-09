@@ -5,9 +5,11 @@
 #include <dirent.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <fidl/fuchsia.fshost/cpp/wire.h>
 #include <fidl/fuchsia.io.admin/cpp/wire.h>
 #include <fidl/fuchsia.io/cpp/wire.h>
 #include <lib/fdio/cpp/caller.h>
+#include <lib/service/llcpp/service.h>
 #include <stdalign.h>
 #include <stdarg.h>
 #include <stdbool.h>
@@ -22,6 +24,8 @@
 #include <utility>
 
 #include <fbl/unique_fd.h>
+
+#include "src/storage/fshost/constants.h"
 
 namespace fio = fuchsia_io;
 
@@ -160,19 +164,20 @@ int main(int argc, const char** argv) {
     }
   }
 
-  // Try to open path with O_ADMIN so we can query for underlying block devices.
-  // If we fail, open directory without O_ADMIN. Block devices will not be returned.
+  std::string fshost_path(fshost::kHubAdminServicePath);
+  auto fshost_or = service::Connect<fuchsia_fshost::Admin>(fshost_path.c_str());
+  if (fshost_or.is_error()) {
+    fprintf(stderr, "Error connecting to fshost (@ %s): %s\n", fshost_path.c_str(),
+            fshost_or.status_string());
+    // Continue...
+  }
+
   for (size_t i = 0; i < dircount; i++) {
     fbl::unique_fd fd;
-    bool admin = true;
-    fd.reset(open(dirs[i], O_RDONLY | O_ADMIN));
+    fd.reset(open(dirs[i], O_RDONLY));
     if (!fd) {
-      fd.reset(open(dirs[i], O_RDONLY));
-      if (!fd) {
-        fprintf(stderr, "df: Could not open target: %s\n", dirs[i]);
-        continue;
-      }
-      admin = false;
+      fprintf(stderr, "df: Could not open target: %s\n", dirs[i]);
+      continue;
     }
 
     fuchsia_io_admin::wire::FilesystemInfo info;
@@ -187,19 +192,21 @@ int main(int argc, const char** argv) {
     info = *result->info;
     info.name[fuchsia_io_admin::wire::kMaxFsNameBuffer - 1] = '\0';
 
-    auto result2 = fidl::WireCall(fidl::UnownedClientEnd<fuchsia_io_admin::DirectoryAdmin>(
-                                      caller.borrow_channel()))
-                       ->GetDevicePath();
-    std::string path(std::string("I/O failure: ") + result2.status_string());
-    if (result2.ok()) {
-      if (result2->s == ZX_OK) {
-        path = result2->path.get();
-      } else if (!admin && result2->s == ZX_ERR_ACCESS_DENIED) {
-        path = "Unknown; missing O_ADMIN";
+    std::string device_path;
+    if (fshost_or.is_ok()) {
+      auto result = fidl::WireCall(*fshost_or)->GetDevicePath(info.fs_id);
+      if (!result.ok()) {
+        fprintf(stderr, "Error getting device path, fidl error: %s\n",
+                result.FormatDescription().c_str());
+        return EXIT_FAILURE;
       }
+      if (result->result.is_err())
+        device_path = zx_status_get_string(result->result.err());
+      else
+        device_path = std::string(result->result.response().path.get());
     }
 
-    print_fs_type(dirs[i], &options, &info, path.c_str());
+    print_fs_type(dirs[i], &options, &info, device_path.c_str());
   }
 
   return 0;

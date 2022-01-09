@@ -5,6 +5,7 @@
 #include "filesystem-mounter.h"
 
 #include <dirent.h>
+#include <fidl/fuchsia.device/cpp/wire.h>
 #include <fidl/fuchsia.io/cpp/wire.h>
 #include <fidl/fuchsia.io/cpp/wire_types.h>
 #include <fidl/fuchsia.update.verify/cpp/wire.h>
@@ -40,6 +41,20 @@ zx::status<> FilesystemMounter::MountFilesystem(FsManager::MountPoint point, con
                                                 const fs_management::MountOptions& options,
                                                 zx::channel block_device_client, uint32_t fs_flags,
                                                 fidl::ClientEnd<fuchsia_fxfs::Crypt> crypt_client) {
+  std::string device_path;
+  if (auto result = fidl::WireCall(fidl::UnownedClientEnd<fuchsia_device::Controller>(
+                                       block_device_client.borrow()))
+                        ->GetTopologicalPath();
+      result.status() != ZX_OK) {
+    FX_LOGS(WARNING) << "Unable to get device topological path (FIDL error): "
+                     << zx_status_get_string(result.status());
+  } else if (result->result.is_err()) {
+    FX_LOGS(WARNING) << "Unable to get device topological path: "
+                     << zx_status_get_string(result->result.err());
+  } else {
+    device_path = result->result.response().path.get();
+  }
+
   zx::status create_endpoints = fidl::CreateEndpoints<fio::Node>();
   if (create_endpoints.is_error()) {
     return create_endpoints.take_error();
@@ -102,7 +117,7 @@ zx::status<> FilesystemMounter::MountFilesystem(FsManager::MountPoint point, con
     return zx::error(resp.status());
   }
 
-  return InstallFs(point, export_root.TakeChannel(), std::move(root_client));
+  return InstallFs(point, device_path, export_root.TakeChannel(), std::move(root_client));
 }
 
 zx_status_t FilesystemMounter::MountData(zx::channel block_device,

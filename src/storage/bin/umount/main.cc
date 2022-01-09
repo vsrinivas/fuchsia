@@ -12,6 +12,8 @@
 #include <filesystem>
 #include <string>
 
+#include "src/storage/fshost/constants.h"
+
 bool verbose = false;
 
 #define xprintf(fmt...) \
@@ -31,8 +33,7 @@ int usage(void) {
 }
 
 int main(int argc, char** argv) {
-  std::string fshost_path =
-      "/hub-v2/children/bootstrap/children/fshost/exec/out/svc/fuchsia.fshost.Admin";
+  std::string fshost_path(fshost::kHubAdminServicePath);
   while (1) {
     static struct option opts[] = {
         {"help", no_argument, NULL, 'h'},

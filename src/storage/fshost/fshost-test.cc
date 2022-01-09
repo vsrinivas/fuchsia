@@ -241,7 +241,7 @@ TEST(FsManagerTestCase, InstallFsAfterShutdownWillFail) {
   fidl::BindServer(loop.dispatcher(), std::move(root->server), root_server);
 
   EXPECT_EQ(manager
-                .InstallFs(FsManager::MountPoint::kData, export_root->client.TakeChannel(),
+                .InstallFs(FsManager::MountPoint::kData, "", export_root->client.TakeChannel(),
                            root->client.TakeChannel())
                 .status_value(),
             ZX_ERR_BAD_STATE);
@@ -280,7 +280,7 @@ TEST(FsManagerTestCase, ReportFailureOnUncleanUnmount) {
   ASSERT_EQ(admin.status_value(), ZX_OK);
 
   EXPECT_EQ(manager
-                .InstallFs(FsManager::MountPoint::kData, export_root->client.TakeChannel(),
+                .InstallFs(FsManager::MountPoint::kData, "", export_root->client.TakeChannel(),
                            root->client.TakeChannel())
                 .status_value(),
             ZX_OK);

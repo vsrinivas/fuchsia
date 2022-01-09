@@ -48,19 +48,20 @@ zx::status<> FinishPkgfsLaunch(FilesystemMounter* filesystems, zx::channel pkgfs
     FX_LOGS(WARNING) << "failed to install /bin (could not open shell-commands)";
   }
   if (auto result =
-          filesystems->InstallFs(FsManager::MountPoint::kPkgfs, {}, std::move(pkgfs_root));
+          filesystems->InstallFs(FsManager::MountPoint::kPkgfs, "", {}, std::move(pkgfs_root));
       result.is_error()) {
     FX_LOGS(ERROR) << "failed to install /pkgfs";
     return result;
   }
   if (auto result =
-          filesystems->InstallFs(FsManager::MountPoint::kSystem, {}, std::move(system_channel));
+          filesystems->InstallFs(FsManager::MountPoint::kSystem, "", {}, std::move(system_channel));
       result.is_error()) {
     FX_LOGS(ERROR) << "failed to install /system";
     return result;
   }
   // as above, failure of /bin export is non-fatal.
-  if (auto result = filesystems->InstallFs(FsManager::MountPoint::kBin, {}, std::move(bin_chan));
+  if (auto result =
+          filesystems->InstallFs(FsManager::MountPoint::kBin, "", {}, std::move(bin_chan));
       result.is_error()) {
     // non-fatal
     FX_LOGS(WARNING) << "failed to install /bin";

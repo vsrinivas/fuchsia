@@ -3,7 +3,9 @@
 // found in the LICENSE file.
 
 #include <fcntl.h>
+#include <lib/service/llcpp/service.h>
 #include <sys/stat.h>
+#include <sys/statvfs.h>
 
 #include <gtest/gtest.h>
 
@@ -62,6 +64,20 @@ TEST_F(AdminServerTest, MountAndUnmount) {
   ASSERT_TRUE(fd);
   ASSERT_EQ(write(fd.get(), "hello", 5), 5);
   fd.reset();
+
+  // Check GetDevicePath.
+  constexpr const char* kRoot = "/hub/children/fshost-collection:test-fshost/exec/out/fs/mnt/test/";
+  struct statvfs buf;
+  ASSERT_EQ(statvfs(kRoot, &buf), 0);
+
+  auto fshost_or = service::Connect<fuchsia_fshost::Admin>(kFshostSvcPath);
+  ASSERT_EQ(fshost_or.status_value(), ZX_OK);
+
+  auto result = fidl::WireCall(*fshost_or)->GetDevicePath(buf.f_fsid);
+  ASSERT_TRUE(result.ok());
+
+  ASSERT_TRUE(result->result.is_response());
+  EXPECT_EQ(result->result.response().path.get(), device_path);
 
   zx::process umount_process;
   ASSERT_EQ(fdio_spawn(ZX_HANDLE_INVALID, FDIO_SPAWN_CLONE_ALL, kUmountBinPath,

@@ -44,6 +44,7 @@ source_set("fshost-registry") {
     ":launcher",
     ":metrics",
     "//sdk/fidl/fuchsia.boot:fuchsia.boot_llcpp",
+    "//sdk/fidl/fuchsia.device:fuchsia.device_llcpp",
     "//sdk/fidl/fuchsia.device.manager:fuchsia.device.manager_llcpp",
     "//sdk/fidl/fuchsia.feedback:fuchsia.feedback_llcpp",
     "//sdk/fidl/fuchsia.fshost:fuchsia.fshost_llcpp",

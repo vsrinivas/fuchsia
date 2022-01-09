@@ -79,8 +79,8 @@ class FsManager {
   // Installs the filesystem with |root_directory| at |mount_point| (which must not already have an
   // installed filesystem).
   // |root_directory| should be a connection to a Directory, but this is not verified.
-  zx::status<> InstallFs(MountPoint mount_point, zx::channel export_root_directory,
-                         zx::channel root_directory);
+  zx::status<> InstallFs(MountPoint mount_point, std::string_view device_path,
+                         zx::channel export_root_directory, zx::channel root_directory);
 
   // Serves connection to the root directory ("/") on |server|.
   zx_status_t ServeRoot(fidl::ServerEnd<fuchsia_io::Directory> server);
@@ -126,10 +126,13 @@ class FsManager {
   // blocks. Note that there is no indication if the reporting fails.
   void FileReport(ReportReason reason);
 
-  zx_status_t AttachMount(fidl::ClientEnd<fuchsia_io_admin::DirectoryAdmin> export_root,
+  zx_status_t AttachMount(std::string_view device_path,
+                          fidl::ClientEnd<fuchsia_io_admin::DirectoryAdmin> export_root,
                           std::string_view name);
 
   zx_status_t DetachMount(std::string_view name);
+
+  zx::status<std::string> GetDevicePath(uint64_t fs_id) const;
 
  private:
   class MountedFilesystem {
@@ -152,14 +155,17 @@ class FsManager {
 
     MountedFilesystem(std::string_view name,
                       fidl::ClientEnd<fuchsia_io_admin::DirectoryAdmin> export_root,
-                      fbl::RefPtr<fs::Vnode> node)
-        : name_(name), export_root_(std::move(export_root)), node_(node) {}
+                      fbl::RefPtr<fs::Vnode> node, uint64_t fs_id)
+        : name_(name), export_root_(std::move(export_root)), node_(node), fs_id_(fs_id) {}
     ~MountedFilesystem();
+
+    uint64_t fs_id() const { return fs_id_; }
 
    private:
     std::string name_;
     fidl::ClientEnd<fuchsia_io_admin::DirectoryAdmin> export_root_;
     fbl::RefPtr<fs::Vnode> node_;
+    uint64_t fs_id_;
   };
 
   zx_status_t SetupOutgoingDirectory(fidl::ServerEnd<fuchsia_io::Directory> dir_request,
@@ -224,6 +230,7 @@ class FsManager {
   bool file_crash_report_ = true;
 
   std::set<std::unique_ptr<MountedFilesystem>, MountedFilesystem::Compare> mounted_filesystems_;
+  std::unordered_map<uint64_t, std::string> device_paths_;
 };
 
 }  // namespace fshost

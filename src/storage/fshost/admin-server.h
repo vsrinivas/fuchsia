@@ -32,6 +32,9 @@ class AdminServer final : public fidl::WireServer<fuchsia_fshost::Admin> {
 
   void Unmount(UnmountRequestView request, UnmountCompleter::Sync& completer) override;
 
+  void GetDevicePath(GetDevicePathRequestView request,
+                     GetDevicePathCompleter::Sync& completer) override;
+
  private:
   FsManager* fs_manager_;
 };
