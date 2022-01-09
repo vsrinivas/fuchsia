@@ -43,30 +43,26 @@ group("non_hermetic_deps") {
   visibility = [
     "//build/prebuilt/*",
     "//scripts/sdk/gn/*",
+    "//third_party/crashpad/*",
     "//vendor/google/*",
   ]
 
   # See: fxrev.dev/528291
-  visibility += [ "//build/rust/*" ]
+  visibility += [ "//build/rust:*" ]
 
   # TODO(http://fxbug.dev/77290): Remove entry when
   # //build/images/assemble_system.gni no longer needs `hermetic_deps = false`.
   visibility += [
     "//build/images/*",
-    "//build/images/fuchsia/*",
-    "//build/images/guest/*",
-    "//build/images/recovery/*",
-    "//build/images/sizes/*",
-    "//third_party/crashpad/*",
     "//third_party/network-conformance/images/*",
   ]
 
-  non_default_checkout_users = [
+  # These repos are not in the default checkout.
+  visibility += [
     # This git repo is only checked out when the vulkan-cts attribute is set.
-    "//third_party/vulkan-cts/fuchsia/*",
     "//third_party/arm-mali-bifrost/*",
+    "//third_party/vulkan-cts/fuchsia/*",
   ]
-  visibility += non_default_checkout_users
 }
 
 # Build targets that use the legacy zx_library and zx_host_tool templates
