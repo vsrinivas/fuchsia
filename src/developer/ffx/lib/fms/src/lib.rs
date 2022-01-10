@@ -39,7 +39,8 @@ impl Entries {
         let files: Vec<PathBuf> =
             ffx_config::get("fms.data.files").await.context("ffx_config::get fms data")?;
         const SDK_ROOT: &str = "{sdk.root}/";
-        let sdk_root: PathBuf = ffx_config::get("sdk.root").await?;
+        let sdk_root =
+            ffx_config::get_sdk().await.context("get sdk")?.get_path_prefix().to_path_buf();
         let files = files
             .iter()
             .map(|path| {
