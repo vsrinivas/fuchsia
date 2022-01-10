@@ -14,6 +14,11 @@ using UartDriver = uart::all::KernelDriver<uart::BasicIoProvider, uart::Unsynchr
 
 UartDriver& GetUartDriver();
 
+// Provides a null implementation for |stdout|. All writes against this object are no-op.
+extern FILE gNullStdout;
+
+constexpr FILE* NullStdout() { return &gNullStdout; }
+
 // Wires up the associated UART to stdout. Defaults to uart::null::Driver.
 void ConfigureStdout(const uart::all::Driver& uart = {});
 

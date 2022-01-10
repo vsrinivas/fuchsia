@@ -10,6 +10,9 @@
 
 #include <phys/stdio.h>
 
+FILE gNullStdout([](void*, ktl::string_view s) -> int { return static_cast<int>(s.length()); },
+                 nullptr);
+
 FILE FILE::stdout_;
 
 UartDriver& GetUartDriver() {
