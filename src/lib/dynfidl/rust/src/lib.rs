@@ -39,6 +39,14 @@ impl Structure {
         buf.extend(2u16.to_le_bytes()); // v2 wire format
         buf.extend([0; 4]); // reserved with zeroes
 
+        // encode the body of the message
+        self.encode(&mut buf);
+
+        buf
+    }
+
+    /// Encode this struct without any header.
+    pub fn encode(&self, buf: &mut Vec<u8>) {
         // encode the struct's fields:
         if self.fields.is_empty() {
             // A structure can be:
@@ -46,23 +54,21 @@ impl Structure {
             // * empty — it has no fields. Such a structure is 1 byte in size, with an alignment of
             // 1 byte, and is exactly equivalent to a structure containing a uint8 with the value
             // zero.
-            BasicField::UInt8(0).encode_inline(&mut buf);
+            BasicField::UInt8(0).encode_inline(buf);
         } else {
             // encode primary objects first
             for field in &self.fields {
-                field.encode_inline(&mut buf);
+                field.encode_inline(buf);
             }
 
             for field in &self.fields {
-                field.encode_out_of_line(&mut buf);
+                field.encode_out_of_line(buf);
             }
         }
 
         // Externally, the structure is aligned on an 8-byte boundary, and may therefore contain
         // final padding to meet that requirement.
         buf.pad_to(8);
-
-        buf
     }
 }
 

@@ -17,6 +17,7 @@ import (
 	gidlc "go.fuchsia.dev/fuchsia/tools/fidl/gidl/c"
 	gidlconfig "go.fuchsia.dev/fuchsia/tools/fidl/gidl/config"
 	gidldart "go.fuchsia.dev/fuchsia/tools/fidl/gidl/dart"
+	gidldynfidl "go.fuchsia.dev/fuchsia/tools/fidl/gidl/dynfidl"
 	gidlcorpus "go.fuchsia.dev/fuchsia/tools/fidl/gidl/fuzzer_corpus"
 	gidlgolang "go.fuchsia.dev/fuchsia/tools/fidl/gidl/golang"
 	gidlhlcpp "go.fuchsia.dev/fuchsia/tools/fidl/gidl/hlcpp"
@@ -39,6 +40,7 @@ type Generator func(gidlir.All, fidlgen.Root, gidlconfig.GeneratorConfig) ([]byt
 
 var conformanceGenerators = map[string]Generator{
 	"c":             gidlc.GenerateConformanceTests,
+	"dynfidl":       gidldynfidl.GenerateConformanceTests,
 	"go":            gidlgolang.GenerateConformanceTests,
 	"llcpp":         gidlllcpp.GenerateConformanceTests,
 	"hlcpp":         gidlhlcpp.GenerateConformanceTests,

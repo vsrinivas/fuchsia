@@ -27,6 +27,7 @@ if (is_host) {
       "dart/benchmarks.go",
       "dart/common.go",
       "dart/conformance.go",
+      "dynfidl/conformance.go",
       "fuzzer_corpus/conformance.go",
       "golang/benchmarks.go",
       "golang/common.go",
@@ -119,6 +120,10 @@ if (is_host) {
     },
     {
       language = "rust"
+      extension = "rs"
+    },
+    {
+      language = "dynfidl"
       extension = "rs"
     },
     {

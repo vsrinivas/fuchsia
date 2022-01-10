@@ -4,6 +4,9 @@
 
 import("//build/components.gni")
 import("//build/rust/rustc_library.gni")
+import("//build/rust/rustc_test.gni")
+import("//src/tests/fidl/conformance_suite/gidl-conformance-suite.gni")
+import("//tools/fidl/gidl/gidl.gni")
 
 group("rust") {
   deps = [ ":dynfidl" ]
@@ -11,9 +14,35 @@ group("rust") {
 
 group("tests") {
   testonly = true
-  deps = [ "tests" ]
+  deps = [
+    ":fidl_dynfidl_conformance_tests",
+    "tests",
+  ]
 }
 
 rustc_library("dynfidl") {
   sources = [ "src/lib.rs" ]
+}
+
+conformance_test_source = "$target_gen_dir/src/conformance_test.rs"
+
+gidl("generate_conformance_test") {
+  type = "conformance"
+  language = "dynfidl"
+  inputs = conformance_suite_gidl_files
+  fidl = conformance_suite_fidl_target
+  output = conformance_test_source
+}
+
+rustc_test("fidl_dynfidl_conformance_tests_bin") {
+  output_name = "fidl_dynfidl_conformance_tests"
+  edition = "2018"
+  source_root = conformance_test_source
+  deps = [ ":dynfidl" ]
+  non_rust_deps = [ ":generate_conformance_test" ]
+  sources = [ conformance_test_source ]
+}
+
+fuchsia_unittest_package("fidl_dynfidl_conformance_tests") {
+  deps = [ ":fidl_dynfidl_conformance_tests_bin" ]
 }
