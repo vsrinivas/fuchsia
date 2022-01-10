@@ -104,6 +104,14 @@ product_bootfs_labels += [
   "//products/kernel_cmdline:virtcon.buffer-count--2",
 ]
 
+# Add bold and italic Vircon fonts.
+virtcon_bold_font_path =
+    "//prebuilt/third_party/fonts/robotomono/RobotoMono-Bold.ttf"
+virtcon_italic_font_path =
+    "//prebuilt/third_party/fonts/robotomono/RobotoMono-Italic.ttf"
+virtcon_bold_italic_font_path =
+    "//prebuilt/third_party/fonts/robotomono/RobotoMono-BoldItalic.ttf"
+
 # End to end (E2E) product test runtime dependencies. Must be added to cache,
 # not universe, so the test can run on bots where there is no package server.
 #
