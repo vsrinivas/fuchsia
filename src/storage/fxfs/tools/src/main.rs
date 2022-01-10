@@ -10,7 +10,7 @@ use {
         mkfs, mount,
         object_store::{
             crypt::{Crypt, InsecureCrypt},
-            fsck::fsck,
+            fsck::{self},
         },
     },
     std::sync::Arc,
@@ -23,6 +23,9 @@ struct TopLevel {
     /// path to the input file to read or write
     #[argh(option, short = 'i')]
     input: String,
+    /// whether to run the tool verbosely
+    #[argh(switch, short = 'v')]
+    verbose: bool,
     #[argh(subcommand)]
     subcommand: SubCommand,
 }
@@ -85,7 +88,14 @@ async fn main() -> Result<(), Error> {
         }
         SubCommand::Fsck(_) => {
             let fs = mount::mount(device, crypt).await?;
-            fsck(&fs).await
+            let options = fsck::FsckOptions {
+                fail_on_warning: false,
+                halt_on_error: false,
+                do_slow_passes: true,
+                on_error: |err| eprintln!("{:?}", err.to_string()),
+                verbose: args.verbose,
+            };
+            fsck::fsck_with_options(&fs, options).await
         }
     }
 }

@@ -55,6 +55,8 @@ pub struct FsckOptions<F: Fn(&FsckIssue)> {
     pub do_slow_passes: bool,
     /// A callback to be invoked for each detected error, e.g. to log the error.
     pub on_error: F,
+    /// Whether to be noisy as we do checks.
+    pub verbose: bool,
 }
 
 /// Verifies the integrity of Fxfs.  See errors.rs for a list of checks performed.
@@ -75,6 +77,7 @@ pub async fn fsck(filesystem: &Arc<FxFilesystem>) -> Result<(), Error> {
                 log::warn!("{:?}", err.to_string())
             }
         },
+        verbose: false,
     };
     fsck_with_options(filesystem, options).await
 }
@@ -96,6 +99,7 @@ pub async fn fsck_with_options<F: Fn(&FsckIssue)>(
     // Scan the root parent object store.
     let mut root_objects = vec![super_block.root_store_object_id, super_block.journal_object_id];
     root_objects.append(&mut object_manager.root_store().parent_objects());
+    fsck.verbose("Scanning root parent store...");
     store_scanner::scan_store(
         &fsck,
         object_manager.root_parent_store().as_ref(),
@@ -103,6 +107,7 @@ pub async fn fsck_with_options<F: Fn(&FsckIssue)>(
         &root_objects,
     )
     .await?;
+    fsck.verbose("Scanning root parent store done");
 
     let root_store = &object_manager.root_store();
     let mut root_store_root_objects = Vec::new();
@@ -120,10 +125,12 @@ pub async fn fsck_with_options<F: Fn(&FsckIssue)>(
         let mut iter = volume_directory.iter(&mut merger).await?;
 
         // TODO(csuter): We could maybe iterate over stores concurrently.
-        while let Some((_, store_id, _)) = iter.get() {
+        while let Some((name, store_id, _)) = iter.get() {
+            fsck.verbose(format!("Scanning volume \"{}\" (id {})...", name, store_id));
             fsck.check_child_store(&filesystem, &graveyard, store_id, &mut root_store_root_objects)
                 .await?;
             iter.advance().await?;
+            fsck.verbose("Scanning volume done");
         }
     }
 
@@ -135,7 +142,13 @@ pub async fn fsck_with_options<F: Fn(&FsckIssue)>(
     if fsck.options.do_slow_passes {
         // Scan each layer file for the allocator.
         let layer_set = allocator.tree().immutable_layer_set();
+        fsck.verbose(format!("Checking {} layers for allocator...", layer_set.layers.len()));
         for layer in layer_set.layers {
+            fsck.verbose(format!(
+                "Layer file {} for allocator is {} bytes",
+                layer.handle().unwrap().object_id(),
+                layer.handle().unwrap().get_size()
+            ));
             fsck.check_layer_file_contents(
                 allocator.object_id(),
                 layer.handle().map(|h| h.object_id()).unwrap_or(INVALID_OBJECT_ID),
@@ -143,9 +156,11 @@ pub async fn fsck_with_options<F: Fn(&FsckIssue)>(
             )
             .await?;
         }
+        fsck.verbose("Checking layers done");
     }
 
     // Finally scan the root object store.
+    fsck.verbose("Scanning root object store...");
     store_scanner::scan_store(
         &fsck,
         root_store.as_ref(),
@@ -153,8 +168,10 @@ pub async fn fsck_with_options<F: Fn(&FsckIssue)>(
         &root_store_root_objects,
     )
     .await?;
+    fsck.verbose("Scanning root object store done");
 
     // Now compare our regenerated allocation map with what we actually have.
+    fsck.verbose("Verifying allocations...");
     let layer_set = allocator.tree().layer_set();
     let mut merger = layer_set.merger();
     let iter = merger.seek(Bound::Unbounded).await?;
@@ -186,6 +203,11 @@ pub async fn fsck_with_options<F: Fn(&FsckIssue)>(
         }
         try_join!(actual.advance(), expected.advance())?;
     }
+    fsck.verbose(format!(
+        "{}/{} bytes allocated",
+        allocated_bytes,
+        filesystem.device().block_count() * filesystem.device().block_size() as u64
+    ));
     if !extra_allocations.is_empty() {
         fsck.error(FsckError::ExtraAllocations(extra_allocations))?;
     }
@@ -242,6 +264,13 @@ impl<F: Fn(&FsckIssue)> Fsck<F> {
             allocations: SkipListLayer::new(2048),
             errors: AtomicU64::new(0),
             warnings: AtomicU64::new(0),
+        }
+    }
+
+    // Log if in verbose mode.
+    fn verbose(&self, message: impl AsRef<str>) {
+        if self.options.verbose {
+            log::info!("fsck: {}", message.as_ref());
         }
     }
 
@@ -314,6 +343,12 @@ impl<F: Fn(&FsckIssue)> Fsck<F> {
             // we'll need to update this.
             (info.object_tree_layers.clone(), info.extent_tree_layers.clone())
         };
+        self.verbose(format!(
+            "Store {} has {} object tree layers, {} extent tree layers",
+            store_id,
+            object_layer_file_object_ids.len(),
+            extent_layer_file_object_ids.len()
+        ));
         for layer_file_object_id in object_layer_file_object_ids {
             self.check_layer_file::<ObjectKey, ObjectValue>(
                 &root_store,
@@ -354,6 +389,12 @@ impl<F: Fn(&FsckIssue)> Fsck<F> {
             FsckFatal::MissingLayerFile(store_object_id, layer_file_object_id),
         )?;
         if self.options.do_slow_passes {
+            self.verbose(format!(
+                "Layer file {} for store {} is {} bytes",
+                layer_file_object_id,
+                store_object_id,
+                layer_file.get_size()
+            ));
             // TODO(ripper): When we have multiple layer file formats, we'll need some way of
             // detecting which format we are dealing with.  For now, we just assume it's
             // SimplePersistentLayer.

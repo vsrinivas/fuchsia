@@ -82,6 +82,7 @@ impl FsckTest {
             fail_on_warning: true,
             halt_on_error,
             do_slow_passes: true,
+            verbose: false,
             on_error: |err| {
                 self.errors.lock().unwrap().push(err.clone());
             },

@@ -117,6 +117,7 @@ impl TestFixture {
                 fail_on_warning: true,
                 halt_on_error: false,
                 do_slow_passes: true,
+                verbose: false,
                 on_error: |err: &FsckIssue| {
                     eprintln!("Fsck error: {:?}", err);
                 },

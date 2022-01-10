@@ -17,6 +17,7 @@ use {
             object_record::{ObjectDescriptor, ObjectKey, ObjectKeyData, ObjectKind, ObjectValue},
             ObjectStore,
         },
+        range::RangeExt,
         round::round_up,
     },
     anyhow::{self, Error},
@@ -498,6 +499,7 @@ async fn scan_extents<'a, F: Fn(&FsckIssue)>(
     let layer_set = store.extent_tree.layer_set();
     let mut merger = layer_set.merger();
     let mut iter = merger.seek(Bound::Unbounded).await?;
+    let mut allocated_bytes = 0;
     while let Some(ItemRef { key: ExtentKey { object_id, attribute_id, range }, value, .. }) =
         iter.get()
     {
@@ -507,6 +509,7 @@ async fn scan_extents<'a, F: Fn(&FsckIssue)>(
             fsck.error(FsckError::MalformedExtent(store_id, *object_id, range.clone(), 0))?;
         }
         if let ExtentValue::Some { device_offset, .. } = value {
+            allocated_bytes += range.length().unwrap();
             if device_offset % bs > 0 {
                 fsck.error(FsckError::MisalignedExtent(
                     store_id,
@@ -564,6 +567,11 @@ async fn scan_extents<'a, F: Fn(&FsckIssue)>(
         }
         iter.advance().await?;
     }
+    fsck.verbose(format!(
+        "Store {} has {} bytes allocated",
+        store.store_object_id(),
+        allocated_bytes
+    ));
     Ok(())
 }
 
@@ -630,6 +638,10 @@ pub(super) async fn scan_store<F: Fn(&FsckIssue)>(
     // have to do this without some refactoring to keep orphaned objects off to the side until
     // they're parented (allowing us to easily also scan orphaned objects).
     let mut num_objects = 0;
+    let mut files = 0;
+    let mut directories = 0;
+    let mut tombstones = 0;
+    let mut other = 0;
     for object in scanned.objects() {
         num_objects += 1;
         match object {
@@ -641,6 +653,7 @@ pub(super) async fn scan_store<F: Fn(&FsckIssue)>(
                 allocated_size: actual_allocated_size,
                 ..
             }) => {
+                files += 1;
                 match kind {
                     Some(ObjectKind::File { refs, allocated_size, .. }) => {
                         let expected_refs = parents.len().try_into().unwrap();
@@ -678,6 +691,7 @@ pub(super) async fn scan_store<F: Fn(&FsckIssue)>(
                 }
             }
             ScannedObject::Directory(ScannedDir { object_id, kind, children, parent }) => {
+                directories += 1;
                 let oid = unsafe { *object_id.get() };
                 match kind {
                     Some(ObjectKind::Directory { sub_dirs }) => {
@@ -702,8 +716,11 @@ pub(super) async fn scan_store<F: Fn(&FsckIssue)>(
                     fsck.warning(FsckWarning::OrphanedObject(store_id, oid))?;
                 }
             }
-            ScannedObject::Etc(..) => { /* NOP */ }
+            ScannedObject::Etc(..) => {
+                other += 1;
+            }
             ScannedObject::Tombstone => {
+                tombstones += 1;
                 num_objects -= 1;
             }
         }
@@ -711,6 +728,10 @@ pub(super) async fn scan_store<F: Fn(&FsckIssue)>(
     if num_objects != store.object_count() {
         fsck.error(FsckError::ObjectCountMismatch(store_id, store.object_count(), num_objects))?;
     }
+    fsck.verbose(format!(
+        "Store {} has {} files, {} dirs, {} tombstones, {} other objects",
+        store_id, files, directories, tombstones, other
+    ));
 
     // Now iterate again in BFS order, looking for cycles.
     for object in scanned.iter_bfs() {
