@@ -16,6 +16,10 @@ type OptionalVectorWrapper = struct {
     v vector<uint8>:optional;
 };
 
+type VectorOfBytes = struct {
+    v vector<vector<uint8>>;
+};
+
 type VectorOfStrings = struct {
     v vector<string>;
 };
