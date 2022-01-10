@@ -515,6 +515,35 @@ config("default_warnings") {
     "-Wno-unused-parameter",
     "-Wnonportable-system-include-path",
   ]
+
+  if (is_gcc) {
+    # GCC is pedantic about which flags apply to which language.
+    cflags -= [
+      "-Wstrict-prototypes",
+      "-Wextra-semi",
+    ]
+    cflags_c = [ "-Wstrict-prototypes" ]
+    cflags_cc = [ "-Wextra-semi" ]
+
+    # GCC doesn't support these flags
+    cflags -= [
+      "-Wnewline-eof",
+      "-Wnonportable-system-include-path",
+    ]
+
+    cflags += [
+      # TODO(https://gcc.gnu.org/bugzilla/show_bug.cgi?id=90036): Re-enable
+      # once the bug is fixed.
+      "-Wno-format-overflow",
+
+      # TODO(fxbug.dev/64272): Disable "-Wmissing-field-initializers" which
+      # warns when designated initializers are used on some (but not all)
+      # fields in C++, contrary to its documentation (and Clang).
+      #
+      # See https://gcc.gnu.org/bugzilla/show_bug.cgi?id=39589.
+      "-Wno-missing-field-initializers",
+    ]
+  }
 }
 
 # TODO(fxbug.dev/58160): clean up instances of this outside of third party code.

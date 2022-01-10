@@ -298,42 +298,6 @@ config("default_icf") {
   }
 }
 
-config("default_warnings") {
-  cflags = [
-    "-Wall",
-    "-Wextra",
-    "-Wconversion",
-    "-Wimplicit-fallthrough",
-    "-Wwrite-strings",
-    "-Wno-sign-conversion",
-    "-Wno-unused-parameter",
-  ]
-  if (is_gcc) {
-    cflags += [
-      # TODO(https://gcc.gnu.org/bugzilla/show_bug.cgi?id=90036): Re-enable
-      # once the bug is fixed.
-      "-Wno-format-overflow",
-
-      # TODO(fxbug.dev/64272): Disable "-Wmissing-field-initializers" which
-      # warns when designated initializers are used on some (but not all)
-      # fields in C++, contrary to its documentation (and Clang).
-      #
-      # See https://gcc.gnu.org/bugzilla/show_bug.cgi?id=39589.
-      "-Wno-missing-field-initializers",
-    ]
-
-    # GCC is pedantic about which flags apply to which language.
-    cflags_c = [ "-Wstrict-prototypes" ]
-    cflags_cc = [ "-Wextra-semi" ]
-  } else {
-    cflags += [
-      "-Wextra-semi",
-      "-Wnewline-eof",
-      "-Wstrict-prototypes",
-    ]
-  }
-}
-
 config("default_template_backtrace_limit") {
   cflags_cc = [ "-ftemplate-backtrace-limit=0" ]
 }
