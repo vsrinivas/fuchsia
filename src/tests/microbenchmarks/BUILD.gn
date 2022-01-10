@@ -45,6 +45,7 @@ executable("bin") {
     "threads.cc",
     "timer.cc",
     "util.cc",
+    "vmar.cc",
     "vmo.cc",
   ]
   deps = [
