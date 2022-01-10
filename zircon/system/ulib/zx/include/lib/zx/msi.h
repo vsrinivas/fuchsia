@@ -11,6 +11,7 @@
 #include <lib/zx/resource.h>
 #include <lib/zx/vmo.h>
 #include <stdint.h>
+#include <zircon/availability.h>
 #include <zircon/types.h>
 
 namespace zx {
@@ -35,12 +36,13 @@ class msi final : public object<msi> {
     return *this;
   }
 
-  static zx_status_t allocate(const resource& resource, uint32_t count, msi* result);
+  static zx_status_t allocate(const resource& resource, uint32_t count, msi* result)
+      ZX_AVAILABLE_SINCE(7);
   static zx_status_t create(const msi& msi, uint32_t options, uint32_t msi_id, const vmo& vmo,
-                            size_t vmo_offset, interrupt* result);
-};
+                            size_t vmo_offset, interrupt* result) ZX_AVAILABLE_SINCE(7);
+} ZX_AVAILABLE_SINCE(7);
 
-using unowned_msi = unowned<msi>;
+using unowned_msi = unowned<msi> ZX_AVAILABLE_SINCE(7);
 
 }  // namespace zx
 

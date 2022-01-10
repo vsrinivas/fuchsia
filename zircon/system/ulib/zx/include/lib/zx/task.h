@@ -9,6 +9,7 @@
 #include <lib/zx/handle.h>
 #include <lib/zx/object.h>
 #include <lib/zx/suspend_token.h>
+#include <zircon/availability.h>
 
 namespace zx {
 
@@ -26,21 +27,23 @@ class task : public object<T> {
 
   task(task&& other) : object<T>(other.release()) {}
 
-  zx_status_t kill() const {
+  zx_status_t kill() const ZX_AVAILABLE_SINCE(7) {
     static_assert(object_traits<T>::supports_kill, "Object must support being killed.");
-    return zx_task_kill(object<T>::get()); }
+    return zx_task_kill(object<T>::get());
+  }
 
-  zx_status_t suspend(suspend_token* result) const {
+  zx_status_t suspend(suspend_token* result) const ZX_AVAILABLE_SINCE(7) {
     // Assume |result| must refer to a different container than |this|, due
     // to strict aliasing.
     return zx_task_suspend_token(object<T>::get(), result->reset_and_get_address());
   }
 
-  zx_status_t create_exception_channel(uint32_t options, object<channel>* channel) const {
+  zx_status_t create_exception_channel(uint32_t options, object<channel>* channel) const
+      ZX_AVAILABLE_SINCE(7) {
     return zx_task_create_exception_channel(object<T>::get(), options,
                                             channel->reset_and_get_address());
   }
-};
+} ZX_AVAILABLE_SINCE(7);
 
 }  // namespace zx
 

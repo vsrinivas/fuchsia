@@ -7,6 +7,7 @@
 
 #include <lib/zx/handle.h>
 #include <lib/zx/object.h>
+#include <zircon/availability.h>
 
 namespace zx {
 
@@ -27,10 +28,10 @@ class pmt final : public object<pmt> {
     return *this;
   }
 
-  zx_status_t unpin() { return zx_pmt_unpin(release()); }
-};
+  zx_status_t unpin() ZX_AVAILABLE_SINCE(7) { return zx_pmt_unpin(release()); }
+} ZX_AVAILABLE_SINCE(7);
 
-using unowned_pmt = unowned<pmt>;
+using unowned_pmt = unowned<pmt> ZX_AVAILABLE_SINCE(7);
 
 }  // namespace zx
 

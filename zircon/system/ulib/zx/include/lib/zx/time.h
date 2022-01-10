@@ -6,6 +6,7 @@
 #define LIB_ZX_TIME_H_
 
 #include <stdint.h>
+#include <zircon/availability.h>
 #include <zircon/compiler.h>
 #include <zircon/syscalls.h>
 #include <zircon/time.h>
@@ -31,15 +32,15 @@ class duration final {
 
   constexpr zx_duration_t get() const { return value_; }
 
-  constexpr duration operator+(duration other) const {
+  constexpr duration operator+(duration other) const ZX_AVAILABLE_SINCE(7) {
     return duration(zx_duration_add_duration(value_, other.value_));
   }
 
-  constexpr duration operator-(duration other) const {
+  constexpr duration operator-(duration other) const ZX_AVAILABLE_SINCE(7) {
     return duration(zx_duration_sub_duration(value_, other.value_));
   }
 
-  constexpr duration operator*(int64_t multiplier) const {
+  constexpr duration operator*(int64_t multiplier) const ZX_AVAILABLE_SINCE(7) {
     return duration(zx_duration_mul_int64(value_, multiplier));
   }
 
@@ -51,17 +52,17 @@ class duration final {
 
   constexpr int64_t operator%(duration other) const { return value_ % other.value_; }
 
-  constexpr duration& operator+=(duration other) {
+  constexpr duration& operator+=(duration other) ZX_AVAILABLE_SINCE(7) {
     value_ = zx_duration_add_duration(value_, other.value_);
     return *this;
   }
 
-  constexpr duration& operator-=(duration other) {
+  constexpr duration& operator-=(duration other) ZX_AVAILABLE_SINCE(7) {
     value_ = zx_duration_sub_duration(value_, other.value_);
     return *this;
   }
 
-  constexpr duration& operator*=(int64_t multiplier) {
+  constexpr duration& operator*=(int64_t multiplier) ZX_AVAILABLE_SINCE(7) {
     value_ = zx_duration_mul_int64(value_, multiplier);
     return *this;
   }
@@ -101,7 +102,7 @@ class duration final {
 
  private:
   zx_duration_t value_ = 0;
-};
+} ZX_AVAILABLE_SINCE(7);
 
 class ticks final {
  public:
@@ -110,10 +111,10 @@ class ticks final {
   explicit constexpr ticks(zx_ticks_t value) : value_(value) {}
 
   // Constructs a tick object for the current tick counter in the system.
-  static ticks now() { return ticks(zx_ticks_get()); }
+  static ticks now() ZX_AVAILABLE_SINCE(7) { return ticks(zx_ticks_get()); }
 
   // Returns the number of ticks contained within one second.
-  static ticks per_second() { return ticks(zx_ticks_per_second()); }
+  static ticks per_second() ZX_AVAILABLE_SINCE(7) { return ticks(zx_ticks_per_second()); }
 
   // Acquires the number of ticks contained within this object.
   constexpr zx_ticks_t get() const { return value_; }
@@ -217,7 +218,7 @@ class ticks final {
   static constexpr zx_ticks_t INFINITE_PAST = std::numeric_limits<zx_ticks_t>::min();
 
   zx_ticks_t value_ = 0;
-};
+} ZX_AVAILABLE_SINCE(7);
 
 template <zx_clock_t kClockId>
 class basic_time final {
@@ -242,24 +243,24 @@ class basic_time final {
 
   zx_time_t* get_address() { return &value_; }
 
-  constexpr duration operator-(basic_time<kClockId> other) const {
+  constexpr duration operator-(basic_time<kClockId> other) const ZX_AVAILABLE_SINCE(7) {
     return duration(zx_time_sub_time(value_, other.value_));
   }
 
-  constexpr basic_time<kClockId> operator+(duration delta) const {
+  constexpr basic_time<kClockId> operator+(duration delta) const ZX_AVAILABLE_SINCE(7) {
     return basic_time<kClockId>(zx_time_add_duration(value_, delta.get()));
   }
 
-  constexpr basic_time<kClockId> operator-(duration delta) const {
+  constexpr basic_time<kClockId> operator-(duration delta) const ZX_AVAILABLE_SINCE(7) {
     return basic_time<kClockId>(zx_time_sub_duration(value_, delta.get()));
   }
 
-  constexpr basic_time<kClockId>& operator+=(duration delta) {
+  constexpr basic_time<kClockId>& operator+=(duration delta) ZX_AVAILABLE_SINCE(7) {
     value_ = zx_time_add_duration(value_, delta.get());
     return *this;
   }
 
-  constexpr basic_time<kClockId>& operator-=(duration delta) {
+  constexpr basic_time<kClockId>& operator-=(duration delta) ZX_AVAILABLE_SINCE(7) {
     value_ = zx_time_sub_duration(value_, delta.get());
     return *this;
   }
@@ -277,7 +278,7 @@ class basic_time final {
 
  private:
   zx_time_t value_ = 0;
-};
+} ZX_AVAILABLE_SINCE(7);
 
 template <zx_clock_t kClockId>
 constexpr basic_time<kClockId> operator+(duration delta, basic_time<kClockId> time) {
@@ -298,9 +299,11 @@ constexpr inline duration min(int64_t n) { return duration(ZX_MIN(n)); }
 
 constexpr inline duration hour(int64_t n) { return duration(ZX_HOUR(n)); }
 
-inline zx_status_t nanosleep(zx::time deadline) { return zx_nanosleep(deadline.get()); }
+inline zx_status_t nanosleep(zx::time deadline) ZX_AVAILABLE_SINCE(7) {
+  return zx_nanosleep(deadline.get());
+}
 
-inline time deadline_after(zx::duration nanoseconds) {
+inline time deadline_after(zx::duration nanoseconds) ZX_AVAILABLE_SINCE(7) {
   return time(zx_deadline_after(nanoseconds.get()));
 }
 

@@ -8,6 +8,7 @@
 #include <lib/zx/handle.h>
 #include <lib/zx/object.h>
 #include <lib/zx/time.h>
+#include <zircon/availability.h>
 
 namespace zx {
 
@@ -28,20 +29,22 @@ class port final : public object<port> {
     return *this;
   }
 
-  static zx_status_t create(uint32_t options, port* result);
+  static zx_status_t create(uint32_t options, port* result) ZX_AVAILABLE_SINCE(7);
 
-  zx_status_t queue(const zx_port_packet_t* packet) const { return zx_port_queue(get(), packet); }
+  zx_status_t queue(const zx_port_packet_t* packet) const ZX_AVAILABLE_SINCE(7) {
+    return zx_port_queue(get(), packet);
+  }
 
-  zx_status_t wait(zx::time deadline, zx_port_packet_t* packet) const {
+  zx_status_t wait(zx::time deadline, zx_port_packet_t* packet) const ZX_AVAILABLE_SINCE(7) {
     return zx_port_wait(get(), deadline.get(), packet);
   }
 
-  zx_status_t cancel(const object_base& source, uint64_t key) const {
+  zx_status_t cancel(const object_base& source, uint64_t key) const ZX_AVAILABLE_SINCE(7) {
     return zx_port_cancel(get(), source.get(), key);
   }
-};
+} ZX_AVAILABLE_SINCE(7);
 
-using unowned_port = unowned<port>;
+using unowned_port = unowned<port> ZX_AVAILABLE_SINCE(7);
 
 }  // namespace zx
 

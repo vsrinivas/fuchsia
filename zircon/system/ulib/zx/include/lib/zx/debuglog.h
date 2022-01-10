@@ -8,6 +8,7 @@
 #include <lib/zx/handle.h>
 #include <lib/zx/object.h>
 #include <lib/zx/resource.h>
+#include <zircon/availability.h>
 
 namespace zx {
 
@@ -28,18 +29,20 @@ class debuglog final : public object<debuglog> {
     return *this;
   }
 
-  static zx_status_t create(const resource& resource, uint32_t options, debuglog* result);
+  static zx_status_t create(const resource& resource, uint32_t options, debuglog* result)
+      ZX_AVAILABLE_SINCE(7);
 
-  zx_status_t write(uint32_t options, const void* buffer, size_t buffer_size) const {
+  zx_status_t write(uint32_t options, const void* buffer, size_t buffer_size) const
+      ZX_AVAILABLE_SINCE(7) {
     return zx_debuglog_write(get(), options, buffer, buffer_size);
   }
 
-  zx_status_t read(uint32_t options, void* buffer, size_t buffer_size) const {
+  zx_status_t read(uint32_t options, void* buffer, size_t buffer_size) const ZX_AVAILABLE_SINCE(7) {
     return zx_debuglog_read(get(), options, buffer, buffer_size);
   }
-};
+} ZX_AVAILABLE_SINCE(7);
 
-using unowned_debuglog = unowned<debuglog>;
+using unowned_debuglog = unowned<debuglog> ZX_AVAILABLE_SINCE(7);
 
 }  // namespace zx
 

@@ -7,6 +7,7 @@
 
 #include <lib/zx/handle.h>
 #include <lib/zx/object.h>
+#include <zircon/availability.h>
 
 namespace zx {
 
@@ -28,7 +29,9 @@ class suspend_token final : public object<suspend_token> {
     reset(other.release());
     return *this;
   }
-};
+} ZX_AVAILABLE_SINCE(7);
+
+using unowned_suspend_token = unowned<suspend_token> ZX_AVAILABLE_SINCE(7);
 
 }  // namespace zx
 

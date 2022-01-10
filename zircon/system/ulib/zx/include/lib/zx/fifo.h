@@ -7,6 +7,7 @@
 
 #include <lib/zx/handle.h>
 #include <lib/zx/object.h>
+#include <zircon/availability.h>
 
 namespace zx {
 
@@ -28,19 +29,20 @@ class fifo final : public object<fifo> {
   }
 
   static zx_status_t create(uint32_t elem_count, uint32_t elem_size, uint32_t options, fifo* out0,
-                            fifo* out1);
+                            fifo* out1) ZX_AVAILABLE_SINCE(7);
 
-  zx_status_t write(size_t elem_size, const void* buffer, size_t count,
-                    size_t* actual_count) const {
+  zx_status_t write(size_t elem_size, const void* buffer, size_t count, size_t* actual_count) const
+      ZX_AVAILABLE_SINCE(7) {
     return zx_fifo_write(get(), elem_size, buffer, count, actual_count);
   }
 
-  zx_status_t read(size_t elem_size, void* buffer, size_t count, size_t* actual_count) const {
+  zx_status_t read(size_t elem_size, void* buffer, size_t count, size_t* actual_count) const
+      ZX_AVAILABLE_SINCE(7) {
     return zx_fifo_read(get(), elem_size, buffer, count, actual_count);
   }
-};
+} ZX_AVAILABLE_SINCE(7);
 
-using unowned_fifo = unowned<fifo>;
+using unowned_fifo = unowned<fifo> ZX_AVAILABLE_SINCE(7);
 
 }  // namespace zx
 

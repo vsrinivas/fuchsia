@@ -7,6 +7,7 @@
 
 #include <lib/zx/object.h>
 #include <lib/zx/vmo.h>
+#include <zircon/availability.h>
 #include <zircon/process.h>
 
 namespace zx {
@@ -31,32 +32,35 @@ class vmar final : public object<vmar> {
   }
 
   zx_status_t map(zx_vm_option_t options, size_t vmar_offset, const vmo& vmo_handle,
-                  uint64_t vmo_offset, size_t len, zx_vaddr_t* ptr) const {
+                  uint64_t vmo_offset, size_t len, zx_vaddr_t* ptr) const ZX_AVAILABLE_SINCE(7) {
     return zx_vmar_map(get(), options, vmar_offset, vmo_handle.get(), vmo_offset, len, ptr);
   }
 
-  zx_status_t unmap(uintptr_t address, size_t len) const {
+  zx_status_t unmap(uintptr_t address, size_t len) const ZX_AVAILABLE_SINCE(7) {
     return zx_vmar_unmap(get(), address, len);
   }
 
-  zx_status_t protect(zx_vm_option_t prot, uintptr_t address, size_t len) const {
+  zx_status_t protect(zx_vm_option_t prot, uintptr_t address, size_t len) const
+      ZX_AVAILABLE_SINCE(7) {
     return zx_vmar_protect(get(), prot, address, len);
   }
 
   zx_status_t op_range(uint32_t op, uint64_t offset, uint64_t size, void* buffer,
-                       size_t buffer_size) const {
+                       size_t buffer_size) const ZX_AVAILABLE_SINCE(7) {
     return zx_vmar_op_range(get(), op, offset, size, buffer, buffer_size);
   }
 
-  zx_status_t destroy() const { return zx_vmar_destroy(get()); }
+  zx_status_t destroy() const ZX_AVAILABLE_SINCE(7) { return zx_vmar_destroy(get()); }
 
   zx_status_t allocate(uint32_t options, size_t offset, size_t size, vmar* child,
-                       uintptr_t* child_addr) const;
+                       uintptr_t* child_addr) const ZX_AVAILABLE_SINCE(7);
 
-  static inline unowned<vmar> root_self() { return unowned<vmar>(zx_vmar_root_self()); }
-};
+  static inline unowned<vmar> root_self() ZX_AVAILABLE_SINCE(7) {
+    return unowned<vmar>(zx_vmar_root_self());
+  }
+} ZX_AVAILABLE_SINCE(7);
 
-using unowned_vmar = unowned<vmar>;
+using unowned_vmar = unowned<vmar> ZX_AVAILABLE_SINCE(7);
 
 }  // namespace zx
 

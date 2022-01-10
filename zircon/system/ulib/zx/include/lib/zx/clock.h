@@ -8,6 +8,7 @@
 #include <lib/zx/handle.h>
 #include <lib/zx/object.h>
 #include <lib/zx/time.h>
+#include <zircon/availability.h>
 #include <zircon/syscalls/clock.h>
 
 namespace zx {
@@ -59,7 +60,7 @@ class clock final : public object<clock> {
     static constexpr uint32_t kArgsVersion = 2u;
     zx_clock_update_args_v2_t args_{};
     uint64_t options_ = 0;
-  };
+  } ZX_AVAILABLE_SINCE(7);
 
   static constexpr zx_obj_type_t TYPE = ZX_OBJ_TYPE_CLOCK;
 
@@ -83,28 +84,31 @@ class clock final : public object<clock> {
     return *this;
   }
 
-  static zx_status_t create(uint64_t options, const zx_clock_create_args_v1* args, clock* result) {
+  static zx_status_t create(uint64_t options, const zx_clock_create_args_v1* args, clock* result)
+      ZX_AVAILABLE_SINCE(7) {
     options = (options & ~ZX_CLOCK_ARGS_VERSION_MASK) |
               ((args != nullptr) ? ZX_CLOCK_ARGS_VERSION(1) : 0);
 
     return zx_clock_create(options, args, result->reset_and_get_address());
   }
 
-  zx_status_t read(zx_time_t* now_out) const { return zx_clock_read(value_, now_out); }
+  zx_status_t read(zx_time_t* now_out) const ZX_AVAILABLE_SINCE(7) {
+    return zx_clock_read(value_, now_out);
+  }
 
-  zx_status_t get_details(zx_clock_details_v1_t* details_out) const {
+  zx_status_t get_details(zx_clock_details_v1_t* details_out) const ZX_AVAILABLE_SINCE(7) {
     return zx_clock_get_details(value_, ZX_CLOCK_ARGS_VERSION(1), details_out);
   }
 
-  zx_status_t update(const update_args& args) const {
+  zx_status_t update(const update_args& args) const ZX_AVAILABLE_SINCE(7) {
     uint64_t options = args.options_ | ZX_CLOCK_ARGS_VERSION(args.kArgsVersion);
     return zx_clock_update(value_, options, &args.args_);
   }
 
-  static time get_monotonic() { return time(zx_clock_get_monotonic()); }
-};
+  static time get_monotonic() ZX_AVAILABLE_SINCE(7) { return time(zx_clock_get_monotonic()); }
+} ZX_AVAILABLE_SINCE(7);
 
-using unowned_clock = unowned<clock>;
+using unowned_clock = unowned<clock> ZX_AVAILABLE_SINCE(7);
 
 }  // namespace zx
 

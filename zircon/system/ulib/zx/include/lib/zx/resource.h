@@ -7,6 +7,7 @@
 
 #include <lib/zx/handle.h>
 #include <lib/zx/object.h>
+#include <zircon/availability.h>
 
 namespace zx {
 
@@ -28,10 +29,11 @@ class resource final : public object<resource> {
   }
 
   static zx_status_t create(const resource& parent, uint32_t options, uint64_t base, size_t len,
-                            const char* name, size_t namelen, resource* result);
-};
+                            const char* name, size_t namelen, resource* result)
+      ZX_AVAILABLE_SINCE(7);
+} ZX_AVAILABLE_SINCE(7);
 
-using unowned_resource = unowned<resource>;
+using unowned_resource = unowned<resource> ZX_AVAILABLE_SINCE(7);
 
 }  // namespace zx
 

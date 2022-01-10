@@ -9,6 +9,7 @@
 #include <lib/zx/task.h>
 #include <lib/zx/vmar.h>
 #include <lib/zx/vmo.h>
+#include <zircon/availability.h>
 #include <zircon/process.h>
 
 namespace zx {
@@ -37,27 +38,32 @@ class process final : public task<process> {
   // the many details of creating a process beyond simply creating
   // the kernel structure.
   static zx_status_t create(const job& job, const char* name, uint32_t name_len, uint32_t flags,
-                            process* proc, vmar* root_vmar);
+                            process* proc, vmar* root_vmar) ZX_AVAILABLE_SINCE(7);
 
   zx_status_t start(const thread& thread_handle, uintptr_t entry, uintptr_t stack,
-                    handle arg_handle, uintptr_t arg2) const;
+                    handle arg_handle, uintptr_t arg2) const ZX_AVAILABLE_SINCE(7);
 
-  zx_status_t read_memory(uintptr_t vaddr, void* buffer, size_t len, size_t* actual) const {
+  zx_status_t read_memory(uintptr_t vaddr, void* buffer, size_t len, size_t* actual) const
+      ZX_AVAILABLE_SINCE(7) {
     return zx_process_read_memory(get(), vaddr, buffer, len, actual);
   }
 
-  zx_status_t write_memory(uintptr_t vaddr, const void* buffer, size_t len, size_t* actual) const {
+  zx_status_t write_memory(uintptr_t vaddr, const void* buffer, size_t len, size_t* actual) const
+      ZX_AVAILABLE_SINCE(7) {
     return zx_process_write_memory(get(), vaddr, buffer, len, actual);
   }
 
   // Provide strongly-typed overload, in addition to get_child(handle*).
   using task<process>::get_child;
-  zx_status_t get_child(uint64_t koid, zx_rights_t rights, thread* result) const;
+  zx_status_t get_child(uint64_t koid, zx_rights_t rights, thread* result) const
+      ZX_AVAILABLE_SINCE(7);
 
-  static inline unowned<process> self() { return unowned<process>(zx_process_self()); }
-};
+  static inline unowned<process> self() ZX_AVAILABLE_SINCE(7) {
+    return unowned<process>(zx_process_self());
+  }
+} ZX_AVAILABLE_SINCE(7);
 
-using unowned_process = unowned<process>;
+using unowned_process = unowned<process> ZX_AVAILABLE_SINCE(7);
 
 }  // namespace zx
 

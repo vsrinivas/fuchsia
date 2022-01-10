@@ -7,6 +7,7 @@
 
 #include <lib/zx/handle.h>
 #include <lib/zx/object.h>
+#include <zircon/availability.h>
 
 namespace zx {
 
@@ -27,10 +28,11 @@ class eventpair final : public object<eventpair> {
     return *this;
   }
 
-  static zx_status_t create(uint32_t options, eventpair* endpoint0, eventpair* endpoint1);
-};
+  static zx_status_t create(uint32_t options, eventpair* endpoint0, eventpair* endpoint1)
+      ZX_AVAILABLE_SINCE(7);
+} ZX_AVAILABLE_SINCE(7);
 
-using unowned_eventpair = unowned<eventpair>;
+using unowned_eventpair = unowned<eventpair> ZX_AVAILABLE_SINCE(7);
 
 }  // namespace zx
 

@@ -6,11 +6,12 @@
 #define LIB_ZX_HANDLE_H_
 
 #include <lib/zx/object.h>
+#include <zircon/availability.h>
 
 namespace zx {
 
-using handle = object<void>;
-using unowned_handle = unowned<handle>;
+using handle = object<void> ZX_AVAILABLE_SINCE(7);
+using unowned_handle = unowned<handle> ZX_AVAILABLE_SINCE(7);
 
 }  // namespace zx
 

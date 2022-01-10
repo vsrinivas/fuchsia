@@ -7,6 +7,7 @@
 
 #include <lib/zx/object.h>
 #include <lib/zx/task.h>
+#include <zircon/availability.h>
 #include <zircon/process.h>
 
 namespace zx {
@@ -33,31 +34,35 @@ class thread final : public task<thread> {
   // std::thread or thrd_create, which properly integrates with the
   // thread-local data structures in libc.
   static zx_status_t create(const process& process, const char* name, uint32_t name_len,
-                            uint32_t flags, thread* result);
+                            uint32_t flags, thread* result) ZX_AVAILABLE_SINCE(7);
 
   // The first variant maps exactly to the syscall and can be used for
   // launching threads in remote processes. The second variant is for
   // conveniently launching threads in the current process.
-  zx_status_t start(uintptr_t thread_entry, uintptr_t stack, uintptr_t arg1, uintptr_t arg2) const {
+  zx_status_t start(uintptr_t thread_entry, uintptr_t stack, uintptr_t arg1, uintptr_t arg2) const
+      ZX_AVAILABLE_SINCE(7) {
     return zx_thread_start(get(), thread_entry, stack, arg1, arg2);
   }
   zx_status_t start(void (*thread_entry)(uintptr_t arg1, uintptr_t arg2), void* stack,
-                    uintptr_t arg1, uintptr_t arg2) const {
+                    uintptr_t arg1, uintptr_t arg2) const ZX_AVAILABLE_SINCE(7) {
     return zx_thread_start(get(), reinterpret_cast<uintptr_t>(thread_entry),
                            reinterpret_cast<uintptr_t>(stack), arg1, arg2);
   }
 
-  zx_status_t read_state(uint32_t kind, void* buffer, size_t len) const {
+  zx_status_t read_state(uint32_t kind, void* buffer, size_t len) const ZX_AVAILABLE_SINCE(7) {
     return zx_thread_read_state(get(), kind, buffer, len);
   }
-  zx_status_t write_state(uint32_t kind, const void* buffer, size_t len) const {
+  zx_status_t write_state(uint32_t kind, const void* buffer, size_t len) const
+      ZX_AVAILABLE_SINCE(7) {
     return zx_thread_write_state(get(), kind, buffer, len);
   }
 
-  static inline unowned<thread> self() { return unowned<thread>(zx_thread_self()); }
+  static inline unowned<thread> self() ZX_AVAILABLE_SINCE(7) {
+    return unowned<thread>(zx_thread_self());
+  }
 };
 
-using unowned_thread = unowned<thread>;
+using unowned_thread = unowned<thread> ZX_AVAILABLE_SINCE(7);
 
 }  // namespace zx
 

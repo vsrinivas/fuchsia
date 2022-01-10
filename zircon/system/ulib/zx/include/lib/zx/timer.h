@@ -7,7 +7,7 @@
 
 #include <lib/zx/handle.h>
 #include <lib/zx/object.h>
-
+#include <zircon/availability.h>
 #include <zircon/types.h>
 
 namespace zx {
@@ -29,16 +29,17 @@ class timer final : public object<timer> {
     return *this;
   }
 
-  static zx_status_t create(uint32_t options, zx_clock_t clock_id, timer* result);
+  static zx_status_t create(uint32_t options, zx_clock_t clock_id, timer* result)
+      ZX_AVAILABLE_SINCE(7);
 
-  zx_status_t set(zx::time deadline, zx::duration slack) const {
+  zx_status_t set(zx::time deadline, zx::duration slack) const ZX_AVAILABLE_SINCE(7) {
     return zx_timer_set(get(), deadline.get(), slack.get());
   }
 
-  zx_status_t cancel() const { return zx_timer_cancel(get()); }
-};
+  zx_status_t cancel() const ZX_AVAILABLE_SINCE(7) { return zx_timer_cancel(get()); }
+} ZX_AVAILABLE_SINCE(7);
 
-using unowned_timer = unowned<timer>;
+using unowned_timer = unowned<timer> ZX_AVAILABLE_SINCE(7);
 
 }  // namespace zx
 

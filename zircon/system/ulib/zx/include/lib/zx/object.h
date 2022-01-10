@@ -7,6 +7,7 @@
 
 #include <lib/zx/object_traits.h>
 #include <lib/zx/time.h>
+#include <zircon/availability.h>
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
 
@@ -51,15 +52,17 @@ class object_base {
   }
 
   zx_status_t get_info(uint32_t topic, void* buffer, size_t buffer_size, size_t* actual_count,
-                       size_t* avail_count) const {
+                       size_t* avail_count) const ZX_AVAILABLE_SINCE(7) {
     return zx_object_get_info(get(), topic, buffer, buffer_size, actual_count, avail_count);
   }
 
-  zx_status_t get_property(uint32_t property, void* value, size_t size) const {
+  zx_status_t get_property(uint32_t property, void* value, size_t size) const
+      ZX_AVAILABLE_SINCE(7) {
     return zx_object_get_property(get(), property, value, size);
   }
 
-  zx_status_t set_property(uint32_t property, const void* value, size_t size) const {
+  zx_status_t set_property(uint32_t property, const void* value, size_t size) const
+      ZX_AVAILABLE_SINCE(7) {
     return zx_object_set_property(get(), property, value, size);
   }
 
@@ -82,7 +85,7 @@ class object_base {
   }
 
   zx_handle_t value_;
-};
+} ZX_AVAILABLE_SINCE(7);
 
 // Forward declaration for borrow method.
 template <typename T>
@@ -114,7 +117,7 @@ class object : public object_base {
     other.value_ = tmp;
   }
 
-  zx_status_t duplicate(zx_rights_t rights, object<T>* result) const {
+  zx_status_t duplicate(zx_rights_t rights, object<T>* result) const ZX_AVAILABLE_SINCE(7) {
     static_assert(object_traits<T>::supports_duplication, "Object must support duplication.");
     zx_handle_t h = ZX_HANDLE_INVALID;
     zx_status_t status = zx_handle_duplicate(value_, rights, &h);
@@ -122,7 +125,7 @@ class object : public object_base {
     return status;
   }
 
-  zx_status_t replace(zx_rights_t rights, object<T>* result) {
+  zx_status_t replace(zx_rights_t rights, object<T>* result) ZX_AVAILABLE_SINCE(7) {
     zx_handle_t h = ZX_HANDLE_INVALID;
     zx_status_t status = zx_handle_replace(value_, rights, &h);
     // We store ZX_HANDLE_INVALID to value_ before calling reset on result
@@ -132,34 +135,37 @@ class object : public object_base {
     return status;
   }
 
-  zx_status_t wait_one(zx_signals_t signals, zx::time deadline, zx_signals_t* pending) const {
+  zx_status_t wait_one(zx_signals_t signals, zx::time deadline, zx_signals_t* pending) const
+      ZX_AVAILABLE_SINCE(7) {
     static_assert(object_traits<T>::supports_wait, "Object is not waitable.");
     return zx_object_wait_one(value_, signals, deadline.get(), pending);
   }
 
   zx_status_t wait_async(const object<port>& port, uint64_t key, zx_signals_t signals,
-                         uint32_t options) const {
+                         uint32_t options) const ZX_AVAILABLE_SINCE(7) {
     static_assert(object_traits<T>::supports_wait, "Object is not waitable.");
     return zx_object_wait_async(value_, port.get(), key, signals, options);
   }
 
-  static zx_status_t wait_many(zx_wait_item_t* wait_items, uint32_t count, zx::time deadline) {
+  static zx_status_t wait_many(zx_wait_item_t* wait_items, uint32_t count, zx::time deadline)
+      ZX_AVAILABLE_SINCE(7) {
     static_assert(object_traits<T>::supports_wait, "Object is not waitable.");
     return zx_object_wait_many(wait_items, count, deadline.get());
   }
 
-  zx_status_t signal(uint32_t clear_mask, uint32_t set_mask) const {
+  zx_status_t signal(uint32_t clear_mask, uint32_t set_mask) const ZX_AVAILABLE_SINCE(7) {
     static_assert(object_traits<T>::supports_user_signal, "Object must support user signals.");
     return zx_object_signal(get(), clear_mask, set_mask);
   }
 
-  zx_status_t signal_peer(uint32_t clear_mask, uint32_t set_mask) const {
+  zx_status_t signal_peer(uint32_t clear_mask, uint32_t set_mask) const ZX_AVAILABLE_SINCE(7) {
     static_assert(object_traits<T>::supports_user_signal, "Object must support user signals.");
     static_assert(object_traits<T>::has_peer_handle, "Object must have peer object.");
     return zx_object_signal_peer(get(), clear_mask, set_mask);
   }
 
-  zx_status_t get_child(uint64_t koid, zx_rights_t rights, object<void>* result) const {
+  zx_status_t get_child(uint64_t koid, zx_rights_t rights, object<void>* result) const
+      ZX_AVAILABLE_SINCE(7) {
     static_assert(object_traits<T>::supports_get_child, "Object must support getting children.");
     // Allow for |result| and |this| being the same container, though that
     // can only happen for |T=void|, due to strict aliasing.
@@ -169,7 +175,8 @@ class object : public object_base {
     return status;
   }
 
-  zx_status_t set_profile(const object<profile>& profile, uint32_t options) const {
+  zx_status_t set_profile(const object<profile>& profile, uint32_t options) const
+      ZX_AVAILABLE_SINCE(7) {
     static_assert(object_traits<T>::supports_set_profile,
                   "Object must support scheduling profiles.");
     return zx_object_set_profile(get(), profile.get(), options);
@@ -188,7 +195,7 @@ class object : public object_base {
   struct is_same<A, A> {
     static const bool value = true;
   };
-};
+} ZX_AVAILABLE_SINCE(7);
 
 template <typename T>
 bool operator==(const object<T>& a, const object<T>& b) {
@@ -331,7 +338,7 @@ class unowned final {
   }
 
   T value_;
-};
+} ZX_AVAILABLE_SINCE(7);
 
 template <typename T>
 bool operator==(const unowned<T>& a, const unowned<T>& b) {

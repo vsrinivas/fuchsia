@@ -5,8 +5,9 @@
 #ifndef LIB_ZX_JOB_H_
 #define LIB_ZX_JOB_H_
 
-#include <lib/zx/task.h>
 #include <lib/zx/process.h>
+#include <lib/zx/task.h>
+#include <zircon/availability.h>
 
 namespace zx {
 
@@ -29,34 +30,40 @@ class job final : public task<job> {
     return *this;
   }
 
-  static zx_status_t create(const zx::job& parent, uint32_t options, job* result);
+  static zx_status_t create(const zx::job& parent, uint32_t options, job* result)
+      ZX_AVAILABLE_SINCE(7);
 
   // Provide strongly-typed overloads, in addition to get_child(handle*).
   using task<job>::get_child;
-  zx_status_t get_child(uint64_t koid, zx_rights_t rights, job* result) const {
+  zx_status_t get_child(uint64_t koid, zx_rights_t rights, job* result) const
+      ZX_AVAILABLE_SINCE(7) {
     // Allow for |result| and |this| aliasing the same container.
     job h;
     zx_status_t status = zx_object_get_child(value_, koid, rights, h.reset_and_get_address());
     result->reset(h.release());
     return status;
   }
-  zx_status_t get_child(uint64_t koid, zx_rights_t rights, process* result) const;
+  zx_status_t get_child(uint64_t koid, zx_rights_t rights, process* result) const
+      ZX_AVAILABLE_SINCE(7);
 
-  zx_status_t set_policy(uint32_t options, uint32_t topic, const void* policy,
-                         uint32_t count) const {
+  zx_status_t set_policy(uint32_t options, uint32_t topic, const void* policy, uint32_t count) const
+      ZX_AVAILABLE_SINCE(7) {
     return zx_job_set_policy(get(), options, topic, policy, count);
   }
 
-  zx_status_t set_critical(uint32_t options, const zx::process& process) const {
+  zx_status_t set_critical(uint32_t options, const zx::process& process) const
+      ZX_AVAILABLE_SINCE(7) {
     return zx_job_set_critical(get(), options, process.get());
   }
 
   // Ideally this would be called zx::job::default(), but default is a
   // C++ keyword and cannot be used as a function name.
-  static inline unowned<job> default_job() { return unowned<job>(zx_job_default()); }
-};
+  static inline unowned<job> default_job() ZX_AVAILABLE_SINCE(7) {
+    return unowned<job>(zx_job_default());
+  }
+} ZX_AVAILABLE_SINCE(7);
 
-using unowned_job = unowned<job>;
+using unowned_job = unowned<job> ZX_AVAILABLE_SINCE(7);
 
 }  // namespace zx
 

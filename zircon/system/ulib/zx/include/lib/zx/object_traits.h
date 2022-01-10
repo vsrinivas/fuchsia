@@ -5,6 +5,8 @@
 #ifndef LIB_ZX_OBJECT_TRAITS_H_
 #define LIB_ZX_OBJECT_TRAITS_H_
 
+#include <zircon/availability.h>
+
 namespace zx {
 
 class channel;

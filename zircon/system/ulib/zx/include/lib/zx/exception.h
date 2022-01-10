@@ -9,6 +9,7 @@
 #include <lib/zx/object.h>
 #include <lib/zx/process.h>
 #include <lib/zx/thread.h>
+#include <zircon/availability.h>
 
 namespace zx {
 
@@ -29,14 +30,16 @@ class exception final : public object<exception> {
     return *this;
   }
 
-  zx_status_t get_thread(thread* thread) const {
+  zx_status_t get_thread(thread* thread) const ZX_AVAILABLE_SINCE(7) {
     return zx_exception_get_thread(get(), thread->reset_and_get_address());
   }
 
-  zx_status_t get_process(process* process) const {
+  zx_status_t get_process(process* process) const ZX_AVAILABLE_SINCE(7) {
     return zx_exception_get_process(get(), process->reset_and_get_address());
   }
-};
+} ZX_AVAILABLE_SINCE(7);
+
+using unowned_exception = unowned<exception> ZX_AVAILABLE_SINCE(7);
 
 }  // namespace zx
 

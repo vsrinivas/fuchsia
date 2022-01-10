@@ -7,6 +7,7 @@
 
 #include <lib/zx/handle.h>
 #include <lib/zx/object.h>
+#include <zircon/availability.h>
 
 namespace zx {
 
@@ -27,10 +28,10 @@ class event final : public object<event> {
     return *this;
   }
 
-  static zx_status_t create(uint32_t options, event* result);
-};
+  static zx_status_t create(uint32_t options, event* result) ZX_AVAILABLE_SINCE(7);
+} ZX_AVAILABLE_SINCE(7);
 
-using unowned_event = unowned<event>;
+using unowned_event = unowned<event> ZX_AVAILABLE_SINCE(7);
 
 }  // namespace zx
 

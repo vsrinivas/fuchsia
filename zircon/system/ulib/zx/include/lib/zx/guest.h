@@ -10,6 +10,7 @@
 #include <lib/zx/port.h>
 #include <lib/zx/resource.h>
 #include <lib/zx/vmo.h>
+#include <zircon/availability.h>
 
 namespace zx {
 
@@ -30,15 +31,16 @@ class guest final : public object<guest> {
     return *this;
   }
 
-  static zx_status_t create(const resource& resource, uint32_t options, guest* guest, vmar* vmar);
+  static zx_status_t create(const resource& resource, uint32_t options, guest* guest, vmar* vmar)
+      ZX_AVAILABLE_SINCE(7);
 
   zx_status_t set_trap(uint32_t kind, zx_gpaddr_t addr, size_t len, const port& port,
-                       uint64_t key) const {
+                       uint64_t key) const ZX_AVAILABLE_SINCE(7) {
     return zx_guest_set_trap(get(), kind, addr, len, port.get(), key);
   }
-};
+} ZX_AVAILABLE_SINCE(7);
 
-using unowned_guest = unowned<guest>;
+using unowned_guest = unowned<guest> ZX_AVAILABLE_SINCE(7);
 
 }  // namespace zx
 

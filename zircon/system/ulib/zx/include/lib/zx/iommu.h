@@ -7,6 +7,7 @@
 
 #include <lib/zx/object.h>
 #include <lib/zx/resource.h>
+#include <zircon/availability.h>
 
 namespace zx {
 
@@ -28,10 +29,10 @@ class iommu final : public object<iommu> {
   }
 
   static zx_status_t create(const resource& resource, uint32_t type, const void* desc,
-                            size_t desc_size, iommu* result);
-};
+                            size_t desc_size, iommu* result) ZX_AVAILABLE_SINCE(7);
+} ZX_AVAILABLE_SINCE(7);
 
-using unowned_iommu = unowned<iommu>;
+using unowned_iommu = unowned<iommu> ZX_AVAILABLE_SINCE(7);
 
 }  // namespace zx
 
