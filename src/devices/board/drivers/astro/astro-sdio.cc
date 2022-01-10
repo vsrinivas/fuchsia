@@ -88,6 +88,7 @@ static aml_sdmmc_config_t config = {
     .max_freq = 208'000'000,
     .version_3 = true,
     .prefs = 0,
+    .use_new_tuning = true,
 };
 
 static const wifi_config_t wifi_config = {
