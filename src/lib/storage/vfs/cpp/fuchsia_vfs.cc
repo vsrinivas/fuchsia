@@ -68,8 +68,8 @@ void FilesystemInfo::SetFsId(const zx::event& event) {
   }
 }
 
-fuchsia_io_admin::wire::FilesystemInfo FilesystemInfo::ToFidl() const {
-  fuchsia_io_admin::wire::FilesystemInfo out = {};
+fuchsia_io::wire::FilesystemInfo FilesystemInfo::ToFidl() const {
+  fuchsia_io::wire::FilesystemInfo out = {};
 
   out.total_bytes = total_bytes;
   out.used_bytes = used_bytes;
@@ -81,9 +81,9 @@ fuchsia_io_admin::wire::FilesystemInfo FilesystemInfo::ToFidl() const {
   out.max_filename_size = max_filename_size;
   out.fs_type = fs_type;
 
-  ZX_DEBUG_ASSERT(name.size() < fuchsia_io_admin::wire::kMaxFsNameBuffer);
+  ZX_DEBUG_ASSERT(name.size() < fuchsia_io::wire::kMaxFsNameBuffer);
   out.name[name.copy(reinterpret_cast<char*>(out.name.data()),
-                     fuchsia_io_admin::wire::kMaxFsNameBuffer - 1)] = '\0';
+                     fuchsia_io::wire::kMaxFsNameBuffer - 1)] = '\0';
 
   return out;
 }

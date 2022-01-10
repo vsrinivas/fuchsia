@@ -21,12 +21,12 @@ namespace {
 using QueryFilesystemTest = FilesystemTest;
 
 TEST_P(QueryFilesystemTest, QueryTest) {
-  // First use DirectoryAdmin to get filesystem info.
+  // First use Directory to get filesystem info.
 
   fbl::unique_fd root_fd(open(fs().mount_path().c_str(), O_RDONLY | O_DIRECTORY));
   ASSERT_TRUE(root_fd);
   fdio_cpp::UnownedFdioCaller root_connection(root_fd);
-  auto result = fidl::WireCall(fidl::UnownedClientEnd<fuchsia_io_admin::DirectoryAdmin>(
+  auto result = fidl::WireCall(fidl::UnownedClientEnd<fuchsia_io::Directory>(
                                    zx::unowned_channel(root_connection.borrow_channel())))
                     ->QueryFilesystem();
   ASSERT_TRUE(result.ok());
@@ -66,7 +66,7 @@ TEST_P(QueryFilesystemTest, QueryTest) {
   std::iota(&buf[0], &buf[buf_size], 0);
   EXPECT_EQ(write(fd.get(), buf.get(), buf_size), static_cast<ssize_t>(buf_size));
 
-  auto result2 = fidl::WireCall(fidl::UnownedClientEnd<fuchsia_io_admin::DirectoryAdmin>(
+  auto result2 = fidl::WireCall(fidl::UnownedClientEnd<fuchsia_io::Directory>(
                                     zx::unowned_channel(root_connection.borrow_channel())))
                      ->QueryFilesystem();
   ASSERT_TRUE(result2.ok() && result2->s == ZX_OK);

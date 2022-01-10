@@ -106,14 +106,14 @@ StorageWatchdog::StorageUsage StorageWatchdog::GetStorageUsage() {
     return StorageUsage();
   }
 
-  fuchsia_io_admin::wire::FilesystemInfo info;
+  fuchsia_io::wire::FilesystemInfo info;
   fdio_cpp::FdioCaller caller(std::move(fd));
   zx_status_t status = GetFilesystemInfo(caller.borrow_channel(), &info);
   if (status != ZX_OK) {
     FX_LOGS(WARNING) << "storage_watchdog: cannot query filesystem: " << status;
     return StorageUsage();
   }
-  info.name[fuchsia_io_admin::wire::kMaxFsNameBuffer - 1] = '\0';
+  info.name[fuchsia_io::wire::kMaxFsNameBuffer - 1] = '\0';
 
   // The number of bytes which may be allocated plus the number of bytes which have been allocated.
   // |total_bytes| is the amount of data (not counting metadata like inode storage) that minfs has
@@ -179,9 +179,9 @@ void StorageWatchdog::PurgeCache() {
 }
 
 zx_status_t StorageWatchdog::GetFilesystemInfo(zx_handle_t directory,
-                                               fuchsia_io_admin::wire::FilesystemInfo* out_info) {
-  auto result = fidl::WireCall(fidl::UnownedClientEnd<fuchsia_io_admin::DirectoryAdmin>(directory))
-                    ->QueryFilesystem();
+                                               fuchsia_io::wire::FilesystemInfo* out_info) {
+  auto result =
+      fidl::WireCall(fidl::UnownedClientEnd<fuchsia_io::Directory>(directory))->QueryFilesystem();
   if (result.ok())
     *out_info = *result->info;
   return !result.ok() ? result.status() : result->s;

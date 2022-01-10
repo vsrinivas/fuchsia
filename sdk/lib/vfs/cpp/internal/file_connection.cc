@@ -237,5 +237,9 @@ void FileConnection::NodeSetFlags(uint32_t flags, NodeSetFlagsCallback callback)
   callback(ZX_ERR_NOT_SUPPORTED);
 }
 
+void FileConnection::QueryFilesystem(QueryFilesystemCallback callback) {
+  callback(ZX_ERR_NOT_SUPPORTED, nullptr);
+}
+
 }  // namespace internal
 }  // namespace vfs

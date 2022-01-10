@@ -54,6 +54,7 @@ class FileConnection final : public Connection, public fuchsia::io::File {
   void GetBackingMemory(fuchsia::io::VmoFlags flags, GetBackingMemoryCallback callback) override;
   void NodeGetFlags(NodeGetFlagsCallback callback) override;
   void NodeSetFlags(uint32_t flags, NodeSetFlagsCallback callback) override;
+  void QueryFilesystem(QueryFilesystemCallback callback) override;
 
  protected:
   // |Connection| Implementation:

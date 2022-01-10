@@ -18,7 +18,6 @@ import (
 	"unsafe"
 
 	"fidl/fuchsia/io"
-	"fidl/fuchsia/io/admin"
 	"fidl/fuchsia/io2"
 	"fidl/fuchsia/mem"
 
@@ -405,11 +404,11 @@ func (d *directoryWrapper) Watch(_ fidl.Context, mask uint32, options uint32, wa
 	return int32(zx.ErrNotSupported), nil
 }
 
-func (d *directoryWrapper) QueryFilesystem(fidl.Context) (int32, *admin.FilesystemInfo, error) {
+func (d *directoryWrapper) QueryFilesystem(fidl.Context) (int32, *io.FilesystemInfo, error) {
 	totalBytes := uint64(d.vfs.fs.Size())
 	usedBytes := totalBytes - uint64(d.vfs.fs.FreeSize())
 
-	info := admin.FilesystemInfo{
+	info := io.FilesystemInfo{
 		TotalBytes:      totalBytes,
 		UsedBytes:       usedBytes,
 		TotalNodes:      0,
@@ -655,6 +654,10 @@ func (f *fileWrapper) SetFlags(_ fidl.Context, inFlags uint32) (int32, error) {
 	flags := uint32(openFlagsFromFIDL(inFlags, 0))
 	uflags := (uint32(f.file.GetOpenFlags()) & ^statusFlags) | (flags & statusFlags)
 	return int32(errorToZx(f.file.SetOpenFlags(fs.OpenFlags(uflags)))), nil
+}
+
+func (d *fileWrapper) QueryFilesystem(fidl.Context) (int32, *io.FilesystemInfo, error) {
+	return int32(zx.ErrNotSupported), nil, nil
 }
 
 func (f *fileWrapper) GetBuffer(_ fidl.Context, flags uint32) (int32, *mem.Buffer, error) {

@@ -43,6 +43,8 @@ class RemoteFileConnection final : public FileConnection {
   void WriteAt2(WriteAt2RequestView request, WriteAt2Completer::Sync& completer) final;
   void Seek(SeekRequestView request, SeekCompleter::Sync& completer) final;
   void Seek2(Seek2RequestView request, Seek2Completer::Sync& completer) final;
+  void QueryFilesystem(QueryFilesystemRequestView request,
+                       QueryFilesystemCompleter::Sync& completer) final;
 
   zx_status_t ReadInternal(void* data, size_t len, size_t* out_actual);
   zx_status_t ReadAtInternal(void* data, size_t len, size_t offset, size_t* out_actual);

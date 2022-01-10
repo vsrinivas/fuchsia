@@ -44,11 +44,10 @@ class ResizeTest : public BaseFilesystemTest, public testing::WithParamInterface
     fbl::unique_fd fd(open(fs().mount_path().c_str(), O_RDONLY | O_DIRECTORY));
     ASSERT_TRUE(fd);
     fdio_cpp::FdioCaller caller(std::move(fd));
-    auto query_result =
-        fidl::WireCall<fuchsia_io_admin::DirectoryAdmin>(caller.channel())->QueryFilesystem();
+    auto query_result = fidl::WireCall<fuchsia_io::Directory>(caller.channel())->QueryFilesystem();
     ASSERT_EQ(query_result.status(), ZX_OK);
     ASSERT_NE(query_result.Unwrap()->info, nullptr);
-    fuchsia_io_admin::wire::FilesystemInfo* info = query_result.Unwrap()->info.get();
+    fuchsia_io::wire::FilesystemInfo* info = query_result.Unwrap()->info.get();
     // This should always be true, for all filesystems.
     ASSERT_GT(info->total_bytes, info->used_bytes);
     *out_free_pool_size = info->free_shared_pool_bytes;

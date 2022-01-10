@@ -83,4 +83,10 @@ class ErrorNodeForSendingEvent extends Node {
   Future<void> sync2() async {
     throw MethodException(ZX.ERR_NOT_SUPPORTED);
   }
+
+  @override
+  Future<Node$QueryFilesystem$Response> queryFilesystem() async {
+    throw UnsupportedError(
+        'ErrorNodeForSendingEvent.queryFilesystem is unreachable.');
+  }
 }

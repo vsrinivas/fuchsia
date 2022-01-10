@@ -62,6 +62,8 @@ class PtyServerDevice : public fidl::WireServer<fuchsia_hardware_pty::Device> {
   void Sync2(Sync2RequestView request, Sync2Completer::Sync& completer) final;
   void GetAttr(GetAttrRequestView request, GetAttrCompleter::Sync& completer) final;
   void SetAttr(SetAttrRequestView request, SetAttrCompleter::Sync& completer) final;
+  void QueryFilesystem(QueryFilesystemRequestView request,
+                       QueryFilesystemCompleter::Sync& completer) final;
 
  private:
   fbl::RefPtr<PtyServer> server_;

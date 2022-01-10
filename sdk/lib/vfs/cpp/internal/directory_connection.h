@@ -55,6 +55,9 @@ class DirectoryConnection final : public Connection, public fuchsia::io::Directo
   void Watch(uint32_t mask, uint32_t options, zx::channel watcher, WatchCallback callback) override;
   void NodeGetFlags(NodeGetFlagsCallback callback) override;
   void NodeSetFlags(uint32_t flags, NodeSetFlagsCallback callback) override;
+  void QueryFilesystem(QueryFilesystemCallback callback) override {
+    callback(ZX_ERR_NOT_SUPPORTED, nullptr);
+  }
 
  protected:
   // |Connection| Implementation:

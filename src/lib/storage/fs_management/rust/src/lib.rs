@@ -53,9 +53,10 @@ use {
     fidl::endpoints::DiscoverableProtocolMarker,
     fidl_fuchsia_fs::AdminSynchronousProxy,
     fidl_fuchsia_io::{
-        DirectorySynchronousProxy, NodeSynchronousProxy, CLONE_FLAG_SAME_RIGHTS, OPEN_RIGHT_ADMIN,
+        DirectorySynchronousProxy, FilesystemInfo, NodeSynchronousProxy, CLONE_FLAG_SAME_RIGHTS,
+        OPEN_RIGHT_ADMIN,
     },
-    fidl_fuchsia_io_admin::{DirectoryAdminSynchronousProxy, FilesystemInfo},
+    fidl_fuchsia_io_admin::DirectoryAdminSynchronousProxy,
     fuchsia_runtime::{HandleInfo, HandleType},
     fuchsia_zircon::{self as zx, AsHandleRef, Task},
     fuchsia_zircon_status as zx_status,

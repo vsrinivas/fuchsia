@@ -688,11 +688,9 @@ void DcIostate::Clone(CloneRequestView request, CloneCompleter::Sync& completer)
 
 void DcIostate::QueryFilesystem(QueryFilesystemRequestView request,
                                 QueryFilesystemCompleter::Sync& completer) {
-  fuchsia_io_admin::wire::FilesystemInfo info;
-  strlcpy(reinterpret_cast<char*>(info.name.data()), "devfs",
-          fuchsia_io_admin::wire::kMaxFsNameBuffer);
-  completer.Reply(ZX_OK,
-                  fidl::ObjectView<fuchsia_io_admin::wire::FilesystemInfo>::FromExternal(&info));
+  fuchsia_io::wire::FilesystemInfo info;
+  strlcpy(reinterpret_cast<char*>(info.name.data()), "devfs", fuchsia_io::wire::kMaxFsNameBuffer);
+  completer.Reply(ZX_OK, fidl::ObjectView<fuchsia_io::wire::FilesystemInfo>::FromExternal(&info));
 }
 
 void DcIostate::Watch(WatchRequestView request, WatchCompleter::Sync& completer) {

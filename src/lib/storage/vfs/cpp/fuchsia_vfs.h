@@ -29,7 +29,7 @@ namespace internal {
 class Connection;
 }  // namespace internal
 
-// An internal version of fuchsia_io_admin::wire::FilesystemInfo with a simpler API and default
+// An internal version of fuchsia_io::wire::FilesystemInfo with a simpler API and default
 // initializers. See that FIDL struct for documentation.
 struct FilesystemInfo {
   uint64_t total_bytes = 0;
@@ -49,7 +49,7 @@ struct FilesystemInfo {
   void SetFsId(const zx::event& event);
 
   // Writes this object's values to the given FIDL object.
-  fuchsia_io_admin::wire::FilesystemInfo ToFidl() const;
+  fuchsia_io::wire::FilesystemInfo ToFidl() const;
 };
 
 // Vfs specialization that adds Fuchsia-specific
@@ -84,7 +84,7 @@ class FuchsiaVfs : public Vfs {
                      std::string_view newStr) __TA_EXCLUDES(vfs_lock_);
 
   // Provides the implementation for fuchsia.fs.Query.GetInfo() and
-  // fuchsia.io.admin.DirectoryAdmin.QueryFilesystem(). This default implementation returns
+  // fuchsia.io.Directory.QueryFilesystem(). This default implementation returns
   // ZX_ERR_NOT_SUPPORTED.
   virtual zx::status<FilesystemInfo> GetFilesystemInfo() __TA_EXCLUDES(vfs_lock_);
 

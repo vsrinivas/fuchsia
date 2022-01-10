@@ -66,15 +66,12 @@ void InspectManager::ServeStats(const std::string& name, fbl::RefPtr<fs::Vnode> 
 
 void InspectManager::FillStats(fidl::UnownedClientEnd<fio::Directory> dir_chan,
                                inspect::Inspector* inspector) {
-  // Note: we are unsafely assuming that the directory also speaks
-  // |fuchsia.io/DirectoryAdmin|.
-  fidl::UnownedClientEnd<fuchsia_io_admin::DirectoryAdmin> dir_admin(dir_chan.channel());
-  auto result = fidl::WireCall(dir_admin)->QueryFilesystem();
+  fidl::UnownedClientEnd<fuchsia_io::Directory> dir(dir_chan.channel());
+  auto result = fidl::WireCall(dir)->QueryFilesystem();
   inspect::Node stats = inspector->GetRoot().CreateChild("stats");
   if (result.status() == ZX_OK) {
-    fidl::WireResponse<fuchsia_io_admin::DirectoryAdmin::QueryFilesystem>* response =
-        result.Unwrap();
-    fuchsia_io_admin::wire::FilesystemInfo* info = response->info.get();
+    fidl::WireResponse<fuchsia_io::Directory::QueryFilesystem>* response = result.Unwrap();
+    fuchsia_io::wire::FilesystemInfo* info = response->info.get();
     if (info != nullptr) {
       stats.CreateUint("fvm_free_bytes", info->free_shared_pool_bytes, inspector);
       stats.CreateUint("allocated_inodes", info->total_nodes, inspector);

@@ -56,12 +56,12 @@ void CheckMountedFs(const char* path, const char* fs_name, size_t len) {
   ASSERT_TRUE(fd);
 
   fdio_cpp::FdioCaller caller(std::move(fd));
-  auto result = fidl::WireCall(fidl::UnownedClientEnd<fuchsia_io_admin::DirectoryAdmin>(
-                                   caller.borrow_channel()))
-                    ->QueryFilesystem();
+  auto result =
+      fidl::WireCall(fidl::UnownedClientEnd<fuchsia_io::Directory>(caller.borrow_channel()))
+          ->QueryFilesystem();
   ASSERT_EQ(result.status(), ZX_OK);
   ASSERT_EQ(result->s, ZX_OK);
-  fuchsia_io_admin::wire::FilesystemInfo info = *result.value().info;
+  fuchsia_io::wire::FilesystemInfo info = *result.value().info;
   ASSERT_EQ(strncmp(fs_name, reinterpret_cast<char*>(info.name.data()), strlen(fs_name)), 0);
   ASSERT_LE(info.used_nodes, info.total_nodes) << "Used nodes greater than free nodes";
   ASSERT_LE(info.used_bytes, info.total_bytes) << "Used bytes greater than free bytes";

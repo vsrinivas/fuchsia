@@ -13,10 +13,10 @@ use {
     fdio::SpawnAction,
     fidl::endpoints::{ClientEnd, ServerEnd},
     fidl_fuchsia_io::{
-        DirectoryMarker, DirectoryProxy, NodeMarker, NodeProxy, CLONE_FLAG_SAME_RIGHTS,
-        OPEN_RIGHT_ADMIN,
+        DirectoryMarker, DirectoryProxy, FilesystemInfo, NodeMarker, NodeProxy,
+        CLONE_FLAG_SAME_RIGHTS, OPEN_RIGHT_ADMIN,
     },
-    fidl_fuchsia_io_admin::{DirectoryAdminMarker, FilesystemInfo},
+    fidl_fuchsia_io_admin::DirectoryAdminMarker,
     fuchsia_async::OnSignals,
     fuchsia_component::client::connect_to_protocol_at_dir_svc,
     fuchsia_runtime::{HandleInfo, HandleType},

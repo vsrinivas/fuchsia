@@ -567,6 +567,11 @@ class _DirConnection extends Directory {
     }
     return len;
   }
+
+  @override
+  Future<Directory$QueryFilesystem$Response> queryFilesystem() async {
+    return Directory$QueryFilesystem$Response(ZX.ERR_NOT_SUPPORTED, null);
+  }
 }
 
 /// _Entry class to store in pseudo directory.

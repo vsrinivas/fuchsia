@@ -44,6 +44,8 @@ class NodeConnection final : public Connection, public fidl::WireServer<fuchsia_
   void SetAttr(SetAttrRequestView request, SetAttrCompleter::Sync& completer) final;
   void NodeGetFlags(NodeGetFlagsRequestView request, NodeGetFlagsCompleter::Sync& completer) final;
   void NodeSetFlags(NodeSetFlagsRequestView request, NodeSetFlagsCompleter::Sync& completer) final;
+  void QueryFilesystem(QueryFilesystemRequestView request,
+                       QueryFilesystemCompleter::Sync& completer) final;
 };
 
 }  // namespace internal

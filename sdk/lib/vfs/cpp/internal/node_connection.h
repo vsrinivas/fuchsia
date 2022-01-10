@@ -39,6 +39,7 @@ class NodeConnection final : public Connection, public fuchsia::io::Node {
                SetAttrCallback callback) override;
   void NodeGetFlags(NodeGetFlagsCallback callback) override;
   void NodeSetFlags(uint32_t flags, NodeSetFlagsCallback callback) override;
+  void QueryFilesystem(QueryFilesystemCallback callback) override;
 
  protected:
   // |Connection| Implementation:

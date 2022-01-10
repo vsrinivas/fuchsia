@@ -241,6 +241,18 @@ void StreamFileConnection::Seek2(Seek2RequestView request, Seek2Completer::Sync&
   }
 }
 
+void StreamFileConnection::QueryFilesystem(QueryFilesystemRequestView request,
+                                           QueryFilesystemCompleter::Sync& completer) {
+  FS_PRETTY_TRACE_DEBUG("[QueryFilesystem] options: ", options());
+
+  fuchsia_io::wire::FilesystemInfo info;
+  zx_status_t status = vnode()->QueryFilesystem(&info);
+  completer.Reply(status,
+                  status == ZX_OK
+                      ? fidl::ObjectView<fuchsia_io::wire::FilesystemInfo>::FromExternal(&info)
+                      : nullptr);
+}
+
 }  // namespace internal
 
 }  // namespace fs

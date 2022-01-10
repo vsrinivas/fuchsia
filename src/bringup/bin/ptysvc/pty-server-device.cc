@@ -148,3 +148,8 @@ void PtyServerDevice::Sync2(Sync2RequestView request, Sync2Completer::Sync& comp
 void PtyServerDevice::SetAttr(SetAttrRequestView request, SetAttrCompleter::Sync& completer) {
   ZX_ASSERT(false);
 }
+
+void PtyServerDevice::QueryFilesystem(QueryFilesystemRequestView request,
+                                      QueryFilesystemCompleter::Sync& completer) {
+  ZX_ASSERT(false);
+}

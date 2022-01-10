@@ -390,6 +390,10 @@ func (ep *endpoint) NodeSetFlags(_ fidl.Context, flags uint32) (int32, error) {
 	return 0, &zx.Error{Status: zx.ErrNotSupported, Text: fmt.Sprintf("%T", ep)}
 }
 
+func (ep *endpoint) QueryFilesystem(fidl.Context) (int32, *fidlio.FilesystemInfo, error) {
+	return int32(zx.ErrNotSupported), nil, nil
+}
+
 func (ep *endpoint) Bind(_ fidl.Context, sockaddr fidlnet.SocketAddress) (socket.BaseNetworkSocketBindResult, error) {
 	addr, err := toTCPIPFullAddress(sockaddr)
 	if err != nil {

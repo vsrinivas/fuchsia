@@ -27,12 +27,11 @@ use {
     fdio::fdio_sys::{V_IRGRP, V_IROTH, V_IRWXU, V_IXGRP, V_IXOTH, V_TYPE_DIR},
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_io::{
-        self as fio, NodeAttributes, NodeMarker, MAX_FILENAME, MODE_TYPE_BLOCK_DEVICE,
-        MODE_TYPE_DIRECTORY, MODE_TYPE_FILE, MODE_TYPE_MASK, MODE_TYPE_SERVICE, MODE_TYPE_SOCKET,
-        OPEN_FLAG_CREATE, OPEN_FLAG_CREATE_IF_ABSENT, OPEN_FLAG_DIRECTORY, OPEN_FLAG_NOT_DIRECTORY,
-        WATCH_MASK_EXISTING,
+        self as fio, FilesystemInfo, NodeAttributes, NodeMarker, MAX_FILENAME,
+        MODE_TYPE_BLOCK_DEVICE, MODE_TYPE_DIRECTORY, MODE_TYPE_FILE, MODE_TYPE_MASK,
+        MODE_TYPE_SERVICE, MODE_TYPE_SOCKET, OPEN_FLAG_CREATE, OPEN_FLAG_CREATE_IF_ABSENT,
+        OPEN_FLAG_DIRECTORY, OPEN_FLAG_NOT_DIRECTORY, WATCH_MASK_EXISTING,
     },
-    fidl_fuchsia_io_admin::FilesystemInfo,
     fuchsia_async as fasync,
     fuchsia_zircon::Status,
     std::{

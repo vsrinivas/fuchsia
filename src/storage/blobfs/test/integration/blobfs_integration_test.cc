@@ -462,7 +462,7 @@ void QueryInfo(fs_test::TestFilesystem& fs, size_t expected_nodes, size_t expect
   const auto& query_result = fidl::WireCall(client_end->borrow())->GetInfo();
   ASSERT_TRUE(query_result.ok());
 
-  const fuchsia_io_admin::wire::FilesystemInfo& info = query_result.value().result.response().info;
+  const fuchsia_io::wire::FilesystemInfo& info = query_result.value().result.response().info;
 
   constexpr std::string_view kFsName = "blobfs";
   const char* name = reinterpret_cast<const char*>(info.name.data());

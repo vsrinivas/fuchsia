@@ -581,4 +581,9 @@ class _FileConnection extends File {
     _currentLen = offset + actual;
     return File$Write$Response(ZX.OK, actual);
   }
+
+  @override
+  Future<File$QueryFilesystem$Response> queryFilesystem() async {
+    return File$QueryFilesystem$Response(ZX.ERR_NOT_SUPPORTED, null);
+  }
 }

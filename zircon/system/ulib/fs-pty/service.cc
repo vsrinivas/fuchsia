@@ -132,4 +132,9 @@ void NullPtyDeviceImpl::SetAttr(SetAttrRequestView request, SetAttrCompleter::Sy
   ZX_ASSERT(false);
 }
 
+void NullPtyDeviceImpl::QueryFilesystem(QueryFilesystemRequestView request,
+                                        QueryFilesystemCompleter::Sync& completer) {
+  ZX_ASSERT(false);
+}
+
 }  // namespace fs_pty::internal

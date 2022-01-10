@@ -61,13 +61,13 @@ class DirectoryConnection final : public Connection,
   void Watch(WatchRequestView request, WatchCompleter::Sync& completer) final;
   void AddInotifyFilter(AddInotifyFilterRequestView request,
                         AddInotifyFilterCompleter::Sync& completer) final;
+  void QueryFilesystem(QueryFilesystemRequestView request,
+                       QueryFilesystemCompleter::Sync& completer) final;
 
   //
   // |fuchsia.io/DirectoryAdmin| operations.
   //
 
-  void QueryFilesystem(QueryFilesystemRequestView request,
-                       QueryFilesystemCompleter::Sync& completer) final;
   void GetDevicePath(GetDevicePathRequestView request,
                      GetDevicePathCompleter::Sync& completer) final;
 

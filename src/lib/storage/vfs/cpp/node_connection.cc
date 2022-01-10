@@ -134,6 +134,16 @@ void NodeConnection::NodeSetFlags(NodeSetFlagsRequestView request,
   }
 }
 
+void NodeConnection::QueryFilesystem(QueryFilesystemRequestView request,
+                                     QueryFilesystemCompleter::Sync& completer) {
+  fuchsia_io::wire::FilesystemInfo info;
+  zx_status_t status = vnode()->QueryFilesystem(&info);
+  completer.Reply(status,
+                  status == ZX_OK
+                      ? fidl::ObjectView<fuchsia_io::wire::FilesystemInfo>::FromExternal(&info)
+                      : nullptr);
+}
+
 }  // namespace internal
 
 }  // namespace fs

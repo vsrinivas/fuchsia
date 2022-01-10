@@ -56,6 +56,7 @@ protocol/member fuchsia.io/Directory.OnConnectionInfo -> (fuchsia.io/ConnectionI
 protocol/member fuchsia.io/Directory.OnOpen -> (int32 s,fuchsia.io/NodeInfo:optional info)
 protocol/member fuchsia.io/Directory.Open(uint32 flags,uint32 mode,string:4096 path,server_end:fuchsia.io/Node object)
 protocol/member fuchsia.io/Directory.Open2(string:4095 path,fuchsia.io/OpenMode mode,fuchsia.io/ConnectionOptions options,zx/handle:CHANNEL object_request)
+protocol/member fuchsia.io/Directory.QueryFilesystem() -> (int32 s,box<fuchsia.io/FilesystemInfo> info)
 protocol/member fuchsia.io/Directory.ReadDirents(uint64 max_bytes) -> (int32 s,vector<uint8>:8192 dirents)
 protocol/member fuchsia.io/Directory.Rename(string:255 src,zx/handle:EVENT dst_parent_token,string:255 dst) -> (fuchsia.io/Directory_Rename_Result result)
 protocol/member fuchsia.io/Directory.Reopen(fuchsia.io/ConnectionOptions options,zx/handle:CHANNEL object_request)
@@ -97,6 +98,7 @@ protocol/member fuchsia.io/File.NodeGetFlags() -> (int32 s,uint32 flags)
 protocol/member fuchsia.io/File.NodeSetFlags(uint32 flags) -> (int32 s)
 protocol/member fuchsia.io/File.OnConnectionInfo -> (fuchsia.io/ConnectionInfo info)
 protocol/member fuchsia.io/File.OnOpen -> (int32 s,fuchsia.io/NodeInfo:optional info)
+protocol/member fuchsia.io/File.QueryFilesystem() -> (int32 s,box<fuchsia.io/FilesystemInfo> info)
 protocol/member fuchsia.io/File.Read(uint64 count) -> (int32 s,vector<uint8>:8192 data)
 protocol/member fuchsia.io/File.Read2(uint64 count) -> (fuchsia.io/File_Read2_Result result)
 protocol/member fuchsia.io/File.ReadAt(uint64 count,uint64 offset) -> (int32 s,vector<uint8>:8192 data)
@@ -157,9 +159,22 @@ struct fuchsia.io/File_WriteAt2_Response
 union/member fuchsia.io/File_WriteAt2_Result.err int32
 union/member fuchsia.io/File_WriteAt2_Result.response fuchsia.io/File_WriteAt2_Response
 strict union fuchsia.io/File_WriteAt2_Result
+struct/member fuchsia.io/FilesystemInfo.block_size uint32
+struct/member fuchsia.io/FilesystemInfo.free_shared_pool_bytes uint64
+struct/member fuchsia.io/FilesystemInfo.fs_id uint64
+struct/member fuchsia.io/FilesystemInfo.fs_type uint32
+struct/member fuchsia.io/FilesystemInfo.max_filename_size uint32
+struct/member fuchsia.io/FilesystemInfo.name array<int8,32>
+struct/member fuchsia.io/FilesystemInfo.padding uint32
+struct/member fuchsia.io/FilesystemInfo.total_bytes uint64
+struct/member fuchsia.io/FilesystemInfo.total_nodes uint64
+struct/member fuchsia.io/FilesystemInfo.used_bytes uint64
+struct/member fuchsia.io/FilesystemInfo.used_nodes uint64
+struct fuchsia.io/FilesystemInfo
 const fuchsia.io/INO_UNKNOWN uint64 18446744073709551615
 const fuchsia.io/MAX_BUF uint64 8192
 const fuchsia.io/MAX_FILENAME uint64 255
+const fuchsia.io/MAX_FS_NAME_BUFFER uint64 32
 const fuchsia.io/MAX_PATH uint64 4096
 const fuchsia.io/MAX_PATH_LENGTH uint64 4095
 const fuchsia.io/MAX_TRANSFER_SIZE uint64 8192
@@ -186,6 +201,7 @@ protocol/member fuchsia.io/Node.NodeGetFlags() -> (int32 s,uint32 flags)
 protocol/member fuchsia.io/Node.NodeSetFlags(uint32 flags) -> (int32 s)
 protocol/member fuchsia.io/Node.OnConnectionInfo -> (fuchsia.io/ConnectionInfo info)
 protocol/member fuchsia.io/Node.OnOpen -> (int32 s,fuchsia.io/NodeInfo:optional info)
+protocol/member fuchsia.io/Node.QueryFilesystem() -> (int32 s,box<fuchsia.io/FilesystemInfo> info)
 protocol/member fuchsia.io/Node.Reopen(fuchsia.io/ConnectionOptions options,zx/handle:CHANNEL object_request)
 protocol/member fuchsia.io/Node.SetAttr(uint32 flags,fuchsia.io/NodeAttributes attributes) -> (int32 s)
 protocol/member fuchsia.io/Node.Sync() -> (int32 s)

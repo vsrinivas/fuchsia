@@ -297,7 +297,7 @@ zx_status_t Vnode::GetVmo(fuchsia_io::wire::VmoFlags flags, zx::vmo* out_vmo, si
   return ZX_ERR_NOT_SUPPORTED;
 }
 
-zx_status_t Vnode::QueryFilesystem(fuchsia_io_admin::wire::FilesystemInfo* out) {
+zx_status_t Vnode::QueryFilesystem(fuchsia_io::wire::FilesystemInfo* out) {
   *out = {};
   std::lock_guard lock(mutex_);
 

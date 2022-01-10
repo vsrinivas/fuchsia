@@ -51,7 +51,7 @@ class QueryServiceTest : public BlobfsWithFvmTest {
     const auto& query_result = call_result.value().result;
     ASSERT_TRUE(query_result.is_response());
 
-    const fuchsia_io_admin::wire::FilesystemInfo& info = query_result.response().info;
+    const fuchsia_io::wire::FilesystemInfo& info = query_result.response().info;
 
     // Check that total_bytes are a multiple of slice size.
     const uint64_t slice_size = fs().options().fvm_slice_size;

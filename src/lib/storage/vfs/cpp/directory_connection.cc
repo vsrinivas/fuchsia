@@ -422,14 +422,14 @@ void DirectoryConnection::Watch(WatchRequestView request, WatchCompleter::Sync& 
 
 void DirectoryConnection::QueryFilesystem(QueryFilesystemRequestView request,
                                           QueryFilesystemCompleter::Sync& completer) {
-  FS_PRETTY_TRACE_DEBUG("[DirectoryAdminQueryFilesystem] our options: ", options());
+  FS_PRETTY_TRACE_DEBUG("[DirectoryQueryFilesystem] our options: ", options());
 
-  fuchsia_io_admin::wire::FilesystemInfo info;
+  fuchsia_io::wire::FilesystemInfo info;
   zx_status_t status = vnode()->QueryFilesystem(&info);
-  completer.Reply(
-      status, status == ZX_OK
-                  ? fidl::ObjectView<fuchsia_io_admin::wire::FilesystemInfo>::FromExternal(&info)
-                  : nullptr);
+  completer.Reply(status,
+                  status == ZX_OK
+                      ? fidl::ObjectView<fuchsia_io::wire::FilesystemInfo>::FromExternal(&info)
+                      : nullptr);
 }
 
 void DirectoryConnection::GetDevicePath(GetDevicePathRequestView request,

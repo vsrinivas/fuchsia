@@ -48,6 +48,8 @@ class NullPtyDeviceImpl : public fidl::WireServer<fuchsia_hardware_pty::Device> 
   void Sync(SyncRequestView request, SyncCompleter::Sync& completer) final;
   void GetAttr(GetAttrRequestView request, GetAttrCompleter::Sync& completer) final;
   void SetAttr(SetAttrRequestView request, SetAttrCompleter::Sync& completer) final;
+  void QueryFilesystem(QueryFilesystemRequestView request,
+                       QueryFilesystemCompleter::Sync& completer) final;
 };
 
 template <typename Console>

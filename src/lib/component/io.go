@@ -134,6 +134,10 @@ func (*Service) NodeSetFlags(_ fidl.Context, flags uint32) (int32, error) {
 	return int32(zx.ErrNotSupported), nil
 }
 
+func (*Service) QueryFilesystem(_ fidl.Context) (int32, *fidlio.FilesystemInfo, error) {
+	return int32(zx.ErrNotSupported), nil, nil
+}
+
 type Directory interface {
 	Get(string) (Node, bool)
 	ForEach(func(string, Node))
@@ -368,6 +372,10 @@ func (*directoryState) NodeSetFlags(fidl.Context, uint32) (int32, error) {
 
 func (dirState *directoryState) AdvisoryLock(fidl.Context, fidlio2.AdvisoryLockRequest) (fidlio2.AdvisoryLockingAdvisoryLockResult, error) {
 	return fidlio2.AdvisoryLockingAdvisoryLockResult{}, &zx.Error{Status: zx.ErrNotSupported, Text: fmt.Sprintf("%T", dirState)}
+}
+
+func (*directoryState) QueryFilesystem(fidl.Context) (int32, *fidlio.FilesystemInfo, error) {
+	return int32(zx.ErrNotSupported), nil, nil
 }
 
 type File interface {
@@ -615,6 +623,10 @@ func (*fileState) NodeGetFlags(fidl.Context) (int32, uint32, error) {
 
 func (*fileState) NodeSetFlags(_ fidl.Context, flags uint32) (int32, error) {
 	return int32(zx.ErrNotSupported), nil
+}
+
+func (*fileState) QueryFilesystem(_ fidl.Context) (int32, *fidlio.FilesystemInfo, error) {
+	return int32(zx.ErrNotSupported), nil, nil
 }
 
 func (fState *fileState) AdvisoryLock(fidl.Context, fidlio2.AdvisoryLockRequest) (fidlio2.AdvisoryLockingAdvisoryLockResult, error) {

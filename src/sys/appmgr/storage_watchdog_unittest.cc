@@ -61,8 +61,7 @@ class TestStorageWatchdog : public StorageWatchdog {
   TestStorageWatchdog(std::string path_to_watch, std::string path_to_clean)
       : StorageWatchdog(path_to_watch, path_to_clean) {}
 
-  zx_status_t GetFilesystemInfo(zx_handle_t directory,
-                                fuchsia_io_admin::wire::FilesystemInfo* out_info) {
+  zx_status_t GetFilesystemInfo(zx_handle_t directory, fio::wire::FilesystemInfo* out_info) {
     if (directory == ZX_HANDLE_INVALID) {
       return ZX_ERR_BAD_HANDLE;
     }
@@ -70,7 +69,7 @@ class TestStorageWatchdog : public StorageWatchdog {
     return ZX_OK;
   }
 
-  fuchsia_io_admin::wire::FilesystemInfo info = {};
+  fio::wire::FilesystemInfo info = {};
 };
 
 TEST_F(StorageWatchdogTest, Basic) {

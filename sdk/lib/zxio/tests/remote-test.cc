@@ -65,6 +65,11 @@ class TestServerBase : public fidl::WireServer<fio::Node> {
     completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
 
+  void QueryFilesystem(QueryFilesystemRequestView request,
+                       QueryFilesystemCompleter::Sync& completer) override {
+    completer.Close(ZX_ERR_NOT_SUPPORTED);
+  }
+
   uint32_t num_close() const { return num_close_.load(); }
 
  private:

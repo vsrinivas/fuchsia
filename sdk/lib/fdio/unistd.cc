@@ -2183,24 +2183,24 @@ static int fs_stat(int fd, struct statfs* buf) {
   if (status != ZX_OK) {
     return ERROR(status);
   }
-  auto directory_admin = fidl::UnownedClientEnd<fuchsia_io_admin::DirectoryAdmin>(handle);
-  if (!directory_admin.is_valid()) {
+  auto directory = fidl::UnownedClientEnd<fuchsia_io::Directory>(handle);
+  if (!directory.is_valid()) {
     return ERRNO(ENOTSUP);
   }
-  auto result = fidl::WireCall(directory_admin)->QueryFilesystem();
+  auto result = fidl::WireCall(directory)->QueryFilesystem();
   if (result.status() != ZX_OK) {
     return ERROR(result.status());
   }
-  fidl::WireResponse<fuchsia_io_admin::DirectoryAdmin::QueryFilesystem>* response = result.Unwrap();
+  fidl::WireResponse<fuchsia_io::Directory::QueryFilesystem>* response = result.Unwrap();
   if (response->s != ZX_OK) {
     return ERROR(response->s);
   }
-  fuchsia_io_admin::wire::FilesystemInfo* info = response->info.get();
+  fuchsia_io::wire::FilesystemInfo* info = response->info.get();
   if (info == nullptr) {
     return ERRNO(EIO);
   }
 
-  info->name[fuchsia_io_admin::wire::kMaxFsNameBuffer - 1] = '\0';
+  info->name[fuchsia_io::wire::kMaxFsNameBuffer - 1] = '\0';
 
   struct statfs stats = {};
 

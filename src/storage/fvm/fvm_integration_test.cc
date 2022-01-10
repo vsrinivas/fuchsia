@@ -2184,9 +2184,9 @@ TEST_F(FvmTest, TestMounting) {
   fbl::unique_fd rootfd(open(kMountPath, O_RDONLY | O_DIRECTORY));
   ASSERT_TRUE(rootfd);
   fdio_cpp::FdioCaller caller(std::move(rootfd));
-  auto result = fidl::WireCall(fidl::UnownedClientEnd<fuchsia_io_admin::DirectoryAdmin>(
-                                   caller.borrow_channel()))
-                    ->QueryFilesystem();
+  auto result =
+      fidl::WireCall(fidl::UnownedClientEnd<fuchsia_io::Directory>(caller.borrow_channel()))
+          ->QueryFilesystem();
   ASSERT_TRUE(result.ok());
   const char* kFsName = "minfs";
   const char* name = reinterpret_cast<const char*>(result.value().info->name.data());
@@ -2271,9 +2271,9 @@ TEST_F(FvmTest, TestMkfs) {
   fbl::unique_fd rootfd(open(kMountPath, O_RDONLY | O_DIRECTORY));
   ASSERT_TRUE(rootfd);
   fdio_cpp::FdioCaller caller(std::move(rootfd));
-  auto result = fidl::WireCall(fidl::UnownedClientEnd<fuchsia_io_admin::DirectoryAdmin>(
-                                   caller.borrow_channel()))
-                    ->QueryFilesystem();
+  auto result =
+      fidl::WireCall(fidl::UnownedClientEnd<fuchsia_io::Directory>(caller.borrow_channel()))
+          ->QueryFilesystem();
   ASSERT_TRUE(result.ok());
   const char* kFsName = "minfs";
   const char* name = reinterpret_cast<const char*>(result.value().info->name.data());
