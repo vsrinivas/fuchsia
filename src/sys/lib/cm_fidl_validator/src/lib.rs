@@ -411,7 +411,8 @@ impl<'a> ValidationContext<'a> {
             match use_ {
                 fdecl::Use::Service(fdecl::UseService { target_path: Some(path), .. })
                 | fdecl::Use::Protocol(fdecl::UseProtocol { target_path: Some(path), .. })
-                | fdecl::Use::Directory(fdecl::UseDirectory { target_path: Some(path), .. }) => {
+                | fdecl::Use::Directory(fdecl::UseDirectory { target_path: Some(path), .. })
+                | fdecl::Use::Storage(fdecl::UseStorage { target_path: Some(path), .. }) => {
                     let capability = match use_ {
                         fdecl::Use::Service(_) => {
                             let dir = match Path::new(path).parent() {
@@ -430,6 +431,9 @@ impl<'a> ValidationContext<'a> {
                         fdecl::Use::Directory(_) => {
                             PathCapability { decl: "UseDirectory", dir: Path::new(path), use_ }
                         }
+                        fdecl::Use::Storage(_) => {
+                            PathCapability { decl: "UseStorage", dir: Path::new(path), use_ }
+                        }
                         _ => unreachable!(),
                     };
                     if used_paths.insert(path, capability).is_some() {
@@ -444,8 +448,11 @@ impl<'a> ValidationContext<'a> {
             used_paths.iter().tuple_combinations()
         {
             if match (capability_a.use_, capability_b.use_) {
-                // Directories can't be the same or partially overlap.
-                (fdecl::Use::Directory(_), fdecl::Use::Directory(_)) => {
+                // Directories and storage can't be the same or partially overlap.
+                (fdecl::Use::Directory(_), fdecl::Use::Directory(_))
+                | (fdecl::Use::Storage(_), fdecl::Use::Directory(_))
+                | (fdecl::Use::Directory(_), fdecl::Use::Storage(_))
+                | (fdecl::Use::Storage(_), fdecl::Use::Storage(_)) => {
                     capability_b.dir == capability_a.dir
                         || capability_b.dir.starts_with(capability_a.dir)
                         || capability_a.dir.starts_with(capability_b.dir)
@@ -2114,6 +2121,66 @@ mod tests {
                 ])),
             ],
         },
+        test_validate_use_disallows_nested_dirs_storage => {
+            input = {
+                let mut decl = new_component_decl();
+                decl.uses = Some(vec![
+                    fdecl::Use::Storage(fdecl::UseStorage {
+                        source_name: Some("abc".to_string()),
+                        target_path: Some("/foo/bar".to_string()),
+                        ..fdecl::UseStorage::EMPTY
+                    }),
+                    fdecl::Use::Storage(fdecl::UseStorage {
+                        source_name: Some("abc".to_string()),
+                        target_path: Some("/foo/bar/baz".to_string()),
+                        ..fdecl::UseStorage::EMPTY
+                    }),
+                ]);
+                decl
+            },
+            results = vec![
+                Err(ErrorList::new(vec![
+                    Error::invalid_path_overlap(
+                        "UseStorage", "/foo/bar/baz", "UseStorage", "/foo/bar"),
+                ])),
+                Err(ErrorList::new(vec![
+                    Error::invalid_path_overlap(
+                        "UseStorage", "/foo/bar", "UseStorage", "/foo/bar/baz"),
+                ])),
+            ],
+        },
+        test_validate_use_disallows_nested_dirs_directory_and_storage => {
+            input = {
+                let mut decl = new_component_decl();
+                decl.uses = Some(vec![
+                    fdecl::Use::Directory(fdecl::UseDirectory {
+                        dependency_type: Some(fdecl::DependencyType::Strong),
+                        source: Some(fdecl::Ref::Parent(fdecl::ParentRef {})),
+                        source_name: Some("abc".to_string()),
+                        target_path: Some("/foo/bar".to_string()),
+                        rights: Some(fio2::Operations::Connect),
+                        subdir: None,
+                        ..fdecl::UseDirectory::EMPTY
+                    }),
+                    fdecl::Use::Storage(fdecl::UseStorage {
+                        source_name: Some("abc".to_string()),
+                        target_path: Some("/foo/bar/baz".to_string()),
+                        ..fdecl::UseStorage::EMPTY
+                    }),
+                ]);
+                decl
+            },
+            results = vec![
+                Err(ErrorList::new(vec![
+                    Error::invalid_path_overlap(
+                        "UseStorage", "/foo/bar/baz", "UseDirectory", "/foo/bar"),
+                ])),
+                Err(ErrorList::new(vec![
+                    Error::invalid_path_overlap(
+                        "UseDirectory", "/foo/bar", "UseStorage", "/foo/bar/baz"),
+                ])),
+            ],
+        },
         test_validate_use_disallows_common_prefixes_protocol => {
             input = {
                 let mut decl = new_component_decl();
@@ -2308,7 +2375,7 @@ mod tests {
                 Error::invalid_field("UseProtocol", "target_path"),
             ])),
         },
-        test_validate_uses_invalid_identifiers => {
+        test_validate_uses_invalid_identifiers_directory => {
             input = {
                 let mut decl = new_component_decl();
                 decl.uses = Some(vec![
@@ -2321,6 +2388,19 @@ mod tests {
                         subdir: Some("/foo".to_string()),
                         ..fdecl::UseDirectory::EMPTY
                     }),
+                ]);
+                decl
+            },
+            result = Err(ErrorList::new(vec![
+                Error::invalid_field("UseDirectory", "source_name"),
+                Error::invalid_field("UseDirectory", "target_path"),
+                Error::invalid_field("UseDirectory", "subdir"),
+            ])),
+        },
+        test_validate_uses_invalid_identifiers_storage => {
+            input = {
+                let mut decl = new_component_decl();
+                decl.uses = Some(vec![
                     fdecl::Use::Storage(fdecl::UseStorage {
                         source_name: Some("/cache".to_string()),
                         target_path: Some("/".to_string()),
@@ -2331,6 +2411,19 @@ mod tests {
                         target_path: Some("tmp".to_string()),
                         ..fdecl::UseStorage::EMPTY
                     }),
+                ]);
+                decl
+            },
+            result = Err(ErrorList::new(vec![
+                Error::invalid_field("UseStorage", "source_name"),
+                Error::invalid_field("UseStorage", "target_path"),
+                Error::invalid_field("UseStorage", "target_path"),
+            ])),
+        },
+        test_validate_uses_invalid_identifiers_event => {
+            input = {
+                let mut decl = new_component_decl();
+                decl.uses = Some(vec![
                     fdecl::Use::Event(fdecl::UseEvent {
                         dependency_type: Some(fdecl::DependencyType::Strong),
                         source: Some(fdecl::Ref::Self_(fdecl::SelfRef {})),
@@ -2374,12 +2467,6 @@ mod tests {
                 Error::invalid_field("UseEvent", "source"),
                 Error::invalid_field("UseEvent", "source_name"),
                 Error::invalid_field("UseEvent", "target_name"),
-                Error::invalid_field("UseDirectory", "source_name"),
-                Error::invalid_field("UseDirectory", "target_path"),
-                Error::invalid_field("UseDirectory", "subdir"),
-                Error::invalid_field("UseStorage", "source_name"),
-                Error::invalid_field("UseStorage", "target_path"),
-                Error::invalid_field("UseStorage", "target_path"),
                 Error::event_stream_event_not_found("UseEventStream", "events", "a".to_string()),
                 Error::event_stream_event_not_found("UseEventStream", "events", "b".to_string()),
                 Error::event_stream_unsupported_mode("UseEventStream", "events", "started".to_string(), "Sync".to_string()),
