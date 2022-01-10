@@ -242,7 +242,7 @@ void MultipleDeviceTestCase::SetUp() {
     auto coordinator_request = fidl::CreateEndpoints(&platform_bus_.coordinator_client);
     ASSERT_OK(coordinator_request.status_value());
 
-    auto status = coordinator().AddDevice(
+    auto status = coordinator().device_manager()->AddDevice(
         coordinator().sys_device()->proxy(), std::move(*device_controller),
         std::move(*coordinator_request),
         /* props_data */ nullptr, /* props_count */ 0, /* str_props_data */ nullptr,
@@ -279,14 +279,14 @@ void MultipleDeviceTestCase::TearDown() {
     coordinator_loop_.RunUntilIdle();
   }
 
-  coordinator().RemoveDevice(std::move(platform_bus_.device), /* forced */ false);
+  coordinator().device_manager()->RemoveDevice(std::move(platform_bus_.device), /* forced */ false);
   coordinator_loop_.RunUntilIdle();
 
   // We need to explicitly remove this proxy device, because it holds a reference to devhost_.
   // Other devices will be removed via the DeviceState dtor.
   fbl::RefPtr<Device> sys_proxy = coordinator().sys_device()->proxy();
   if (sys_proxy) {
-    coordinator().RemoveDevice(std::move(sys_proxy), /* forced */ false);
+    coordinator().device_manager()->RemoveDevice(std::move(sys_proxy), /* forced */ false);
     coordinator_loop_.RunUntilIdle();
   }
 
@@ -309,7 +309,7 @@ void MultipleDeviceTestCase::AddDevice(const fbl::RefPtr<Device>& parent, const 
   auto controller_client = fidl::CreateEndpoints(&state.controller_server);
   ASSERT_OK(controller_client.status_value());
 
-  auto status = coordinator().AddDevice(
+  auto status = coordinator().device_manager()->AddDevice(
       parent, std::move(*controller_client), std::move(*coordinator_server),
       /* props_data */ nullptr,
       /* props_count */ 0, /* str_props_data */ nullptr,
@@ -347,7 +347,7 @@ void MultipleDeviceTestCase::AddDeviceSkipAutobind(const fbl::RefPtr<Device>& pa
   auto controller_client = fidl::CreateEndpoints(&state.controller_server);
   ASSERT_OK(controller_client.status_value());
 
-  auto status = coordinator().AddDevice(
+  auto status = coordinator().device_manager()->AddDevice(
       parent, std::move(*controller_client), std::move(*coordinator_server),
       /* props_data */ nullptr, /* props_count */ 0,
       /* str_props_data */ nullptr,
@@ -368,7 +368,7 @@ void MultipleDeviceTestCase::AddDeviceSkipAutobind(const fbl::RefPtr<Device>& pa
 
 void MultipleDeviceTestCase::RemoveDevice(size_t device_index) {
   auto& state = devices_[device_index];
-  ASSERT_OK(coordinator().RemoveDevice(state.device, false));
+  ASSERT_OK(coordinator().device_manager()->RemoveDevice(state.device, false));
   state.device.reset();
   state.controller_server.reset();
   state.coordinator_client.reset();

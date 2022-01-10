@@ -345,7 +345,7 @@ TEST(MiscTestCase, BindDevices) {
   ASSERT_OK(coordinator_endpoints.status_value());
 
   fbl::RefPtr<Device> device;
-  auto status = coordinator.AddDevice(
+  auto status = coordinator.device_manager()->AddDevice(
       coordinator.sys_device(), std::move(controller_endpoints->client),
       std::move(coordinator_endpoints->server), nullptr /* props_data */, 0 /* props_count */,
       nullptr /* str_props_data */, 0 /* str_props_count */, "mock-device", ZX_PROTOCOL_TEST,
@@ -353,7 +353,7 @@ TEST(MiscTestCase, BindDevices) {
       true /* always_init */, zx::vmo() /*inspect*/, zx::channel() /* client_remote */,
       fidl::ClientEnd<fio::Directory>() /* outgoing_dir */, &device);
   ASSERT_OK(status);
-  ASSERT_EQ(1, coordinator.devices().size_slow());
+  ASSERT_EQ(1, coordinator.device_manager()->devices().size_slow());
 
   // Add the driver.
   load_driver(nullptr, kDriverPath, fit::bind_member(&coordinator, &Coordinator::DriverAdded));
@@ -365,12 +365,12 @@ TEST(MiscTestCase, BindDevices) {
   ASSERT_EQ(Device::State::kActive, device->state());
 
   // Bind the device to a fake driver_host.
-  fbl::RefPtr<Device> dev = fbl::RefPtr(&coordinator.devices().front());
+  fbl::RefPtr<Device> dev = fbl::RefPtr(&coordinator.device_manager()->devices().front());
   auto host = fbl::MakeRefCounted<DriverHost>(
       &coordinator, fidl::ClientEnd<fuchsia_device_manager::DriverHostController>(),
       fidl::ClientEnd<fuchsia_io::Directory>(), zx::process{});
   dev->set_host(std::move(host));
-  status = coordinator.BindDevice(dev, kDriverPath, true /* new device */);
+  status = coordinator.bind_driver_manager()->BindDevice(dev, kDriverPath, true /* new device */);
   ASSERT_OK(status);
 
   // Check the BindDriver request.
@@ -400,7 +400,7 @@ TEST(MiscTestCase, TestOutput) {
   ASSERT_OK(coordinator_endpoints.status_value());
 
   fbl::RefPtr<Device> device;
-  auto status = coordinator.AddDevice(
+  auto status = coordinator.device_manager()->AddDevice(
       coordinator.sys_device(), std::move(controller_endpoints->client),
       std::move(coordinator_endpoints->server), nullptr /* props_data */, 0 /* props_count */,
       nullptr /* str_props_data */, 0 /* str_props_count */, "mock-device", ZX_PROTOCOL_TEST,
@@ -408,7 +408,7 @@ TEST(MiscTestCase, TestOutput) {
       true /* always_init */, zx::vmo() /*inspect*/, zx::channel() /* client_remote */,
       fidl::ClientEnd<fio::Directory>() /* outgoing_dir */, &device);
   ASSERT_OK(status);
-  ASSERT_EQ(1, coordinator.devices().size_slow());
+  ASSERT_EQ(1, coordinator.device_manager()->devices().size_slow());
 
   fbl::String driver_name;
   auto test_reporter_ = std::make_unique<TestDriverTestReporter>(driver_name);
@@ -425,12 +425,12 @@ TEST(MiscTestCase, TestOutput) {
   ASSERT_EQ(Device::State::kActive, device->state());
 
   // Bind the device to a fake driver_host.
-  fbl::RefPtr<Device> dev = fbl::RefPtr(&coordinator.devices().front());
+  fbl::RefPtr<Device> dev = fbl::RefPtr(&coordinator.device_manager()->devices().front());
   auto host = fbl::MakeRefCounted<DriverHost>(
       &coordinator, fidl::ClientEnd<fuchsia_device_manager::DriverHostController>(),
       fidl::ClientEnd<fuchsia_io::Directory>(), zx::process{});
   dev->set_host(std::move(host));
-  status = coordinator.BindDevice(dev, kDriverPath, true /* new device */);
+  status = coordinator.bind_driver_manager()->BindDevice(dev, kDriverPath, true /* new device */);
   ASSERT_OK(status);
 
   // Check the BindDriver request.
@@ -505,7 +505,7 @@ void AddDeviceWithProperties(const fuchsia_device_manager::wire::DeviceProperty*
   ASSERT_OK(coordinator_endpoints.status_value());
 
   fbl::RefPtr<Device> device;
-  auto status = coordinator.AddDevice(
+  auto status = coordinator.device_manager()->AddDevice(
       coordinator.sys_device(), std::move(controller_endpoints->client),
       std::move(coordinator_endpoints->server), props_data, props_count, str_props_data,
       str_props_count, "mock-device", ZX_PROTOCOL_TEST, {} /* driver_path */, {} /* args */,
@@ -515,8 +515,8 @@ void AddDeviceWithProperties(const fuchsia_device_manager::wire::DeviceProperty*
   ASSERT_OK(status);
 
   // Check that the device has been added to the coordinator, with the correct properties.
-  ASSERT_EQ(1, coordinator.devices().size_slow());
-  const Device& dev = coordinator.devices().front();
+  ASSERT_EQ(1, coordinator.device_manager()->devices().size_slow());
+  const Device& dev = coordinator.device_manager()->devices().front();
   ASSERT_EQ(dev.props().size(), props_count);
   for (size_t i = 0; i < props_count; i++) {
     ASSERT_EQ(dev.props()[i].id, props_data[i].id);
@@ -586,7 +586,7 @@ TEST(MiscTestCase, InvalidStringProperties) {
   };
 
   fbl::RefPtr<Device> device;
-  auto status = coordinator.AddDevice(
+  auto status = coordinator.device_manager()->AddDevice(
       coordinator.sys_device(), std::move(controller_endpoints->client),
       std::move(coordinator_endpoints->server), nullptr /* props */, 0 /* props_count */, str_props,
       std::size(str_props), "mock-device", ZX_PROTOCOL_TEST, {} /* driver_path */, {} /* args */,
@@ -624,7 +624,7 @@ TEST(MiscTestCase, DeviceAlreadyBoundFromDriverIndex) {
   ASSERT_OK(coordinator_endpoints.status_value());
 
   fbl::RefPtr<Device> device;
-  auto status = coordinator.AddDevice(
+  auto status = coordinator.device_manager()->AddDevice(
       coordinator.sys_device(), std::move(controller_endpoints->client),
       std::move(coordinator_endpoints->server), nullptr /* props_data */, 0 /* props_count */,
       nullptr /* str_props_data */, 0 /* str_props_count */, "mock-device", ZX_PROTOCOL_TEST,
@@ -632,19 +632,21 @@ TEST(MiscTestCase, DeviceAlreadyBoundFromDriverIndex) {
       true /* always_init */, zx::vmo() /*inspect*/, zx::channel() /* client_remote */,
       fidl::ClientEnd<fio::Directory>() /*outgoing_dir*/, &device);
   ASSERT_OK(status);
-  ASSERT_EQ(1, coordinator.devices().size_slow());
+  ASSERT_EQ(1, coordinator.device_manager()->devices().size_slow());
 
   // Bind the device to a fake driver_host.
-  fbl::RefPtr<Device> dev = fbl::RefPtr(&coordinator.devices().front());
+  fbl::RefPtr<Device> dev = fbl::RefPtr(&coordinator.device_manager()->devices().front());
   auto host = fbl::MakeRefCounted<DriverHost>(
       &coordinator, fidl::ClientEnd<fuchsia_device_manager::DriverHostController>(),
       fidl::ClientEnd<fuchsia_io::Directory>(), zx::process{});
   dev->set_host(std::move(host));
-  status = coordinator.BindDevice(dev, kFakeDriverUrl, true /* new device */);
+  status =
+      coordinator.bind_driver_manager()->BindDevice(dev, kFakeDriverUrl, true /* new device */);
   ASSERT_OK(status);
   loop.RunUntilIdle();
 
-  status = coordinator.BindDevice(dev, kFakeDriverUrl, true /* new device */);
+  status =
+      coordinator.bind_driver_manager()->BindDevice(dev, kFakeDriverUrl, true /* new device */);
   ASSERT_STATUS(status, ZX_ERR_ALREADY_BOUND);
   loop.RunUntilIdle();
 

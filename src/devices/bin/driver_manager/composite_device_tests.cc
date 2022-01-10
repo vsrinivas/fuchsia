@@ -173,8 +173,9 @@ void BindCompositeDefineComposite(const fbl::RefPtr<Device>& platform_bus,
   };
 
   Coordinator* coordinator = platform_bus->coordinator;
-  ASSERT_EQ(coordinator->AddCompositeDevice(platform_bus, name, std::move(comp_desc)),
-            expected_status);
+  ASSERT_EQ(
+      coordinator->device_manager()->AddCompositeDevice(platform_bus, name, std::move(comp_desc)),
+      expected_status);
 }
 
 class CompositeTestCase : public MultipleDeviceTestCase {
@@ -485,7 +486,8 @@ TEST_F(CompositeTestCase, SharedFragmentUnbinds) {
     ASSERT_NOT_NULL(comp_device2);
   }
   // Remove device 0 and its children (fragment and composite devices).
-  ASSERT_NO_FATAL_FAILURE(coordinator().ScheduleRemove(device(device_indexes[0])->device));
+  ASSERT_NO_FATAL_FAILURE(
+      coordinator().device_manager()->ScheduleRemove(device(device_indexes[0])->device));
   coordinator_loop()->RunUntilIdle();
 
   auto device_zero = device(device_indexes[0]);
@@ -594,7 +596,8 @@ TEST_F(CompositeTestCase, FragmentUnbinds) {
   }
 
   // Remove device 0 and its children (fragment and composite devices).
-  ASSERT_NO_FATAL_FAILURE(coordinator().ScheduleRemove(device(device_indexes[0])->device));
+  ASSERT_NO_FATAL_FAILURE(
+      coordinator().device_manager()->ScheduleRemove(device(device_indexes[0])->device));
   coordinator_loop()->RunUntilIdle();
 
   auto device_zero = device(device_indexes[0]);
@@ -1045,7 +1048,8 @@ TEST_F(CompositeMetadataTestCase, GetMetadataAfterCompositeReassemble) {
   VerifyMetadata(buf, len);
 
   // Remove device 0 and its children (fragment and composite devices).
-  ASSERT_NO_FATAL_FAILURE(coordinator().ScheduleRemove(device(device_indexes[0])->device));
+  ASSERT_NO_FATAL_FAILURE(
+      coordinator().device_manager()->ScheduleRemove(device(device_indexes[0])->device));
   coordinator_loop()->RunUntilIdle();
 
   auto device_zero = device(device_indexes[0]);

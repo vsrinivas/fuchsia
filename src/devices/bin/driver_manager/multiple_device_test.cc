@@ -24,7 +24,8 @@ TEST_F(MultipleDeviceTestCase, UnbindThenSuspend) {
   ASSERT_NO_FATAL_FAILURE(AddDevice(device(parent_index)->device, "child-device",
                                     0 /* protocol id */, "", &child_index));
 
-  ASSERT_NO_FATAL_FAILURE(coordinator().ScheduleRemove(device(parent_index)->device));
+  ASSERT_NO_FATAL_FAILURE(
+      coordinator().device_manager()->ScheduleRemove(device(parent_index)->device));
   coordinator_loop()->RunUntilIdle();
 
   // The child should be unbound first.
@@ -63,7 +64,8 @@ TEST_F(MultipleDeviceTestCase, SuspendThenUnbind) {
 
   // Don't reply to the suspend yet.
   ASSERT_NO_FATAL_FAILURE(device(child_index)->CheckSuspendReceived(flags));
-  ASSERT_NO_FATAL_FAILURE(coordinator().ScheduleRemove(device(parent_index)->device));
+  ASSERT_NO_FATAL_FAILURE(
+      coordinator().device_manager()->ScheduleRemove(device(parent_index)->device));
   coordinator_loop()->RunUntilIdle();
 
   // Check that the child device has not yet started unbinding.
@@ -142,7 +144,8 @@ TEST_F(MultipleDeviceTestCase, UnbindThenResume) {
   device(parent_index)->device->set_state(Device::State::kSuspended);
   device(child_index)->device->set_state(Device::State::kSuspended);
 
-  ASSERT_NO_FATAL_FAILURE(coordinator().ScheduleRemove(device(parent_index)->device));
+  ASSERT_NO_FATAL_FAILURE(
+      coordinator().device_manager()->ScheduleRemove(device(parent_index)->device));
   coordinator_loop()->RunUntilIdle();
   // The child should be unbound first.
   ASSERT_NO_FATAL_FAILURE(device(child_index)->CheckUnbindReceived());
@@ -199,7 +202,8 @@ TEST_F(MultipleDeviceTestCase, ResumeThenUnbind) {
   // Don't reply to the resume yet.
   ASSERT_NO_FATAL_FAILURE(device(parent_index)->CheckResumeReceived(SystemPowerState::kFullyOn));
 
-  ASSERT_NO_FATAL_FAILURE(coordinator().ScheduleRemove(device(parent_index)->device));
+  ASSERT_NO_FATAL_FAILURE(
+      coordinator().device_manager()->ScheduleRemove(device(parent_index)->device));
   coordinator_loop()->RunUntilIdle();
 
   // Check that the child device has not yet started unbinding.

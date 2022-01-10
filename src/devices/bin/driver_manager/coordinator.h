@@ -39,7 +39,6 @@
 
 #include "lib/async/dispatcher.h"
 #include "src/devices/bin/driver_manager/bind_driver_manager.h"
-#include "src/devices/bin/driver_manager/composite_device.h"
 #include "src/devices/bin/driver_manager/devfs.h"
 #include "src/devices/bin/driver_manager/device.h"
 #include "src/devices/bin/driver_manager/driver.h"
@@ -49,6 +48,7 @@
 #include "src/devices/bin/driver_manager/metadata.h"
 #include "src/devices/bin/driver_manager/package_resolver.h"
 #include "src/devices/bin/driver_manager/system_state_manager.h"
+#include "src/devices/bin/driver_manager/v1/device_manager.h"
 #include "src/devices/bin/driver_manager/v1/firmware_loader.h"
 #include "src/devices/bin/driver_manager/v1/init_task.h"
 #include "src/devices/bin/driver_manager/v1/resume_task.h"
@@ -62,6 +62,7 @@ using statecontrol_fidl::wire::SystemPowerState;
 namespace fdf = fuchsia_driver_framework;
 
 class BindDriverManager;
+class DeviceManager;
 class DriverHostLoaderService;
 class FirmwareLoader;
 class FsProvider;
@@ -156,34 +157,7 @@ class Coordinator : public fidl::WireServer<fuchsia_driver_development::DriverDe
   zx_status_t LibnameToVmo(const fbl::String& libname, zx::vmo* out_vmo) const;
   const Driver* LibnameToDriver(std::string_view libname) const;
 
-  // Used to implement fuchsia::device::manager::Coordinator.
-  // TODO(fxbug.dev/43370): remove |always_init| once init tasks can be enabled for all devices.
-  zx_status_t AddDevice(const fbl::RefPtr<Device>& parent,
-                        fidl::ClientEnd<fuchsia_device_manager::DeviceController> device_controller,
-                        fidl::ServerEnd<fuchsia_device_manager::Coordinator> coordinator,
-                        const fuchsia_device_manager::wire::DeviceProperty* props_data,
-                        size_t props_count,
-                        const fuchsia_device_manager::wire::DeviceStrProperty* str_props_data,
-                        size_t str_props_count, std::string_view name, uint32_t protocol_id,
-                        std::string_view driver_path, std::string_view args, bool skip_autobind,
-                        bool has_init, bool always_init, zx::vmo inspect, zx::channel client_remote,
-                        fidl::ClientEnd<fio::Directory> outgoing_dir,
-                        fbl::RefPtr<Device>* new_device);
-  // Begin scheduling for removal of the device and unbinding of its children.
-  void ScheduleRemove(const fbl::RefPtr<Device>& dev);
-  // This is for scheduling the initial unbind task as a result of a driver_host's |ScheduleRemove|
-  // request.
-  // If |do_unbind| is true, unbinding is also requested for |dev|.
-  void ScheduleDriverHostRequestedRemove(const fbl::RefPtr<Device>& dev, bool do_unbind = false);
-  void ScheduleDriverHostRequestedUnbindChildren(const fbl::RefPtr<Device>& parent);
-  zx_status_t RemoveDevice(const fbl::RefPtr<Device>& dev, bool forced);
   zx_status_t MakeVisible(const fbl::RefPtr<Device>& dev);
-  // Try binding a driver to the device. Returns ZX_ERR_ALREADY_BOUND if there
-  // is a driver bound to the device and the device is not allowed to be bound multiple times.
-  zx_status_t BindDevice(const fbl::RefPtr<Device>& dev, std::string_view drvlibname,
-                         bool new_device);
-
-  void HandleNewDevice(const fbl::RefPtr<Device>& dev);
 
   zx_status_t GetTopologicalPath(const fbl::RefPtr<const Device>& dev, char* out, size_t max) const;
 
@@ -194,8 +168,6 @@ class Coordinator : public fidl::WireServer<fuchsia_driver_development::DriverDe
   }
   zx_status_t AddMetadata(const fbl::RefPtr<Device>& dev, uint32_t type, const void* data,
                           uint32_t length);
-  zx_status_t AddCompositeDevice(const fbl::RefPtr<Device>& dev, std::string_view name,
-                                 fuchsia_device_manager::wire::CompositeDeviceDescriptor comp_desc);
 
   zx_status_t PrepareProxy(const fbl::RefPtr<Device>& dev,
                            fbl::RefPtr<DriverHost> target_driver_host);
@@ -228,13 +200,6 @@ class Coordinator : public fidl::WireServer<fuchsia_driver_development::DriverDe
 
   fbl::DoublyLinkedList<std::unique_ptr<Driver>>& drivers() { return drivers_; }
   const fbl::DoublyLinkedList<std::unique_ptr<Driver>>& drivers() const { return drivers_; }
-  fbl::TaggedDoublyLinkedList<fbl::RefPtr<Device>, Device::AllDevicesListTag>& devices() {
-    return devices_;
-  }
-  const fbl::TaggedDoublyLinkedList<fbl::RefPtr<Device>, Device::AllDevicesListTag>& devices()
-      const {
-    return devices_;
-  }
 
   // Called when a new driver becomes available to the Coordinator. Existing devices are
   // inspected to see if the new driver is bindable to them (unless they are already bound).
@@ -276,6 +241,8 @@ class Coordinator : public fidl::WireServer<fuchsia_driver_development::DriverDe
 
   InspectManager& inspect_manager() { return *inspect_manager_; }
   DriverLoader& driver_loader() { return driver_loader_; }
+
+  DeviceManager* device_manager() const { return device_manager_.get(); }
 
   BindDriverManager* bind_driver_manager() const { return bind_driver_manager_.get(); }
 
@@ -322,10 +289,6 @@ class Coordinator : public fidl::WireServer<fuchsia_driver_development::DriverDe
 
   zx_status_t NewDriverHost(const char* name, fbl::RefPtr<DriverHost>* out);
 
-  // Schedule unbind and remove tasks for all devices in |driver_host|.
-  // Used as part of RestartDriverHosts().
-  void ScheduleUnbindRemoveAllDevices(fbl::RefPtr<DriverHost> driver_host);
-
   CoordinatorConfig config_;
   async_dispatcher_t* const dispatcher_;
   bool running_ = false;
@@ -346,12 +309,6 @@ class Coordinator : public fidl::WireServer<fuchsia_driver_development::DriverDe
   // All DriverHosts
   fbl::DoublyLinkedList<DriverHost*> driver_hosts_;
 
-  // All Devices (excluding static immortal devices)
-  fbl::TaggedDoublyLinkedList<fbl::RefPtr<Device>, Device::AllDevicesListTag> devices_;
-
-  // All composite devices
-  fbl::DoublyLinkedList<std::unique_ptr<CompositeDevice>> composite_devices_;
-
   fbl::RefPtr<Device> root_device_;
   fbl::RefPtr<Device> sys_device_;
 
@@ -369,6 +326,8 @@ class Coordinator : public fidl::WireServer<fuchsia_driver_development::DriverDe
   zx::vmo mexec_kernel_zbi_, mexec_data_zbi_;
 
   std::unique_ptr<SuspendResumeManager> suspend_resume_manager_;
+
+  std::unique_ptr<DeviceManager> device_manager_;
 
   std::unique_ptr<BindDriverManager> bind_driver_manager_;
 };

@@ -36,7 +36,7 @@ Device::Device(Coordinator* coord, fbl::String name, fbl::String libname, fbl::S
       args_(std::move(args)),
       parent_(std::move(parent)),
       protocol_id_(protocol_id),
-      publish_task_([this] { coordinator->HandleNewDevice(fbl::RefPtr(this)); }),
+      publish_task_([this] { coordinator->device_manager()->HandleNewDevice(fbl::RefPtr(this)); }),
       client_remote_(std::move(client_remote)),
       outgoing_dir_(std::move(outgoing_dir)) {
   test_reporter = std::make_unique<DriverTestReporter>(name_);
@@ -88,7 +88,7 @@ void Device::Bind(fbl::RefPtr<Device> dev, async_dispatcher_t* dispatcher,
               LOGF(WARNING, "Disconnected device %p '%s', see fxbug.dev/56208 for potential cause",
                    dev.get(), dev->name().data());
 
-              dev->coordinator->RemoveDevice(dev, true);
+              dev->coordinator->device_manager()->RemoveDevice(dev, true);
             }
             break;
           default:
@@ -570,7 +570,7 @@ zx_status_t Device::CompleteRemove(zx_status_t status) {
   }
   // If we received an error, it is because we are currently force removing the device.
   if (status == ZX_OK) {
-    coordinator->RemoveDevice(fbl::RefPtr(this), false);
+    coordinator->device_manager()->RemoveDevice(fbl::RefPtr(this), false);
   }
   if (remove_completion_) {
     // If we received an error, it is because we are currently force removing the device.
@@ -731,8 +731,8 @@ int Device::RunCompatibilityTests() {
     auto& child = *itr;
     itr++;
     this->set_test_state(Device::TestStateMachine::kTestUnbindSent);
-    coordinator->ScheduleDriverHostRequestedRemove(fbl::RefPtr<Device>(&child),
-                                                   true /* unbind_self */);
+    coordinator->device_manager()->ScheduleDriverHostRequestedRemove(fbl::RefPtr<Device>(&child),
+                                                                     true /* unbind_self */);
   }
 
   zx_signals_t observed = 0;
@@ -755,7 +755,7 @@ int Device::RunCompatibilityTests() {
     return ZX_ERR_INTERNAL;
   }
   this->set_test_state(Device::TestStateMachine::kTestBindSent);
-  this->coordinator->HandleNewDevice(fbl::RefPtr(this));
+  this->coordinator->device_manager()->HandleNewDevice(fbl::RefPtr(this));
   observed = 0;
   status = test_event().wait_one(TEST_BIND_DONE_SIGNAL, zx::deadline_after(test_time()), &observed);
   if (status != ZX_OK) {
@@ -801,7 +801,7 @@ void Device::AddDevice(AddDeviceRequestView request, AddDeviceCompleter::Sync& c
       request->device_add_config & fuchsia_device_manager::wire::AddDeviceConfig::kSkipAutobind);
 
   fbl::RefPtr<Device> device;
-  zx_status_t status = parent->coordinator->AddDevice(
+  zx_status_t status = parent->coordinator->device_manager()->AddDevice(
       parent, std::move(request->device_controller), std::move(request->coordinator),
       request->property_list.props.data(), request->property_list.props.count(),
       request->property_list.str_props.data(), request->property_list.str_props.count(), name,
@@ -826,7 +826,7 @@ void Device::ScheduleRemove(ScheduleRemoveRequestView request,
 
   VLOGF(1, "Scheduling remove of device %p '%s'", dev.get(), dev->name().data());
 
-  dev->coordinator->ScheduleDriverHostRequestedRemove(dev, request->unbind_self);
+  dev->coordinator->device_manager()->ScheduleDriverHostRequestedRemove(dev, request->unbind_self);
 }
 
 void Device::ScheduleUnbindChildren(ScheduleUnbindChildrenRequestView request,
@@ -835,7 +835,7 @@ void Device::ScheduleUnbindChildren(ScheduleUnbindChildrenRequestView request,
 
   VLOGF(1, "Scheduling unbind of children for device %p '%s'", dev.get(), dev->name().data());
 
-  dev->coordinator->ScheduleDriverHostRequestedUnbindChildren(dev);
+  dev->coordinator->device_manager()->ScheduleDriverHostRequestedUnbindChildren(dev);
 }
 
 void Device::BindDevice(BindDeviceRequestView request, BindDeviceCompleter::Sync& completer) {
@@ -849,7 +849,8 @@ void Device::BindDevice(BindDeviceRequestView request, BindDeviceCompleter::Sync
   }
 
   VLOGF(1, "'bind-device' device %p '%s'", dev.get(), dev->name().data());
-  zx_status_t status = dev->coordinator->BindDevice(dev, driver_path, false /* new device */);
+  zx_status_t status =
+      dev->coordinator->bind_driver_manager()->BindDevice(dev, driver_path, false /* new device */);
   if (status != ZX_OK) {
     completer.ReplyError(status);
   } else {
@@ -943,8 +944,8 @@ void Device::AddCompositeDevice(AddCompositeDeviceRequestView request,
                                 AddCompositeDeviceCompleter::Sync& completer) {
   auto dev = fbl::RefPtr(this);
   std::string_view name(request->name.data(), request->name.size());
-  zx_status_t status =
-      this->coordinator->AddCompositeDevice(dev, name, std::move(request->comp_desc));
+  zx_status_t status = this->coordinator->device_manager()->AddCompositeDevice(
+      dev, name, std::move(request->comp_desc));
   if (status != ZX_OK) {
     completer.ReplyError(status);
   } else {

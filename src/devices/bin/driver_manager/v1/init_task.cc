@@ -50,7 +50,8 @@ void InitTask::Run() {
       // TODO(https://fxbug.dev/56208): Change this log back to error once isolated devmgr is fixed.
       LOGF(WARNING, "Init task failed, scheduling removal of device %p '%s': %s", device_.get(),
            device_->name().data(), zx_status_get_string(status));
-      device_->coordinator->ScheduleDriverHostRequestedRemove(device_, true /* do_unbind */);
+      device_->coordinator->device_manager()->ScheduleDriverHostRequestedRemove(
+          device_, true /* do_unbind */);
     }
     // We still want other tasks to run even if init failed, so do not propagate errors.
     // If a driver adds multiple devices, it is possible that init tasks are scheduled

@@ -76,8 +76,8 @@ TEST_F(UnbindTestCase, UnbindWithRemoveOp) {
 
   // We will schedule child device 1_1_1's removal in device 1_1's unbind hook.
   auto unbind_op = [&] {
-    ASSERT_NO_FATAL_FAILURE(
-        coordinator().ScheduleDriverHostRequestedRemove(device(devices[2].index)->device));
+    ASSERT_NO_FATAL_FAILURE(coordinator().device_manager()->ScheduleDriverHostRequestedRemove(
+        device(devices[2].index)->device));
   };
   devices[1].unbind_op = unbind_op;
   ASSERT_NO_FATAL_FAILURE(UnbindTest(devices, std::size(devices), index_to_remove));
@@ -141,9 +141,10 @@ void UnbindTestCase::UnbindTest(DeviceDesc devices[], size_t num_devices,
   if (unbind_children_only) {
     // Skip removal of the target device.
     ASSERT_NO_FATAL_FAILURE(
-        coordinator().ScheduleDriverHostRequestedUnbindChildren(device(desc.index)->device));
+        coordinator().device_manager()->ScheduleDriverHostRequestedUnbindChildren(
+            device(desc.index)->device));
   } else {
-    ASSERT_NO_FATAL_FAILURE(coordinator().ScheduleDriverHostRequestedRemove(
+    ASSERT_NO_FATAL_FAILURE(coordinator().device_manager()->ScheduleDriverHostRequestedRemove(
         device(desc.index)->device, unbind_target_device));
   }
   coordinator_loop()->RunUntilIdle();
@@ -230,7 +231,8 @@ void UnbindTestCase::UnbindTest(DeviceDesc devices[], size_t num_devices,
 }
 TEST_F(UnbindTestCase, UnbindSysDevice) {
   // Since the sys device is immortal, only its children will be unbound.
-  ASSERT_NO_FATAL_FAILURE(coordinator().ScheduleRemove(coordinator().sys_device()));
+  ASSERT_NO_FATAL_FAILURE(
+      coordinator().device_manager()->ScheduleRemove(coordinator().sys_device()));
   coordinator_loop()->RunUntilIdle();
 
   ASSERT_FALSE(sys_proxy()->HasPendingMessages());
@@ -253,10 +255,12 @@ TEST_F(UnbindTestCase, UnbindSysDevice) {
 TEST_F(UnbindTestCase, UnbindWhileRemovingProxy) {
   // The unbind task should complete immediately.
   // The remove task is blocked on the platform bus remove task completing.
-  ASSERT_NO_FATAL_FAILURE(coordinator().ScheduleRemove(coordinator().sys_device()->proxy()));
+  ASSERT_NO_FATAL_FAILURE(
+      coordinator().device_manager()->ScheduleRemove(coordinator().sys_device()->proxy()));
 
   // Since the sys device is immortal, only its children will be unbound.
-  ASSERT_NO_FATAL_FAILURE(coordinator().ScheduleRemove(coordinator().sys_device()));
+  ASSERT_NO_FATAL_FAILURE(
+      coordinator().device_manager()->ScheduleRemove(coordinator().sys_device()));
   coordinator_loop()->RunUntilIdle();
 
   ASSERT_FALSE(sys_proxy()->HasPendingMessages());
@@ -284,7 +288,7 @@ TEST_F(UnbindTestCase, NumRemovals) {
 
   auto* child_device = device(child_index);
 
-  ASSERT_NO_FATAL_FAILURE(coordinator().ScheduleRemove(child_device->device));
+  ASSERT_NO_FATAL_FAILURE(coordinator().device_manager()->ScheduleRemove(child_device->device));
   coordinator_loop()->RunUntilIdle();
 
   ASSERT_NO_FATAL_FAILURE(child_device->CheckRemoveReceivedAndReply());
@@ -304,7 +308,7 @@ TEST_F(UnbindTestCase, AddDuringParentUnbind) {
       AddDevice(platform_bus()->device, "parent", 0 /* protocol id */, "", &parent_index));
 
   auto* parent_device = device(parent_index);
-  ASSERT_NO_FATAL_FAILURE(coordinator().ScheduleRemove(parent_device->device));
+  ASSERT_NO_FATAL_FAILURE(coordinator().device_manager()->ScheduleRemove(parent_device->device));
   coordinator_loop()->RunUntilIdle();
 
   // Don't reply to the request until we add the device.
@@ -320,7 +324,7 @@ TEST_F(UnbindTestCase, AddDuringParentUnbind) {
   ASSERT_OK(coordinator_endpoints.status_value());
 
   fbl::RefPtr<Device> device;
-  auto status = coordinator().AddDevice(
+  auto status = coordinator().device_manager()->AddDevice(
       parent_device->device, std::move(controller_endpoints->client),
       std::move(coordinator_endpoints->server), nullptr /* props_data */, 0 /* props_count */,
       nullptr /* str_props_data */, 0 /* str_props_count */, "child", 0 /* protocol_id */,
@@ -349,8 +353,8 @@ TEST_F(UnbindTestCase, TwoConcurrentRemovals) {
   auto* child_device = device(child_index);
 
   // Schedule concurrent removals.
-  ASSERT_NO_FATAL_FAILURE(coordinator().ScheduleRemove(parent_device->device));
-  ASSERT_NO_FATAL_FAILURE(coordinator().ScheduleRemove(child_device->device));
+  ASSERT_NO_FATAL_FAILURE(coordinator().device_manager()->ScheduleRemove(parent_device->device));
+  ASSERT_NO_FATAL_FAILURE(coordinator().device_manager()->ScheduleRemove(child_device->device));
   coordinator_loop()->RunUntilIdle();
 
   ASSERT_NO_FATAL_FAILURE(child_device->CheckRemoveReceivedAndReply());
@@ -370,7 +374,8 @@ TEST_F(UnbindTestCase, ManyConcurrentRemovals) {
   }
 
   for (size_t i = 0; i < num_devices; i++) {
-    ASSERT_NO_FATAL_FAILURE(coordinator().ScheduleRemove(device(idx_map[i])->device));
+    ASSERT_NO_FATAL_FAILURE(
+        coordinator().device_manager()->ScheduleRemove(device(idx_map[i])->device));
   }
 
   coordinator_loop()->RunUntilIdle();
@@ -393,7 +398,7 @@ TEST_F(UnbindTestCase, ForcedRemovalDuringUnbind) {
 
   auto* child_device = device(child_index);
 
-  ASSERT_NO_FATAL_FAILURE(coordinator().ScheduleRemove(parent_device->device));
+  ASSERT_NO_FATAL_FAILURE(coordinator().device_manager()->ScheduleRemove(parent_device->device));
   coordinator_loop()->RunUntilIdle();
 
   // Don't reply to the unbind request.
@@ -428,7 +433,7 @@ TEST_F(UnbindTestCase, ForcedRemovalDuringRemove) {
 
   auto* child_device = device(child_index);
 
-  ASSERT_NO_FATAL_FAILURE(coordinator().ScheduleRemove(parent_device->device));
+  ASSERT_NO_FATAL_FAILURE(coordinator().device_manager()->ScheduleRemove(parent_device->device));
   coordinator_loop()->RunUntilIdle();
 
   ASSERT_NO_FATAL_FAILURE(child_device->CheckUnbindReceivedAndReply());
@@ -478,11 +483,11 @@ TEST_F(UnbindTestCase, RemoveParentWhileRemovingChild) {
   // Start removing the child. Since we are not requesting an unbind
   // the unbind task will complete immediately. The remove task will be waiting
   // on the grandchild's remove to complete.
-  ASSERT_NO_FATAL_FAILURE(coordinator().ScheduleRemove(child_device->device));
+  ASSERT_NO_FATAL_FAILURE(coordinator().device_manager()->ScheduleRemove(child_device->device));
   coordinator_loop()->RunUntilIdle();
 
   // Start removing the parent.
-  ASSERT_NO_FATAL_FAILURE(coordinator().ScheduleRemove(parent_device->device));
+  ASSERT_NO_FATAL_FAILURE(coordinator().device_manager()->ScheduleRemove(parent_device->device));
   coordinator_loop()->RunUntilIdle();
 
   ASSERT_NO_FATAL_FAILURE(grandchild_device->CheckUnbindReceivedAndReply());
@@ -511,13 +516,13 @@ TEST_F(UnbindTestCase, RemoveParentAndChildSimultaneously) {
 
   auto* child_device = device(child_index);
 
-  ASSERT_NO_FATAL_FAILURE(coordinator().ScheduleDriverHostRequestedRemove(parent_device->device,
-                                                                          false /* do_unbind */));
+  ASSERT_NO_FATAL_FAILURE(coordinator().device_manager()->ScheduleDriverHostRequestedRemove(
+      parent_device->device, false /* do_unbind */));
   coordinator_loop()->RunUntilIdle();
 
   // At the same time, have the child try to remove itself.
-  ASSERT_NO_FATAL_FAILURE(
-      coordinator().ScheduleDriverHostRequestedRemove(child_device->device, false /* do_unbind */));
+  ASSERT_NO_FATAL_FAILURE(coordinator().device_manager()->ScheduleDriverHostRequestedRemove(
+      child_device->device, false /* do_unbind */));
   coordinator_loop()->RunUntilIdle();
 
   // The child device will not reply, as it already called device_remove previously.
@@ -547,12 +552,12 @@ TEST_F(UnbindTestCase, ForcedRemovalBeforeRemoveTask) {
 
   auto* child_device = device(child_index);
 
-  ASSERT_NO_FATAL_FAILURE(coordinator().ScheduleRemove(parent_device->device));
+  ASSERT_NO_FATAL_FAILURE(coordinator().device_manager()->ScheduleRemove(parent_device->device));
   coordinator_loop()->RunUntilIdle();
 
   // Complete the unbind without running the remove task yet.
   ASSERT_OK(child_device->device->CompleteUnbind(ZX_OK));
-  ASSERT_OK(coordinator().RemoveDevice(child_device->device, true /* forced */));
+  ASSERT_OK(coordinator().device_manager()->RemoveDevice(child_device->device, true /* forced */));
 
   // The remove task should now be run.
   coordinator_loop()->RunUntilIdle();
@@ -587,7 +592,7 @@ TEST_F(UnbindTestCase, SendUnbindFails) {
   child_device->device->device_controller().AsyncTeardown();
   coordinator_loop()->RunUntilIdle();
 
-  ASSERT_NO_FATAL_FAILURE(coordinator().ScheduleRemove(parent_device->device));
+  ASSERT_NO_FATAL_FAILURE(coordinator().device_manager()->ScheduleRemove(parent_device->device));
   coordinator_loop()->RunUntilIdle();
 
   // Check that both devices are dead and have no pending unbind or remove tasks.
@@ -613,7 +618,7 @@ TEST_F(UnbindTestCase, SendRemoveFails) {
   test_device->device->device_controller().AsyncTeardown();
   coordinator_loop()->RunUntilIdle();
 
-  ASSERT_NO_FATAL_FAILURE(coordinator().ScheduleRemove(test_device->device));
+  ASSERT_NO_FATAL_FAILURE(coordinator().device_manager()->ScheduleRemove(test_device->device));
   coordinator_loop()->RunUntilIdle();
 
   // Check the device is dead and has no pending unbind or remove tasks.

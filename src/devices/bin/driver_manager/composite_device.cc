@@ -294,7 +294,7 @@ zx_status_t CompositeDevice::TryAssemble() {
   if (status != ZX_OK) {
     return status;
   }
-  coordinator->devices().push_back(new_device);
+  coordinator->device_manager()->AddToDevices(new_device);
 
   // Create the composite device in the driver_host
   fdm::wire::CompositeDevice composite{fragments, fidl::StringView::FromExternal(name())};

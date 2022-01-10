@@ -93,7 +93,7 @@ class DeviceState : public fidl::WireServer<fdm::DeviceController> {
 
   ~DeviceState() {
     if (device) {
-      device->coordinator->RemoveDevice(device, false);
+      device->coordinator->device_manager()->RemoveDevice(device, false);
     }
   }
 

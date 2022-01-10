@@ -32,8 +32,8 @@ TEST_F(InitTestCase, InitThenUnbind) {
 
   ASSERT_NO_FATAL_FAILURE(device(index)->CheckInitReceived());
 
-  ASSERT_NO_FATAL_FAILURE(
-      coordinator().ScheduleDriverHostRequestedRemove(device(index)->device, true /* do_unbind */));
+  ASSERT_NO_FATAL_FAILURE(coordinator().device_manager()->ScheduleDriverHostRequestedRemove(
+      device(index)->device, true /* do_unbind */));
   coordinator_loop()->RunUntilIdle();
 
   // We should not get the unbind request until we reply to the init.

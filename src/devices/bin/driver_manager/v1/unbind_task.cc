@@ -155,7 +155,7 @@ void UnbindTask::Run() {
       // TODO(https://fxbug.dev/56208): Change this log back to error once isolated devmgr is fixed.
       LOGF(WARNING, "Unbind task failed, force removing device %p '%s': %s", device_.get(),
            device_->name().data(), zx_status_get_string(status));
-      device_->coordinator->RemoveDevice(device_, true /* forced */);
+      device_->coordinator->device_manager()->RemoveDevice(device_, true /* forced */);
     }
     // The forced removal will schedule new unbind tasks if needed (e.g. for proxy tasks),
     // so we should not propagate errors other than ZX_ERR_UNAVAILABLE.
@@ -194,7 +194,7 @@ void RemoveTask::Run() {
       // TODO(https://fxbug.dev/56208): Change this log back to error once isolated devmgr is fixed.
       LOGF(WARNING, "Remove task failed, forcing remove of device %p '%s': %s", device_.get(),
            device_->name().data(), zx_status_get_string(status));
-      device_->coordinator->RemoveDevice(device_, true /* forced */);
+      device_->coordinator->device_manager()->RemoveDevice(device_, true /* forced */);
     }
     // The forced removal will schedule new remove tasks if needed (e.g. for proxy tasks),
     // so we should not propagate errors other than ZX_ERR_UNAVAILABLE.

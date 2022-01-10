@@ -77,7 +77,7 @@ void SuspendResumeManager::Resume(SystemPowerState target_state, ResumeCallback 
   };
 
   resume_context_ = ResumeContext(ResumeContext::Flags::kResume, target_state), std::move(callback);
-  for (auto& dev : coordinator_->devices()) {
+  for (auto& dev : coordinator_->device_manager()->devices()) {
     schedule_resume(fbl::RefPtr(&dev));
     if (dev.proxy()) {
       schedule_resume(dev.proxy());

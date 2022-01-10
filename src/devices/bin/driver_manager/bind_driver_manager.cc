@@ -8,6 +8,7 @@
 #include <lib/fit/function.h>
 #include <zircon/status.h>
 
+#include "src/devices/bin/driver_manager/devfs.h"
 #include "src/devices/lib/log/log.h"
 
 BindDriverManager::BindDriverManager(Coordinator* coordinator, AttemptBindFunc attempt_bind)
@@ -33,6 +34,61 @@ zx_status_t BindDriverManager::BindDriverToDevice(const MatchedDriver& driver,
          driver.driver->libname.data(), dev->name().data(), zx_status_get_string(status));
   }
   return status;
+}
+
+zx_status_t BindDriverManager::BindDevice(const fbl::RefPtr<Device>& dev,
+                                          std::string_view drvlibname, bool new_device) {
+  // shouldn't be possible to get a bind request for a proxy device
+  if (dev->flags & DEV_CTX_PROXY) {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+
+  // A libname of "" means a general rebind request instead of a specific request.
+  bool autobind = drvlibname.size() == 0;
+  if (autobind && (dev->flags & DEV_CTX_SKIP_AUTOBIND)) {
+    return ZX_OK;
+  }
+
+  // Attempt composite device matching first. This is unnecessary if a
+  // specific driver has been requested.
+  if (autobind) {
+    zx_status_t status;
+    for (auto& composite : coordinator_->device_manager()->composite_devices()) {
+      size_t index;
+      if (composite.TryMatchFragments(dev, &index)) {
+        LOGF(INFO, "Device '%s' matched fragment %zu of composite '%s'", dev->name().data(), index,
+             composite.name().data());
+        status = composite.BindFragment(index, dev);
+        if (status != ZX_OK) {
+          LOGF(ERROR, "Device '%s' failed to bind fragment %zu of composite '%s': %s",
+               dev->name().data(), index, composite.name().data(), zx_status_get_string(status));
+          return status;
+        }
+      }
+    }
+  }
+
+  // TODO: disallow if we're in the middle of enumeration, etc
+  zx::status<std::vector<MatchedDriver>> result = GetMatchingDrivers(dev, drvlibname);
+  if (!result.is_ok()) {
+    return result.error_value();
+  }
+
+  auto drivers = std::move(result.value());
+  for (auto& driver : drivers) {
+    zx_status_t status = BindDriverToDevice(driver, dev);
+    if (status != ZX_OK) {
+      return status;
+    }
+  }
+
+  // Notify observers that this device is available again
+  // Needed for non-auto-binding drivers like GPT against block, etc
+  if (!new_device && autobind) {
+    devfs_advertise_modified(dev);
+  }
+
+  return ZX_OK;
 }
 
 zx_status_t BindDriverManager::MatchDevice(const fbl::RefPtr<Device>& dev, const Driver* driver,
@@ -160,7 +216,7 @@ void BindDriverManager::BindAllDevicesDriverIndex(const DriverLoader::MatchDevic
     return;
   }
 
-  for (auto& dev : coordinator_->devices()) {
+  for (auto& dev : coordinator_->device_manager()->devices()) {
     auto dev_ref = fbl::RefPtr(&dev);
     zx_status_t status = BindDeviceWithDriverIndex(dev_ref, config);
     if (status == ZX_ERR_NEXT || status == ZX_ERR_ALREADY_BOUND) {
