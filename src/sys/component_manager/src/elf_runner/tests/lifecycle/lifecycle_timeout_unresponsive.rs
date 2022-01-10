@@ -18,18 +18,36 @@ use {
 #[fuchsia::test]
 async fn test_stop_timeouts() {
     let event_source = EventSource::new().unwrap();
-    let event_stream = event_source
+
+    // We'll use one event stream for each component we're interested in monitoring
+    let event_stream_root = event_source
         .subscribe(vec![EventSubscription::new(
             vec![Stopped::NAME, Purged::NAME],
             EventMode::Async,
         )])
         .await
         .unwrap();
+    let event_stream_custom = event_source
+        .subscribe(vec![EventSubscription::new(
+            vec![Stopped::NAME, Purged::NAME],
+            EventMode::Async,
+        )])
+        .await
+        .unwrap();
+    let event_stream_inherited = event_source
+        .subscribe(vec![EventSubscription::new(
+            vec![Stopped::NAME, Purged::NAME],
+            EventMode::Async,
+        )])
+        .await
+        .unwrap();
+
     event_source.start_component_tree().await;
     let collection_name = String::from("test-collection");
+
     // What is going on here? A scoped dynamic instance is created and then
     // dropped. When a the instance is dropped it stops the instance.
-    let target_monikers = {
+    let (root_moniker, custom_moniker, inherited_moniker) = {
         let instance = ScopedInstance::new(
             collection_name.clone(),
             String::from(concat!(
@@ -45,9 +63,9 @@ async fn test_stop_timeouts() {
         let _ = instance.connect_to_binder().unwrap();
 
         let moniker_stem = format!("./{}:{}", collection_name, instance.child_name().to_string());
+        let root_moniker = format!("{}$", moniker_stem);
         let custom_timeout_child = format!("{}/custom-timeout-child$", moniker_stem);
         let inherited_timeout_child = format!("{}/inherited-timeout-child$", moniker_stem);
-        let target_monikers = [moniker_stem, custom_timeout_child, inherited_timeout_child];
 
         // Attempt to connect to protocols exposed from the components whose
         // stop we want to observe. Those components don't actually provide
@@ -74,30 +92,52 @@ async fn test_stop_timeouts() {
         };
 
         join!(client1_startup, client2_startup);
-        target_monikers
+        (root_moniker, custom_timeout_child, inherited_timeout_child)
     };
 
-    // We expect three things to stop, the root component and its two children.
     EventSequence::new()
-        .all_of(
+        .has_subset(
             vec![
                 EventMatcher::ok()
-                    .r#type(Stopped::TYPE)
-                    .monikers_regex(&target_monikers)
+                    .monikers_regex(vec![root_moniker.clone()])
                     .stop(Some(ExitStatusMatcher::AnyCrash)),
-                EventMatcher::ok()
-                    .monikers_regex(&target_monikers)
-                    .stop(Some(ExitStatusMatcher::AnyCrash)),
-                EventMatcher::ok()
-                    .monikers_regex(&target_monikers)
-                    .stop(Some(ExitStatusMatcher::AnyCrash)),
-                EventMatcher::ok().r#type(Purged::TYPE).monikers_regex(&target_monikers),
-                EventMatcher::ok().r#type(Purged::TYPE).monikers_regex(&target_monikers),
-                EventMatcher::ok().r#type(Purged::TYPE).monikers_regex(&target_monikers),
+                EventMatcher::ok().monikers_regex(vec![root_moniker.clone()]).r#type(Purged::TYPE),
             ],
-            Ordering::Unordered,
+            Ordering::Ordered,
         )
-        .expect(event_stream)
+        .expect(event_stream_root)
+        .await
+        .unwrap();
+
+    EventSequence::new()
+        .has_subset(
+            vec![
+                EventMatcher::ok()
+                    .monikers_regex(vec![custom_moniker.clone()])
+                    .stop(Some(ExitStatusMatcher::AnyCrash)),
+                EventMatcher::ok()
+                    .monikers_regex(vec![custom_moniker.clone()])
+                    .r#type(Purged::TYPE),
+            ],
+            Ordering::Ordered,
+        )
+        .expect(event_stream_custom)
+        .await
+        .unwrap();
+
+    EventSequence::new()
+        .has_subset(
+            vec![
+                EventMatcher::ok()
+                    .monikers_regex(vec![inherited_moniker.clone()])
+                    .stop(Some(ExitStatusMatcher::AnyCrash)),
+                EventMatcher::ok()
+                    .monikers_regex(vec![inherited_moniker.clone()])
+                    .r#type(Purged::TYPE),
+            ],
+            Ordering::Ordered,
+        )
+        .expect(event_stream_inherited)
         .await
         .unwrap();
 }
