@@ -59,6 +59,13 @@ class CallbackRequest : public fbl::DoublyLinkedListable<std::unique_ptr<Callbac
   // Returns whether a callback has been set via |SetCallback| and not yet been called.
   bool IsPending() { return !!callback_; }
 
+  // Clears the callback request state.
+  void Reset() {
+    dispatcher_ = nullptr;
+    reason_ = std::nullopt;
+    callback_ = nullptr;
+  }
+
  private:
   struct fdf_dispatcher* dispatcher_;
   Callback callback_;

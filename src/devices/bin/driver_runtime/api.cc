@@ -87,6 +87,15 @@ __EXPORT fdf_status_t fdf_channel_call(fdf_handle_t channel_handle, uint32_t opt
   return channel->Call(options, deadline, args);
 }
 
+__EXPORT void fdf_channel_cancel_wait(fdf_handle_t channel_handle) {
+  fbl::RefPtr<driver_runtime::Channel> channel;
+  fdf_status_t status =
+      driver_runtime::Handle::GetObject<driver_runtime::Channel>(channel_handle, &channel);
+  // TODO(fxbug.dev/87046): we may want to consider killing the process.
+  ZX_ASSERT(status == ZX_OK);
+  channel->CancelWait();
+}
+
 __EXPORT void fdf_handle_close(fdf_handle_t channel_handle) {
   if (channel_handle == ZX_HANDLE_INVALID) {
     return;
@@ -125,6 +134,10 @@ __EXPORT async_dispatcher_t* fdf_dispatcher_get_async_dispatcher(fdf_dispatcher_
 
 __EXPORT fdf_dispatcher_t* fdf_dispatcher_from_async_dispatcher(async_dispatcher_t* dispatcher) {
   return static_cast<fdf_dispatcher*>(fdf_dispatcher::FromAsyncDispatcher(dispatcher));
+}
+
+__EXPORT uint32_t fdf_dispatcher_get_options(fdf_dispatcher_t* dispatcher) {
+  return dispatcher->options();
 }
 
 __EXPORT void fdf_dispatcher_destroy(fdf_dispatcher_t* dispatcher) { return dispatcher->Destroy(); }

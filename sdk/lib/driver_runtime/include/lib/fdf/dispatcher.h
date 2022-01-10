@@ -59,6 +59,9 @@ async_dispatcher_t* fdf_dispatcher_get_async_dispatcher(fdf_dispatcher_t* dispat
 // retrieved via `fdf_dispatcher_get_async_dispatcher`, the call will result in a crash.
 fdf_dispatcher_t* fdf_dispatcher_from_async_dispatcher(async_dispatcher_t* async_dispatcher);
 
+// Returns the options set for this dispatcher.
+uint32_t fdf_dispatcher_get_options(fdf_dispatcher_t* dispatcher);
+
 // Removes all queued callbacks, and waits for all pending callbacks started by this
 // dispatcher to complete before returning. No new callbacks will be started once this returns.
 //

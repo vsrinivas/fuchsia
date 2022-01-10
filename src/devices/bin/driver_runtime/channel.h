@@ -45,6 +45,7 @@ struct Channel : public Object {
                     uint32_t* out_num_bytes, zx_handle_t** out_handles, uint32_t* out_num_handles);
   fdf_status_t WaitAsync(struct fdf_dispatcher* dispatcher, fdf_channel_read_t* channel_read,
                          uint32_t options);
+  void CancelWait();
   fdf_status_t Call(uint32_t options, zx_time_t deadline, const fdf_channel_call_args_t* args);
   void Close();
 
@@ -156,7 +157,7 @@ struct Channel : public Object {
   // Only one pending callback per end of the channel is supported at a time.
   std::unique_ptr<driver_runtime::CallbackRequest> callback_request_ __TA_GUARDED(get_lock());
   // Used for canceling a queued callback request.
-  CallbackRequest* const unowned_callback_request_ __TA_GUARDED(get_lock());
+  CallbackRequest* const unowned_callback_request_;
 
   // This could be potentially be greater than 1 if the user registers a new callback from within
   // a callback, and a new callback is called from a different thread.

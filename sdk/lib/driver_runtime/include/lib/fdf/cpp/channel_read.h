@@ -10,6 +10,8 @@
 #include <lib/fit/function.h>
 #include <lib/stdcompat/span.h>
 
+#include <mutex>
+
 namespace fdf {
 
 // Holds context for an asynchronous read and its handler.
@@ -42,7 +44,10 @@ class ChannelReadBase {
   void set_options(uint32_t options) { channel_read_.options = options; }
 
   // Returns true if the wait has begun and not yet completed or been canceled.
-  bool is_pending() const { return dispatcher_ != nullptr; }
+  bool is_pending() {
+    std::lock_guard<std::mutex> lock(lock_);
+    return dispatcher_ != nullptr;
+  }
 
   // Begins asynchronously waiting for |channel| to be readable.
   // The |dispatcher| invokes the handler when the wait completes.
@@ -60,18 +65,32 @@ class ChannelReadBase {
   // on this channel, or if the dispatcher is shutting down.
   zx_status_t Begin(fdf_dispatcher_t* dispatcher);
 
+  // Cancels the wait.
+  //
+  // Whether the wait handler will run depends on whether the dispatcher it
+  // was registered with is synchronized.
+  // If the dispatcher is synchronized, this must only be called from a dispatcher
+  // thread, and any pending callback will be canceled synchronously.
+  // If the dispatcher is unsynchronized, the callback will be scheduled to be called.
+  void Cancel();
+
  protected:
   template <typename T>
   static T* Dispatch(fdf_channel_read_t* channel_read) {
     static_assert(offsetof(ChannelReadBase, channel_read_) == 0);
     auto self = reinterpret_cast<ChannelReadBase*>(channel_read);
-    self->dispatcher_ = nullptr;
+    {
+      std::lock_guard<std::mutex> lock(self->lock_);
+      self->dispatcher_ = nullptr;
+    }
     return static_cast<T*>(self);
   }
 
  private:
   fdf_channel_read_t channel_read_;
-  fdf_dispatcher_t* dispatcher_ = nullptr;
+
+  std::mutex lock_;
+  fdf_dispatcher_t* dispatcher_ __TA_GUARDED(lock_) = nullptr;
 };
 
 // An asynchronous read whose handler is bound to a |fdf::ChannelRead::Handler| function.

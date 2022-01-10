@@ -36,7 +36,7 @@ class Dispatcher : public async_dispatcher_t {
  public:
   // Public for std::make_unique.
   // Use |Create| or |CreateWithLoop| instead of calling directly.
-  Dispatcher(bool unsynchronized, bool allow_sync_calls, const void* owner,
+  Dispatcher(uint32_t options, bool unsynchronized, bool allow_sync_calls, const void* owner,
              async_dispatcher_t* process_shared_dispatcher);
 
   // Creates a dispatcher which is backed by |loop|.
@@ -76,6 +76,7 @@ class Dispatcher : public async_dispatcher_t {
   std::unique_ptr<CallbackRequest> CancelCallback(CallbackRequest& callback_request);
 
   // Returns the dispatcher options specified by the user.
+  uint32_t options() const { return options_; }
   bool unsynchronized() const { return unsynchronized_; }
   bool allow_sync_calls() const { return allow_sync_calls_; }
 
@@ -131,6 +132,7 @@ class Dispatcher : public async_dispatcher_t {
   void DispatchCallbacks(std::unique_ptr<EventWaiter> event_waiter);
 
   // Dispatcher options set by the user.
+  uint32_t options_;
   bool unsynchronized_;
   bool allow_sync_calls_;
 

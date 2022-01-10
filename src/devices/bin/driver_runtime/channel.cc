@@ -331,35 +331,56 @@ fdf_status_t Channel::Call(uint32_t options, zx_time_t deadline,
   }
 }
 
+void Channel::CancelWait() {
+  std::unique_ptr<driver_runtime::CallbackRequest> callback_request;
+  {
+    fbl::AutoLock lock(get_lock());
+
+    // Check if the client has registered a callback via |WaitAsync|.
+    if (!IsWaitAsyncRegisteredLocked()) {
+      return;
+    }
+    if (dispatcher_->unsynchronized()) {
+      // If the callback has already been scheduled, we don't need to do anything.
+      if (IsCallbackRequestQueuedLocked()) {
+        return;
+      }
+      // If there were no pending messages we would not yet have queued it to the dispatcher.
+      callback_request = TakeCallbackRequestLocked(ZX_ERR_CANCELED);
+
+    } else {
+      // For synchronized dispatchers, we always cancel the request synchronously.
+      // Since we require |CancelWait| to be called on the dispatcher thread,
+      // a callback request could be queued on the dispatcher, but not yet run.
+      if (IsCallbackRequestQueuedLocked()) {
+        ZX_ASSERT(unowned_callback_request_);
+        callback_request = dispatcher_->CancelCallback(*unowned_callback_request_);
+        // Cancellation should always be successful for synchronized dispatchers.
+        ZX_ASSERT(callback_request);
+        callback_request->Reset();
+        callback_request_ = std::move(callback_request);
+      }
+      dispatcher_ = nullptr;
+      channel_read_ = nullptr;
+    }
+  }
+  if (callback_request) {
+    CallbackRequest::QueueOntoDispatcher(std::move(callback_request));
+  }
+}
+
 // We disable lock analysis here as it doesn't realize the lock is shared
 // when trying to access the peer's internals.
 // Make sure to acquire the lock before accessing class members or calling
 // any _Locked class methods.
 void Channel::Close() __TA_NO_THREAD_SAFETY_ANALYSIS {
   fbl::RefPtr<Channel> peer;
-  std::unique_ptr<driver_runtime::CallbackRequest> callback_request;
-  bool cancel_callback = false;
   {
     fbl::AutoLock lock(get_lock());
 
     peer = std::move(peer_);
     if (peer) {
       peer->peer_.reset();
-    }
-    // The client may have registered a callback via |WaitAsync|.
-    if (IsWaitAsyncRegisteredLocked()) {
-      if (dispatcher_->unsynchronized()) {
-        // Make sure the callback is scheduled.
-        // If there were no pending messages we would not yet have queued it to the dispatcher.
-        if (!IsCallbackRequestQueuedLocked()) {
-          callback_request = TakeCallbackRequestLocked(ZX_ERR_CANCELED);
-        }
-      } else {
-        // Cancel any pending callback.
-        if (IsCallbackRequestQueuedLocked()) {
-          cancel_callback = true;
-        }
-      }
     }
     // Abort any waiting Call operations because we've been canceled by reason
     // of the opposing endpoint going away.
@@ -369,15 +390,7 @@ void Channel::Close() __TA_NO_THREAD_SAFETY_ANALYSIS {
       waiter->CancelLocked(ZX_ERR_PEER_CLOSED);
     }
   }
-  if (callback_request) {
-    CallbackRequest::QueueOntoDispatcher(std::move(callback_request));
-  }
-  if (cancel_callback) {
-    ZX_ASSERT(unowned_callback_request_);
-    // Since we require |Close| to be called on the dispatcher thread,
-    // a callback request could be queued on the dispatcher, but not yet run.
-    dispatcher_->CancelCallback(*unowned_callback_request_);
-  }
+  CancelWait();
   if (peer) {
     peer->OnPeerClosed();
   }

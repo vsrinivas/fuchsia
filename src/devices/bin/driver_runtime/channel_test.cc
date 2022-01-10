@@ -5,6 +5,7 @@
 #include "src/devices/bin/driver_runtime/channel.h"
 
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async/task.h>
 #include <lib/fdf/cpp/channel_read.h>
 #include <lib/fit/defer.h>
 #include <lib/sync/completion.h>
@@ -329,19 +330,167 @@ TEST_F(ChannelTest, CancelSynchronousDispatcherCallbackOnClose) {
   driver_context::PushDriver(driver);
   auto pop_driver = fit::defer([]() { driver_context::PopDriver(); });
 
+  // Use the C API for this test, since we want to check Close() cancels the read,
+  // and the C++ ChannelRead destructor would assert that the read had already been cancelled.
+  fdf_channel_read_t channel_read;
+  channel_read.handler = [](fdf_dispatcher_t* dispatcher, fdf_channel_read_t* read,
+                            fdf_status_t status) {};
+  channel_read.channel = remote_.get();
   // Since there is a pending message, this should queue a callback on the dispatcher.
-  sync_completion_t read_completion;
+  ASSERT_OK(fdf_channel_wait_async(static_cast<fdf_dispatcher_t*>(sync_dispatcher.get()),
+                                   &channel_read, 0));
+
+  ASSERT_EQ(sync_dispatcher->callback_queue_size_slow(), 1);
+
+  // Close the channel to trigger the cancellation.
+  remote_.reset();
+
+  ASSERT_EQ(sync_dispatcher->callback_queue_size_slow(), 0);
+}
+
+// Tests cancelling a channel read that has not yet been queued with the synchronized dispatcher.
+TEST_F(ChannelTest, SyncDispatcherCancelUnqueuedRead) {
+  const void* driver = CreateFakeDriver();
+  std::unique_ptr<driver_runtime::Dispatcher> sync_dispatcher;
+  ASSERT_EQ(ZX_OK,
+            driver_runtime::Dispatcher::CreateWithLoop(0, "", 0, driver, &loop_, &sync_dispatcher));
+
   auto channel_read = std::make_unique<fdf::ChannelRead>(
+      remote_.get(), 0,
+      [&](fdf_dispatcher_t* dispatcher, fdf::ChannelRead* channel_read, fdf_status_t status) {
+        ASSERT_FALSE(true);  // This callback should never be called.
+      });
+  ASSERT_OK(channel_read->Begin(static_cast<fdf_dispatcher_t*>(sync_dispatcher.get())));
+
+  channel_read->Cancel();
+}
+
+// Tests cancelling a channel read that has been queued with the synchronized dispatcher.
+TEST_F(ChannelTest, SyncDispatcherCancelQueuedRead) {
+  loop_.StartThread();
+
+  const void* driver = CreateFakeDriver();
+  std::unique_ptr<driver_runtime::Dispatcher> sync_dispatcher;
+  ASSERT_EQ(ZX_OK,
+            driver_runtime::Dispatcher::CreateWithLoop(0, "", 0, driver, &loop_, &sync_dispatcher));
+
+  // Make calls reentrant so any callback will be queued on the async loop.
+  driver_context::PushDriver(driver);
+  auto pop_driver = fit::defer([]() { driver_context::PopDriver(); });
+
+  auto channel_read = std::make_unique<fdf::ChannelRead>(
+      remote_.get(), 0,
+      [&](fdf_dispatcher_t* dispatcher, fdf::ChannelRead* channel_read, fdf_status_t status) {
+        ASSERT_FALSE(true);  // This callback should never be called.
+      });
+  ASSERT_OK(channel_read->Begin(static_cast<fdf_dispatcher_t*>(sync_dispatcher.get())));
+
+  sync_completion_t task_completion;
+  ASSERT_OK(async::PostTask(sync_dispatcher->GetAsyncDispatcher(), [&] {
+    // This should queue the callback on the async loop. It won't be running yet
+    // as this task is currently blocking the loop.
+    ASSERT_EQ(ZX_OK, fdf_channel_write(local_.get(), 0, arena_.get(), nullptr, 0, nullptr, 0));
+    ASSERT_EQ(sync_dispatcher->callback_queue_size_slow(), 1);
+    // This should synchronously cancel the callback.
+    channel_read->Cancel();
+    ASSERT_EQ(sync_dispatcher->callback_queue_size_slow(), 0);
+    sync_completion_signal(&task_completion);
+  }));
+
+  ASSERT_OK(sync_completion_wait(&task_completion, ZX_TIME_INFINITE));
+
+  // The read should already be cancelled, try registering a new one.
+  sync_completion_t read_completion;
+  channel_read = std::make_unique<fdf::ChannelRead>(
       remote_.get(), 0,
       [&read_completion](fdf_dispatcher_t* dispatcher, fdf::ChannelRead* channel_read,
                          fdf_status_t status) { sync_completion_signal(&read_completion); });
   ASSERT_OK(channel_read->Begin(static_cast<fdf_dispatcher_t*>(sync_dispatcher.get())));
 
-  ASSERT_EQ(sync_dispatcher->callback_queue_size_slow(), 1);
+  ASSERT_OK(sync_completion_wait(&read_completion, ZX_TIME_INFINITE));
 
-  remote_.reset();
+  loop_.Quit();
+  loop_.JoinThreads();
+}
 
-  ASSERT_EQ(sync_dispatcher->callback_queue_size_slow(), 0);
+// Tests cancelling a channel read that has not yet been queued with the unsynchronized dispatcher.
+TEST_F(ChannelTest, UnsyncDispatcherCancelUnqueuedRead) {
+  loop_.StartThread();
+
+  const void* driver = CreateFakeDriver();
+  std::unique_ptr<driver_runtime::Dispatcher> unsync_dispatcher;
+  ASSERT_EQ(ZX_OK,
+            driver_runtime::Dispatcher::CreateWithLoop(FDF_DISPATCHER_OPTION_UNSYNCHRONIZED, "", 0,
+                                                       driver, &loop_, &unsync_dispatcher));
+
+  // Make calls reentrant so that any callback will be queued on the async loop.
+  driver_context::PushDriver(driver);
+  auto pop_driver = fit::defer([]() { driver_context::PopDriver(); });
+
+  sync_completion_t completion;
+  auto channel_read = std::make_unique<fdf::ChannelRead>(
+      remote_.get(), 0,
+      [&](fdf_dispatcher_t* dispatcher, fdf::ChannelRead* channel_read, fdf_status_t status) {
+        ASSERT_EQ(status, ZX_ERR_CANCELED);
+        sync_completion_signal(&completion);
+      });
+  ASSERT_OK(channel_read->Begin(static_cast<fdf_dispatcher_t*>(unsync_dispatcher.get())));
+
+  channel_read->Cancel();
+  ASSERT_OK(sync_completion_wait(&completion, ZX_TIME_INFINITE));
+
+  loop_.Quit();
+  loop_.JoinThreads();
+}
+
+// Tests cancelling a channel read that has been queued with the unsynchronized dispatcher.
+TEST_F(ChannelTest, UnsyncDispatcherCancelQueuedRead) {
+  loop_.StartThread();
+
+  const void* driver = CreateFakeDriver();
+  std::unique_ptr<driver_runtime::Dispatcher> unsync_dispatcher;
+  ASSERT_EQ(ZX_OK,
+            driver_runtime::Dispatcher::CreateWithLoop(FDF_DISPATCHER_OPTION_UNSYNCHRONIZED, "", 0,
+                                                       driver, &loop_, &unsync_dispatcher));
+
+  // Make calls reentrant so that the callback will be queued on the async loop.
+  driver_context::PushDriver(driver);
+  auto pop_driver = fit::defer([]() { driver_context::PopDriver(); });
+
+  sync_completion_t read_completion;
+  auto channel_read = std::make_unique<fdf::ChannelRead>(
+      remote_.get(), 0,
+      [&](fdf_dispatcher_t* dispatcher, fdf::ChannelRead* channel_read, fdf_status_t status) {
+        ASSERT_OK(status);
+        sync_completion_signal(&read_completion);
+      });
+  ASSERT_OK(channel_read->Begin(static_cast<fdf_dispatcher_t*>(unsync_dispatcher.get())));
+
+  ASSERT_OK(async::PostTask(unsync_dispatcher->GetAsyncDispatcher(), [&] {
+    // This should queue the callback on the async loop.
+    ASSERT_EQ(ZX_OK, fdf_channel_write(local_.get(), 0, arena_.get(), nullptr, 0, nullptr, 0));
+    ASSERT_EQ(unsync_dispatcher->callback_queue_size_slow(), 1);
+    channel_read->Cancel();
+    // The channel read is still expecting a callback.
+    ASSERT_NOT_OK(channel_read->Begin(static_cast<fdf_dispatcher_t*>(unsync_dispatcher.get())));
+  }));
+
+  ASSERT_OK(sync_completion_wait(&read_completion, ZX_TIME_INFINITE));
+
+  ASSERT_EQ(unsync_dispatcher->callback_queue_size_slow(), 0);
+
+  // Try scheduling another read.
+  sync_completion_reset(&read_completion);
+  channel_read = std::make_unique<fdf::ChannelRead>(
+      remote_.get(), 0,
+      [&read_completion](fdf_dispatcher_t* dispatcher, fdf::ChannelRead* channel_read,
+                         fdf_status_t status) { sync_completion_signal(&read_completion); });
+  ASSERT_OK(channel_read->Begin(static_cast<fdf_dispatcher_t*>(unsync_dispatcher.get())));
+
+  ASSERT_OK(sync_completion_wait(&read_completion, ZX_TIME_INFINITE));
+
+  loop_.Quit();
+  loop_.JoinThreads();
 }
 
 // Tests that you can wait on and read pending messages from a channel even if the peer is closed.

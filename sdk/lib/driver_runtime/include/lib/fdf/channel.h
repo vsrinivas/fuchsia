@@ -133,6 +133,14 @@ fdf_status_t fdf_channel_read(fdf_handle_t channel, uint32_t options, fdf_arena_
 fdf_status_t fdf_channel_wait_async(struct fdf_dispatcher* dispatcher,
                                     struct fdf_channel_read* channel_read, uint32_t options);
 
+// Cancels any pending callback registered via |fdf_channel_wait_async|.
+// How it is handled depends on whether the dispatcher it was registered with is
+// synchronized.
+// If the dispatcher is synchronized, this must only be called from a dispatcher
+// thread, and any pending callback will be canceled synchronously.
+// If the dispatcher is unsynchronized, the callback will be scheduled to be called.
+void fdf_channel_cancel_wait(fdf_handle_t handle);
+
 // fdf_channel_call() is like a combined fdf_channel_write(), fdf_channel_wait_async(),
 // and fdf_channel_read(), with the addition of a feature where a transaction id at
 // the front of the message payload bytes is used to match reply messages with send messages,

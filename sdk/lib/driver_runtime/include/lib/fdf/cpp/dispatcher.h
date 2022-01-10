@@ -91,6 +91,11 @@ class Dispatcher {
     return dispatcher_ ? fdf_dispatcher_get_async_dispatcher(dispatcher_) : nullptr;
   }
 
+  // Returns the options set for this dispatcher.
+  std::optional<uint32_t> options(fdf_dispatcher_t* dispatcher) {
+    return dispatcher_ ? std::optional(fdf_dispatcher_get_options(dispatcher_)) : std::nullopt;
+  }
+
  protected:
   fdf_dispatcher_t* dispatcher_;
 };

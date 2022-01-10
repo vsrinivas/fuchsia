@@ -82,9 +82,10 @@ ProcessSharedLoop& GetProcessSharedLoop() {
   return shared_loop;
 }
 
-Dispatcher::Dispatcher(bool unsynchronized, bool allow_sync_calls, const void* owner,
-                       async_dispatcher_t* process_shared_dispatcher)
+Dispatcher::Dispatcher(uint32_t options, bool unsynchronized, bool allow_sync_calls,
+                       const void* owner, async_dispatcher_t* process_shared_dispatcher)
     : async_dispatcher_t{&g_dispatcher_ops},
+      options_(options),
       unsynchronized_(unsynchronized),
       allow_sync_calls_(allow_sync_calls),
       owner_(owner),
@@ -112,8 +113,8 @@ fdf_status_t Dispatcher::CreateWithLoop(uint32_t options, const char* scheduler_
     }
   }
 
-  auto dispatcher =
-      std::make_unique<Dispatcher>(unsynchronized, allow_sync_calls, owner, loop->dispatcher());
+  auto dispatcher = std::make_unique<Dispatcher>(options, unsynchronized, allow_sync_calls, owner,
+                                                 loop->dispatcher());
 
   zx::event event;
   if (zx_status_t status = zx::event::create(0, &event); status != ZX_OK) {
