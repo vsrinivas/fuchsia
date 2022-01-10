@@ -235,6 +235,10 @@ impl RuntimeConfig {
         Ok(Self::try_from(decode_persistent::<component_internal::Config>(&raw_content)?)?)
     }
 
+    pub fn load_from_bytes(bytes: &Vec<u8>) -> Result<Self, Error> {
+        Ok(Self::try_from(decode_persistent::<component_internal::Config>(&bytes)?)?)
+    }
+
     fn translate_namespace_capabilities(
         capabilities: Option<Vec<fdecl::Capability>>,
     ) -> Result<Vec<cm_rust::CapabilityDecl>, Error> {
