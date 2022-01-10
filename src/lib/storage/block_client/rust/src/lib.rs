@@ -41,14 +41,17 @@ pub mod testing;
 const BLOCK_VMOID_INVALID: u16 = 0;
 const TEMP_VMO_SIZE: usize = 65536;
 
+// See fuchsia.hardware.block/block.fidl
 pub const BLOCKIO_READ: u32 = 1;
 pub const BLOCKIO_WRITE: u32 = 2;
-const BLOCKIO_FLUSH: u32 = 3;
-const BLOCKIO_TRIM: u32 = 4;
+pub const BLOCKIO_FLUSH: u32 = 3;
+pub const BLOCKIO_TRIM: u32 = 4;
 pub const BLOCKIO_CLOSE_VMO: u32 = 5;
 
+const BLOCK_OP_MASK: u32 = 0x000000ff;
+
 fn op_code_str(op_code: u32) -> &'static str {
-    match op_code {
+    match op_code & BLOCK_OP_MASK {
         BLOCKIO_READ => "read",
         BLOCKIO_WRITE => "write",
         BLOCKIO_FLUSH => "flush",
