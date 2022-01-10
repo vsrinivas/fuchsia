@@ -11,17 +11,12 @@ import("version_string.gni")
 declare_args() {
   # Version string embedded in the kernel for `zx_system_get_version_string`.
   # If set to the default "", a string is generated based on the
-  # `kernel_version_git_checkout` and `kernel_version_git_dirty_check`
-  # settings, which see.
+  # commit hash of git HEAD and the value of `kernel_version_git_dirty_check`.
   kernel_version_string = ""
 
-  # By default the kernel version string is generated based on the full git
-  # revision found by `git rev-parse HEAD` in this checkout directory.
-  kernel_version_git_checkout = "//zircon/.."
-
-  # If this is true, then the kernel version string generated based on
-  # `kernel_version_git_checkout` also adds a "-dirty" suffix if any files in
-  # the checkout are modified from what's committed in git.
+  # If this is true, then the generated kernel version string also adds a
+  # "-dirty" suffix if any files in the checkout are modified from what's
+  # committed in git.
   kernel_version_git_dirty_check = true
 }
 
@@ -48,17 +43,17 @@ if (current_toolchain == default_toolchain) {
       ]
       script = "git-version-string.sh"
       outputs = [ kernel_version_string_file ]
-      sources = [ "$kernel_version_git_checkout/.git/HEAD" ]
+      sources = [ "//.git/HEAD" ]
 
       # fxbug.dev/68558: git dirty check is incompatible with should_trace
       kernel_version_git_dirty_check =
           kernel_version_git_dirty_check && !build_should_trace_actions
       if (kernel_version_git_dirty_check) {
-        sources += [ "$kernel_version_git_checkout/.git/index" ]
+        sources += [ "//.git/index" ]
       }
       args = rebase_path([
                            kernel_version_string_file,
-                           kernel_version_git_checkout,
+                           "//.git",
                          ],
                          root_build_dir) + [ "$kernel_version_git_dirty_check" ]
     }
