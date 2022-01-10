@@ -812,7 +812,7 @@ func TestExecute(t *testing.T) {
 			Test: build.Test{
 				Name:       "bar",
 				OS:         "fuchsia",
-				PackageURL: "fuchsia-pkg://foo/bar",
+				PackageURL: "fuchsia-pkg://foo/bar.cm",
 			},
 			RunAlgorithm: testsharder.StopOnFailure,
 			Runs:         2,
@@ -821,7 +821,7 @@ func TestExecute(t *testing.T) {
 				Name:       "baz",
 				Path:       "/foo/baz",
 				OS:         "fuchsia",
-				PackageURL: "fuchsia-pkg://foo/baz",
+				PackageURL: "fuchsia-pkg://foo/baz.cm",
 			},
 			RunAlgorithm: testsharder.StopOnSuccess,
 			Runs:         2,
@@ -898,7 +898,8 @@ func TestExecute(t *testing.T) {
 			producer := tap.NewProducer(&buf)
 			o := testrunner.CreateTestOutputs(producer, "")
 			defer o.Close()
-			err := execute(context.Background(), tests, o, net.IPAddr{}, c.sshKeyFile, c.serialSocketPath, "out-dir", testrunnerFlags{ffxExperimental: true})
+			err := execute(context.Background(), tests, o, net.IPAddr{}, c.sshKeyFile, c.serialSocketPath, t.TempDir(),
+				testrunnerFlags{snapshotFile: "snapshot.zip", ffxExperimental: true})
 			if c.wantErr {
 				if err == nil {
 					t.Errorf("got nil error, want an error for failing to initialize a tester")
@@ -914,26 +915,40 @@ func TestExecute(t *testing.T) {
 
 			funcCalls := strings.Join(fuchsiaTester.funcCalls, ",")
 			testCount := strings.Count(funcCalls, testFunc)
+			expectedTestCount := 3
+			if c.useFFX {
+				testCount = strings.Count(strings.Join(ffx.CmdsCalled, ","), "test")
+				// We expect to call ffx.Test() twice. The first time will be through
+				// calling FFXTester.TestMultiple() with both tests bar and baz, and the
+				// second time to run the second run of bar.
+				expectedTestCount = 2
+			}
 			copySinksCount := strings.Count(funcCalls, copySinksFunc)
 			snapshotCount := strings.Count(funcCalls, runSnapshotFunc)
+			if c.useFFX {
+				snapshotCount = strings.Count(strings.Join(ffx.CmdsCalled, ","), "snapshot")
+			}
 			closeCount := strings.Count(funcCalls, closeFunc)
-			if testCount != 3 {
-				t.Errorf("ran %d tests, want: 3", testCount)
+			if testCount != expectedTestCount {
+				t.Errorf("ran %d tests, want: %d", testCount, expectedTestCount)
 			}
 			if copySinksCount != 1 {
 				t.Errorf("ran CopySinks %d times, want: 1", copySinksCount)
 			}
-			if snapshotCount != 1 && !c.useFFX {
+			if snapshotCount != 1 {
 				t.Errorf("ran RunSnapshot %d times, want: 1", snapshotCount)
 			}
 			if closeCount != 1 {
 				t.Errorf("ran Close %d times, want: 1", closeCount)
 			}
 			// Ensure CopySinks, RunSnapshot, and Close are run after all calls to Test.
-			lastCalls := fuchsiaTester.funcCalls[len(fuchsiaTester.funcCalls)-3:]
+			numLastCalls := 3
+			if c.useFFX {
+				numLastCalls = 2
+			}
+			lastCalls := fuchsiaTester.funcCalls[len(fuchsiaTester.funcCalls)-numLastCalls:]
 			expectedLastCalls := []string{runSnapshotFunc, copySinksFunc, closeFunc}
 			if c.useFFX {
-				lastCalls = lastCalls[1:]
 				expectedLastCalls = expectedLastCalls[1:]
 			}
 			if diff := cmp.Diff(expectedLastCalls, lastCalls); diff != "" {

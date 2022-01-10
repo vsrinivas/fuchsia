@@ -412,6 +412,21 @@ func (b *stdioBuffer) Write(p []byte) (n int, err error) {
 	return b.buf.Write(p)
 }
 
+type multiTester interface {
+	testrunner.Tester
+	TestMultiple(ctx context.Context, tests []testsharder.Test, stdout, stderr io.Writer, outDir string) ([]*testrunner.TestResult, error)
+	EnabledForTest(testsharder.Test) bool
+}
+
+// testToRun represents an entry in a queue of tests to run.
+type testToRun struct {
+	testsharder.Test
+	// The number of times the test has already been run.
+	previousRuns int
+	// The sum of the durations of all the test's previous runs.
+	totalDuration time.Duration
+}
+
 // runAndOutputTests runs all the tests, possibly with retries, and records the
 // results to `outputs`.
 func runAndOutputTests(
@@ -421,23 +436,34 @@ func runAndOutputTests(
 	outputs *testrunner.TestOutputs,
 	globalOutDir string,
 ) error {
-	// testToRun represents an entry in the queue of tests to run.
-	type testToRun struct {
-		testsharder.Test
-		// The number of times the test has already been run.
-		previousRuns int
-		// The sum of the durations of all the test's previous runs.
-		totalDuration time.Duration
-	}
-
 	// Since only a single goroutine writes to and reads from the queue it would
 	// be more appropriate to use a true Queue data structure, but we'd need to
 	// implement that ourselves so it's easier to just use a channel. Make the
 	// channel double the necessary size just to be safe and avoid potential
 	// deadlocks.
 	testQueue := make(chan testToRun, 2*len(tests))
+
+	var multiTests []testToRun
+	var mt multiTester
 	for _, test := range tests {
-		testQueue <- testToRun{Test: test}
+		t, _, err := testerForTest(test)
+		if err != nil {
+			return err
+		}
+		mtForTest, ok := t.(multiTester)
+		if ok && mtForTest.EnabledForTest(test) {
+			multiTests = append(multiTests, testToRun{Test: test})
+			if mt == nil {
+				mt = mtForTest
+			}
+		} else {
+			testQueue <- testToRun{Test: test}
+		}
+	}
+
+	// Run ffx tests first.
+	if err := runMultipleTests(ctx, multiTests, mt, globalOutDir, outputs); err != nil {
+		return err
 	}
 
 	// `for test := range testQueue` might seem simpler, but it would block
@@ -474,6 +500,38 @@ func runAndOutputTests(
 		// TODO(olivernewman): Add a unit test to make sure data sinks are
 		// recorded correctly.
 		*sinks = append(*sinks, result.DataSinks)
+	}
+	return nil
+}
+
+func runMultipleTests(ctx context.Context, multiTests []testToRun, mt multiTester, globalOutDir string, outputs *testrunner.TestOutputs) error {
+	multiTestRunIndex := 0
+	for len(multiTests) > 0 {
+		outDir := filepath.Join(globalOutDir, "ffx_tests", strconv.Itoa(multiTestRunIndex))
+
+		var tests []testsharder.Test
+		for _, t := range multiTests {
+			tests = append(tests, t.Test)
+		}
+
+		testResults, err := mt.TestMultiple(ctx, tests, streams.Stdout(ctx), streams.Stderr(ctx), outDir)
+		if err != nil {
+			return err
+		}
+
+		retryTests := []testToRun{}
+		for i, result := range testResults {
+			result.RunIndex = multiTestRunIndex
+			if err := outputs.Record(ctx, *result); err != nil {
+				return err
+			}
+			multiTests[i].totalDuration += result.Duration()
+			if shouldKeepGoing(multiTests[i].Test, result, multiTests[i].totalDuration) {
+				retryTests = append(retryTests, multiTests[i])
+			}
+		}
+		multiTestRunIndex++
+		multiTests = retryTests
 	}
 	return nil
 }

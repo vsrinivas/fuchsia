@@ -27,6 +27,7 @@ import (
 	"go.fuchsia.dev/fuchsia/tools/lib/retry"
 	"go.fuchsia.dev/fuchsia/tools/net/sshutil"
 	"go.fuchsia.dev/fuchsia/tools/testing/runtests"
+	"go.fuchsia.dev/fuchsia/tools/testing/testparser"
 
 	"github.com/google/go-cmp/cmp"
 )
@@ -226,6 +227,7 @@ func TestFFXTester(t *testing.T) {
 		runV2          bool
 		sshRunErrs     []error
 		expectedResult runtests.TestResult
+		testMulti      bool
 	}{
 		{
 			name:           "run v1 tests with ssh",
@@ -257,6 +259,13 @@ func TestFFXTester(t *testing.T) {
 			runV2:          true,
 			expectedResult: runtests.TestTimeout,
 		},
+		{
+			name:           "run multiple tests",
+			experimental:   true,
+			runV2:          true,
+			expectedResult: runtests.TestSuccess,
+			testMulti:      true,
+		},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
@@ -264,8 +273,7 @@ func TestFFXTester(t *testing.T) {
 				runErrs: c.sshRunErrs,
 			}
 			copier := &fakeDataSinkCopier{}
-			var tester Tester
-			tester = &FuchsiaSSHTester{
+			sshTester := &FuchsiaSSHTester{
 				client:                      client,
 				copier:                      copier,
 				connectionErrorRetryBackoff: &retry.ZeroBackoff{},
@@ -281,7 +289,7 @@ func TestFFXTester(t *testing.T) {
 				outcome = ffxutil.TestTimedOut
 			}
 			ffx := &ffxutil.MockFFXInstance{TestOutcome: outcome}
-			tester = NewFFXTester(ffx, tester, "", c.experimental)
+			tester := NewFFXTester(ffx, sshTester, "", c.experimental)
 
 			defer func() {
 				if err := tester.Close(); err != nil {
@@ -294,28 +302,59 @@ func TestFFXTester(t *testing.T) {
 				Runs:         1,
 				RunAlgorithm: testsharder.StopOnSuccess,
 			}
-			if c.runV2 {
+			if c.runV2 || c.testMulti {
 				test.Test = build.Test{PackageURL: "fuchsia-pkg://foo#meta/bar.cm"}
 			}
-			testResult, err := tester.Test(context.Background(), test, ioutil.Discard, ioutil.Discard, t.TempDir())
+			ctx := context.Background()
+			var testResults []*TestResult
+			var err error
+			if c.testMulti {
+				tests := []testsharder.Test{test,
+					{
+						Test:         build.Test{PackageURL: "fuchsia-pkg://foo#meta/baz.cm"},
+						Runs:         1,
+						RunAlgorithm: testsharder.StopOnSuccess,
+					},
+				}
+				testResults, err = tester.TestMultiple(ctx, tests, ioutil.Discard, ioutil.Discard, t.TempDir())
+			} else {
+				var testResult *TestResult
+				testResult, err = tester.Test(ctx, test, ioutil.Discard, ioutil.Discard, t.TempDir())
+				testResults = []*TestResult{testResult}
+			}
 			if err != nil {
 				t.Errorf("tester.Test got unexpected error: %s", err)
 			}
-			if testResult.Result != c.expectedResult {
-				t.Errorf("tester.Test got result: %s, want result: %s", testResult.Result, c.expectedResult)
-			}
+			var sinks []runtests.DataSinkReference
+			for _, testResult := range testResults {
+				if testResult.Result != c.expectedResult {
+					t.Errorf("tester.Test got result: %s, want result: %s", testResult.Result, c.expectedResult)
+				}
 
-			if c.runV2 && c.experimental {
-				if !ffx.ContainsCmd("test") {
-					t.Errorf("failed to call `ffx test`, called: %s", ffx.CmdsCalled)
+				if c.runV2 && c.experimental {
+					if !ffx.ContainsCmd("test") {
+						t.Errorf("failed to call `ffx test`, called: %s", ffx.CmdsCalled)
+					}
+					expectedCaseStatus := testparser.Pass
+					if c.expectedResult != runtests.TestSuccess {
+						expectedCaseStatus = testparser.Fail
+					}
+					if len(testResult.Cases) != 1 {
+						t.Errorf("expected 1 test case, got %d", len(testResult.Cases))
+					} else {
+						if testResult.Cases[0].Status != expectedCaseStatus {
+							t.Errorf("test case has status: %s, want: %s", testResult.Cases[0].Status, expectedCaseStatus)
+						}
+					}
+				} else {
+					if ffx.ContainsCmd("test") {
+						t.Errorf("unexpectedly called ffx test")
+					}
 				}
-			} else {
-				if ffx.ContainsCmd("test") {
-					t.Errorf("unexpectedly called ffx test")
-				}
+				sinks = append(sinks, testResult.DataSinks)
 			}
 			p := filepath.Join(t.TempDir(), "testrunner-cmd-test")
-			if err = tester.RunSnapshot(context.Background(), p); err != nil {
+			if err = tester.RunSnapshot(ctx, p); err != nil {
 				t.Errorf("failed to run snapshot: %s", err)
 			}
 			if !ffx.ContainsCmd("snapshot") {
@@ -331,7 +370,7 @@ func TestFFXTester(t *testing.T) {
 			if c.runV2 {
 				// Call EnsureSinks() for v2 tests to set the copier.remoteDir to the data output dir for v2 tests.
 				// v1 tests will already have set the appropriate remoteDir value within Test().
-				if err = tester.EnsureSinks(context.Background(), []runtests.DataSinkReference{testResult.DataSinks}, &TestOutputs{}); err != nil {
+				if err = tester.EnsureSinks(ctx, sinks, &TestOutputs{}); err != nil {
 					t.Errorf("failed to collect sinks: %s", err)
 				}
 				expectedRemoteDir = dataOutputDirV2

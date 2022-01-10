@@ -12,6 +12,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"time"
 )
 
 type MockFFXInstance struct {
@@ -33,6 +34,9 @@ func (f *MockFFXInstance) Test(_ context.Context, tests []TestDef, outDir string
 	if f.TestOutcome != "" {
 		outcome = f.TestOutcome
 	}
+	if err := os.MkdirAll(outDir, os.ModePerm); err != nil {
+		return nil, err
+	}
 	var suites []suiteEntry
 	for i, test := range tests {
 		suite := suiteEntry{fmt.Sprintf("summary%d.json", i)}
@@ -41,6 +45,16 @@ func (f *MockFFXInstance) Test(_ context.Context, tests []TestDef, outDir string
 		summaryBytes, err := json.Marshal(SuiteResult{
 			Outcome: outcome,
 			Name:    test.TestUrl,
+			Cases: []CaseResult{
+				{
+					Outcome:              outcome,
+					Name:                 "case1",
+					StartTime:            time.Now().UnixMilli(),
+					DurationMilliseconds: 1000,
+				},
+			},
+			StartTime:            time.Now().UnixMilli(),
+			DurationMilliseconds: 1000,
 		})
 		if err != nil {
 			return nil, err

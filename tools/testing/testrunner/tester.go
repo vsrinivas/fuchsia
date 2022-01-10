@@ -309,28 +309,16 @@ func NewFFXTester(ffx FFXInstance, sshTester Tester, localOutputDir string, expe
 	}
 }
 
-func (t *FFXTester) Test(ctx context.Context, test testsharder.Test, stdout, stderr io.Writer, outDir string) (*TestResult, error) {
+func (t *FFXTester) EnabledForTest(test testsharder.Test) bool {
 	// TODO(fxbug.dev/84153): Once performance is up to par with running over SSH,
 	// remove experimental condition.
-	if test.IsComponentV2() && t.experimental {
+	return test.IsComponentV2() && t.experimental
+}
+
+func (t *FFXTester) Test(ctx context.Context, test testsharder.Test, stdout, stderr io.Writer, outDir string) (*TestResult, error) {
+	if t.EnabledForTest(test) {
 		baseTestResult := BaseTestResultFromTest(test)
-		testDef := ffxutil.TestDef{
-			TestUrl:         test.PackageURL,
-			Timeout:         int(test.Timeout.Seconds()),
-			Parallel:        test.Parallel,
-			MaxSeverityLogs: test.LogSettings.MaxSeverity,
-		}
-		t.ffx.SetStdoutStderr(stdout, stderr)
-		defer t.ffx.SetStdoutStderr(os.Stdout, os.Stderr)
-		ffxTestResult, err := t.ffx.Test(ctx, []ffxutil.TestDef{testDef}, outDir, "--filter-ansi")
-		testsByURL := map[string]testsharder.Test{
-			test.PackageURL: test,
-		}
-		if err != nil {
-			baseTestResult.FailReason = err.Error()
-			return baseTestResult, nil
-		}
-		testResults, err := t.processTestResult(ffxTestResult, testsByURL)
+		testResults, err := t.TestMultiple(ctx, []testsharder.Test{test}, stdout, stderr, outDir)
 		if err != nil {
 			baseTestResult.FailReason = err.Error()
 			return baseTestResult, nil
@@ -342,6 +330,44 @@ func (t *FFXTester) Test(ctx context.Context, test testsharder.Test, stdout, std
 		return testResults[0], nil
 	}
 	return t.sshTester.Test(ctx, test, stdout, stderr, outDir)
+}
+
+// TestMultiple runs `ffx test` with multiple tests in one invocation and stores the results in lastTestResults.
+func (t *FFXTester) TestMultiple(ctx context.Context, tests []testsharder.Test, stdout, stderr io.Writer, outDir string) ([]*TestResult, error) {
+	var testDefs []ffxutil.TestDef
+	testsByURL := make(map[string]testsharder.Test)
+	for _, test := range tests {
+		var numRuns int
+		if test.RunAlgorithm == testsharder.KeepGoing {
+			numRuns = test.Runs
+		} else {
+			// StopOnFailure and StopOnSuccess are used to determine retries, which are not
+			// supported yet with ffx. Retries are now run at the end after all tests have
+			// run, so they can just be rerun with another call to Test() for StopOnSuccess.
+			// StopOnFailure is used for multiplier shards to run as many times as test.Runs
+			// or until it gets a failure. This will need to be supported in ffx so that we
+			// can use the multiple test feature in ffx to run multiplier tests.
+			numRuns = 1
+		}
+		testsByURL[test.PackageURL] = test
+
+		for i := 0; i < numRuns; i++ {
+			testDefs = append(testDefs, ffxutil.TestDef{
+				TestUrl:         test.PackageURL,
+				Timeout:         int(test.Timeout.Seconds()),
+				Parallel:        test.Parallel,
+				MaxSeverityLogs: test.LogSettings.MaxSeverity,
+			})
+		}
+	}
+	t.ffx.SetStdoutStderr(stdout, stderr)
+	defer t.ffx.SetStdoutStderr(os.Stdout, os.Stderr)
+
+	runResult, err := t.ffx.Test(ctx, testDefs, outDir, "--filter-ansi")
+	if err != nil {
+		return []*TestResult{}, err
+	}
+	return t.processTestResult(runResult, testsByURL)
 }
 
 func (t *FFXTester) processTestResult(runResult *ffxutil.TestRunResult, testsByURL map[string]testsharder.Test) ([]*TestResult, error) {
