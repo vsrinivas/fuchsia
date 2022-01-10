@@ -744,6 +744,192 @@ TEST(PagerWriteback, FailDirtyRequests) {
   ASSERT_TRUE(check_buffer_data(vmo, 0, kNumPages, expected.data(), true));
 }
 
+// Tests that DIRTY requests are generated when offsets with zero page markers are written to.
+TEST(PagerWriteback, DirtyRequestsForZeroPages) {
+  UserPager pager;
+  ASSERT_TRUE(pager.Init());
+
+  Vmo* vmo;
+  constexpr uint64_t kNumPages = 2;
+  ASSERT_TRUE(pager.CreateVmoWithOptions(kNumPages, ZX_VMO_TRAP_DIRTY, &vmo));
+
+  // Supply with empty source vmo so that the destination gets zero page markers.
+  zx::vmo vmo_src;
+  ASSERT_OK(zx::vmo::create(kNumPages * zx_system_get_page_size(), 0, &vmo_src));
+  ASSERT_OK(
+      pager.pager().supply_pages(vmo->vmo(), 0, kNumPages * zx_system_get_page_size(), vmo_src, 0));
+
+  // Verify that the pager vmo has no committed pages, i.e. it only has markers.
+  zx_info_vmo_t info;
+  ASSERT_OK(vmo->vmo().get_info(ZX_INFO_VMO, &info, sizeof(info), nullptr, nullptr));
+  ASSERT_EQ(0, info.committed_bytes);
+
+  // No dirty pages yet.
+  ASSERT_TRUE(pager.VerifyDirtyRanges(vmo, nullptr, 0));
+
+  // Buffer to verify VMO contents later.
+  std::vector<uint8_t> expected(kNumPages * zx_system_get_page_size(), 0);
+
+  // Write to the first page with zx_vmo_write.
+  TestThread t1([vmo, &expected]() -> bool {
+    uint8_t data = 0xaa;
+    expected[0] = data;
+    return vmo->vmo().write(&data, 0, sizeof(data)) == ZX_OK;
+  });
+  ASSERT_TRUE(t1.Start());
+  ASSERT_TRUE(t1.WaitForBlocked());
+
+  ASSERT_TRUE(pager.WaitForPageDirty(vmo, 0, 1, ZX_TIME_INFINITE));
+
+  // Dirty the first page.
+  ASSERT_TRUE(pager.DirtyPages(vmo, 0, 1));
+  ASSERT_TRUE(t1.Wait());
+
+  // Verify that the pager vmo has one committed page now.
+  ASSERT_OK(vmo->vmo().get_info(ZX_INFO_VMO, &info, sizeof(info), nullptr, nullptr));
+  ASSERT_EQ(zx_system_get_page_size(), info.committed_bytes);
+
+  // Verify that the page is dirty.
+  zx_vmo_dirty_range_t range = {.offset = 0, .length = 1};
+  ASSERT_TRUE(pager.VerifyDirtyRanges(vmo, &range, 1));
+
+  ASSERT_TRUE(check_buffer_data(vmo, 0, kNumPages, expected.data(), true));
+
+  zx_vaddr_t ptr;
+  // Map the second page of the vmo.
+  ASSERT_OK(zx::vmar::root_self()->map(ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, 0, vmo->vmo(),
+                                       zx_system_get_page_size(), zx_system_get_page_size(), &ptr));
+
+  auto unmap = fit::defer([&]() {
+    // Cleanup the mapping we created.
+    zx::vmar::root_self()->unmap(ptr, zx_system_get_page_size());
+  });
+
+  // Write to the second page via the mapping.
+  auto buf = reinterpret_cast<uint8_t*>(ptr);
+  uint8_t data = 0xbb;
+  TestThread t2([buf, data, &expected]() -> bool {
+    *buf = data;
+    expected[zx_system_get_page_size()] = data;
+    return true;
+  });
+
+  ASSERT_TRUE(t2.Start());
+
+  ASSERT_TRUE(t2.WaitForBlocked());
+  ASSERT_TRUE(pager.WaitForPageDirty(vmo, 1, 1, ZX_TIME_INFINITE));
+
+  // Dirty the second page.
+  ASSERT_TRUE(pager.DirtyPages(vmo, 1, 1));
+  ASSERT_TRUE(t2.Wait());
+
+  // Verify that the pager vmo has both pages committed now.
+  ASSERT_OK(vmo->vmo().get_info(ZX_INFO_VMO, &info, sizeof(info), nullptr, nullptr));
+  ASSERT_EQ(kNumPages * zx_system_get_page_size(), info.committed_bytes);
+
+  // Verify that both the pages are now dirty.
+  range = {.offset = 0, .length = 2};
+  ASSERT_TRUE(pager.VerifyDirtyRanges(vmo, &range, 1));
+  ASSERT_EQ(data, *buf);
+  ASSERT_TRUE(check_buffer_data(vmo, 0, kNumPages, expected.data(), true));
+}
+
+// Tests that ZX_PAGER_OP_DIRTY works for a mix of zero and non-zero pages.
+TEST(PagerWriteback, DirtyZeroAndNonZeroPages) {
+  UserPager pager;
+  ASSERT_TRUE(pager.Init());
+
+  Vmo* vmo;
+  constexpr uint64_t kNumPages = 10;
+  ASSERT_TRUE(pager.CreateVmoWithOptions(kNumPages, ZX_VMO_TRAP_DIRTY, &vmo));
+
+  // Buffer to verify VMO contents later.
+  std::vector<uint8_t> expected(kNumPages * zx_system_get_page_size(), 0);
+
+  // Empty source vmo to supply with zero pages.
+  zx::vmo vmo_src;
+  ASSERT_OK(zx::vmo::create(zx_system_get_page_size(), 0, &vmo_src));
+
+  // For each page offset, supply either a zero or a non-zero page.
+  uint64_t non_zero_count = 0;
+  for (uint64_t i = 0; i < kNumPages; i++) {
+    if (rand() % 2) {
+      non_zero_count++;
+      ASSERT_TRUE(pager.SupplyPages(vmo, i, 1));
+      vmo->GenerateBufferContents(expected.data(), 1, i);
+    } else {
+      ASSERT_OK(pager.pager().supply_pages(vmo->vmo(), i * zx_system_get_page_size(),
+                                           zx_system_get_page_size(), vmo_src, 0));
+    }
+  }
+
+  // Only non-zero pages should be committed.
+  zx_info_vmo_t info;
+  ASSERT_OK(vmo->vmo().get_info(ZX_INFO_VMO, &info, sizeof(info), nullptr, nullptr));
+  ASSERT_EQ(non_zero_count * zx_system_get_page_size(), info.committed_bytes);
+
+  // No dirty pages yet.
+  ASSERT_TRUE(pager.VerifyDirtyRanges(vmo, nullptr, 0));
+
+  // Verify that we're able to dirty the entire range regardless of the type of page.
+  ASSERT_TRUE(pager.DirtyPages(vmo, 0, kNumPages));
+
+  // All the pages should be committed and dirty now.
+  ASSERT_OK(vmo->vmo().get_info(ZX_INFO_VMO, &info, sizeof(info), nullptr, nullptr));
+  ASSERT_EQ(kNumPages * zx_system_get_page_size(), info.committed_bytes);
+  zx_vmo_dirty_range_t range = {.offset = 0, .length = kNumPages};
+  ASSERT_TRUE(pager.VerifyDirtyRanges(vmo, &range, 1));
+}
+
+// Tests that ZX_PAGER_OP_FAIL can fail DIRTY page requests for zero pages.
+TEST(PagerWriteback, FailDirtyRequestsForZeroPages) {
+  UserPager pager;
+  ASSERT_TRUE(pager.Init());
+
+  Vmo* vmo;
+  ASSERT_TRUE(pager.CreateVmoWithOptions(1, ZX_VMO_TRAP_DIRTY, &vmo));
+
+  // Supply with empty source vmo so that the destination gets zero page markers.
+  zx::vmo vmo_src;
+  ASSERT_OK(zx::vmo::create(zx_system_get_page_size(), 0, &vmo_src));
+  ASSERT_OK(pager.pager().supply_pages(vmo->vmo(), 0, zx_system_get_page_size(), vmo_src, 0));
+
+  // Verify that the pager vmo has no committed pages, i.e. it only has markers.
+  zx_info_vmo_t info;
+  ASSERT_OK(vmo->vmo().get_info(ZX_INFO_VMO, &info, sizeof(info), nullptr, nullptr));
+  ASSERT_EQ(0, info.committed_bytes);
+
+  // No dirty pages yet.
+  ASSERT_TRUE(pager.VerifyDirtyRanges(vmo, nullptr, 0));
+
+  // Buffer to verify VMO contents later.
+  std::vector<uint8_t> expected(zx_system_get_page_size(), 0);
+
+  // Attempt to write to the first page.
+  TestThread t([vmo, &expected]() -> bool {
+    uint8_t data = 0xaa;
+    expected[0] = data;
+    return vmo->vmo().write(&data, 0, sizeof(data)) == ZX_OK;
+  });
+  ASSERT_TRUE(t.Start());
+  ASSERT_TRUE(t.WaitForBlocked());
+
+  ASSERT_TRUE(pager.WaitForPageDirty(vmo, 0, 1, ZX_TIME_INFINITE));
+
+  // Fail the dirty request.
+  ASSERT_TRUE(pager.FailPages(vmo, 0, 1));
+
+  // The thread should exit with failure.
+  ASSERT_TRUE(t.WaitForFailure());
+
+  // No committed pages still.
+  ASSERT_OK(vmo->vmo().get_info(ZX_INFO_VMO, &info, sizeof(info), nullptr, nullptr));
+  ASSERT_EQ(0, info.committed_bytes);
+
+  // No dirty pages too.
+  ASSERT_TRUE(pager.VerifyDirtyRanges(vmo, nullptr, 0));
+}
+
 // Tests that no DIRTY requests are generated on a commit.
 TEST(PagerWriteback, NoDirtyRequestsOnCommit) {
   UserPager pager;

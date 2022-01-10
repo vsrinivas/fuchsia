@@ -1304,6 +1304,15 @@ zx_status_t VmCowPages::AddNewPageLocked(uint64_t offset, vm_page_t* page, bool 
     ZeroPage(page);
   }
 
+  // Pages being added to pager backed VMOs should have a valid dirty_state before being added to
+  // the page list, so that they can be inserted in the correct page queue. New pages start off
+  // clean.
+  if (has_pager_backlinks_locked()) {
+    // Only zero pages can be added as new pages to pager backed VMOs.
+    DEBUG_ASSERT(zero || IsZeroPage(page));
+    page->object.dirty_state = static_cast<uint8_t>(DirtyState::Clean);
+  }
+
   VmPageOrMarker p = VmPageOrMarker::Page(page);
   zx_status_t status = AddPageLocked(&p, offset, do_range_update);
 
@@ -1935,6 +1944,33 @@ zx_status_t VmCowPages::LookupPagesLocked(uint64_t offset, uint pf_flags,
 
   vm_page_t* res_page;
   if (!page_owner->is_hidden_locked() || p == vm_get_zero_page()) {
+    // If the page source is preserving content (is a PagerProxy), and is configured to trap dirty
+    // transitions, we first need to generate a DIRTY request *before* the zero page can be forked
+    // and marked dirty. If dirty transitions are not trapped, we will fall through to allocate the
+    // page and then mark it dirty below.
+    //
+    // Note that the check for ShouldTrapDirtyTransitions() is an optimization here.
+    // PrepareForWriteLocked() would do the right thing depending on ShouldTrapDirtyTransitions(),
+    // however we choose to avoid the extra work only to have it be a no-op if dirty transitions
+    // should not be trapped.
+    if (is_source_preserving_page_content_locked() && page_source_->ShouldTrapDirtyTransitions()) {
+      // The only page we can be forking here is the zero page. A non-slice child VMO does not
+      // support dirty page tracking.
+      DEBUG_ASSERT(p == vm_get_zero_page());
+      // This object directly owns the page.
+      DEBUG_ASSERT(page_owner == this);
+      AssertHeld(paged_ref_->lock_ref());
+      VmoDebugInfo vmo_debug_info = {.vmo_ptr = reinterpret_cast<uintptr_t>(paged_ref_),
+                                     .vmo_id = paged_ref_->user_id_locked()};
+      zx_status_t status = page_source_->RequestDirtyTransition(page_request->get(), offset,
+                                                                PAGE_SIZE, vmo_debug_info);
+      // The page source will never succeed synchronously.
+      DEBUG_ASSERT(status != ZX_OK);
+      // No pages to return yet.
+      out->num_pages = 0;
+      return status;
+    }
+
     // If the vmo isn't hidden, we can't move the page. If the page is the zero
     // page, there's no need to try to move the page. In either case, we need to
     // allocate a writable page for this vmo.
@@ -1949,6 +1985,9 @@ zx_status_t VmCowPages::LookupPagesLocked(uint64_t offset, uint pf_flags,
     // going to write to the page, so mark it Dirty. AddPageLocked below will then insert the page
     // into the appropriate page queue.
     if (is_source_preserving_page_content_locked()) {
+      // The only page we can be forking here is the zero page. A non-slice child VMO does not
+      // support dirty page tracking.
+      DEBUG_ASSERT(p == vm_get_zero_page());
       res_page->object.dirty_state = static_cast<uint8_t>(DirtyState::Dirty);
     }
 
@@ -3423,6 +3462,70 @@ zx_status_t VmCowPages::DirtyPagesLocked(uint64_t offset, uint64_t len) {
 
   if (!page_source_->ShouldTrapDirtyTransitions()) {
     return ZX_ERR_NOT_SUPPORTED;
+  }
+
+  // If any of the pages in the range are zero page markers, they need to be forked in order to be
+  // dirtied (written to). Find the number of such pages that need to be allocated.
+  size_t zero_pages_count = 0;
+  zx_status_t status = page_list_.ForEveryPageInRange(
+      [&zero_pages_count](const VmPageOrMarker* p, uint64_t off) {
+        if (p->IsMarker()) {
+          zero_pages_count++;
+        }
+        return ZX_ERR_NEXT;
+      },
+      offset, offset + len);
+
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  if (zero_pages_count > 0) {
+    // Allocate the number of zero pages required upfront, so that we can fail the call early if the
+    // page allocation fails.
+    list_node zero_pages_list;
+    list_initialize(&zero_pages_list);
+    status = pmm_alloc_pages(zero_pages_count, pmm_alloc_flags_, &zero_pages_list);
+    if (status != ZX_OK) {
+      return status;
+    }
+
+    auto zero_pages_cleanup = fit::defer([this, &zero_pages_list]() {
+      if (!list_is_empty(&zero_pages_list)) {
+        FreePages(&zero_pages_list);
+      }
+    });
+
+    // Increment the generation count as we're going to be inserting new pages.
+    IncrementHierarchyGenerationCountLocked();
+
+    // Install the newly allocated pages in place of the zero page markers.
+    status = page_list_.ForEveryPageInRange(
+        [this, &zero_pages_list](const VmPageOrMarker* p, uint64_t off) {
+          if (p->IsMarker()) {
+            DEBUG_ASSERT(!list_is_empty(&zero_pages_list));
+            AssertHeld(lock_);
+            // AddNewPageLocked will also zero the page and update any mappings.
+            //
+            // TODO(rashaeqbal): Depending on how often we end up forking zero markers, we might
+            // want to pass do_range_udpate = false, and defer updates until later, so we can
+            // perform a single batch update.
+            zx_status_t status =
+                AddNewPageLocked(off, list_remove_head_type(&zero_pages_list, vm_page, queue_node));
+            // AddNewPageLocked will not fail with ZX_ERR_ALREADY_EXISTS as markers can be
+            // overwritten, nor with ZX_ERR_NO_MEMORY as we don't need to allocate a new slot in the
+            // page list, we're simply replacing its content.
+            ASSERT(status == ZX_OK);
+          }
+          return ZX_ERR_NEXT;
+        },
+        offset, offset + len);
+
+    if (status != ZX_OK) {
+      return status;
+    }
+
+    DEBUG_ASSERT(list_is_empty(&zero_pages_list));
   }
 
   return page_list_.ForEveryPageAndContiguousRunInRange(
