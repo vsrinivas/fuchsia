@@ -5,7 +5,6 @@
 #include <lib/fidl/coding.h>
 #include <lib/fidl/internal.h>
 #include <lib/fidl/llcpp/coding.h>
-#include <lib/fidl/llcpp/internal/transport_channel.h>
 #include <lib/fidl/llcpp/message.h>
 #include <lib/fidl/trace.h>
 #include <lib/fidl/transformer.h>
@@ -16,8 +15,11 @@
 
 #ifdef __Fuchsia__
 #include <lib/fidl/llcpp/client_base.h>
+#include <lib/fidl/llcpp/internal/transport_channel.h>
 #include <lib/fidl/llcpp/server.h>
 #include <zircon/syscalls.h>
+#else
+#include <lib/fidl/llcpp/internal/transport_channel_host.h>
 #endif  // __Fuchsia__
 
 namespace fidl {

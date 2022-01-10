@@ -4,16 +4,12 @@
 
 #include <lib/fidl/internal.h>
 #include <lib/fidl/llcpp/internal/transport_channel.h>
+#include <lib/fidl/llcpp/message.h>
 #include <lib/fidl/llcpp/message_storage.h>
 #include <lib/fidl/trace.h>
 #include <zircon/syscalls.h>
 
 #include <cstring>
-
-#ifdef __Fuchsia__
-#include <lib/fidl/llcpp/message.h>
-#include <lib/fidl/trace.h>
-#endif
 
 namespace fidl {
 namespace internal {
@@ -23,9 +19,6 @@ namespace {
 zx_status_t channel_write(fidl_handle_t handle, WriteOptions write_options, const void* data,
                           uint32_t data_count, const fidl_handle_t* handles,
                           const void* handle_metadata, uint32_t handles_count) {
-#ifndef __Fuchsia__
-  ZX_PANIC("channel_write unsupported on host");
-#else
   zx_handle_disposition_t hds[ZX_CHANNEL_MAX_MSG_HANDLES];
   const fidl_channel_handle_metadata_t* metadata =
       static_cast<const fidl_channel_handle_metadata_t*>(handle_metadata);
@@ -40,10 +33,8 @@ zx_status_t channel_write(fidl_handle_t handle, WriteOptions write_options, cons
   }
   return zx_channel_write_etc(handle, ZX_CHANNEL_WRITE_USE_IOVEC, data, data_count,
                               reinterpret_cast<zx_handle_disposition_t*>(hds), handles_count);
-#endif
 }
 
-#ifdef __Fuchsia__
 void channel_read_existing_buffer(fidl_handle_t handle, ReadBuffers existing_buffers,
                                   uint32_t options, TransportReadCallback callback) {
   uint32_t bytes_actual_count = 0;
@@ -95,13 +86,9 @@ void channel_read_new_buffer(fidl_handle_t handle, uint32_t options,
                                },
                                options, std::move(callback));
 }
-#endif  // __Fuchsia__
 
 void channel_read(fidl_handle_t handle, std::optional<ReadBuffers> existing_buffers,
                   ReadOptions read_options, TransportReadCallback callback) {
-#ifndef __Fuchsia__
-  ZX_PANIC("channel_read unsupported on host");
-#else
   uint32_t options = 0;
   if (read_options.discardable) {
     options |= ZX_CHANNEL_READ_MAY_DISCARD;
@@ -112,16 +99,11 @@ void channel_read(fidl_handle_t handle, std::optional<ReadBuffers> existing_buff
   } else {
     channel_read_new_buffer(handle, options, std::move(callback));
   }
-
-#endif
 }
 
 zx_status_t channel_call(fidl_handle_t handle, CallOptions call_options,
                          const CallMethodArgs& cargs, uint32_t* out_data_actual_count,
                          uint32_t* out_handles_actual_count) {
-#ifndef __Fuchsia__
-  ZX_PANIC("channel_call unsupported on host");
-#else
   zx_handle_disposition_t hds[ZX_CHANNEL_MAX_MSG_HANDLES];
   const fidl_channel_handle_metadata_t* wr_metadata =
       static_cast<const fidl_channel_handle_metadata_t*>(cargs.wr_handle_metadata);
@@ -158,10 +140,8 @@ zx_status_t channel_call(fidl_handle_t handle, CallOptions call_options,
     };
   }
   return status;
-#endif
 }
 
-#ifdef __Fuchsia__
 zx_status_t channel_create_waiter(fidl_handle_t handle, async_dispatcher_t* dispatcher,
                                   TransportWaitSuccessHandler success_handler,
                                   TransportWaitFailureHandler failure_handler,
@@ -170,15 +150,8 @@ zx_status_t channel_create_waiter(fidl_handle_t handle, async_dispatcher_t* disp
                                               std::move(failure_handler));
   return ZX_OK;
 }
-#endif
 
-void channel_close(fidl_handle_t handle) {
-#ifndef __Fuchsia__
-  ZX_PANIC("channel_close unsupported on host");
-#else
-  zx_handle_close(handle);
-#endif
-}
+void channel_close(fidl_handle_t handle) { zx_handle_close(handle); }
 
 }  // namespace
 
@@ -188,13 +161,10 @@ const TransportVTable ChannelTransport::VTable = {
     .write = channel_write,
     .read = channel_read,
     .call = channel_call,
-#ifdef __Fuchsia__
     .create_waiter = channel_create_waiter,
-#endif
     .close = channel_close,
 };
 
-#ifdef __Fuchsia__
 void ChannelWaiter::HandleWaitFinished(async_dispatcher_t* dispatcher, zx_status_t status,
                                        const zx_packet_signal_t* signal) {
   if (status != ZX_OK) {
@@ -215,7 +185,6 @@ void ChannelWaiter::HandleWaitFinished(async_dispatcher_t* dispatcher, zx_status
         return success_handler_(msg, IncomingTransportContext());
       });
 }
-#endif
 
 namespace {
 

@@ -195,13 +195,13 @@ if (is_fuchsia) {
                     "lib/fidl/llcpp/vector_view.h",
                     "lib/fidl/llcpp/wire_types.h",
                     "lib/fidl/llcpp/internal/transport.h",
-                    "lib/fidl/llcpp/internal/transport_channel.h",
+                    "lib/fidl/llcpp/internal/transport_channel_host.h",
                   ] + llcpp_wavl_tree_headers
 
     sdk_private_headers =
         [
           "include/lib/fidl/llcpp/internal/transport.h",
-          "include/lib/fidl/llcpp/internal/transport_channel.h",
+          "include/lib/fidl/llcpp/internal/transport_channel_host.h",
         ] + llcpp_wavl_tree_headers_with_include
 
     sources = [
@@ -213,7 +213,7 @@ if (is_fuchsia) {
       "llcpp_message_storage.cc",
       "llcpp_result.cc",
       "llcpp_transport.cc",
-      "llcpp_transport_channel.cc",
+      "llcpp_transport_channel_host.cc",
     ]
     public_deps = [
       "//sdk/lib/fit:headers",

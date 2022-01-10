@@ -5,7 +5,9 @@
 #ifndef LIB_FIDL_LLCPP_WIRE_TYPES_H_
 #define LIB_FIDL_LLCPP_WIRE_TYPES_H_
 
+#ifdef __Fuchsia__
 #include <lib/fidl/llcpp/internal/transport_channel.h>
+#endif  // __Fuchsia__
 
 // # Wire domain objects
 //

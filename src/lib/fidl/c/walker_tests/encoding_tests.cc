@@ -4,14 +4,16 @@
 
 #include <lib/fidl/coding.h>
 #include <lib/fidl/llcpp/coding.h>
-#include <lib/fidl/llcpp/internal/transport_channel.h>
 #include <limits.h>
 #include <stddef.h>
 
 #ifdef __Fuchsia__
+#include <lib/fidl/llcpp/internal/transport_channel.h>
 #include <lib/zx/event.h>
 #include <lib/zx/eventpair.h>
 #include <zircon/syscalls.h>
+#else
+#include <lib/fidl/llcpp/internal/transport_channel_host.h>
 #endif
 
 #include <memory>

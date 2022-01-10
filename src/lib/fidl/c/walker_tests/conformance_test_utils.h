@@ -7,7 +7,6 @@
 
 #include <lib/fidl/coding.h>
 #include <lib/fidl/internal.h>
-#include <lib/fidl/llcpp/internal/transport_channel.h>
 #include <lib/fidl/llcpp/message.h>
 #include <lib/fit/function.h>
 #include <zircon/fidl.h>
@@ -20,7 +19,10 @@
 #include <memory>
 #include <vector>
 
-#ifndef __Fuchsia__
+#ifdef __Fuchsia__
+#include <lib/fidl/llcpp/internal/transport_channel.h>
+#else
+#include <lib/fidl/llcpp/internal/transport_channel_host.h>
 // The current build rules for zircon/system/ulib/zircon don't allow linking
 // zx_status_get_string on host. Consider changing in the future.
 #define zx_status_get_string(status) ((status))
