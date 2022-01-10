@@ -22,7 +22,6 @@
 #include <ktl/limits.h>
 #include <lk/init.h>
 #include <phys/handoff.h>
-#include <platform/pc/bootloader.h>
 
 class X86PciePlatformSupport : public PciePlatformInterface {
  public:

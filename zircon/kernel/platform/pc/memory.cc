@@ -27,7 +27,6 @@
 #include <lk/init.h>
 #include <object/handle.h>
 #include <object/resource_dispatcher.h>
-#include <platform/pc/bootloader.h>
 #include <vm/vm.h>
 
 #include "platform_p.h"

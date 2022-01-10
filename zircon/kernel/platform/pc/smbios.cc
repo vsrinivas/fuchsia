@@ -14,7 +14,6 @@
 
 #include <ktl/move.h>
 #include <phys/handoff.h>
-#include <platform/pc/bootloader.h>
 #include <platform/pc/smbios.h>
 #include <vm/physmap.h>
 #include <vm/vm_address_region.h>
