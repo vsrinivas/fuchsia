@@ -152,19 +152,6 @@ void fidl::internal::WireClientImpl<::test_nullable::SimpleProtocol>::Add(
   ::fidl::internal::ClientBase::SendTwoWay(
       _request_message.GetOutgoingMessage(), _context);
 }
-void fidl::internal::WireClientImpl<::test_nullable::SimpleProtocol>::Add(
-    ::fidl::BufferSpan _request_buffer, int32_t a, int32_t b,
-    ::fidl::WireResponseContext<::test_nullable::SimpleProtocol::Add>*
-        _context) {
-  ::fidl::WireRequest<::test_nullable::SimpleProtocol::Add> _request{a, b};
-
-  ::fidl::UnownedEncodedMessage<
-      ::fidl::WireRequest<::test_nullable::SimpleProtocol::Add>>
-      _request_message(_request_buffer.data, _request_buffer.capacity,
-                       &_request);
-  ::fidl::internal::ClientBase::SendTwoWay(
-      _request_message.GetOutgoingMessage(), _context);
-}
 ::fidl::WireResult<::test_nullable::SimpleProtocol::Add>
 fidl::internal::WireClientImpl<::test_nullable::SimpleProtocol>::Add_Sync(
     int32_t a, int32_t b) {

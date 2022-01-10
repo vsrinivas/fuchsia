@@ -292,24 +292,6 @@ void fidl::internal::WireClientImpl<::test_union::TestProtocol>::
   ::fidl::internal::ClientBase::SendTwoWay(
       _request_message.GetOutgoingMessage(), _context);
 }
-void fidl::internal::WireClientImpl<::test_union::TestProtocol>::
-    StrictXUnionHenceResponseMayBeStackAllocated(
-        ::fidl::WireResponseContext<
-            ::test_union::TestProtocol::
-                StrictXUnionHenceResponseMayBeStackAllocated>* _context) {
-  ::fidl::WireRequest<
-      ::test_union::TestProtocol::StrictXUnionHenceResponseMayBeStackAllocated>
-      _request{};
-
-  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::OwnedEncodedMessage<
-      ::fidl::WireRequest<::test_union::TestProtocol::
-                              StrictXUnionHenceResponseMayBeStackAllocated>,
-      ::fidl::internal::ChannelTransport>
-      _request_message(::fidl::internal::AllowUnownedInputRef{}, &_request);
-  ::fidl::internal::ClientBase::SendTwoWay(
-      _request_message.GetOutgoingMessage(), _context);
-}
 ::fidl::WireResult<
     ::test_union::TestProtocol::StrictXUnionHenceResponseMayBeStackAllocated>
 fidl::internal::WireClientImpl<::test_union::TestProtocol>::
@@ -423,24 +405,6 @@ void fidl::internal::WireClientImpl<::test_union::TestProtocol>::
   ::fidl::WireRequest<::test_union::TestProtocol::
                           FlexibleXUnionHenceResponseMustBeHeapAllocated>
       _request{};
-  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::OwnedEncodedMessage<
-      ::fidl::WireRequest<::test_union::TestProtocol::
-                              FlexibleXUnionHenceResponseMustBeHeapAllocated>,
-      ::fidl::internal::ChannelTransport>
-      _request_message(::fidl::internal::AllowUnownedInputRef{}, &_request);
-  ::fidl::internal::ClientBase::SendTwoWay(
-      _request_message.GetOutgoingMessage(), _context);
-}
-void fidl::internal::WireClientImpl<::test_union::TestProtocol>::
-    FlexibleXUnionHenceResponseMustBeHeapAllocated(
-        ::fidl::WireResponseContext<
-            ::test_union::TestProtocol::
-                FlexibleXUnionHenceResponseMustBeHeapAllocated>* _context) {
-  ::fidl::WireRequest<::test_union::TestProtocol::
-                          FlexibleXUnionHenceResponseMustBeHeapAllocated>
-      _request{};
-
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::OwnedEncodedMessage<
       ::fidl::WireRequest<::test_union::TestProtocol::

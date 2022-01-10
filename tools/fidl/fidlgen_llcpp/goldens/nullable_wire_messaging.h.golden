@@ -462,14 +462,6 @@ class ::fidl::internal::WireClientImpl<::test_nullable::SimpleProtocol> final
           ::fidl::WireResponse<::test_nullable::SimpleProtocol::Add>* response)>
           _cb);
 
-  // Asynchronous variant of |SimpleProtocol.Add()|.
-  // Caller provides the backing storage for FIDL message via request buffer.
-  // Ownership of |_context| is given unsafely to the binding until |OnError|
-  // or |OnReply| are called on it.
-  void Add(::fidl::BufferSpan _request_buffer, int32_t a, int32_t b,
-           ::fidl::WireResponseContext<::test_nullable::SimpleProtocol::Add>*
-               _context);
-
   // Synchronous variant of |Add.Add()|.
   // Allocates 48 bytes of message buffer on the stack. No heap allocation
   // necessary.

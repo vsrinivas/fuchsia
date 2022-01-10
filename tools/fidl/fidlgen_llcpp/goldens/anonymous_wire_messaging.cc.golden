@@ -165,22 +165,6 @@ void fidl::internal::WireClientImpl<::test_anonymous::SomeProtocol>::SomeMethod(
   ::fidl::internal::ClientBase::SendTwoWay(
       _request_message.GetOutgoingMessage(), _context);
 }
-void fidl::internal::WireClientImpl<::test_anonymous::SomeProtocol>::SomeMethod(
-    ::fidl::BufferSpan _request_buffer,
-    ::test_anonymous::wire::UnionMember union_member,
-    ::test_anonymous::wire::TableMember table_member,
-    ::fidl::WireResponseContext<::test_anonymous::SomeProtocol::SomeMethod>*
-        _context) {
-  ::fidl::WireRequest<::test_anonymous::SomeProtocol::SomeMethod> _request{
-      union_member, table_member};
-
-  ::fidl::UnownedEncodedMessage<
-      ::fidl::WireRequest<::test_anonymous::SomeProtocol::SomeMethod>>
-      _request_message(_request_buffer.data, _request_buffer.capacity,
-                       &_request);
-  ::fidl::internal::ClientBase::SendTwoWay(
-      _request_message.GetOutgoingMessage(), _context);
-}
 ::fidl::WireResult<::test_anonymous::SomeProtocol::SomeMethod>
 fidl::internal::WireClientImpl<::test_anonymous::SomeProtocol>::SomeMethod_Sync(
     ::test_anonymous::wire::UnionMember union_member,

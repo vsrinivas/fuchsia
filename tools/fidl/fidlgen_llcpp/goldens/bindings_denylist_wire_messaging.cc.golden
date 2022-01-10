@@ -150,25 +150,6 @@ void fidl::internal::WireClientImpl<
   ::fidl::internal::ClientBase::SendTwoWay(
       _request_message.GetOutgoingMessage(), _context);
 }
-void fidl::internal::WireClientImpl<
-    ::test_bindingsdenylist::OnlyLibfuzzerAndDeps>::
-    LibfuzzerNeedsNonemptyProtocol(
-        ::fidl::WireResponseContext<
-            ::test_bindingsdenylist::OnlyLibfuzzerAndDeps::
-                LibfuzzerNeedsNonemptyProtocol>* _context) {
-  ::fidl::WireRequest<::test_bindingsdenylist::OnlyLibfuzzerAndDeps::
-                          LibfuzzerNeedsNonemptyProtocol>
-      _request{};
-
-  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::OwnedEncodedMessage<
-      ::fidl::WireRequest<::test_bindingsdenylist::OnlyLibfuzzerAndDeps::
-                              LibfuzzerNeedsNonemptyProtocol>,
-      ::fidl::internal::ChannelTransport>
-      _request_message(::fidl::internal::AllowUnownedInputRef{}, &_request);
-  ::fidl::internal::ClientBase::SendTwoWay(
-      _request_message.GetOutgoingMessage(), _context);
-}
 ::fidl::WireResult<::test_bindingsdenylist::OnlyLibfuzzerAndDeps::
                        LibfuzzerNeedsNonemptyProtocol>
 fidl::internal::WireClientImpl<::test_bindingsdenylist::OnlyLibfuzzerAndDeps>::

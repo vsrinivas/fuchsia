@@ -916,16 +916,6 @@ class ::fidl::internal::WireClientImpl<
                                    ComposedCallWhichMayFail>* response)>
           _cb);
 
-  // Asynchronous variant of
-  // |ExampleUseOfErrorSyntax.ComposedCallWhichMayFail()|. Caller provides the
-  // backing storage for FIDL message via request buffer. Ownership of
-  // |_context| is given unsafely to the binding until |OnError| or |OnReply|
-  // are called on it.
-  void ComposedCallWhichMayFail(
-      ::fidl::BufferSpan _request_buffer, ::fidl::StringView s,
-      ::fidl::WireResponseContext<::test_errorsyntax::ExampleUseOfErrorSyntax::
-                                      ComposedCallWhichMayFail>* _context);
-
   // Synchronous variant of
   // |ComposedCallWhichMayFail.ComposedCallWhichMayFail()|.
   // Allocates 40 bytes of response buffer on the stack. Request is
@@ -955,16 +945,6 @@ class ::fidl::internal::WireClientImpl<
           ::fidl::WireResponse<::test_errorsyntax::ExampleUseOfErrorSyntax::
                                    CallWhichMayFail>* response)>
           _cb);
-
-  // Asynchronous variant of |ExampleUseOfErrorSyntax.CallWhichMayFail()|.
-  // Caller provides the backing storage for FIDL message via request buffer.
-  // Ownership of |_context| is given unsafely to the binding until |OnError|
-  // or |OnReply| are called on it.
-  void CallWhichMayFail(
-      ::fidl::BufferSpan _request_buffer, ::fidl::StringView s,
-      ::fidl::WireResponseContext<
-          ::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>*
-          _context);
 
   // Synchronous variant of |CallWhichMayFail.CallWhichMayFail()|.
   // Allocates 40 bytes of response buffer on the stack. Request is

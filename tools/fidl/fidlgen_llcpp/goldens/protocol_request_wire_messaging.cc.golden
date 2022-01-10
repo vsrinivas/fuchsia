@@ -351,19 +351,6 @@ void fidl::internal::WireClientImpl<::test_protocolrequest::Parent>::GetChild(
   ::fidl::internal::ClientBase::SendTwoWay(
       _request_message.GetOutgoingMessage(), _context);
 }
-void fidl::internal::WireClientImpl<::test_protocolrequest::Parent>::GetChild(
-    ::fidl::WireResponseContext<::test_protocolrequest::Parent::GetChild>*
-        _context) {
-  ::fidl::WireRequest<::test_protocolrequest::Parent::GetChild> _request{};
-
-  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::OwnedEncodedMessage<
-      ::fidl::WireRequest<::test_protocolrequest::Parent::GetChild>,
-      ::fidl::internal::ChannelTransport>
-      _request_message(::fidl::internal::AllowUnownedInputRef{}, &_request);
-  ::fidl::internal::ClientBase::SendTwoWay(
-      _request_message.GetOutgoingMessage(), _context);
-}
 ::fidl::WireResult<::test_protocolrequest::Parent::GetChild> fidl::internal::
     WireClientImpl<::test_protocolrequest::Parent>::GetChild_Sync() {
   return ::fidl::internal::ClientBase::MakeSyncCallWith(
@@ -464,21 +451,6 @@ void fidl::internal::WireClientImpl<::test_protocolrequest::Parent>::
   ::fidl::internal::ClientBase::SendTwoWay(
       _request_message.GetOutgoingMessage(), _context);
 }
-void fidl::internal::WireClientImpl<::test_protocolrequest::Parent>::
-    GetChildRequest(
-        ::fidl::WireResponseContext<
-            ::test_protocolrequest::Parent::GetChildRequest>* _context) {
-  ::fidl::WireRequest<::test_protocolrequest::Parent::GetChildRequest>
-      _request{};
-
-  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::OwnedEncodedMessage<
-      ::fidl::WireRequest<::test_protocolrequest::Parent::GetChildRequest>,
-      ::fidl::internal::ChannelTransport>
-      _request_message(::fidl::internal::AllowUnownedInputRef{}, &_request);
-  ::fidl::internal::ClientBase::SendTwoWay(
-      _request_message.GetOutgoingMessage(), _context);
-}
 ::fidl::WireResult<::test_protocolrequest::Parent::GetChildRequest>
 fidl::internal::WireClientImpl<
     ::test_protocolrequest::Parent>::GetChildRequest_Sync() {
@@ -522,19 +494,6 @@ fidl::internal::WireClientImpl<::test_protocolrequest::Parent>::TakeChild(
   return ::fidl::internal::ClientBase::SendOneWay(
       _request_message.GetOutgoingMessage());
 }
-::fidl::Result
-fidl::internal::WireClientImpl<::test_protocolrequest::Parent>::TakeChild(
-    ::fidl::BufferSpan _buffer_span,
-    ::fidl::ClientEnd<::test_protocolrequest::Child>&& c) {
-  ::fidl::WireRequest<::test_protocolrequest::Parent::TakeChild>
-      _request_object{std::move(c)};
-  ::fidl::UnownedEncodedMessage<
-      ::fidl::WireRequest<::test_protocolrequest::Parent::TakeChild>>
-      _request_message(_buffer_span.data, _buffer_span.capacity,
-                       &_request_object);
-  return ::fidl::internal::ClientBase::SendOneWay(
-      _request_message.GetOutgoingMessage());
-}
 ::fidl::Result fidl::internal::WireClientImpl<::test_protocolrequest::Parent>::
     TakeChildRequest(::fidl::ServerEnd<::test_protocolrequest::Child>&& r) {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
@@ -544,18 +503,6 @@ fidl::internal::WireClientImpl<::test_protocolrequest::Parent>::TakeChild(
       ::fidl::WireRequest<::test_protocolrequest::Parent::TakeChildRequest>,
       ::fidl::internal::ChannelTransport>
       _request_message(::fidl::internal::AllowUnownedInputRef{},
-                       &_request_object);
-  return ::fidl::internal::ClientBase::SendOneWay(
-      _request_message.GetOutgoingMessage());
-}
-::fidl::Result fidl::internal::WireClientImpl<::test_protocolrequest::Parent>::
-    TakeChildRequest(::fidl::BufferSpan _buffer_span,
-                     ::fidl::ServerEnd<::test_protocolrequest::Child>&& r) {
-  ::fidl::WireRequest<::test_protocolrequest::Parent::TakeChildRequest>
-      _request_object{std::move(r)};
-  ::fidl::UnownedEncodedMessage<
-      ::fidl::WireRequest<::test_protocolrequest::Parent::TakeChildRequest>>
-      _request_message(_buffer_span.data, _buffer_span.capacity,
                        &_request_object);
   return ::fidl::internal::ClientBase::SendOneWay(
       _request_message.GetOutgoingMessage());

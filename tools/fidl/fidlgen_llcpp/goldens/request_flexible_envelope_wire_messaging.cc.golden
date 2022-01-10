@@ -284,24 +284,6 @@ void fidl::internal::WireClientImpl<::test_requestflexibleenvelope::Protocol>::
   ::fidl::internal::ClientBase::SendTwoWay(
       _request_message.GetOutgoingMessage(), _context);
 }
-void fidl::internal::WireClientImpl<::test_requestflexibleenvelope::Protocol>::
-    RequestStrictResponseFlexible(
-        ::fidl::BufferSpan _request_buffer,
-        ::test_requestflexibleenvelope::wire::StrictFoo s,
-        ::fidl::WireResponseContext<::test_requestflexibleenvelope::Protocol::
-                                        RequestStrictResponseFlexible>*
-            _context) {
-  ::fidl::WireRequest<
-      ::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>
-      _request{s};
-
-  ::fidl::UnownedEncodedMessage<::fidl::WireRequest<
-      ::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>>
-      _request_message(_request_buffer.data, _request_buffer.capacity,
-                       &_request);
-  ::fidl::internal::ClientBase::SendTwoWay(
-      _request_message.GetOutgoingMessage(), _context);
-}
 ::fidl::WireResult<
     ::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>
 fidl::internal::WireClientImpl<::test_requestflexibleenvelope::Protocol>::
@@ -419,24 +401,6 @@ void fidl::internal::WireClientImpl<::test_requestflexibleenvelope::Protocol>::
                               RequestFlexibleResponseStrict>,
       ::fidl::internal::ChannelTransport>
       _request_message(::fidl::internal::AllowUnownedInputRef{}, &_request);
-  ::fidl::internal::ClientBase::SendTwoWay(
-      _request_message.GetOutgoingMessage(), _context);
-}
-void fidl::internal::WireClientImpl<::test_requestflexibleenvelope::Protocol>::
-    RequestFlexibleResponseStrict(
-        ::fidl::BufferSpan _request_buffer,
-        ::test_requestflexibleenvelope::wire::FlexibleFoo s,
-        ::fidl::WireResponseContext<::test_requestflexibleenvelope::Protocol::
-                                        RequestFlexibleResponseStrict>*
-            _context) {
-  ::fidl::WireRequest<
-      ::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>
-      _request{s};
-
-  ::fidl::UnownedEncodedMessage<::fidl::WireRequest<
-      ::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>>
-      _request_message(_request_buffer.data, _request_buffer.capacity,
-                       &_request);
   ::fidl::internal::ClientBase::SendTwoWay(
       _request_message.GetOutgoingMessage(), _context);
 }

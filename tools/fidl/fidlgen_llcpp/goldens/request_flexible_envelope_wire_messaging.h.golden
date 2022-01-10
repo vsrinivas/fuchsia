@@ -899,16 +899,6 @@ class ::fidl::internal::WireClientImpl<::test_requestflexibleenvelope::Protocol>
                                    RequestStrictResponseFlexible>* response)>
           _cb);
 
-  // Asynchronous variant of |Protocol.RequestStrictResponseFlexible()|.
-  // Caller provides the backing storage for FIDL message via request buffer.
-  // Ownership of |_context| is given unsafely to the binding until |OnError|
-  // or |OnReply| are called on it.
-  void RequestStrictResponseFlexible(
-      ::fidl::BufferSpan _request_buffer,
-      ::test_requestflexibleenvelope::wire::StrictFoo s,
-      ::fidl::WireResponseContext<::test_requestflexibleenvelope::Protocol::
-                                      RequestStrictResponseFlexible>* _context);
-
   // Synchronous variant of
   // |RequestStrictResponseFlexible.RequestStrictResponseFlexible()|. Request is
   // heap-allocated. Response is heap-allocated.
@@ -940,16 +930,6 @@ class ::fidl::internal::WireClientImpl<::test_requestflexibleenvelope::Protocol>
           ::fidl::WireResponse<::test_requestflexibleenvelope::Protocol::
                                    RequestFlexibleResponseStrict>* response)>
           _cb);
-
-  // Asynchronous variant of |Protocol.RequestFlexibleResponseStrict()|.
-  // Caller provides the backing storage for FIDL message via request buffer.
-  // Ownership of |_context| is given unsafely to the binding until |OnError|
-  // or |OnReply| are called on it.
-  void RequestFlexibleResponseStrict(
-      ::fidl::BufferSpan _request_buffer,
-      ::test_requestflexibleenvelope::wire::FlexibleFoo s,
-      ::fidl::WireResponseContext<::test_requestflexibleenvelope::Protocol::
-                                      RequestFlexibleResponseStrict>* _context);
 
   // Synchronous variant of
   // |RequestFlexibleResponseStrict.RequestFlexibleResponseStrict()|. Request is

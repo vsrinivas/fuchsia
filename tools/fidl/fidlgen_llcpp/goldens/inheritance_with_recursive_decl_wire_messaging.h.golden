@@ -762,11 +762,6 @@ class ::fidl::internal::WireClientImpl<
   // necessary.
   ::fidl::Result First(
       ::fidl::ServerEnd<::test_inheritancewithrecursivedecl::Parent>&& request);
-
-  // Caller provides the backing storage for FIDL message via request buffer.
-  ::fidl::Result First(
-      ::fidl::BufferSpan _buffer_span,
-      ::fidl::ServerEnd<::test_inheritancewithrecursivedecl::Parent>&& request);
   WireClientImpl() = default;
 };
 
@@ -855,19 +850,9 @@ class ::fidl::internal::WireClientImpl<
   ::fidl::Result First(
       ::fidl::ServerEnd<::test_inheritancewithrecursivedecl::Parent>&& request);
 
-  // Caller provides the backing storage for FIDL message via request buffer.
-  ::fidl::Result First(
-      ::fidl::BufferSpan _buffer_span,
-      ::fidl::ServerEnd<::test_inheritancewithrecursivedecl::Parent>&& request);
-
   // Allocates 24 bytes of message buffer on the stack. No heap allocation
   // necessary.
   ::fidl::Result Second(
-      ::fidl::ServerEnd<::test_inheritancewithrecursivedecl::Parent>&& request);
-
-  // Caller provides the backing storage for FIDL message via request buffer.
-  ::fidl::Result Second(
-      ::fidl::BufferSpan _buffer_span,
       ::fidl::ServerEnd<::test_inheritancewithrecursivedecl::Parent>&& request);
   WireClientImpl() = default;
 };

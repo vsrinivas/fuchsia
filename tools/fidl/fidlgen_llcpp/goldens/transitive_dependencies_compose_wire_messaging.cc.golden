@@ -168,20 +168,6 @@ void fidl::internal::WireClientImpl<::test_transitivedependenciescompose::Top>::
   ::fidl::internal::ClientBase::SendTwoWay(
       _request_message.GetOutgoingMessage(), _context);
 }
-void fidl::internal::WireClientImpl<::test_transitivedependenciescompose::Top>::
-    GetFoo(::fidl::WireResponseContext<
-           ::test_transitivedependenciescompose::Top::GetFoo>* _context) {
-  ::fidl::WireRequest<::test_transitivedependenciescompose::Top::GetFoo>
-      _request{};
-
-  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::OwnedEncodedMessage<
-      ::fidl::WireRequest<::test_transitivedependenciescompose::Top::GetFoo>,
-      ::fidl::internal::ChannelTransport>
-      _request_message(::fidl::internal::AllowUnownedInputRef{}, &_request);
-  ::fidl::internal::ClientBase::SendTwoWay(
-      _request_message.GetOutgoingMessage(), _context);
-}
 ::fidl::WireResult<::test_transitivedependenciescompose::Top::GetFoo>
 fidl::internal::WireClientImpl<
     ::test_transitivedependenciescompose::Top>::GetFoo_Sync() {

@@ -312,10 +312,6 @@ class ::fidl::internal::WireClientImpl<
   // Allocates 24 bytes of message buffer on the stack. No heap allocation
   // necessary.
   ::fidl::Result Method(const ::test_exampleusing::wire::Empty& arg);
-
-  // Caller provides the backing storage for FIDL message via request buffer.
-  ::fidl::Result Method(::fidl::BufferSpan _buffer_span,
-                        const ::test_exampleusing::wire::Empty& arg);
   WireClientImpl() = default;
 };
 

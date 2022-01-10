@@ -84,19 +84,6 @@ namespace test_placementofattributes {
   return ::fidl::internal::ClientBase::SendOneWay(
       _request_message.GetOutgoingMessage());
 }
-::fidl::Result fidl::internal::
-    WireClientImpl<::test_placementofattributes::ExampleProtocol>::Method(
-        ::fidl::BufferSpan _buffer_span,
-        const ::test_exampleusing::wire::Empty& arg) {
-  ::fidl::WireRequest<::test_placementofattributes::ExampleProtocol::Method>
-      _request_object{arg};
-  ::fidl::UnownedEncodedMessage<::fidl::WireRequest<
-      ::test_placementofattributes::ExampleProtocol::Method>>
-      _request_message(_buffer_span.data, _buffer_span.capacity,
-                       &_request_object);
-  return ::fidl::internal::ClientBase::SendOneWay(
-      _request_message.GetOutgoingMessage());
-}
 ::fidl::Result fidl::internal::WireWeakOnewayBufferClientImpl<
     ::test_placementofattributes::ExampleProtocol>::
     Method(const ::test_exampleusing::wire::Empty& arg) {

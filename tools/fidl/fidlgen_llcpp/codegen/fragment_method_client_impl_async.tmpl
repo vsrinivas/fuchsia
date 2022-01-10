@@ -23,23 +23,6 @@
   void {{ .Name }}({{ RenderParams .RequestArgs
                    (printf "::fit::callback<void (%s* response)> _cb" .WireResponse) }});
 
-  {{- /* Async caller-allocate flavor */}}
-  {{ .Docs }}
-  {{- if .DocComments }}
-    //
-  {{- end }}
-  // Asynchronous variant of |{{ .Protocol.Name }}.{{ .Name }}()|.
-  // Caller provides the backing storage for FIDL message via request buffer.
-  // Ownership of |_context| is given unsafely to the binding until |OnError|
-  // or |OnReply| are called on it.
-  void {{ .Name }}(
-        {{- if .RequestArgs }}
-          {{ RenderParams "::fidl::BufferSpan _request_buffer"
-                          .RequestArgs
-                          (printf "%s* _context" .WireResponseContext) }}
-        {{- else }}
-          {{ .WireResponseContext }}* _context
-        {{- end -}});
   {{- EndifFuchsia -}}
 {{- end }}
 
@@ -100,28 +83,6 @@
     FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
     ::fidl::OwnedEncodedMessage<{{ .WireRequest }}, {{ .Transport.Type }}> _request_message(
     ::fidl::internal::AllowUnownedInputRef{}, &_request);
-    ::fidl::internal::ClientBase::SendTwoWay(_request_message.GetOutgoingMessage(), _context);
-  }
-
-
-  {{- /* Async caller-allocate flavor */}}
-  void {{ .Protocol.WireClientImpl.NoLeading }}::{{ .Name }}(
-      {{- if .RequestArgs }}
-        {{ RenderParams "::fidl::BufferSpan _request_buffer"
-                        .RequestArgs
-                        (printf "%s* _context" .WireResponseContext) }}
-      {{- else }}
-        {{ .WireResponseContext }}* _context
-      {{- end -}}) {
-    {{ .WireRequest }} _request{ {{ RenderForwardParams .RequestArgs }} };
-    {{ if .RequestArgs }}
-    ::fidl::UnownedEncodedMessage<{{ .WireRequest }}> _request_message(
-          _request_buffer.data, _request_buffer.capacity, &_request);
-    {{- else }}
-      FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-      ::fidl::OwnedEncodedMessage<{{ .WireRequest }}, {{ .Transport.Type }}> _request_message(
-          ::fidl::internal::AllowUnownedInputRef{}, &_request);
-    {{- end }}
     ::fidl::internal::ClientBase::SendTwoWay(_request_message.GetOutgoingMessage(), _context);
   }
 

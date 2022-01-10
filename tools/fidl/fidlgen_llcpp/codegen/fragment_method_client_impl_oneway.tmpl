@@ -14,16 +14,6 @@
   ::fidl::Result {{ .Name }}(
     {{ RenderParams .RequestArgs }});
 
-  {{- /* Caller-allocate flavor */}}
-  {{- if .RequestArgs }}
-    {{ .Docs }}
-    {{- if .DocComments }}
-      //
-    {{- end }}
-    // Caller provides the backing storage for FIDL message via request buffer.
-    ::fidl::Result {{ .Name }}(
-      {{- template "Method:ClientImplSyncCallerAllocateArguments:Helper" . }});
-  {{- end }}
 {{- end }}
 
 
@@ -40,17 +30,5 @@
     return ::fidl::internal::ClientBase::SendOneWay(_request_message.GetOutgoingMessage());
   }
 
-  {{- /* Caller-allocate flavor */}}
-  {{- if .RequestArgs }}
-    ::fidl::Result {{ .Protocol.WireClientImpl.NoLeading }}::{{ .Name }}(
-         {{- template "Method:ClientImplSyncCallerAllocateArguments:Helper" . }}) {
-      {{ .WireRequest }} _request_object{ {{ RenderForwardParams .RequestArgs }} };
-      ::fidl::UnownedEncodedMessage<{{ .WireRequest }}> _request_message(
-          _buffer_span.data, _buffer_span.capacity, &_request_object);
-      return ::fidl::internal::ClientBase::SendOneWay(_request_message.GetOutgoingMessage());
-    }
-  {{- end }}
-
   {{- EndifFuchsia -}}
 {{- end }}
-  

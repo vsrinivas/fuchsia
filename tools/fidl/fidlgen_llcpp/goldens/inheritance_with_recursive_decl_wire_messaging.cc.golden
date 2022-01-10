@@ -82,20 +82,6 @@ namespace test_inheritancewithrecursivedecl {
   return ::fidl::internal::ClientBase::SendOneWay(
       _request_message.GetOutgoingMessage());
 }
-::fidl::Result fidl::internal::
-    WireClientImpl<::test_inheritancewithrecursivedecl::Parent>::First(
-        ::fidl::BufferSpan _buffer_span,
-        ::fidl::ServerEnd<::test_inheritancewithrecursivedecl::Parent>&&
-            request) {
-  ::fidl::WireRequest<::test_inheritancewithrecursivedecl::Parent::First>
-      _request_object{std::move(request)};
-  ::fidl::UnownedEncodedMessage<
-      ::fidl::WireRequest<::test_inheritancewithrecursivedecl::Parent::First>>
-      _request_message(_buffer_span.data, _buffer_span.capacity,
-                       &_request_object);
-  return ::fidl::internal::ClientBase::SendOneWay(
-      _request_message.GetOutgoingMessage());
-}
 ::fidl::Result fidl::internal::WireWeakOnewayBufferClientImpl<
     ::test_inheritancewithrecursivedecl::Parent>::
     First(::fidl::ServerEnd<::test_inheritancewithrecursivedecl::Parent>&&
@@ -398,20 +384,6 @@ namespace test_inheritancewithrecursivedecl {
       _request_message.GetOutgoingMessage());
 }
 ::fidl::Result fidl::internal::
-    WireClientImpl<::test_inheritancewithrecursivedecl::Child>::First(
-        ::fidl::BufferSpan _buffer_span,
-        ::fidl::ServerEnd<::test_inheritancewithrecursivedecl::Parent>&&
-            request) {
-  ::fidl::WireRequest<::test_inheritancewithrecursivedecl::Child::First>
-      _request_object{std::move(request)};
-  ::fidl::UnownedEncodedMessage<
-      ::fidl::WireRequest<::test_inheritancewithrecursivedecl::Child::First>>
-      _request_message(_buffer_span.data, _buffer_span.capacity,
-                       &_request_object);
-  return ::fidl::internal::ClientBase::SendOneWay(
-      _request_message.GetOutgoingMessage());
-}
-::fidl::Result fidl::internal::
     WireClientImpl<::test_inheritancewithrecursivedecl::Child>::Second(
         ::fidl::ServerEnd<::test_inheritancewithrecursivedecl::Parent>&&
             request) {
@@ -422,20 +394,6 @@ namespace test_inheritancewithrecursivedecl {
       ::fidl::WireRequest<::test_inheritancewithrecursivedecl::Child::Second>,
       ::fidl::internal::ChannelTransport>
       _request_message(::fidl::internal::AllowUnownedInputRef{},
-                       &_request_object);
-  return ::fidl::internal::ClientBase::SendOneWay(
-      _request_message.GetOutgoingMessage());
-}
-::fidl::Result fidl::internal::
-    WireClientImpl<::test_inheritancewithrecursivedecl::Child>::Second(
-        ::fidl::BufferSpan _buffer_span,
-        ::fidl::ServerEnd<::test_inheritancewithrecursivedecl::Parent>&&
-            request) {
-  ::fidl::WireRequest<::test_inheritancewithrecursivedecl::Child::Second>
-      _request_object{std::move(request)};
-  ::fidl::UnownedEncodedMessage<
-      ::fidl::WireRequest<::test_inheritancewithrecursivedecl::Child::Second>>
-      _request_message(_buffer_span.data, _buffer_span.capacity,
                        &_request_object);
   return ::fidl::internal::ClientBase::SendOneWay(
       _request_message.GetOutgoingMessage());

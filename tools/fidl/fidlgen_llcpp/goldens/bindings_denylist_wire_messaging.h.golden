@@ -673,16 +673,6 @@ class ::fidl::internal::WireClientImpl<
                                    LibfuzzerNeedsNonemptyProtocol>* response)>
           _cb);
 
-  // Asynchronous variant of
-  // |OnlyLibfuzzerAndDeps.LibfuzzerNeedsNonemptyProtocol()|. Caller provides
-  // the backing storage for FIDL message via request buffer. Ownership of
-  // |_context| is given unsafely to the binding until |OnError| or |OnReply|
-  // are called on it.
-  void LibfuzzerNeedsNonemptyProtocol(
-      ::fidl::WireResponseContext<
-          ::test_bindingsdenylist::OnlyLibfuzzerAndDeps::
-              LibfuzzerNeedsNonemptyProtocol>* _context);
-
   // Synchronous variant of
   // |LibfuzzerNeedsNonemptyProtocol.LibfuzzerNeedsNonemptyProtocol()|.
   // Allocates 32 bytes of message buffer on the stack. No heap allocation

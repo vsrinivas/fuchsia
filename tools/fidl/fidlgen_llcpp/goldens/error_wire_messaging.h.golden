@@ -430,13 +430,6 @@ class ::fidl::internal::WireClientImpl<::test_error::Example> final
                void(::fidl::WireResponse<::test_error::Example::Foo>* response)>
                _cb);
 
-  // Asynchronous variant of |Example.Foo()|.
-  // Caller provides the backing storage for FIDL message via request buffer.
-  // Ownership of |_context| is given unsafely to the binding until |OnError|
-  // or |OnReply| are called on it.
-  void Foo(::fidl::BufferSpan _request_buffer, ::fidl::StringView s,
-           ::fidl::WireResponseContext<::test_error::Example::Foo>* _context);
-
   // Synchronous variant of |Foo.Foo()|.
   // Allocates 40 bytes of response buffer on the stack. Request is
   // heap-allocated.

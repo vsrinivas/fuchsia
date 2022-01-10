@@ -500,17 +500,6 @@ class ::fidl::internal::WireClientImpl<::test_anonymous::SomeProtocol> final
                    response)>
           _cb);
 
-  // Asynchronous variant of |SomeProtocol.SomeMethod()|.
-  // Caller provides the backing storage for FIDL message via request buffer.
-  // Ownership of |_context| is given unsafely to the binding until |OnError|
-  // or |OnReply| are called on it.
-  void SomeMethod(
-      ::fidl::BufferSpan _request_buffer,
-      ::test_anonymous::wire::UnionMember union_member,
-      ::test_anonymous::wire::TableMember table_member,
-      ::fidl::WireResponseContext<::test_anonymous::SomeProtocol::SomeMethod>*
-          _context);
-
   // Synchronous variant of |SomeMethod.SomeMethod()|.
   // Allocates 128 bytes of message buffer on the stack. No heap allocation
   // necessary.

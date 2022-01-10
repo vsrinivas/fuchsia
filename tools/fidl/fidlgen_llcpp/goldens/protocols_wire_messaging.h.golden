@@ -8064,10 +8064,6 @@ class ::fidl::internal::WireClientImpl<::test_protocols::HandleRightsProtocol>
   // Allocates 24 bytes of message buffer on the stack. No heap allocation
   // necessary.
   ::fidl::Result NoResponseMethod(::zx::socket&& h);
-
-  // Caller provides the backing storage for FIDL message via request buffer.
-  ::fidl::Result NoResponseMethod(::fidl::BufferSpan _buffer_span,
-                                  ::zx::socket&& h);
   // Asynchronous variant of |HandleRightsProtocol.ResponseMethod()|.
   // Allocates 24 bytes of request buffer on the stack. The callback is stored
   // on the heap.
@@ -8083,15 +8079,6 @@ class ::fidl::internal::WireClientImpl<::test_protocols::HandleRightsProtocol>
           void(::fidl::WireResponse<::test_protocols::HandleRightsProtocol::
                                         ResponseMethod>* response)>
           _cb);
-
-  // Asynchronous variant of |HandleRightsProtocol.ResponseMethod()|.
-  // Caller provides the backing storage for FIDL message via request buffer.
-  // Ownership of |_context| is given unsafely to the binding until |OnError|
-  // or |OnReply| are called on it.
-  void ResponseMethod(
-      ::fidl::BufferSpan _request_buffer, ::zx::socket&& h,
-      ::fidl::WireResponseContext<
-          ::test_protocols::HandleRightsProtocol::ResponseMethod>* _context);
 
   // Synchronous variant of |ResponseMethod.ResponseMethod()|.
   // Allocates 48 bytes of message buffer on the stack. No heap allocation
@@ -8220,15 +8207,6 @@ class ::fidl::internal::WireClientImpl<
                                    NoRequestEmptyResponse>* response)>
           _cb);
 
-  // Asynchronous variant of
-  // |WithAndWithoutRequestResponse.NoRequestEmptyResponse()|. Caller provides
-  // the backing storage for FIDL message via request buffer. Ownership of
-  // |_context| is given unsafely to the binding until |OnError| or |OnReply|
-  // are called on it.
-  void NoRequestEmptyResponse(::fidl::WireResponseContext<
-                              ::test_protocols::WithAndWithoutRequestResponse::
-                                  NoRequestEmptyResponse>* _context);
-
   // Synchronous variant of |NoRequestEmptyResponse.NoRequestEmptyResponse()|.
   // Allocates 32 bytes of message buffer on the stack. No heap allocation
   // necessary.
@@ -8249,15 +8227,6 @@ class ::fidl::internal::WireClientImpl<
                                    NoRequestWithResponse>* response)>
           _cb);
 
-  // Asynchronous variant of
-  // |WithAndWithoutRequestResponse.NoRequestWithResponse()|. Caller provides
-  // the backing storage for FIDL message via request buffer. Ownership of
-  // |_context| is given unsafely to the binding until |OnError| or |OnReply|
-  // are called on it.
-  void NoRequestWithResponse(::fidl::WireResponseContext<
-                             ::test_protocols::WithAndWithoutRequestResponse::
-                                 NoRequestWithResponse>* _context);
-
   // Synchronous variant of |NoRequestWithResponse.NoRequestWithResponse()|.
   // Allocates 16 bytes of request buffer on the stack. Response is
   // heap-allocated.
@@ -8274,10 +8243,6 @@ class ::fidl::internal::WireClientImpl<
 
   // Request is heap-allocated.
   ::fidl::Result WithRequestNoResponse(::fidl::StringView arg);
-
-  // Caller provides the backing storage for FIDL message via request buffer.
-  ::fidl::Result WithRequestNoResponse(::fidl::BufferSpan _buffer_span,
-                                       ::fidl::StringView arg);
   // Asynchronous variant of
   // |WithAndWithoutRequestResponse.WithRequestEmptyResponse()|. The request and
   // callback are allocated on the heap.
@@ -8294,17 +8259,6 @@ class ::fidl::internal::WireClientImpl<
           ::fidl::WireResponse<::test_protocols::WithAndWithoutRequestResponse::
                                    WithRequestEmptyResponse>* response)>
           _cb);
-
-  // Asynchronous variant of
-  // |WithAndWithoutRequestResponse.WithRequestEmptyResponse()|. Caller provides
-  // the backing storage for FIDL message via request buffer. Ownership of
-  // |_context| is given unsafely to the binding until |OnError| or |OnReply|
-  // are called on it.
-  void WithRequestEmptyResponse(
-      ::fidl::BufferSpan _request_buffer, ::fidl::StringView arg,
-      ::fidl::WireResponseContext<
-          ::test_protocols::WithAndWithoutRequestResponse::
-              WithRequestEmptyResponse>* _context);
 
   // Synchronous variant of
   // |WithRequestEmptyResponse.WithRequestEmptyResponse()|.
@@ -8337,17 +8291,6 @@ class ::fidl::internal::WireClientImpl<
           ::fidl::WireResponse<::test_protocols::WithAndWithoutRequestResponse::
                                    WithRequestWithResponse>* response)>
           _cb);
-
-  // Asynchronous variant of
-  // |WithAndWithoutRequestResponse.WithRequestWithResponse()|. Caller provides
-  // the backing storage for FIDL message via request buffer. Ownership of
-  // |_context| is given unsafely to the binding until |OnError| or |OnReply|
-  // are called on it.
-  void WithRequestWithResponse(
-      ::fidl::BufferSpan _request_buffer, ::fidl::StringView arg,
-      ::fidl::WireResponseContext<
-          ::test_protocols::WithAndWithoutRequestResponse::
-              WithRequestWithResponse>* _context);
 
   // Synchronous variant of |WithRequestWithResponse.WithRequestWithResponse()|.
   // Request is heap-allocated. Response is heap-allocated.
@@ -8501,15 +8444,6 @@ class ::fidl::internal::WireClientImpl<::test_protocols::Transitional> final
                            ::test_protocols::Transitional::Request>* response)>
           _cb);
 
-  // Asynchronous variant of |Transitional.Request()|.
-  // Caller provides the backing storage for FIDL message via request buffer.
-  // Ownership of |_context| is given unsafely to the binding until |OnError|
-  // or |OnReply| are called on it.
-  void Request(
-      ::fidl::BufferSpan _request_buffer, int64_t x,
-      ::fidl::WireResponseContext<::test_protocols::Transitional::Request>*
-          _context);
-
   // Synchronous variant of |Request.Request()|.
   // Allocates 48 bytes of message buffer on the stack. No heap allocation
   // necessary.
@@ -8525,9 +8459,6 @@ class ::fidl::internal::WireClientImpl<::test_protocols::Transitional> final
   // Allocates 24 bytes of message buffer on the stack. No heap allocation
   // necessary.
   ::fidl::Result OneWay(int64_t x);
-
-  // Caller provides the backing storage for FIDL message via request buffer.
-  ::fidl::Result OneWay(::fidl::BufferSpan _buffer_span, int64_t x);
   WireClientImpl() = default;
 };
 
@@ -8624,10 +8555,6 @@ class ::fidl::internal::WireClientImpl<::test_protocols::MethodWithUnion> final
   // Allocates 32 bytes of message buffer on the stack. No heap allocation
   // necessary.
   ::fidl::Result UnionMethod(::test_protocols::wire::TheUnion u);
-
-  // Caller provides the backing storage for FIDL message via request buffer.
-  ::fidl::Result UnionMethod(::fidl::BufferSpan _buffer_span,
-                             ::test_protocols::wire::TheUnion u);
   WireClientImpl() = default;
 };
 
@@ -8721,16 +8648,6 @@ class ::fidl::internal::WireClientImpl<::test_protocols::WithProtocolEnds> final
               response)>
           _cb);
 
-  // Asynchronous variant of |WithProtocolEnds.ClientEnds()|.
-  // Caller provides the backing storage for FIDL message via request buffer.
-  // Ownership of |_context| is given unsafely to the binding until |OnError|
-  // or |OnReply| are called on it.
-  void ClientEnds(
-      ::fidl::BufferSpan _request_buffer,
-      ::fidl::ClientEnd<::test_protocols::DiscoverableProtocol>&& in,
-      ::fidl::WireResponseContext<
-          ::test_protocols::WithProtocolEnds::ClientEnds>* _context);
-
   // Synchronous variant of |ClientEnds.ClientEnds()|.
   // Allocates 48 bytes of message buffer on the stack. No heap allocation
   // necessary.
@@ -8759,16 +8676,6 @@ class ::fidl::internal::WireClientImpl<::test_protocols::WithProtocolEnds> final
           ::fidl::WireResponse<::test_protocols::WithProtocolEnds::ServerEnds>*
               response)>
           _cb);
-
-  // Asynchronous variant of |WithProtocolEnds.ServerEnds()|.
-  // Caller provides the backing storage for FIDL message via request buffer.
-  // Ownership of |_context| is given unsafely to the binding until |OnError|
-  // or |OnReply| are called on it.
-  void ServerEnds(
-      ::fidl::BufferSpan _request_buffer,
-      ::fidl::ServerEnd<::test_protocols::DiscoverableProtocol>&& in,
-      ::fidl::WireResponseContext<
-          ::test_protocols::WithProtocolEnds::ServerEnds>* _context);
 
   // Synchronous variant of |ServerEnds.ServerEnds()|.
   // Allocates 48 bytes of message buffer on the stack. No heap allocation
@@ -8799,16 +8706,6 @@ class ::fidl::internal::WireClientImpl<::test_protocols::WithProtocolEnds> final
           void(::fidl::WireResponse<::test_protocols::WithProtocolEnds::
                                         StructContainingEnds>* response)>
           _cb);
-
-  // Asynchronous variant of |WithProtocolEnds.StructContainingEnds()|.
-  // Caller provides the backing storage for FIDL message via request buffer.
-  // Ownership of |_context| is given unsafely to the binding until |OnError|
-  // or |OnReply| are called on it.
-  void StructContainingEnds(
-      ::fidl::BufferSpan _request_buffer,
-      ::test_protocols::wire::ProtocolEnds&& in,
-      ::fidl::WireResponseContext<
-          ::test_protocols::WithProtocolEnds::StructContainingEnds>* _context);
 
   // Synchronous variant of |StructContainingEnds.StructContainingEnds()|.
   // Allocates 64 bytes of message buffer on the stack. No heap allocation
@@ -8922,12 +8819,6 @@ class ::fidl::internal::WireClientImpl<::test_protocols::ManyParameters> final
   ::fidl::Result Fifteen(bool p1, bool p2, bool p3, bool p4, bool p5, bool p6,
                          bool p7, bool p8, bool p9, bool p10, bool p11,
                          bool p12, bool p13, bool p14, bool p15);
-
-  // Caller provides the backing storage for FIDL message via request buffer.
-  ::fidl::Result Fifteen(::fidl::BufferSpan _buffer_span, bool p1, bool p2,
-                         bool p3, bool p4, bool p5, bool p6, bool p7, bool p8,
-                         bool p9, bool p10, bool p11, bool p12, bool p13,
-                         bool p14, bool p15);
   WireClientImpl() = default;
 };
 
@@ -9021,14 +8912,6 @@ class ::fidl::internal::WireClientImpl<::test_protocols::WithErrorSyntax> final
                ::test_protocols::WithErrorSyntax::ResponseAsStruct>* response)>
           _cb);
 
-  // Asynchronous variant of |WithErrorSyntax.ResponseAsStruct()|.
-  // Caller provides the backing storage for FIDL message via request buffer.
-  // Ownership of |_context| is given unsafely to the binding until |OnError|
-  // or |OnReply| are called on it.
-  void ResponseAsStruct(
-      ::fidl::WireResponseContext<
-          ::test_protocols::WithErrorSyntax::ResponseAsStruct>* _context);
-
   // Synchronous variant of |ResponseAsStruct.ResponseAsStruct()|.
   // Allocates 72 bytes of message buffer on the stack. No heap allocation
   // necessary.
@@ -9052,14 +8935,6 @@ class ::fidl::internal::WireClientImpl<::test_protocols::WithErrorSyntax> final
           void(::fidl::WireResponse<
                ::test_protocols::WithErrorSyntax::ErrorAsPrimitive>* response)>
           _cb);
-
-  // Asynchronous variant of |WithErrorSyntax.ErrorAsPrimitive()|.
-  // Caller provides the backing storage for FIDL message via request buffer.
-  // Ownership of |_context| is given unsafely to the binding until |OnError|
-  // or |OnReply| are called on it.
-  void ErrorAsPrimitive(
-      ::fidl::WireResponseContext<
-          ::test_protocols::WithErrorSyntax::ErrorAsPrimitive>* _context);
 
   // Synchronous variant of |ErrorAsPrimitive.ErrorAsPrimitive()|.
   // Allocates 48 bytes of message buffer on the stack. No heap allocation
@@ -9085,13 +8960,6 @@ class ::fidl::internal::WireClientImpl<::test_protocols::WithErrorSyntax> final
               response)>
           _cb);
 
-  // Asynchronous variant of |WithErrorSyntax.ErrorAsEnum()|.
-  // Caller provides the backing storage for FIDL message via request buffer.
-  // Ownership of |_context| is given unsafely to the binding until |OnError|
-  // or |OnReply| are called on it.
-  void ErrorAsEnum(::fidl::WireResponseContext<
-                   ::test_protocols::WithErrorSyntax::ErrorAsEnum>* _context);
-
   // Synchronous variant of |ErrorAsEnum.ErrorAsEnum()|.
   // Allocates 48 bytes of message buffer on the stack. No heap allocation
   // necessary.
@@ -9115,14 +8983,6 @@ class ::fidl::internal::WireClientImpl<::test_protocols::WithErrorSyntax> final
           void(::fidl::WireResponse<
                ::test_protocols::WithErrorSyntax::HandleInResult>* response)>
           _cb);
-
-  // Asynchronous variant of |WithErrorSyntax.HandleInResult()|.
-  // Caller provides the backing storage for FIDL message via request buffer.
-  // Ownership of |_context| is given unsafely to the binding until |OnError|
-  // or |OnReply| are called on it.
-  void HandleInResult(
-      ::fidl::WireResponseContext<
-          ::test_protocols::WithErrorSyntax::HandleInResult>* _context);
 
   // Synchronous variant of |HandleInResult.HandleInResult()|.
   // Allocates 48 bytes of message buffer on the stack. No heap allocation
@@ -9314,9 +9174,6 @@ class ::fidl::internal::WireClientImpl<::test_protocols::ChannelProtocol> final
   // Allocates 32 bytes of message buffer on the stack. No heap allocation
   // necessary.
   ::fidl::Result MethodA(int64_t a, int64_t b);
-
-  // Caller provides the backing storage for FIDL message via request buffer.
-  ::fidl::Result MethodA(::fidl::BufferSpan _buffer_span, int64_t a, int64_t b);
   // Asynchronous variant of |ChannelProtocol.MethodB()|.
   // Allocates 32 bytes of request buffer on the stack. The callback is stored
   // on the heap.
@@ -9330,15 +9187,6 @@ class ::fidl::internal::WireClientImpl<::test_protocols::ChannelProtocol> final
                    void(::fidl::WireResponse<
                         ::test_protocols::ChannelProtocol::MethodB>* response)>
                    _cb);
-
-  // Asynchronous variant of |ChannelProtocol.MethodB()|.
-  // Caller provides the backing storage for FIDL message via request buffer.
-  // Ownership of |_context| is given unsafely to the binding until |OnError|
-  // or |OnReply| are called on it.
-  void MethodB(
-      ::fidl::BufferSpan _request_buffer, int64_t a, int64_t b,
-      ::fidl::WireResponseContext<::test_protocols::ChannelProtocol::MethodB>*
-          _context);
 
   // Synchronous variant of |MethodB.MethodB()|.
   // Allocates 56 bytes of message buffer on the stack. No heap allocation
@@ -9366,14 +9214,6 @@ class ::fidl::internal::WireClientImpl<::test_protocols::ChannelProtocol> final
               response)>
           _cb);
 
-  // Asynchronous variant of |ChannelProtocol.TakeHandle()|.
-  // Caller provides the backing storage for FIDL message via request buffer.
-  // Ownership of |_context| is given unsafely to the binding until |OnError|
-  // or |OnReply| are called on it.
-  void TakeHandle(::fidl::BufferSpan _request_buffer, ::zx::handle&& h,
-                  ::fidl::WireResponseContext<
-                      ::test_protocols::ChannelProtocol::TakeHandle>* _context);
-
   // Synchronous variant of |TakeHandle.TakeHandle()|.
   // Allocates 40 bytes of message buffer on the stack. No heap allocation
   // necessary.
@@ -9399,15 +9239,6 @@ class ::fidl::internal::WireClientImpl<::test_protocols::ChannelProtocol> final
           ::fidl::WireResponse<::test_protocols::ChannelProtocol::MutateSocket>*
               response)>
           _cb);
-
-  // Asynchronous variant of |ChannelProtocol.MutateSocket()|.
-  // Caller provides the backing storage for FIDL message via request buffer.
-  // Ownership of |_context| is given unsafely to the binding until |OnError|
-  // or |OnReply| are called on it.
-  void MutateSocket(
-      ::fidl::BufferSpan _request_buffer, ::zx::socket&& a,
-      ::fidl::WireResponseContext<
-          ::test_protocols::ChannelProtocol::MutateSocket>* _context);
 
   // Synchronous variant of |MutateSocket.MutateSocket()|.
   // Allocates 48 bytes of message buffer on the stack. No heap allocation

@@ -186,24 +186,6 @@ void fidl::internal::
   ::fidl::internal::ClientBase::SendTwoWay(
       _request_message.GetOutgoingMessage(), _context);
 }
-void fidl::internal::
-    WireClientImpl<::test_foreigntypeinresponseusedthroughcompose::Top>::GetFoo(
-        ::fidl::WireResponseContext<
-            ::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>*
-            _context) {
-  ::fidl::WireRequest<
-      ::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>
-      _request{};
-
-  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::OwnedEncodedMessage<
-      ::fidl::WireRequest<
-          ::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>,
-      ::fidl::internal::ChannelTransport>
-      _request_message(::fidl::internal::AllowUnownedInputRef{}, &_request);
-  ::fidl::internal::ClientBase::SendTwoWay(
-      _request_message.GetOutgoingMessage(), _context);
-}
 ::fidl::WireResult<::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>
 fidl::internal::WireClientImpl<
     ::test_foreigntypeinresponseusedthroughcompose::Top>::GetFoo_Sync() {

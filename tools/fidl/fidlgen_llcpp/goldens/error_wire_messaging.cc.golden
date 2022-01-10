@@ -143,17 +143,6 @@ void fidl::internal::WireClientImpl<::test_error::Example>::Foo(
   ::fidl::internal::ClientBase::SendTwoWay(
       _request_message.GetOutgoingMessage(), _context);
 }
-void fidl::internal::WireClientImpl<::test_error::Example>::Foo(
-    ::fidl::BufferSpan _request_buffer, ::fidl::StringView s,
-    ::fidl::WireResponseContext<::test_error::Example::Foo>* _context) {
-  ::fidl::WireRequest<::test_error::Example::Foo> _request{s};
-
-  ::fidl::UnownedEncodedMessage<::fidl::WireRequest<::test_error::Example::Foo>>
-      _request_message(_request_buffer.data, _request_buffer.capacity,
-                       &_request);
-  ::fidl::internal::ClientBase::SendTwoWay(
-      _request_message.GetOutgoingMessage(), _context);
-}
 ::fidl::WireResult<::test_error::Example::Foo> fidl::internal::WireClientImpl<
     ::test_error::Example>::Foo_Sync(::fidl::StringView s) {
   return ::fidl::internal::ClientBase::MakeSyncCallWith(

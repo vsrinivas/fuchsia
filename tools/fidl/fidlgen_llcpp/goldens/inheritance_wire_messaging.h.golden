@@ -820,14 +820,6 @@ class ::fidl::internal::WireClientImpl<::test_inheritance::Super> final
                ::fidl::WireResponse<::test_inheritance::Super::Foo>* response)>
                _cb);
 
-  // Asynchronous variant of |Super.Foo()|.
-  // Caller provides the backing storage for FIDL message via request buffer.
-  // Ownership of |_context| is given unsafely to the binding until |OnError|
-  // or |OnReply| are called on it.
-  void Foo(
-      ::fidl::BufferSpan _request_buffer, ::fidl::StringView s,
-      ::fidl::WireResponseContext<::test_inheritance::Super::Foo>* _context);
-
   // Synchronous variant of |Foo.Foo()|.
   // Allocates 24 bytes of response buffer on the stack. Request is
   // heap-allocated.
@@ -926,13 +918,6 @@ class ::fidl::internal::WireClientImpl<::test_inheritance::Sub> final
            ::fit::callback<void(
                ::fidl::WireResponse<::test_inheritance::Sub::Foo>* response)>
                _cb);
-
-  // Asynchronous variant of |Sub.Foo()|.
-  // Caller provides the backing storage for FIDL message via request buffer.
-  // Ownership of |_context| is given unsafely to the binding until |OnError|
-  // or |OnReply| are called on it.
-  void Foo(::fidl::BufferSpan _request_buffer, ::fidl::StringView s,
-           ::fidl::WireResponseContext<::test_inheritance::Sub::Foo>* _context);
 
   // Synchronous variant of |Foo.Foo()|.
   // Allocates 24 bytes of response buffer on the stack. Request is

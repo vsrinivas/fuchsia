@@ -538,14 +538,6 @@ class ::fidl::internal::WireClientImpl<
                        response)>
                   _cb);
 
-  // Asynchronous variant of |Top.GetFoo()|.
-  // Caller provides the backing storage for FIDL message via request buffer.
-  // Ownership of |_context| is given unsafely to the binding until |OnError|
-  // or |OnReply| are called on it.
-  void GetFoo(::fidl::WireResponseContext<
-              ::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>*
-                  _context);
-
   // Synchronous variant of |GetFoo.GetFoo()|.
   // Allocates 40 bytes of message buffer on the stack. No heap allocation
   // necessary.

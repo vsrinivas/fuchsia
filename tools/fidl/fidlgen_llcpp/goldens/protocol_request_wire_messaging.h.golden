@@ -1207,14 +1207,6 @@ class ::fidl::internal::WireClientImpl<::test_protocolrequest::Parent> final
                            ::test_protocolrequest::Parent::GetChild>* response)>
           _cb);
 
-  // Asynchronous variant of |Parent.GetChild()|.
-  // Caller provides the backing storage for FIDL message via request buffer.
-  // Ownership of |_context| is given unsafely to the binding until |OnError|
-  // or |OnReply| are called on it.
-  void GetChild(
-      ::fidl::WireResponseContext<::test_protocolrequest::Parent::GetChild>*
-          _context);
-
   // Synchronous variant of |GetChild.GetChild()|.
   // Allocates 40 bytes of message buffer on the stack. No heap allocation
   // necessary.
@@ -1238,14 +1230,6 @@ class ::fidl::internal::WireClientImpl<::test_protocolrequest::Parent> final
               response)>
           _cb);
 
-  // Asynchronous variant of |Parent.GetChildRequest()|.
-  // Caller provides the backing storage for FIDL message via request buffer.
-  // Ownership of |_context| is given unsafely to the binding until |OnError|
-  // or |OnReply| are called on it.
-  void GetChildRequest(
-      ::fidl::WireResponseContext<
-          ::test_protocolrequest::Parent::GetChildRequest>* _context);
-
   // Synchronous variant of |GetChildRequest.GetChildRequest()|.
   // Allocates 40 bytes of message buffer on the stack. No heap allocation
   // necessary.
@@ -1263,19 +1247,9 @@ class ::fidl::internal::WireClientImpl<::test_protocolrequest::Parent> final
   ::fidl::Result TakeChild(
       ::fidl::ClientEnd<::test_protocolrequest::Child>&& c);
 
-  // Caller provides the backing storage for FIDL message via request buffer.
-  ::fidl::Result TakeChild(
-      ::fidl::BufferSpan _buffer_span,
-      ::fidl::ClientEnd<::test_protocolrequest::Child>&& c);
-
   // Allocates 24 bytes of message buffer on the stack. No heap allocation
   // necessary.
   ::fidl::Result TakeChildRequest(
-      ::fidl::ServerEnd<::test_protocolrequest::Child>&& r);
-
-  // Caller provides the backing storage for FIDL message via request buffer.
-  ::fidl::Result TakeChildRequest(
-      ::fidl::BufferSpan _buffer_span,
       ::fidl::ServerEnd<::test_protocolrequest::Child>&& r);
   WireClientImpl() = default;
 };
