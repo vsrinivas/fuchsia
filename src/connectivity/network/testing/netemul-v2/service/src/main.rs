@@ -2307,16 +2307,12 @@ mod tests {
                 .unwrap_or_else(|e| panic!("calling open {}: {:?}", dir, e))
                 .map_err(zx::Status::from_raw)
                 .unwrap_or_else(|e| panic!("failed to open {}: {:?}", dir, e));
-            let err = counter_without_storage
+            let result = counter_without_storage
                 .try_open_directory(dir)
                 .await
                 .unwrap_or_else(|e| panic!("calling open {}: {:?}", dir, e))
-                .map_err(zx::Status::from_raw)
-                .map_or_else(
-                    |e| e,
-                    |()| panic!("open {} on counter without capability should fail", dir),
-                );
-            assert_eq!(err, zx::Status::NOT_FOUND, "opening {}", dir);
+                .map_err(zx::Status::from_raw);
+            assert_eq!(result, Err(zx::Status::NOT_FOUND), "opening {}", dir);
         }
     }
 
