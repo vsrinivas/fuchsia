@@ -398,11 +398,23 @@ func (t *FFXTester) processTestResult(runResult *ffxutil.TestRunResult, testsByU
 		}
 
 		var suiteArtifacts []string
-		for artifact := range suiteResult.Artifacts {
-			suiteArtifacts = append(suiteArtifacts, artifact)
+		suiteArtifactDir := filepath.Join(testOutDir, suiteResult.ArtifactDir)
+		for artifact, metadata := range suiteResult.Artifacts {
+			if metadata.ArtifactType == ffxutil.ReportType {
+				// Copy the report log into the filename expected by infra.
+				// TODO(fxbug.dev/91013): Remove dependencies on this filename.
+				absPath := filepath.Join(suiteArtifactDir, artifact)
+				newAbsPath := filepath.Join(suiteArtifactDir, runtests.TestOutputFilename)
+				if err := os.Rename(absPath, newAbsPath); err != nil {
+					return testResults, err
+				}
+				suiteArtifacts = append(suiteArtifacts, runtests.TestOutputFilename)
+			} else {
+				suiteArtifacts = append(suiteArtifacts, artifact)
+			}
 		}
 		testResult.OutputFiles = suiteArtifacts
-		testResult.OutputDir = filepath.Join(testOutDir, suiteResult.ArtifactDir)
+		testResult.OutputDir = suiteArtifactDir
 		testResult.StartTime = time.UnixMilli(suiteResult.StartTime)
 		testResult.EndTime = time.UnixMilli(suiteResult.StartTime + suiteResult.DurationMilliseconds)
 		testResults = append(testResults, testResult)

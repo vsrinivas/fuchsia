@@ -30,5 +30,5 @@ type TestCaseResult struct {
 	FailReason  string   `json:"fail_reason"`
 	OutputFiles []string `json:"output_files,omitempty"`
 	// The directory where the OutputFiles live if given as relative paths.
-	OutputDir string
+	OutputDir string `json:"output_dir,omitempty"`
 }

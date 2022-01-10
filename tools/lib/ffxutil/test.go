@@ -22,6 +22,15 @@ const (
 	TestTimedOut     = "TIMEDOUT"
 	TestError        = "ERROR"
 	TestSkipped      = "SKIPPED"
+
+	// Artifact types. This should match the list under `artifact_metadata.artifact_type`
+	// at //src/sys/run_test_suite/directory/schema/suite_summary.schema.json.
+	SyslogType        = "SYSLOG"
+	StdoutType        = "STDOUT"
+	StderrType        = "STDERR"
+	CustomType        = "CUSTOM"
+	RestrictedLogType = "RESTRICTED_LOG"
+	ReportType        = "REPORT"
 )
 
 // TestDef is the JSON schema for input to `ffx test run`.

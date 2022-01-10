@@ -91,10 +91,23 @@ func (o *TestOutputs) Record(ctx context.Context, result TestResult) error {
 	if err != nil {
 		return fmt.Errorf("error moving output files: %w", err)
 	}
+	containsStdio := false
+	for _, outputFile := range suiteOutputFiles {
+		if outputFile == stdioPath {
+			containsStdio = true
+			break
+		}
+	}
+	if !containsStdio {
+		suiteOutputFiles = append(suiteOutputFiles, stdioPath)
+	}
 
 	var cases []testparser.TestCaseResult
-	for _, testCase := range result.Cases {
-		nameForPath := url.PathEscape(testCase.DisplayName)
+	for i, testCase := range result.Cases {
+		// TODO(ihuh): Using the testCase.DisplayName in the new path name
+		// can cause errors if the name is too long. Find a better way to
+		// display test case output files.
+		nameForPath := fmt.Sprintf("case%d", i+1)
 		caseRelPath := filepath.Join(outputRelPath, nameForPath)
 		caseOutputFiles, err := o.moveOutputFiles(testCase.OutputFiles, testCase.OutputDir, caseRelPath)
 		if err != nil {
@@ -109,7 +122,7 @@ func (o *TestOutputs) Record(ctx context.Context, result TestResult) error {
 	o.Summary.Tests = append(o.Summary.Tests, runtests.TestDetails{
 		Name:           result.Name,
 		GNLabel:        result.GNLabel,
-		OutputFiles:    append(suiteOutputFiles, stdioPath),
+		OutputFiles:    suiteOutputFiles,
 		Result:         result.Result,
 		Cases:          cases,
 		StartTime:      result.StartTime,
@@ -120,8 +133,10 @@ func (o *TestOutputs) Record(ctx context.Context, result TestResult) error {
 	desc := fmt.Sprintf("%s (%s)", result.Name, duration)
 	o.tap.Ok(result.Passed(), desc)
 
-	if o.OutDir != "" {
-		stdioPath = filepath.Join(o.OutDir, stdioPath)
+	// If the stdout/stderr file didn't already exist in the test result's OutputFiles,
+	// create it using the bytes from the test Stdio.
+	if o.OutDir != "" && !containsStdio {
+		stdioPath := filepath.Join(o.OutDir, stdioPath)
 		pathWriter, err := osmisc.CreateFile(stdioPath)
 		if err != nil {
 			return fmt.Errorf("failed to create stdio file for test %q: %w", result.Name, err)
