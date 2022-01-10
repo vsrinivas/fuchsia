@@ -1238,13 +1238,24 @@ mod tests {
     }
 
     impl MockResolver {
-        fn ip_lookup<N: IntoName + Send>(&self, host: N) -> Lookup {
-            let rdatas = match host.into_name().unwrap().to_utf8().as_str() {
-                REMOTE_IPV4_HOST => vec![RData::A(IPV4_HOST)],
-                REMOTE_IPV6_HOST => vec![RData::AAAA(IPV6_HOST)],
-                REMOTE_IPV4_IPV6_HOST => vec![RData::A(IPV4_HOST), RData::AAAA(IPV6_HOST)],
-                _ => vec![],
-            };
+        fn ip_lookup<N: IntoName + Send>(
+            &self,
+            host: N,
+            ipv4_lookup: bool,
+            ipv6_lookup: bool,
+        ) -> Result<Lookup, ResolveError> {
+            let host_name = host.into_name().unwrap().to_utf8();
+            let rdatas = std::iter::empty()
+                .chain(
+                    (ipv4_lookup
+                        && [REMOTE_IPV4_HOST, REMOTE_IPV4_IPV6_HOST].contains(&host_name.as_str()))
+                    .then(|| RData::A(IPV4_HOST)),
+                )
+                .chain(
+                    (ipv6_lookup
+                        && [REMOTE_IPV6_HOST, REMOTE_IPV4_IPV6_HOST].contains(&host_name.as_str()))
+                    .then(|| RData::AAAA(IPV6_HOST)),
+                );
 
             let records: Vec<Record> = rdatas
                 .into_iter()
@@ -1258,18 +1269,18 @@ mod tests {
                     )
                 })
                 .collect();
-            let records: Arc<[_]> = records.into();
 
-            Lookup::new_with_max_ttl(Query::default(), records)
+            if records.is_empty() {
+                let mut response = trust_dns_proto::op::Message::new();
+                let _: &mut trust_dns_proto::op::Message =
+                    response.set_response_code(ResponseCode::NoError);
+                let error = ResolveError::from_response(response.into(), false)
+                    .expect_err("response with no records should be a NoRecordsFound error");
+                return Err(error);
+            }
+
+            Ok(Lookup::new_with_max_ttl(Query::default(), records.into()))
         }
-    }
-
-    fn no_records_found_error() -> ResolveError {
-        let mut response = trust_dns_proto::op::Message::new();
-        let _: &mut trust_dns_proto::op::Message =
-            response.set_response_code(ResponseCode::NoError);
-        ResolveError::from_response(response.into(), false)
-            .expect_err("response with no records should be a NoRecordsFound error")
     }
 
     #[async_trait]
@@ -1282,45 +1293,21 @@ mod tests {
             &self,
             host: N,
         ) -> Result<lookup_ip::LookupIp, ResolveError> {
-            Ok(LookupIp::from(self.ip_lookup(host)))
+            self.ip_lookup(host, true, true).map(LookupIp::from)
         }
 
         async fn ipv4_lookup<N: IntoName + Send>(
             &self,
             host: N,
         ) -> Result<lookup::Ipv4Lookup, ResolveError> {
-            let lookup = self.ip_lookup(host);
-            if lookup
-                .iter()
-                .filter(|record| match record {
-                    trust_dns_proto::rr::RData::A(_) => true,
-                    _ => false,
-                })
-                .count()
-                == 0
-            {
-                return Err(no_records_found_error());
-            }
-            Ok(Ipv4Lookup::from(lookup))
+            self.ip_lookup(host, true, false).map(Ipv4Lookup::from)
         }
 
         async fn ipv6_lookup<N: IntoName + Send>(
             &self,
             host: N,
         ) -> Result<lookup::Ipv6Lookup, ResolveError> {
-            let lookup = self.ip_lookup(host);
-            if lookup
-                .iter()
-                .filter(|record| match record {
-                    trust_dns_proto::rr::RData::AAAA(_) => true,
-                    _ => false,
-                })
-                .count()
-                == 0
-            {
-                return Err(no_records_found_error());
-            }
-            Ok(Ipv6Lookup::from(lookup))
+            self.ip_lookup(host, false, true).map(Ipv6Lookup::from)
         }
 
         async fn reverse_lookup(
