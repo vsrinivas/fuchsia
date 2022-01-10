@@ -22,8 +22,8 @@ use {
                 fsck_with_options, FsckOptions,
             },
             object_record::{
-                ObjectAttributes, ObjectDescriptor, ObjectKey, ObjectKeyData, ObjectKind,
-                ObjectValue, Timestamp,
+                EncryptionKeys, ObjectAttributes, ObjectDescriptor, ObjectKey, ObjectKeyData,
+                ObjectKind, ObjectValue, Timestamp,
             },
             transaction::{self, Options, TransactionHandler},
             volume::create_root_volume,
@@ -79,6 +79,7 @@ impl FsckTest {
     }
     async fn run(&self, halt_on_error: bool) -> Result<(), Error> {
         let options = FsckOptions {
+            fail_on_warning: true,
             halt_on_error,
             do_slow_passes: true,
             on_error: |err| {
@@ -564,7 +565,7 @@ async fn test_too_few_object_refs() {
     }
 
     test.remount().await.expect("Remount failed");
-    test.run(false).await.expect("Fsck should succeed");
+    test.run(false).await.expect_err("Fsck should fail");
     assert_matches!(test.errors()[..], [FsckIssue::Warning(FsckWarning::OrphanedObject(..))]);
 }
 
@@ -1162,6 +1163,120 @@ async fn test_link_cycle() {
             FsckIssue::Error(FsckError::SubDirCountMismatch(..)),
             FsckIssue::Error(FsckError::ObjectCountMismatch(..)),
             FsckIssue::Error(FsckError::LinkCycle(..)),
+            ..
+        ]
+    );
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn test_file_length_mismatch() {
+    let mut test = FsckTest::new().await;
+
+    {
+        let fs = test.filesystem();
+        let device = fs.device();
+        let root_volume = create_root_volume(&fs).await.unwrap();
+        let store = root_volume.new_volume("vol").await.unwrap();
+
+        let mut transaction = fs
+            .clone()
+            .new_transaction(&[], Options::default())
+            .await
+            .expect("new_transaction failed");
+        let handle =
+            ObjectStore::create_object(&store, &mut transaction, HandleOptions::default(), None)
+                .await
+                .expect("create object failed");
+        transaction.commit().await.expect("commit transaction failed");
+
+        let mut transaction = fs
+            .clone()
+            .new_transaction(&[], Options::default())
+            .await
+            .expect("new_transaction failed");
+        let buf = device.allocate_buffer(1);
+        handle.txn_write(&mut transaction, 1_048_576, buf.as_ref()).await.expect("write failed");
+        transaction.commit().await.expect("commit transaction failed");
+
+        let mut transaction = fs
+            .clone()
+            .new_transaction(&[], Options::default())
+            .await
+            .expect("new_transaction failed");
+        transaction.add(
+            store.store_object_id(),
+            Mutation::replace_or_insert_object(
+                ObjectKey::attribute(handle.object_id, handle.attribute_id),
+                ObjectValue::attribute(123),
+            ),
+        );
+        transaction.add(
+            store.store_object_id(),
+            Mutation::replace_or_insert_object(
+                ObjectKey::object(handle.object_id),
+                ObjectValue::Object {
+                    kind: ObjectKind::File {
+                        refs: 1,
+                        allocated_size: 123,
+                        keys: EncryptionKeys::None,
+                    },
+                    attributes: ObjectAttributes {
+                        creation_time: Timestamp::now(),
+                        modification_time: Timestamp::now(),
+                    },
+                },
+            ),
+        );
+        transaction.commit().await.expect("commit transaction failed");
+    }
+
+    test.remount().await.expect("Remount failed");
+    test.run(false).await.expect_err("Fsck should fail");
+    assert_matches!(
+        test.errors()[..],
+        [
+            FsckIssue::Error(FsckError::ExtentExceedsLength(..)),
+            FsckIssue::Error(FsckError::AllocatedSizeMismatch(..)),
+            ..
+        ]
+    );
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn test_spurious_extents() {
+    let mut test = FsckTest::new().await;
+
+    {
+        let fs = test.filesystem();
+        let root_volume = create_root_volume(&fs).await.unwrap();
+        let store = root_volume.new_volume("vol").await.unwrap();
+
+        let mut transaction = fs
+            .clone()
+            .new_transaction(&[], Options::default())
+            .await
+            .expect("new_transaction failed");
+        transaction.add(
+            store.store_object_id(),
+            Mutation::extent(ExtentKey::new(555, 0, 0..4096), ExtentValue::new(0)),
+        );
+        transaction.add(
+            store.store_object_id(),
+            Mutation::extent(
+                ExtentKey::new(store.root_directory_object_id(), 0, 0..4096),
+                ExtentValue::new(0),
+            ),
+        );
+        transaction.commit().await.expect("commit failed");
+    }
+
+    test.remount().await.expect("Remount failed");
+    test.run(false).await.expect_err("Fsck should fail");
+    assert_matches!(
+        test.errors()[..],
+        [
+            FsckIssue::Warning(FsckWarning::ExtentForDirectory(..)),
+            FsckIssue::Warning(FsckWarning::ExtentForNonexistentObject(..)),
             ..
         ]
     );

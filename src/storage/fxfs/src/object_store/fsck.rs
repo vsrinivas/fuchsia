@@ -47,24 +47,25 @@ mod store_scanner;
 mod tests;
 
 pub struct FsckOptions<F: Fn(&FsckIssue)> {
-    /// Whether to halt fsck on the first error (fatal or not).
-    halt_on_error: bool,
+    /// Whether to fail fsck if any warnings are encountered.
+    pub fail_on_warning: bool,
+    // Whether to halt after the first error encountered (fatal or not).
+    pub halt_on_error: bool,
     /// Whether to perform slower, more complete checks.
-    do_slow_passes: bool,
+    pub do_slow_passes: bool,
     /// A callback to be invoked for each detected error, e.g. to log the error.
-    on_error: F,
+    pub on_error: F,
 }
 
-// TODO(csuter): for now, this just checks allocations. We should think about adding checks for:
-//
+/// Verifies the integrity of Fxfs.  See errors.rs for a list of checks performed.
+// TODO(fxbug.dev/87381): add checks for:
 //  + The root parent object store ID and root object store ID must not conflict with any other
 //    stores or the allocator.
-//  + Checking the sub_dirs property on directories.
-//
 // TODO(csuter): This currently takes a write lock on the filesystem.  It would be nice if we could
 // take a snapshot.
 pub async fn fsck(filesystem: &Arc<FxFilesystem>) -> Result<(), Error> {
     let options = FsckOptions {
+        fail_on_warning: false,
         halt_on_error: false,
         do_slow_passes: true,
         on_error: |err: &FsckIssue| {
@@ -198,9 +199,13 @@ pub async fn fsck_with_options<F: Fn(&FsckIssue)>(
         ))?;
     }
     let errors = fsck.errors();
-    if errors > 0 {
-        Err(anyhow!("Fsck encountered {} errors", errors))
+    let warnings = fsck.warnings();
+    if errors > 0 || (fsck.options.fail_on_warning && warnings > 0) {
+        Err(anyhow!("Fsck encountered {} errors, {} warnings", errors, warnings))
     } else {
+        if warnings > 0 {
+            log::warn!("Fsck encountered {} warnings", warnings);
+        }
         Ok(())
     }
 }
@@ -226,6 +231,7 @@ struct Fsck<F: Fn(&FsckIssue)> {
     // A list of allocations generated based on all extents found across all scanned object stores.
     allocations: Arc<SkipListLayer<AllocatorKey, AllocatorValue>>,
     errors: AtomicU64,
+    warnings: AtomicU64,
 }
 
 impl<F: Fn(&FsckIssue)> Fsck<F> {
@@ -235,11 +241,16 @@ impl<F: Fn(&FsckIssue)> Fsck<F> {
             // TODO(csuter): fix magic number
             allocations: SkipListLayer::new(2048),
             errors: AtomicU64::new(0),
+            warnings: AtomicU64::new(0),
         }
     }
 
     fn errors(&self) -> u64 {
         self.errors.load(Ordering::Relaxed)
+    }
+
+    fn warnings(&self) -> u64 {
+        self.warnings.load(Ordering::Relaxed)
     }
 
     fn assert<V>(&self, res: Result<V, Error>, error: FsckFatal) -> Result<V, Error> {
@@ -252,6 +263,7 @@ impl<F: Fn(&FsckIssue)> Fsck<F> {
 
     fn warning(&self, error: FsckWarning) -> Result<(), Error> {
         (self.options.on_error)(&FsckIssue::Warning(error.clone()));
+        self.warnings.fetch_add(1, Ordering::Relaxed);
         Ok(())
     }
 

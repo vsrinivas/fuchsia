@@ -8,7 +8,7 @@ use {
         object_handle::INVALID_OBJECT_ID,
         object_store::{
             allocator::{self, AllocatorKey, AllocatorValue},
-            extent_record::{ExtentKey, ExtentValue},
+            extent_record::{ExtentKey, ExtentValue, DEFAULT_DATA_ATTRIBUTE_ID},
             fsck::{
                 errors::{FsckError, FsckFatal, FsckIssue, FsckWarning},
                 Fsck,
@@ -17,6 +17,7 @@ use {
             object_record::{ObjectDescriptor, ObjectKey, ObjectKeyData, ObjectKind, ObjectValue},
             ObjectStore,
         },
+        round::round_up,
     },
     anyhow::{self, Error},
     std::{
@@ -31,12 +32,14 @@ struct ScannedFile {
     // Set when the Object record is processed for the file.  (The object might appear in another
     // record before its Object record appears, e.g. a Child record, hence this is an Option.)
     kind: Option<ObjectKind>,
-    // A list of attribute IDs found for the file.
-    attributes: Vec<u64>,
+    // A list of attribute IDs found for the file, along with their logical size.
+    attributes: Vec<(u64, u64)>,
     // A list of parent object IDs for the file.  INVALID_OBJECT_ID indicates a reference from
     // outside the object store (either the graveyard, or because the object is a root object of the
     // store and probably has a reference to it in e.g. the StoreInfo or superblock).
     parents: Vec<u64>,
+    // The allocated size of the file (computed by summing up the extents for the file).
+    allocated_size: u64,
 }
 
 #[derive(Debug)]
@@ -156,6 +159,7 @@ impl<'a, F: Fn(&FsckIssue)> ScannedStore<'a, F> {
                                         kind: Some(kind),
                                         attributes: vec![],
                                         parents,
+                                        allocated_size: 0,
                                     }),
                                 );
                             }
@@ -195,8 +199,8 @@ impl<'a, F: Fn(&FsckIssue)> ScannedStore<'a, F> {
                                 } else {
                                     None
                                 };
-                                // We've verified no duplicate keys, and Object records come first, so this
-                                // should always be the first time we encounter this object.
+                                // We've verified no duplicate keys, and Object records come first,
+                                // so this should always be the first time we encounter this object.
                                 self.objects.insert(
                                     key.object_id,
                                     ScannedObject::Directory(ScannedDir {
@@ -230,10 +234,10 @@ impl<'a, F: Fn(&FsckIssue)> ScannedStore<'a, F> {
             }
             ObjectKeyData::Attribute(attribute_id) => {
                 match value {
-                    ObjectValue::Attribute { .. } => {
+                    ObjectValue::Attribute { size } => {
                         match self.objects.get_mut(&key.object_id) {
                             Some(ScannedObject::File(ScannedFile { attributes, .. })) => {
-                                attributes.push(attribute_id);
+                                attributes.push((attribute_id, *size));
                             }
                             Some(ScannedObject::Directory(..)) => {
                                 self.fsck.error(FsckError::AttributeOnDirectory(
@@ -344,6 +348,7 @@ impl<'a, F: Fn(&FsckIssue)> ScannedStore<'a, F> {
                                         kind: None,
                                         attributes: vec![],
                                         parents: vec![key.object_id],
+                                        allocated_size: 0,
                                     }),
                                     ObjectDescriptor::Directory => {
                                         ScannedObject::Directory(ScannedDir {
@@ -481,6 +486,87 @@ impl<'iter, 'a, F: Fn(&FsckIssue)> std::iter::Iterator for ScannedStoreIterator<
     }
 }
 
+// Scans all extents in the store, emitting synthesized allocations into |fsck.allocations| and
+// updating the sizes for files in |scanned|.
+async fn scan_extents<'a, F: Fn(&FsckIssue)>(
+    fsck: &'a Fsck<F>,
+    store: &ObjectStore,
+    scanned: &mut ScannedStore<'a, F>,
+) -> Result<(), Error> {
+    let store_id = store.store_object_id();
+    let bs = store.block_size();
+    let layer_set = store.extent_tree.layer_set();
+    let mut merger = layer_set.merger();
+    let mut iter = merger.seek(Bound::Unbounded).await?;
+    while let Some(ItemRef { key: ExtentKey { object_id, attribute_id, range }, value, .. }) =
+        iter.get()
+    {
+        if range.start % bs > 0 || range.end % bs > 0 {
+            fsck.error(FsckError::MisalignedExtent(store_id, *object_id, range.clone(), 0))?;
+        } else if range.start >= range.end {
+            fsck.error(FsckError::MalformedExtent(store_id, *object_id, range.clone(), 0))?;
+        }
+        if let ExtentValue::Some { device_offset, .. } = value {
+            if device_offset % bs > 0 {
+                fsck.error(FsckError::MisalignedExtent(
+                    store_id,
+                    *object_id,
+                    range.clone(),
+                    *device_offset,
+                ))?;
+            }
+            match scanned.objects.get_mut(object_id) {
+                Some(ScannedObject::File(ScannedFile { attributes, allocated_size, .. })) => {
+                    match attributes.iter().find(|(attr_id, _)| attr_id == attribute_id) {
+                        Some((_, size)) => {
+                            if range.end > round_up(*size, bs).unwrap() {
+                                fsck.error(FsckError::ExtentExceedsLength(
+                                    store_id,
+                                    *object_id,
+                                    *attribute_id,
+                                    *size,
+                                    range.into(),
+                                ))?;
+                            }
+                        }
+                        None => {
+                            fsck.warning(FsckWarning::ExtentForMissingAttribute(
+                                store.store_object_id(),
+                                *object_id,
+                                *attribute_id,
+                            ))?;
+                        }
+                    }
+                    *allocated_size += range.end - range.start;
+                }
+                Some(ScannedObject::Directory(..)) => {
+                    fsck.warning(FsckWarning::ExtentForDirectory(
+                        store.store_object_id(),
+                        *object_id,
+                    ))?;
+                }
+                Some(_) => { /* NOP */ }
+                None => {
+                    fsck.warning(FsckWarning::ExtentForNonexistentObject(
+                        store.store_object_id(),
+                        *object_id,
+                    ))?;
+                }
+            }
+            let item = Item::new(
+                AllocatorKey {
+                    device_range: *device_offset..*device_offset + range.end - range.start,
+                },
+                AllocatorValue { delta: 1 },
+            );
+            let lower_bound = item.key.lower_bound_for_merge_into();
+            fsck.allocations.merge_into(item, &lower_bound, allocator::merge::merge).await;
+        }
+        iter.advance().await?;
+    }
+    Ok(())
+}
+
 /// Scans an object store, accumulating all of its allocations into |fsck.allocations| and
 /// validating various object properties.
 pub(super) async fn scan_store<F: Fn(&FsckIssue)>(
@@ -493,6 +579,7 @@ pub(super) async fn scan_store<F: Fn(&FsckIssue)>(
 
     let mut scanned = ScannedStore::new(fsck, root_objects, store_id, store.is_root());
 
+    // Scan the store for objects, attributes, and parent/child relationships.
     let layer_set = store.tree.layer_set();
     let mut merger = layer_set.merger();
     let mut iter =
@@ -533,6 +620,11 @@ pub(super) async fn scan_store<F: Fn(&FsckIssue)>(
         fsck.assert(iter.advance().await, FsckFatal::MalformedGraveyard)?;
     }
 
+    // Iterate over extents, adding them to the relevant attributes for the file.
+    scan_extents(fsck, store, &mut scanned).await?;
+
+    // At this point, we've provided all of the inputs to |scanned|.
+
     // First, iterate in object-id order, so that we check every object (and thus find orphans).
     // It's not very efficient to scan twice, but we don't want to miss orphaned objects, so we'll
     // have to do this without some refactoring to keep orphaned objects off to the side until
@@ -541,13 +633,39 @@ pub(super) async fn scan_store<F: Fn(&FsckIssue)>(
     for object in scanned.objects() {
         num_objects += 1;
         match object {
-            ScannedObject::File(ScannedFile { object_id, kind, parents, .. }) => {
+            ScannedObject::File(ScannedFile {
+                object_id,
+                kind,
+                attributes,
+                parents,
+                allocated_size: actual_allocated_size,
+                ..
+            }) => {
                 match kind {
-                    Some(ObjectKind::File { refs, .. }) => {
-                        let expected = parents.len().try_into().unwrap();
-                        // expected == 0 is handled separately to distinguish orphaned objects
-                        if expected != *refs && expected > 0 {
-                            fsck.error(FsckError::RefCountMismatch(*object_id, expected, *refs))?;
+                    Some(ObjectKind::File { refs, allocated_size, .. }) => {
+                        let expected_refs = parents.len().try_into().unwrap();
+                        // expected_refs == 0 is handled separately to distinguish orphaned objects
+                        if expected_refs != *refs && expected_refs > 0 {
+                            fsck.error(FsckError::RefCountMismatch(
+                                *object_id,
+                                expected_refs,
+                                *refs,
+                            ))?;
+                        }
+                        if allocated_size != actual_allocated_size {
+                            fsck.error(FsckError::AllocatedSizeMismatch(
+                                store_id,
+                                *object_id,
+                                *allocated_size,
+                                *actual_allocated_size,
+                            ))?;
+                        }
+                        if attributes
+                            .iter()
+                            .find(|(attr_id, _)| *attr_id == DEFAULT_DATA_ATTRIBUTE_ID)
+                            .is_none()
+                        {
+                            fsck.error(FsckError::MissingDataAttribute(store_id, *object_id))?;
                         }
                     }
                     Some(_) => unreachable!(), // Checked during tree construction
@@ -613,38 +731,6 @@ pub(super) async fn scan_store<F: Fn(&FsckIssue)>(
                 unsafe { *object_id.get() = INVALID_OBJECT_ID };
             }
         }
-    }
-
-    let bs = store.block_size();
-    let layer_set = store.extent_tree.layer_set();
-    let mut merger = layer_set.merger();
-    let mut iter = merger.seek(Bound::Unbounded).await?;
-    // TODO(fxbug.dev/87381): Accumulate extents into the scanner, so we can verify file lengths.
-    while let Some(ItemRef { key: ExtentKey { object_id, range, .. }, value, .. }) = iter.get() {
-        if range.start % bs > 0 || range.end % bs > 0 {
-            fsck.error(FsckError::MisalignedExtent(store_id, *object_id, range.clone(), 0))?;
-        } else if range.start >= range.end {
-            fsck.error(FsckError::MalformedExtent(store_id, *object_id, range.clone(), 0))?;
-        }
-        if let ExtentValue::Some { device_offset, .. } = value {
-            if device_offset % bs > 0 {
-                fsck.error(FsckError::MisalignedExtent(
-                    store_id,
-                    *object_id,
-                    range.clone(),
-                    *device_offset,
-                ))?;
-            }
-            let item = Item::new(
-                AllocatorKey {
-                    device_range: *device_offset..*device_offset + range.end - range.start,
-                },
-                AllocatorValue { delta: 1 },
-            );
-            let lower_bound = item.key.lower_bound_for_merge_into();
-            fsck.allocations.merge_into(item, &lower_bound, allocator::merge::merge).await;
-        }
-        iter.advance().await?;
     }
 
     Ok(())

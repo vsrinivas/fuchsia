@@ -7,7 +7,7 @@ use {
         object_store::{
             crypt::InsecureCrypt,
             filesystem::{FxFilesystem, OpenFxFilesystem},
-            fsck::fsck,
+            fsck::{errors::FsckIssue, fsck_with_options, FsckOptions},
             volume::{create_root_volume, root_volume},
         },
         server::volume::FxVolumeAndRoot,
@@ -111,7 +111,19 @@ impl TestFixture {
         device.reopen();
         let filesystem =
             FxFilesystem::open(device, Arc::new(InsecureCrypt::new())).await.expect("open failed");
-        fsck(&filesystem).await.expect("fsck failed");
+        fsck_with_options(
+            &filesystem,
+            FsckOptions {
+                fail_on_warning: true,
+                halt_on_error: false,
+                do_slow_passes: true,
+                on_error: |err: &FsckIssue| {
+                    eprintln!("Fsck error: {:?}", err);
+                },
+            },
+        )
+        .await
+        .expect("fsck failed");
 
         filesystem.close().await.expect("close filesystem failed");
         let device = filesystem.take_device().await;

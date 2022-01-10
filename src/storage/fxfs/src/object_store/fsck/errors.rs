@@ -100,6 +100,9 @@ impl<V: std::fmt::Debug> From<&V> for Value {
 
 #[derive(Clone, Debug)]
 pub enum FsckWarning {
+    ExtentForMissingAttribute(u64, u64, u64),
+    ExtentForDirectory(u64, u64),
+    ExtentForNonexistentObject(u64, u64),
     GraveyardRecordForAbsentObject(u64, u64),
     InvalidObjectIdInStore(u64, Key, Value),
     OrphanedAttribute(u64, u64, u64),
@@ -109,6 +112,24 @@ pub enum FsckWarning {
 impl FsckWarning {
     fn to_string(&self) -> String {
         match self {
+            FsckWarning::ExtentForMissingAttribute(store_id, object_id, attr_id) => {
+                format!(
+                    "Found an extent in store {} for missing attribute {} on object {}",
+                    store_id, attr_id, object_id
+                )
+            }
+            FsckWarning::ExtentForDirectory(store_id, object_id) => {
+                format!(
+                    "Found an extent in store {} for a directory object {}",
+                    store_id, object_id
+                )
+            }
+            FsckWarning::ExtentForNonexistentObject(store_id, object_id) => {
+                format!(
+                    "Found an extent in store {} for a non-existent object {}",
+                    store_id, object_id
+                )
+            }
             FsckWarning::GraveyardRecordForAbsentObject(store_id, object_id) => {
                 format!(
                     "Graveyard contains an entry for object {} in store {}, but that object is \
@@ -135,9 +156,11 @@ impl FsckWarning {
 #[derive(Clone, Debug)]
 pub enum FsckError {
     AllocatedBytesMismatch(u64, u64),
+    AllocatedSizeMismatch(u64, u64, u64, u64),
     AllocationMismatch(Allocation, Allocation),
     AttributeOnDirectory(u64, u64),
     ConflictingTypeForLink(u64, u64, Value, Value),
+    ExtentExceedsLength(u64, u64, u64, u64, Value),
     ExtraAllocations(Vec<Allocation>),
     FileHasChildren(u64, u64),
     GraveyardInChildStore(u64, u64),
@@ -149,6 +172,7 @@ pub enum FsckError {
     MisalignedAllocation(Allocation),
     MisalignedExtent(u64, u64, Range<u64>, u64),
     MissingAllocation(Allocation),
+    MissingDataAttribute(u64, u64),
     MissingObjectInfo(u64, u64),
     MultipleLinksToDirectory(u64, u64),
     ObjectCountMismatch(u64, u64, u64),
@@ -170,6 +194,12 @@ impl FsckError {
             FsckError::AllocatedBytesMismatch(expected, actual) => {
                 format!("Expected {} bytes allocated, but found {} bytes", expected, actual)
             }
+            FsckError::AllocatedSizeMismatch(store_id, oid, expected, actual) => {
+                format!(
+                    "Expected {} bytes allocated for object {} in store {}, but found {} bytes",
+                    expected, store_id, oid, actual
+                )
+            }
             FsckError::AttributeOnDirectory(store_id, object_id) => {
                 format!("Directory {} in store {} had attributes", object_id, store_id)
             }
@@ -177,6 +207,12 @@ impl FsckError {
                 format!(
                     "Object {} in store {} is of type {:?} but has a link of type {:?}",
                     store_id, object_id, expected, actual
+                )
+            }
+            FsckError::ExtentExceedsLength(store_id, oid, attr_id, size, extent) => {
+                format!(
+                    "Extent {:?} exceeds length {} of attr {} on object {} in store {}",
+                    extent, size, attr_id, oid, store_id
                 )
             }
             FsckError::ExtraAllocations(allocations) => {
@@ -220,6 +256,9 @@ impl FsckError {
             }
             FsckError::MissingAllocation(allocation) => {
                 format!("Expected but didn't find allocation {:?}", allocation)
+            }
+            FsckError::MissingDataAttribute(store_id, oid) => {
+                format!("File {} in store {} didn't have the default data attribute", store_id, oid)
             }
             FsckError::MissingObjectInfo(store_id, object_id) => {
                 format!("Object {} in store {} had no object record", store_id, object_id)
