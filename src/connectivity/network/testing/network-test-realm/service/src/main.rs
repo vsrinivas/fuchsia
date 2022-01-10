@@ -573,6 +573,9 @@ fn set_v4_multicast_socket_option(
         // Note that the standard `socket2::Socket` join_multicast_v4 and
         // leave_multicast_v4 methods are not used as they do not specify the
         // interface id.
+        //
+        // TODO(https://github.com/rust-lang/socket2/issues/283): use upstream's
+        // method when available.
         imr_ifindex: interface as i32,
     };
     unsafe {
