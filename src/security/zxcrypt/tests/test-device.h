@@ -261,7 +261,7 @@ class TestDevice final {
   // The root key for this device.
   crypto::Secret key_;
   // Client for the block I/O protocol to the block server. Created/destroyed on demand.
-  std::optional<block_client::Client> client_;
+  std::unique_ptr<block_client::Client> client_;
   // Request structure used to send messages via the block I/O protocol.
   block_fifo_request_t req_;
   // VMO attached to the zxcrypt device for use with the block I/O protocol.

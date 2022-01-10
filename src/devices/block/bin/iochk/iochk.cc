@@ -104,7 +104,7 @@ class WorkContext {
 
   // Implementation specific information.
   struct {
-    block_client::Client client;
+    std::unique_ptr<block_client::Client> client;
     fuchsia_hardware_block_BlockInfo info = {};
   } block;
   struct {
@@ -401,7 +401,7 @@ class SkipBlockChecker : public Checker {
 
 zx_status_t InitializeChecker(WorkContext& ctx, std::unique_ptr<Checker>* checker) {
   return skip ? SkipBlockChecker::Initialize(ctx.caller, ctx.skip.info, checker)
-              : BlockChecker::Initialize(ctx.caller, ctx.block.info, ctx.block.client, checker);
+              : BlockChecker::Initialize(ctx.caller, ctx.block.info, *ctx.block.client, checker);
 }
 
 zx_status_t InitializeDevice(WorkContext& ctx) {
@@ -667,13 +667,7 @@ int iochk(int argc, char** argv) {
       return -1;
     }
 
-    auto client_or = block_client::Client::Create(std::move(fifo));
-    if (client_or.is_error()) {
-      printf("cannot create block client for device\n");
-      return -1;
-    }
-    ctx.block.client = std::move(*client_or);
-
+    ctx.block.client = std::make_unique<block_client::Client>(std::move(fifo));
     BlockChecker::ResetAtomic();
   }
 

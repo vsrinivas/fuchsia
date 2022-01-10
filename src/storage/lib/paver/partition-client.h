@@ -98,7 +98,7 @@ class BlockPartitionClient final : public BlockDevicePartitionClient {
   zx::status<> ReadBlockInfo();
 
   fidl::WireSyncClient<fuchsia_hardware_block::Block> partition_;
-  std::optional<block_client::Client> client_;
+  std::unique_ptr<block_client::Client> client_;
   std::optional<fuchsia_hardware_block::wire::BlockInfo> block_info_;
 };
 

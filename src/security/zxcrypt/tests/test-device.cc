@@ -406,9 +406,7 @@ void TestDevice::Connect() {
   ASSERT_OK(status);
   req_.group = 0;
 
-  auto client_or = block_client::Client::Create(std::move(fifo));
-  ASSERT_OK(client_or.status_value());
-  client_ = std::move(*client_or);
+  client_ = std::make_unique<block_client::Client>(std::move(fifo));
 
   // Create the vmo and get a transferable handle to give to the block server
   ASSERT_OK(zx::vmo::create(size(), 0, &vmo_));
@@ -435,7 +433,7 @@ void TestDevice::Disconnect() {
     zx_status_t status;
     fuchsia_hardware_block_BlockCloseFifo(zxcrypt_channel()->get(), &status);
     memset(&req_, 0, sizeof(req_));
-    client_ = std::nullopt;
+    client_ = nullptr;
   }
   zxcrypt_.reset();
   volume_manager_.reset();

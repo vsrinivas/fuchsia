@@ -44,7 +44,7 @@ class RemoteBlockDevice final : public BlockDevice {
   zx_status_t VolumeShrink(uint64_t offset, uint64_t length) final;
 
  private:
-  RemoteBlockDevice(zx::channel device, block_client::Client fifo_client);
+  RemoteBlockDevice(zx::channel device, zx::fifo fifo);
 
   zx::channel device_;
   block_client::Client fifo_client_;

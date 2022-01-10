@@ -72,12 +72,7 @@ zx::status<> BlockPartitionClient::RegisterFastBlockIo() {
     return status.take_error();
   }
 
-  zx::status<block_client::Client> client = block_client::Client::Create(std::move(result->fifo));
-  if (client.is_error()) {
-    return client.take_error();
-  }
-
-  client_ = std::move(*client);
+  client_ = std::make_unique<block_client::Client>(std::move(result->fifo));
   return zx::ok();
 }
 

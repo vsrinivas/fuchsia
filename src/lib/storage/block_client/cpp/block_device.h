@@ -22,8 +22,9 @@ namespace block_client {
 // An interface which virtualizes the connection to the underlying block device.
 class BlockDevice : public storage::VmoidRegistry {
  public:
-  // TODO(fxbug.dev/33909): Deprecate this interface. Favor reading over the FIFO
-  // protocol instead.
+  // Reads from the block device using the fuchsia_io::File protocol.
+  //
+  // TODO(fxbug.dev/33909): Deprecate this interface. Favor reading over the FIFO protocol instead.
   virtual zx_status_t ReadBlock(uint64_t block_num, uint64_t block_size, void* block) const = 0;
 
   // FIFO protocol.
@@ -40,8 +41,8 @@ class BlockDevice : public storage::VmoidRegistry {
 
   // Volume IPC.
   //
-  // VolumeGetInfo is safe to invoke, even for devices which do not necessarily speak
-  // the Volume protocol.
+  // VolumeGetInfo is safe to invoke, even for devices which do not necessarily speak the Volume
+  // protocol.
   virtual zx_status_t VolumeGetInfo(
       fuchsia_hardware_block_volume_VolumeManagerInfo* out_manager_info,
       fuchsia_hardware_block_volume_VolumeInfo* out_volume_info) const = 0;

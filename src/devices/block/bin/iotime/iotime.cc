@@ -137,11 +137,7 @@ static zx_duration_t iotime_fifo(char* dev, int is_read, int fd, size_t total, s
     return ZX_TIME_INFINITE;
   }
 
-  zx::status<block_client::Client> client = block_client::Client::Create(std::move(fifo));
-  if (client.is_error()) {
-    fprintf(stderr, "error: cannot create block client for '%s' %d\n", dev, client.status_value());
-    return ZX_TIME_INFINITE;
-  }
+  block_client::Client client(std::move(fifo));
 
   zx_time_t t0 = zx_clock_get_monotonic();
   size_t n = total;
@@ -156,7 +152,7 @@ static zx_duration_t iotime_fifo(char* dev, int is_read, int fd, size_t total, s
         .vmo_offset = 0,
         .dev_offset = (total - n) / info.block_size,
     };
-    if ((status = client->Transaction(&request, 1)) != ZX_OK) {
+    if ((status = client.Transaction(&request, 1)) != ZX_OK) {
       fprintf(stderr, "error: block_fifo_txn error %d\n", status);
       return ZX_TIME_INFINITE;
     }

@@ -158,17 +158,13 @@ zx_status_t RemoteBlockDevice::Create(zx::channel device, std::unique_ptr<Remote
     return status;
   }
 
-  zx::status<block_client::Client> fifo_client = block_client::Client::Create(std::move(fifo));
-  if (fifo_client.is_error()) {
-    return fifo_client.status_value();
-  }
-  *out = std::unique_ptr<RemoteBlockDevice>(
-      new RemoteBlockDevice(std::move(device), std::move(*fifo_client)));
+  *out =
+      std::unique_ptr<RemoteBlockDevice>(new RemoteBlockDevice(std::move(device), std::move(fifo)));
   return ZX_OK;
 }
 
-RemoteBlockDevice::RemoteBlockDevice(zx::channel device, block_client::Client fifo_client)
-    : device_(std::move(device)), fifo_client_(std::move(fifo_client)) {}
+RemoteBlockDevice::RemoteBlockDevice(zx::channel device, zx::fifo fifo)
+    : device_(std::move(device)), fifo_client_(std::move(fifo)) {}
 
 RemoteBlockDevice::~RemoteBlockDevice() { BlockCloseFifo(device_); }
 

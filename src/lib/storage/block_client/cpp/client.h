@@ -6,43 +6,49 @@
 #define SRC_LIB_STORAGE_BLOCK_CLIENT_CPP_CLIENT_H_
 
 #include <lib/zx/fifo.h>
-#include <lib/zx/status.h>
-#include <stdlib.h>
+#include <zircon/device/block.h>
 #include <zircon/types.h>
 
-#include <fbl/macros.h>
-
-#include "src/lib/storage/block_client/cpp/client_c.h"
+#include <condition_variable>
+#include <mutex>
 
 namespace block_client {
 
+// Provides a simple synchronous wrapper for talking to a block device over a FIFO.
+//
+// Block devices can support several (MAX_TXN_GROUP_COUNT) requests in-flight at once and this class
+// is threadsafe to support this many requests from different threads in parallel. Exceeding
+// MAX_TXN_GROUP_COUNT parallel transactions will block future requests until a transaction group
+// becomes available.
 class Client {
  public:
-  // Constructs an invalid Client.
-  //
-  // It is invalid to call any block client operations with this empty block client wrapper.
-  Client();
+  explicit Client(zx::fifo fifo);
 
-  Client(Client&& other);
-  Client& operator=(Client&& other);
-  ~Client();
-
-  // Factory function.
-  static zx::status<Client> Create(zx::fifo fifo);
+  // This object can not be moved due to the presence of the mutex.
+  Client(const Client&) = delete;
+  Client(Client&&) = delete;
 
   // Issues a group of block requests over the underlying fifo, and waits for a response.
-  zx_status_t Transaction(block_fifo_request_t* requests, size_t count) const;
+  zx_status_t Transaction(block_fifo_request_t* requests, size_t count);
 
  private:
-  explicit Client(fifo_client_t* client);
+  struct BlockCompletion {
+    bool in_use = false;
+    bool done = false;
+    zx_status_t status = ZX_ERR_IO;
+  };
 
-  // Replace the current fifo_client with a new one.
-  void Reset(fifo_client_t* client = nullptr);
+  zx_status_t DoRead(block_fifo_response_t* response, size_t* count);
+  zx_status_t DoWrite(block_fifo_request_t* request, size_t count);
 
-  // Relinquish the underlying fifo client without destroying it.
-  fifo_client_t* Release();
+  zx::fifo fifo_;
 
-  fifo_client_t* client_;
+  std::mutex mutex_;
+
+  BlockCompletion groups_[MAX_TXN_GROUP_COUNT];  // Guarded by mutex.
+
+  std::condition_variable condition_;
+  bool reading_ = false;  // Guarded by mutex.
 };
 
 }  // namespace block_client

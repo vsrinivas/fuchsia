@@ -278,13 +278,13 @@ class VmoBuf;
 
 class VmoClient : public fbl::RefCounted<VmoClient> {
  public:
-  static void Create(int fd, fbl::RefPtr<VmoClient>* out);
-
+  explicit VmoClient(int fd);
   ~VmoClient();
-  void CheckWrite(VmoBuf* vbuf, size_t buf_off, size_t dev_off, size_t len);
-  void CheckRead(VmoBuf* vbuf, size_t buf_off, size_t dev_off, size_t len);
+
+  void CheckWrite(VmoBuf& vbuf, size_t buf_off, size_t dev_off, size_t len);
+  void CheckRead(VmoBuf& vbuf, size_t buf_off, size_t dev_off, size_t len);
   void Transaction(block_fifo_request_t* requests, size_t count) {
-    ASSERT_OK(client_.Transaction(requests, count));
+    ASSERT_OK(client_->Transaction(requests, count));
   }
 
   int fd() const { return fd_; }
@@ -293,31 +293,26 @@ class VmoClient : public fbl::RefCounted<VmoClient> {
  private:
   int fd_;
   fuchsia_hardware_block_BlockInfo info_;
-  block_client::Client client_;
+  std::unique_ptr<block_client::Client> client_;
 };
 
 class VmoBuf {
  public:
-  static void Create(fbl::RefPtr<VmoClient> client, size_t size, std::unique_ptr<VmoBuf>* out) {
-    std::unique_ptr<uint8_t[]> buf(new uint8_t[size]);
+  VmoBuf(fbl::RefPtr<VmoClient> client, size_t size) : client_(std::move(client)) {
+    buf_ = std::make_unique<uint8_t[]>(size);
 
     zx::vmo vmo;
-    ASSERT_EQ(zx::vmo::create(size, 0, &vmo), ZX_OK);
+    ASSERT_EQ(zx::vmo::create(size, 0, &vmo_), ZX_OK);
     zx::vmo xfer_vmo;
-    ASSERT_EQ(vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &xfer_vmo), ZX_OK);
+    ASSERT_EQ(vmo_.duplicate(ZX_RIGHT_SAME_RIGHTS, &xfer_vmo), ZX_OK);
 
-    fdio_cpp::UnownedFdioCaller disk_connection(client->fd());
+    fdio_cpp::UnownedFdioCaller disk_connection(client_->fd());
     zx::unowned_channel channel(disk_connection.borrow_channel());
-    fuchsia_hardware_block_VmoId vmoid;
     zx_status_t status;
     ASSERT_EQ(
-        fuchsia_hardware_block_BlockAttachVmo(channel->get(), xfer_vmo.release(), &status, &vmoid),
+        fuchsia_hardware_block_BlockAttachVmo(channel->get(), xfer_vmo.release(), &status, &vmoid_),
         ZX_OK);
     ASSERT_EQ(status, ZX_OK);
-
-    std::unique_ptr<VmoBuf> vb(
-        new VmoBuf(std::move(client), std::move(vmo), std::move(buf), vmoid));
-    *out = std::move(vb);
   }
 
   ~VmoBuf() {
@@ -333,19 +328,13 @@ class VmoBuf {
  private:
   friend VmoClient;
 
-  VmoBuf(fbl::RefPtr<VmoClient> client, zx::vmo vmo, std::unique_ptr<uint8_t[]> buf,
-         fuchsia_hardware_block_VmoId vmoid)
-      : client_(std::move(client)), vmo_(std::move(vmo)), buf_(std::move(buf)), vmoid_(vmoid) {}
-
   fbl::RefPtr<VmoClient> client_;
   zx::vmo vmo_;
   std::unique_ptr<uint8_t[]> buf_;
   fuchsia_hardware_block_VmoId vmoid_;
 };
 
-void VmoClient::Create(int fd, fbl::RefPtr<VmoClient>* out) {
-  fbl::RefPtr<VmoClient> vc = fbl::MakeRefCounted<VmoClient>();
-
+VmoClient::VmoClient(int fd) : fd_(fd) {
   fdio_cpp::UnownedFdioCaller disk_connection(fd);
   zx::unowned_channel channel(disk_connection.borrow_channel());
   zx_status_t status;
@@ -356,15 +345,10 @@ void VmoClient::Create(int fd, fbl::RefPtr<VmoClient>* out) {
       ZX_OK);
   ASSERT_EQ(status, ZX_OK);
 
-  ASSERT_EQ(fuchsia_hardware_block_BlockGetInfo(channel->get(), &status, &vc->info_), ZX_OK);
+  ASSERT_EQ(fuchsia_hardware_block_BlockGetInfo(channel->get(), &status, &info_), ZX_OK);
   ASSERT_EQ(status, ZX_OK);
 
-  auto client_or = block_client::Client::Create(std::move(fifo));
-  ASSERT_TRUE(client_or.is_ok());
-  vc->client_ = std::move(*client_or);
-
-  vc->fd_ = fd;
-  *out = std::move(vc);
+  client_ = std::make_unique<block_client::Client>(std::move(fifo));
 }
 
 VmoClient::~VmoClient() {
@@ -373,18 +357,18 @@ VmoClient::~VmoClient() {
   fuchsia_hardware_block_BlockCloseFifo(disk_connection.borrow_channel(), &status);
 }
 
-void VmoClient::CheckWrite(VmoBuf* vbuf, size_t buf_off, size_t dev_off, size_t len) {
+void VmoClient::CheckWrite(VmoBuf& vbuf, size_t buf_off, size_t dev_off, size_t len) {
   // Write to the client-side buffer
   for (size_t i = 0; i < len; i++)
-    vbuf->buf_[i + buf_off] = static_cast<uint8_t>(rand());
+    vbuf.buf_[i + buf_off] = static_cast<uint8_t>(rand());
 
   // Write to the registered VMO
-  ASSERT_EQ(vbuf->vmo_.write(&vbuf->buf_[buf_off], buf_off, len), ZX_OK);
+  ASSERT_EQ(vbuf.vmo_.write(&vbuf.buf_[buf_off], buf_off, len), ZX_OK);
 
   // Write to the block device
   block_fifo_request_t request;
   request.group = group();
-  request.vmoid = vbuf->vmoid_.id;
+  request.vmoid = vbuf.vmoid_.id;
   request.opcode = BLOCKIO_WRITE;
   ASSERT_EQ(len % info_.block_size, 0);
   ASSERT_EQ(buf_off % info_.block_size, 0);
@@ -395,7 +379,7 @@ void VmoClient::CheckWrite(VmoBuf* vbuf, size_t buf_off, size_t dev_off, size_t 
   Transaction(&request, 1);
 }
 
-void VmoClient::CheckRead(VmoBuf* vbuf, size_t buf_off, size_t dev_off, size_t len) {
+void VmoClient::CheckRead(VmoBuf& vbuf, size_t buf_off, size_t dev_off, size_t len) {
   // Create a comparison buffer
   fbl::AllocChecker ac;
   std::unique_ptr<uint8_t[]> out(new (&ac) uint8_t[len]);
@@ -405,7 +389,7 @@ void VmoClient::CheckRead(VmoBuf* vbuf, size_t buf_off, size_t dev_off, size_t l
   // Read from the block device
   block_fifo_request_t request;
   request.group = group();
-  request.vmoid = vbuf->vmoid_.id;
+  request.vmoid = vbuf.vmoid_.id;
   request.opcode = BLOCKIO_READ;
   ASSERT_EQ(len % info_.block_size, 0);
   ASSERT_EQ(buf_off % info_.block_size, 0);
@@ -416,9 +400,9 @@ void VmoClient::CheckRead(VmoBuf* vbuf, size_t buf_off, size_t dev_off, size_t l
   Transaction(&request, 1);
 
   // Read from the registered VMO
-  ASSERT_EQ(vbuf->vmo_.read(out.get(), buf_off, len), ZX_OK);
+  ASSERT_EQ(vbuf.vmo_.read(out.get(), buf_off, len), ZX_OK);
 
-  ASSERT_EQ(memcmp(&vbuf->buf_[buf_off], out.get(), len), 0);
+  ASSERT_EQ(memcmp(&vbuf.buf_[buf_off], out.get(), len), 0);
 }
 
 void CheckWrite(int fd, size_t off, size_t len, uint8_t* buf) {
@@ -1294,12 +1278,10 @@ TEST_F(FvmTest, TestSliceAccessContiguous) {
   size_t last_block = (slice_size / block_info.block_size) - 1;
 
   {
-    fbl::RefPtr<VmoClient> vc;
-    VmoClient::Create(vp_fd.get(), &vc);
-    std::unique_ptr<VmoBuf> vb;
-    VmoBuf::Create(vc, block_info.block_size * 2, &vb);
-    vc->CheckWrite(vb.get(), 0, block_info.block_size * last_block, block_info.block_size);
-    vc->CheckRead(vb.get(), 0, block_info.block_size * last_block, block_info.block_size);
+    auto vc = fbl::MakeRefCounted<VmoClient>(vp_fd.get());
+    VmoBuf vb(vc, block_info.block_size * 2);
+    vc->CheckWrite(vb, 0, block_info.block_size * last_block, block_info.block_size);
+    vc->CheckRead(vb, 0, block_info.block_size * last_block, block_info.block_size);
 
     // Try writing out of bounds -- check that we don't have access.
     CheckNoAccessBlock(vp_fd.get(), (slice_size / block_info.block_size) - 1, 2);
@@ -1311,14 +1293,14 @@ TEST_F(FvmTest, TestSliceAccessContiguous) {
     ASSERT_EQ(status, ZX_OK);
 
     // Now we can access the next slice...
-    vc->CheckWrite(vb.get(), block_info.block_size, block_info.block_size * (last_block + 1),
+    vc->CheckWrite(vb, block_info.block_size, block_info.block_size * (last_block + 1),
                    block_info.block_size);
-    vc->CheckRead(vb.get(), block_info.block_size, block_info.block_size * (last_block + 1),
+    vc->CheckRead(vb, block_info.block_size, block_info.block_size * (last_block + 1),
                   block_info.block_size);
     // ... We can still access the previous slice...
-    vc->CheckRead(vb.get(), 0, block_info.block_size * last_block, block_info.block_size);
+    vc->CheckRead(vb, 0, block_info.block_size * last_block, block_info.block_size);
     // ... And we can cross slices
-    vc->CheckRead(vb.get(), 0, block_info.block_size * last_block, block_info.block_size * 2);
+    vc->CheckRead(vb, 0, block_info.block_size * last_block, block_info.block_size * 2);
   }
 
   ASSERT_EQ(close(vp_fd.release()), 0);
@@ -1363,14 +1345,12 @@ TEST_F(FvmTest, TestSliceAccessMany) {
   ASSERT_EQ(block_info.block_size, kBlockSize);
 
   {
-    fbl::RefPtr<VmoClient> vc;
-    VmoClient::Create(vp_fd.get(), &vc);
-    std::unique_ptr<VmoBuf> vb;
-    VmoBuf::Create(vc, kSliceSize * 3, &vb);
+    auto vc = fbl::MakeRefCounted<VmoClient>(vp_fd.get());
+    VmoBuf vb(vc, kSliceSize * 3);
 
     // Access the first slice
-    vc->CheckWrite(vb.get(), 0, 0, kSliceSize);
-    vc->CheckRead(vb.get(), 0, 0, kSliceSize);
+    vc->CheckWrite(vb, 0, 0, kSliceSize);
+    vc->CheckRead(vb, 0, 0, kSliceSize);
 
     // Try writing out of bounds -- check that we don't have access.
     CheckNoAccessBlock(vp_fd.get(), kBlocksPerSlice - 1, 2);
@@ -1385,22 +1365,22 @@ TEST_F(FvmTest, TestSliceAccessMany) {
     ASSERT_EQ(status, ZX_OK);
 
     // Now we can access the next slices...
-    vc->CheckWrite(vb.get(), kSliceSize, kSliceSize, 2 * kSliceSize);
-    vc->CheckRead(vb.get(), kSliceSize, kSliceSize, 2 * kSliceSize);
+    vc->CheckWrite(vb, kSliceSize, kSliceSize, 2 * kSliceSize);
+    vc->CheckRead(vb, kSliceSize, kSliceSize, 2 * kSliceSize);
     // ... We can still access the previous slice...
-    vc->CheckRead(vb.get(), 0, 0, kSliceSize);
+    vc->CheckRead(vb, 0, 0, kSliceSize);
     // ... And we can cross slices for reading.
-    vc->CheckRead(vb.get(), 0, 0, 3 * kSliceSize);
+    vc->CheckRead(vb, 0, 0, 3 * kSliceSize);
 
     // Also, we can cross slices for writing.
-    vc->CheckWrite(vb.get(), 0, 0, 3 * kSliceSize);
-    vc->CheckRead(vb.get(), 0, 0, 3 * kSliceSize);
+    vc->CheckWrite(vb, 0, 0, 3 * kSliceSize);
+    vc->CheckRead(vb, 0, 0, 3 * kSliceSize);
 
     // Additionally, we can access "parts" of slices in a multi-slice
     // operation. Here, read one block into the first slice, and read
     // up to the last block in the final slice.
-    vc->CheckWrite(vb.get(), 0, kBlockSize, 3 * kSliceSize - 2 * kBlockSize);
-    vc->CheckRead(vb.get(), 0, kBlockSize, 3 * kSliceSize - 2 * kBlockSize);
+    vc->CheckWrite(vb, 0, kBlockSize, 3 * kSliceSize - 2 * kBlockSize);
+    vc->CheckRead(vb, 0, kBlockSize, 3 * kSliceSize - 2 * kBlockSize);
   }
 
   ASSERT_EQ(close(vp_fd.release()), 0);
@@ -1464,13 +1444,12 @@ TEST_F(FvmTest, TestSliceAccessNonContiguousPhysical) {
     int vfd = vparts[i].fd.get();
     // This is the last 'accessible' block.
     size_t last_block = (vparts[i].slices_used * (kSliceSize / block_info.block_size)) - 1;
-    fbl::RefPtr<VmoClient> vc;
-    VmoClient::Create(vfd, &vc);
-    std::unique_ptr<VmoBuf> vb;
-    VmoBuf::Create(vc, block_info.block_size * 2, &vb);
 
-    vc->CheckWrite(vb.get(), 0, block_info.block_size * last_block, block_info.block_size);
-    vc->CheckRead(vb.get(), 0, block_info.block_size * last_block, block_info.block_size);
+    auto vc = fbl::MakeRefCounted<VmoClient>(vfd);
+    VmoBuf vb(vc, block_info.block_size * 2);
+
+    vc->CheckWrite(vb, 0, block_info.block_size * last_block, block_info.block_size);
+    vc->CheckRead(vb, 0, block_info.block_size * last_block, block_info.block_size);
 
     // Try writing out of bounds -- check that we don't have access.
     CheckNoAccessBlock(vfd, last_block, 2);
@@ -1487,14 +1466,14 @@ TEST_F(FvmTest, TestSliceAccessNonContiguousPhysical) {
     ASSERT_EQ(status, ZX_OK);
 
     // Now we can access the next slice...
-    vc->CheckWrite(vb.get(), block_info.block_size, block_info.block_size * (last_block + 1),
+    vc->CheckWrite(vb, block_info.block_size, block_info.block_size * (last_block + 1),
                    block_info.block_size);
-    vc->CheckRead(vb.get(), block_info.block_size, block_info.block_size * (last_block + 1),
+    vc->CheckRead(vb, block_info.block_size, block_info.block_size * (last_block + 1),
                   block_info.block_size);
     // ... We can still access the previous slice...
-    vc->CheckRead(vb.get(), 0, block_info.block_size * last_block, block_info.block_size);
+    vc->CheckRead(vb, 0, block_info.block_size * last_block, block_info.block_size);
     // ... And we can cross slices
-    vc->CheckRead(vb.get(), 0, block_info.block_size * last_block, block_info.block_size * 2);
+    vc->CheckRead(vb, 0, block_info.block_size * last_block, block_info.block_size * 2);
 
     vparts[i].slices_used++;
     i = (i + 1) % kNumVParts;
@@ -1508,10 +1487,8 @@ TEST_F(FvmTest, TestSliceAccessNonContiguousPhysical) {
     ASSERT_GE(vparts[i].slices_used, 5);
 
     {
-      fbl::RefPtr<VmoClient> vc;
-      VmoClient::Create(vparts[i].fd.get(), &vc);
-      std::unique_ptr<VmoBuf> vb;
-      VmoBuf::Create(vc, kSliceSize * 4, &vb);
+      auto vc = fbl::MakeRefCounted<VmoClient>(vparts[i].fd.get());
+      VmoBuf vb(vc, kSliceSize * 4);
 
       // Try accessing 3 noncontiguous slices at once, with the
       // addition of "off by one block".
@@ -1532,15 +1509,15 @@ TEST_F(FvmTest, TestSliceAccessNonContiguousPhysical) {
           for (size_t vmo_off = 0; vmo_off < 3 * bsz; vmo_off += bsz) {
             // Try writing & reading the entire section (multiple
             // slices) at once.
-            vc->CheckWrite(vb.get(), vmo_off, dev_off, len);
-            vc->CheckRead(vb.get(), vmo_off, dev_off, len);
+            vc->CheckWrite(vb, vmo_off, dev_off, len);
+            vc->CheckRead(vb, vmo_off, dev_off, len);
 
             // Try reading the section one slice at a time.
             // The results should be the same.
             size_t sub_off = 0;
             size_t sub_len = kSliceSize - (dev_off % kSliceSize);
             while (sub_off < len) {
-              vc->CheckRead(vb.get(), vmo_off + sub_off, dev_off + sub_off, sub_len);
+              vc->CheckRead(vb, vmo_off + sub_off, dev_off + sub_off, sub_len);
               sub_off += sub_len;
               sub_len = std::min(kSliceSize, len - sub_off);
             }

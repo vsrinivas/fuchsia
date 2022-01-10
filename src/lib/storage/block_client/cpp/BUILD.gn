@@ -25,9 +25,7 @@ static_library("cpp") {
   sources = [
     "block_device.cc",
     "block_group_registry.cc",
-    "client.c",
     "client.cc",
-    "client_c.h",
     "remote_block_device.cc",
   ]
 

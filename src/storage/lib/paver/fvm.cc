@@ -120,7 +120,7 @@ fvm::ExtentDescriptor GetExtent(fvm::PartitionDescriptor* pd, size_t extent) {
 
 // Registers a FIFO
 zx_status_t RegisterFastBlockIo(const fbl::unique_fd& fd, const zx::vmo& vmo, vmoid_t* out_vmoid,
-                                block_client::Client* out_client) {
+                                std::unique_ptr<block_client::Client>* out_client) {
   fdio_cpp::UnownedFdioCaller caller(fd.get());
 
   auto result = fidl::WireCall<block::Block>(caller.channel())->GetFifo();
@@ -148,11 +148,8 @@ zx_status_t RegisterFastBlockIo(const fbl::unique_fd& fd, const zx::vmo& vmo, vm
   }
 
   *out_vmoid = response2.vmoid->id;
-
-  zx::status<block_client::Client> client = block_client::Client::Create(std::move(response.fifo));
-  if (client.is_ok())
-    *out_client = std::move(*client);
-  return client.status_value();
+  *out_client = std::make_unique<block_client::Client>(std::move(response.fifo));
+  return ZX_OK;
 }
 
 zx_status_t FlushClient(block_client::Client* client) {
@@ -169,7 +166,7 @@ zx_status_t FlushClient(block_client::Client* client) {
 
 // Stream an FVM partition to disk.
 zx_status_t StreamFvmPartition(fvm::SparseReader* reader, PartitionInfo* part,
-                               const fzl::VmoMapper& mapper, const block_client::Client& client,
+                               const fzl::VmoMapper& mapper, block_client::Client& client,
                                size_t block_size, block_fifo_request_t* request) {
   size_t slice_size = reader->Image()->slice_size;
   const size_t vmo_cap = mapper.size();
@@ -734,7 +731,7 @@ zx::status<> FvmStreamPartitions(const fbl::unique_fd& devfs_root,
   // Now that all partitions are preallocated, begin streaming data to them.
   for (size_t p = 0; p < parts.size(); p++) {
     vmoid_t vmoid;
-    block_client::Client client;
+    std::unique_ptr<block_client::Client> client;
     auto status = zx::make_status(RegisterFastBlockIo(parts[p].new_part, vmo, &vmoid, &client));
     if (status.is_error()) {
       ERROR("Failed to register fast block IO\n");
@@ -762,13 +759,13 @@ zx::status<> FvmStreamPartitions(const fbl::unique_fd& devfs_root,
 
     LOG("Streaming partition %zu\n", p);
     status = zx::make_status(
-        StreamFvmPartition(reader.get(), &parts[p], mapping, client, block_size, &request));
+        StreamFvmPartition(reader.get(), &parts[p], mapping, *client, block_size, &request));
     LOG("Done streaming partition %zu\n", p);
     if (status.is_error()) {
       ERROR("Failed to stream partition status=%d\n", status.error_value());
       return status.take_error();
     }
-    if (status = zx::make_status(FlushClient(&client)); status.is_error()) {
+    if (status = zx::make_status(FlushClient(client.get())); status.is_error()) {
       ERROR("Failed to flush client\n");
       return status.take_error();
     }

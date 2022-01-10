@@ -77,7 +77,7 @@ TEST(BlkdevTests, blkdev_test_simple) {
   ASSERT_EQ(write(fd.get(), buf.get(), buffer_size / 2), buffer_size / 2);
 
   // Seek to the start of the device and read the contents
-  ASSERT_EQ(lseek(fd.get(), 0, SEEK_SET), 0, "");
+  ASSERT_EQ(lseek(fd.get(), 0, SEEK_SET), 0);
   ASSERT_EQ(read(fd.get(), out.get(), buffer_size), buffer_size);
   ASSERT_EQ(memcmp(out.get(), buf.get(), buffer_size), 0);
   ASSERT_EQ(read(fd.get(), out.get(), buffer_size / 2), buffer_size / 2);
@@ -176,7 +176,7 @@ TEST(BlkdevTests, blkdev_test_fifo_basic) {
   std::unique_ptr<uint8_t[]> buf(new uint8_t[vmo_size]);
   fill_random(buf.get(), vmo_size);
 
-  ASSERT_EQ(vmo.write(buf.get(), 0, vmo_size), ZX_OK, "");
+  ASSERT_EQ(vmo.write(buf.get(), 0, vmo_size), ZX_OK);
 
   // Send a handle to the vmo to the block device, get a vmoid which identifies it
   zx::vmo xfer_vmo;
@@ -204,23 +204,22 @@ TEST(BlkdevTests, blkdev_test_fifo_basic) {
   requests[1].vmo_offset = 1;
   requests[1].dev_offset = 100;
 
-  zx::status<block_client::Client> client = block_client::Client::Create(std::move(fifo));
-  ASSERT_TRUE(client.is_ok());
-  ASSERT_EQ(client->Transaction(&requests[0], std::size(requests)), ZX_OK, "");
+  block_client::Client client(std::move(fifo));
+  ASSERT_EQ(client.Transaction(&requests[0], std::size(requests)), ZX_OK);
 
   // Empty the vmo, then read the info we just wrote to the disk
   std::unique_ptr<uint8_t[]> out(new uint8_t[vmo_size]());
 
-  ASSERT_EQ(vmo.write(out.get(), 0, vmo_size), ZX_OK, "");
+  ASSERT_EQ(vmo.write(out.get(), 0, vmo_size), ZX_OK);
   requests[0].opcode = BLOCKIO_READ;
   requests[1].opcode = BLOCKIO_READ;
-  ASSERT_EQ(client->Transaction(&requests[0], std::size(requests)), ZX_OK, "");
-  ASSERT_EQ(vmo.read(out.get(), 0, vmo_size), ZX_OK, "");
+  ASSERT_EQ(client.Transaction(&requests[0], std::size(requests)), ZX_OK);
+  ASSERT_EQ(vmo.read(out.get(), 0, vmo_size), ZX_OK);
   ASSERT_EQ(memcmp(buf.get(), out.get(), blk_size * 3), 0, "Read data not equal to written data");
 
   // Close the current vmo
   requests[0].opcode = BLOCKIO_CLOSE_VMO;
-  ASSERT_EQ(client->Transaction(&requests[0], 1), ZX_OK, "");
+  ASSERT_EQ(client.Transaction(&requests[0], 1), ZX_OK);
 
   ASSERT_EQ(fuchsia_hardware_block_BlockCloseFifo(channel->get(), &status), ZX_OK);
   ASSERT_EQ(status, ZX_OK);
@@ -248,7 +247,7 @@ TEST(BlkdevTests, DISABLED_blkdev_test_fifo_whole_disk) {
   std::unique_ptr<uint8_t[]> buf(new uint8_t[vmo_size]);
   fill_random(buf.get(), vmo_size);
 
-  ASSERT_EQ(vmo.write(buf.get(), 0, vmo_size), ZX_OK, "");
+  ASSERT_EQ(vmo.write(buf.get(), 0, vmo_size), ZX_OK);
 
   // Send a handle to the vmo to the block device, get a vmoid which identifies it
   zx::vmo xfer_vmo;
@@ -268,22 +267,21 @@ TEST(BlkdevTests, DISABLED_blkdev_test_fifo_whole_disk) {
   request.vmo_offset = 0;
   request.dev_offset = 0;
 
-  zx::status<block_client::Client> client = block_client::Client::Create(std::move(fifo));
-  ASSERT_TRUE(client.is_ok());
-  ASSERT_EQ(client->Transaction(&request, 1), ZX_OK, "");
+  block_client::Client client(std::move(fifo));
+  ASSERT_EQ(client.Transaction(&request, 1), ZX_OK);
 
   // Empty the vmo, then read the info we just wrote to the disk
   std::unique_ptr<uint8_t[]> out(new uint8_t[vmo_size]());
 
-  ASSERT_EQ(vmo.write(out.get(), 0, vmo_size), ZX_OK, "");
+  ASSERT_EQ(vmo.write(out.get(), 0, vmo_size), ZX_OK);
   request.opcode = BLOCKIO_READ;
-  ASSERT_EQ(client->Transaction(&request, 1), ZX_OK, "");
-  ASSERT_EQ(vmo.read(out.get(), 0, vmo_size), ZX_OK, "");
+  ASSERT_EQ(client.Transaction(&request, 1), ZX_OK);
+  ASSERT_EQ(vmo.read(out.get(), 0, vmo_size), ZX_OK);
   ASSERT_EQ(memcmp(buf.get(), out.get(), blk_size * 3), 0, "Read data not equal to written data");
 
   // Close the current vmo
   request.opcode = BLOCKIO_CLOSE_VMO;
-  ASSERT_EQ(client->Transaction(&request, 1), ZX_OK, "");
+  ASSERT_EQ(client.Transaction(&request, 1), ZX_OK);
 
   ASSERT_EQ(fuchsia_hardware_block_BlockCloseFifo(channel->get(), &status), ZX_OK);
   ASSERT_EQ(status, ZX_OK);
@@ -331,7 +329,7 @@ void WriteStripedVmoHelper(block_client::Client& client, const TestVmoObject& ob
     requests[b].dev_offset = i + b * objs;
   }
   // Write entire vmos at once
-  ASSERT_EQ(client.Transaction(&requests[0], requests.size()), ZX_OK, "");
+  ASSERT_EQ(client.Transaction(&requests[0], requests.size()), ZX_OK);
 }
 
 // Verifies the result from "WriteStripedVmoHelper"
@@ -354,7 +352,7 @@ void ReadStripedVmoHelper(block_client::Client& client, const TestVmoObject& obj
   }
 
   // Read entire vmos at once
-  ASSERT_EQ(client.Transaction(&requests[0], requests.size()), ZX_OK, "");
+  ASSERT_EQ(client.Transaction(&requests[0], requests.size()), ZX_OK);
 
   // Finally, write from the vmo to an out buffer, where we can compare
   // the results with the input buffer.
@@ -369,7 +367,7 @@ void CloseVmoHelper(block_client::Client& client, TestVmoObject& obj, groupid_t 
   request.group = group;
   request.vmoid = obj.vmoid.id;
   request.opcode = BLOCKIO_CLOSE_VMO;
-  ASSERT_EQ(client.Transaction(&request, 1), ZX_OK, "");
+  ASSERT_EQ(client.Transaction(&request, 1), ZX_OK);
   obj.vmo.reset();
 }
 
@@ -388,27 +386,25 @@ TEST(BlkdevTests, blkdev_test_fifo_multiple_vmo) {
   ASSERT_EQ(status, ZX_OK);
   groupid_t group = 0;
 
-  zx::status<block_client::Client> client = block_client::Client::Create(std::move(fifo));
-  ASSERT_TRUE(client.is_ok());
+  block_client::Client client(std::move(fifo));
 
   // Create multiple VMOs
   std::vector<TestVmoObject> objs(10);
   for (size_t i = 0; i < objs.size(); i++) {
-    ASSERT_NO_FATAL_FAILURE(CreateVmoHelper(*channel, objs[i], blk_size), "");
+    ASSERT_NO_FATAL_FAILURE(CreateVmoHelper(*channel, objs[i], blk_size));
   }
 
   for (size_t i = 0; i < objs.size(); i++) {
     ASSERT_NO_FATAL_FAILURE(
-        WriteStripedVmoHelper(*client, objs[i], i, objs.size(), group, blk_size), "");
+        WriteStripedVmoHelper(client, objs[i], i, objs.size(), group, blk_size));
   }
 
   for (size_t i = 0; i < objs.size(); i++) {
-    ASSERT_NO_FATAL_FAILURE(ReadStripedVmoHelper(*client, objs[i], i, objs.size(), group, blk_size),
-                            "");
+    ASSERT_NO_FATAL_FAILURE(ReadStripedVmoHelper(client, objs[i], i, objs.size(), group, blk_size));
   }
 
   for (size_t i = 0; i < objs.size(); i++) {
-    ASSERT_NO_FATAL_FAILURE(CloseVmoHelper(*client, objs[i], group), "");
+    ASSERT_NO_FATAL_FAILURE(CloseVmoHelper(client, objs[i], group));
   }
 
   ASSERT_EQ(fuchsia_hardware_block_BlockCloseFifo(channel->get(), &status), ZX_OK);
@@ -429,8 +425,7 @@ TEST(BlkdevTests, blkdev_test_fifo_multiple_vmo_multithreaded) {
       ZX_OK);
   ASSERT_EQ(status, ZX_OK);
 
-  zx::status<block_client::Client> client = block_client::Client::Create(std::move(fifo));
-  ASSERT_TRUE(client.is_ok());
+  block_client::Client client(std::move(fifo));
 
   // Create multiple VMOs
   constexpr size_t kNumThreads = MAX_TXN_GROUP_COUNT;
@@ -441,12 +436,12 @@ TEST(BlkdevTests, blkdev_test_fifo_multiple_vmo_multithreaded) {
     // Capture i by value to get the updated version each loop iteration.
     threads.push_back(std::thread([&, i]() {
       groupid_t group = static_cast<groupid_t>(i);
-      ASSERT_NO_FATAL_FAILURE(CreateVmoHelper(*channel, objs[i], kBlockSize), "");
+      ASSERT_NO_FATAL_FAILURE(CreateVmoHelper(*channel, objs[i], kBlockSize));
       ASSERT_NO_FATAL_FAILURE(
-          WriteStripedVmoHelper(*client, objs[i], i, objs.size(), group, kBlockSize), "");
+          WriteStripedVmoHelper(client, objs[i], i, objs.size(), group, kBlockSize));
       ASSERT_NO_FATAL_FAILURE(
-          ReadStripedVmoHelper(*client, objs[i], i, objs.size(), group, kBlockSize), "");
-      ASSERT_NO_FATAL_FAILURE(CloseVmoHelper(*client, objs[i], group), "");
+          ReadStripedVmoHelper(client, objs[i], i, objs.size(), group, kBlockSize));
+      ASSERT_NO_FATAL_FAILURE(CloseVmoHelper(client, objs[i], group));
     }));
   }
 
@@ -477,12 +472,11 @@ TEST(BlkdevTests, DISABLED_blkdev_test_fifo_unclean_shutdown) {
         ZX_OK);
     ASSERT_EQ(status, ZX_OK);
 
-    zx::status<block_client::Client> client = block_client::Client::Create(std::move(fifo));
-    ASSERT_TRUE(client.is_ok());
+    block_client::Client client(std::move(fifo));
 
     // Create multiple VMOs
     for (size_t i = 0; i < objs.size(); i++) {
-      ASSERT_NO_FATAL_FAILURE(CreateVmoHelper(*channel, objs[i], kBlockSize), "");
+      ASSERT_NO_FATAL_FAILURE(CreateVmoHelper(*channel, objs[i], kBlockSize));
     }
   }
 
@@ -500,22 +494,21 @@ TEST(BlkdevTests, DISABLED_blkdev_test_fifo_unclean_shutdown) {
         ZX_OK);
     ASSERT_EQ(status, ZX_OK);
 
-    zx::status<block_client::Client> client = block_client::Client::Create(std::move(fifo));
-    ASSERT_TRUE(client.is_ok());
+    block_client::Client client(std::move(fifo));
 
     for (size_t i = 0; i < objs.size(); i++) {
-      ASSERT_NO_FATAL_FAILURE(CreateVmoHelper(*channel, objs[i], kBlockSize), "");
+      ASSERT_NO_FATAL_FAILURE(CreateVmoHelper(*channel, objs[i], kBlockSize));
     }
     for (size_t i = 0; i < objs.size(); i++) {
       ASSERT_NO_FATAL_FAILURE(
-          WriteStripedVmoHelper(*client, objs[i], i, objs.size(), group, kBlockSize), "");
+          WriteStripedVmoHelper(client, objs[i], i, objs.size(), group, kBlockSize));
     }
     for (size_t i = 0; i < objs.size(); i++) {
       ASSERT_NO_FATAL_FAILURE(
-          ReadStripedVmoHelper(*client, objs[i], i, objs.size(), group, kBlockSize), "");
+          ReadStripedVmoHelper(client, objs[i], i, objs.size(), group, kBlockSize));
     }
     for (size_t i = 0; i < objs.size(); i++) {
-      ASSERT_NO_FATAL_FAILURE(CloseVmoHelper(*client, objs[i], group), "");
+      ASSERT_NO_FATAL_FAILURE(CloseVmoHelper(client, objs[i], group));
     }
 
     ASSERT_EQ(fuchsia_hardware_block_BlockCloseFifo(channel->get(), &status), ZX_OK);
@@ -538,14 +531,12 @@ TEST(BlkdevTests, blkdev_test_fifo_bad_client_vmoid) {
       ZX_OK);
   ASSERT_EQ(status, ZX_OK);
 
-  zx::status<block_client::Client> client = block_client::Client::Create(std::move(fifo));
-  ASSERT_TRUE(client.is_ok());
-
+  block_client::Client client(std::move(fifo));
   groupid_t group = 0;
 
   // Create a vmo
   TestVmoObject obj;
-  ASSERT_NO_FATAL_FAILURE(CreateVmoHelper(*channel, obj, kBlockSize), "");
+  ASSERT_NO_FATAL_FAILURE(CreateVmoHelper(*channel, obj, kBlockSize));
 
   // Bad request: Writing to the wrong vmoid
   block_fifo_request_t request;
@@ -555,7 +546,7 @@ TEST(BlkdevTests, blkdev_test_fifo_bad_client_vmoid) {
   request.length = 1;
   request.vmo_offset = 0;
   request.dev_offset = 0;
-  ASSERT_EQ(client->Transaction(&request, 1), ZX_ERR_IO, "Expected IO error with bad vmoid");
+  ASSERT_EQ(client.Transaction(&request, 1), ZX_ERR_IO, "Expected IO error with bad vmoid");
 
   ASSERT_EQ(fuchsia_hardware_block_BlockCloseFifo(channel->get(), &status), ZX_OK);
   ASSERT_EQ(status, ZX_OK);
@@ -576,16 +567,14 @@ TEST(BlkdevTests, blkdev_test_fifo_bad_client_unaligned_request) {
       ZX_OK);
   ASSERT_EQ(status, ZX_OK);
 
-  zx::status<block_client::Client> client = block_client::Client::Create(std::move(fifo));
-  ASSERT_TRUE(client.is_ok());
-
+  block_client::Client client(std::move(fifo));
   groupid_t group = 0;
 
   // Create a vmo of at least size "kBlockSize * 2", since we'll
   // be reading "kBlockSize" bytes from an offset below, and we want it
   // to fit within the bounds of the VMO.
   TestVmoObject obj;
-  ASSERT_NO_FATAL_FAILURE(CreateVmoHelper(*channel, obj, kBlockSize * 2), "");
+  ASSERT_NO_FATAL_FAILURE(CreateVmoHelper(*channel, obj, kBlockSize * 2));
 
   block_fifo_request_t request;
   request.group = group;
@@ -596,7 +585,7 @@ TEST(BlkdevTests, blkdev_test_fifo_bad_client_unaligned_request) {
   request.length = 0;
   request.vmo_offset = 0;
   request.dev_offset = 0;
-  ASSERT_EQ(client->Transaction(&request, 1), ZX_ERR_INVALID_ARGS, "");
+  ASSERT_EQ(client.Transaction(&request, 1), ZX_ERR_INVALID_ARGS, "");
 
   ASSERT_EQ(fuchsia_hardware_block_BlockCloseFifo(channel->get(), &status), ZX_OK);
   ASSERT_EQ(status, ZX_OK);
@@ -617,16 +606,14 @@ TEST(BlkdevTests, blkdev_test_fifo_bad_client_overflow) {
       ZX_OK);
   ASSERT_EQ(status, ZX_OK);
 
-  zx::status<block_client::Client> client = block_client::Client::Create(std::move(fifo));
-  ASSERT_TRUE(client.is_ok());
-
+  block_client::Client client(std::move(fifo));
   groupid_t group = 0;
 
   // Create a vmo of at least size "kBlockSize * 2", since we'll
   // be reading "kBlockSize" bytes from an offset below, and we want it
   // to fit within the bounds of the VMO.
   TestVmoObject obj;
-  ASSERT_NO_FATAL_FAILURE(CreateVmoHelper(*channel, obj, kBlockSize * 2), "");
+  ASSERT_NO_FATAL_FAILURE(CreateVmoHelper(*channel, obj, kBlockSize * 2));
 
   block_fifo_request_t request;
   request.group = group;
@@ -637,31 +624,31 @@ TEST(BlkdevTests, blkdev_test_fifo_bad_client_overflow) {
   request.length = 1;
   request.vmo_offset = 0;
   request.dev_offset = blk_count;
-  ASSERT_EQ(client->Transaction(&request, 1), ZX_ERR_OUT_OF_RANGE);
+  ASSERT_EQ(client.Transaction(&request, 1), ZX_ERR_OUT_OF_RANGE);
 
   // Send a request that is half out-of-bounds for the device
   request.length = 2;
   request.vmo_offset = 0;
   request.dev_offset = blk_count - 1;
-  ASSERT_EQ(client->Transaction(&request, 1), ZX_ERR_OUT_OF_RANGE);
+  ASSERT_EQ(client.Transaction(&request, 1), ZX_ERR_OUT_OF_RANGE);
 
   // Send a request that is very out-of-bounds for the device
   request.length = 1;
   request.vmo_offset = 0;
   request.dev_offset = blk_count + 1;
-  ASSERT_EQ(client->Transaction(&request, 1), ZX_ERR_OUT_OF_RANGE);
+  ASSERT_EQ(client.Transaction(&request, 1), ZX_ERR_OUT_OF_RANGE);
 
   // Send a request that tries to overflow the VMO
   request.length = 2;
   request.vmo_offset = std::numeric_limits<uint64_t>::max();
   request.dev_offset = 0;
-  ASSERT_EQ(client->Transaction(&request, 1), ZX_ERR_OUT_OF_RANGE);
+  ASSERT_EQ(client.Transaction(&request, 1), ZX_ERR_OUT_OF_RANGE);
 
   // Send a request that tries to overflow the device
   request.length = 2;
   request.vmo_offset = 0;
   request.dev_offset = std::numeric_limits<uint64_t>::max();
-  ASSERT_EQ(client->Transaction(&request, 1), ZX_ERR_OUT_OF_RANGE);
+  ASSERT_EQ(client.Transaction(&request, 1), ZX_ERR_OUT_OF_RANGE);
 
   ASSERT_EQ(fuchsia_hardware_block_BlockCloseFifo(channel->get(), &status), ZX_OK);
   ASSERT_EQ(status, ZX_OK);
@@ -682,9 +669,7 @@ TEST(BlkdevTests, blkdev_test_fifo_bad_client_bad_vmo) {
       ZX_OK);
   ASSERT_EQ(status, ZX_OK);
 
-  zx::status<block_client::Client> client = block_client::Client::Create(std::move(fifo));
-  ASSERT_TRUE(client.is_ok());
-
+  block_client::Client client(std::move(fifo));
   groupid_t group = 0;
 
   // Create a vmo of one block.
@@ -716,10 +701,10 @@ TEST(BlkdevTests, blkdev_test_fifo_bad_client_bad_vmo) {
   request.length = static_cast<uint32_t>(length);
   request.vmo_offset = 0;
   request.dev_offset = 0;
-  ASSERT_EQ(client->Transaction(&request, 1), ZX_ERR_OUT_OF_RANGE, "");
+  ASSERT_EQ(client.Transaction(&request, 1), ZX_ERR_OUT_OF_RANGE);
   // Do the same thing, but for reading
   request.opcode = BLOCKIO_READ;
-  ASSERT_EQ(client->Transaction(&request, 1), ZX_ERR_OUT_OF_RANGE, "");
+  ASSERT_EQ(client.Transaction(&request, 1), ZX_ERR_OUT_OF_RANGE);
 
   ASSERT_EQ(fuchsia_hardware_block_BlockCloseFifo(channel->get(), &status), ZX_OK);
   ASSERT_EQ(status, ZX_OK);
