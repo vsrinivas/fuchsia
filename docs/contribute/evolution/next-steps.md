@@ -203,6 +203,10 @@ The CTS project is new and coverage is fairly low. CTS is a form of defense in
 depth, so increasing coverage helps ensure that compatibility is as intended,
 even if CTS coverage never reaches 100% of the platform surface.
 
+## Further reading
+
+- [Platform evolution best practices](best-practices.md)
+
 [acts]: https://android.googlesource.com/platform/tools/test/connectivity/+/HEAD/acts
 [archiveaccessor]: https://fuchsia.dev/reference/fidl/fuchsia.diagnostics#ArchiveAccessor
 [build-info]: /docs/development/build/build_information.md
