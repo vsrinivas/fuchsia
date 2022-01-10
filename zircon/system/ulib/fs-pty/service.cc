@@ -128,6 +128,10 @@ void NullPtyDeviceImpl::Sync(SyncRequestView request, SyncCompleter::Sync& compl
   ZX_ASSERT(false);
 }
 
+void NullPtyDeviceImpl::Sync2(Sync2RequestView request, Sync2Completer::Sync& completer) {
+  ZX_ASSERT(false);
+}
+
 void NullPtyDeviceImpl::SetAttr(SetAttrRequestView request, SetAttrCompleter::Sync& completer) {
   ZX_ASSERT(false);
 }

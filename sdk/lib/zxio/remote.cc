@@ -464,8 +464,11 @@ void zxio_remote_wait_end(zxio_t* io, zx_signals_t zx_signals, zxio_signals_t* o
 
 zx_status_t zxio_remote_sync(zxio_t* io) {
   Remote rio(io);
-  auto result = fidl::WireCall(fidl::UnownedClientEnd<fio::Node>(rio.control()))->Sync();
-  return result.ok() ? result.Unwrap()->s : result.status();
+  auto result = fidl::WireCall(fidl::UnownedClientEnd<fio::Node>(rio.control()))->Sync2();
+  if (result.status() != ZX_OK) {
+    return result.status();
+  }
+  return result->result.is_err() ? result->result.err() : ZX_OK;
 }
 
 template <typename ToZxioAbilities>

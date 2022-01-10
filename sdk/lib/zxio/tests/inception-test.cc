@@ -162,8 +162,8 @@ TEST(CreateWithInfo, Device) {
 namespace {
 
 class TestDirectoryServer final : public zxio_tests::TestDirectoryServerBase {
-  void Sync(SyncRequestView request, SyncCompleter::Sync& completer) final {
-    completer.Reply(ZX_OK);
+  void Sync2(Sync2RequestView request, Sync2Completer::Sync& completer) final {
+    completer.ReplySuccess();
   }
 };
 

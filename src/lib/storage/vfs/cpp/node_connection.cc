@@ -89,9 +89,9 @@ void NodeConnection::Sync(SyncRequestView request, SyncCompleter::Sync& complete
 void NodeConnection::Sync2(Sync2RequestView request, Sync2Completer::Sync& completer) {
   Connection::NodeSync([completer = completer.ToAsync()](zx_status_t sync_status) mutable {
     if (sync_status != ZX_OK) {
-      completer.Reply(fio::wire::NodeSync2Result::WithErr(sync_status));
+      completer.ReplyError(sync_status);
     } else {
-      completer.Reply({});
+      completer.ReplySuccess();
     }
   });
 }

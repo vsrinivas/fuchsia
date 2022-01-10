@@ -100,6 +100,7 @@ class MockBlockDevice {
     void Close2(Close2RequestView request, Close2Completer::Sync& completer) override {}
     void Describe(DescribeRequestView request, DescribeCompleter::Sync& completer) override {}
     void Sync(SyncRequestView request, SyncCompleter::Sync& completer) override {}
+    void Sync2(Sync2RequestView request, Sync2Completer::Sync& completer) override {}
     void GetAttr(GetAttrRequestView request, GetAttrCompleter::Sync& completer) override {}
     void SetAttr(SetAttrRequestView request, SetAttrCompleter::Sync& completer) override {}
     void QueryFilesystem(QueryFilesystemRequestView request,
