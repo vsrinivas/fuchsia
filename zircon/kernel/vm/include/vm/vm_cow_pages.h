@@ -761,8 +761,7 @@ class VmCowPages final
   // pages are clean and need to transition to dirty, in which case ZX_ERR_SHOULD_WAIT will be
   // returned and the caller should wait on |page_request|. If no page requests need to be
   // generated, i.e. the pages are already dirty, or if they do not require the dirty transition to
-  // be trapped, ZX_OK is returned. |offset| and |len| should be page-aligned, and pages in the
-  // range should be committed.
+  // be trapped, ZX_OK is returned. |offset| and |len| should be page-aligned.
   zx_status_t PrepareForWriteLocked(LazyPageRequest* page_request, uint64_t offset, uint64_t len)
       TA_REQ(lock_);
 

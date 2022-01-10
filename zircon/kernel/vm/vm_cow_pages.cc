@@ -1633,39 +1633,42 @@ zx_status_t VmCowPages::PrepareForWriteLocked(LazyPageRequest* page_request, uin
   }
 
   // Otherwise, generate a DIRTY page request for pages in the range which need to transition to
-  // Dirty. Find a contiguous run of committed non-Dirty pages. For the purpose of generating DIRTY
-  // requests, both Clean and AwaitingClean pages are considered equivalent. This is because pages
-  // that are in AwaitingClean will need another acknowledgment from the user pager before they can
-  // be made Dirty (the filesystem might need to reserve additional space for them etc.).
-  //
-  // The caller is expected to only pass in a committed range with no gaps or markers.
+  // Dirty. Find a contiguous run of non-Dirty pages (committed pages as well as zero page markers).
+  // For the purpose of generating DIRTY requests, both Clean and AwaitingClean pages are considered
+  // equivalent. This is because pages that are in AwaitingClean will need another acknowledgment
+  // from the user pager before they can be made Dirty (the filesystem might need to reserve
+  // additional space for them etc.).
   uint64_t pages_to_dirty_start = offset;
   uint64_t pages_to_dirty_len = 0;
   zx_status_t status = page_list_.ForEveryPageAndGapInRange(
       [&pages_to_dirty_start, &pages_to_dirty_len](const VmPageOrMarker* p, uint64_t off) {
-        if (p->IsMarker()) {
-          return ZX_ERR_BAD_STATE;
-        }
-        DEBUG_ASSERT(is_page_dirty_tracked(p->Page()));
-        // Page is already dirty.
-        if (is_page_dirty(p->Page())) {
-          // Bail if we were tracking a non-zero run of pages to be dirtied.
-          if (pages_to_dirty_len > 0) {
-            return ZX_ERR_STOP;
-          } else {
-            // Otherwise advance pages_to_dirty_start to track a potential run later.
-            pages_to_dirty_start = off + PAGE_SIZE;
-            return ZX_ERR_NEXT;
+        if (p->IsPage()) {
+          DEBUG_ASSERT(is_page_dirty_tracked(p->Page()));
+          // Page is already dirty.
+          if (is_page_dirty(p->Page())) {
+            // Bail if we were tracking a non-zero run of pages to be dirtied.
+            if (pages_to_dirty_len > 0) {
+              return ZX_ERR_STOP;
+            } else {
+              // Otherwise advance pages_to_dirty_start to track a potential run later.
+              pages_to_dirty_start = off + PAGE_SIZE;
+              return ZX_ERR_NEXT;
+            }
           }
         }
-        // This is a committed page which is not already Dirty. Increment pages_to_dirty_len.
+        // This is a either a zero page marker (which represents a clean zero page) or a committed
+        // page which is not already Dirty. Increment pages_to_dirty_len.
         pages_to_dirty_len += PAGE_SIZE;
         return ZX_ERR_NEXT;
       },
-      [](uint64_t start, uint64_t end) { return ZX_ERR_BAD_STATE; }, offset, offset + len);
-  // No gaps and markers were encountered.
-  // TODO(rashaeqbal): Consider relaxing this restriction. Currently this assumption works as we can
-  // only come in here after collecting committed pages in LookupPagesLocked.
+      [](uint64_t start, uint64_t end) {
+        // We found a gap. End the traversal.
+        return ZX_ERR_STOP;
+      },
+      offset, offset + len);
+
+  // We don't expect an error from the traversal above. If an already dirty page or a gap is
+  // encountered, we will simply terminate early.
   ASSERT(status == ZX_OK);
 
   // No pages need to transition to Dirty.
@@ -1803,6 +1806,30 @@ zx_status_t VmCowPages::LookupPagesLocked(uint64_t offset, uint pf_flags,
     vm_page_t* p = page_or_mark->Page();
     UpdateOnAccessLocked(p, pf_flags);
 
+    // If we're writing to a root VMO backed by a user pager, i.e. a VMO whose page source preserves
+    // page contents, we might need to mark pages Dirty so that they can be written back later. This
+    // is the only path that can result in a write to such a page; if the page was not present, we
+    // would have already blocked on a read request the first time, and ended up here when
+    // unblocked, at which point the page would be present.
+    if ((pf_flags & VMM_PF_FLAG_WRITE) && is_source_preserving_page_content_locked() &&
+        mark_dirty == DirtyTrackingAction::DirtyAllPagesOnWrite) {
+      // Pass in max_out_pages for the requested length. If the VMO traps dirty transitions, this
+      // will allow extending the DIRTY request to also include other consecutive markers /
+      // non-dirty pages in the entire lookup range. This is an optimization to reduce the number of
+      // DIRTY page requests generated overall.
+      //
+      // Note that in the case where dirty transitions are not trapped and pages are directly marked
+      // dirty, this will not mark any extra pages dirty beyond out->num_pages, since we will stop
+      // at a marker or a gap, similar to how out->num_pages is updated by collect_pages below.
+      // TODO(rashaeqbal): Add an assert to verify this.
+      zx_status_t status = PrepareForWriteLocked(page_request, offset, max_out_pages * PAGE_SIZE);
+      if (status != ZX_OK) {
+        // No pages to return.
+        out->num_pages = 0;
+        return status;
+      }
+    }
+
     // This is writable if either of these conditions is true:
     // 1) This is a write fault.
     // 2) This is a read fault and we do not need to do dirty tracking, i.e. it is fine to retain
@@ -1816,20 +1843,6 @@ zx_status_t VmCowPages::LookupPagesLocked(uint64_t offset, uint pf_flags,
       collect_pages(this, offset + PAGE_SIZE, (max_out_pages - 1) * PAGE_SIZE);
     }
 
-    // If we're writing to a root VMO backed by a user pager, i.e. a VMO whose page source preserves
-    // page contents, we might need to mark pages Dirty so that they can be written back later. This
-    // is the only path that can result in a write to such a page; if the page was not present, we
-    // would have already blocked on a read request the first time, and ended up here when
-    // unblocked, at which point the page would be present.
-    if ((pf_flags & VMM_PF_FLAG_WRITE) && is_source_preserving_page_content_locked() &&
-        mark_dirty == DirtyTrackingAction::DirtyAllPagesOnWrite) {
-      zx_status_t status = PrepareForWriteLocked(page_request, offset, out->num_pages * PAGE_SIZE);
-      if (status != ZX_OK) {
-        // No pages to return.
-        out->num_pages = 0;
-        return status;
-      }
-    }
     return ZX_OK;
   }
 
@@ -1959,11 +1972,13 @@ zx_status_t VmCowPages::LookupPagesLocked(uint64_t offset, uint pf_flags,
       DEBUG_ASSERT(p == vm_get_zero_page());
       // This object directly owns the page.
       DEBUG_ASSERT(page_owner == this);
-      AssertHeld(paged_ref_->lock_ref());
-      VmoDebugInfo vmo_debug_info = {.vmo_ptr = reinterpret_cast<uintptr_t>(paged_ref_),
-                                     .vmo_id = paged_ref_->user_id_locked()};
-      zx_status_t status = page_source_->RequestDirtyTransition(page_request->get(), offset,
-                                                                PAGE_SIZE, vmo_debug_info);
+
+      // When generating the DIRTY request, try to extend the range beyond the immediate page, to
+      // include other non-dirty pages and markers within the requested range. This is an
+      // optimization aimed at reducing the number of distinct calls to LookupPagesLocked, and hence
+      // the number of distinct DIRTY page requests generated for consecutive pages that need DIRTY
+      // requests.
+      zx_status_t status = PrepareForWriteLocked(page_request, offset, max_out_pages * PAGE_SIZE);
       // The page source will never succeed synchronously.
       DEBUG_ASSERT(status != ZX_OK);
       // No pages to return yet.

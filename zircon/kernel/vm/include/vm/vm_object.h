@@ -565,15 +565,17 @@ class VmObject : public VmHierarchyBase,
   // |LookupInfo| output struct. The |max_out_pages| is required to be strictly greater than 0, but
   // not greater than LookupInfo::kMaxPages. |mark_dirty| specifies whether pages looked up should
   // be marked dirty, e.g. when called from a zx_vmo_write or a write fault.
-  // Collecting additional pages essentially treat the VMO as immutable, and will not perform write
-  // forking or perform any kinds of allocations. This ensures the VMO behaves functionally
-  // identically regardless of how many extra pages are ever asked for. Further returning additional
-  // pages is strictly optional and the caller may not infer anything based on absence of these
-  // pages.
-  // For any additional pages that are returned, it is guaranteed that GetPage would have returned
-  // exactly the same page.
-  // The additional lookups treating the VMO immutable makes this suitable for performing optimistic
-  // lookups without impacting memory usage.
+  //
+  // Collecting additional pages essentially treats the VMO's content as immutable, and will not
+  // perform page write forking or any page allocations, but may update page tracking metadata. For
+  // example, if a lookup is requested for a multi-page range with the write flag set, looked up
+  // pages in the range may be marked dirty in preparation for the write.
+  //
+  // However returning additional pages is strictly optional and the caller may not infer anything
+  // based on absence of these pages. That is, for any additional pages that are returned, it is
+  // guaranteed that GetPage would have returned exactly the same page. The additional lookups
+  // treating the VMO immutable makes this suitable for performing optimistic lookups without
+  // impacting memory usage.
   virtual zx_status_t LookupPagesLocked(uint64_t offset, uint pf_flags,
                                         DirtyTrackingAction mark_dirty, uint64_t max_out_pages,
                                         list_node* alloc_list, LazyPageRequest* page_request,

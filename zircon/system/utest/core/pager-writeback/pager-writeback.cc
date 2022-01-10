@@ -930,6 +930,117 @@ TEST(PagerWriteback, FailDirtyRequestsForZeroPages) {
   ASSERT_TRUE(pager.VerifyDirtyRanges(vmo, nullptr, 0));
 }
 
+// Tests that DIRTY requests are generated for ranges including zero pages as expected.
+TEST(PagerWriteback, DirtyRequestsForZeroRanges) {
+  UserPager pager;
+  ASSERT_TRUE(pager.Init());
+
+  Vmo* vmo;
+  constexpr uint64_t kNumPages = 10;
+  ASSERT_TRUE(pager.CreateVmoWithOptions(kNumPages, ZX_VMO_TRAP_DIRTY, &vmo));
+
+  // Buffer to verify VMO contents later.
+  std::vector<uint8_t> expected(kNumPages * zx_system_get_page_size(), 0);
+
+  // Empty source vmo to supply with zero pages.
+  zx::vmo vmo_src;
+  ASSERT_OK(zx::vmo::create(zx_system_get_page_size(), 0, &vmo_src));
+
+  // Supply zero page markers for pages 0 and 1.
+  ASSERT_OK(pager.pager().supply_pages(vmo->vmo(), 0, zx_system_get_page_size(), vmo_src, 0));
+  ASSERT_OK(pager.pager().supply_pages(vmo->vmo(), zx_system_get_page_size(),
+                                       zx_system_get_page_size(), vmo_src, 0));
+
+  // Attempt to write to the range [0, 2).
+  TestThread t1([vmo, &expected]() -> bool {
+    std::vector<uint8_t> data(2 * zx_system_get_page_size(), 0xaa);
+    memset(expected.data(), 0xaa, 2 * zx_system_get_page_size());
+    return vmo->vmo().write(data.data(), 0, 2 * zx_system_get_page_size()) == ZX_OK;
+  });
+
+  ASSERT_TRUE(t1.Start());
+  ASSERT_TRUE(t1.WaitForBlocked());
+
+  // We should see a dirty request for the range [0, 2). Verifies that the range is extended to
+  // include another marker.
+  ASSERT_TRUE(pager.WaitForPageDirty(vmo, 0, 2, ZX_TIME_INFINITE));
+  ASSERT_TRUE(pager.DirtyPages(vmo, 0, 2));
+  ASSERT_TRUE(t1.Wait());
+
+  // Verify dirty pages.
+  zx_vmo_dirty_range_t range = {.offset = 0, .length = 2};
+  ASSERT_TRUE(pager.VerifyDirtyRanges(vmo, &range, 1));
+  ASSERT_TRUE(check_buffer_data(vmo, 0, 2, expected.data(), true));
+
+  // Supply a zero marker for page 2 and a non-zero page for page 3.
+  ASSERT_OK(pager.pager().supply_pages(vmo->vmo(), 2 * zx_system_get_page_size(),
+                                       zx_system_get_page_size(), vmo_src, 0));
+  ASSERT_TRUE(pager.SupplyPages(vmo, 3, 1));
+
+  // Attempt to write to the range [2, 4).
+  TestThread t2([vmo, &expected]() -> bool {
+    std::vector<uint8_t> data(2 * zx_system_get_page_size(), 0xbb);
+    memset(expected.data() + 2 * zx_system_get_page_size(), 0xbb, 2 * zx_system_get_page_size());
+    return vmo->vmo().write(data.data(), 2 * zx_system_get_page_size(),
+                            2 * zx_system_get_page_size()) == ZX_OK;
+  });
+
+  ASSERT_TRUE(t2.Start());
+  ASSERT_TRUE(t2.WaitForBlocked());
+
+  // We should see a dirty request for the range [2, 4). Verifies that the range is extended to
+  // include a non-zero clean page.
+  ASSERT_TRUE(pager.WaitForPageDirty(vmo, 2, 2, ZX_TIME_INFINITE));
+  ASSERT_TRUE(pager.DirtyPages(vmo, 2, 2));
+  ASSERT_TRUE(t2.Wait());
+
+  // Verify dirty pages.
+  range = {.offset = 0, .length = 4};
+  ASSERT_TRUE(pager.VerifyDirtyRanges(vmo, &range, 1));
+  ASSERT_TRUE(check_buffer_data(vmo, 0, 4, expected.data(), true));
+
+  // For the rest of the pages, supply a mix of zero and non-zero pages, leaving a gap at the end.
+  for (uint64_t i = 4; i < kNumPages - 1; i++) {
+    if (rand() % 2) {
+      ASSERT_TRUE(pager.SupplyPages(vmo, i, 1));
+    } else {
+      ASSERT_OK(pager.pager().supply_pages(vmo->vmo(), i * zx_system_get_page_size(),
+                                           zx_system_get_page_size(), vmo_src, 0));
+    }
+  }
+
+  // Attempt to write to the range [4, 10).
+  TestThread t3([vmo, &expected]() -> bool {
+    size_t len = kNumPages - 4;
+    std::vector<uint8_t> data(len * zx_system_get_page_size(), 0xcc);
+    memset(expected.data() + 4 * zx_system_get_page_size(), 0xcc, len * zx_system_get_page_size());
+    return vmo->vmo().write(data.data(), 4 * zx_system_get_page_size(),
+                            len * zx_system_get_page_size()) == ZX_OK;
+  });
+
+  ASSERT_TRUE(t3.Start());
+  ASSERT_TRUE(t3.WaitForBlocked());
+
+  // We should see a dirty request for pages [4, 9). Verifies that zero and non-zero clean pages get
+  // picked up in a single range, and that the range stops before a gap.
+  ASSERT_TRUE(pager.WaitForPageDirty(vmo, 4, 5, ZX_TIME_INFINITE));
+  ASSERT_TRUE(pager.DirtyPages(vmo, 4, 5));
+  ASSERT_TRUE(t3.WaitForBlocked());
+
+  // We should now see a read request followed by a dirty request for the last gap.
+  ASSERT_TRUE(pager.WaitForPageRead(vmo, 9, 1, ZX_TIME_INFINITE));
+  ASSERT_TRUE(pager.SupplyPages(vmo, 9, 1));
+  ASSERT_TRUE(t3.WaitForBlocked());
+  ASSERT_TRUE(pager.WaitForPageDirty(vmo, 9, 1, ZX_TIME_INFINITE));
+  ASSERT_TRUE(pager.DirtyPages(vmo, 9, 1));
+  ASSERT_TRUE(t3.Wait());
+
+  // Verify dirty pages.
+  range = {.offset = 0, .length = kNumPages};
+  ASSERT_TRUE(pager.VerifyDirtyRanges(vmo, &range, 1));
+  ASSERT_TRUE(check_buffer_data(vmo, 0, kNumPages, expected.data(), true));
+}
+
 // Tests that no DIRTY requests are generated on a commit.
 TEST(PagerWriteback, NoDirtyRequestsOnCommit) {
   UserPager pager;
