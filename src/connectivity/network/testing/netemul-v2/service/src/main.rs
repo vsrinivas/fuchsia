@@ -567,10 +567,19 @@ impl ManagedRealm {
                                         .clone()
                                         .serve_device(channel.into_zx_channel())
                                         .unwrap_or_else(|e| {
-                                            error!(
+                                            // PEER_CLOSED errors are expected
+                                            // to happen during test teardown.
+                                            let level = if e.is_closed() {
+                                                log::Level::Warn
+                                            } else {
+                                                log::Level::Error
+                                            };
+                                            log::log!(
+                                                level,
                                                 "failed to serve device on path {}: {}",
-                                                path_clone, e
-                                            )
+                                                path_clone,
+                                                e
+                                            );
                                         });
                                 },
                             ),
