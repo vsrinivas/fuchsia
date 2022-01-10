@@ -18,37 +18,44 @@ type Generator struct {
 	formatter Formatter
 }
 
-func NewGenerator(name string, templates fs.FS, formatter Formatter, funcs template.FuncMap) *Generator {
+// NewGenerator creates a new fidlgen Generator, given a name, a system of Go
+// .tmpl files dictating the generation (likely deriving from a go:embed
+// directive), a formatter for the generated source, and a template function map.
+func NewGenerator(name string, tmplFS fs.FS, formatter Formatter, funcs template.FuncMap) *Generator {
 	gen := &Generator{
 		template.New(name),
 		formatter,
 	}
 	gen.tmpls.Funcs(funcs)
 
-	if hasDir(templates) {
-		template.Must(gen.tmpls.ParseFS(templates, "*.tmpl", "*/*.tmpl"))
-	} else {
-		template.Must(gen.tmpls.ParseFS(templates, "*.tmpl"))
+	// The text/template package does not make it easy for us to populate the
+	// template parse tree from our abstracted filesystem. In order to do this,
+	// we must manually walk the filesystem ourselves to pick out the .tmpl
+	// files, and then pass those along to template.ParseFS() as exact globs.
+	files, err := listTemplateFiles(tmplFS)
+	if err != nil {
+		panic(err)
 	}
+	template.Must(gen.tmpls.ParseFS(tmplFS, files...))
 
 	return gen
 }
 
-func hasDir(r fs.FS) bool {
-	matches, err := fs.Glob(r, "*")
-	if err != nil {
-		panic(err)
-	}
-	for _, match := range matches {
-		info, err := fs.Stat(r, match)
+func listTemplateFiles(tmplFS fs.FS) ([]string, error) {
+	var tmpls []string
+	err := fs.WalkDir(tmplFS, ".", func(path string, _ fs.DirEntry, err error) error {
 		if err != nil {
-			panic(err)
+			return nil
 		}
-		if info.IsDir() {
-			return true
+		if filepath.Ext(path) == ".tmpl" {
+			tmpls = append(tmpls, path)
 		}
+		return nil
+	})
+	if err != nil {
+		return nil, err
 	}
-	return false
+	return tmpls, nil
 }
 
 func (gen *Generator) ExecuteTemplate(tmpl string, data interface{}) ([]byte, error) {
