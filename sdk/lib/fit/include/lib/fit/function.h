@@ -6,6 +6,7 @@
 #define LIB_FIT_INCLUDE_LIB_FIT_FUNCTION_H_
 
 #include "function_internal.h"
+#include "traits.h"
 #include "utility_internal.h"
 
 namespace fit {
@@ -496,6 +497,17 @@ auto bind_member(T* instance, R (T::*fn)(Args...)) {
 
 // C++17 due to use of 'auto' template parameters and lambda parameters.
 #if __cplusplus >= 201703L
+namespace internal {
+// Performs the call for bind_member but captures the arguments of the method.
+// This ensure that the correct overload of |method| is called.
+template <auto method, typename T, typename... Args>
+auto make_the_call(T* instance, parameter_pack<Args...>) {
+  return [instance](Args... args) {
+    return (instance->*method)(std::forward<decltype(args)>(args)...);
+  };
+}
+}  // namespace internal
+
 // Returns a Callable object that invokes a member function of an object.
 // In other words, returns a closure 'f' for which calling f(args) is equivalent to
 // calling obj.method(args).
@@ -503,9 +515,8 @@ auto bind_member(T* instance, R (T::*fn)(Args...)) {
 // Usage: fit::bind_member<&ObjType::MethodName>(&obj)
 template <auto method, typename T>
 auto bind_member(T* instance) {
-  return [instance](auto... args) {
-    return (instance->*method)(std::forward<decltype(args)>(args)...);
-  };
+  return internal::make_the_call<method>(instance,
+                                         typename callable_traits<decltype(method)>::args{});
 }
 #endif  //  __cplusplus >= 201703L
 

@@ -716,8 +716,10 @@ TEST(FunctionTests, bind_member) {
   EXPECT_EQ(23, fit::bind_member<&Obj::AddOne>(&obj)(22));
   EXPECT_EQ(6, fit::bind_member<&Obj::Sum>(&obj)(1, 2, 3));
   move_only_value = fit::bind_member<&Obj::AddAndReturn>(&obj)(std::move(move_only_value));
+  fit::function<int(int, int, int)> f(fit::bind_member<&Obj::Sum>(&obj));
+  EXPECT_EQ(6, f(1, 2, 3));
   EXPECT_EQ(5, *move_only_value);
-  EXPECT_EQ(3, obj.calls);
+  EXPECT_EQ(4, obj.calls);
 }
 
 TEST(FunctionTests, callback_once) {
