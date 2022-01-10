@@ -1877,7 +1877,7 @@ only useful on Chrome OS.
 
 **Current value (from the default):** `false`
 
-From [//third_party/icu/config.gni:12](https://chromium.googlesource.com/chromium/deps/icu/+/ece15d049f2d360721716089372e3749fb89e0f4/config.gni#12)
+From //third_party/icu/config.gni:12
 
 ### icu_major_version_number
 Contains the major version number of the ICU library, for dependencies that
@@ -1886,7 +1886,7 @@ is only useful in Fuchsia.
 
 **Current value (from the default):** `"69"`
 
-From [//third_party/icu/version.gni:9](https://chromium.googlesource.com/chromium/deps/icu/+/ece15d049f2d360721716089372e3749fb89e0f4/version.gni#9)
+From //third_party/icu/version.gni:9
 
 ### icu_use_data_file
 Tells icu to load an external data file rather than rely on the icudata
@@ -1894,7 +1894,7 @@ being linked directly into the binary.
 
 **Current value (from the default):** `true`
 
-From [//third_party/icu/config.gni:8](https://chromium.googlesource.com/chromium/deps/icu/+/ece15d049f2d360721716089372e3749fb89e0f4/config.gni#8)
+From //third_party/icu/config.gni:8
 
 ### include_account_in_fvm
 Include an account partition in the FVM image if set to true.
@@ -2070,32 +2070,23 @@ Extra macro definitions for kernel code, e.g. "DISABLE_KASLR",
 
 From //zircon/kernel/params.gni:73
 
-### kernel_version_git_checkout
-By default the kernel version string is generated based on the full git
-revision found by `git rev-parse HEAD` in this checkout directory.
-
-**Current value (from the default):** `"//zircon/.."`
-
-From //zircon/kernel/lib/version/BUILD.gn:20
-
 ### kernel_version_git_dirty_check
-If this is true, then the kernel version string generated based on
-`kernel_version_git_checkout` also adds a "-dirty" suffix if any files in
-the checkout are modified from what's committed in git.
+If this is true, then the generated kernel version string also adds a
+"-dirty" suffix if any files in the checkout are modified from what's
+committed in git.
 
 **Current value (from the default):** `true`
 
-From //zircon/kernel/lib/version/BUILD.gn:25
+From //zircon/kernel/lib/version/BUILD.gn:20
 
 ### kernel_version_string
 Version string embedded in the kernel for `zx_system_get_version_string`.
 If set to the default "", a string is generated based on the
-`kernel_version_git_checkout` and `kernel_version_git_dirty_check`
-settings, which see.
+commit hash of git HEAD and the value of `kernel_version_git_dirty_check`.
 
 **Current value (from the default):** `""`
 
-From //zircon/kernel/lib/version/BUILD.gn:16
+From //zircon/kernel/lib/version/BUILD.gn:15
 
 ### known_variants
 List of variants that will form the basis for variant toolchains.
@@ -2520,13 +2511,13 @@ From //build/images/fvm.gni:64
 
 **Current value (from the default):** `false`
 
-From [//third_party/mini_chromium/build/platform.gni:31](https://chromium.googlesource.com/chromium/mini_chromium/+/bbb68fcec19ff7c268fadeebd2ef79f7203fa2f2/build/platform.gni#31)
+From //third_party/mini_chromium/build/platform.gni:31
 
 ### mini_chromium_is_chromeos_lacros
 
 **Current value (from the default):** `false`
 
-From [//third_party/mini_chromium/build/platform.gni:30](https://chromium.googlesource.com/chromium/mini_chromium/+/bbb68fcec19ff7c268fadeebd2ef79f7203fa2f2/build/platform.gni#30)
+From //third_party/mini_chromium/build/platform.gni:30
 
 ### msd_arm_enable_all_cores
 Enable all 8 cores, which is faster but emits more heat.
