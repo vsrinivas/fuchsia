@@ -32,7 +32,7 @@
   <string name="element_checked">Aangevinkt</string>
   <string name="element_not_checked">Uitgevinkt</string>
   <string name="element_partially_checked">Gedeeltelijk aangevinkt</string>
-  <string name="element_disabled">Uitgeschakeld</string>
+  <string name="element_disabled">Uit</string>
   <string name="element_expanded">Uitgevouwen</string>
   <string name="element_collapsed">Samengevouwen</string>
   <string name="heading_level_1">Kop 1</string>
