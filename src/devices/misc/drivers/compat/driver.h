@@ -22,7 +22,7 @@ class Driver {
   Driver(async_dispatcher_t* dispatcher,
          fidl::WireSharedClient<fuchsia_driver_framework::Node> node, driver::Namespace ns,
          driver::Logger logger, std::string_view url, std::string_view name, void* context,
-         const zx_protocol_device_t* ops, std::optional<Device*> parent);
+         const zx_protocol_device_t* ops, std::optional<Device*> linked_device);
   ~Driver();
 
   zx_driver_t* ZxDriver();

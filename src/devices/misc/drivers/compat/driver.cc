@@ -51,14 +51,14 @@ namespace compat {
 Driver::Driver(async_dispatcher_t* dispatcher, fidl::WireSharedClient<fdf::Node> node,
                driver::Namespace ns, driver::Logger logger, std::string_view url,
                std::string_view name, void* context, const zx_protocol_device_t* ops,
-               std::optional<Device*> parent)
+               std::optional<Device*> linked_device)
     : dispatcher_(dispatcher),
       executor_(dispatcher),
       outgoing_(dispatcher),
       ns_(std::move(ns)),
       logger_(std::move(logger)),
       url_(url),
-      device_(name, context, ops, parent, inner_logger_, dispatcher) {
+      device_(name, context, ops, linked_device, inner_logger_, dispatcher) {
   device_.Bind(std::move(node));
 }
 

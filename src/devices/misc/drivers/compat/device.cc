@@ -41,14 +41,14 @@ bool HasOp(const zx_protocol_device_t* ops, T member) {
 namespace compat {
 
 Device::Device(std::string_view name, void* context, const zx_protocol_device_t* ops,
-               std::optional<Device*> parent, driver::Logger& logger,
+               std::optional<Device*> linked_device, driver::Logger& logger,
                async_dispatcher_t* dispatcher)
     : name_(name),
       context_(context),
       ops_(ops),
       logger_(logger),
       dispatcher_(dispatcher),
-      parent_(parent ? **parent : *this) {}
+      linked_device_(linked_device ? **linked_device : *this) {}
 
 zx_device_t* Device::ZxDevice() { return static_cast<zx_device_t*>(this); }
 
@@ -191,8 +191,8 @@ zx_status_t Device::AddMetadata(uint32_t type, const void* data, size_t size) {
 }
 
 zx_status_t Device::GetMetadata(uint32_t type, void* buf, size_t buflen, size_t* actual) {
-  auto it = parent_.metadata_.find(type);
-  if (it == parent_.metadata_.end()) {
+  auto it = linked_device_.metadata_.find(type);
+  if (it == linked_device_.metadata_.end()) {
     FDF_LOG(WARNING, "Metadata %#x for device '%s' not found", type, Name());
     return ZX_ERR_NOT_FOUND;
   }
@@ -207,8 +207,8 @@ zx_status_t Device::GetMetadata(uint32_t type, void* buf, size_t buflen, size_t*
 }
 
 zx_status_t Device::GetMetadataSize(uint32_t type, size_t* out_size) {
-  auto it = parent_.metadata_.find(type);
-  if (it == parent_.metadata_.end()) {
+  auto it = linked_device_.metadata_.find(type);
+  if (it == linked_device_.metadata_.end()) {
     FDF_LOG(WARNING, "Metadata %#x for device '%s' not found", type, Name());
     return ZX_ERR_NOT_FOUND;
   }

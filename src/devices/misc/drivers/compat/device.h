@@ -21,7 +21,8 @@ namespace compat {
 class Device {
  public:
   Device(std::string_view name, void* context, const zx_protocol_device_t* ops,
-         std::optional<Device*> parent, driver::Logger& logger, async_dispatcher_t* dispatcher);
+         std::optional<Device*> linked_device, driver::Logger& logger,
+         async_dispatcher_t* dispatcher);
 
   zx_device_t* ZxDevice();
 
@@ -53,9 +54,9 @@ class Device {
   driver::Logger& logger_;
   async_dispatcher_t* const dispatcher_;
 
-  // Used to link two instances of the same device together, or otherwise to
-  // operate on the owned node.
-  Device& parent_;
+  // Used to link two instances of the same device together.
+  // If the device is not linked with anything, this will point to `this`.
+  Device& linked_device_;
 
   fidl::WireSharedClient<fuchsia_driver_framework::Node> node_;
   fidl::WireSharedClient<fuchsia_driver_framework::NodeController> controller_;
