@@ -38,7 +38,7 @@ static void CheckUrl(const std::string& url) {
     fprintf(stderr,
             "\"%s\" is a Components v2 URL. `run` only supports v1 "
             "components. See: "
-            "https://fuchsia.dev/fuchsia-src/glossary#components-v2\n",
+            "https://fuchsia.dev/fuchsia-src/development/components/run\n",
             url.c_str());
     zx_process_exit(1);
   } else {
