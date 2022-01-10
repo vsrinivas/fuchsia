@@ -14,6 +14,13 @@
 
 namespace crypto {
 
+// The minimum amount of entropy (in bytes) that a generator requires before
+// safely drawing from it.
+static constexpr uint64_t kMinEntropyBytes = 32;
+
+// Maximum allowed size for any collected entropy to be added into the pool.
+static constexpr uint64_t kMaxEntropySize = 1ull << 30;
+
 // Represents a collection of entropy from multiple sources.
 struct EntropyPool {
  public:
@@ -32,6 +39,10 @@ struct EntropyPool {
 
   // Adds |entropy| into the |pool|, collecting |entropy.size()| bits of entropy.
   void Add(ktl::span<const uint8_t> entropy);
+
+  // Adds the entropy of the digested |source| to the pool.
+  // Returns the size in bytes of the digest of |source|.
+  size_t AddFromDigest(ktl::span<const uint8_t> source);
 
   // Creates a copy of the current state of |EntropyPool|.
   EntropyPool Clone() const {

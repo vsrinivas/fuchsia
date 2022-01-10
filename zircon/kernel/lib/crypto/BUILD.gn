@@ -6,16 +6,20 @@
 
 import("//build/zircon/migrated_targets.gni")
 
+config("includes") {
+  include_dirs = [ "include" ]
+}
+
 source_set("crypto-entropy-src") {
   sources = [ "entropy_pool.cc" ]
   public = [ "include/lib/crypto/entropy_pool.h" ]
-  include_dirs = [ "include" ]
   public_deps = [ "//zircon/kernel/lib/ktl" ]
   deps = [
     "boringssl",
     "//zircon/kernel/lib/libc",
     "//zircon/system/ulib/explicit-memory",
   ]
+  public_configs = [ ":includes" ]
 }
 
 source_set("crypto-entropy-test") {

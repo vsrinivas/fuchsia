@@ -7,8 +7,8 @@
 #include <lib/crypto/entropy_pool.h>
 #include <lib/unittest/unittest.h>
 
-#include "ktl/array.h"
-#include "ktl/type_traits.h"
+#include <ktl/array.h>
+#include <ktl/type_traits.h>
 
 namespace {
 
@@ -33,6 +33,47 @@ bool AddEntropyUpdatesThePool() {
 
   pool.Add(entropy);
   EXPECT_FALSE(memcmp(pool.contents().data(), zeroed_contents.data(), zeroed_contents.size()) == 0);
+
+  END_TEST;
+}
+
+bool AddEntropyFromDigestUpdatesThePool() {
+  BEGIN_TEST;
+  EntropyPool pool;
+  EntropyPool eq_pool;
+  ktl::array<uint8_t, pool.contents().size()> zeroed_contents = {0};
+
+  ktl::array<uint8_t, 15> source = {1, 2, 3, 4, 5, 6, 7, 8};
+  ASSERT_TRUE(memcmp(pool.contents().data(), zeroed_contents.data(), zeroed_contents.size()) == 0);
+
+  pool.AddFromDigest(source);
+  eq_pool.AddFromDigest(source);
+  EXPECT_FALSE(memcmp(pool.contents().data(), zeroed_contents.data(), zeroed_contents.size()) == 0);
+  EXPECT_TRUE(
+      memcmp(pool.contents().data(), eq_pool.contents().data(), eq_pool.contents().size()) == 0);
+
+  END_TEST;
+}
+
+bool AddEntropyFromDifferentDigests() {
+  BEGIN_TEST;
+  EntropyPool pool;
+  EntropyPool pool_2;
+  EntropyPool pool_3;
+  EntropyPool pool_4;
+
+  ktl::array<uint8_t, 15> source = {1, 2, 3, 4, 5, 6, 7, 8};
+  ktl::array<uint8_t, 15> source_2 = {2, 3, 4, 5, 6, 7, 8};
+
+  pool.AddFromDigest(source);
+  pool_2.AddFromDigest(source_2);
+  EXPECT_TRUE(memcmp(pool.contents().data(), pool_2.contents().data(), pool_2.contents().size()) !=
+              0);
+
+  pool_3.AddFromDigest(ktl::span(source).subspan(0, 4));
+  pool_4.AddFromDigest(ktl::span(source).subspan(0, 5));
+  EXPECT_TRUE(
+      memcmp(pool_3.contents().data(), pool_4.contents().data(), pool_4.contents().size()) != 0);
 
   END_TEST;
 }
@@ -97,6 +138,9 @@ UNITTEST_START_TESTCASE(crypto_entropy_pool_tests)
 UNITTEST("Default Constructor is has zeroed contents.", DefaultConstructorIsZeroed)
 UNITTEST("Clone generates copy.", CloneCreatesCopy)
 UNITTEST("AddEntropy update contents.", AddEntropyUpdatesThePool)
+UNITTEST("AddEntropyFromDigest update contents.", AddEntropyFromDigestUpdatesThePool)
+UNITTEST("AddEntropyFromDifferentDigests generates different contents.",
+         AddEntropyFromDifferentDigests)
 UNITTEST("Move shreds contents.", DestructorCleansUpContents)
 UNITTEST("Destructor shreds contents.", MoveCleansUpContents)
 UNITTEST_END_TESTCASE(crypto_entropy_pool_tests, "crypto_entropy_pool",

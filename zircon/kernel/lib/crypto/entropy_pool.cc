@@ -36,4 +36,12 @@ void EntropyPool::Add(ktl::span<const uint8_t> entropy) {
   SHA256_Final(contents_.data(), &ctx);
 }
 
+size_t EntropyPool::AddFromDigest(ktl::span<const uint8_t> source) {
+  ktl::array<uint8_t, SHA256_DIGEST_LENGTH> digest;
+  SHA256(source.data(), source.size(), digest.data());
+  Add(digest);
+  mandatory_memset(digest.data(), kShredValue, digest.size());
+  return SHA256_DIGEST_LENGTH;
+}
+
 }  // namespace crypto
