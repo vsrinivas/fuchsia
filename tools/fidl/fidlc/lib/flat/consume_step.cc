@@ -335,15 +335,15 @@ void ConsumeStep::ConsumeUsing(std::unique_ptr<raw::Using> using_directive) {
     case Dependencies::RegisterResult::kSuccess:
       break;
     case Dependencies::RegisterResult::kDuplicate:
-      FailNoSpan(ErrDuplicateLibraryImport, library_name);
+      Fail(ErrDuplicateLibraryImport, using_directive->span(), library_name);
       return;
     case Dependencies::RegisterResult::kCollision:
       if (using_directive->maybe_alias) {
-        FailNoSpan(ErrConflictingLibraryImportAlias, library_name,
-                   using_directive->maybe_alias->span().data());
+        Fail(ErrConflictingLibraryImportAlias, using_directive->span(), library_name,
+             using_directive->maybe_alias->span().data());
         return;
       }
-      FailNoSpan(ErrConflictingLibraryImport, library_name);
+      Fail(ErrConflictingLibraryImport, using_directive->span(), library_name);
       return;
   }
 
