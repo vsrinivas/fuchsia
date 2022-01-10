@@ -2,20 +2,5 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/config.gni")
-
-# Packages a Session Framework configuration for the session_manager package.
-# The configuration will be located at session_managers's /config/data/startup.config.
-# Including this rule in a product definition will automatically launch
-# Session Framework with a root session, defined as the `session_url` in the json configuration.
-#
-# Parameters
-#   config
-#     The JSON configuration file for the Session Framework.
-template("session_config") {
-  config_data(target_name) {
-    for_pkg = "session_manager"
-    sources = [ invoker.config ]
-    outputs = [ "startup.config" ]
-  }
-}
+# The template previously in this file is no longer used, but this file is still included in some
+# CTS prebuilts. Once this file is no longer referenced anywhere in the build it should be deleted.

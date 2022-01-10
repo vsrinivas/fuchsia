@@ -128,7 +128,7 @@ package which is configured to start the session URL in the above config.
 Add the `session_manager_package` to the `BUILD.gn` file:
 
 ```gn
-{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="src/session/examples/hello-world-session/BUILD.gn" region_tag="session_config" adjust_indentation="auto" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="src/session/examples/hello-world-session/BUILD.gn" region_tag="session_manager_package" adjust_indentation="auto" %}
 ```
 
 ### Rust binary {#rust-binary}

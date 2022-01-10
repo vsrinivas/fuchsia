@@ -4,7 +4,6 @@
 
 import("//build/components.gni")
 import("//sdk/cts/build/cts.gni")
-import("//src/session/build/session_config.gni")
 
 cts_executable("hwinfo-test-bin") {
   output_name = "hwinfo-test"

@@ -19,12 +19,12 @@ group("tests") {
   deps = [ ":hello-world-session-unittests" ]
 }
 
-# [START session_config]
+# [START session_manager_package]
 session_manager_package("hello-world-session-manager") {
   config = "meta/hello-world-session-config.json"
 }
 
-# [END session_config]
+# [END session_manager_package]
 
 # [START session_binary]
 rustc_binary("bin") {

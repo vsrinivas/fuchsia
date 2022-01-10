@@ -7,7 +7,7 @@ group("all") {
     "//src/session/bin/cursor",
     "//src/session/bin/element_manager",
     "//src/session/bin/scene_manager",
-    "//src/session/bin/session_manager",
+    "//src/session/bin/session_manager:bin",
   ]
 }
 

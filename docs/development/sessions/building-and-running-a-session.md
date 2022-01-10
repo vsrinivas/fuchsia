@@ -1,4 +1,4 @@
-# Building and running a session {#building-and-running-a-session} 
+# Building and running a session {#building-and-running-a-session}
 
 A session is the first product-specific component started on boot. The session
 component is responsible for building a product's user experience. For more
@@ -29,20 +29,20 @@ session component URL.
 component
 
    ```json
-   import("//src/session/build/session_config.gni")
+   import("//src/session/build/session_manager.gni")
 
-   session_config("your_session_config") {
+   session_manager_package("your_session_manager_package") {
        config = "path/to/config.json"
    }
    ```
 
-1. Run the following command to include the `session_manager`, `your_session`,
-   and `:your_session_config` in your base image:
+1. Run the following command to include the `session_manager` and `your_session`
+   in your base image:
 
-   <pre class="prettyprint"><code class="devsite-terminal">fx set <var>product</var>.<var>board</var> --with-base=//src/session,<var>//path/to/your/session</var>,<var>//path/to/your/session:your_session_config</var></code></pre>
+   <pre class="prettyprint"><code class="devsite-terminal">fx set <var>product</var>.<var>board</var> --with-base=<var>//path/to/your/session</var>,<var>//path/to/your/session:your_session_manager_package</var></code></pre>
 
-   Note: Selecting a product that already has a session_config will result
-   in a build error because the configurations will conflict. The `core`
+   Note: Selecting a product that already has a session manager package will
+   result in a build error because the packages will conflict. The `core`
    product would be a good choice as a starting point as it includes only the
    bare minimum needed to launch Fuchsia.
 
