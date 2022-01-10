@@ -17,3 +17,11 @@ group("tests") {
     "//src/media/stream_processors/test",
   ]
 }
+
+group("hw_dependent_tests") {
+  testonly = true
+  deps = [
+    "test",
+    "//src/media/codec/bundles:services",
+  ]
+}
