@@ -95,7 +95,7 @@ rustc_binary("bin") {
 }
 
 fuchsia_unittest_package("dns-resolver-tests") {
-  manifest = "meta/dns_bin_test.cml"
+  v2 = true
   deps = [ ":bin_test" ]
 }
 
