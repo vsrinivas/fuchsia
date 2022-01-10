@@ -19,30 +19,46 @@
 
 namespace block_client {
 
-// An interface which virtualizes the connection to the underlying block device.
+// A high-level interface to a block device. This class also inherits from VmoidRegistry for
+// managing the VMOs associated with block requests.
+//
+// The normal implementation would be a RemoteBlockDevice which speaks the FIDL/FIFO protocols
 class BlockDevice : public storage::VmoidRegistry {
  public:
-  // Reads from the block device using the fuchsia_io::File protocol.
+  // Reads one block from the block device using the fuchsia.io.File protocol. The block_size
+  // should match that of the underlying block device (see BlockGetInfo() to query) or the
+  // returned data will be incorrect.
   //
-  // TODO(fxbug.dev/33909): Deprecate this interface. Favor reading over the FIFO protocol instead.
+  // Favor reading over the FIFO protocol using FifoTransaction() instead.
+  //
+  // TODO(fxbug.dev/33909): Deprecate this interface.
   virtual zx_status_t ReadBlock(uint64_t block_num, uint64_t block_size, void* block) const = 0;
 
-  // FIFO protocol.
+  // FIFO protocol. This is the normal way to read from and write to the block device.
   virtual zx_status_t FifoTransaction(block_fifo_request_t* requests, size_t count) = 0;
 
-  // Controller IPC.
+  // Queries the device path using the fuchsia.device.Controller interface.
   virtual zx::status<std::string> GetDevicePath() const = 0;
 
-  // Block IPC.
+  // fuchsia.device.block interface:
   virtual zx_status_t BlockGetInfo(fuchsia_hardware_block_BlockInfo* out_info) const = 0;
 
-  // A default implementation is provided that should work in most if not all cases.
+  // storage::VmoidRegistry implementation:
+  //
+  // Derived classes will need to implement BlockAttachVmo() according to their requirements. This
+  // implementation implements detach by sending a FIFO transaction which should work for most
+  // cases.
   zx_status_t BlockDetachVmo(storage::Vmoid vmoid) override;
 
-  // Volume IPC.
+  // fuchsia.hardware.block.volume interface:
   //
-  // VolumeGetInfo is safe to invoke, even for devices which do not necessarily speak the Volume
-  // protocol.
+  // Many block devices (like normal disk partitions) are volumes. This provides a convenience
+  // wrapper for speaking the fuchsia.hardware.block.Volume FIDL API to the device.
+  //
+  // If the underlying device does not speak the Volume API, the connection used by this object
+  // will be closed. The exception is VolumeGetInfo() which is implemented such that the connection
+  // will still be usable. Clients should call VolumeGetInfo() to confirm that the device supports
+  // the Volume API before using any other Volume methods.
   virtual zx_status_t VolumeGetInfo(
       fuchsia_hardware_block_volume_VolumeManagerInfo* out_manager_info,
       fuchsia_hardware_block_volume_VolumeInfo* out_volume_info) const = 0;
