@@ -136,6 +136,17 @@ assemble_system("bringup_fastboot") {
     zbi_signing_args = [ "-s ${rebased_script}" ] + vboot_action.args
     deps = vboot_action.deps
   }
+
+  metadata = {
+    images = [
+      {
+        fastboot_boot = [ "--boot" ]
+        name = "fuchsia"
+        path = "bringup_fastboot.zbi.signed"
+        type = "zbi_fastboot"
+      },
+    ]
+  }
 }
 
 group("bringup") {
