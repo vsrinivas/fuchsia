@@ -5,6 +5,7 @@
 group("lib") {
   deps = [
     "lowpan_driver_common",
+    "openthread_rust",
     "openthread_sys",
     "spinel_pack",
   ]
@@ -14,6 +15,7 @@ group("tests") {
   testonly = true
   deps = [
     "lowpan_driver_common:tests",
+    "openthread_rust:tests",
     "spinel_pack:tests",
   ]
 }
