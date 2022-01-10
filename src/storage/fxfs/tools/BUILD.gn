@@ -1,0 +1,27 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/host.gni")
+import("//build/rust/rustc_binary.gni")
+
+if (host_toolchain == current_toolchain) {
+  rustc_binary("fxfs_tool") {
+    edition = "2018"
+    deps = [
+      "//src/lib/fuchsia-async",
+      "//src/lib/storage/storage_device",
+      "//src/storage/fxfs:lib($host_toolchain)",
+      "//third_party/rust_crates:anyhow",
+      "//third_party/rust_crates:argh",
+      "//third_party/rust_crates:log",
+    ]
+    sources = [ "src/main.rs" ]
+    output_name = "fxfs"
+  }
+}
+
+install_host_tools("tools") {
+  deps = [ ":fxfs_tool($host_toolchain)" ]
+  outputs = [ "fxfs" ]
+}
