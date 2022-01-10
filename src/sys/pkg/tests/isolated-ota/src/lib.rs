@@ -6,9 +6,9 @@ use {
     blobfs_ramdisk::BlobfsRamdisk,
     fidl::endpoints::{ClientEnd, RequestStream, ServerEnd},
     fidl_fuchsia_io::{
-        self as fio, DirectoryMarker, DirectoryObject, NodeAttributes, NodeInfo, NodeMarker,
+        self as fio, DirectoryMarker, DirectoryObject, DirectoryRequest, DirectoryRequestStream,
+        NodeAttributes, NodeInfo, NodeMarker,
     },
-    fidl_fuchsia_io_admin::{DirectoryAdminRequest, DirectoryAdminRequestStream},
     fidl_fuchsia_paver::{Asset, Configuration, PaverRequestStream},
     fidl_fuchsia_pkg_ext::{MirrorConfigBuilder, RepositoryConfigBuilder, RepositoryConfigs},
     fuchsia_async as fasync,
@@ -494,7 +494,7 @@ fn launch_cloned_blobfs(end: ServerEnd<NodeMarker>, flags: u32, parent_flags: u3
         flags
     };
     let chan = fidl::AsyncChannel::from_channel(end.into_channel()).expect("cloning blobfs dir");
-    let stream = DirectoryAdminRequestStream::from_channel(chan);
+    let stream = DirectoryRequestStream::from_channel(chan);
     fasync::Task::spawn(async move {
         serve_failing_blobfs(stream, flags)
             .await
@@ -504,7 +504,7 @@ fn launch_cloned_blobfs(end: ServerEnd<NodeMarker>, flags: u32, parent_flags: u3
 }
 
 async fn serve_failing_blobfs(
-    mut stream: DirectoryAdminRequestStream,
+    mut stream: DirectoryRequestStream,
     open_flags: u32,
 ) -> Result<(), Error> {
     if (open_flags & fio::OPEN_FLAG_DESCRIBE) == fio::OPEN_FLAG_DESCRIBE {
@@ -518,25 +518,25 @@ async fn serve_failing_blobfs(
     }
     while let Some(req) = stream.try_next().await? {
         match req {
-            DirectoryAdminRequest::Clone { object, flags, .. } => {
+            DirectoryRequest::Clone { object, flags, .. } => {
                 launch_cloned_blobfs(object, flags, open_flags)
             }
-            DirectoryAdminRequest::Close { responder } => {
+            DirectoryRequest::Close { responder } => {
                 responder.send(zx::Status::IO.into_raw()).context("failing close")?
             }
-            DirectoryAdminRequest::Close2 { responder } => {
+            DirectoryRequest::Close2 { responder } => {
                 responder.send(&mut Err(zx::Status::IO.into_raw())).context("failing close")?
             }
-            DirectoryAdminRequest::Describe { responder } => {
+            DirectoryRequest::Describe { responder } => {
                 responder.send(&mut NodeInfo::Directory(DirectoryObject)).context("describing")?
             }
-            DirectoryAdminRequest::Sync { responder } => {
+            DirectoryRequest::Sync { responder } => {
                 responder.send(zx::Status::IO.into_raw()).context("failing sync")?
             }
-            DirectoryAdminRequest::AdvisoryLock { responder, .. } => {
+            DirectoryRequest::AdvisoryLock { responder, .. } => {
                 responder.send(&mut Err(zx::sys::ZX_ERR_NOT_SUPPORTED))?
             }
-            DirectoryAdminRequest::GetAttr { responder } => responder
+            DirectoryRequest::GetAttr { responder } => responder
                 .send(
                     zx::Status::IO.into_raw(),
                     &mut NodeAttributes {
@@ -550,52 +550,49 @@ async fn serve_failing_blobfs(
                     },
                 )
                 .context("failing getattr")?,
-            DirectoryAdminRequest::SetAttr { responder, .. } => {
+            DirectoryRequest::SetAttr { responder, .. } => {
                 responder.send(zx::Status::IO.into_raw()).context("failing setattr")?
             }
-            DirectoryAdminRequest::NodeGetFlags { responder } => {
+            DirectoryRequest::NodeGetFlags { responder } => {
                 responder.send(zx::Status::IO.into_raw(), 0).context("failing getflags")?
             }
-            DirectoryAdminRequest::NodeSetFlags { responder, .. } => {
+            DirectoryRequest::NodeSetFlags { responder, .. } => {
                 responder.send(zx::Status::IO.into_raw()).context("failing setflags")?
             }
-            DirectoryAdminRequest::Open { object, flags, path, .. } => {
+            DirectoryRequest::Open { object, flags, path, .. } => {
                 if &path == "." {
                     launch_cloned_blobfs(object, flags, open_flags);
                 } else {
                     object.close_with_epitaph(zx::Status::IO).context("failing open")?;
                 }
             }
-            DirectoryAdminRequest::AddInotifyFilter { responder, .. } => {
+            DirectoryRequest::AddInotifyFilter { responder, .. } => {
                 responder.send().context("failing addinotifyfilter")?
             }
-            DirectoryAdminRequest::Unlink { responder, .. } => {
+            DirectoryRequest::Unlink { responder, .. } => {
                 responder.send(&mut Err(zx::Status::IO.into_raw())).context("failing unlink")?
             }
-            DirectoryAdminRequest::ReadDirents { responder, .. } => {
+            DirectoryRequest::ReadDirents { responder, .. } => {
                 responder.send(zx::Status::IO.into_raw(), &[]).context("failing readdirents")?
             }
-            DirectoryAdminRequest::Rewind { responder } => {
+            DirectoryRequest::Rewind { responder } => {
                 responder.send(zx::Status::IO.into_raw()).context("failing rewind")?
             }
-            DirectoryAdminRequest::GetToken { responder } => {
+            DirectoryRequest::GetToken { responder } => {
                 responder.send(zx::Status::IO.into_raw(), None).context("failing gettoken")?
             }
-            DirectoryAdminRequest::Rename { responder, .. } => {
+            DirectoryRequest::Rename { responder, .. } => {
                 responder.send(&mut Err(zx::Status::IO.into_raw())).context("failing rename")?
             }
-            DirectoryAdminRequest::Link { responder, .. } => {
+            DirectoryRequest::Link { responder, .. } => {
                 responder.send(zx::Status::IO.into_raw()).context("failing link")?
             }
-            DirectoryAdminRequest::Watch { responder, .. } => {
+            DirectoryRequest::Watch { responder, .. } => {
                 responder.send(zx::Status::IO.into_raw()).context("failing watch")?
             }
-            DirectoryAdminRequest::QueryFilesystem { responder, .. } => responder
+            DirectoryRequest::QueryFilesystem { responder, .. } => responder
                 .send(zx::Status::IO.into_raw(), None)
                 .context("failing queryfilesystem")?,
-            DirectoryAdminRequest::GetDevicePath { responder } => {
-                responder.send(zx::Status::IO.into_raw(), None).context("failing getdevicepath")?
-            }
             // TODO(https://fxbug.dev/77623): Remove when the io1 -> io2 transition is complete.
             _ => panic!("Unhandled request!"),
         };
@@ -618,8 +615,7 @@ pub async fn test_blobfs_broken() -> Result<(), Error> {
         .await
         .context("Building TestEnv")?;
 
-    let stream =
-        DirectoryAdminRequestStream::from_channel(fidl::AsyncChannel::from_channel(server)?);
+    let stream = DirectoryRequestStream::from_channel(fidl::AsyncChannel::from_channel(server)?);
 
     fasync::Task::spawn(async move {
         serve_failing_blobfs(stream, 0)

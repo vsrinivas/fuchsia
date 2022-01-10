@@ -19,7 +19,7 @@ namespace fs {
 namespace internal {
 
 class DirectoryConnection final : public Connection,
-                                  public fidl::WireServer<fuchsia_io_admin::DirectoryAdmin> {
+                                  public fidl::WireServer<fuchsia_io::Directory> {
  public:
   // Refer to documentation for |Connection::Connection|.
   DirectoryConnection(fs::FuchsiaVfs* vfs, fbl::RefPtr<fs::Vnode> vnode, VnodeProtocol protocol,
@@ -63,13 +63,6 @@ class DirectoryConnection final : public Connection,
                         AddInotifyFilterCompleter::Sync& completer) final;
   void QueryFilesystem(QueryFilesystemRequestView request,
                        QueryFilesystemCompleter::Sync& completer) final;
-
-  //
-  // |fuchsia.io/DirectoryAdmin| operations.
-  //
-
-  void GetDevicePath(GetDevicePathRequestView request,
-                     GetDevicePathCompleter::Sync& completer) final;
 
   //
   // |fuchsia.io2/AdvisoryLocking| operations.

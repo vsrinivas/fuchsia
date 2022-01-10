@@ -30,7 +30,6 @@ test("blobfs_component_test") {
   deps = [
     "//sdk/fidl/fuchsia.hardware.block:fuchsia.hardware.block_llcpp",
     "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
-    "//sdk/fidl/fuchsia.io.admin:fuchsia.io.admin_llcpp",
     "//src/lib/fxl/test:gtest_main",
     "//src/storage/fidl/fuchsia.fs.startup:fuchsia.fs.startup_llcpp",
     "//src/storage/testing:storage_driver_test_support",

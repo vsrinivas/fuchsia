@@ -44,8 +44,7 @@ int Fsck(std::unique_ptr<minfs::Bcache> bc, const minfs::MountOptions& options) 
 }
 
 // Run the filesystem server on top of the block device |device|.
-// This function blocks until the filesystem server is instructed to exit via an
-// |fuchsia.io/DirectoryAdmin.Unmount| command.
+// This function blocks until the filesystem server is instructed to exit.
 int Mount(std::unique_ptr<minfs::Bcache> bcache, const minfs::MountOptions& options) {
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   trace::TraceProviderWithFdio trace_provider(loop.dispatcher());

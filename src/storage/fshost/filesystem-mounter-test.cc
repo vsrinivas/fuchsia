@@ -80,8 +80,7 @@ class TestMounter : public FilesystemMounter {
  public:
   class FakeDirectoryImpl : public fuchsia_io::testing::Directory_TestBase {
    public:
-    explicit FakeDirectoryImpl(std::function<void(uint32_t)> flags_callback)
-        : flags_callback_(std::move(flags_callback)) {}
+    FakeDirectoryImpl() = default;
 
     void NotImplemented_(const std::string& name, fidl::CompleterBase& completer) override {
       ADD_FAILURE() << "Unexpected call to " << name;
@@ -93,12 +92,7 @@ class TestMounter : public FilesystemMounter {
           fuchsia_io::wire::NodeInfo::WithDirectory(fuchsia_io::wire::DirectoryObject()));
     }
 
-    void Open(OpenRequestView request, OpenCompleter::Sync& _completer) override {
-      flags_callback_(request->flags);
-    }
-
-   private:
-    std::function<void(uint32_t)> flags_callback_;
+    void Open(OpenRequestView request, OpenCompleter::Sync& _completer) override {}
   };
 
   template <typename... Args>
@@ -109,22 +103,6 @@ class TestMounter : public FilesystemMounter {
   }
 
   void ExpectFilesystem(FilesystemType fs) { expected_filesystem_ = fs; }
-
-  void ResetSeenAdminFlag() {
-    std::lock_guard l(flags_lock_);
-    seen_admin_flag_ = false;
-    sync_completion_reset(&flags_completion_);
-  }
-
-  bool SeenAdminFlag() {
-    sync_completion_wait(&flags_completion_, ZX_TIME_INFINITE);
-    bool copy_of_result;
-    {
-      std::lock_guard l(flags_lock_);
-      copy_of_result = seen_admin_flag_;
-    }
-    return copy_of_result;
-  }
 
   zx_status_t LaunchFs(int argc, const char** argv, zx_handle_t* hnd, uint32_t* ids, size_t len,
                        uint32_t fs_flags) final {
@@ -158,12 +136,7 @@ class TestMounter : public FilesystemMounter {
 
     fidl::BindServer(loop_.dispatcher(),
                      fidl::ServerEnd<fuchsia_io::Directory>(zx::channel(hnd[0])),
-                     std::make_unique<FakeDirectoryImpl>([this](uint32_t flags) {
-                       std::lock_guard l(this->flags_lock_);
-                       if ((flags & fuchsia_io::wire::kOpenRightAdmin) > 0)
-                         this->seen_admin_flag_ = true;
-                       sync_completion_signal(&flags_completion_);
-                     }));
+                     std::make_unique<FakeDirectoryImpl>());
 
     // Close all other handles.
     for (size_t i = 1; i < len; i++) {
@@ -176,8 +149,6 @@ class TestMounter : public FilesystemMounter {
  private:
   FilesystemType expected_filesystem_ = FilesystemType::kBlobfs;
   std::mutex flags_lock_;
-  sync_completion_t flags_completion_;
-  bool seen_admin_flag_ TA_GUARDED(flags_lock_) = false;
   async::Loop loop_;
 };
 
@@ -249,43 +220,6 @@ TEST_F(MounterTest, PkgfsMountsWithBlobAndData) {
   ASSERT_TRUE(mounter.DataMounted());
   mounter.TryMountPkgfs();
   EXPECT_TRUE(mounter.PkgfsMounted());
-}
-
-TEST_F(MounterTest, OpenAllWithDirectoryAdmin) {
-  config_ = Config(Config::Options{{Config::kWaitForData, {}}});
-  TestMounter mounter(manager(), &config_);
-
-  mounter.ResetSeenAdminFlag();
-  mounter.ExpectFilesystem(FilesystemType::kMinfs);
-  ASSERT_OK(mounter.MountData(zx::channel(), fs_management::MountOptions()));
-  ASSERT_TRUE(mounter.SeenAdminFlag());
-
-  mounter.ResetSeenAdminFlag();
-  mounter.ExpectFilesystem(FilesystemType::kBlobfs);
-  ASSERT_OK(mounter.MountBlob(zx::channel(), fs_management::MountOptions()));
-  ASSERT_TRUE(mounter.SeenAdminFlag());
-
-  ASSERT_TRUE(mounter.BlobMounted());
-  ASSERT_TRUE(mounter.DataMounted());
-}
-
-TEST_F(MounterTest, OpenDataRootWithoutDirectoryAdmin) {
-  config_ = Config(
-      Config::Options{{Config::kWaitForData, {}}, {Config::kDataFilesystemNoDirectoryAdmin, {}}});
-  TestMounter mounter(manager(), &config_);
-
-  mounter.ResetSeenAdminFlag();
-  mounter.ExpectFilesystem(FilesystemType::kMinfs);
-  ASSERT_OK(mounter.MountData(zx::channel(), fs_management::MountOptions()));
-  ASSERT_FALSE(mounter.SeenAdminFlag());
-
-  mounter.ResetSeenAdminFlag();
-  mounter.ExpectFilesystem(FilesystemType::kBlobfs);
-  ASSERT_OK(mounter.MountBlob(zx::channel(), fs_management::MountOptions()));
-  ASSERT_TRUE(mounter.SeenAdminFlag());
-
-  ASSERT_TRUE(mounter.BlobMounted());
-  ASSERT_TRUE(mounter.DataMounted());
 }
 
 }  // namespace

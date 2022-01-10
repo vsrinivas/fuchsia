@@ -56,7 +56,6 @@ use {
         DirectorySynchronousProxy, FilesystemInfo, NodeSynchronousProxy, CLONE_FLAG_SAME_RIGHTS,
         OPEN_RIGHT_ADMIN,
     },
-    fidl_fuchsia_io_admin::DirectoryAdminSynchronousProxy,
     fuchsia_runtime::{HandleInfo, HandleType},
     fuchsia_zircon::{self as zx, AsHandleRef, Task},
     fuchsia_zircon_status as zx_status,
@@ -158,7 +157,7 @@ impl FSInstance {
             .connect(&self.mount_point, OPEN_RIGHT_ADMIN, server_chan)
             .context("failed to connect to filesystem")?;
 
-        let proxy = DirectoryAdminSynchronousProxy::new(client_chan);
+        let proxy = DirectorySynchronousProxy::new(client_chan);
 
         let (status, result) = proxy
             .query_filesystem(zx::Time::INFINITE)

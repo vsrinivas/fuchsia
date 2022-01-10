@@ -64,7 +64,7 @@ const char* ReportReasonStr(const FsManager::ReportReason& reason) {
   }
 }
 
-zx::status<uint64_t> GetFsId(fidl::UnownedClientEnd<fuchsia_io_admin::DirectoryAdmin> root) {
+zx::status<uint64_t> GetFsId(fidl::UnownedClientEnd<fuchsia_io::Directory> root) {
   auto result = fidl::WireCall(root)->QueryFilesystem();
   if (!result.ok())
     return zx::error(result.status());
@@ -255,8 +255,7 @@ zx::status<> FsManager::InstallFs(MountPoint point, std::string_view device_path
   }
   node->second.export_root = std::move(export_root_directory);
   if (!device_path.empty()) {
-    device_paths_[GetFsId(fidl::UnownedClientEnd<fuchsia_io_admin::DirectoryAdmin>(
-                              root_directory.borrow()))
+    device_paths_[GetFsId(fidl::UnownedClientEnd<fuchsia_io::Directory>(root_directory.borrow()))
                       .value_or(0)] = device_path;
   }
   if (zx_status_t status =
@@ -504,7 +503,7 @@ void FsManager::FileReport(ReportReason reason) {
 }
 
 zx_status_t FsManager::AttachMount(std::string_view device_path,
-                                   fidl::ClientEnd<fuchsia_io_admin::DirectoryAdmin> export_root,
+                                   fidl::ClientEnd<fuchsia_io::Directory> export_root,
                                    std::string_view name) {
   auto root_or = fs_management::FsRootHandle(export_root);
   if (root_or.is_error()) {

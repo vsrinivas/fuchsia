@@ -197,27 +197,10 @@ mountpoints exist elsewhere.
 ### Filesystem Management
 
 There are a collection of filesystem operations that are considered related to
-"administration", including "unmounting the current filesystem", "querying for
-the underlying block device path", etc. These operations are defined by the
-DirectoryAdmin interface within
-[directory_admin.fidl](/sdk/fidl/fuchsia.io.admin/directory_admin.fidl).
-A connection to this interface allows access to "filesystem-wide" state, and is
-restricted by an access flag `ZX_FS_RIGHT_ADMIN`. This access right must be
-requested explicitly, and is not granted when requested on a connection lacking
-`ZX_FS_RIGHT_ADMIN`. This right is provided to the root connection of a
-filesystem once it is mounted - a reasonable bootstrapping point for
-administration - but must be preserved by the mounting tools to propagate this
-access, or must be dropped when vending connections from the filesystem to less
-privileged clients.
-
-This `ZX_FS_RIGHT_ADMIN` mechanism (occasionally referred to as `O_ADMIN`, for
-the POSIX interop declaration) will be superceded by an explicit service for
-filesystem administration. Rather than existing as an "implicit right" attached
-silently to limited directory connections, it will be a separate interface
-exposed by filesystem components. This will (in the abstract) allow filesystems
-to expose a "root directory" handle and an "administraction" handle separately,
-rather than overloading them on the same connection. Once this transition has
-occurred, the `ZX_FS_RIGHT_ADMIN` (and `O_ADMIN`) flags will be deprecated.
+"administration", including "unmounting the current filesystem".  These
+operations are defined by the fs.Admin interface within
+[admin.fidl](/sdk/fidl/fuchsia.fs/admin.fidl). Filesystems export this service
+alongside access to the root of the filesystem.
 
 ## Current Filesystems
 

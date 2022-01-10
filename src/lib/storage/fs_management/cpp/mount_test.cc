@@ -6,7 +6,6 @@
 
 #include <errno.h>
 #include <fcntl.h>
-#include <fidl/fuchsia.io.admin/cpp/wire.h>
 #include <fidl/fuchsia.io/cpp/wire.h>
 #include <fuchsia/hardware/block/c/fidl.h>
 #include <fuchsia/hardware/block/volume/c/fidl.h>
@@ -109,75 +108,6 @@ TEST(MountFsckCase, MountFsck) {
 
   // Fsck shouldn't require any user input for a newly mkfs'd filesystem.
   ASSERT_EQ(Fsck(ramdisk_path, kDiskFormatMinfs, FsckOptions(), launch_stdio_sync), ZX_OK);
-  ASSERT_EQ(ramdisk_destroy(ramdisk), 0);
-}
-
-TEST(MountGetDeviceCase, MountGetDevice) {
-  // First test with memfs.
-  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
-  ASSERT_EQ(loop.StartThread("mountest-mount-get-device"), ZX_OK);
-  memfs_filesystem_t* memfs;
-  ASSERT_EQ(memfs_install_at(loop.dispatcher(), "/memfs", &memfs), ZX_OK);
-
-  auto defer = fit::defer([memfs, &loop] {
-    loop.Shutdown();
-    memfs_uninstall_unsafe(memfs, "/memfs");
-  });
-
-  constexpr const char* kTestDir = "/memfs/mount_get_device";
-  ASSERT_EQ(mkdir(kTestDir, 0666), 0);
-  CheckMountedFs(kTestDir, "memfs", strlen("memfs"));
-  fbl::unique_fd mountfd(open(kTestDir, O_RDONLY | O_ADMIN));
-  ASSERT_TRUE(mountfd);
-  fdio_cpp::FdioCaller caller(std::move(mountfd));
-  auto result = fidl::WireCall(fidl::UnownedClientEnd<fuchsia_io_admin::DirectoryAdmin>(
-                                   caller.borrow_channel()))
-                    ->GetDevicePath();
-  ASSERT_EQ(result.status(), ZX_OK);
-
-  // Memfs does not support GetDevicePath.
-  ASSERT_EQ(result->s, ZX_ERR_NOT_SUPPORTED);
-
-  // Now test with minfs.
-  ASSERT_EQ(storage::WaitForRamctl().status_value(), ZX_OK);
-  ramdisk_client_t* ramdisk = nullptr;
-  ASSERT_EQ(ramdisk_create(512, 1 << 16, &ramdisk), ZX_OK);
-
-  const char* ramdisk_path = ramdisk_get_path(ramdisk);
-  ASSERT_EQ(Mkfs(ramdisk_path, kDiskFormatMinfs, launch_stdio_sync, MkfsOptions()), ZX_OK);
-
-  fbl::unique_fd fd(open(ramdisk_path, O_RDWR));
-  ASSERT_TRUE(fd);
-
-  constexpr const char* kMinfsMountPath = "/test/mount_get_device";
-  {
-    auto mounted_filesystem_or =
-        Mount(std::move(fd), kMinfsMountPath, kDiskFormatMinfs, MountOptions(), launch_stdio_async);
-    ASSERT_EQ(mounted_filesystem_or.status_value(), ZX_OK);
-
-    CheckMountedFs(kMinfsMountPath, "minfs", strlen("minfs"));
-
-    mountfd.reset(open(kMinfsMountPath, O_RDONLY | O_ADMIN));
-    ASSERT_TRUE(mountfd);
-    caller.reset(std::move(mountfd));
-    auto result2 = fidl::WireCall(fidl::UnownedClientEnd<fuchsia_io_admin::DirectoryAdmin>(
-                                      caller.borrow_channel()))
-                       ->GetDevicePath();
-    ASSERT_EQ(result2.status(), ZX_OK);
-    ASSERT_EQ(result2->s, ZX_OK);
-    ASSERT_GT(result2.value().path.size(), 0ul) << "Device path not found";
-    ASSERT_STREQ(ramdisk_path, result2.value().path.data()) << "Unexpected device path";
-
-    mountfd.reset(open(kMinfsMountPath, O_RDONLY));
-    ASSERT_TRUE(mountfd);
-    caller.reset(std::move(mountfd));
-    auto result3 = fidl::WireCall(fidl::UnownedClientEnd<fuchsia_io_admin::DirectoryAdmin>(
-                                      caller.borrow_channel()))
-                       ->GetDevicePath();
-    ASSERT_EQ(result3.status(), ZX_OK);
-    ASSERT_EQ(result3->s, ZX_ERR_ACCESS_DENIED);
-  }
-
   ASSERT_EQ(ramdisk_destroy(ramdisk), 0);
 }
 

@@ -3,8 +3,8 @@
 // found in the LICENSE file.
 
 #include <fidl/fuchsia.fshost/cpp/wire.h>
-#include <fidl/fuchsia.io.admin/cpp/wire_test_base.h>
 #include <fidl/fuchsia.io/cpp/wire.h>
+#include <fidl/fuchsia.io/cpp/wire_test_base.h>
 #include <fidl/fuchsia.io2/cpp/wire.h>
 #include <fidl/fuchsia.process.lifecycle/cpp/wire.h>
 #include <lib/async-loop/cpp/loop.h>
@@ -145,10 +145,10 @@ TEST(FsManagerTestCase, LifecycleStop) {
   EXPECT_TRUE(driver_admin.UnregisterWasCalled());
 }
 
-class MockDirectoryAdminOpener : public fuchsia_io_admin::testing::DirectoryAdmin_TestBase {
+class MockDirectoryOpener : public fuchsia_io::testing::Directory_TestBase {
  public:
   void NotImplemented_(const std::string& name, fidl::CompleterBase& completer) override {
-    ADD_FAILURE() << "Unexpected call to MockDirectoryAdminOpener: " << name;
+    ADD_FAILURE() << "Unexpected call to MockDirectoryOpener: " << name;
     completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
 
@@ -180,10 +180,10 @@ TEST(FshostFsProviderTestCase, CloneBlobExec) {
 
   // Mock out an object that implements DirectoryOpen and records some state;
   // bind it to the server handle.  Install it at /fs.
-  auto admin = fidl::CreateEndpoints<fuchsia_io_admin::DirectoryAdmin>();
+  auto admin = fidl::CreateEndpoints<fuchsia_io::Directory>();
   ASSERT_EQ(admin.status_value(), ZX_OK);
 
-  auto server = std::make_shared<MockDirectoryAdminOpener>();
+  auto server = std::make_shared<MockDirectoryOpener>();
   fidl::BindServer(loop.dispatcher(), std::move(admin->server), server);
 
   fdio_ns_bind(ns, "/fs", admin->client.channel().release());
@@ -228,16 +228,16 @@ TEST(FsManagerTestCase, InstallFsAfterShutdownWillFail) {
   manager.Shutdown([](zx_status_t status) { EXPECT_EQ(status, ZX_OK); });
   manager.WaitForShutdown();
 
-  auto export_root = fidl::CreateEndpoints<fuchsia_io_admin::DirectoryAdmin>();
+  auto export_root = fidl::CreateEndpoints<fuchsia_io::Directory>();
   ASSERT_EQ(export_root.status_value(), ZX_OK);
 
-  auto export_root_server = std::make_shared<MockDirectoryAdminOpener>();
+  auto export_root_server = std::make_shared<MockDirectoryOpener>();
   fidl::BindServer(loop.dispatcher(), std::move(export_root->server), export_root_server);
 
-  auto root = fidl::CreateEndpoints<fuchsia_io_admin::DirectoryAdmin>();
+  auto root = fidl::CreateEndpoints<fuchsia_io::Directory>();
   ASSERT_EQ(root.status_value(), ZX_OK);
 
-  auto root_server = std::make_shared<MockDirectoryAdminOpener>();
+  auto root_server = std::make_shared<MockDirectoryOpener>();
   fidl::BindServer(loop.dispatcher(), std::move(root->server), root_server);
 
   EXPECT_EQ(manager
@@ -264,19 +264,19 @@ TEST(FsManagerTestCase, ReportFailureOnUncleanUnmount) {
                                std::move(admin_endpoints->client), nullptr, watcher),
             ZX_OK);
 
-  auto export_root = fidl::CreateEndpoints<fuchsia_io_admin::DirectoryAdmin>();
+  auto export_root = fidl::CreateEndpoints<fuchsia_io::Directory>();
   ASSERT_EQ(export_root.status_value(), ZX_OK);
 
-  auto export_root_server = std::make_shared<MockDirectoryAdminOpener>();
+  auto export_root_server = std::make_shared<MockDirectoryOpener>();
   fidl::BindServer(loop.dispatcher(), std::move(export_root->server), export_root_server);
 
-  auto root = fidl::CreateEndpoints<fuchsia_io_admin::DirectoryAdmin>();
+  auto root = fidl::CreateEndpoints<fuchsia_io::Directory>();
   ASSERT_EQ(root.status_value(), ZX_OK);
 
-  auto root_server = std::make_shared<MockDirectoryAdminOpener>();
+  auto root_server = std::make_shared<MockDirectoryOpener>();
   fidl::BindServer(loop.dispatcher(), std::move(root->server), root_server);
 
-  auto admin = fidl::CreateEndpoints<fuchsia_io_admin::DirectoryAdmin>();
+  auto admin = fidl::CreateEndpoints<fuchsia_io::Directory>();
   ASSERT_EQ(admin.status_value(), ZX_OK);
 
   EXPECT_EQ(manager
@@ -289,7 +289,7 @@ TEST(FsManagerTestCase, ReportFailureOnUncleanUnmount) {
   manager.Shutdown([&shutdown_status](zx_status_t status) { shutdown_status = status; });
   manager.WaitForShutdown();
 
-  // MockDirectoryAdminOpener doesn't handle the attempt to open the admin service (which is used to
+  // MockDirectoryOpener doesn't handle the attempt to open the admin service (which is used to
   // shut down the filesystem) which should result in the channel being closed.
   ASSERT_EQ(shutdown_status, ZX_ERR_PEER_CLOSED);
 }

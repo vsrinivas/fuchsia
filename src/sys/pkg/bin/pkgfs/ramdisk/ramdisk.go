@@ -99,9 +99,8 @@ import (
 	"runtime"
 	"syscall/zx"
 	"syscall/zx/fdio"
+	"syscall/zx/io"
 	"syscall/zx/zxwait"
-
-	"syscall/zx/io/admin"
 
 	"go.fuchsia.dev/fuchsia/src/sys/pkg/bin/pkgfs/iou"
 )
@@ -159,7 +158,7 @@ func (r *Ramdisk) StartBlobfs() error {
 		return &zx.Error{Status: zx.Status(status), Text: "ramdisk_blobfs_mount"}
 	}
 
-	r.dir = fdio.NewDirectoryWithCtx(&admin.DirectoryAdminWithCtxInterface{Channel: pxy})
+	r.dir = fdio.NewDirectoryWithCtx(&io.DirectoryWithCtxInterface{Channel: pxy})
 	return nil
 }
 

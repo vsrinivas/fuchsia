@@ -24,13 +24,13 @@
 namespace fs_management {
 namespace {
 
-using fuchsia_io_admin::DirectoryAdmin;
+using fuchsia_io::Directory;
 
-zx::status<fidl::ClientEnd<DirectoryAdmin>> InitNativeFs(const char* binary, zx::channel device,
-                                                         const InitOptions& options,
-                                                         zx::channel crypt_client) {
+zx::status<fidl::ClientEnd<Directory>> InitNativeFs(const char* binary, zx::channel device,
+                                                    const InitOptions& options,
+                                                    zx::channel crypt_client) {
   zx_status_t status;
-  auto outgoing_directory_or = fidl::CreateEndpoints<DirectoryAdmin>();
+  auto outgoing_directory_or = fidl::CreateEndpoints<Directory>();
   if (outgoing_directory_or.is_error())
     return outgoing_directory_or.take_error();
   std::array<zx_handle_t, 3> handles = {device.release(),
@@ -104,27 +104,27 @@ zx::status<fidl::ClientEnd<DirectoryAdmin>> InitNativeFs(const char* binary, zx:
 }  // namespace
 
 __EXPORT
-zx::status<fidl::ClientEnd<DirectoryAdmin>> FsRootHandle(
-    fidl::UnownedClientEnd<DirectoryAdmin> export_root, uint32_t flags) {
+zx::status<fidl::ClientEnd<Directory>> FsRootHandle(fidl::UnownedClientEnd<Directory> export_root,
+                                                    uint32_t flags) {
   zx::channel root_client, root_server;
   auto status = zx::make_status(zx::channel::create(0, &root_client, &root_server));
   if (status.is_error()) {
     return status.take_error();
   }
 
-  auto resp = fidl::WireCall<DirectoryAdmin>(export_root)
+  auto resp = fidl::WireCall<Directory>(export_root)
                   ->Open(flags, 0, fidl::StringView("root"), std::move(root_server));
   if (!resp.ok()) {
     return zx::error(resp.status());
   }
 
-  return zx::ok(fidl::ClientEnd<DirectoryAdmin>(std::move(root_client)));
+  return zx::ok(fidl::ClientEnd<Directory>(std::move(root_client)));
 }
 
 __EXPORT
-zx::status<fidl::ClientEnd<DirectoryAdmin>> FsInit(zx::channel device, DiskFormat df,
-                                                   const InitOptions& options,
-                                                   zx::channel crypt_client) {
+zx::status<fidl::ClientEnd<Directory>> FsInit(zx::channel device, DiskFormat df,
+                                              const InitOptions& options,
+                                              zx::channel crypt_client) {
   switch (df) {
     case kDiskFormatMinfs:
       return InitNativeFs(GetBinaryPath("minfs").c_str(), std::move(device), options,

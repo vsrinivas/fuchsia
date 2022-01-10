@@ -17,11 +17,10 @@ use {
     anyhow::Error,
     fidl::{endpoints::ServerEnd, Handle},
     fidl_fuchsia_io::{
-        DirectoryObject, NodeAttributes, NodeInfo, NodeMarker, INO_UNKNOWN, OPEN_FLAG_CREATE,
-        OPEN_FLAG_CREATE_IF_ABSENT, OPEN_FLAG_DIRECTORY, OPEN_FLAG_NODE_REFERENCE,
-        OPEN_FLAG_NOT_DIRECTORY, OPEN_RIGHT_WRITABLE,
+        DirectoryObject, DirectoryRequest, DirectoryRequestStream, NodeAttributes, NodeInfo,
+        NodeMarker, INO_UNKNOWN, OPEN_FLAG_CREATE, OPEN_FLAG_CREATE_IF_ABSENT, OPEN_FLAG_DIRECTORY,
+        OPEN_FLAG_NODE_REFERENCE, OPEN_FLAG_NOT_DIRECTORY, OPEN_RIGHT_WRITABLE,
     },
-    fidl_fuchsia_io_admin::{DirectoryAdminRequest, DirectoryAdminRequestStream},
     fuchsia_async::Channel,
     fuchsia_zircon::{
         sys::{ZX_ERR_INVALID_ARGS, ZX_ERR_NOT_SUPPORTED, ZX_OK},
@@ -69,7 +68,7 @@ pub trait DerivedConnection: Send + Sync {
 
     fn handle_request(
         &mut self,
-        request: DirectoryAdminRequest,
+        request: DirectoryRequest,
     ) -> BoxFuture<'_, Result<ConnectionState, Error>>;
 }
 
@@ -114,7 +113,7 @@ where
 }
 
 pub(in crate::directory) async fn handle_requests<Connection>(
-    mut requests: DirectoryAdminRequestStream,
+    mut requests: DirectoryRequestStream,
     mut connection: Connection,
     mut shutdown: oneshot::Receiver<()>,
 ) where
@@ -172,14 +171,14 @@ where
     /// directory operations.
     pub(in crate::directory) async fn handle_request(
         &mut self,
-        request: DirectoryAdminRequest,
+        request: DirectoryRequest,
     ) -> Result<ConnectionState, Error> {
         match request {
-            DirectoryAdminRequest::Clone { flags, object, control_handle: _ } => {
+            DirectoryRequest::Clone { flags, object, control_handle: _ } => {
                 fuchsia_trace::duration!("storage", "Directory::Clone");
                 self.handle_clone(flags, 0, object);
             }
-            DirectoryAdminRequest::Close { responder } => {
+            DirectoryRequest::Close { responder } => {
                 fuchsia_trace::duration!("storage", "Directory::Close");
                 let status = match self.directory.close() {
                     Ok(()) => Status::OK,
@@ -188,17 +187,17 @@ where
                 responder.send(status.into_raw())?;
                 return Ok(ConnectionState::Closed);
             }
-            DirectoryAdminRequest::Close2 { responder } => {
+            DirectoryRequest::Close2 { responder } => {
                 fuchsia_trace::duration!("storage", "Directory::Close2");
                 responder.send(&mut self.directory.close().map_err(|status| status.into_raw()))?;
                 return Ok(ConnectionState::Closed);
             }
-            DirectoryAdminRequest::Describe { responder } => {
+            DirectoryRequest::Describe { responder } => {
                 fuchsia_trace::duration!("storage", "Directory::Describe");
                 let mut info = NodeInfo::Directory(DirectoryObject);
                 responder.send(&mut info)?;
             }
-            DirectoryAdminRequest::GetAttr { responder } => {
+            DirectoryRequest::GetAttr { responder } => {
                 fuchsia_trace::duration!("storage", "Directory::GetAttr");
                 let (mut attrs, status) = match self.directory.get_attrs().await {
                     Ok(attrs) => (attrs, ZX_OK),
@@ -217,45 +216,45 @@ where
                 };
                 responder.send(status, &mut attrs)?;
             }
-            DirectoryAdminRequest::NodeGetFlags { responder } => {
+            DirectoryRequest::NodeGetFlags { responder } => {
                 fuchsia_trace::duration!("storage", "Directory::GetFlags");
                 responder.send(ZX_OK, self.flags & GET_FLAGS_VISIBLE)?;
             }
-            DirectoryAdminRequest::NodeSetFlags { flags: _, responder } => {
+            DirectoryRequest::NodeSetFlags { flags: _, responder } => {
                 fuchsia_trace::duration!("storage", "Directory::SetFlags");
                 responder.send(ZX_ERR_NOT_SUPPORTED)?;
             }
-            DirectoryAdminRequest::Open { flags, mode, path, object, control_handle: _ } => {
+            DirectoryRequest::Open { flags, mode, path, object, control_handle: _ } => {
                 fuchsia_trace::duration!("storage", "Directory::Open");
                 self.handle_open(flags, mode, path, object);
             }
-            DirectoryAdminRequest::AddInotifyFilter { .. } => {
+            DirectoryRequest::AddInotifyFilter { .. } => {
                 fuchsia_trace::duration!("storage", "Directory::AddInotifyFilter");
             }
-            DirectoryAdminRequest::AdvisoryLock { request: _, responder } => {
+            DirectoryRequest::AdvisoryLock { request: _, responder } => {
                 fuchsia_trace::duration!("storage", "Directory::AdvisoryLock");
                 responder.send(&mut Err(ZX_ERR_NOT_SUPPORTED))?;
             }
-            DirectoryAdminRequest::ReadDirents { max_bytes, responder } => {
+            DirectoryRequest::ReadDirents { max_bytes, responder } => {
                 fuchsia_trace::duration!("storage", "Directory::ReadDirents");
                 self.handle_read_dirents(max_bytes, |status, entries| {
                     responder.send(status.into_raw(), entries)
                 })
                 .await?;
             }
-            DirectoryAdminRequest::Rewind { responder } => {
+            DirectoryRequest::Rewind { responder } => {
                 fuchsia_trace::duration!("storage", "Directory::Rewind");
                 self.seek = Default::default();
                 responder.send(ZX_OK)?;
             }
-            DirectoryAdminRequest::Link { src, dst_parent_token, dst, responder } => {
+            DirectoryRequest::Link { src, dst_parent_token, dst, responder } => {
                 fuchsia_trace::duration!("storage", "Directory::Link");
                 self.handle_link(&src, dst_parent_token, dst, |status| {
                     responder.send(status.into_raw())
                 })
                 .await?;
             }
-            DirectoryAdminRequest::Watch { mask, options, watcher, responder } => {
+            DirectoryRequest::Watch { mask, options, watcher, responder } => {
                 fuchsia_trace::duration!("storage", "Directory::Watch");
                 if options != 0 {
                     responder.send(ZX_ERR_INVALID_ARGS)?;
@@ -264,32 +263,29 @@ where
                     self.handle_watch(mask, channel, |status| responder.send(status.into_raw()))?;
                 }
             }
-            DirectoryAdminRequest::QueryFilesystem { responder } => {
+            DirectoryRequest::QueryFilesystem { responder } => {
                 fuchsia_trace::duration!("storage", "Directory::QueryFilesystem");
                 match self.directory.query_filesystem() {
                     Err(status) => responder.send(status.into_raw(), None)?,
                     Ok(mut info) => responder.send(0, Some(&mut info))?,
                 }
             }
-            DirectoryAdminRequest::GetDevicePath { responder } => {
-                responder.send(ZX_ERR_NOT_SUPPORTED, None)?
-            }
-            DirectoryAdminRequest::Unlink { responder, .. } => {
+            DirectoryRequest::Unlink { responder, .. } => {
                 responder.send(&mut Err(ZX_ERR_NOT_SUPPORTED))?;
             }
-            DirectoryAdminRequest::GetToken { responder } => {
+            DirectoryRequest::GetToken { responder } => {
                 responder.send(ZX_ERR_NOT_SUPPORTED, None)?;
             }
-            DirectoryAdminRequest::Rename { src: _, dst_parent_token: _, dst: _, responder } => {
+            DirectoryRequest::Rename { src: _, dst_parent_token: _, dst: _, responder } => {
                 responder.send(&mut Err(ZX_ERR_NOT_SUPPORTED))?;
             }
-            DirectoryAdminRequest::SetAttr { responder, .. } => {
+            DirectoryRequest::SetAttr { responder, .. } => {
                 responder.send(ZX_ERR_NOT_SUPPORTED)?;
             }
-            DirectoryAdminRequest::Sync { responder } => {
+            DirectoryRequest::Sync { responder } => {
                 responder.send(ZX_ERR_NOT_SUPPORTED)?;
             }
-            DirectoryAdminRequest::Sync2 { responder } => {
+            DirectoryRequest::Sync2 { responder } => {
                 responder.send(&mut Err(ZX_ERR_NOT_SUPPORTED))?;
             }
             // TODO(https://fxbug.dev/77623): Remove when the io1 -> io2 transition is complete.

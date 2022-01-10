@@ -25,7 +25,6 @@ import (
 	"testing"
 
 	zxio "syscall/zx/io"
-	"syscall/zx/io/admin"
 
 	"go.fuchsia.dev/fuchsia/src/sys/pkg/bin/pkgfs/iou"
 	"go.fuchsia.dev/fuchsia/src/sys/pkg/bin/pkgfs/ramdisk"
@@ -137,7 +136,7 @@ func tmain(m *testing.M) int {
 		panic(err)
 	}
 
-	pkgfsDir = fdio.NewDirectoryWithCtx(&admin.DirectoryAdminWithCtxInterface{Channel: nc})
+	pkgfsDir = fdio.NewDirectoryWithCtx(&zxio.DirectoryWithCtxInterface{Channel: nc})
 	if err = pkgfs.Serve(sc); err != nil {
 		panic(err)
 	}

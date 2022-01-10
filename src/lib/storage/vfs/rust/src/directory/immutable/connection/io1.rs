@@ -26,9 +26,9 @@ use {
     anyhow::Error,
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_io::{
-        DirectoryObject, NodeInfo, NodeMarker, OPEN_FLAG_CREATE, OPEN_FLAG_DESCRIBE,
+        DirectoryMarker, DirectoryObject, DirectoryRequest, NodeInfo, NodeMarker, OPEN_FLAG_CREATE,
+        OPEN_FLAG_DESCRIBE,
     },
-    fidl_fuchsia_io_admin::{DirectoryAdminMarker, DirectoryAdminRequest},
     fuchsia_zircon::Status,
     futures::future::BoxFuture,
     std::sync::Arc,
@@ -66,7 +66,7 @@ impl DerivedConnection for ImmutableConnection {
         };
 
         let (requests, control_handle) =
-            match ServerEnd::<DirectoryAdminMarker>::new(server_end.into_channel())
+            match ServerEnd::<DirectoryMarker>::new(server_end.into_channel())
                 .into_stream_and_control_handle()
             {
                 Ok((requests, control_handle)) => (requests, control_handle),
@@ -113,7 +113,7 @@ impl DerivedConnection for ImmutableConnection {
 
     fn handle_request(
         &mut self,
-        request: DirectoryAdminRequest,
+        request: DirectoryRequest,
     ) -> BoxFuture<'_, Result<ConnectionState, Error>> {
         Box::pin(async move { self.base.handle_request(request).await })
     }

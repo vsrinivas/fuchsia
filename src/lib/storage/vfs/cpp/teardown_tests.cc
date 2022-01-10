@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fidl/fuchsia.io.admin/cpp/markers.h>
-#include <fidl/fuchsia.io.admin/cpp/wire_test_base.h>
+#include <fidl/fuchsia.io/cpp/markers.h>
 #include <fidl/fuchsia.io/cpp/wire.h>
+#include <fidl/fuchsia.io/cpp/wire_test_base.h>
 #include <fidl/fuchsia.io/cpp/wire_types.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>

@@ -14,9 +14,8 @@ use {
     fidl::endpoints::{ClientEnd, ServerEnd},
     fidl_fuchsia_io::{
         DirectoryMarker, DirectoryProxy, FilesystemInfo, NodeMarker, NodeProxy,
-        CLONE_FLAG_SAME_RIGHTS, OPEN_RIGHT_ADMIN,
+        CLONE_FLAG_SAME_RIGHTS,
     },
-    fidl_fuchsia_io_admin::DirectoryAdminMarker,
     fuchsia_async::OnSignals,
     fuchsia_component::client::connect_to_protocol_at_dir_svc,
     fuchsia_runtime::{HandleInfo, HandleType},
@@ -190,7 +189,7 @@ impl<FSC: FSConfig> ServingFilesystem<FSC> {
     }
 
     /// Attempts to shutdown the filesystem using the
-    /// [`fidl_fuchsia_io_admin::DirectoryAdminProxy::unmount()`] FIDL method and waiting for the
+    /// [`fidl_fuchsia_io::DirectoryProxy::unmount()`] FIDL method and waiting for the
     /// filesystem process to terminate.
     ///
     /// # Errors
@@ -232,12 +231,9 @@ impl<FSC: FSConfig> ServingFilesystem<FSC> {
     ///
     /// Returns [`Err`] if querying the filesystem failed.
     pub async fn query(&self) -> Result<Box<FilesystemInfo>, QueryError> {
-        let (admin_proxy, server_end) = fidl::endpoints::create_proxy::<DirectoryAdminMarker>()?;
-        self.root_dir.clone(OPEN_RIGHT_ADMIN, ServerEnd::new(server_end.into_channel()))?;
-
-        let (status, info) = admin_proxy.query_filesystem().await?;
-        Status::ok(status).map_err(QueryError::DirectoryAdminQuery)?;
-        info.ok_or(QueryError::DirectoryAdminEmptyResult)
+        let (status, info) = self.root_dir.query_filesystem().await?;
+        Status::ok(status).map_err(QueryError::DirectoryQuery)?;
+        info.ok_or(QueryError::DirectoryEmptyResult)
     }
 
     /// Attempts to kill the filesystem process and waits for the process to terminate.

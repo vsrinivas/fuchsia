@@ -29,13 +29,10 @@ use {
     either::{Either, Left, Right},
     fidl::{endpoints::ServerEnd, Handle},
     fidl_fuchsia_io::{
-        DirectoryObject, NodeAttributes, NodeInfo, NodeMarker, OPEN_FLAG_CREATE,
-        OPEN_FLAG_DESCRIBE, OPEN_RIGHT_WRITABLE,
+        DirectoryMarker, DirectoryObject, DirectoryRequest, DirectoryRequestStream, NodeAttributes,
+        NodeInfo, NodeMarker, OPEN_FLAG_CREATE, OPEN_FLAG_DESCRIBE, OPEN_RIGHT_WRITABLE,
     },
     fidl_fuchsia_io2::{UnlinkFlags, UnlinkOptions},
-    fidl_fuchsia_io_admin::{
-        DirectoryAdminMarker, DirectoryAdminRequest, DirectoryAdminRequestStream,
-    },
     fuchsia_zircon::Status,
     futures::{channel::oneshot, future::BoxFuture},
     std::sync::Arc,
@@ -122,7 +119,7 @@ impl DerivedConnection for MutableConnection {
 
     fn handle_request(
         &mut self,
-        request: DirectoryAdminRequest,
+        request: DirectoryRequest,
     ) -> BoxFuture<'_, Result<ConnectionState, Error>> {
         Box::pin(async move {
             match self.handle_request(request).await {
@@ -155,37 +152,37 @@ impl MutableConnection {
 
     async fn handle_request(
         &mut self,
-        request: DirectoryAdminRequest,
-    ) -> Result<Either<ConnectionState, DirectoryAdminRequest>, Error> {
+        request: DirectoryRequest,
+    ) -> Result<Either<ConnectionState, DirectoryRequest>, Error> {
         match request {
-            DirectoryAdminRequest::Unlink { name, options, responder } => {
+            DirectoryRequest::Unlink { name, options, responder } => {
                 self.handle_unlink(name, options, |status| {
                     responder.send(&mut Result::from(status).map_err(|e| e.into_raw()))
                 })
                 .await?;
             }
-            DirectoryAdminRequest::GetToken { responder } => {
+            DirectoryRequest::GetToken { responder } => {
                 self.handle_get_token(|status, token| responder.send(status.into_raw(), token))?;
             }
-            DirectoryAdminRequest::Rename { src, dst_parent_token, dst, responder } => {
+            DirectoryRequest::Rename { src, dst_parent_token, dst, responder } => {
                 self.handle_rename(src, Handle::from(dst_parent_token), dst, |status| {
                     responder.send(&mut Result::from(status).map_err(|e| e.into_raw()))
                 })
                 .await?;
             }
-            DirectoryAdminRequest::SetAttr { flags, attributes, responder } => {
+            DirectoryRequest::SetAttr { flags, attributes, responder } => {
                 let status = match self.handle_setattr(flags, attributes).await {
                     Ok(()) => Status::OK,
                     Err(status) => status,
                 };
                 responder.send(status.into_raw())?;
             }
-            DirectoryAdminRequest::Sync { responder } => {
+            DirectoryRequest::Sync { responder } => {
                 responder.send(
                     self.base.directory.sync().await.err().unwrap_or(Status::OK).into_raw(),
                 )?;
             }
-            DirectoryAdminRequest::Sync2 { responder } => {
+            DirectoryRequest::Sync2 { responder } => {
                 responder.send(&mut self.base.directory.sync().await.map_err(Status::into_raw))?;
             }
             _ => {
@@ -329,7 +326,7 @@ impl MutableConnection {
         directory: OpenDirectory<dyn MutableConnectionClient>,
         flags: u32,
         server_end: ServerEnd<NodeMarker>,
-    ) -> Result<(Self, DirectoryAdminRequestStream), Error> {
+    ) -> Result<(Self, DirectoryRequestStream), Error> {
         // TODO(fxbug.dev/82054): These flags should be validated before create_connection is called
         // since at this point the directory resource has already been opened/created.
         let flags = match new_connection_validate_flags(flags) {
@@ -341,7 +338,7 @@ impl MutableConnection {
         };
 
         let (requests, control_handle) =
-            ServerEnd::<DirectoryAdminMarker>::new(server_end.into_channel())
+            ServerEnd::<DirectoryMarker>::new(server_end.into_channel())
                 .into_stream_and_control_handle()?;
 
         if flags & OPEN_FLAG_DESCRIBE != 0 {
@@ -354,7 +351,7 @@ impl MutableConnection {
 
     async fn handle_requests(
         self,
-        requests: DirectoryAdminRequestStream,
+        requests: DirectoryRequestStream,
         shutdown: oneshot::Receiver<()>,
     ) {
         handle_requests::<Self>(requests, self, shutdown).await;

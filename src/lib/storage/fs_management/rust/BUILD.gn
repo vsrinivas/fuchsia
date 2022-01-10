@@ -12,7 +12,6 @@ rustc_library("fs_management") {
   deps = [
     "//sdk/fidl/fuchsia.fs:fuchsia.fs-rustc",
     "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
-    "//sdk/fidl/fuchsia.io.admin:fuchsia.io.admin-rustc",
     "//src/lib/cstr",
     "//src/lib/fdio/rust:fdio",
     "//src/lib/fidl/rust/fidl",

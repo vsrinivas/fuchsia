@@ -5,7 +5,6 @@
 #include "devfs.h"
 
 #include <fcntl.h>
-#include <fidl/fuchsia.io.admin/cpp/wire.h>
 #include <fidl/fuchsia.io/cpp/wire.h>
 #include <lib/async/cpp/wait.h>
 #include <lib/ddk/driver.h>
@@ -87,7 +86,7 @@ void Watcher::HandleChannelClose(async_dispatcher_t* dispatcher, async::WaitBase
 }
 
 class DcIostate : public fbl::DoublyLinkedListable<DcIostate*>,
-                  public fidl::WireServer<fuchsia_io_admin::DirectoryAdmin> {
+                  public fidl::WireServer<fuchsia_io::Directory> {
  public:
   explicit DcIostate(Devnode* dn, async_dispatcher_t* dispatcher);
   ~DcIostate();
@@ -130,16 +129,12 @@ class DcIostate : public fbl::DoublyLinkedListable<DcIostate*>,
   void Watch(WatchRequestView request, WatchCompleter::Sync& completer) override;
   void QueryFilesystem(QueryFilesystemRequestView request,
                        QueryFilesystemCompleter::Sync& completer) override;
-  void GetDevicePath(GetDevicePathRequestView request,
-                     GetDevicePathCompleter::Sync& completer) override {
-    completer.Reply(ZX_ERR_NOT_SUPPORTED, fidl::StringView());
-  }
 
  private:
   // pointer to our devnode, nullptr if it has been removed
   Devnode* devnode_;
 
-  std::optional<fidl::ServerBindingRef<fuchsia_io_admin::DirectoryAdmin>> binding_;
+  std::optional<fidl::ServerBindingRef<fuchsia_io::Directory>> binding_;
 
   async_dispatcher_t* dispatcher_;
 
@@ -539,10 +534,10 @@ DcIostate::DcIostate(Devnode* dn, async_dispatcher_t* dispatcher)
 DcIostate::~DcIostate() { DetachFromDevnode(); }
 
 void DcIostate::Bind(std::unique_ptr<DcIostate> ios, fidl::ServerEnd<fio::Node> request) {
-  std::optional<fidl::ServerBindingRef<fuchsia_io_admin::DirectoryAdmin>>* binding = &ios->binding_;
-  *binding = fidl::BindServer(
-      ios->dispatcher_, fidl::ServerEnd<fuchsia_io_admin::DirectoryAdmin>(request.TakeChannel()),
-      std::move(ios));
+  std::optional<fidl::ServerBindingRef<fuchsia_io::Directory>>* binding = &ios->binding_;
+  *binding = fidl::BindServer(ios->dispatcher_,
+                              fidl::ServerEnd<fuchsia_io::Directory>(request.TakeChannel()),
+                              std::move(ios));
 }
 
 void DcIostate::DetachFromDevnode() {

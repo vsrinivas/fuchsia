@@ -4,7 +4,6 @@
 
 #include "multiple_device_test.h"
 
-#include <fidl/fuchsia.io.admin/cpp/wire.h>
 #include <fidl/fuchsia.io/cpp/wire.h>
 #include <lib/service/llcpp/service.h>
 #include <zircon/errors.h>
@@ -519,10 +518,9 @@ class UnsupportedErrorMatcher {
 
 TEST_F(MultipleDeviceTestCase, DevfsUnsupportedAPICheck) {
   zx::channel chan = devfs_root_clone();
-  fidl::WireClient client(fidl::ClientEnd<fuchsia_io_admin::DirectoryAdmin>(std::move(chan)),
+  fidl::WireClient client(fidl::ClientEnd<fuchsia_io::Directory>(std::move(chan)),
                           coordinator_loop()->dispatcher());
 
-  client->GetDevicePath(UnsupportedErrorMatcher());
   {
     zx::channel s, c;
     ASSERT_EQ(ZX_OK, zx::channel::create(0, &s, &c));
@@ -533,7 +531,7 @@ TEST_F(MultipleDeviceTestCase, DevfsUnsupportedAPICheck) {
     fuchsia_io::wire::DirectoryRenameResult x;
     ASSERT_EQ(ZX_OK, zx::event::create(0, &e));
     client->Rename("", std::move(e), "",
-                   [](fidl::WireUnownedResult<fuchsia_io_admin::DirectoryAdmin::Rename>& ret) {
+                   [](fidl::WireUnownedResult<fuchsia_io::Directory::Rename>& ret) {
                      ASSERT_OK(ret.status());
                      ASSERT_TRUE(ret->result.is_err());
                      ASSERT_EQ(ret->result.err(), ZX_ERR_NOT_SUPPORTED);

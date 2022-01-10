@@ -108,7 +108,7 @@ int OpenVerityDeviceThread(void* arg) {
 // binary to terminate and returns the status.
 zx_status_t RunBinary(const fbl::Vector<const char*>& argv,
                       fidl::ClientEnd<fuchsia_io::Node> device,
-                      fidl::ServerEnd<fuchsia_io_admin::DirectoryAdmin> export_root = {},
+                      fidl::ServerEnd<fuchsia_io::Directory> export_root = {},
                       fidl::ClientEnd<fuchsia_fxfs::Crypt> crypt_client = {}) {
   FX_CHECK(argv[argv.size() - 1] == nullptr);
   FshostFsProvider fs_provider;
@@ -161,8 +161,8 @@ zx_status_t RunBinary(const fbl::Vector<const char*>& argv,
   return ZX_OK;
 }
 
-// Unmounts the filesystem using fuchsia.fs (rather than DirectoryAdmin).
-void Unmount(const fidl::ClientEnd<fuchsia_io_admin::DirectoryAdmin>& export_root) {
+// Unmounts the filesystem using fuchsia.fs.
+void Unmount(const fidl::ClientEnd<fuchsia_io::Directory>& export_root) {
   auto admin_or = fidl::CreateEndpoints<fuchsia_fs::Admin>();
   if (admin_or.is_error()) {
     FX_LOGS(ERROR) << "Unable to create fs.Admin endpoints";
@@ -185,7 +185,7 @@ void Unmount(const fidl::ClientEnd<fuchsia_io_admin::DirectoryAdmin>& export_roo
 // Tries to mount Minfs and reads all data found on the minfs partition.  Errors are ignored.
 Copier TryReadingMinfs(fidl::ClientEnd<fuchsia_io::Node> device) {
   fbl::Vector<const char*> argv = {"/pkg/bin/minfs", "mount", nullptr};
-  auto export_root_or = fidl::CreateEndpoints<fuchsia_io_admin::DirectoryAdmin>();
+  auto export_root_or = fidl::CreateEndpoints<fuchsia_io::Directory>();
   if (export_root_or.is_error())
     return {};
   if (RunBinary(argv, std::move(device), std::move(export_root_or->server)) != ZX_OK)
@@ -211,7 +211,7 @@ Copier TryReadingMinfs(fidl::ClientEnd<fuchsia_io::Node> device) {
     return {};
   }
 
-  fidl::ClientEnd<fuchsia_io_admin::DirectoryAdmin> root_dir_client(std::move(root_dir_handle));
+  fidl::ClientEnd<fuchsia_io::Directory> root_dir_client(std::move(root_dir_handle));
   auto unmount = fit::defer([&export_root_or] {
     [[maybe_unused]] auto ignore_failure = fs_management::Shutdown(export_root_or->client);
   });
@@ -1001,7 +1001,7 @@ zx_status_t BlockDevice::FormatCustomFilesystem(const std::string& binary_path) 
   if (zx_status_t status = fdio_fd_create(handle, fd.reset_and_get_address()); status != ZX_OK)
     return status;
 
-  auto export_root_or = fidl::CreateEndpoints<fuchsia_io_admin::DirectoryAdmin>();
+  auto export_root_or = fidl::CreateEndpoints<fuchsia_io::Directory>();
   if (export_root_or.is_error())
     return export_root_or.error_value();
 

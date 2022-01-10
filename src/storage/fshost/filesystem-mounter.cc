@@ -106,13 +106,10 @@ zx::status<> FilesystemMounter::MountFilesystem(FsManager::MountPoint point, con
     return zx::error(status);
   }
 
-  uint32_t open_rights = fio::wire::kOpenRightReadable | fio::wire::kOpenFlagPosixWritable |
-                         fio::wire::kOpenFlagPosixExecutable;
-  if (options.admin) {
-    open_rights |= fio::wire::kOpenRightAdmin;
-  }
   if (auto resp = fidl::WireCall<fio::Directory>(zx::unowned_channel(export_root.channel()))
-                      ->Open(open_rights, 0, fidl::StringView("root"), std::move(root_server));
+                      ->Open(fio::wire::kOpenRightReadable | fio::wire::kOpenFlagPosixWritable |
+                                 fio::wire::kOpenFlagPosixExecutable,
+                             0, fidl::StringView("root"), std::move(root_server));
       !resp.ok()) {
     return zx::error(resp.status());
   }
@@ -126,11 +123,6 @@ zx_status_t FilesystemMounter::MountData(zx::channel block_device,
     return ZX_ERR_ALREADY_BOUND;
   }
 
-  fs_management::MountOptions data_options = options;
-  if (config_.is_set(Config::kDataFilesystemNoDirectoryAdmin)) {
-    data_options.admin = false;
-  }
-
   std::string binary_path = config_.ReadStringOptionValue(Config::kDataFilesystemBinaryPath);
   if (binary_path.empty())
     binary_path = "/pkg/bin/minfs";
@@ -140,7 +132,7 @@ zx_status_t FilesystemMounter::MountData(zx::channel block_device,
     return crypt_client_or.error_value();
 
   if (auto result =
-          MountFilesystem(FsManager::MountPoint::kData, binary_path.c_str(), data_options,
+          MountFilesystem(FsManager::MountPoint::kData, binary_path.c_str(), options,
                           std::move(block_device), FS_SVC, std::move(crypt_client_or).value());
       result.is_error()) {
     return result.error_value();

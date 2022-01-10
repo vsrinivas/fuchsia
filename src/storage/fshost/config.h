@@ -47,7 +47,6 @@ struct Config {
   static const char kUseSyslog[];
   static const char kWaitForData[];
   static const char kDataFilesystemBinaryPath[];
-  static const char kDataFilesystemNoDirectoryAdmin[];
   static const char kDataFilesystemUsesCrypt[];
   static const char kAllowLegacyDataPartitionNames[];
   static const char kNand[];

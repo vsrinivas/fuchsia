@@ -86,12 +86,12 @@ pub enum QueryError {
     /// A FIDL error occurred.
     #[error(transparent)]
     Fidl(#[from] fidl::Error),
-    /// A request for filesystem info using the DirectoryAdmin protocol failed.
-    #[error("failed to query filesystem with DirectoryAdmin: {0}")]
-    DirectoryAdminQuery(#[source] Status),
-    /// The filesystem info returned by the DirectoryAdmin protocol was empty.
+    /// A request for filesystem info using the Directory protocol failed.
+    #[error("failed to query filesystem with Directory: {0}")]
+    DirectoryQuery(#[source] Status),
+    /// The filesystem info returned by the Directory protocol was empty.
     #[error("empty filesystem info result")]
-    DirectoryAdminEmptyResult,
+    DirectoryEmptyResult,
 }
 
 /// The error type used by the kill operation of a serving filesystem.

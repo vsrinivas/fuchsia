@@ -4,7 +4,6 @@
 
 #include "src/lib/storage/vfs/cpp/fuchsia_vfs.h"
 
-#include <fidl/fuchsia.io.admin/cpp/wire.h>
 #include <fidl/fuchsia.io/cpp/wire.h>
 #include <fidl/fuchsia.io2/cpp/wire.h>
 #include <lib/fdio/watcher.h>

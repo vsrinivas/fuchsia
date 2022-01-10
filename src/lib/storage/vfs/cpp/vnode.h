@@ -33,7 +33,6 @@
 #include "src/lib/storage/vfs/cpp/vfs_types.h"
 
 #ifdef __Fuchsia__
-#include <fidl/fuchsia.io.admin/cpp/wire.h>
 #include <fidl/fuchsia.io/cpp/wire.h>
 #include <fidl/fuchsia.io2/cpp/wire.h>
 #include <lib/file-lock/file-lock.h>

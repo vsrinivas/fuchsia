@@ -4,7 +4,7 @@
 
 #include <dirent.h>
 #include <fcntl.h>
-#include <fidl/fuchsia.io.admin/cpp/wire.h>
+#include <fidl/fuchsia.io/cpp/wire.h>
 #include <lib/fdio/fdio.h>
 #include <lib/fdio/io.h>
 #include <lib/fdio/namespace.h>
@@ -2172,7 +2172,7 @@ int shutdown(int fd, int how) {
 
 // The common denominator between the Linux-y fstatfs and the POSIX
 // fstatvfs, which align on most fields. The fs version is more easily
-// computed from the fuchsia_io_admin::FilesystemInfo, so this takes a struct statfs.
+// computed from the fuchsia_io::FilesystemInfo, so this takes a struct statfs.
 static int fs_stat(int fd, struct statfs* buf) {
   fdio_ptr io = fd_to_io(fd);
   if (io == nullptr) {

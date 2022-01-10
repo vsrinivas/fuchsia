@@ -127,7 +127,7 @@ class FsManager {
   void FileReport(ReportReason reason);
 
   zx_status_t AttachMount(std::string_view device_path,
-                          fidl::ClientEnd<fuchsia_io_admin::DirectoryAdmin> export_root,
+                          fidl::ClientEnd<fuchsia_io::Directory> export_root,
                           std::string_view name);
 
   zx_status_t DetachMount(std::string_view name);
@@ -153,8 +153,7 @@ class FsManager {
       }
     };
 
-    MountedFilesystem(std::string_view name,
-                      fidl::ClientEnd<fuchsia_io_admin::DirectoryAdmin> export_root,
+    MountedFilesystem(std::string_view name, fidl::ClientEnd<fuchsia_io::Directory> export_root,
                       fbl::RefPtr<fs::Vnode> node, uint64_t fs_id)
         : name_(name), export_root_(std::move(export_root)), node_(node), fs_id_(fs_id) {}
     ~MountedFilesystem();
@@ -163,7 +162,7 @@ class FsManager {
 
    private:
     std::string name_;
-    fidl::ClientEnd<fuchsia_io_admin::DirectoryAdmin> export_root_;
+    fidl::ClientEnd<fuchsia_io::Directory> export_root_;
     fbl::RefPtr<fs::Vnode> node_;
     uint64_t fs_id_;
   };

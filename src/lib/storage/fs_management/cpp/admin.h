@@ -5,7 +5,7 @@
 #ifndef SRC_LIB_STORAGE_FS_MANAGEMENT_CPP_ADMIN_H_
 #define SRC_LIB_STORAGE_FS_MANAGEMENT_CPP_ADMIN_H_
 
-#include <fidl/fuchsia.io.admin/cpp/wire.h>
+#include <fidl/fuchsia.io/cpp/wire.h>
 #include <lib/fidl/llcpp/client_end.h>
 #include <lib/zx/channel.h>
 #include <zircon/types.h>
@@ -108,14 +108,13 @@ zx_status_t Fsck(const char* device_path, DiskFormat df, const FsckOptions& opti
 // filesystem-specific operations.
 //
 // |device_handle| is always consumed.
-zx::status<fidl::ClientEnd<fuchsia_io_admin::DirectoryAdmin>> FsInit(zx::channel device_handle,
-                                                                     DiskFormat df,
-                                                                     const InitOptions& options,
-                                                                     zx::channel crypt_client = {});
+zx::status<fidl::ClientEnd<fuchsia_io::Directory>> FsInit(zx::channel device_handle, DiskFormat df,
+                                                          const InitOptions& options,
+                                                          zx::channel crypt_client = {});
 
 // Get a connection to the root of the filesystem, given a filesystem outgoing directory.
-zx::status<fidl::ClientEnd<fuchsia_io_admin::DirectoryAdmin>> FsRootHandle(
-    fidl::UnownedClientEnd<fuchsia_io_admin::DirectoryAdmin> export_root,
+zx::status<fidl::ClientEnd<fuchsia_io::Directory>> FsRootHandle(
+    fidl::UnownedClientEnd<fuchsia_io::Directory> export_root,
     uint32_t flags = fuchsia_io::wire::kOpenRightReadable |
                      fuchsia_io::wire::kOpenFlagPosixWritable |
                      fuchsia_io::wire::kOpenFlagPosixExecutable |

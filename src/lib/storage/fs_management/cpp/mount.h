@@ -35,10 +35,6 @@ struct MountOptions {
   // If set, run fsck after every transaction.
   bool fsck_after_every_transaction = false;
 
-  // If set, attach the filesystem with O_ADMIN, which will allow the use of the DirectoryAdmin
-  // protocol.
-  bool admin = true;
-
   // If true, puts decompression in a sandboxed process.
   bool sandbox_decompression = false;
 
@@ -48,27 +44,22 @@ struct MountOptions {
 
 class __EXPORT MountedFilesystem {
  public:
-  MountedFilesystem(fidl::ClientEnd<fuchsia_io_admin::DirectoryAdmin> export_root,
-                    std::string_view mount_path)
+  MountedFilesystem(fidl::ClientEnd<fuchsia_io::Directory> export_root, std::string_view mount_path)
       : export_root_(std::move(export_root)), mount_path_(mount_path) {}
   MountedFilesystem(MountedFilesystem&&) = default;
 
   ~MountedFilesystem();
 
-  const fidl::ClientEnd<fuchsia_io_admin::DirectoryAdmin>& export_root() const {
-    return export_root_;
-  }
+  const fidl::ClientEnd<fuchsia_io::Directory>& export_root() const { return export_root_; }
   const std::string& mount_path() const { return mount_path_; }
 
   zx::status<> Unmount() && { return UnmountImpl(); }
-  fidl::ClientEnd<fuchsia_io_admin::DirectoryAdmin> TakeExportRoot() && {
-    return std::move(export_root_);
-  }
+  fidl::ClientEnd<fuchsia_io::Directory> TakeExportRoot() && { return std::move(export_root_); }
 
  private:
   zx::status<> UnmountImpl();
 
-  fidl::ClientEnd<fuchsia_io_admin::DirectoryAdmin> export_root_;
+  fidl::ClientEnd<fuchsia_io::Directory> export_root_;
   std::string mount_path_;
 };
 
@@ -85,7 +76,7 @@ zx::status<MountedFilesystem> Mount(fbl::unique_fd device_fd, const char* mount_
 
 // Shuts down a filesystem (using fuchsia.fs/Admin).
 __EXPORT
-zx::status<> Shutdown(fidl::UnownedClientEnd<fuchsia_io_admin::DirectoryAdmin> export_root);
+zx::status<> Shutdown(fidl::UnownedClientEnd<fuchsia_io::Directory> export_root);
 
 }  // namespace fs_management
 

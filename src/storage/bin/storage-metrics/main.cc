@@ -6,7 +6,7 @@
 #include <fcntl.h>
 #include <fidl/fuchsia.fshost/cpp/wire.h>
 #include <fidl/fuchsia.hardware.block/cpp/wire.h>
-#include <fidl/fuchsia.io.admin/cpp/wire.h>
+#include <fidl/fuchsia.io/cpp/wire.h>
 #include <fidl/fuchsia.minfs/cpp/wire.h>
 #include <getopt.h>
 #include <lib/fdio/cpp/caller.h>

@@ -5,7 +5,6 @@
 #include "src/lib/storage/vfs/cpp/directory_connection.h"
 
 #include <fcntl.h>
-#include <fidl/fuchsia.io.admin/cpp/wire.h>
 #include <fidl/fuchsia.io/cpp/wire.h>
 #include <fidl/fuchsia.io2/cpp/wire.h>
 #include <lib/fdio/io.h>
@@ -98,7 +97,7 @@ namespace internal {
 DirectoryConnection::DirectoryConnection(fs::FuchsiaVfs* vfs, fbl::RefPtr<fs::Vnode> vnode,
                                          VnodeProtocol protocol, VnodeConnectionOptions options)
     : Connection(vfs, std::move(vnode), protocol, options,
-                 FidlProtocol::Create<fuchsia_io_admin::DirectoryAdmin>(this)) {}
+                 FidlProtocol::Create<fuchsia_io::Directory>(this)) {}
 
 void DirectoryConnection::Clone(CloneRequestView request, CloneCompleter::Sync& completer) {
   Connection::NodeClone(request->flags, std::move(request->object));
@@ -423,22 +422,6 @@ void DirectoryConnection::QueryFilesystem(QueryFilesystemRequestView request,
                   status == ZX_OK
                       ? fidl::ObjectView<fuchsia_io::wire::FilesystemInfo>::FromExternal(&info)
                       : nullptr);
-}
-
-void DirectoryConnection::GetDevicePath(GetDevicePathRequestView request,
-                                        GetDevicePathCompleter::Sync& completer) {
-  FS_PRETTY_TRACE_DEBUG("[DirectoryAdminGetDevicePath] our options: ", options());
-
-  if (!options().rights.admin) {
-    completer.Reply(ZX_ERR_ACCESS_DENIED, fidl::StringView());
-    return;
-  }
-
-  if (auto device_path_or = vnode()->GetDevicePath(); device_path_or.is_error()) {
-    completer.Reply(device_path_or.error_value(), {});
-  } else {
-    completer.Reply(ZX_OK, fidl::StringView::FromExternal(device_path_or.value()));
-  }
 }
 
 void DirectoryConnection::AdvisoryLock(AdvisoryLockRequestView request,

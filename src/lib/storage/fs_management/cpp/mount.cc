@@ -7,7 +7,6 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <fidl/fuchsia.hardware.block/cpp/wire.h>
-#include <fidl/fuchsia.io.admin/cpp/wire.h>
 #include <fidl/fuchsia.io/cpp/wire.h>
 #include <lib/fdio/cpp/caller.h>
 #include <lib/fdio/directory.h>
@@ -41,11 +40,11 @@ namespace {
 
 namespace fio = fuchsia_io;
 
-using DirectoryAdmin = fuchsia_io_admin::DirectoryAdmin;
+using Directory = fuchsia_io::Directory;
 
-zx::status<std::pair<fidl::ClientEnd<DirectoryAdmin>, fidl::ClientEnd<DirectoryAdmin>>>
-StartFilesystem(fbl::unique_fd device_fd, DiskFormat df, const MountOptions& options,
-                LaunchCallback cb, zx::channel crypt_client) {
+zx::status<std::pair<fidl::ClientEnd<Directory>, fidl::ClientEnd<Directory>>> StartFilesystem(
+    fbl::unique_fd device_fd, DiskFormat df, const MountOptions& options, LaunchCallback cb,
+    zx::channel crypt_client) {
   // get the device handle from the device_fd
   zx_status_t status;
   zx::channel device;
@@ -78,11 +77,9 @@ StartFilesystem(fbl::unique_fd device_fd, DiskFormat df, const MountOptions& opt
 
   // Extract the handle to the root of the filesystem from the export root. The POSIX flags will
   // cause the writable and executable rights to be inherited (if present).
-  uint32_t flags = fio::wire::kOpenRightReadable | fio::wire::kOpenFlagPosixWritable |
-                   fio::wire::kOpenFlagPosixExecutable;
-  if (options.admin)
-    flags |= fio::wire::kOpenRightAdmin;
-  auto root_or = FsRootHandle(fidl::UnownedClientEnd<DirectoryAdmin>(*export_root_or), flags);
+  auto root_or = FsRootHandle(fidl::UnownedClientEnd<Directory>(*export_root_or),
+                              fio::wire::kOpenRightReadable | fio::wire::kOpenFlagPosixWritable |
+                                  fio::wire::kOpenFlagPosixExecutable);
   if (root_or.is_error())
     return root_or.take_error();
   return zx::ok(std::make_pair(*std::move(export_root_or), *std::move(root_or)));
@@ -118,7 +115,7 @@ zx::status<> MountedFilesystem::UnmountImpl() {
 }
 
 __EXPORT
-zx::status<> Shutdown(fidl::UnownedClientEnd<DirectoryAdmin> export_root) {
+zx::status<> Shutdown(fidl::UnownedClientEnd<Directory> export_root) {
   auto admin_or = fidl::CreateEndpoints<fuchsia_fs::Admin>();
   if (admin_or.is_error())
     return admin_or.take_error();

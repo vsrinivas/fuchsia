@@ -6,7 +6,6 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <fidl/fuchsia.fs/cpp/wire.h>
-#include <fidl/fuchsia.io.admin/cpp/wire.h>
 #include <fidl/fuchsia.io/cpp/wire.h>
 #include <fuchsia/blobfs/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
@@ -1059,38 +1058,6 @@ TEST_P(BlobfsIntegrationTest, MultipleWrites) {
   fd.reset(open(info->path, O_RDONLY));
   ASSERT_TRUE(fd);
   ASSERT_NO_FATAL_FAILURE(VerifyContents(fd.get(), info->data.get(), info->size_data));
-}
-
-zx_status_t DirectoryAdminGetDevicePath(fbl::unique_fd directory, std::string* path) {
-  fdio_cpp::FdioCaller caller(std::move(directory));
-  auto result = fidl::WireCall(fidl::UnownedClientEnd<fuchsia_io_admin::DirectoryAdmin>(
-                                   zx::unowned_channel(caller.borrow_channel())))
-                    ->GetDevicePath();
-  if (result.status() != ZX_OK) {
-    return result.status();
-  }
-  if (result->s != ZX_OK) {
-    return result->s;
-  }
-  path->assign(std::string(result->path.begin(), result->path.size()));
-  return ZX_OK;
-}
-
-TEST_P(BlobfsIntegrationTest, QueryDevicePath) {
-  fbl::unique_fd root_fd(open(fs().mount_path().c_str(), O_RDONLY | O_ADMIN));
-  ASSERT_TRUE(root_fd) << "Cannot open root directory";
-
-  std::string path;
-  ASSERT_EQ(DirectoryAdminGetDevicePath(std::move(root_fd), &path), ZX_OK);
-  ASSERT_FALSE(path.empty());
-
-  ASSERT_EQ(path, storage::GetTopologicalPath(fs().DevicePath().value()).value());
-  printf("device_path %s\n", fs().DevicePath()->c_str());
-
-  root_fd.reset(open(fs().mount_path().c_str(), O_RDONLY));
-  ASSERT_TRUE(root_fd) << "Cannot open root directory";
-
-  ASSERT_EQ(DirectoryAdminGetDevicePath(std::move(root_fd), &path), ZX_ERR_ACCESS_DENIED);
 }
 
 TEST_P(BlobfsIntegrationTest, ReadOnly) {

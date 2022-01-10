@@ -4,7 +4,6 @@
 
 #include "src/lib/storage/fs_management/cpp/admin.h"
 
-#include <fidl/fuchsia.io.admin/cpp/wire.h>
 #include <fidl/fuchsia.io/cpp/wire.h>
 #include <lib/fdio/directory.h>
 #include <lib/zx/channel.h>
@@ -22,7 +21,7 @@ namespace fs_management {
 namespace {
 
 namespace fio = fuchsia_io;
-using fuchsia_io_admin::DirectoryAdmin;
+using fuchsia_io::Directory;
 
 enum State {
   kFormatted,
@@ -61,12 +60,12 @@ class OutgoingDirectoryFixture : public testing::Test {
     ASSERT_EQ(status = ramdisk_destroy(ramdisk_), ZX_OK) << zx_status_get_string(status);
   }
 
-  fidl::WireSyncClient<DirectoryAdmin>& DataRoot() {
+  fidl::WireSyncClient<Directory>& DataRoot() {
     ZX_ASSERT(state_ == kStarted);  // Ensure this isn't used after stopping the filesystem.
     return data_client_;
   }
 
-  fidl::WireSyncClient<DirectoryAdmin>& ExportRoot() {
+  fidl::WireSyncClient<Directory>& ExportRoot() {
     ZX_ASSERT(state_ == kStarted);  // Ensure this isn't used after stopping the filesystem.
     return export_client_;
   }
@@ -87,11 +86,11 @@ class OutgoingDirectoryFixture : public testing::Test {
 
     auto export_root = FsInit(std::move(device), format_, options);
     ASSERT_TRUE(export_root.is_ok()) << export_root.status_string();
-    export_client_ = fidl::WireSyncClient<DirectoryAdmin>(std::move(export_root.value()));
+    export_client_ = fidl::WireSyncClient<Directory>(std::move(export_root.value()));
 
     auto data_root = FsRootHandle(export_client_.client_end());
     ASSERT_TRUE(data_root.is_ok()) << data_root.status_string();
-    data_client_ = fidl::WireSyncClient<DirectoryAdmin>(std::move(data_root.value()));
+    data_client_ = fidl::WireSyncClient<Directory>(std::move(data_root.value()));
 
     state_ = kStarted;
   }
@@ -100,8 +99,8 @@ class OutgoingDirectoryFixture : public testing::Test {
     if (state_ != kStarted) {
       return;
     }
-    ASSERT_EQ(fs_management::Shutdown(fidl::UnownedClientEnd<fuchsia_io_admin::DirectoryAdmin>(
-                                          export_client_.client_end()))
+    ASSERT_EQ(fs_management::Shutdown(
+                  fidl::UnownedClientEnd<fuchsia_io::Directory>(export_client_.client_end()))
                   .status_value(),
               ZX_OK);
 
@@ -113,8 +112,8 @@ class OutgoingDirectoryFixture : public testing::Test {
   ramdisk_client_t* ramdisk_ = nullptr;
   DiskFormat format_;
   InitOptions options_ = {};
-  fidl::WireSyncClient<DirectoryAdmin> export_client_;
-  fidl::WireSyncClient<DirectoryAdmin> data_client_;
+  fidl::WireSyncClient<Directory> export_client_;
+  fidl::WireSyncClient<Directory> data_client_;
 };
 
 // Generalized Admin Tests

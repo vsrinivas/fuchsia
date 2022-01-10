@@ -103,7 +103,6 @@ static_library("cpp") {
     public_deps += [
       "//sdk/fidl/fuchsia.fs:fuchsia.fs_llcpp",
       "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
-      "//sdk/fidl/fuchsia.io.admin:fuchsia.io.admin_llcpp",
       "//sdk/fidl/fuchsia.io2:fuchsia.io2_llcpp",
       "//sdk/lib/file-lock:cpp",
       "//zircon/system/ulib/async",

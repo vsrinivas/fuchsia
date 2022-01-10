@@ -30,7 +30,6 @@ class TestFilesystem {
 
   fs_management::MountOptions DefaultMountOptions() const {
     fs_management::MountOptions options;
-    options.admin = GetTraits().use_admin;
     if (options_.blob_compression_algorithm) {
       options.write_compression_algorithm =
           blobfs::CompressionAlgorithmToString(*options_.blob_compression_algorithm);
