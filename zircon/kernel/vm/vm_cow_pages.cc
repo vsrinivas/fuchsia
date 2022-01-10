@@ -1798,22 +1798,21 @@ zx_status_t VmCowPages::LookupPagesLocked(uint64_t offset, uint pf_flags,
     // 1) This is a write fault.
     // 2) This is a read fault and we do not need to do dirty tracking, i.e. it is fine to retain
     // the write permission on mappings since we don't need to generate a permission fault. We only
-    // need to dirty track pages owned by a root user-pager-backed VMO.
-    out->writable = pf_flags & VMM_PF_FLAG_WRITE || !is_dirty_tracked_locked();
+    // need to dirty track pages owned by a root user-pager-backed VMO, i.e. a VMO with a page
+    // source that preserves page contents.
+    out->writable = pf_flags & VMM_PF_FLAG_WRITE || !is_source_preserving_page_content_locked();
 
     out->add_page(p->paddr());
     if (max_out_pages > 1) {
       collect_pages(this, offset + PAGE_SIZE, (max_out_pages - 1) * PAGE_SIZE);
     }
-    // If we're writing to a root VMO backed by a pager, we might need to mark pages Dirty so that
-    // they can be written back later. This is the only path that can result in such a write; if the
-    // page was not present, we would have already blocked on a read request the first time, and
-    // ended up here when unblocked, at which point the page would be present.
-    //
-    // The check for is_preserving_page_content here may need to be adjusted if we add more
-    // PageProvider types; for now it's effectively checking if this is PagerProxy (which does
-    // preserve page content) vs. PhysicalPageProvider (which doesn't preserve page content).
-    if ((pf_flags & VMM_PF_FLAG_WRITE) && is_dirty_tracked_locked() &&
+
+    // If we're writing to a root VMO backed by a user pager, i.e. a VMO whose page source preserves
+    // page contents, we might need to mark pages Dirty so that they can be written back later. This
+    // is the only path that can result in a write to such a page; if the page was not present, we
+    // would have already blocked on a read request the first time, and ended up here when
+    // unblocked, at which point the page would be present.
+    if ((pf_flags & VMM_PF_FLAG_WRITE) && is_source_preserving_page_content_locked() &&
         mark_dirty == DirtyTrackingAction::DirtyAllPagesOnWrite) {
       zx_status_t status = PrepareForWriteLocked(page_request, offset, out->num_pages * PAGE_SIZE);
       if (status != ZX_OK) {
