@@ -114,6 +114,19 @@ std::string Display(const flat::Decl* d) {
   return decl_kind;
 }
 
+// Display a list of nested types with arrows indicating what includes what:
+// ['A', 'B', 'C'] -> "A -> B -> C"
+std::string Display(std::vector<const flat::Decl*>& d) {
+  std::stringstream ss;
+  for (auto it = d.cbegin(); it != d.cend(); it++) {
+    if (it != d.cbegin()) {
+      ss << " -> ";
+    }
+    ss << Display(*it);
+  }
+  return ss.str();
+}
+
 std::string Display(const flat::Type* t) { return NameFlatType(t); }
 
 std::string Display(const flat::TypeTemplate* t) { return NameFlatName(t->name()); }

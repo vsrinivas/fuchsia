@@ -101,6 +101,15 @@ class CompileStep : public StepBase {
   bool ValidateBitsMembersAndCalcMask(Bits* bits_decl, MemberType* out_mask);
   template <typename MemberType>
   bool ValidateEnumMembersAndCalcUnknownValue(Enum* enum_decl, MemberType* out_unknown_value);
+
+  // If the given |decl| is already in the decl_stack, gets a vector of decls
+  // describing the decl cycle starting and ending with that decl. Otherwise,
+  // returns nullopt.
+  std::optional<std::vector<const Decl*>> GetDeclCycle(const Decl* decl);
+
+  // Stack of decls being compiled. Used to trace back and print the cycle if a
+  // cycle is detected.
+  std::vector<const Decl*> decl_stack_;
 };
 
 }  // namespace fidl::flat

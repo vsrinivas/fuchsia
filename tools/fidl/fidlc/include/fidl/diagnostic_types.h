@@ -50,6 +50,7 @@ std::string Display(const flat::Attribute* a);
 std::string Display(const flat::AttributeArg* a);
 std::string Display(const flat::Constant* c);
 std::string Display(const flat::Decl* d);
+std::string Display(std::vector<const flat::Decl*>& d);
 std::string Display(const flat::Type* t);
 std::string Display(const flat::TypeTemplate* t);
 std::string Display(const flat::Name& n);

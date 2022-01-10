@@ -1931,6 +1931,8 @@ const BAR bool = true;
 )FIDL");
   ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrIncludeCycle,
                                       fidl::ErrCouldNotResolveAttributeArg);
+  EXPECT_TRUE(library.errors()[0]->span.has_value());
+  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "const BAR -> const BAR");
 }
 
 TEST(AttributesTests, BadSelfReferenceWithoutSchemaString) {
@@ -1943,6 +1945,8 @@ const BAR string = "bar";
 )FIDL");
   ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrIncludeCycle,
                                       fidl::ErrCouldNotResolveAttributeArg);
+  EXPECT_TRUE(library.errors()[0]->span.has_value());
+  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "const BAR -> const BAR");
 }
 
 TEST(AttributesTests, BadSelfReferenceWithSchema) {
@@ -1957,6 +1961,8 @@ const BAR bool = true;
       "value", fidl::flat::AttributeArgSchema(fidl::flat::ConstantValue::Kind::kBool));
   ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrIncludeCycle,
                                       fidl::ErrCouldNotResolveAttributeArg);
+  EXPECT_TRUE(library.errors()[0]->span.has_value());
+  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "const BAR -> const BAR");
 }
 
 TEST(AttributesTests, BadMutualReferenceWithoutSchemaBool) {
@@ -1971,6 +1977,8 @@ const SECOND bool = false;
 )FIDL");
   ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrIncludeCycle,
                                       fidl::ErrCouldNotResolveAttributeArg);
+  EXPECT_TRUE(library.errors()[0]->span.has_value());
+  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "const FIRST -> const SECOND -> const FIRST");
 }
 
 TEST(AttributesTests, BadMutualReferenceWithoutSchemaString) {
@@ -1985,6 +1993,8 @@ const SECOND string = "second";
 )FIDL");
   ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrIncludeCycle,
                                       fidl::ErrCouldNotResolveAttributeArg);
+  EXPECT_TRUE(library.errors()[0]->span.has_value());
+  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "const FIRST -> const SECOND -> const FIRST");
 }
 
 TEST(AttributesTests, BadMutualReferenceWithSchema) {
@@ -2001,6 +2011,8 @@ const SECOND bool = false;
       "value", fidl::flat::AttributeArgSchema(fidl::flat::ConstantValue::Kind::kBool));
   ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrIncludeCycle,
                                       fidl::ErrCouldNotResolveAttributeArg);
+  EXPECT_TRUE(library.errors()[0]->span.has_value());
+  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "const FIRST -> const SECOND -> const FIRST");
 }
 
 }  // namespace

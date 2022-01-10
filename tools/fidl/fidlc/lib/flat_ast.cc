@@ -920,6 +920,9 @@ Constant* IdentifierLayoutParameter::AsConstant() const {
 }
 
 void LibraryMediator::CompileDecl(Decl* decl) const { compile_step_->CompileDecl(decl); }
+std::optional<std::vector<const Decl*>> LibraryMediator::GetDeclCycle(const Decl* decl) const {
+  return compile_step_->GetDeclCycle(decl);
+}
 
 std::any Bits::AcceptAny(VisitorAny* visitor) const { return visitor->Visit(*this); }
 std::any Enum::AcceptAny(VisitorAny* visitor) const { return visitor->Visit(*this); }

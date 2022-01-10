@@ -292,12 +292,10 @@ bool TypeAliasTypeTemplate::Create(const LibraryMediator& lib,
                                    const ParamsAndConstraints& unresolved_args,
                                    std::unique_ptr<Type>* out_type,
                                    LayoutInvocation* out_params) const {
-  if (!decl_->compiled) {
-    if (decl_->compiling) {
-      return FailNoSpan(ErrIncludeCycle);
-    }
-    lib.CompileDecl(decl_);
+  if (auto cycle = lib.GetDeclCycle(decl_); cycle) {
+    return Fail(ErrIncludeCycle, decl_->name.span().value(), cycle.value());
   }
+  lib.CompileDecl(decl_);
 
   size_t num_params = unresolved_args.parameters->items.size();
   if (num_params != 0) {

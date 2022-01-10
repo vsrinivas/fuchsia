@@ -4,6 +4,9 @@
 
 #include "fidl/flat/compile_step.h"
 
+#include <algorithm>
+#include <optional>
+
 #include "fidl/flat_ast.h"
 #include "fidl/names.h"
 #include "fidl/ordinals.h"
@@ -17,6 +20,7 @@ constexpr size_t kMaxTableOrdinals = 64;
 
 void CompileStep::RunImpl() {
   CompileAttributeList(library_->attributes.get());
+
   for (auto& [name, decl] : library_->declarations_) {
     CompileDecl(decl);
   }
@@ -120,28 +124,52 @@ class DeriveResourceness {
 // A helper class to track when a Decl is compiling and compiled.
 class Compiling {
  public:
-  explicit Compiling(Decl* decl) : decl_(decl) { decl_->compiling = true; }
+  explicit Compiling(Decl* decl, std::vector<const Decl*>& decl_stack)
+      : decl_(decl), decl_stack_(decl_stack) {
+    decl_->compiling = true;
+    decl_stack_.push_back(decl);
+  }
 
   ~Compiling() {
     decl_->compiling = false;
     decl_->compiled = true;
+    decl_stack_.pop_back();
   }
 
  private:
   Decl* decl_;
+  // Stack trace of decl compile calls.
+  std::vector<const Decl*>& decl_stack_;
 };
 
 }  // namespace
+
+std::optional<std::vector<const Decl*>> CompileStep::GetDeclCycle(const Decl* decl) {
+  if (!decl->compiled && decl->compiling) {
+    auto decl_pos = std::find(decl_stack_.begin(), decl_stack_.end(), decl);
+    // Decl should already be in the stack somewhere because compiling is set to
+    // true iff the decl is in the decl stack.
+    assert(decl_pos != decl_stack_.end());
+    // Copy the part of the cycle we care about so Compiling guards can pop
+    // normally when returning.
+    std::vector<const Decl*> cycle(decl_pos, decl_stack_.end());
+    // Add a second instance of the decl at the end of the list so it shows as
+    // both the beginning and end of the cycle.
+    cycle.push_back(decl);
+    return cycle;
+  }
+  return std::nullopt;
+}
 
 void CompileStep::CompileDecl(Decl* decl) {
   if (decl->compiled) {
     return;
   }
-  if (decl->compiling) {
-    FailNoSpan(ErrIncludeCycle);
+  if (auto cycle = GetDeclCycle(decl); cycle) {
+    Fail(ErrIncludeCycle, decl->name.span().value(), cycle.value());
     return;
   }
-  Compiling guard(decl);
+  Compiling guard(decl, decl_stack_);
   switch (decl->kind) {
     case Decl::Kind::kBits:
       CompileBits(static_cast<Bits*>(decl));
@@ -1214,7 +1242,9 @@ void CompileStep::CompileTypeAlias(TypeAlias* type_alias) {
     // defined `uint32` fails to shadow the builtin which means that we successfully
     // resolve the RHS. To avoid inconsistent semantics, we need to manually
     // catch this case and fail.
-    FailNoSpan(ErrIncludeCycle);
+    std::vector<const Decl*> cycle = {static_cast<const Decl*>(type_alias),
+                                      static_cast<const Decl*>(type_alias)};
+    Fail(ErrIncludeCycle, type_alias->name.span().value(), cycle);
     return;
   }
   CompileTypeConstructor(type_alias->partial_type_ctor.get());

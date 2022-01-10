@@ -297,6 +297,7 @@ type Value = strict union {
 
 )FIDL");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrIncludeCycle);
+  EXPECT_TRUE(library.errors()[0]->span.has_value());
 }
 
 TEST(UnionTests, BadEmptyUnion) {

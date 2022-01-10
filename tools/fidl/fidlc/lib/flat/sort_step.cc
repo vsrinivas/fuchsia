@@ -4,13 +4,16 @@
 
 #include "fidl/flat/sort_step.h"
 
+#include <algorithm>
+
 #include "fidl/names.h"
 
 namespace fidl::flat {
 
 using namespace diagnostics;
 
-bool SortStep::AddConstantDependencies(const Constant* constant, std::set<const Decl*>* out_edges) {
+bool SortStep::AddConstantDependencies(const Constant* constant,
+                                       std::set<const Decl*, CmpDeclInLibrary>* out_edges) {
   switch (constant->kind) {
     case Constant::Kind::kIdentifier: {
       auto identifier = static_cast<const flat::IdentifierConstant*>(constant);
@@ -51,8 +54,9 @@ bool SortStep::AddConstantDependencies(const Constant* constant, std::set<const 
 // Notes:
 // - Nullable structs do not require dependency edges since they are boxed via a
 // pointer indirection, and their content placed out-of-line.
-bool SortStep::DeclDependencies(const Decl* decl, std::set<const Decl*>* out_edges) {
-  std::set<const Decl*> edges;
+bool SortStep::DeclDependencies(const Decl* decl,
+                                std::set<const Decl*, CmpDeclInLibrary>* out_edges) {
+  std::set<const Decl*, CmpDeclInLibrary> edges;
 
   auto maybe_add_decl = [&edges](const TypeConstructor* type_ctor) {
     const TypeConstructor* current = type_ctor;
@@ -214,7 +218,40 @@ bool SortStep::DeclDependencies(const Decl* decl, std::set<const Decl*>* out_edg
   return true;
 }
 
-namespace {
+// Recursive helper for building a cycle to use as the example in
+// ErrIncludeCycle. Given |dependencies|, the set of remaining undeclared
+// dependencies of each decl and |inverse_dependencies|, the list other decls
+// which depend on each decl, build out |cycle| by recursively searching all
+// dependents of the last element in the cycle until one is found which is
+// already a member of the cycle.
+//
+// The cycle must not be empty, as the last element of the cycle is the current
+// search point in the recursion.
+bool SortStep::BuildExampleCycle(
+    std::map<const Decl*, std::set<const Decl*, CmpDeclInLibrary>, CmpDeclInLibrary>& dependencies,
+    std::vector<const Decl*>& cycle) {
+  const Decl* const decl = cycle.back();
+  for (const Decl* dep : dependencies[decl]) {
+    auto dep_pos = std::find(cycle.begin(), cycle.end(), dep);
+    if (dep_pos != cycle.end()) {
+      // We found a decl that is in the cycle already. That means we have a
+      // cycle from dep_pos to cycle.end(), but there may be other decls from
+      // cycle.begin() to decl_pos which are either leaf elements not part of
+      // this cycle or part of another cycle which intersects this one.
+      cycle.erase(cycle.begin(), dep_pos);
+      // Add another reference to the same decl so it gets printed at both the
+      // start and end of the cycle.
+      cycle.push_back(dep);
+      return true;
+    }
+    cycle.push_back(dep);
+    if (BuildExampleCycle(dependencies, cycle)) {
+      return true;
+    }
+    cycle.pop_back();
+  }
+  return false;
+}
 
 // Declaration comparator.
 //
@@ -223,42 +260,38 @@ namespace {
 //
 // (2) To compare two Decl's across libraries, we rely on the fully qualified
 //     names of the Decl's. (This is slower.)
-struct CmpDeclInLibrary {
-  bool operator()(const Decl* a, const Decl* b) const {
-    assert(a->name != b->name || a == b);
-    const Library* a_library = a->name.library();
-    const Library* b_library = b->name.library();
-    if (a_library != b_library) {
-      return NameFlatName(a->name) < NameFlatName(b->name);
-    } else {
-      return a->name.decl_name() < b->name.decl_name();
-    }
+bool SortStep::CmpDeclInLibrary::operator()(const Decl* a, const Decl* b) const {
+  assert(a->name != b->name || a == b);
+  const Library* a_library = a->name.library();
+  const Library* b_library = b->name.library();
+  if (a_library != b_library) {
+    return NameFlatName(a->name) < NameFlatName(b->name);
+  } else {
+    return a->name.decl_name() < b->name.decl_name();
   }
-};
-
-}  // namespace
+}
 
 void SortStep::RunImpl() {
-  // |degree| is the number of undeclared dependencies for each decl.
-  std::map<const Decl*, uint32_t, CmpDeclInLibrary> degrees;
+  // |dependences| is the number of undeclared dependencies left for each decl.
+  std::map<const Decl*, std::set<const Decl*, CmpDeclInLibrary>, CmpDeclInLibrary> dependencies;
   // |inverse_dependencies| records the decls that depend on each decl.
   std::map<const Decl*, std::vector<const Decl*>, CmpDeclInLibrary> inverse_dependencies;
   for (const auto& name_and_decl : library_->declarations_) {
     const Decl* decl = name_and_decl.second;
-    std::set<const Decl*> deps;
+    std::set<const Decl*, CmpDeclInLibrary> deps;
     if (!DeclDependencies(decl, &deps))
       return;
-    degrees[decl] = static_cast<uint32_t>(deps.size());
     for (const Decl* dep : deps) {
       inverse_dependencies[dep].push_back(decl);
     }
+    dependencies[decl] = std::move(deps);
   }
 
   // Start with all decls that have no incoming edges.
   std::vector<const Decl*> decls_without_deps;
-  for (const auto& decl_and_degree : degrees) {
-    if (decl_and_degree.second == 0u) {
-      decls_without_deps.push_back(decl_and_degree.first);
+  for (const auto& [decl, deps] : dependencies) {
+    if (deps.empty()) {
+      decls_without_deps.push_back(decl);
     }
   }
 
@@ -266,24 +299,48 @@ void SortStep::RunImpl() {
     // Pull one out of the queue.
     auto decl = decls_without_deps.back();
     decls_without_deps.pop_back();
-    assert(degrees[decl] == 0u);
+    assert(dependencies[decl].empty());
     library_->declaration_order_.push_back(decl);
 
-    // Decrement the incoming degree of all the other decls it
-    // points to.
+    // Since this decl is now declared, remove it from the set of undeclared
+    // dependencies for every other decl that depends on it.
     auto& inverse_deps = inverse_dependencies[decl];
     for (const Decl* inverse_dep : inverse_deps) {
-      uint32_t& degree = degrees[inverse_dep];
-      assert(degree != 0u);
-      degree -= 1;
-      if (degree == 0u)
+      auto& inverse_dep_forward_edges = dependencies[inverse_dep];
+      auto incoming_edge = inverse_dep_forward_edges.find(decl);
+      assert(incoming_edge != inverse_dep_forward_edges.end());
+      inverse_dep_forward_edges.erase(incoming_edge);
+      if (inverse_dep_forward_edges.empty())
         decls_without_deps.push_back(inverse_dep);
     }
   }
 
-  if (library_->declaration_order_.size() != degrees.size()) {
+  if (library_->declaration_order_.size() != dependencies.size()) {
     // We didn't visit all the edges! There was a cycle.
-    library_->FailNoSpan(ErrIncludeCycle);
+
+    // Find a cycle to use as an example in the error message.  We start from
+    // some type that still has undeclared outgoing dependencies, then do a DFS
+    // until we get back to a type we've visited before.
+    std::vector<const Decl*> cycle;
+    for (auto const& [decl, deps] : dependencies) {
+      // Find the first type that still has undeclared deps.
+      if (!deps.empty()) {
+        cycle.push_back(decl);
+        break;
+      }
+    }
+    // There is a cycle so we should find at least one decl with remaining
+    // undeclared deps.
+    assert(!cycle.empty());
+    // Because there is a cycle, building a cycle should always succeed.
+    [[maybe_unused]] bool found_cycle = BuildExampleCycle(dependencies, cycle);
+    assert(found_cycle);
+    // Even if there is only one element in the cycle (a self-loop),
+    // BuildExampleCycle should add a second entry so when printing we get A->A,
+    // so the list should always end up with at least two elements.
+    assert(cycle.size() > 1);
+
+    library_->Fail(ErrIncludeCycle, cycle.front()->name.span().value(), cycle);
   }
 }
 

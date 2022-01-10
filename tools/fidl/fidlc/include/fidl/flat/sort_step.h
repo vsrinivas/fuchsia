@@ -17,9 +17,17 @@ class SortStep : public StepBase {
   using StepBase::StepBase;
 
  private:
+  struct CmpDeclInLibrary {
+    bool operator()(const Decl* a, const Decl* b) const;
+  };
+
   void RunImpl() override;
-  bool AddConstantDependencies(const Constant* constant, std::set<const Decl*>* out_edges);
-  bool DeclDependencies(const Decl* decl, std::set<const Decl*>* out_edges);
+  bool AddConstantDependencies(const Constant* constant,
+                               std::set<const Decl*, CmpDeclInLibrary>* out_edges);
+  bool DeclDependencies(const Decl* decl, std::set<const Decl*, CmpDeclInLibrary>* out_edges);
+  static bool BuildExampleCycle(std::map<const Decl*, std::set<const Decl*, CmpDeclInLibrary>,
+                                         CmpDeclInLibrary>& dependencies,
+                                std::vector<const Decl*>& cycle);
 };
 
 }  // namespace fidl::flat

@@ -854,6 +854,11 @@ class LibraryMediator : private ReporterMixin {
   // type alias.
   void CompileDecl(Decl* decl) const;
 
+  // Use in TypeAliasTypeTemplates to check for decl cycles before trying to
+  // compile the next type alias and to get the cycle to use in the error
+  // report.
+  std::optional<std::vector<const Decl*>> GetDeclCycle(const Decl* decl) const;
+
  private:
   Library* library_;
   CompileStep* compile_step_;

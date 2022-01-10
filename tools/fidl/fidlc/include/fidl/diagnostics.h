@@ -113,14 +113,18 @@ constexpr ErrorDef ErrNullableUnionMember("Union members cannot be nullable");
 // ---------------------------------------------------------------------------
 // Library::Compile: SortDeclarations
 // ---------------------------------------------------------------------------
-// NOTE: currently, neither of these errors will actually be thrown as part of SortDeclarations,
-// since they will be caught earlier during the compilation process. Specifically,
-// ErrFailedConstantLookup will never be thrown (ErrCannotResolveConstantValue is caught first),
-// and ErrIncludeCycle is thrown as part of the compilation step rather than here.
-// We still keep these errors so that SortDeclarations can work "standalone" and does not depend
-// on whether compilation occurs first. This makes it easier to move/reorder later if needed
+// NOTE: currently, ErrFailedConstantLookup will never be thrown because
+// ErrCannotResolveConstantValue is caught first.
+// We still keep this error so that SortDeclarations can work "standalone" and
+// does not depend on whether compilation occurs first. This makes it easier to
+// move/reorder later if needed.
 constexpr ErrorDef<flat::Name> ErrFailedConstantLookup("Unable to find the constant named: {}");
-constexpr ErrorDef ErrIncludeCycle("There is an includes-cycle in declarations");
+// ErrIncludeCycle is thrown either as part of SortDeclarations or as part of
+// CompileStep, depending on the type of the cycle, because SortDeclarations
+// understands the support for boxed recursive structs, while CompileStep
+// handles recursive protocols and self-referencing type-aliases.
+constexpr ErrorDef<std::vector<const flat::Decl *>> ErrIncludeCycle(
+    "There is an includes-cycle in declarations: {}");
 
 // ---------------------------------------------------------------------------
 // Library::Compile: Compilation, Resolution, Validation

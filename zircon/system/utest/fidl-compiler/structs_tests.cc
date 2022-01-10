@@ -233,6 +233,89 @@ type Yang = struct {
 };
 )FIDL");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrIncludeCycle);
+  EXPECT_TRUE(library.errors()[0]->span.has_value());
+  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "struct Yang -> struct Yin -> struct Yang");
+}
+
+TEST(StructsTests, BadSelfRecursive) {
+  TestLibrary library(R"FIDL(
+library example;
+
+type MySelf = struct {
+  me MySelf;
+};
+)FIDL");
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrIncludeCycle);
+  EXPECT_TRUE(library.errors()[0]->span.has_value());
+  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "struct MySelf -> struct MySelf");
+}
+
+TEST(StructsTests, BadMutuallyRecursiveWithIncomingLeaf) {
+  TestLibrary library(R"FIDL(
+library example;
+
+type Yin = struct {
+  yang Yang;
+};
+
+type Yang = struct {
+  yin Yin;
+};
+
+type Leaf = struct {
+  yin Yin;
+};
+)FIDL");
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrIncludeCycle);
+  EXPECT_TRUE(library.errors()[0]->span.has_value());
+  // Leaf sorts before either Yin or Yang, so the cycle finder in sort_step.cc
+  // starts there, which leads it to yin before yang.
+  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "struct Yin -> struct Yang -> struct Yin");
+}
+
+TEST(StructsTests, BadMutuallyRecursiveWithOutogingLeaf) {
+  TestLibrary library(R"FIDL(
+library example;
+
+type Yin = struct {
+  yang Yang;
+};
+
+type Yang = struct {
+  yin Yin;
+  leaf Leaf;
+};
+
+type Leaf = struct {
+  x int32;
+};
+)FIDL");
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrIncludeCycle);
+  EXPECT_TRUE(library.errors()[0]->span.has_value());
+  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "struct Yang -> struct Yin -> struct Yang");
+}
+
+TEST(StructsTests, BadMutuallyRecursiveIntersectingLoops) {
+  TestLibrary library(R"FIDL(
+library example;
+
+type Yin = struct {
+  intersection Intersection;
+};
+
+type Yang = struct {
+  intersection Intersection;
+};
+
+type Intersection = struct {
+  yin Yin;
+  yang Yang;
+};
+)FIDL");
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrIncludeCycle);
+  EXPECT_TRUE(library.errors()[0]->span.has_value());
+  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(),
+                "struct Intersection -> struct Yang -> struct Intersection");
 }
 
 TEST(StructsTests, BadBoxCannotBeNullable) {
