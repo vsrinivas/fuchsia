@@ -4,6 +4,7 @@
 
 #include <errno.h>
 #include <fcntl.h>
+#include <fidl/fuchsia.fshost/cpp/wire.h>
 #include <fidl/fuchsia.hardware.block/cpp/wire.h>
 #include <fidl/fuchsia.io.admin/cpp/wire.h>
 #include <fidl/fuchsia.minfs/cpp/wire.h>
@@ -24,6 +25,7 @@
 #include <storage-metrics/block-metrics.h>
 #include <storage-metrics/fs-metrics.h>
 
+#include "src/storage/fshost/constants.h"
 #include "src/storage/minfs/metrics.h"
 
 namespace {
@@ -195,14 +197,24 @@ void RunBlockMetrics(const char* path, const StorageMetricOptions options) {
     }
   }
 
+  std::string device_path;
   fdio_cpp::FdioCaller caller(std::move(fd));
+  auto result = fidl::WireCall(caller.directory())->QueryFilesystem();
+  if (result.ok() && result->s == ZX_OK) {
+    std::string fshost_path(fshost::kHubAdminServicePath);
+    auto fshost_or = service::Connect<fuchsia_fshost::Admin>(fshost_path.c_str());
+    if (fshost_or.is_error()) {
+      fprintf(stderr, "Error connecting to fshost (@ %s): %s\n", fshost_path.c_str(),
+              fshost_or.status_string());
+    } else {
+      auto path_result = fidl::WireCall(*fshost_or)->GetDevicePath(result->info->fs_id);
+      if (path_result.ok() && path_result->result.is_response()) {
+        device_path = std::string(path_result->result.response().path.get());
+      }
+    }
+  }
 
-  auto result = fidl::WireCall(fidl::UnownedClientEnd<fuchsia_io_admin::DirectoryAdmin>(
-                                   caller.borrow_channel()))
-                    ->GetDevicePath();
-
-  if (result.ok()) {
-    std::string device_path(result.value().path.get());
+  if (!device_path.empty()) {
     zx::status<fuchsia_hardware_block::wire::BlockStats> block_stats =
         GetBlockStats(device_path.data(), options.clear_block);
     if (block_stats.is_ok()) {
