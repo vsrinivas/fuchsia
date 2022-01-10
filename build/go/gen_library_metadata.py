@@ -90,7 +90,11 @@ def main():
             current_sources.append(
                 Source(os.path.join(name, source), p, args.output))
         if not name.endswith('/...'):
-            for s in args.sources:
+            go_sources = {f for f in args.sources if f.endswith('.go')}
+
+            # Go sources are constrained to live top-level under `source_dir`;
+            # others (e.g., template files) are free to live further down.
+            for s in go_sources:
                 if os.path.dirname(s):
                     raise ValueError(
                         f'Source "{s}" for "{name}" comes from a subdirectory.'
@@ -101,7 +105,6 @@ def main():
             go_files = {
                 f for f in os.listdir(args.source_dir) if f.endswith('.go')
             }
-            go_sources = {f for f in args.sources if f.endswith('.go')}
             missing = go_files - go_sources
             if missing:
                 raise ValueError(
