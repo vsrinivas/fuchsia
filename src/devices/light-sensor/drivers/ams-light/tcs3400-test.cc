@@ -77,10 +77,10 @@ class FakeLightSensor : public fake_i2c::FakeI2c {
     // The interrupt or timeout has been received and the driver is reading out the data registers.
     if (address == TCS_I2C_BDATAH) {
       sync_completion_signal(&read_completion_);
-    } else if (address == TCS_I2C_ENABLE) {
-      enable_written_ = true;
-    } else if (address == TCS_I2C_ATIME && enable_written_) {
-      enable_written_ = false;
+    } else if (!first_enable_written_ && address == TCS_I2C_ENABLE) {
+      first_enable_written_ = true;
+    } else if (first_enable_written_ && address == TCS_I2C_ENABLE) {
+      first_enable_written_ = false;
       sync_completion_signal(&configuration_completion_);
     }
 
@@ -92,7 +92,7 @@ class FakeLightSensor : public fake_i2c::FakeI2c {
   std::array<std::vector<uint8_t>, UINT8_MAX> registers_ TA_GUARDED(registers_lock_) = {};
   sync_completion_t read_completion_;
   sync_completion_t configuration_completion_;
-  bool enable_written_ = false;
+  bool first_enable_written_ = false;
 };
 
 class Tcs3400Test : public zxtest::Test {
