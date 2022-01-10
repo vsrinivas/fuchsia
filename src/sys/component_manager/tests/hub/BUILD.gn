@@ -11,18 +11,10 @@ rustc_test("hub_integration_test_bin") {
   edition = "2018"
   source_root = "hub_integration_test.rs"
   deps = [
-    "//examples/components/routing/fidl:echo-rustc",
-    "//garnet/lib/rust/io_util",
-    "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
     "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
-    "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
-    "//src/sys/component_manager/testing:test_utils_lib",
-    "//src/sys/component_manager/tests/fidl:hub-rustc",
+    "//src/lib/fuchsia-component-test",
     "//src/sys/lib/component-events",
-    "//third_party/rust_crates:anyhow",
-    "//third_party/rust_crates:futures",
-    "//third_party/rust_crates:matches",
   ]
 
   sources = [ "hub_integration_test.rs" ]
@@ -66,13 +58,6 @@ fuchsia_component("resolver") {
   testonly = true
   deps = [ "components:resolver_bin" ]
   manifest = "components/resolver/meta/resolver.cml"
-  restricted_features = [ "structured_config" ]
-}
-
-fuchsia_structured_config_values("resolver_config") {
-  testonly = true
-  component = ":resolver"
-  values = "components/resolver/config/resolver_config.json5"
 }
 
 fuchsia_component("child") {
@@ -86,9 +71,7 @@ fuchsia_component("grandchild") {
 }
 
 fuchsia_unittest_package("hub_integration_test") {
-  package_deps_for_infra_only =
-      [ "//src/sys/component_manager:component-manager" ]
-  manifest = "meta/hub_integration_test.cmx"
+  manifest = "meta/hub_integration_test.cml"
   deps = [
     ":advanced_routing_echo_realm",
     ":advanced_routing_reporter",
@@ -98,9 +81,9 @@ fuchsia_unittest_package("hub_integration_test") {
     ":hub_client",
     ":hub_integration_test_bin",
     ":resolver",
-    ":resolver_config",
     ":simple",
     ":visibility_reporter",
     "//examples/components/routing/echo_server:echo_server_component",
+    "//src/sys/component_manager:component-manager-realm-builder-debug-cmp",
   ]
 }

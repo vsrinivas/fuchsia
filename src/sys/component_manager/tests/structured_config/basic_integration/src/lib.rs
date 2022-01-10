@@ -6,6 +6,7 @@ use cm_rust::FidlIntoNative;
 use fidl::encoding::decode_persistent;
 use fidl_fuchsia_component_config::{ListValue, SingleValue, Value, ValuesData};
 use fidl_test_structuredconfig_receiver::{ConfigReceiverPuppetMarker, ReceiverConfig};
+use std::fs::{read_dir, read_to_string};
 use std::path::Path;
 
 fn expected_my_flag() -> bool {
@@ -48,6 +49,50 @@ async fn resolve_structured_config_in_child() {
         expected_config(),
         "child must receive expected configuration"
     );
+
+    // Now that the receiver has been resolved, check that the hub also has the matching
+    // configuration fields.
+    let config_path = Path::new("/hub/children/receiver/resolved/config");
+    let files = read_dir(config_path).unwrap();
+    let mut files: Vec<String> =
+        files.map(|d| d.unwrap().file_name().into_string().unwrap()).collect();
+    files.sort();
+
+    let my_flag_hub_value =
+        if expected_my_flag() { "Single(Flag(true))" } else { "Single(Flag(false))" };
+
+    let expected_fields = vec![
+        ("my_flag", my_flag_hub_value),
+        ("my_int16", "Single(Signed16(-32766))"),
+        ("my_int32", "Single(Signed32(-2000000000))"),
+        ("my_int64", "Single(Signed64(-4000000000))"),
+        ("my_int8", "Single(Signed8(-127))"),
+        ("my_string", "Single(Text(\"hello, world!\"))"),
+        ("my_uint16", "Single(Unsigned16(65535))"),
+        ("my_uint32", "Single(Unsigned32(4000000000))"),
+        ("my_uint64", "Single(Unsigned64(8000000000))"),
+        ("my_uint8", "Single(Unsigned8(255))"),
+        ("my_vector_of_flag", "List(FlagList([true, false]))"),
+        ("my_vector_of_int16", "List(Signed16List([-2, -3, 4]))"),
+        ("my_vector_of_int32", "List(Signed32List([-3, -4, 5]))"),
+        ("my_vector_of_int64", "List(Signed64List([-4, -5, 6]))"),
+        ("my_vector_of_int8", "List(Signed8List([-1, -2, 3]))"),
+        ("my_vector_of_string", "List(TextList([\"hello, world!\", \"hello, again!\"]))"),
+        ("my_vector_of_uint16", "List(Unsigned16List([2, 3, 4]))"),
+        ("my_vector_of_uint32", "List(Unsigned32List([3, 4, 5]))"),
+        ("my_vector_of_uint64", "List(Unsigned64List([4, 5, 6]))"),
+        ("my_vector_of_uint8", "List(Unsigned8List([1, 2, 3]))"),
+    ];
+
+    let expected_files: Vec<&str> = expected_fields.iter().map(|field| field.0).collect();
+
+    assert_eq!(files, expected_files);
+
+    for (key, expected_value) in expected_fields {
+        let file = config_path.join(key);
+        let value = read_to_string(file).unwrap();
+        assert_eq!(value, expected_value);
+    }
 }
 
 #[fuchsia::test]

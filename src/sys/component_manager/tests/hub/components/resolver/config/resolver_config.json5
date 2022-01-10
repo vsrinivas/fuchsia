@@ -1,8 +1,0 @@
-{
-    logging: true,
-    verbosity: "DEBUG",
-    tags: [
-        "foo",
-        "bar",
-    ],
-}

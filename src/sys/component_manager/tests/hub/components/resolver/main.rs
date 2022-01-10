@@ -64,8 +64,4 @@ async fn main() {
         vec!["children", "component_type", "debug", "id", "resolved", "url"],
     )
     .await;
-    expect_dir_listing("/hub/resolved/config", vec!["logging", "tags", "verbosity"]).await;
-    expect_file_content("/hub/resolved/config/logging", "Single(Flag(true))").await;
-    expect_file_content("/hub/resolved/config/verbosity", "Single(Text(\"DEBUG\"))").await;
-    expect_file_content("/hub/resolved/config/tags", "List(TextList([\"foo\", \"bar\"]))").await;
 }

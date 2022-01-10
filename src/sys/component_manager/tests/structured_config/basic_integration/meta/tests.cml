@@ -17,6 +17,12 @@
             protocol: "test.structuredconfig.receiver.ConfigReceiverPuppet",
             from: "#receiver",
         },
+        {
+            directory: "hub",
+            from: "framework",
+            rights: [ "r*" ],
+            path: "/hub",
+        },
     ],
     offer: [
         {

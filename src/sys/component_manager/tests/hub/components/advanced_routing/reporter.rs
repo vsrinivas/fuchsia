@@ -48,8 +48,11 @@ async fn main() {
     )
     .await;
 
-    expect_dir_listing("/parent_hub/children/reporter/exec/in/pkg", vec!["bin", "lib", "meta"])
-        .await;
+    expect_dir_listing(
+        "/parent_hub/children/reporter/exec/in/pkg",
+        vec!["bin", "data", "lib", "meta"],
+    )
+    .await;
 
     expect_echo_service(
         "/parent_hub/children/echo_server/resolved/expose/fidl.examples.routing.echo.Echo",
