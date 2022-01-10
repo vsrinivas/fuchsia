@@ -124,11 +124,12 @@ async fn discovered_dns<E: netemul::Endpoint, M: Manager>(name: &str) {
                 //
                 // The network manager should listen for DNS server events from the netstack and
                 // configure the DNS resolver accordingly.
-                KnownServiceProvider::Manager(M::MANAGEMENT_AGENT),
+                KnownServiceProvider::Manager {
+                    agent: M::MANAGEMENT_AGENT,
+                    use_dhcp_server: false,
+                },
                 KnownServiceProvider::DnsResolver,
-                KnownServiceProvider::DhcpServer { persistent: false },
                 KnownServiceProvider::Dhcpv6Client,
-                KnownServiceProvider::SecureStash,
             ],
         )
         .expect("failed to create client realm");
@@ -271,11 +272,12 @@ async fn discovered_dhcpv6_dns<E: netemul::Endpoint, M: Manager>(name: &str) {
                 //
                 // The network manager should listen for DNS server events from the DHCPv6 client
                 // and configure the DNS resolver accordingly.
-                KnownServiceProvider::Manager(M::MANAGEMENT_AGENT),
-                KnownServiceProvider::DhcpServer { persistent: false },
+                KnownServiceProvider::Manager {
+                    agent: M::MANAGEMENT_AGENT,
+                    use_dhcp_server: false,
+                },
                 KnownServiceProvider::Dhcpv6Client,
                 KnownServiceProvider::DnsResolver,
-                KnownServiceProvider::SecureStash,
             ],
         )
         .expect("failed to create realm");

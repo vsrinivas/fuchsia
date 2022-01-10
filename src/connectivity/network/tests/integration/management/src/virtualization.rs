@@ -290,13 +290,12 @@ async fn virtualization<E: netemul::Endpoint>(name: &str, sub_name: &str, steps:
         .create_netstack_realm_with::<Netstack2, _, _>(
             format!("{}_{}_host", name, sub_name),
             &[
-                KnownServiceProvider::Manager(ManagementAgent::NetCfg(NetCfgVersion::Advanced)),
+                KnownServiceProvider::Manager {
+                    agent: ManagementAgent::NetCfg(NetCfgVersion::Advanced),
+                    use_dhcp_server: false,
+                },
                 KnownServiceProvider::DnsResolver,
-                // TODO(https://fxbug.dev/89142): Don't start DHCP server since
-                // it's not necessary for the test.
-                KnownServiceProvider::DhcpServer { persistent: false },
                 KnownServiceProvider::Dhcpv6Client,
-                KnownServiceProvider::SecureStash,
             ],
         )
         .expect("failed to create host netstack realm");
@@ -519,13 +518,12 @@ async fn dhcpv4_client_started<E: netemul::Endpoint>(name: &str) {
         .create_netstack_realm_with::<Netstack2, _, _>(
             format!("{}_host", name),
             &[
-                KnownServiceProvider::Manager(ManagementAgent::NetCfg(NetCfgVersion::Advanced)),
+                KnownServiceProvider::Manager {
+                    agent: ManagementAgent::NetCfg(NetCfgVersion::Advanced),
+                    use_dhcp_server: false,
+                },
                 KnownServiceProvider::DnsResolver,
-                // TODO(https://fxbug.dev/89142): Don't start DHCP server since
-                // it's not necessary for the test.
-                KnownServiceProvider::DhcpServer { persistent: false },
                 KnownServiceProvider::Dhcpv6Client,
-                KnownServiceProvider::SecureStash,
             ],
         )
         .expect("failed to create host netstack realm");

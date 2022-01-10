@@ -140,7 +140,7 @@ impl ManagementAgent {
 #[allow(missing_docs)]
 pub enum KnownServiceProvider {
     Netstack(NetstackVersion),
-    Manager(ManagementAgent),
+    Manager { agent: ManagementAgent, use_dhcp_server: bool },
     SecureStash,
     DhcpServer { persistent: bool },
     Dhcpv6Client,
@@ -250,72 +250,87 @@ impl<'a> From<&'a KnownServiceProvider> for fnetemul::ChildDef {
                 )),
                 ..fnetemul::ChildDef::EMPTY
             },
-            KnownServiceProvider::Manager(management_agent) => fnetemul::ChildDef {
-                name: Some(management_agent.get_component_name().to_string()),
-                source: Some(fnetemul::ChildSource::Component(
-                    management_agent.get_url().to_string(),
-                )),
+            KnownServiceProvider::Manager { agent, use_dhcp_server } => fnetemul::ChildDef {
+                name: Some(agent.get_component_name().to_string()),
+                source: Some(fnetemul::ChildSource::Component(agent.get_url().to_string())),
                 program_args: Some(
-                    management_agent.get_program_args().iter().cloned().map(Into::into).collect(),
+                    agent.get_program_args().iter().cloned().map(Into::into).collect(),
                 ),
                 exposes: Some(
-                    management_agent
-                        .get_services()
-                        .iter()
-                        .map(|service| service.to_string())
-                        .collect(),
+                    agent.get_services().iter().map(|service| service.to_string()).collect(),
                 ),
-                uses: Some(fnetemul::ChildUses::Capabilities(vec![
-                    fnetemul::Capability::LogSink(fnetemul::Empty {}),
-                    fnetemul::Capability::ChildDep(protocol_dep::<fnet_filter::FilterMarker>(
-                        constants::netstack::COMPONENT_NAME,
-                    )),
-                    fnetemul::Capability::ChildDep(protocol_dep::<fnet_interfaces::StateMarker>(
-                        constants::netstack::COMPONENT_NAME,
-                    )),
-                    fnetemul::Capability::ChildDep(protocol_dep::<
-                        fnet_interfaces_admin::InstallerMarker,
-                    >(
-                        constants::netstack::COMPONENT_NAME
-                    )),
-                    fnetemul::Capability::ChildDep(protocol_dep::<fnet_stack::StackMarker>(
-                        constants::netstack::COMPONENT_NAME,
-                    )),
-                    fnetemul::Capability::ChildDep(protocol_dep::<fnetstack::NetstackMarker>(
-                        constants::netstack::COMPONENT_NAME,
-                    )),
-                    fnetemul::Capability::ChildDep(protocol_dep::<fnet_dhcp::Server_Marker>(
-                        constants::dhcp_server::COMPONENT_NAME,
-                    )),
-                    fnetemul::Capability::ChildDep(
-                        protocol_dep::<fnet_dhcpv6::ClientProviderMarker>(
-                            constants::dhcpv6_client::COMPONENT_NAME,
-                        ),
-                    ),
-                    fnetemul::Capability::ChildDep(protocol_dep::<fnet_name::LookupAdminMarker>(
-                        constants::dns_resolver::COMPONENT_NAME,
-                    )),
-                    fnetemul::Capability::NetemulDevfs(fnetemul::DevfsDep {
-                        name: Some(constants::netcfg::DEV_CLASS_ETHERNET.to_string()),
-                        subdir: Some(constants::netcfg::CLASS_ETHERNET_PATH.to_string()),
-                        ..fnetemul::DevfsDep::EMPTY
-                    }),
-                    fnetemul::Capability::NetemulDevfs(fnetemul::DevfsDep {
-                        name: Some(constants::netcfg::DEV_CLASS_NETWORK.to_string()),
-                        subdir: Some(constants::netcfg::CLASS_NETWORK_PATH.to_string()),
-                        ..fnetemul::DevfsDep::EMPTY
-                    }),
-                    fnetemul::Capability::StorageDep(fnetemul::StorageDep {
-                        variant: Some(fnetemul::StorageVariant::Data),
-                        path: Some("/data".to_string()),
-                        ..fnetemul::StorageDep::EMPTY
-                    }),
-                    // TODO(https://fxbug.dev/74532): We won't need to reach out to
-                    // debug once we don't have Ethernet interfaces anymore.
-                    fnetemul::Capability::ChildDep(protocol_dep::<fnet_debug::InterfacesMarker>(
-                        constants::netstack::COMPONENT_NAME,
-                    )),
-                ])),
+                uses: Some(fnetemul::ChildUses::Capabilities(
+                    (*use_dhcp_server)
+                        .then(|| {
+                            fnetemul::Capability::ChildDep(
+                                protocol_dep::<fnet_dhcp::Server_Marker>(
+                                    constants::dhcp_server::COMPONENT_NAME,
+                                ),
+                            )
+                        })
+                        .into_iter()
+                        .chain(IntoIterator::into_iter([
+                            fnetemul::Capability::LogSink(fnetemul::Empty {}),
+                            fnetemul::Capability::ChildDep(
+                                protocol_dep::<fnet_filter::FilterMarker>(
+                                    constants::netstack::COMPONENT_NAME,
+                                ),
+                            ),
+                            fnetemul::Capability::ChildDep(protocol_dep::<
+                                fnet_interfaces::StateMarker,
+                            >(
+                                constants::netstack::COMPONENT_NAME
+                            )),
+                            fnetemul::Capability::ChildDep(protocol_dep::<
+                                fnet_interfaces_admin::InstallerMarker,
+                            >(
+                                constants::netstack::COMPONENT_NAME
+                            )),
+                            fnetemul::Capability::ChildDep(
+                                protocol_dep::<fnet_stack::StackMarker>(
+                                    constants::netstack::COMPONENT_NAME,
+                                ),
+                            ),
+                            fnetemul::Capability::ChildDep(
+                                protocol_dep::<fnetstack::NetstackMarker>(
+                                    constants::netstack::COMPONENT_NAME,
+                                ),
+                            ),
+                            fnetemul::Capability::ChildDep(protocol_dep::<
+                                fnet_dhcpv6::ClientProviderMarker,
+                            >(
+                                constants::dhcpv6_client::COMPONENT_NAME,
+                            )),
+                            fnetemul::Capability::ChildDep(protocol_dep::<
+                                fnet_name::LookupAdminMarker,
+                            >(
+                                constants::dns_resolver::COMPONENT_NAME,
+                            )),
+                            fnetemul::Capability::NetemulDevfs(fnetemul::DevfsDep {
+                                name: Some(constants::netcfg::DEV_CLASS_ETHERNET.to_string()),
+                                subdir: Some(constants::netcfg::CLASS_ETHERNET_PATH.to_string()),
+                                ..fnetemul::DevfsDep::EMPTY
+                            }),
+                            fnetemul::Capability::NetemulDevfs(fnetemul::DevfsDep {
+                                name: Some(constants::netcfg::DEV_CLASS_NETWORK.to_string()),
+                                subdir: Some(constants::netcfg::CLASS_NETWORK_PATH.to_string()),
+                                ..fnetemul::DevfsDep::EMPTY
+                            }),
+                            fnetemul::Capability::StorageDep(fnetemul::StorageDep {
+                                variant: Some(fnetemul::StorageVariant::Data),
+                                path: Some("/data".to_string()),
+                                ..fnetemul::StorageDep::EMPTY
+                            }),
+                            // TODO(https://fxbug.dev/74532): We won't need to reach out to
+                            // debug once we don't have Ethernet interfaces anymore.
+                            fnetemul::Capability::ChildDep(protocol_dep::<
+                                fnet_debug::InterfacesMarker,
+                            >(
+                                constants::netstack::COMPONENT_NAME
+                            )),
+                        ]))
+                        .collect(),
+                )),
                 eager: Some(true),
                 ..fnetemul::ChildDef::EMPTY
             },

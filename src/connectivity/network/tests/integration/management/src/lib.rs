@@ -40,11 +40,12 @@ async fn test_oir<E: netemul::Endpoint, M: Manager>(name: &str) {
         .create_netstack_realm_with::<Netstack2, _, _>(
             name,
             &[
-                KnownServiceProvider::Manager(M::MANAGEMENT_AGENT),
+                KnownServiceProvider::Manager {
+                    agent: M::MANAGEMENT_AGENT,
+                    use_dhcp_server: false,
+                },
                 KnownServiceProvider::DnsResolver,
-                KnownServiceProvider::DhcpServer { persistent: false },
                 KnownServiceProvider::Dhcpv6Client,
-                KnownServiceProvider::SecureStash,
             ],
         )
         .expect("create netstack realm");
@@ -87,11 +88,12 @@ async fn test_oir_interface_name_conflict<E: netemul::Endpoint, M: Manager>(name
         .create_netstack_realm_with::<Netstack2, _, _>(
             name,
             &[
-                KnownServiceProvider::Manager(M::MANAGEMENT_AGENT),
+                KnownServiceProvider::Manager {
+                    agent: M::MANAGEMENT_AGENT,
+                    use_dhcp_server: false,
+                },
                 KnownServiceProvider::DnsResolver,
-                KnownServiceProvider::DhcpServer { persistent: false },
                 KnownServiceProvider::Dhcpv6Client,
-                KnownServiceProvider::SecureStash,
             ],
         )
         .expect("create netstack realm");
@@ -464,7 +466,7 @@ async fn test_wlan_ap_dhcp_server<E: netemul::Endpoint, M: Manager>(name: &str) 
         .create_netstack_realm_with::<Netstack2, _, _>(
             name,
             &[
-                KnownServiceProvider::Manager(M::MANAGEMENT_AGENT),
+                KnownServiceProvider::Manager { agent: M::MANAGEMENT_AGENT, use_dhcp_server: true },
                 KnownServiceProvider::DnsResolver,
                 KnownServiceProvider::DhcpServer { persistent: false },
                 KnownServiceProvider::Dhcpv6Client,
@@ -503,11 +505,12 @@ async fn observes_stop_events<M: Manager>(name: &str) {
         .create_netstack_realm_with::<Netstack2, _, _>(
             name,
             &[
-                KnownServiceProvider::Manager(M::MANAGEMENT_AGENT),
+                KnownServiceProvider::Manager {
+                    agent: M::MANAGEMENT_AGENT,
+                    use_dhcp_server: false,
+                },
                 KnownServiceProvider::DnsResolver,
-                KnownServiceProvider::DhcpServer { persistent: false },
                 KnownServiceProvider::Dhcpv6Client,
-                KnownServiceProvider::SecureStash,
             ],
         )
         .expect("create netstack realm");
