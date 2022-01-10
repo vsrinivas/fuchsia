@@ -2,10 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fcntl.h>
 #include <fidl/fuchsia.hardware.radar/cpp/wire.h>
 #include <lib/fdio/fdio.h>
 #include <lib/zx/channel.h>
 #include <stdio.h>
+#include <sys/stat.h>
+#include <sys/types.h>
 
 #include <fbl/unique_fd.h>
 
