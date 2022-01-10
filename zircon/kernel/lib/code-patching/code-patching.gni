@@ -33,17 +33,26 @@ import("//build/zircon/zircon_cpu.gni")
 ## ```
 ##
 
-# Extracts the content of the ".code-patches" sections from each of the
-# executables in $deps.
+# Extracts the content of the ".code-patches" sections from the linking
+# target reached by in $deps.
+#
+# There is no particular output file this target produces as its API.
+# Instead, having this target in $deps of a kernel_package() ensures the
+# file "code-patches.bin" appears in the package file tree.
 #
 # Parameters
 #
 #   * deps
-#     - Required: Dependencies, from which all transitively dependent
-#       executables will have their section content extracted.
+#     - Required: Must reach exactly one linking target as per metadata
+#       barriers used by link_output_rspfile(), which see.  The code
+#       consuming the "code-patches.bin" file from the kernel package is
+#       expected to know what single ELF file the address constants in that
+#       file refer to, so it doesn't make sense to have more than one
+#       linkable target that might have ".code-patches" section data to
+#       extract.
 #     - Type: list(label)
 #
-#   * testonly, visibility, metadata
+#   * metadata, testonly, visibility
 #     - See action().
 #
 template("code_patches") {
@@ -72,6 +81,11 @@ template("code_patches") {
                            ])
     outputs = [ output_file ]
 
+    # Nothing prevents link_output_rspfile() from collecting multiple
+    # binary files here if $deps reaches more than one without barrier.
+    # This is verboten and will just make objcopy die from having too many
+    # positional arguments after @rspfile expansion, so there's no need to
+    # check for it otherwise (which would require a wrapper script).
     utils = [ "objcopy" ]
     script = true
     args = [
@@ -156,7 +170,7 @@ template("code_patching_hermetic_alternative") {
                            ])
 
     output_name = entrypoint
-    output_dir = target_gen_dir
+    output_dir = target_out_dir
 
     configs += [ "//zircon/kernel/lib/code-patching:hermetic-leaf.config" ]
     configs += [ "//build/config/zircon:static-pie-link" ]
