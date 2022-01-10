@@ -11,7 +11,7 @@ if (is_host) {
     with_unit_tests = true
     edition = "2018"
     deps = [
-      "//src/security/scrutiny/lib/utils",
+      "//src/security/scrutiny/utils",
       "//third_party/rust_crates:serde",
     ]
     non_rust_deps = [ "//src/lib/chunked-compression" ]

@@ -2,12 +2,32 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/host.gni")
+
 group("scrutiny") {
-  testonly = true
-  public_deps = [ "//src/security/scrutiny/lib($host_toolchain)" ]
+  public_deps = [ ":lib($host_toolchain)" ]
+}
+
+group("lib") {
+  if (is_host) {
+    public_deps = [
+      "//src/security/scrutiny/config",
+      "//src/security/scrutiny/framework",
+      "//src/security/scrutiny/frontend",
+      "//src/security/scrutiny/plugins",
+      "//src/security/scrutiny/testing",
+      "//src/security/scrutiny/utils",
+    ]
+  }
 }
 
 group("tests") {
   testonly = true
-  public_deps = [ "//src/security/scrutiny/lib:tests($host_toolchain)" ]
+  public_deps = [
+    "//src/security/scrutiny/config:tests($host_toolchain)",
+    "//src/security/scrutiny/framework:tests($host_toolchain)",
+    "//src/security/scrutiny/frontend:tests($host_toolchain)",
+    "//src/security/scrutiny/plugins:tests($host_toolchain)",
+    "//src/security/scrutiny/utils:tests($host_toolchain)",
+  ]
 }

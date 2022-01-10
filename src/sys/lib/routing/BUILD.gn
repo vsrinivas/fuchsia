@@ -13,7 +13,7 @@ rustc_library("routing") {
 
   visibility = [
     "//src/lib/component_hub/*",
-    "//src/security/scrutiny/lib/plugins/*",
+    "//src/security/scrutiny/plugins/*",
     "//src/sys/component_manager/*",
     "//src/sys/lib/cm_rust/testing:*",
     "//src/sys/lib/routing/*",

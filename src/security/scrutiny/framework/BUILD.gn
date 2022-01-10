@@ -12,7 +12,7 @@ if (is_host) {
     edition = "2018"
     visibility = [ "//src/security/scrutiny/*" ]
     deps = [
-      "//src/security/scrutiny/lib/config",
+      "//src/security/scrutiny/config",
       "//third_party/rust_crates:anyhow",
       "//third_party/rust_crates:lazy_static",
       "//third_party/rust_crates:log",
@@ -25,7 +25,7 @@ if (is_host) {
     ]
     non_rust_deps = [ "//src/lib/chunked-compression" ]
     test_deps = [
-      "//src/security/scrutiny/lib/testing",
+      "//src/security/scrutiny/testing",
       "//third_party/rust_crates:tempfile",
     ]
     sources = [

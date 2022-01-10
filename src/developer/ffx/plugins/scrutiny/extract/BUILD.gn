@@ -15,8 +15,8 @@ ffx_plugin("ffx_scrutiny_extract") {
     "zbi:ffx_scrutiny_zbi",
   ]
   deps = [
-    "//src/security/scrutiny/lib/config",
-    "//src/security/scrutiny/lib/frontend",
+    "//src/security/scrutiny/config",
+    "//src/security/scrutiny/frontend",
   ]
   non_rust_deps = [ "//src/lib/chunked-compression" ]
 
