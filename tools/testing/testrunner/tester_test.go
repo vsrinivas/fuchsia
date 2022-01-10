@@ -20,6 +20,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/google/go-cmp/cmp"
+
 	"go.fuchsia.dev/fuchsia/tools/build"
 	"go.fuchsia.dev/fuchsia/tools/integration/testsharder"
 	"go.fuchsia.dev/fuchsia/tools/lib/ffxutil"
@@ -28,8 +30,6 @@ import (
 	"go.fuchsia.dev/fuchsia/tools/net/sshutil"
 	"go.fuchsia.dev/fuchsia/tools/testing/runtests"
 	"go.fuchsia.dev/fuchsia/tools/testing/testparser"
-
-	"github.com/google/go-cmp/cmp"
 )
 
 type fakeSSHClient struct {
@@ -309,7 +309,8 @@ func TestFFXTester(t *testing.T) {
 			var testResults []*TestResult
 			var err error
 			if c.testMulti {
-				tests := []testsharder.Test{test,
+				tests := []testsharder.Test{
+					test,
 					{
 						Test:         build.Test{PackageURL: "fuchsia-pkg://foo#meta/baz.cm"},
 						Runs:         1,
@@ -382,6 +383,17 @@ func TestFFXTester(t *testing.T) {
 	}
 }
 
+// for testability
+type fakeSSHExitError struct {
+	exitStatus int
+}
+
+// Statically assert that this error satisfies the sshExitError interface.
+var _ sshExitError = fakeSSHExitError{}
+
+func (e fakeSSHExitError) Error() string   { return fmt.Sprintf("ssh exit status: %d", e.exitStatus) }
+func (e fakeSSHExitError) ExitStatus() int { return e.exitStatus }
+
 func TestSSHTester(t *testing.T) {
 	cases := []struct {
 		name            string
@@ -400,7 +412,7 @@ func TestSSHTester(t *testing.T) {
 		},
 		{
 			name:           "test failure",
-			runErrs:        []error{fmt.Errorf("test failed")},
+			runErrs:        []error{fakeSSHExitError{exitStatus: 1}},
 			expectedResult: runtests.TestFailure,
 		},
 		{
@@ -445,7 +457,7 @@ func TestSSHTester(t *testing.T) {
 		},
 		{
 			name:           "test timeout",
-			runErrs:        []error{&exitError{fmt.Errorf("timeout"), timeoutExitCode}},
+			runErrs:        []error{fakeSSHExitError{exitStatus: timeoutExitCode}},
 			expectedResult: runtests.TestTimeout,
 		},
 	}

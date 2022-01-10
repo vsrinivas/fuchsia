@@ -545,28 +545,27 @@ func (t *FuchsiaSSHTester) reconnect(ctx context.Context) error {
 	return nil
 }
 
-// for testability
-type exitError struct {
+// sshExitError is an interface that ssh.ExitError conforms to. We use this for
+// testability instead of unwrapping an error as an ssh.ExitError, because it's
+// not possible to construct an ssh.ExitError in-memory in a test due to private
+// field constraints.
+type sshExitError interface {
 	error
-	exitStatus int
+	ExitStatus() int
 }
 
-func (e *exitError) ExitStatus() int {
-	if exitErr, ok := e.error.(*ssh.ExitError); ok {
-		return exitErr.Waitmsg.ExitStatus()
-	}
-	return e.exitStatus
-}
+// Statically assert that ssh.ExitError implements the sshExitError interface.
+var _ sshExitError = &ssh.ExitError{}
 
 func (t *FuchsiaSSHTester) isTimeoutError(test testsharder.Test, err error) bool {
 	if test.Timeout <= 0 {
 		return false
 	}
-	exitErr, ok := err.(*exitError)
-	if !ok {
-		exitErr = &exitError{error: err}
+	var exitErr sshExitError
+	if errors.As(err, &exitErr) {
+		return exitErr.ExitStatus() == timeoutExitCode
 	}
-	return exitErr.ExitStatus() == timeoutExitCode
+	return false
 }
 
 func (t *FuchsiaSSHTester) runSSHCommandWithRetry(ctx context.Context, command []string, stdout, stderr io.Writer) error {
