@@ -2272,8 +2272,6 @@ zx_status_t Controller::Init() {
     fbl::AutoLock lock(&display_lock_);
     for (const auto pipe : {registers::PIPE_A, registers::PIPE_B, registers::PIPE_C}) {
       pipes_.push_back(Pipe(mmio_space(), pipe, power()->GetPipePowerWellRef(pipe)));
-      pipes_.push_back(Pipe(mmio_space(), pipe, power()->GetPipePowerWellRef(pipe)));
-      pipes_.push_back(Pipe(mmio_space(), pipe, power()->GetPipePowerWellRef(pipe)));
     }
   }
 
