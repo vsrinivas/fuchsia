@@ -166,94 +166,86 @@ pub fn map_elf_segments(
     let mapper_relative_bias = vaddr_bias.wrapping_sub(mapper_base);
     let vmo_name = vmo.get_name().map_err(|s| ElfLoadError::GetVmoName(s))?;
     for hdr in headers.program_headers_with_type(elf::SegmentType::Load) {
-        // Map in all whole pages that this segment touches. Calculate the virtual address
-        // range that this mapping needs to cover. These addresses are relative to the
-        // allocated VMAR, not the root VMAR.
-        let vaddr_start = hdr.vaddr.wrapping_add(mapper_relative_bias);
-        let map_start = util::page_start(vaddr_start);
-        let map_end = util::page_end(vaddr_start + hdr.memsz as usize);
-        let map_size = map_end - map_start;
-        if map_size == 0 {
-            // Empty segment, ignore and map others.
-            continue;
-        }
+        // Shift the start of the mapping down to the nearest page.
+        let adjust = util::page_offset(hdr.offset);
+        let mut file_offset = hdr.offset - adjust;
+        let file_size = hdr.filesz + adjust as u64;
+        let virt_offset = hdr.vaddr - adjust;
+        let virt_size = hdr.memsz + adjust as u64;
 
-        // Calculate the pages from the VMO that need to be mapped.
-        let offset_end = hdr.offset + hdr.filesz as usize;
-        let mut vmo_start = util::page_start(hdr.offset);
-        let mut vmo_full_page_end = util::page_start(offset_end);
-        let vmo_partial_page_size = util::page_offset(offset_end);
+        // Calculate the virtual address range that this mapping needs to cover. These addresses
+        // are relative to the allocated VMAR, not the root VMAR.
+        let virt_addr = virt_offset.wrapping_add(mapper_relative_bias);
 
-        // Page aligned size of VMO content to be mapped in, including any partial pages.
-        let vmo_size = util::page_end(offset_end) - vmo_start;
-        assert!(map_size >= vmo_size);
+        // If the segment is specified as larger than the data in the file, and the data in the file
+        // does not end at a page boundary, we will need to zero out the remaining memory in the
+        // page.
+        let must_write = virt_size > file_size && util::page_offset(file_size as usize) != 0;
 
         // If this segment is writeable (and we're mapping in some VMO content, i.e. it's not
-        // all zero initialized), create a writeable clone of the VMO.
+        // all zero initialized) or the segment has a BSS section that needs to be zeroed, create
+        // a writeable clone of the VMO. Otherwise use the potentially read-only VMO passed in.
         let vmo_to_map: &zx::Vmo;
         let writeable_vmo: zx::Vmo;
-        if vmo_size == 0 || !hdr.flags().contains(elf::SegmentFlags::WRITE) {
-            vmo_to_map = vmo;
-        } else {
+        if must_write || (file_size > 0 && hdr.flags().contains(elf::SegmentFlags::WRITE)) {
             writeable_vmo = vmo
                 .create_child(
                     zx::VmoChildOptions::SNAPSHOT_AT_LEAST_ON_WRITE,
-                    vmo_start as u64,
-                    vmo_size as u64,
+                    file_offset as u64,
+                    util::page_end(file_size as usize) as u64,
                 )
                 .map_err(ElfLoadError::VmoCowClone)?;
             writeable_vmo
                 .set_name(&vmo_name_with_prefix(&vmo_name, VMO_NAME_PREFIX_DATA))
                 .map_err(ElfLoadError::SetVmoName)?;
-            vmo_to_map = &writeable_vmo;
-
             // Update addresses into the VMO that will be mapped.
-            vmo_full_page_end -= vmo_start;
-            vmo_start = 0;
+            file_offset = 0;
+
+            // Zero-out the memory between the end of the filesize and the end of the page.
+            if virt_size > file_size {
+                // If the space to be zero-filled overlaps with the VMO, we need to memset it.
+                let memset_size = util::page_end(file_size as usize) - file_size as usize;
+                if memset_size > 0 {
+                    writeable_vmo
+                        .write(&vec![0u8; memset_size], file_size)
+                        .map_err(|s| ElfLoadError::VmoWrite(s))?;
+                }
+            }
+            vmo_to_map = &writeable_vmo;
+        } else {
+            vmo_to_map = vmo;
         }
 
-        // If the mapping size is equal in size to the data to be mapped, then nothing else to
-        // do. Create the mapping and we're done with this segment.
+        // Create the VMO part of the mapping.
         let flags = zx::VmarFlags::SPECIFIC | elf_to_vmar_perm_flags(&hdr.flags());
-        if map_size == vmo_size {
-            mapper
-                .map(map_start, vmo_to_map, vmo_start as u64, vmo_size, flags)
-                .map_err(ElfLoadError::VmarMap)?;
-            continue;
-        }
-
-        // Mapping size is larger than the vmo data size (i.e. the segment contains a .bss
-        // section). The mapped region beyond the vmo size is zero initialized. We can start
-        // out by mapping any full pages from the vmo.
-        let vmo_full_page_size = vmo_full_page_end - vmo_start;
-        if vmo_full_page_size > 0 {
-            mapper
-                .map(map_start, vmo_to_map, vmo_start as u64, vmo_full_page_size, flags)
-                .map_err(ElfLoadError::VmarMap)?;
-        }
-
-        // Remaining pages are backed by an anonymous VMO, which is automatically zero filled
-        // by the kernel as needed.
-        let anon_map_start = map_start + vmo_full_page_size;
-        let anon_size = map_size - vmo_full_page_size;
-        let anon_vmo = zx::Vmo::create(anon_size as u64).map_err(|s| ElfLoadError::VmoCreate(s))?;
-        anon_vmo
-            .set_name(&vmo_name_with_prefix(&vmo_name, VMO_NAME_PREFIX_BSS))
-            .map_err(ElfLoadError::SetVmoName)?;
-
-        // If the segment has a partial page of data at the end, it needs to be copied into the
-        // anonymous VMO.
-        if vmo_partial_page_size > 0 {
-            let mut page_buf = [0u8; util::PAGE_SIZE];
-            let buf = &mut page_buf[0..vmo_partial_page_size];
-            vmo_to_map.read(buf, vmo_full_page_end as u64).map_err(ElfLoadError::VmoRead)?;
-            anon_vmo.write(buf, 0).map_err(|s| ElfLoadError::VmoWrite(s))?;
-        }
-
-        // Map the anonymous vmo and done with this segment!
         mapper
-            .map(anon_map_start, &anon_vmo, 0, anon_size, flags)
+            .map(
+                virt_addr,
+                vmo_to_map,
+                file_offset as u64,
+                util::page_end(file_size as usize),
+                flags,
+            )
             .map_err(ElfLoadError::VmarMap)?;
+
+        // If the mapping is specified as larger than the data in the file (i.e. virt_size is
+        // larger than file_size), the remainder of the space (from virt_addr + file_size to
+        // virt_addr + virt_size) is the BSS and must be filled with zeros.
+        if virt_size > file_size {
+            // The rest of the BSS is created as an anonymous vmo.
+            let bss_vmo_start = util::page_end(file_size as usize);
+            let bss_vmo_size = util::page_end(virt_size as usize) - bss_vmo_start;
+            if bss_vmo_size > 0 {
+                let anon_vmo =
+                    zx::Vmo::create(bss_vmo_size as u64).map_err(|s| ElfLoadError::VmoCreate(s))?;
+                anon_vmo
+                    .set_name(&vmo_name_with_prefix(&vmo_name, VMO_NAME_PREFIX_BSS))
+                    .map_err(ElfLoadError::SetVmoName)?;
+                mapper
+                    .map(virt_addr + bss_vmo_start, &anon_vmo, 0, bss_vmo_size, flags)
+                    .map_err(ElfLoadError::VmarMap)?;
+            }
+        }
     }
     Ok(())
 }
@@ -315,7 +307,10 @@ fn elf_to_vmar_perm_flags(elf_flags: &elf::SegmentFlags) -> zx::VmarFlags {
 
 #[cfg(test)]
 mod tests {
-    use {super::*, anyhow::Error};
+    use {
+        super::*, crate::elf_parse, anyhow::Error, fidl::HandleBased, matches::assert_matches,
+        std::cell::RefCell, std::mem::size_of,
+    };
 
     #[test]
     fn test_vmo_name_with_prefix() -> Result<(), Error> {
@@ -353,5 +348,291 @@ mod tests {
             max_vmo_name.to_bytes()
         );
         Ok(())
+    }
+
+    #[derive(Debug)]
+    struct RecordedMapping {
+        vmo: zx::Vmo,
+        vmo_offset: u64,
+    }
+
+    /// Records which VMOs and the offset within them are to be mapped.
+    struct TrackingMapper(RefCell<Vec<RecordedMapping>>);
+
+    impl TrackingMapper {
+        fn new() -> Self {
+            Self(RefCell::new(Vec::new()))
+        }
+    }
+
+    impl IntoIterator for TrackingMapper {
+        type Item = RecordedMapping;
+        type IntoIter = std::vec::IntoIter<Self::Item>;
+
+        fn into_iter(self) -> Self::IntoIter {
+            self.0.into_inner().into_iter()
+        }
+    }
+
+    impl Mapper for TrackingMapper {
+        fn map(
+            &self,
+            vmar_offset: usize,
+            vmo: &zx::Vmo,
+            vmo_offset: u64,
+            _length: usize,
+            _flags: zx::VmarFlags,
+        ) -> Result<usize, zx::Status> {
+            self.0.borrow_mut().push(RecordedMapping {
+                vmo: vmo.as_handle_ref().duplicate(zx::Rights::SAME_RIGHTS).unwrap().into(),
+                vmo_offset,
+            });
+            Ok(vmar_offset)
+        }
+    }
+
+    /// A basic ELF64 File header with one program header.
+    const ELF_FILE_HEADER: &elf_parse::Elf64FileHeader = &elf_parse::Elf64FileHeader {
+        ident: elf_parse::ElfIdent {
+            magic: elf_parse::ELF_MAGIC,
+            class: elf_parse::ElfClass::Elf64 as u8,
+            data: elf_parse::NATIVE_ENCODING as u8,
+            version: elf_parse::ElfVersion::Current as u8,
+            osabi: 0x00,
+            abiversion: 0x00,
+            pad: [0; 7],
+        },
+        elf_type: elf_parse::ElfType::SharedObject as u16,
+        machine: elf_parse::CURRENT_ARCH as u16,
+        version: elf_parse::ElfVersion::Current as u32,
+        entry: 0x10000,
+        phoff: size_of::<elf_parse::Elf64FileHeader>(),
+        shoff: 0,
+        flags: 0,
+        ehsize: size_of::<elf_parse::Elf64FileHeader>() as u16,
+        phentsize: size_of::<elf_parse::Elf64ProgramHeader>() as u16,
+        phnum: 1,
+        shentsize: 0,
+        shnum: 0,
+        shstrndx: 0,
+    };
+
+    // The bitwise `|` operator for `bitflags` is implemented through the `std::ops::BitOr` trait,
+    // which cannot be used in a const context. The workaround is to bitwise OR the raw bits.
+    const VMO_DEFAULT_RIGHTS: zx::Rights = zx::Rights::from_bits_truncate(
+        zx::Rights::DUPLICATE.bits()
+            | zx::Rights::TRANSFER.bits()
+            | zx::Rights::READ.bits()
+            | zx::Rights::WRITE.bits()
+            | zx::Rights::MAP.bits()
+            | zx::Rights::GET_PROPERTY.bits()
+            | zx::Rights::SET_PROPERTY.bits(),
+    );
+
+    #[test]
+    fn map_read_only_with_page_unaligned_bss() {
+        const ELF_DATA: &[u8; 8] = b"FUCHSIA!";
+
+        /// Contains a PT_LOAD segment where the filesz is less than memsz (BSS).
+        const ELF_PROGRAM_HEADERS: &[elf_parse::Elf64ProgramHeader] =
+            &[elf_parse::Elf64ProgramHeader {
+                segment_type: elf_parse::SegmentType::Load as u32,
+                flags: elf_parse::SegmentFlags::from_bits_truncate(
+                    elf_parse::SegmentFlags::READ.bits() | elf_parse::SegmentFlags::EXECUTE.bits(),
+                )
+                .bits(),
+                offset: util::PAGE_SIZE,
+                vaddr: 0x10000,
+                paddr: 0x10000,
+                filesz: ELF_DATA.len() as u64,
+                memsz: 0x100,
+                align: util::PAGE_SIZE as u64,
+            }];
+
+        let headers =
+            elf_parse::Elf64Headers::new_for_test(ELF_FILE_HEADER, Some(ELF_PROGRAM_HEADERS));
+        let vmo = zx::Vmo::create(util::PAGE_SIZE as u64 * 2).expect("create VMO");
+
+        // Fill the VMO with 0xff, so that we can verify that the BSS section is correctly zeroed.
+        vmo.write(&[0xff; util::PAGE_SIZE * 2], 0).expect("fill VMO with 0xff");
+        // Write the PT_LOAD segment's data at the defined offset.
+        vmo.write(ELF_DATA, util::PAGE_SIZE as u64).expect("write data to VMO");
+
+        // Remove the ZX_RIGHT_WRITE right. Page zeroing should happen in a COW VMO.
+        let vmo =
+            vmo.replace_handle(VMO_DEFAULT_RIGHTS - zx::Rights::WRITE).expect("remove WRITE right");
+
+        let mapper = TrackingMapper::new();
+        map_elf_segments(&vmo, &headers, &mapper, 0, 0).expect("map ELF segments");
+
+        let mut mapping_iter = mapper.into_iter();
+
+        // Extract the VMO and offset that was supposed to be mapped.
+        let mapping = mapping_iter.next().expect("mapping from ELF VMO");
+
+        // Read a page of data that was "mapped".
+        let mut data = [0; util::PAGE_SIZE];
+        mapping.vmo.read(&mut data, mapping.vmo_offset).expect("read VMO");
+
+        // Construct the expected memory, which is ASCII "FUCHSIA!" followed by 0s for the rest of
+        // the page.
+        let expected = ELF_DATA
+            .into_iter()
+            .cloned()
+            .chain(std::iter::repeat(0).take(util::PAGE_SIZE - ELF_DATA.len()))
+            .collect::<Vec<u8>>();
+
+        assert_eq!(&expected, &data);
+
+        // No more mappings expected.
+        assert_matches!(mapping_iter.next(), None);
+    }
+
+    #[test]
+    fn map_read_only_vmo_with_page_aligned_bss() {
+        // Contains a PT_LOAD segment where the BSS starts at a page boundary.
+        const ELF_PROGRAM_HEADERS: &[elf_parse::Elf64ProgramHeader] =
+            &[elf_parse::Elf64ProgramHeader {
+                segment_type: elf_parse::SegmentType::Load as u32,
+                flags: elf_parse::SegmentFlags::from_bits_truncate(
+                    elf_parse::SegmentFlags::READ.bits() | elf_parse::SegmentFlags::EXECUTE.bits(),
+                )
+                .bits(),
+                offset: util::PAGE_SIZE,
+                vaddr: 0x10000,
+                paddr: 0x10000,
+                filesz: util::PAGE_SIZE as u64,
+                memsz: util::PAGE_SIZE as u64 * 2,
+                align: util::PAGE_SIZE as u64,
+            }];
+        let headers =
+            elf_parse::Elf64Headers::new_for_test(ELF_FILE_HEADER, Some(ELF_PROGRAM_HEADERS));
+        let vmo = zx::Vmo::create(util::PAGE_SIZE as u64 * 2).expect("create VMO");
+        // Fill the VMO with 0xff, so we can verify the BSS section is correctly allocated.
+        vmo.write(&[0xff; util::PAGE_SIZE * 2], 0).expect("fill VMO with 0xff");
+
+        // Remove the ZX_RIGHT_WRITE right. Since the BSS ends at a page boundary, we shouldn't
+        // need to zero out any of the pages in this VMO.
+        let vmo =
+            vmo.replace_handle(VMO_DEFAULT_RIGHTS - zx::Rights::WRITE).expect("remove WRITE right");
+
+        let mapper = TrackingMapper::new();
+        map_elf_segments(&vmo, &headers, &mapper, 0, 0).expect("map ELF segments");
+
+        let mut mapping_iter = mapper.into_iter();
+
+        // Verify that a COW VMO was not created, since we didn't need to write to the original VMO.
+        // We must check that KOIDs are the same, since we duplicate the handle when recording it
+        // in TrackingMapper.
+        let mapping = mapping_iter.next().expect("mapping from ELF VMO");
+        assert_eq!(mapping.vmo.get_koid().unwrap(), vmo.get_koid().unwrap());
+
+        let mut data = [0u8; util::PAGE_SIZE];
+
+        // Ensure the first page is from the ELF.
+        mapping.vmo.read(&mut data, mapping.vmo_offset).expect("read ELF VMO");
+        assert_eq!(&data, &[0xffu8; util::PAGE_SIZE]);
+
+        let mapping = mapping_iter.next().expect("mapping from BSS VMO");
+
+        // Ensure the second page is BSS.
+        mapping.vmo.read(&mut data, mapping.vmo_offset).expect("read BSS VMO");
+        assert_eq!(&data, &[0u8; util::PAGE_SIZE]);
+
+        // No more mappings expected.
+        assert_matches!(mapping_iter.next(), None);
+    }
+
+    #[test]
+    fn map_read_only_vmo_with_no_bss() {
+        // Contains a PT_LOAD segment where there is no BSS.
+        const ELF_PROGRAM_HEADERS: &[elf_parse::Elf64ProgramHeader] =
+            &[elf_parse::Elf64ProgramHeader {
+                segment_type: elf_parse::SegmentType::Load as u32,
+                flags: elf_parse::SegmentFlags::from_bits_truncate(
+                    elf_parse::SegmentFlags::READ.bits() | elf_parse::SegmentFlags::EXECUTE.bits(),
+                )
+                .bits(),
+                offset: util::PAGE_SIZE,
+                vaddr: 0x10000,
+                paddr: 0x10000,
+                filesz: util::PAGE_SIZE as u64,
+                memsz: util::PAGE_SIZE as u64,
+                align: util::PAGE_SIZE as u64,
+            }];
+        let headers =
+            elf_parse::Elf64Headers::new_for_test(ELF_FILE_HEADER, Some(ELF_PROGRAM_HEADERS));
+        let vmo = zx::Vmo::create(util::PAGE_SIZE as u64 * 2).expect("create VMO");
+        // Fill the VMO with 0xff, so we can verify the BSS section is correctly allocated.
+        vmo.write(&[0xff; util::PAGE_SIZE * 2], 0).expect("fill VMO with 0xff");
+
+        // Remove the ZX_RIGHT_WRITE right. Since the BSS ends at a page boundary, we shouldn't
+        // need to zero out any of the pages in this VMO.
+        let vmo =
+            vmo.replace_handle(VMO_DEFAULT_RIGHTS - zx::Rights::WRITE).expect("remove WRITE right");
+
+        let mapper = TrackingMapper::new();
+        map_elf_segments(&vmo, &headers, &mapper, 0, 0).expect("map ELF segments");
+
+        let mut mapping_iter = mapper.into_iter();
+
+        // Verify that a COW VMO was not created, since we didn't need to write to the original VMO.
+        // We must check that KOIDs are the same, since we duplicate the handle when recording it
+        // in TrackingMapper.
+        let mapping = mapping_iter.next().expect("mapping from ELF VMO");
+        assert_eq!(mapping.vmo.get_koid().unwrap(), vmo.get_koid().unwrap());
+
+        let mut data = [0u8; util::PAGE_SIZE];
+
+        // Ensure the first page is from the ELF.
+        mapping.vmo.read(&mut data, mapping.vmo_offset).expect("read ELF VMO");
+        assert_eq!(&data, &[0xffu8; util::PAGE_SIZE]);
+
+        // No more mappings expected.
+        assert_matches!(mapping_iter.next(), None);
+    }
+
+    #[test]
+    fn map_read_only_vmo_with_write_flag() {
+        // Contains a PT_LOAD segment where there is no BSS.
+        const ELF_PROGRAM_HEADERS: &[elf_parse::Elf64ProgramHeader] =
+            &[elf_parse::Elf64ProgramHeader {
+                segment_type: elf_parse::SegmentType::Load as u32,
+                flags: elf_parse::SegmentFlags::from_bits_truncate(
+                    elf_parse::SegmentFlags::READ.bits() | elf_parse::SegmentFlags::WRITE.bits(),
+                )
+                .bits(),
+                offset: util::PAGE_SIZE,
+                vaddr: 0x10000,
+                paddr: 0x10000,
+                filesz: util::PAGE_SIZE as u64,
+                memsz: util::PAGE_SIZE as u64,
+                align: util::PAGE_SIZE as u64,
+            }];
+        let headers =
+            elf_parse::Elf64Headers::new_for_test(ELF_FILE_HEADER, Some(ELF_PROGRAM_HEADERS));
+        let vmo = zx::Vmo::create(util::PAGE_SIZE as u64 * 2).expect("create VMO");
+
+        // Remove the ZX_RIGHT_WRITE right. Since the segment has a WRITE flag, a COW child VMO
+        // will be created.
+        let vmo =
+            vmo.replace_handle(VMO_DEFAULT_RIGHTS - zx::Rights::WRITE).expect("remove WRITE right");
+
+        let mapper = TrackingMapper::new();
+        map_elf_segments(&vmo, &headers, &mapper, 0, 0).expect("map ELF segments");
+
+        let mut mapping_iter = mapper.into_iter();
+
+        // Verify that a COW VMO was created, since the segment had a WRITE flag.
+        // We must check that KOIDs are different, since we duplicate the handle when recording it
+        // in TrackingMapper.
+        let mapping = mapping_iter.next().expect("mapping from ELF VMO");
+        assert_ne!(mapping.vmo.get_koid().unwrap(), vmo.get_koid().unwrap());
+
+        // Attempt to write to the VMO to ensure it has the ZX_RIGHT_WRITE right.
+        mapping.vmo.write(b"FUCHSIA!", mapping.vmo_offset).expect("write to COW VMO");
+
+        // No more mappings expected.
+        assert_matches!(mapping_iter.next(), None);
     }
 }

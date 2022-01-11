@@ -8,6 +8,7 @@
 #![allow(missing_docs)]
 
 use {
+    crate::util,
     bitflags::bitflags,
     fuchsia_zircon as zx,
     num_derive::FromPrimitive,
@@ -176,17 +177,17 @@ pub enum ElfArchitecture {
     AARCH64 = 183,
 }
 
-const ELF_MAGIC: [u8; 4] = *b"\x7fELF";
+pub const ELF_MAGIC: [u8; 4] = *b"\x7fELF";
 
 #[cfg(target_endian = "little")]
-const NATIVE_ENCODING: ElfDataEncoding = ElfDataEncoding::LittleEndian;
+pub const NATIVE_ENCODING: ElfDataEncoding = ElfDataEncoding::LittleEndian;
 #[cfg(target_endian = "big")]
-const NATIVE_ENCODING: ElfDataEncoding = ElfDataEncoding::BigEndian;
+pub const NATIVE_ENCODING: ElfDataEncoding = ElfDataEncoding::BigEndian;
 
 #[cfg(target_arch = "x86_64")]
-const CURRENT_ARCH: ElfArchitecture = ElfArchitecture::X86_64;
+pub const CURRENT_ARCH: ElfArchitecture = ElfArchitecture::X86_64;
 #[cfg(target_arch = "aarch64")]
-const CURRENT_ARCH: ElfArchitecture = ElfArchitecture::AARCH64;
+pub const CURRENT_ARCH: ElfArchitecture = ElfArchitecture::AARCH64;
 
 impl Elf64FileHeader {
     pub fn elf_type(&self) -> Result<ElfType, u16> {
@@ -370,6 +371,21 @@ impl Validate for [Elf64ProgramHeader] {
                         ));
                     }
                     vaddr_high = hdr.vaddr + hdr.memsz as usize;
+
+                    // Segment alignment should be a multiple of the system page size.
+                    if hdr.align % util::PAGE_SIZE as u64 != 0 {
+                        return Err(ElfParseError::InvalidProgramHeader(
+                            "Alignment must be multiple of the system page size",
+                        ));
+                    }
+
+                    // Virtual addresses should be at the same page offset as their offset in the
+                    // file.
+                    if (hdr.vaddr % hdr.align as usize) != (hdr.offset % hdr.align as usize) {
+                        return Err(ElfParseError::InvalidProgramHeader(
+                            "Virtual address and offset in file are not at same offset in page",
+                        ));
+                    }
                 }
                 Ok(SegmentType::GnuStack) => {
                     if hdr.flags().contains(SegmentFlags::EXECUTE) {
@@ -467,11 +483,26 @@ impl Elf64Headers {
         }
         return Ok(header);
     }
+
+    /// Creates an instance of Elf64Headers from in-memory representations of the ELF headers.
+    /// The data must have a static lifetime as it is not derived from the bytes owned by this
+    /// instance.
+    #[cfg(test)]
+    pub fn new_for_test(
+        file_header: &'static Elf64FileHeader,
+        program_headers: Option<&'static [Elf64ProgramHeader]>,
+    ) -> Self {
+        Self {
+            file_header: OwningRef::new(Vec::new()).map(|_| file_header),
+            program_headers: program_headers
+                .map(|headers| OwningRef::new(Vec::new()).map(|_| headers)),
+        }
+    }
 }
 
 #[cfg(test)]
 mod tests {
-    use {super::*, anyhow::Error, fdio, std::fs::File};
+    use {super::*, anyhow::Error, fdio, matches::assert_matches, std::fs::File};
 
     // These are specially crafted files that just contain a valid ELF64 file header but
     // nothing else.
@@ -566,5 +597,45 @@ mod tests {
         assert!(headers.program_headers_with_type(SegmentType::Dynamic).count() == 1);
         assert!(headers.program_headers_with_type(SegmentType::Load).count() > 1);
         Ok(())
+    }
+
+    #[test]
+    fn test_parse_program_header_bad_alignment() {
+        let headers = [Elf64ProgramHeader {
+            segment_type: SegmentType::Load as u32,
+            flags: (SegmentFlags::READ | SegmentFlags::EXECUTE).bits,
+            align: util::PAGE_SIZE as u64 + 1024,
+            offset: 0x1000,
+            vaddr: 0x1000,
+            paddr: 0x1000,
+            filesz: 0x1000,
+            memsz: 0x1000,
+        }];
+        assert_matches!(
+            headers.validate(),
+            Err(ElfParseError::InvalidProgramHeader(
+                "Alignment must be multiple of the system page size"
+            ))
+        );
+    }
+
+    #[test]
+    fn test_parse_program_header_bad_offset_and_vaddr() {
+        let headers = [Elf64ProgramHeader {
+            segment_type: SegmentType::Load as u32,
+            flags: (SegmentFlags::READ | SegmentFlags::EXECUTE).bits,
+            align: util::PAGE_SIZE as u64,
+            offset: 0x1001,
+            vaddr: 0x1002,
+            paddr: 0x1000,
+            filesz: 0x1000,
+            memsz: 0x1000,
+        }];
+        assert_matches!(
+            headers.validate(),
+            Err(ElfParseError::InvalidProgramHeader(
+                "Virtual address and offset in file are not at same offset in page"
+            ))
+        );
     }
 }
