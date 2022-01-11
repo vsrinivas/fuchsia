@@ -7,7 +7,10 @@
 #include <lib/fdio/directory.h>
 #include <zircon/device/vfs.h>
 
+#include <ddktl/device.h>
 #include <zxtest/zxtest.h>
+
+#include "src/devices/testing/mock-ddk/mock-device.h"
 
 namespace {
 
@@ -35,6 +38,45 @@ TEST(MetadataTest, RunTests) {
   ASSERT_OK(result.status());
   // The driver will run its tests in its bind routine, and return ZX_OK on success.
   ASSERT_FALSE(result->result.is_err());
+}
+
+// Test the Metadata struct helper:
+TEST(MetadataTest, GetMetadataStructTest) {
+  auto parent = MockDevice::FakeRootParent();  // Hold on to the parent during the test.
+  constexpr size_t kMetadataType = 5;
+  struct MetadataType {
+    int data[4];
+    float data1;
+  };
+  MetadataType metadata_source;
+  parent->SetMetadata(kMetadataType, &metadata_source, sizeof(metadata_source));
+
+  auto metadata_result = ddk::GetMetadata<MetadataType>(parent.get(), kMetadataType);
+
+  ASSERT_TRUE(metadata_result.is_ok());
+  ASSERT_BYTES_EQ(metadata_result.value().get(), &metadata_source, sizeof(MetadataType));
+}
+
+// Test the Metadata Array helper:
+TEST(MetadataTest, MetadataArrayTests) {
+  auto parent = MockDevice::FakeRootParent();  // Hold on to the parent during the test.
+  constexpr size_t kMetadataType = 5;
+  struct MetadataType {
+    int data[4];
+    float data1;
+  };
+
+  constexpr size_t kMetadataArrayLen = 5;
+  MetadataType metadata_source[kMetadataArrayLen];
+  parent->SetMetadata(kMetadataType, &metadata_source, sizeof(metadata_source));
+
+  auto metadata_result = ddk::GetMetadataArray<MetadataType>(parent.get(), kMetadataType);
+
+  ASSERT_TRUE(metadata_result.is_ok());
+  ASSERT_EQ(metadata_result->size(), kMetadataArrayLen);
+  for (size_t i = 0; i < metadata_result->size(); ++i) {
+    ASSERT_BYTES_EQ(&metadata_result.value()[i], &metadata_source[i], sizeof(MetadataType));
+  }
 }
 
 }  // namespace

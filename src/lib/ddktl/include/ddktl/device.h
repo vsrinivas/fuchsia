@@ -21,6 +21,7 @@
 #include <ddktl/device-internal.h>
 #include <ddktl/fidl.h>
 #include <ddktl/init-txn.h>
+#include <ddktl/metadata.h>
 #include <ddktl/resume-txn.h>
 #include <ddktl/suspend-txn.h>
 #include <ddktl/unbind-txn.h>
