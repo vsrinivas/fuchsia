@@ -341,10 +341,12 @@ class OobeStateImpl with Disposable implements OobeState {
   @override
   void setPassword(String password) async {
     try {
-      _authError.value = '';
-      _wait.value = true;
+      runInAction(() {
+        _authError.value = '';
+        _wait.value = true;
+      });
       await authService.createAccountWithPassword(password);
-      _wait.value = false;
+      runInAction(() => _wait.value = false);
       nextScreen();
       // ignore: avoid_catches_without_on_clauses
     } catch (e) {
@@ -359,10 +361,12 @@ class OobeStateImpl with Disposable implements OobeState {
   @override
   void login(String password) async {
     try {
-      _authError.value = '';
-      _wait.value = true;
+      runInAction(() {
+        _authError.value = '';
+        _wait.value = true;
+      });
       await authService.loginWithPassword(password);
-      _wait.value = false;
+      runInAction(() => _wait.value = false);
       finish();
       // ignore: avoid_catches_without_on_clauses
     } catch (e) {
