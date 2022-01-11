@@ -103,8 +103,12 @@ class StartupService extends activity.Listener {
             onAltReleased();
           }
         }
-        // Notify activity service to user input.
-        onActivity('keyboard');
+        // Notify activity service of user input. This is used to dismiss the
+        // screen saver if it is active. We do this only for key presses
+        // because key release from screensaver shortcut itself might cancel it.
+        if (event is RawKeyDownEvent) {
+          onActivity('keyboard');
+        }
       });
     });
 
