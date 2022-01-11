@@ -54,10 +54,6 @@ const (
 	dhcpRetransmission = 4 * zxtime.Second
 )
 
-var (
-	errNoSuchAddress = errors.New("no such address")
-)
-
 func ipv6LinkLocalOnLinkRoute(nicID tcpip.NICID) tcpip.Route {
 	return onLinkV6Route(nicID, header.IPv6LinkLocalPrefix.Subnet())
 }
