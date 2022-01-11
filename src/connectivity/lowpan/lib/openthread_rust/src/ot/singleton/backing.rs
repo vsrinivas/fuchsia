@@ -11,6 +11,7 @@ use std::task::Waker;
 pub(crate) struct InstanceBacking {
     pub waker: Cell<Waker>,
     pub platform: RefCell<std::boxed::Box<dyn Platform>>,
+    pub state_change_fn: Cell<Option<std::boxed::Box<dyn FnMut(ot::ChangedFlags)>>>,
 }
 
 impl InstanceBacking {
@@ -18,6 +19,7 @@ impl InstanceBacking {
         Self {
             waker: Cell::new(futures::task::noop_waker()),
             platform: RefCell::new(Box::new(platform) as std::boxed::Box<dyn Platform>),
+            state_change_fn: Cell::new(None),
         }
     }
 }
