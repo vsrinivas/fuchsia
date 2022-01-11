@@ -14,7 +14,7 @@ import 'vnode.dart';
 // ignore_for_file: unnecessary_null_comparison, unused_import
 
 /// A [PseudoDir] which will pass requests for inherited nodes to the underlying
-/// [fidl_io.Directory].
+/// [fidl_fuchsia_io.Directory].
 ///
 /// Inherited Nodes must be specified at time of creation. Any requests to open
 /// nodes in the [inheritedNodes] list will be proxied to the provided

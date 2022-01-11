@@ -42,7 +42,7 @@ abstract class Vnode {
   /// Inode number as defined in io.fidl.
   int inodeNumber();
 
-  /// This function is called from [fuchsia.io.Directory#open].
+  /// This function is called from [fidl_fuchsia_io.Directory#open].
   /// This function parses path and opens correct node.
   ///
   /// Vnode provides a simplified implementation for non-directory types.

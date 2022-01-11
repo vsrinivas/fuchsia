@@ -89,7 +89,7 @@ class PseudoDir extends Vnode {
   }
 
   /// Connects to this instance of [PseudoDir] and serves
-  /// [fushsia.io.Directory] over fidl.
+  /// [fidl_fuchsia_io.Directory] over fidl.
   @override
   int connect(int flags, int mode, fidl.InterfaceRequest<Node> request,
       [int parentFlags = Flags.fsRightsDefault]) {

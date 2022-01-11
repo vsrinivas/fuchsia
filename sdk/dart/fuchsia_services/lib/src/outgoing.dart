@@ -41,7 +41,7 @@ class Outgoing {
     }
   }
 
-  /// Serves root dir to request channel and serve [fuchsia.io.Directory]
+  /// Serves root dir to request channel and serve [fidl_fuchsia_io.Directory]
   /// over it.
   void serve(InterfaceRequest<Node> request) {
     _ensureNotClosed();

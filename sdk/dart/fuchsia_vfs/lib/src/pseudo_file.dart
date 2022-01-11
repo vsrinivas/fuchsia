@@ -38,8 +38,8 @@ typedef ReadFnStr = String? Function();
 ///
 /// Write callback, if any, is called when the connection is closed if the file
 /// content was ever modified while the connection was open.
-/// Modifications are: [fuchsia.io.File#write()] calls or opening a file for
-/// writing with the `openFlagTruncate` flag set.
+/// Modifications are: [fidl_fuchsia_io.File#write()] calls or opening a file
+/// for writing with the `openFlagTruncate` flag set.
 class PseudoFile extends Vnode {
   final int _capacity;
   ReadFn? _readFn;
@@ -93,7 +93,7 @@ class PseudoFile extends Vnode {
     _writeFn = _getWriteFn(wfn);
   }
 
-  /// Connects to this instance of [PseudoFile] and serves [fushsia.io.File] over fidl.
+  /// Connects to this instance of [PseudoFile] and serves [fidl_fuchsia_io.File] over fidl.
   @override
   int connect(int flags, int mode, fidl.InterfaceRequest<Node> request,
       [int parentFlags = Flags.fsRightsDefault]) {

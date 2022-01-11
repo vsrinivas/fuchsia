@@ -29,12 +29,12 @@ class FuchsiaWebServices {
   // TODO(fxbug.dev/54313) We are currently enabling all of the "base" features on
   // all builds but they should be conditionally enabled based on the values
   // specified in the parameters.
-  /// This is the base set of [fidl_web.ContextFeatureFlags] that is enabled in all circumstances.
+  /// This is the base set of [fidl_fuchsia_web.ContextFeatureFlags] that is enabled in all circumstances.
   static final baseWebFeatures = fidl_web.ContextFeatureFlags.network |
       fidl_web.ContextFeatureFlags.audio |
       fidl_web.ContextFeatureFlags.hardwareVideoDecoder;
 
-  /// This helper computes the appropriate `fuchsia.web.ContextFeatureFlags` from passed-in settings.
+  /// This helper computes the appropriate `fidl_fuchsia_web.ContextFeatureFlags` from passed-in settings.
   static fidl_web.ContextFeatureFlags webFeaturesFromSettings(
       {bool useSoftwareRendering = false}) {
     return FuchsiaWebServices.baseWebFeatures |
@@ -131,11 +131,11 @@ class FuchsiaWebServices {
   /// view's contents.
   FuchsiaViewConnection? get viewConnection => _viewConnection;
 
-  /// Returns [fidl_web.NavigationControllerProxy]
+  /// Returns [fidl_fuchsia_web.NavigationControllerProxy]
   fidl_web.NavigationControllerProxy get navigationController =>
       _navigationControllerProxy;
 
-  /// Returns [fidl_web.FrameProxy]
+  /// Returns [fidl_fuchsia_web.FrameProxy]
   fidl_web.FrameProxy get frame => _frameProxy;
 
   /// Preforms the all the necessary cleanup.
@@ -195,7 +195,7 @@ class FuchsiaWebServices {
   }
 
   /// Executes a UTF-8 encoded `script` for every subsequent page load where the
-  /// [`fuchsia.web.Frame`]'s URL has an origin reflected in `origins`. The script is executed
+  /// [`fidl_fuchsia_web.Frame`]'s URL has an origin reflected in `origins`. The script is executed
   /// early, prior to the execution of the document's scripts.
   ///
   /// Scripts are identified by a client-managed identifier `id`. Any script previously injected
@@ -208,7 +208,7 @@ class FuchsiaWebServices {
   /// At least one `origins` entry must be specified. If a wildcard `"*"` is specified in
   /// `origins`, then the script will be evaluated unconditionally.
   ///
-  /// If an error occured, the [`fuchsia.web.FrameError`] will be set to one of these values:
+  /// If an error occured, the [`fidl_fuchsia_web.FrameError`] will be set to one of these values:
   /// - `BUFFER_NOT_UTF8`: `script` is not UTF-8 encoded.
   /// - `INVALID_ORIGIN`: `origins` is an empty vector.
   Future<void> runJavascriptBeforeLoad(
@@ -219,7 +219,7 @@ class FuchsiaWebServices {
     await frame.addBeforeLoadJavaScript(id, origins, buffer);
   }
 
-  /// Posts a message to the [fidl_web.Frame]'s onMessage handler.
+  /// Posts a message to the [fidl_fuchsia_web.Frame]'s onMessage handler.
   ///
   /// [targetOrigin] restricts message delivery to the specified origin. If
   /// [targetOrigin] is "*", then the message will be sent to the document
@@ -227,10 +227,10 @@ class FuchsiaWebServices {
   ///
   /// If an error occurred, the FrameError will be set to one of these values:
   /// - INTERNAL_ERROR: The WebEngine failed to create a message pipe.
-  /// - BUFFER_NOT_UTF8: The script in [message]'s [fidl_web.WebMessage.data]
+  /// - BUFFER_NOT_UTF8: The script in [message]'s [fidl_fuchsia_web.WebMessage#data]
   ///   property is not UTF-8 encoded.
   /// - INVALID_ORIGIN: origins is an empty vector.
-  /// - NO_DATA_IN_MESSAGE: The [fidl_web.WebMessage.data] property is missing
+  /// - NO_DATA_IN_MESSAGE: The [fidl_fuchsia_web.WebMessage#data] property is missing
   ///   in [message].
   Future<void> postMessage(
     String targetOrigin,
