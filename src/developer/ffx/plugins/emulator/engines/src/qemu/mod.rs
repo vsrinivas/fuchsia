@@ -8,11 +8,15 @@
 //! femu module since femu is a wrapper around an older version of QEMU.
 
 use crate::serialization::SerializingEngine;
-use anyhow::Result;
+use anyhow::{bail, Result};
 use async_trait::async_trait;
-use ffx_emulator_common::{config::FfxConfigWrapper, process};
-use ffx_emulator_config::{EmulatorConfiguration, EmulatorEngine, EngineType};
+use ffx_emulator_common::{
+    config::{FfxConfigWrapper, QEMU_TOOL, SDK_ROOT},
+    process,
+};
+use ffx_emulator_config::{EmulatorConfiguration, EmulatorEngine, EngineType, PointingDevice};
 use serde::{Deserialize, Serialize};
+use std::{env, path::PathBuf, process::Command};
 
 pub(crate) mod qemu_base;
 pub(crate) use qemu_base::QemuBasedEngine;
@@ -40,18 +44,42 @@ impl EmulatorEngine for QemuEngine {
             .await
             .expect("could not stage image files");
 
-        let instance_directory = self.emulator_configuration.runtime.instance_directory.clone();
-        self.write_to_disk(&instance_directory).await?;
-        todo!()
+        // TODO(fxbug.dev/86737): Find the emulator executable using ffx_config::get_host_tool().
+        // This is a workaround until the ffx_config::get_host_tool works.
+        let sdk_root = &self.ffx_config.file(SDK_ROOT).await?;
+        let backup_qemu = match env::consts::OS {
+            "linux" => {
+                sdk_root.join("../../prebuilt/third_party/qemu/linux-x64/bin/qemu-system-x86_64")
+            }
+            "macos" => {
+                sdk_root.join("../../prebuilt/third_party/qemu/mac-x64/bin/qemu-system-x86_64")
+            }
+            _ => panic!("Sorry. {} is not supported.", env::consts::OS),
+        }
+        .canonicalize()?;
+
+        let qemu = match self.ffx_config.get_host_tool(QEMU_TOOL).await {
+            Ok(qemu_path) => qemu_path,
+            Err(e) => {
+                println!("Need to fix {:?}", e);
+                backup_qemu
+            }
+        };
+
+        return self.run(&qemu).await;
     }
     fn show(&self) {
         println!("{:#?}", self.emulator_configuration);
     }
-    fn shutdown(&mut self) -> Result<()> {
-        todo!()
+    fn shutdown(&self) -> Result<()> {
+        self.shutdown_emulator()
     }
     fn validate(&self) -> Result<()> {
-        self.check_required_files(&self.emulator_configuration.guest)
+        if self.emulator_configuration.device.pointing_device == PointingDevice::Touch {
+            bail!("Touchscreen as a pointing device is not available on Qemu.");
+        }
+        self.validate_network_flags(&self.emulator_configuration)
+            .and_then(|()| self.check_required_files(&self.emulator_configuration.guest))
     }
     fn engine_type(&self) -> EngineType {
         self.engine_type
@@ -65,4 +93,41 @@ impl EmulatorEngine for QemuEngine {
 #[async_trait]
 impl SerializingEngine for QemuEngine {}
 
-impl QemuBasedEngine for QemuEngine {}
+impl QemuBasedEngine for QemuEngine {
+    fn set_pid(&mut self, pid: u32) {
+        self.pid = pid;
+    }
+
+    fn get_pid(&self) -> u32 {
+        self.pid
+    }
+
+    fn emu_config(&self) -> &EmulatorConfiguration {
+        return &self.emulator_configuration;
+    }
+
+    fn emu_config_mut(&mut self) -> &mut EmulatorConfiguration {
+        return &mut self.emulator_configuration;
+    }
+
+    /// Build the Command to launch Qemu emulator running Fuchsia.
+    fn build_emulator_cmd(&self, emu_binary: &PathBuf) -> Result<Command> {
+        let mut cmd = Command::new(&emu_binary);
+        cmd.args(&self.emulator_configuration.flags.args);
+        let extra_args = self
+            .emulator_configuration
+            .flags
+            .kernel_args
+            .iter()
+            .map(|x| x.to_string())
+            .collect::<Vec<_>>()
+            .join(" ");
+        if extra_args.len() > 0 {
+            cmd.args(["-append", &extra_args]);
+        }
+        if self.emulator_configuration.flags.envs.len() > 0 {
+            cmd.envs(&self.emulator_configuration.flags.envs);
+        }
+        Ok(cmd)
+    }
+}

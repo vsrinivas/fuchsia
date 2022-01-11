@@ -5,11 +5,16 @@
 //! The qemu_base module encapsulates traits and functions specific
 //! for engines using QEMU as the emulator platform.
 
+use crate::{arg_templates::process_flag_template, serialization::SerializingEngine};
 use anyhow::{anyhow, bail, Result};
 use async_trait::async_trait;
-use ffx_emulator_common::{config, config::FfxConfigWrapper};
-use ffx_emulator_config::{DeviceConfig, GuestConfig};
-use std::{fs, path::PathBuf, process::Command, str};
+use ffx_emulator_common::{config, config::FfxConfigWrapper, process};
+use ffx_emulator_config::{
+    ConsoleType, DeviceConfig, EmulatorConfiguration, EmulatorEngine, GuestConfig, LogLevel,
+    NetworkingMode,
+};
+use shared_child::SharedChild;
+use std::{fs, path::PathBuf, process::Command, str, sync::Arc};
 
 /// QemuBasedEngine collects the interface for
 /// emulator engine implementations that use
@@ -17,7 +22,7 @@ use std::{fs, path::PathBuf, process::Command, str};
 /// This allows the implementation to be shared
 /// across multiple engine types.
 #[async_trait]
-pub(crate) trait QemuBasedEngine {
+pub(crate) trait QemuBasedEngine: EmulatorEngine + SerializingEngine {
     /// Checks that the required files are present
     fn check_required_files(&self, guest: &GuestConfig) -> Result<()> {
         let kernel_path = &guest.kernel_image;
@@ -151,15 +156,156 @@ pub(crate) trait QemuBasedEngine {
         let ifname = String::from_utf8_lossy(&output.stdout);
         Ok(ifname != "")
     }
+
+    fn validate_network_flags(&self, emu_config: &EmulatorConfiguration) -> Result<()> {
+        if emu_config.host.networking == NetworkingMode::Tap && std::env::consts::OS == "macos" {
+            eprintln!(
+                "Tun/Tap networking mode is not currently supported on MacOS. \
+                You may experience errors with your current configuration."
+            );
+        }
+        if emu_config.host.networking == NetworkingMode::Tap {
+            if !Self::tap_available()? {
+                eprintln!("To use emu with networking on Linux, configure Tun/Tap:");
+                eprintln!(
+                    "  sudo ip tuntap add dev qemu mode tap user $USER && sudo ip link set qemu up"
+                );
+                bail!("Configure Tun/Tap on your host or disable networking.")
+            }
+        }
+        Ok(())
+    }
+
+    async fn run(&mut self, emu_binary: &PathBuf) -> Result<i32> {
+        if !emu_binary.exists() || !emu_binary.is_file() {
+            bail!("Giving up finding emulator binary. Tried {:?}", emu_binary)
+        }
+
+        self.emu_config_mut().flags = process_flag_template(&self.emu_config())?;
+
+        let mut emulator_cmd = self.build_emulator_cmd(&emu_binary)?;
+
+        if self.emu_config().runtime.log_level == LogLevel::Verbose
+            || self.emu_config().runtime.dry_run
+        {
+            println!("[emulator] Running emulator cmd: {:?}\n", emulator_cmd);
+            println!("[emulator] Running with ENV: {:?}\n", emulator_cmd.get_envs());
+            if self.emu_config().runtime.dry_run {
+                return Ok(0);
+            }
+        }
+
+        let shared_process = SharedChild::spawn(&mut emulator_cmd)?;
+        let child_arc = Arc::new(shared_process);
+
+        self.set_pid(child_arc.id());
+
+        self.write_to_disk(&self.emu_config().runtime.instance_directory)?;
+
+        if self.emu_config().runtime.console == ConsoleType::Monitor
+            || self.emu_config().runtime.console == ConsoleType::Console
+        {
+            // When running with '--monitor' or '--console' mode, the user is directly interacting
+            // with the emulator console, or the guest console. Therefore wait until the
+            // execution of QEMU or AEMU terminates.
+            match fuchsia_async::unblock(move || process::monitored_child_process(&child_arc)).await
+            {
+                Ok(_) => {
+                    return Ok(0);
+                }
+                Err(e) => {
+                    if let Some(shutdown_error) = self.shutdown().err() {
+                        log::debug!(
+                            "Error encountered in shutdown when handling failed launch: {:?}",
+                            shutdown_error
+                        );
+                    }
+                    bail!("Emulator launcher did not terminate properly, error: {}", e)
+                }
+            }
+        } else if self.emu_config().runtime.debugger {
+            let status = child_arc.wait()?;
+            if !status.success() {
+                let exit_code = status.code().unwrap_or_default();
+                if exit_code != 0 {
+                    bail!("Cannot start Fuchsia Emulator.")
+                }
+            }
+        }
+        Ok(0)
+    }
+
+    fn shutdown_emulator(&self) -> Result<()> {
+        if self.is_running() {
+            print!("Terminating running instance {:?}", self.get_pid());
+            if let Some(terminate_error) = process::terminate(self.get_pid()).err() {
+                log::debug!("Error encountered terminating process: {:?}", terminate_error);
+            }
+        }
+        Ok(())
+    }
+
+    /// Access to the engine's pid field.
+    fn set_pid(&mut self, pid: u32);
+    fn get_pid(&self) -> u32;
+
+    /// Access to the engine's emulator_configuration field.
+    fn emu_config(&self) -> &EmulatorConfiguration;
+
+    /// Mutable access to the engine's emulator_configuration field.
+    fn emu_config_mut(&mut self) -> &mut EmulatorConfiguration;
+
+    /// An engine-specific function for building a command-line from the emu_config.
+    fn build_emulator_cmd(&self, emu_binary: &PathBuf) -> Result<Command>;
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use async_trait::async_trait;
+    use ffx_emulator_config::EngineType;
+    use serde::Serialize;
     use tempfile::tempdir;
 
+    #[derive(Serialize)]
     struct TestEngine {}
-    impl QemuBasedEngine for TestEngine {}
+    impl QemuBasedEngine for TestEngine {
+        fn set_pid(&mut self, _pid: u32) {}
+        fn get_pid(&self) -> u32 {
+            todo!()
+        }
+        fn emu_config(&self) -> &EmulatorConfiguration {
+            todo!()
+        }
+        fn emu_config_mut(&mut self) -> &mut EmulatorConfiguration {
+            todo!()
+        }
+        fn build_emulator_cmd(&self, _emu_binary: &PathBuf) -> Result<Command> {
+            todo!()
+        }
+    }
+    #[async_trait]
+    impl EmulatorEngine for TestEngine {
+        async fn start(&mut self) -> Result<i32> {
+            todo!()
+        }
+        fn shutdown(&self) -> Result<()> {
+            todo!()
+        }
+        fn show(&self) {
+            todo!()
+        }
+        fn validate(&self) -> Result<()> {
+            todo!()
+        }
+        fn engine_type(&self) -> EngineType {
+            EngineType::default()
+        }
+        fn is_running(&self) -> bool {
+            false
+        }
+    }
+    impl SerializingEngine for TestEngine {}
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_staging() {

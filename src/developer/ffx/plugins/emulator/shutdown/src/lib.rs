@@ -16,7 +16,7 @@ async fn attempt_shutdown(instance_dir: &PathBuf) -> Result<()> {
         // If the directory doesn't exist, we just return Ok(()) since there's nothing to shut down
         return Ok(());
     }
-    let mut engine = read_from_disk(instance_dir).await?;
+    let engine = read_from_disk(instance_dir)?;
     engine.shutdown()
 }
 

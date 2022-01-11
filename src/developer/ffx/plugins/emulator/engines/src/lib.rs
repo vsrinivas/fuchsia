@@ -122,8 +122,7 @@ impl EngineBuilder {
         let filepath =
             self.emulator_configuration.runtime.instance_directory.join(SERIALIZE_FILE_NAME);
         if filepath.exists() {
-            let engine =
-                read_from_disk(&self.emulator_configuration.runtime.instance_directory).await?;
+            let engine = read_from_disk(&self.emulator_configuration.runtime.instance_directory)?;
             if engine.is_running() {
                 bail!(
                     "Emulator named {} is already running. \

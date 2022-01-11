@@ -4,7 +4,7 @@
 
 //! Handlebars helper functions for working with an EmulatorConfiguration.
 
-use anyhow::Result;
+use anyhow::{Context as anyhow_context, Result};
 use ffx_emulator_config::{DataUnits, EmulatorConfiguration, FlagData};
 use handlebars::{
     Context, Handlebars, Helper, HelperDef, HelperResult, JsonRender, Output, RenderContext,
@@ -160,9 +160,17 @@ impl HelperDef for EnvironmentHelper {
     }
 }
 
-pub async fn process_flag_template(
-    template: &str,
-    emu_config: &mut EmulatorConfiguration,
+pub fn process_flag_template(emu_config: &EmulatorConfiguration) -> Result<FlagData> {
+    let template_text = std::fs::read_to_string(&emu_config.runtime.template).context(format!(
+        "couldn't locate template file from path {:?}",
+        &emu_config.runtime.template
+    ))?;
+    process_flag_template_inner(&template_text, emu_config)
+}
+
+fn process_flag_template_inner(
+    template_text: &str,
+    emu_config: &EmulatorConfiguration,
 ) -> Result<FlagData> {
     // This performs all the variable substitution and condition resolution.
     let mut handlebars = Handlebars::new();
@@ -170,7 +178,7 @@ pub async fn process_flag_template(
     handlebars.register_helper("env", Box::new(EnvironmentHelper {}));
     handlebars.register_helper("eq", Box::new(EqHelper {}));
     handlebars.register_helper("ua", Box::new(UnitAbbreviationHelper {}));
-    let json = handlebars.render_template(&template, &emu_config)?;
+    let json = handlebars.render_template(&template_text, &emu_config)?;
 
     // Deserialize and return the flags from the template.
     let flags = serde_json::from_str(&json)?;
@@ -268,7 +276,7 @@ mod tests {
         let empty_template = "";
         let mut emu_config = EmulatorConfiguration::default();
 
-        let flags = process_flag_template(empty_template, &mut emu_config).await;
+        let flags = process_flag_template_inner(empty_template, &mut emu_config);
         assert!(flags.is_err());
 
         Ok(())
@@ -287,7 +295,7 @@ mod tests {
         }"#;
         let mut emu_config = EmulatorConfiguration::default();
 
-        let flags = process_flag_template(empty_vectors_template, &mut emu_config).await;
+        let flags = process_flag_template_inner(empty_vectors_template, &mut emu_config);
         assert!(flags.is_ok(), "{:?}", flags);
         assert_eq!(flags.as_ref().unwrap().args.len(), 0);
         assert_eq!(flags.as_ref().unwrap().envs.len(), 0);
@@ -311,7 +319,7 @@ mod tests {
         }"#;
         let mut emu_config = EmulatorConfiguration::default();
 
-        let flags = process_flag_template(invalid_template, &mut emu_config).await;
+        let flags = process_flag_template_inner(invalid_template, &mut emu_config);
         assert!(flags.is_err());
 
         Ok(())
@@ -330,7 +338,7 @@ mod tests {
         }"#;
         let mut emu_config = EmulatorConfiguration::default();
 
-        let flags = process_flag_template(ok_template, &mut emu_config).await;
+        let flags = process_flag_template_inner(ok_template, &mut emu_config);
         assert!(flags.is_ok(), "{:?}", flags);
         assert_eq!(flags.as_ref().unwrap().args.len(), 0);
         assert_eq!(flags.as_ref().unwrap().envs.len(), 1);
@@ -357,7 +365,7 @@ mod tests {
         }"#;
         let mut emu_config = EmulatorConfiguration::default();
 
-        let flags = process_flag_template(substitution_template, &mut emu_config).await;
+        let flags = process_flag_template_inner(substitution_template, &mut emu_config);
         assert!(flags.is_ok(), "{:?}", flags);
         assert_eq!(flags.as_ref().unwrap().args.len(), 1);
         assert_eq!(flags.as_ref().unwrap().envs.len(), 0);
@@ -368,7 +376,7 @@ mod tests {
 
         emu_config.device.audio.model = AudioModel::Hda;
 
-        let flags = process_flag_template(substitution_template, &mut emu_config).await;
+        let flags = process_flag_template_inner(substitution_template, &mut emu_config);
         assert!(flags.is_ok(), "{:?}", flags);
         assert_eq!(flags.as_ref().unwrap().args.len(), 1);
         assert_eq!(flags.as_ref().unwrap().envs.len(), 0);
@@ -396,7 +404,7 @@ mod tests {
 
         emu_config.runtime.headless = false;
 
-        let flags = process_flag_template(conditional_template, &mut emu_config).await;
+        let flags = process_flag_template_inner(conditional_template, &mut emu_config);
         assert!(flags.is_ok(), "{:?}", flags);
         assert_eq!(flags.as_ref().unwrap().args.len(), 0);
         assert_eq!(flags.as_ref().unwrap().envs.len(), 0);
@@ -407,7 +415,7 @@ mod tests {
 
         emu_config.runtime.headless = true;
 
-        let flags = process_flag_template(conditional_template, &mut emu_config).await;
+        let flags = process_flag_template_inner(conditional_template, &mut emu_config);
         assert!(flags.is_ok(), "{:?}", flags);
         assert_eq!(flags.as_ref().unwrap().args.len(), 0);
         assert_eq!(flags.as_ref().unwrap().envs.len(), 0);
@@ -435,7 +443,7 @@ mod tests {
 
         let mut emu_config = EmulatorConfiguration::default();
 
-        let flags = process_flag_template(template, &mut emu_config).await;
+        let flags = process_flag_template_inner(template, &mut emu_config);
         assert!(flags.is_ok(), "{:?}", flags);
         assert_eq!(flags.as_ref().unwrap().args.len(), 0);
         assert_eq!(flags.as_ref().unwrap().envs.len(), 0);
@@ -446,7 +454,7 @@ mod tests {
 
         emu_config.device.storage.units = DataUnits::Megabytes;
 
-        let flags = process_flag_template(template, &mut emu_config).await;
+        let flags = process_flag_template_inner(template, &mut emu_config);
         assert!(flags.is_ok(), "{:?}", flags);
         assert_eq!(flags.as_ref().unwrap().args.len(), 0);
         assert_eq!(flags.as_ref().unwrap().envs.len(), 0);

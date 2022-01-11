@@ -5,19 +5,13 @@
 //! The femu module encapsulates the interactions with the emulator instance
 //! started via the Fuchsia emulator, Femu.
 
-use crate::{
-    arg_templates::process_flag_template, qemu::qemu_base::QemuBasedEngine,
-    serialization::SerializingEngine,
-};
-use anyhow::{bail, Context, Result};
+use crate::{qemu::qemu_base::QemuBasedEngine, serialization::SerializingEngine};
+use anyhow::Result;
 use async_trait::async_trait;
 use ffx_emulator_common::{config, config::FfxConfigWrapper, process};
-use ffx_emulator_config::{
-    ConsoleType, EmulatorConfiguration, EmulatorEngine, EngineType, LogLevel, NetworkingMode,
-};
+use ffx_emulator_config::{EmulatorConfiguration, EmulatorEngine, EngineType};
 use serde::{Deserialize, Serialize};
-use shared_child::SharedChild;
-use std::{env, path::PathBuf, process::Command, sync::Arc};
+use std::{env, path::PathBuf, process::Command};
 
 #[derive(Clone, Debug, Default, Deserialize, PartialEq, Serialize)]
 pub struct FemuEngine {
@@ -42,9 +36,6 @@ impl EmulatorEngine for FemuEngine {
             .await
             .expect("could not stage image files");
 
-        let instance_directory = self.emulator_configuration.runtime.instance_directory.clone();
-        self.write_to_disk(&instance_directory).await?;
-
         // TODO(fxbug.dev/86737): Find the emulator executable using ffx_config::get_host_tool().
         // This is a workaround until the ffx_config::get_host_tool works.
         let sdk_root = &self.ffx_config.file(config::SDK_ROOT).await?;
@@ -66,80 +57,13 @@ impl EmulatorEngine for FemuEngine {
             }
         };
 
-        if !aemu.exists() || !aemu.is_file() {
-            bail!("Giving up finding aemu binary. Tried {:?}", aemu)
-        }
-
-        let template_text = std::fs::read_to_string(&self.emulator_configuration.runtime.template)
-            .context(format!(
-                "couldn't locate template file from path {:?}",
-                &self.emulator_configuration.runtime.template
-            ))?;
-        self.emulator_configuration.flags =
-            process_flag_template(&template_text, &mut self.emulator_configuration).await?;
-
-        let mut emulator_cmd = self.build_emulator_cmd(&aemu)?;
-
-        if self.emulator_configuration.runtime.log_level == LogLevel::Verbose
-            || self.emulator_configuration.runtime.dry_run
-        {
-            println!("[aemu emulator] Running emulator cmd: {:?}\n", emulator_cmd);
-            println!("[aemu emulator] Running with ENV: {:?}\n", emulator_cmd.get_envs());
-            if self.emulator_configuration.runtime.dry_run {
-                return Ok(0);
-            }
-        }
-
-        let shared_process = SharedChild::spawn(&mut emulator_cmd)?;
-        let child_arc = Arc::new(shared_process);
-
-        self.pid = child_arc.id();
-
-        self.write_to_disk(&self.emulator_configuration.runtime.instance_directory).await?;
-
-        if self.emulator_configuration.runtime.console == ConsoleType::Monitor
-            || self.emulator_configuration.runtime.console == ConsoleType::Console
-        {
-            // When running with '--monitor' or '--console' mode, the user is directly interacting
-            // with the emulator console, or the guest console. Therefore wait until the
-            // execution of QEMU or AEMU terminates.
-            match fuchsia_async::unblock(move || process::monitored_child_process(&child_arc)).await
-            {
-                Ok(_) => {
-                    return Ok(0);
-                }
-                Err(e) => {
-                    if let Some(shutdown_error) = self.shutdown().err() {
-                        log::debug!(
-                            "Error encountered in shutdown when handling failed launch: {:?}",
-                            shutdown_error
-                        );
-                    }
-                    bail!("Emulator launcher did not terminate properly, error: {}", e)
-                }
-            }
-        } else if self.emulator_configuration.runtime.debugger {
-            let status = child_arc.wait()?;
-            if !status.success() {
-                let exit_code = status.code().unwrap_or_default();
-                if exit_code != 0 {
-                    bail!("Cannot start Fuchsia Emulator.")
-                }
-            }
-        }
-        Ok(0)
+        return self.run(&aemu).await;
     }
     fn show(&self) {
         println!("{:#?}", self.emulator_configuration);
     }
-    fn shutdown(&mut self) -> Result<()> {
-        if self.is_running() {
-            print!("Terminating running instance {:?}", self.pid);
-            if let Some(terminate_error) = process::terminate(self.pid).err() {
-                log::debug!("Error encountered terminating process: {:?}", terminate_error);
-            }
-        }
-        Ok(())
+    fn shutdown(&self) -> Result<()> {
+        self.shutdown_emulator()
     }
 
     fn validate(&self) -> Result<()> {
@@ -149,24 +73,8 @@ impl EmulatorEngine for FemuEngine {
                 encounter failures related to display or Qt.",
             );
         }
-        if self.emulator_configuration.host.networking == NetworkingMode::Tap
-            && std::env::consts::OS == "macos"
-        {
-            eprintln!(
-                "Tun/Tap networking mode is not currently supported on MacOS. \
-                You may experience errors with your current configuration."
-            );
-        }
-        if self.emulator_configuration.host.networking == NetworkingMode::Tap {
-            if !Self::tap_available()? {
-                eprintln!("To use emu with networking on Linux, configure Tun/Tap:");
-                eprintln!(
-                    "  sudo ip tuntap add dev qemu mode tap user $USER && sudo ip link set qemu up"
-                );
-                bail!("Configure Tun/Tap on your host or disable networking.")
-            }
-        }
-        self.check_required_files(&self.emulator_configuration.guest)
+        self.validate_network_flags(&self.emulator_configuration)
+            .and_then(|()| self.check_required_files(&self.emulator_configuration.guest))
     }
 
     fn engine_type(&self) -> EngineType {
@@ -181,12 +89,26 @@ impl EmulatorEngine for FemuEngine {
 #[async_trait]
 impl SerializingEngine for FemuEngine {}
 
-impl QemuBasedEngine for FemuEngine {}
+impl QemuBasedEngine for FemuEngine {
+    fn set_pid(&mut self, pid: u32) {
+        self.pid = pid;
+    }
 
-impl FemuEngine {
+    fn get_pid(&self) -> u32 {
+        self.pid
+    }
+
+    fn emu_config(&self) -> &EmulatorConfiguration {
+        return &self.emulator_configuration;
+    }
+
+    fn emu_config_mut(&mut self) -> &mut EmulatorConfiguration {
+        return &mut self.emulator_configuration;
+    }
+
     /// Build the Command to launch Android emulator running Fuchsia.
-    fn build_emulator_cmd(&mut self, aemu: &PathBuf) -> Result<Command> {
-        let mut cmd = Command::new(&aemu);
+    fn build_emulator_cmd(&self, emu_binary: &PathBuf) -> Result<Command> {
+        let mut cmd = Command::new(&emu_binary);
         let feature_arg = self
             .emulator_configuration
             .flags

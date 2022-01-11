@@ -17,7 +17,7 @@ async fn show_internal(ffx_config: &FfxConfigWrapper, name: &str) -> Result<()> 
             name
         ))
     } else {
-        let engine = read_from_disk(&instance_dir).await;
+        let engine = read_from_disk(&instance_dir);
         if let Ok(engine) = engine {
             engine.show();
             Ok(())

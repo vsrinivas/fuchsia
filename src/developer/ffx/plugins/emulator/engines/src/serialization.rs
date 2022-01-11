@@ -4,14 +4,13 @@
 
 use crate::{FemuEngine, QemuEngine};
 use anyhow::{anyhow, Result};
-use async_trait::async_trait;
 use ffx_emulator_config::EmulatorEngine;
 use serde::{Deserialize, Serialize};
 use std::{fs::File, path::PathBuf};
 
 pub(crate) const SERIALIZE_FILE_NAME: &str = "engine.json";
 
-pub async fn read_from_disk(instance_directory: &PathBuf) -> Result<Box<dyn EmulatorEngine>> {
+pub fn read_from_disk(instance_directory: &PathBuf) -> Result<Box<dyn EmulatorEngine>> {
     // Get the engine's location, which is in the instance directory.
     let filepath = instance_directory.join(SERIALIZE_FILE_NAME);
 
@@ -36,9 +35,8 @@ pub async fn read_from_disk(instance_directory: &PathBuf) -> Result<Box<dyn Emul
     }
 }
 
-#[async_trait]
 pub trait SerializingEngine: Serialize {
-    async fn write_to_disk(&self, instance_directory: &PathBuf) -> Result<()> {
+    fn write_to_disk(&self, instance_directory: &PathBuf) -> Result<()> {
         // The engine's serialized form will be saved in ${EMU_INSTANCE_ROOT_DIR}/${runtime.name}.
         // This is the path set up by the EngineBuilder, so it's expected to already exist.
         let filepath = instance_directory.join(SERIALIZE_FILE_NAME);
@@ -59,7 +57,6 @@ mod tests {
     use super::*;
     use crate::qemu::QemuEngine;
     use ffx_emulator_config::EngineType;
-    use futures::executor::block_on;
     use std::fs::{create_dir_all, remove_file};
     use tempfile::tempdir;
 
@@ -74,7 +71,7 @@ mod tests {
         let engine = QemuEngine { engine_type: EngineType::Qemu, ..Default::default() };
 
         // Serialize the engine to disk.
-        block_on(engine.write_to_disk(&temp_path)).expect("Problem serializing engine to disk.");
+        engine.write_to_disk(&temp_path).expect("Problem serializing engine to disk.");
 
         // Deserialize it from the expected file location.
         temp_path.push(SERIALIZE_FILE_NAME);
