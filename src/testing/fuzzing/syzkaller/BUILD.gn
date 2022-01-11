@@ -70,12 +70,13 @@ executable("syz-executor") {
     "${src}/executor/test.h",
     "${src}/executor/test_linux.h",
   ]
+  defines = [
+    "GOOS_${GOOS}=1",
+    "GOARCH_${GOARCH}=1",
+    "HOSTGOOS_${HOSTGOOS}=1",
+    "GIT_REVISION=\"${GIT_REVISION}\"",
+  ]
   cflags = [
-    "-DGOOS_${GOOS}=1",
-    "-DGOARCH_${GOARCH}=1",
-    "-DHOSTGOOS_${HOSTGOOS}=1",
-    "-DGIT_REVISION=\"${GIT_REVISION}\"",
-
     # TODO(mdempsky): How do we avoid hard-coding this path?
     "-Ihost_x64/gen/src/testing/fuzzing/syzkaller/sysgen/executor",
   ]
