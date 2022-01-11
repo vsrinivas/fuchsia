@@ -1620,11 +1620,11 @@ std::unique_ptr<raw::File> Parser::ParseFile() {
 }
 
 bool Parser::ConsumeTokensUntil(std::set<Token::Kind> exit_tokens) {
-  auto p = [&](Token::KindAndSubkind token) -> std::unique_ptr<Diagnostic> {
+  auto p = [&](const Token& token) -> std::unique_ptr<Diagnostic> {
     for (const auto& exit_token : exit_tokens) {
       if (token.kind() == exit_token)
         // signal to ReadToken to stop by returning an error
-        return Diagnostic::MakeError(ErrUnexpectedToken, std::nullopt);
+        return Diagnostic::MakeError(ErrUnexpectedToken, token.span());
     }
     // nullptr return value indicates -> yes, consume to ReadToken
     return nullptr;

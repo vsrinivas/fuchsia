@@ -161,9 +161,9 @@ class Parser {
   template <class Predicate>
   std::optional<Token> ReadToken(Predicate p, OnNoMatch on_no_match) {
     assert(!ConsumedEOF() && "Already consumed EOF");
-    std::unique_ptr<Diagnostic> error = p(Peek());
+    std::unique_ptr<Diagnostic> error = p(last_token_);
     if (error) {
-      error->span = last_token_.span();
+      assert(error->span.has_value());
       switch (on_no_match) {
         case OnNoMatch::kReportAndConsume:
           reporter_->Report(std::move(error));
@@ -209,9 +209,10 @@ class Parser {
   }
 
   static auto OfKind(Token::Kind expected_kind) {
-    return [expected_kind](Token::KindAndSubkind actual) -> std::unique_ptr<Diagnostic> {
+    return [expected_kind](const Token& actual) -> std::unique_ptr<Diagnostic> {
       if (actual.kind() != expected_kind) {
-        return Diagnostic::MakeError(ErrUnexpectedTokenOfKind, std::nullopt, actual,
+        return Diagnostic::MakeError(ErrUnexpectedTokenOfKind, actual.span(),
+                                     actual.kind_and_subkind(),
                                      Token::KindAndSubkind(expected_kind, Token::Subkind::kNone));
       }
       return nullptr;
@@ -219,11 +220,11 @@ class Parser {
   }
 
   static auto IdentifierOfSubkind(Token::Subkind expected_subkind) {
-    return [expected_subkind](Token::KindAndSubkind actual) -> std::unique_ptr<Diagnostic> {
+    return [expected_subkind](const Token& actual) -> std::unique_ptr<Diagnostic> {
       auto expected = Token::KindAndSubkind(Token::Kind::kIdentifier, expected_subkind);
-      if (actual.combined() != expected.combined()) {
+      if (actual.kind_and_subkind().combined() != expected.combined()) {
         return Diagnostic::MakeError(
-            ErrUnexpectedIdentifier, std::nullopt, actual,
+            ErrUnexpectedIdentifier, actual.span(), actual.kind_and_subkind(),
             Token::KindAndSubkind(Token::Kind::kIdentifier, Token::Subkind::kNone));
       }
       return nullptr;
