@@ -1434,9 +1434,9 @@ bool CompileStep::ValidateMembers(DeclType* decl, MemberValidator<MemberType> va
            previous_span);
     }
 
-    auto err = validator(value, member.attributes.get());
+    auto err = validator(value, member.attributes.get(), member.name);
     if (err) {
-      err->span = member.name;
+      assert(err->span.has_value());
       Report(std::move(err));
     }
   }
@@ -1461,9 +1461,10 @@ bool CompileStep::ValidateBitsMembersAndCalcMask(Bits* bits_decl, MemberType* ou
                 "Bits members must be an unsigned integral type!");
   // Each bits member must be a power of two.
   MemberType mask = 0u;
-  auto validator = [&mask](MemberType member, const AttributeList*) -> std::unique_ptr<Diagnostic> {
+  auto validator = [&mask](MemberType member, const AttributeList*,
+                           SourceSpan span) -> std::unique_ptr<Diagnostic> {
     if (!IsPowerOfTwo(member)) {
-      return Diagnostic::MakeError(ErrBitsMemberMustBePowerOfTwo, std::nullopt);
+      return Diagnostic::MakeError(ErrBitsMemberMustBePowerOfTwo, span);
     }
     mask |= member;
     return nullptr;
@@ -1498,17 +1499,17 @@ bool CompileStep::ValidateEnumMembersAndCalcUnknownValue(Enum* enum_decl,
   }
 
   auto validator = [enum_decl, &explicit_unknown_value](
-                       MemberType member,
-                       const AttributeList* attributes) -> std::unique_ptr<Diagnostic> {
+                       MemberType member, const AttributeList* attributes,
+                       SourceSpan span) -> std::unique_ptr<Diagnostic> {
     switch (enum_decl->strictness) {
       case types::Strictness::kStrict:
         if (attributes->Get("unknown") != nullptr) {
-          return Diagnostic::MakeError(ErrUnknownAttributeOnStrictEnumMember, std::nullopt);
+          return Diagnostic::MakeError(ErrUnknownAttributeOnStrictEnumMember, span);
         }
         return nullptr;
       case types::Strictness::kFlexible:
         if (member == default_unknown_value && !explicit_unknown_value.has_value()) {
-          return Diagnostic::MakeError(ErrFlexibleEnumMemberWithMaxValue, std::nullopt,
+          return Diagnostic::MakeError(ErrFlexibleEnumMemberWithMaxValue, span,
                                        std::to_string(default_unknown_value));
         }
         return nullptr;

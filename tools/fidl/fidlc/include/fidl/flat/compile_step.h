@@ -92,7 +92,7 @@ class CompileStep : public StepBase {
   // and on failure returns an error. The caller will set the diagnostic span.
   template <typename MemberType>
   using MemberValidator = fit::function<std::unique_ptr<diagnostics::Diagnostic>(
-      const MemberType& member, const AttributeList* attributes)>;
+      const MemberType& member, const AttributeList* attributes, SourceSpan span)>;
 
   // Validation methods
   template <typename DeclType, typename MemberType>
