@@ -73,29 +73,30 @@ Linux test binaries can also be run using the Starnix test runner using the
 standard `fx test` command:
 
 ```
-$ fx test hello-starnix-test --output
+$ fx test exit_test --output
 ```
 
 You should see output like:
 
 ```
-Running test 'fuchsia-pkg://fuchsia.com/hello-starnix-test#meta/hello_starnix_test.cm'
-[RUNNING]       fuchsia-pkg://fuchsia.com/hello-starnix-test#meta/hello_starnix_test.cm
-[PASSED]        fuchsia-pkg://fuchsia.com/hello-starnix-test#meta/hello_starnix_test.cm
+[==========] Running 3 tests from 1 test suite.
+[----------] Global test environment set-up.
+[----------] 3 tests from ExitTest
+[ RUN      ] ExitTest.Success
+[       OK ] ExitTest.Success (4 ms)
+[ RUN      ] ExitTest.Failure
+[       OK ] ExitTest.Failure (3 ms)
+[ RUN      ] ExitTest.CloseFds
 ```
 
-In the device logs you should see output like:
+If you set the log level to `TRACE` (e.g.,  `fx log --severity TRACE --select "core/test*/*/starnix*#TRACE"`), you should e the system call handling in the device logs:
 
 ```
-[starnix, starnix_runner] INFO: main
-[starnix, starnix_runner] INFO: start_component: fuchsia-pkg://fuchsia.com/hello-starnix-test#meta/hello_starnix_test.cm
-[starnix, strace] INFO: 1(0x1, 0x35a3ca6000, 0xe, 0x0, 0x0, 0x0)
-[starnix, starnix_runner::syscalls] INFO: write: hello starnix
-
-[starnix, strace] INFO: -> 0xe
-[starnix, strace] INFO: 60(0x0, 0x35a3ca6000, 0xe, 0x0, 0x0, 0x0)
-[starnix, starnix_runner::syscalls] INFO: exit: error_code=0
-[starnix, strace] INFO: -> 0x0
+[629.603][starnix][D] 1[/data/tests/exit_test] wait4(0x3, 0x1c48095b950, 0x0, 0x0, 0x10, 0x10)
+[629.603][starnix][D] 3[/data/tests/exit_test] prctl(0x53564d41, 0x0, 0x700d5ea000, 0x3000, 0x3a506c7a34b, 0xc06913ece9)
+[629.603][starnix][D] 3[/data/tests/exit_test] -> 0x0
+[629.604][starnix][D] 3[/data/tests/exit_test] exit_group(0x1, 0x3, 0x2b18e3464f8, 0x3000, 0x3a506c7a34b, 0xc06913ece9)
+[629.604][starnix][I] exit_group: pid=3 exit_code=1
 ```
 
 ## Testing
