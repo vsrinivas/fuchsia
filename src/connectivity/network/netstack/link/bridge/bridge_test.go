@@ -295,33 +295,7 @@ func TestBridgeWritePackets(t *testing.T) {
 	}
 	baddr := bridgeEP.LinkAddress()
 
-	t.Run("WritePackets", func(t *testing.T) {
-		dstAddr := linkAddr4
-		var pkts stack.PacketBufferList
-		defer pkts.DecRef()
-		pkt := stack.NewPacketBuffer(stack.PacketBufferOptions{
-			ReserveHeaderBytes: int(bridgeEP.MaxHeaderLength()),
-			Data:               buffer.View(data[0]).ToVectorisedView(),
-		})
-		pkts.PushBack(pkt)
-		pkt.EgressRoute.RemoteLinkAddress = dstAddr
-		pkt.NetworkProtocolNumber = fakeNetworkProtocol
-		if n, err := bridgeEP.WritePackets(stack.RouteInfo{}, pkts, 0); err != nil {
-			t.Fatalf("bridgeEP.WritePackets({}, _, 0): %s", err)
-		} else if n != 1 {
-			t.Fatalf("got bridgeEP.WritePackets({}, _, 0) = %d, want = 1", n)
-		}
-
-		for i, ep := range eps {
-			func() {
-				pkt := ep.getPacket()
-				defer pkt.DecRef()
-				expectPacket(t, fmt.Sprintf("ep%d", i), pkt, baddr, dstAddr, fakeNetworkProtocol, data[0])
-			}()
-		}
-	})
-
-	for i := 1; i <= len(data); i++ {
+	for i := 0; i <= len(data); i++ {
 		t.Run(fmt.Sprintf("WritePackets(N=%d)", i), func(t *testing.T) {
 			var pkts stack.PacketBufferList
 			defer pkts.DecRef()
