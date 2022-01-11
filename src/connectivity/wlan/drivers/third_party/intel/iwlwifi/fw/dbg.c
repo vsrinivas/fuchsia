@@ -1417,7 +1417,7 @@ static inline void _iwl_fw_dbg_stop_recording(struct iwl_trans* trans,
   }
 
   iwl_write_prph(trans, DBGC_IN_SAMPLE, 0);
-  zx_nanosleep(ZX_USEC(100));
+  zx_nanosleep(zx_deadline_after(ZX_USEC(100)));
   iwl_write_prph(trans, DBGC_OUT_CTRL, 0);
 #ifdef CPTCFG_IWLWIFI_DEBUGFS
   trans->dbg_rec_on = false;
@@ -1445,7 +1445,7 @@ static inline void _iwl_fw_dbg_restart_recording(struct iwl_trans* trans,
     iwl_set_bits_prph(trans, MON_BUFF_SAMPLE_CTL, 0x1);
   } else {
     iwl_write_prph(trans, DBGC_IN_SAMPLE, params->in_sample);
-    zx_nanosleep(ZX_USEC(100));
+    zx_nanosleep(zx_deadline_after(ZX_USEC(100)));
     iwl_write_prph(trans, DBGC_OUT_CTRL, params->out_ctrl);
   }
 }
@@ -1494,7 +1494,7 @@ void iwl_fw_dbg_collect_sync(struct iwl_fw_runtime* fwrt) {
   /* start recording again if the firmware is not crashed */
   if (!test_bit(STATUS_FW_ERROR, &fwrt->trans->status) && fwrt->fw->dbg.dest_tlv) {
     /* wait before we collect the data till the DBGC stop */
-    zx_nanosleep(ZX_USEC(500));
+    zx_nanosleep(zx_deadline_after(ZX_USEC(500)));
     iwl_fw_dbg_restart_recording(fwrt, &params);
   }
 }
