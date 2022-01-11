@@ -66,10 +66,10 @@ void Device::Unbind() {
 
 const char* Device::Name() const { return name_.data(); }
 
-bool Device::HasChildren() const { return child_counter_.use_count() > 1; }
+bool Device::HasChildren() const { return !children_.empty(); }
 
 zx_status_t Device::Add(device_add_args_t* zx_args, zx_device_t** out) {
-  auto device = std::make_unique<Device>(zx_args->name, zx_args->ctx, zx_args->ops, this,
+  auto device = std::make_shared<Device>(zx_args->name, zx_args->ctx, zx_args->ops, this,
                                          std::nullopt, logger_, dispatcher_);
   auto device_ptr = device.get();
 
@@ -109,20 +109,30 @@ zx_status_t Device::Add(device_add_args_t* zx_args, zx_device_t** out) {
   if (controller_ends.is_error()) {
     return controller_ends.status_value();
   }
-  device_ptr->controller_.Bind(
-      std::move(controller_ends->client), dispatcher_,
-      fidl::ObserveTeardown([device = std::move(device), counter = child_counter_] {
-        // When we observe teardown, we will destroy both the device and the
-        // shared counter associated with it.
-        //
-        // Because the dispatcher is multi-threaded, we must use a
-        // `fidl::WireSharedClient`. Because we use a `fidl::WireSharedClient`,
-        // a two-phase destruction must occur to safely teardown the client.
-        //
-        // Here, we follow the FIDL recommendation to make the observer be in
-        // charge of deallocation by taking ownership of the unique_ptr. See:
-        // https://fuchsia.dev/fuchsia-src/development/languages/fidl/guides/llcpp-threading#custom_teardown_observer
-      }));
+  device_ptr->controller_.Bind(std::move(controller_ends->client), dispatcher_,
+                               fidl::ObserveTeardown([device = device->weak_from_this()] {
+                                 // Because the dispatcher can be multi-threaded, we must use a
+                                 // `fidl::WireSharedClient`. The `fidl::WireSharedClient` uses a
+                                 // two-phase destruction to teardown the client.
+                                 //
+                                 // Because of this, the teardown might be happening after the
+                                 // Device has already been erased. This is likely to occur if the
+                                 // Driver is asked to shutdown. If that happens, the Driver will
+                                 // free its Devices, the Device will release its NodeController,
+                                 // and then this shutdown will occur later. In order to not have a
+                                 // Use-After-Free here, only try to remove the Device if the
+                                 // weak_ptr still exists.
+                                 //
+                                 // The weak pointer will be valid here if the NodeController
+                                 // representing the Device exits on its own. This represents the
+                                 // Device's child Driver exiting, and in that instance we want to
+                                 // Remove the Device.
+                                 if (auto ptr = device.lock()) {
+                                   if (ptr->parent_.has_value()) {
+                                     (*ptr->parent_)->RemoveChild(ptr);
+                                   }
+                                 }
+                               }));
 
   // If the node is not bindable, we own the node.
   fidl::ServerEnd<fdf::Node> node_server;
@@ -156,6 +166,8 @@ zx_status_t Device::Add(device_add_args_t* zx_args, zx_device_t** out) {
   node_->AddChild(std::move(args), std::move(controller_ends->server), std::move(node_server),
                   std::move(callback));
 
+  children_.push_back(std::move(device));
+
   *out = device_ptr->ZxDevice();
   return ZX_OK;
 }
@@ -170,6 +182,8 @@ void Device::Remove() {
     FDF_LOG(ERROR, "Failed to remove device '%s': %s", Name(), result.FormatDescription().data());
   }
 }
+
+void Device::RemoveChild(std::shared_ptr<Device>& child) { children_.remove(child); }
 
 zx_status_t Device::GetProtocol(uint32_t proto_id, void* out) const {
   if (!HasOp(ops_, &zx_protocol_device_t::get_protocol)) {

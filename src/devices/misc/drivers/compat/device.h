@@ -9,6 +9,8 @@
 #include <lib/ddk/device.h>
 #include <lib/ddk/driver.h>
 
+#include <list>
+#include <memory>
 #include <unordered_map>
 
 #include <fbl/intrusive_double_list.h>
@@ -18,7 +20,7 @@
 namespace compat {
 
 // Device is an implementation of a DFv1 device.
-class Device {
+class Device : public std::enable_shared_from_this<Device> {
  public:
   Device(std::string_view name, void* context, const zx_protocol_device_t* ops,
          std::optional<Device*> parent, std::optional<Device*> linked_device,
@@ -48,6 +50,8 @@ class Device {
   Device(Device&&) = delete;
   Device& operator=(Device&&) = delete;
 
+  void RemoveChild(std::shared_ptr<Device>& child);
+
   const std::string name_;
   void* const context_;
   const zx_protocol_device_t* const ops_;
@@ -71,9 +75,11 @@ class Device {
   fidl::WireSharedClient<fuchsia_driver_framework::Node> node_;
   fidl::WireSharedClient<fuchsia_driver_framework::NodeController> controller_;
   std::unordered_map<uint32_t, const Metadata> metadata_;
-  // We use the `use_count()` of a `std::shared_ptr` as a thread-safe way of
-  // counting the number of children currently active.
-  std::shared_ptr<std::nullptr_t> child_counter_ = std::make_shared<std::nullptr_t>();
+
+  // The Device's children. The Device has full ownership of the children,
+  // but these are shared pointers so that the NodeController can get a weak
+  // pointer to the child in order to erase them.
+  std::list<std::shared_ptr<Device>> children_;
 };
 
 }  // namespace compat
