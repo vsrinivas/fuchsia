@@ -294,7 +294,7 @@ void DeviceInterface::NetworkDeviceIfcAddPort(uint8_t port_id,
   };
   std::unique_ptr<DevicePort> port(
       new (&checker) DevicePort(this, dispatcher_, salted_id, port_client, std::move(mac),
-                                fit::bind_member(this, &DeviceInterface::OnPortTeardownComplete)));
+                                fit::bind_member<&DeviceInterface::OnPortTeardownComplete>(this)));
   if (!checker.check()) {
     LOGF_ERROR("network-device: failed to allocate port memory");
     return;

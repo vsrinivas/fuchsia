@@ -42,7 +42,7 @@ void MdnsTransceiver::Start(fuchsia::net::interfaces::WatcherPtr watcher,
   };
   transceiver_factory_ = std::move(transceiver_factory);
 
-  interface_watcher_->Watch(fit::bind_member(this, &MdnsTransceiver::OnInterfacesEvent));
+  interface_watcher_->Watch(fit::bind_member<&MdnsTransceiver::OnInterfacesEvent>(this));
 }
 
 void MdnsTransceiver::Stop() {
@@ -182,7 +182,7 @@ bool MdnsTransceiver::OnInterfaceDiscovered(fuchsia::net::interfaces::Properties
 }
 
 void MdnsTransceiver::OnInterfacesEvent(fuchsia::net::interfaces::Event event) {
-  interface_watcher_->Watch(fit::bind_member(this, &MdnsTransceiver::OnInterfacesEvent));
+  interface_watcher_->Watch(fit::bind_member<&MdnsTransceiver::OnInterfacesEvent>(this));
 
   bool link_change = false;
 

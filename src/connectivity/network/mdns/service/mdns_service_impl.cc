@@ -99,12 +99,15 @@ MdnsServiceImpl::MdnsServiceImpl(sys::ComponentContext* component_context)
       subscriber_bindings_(this, "Subscriber"),
       publisher_bindings_(this, "Publisher"),
       mdns_(transceiver_) {
-  component_context_->outgoing()->AddPublicService<fuchsia::net::mdns::Resolver>(fit::bind_member(
-      &resolver_bindings_, &BindingSet<fuchsia::net::mdns::Resolver>::OnBindRequest));
-  component_context_->outgoing()->AddPublicService<fuchsia::net::mdns::Subscriber>(fit::bind_member(
-      &subscriber_bindings_, &BindingSet<fuchsia::net::mdns::Subscriber>::OnBindRequest));
-  component_context_->outgoing()->AddPublicService<fuchsia::net::mdns::Publisher>(fit::bind_member(
-      &publisher_bindings_, &BindingSet<fuchsia::net::mdns::Publisher>::OnBindRequest));
+  component_context_->outgoing()->AddPublicService<fuchsia::net::mdns::Resolver>(
+      fit::bind_member<&BindingSet<fuchsia::net::mdns::Resolver>::OnBindRequest>(
+          &resolver_bindings_));
+  component_context_->outgoing()->AddPublicService<fuchsia::net::mdns::Subscriber>(
+      fit::bind_member<&BindingSet<fuchsia::net::mdns::Subscriber>::OnBindRequest>(
+          &subscriber_bindings_));
+  component_context_->outgoing()->AddPublicService<fuchsia::net::mdns::Publisher>(
+      fit::bind_member<&BindingSet<fuchsia::net::mdns::Publisher>::OnBindRequest>(
+          &publisher_bindings_));
   Start();
 }
 
@@ -130,7 +133,7 @@ void MdnsServiceImpl::Start() {
   fuchsia::net::interfaces::WatcherPtr watcher;
   interfaces_state->GetWatcher(fuchsia::net::interfaces::WatcherOptions(), watcher.NewRequest());
   mdns_.Start(std::move(watcher), host_name, config_.addresses(), config_.perform_host_name_probe(),
-              fit::bind_member(this, &MdnsServiceImpl::OnReady));
+              fit::bind_member<&MdnsServiceImpl::OnReady>(this));
 }
 
 void MdnsServiceImpl::OnReady() {
@@ -416,7 +419,7 @@ void MdnsServiceImpl::Subscriber::MaybeSendNextEntry() {
   }
 
   Entry& entry = entries_.front();
-  auto on_reply = fit::bind_member(this, &MdnsServiceImpl::Subscriber::ReplyReceived);
+  auto on_reply = fit::bind_member<&MdnsServiceImpl::Subscriber::ReplyReceived>(this);
 
   if (client_) {
     switch (entry.type) {

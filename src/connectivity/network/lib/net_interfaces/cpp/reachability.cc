@@ -38,7 +38,7 @@ ReachabilityWatcher::ReachabilityWatcher(
     callback_(fpromise::error(ReachabilityWatcher::Error::kChannelClosed));
   });
 
-  watcher_->Watch(fit::bind_member(this, &ReachabilityWatcher::HandleEvent));
+  watcher_->Watch(fit::bind_member<&ReachabilityWatcher::HandleEvent>(this));
 }
 
 void ReachabilityWatcher::HandleEvent(fuchsia::net::interfaces::Event event) {
@@ -47,7 +47,7 @@ void ReachabilityWatcher::HandleEvent(fuchsia::net::interfaces::Event event) {
     return callback_(fpromise::error(update_result.error()));
   }
 
-  watcher_->Watch(fit::bind_member(this, &ReachabilityWatcher::HandleEvent));
+  watcher_->Watch(fit::bind_member<&ReachabilityWatcher::HandleEvent>(this));
   bool reachable = std::any_of(interface_properties_.properties_map().cbegin(),
                                interface_properties_.properties_map().cend(),
                                [](const auto& it) { return it.second.IsGloballyRoutable(); });
