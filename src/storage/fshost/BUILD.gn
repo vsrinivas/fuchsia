@@ -312,7 +312,7 @@ test("fshost_loader_service_test") {
 }
 
 fuchsia_unittest_component("fshost-loader-service-test") {
-  manifest = "meta/fshost-loader-service-test.cmx"
+  manifest = "meta/fshost_loader_service_test.cml"
   deps = [ ":fshost_loader_service_test" ]
 }
 
