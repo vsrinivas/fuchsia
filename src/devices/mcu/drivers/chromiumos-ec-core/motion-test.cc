@@ -13,6 +13,7 @@
 #include <hid-parser/parser.h>
 #include <zxtest/zxtest.h>
 
+#include "fuchsia/hardware/hidbus/c/banjo.h"
 #include "src/devices/mcu/drivers/chromiumos-ec-core/fake_device.h"
 #include "src/devices/testing/mock-ddk/mock-device.h"
 
@@ -64,6 +65,7 @@ TEST(BuildHidDescriptor, AllSensors) {
 
 // A Fake EmbeddedController with MotionSense support for 1 sensor.
 class ChromiumosEcMotionTest : public ChromiumosEcTestBase {
+ public:
   void SetUp() override {
     ChromiumosEcTestBase::SetUp();
 
@@ -89,6 +91,7 @@ class ChromiumosEcMotionTest : public ChromiumosEcTestBase {
     // Parse command.
     struct ec_response_motion_sense rsp = {};
     fidl::VectorView<uint8_t> response;
+    std::vector<uint8_t> data;
     switch (cmd->cmd) {
       case MOTIONSENSE_CMD_DUMP:
         // We only support one sensor.
@@ -123,6 +126,44 @@ class ChromiumosEcMotionTest : public ChromiumosEcTestBase {
         response = MakeVectorView(rsp.sensor_range);
         break;
 
+      case MOTIONSENSE_CMD_FIFO_READ: {
+        ZX_ASSERT(cmd->fifo_read.max_data_vector == 2);
+        {
+          std::scoped_lock lock(fifo_count_mutex_);
+          if (left_in_fifo_ == 0) {
+            rsp.fifo_read.number_data = 0;
+          } else {
+            rsp.fifo_read.number_data = 1;
+            left_in_fifo_--;
+          }
+        }
+        struct ec_response_motion_sensor_data sensor_data = {
+            .flags = 0,
+            .sensor_num = 0,
+            .data = {100, 0, 0},
+        };
+        data.resize(sizeof(rsp.fifo_read) + sizeof(sensor_data), 0);
+        memcpy(data.data(), &rsp.fifo_read, sizeof(rsp.fifo_read));
+        memcpy(data.data() + sizeof(rsp.fifo_read), &sensor_data, sizeof(sensor_data));
+        response = fidl::VectorView<uint8_t>::FromExternal(data);
+        sync_completion_signal(&fifo_read_);
+        break;
+      }
+      case MOTIONSENSE_CMD_SENSOR_ODR:
+        ZX_ASSERT(cmd->sensor_odr.sensor_num == 0);
+        rsp.sensor_odr.ret = 0;
+        response = MakeVectorView(rsp.sensor_odr);
+        break;
+      case MOTIONSENSE_CMD_EC_RATE:
+        ZX_ASSERT(cmd->ec_rate.sensor_num == 0);
+        rsp.ec_rate.ret = 0;
+        response = MakeVectorView(rsp.ec_rate);
+        break;
+      case MOTIONSENSE_CMD_FIFO_INFO:
+        rsp.fifo_info.size = 2;
+        response = MakeVectorView(rsp.fifo_info);
+        break;
+
       default:
         ZX_PANIC("Unsupported command: %d\n", cmd->cmd);
     }
@@ -130,7 +171,25 @@ class ChromiumosEcMotionTest : public ChromiumosEcTestBase {
     completer.ReplySuccess(fuchsia_hardware_google_ec::wire::EcStatus::kSuccess, response);
   }
 
+  void TriggerFifoEvent() {
+    if (interrupt_enabled_) {
+      {
+        std::scoped_lock lock(fifo_count_mutex_);
+        left_in_fifo_ += 1;
+      }
+      auto result = fidl::WireCall(handler_)->Handle(0x80);
+      ASSERT_OK(result.status());
+      sync_completion_wait(&fifo_read_, ZX_TIME_INFINITE);
+      sync_completion_reset(&fifo_read_);
+    }
+  }
+
+  static void IoQueue(void* ctx, const uint8_t* data, size_t len, zx_time_t timestamp) {}
+
  protected:
+  sync_completion_t fifo_read_;
+  std::mutex fifo_count_mutex_;
+  size_t left_in_fifo_ __TA_GUARDED(fifo_count_mutex_) = 0;
   bool interrupt_enabled_ = false;
   AcpiCrOsEcMotionDevice* motion_dev_;
 };
@@ -148,6 +207,34 @@ TEST_F(ChromiumosEcMotionTest, Lifecycle) {
   ASSERT_EQ(hid::kParseOk, hid::ParseReportDescriptor(buffer, report_size, &parsed_hid));
   ASSERT_EQ(parsed_hid->rep_count, 1);
   hid::FreeDeviceDescriptor(parsed_hid);
+}
+
+TEST_F(ChromiumosEcMotionTest, FifoAvoidsDeadlocks) {
+  hidbus_ifc_protocol_ops_t ops = {
+      .io_queue = ChromiumosEcMotionTest::IoQueue,
+
+  };
+  hidbus_ifc_protocol_t proto = {
+      .ops = &ops,
+      .ctx = this,
+  };
+  std::atomic_bool running = true;
+  std::thread thr([this, &running]() {
+    while (running.load()) {
+      TriggerFifoEvent();
+      zx::nanosleep(zx::deadline_after(zx::msec(1)));
+    }
+  });
+
+  for (size_t i = 0; i < 10; i++) {
+    ASSERT_OK(motion_dev_->HidbusStart(&proto));
+    zx::nanosleep(zx::deadline_after(zx::msec(50)));
+    motion_dev_->HidbusStop();
+    zx::nanosleep(zx::deadline_after(zx::msec(50)));
+  }
+
+  running = false;
+  thr.join();
 }
 
 }  // namespace

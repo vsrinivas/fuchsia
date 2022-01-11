@@ -19,7 +19,11 @@ void ChromiumosEcTestBase::SetUp() {
   fake_root_ = MockDevice::FakeRootParent();
   ASSERT_OK(loop_.StartThread("chromiumos-ec-core-test"));
   fake_acpi_.SetInstallNotifyHandler(
-      [](auto request, auto& completer) { completer.ReplySuccess(); });
+      [this](acpi::mock::Device::InstallNotifyHandlerRequestView request, auto& completer) {
+        ASSERT_FALSE(handler_.is_valid());
+        handler_ = std::move(request->handler);
+        completer.ReplySuccess();
+      });
 }
 
 void ChromiumosEcTestBase::InitDevice() {

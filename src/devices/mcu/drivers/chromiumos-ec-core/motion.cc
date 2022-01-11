@@ -22,8 +22,10 @@
 #include <lib/fit/defer.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <zircon/compiler.h>
 #include <zircon/status.h>
 #include <zircon/syscalls.h>
+#include <zircon/time.h>
 #include <zircon/types.h>
 
 #include <memory>
@@ -70,46 +72,83 @@ void AcpiCrOsEcMotionDevice::HandleNotify(uint32_t event) {
   }
 }
 
+void AcpiCrOsEcMotionDevice::FifoConsumerThread() {
+  report_lock_.lock();
+  while (!shutdown_) {
+    reports_ready_.wait(report_lock_, [this]() __TA_REQUIRES(report_lock_) {
+      return shutdown_ || !report_queue_.empty();
+    });
+
+    if (shutdown_) {
+      break;
+    }
+
+    std::vector<std::pair<std::array<uint8_t, kMaxReportLength>, size_t>> reports;
+    reports.swap(report_queue_);
+    report_lock_.unlock();
+    // Process reports.
+    {
+      std::scoped_lock hid_lock(hid_lock_);
+      for (auto& event : reports) {
+        QueueHidReportLocked(event.first.data(), event.second);
+      }
+    }
+    report_lock_.lock();
+  }
+
+  report_lock_.unlock();
+}
+
 void AcpiCrOsEcMotionDevice::ConsumeFifoAsync(bool enabling) {
   ec_->executor().schedule_task(
       FifoRead()
-          .and_then([this](ec_response_motion_sensor_data& data) {
-            fbl::AutoLock lock(&hid_lock_);
-            auto reschedule = fit::defer([this]() { ConsumeFifoAsync(/*enabling=*/false); });
-            if (data.sensor_num >= sensors_.size() || !sensors_[data.sensor_num].valid) {
-              return;
-            }
-            if (data.flags & (MOTIONSENSE_SENSOR_FLAG_TIMESTAMP | MOTIONSENSE_SENSOR_FLAG_FLUSH)) {
-              // This is a special packet, not a report.
-              return;
+          .and_then([this](std::vector<ec_response_motion_sensor_data>& entries) {
+            for (auto& data : entries) {
+              if (data.sensor_num >= sensors_.size() || !sensors_[data.sensor_num].valid) {
+                continue;
+              }
+              if (data.flags &
+                  (MOTIONSENSE_SENSOR_FLAG_TIMESTAMP | MOTIONSENSE_SENSOR_FLAG_FLUSH)) {
+                // This is a special packet, not a report.
+                continue;
+              }
+
+              std::array<uint8_t, kMaxReportLength> report = {SensorIdToReportId(data.sensor_num)};
+              size_t report_len = 1;
+              switch (sensors_[data.sensor_num].type) {
+                // 3-axis sensors
+                case MOTIONSENSE_TYPE_ACCEL:
+                case MOTIONSENSE_TYPE_GYRO:
+                case MOTIONSENSE_TYPE_MAG:
+                  static_assert(sizeof(data.data) == 6, "3-axis sensor data size is wrong");
+                  memcpy(report.data() + report_len, data.data, sizeof(data.data));
+                  report_len += sizeof(data.data);
+                  break;
+                // 1-axis sensors
+                case MOTIONSENSE_TYPE_LIGHT:
+                  static_assert(sizeof(data.data[0]) == 2, "1-axis sensor data size is wrong");
+                  memcpy(report.data() + report_len, data.data, sizeof(data.data[0]));
+                  report_len += 2;
+                  break;
+                default:
+                  ZX_ASSERT_MSG(false, "should not be reachable\n");
+              }
+              ZX_DEBUG_ASSERT(report_len < report.size());
+
+              {
+                std::scoped_lock lock(report_lock_);
+                report_queue_.emplace_back(std::make_pair(report, report_len));
+              }
             }
 
-            uint8_t report[8] = {SensorIdToReportId(data.sensor_num)};
-            size_t report_len = 1;
-            switch (sensors_[data.sensor_num].type) {
-              // 3-axis sensors
-              case MOTIONSENSE_TYPE_ACCEL:
-              case MOTIONSENSE_TYPE_GYRO:
-              case MOTIONSENSE_TYPE_MAG:
-                static_assert(sizeof(data.data) == 6, "3-axis sensor data size is wrong");
-                memcpy(report + report_len, data.data, sizeof(data.data));
-                report_len += sizeof(data.data);
-                break;
-              // 1-axis sensors
-              case MOTIONSENSE_TYPE_LIGHT:
-                static_assert(sizeof(data.data[0]) == 2, "1-axis sensor data size is wrong");
-                memcpy(report + report_len, data.data, sizeof(data.data[0]));
-                report_len += 2;
-                break;
-              default:
-                ZX_ASSERT_MSG(false, "should not be reachable\n");
+            if (!entries.empty()) {
+              reports_ready_.notify_all();
             }
-
-            ZX_DEBUG_ASSERT(report_len < sizeof(report));
-            QueueHidReportLocked(report, report_len);
           })
           .or_else([enabling, this](zx_status_t& status) {
-            if (status != ZX_ERR_SHOULD_WAIT) {
+            // ZX_ERR_SHOULD_WAIT means the FIFO is empty, and ZX_ERR_CANCELED means that the
+            // async executor is being shut down.
+            if (status != ZX_ERR_SHOULD_WAIT && status != ZX_ERR_CANCELED) {
               zxlogf(ERROR, "FifoRead failed: %s", zx_status_get_string(status));
               if (enabling) {
                 // If we were just trying to read from the EC for the first time,
@@ -139,17 +178,13 @@ zx_status_t AcpiCrOsEcMotionDevice::HidbusQuery(uint32_t options, hid_info_t* in
 zx_status_t AcpiCrOsEcMotionDevice::HidbusStart(const hidbus_ifc_protocol_t* ifc) {
   zxlogf(DEBUG, "acpi-cros-ec-motion: hid bus start");
 
-  fbl::AutoLock guard(&hid_lock_);
+  std::scoped_lock guard(hid_lock_);
   if (client_.is_valid()) {
     return ZX_ERR_ALREADY_BOUND;
   }
 
   client_ = ddk::HidbusIfcProtocolClient(ifc);
-
-  zx_status_t status = FifoInterruptEnable(true);
-  if (status != ZX_OK) {
-    return status;
-  }
+  zx_status_t status;
 
   // TODO(fxb/89400): Make this setting dynamic
   // Enable all of our sensors at 10000mHz
@@ -171,6 +206,18 @@ zx_status_t AcpiCrOsEcMotionDevice::HidbusStart(const hidbus_ifc_protocol_t* ifc
     }
   }
 
+  status = FifoInterruptEnable(true);
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  {
+    std::scoped_lock lock(report_lock_);
+    shutdown_ = false;
+    report_queue_.clear();
+    report_consumer_thread_ = std::thread(&AcpiCrOsEcMotionDevice::FifoConsumerThread, this);
+  }
+
   ConsumeFifoAsync(/*enabling=*/true);
   return ZX_OK;
 }
@@ -178,9 +225,22 @@ zx_status_t AcpiCrOsEcMotionDevice::HidbusStart(const hidbus_ifc_protocol_t* ifc
 void AcpiCrOsEcMotionDevice::HidbusStop() {
   zxlogf(DEBUG, "acpi-cros-ec-motion: hid bus stop");
 
-  fbl::AutoLock guard(&hid_lock_);
+  {
+    std::scoped_lock guard(hid_lock_);
+    if (!client_.is_valid()) {
+      return;
+    }
 
-  client_.clear();
+    client_.clear();
+  }
+  {
+    std::scoped_lock lock(report_lock_);
+    shutdown_ = true;
+    reports_ready_.notify_all();
+    report_queue_.clear();
+  }
+  report_consumer_thread_.join();
+
   FifoInterruptEnable(false);
 
   // Disable all sensors
@@ -249,6 +309,16 @@ zx_status_t AcpiCrOsEcMotionDevice::HidbusGetProtocol(uint8_t* protocol) {
 }
 
 zx_status_t AcpiCrOsEcMotionDevice::HidbusSetProtocol(uint8_t protocol) { return ZX_OK; }
+
+void AcpiCrOsEcMotionDevice::DdkUnbind(ddk::UnbindTxn txn) {
+  std::thread shutdown_thread([this, txn = std::move(txn)]() mutable {
+    HidbusStop();
+
+    txn.Reply();
+  });
+
+  shutdown_thread.detach();
+}
 
 void AcpiCrOsEcMotionDevice::DdkRelease() {
   zxlogf(INFO, "acpi-cros-ec-motion: release");
@@ -394,36 +464,61 @@ fpromise::promise<int32_t, zx_status_t> AcpiCrOsEcMotionDevice::GetSensorRange(u
       });
 }
 
-fpromise::promise<ec_response_motion_sensor_data, zx_status_t> AcpiCrOsEcMotionDevice::FifoRead() {
+fpromise::promise<ec_response_motion_sense_fifo_info, zx_status_t>
+AcpiCrOsEcMotionDevice::GetFifoInfo() {
+  zxlogf(TRACE, "acpi-cros-ec-motion: GetFifoInfo");
+
+  struct ec_params_motion_sense cmd = {};
+  cmd.cmd = MOTIONSENSE_CMD_FIFO_INFO;
+
+  return ec_->IssueCommand(EC_CMD_MOTION_SENSE_CMD, 3, cmd)
+      .and_then([](CommandResult& result)
+                    -> fpromise::result<ec_response_motion_sense_fifo_info, zx_status_t> {
+        auto r = result.GetData<ec_response_motion_sense_fifo_info>();
+        if (r == nullptr) {
+          zxlogf(ERROR, "GetFifoInfo returned wrong type");
+          return fpromise::error(ZX_ERR_WRONG_TYPE);
+        }
+
+        return fpromise::ok(*r);
+      });
+}
+
+fpromise::promise<std::vector<ec_response_motion_sensor_data>, zx_status_t>
+AcpiCrOsEcMotionDevice::FifoRead() {
   zxlogf(TRACE, "acpi-cros-ec-motion: FifoRead");
 
   struct ec_params_motion_sense cmd = {};
   cmd.cmd = MOTIONSENSE_CMD_FIFO_READ;
-  cmd.fifo_read.max_data_vector = 1;
+  cmd.fifo_read.max_data_vector = fifo_size_;
 
   return ec_->IssueCommand(EC_CMD_MOTION_SENSE_CMD, 3, cmd)
-      .and_then(
-          [](CommandResult& res) -> fpromise::result<ec_response_motion_sensor_data, zx_status_t> {
-            struct __packed fifo_read_response {
-              uint32_t count;
-              struct ec_response_motion_sensor_data data;
-            };
+      .and_then([this](CommandResult& res)
+                    -> fpromise::result<std::vector<ec_response_motion_sensor_data>, zx_status_t> {
+        struct __packed fifo_read_response {
+          uint32_t count;
+          struct ec_response_motion_sensor_data data[0];
+        };
 
-            auto count = res.GetData<uint32_t>();
-            if (count == nullptr) {
-              return fpromise::error(ZX_ERR_WRONG_TYPE);
-            }
-            if (*count != 1) {
-              zxlogf(TRACE, "acpi-cros-ec-motion: FifoRead found no reports");
-              return fpromise::error(ZX_ERR_SHOULD_WAIT);
-            }
-            fifo_read_response* r = reinterpret_cast<fifo_read_response*>(count);
+        auto count = res.GetData<uint32_t>();
+        if (count == nullptr) {
+          return fpromise::error(ZX_ERR_WRONG_TYPE);
+        }
+        if (*count == 0) {
+          zxlogf(TRACE, "acpi-cros-ec-motion: FifoRead found no reports");
+          return fpromise::error(ZX_ERR_SHOULD_WAIT);
+        }
+        size_t available_elements =
+            (res.data.size() - sizeof(uint32_t)) / sizeof(ec_response_motion_sensor_data);
+        if (*count > fifo_size_ || *count > available_elements) {
+          zxlogf(ERROR, "acpi-cros-ec-motion: FifoRead returned too many elements");
+          return fpromise::error(ZX_ERR_IO);
+        }
+        fifo_read_response* r = reinterpret_cast<fifo_read_response*>(count);
 
-            zxlogf(TRACE, "acpi-cros-ec-motion: sensor=%u flags=%#x val=(%d, %d, %d)",
-                   r->data.sensor_num, r->data.flags, r->data.data[0], r->data.data[1],
-                   r->data.data[2]);
-            return fpromise::ok(r->data);
-          });
+        std::vector<ec_response_motion_sensor_data> data(r->data, r->data + available_elements);
+        return fpromise::ok(std::move(data));
+      });
 }
 
 zx_status_t AcpiCrOsEcMotionDevice::Bind(zx_device_t* parent, ChromiumosEcCore* ec,
@@ -523,8 +618,20 @@ void AcpiCrOsEcMotionDevice::DdkInit(ddk::InitTxn txn) {
             });
       });
 
-  // At this stage, we've populated the sensors_ array.
-  auto finish_init = populate_sensors.and_then([this]() -> fpromise::result<void, zx_status_t> {
+  auto get_fifo_size =
+      populate_sensors
+          .and_then([this]() -> fpromise::promise<ec_response_motion_sense_fifo_info, zx_status_t> {
+            return GetFifoInfo();
+          })
+          .and_then([this](ec_response_motion_sense_fifo_info& info)
+                        -> fpromise::result<void, zx_status_t> {
+            fifo_size_ = info.size;
+            zxlogf(INFO, "Motion sense fifo size: %u", fifo_size_);
+            return fpromise::ok();
+          });
+
+  // At this stage, we've populated the sensors_ array and figured out the fifo size.
+  auto finish_init = get_fifo_size.and_then([this]() -> fpromise::result<void, zx_status_t> {
     // Populate hid_descriptor_ based on available sensors.
     zx_status_t status =
         BuildHidDescriptor(cpp20::span(sensors_.begin(), sensors_.end()), &hid_descriptor_);

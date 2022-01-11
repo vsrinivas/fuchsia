@@ -68,6 +68,7 @@ class ChromiumosEcTestBase : public inspect::InspectTestHelper, public zxtest::T
   sync_completion_t acpi_shutdown_;
   std::optional<fidl::ServerBindingRef<fuchsia_hardware_google_ec::Device>> ec_binding_;
   std::optional<fidl::ServerBindingRef<fuchsia_hardware_acpi::Device>> acpi_binding_;
+  fidl::ClientEnd<fuchsia_hardware_acpi::NotifyHandler> handler_;
 
   bool initialised_ = false;
 };

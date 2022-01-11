@@ -9,6 +9,7 @@
 #include <zircon/compiler.h>
 #include <zircon/types.h>
 
+#include <condition_variable>
 #include <memory>
 
 #include <chromiumos-platform-ec/ec_commands.h>
@@ -19,9 +20,10 @@
 #include "src/devices/mcu/drivers/chromiumos-ec-core/chromiumos_ec_core.h"
 
 namespace chromiumos_ec_core::motion {
+constexpr size_t kMaxReportLength = 8;
 
 class AcpiCrOsEcMotionDevice;
-using DeviceType = ddk::Device<AcpiCrOsEcMotionDevice, ddk::Initializable>;
+using DeviceType = ddk::Device<AcpiCrOsEcMotionDevice, ddk::Initializable, ddk::Unbindable>;
 
 // Properties for a single MotionSense sensor.
 struct SensorInfo {
@@ -58,6 +60,7 @@ class AcpiCrOsEcMotionDevice
 
   // DDK implementation.
   void DdkInit(ddk::InitTxn txn);
+  void DdkUnbind(ddk::UnbindTxn txn);
   void DdkRelease();
 
   // hidbus protocol implementation.
@@ -88,12 +91,19 @@ class AcpiCrOsEcMotionDevice
   zx_status_t SetSensorOutputDataRate(uint8_t sensor_num, uint32_t freq_millihertz);
   fpromise::promise<int32_t, zx_status_t> GetSensorRange(uint8_t sensor_num);
   zx_status_t FifoInterruptEnable(bool enable);
-  fpromise::promise<ec_response_motion_sensor_data, zx_status_t> FifoRead();
+  // Don't call this directly. Use ConsumeFifoAsync instead.
+  fpromise::promise<std::vector<ec_response_motion_sensor_data>, zx_status_t> FifoRead();
+  fpromise::promise<ec_response_motion_sense_fifo_info, zx_status_t> GetFifoInfo();
 
   // Guard against concurrent use of the HID interfaces
-  fbl::Mutex hid_lock_;
-  void QueueHidReportLocked(const uint8_t* data, size_t len);
+  std::mutex hid_lock_;
+  void QueueHidReportLocked(const uint8_t* data, size_t len) __TA_REQUIRES(hid_lock_);
   void ConsumeFifoAsync(bool enabling);
+
+  // Thread for taking FIFO data and exposing to HID bus.
+  // This isn't done on the async loop to avoid potential deadlocks
+  // between HidbusStart and ConsumeFifoAsync.
+  void FifoConsumerThread();
 
   // Chat with hardware to build up |sensors_|
   zx_status_t ProbeSensors();
@@ -101,13 +111,24 @@ class AcpiCrOsEcMotionDevice
   ChromiumosEcCore* ec_;
 
   // Interface the driver is currently bound to
-  ddk::HidbusIfcProtocolClient client_;
+  ddk::HidbusIfcProtocolClient client_ __TA_GUARDED(hid_lock_);
 
   std::vector<SensorInfo> sensors_;
 
   fbl::Array<uint8_t> hid_descriptor_ = fbl::Array<uint8_t>();
   std::optional<ddk::InitTxn> init_txn_;
   std::optional<ChromiumosEcCore::NotifyHandlerDeleter> notify_deleter_;
+
+  std::thread report_consumer_thread_;
+  std::mutex report_lock_ __TA_ACQUIRED_AFTER(hid_lock_);
+  std::condition_variable_any reports_ready_;
+  // Queue of (report, report_len).
+  std::vector<std::pair<std::array<uint8_t, kMaxReportLength>, size_t>> report_queue_
+      __TA_GUARDED(report_lock_);
+  bool shutdown_ __TA_GUARDED(report_lock_) = false;
+
+  // Size of the FIFO on the EC.
+  uint16_t fifo_size_ = 0;
 };
 
 // Build a HID descriptor reporting information about the given set of sensors.
