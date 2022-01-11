@@ -1998,20 +1998,20 @@ mod tests {
 
         // Add ip1 (ok)
         crate::device::add_ip_addr_subnet(&mut ctx, device, as1).unwrap();
-        assert_matches!(crate::device::get_ip_addr_state(&ctx, device, &ip1), Some(_));
+        assert_eq!(crate::device::get_ip_addr_state(&ctx, device, &ip1), Some(AddressState::Assigned));
         assert_eq!(crate::device::get_ip_addr_state(&ctx, device, &ip2), None);
         assert_eq!(crate::device::get_ip_addr_state(&ctx, device, &ip3), None);
 
         // Add ip2 (ok)
         crate::device::add_ip_addr_subnet(&mut ctx, device, as2).unwrap();
-        assert_matches!(crate::device::get_ip_addr_state(&ctx, device, &ip1), Some(_));
-        assert_matches!(crate::device::get_ip_addr_state(&ctx, device, &ip2), Some(_));
+        assert_eq!(crate::device::get_ip_addr_state(&ctx, device, &ip1), Some(AddressState::Assigned));
+        assert_eq!(crate::device::get_ip_addr_state(&ctx, device, &ip2), Some(AddressState::Assigned));
         assert_eq!(crate::device::get_ip_addr_state(&ctx, device, &ip3), None);
 
         // Del ip1 (ok)
         crate::device::del_ip_addr(&mut ctx, device, &ip1).unwrap();
         assert_eq!(crate::device::get_ip_addr_state(&ctx, device, &ip1), None);
-        assert_matches!(crate::device::get_ip_addr_state(&ctx, device, &ip2), Some(_));
+        assert_eq!(crate::device::get_ip_addr_state(&ctx, device, &ip2), Some(AddressState::Assigned));
         assert_eq!(crate::device::get_ip_addr_state(&ctx, device, &ip3), None);
 
         // Del ip1 again (ip1 not found)
@@ -2020,7 +2020,7 @@ mod tests {
             AddressError::NotFound
         );
         assert_eq!(crate::device::get_ip_addr_state(&ctx, device, &ip1), None);
-        assert_matches!(crate::device::get_ip_addr_state(&ctx, device, &ip2), Some(_));
+        assert_eq!(crate::device::get_ip_addr_state(&ctx, device, &ip2), Some(AddressState::Assigned));
         assert_eq!(crate::device::get_ip_addr_state(&ctx, device, &ip3), None);
 
         // Add ip2 again (ip2 already exists)
@@ -2029,7 +2029,7 @@ mod tests {
             AddressError::AlreadyExists
         );
         assert_eq!(crate::device::get_ip_addr_state(&ctx, device, &ip1), None);
-        assert_matches!(crate::device::get_ip_addr_state(&ctx, device, &ip2), Some(_));
+        assert_eq!(crate::device::get_ip_addr_state(&ctx, device, &ip2), Some(AddressState::Assigned));
         assert_eq!(crate::device::get_ip_addr_state(&ctx, device, &ip3), None);
 
         // Add ip2 with different subnet (ip2 already exists)
@@ -2043,7 +2043,7 @@ mod tests {
             AddressError::AlreadyExists
         );
         assert_eq!(crate::device::get_ip_addr_state(&ctx, device, &ip1), None);
-        assert_matches!(crate::device::get_ip_addr_state(&ctx, device, &ip2), Some(_));
+        assert_eq!(crate::device::get_ip_addr_state(&ctx, device, &ip2), Some(AddressState::Assigned));
         assert_eq!(crate::device::get_ip_addr_state(&ctx, device, &ip3), None);
     }
 

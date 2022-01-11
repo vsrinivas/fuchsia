@@ -487,7 +487,6 @@ where
 
 #[cfg(test)]
 mod test {
-    use matches::assert_matches;
     use net_types::ip::{Ip, Ipv4, Ipv6};
     use net_types::Witness;
 
@@ -509,14 +508,14 @@ mod test {
 
         // Add IP (OK).
         let () = add_ip_addr_subnet(&mut ctx, device, addr_subnet).unwrap();
-        assert_matches!(get_all_ip_addr_subnets(&ctx, device).find(|&a| a == addr_subnet), Some(_));
+        assert_eq!(get_all_ip_addr_subnets(&ctx, device).find(|&a| a == addr_subnet), Some(addr_subnet));
 
         // Add IP again (already exists).
         assert_eq!(
             add_ip_addr_subnet(&mut ctx, device, addr_subnet).unwrap_err(),
             NetstackError::Exists
         );
-        assert_matches!(get_all_ip_addr_subnets(&ctx, device).find(|&a| a == addr_subnet), Some(_));
+        assert_eq!(get_all_ip_addr_subnets(&ctx, device).find(|&a| a == addr_subnet), Some(addr_subnet));
 
         // Add IP with different subnet (already exists).
         let wrong_addr_subnet = AddrSubnetEither::new(ip, prefix - 1).unwrap();
@@ -524,7 +523,7 @@ mod test {
             add_ip_addr_subnet(&mut ctx, device, wrong_addr_subnet).unwrap_err(),
             NetstackError::Exists
         );
-        assert_matches!(get_all_ip_addr_subnets(&ctx, device).find(|&a| a == addr_subnet), Some(_));
+        assert_eq!(get_all_ip_addr_subnets(&ctx, device).find(|&a| a == addr_subnet), Some(addr_subnet));
 
         let ip = SpecifiedAddr::new(ip).unwrap();
         // Del IP (ok).
