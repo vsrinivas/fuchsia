@@ -127,8 +127,7 @@ TEST(DeviceControllerConnectionTestCase, PeerClosedDuringReply) {
   client->BindDriver(
       ::fidl::StringView(""), std::move(vmo),
       [](fidl::WireUnownedResult<fuchsia_device_manager::DeviceController::BindDriver>& result) {
-        ASSERT_STATUS(ZX_ERR_CANCELED, result.status());
-        ASSERT_EQ(fidl::Reason::kUnbind, result.reason());
+        ASSERT_TRUE(result.is_canceled());
       });
 
   ASSERT_OK(ctx.loop().RunUntilIdle());

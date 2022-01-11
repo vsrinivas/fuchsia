@@ -74,27 +74,24 @@ void Device::Bind(fbl::RefPtr<Device> dev, async_dispatcher_t* dispatcher,
       dispatcher, std::move(request), dev.get(),
       [dev](Device* self, fidl::UnbindInfo info,
             fidl::ServerEnd<fuchsia_device_manager::Coordinator> server_end) {
-        switch (info.reason()) {
-          case fidl::Reason::kUnbind:
-          case fidl::Reason::kClose:
-            // These are initiated by ourself.
-            break;
-          case fidl::Reason::kPeerClosed:
-            // If the device is already dead, we are detecting an expected disconnect from the
-            // driver_host.
-            if (dev->state() != Device::State::kDead) {
-              // TODO(https://fxbug.dev/56208): Change this log back to error once isolated devmgr
-              // is fixed.
-              LOGF(WARNING, "Disconnected device %p '%s', see fxbug.dev/56208 for potential cause",
-                   dev.get(), dev->name().data());
-
-              dev->coordinator->device_manager()->RemoveDevice(dev, true);
-            }
-            break;
-          default:
-            LOGF(ERROR, "Failed to handle RPC for device %p '%s': %s", dev.get(),
-                 dev->name().data(), info.FormatDescription().c_str());
+        if (info.is_user_initiated()) {
+          return;
         }
+        if (info.is_peer_closed()) {
+          // If the device is already dead, we are detecting an expected disconnect from the
+          // driver_host.
+          if (dev->state() != Device::State::kDead) {
+            // TODO(https://fxbug.dev/56208): Change this log back to error once isolated devmgr
+            // is fixed.
+            LOGF(WARNING, "Disconnected device %p '%s', see fxbug.dev/56208 for potential cause",
+                 dev.get(), dev->name().data());
+
+            dev->coordinator->device_manager()->RemoveDevice(dev, true);
+          }
+          return;
+        }
+        LOGF(ERROR, "Failed to handle RPC for device %p '%s': %s", dev.get(), dev->name().data(),
+             info.FormatDescription().c_str());
       });
 }
 
@@ -603,16 +600,13 @@ void Device::HandleTestOutput(async_dispatcher_t* dispatcher, async::WaitBase* w
                    test_reporter.get(),
                    [this](DriverTestReporter* test_reporter, fidl::UnbindInfo info,
                           fidl::ServerEnd<fuchsia_driver_test_logger::Logger> server_end) {
-                     switch (info.reason()) {
-                       case fidl::Reason::kPeerClosed:
-                         test_reporter->TestFinished();
-                         break;
-                       default: {
-                         auto reason = info.FormatDescription();
-                         LOGF(ERROR, "Unexpected server error for device %p '%s': %s", this,
-                              name_.data(), reason.c_str());
-                       }
+                     if (info.is_user_initiated() || info.is_peer_closed()) {
+                       test_reporter->TestFinished();
+                       return;
                      }
+                     auto reason = info.FormatDescription();
+                     LOGF(ERROR, "Unexpected server error for device %p '%s': %s", this,
+                          name_.data(), reason.c_str());
                    });
 }
 

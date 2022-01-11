@@ -733,32 +733,18 @@ void DriverHostControllerConnection::Bind(
   fidl::BindServer(dispatcher, std::move(request), std::move(conn),
                    [](DriverHostControllerConnection* self, fidl::UnbindInfo info,
                       fidl::ServerEnd<fuchsia_device_manager::DriverHostController> server_end) {
-                     switch (info.reason()) {
-                       case fidl::Reason::kUnbind:
-                       case fidl::Reason::kClose:
-                         // These are initiated by ourself.
-                         break;
-                       case fidl::Reason::kPeerClosed:
-                         // This is expected in test environments where driver_manager has
-                         // terminated.
-                         // TODO(fxbug.dev/52627): Support graceful termination.
-                         LOGF(WARNING, "Disconnected %p from driver_manager", self);
-                         zx_process_exit(1);
-                         break;
-                       case fidl::Reason::kDispatcherError:
-                       case fidl::Reason::kDecodeError:
-                       case fidl::Reason::kUnexpectedMessage:
-                         LOGF(FATAL, "Failed to handle RPC on %p from driver_manager: %s", self,
-                              info.FormatDescription().c_str());
-                         break;
-                       case fidl::Reason::kEncodeError:
-                         LOGF(FATAL, "Failed to encode message on %p: %s", self,
-                              info.FormatDescription().c_str());
-                         break;
-                       default:
-                         LOGF(FATAL, "Unknown fidl error on %p: %s", self,
-                              info.FormatDescription().c_str());
+                     if (info.is_user_initiated()) {
+                       return;
                      }
+                     if (info.is_peer_closed()) {
+                       // This is expected in test environments where driver_manager has
+                       // terminated.
+                       // TODO(fxbug.dev/52627): Support graceful termination.
+                       LOGF(WARNING, "Disconnected %p from driver_manager", self);
+                       zx_process_exit(1);
+                       return;
+                     }
+                     LOGF(FATAL, "FIDL error on %p: %s", self, info.FormatDescription().c_str());
                    });
 }
 

@@ -1455,7 +1455,7 @@ zx_status_t Coordinator::InitOutgoingServices(const fbl::RefPtr<fs::PseudoDir>& 
           if (info.is_user_initiated()) {
             return;
           }
-          if (info.reason() == fidl::Reason::kPeerClosed) {
+          if (info.is_peer_closed()) {
             // For this development protocol, the client is free to disconnect
             // at any time.
             return;

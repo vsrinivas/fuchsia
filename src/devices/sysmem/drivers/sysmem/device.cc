@@ -588,7 +588,7 @@ zx_status_t Device::SysmemRegisterHeap(uint64_t heap_param, zx::channel heap_con
     }
 
     void on_fidl_error(fidl::UnbindInfo info) override {
-      if (info.reason() != fidl::Reason::kPeerClosed) {
+      if (!info.is_peer_closed()) {
         DRIVER_ERROR("Heap failed: %s\n", info.FormatDescription().c_str());
       }
     }

@@ -245,45 +245,32 @@ void DeviceControllerConnection::Bind(
       [](DeviceControllerConnection* self, fidl::UnbindInfo info,
          fidl::ServerEnd<fuchsia_device_manager::DeviceController> server_end) {
         auto& dev = self->dev_;
-        switch (info.reason()) {
-          case fidl::Reason::kUnbind:
-          case fidl::Reason::kClose:
-            // These are initiated by ourself.
-            break;
-          case fidl::Reason::kPeerClosed:
-            // Check if we were expecting this peer close.  If not, this could be a
-            // serious bug.
-            {
-              fbl::AutoLock al(&dev->controller_lock);
-              if (!dev->controller_binding) {
-                // We're in the middle of shutting down, so just stop processing
-                // signals and wait for the queued shutdown packet.  It has a
-                // reference to the connection, which it will use to recover
-                // ownership of it.
-                return;
-              }
-            }
-
-            // This is expected in test environments where driver_manager has
-            // terminated.
-            // TODO(fxbug.dev/52627): Support graceful termination.
-            LOGD(WARNING, *dev, "driver_manager disconnected from device %p", dev.get());
-            zx_process_exit(1);
-            break;
-          case fidl::Reason::kDispatcherError:
-          case fidl::Reason::kDecodeError:
-          case fidl::Reason::kUnexpectedMessage:
-            LOGD(FATAL, *dev, "Failed to handle RPC for device %p: %s", dev.get(),
-                 info.FormatDescription().c_str());
-            break;
-          case fidl::Reason::kEncodeError:
-            LOGD(FATAL, *dev, "Failed to encode message for device %p: %s", dev.get(),
-                 info.FormatDescription().c_str());
-            break;
-          default:
-            LOGD(FATAL, *dev, "Unknown fidl error for device %p: %s", dev.get(),
-                 info.FormatDescription().c_str());
+        if (info.is_user_initiated()) {
+          return;
         }
+        if (info.is_peer_closed()) {
+          // Check if we were expecting this peer close.  If not, this could be a
+          // serious bug.
+          {
+            fbl::AutoLock al(&dev->controller_lock);
+            if (!dev->controller_binding) {
+              // We're in the middle of shutting down, so just stop processing
+              // signals and wait for the queued shutdown packet.  It has a
+              // reference to the connection, which it will use to recover
+              // ownership of it.
+              return;
+            }
+          }
+
+          // This is expected in test environments where driver_manager has
+          // terminated.
+          // TODO(fxbug.dev/52627): Support graceful termination.
+          LOGD(WARNING, *dev, "driver_manager disconnected from device %p", dev.get());
+          zx_process_exit(1);
+          return;
+        }
+        LOGD(FATAL, *dev, "FIDL error for device %p: %s", dev.get(),
+             info.FormatDescription().c_str());
       });
 }
 
