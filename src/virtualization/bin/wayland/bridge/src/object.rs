@@ -220,9 +220,19 @@ impl<T> ObjectRef<T> {
         client.get_object(self.1)
     }
 
+    /// Provides an immutable reference to an object, downcasted to |T|, if available.
+    pub fn try_get<'a>(&self, client: &'a Client) -> Option<&'a T> {
+        client.try_get_object(self.1)
+    }
+
     /// Provides a mutable reference to an object, downcasted to |T|.
     pub fn get_mut<'a>(&self, client: &'a mut Client) -> Result<&'a mut T, ObjectLookupError> {
         client.get_object_mut(self.1)
+    }
+
+    /// Provides a mutable reference to an object, downcasted to |T|, if available.
+    pub fn try_get_mut<'a>(&self, client: &'a mut Client) -> Option<&'a mut T> {
+        client.try_get_object_mut(self.1)
     }
 
     /// Returns `true` iff the underlying object is still valid.

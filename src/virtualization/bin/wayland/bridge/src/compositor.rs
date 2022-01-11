@@ -1031,7 +1031,7 @@ impl Surface {
     ) -> Option<(ObjectRef<Self>, (i32, i32))> {
         // Iterate over subsurfaces, starting with the top-most surface.
         for (surface_ref, _) in self.subsurfaces.iter().rev() {
-            if let Ok(surface) = surface_ref.get(client) {
+            if let Some(surface) = surface_ref.try_get(client) {
                 let (x1, y1, x2, y2) = {
                     let geometry = surface.window_geometry();
                     (

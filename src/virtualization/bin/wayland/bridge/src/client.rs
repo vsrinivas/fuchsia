@@ -210,7 +210,20 @@ impl Client {
     /// Looks up an object in the map and returns a downcasted reference to
     /// the implementation.
     pub fn get_object<T: Any>(&self, id: wl::ObjectId) -> Result<&T, ObjectLookupError> {
+        // Enable this to debug object lookup errors.
+        //
+        // let v = self.objects.get::<T>(id);
+        // if !v.is_ok() {
+        //     panic!("Invalid object: {:?}", id);
+        // }
+
         self.objects.get(id)
+    }
+
+    /// Looks up an object in the map and returns a downcasted reference to
+    /// the implementation, if it exists.
+    pub fn try_get_object<T: Any>(&self, id: wl::ObjectId) -> Option<&T> {
+        self.objects.get(id).ok()
     }
 
     /// Looks up an object in the map and returns a downcasted mutable
@@ -219,7 +232,20 @@ impl Client {
         &mut self,
         id: wl::ObjectId,
     ) -> Result<&mut T, ObjectLookupError> {
+        // Enable this to debug object lookup errors.
+        //
+        // let v = self.objects.get_mut::<T>(id);
+        // if !v.is_ok() {
+        //     panic!("Invalid object: {:?}", id);
+        // }
+
         self.objects.get_mut(id)
+    }
+
+    /// Looks up an object in the map and returns a downcasted mutable
+    /// reference to the implementation, if it exists.
+    pub fn try_get_object_mut<T: Any>(&mut self, id: wl::ObjectId) -> Option<&mut T> {
+        self.objects.get_mut(id).ok()
     }
 
     /// Adds a new object into the map that will handle messages with the sender

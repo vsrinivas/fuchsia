@@ -380,7 +380,7 @@ impl XdgSurface {
     /// to the concrete surface.
     pub fn finalize_commit(this: ObjectRef<Self>, client: &mut Client) -> Result<bool, Error> {
         ftrace::duration!("wayland", "XdgSurface::finalize_commit");
-        if let Ok(xdg_surface) = this.get(client) {
+        if let Some(xdg_surface) = this.try_get(client) {
             match xdg_surface.xdg_role {
                 Some(XdgSurfaceRole::Popup(_)) => Ok(true),
                 Some(XdgSurfaceRole::Toplevel(toplevel)) => {
@@ -398,12 +398,12 @@ impl XdgSurface {
         self.view.as_ref().map(|v| v.lock().shutdown());
         match self.xdg_role {
             Some(XdgSurfaceRole::Popup(popup)) => {
-                if let Ok(popup) = popup.get(client) {
+                if let Some(popup) = popup.try_get(client) {
                     popup.shutdown();
                 }
             }
             Some(XdgSurfaceRole::Toplevel(toplevel)) => {
-                if let Ok(toplevel) = toplevel.get(client) {
+                if let Some(toplevel) = toplevel.try_get(client) {
                     toplevel.shutdown(client);
                 }
             }
@@ -488,7 +488,7 @@ impl XdgSurface {
         client: &Client,
     ) -> Option<ObjectRef<Self>> {
         for xdg_surface_ref in client.xdg_surfaces.iter().rev() {
-            if let Ok(xdg_surface) = xdg_surface_ref.get(client) {
+            if let Some(xdg_surface) = xdg_surface_ref.try_get(client) {
                 if xdg_surface.root_surface_ref == root_surface_ref {
                     return Some(*xdg_surface_ref);
                 }
@@ -604,7 +604,7 @@ impl XdgSurface {
                                 let time_in_ms =
                                     (info.presentation_time.expect("no presentation time")
                                         / 1_000_000) as u32;
-                                if let Ok(surface) = surface_ref.get_mut(client) {
+                                if let Some(surface) = surface_ref.try_get_mut(client) {
                                     // TODO: Remove this check when OnNextFrameBegin is only sent as a
                                     // result of Present.
                                     if let Some(callbacks) = surface.next_callbacks() {
@@ -729,7 +729,7 @@ impl XdgSurface {
                                 XdgSurface::get_event_target(root_surface_ref, client)
                                     .unwrap_or(this);
                             let surface_ref = xdg_surface_ref.get(client)?.surface_ref;
-                            if surface_ref.get(client).is_ok() {
+                            if surface_ref.try_get(client).is_some() {
                                 let had_focus = client.input_dispatcher.has_focus(surface_ref);
                                 client.input_dispatcher.handle_keyboard_focus(
                                     source_surface_ref,
@@ -934,13 +934,13 @@ impl XdgSurface {
     ) -> Option<(ObjectRef<Self>, ObjectRef<Surface>, (i32, i32))> {
         let mut maybe_xdg_surface_ref = Some(this);
         while let Some(xdg_surface_ref) = maybe_xdg_surface_ref.take() {
-            if let Ok(xdg_surface) = xdg_surface_ref.get(client) {
+            if let Some(xdg_surface) = xdg_surface_ref.try_get(client) {
                 if let Some((parent_view, view_offset)) = xdg_surface.view.as_ref().map(|v| {
                     let view = v.lock();
                     (view.parent(), view.absolute_offset())
                 }) {
                     let surface_ref = xdg_surface.surface_ref;
-                    if let Ok(surface) = surface_ref.get(client) {
+                    if let Some(surface) = surface_ref.try_get(client) {
                         let pixel_scale = surface.pixel_scale();
                         let x = location_x * pixel_scale.0 - view_offset.0 as f32;
                         let y = location_y * pixel_scale.1 - view_offset.1 as f32;
@@ -979,7 +979,7 @@ impl XdgSurface {
                     Some((xdg_surface_ref, xdg_surface_ref.get(client)?.surface_ref, (0, 0)))
                 };
                 if let Some((xdg_surface_ref, surface_ref, offset)) = target {
-                    if let Ok(surface) = surface_ref.get(client) {
+                    if let Some(surface) = surface_ref.try_get(client) {
                         let had_focus = client.input_dispatcher.has_focus(surface_ref);
                         // If the client has set window geometry we'll place the scenic
                         // surface at the (x,y) location specified in the window geometry.
@@ -1301,7 +1301,7 @@ impl XdgToplevel {
             // Let the client determine the size if it has a parent.
             let (width, height, maximized) = if maybe_parent_ref.is_some() {
                 surface_ref
-                    .get(client)
+                    .try_get(client)
                     .map(|surface| {
                         let geometry = surface.window_geometry();
                         (geometry.width, geometry.height, false)
