@@ -1108,9 +1108,9 @@ void ArmArchVmAspace::MarkAccessedPageTable(vaddr_t vaddr, vaddr_t vaddr_rel_in,
 }
 
 ssize_t ArmArchVmAspace::MapPages(vaddr_t vaddr, paddr_t paddr, size_t size, pte_t attrs,
-                                  vaddr_t vaddr_base, uint top_size_shift, ConsistencyManager& cm) {
+                                  vaddr_t vaddr_base, ConsistencyManager& cm) {
   vaddr_t vaddr_rel = vaddr - vaddr_base;
-  vaddr_t vaddr_rel_max = 1UL << top_size_shift;
+  vaddr_t vaddr_rel_max = 1UL << top_size_shift_;
 
   LTRACEF("vaddr %#" PRIxPTR ", paddr %#" PRIxPTR ", size %#" PRIxPTR ", attrs %#" PRIx64
           ", asid %#x\n",
@@ -1129,10 +1129,9 @@ ssize_t ArmArchVmAspace::MapPages(vaddr_t vaddr, paddr_t paddr, size_t size, pte
 }
 
 ssize_t ArmArchVmAspace::UnmapPages(vaddr_t vaddr, size_t size, EnlargeOperation enlarge,
-                                    vaddr_t vaddr_base, uint top_size_shift,
-                                    ConsistencyManager& cm) {
+                                    vaddr_t vaddr_base, ConsistencyManager& cm) {
   vaddr_t vaddr_rel = vaddr - vaddr_base;
-  vaddr_t vaddr_rel_max = 1UL << top_size_shift;
+  vaddr_t vaddr_rel_max = 1UL << top_size_shift_;
 
   LTRACEF("vaddr 0x%lx, size 0x%lx, asid 0x%x\n", vaddr, size, asid_);
 
@@ -1149,9 +1148,9 @@ ssize_t ArmArchVmAspace::UnmapPages(vaddr_t vaddr, size_t size, EnlargeOperation
 }
 
 zx_status_t ArmArchVmAspace::ProtectPages(vaddr_t vaddr, size_t size, pte_t attrs,
-                                          vaddr_t vaddr_base, uint top_size_shift) {
+                                          vaddr_t vaddr_base) {
   vaddr_t vaddr_rel = vaddr - vaddr_base;
-  vaddr_t vaddr_rel_max = 1UL << top_size_shift;
+  vaddr_t vaddr_rel_max = 1UL << top_size_shift_;
 
   LTRACEF("vaddr %#" PRIxPTR ", size %#" PRIxPTR ", attrs %#" PRIx64 ", asid %#x\n", vaddr, size,
           attrs, asid_);
@@ -1230,7 +1229,7 @@ zx_status_t ArmArchVmAspace::MapContiguous(vaddr_t vaddr, paddr_t paddr, size_t 
     pte_t attrs = MmuParamsFromFlags(mmu_flags);
 
     ConsistencyManager cm(*this);
-    ret = MapPages(vaddr, paddr, count * PAGE_SIZE, attrs, vaddr_base_, top_size_shift_, cm);
+    ret = MapPages(vaddr, paddr, count * PAGE_SIZE, attrs, vaddr_base_, cm);
     MarkAspaceModified();
   }
 
@@ -1296,7 +1295,7 @@ zx_status_t ArmArchVmAspace::Map(vaddr_t vaddr, paddr_t* phys, size_t count, uin
     ConsistencyManager cm(*this);
     auto undo = fit::defer([&]() TA_NO_THREAD_SAFETY_ANALYSIS {
       if (idx > 0) {
-        UnmapPages(vaddr, idx * PAGE_SIZE, EnlargeOperation::No, vaddr_base_, top_size_shift_, cm);
+        UnmapPages(vaddr, idx * PAGE_SIZE, EnlargeOperation::No, vaddr_base_, cm);
       }
     });
 
@@ -1304,7 +1303,7 @@ zx_status_t ArmArchVmAspace::Map(vaddr_t vaddr, paddr_t* phys, size_t count, uin
     for (; idx < count; ++idx) {
       paddr_t paddr = phys[idx];
       DEBUG_ASSERT(IS_PAGE_ALIGNED(paddr));
-      ret = MapPages(v, paddr, PAGE_SIZE, attrs, vaddr_base_, top_size_shift_, cm);
+      ret = MapPages(v, paddr, PAGE_SIZE, attrs, vaddr_base_, cm);
       MarkAspaceModified();
       if (ret < 0) {
         zx_status_t status = static_cast<zx_status_t>(ret);
@@ -1356,7 +1355,7 @@ zx_status_t ArmArchVmAspace::Unmap(vaddr_t vaddr, size_t count, EnlargeOperation
   ssize_t ret;
   {
     ConsistencyManager cm(*this);
-    ret = UnmapPages(vaddr, count * PAGE_SIZE, enlarge, vaddr_base_, top_size_shift_, cm);
+    ret = UnmapPages(vaddr, count * PAGE_SIZE, enlarge, vaddr_base_, cm);
     MarkAspaceModified();
   }
 
@@ -1410,7 +1409,7 @@ zx_status_t ArmArchVmAspace::Protect(vaddr_t vaddr, size_t count, uint mmu_flags
   {
     pte_t attrs = MmuParamsFromFlags(mmu_flags);
 
-    ret = ProtectPages(vaddr, count * PAGE_SIZE, attrs, vaddr_base_, top_size_shift_);
+    ret = ProtectPages(vaddr, count * PAGE_SIZE, attrs, vaddr_base_);
     MarkAspaceModified();
   }
 
