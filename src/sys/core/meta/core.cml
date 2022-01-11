@@ -160,6 +160,10 @@
             url: "fuchsia-pkg://fuchsia.com/ssh-key-manager#meta/ssh-key-manager.cm",
         },
         {
+            name: "universe-resolver",
+            url: "fuchsia-pkg://fuchsia.com/universe-resolver#meta/universe-resolver.cm",
+        },
+        {
             name: "bt-avrcp",
             url: "fuchsia-pkg://fuchsia.com/bt-avrcp#meta/bt-avrcp.cm",
             environment: "#full-resolver-env",
@@ -222,7 +226,7 @@
         {
             protocol: "fuchsia.sys2.ComponentResolver",
             from: "parent",
-            to: "#full-resolver",
+            to: [ "#universe-resolver" ],
         },
         {
             protocol: "fuchsia.factory.MiscFactoryStoreProvider",
@@ -367,6 +371,11 @@
             to: [ "#network" ],
         },
         {
+            protocol: "fuchsia.pkg.PackageResolver",
+            from: "#pkg-resolver",
+            to: "#universe-resolver",
+        },
+        {
             directory: [
                 "blob",
                 "pkgfs",
@@ -495,6 +504,7 @@
                 "#system-metrics-logger",
                 "#system-update-committer",
                 "#temperature-logger",
+                "#universe-resolver",
                 "#vulkan_loader",
             ],
         },
@@ -1070,6 +1080,19 @@
         {
             protocol: [ "fuchsia.exception.Handler" ],
             from: "#exceptions",
+        },
+    ],
+    environments: [
+        {
+            name: "universe-resolver-env",
+            extends: "realm",
+            resolvers: [
+                {
+                    resolver: "full-resolver",
+                    from: "#universe-resolver",
+                    scheme: "fuchsia-pkg",
+                },
+            ],
         },
     ],
 }

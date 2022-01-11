@@ -322,6 +322,7 @@
                     // allowlist for v1 components accessing pkg-resolver.
                     "/core",
                     "/core/full-resolver",
+                    "/core/universe-resolver",
                     "/core/system-update-checker",
                     "/core/system-updater",
                 ],

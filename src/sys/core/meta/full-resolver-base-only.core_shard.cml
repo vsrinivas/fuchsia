@@ -5,7 +5,7 @@
     children: [
         {
             name: "full-resolver",
-            url: "fuchsia-pkg://fuchsia.com/universe-resolver#meta/full-resolver.cm",
+            url: "fuchsia-pkg://fuchsia.com/universe-resolver#meta/universe-resolver.cm",
         },
     ],
     environments: [
