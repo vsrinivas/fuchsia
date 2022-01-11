@@ -1,0 +1,42 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.test.debug;
+
+using fuchsia.io;
+using zx;
+
+/// A test-manager internal protocol used for communicating between the debug data
+/// component, which implements `fuchsia.debugdata.DebugData`, and the component that
+/// actually processes the VMOs passed to `fuchsia.debugdata.DebugData`.
+/// In the future, this protocol may be moved to the SDK, to enable "pluggable" VMO
+/// processing, or removed entirely if VMO processing is moved to the host.
+@discoverable
+protocol DebugDataProcessor {
+    /// Set the directory to store results in. This must be called first.
+    /// Note that we currently provide a directory as coverage tools pull profile
+    /// information off the device using a specific, topology dependent location
+    /// in the /tmp filesystem. Once these tools are updated, we can update this
+    /// protocol free of this constraint.
+    SetDirectory(resource struct {
+        directory client_end:fuchsia.io.Directory;
+    });
+
+    /// Add more VMOs to process. The VMOs are expected to be ready to process.
+    AddDebugVmos(resource struct {
+        vmos vector<DebugVmo>:MAX;
+    }) -> ();
+
+    /// Indicates all VMOs have been sent. This method returns when all processing
+    /// is complete, after which the client may observe the results in the directory
+    /// passed via NewProcessor.
+    Finish() -> ();
+};
+
+/// Container for a single VMO that is ready to be processed.
+type DebugVmo = resource struct {
+    vmo zx.handle:VMO;
+    data_sink string:1024;
+    test_url string:1024;
+};

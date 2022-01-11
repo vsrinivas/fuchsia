@@ -24,6 +24,11 @@ class TestDataProcessor : public AbstractDataProcessor {
     idle_signal_event_.signal(0, IDLE_SIGNAL);
   }
 
+  /// Create a test data processor for testing the idle signal.
+  TestDataProcessor(zx_handle_t idle_signal) : idle_signal_event_(idle_signal) {
+    map_ = std::make_shared<UrlDataMap>();
+  }
+
   void ProcessData(std::string test_url, DataSinkDump data_sink) override {
     if (map_->find(test_url) == map_->end()) {
       std::vector<DataSinkDump> data_sink_vec;

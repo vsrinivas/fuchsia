@@ -1,4 +1,4 @@
-# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
@@ -13,6 +13,8 @@ source_set("lib") {
     "common.h",
     "data_processor.cc",
     "data_processor.h",
+    "data_processor_fidl.cc",
+    "data_processor_fidl.h",
     "debug_data.cc",
     "debug_data.h",
     "event_stream.cc",
@@ -23,9 +25,11 @@ source_set("lib") {
     "//sdk/fidl/fuchsia.debugdata",
     "//sdk/fidl/fuchsia.sys2",
     "//sdk/fidl/fuchsia.test.internal",
+    "//sdk/lib/fdio",
     "//sdk/lib/syslog/cpp",
     "//src/lib/fxl",
     "//src/lib/json_parser",
+    "//src/sys/test_manager/fidl/fuchsia.test.debug",
     "//zircon/system/ulib/async:async-cpp",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
@@ -48,10 +52,32 @@ executable("bin") {
   ]
 }
 
+executable("debug_data_processor_bin") {
+  testonly = true
+  output_name = "debug_data_processor"
+  sources = [ "processor_main.cc" ]
+
+  deps = [
+    ":lib",
+    "//sdk/fidl/fuchsia.sys2",
+    "//sdk/lib/sys/cpp",
+    "//sdk/lib/syslog/cpp",
+    "//src/sys/test_manager/fidl/fuchsia.test.debug",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
+  ]
+}
+
 fuchsia_component("debug_data") {
   testonly = true
   deps = [ ":bin" ]
   manifest = "meta/debug_data.cml"
+}
+
+fuchsia_component("debug_data_processor") {
+  testonly = true
+  deps = [ ":debug_data_processor_bin" ]
+  manifest = "meta/debug_data_processor.cml"
 }
 
 executable("test_bin") {
@@ -60,6 +86,7 @@ executable("test_bin") {
 
   sources = [
     "cache_unittests.cc",
+    "data_processor_fidl_unittests.cc",
     "data_processor_unittests.cc",
     "debug_data_unittests.cc",
     "event_stream_unittests.cc",
