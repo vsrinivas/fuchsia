@@ -224,7 +224,7 @@ zx::status<std::unique_ptr<Blobfs>> Blobfs::Create(async_dispatcher_t* dispatche
 #ifndef NDEBUG
       if (options.fsck_at_end_of_every_transaction) {
         fs->journal_->set_write_metadata_callback(
-            fit::bind_member(fs.get(), &Blobfs::FsckAtEndOfTransaction));
+            fit::bind_member<&Blobfs::FsckAtEndOfTransaction>(fs.get()));
       }
 #endif
       break;

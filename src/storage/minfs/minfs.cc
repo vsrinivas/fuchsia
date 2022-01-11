@@ -1238,7 +1238,7 @@ zx::status<std::unique_ptr<Minfs>> Minfs::Create(FuchsiaDispatcher* dispatcher,
     if (options.fsck_after_every_transaction) {
       FX_LOGS(ERROR) << "Will fsck after every transaction";
       out_fs->journal_->set_write_metadata_callback(
-          fit::bind_member(out_fs.get(), &Minfs::FsckAtEndOfTransaction));
+          fit::bind_member<&Minfs::FsckAtEndOfTransaction>(out_fs.get()));
     }
   }
 
