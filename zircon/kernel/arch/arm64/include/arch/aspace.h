@@ -80,10 +80,9 @@ class ArmArchVmAspace final : public ArchVmAspaceInterface {
     return (vaddr >= base_ && vaddr <= base_ + size_ - 1);
   }
 
-  zx_status_t AllocPageTable(paddr_t* paddrp, uint page_size_shift) TA_REQ(lock_);
+  zx_status_t AllocPageTable(paddr_t* paddrp) TA_REQ(lock_);
 
-  void FreePageTable(void* vaddr, paddr_t paddr, uint page_size_shift, ConsistencyManager& cm)
-      TA_REQ(lock_);
+  void FreePageTable(void* vaddr, paddr_t paddr, ConsistencyManager& cm) TA_REQ(lock_);
 
   ssize_t MapPageTable(vaddr_t vaddr_in, vaddr_t vaddr_rel_in, paddr_t paddr_in, size_t size_in,
                        pte_t attrs, uint index_shift, uint page_size_shift,
@@ -118,8 +117,7 @@ class ArmArchVmAspace final : public ArchVmAspaceInterface {
                              vaddr_t pt_index, volatile pte_t* page_table, ConsistencyManager& cm)
       TA_REQ(lock_);
 
-  void MmuParamsFromFlags(uint mmu_flags, pte_t* attrs, vaddr_t* vaddr_base, uint* top_size_shift,
-                          uint* top_index_shift, uint* page_size_shift);
+  pte_t MmuParamsFromFlags(uint mmu_flags);
   ssize_t MapPages(vaddr_t vaddr, paddr_t paddr, size_t size, pte_t attrs, vaddr_t vaddr_base,
                    uint top_size_shift, uint top_index_shift, uint page_size_shift,
                    ConsistencyManager& cm) TA_REQ(lock_);
@@ -172,6 +170,12 @@ class ArmArchVmAspace final : public ArchVmAspaceInterface {
   // Range of address space.
   const vaddr_t base_ = 0;
   const size_t size_ = 0;
+
+  // Once-computed page shift constants
+  vaddr_t vaddr_base_ = 0;       // Offset that should be applied to address to compute PTE indices.
+  uint32_t top_size_shift_ = 0;  // Log2 of aspace size.
+  uint32_t top_index_shift_ = 0;  // Log2 top level shift.
+  uint32_t page_size_shift_ = 0;  // Log2 of page size.
 
   // Number of CPUs this aspace is currently active on.
   ktl::atomic<uint32_t> num_active_cpus_ = 0;
