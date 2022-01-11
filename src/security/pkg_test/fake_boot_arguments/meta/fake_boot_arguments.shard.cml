@@ -1,0 +1,24 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [
+        "//sdk/lib/syslog/client.shard.cml",
+        "//sdk/lib/syslog/elf_stdio.shard.cml",
+    ],
+    program: {
+        binary: "bin/fake_boot_arguments",
+
+        // Note: Manifests including this shard must provide args:
+        //   --system-image-path
+    },
+    capabilities: [
+        { protocol: "fuchsia.boot.Arguments" },
+    ],
+    expose: [
+        {
+            protocol: "fuchsia.boot.Arguments",
+            from: "self",
+        },
+    ],
+}

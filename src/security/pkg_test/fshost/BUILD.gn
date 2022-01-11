@@ -1,0 +1,54 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components/fuchsia_test_component.gni")
+import("//build/rust/rustc_binary.gni")
+
+rustc_binary("fshost-binary") {
+  testonly = true
+  output_name = "product_security_fshost"
+  edition = "2018"
+  source_root = "src/main.rs"
+
+  sources = [
+    "src/fshost.rs",
+    "src/main.rs",
+    "src/pkgfs.rs",
+    "src/storage.rs",
+  ]
+  deps = [
+    "//garnet/lib/rust/files_async",
+    "//garnet/lib/rust/io_util",
+    "//sdk/fidl/fuchsia.device:fuchsia.device-rustc",
+    "//sdk/fidl/fuchsia.hardware.block.partition:fuchsia.hardware.block.partition-rustc",
+    "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
+    "//src/lib/fdio/rust:fdio",
+    "//src/lib/fidl/rust/fidl",
+    "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-component",
+    "//src/lib/fuchsia-runtime",
+    "//src/lib/scoped_task",
+    "//src/lib/storage/fs_management/rust:fs_management",
+    "//src/lib/storage/ramdevice_client",
+    "//src/lib/syslog/rust:syslog",
+    "//src/lib/zircon/rust:fuchsia-zircon",
+    "//src/storage/bin/blobfs",
+    "//src/storage/testing/rust:storage-isolated-driver-manager",
+    "//src/sys/pkg/bin/pkgfs:pkgsvr",
+    "//src/sys/pkg/lib/fuchsia-merkle",
+    "//third_party/rust_crates:argh",
+    "//third_party/rust_crates:log",
+
+    # Storage utilities in library assumes access to
+    # `storage_driver_test_realm` in test environment from
+    # `meta/storage.shard.cml`.
+    "//src/storage/testing:storage_driver_test_realm",
+
+    # Library executes blobfs as a sub-process.
+    "//src/storage/bin/blobfs",
+
+    # Child component: memfs.
+    "//src/sys/component_manager/tests/storage:memfs",
+  ]
+}

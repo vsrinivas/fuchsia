@@ -1,0 +1,16 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library test.security.pkg;
+
+const MAX_STRING_SIZE uint64 = 30;
+
+/// Fetches metadata regarding a local package server.
+@discoverable
+protocol PackageServer {
+    /// Gets the URL of the local package server.
+    GetUrl() -> (struct {
+        url string:MAX_STRING_SIZE;
+    });
+};

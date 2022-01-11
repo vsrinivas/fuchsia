@@ -1,0 +1,69 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [
+        "//sdk/lib/syslog/client.shard.cml",
+        "//sdk/lib/syslog/elf_stdio.shard.cml",
+        "//src/lib/fuchsia-hyper/hyper_testing.shard.cml",
+        "//src/sys/test_runners/tmp_storage.shard.cml",
+    ],
+    program: {
+        binary: "bin/pkg_server",
+
+        // Note: Manifests including this shard must provide args:
+        //   --update-package-resource-directory
+    },
+    children: [
+        // Note: Manifests including this shard must provide children:
+        //   fshost
+        {
+            name: "netstack",
+            url: "#meta/netstack.cm",
+        },
+        {
+            name: "dns_resolver",
+            url: "#meta/dns_resolver.cm",
+        },
+    ],
+    capabilities: [
+        { protocol: "test.security.pkg.PackageServer" },
+    ],
+    use: [
+        {
+            directory: "blob",
+            from: "#fshost",
+            rights: [ "rw*" ],
+            path: "/blob",
+        },
+        {
+            protocol: "fuchsia.process.Launcher",
+            from: "parent",
+        },
+        {
+            protocol: "fuchsia.posix.socket.Provider",
+            from: "#netstack",
+        },
+        {
+            protocol: "fuchsia.net.name.Lookup",
+            from: "#dns_resolver",
+        },
+    ],
+    offer: [
+        {
+            protocol: [
+                "fuchsia.kernel.VmexResource",
+                "fuchsia.logger.LogSink",
+                "fuchsia.process.Launcher",
+            ],
+            from: "parent",
+            to: "#fshost",
+        },
+    ],
+    expose: [
+        {
+            protocol: "test.security.pkg.PackageServer",
+            from: "self",
+        },
+    ],
+}

@@ -1,0 +1,42 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components/fuchsia_test_component.gni")
+import("//build/fidl/fidl.gni")
+import("//build/rust/rustc_binary.gni")
+
+rustc_binary("pkg_server-binary") {
+  testonly = true
+  name = "pkg_server"
+  edition = "2018"
+  source_root = "src/main.rs"
+
+  sources = [ "src/main.rs" ]
+  deps = [
+    ":test.security.pkg-rustc",
+    "//garnet/lib/rust/files_async",
+    "//garnet/lib/rust/io_util",
+    "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
+    "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-component",
+    "//src/lib/fuchsia-url",
+    "//src/lib/syslog/rust:syslog",
+    "//src/sys/pkg/lib/blobfs",
+    "//src/sys/pkg/lib/far/rust:fuchsia-archive",
+    "//src/sys/pkg/lib/fuchsia-merkle",
+    "//src/sys/pkg/lib/fuchsia-pkg-testing",
+    "//src/sys/pkg/lib/update-package",
+    "//third_party/rust_crates:argh",
+    "//third_party/rust_crates:async-trait",
+    "//third_party/rust_crates:futures",
+
+    # Required for using fuchsia-pkg-testing's PackageBuilder.
+    "//src/sys/pkg/bin/pm:pm_bin",
+  ]
+}
+
+fidl("test.security.pkg") {
+  testonly = true
+  sources = [ "fidl/pkg_server.fidl" ]
+}
