@@ -62,7 +62,7 @@ class Mac80211Test : public SingleApTest {
     ASSERT_EQ(ZX_OK, iwl_mvm_mac_sta_state(&mvmvif_, &ap_sta_, IWL_STA_NOTEXIST, IWL_STA_NONE));
 
     // Set it to associated.
-    mvm_->fw_id_to_mac_id[0]->sta_state = IWL_STA_AUTHORIZED;
+    mvmvif_.bss_conf.assoc = true;
   }
 
   struct iwl_mvm* mvm_;

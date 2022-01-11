@@ -1584,12 +1584,10 @@ static void iwl_mvm_mc_iface_iterator(void* _data, struct iwl_mvm_vif* mvmvif) {
     return;
   }
 
-  // Only associated client interface can continue. Other interfaces will be ignored.
-  if (mvmvif->mac_role != WLAN_INFO_MAC_ROLE_CLIENT ||
-      mvmvif->mvm->fw_id_to_mac_id[0]->sta_state != IWL_STA_AUTHORIZED) {
-    IWL_ERR(mvmvif, "unexpected state while setting mcast filter. role: %d!=%d or state: %d!=%d\n",
-            mvmvif->mac_role, WLAN_INFO_MAC_ROLE_CLIENT, mvmvif->mvm->fw_id_to_mac_id[0]->sta_state,
-            IWL_STA_AUTHORIZED);
+  // Only client interface can continue. Other interfaces will be ignored.
+  if (mvmvif->mac_role != WLAN_INFO_MAC_ROLE_CLIENT || !mvmvif->bss_conf.assoc) {
+    IWL_ERR(mvmvif, "unexpected state while setting mcast filter. role: %d!=%d or assoc: %d!=%d\n",
+            mvmvif->mac_role, WLAN_INFO_MAC_ROLE_CLIENT, mvmvif->bss_conf.assoc, true);
     return;
   }
 

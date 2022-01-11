@@ -269,15 +269,6 @@ void mac_stop(void* ctx) {
     }
   }
 
-  if (mvmvif->phy_ctxt) {
-    ret = iwl_mvm_remove_chanctx(mvmvif->mvm, mvmvif->phy_ctxt->id);
-    if (ret != ZX_OK) {
-      IWL_WARN(mvmvif, "Cannot remove chanctx: %s\n", zx_status_get_string(ret));
-    }
-  } else {
-    IWL_WARN(mvmvif, "PHY context is NULL in %s()\n", __func__);
-  }
-
   // Clean up other sta info.
   for (size_t i = 0; i < std::size(mvmvif->mvm->fw_id_to_mac_id); i++) {
     // TODO(fxbug.dev/86715): this RCU-unprotected access is safe as deletions from the map are
@@ -286,6 +277,13 @@ void mac_stop(void* ctx) {
     if (mvm_sta) {
       iwl_rcu_call_sync(mvmvif->mvm->dev, &free_ap_mvm_sta, mvm_sta);
       mvmvif->mvm->fw_id_to_mac_id[i] = NULL;
+    }
+  }
+
+  if (mvmvif->phy_ctxt) {
+    ret = iwl_mvm_remove_chanctx(mvmvif->mvm, mvmvif->phy_ctxt->id);
+    if (ret != ZX_OK) {
+      IWL_WARN(mvmvif, "Cannot remove chanctx: %s\n", zx_status_get_string(ret));
     }
   }
 
@@ -339,8 +337,6 @@ static zx_status_t mac_ensure_phyctxt_valid(struct iwl_mvm_vif* mvmvif) {
   return ZX_OK;
 }
 
-static zx_status_t mac_unconfigure_bss(struct iwl_mvm_vif* mvmvif, struct iwl_mvm_sta* mvm_sta);
-
 static zx_status_t remove_chanctx(struct iwl_mvm_vif* mvmvif) {
   zx_status_t ret;
 
@@ -370,6 +366,8 @@ out:
   return ret;
 }
 
+static zx_status_t mac_unconfigure_bss(struct iwl_mvm_vif* mvmvif, struct iwl_mvm_sta* mvm_sta);
+
 // This is called right after SSID scan. The MLME tells this function the channel to tune in.
 // This function configures the PHY context and binds the MAC to that PHY context.
 zx_status_t mac_set_channel(void* ctx, uint32_t options, const wlan_channel_t* channel) {
@@ -386,7 +384,7 @@ zx_status_t mac_set_channel(void* ctx, uint32_t options, const wlan_channel_t* c
                                                           : "unknown",
            channel->secondary80);
 
-  if (mvmvif->phy_ctxt && mvmvif->ap_sta_id != IWL_MVM_INVALID_STA) {
+  if (mvmvif->ap_sta_id != IWL_MVM_INVALID_STA) {
     // We already have AP STA ID set. It probably was left from the previous association attempt
     // (had gone through mac_configure_bss but was rejected by the AP). Remove it first.
     IWL_INFO(mvmvif, "We already have AP STA ID set (%d). Removing it.\n", mvmvif->ap_sta_id);
@@ -440,8 +438,9 @@ zx_status_t mac_set_channel(void* ctx, uint32_t options, const wlan_channel_t* c
 
 // This is called after mac_set_channel(). The MAC (mvmvif) will be configured as a CLIENT role.
 zx_status_t mac_configure_bss(void* ctx, uint32_t options, const bss_config_t* config) {
-  const auto mvmvif = reinterpret_cast<struct iwl_mvm_vif*>(ctx);
   zx_status_t ret = ZX_OK;
+  const auto mvmvif = reinterpret_cast<struct iwl_mvm_vif*>(ctx);
+  struct iwl_mvm_sta* mvm_sta = nullptr;
 
   IWL_INFO(mvmvif, "mac_configure_bss(bssid=%02x:%02x:%02x:%02x:%02x:%02x, type=%d, remote=%d)\n",
            config->bssid[0], config->bssid[1], config->bssid[2], config->bssid[3], config->bssid[4],
@@ -456,7 +455,6 @@ zx_status_t mac_configure_bss(void* ctx, uint32_t options, const bss_config_t* c
     IWL_ERR(mvmvif, "The AP sta ID has been set already. ap_sta_id=%d\n", mvmvif->ap_sta_id);
     return ZX_ERR_ALREADY_EXISTS;
   }
-  // Note that 'ap_sta_id' is unset and later will be set in iwl_mvm_add_sta().
 
   {
     // Copy the BSSID info.
@@ -472,8 +470,13 @@ zx_status_t mac_configure_bss(void* ctx, uint32_t options, const bss_config_t* c
     }
   }
 
+  // Ask the firmware to pay attention for beacon.
+  // Note that this would add TIME_EVENT as well.
+  iwl_mvm_mac_mgd_prepare_tx(mvmvif->mvm, mvmvif, IWL_MVM_TE_SESSION_PROTECTION_MAX_TIME_MS);
+
+  // Note that 'ap_sta_id' is unset and later will be set in iwl_mvm_add_sta().
   // Add AP into the STA table in the firmware.
-  struct iwl_mvm_sta* mvm_sta = alloc_ap_mvm_sta(config->bssid);
+  mvm_sta = alloc_ap_mvm_sta(config->bssid);
   if (!mvm_sta) {
     IWL_ERR(mvmvif, "cannot allocate MVM STA for AP.\n");
     return ZX_ERR_NO_RESOURCES;
@@ -487,10 +490,6 @@ zx_status_t mac_configure_bss(void* ctx, uint32_t options, const bss_config_t* c
     IWL_ERR(mvmvif, "cannot set MVM STA state: %s\n", zx_status_get_string(ret));
     goto exit;
   }
-
-  // Ask the firmware to pay attention for beacon.
-  // Note that this would add TIME_EVENT as well.
-  iwl_mvm_mac_mgd_prepare_tx(mvmvif->mvm, mvmvif, IWL_MVM_TE_SESSION_PROTECTION_MAX_TIME_MS);
 
   {
     auto lock = std::lock_guard(mvmvif->mvm->mutex);
@@ -631,9 +630,6 @@ zx_status_t mac_configure_assoc(void* ctx, uint32_t options, const wlan_assoc_ct
     return ret;
   }
 
-  // Tell firmware to pass multicast packets to driver.
-  iwl_mvm_configure_filter(mvmvif->mvm);
-
   {
     auto lock = std::lock_guard(mvmvif->mvm->mutex);
 
@@ -652,6 +648,9 @@ zx_status_t mac_configure_assoc(void* ctx, uint32_t options, const wlan_assoc_ct
       return ret;
     }
   }
+
+  // Tell firmware to pass multicast packets to driver.
+  iwl_mvm_configure_filter(mvmvif->mvm);
 
   // TODO(43218): support multiple interfaces. Need to port iwl_mvm_update_quotas() in mvm/quota.c.
   // TODO(56093): support low latency in struct iwl_time_quota_data.
@@ -711,17 +710,14 @@ zx_status_t mac_clear_assoc(void* ctx, uint32_t options,
       IWL_ERR(mvmvif, "cannot remove time event: %s\n", zx_status_get_string(ret));
     }
     iwl_mvm_flush_sta(mvmvif->mvm, mvm_sta, false, 0);
-
-    // Update the MAC context in the firmware.
-    mvmvif->bss_conf.assoc = false;
-    ret = iwl_mvm_mac_ctxt_changed(mvmvif, false, NULL);
-    if (ret != ZX_OK) {
-      IWL_ERR(mvmvif, "cannot update MAC context in the firmware: %s\n", zx_status_get_string(ret));
-      return ret;
-    }
   }
 
-  return mac_unconfigure_bss(mvmvif, mvm_sta);
+  ret = mac_unconfigure_bss(mvmvif, mvm_sta);
+  if (ret != ZX_OK) {
+    return ret;
+  }
+
+  return remove_chanctx(mvmvif);
 }
 
 // This function is to revert what mac_configure_bss() does.
@@ -745,8 +741,6 @@ zx_status_t mac_unconfigure_bss(struct iwl_mvm_vif* mvmvif, struct iwl_mvm_sta* 
       goto out;
     }
   }
-
-  ret = remove_chanctx(mvmvif);
 
 out:
   free_ap_mvm_sta(mvm_sta);
