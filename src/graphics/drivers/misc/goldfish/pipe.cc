@@ -115,19 +115,15 @@ void Pipe::Bind(fidl::ServerEnd<fuchsia_hardware_goldfish::Pipe> server_request)
   using PipeProtocol = fuchsia_hardware_goldfish::Pipe;
   using PipeServer = fidl::WireServer<PipeProtocol>;
   auto on_unbound = [this](PipeServer*, fidl::UnbindInfo info, fidl::ServerEnd<PipeProtocol>) {
-    switch (info.reason()) {
-      case fidl::Reason::kUnbind:
-      case fidl::Reason::kPeerClosed:
-        // Client closed without errors. No-op.
-        break;
-      case fidl::Reason::kClose:
-        // Client closed with epitaph.
-        zxlogf(DEBUG, "[%s] Pipe closed with epitaph: %d\n", kTag, info.status());
-        break;
-      default:
-        // handle pipe error.
-        zxlogf(ERROR, "[%s] Pipe error: %s\n", kTag, info.FormatDescription().c_str());
+    if (info.is_user_initiated()) {
+      return;
     }
+    if (info.is_peer_closed()) {
+      // Client closed without errors. No-op.
+      return;
+    }
+    // handle pipe error.
+    zxlogf(ERROR, "[%s] Pipe error: %s\n", kTag, info.FormatDescription().c_str());
     if (on_close_) {
       on_close_(this);
     }

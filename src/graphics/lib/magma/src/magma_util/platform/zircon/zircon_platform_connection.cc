@@ -145,8 +145,7 @@ void ZirconPlatformConnection::FlowControl(uint64_t size) {
     fidl::Result result = server_binding_.value()->OnNotifyMessagesConsumed(messages_consumed_);
     if (result.ok()) {
       messages_consumed_ = 0;
-    } else if (result.reason() != fidl::Reason::kPeerClosed &&
-               result.reason() != fidl::Reason::kUnbind) {
+    } else if (!result.is_canceled() && !result.is_peer_closed()) {
       DMESSAGE("SendOnNotifyMessagesConsumedEvent failed: %s", result.FormatDescription().c_str());
     }
   }
@@ -155,8 +154,7 @@ void ZirconPlatformConnection::FlowControl(uint64_t size) {
     fidl::Result result = server_binding_.value()->OnNotifyMemoryImported(bytes_imported_);
     if (result.ok()) {
       bytes_imported_ = 0;
-    } else if (result.reason() != fidl::Reason::kPeerClosed &&
-               result.reason() != fidl::Reason::kUnbind) {
+    } else if (!result.is_canceled() && !result.is_peer_closed()) {
       DMESSAGE("SendOnNotifyMemoryImportedEvent failed: %s", result.FormatDescription().c_str());
     }
   }

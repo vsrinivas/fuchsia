@@ -54,19 +54,19 @@ fuchsia_sysmem2::wire::HeapProperties GetHeapProperties(fidl::AnyArena& arena) {
 }
 
 void OnHeapServerClose(fidl::UnbindInfo info, zx::channel channel) {
-  if (info.status() == ZX_ERR_CANCELED) {
-    // If the status is "ZX_ERR_CANCELLED", it means that pending wait is
-    // canceled because the display device that the heap belongs to has been
-    // destroyed.
-    zxlogf(INFO, "Simple display destroyed: status: %d", info.status());
+  if (info.is_dispatcher_shutdown()) {
+    // Pending wait is canceled because the display device that the heap belongs
+    // to has been destroyed.
+    zxlogf(INFO, "Simple display destroyed: status: %s", info.status_string());
     return;
   }
 
-  if (info.reason() == fidl::Reason::kPeerClosed) {
-    zxlogf(INFO, "Client closed heap connection: epitaph: %d", info.status());
-  } else if (!info.is_user_initiated()) {
-    zxlogf(ERROR, "Channel internal error: status: %d", info.status());
+  if (info.is_peer_closed()) {
+    zxlogf(INFO, "Client closed heap connection");
+    return;
   }
+
+  zxlogf(ERROR, "Channel internal error: status: %s", info.FormatDescription().c_str());
 }
 
 }  // namespace

@@ -454,7 +454,7 @@ magma_status_t PrimaryWrapper::GetError() {
     if (unbind_info) {
       DMESSAGE("Primary protocol unbind_info: %s", unbind_info->FormatDescription().c_str());
       error_ = MAGMA_STATUS_INTERNAL_ERROR;
-      if (unbind_info->reason() == fidl::Reason::kPeerClosed) {
+      if (unbind_info->is_peer_closed()) {
         error_ = magma::FromZxStatus(unbind_info->status()).get();
       }
     }

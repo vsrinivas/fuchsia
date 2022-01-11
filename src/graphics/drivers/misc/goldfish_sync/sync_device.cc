@@ -328,10 +328,12 @@ zx_status_t SyncTimeline::Bind(fidl::ServerEnd<fuchsia_hardware_goldfish::SyncTi
 }
 
 void SyncTimeline::OnClose(fidl::UnbindInfo info, zx::channel channel) {
-  if (info.reason() == fidl::Reason::kPeerClosed) {
-    zxlogf(INFO, "Client closed SyncTimeline connection: epitaph: %d", info.status());
-  } else if (!info.is_user_initiated()) {
-    zxlogf(ERROR, "Channel internal error: %s", info.FormatDescription().c_str());
+  if (!info.is_user_initiated()) {
+    if (info.is_peer_closed()) {
+      zxlogf(INFO, "Client closed SyncTimeline connection");
+    } else {
+      zxlogf(ERROR, "Channel internal error: %s", info.FormatDescription().c_str());
+    }
   }
 
   if (InContainer()) {
