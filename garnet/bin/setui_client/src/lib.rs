@@ -6,6 +6,8 @@ use anyhow::{Context as _, Error};
 use argh::FromArgs;
 use fidl_fuchsia_settings::{ConfigurationInterfaces, LightState, LightValue, Theme};
 use fuchsia_component::client::connect_to_protocol;
+use regex::Regex;
+use std::num::ParseIntError;
 
 pub mod accessibility;
 pub mod audio;
@@ -275,17 +277,17 @@ pub struct Keyboard {
     #[argh(option, short = 'k', from_str_fn(str_to_keymap))]
     keymap: Option<fidl_fuchsia_input::KeymapId>,
 
-    /// delay value of autorepeat values for the keyboard. Values should be a positive integer. If
-    /// this value and autorepeat_period are zero, the autorepeat field of KeyboardSettings will be
-    /// cleaned as None.
-    #[argh(option, short = 'd')]
-    autorepeat_delay: i64,
+    /// delay value of autorepeat values for the keyboard. Values should be a positive integer plus
+    /// an SI time unit. Valid units are s, ms. If this value and autorepeat_period are zero, the
+    /// autorepeat field of KeyboardSettings will be cleaned as None.
+    #[argh(option, short = 'd', from_str_fn(str_to_duration))]
+    autorepeat_delay: Option<i64>,
 
-    /// period value of autorepeat values for the keyboard. Values should be a positive integer. If
-    /// this value and autorepeat_delay are zero, the autorepeat field of KeyboardSettings will be
-    /// cleaned as None.
-    #[argh(option, short = 'p')]
-    autorepeat_period: i64,
+    /// period value of autorepeat values for the keyboard. Values should be a positive integer plus
+    /// an SI time unit. Valid units are s, ms. If this value and autorepeat_delay are zero, the
+    /// autorepeat field of KeyboardSettings will be cleaned as None.
+    #[argh(option, short = 'p', from_str_fn(str_to_duration))]
+    autorepeat_period: Option<i64>,
 }
 
 #[derive(FromArgs, Debug, Clone)]
@@ -825,6 +827,31 @@ fn str_to_keymap(src: &str) -> Result<fidl_fuchsia_input::KeymapId, String> {
         "frazerty" => fidl_fuchsia_input::KeymapId::FrAzerty,
         "usdvorak" => fidl_fuchsia_input::KeymapId::UsDvorak,
         _ => return Err(String::from("Couldn't parse keymap id.")),
+    })
+}
+
+/// Converts a single string of number and unit into a number interpreting as nanoseconds.
+fn str_to_duration(src: &str) -> Result<i64, String> {
+    // This regex matches a string that starts with at least one digit, follows by zero or more
+    // whitespace, and ends with zero or more letters. Digits and letters are captured.
+    let re = Regex::new(r"^(\d+)\s*([A-Za-z]*)$").unwrap();
+    let captures = re.captures(src).ok_or_else(|| {
+        String::from("Invalid input, please pass in number and units as <123ms> or <0>.")
+    })?;
+
+    let num: i64 = captures[1].parse().map_err(|e: ParseIntError| e.to_string())?;
+    let unit = captures[2].to_string();
+
+    Ok(match unit.to_lowercase().as_str() {
+        "s" | "second" | "seconds" => num * 1_000_000_000,
+        "ms" | "millisecond" | "milliseconds" => num * 1_000_000,
+        _ => {
+            if unit.is_empty() && num == 0 {
+                0
+            } else {
+                return Err(String::from("Couldn't parse duration, please specify a valid unit."));
+            }
+        }
     })
 }
 

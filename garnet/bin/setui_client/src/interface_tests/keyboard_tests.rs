@@ -14,14 +14,14 @@ use futures::prelude::*;
 use test_case::test_case;
 
 #[test_case(
-    Keyboard { keymap: None, autorepeat_delay: 0, autorepeat_period: 0 };
+    Keyboard { keymap: None, autorepeat_delay: Some(0), autorepeat_period: Some(0) };
     "Test keyboard client calls keyboard watch."
 )]
 #[test_case(
     Keyboard {
         keymap: Some(fidl_fuchsia_input::KeymapId::FrAzerty),
-        autorepeat_delay: 1,
-        autorepeat_period: 2,
+        autorepeat_delay: Some(1),
+        autorepeat_period: Some(2),
     }; "Test keyboard client calls set Keyboard."
 )]
 #[fuchsia_async::run_until_stalled(test)]
@@ -51,8 +51,8 @@ async fn validate_keyboard(expected_keyboard: Keyboard) -> Result<(), Error> {
 #[test_case(
     Keyboard {
         keymap: Some(fidl_fuchsia_input::KeymapId::FrAzerty),
-        autorepeat_delay: -1,
-        autorepeat_period: -2,
+        autorepeat_delay: Some(-1),
+        autorepeat_period: Some(-2),
     }; "Test keyboard invalid autorepeat inputs."
 )]
 #[fuchsia_async::run_until_stalled(test)]
@@ -83,15 +83,15 @@ async fn validate_keyboard_failure(expected_keyboard: Keyboard) -> Result<(), Er
 #[test_case(
     Keyboard {
         keymap: Some(fidl_fuchsia_input::KeymapId::UsQwerty),
-        autorepeat_delay: 2,
-        autorepeat_period: 3,
+        autorepeat_delay: Some(2),
+        autorepeat_period: Some(3),
     }; "Test keyboard set() output."
 )]
 #[test_case(
     Keyboard {
         keymap: Some(fidl_fuchsia_input::KeymapId::UsDvorak),
-        autorepeat_delay: 3,
-        autorepeat_period: 4,
+        autorepeat_delay: Some(3),
+        autorepeat_period: Some(4),
     }; "Test keyboard set() output with different values."
 )]
 #[fuchsia_async::run_until_stalled(test)]
@@ -117,15 +117,15 @@ async fn validate_keyboard_set_output(expected_keyboard: Keyboard) -> Result<(),
 #[test_case(
     Keyboard {
         keymap: None,
-        autorepeat_delay: 0,
-        autorepeat_period: 0,
+        autorepeat_delay: Some(0),
+        autorepeat_period: Some(0),
     }; "Test keyboard watch() output with empty Keyboard."
 )]
 #[test_case(
     Keyboard {
         keymap: Some(fidl_fuchsia_input::KeymapId::UsDvorak),
-        autorepeat_delay: 7,
-        autorepeat_period: 8,
+        autorepeat_delay: Some(7),
+        autorepeat_period: Some(8),
     }; "Test keyboard watch() output with non-empty Keyboard."
 )]
 #[fuchsia_async::run_until_stalled(test)]
@@ -145,7 +145,7 @@ async fn validate_keyboard_watch_output(expected_keyboard: Keyboard) -> Result<(
 
     let output = assert_watch!(keyboard::command(
         keyboard_service,
-        Keyboard { keymap: None, autorepeat_delay: 0, autorepeat_period: 0 }
+        Keyboard { keymap: None, autorepeat_delay: None, autorepeat_period: None }
     ));
     assert_eq!(output, format!("{:#?}", KeyboardSettings::from(expected_keyboard)));
     Ok(())

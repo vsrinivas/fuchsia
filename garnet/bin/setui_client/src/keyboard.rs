@@ -8,7 +8,7 @@ use anyhow::format_err;
 use fidl_fuchsia_settings::{KeyboardProxy, KeyboardSettings};
 
 pub async fn command(proxy: KeyboardProxy, keyboard: Keyboard) -> WatchOrSetResult {
-    if keyboard.autorepeat_delay < 0 || keyboard.autorepeat_period < 0 {
+    if keyboard.autorepeat_delay.unwrap_or(0) < 0 || keyboard.autorepeat_period.unwrap_or(0) < 0 {
         return Err(format_err!("Negative values are invalid for autorepeat values."));
     }
     let settings = KeyboardSettings::from(keyboard);
@@ -29,8 +29,8 @@ impl From<KeyboardSettings> for Keyboard {
     fn from(src: KeyboardSettings) -> Self {
         Keyboard {
             keymap: src.keymap,
-            autorepeat_delay: src.autorepeat.map(|a| a.delay).unwrap_or(0),
-            autorepeat_period: src.autorepeat.map(|a| a.period).unwrap_or(0),
+            autorepeat_delay: src.autorepeat.map(|a| a.delay),
+            autorepeat_period: src.autorepeat.map(|a| a.period),
         }
     }
 }
@@ -39,12 +39,12 @@ impl From<Keyboard> for KeyboardSettings {
     fn from(src: Keyboard) -> KeyboardSettings {
         KeyboardSettings {
             keymap: src.keymap,
-            autorepeat: if src.autorepeat_delay == 0 && src.autorepeat_period == 0 {
+            autorepeat: if src.autorepeat_delay.is_none() && src.autorepeat_period.is_none() {
                 None
             } else {
                 Some(fidl_fuchsia_settings::Autorepeat {
-                    delay: src.autorepeat_delay,
-                    period: src.autorepeat_period,
+                    delay: src.autorepeat_delay.unwrap_or(0),
+                    period: src.autorepeat_period.unwrap_or(0),
                 })
             },
             ..KeyboardSettings::EMPTY

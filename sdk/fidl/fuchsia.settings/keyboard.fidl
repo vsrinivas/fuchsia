@@ -11,9 +11,9 @@ type KeyboardSettings = table {
     1: keymap fuchsia.input.KeymapId;
 
     2: autorepeat struct {
-        /// The delay in milliseconds between key actuation and autorepeat actuation.
+        /// The duration between key actuation and autorepeat actuation.
         delay zx.duration;
-        /// The period between two successive autorepeat actuations (1/rate). Rate is defined as
+        /// The duration between two successive autorepeat actuations (1/rate). Rate is defined as
         /// once the autorepeat kicks in, the frequency at which repeated key actuations are
         /// generated per second.
         period zx.duration;
