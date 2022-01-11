@@ -11,15 +11,15 @@ use fidl_fuchsia_io::{DirectoryMarker, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE}
 use fuchsia_component::server::{ServiceFs, ServiceObjTrait};
 use fuchsia_inspect::{Error, Inspector};
 use futures::prelude::*;
+use std::sync::Arc;
 use tracing::warn;
 use vfs::{
-    directory::entry::DirectoryEntry, execution_scope::ExecutionScope, path::Path,
-    pseudo_directory, service as pseudo_fs_service,
+    directory::entry::DirectoryEntry, execution_scope::ExecutionScope, path::Path, pseudo_directory,
 };
 
 pub mod service;
 
-/// Directiory within the outgoing directory of a component where the diagnostics service should be
+/// Directory within the outgoing directory of a component where the diagnostics service should be
 /// added.
 pub const DIAGNOSTICS_DIR: &str = "diagnostics";
 
@@ -32,22 +32,7 @@ pub fn serve_with_options<'a, ServiceObjTy: ServiceObjTrait>(
 ) -> Result<(), Error> {
     let (proxy, server) =
         fidl::endpoints::create_proxy::<DirectoryMarker>().map_err(|e| Error::fidl(e.into()))?;
-    let inspector_for_fs = inspector.clone();
-    let dir = pseudo_directory! {
-        TreeMarker::PROTOCOL_NAME => pseudo_fs_service::host(move |stream| {
-            let inspector = inspector_for_fs.clone();
-            let options = options.clone();
-            async move {
-                service::handle_request_stream(
-                    inspector, options, stream
-                    )
-                    .await
-                    .unwrap_or_else(|e| warn!("failed to run server: {:?}", e));
-            }
-            .boxed()
-        }),
-    };
-
+    let dir = create_diagnostics_dir_with_options(inspector.clone(), options);
     let server_end = server.into_channel().into();
     let scope = ExecutionScope::new();
     dir.open(scope, OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE, 0, Path::dot(), server_end);
@@ -63,6 +48,36 @@ pub fn serve<'a, ServiceObjTy: ServiceObjTrait>(
     service_fs: &mut ServiceFs<ServiceObjTy>,
 ) -> Result<(), Error> {
     serve_with_options(inspector, service::TreeServerSettings::default(), service_fs)
+}
+
+/// Creates the outgoing diagnostics directory with options. Should be added to the component's
+/// outgoing directory at `DIAGNOSTICS_DIR`. Use `serve_with_options` if the component's outgoing
+/// directory is served by `ServiceFs`.
+pub fn create_diagnostics_dir_with_options(
+    inspector: fuchsia_inspect::Inspector,
+    options: service::TreeServerSettings,
+) -> Arc<dyn DirectoryEntry> {
+    pseudo_directory! {
+        TreeMarker::PROTOCOL_NAME =>
+            vfs::service::host(move |stream| {
+                service::handle_request_stream(
+                    inspector.clone(),
+                    options.clone(),
+                    stream
+                ).unwrap_or_else(|e| {
+                    warn!(
+                        "error handling fuchsia.inspect/Tree connection: {e:#}"
+                    );
+                })
+            }),
+    }
+}
+
+/// Creates the outgoing diagnostics directory. Should be added to the component's outgoing
+/// directory at `DIAGNOSTICS_DIR`. Use `serve` if the component's outgoing directory is served by
+/// `ServiceFs`.
+pub fn create_diagnostics_dir(inspector: Inspector) -> Arc<dyn DirectoryEntry> {
+    create_diagnostics_dir_with_options(inspector, service::TreeServerSettings::default())
 }
 
 #[cfg(test)]
