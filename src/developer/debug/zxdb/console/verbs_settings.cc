@@ -571,8 +571,13 @@ OutputBuffer FormatSetFeedback(ConsoleContext* console_context,
 
 Err DoSet(ConsoleContext* console_context, const Command& cmd) {
   // The command parser will provide everything as one argument.
-  if (cmd.args().size() != 1)
-    return Err("Wrong amount of Arguments. See \"help set\".");
+  if (cmd.args().size() != 1) {
+    return Err(
+        "Expected a setting and a new value.\n"
+        " • Type \"help set\" for usage.\n"
+        " • Type \"get\" to list all settings and their current values.\n"
+        " • Type \"get <setting-name>\" for documentation on a setting.");
+  }
 
   ErrOr<ParsedSetCommand> parsed = ParseSetCommand(cmd.args()[0]);
   if (parsed.has_error())
