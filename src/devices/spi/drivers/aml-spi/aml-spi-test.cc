@@ -175,7 +175,13 @@ class FakeDdkSpi : public fake_ddk::Bind {
 
  private:
   static constexpr amlspi_config_t kSpiConfig[] = {
-      {.bus_id = 0, .cs_count = 2, .cs = {5, 3}},
+      {
+          .bus_id = 0,
+          .cs_count = 2,
+          .cs = {5, 3},
+          .clock_divider_register_value = 0,
+          .use_enhanced_clock_mode = false,
+      },
   };
 
   async::Loop loop_;
@@ -738,6 +744,115 @@ TEST(AmlSpiTest, ReleaseVmos) {
     EXPECT_OK(zx::vmo::create(PAGE_SIZE, 0, &vmo));
     EXPECT_OK(spi1.SpiImplRegisterVmo(0, 2, std::move(vmo), 0, PAGE_SIZE, SPI_VMO_RIGHT_READ));
   }
+}
+
+TEST(AmlSpiTest, NormalClockMode) {
+  constexpr amlspi_config_t kTestSpiConfig[] = {
+      {
+          .bus_id = 0,
+          .cs_count = 2,
+          .cs = {5, 3},
+          .clock_divider_register_value = 0x5,
+          .use_enhanced_clock_mode = false,
+      },
+  };
+
+  FakeDdkSpi bind;
+  bind.SetMetadata(DEVICE_METADATA_AMLSPI_CONFIG, kTestSpiConfig, sizeof(kTestSpiConfig));
+
+  EXPECT_OK(AmlSpi::Create(nullptr, fake_ddk::kFakeParent));
+
+  const auto conreg = ConReg::Get().FromValue(bind.mmio()[AML_SPI_CONREG / sizeof(uint32_t)]);
+  EXPECT_EQ(conreg.data_rate(), 0x5);
+  EXPECT_EQ(conreg.drctl(), 0);
+  EXPECT_EQ(conreg.ssctl(), 0);
+  EXPECT_EQ(conreg.smc(), 0);
+  EXPECT_EQ(conreg.xch(), 0);
+  EXPECT_EQ(conreg.mode(), ConReg::kModeMaster);
+  EXPECT_EQ(conreg.en(), 1);
+
+  const auto enhanced_cntl =
+      EnhanceCntl::Get().FromValue(bind.mmio()[AML_SPI_ENHANCE_CNTL / sizeof(uint32_t)]);
+  EXPECT_EQ(enhanced_cntl.reg_value(), 0);
+
+  const auto testreg = TestReg::Get().FromValue(bind.mmio()[AML_SPI_TESTREG / sizeof(uint32_t)]);
+  EXPECT_EQ(testreg.dlyctl(), 0x15);
+  EXPECT_EQ(testreg.clk_free_en(), 1);
+}
+
+TEST(AmlSpiTest, EnhancedClockMode) {
+  constexpr amlspi_config_t kTestSpiConfig[] = {
+      {
+          .bus_id = 0,
+          .cs_count = 2,
+          .cs = {5, 3},
+          .clock_divider_register_value = 0xa5,
+          .use_enhanced_clock_mode = true,
+      },
+  };
+
+  FakeDdkSpi bind;
+  bind.SetMetadata(DEVICE_METADATA_AMLSPI_CONFIG, kTestSpiConfig, sizeof(kTestSpiConfig));
+
+  EXPECT_OK(AmlSpi::Create(nullptr, fake_ddk::kFakeParent));
+
+  const auto conreg = ConReg::Get().FromValue(bind.mmio()[AML_SPI_CONREG / sizeof(uint32_t)]);
+  EXPECT_EQ(conreg.data_rate(), 0);
+  EXPECT_EQ(conreg.drctl(), 0);
+  EXPECT_EQ(conreg.ssctl(), 0);
+  EXPECT_EQ(conreg.smc(), 0);
+  EXPECT_EQ(conreg.xch(), 0);
+  EXPECT_EQ(conreg.mode(), ConReg::kModeMaster);
+  EXPECT_EQ(conreg.en(), 1);
+
+  const auto enhanced_cntl =
+      EnhanceCntl::Get().FromValue(bind.mmio()[AML_SPI_ENHANCE_CNTL / sizeof(uint32_t)]);
+  EXPECT_EQ(enhanced_cntl.main_clock_always_on(), 0);
+  EXPECT_EQ(enhanced_cntl.clk_cs_delay_enable(), 1);
+  EXPECT_EQ(enhanced_cntl.cs_oen_enhance_enable(), 1);
+  EXPECT_EQ(enhanced_cntl.clk_oen_enhance_enable(), 1);
+  EXPECT_EQ(enhanced_cntl.mosi_oen_enhance_enable(), 1);
+  EXPECT_EQ(enhanced_cntl.spi_clk_select(), 1);
+  EXPECT_EQ(enhanced_cntl.enhance_clk_div(), 0xa5);
+  EXPECT_EQ(enhanced_cntl.clk_cs_delay(), 0);
+
+  const auto testreg = TestReg::Get().FromValue(bind.mmio()[AML_SPI_TESTREG / sizeof(uint32_t)]);
+  EXPECT_EQ(testreg.dlyctl(), 0x15);
+  EXPECT_EQ(testreg.clk_free_en(), 1);
+}
+
+TEST(AmlSpiTest, NormalClockModeInvalidDivider) {
+  constexpr amlspi_config_t kTestSpiConfig[] = {
+      {
+          .bus_id = 0,
+          .cs_count = 2,
+          .cs = {5, 3},
+          .clock_divider_register_value = 0xa5,
+          .use_enhanced_clock_mode = false,
+      },
+  };
+
+  FakeDdkSpi bind;
+  bind.SetMetadata(DEVICE_METADATA_AMLSPI_CONFIG, kTestSpiConfig, sizeof(kTestSpiConfig));
+
+  EXPECT_EQ(AmlSpi::Create(nullptr, fake_ddk::kFakeParent), ZX_ERR_INVALID_ARGS);
+}
+
+TEST(AmlSpiTest, EnhancedClockModeInvalidDivider) {
+  constexpr amlspi_config_t kTestSpiConfig[] = {
+      {
+          .bus_id = 0,
+          .cs_count = 2,
+          .cs = {5, 3},
+          .clock_divider_register_value = 0x1a5,
+          .use_enhanced_clock_mode = true,
+      },
+  };
+
+  FakeDdkSpi bind;
+  bind.SetMetadata(DEVICE_METADATA_AMLSPI_CONFIG, kTestSpiConfig, sizeof(kTestSpiConfig));
+
+  EXPECT_EQ(AmlSpi::Create(nullptr, fake_ddk::kFakeParent), ZX_ERR_INVALID_ARGS);
 }
 
 }  // namespace spi

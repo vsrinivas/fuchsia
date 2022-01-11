@@ -49,7 +49,9 @@ static const amlspi_config_t spi_config = {
     .period = 0,
     .bus_id = SHERLOCK_SPICC0,
     .cs_count = 1,
-    .cs = {0},  // index into fragments list
+    .cs = {0},                          // index into fragments list
+    .clock_divider_register_value = 0,  // SCLK = core clock / 4 = 10 MHz
+    .use_enhanced_clock_mode = false,
 };
 
 static pbus_dev_t spi_dev = []() {

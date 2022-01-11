@@ -85,12 +85,7 @@ zx::status<cpp20::span<uint8_t>> AmlSpi::GetVmoSpan(uint32_t chip_select, uint32
 
 void AmlSpi::Exchange8(const uint8_t* txdata, uint8_t* out_rxdata, size_t size) {
   // transfer settings
-  auto conreg = ConReg::Get()
-                    .FromValue(0)
-                    .set_en(1)
-                    .set_mode(ConReg::kModeMaster)
-                    .set_bits_per_word(CHAR_BIT - 1)
-                    .WriteTo(&mmio_);
+  auto conreg = ConReg::Get().ReadFrom(&mmio_).set_bits_per_word(CHAR_BIT - 1).WriteTo(&mmio_);
 
   while (size > 0) {
     // Burst size in words (with one byte per word).
@@ -135,9 +130,7 @@ void AmlSpi::Exchange64(const uint8_t* txdata, uint8_t* out_rxdata, size_t size)
   constexpr size_t kMaxBytesPerBurst = kBytesPerWord * kBurstMaxDoubleWords;
 
   auto conreg = ConReg::Get()
-                    .FromValue(0)
-                    .set_en(1)
-                    .set_mode(ConReg::kModeMaster)
+                    .ReadFrom(&mmio_)
                     .set_bits_per_word((kBytesPerWord * CHAR_BIT) - 1)
                     .WriteTo(&mmio_);
 
@@ -221,6 +214,38 @@ void AmlSpi::WaitForTransferComplete() {
   statreg.WriteTo(&mmio_);
 }
 
+void AmlSpi::InitRegisters() {
+  ConReg::Get().FromValue(0).WriteTo(&mmio_);
+
+  TestReg::GetFromDefaultValue().set_clk_free_en(1).WriteTo(&mmio_);
+
+  ConReg::Get()
+      .ReadFrom(&mmio_)
+      .set_data_rate(config_.use_enhanced_clock_mode ? 0 : config_.clock_divider_register_value)
+      .set_drctl(0)
+      .set_ssctl(0)
+      .set_smc(0)
+      .set_xch(0)
+      .set_mode(ConReg::kModeMaster)
+      .WriteTo(&mmio_);
+
+  auto enhance_cntl = EnhanceCntl::Get().FromValue(0);
+  if (config_.use_enhanced_clock_mode) {
+    enhance_cntl.set_clk_cs_delay_enable(1)
+        .set_cs_oen_enhance_enable(1)
+        .set_clk_oen_enhance_enable(1)
+        .set_mosi_oen_enhance_enable(1)
+        .set_spi_clk_select(1)  // Use this register instead of CONREG.
+        .set_enhance_clk_div(config_.clock_divider_register_value)
+        .set_clk_cs_delay(0);
+  }
+  enhance_cntl.WriteTo(&mmio_);
+
+  EnhanceCntl1::Get().FromValue(0).WriteTo(&mmio_);
+
+  ConReg::Get().ReadFrom(&mmio_).set_en(1).WriteTo(&mmio_);
+}
+
 zx_status_t AmlSpi::SpiImplExchange(uint32_t cs, const uint8_t* txdata, size_t txdata_size,
                                     uint8_t* out_rxdata, size_t rxdata_size,
                                     size_t* out_rxdata_actual) {
@@ -241,10 +266,11 @@ zx_status_t AmlSpi::SpiImplExchange(uint32_t cs, const uint8_t* txdata, size_t t
   // problem.
   if (need_reset_ && reset_ && exchange_size >= sizeof(uint64_t)) {
     reset_->WriteRegister32(kReset6RegisterOffset, reset_mask_, reset_mask_);
+    InitRegisters();  // The registers must be reinitialized after resetting the IP.
     need_reset_ = false;
   } else {
     // reset both fifos
-    auto testreg = TestReg::Get().FromValue(0).set_fiforst(3).WriteTo(&mmio_);
+    auto testreg = TestReg::GetFromDefaultValue().set_fiforst(3).WriteTo(&mmio_);
     do {
       testreg.ReadFrom(&mmio_);
     } while ((testreg.rxcnt() != 0) || (testreg.txcnt() != 0));
@@ -430,6 +456,14 @@ zx_status_t AmlSpi::Create(void* ctx, zx_device_t* device) {
     return status;
   }
 
+  const uint32_t max_clock_div_reg_value =
+      config.use_enhanced_clock_mode ? EnhanceCntl::kEnhanceClkDivMax : ConReg::kDataRateMax;
+  if (config.clock_divider_register_value > max_clock_div_reg_value) {
+    zxlogf(ERROR, "Metadata clock divider value is too large: %u",
+           config.clock_divider_register_value);
+    return ZX_ERR_INVALID_ARGS;
+  }
+
   std::optional<ddk::MmioBuffer> mmio;
   status = pdev.MapMmio(0, &mmio);
   if (status != ZX_OK) {
@@ -479,10 +513,12 @@ zx_status_t AmlSpi::Create(void* ctx, zx_device_t* device) {
   fbl::AllocChecker ac;
   std::unique_ptr<AmlSpi> spi(
       new (&ac) AmlSpi(device, *std::move(mmio), std::move(reset_fidl_client), reset_mask,
-                       std::move(chips), std::move(thread_profile), std::move(interrupt)));
+                       std::move(chips), std::move(thread_profile), std::move(interrupt), config));
   if (!ac.check()) {
     return ZX_ERR_NO_MEMORY;
   }
+
+  spi->InitRegisters();
 
   char devname[32];
   sprintf(devname, "aml-spi-%u", config.bus_id);

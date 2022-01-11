@@ -63,7 +63,9 @@ static const amlspi_config_t spi_config = {
     .period = kSelinaPeriod.to_nsecs(),
     .bus_id = NELSON_SPICC1,
     .cs_count = 1,
-    .cs = {0},  // index into fragments list
+    .cs = {0},                          // index into fragments list
+    .clock_divider_register_value = 0,  // SCLK = core clock / 4 = 25 MHz
+    .use_enhanced_clock_mode = false,
 };
 
 static pbus_dev_t spi_dev = []() {
