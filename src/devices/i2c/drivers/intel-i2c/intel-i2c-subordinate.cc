@@ -70,7 +70,7 @@ zx_status_t IntelI2cSubordinate::Transfer(const IntelI2cSubordinateSegment* segm
     }
   }
 
-  if (!WaitFor(fit::bind_member(controller_, &IntelI2cController::IsBusIdle), zx::usec(50))) {
+  if (!WaitFor(fit::bind_member<&IntelI2cController::IsBusIdle>(controller_), zx::usec(50))) {
     status = ZX_ERR_TIMED_OUT;
     return status;
   }
@@ -199,14 +199,14 @@ zx_status_t IntelI2cSubordinate::Transfer(const IntelI2cSubordinateSegment* segm
     return status;
   }
 
-  if (!WaitFor(fit::bind_member(controller_, &IntelI2cController::IsBusIdle), zx::usec(50))) {
+  if (!WaitFor(fit::bind_member<&IntelI2cController::IsBusIdle>(controller_), zx::usec(50))) {
     status = ZX_ERR_TIMED_OUT;
     return status;
   }
 
   // Read the data_cmd register to pull data out of the RX FIFO.
   if (!DoUntil(
-          fit::bind_member(controller_, &IntelI2cController::IsRxFifoEmpty),
+          fit::bind_member<&IntelI2cController::IsRxFifoEmpty>(controller_),
           [this]() { controller_->ReadRx(); }, zx::duration(0))) {
     status = ZX_ERR_TIMED_OUT;
     return status;

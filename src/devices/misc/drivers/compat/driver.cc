@@ -112,17 +112,17 @@ zx::status<> Driver::Run(fidl::ServerEnd<fio::Directory> outgoing_dir,
   }
 
   auto root_resource = driver::Connect<fboot::RootResource>(ns_, dispatcher_)
-                           .and_then(fit::bind_member(this, &Driver::GetRootResource));
+                           .and_then(fit::bind_member<&Driver::GetRootResource>(this));
   auto loader_vmo = driver::Connect<fio::File>(ns_, dispatcher_, kLibDriverPath, kOpenFlags)
-                        .and_then(fit::bind_member(this, &Driver::GetBuffer));
+                        .and_then(fit::bind_member<&Driver::GetBuffer>(this));
   auto driver_vmo = driver::Connect<fio::File>(ns_, dispatcher_, driver_path, kOpenFlags)
-                        .and_then(fit::bind_member(this, &Driver::GetBuffer));
+                        .and_then(fit::bind_member<&Driver::GetBuffer>(this));
   auto start_driver =
       join_promises(std::move(root_resource), std::move(loader_vmo), std::move(driver_vmo))
-          .then(fit::bind_member(this, &Driver::Join))
-          .and_then(fit::bind_member(this, &Driver::LoadDriver))
-          .and_then(fit::bind_member(this, &Driver::StartDriver))
-          .or_else(fit::bind_member(this, &Driver::StopDriver))
+          .then(fit::bind_member<&Driver::Join>(this))
+          .and_then(fit::bind_member<&Driver::LoadDriver>(this))
+          .and_then(fit::bind_member<&Driver::StartDriver>(this))
+          .or_else(fit::bind_member<&Driver::StopDriver>(this))
           .wrap_with(scope_);
   executor_.schedule_task(std::move(start_driver));
   return zx::ok();

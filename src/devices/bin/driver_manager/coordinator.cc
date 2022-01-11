@@ -295,7 +295,7 @@ Coordinator::Coordinator(CoordinatorConfig config, InspectManager* inspect_manag
   root_device_->flags = DEV_CTX_IMMORTAL | DEV_CTX_MUST_ISOLATE | DEV_CTX_MULTI_BIND;
 
   bind_driver_manager_ =
-      std::make_unique<BindDriverManager>(this, fit::bind_member(this, &Coordinator::AttemptBind));
+      std::make_unique<BindDriverManager>(this, fit::bind_member<&Coordinator::AttemptBind>(this));
 
   device_manager_ = std::make_unique<DeviceManager>(this, config_.crash_policy);
 
@@ -313,10 +313,10 @@ void Coordinator::LoadV1Drivers(std::string_view sys_device_driver,
 
   // Load the drivers.
   for (const std::string& path : driver_search_paths) {
-    find_loadable_drivers(boot_args(), path, fit::bind_member(this, &Coordinator::DriverAddedInit));
+    find_loadable_drivers(boot_args(), path, fit::bind_member<&Coordinator::DriverAddedInit>(this));
   }
   for (const char* driver : load_drivers) {
-    load_driver(boot_args(), driver, fit::bind_member(this, &Coordinator::DriverAddedInit));
+    load_driver(boot_args(), driver, fit::bind_member<&Coordinator::DriverAddedInit>(this));
   }
 
   PrepareProxy(sys_device_, nullptr);

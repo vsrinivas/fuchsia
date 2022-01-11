@@ -36,7 +36,7 @@ class DeviceWatcher : public fidl::WireServer<fuchsia_device_manager::DeviceWatc
         return;
       }
       watcher_ = fsl::DeviceWatcher::CreateWithIdleCallback(
-          std::move(fd), fit::bind_member(this, &DeviceWatcher::FdCallback), [] {}, dispatcher_);
+          std::move(fd), fit::bind_member<&DeviceWatcher::FdCallback>(this), [] {}, dispatcher_);
     }
     if (request_) {
       completer.ReplyError(ZX_ERR_ALREADY_BOUND);
