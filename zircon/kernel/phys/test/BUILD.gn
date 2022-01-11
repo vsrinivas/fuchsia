@@ -51,6 +51,16 @@ if (current_toolchain != default_toolchain) {
     ]
   }
 
+  source_set("phys-unittest") {
+    testonly = true
+    public = [ "phys-unittest.h" ]
+    public_deps = [
+      ":test-main",
+      "//zircon/kernel/lib/ktl",
+    ]
+    deps = [ "//zircon/kernel/lib/libc" ]
+  }
+
   # Build a ZBI test that uses the physboot framework.
   template("phys_zbi_test") {
     if (defined(invoker.test_deps)) {
@@ -153,6 +163,7 @@ if (current_toolchain != default_toolchain) {
       "stack-tests.cc",
     ]
     deps = [
+      ":phys-unittest",
       ":test-main",
       "//zircon/kernel/lib/arch/test:kernel-tests",
       "//zircon/kernel/lib/crypto:crypto-entropy-test",
