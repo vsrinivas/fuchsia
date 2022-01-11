@@ -369,7 +369,7 @@ mod tests {
         let wlan_softmac_info = fake_wlan_softmac_info();
         let band0 = convert_ddk_band_info(wlan_softmac_info.bands[0], 10);
         assert_eq!(band0.band_id, fidl_common::Band::WlanBand2Ghz);
-        assert_eq!(band0.rates, vec![12, 24, 48, 54, 96, 108]);
+        assert_eq!(band0.rates, vec![0x0C, 0x12, 0x18, 0x24, 0x30, 0x48, 0x60, 0x6C]);
         assert_eq!(band0.base_frequency, 2407);
         assert_eq!(band0.channels, vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14]);
         assert_eq!(band0.capability_info, 10);

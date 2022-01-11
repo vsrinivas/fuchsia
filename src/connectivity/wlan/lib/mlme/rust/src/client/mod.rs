@@ -1459,8 +1459,8 @@ mod tests {
             // IEs
             0, 4, // SSID id and length
             115, 115, 105, 100, // SSID
-            1, 6, // supp_rates id and length
-            12, 24, 48, 54, 96, 108, // supp_rates
+            1, 8, // supp_rates id and length
+            0x0C, 0x12, 0x18, 0x24, 0x30, 0x48, 0x60, 0x6C // supp_rates
         ][..]);
         m.fake_device.wlan_queue.clear();
         assert_eq!(me.ctx.device.channel().primary, SCAN_CHANNEL_PRIMARY);
