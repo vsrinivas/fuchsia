@@ -392,6 +392,14 @@ type Constant struct {
 	Value      string                    `json:"value"`
 }
 
+// Location gives the location of the FIDL declaration in its source `.fidl` file.
+type Location struct {
+	Filename string `json:"filename"`
+	Line     int    `json:"line"`
+	Column   int    `json:"column"`
+	Length   int    `json:"length"`
+}
+
 type TypeKind string
 
 const (
@@ -671,7 +679,8 @@ type Declaration interface {
 
 type Decl struct {
 	Attributes
-	Name EncodedCompoundIdentifier `json:"name"`
+	Name     EncodedCompoundIdentifier `json:"name"`
+	Location `json:"location"`
 }
 
 func (d *Decl) GetName() EncodedCompoundIdentifier {

@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"math"
+	"reflect"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -227,6 +228,50 @@ func TestCanUnmarshalBitsStrictness(t *testing.T) {
 			t.Fatalf("jsonValue '%s': expected %v, actual %v",
 				ex.jsonValue, ex.expectedValue, bits.Strictness)
 		}
+	}
+}
+
+func TestCanUnmarshalLocation(t *testing.T) {
+	inputTmpl := `{
+		"const_declarations": [
+			{
+				"name": "lib/CONST",
+				"location": {
+				  "filename": "path/to/file.fidl",
+				  "line": 17,
+				  "column": 7,
+				  "length": 18
+				},
+				"type": {
+				  "kind": "primitive",
+				  "subtype": "int32",
+				  "type_shape_v1": {},
+				  "type_shape_v2": {}
+				},
+				"value": {
+				  "kind": "literal",
+				  "value": "0",
+				  "literal": {
+				  "kind": "numeric",
+				      "value": "0",
+					  "expression": "0"
+				  }
+				}
+			}
+		]
+	}`
+
+	root, err := fidlgen.ReadJSONIrContent([]byte(inputTmpl))
+	if err != nil {
+		t.Fatalf("failed to read JSON IR: %s", err)
+	}
+	if len(root.Consts) == 0 {
+		t.Fatalf("failed to parse constant declarations")
+	}
+	actual := root.Consts[0].Location
+	expected := fidlgen.Location{"path/to/file.fidl", 17, 7, 18}
+	if !reflect.DeepEqual(actual, expected) {
+		t.Errorf("expected %#v; actual %#v", expected, actual)
 	}
 }
 
