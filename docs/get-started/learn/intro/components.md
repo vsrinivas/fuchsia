@@ -187,7 +187,7 @@ ffx component list
 You should see output similar to the (truncated) list below:
 
 ```none {:.devsite-disable-click-to-copy}
-<root>
+/
   bootstrap
     archivist
     base_resolver
