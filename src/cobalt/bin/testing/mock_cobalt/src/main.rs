@@ -252,18 +252,37 @@ async fn run_metrics_service(
     use fidl_fuchsia_metrics::MetricEventLoggerFactoryRequest::*;
     stream
         .try_for_each_concurrent(None, |event| async {
-            let CreateMetricEventLogger { project_spec, logger, responder } = event;
-            let log = loggers
-                .lock()
-                .await
-                .entry(project_spec.project_id.unwrap_or(0))
-                .or_insert_with(Default::default)
-                .clone();
-            let handler = handle_metric_event_logger(logger.into_stream()?, log);
-            let () = responder.send(fidl_fuchsia_metrics::Status::Ok)?;
-            handler.await
+            match event {
+                CreateMetricEventLogger { project_spec, logger, responder } => {
+                    let handler = make_handler(project_spec, &loggers, logger);
+                    let () = responder.send(fidl_fuchsia_metrics::Status::Ok)?;
+                    handler.await
+                }
+                CreateMetricEventLoggerWithExperiments {
+                    project_spec, logger, responder, ..
+                } => {
+                    // TODO(fxb/90740): Support experiment_ids.
+                    let handler = make_handler(project_spec, &loggers, logger);
+                    let () = responder.send(fidl_fuchsia_metrics::Status::Ok)?;
+                    handler.await
+                }
+            }
         })
         .await
+}
+
+async fn make_handler(
+    project_spec: fidl_fuchsia_metrics::ProjectSpec,
+    loggers: &LoggersHandle,
+    logger: fidl::endpoints::ServerEnd<fidl_fuchsia_metrics::MetricEventLoggerMarker>,
+) -> Result<(), fidl::Error> {
+    let log = loggers
+        .lock()
+        .await
+        .entry(project_spec.project_id.unwrap_or(0))
+        .or_insert_with(Default::default)
+        .clone();
+    handle_metric_event_logger(logger.into_stream()?, log).await
 }
 
 async fn handle_metric_event_logger(

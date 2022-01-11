@@ -26,6 +26,11 @@ class MetricEventLoggerFactoryImpl : public fuchsia::metrics::MetricEventLoggerF
                                fidl::InterfaceRequest<fuchsia::metrics::MetricEventLogger> request,
                                CreateMetricEventLoggerCallback callback);
 
+  void CreateMetricEventLoggerWithExperiments(
+      fuchsia::metrics::ProjectSpec project_spec, std::vector<uint32_t> experiment_ids,
+      fidl::InterfaceRequest<fuchsia::metrics::MetricEventLogger> request,
+      CreateMetricEventLoggerCallback callback);
+
   fidl::BindingSet<fuchsia::metrics::MetricEventLogger,
                    std::unique_ptr<fuchsia::metrics::MetricEventLogger>>
       logger_bindings_;

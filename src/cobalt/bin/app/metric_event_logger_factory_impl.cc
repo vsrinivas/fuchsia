@@ -21,6 +21,15 @@ void MetricEventLoggerFactoryImpl::CreateMetricEventLogger(
     fuchsia::metrics::ProjectSpec project_spec,
     fidl::InterfaceRequest<fuchsia::metrics::MetricEventLogger> request,
     CreateMetricEventLoggerCallback callback) {
+  std::vector<uint32_t> experiment_ids = std::vector<uint32_t>();
+  MetricEventLoggerFactoryImpl::CreateMetricEventLoggerWithExperiments(
+      std::move(project_spec), std::move(experiment_ids), std::move(request), std::move(callback));
+}
+
+void MetricEventLoggerFactoryImpl::CreateMetricEventLoggerWithExperiments(
+    fuchsia::metrics::ProjectSpec project_spec, std::vector<uint32_t> experiment_ids,
+    fidl::InterfaceRequest<fuchsia::metrics::MetricEventLogger> request,
+    CreateMetricEventLoggerCallback callback) {
   if (shut_down_) {
     FX_LOGS(ERROR) << "The LoggerFactory received a ShutDown signal and can not "
                       "create a new Logger.";

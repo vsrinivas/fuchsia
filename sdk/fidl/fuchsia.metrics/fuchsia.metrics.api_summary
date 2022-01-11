@@ -6,6 +6,7 @@ struct/member fuchsia.metrics/HistogramBucket.index uint32
 struct fuchsia.metrics/HistogramBucket
 const fuchsia.metrics/MAX_BATCHED_EVENTS uint32 500
 const fuchsia.metrics/MAX_BYTES_PER_EVENT int64 102400
+const fuchsia.metrics/MAX_EXPERIMENT_IDS uint32 100
 const fuchsia.metrics/MAX_HISTOGRAM_BUCKETS uint32 500
 const fuchsia.metrics/MAX_METRIC_DIMENSIONS uint32 10
 const fuchsia.metrics/MAX_STRING_EVENT_SIZE uint32 256
@@ -21,6 +22,7 @@ protocol/member fuchsia.metrics/MetricEventLogger.LogOccurrence(uint32 metric_id
 protocol/member fuchsia.metrics/MetricEventLogger.LogString(uint32 metric_id,string:256 string_value,vector<uint32>:10 event_codes) -> (fuchsia.metrics/Status status)
 protocol fuchsia.metrics/MetricEventLogger
 protocol/member fuchsia.metrics/MetricEventLoggerFactory.CreateMetricEventLogger(fuchsia.metrics/ProjectSpec project_spec,server_end:fuchsia.metrics/MetricEventLogger logger) -> (fuchsia.metrics/Status status)
+protocol/member fuchsia.metrics/MetricEventLoggerFactory.CreateMetricEventLoggerWithExperiments(fuchsia.metrics/ProjectSpec project_spec,vector<uint32>:100 experiment_ids,server_end:fuchsia.metrics/MetricEventLogger logger) -> (fuchsia.metrics/Status status)
 protocol fuchsia.metrics/MetricEventLoggerFactory
 union/member fuchsia.metrics/MetricEventPayload.count uint64
 union/member fuchsia.metrics/MetricEventPayload.histogram vector<fuchsia.metrics/HistogramBucket>:500

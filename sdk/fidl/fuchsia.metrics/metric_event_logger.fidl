@@ -32,6 +32,9 @@ const MAX_STRING_EVENT_SIZE uint32 = 256;
 /// Maximum number of event codes that can be associated with a single event.
 const MAX_METRIC_DIMENSIONS uint32 = 10;
 
+/// Maximum number of experiment ids that can be provided to a single logger.
+const MAX_EXPERIMENT_IDS uint32 = 100;
+
 /// Response codes for MetricEventLogger operations.
 type Status = strict enum : int32 {
     OK = 0;
@@ -71,6 +74,22 @@ protocol MetricEventLoggerFactory {
     /// Create a MetricEventLogger for the project specified by `project_spec`.
     CreateMetricEventLogger(resource struct {
         project_spec ProjectSpec;
+        logger server_end:MetricEventLogger;
+    }) -> (struct {
+        status Status;
+    });
+
+    /// Create a MetricEventLogger with experiment metadata.
+    ///
+    /// This temporary method exposes experiment data to Cobalt directly from
+    /// components. In the future, experiment state will be managed by the
+    /// system and passed directly to Cobalt. Contact the Cobalt team before
+    /// using this interface.
+    ///
+    /// To update experiment state create a new logger.
+    CreateMetricEventLoggerWithExperiments(resource struct {
+        project_spec ProjectSpec;
+        experiment_ids vector<uint32>:MAX_EXPERIMENT_IDS;
         logger server_end:MetricEventLogger;
     }) -> (struct {
         status Status;
