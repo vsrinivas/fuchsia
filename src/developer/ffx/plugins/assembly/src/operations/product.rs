@@ -12,7 +12,7 @@ use log::info;
 mod assembly_builder;
 
 pub fn assemble(args: ProductArgs) -> Result<()> {
-    let ProductArgs { product, outdir: _, gendir: _, input_bundles_dir } = args;
+    let ProductArgs { product, outdir, gendir: _, input_bundles_dir } = args;
 
     info!("Loading configuration files.");
     info!("  product: {}", product.display());
@@ -28,7 +28,13 @@ pub fn assemble(args: ProductArgs) -> Result<()> {
             .context(format!("Adding input bundle: {}", bundle_path.display()))?;
     }
 
-    let _image_assembly = builder.build().context("Building Image Assembly config")?;
+    let image_assembly = builder.build().context("Building Image Assembly config")?;
+    let image_assembly_path = outdir.join("image_assembly.json");
+    let image_assembly_file = std::fs::File::create(&image_assembly_path).context(format!(
+        "Failed to create image assembly config file: {}",
+        image_assembly_path.display()
+    ))?;
+    serde_json::to_writer_pretty(image_assembly_file, &image_assembly)?;
 
     Ok(())
 }

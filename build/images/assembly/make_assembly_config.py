@@ -64,12 +64,12 @@ def main():
     ]
     config["kernel"] = {
         "path": kernel_path,
-        "args": json.load(args.kernel_cmdline),
+        "args": sorted(json.load(args.kernel_cmdline)),
         "clock_backstop": json.load(args.kernel_clock_backstop),
     }
 
     if args.boot_args is not None:
-        config["boot_args"] = json.load(args.boot_args)
+        config["boot_args"] = sorted(json.load(args.boot_args))
 
     config["bootfs_files"] = [
         {
