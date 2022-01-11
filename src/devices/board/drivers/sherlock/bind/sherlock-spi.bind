@@ -8,6 +8,7 @@ using fuchsia.amlogic.platform;
 using fuchsia.amlogic.platform.t931;
 using fuchsia.gpio;
 using fuchsia.platform;
+using fuchsia.registers;
 
 primary node "pdev" {
     fuchsia.BIND_PROTOCOL == fuchsia.platform.BIND_PROTOCOL.DEVICE;
@@ -20,4 +21,9 @@ primary node "pdev" {
 node "gpio-cs-0" {
   fuchsia.BIND_PROTOCOL == fuchsia.gpio.BIND_PROTOCOL.DEVICE;
   fuchsia.BIND_GPIO_PIN == fuchsia.amlogic.platform.t931.GPIOC_PIN_ID.PIN_2; // GPIO_SPICC0_SS0
+}
+
+node "reset" {
+  fuchsia.BIND_PROTOCOL == fuchsia.registers.BIND_PROTOCOL.DEVICE;
+  fuchsia.BIND_REGISTER_ID == fuchsia.amlogic.platform.BIND_REGISTER_ID.SPICC0_RESET;
 }

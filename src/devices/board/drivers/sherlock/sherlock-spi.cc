@@ -33,6 +33,13 @@ static const pbus_mmio_t spi_mmios[] = {
     },
 };
 
+static const pbus_irq_t spi_irqs[] = {
+    {
+        .irq = T931_SPICC0_IRQ,
+        .mode = ZX_INTERRUPT_MODE_EDGE_HIGH,
+    },
+};
+
 static const spi_channel_t spi_channels[] = {
     // Thread SPI
     {
@@ -62,6 +69,8 @@ static pbus_dev_t spi_dev = []() {
   dev.did = PDEV_DID_AMLOGIC_SPI;
   dev.mmio_list = spi_mmios;
   dev.mmio_count = std::size(spi_mmios);
+  dev.irq_list = spi_irqs;
+  dev.irq_count = std::size(spi_irqs);
   return dev;
 }();
 
