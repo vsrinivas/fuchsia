@@ -9,10 +9,16 @@ import (
 	"reflect"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 )
+
+func newTestInstance() *BaseInstance {
+	build, _ := newMockBuild()
+	return &BaseInstance{Build: build, reconnectInterval: defaultReconnectInterval}
+}
 
 func TestInstanceHandle(t *testing.T) {
 	// Instance loading automatically loads the build, so we need to stub it out
@@ -20,10 +26,9 @@ func TestInstanceHandle(t *testing.T) {
 	NewBuild = newMockBuild
 	defer func() { NewBuild = realNewBuild }()
 
-	launcher := &QemuLauncher{Pid: 404, TmpDir: "/some/dir"}
-	connector := &SSHConnector{Host: "somehost", Port: 123, Key: "keyfile"}
-	build, _ := newMockBuild()
-	instance := &BaseInstance{Build: build, Launcher: launcher, Connector: connector}
+	instance := newTestInstance()
+	instance.Launcher = &QemuLauncher{Pid: 404, TmpDir: "/some/dir"}
+	instance.Connector = &SSHConnector{Host: "somehost", Port: 123, Key: "keyfile"}
 
 	handle, err := instance.Handle()
 	if err != nil {
@@ -66,9 +71,8 @@ func TestInstanceHandle(t *testing.T) {
 }
 
 func TestInstanceRepeatedStart(t *testing.T) {
-	build, _ := newMockBuild()
-	launcher := &mockLauncher{}
-	i := &BaseInstance{Build: build, Launcher: launcher}
+	i := newTestInstance()
+	i.Launcher = &mockLauncher{}
 
 	if err := i.Start(); err != nil {
 		t.Fatalf("Error starting instance: %s", err)
@@ -80,33 +84,92 @@ func TestInstanceRepeatedStart(t *testing.T) {
 }
 
 func TestInstanceStartWithLauncherFailure(t *testing.T) {
-	build, _ := newMockBuild()
-	launcher := &mockLauncher{shouldFailToStart: true}
-	i := &BaseInstance{Build: build, Launcher: launcher}
+	i := newTestInstance()
+	i.Launcher = &mockLauncher{shouldFailToStart: true}
 
 	if err := i.Start(); err == nil {
 		t.Fatalf("expected launcher failure but succeeded")
 	}
 }
 
-func TestInstanceStartWithConnectorFailure(t *testing.T) {
-	build, _ := newMockBuild()
-	launcher := &mockLauncher{shouldFailToConnect: true}
-	i := &BaseInstance{Build: build, Launcher: launcher}
+func TestInstanceStartWithLauncherEarlyExit(t *testing.T) {
+	i := newTestInstance()
+	// Only the first connection will fail, but no retries should be made
+	// because the launcher will have died.
+	i.Launcher = &mockLauncher{shouldFailToConnectCount: 1, shouldExitEarly: true}
+
+	if err := i.Start(); err == nil {
+		t.Fatalf("expected launcher failure but succeeded")
+	}
+}
+
+func TestInstanceStartWithTemporaryConnectorFailure(t *testing.T) {
+	i := newTestInstance()
+	i.Launcher = &mockLauncher{shouldFailToConnectCount: maxInitialConnectAttempts - 1}
+	i.reconnectInterval = 1 * time.Millisecond
+
+	if err := i.Start(); err != nil {
+		t.Fatalf("Expected connector to succeed after reconnection attempt")
+	}
+
+	if err := i.Stop(); err != nil {
+		t.Fatalf("Error stopping instance: %s", err)
+	}
+
+	if running, _ := i.Launcher.IsRunning(); running {
+		t.Fatalf("expected launcher to have been killed, but it is running")
+	}
+}
+
+func TestInstanceStartWithPermanentConnectorFailure(t *testing.T) {
+	i := newTestInstance()
+	i.Launcher = &mockLauncher{shouldFailToConnectCount: maxInitialConnectAttempts}
+	i.reconnectInterval = 1 * time.Millisecond
 
 	if err := i.Start(); err == nil {
 		t.Fatalf("Expected connector failure but succeeded")
 	}
 
-	if launcher.running {
+	if running, _ := i.Launcher.IsRunning(); running {
+		t.Fatalf("expected launcher to have been killed, but it is running")
+	}
+}
+
+func TestInstanceStartWithTemporaryCommandFailure(t *testing.T) {
+	i := newTestInstance()
+	i.Launcher = &mockLauncher{shouldFailToExecuteCount: maxInitialConnectAttempts - 1}
+	i.reconnectInterval = 1 * time.Millisecond
+
+	if err := i.Start(); err != nil {
+		t.Fatalf("Expected to succeed after command re-execution attempt")
+	}
+
+	if err := i.Stop(); err != nil {
+		t.Fatalf("Error stopping instance: %s", err)
+	}
+
+	if running, _ := i.Launcher.IsRunning(); running {
+		t.Fatalf("expected launcher to have been killed, but it is running")
+	}
+}
+
+func TestInstanceStartWithPermanentCommandFailure(t *testing.T) {
+	i := newTestInstance()
+	i.Launcher = &mockLauncher{shouldFailToExecuteCount: maxInitialConnectAttempts + 1}
+	i.reconnectInterval = 1 * time.Millisecond
+
+	if err := i.Start(); err == nil {
+		t.Fatalf("Expected command execution failure but succeeded")
+	}
+
+	if running, _ := i.Launcher.IsRunning(); running {
 		t.Fatalf("expected launcher to have been killed, but it is running")
 	}
 }
 
 func TestInstance(t *testing.T) {
-	build, _ := newMockBuild()
-	launcher := &mockLauncher{}
-	i := &BaseInstance{Build: build, Launcher: launcher}
+	i := newTestInstance()
+	i.Launcher = &mockLauncher{}
 
 	if err := i.Start(); err != nil {
 		t.Fatalf("Error starting instance: %s", err)
@@ -168,15 +231,14 @@ func TestInstance(t *testing.T) {
 		t.Fatalf("Error stopping instance: %s", err)
 	}
 
-	if launcher.running {
+	if running, _ := i.Launcher.IsRunning(); running {
 		t.Fatalf("expected launcher to have been killed, but it is running")
 	}
 }
 
 func TestInstanceRunFuzzerWithArtifactFetch(t *testing.T) {
-	build, _ := newMockBuild()
-	launcher := &mockLauncher{}
-	i := &BaseInstance{Build: build, Launcher: launcher}
+	i := newTestInstance()
+	i.Launcher = &mockLauncher{}
 
 	if err := i.Start(); err != nil {
 		t.Fatalf("Error starting instance: %s", err)
@@ -203,7 +265,7 @@ func TestInstanceRunFuzzerWithArtifactFetch(t *testing.T) {
 		t.Fatalf("Error stopping instance: %s", err)
 	}
 
-	if launcher.running {
+	if running, _ := i.Launcher.IsRunning(); running {
 		t.Fatalf("expected launcher to have been killed, but it is running")
 	}
 }

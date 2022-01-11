@@ -17,7 +17,7 @@ import (
 	"github.com/google/go-cmp/cmp/cmpopts"
 )
 
-// These SSHConnector tests connect to an in-memory SSH server (see ssh_mock.go
+// These SSHConnector tests connect to an in-memory SSH server (see ssh_fake.go
 // for details), so we have good coverage of the SSH/SFTP mechanics. However,
 // on the remote side, they rely on mocked commands and a mocked filesystem so
 // do not test interaction with an actual instance.  For that, we rely on the

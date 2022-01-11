@@ -14,13 +14,14 @@ import (
 
 // mockInstanceCmd is the type returned by mockConnector.Command()
 type mockInstanceCmd struct {
-	connector *mockConnector
-	name      string
-	args      []string
-	running   bool
-	pipeOut   *io.PipeWriter
-	errCh     chan error
-	timeout   time.Duration
+	connector  *mockConnector
+	name       string
+	args       []string
+	running    bool
+	pipeOut    *io.PipeWriter
+	errCh      chan error
+	timeout    time.Duration
+	shouldFail bool
 }
 
 func (c *mockInstanceCmd) getOutput() ([]byte, error) {
@@ -161,6 +162,10 @@ func (c *mockInstanceCmd) Wait() error {
 		if err := <-c.errCh; err != nil {
 			return fmt.Errorf("error in goroutine: %s", err)
 		}
+	}
+
+	if c.shouldFail {
+		return fmt.Errorf("Intentionally broken Wait")
 	}
 
 	return nil

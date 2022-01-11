@@ -11,9 +11,10 @@ import (
 
 // mockConnector is used in Fuzzer and Instance tests, and returned by mockLauncher.Start()
 type mockConnector struct {
-	connected             bool
-	shouldFailToConnect   bool
-	shouldFailToGetSysLog bool
+	connected                bool
+	shouldFailToConnectCount uint
+	shouldFailToExecuteCount uint
+	shouldFailToGetSysLog    bool
 
 	// Store history of Get/Put paths to enable basic checks
 	PathsGot []string
@@ -28,7 +29,8 @@ func (c *mockConnector) Connect() error {
 		return fmt.Errorf("Connect called when already connected")
 	}
 
-	if c.shouldFailToConnect {
+	if c.shouldFailToConnectCount > 0 {
+		c.shouldFailToConnectCount -= 1
 		return fmt.Errorf("Intentionally broken Connector")
 	}
 
@@ -41,7 +43,11 @@ func (c *mockConnector) Close() {
 }
 
 func (c *mockConnector) Command(name string, args ...string) InstanceCmd {
-	return &mockInstanceCmd{connector: c, name: name, args: args}
+	shouldFail := c.shouldFailToExecuteCount > 0
+	if shouldFail {
+		c.shouldFailToExecuteCount -= 1
+	}
+	return &mockInstanceCmd{connector: c, name: name, args: args, shouldFail: shouldFail}
 }
 
 func (c *mockConnector) Get(targetSrc string, hostDst string) error {

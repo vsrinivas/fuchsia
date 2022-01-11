@@ -10,9 +10,13 @@ import (
 )
 
 type mockLauncher struct {
-	running             bool
-	shouldFailToStart   bool
-	shouldFailToConnect bool
+	running           bool
+	shouldFailToStart bool
+	shouldExitEarly   bool
+
+	// Failure modes that will be passed on to the Connector
+	shouldFailToConnectCount uint
+	shouldFailToExecuteCount uint
 }
 
 func (l *mockLauncher) Prepare() error {
@@ -29,9 +33,10 @@ func (l *mockLauncher) Start() (Connector, error) {
 	}
 
 	l.Prepare()
-	l.running = true
+	l.running = !l.shouldExitEarly
 
-	return &mockConnector{shouldFailToConnect: l.shouldFailToConnect}, nil
+	return &mockConnector{shouldFailToConnectCount: l.shouldFailToConnectCount,
+		shouldFailToExecuteCount: l.shouldFailToExecuteCount}, nil
 }
 
 func (l *mockLauncher) IsRunning() (bool, error) {

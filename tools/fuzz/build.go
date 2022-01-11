@@ -183,13 +183,14 @@ func NewLocalFuchsiaBuild() (Build, error) {
 
 	clangDir := filepath.Join(prebuiltDir, "third_party/clang", platform)
 	qemuDir := filepath.Join(prebuiltDir, "third_party/qemu", platform)
+	imgDir := filepath.Join(buildDir, "obj", "build", "images", "fuchsia", "fuchsia")
 
 	build := &BaseBuild{
 		Paths: map[string]string{
-			"zbi":             filepath.Join(buildDir, "fuchsia.zbi"),
+			"zbi":             filepath.Join(imgDir, "fuchsia.zbi"),
 			"fvm":             filepath.Join(buildDir, hostDir, "fvm"),
 			"zbitool":         filepath.Join(buildDir, hostDir, "zbi"),
-			"blk":             filepath.Join(buildDir, "obj", "build", "images", "fvm.blk"),
+			"blk":             filepath.Join(imgDir, "fvm.blk"),
 			"qemu":            filepath.Join(qemuDir, "bin", binary),
 			"kernel":          filepath.Join(buildDir, kernel),
 			"symbolize":       filepath.Join(buildDir, hostDir, "symbolize"),
