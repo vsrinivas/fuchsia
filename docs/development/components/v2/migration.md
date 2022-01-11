@@ -1856,9 +1856,10 @@ the following to route directory access to your test component:
 If your component uses any of the following features, follow the instructions in
 this section to migrate device access:
 
-Feature | Description                      | Path
-------- | -------------------------------- | --------------
-`dev`   | Device driver entries in `devfs` | `/dev/class/*`
+Feature | Description                                      | Path
+------- | ------------------------------------------------ | -------------------------
+`dev`   | Entries in `devfs`                               | `/dev/*`
+`dev`   | [Legacy device entries](#legacy-device-entries)  | `/dev/null`, `/dev/zero`
 
 [Device filesystem][device-model] access is supported in Components v2 using
 [directory capabilities][directory-capabilities].
@@ -1924,6 +1925,17 @@ the appropriate device path to your component from its parent realm.
     ],
 }
 ```
+
+#### Legacy device entries {#legacy-device-entries}
+
+Components v2 does not route the following pseudo-device entries to components:
+
+* `/dev/zero`: Create an equivalent (pseudo-)file in your code if necessary.
+  For example, see the Chromium [`ScopedDevZero`][scoped-dev-zero-fuchsia]
+  implementation.
+
+* `/dev/null`: Use [fdio_fd_null_create] to get a file descriptor to a file
+  that acts like `/dev/null`.
 
 #### Device directories in tests
 
@@ -2060,6 +2072,7 @@ described in the [Vulkan documentation][vulkan].
 [example-fonts]: https://fuchsia.googlesource.com/fuchsia/+/cd29e692c5bfdb0979161e52572f847069e10e2f/src/fonts/meta/fonts.cmx
 [example-package-rule]: https://fuchsia.googlesource.com/fuchsia/+/cd29e692c5bfdb0979161e52572f847069e10e2f/src/fonts/BUILD.gn
 [example-services-config]: /src/sys/sysmgr/config/services.config
+[fdio_fd_null_create]: /sdk/lib/fdio/include/lib/fdio/fdio.h#48
 [ffx-inspect]: https://fuchsia.dev/reference/tools/sdk/ffx.md#inspect
 [fshost-lifecycle]: /src/storage/fshost/main.cc
 [fuchsia-test-facets]: /docs/concepts/testing/v1_test_component.md
@@ -2089,6 +2102,7 @@ described in the [Vulkan documentation][vulkan].
 [realm-builder]:/docs/development/components/v2/realm_builder.md
 [resource-data]: /docs/development/components/data.md#hermetic_data_files_with_resource
 [rust-lifecycle]: /examples/components/lifecycle
+[scoped-dev-zero-fuchsia]: https://source.chromium.org/chromium/chromium/src/+/main:base/test/scoped_dev_zero_fuchsia.cc
 [service-directory-cpp]: /sdk/lib/sys/cpp/service_directory.h
 [src-security-policy]: /src/security/policy/component_manager_policy.json5
 [storage-capabilities]: /docs/concepts/components/v2/capabilities/storage.md
