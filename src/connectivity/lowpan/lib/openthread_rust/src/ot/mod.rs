@@ -82,6 +82,9 @@ pub use link::*;
 pub(crate) mod types;
 pub use types::*;
 
+mod thread;
+pub use thread::*;
+
 mod state;
 pub use state::*;
 

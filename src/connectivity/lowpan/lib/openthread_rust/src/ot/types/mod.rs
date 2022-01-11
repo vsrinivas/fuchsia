@@ -7,6 +7,8 @@ mod channel_mask;
 mod device_role;
 mod ext_address;
 mod extended_pan_id;
+mod ipv6;
+mod link_mode;
 mod log_region;
 mod network_key;
 mod network_name;
@@ -18,6 +20,8 @@ pub use channel_mask::*;
 pub use device_role::*;
 pub use ext_address::*;
 pub use extended_pan_id::*;
+pub use ipv6::*;
+pub use link_mode::*;
 pub use log_region::*;
 pub use network_key::*;
 pub use network_name::*;
@@ -33,3 +37,8 @@ pub type Decibels = i8;
 
 /// Channel index value. Identifies an individual radio channel for transmitting and receiving.
 pub type ChannelIndex = u8;
+
+/// Mesh-Local Prefix.
+///
+/// Same type as [`Ip6NetworkPrefix`]. Functional equivalent of [`otsys::otMeshLocalPrefix`](crate::otsys::otMeshLocalPrefix).
+pub type MeshLocalPrefix = Ip6NetworkPrefix;

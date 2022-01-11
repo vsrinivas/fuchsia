@@ -34,6 +34,8 @@ pub mod prelude {
     pub use ot::Reset as _;
     pub use ot::State as _;
     pub use ot::Tasklets as _;
+    pub use ot::Thread as _;
+
     pub use ot::TaskletsStreamExt as _;
     pub use std::convert::TryFrom as _;
     pub use std::convert::TryInto as _;
@@ -54,6 +56,6 @@ pub(crate) mod prelude_internal {
     pub use log::{debug, error, info, trace, warn};
     pub use num::FromPrimitive as _;
     pub use ot::Result;
-    pub use ot::{types::*, Boxable, Error, Instance, Link, Platform, Tasklets};
+    pub use ot::{types::*, Boxable, Error, Instance, Link, Platform, Tasklets, Thread};
     pub use static_assertions as sa;
 }
