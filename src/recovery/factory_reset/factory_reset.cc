@@ -5,25 +5,11 @@
 #include "factory_reset.h"
 
 #include <dirent.h>
-#include <errno.h>
 #include <fcntl.h>
-#include <fuchsia/device/c/fidl.h>
-#include <fuchsia/hardware/block/c/fidl.h>
-#include <fuchsia/hardware/block/encrypted/c/fidl.h>
-#include <fuchsia/sysinfo/c/fidl.h>
-#include <lib/fdio/cpp/caller.h>
 #include <lib/fdio/fdio.h>
+#include <lib/syslog/cpp/macros.h>
 #include <lib/zx/channel.h>
-#include <limits.h>
-#include <stdio.h>
-#include <unistd.h>
 #include <zircon/status.h>
-#include <zircon/syscalls.h>
-#include <zircon/syscalls/system.h>
-
-#include <string_view>
-
-#include <fbl/string_buffer.h>
 
 #include "src/lib/storage/fs_management/cpp/mount.h"
 #include "src/security/kms-stateless/kms-stateless.h"
@@ -44,15 +30,16 @@ zx_status_t ShredBlockDevice(fbl::unique_fd fd, fbl::unique_fd devfs_root_fd) {
   zx::channel driver_chan;
   status = volume.OpenClient(zx::sec(5), driver_chan);
   if (status != ZX_OK) {
-    fprintf(stderr, "Couldn't open channel to zxcrypt volume manager: %d (%s)\n", status,
-            zx_status_get_string(status));
+    FX_LOGS(ERROR) << "Couldn't open channel to zxcrypt volume manager: " << status << " ("
+                   << zx_status_get_string(status) << ")";
     return status;
   }
 
   zxcrypt::EncryptedVolumeClient zxc_manager(std::move(driver_chan));
   status = zxc_manager.Shred();
   if (status != ZX_OK) {
-    fprintf(stderr, "Couldn't shred volume: %d (%s)\n", status, zx_status_get_string(status));
+    FX_LOGS(ERROR) << "Couldn't shred volume: " << status << " (" << zx_status_get_string(status)
+                   << ")";
     return status;
   }
 
@@ -68,7 +55,7 @@ FactoryReset::FactoryReset(fbl::unique_fd dev_fd,
 zx_status_t FactoryReset::Shred() const {
   fbl::unique_fd block_dir(openat(dev_fd_.get(), kBlockPath, O_RDONLY | O_DIRECTORY));
   if (!block_dir) {
-    fprintf(stderr, "Error opening %s\n", kBlockPath);
+    FX_LOGS(ERROR) << "Error opening " << kBlockPath;
     return ZX_ERR_NOT_FOUND;
   }
   struct dirent* de;
@@ -94,7 +81,7 @@ zx_status_t FactoryReset::Shred() const {
 void FactoryReset::Reset(ResetCallback callback) {
   zx_status_t status = Shred();
   if (status != ZX_OK) {
-    fprintf(stderr, "FactoryReset: Shred failed: %d (%s)\n", status, zx_status_get_string(status));
+    FX_LOGS(ERROR) << "Shred failed: " << status << " (" << zx_status_get_string(status) << ")";
     callback(std::move(status));
     return;
   }
@@ -102,12 +89,12 @@ void FactoryReset::Reset(ResetCallback callback) {
   uint8_t key_info[kms_stateless::kExpectedKeyInfoSize] = "zxcrypt";
   status = kms_stateless::RotateHardwareDerivedKeyFromService(key_info);
   if (status == ZX_ERR_NOT_SUPPORTED) {
-    fprintf(stderr,
-            "FactoryReset: The device does not support rotatable hardware keys. Ignoring.\n");
+    FX_LOGS(ERROR)
+        << "FactoryReset: The device does not support rotatable hardware keys. Ignoring.";
     status = ZX_OK;
   } else if (status != ZX_OK) {
-    fprintf(stderr, "FactoryReset: RotateHardwareDerivedKey() failed: %d (%s)\n", status,
-            zx_status_get_string(status));
+    FX_LOGS(ERROR) << "FactoryReset: RotateHardwareDerivedKey() failed: " << status << " ("
+                   << zx_status_get_string(status) << ")";
     callback(std::move(status));
     return;
   }

@@ -1,0 +1,37 @@
+{
+    include: [ "syslog/client.shard.cml" ],
+    program: {
+        runner: "elf",
+        binary: "bin/factory_reset",
+    },
+    capabilities: [
+        { protocol: "fuchsia.recovery.FactoryReset" },
+    ],
+    use: [
+        {
+            protocol: [
+                "fuchsia.hardware.power.statecontrol.Admin",
+                "fuchsia.tee.Application.808032e0-fd9e-4e6f-8896-544735c98480",
+                "fuchsia.tee.DeviceInfo",
+            ],
+        },
+
+        // Ideally we'd only have access to a narrow subset of appropriate devices, but
+        // due to lack of driver support for accessing related devices, we need
+        // the whole /dev topology to get access to the zxcrypt child of a particular
+        // block device, which we require to shred volumes.  This is currently only
+        // achievable via constructing topological paths, which means we need access to
+        // the root of the device topology.
+        {
+            directory: "dev",
+            rights: [ "rw*" ],
+            path: "/dev",
+        },
+    ],
+    expose: [
+        {
+            protocol: "fuchsia.recovery.FactoryReset",
+            from: "self",
+        },
+    ],
+}
