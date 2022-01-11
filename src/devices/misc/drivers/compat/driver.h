@@ -10,6 +10,7 @@
 #include <lib/fpromise/scope.h>
 #include <lib/service/llcpp/outgoing_directory.h>
 
+#include "src/devices/lib/driver2/devfs_exporter.h"
 #include "src/devices/lib/driver2/logger.h"
 #include "src/devices/lib/driver2/namespace.h"
 #include "src/devices/misc/drivers/compat/device.h"
@@ -39,6 +40,8 @@ class Driver {
   // Logs a message for the DFv1 driver.
   void Log(FuchsiaLogSeverity severity, const char* tag, const char* file, int line,
            const char* msg, va_list args);
+
+  zx_status_t AddDevice(Device* parent, device_add_args_t* args, zx_device_t** out);
 
  private:
   // Run the driver at `driver_path`.
@@ -74,6 +77,9 @@ class Driver {
   const std::string url_;
   Device device_;
 
+  // When this driver creates a new Device, that Device's protocol will get this id number.
+  uint32_t next_device_id_ = 0;
+
   void* library_ = nullptr;
   zx_driver_rec_t* record_ = nullptr;
   void* context_ = nullptr;
@@ -81,6 +87,8 @@ class Driver {
   // API resources.
   driver::Logger inner_logger_;
   zx::resource root_resource_;
+
+  driver::DevfsExporter exporter_;
 
   // NOTE: Must be the last member.
   fpromise::scope scope_;

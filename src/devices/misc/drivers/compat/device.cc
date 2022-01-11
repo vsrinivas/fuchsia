@@ -7,7 +7,9 @@
 #include <lib/async/cpp/task.h>
 #include <lib/ddk/binding_priv.h>
 #include <lib/stdcompat/span.h>
+#include <zircon/errors.h>
 
+#include "lib/ddk/device.h"
 #include "src/devices/lib/compat/symbols.h"
 
 namespace fdf = fuchsia_driver_framework;
@@ -50,6 +52,12 @@ Device::Device(std::string_view name, void* context, const zx_protocol_device_t*
       dispatcher_(dispatcher),
       parent_(parent),
       linked_device_(linked_device ? **linked_device : *this) {}
+
+Device::~Device() {
+  if (vnode_teardown_callback_) {
+    (*vnode_teardown_callback_)();
+  }
+}
 
 zx_device_t* Device::ZxDevice() { return static_cast<zx_device_t*>(this); }
 
@@ -230,6 +238,13 @@ zx_status_t Device::GetMetadataSize(uint32_t type, size_t* out_size) {
   auto& [_, metadata] = *it;
   *out_size = metadata.size();
   return ZX_OK;
+}
+
+zx_status_t Device::MessageOp(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
+  if (!HasOp(ops_, &zx_protocol_device_t::message)) {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+  return ops_->message(context_, msg, txn);
 }
 
 }  // namespace compat

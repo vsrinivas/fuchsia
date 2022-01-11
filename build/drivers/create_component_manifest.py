@@ -67,11 +67,16 @@ def main():
             'runner': 'driver',
             'binary': program,
             'bind': bind
-        }
+        },
     }
     if args.is_v1:
         manifest["program"]["binary"] = "driver/compat.so"
         manifest["program"]["compat"] = program
+        manifest["include"] = [
+            'inspect/client.shard.cml',
+            'syslog/client.shard.cml',
+        ]
+        manifest['use'] = [{'protocol': "fuchsia.device.fs.Exporter"}]
     else:
         manifest["program"]["binary"] = program
 

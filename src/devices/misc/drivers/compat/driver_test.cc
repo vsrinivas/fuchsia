@@ -166,6 +166,9 @@ class DriverTest : public gtest::TestLoopFixture {
       } else if (request->path.get() == fidl::DiscoverableProtocolName<fboot::Items>) {
         fidl::ServerEnd<fboot::Items> server_end(request->object.TakeChannel());
         fidl::BindServer(dispatcher(), std::move(server_end), &items_);
+      } else if (request->path.get() ==
+                 fidl::DiscoverableProtocolName<fuchsia_device_fs::Exporter>) {
+        // TODO: If the unit tests need a working Exporter add it here.
       } else {
         FAIL() << "Unexpected service: " << request->path.get();
       }

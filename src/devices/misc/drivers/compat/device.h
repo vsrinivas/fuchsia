@@ -5,6 +5,7 @@
 #ifndef SRC_DEVICES_MISC_DRIVERS_COMPAT_DEVICE_H_
 #define SRC_DEVICES_MISC_DRIVERS_COMPAT_DEVICE_H_
 
+#include <fidl/fuchsia.device/cpp/wire.h>
 #include <fidl/fuchsia.driver.framework/cpp/wire.h>
 #include <lib/ddk/device.h>
 #include <lib/ddk/driver.h>
@@ -26,6 +27,8 @@ class Device : public std::enable_shared_from_this<Device> {
          std::optional<Device*> parent, std::optional<Device*> linked_device,
          driver::Logger& logger, async_dispatcher_t* dispatcher);
 
+  ~Device();
+
   zx_device_t* ZxDevice();
 
   // Binds a device to a DFv2 node.
@@ -43,6 +46,14 @@ class Device : public std::enable_shared_from_this<Device> {
   zx_status_t AddMetadata(uint32_t type, const void* data, size_t size);
   zx_status_t GetMetadata(uint32_t type, void* buf, size_t buflen, size_t* actual);
   zx_status_t GetMetadataSize(uint32_t type, size_t* out_size);
+  zx_status_t MessageOp(fidl_incoming_msg_t* msg, fidl_txn_t* txn);
+
+  // Set a callback to tear down any Vnodes associated with the Device.
+  // This will be called in ~Device, so that the Device will always
+  // outlive the Vnode.
+  void SetVnodeTeardownCallback(fit::callback<void()> cb) {
+    vnode_teardown_callback_ = std::move(cb);
+  }
 
  private:
   using Metadata = std::vector<uint8_t>;
@@ -57,6 +68,8 @@ class Device : public std::enable_shared_from_this<Device> {
   const zx_protocol_device_t* const ops_;
   driver::Logger& logger_;
   async_dispatcher_t* const dispatcher_;
+
+  std::optional<fit::callback<void()>> vnode_teardown_callback_;
 
   // The device's parent. If this field is set then the Device ptr is guaranteed
   // to be non-null. The parent is also guaranteed to outlive its child.

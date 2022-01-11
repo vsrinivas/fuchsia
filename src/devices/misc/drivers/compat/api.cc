@@ -10,7 +10,7 @@
 extern "C" {
 __EXPORT zx_status_t device_add_from_driver(zx_driver_t* drv, zx_device_t* parent,
                                             device_add_args_t* args, zx_device_t** out) {
-  return parent->Add(args, out);
+  return drv->AddDevice(parent, args, out);
 }
 
 __EXPORT void device_init_reply(zx_device_t* dev, zx_status_t status,

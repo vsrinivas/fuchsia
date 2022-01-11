@@ -6,6 +6,7 @@
 
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/ddk/binding_priv.h>
+#include <lib/fidl/llcpp/connect_service.h>
 #include <lib/fpromise/bridge.h>
 #include <lib/service/llcpp/service.h>
 #include <zircon/dlfcn.h>
@@ -14,6 +15,7 @@
 #include "src/devices/lib/driver2/promise.h"
 #include "src/devices/lib/driver2/record_cpp.h"
 #include "src/devices/lib/driver2/start_args.h"
+#include "src/devices/misc/drivers/compat/devfs_vnode.h"
 #include "src/devices/misc/drivers/compat/loader.h"
 
 namespace fboot = fuchsia_boot;
@@ -276,6 +278,15 @@ result<void, zx_status_t> Driver::LoadDriver(std::tuple<zx::vmo, zx::vmo>& vmos)
     return error(inner_logger.status_value());
   }
   inner_logger_ = std::move(*inner_logger);
+
+  // Create the devfs exporter.
+  auto exporter =
+      driver::DevfsExporter::Create(ns_, dispatcher_, outgoing_.vfs(), outgoing_.svc_dir());
+  if (exporter.is_error()) {
+    return error(exporter.error_value());
+  }
+  exporter_ = std::move(*exporter);
+
   return ok();
 }
 
@@ -329,6 +340,43 @@ void* Driver::Context() const { return context_; }
 void Driver::Log(FuchsiaLogSeverity severity, const char* tag, const char* file, int line,
                  const char* msg, va_list args) {
   inner_logger_.logvf(severity, tag, file, line, msg, args);
+}
+
+zx_status_t Driver::AddDevice(Device* parent, device_add_args_t* args, zx_device_t** out) {
+  zx_status_t status = parent->Add(args, out);
+  if (status != ZX_OK) {
+    return status;
+  }
+  zx_device_t* child = *out;
+  std::string child_protocol = "device-" + std::to_string(next_device_id_);
+  next_device_id_++;
+
+  // Create a devfs entry for the new device.
+  auto vnode = fbl::MakeRefCounted<DevfsVnode>(child->ZxDevice(), logger_);
+  outgoing_.svc_dir()->AddEntry(child_protocol, vnode);
+  // TODO(fxbug.dev/90629): Replace this path with a DFv1 topological path.
+  std::string devfs_name = std::string("compat/") + child->Name();
+  // TODO(fxdebug.dev/90735): When DriverDevelopment works in DFv2, don't print this.
+  FDF_LOG(INFO, "Created /dev/%s", devfs_name.data());
+  // Export the devfs entry. Once the export is complete, put a callback on the
+  // Device so that when the Device is removed the Vnode will also be removed.
+  // This assumes that Driver will always outlive Device.
+  auto task =
+      exporter_.Export(child_protocol, devfs_name, args->proto_id)
+          .and_then([this, child_protocol, child, vnode = std::move(vnode)]() {
+            child->SetVnodeTeardownCallback([this, child_protocol, vnode = std::move(vnode)]() {
+              outgoing_.svc_dir()->RemoveEntry(child_protocol);
+              outgoing_.vfs().CloseAllConnectionsForVnode(*vnode, {});
+            });
+          })
+          .or_else([this](const zx_status_t& status) {
+            FDF_LOG(ERROR, "Failed Export to devfs: %s", zx_status_get_string(status));
+            return ok();
+          })
+          .wrap_with(scope_);
+  executor_.schedule_task(std::move(task));
+
+  return status;
 }
 
 }  // namespace compat
