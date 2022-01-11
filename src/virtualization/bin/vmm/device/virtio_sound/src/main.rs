@@ -156,7 +156,13 @@ async fn run_virtio_sound(
 ) -> Result<(), Error> {
     // First method call must be Start().
     let (start_info, enable_input, responder) = match con.try_next().await? {
-        Some(VirtioSoundRequest::Start { start_info, enable_input, responder }) => {
+        Some(VirtioSoundRequest::Start {
+            start_info,
+            enable_input,
+            enable_verbose_logging,
+            responder,
+        }) => {
+            throttled_log::log_everything(enable_verbose_logging);
             (start_info, enable_input, responder)
         }
         Some(msg) => {

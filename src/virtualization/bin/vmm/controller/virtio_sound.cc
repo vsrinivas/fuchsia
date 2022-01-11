@@ -32,7 +32,8 @@ zx_status_t VirtioSound::Start(const zx::guest& guest, fuchsia::sys::Launcher* l
   }
 
   uint32_t features, jacks, streams, chmaps;
-  status = sound_->Start(std::move(start_info), enable_input, &features, &jacks, &streams, &chmaps);
+  status = sound_->Start(std::move(start_info), enable_input, false /* enable_verbose_logging */,
+                         &features, &jacks, &streams, &chmaps);
   if (status != ZX_OK) {
     return status;
   }

@@ -6,7 +6,8 @@
 #![allow(unused)]
 
 use {
-    fuchsia_zircon as zx, once_cell::sync::Lazy, std::cell::RefCell, std::rc::Rc, std::sync::Mutex,
+    fuchsia_zircon as zx, once_cell::sync::Lazy, std::cell::RefCell, std::rc::Rc,
+    std::sync::atomic::AtomicBool, std::sync::Mutex,
 };
 
 /// A simple rate limiter
@@ -28,24 +29,12 @@ trait Clock {
 }
 
 impl<C: Clock> RateLimiter<C> {
-    fn new_from_rate(clock: C, tokens_per_period: i64, period: zx::Duration) -> Self {
+    fn new(clock: C, tokens_per_period: i64, period: zx::Duration) -> Self {
         RateLimiter {
             inner: Mutex::new(TokenBucket {
                 last_update: clock.now(),
                 period,
                 tokens_per_period,
-                tokens: 0,
-                clock,
-            }),
-        }
-    }
-
-    fn new_infinite(clock: C) -> Self {
-        RateLimiter {
-            inner: Mutex::new(TokenBucket {
-                last_update: clock.now(),
-                period: zx::Duration::from_nanos(0),
-                tokens_per_period: 0,
                 tokens: 0,
                 clock,
             }),
@@ -82,17 +71,26 @@ impl Clock for Monotonic {
 }
 
 // Allow bursts of up to 30 log messages, but throttle to 1 log/s on average.
-#[cfg(not(test))]
-static LOG_LIMITER: Lazy<RateLimiter<Monotonic>> =
-    Lazy::new(|| RateLimiter::new_from_rate(Monotonic, 30, zx::Duration::from_seconds(30)));
+static LIMITER: Lazy<RateLimiter<Monotonic>> =
+    Lazy::new(|| RateLimiter::new(Monotonic, 30, zx::Duration::from_seconds(30)));
 
 // Log everything in tests.
 #[cfg(test)]
-static LOG_LIMITER: Lazy<RateLimiter<Monotonic>> =
-    Lazy::new(|| RateLimiter::new_infinite(Monotonic));
+static LOG_EVERYTHING: Lazy<AtomicBool> = Lazy::new(|| AtomicBool::new(false));
+
+#[cfg(not(test))]
+static LOG_EVERYTHING: Lazy<AtomicBool> = Lazy::new(|| AtomicBool::new(true));
 
 pub fn acquire_one() -> bool {
-    LOG_LIMITER.acquire_one()
+    if LOG_EVERYTHING.load(std::sync::atomic::Ordering::Relaxed) {
+        true
+    } else {
+        LIMITER.acquire_one()
+    }
+}
+
+pub fn log_everything(enabled: bool) {
+    LOG_EVERYTHING.store(enabled, std::sync::atomic::Ordering::Relaxed);
 }
 
 macro_rules! debug {
@@ -154,22 +152,9 @@ mod tests {
     }
 
     #[test]
-    fn test_infinite() {
+    fn test() {
         let clock = FakeClock::new(zx::Time::from_nanos(0));
-        let limiter = RateLimiter::<FakeClock>::new_infinite(clock);
-
-        assert!(limiter.acquire_one());
-        assert!(limiter.acquire_one());
-        assert!(limiter.acquire_one());
-        assert!(limiter.acquire_one());
-        assert!(limiter.acquire_one());
-    }
-
-    #[test]
-    fn test_limited() {
-        let clock = FakeClock::new(zx::Time::from_nanos(0));
-        let limiter =
-            RateLimiter::<FakeClock>::new_from_rate(clock.clone(), 2, zx::Duration::from_nanos(2));
+        let limiter = RateLimiter::<FakeClock>::new(clock.clone(), 2, zx::Duration::from_nanos(2));
 
         // Starts empty.
         assert!(!limiter.acquire_one());

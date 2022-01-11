@@ -359,8 +359,9 @@ class VirtioSoundTestBase : public TestWithDevice {
     RunLoopUntilIdle();
 
     uint32_t features, jacks, streams, chmaps;
-    ASSERT_EQ(ZX_OK, sound_->Start(std::move(start_info), EnableInput, &features, &jacks, &streams,
-                                   &chmaps));
+    ASSERT_EQ(ZX_OK,
+              sound_->Start(std::move(start_info), EnableInput, true /* enable_verbose_logging */,
+                            &features, &jacks, &streams, &chmaps));
     ASSERT_EQ(features, 0u);
     ASSERT_EQ(jacks, kNumJacks);
     if (EnableInput) {
