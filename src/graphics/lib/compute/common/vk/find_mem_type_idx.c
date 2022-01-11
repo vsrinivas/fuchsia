@@ -49,14 +49,16 @@ vk_find_mem_type_idx(VkPhysicalDeviceMemoryProperties const * pdmp,
 
   while (vk_spn_ffs(&lsb, memoryTypeBits) != 0)
     {
-      // clear it
-      memoryTypeBits &= ~BITS_TO_MASK_MACRO(lsb + 1);
+      // clear this bit
+      memoryTypeBits ^= (1u << lsb);
 
       // otherwise, find first match...
       VkMemoryPropertyFlags const common = pdmp->memoryTypes[lsb].propertyFlags & mpf;
 
       if (common == mpf)
-        return lsb;
+        {
+          return lsb;
+        }
     }
 
   return UINT32_MAX;
