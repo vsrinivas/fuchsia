@@ -162,16 +162,22 @@ class VmAddressRegionOrMapping
   // Check if the given *arch_mmu_flags* are allowed under this
   // regions *flags_*
   bool is_valid_mapping_flags(uint arch_mmu_flags) {
-    if (!(flags_ & VMAR_FLAG_CAN_MAP_READ) && (arch_mmu_flags & ARCH_MMU_FLAG_PERM_READ)) {
-      return false;
+    // Work out what flags we must support for these arch_mmu_flags
+    uint32_t needed = 0;
+    if (arch_mmu_flags & ARCH_MMU_FLAG_PERM_READ) {
+      needed |= VMAR_FLAG_CAN_MAP_READ;
     }
-    if (!(flags_ & VMAR_FLAG_CAN_MAP_WRITE) && (arch_mmu_flags & ARCH_MMU_FLAG_PERM_WRITE)) {
-      return false;
+    if (arch_mmu_flags & ARCH_MMU_FLAG_PERM_WRITE) {
+      needed |= VMAR_FLAG_CAN_MAP_WRITE;
     }
-    if (!(flags_ & VMAR_FLAG_CAN_MAP_EXECUTE) && (arch_mmu_flags & ARCH_MMU_FLAG_PERM_EXECUTE)) {
-      return false;
+    if (arch_mmu_flags & ARCH_MMU_FLAG_PERM_EXECUTE) {
+      needed |= VMAR_FLAG_CAN_MAP_EXECUTE;
     }
-    return true;
+    // Mask out the actual relevant mappings flags we have.
+    const uint32_t actual =
+        flags_ & (VMAR_FLAG_CAN_MAP_READ | VMAR_FLAG_CAN_MAP_WRITE | VMAR_FLAG_CAN_MAP_EXECUTE);
+    // Validate that every |needed| occurs in |actual|
+    return (needed & actual) == needed;
   }
 
   // Returns true if the instance is alive and reporting information that
