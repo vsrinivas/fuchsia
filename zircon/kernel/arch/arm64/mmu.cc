@@ -566,10 +566,9 @@ void ArmArchVmAspace::FreePageTable(void* vaddr, paddr_t paddr, ConsistencyManag
   pt_pages_--;
 }
 
-zx_status_t ArmArchVmAspace::SplitLargePage(vaddr_t vaddr, uint index_shift, uint page_size_shift,
-                                            vaddr_t pt_index, volatile pte_t* page_table,
-                                            ConsistencyManager& cm) {
-  DEBUG_ASSERT(index_shift > page_size_shift);
+zx_status_t ArmArchVmAspace::SplitLargePage(vaddr_t vaddr, uint index_shift, vaddr_t pt_index,
+                                            volatile pte_t* page_table, ConsistencyManager& cm) {
+  DEBUG_ASSERT(index_shift > page_size_shift_);
 
   const pte_t pte = page_table[pt_index];
   DEBUG_ASSERT((pte & MMU_PTE_DESCRIPTOR_MASK) == MMU_PTE_L012_DESCRIPTOR_BLOCK);
@@ -581,11 +580,11 @@ zx_status_t ArmArchVmAspace::SplitLargePage(vaddr_t vaddr, uint index_shift, uin
     return ret;
   }
 
-  const uint next_shift = (index_shift - (page_size_shift - 3));
+  const uint next_shift = (index_shift - (page_size_shift_ - 3));
 
   const auto new_page_table = static_cast<volatile pte_t*>(paddr_to_physmap(paddr));
   const auto new_desc_type =
-      (next_shift == page_size_shift) ? MMU_PTE_L3_DESCRIPTOR_PAGE : MMU_PTE_L012_DESCRIPTOR_BLOCK;
+      (next_shift == page_size_shift_) ? MMU_PTE_L3_DESCRIPTOR_PAGE : MMU_PTE_L012_DESCRIPTOR_BLOCK;
   const auto attrs = (pte & ~(MMU_PTE_OUTPUT_ADDR_MASK | MMU_PTE_DESCRIPTOR_MASK)) | new_desc_type;
 
   const uint next_size = 1U << next_shift;
@@ -676,15 +675,14 @@ void ArmArchVmAspace::FlushAsid() const {
 
 ssize_t ArmArchVmAspace::UnmapPageTable(vaddr_t vaddr, vaddr_t vaddr_rel, size_t size,
                                         EnlargeOperation enlarge, uint index_shift,
-                                        uint page_size_shift, volatile pte_t* page_table,
-                                        ConsistencyManager& cm) {
+                                        volatile pte_t* page_table, ConsistencyManager& cm) {
   const vaddr_t block_size = 1UL << index_shift;
   const vaddr_t block_mask = block_size - 1;
 
   LTRACEF(
       "vaddr 0x%lx, vaddr_rel 0x%lx, size 0x%lx, index shift %u, page_size_shift %u, page_table "
       "%p\n",
-      vaddr, vaddr_rel, size, index_shift, page_size_shift, page_table);
+      vaddr, vaddr_rel, size, index_shift, page_size_shift_, page_table);
 
   size_t unmap_size = 0;
   while (size) {
@@ -695,10 +693,10 @@ ssize_t ArmArchVmAspace::UnmapPageTable(vaddr_t vaddr, vaddr_t vaddr_rel, size_t
     pte_t pte = page_table[index];
 
     // If the input range partially covers a large page, attempt to split.
-    if (index_shift > page_size_shift &&
+    if (index_shift > page_size_shift_ &&
         (pte & MMU_PTE_DESCRIPTOR_MASK) == MMU_PTE_L012_DESCRIPTOR_BLOCK &&
         chunk_size != block_size) {
-      zx_status_t s = SplitLargePage(vaddr, index_shift, page_size_shift, index, page_table, cm);
+      zx_status_t s = SplitLargePage(vaddr, index_shift, index, page_table, cm);
       // If the split failed then check if we are allowed to unmap extra, and if so just fall
       // through and unmap the entire large page.
       if (likely(s == ZX_OK)) {
@@ -707,23 +705,22 @@ ssize_t ArmArchVmAspace::UnmapPageTable(vaddr_t vaddr, vaddr_t vaddr_rel, size_t
         return s;
       }
     }
-    if (index_shift > page_size_shift &&
+    if (index_shift > page_size_shift_ &&
         (pte & MMU_PTE_DESCRIPTOR_MASK) == MMU_PTE_L012_DESCRIPTOR_TABLE) {
       const paddr_t page_table_paddr = pte & MMU_PTE_OUTPUT_ADDR_MASK;
       volatile pte_t* next_page_table =
           static_cast<volatile pte_t*>(paddr_to_physmap(page_table_paddr));
 
       // Recurse a level.
-      ssize_t result =
-          UnmapPageTable(vaddr, vaddr_rem, chunk_size, enlarge, index_shift - (page_size_shift - 3),
-                         page_size_shift, next_page_table, cm);
+      ssize_t result = UnmapPageTable(vaddr, vaddr_rem, chunk_size, enlarge,
+                                      index_shift - (page_size_shift_ - 3), next_page_table, cm);
       if (result < 0) {
         return result;
       }
 
       // if we unmapped an entire page table leaf and/or the unmap made the level below us empty,
       // free the page table
-      if (chunk_size == block_size || page_table_is_clear(next_page_table, page_size_shift)) {
+      if (chunk_size == block_size || page_table_is_clear(next_page_table, page_size_shift_)) {
         LTRACEF("pte %p[0x%lx] = 0 (was page table phys %#lx)\n", page_table, index,
                 page_table_paddr);
         update_pte(&page_table[index], MMU_PTE_DESCRIPTOR_INVALID);
@@ -752,8 +749,7 @@ ssize_t ArmArchVmAspace::UnmapPageTable(vaddr_t vaddr, vaddr_t vaddr_rel, size_t
 
 ssize_t ArmArchVmAspace::MapPageTable(vaddr_t vaddr_in, vaddr_t vaddr_rel_in, paddr_t paddr_in,
                                       size_t size_in, pte_t attrs, uint index_shift,
-                                      uint page_size_shift, volatile pte_t* page_table,
-                                      ConsistencyManager& cm) {
+                                      volatile pte_t* page_table, ConsistencyManager& cm) {
   vaddr_t vaddr = vaddr_in;
   vaddr_t vaddr_rel = vaddr_rel_in;
   paddr_t paddr = paddr_in;
@@ -763,9 +759,9 @@ ssize_t ArmArchVmAspace::MapPageTable(vaddr_t vaddr_in, vaddr_t vaddr_rel_in, pa
   const vaddr_t block_mask = block_size - 1;
   LTRACEF("vaddr %#" PRIxPTR ", vaddr_rel %#" PRIxPTR ", paddr %#" PRIxPTR
           ", size %#zx, attrs %#" PRIx64 ", index shift %u, page_size_shift %u, page_table %p\n",
-          vaddr, vaddr_rel, paddr, size, attrs, index_shift, page_size_shift, page_table);
+          vaddr, vaddr_rel, paddr, size, attrs, index_shift, page_size_shift_, page_table);
 
-  if ((vaddr_rel | paddr | size) & ((1UL << page_size_shift) - 1)) {
+  if ((vaddr_rel | paddr | size) & ((1UL << page_size_shift_) - 1)) {
     TRACEF("not page aligned\n");
     return ZX_ERR_INVALID_ARGS;
   }
@@ -775,7 +771,7 @@ ssize_t ArmArchVmAspace::MapPageTable(vaddr_t vaddr_in, vaddr_t vaddr_rel_in, pa
     // Unmapping what we have just mapped in should never fail, and we should not have to enlarge
     // the unmap for it to succeed.
     ssize_t result = UnmapPageTable(vaddr_in, vaddr_rel_in, size_in - size, EnlargeOperation::No,
-                                    index_shift, page_size_shift, page_table, cm);
+                                    index_shift, page_table, cm);
     ASSERT(result >= 0);
   });
 
@@ -794,8 +790,6 @@ ssize_t ArmArchVmAspace::MapPageTable(vaddr_t vaddr_in, vaddr_t vaddr_rel_in, pa
       bool allocated_page_table = false;
       paddr_t page_table_paddr = 0;
       volatile pte_t* next_page_table = nullptr;
-
-      DEBUG_ASSERT(page_size_shift <= MMU_MAX_PAGE_SIZE_SHIFT);
 
       switch (pte & MMU_PTE_DESCRIPTOR_MASK) {
         case MMU_PTE_DESCRIPTOR_INVALID: {
@@ -844,9 +838,8 @@ ssize_t ArmArchVmAspace::MapPageTable(vaddr_t vaddr_in, vaddr_t vaddr_rel_in, pa
       }
       DEBUG_ASSERT(next_page_table);
 
-      ssize_t ret =
-          MapPageTable(vaddr, vaddr_rem, paddr, chunk_size, attrs,
-                       index_shift - (page_size_shift - 3), page_size_shift, next_page_table, cm);
+      ssize_t ret = MapPageTable(vaddr, vaddr_rem, paddr, chunk_size, attrs,
+                                 index_shift - (page_size_shift_ - 3), next_page_table, cm);
       if (ret < 0) {
         if (allocated_page_table) {
           // We just allocated this page table. The unmap in err will not clean it up as the size
@@ -855,7 +848,7 @@ ssize_t ArmArchVmAspace::MapPageTable(vaddr_t vaddr_in, vaddr_t vaddr_rel_in, pa
           // anything from that page table.
           // Since we just allocated it there should be nothing in it, otherwise the MapPageTable
           // call would not have failed.
-          DEBUG_ASSERT(page_table_is_clear(next_page_table, page_size_shift));
+          DEBUG_ASSERT(page_table_is_clear(next_page_table, page_size_shift_));
           update_pte(&page_table[index], MMU_PTE_DESCRIPTOR_INVALID);
 
           // We can safely defer TLB flushing as the consistency manager will not return the backing
@@ -873,7 +866,7 @@ ssize_t ArmArchVmAspace::MapPageTable(vaddr_t vaddr_in, vaddr_t vaddr_rel_in, pa
       }
 
       pte = paddr | attrs;
-      if (index_shift > page_size_shift) {
+      if (index_shift > page_size_shift_) {
         pte |= MMU_PTE_L012_DESCRIPTOR_BLOCK;
       } else {
         pte |= MMU_PTE_L3_DESCRIPTOR_PAGE;
@@ -894,8 +887,7 @@ ssize_t ArmArchVmAspace::MapPageTable(vaddr_t vaddr_in, vaddr_t vaddr_rel_in, pa
 
 zx_status_t ArmArchVmAspace::ProtectPageTable(vaddr_t vaddr_in, vaddr_t vaddr_rel_in,
                                               size_t size_in, pte_t attrs, uint index_shift,
-                                              uint page_size_shift, volatile pte_t* page_table,
-                                              ConsistencyManager& cm) {
+                                              volatile pte_t* page_table, ConsistencyManager& cm) {
   vaddr_t vaddr = vaddr_in;
   vaddr_t vaddr_rel = vaddr_rel_in;
   size_t size = size_in;
@@ -905,10 +897,10 @@ zx_status_t ArmArchVmAspace::ProtectPageTable(vaddr_t vaddr_in, vaddr_t vaddr_re
 
   LTRACEF("vaddr %#" PRIxPTR ", vaddr_rel %#" PRIxPTR ", size %#" PRIxPTR ", attrs %#" PRIx64
           ", index shift %u, page_size_shift %u, page_table %p\n",
-          vaddr, vaddr_rel, size, attrs, index_shift, page_size_shift, page_table);
+          vaddr, vaddr_rel, size, attrs, index_shift, page_size_shift_, page_table);
 
   // vaddr_rel and size must be page aligned
-  DEBUG_ASSERT(((vaddr_rel | size) & ((1UL << page_size_shift) - 1)) == 0);
+  DEBUG_ASSERT(((vaddr_rel | size) & ((1UL << page_size_shift_) - 1)) == 0);
 
   while (size) {
     const vaddr_t vaddr_rem = vaddr_rel & block_mask;
@@ -918,17 +910,17 @@ zx_status_t ArmArchVmAspace::ProtectPageTable(vaddr_t vaddr_in, vaddr_t vaddr_re
     pte_t pte = page_table[index];
 
     // If the input range partially covers a large page, split the page.
-    if (index_shift > page_size_shift &&
+    if (index_shift > page_size_shift_ &&
         (pte & MMU_PTE_DESCRIPTOR_MASK) == MMU_PTE_L012_DESCRIPTOR_BLOCK &&
         chunk_size != block_size) {
-      zx_status_t s = SplitLargePage(vaddr, index_shift, page_size_shift, index, page_table, cm);
+      zx_status_t s = SplitLargePage(vaddr, index_shift, index, page_table, cm);
       if (unlikely(s != ZX_OK)) {
         return s;
       }
       pte = page_table[index];
     }
 
-    if (index_shift > page_size_shift &&
+    if (index_shift > page_size_shift_ &&
         (pte & MMU_PTE_DESCRIPTOR_MASK) == MMU_PTE_L012_DESCRIPTOR_TABLE) {
       const paddr_t page_table_paddr = pte & MMU_PTE_OUTPUT_ADDR_MASK;
       volatile pte_t* next_page_table =
@@ -936,8 +928,8 @@ zx_status_t ArmArchVmAspace::ProtectPageTable(vaddr_t vaddr_in, vaddr_t vaddr_re
 
       // Recurse a level.
       zx_status_t status =
-          ProtectPageTable(vaddr, vaddr_rem, chunk_size, attrs, index_shift - (page_size_shift - 3),
-                           page_size_shift, next_page_table, cm);
+          ProtectPageTable(vaddr, vaddr_rem, chunk_size, attrs,
+                           index_shift - (page_size_shift_ - 3), next_page_table, cm);
       if (unlikely(status != ZX_OK)) {
         return status;
       }
@@ -957,20 +949,17 @@ zx_status_t ArmArchVmAspace::ProtectPageTable(vaddr_t vaddr_in, vaddr_t vaddr_re
   return ZX_OK;
 }
 
-size_t ArmArchVmAspace::HarvestAccessedPageTable(size_t* entry_limit, vaddr_t vaddr,
-                                                 vaddr_t vaddr_rel_in, size_t size,
-                                                 const uint index_shift, const uint page_size_shift,
-                                                 NonTerminalAction non_terminal_action,
-                                                 TerminalAction terminal_action,
-                                                 volatile pte_t* page_table, ConsistencyManager& cm,
-                                                 bool* unmapped_out) {
+size_t ArmArchVmAspace::HarvestAccessedPageTable(
+    size_t* entry_limit, vaddr_t vaddr, vaddr_t vaddr_rel_in, size_t size, const uint index_shift,
+    NonTerminalAction non_terminal_action, TerminalAction terminal_action,
+    volatile pte_t* page_table, ConsistencyManager& cm, bool* unmapped_out) {
   const vaddr_t block_size = 1UL << index_shift;
   const vaddr_t block_mask = block_size - 1;
 
   vaddr_t vaddr_rel = vaddr_rel_in;
 
   // vaddr_rel and size must be page aligned
-  DEBUG_ASSERT(((vaddr_rel | size) & ((1UL << page_size_shift) - 1)) == 0);
+  DEBUG_ASSERT(((vaddr_rel | size) & ((1UL << page_size_shift_) - 1)) == 0);
 
   size_t harvested_size = 0;
 
@@ -984,12 +973,12 @@ size_t ArmArchVmAspace::HarvestAccessedPageTable(size_t* entry_limit, vaddr_t va
 
     pte_t pte = page_table[index];
 
-    if (index_shift > page_size_shift &&
+    if (index_shift > page_size_shift_ &&
         (pte & MMU_PTE_DESCRIPTOR_MASK) == MMU_PTE_L012_DESCRIPTOR_BLOCK &&
         chunk_size != block_size) {
       // Ignore large pages, we do not support harvesting accessed bits from them. Having this empty
       // if block simplifies the overall logic.
-    } else if (index_shift > page_size_shift &&
+    } else if (index_shift > page_size_shift_ &&
                (pte & MMU_PTE_DESCRIPTOR_MASK) == MMU_PTE_L012_DESCRIPTOR_TABLE) {
       const paddr_t page_table_paddr = pte & MMU_PTE_OUTPUT_ADDR_MASK;
       volatile pte_t* next_page_table =
@@ -1003,11 +992,11 @@ size_t ArmArchVmAspace::HarvestAccessedPageTable(size_t* entry_limit, vaddr_t va
       if (pte & MMU_PTE_ATTR_RES_SOFTWARE_AF) {
         bool unmapped = false;
         chunk_size = HarvestAccessedPageTable(
-            entry_limit, vaddr, vaddr_rem, chunk_size, index_shift - (page_size_shift - 3),
-            page_size_shift, non_terminal_action, terminal_action, next_page_table, cm, &unmapped);
+            entry_limit, vaddr, vaddr_rem, chunk_size, index_shift - (page_size_shift_ - 3),
+            non_terminal_action, terminal_action, next_page_table, cm, &unmapped);
         // This was accessed so we don't necessarily want to unmap it, unless our recursive call
         // caused the page table to be empty, in which case we are obligated to.
-        do_unmap = (unmapped && page_table_is_clear(next_page_table, page_size_shift));
+        do_unmap = (unmapped && page_table_is_clear(next_page_table, page_size_shift_));
         // If we processed till the end of sub page table, and we are not retaining page tables,
         // then we can clear the AF as we know we will not have to process entries from this one
         // again.
@@ -1021,10 +1010,9 @@ size_t ArmArchVmAspace::HarvestAccessedPageTable(size_t* entry_limit, vaddr_t va
         // Unmapping an exact block, which should not need enlarging and hence should never be able
         // to fail.
         ssize_t result = UnmapPageTable(vaddr, vaddr_rem, chunk_size, EnlargeOperation::No,
-                                        index_shift - (page_size_shift - 3), page_size_shift,
-                                        next_page_table, cm);
+                                        index_shift - (page_size_shift_ - 3), next_page_table, cm);
         ASSERT(result >= 0);
-        DEBUG_ASSERT(page_table_is_clear(next_page_table, page_size_shift));
+        DEBUG_ASSERT(page_table_is_clear(next_page_table, page_size_shift_));
         update_pte(&page_table[index], MMU_PTE_DESCRIPTOR_INVALID);
 
         // We can safely defer TLB flushing as the consistency manager will not return the backing
@@ -1077,15 +1065,15 @@ size_t ArmArchVmAspace::HarvestAccessedPageTable(size_t* entry_limit, vaddr_t va
 }
 
 void ArmArchVmAspace::MarkAccessedPageTable(vaddr_t vaddr, vaddr_t vaddr_rel_in, size_t size,
-                                            uint index_shift, uint page_size_shift,
-                                            volatile pte_t* page_table, ConsistencyManager& cm) {
+                                            uint index_shift, volatile pte_t* page_table,
+                                            ConsistencyManager& cm) {
   const vaddr_t block_size = 1UL << index_shift;
   const vaddr_t block_mask = block_size - 1;
 
   vaddr_t vaddr_rel = vaddr_rel_in;
 
   // vaddr_rel and size must be page aligned
-  DEBUG_ASSERT(((vaddr_rel | size) & ((1UL << page_size_shift) - 1)) == 0);
+  DEBUG_ASSERT(((vaddr_rel | size) & ((1UL << page_size_shift_) - 1)) == 0);
 
   while (size) {
     const vaddr_t vaddr_rem = vaddr_rel & block_mask;
@@ -1094,12 +1082,12 @@ void ArmArchVmAspace::MarkAccessedPageTable(vaddr_t vaddr, vaddr_t vaddr_rel_in,
 
     pte_t pte = page_table[index];
 
-    if (index_shift > page_size_shift &&
+    if (index_shift > page_size_shift_ &&
         (pte & MMU_PTE_DESCRIPTOR_MASK) == MMU_PTE_L012_DESCRIPTOR_BLOCK &&
         chunk_size != block_size) {
       // Ignore large pages as we don't support modifying their access flags. Having this empty if
       // block simplifies the overall logic.
-    } else if (index_shift > page_size_shift &&
+    } else if (index_shift > page_size_shift_ &&
                (pte & MMU_PTE_DESCRIPTOR_MASK) == MMU_PTE_L012_DESCRIPTOR_TABLE) {
       // Set the software bit we use to represent that this page table has been accessed.
       pte |= MMU_PTE_ATTR_RES_SOFTWARE_AF;
@@ -1107,8 +1095,8 @@ void ArmArchVmAspace::MarkAccessedPageTable(vaddr_t vaddr, vaddr_t vaddr_rel_in,
       const paddr_t page_table_paddr = pte & MMU_PTE_OUTPUT_ADDR_MASK;
       volatile pte_t* next_page_table =
           static_cast<volatile pte_t*>(paddr_to_physmap(page_table_paddr));
-      MarkAccessedPageTable(vaddr, vaddr_rem, chunk_size, index_shift - (page_size_shift - 3),
-                            page_size_shift, next_page_table, cm);
+      MarkAccessedPageTable(vaddr, vaddr_rem, chunk_size, index_shift - (page_size_shift_ - 3),
+                            next_page_table, cm);
     } else if (is_pte_valid(pte) && (pte & MMU_PTE_ATTR_AF) == 0) {
       pte |= MMU_PTE_ATTR_AF;
       update_pte(&page_table[index], pte);
@@ -1121,7 +1109,7 @@ void ArmArchVmAspace::MarkAccessedPageTable(vaddr_t vaddr, vaddr_t vaddr_rel_in,
 
 ssize_t ArmArchVmAspace::MapPages(vaddr_t vaddr, paddr_t paddr, size_t size, pte_t attrs,
                                   vaddr_t vaddr_base, uint top_size_shift, uint top_index_shift,
-                                  uint page_size_shift, ConsistencyManager& cm) {
+                                  ConsistencyManager& cm) {
   vaddr_t vaddr_rel = vaddr - vaddr_base;
   vaddr_t vaddr_rel_max = 1UL << top_size_shift;
 
@@ -1137,14 +1125,13 @@ ssize_t ArmArchVmAspace::MapPages(vaddr_t vaddr, paddr_t paddr, size_t size, pte
   }
 
   LOCAL_KTRACE("mmu map", (vaddr & ~PAGE_MASK) | ((size >> PAGE_SIZE_SHIFT) & PAGE_MASK));
-  ssize_t ret = MapPageTable(vaddr, vaddr_rel, paddr, size, attrs, top_index_shift, page_size_shift,
-                             tt_virt_, cm);
+  ssize_t ret = MapPageTable(vaddr, vaddr_rel, paddr, size, attrs, top_index_shift, tt_virt_, cm);
   return ret;
 }
 
 ssize_t ArmArchVmAspace::UnmapPages(vaddr_t vaddr, size_t size, EnlargeOperation enlarge,
                                     vaddr_t vaddr_base, uint top_size_shift, uint top_index_shift,
-                                    uint page_size_shift, ConsistencyManager& cm) {
+                                    ConsistencyManager& cm) {
   vaddr_t vaddr_rel = vaddr - vaddr_base;
   vaddr_t vaddr_rel_max = 1UL << top_size_shift;
 
@@ -1158,14 +1145,13 @@ ssize_t ArmArchVmAspace::UnmapPages(vaddr_t vaddr, size_t size, EnlargeOperation
 
   LOCAL_KTRACE("mmu unmap", (vaddr & ~PAGE_MASK) | ((size >> PAGE_SIZE_SHIFT) & PAGE_MASK));
 
-  ssize_t ret = UnmapPageTable(vaddr, vaddr_rel, size, enlarge, top_index_shift, page_size_shift,
-                               tt_virt_, cm);
+  ssize_t ret = UnmapPageTable(vaddr, vaddr_rel, size, enlarge, top_index_shift, tt_virt_, cm);
   return ret;
 }
 
 zx_status_t ArmArchVmAspace::ProtectPages(vaddr_t vaddr, size_t size, pte_t attrs,
                                           vaddr_t vaddr_base, uint top_size_shift,
-                                          uint top_index_shift, uint page_size_shift) {
+                                          uint top_index_shift) {
   vaddr_t vaddr_rel = vaddr - vaddr_base;
   vaddr_t vaddr_rel_max = 1UL << top_size_shift;
 
@@ -1183,8 +1169,7 @@ zx_status_t ArmArchVmAspace::ProtectPages(vaddr_t vaddr, size_t size, pte_t attr
 
   ConsistencyManager cm(*this);
 
-  zx_status_t ret = ProtectPageTable(vaddr, vaddr_rel, size, attrs, top_index_shift,
-                                     page_size_shift, tt_virt_, cm);
+  zx_status_t ret = ProtectPageTable(vaddr, vaddr_rel, size, attrs, top_index_shift, tt_virt_, cm);
   return ret;
 }
 
@@ -1248,7 +1233,7 @@ zx_status_t ArmArchVmAspace::MapContiguous(vaddr_t vaddr, paddr_t paddr, size_t 
 
     ConsistencyManager cm(*this);
     ret = MapPages(vaddr, paddr, count * PAGE_SIZE, attrs, vaddr_base_, top_size_shift_,
-                   top_index_shift_, page_size_shift_, cm);
+                   top_index_shift_, cm);
     MarkAspaceModified();
   }
 
@@ -1315,7 +1300,7 @@ zx_status_t ArmArchVmAspace::Map(vaddr_t vaddr, paddr_t* phys, size_t count, uin
     auto undo = fit::defer([&]() TA_NO_THREAD_SAFETY_ANALYSIS {
       if (idx > 0) {
         UnmapPages(vaddr, idx * PAGE_SIZE, EnlargeOperation::No, vaddr_base_, top_size_shift_,
-                   top_index_shift_, page_size_shift_, cm);
+                   top_index_shift_, cm);
       }
     });
 
@@ -1323,8 +1308,8 @@ zx_status_t ArmArchVmAspace::Map(vaddr_t vaddr, paddr_t* phys, size_t count, uin
     for (; idx < count; ++idx) {
       paddr_t paddr = phys[idx];
       DEBUG_ASSERT(IS_PAGE_ALIGNED(paddr));
-      ret = MapPages(v, paddr, PAGE_SIZE, attrs, vaddr_base_, top_size_shift_, top_index_shift_,
-                     page_size_shift_, cm);
+      ret =
+          MapPages(v, paddr, PAGE_SIZE, attrs, vaddr_base_, top_size_shift_, top_index_shift_, cm);
       MarkAspaceModified();
       if (ret < 0) {
         zx_status_t status = static_cast<zx_status_t>(ret);
@@ -1377,7 +1362,7 @@ zx_status_t ArmArchVmAspace::Unmap(vaddr_t vaddr, size_t count, EnlargeOperation
   {
     ConsistencyManager cm(*this);
     ret = UnmapPages(vaddr, count * PAGE_SIZE, enlarge, vaddr_base_, top_size_shift_,
-                     top_index_shift_, page_size_shift_, cm);
+                     top_index_shift_, cm);
     MarkAspaceModified();
   }
 
@@ -1432,7 +1417,7 @@ zx_status_t ArmArchVmAspace::Protect(vaddr_t vaddr, size_t count, uint mmu_flags
     pte_t attrs = MmuParamsFromFlags(mmu_flags);
 
     ret = ProtectPages(vaddr, count * PAGE_SIZE, attrs, vaddr_base_, top_size_shift_,
-                       top_index_shift_, page_size_shift_);
+                       top_index_shift_);
     MarkAspaceModified();
   }
 
@@ -1501,7 +1486,7 @@ zx_status_t ArmArchVmAspace::HarvestAccessed(vaddr_t vaddr, size_t count,
     size_t entry_limit = kMaxEntriesPerIteration;
     const size_t harvested_size = HarvestAccessedPageTable(
         &entry_limit, current_vaddr, current_vaddr_rel, remaining_size, top_index_shift_,
-        page_size_shift_, non_terminal_action, terminal_action, tt_virt_, cm, nullptr);
+        non_terminal_action, terminal_action, tt_virt_, cm, nullptr);
     DEBUG_ASSERT(harvested_size > 0);
     DEBUG_ASSERT(harvested_size <= remaining_size);
 
@@ -1545,7 +1530,7 @@ zx_status_t ArmArchVmAspace::MarkAccessed(vaddr_t vaddr, size_t count) {
 
   ConsistencyManager cm(*this);
 
-  MarkAccessedPageTable(vaddr, vaddr_rel, size, top_index_shift_, page_size_shift_, tt_virt_, cm);
+  MarkAccessedPageTable(vaddr, vaddr_rel, size, top_index_shift_, tt_virt_, cm);
   MarkAspaceModified();
 
   return ZX_OK;

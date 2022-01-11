@@ -85,50 +85,45 @@ class ArmArchVmAspace final : public ArchVmAspaceInterface {
   void FreePageTable(void* vaddr, paddr_t paddr, ConsistencyManager& cm) TA_REQ(lock_);
 
   ssize_t MapPageTable(vaddr_t vaddr_in, vaddr_t vaddr_rel_in, paddr_t paddr_in, size_t size_in,
-                       pte_t attrs, uint index_shift, uint page_size_shift,
-                       volatile pte_t* page_table, ConsistencyManager& cm) TA_REQ(lock_);
+                       pte_t attrs, uint index_shift, volatile pte_t* page_table,
+                       ConsistencyManager& cm) TA_REQ(lock_);
 
   ssize_t UnmapPageTable(vaddr_t vaddr, vaddr_t vaddr_rel, size_t size, EnlargeOperation enlarge,
-                         uint index_shift, uint page_size_shift, volatile pte_t* page_table,
-                         ConsistencyManager& cm) TA_REQ(lock_);
+                         uint index_shift, volatile pte_t* page_table, ConsistencyManager& cm)
+      TA_REQ(lock_);
 
   zx_status_t ProtectPageTable(vaddr_t vaddr_in, vaddr_t vaddr_rel_in, size_t size_in, pte_t attrs,
-                               uint index_shift, uint page_size_shift, volatile pte_t* page_table,
-                               ConsistencyManager& cm) TA_REQ(lock_);
+                               uint index_shift, volatile pte_t* page_table, ConsistencyManager& cm)
+      TA_REQ(lock_);
 
   size_t HarvestAccessedPageTable(size_t* entry_limit, vaddr_t vaddr_in, vaddr_t vaddr_rel_in,
-                                  size_t size_in, uint index_shift, uint page_size_shift,
+                                  size_t size_in, uint index_shift,
                                   NonTerminalAction non_terminal_action,
                                   TerminalAction terminal_action, volatile pte_t* page_table,
                                   ConsistencyManager& cm, bool* unmapped_out) TA_REQ(lock_);
 
   void MarkAccessedPageTable(vaddr_t vaddr, vaddr_t vaddr_rel_in, size_t size, uint index_shift,
-                             uint page_size_shift, volatile pte_t* page_table,
-                             ConsistencyManager& cm) TA_REQ(lock_);
+                             volatile pte_t* page_table, ConsistencyManager& cm) TA_REQ(lock_);
 
   // Splits a descriptor block into a set of next-level-down page blocks/pages.
   //
   // |vaddr| is the virtual address of the start of the block being split. |index_shift| is
   // the index shift of the page table entry of the descriptor blocking being split.
-  // |page_size_shift| is the page size shift of the current aspace. |page_table| is the
-  // page table that contains the descriptor block being split, and |pt_index| is the index
-  // into that table.
-  zx_status_t SplitLargePage(vaddr_t vaddr, uint index_shift, uint page_size_shift,
-                             vaddr_t pt_index, volatile pte_t* page_table, ConsistencyManager& cm)
-      TA_REQ(lock_);
+  // |page_table| is the page table that contains the descriptor block being split,
+  // and |pt_index| is the index into that table.
+  zx_status_t SplitLargePage(vaddr_t vaddr, uint index_shift, vaddr_t pt_index,
+                             volatile pte_t* page_table, ConsistencyManager& cm) TA_REQ(lock_);
 
   pte_t MmuParamsFromFlags(uint mmu_flags);
   ssize_t MapPages(vaddr_t vaddr, paddr_t paddr, size_t size, pte_t attrs, vaddr_t vaddr_base,
-                   uint top_size_shift, uint top_index_shift, uint page_size_shift,
-                   ConsistencyManager& cm) TA_REQ(lock_);
+                   uint top_size_shift, uint top_index_shift, ConsistencyManager& cm) TA_REQ(lock_);
 
   ssize_t UnmapPages(vaddr_t vaddr, size_t size, EnlargeOperation enlarge, vaddr_t vaddr_base,
-                     uint top_size_shift, uint top_index_shift, uint page_size_shift,
-                     ConsistencyManager& cm) TA_REQ(lock_);
+                     uint top_size_shift, uint top_index_shift, ConsistencyManager& cm)
+      TA_REQ(lock_);
 
   zx_status_t ProtectPages(vaddr_t vaddr, size_t size, pte_t attrs, vaddr_t vaddr_base,
-                           uint top_size_shift, uint top_index_shift, uint page_size_shift)
-      TA_REQ(lock_);
+                           uint top_size_shift, uint top_index_shift) TA_REQ(lock_);
   zx_status_t QueryLocked(vaddr_t vaddr, paddr_t* paddr, uint* mmu_flags) TA_REQ(lock_);
 
   void FlushTLBEntry(vaddr_t vaddr, bool terminal) const TA_REQ(lock_);
