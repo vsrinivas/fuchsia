@@ -21,8 +21,8 @@ namespace compat {
 class Device {
  public:
   Device(std::string_view name, void* context, const zx_protocol_device_t* ops,
-         std::optional<Device*> linked_device, driver::Logger& logger,
-         async_dispatcher_t* dispatcher);
+         std::optional<Device*> parent, std::optional<Device*> linked_device,
+         driver::Logger& logger, async_dispatcher_t* dispatcher);
 
   zx_device_t* ZxDevice();
 
@@ -53,6 +53,16 @@ class Device {
   const zx_protocol_device_t* const ops_;
   driver::Logger& logger_;
   async_dispatcher_t* const dispatcher_;
+
+  // The device's parent. If this field is set then the Device ptr is guaranteed
+  // to be non-null. The parent is also guaranteed to outlive its child.
+  //
+  // This is used by a Device to free itself, by calling parent_.RemoveChild(this).
+  //
+  // parent_ will be std::nullopt when the Device is the fake device created
+  // by the Driver class in the DFv1 shim. When parent_ is std::nullopt, the
+  // Device will be freed when the Driver is freed.
+  std::optional<Device*> parent_;
 
   // Used to link two instances of the same device together.
   // If the device is not linked with anything, this will point to `this`.

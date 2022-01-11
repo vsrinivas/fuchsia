@@ -71,7 +71,8 @@ TEST_F(DeviceTest, ConstructDevice) {
 
   // Create a device.
   zx_protocol_device_t ops{};
-  compat::Device device("test-device", nullptr, &ops, {}, logger(), dispatcher());
+  compat::Device device("test-device", nullptr, &ops, std::nullopt, std::nullopt, logger(),
+                        dispatcher());
   device.Bind({std::move(endpoints->client), dispatcher()});
 
   // Test basic functions on the device.
@@ -99,7 +100,8 @@ TEST_F(DeviceTest, AddChildDevice) {
 
   // Create a device.
   zx_protocol_device_t ops{};
-  compat::Device parent("parent", nullptr, &ops, {}, logger(), dispatcher());
+  compat::Device parent("parent", nullptr, &ops, std::nullopt, std::nullopt, logger(),
+                        dispatcher());
   parent.Bind({std::move(endpoints->client), dispatcher()});
 
   // Add a child device.
@@ -124,7 +126,8 @@ TEST_F(DeviceTest, AddChildDeviceWithInit) {
 
   // Create a device.
   zx_protocol_device_t parent_ops{};
-  compat::Device parent("parent", nullptr, &parent_ops, {}, logger(), dispatcher());
+  compat::Device parent("parent", nullptr, &parent_ops, std::nullopt, std::nullopt, logger(),
+                        dispatcher());
   parent.Bind({std::move(endpoints->client), dispatcher()});
 
   // Add a child device.
@@ -159,7 +162,8 @@ TEST_F(DeviceTest, AddAndRemoveChildDevice) {
 
   // Create a device.
   zx_protocol_device_t ops{};
-  compat::Device parent("parent", nullptr, &ops, {}, logger(), dispatcher());
+  compat::Device parent("parent", nullptr, &ops, std::nullopt, std::nullopt, logger(),
+                        dispatcher());
   parent.Bind({std::move(endpoints->client), dispatcher()});
 
   // Add a child device.
@@ -186,7 +190,8 @@ TEST_F(DeviceTest, AddAndRemoveChildDevice) {
 TEST_F(DeviceTest, GetProtocolFromDevice) {
   // Create a device without a get_protocol hook.
   zx_protocol_device_t ops{};
-  compat::Device without("without-protocol", nullptr, &ops, {}, logger(), dispatcher());
+  compat::Device without("without-protocol", nullptr, &ops, std::nullopt, std::nullopt, logger(),
+                         dispatcher());
   ASSERT_EQ(ZX_ERR_UNAVAILABLE, without.GetProtocol(ZX_PROTOCOL_BLOCK, nullptr));
 
   // Create a device with a get_protocol hook.
@@ -194,14 +199,16 @@ TEST_F(DeviceTest, GetProtocolFromDevice) {
     EXPECT_EQ(ZX_PROTOCOL_BLOCK, proto_id);
     return ZX_OK;
   };
-  compat::Device with("with-protocol", nullptr, &ops, {}, logger(), dispatcher());
+  compat::Device with("with-protocol", nullptr, &ops, std::nullopt, std::nullopt, logger(),
+                      dispatcher());
   ASSERT_EQ(ZX_OK, with.GetProtocol(ZX_PROTOCOL_BLOCK, nullptr));
 }
 
 TEST_F(DeviceTest, DeviceMetadata) {
   // Create a device.
   zx_protocol_device_t ops{};
-  compat::Device device("test-device", nullptr, &ops, {}, logger(), dispatcher());
+  compat::Device device("test-device", nullptr, &ops, std::nullopt, std::nullopt, logger(),
+                        dispatcher());
 
   // Add metadata to the device.
   const uint64_t metadata = 0xAABBCCDDEEFF0011;
@@ -238,8 +245,9 @@ TEST_F(DeviceTest, DeviceMetadata) {
 TEST_F(DeviceTest, LinkedDeviceMetadata) {
   // Create two devices.
   zx_protocol_device_t ops{};
-  compat::Device parent("test-parent", nullptr, &ops, {}, logger(), dispatcher());
-  compat::Device child("test-device", nullptr, &ops, &parent, logger(), dispatcher());
+  compat::Device parent("test-parent", nullptr, &ops, std::nullopt, std::nullopt, logger(),
+                        dispatcher());
+  compat::Device child("test-device", nullptr, &ops, std::nullopt, &parent, logger(), dispatcher());
 
   // Add metadata to the parent device.
   const uint64_t metadata = 0xAABBCCDDEEFF0011;

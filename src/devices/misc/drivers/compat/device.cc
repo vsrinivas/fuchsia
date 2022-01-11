@@ -41,13 +41,14 @@ bool HasOp(const zx_protocol_device_t* ops, T member) {
 namespace compat {
 
 Device::Device(std::string_view name, void* context, const zx_protocol_device_t* ops,
-               std::optional<Device*> linked_device, driver::Logger& logger,
-               async_dispatcher_t* dispatcher)
+               std::optional<Device*> parent, std::optional<Device*> linked_device,
+               driver::Logger& logger, async_dispatcher_t* dispatcher)
     : name_(name),
       context_(context),
       ops_(ops),
       logger_(logger),
       dispatcher_(dispatcher),
+      parent_(parent),
       linked_device_(linked_device ? **linked_device : *this) {}
 
 zx_device_t* Device::ZxDevice() { return static_cast<zx_device_t*>(this); }
@@ -68,8 +69,8 @@ const char* Device::Name() const { return name_.data(); }
 bool Device::HasChildren() const { return child_counter_.use_count() > 1; }
 
 zx_status_t Device::Add(device_add_args_t* zx_args, zx_device_t** out) {
-  auto device = std::make_unique<Device>(zx_args->name, zx_args->ctx, zx_args->ops, std::nullopt,
-                                         logger_, dispatcher_);
+  auto device = std::make_unique<Device>(zx_args->name, zx_args->ctx, zx_args->ops, this,
+                                         std::nullopt, logger_, dispatcher_);
   auto device_ptr = device.get();
 
   // Create NodeAddArgs from `zx_args`.
