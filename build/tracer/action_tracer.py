@@ -223,8 +223,14 @@ def _parse_fsatrace_line(fsatrace_line: str) -> Iterable[FSAccess]:
 
 def parse_fsatrace_output(fsatrace_lines: Iterable[str]) -> Iterable[FSAccess]:
     """Returns a stream of FSAccess objects."""
-    return itertools.chain.from_iterable(
-        _parse_fsatrace_line(line) for line in fsatrace_lines)
+    ret = []
+    for line in fsatrace_lines:
+        try:
+            ret.extend(_parse_fsatrace_line(line))
+        except Exception as e:
+            print('\n'.join(fsatrace_lines))
+            raise e
+    return ret
 
 
 def _abspaths(container: Iterable[str]) -> AbstractSet[str]:
