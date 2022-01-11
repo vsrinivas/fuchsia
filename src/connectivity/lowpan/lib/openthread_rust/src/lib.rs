@@ -29,6 +29,7 @@ pub mod prelude {
     pub use crate::{ot, otsys};
     pub use crate::{OtBox, OtInstanceBox};
     pub use ot::Boxable as _;
+    pub use ot::OtCastable as _;
     pub use ot::Reset as _;
     pub use ot::State as _;
     pub use ot::Tasklets as _;
@@ -43,6 +44,7 @@ pub mod prelude {
 pub(crate) mod prelude_internal {
     #![allow(unused_imports)]
 
+    pub use crate::impl_ot_castable;
     pub use crate::otsys::*;
     pub use crate::prelude::*;
     pub use core::convert::TryFrom;
