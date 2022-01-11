@@ -15,12 +15,6 @@ pub enum Capability {
     Event(Event, cm_rust::EventMode),
 }
 
-impl Capability {
-    pub fn event(event: Event, mode: cm_rust::EventMode) -> Self {
-        Self::Event(event, mode)
-    }
-}
-
 /// A capability route from one source component to one or more target components.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct CapabilityRoute {
