@@ -40,7 +40,7 @@ bitflags! {
 
 /// This struct is a more ergonomic way of reading zxio_dirent values, because
 /// it saves the data it points to instead of rellying on pointers.
-#[derive(Default)]
+#[derive(Default, Debug)]
 pub struct ZxioDirent {
     pub protocols: Option<zxio::zxio_node_protocols_t>,
     pub abilities: Option<zxio::zxio_abilities_t>,
@@ -61,12 +61,13 @@ pub struct DirentIterator {
 
 /// It is important that all methods here are &mut self, to require the client
 /// to obtain exclusive access to the object, externally locking it.
-impl DirentIterator {
-    /// Returns the next dir entry for this iterator. If the end is reached,
-    /// returns ZX_ERR_NOT_FOUND.
-    pub fn next(&mut self) -> Result<ZxioDirent, zx::Status> {
+impl Iterator for DirentIterator {
+    type Item = Result<ZxioDirent, zx::Status>;
+
+    /// Returns the next dir entry for this iterator.
+    fn next(&mut self) -> Option<Result<ZxioDirent, zx::Status>> {
         if self.finished {
-            return Err(zx::Status::NOT_FOUND);
+            return None;
         }
         let mut entry: *mut zxio_dirent_t = ptr::null_mut();
         let status = unsafe { zxio_dirent_iterator_next(&mut self.iterator, &mut entry) };
@@ -77,11 +78,11 @@ impl DirentIterator {
             }
             Err(zx::Status::NOT_FOUND) => {
                 self.finished = true;
-                Err(zx::Status::NOT_FOUND)
+                return None;
             }
             Err(e) => Err(e),
         };
-        result
+        return Some(result);
     }
 }
 
@@ -545,6 +546,31 @@ mod test {
         let io = &storage.io as *const zxio::zxio_t as *mut zxio::zxio_t;
         let close_status = unsafe { zxio::zxio_close(io) };
         assert_eq!(close_status, zx::sys::ZX_OK);
+        Ok(())
+    }
+
+    #[fuchsia::test]
+    async fn test_directory_enumerate() -> Result<(), Error> {
+        let pkg_dir_handle = directory::open_in_namespace(
+            "/pkg",
+            fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE,
+        )
+        .expect("failed to open /pkg")
+        .into_channel()
+        .expect("could not unwrap channel")
+        .into_zx_channel()
+        .into();
+
+        let io: Zxio = Zxio::create(pkg_dir_handle)?;
+        let iter = io.create_dirent_iterator().expect("failed to create iterator");
+        let expected_dir_names = vec![".", "bin", "lib", "meta"];
+        let mut found_dir_names = iter
+            .map(|e| {
+                std::str::from_utf8(&e.unwrap().name).expect("name was not valid utf8").to_string()
+            })
+            .collect::<Vec<_>>();
+        found_dir_names.sort();
+        assert_eq!(expected_dir_names, found_dir_names);
         Ok(())
     }
 }

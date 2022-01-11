@@ -29,6 +29,7 @@ rustc_library("syncio") {
 
   test_deps = [
     "//garnet/lib/rust/io_util",
+    "//src/lib/fuchsia",
     "//src/lib/fuchsia-async",
     "//third_party/rust_crates:anyhow",
   ]

@@ -261,16 +261,19 @@ impl RemoteDirectoryIterator {
     /// Returns the next dir entry. If no more entries are found, returns None.
     /// Returns an error if the iterator fails for other reasons described by
     /// the zxio library.
-    pub fn next(&mut self, zxio: &Zxio) -> Result<Option<ZxioDirent>, Errno> {
+    pub fn next(&mut self, zxio: &Zxio) -> Option<Result<ZxioDirent, Errno>> {
         match self.pending_entry.take() {
-            Some(entry) => return Ok(Some(entry)),
+            Some(entry) => Some(Ok(entry)),
             None => {
-                let iterator = self.get_or_init_iterator(zxio)?;
+                let iterator = match self.get_or_init_iterator(zxio) {
+                    Ok(iter) => iter,
+                    Err(e) => return Some(Err(e)),
+                };
                 let result = iterator.next();
                 match result {
-                    Ok(v) => return Ok(Some(v)),
-                    Err(zx::Status::NOT_FOUND) => return Ok(None),
-                    Err(status) => return Err(from_status_like_fdio!(status)),
+                    Some(Ok(v)) => return Some(Ok(v)),
+                    Some(Err(status)) => return Some(Err(from_status_like_fdio!(status))),
+                    None => return None,
                 }
             }
         }
@@ -332,9 +335,9 @@ impl FileOps for RemoteDirectoryObject {
         // Advance the iterator to catch up with the offset.
         for i in iterator_position..new_offset {
             match iterator.next(&self.zxio) {
-                Ok(Some(_)) => continue,
-                Ok(None) => break, // No more entries.
-                Err(_) => {
+                Some(Ok(_)) => continue,
+                None => break, // No more entries.
+                Some(Err(_)) => {
                     // In order to keep the offset and the iterator in sync, set the new offset
                     // to be as far as we could get.
                     // Note that failing the seek here would also cause the iterator and the
@@ -371,10 +374,12 @@ impl FileOps for RemoteDirectoryObject {
             Ok(())
         };
 
-        while let Some(entry) = iterator.next(&self.zxio)? {
-            if let Err(e) = add_entry(&entry) {
-                iterator.pending_entry = Some(entry);
-                return Err(e);
+        while let Some(entry) = iterator.next(&self.zxio) {
+            if entry.is_ok() {
+                if let Err(e) = add_entry(&entry.as_ref().unwrap()) {
+                    iterator.pending_entry = Some(entry.unwrap());
+                    return Err(e);
+                }
             }
         }
         Ok(())
