@@ -17,7 +17,7 @@ use {
     std::fmt,
     std::mem,
     thiserror::Error,
-    zerocopy::{FromBytes, LayoutVerified},
+    zerocopy::{AsBytes, FromBytes, LayoutVerified},
 };
 
 /// Possible errors that can occur during ELF parsing.
@@ -250,6 +250,61 @@ pub struct Elf64ProgramHeader {
     pub filesz: u64,
     pub memsz: u64,
     pub align: u64,
+}
+
+#[derive(FromPrimitive, Debug, Eq, PartialEq)]
+#[repr(u64)]
+pub enum Elf64DynTag {
+    Null = 0,
+    Needed = 1,
+    Pltrelsz = 2,
+    Pltgot = 3,
+    Hash = 4,
+    Strtab = 5,
+    Symtab = 6,
+    Rela = 7,
+    Relasz = 8,
+    Relaent = 9,
+    Strsz = 10,
+    Syment = 11,
+    Init = 12,
+    Fini = 13,
+    Soname = 14,
+    Rpath = 15,
+    Symbolic = 16,
+    Rel = 17,
+    Relsz = 18,
+    Relent = 19,
+    Pltrel = 20,
+    Debug = 21,
+    Textrel = 22,
+    Jmprel = 23,
+    BindNow = 24,
+    InitArray = 25,
+    FiniArray = 26,
+    InitArraysz = 27,
+    FiniArraysz = 28,
+    Runpath = 29,
+    Flags = 30,
+    PreinitArray = 32,
+    PreinitArraysz = 33,
+    Loos = 0x6000000D,
+    Hios = 0x6ffff000,
+    Loproc = 0x70000000,
+    Hiproc = 0x7fffffff,
+}
+
+#[derive(AsBytes, FromBytes, Default, Debug, Eq, PartialEq)]
+#[repr(C)]
+pub struct Elf64Dyn {
+    pub tag: u64,
+    pub value: u64,
+}
+
+impl Elf64Dyn {
+    pub fn tag(&self) -> Result<Elf64DynTag, u64> {
+        Elf64DynTag::from_u64(self.tag).ok_or(self.tag)
+    }
 }
 
 #[derive(FromPrimitive, Copy, Clone, Debug, Eq, PartialEq)]
