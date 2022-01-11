@@ -23,8 +23,8 @@ use {
 #[cfg(feature = "flatland")]
 use {
     crate::buffer::ImageInstanceId,
-    crate::scenic::Flatland,
-    fidl_fuchsia_math::{RectF, SizeU},
+    crate::scenic::FlatlandPtr,
+    fidl_fuchsia_math::{RectF, SizeU, Vec_},
     fidl_fuchsia_ui_composition::TransformId,
     std::{
         collections::VecDeque,
@@ -72,7 +72,7 @@ impl RequestReceiver<WlCompositor> for Compositor {
 #[cfg(feature = "flatland")]
 struct SurfaceNode {
     /// The flatland instance that can be used to create flatland entities.
-    pub flatland: Flatland,
+    pub flatland: FlatlandPtr,
     /// The flatland transform that represents this surface. Views can present this
     /// surface by placeing this transform in their view hierarchy.
     pub transform_id: TransformId,
@@ -80,9 +80,9 @@ struct SurfaceNode {
 
 #[cfg(feature = "flatland")]
 impl SurfaceNode {
-    pub fn new(flatland: Flatland) -> Self {
-        let transform_id = flatland.alloc_transform_id();
-        flatland.proxy().create_transform(&mut transform_id.clone()).expect("fidl error");
+    pub fn new(flatland: FlatlandPtr) -> Self {
+        let transform_id = flatland.borrow_mut().alloc_transform_id();
+        flatland.borrow().proxy().create_transform(&mut transform_id.clone()).expect("fidl error");
         Self { flatland, transform_id }
     }
 }
@@ -418,7 +418,7 @@ impl Surface {
     ///
     /// It is an error to call `set_flatland` multiple times for the same
     /// surface.
-    pub fn set_flatland(&mut self, flatland: Flatland) -> Result<(), Error> {
+    pub fn set_flatland(&mut self, flatland: FlatlandPtr) -> Result<(), Error> {
         ftrace::duration!("wayland", "Surface::set_flatland");
         if self.node.is_some() {
             Err(format_err!("Changing the Flatland instance for a surface is not supported"))
@@ -432,7 +432,7 @@ impl Surface {
         self.node = None;
     }
 
-    pub fn flatland(&self) -> Option<Flatland> {
+    pub fn flatland(&self) -> Option<FlatlandPtr> {
         self.node.as_ref().map(|n| n.flatland.clone())
     }
 
@@ -543,6 +543,7 @@ impl Surface {
 
             // Set image as content for transform.
             node.flatland
+                .borrow()
                 .proxy()
                 .set_content(&mut node.transform_id.clone(), &mut image_content.id.clone())
                 .expect("fidl error");
@@ -558,6 +559,7 @@ impl Surface {
                 |crop| RectF { x: crop.x, y: crop.y, width: crop.width, height: crop.height },
             );
             node.flatland
+                .borrow()
                 .proxy()
                 .set_image_sample_region(&mut image_content.id.clone(), &mut sample_region)
                 .expect("fidl error");
@@ -568,10 +570,22 @@ impl Surface {
                 |scale| SizeU { width: scale.width as u32, height: scale.height as u32 },
             );
             node.flatland
+                .borrow()
                 .proxy()
                 .set_image_destination_size(&mut image_content.id.clone(), &mut destination_size)
                 .expect("fidl error");
         }
+
+        let mut translation = if let Some(window_geometry) = self.window_geometry.as_ref() {
+            Vec_ { x: -window_geometry.x, y: -window_geometry.y }
+        } else {
+            Vec_ { x: 0, y: 0 }
+        };
+        node.flatland
+            .borrow()
+            .proxy()
+            .set_translation(&mut node.transform_id.clone(), &mut translation)
+            .expect("fidl error");
 
         // Create and register a release fence to release the last buffer unless
         // it's the same as the current buffer.
@@ -581,7 +595,7 @@ impl Surface {
         if last_buffer_id != buffer_id {
             if let Some(last_buffer_id) = last_buffer_id {
                 let release_fence = zx::Event::create().unwrap();
-                node.flatland.add_release_fence(
+                node.flatland.borrow_mut().add_release_fence(
                     release_fence.duplicate_handle(zx::Rights::SAME_RIGHTS).unwrap(),
                 );
                 let task_queue = task_queue.clone();
@@ -613,7 +627,7 @@ impl Surface {
         // Wayland protocol doesn't provide a mechanism to control presentation time
         // so we ask Flatland to present contents immediately by specifying a presentation
         // time of 0.
-        flatland.present(0);
+        flatland.borrow_mut().present(0);
         self.present_credits -= 1;
         self.present_needed = false;
         Ok(())
@@ -625,15 +639,16 @@ impl Surface {
         mut callbacks: Vec<ObjectRef<Callback>>,
     ) -> Result<(), Error> {
         ftrace::duration!("wayland", "Surface::present");
-        let surface = this.get_mut(client)?;
-        if surface.present_credits == 0 {
-            // Drop frame by adding callbacks to previous frame. There must be at least
-            // one set of pending callbacks when we enter this state.
-            surface.callbacks.back_mut().expect("no pending frame").append(&mut callbacks);
-            surface.present_needed = true;
-        } else {
-            surface.present_internal()?;
-            surface.callbacks.push_back(callbacks);
+        if let Ok(surface) = this.get_mut(client) {
+            if surface.present_credits == 0 {
+                // Drop frame by adding callbacks to previous frame. There must be at least
+                // one set of pending callbacks when we enter this state.
+                surface.callbacks.back_mut().expect("no pending frame").append(&mut callbacks);
+                surface.present_needed = true;
+            } else {
+                surface.present_internal()?;
+                surface.callbacks.push_back(callbacks);
+            }
         }
         Ok(())
     }
@@ -644,11 +659,12 @@ impl Surface {
         present_credits: u32,
     ) -> Result<(), Error> {
         ftrace::duration!("wayland", "Surface::add_present_credits");
-        let surface = this.get_mut(client)?;
-        surface.present_credits += present_credits;
-        // Present immediately if needed.
-        if surface.present_needed && surface.present_credits > 0 {
-            surface.present_internal()?;
+        if let Ok(surface) = this.get_mut(client) {
+            surface.present_credits += present_credits;
+            // Present immediately if needed.
+            if surface.present_needed && surface.present_credits > 0 {
+                surface.present_internal()?;
+            }
         }
         Ok(())
     }

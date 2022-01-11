@@ -15,7 +15,7 @@ use {
 
 #[cfg(feature = "flatland")]
 use {
-    crate::scenic::{Flatland, FlatlandInstanceId},
+    crate::scenic::{FlatlandInstanceId, FlatlandPtr},
     fidl_fuchsia_math as fmath,
     fidl_fuchsia_ui_composition::{BufferCollectionImportToken, ContentId, ImageProperties},
 };
@@ -33,13 +33,13 @@ pub struct Content {
     /// The Flatland content ID.
     pub id: ContentId,
     /// The Flatland instance that was used to create content ID.
-    flatland: Flatland,
+    flatland: FlatlandPtr,
 }
 
 #[cfg(feature = "flatland")]
 impl Drop for Content {
     fn drop(&mut self) {
-        self.flatland.proxy().release_image(&mut self.id.clone()).expect("fidl error");
+        self.flatland.borrow().proxy().release_image(&mut self.id.clone()).expect("fidl error");
     }
 }
 
@@ -87,9 +87,14 @@ impl Image {
         Self { import_token, size, id: Cell::new(None) }
     }
 
-    pub fn scenic_content(&self, instance_id: ImageInstanceId, flatland: &Flatland) -> Rc<Content> {
+    pub fn scenic_content(
+        &self,
+        instance_id: ImageInstanceId,
+        flatland: &FlatlandPtr,
+    ) -> Rc<Content> {
         ftrace::duration!("wayland", "Image::scenic_content");
-        let id = match self.id.take().filter(|id| instance_id == id.1 && flatland.id() == id.2) {
+        let flatland_id = flatland.borrow().id();
+        let id = match self.id.take().filter(|id| instance_id == id.1 && flatland_id == id.2) {
             Some(id) => id,
             None => {
                 let raw_import_token =
@@ -97,15 +102,16 @@ impl Image {
                 let size =
                     fmath::SizeU { width: self.size.width as u32, height: self.size.height as u32 };
                 let image_props = ImageProperties { size: Some(size), ..ImageProperties::EMPTY };
-                let content_id = flatland.alloc_content_id();
+                let content_id = flatland.borrow_mut().alloc_content_id();
                 let mut import_token = BufferCollectionImportToken { value: raw_import_token };
                 flatland
+                    .borrow()
                     .proxy()
                     .create_image(&mut content_id.clone(), &mut import_token, 0, image_props)
                     .expect("fidl error");
                 let content = Content { id: content_id, flatland: flatland.clone() };
 
-                (Rc::new(content), instance_id, flatland.id())
+                (Rc::new(content), instance_id, flatland_id)
             }
         };
         let result = id.0.clone();
@@ -179,7 +185,11 @@ impl Buffer {
         Buffer { image: Rc::new(image) }
     }
 
-    pub fn image_content(&self, instance_id: ImageInstanceId, flatland: &Flatland) -> Rc<Content> {
+    pub fn image_content(
+        &self,
+        instance_id: ImageInstanceId,
+        flatland: &FlatlandPtr,
+    ) -> Rc<Content> {
         ftrace::duration!("wayland", "Buffer::image_content");
         self.image.scenic_content(instance_id, flatland)
     }

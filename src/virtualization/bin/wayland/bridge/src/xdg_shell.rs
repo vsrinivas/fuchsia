@@ -37,7 +37,7 @@ use {
 
 #[cfg(feature = "flatland")]
 use {
-    crate::scenic::Flatland,
+    crate::scenic::{Flatland, FlatlandPtr},
     crate::Callback,
     async_utils::hanging_get::client::HangingGetStream,
     fidl_fuchsia_math::{SizeU, Vec_},
@@ -520,7 +520,7 @@ impl XdgSurface {
         let flatland = surface
             .flatland()
             .ok_or(format_err!("Unable to create a child view without a flatland instance."))?;
-        let transform = flatland.alloc_transform_id();
+        let transform = flatland.borrow_mut().alloc_transform_id();
         let task_queue = client.task_queue();
         let (child_view_watcher, server_end) = create_proxy::<ChildViewWatcherMarker>()
             .expect("failed to create ChildViewWatcher endpoints");
@@ -539,7 +539,7 @@ impl XdgSurface {
     fn spawn_child_view(
         this: ObjectRef<Self>,
         client: &mut Client,
-        flatland: Flatland,
+        flatland: FlatlandPtr,
         parent_ref: ObjectRef<Self>,
         local_offset: Option<(i32, i32)>,
         geometry: Rect,
@@ -556,6 +556,7 @@ impl XdgSurface {
         let (parent_viewport_watcher, server_end) = create_proxy::<ParentViewportWatcherMarker>()
             .expect("failed to create ParentViewportWatcherProxy");
         flatland
+            .borrow()
             .proxy()
             .create_view(&mut link_tokens.view_creation_token, server_end)
             .expect("fidl error");
@@ -577,6 +578,7 @@ impl XdgSurface {
         let xdg_surface = this.get_mut(client)?;
         xdg_surface.set_view(view_ptr.clone());
         xdg_surface.set_root_surface(root_surface_ref);
+        client.xdg_surfaces.push(this);
         Ok(())
     }
 
@@ -602,15 +604,15 @@ impl XdgSurface {
                                 let time_in_ms =
                                     (info.presentation_time.expect("no presentation time")
                                         / 1_000_000) as u32;
-                                // TODO: Remove this check when OnNextFrameBegin is only sent as a
-                                // result of Present.
-                                if let Some(callbacks) =
-                                    surface_ref.get_mut(client)?.next_callbacks()
-                                {
-                                    callbacks.iter().try_for_each(|callback| {
-                                        Callback::done(*callback, client, time_in_ms)?;
-                                        client.delete_id(callback.id())
-                                    })?;
+                                if let Ok(surface) = surface_ref.get_mut(client) {
+                                    // TODO: Remove this check when OnNextFrameBegin is only sent as a
+                                    // result of Present.
+                                    if let Some(callbacks) = surface.next_callbacks() {
+                                        callbacks.iter().try_for_each(|callback| {
+                                            Callback::done(*callback, client, time_in_ms)?;
+                                            client.delete_id(callback.id())
+                                        })?;
+                                    }
                                 }
                                 Surface::add_present_credits(
                                     surface_ref,
@@ -644,26 +646,25 @@ impl XdgSurface {
             while let Some(result) = layout_info_stream.next().await {
                 match result {
                     Ok(layout_info) => {
-                        let logical_size = layout_info
+                        if let Some(logical_size) = layout_info
                             .logical_size
+                            // TODO(https://fxbug.dev/91259): Remove this filter when
+                            // no longer needed.
+                            .filter(|size| size.width > 32 || size.height > 32)
                             .map(|size| SizeF {
                                 width: size.width as f32,
                                 height: size.height as f32,
                             })
-                            .expect("layout info is missing logical size");
-                        task_queue.post(move |client| {
-                            if let Some(view) = this.get(client)?.view.clone() {
-                                view.lock().handle_layout_changed(&logical_size);
-                            }
-                            Ok(())
-                        });
+                        {
+                            task_queue.post(move |client| {
+                                if let Some(view) = this.get(client)?.view.clone() {
+                                    view.lock().handle_layout_changed(&logical_size);
+                                }
+                                Ok(())
+                            });
+                        }
                     }
                     Err(fidl::Error::ClientChannelClosed { .. }) => {
-                        task_queue.post(|_client| {
-                            // Returning an error causes the client connection to be
-                            // closed (and that typically closes the application).
-                            Err(format_err!("Parent viewport watcher channel closed"))
-                        });
                         return;
                     }
                     Err(fidl_error) => {
@@ -746,8 +747,6 @@ impl XdgSurface {
                         });
                     }
                     Err(fidl::Error::ClientChannelClosed { .. }) => {
-                        task_queue
-                            .post(|_client| Err(format_err!("ViewRefFocused channel closed")));
                         return;
                     }
                     Err(fidl_error) => {
@@ -782,7 +781,7 @@ impl RequestReceiver<xdg_shell::XdgSurface> for XdgSurface {
                 XdgSurface::spawn_flatland_listener(
                     this,
                     client,
-                    flatland.proxy().take_event_stream(),
+                    flatland.borrow().proxy().take_event_stream(),
                 )?;
             }
             XdgSurfaceRequest::GetPopup { id, parent, positioner } => {
@@ -805,7 +804,7 @@ impl RequestReceiver<xdg_shell::XdgSurface> for XdgSurface {
                 XdgSurface::spawn_flatland_listener(
                     this,
                     client,
-                    flatland.proxy().take_event_stream(),
+                    flatland.borrow().proxy().take_event_stream(),
                 )?;
             }
             XdgSurfaceRequest::SetWindowGeometry { x, y, width, height } => {
@@ -1184,7 +1183,7 @@ impl XdgPopup {
     pub fn new(
         xdg_surface_ref: ObjectRef<XdgSurface>,
         client: &mut Client,
-        flatland: Flatland,
+        flatland: FlatlandPtr,
         positioner_ref: ObjectRef<XdgPositioner>,
     ) -> Result<Self, Error> {
         let geometry = positioner_ref.get(client)?.get_geometry()?;
@@ -1386,7 +1385,7 @@ impl XdgToplevel {
     pub fn new(
         xdg_surface_ref: ObjectRef<XdgSurface>,
         client: &mut Client,
-        flatland: Flatland,
+        flatland: FlatlandPtr,
     ) -> Result<Self, Error> {
         let surface_ref = xdg_surface_ref.get(client)?.surface_ref();
         surface_ref.get_mut(client)?.set_flatland(flatland)?;
@@ -1406,7 +1405,7 @@ impl XdgToplevel {
     fn spawn_view_provider(
         this: ObjectRef<Self>,
         client: &mut Client,
-        flatland: Flatland,
+        flatland: FlatlandPtr,
     ) -> Result<ViewProviderControlHandle, Error> {
         ftrace::duration!("wayland", "XdgToplevel::spawn_view_provider");
         // Create a new ViewProvider service, hand off the client endpoint to
@@ -1442,6 +1441,7 @@ impl XdgToplevel {
                                 ..ViewBoundProtocols::EMPTY
                             };
                             flatland
+                                .borrow()
                                 .proxy()
                                 .create_view2(
                                     &mut view_creation_token,
@@ -1508,7 +1508,7 @@ impl XdgToplevel {
     fn spawn_view(
         this: ObjectRef<Self>,
         client: &mut Client,
-        flatland: Flatland,
+        flatland: FlatlandPtr,
     ) -> Result<ViewControllerProxy, Error> {
         ftrace::duration!("wayland", "XdgToplevel::spawn_view");
         let (proxy, server_end) = create_proxy::<ViewControllerMarker>()?;
@@ -1542,6 +1542,7 @@ impl XdgToplevel {
             ..ViewBoundProtocols::EMPTY
         };
         flatland
+            .borrow()
             .proxy()
             .create_view2(
                 &mut link_tokens.view_creation_token,
@@ -2017,9 +2018,11 @@ impl RequestReceiver<xdg_shell::XdgToplevel> for XdgToplevel {
 /// `XdgSurface`.
 struct XdgSurfaceView {
     #[cfg(feature = "flatland")]
-    flatland: Flatland,
+    flatland: FlatlandPtr,
     #[cfg(feature = "flatland")]
-    transform: Option<TransformId>,
+    root_transform: Option<TransformId>,
+    #[cfg(feature = "flatland")]
+    container_transform: TransformId,
     #[cfg(not(feature = "flatland"))]
     view: Option<View>,
     #[cfg(not(feature = "flatland"))]
@@ -2061,7 +2064,7 @@ impl XdgSurfaceView {
         // If we have both a size and a pixel scale, we're ready to send the
         // configure event to the client. We need both because we send expose
         // physical pixels to the client.
-        if self.logical_size.width != 0.0 && self.logical_size.width != 0.0 {
+        if self.logical_size.width != 0.0 && self.logical_size.height != 0.0 {
             // Post the xdg_toplevel::configure event to inform the client about
             // the change.
             let xdg_surface = self.xdg_surface;
@@ -2131,7 +2134,7 @@ impl XdgSurfaceView {
 #[cfg(feature = "flatland")]
 impl XdgSurfaceView {
     pub fn new(
-        flatland: Flatland,
+        flatland: FlatlandPtr,
         task_queue: TaskQueue,
         xdg_surface: ObjectRef<XdgSurface>,
         surface: ObjectRef<Surface>,
@@ -2146,11 +2149,22 @@ impl XdgSurfaceView {
         let physical_size = Self::physical_size_internal(&logical_size);
         let absolute_offset =
             Self::compute_absolute_offset(&parent, &physical_size, &local_offset, &geometry);
-        let transform = flatland.alloc_transform_id();
-        flatland.proxy().create_transform(&mut transform.clone()).expect("fidl error");
+        let root_transform = flatland.borrow_mut().alloc_transform_id();
+        let container_transform = flatland.borrow_mut().alloc_transform_id();
+        flatland
+            .borrow()
+            .proxy()
+            .create_transform(&mut root_transform.clone())
+            .expect("fidl error");
+        flatland
+            .borrow()
+            .proxy()
+            .create_transform(&mut container_transform.clone())
+            .expect("fidl error");
         let view_controller = XdgSurfaceView {
             flatland,
-            transform: Some(transform),
+            root_transform: Some(root_transform),
+            container_transform,
             logical_size,
             local_offset,
             absolute_offset,
@@ -2175,15 +2189,18 @@ impl XdgSurfaceView {
         vc.attach(vc.surface, client)?;
 
         // Perform an update if we have an initial size.
-        if vc.logical_size.width != 0.0 && vc.logical_size.width != 0.0 {
+        if vc.logical_size.width != 0.0 && vc.logical_size.height != 0.0 {
             vc.update();
+            vc.reconfigure();
         }
         vc.present_internal();
         Ok(())
     }
 
     pub fn shutdown(&mut self) {
-        self.transform = None;
+        self.root_transform.take().map(|_| {
+            self.flatland.borrow().proxy().release_view().expect("fidl error");
+        });
     }
 
     fn physical_size_internal(logical_size: &SizeF) -> Size {
@@ -2201,32 +2218,39 @@ impl XdgSurfaceView {
         ftrace::duration!("wayland", "XdgSurfaceView::attach");
         let surface = surface.get(client)?;
         let surface_transform = surface.transform().expect("surface is missing a transform");
-        self.transform.as_ref().map(|transform| {
-            self.flatland
-                .proxy()
-                .add_child(&mut transform.clone(), &mut surface_transform.clone())
-                .expect("fidl error");
-        });
+        self.flatland
+            .borrow()
+            .proxy()
+            .add_child(&mut self.container_transform.clone(), &mut surface_transform.clone())
+            .expect("fidl error");
         Ok(())
     }
 
     fn setup_scene(&self) {
         ftrace::duration!("wayland", "XdgSurfaceView::setup_scene");
-        self.transform.as_ref().map(|transform| {
-            self.flatland.proxy().set_root_transform(&mut transform.clone()).expect("fidl error");
+        self.root_transform.as_ref().map(|root_transform| {
+            self.flatland
+                .borrow()
+                .proxy()
+                .set_root_transform(&mut root_transform.clone())
+                .expect("fidl error");
+            // TODO(fxbug.dev/90666): Add background color if there's no parent.
+            self.flatland
+                .borrow()
+                .proxy()
+                .add_child(&mut root_transform.clone(), &mut self.container_transform.clone())
+                .expect("fidl error");
         });
-        // TODO(fxbug.dev/90666): Add background color if there's no parent.
     }
 
     fn update(&mut self) {
         ftrace::duration!("wayland", "XdgSurfaceView::update");
-        self.transform.as_ref().map(|transform| {
-            let mut translation = Vec_ { x: self.absolute_offset.0, y: self.absolute_offset.1 };
-            self.flatland
-                .proxy()
-                .set_translation(&mut transform.clone(), &mut translation)
-                .expect("fidl error");
-        });
+        let mut translation = Vec_ { x: self.absolute_offset.0, y: self.absolute_offset.1 };
+        self.flatland
+            .borrow()
+            .proxy()
+            .set_translation(&mut self.container_transform.clone(), &mut translation)
+            .expect("fidl error");
     }
 
     pub fn handle_layout_changed(&mut self, logical_size: &SizeF) {
@@ -2278,8 +2302,9 @@ impl XdgSurfaceView {
         };
         let mut child_transform = TransformId { value: id.into() };
         let mut link = ContentId { value: id.into() };
-        self.flatland.proxy().create_transform(&mut child_transform).expect("fidl error");
+        self.flatland.borrow().proxy().create_transform(&mut child_transform).expect("fidl error");
         self.flatland
+            .borrow()
             .proxy()
             .create_viewport(
                 &mut link,
@@ -2288,11 +2313,16 @@ impl XdgSurfaceView {
                 server_end,
             )
             .expect("fidl error");
-        self.flatland.proxy().set_content(&mut child_transform, &mut link).expect("fidl error");
-        self.transform.as_ref().map(|transform| {
+        self.flatland
+            .borrow()
+            .proxy()
+            .set_content(&mut child_transform, &mut link)
+            .expect("fidl error");
+        self.root_transform.as_ref().map(|root_transform| {
             self.flatland
+                .borrow()
                 .proxy()
-                .add_child(&mut transform.clone(), &mut child_transform)
+                .add_child(&mut root_transform.clone(), &mut child_transform)
                 .expect("fidl error");
         });
         self.children.insert(id);
@@ -2302,15 +2332,20 @@ impl XdgSurfaceView {
     pub fn handle_view_disconnected(&mut self, id: u64) {
         ftrace::duration!("wayland", "XdgSurfaceView::handle_view_disconnected");
         if self.children.remove(&id) {
-            self.transform.as_ref().map(|transform| {
+            self.root_transform.as_ref().map(|root_transform| {
                 let mut child_transform = TransformId { value: id.into() };
                 self.flatland
+                    .borrow()
                     .proxy()
-                    .remove_child(&mut transform.clone(), &mut child_transform)
+                    .remove_child(&mut root_transform.clone(), &mut child_transform)
                     .expect("fidl error");
-                self.flatland.proxy().release_transform(&mut child_transform).expect("fidl error");
+                self.flatland
+                    .borrow()
+                    .proxy()
+                    .release_transform(&mut child_transform)
+                    .expect("fidl error");
                 let mut link = ContentId { value: id.into() };
-                let _ = self.flatland.proxy().release_viewport(&mut link);
+                let _ = self.flatland.borrow().proxy().release_viewport(&mut link);
             });
         }
         self.update_and_present();
@@ -2326,6 +2361,7 @@ impl XdgSurfaceView {
         };
         let mut link = ContentId { value: id.into() };
         self.flatland
+            .borrow()
             .proxy()
             .set_viewport_properties(&mut link, viewport_properties)
             .expect("fidl error");
@@ -2385,8 +2421,9 @@ impl XdgSurfaceView {
         vc.surface.get_mut(client)?.set_pixel_scale(vc.pixel_scale.0, vc.pixel_scale.1);
 
         // Perform an update if we have an initial size.
-        if vc.logical_size.width != 0.0 && vc.logical_size.width != 0.0 {
+        if vc.logical_size.width != 0.0 && vc.logical_size.height != 0.0 {
             vc.update();
+            vc.reconfigure();
         }
         vc.present_internal();
         Ok(())
