@@ -375,6 +375,10 @@ bool RunTests(const char* test_suite, TestList* test_list, uint32_t run_count,
   // Copy test_list so that we can change the ordering without modifying
   // test_list itself.
   fbl::Vector<NamedTest*> test_list_copy;
+  if (!test_list) {
+    fprintf(log_stream, "No test cases are registered\n");
+    return false;
+  }
   for (internal::NamedTest& test_case : *test_list) {
     test_list_copy.push_back(&test_case);
   }

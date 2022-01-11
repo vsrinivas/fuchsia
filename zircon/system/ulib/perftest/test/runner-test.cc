@@ -24,7 +24,12 @@ class DummyOutputStream {
     fp_ = fmemopen(buf_, sizeof(buf_), "w+");
     ZX_ASSERT(fp_);
   }
-  ~DummyOutputStream() { ZX_ASSERT(fclose(fp_) == 0); }
+  ~DummyOutputStream() {
+    // Ignore any errors that might arise from running out of space in
+    // the buffer when flushing the stream.
+    fflush(fp_);
+    ZX_ASSERT(fclose(fp_) == 0);
+  }
 
   FILE* fp() { return fp_; }
 
@@ -292,6 +297,16 @@ TEST(PerfTestRunner, TestBytesProcessedParameterMultistep) {
   EXPECT_EQ((*test_cases)[0].bytes_processed_per_run, 1234);
   EXPECT_EQ((*test_cases)[1].bytes_processed_per_run, 0);
   EXPECT_EQ((*test_cases)[2].bytes_processed_per_run, 0);
+}
+
+// When no tests have been registered, a null pointer is passed to
+// RunTests() as the test list.  Check that that does not crash.
+TEST(PerfTestRunner, NullTestList) {
+  const uint32_t kRunCount = 5;
+  perftest::ResultsSet results;
+  DummyOutputStream out;
+  EXPECT_FALSE(
+      perftest::internal::RunTests("test-suite", nullptr, kRunCount, "", out.fp(), &results));
 }
 
 // Check that, by default, test cases are run in sorted order, sorted by
