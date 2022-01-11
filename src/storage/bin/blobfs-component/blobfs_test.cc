@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fidl/fuchsia.component/cpp/wire.h>
 #include <fidl/fuchsia.fs.startup/cpp/wire.h>
 #include <fidl/fuchsia.fs/cpp/wire.h>
 #include <fidl/fuchsia.hardware.block/cpp/wire.h>
@@ -21,6 +22,9 @@ namespace {
 constexpr uint32_t kBlockCount = 1024 * 256;
 constexpr uint32_t kBlockSize = 512;
 
+const fuchsia_component_decl::wire::ChildRef kBlobfsChildRef{.name = "test-blobfs",
+                                                             .collection = "blobfs-collection"};
+
 class BlobfsComponentTest : public testing::Test {
  public:
   void SetUp() override {
@@ -28,14 +32,50 @@ class BlobfsComponentTest : public testing::Test {
     ASSERT_EQ(ramdisk_or.status_value(), ZX_OK);
     ramdisk_ = std::move(*ramdisk_or);
 
-    auto startup_client_end = service::Connect<fuchsia_fs_startup::Startup>();
+    auto realm_client_end = service::Connect<fuchsia_component::Realm>();
+    ASSERT_EQ(realm_client_end.status_value(), ZX_OK);
+    realm_ = fidl::BindSyncClient(std::move(*realm_client_end));
+
+    fidl::Arena allocator;
+    fuchsia_component_decl::wire::CollectionRef collection_ref{.name = "blobfs-collection"};
+    fuchsia_component_decl::wire::Child child_decl(allocator);
+    child_decl.set_name(allocator, allocator, "test-blobfs")
+        .set_url(allocator, allocator, "fuchsia-boot:///#meta/blobfs.cm")
+        .set_startup(fuchsia_component_decl::wire::StartupMode::kLazy);
+    fuchsia_component::wire::CreateChildArgs child_args;
+    auto create_res = realm_->CreateChild(collection_ref, child_decl, child_args);
+    ASSERT_EQ(create_res.status(), ZX_OK);
+    ASSERT_FALSE(create_res->result.is_err())
+        << "create error: " << static_cast<uint32_t>(create_res->result.err());
+
+    auto exposed_endpoints = fidl::CreateEndpoints<fuchsia_io::Directory>();
+    ASSERT_EQ(exposed_endpoints.status_value(), ZX_OK);
+    auto open_exposed_res =
+        realm_->OpenExposedDir(kBlobfsChildRef, std::move(exposed_endpoints->server));
+    ASSERT_EQ(open_exposed_res.status(), ZX_OK);
+    ASSERT_FALSE(open_exposed_res->result.is_err())
+        << "open exposed dir error: " << static_cast<uint32_t>(open_exposed_res->result.err());
+    exposed_dir_ = std::move(exposed_endpoints->client);
+
+    auto startup_client_end =
+        service::ConnectAt<fuchsia_fs_startup::Startup>(exposed_dir_.borrow());
     ASSERT_EQ(startup_client_end.status_value(), ZX_OK);
     startup_client_ = fidl::BindSyncClient(std::move(*startup_client_end));
   }
-  void TearDown() override {}
+
+  void TearDown() override {
+    auto destroy_res = realm_->DestroyChild(kBlobfsChildRef);
+    ASSERT_EQ(destroy_res.status(), ZX_OK);
+    ASSERT_FALSE(destroy_res->result.is_err())
+        << "destroy error: " << static_cast<uint32_t>(destroy_res->result.err());
+  }
 
   const fidl::WireSyncClient<fuchsia_fs_startup::Startup>& startup_client() const {
     return startup_client_;
+  }
+
+  fidl::UnownedClientEnd<fuchsia_io::Directory> exposed_dir() const {
+    return exposed_dir_.borrow();
   }
 
   fidl::ClientEnd<fuchsia_hardware_block::Block> block_client() const {
@@ -50,7 +90,9 @@ class BlobfsComponentTest : public testing::Test {
 
  private:
   storage::RamDisk ramdisk_;
+  fidl::WireSyncClient<fuchsia_component::Realm> realm_;
   fidl::WireSyncClient<fuchsia_fs_startup::Startup> startup_client_;
+  fidl::ClientEnd<fuchsia_io::Directory> exposed_dir_;
 };
 
 TEST_F(BlobfsComponentTest, FormatCheckStartQuery) {
@@ -70,7 +112,7 @@ TEST_F(BlobfsComponentTest, FormatCheckStartQuery) {
   ASSERT_EQ(startup_res.status(), ZX_OK);
   ASSERT_FALSE(startup_res->result.is_err());
 
-  auto query_client_end = service::Connect<fuchsia_fs::Query>();
+  auto query_client_end = service::ConnectAt<fuchsia_fs::Query>(exposed_dir());
   ASSERT_EQ(query_client_end.status_value(), ZX_OK);
   auto query_client = fidl::BindSyncClient(std::move(*query_client_end));
 
@@ -79,7 +121,7 @@ TEST_F(BlobfsComponentTest, FormatCheckStartQuery) {
   ASSERT_FALSE(query_res->result.is_err()) << query_res->result.err();
   ASSERT_EQ(query_res->result.response().info.fs_type, VFS_TYPE_BLOBFS);
 
-  auto admin_client_end = service::Connect<fuchsia_fs::Admin>();
+  auto admin_client_end = service::ConnectAt<fuchsia_fs::Admin>(exposed_dir());
   ASSERT_EQ(admin_client_end.status_value(), ZX_OK);
   auto admin_client = fidl::BindSyncClient(std::move(*admin_client_end));
 
@@ -90,7 +132,7 @@ TEST_F(BlobfsComponentTest, FormatCheckStartQuery) {
 TEST_F(BlobfsComponentTest, RequestsBeforeStartupAreQueuedAndServicedAfter) {
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   loop.StartThread("blobfs caller test thread");
-  auto query_client_end = service::Connect<fuchsia_fs::Query>();
+  auto query_client_end = service::ConnectAt<fuchsia_fs::Query>(exposed_dir());
   ASSERT_EQ(query_client_end.status_value(), ZX_OK);
   fidl::WireSharedClient query_client(std::move(*query_client_end), loop.dispatcher());
 
@@ -122,7 +164,7 @@ TEST_F(BlobfsComponentTest, RequestsBeforeStartupAreQueuedAndServicedAfter) {
   // Query should get a response now.
   EXPECT_EQ(sync_completion_wait(&query_completion, ZX_TIME_INFINITE), ZX_OK);
 
-  auto admin_client_end = service::Connect<fuchsia_fs::Admin>();
+  auto admin_client_end = service::ConnectAt<fuchsia_fs::Admin>(exposed_dir());
   ASSERT_EQ(admin_client_end.status_value(), ZX_OK);
   auto admin_client = fidl::BindSyncClient(std::move(*admin_client_end));
 

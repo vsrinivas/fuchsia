@@ -28,6 +28,7 @@ component_manifest_resources("meta") {
 test("blobfs_component_test") {
   sources = [ "blobfs_test.cc" ]
   deps = [
+    "//sdk/fidl/fuchsia.component:fuchsia.component_llcpp",
     "//sdk/fidl/fuchsia.hardware.block:fuchsia.hardware.block_llcpp",
     "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
     "//src/lib/fxl/test:gtest_main",

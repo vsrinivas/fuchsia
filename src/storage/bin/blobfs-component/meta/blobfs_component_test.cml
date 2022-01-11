@@ -8,41 +8,16 @@
     program: {
         binary: "test/blobfs_component_test",
     },
-    children: [
+    collections: [
         {
-            name: "blobfs",
-            url: "fuchsia-boot:///#meta/blobfs.cm",
-            startup: "eager",
+            name: "blobfs-collection",
+            durability: "transient",
         },
     ],
     use: [
-        { protocol: "fuchsia.process.Launcher" },
         {
-            protocol: "fuchsia.sys2.Realm",
+            protocol: "fuchsia.component.Realm",
             from: "framework",
-        },
-        {
-            protocol: [
-                "fuchsia.fs.Admin",
-                "fuchsia.fs.Query",
-                "fuchsia.fs.startup.Startup",
-            ],
-            from: "#blobfs",
-        },
-        {
-            directory: "blob-exec",
-            from: "#blobfs",
-            rights: [
-                "execute",
-                "rw*",
-            ],
-            path: "/blob_exec",
-        },
-        {
-            directory: "blob",
-            from: "#blobfs",
-            rights: [ "rw*" ],
-            path: "/blob",
         },
     ],
     offer: [
@@ -52,12 +27,12 @@
                 "fuchsia.logger.LogSink",
             ],
             from: "parent",
-            to: [ "#blobfs" ],
+            to: [ "#blobfs-collection" ],
         },
         {
             directory: "dev",
             from: "#storage_driver_test_realm",
-            to: [ "#blobfs" ],
+            to: [ "#blobfs-collection" ],
         },
     ],
 }
