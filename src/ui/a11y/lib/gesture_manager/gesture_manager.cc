@@ -14,9 +14,8 @@ namespace a11y {
 GestureManager::GestureManager()
     : binding_(this),
       gesture_handler_([this](GestureRecognizer* recognizer) { AddRecognizer(recognizer); }),
-      arena_(fit::bind_member(&binding_.events(),
-                              &fuchsia::ui::input::accessibility::PointerEventListener::
-                                  EventSender_::OnStreamHandled)) {}
+      arena_(fit::bind_member<&fuchsia::ui::input::accessibility::PointerEventListener::
+                                  EventSender_::OnStreamHandled>(&binding_.events())) {}
 
 void GestureManager::OnEvent(fuchsia::ui::input::accessibility::PointerEvent pointer_event) {
   arena_.OnEvent(pointer_event);

@@ -87,7 +87,7 @@ App::App(sys::ComponentContext* context, a11y::ViewManager* view_manager,
     }
   });
   property_provider_.events().OnChange =
-      fit::bind_member(this, &App::PropertyProviderOnChangeHandler);
+      fit::bind_member<&App::PropertyProviderOnChangeHandler>(this);
   // Fetches the initial locale.
   // When the locale is returned, marks this object as initialized and ready to process requests.
   // This is necessary because the Locale is a must-have information that needs to be present to
@@ -208,7 +208,7 @@ void App::SetuiWatchCallback(fuchsia::settings::AccessibilitySettings settings) 
   WatchSetui();
 }
 
-void App::WatchSetui() { setui_settings_->Watch(fit::bind_member(this, &App::SetuiWatchCallback)); }
+void App::WatchSetui() { setui_settings_->Watch(fit::bind_member<&App::SetuiWatchCallback>(this)); }
 
 // Converts setui color blindess type to the relevant accessibility color correction mode.
 fuchsia::accessibility::ColorCorrectionMode ConvertColorCorrection(
