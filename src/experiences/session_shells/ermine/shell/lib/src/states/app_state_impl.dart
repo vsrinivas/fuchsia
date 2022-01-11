@@ -659,6 +659,7 @@ class AppStateImpl with Disposable implements AppState {
     data['appBarVisible'] = appBarVisible;
     data['sideBarVisible'] = sideBarVisible;
     data['overlaysVisible'] = overlaysVisible;
+    data['lastAction'] = shortcutsService.lastShortcutAction;
 
     // Number of running component views.
     data['numViews'] = views.length;

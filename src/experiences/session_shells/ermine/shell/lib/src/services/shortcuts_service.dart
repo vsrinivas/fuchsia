@@ -17,6 +17,9 @@ class ShortcutsService {
 
   final ViewRef hostViewRef;
 
+  /// Returns the last shortcut received by the application.
+  String lastShortcutAction = '';
+
   ShortcutsService(this.hostViewRef);
 
   late final KeyboardShortcuts _keyboardShortcuts;
@@ -30,7 +33,10 @@ class ShortcutsService {
 
     _keyboardShortcuts = KeyboardShortcuts.withViewRef(
       hostViewRef,
-      actions: actions.map((k, v) => MapEntry(k, () => v())),
+      actions: actions.map((k, v) => MapEntry(k, () {
+            lastShortcutAction = k;
+            v();
+          })),
       bindings: bindings,
     );
 

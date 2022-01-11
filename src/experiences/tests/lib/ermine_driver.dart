@@ -391,6 +391,9 @@ class ErmineDriver {
     return ShellSnapshot(json.decode(data));
   }
 
+  /// Returns the last keyboard shortcut action received by ermine shell.
+  Future<String> get lastAction async => (await snapshot).lastAction;
+
   /// Returns the list of launched views from inspect data.
   Future<List<ViewSnapshot>> get views async => (await snapshot).views;
 
@@ -550,6 +553,7 @@ class ShellSnapshot {
   bool get appBarVisible => inspectData['appBarVisible'] == true;
   bool get sideBarVisible => inspectData['sideBarVisible'] == true;
   bool get overlaysVisible => inspectData['overlaysVisible'] == true;
+  String get lastAction => inspectData['lastAction'] ?? '';
   ViewSnapshot? get activeView =>
       numViews > 0 ? views[inspectData['activeView'] ?? 0] : null;
 
