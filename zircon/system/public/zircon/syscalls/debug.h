@@ -121,7 +121,7 @@ typedef struct zx_thread_state_vector_regs {
 // The number is obtained by the WRPs field in the EDDFR register.
 #define AARCH64_MAX_HW_WATCHPOINTS 16
 
-// Value for XZ_THREAD_STATE_DEBUG_REGS for ARM64 platforms.
+// Value for ZX_THREAD_STATE_DEBUG_REGS for ARM64 platforms.
 typedef struct zx_thread_state_debug_regs {
   struct {
     uint32_t dbgbcr;  //  HW Breakpoint Control register.

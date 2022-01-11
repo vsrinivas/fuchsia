@@ -221,7 +221,7 @@
   "include/zircon/syscalls-next.h": "15b19191a3763e6acf3f0cead7722ccf",
   "include/zircon/syscalls.h": "dc7e8379ef6fa3a2969ff90d08a64143",
   "include/zircon/syscalls/clock.h": "5df7b36bb718402d9c5c9fa482d4e1eb",
-  "include/zircon/syscalls/debug.h": "e29767a8fed05a15f66f4c57e761d579",
+  "include/zircon/syscalls/debug.h": "f57f586b395aaca99a83d549e72143cc",
   "include/zircon/syscalls/exception.h": "d205645795319e8a897b3c81a5db1240",
   "include/zircon/syscalls/hypervisor.h": "5d6908e80523ace506f55f481a3074cd",
   "include/zircon/syscalls/internal/cdecls.inc": "8626e0b09d61801774ef525069f3b467",
