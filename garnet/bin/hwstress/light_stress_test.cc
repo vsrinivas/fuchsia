@@ -32,7 +32,7 @@ class FakeLightServer : public fuchsia::hardware::light::testing::Light_TestBase
   const std::vector<Light>& lights() { return lights_; }
 
   // Implementation of |Light| methods.
-  void GetNumLights(GetNumLightsCallback callback) override { return callback(lights_.size()); }
+  void GetNumLights(GetNumLightsCallback callback) override { return callback(static_cast<uint32_t>(lights_.size())); }
   void GetInfo(uint32_t index, GetInfoCallback callback) override {
     fuchsia::hardware::light::Light_GetInfo_Response response;
     response.info.capability = lights_.at(index).capability;

@@ -19,7 +19,7 @@ namespace hwstress {
 
 LogLevel LogLevelFromString(const std::string& value) {
   std::string value_lower(value);
-  std::for_each(value_lower.begin(), value_lower.end(), [](char& c) { c = std::tolower(c); });
+  std::for_each(value_lower.begin(), value_lower.end(), [](char& c) { c = static_cast<char>(std::tolower(c)); });
 
   if (value_lower == "terse") {
     return LogLevel::kTerse;

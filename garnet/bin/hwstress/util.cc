@@ -16,7 +16,7 @@ zx::duration SecsToDuration(double secs) {
   return zx::nsec(static_cast<int64_t>(secs * 1'000'000'000.0));
 }
 
-double DurationToSecs(zx::duration d) { return d.to_nsecs() / 1'000'000'000.0; }
+double DurationToSecs(zx::duration d) { return static_cast<double>(d.to_nsecs()) / 1'000'000'000.0; }
 
 std::string DoubleAsHex(double v) {
   // Standards-compliant way to convert a double to a long. The compiler will

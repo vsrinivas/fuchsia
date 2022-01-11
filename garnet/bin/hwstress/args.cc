@@ -181,7 +181,7 @@ fitx::result<std::string, CommandLineArgs> ParseArgs(cpp20::span<const char* con
 
   std::unique_ptr<cmdline::ArgsParser<CommandLineArgs>> parser = GetParser();
   std::vector<std::string> params;
-  cmdline::Status status = parser->Parse(other_args.size(), other_args.data(), &result, &params);
+  cmdline::Status status = parser->Parse(static_cast<int>(other_args.size()), other_args.data(), &result, &params);
   if (!status.ok()) {
     return fitx::error(status.error_message().c_str());
   }
@@ -237,7 +237,7 @@ fitx::result<std::string, CommandLineArgs> ParseArgs(cpp20::span<const char* con
     if (result.iterations < 1) {
       return fitx::error("'--iterations' must be at least 1.");
     }
-    if (result.test_duration_seconds) {
+    if (result.test_duration_seconds != 0.0) {
       return fitx::error("'--duration' and '--iterations' cannot both be specified.");
     }
     if (result.subcommand != StressTest::kFlash) {

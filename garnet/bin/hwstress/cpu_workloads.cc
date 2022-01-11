@@ -150,7 +150,7 @@ class MatrixMultiplicationWorkload final : public Workload {
 
     // Create a random matrix.
     std::mt19937_64 generator{};
-    std::uniform_real_distribution<> dist(-1.0, 1.0);
+    std::uniform_real_distribution<float> dist(-1.0, 1.0);
     for (int x = 0; x < kSize; x++) {
       for (int y = 0; y < kSize; y++) {
         random_.m[x][y] = dist(generator);

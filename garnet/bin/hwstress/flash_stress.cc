@@ -151,12 +151,12 @@ zx_status_t FlashIo(const BlockDevice& device, size_t bytes_to_test, size_t tran
     if ((pending_signals & ZX_FIFO_WRITABLE) != 0 && !ready_to_send.empty() && bytes_to_send > 0) {
       reqid_t reqid = ready_to_send.front();
       reqs[reqid].dev_offset = dev_off / blksize;
-      reqs[reqid].length = std::min(transfer_size, bytes_to_send) / blksize;
+      reqs[reqid].length = static_cast<uint32_t>(std::min(transfer_size, bytes_to_send) / static_cast<uint32_t>(blksize));
       if (is_write_test) {
         vmo_byte_offset = reqs[reqid].vmo_offset * blksize;
         for (size_t i = 0; i < reqs[reqid].length; i++) {
           uint64_t value = reqs[reqid].dev_offset + i;
-          WriteBlockData(device.vmo_addr + vmo_byte_offset + blksize * i, blksize, value);
+          WriteBlockData(device.vmo_addr + vmo_byte_offset + blksize * i, static_cast<uint32_t>(blksize), value);
         }
       }
       zx_status_t r = SendFifoRequest(device.fifo, reqs[reqid]);
@@ -184,7 +184,7 @@ zx_status_t FlashIo(const BlockDevice& device, size_t bytes_to_test, size_t tran
         vmo_byte_offset = reqs[reqid].vmo_offset * blksize;
         for (size_t i = 0; i < reqs[reqid].length; i++) {
           uint64_t value = reqs[reqid].dev_offset + i;
-          VerifyBlockData(device.vmo_addr + vmo_byte_offset + blksize * i, blksize, value);
+          VerifyBlockData(device.vmo_addr + vmo_byte_offset + blksize * i, static_cast<uint32_t>(blksize), value);
         }
       }
       if (bytes_to_send > 0) {
@@ -371,7 +371,7 @@ bool StressFlash(StatusLine* status, const CommandLineArgs& args, zx::duration d
     zx::duration test_duration = zx::clock::get_monotonic() - test_start;
     status->Log("Test %4ld: Write: %0.3fs, throughput: %0.2f MiB/s", num_tests,
                 DurationToSecs(test_duration),
-                bytes_to_test / (DurationToSecs(test_duration) * 1024 * 1024));
+                static_cast<double>(bytes_to_test) / (DurationToSecs(test_duration) * 1024 * 1024));
 
     test_start = zx::clock::get_monotonic();
     if (FlashIo(device, bytes_to_test, actual_transfer_size, /*is_write_test=*/false) != ZX_OK) {
@@ -381,7 +381,7 @@ bool StressFlash(StatusLine* status, const CommandLineArgs& args, zx::duration d
     test_duration = zx::clock::get_monotonic() - test_start;
     status->Log("Test %4ld: Read: %0.3fs, throughput: %0.2f MiB/s", num_tests,
                 DurationToSecs(test_duration),
-                bytes_to_test / (DurationToSecs(test_duration) * 1024 * 1024));
+                static_cast<double>(bytes_to_test) / (DurationToSecs(test_duration) * 1024 * 1024));
 
     num_tests++;
     // If 'iterations' is set the duration will be infinite

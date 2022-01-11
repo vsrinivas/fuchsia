@@ -98,7 +98,7 @@ void RowHammer(StatusLine* status, MemoryRange* memory, zx::duration duration, u
   WritePattern(memory->span(), SimplePattern(pattern));
 
   // Get random numbers returning a random page.
-  uint32_t num_pages = memory->size_bytes() / zx_system_get_page_size();
+  uint32_t num_pages = static_cast<uint32_t>(memory->size_bytes() / zx_system_get_page_size());
   std::default_random_engine rng = CreateRandomEngine();
   std::uniform_int_distribution<uint32_t> random_page(0, num_pages - 1);
 
@@ -138,7 +138,7 @@ void RowHammer(StatusLine* status, MemoryRange* memory, zx::duration duration, u
     };
   }
   zx::time end = zx::clock::get_monotonic();
-  double seconds_per_iteration = DurationToSecs(end - start) / iterations;
+  double seconds_per_iteration = DurationToSecs(end - start) / static_cast<double>(iterations);
   status->Verbose("Done. Time per iteration = %0.2fs, row activations per 64ms refresh ~= %0.0f",
                   seconds_per_iteration,
                   (kReadsPerIteration / seconds_per_iteration) * (64. / 1000.));
@@ -277,7 +277,7 @@ fitx::result<std::string, size_t> GetMemoryToTest(const CommandLineArgs& args) {
   if (args.ram_to_test_percent.has_value()) {
     uint64_t total_bytes = maybe_stats->total_bytes();
     auto test_bytes =
-        static_cast<uint64_t>(total_bytes * (args.ram_to_test_percent.value() / 100.));
+        static_cast<uint64_t>(static_cast<double>(total_bytes) * (static_cast<double>(args.ram_to_test_percent.value()) / 100.));
     return fitx::ok(RoundUp(test_bytes, zx_system_get_page_size()));
   }
 
@@ -353,7 +353,7 @@ bool StressMemory(StatusLine* status, const CommandLineArgs& args, zx::duration 
     status->Log(bytes_to_test.error_value());
     return false;
   }
-  status->Log("Testing %0.2fMiB of memory.", bytes_to_test.value() / static_cast<double>(MiB(1)));
+  status->Log("Testing %0.2fMiB of memory.", static_cast<double>(bytes_to_test.value()) / static_cast<double>(MiB(1)));
 
   // Create a profile manager.
   std::unique_ptr<ProfileManager> profile_manager = ProfileManager::CreateFromEnvironment();
@@ -398,7 +398,7 @@ bool StressMemory(StatusLine* status, const CommandLineArgs& args, zx::duration 
     if (next.workload.report_throughput) {
       throughput =
           fxl::StringPrintf(", throughput: %0.2f MiB/s",
-                            memory->size_bytes() / DurationToSecs(test_duration) / 1024. / 1024.);
+                            static_cast<double>(memory->size_bytes()) / DurationToSecs(test_duration) / 1024. / 1024.);
     }
     status->Log("Test %4ld: CPU %2d : %s: %0.3fs%s", num_tests, next.cpu,
                 next.workload.name.c_str(), DurationToSecs(test_duration), throughput.c_str());
