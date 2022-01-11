@@ -1148,7 +1148,7 @@ ssize_t ArmArchVmAspace::UnmapPages(vaddr_t vaddr, size_t size, EnlargeOperation
 }
 
 zx_status_t ArmArchVmAspace::ProtectPages(vaddr_t vaddr, size_t size, pte_t attrs,
-                                          vaddr_t vaddr_base) {
+                                          vaddr_t vaddr_base, ConsistencyManager& cm) {
   vaddr_t vaddr_rel = vaddr - vaddr_base;
   vaddr_t vaddr_rel_max = 1UL << top_size_shift_;
 
@@ -1163,8 +1163,6 @@ zx_status_t ArmArchVmAspace::ProtectPages(vaddr_t vaddr, size_t size, pte_t attr
   }
 
   LOCAL_KTRACE("mmu protect", (vaddr & ~PAGE_MASK) | ((size >> PAGE_SIZE_SHIFT) & PAGE_MASK));
-
-  ConsistencyManager cm(*this);
 
   zx_status_t ret = ProtectPageTable(vaddr, vaddr_rel, size, attrs, top_index_shift_, tt_virt_, cm);
   return ret;
@@ -1409,7 +1407,8 @@ zx_status_t ArmArchVmAspace::Protect(vaddr_t vaddr, size_t count, uint mmu_flags
   {
     pte_t attrs = MmuParamsFromFlags(mmu_flags);
 
-    ret = ProtectPages(vaddr, count * PAGE_SIZE, attrs, vaddr_base_);
+    ConsistencyManager cm(*this);
+    ret = ProtectPages(vaddr, count * PAGE_SIZE, attrs, vaddr_base_, cm);
     MarkAspaceModified();
   }
 

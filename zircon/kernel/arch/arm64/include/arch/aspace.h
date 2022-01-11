@@ -121,8 +121,8 @@ class ArmArchVmAspace final : public ArchVmAspaceInterface {
   ssize_t UnmapPages(vaddr_t vaddr, size_t size, EnlargeOperation enlarge, vaddr_t vaddr_base,
                      ConsistencyManager& cm) TA_REQ(lock_);
 
-  zx_status_t ProtectPages(vaddr_t vaddr, size_t size, pte_t attrs, vaddr_t vaddr_base)
-      TA_REQ(lock_);
+  zx_status_t ProtectPages(vaddr_t vaddr, size_t size, pte_t attrs, vaddr_t vaddr_base,
+                           ConsistencyManager& cm) TA_REQ(lock_);
   zx_status_t QueryLocked(vaddr_t vaddr, paddr_t* paddr, uint* mmu_flags) TA_REQ(lock_);
 
   void FlushTLBEntry(vaddr_t vaddr, bool terminal) const TA_REQ(lock_);
