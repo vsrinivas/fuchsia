@@ -1161,7 +1161,7 @@ but you do not want the client to be able to interact with other objects,
 creating a separate protocol instance means you can use the underlying channel
 as a capability that controls access to that object.
 
-### Command union
+### Command union {#command-pattern}
 
 In protocols that use feed-forward dataflow, the client often sends many one-way
 messages to the server before sending a two-way synchronization message.  If the
@@ -1367,6 +1367,65 @@ Things to avoid:
  * Avoid individual methods to update settings' fields such as
    `SetMagnificationEnabled`. Such individal methods are more burdensome to
    maintain, and callers rarely want to update a single value.
+
+### Referring to union variants and table fields
+
+It is often useful to refer to fields of types, such as referring to one or
+multiple fields of a table or referring to a specific union variant.
+
+Consider an API which provides metadata as a `table` with many fields. If this
+metadata can grow to be quite large, it is often useful to have a mechanism for
+the recipient to indicate to the sender which fields in this metadata will be
+read, thus avoiding sending superfluous fields which will not be considered by
+the recipients. In such cases, having a parallel `bits` whose members match
+one-to-one with the fields of the `table` can be a strong foundation to build
+your API:
+
+```fidl
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples.docs/api_rubric.test.fidl" region_tag="bits-fields-for-table" %}
+```
+
+Now, consider the [command union](#command-pattern). In a complex scenario, the
+server may want the ability to describe the commands it supports. In such cases,
+having a parallel `enum` whose members match one-to-one with the variants of the
+`union` can be a strong foundation to build your API:
+
+```fidl
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples.docs/api_rubric.test.fidl" region_tag="enum-variants-for-union" %}
+```
+
+Note that while it might be tempting to use a `bits` value to represent the set
+of commands, this leads to some more difficult choices down the line, If your
+API evolves such that you need to refer to a specific command, having an `enum`
+fits naturally. Should you have started with a `bits` value, you are now faced
+with one of two bad choices:
+
+1. Introduce a `enum` which means that there are now two ways to refer to
+   fields, and possibly conversion issues in client code (to go from one
+   representation to the other); or
+
+1. Continue to use the `bits` with the restriction that only one bit be set at
+   any given time, and now mapping back to which specific bit is set is
+   cumbersome.
+
+In summary, for `table`:
+
+  * Name the `bits` by the name of the `table` along with the suffix `Fields`
+    (plural). Each member value should be the bit at the ordinal index, i.e.
+    `1 << (ordinal - 1)`.
+
+  * Similarly to the advice for `union`, you want to match the flexibility
+    between the `bits` and the `table`, i.e. since FIDL only supports flexible
+    tables today, the `bits` must be `flexible`.
+
+For `union`:
+
+  * Name the `enum` listing all variants by the name of the `union` along with
+    the suffix `Variant` (singular). Each member value should be the ordinal
+    of the variant it describes.
+
+  * Match the flexibility between the `union` and the `enum`, i.e. if the
+    `union` is `strict` then the `enum` must also be `strict`.
 
 ## Antipatterns
 

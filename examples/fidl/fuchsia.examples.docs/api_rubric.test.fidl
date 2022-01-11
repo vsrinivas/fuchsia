@@ -395,6 +395,41 @@ protocol TheManagerOfOtherSorts {
 };
 // [END settings-replace]
 
+// [START enum-variants-for-union]
+type MyCommandVariant = strict enum {
+    POKE = 1;
+    PROD = 2;
+    // ...
+};
+
+protocol HighVolumeSinkContinued {
+    SupportedCommands() -> (struct {
+        supported_commands vector<MyCommandVariant>;
+    });
+};
+// [END enum-variants-for-union]
+
+// [START bits-fields-for-table]
+type MetadataFields = flexible bits {
+    VERSION = 0b1;
+    COUNT = 0b10;
+};
+
+type Metadata = table {
+    1: version string;
+    2: count uint32;
+    // ...
+};
+
+protocol MetadataGetter {
+    Get(struct {
+        fields MetadataFields;
+    }) -> (struct {
+        metadata Metadata;
+    });
+};
+// [END bits-fields-for-table]
+
 // [START service-hub-1]
 // BAD
 @discoverable
