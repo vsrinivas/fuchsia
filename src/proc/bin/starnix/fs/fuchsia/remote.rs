@@ -8,6 +8,7 @@ use parking_lot::{Mutex, RwLockReadGuard, RwLockWriteGuard};
 use std::sync::Arc;
 use syncio::{
     zxio, zxio::zxio_get_posix_mode, zxio_node_attributes_t, DirentIterator, Zxio, ZxioDirent,
+    ZxioSignals,
 };
 
 use crate::errno;
@@ -77,36 +78,33 @@ fn update_into_from_attrs(info: &mut FsNodeInfo, attrs: zxio_node_attributes_t) 
 }
 
 fn get_zxio_signals_from_events(events: FdEvents) -> zxio::zxio_signals_t {
-    let mut signals = zxio::ZXIO_SIGNAL_NONE;
+    let mut signals = ZxioSignals::NONE;
     if events & FdEvents::POLLIN {
-        signals |= zxio::ZXIO_SIGNAL_READABLE
-            | zxio::ZXIO_SIGNAL_PEER_CLOSED
-            | zxio::ZXIO_SIGNAL_READ_DISABLED;
+        signals |= ZxioSignals::READABLE | ZxioSignals::PEER_CLOSED | ZxioSignals::READ_DISABLED;
     }
     if events & FdEvents::POLLOUT {
-        signals |= zxio::ZXIO_SIGNAL_WRITABLE | zxio::ZXIO_SIGNAL_WRITE_DISABLED;
+        signals |= ZxioSignals::WRITABLE | ZxioSignals::WRITE_DISABLED;
     }
     if events & FdEvents::POLLRDHUP {
-        signals |= zxio::ZXIO_SIGNAL_READ_DISABLED | zxio::ZXIO_SIGNAL_PEER_CLOSED;
+        signals |= ZxioSignals::READ_DISABLED | ZxioSignals::PEER_CLOSED;
     }
-    return signals;
+    return signals.bits();
 }
 
 fn get_events_from_zxio_signals(signals: zxio::zxio_signals_t) -> FdEvents {
+    let zxio_signals = ZxioSignals::from_bits_truncate(signals);
+
     let mut events = FdEvents::empty();
 
-    if signals
-        & (zxio::ZXIO_SIGNAL_READABLE
-            | zxio::ZXIO_SIGNAL_PEER_CLOSED
-            | zxio::ZXIO_SIGNAL_READ_DISABLED)
-        != 0
+    if zxio_signals
+        .intersects(ZxioSignals::READABLE | ZxioSignals::PEER_CLOSED | ZxioSignals::READ_DISABLED)
     {
         events |= FdEvents::POLLIN;
     }
-    if signals & (zxio::ZXIO_SIGNAL_WRITABLE | zxio::ZXIO_SIGNAL_WRITE_DISABLED) != 0 {
+    if zxio_signals.intersects(ZxioSignals::WRITABLE | ZxioSignals::WRITE_DISABLED) {
         events |= FdEvents::POLLOUT;
     }
-    if signals & (zxio::ZXIO_SIGNAL_READ_DISABLED | zxio::ZXIO_SIGNAL_PEER_CLOSED) != 0 {
+    if zxio_signals.intersects(ZxioSignals::READ_DISABLED | ZxioSignals::PEER_CLOSED) {
         events |= FdEvents::POLLRDHUP;
     }
 

@@ -5,6 +5,7 @@
 use std::convert::From;
 use std::ptr;
 
+use bitflags::bitflags;
 use fidl::endpoints::ServerEnd;
 use fidl_fuchsia_io as fio;
 use fuchsia_zircon::{self as zx, HandleBased};
@@ -16,6 +17,22 @@ pub mod zxio;
 pub use zxio::zxio_dirent_t;
 pub use zxio::zxio_node_attributes_t;
 pub use zxio::zxio_signals_t;
+
+bitflags! {
+    // These values should match the values in sdk/lib/zxio/include/lib/zxio/types.h
+    pub struct ZxioSignals : zxio_signals_t {
+        const NONE            =      0;
+        const READABLE        = 1 << 0;
+        const WRITABLE        = 1 << 1;
+        const READ_DISABLED   = 1 << 2;
+        const WRITE_DISABLED  = 1 << 3;
+        const READ_THRESHOLD  = 1 << 4;
+        const WRITE_THRESHOLD = 1 << 5;
+        const OUT_OF_BAND     = 1 << 6;
+        const ERROR           = 1 << 7;
+        const PEER_CLOSED     = 1 << 8;
+    }
+}
 
 // TODO: We need a more comprehensive error strategy.
 // Our dependencies create elaborate error objects, but Starnix would prefer
@@ -236,7 +253,7 @@ impl Zxio {
     }
 
     pub fn wait_end(&self, signals: zx::Signals) -> zxio_signals_t {
-        let mut zxio_signals = zxio::ZXIO_SIGNAL_NONE;
+        let mut zxio_signals = ZxioSignals::NONE.bits();
         unsafe {
             zxio::zxio_wait_end(self.as_ptr(), signals.bits(), &mut zxio_signals);
         }
