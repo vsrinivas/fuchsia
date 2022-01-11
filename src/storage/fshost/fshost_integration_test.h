@@ -5,9 +5,8 @@
 #ifndef SRC_STORAGE_FSHOST_FSHOST_INTEGRATION_TEST_H_
 #define SRC_STORAGE_FSHOST_FSHOST_INTEGRATION_TEST_H_
 
+#include <fidl/fuchsia.component/cpp/wire.h>
 #include <fidl/fuchsia.fshost/cpp/wire.h>
-#include <fuchsia/component/cpp/fidl.h>
-#include <fuchsia/component/decl/cpp/fidl.h>
 #include <lib/fdio/directory.h>
 
 #include <string_view>
@@ -22,11 +21,11 @@ class FshostIntegrationTest : public testing::Test {
   void SetUp() override;
   void TearDown() override;
 
-  const fidl::SynchronousInterfacePtr<fuchsia::io::Directory>& exposed_dir() const {
-    return exposed_dir_;
-  }
+  const fidl::WireSyncClient<fuchsia_io::Directory>& exposed_dir() const { return exposed_dir_; }
 
-  const zx::channel& watcher_channel() const { return watcher_channel_; }
+  const fidl::WireSyncClient<fuchsia_fshost::BlockWatcher>& block_watcher() const {
+    return block_watcher_;
+  }
 
   void PauseWatcher() const;
   void ResumeWatcher() const;
@@ -38,9 +37,9 @@ class FshostIntegrationTest : public testing::Test {
   std::pair<fbl::unique_fd, uint64_t> WaitForMount(const std::string& name);
 
  private:
-  fidl::SynchronousInterfacePtr<fuchsia::io::Directory> exposed_dir_;
-  fidl::SynchronousInterfacePtr<fuchsia::component::Realm> realm_;
-  zx::channel watcher_channel_;
+  fidl::WireSyncClient<fuchsia_io::Directory> exposed_dir_;
+  fidl::WireSyncClient<fuchsia_component::Realm> realm_;
+  fidl::WireSyncClient<fuchsia_fshost::BlockWatcher> block_watcher_;
 };
 
 }  // namespace fshost

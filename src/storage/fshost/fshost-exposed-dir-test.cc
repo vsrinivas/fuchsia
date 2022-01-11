@@ -6,7 +6,6 @@
 #include <fcntl.h>
 #include <fidl/fuchsia.io/cpp/wire.h>
 #include <fidl/fuchsia.update.verify/cpp/wire.h>
-#include <fuchsia/io/cpp/fidl.h>
 #include <lib/fdio/fd.h>
 #include <sys/statfs.h>
 #include <zircon/device/block.h>
@@ -71,25 +70,26 @@ TEST_F(FshostExposedDirTest, ExposesDiagnosticsAndServicesForBlobfs) {
   ASSERT_TRUE(fd);
   EXPECT_EQ(fs_type, VFS_TYPE_BLOBFS);
 
-  fidl::SynchronousInterfacePtr<fuchsia::io::Node> exposed_dir_client;
-  ASSERT_EQ(
-      exposed_dir()->Clone(fuchsia::io::CLONE_FLAG_SAME_RIGHTS, exposed_dir_client.NewRequest()),
-      ZX_OK);
+  auto exposed_dir_endpoints = fidl::CreateEndpoints<fuchsia_io::Node>();
+  ASSERT_EQ(exposed_dir_endpoints.status_value(), ZX_OK);
+  auto clone_res = exposed_dir()->Clone(fuchsia_io::wire::kCloneFlagSameRights,
+                                        std::move(exposed_dir_endpoints->server));
+  ASSERT_EQ(clone_res.status(), ZX_OK);
 
   fbl::unique_fd export_dir_fd;
-  ASSERT_EQ(fdio_fd_create(exposed_dir_client.Unbind().TakeChannel().release(),
+  ASSERT_EQ(fdio_fd_create(exposed_dir_endpoints->client.TakeChannel().release(),
                            export_dir_fd.reset_and_get_address()),
             ZX_OK);
   ASSERT_TRUE(export_dir_fd);
 
   std::string svc_name = "diagnostics/blobfs";
   fbl::unique_fd blobfs_diag_dir_fd(
-      openat(export_dir_fd.get(), svc_name.c_str(), fuchsia::io::OPEN_FLAG_DESCRIBE, 0644));
+      openat(export_dir_fd.get(), svc_name.c_str(), ZX_FS_FLAG_DESCRIBE, 0644));
   EXPECT_TRUE(blobfs_diag_dir_fd) << "failed to open " << svc_name << ": " << strerror(errno);
 
   svc_name = fidl::DiscoverableProtocolName<fuchsia_update_verify::BlobfsVerifier>;
   fbl::unique_fd blobfs_health_check_dir_fd(
-      openat(export_dir_fd.get(), svc_name.c_str(), fuchsia::io::OPEN_FLAG_DESCRIBE, 0644));
+      openat(export_dir_fd.get(), svc_name.c_str(), ZX_FS_FLAG_DESCRIBE, 0644));
   EXPECT_TRUE(blobfs_health_check_dir_fd)
       << "failed to open " << svc_name << ": " << strerror(errno);
 }

@@ -4,65 +4,61 @@
 
 #include "src/storage/fshost/fshost_integration_test.h"
 
+#include <lib/service/llcpp/service.h>
 #include <sys/statfs.h>
 #include <zircon/device/vfs.h>
 
 namespace fshost {
 
+static const char kTestFshostName[] = "test-fshost";
+static const char kTestFshostCollection[] = "fshost-collection";
+static const char kTestFshostUrl[] = "fuchsia-pkg://fuchsia.com/fshost-tests#meta/test-fshost.cm";
+
+static const fuchsia_component_decl::wire::ChildRef kFshostChildRef{
+    .name = kTestFshostName, .collection = kTestFshostCollection};
+
 void FshostIntegrationTest::SetUp() {
-  std::string service_name = std::string("/svc/") + fuchsia::component::Realm::Name_;
-  auto status = zx::make_status(
-      fdio_service_connect(service_name.c_str(), realm_.NewRequest().TakeChannel().get()));
-  ASSERT_TRUE(status.is_ok());
+  auto realm_client_end = service::Connect<fuchsia_component::Realm>();
+  ASSERT_EQ(realm_client_end.status_value(), ZX_OK);
+  realm_ = fidl::BindSyncClient(std::move(*realm_client_end));
 
-  fuchsia::component::Realm_CreateChild_Result create_result;
-  fuchsia::component::decl::Child child_decl;
-  child_decl.set_name("test-fshost")
-      .set_url("fuchsia-pkg://fuchsia.com/fshost-tests#meta/test-fshost.cm")
-      .set_startup(fuchsia::component::decl::StartupMode::LAZY);
-  status = zx::make_status(realm_->CreateChild(
-      fuchsia::component::decl::CollectionRef{.name = "fshost-collection"}, std::move(child_decl),
-      fuchsia::component::CreateChildArgs(), &create_result));
-  ASSERT_TRUE(status.is_ok() && !create_result.is_err());
+  fidl::Arena allocator;
+  fuchsia_component_decl::wire::CollectionRef collection_ref{.name = kTestFshostCollection};
+  fuchsia_component_decl::wire::Child child_decl(allocator);
+  child_decl.set_name(allocator, allocator, kTestFshostName)
+      .set_url(allocator, allocator, kTestFshostUrl)
+      .set_startup(fuchsia_component_decl::wire::StartupMode::kLazy);
+  fuchsia_component::wire::CreateChildArgs child_args;
+  auto create_res = realm_->CreateChild(collection_ref, child_decl, child_args);
+  ASSERT_TRUE(create_res.ok() && !create_res->result.is_err());
 
-  fuchsia::component::Realm_OpenExposedDir_Result bind_result;
-  status = zx::make_status(realm_->OpenExposedDir(
-      fuchsia::component::decl::ChildRef{.name = "test-fshost", .collection = "fshost-collection"},
-      exposed_dir_.NewRequest(), &bind_result));
-  ASSERT_TRUE(status.is_ok() && !bind_result.is_err());
+  auto exposed_endpoints = fidl::CreateEndpoints<fuchsia_io::Directory>();
+  ASSERT_EQ(exposed_endpoints.status_value(), ZX_OK);
+  auto open_res = realm_->OpenExposedDir(kFshostChildRef, std::move(exposed_endpoints->server));
+  ASSERT_TRUE(open_res.ok() && !open_res->result.is_err());
+  exposed_dir_ = fidl::BindSyncClient(std::move(exposed_endpoints->client));
 
-  // Describe so that we discover errors early.
-  fuchsia::io::NodeInfo info;
-  ASSERT_EQ(exposed_dir_->Describe(&info), ZX_OK);
-
-  zx::channel request;
-  status = zx::make_status(zx::channel::create(0, &watcher_channel_, &request));
-  ASSERT_EQ(status.status_value(), ZX_OK);
-  status = zx::make_status(
-      exposed_dir_->Open(fuchsia::io::OPEN_RIGHT_READABLE | fuchsia::io::OPEN_RIGHT_WRITABLE, 0,
-                         fidl::DiscoverableProtocolName<fuchsia_fshost::BlockWatcher>,
-                         fidl::InterfaceRequest<fuchsia::io::Node>(std::move(request))));
-  ASSERT_EQ(status.status_value(), ZX_OK);
+  auto watcher_client_end =
+      service::ConnectAt<fuchsia_fshost::BlockWatcher>(exposed_dir_.client_end());
+  ASSERT_EQ(watcher_client_end.status_value(), ZX_OK);
+  block_watcher_ = fidl::BindSyncClient(std::move(*watcher_client_end));
 }
 
 void FshostIntegrationTest::TearDown() {
-  fuchsia::component::Realm_DestroyChild_Result destroy_result;
-  auto status = zx::make_status(realm_->DestroyChild(
-      fuchsia::component::decl::ChildRef{.name = "test-fshost", .collection = "fshost-collection"},
-      &destroy_result));
-  ASSERT_TRUE(status.is_ok() && !destroy_result.is_err());
+  auto destroy_res = realm_->DestroyChild(kFshostChildRef);
+  ASSERT_TRUE(destroy_res.ok() && !destroy_res->result.is_err());
 }
 
 void FshostIntegrationTest::PauseWatcher() const {
-  auto result = fidl::WireCall<fuchsia_fshost::BlockWatcher>(watcher_channel_.borrow())->Pause();
-  ASSERT_EQ(result.status(), ZX_OK);
-  ASSERT_EQ(result->status, ZX_OK);
+  auto res = block_watcher_->Pause();
+  ASSERT_EQ(res.status(), ZX_OK);
+  ASSERT_EQ(res->status, ZX_OK);
 }
 
 void FshostIntegrationTest::ResumeWatcher() const {
-  auto result = fidl::WireCall<fuchsia_fshost::BlockWatcher>(watcher_channel_.borrow())->Resume();
-  ASSERT_EQ(result.status(), ZX_OK);
-  ASSERT_EQ(result->status, ZX_OK);
+  auto res = block_watcher_->Resume();
+  ASSERT_EQ(res.status(), ZX_OK);
+  ASSERT_EQ(res->status, ZX_OK);
 }
 
 std::pair<fbl::unique_fd, uint64_t> FshostIntegrationTest::WaitForMount(const std::string& name) {
@@ -73,15 +69,18 @@ std::pair<fbl::unique_fd, uint64_t> FshostIntegrationTest::WaitForMount(const st
   // complex process launching so use a high retry limit.
   constexpr int kMaxRetries = 30;
   for (int i = 0; i < kMaxRetries; i++) {
-    fidl::SynchronousInterfacePtr<fuchsia::io::Node> root;
-    zx_status_t status =
-        exposed_dir()->Open(fuchsia::io::OPEN_RIGHT_READABLE, 0, name, root.NewRequest());
-    EXPECT_EQ(ZX_OK, status);
-    if (status != ZX_OK)
+    auto root_endpoints = fidl::CreateEndpoints<fuchsia_io::Node>();
+    EXPECT_EQ(root_endpoints.status_value(), ZX_OK);
+    auto open_res = exposed_dir()->Open(fuchsia_io::wire::kOpenRightReadable, 0,
+                                        fidl::StringView::FromExternal(name),
+                                        std::move(root_endpoints->server));
+    EXPECT_EQ(open_res.status(), ZX_OK);
+    if (open_res.status() != ZX_OK)
       return std::make_pair(fbl::unique_fd(), 0);
 
     fbl::unique_fd fd;
-    status = fdio_fd_create(root.Unbind().TakeChannel().release(), fd.reset_and_get_address());
+    zx_status_t status =
+        fdio_fd_create(root_endpoints->client.TakeChannel().release(), fd.reset_and_get_address());
     EXPECT_EQ(ZX_OK, status);
     if (status != ZX_OK)
       return std::make_pair(fbl::unique_fd(), 0);
