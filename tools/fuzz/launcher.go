@@ -349,7 +349,7 @@ func (q *QemuLauncher) Start() (conn Connector, returnErr error) {
 	// Detach from the child, since we will never wait on it
 	cmd.Process.Release()
 
-	return &SSHConnector{Host: "localhost", Port: port, Key: q.sshKey}, nil
+	return NewSSHConnector("localhost", port, q.sshKey), nil
 }
 
 // IsRunning checks if the qemu process is alive

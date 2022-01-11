@@ -24,13 +24,15 @@ import (
 // function.  Any runtime errors will be passed back on the error channel.  The
 // SSH server itself is real, but its subsystems (exec, sftp) are fakes for
 // testing.
-func startLocalSSHServer() (*SSHConnector, <-chan error, *fakeSftp, error) {
+//
+// The first `failureCount` connections will fail to connect.
+func startLocalSSHServer(failureCount uint) (*SSHConnector, <-chan error, *fakeSftp, error) {
 	connCh := make(chan *SSHConnector, 1)
 	errCh := make(chan error, 1)
 
 	fakeFs := &fakeSftp{}
 
-	go serveSSH(connCh, errCh, fakeFs)
+	go serveSSH(connCh, errCh, fakeFs, failureCount)
 
 	// We expect either a startup error or nil to indicate success
 	if err := <-errCh; err != nil {
@@ -40,7 +42,7 @@ func startLocalSSHServer() (*SSHConnector, <-chan error, *fakeSftp, error) {
 	return <-connCh, errCh, fakeFs, nil
 }
 
-func serveSSH(connCh chan<- *SSHConnector, errCh chan<- error, fakeFs *fakeSftp) {
+func serveSSH(connCh chan<- *SSHConnector, errCh chan<- error, fakeFs *fakeSftp, failureCount uint) {
 	// Note: Even though startLocalSSHServer is going to block on these
 	// initialization steps , they are inside this goroutine because that is
 	// the scope where the deferred cleanup belongs
@@ -99,15 +101,26 @@ func serveSSH(connCh chan<- *SSHConnector, errCh chan<- error, fakeFs *fakeSftp)
 
 	// Return a suitable connector for the test to use
 	addr := listener.Addr().(*net.TCPAddr)
-	connCh <- &SSHConnector{Host: "127.0.0.1", Port: addr.Port, Key: pemFile}
+	connCh <- NewSSHConnector("127.0.0.1", addr.Port, pemFile)
 
 	// Indicate initialization is complete
 	errCh <- nil
 
-	conn, err := listener.Accept()
-	if err != nil {
-		errCh <- fmt.Errorf("error during Accept: %s", err)
-		return
+	var conn net.Conn
+	for {
+		conn, err = listener.Accept()
+		if err != nil {
+			errCh <- fmt.Errorf("error during Accept: %s", err)
+			return
+		}
+
+		if failureCount == 0 {
+			break
+		}
+
+		// Cause a handshake failure
+		conn.Close()
+		failureCount -= 1
 	}
 
 	defer conn.Close()

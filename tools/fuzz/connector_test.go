@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/golang/glog"
 	"github.com/google/go-cmp/cmp"
@@ -24,7 +25,7 @@ import (
 // end-to-end tests in e2e_test.go.
 
 func TestSSHConnectorHandle(t *testing.T) {
-	c := &SSHConnector{Host: "somehost", Port: 123, Key: "keyfile"}
+	c := NewSSHConnector("somehost", 123, "keyfile")
 
 	handle, err := NewHandleWithData(HandleData{connector: c})
 	if err != nil {
@@ -50,7 +51,7 @@ func TestSSHConnectorHandle(t *testing.T) {
 
 func TestIncompleteSSHConnectorHandle(t *testing.T) {
 	// Construct an object that isn't fully initialized
-	c := &SSHConnector{Port: 123}
+	c := NewSSHConnector("", 123, "")
 
 	handle, err := NewHandleWithData(HandleData{connector: c})
 	if err != nil {
@@ -64,7 +65,7 @@ func TestIncompleteSSHConnectorHandle(t *testing.T) {
 }
 
 func TestSSHCommand(t *testing.T) {
-	c, _ := getFakeSSHConnector(t)
+	c, _ := getFakeSSHConnector(t, 0)
 	defer c.Close()
 
 	arg := "some cool args"
@@ -80,7 +81,7 @@ func TestSSHCommand(t *testing.T) {
 }
 
 func TestSSHInvalidCommand(t *testing.T) {
-	c, _ := getFakeSSHConnector(t)
+	c, _ := getFakeSSHConnector(t, 0)
 	defer c.Close()
 
 	cmd := c.Command("LOAD", `"*",8`)
@@ -89,8 +90,28 @@ func TestSSHInvalidCommand(t *testing.T) {
 	}
 }
 
+func TestSSHCommandWithConnectionFailures(t *testing.T) {
+	// Should recover with a few failures
+	c, _ := getFakeSSHConnector(t, sshReconnectCount-1)
+	defer c.Close()
+
+	cmd := c.Command("echo", "a few")
+	if err := cmd.Run(); err != nil {
+		t.Fatalf("error running remote command: %s", err)
+	}
+
+	// Should abort after repeated failures
+	c2, _ := getFakeSSHConnector(t, sshReconnectCount)
+	defer c2.Close()
+
+	cmd = c2.Command("echo", "too many")
+	if err := cmd.Run(); err == nil {
+		t.Fatalf("missing expected error running remote command")
+	}
+}
+
 func TestSSHGet(t *testing.T) {
-	c, fs := getFakeSSHConnector(t)
+	c, fs := getFakeSSHConnector(t, 0)
 	defer c.Close()
 
 	tmpDir := getTempdir(t)
@@ -114,7 +135,7 @@ func TestSSHGet(t *testing.T) {
 }
 
 func TestSSHGetNonexistentSourceFile(t *testing.T) {
-	c, _ := getFakeSSHConnector(t)
+	c, _ := getFakeSSHConnector(t, 0)
 	defer c.Close()
 
 	tmpDir := getTempdir(t)
@@ -126,7 +147,7 @@ func TestSSHGetNonexistentSourceFile(t *testing.T) {
 }
 
 func TestSSHGetToNonexistentDestDir(t *testing.T) {
-	c, _ := getFakeSSHConnector(t)
+	c, _ := getFakeSSHConnector(t, 0)
 	defer c.Close()
 
 	tmpDir := getTempdir(t)
@@ -138,7 +159,7 @@ func TestSSHGetToNonexistentDestDir(t *testing.T) {
 }
 
 func TestSSHPut(t *testing.T) {
-	c, fs := getFakeSSHConnector(t)
+	c, fs := getFakeSSHConnector(t, 0)
 	defer c.Close()
 
 	tmpDir := getTempdir(t)
@@ -162,7 +183,7 @@ func TestSSHPut(t *testing.T) {
 }
 
 func TestSSHGetGlob(t *testing.T) {
-	c, fs := getFakeSSHConnector(t)
+	c, fs := getFakeSSHConnector(t, 0)
 	defer c.Close()
 
 	tmpDir := getTempdir(t)
@@ -194,7 +215,7 @@ func TestSSHGetGlob(t *testing.T) {
 }
 
 func TestSSHPutGlob(t *testing.T) {
-	c, fs := getFakeSSHConnector(t)
+	c, fs := getFakeSSHConnector(t, 0)
 	defer c.Close()
 
 	tmpDir := getTempdir(t)
@@ -226,7 +247,7 @@ func TestSSHPutGlob(t *testing.T) {
 }
 
 func TestSSHGetDir(t *testing.T) {
-	c, fs := getFakeSSHConnector(t)
+	c, fs := getFakeSSHConnector(t, 0)
 	defer c.Close()
 
 	// Set up remote file structure
@@ -328,7 +349,7 @@ func TestSSHPutDir(t *testing.T) {
 
 	// Put /outer (contains file and subdirectory)
 
-	c, fs := getFakeSSHConnector(t)
+	c, fs := getFakeSSHConnector(t, 0)
 	defer c.Close()
 
 	remotePath := "/some/dir"
@@ -344,7 +365,7 @@ func TestSSHPutDir(t *testing.T) {
 
 	// Put /outer/inner (contains files)
 
-	c, fs = getFakeSSHConnector(t)
+	c, fs = getFakeSSHConnector(t, 0)
 	defer c.Close()
 
 	fs.files = []*fakeFile{{name: remotePath, isDir: true}}
@@ -370,13 +391,15 @@ func TestSSHPutDir(t *testing.T) {
 
 // Helper functions:
 
-func getFakeSSHConnector(t *testing.T) (*SSHConnector, *fakeSftp) {
+func getFakeSSHConnector(t *testing.T, failureCount uint) (*SSHConnector, *fakeSftp) {
 	glog.Info("Starting local SSH server...")
 
-	conn, errCh, fakeFs, err := startLocalSSHServer()
+	conn, errCh, fakeFs, err := startLocalSSHServer(failureCount)
 	if err != nil {
 		t.Fatalf("error starting local server: %s", err)
 	}
+
+	conn.reconnectInterval = 1 * time.Millisecond
 
 	// Monitor for server errors
 	go func() {

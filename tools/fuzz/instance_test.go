@@ -28,7 +28,7 @@ func TestInstanceHandle(t *testing.T) {
 
 	instance := newTestInstance()
 	instance.Launcher = &QemuLauncher{Pid: 404, TmpDir: "/some/dir"}
-	instance.Connector = &SSHConnector{Host: "somehost", Port: 123, Key: "keyfile"}
+	instance.Connector = NewSSHConnector("somehost", 123, "keyfile")
 
 	handle, err := instance.Handle()
 	if err != nil {

@@ -13,7 +13,7 @@ import (
 )
 
 func TestHandleSerialize(t *testing.T) {
-	connector := &SSHConnector{Port: 1234}
+	connector := NewSSHConnector("host", 1234, "key")
 	launcher := NewQemuLauncher(nil)
 	launcher.TmpDir = "フクシャ"
 

@@ -18,6 +18,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/golang/glog"
 	"github.com/kr/fs"
@@ -66,6 +67,17 @@ type SSHConnector struct {
 
 	client     *ssh.Client
 	sftpClient *sftp.Client
+
+	// Retry configuration; defaults only need to be overridden for testing
+	reconnectInterval time.Duration
+}
+
+const sshReconnectCount = 3
+const defaultSSHReconnectInterval = 3 * time.Second
+
+func NewSSHConnector(host string, port int, key string) *SSHConnector {
+	return &SSHConnector{Host: host, Port: port, Key: key,
+		reconnectInterval: defaultSSHReconnectInterval}
 }
 
 // Connect to the remote server
@@ -93,25 +105,39 @@ func (c *SSHConnector) Connect() error {
 		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
 	}
 
-	// TODO(fxbug.dev/45424): dial timeout
 	address := net.JoinHostPort(c.Host, strconv.Itoa(c.Port))
-	client, err := ssh.Dial("tcp", address, config)
-	if err != nil {
-		return fmt.Errorf("error connecting ssh: %s", err)
+
+	var client *ssh.Client
+	first := true
+	for j := 1; j <= sshReconnectCount; j++ {
+		if !first {
+			glog.Warningf("Retrying in %s...", c.reconnectInterval)
+			time.Sleep(c.reconnectInterval)
+		}
+		first = false
+
+		// TODO(fxbug.dev/45424): dial timeout
+		if client, err = ssh.Dial("tcp", address, config); err != nil {
+			glog.Warningf("Got error during attempt %d: %s", j, err)
+			continue
+		}
+
+		glog.Info("SSH: connected")
+		c.client = client
+
+		sftpClient, err := sftp.NewClient(c.client)
+		if err != nil {
+			return fmt.Errorf("error connecting sftp: %s", err)
+		}
+
+		glog.Info("SFTP: connected")
+		c.sftpClient = sftpClient
+
+		return nil
 	}
 
-	glog.Info("SSH: connected")
-	c.client = client
+	return fmt.Errorf("error connecting ssh")
 
-	sftpClient, err := sftp.NewClient(c.client)
-	if err != nil {
-		return fmt.Errorf("error connecting sftp: %s", err)
-	}
-
-	glog.Info("SFTP: connected")
-	c.sftpClient = sftpClient
-
-	return nil
 }
 
 // Close any open connections

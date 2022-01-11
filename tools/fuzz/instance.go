@@ -128,6 +128,7 @@ func (i *BaseInstance) Start() error {
 		cmd.SetTimeout(5 * time.Second)
 
 		// Start() will return an error if we have trouble connecting to the server.
+		// Note that the underlying connector may have its own additional retry logic.
 		if err := cmd.Start(); err != nil {
 			glog.Warningf("Connection failed during attempt %d: %s", j, err)
 			continue
