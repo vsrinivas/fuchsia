@@ -48,11 +48,9 @@ class TestEffectsV2::TestProcessor : public fidl::WireServer<fuchsia_audio_effec
         binding_(fidl::BindServer(dispatcher, std::move(server_end), this,
                                   [](TestProcessor* impl, fidl::UnbindInfo info,
                                      fidl::ServerEnd<fuchsia_audio_effects::Processor> server_end) {
-                                    if (info.reason() != fidl::Reason::kClose &&
-                                        info.reason() != fidl::Reason::kPeerClosed &&
-                                        info.reason() != fidl::Reason::kUnbind) {
+                                    if (!info.is_user_initiated() && !info.is_peer_closed()) {
                                       FX_PLOGS(ERROR, info.status())
-                                          << "Client disconnected unexpectedly: ";
+                                          << "Client disconnected unexpectedly: " << info;
                                     }
                                   })) {
     // This should not fail.
@@ -130,9 +128,8 @@ void TestEffectsV2::HandleRequest(
       loop_.dispatcher(), std::move(server_end), this,
       [](TestEffectsV2* impl, fidl::UnbindInfo info,
          fidl::ServerEnd<fuchsia_audio_effects::ProcessorCreator> server_end) {
-        if (info.reason() != fidl::Reason::kClose && info.reason() != fidl::Reason::kPeerClosed &&
-            info.reason() != fidl::Reason::kUnbind) {
-          FX_PLOGS(ERROR, info.status()) << "Client disconnected unexpectedly: ";
+        if (!info.is_user_initiated() && !info.is_peer_closed()) {
+          FX_PLOGS(ERROR, info.status()) << "Client disconnected unexpectedly: " << info;
         }
       }));
 }

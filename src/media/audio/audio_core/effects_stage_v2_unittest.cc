@@ -226,11 +226,9 @@ class BaseProcessor : public fidl::WireServer<fuchsia_audio_effects::Processor> 
       : binding_(fidl::BindServer(dispatcher, std::move(server_end), this,
                                   [](BaseProcessor* impl, fidl::UnbindInfo info,
                                      fidl::ServerEnd<fuchsia_audio_effects::Processor> server_end) {
-                                    if (info.reason() != fidl::Reason::kClose &&
-                                        info.reason() != fidl::Reason::kPeerClosed &&
-                                        info.reason() != fidl::Reason::kUnbind) {
+                                    if (!info.is_user_initiated() && !info.is_peer_closed()) {
                                       FX_PLOGS(ERROR, info.status())
-                                          << "Client disconnected unexpectedly: ";
+                                          << "Client disconnected unexpectedly: " << info;
                                     }
                                   })),
         buffers_(EffectsStageV2::Buffers::Create(options.input_buffer, options.output_buffer)) {}
