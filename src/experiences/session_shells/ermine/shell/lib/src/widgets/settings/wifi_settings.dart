@@ -35,14 +35,11 @@ class WiFiSettings extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Padding(
-                      padding:
-                          EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-                      child: Text(Strings.savedNetworks),
-                    ),
-                    if (savedNetworks.isEmpty)
-                      ListTile(
-                        title: Text(Strings.loading.toLowerCase()),
+                    if (savedNetworks.isNotEmpty)
+                      Padding(
+                        padding:
+                            EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                        child: Text(Strings.savedNetworks),
                       ),
                     ListView.builder(
                         shrinkWrap: true,
