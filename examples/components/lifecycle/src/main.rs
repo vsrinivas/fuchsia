@@ -21,9 +21,7 @@ async fn main() {
     match fruntime::take_startup_handle(HandleInfo::new(HandleType::Lifecycle, 0)) {
         Some(lifecycle_handle) => {
             info!("Lifecycle channel received.");
-            // We could start waiting for a message on this channel which
-            // would tell us to stop. Instead we close it, indicating to our
-            // Runner that we are done.
+            // Begin listening for lifecycle requests on this channel
             let x: zx::Channel = lifecycle_handle.into();
             let async_x = AsyncChannel::from(
                 fasync::Channel::from_channel(x).expect("Async channel conversion failed."),
