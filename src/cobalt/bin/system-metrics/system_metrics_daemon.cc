@@ -68,7 +68,7 @@ SystemMetricsDaemon::SystemMetricsDaemon(async_dispatcher_t* dispatcher,
           std::unique_ptr<cobalt::SteadyClock>(new cobalt::RealSteadyClock()),
           std::unique_ptr<cobalt::CpuStatsFetcher>(new cobalt::CpuStatsFetcherImpl()),
           std::make_unique<cobalt::ActivityListener>(
-              fit::bind_member(this, &SystemMetricsDaemon::UpdateState)),
+              fit::bind_member<&SystemMetricsDaemon::UpdateState>(this)),
           "data/") {
   InitializeLogger();
   // Connect activity listener to service provider.
