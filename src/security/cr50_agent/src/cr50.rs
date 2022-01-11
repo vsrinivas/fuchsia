@@ -12,21 +12,23 @@ use crate::{
                 CcdCommand, CcdGetInfoResponse, CcdOpenResponse, CcdPhysicalPresenceResponse,
                 CcdRequest,
             },
-            pinweaver::PinweaverResetTree,
+            pinweaver::{PinweaverInsertLeaf, PinweaverResetTree},
             wp::WpInfoRequest,
-            TpmCommand,
+            Serializable, TpmCommand,
         },
         status::{ExecuteError, TpmStatus},
     },
     power_button::PowerButton,
+    util::Serializer,
 };
 use anyhow::{anyhow, Context, Error};
 use fidl::endpoints::RequestStream;
 use fidl_fuchsia_tpm::TpmDeviceProxy;
 use fidl_fuchsia_tpm_cr50::{
     CcdCapability, CcdFlags, CcdIndicator, CcdInfo, CcdState, Cr50Rc, Cr50Request,
-    Cr50RequestStream, Cr50Status, PhysicalPresenceEvent, PhysicalPresenceNotifierMarker,
-    PhysicalPresenceState, PinWeaverRequest, PinWeaverRequestStream, WpState,
+    Cr50RequestStream, Cr50Status, InsertLeafResponse, PhysicalPresenceEvent,
+    PhysicalPresenceNotifierMarker, PhysicalPresenceState, PinWeaverRequest,
+    PinWeaverRequestStream, WpState,
 };
 use fuchsia_async as fasync;
 use fuchsia_syslog::fx_log_warn;
@@ -123,7 +125,31 @@ impl Cr50 {
                         .send(&mut result.ok().map(|_| result.root))
                         .context("Replying to request")?;
                 }
-                PinWeaverRequest::InsertLeaf { .. } => todo!(),
+                PinWeaverRequest::InsertLeaf { params, responder } => {
+                    let request = match PinweaverInsertLeaf::new(params) {
+                        Ok(req) => req,
+                        Err(e) => {
+                            responder.send(&mut Err(e)).context("Replying to request")?;
+                            continue;
+                        }
+                    };
+
+                    let result =
+                        request.execute(&self.proxy).await.context("Executing TPM command")?;
+                    let mut fidl_result = result.ok().map(|response| {
+                        let mut table = InsertLeafResponse::EMPTY;
+                        table.root_hash = Some(response.root);
+                        let data = response.data.as_ref().unwrap();
+                        table.mac = Some(data.leaf_data.hmac);
+                        // cred metadata is just the whole unimported_leaf_data.
+                        let mut serializer = Serializer::new();
+                        data.leaf_data.serialize(&mut serializer);
+                        table.cred_metadata = Some(serializer.into_vec());
+                        table
+                    });
+
+                    responder.send(&mut fidl_result).context("Replying to request")?;
+                }
                 PinWeaverRequest::RemoveLeaf { .. } => todo!(),
                 PinWeaverRequest::TryAuth { .. } => todo!(),
             }

@@ -96,6 +96,14 @@ impl Serializer {
         self.put(&data.to_le_bytes())
     }
 
+    pub fn put_le_u32(&mut self, data: u32) {
+        self.put(&data.to_le_bytes())
+    }
+
+    pub fn put_le_u64(&mut self, data: u64) {
+        self.put(&data.to_le_bytes())
+    }
+
     pub fn into_vec(self) -> Vec<u8> {
         self.data
     }

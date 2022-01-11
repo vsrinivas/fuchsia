@@ -59,6 +59,20 @@ pub trait Serializable {
     fn serialize(&self, serializer: &mut Serializer);
 }
 
+impl<T: Serializable> Serializable for &[T] {
+    fn serialize(&self, serializer: &mut Serializer) {
+        for value in self.iter() {
+            value.serialize(serializer);
+        }
+    }
+}
+
+impl Serializable for u8 {
+    fn serialize(&self, serializer: &mut Serializer) {
+        serializer.put_u8(*self);
+    }
+}
+
 /// Trait used for deserialising TPM commands from byte arrays.
 pub trait Deserializable: Sized {
     fn deserialize(deserializer: &mut Deserializer) -> Result<Self, DeserializeError>;
