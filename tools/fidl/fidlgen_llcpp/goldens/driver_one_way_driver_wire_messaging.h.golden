@@ -95,9 +95,28 @@ struct ::fidl::WireRequest<::test_driveroneway::OneWay::Send> final {
 #ifdef __Fuchsia__
 
 template <>
+class ::fidl::WireResult<::test_driveroneway::OneWay::Send> final
+    : public ::fidl::Result {
+ public:
+  WireResult(::fdf::UnownedClientEnd<::test_driveroneway::OneWay> client,
+             ::fidl::WireRequest<::test_driveroneway::OneWay::Send>* request);
+  explicit WireResult(const ::fidl::Result& result) : ::fidl::Result(result) {}
+  WireResult(WireResult&&) = delete;
+  WireResult(const WireResult&) = delete;
+  WireResult* operator=(WireResult&&) = delete;
+  WireResult* operator=(const WireResult&) = delete;
+  ~WireResult() = default;
+
+ private:
+};
+template <>
 class ::fidl::WireUnownedResult<::test_driveroneway::OneWay::Send> final
     : public ::fidl::Result {
  public:
+  explicit WireUnownedResult(
+      ::fdf::UnownedClientEnd<::test_driveroneway::OneWay> client_end,
+      ::fidl::internal::AnyBufferAllocator& allocator,
+      ::fidl::WireRequest<::test_driveroneway::OneWay::Send>* request);
   explicit WireUnownedResult(const ::fidl::Result& result)
       : ::fidl::Result(result) {}
   WireUnownedResult(WireUnownedResult&&) = delete;
@@ -153,6 +172,52 @@ class ::fidl::internal::WireEventDispatcher<::test_driveroneway::OneWay> final
   std::optional<::fidl::UnbindInfo> DispatchEvent(
       ::fidl::IncomingMessage& msg,
       ::fidl::internal::IncomingTransportContext transport_context) override;
+};
+
+// Methods to make a sync FIDL call directly on an unowned handle or a
+// const reference to a |fdf::ClientEnd<::test_driveroneway::OneWay>|,
+// avoiding setting up a client.
+template <>
+class ::fidl::internal::WireSyncClientImpl<::test_driveroneway::OneWay> final
+    : public ::fidl::internal::SyncEndpointManagedVeneer<
+          ::fidl::internal::WireSyncClientImpl<::test_driveroneway::OneWay>> {
+ public:
+  // Allocates 24 bytes of message buffer on the stack. No heap allocation
+  // necessary.
+  ::fidl::WireResult<::test_driveroneway::OneWay::Send> Send(
+      const ::test_driveroneway::wire::Payload& payload) {
+    ::fidl::WireRequest<::test_driveroneway::OneWay::Send> _request{payload};
+    return ::fidl::WireResult<::test_driveroneway::OneWay::Send>(_client_end(),
+                                                                 &_request);
+  }
+
+ private:
+  ::fdf::UnownedClientEnd<::test_driveroneway::OneWay> _client_end() const {
+    return ::fdf::UnownedClientEnd<::test_driveroneway::OneWay>(
+        _transport().get<::fidl::internal::DriverTransport>());
+  }
+};
+
+template <>
+class ::fidl::internal::WireSyncBufferClientImpl<::test_driveroneway::OneWay>
+    final : public ::fidl::internal::SyncEndpointBufferVeneer<
+                ::fidl::internal::WireSyncBufferClientImpl<
+                    ::test_driveroneway::OneWay>> {
+ public:
+  // Caller provides the backing storage for FIDL message via an argument to
+  // `.buffer()`.
+  ::fidl::WireUnownedResult<::test_driveroneway::OneWay::Send> Send(
+      const ::test_driveroneway::wire::Payload& payload) {
+    ::fidl::WireRequest<::test_driveroneway::OneWay::Send> _request{payload};
+    return ::fidl::WireUnownedResult<::test_driveroneway::OneWay::Send>(
+        _client_end(), _allocator(), &_request);
+  }
+
+ private:
+  ::fdf::UnownedClientEnd<::test_driveroneway::OneWay> _client_end() const {
+    return ::fdf::UnownedClientEnd<::test_driveroneway::OneWay>(
+        _transport().get<::fidl::internal::DriverTransport>());
+  }
 };
 
 // Pure-virtual interface to be implemented by a server.

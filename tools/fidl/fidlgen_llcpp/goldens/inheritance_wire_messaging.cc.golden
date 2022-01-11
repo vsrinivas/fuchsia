@@ -22,7 +22,7 @@ extern "C" const fidl_type_t test_inheritance_superfooResponseMessageTable;
       request_message(::fidl::internal::AllowUnownedInputRef{}, request);
   auto& outgoing = request_message.GetOutgoingMessage();
   outgoing.Call<::fidl::WireResponse<::test_inheritance::Super::Foo>>(
-      client.channel(), bytes_.data(), static_cast<uint32_t>(bytes_.size()));
+      client.handle(), bytes_.data(), static_cast<uint32_t>(bytes_.size()));
   SetResult(outgoing);
 }
 
@@ -37,7 +37,7 @@ extern "C" const fidl_type_t test_inheritance_superfooResponseMessageTable;
       request_message(::fidl::internal::AllowUnownedInputRef{}, request);
   auto& outgoing = request_message.GetOutgoingMessage();
   outgoing.Call<::fidl::WireResponse<::test_inheritance::Super::Foo>>(
-      client.channel(), bytes_.data(), static_cast<uint32_t>(bytes_.size()),
+      client.handle(), bytes_.data(), static_cast<uint32_t>(bytes_.size()),
       fidl::CallOptions{.deadline = deadline});
   SetResult(outgoing);
 }
@@ -72,7 +72,7 @@ namespace test_inheritance {
       request_message(request_bytes, request_byte_capacity, request);
   auto& outgoing = request_message.GetOutgoingMessage();
   outgoing.Call<::fidl::WireResponse<::test_inheritance::Super::Foo>>(
-      client_end.channel(), response_bytes, response_byte_capacity);
+      client_end.handle(), response_bytes, response_byte_capacity);
   bytes_ = response_bytes;
   ::fidl::Result::operator=(outgoing);
 }
@@ -363,7 +363,7 @@ extern "C" const fidl_type_t test_inheritance_subfooResponseMessageTable;
       request_message(::fidl::internal::AllowUnownedInputRef{}, request);
   auto& outgoing = request_message.GetOutgoingMessage();
   outgoing.Call<::fidl::WireResponse<::test_inheritance::Sub::Foo>>(
-      client.channel(), bytes_.data(), static_cast<uint32_t>(bytes_.size()));
+      client.handle(), bytes_.data(), static_cast<uint32_t>(bytes_.size()));
   SetResult(outgoing);
 }
 
@@ -377,7 +377,7 @@ extern "C" const fidl_type_t test_inheritance_subfooResponseMessageTable;
       request_message(::fidl::internal::AllowUnownedInputRef{}, request);
   auto& outgoing = request_message.GetOutgoingMessage();
   outgoing.Call<::fidl::WireResponse<::test_inheritance::Sub::Foo>>(
-      client.channel(), bytes_.data(), static_cast<uint32_t>(bytes_.size()),
+      client.handle(), bytes_.data(), static_cast<uint32_t>(bytes_.size()),
       fidl::CallOptions{.deadline = deadline});
   SetResult(outgoing);
 }
@@ -412,7 +412,7 @@ namespace test_inheritance {
       request_message(request_bytes, request_byte_capacity, request);
   auto& outgoing = request_message.GetOutgoingMessage();
   outgoing.Call<::fidl::WireResponse<::test_inheritance::Sub::Foo>>(
-      client_end.channel(), response_bytes, response_byte_capacity);
+      client_end.handle(), response_bytes, response_byte_capacity);
   bytes_ = response_bytes;
   ::fidl::Result::operator=(outgoing);
 }

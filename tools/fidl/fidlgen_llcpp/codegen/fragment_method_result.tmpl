@@ -75,9 +75,9 @@ class {{ .WireResult }} final : public ::fidl::Result {
   auto& outgoing = request_message.GetOutgoingMessage();
   {{- if .HasResponse }}
   outgoing.Call<{{ .WireResponse }}>(
-    client.channel(), bytes_.data(), static_cast<uint32_t>(bytes_.size()));
+    client.handle(), bytes_.data(), static_cast<uint32_t>(bytes_.size()));
   {{- else }}
-  outgoing.Write(client.channel());
+  outgoing.Write(client.handle());
   {{- end }}
   SetResult(outgoing);
 }
@@ -91,7 +91,7 @@ class {{ .WireResult }} final : public ::fidl::Result {
       ::fidl::internal::AllowUnownedInputRef{}, request);
   auto& outgoing = request_message.GetOutgoingMessage();
   outgoing.Call<{{ .WireResponse }}>(
-    client.channel(), bytes_.data(), static_cast<uint32_t>(bytes_.size()), fidl::CallOptions{.deadline = deadline});
+    client.handle(), bytes_.data(), static_cast<uint32_t>(bytes_.size()), fidl::CallOptions{.deadline = deadline});
   SetResult(outgoing);
 }
   {{- end }}

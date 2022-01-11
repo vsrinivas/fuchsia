@@ -19,7 +19,8 @@ test("fidl_driver_transport_tests_bin") {
   output_name = "fidl_driver_transport_tests"
   sources = [
     "api_test.cc",
-    "two_way_test.cc",
+    "async_two_way_test.cc",
+    "sync_two_way_test.cc",
   ]
   deps = [
     ":test.transport_driver",

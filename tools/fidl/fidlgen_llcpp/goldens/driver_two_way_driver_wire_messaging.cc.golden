@@ -10,6 +10,74 @@ namespace test_drivertwoway {
 extern "C" const fidl_type_t test_drivertwoway_TwoWayAddRequestMessageTable;
 
 extern "C" const fidl_type_t test_drivertwoway_TwoWayAddResponseMessageTable;
+#ifdef __Fuchsia__
+}  // namespace test_drivertwoway
+::fidl::WireResult<::test_drivertwoway::TwoWay::Add>::WireResult(
+    ::fdf::UnownedClientEnd<::test_drivertwoway::TwoWay> client,
+    ::fidl::WireRequest<::test_drivertwoway::TwoWay::Add>* request) {
+  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
+  ::fidl::OwnedEncodedMessage<
+      ::fidl::WireRequest<::test_drivertwoway::TwoWay::Add>,
+      ::fidl::internal::DriverTransport>
+      request_message(::fidl::internal::AllowUnownedInputRef{}, request);
+  auto& outgoing = request_message.GetOutgoingMessage();
+  outgoing.Call<::fidl::WireResponse<::test_drivertwoway::TwoWay::Add>>(
+      client.handle(), bytes_.data(), static_cast<uint32_t>(bytes_.size()));
+  SetResult(outgoing);
+}
+
+::fidl::WireResult<::test_drivertwoway::TwoWay::Add>::WireResult(
+    ::fdf::UnownedClientEnd<::test_drivertwoway::TwoWay> client,
+    ::fidl::WireRequest<::test_drivertwoway::TwoWay::Add>* request,
+    zx_time_t deadline) {
+  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
+  ::fidl::OwnedEncodedMessage<
+      ::fidl::WireRequest<::test_drivertwoway::TwoWay::Add>,
+      ::fidl::internal::DriverTransport>
+      request_message(::fidl::internal::AllowUnownedInputRef{}, request);
+  auto& outgoing = request_message.GetOutgoingMessage();
+  outgoing.Call<::fidl::WireResponse<::test_drivertwoway::TwoWay::Add>>(
+      client.handle(), bytes_.data(), static_cast<uint32_t>(bytes_.size()),
+      fidl::CallOptions{.deadline = deadline});
+  SetResult(outgoing);
+}
+namespace test_drivertwoway {
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+}  // namespace test_drivertwoway
+::fidl::WireUnownedResult<::test_drivertwoway::TwoWay::Add>::WireUnownedResult(
+    ::fdf::UnownedClientEnd<::test_drivertwoway::TwoWay> client_end,
+    ::fidl::internal::AnyBufferAllocator& allocator,
+    ::fidl::WireRequest<::test_drivertwoway::TwoWay::Add>* request) {
+  constexpr uint32_t buffer_size = ::fidl::SyncClientMethodBufferSizeInChannel<
+      ::test_drivertwoway::TwoWay::Add>();
+  ::fitx::result<::fidl::Error, ::fidl::BufferSpan> allocation =
+      allocator.TryAllocate(buffer_size);
+  if (!allocation.is_ok()) {
+    ::fidl::Result::operator=(allocation.error_value());
+    return;
+  }
+  uint8_t* buffer = allocation->data;
+  constexpr uint32_t request_byte_capacity = ::fidl::MaxSizeInChannel<
+      ::fidl::WireRequest<::test_drivertwoway::TwoWay::Add>,
+      ::fidl::MessageDirection::kSending>();
+  uint8_t* request_bytes = buffer;
+  static_assert(buffer_size > request_byte_capacity);
+  uint32_t response_byte_capacity = buffer_size - request_byte_capacity;
+  uint8_t* response_bytes = &buffer[request_byte_capacity];
+
+  ::fidl::UnownedEncodedMessage<
+      ::fidl::WireRequest<::test_drivertwoway::TwoWay::Add>>
+      request_message(request_bytes, request_byte_capacity, request);
+  auto& outgoing = request_message.GetOutgoingMessage();
+  outgoing.Call<::fidl::WireResponse<::test_drivertwoway::TwoWay::Add>>(
+      client_end.handle(), response_bytes, response_byte_capacity);
+  bytes_ = response_bytes;
+  ::fidl::Result::operator=(outgoing);
+}
+namespace test_drivertwoway {
+#endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 }  // namespace test_drivertwoway

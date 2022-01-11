@@ -7,7 +7,7 @@
 {{- define "Protocol:Caller:MessagingHeader" }}
 {{- EnsureNamespace "" }}
 
-// Methods to make a sync FIDL call directly on an unowned channel or a
+// Methods to make a sync FIDL call directly on an unowned handle or a
 // const reference to a |{{ .Transport.Namespace }}::ClientEnd<{{ .WireType }}>|,
 // avoiding setting up a client.
 template<>
@@ -27,7 +27,8 @@ class {{ .WireSyncClientImpl }} final :
 
  private:
   ::{{ .Transport.Namespace }}::UnownedClientEnd<{{ . }}> _client_end() const {
-    return ::{{ .Transport.Namespace }}::UnownedClientEnd<{{ . }}>(_channel());
+    return ::{{ .Transport.Namespace }}::UnownedClientEnd<{{ . }}>(
+      _transport().get<{{ .Transport.Type }}>());
   }
 };
 
@@ -48,7 +49,8 @@ class {{ .WireSyncBufferClientImpl }} final :
 
  private:
   ::{{ .Transport.Namespace }}::UnownedClientEnd<{{ . }}> _client_end() const {
-    return ::{{ .Transport.Namespace }}::UnownedClientEnd<{{ . }}>(_channel());
+    return ::{{ .Transport.Namespace }}::UnownedClientEnd<{{ . }}>(
+      _transport().get<{{ .Transport.Type }}>());
   }
 };
 {{- end }}

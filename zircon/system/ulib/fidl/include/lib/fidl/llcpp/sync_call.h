@@ -128,7 +128,8 @@ struct CallerAllocatingImpl<WireSyncClientImpl, FidlProtocol> {
 template <typename Derived>
 struct SyncEndpointManagedVeneer {
  public:
-  explicit SyncEndpointManagedVeneer(zx::unowned_channel channel) : channel_(std::move(channel)) {}
+  explicit SyncEndpointManagedVeneer(fidl::internal::AnyUnownedTransport transport)
+      : transport_(transport) {}
 
   // Returns a pointer to the concrete messaging implementation.
   Derived* operator->() && {
@@ -143,10 +144,10 @@ struct SyncEndpointManagedVeneer {
  protected:
   // Used by implementations to access the transport, hence prefixed with an
   // underscore to avoid the unlikely event of a name collision.
-  zx::unowned_channel _channel() const { return zx::unowned_channel(channel_->get()); }
+  fidl::internal::AnyUnownedTransport _transport() const { return transport_; }
 
  private:
-  zx::unowned_channel channel_;
+  fidl::internal::AnyUnownedTransport transport_;
 };
 
 // A veneer interface object for client/server messaging implementations that
@@ -163,8 +164,9 @@ struct SyncEndpointManagedVeneer {
 // |Derived| implementations must not add any state, only behavior.
 template <typename Derived>
 struct SyncEndpointBufferVeneer {
-  explicit SyncEndpointBufferVeneer(zx::unowned_channel channel, AnyBufferAllocator&& allocator)
-      : channel_(std::move(channel)), allocator_(std::move(allocator)) {}
+  explicit SyncEndpointBufferVeneer(fidl::internal::AnyUnownedTransport transport,
+                                    AnyBufferAllocator&& allocator)
+      : transport_(transport), allocator_(std::move(allocator)) {}
 
   // Returns a pointer to the concrete messaging implementation.
   Derived* operator->() {
@@ -179,14 +181,14 @@ struct SyncEndpointBufferVeneer {
  protected:
   // Used by implementations to access the transport, hence prefixed with an
   // underscore to avoid the unlikely event of a name collision.
-  zx::unowned_channel _channel() const { return zx::unowned_channel(channel_->get()); }
+  fidl::internal::AnyUnownedTransport _transport() const { return transport_; }
 
   // Used by implementations to access the allocator, hence prefixed with an
   // underscore to avoid the unlikely event of a name collision.
   AnyBufferAllocator& _allocator() { return allocator_; }
 
  private:
-  zx::unowned_channel channel_;
+  fidl::internal::AnyUnownedTransport transport_;
   AnyBufferAllocator allocator_;
 };
 
@@ -207,12 +209,13 @@ class SyncEndpointVeneer final {
       typename ::fidl::internal::CallerAllocatingImpl<SyncImpl, FidlProtocol>::Type;
 
  public:
-  explicit SyncEndpointVeneer(zx::unowned_channel channel) : channel_(std::move(channel)) {}
+  explicit SyncEndpointVeneer(fidl::internal::AnyUnownedTransport transport)
+      : transport_(std::move(transport)) {}
 
   // Returns a veneer object for the concrete messaging implementation.
   internal::SyncEndpointManagedVeneer<internal::WireSyncClientImpl<FidlProtocol>> operator->() && {
     return internal::SyncEndpointManagedVeneer<internal::WireSyncClientImpl<FidlProtocol>>(
-        channel_->borrow());
+        transport_);
   }
 
   // Returns a veneer object which exposes the caller-allocating API, using
@@ -255,11 +258,11 @@ class SyncEndpointVeneer final {
   template <typename MemoryResource>
   auto buffer(MemoryResource&& resource) {
     return SyncEndpointBufferVeneer<CallerAllocatingImpl>{
-        channel_->borrow(), MakeAnyBufferAllocator(std::forward<MemoryResource>(resource))};
+        transport_, MakeAnyBufferAllocator(std::forward<MemoryResource>(resource))};
   }
 
  private:
-  zx::unowned_channel channel_;
+  fidl::internal::AnyUnownedTransport transport_;
 };
 
 }  // namespace internal
@@ -317,7 +320,7 @@ class WireSyncClient {
   // be valid, use the |fidl::WireCall(client_end)| helper. We may extend
   // |fidl::WireSyncClient<P>| with richer features hinging on having a valid
   // endpoint in the future.
-  explicit WireSyncClient(::fidl::ClientEnd<FidlProtocol> client_end)
+  explicit WireSyncClient(::fidl::internal::ClientEndType<FidlProtocol> client_end)
       : client_end_(std::move(client_end)) {
     ZX_ASSERT(is_valid());
   }
@@ -353,7 +356,7 @@ class WireSyncClient {
   // client goes back to an uninitialized state.
   //
   // It is not safe to invoke this method while there are ongoing FIDL calls.
-  ::fidl::ClientEnd<FidlProtocol> TakeClientEnd() {
+  ::fidl::internal::ClientEndType<FidlProtocol> TakeClientEnd() {
     ZX_ASSERT(is_valid());
     return std::move(client_end_);
   }
@@ -363,7 +366,7 @@ class WireSyncClient {
       const {
     ZX_ASSERT(is_valid());
     return internal::SyncEndpointManagedVeneer<internal::WireSyncClientImpl<FidlProtocol>>(
-        client_end_.borrow().channel());
+        fidl::internal::MakeAnyUnownedTransport(client_end_.handle()));
   }
 
   // Returns a veneer object which exposes the caller-allocating API, using
@@ -373,7 +376,7 @@ class WireSyncClient {
   auto buffer(MemoryResource&& resource) const {
     ZX_ASSERT(is_valid());
     return internal::SyncEndpointBufferVeneer<internal::WireSyncBufferClientImpl<FidlProtocol>>{
-        client_end_.borrow().channel(),
+        internal::MakeAnyUnownedTransport(client_end_.handle()),
         internal::MakeAnyBufferAllocator(std::forward<MemoryResource>(resource))};
   }
 
@@ -387,7 +390,7 @@ class WireSyncClient {
   }
 
  private:
-  ::fidl::ClientEnd<FidlProtocol> client_end_;
+  ::fidl::internal::ClientEndType<FidlProtocol> client_end_;
 };
 
 template <typename FidlProtocol>
@@ -402,7 +405,7 @@ template <typename FidlProtocol>
 internal::SyncEndpointVeneer<internal::WireSyncClientImpl, FidlProtocol> WireCall(
     const fidl::ClientEnd<FidlProtocol>& client_end) {
   return internal::SyncEndpointVeneer<internal::WireSyncClientImpl, FidlProtocol>(
-      client_end.borrow().channel());
+      fidl::internal::MakeAnyUnownedTransport(client_end.borrow().handle()));
 }
 
 // |WireCall| is used to make method calls directly on a |fidl::ClientEnd|
@@ -414,7 +417,7 @@ template <typename FidlProtocol>
 internal::SyncEndpointVeneer<internal::WireSyncClientImpl, FidlProtocol> WireCall(
     const fidl::UnownedClientEnd<FidlProtocol>& client_end) {
   return internal::SyncEndpointVeneer<internal::WireSyncClientImpl, FidlProtocol>(
-      client_end.channel());
+      fidl::internal::MakeAnyUnownedTransport(client_end.handle()));
 }
 
 // A buffer holding data inline, sized specifically for |FidlMethod| and for use

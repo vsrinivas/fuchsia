@@ -28,7 +28,7 @@ extern "C" const fidl_type_t
   auto& outgoing = request_message.GetOutgoingMessage();
   outgoing.Call<
       ::fidl::WireResponse<::test_transitivedependenciescompose::Top::GetFoo>>(
-      client.channel(), bytes_.data(), static_cast<uint32_t>(bytes_.size()));
+      client.handle(), bytes_.data(), static_cast<uint32_t>(bytes_.size()));
   SetResult(outgoing);
 }
 
@@ -47,7 +47,7 @@ extern "C" const fidl_type_t
   auto& outgoing = request_message.GetOutgoingMessage();
   outgoing.Call<
       ::fidl::WireResponse<::test_transitivedependenciescompose::Top::GetFoo>>(
-      client.channel(), bytes_.data(), static_cast<uint32_t>(bytes_.size()),
+      client.handle(), bytes_.data(), static_cast<uint32_t>(bytes_.size()),
       fidl::CallOptions{.deadline = deadline});
   SetResult(outgoing);
 }
@@ -86,7 +86,7 @@ namespace test_transitivedependenciescompose {
   auto& outgoing = request_message.GetOutgoingMessage();
   outgoing.Call<
       ::fidl::WireResponse<::test_transitivedependenciescompose::Top::GetFoo>>(
-      client_end.channel(), response_bytes, response_byte_capacity);
+      client_end.handle(), response_bytes, response_byte_capacity);
   bytes_ = response_bytes;
   ::fidl::Result::operator=(outgoing);
 }

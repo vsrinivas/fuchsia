@@ -42,7 +42,7 @@ extern "C" const fidl_type_t
       ::fidl::internal::ChannelTransport>
       request_message(::fidl::internal::AllowUnownedInputRef{}, request);
   auto& outgoing = request_message.GetOutgoingMessage();
-  outgoing.Write(client.channel());
+  outgoing.Write(client.handle());
   SetResult(outgoing);
 }
 namespace test_emptystruct {
@@ -71,7 +71,7 @@ namespace test_emptystruct {
       ::fidl::WireRequest<::test_emptystruct::EmptyProtocol::Send>>
       request_message(request_bytes, request_byte_capacity, request);
   auto& outgoing = request_message.GetOutgoingMessage();
-  outgoing.Write(client_end.channel());
+  outgoing.Write(client_end.handle());
   ::fidl::Result::operator=(outgoing);
 }
 namespace test_emptystruct {
@@ -92,7 +92,7 @@ namespace test_emptystruct {
   auto& outgoing = request_message.GetOutgoingMessage();
   outgoing.Call<
       ::fidl::WireResponse<::test_emptystruct::EmptyProtocol::SendAndReceive>>(
-      client.channel(), bytes_.data(), static_cast<uint32_t>(bytes_.size()));
+      client.handle(), bytes_.data(), static_cast<uint32_t>(bytes_.size()));
   SetResult(outgoing);
 }
 
@@ -110,7 +110,7 @@ namespace test_emptystruct {
   auto& outgoing = request_message.GetOutgoingMessage();
   outgoing.Call<
       ::fidl::WireResponse<::test_emptystruct::EmptyProtocol::SendAndReceive>>(
-      client.channel(), bytes_.data(), static_cast<uint32_t>(bytes_.size()),
+      client.handle(), bytes_.data(), static_cast<uint32_t>(bytes_.size()),
       fidl::CallOptions{.deadline = deadline});
   SetResult(outgoing);
 }
@@ -148,7 +148,7 @@ namespace test_emptystruct {
   auto& outgoing = request_message.GetOutgoingMessage();
   outgoing.Call<
       ::fidl::WireResponse<::test_emptystruct::EmptyProtocol::SendAndReceive>>(
-      client_end.channel(), response_bytes, response_byte_capacity);
+      client_end.handle(), response_bytes, response_byte_capacity);
   bytes_ = response_bytes;
   ::fidl::Result::operator=(outgoing);
 }

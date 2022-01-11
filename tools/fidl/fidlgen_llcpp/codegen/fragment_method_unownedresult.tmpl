@@ -130,10 +130,10 @@ class {{ .WireUnownedResult }} final : public ::fidl::Result {
       request_bytes, request_byte_capacity, request);
   auto& outgoing = request_message.GetOutgoingMessage();
 {{- if .HasResponse }}
-  outgoing.Call<{{ .WireResponse }}>(client_end.channel(), response_bytes, response_byte_capacity);
+  outgoing.Call<{{ .WireResponse }}>(client_end.handle(), response_bytes, response_byte_capacity);
   bytes_ = response_bytes;
 {{- else }}
-  outgoing.Write(client_end.channel());
+  outgoing.Write(client_end.handle());
 {{- end }}
   ::fidl::Result::operator=(outgoing);
 }

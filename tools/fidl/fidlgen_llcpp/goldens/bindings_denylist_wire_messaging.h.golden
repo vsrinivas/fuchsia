@@ -351,7 +351,7 @@ class ::fidl::internal::WireEventDispatcher<
       ::fidl::internal::IncomingTransportContext transport_context) override;
 };
 
-// Methods to make a sync FIDL call directly on an unowned channel or a
+// Methods to make a sync FIDL call directly on an unowned handle or a
 // const reference to a
 // |fidl::ClientEnd<::test_bindingsdenylist::OnlyLibfuzzerAndDeps>|, avoiding
 // setting up a client.
@@ -379,7 +379,8 @@ class ::fidl::internal::WireSyncClientImpl<
   ::fidl::UnownedClientEnd<::test_bindingsdenylist::OnlyLibfuzzerAndDeps>
   _client_end() const {
     return ::fidl::UnownedClientEnd<
-        ::test_bindingsdenylist::OnlyLibfuzzerAndDeps>(_channel());
+        ::test_bindingsdenylist::OnlyLibfuzzerAndDeps>(
+        _transport().get<::fidl::internal::ChannelTransport>());
   }
 };
 
@@ -408,7 +409,8 @@ class ::fidl::internal::WireSyncBufferClientImpl<
   ::fidl::UnownedClientEnd<::test_bindingsdenylist::OnlyLibfuzzerAndDeps>
   _client_end() const {
     return ::fidl::UnownedClientEnd<
-        ::test_bindingsdenylist::OnlyLibfuzzerAndDeps>(_channel());
+        ::test_bindingsdenylist::OnlyLibfuzzerAndDeps>(
+        _transport().get<::fidl::internal::ChannelTransport>());
   }
 };
 
@@ -563,7 +565,7 @@ class ::fidl::internal::WireEventDispatcher<
       ::fidl::internal::IncomingTransportContext transport_context) override;
 };
 
-// Methods to make a sync FIDL call directly on an unowned channel or a
+// Methods to make a sync FIDL call directly on an unowned handle or a
 // const reference to a
 // |fidl::ClientEnd<::test_bindingsdenylist::OnlyCppAndDeps>|, avoiding setting
 // up a client.
@@ -578,7 +580,7 @@ class ::fidl::internal::WireSyncClientImpl<
   ::fidl::UnownedClientEnd<::test_bindingsdenylist::OnlyCppAndDeps>
   _client_end() const {
     return ::fidl::UnownedClientEnd<::test_bindingsdenylist::OnlyCppAndDeps>(
-        _channel());
+        _transport().get<::fidl::internal::ChannelTransport>());
   }
 };
 
@@ -593,7 +595,7 @@ class ::fidl::internal::WireSyncBufferClientImpl<
   ::fidl::UnownedClientEnd<::test_bindingsdenylist::OnlyCppAndDeps>
   _client_end() const {
     return ::fidl::UnownedClientEnd<::test_bindingsdenylist::OnlyCppAndDeps>(
-        _channel());
+        _transport().get<::fidl::internal::ChannelTransport>());
   }
 };
 

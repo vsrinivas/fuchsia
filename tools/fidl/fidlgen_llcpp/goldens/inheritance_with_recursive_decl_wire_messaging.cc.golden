@@ -27,7 +27,7 @@ extern "C" const fidl_type_t
       ::fidl::internal::ChannelTransport>
       request_message(::fidl::internal::AllowUnownedInputRef{}, request);
   auto& outgoing = request_message.GetOutgoingMessage();
-  outgoing.Write(client.channel());
+  outgoing.Write(client.handle());
   SetResult(outgoing);
 }
 namespace test_inheritancewithrecursivedecl {
@@ -58,7 +58,7 @@ namespace test_inheritancewithrecursivedecl {
       ::fidl::WireRequest<::test_inheritancewithrecursivedecl::Parent::First>>
       request_message(request_bytes, request_byte_capacity, request);
   auto& outgoing = request_message.GetOutgoingMessage();
-  outgoing.Write(client_end.channel());
+  outgoing.Write(client_end.handle());
   ::fidl::Result::operator=(outgoing);
 }
 namespace test_inheritancewithrecursivedecl {
@@ -277,7 +277,7 @@ extern "C" const fidl_type_t
       ::fidl::internal::ChannelTransport>
       request_message(::fidl::internal::AllowUnownedInputRef{}, request);
   auto& outgoing = request_message.GetOutgoingMessage();
-  outgoing.Write(client.channel());
+  outgoing.Write(client.handle());
   SetResult(outgoing);
 }
 namespace test_inheritancewithrecursivedecl {
@@ -308,7 +308,7 @@ namespace test_inheritancewithrecursivedecl {
       ::fidl::WireRequest<::test_inheritancewithrecursivedecl::Child::First>>
       request_message(request_bytes, request_byte_capacity, request);
   auto& outgoing = request_message.GetOutgoingMessage();
-  outgoing.Write(client_end.channel());
+  outgoing.Write(client_end.handle());
   ::fidl::Result::operator=(outgoing);
 }
 namespace test_inheritancewithrecursivedecl {
@@ -328,7 +328,7 @@ namespace test_inheritancewithrecursivedecl {
       ::fidl::internal::ChannelTransport>
       request_message(::fidl::internal::AllowUnownedInputRef{}, request);
   auto& outgoing = request_message.GetOutgoingMessage();
-  outgoing.Write(client.channel());
+  outgoing.Write(client.handle());
   SetResult(outgoing);
 }
 namespace test_inheritancewithrecursivedecl {
@@ -359,7 +359,7 @@ namespace test_inheritancewithrecursivedecl {
       ::fidl::WireRequest<::test_inheritancewithrecursivedecl::Child::Second>>
       request_message(request_bytes, request_byte_capacity, request);
   auto& outgoing = request_message.GetOutgoingMessage();
-  outgoing.Write(client_end.channel());
+  outgoing.Write(client_end.handle());
   ::fidl::Result::operator=(outgoing);
 }
 namespace test_inheritancewithrecursivedecl {

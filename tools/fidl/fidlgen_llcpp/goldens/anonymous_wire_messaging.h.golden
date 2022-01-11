@@ -325,7 +325,7 @@ class ::fidl::internal::WireEventDispatcher<::test_anonymous::SomeProtocol>
       ::fidl::internal::IncomingTransportContext transport_context) override;
 };
 
-// Methods to make a sync FIDL call directly on an unowned channel or a
+// Methods to make a sync FIDL call directly on an unowned handle or a
 // const reference to a |fidl::ClientEnd<::test_anonymous::SomeProtocol>|,
 // avoiding setting up a client.
 template <>
@@ -347,7 +347,8 @@ class ::fidl::internal::WireSyncClientImpl<::test_anonymous::SomeProtocol> final
 
  private:
   ::fidl::UnownedClientEnd<::test_anonymous::SomeProtocol> _client_end() const {
-    return ::fidl::UnownedClientEnd<::test_anonymous::SomeProtocol>(_channel());
+    return ::fidl::UnownedClientEnd<::test_anonymous::SomeProtocol>(
+        _transport().get<::fidl::internal::ChannelTransport>());
   }
 };
 
@@ -371,7 +372,8 @@ class ::fidl::internal::WireSyncBufferClientImpl<::test_anonymous::SomeProtocol>
 
  private:
   ::fidl::UnownedClientEnd<::test_anonymous::SomeProtocol> _client_end() const {
-    return ::fidl::UnownedClientEnd<::test_anonymous::SomeProtocol>(_channel());
+    return ::fidl::UnownedClientEnd<::test_anonymous::SomeProtocol>(
+        _transport().get<::fidl::internal::ChannelTransport>());
   }
 };
 

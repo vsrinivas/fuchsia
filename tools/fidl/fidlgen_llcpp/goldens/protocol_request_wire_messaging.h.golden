@@ -724,7 +724,7 @@ class ::fidl::internal::WireEventDispatcher<::test_protocolrequest::Parent>
       ::fidl::internal::IncomingTransportContext transport_context) override;
 };
 
-// Methods to make a sync FIDL call directly on an unowned channel or a
+// Methods to make a sync FIDL call directly on an unowned handle or a
 // const reference to a |fidl::ClientEnd<::test_protocolrequest::Parent>|,
 // avoiding setting up a client.
 template <>
@@ -773,7 +773,8 @@ class ::fidl::internal::WireSyncClientImpl<::test_protocolrequest::Parent> final
 
  private:
   ::fidl::UnownedClientEnd<::test_protocolrequest::Parent> _client_end() const {
-    return ::fidl::UnownedClientEnd<::test_protocolrequest::Parent>(_channel());
+    return ::fidl::UnownedClientEnd<::test_protocolrequest::Parent>(
+        _transport().get<::fidl::internal::ChannelTransport>());
   }
 };
 
@@ -826,7 +827,8 @@ class ::fidl::internal::WireSyncBufferClientImpl<::test_protocolrequest::Parent>
 
  private:
   ::fidl::UnownedClientEnd<::test_protocolrequest::Parent> _client_end() const {
-    return ::fidl::UnownedClientEnd<::test_protocolrequest::Parent>(_channel());
+    return ::fidl::UnownedClientEnd<::test_protocolrequest::Parent>(
+        _transport().get<::fidl::internal::ChannelTransport>());
   }
 };
 
@@ -1024,7 +1026,7 @@ class ::fidl::internal::WireEventDispatcher<::test_protocolrequest::Child> final
       ::fidl::internal::IncomingTransportContext transport_context) override;
 };
 
-// Methods to make a sync FIDL call directly on an unowned channel or a
+// Methods to make a sync FIDL call directly on an unowned handle or a
 // const reference to a |fidl::ClientEnd<::test_protocolrequest::Child>|,
 // avoiding setting up a client.
 template <>
@@ -1034,7 +1036,8 @@ class ::fidl::internal::WireSyncClientImpl<::test_protocolrequest::Child> final
  public:
  private:
   ::fidl::UnownedClientEnd<::test_protocolrequest::Child> _client_end() const {
-    return ::fidl::UnownedClientEnd<::test_protocolrequest::Child>(_channel());
+    return ::fidl::UnownedClientEnd<::test_protocolrequest::Child>(
+        _transport().get<::fidl::internal::ChannelTransport>());
   }
 };
 
@@ -1046,7 +1049,8 @@ class ::fidl::internal::WireSyncBufferClientImpl<::test_protocolrequest::Child>
  public:
  private:
   ::fidl::UnownedClientEnd<::test_protocolrequest::Child> _client_end() const {
-    return ::fidl::UnownedClientEnd<::test_protocolrequest::Child>(_channel());
+    return ::fidl::UnownedClientEnd<::test_protocolrequest::Child>(
+        _transport().get<::fidl::internal::ChannelTransport>());
   }
 };
 

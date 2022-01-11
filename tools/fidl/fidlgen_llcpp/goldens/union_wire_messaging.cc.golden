@@ -42,7 +42,7 @@ extern "C" const fidl_type_t
   outgoing.Call<
       ::fidl::WireResponse<::test_union::TestProtocol::
                                StrictXUnionHenceResponseMayBeStackAllocated>>(
-      client.channel(), bytes_.data(), static_cast<uint32_t>(bytes_.size()));
+      client.handle(), bytes_.data(), static_cast<uint32_t>(bytes_.size()));
   SetResult(outgoing);
 }
 
@@ -63,7 +63,7 @@ extern "C" const fidl_type_t
   outgoing.Call<
       ::fidl::WireResponse<::test_union::TestProtocol::
                                StrictXUnionHenceResponseMayBeStackAllocated>>(
-      client.channel(), bytes_.data(), static_cast<uint32_t>(bytes_.size()),
+      client.handle(), bytes_.data(), static_cast<uint32_t>(bytes_.size()),
       fidl::CallOptions{.deadline = deadline});
   SetResult(outgoing);
 }
@@ -106,7 +106,7 @@ namespace test_union {
   outgoing.Call<
       ::fidl::WireResponse<::test_union::TestProtocol::
                                StrictXUnionHenceResponseMayBeStackAllocated>>(
-      client_end.channel(), response_bytes, response_byte_capacity);
+      client_end.handle(), response_bytes, response_byte_capacity);
   bytes_ = response_bytes;
   ::fidl::Result::operator=(outgoing);
 }
@@ -132,7 +132,7 @@ namespace test_union {
   outgoing.Call<
       ::fidl::WireResponse<::test_union::TestProtocol::
                                FlexibleXUnionHenceResponseMustBeHeapAllocated>>(
-      client.channel(), bytes_.data(), static_cast<uint32_t>(bytes_.size()));
+      client.handle(), bytes_.data(), static_cast<uint32_t>(bytes_.size()));
   SetResult(outgoing);
 }
 
@@ -153,7 +153,7 @@ namespace test_union {
   outgoing.Call<
       ::fidl::WireResponse<::test_union::TestProtocol::
                                FlexibleXUnionHenceResponseMustBeHeapAllocated>>(
-      client.channel(), bytes_.data(), static_cast<uint32_t>(bytes_.size()),
+      client.handle(), bytes_.data(), static_cast<uint32_t>(bytes_.size()),
       fidl::CallOptions{.deadline = deadline});
   SetResult(outgoing);
 }
@@ -197,7 +197,7 @@ namespace test_union {
   outgoing.Call<
       ::fidl::WireResponse<::test_union::TestProtocol::
                                FlexibleXUnionHenceResponseMustBeHeapAllocated>>(
-      client_end.channel(), response_bytes, response_byte_capacity);
+      client_end.handle(), response_bytes, response_byte_capacity);
   bytes_ = response_bytes;
   ::fidl::Result::operator=(outgoing);
 }

@@ -45,7 +45,7 @@ class UnownedClientEndBase : public UnownedTransportEnd<Protocol, Transport> {
   // generated FIDL APIs with either an unowned client end, or a const
   // reference to a |TransportEndSubclass|.
   // NOLINTNEXTLINE
-  UnownedClientEndBase(const ClientEnd<Protocol>& owner)
+  UnownedClientEndBase(const ClientEndType<Protocol>& owner)
       : UnownedClientEndBase(owner.handle()->get()) {}
 };
 

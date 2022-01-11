@@ -222,7 +222,7 @@ var driverTransport = Transport{
 	Namespace:     "fdf",
 	Type:          "::fidl::internal::DriverTransport",
 	HasEvents:     false,
-	HasSyncClient: false,
+	HasSyncClient: true,
 }
 
 var transports = map[string]*Transport{

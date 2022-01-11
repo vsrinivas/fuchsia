@@ -51,7 +51,7 @@ class TransportEnd {
   void reset() { handle_.reset(); }
 
   // The underlying handle.
-  UnownedType handle() const { return handle_.borrow(); }
+  UnownedType handle() const { return UnownedType(handle_.get()); }
 
   // Transfers ownership of the underlying handle to the caller.
   OwnedType TakeHandle() { return std::move(handle_); }

@@ -32,7 +32,7 @@ extern "C" const fidl_type_t test_doccomments_InterfaceOnEventEventMessageTable;
       ::fidl::internal::ChannelTransport>
       request_message(::fidl::internal::AllowUnownedInputRef{}, request);
   auto& outgoing = request_message.GetOutgoingMessage();
-  outgoing.Write(client.channel());
+  outgoing.Write(client.handle());
   SetResult(outgoing);
 }
 namespace test_doccomments {

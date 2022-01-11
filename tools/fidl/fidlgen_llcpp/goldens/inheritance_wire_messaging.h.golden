@@ -294,7 +294,7 @@ class ::fidl::internal::WireEventDispatcher<::test_inheritance::Super> final
       ::fidl::internal::IncomingTransportContext transport_context) override;
 };
 
-// Methods to make a sync FIDL call directly on an unowned channel or a
+// Methods to make a sync FIDL call directly on an unowned handle or a
 // const reference to a |fidl::ClientEnd<::test_inheritance::Super>|,
 // avoiding setting up a client.
 template <>
@@ -312,7 +312,8 @@ class ::fidl::internal::WireSyncClientImpl<::test_inheritance::Super> final
 
  private:
   ::fidl::UnownedClientEnd<::test_inheritance::Super> _client_end() const {
-    return ::fidl::UnownedClientEnd<::test_inheritance::Super>(_channel());
+    return ::fidl::UnownedClientEnd<::test_inheritance::Super>(
+        _transport().get<::fidl::internal::ChannelTransport>());
   }
 };
 
@@ -333,7 +334,8 @@ class ::fidl::internal::WireSyncBufferClientImpl<::test_inheritance::Super>
 
  private:
   ::fidl::UnownedClientEnd<::test_inheritance::Super> _client_end() const {
-    return ::fidl::UnownedClientEnd<::test_inheritance::Super>(_channel());
+    return ::fidl::UnownedClientEnd<::test_inheritance::Super>(
+        _transport().get<::fidl::internal::ChannelTransport>());
   }
 };
 
@@ -660,7 +662,7 @@ class ::fidl::internal::WireEventDispatcher<::test_inheritance::Sub> final
       ::fidl::internal::IncomingTransportContext transport_context) override;
 };
 
-// Methods to make a sync FIDL call directly on an unowned channel or a
+// Methods to make a sync FIDL call directly on an unowned handle or a
 // const reference to a |fidl::ClientEnd<::test_inheritance::Sub>|,
 // avoiding setting up a client.
 template <>
@@ -678,7 +680,8 @@ class ::fidl::internal::WireSyncClientImpl<::test_inheritance::Sub> final
 
  private:
   ::fidl::UnownedClientEnd<::test_inheritance::Sub> _client_end() const {
-    return ::fidl::UnownedClientEnd<::test_inheritance::Sub>(_channel());
+    return ::fidl::UnownedClientEnd<::test_inheritance::Sub>(
+        _transport().get<::fidl::internal::ChannelTransport>());
   }
 };
 
@@ -698,7 +701,8 @@ class ::fidl::internal::WireSyncBufferClientImpl<::test_inheritance::Sub> final
 
  private:
   ::fidl::UnownedClientEnd<::test_inheritance::Sub> _client_end() const {
-    return ::fidl::UnownedClientEnd<::test_inheritance::Sub>(_channel());
+    return ::fidl::UnownedClientEnd<::test_inheritance::Sub>(
+        _transport().get<::fidl::internal::ChannelTransport>());
   }
 };
 
