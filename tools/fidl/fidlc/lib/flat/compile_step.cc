@@ -214,7 +214,7 @@ bool CompileStep::ResolveOrOperatorConstant(Constant* constant, std::optional<co
   if (type == nullptr)
     return false;
   if (type->kind != Type::Kind::kPrimitive) {
-    return FailNoSpan(ErrOrOperatorOnNonPrimitiveValue);
+    return Fail(ErrOrOperatorOnNonPrimitiveValue, constant->span);
   }
   std::unique_ptr<ConstantValue> left_operand_u64;
   std::unique_ptr<ConstantValue> right_operand_u64;
@@ -414,9 +414,10 @@ bool CompileStep::ResolveIdentifierConstant(IdentifierConstant* identifier_const
         }
       }
 
-      auto fail_with_mismatched_type = [this, identifier_type](const Name& type_name) {
-        return FailNoSpan(ErrMismatchedNameTypeAssignment, identifier_type->type_decl->name,
-                          type_name);
+      auto fail_with_mismatched_type = [this, identifier_type,
+                                        identifier_constant](const Name& type_name) {
+        return Fail(ErrMismatchedNameTypeAssignment, identifier_constant->span,
+                    identifier_type->type_decl->name, type_name);
       };
 
       switch (decl->kind) {
@@ -652,10 +653,11 @@ const Type* CompileStep::TypeResolve(const Type* type) {
   }
   auto identifier_type = static_cast<const IdentifierType*>(type);
   Decl* decl = library_->LookupDeclByName(identifier_type->name);
-  if (!decl) {
-    FailNoSpan(ErrCouldNotResolveIdentifierToType);
-    return nullptr;
-  }
+  // This is only reachable via ResolveOrOperatorConstant, which is always
+  // called from ResolveConstant only after resolving the left and right sides.
+  // That process should force declaration of the constant, which should fail
+  // before this is reached if the type can't be resolved.
+  assert(decl);
   CompileDecl(decl);
   switch (decl->kind) {
     case Decl::Kind::kBits:
@@ -901,9 +903,11 @@ void CompileStep::CompileResource(Resource* resource_declaration) {
     return;
   }
 
-  if (resource_declaration->subtype_ctor->type->kind != Type::Kind::kPrimitive) {
-    Fail(ErrEnumTypeMustBeIntegralPrimitive, resource_declaration->name.span().value(),
-         resource_declaration->subtype_ctor->type);
+  if (resource_declaration->subtype_ctor->type->kind != Type::Kind::kPrimitive ||
+      static_cast<const PrimitiveType*>(resource_declaration->subtype_ctor->type)->subtype !=
+          types::PrimitiveSubtype::kUint32) {
+    Fail(ErrResourceMustBeUint32Derived, resource_declaration->name.span().value(),
+         resource_declaration->name);
     return;
   }
 
@@ -1132,7 +1136,7 @@ void CompileStep::CompileTable(Table* table_declaration) {
 
   CompileAttributeList(table_declaration->attributes.get());
   if (table_declaration->members.size() > kMaxTableOrdinals) {
-    FailNoSpan(ErrTooManyTableOrdinals);
+    Fail(ErrTooManyTableOrdinals, table_declaration->name.span().value());
   }
 
   for (size_t i = 0; i < table_declaration->members.size(); i++) {
@@ -1168,11 +1172,11 @@ void CompileStep::CompileTable(Table* table_declaration) {
     }
     if (i == kMaxTableOrdinals - 1) {
       if (member_used.type_ctor->type->kind != Type::Kind::kIdentifier) {
-        FailNoSpan(ErrMaxOrdinalNotTable);
+        Fail(ErrMaxOrdinalNotTable, member_used.name);
       } else {
         auto identifier_type = static_cast<const IdentifierType*>(member_used.type_ctor->type);
         if (identifier_type->type_decl->kind != Decl::Kind::kTable) {
-          FailNoSpan(ErrMaxOrdinalNotTable);
+          Fail(ErrMaxOrdinalNotTable, member_used.name);
         }
       }
     }
@@ -1295,10 +1299,6 @@ bool CompileStep::VerifyTypeCategory(const Type* type, std::optional<SourceSpan>
 
 bool CompileStep::ResolveHandleRightsConstant(Resource* resource, Constant* constant,
                                               const HandleRights** out_rights) {
-  if (resource->subtype_ctor == nullptr || resource->subtype_ctor->name.full_name() != "uint32") {
-    return FailNoSpan(ErrResourceMustBeUint32Derived, resource->name);
-  }
-
   auto rights_property = resource->LookupProperty("rights");
   if (!rights_property) {
     return false;
@@ -1338,9 +1338,6 @@ bool CompileStep::ResolveHandleSubtypeIdentifier(Resource* resource,
   auto identifier_constant = static_cast<IdentifierConstant*>(constant.get());
   const Name& handle_subtype_identifier = identifier_constant->name;
 
-  if (resource->subtype_ctor == nullptr || resource->subtype_ctor->name.full_name() != "uint32") {
-    return false;
-  }
   auto subtype_property = resource->LookupProperty("subtype");
   if (!subtype_property) {
     return false;

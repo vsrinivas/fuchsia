@@ -380,6 +380,7 @@ const c MyEnum = OtherEnum.VALUE;
 )FIDL");
   ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrMismatchedNameTypeAssignment,
                                       fidl::ErrCannotResolveConstantValue);
+  EXPECT_TRUE(library.errors()[0]->span.has_value());
 }
 
 TEST(ConstsTests, BadConstDifferentBitsMemberReference) {
@@ -392,6 +393,7 @@ const c MyBits = OtherBits.VALUE;
 )FIDL");
   ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrMismatchedNameTypeAssignment,
                                       fidl::ErrCannotResolveConstantValue);
+  EXPECT_TRUE(library.errors()[0]->span.has_value());
 }
 
 TEST(ConstsTests, BadConstAssignPrimitiveToEnum) {
@@ -627,6 +629,7 @@ const result string = HI | THERE;
   )FIDL");
   ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrOrOperatorOnNonPrimitiveValue,
                                       fidl::ErrCannotResolveConstantValue);
+  EXPECT_TRUE(library.errors()[0]->span.has_value());
 }
 
 TEST(ConstsTests, GoodOrOperatorParenthesesTest) {
@@ -707,6 +710,7 @@ const b AnotherEnum = a;
 )FIDL");
   ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrMismatchedNameTypeAssignment,
                                       fidl::ErrCannotResolveConstantValue);
+  EXPECT_TRUE(library.errors()[0]->span.has_value());
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "AnotherEnum");
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "OneEnum");
 }
@@ -725,6 +729,7 @@ const a OneEnum = AnotherEnum.B;
 )FIDL");
   ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrMismatchedNameTypeAssignment,
                                       fidl::ErrCannotResolveConstantValue);
+  EXPECT_TRUE(library.errors()[0]->span.has_value());
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "AnotherEnum");
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "OneEnum");
 }

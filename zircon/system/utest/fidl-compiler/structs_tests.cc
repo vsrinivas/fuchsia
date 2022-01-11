@@ -87,6 +87,7 @@ type MyStruct = struct {
 )FIDL");
   ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrMismatchedNameTypeAssignment,
                                       fidl::ErrCouldNotResolveMemberDefault);
+  EXPECT_TRUE(library.errors()[0]->span.has_value());
 }
 
 TEST(StructsTests, BadDefaultValuePrimitiveInEnum) {
@@ -145,6 +146,7 @@ type MyStruct = struct {
 )FIDL");
   ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrMismatchedNameTypeAssignment,
                                       fidl::ErrCouldNotResolveMemberDefault);
+  EXPECT_TRUE(library.errors()[0]->span.has_value());
 }
 
 TEST(StructsTests, BadDefaultValuePrimitiveInBits) {

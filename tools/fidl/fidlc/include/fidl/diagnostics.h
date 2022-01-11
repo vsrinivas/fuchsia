@@ -154,7 +154,6 @@ constexpr ErrorDef<const flat::Constant *, const flat::Type *, const flat::Type 
     ErrTypeCannotBeConvertedToType("{} (type {}) cannot be converted to type {}");
 constexpr ErrorDef<const flat::Constant *, const flat::Type *> ErrConstantOverflowsType(
     "{} overflows type {}");
-constexpr ErrorDef ErrCouldNotResolveIdentifierToType("could not resolve identifier to a type");
 constexpr ErrorDef ErrBitsMemberMustBePowerOfTwo("bits members must be powers of two");
 constexpr ErrorDef<std::string_view> ErrFlexibleEnumMemberWithMaxValue(
     "flexible enums must not have a member with a value of {}, which is "
