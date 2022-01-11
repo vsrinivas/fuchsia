@@ -81,25 +81,20 @@ struct Part {
 
 impl Sdk {
     pub fn from_build_dir(path: PathBuf) -> Result<Self> {
-        let mut manifest_path = path.clone();
-        let file = if cfg!(target_arch = "x86_64") {
-            manifest_path.push("host_x64/sdk/manifest/host_tools.modular");
-            fs::File::open(&manifest_path).map_err(Into::into)
-        } else if cfg!(target_arch = "aarch64") {
-            manifest_path.push("host_arm64/sdk/manifest/host_tools.modular");
-            fs::File::open(&manifest_path).map_err(Into::into)
-        } else {
-            Err(anyhow!("Host architecture not supported"))
-        }
-        .context(format!("opening sdk path: {:?}", path));
-
-        let file = match file {
-            Ok(file) => file,
-            Err(e) => {
-                manifest_path = path.join("sdk/manifest/core");
-                fs::File::open(&manifest_path).map_err(|_| e)?
-            }
-        };
+        let manifest_path = path.join("sdk/manifest/core");
+        let file = fs::File::open(&manifest_path)
+            .or_else(|_| {
+                if cfg!(target_arch = "x86_64") {
+                    let manifest_path = path.join("host_x64/sdk/manifest/host_tools.modular");
+                    fs::File::open(&manifest_path).map_err(Into::into)
+                } else if cfg!(target_arch = "aarch64") {
+                    let manifest_path = path.join("host_arm64/sdk/manifest/host_tools.modular");
+                    fs::File::open(&manifest_path).map_err(Into::into)
+                } else {
+                    Err(anyhow!("Host architecture not supported"))
+                }
+            })
+            .context(format!("opening sdk path: {:?}", path))?;
 
         // If we are able to parse the json file into atoms, creates a Sdk object from the atoms.
         Self::from_sdk_atoms(
@@ -220,7 +215,10 @@ impl Sdk {
                 .filter(|x| {
                     x.get("name")
                         .filter(|n| *n == name)
-                        .and(x.get("type").filter(|t| *t == "host_tool"))
+                        .and(
+                            x.get("type")
+                                .filter(|t| *t == "host_tool" || *t == "companion_host_tool"),
+                        )
                         .is_some()
                 })
                 .map(|x| -> Result<_> {

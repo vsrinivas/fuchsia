@@ -26,10 +26,10 @@ pub mod include_target {
         // Only when invoked from ffx-e2e-with-target.sh we could get sdk.root=.
         if ffx_config::get::<String, _>("sdk.root").await.unwrap_or_default() == "." {
             ensure!(cfg!(target_arch = "x86_64"), "The test only supports x86_64 for now.");
-            let host_tools_modular_file = Path::new("host_x64/sdk/manifest/host_tools.modular");
-            if !host_tools_modular_file.exists() {
-                create_dir_all(host_tools_modular_file.parent().unwrap())?;
-                File::create(host_tools_modular_file)?.write(br#"{
+            let manifest_file = Path::new("sdk/manifest/core");
+            if !manifest_file.exists() {
+                create_dir_all(manifest_file.parent().unwrap())?;
+                File::create(manifest_file)?.write(br#"{
                     "atoms": [{
                         "category": "partner",
                         "deps": [],
