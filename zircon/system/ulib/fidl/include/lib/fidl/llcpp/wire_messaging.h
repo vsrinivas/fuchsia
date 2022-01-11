@@ -10,7 +10,7 @@
 
 #ifdef __Fuchsia__
 #include <lib/fidl/llcpp/channel.h>
-#include <lib/fidl/llcpp/client_end.h>
+#include <lib/fidl/llcpp/internal/endpoints.h>
 #include <lib/fidl/llcpp/message.h>
 #include <lib/fidl/llcpp/soft_migration.h>
 #include <lib/fidl/llcpp/transaction.h>

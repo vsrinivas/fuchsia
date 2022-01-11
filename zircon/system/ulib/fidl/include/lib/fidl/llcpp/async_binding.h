@@ -11,10 +11,10 @@
 #include <lib/fidl/epitaph.h>
 #include <lib/fidl/llcpp/extract_resource_on_destruction.h>
 #include <lib/fidl/llcpp/internal/client_details.h>
+#include <lib/fidl/llcpp/internal/endpoints.h>
 #include <lib/fidl/llcpp/internal/thread_checker.h>
 #include <lib/fidl/llcpp/message.h>
 #include <lib/fidl/llcpp/result.h>
-#include <lib/fidl/llcpp/server_end.h>
 #include <lib/fidl/llcpp/transaction.h>
 #include <lib/fidl/llcpp/wire_messaging_declarations.h>
 #include <lib/fit/function.h>

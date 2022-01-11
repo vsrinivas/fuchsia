@@ -7,7 +7,7 @@
 
 #include <fidl/fuchsia.io/cpp/wire.h>
 #include <lib/ddk/driver.h>
-#include <lib/fidl/llcpp/client_end.h>
+#include <lib/fidl/llcpp/channel.h>
 
 #include "src/devices/bin/driver_host/zx_device.h"
 

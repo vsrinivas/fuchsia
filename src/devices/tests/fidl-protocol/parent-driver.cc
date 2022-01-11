@@ -18,7 +18,7 @@
 #include <ddktl/unbind-txn.h>
 #include <fbl/ref_ptr.h>
 
-#include "lib/fidl/llcpp/server_end.h"
+#include "lib/fidl/llcpp/channel.h"
 #include "src/devices/tests/fidl-protocol/parent-driver-bind.h"
 
 namespace {

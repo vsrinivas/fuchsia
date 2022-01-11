@@ -12,7 +12,7 @@
 #include <zircon/fidl.h>
 
 #ifdef __Fuchsia__
-#include <lib/fidl/llcpp/server_end.h>
+#include <lib/fidl/llcpp/internal/endpoints.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/status.h>
 #endif  // __Fuchsia__

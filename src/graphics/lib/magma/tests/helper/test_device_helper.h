@@ -7,7 +7,7 @@
 
 #include <fidl/fuchsia.device/cpp/wire.h>
 #include <lib/fdio/directory.h>
-#include <lib/fidl/llcpp/client_end.h>
+#include <lib/fidl/llcpp/channel.h>
 #include <lib/service/llcpp/service.h>
 #include <lib/zx/channel.h>
 
@@ -16,7 +16,7 @@
 #include <gtest/gtest.h>
 
 #include "magma.h"
-#include "zircon/system/ulib/fidl/include/lib/fidl/llcpp/client_end.h"
+#include "zircon/system/ulib/fidl/include/lib/fidl/llcpp/channel.h"
 
 namespace magma {
 class TestDeviceBase {

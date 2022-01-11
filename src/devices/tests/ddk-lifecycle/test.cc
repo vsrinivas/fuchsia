@@ -10,7 +10,7 @@
 #include <lib/ddk/platform-defs.h>
 #include <lib/driver-integration-test/fixture.h>
 #include <lib/fdio/directory.h>
-#include <lib/fidl/llcpp/client_end.h>
+#include <lib/fidl/llcpp/channel.h>
 #include <lib/fidl/llcpp/connect_service.h>
 #include <zircon/processargs.h>
 #include <zircon/syscalls.h>

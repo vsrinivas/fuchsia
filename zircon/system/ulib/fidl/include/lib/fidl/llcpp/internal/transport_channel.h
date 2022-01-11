@@ -10,9 +10,7 @@
 #ifdef __Fuchsia__
 #include <lib/async/dispatcher.h>
 #include <lib/async/wait.h>
-#include <lib/fidl/llcpp/client_end.h>
-#include <lib/fidl/llcpp/internal/transport.h>
-#include <lib/fidl/llcpp/server_end.h>
+#include <lib/fidl/llcpp/internal/endpoints.h>
 #include <lib/zx/channel.h>
 #include <zircon/syscalls.h>
 #endif

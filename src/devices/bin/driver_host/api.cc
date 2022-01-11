@@ -6,7 +6,7 @@
 #include <lib/ddk/device.h>
 #include <lib/ddk/driver.h>
 #include <lib/ddk/fragment-device.h>
-#include <lib/fidl/llcpp/client_end.h>
+#include <lib/fidl/llcpp/channel.h>
 #include <lib/syslog/logger.h>
 #include <lib/zx/process.h>
 #include <stdarg.h>

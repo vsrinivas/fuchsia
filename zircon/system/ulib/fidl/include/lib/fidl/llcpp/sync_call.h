@@ -5,8 +5,8 @@
 #ifndef LIB_FIDL_LLCPP_SYNC_CALL_H_
 #define LIB_FIDL_LLCPP_SYNC_CALL_H_
 
-#include <lib/fidl/llcpp/client_end.h>
 #include <lib/fidl/llcpp/coding.h>
+#include <lib/fidl/llcpp/internal/endpoints.h>
 #include <lib/fidl/llcpp/message_storage.h>
 #include <lib/fidl/llcpp/traits.h>
 #include <lib/fidl/llcpp/wire_messaging_declarations.h>

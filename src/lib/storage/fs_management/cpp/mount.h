@@ -6,7 +6,7 @@
 #define SRC_LIB_STORAGE_FS_MANAGEMENT_CPP_MOUNT_H_
 
 #include <fidl/fuchsia.io/cpp/wire.h>
-#include <lib/fidl/llcpp/client_end.h>
+#include <lib/fidl/llcpp/channel.h>
 #include <zircon/compiler.h>
 
 #include <fbl/unique_fd.h>

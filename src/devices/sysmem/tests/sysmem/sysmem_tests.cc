@@ -12,7 +12,7 @@
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
 #include <lib/fdio/unsafe.h>
-#include <lib/fidl/llcpp/server_end.h>
+#include <lib/fidl/llcpp/channel.h>
 #include <lib/service/llcpp/service.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/clock.h>

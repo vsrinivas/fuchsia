@@ -20,7 +20,7 @@
 #include "fbl/unique_fd.h"
 #include "fuchsia/io/cpp/fidl.h"
 #include "lib/fdio/directory.h"
-#include "lib/fidl/llcpp/client_end.h"
+#include "lib/fidl/llcpp/channel.h"
 #include "src/security/zxcrypt/client.h"
 #include "src/security/zxcrypt/volume.h"
 

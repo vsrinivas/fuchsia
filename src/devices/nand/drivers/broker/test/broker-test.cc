@@ -21,7 +21,7 @@
 #include <fbl/unique_fd.h>
 #include <zxtest/zxtest.h>
 
-#include "lib/fidl/llcpp/client_end.h"
+#include "lib/fidl/llcpp/channel.h"
 #include "parent.h"
 #include "sdk/lib/device-watcher/cpp/device-watcher.h"
 

@@ -21,8 +21,7 @@
 #include <vector>
 
 #ifdef __Fuchsia__
-#include <lib/fidl/llcpp/client_end.h>
-#include <lib/fidl/llcpp/server_end.h>
+#include <lib/fidl/llcpp/internal/endpoints.h>
 #include <lib/zx/channel.h>
 #endif  // __Fuchsia__
 

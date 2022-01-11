@@ -5,7 +5,6 @@
 #include <fidl/test.transport/cpp/driver/wire.h>
 #include <lib/fdf/cpp/dispatcher.h>
 #include <lib/fdf/internal.h>
-#include <lib/fidl_driver/cpp/client.h>
 #include <lib/fit/defer.h>
 #include <zircon/errors.h>
 

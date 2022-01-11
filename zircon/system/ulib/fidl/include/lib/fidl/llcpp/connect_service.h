@@ -5,8 +5,7 @@
 #ifndef LIB_FIDL_LLCPP_CONNECT_SERVICE_H_
 #define LIB_FIDL_LLCPP_CONNECT_SERVICE_H_
 
-#include <lib/fidl/llcpp/client_end.h>
-#include <lib/fidl/llcpp/server_end.h>
+#include <lib/fidl/llcpp/internal/endpoints.h>
 #include <lib/fidl/llcpp/string_view.h>
 #include <lib/fidl/llcpp/sync_call.h>
 #include <lib/fpromise/result.h>

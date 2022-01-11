@@ -6,7 +6,7 @@
 #define LIB_FIDL_LLCPP_CLIENT_H_
 
 #include <lib/fidl/llcpp/client_base.h>
-#include <lib/fidl/llcpp/client_end.h>
+#include <lib/fidl/llcpp/internal/endpoints.h>
 #include <lib/fidl/llcpp/wire_messaging_declarations.h>
 
 namespace fidl {

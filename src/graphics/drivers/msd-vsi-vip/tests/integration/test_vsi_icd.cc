@@ -9,7 +9,7 @@
 #include <gtest/gtest.h>
 
 #include "helper/test_device_helper.h"
-#include "lib/fidl/llcpp/client_end.h"
+#include "lib/fidl/llcpp/channel.h"
 #include "magma.h"
 #include "magma_util/macros.h"
 #include "magma_vendor_queries.h"
