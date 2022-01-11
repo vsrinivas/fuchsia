@@ -36,7 +36,9 @@ use net_types::{
 };
 use nonzero_ext::nonzero;
 use packet::{EmptyBuf, InnerPacketBuilder, Serializer};
-use packet_formats::icmp::ndp::options::{NdpOption, NdpOptionBuilder, INFINITE_LIFETIME};
+use packet_formats::icmp::ndp::options::{
+    NdpOption, NdpOptionBuilder, PrefixInformation, INFINITE_LIFETIME,
+};
 use packet_formats::icmp::ndp::{
     self, NeighborAdvertisement, NeighborSolicitation, Options, RouterSolicitation,
 };
@@ -1625,6 +1627,204 @@ where
     .map_err(|_| ())
 }
 
+/// Execute the algorithm in RFC 4862 Section 5.5.3, adding or updating a static SLAAC addresses for
+/// the given prefix.
+fn apply_slaac_update<'a, D: LinkDevice, C: NdpContext<D>>(
+    ctx: &mut C,
+    device_id: <C as DeviceIdContext<D>>::DeviceId,
+    prefix_info: &PrefixInformation,
+) {
+    if prefix_info.preferred_lifetime() > prefix_info.valid_lifetime() {
+        // If the preferred lifetime is greater than the valid lifetime, silently ignore the Prefix
+        // Information option, as per RFC 4862 section 5.5.3.
+        trace!("receive_ndp_packet: autonomous prefix's preferred lifetime is greater than valid lifetime, ignoring");
+        return;
+    }
+
+    let subnet = match Subnet::new(*prefix_info.prefix(), prefix_info.prefix_length()) {
+        Ok(subnet) => subnet,
+        Err(err) => {
+            trace!(
+                "receive_ndp_packet: autonomous prefix {:?} with length {:?} is not valid: {:?}",
+                prefix_info.prefix(),
+                prefix_info.prefix_length(),
+                err
+            );
+            return;
+        }
+    };
+
+    let now = ctx.now();
+    let preferred_until =
+        prefix_info.preferred_lifetime().map(|l| now.checked_add(l.get()).unwrap());
+
+    let valid_for = prefix_info.valid_lifetime().map(|l| l.get()).unwrap_or(Duration::from_secs(0));
+    let valid_until = now.checked_add(valid_for).unwrap();
+
+    // Before configuring a SLAAC address, check to see if we already have a SLAAC address for the
+    // given prefix.
+    let entry = ctx
+        .get_ip_device_state(device_id)
+        .iter_global_ipv6_addrs()
+        .find(|a| a.addr_sub().subnet() == subnet && a.config_type() == AddrConfigType::Slaac)
+        .cloned();
+    if let Some(entry) = entry {
+        let addr_sub = entry.addr_sub();
+        let addr = addr_sub.addr();
+
+        trace!("receive_ndp_packet: autonomous prefix is for an already configured SLAAC address {:?} on device {:?}", addr_sub, device_id);
+
+        // TODO(https://fxbug.dev/91300): The code below assumes that valid_until is always finite,
+        // which it is not. This means the `unwrap` can panic.
+        let entry_valid_until = entry.valid_until.unwrap();
+        let remaining_lifetime = if entry_valid_until < now {
+            None
+        } else {
+            Some(entry_valid_until.duration_since(now))
+        };
+
+        // As per RFC 4862 section 5.5.3.e, if the advertised prefix is equal to the prefix of an
+        // address configured by stateless autoconfiguration in the list, the preferred lifetime of
+        // the address is reset to the Preferred Lifetime in the received advertisement.
+        trace!("receive_ndp_packet: updating preferred lifetime to {:?} for SLAAC address {:?} on device {:?}", preferred_until, addr, device_id);
+
+        // Update the preferred lifetime for this address.
+        //
+        // Must not have reached this point if the address was not already assigned to a device.
+        if let Some(preferred_until_duration) = preferred_until {
+            if entry.state.is_deprecated() {
+                ctx.unique_address_determined(device_id, addr);
+            }
+            let _: Option<C::Instant> = ctx.schedule_timer_instant(
+                preferred_until_duration,
+                NdpTimerId::new_deprecate_slaac_address(device_id, addr).into(),
+            );
+        } else if !entry.state.is_deprecated() {
+            ctx.deprecate_slaac_addr(device_id, &addr);
+            let _: Option<C::Instant> =
+                ctx.cancel_timer(NdpTimerId::new_deprecate_slaac_address(device_id, addr));
+        }
+
+        // As per RFC 4862 section 5.5.3.e, the specific action to perform for the valid lifetime
+        // of the address depends on the Valid Lifetime in the received advertisement and the
+        // remaining time to the valid lifetime expiration of the previously autoconfigured
+        // address:
+        if (valid_for > MIN_PREFIX_VALID_LIFETIME_FOR_UPDATE)
+            || remaining_lifetime.map_or(true, |r| r < valid_for)
+        {
+            // If the received Valid Lifetime is greater than 2 hours or greater than
+            // RemainingLifetime, set the valid lifetime of the corresponding address to the
+            // advertised Valid Lifetime.
+            trace!("receive_ndp_packet: updating valid lifetime to {:?} for SLAAC address {:?} on device {:?}", valid_until, addr, device_id);
+
+            // Set the valid lifetime for this address.
+            ctx.update_slaac_addr_valid_until(device_id, &addr, valid_until);
+
+            // Must not have reached this point if the address was already assigned to a device.
+            assert_matches!(
+                ctx.schedule_timer_instant(
+                    valid_until,
+                    NdpTimerId::new_invalidate_slaac_address(device_id, addr).into(),
+                ),
+                Some(_)
+            );
+        } else if remaining_lifetime.map_or(true, |r| r <= MIN_PREFIX_VALID_LIFETIME_FOR_UPDATE) {
+            // If RemainingLifetime is less than or equal to 2 hours, ignore the Prefix Information
+            // option with regards to the valid lifetime, unless the Router Advertisement from
+            // which this option was obtained has been authenticated (e.g., via Secure Neighbor
+            // Discovery [RFC3971]).  If the Router Advertisement was authenticated, the valid
+            // lifetime of the corresponding address should be set to the Valid Lifetime in the
+            // received option.
+            //
+            // TODO(ghanan): If the NDP packet this prefix option is in was authenticated, update
+            //               the valid lifetime of the address to the valid lifetime in the
+            //               received option, as per RFC 4862 section 5.5.3.e.
+            trace!("receive_ndp_packet: not updating valid lifetime for SLAAC address {:?} on device {:?} as remaining lifetime is less than 2 hours and new valid lifetime ({:?}) is less than remaining lifetime", addr, device_id, valid_for);
+        } else {
+            // Otherwise, reset the valid lifetime of the corresponding address to 2 hours.
+            trace!("receive_ndp_packet: resetting valid lifetime to 2 hrs for SLAAC address {:?} on device {:?}",addr, device_id);
+
+            // Update the valid lifetime for this address.
+            let valid_until = now.checked_add(MIN_PREFIX_VALID_LIFETIME_FOR_UPDATE).unwrap();
+
+            ctx.update_slaac_addr_valid_until(device_id, &addr, valid_until);
+
+            // Must not have reached this point if the address was not already assigned to a
+            // device.
+            assert_matches!(
+                ctx.schedule_timer_instant(
+                    valid_until,
+                    NdpTimerId::new_invalidate_slaac_address(device_id, addr).into(),
+                ),
+                Some(_)
+            );
+        }
+    } else {
+        // As per RFC 4862 section 5.5.3.e, if the prefix advertised is not equal to the prefix of
+        // an address configured by stateless autoconfiguration already in the list of addresses
+        // associated with the interface, and if the Valid Lifetime is not 0, form an address (and
+        // add it to the list) by combining the advertised prefix with an interface identifier of
+        // the link as follows:
+        //
+        // |    128 - N bits    |        N bits          |
+        // +--------------------+------------------------+
+        // |    link prefix     |  interface identifier  |
+        // +---------------------------------------------+
+        if valid_for == ZERO_DURATION {
+            trace!("receive_ndp_packet: autonomous prefix has valid lifetime = 0, ignoring");
+            return;
+        }
+
+        if subnet.prefix() != REQUIRED_PREFIX_BITS {
+            // If the sum of the prefix length and interface identifier length does not equal 128
+            // bits, the Prefix Information option MUST be ignored, as per RFC 4862 section 5.5.3.
+            error!("receive_ndp_packet: autonomous prefix length {:?} and interface identifier length {:?} cannot form valid IPv6 address, ignoring", subnet.prefix(), REQUIRED_PREFIX_BITS);
+            return;
+        }
+
+        // Generate the global address as defined by RFC 4862 section 5.5.3.d.
+        let address =
+            generate_global_address(&subnet, &ctx.get_interface_identifier(device_id)[..]);
+
+        // TODO(https://fxbug.dev/91301): Should bindings be the one to actually assign the address
+        // to maintain a "single source of truth"?
+
+        // Attempt to add the address to the device.
+        if let Err(err) = ctx.add_slaac_addr_sub(device_id, address, valid_until) {
+            error!("receive_ndp_packet: Failed configure new IPv6 address {:?} on device {:?} via SLAAC with error {:?}", address, device_id, err);
+        } else {
+            trace!("receive_ndp_packet: Successfully configured new IPv6 address {:?} on device {:?} via SLAAC", address, device_id);
+
+            // Set the valid lifetime for this address.
+            //
+            // Must not have reached this point if the address was already assigned to a device.
+            assert_eq!(
+                ctx.schedule_timer_instant(
+                    valid_until,
+                    NdpTimerId::new_invalidate_slaac_address(device_id, address.addr()).into(),
+                ),
+                None
+            );
+
+            let timer_id = NdpTimerId::new_deprecate_slaac_address(device_id, address.addr());
+
+            // Set the preferred lifetime for this address.
+            //
+            // Must not have reached this point if the address was already assigned to a device.
+            match preferred_until {
+                Some(preferred_until_duration) => assert_eq!(
+                    ctx.schedule_timer_instant(preferred_until_duration, timer_id.into()),
+                    None
+                ),
+                None => {
+                    ctx.deprecate_slaac_addr(device_id, &address.addr());
+                    assert_eq!(ctx.cancel_timer(timer_id.into()), None);
+                }
+            };
+        }
+    }
+}
+
 /// A handler for incoming NDP packets.
 ///
 /// An implementation of `NdpPacketHandler` is provided by the device layer (see
@@ -1927,278 +2127,7 @@ pub(crate) fn receive_ndp_packet<D: LinkDevice, C: NdpContext<D>, B>(
                         }
 
                         if prefix_info.autonomous_address_configuration_flag() {
-                            if prefix_info.preferred_lifetime() > prefix_info.valid_lifetime() {
-                                // If the preferred lifetime is greater than the
-                                // valid lifetime, silently ignore the Prefix
-                                // Information option, as per RFC 4862 section
-                                // 5.5.3.
-                                trace!("receive_ndp_packet: autonomous prefix's preferred lifetime is greater than valid lifetime, ignoring");
-                                continue;
-                            }
-
-                            let subnet = match Subnet::new(
-                                *prefix_info.prefix(),
-                                prefix_info.prefix_length(),
-                            ) {
-                                Ok(subnet) => subnet,
-                                Err(err) => {
-                                    trace!("receive_ndp_packet: autonomous prefix {:?} with length {:?} is not valid: {:?}", prefix_info.prefix(), prefix_info.prefix_length(), err);
-                                    continue;
-                                }
-                            };
-
-                            let now = ctx.now();
-                            let preferred_until = prefix_info
-                                .preferred_lifetime()
-                                .map(|l| now.checked_add(l.get()).unwrap());
-
-                            let valid_for = prefix_info
-                                .valid_lifetime()
-                                .map(|l| l.get())
-                                .unwrap_or(Duration::from_secs(0));
-                            let valid_until = now.checked_add(valid_for).unwrap();
-
-                            // Before configuring a SLAAC address, check to see
-                            // if we already have a SLAAC address for the given
-                            // prefix.
-                            let entry = ctx
-                                .get_ip_device_state(device_id)
-                                .iter_global_ipv6_addrs()
-                                .find(|a| {
-                                    a.addr_sub().subnet() == subnet
-                                        && a.config_type() == AddrConfigType::Slaac
-                                })
-                                .cloned();
-                            if let Some(entry) = entry {
-                                let addr_sub = entry.addr_sub();
-                                let addr = addr_sub.addr();
-
-                                trace!("receive_ndp_packet: autonomous prefix is for an already configured SLAAC address {:?} on device {:?}", addr_sub, device_id);
-
-                                // We know the call to `unwrap` will not panic
-                                // because `entry` will be an `AddressEntry`
-                                // configured via SLAAC. All SLAAC addresses
-                                // MUST expire after some time as per the
-                                // discovered autonomous prefix's valid
-                                // lifetime.
-                                let entry_valid_until = entry.valid_until.unwrap();
-                                let remaining_lifetime = if entry_valid_until < now {
-                                    None
-                                } else {
-                                    Some(entry_valid_until.duration_since(now))
-                                };
-
-                                // As per RFC 4862 section 5.5.3.e, if the
-                                // advertised prefix is equal to the prefix of
-                                // an address configured by stateless
-                                // autoconfiguration in the list, the preferred
-                                // lifetime of the address is reset to the
-                                // Preferred Lifetime in the received
-                                // advertisement.
-                                trace!("receive_ndp_packet: updating preferred lifetime to {:?} for SLAAC address {:?} on device {:?}", preferred_until, addr, device_id);
-
-                                // Update the preferred lifetime for this
-                                // address.
-                                //
-                                // Must not have reached this point if the
-                                // address was not already assigned to a device.
-                                if let Some(preferred_until_duration) = preferred_until {
-                                    if entry.state.is_deprecated() {
-                                        ctx.unique_address_determined(device_id, addr);
-                                    }
-                                    let _: Option<C::Instant> = ctx.schedule_timer_instant(
-                                        preferred_until_duration,
-                                        NdpTimerId::new_deprecate_slaac_address(device_id, addr)
-                                            .into(),
-                                    );
-                                } else if !entry.state.is_deprecated() {
-                                    ctx.deprecate_slaac_addr(device_id, &addr);
-                                    let _: Option<C::Instant> = ctx.cancel_timer(
-                                        NdpTimerId::new_deprecate_slaac_address(device_id, addr),
-                                    );
-                                }
-
-                                // As per RFC 4862 section 5.5.3.e, the specific
-                                // action to perform for the valid lifetime of
-                                // the address depends on the Valid Lifetime in
-                                // the received advertisement and the remaining
-                                // time to the valid lifetime expiration of the
-                                // previously autoconfigured address:
-                                if (valid_for > MIN_PREFIX_VALID_LIFETIME_FOR_UPDATE)
-                                    || remaining_lifetime.map_or(true, |r| r < valid_for)
-                                {
-                                    // If the received Valid Lifetime is greater
-                                    // than 2 hours or greater than
-                                    // RemainingLifetime, set the valid lifetime
-                                    // of the corresponding address to the
-                                    // advertised Valid Lifetime.
-                                    trace!("receive_ndp_packet: updating valid lifetime to {:?} for SLAAC address {:?} on device {:?}", valid_until, addr, device_id);
-
-                                    // Set the valid lifetime for this address.
-                                    ctx.update_slaac_addr_valid_until(
-                                        device_id,
-                                        &addr,
-                                        valid_until,
-                                    );
-
-                                    // Must not have reached this point if the
-                                    // address was already assigned to a device.
-                                    assert_matches!(
-                                        ctx.schedule_timer_instant(
-                                            valid_until,
-                                            NdpTimerId::new_invalidate_slaac_address(
-                                                device_id, addr
-                                            )
-                                            .into(),
-                                        ),
-                                        Some(_)
-                                    );
-                                } else if remaining_lifetime
-                                    .map_or(true, |r| r <= MIN_PREFIX_VALID_LIFETIME_FOR_UPDATE)
-                                {
-                                    // If RemainingLifetime is less than or
-                                    // equal to 2 hours, ignore the Prefix
-                                    // Information option with regards to the
-                                    // valid lifetime, unless the Router
-                                    // Advertisement from which this option was
-                                    // obtained has been authenticated (e.g.,
-                                    // via Secure Neighbor Discovery [RFC3971]).
-                                    // If the Router Advertisement was
-                                    // authenticated, the valid lifetime of the
-                                    // corresponding address should be set to
-                                    // the Valid Lifetime in the received
-                                    // option.
-                                    //
-                                    // TODO(ghanan): If the NDP packet this
-                                    //               prefix option is in was
-                                    //               authenticated, update the
-                                    //               valid lifetime of the
-                                    //               address to the valid
-                                    //               lifetime in the received
-                                    //               option, as per RFC 4862
-                                    //               section 5.5.3.e.
-                                    trace!("receive_ndp_packet: not updating valid lifetime for SLAAC address {:?} on device {:?} as remaining lifetime is less than 2 hours and new valid lifetime ({:?}) is less than remaining lifetime", addr, device_id, valid_for);
-                                } else {
-                                    // Otherwise, reset the valid lifetime of
-                                    // the corresponding address to 2 hours.
-                                    trace!("receive_ndp_packet: resetting valid lifetime to 2 hrs for SLAAC address {:?} on device {:?}",addr, device_id);
-
-                                    // Update the valid lifetime for this address.
-                                    let valid_until = now
-                                        .checked_add(MIN_PREFIX_VALID_LIFETIME_FOR_UPDATE)
-                                        .unwrap();
-
-                                    ctx.update_slaac_addr_valid_until(
-                                        device_id,
-                                        &addr,
-                                        valid_until,
-                                    );
-
-                                    // Must not have reached this point if the
-                                    // address was not already assigned to a
-                                    // device.
-                                    assert_matches!(
-                                        ctx.schedule_timer_instant(
-                                            valid_until,
-                                            NdpTimerId::new_invalidate_slaac_address(
-                                                device_id, addr
-                                            )
-                                            .into(),
-                                        ),
-                                        Some(_)
-                                    );
-                                }
-                            } else {
-                                // As per RFC 4862 section 5.5.3.e, if the
-                                // prefix advertised is not equal to the prefix
-                                // of an address configured by stateless
-                                // autoconfiguration already in the list of
-                                // addresses associated with the interface, and
-                                // if the Valid Lifetime is not 0, form an
-                                // address (and add it to the list) by combining
-                                // the advertised prefix with an interface
-                                // identifier of the link as follows:
-                                //
-                                // |    128 - N bits    |        N bits          |
-                                // +--------------------+------------------------+
-                                // |    link prefix     |  interface identifier  |
-                                // +---------------------------------------------+
-                                if valid_for == ZERO_DURATION {
-                                    trace!("receive_ndp_packet: autonomous prefix has valid lifetime = 0, ignoring");
-                                    continue;
-                                }
-
-                                if subnet.prefix() != REQUIRED_PREFIX_BITS {
-                                    // If the sum of the prefix length and
-                                    // interface identifier length does not
-                                    // equal 128 bits, the Prefix Information
-                                    // option MUST be ignored, as per RFC 4862
-                                    // section 5.5.3.
-                                    error!("receive_ndp_packet: autonomous prefix length {:?} and interface identifier length {:?} cannot form valid IPv6 address, ignoring", subnet.prefix(), REQUIRED_PREFIX_BITS);
-                                    continue;
-                                }
-
-                                // Generate the global address as defined by RFC
-                                // 4862 section 5.5.3.d.
-                                let address = generate_global_address(
-                                    &subnet,
-                                    &ctx.get_interface_identifier(device_id)[..],
-                                );
-
-                                // TODO(ghanan): Should bindings be the one to
-                                //               actually assign the address to
-                                //               maintain a "single source of
-                                //               truth"?
-
-                                // Attempt to add the address to the device.
-                                if let Err(err) =
-                                    ctx.add_slaac_addr_sub(device_id, address, valid_until)
-                                {
-                                    error!("receive_ndp_packet: Failed configure new IPv6 address {:?} on device {:?} via SLAAC with error {:?}", address, device_id, err);
-                                } else {
-                                    trace!("receive_ndp_packet: Successfully configured new IPv6 address {:?} on device {:?} via SLAAC", address, device_id);
-
-                                    // Set the valid lifetime for this address.
-                                    //
-                                    // Must not have reached this point if the
-                                    // address was already assigned to a device.
-                                    assert_eq!(
-                                        ctx.schedule_timer_instant(
-                                            valid_until,
-                                            NdpTimerId::new_invalidate_slaac_address(
-                                                device_id,
-                                                address.addr()
-                                            )
-                                            .into(),
-                                        ),
-                                        None
-                                    );
-
-                                    let timer_id = NdpTimerId::new_deprecate_slaac_address(
-                                        device_id,
-                                        address.addr(),
-                                    );
-
-                                    // Set the preferred lifetime for this
-                                    // address.
-                                    //
-                                    // Must not have reached this point if the
-                                    // address was already assigned to a device.
-                                    match preferred_until {
-                                        Some(preferred_until_duration) => assert_eq!(
-                                            ctx.schedule_timer_instant(
-                                                preferred_until_duration,
-                                                timer_id.into()
-                                            ),
-                                            None
-                                        ),
-                                        None => {
-                                            ctx.deprecate_slaac_addr(device_id, &address.addr());
-                                            assert_eq!(ctx.cancel_timer(timer_id.into()), None);
-                                        }
-                                    };
-                                }
-                            }
+                            apply_slaac_update(ctx, device_id, prefix_info);
                         }
                     }
                     _ => {}
