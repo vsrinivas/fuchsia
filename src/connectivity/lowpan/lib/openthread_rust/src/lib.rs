@@ -29,6 +29,7 @@ pub mod prelude {
     pub use crate::{ot, otsys};
     pub use crate::{OtBox, OtInstanceBox};
     pub use ot::Boxable as _;
+    pub use ot::Link as _;
     pub use ot::OtCastable as _;
     pub use ot::Reset as _;
     pub use ot::State as _;
@@ -53,6 +54,6 @@ pub(crate) mod prelude_internal {
     pub use log::{debug, error, info, trace, warn};
     pub use num::FromPrimitive as _;
     pub use ot::Result;
-    pub use ot::{types::*, Boxable, Error, Instance, Platform, Tasklets};
+    pub use ot::{types::*, Boxable, Error, Instance, Link, Platform, Tasklets};
     pub use static_assertions as sa;
 }

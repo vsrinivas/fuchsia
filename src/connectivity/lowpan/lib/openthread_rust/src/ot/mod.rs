@@ -76,6 +76,9 @@ pub use tasklets::*;
 mod reset;
 pub use reset::*;
 
+mod link;
+pub use link::*;
+
 pub(crate) mod types;
 pub use types::*;
 
