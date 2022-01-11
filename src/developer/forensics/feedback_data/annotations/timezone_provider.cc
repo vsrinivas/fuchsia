@@ -28,8 +28,8 @@ TimezoneProvider::TimezoneProvider(async_dispatcher_t* dispatcher,
                /*max_delay=*/zx::hour(1)) {
   services_->Connect(property_provider_ptr_.NewRequest(dispatcher_));
   property_provider_ptr_.events().OnChange =
-      ::fit::bind_member(this, &TimezoneProvider::GetTimezone);
-  property_provider_ptr_.set_error_handler(::fit::bind_member(this, &TimezoneProvider::OnError));
+      ::fit::bind_member<&TimezoneProvider::GetTimezone>(this);
+  property_provider_ptr_.set_error_handler(::fit::bind_member<&TimezoneProvider::OnError>(this));
 
   GetTimezone();
 }
