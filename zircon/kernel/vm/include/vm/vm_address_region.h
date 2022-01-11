@@ -161,11 +161,26 @@ class VmAddressRegionOrMapping
 
   // Check if the given *arch_mmu_flags* are allowed under this
   // regions *flags_*
-  bool is_valid_mapping_flags(uint arch_mmu_flags);
+  bool is_valid_mapping_flags(uint arch_mmu_flags) {
+    if (!(flags_ & VMAR_FLAG_CAN_MAP_READ) && (arch_mmu_flags & ARCH_MMU_FLAG_PERM_READ)) {
+      return false;
+    }
+    if (!(flags_ & VMAR_FLAG_CAN_MAP_WRITE) && (arch_mmu_flags & ARCH_MMU_FLAG_PERM_WRITE)) {
+      return false;
+    }
+    if (!(flags_ & VMAR_FLAG_CAN_MAP_EXECUTE) && (arch_mmu_flags & ARCH_MMU_FLAG_PERM_EXECUTE)) {
+      return false;
+    }
+    return true;
+  }
 
   // Returns true if the instance is alive and reporting information that
   // reflects the address space layout. |aspace()->lock()| must be held.
-  bool IsAliveLocked() const;
+  bool IsAliveLocked() const {
+    canary_.Assert();
+    DEBUG_ASSERT(aspace_->lock()->lock().IsHeld());
+    return state_ == LifeCycleState::ALIVE;
+  }
 
   virtual zx_status_t DestroyLocked() TA_REQ(lock()) = 0;
 
@@ -1026,5 +1041,39 @@ class VmEnumerator {
   VmEnumerator() = default;
   ~VmEnumerator() = default;
 };
+
+// Now that all the sub-classes are defined finish declaring some inline VmAddressRegionOrMapping
+// methods.
+inline fbl::RefPtr<VmAddressRegion> VmAddressRegionOrMapping::as_vm_address_region() {
+  canary_.Assert();
+  if (is_mapping()) {
+    return nullptr;
+  }
+  return fbl::RefPtr<VmAddressRegion>(static_cast<VmAddressRegion*>(this));
+}
+
+inline VmAddressRegion* VmAddressRegionOrMapping::as_vm_address_region_ptr() {
+  canary_.Assert();
+  if (unlikely(is_mapping())) {
+    return nullptr;
+  }
+  return static_cast<VmAddressRegion*>(this);
+}
+
+inline fbl::RefPtr<VmMapping> VmAddressRegionOrMapping::as_vm_mapping() {
+  canary_.Assert();
+  if (!is_mapping()) {
+    return nullptr;
+  }
+  return fbl::RefPtr<VmMapping>(static_cast<VmMapping*>(this));
+}
+
+inline VmMapping* VmAddressRegionOrMapping::as_vm_mapping_ptr() {
+  canary_.Assert();
+  if (unlikely(!is_mapping())) {
+    return nullptr;
+  }
+  return static_cast<VmMapping*>(this);
+}
 
 #endif  // ZIRCON_KERNEL_VM_INCLUDE_VM_VM_ADDRESS_REGION_H_

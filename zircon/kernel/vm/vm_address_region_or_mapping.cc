@@ -52,57 +52,6 @@ VmAddressRegionOrMapping::~VmAddressRegionOrMapping() {
   DEBUG_ASSERT(!this->in_subregion_tree());
 }
 
-bool VmAddressRegionOrMapping::IsAliveLocked() const {
-  canary_.Assert();
-  DEBUG_ASSERT(aspace_->lock()->lock().IsHeld());
-  return state_ == LifeCycleState::ALIVE;
-}
-
-fbl::RefPtr<VmAddressRegion> VmAddressRegionOrMapping::as_vm_address_region() {
-  canary_.Assert();
-  if (is_mapping()) {
-    return nullptr;
-  }
-  return fbl::RefPtr<VmAddressRegion>(static_cast<VmAddressRegion*>(this));
-}
-
-fbl::RefPtr<VmMapping> VmAddressRegionOrMapping::as_vm_mapping() {
-  canary_.Assert();
-  if (!is_mapping()) {
-    return nullptr;
-  }
-  return fbl::RefPtr<VmMapping>(static_cast<VmMapping*>(this));
-}
-
-VmAddressRegion* VmAddressRegionOrMapping::as_vm_address_region_ptr() {
-  canary_.Assert();
-  if (unlikely(is_mapping())) {
-    return nullptr;
-  }
-  return static_cast<VmAddressRegion*>(this);
-}
-
-VmMapping* VmAddressRegionOrMapping::as_vm_mapping_ptr() {
-  canary_.Assert();
-  if (unlikely(!is_mapping())) {
-    return nullptr;
-  }
-  return static_cast<VmMapping*>(this);
-}
-
-bool VmAddressRegionOrMapping::is_valid_mapping_flags(uint arch_mmu_flags) {
-  if (!(flags_ & VMAR_FLAG_CAN_MAP_READ) && (arch_mmu_flags & ARCH_MMU_FLAG_PERM_READ)) {
-    return false;
-  }
-  if (!(flags_ & VMAR_FLAG_CAN_MAP_WRITE) && (arch_mmu_flags & ARCH_MMU_FLAG_PERM_WRITE)) {
-    return false;
-  }
-  if (!(flags_ & VMAR_FLAG_CAN_MAP_EXECUTE) && (arch_mmu_flags & ARCH_MMU_FLAG_PERM_EXECUTE)) {
-    return false;
-  }
-  return true;
-}
-
 size_t VmAddressRegionOrMapping::AllocatedPages() const {
   Guard<Mutex> guard{aspace_->lock()};
   if (state_ != LifeCycleState::ALIVE) {
