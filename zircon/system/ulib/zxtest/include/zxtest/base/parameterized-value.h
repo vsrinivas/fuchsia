@@ -35,7 +35,7 @@ class WithParamInterface {
     return [value_getter = std::move(value_getter)](
                internal::TestDriver* driver) mutable -> std::unique_ptr<TestImpl> {
       std::unique_ptr<TestImpl> test = TestImpl::template Create<TestImpl>(driver);
-      test->param_ = value_getter();
+      test->param_.emplace(value_getter());
       return std::move(test);
     };
   }
