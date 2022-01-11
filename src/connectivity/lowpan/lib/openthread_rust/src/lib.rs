@@ -21,15 +21,19 @@ pub type OtBox<T> = ot::Box<T>;
 /// Shorthand for `ot::Box<ot::Instance>`.
 pub type OtInstanceBox = ot::Box<ot::Instance>;
 
+/// Shorthand for `ot::Box<ot::Message<'a>>`.
+pub type OtMessageBox<'a> = ot::Box<ot::Message<'a>>;
+
 /// Prelude namespace for improving the ergonomics of using this crate.
 #[macro_use]
 pub mod prelude {
     #![allow(unused_imports)]
 
     pub use crate::{ot, otsys};
-    pub use crate::{OtBox, OtInstanceBox};
+    pub use crate::{OtBox, OtInstanceBox, OtMessageBox};
     pub use ot::Boxable as _;
     pub use ot::Link as _;
+    pub use ot::MessageBuffer as _;
     pub use ot::OtCastable as _;
     pub use ot::Reset as _;
     pub use ot::State as _;
@@ -56,6 +60,6 @@ pub(crate) mod prelude_internal {
     pub use log::{debug, error, info, trace, warn};
     pub use num::FromPrimitive as _;
     pub use ot::Result;
-    pub use ot::{types::*, Boxable, Error, Instance, Link, Platform, Tasklets, Thread};
+    pub use ot::{types::*, Boxable, Error, Instance, Link, Message, MessageBuffer, Platform, Tasklets, Thread};
     pub use static_assertions as sa;
 }

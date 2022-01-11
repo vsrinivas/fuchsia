@@ -30,6 +30,7 @@ rustc_library("openthread") {
     "src/lib.rs",
     "src/ot/error.rs",
     "src/ot/link.rs",
+    "src/ot/message.rs",
     "src/ot/mod.rs",
     "src/ot/otbox.rs",
     "src/ot/platform.rs",

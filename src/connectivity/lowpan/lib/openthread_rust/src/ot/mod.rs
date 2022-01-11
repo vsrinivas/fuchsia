@@ -88,6 +88,9 @@ pub use thread::*;
 mod state;
 pub use state::*;
 
+pub mod message;
+pub use message::{Message, MessageBuffer};
+
 mod otbox;
 pub use otbox::*;
 
