@@ -39,31 +39,31 @@ const HEADING_COLOR: Color = Color::new();
 const BODY_COLOR: Color = Color { r: 0x7e, g: 0x86, b: 0x8d, a: 0xff };
 const COUNTDOWN_COLOR: Color = Color { r: 0x42, g: 0x85, b: 0xf4, a: 0xff };
 
-const WIFI_SSID: &'static str = "WiFi SSID";
-const WIFI_PASSWORD: &'static str = "WiFi Password";
-const WIFI_CONNECT: &'static str = "WiFi Connect";
-
 #[cfg(feature = "http_setup_server")]
-mod setup;
-
+mod button;
+#[cfg(feature = "http_setup_server")]
+mod keyboard;
+#[cfg(feature = "http_setup_server")]
+mod keys;
 #[cfg(feature = "http_setup_server")]
 mod ota;
-
 #[cfg(feature = "http_setup_server")]
-use crate::setup::SetupEvent;
-
+mod setup;
 #[cfg(feature = "http_setup_server")]
 mod storage;
 
-mod button;
 mod fdr;
-mod keyboard;
-mod keys;
 mod proxy_view_assistant;
 
-use crate::button::{Button, ButtonMessages};
-use crate::keyboard::{KeyboardMessages, KeyboardViewAssistant};
-use crate::proxy_view_assistant::{ProxyMessages, ProxyViewAssistant};
+#[cfg(feature = "http_setup_server")]
+use crate::{
+    button::{Button, ButtonMessages},
+    keyboard::{KeyboardMessages, KeyboardViewAssistant},
+    proxy_view_assistant::ProxyMessages,
+    setup::SetupEvent,
+};
+
+use crate::proxy_view_assistant::ProxyViewAssistant;
 
 use fdr::{FactoryResetState, ResetEvent};
 
@@ -104,6 +104,13 @@ const RECOVERY_MODE_BODY: &'static str = "Press and hold both volume keys to fac
 const COUNTDOWN_MODE_HEADLINE: &'static str = "Factory reset device";
 const COUNTDOWN_MODE_BODY: &'static str = "Continue holding the keys to the end of the countdown. \
 This will wipe all of your data from this device and reset it to factory settings.";
+
+#[cfg(feature = "http_setup_server")]
+const WIFI_SSID: &'static str = "WiFi SSID";
+#[cfg(feature = "http_setup_server")]
+const WIFI_PASSWORD: &'static str = "WiFi Password";
+#[cfg(feature = "http_setup_server")]
+const WIFI_CONNECT: &'static str = "WiFi Connect";
 
 const PATH_TO_FDR_RESTRICTION_CONFIG: &'static str = "/config/data/check_fdr_restriction.json";
 
@@ -168,10 +175,15 @@ impl AppAssistant for RecoveryAppAssistant {
         config.display_rotation = self.display_rotation;
     }
 }
-
+#[cfg(feature = "http_setup_server")]
 struct RenderResources {
     scene: Scene,
     buttons: Vec<Button>,
+}
+
+#[cfg(not(feature = "http_setup_server"))]
+struct RenderResources {
+    scene: Scene,
 }
 
 impl RenderResources {
@@ -182,7 +194,7 @@ impl RenderResources {
         heading: &str,
         body: Option<&str>,
         countdown_ticks: u8,
-        focus_connect_button: bool,
+        #[cfg(feature = "http_setup_server")] focus_connect_button: bool,
         face: &FontFace,
         is_counting_down: bool,
     ) -> Self {
@@ -191,9 +203,7 @@ impl RenderResources {
         let text_size = min_dimension / 10.0;
         let top_margin = 0.255;
         let body_text_size = min_dimension / 18.0;
-        let button_text_size = min_dimension / 14.0;
         let countdown_text_size = min_dimension / 6.0;
-        let buttons_y = min_dimension - button_text_size * 2.0;
 
         let mut builder = SceneBuilder::new().background_color(BG_COLOR).round_scene_corners(true);
 
@@ -204,7 +214,6 @@ impl RenderResources {
             let y = top_margin * target_size.height - logo_edge / 2.0;
             point2(x, y)
         };
-        let mut buttons: Vec<Button> = Vec::new();
 
         if is_counting_down {
             let countdown_position = logo_position + vec2(logo_edge / 2.0, logo_edge / 2.0);
@@ -242,16 +251,6 @@ impl RenderResources {
                     logo_position,
                 );
             }
-            buttons.push(
-                Button::new(WIFI_SSID, button_text_size, 7.0, &mut builder).expect(WIFI_SSID),
-            );
-            buttons.push(
-                Button::new(WIFI_PASSWORD, button_text_size, 7.0, &mut builder)
-                    .expect(WIFI_PASSWORD),
-            );
-            buttons.push(
-                Button::new(WIFI_CONNECT, button_text_size, 7.0, &mut builder).expect(WIFI_CONNECT),
-            );
         }
 
         let heading_text_location =
@@ -285,18 +284,43 @@ impl RenderResources {
                 },
             );
         }
-        let mut scene = builder.build();
-        let mut x = 40.0;
-        for i in 0..buttons.len() {
-            buttons[i].set_location(&mut scene, point2(x, buttons_y));
-            // Set all buttons focus to true apart from button 2
-            buttons[i].set_focused(&mut scene, true);
-            if i == 2 {
-                buttons[i].set_focused(&mut scene, focus_connect_button);
+
+        #[cfg(feature = "http_setup_server")]
+        {
+            let button_text_size = min_dimension / 14.0;
+            let buttons_y = min_dimension - button_text_size * 2.0;
+            let mut buttons: Vec<Button> = Vec::new();
+
+            if !is_counting_down {
+                buttons.push(
+                    Button::new(WIFI_SSID, button_text_size, 7.0, &mut builder).expect(WIFI_SSID),
+                );
+                buttons.push(
+                    Button::new(WIFI_PASSWORD, button_text_size, 7.0, &mut builder)
+                        .expect(WIFI_PASSWORD),
+                );
+                buttons.push(
+                    Button::new(WIFI_CONNECT, button_text_size, 7.0, &mut builder)
+                        .expect(WIFI_CONNECT),
+                );
             }
-            x += buttons[i].get_size(&mut scene).width + 50.0;
+
+            let mut scene = builder.build();
+            let mut x = 40.0;
+            for i in 0..buttons.len() {
+                buttons[i].set_location(&mut scene, point2(x, buttons_y));
+                // Set all buttons focus to true apart from button 2
+                buttons[i].set_focused(&mut scene, true);
+                if i == 2 {
+                    buttons[i].set_focused(&mut scene, focus_connect_button);
+                }
+                x += buttons[i].get_size(&mut scene).width + 50.0;
+            }
+
+            Self { scene, buttons }
         }
-        Self { scene, buttons }
+        #[cfg(not(feature = "http_setup_server"))]
+        Self { scene: builder.build() }
     }
 }
 
@@ -312,7 +336,9 @@ struct RecoveryViewAssistant {
     countdown_task: Option<Task<()>>,
     countdown_ticks: u8,
     render_resources: Option<RenderResources>,
+    #[cfg(feature = "http_setup_server")]
     wifi_ssid: Option<String>,
+    #[cfg(feature = "http_setup_server")]
     wifi_password: Option<String>,
 }
 
@@ -340,7 +366,9 @@ impl RecoveryViewAssistant {
             countdown_task: None,
             countdown_ticks: FACTORY_RESET_TIMER_IN_SECONDS,
             render_resources: None,
+            #[cfg(feature = "http_setup_server")]
             wifi_ssid: None,
+            #[cfg(feature = "http_setup_server")]
             wifi_password: None,
         })
     }
@@ -442,159 +470,123 @@ impl RecoveryViewAssistant {
             }
         };
     }
-}
 
-impl ViewAssistant for RecoveryViewAssistant {
-    fn setup(&mut self, context: &ViewAssistantContext) -> Result<(), Error> {
-        self.view_key = context.key;
-        Ok(())
-    }
-
-    fn render(
-        &mut self,
-        render_context: &mut RenderContext,
-        ready_event: Event,
-        context: &ViewAssistantContext,
-    ) -> Result<(), Error> {
-        // Emulate the size that Carnelian passes when the display is rotated
-        let target_size = context.size;
-
-        if self.render_resources.is_none() {
-            self.render_resources = Some(RenderResources::new(
-                render_context,
-                &self.file,
-                target_size,
-                self.heading,
-                self.body.as_ref().map(Borrow::borrow),
-                self.countdown_ticks,
-                self.wifi_ssid.is_some() && self.wifi_password.is_some(),
-                &self.face,
-                self.reset_state_machine.is_counting_down(),
-            ));
-        }
-
-        let render_resources = self.render_resources.as_mut().unwrap();
-        render_resources.scene.render(render_context, ready_event, context)?;
-        context.request_render();
-        Ok(())
-    }
-
-    fn handle_message(&mut self, message: carnelian::Message) {
-        if let Some(message) = message.downcast_ref::<RecoveryMessages>() {
-            match message {
-                #[cfg(feature = "http_setup_server")]
-                RecoveryMessages::EventReceived => {
-                    self.body = Some("Got event".into());
+    fn handle_recovery_message(&mut self, message: &RecoveryMessages) {
+        match message {
+            #[cfg(feature = "http_setup_server")]
+            RecoveryMessages::EventReceived => {
+                self.body = Some("Got event".into());
+            }
+            #[cfg(feature = "http_setup_server")]
+            RecoveryMessages::StartingOta => {
+                self.body = Some("Starting OTA update".into());
+            }
+            #[cfg(feature = "http_setup_server")]
+            RecoveryMessages::OtaFinished { result } => {
+                if let Err(e) = result {
+                    self.body = Some(format!("OTA failed: {:?}", e).into());
+                } else {
+                    self.body = Some("OTA succeeded".into());
                 }
-                #[cfg(feature = "http_setup_server")]
-                RecoveryMessages::StartingOta => {
-                    self.body = Some("Starting OTA update".into());
-                }
-                #[cfg(feature = "http_setup_server")]
-                RecoveryMessages::OtaFinished { result } => {
-                    if let Err(e) = result {
-                        self.body = Some(format!("OTA failed: {:?}", e).into());
-                    } else {
-                        self.body = Some("OTA succeeded".into());
+            }
+            RecoveryMessages::PolicyResult(check_id, fdr_enabled) => {
+                let state = self
+                    .reset_state_machine
+                    .handle_event(ResetEvent::AwaitPolicyResult(*check_id, *fdr_enabled));
+                self.app_context.queue_message(
+                    MessageTarget::View(self.view_key),
+                    make_message(RecoveryMessages::ResetMessage(state)),
+                );
+            }
+            RecoveryMessages::ResetMessage(state) => {
+                match state {
+                    FactoryResetState::Waiting => {
+                        self.heading = RECOVERY_MODE_HEADLINE;
+                        self.body = get_recovery_body(self.fdr_restriction.is_initially_enabled())
+                            .map(Into::into);
+                        self.render_resources = None;
+                        self.app_context.request_render(self.view_key);
                     }
-                }
-                RecoveryMessages::PolicyResult(check_id, fdr_enabled) => {
-                    let state = self
-                        .reset_state_machine
-                        .handle_event(ResetEvent::AwaitPolicyResult(*check_id, *fdr_enabled));
-                    self.app_context.queue_message(
-                        MessageTarget::View(self.view_key),
-                        make_message(RecoveryMessages::ResetMessage(state)),
-                    );
-                }
-                RecoveryMessages::ResetMessage(state) => {
-                    match state {
-                        FactoryResetState::Waiting => {
-                            self.heading = RECOVERY_MODE_HEADLINE;
-                            self.body =
-                                get_recovery_body(self.fdr_restriction.is_initially_enabled())
-                                    .map(Into::into);
-                            self.render_resources = None;
-                            self.app_context.request_render(self.view_key);
-                        }
-                        FactoryResetState::AwaitingPolicy(_) => {} // no-op
-                        FactoryResetState::StartCountdown => {
-                            let view_key = self.view_key;
-                            let local_app_context = self.app_context.clone();
+                    FactoryResetState::AwaitingPolicy(_) => {} // no-op
+                    FactoryResetState::StartCountdown => {
+                        let view_key = self.view_key;
+                        let local_app_context = self.app_context.clone();
 
-                            let mut counter = FACTORY_RESET_TIMER_IN_SECONDS;
-                            local_app_context.queue_message(
-                                MessageTarget::View(view_key),
-                                make_message(RecoveryMessages::CountdownTick(counter)),
-                            );
+                        let mut counter = FACTORY_RESET_TIMER_IN_SECONDS;
+                        local_app_context.queue_message(
+                            MessageTarget::View(view_key),
+                            make_message(RecoveryMessages::CountdownTick(counter)),
+                        );
 
-                            // start the countdown timer
-                            let f = async move {
-                                let mut interval_timer =
-                                    fasync::Interval::new(Duration::from_seconds(1));
-                                while let Some(()) = interval_timer.next().await {
-                                    counter -= 1;
-                                    local_app_context.queue_message(
-                                        MessageTarget::View(view_key),
-                                        make_message(RecoveryMessages::CountdownTick(counter)),
-                                    );
-                                    if counter == 0 {
-                                        break;
-                                    }
+                        // start the countdown timer
+                        let f = async move {
+                            let mut interval_timer =
+                                fasync::Interval::new(Duration::from_seconds(1));
+                            while let Some(()) = interval_timer.next().await {
+                                counter -= 1;
+                                local_app_context.queue_message(
+                                    MessageTarget::View(view_key),
+                                    make_message(RecoveryMessages::CountdownTick(counter)),
+                                );
+                                if counter == 0 {
+                                    break;
                                 }
-                            };
-                            self.countdown_task = Some(fasync::Task::local(f));
-                        }
-                        FactoryResetState::CancelCountdown => {
-                            self.countdown_task
-                                .take()
-                                .and_then(|task| Some(fasync::Task::local(task.cancel())));
-                            let state = self
-                                .reset_state_machine
-                                .handle_event(ResetEvent::CountdownCancelled);
-                            assert_eq!(state, fdr::FactoryResetState::Waiting);
-                            self.app_context.queue_message(
-                                MessageTarget::View(self.view_key),
-                                make_message(RecoveryMessages::ResetMessage(state)),
-                            );
-                        }
-                        FactoryResetState::ExecuteReset => {
-                            let view_key = self.view_key;
-                            let local_app_context = self.app_context.clone();
-                            let f = async move {
-                                RecoveryViewAssistant::execute_reset(view_key, local_app_context)
-                                    .await;
-                            };
-                            fasync::Task::local(f).detach();
-                        }
-                    };
-                }
-                RecoveryMessages::CountdownTick(count) => {
-                    self.heading = COUNTDOWN_MODE_HEADLINE;
-                    self.countdown_ticks = *count;
-                    if *count == 0 {
-                        self.body = Some("Resetting device...".into());
+                            }
+                        };
+                        self.countdown_task = Some(fasync::Task::local(f));
+                    }
+                    FactoryResetState::CancelCountdown => {
+                        self.countdown_task
+                            .take()
+                            .and_then(|task| Some(fasync::Task::local(task.cancel())));
                         let state =
-                            self.reset_state_machine.handle_event(ResetEvent::CountdownFinished);
-                        assert_eq!(state, FactoryResetState::ExecuteReset);
+                            self.reset_state_machine.handle_event(ResetEvent::CountdownCancelled);
+                        assert_eq!(state, fdr::FactoryResetState::Waiting);
                         self.app_context.queue_message(
                             MessageTarget::View(self.view_key),
                             make_message(RecoveryMessages::ResetMessage(state)),
                         );
-                    } else {
-                        self.body = Some(COUNTDOWN_MODE_BODY.into());
                     }
-                    self.render_resources = None;
-                    self.app_context.request_render(self.view_key);
-                }
-                RecoveryMessages::ResetFailed => {
-                    self.heading = "Reset failed";
-                    self.body = Some("Please restart device to try again".into());
-                    self.render_resources = None;
-                    self.app_context.request_render(self.view_key);
-                }
+                    FactoryResetState::ExecuteReset => {
+                        let view_key = self.view_key;
+                        let local_app_context = self.app_context.clone();
+                        let f = async move {
+                            RecoveryViewAssistant::execute_reset(view_key, local_app_context).await;
+                        };
+                        fasync::Task::local(f).detach();
+                    }
+                };
             }
-        } else if let Some(message) = message.downcast_ref::<KeyboardMessages>() {
+            RecoveryMessages::CountdownTick(count) => {
+                self.heading = COUNTDOWN_MODE_HEADLINE;
+                self.countdown_ticks = *count;
+                if *count == 0 {
+                    self.body = Some("Resetting device...".into());
+                    let state =
+                        self.reset_state_machine.handle_event(ResetEvent::CountdownFinished);
+                    assert_eq!(state, FactoryResetState::ExecuteReset);
+                    self.app_context.queue_message(
+                        MessageTarget::View(self.view_key),
+                        make_message(RecoveryMessages::ResetMessage(state)),
+                    );
+                } else {
+                    self.body = Some(COUNTDOWN_MODE_BODY.into());
+                }
+                self.render_resources = None;
+                self.app_context.request_render(self.view_key);
+            }
+            RecoveryMessages::ResetFailed => {
+                self.heading = "Reset failed";
+                self.body = Some("Please restart device to try again".into());
+                self.render_resources = None;
+                self.app_context.request_render(self.view_key);
+            }
+        }
+    }
+
+    #[cfg(feature = "http_setup_server")]
+    fn handle_keyboard_message(&mut self, message: carnelian::Message) {
+        if let Some(message) = message.downcast_ref::<KeyboardMessages>() {
             match message {
                 KeyboardMessages::NoInput => {}
                 KeyboardMessages::Result(WIFI_SSID, result) => {
@@ -659,6 +651,54 @@ impl ViewAssistant for RecoveryViewAssistant {
             }
         }
     }
+}
+
+impl ViewAssistant for RecoveryViewAssistant {
+    fn setup(&mut self, context: &ViewAssistantContext) -> Result<(), Error> {
+        self.view_key = context.key;
+        Ok(())
+    }
+
+    fn render(
+        &mut self,
+        render_context: &mut RenderContext,
+        ready_event: Event,
+        context: &ViewAssistantContext,
+    ) -> Result<(), Error> {
+        // Emulate the size that Carnelian passes when the display is rotated
+        let target_size = context.size;
+
+        if self.render_resources.is_none() {
+            self.render_resources = Some(RenderResources::new(
+                render_context,
+                &self.file,
+                target_size,
+                self.heading,
+                self.body.as_ref().map(Borrow::borrow),
+                self.countdown_ticks,
+                #[cfg(feature = "http_setup_server")]
+                {
+                    self.wifi_ssid.is_some() && self.wifi_password.is_some()
+                },
+                &self.face,
+                self.reset_state_machine.is_counting_down(),
+            ));
+        }
+
+        let render_resources = self.render_resources.as_mut().unwrap();
+        render_resources.scene.render(render_context, ready_event, context)?;
+        context.request_render();
+        Ok(())
+    }
+
+    fn handle_message(&mut self, message: carnelian::Message) {
+        if let Some(message) = message.downcast_ref::<RecoveryMessages>() {
+            self.handle_recovery_message(message);
+        } else if cfg!(feature = "http_setup_server") {
+            #[cfg(feature = "http_setup_server")]
+            self.handle_keyboard_message(message);
+        }
+    }
 
     fn handle_consumer_control_event(
         &mut self,
@@ -704,6 +744,7 @@ impl ViewAssistant for RecoveryViewAssistant {
         Ok(())
     }
 
+    #[cfg(feature = "http_setup_server")]
     fn handle_pointer_event(
         &mut self,
         context: &mut ViewAssistantContext,
@@ -720,6 +761,7 @@ impl ViewAssistant for RecoveryViewAssistant {
     }
 
     // This is to allow development of this feature on devices without consumer control buttons.
+    #[cfg(feature = "http_setup_server")]
     fn handle_keyboard_event(
         &mut self,
         context: &mut ViewAssistantContext,
@@ -766,6 +808,7 @@ impl ViewAssistant for RecoveryViewAssistant {
     }
 }
 
+#[cfg(feature = "http_setup_server")]
 async fn connect_to_wifi(_ssid: String, _password: String) {
     // TODO(kpt): This is a place holder for the real WiFi connection when it is written
     println!("Connect to WiFi");

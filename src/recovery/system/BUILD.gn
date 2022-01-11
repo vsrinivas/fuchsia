@@ -152,10 +152,7 @@ rustc_binary("bin_fdr") {
     "//third_party/rust_crates:thiserror",
   ]
   sources = [
-    "src/button.rs",
     "src/fdr.rs",
-    "src/keyboard.rs",
-    "src/keys.rs",
     "src/main.rs",
     "src/proxy_view_assistant.rs",
   ]
