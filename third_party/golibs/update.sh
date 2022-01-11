@@ -93,12 +93,6 @@ if [ $UPDATE -eq 1 ]; then
   # go branch.
   $GO get -u gvisor.dev/gvisor@go
   $GO get -u
-  # 0.60.0 contains
-  # https://github.com/googleapis/google-api-go-client/commit/aa0f0be which
-  # pulls in grpc/xds and with it a lot of unwanted dependencies.
-  #
-  # See https://github.com/googleapis/google-api-go-client/issues/1283.
-  $GO get -u google.golang.org/api@v0.59.0
 else
   $GO get
 fi
