@@ -36,7 +36,18 @@ cts_fuchsia_test_package("driver_test_realm_cts_test") {
   package_deps_for_infra_only = [ "//sdk/lib/driver_test_realm:package" ]
 }
 
+cts_copy_to_sdk("build") {
+  testonly = true
+  sources = [ "BUILD.gn" ]
+}
+
 sdk_molecule("test_sdks") {
   testonly = true
-  deps = [ ":driver_test_realm_cts_test_sdk" ]
+  deps = [
+    # TODO(fxb/91111): Uncomment this :bin_sdk target.
+    #":bin_sdk",
+    ":build_sdk",
+    ":component_sdk",
+    ":driver_test_realm_cts_test_sdk",
+  ]
 }

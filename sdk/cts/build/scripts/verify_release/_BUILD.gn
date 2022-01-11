@@ -12,10 +12,10 @@ group("tests") {
   ]
 }
 
-group("api") {
-  testonly = true
-  deps = [ "//prebuilt/cts/{cts_version}/cts" ]
-}
+#group("api") {
+#  testonly = true
+#  deps = [ "//prebuilt/cts/{cts_version}/cts" ]
+#}
 
 prebuilt_test_manifest("abi") {
   archive_dir = rebase_path("//prebuilt/cts/{cts_version}/cts")
