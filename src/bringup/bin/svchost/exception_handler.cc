@@ -42,7 +42,7 @@ void ExceptionHandler::SetUpClient() {
 void ExceptionHandler::on_fidl_error(const fidl::UnbindInfo info) {
   // If the unbind was only due to dispatcher shutdown, don't reconnect and stop sending exceptions
   // to fuchsia.exception.Handler. This should only happen in tests.
-  if (info.reason() == fidl::Reason::kDispatcherError && info.status() == ZX_ERR_CANCELED) {
+  if (info.is_dispatcher_shutdown()) {
     drop_exceptions_ = true;
     return;
   }
