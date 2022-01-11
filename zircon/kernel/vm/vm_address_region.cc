@@ -1055,7 +1055,6 @@ zx_status_t VmAddressRegion::Protect(vaddr_t base, size_t size, uint new_arch_mm
   vaddr_t end_addr_byte = 0;
   bool overflowed = add_overflow(base, size - 1, &end_addr_byte);
   ASSERT(!overflowed);
-  const auto end = subregions_.UpperBound(end_addr_byte);
 
   // Find the first region with a base greater than *base*.  If a region
   // exists for *base*, it will be immediately before it.  If *base* isn't in
@@ -1067,41 +1066,47 @@ zx_status_t VmAddressRegion::Protect(vaddr_t base, size_t size, uint new_arch_mm
 
   // Check if we're overlapping a subregion, or a part of the range is not
   // mapped, or the new permissions are invalid for some mapping in the range.
-
-  // The last byte of the last mapped region.
-  vaddr_t last_mapped_byte = begin->base();
-  if (begin->base() != 0) {
-    last_mapped_byte--;
-  }
-  for (auto itr = begin; itr != end; ++itr) {
-    if (!itr->is_mapping()) {
+  for (auto itr = begin;;) {
+    VmMapping* mapping = itr->as_vm_mapping_ptr();
+    if (!mapping) {
       return ZX_ERR_INVALID_ARGS;
     }
-    vaddr_t current_begin = 0;
-    // This would not overflow because previous region end + 1 would not overflow.
-    overflowed = add_overflow(last_mapped_byte, 1, &current_begin);
-    ASSERT(!overflowed);
-    if (itr->base() != current_begin) {
-      return ZX_ERR_NOT_FOUND;
-    }
+
     if (!itr->is_valid_mapping_flags(new_arch_mmu_flags)) {
       return ZX_ERR_ACCESS_DENIED;
     }
-    if (itr->as_vm_mapping() == aspace_->vdso_code_mapping_) {
+    if (mapping == aspace_->vdso_code_mapping_.get()) {
       return ZX_ERR_ACCESS_DENIED;
     }
+
+    // The last byte of the last mapped region.
+    vaddr_t last_mapped_byte = 0;
     overflowed = add_overflow(itr->base(), itr->size() - 1, &last_mapped_byte);
     ASSERT(!overflowed);
-  }
-  if (last_mapped_byte < end_addr_byte) {
-    return ZX_ERR_NOT_FOUND;
+    if (last_mapped_byte >= end_addr_byte) {
+      // This mapping either reaches exactly to, or beyond, the end of the range we are protecting,
+      // so we are finished validating.
+      break;
+    }
+    // As we still have some range to process we can require there to be another adjacent mapping,
+    // so increment itr and check for it.
+
+    ++itr;
+    if (!itr.IsValid()) {
+      return ZX_ERR_NOT_FOUND;
+    }
+
+    // As we are at least the second mapping in the address space, and mappings cannot be
+    // zero sized, we should not have a base of 0.
+    DEBUG_ASSERT(itr->base() > 0);
+    if (itr->base() - 1 != last_mapped_byte) {
+      return ZX_ERR_NOT_FOUND;
+    }
   }
 
-  for (auto itr = begin; itr != end;) {
-    DEBUG_ASSERT(itr->is_mapping());
-
-    auto next = itr;
-    ++next;
+  for (auto itr = begin; itr.IsValid() && itr->base() < end_addr_byte;) {
+    VmMapping* mapping = itr->as_vm_mapping_ptr();
+    DEBUG_ASSERT(mapping);
 
     // The last byte of the current region.
     vaddr_t curr_end_byte = 0;
@@ -1112,17 +1117,18 @@ zx_status_t VmAddressRegion::Protect(vaddr_t base, size_t size, uint new_arch_mm
     size_t protect_size;
     overflowed = add_overflow(protect_end_byte - protect_base, 1, &protect_size);
     ASSERT(!overflowed);
-    AssertHeld(itr->as_vm_mapping()->lock_ref());
+    AssertHeld(mapping->lock_ref());
 
-    zx_status_t status =
-        itr->as_vm_mapping()->ProtectLocked(protect_base, protect_size, new_arch_mmu_flags);
+    // |itr| needs to be incremented here since the mapping might be deleted by ProtectLocked. After
+    // |itr| is incremented we can use |mapping| instead, although after ProtectLocked is called it
+    // also becomes invalid.
+    itr++;
+    zx_status_t status = mapping->ProtectLocked(protect_base, protect_size, new_arch_mmu_flags);
     if (status != ZX_OK) {
       // TODO(teisenbe): Try to work out a way to guarantee success, or
       // provide a full unwind?
       return status;
     }
-
-    itr = ktl::move(next);
   }
 
   return ZX_OK;
