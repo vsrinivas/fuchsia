@@ -73,7 +73,7 @@ RootDevice::~RootDevice() {
 zx_status_t RootDevice::Setup(const std::map<uint64_t, InputDeviceInfo>& input_devices) {
   auto_reader_ =
       std::make_unique<PipeAutoReader>(&pipe_, kPipeName, pipe_io_loop_.dispatcher(),
-                                       fit::bind_member(this, &RootDevice::OnReadSensor));
+                                       fit::bind_member<&RootDevice::OnReadSensor>(this));
   if (!auto_reader_->valid()) {
     zxlogf(ERROR, "%s: PipeAutoReader() initialization failed", kTag);
     return ZX_ERR_INTERNAL;
