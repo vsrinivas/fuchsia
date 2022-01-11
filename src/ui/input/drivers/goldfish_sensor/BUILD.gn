@@ -93,7 +93,6 @@ test("goldfish-sensor-unittest") {
            "//src/ui/input/lib/input-report-reader",
            "//third_party/googletest:gtest",
            "//zircon/system/ulib/mmio-ptr:mmio-ptr-fake",
-           "//zircon/system/ulib/mock-function",
            "//zircon/system/ulib/sync",
            "//zircon/system/ulib/zircon-internal",
            "//zircon/system/ulib/zx",
@@ -123,9 +122,6 @@ fuzzers_package("goldfish-sensor-parser-fuzzer-package") {
 fuchsia_unittest_package("goldfish-sensor-test-package") {
   package_name = "goldfish-sensor-test"
   deps = [ ":goldfish-sensor-unittest" ]
-
-  # TODO(fxbug.dev/76529): Switch to v2 when this no longer depends on both gtest and zxtest.
-  v2 = false
 }
 
 group("tests") {
