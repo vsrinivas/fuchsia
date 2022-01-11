@@ -92,6 +92,10 @@ class ContiguousPooledMemoryAllocator : public MemoryAllocator {
   static constexpr zx::duration kUnusedRecentlyPageCheckPeriod = zx::sec(2);
   static constexpr zx::duration kUnusedRecentlyAgeThreshold = zx::sec(5);
 
+  // Keep < 1% of pages aside for being unused page guard pattern.  The rest get loaned back to
+  // Zircon.
+  static constexpr uint64_t kUnusedGuardPatternPeriodPages = 128;
+
  private:
   struct RegionData {
     std::string name;
@@ -250,20 +254,10 @@ class ContiguousPooledMemoryAllocator : public MemoryAllocator {
       unused_recently_checker_{this};
   SysmemMetrics& metrics_;
 
-  // Keep < 1% of pages aside for being unused page guard pattern.  The rest get loaned back to
-  // Zircon.
-  //
-  // TODO(dustingreen): Make the previous paragraph true.  For the moment though, we're patterning
-  // all unused pages to gather more information re. a detected problem.  Change this back to 128.
-  static constexpr uint64_t kUnusedGuardPatternPeriodPages = 512 * 1024 / 4096;
   // While we'll typically pattern only 1 page per pattern period and adjust the pattern period to
   // get the % we want, being able to vary this might potentially help catch a suspected problem
   // faster; in any case it's simple enough to allow this to be adjusted.
-  //
-  // TODO(dustingreen): Temporarily setting this to pattern all pages gather more info re. a
-  // detected problem and hopefully increase detection rate / lower detection duration.  Later we'll
-  // change this back to 1.
-  static constexpr uint64_t kUnusedToPatternPages = kUnusedGuardPatternPeriodPages;
+  static constexpr uint64_t kUnusedToPatternPages = 1;
   const uint64_t unused_guard_pattern_period_bytes_ =
       kUnusedGuardPatternPeriodPages * zx_system_get_page_size();
   const uint64_t unused_to_pattern_bytes_ = kUnusedToPatternPages * zx_system_get_page_size();

@@ -647,6 +647,7 @@ void ContiguousPooledMemoryAllocator::CheckUnusedRecentlyPagesCallback(
     }
     CheckAnyUnusedPages(deleted_region.region.base,
                         deleted_region.region.base + deleted_region.region.size);
+    --deleted_region_index;
   }
   unused_recently_checker_.PostDelayed(dispatcher, kUnusedRecentlyPageCheckPeriod);
 }
