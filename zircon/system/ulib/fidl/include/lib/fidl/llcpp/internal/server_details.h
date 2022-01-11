@@ -125,14 +125,13 @@ class WeakEventSenderInner {
 // the user pointer type, possibly at an offset, before invoking the
 // user-provided on-unbound handler.
 template <typename Protocol>
-ServerBindingRef<Protocol> BindServerTypeErased(async_dispatcher_t* dispatcher,
-                                                fidl::internal::ServerEndType<Protocol> server_end,
-                                                IncomingMessageDispatcher* interface,
-                                                internal::AnyOnUnboundFn on_unbound) {
+ServerBindingRefType<Protocol> BindServerTypeErased(
+    async_dispatcher_t* dispatcher, fidl::internal::ServerEndType<Protocol> server_end,
+    IncomingMessageDispatcher* interface, internal::AnyOnUnboundFn on_unbound) {
   std::shared_ptr<AsyncServerBinding> internal_binding =
       AsyncServerBinding::Create(dispatcher, internal::MakeAnyTransport(server_end.TakeHandle()),
                                  interface, std::move(on_unbound));
-  fidl::ServerBindingRef<Protocol> binding_ref(internal_binding);
+  ServerBindingRefType<Protocol> binding_ref(internal_binding);
   AsyncServerBinding* binding_ptr = internal_binding.get();
   // The binding object keeps itself alive until unbinding, so dropping the
   // shared pointer here is fine.
@@ -149,7 +148,7 @@ ServerBindingRef<Protocol> BindServerTypeErased(async_dispatcher_t* dispatcher,
 // Note: if you see a compiler error that ends up in this function, that is
 // probably because you passed in an incompatible |on_unbound| handler.
 template <typename ServerImpl, typename OnUnbound>
-ServerBindingRef<typename ServerImpl::_EnclosingProtocol> BindServerImpl(
+ServerBindingRefType<typename ServerImpl::_EnclosingProtocol> BindServerImpl(
     async_dispatcher_t* dispatcher,
     fidl::internal::ServerEndType<typename ServerImpl::_EnclosingProtocol> server_end,
     ServerImpl* impl, OnUnbound&& on_unbound) {

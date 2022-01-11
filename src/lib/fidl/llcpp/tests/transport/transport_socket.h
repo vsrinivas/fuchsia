@@ -9,6 +9,7 @@
 #include <lib/async/wait.h>
 #include <lib/fidl/llcpp/client_end.h>
 #include <lib/fidl/llcpp/internal/transport.h>
+#include <lib/fidl/llcpp/server.h>
 #include <lib/fidl/llcpp/server_end.h>
 #include <lib/zx/socket.h>
 #include <zircon/syscalls.h>
@@ -21,6 +22,8 @@ template <typename Protocol>
 class UnownedClientEnd;
 template <typename Protocol>
 class ServerEnd;
+template <typename Protocol>
+class ServerBindingRef;
 }  // namespace socket
 
 namespace internal {
@@ -39,6 +42,8 @@ struct SocketTransport {
   using UnownedClientEnd = fidl::socket::UnownedClientEnd<Protocol>;
   template <typename Protocol>
   using ServerEnd = fidl::socket::ServerEnd<Protocol>;
+  template <typename Protocol>
+  using ServerBindingRef = fidl::socket::ServerBindingRef<Protocol>;
 
   static const TransportVTable VTable;
   static const CodingConfig EncodingConfiguration;
@@ -120,6 +125,47 @@ class ServerEnd final : public internal::ServerEndBase<Protocol, internal::Socke
  public:
   using ServerEndBase::ServerEndBase;
 };
+
+template <typename Protocol>
+class ServerBindingRef : public fidl::ServerBindingRefImpl<Protocol, typename Protocol::Transport> {
+ public:
+  using fidl::ServerBindingRefImpl<Protocol, typename Protocol::Transport>::ServerBindingRefImpl;
+};
+
+template <typename ServerImpl, typename OnUnbound = std::nullptr_t>
+ServerBindingRef<typename ServerImpl::_EnclosingProtocol> BindServer(
+    async_dispatcher_t* dispatcher, ServerEnd<typename ServerImpl::_EnclosingProtocol> server_end,
+    ServerImpl* impl, OnUnbound&& on_unbound = nullptr) {
+  static_assert(std::is_same_v<typename ServerImpl::_EnclosingProtocol::Transport,
+                               fidl::internal::SocketTransport>);
+  return fidl::internal::BindServerImpl<ServerImpl>(
+      dispatcher, std::move(server_end), impl,
+      fidl::internal::UnboundThunk(std::move(impl), std::forward<OnUnbound>(on_unbound)));
+}
+
+template <typename ServerImpl, typename OnUnbound = std::nullptr_t>
+ServerBindingRef<typename ServerImpl::_EnclosingProtocol> BindServer(
+    async_dispatcher_t* dispatcher, ServerEnd<typename ServerImpl::_EnclosingProtocol> server_end,
+    std::unique_ptr<ServerImpl>&& impl, OnUnbound&& on_unbound = nullptr) {
+  static_assert(std::is_same_v<typename ServerImpl::_EnclosingProtocol::Transport,
+                               fidl::internal::SocketTransport>);
+  ServerImpl* impl_raw = impl.get();
+  return fidl::internal::BindServerImpl<ServerImpl>(
+      dispatcher, std::move(server_end), impl_raw,
+      fidl::internal::UnboundThunk(std::move(impl), std::forward<OnUnbound>(on_unbound)));
+}
+
+template <typename ServerImpl, typename OnUnbound = std::nullptr_t>
+ServerBindingRef<typename ServerImpl::_EnclosingProtocol> BindServer(
+    async_dispatcher_t* dispatcher, ServerEnd<typename ServerImpl::_EnclosingProtocol> server_end,
+    std::shared_ptr<ServerImpl> impl, OnUnbound&& on_unbound = nullptr) {
+  static_assert(std::is_same_v<typename ServerImpl::_EnclosingProtocol::Transport,
+                               fidl::internal::SocketTransport>);
+  ServerImpl* impl_raw = impl.get();
+  return fidl::internal::BindServerImpl<ServerImpl>(
+      dispatcher, std::move(server_end), impl_raw,
+      fidl::internal::UnboundThunk(std::move(impl), std::forward<OnUnbound>(on_unbound)));
+}
 }  // namespace socket
 
 }  // namespace fidl

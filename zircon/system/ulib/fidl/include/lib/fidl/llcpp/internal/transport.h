@@ -446,6 +446,10 @@ using UnownedClientEndType = typename Protocol::Transport::template UnownedClien
 template <typename Protocol>
 using ServerEndType = typename Protocol::Transport::template ServerEnd<Protocol>;
 
+// The ServerBindingRef type for a given protocol, e.g. fidl::ServerBindingRef.
+template <typename Protocol>
+using ServerBindingRefType = typename Protocol::Transport::template ServerBindingRef<Protocol>;
+
 }  // namespace internal
 }  // namespace fidl
 

@@ -5,6 +5,9 @@
 #ifndef LIB_FIDL_LLCPP_INTERNAL_TRANSPORT_CHANNEL_H_
 #define LIB_FIDL_LLCPP_INTERNAL_TRANSPORT_CHANNEL_H_
 
+#include <lib/fidl/llcpp/internal/transport.h>
+
+#ifdef __Fuchsia__
 #include <lib/async/dispatcher.h>
 #include <lib/async/wait.h>
 #include <lib/fidl/llcpp/client_end.h>
@@ -12,6 +15,7 @@
 #include <lib/fidl/llcpp/server_end.h>
 #include <lib/zx/channel.h>
 #include <zircon/syscalls.h>
+#endif
 
 namespace fidl {
 
@@ -21,10 +25,13 @@ template <typename Protocol>
 class UnownedClientEnd;
 template <typename Protocol>
 class ServerEnd;
+template <typename Protocol>
+class ServerBindingRef;
 
 namespace internal {
 
 struct ChannelTransport {
+#ifdef __Fuchsia__
   using OwnedType = zx::channel;
   using UnownedType = zx::unowned_channel;
   template <typename Protocol>
@@ -33,6 +40,9 @@ struct ChannelTransport {
   using UnownedClientEnd = fidl::UnownedClientEnd<Protocol>;
   template <typename Protocol>
   using ServerEnd = fidl::ServerEnd<Protocol>;
+  template <typename Protocol>
+  using ServerBindingRef = fidl::ServerBindingRef<Protocol>;
+#endif
   using HandleMetadata = fidl_channel_handle_metadata_t;
   using IncomingTransportContextType = struct {};
   using OutgoingTransportContextType = struct {};
@@ -41,6 +51,7 @@ struct ChannelTransport {
   static const CodingConfig EncodingConfiguration;
 };
 
+#ifdef __Fuchsia__
 template <>
 struct AssociatedTransportImpl<zx::channel> {
   using type = ChannelTransport;
@@ -49,12 +60,14 @@ template <>
 struct AssociatedTransportImpl<zx::unowned_channel> {
   using type = ChannelTransport;
 };
+#endif
 
 template <>
 struct AssociatedTransportImpl<fidl_channel_handle_metadata_t> {
   using type = ChannelTransport;
 };
 
+#ifdef __Fuchsia__
 static_assert(sizeof(fidl_handle_t) == sizeof(zx_handle_t));
 
 class ChannelWaiter : private async_wait_t, public TransportWaiter {
@@ -91,8 +104,11 @@ class ChannelWaiter : private async_wait_t, public TransportWaiter {
   TransportWaitFailureHandler failure_handler_;
 };
 
+#endif
+
 }  // namespace internal
 
+#ifdef __Fuchsia__
 // The client endpoint of a FIDL channel.
 //
 // The remote (server) counterpart of the channel expects this end of the
@@ -178,6 +194,7 @@ class ServerEnd : public internal::ServerEndBase<Protocol, internal::ChannelTran
     return fidl_epitaph_write(channel.get(), epitaph_value);
   }
 };
+#endif
 
 }  // namespace fidl
 

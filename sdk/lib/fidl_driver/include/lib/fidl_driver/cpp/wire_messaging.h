@@ -7,6 +7,8 @@
 
 #include <lib/fdf/cpp/arena.h>
 #include <lib/fidl/llcpp/wire_messaging.h>
+#include <lib/fidl_driver/cpp/client.h>
+#include <lib/fidl_driver/cpp/server.h>
 #include <lib/fidl_driver/cpp/transport.h>
 
 #endif  // LIB_FIDL_DRIVER_INCLUDE_LIB_FIDL_DRIVER_CPP_WIRE_MESSAGING_H_

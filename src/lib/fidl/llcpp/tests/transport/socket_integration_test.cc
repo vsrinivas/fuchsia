@@ -160,8 +160,8 @@ TEST(TransportIntegration, TwoWayAsync) {
         EXPECT_EQ(ZX_ERR_CANCELED, info.status());
         EXPECT_TRUE(server_end);
       };
-  fidl::BindServer(loop.dispatcher(), std::move(server_end), std::make_shared<TestServer>(),
-                   std::move(on_unbound));
+  fidl::socket::BindServer(loop.dispatcher(), std::move(server_end), std::make_shared<TestServer>(),
+                           std::move(on_unbound));
 
   auto client = std::make_shared<TestClient>();
   client->Bind(client, std::move(s2), loop.dispatcher());

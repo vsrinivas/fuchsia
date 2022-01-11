@@ -5,7 +5,6 @@
 #include <fidl/test.transport/cpp/driver/wire.h>
 #include <lib/fdf/cpp/dispatcher.h>
 #include <lib/fdf/internal.h>
-#include <lib/fidl_driver/cpp/client.h>
 #include <lib/fit/defer.h>
 #include <zircon/errors.h>
 
@@ -40,7 +39,7 @@ TEST(DriverTransport, DISABLED_TwoWayAsync) {
   fdf::ClientEnd<test_transport::TransportTest> client_end(std::move(channels->end1));
 
   auto server = std::make_shared<TestServer>();
-  fidl::BindServer(dispatcher->async_dispatcher(), std::move(server_end), server);
+  fdf::BindServer(dispatcher->get(), std::move(server_end), server);
 
   fdf::WireSharedClient<test_transport::TransportTest> client;
   client.Bind(std::move(client_end), dispatcher->get());
