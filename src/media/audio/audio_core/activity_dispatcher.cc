@@ -64,7 +64,7 @@ class ActivityDispatcherImpl::ActivityReporterImpl : public fuchsia::media::Acti
   class Reporter {
    public:
     Reporter(ActivityDispatcherImpl::ActivityReporterImpl& parent, const Activity& activity)
-        : parent_(parent), last_known_activity_(activity){}
+        : parent_(parent), last_known_activity_(activity) {}
     ~Reporter<Activity, Callback>() = default;
     void WatchActivity(Callback callback);
     void MaybeSendActivity();
@@ -153,7 +153,7 @@ void ActivityDispatcherImpl::ActivityReporterImpl::Reporter<Activity,
 
 fidl::InterfaceRequestHandler<fuchsia::media::ActivityReporter>
 ActivityDispatcherImpl::GetFidlRequestHandler() {
-  return fit::bind_member(this, &ActivityDispatcherImpl::Bind);
+  return fit::bind_member<&ActivityDispatcherImpl::Bind>(this);
 }
 
 void ActivityDispatcherImpl::Bind(
