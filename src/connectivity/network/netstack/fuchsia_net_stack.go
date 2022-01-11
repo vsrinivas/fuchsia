@@ -175,30 +175,10 @@ func (ns *Netstack) disableInterface(id uint64) stack.StackDisableInterfaceResul
 	return result
 }
 
-func toProtocolAddr(ifAddr net.Subnet) tcpip.ProtocolAddress {
-	protocolAddr := tcpip.ProtocolAddress{
-		AddressWithPrefix: tcpip.AddressWithPrefix{
-			PrefixLen: int(ifAddr.PrefixLen),
-		},
-	}
-
-	switch typ := ifAddr.Addr.Which(); typ {
-	case net.IpAddressIpv4:
-		protocolAddr.Protocol = ipv4.ProtocolNumber
-		protocolAddr.AddressWithPrefix.Address = tcpip.Address(ifAddr.Addr.Ipv4.Addr[:])
-	case net.IpAddressIpv6:
-		protocolAddr.Protocol = ipv6.ProtocolNumber
-		protocolAddr.AddressWithPrefix.Address = tcpip.Address(ifAddr.Addr.Ipv6.Addr[:])
-	default:
-		panic(fmt.Sprintf("unknown IpAddress type %d", typ))
-	}
-	return protocolAddr
-}
-
 func (ns *Netstack) addInterfaceAddr(id uint64, ifAddr net.Subnet) stack.StackAddInterfaceAddressResult {
 	var result stack.StackAddInterfaceAddressResult
 
-	protocolAddr := toProtocolAddr(ifAddr)
+	protocolAddr := fidlconv.ToTCPIPProtocolAddress(ifAddr)
 	if protocolAddr.AddressWithPrefix.PrefixLen > 8*len(protocolAddr.AddressWithPrefix.Address) {
 		result.SetErr(stack.ErrorInvalidArgs)
 		return result
@@ -221,7 +201,7 @@ func (ns *Netstack) addInterfaceAddr(id uint64, ifAddr net.Subnet) stack.StackAd
 }
 
 func (ns *Netstack) delInterfaceAddr(id uint64, ifAddr net.Subnet) stack.StackDelInterfaceAddressResult {
-	protocolAddr := toProtocolAddr(ifAddr)
+	protocolAddr := fidlconv.ToTCPIPProtocolAddress(ifAddr)
 	if protocolAddr.AddressWithPrefix.PrefixLen > 8*len(protocolAddr.AddressWithPrefix.Address) {
 		return stack.StackDelInterfaceAddressResultWithErr(stack.ErrorInvalidArgs)
 	}
@@ -241,7 +221,7 @@ func (ns *Netstack) getForwardingTable() []stack.ForwardingEntry {
 	ert := ns.GetExtendedRouteTable()
 	entries := make([]stack.ForwardingEntry, 0, len(ert))
 	for _, er := range ert {
-		entries = append(entries, fidlconv.TcpipRouteToForwardingEntry(er.Route))
+		entries = append(entries, fidlconv.TCPIPRouteToForwardingEntry(er.Route))
 	}
 	return entries
 }
@@ -284,7 +264,7 @@ func (ns *Netstack) addForwardingEntry(entry stack.ForwardingEntry) stack.StackA
 		return result
 	}
 
-	route := fidlconv.ForwardingEntryToTcpipRoute(entry)
+	route := fidlconv.ForwardingEntryToTCPIPRoute(entry)
 	if err := ns.AddRoute(route, metricNotSet, false /* not dynamic */); err != nil {
 		if errors.Is(err, routes.ErrNoSuchNIC) {
 			result.SetErr(stack.ErrorInvalidArgs)
@@ -398,7 +378,7 @@ func (ni *stackImpl) DisableIpForwarding(fidl.Context) error {
 }
 
 func (ni *stackImpl) GetInterfaceIpForwarding(_ fidl.Context, id uint64, ip net.IpVersion) (stack.StackGetInterfaceIpForwardingResult, error) {
-	netProto, ok := fidlconv.ToTCPNetProto(ip)
+	netProto, ok := fidlconv.ToTCPIPNetProto(ip)
 	if !ok {
 		return stack.StackGetInterfaceIpForwardingResultWithErr(stack.ErrorInvalidArgs), nil
 	}
@@ -414,7 +394,7 @@ func (ni *stackImpl) GetInterfaceIpForwarding(_ fidl.Context, id uint64, ip net.
 }
 
 func (ni *stackImpl) SetInterfaceIpForwarding(_ fidl.Context, id uint64, ip net.IpVersion, enabled bool) (stack.StackSetInterfaceIpForwardingResult, error) {
-	netProto, ok := fidlconv.ToTCPNetProto(ip)
+	netProto, ok := fidlconv.ToTCPIPNetProto(ip)
 	if !ok {
 		return stack.StackSetInterfaceIpForwardingResultWithErr(stack.ErrorInvalidArgs), nil
 	}

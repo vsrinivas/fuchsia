@@ -158,13 +158,13 @@ func TestForwardingEntryAndTcpipRouteConversions(t *testing.T) {
 			},
 			Destination: tc.dest,
 		}
-		got := ForwardingEntryToTcpipRoute(fe)
+		got := ForwardingEntryToTCPIPRoute(fe)
 		if got != tc.want {
-			t.Errorf("got ForwardingEntryToTcpipRoute(%v) = %v, want = %v", fe, got, tc.want)
+			t.Errorf("got ForwardingEntryToTCPIPRoute(%v) = %v, want = %v", fe, got, tc.want)
 		}
-		roundtripFe := TcpipRouteToForwardingEntry(got)
+		roundtripFe := TCPIPRouteToForwardingEntry(got)
 		if roundtripFe != fe {
-			t.Errorf("got TcpipRouteToForwardingEntry(%+v) = %+v, want = %+v", got, roundtripFe, fe)
+			t.Errorf("got TCPIPRouteToForwardingEntry(%+v) = %+v, want = %+v", got, roundtripFe, fe)
 		}
 	}
 }

@@ -154,7 +154,7 @@ func (n *neighborImpl) OpenEntryIterator(ctx fidl.Context, it neighbor.EntryIter
 }
 
 func (n *neighborImpl) GetUnreachabilityConfig(_ fidl.Context, interfaceID uint64, ipVersion net.IpVersion) (neighbor.ViewGetUnreachabilityConfigResult, error) {
-	netProto, ok := fidlconv.ToTCPNetProto(ipVersion)
+	netProto, ok := fidlconv.ToTCPIPNetProto(ipVersion)
 	if !ok {
 		return neighbor.ViewGetUnreachabilityConfigResultWithErr(int32(zx.ErrInvalidArgs)), nil
 	}
@@ -208,7 +208,7 @@ func (n *neighborImpl) RemoveEntry(_ fidl.Context, interfaceID uint64, neighborI
 }
 
 func (n *neighborImpl) ClearEntries(_ fidl.Context, interfaceID uint64, ipVersion net.IpVersion) (neighbor.ControllerClearEntriesResult, error) {
-	netProto, ok := fidlconv.ToTCPNetProto(ipVersion)
+	netProto, ok := fidlconv.ToTCPIPNetProto(ipVersion)
 	if !ok {
 		return neighbor.ControllerClearEntriesResultWithErr(int32(zx.ErrInvalidArgs)), nil
 	}
@@ -224,7 +224,7 @@ func (n *neighborImpl) UpdateUnreachabilityConfig(_ fidl.Context, interfaceID ui
 		return neighbor.ControllerUpdateUnreachabilityConfigResultWithErr(int32(zx.ErrNotFound)), nil
 	}
 
-	netProto, ok := fidlconv.ToTCPNetProto(ipVersion)
+	netProto, ok := fidlconv.ToTCPIPNetProto(ipVersion)
 	if !ok {
 		return neighbor.ControllerUpdateUnreachabilityConfigResultWithErr(int32(zx.ErrInvalidArgs)), nil
 	}

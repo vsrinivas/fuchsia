@@ -19,7 +19,7 @@ import (
 	"gvisor.dev/gvisor/pkg/tcpip/network/ipv6"
 )
 
-func ToTCPNetProto(v net.IpVersion) (tcpip.NetworkProtocolNumber, bool) {
+func ToTCPIPNetProto(v net.IpVersion) (tcpip.NetworkProtocolNumber, bool) {
 	switch v {
 	case net.IpVersionV4:
 		return header.IPv4ProtocolNumber, true
@@ -107,15 +107,34 @@ func ToNetSocketAddress(addr tcpip.FullAddress) net.SocketAddress {
 	return out
 }
 
-func ToTCPIPSubnet(sn net.Subnet) tcpip.Subnet {
-	a := ToTCPIPAddress(sn.Addr)
+func toTCPIPAddressWithPrefix(sn net.Subnet) tcpip.AddressWithPrefix {
 	return tcpip.AddressWithPrefix{
-		Address:   a,
+		Address:   ToTCPIPAddress(sn.Addr),
 		PrefixLen: int(sn.PrefixLen),
-	}.Subnet()
+	}
 }
 
-func TcpipRouteToForwardingEntry(route tcpip.Route) stack.ForwardingEntry {
+func ToTCPIPSubnet(sn net.Subnet) tcpip.Subnet {
+	return toTCPIPAddressWithPrefix(sn).Subnet()
+}
+
+func ToTCPIPProtocolAddress(sn net.Subnet) tcpip.ProtocolAddress {
+	protocolAddr := tcpip.ProtocolAddress{
+		AddressWithPrefix: toTCPIPAddressWithPrefix(sn),
+	}
+
+	switch typ := sn.Addr.Which(); typ {
+	case net.IpAddressIpv4:
+		protocolAddr.Protocol = ipv4.ProtocolNumber
+	case net.IpAddressIpv6:
+		protocolAddr.Protocol = ipv6.ProtocolNumber
+	default:
+		panic(fmt.Sprintf("unknown IpAddress type %d", typ))
+	}
+	return protocolAddr
+}
+
+func TCPIPRouteToForwardingEntry(route tcpip.Route) stack.ForwardingEntry {
 	forwardingEntry := stack.ForwardingEntry{
 		Subnet: net.Subnet{
 			Addr:      ToNetIpAddress(route.Destination.ID()),
@@ -133,7 +152,7 @@ func TcpipRouteToForwardingEntry(route tcpip.Route) stack.ForwardingEntry {
 	return forwardingEntry
 }
 
-func ForwardingEntryToTcpipRoute(forwardingEntry stack.ForwardingEntry) tcpip.Route {
+func ForwardingEntryToTCPIPRoute(forwardingEntry stack.ForwardingEntry) tcpip.Route {
 	route := tcpip.Route{
 		Destination: ToTCPIPSubnet(forwardingEntry.Subnet),
 	}

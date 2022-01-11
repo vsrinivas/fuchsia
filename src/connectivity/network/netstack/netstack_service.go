@@ -121,7 +121,7 @@ func (ni *netstackImpl) StartRouteTableTransaction(_ fidl.Context, req netstack.
 
 // Add address to the given network interface.
 func (ni *netstackImpl) SetInterfaceAddress(_ fidl.Context, nicid uint32, address fidlnet.IpAddress, prefixLen uint8) (netstack.NetErr, error) {
-	protocolAddr := toProtocolAddr(fidlnet.Subnet{
+	protocolAddr := fidlconv.ToTCPIPProtocolAddress(fidlnet.Subnet{
 		Addr:      address,
 		PrefixLen: prefixLen,
 	})
@@ -142,7 +142,7 @@ func (ni *netstackImpl) SetInterfaceAddress(_ fidl.Context, nicid uint32, addres
 }
 
 func (ni *netstackImpl) RemoveInterfaceAddress(_ fidl.Context, nicid uint32, address fidlnet.IpAddress, prefixLen uint8) (netstack.NetErr, error) {
-	protocolAddr := toProtocolAddr(fidlnet.Subnet{
+	protocolAddr := fidlconv.ToTCPIPProtocolAddress(fidlnet.Subnet{
 		Addr:      address,
 		PrefixLen: prefixLen,
 	})
