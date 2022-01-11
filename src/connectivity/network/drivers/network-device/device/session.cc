@@ -222,20 +222,9 @@ void Session::OnUnbind(fidl::UnbindInfo info, fidl::ServerEnd<netdev::Session> c
   // epitaph message over the channel if it's still open. The Rx FIFO is not closed here since it's
   // possible it's currently shared with the Rx Queue. The session will drop its reference to the Rx
   // FIFO upon destruction.
-
-  switch (info.reason()) {
-    case fidl::Reason::kUnbind:
-    case fidl::Reason::kDispatcherError:
-    case fidl::Reason::kTransportError:
-    case fidl::Reason::kEncodeError:
-    case fidl::Reason::kDecodeError:
-    case fidl::Reason::kUnexpectedMessage:
-      // Store the channel to send an epitaph once the session is destroyed.
-      control_channel_ = std::move(channel);
-      break;
-    case fidl::Reason::kClose:
-    case fidl::Reason::kPeerClosed:
-      break;
+  if (!info.is_peer_closed() && !info.did_send_epitaph()) {
+    // Store the channel to send an epitaph once the session is destroyed.
+    control_channel_ = std::move(channel);
   }
 
   // When the session is unbound we can just detach all the ports from it.

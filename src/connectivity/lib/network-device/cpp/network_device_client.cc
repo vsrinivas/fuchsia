@@ -418,7 +418,7 @@ void NetworkDeviceClient::GetPortInfoWithMac(netdev::wire::PortId port_id,
          state](fidl::WireUnownedResult<netdev::MacAddressing::GetUnicastAddress>& result) mutable {
           if (!result.ok()) {
             zx_status_t status = result.status();
-            if (status == ZX_ERR_NOT_SUPPORTED && result.reason() == fidl::Reason::kPeerClosed) {
+            if (status == ZX_ERR_NOT_SUPPORTED && result.is_peer_closed()) {
               completer.complete_ok();
             } else {
               completer.complete_error(status);
