@@ -37,9 +37,29 @@ where
     from_reader(&mut file)
 }
 
+/// Helper fn to insert into an empty Option, or return an Error.
+pub fn set_option_once_or<T, E>(
+    opt: &mut Option<T>,
+    value: impl Into<Option<T>>,
+    e: E,
+) -> Result<(), E> {
+    let value = value.into();
+    if value.is_none() {
+        Ok(())
+    } else {
+        if opt.is_some() {
+            Err(e)
+        } else {
+            *opt = value;
+            Ok(())
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+    use anyhow::anyhow;
     use fuchsia_hash::Hash;
     use serde::Deserialize;
     use serde_json::json;
@@ -124,5 +144,41 @@ mod tests {
         let value: MyStruct = read_config(file.path()).unwrap();
         let expected: MyStruct = serde_json::from_value(json).unwrap();
         assert_eq!(expected, value);
+    }
+
+    #[test]
+    fn test_set_option_once() {
+        let mut opt = None;
+
+        // should be able to set None on None.
+        assert!(
+            set_option_once_or(&mut opt, None, anyhow!("an error")).is_ok(),
+            "Setting None on None failed"
+        );
+
+        // should be able to set Value on None.
+        assert!(
+            set_option_once_or(&mut opt, Some("some value"), anyhow!("an error")).is_ok(),
+            "initial set value failed"
+        );
+        assert_eq!(opt, Some("some value"));
+
+        // setting None on Some should be a no-op.
+        assert!(
+            set_option_once_or(&mut opt, None, anyhow!("an error")).is_ok(),
+            "Setting None on Some failed"
+        );
+        assert_eq!(opt, Some("some value"), "Setting None on Some was not a no-op");
+
+        // setting Some on Some should fail.
+        assert!(
+            set_option_once_or(&mut opt, "other value", anyhow!("an error")).is_err(),
+            "Setting Some on Some did not fail"
+        );
+        assert_eq!(
+            opt,
+            Some("some value"),
+            "Setting Some(other) on Some(value) changed the value with an error"
+        );
     }
 }

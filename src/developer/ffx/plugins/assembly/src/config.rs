@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use crate::util;
 use anyhow::{anyhow, Result};
 use assembly_fvm::FilesystemAttributes;
 use serde::{Deserialize, Serialize};
@@ -56,7 +57,9 @@ impl PartialProductConfig {
     ///
     /// bootfs entries are merged, and any entries with duplicate destination
     /// paths will cause an error.
-    pub fn try_from_partials(configs: Vec<PartialProductConfig>) -> Result<Self> {
+    pub fn try_from_partials<I: IntoIterator<Item = PartialProductConfig>>(
+        configs: I,
+    ) -> Result<Self> {
         let mut system = BTreeSet::new();
         let mut base = BTreeSet::new();
         let mut cache = BTreeSet::new();
@@ -67,7 +70,7 @@ impl PartialProductConfig {
         let mut kernel_args = Vec::new();
         let mut kernel_clock_backstop = None;
 
-        for config in configs {
+        for config in configs.into_iter() {
             system.extend(config.system);
             base.extend(config.base);
             cache.extend(config.cache);
@@ -78,14 +81,14 @@ impl PartialProductConfig {
             }
 
             if let Some(PartialKernelConfig { path, mut args, clock_backstop }) = config.kernel {
-                set_option_once_or(
+                util::set_option_once_or(
                     &mut kernel_path,
                     path,
                     anyhow!("Only one product configuration can specify a kernel path"),
                 )?;
                 kernel_args.append(&mut args);
 
-                set_option_once_or(
+                util::set_option_once_or(
                     &mut kernel_clock_backstop,
                     clock_backstop,
                     anyhow!("Only one product configuration can specify a backstop time"),
@@ -105,25 +108,6 @@ impl PartialProductConfig {
             boot_args: boot_args.into_iter().collect(),
             bootfs_files: bootfs_files.into_values().collect(),
         })
-    }
-}
-
-/// Helper fn to insert into an empty Option, or return an Error.
-fn set_option_once_or<T, E>(
-    opt: &mut Option<T>,
-    value: impl Into<Option<T>>,
-    e: E,
-) -> Result<(), E> {
-    let value = value.into();
-    if value.is_none() {
-        Ok(())
-    } else {
-        if opt.is_some() {
-            Err(e)
-        } else {
-            *opt = value;
-            Ok(())
-        }
     }
 }
 
@@ -173,9 +157,11 @@ impl ProductConfig {
     ///
     /// bootfs entries are merged, and any entries with duplicate destination
     /// paths will cause an error.
-    pub fn try_from_partials(configs: Vec<PartialProductConfig>) -> Result<Self> {
+    pub fn try_from_partials<I: IntoIterator<Item = PartialProductConfig>>(
+        configs: I,
+    ) -> Result<Self> {
         let PartialProductConfig { system, base, cache, kernel, boot_args, bootfs_files } =
-            PartialProductConfig::try_from_partials(configs)?;
+            PartialProductConfig::try_from_partials(configs.into_iter())?;
 
         let PartialKernelConfig { path: kernel_path, args: cmdline_args, clock_backstop } =
             kernel.ok_or(anyhow!("A kernel configuration must be specified"))?;
@@ -278,7 +264,7 @@ fn default_base_package_name() -> String {
 }
 
 /// A mapping between a file source and destination.
-#[derive(Debug, Deserialize, PartialEq, Serialize)]
+#[derive(Debug, Clone, Deserialize, Serialize, PartialEq, Eq, PartialOrd, Ord)]
 #[serde(deny_unknown_fields)]
 pub struct FileEntry {
     /// The path of the source file.
@@ -532,42 +518,6 @@ mod tests {
                 fvm: None,
             }
         }
-    }
-
-    #[test]
-    fn test_set_option_once() {
-        let mut opt = None;
-
-        // should be able to set None on None.
-        assert!(
-            set_option_once_or(&mut opt, None, anyhow!("an error")).is_ok(),
-            "Setting None on None failed"
-        );
-
-        // should be able to set Value on None.
-        assert!(
-            set_option_once_or(&mut opt, Some("some value"), anyhow!("an error")).is_ok(),
-            "initial set value failed"
-        );
-        assert_eq!(opt, Some("some value"));
-
-        // setting None on Some should be a no-op.
-        assert!(
-            set_option_once_or(&mut opt, None, anyhow!("an error")).is_ok(),
-            "Setting None on Some failed"
-        );
-        assert_eq!(opt, Some("some value"), "Setting None on Some was not a no-op");
-
-        // setting Some on Some should fail.
-        assert!(
-            set_option_once_or(&mut opt, "other value", anyhow!("an error")).is_err(),
-            "Setting Some on Some did not fail"
-        );
-        assert_eq!(
-            opt,
-            Some("some value"),
-            "Setting Some(other) on Some(value) changed the value with an error"
-        );
     }
 
     #[test]

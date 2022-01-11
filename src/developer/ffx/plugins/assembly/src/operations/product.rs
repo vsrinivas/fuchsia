@@ -3,19 +3,32 @@
 // found in the LICENSE file.
 
 use crate::config::product_config::ProductAssemblyConfig;
+use crate::operations::product::assembly_builder::ImageAssemblyConfigBuilder;
 use crate::util;
-
-use anyhow::Result;
+use anyhow::{Context, Result};
 use ffx_assembly_args::ProductArgs;
 use log::info;
 
+mod assembly_builder;
+
 pub fn assemble(args: ProductArgs) -> Result<()> {
-    let ProductArgs { product, outdir: _, gendir: _, input_bundles_dir: _ } = args;
+    let ProductArgs { product, outdir: _, gendir: _, input_bundles_dir } = args;
 
     info!("Loading configuration files.");
     info!("  product: {}", product.display());
 
     let _product: ProductAssemblyConfig = util::read_config(&product)?;
+
+    let mut builder = ImageAssemblyConfigBuilder::default();
+
+    let legacy_bundle_path = input_bundles_dir.join("legacy").join("assembly_config.json");
+    for bundle_path in vec![legacy_bundle_path] {
+        builder
+            .add_bundle(&bundle_path)
+            .context(format!("Adding input bundle: {}", bundle_path.display()))?;
+    }
+
+    let _image_assembly = builder.build().context("Building Image Assembly config")?;
 
     Ok(())
 }
