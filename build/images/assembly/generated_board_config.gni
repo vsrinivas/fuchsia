@@ -84,24 +84,28 @@ template("generated_board_config") {
   }
 
   # Generate the vbmeta descriptor if needed, and add it to
-  # board_extra_vbmeta_descriptors.
-  descriptor_deps = []
-  if (extra_vbmeta_descriptors != false) {
-    vbmeta_descriptor_label = "${target_name}_vbmeta_descriptor"
-    vbmeta_descriptor_file =
-        "${target_out_dir}/${target_name}_vbmeta_descriptor.json"
-    generated_file(vbmeta_descriptor_label) {
-      forward_variables_from(invoker,
-                             [
-                               "testonly",
-                               "visibility",
-                             ])
-      output_conversion = "json"
-      contents = extra_vbmeta_descriptors[0]
-      outputs = [ vbmeta_descriptor_file ]
+  # vbmeta_descriptors.
+  if (use_vbmeta) {
+    descriptor_deps = []
+    vbmeta_descriptors = []
+    if (extra_vbmeta_descriptors != false) {
+      vbmeta_descriptor_label = "${target_name}_vbmeta_descriptor"
+      vbmeta_descriptor_file =
+          "${target_out_dir}/${target_name}_vbmeta_descriptor.json"
+      generated_file(vbmeta_descriptor_label) {
+        forward_variables_from(invoker,
+                               [
+                                 "testonly",
+                                 "visibility",
+                               ])
+        output_conversion = "json"
+        contents = extra_vbmeta_descriptors[0]
+        outputs = [ vbmeta_descriptor_file ]
+      }
+      descriptor_deps += [ ":${vbmeta_descriptor_label}" ]
+      vbmeta_descriptors +=
+          [ rebase_path(vbmeta_descriptor_file, root_build_dir) ]
     }
-    board_extra_vbmeta_descriptors += [ vbmeta_descriptor_file ]
-    descriptor_deps += [ ":${vbmeta_descriptor_label}" ]
   }
 
   generated_file(target_name) {
@@ -110,9 +114,12 @@ template("generated_board_config") {
                              "testonly",
                              "visibility",
                            ])
-    deps = descriptor_deps
+    deps = []
     if (defined(invoker.deps)) {
       deps += invoker.deps
+    }
+    if (use_vbmeta) {
+      deps += descriptor_deps
     }
 
     outputs = [ invoker.output_path ]
@@ -189,8 +196,7 @@ template("generated_board_config") {
           kernel_partition = "zircon"
           key = rebase_path(avb_key, root_build_dir)
           key_metadata = rebase_path(avb_atx_metadata, root_build_dir)
-          additional_descriptor_files =
-              rebase_path(board_extra_vbmeta_descriptors, root_build_dir)
+          additional_descriptor_files = vbmeta_descriptors
         }
       }
 
