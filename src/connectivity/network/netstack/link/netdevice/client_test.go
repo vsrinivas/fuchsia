@@ -405,10 +405,10 @@ func TestClient_WritePackets(t *testing.T) {
 			ReserveHeaderBytes: int(linkEndpoint.MaxHeaderLength()),
 		}))
 
-		if n, err := linkEndpoint.WritePackets(stack.RouteInfo{}, pkts, header.IPv4ProtocolNumber); err != nil {
-			t.Fatalf("WritePackets({}, _, %d): %s", header.IPv4ProtocolNumber, err)
+		if n, err := linkEndpoint.WritePackets(stack.RouteInfo{}, pkts, 0); err != nil {
+			t.Fatalf("WritePackets({}, _, 0): %s", err)
 		} else if n != 1 {
-			t.Fatalf("got WritePackets({}, _, %d) = %d, want = 1", header.IPv4ProtocolNumber, n)
+			t.Fatalf("got WritePackets({}, _, 0) = %d, want = 1", n)
 		}
 	}()
 
@@ -497,10 +497,10 @@ func TestWritePackets(t *testing.T) {
 				pkt.NetworkProtocolNumber = protocol
 				pkts.PushBack(pkt)
 
-				if n, err := linkEndpoint.WritePackets(stack.RouteInfo{}, pkts, protocol); err != nil {
-					t.Fatalf("WritePackets({}, _, %d): %s", protocol, err)
+				if n, err := linkEndpoint.WritePackets(stack.RouteInfo{}, pkts, 0); err != nil {
+					t.Fatalf("WritePackets({}, _, 0): %s", err)
 				} else if n != 1 {
-					t.Fatalf("got WritePackets({}, _, %d) = %d, want = 1", protocol, n)
+					t.Fatalf("got WritePackets({}, _, 0) = %d, want = 1", n)
 				}
 			}()
 			readFrameResult, err := tunDev.ReadFrame(ctx)
@@ -1118,27 +1118,29 @@ func TestPairExchangePackets(t *testing.T) {
 		for i := uint32(0); i < payloadLength; i++ {
 			view = append(view, byte(rng.Uint32()))
 		}
-		return stack.NewPacketBuffer(stack.PacketBufferOptions{
+		pkt := stack.NewPacketBuffer(stack.PacketBufferOptions{
 			Data: buffer.View(view).ToVectorisedView(),
 		})
+		pkt.NetworkProtocolNumber = header.IPv4ProtocolNumber
+		return pkt
 	}
 
 	send := func(endpoint stack.LinkEndpoint, prefix byte, errs chan error) {
+		var pkts stack.PacketBufferList
+		defer pkts.DecRef()
 		for i := uint16(0); i < packetCount; i++ {
-			func() {
-				var pkts stack.PacketBufferList
-				defer pkts.DecRef()
-				pkts.PushBack(makeTestPacket(prefix, i))
-
-				if n, err := endpoint.WritePackets(stack.RouteInfo{}, pkts, header.IPv4ProtocolNumber); err != nil {
-					errs <- fmt.Errorf("WritePackets({}, _, %d): %s", header.IPv4ProtocolNumber, err)
-					return
-				} else if n != 1 {
-					t.Fatalf("got WritePackets({}, _, %d) = %d, want = 1", header.IPv4ProtocolNumber, n)
-				}
-			}()
+			pkts.PushBack(makeTestPacket(prefix, i))
 		}
-		errs <- nil
+		errs <- func() error {
+			n, err := endpoint.WritePackets(stack.RouteInfo{}, pkts, 0)
+			if err != nil {
+				return fmt.Errorf("WritePackets({}, _, 0): %s", err)
+			}
+			if n != int(packetCount) {
+				return fmt.Errorf("got WritePackets({}, _, 0) = %d, want %d", n, packetCount)
+			}
+			return nil
+		}()
 	}
 
 	validate := func(pktArgs DeliverNetworkPacketArgs, prefix uint8, index uint16) {

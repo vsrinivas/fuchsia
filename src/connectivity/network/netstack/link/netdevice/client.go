@@ -131,7 +131,7 @@ func (p *Port) LinkAddress() tcpip.LinkAddress {
 }
 
 // write writes a list of packets to the device.
-func (c *Client) write(port network.PortId, pkts stack.PacketBufferList, protocol tcpip.NetworkProtocolNumber) (int, tcpip.Error) {
+func (c *Client) write(port network.PortId, pkts stack.PacketBufferList) (int, tcpip.Error) {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 	if c.mu.closed {
@@ -156,7 +156,7 @@ func (c *Client) write(port network.PortId, pkts stack.PacketBufferList, protoco
 		if len(pkt.LinkHeader().View()) != 0 {
 			frameType = network.FrameTypeEthernet
 		} else {
-			switch protocol {
+			switch pkt.NetworkProtocolNumber {
 			case header.IPv4ProtocolNumber:
 				frameType = network.FrameTypeIpv4
 			case header.IPv6ProtocolNumber:
@@ -177,8 +177,8 @@ func (c *Client) write(port network.PortId, pkts stack.PacketBufferList, protoco
 	})
 }
 
-func (p *Port) WritePackets(_ stack.RouteInfo, pkts stack.PacketBufferList, proto tcpip.NetworkProtocolNumber) (int, tcpip.Error) {
-	return p.client.write(p.portInfo.Id, pkts, proto)
+func (p *Port) WritePackets(_ stack.RouteInfo, pkts stack.PacketBufferList, _ tcpip.NetworkProtocolNumber) (int, tcpip.Error) {
+	return p.client.write(p.portInfo.Id, pkts)
 }
 
 func (p *Port) WriteRawPacket(pkt *stack.PacketBuffer) tcpip.Error {
@@ -186,7 +186,7 @@ func (p *Port) WriteRawPacket(pkt *stack.PacketBuffer) tcpip.Error {
 	pkts.PushBack(pkt)
 	// TODO(https://fxbug.dev/86725): Frame type detection may not work for implementing
 	// packet sockets.
-	_, err := p.client.write(p.portInfo.Id, pkts, pkt.NetworkProtocolNumber)
+	_, err := p.client.write(p.portInfo.Id, pkts)
 	return err
 }
 

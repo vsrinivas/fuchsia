@@ -298,13 +298,13 @@ func TestClient(t *testing.T) {
 						count, err := client.WritePackets(
 							stack.RouteInfo{},
 							pkts,
-							1337,
+							0,
 						)
 						if err != nil {
 							t.Fatal(err)
 						}
 						if got := uint32(count); got != writeSize {
-							t.Fatalf("got WritePackets(_) = %d, nil, want %d, nil", got, writeSize)
+							t.Fatalf("got WritePackets({}, _, 0) = %d, want %d", got, writeSize)
 						}
 
 						dropsBefore := client.TxStats().Drops.Value()
@@ -379,11 +379,10 @@ func TestClient(t *testing.T) {
 							t.Fatalf("got copy(...) = %d, want = %d", n, len(packetHeader))
 						}
 
-						const protocol = 1337
-						if n, err := client.WritePackets(stack.RouteInfo{}, pkts, protocol); err != nil {
-							t.Fatalf("client.WritePackets({}, %d, _): %s", protocol, err)
+						if n, err := client.WritePackets(stack.RouteInfo{}, pkts, 0); err != nil {
+							t.Fatalf("client.WritePackets({}, _, 0): %s", err)
 						} else if n != 1 {
-							t.Fatalf("got WritePackets({}, _, %d) = %d, want = 1", protocol, n)
+							t.Fatalf("got WritePackets({}, _, 0) = %d, want = 1", n)
 						}
 					}()
 
