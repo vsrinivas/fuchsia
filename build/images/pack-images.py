@@ -16,12 +16,13 @@ import zipfile
 from functools import reduce
 
 
-def generate_script(images, board_name, type, additional_bootserver_arguments):
-    # The bootserver must be in there or we lose.
+def generate_script(
+        binary_name, images, board_name, type, additional_arguments):
+    # The binary must be in there or we lose.
     # TODO(mcgrathr): Multiple bootservers for different platforms
     # and switch in the script.
-    [bootserver
-    ] = [image['path'] for image in images if image['name'] == 'bootserver']
+    [binary
+    ] = [image['path'] for image in images if image['name'] == binary_name]
     script = '''\
 #!/bin/sh
 dir="$(dirname "$0")"
@@ -30,12 +31,13 @@ set -x
     switches = dict(
         (switch, '"$dir/%s"' % image['path']) for image in images
         if type in image for switch in image[type])
-    cmd = ['exec', '"$dir/%s"' % bootserver]
-    if board_name:
-        cmd += ['--board_name', '"%s"' % board_name]
+    cmd = ['exec', '"$dir/%s"' % binary]
+    if binary_name == "bootserver":
+        if board_name:
+            cmd += ['--board_name', '"%s"' % board_name]
 
-    if additional_bootserver_arguments:
-        cmd += [additional_bootserver_arguments]
+    if additional_arguments:
+        cmd += [additional_arguments]
 
     for switch, path in sorted(switches.items()):
         cmd += [switch, path]
@@ -134,16 +136,18 @@ def write_archive(outfile, images, board_name, additional_bootserver_arguments):
     content_images = [
         (
             generate_script(
-                [image for path, image in path_images], board_name,
-                'bootserver_pave', additional_bootserver_arguments), {
+                "bootserver", [image for path, image in path_images],
+                board_name, 'bootserver_pave',
+                additional_bootserver_arguments), {
                     'name': 'pave',
                     'type': 'sh',
                     'path': 'pave.sh'
                 }),
         (
             generate_script(
-                [image for path, image in path_images], board_name,
-                'bootserver_pave_zedboot', additional_bootserver_arguments +
+                "bootserver", [image for path, image in path_images],
+                board_name, 'bootserver_pave_zedboot',
+                additional_bootserver_arguments +
                 " --allow-zedboot-version-mismatch"), {
                     'name': 'pave-zedboot',
                     'type': 'sh',
@@ -151,8 +155,9 @@ def write_archive(outfile, images, board_name, additional_bootserver_arguments):
                 }),
         (
             generate_script(
-                [image for path, image in path_images], board_name,
-                'bootserver_netboot', additional_bootserver_arguments), {
+                "bootserver", [image for path, image in path_images],
+                board_name, 'bootserver_netboot',
+                additional_bootserver_arguments), {
                     'name': 'netboot',
                     'type': 'sh',
                     'path': 'netboot.sh'
@@ -182,7 +187,8 @@ def write_archive(outfile, images, board_name, additional_bootserver_arguments):
         for path, image in path_images:
             archiver.add_path(path, image['path'], is_executable(image))
         for contents, image in content_images:
-            archiver.add_contents(contents.encode(), image['path'], is_executable(image))
+            archiver.add_contents(
+                contents.encode(), image['path'], is_executable(image))
 
 
 def main():
@@ -204,6 +210,10 @@ def main():
         '--netboot',
         metavar='FILE',
         help='Write netboot bootserver script to FILE')
+    parser.add_argument(
+        '--fastboot_boot',
+        metavar='FILE',
+        help="Write fastboot boot script to FILE")
     parser.add_argument(
         '--archive', metavar='FILE', help='Write archive to FILE')
     parser.add_argument(
@@ -232,13 +242,15 @@ def main():
     outfile = None
 
     # Write an executable script into outfile for the given bootserver mode.
-    def write_script_for(outfile, mode):
+    def write_script_for(outfile, mode, binary_name="bootserver"):
         with os.fdopen(os.open(outfile, os.O_CREAT | os.O_TRUNC | os.O_WRONLY,
                                0o777), 'w') as script_file:
+            additional_args = ''
+            if mode != 'fastboot_boot':
+                additional_args = ''.join(args.additional_bootserver_arguments)
             script_file.write(
                 generate_script(
-                    images, args.board_name, mode,
-                    ' '.join(args.additional_bootserver_arguments)))
+                    binary_name, images, args.board_name, mode, additional_args))
 
     # First write the local scripts that work relative to the build directory.
     if args.pave:
@@ -250,6 +262,10 @@ def main():
     if args.netboot:
         outfile = args.netboot
         write_script_for(args.netboot, 'bootserver_netboot')
+    if args.fastboot_boot:
+        outfile = args.fastboot_boot
+        write_script_for(
+            args.fastboot_boot, "fastboot_boot", binary_name="fastboot")
 
     if args.archive:
         outfile = args.archive

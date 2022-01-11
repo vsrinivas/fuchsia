@@ -832,6 +832,32 @@ generated_file("fastboot_manifest_archive") {
   }
 }
 
+fastboot_targets = []
+if (bootfs_only) {
+  fastboot_targets += [
+    {
+      name = "fastboot-boot-script"
+      outputs = [ "$root_build_dir/boot.sh" ]
+      switch = "--fastboot_boot="
+
+      deps = [
+        ":fastboot",
+        "bringup",
+      ]
+      metadata = {
+        images = [
+          {
+            label = get_label_info(":$name", "label_with_toolchain")
+            name = name
+            path = "boot.sh"
+            type = "script"
+          },
+        ]
+      }
+    },
+  ]
+}
+
 paver_targets = [
   {
     name = "netboot-script"
@@ -971,7 +997,7 @@ foreach(target, paver_targets) {
   uefi_disk_deps += [ ":${target.name}" ]
 }
 
-foreach(target, archive_targets + paver_targets) {
+foreach(target, archive_targets + fastboot_targets + paver_targets) {
   action(target.name) {
     deps = []
     if (defined(target.deps)) {
@@ -992,7 +1018,8 @@ foreach(target, archive_targets + paver_targets) {
         "--additional_bootserver_arguments=${additional_bootserver_arguments}",
       ]
     }
-    if (target.extra_bootserver_arguments != "") {
+    if (defined(target.extra_bootserver_arguments) &&
+        target.extra_bootserver_arguments != "") {
       args += [ "--additional_bootserver_arguments=${target.extra_bootserver_arguments}" ]
     }
 
@@ -1434,6 +1461,8 @@ group("default-images") {
     if (!build_sdk_archives) {
       deps += [ ":product_metadata" ]
     }
+  } else {
+    deps += [ ":fastboot-boot-script" ]
   }
 
   if (check_vtables_in_rodata) {
