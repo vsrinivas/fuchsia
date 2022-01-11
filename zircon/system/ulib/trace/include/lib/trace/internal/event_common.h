@@ -155,10 +155,10 @@
 // This event may be followed by async instant events and must be matched by
 // an async end event with the same category, name, and id.
 //
-// Asynchronous events describe work which is happening asynchronously and which
-// may span multiple threads.  Asynchronous events do not nest.  The id serves
-// to correlate the progress of distinct asynchronous operations which share
-// the same category and name within the same process.
+// Asynchronous events describe work which is happening asynchronously and which may span multiple
+// threads. The id serves to correlate the progress of distinct asynchronous operations which share
+// the same category and name within the same process. Asynchronous events within the same process
+// with matching categories and ids will nest.
 //
 // 0 to 15 arguments can be associated with the event, each of which is used
 // to annotate the asynchronous operation with additional information.  The
@@ -180,10 +180,10 @@
 
 // Writes an asynchronous instant event with the specified id.
 //
-// Asynchronous events describe work which is happening asynchronously and which
-// may span multiple threads.  Asynchronous events do not nest.  The id serves
-// to correlate the progress of distinct asynchronous operations which share
-// the same category and name within the same process.
+// Asynchronous events describe work which is happening asynchronously and which may span multiple
+// threads. The id serves to correlate the progress of distinct asynchronous operations which share
+// the same category and name within the same process. Asynchronous events within the same process
+// with matching categories and ids will nest.
 //
 // 0 to 15 arguments can be associated with the event, each of which is used
 // to annotate the asynchronous operation with additional information.  The
@@ -205,10 +205,10 @@
 
 // Writes an asynchronous end event with the specified id.
 //
-// Asynchronous events describe work which is happening asynchronously and which
-// may span multiple threads.  Asynchronous events do not nest.  The id serves
-// to correlate the progress of distinct asynchronous operations which share
-// the same category and name within the same process.
+// Asynchronous events describe work which is happening asynchronously and which may span multiple
+// threads. The id serves to correlate the progress of distinct asynchronous operations which share
+// the same category and name within the same process. Asynchronous events within the same process
+// with matching categories and ids will nest.
 //
 // 0 to 15 arguments can be associated with the event, each of which is used
 // to annotate the asynchronous operation with additional information.  The
