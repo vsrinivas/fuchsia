@@ -40,19 +40,6 @@ type DaemonError = strict enum {
 
 @discoverable
 protocol Daemon {
-    /// Crashes the daemon. Primarily used for testing.
-    Crash() -> ();
-
-    /// Returns the input.
-    EchoString(struct {
-        value string:256;
-    }) -> (struct {
-        response string:256;
-    });
-
-    /// Hang the daemon. Primarily used for testing.
-    Hang() -> ();
-
     /// Make the daemon exit.
     Quit() -> (struct {
         success bool;

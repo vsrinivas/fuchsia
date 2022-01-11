@@ -514,25 +514,6 @@ impl Daemon {
         log::debug!("daemon received request: {:?}", req);
 
         match req {
-            DaemonRequest::Crash { .. } => {
-                add_daemon_metrics_event("panic").await;
-                panic!("instructed to crash by client!");
-            }
-            DaemonRequest::EchoString { value, responder } => {
-                log::info!("Received echo request for string {:?}", value);
-                responder.send(value.as_ref()).context("error sending response")?;
-                log::info!("echo response sent successfully");
-                add_daemon_metrics_event("echo").await;
-            }
-            // Hang intends to block the reactor indefinitely, however
-            // that's a little tricky to do exactly. This approximation
-            // is strong enough for right now, though it may be awoken
-            // again periodically on timers, depending on implementation
-            // details of the underlying reactor.
-            DaemonRequest::Hang { .. } => loop {
-                add_daemon_metrics_event("hang").await;
-                std::thread::park()
-            },
             DaemonRequest::Quit { responder } => {
                 log::info!("Received quit request.");
 

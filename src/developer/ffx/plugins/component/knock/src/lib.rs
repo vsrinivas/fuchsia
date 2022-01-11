@@ -80,24 +80,20 @@ async fn knock<W: Write>(
 #[cfg(test)]
 mod test {
     use {
-        super::*,
-        fidl::endpoints::RequestStream,
-        fidl::handle::AsyncChannel,
-        fidl_fuchsia_developer_bridge::{DaemonRequest, DaemonRequestStream},
-        futures::TryStreamExt,
+        super::*, fidl::endpoints::RequestStream, fidl::handle::AsyncChannel,
+        fidl_fuchsia_developer_bridge::DaemonRequestStream, futures::TryStreamExt,
     };
 
     fn setup_fake_daemon_service(mut stream: DaemonRequestStream) {
         fuchsia_async::Task::local(async move {
-            while let Ok(Some(req)) = stream.try_next().await {
-                match req {
-                    DaemonRequest::EchoString { value, responder } => {
-                        responder.send(&value).unwrap();
-                    }
-                    _ => assert!(false),
-                }
+            let mut continue_once = true;
+            while let Ok(Some(_req)) = stream.try_next().await {
                 // We should only get one request per stream. We want subsequent calls to fail if more are
                 // made.
+                if continue_once {
+                    continue_once = false;
+                    continue;
+                }
                 break;
             }
         })

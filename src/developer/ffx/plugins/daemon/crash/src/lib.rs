@@ -4,12 +4,12 @@
 
 use {
     anyhow::Result, ffx_core::ffx_plugin, ffx_crash_args::CrashCommand,
-    fidl_fuchsia_developer_bridge as bridge,
+    fidl_fuchsia_developer_bridge::TestingProxy,
 };
 
-#[ffx_plugin()]
-pub async fn crash(daemon_proxy: bridge::DaemonProxy, _cmd: CrashCommand) -> Result<()> {
-    let _ = daemon_proxy.crash().await;
+#[ffx_plugin(TestingProxy = "daemon::protocol")]
+pub async fn crash(testing_proxy: TestingProxy, _cmd: CrashCommand) -> Result<()> {
+    let _ = testing_proxy.crash().await;
     Ok(())
 }
 
@@ -17,17 +17,17 @@ pub async fn crash(daemon_proxy: bridge::DaemonProxy, _cmd: CrashCommand) -> Res
 mod test {
     use {
         super::*,
-        fidl_fuchsia_developer_bridge::DaemonRequest,
+        fidl_fuchsia_developer_bridge::TestingRequest,
         std::sync::atomic::{AtomicBool, Ordering},
     };
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_crash_with_no_text() {
-        // XXX(raggi): if we can bound the lifetime of the daemon proxy setup as
+        // XXX(raggi): if we can bound the lifetime of the testing proxy setup as
         // desired by the test, then we could avoid the need for the static.
         static CRASHED: AtomicBool = AtomicBool::new(false);
-        let proxy = setup_fake_daemon_proxy(|req| match req {
-            DaemonRequest::Crash { .. } => {
+        let proxy = setup_fake_testing_proxy(|req| match req {
+            TestingRequest::Crash { .. } => {
                 CRASHED.store(true, Ordering::SeqCst);
             }
             _ => assert!(false),

@@ -16,6 +16,7 @@ if (is_host) {
       "//src/developer/ffx/daemon/protocols/mdns:ffx_daemon_protocol_mdns",
       "//src/developer/ffx/daemon/protocols/repo:ffx_daemon_protocol_repo",
       "//src/developer/ffx/daemon/protocols/target_collection:ffx_daemon_protocol_target_collection",
+      "//src/developer/ffx/daemon/protocols/testing:ffx_daemon_protocol_testing",
       "//src/developer/ffx/daemon/protocols/tracing:ffx_daemon_protocol_tracing",
     ]
   }
@@ -32,6 +33,7 @@ group("tests") {
     "mdns:tests($host_toolchain)",
     "repo:tests($host_toolchain)",
     "target_collection:tests($host_toolchain)",
+    "testing:tests($host_toolchain)",
     "tracing:tests($host_toolchain)",
   ]
 }
