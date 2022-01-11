@@ -207,8 +207,8 @@ protocol BaseNetworkSocket {
     }) error fuchsia.posix.Errno;
 
     /// Set `SOL_IP` -> `IP_TTL`.
-    // [1, 255] but -1 means ipv4.sysctl_ip_default_ttl.
-    // https://github.com/torvalds/linux/blob/v5.11/net/ipv4/ip_sockglue.c#L1596-L1603
+    // [1, 255] but unset means default, which is `sysctl net.ipv4.ip_default_ttl`.
+    // https://github.com/torvalds/linux/blob/6f38be8f2cc/net/ipv4/ip_sockglue.c#L1605-L1612
     SetIpTtl(struct {
         value OptionalUint8;
     }) -> (struct {}) error fuchsia.posix.Errno;
@@ -246,8 +246,8 @@ protocol BaseNetworkSocket {
     }) error fuchsia.posix.Errno;
 
     /// Set `SOL_IP` -> `IP_MULTICAST_TTL`.
-    // [1, 255] but -1 means 1.
-    // https://github.com/torvalds/linux/blob/v5.11/net/ipv4/ip_sockglue.c#L1086-L1096
+    // [1, 255] but unset means kernel default, which is 1.
+    // https://github.com/torvalds/linux/blob/6f38be8f2cc/net/ipv4/ip_sockglue.c#L1088-L1098
     SetIpMulticastTtl(struct {
         value OptionalUint8;
     }) -> (struct {}) error fuchsia.posix.Errno;
@@ -293,8 +293,8 @@ protocol BaseNetworkSocket {
     }) error fuchsia.posix.Errno;
 
     /// Set `SOL_IPV6` -> `IPV6_MULTICAST_HOPS`.
-    // [-1, 255] where -1 means IPV6_DEFAULT_MCASTHOPS, which is 1.
-    // https://github.com/torvalds/linux/blob/v5.11/net/ipv6/ipv6_sockglue.c#L742-L751
+    // [0, 255] but unset means kernel default, which is 1.
+    // https://github.com/torvalds/linux/blob/6f38be8f2cc/net/ipv6/ipv6_sockglue.c#L751-L760
     SetIpv6MulticastHops(struct {
         value OptionalUint8;
     }) -> (struct {}) error fuchsia.posix.Errno;
@@ -335,8 +335,8 @@ protocol BaseNetworkSocket {
     /// Set `SOL_IPV6` -> `IPV6_TCLASS`
     // NOTE: see https://tools.ietf.org/html/rfc3542.html for definitions.
     //
-    // [-1, 255] where -1 means "kernel default", which is 0.
-    // https://github.com/torvalds/linux/blob/v5.11/net/ipv6/ipv6_sockglue.c#L592-L602
+    // [0, 255] but unset means kernel default, which is 0.
+    // https://github.com/torvalds/linux/blob/6f38be8f2cc/net/ipv6/ipv6_sockglue.c#L594-L611
     SetIpv6TrafficClass(struct {
         value OptionalUint8;
     }) -> (struct {}) error fuchsia.posix.Errno;
