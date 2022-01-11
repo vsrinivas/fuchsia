@@ -7,6 +7,7 @@ package testrunner
 import (
 	"errors"
 	"fmt"
+	"path/filepath"
 )
 
 // MountPt describes the source, destination, and permissions for a
@@ -25,11 +26,17 @@ type MountPt struct {
 type NsJailCmdBuilder struct {
 	// Bin is the path to the NsJail binary. This is a required parameter.
 	Bin string
+	// Cwd is the path to a directory to set as the working directory.
+	// Note that this does not add any required mount points, the caller
+	// is responsible for ensuring that the directory exists in the jail.
+	Cwd string
 	// IsolateNetwork indicates whether we should use a network namespace.
 	IsolateNetwork bool
 	// MountPoints is a list of locations on the current filesystem that
 	// should be mounted into the NsJail.
 	MountPoints []*MountPt
+	// Root is the path to a directory to set as the chroot.
+	Root string
 }
 
 // Build takes the given subcmd and wraps it in the appropriate NsJail invocation.
@@ -42,6 +49,16 @@ func (n *NsJailCmdBuilder) Build(subcmd []string) ([]string, error) {
 	cmd := []string{n.Bin, "--keep_env"}
 	if !n.IsolateNetwork {
 		cmd = append(cmd, "--disable_clone_newnet")
+	}
+	if n.Root != "" {
+		root, err := filepath.Abs(n.Root)
+		if err != nil {
+			return nil, err
+		}
+		cmd = append(cmd, "--chroot", root)
+	}
+	if n.Cwd != "" {
+		cmd = append(cmd, "--cwd", n.Cwd)
 	}
 	for _, mountPt := range n.MountPoints {
 		if mountPt.Src == "" {

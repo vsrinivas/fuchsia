@@ -89,6 +89,38 @@ func TestBuild(t *testing.T) {
 				"/foo/bar",
 			},
 		},
+		{
+			name: "Test current working directory",
+			cmdBuilder: &NsJailCmdBuilder{
+				Bin: "/path/to/nsjail",
+				Cwd: "/cwd",
+			},
+			subcmd: []string{"/foo/bar"},
+			want: []string{
+				"/path/to/nsjail",
+				"--keep_env",
+				"--disable_clone_newnet",
+				"--cwd", "/cwd",
+				"--",
+				"/foo/bar",
+			},
+		},
+		{
+			name: "Test chroot",
+			cmdBuilder: &NsJailCmdBuilder{
+				Bin:  "/path/to/nsjail",
+				Root: "/chroot",
+			},
+			subcmd: []string{"/foo/bar"},
+			want: []string{
+				"/path/to/nsjail",
+				"--keep_env",
+				"--disable_clone_newnet",
+				"--chroot", "/chroot",
+				"--",
+				"/foo/bar",
+			},
+		},
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {

@@ -59,6 +59,9 @@ type testrunnerFlags struct {
 	// The path to an NsJail binary.
 	nsjailPath string
 
+	// The path to mount as NsJail's root directory.
+	nsjailRoot string
+
 	// Whether to use runtests when executing tests on fuchsia. If false, the
 	// default will be run_test_component.
 	useRuntests bool
@@ -93,6 +96,7 @@ func main() {
 	flag.BoolVar(&flags.help, "help", false, "Whether to show Usage and exit.")
 	flag.StringVar(&flags.outDir, "out-dir", "", "Optional path where a directory containing test results should be created.")
 	flag.StringVar(&flags.nsjailPath, "nsjail", "", "Optional path to an NsJail binary to use for linux host test sandboxing.")
+	flag.StringVar(&flags.nsjailRoot, "nsjail-root", "", "Path to the directory to use as the NsJail root directory")
 	flag.StringVar(&flags.localWD, "C", "", "Working directory of local testing subprocesses; if unset the current working directory will be used.")
 	flag.BoolVar(&flags.useRuntests, "use-runtests", false, "Whether to default to running fuchsia tests with runtests; if false, run_test_component will be used.")
 	flag.StringVar(&flags.snapshotFile, "snapshot-output", "", "The output filename for the snapshot. This will be created in the output directory.")
