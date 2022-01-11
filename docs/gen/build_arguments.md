@@ -68,14 +68,14 @@ TODO(fxbug.dev/67565) - remove once external sync FD extensions fully supported
 
 **Current value (from the default):** `false`
 
-From [//third_party/mesa/src/intel/vulkan/BUILD.gn:27](https://fuchsia.googlesource.com/third_party/mesa/+/b641ad68d1f645b1e5be862d408acf865dcbda71/src/intel/vulkan/BUILD.gn#27)
+From [//third_party/mesa/src/intel/vulkan/BUILD.gn:27](https://fuchsia.googlesource.com/third_party/mesa/+/3168bcbc842464fc39f92e86e98592eff8d28bae/src/intel/vulkan/BUILD.gn#27)
 
 ### anv_use_max_ram
 Give maximum possible memory to Vulkan heap
 
 **Current value (from the default):** `false`
 
-From [//third_party/mesa/src/intel/vulkan/BUILD.gn:30](https://fuchsia.googlesource.com/third_party/mesa/+/b641ad68d1f645b1e5be862d408acf865dcbda71/src/intel/vulkan/BUILD.gn#30)
+From [//third_party/mesa/src/intel/vulkan/BUILD.gn:30](https://fuchsia.googlesource.com/third_party/mesa/+/3168bcbc842464fc39f92e86e98592eff8d28bae/src/intel/vulkan/BUILD.gn#30)
 
 ### asan_default_options
 Default [AddressSanitizer](https://clang.llvm.org/docs/AddressSanitizer.html)
@@ -110,7 +110,7 @@ From //build/security.gni:140
 
 **Current value (from the default):** `"DEPRECATED"`
 
-From //build/images/vbmeta.gni:69
+From //build/images/vbmeta.gni:39
 
 ### avb_atx_metadata
 AVB metadata which will be used to validate public key
@@ -336,44 +336,12 @@ by the board definition rather than the product definition.
 
 From //build/board.gni:17
 
-### board_extra_vbmeta_descriptors
-DEPRECATED: Remove when no boards set a value for this.
-Use extra_vbmeta_descriptors instead.
-
-Board level extra vbmeta descriptors to be combined into the top-level
-vbmeta struct.
-
-The format of these are:
-
-```json
-{
-    "type": "partition",
-    "name": "partition_name",
-    "size": "104448",
-    "flags": "1",
-    "min_avb_version": "1.1"
-}
-```
-
-- `name` = (string) The name of the partition as it to appear in the vbmeta image
-- `size` = (int as string) The size of the partition in bytes
-- `flags` = (int) The bit-wise set of flag values
-- `min_avb_version` = (version x.y as a string) the minimum avb version that the
-   resultant vbmeta image requires if it includes this descriptor.
-
-Note: These files cannot contain any comments, and must strictly conform to the
-[JSON](http://json.org) spec.
-
-**Current value (from the default):** `[]`
-
-From //build/images/vbmeta.gni:49
-
 ### board_extra_vbmeta_images
 DEPRECATED:  Remove when no boards set a value for these.
 
 **Current value (from the default):** `[]`
 
-From //build/images/vbmeta.gni:68
+From //build/images/vbmeta.gni:38
 
 ### board_fastboot_unlock_credentials
 A list of paths to the unlock credentials file necessary to unlock this
@@ -1308,8 +1276,6 @@ From //build/config/BUILDCONFIG.gn:1403
 
 ### extra_vbmeta_descriptors
 Additional VBMeta Descriptors to add to the vbmeta image during assembly.
-This mimics `board_extra_vbmeta_descriptors` except that this is a list of
-GN dictionaries instead of a list of files.
 
 To add a descriptor, include GN code such as:
 
@@ -1324,7 +1290,7 @@ extra_vbmeta_descriptors = [{
 
 **Current value (from the default):** `false`
 
-From //build/images/vbmeta.gni:65
+From //build/images/vbmeta.gni:35
 
 ### extract_minfs_metadata_on_corruption
 If extract_minfs_metadata_on_corruption is true, fshost extracts minfs metadata on finding it
