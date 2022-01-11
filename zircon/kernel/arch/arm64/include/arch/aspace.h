@@ -116,14 +116,13 @@ class ArmArchVmAspace final : public ArchVmAspaceInterface {
 
   pte_t MmuParamsFromFlags(uint mmu_flags);
   ssize_t MapPages(vaddr_t vaddr, paddr_t paddr, size_t size, pte_t attrs, vaddr_t vaddr_base,
-                   uint top_size_shift, uint top_index_shift, ConsistencyManager& cm) TA_REQ(lock_);
+                   uint top_size_shift, ConsistencyManager& cm) TA_REQ(lock_);
 
   ssize_t UnmapPages(vaddr_t vaddr, size_t size, EnlargeOperation enlarge, vaddr_t vaddr_base,
-                     uint top_size_shift, uint top_index_shift, ConsistencyManager& cm)
-      TA_REQ(lock_);
+                     uint top_size_shift, ConsistencyManager& cm) TA_REQ(lock_);
 
   zx_status_t ProtectPages(vaddr_t vaddr, size_t size, pte_t attrs, vaddr_t vaddr_base,
-                           uint top_size_shift, uint top_index_shift) TA_REQ(lock_);
+                           uint top_size_shift) TA_REQ(lock_);
   zx_status_t QueryLocked(vaddr_t vaddr, paddr_t* paddr, uint* mmu_flags) TA_REQ(lock_);
 
   void FlushTLBEntry(vaddr_t vaddr, bool terminal) const TA_REQ(lock_);
