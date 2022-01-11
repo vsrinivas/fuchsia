@@ -1561,6 +1561,9 @@ mod tests {
                             LogSinkRequest::ConnectStructured { .. } => {
                                 panic!("Unexpected call to `ConnectStructured`");
                             }
+                            LogSinkRequest::WaitForInterestChange { responder: _ } => {
+                                panic!("Unexpected call to `WaitForInterestChange`")
+                            }
                         }
                     }
                 }

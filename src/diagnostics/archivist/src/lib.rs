@@ -18,6 +18,7 @@ pub mod logs;
 pub(crate) mod moniker_rewriter;
 pub mod pipeline;
 pub mod repository;
+pub mod utils;
 
 #[cfg(test)]
 mod testing;

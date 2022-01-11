@@ -13,16 +13,27 @@ use crate::{
         stats::LogStreamStats,
         stored_message::StoredMessage,
     },
+    utils::AutoCall,
 };
 use diagnostics_data::{BuilderArgs, LogsData, LogsDataBuilder};
 use fidl::prelude::*;
 use fidl_fuchsia_diagnostics::{Interest as FidlInterest, LogInterestSelector, StreamMode};
-use fidl_fuchsia_logger::{LogSinkControlHandle, LogSinkRequest, LogSinkRequestStream};
+use fidl_fuchsia_logger::{
+    InterestChangeError, LogSinkControlHandle, LogSinkRequest, LogSinkRequestStream,
+    LogSinkWaitForInterestChangeResponder,
+};
 use fuchsia_async::Task;
 use fuchsia_zircon as zx;
-use futures::{channel::mpsc, prelude::*};
+use futures::{
+    channel::{mpsc, oneshot},
+    prelude::*,
+};
 use parking_lot::Mutex;
-use std::{cmp::Ordering, collections::BTreeMap, sync::Arc};
+use std::{
+    cmp::Ordering,
+    collections::BTreeMap,
+    sync::{atomic::AtomicUsize, Arc},
+};
 use tracing::{debug, error, warn};
 
 pub struct LogsArtifactsContainer {
@@ -40,11 +51,26 @@ pub struct LogsArtifactsContainer {
     buffer: ArcList<StoredMessage>,
 
     /// Mutable state for the container.
-    state: Mutex<ContainerState>,
+    state: Arc<Mutex<ContainerState>>,
 
     /// The time when the container was created by the logging
     /// framework.
     pub event_timestamp: zx::Time,
+
+    /// Current object ID used in place of a memory address
+    /// used to uniquely identify an object in a BTreeMap.
+    next_hanging_get_id: AtomicUsize,
+
+    /// Mechanism for a test to retrieve the internal hanging get state.
+    hanging_get_test_state: Arc<Mutex<TestState>>,
+}
+
+#[derive(PartialEq, Debug)]
+enum TestState {
+    /// Blocked -- waiting for interest change
+    Blocked,
+    /// No FIDL request received yet
+    NoRequest,
 }
 
 struct ContainerState {
@@ -62,6 +88,12 @@ struct ContainerState {
 
     /// Control handles for connected clients.
     control_handles: Vec<LogSinkControlHandle>,
+
+    /// Hanging gets
+    hanging_gets: BTreeMap<
+        usize,
+        Arc<Mutex<Option<oneshot::Sender<Result<FidlInterest, InterestChangeError>>>>>,
+    >,
 }
 
 impl LogsArtifactsContainer {
@@ -75,21 +107,28 @@ impl LogsArtifactsContainer {
             identity,
             budget,
             buffer: Default::default(),
-            state: Mutex::new(ContainerState {
+            state: Arc::new(Mutex::new(ContainerState {
                 is_live: true,
                 num_active_channels: 0,
                 num_active_sockets: 0,
                 control_handles: vec![],
                 interests: BTreeMap::new(),
-            }),
+                hanging_gets: BTreeMap::new(),
+            })),
             stats: Arc::new(stats),
             event_timestamp: zx::Time::get_monotonic(),
+            next_hanging_get_id: AtomicUsize::new(0),
+            hanging_get_test_state: Arc::new(Mutex::new(TestState::NoRequest)),
         };
 
         // there are no control handles so this won't notify anyone
         new.update_interest(interest_selectors, &[]);
 
         new
+    }
+
+    fn fetch_add_hanging_get_id(&self) -> usize {
+        self.next_hanging_get_id.fetch_add(1, std::sync::atomic::Ordering::Relaxed)
     }
 
     /// Returns a stream of this component's log messages.
@@ -164,6 +203,10 @@ impl LogsArtifactsContainer {
         mut stream: LogSinkRequestStream,
         sender: mpsc::UnboundedSender<Task<()>>,
     ) {
+        let hanging_get_sender = Arc::new(Mutex::new(None));
+
+        let mut interest_listener = None;
+        let previous_interest_sent = Arc::new(Mutex::new(None));
         debug!(%self.identity, "Draining LogSink channel.");
         {
             let control = stream.control_handle();
@@ -196,11 +239,102 @@ impl LogsArtifactsContainer {
                 Ok(LogSinkRequest::ConnectStructured { socket, control_handle }) => {
                     handle_socket! {new_structured(socket, control_handle)};
                 }
+                Ok(LogSinkRequest::WaitForInterestChange { responder }) => {
+                    // Check if we sent latest data to the client
+                    let min_interest;
+                    let needs_interest_broadcast;
+                    {
+                        let state = self.state.lock();
+                        let previous_interest = previous_interest_sent.lock();
+                        needs_interest_broadcast = {
+                            if let Some(prev) = &*previous_interest {
+                                *prev != state.min_interest()
+                            } else {
+                                true
+                            }
+                        };
+                        min_interest = state.min_interest();
+                    }
+                    if needs_interest_broadcast {
+                        // Send interest if not yet received
+                        let _ = responder.send(&mut Ok(min_interest.clone().into()));
+                        let mut previous_interest = previous_interest_sent.lock();
+                        *previous_interest = Some(min_interest.clone());
+                    } else {
+                        // Wait for broadcast event asynchronously
+                        self.wait_for_interest_change_async(
+                            previous_interest_sent.clone(),
+                            &mut interest_listener,
+                            responder,
+                            hanging_get_sender.clone(),
+                        )
+                        .await;
+                    }
+                }
                 Err(e) => error!(%self.identity, %e, "error handling log sink"),
             }
         }
         debug!(%self.identity, "LogSink channel closed.");
         self.state.lock().num_active_channels -= 1;
+    }
+
+    async fn wait_for_interest_change_async(
+        self: &Arc<Self>,
+        previous_interest_sent: Arc<Mutex<Option<FidlInterest>>>,
+        interest_listener: &mut Option<Task<()>>,
+        responder: LogSinkWaitForInterestChangeResponder,
+        sender: Arc<Mutex<Option<oneshot::Sender<Result<FidlInterest, InterestChangeError>>>>>,
+    ) {
+        let (tx, rx) = oneshot::channel();
+        {
+            let mut locked_sender = sender.lock();
+            if let Some(value) = locked_sender.take() {
+                // Error to call API twice without waiting for first return
+                let _ = value.send(Err(InterestChangeError::CalledTwice));
+            }
+            *locked_sender = Some(tx);
+        }
+        if let Some(listener) = interest_listener.take() {
+            listener.await;
+        }
+
+        let mut state = self.state.lock();
+        let id = self.fetch_add_hanging_get_id();
+        {
+            state.hanging_gets.insert(id, sender.clone());
+        }
+        let unlocked_state = self.state.clone();
+        let prev_interest_clone = previous_interest_sent.clone();
+        let get_clone = self.hanging_get_test_state.clone();
+        *interest_listener = Some(Task::spawn(async move {
+            // Block started
+            if cfg!(test) {
+                let mut get_state = get_clone.lock();
+                *get_state = TestState::Blocked;
+            }
+            let _ac = AutoCall::new(|| {
+                let mut state = unlocked_state.lock();
+                state.hanging_gets.remove(&id);
+            });
+            let res = rx.await;
+            if let Ok(value) = res {
+                match value {
+                    Ok(value) => {
+                        let _ = responder.send(&mut Ok(value.clone().into()));
+                        let mut write_lock = prev_interest_clone.lock();
+                        *write_lock = Some(value);
+                    }
+                    Err(error) => {
+                        let _ = responder.send(&mut Err(error));
+                    }
+                }
+            }
+            // No longer blocked
+            if cfg!(test) {
+                let mut get_state = get_clone.lock();
+                *get_state = TestState::NoRequest;
+            }
+        }));
     }
 
     /// Drain a `LogMessageSocket` which wraps a socket from a component
@@ -381,6 +515,12 @@ impl ContainerState {
             self.control_handles.retain(|handle| {
                 handle.send_on_register_interest(new_min_interest.clone()).is_ok()
             });
+            for (_, value) in &mut self.hanging_gets {
+                let locked = value.lock().take();
+                if let Some(value) = locked {
+                    let _ = value.send(Ok(new_min_interest.clone()));
+                }
+            }
         }
     }
 
@@ -465,7 +605,8 @@ mod tests {
         logs::budget::BudgetManager,
     };
     use fidl_fuchsia_diagnostics::{ComponentSelector, Severity, StringSelector};
-    use fidl_fuchsia_logger::{LogSinkEventStream, LogSinkMarker};
+    use fidl_fuchsia_logger::{LogSinkEventStream, LogSinkMarker, LogSinkProxy};
+    use fuchsia_async::Duration;
     use matches::assert_matches;
 
     async fn initialize_container() -> (Arc<LogsArtifactsContainer>, LogSinkEventStream) {
@@ -505,6 +646,12 @@ mod tests {
     async fn update_interest() {
         let (container, mut event_stream) = initialize_container().await;
 
+        let (log_sink, stream) =
+            fidl::endpoints::create_proxy_and_stream::<LogSinkMarker>().expect("create log sink");
+
+        let (sender, _recv) = mpsc::unbounded();
+        container.handle_log_sink(stream, sender);
+
         // We shouldn't see this interest update since it doesn't match the
         // moniker.
         container.update_interest(&[interest(&["foo"], Some(Severity::Info))], &[]);
@@ -515,16 +662,86 @@ mod tests {
         container.update_interest(&[interest(&["foo", "bar"], Some(Severity::Info))], &[]);
 
         // Verify we see the last interest we set.
-        assert_severity(&mut event_stream, Severity::Info).await;
+        assert_severity(&mut event_stream, &log_sink, Severity::Info).await;
+    }
+
+    #[fuchsia::test]
+    async fn update_interest_hanging_get() {
+        // Sync path test (initial interest)
+        let (container, _event_stream) = initialize_container().await;
+        let (log_sink, stream) =
+            fidl::endpoints::create_proxy_and_stream::<LogSinkMarker>().expect("create log sink");
+
+        let (sender, _recv) = mpsc::unbounded();
+        container.handle_log_sink(stream, sender);
+        // Get initial interest
+        let initial_interest = log_sink.wait_for_interest_change().await.unwrap().unwrap();
+        {
+            let test_state = container.hanging_get_test_state.lock();
+            assert_eq!(*test_state, TestState::NoRequest);
+        }
+        // Async (blocking) path test.
+        assert_eq!(initial_interest.min_severity, None);
+        let log_sink_clone = log_sink.clone();
+        let interest_future =
+            Task::spawn(async move { log_sink_clone.wait_for_interest_change().await });
+        // Wait for the background task to get blocked to test the blocking case
+        loop {
+            fuchsia_async::Timer::new(Duration::from_millis(200)).await;
+            {
+                let test_state = container.hanging_get_test_state.lock();
+                if *test_state == TestState::Blocked {
+                    break;
+                }
+            }
+        }
+        // We should see this interest update. This should unblock the hanging get.
+        container.update_interest(&[interest(&["foo", "bar"], Some(Severity::Info))], &[]);
+
+        // Verify we see the last interest we set.
+        assert_eq!(interest_future.await.unwrap().unwrap().min_severity, Some(Severity::Info));
+
+        // Issuing another hanging get should error out the first one
+        let log_sink_clone = log_sink.clone();
+        let interest_future =
+            Task::spawn(async move { log_sink_clone.wait_for_interest_change().await });
+        // Since spawn is async we need to wait for first future to block before starting second
+        // Fuchsia Rust provides no ordering guarantees with respect to async tasks
+        loop {
+            fuchsia_async::Timer::new(Duration::from_millis(200)).await;
+            {
+                let test_state = container.hanging_get_test_state.lock();
+                if *test_state == TestState::Blocked {
+                    break;
+                }
+            }
+        }
+        let _interest_future_2 =
+            Task::spawn(async move { log_sink.wait_for_interest_change().await });
+        match interest_future.await {
+            Ok(Err(InterestChangeError::CalledTwice)) => {
+                // pass test
+            }
+            _ => {
+                panic!("Invoking a second interest listener on a channel should cancel the first one with an error.");
+            }
+        }
     }
 
     #[fuchsia::test]
     async fn interest_serverity_semantics() {
         let (container, mut event_stream) = initialize_container().await;
+        let (log_sink, stream) =
+            fidl::endpoints::create_proxy_and_stream::<LogSinkMarker>().expect("create log sink");
+
+        let (sender, _recv) = mpsc::unbounded();
+        container.handle_log_sink(stream, sender);
+        let initial_interest = log_sink.wait_for_interest_change().await.unwrap().unwrap();
+        assert_eq!(initial_interest.min_severity, None);
 
         // Set some interest.
         container.update_interest(&[interest(&["foo", "bar"], Some(Severity::Info))], &[]);
-        assert_severity(&mut event_stream, Severity::Info).await;
+        assert_severity(&mut event_stream, &log_sink, Severity::Info).await;
         assert_matches!(event_stream.next().now_or_never(), None);
         assert_interests(&container, [(Severity::Info, 1)]);
 
@@ -536,7 +753,7 @@ mod tests {
 
         // Sending a lower interest (DEBUG < INFO) updates the previous one.
         container.update_interest(&[interest(&["foo", "bar"], Some(Severity::Debug))], &[]);
-        assert_severity(&mut event_stream, Severity::Debug).await;
+        assert_severity(&mut event_stream, &log_sink, Severity::Debug).await;
         assert_interests(
             &container,
             [(Severity::Debug, 1), (Severity::Info, 1), (Severity::Warn, 1)],
@@ -562,7 +779,7 @@ mod tests {
 
         // The second reset causes a change in minimum interest -> now INFO.
         container.reset_interest(&[interest(&["foo", "bar"], Some(Severity::Debug))]);
-        assert_severity(&mut event_stream, Severity::Info).await;
+        assert_severity(&mut event_stream, &log_sink, Severity::Info).await;
         assert_interests(&container, [(Severity::Info, 1), (Severity::Warn, 1)]);
 
         // If we pass a previous severity (INFO), then we undo it and set the new one (ERROR).
@@ -571,12 +788,12 @@ mod tests {
             &[interest(&["foo", "bar"], Some(Severity::Error))],
             &[interest(&["foo", "bar"], Some(Severity::Info))],
         );
-        assert_severity(&mut event_stream, Severity::Warn).await;
+        assert_severity(&mut event_stream, &log_sink, Severity::Warn).await;
         assert_interests(&container, [(Severity::Error, 1), (Severity::Warn, 1)]);
 
         // When we reset warn, now we get ERROR since that's the minimum severity in the set.
         container.reset_interest(&[interest(&["foo", "bar"], Some(Severity::Warn))]);
-        assert_severity(&mut event_stream, Severity::Error).await;
+        assert_severity(&mut event_stream, &log_sink, Severity::Error).await;
         assert_interests(&container, [(Severity::Error, 1)]);
 
         // When we reset ERROR , we get back to EMPTY since we have removed all interests from the
@@ -604,7 +821,11 @@ mod tests {
         }
     }
 
-    async fn assert_severity(event_stream: &mut LogSinkEventStream, severity: Severity) {
+    async fn assert_severity(
+        event_stream: &mut LogSinkEventStream,
+        proxy: &LogSinkProxy,
+        severity: Severity,
+    ) {
         assert_eq!(
             event_stream
                 .next()
@@ -615,6 +836,10 @@ mod tests {
                 .unwrap()
                 .min_severity
                 .unwrap(),
+            severity
+        );
+        assert_eq!(
+            proxy.wait_for_interest_change().await.unwrap().unwrap().min_severity.unwrap(),
             severity
         );
     }

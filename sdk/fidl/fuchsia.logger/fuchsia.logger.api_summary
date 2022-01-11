@@ -1,4 +1,6 @@
 const fuchsia.logger/COMPONENT_NAME_PLACEHOLDER_TAG string "COMPONENT_NAME"
+enum/member fuchsia.logger/InterestChangeError.CALLED_TWICE 1
+strict enum fuchsia.logger/InterestChangeError uint32
 const fuchsia.logger/LOG_LEVEL_DEFAULT uint8 48
 const fuchsia.logger/LOG_SEVERITY_MAX_STEP uint8 6
 const fuchsia.logger/LOG_SEVERITY_STEP_SIZE uint8 16
@@ -49,7 +51,13 @@ protocol/member fuchsia.logger/LogSink.Connect(zx/handle:SOCKET socket)
 protocol/member fuchsia.logger/LogSink.ConnectStructured(zx/handle:SOCKET socket)
 protocol/member fuchsia.logger/LogSink.OnInterestChanged -> (fuchsia.diagnostics/Interest interest)
 protocol/member fuchsia.logger/LogSink.OnRegisterInterest -> (fuchsia.diagnostics/Interest interest)
+protocol/member fuchsia.logger/LogSink.WaitForInterestChange() -> (fuchsia.logger/LogSink_WaitForInterestChange_Result result)
 protocol fuchsia.logger/LogSink
+struct/member fuchsia.logger/LogSink_WaitForInterestChange_Response.data fuchsia.diagnostics/Interest
+struct fuchsia.logger/LogSink_WaitForInterestChange_Response
+union/member fuchsia.logger/LogSink_WaitForInterestChange_Result.err fuchsia.logger/InterestChangeError
+union/member fuchsia.logger/LogSink_WaitForInterestChange_Result.response fuchsia.logger/LogSink_WaitForInterestChange_Response
+strict union fuchsia.logger/LogSink_WaitForInterestChange_Result
 const fuchsia.logger/MAX_DATAGRAM_LEN_BYTES uint32 32768
 const fuchsia.logger/MAX_LOG_MANY_SIZE_BYTES uint64 16384
 const fuchsia.logger/MAX_TAGS uint8 16

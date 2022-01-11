@@ -24,7 +24,6 @@ import (
 
 	"fidl/fuchsia/diagnostics"
 	"fidl/fuchsia/logger"
-
 	"go.fuchsia.dev/fuchsia/src/lib/component"
 	syslog "go.fuchsia.dev/fuchsia/src/lib/syslog/go"
 )
@@ -45,6 +44,10 @@ func (impl *logSinkImpl) Connect(ctx fidl.Context, socket zx.Socket) error {
 
 func (*logSinkImpl) ConnectStructured(fidl.Context, zx.Socket) error {
 	return nil
+}
+
+func (*logSinkImpl) WaitForInterestChange(fidl.Context) (logger.LogSinkWaitForInterestChangeResult, error) {
+	return logger.LogSinkWaitForInterestChangeResult{}, nil
 }
 
 func TestLogSimple(t *testing.T) {

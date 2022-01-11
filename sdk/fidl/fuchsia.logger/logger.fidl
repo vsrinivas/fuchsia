@@ -129,6 +129,12 @@ protocol Log {
     });
 };
 
+type InterestChangeError = strict enum : uint32 {
+    /// Incorrectly called WaitForInterestChange twice
+    /// without waiting for the first call to return.
+    CALLED_TWICE = 1;
+};
+
 /// Drains a program's logs.
 @discoverable
 protocol LogSink {
@@ -139,6 +145,18 @@ protocol LogSink {
     Connect(resource struct {
         socket zx.handle:SOCKET;
     });
+
+    /// LogSink implementers will return to this hanging-get whenever the scope of
+    /// their interest changes. Clients are expected to emit messages based on
+    /// the registered Interest. In the event that an empty interest is
+    /// conveyed, clients should emit messages based on their default
+    /// e.g. compile time configuration. Each client may only poll this once at a time.
+    /// Invoking WaitForInterestChange a second time before the first call returns will
+    /// result in an error being returned.
+    @transitional
+    WaitForInterestChange() -> (struct {
+        data fuchsia.diagnostics.Interest;
+    }) error InterestChangeError;
 
     /// Send this socket to be drained, using the structured logs format.
     ///
@@ -154,6 +172,7 @@ protocol LogSink {
     /// the registered Interest. In the event that an empty interest is
     /// conveyed, clients should emit messages based on their default
     /// (compile time) configuration.
+    @deprecated
     -> OnRegisterInterest(struct {
         interest fuchsia.diagnostics.Interest;
     });
