@@ -8,6 +8,7 @@ import 'package:fidl_fuchsia_identity_account/fidl_async.dart';
 import 'package:fuchsia_logger/logger.dart';
 import 'package:fuchsia_services/services.dart';
 import 'package:fuchsia_vfs/vfs.dart';
+import 'package:internationalization/strings.dart';
 import 'package:mobx/mobx.dart';
 import 'package:zircon/zircon.dart';
 
@@ -58,11 +59,22 @@ class AuthService {
     return _accountIds.isNotEmpty;
   }
 
+  String errorFromException(Object e) {
+    if (e is MethodException) {
+      switch (e.value as Error) {
+        case Error.failedAuthentication:
+          return Strings.accountPasswordFailedAuthentication;
+      }
+    }
+    return e.toString();
+  }
+
   /// Creates an account with password and sets up the account data directory.
   Future<void> createAccountWithPassword(String password) async {
     assert(_account == null, 'An account already exists.');
-    if (_account != null) {
-      await _account!.lock();
+    if (_account != null && _account!.ctrl.isBound) {
+      // ignore: unawaited_futures
+      _account!.lock().catchError((_) {});
       _account!.ctrl.close();
     }
 
@@ -86,8 +98,9 @@ class AuthService {
   /// directory.
   Future<void> loginWithPassword(String password) async {
     assert(_accountIds.isNotEmpty, 'No account exist to login to.');
-    if (_account != null) {
-      await _account!.lock();
+    if (_account != null && _account!.ctrl.isBound) {
+      // ignore: unawaited_futures
+      _account!.lock().catchError((_) {});
       _account!.ctrl.close();
     }
 

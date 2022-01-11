@@ -50,6 +50,7 @@ class Password extends StatelessWidget {
                         width: kOobeBodyFieldWidth,
                         child: TextFormField(
                           autofocus: true,
+                          autovalidateMode: AutovalidateMode.onUserInteraction,
                           controller: _passwordController,
                           obscureText: !_showPassword.value,
                           decoration: InputDecoration(
@@ -57,13 +58,11 @@ class Password extends StatelessWidget {
                             labelText: Strings.passwordHint,
                           ),
                           validator: (value) {
-                            // TODO(http://fxb/85576): Uncomment once
-                            // login functionality is ready.
-                            // if (value == null ||
-                            //     value.isEmpty ||
-                            //     value.length < passwordLength) {
-                            //   return Strings.accountPasswordInvalid;
-                            // }
+                            if (value == null ||
+                                value.isEmpty ||
+                                value.length < kPasswordLength) {
+                              return Strings.accountPasswordInvalid;
+                            }
                             return null;
                           },
                         ),
@@ -73,6 +72,7 @@ class Password extends StatelessWidget {
                       SizedBox(
                         width: kOobeBodyFieldWidth,
                         child: TextFormField(
+                          autovalidateMode: AutovalidateMode.onUserInteraction,
                           controller: _confirmPasswordController,
                           obscureText: !_showPassword.value,
                           decoration: InputDecoration(
@@ -80,16 +80,9 @@ class Password extends StatelessWidget {
                             labelText: Strings.confirmPasswordHint,
                           ),
                           validator: (value) {
-                            // TODO(http://fxb/85576): Uncomment once
-                            // login functionality is ready.
-                            // if (value == null ||
-                            //     value.isEmpty ||
-                            //     value.length < passwordLength) {
-                            //   return Strings.accountPasswordInvalid;
-                            // }
-                            // if (value != _passwordController.text) {
-                            //   return Strings.accountPasswordMismatch;
-                            // }
+                            if (value != _passwordController.text) {
+                              return Strings.accountPasswordMismatch;
+                            }
                             return null;
                           },
                           onFieldSubmitted: (value) =>

@@ -80,6 +80,8 @@ class Login extends StatelessWidget {
                                 width: kOobeBodyFieldWidth,
                                 child: TextFormField(
                                   autofocus: true,
+                                  autovalidateMode:
+                                      AutovalidateMode.onUserInteraction,
                                   controller: _passwordController,
                                   obscureText: !_showPassword.value,
                                   decoration: InputDecoration(
@@ -87,13 +89,9 @@ class Login extends StatelessWidget {
                                     labelText: Strings.passwordHint,
                                   ),
                                   validator: (value) {
-                                    // TODO(http://fxb/81598): Uncomment once
-                                    // login functionality is ready.
-                                    // if (value == null ||
-                                    //     value.isEmpty ||
-                                    //     value.length < passwordLength) {
-                                    //   return Strings.accountPasswordInvalid;
-                                    // }
+                                    if (value == null || value.isEmpty) {
+                                      return Strings.accountPasswordInvalid;
+                                    }
                                     return null;
                                   },
                                   onFieldSubmitted: (_) {

@@ -349,7 +349,10 @@ class OobeStateImpl with Disposable implements OobeState {
       // ignore: avoid_catches_without_on_clauses
     } catch (e) {
       log.shout('Caught exception during account creation: $e');
-      _authError.value = e.toString();
+      runInAction(() {
+        _wait.value = false;
+        _authError.value = authService.errorFromException(e);
+      });
     }
   }
 
@@ -364,7 +367,10 @@ class OobeStateImpl with Disposable implements OobeState {
       // ignore: avoid_catches_without_on_clauses
     } catch (e) {
       log.shout('Caught exception during login: $e');
-      _authError.value = e.toString();
+      runInAction(() {
+        _wait.value = false;
+        _authError.value = authService.errorFromException(e);
+      });
     }
   }
 

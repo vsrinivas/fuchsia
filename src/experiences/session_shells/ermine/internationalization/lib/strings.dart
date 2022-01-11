@@ -472,6 +472,12 @@ class Strings {
         desc: 'The error text when password does not meet requirements',
       );
 
+  static String get accountPasswordFailedAuthentication => Intl.message(
+        'The password you entered was incorrect.',
+        name: 'accountPasswordFailedAuthentication',
+        desc: 'The error text when password does fails authentication',
+      );
+
   static String get accountPasswordMismatch => Intl.message(
         'The passwords do not match.',
         name: 'accountPasswordMismatch',
