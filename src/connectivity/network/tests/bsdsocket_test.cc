@@ -12,6 +12,7 @@
 #include <netdb.h>
 #include <netinet/icmp6.h>
 #include <netinet/if_ether.h>
+#include <netinet/ip.h>
 #include <netinet/ip_icmp.h>
 #include <netinet/tcp.h>
 #include <poll.h>
@@ -349,6 +350,7 @@ TEST(LocalhostTest, IpAddMembershipAny) {
   ASSERT_EQ(close(s.release()), 0) << strerror(errno);
 }
 
+// TODO(https://fxbug.dev/90038): Delete once SockOptsTest is gone.
 struct SockOption {
   int level;
   int option;
@@ -425,6 +427,371 @@ class SocketKindTest : public testing::TestWithParam<SocketKind> {
 constexpr int kSockOptOn = 1;
 constexpr int kSockOptOff = 0;
 
+struct SocketOption {
+  int level;
+  std::string level_str;
+  int name;
+  std::string name_str;
+};
+
+#define STRINGIFIED_SOCKOPT(level, name) \
+  SocketOption { level, #level, name, #name }
+
+struct IntSocketOption {
+  SocketOption option;
+  bool is_boolean;
+  int default_value;
+  std::vector<int> valid_values;
+  std::vector<int> invalid_values;
+};
+
+class SocketOptionTestBase : public testing::Test {
+ public:
+  SocketOptionTestBase(int domain, int type) : sock_domain_(domain), sock_type_(type) {}
+
+ protected:
+  void SetUp() override {
+    ASSERT_TRUE(sock_ = fbl::unique_fd(socket(sock_domain_, sock_type_, 0))) << strerror(errno);
+  }
+
+  void TearDown() override { EXPECT_EQ(close(sock_.release()), 0) << strerror(errno); }
+
+  bool IsOptionLevelSupportedByDomain(int level) const {
+#if defined(__Fuchsia__)
+    // TODO(https://gvisor.dev/issues/6389): Remove once Fuchsia returns an error
+    // when setting/getting IPv6 options on an IPv4 socket.
+    return true;
+#else
+    // IPv6 options are only supported on AF_INET6 sockets.
+    return sock_domain_ == AF_INET6 || level != IPPROTO_IPV6;
+#endif
+  }
+
+  fbl::unique_fd const& sock() const { return sock_; }
+
+ private:
+  fbl::unique_fd sock_;
+  const int sock_domain_;
+  const int sock_type_;
+};
+
+using SocketKindAndIntOption = std::tuple<int, int, IntSocketOption>;
+
+std::string socketKindAndIntOptionToString(
+    const testing::TestParamInfo<SocketKindAndIntOption>& info) {
+  auto const& [domain, type, sockopt] = info.param;
+  std::ostringstream oss;
+  oss << socketDomainToString(domain);
+  oss << '_' << socketTypeToString(type);
+  oss << '_' << sockopt.option.level_str;
+  oss << '_' << sockopt.option.name_str;
+  return oss.str();
+}
+
+// Test functionality common to every integer and pseudo-boolean socket option.
+class IntSocketOptionTest : public SocketOptionTestBase,
+                            public testing::WithParamInterface<SocketKindAndIntOption> {
+ protected:
+  IntSocketOptionTest()
+      : SocketOptionTestBase(std::get<0>(GetParam()), std::get<1>(GetParam())),
+        opt_(std::get<2>(GetParam())) {}
+
+  void SetUp() override {
+    ASSERT_FALSE(opt_.valid_values.empty()) << "must have at least one valid value";
+    SocketOptionTestBase::SetUp();
+  }
+
+  void TearDown() override { SocketOptionTestBase::TearDown(); }
+
+  bool IsOptionCharCompatible() const {
+    const int level = opt_.option.level;
+    return level != IPPROTO_IPV6 && level != SOL_SOCKET;
+  }
+
+  IntSocketOption const& opt() const { return opt_; }
+
+ private:
+  const IntSocketOption opt_;
+};
+
+TEST_P(IntSocketOptionTest, Default) {
+  int get = -1;
+  socklen_t get_len = sizeof(get);
+  const int r = getsockopt(sock().get(), opt().option.level, opt().option.name, &get, &get_len);
+
+  if (IsOptionLevelSupportedByDomain(opt().option.level)) {
+    ASSERT_EQ(r, 0) << strerror(errno);
+    ASSERT_EQ(get_len, sizeof(get));
+    EXPECT_EQ(get, opt().default_value);
+  } else {
+    ASSERT_EQ(r, -1);
+    EXPECT_EQ(errno, ENOTSUP) << strerror(errno);
+  }
+}
+
+TEST_P(IntSocketOptionTest, SetValid) {
+  for (int value : opt().valid_values) {
+    SCOPED_TRACE("value=" + std::to_string(value));
+    // Test each value in a lambda so we continue testing the other values if an ASSERT fails.
+    [&]() {
+      const int r =
+          setsockopt(sock().get(), opt().option.level, opt().option.name, &value, sizeof(value));
+
+      if (IsOptionLevelSupportedByDomain(opt().option.level)) {
+        ASSERT_EQ(r, 0) << strerror(errno);
+        int get = -1;
+        socklen_t get_len = sizeof(get);
+        ASSERT_EQ(getsockopt(sock().get(), opt().option.level, opt().option.name, &get, &get_len),
+                  0)
+            << strerror(errno);
+        ASSERT_EQ(get_len, sizeof(get));
+        EXPECT_EQ(get, opt().is_boolean ? static_cast<bool>(value) : value);
+      } else {
+        ASSERT_EQ(r, -1);
+        EXPECT_EQ(errno, ENOPROTOOPT) << strerror(errno);
+      }
+    }();
+  }
+}
+
+TEST_P(IntSocketOptionTest, SetInvalid) {
+  for (int value : opt().invalid_values) {
+    SCOPED_TRACE("value=" + std::to_string(value));
+    // Test each value in a lambda so we continue testing the other values if an ASSERT fails.
+    [&]() {
+      const int r =
+          setsockopt(sock().get(), opt().option.level, opt().option.name, &value, sizeof(value));
+
+      if (IsOptionLevelSupportedByDomain(opt().option.level)) {
+        ASSERT_EQ(r, -1);
+        EXPECT_EQ(errno, EINVAL) << strerror(errno);
+
+        // Confirm that no changes were made.
+        int get = -1;
+        socklen_t get_len = sizeof(get);
+        ASSERT_EQ(getsockopt(sock().get(), opt().option.level, opt().option.name, &get, &get_len),
+                  0)
+            << strerror(errno);
+        ASSERT_EQ(get_len, sizeof(get));
+        EXPECT_EQ(get, opt().default_value);
+      } else {
+        ASSERT_EQ(r, -1);
+        EXPECT_EQ(errno, ENOPROTOOPT) << strerror(errno);
+      }
+    }();
+  }
+}
+
+TEST_P(IntSocketOptionTest, SetChar) {
+  for (int value : opt().valid_values) {
+    SCOPED_TRACE("value=" + std::to_string(value));
+    // Test each value in a lambda so we continue testing the other values if an ASSERT fails.
+    [&]() {
+      int want;
+      {
+        const char set_char = static_cast<char>(value);
+        if (static_cast<int>(set_char) != value) {
+          // Skip values that don't fit in a char.
+          return;
+        }
+        const int r = setsockopt(sock().get(), opt().option.level, opt().option.name, &set_char,
+                                 sizeof(set_char));
+        if (!IsOptionLevelSupportedByDomain(opt().option.level)) {
+          ASSERT_EQ(r, -1);
+          EXPECT_EQ(errno, ENOPROTOOPT) << strerror(errno);
+          want = opt().default_value;
+        } else if (!IsOptionCharCompatible()) {
+          ASSERT_EQ(r, -1);
+          EXPECT_EQ(errno, EINVAL) << strerror(errno);
+          want = opt().default_value;
+        } else {
+          ASSERT_EQ(r, 0) << strerror(errno);
+          want = opt().is_boolean ? static_cast<bool>(set_char) : set_char;
+        }
+      }
+
+      {
+        char get = -1;
+        socklen_t get_len = sizeof(get);
+        const int r =
+            getsockopt(sock().get(), opt().option.level, opt().option.name, &get, &get_len);
+        if (!IsOptionLevelSupportedByDomain(opt().option.level)) {
+          ASSERT_EQ(r, -1);
+          EXPECT_EQ(errno, ENOTSUP) << strerror(errno);
+        } else {
+          ASSERT_EQ(r, 0) << strerror(errno);
+          ASSERT_EQ(get_len, sizeof(get));
+          EXPECT_EQ(get, static_cast<char>(want));
+        }
+      }
+
+      {
+        int16_t get = -1;
+        socklen_t get_len = sizeof(get);
+        const int r =
+            getsockopt(sock().get(), opt().option.level, opt().option.name, &get, &get_len);
+        if (!IsOptionLevelSupportedByDomain(opt().option.level)) {
+          ASSERT_EQ(r, -1);
+          EXPECT_EQ(errno, ENOTSUP) << strerror(errno);
+        } else if (!IsOptionCharCompatible()) {
+          ASSERT_EQ(r, 0) << strerror(errno);
+          ASSERT_EQ(get_len, sizeof(get));
+          EXPECT_EQ(get, want);
+        } else {
+          ASSERT_EQ(r, 0) << strerror(errno);
+          // Truncates size < 4 to 1 and only writes the low byte.
+          // https://github.com/torvalds/linux/blob/2585cf9dfaa/net/ipv4/ip_sockglue.c#L1742-L1745
+          ASSERT_EQ(get_len, sizeof(char));
+          EXPECT_EQ(get, static_cast<int16_t>(uint16_t(-1) << 8) | want);
+        }
+      }
+
+      {
+        int get = -1;
+        socklen_t get_len = sizeof(get);
+        const int r =
+            getsockopt(sock().get(), opt().option.level, opt().option.name, &get, &get_len);
+        if (!IsOptionLevelSupportedByDomain(opt().option.level)) {
+          ASSERT_EQ(r, -1);
+          EXPECT_EQ(errno, ENOTSUP) << strerror(errno);
+        } else {
+          ASSERT_EQ(r, 0) << strerror(errno);
+          ASSERT_EQ(get_len, sizeof(get));
+          EXPECT_EQ(get, want);
+        }
+      }
+    }();
+  }
+}
+
+const std::vector<int> kBooleanOptionValidValues = {-2, -1, 0, 1, 2, 15, 255, 256};
+
+// The tests below use valid and invalid values that attempt to cover normal use cases,
+// min/max values, and invalid negative/large values.
+// Special values (e.g. ones that reset an option to its default) have option-specific tests.
+INSTANTIATE_TEST_SUITE_P(
+    IntSocketOptionTests, IntSocketOptionTest,
+    testing::Combine(testing::Values(AF_INET, AF_INET6), testing::Values(SOCK_STREAM, SOCK_DGRAM),
+                     testing::Values(
+                         IntSocketOption{
+                             .option = STRINGIFIED_SOCKOPT(IPPROTO_IP, IP_MULTICAST_LOOP),
+                             .is_boolean = true,
+                             .default_value = 1,
+                             .valid_values = kBooleanOptionValidValues,
+                             .invalid_values = {},
+                         },
+                         IntSocketOption{
+                             .option = STRINGIFIED_SOCKOPT(IPPROTO_IP, IP_TOS),
+                             .is_boolean = false,
+                             .default_value = 0,
+                             // The ECN (2 rightmost) bits may be cleared, so we use arbitrary
+                             // values without these bits set. See CheckSkipECN test.
+                             .valid_values = {0x04, 0xC0, 0xFC},
+                             // Larger-than-byte values are accepted but the extra bits are
+                             // merely ignored). See InvalidLargeTOS test.
+                             .invalid_values = {},
+                         },
+                         IntSocketOption{
+                             .option = STRINGIFIED_SOCKOPT(IPPROTO_IP, IP_RECVTOS),
+                             .is_boolean = true,
+                             .default_value = 0,
+                             .valid_values = kBooleanOptionValidValues,
+                             .invalid_values = {},
+                         },
+                         IntSocketOption{
+                             .option = STRINGIFIED_SOCKOPT(IPPROTO_IP, IP_TTL),
+                             .is_boolean = false,
+                             .default_value = 64,
+                             // -1 is not tested here, it is a special value which resets ttl to
+                             // its default value.
+                             .valid_values = {1, 2, 15, 255},
+                             .invalid_values = {-2, 0, 256},
+                         },
+                         IntSocketOption {
+                           .option = STRINGIFIED_SOCKOPT(IPPROTO_IPV6, IPV6_MULTICAST_LOOP),
+                           .is_boolean = true, .default_value = 1,
+#if defined(__Fuchsia__)
+                           .valid_values = kBooleanOptionValidValues, .invalid_values = {},
+#else
+                           // On Linux, this option only accepts 0 or 1. This is one of a kind.
+                           // There seem to be no good reasons for it, so it should probably be
+                           // fixed in Linux rather than in Fuchsia.
+                           // https://github.com/torvalds/linux/blob/eec4df26e24/net/ipv6/ipv6_sockglue.c#L758
+                               .valid_values = {0, 1}, .invalid_values = {-2, -1, 2, 15, 255, 256},
+#endif
+                         },
+                         IntSocketOption {
+                           .option = STRINGIFIED_SOCKOPT(IPPROTO_IPV6, IPV6_TCLASS),
+                           .is_boolean = false, .default_value = 0,
+#if defined(__Fuchsia__)
+                           // TODO(https://gvisor.dev/issues/6389): Remove once Fuchsia treats
+                           // IPV6_TCLASS differently than IP_TOS. See CheckSkipECN test.
+                               .valid_values = {0x04, 0xC0, 0xFC},
+#else
+                           // -1 is not tested here, it is a special value which resets the traffic
+                           // class to its default value.
+                               .valid_values = {0, 1, 2, 15, 255},
+#endif
+                           .invalid_values = {-2, 256},
+                         },
+                         IntSocketOption{
+                             .option = STRINGIFIED_SOCKOPT(IPPROTO_IPV6, IPV6_RECVTCLASS),
+                             .is_boolean = true,
+                             .default_value = 0,
+                             .valid_values = kBooleanOptionValidValues,
+                             .invalid_values = {},
+                         },
+                         IntSocketOption{
+                             .option = STRINGIFIED_SOCKOPT(SOL_SOCKET, SO_NO_CHECK),
+                             .is_boolean = true,
+                             .default_value = 0,
+                             .valid_values = kBooleanOptionValidValues,
+                             .invalid_values = {},
+                         },
+                         IntSocketOption{
+                             .option = STRINGIFIED_SOCKOPT(SOL_SOCKET, SO_TIMESTAMP),
+                             .is_boolean = true,
+                             .default_value = 0,
+                             .valid_values = kBooleanOptionValidValues,
+                             .invalid_values = {},
+                         },
+                         IntSocketOption{
+                             .option = STRINGIFIED_SOCKOPT(SOL_SOCKET, SO_TIMESTAMPNS),
+                             .is_boolean = true,
+                             .default_value = 0,
+                             .valid_values = kBooleanOptionValidValues,
+                             .invalid_values = {},
+                         })),
+    socketKindAndIntOptionToString);
+
+// TODO(https://github.com/google/gvisor/issues/6972): Test multicast ttl options on SOCK_STREAM
+// sockets. Right now it's complicated because setting these options on a stream socket silently
+// fails (no error returned but no change observed).
+INSTANTIATE_TEST_SUITE_P(
+    DatagramIntSocketOptionTests, IntSocketOptionTest,
+    testing::Combine(testing::Values(AF_INET, AF_INET6), testing::Values(SOCK_DGRAM),
+                     testing::Values(
+                         IntSocketOption{
+                             .option = STRINGIFIED_SOCKOPT(IPPROTO_IP, IP_MULTICAST_TTL),
+                             .is_boolean = false,
+                             .default_value = 1,
+                             // -1 is not tested here, it is a special value which
+                             // resets the ttl to its default value.
+                             .valid_values = {0, 1, 2, 15, 128, 255},
+                             .invalid_values = {-2, 256},
+                         },
+                         IntSocketOption{
+                             .option = STRINGIFIED_SOCKOPT(IPPROTO_IPV6, IPV6_MULTICAST_HOPS),
+                             .is_boolean = false,
+                             .default_value = 1,
+                             // -1 is not tested here, it is a special value which
+                             // resets the hop limit to its default value.
+                             .valid_values = {0, 1, 2, 15, 128, 255},
+                             .invalid_values = {-2, 256},
+                         })),
+    socketKindAndIntOptionToString);
+
+// TODO(https://fxbug.dev/90038): Use SocketOptionTestBase instead of SocketOptsTest.
 class SocketOptsTest : public SocketKindTest {
  protected:
   static bool IsTCP() { return std::get<1>(GetParam()) == SOCK_STREAM; }
@@ -441,19 +808,6 @@ class SocketOptsTest : public SocketKindTest {
     return {
         .level = IPPROTO_IP,
         .option = IP_TOS,
-    };
-  }
-
-  static SockOption GetMcastLoopOption() {
-    if (IsIPv6()) {
-      return {
-          .level = IPPROTO_IPV6,
-          .option = IPV6_MULTICAST_LOOP,
-      };
-    }
-    return {
-        .level = IPPROTO_IP,
-        .option = IP_MULTICAST_LOOP,
     };
   }
 
@@ -518,44 +872,6 @@ class SocketOptsTest : public SocketKindTest {
   }
 };
 
-// The SocketOptsTest is adapted from gvisor/tests/syscalls/linux/socket_ip_unbound.cc
-TEST_P(SocketOptsTest, TtlDefault) {
-  fbl::unique_fd s;
-  ASSERT_TRUE(s = NewSocket()) << strerror(errno);
-
-  int get = -1;
-  socklen_t get_sz = sizeof(get);
-  constexpr int kDefaultTTL = 64;
-  EXPECT_EQ(getsockopt(s.get(), IPPROTO_IP, IP_TTL, &get, &get_sz), 0) << strerror(errno);
-  EXPECT_EQ(get_sz, sizeof(get));
-  EXPECT_EQ(get, kDefaultTTL);
-  EXPECT_EQ(close(s.release()), 0) << strerror(errno);
-}
-
-TEST_P(SocketOptsTest, SetTtl) {
-  fbl::unique_fd s;
-  ASSERT_TRUE(s = NewSocket()) << strerror(errno);
-
-  int get1 = -1;
-  socklen_t get1_sz = sizeof(get1);
-  EXPECT_EQ(getsockopt(s.get(), IPPROTO_IP, IP_TTL, &get1, &get1_sz), 0) << strerror(errno);
-  EXPECT_EQ(get1_sz, sizeof(get1));
-
-  int set = 100;
-  if (set == get1) {
-    set += 1;
-  }
-  socklen_t set_sz = sizeof(set);
-  EXPECT_EQ(setsockopt(s.get(), IPPROTO_IP, IP_TTL, &set, set_sz), 0) << strerror(errno);
-
-  int get2 = -1;
-  socklen_t get2_sz = sizeof(get2);
-  EXPECT_EQ(getsockopt(s.get(), IPPROTO_IP, IP_TTL, &get2, &get2_sz), 0) << strerror(errno);
-  EXPECT_EQ(get2_sz, sizeof(get2));
-  EXPECT_EQ(get2, set);
-  EXPECT_EQ(close(s.release()), 0) << strerror(errno);
-}
-
 TEST_P(SocketOptsTest, ResetTtlToDefault) {
   fbl::unique_fd s;
   ASSERT_TRUE(s = NewSocket()) << strerror(errno);
@@ -584,70 +900,6 @@ TEST_P(SocketOptsTest, ResetTtlToDefault) {
   EXPECT_EQ(close(s.release()), 0) << strerror(errno);
 }
 
-TEST_P(SocketOptsTest, ZeroTtl) {
-  fbl::unique_fd s;
-  ASSERT_TRUE(s = NewSocket()) << strerror(errno);
-
-  int set = 0;
-  socklen_t set_sz = sizeof(set);
-  EXPECT_EQ(setsockopt(s.get(), IPPROTO_IP, IP_TTL, &set, set_sz), -1);
-  EXPECT_EQ(errno, EINVAL) << strerror(errno);
-  EXPECT_EQ(close(s.release()), 0) << strerror(errno);
-}
-
-TEST_P(SocketOptsTest, InvalidLargeTtl) {
-  fbl::unique_fd s;
-  ASSERT_TRUE(s = NewSocket()) << strerror(errno);
-
-  int set = 256;
-  socklen_t set_sz = sizeof(set);
-  EXPECT_EQ(setsockopt(s.get(), IPPROTO_IP, IP_TTL, &set, set_sz), -1);
-  EXPECT_EQ(errno, EINVAL) << strerror(errno);
-  EXPECT_EQ(close(s.release()), 0) << strerror(errno);
-}
-
-TEST_P(SocketOptsTest, InvalidNegativeTtl) {
-  fbl::unique_fd s;
-  ASSERT_TRUE(s = NewSocket()) << strerror(errno);
-
-  int set = -2;
-  socklen_t set_sz = sizeof(set);
-  EXPECT_EQ(setsockopt(s.get(), IPPROTO_IP, IP_TTL, &set, set_sz), -1);
-  EXPECT_EQ(errno, EINVAL) << strerror(errno);
-  EXPECT_EQ(close(s.release()), 0) << strerror(errno);
-}
-
-TEST_P(SocketOptsTest, TOSDefault) {
-  fbl::unique_fd s;
-  ASSERT_TRUE(s = NewSocket()) << strerror(errno);
-
-  SockOption t = GetTOSOption();
-  int get = -1;
-  socklen_t get_sz = sizeof(get);
-  constexpr int kDefaultTOS = 0;
-  EXPECT_EQ(getsockopt(s.get(), t.level, t.option, &get, &get_sz), 0) << strerror(errno);
-  EXPECT_EQ(get_sz, sizeof(get));
-  EXPECT_EQ(get, kDefaultTOS);
-  EXPECT_EQ(close(s.release()), 0) << strerror(errno);
-}
-
-TEST_P(SocketOptsTest, SetTOS) {
-  fbl::unique_fd s;
-  ASSERT_TRUE(s = NewSocket()) << strerror(errno);
-
-  int set = 0xC0;
-  socklen_t set_sz = sizeof(set);
-  SockOption t = GetTOSOption();
-  EXPECT_EQ(setsockopt(s.get(), t.level, t.option, &set, set_sz), 0) << strerror(errno);
-
-  int get = -1;
-  socklen_t get_sz = sizeof(get);
-  EXPECT_EQ(getsockopt(s.get(), t.level, t.option, &get, &get_sz), 0) << strerror(errno);
-  EXPECT_EQ(get_sz, sizeof(get));
-  EXPECT_EQ(get, set);
-  EXPECT_EQ(close(s.release()), 0) << strerror(errno);
-}
-
 TEST_P(SocketOptsTest, NullTOS) {
   fbl::unique_fd s;
   ASSERT_TRUE(s = NewSocket()) << strerror(errno);
@@ -669,22 +921,6 @@ TEST_P(SocketOptsTest, NullTOS) {
   EXPECT_EQ(close(s.release()), 0) << strerror(errno);
 }
 
-TEST_P(SocketOptsTest, ZeroTOS) {
-  fbl::unique_fd s;
-  ASSERT_TRUE(s = NewSocket()) << strerror(errno);
-
-  int set = 0;
-  socklen_t set_sz = sizeof(set);
-  SockOption t = GetTOSOption();
-  EXPECT_EQ(setsockopt(s.get(), t.level, t.option, &set, set_sz), 0) << strerror(errno);
-  int get = -1;
-  socklen_t get_sz = sizeof(get);
-  EXPECT_EQ(getsockopt(s.get(), t.level, t.option, &get, &get_sz), 0) << strerror(errno);
-  EXPECT_EQ(get_sz, sizeof(get));
-  EXPECT_EQ(get, set);
-  EXPECT_EQ(close(s.release()), 0) << strerror(errno);
-}
-
 TEST_P(SocketOptsTest, InvalidLargeTOS) {
   fbl::unique_fd s;
   ASSERT_TRUE(s = NewSocket()) << strerror(errno);
@@ -698,6 +934,8 @@ TEST_P(SocketOptsTest, InvalidLargeTOS) {
     EXPECT_EQ(setsockopt(s.get(), t.level, t.option, &set, set_sz), -1);
     EXPECT_EQ(errno, EINVAL) << strerror(errno);
   } else {
+    // Linux allows values larger than 255, though it only looks at the char part of the value.
+    // https://github.com/torvalds/linux/blob/eec4df26e24/net/ipv4/ip_sockglue.c#L1047
     EXPECT_EQ(setsockopt(s.get(), t.level, t.option, &set, set_sz), 0) << strerror(errno);
   }
   int get = -1;
@@ -866,184 +1104,6 @@ TEST_P(SocketOptsTest, InvalidNegativeTOS) {
   EXPECT_EQ(close(s.release()), 0) << strerror(errno);
 }
 
-TEST_P(SocketOptsTest, MulticastLoopDefault) {
-  if (IsTCP()) {
-    GTEST_SKIP() << "Skip multicast tests on TCP socket";
-  }
-
-  fbl::unique_fd s;
-  ASSERT_TRUE(s = NewSocket()) << strerror(errno);
-
-  int get = -1;
-  socklen_t get_len = sizeof(get);
-  SockOption t = GetMcastLoopOption();
-  EXPECT_EQ(getsockopt(s.get(), t.level, t.option, &get, &get_len), 0) << strerror(errno);
-  EXPECT_EQ(get_len, sizeof(get));
-  EXPECT_EQ(get, kSockOptOn);
-
-  EXPECT_EQ(close(s.release()), 0) << strerror(errno);
-}
-
-TEST_P(SocketOptsTest, SetMulticastLoop) {
-  if (IsTCP()) {
-    GTEST_SKIP() << "Skip multicast tests on TCP socket";
-  }
-
-  fbl::unique_fd s;
-  ASSERT_TRUE(s = NewSocket()) << strerror(errno);
-
-  SockOption t = GetMcastLoopOption();
-  ASSERT_EQ(setsockopt(s.get(), t.level, t.option, &kSockOptOff, sizeof(kSockOptOff)), 0)
-      << strerror(errno);
-
-  int get = -1;
-  socklen_t get_len = sizeof(get);
-  EXPECT_EQ(getsockopt(s.get(), t.level, t.option, &get, &get_len), 0) << strerror(errno);
-  EXPECT_EQ(get_len, sizeof(get));
-  EXPECT_EQ(get, kSockOptOff);
-
-  ASSERT_EQ(setsockopt(s.get(), t.level, t.option, &kSockOptOn, sizeof(kSockOptOn)), 0)
-      << strerror(errno);
-
-  EXPECT_EQ(getsockopt(s.get(), t.level, t.option, &get, &get_len), 0) << strerror(errno);
-  EXPECT_EQ(get_len, sizeof(get));
-  EXPECT_EQ(get, kSockOptOn);
-
-  EXPECT_EQ(close(s.release()), 0) << strerror(errno);
-}
-
-TEST_P(SocketOptsTest, SetMulticastLoopChar) {
-  if (IsTCP()) {
-    GTEST_SKIP() << "Skip multicast tests on TCP socket";
-  }
-
-  fbl::unique_fd s;
-  ASSERT_TRUE(s = NewSocket()) << strerror(errno);
-
-  constexpr char kSockOptOnChar = kSockOptOn;
-  constexpr char kSockOptOffChar = kSockOptOff;
-
-  SockOption t = GetMcastLoopOption();
-  int want;
-  if (IsIPv6()) {
-    EXPECT_EQ(setsockopt(s.get(), t.level, t.option, &kSockOptOffChar, sizeof(kSockOptOffChar)),
-              -1);
-    EXPECT_EQ(errno, EINVAL) << strerror(errno);
-    want = kSockOptOnChar;
-  } else {
-    EXPECT_EQ(setsockopt(s.get(), t.level, t.option, &kSockOptOffChar, sizeof(kSockOptOffChar)), 0)
-        << strerror(errno);
-    want = kSockOptOffChar;
-  }
-
-  {
-    char get = -1;
-    socklen_t get_len = sizeof(get);
-    EXPECT_EQ(getsockopt(s.get(), t.level, t.option, &get, &get_len), 0) << strerror(errno);
-    EXPECT_EQ(get_len, sizeof(get));
-    EXPECT_EQ(get, want);
-  }
-
-  {
-    int16_t get = -1;
-    fprintf(stderr, "%s\n", std::bitset<16>(get).to_string().c_str());
-    socklen_t get_len = sizeof(get);
-    EXPECT_EQ(getsockopt(s.get(), t.level, t.option, &get, &get_len), 0) << strerror(errno);
-    if (IsIPv6()) {
-      EXPECT_EQ(get_len, sizeof(get));
-      EXPECT_EQ(get, want);
-    } else {
-      // This option truncates size < 4 to 1 and only writes the low byte.
-      EXPECT_EQ(get_len, sizeof(char));
-      EXPECT_EQ(get, static_cast<int16_t>(uint16_t(-1) << 8) | want);
-    }
-  }
-
-  {
-    int get = -1;
-    socklen_t get_len = sizeof(get);
-    EXPECT_EQ(getsockopt(s.get(), t.level, t.option, &get, &get_len), 0) << strerror(errno);
-    EXPECT_EQ(get_len, sizeof(get));
-    EXPECT_EQ(get, want);
-  }
-
-  if (IsIPv6()) {
-    EXPECT_EQ(setsockopt(s.get(), t.level, t.option, &kSockOptOnChar, sizeof(kSockOptOnChar)), -1);
-    EXPECT_EQ(errno, EINVAL) << strerror(errno);
-  } else {
-    EXPECT_EQ(setsockopt(s.get(), t.level, t.option, &kSockOptOnChar, sizeof(kSockOptOnChar)), 0)
-        << strerror(errno);
-  }
-
-  char get = -1;
-  socklen_t get_len = sizeof(get);
-  EXPECT_EQ(getsockopt(s.get(), t.level, t.option, &get, &get_len), 0) << strerror(errno);
-  EXPECT_EQ(get_len, sizeof(get));
-  EXPECT_EQ(get, kSockOptOn);
-
-  EXPECT_EQ(close(s.release()), 0) << strerror(errno);
-}
-
-TEST_P(SocketOptsTest, MulticastTTLDefault) {
-  if (IsTCP()) {
-    GTEST_SKIP() << "Skip multicast tests on TCP socket";
-  }
-
-  fbl::unique_fd s;
-  ASSERT_TRUE(s = NewSocket()) << strerror(errno);
-
-  int get = -1;
-  socklen_t get_len = sizeof(get);
-  SockOption t = GetMcastTTLOption();
-  EXPECT_EQ(getsockopt(s.get(), t.level, t.option, &get, &get_len), 0) << strerror(errno);
-  EXPECT_EQ(get_len, sizeof(get));
-  EXPECT_EQ(get, 1);
-
-  EXPECT_EQ(close(s.release()), 0) << strerror(errno);
-}
-
-TEST_P(SocketOptsTest, SetUDPMulticastTTLMin) {
-  if (IsTCP()) {
-    GTEST_SKIP() << "Skip multicast tests on TCP socket";
-  }
-
-  fbl::unique_fd s;
-  ASSERT_TRUE(s = NewSocket()) << strerror(errno);
-
-  constexpr int kMin = 0;
-  SockOption t = GetMcastTTLOption();
-  EXPECT_EQ(setsockopt(s.get(), t.level, t.option, &kMin, sizeof(kMin)), 0) << strerror(errno);
-
-  int get = -1;
-  socklen_t get_len = sizeof(get);
-  EXPECT_EQ(getsockopt(s.get(), t.level, t.option, &get, &get_len), 0) << strerror(errno);
-  EXPECT_EQ(get_len, sizeof(get));
-  EXPECT_EQ(get, kMin);
-
-  EXPECT_EQ(close(s.release()), 0) << strerror(errno);
-}
-
-TEST_P(SocketOptsTest, SetUDPMulticastTTLMax) {
-  if (IsTCP()) {
-    GTEST_SKIP() << "Skip multicast tests on TCP socket";
-  }
-
-  fbl::unique_fd s;
-  ASSERT_TRUE(s = NewSocket()) << strerror(errno);
-
-  constexpr int kMax = 255;
-  SockOption t = GetMcastTTLOption();
-  EXPECT_EQ(setsockopt(s.get(), t.level, t.option, &kMax, sizeof(kMax)), 0) << strerror(errno);
-
-  int get = -1;
-  socklen_t get_len = sizeof(get);
-  EXPECT_EQ(getsockopt(s.get(), t.level, t.option, &get, &get_len), 0) << strerror(errno);
-  EXPECT_EQ(get_len, sizeof(get));
-  EXPECT_EQ(get, kMax);
-
-  EXPECT_EQ(close(s.release()), 0) << strerror(errno);
-}
-
 TEST_P(SocketOptsTest, SetUDPMulticastTTLNegativeOne) {
   if (IsTCP()) {
     GTEST_SKIP() << "Skip multicast tests on TCP socket";
@@ -1066,92 +1126,6 @@ TEST_P(SocketOptsTest, SetUDPMulticastTTLNegativeOne) {
   EXPECT_EQ(getsockopt(s.get(), t.level, t.option, &get, &get_len), 0) << strerror(errno);
   EXPECT_EQ(get_len, sizeof(get));
   EXPECT_EQ(get, 1);
-
-  EXPECT_EQ(close(s.release()), 0) << strerror(errno);
-}
-
-TEST_P(SocketOptsTest, SetUDPMulticastTTLBelowMin) {
-  if (IsTCP()) {
-    GTEST_SKIP() << "Skip multicast tests on TCP socket";
-  }
-
-  fbl::unique_fd s;
-  ASSERT_TRUE(s = NewSocket()) << strerror(errno);
-
-  constexpr int kBelowMin = -2;
-  SockOption t = GetMcastTTLOption();
-  EXPECT_EQ(setsockopt(s.get(), t.level, t.option, &kBelowMin, sizeof(kBelowMin)), -1);
-  EXPECT_EQ(errno, EINVAL) << strerror(errno);
-
-  EXPECT_EQ(close(s.release()), 0) << strerror(errno);
-}
-
-TEST_P(SocketOptsTest, SetUDPMulticastTTLAboveMax) {
-  if (IsTCP()) {
-    GTEST_SKIP() << "Skip multicast tests on TCP socket";
-  }
-
-  fbl::unique_fd s;
-  ASSERT_TRUE(s = NewSocket()) << strerror(errno);
-
-  constexpr int kAboveMax = 256;
-  SockOption t = GetMcastTTLOption();
-  EXPECT_EQ(setsockopt(s.get(), t.level, t.option, &kAboveMax, sizeof(kAboveMax)), -1);
-  EXPECT_EQ(errno, EINVAL) << strerror(errno);
-
-  EXPECT_EQ(close(s.release()), 0) << strerror(errno);
-}
-
-TEST_P(SocketOptsTest, SetUDPMulticastTTLChar) {
-  if (IsTCP()) {
-    GTEST_SKIP() << "Skip multicast tests on TCP socket";
-  }
-
-  fbl::unique_fd s;
-  ASSERT_TRUE(s = NewSocket()) << strerror(errno);
-
-  constexpr char kArbitrary = 6;
-  SockOption t = GetMcastTTLOption();
-  int want;
-  if (IsIPv6()) {
-    EXPECT_EQ(setsockopt(s.get(), t.level, t.option, &kArbitrary, sizeof(kArbitrary)), -1);
-    EXPECT_EQ(errno, EINVAL) << strerror(errno);
-    want = 1;
-  } else {
-    EXPECT_EQ(setsockopt(s.get(), t.level, t.option, &kArbitrary, sizeof(kArbitrary)), 0)
-        << strerror(errno);
-    want = kArbitrary;
-  }
-
-  {
-    char get = -1;
-    socklen_t get_len = sizeof(get);
-    EXPECT_EQ(getsockopt(s.get(), t.level, t.option, &get, &get_len), 0) << strerror(errno);
-    EXPECT_EQ(get_len, sizeof(get));
-    EXPECT_EQ(get, want);
-  }
-
-  {
-    int16_t get = -1;
-    socklen_t get_len = sizeof(get);
-    EXPECT_EQ(getsockopt(s.get(), t.level, t.option, &get, &get_len), 0) << strerror(errno);
-    if (IsIPv6()) {
-      EXPECT_EQ(get_len, sizeof(get));
-      EXPECT_EQ(get, want);
-    } else {
-      // This option truncates size < 4 to 1 and only writes the low byte.
-      EXPECT_EQ(get_len, sizeof(char));
-      EXPECT_EQ(get, static_cast<int16_t>(uint16_t(-1) << 8) | want);
-    }
-  }
-
-  {
-    int get = -1;
-    socklen_t get_len = sizeof(get);
-    EXPECT_EQ(getsockopt(s.get(), t.level, t.option, &get, &get_len), 0) << strerror(errno);
-    EXPECT_EQ(get_len, sizeof(get));
-    EXPECT_EQ(get, want);
-  }
 
   EXPECT_EQ(close(s.release()), 0) << strerror(errno);
 }
@@ -1224,52 +1198,6 @@ TEST_P(SocketOptsTest, SetUDPMulticastIfImrAddress) {
   ASSERT_EQ(close(s.release()), 0) << strerror(errno);
 }
 
-TEST_P(SocketOptsTest, ReceiveTOSDefault) {
-  if (IsTCP()) {
-    GTEST_SKIP() << "Skip receive TOS tests on TCP socket";
-  }
-
-  fbl::unique_fd s;
-  ASSERT_TRUE(s = NewSocket()) << strerror(errno);
-
-  int get = -1;
-  socklen_t get_len = sizeof(get);
-  SockOption t = GetRecvTOSOption();
-  EXPECT_EQ(getsockopt(s.get(), t.level, t.option, &get, &get_len), 0) << strerror(errno);
-  EXPECT_EQ(get_len, sizeof(get));
-  EXPECT_EQ(get, kSockOptOff);
-
-  EXPECT_EQ(close(s.release()), 0) << strerror(errno);
-}
-
-TEST_P(SocketOptsTest, SetReceiveTOS) {
-  if (IsTCP()) {
-    GTEST_SKIP() << "Skip receive TOS tests on TCP socket";
-  }
-
-  fbl::unique_fd s;
-  ASSERT_TRUE(s = NewSocket()) << strerror(errno);
-
-  SockOption t = GetRecvTOSOption();
-  ASSERT_EQ(setsockopt(s.get(), t.level, t.option, &kSockOptOn, sizeof(kSockOptOn)), 0)
-      << strerror(errno);
-
-  int get = -1;
-  socklen_t get_len = sizeof(get);
-  EXPECT_EQ(getsockopt(s.get(), t.level, t.option, &get, &get_len), 0) << strerror(errno);
-  EXPECT_EQ(get_len, sizeof(get));
-  EXPECT_EQ(get, kSockOptOn);
-
-  ASSERT_EQ(setsockopt(s.get(), t.level, t.option, &kSockOptOff, sizeof(kSockOptOff)), 0)
-      << strerror(errno);
-
-  EXPECT_EQ(getsockopt(s.get(), t.level, t.option, &get, &get_len), 0) << strerror(errno);
-  EXPECT_EQ(get_len, sizeof(get));
-  EXPECT_EQ(get, kSockOptOff);
-
-  EXPECT_EQ(close(s.release()), 0) << strerror(errno);
-}
-
 // Tests that a two byte RECVTOS/RECVTCLASS optval is acceptable.
 TEST_P(SocketOptsTest, SetReceiveTOSShort) {
   if (IsTCP()) {
@@ -1316,218 +1244,6 @@ TEST_P(SocketOptsTest, SetReceiveTOSShort) {
   EXPECT_EQ(getsockopt(s.get(), t.level, t.option, &get, &get_len), 0) << strerror(errno);
   EXPECT_EQ(get_len, sizeof(get));
   EXPECT_EQ(get, kSockOptOff);
-
-  EXPECT_EQ(close(s.release()), 0) << strerror(errno);
-}
-
-// Tests that a one byte sized optval is acceptable for RECVTOS and not for
-// RECVTCLASS.
-TEST_P(SocketOptsTest, SetReceiveTOSChar) {
-  if (IsTCP()) {
-    GTEST_SKIP() << "Skip receive TOS tests on TCP socket";
-  }
-
-  fbl::unique_fd s;
-  ASSERT_TRUE(s = NewSocket()) << strerror(errno);
-
-  constexpr char kSockOptOnChar = kSockOptOn;
-  constexpr char kSockOptOffChar = kSockOptOff;
-
-  SockOption t = GetRecvTOSOption();
-  if (IsIPv6()) {
-    ASSERT_EQ(setsockopt(s.get(), t.level, t.option, &kSockOptOnChar, sizeof(kSockOptOnChar)), -1)
-        << strerror(errno);
-    EXPECT_EQ(errno, EINVAL) << strerror(errno);
-  } else {
-    ASSERT_EQ(setsockopt(s.get(), t.level, t.option, &kSockOptOnChar, sizeof(kSockOptOnChar)), 0)
-        << strerror(errno);
-  }
-
-  int want;
-  if (IsIPv6()) {
-    want = kSockOptOff;
-  } else {
-    want = kSockOptOn;
-  }
-
-  {
-    char get = -1;
-    socklen_t get_len = sizeof(get);
-    EXPECT_EQ(getsockopt(s.get(), t.level, t.option, &get, &get_len), 0) << strerror(errno);
-    EXPECT_EQ(get_len, sizeof(get));
-    EXPECT_EQ(get, want);
-  }
-
-  {
-    int16_t get = -1;
-    socklen_t get_len = sizeof(get);
-    EXPECT_EQ(getsockopt(s.get(), t.level, t.option, &get, &get_len), 0) << strerror(errno);
-    if (IsIPv6()) {
-      EXPECT_EQ(get_len, sizeof(get));
-      EXPECT_EQ(get, want);
-    } else {
-      // This option truncates size < 4 to 1 and only writes the low byte.
-      EXPECT_EQ(get_len, sizeof(char));
-      EXPECT_EQ(get, static_cast<int16_t>(uint16_t(-1) << 8) | want);
-    }
-  }
-
-  {
-    int get = -1;
-    socklen_t get_len = sizeof(get);
-    EXPECT_EQ(getsockopt(s.get(), t.level, t.option, &get, &get_len), 0) << strerror(errno);
-    EXPECT_EQ(get_len, sizeof(get));
-    EXPECT_EQ(get, want);
-  }
-
-  if (IsIPv6()) {
-    ASSERT_EQ(setsockopt(s.get(), t.level, t.option, &kSockOptOffChar, sizeof(kSockOptOffChar)), -1)
-        << strerror(errno);
-    EXPECT_EQ(errno, EINVAL) << strerror(errno);
-  } else {
-    ASSERT_EQ(setsockopt(s.get(), t.level, t.option, &kSockOptOffChar, sizeof(kSockOptOffChar)), 0)
-        << strerror(errno);
-  }
-
-  int get = -1;
-  socklen_t get_len = sizeof(get);
-  EXPECT_EQ(getsockopt(s.get(), t.level, t.option, &get, &get_len), 0) << strerror(errno);
-  EXPECT_EQ(get_len, sizeof(get));
-  EXPECT_EQ(get, kSockOptOff);
-
-  EXPECT_EQ(close(s.release()), 0) << strerror(errno);
-}
-
-TEST_P(SocketOptsTest, NoChecksumDefault) {
-  if (IsTCP()) {
-    GTEST_SKIP() << "Skip NoChecksum tests on TCP socket";
-  }
-
-  fbl::unique_fd s;
-  ASSERT_TRUE(s = NewSocket()) << strerror(errno);
-
-  int get = -1;
-  socklen_t get_len = sizeof(get);
-  SockOption t = GetNoChecksum();
-  EXPECT_EQ(getsockopt(s.get(), t.level, t.option, &get, &get_len), 0) << strerror(errno);
-  EXPECT_EQ(get_len, sizeof(get));
-  EXPECT_EQ(get, kSockOptOff);
-
-  EXPECT_EQ(close(s.release()), 0) << strerror(errno);
-}
-
-TEST_P(SocketOptsTest, SetNoChecksum) {
-  if (IsTCP()) {
-    GTEST_SKIP() << "Skip NoChecksum tests on TCP socket";
-  }
-
-  fbl::unique_fd s;
-  ASSERT_TRUE(s = NewSocket()) << strerror(errno);
-
-  SockOption t = GetNoChecksum();
-  ASSERT_EQ(setsockopt(s.get(), t.level, t.option, &kSockOptOn, sizeof(kSockOptOn)), 0)
-      << strerror(errno);
-
-  int get = -1;
-  socklen_t get_len = sizeof(get);
-  EXPECT_EQ(getsockopt(s.get(), t.level, t.option, &get, &get_len), 0) << strerror(errno);
-  EXPECT_EQ(get_len, sizeof(get));
-  EXPECT_EQ(get, kSockOptOn);
-
-  ASSERT_EQ(setsockopt(s.get(), t.level, t.option, &kSockOptOff, sizeof(kSockOptOff)), 0)
-      << strerror(errno);
-
-  EXPECT_EQ(getsockopt(s.get(), t.level, t.option, &get, &get_len), 0) << strerror(errno);
-  EXPECT_EQ(get_len, sizeof(get));
-  EXPECT_EQ(get, kSockOptOff);
-
-  EXPECT_EQ(close(s.release()), 0) << strerror(errno);
-}
-
-TEST_P(SocketOptsTest, TimestampDefault) {
-  fbl::unique_fd s;
-  ASSERT_TRUE(s = NewSocket()) << strerror(errno);
-
-  int get = -1;
-  socklen_t get_len = sizeof(get);
-  SockOption t = GetTimestamp();
-  EXPECT_EQ(getsockopt(s.get(), t.level, t.option, &get, &get_len), 0) << strerror(errno);
-  EXPECT_EQ(get_len, sizeof(get));
-  EXPECT_EQ(get, kSockOptOff);
-
-  EXPECT_EQ(close(s.release()), 0) << strerror(errno);
-}
-
-TEST_P(SocketOptsTest, SetTimestamp) {
-  fbl::unique_fd s;
-  ASSERT_TRUE(s = NewSocket()) << strerror(errno);
-
-  SockOption t = GetTimestamp();
-  ASSERT_EQ(setsockopt(s.get(), t.level, t.option, &kSockOptOn, sizeof(kSockOptOn)), 0)
-      << strerror(errno);
-
-  {
-    int get = -1;
-    socklen_t get_len = sizeof(get);
-    EXPECT_EQ(getsockopt(s.get(), t.level, t.option, &get, &get_len), 0) << strerror(errno);
-    EXPECT_EQ(get_len, sizeof(get));
-    EXPECT_EQ(get, kSockOptOn);
-  }
-
-  ASSERT_EQ(setsockopt(s.get(), t.level, t.option, &kSockOptOff, sizeof(kSockOptOff)), 0)
-      << strerror(errno);
-
-  {
-    int get = -1;
-    socklen_t get_len = sizeof(get);
-    EXPECT_EQ(getsockopt(s.get(), t.level, t.option, &get, &get_len), 0) << strerror(errno);
-    EXPECT_EQ(get_len, sizeof(get));
-    EXPECT_EQ(get, kSockOptOff);
-  }
-
-  EXPECT_EQ(close(s.release()), 0) << strerror(errno);
-}
-
-TEST_P(SocketOptsTest, TimestampNsDefault) {
-  fbl::unique_fd s;
-  ASSERT_TRUE(s = NewSocket()) << strerror(errno);
-
-  int get = -1;
-  socklen_t get_len = sizeof(get);
-  SockOption t = GetTimestampNs();
-  EXPECT_EQ(getsockopt(s.get(), t.level, t.option, &get, &get_len), 0) << strerror(errno);
-  EXPECT_EQ(get_len, sizeof(get));
-  EXPECT_EQ(get, kSockOptOff);
-
-  EXPECT_EQ(close(s.release()), 0) << strerror(errno);
-}
-
-TEST_P(SocketOptsTest, SetTimestampNs) {
-  fbl::unique_fd s;
-  ASSERT_TRUE(s = NewSocket()) << strerror(errno);
-
-  SockOption t = GetTimestampNs();
-  ASSERT_EQ(setsockopt(s.get(), t.level, t.option, &kSockOptOn, sizeof(kSockOptOn)), 0)
-      << strerror(errno);
-
-  {
-    int get = -1;
-    socklen_t get_len = sizeof(get);
-    EXPECT_EQ(getsockopt(s.get(), t.level, t.option, &get, &get_len), 0) << strerror(errno);
-    EXPECT_EQ(get_len, sizeof(get));
-    EXPECT_EQ(get, kSockOptOn);
-  }
-
-  ASSERT_EQ(setsockopt(s.get(), t.level, t.option, &kSockOptOff, sizeof(kSockOptOff)), 0)
-      << strerror(errno);
-
-  {
-    int get = -1;
-    socklen_t get_len = sizeof(get);
-    EXPECT_EQ(getsockopt(s.get(), t.level, t.option, &get, &get_len), 0) << strerror(errno);
-    EXPECT_EQ(get_len, sizeof(get));
-    EXPECT_EQ(get, kSockOptOff);
-  }
 
   EXPECT_EQ(close(s.release()), 0) << strerror(errno);
 }
@@ -2051,8 +1767,8 @@ TEST_P(HangupTest, DuringConnect) {
       switch (hangup_method) {
         case HangupMethod::kClose: {
           ASSERT_EQ(close(established_client.release()), 0) << strerror(errno);
-          // Closing the established client isn't enough; the connection must be accepted before the
-          // connecting client can make progress.
+          // Closing the established client isn't enough; the connection must be accepted before
+          // the connecting client can make progress.
           EXPECT_EQ(connect(connecting_client.get(), addr, addr_len), -1) << strerror(errno);
           EXPECT_EQ(errno, EALREADY) << strerror(errno);
 
@@ -2410,8 +2126,8 @@ TEST_F(NetStreamSocketsTest, PartialWriteStress) {
 
   {
     // Write in small chunks to allow the outbound TCP to coalesce adjacent writes into a single
-    // segment; that is the circumstance in which the data corruption bug that prompted writing this
-    // test was observed.
+    // segment; that is the circumstance in which the data corruption bug that prompted writing
+    // this test was observed.
     //
     // Loopback MTU is 64KiB, so use a value smaller than that.
     constexpr size_t write_size = 1 << 10;  // 1 KiB.
@@ -2427,17 +2143,17 @@ TEST_F(NetStreamSocketsTest, PartialWriteStress) {
 
   // Read the data and validate it against our payload.
   {
-    // Read in small chunks to increase the probability of partial writes from the network endpoint
-    // into the zircon socket; that is the circumstance in which the data corruption bug that
-    // prompted writing this test was observed.
+    // Read in small chunks to increase the probability of partial writes from the network
+    // endpoint into the zircon socket; that is the circumstance in which the data corruption bug
+    // that prompted writing this test was observed.
     //
     // zircon sockets are 256KiB deep, so use a value smaller than that.
     //
-    // Note that in spite of the trickery we employ in this test to create the conditions necessary
-    // to trigger the data corruption bug, it is still not guaranteed to happen. This is because a
-    // race is still necessary to trigger the bug; as netstack is copying bytes from the network to
-    // the zircon socket, the application on the other side of this socket (this test) must read
-    // between a partial write and the next write.
+    // Note that in spite of the trickery we employ in this test to create the conditions
+    // necessary to trigger the data corruption bug, it is still not guaranteed to happen. This is
+    // because a race is still necessary to trigger the bug; as netstack is copying bytes from the
+    // network to the zircon socket, the application on the other side of this socket (this test)
+    // must read between a partial write and the next write.
     constexpr size_t read_size = 1 << 13;  // 8 KiB.
 
     std::string buf;
@@ -3787,9 +3503,9 @@ TEST_P(ConnectingIOTest, BlockedIO) {
 
   // Observe the precursor client connection on the server side. This ensures that the TCP stack's
   // server accept queue is updated with the precursor client connection before any subsequent
-  // client connect requests. The precursor client connect call returns after handshake completion,
-  // but not necessarily after the server side has processed the ACK from the client and updated its
-  // accept queue.
+  // client connect requests. The precursor client connect call returns after handshake
+  // completion, but not necessarily after the server side has processed the ACK from the client
+  // and updated its accept queue.
   {
     pollfd pfd = {
         .fd = listener.get(),
@@ -4302,28 +4018,29 @@ TEST_F(NetStreamSocketsTest, ResetOnFullReceiveBufferShutdown) {
 
 // Tests that a socket which has completed SHUT_RDWR responds to incoming data with RST.
 TEST_F(NetStreamSocketsTest, ShutdownReset) {
-  // This test is tricky. In Linux we could shutdown(SHUT_RDWR) the server socket, write() some data
-  // on the client socket, and observe the server reply with RST. The SHUT_WR would move the server
-  // socket state out of ESTABLISHED (to FIN-WAIT2 after sending FIN and receiving an ACK) and
-  // SHUT_RD would close the receiver. Only when the server socket has transitioned out of
+  // This test is tricky. In Linux we could shutdown(SHUT_RDWR) the server socket, write() some
+  // data on the client socket, and observe the server reply with RST. The SHUT_WR would move the
+  // server socket state out of ESTABLISHED (to FIN-WAIT2 after sending FIN and receiving an ACK)
+  // and SHUT_RD would close the receiver. Only when the server socket has transitioned out of
   // ESTABLISHED state. At this point, the server socket would respond to incoming data with RST.
   //
-  // In Fuchsia this is more complicated because each socket is a distributed system (consisting of
-  // netstack and fdio) wherein the socket state is eventually consistent. We must take care to
-  // synchronize our actions with netstack's state as we're testing that netstack correctly sends a
-  // RST in response to data received after shutdown(SHUT_RDWR).
+  // In Fuchsia this is more complicated because each socket is a distributed system (consisting
+  // of netstack and fdio) wherein the socket state is eventually consistent. We must take care to
+  // synchronize our actions with netstack's state as we're testing that netstack correctly sends
+  // a RST in response to data received after shutdown(SHUT_RDWR).
   //
-  // We can manipulate and inspect state using only shutdown() and poll(), both of which operate on
-  // fdio state rather than netstack state. Combined with the fact that SHUT_RD is not observable by
-  // the peer (i.e. doesn't cause any network traffic), means we are in a pickle.
+  // We can manipulate and inspect state using only shutdown() and poll(), both of which operate
+  // on fdio state rather than netstack state. Combined with the fact that SHUT_RD is not
+  // observable by the peer (i.e. doesn't cause any network traffic), means we are in a pickle.
   //
-  // On the other hand, SHUT_WR does cause a FIN to be sent, which can be observed by the peer using
-  // poll(POLLRDHUP). Note also that netstack observes SHUT_RD and SHUT_WR on different threads,
-  // meaning that a race condition still exists. At the time of writing, this is the best we can do.
+  // On the other hand, SHUT_WR does cause a FIN to be sent, which can be observed by the peer
+  // using poll(POLLRDHUP). Note also that netstack observes SHUT_RD and SHUT_WR on different
+  // threads, meaning that a race condition still exists. At the time of writing, this is the best
+  // we can do.
 
   // Change internal state to disallow further reads and writes. The state change propagates to
-  // netstack at some future time. We have no way to observe that SHUT_RD has propagated (because it
-  // propagates independently from SHUT_WR).
+  // netstack at some future time. We have no way to observe that SHUT_RD has propagated (because
+  // it propagates independently from SHUT_WR).
   ASSERT_EQ(shutdown(server().get(), SHUT_RDWR), 0) << strerror(errno);
 
   // Wait for the FIN to arrive at the client and for the state to propagate to the client's fdio.
@@ -4517,9 +4234,8 @@ INSTANTIATE_TEST_SUITE_P(
                      testing::Values(false, true)),
     BlockedIOParamsToString);
 
-// Use this routine to test blocking socket reads. On failure, this attempts to recover the blocked
-// thread.
-// Return value:
+// Use this routine to test blocking socket reads. On failure, this attempts to recover the
+// blocked thread. Return value:
 //      (1) actual length of read data on successful recv
 //      (2) 0, when we abort a blocked recv
 //      (3) -1, on failure of both of the above operations.
@@ -4540,8 +4256,8 @@ ssize_t asyncSocketRead(int recvfd, int sendfd, char* buf, ssize_t len, int flag
     case SOCK_STREAM: {
       // shutdown() would unblock the receiver thread with recv returning 0.
       EXPECT_EQ(shutdown(recvfd, SHUT_RD), 0) << strerror(errno);
-      // We do not use 'timeout' because that maybe short here. We expect to succeed and hence use a
-      // known large timeout to ensure the test does not hang in case underlying code is broken.
+      // We do not use 'timeout' because that maybe short here. We expect to succeed and hence use
+      // a known large timeout to ensure the test does not hang in case underlying code is broken.
       EXPECT_EQ(recv.wait_for(kTimeout), std::future_status::ready);
       EXPECT_EQ(recv.get(), 0);
       break;
@@ -4550,11 +4266,11 @@ ssize_t asyncSocketRead(int recvfd, int sendfd, char* buf, ssize_t len, int flag
       // Send a 0 length payload to unblock the receiver.
       // This would ensure that the async-task deterministically exits before call to future`s
       // destructor. Calling close(.release()) on recvfd when the async task is blocked on recv(),
-      // __does_not__ cause recv to return; this can result in undefined behavior, as the descriptor
-      // can get reused. Instead of sending a valid packet to unblock the recv() task, we could call
-      // shutdown(), but that returns ENOTCONN (unconnected) but still causing recv() to return.
-      // shutdown() becomes unreliable for unconnected UDP sockets because, irrespective of the
-      // effect of calling this call, it returns error.
+      // __does_not__ cause recv to return; this can result in undefined behavior, as the
+      // descriptor can get reused. Instead of sending a valid packet to unblock the recv() task,
+      // we could call shutdown(), but that returns ENOTCONN (unconnected) but still causing
+      // recv() to return. shutdown() becomes unreliable for unconnected UDP sockets because,
+      // irrespective of the effect of calling this call, it returns error.
       EXPECT_EQ(sendto(sendfd, nullptr, 0, 0, reinterpret_cast<sockaddr*>(addr), *addrlen), 0)
           << strerror(errno);
       // We use a known large timeout for the same reason as for the above case.
@@ -5242,8 +4958,8 @@ TEST_P(SocketKindTest, IoctlInterfaceLookupRoundTrip) {
 
   ifreq ifr_err;
   memset(ifr_err.ifr_name, 0xde, IFNAMSIZ);
-  // Although the first few bytes of ifr_name contain the correct name, there is no null terminator
-  // and the remaining bytes are gibberish, should match no interfaces.
+  // Although the first few bytes of ifr_name contain the correct name, there is no null
+  // terminator and the remaining bytes are gibberish, should match no interfaces.
   memcpy(ifr_err.ifr_name, ifr_iton.ifr_name, strnlen(ifr_iton.ifr_name, IFNAMSIZ));
 
   const struct {

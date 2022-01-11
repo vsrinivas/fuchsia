@@ -592,7 +592,7 @@ SockOptResult GetSockOptProcessor::StoreOption(const fsocket::wire::TcpInfo& val
 // Used for various options that allow the caller to supply larger buffers than needed.
 struct PartialCopy {
   int32_t value;
-  // Appears to be true for IP_* and false for IPV6_*.
+  // Appears to be true for IP_*, SO_* and false for IPV6_*.
   bool allow_char;
 };
 
@@ -826,11 +826,17 @@ struct BaseSocket {
         }
       case SO_TIMESTAMP:
         return proc.Process(client()->GetTimestamp2(), [](const auto& response) {
-          return response.value == fsocket::wire::TimestampOption::kMicrosecond;
+          return PartialCopy{
+              .value = response.value == fsocket::wire::TimestampOption::kMicrosecond,
+              .allow_char = false,
+          };
         });
       case SO_TIMESTAMPNS:
         return proc.Process(client()->GetTimestamp2(), [](const auto& response) {
-          return response.value == fsocket::wire::TimestampOption::kNanosecond;
+          return PartialCopy{
+              .value = response.value == fsocket::wire::TimestampOption::kNanosecond,
+              .allow_char = false,
+          };
         });
       case SO_PROTOCOL:
         if constexpr (std::is_same_v<T, fidl::WireSyncClient<fsocket::DatagramSocket>>) {
@@ -921,8 +927,12 @@ struct BaseSocket {
         return proc.Process(client()->GetOutOfBandInline(),
                             [](const auto& response) { return response.value; });
       case SO_NO_CHECK:
-        return proc.Process(client()->GetNoCheck(),
-                            [](const auto& response) { return response.value; });
+        return proc.Process(client()->GetNoCheck(), [](const auto& response) {
+          return PartialCopy{
+              .value = response.value,
+              .allow_char = false,
+          };
+        });
       case SO_SNDTIMEO:
       case SO_RCVTIMEO:
       case SO_PEERCRED:
@@ -1103,7 +1113,10 @@ struct BaseNetworkSocket : public BaseSocket<T> {
         switch (optname) {
           case IP_TTL:
             return proc.Process(client()->GetIpTtl(), [](const auto& response) {
-              return static_cast<int32_t>(response.value);
+              return PartialCopy{
+                  .value = response.value,
+                  .allow_char = true,
+              };
             });
           case IP_MULTICAST_TTL:
             return proc.Process(client()->GetIpMulticastTtl(), [](const auto& response) {
@@ -1290,8 +1303,8 @@ struct BaseNetworkSocket : public BaseSocket<T> {
               return client()->SetIpMulticastLoopback(value.value != 0);
             });
           case IP_TTL:
-            return proc.Process<fsocket::wire::OptionalUint8>(
-                [this](fsocket::wire::OptionalUint8 value) { return client()->SetIpTtl(value); });
+            return proc.Process<OptionalUint8CharAllowed>(
+                [this](OptionalUint8CharAllowed value) { return client()->SetIpTtl(value.inner); });
           case IP_TOS:
             if (optlen == 0) {
               return SockOptResult::Ok();
