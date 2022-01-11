@@ -19,7 +19,7 @@
 #include "src/devices/lib/fidl-metadata/spi.h"
 
 #define HHI_SPICC_CLK_CNTL (0xf7 * 4)
-#define spicc_0_clk_sel_fclk_div5 (5 << 7)
+#define spicc_0_clk_sel_fclk_div3 (3 << 7)
 #define spicc_0_clk_en (1 << 6)
 #define spicc_0_clk_div(x) ((x)-1)
 
@@ -56,9 +56,9 @@ static const amlspi_config_t spi_config = {
     .period = 0,
     .bus_id = SHERLOCK_SPICC0,
     .cs_count = 1,
-    .cs = {0},                          // index into fragments list
-    .clock_divider_register_value = 0,  // SCLK = core clock / 4 = 10 MHz
-    .use_enhanced_clock_mode = false,
+    .cs = {0},                                       // index into fragments list
+    .clock_divider_register_value = (512 >> 1) - 1,  // SCLK = core clock / 512 = ~1.3 MHz
+    .use_enhanced_clock_mode = true,
 };
 
 static pbus_dev_t spi_dev = []() {
@@ -120,8 +120,8 @@ zx_status_t Sherlock::SpiInit() {
       return status;
     }
 
-    // SPICC0 clock enable
-    buf->Write32(spicc_0_clk_sel_fclk_div5 | spicc_0_clk_en | spicc_0_clk_div(10),
+    // SPICC0 clock enable (666 MHz)
+    buf->Write32(spicc_0_clk_sel_fclk_div3 | spicc_0_clk_en | spicc_0_clk_div(1),
                  HHI_SPICC_CLK_CNTL);
   }
 
