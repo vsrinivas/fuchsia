@@ -13,7 +13,11 @@ use {
     },
 };
 
-/// Essentially `stream.into_future().map(move |(value, stream) (value, stream, with))`
+/// Given a stream `stream` and an auxiliary item `with`,
+/// converts the `stream` into a future of `(next_item, tail_of_stream, with)`,
+/// where `next_item` and `tail_of_stream` are respectively the head and tail of the `stream`.
+/// This is logically equivalent to
+/// `stream.into_future().map(move |(value, stream)| (value, stream, with))`
 pub(super) struct NextWith<St, With> {
     opt: Option<(St, With)>,
 }
