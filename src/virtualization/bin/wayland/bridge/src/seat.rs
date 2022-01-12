@@ -375,13 +375,9 @@ impl InputDispatcher {
             let key = event.key.unwrap();
             let time_in_ms = (event.timestamp.unwrap() / 1_000_000) as u32;
             match event.type_.unwrap() {
-                KeyEventType::Pressed => {
-                    // TODO(fxbug.dev/91337): Use repeat_sequence to determine if
-                    // this is a repeat instead of using set of pressed keys.
-                    let not_present = self.pressed_keys.insert(key);
-                    if not_present {
-                        self.send_key_event(key, time_in_ms, wl_keyboard::KeyState::Pressed)?;
-                    }
+                KeyEventType::Pressed if event.repeat_sequence.is_none() => {
+                    self.pressed_keys.insert(key);
+                    self.send_key_event(key, time_in_ms, wl_keyboard::KeyState::Pressed)?;
                 }
                 KeyEventType::Released => {
                     self.pressed_keys.remove(&key);
