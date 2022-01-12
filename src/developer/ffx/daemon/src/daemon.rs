@@ -363,7 +363,8 @@ impl Daemon {
         // TODO: these tasks could and probably should be managed by the daemon
         // instead of being detached.
         Daemon::spawn_onet_discovery(self.event_queue.clone());
-        self.tasks.push(Rc::new(zedboot_discovery(self.event_queue.clone())?));
+        let discovery = zedboot_discovery(self.event_queue.clone()).await?;
+        self.tasks.push(Rc::new(discovery));
         Ok(())
     }
 

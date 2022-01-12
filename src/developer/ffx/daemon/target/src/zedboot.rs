@@ -26,8 +26,9 @@ use {
 const ZEDBOOT_MCAST_V6: Ipv6Addr = Ipv6Addr::new(0xff02, 0, 0, 0, 0, 0, 0, 1);
 const ZEDBOOT_REDISCOVERY_INTERFACE_INTERVAL: Duration = Duration::from_secs(5);
 
-pub fn zedboot_discovery(e: events::Queue<DaemonEvent>) -> Result<Task<()>> {
-    Ok(Task::local(interface_discovery(e, ZEDBOOT_REDISCOVERY_INTERFACE_INTERVAL)))
+pub async fn zedboot_discovery(e: events::Queue<DaemonEvent>) -> Result<Task<()>> {
+    let port = port().await?;
+    Ok(Task::local(interface_discovery(port, e, ZEDBOOT_REDISCOVERY_INTERFACE_INTERVAL)))
 }
 
 async fn port() -> Result<NonZeroU16> {
@@ -40,7 +41,11 @@ async fn port() -> Result<NonZeroU16> {
 }
 
 // interface_discovery iterates over all multicast interfaces
-pub async fn interface_discovery(e: events::Queue<DaemonEvent>, discovery_interval: Duration) {
+pub async fn interface_discovery(
+    port: NonZeroU16,
+    e: events::Queue<DaemonEvent>,
+    discovery_interval: Duration,
+) {
     log::debug!("Starting Zedboot discovery");
     // See fxbug.dev/62617#c10 for details. A macOS system can end up in
     // a situation where the default routes for protocols are on
@@ -58,9 +63,7 @@ pub async fn interface_discovery(e: events::Queue<DaemonEvent>, discovery_interv
     let mut v6_listen_socket: Weak<UdpSocket> = Weak::new();
     loop {
         if v6_listen_socket.upgrade().is_none() {
-            match port()
-                .await
-                .and_then(|port| make_listen_socket((ZEDBOOT_MCAST_V6, port.get()).into()))
+            match make_listen_socket((ZEDBOOT_MCAST_V6, port.get()).into())
                 .context("make_listen_socket for IPv6")
             {
                 Ok(sock) => {
