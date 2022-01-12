@@ -199,7 +199,10 @@ protocol Socket {
     SendMsg(struct {
         packet_info PacketInfo:optional;
         data bytes:MAX;
-        control @generated_name("SendControlData") table {};
+        control @generated_name("SendControlData") table {
+            /// Socket level ancillary data.
+            1: socket fuchsia.posix.socket.SocketSendControlData;
+        };
         flags fuchsia.posix.socket.SendMsgFlags;
     }) -> (struct {}) error fuchsia.posix.Errno;
 };

@@ -420,9 +420,6 @@ type SocketRecvControlData = table {
     };
 };
 
-/// Network socket (L3) ancillary data that can be sent.
-type NetworkSocketSendControlData = table {};
-
 /// Network socket (L3) ancillary data that can be received.
 type NetworkSocketRecvControlData = table {
     /// Socket level ancillary data.
@@ -437,6 +434,27 @@ type NetworkSocketRecvControlData = table {
         /// Present if the `SOL_IP` -> `IP_RECVTOS` option is enabled.
         1: tos uint8;
     };
+};
+
+/// Socket level ancillary data that can be sent.
+///
+/// These match the POSIX `SOL_SOCKET` control messages.
+type SocketSendControlData = table {};
+
+/// Network socket (L3) ancillary data that can be sent.
+type NetworkSocketSendControlData = table {
+    /// Socket level ancillary data.
+    1: socket SocketSendControlData;
+
+    /// IPv4 level ancillary data.
+    ///
+    /// These match POSIX `SOL_IP` control messages.
+    2: ip @generated_name("IpSendControlData") table {};
+
+    /// IPv6 level ancillary data.
+    ///
+    /// These match POSIX `SOL_IPV6` control messages.
+    3: ipv6 @generated_name("Ipv6SendControlData") table {};
 };
 
 /// Flags controlling RecvMsg behavior.

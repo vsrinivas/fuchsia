@@ -15,6 +15,7 @@
 #include <netinet/ip.h>
 #include <netinet/ip_icmp.h>
 #include <netinet/tcp.h>
+#include <netinet/udp.h>
 #include <poll.h>
 #include <sys/ioctl.h>
 #include <sys/socket.h>
@@ -5592,15 +5593,12 @@ class NetDatagramSocketsCmsgTestBase {
   }
 
   template <typename F>
-  void SendAndCheckReceivedMessage(void* control, socklen_t control_len, F check) {
-    const char sendbuf[] = "hello";
-    ASSERT_EQ(send(connected_.get(), sendbuf, sizeof(sendbuf), 0), ssize_t(sizeof(sendbuf)))
-        << strerror(errno);
-
-    char recvbuf[sizeof(sendbuf) + 1];
+  void ReceiveAndCheckMessage(const char* sent_buf, ssize_t sent_buf_len, void* control,
+                              socklen_t control_len, F check) const {
+    char recv_buf[sent_buf_len + 1];
     iovec iovec = {
-        .iov_base = recvbuf,
-        .iov_len = sizeof(recvbuf),
+        .iov_base = recv_buf,
+        .iov_len = sizeof(recv_buf),
     };
     msghdr msghdr = {
         .msg_name = nullptr,
@@ -5610,9 +5608,19 @@ class NetDatagramSocketsCmsgTestBase {
         .msg_control = control,
         .msg_controllen = control_len,
     };
-    ASSERT_EQ(recvmsg(bound_.get(), &msghdr, 0), ssize_t(sizeof(sendbuf))) << strerror(errno);
-    ASSERT_EQ(memcmp(recvbuf, sendbuf, sizeof(sendbuf)), 0);
+    ASSERT_EQ(recvmsg(bound().get(), &msghdr, 0), ssize_t(sent_buf_len)) << strerror(errno);
+    ASSERT_EQ(memcmp(recv_buf, sent_buf, sent_buf_len), 0);
     check(msghdr);
+  }
+
+  template <typename F>
+  void SendAndCheckReceivedMessage(void* control, socklen_t control_len, F check) {
+    constexpr char send_buf[] = "hello";
+
+    ASSERT_EQ(send(connected().get(), send_buf, sizeof(send_buf), 0), ssize_t(sizeof(send_buf)))
+        << strerror(errno);
+
+    ReceiveAndCheckMessage(send_buf, sizeof(send_buf), control, control_len, check);
   }
 
   fbl::unique_fd const& bound() const { return bound_; }
@@ -5746,6 +5754,157 @@ INSTANTIATE_TEST_SUITE_P(NetDatagramSocketsCmsgRecvIPv4Tests, NetDatagramSockets
                                               .optname_to_enable_receive = IP_RECVTOS,
                                           })),
                          SocketDomainAndOptionToString);
+
+class NetDatagramSocketsCmsgSendTest : public NetDatagramSocketsCmsgTestBase,
+                                       public testing::TestWithParam<sa_family_t> {
+ protected:
+  void SetUp() override { ASSERT_NO_FATAL_FAILURE(SetUpDatagramSockets(GetParam())); }
+
+  cmsghdr OrdinaryControlMessage() {
+    return {
+        // SOL_SOCKET/SCM_RIGHTS is used for general cmsg tests, because SOL_SOCKET messages are
+        // supported on every socket type, and the SCM_RIGHTS control message is a no-op.
+        // https://github.com/torvalds/linux/blob/42eb8fdac2f/net/core/sock.c#L2628
+        .cmsg_len = CMSG_LEN(0),
+        .cmsg_level = SOL_SOCKET,
+        .cmsg_type = SCM_RIGHTS,
+    };
+  }
+};
+
+TEST_P(NetDatagramSocketsCmsgSendTest, NullControlBufferWithNonZeroLength) {
+  char send_buf[] = "hello";
+  iovec iovec = {
+      .iov_base = send_buf,
+      .iov_len = sizeof(send_buf),
+  };
+  const msghdr send_msghdr = {
+      .msg_iov = &iovec,
+      .msg_iovlen = 1,
+      .msg_control = nullptr,
+      .msg_controllen = 1,
+  };
+
+  ASSERT_EQ(sendmsg(connected().get(), &send_msghdr, 0), -1);
+  ASSERT_EQ(errno, EFAULT) << strerror(errno);
+}
+
+TEST_P(NetDatagramSocketsCmsgSendTest, NonNullControlBufferWithZeroLength) {
+  char send_buf[] = "hello";
+  iovec iovec = {
+      .iov_base = send_buf,
+      .iov_len = sizeof(send_buf),
+  };
+  uint8_t send_control[1];
+  const msghdr send_msghdr = {
+      .msg_iov = &iovec,
+      .msg_iovlen = 1,
+      .msg_control = send_control,
+      .msg_controllen = 0,
+  };
+
+  ASSERT_EQ(sendmsg(connected().get(), &send_msghdr, 0), ssize_t(sizeof(send_buf)))
+      << strerror(errno);
+
+  ASSERT_NO_FATAL_FAILURE(
+      ReceiveAndCheckMessage(send_buf, sizeof(send_buf), nullptr, 0, [](msghdr& recv_msghdr) {
+        EXPECT_EQ(recv_msghdr.msg_controllen, 0u);
+        ASSERT_EQ(CMSG_FIRSTHDR(&recv_msghdr), nullptr);
+      }));
+}
+
+TEST_P(NetDatagramSocketsCmsgSendTest, ValidCmsg) {
+  char send_buf[] = "hello";
+  iovec iovec = {
+      .iov_base = send_buf,
+      .iov_len = sizeof(send_buf),
+  };
+  cmsghdr cmsg = OrdinaryControlMessage();
+  const msghdr send_msghdr = {
+      .msg_iov = &iovec,
+      .msg_iovlen = 1,
+      .msg_control = &cmsg,
+      .msg_controllen = cmsg.cmsg_len,
+  };
+
+  ASSERT_EQ(sendmsg(connected().get(), &send_msghdr, 0), ssize_t(sizeof(send_buf)))
+      << strerror(errno);
+  uint8_t recv_control[CMSG_SPACE(0)];
+  ASSERT_NO_FATAL_FAILURE(ReceiveAndCheckMessage(send_buf, sizeof(send_buf), recv_control,
+                                                 sizeof(recv_control), [](msghdr& recv_msghdr) {
+                                                   EXPECT_EQ(recv_msghdr.msg_controllen, 0u);
+                                                   ASSERT_EQ(CMSG_FIRSTHDR(&recv_msghdr), nullptr);
+                                                 }));
+}
+
+TEST_P(NetDatagramSocketsCmsgSendTest, CmsgLengthOutOfBounds) {
+  char send_buf[] = "hello";
+  iovec iovec = {
+      .iov_base = send_buf,
+      .iov_len = sizeof(send_buf),
+  };
+  cmsghdr cmsg = OrdinaryControlMessage();
+  const msghdr send_msghdr = {
+      .msg_iov = &iovec,
+      .msg_iovlen = 1,
+      .msg_control = &cmsg,
+      .msg_controllen = cmsg.cmsg_len,
+  };
+  cmsg.cmsg_len++;
+
+  ASSERT_EQ(sendmsg(connected().get(), &send_msghdr, 0), -1);
+  ASSERT_EQ(errno, EINVAL) << strerror(errno);
+}
+
+TEST_P(NetDatagramSocketsCmsgSendTest, ControlBufferSmallerThanCmsgHeader) {
+  char send_buf[] = "hello";
+  iovec iovec = {
+      .iov_base = send_buf,
+      .iov_len = sizeof(send_buf),
+  };
+  cmsghdr cmsg = OrdinaryControlMessage();
+  const msghdr send_msghdr = {
+      .msg_iov = &iovec,
+      .msg_iovlen = 1,
+      .msg_control = &cmsg,
+      .msg_controllen = sizeof(cmsg) - 1,
+  };
+  // The control message header would fail basic validation. But because the control buffer length
+  // is too small, the control message should be ignored.
+  cmsg.cmsg_len = 0;
+
+  ASSERT_EQ(sendmsg(connected().get(), &send_msghdr, 0), ssize_t(sizeof(send_buf)));
+  uint8_t recv_control[CMSG_SPACE(0)];
+  ASSERT_NO_FATAL_FAILURE(ReceiveAndCheckMessage(send_buf, sizeof(send_buf), recv_control,
+                                                 sizeof(recv_control), [](msghdr& recv_msghdr) {
+                                                   EXPECT_EQ(recv_msghdr.msg_controllen, 0u);
+                                                   ASSERT_EQ(CMSG_FIRSTHDR(&recv_msghdr), nullptr);
+                                                 }));
+}
+
+TEST_P(NetDatagramSocketsCmsgSendTest, CmsgLengthSmallerThanCmsgHeader) {
+  char send_buf[] = "hello";
+  iovec iovec = {
+      .iov_base = send_buf,
+      .iov_len = sizeof(send_buf),
+  };
+  cmsghdr cmsg = OrdinaryControlMessage();
+  const msghdr send_msghdr = {
+      .msg_iov = &iovec,
+      .msg_iovlen = 1,
+      .msg_control = &cmsg,
+      .msg_controllen = cmsg.cmsg_len,
+  };
+  // It is invalid to have a control message header with a size smaller than itself.
+  cmsg.cmsg_len = sizeof(cmsg) - 1;
+
+  ASSERT_EQ(sendmsg(connected().get(), &send_msghdr, 0), -1);
+  ASSERT_EQ(errno, EINVAL) << strerror(errno);
+}
+
+INSTANTIATE_TEST_SUITE_P(NetDatagramSocketsCmsgSendTests, NetDatagramSocketsCmsgSendTest,
+                         testing::Values(AF_INET, AF_INET6),
+                         [](const auto info) { return socketDomainToString(info.param); });
 
 class NetDatagramSocketsCmsgTimestampTest : public NetDatagramSocketsCmsgTestBase,
                                             public testing::TestWithParam<sa_family_t> {
@@ -5996,6 +6155,52 @@ TEST_F(NetDatagramSocketsCmsgIpTosTest, RecvCmsgBufferTooSmallToBePadded) {
     EXPECT_EQ(cmsg->cmsg_type, IP_TOS);
     EXPECT_EQ(CMSG_NXTHDR(&msghdr, cmsg), nullptr);
   }));
+}
+
+TEST_F(NetDatagramSocketsCmsgIpTosTest, SendCmsg) {
+  constexpr uint8_t tos = 42;
+  char send_buf[] = "hello";
+  iovec iovec = {
+      .iov_base = send_buf,
+      .iov_len = sizeof(send_buf),
+  };
+  uint8_t send_control[CMSG_SPACE(sizeof(tos))];
+  const msghdr send_msghdr = {
+      .msg_iov = &iovec,
+      .msg_iovlen = 1,
+      .msg_control = send_control,
+      .msg_controllen = sizeof(send_control),
+  };
+  cmsghdr* cmsg = CMSG_FIRSTHDR(&send_msghdr);
+  ASSERT_NE(cmsg, nullptr);
+  cmsg->cmsg_level = SOL_IP;
+  cmsg->cmsg_type = IP_TOS;
+  cmsg->cmsg_len = CMSG_LEN(sizeof(tos));
+  memcpy(CMSG_DATA(cmsg), &tos, sizeof(tos));
+
+  ASSERT_EQ(sendmsg(connected().get(), &send_msghdr, 0), ssize_t(sizeof(send_buf)))
+      << strerror(errno);
+  char recv_control[CMSG_SPACE(sizeof(tos)) + 1];
+  ASSERT_NO_FATAL_FAILURE(ReceiveAndCheckMessage(
+      send_buf, sizeof(send_buf), recv_control, sizeof(recv_control), [tos](msghdr& recv_msghdr) {
+        EXPECT_EQ(recv_msghdr.msg_controllen, CMSG_SPACE(sizeof(tos)));
+        cmsghdr* cmsg = CMSG_FIRSTHDR(&recv_msghdr);
+        ASSERT_NE(cmsg, nullptr);
+        EXPECT_EQ(cmsg->cmsg_len, CMSG_LEN(sizeof(tos)));
+        EXPECT_EQ(cmsg->cmsg_level, SOL_IP);
+        EXPECT_EQ(cmsg->cmsg_type, IP_TOS);
+        uint8_t recv_tos;
+        memcpy(&recv_tos, CMSG_DATA(cmsg), sizeof(recv_tos));
+#if defined(__Fuchsia__)
+        // TODO(https://fxbug.dev/21106): Support sending SOL_IP -> IP_TOS control message.
+        (void)tos;
+        constexpr uint8_t kDefaultTOS = 0;
+        EXPECT_EQ(recv_tos, kDefaultTOS);
+#else
+        EXPECT_EQ(recv_tos, tos);
+#endif
+        EXPECT_EQ(CMSG_NXTHDR(&recv_msghdr, cmsg), nullptr);
+      }));
 }
 
 }  // namespace
