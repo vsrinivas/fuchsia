@@ -74,7 +74,10 @@ rustc_binary("rust_bin") {
   ]
 
   sources = [
+    "src/data_processor.rs",
+    "src/debug_data_server.rs",
     "src/debug_data_set.rs",
+    "src/iterator.rs",
     "src/main.rs",
     "src/message.rs",
   ]
