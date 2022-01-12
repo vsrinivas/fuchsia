@@ -78,10 +78,10 @@ zx_status_t IsolatedDevmgr::Create(devmgr_launcher::Args args, async_dispatcher_
   devmgr.loop_ = std::make_unique<async::Loop>(&kAsyncLoopConfigNoAttachToCurrentThread);
 
   // Create and build the realm.
-  auto realm_builder = sys::testing::Realm::Builder::Create();
+  auto realm_builder = sys::testing::experimental::RealmBuilder::Create();
   driver_test_realm::Setup(realm_builder);
-  devmgr.realm_ =
-      std::make_unique<sys::testing::Realm>(realm_builder.Build(devmgr.loop_->dispatcher()));
+  devmgr.realm_ = std::make_unique<sys::testing::experimental::RealmRoot>(
+      realm_builder.Build(devmgr.loop_->dispatcher()));
 
   // Start DriverTestRealm.
   fidl::SynchronousInterfacePtr<fuchsia::driver::test::Realm> driver_test_realm;
@@ -127,8 +127,11 @@ IsolatedDevmgr::IsolatedDevmgr(IsolatedDevmgr&& other)
 
 __EXPORT
 IsolatedDevmgr& IsolatedDevmgr::operator=(IsolatedDevmgr&& other) {
-  loop_ = std::move(other.loop_);
+  // Order is important here. `realm_` must be moved first because its
+  // destructor depends on a reference to `loop_`. If we destroy `loop_`
+  // first, we'll encounter a use-after-free failure.
   realm_ = std::move(other.realm_);
+  loop_ = std::move(other.loop_);
   devfs_root_ = std::move(other.devfs_root_);
   return *this;
 }

@@ -7,6 +7,7 @@
 #include <fidl/fuchsia.board.test/cpp/wire.h>
 #include <fidl/fuchsia.driver.framework/cpp/wire.h>
 #include <fuchsia/driver/test/cpp/fidl.h>
+#include <fuchsia/io2/cpp/fidl.h>
 #include <lib/driver_test_realm/realm_builder/cpp/lib.h>
 #include <lib/fdio/cpp/caller.h>
 #include <lib/fdio/directory.h>
@@ -14,6 +15,7 @@
 #include <lib/fdio/fdio.h>
 #include <lib/syslog/global.h>
 
+#include "lib/sys/component/cpp/testing/realm_builder.h"
 #include "sdk/lib/device-watcher/cpp/device-watcher.h"
 
 namespace driver_integration_test {
@@ -25,70 +27,65 @@ zx_status_t IsolatedDevmgr::Create(Args* args, IsolatedDevmgr* out) {
   devmgr.loop_ = std::make_unique<async::Loop>(&kAsyncLoopConfigNoAttachToCurrentThread);
 
   // Create and build the realm.
-  auto realm_builder = sys::testing::Realm::Builder::Create();
+  auto realm_builder = sys::testing::experimental::RealmBuilder::Create();
   driver_test_realm::Setup(realm_builder);
 
   // Setup Fshost.
   if (args->disable_block_watcher) {
-    realm_builder.AddComponent(
-        Moniker{"fshost"}, Component{.source = ComponentUrl{"#meta/test-fshost-no-watcher.cm"}});
+    realm_builder.AddChild("fshost", "#meta/test-fshost-no-watcher.cm");
 
   } else {
-    realm_builder.AddComponent(Moniker{"fshost"},
-                               Component{.source = ComponentUrl{"#meta/test-fshost.cm"}});
+    realm_builder.AddChild("fshost", "#meta/test-fshost.cm");
   }
-  realm_builder.AddRoute(CapabilityRoute{.capability = Protocol{"fuchsia.process.Launcher"},
-                                         .source = {AboveRoot()},
-                                         .targets = {Moniker{"fshost"}}});
+  realm_builder.AddRoute(Route{.capabilities = {Protocol{"fuchsia.process.Launcher"}},
+                               .source = {ParentRef()},
+                               .targets = {ChildRef{"fshost"}}});
+  realm_builder.AddRoute(Route{.capabilities = {Protocol{"fuchsia.device.manager.Administrator"}},
+                               .source = {ChildRef{"driver_test_realm"}},
+                               .targets = {ChildRef{"fshost"}}});
   realm_builder.AddRoute(
-      CapabilityRoute{.capability = Protocol{"fuchsia.device.manager.Administrator"},
-                      .source = {Moniker{"driver_test_realm"}},
-                      .targets = {Moniker{"fshost"}}});
+      Route{.capabilities = {Protocol{"fuchsia.hardware.power.statecontrol.Admin"}},
+            .source = {ChildRef{"driver_test_realm"}},
+            .targets = {ChildRef{"fshost"}}});
+  realm_builder.AddRoute(Route{.capabilities = {Protocol{"fuchsia.logger.LogSink"}},
+                               .source = {ParentRef()},
+                               .targets = {ChildRef{"fshost"}}});
+  realm_builder.AddRoute(Route{.capabilities = {Protocol{"fuchsia.fshost.BlockWatcher"}},
+                               .source = {ChildRef{"fshost"}},
+                               .targets = {ParentRef()}});
+  realm_builder.AddRoute(Route{.capabilities = {Protocol{"fuchsia.fshost.Admin"}},
+                               .source = {ChildRef{"fshost"}},
+                               .targets = {ParentRef()}});
+  realm_builder.AddRoute(Route{.capabilities = {Protocol{"fuchsia.fshost.Loader"}},
+                               .source = {ChildRef{"fshost"}},
+                               .targets = {ParentRef()}});
   realm_builder.AddRoute(
-      CapabilityRoute{.capability = Protocol{"fuchsia.hardware.power.statecontrol.Admin"},
-                      .source = {Moniker{"driver_test_realm"}},
-                      .targets = {Moniker{"fshost"}}});
-  realm_builder.AddRoute(CapabilityRoute{.capability = Protocol{"fuchsia.logger.LogSink"},
-                                         .source = {AboveRoot()},
-                                         .targets = {Moniker{"fshost"}}});
-  realm_builder.AddRoute(CapabilityRoute{.capability = Protocol{"fuchsia.fshost.BlockWatcher"},
-                                         .source = {Moniker{"fshost"}},
-                                         .targets = {AboveRoot()}});
-  realm_builder.AddRoute(CapabilityRoute{.capability = Protocol{"fuchsia.fshost.Admin"},
-                                         .source = {Moniker{"fshost"}},
-                                         .targets = {AboveRoot()}});
-  realm_builder.AddRoute(CapabilityRoute{.capability = Protocol{"fuchsia.fshost.Loader"},
-                                         .source = {Moniker{"fshost"}},
-                                         .targets = {AboveRoot()}});
-  realm_builder.AddRoute(CapabilityRoute{
-      .capability = Directory{"factory", "factory", fuchsia::io2::Operations::CONNECT},
-      .source = {Moniker{"fshost"}},
-      .targets = {AboveRoot()}});
-  realm_builder.AddRoute(CapabilityRoute{
-      .capability = Directory{"durable", "durable", fuchsia::io2::Operations::CONNECT},
-      .source = {Moniker{"fshost"}},
-      .targets = {AboveRoot()}});
-  realm_builder.AddRoute(CapabilityRoute{
-      .capability = Directory{"install", "install", fuchsia::io2::Operations::CONNECT},
-      .source = {Moniker{"fshost"}},
-      .targets = {AboveRoot()}});
+      Route{.capabilities = {Directory{"factory", "factory", fuchsia::io2::R_STAR_DIR}},
+            .source = {ChildRef{"fshost"}},
+            .targets = {ParentRef()}});
   realm_builder.AddRoute(
-      CapabilityRoute{.capability = Directory{"tmp", "tmp", fuchsia::io2::Operations::CONNECT},
-                      .source = {Moniker{"fshost"}},
-                      .targets = {AboveRoot()}});
-  realm_builder.AddRoute(CapabilityRoute{
-      .capability = Directory{"volume", "volume", fuchsia::io2::Operations::CONNECT},
-      .source = {Moniker{"fshost"}},
-      .targets = {AboveRoot()}});
+      Route{.capabilities = {Directory{"durable", "durable", fuchsia::io2::RW_STAR_DIR}},
+            .source = {ChildRef{"fshost"}},
+            .targets = {ParentRef()}});
+  realm_builder.AddRoute(
+      Route{.capabilities = {Directory{"install", "install", fuchsia::io2::RW_STAR_DIR}},
+            .source = {ChildRef{"fshost"}},
+            .targets = {ParentRef()}});
+  realm_builder.AddRoute(Route{.capabilities = {Directory{"tmp", "tmp", fuchsia::io2::RW_STAR_DIR}},
+                               .source = {ChildRef{"fshost"}},
+                               .targets = {ParentRef()}});
+  realm_builder.AddRoute(
+      Route{.capabilities = {Directory{"volume", "volume", fuchsia::io2::RW_STAR_DIR}},
+            .source = {ChildRef{"fshost"}},
+            .targets = {ParentRef()}});
 
-  realm_builder.AddRoute(
-      CapabilityRoute{.capability = Directory{"dev", "dev", fuchsia::io2::Operations::CONNECT},
-                      .source = {Moniker{"driver_test_realm"}},
-                      .targets = {Moniker{"fshost"}}});
+  realm_builder.AddRoute(Route{.capabilities = {Directory{"dev", "dev", fuchsia::io2::RW_STAR_DIR}},
+                               .source = {ChildRef{"driver_test_realm"}},
+                               .targets = {ChildRef{"fshost"}}});
 
   // Build the realm.
-  devmgr.realm_ =
-      std::make_unique<sys::testing::Realm>(realm_builder.Build(devmgr.loop_->dispatcher()));
+  devmgr.realm_ = std::make_unique<sys::testing::experimental::RealmRoot>(
+      realm_builder.Build(devmgr.loop_->dispatcher()));
 
   // Start DriverTestRealm.
   fidl::SynchronousInterfacePtr<fuchsia::driver::test::Realm> driver_test_realm;

@@ -19,7 +19,7 @@ class DriverTestRealmTest : public gtest::TestLoopFixture {};
 
 TEST_F(DriverTestRealmTest, DriversExist) {
   // Create and build the realm.
-  auto realm_builder = sys::testing::Realm::Builder::Create();
+  auto realm_builder = sys::testing::experimental::RealmBuilder::Create();
   driver_test_realm::Setup(realm_builder);
   auto realm = realm_builder.Build(dispatcher());
 

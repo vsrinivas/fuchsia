@@ -33,11 +33,11 @@ constexpr char kParentPath[] = "sys/platform/11:01:1a";
 constexpr char kDevicePath[] = "sys/platform/11:01:1a/test-bti";
 
 TEST(PbusBtiTest, BtiIsSameAfterCrash) {
-  auto realm_builder = sys::testing::Realm::Builder::Create();
+  auto realm_builder = sys::testing::experimental::RealmBuilder::Create();
   driver_test_realm::Setup(realm_builder);
-  realm_builder.AddRoute(CapabilityRoute{.capability = Protocol{"fuchsia.boot.RootResource"},
-                                         .source = {AboveRoot()},
-                                         .targets = {Moniker{"driver_test_realm"}}});
+  realm_builder.AddRoute(Route{.capabilities = {Protocol{"fuchsia.boot.RootResource"}},
+                               .source = {ParentRef()},
+                               .targets = {ChildRef{"driver_test_realm"}}});
 
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   auto realm = realm_builder.Build(loop.dispatcher());

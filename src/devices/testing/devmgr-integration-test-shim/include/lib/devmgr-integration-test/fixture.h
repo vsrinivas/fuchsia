@@ -60,8 +60,11 @@ class IsolatedDevmgr {
   zx_status_t AddDevfsToOutgoingDir(vfs::PseudoDir* outgoing_root_dir);
 
  private:
+  // `loop_` must come before `realm_` so that they are destroyed in order.
+  // That is, `realm_` needs to be destroyed before `loop_` because it will
+  // hold a reference to `loop_` async dispatcher object.
   std::unique_ptr<async::Loop> loop_;
-  std::unique_ptr<sys::testing::Realm> realm_;
+  std::unique_ptr<sys::testing::experimental::RealmRoot> realm_;
 
   // FD to the root of devmgr's devfs
   fbl::unique_fd devfs_root_;
