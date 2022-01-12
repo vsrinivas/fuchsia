@@ -21,7 +21,7 @@
 
 namespace memfs {
 
-class VnodeMemfs;
+class Vnode;
 
 constexpr size_t kDnodeNameMax = NAME_MAX;
 static_assert(NAME_MAX == 255, "NAME_MAX must be 255");
@@ -41,7 +41,7 @@ class Dnode : public fbl::DoublyLinkedListable<std::unique_ptr<Dnode>> {
   DISALLOW_COPY_ASSIGN_AND_MOVE(Dnode);
 
   // Allocates a dnode, attached to a vnode
-  static std::unique_ptr<Dnode> Create(std::string_view name, fbl::RefPtr<VnodeMemfs> vn);
+  static std::unique_ptr<Dnode> Create(std::string_view name, fbl::RefPtr<Vnode> vn);
 
   // Takes a parent-less node and makes it a child of the parent node.
   //
@@ -75,7 +75,7 @@ class Dnode : public fbl::DoublyLinkedListable<std::unique_ptr<Dnode>> {
 
   // Acquire a pointer to the vnode underneath this dnode.
   // Acquires a reference to the underlying vnode.
-  fbl::RefPtr<VnodeMemfs> AcquireVnode() const;
+  fbl::RefPtr<Vnode> AcquireVnode() const;
 
   // Get a pointer to the parent Dnode. If current Dnode is root, return nullptr.
   Dnode* GetParent() const;
@@ -102,12 +102,12 @@ class Dnode : public fbl::DoublyLinkedListable<std::unique_ptr<Dnode>> {
  private:
   friend struct TypeChildTraits;
 
-  Dnode(fbl::RefPtr<VnodeMemfs> vn, std::unique_ptr<char[]> name, uint32_t flags);
+  Dnode(fbl::RefPtr<Vnode> vn, std::unique_ptr<char[]> name, uint32_t flags);
 
   size_t NameLen() const;
   bool NameMatch(std::string_view name) const;
 
-  fbl::RefPtr<VnodeMemfs> vnode_;
+  fbl::RefPtr<Vnode> vnode_;
   // Refers to the parent named node in the directory hierarchy.
   // A weak reference is used here to avoid a circular dependency, where
   // parents own children, but children point to their parents.

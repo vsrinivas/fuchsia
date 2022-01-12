@@ -8,7 +8,6 @@
 #include <lib/async/dispatcher.h>
 #include <lib/fdio/namespace.h>
 #include <lib/fdio/vfs.h>
-#include <lib/memfs/cpp/vnode.h>
 #include <lib/memfs/memfs.h>
 #include <lib/sync/completion.h>
 #include <stdlib.h>
@@ -21,13 +20,15 @@
 
 #include <fbl/ref_ptr.h>
 
-#include "dnode.h"
 #include "src/lib/storage/vfs/cpp/vfs.h"
+#include "src/storage/memfs/dnode.h"
+#include "src/storage/memfs/memfs.h"
+#include "src/storage/memfs/vnode_dir.h"
 
 struct memfs_filesystem {
-  std::unique_ptr<memfs::Vfs> vfs;
+  std::unique_ptr<memfs::Memfs> vfs;
 
-  explicit memfs_filesystem(std::unique_ptr<memfs::Vfs> fs) : vfs(std::move(fs)) {}
+  explicit memfs_filesystem(std::unique_ptr<memfs::Memfs> fs) : vfs(std::move(fs)) {}
 };
 
 zx_status_t memfs_create_filesystem(async_dispatcher_t* dispatcher, memfs_filesystem_t** out_fs,
@@ -41,9 +42,10 @@ zx_status_t memfs_create_filesystem(async_dispatcher_t* dispatcher, memfs_filesy
     return fs_endpoints.status_value();
   }
 
-  std::unique_ptr<memfs::Vfs> vfs;
+  std::unique_ptr<memfs::Memfs> vfs;
   fbl::RefPtr<memfs::VnodeDir> root;
-  if (zx_status_t status = memfs::Vfs::Create(dispatcher, "<tmp>", &vfs, &root); status != ZX_OK) {
+  if (zx_status_t status = memfs::Memfs::Create(dispatcher, "<tmp>", &vfs, &root);
+      status != ZX_OK) {
     return status;
   }
 

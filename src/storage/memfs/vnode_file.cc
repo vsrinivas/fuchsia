@@ -2,32 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fcntl.h>
-#include <inttypes.h>
-#include <lib/fdio/vfs.h>
-#include <lib/memfs/cpp/vnode.h>
-#include <limits.h>
-#include <stdlib.h>
-#include <string.h>
-#include <sys/stat.h>
-#include <zircon/device/vfs.h>
+#include "src/storage/memfs/vnode_file.h"
 
-#include <algorithm>
-
-#include <fbl/algorithm.h>
-#include <fbl/alloc_checker.h>
-#include <fbl/ref_ptr.h>
-
-#include "dnode.h"
-#include "src/lib/storage/vfs/cpp/vfs.h"
-#include "src/lib/storage/vfs/cpp/vfs_types.h"
+#include "src/storage/memfs/dnode.h"
+#include "src/storage/memfs/memfs.h"
 
 namespace memfs {
 
 // Artificially cap the maximum in-memory file size to 512MB.
 constexpr size_t kMemfsMaxFileSize = 512 * 1024 * 1024;
 
-VnodeFile::VnodeFile(PlatformVfs* vfs) : VnodeMemfs(vfs) {}
+VnodeFile::VnodeFile(PlatformVfs* vfs) : Vnode(vfs) {}
 
 VnodeFile::~VnodeFile() = default;
 

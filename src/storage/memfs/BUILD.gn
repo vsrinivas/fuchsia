@@ -4,21 +4,35 @@
 
 import("//build/unification/zx_library.gni")
 
+# TODO(brettw) remove this when callers are updated to use full paths.
+config("memfs_config") {
+  include_dirs = [ "include" ]
+}
+
 # libmemfs-cpp.a: The C++ client library.
 #
 # Used to implement the C++ components of Memfs, which
 # can be plugged into ulib/fs.
-zx_library("memfs-cpp") {
-  sdk = "source"
-  sdk_headers = [ "lib/memfs/cpp/vnode.h" ]
+static_library("memfs-cpp") {
+  public = [
+    "memfs.h",
+    "vnode.h",
+    "vnode_dir.h",
+    "vnode_file.h",
+    "vnode_vmo.h",
+  ]
   sources = [
-    "directory.cc",
     "dnode.cc",
-    "file.cc",
     "include/lib/memfs/memfs.h",
     "memfs.cc",
-    "vmo.cc",
+    "vnode.cc",
+    "vnode_dir.cc",
+    "vnode_file.cc",
+    "vnode_vmo.cc",
   ]
+
+  public_configs = [ ":memfs_config" ]
+
   public_deps = [
     # <lib/memfs/cpp/vnode.h> has #include <lib/fdio/io.h>
     "//sdk/lib/fdio",

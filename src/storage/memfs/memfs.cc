@@ -2,32 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fcntl.h>
-#include <inttypes.h>
-#include <lib/fdio/namespace.h>
-#include <lib/fdio/vfs.h>
-#include <lib/memfs/cpp/vnode.h>
-#include <lib/memfs/memfs.h>
-#include <lib/sync/completion.h>
-#include <limits.h>
-#include <stdlib.h>
-#include <string.h>
-#include <sys/stat.h>
-#include <zircon/device/vfs.h>
-#include <zircon/time.h>
+#include "src/storage/memfs/memfs.h"
 
-#include <atomic>
-#include <ctime>
-#include <string_view>
-#include <utility>
-
-#include <fbl/algorithm.h>
-#include <fbl/alloc_checker.h>
-#include <fbl/ref_ptr.h>
 #include <safemath/safe_math.h>
 
-#include "src/lib/storage/vfs/cpp/vfs.h"
 #include "src/storage/memfs/dnode.h"
+#include "src/storage/memfs/vnode_dir.h"
 
 namespace memfs {
 
@@ -36,8 +16,8 @@ size_t GetPageSize() {
   return kPageSize;
 }
 
-zx_status_t Vfs::GrowVMO(zx::vmo& vmo, size_t current_size, size_t request_size,
-                         size_t* actual_size) {
+zx_status_t Memfs::GrowVMO(zx::vmo& vmo, size_t current_size, size_t request_size,
+                           size_t* actual_size) {
   if (request_size <= current_size) {
     *actual_size = current_size;
     return ZX_OK;
@@ -62,7 +42,7 @@ zx_status_t Vfs::GrowVMO(zx::vmo& vmo, size_t current_size, size_t request_size,
   return ZX_OK;
 }
 
-zx::status<fs::FilesystemInfo> Vfs::GetFilesystemInfo() {
+zx::status<fs::FilesystemInfo> Memfs::GetFilesystemInfo() {
   fs::FilesystemInfo info;
 
   info.block_size = safemath::checked_cast<uint32_t>(GetPageSize());
@@ -76,8 +56,8 @@ zx::status<fs::FilesystemInfo> Vfs::GetFilesystemInfo() {
   info.total_bytes = UINT64_MAX;
   info.used_bytes = 0;
   info.total_nodes = UINT64_MAX;
-  uint64_t deleted_ino_count = VnodeMemfs::GetDeletedInoCounter();
-  uint64_t ino_count = VnodeMemfs::GetInoCounter();
+  uint64_t deleted_ino_count = Vnode::GetDeletedInoCounter();
+  uint64_t ino_count = Vnode::GetInoCounter();
   ZX_DEBUG_ASSERT(ino_count >= deleted_ino_count);
   info.used_nodes = ino_count - deleted_ino_count;
   info.name = "memfs";
@@ -85,9 +65,9 @@ zx::status<fs::FilesystemInfo> Vfs::GetFilesystemInfo() {
   return zx::ok(info);
 }
 
-zx_status_t Vfs::Create(async_dispatcher_t* dispatcher, std::string_view fs_name,
-                        std::unique_ptr<memfs::Vfs>* out_vfs, fbl::RefPtr<VnodeDir>* out_root) {
-  auto fs = std::unique_ptr<memfs::Vfs>(new memfs::Vfs(dispatcher));
+zx_status_t Memfs::Create(async_dispatcher_t* dispatcher, std::string_view fs_name,
+                          std::unique_ptr<memfs::Memfs>* out_vfs, fbl::RefPtr<VnodeDir>* out_root) {
+  auto fs = std::unique_ptr<memfs::Memfs>(new memfs::Memfs(dispatcher));
 
   fbl::RefPtr<VnodeDir> root = fbl::MakeRefCounted<VnodeDir>(fs.get());
   std::unique_ptr<Dnode> dn = Dnode::Create(fs_name, root);
@@ -103,73 +83,14 @@ zx_status_t Vfs::Create(async_dispatcher_t* dispatcher, std::string_view fs_name
   return ZX_OK;
 }
 
-Vfs::Vfs(async_dispatcher_t* dispatcher) : fs::ManagedVfs(dispatcher) {}
+Memfs::Memfs(async_dispatcher_t* dispatcher) : fs::ManagedVfs(dispatcher) {}
 
-Vfs::~Vfs() = default;
+Memfs::~Memfs() = default;
 
-zx_status_t Vfs::CreateFromVmo(VnodeDir* parent, std::string_view name, zx_handle_t vmo,
-                               zx_off_t off, zx_off_t len) {
+zx_status_t Memfs::CreateFromVmo(VnodeDir* parent, std::string_view name, zx_handle_t vmo,
+                                 zx_off_t off, zx_off_t len) {
   std::lock_guard<std::mutex> lock(vfs_lock_);
   return parent->CreateFromVmo(name, vmo, off, len);
-}
-
-std::atomic<uint64_t> VnodeMemfs::ino_ctr_ = 0;
-std::atomic<uint64_t> VnodeMemfs::deleted_ino_ctr_ = 0;
-
-VnodeMemfs::VnodeMemfs(PlatformVfs* vfs)
-    : Vnode(vfs), ino_(ino_ctr_.fetch_add(1, std::memory_order_relaxed)) {
-  ZX_DEBUG_ASSERT(vfs);
-  std::timespec ts;
-  if (std::timespec_get(&ts, TIME_UTC)) {
-    create_time_ = modify_time_ = zx_time_from_timespec(ts);
-  }
-}
-
-VnodeMemfs::~VnodeMemfs() { deleted_ino_ctr_.fetch_add(1, std::memory_order_relaxed); }
-
-zx_status_t VnodeMemfs::SetAttributes(fs::VnodeAttributesUpdate attr) {
-  if (attr.has_modification_time()) {
-    modify_time_ = attr.take_modification_time();
-  }
-  if (attr.any()) {
-    // any unhandled field update is unsupported
-    return ZX_ERR_INVALID_ARGS;
-  }
-  return ZX_OK;
-}
-
-void VnodeMemfs::Sync(SyncCallback closure) {
-  // Since this filesystem is in-memory, all data is already up-to-date in
-  // the underlying storage
-  closure(ZX_OK);
-}
-
-zx_status_t VnodeMemfs::AttachRemote(fidl::ClientEnd<fuchsia_io::Directory> h) {
-  if (!IsDirectory()) {
-    return ZX_ERR_NOT_DIR;
-  } else if (IsRemote()) {
-    return ZX_ERR_ALREADY_BOUND;
-  }
-  SetRemote(std::move(h));
-  return ZX_OK;
-}
-
-void VnodeMemfs::UpdateModified() {
-  std::timespec ts;
-  if (std::timespec_get(&ts, TIME_UTC)) {
-    modify_time_ = zx_time_from_timespec(ts);
-  } else {
-    modify_time_ = 0;
-  }
-
-#ifdef __Fuchsia__
-  // Notify current vnode.
-  CheckInotifyFilterAndNotify(fio2::wire::InotifyWatchMask::kModify);
-  // Notify all parent vnodes.
-  for (auto parent = dnode_parent_; parent != nullptr; parent = parent->GetParent()) {
-    parent->AcquireVnode()->CheckInotifyFilterAndNotify(fio2::wire::InotifyWatchMask::kModify);
-  }
-#endif
 }
 
 }  // namespace memfs

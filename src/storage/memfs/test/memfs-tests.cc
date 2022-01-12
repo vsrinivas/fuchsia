@@ -4,10 +4,12 @@
 
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
-#include <lib/memfs/cpp/vnode.h>
 #include <sys/stat.h>
 
 #include <zxtest/zxtest.h>
+
+#include "src/storage/memfs/memfs.h"
+#include "src/storage/memfs/vnode_dir.h"
 
 namespace memfs {
 namespace {
@@ -15,17 +17,17 @@ namespace {
 TEST(MemfsTest, DirectoryLifetime) {
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
 
-  std::unique_ptr<Vfs> vfs;
+  std::unique_ptr<Memfs> vfs;
   fbl::RefPtr<VnodeDir> root;
-  ASSERT_OK(Vfs::Create(loop.dispatcher(), "<tmp>", &vfs, &root));
+  ASSERT_OK(Memfs::Create(loop.dispatcher(), "<tmp>", &vfs, &root));
 }
 
 TEST(MemfsTest, CreateFile) {
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
 
-  std::unique_ptr<Vfs> vfs;
+  std::unique_ptr<Memfs> vfs;
   fbl::RefPtr<VnodeDir> root;
-  ASSERT_OK(Vfs::Create(loop.dispatcher(), "<tmp>", &vfs, &root));
+  ASSERT_OK(Memfs::Create(loop.dispatcher(), "<tmp>", &vfs, &root));
   fbl::RefPtr<fs::Vnode> file;
   ASSERT_OK(root->Create("foobar", S_IFREG, &file));
   auto directory = static_cast<fbl::RefPtr<fs::Vnode>>(root);
@@ -44,9 +46,9 @@ TEST(MemfsTest, CreateFile) {
 TEST(MemfsTest, SubdirectoryUpdateTime) {
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
 
-  std::unique_ptr<Vfs> vfs;
+  std::unique_ptr<Memfs> vfs;
   fbl::RefPtr<VnodeDir> root;
-  ASSERT_OK(Vfs::Create(loop.dispatcher(), "<tmp>", &vfs, &root));
+  ASSERT_OK(Memfs::Create(loop.dispatcher(), "<tmp>", &vfs, &root));
   fbl::RefPtr<fs::Vnode> index;
   ASSERT_OK(root->Create("index", S_IFREG, &index));
   fbl::RefPtr<fs::Vnode> subdirectory;
@@ -71,9 +73,9 @@ TEST(MemfsTest, SubdirectoryUpdateTime) {
 TEST(MemfsTest, SubPageContentSize) {
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
 
-  std::unique_ptr<Vfs> vfs;
+  std::unique_ptr<Memfs> vfs;
   fbl::RefPtr<VnodeDir> root;
-  ASSERT_OK(Vfs::Create(loop.dispatcher(), "<tmp>", &vfs, &root));
+  ASSERT_OK(Memfs::Create(loop.dispatcher(), "<tmp>", &vfs, &root));
 
   zx::vmo vmo;
   ASSERT_OK(zx::vmo::create(zx_system_get_page_size(), 0, &vmo));
@@ -109,9 +111,9 @@ TEST(MemfsTest, SubPageContentSize) {
 TEST(MemfsTest, LocalClone) {
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
 
-  std::unique_ptr<Vfs> vfs;
+  std::unique_ptr<Memfs> vfs;
   fbl::RefPtr<VnodeDir> root;
-  ASSERT_OK(Vfs::Create(loop.dispatcher(), "<tmp>", &vfs, &root));
+  ASSERT_OK(Memfs::Create(loop.dispatcher(), "<tmp>", &vfs, &root));
 
   zx_off_t vmo_size = zx_system_get_page_size() * static_cast<zx_off_t>(2);
   zx_off_t vmo_offset = vmo_size / 2;

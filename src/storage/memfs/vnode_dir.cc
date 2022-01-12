@@ -2,31 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fcntl.h>
-#include <inttypes.h>
-#include <lib/fdio/vfs.h>
-#include <lib/memfs/cpp/vnode.h>
-#include <limits.h>
-#include <stdlib.h>
-#include <string.h>
+#include "src/storage/memfs/vnode_dir.h"
+
 #include <sys/stat.h>
-#include <zircon/device/vfs.h>
 
-#include <memory>
-#include <string_view>
-#include <utility>
-
-#include <fbl/algorithm.h>
-#include <fbl/alloc_checker.h>
-#include <fbl/ref_ptr.h>
-
-#include "dnode.h"
-#include "src/lib/storage/vfs/cpp/vfs.h"
-#include "src/lib/storage/vfs/cpp/vfs_types.h"
+#include "src/storage/memfs/dnode.h"
+#include "src/storage/memfs/vnode_file.h"
+#include "src/storage/memfs/vnode_vmo.h"
 
 namespace memfs {
 
-VnodeDir::VnodeDir(PlatformVfs* vfs) : VnodeMemfs(vfs) {
+VnodeDir::VnodeDir(PlatformVfs* vfs) : Vnode(vfs) {
   link_count_ = 1;  // Implied '.'
 }
 
@@ -114,7 +100,7 @@ zx_status_t VnodeDir::Create(std::string_view name, uint32_t mode, fbl::RefPtr<f
   }
 
   fbl::AllocChecker ac;
-  fbl::RefPtr<memfs::VnodeMemfs> vn;
+  fbl::RefPtr<memfs::Vnode> vn;
   {
     std::lock_guard lock(mutex_);
     if (S_ISDIR(mode)) {
@@ -164,7 +150,7 @@ zx_status_t VnodeDir::Unlink(std::string_view name, bool must_be_dir) {
 
 zx_status_t VnodeDir::Rename(fbl::RefPtr<fs::Vnode> _newdir, std::string_view oldname,
                              std::string_view newname, bool src_must_be_dir, bool dst_must_be_dir) {
-  auto newdir = fbl::RefPtr<VnodeMemfs>::Downcast(std::move(_newdir));
+  auto newdir = fbl::RefPtr<Vnode>::Downcast(std::move(_newdir));
 
   if (!IsDirectory() || !newdir->IsDirectory()) {
     // Not linked into the directory hierachy.
@@ -243,7 +229,7 @@ zx_status_t VnodeDir::Rename(fbl::RefPtr<fs::Vnode> _newdir, std::string_view ol
 }
 
 zx_status_t VnodeDir::Link(std::string_view name, fbl::RefPtr<fs::Vnode> target) {
-  auto vn = fbl::RefPtr<VnodeMemfs>::Downcast(std::move(target));
+  auto vn = fbl::RefPtr<Vnode>::Downcast(std::move(target));
 
   if (!IsDirectory()) {
     // Empty, unlinked parent
@@ -282,7 +268,7 @@ zx_status_t VnodeDir::CreateFromVmo(std::string_view name, zx_handle_t vmo, zx_o
   std::lock_guard lock(mutex_);
 
   fbl::AllocChecker ac;
-  fbl::RefPtr<VnodeMemfs> vn;
+  fbl::RefPtr<Vnode> vn;
   vn = fbl::AdoptRef(new (&ac) VnodeVmo(vfs(), vmo, off, len));
   if (!ac.check()) {
     return ZX_ERR_NO_MEMORY;
@@ -307,7 +293,7 @@ zx_status_t VnodeDir::CanCreate(std::string_view name) const {
   return status;
 }
 
-zx_status_t VnodeDir::AttachVnode(fbl::RefPtr<VnodeMemfs> vn, std::string_view name, bool isdir) {
+zx_status_t VnodeDir::AttachVnode(fbl::RefPtr<Vnode> vn, std::string_view name, bool isdir) {
   // dnode takes a reference to the vnode
   std::unique_ptr<Dnode> dn;
   if ((dn = Dnode::Create(name, vn)) == nullptr) {

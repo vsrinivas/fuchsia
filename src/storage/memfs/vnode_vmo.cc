@@ -2,24 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fcntl.h>
-#include <inttypes.h>
-#include <lib/fdio/vfs.h>
-#include <lib/memfs/cpp/vnode.h>
+#include "src/storage/memfs/vnode_vmo.h"
+
 #include <lib/syslog/cpp/macros.h>
-#include <limits.h>
-#include <stdlib.h>
-#include <string.h>
-#include <sys/stat.h>
-#include <zircon/device/vfs.h>
 
-#include <fbl/algorithm.h>
-#include <fbl/alloc_checker.h>
-#include <fbl/ref_ptr.h>
-
-#include "dnode.h"
-#include "src/lib/storage/vfs/cpp/vfs.h"
-#include "src/lib/storage/vfs/cpp/vfs_types.h"
+#include "src/storage/memfs/dnode.h"
+#include "src/storage/memfs/memfs.h"
 
 namespace memfs {
 namespace {
@@ -39,7 +27,7 @@ bool WindowMatchesVMO(zx_handle_t vmo, zx_off_t offset, zx_off_t length) {
 }  // namespace
 
 VnodeVmo::VnodeVmo(PlatformVfs* vfs, zx_handle_t vmo, zx_off_t offset, zx_off_t length)
-    : VnodeMemfs(vfs), vmo_(vmo), offset_(offset), length_(length) {
+    : Vnode(vfs), vmo_(vmo), offset_(offset), length_(length) {
   // Check whether the backing VMO has ZX_RIGHT_EXECUTE, which influences later validation and
   // behavior.
   zx_info_handle_basic_t handle_info;

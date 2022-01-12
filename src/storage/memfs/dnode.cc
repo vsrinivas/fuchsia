@@ -2,26 +2,19 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "dnode.h"
+#include "src/storage/memfs/dnode.h"
 
-#include <lib/memfs/cpp/vnode.h>
-#include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
 
 #include <memory>
-#include <string_view>
-#include <utility>
-
-#include <fbl/alloc_checker.h>
-#include <fbl/ref_ptr.h>
 
 #include "src/lib/storage/vfs/cpp/vfs.h"
+#include "src/storage/memfs/vnode.h"
 
 namespace memfs {
 
 // Create a new dnode and attach it to a vnode
-std::unique_ptr<Dnode> Dnode::Create(std::string_view name, fbl::RefPtr<VnodeMemfs> vn) {
+std::unique_ptr<Dnode> Dnode::Create(std::string_view name, fbl::RefPtr<Vnode> vn) {
   if ((name.length() > kDnodeNameMax) || (name.length() < 1)) {
     return nullptr;
   }
@@ -105,7 +98,7 @@ zx_status_t Dnode::Lookup(std::string_view name, Dnode** out) {
   return ZX_OK;
 }
 
-fbl::RefPtr<VnodeMemfs> Dnode::AcquireVnode() const { return vnode_; }
+fbl::RefPtr<Vnode> Dnode::AcquireVnode() const { return vnode_; }
 
 Dnode* Dnode::GetParent() const { return parent_; }
 
@@ -190,7 +183,7 @@ void Dnode::PutName(std::unique_ptr<char[]> name, size_t len) {
 
 bool Dnode::IsDirectory() const { return vnode_->IsDirectory(); }
 
-Dnode::Dnode(fbl::RefPtr<VnodeMemfs> vn, std::unique_ptr<char[]> name, uint32_t flags)
+Dnode::Dnode(fbl::RefPtr<Vnode> vn, std::unique_ptr<char[]> name, uint32_t flags)
     : vnode_(std::move(vn)),
       parent_(nullptr),
       ordering_token_(0),
