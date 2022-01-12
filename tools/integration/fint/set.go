@@ -138,6 +138,7 @@ func runGen(
 		gn,
 		"gen",
 		contextSpec.BuildDir,
+		fmt.Sprintf("--root=%s", contextSpec.CheckoutDir),
 		"--check=system",
 		"--fail-on-unused-args",
 		// If --ninja-executable is set, GN runs `ninja -t restat build.ninja`
