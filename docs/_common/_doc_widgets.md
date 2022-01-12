@@ -65,13 +65,13 @@ Simple definition callout. Use between pargraphs.
   {% set match=false %}
   {% for item in glossary %}
     {% if item.term|lower ==  term|replace('-', ' ')|lower %}
-    <div>
+    <div style="display:flex;width:100%">
        <style>
          .pencil-edit {
            float: right;
          }
        </style>
-       <aside class="key-term">
+       <aside class="key-term" style="width:100%">
        <b><a href="/docs/glossary.md#{{ item.term|replace(' ', '-')|lower }}">{{ item.term }}</a>:</b>
        {% if item.full_description != '' %}
         {{ item.full_description }}
@@ -82,9 +82,7 @@ Simple definition callout. Use between pargraphs.
          Click the pencil icon to add a description.
       {% endif %}
       {% set match=true %}
-      <br>
       {{ pencil_edit }}
-      <br>
       </aside>
   </div>
     {% endif %}
