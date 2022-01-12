@@ -410,10 +410,10 @@ zx::status<ContiguousTRBInfo> TransferRing::AllocateContiguous(size_t count) {
   TRB* nop;
   size_t nop_count = 1;
   zx_status_t status = AllocateTRB(&nop, nullptr);
-  Control::FromTRB(nop).set_Type(Control::Nop).ToTrb(nop);
   if (status != ZX_OK) {
     return zx::error(status);
   }
+  Control::FromTRB(nop).set_Type(Control::Nop).ToTrb(nop);
   TRB* prev = nop;
   count--;
   bool discontiguous = false;
