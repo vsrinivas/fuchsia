@@ -419,7 +419,7 @@ impl DataRepoState {
         event_timestamp: zx::Time,
     ) -> Result<(), Error> {
         let inspect_container = InspectArtifactsContainer {
-            component_diagnostics_proxy: Arc::new(directory_proxy),
+            component_diagnostics_proxy: directory_proxy,
             event_timestamp,
         };
 

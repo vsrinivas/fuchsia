@@ -23,7 +23,7 @@ use tracing::warn;
 pub struct InspectArtifactsContainer {
     /// DirectoryProxy for the out directory that this
     /// data packet is configured for.
-    pub component_diagnostics_proxy: Arc<DirectoryProxy>,
+    pub component_diagnostics_proxy: DirectoryProxy,
     /// The time when the DiagnosticsReady event that caused the creation of
     /// the inspect artifact container was created.
     pub event_timestamp: zx::Time,
