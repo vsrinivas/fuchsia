@@ -38,8 +38,7 @@
                 "test": [
                     {}
                 ]
-            },
-            "timeout": 120
+            }
         }
     },
     "include": [
