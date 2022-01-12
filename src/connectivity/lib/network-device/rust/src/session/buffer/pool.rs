@@ -8,6 +8,7 @@ use parking_lot::Mutex;
 use std::collections::VecDeque;
 use std::io::{Read, Seek, SeekFrom, Write};
 use std::mem::{ManuallyDrop, MaybeUninit};
+use std::num::TryFromIntError;
 use std::ops::{Deref, DerefMut};
 use std::ptr::NonNull;
 use std::sync::Arc;
@@ -889,15 +890,18 @@ impl<K: AllocKind> Seek for Buffer<K> {
         let pos = match pos {
             SeekFrom::Start(pos) => pos,
             SeekFrom::End(offset) => {
-                let end = i64::try_from(self.cap()).map_err(|_err| zx::Status::OUT_OF_RANGE)?;
+                let end = i64::try_from(self.cap())
+                    .map_err(|TryFromIntError { .. }| zx::Status::OUT_OF_RANGE)?;
                 u64::try_from(end.wrapping_add(offset)).unwrap()
             }
             SeekFrom::Current(offset) => {
-                let current = i64::try_from(self.pos).map_err(|_err| zx::Status::OUT_OF_RANGE)?;
+                let current = i64::try_from(self.pos)
+                    .map_err(|TryFromIntError { .. }| zx::Status::OUT_OF_RANGE)?;
                 u64::try_from(current.wrapping_add(offset)).unwrap()
             }
         };
-        self.pos = usize::try_from(pos).map_err(|_err| zx::Status::OUT_OF_RANGE)?;
+        self.pos =
+            usize::try_from(pos).map_err(|TryFromIntError { .. }| zx::Status::OUT_OF_RANGE)?;
         Ok(pos)
     }
 }
@@ -1085,12 +1089,25 @@ mod tests {
         }
     }
 
-    impl<T: PartialEq> PartialEq for Chained<T> {
-        fn eq(&self, other: &Self) -> bool {
-            if self.len != other.len {
+    impl<K, I, T> PartialEq<T> for Chained<DescId<K>>
+    where
+        K: AllocKind,
+        I: ExactSizeIterator<Item = u16>,
+        T: Copy + IntoIterator<IntoIter = I>,
+    {
+        fn eq(&self, other: &T) -> bool {
+            let iter = other.into_iter();
+            if usize::from(self.len) != iter.len() {
                 return false;
             }
-            self.iter().zip(other.iter()).all(|(l, r)| l == r)
+            self.iter().zip(iter).all(|(l, r)| l.get() == r)
+        }
+    }
+
+    impl Debug for TxAllocReq {
+        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+            let TxAllocReq { sender: _, size } = self;
+            f.debug_struct("TxAllocReq").field("size", &size).finish_non_exhaustive()
         }
     }
 
@@ -1180,9 +1197,16 @@ mod tests {
             let alloc_fut = pool.alloc_tx_checked(1);
             futures::pin_mut!(alloc_fut);
             assert_matches!(executor.run_until_stalled(&mut alloc_fut), Poll::Pending);
-            assert!(!pool.tx_alloc_state.lock().requests.is_empty());
+            assert_matches!(
+                pool.tx_alloc_state.lock().requests.as_slices(),
+                (&[ref req1, ref req2], &[]) if req1.size.get() == 1 && req2.size.get() == 1
+            );
         }
-        assert_matches!(allocated.pop(), Some(_));
+        assert_matches!(
+            allocated.pop(),
+            Some(AllocGuard { ref descs, pool: ref p })
+                if descs == &[DEFAULT_TX_BUFFERS.get() - 1] && Arc::ptr_eq(p, &pool)
+        );
         let state = pool.tx_alloc_state.lock();
         assert_eq!(state.free_list.len, 1);
         assert!(state.requests.is_empty());
@@ -1197,8 +1221,15 @@ mod tests {
             let alloc_fut = pool.alloc_tx_checked(1);
             futures::pin_mut!(alloc_fut);
             assert_matches!(executor.run_until_stalled(&mut alloc_fut), Poll::Pending);
-            assert!(!pool.tx_alloc_state.lock().requests.is_empty());
-            assert_matches!(allocated.pop(), Some(_));
+            assert_matches!(
+                pool.tx_alloc_state.lock().requests.as_slices(),
+                (&[ref req1, ref req2], &[]) if req1.size.get() == 1 && req2.size.get() == 1
+            );
+            assert_matches!(
+                allocated.pop(),
+                Some(AllocGuard { ref descs, pool: ref p })
+                    if descs == &[DEFAULT_TX_BUFFERS.get() - 1] && Arc::ptr_eq(p, &pool)
+            );
         }
         let state = pool.tx_alloc_state.lock();
         assert_eq!(state.free_list.len, 1);
@@ -1237,13 +1268,24 @@ mod tests {
         }
 
         let mut to_free = Vec::new();
+        let mut freed = 0;
         for free_size in (1..=TASKS_TOTAL).rev() {
             let (_req_size, mut task) = alloc_futs.remove(0);
             for _ in 1..free_size {
-                assert_matches!(allocated.pop(), Some(_));
+                freed += 1;
+                assert_matches!(
+                    allocated.pop(),
+                    Some(AllocGuard { ref descs, pool: ref p })
+                        if descs == &[DEFAULT_TX_BUFFERS.get() - freed] && Arc::ptr_eq(p, &pool)
+                );
                 assert_matches!(executor.run_until_stalled(&mut task), Poll::Pending);
             }
-            assert_matches!(allocated.pop(), Some(_));
+            freed += 1;
+            assert_matches!(
+                allocated.pop(),
+                Some(AllocGuard { ref descs, pool: ref p })
+                    if descs == &[DEFAULT_TX_BUFFERS.get() - freed] && Arc::ptr_eq(p, &pool)
+            );
             match executor.run_until_stalled(&mut task) {
                 Poll::Ready(alloc) => {
                     assert_eq!(alloc.len(), free_size);

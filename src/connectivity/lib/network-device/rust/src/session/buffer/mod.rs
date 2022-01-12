@@ -503,6 +503,7 @@ mod types {
     use fuchsia_async::FifoEntry;
     use std::convert::{TryFrom, TryInto as _};
     use std::fmt::Debug;
+    use std::num::TryFromIntError;
 
     /// The identifier of a descriptor.
     ///
@@ -569,7 +570,8 @@ mod types {
         type Error = Error;
 
         fn try_from(value: usize) -> Result<Self> {
-            let value = u8::try_from(value).map_err(|_err| Error::LargeChain(value))?;
+            let value =
+                u8::try_from(value).map_err(|TryFromIntError { .. }| Error::LargeChain(value))?;
             value.try_into()
         }
     }
