@@ -32,7 +32,10 @@ When running tests, you will need to modify the selector for the logs.
 fx log --tag starnix --hide_metadata --pretty --severity TRACE --select "core/test*/*/starnix*#TRACE"
 ```
 
-The `select` arguments contain the moniker for the starnix instance you want to inspect logs from.
+The `--select` arguments contain the moniker for the starnix instance whose minimum severity log
+level you want to change. This affects the logs emitted by starnix, as opposed to `--severity`,
+which affects which logs are filtered for viewing. The changed log level only persists for the
+duration of the `fx log` command.
 
 If you do not care about detailed logging, you can leave out the `--severity` and just do:
 
