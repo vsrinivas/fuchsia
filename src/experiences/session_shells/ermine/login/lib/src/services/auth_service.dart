@@ -117,7 +117,7 @@ class AuthService {
 
   /// Logs out of an account by locking it.
   Future<void> logout() async {
-    assert(_account == null, 'No account exist to logout from.');
+    assert(_account != null, 'No account exists to logout from.');
     return _account!.lock();
   }
 
