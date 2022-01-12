@@ -21,8 +21,8 @@ type CSsid = struct {
 };
 
 /// The limit on the number of SSIDs is 84 because an SSID List IE can contain no
-/// more than 84 one byte SSIDs. (Specifying 0 byte SSID is an SSID List is valid
-/// but unnecessary since it is the wildcard SSID.)
+/// more than 84 one byte SSIDs. (Specifying a zero byte SSID in an SSID List with
+/// more than one SSID is valid but unnecessary since it is the wildcard SSID.)
 @namespaced
 const SSID_LIST_MAX uint8 = 84;
 
