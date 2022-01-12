@@ -56,19 +56,19 @@ class MagmaVsi {
 
   void ConnectionCreate() {
     ASSERT_NE(device_, 0ul);
-    ASSERT_EQ(connection_, nullptr);
+    ASSERT_EQ(connection_, 0u);
     EXPECT_EQ(magma_create_connection2(device_, &(connection_)), MAGMA_STATUS_OK);
-    EXPECT_NE(connection_, nullptr);
+    EXPECT_NE(connection_, 0u);
   }
 
   void ConnectionRelease() {
-    ASSERT_NE(connection_, nullptr);
+    ASSERT_NE(connection_, 0u);
     magma_release_connection(connection_);
-    connection_ = nullptr;
+    connection_ = 0;
   }
 
   void ContextCreate() {
-    ASSERT_NE(connection_, nullptr);
+    ASSERT_NE(connection_, 0u);
     ASSERT_EQ(context_id_, 0u);
     magma_create_context(connection_, &(context_id_));
     EXPECT_NE(context_id_, 0u);
@@ -90,7 +90,7 @@ class MagmaVsi {
   static constexpr const uint32_t kVersiliconChipID = 0x8000;
 
   magma_device_t device_ = 0ul;
-  magma_connection_t connection_ = nullptr;
+  magma_connection_t connection_ = {};
   uint32_t context_id_ = 0u;
 };
 

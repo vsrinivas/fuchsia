@@ -399,6 +399,11 @@ zx_status_t VirtioMagma::Handle_poll(VirtioDescriptor* request_desc,
     return ZX_ERR_INVALID_ARGS;
   }
 
+  if (request->count % sizeof(magma_poll_item_t) != 0) {
+    FX_LOGS(ERROR) << "VIRTIO_MAGMA_CMD_POLL: count is not a multiple of sizeof(magma_poll_item_t)";
+    return ZX_ERR_INVALID_ARGS;
+  }
+
   // The actual items immediately follow the request struct.
   auto request_copy = *request;
   request_copy.items = reinterpret_cast<uint64_t>(&request[1]);

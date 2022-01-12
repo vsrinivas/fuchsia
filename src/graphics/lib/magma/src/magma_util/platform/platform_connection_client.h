@@ -29,7 +29,7 @@ class PlatformPerfCountPoolClient {
 };
 
 // Any implementation of PlatformConnectionClient shall be threadsafe.
-class PlatformConnectionClient : public magma_connection {
+class PlatformConnectionClient {
  public:
   virtual ~PlatformConnectionClient() {}
 
@@ -92,18 +92,21 @@ class PlatformConnectionClient : public magma_connection {
 
   static PlatformConnectionClient* cast(magma_connection_t connection) {
     DASSERT(connection);
-    DASSERT(connection->magic_ == kMagic);
-    return static_cast<PlatformConnectionClient*>(connection);
+    auto client = reinterpret_cast<PlatformConnectionClient*>(connection);
+    DASSERT(client->magic_ == kMagic);
+    return client;
   }
 
   // Returns: inflight messages, inflight memory
   virtual std::pair<uint64_t, uint64_t> GetFlowControlCounts() = 0;
 
  protected:
-  PlatformConnectionClient() { magic_ = kMagic; }
+  PlatformConnectionClient() {}
 
  private:
   static const uint32_t kMagic = 0x636f6e6e;  // "conn" (Connection)
+
+  uint32_t magic_ = kMagic;
 };
 
 }  // namespace magma

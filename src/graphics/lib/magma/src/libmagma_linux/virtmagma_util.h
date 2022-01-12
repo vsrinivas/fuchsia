@@ -10,6 +10,8 @@
 #include <sys/ioctl.h>
 #include <sys/unistd.h>
 
+#include <utility>
+
 #include "src/graphics/lib/magma/src/magma_util/macros.h"
 #include "virtmagma.h"
 
@@ -44,9 +46,9 @@ inline bool virtmagma_handshake(int32_t file_descriptor) {
 inline bool virtmagma_send_command(int32_t file_descriptor, void* request, size_t request_size,
                                    void* response, size_t response_size) {
   virtmagma_ioctl_args_magma_command command{};
-  command.request_address = (uint64_t)request;
+  command.request_address = reinterpret_cast<uintptr_t>(request);
   command.request_size = request_size;
-  command.response_address = (uint64_t)response;
+  command.response_address = reinterpret_cast<uintptr_t>(response);
   command.response_size = response_size;
   if (ioctl(file_descriptor, VIRTMAGMA_IOCTL_MAGMA_COMMAND, &command)) {
     DMESSAGE("virtmagma ioctl fd %d failed: %d", file_descriptor, errno);

@@ -14,7 +14,7 @@
 std::unordered_map<uint32_t, magma::PlatformBuffer*> exported_buffers;
 std::unordered_map<uint32_t, magma::PlatformSemaphore*> exported_semaphores;
 
-class MockConnection : public magma_connection {
+class MockConnection {
  public:
   uint32_t next_context_id() { return next_context_id_++; }
 
@@ -32,17 +32,12 @@ magma_status_t magma_device_import(uint32_t device_handle, magma_device_t* devic
 void magma_device_release(magma_device_t device) { delete reinterpret_cast<MockDevice*>(device); }
 
 magma_status_t magma_create_connection2(magma_device_t device, magma_connection_t* connection_out) {
-  *connection_out = new MockConnection();
-  return MAGMA_STATUS_OK;
-}
-
-magma_status_t magma_create_connection(int32_t fd, magma_connection_t* connection_out) {
-  *connection_out = new MockConnection();
+  *connection_out = reinterpret_cast<magma_connection_t>(new MockConnection());
   return MAGMA_STATUS_OK;
 }
 
 void magma_release_connection(magma_connection_t connection) {
-  delete static_cast<MockConnection*>(connection);
+  delete reinterpret_cast<MockConnection*>(connection);
 }
 
 magma_status_t magma_get_error(magma_connection_t connection) { return MAGMA_STATUS_OK; }
@@ -82,7 +77,7 @@ magma_status_t magma_query_returns_buffer2(magma_device_t device, uint64_t id,
 }
 
 magma_status_t magma_create_context(magma_connection_t connection, uint32_t* context_id_out) {
-  *context_id_out = static_cast<MockConnection*>(connection)->next_context_id();
+  *context_id_out = reinterpret_cast<MockConnection*>(connection)->next_context_id();
   return MAGMA_STATUS_OK;
 }
 

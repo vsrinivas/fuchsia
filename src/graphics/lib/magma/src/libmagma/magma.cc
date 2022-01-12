@@ -68,7 +68,7 @@ magma_status_t magma_create_connection2(magma_device_t device, magma_connection_
     return DRET_MSG(MAGMA_STATUS_INTERNAL_ERROR, "couldn't connect");
   }
 
-  *connection_out = connection.release();
+  *connection_out = reinterpret_cast<magma_connection_t>(connection.release());
   return MAGMA_STATUS_OK;
 }
 
@@ -348,7 +348,6 @@ magma_status_t magma_poll(magma_poll_item_t* items, uint32_t count, uint64_t tim
         if (items[i].condition != MAGMA_POLL_CONDITION_SIGNALED)
           return DRET_MSG(MAGMA_STATUS_INVALID_ARGS, "Invalid condition for semaphore: 0x%x",
                           items[i].condition);
-
         auto semaphore = reinterpret_cast<magma::PlatformSemaphore*>(items[i].semaphore);
         uint64_t key;
         if (!semaphore->WaitAsync(port.get(), &key))
@@ -377,6 +376,9 @@ magma_status_t magma_poll(magma_poll_item_t* items, uint32_t count, uint64_t tim
         map[key] = i;
         break;
       }
+
+      default:
+        return DRET_MSG(MAGMA_STATUS_INVALID_ARGS, "Invalid item type: %u", items[i].type);
     }
   }
 

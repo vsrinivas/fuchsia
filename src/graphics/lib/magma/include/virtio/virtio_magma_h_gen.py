@@ -73,7 +73,7 @@ def wire_width(type):
 # Wire format for a given type
 def wire_format(type):
     if type.find('*') != -1:
-        return "uintptr_t"
+        return wire_format_from_width(8)
     return wire_format_from_width(wire_width(type))
 
 

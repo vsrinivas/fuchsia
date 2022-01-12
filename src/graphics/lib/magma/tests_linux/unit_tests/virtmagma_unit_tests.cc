@@ -61,7 +61,7 @@ TEST_F(VirtMagmaTest, MagmaQuery) {
 TEST_F(VirtMagmaTest, MagmaCreateConnection) {
   magma_status_t status = magma_create_connection2(device_, &connection_);
   EXPECT_EQ(status, MAGMA_STATUS_OK);
-  EXPECT_NE(connection_, nullptr);
+  EXPECT_NE(connection_, 0u);
   magma_release_connection(connection_);
 }
 

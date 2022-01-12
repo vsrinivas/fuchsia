@@ -182,25 +182,23 @@ typedef uint32_t magma_cache_operation_t;
 
 typedef uint32_t magma_cache_policy_t;
 
-typedef uintptr_t magma_device_t;
+typedef uint64_t magma_device_t;
 
-typedef uintptr_t magma_buffer_t;
+typedef uint64_t magma_buffer_t;
 
-typedef uintptr_t magma_semaphore_t;
+typedef uint64_t magma_semaphore_t;
 
-typedef uintptr_t magma_perf_count_pool_t;
+typedef uint64_t magma_perf_count_pool_t;
 
-typedef struct magma_connection {
-  uint32_t magic_;
-} * magma_connection_t;
+typedef uint64_t magma_connection_t;
 
-typedef uintptr_t magma_sysmem_connection_t;
+typedef uint64_t magma_sysmem_connection_t;
 
-typedef uintptr_t magma_buffer_collection_t;
+typedef uint64_t magma_buffer_collection_t;
 
-typedef uintptr_t magma_sysmem_buffer_constraints_t;
+typedef uint64_t magma_sysmem_buffer_constraints_t;
 
-typedef uintptr_t magma_buffer_format_description_t;
+typedef uint64_t magma_buffer_format_description_t;
 
 // Corresponds to a zx_handle_t on Fuchsia.
 typedef uint32_t magma_handle_t;
@@ -213,6 +211,7 @@ typedef struct magma_poll_item {
   uint32_t type;
   uint32_t condition;
   uint32_t result;
+  uint32_t unused;
 } magma_poll_item_t;
 
 // Deprecated: a buffer plus its associated relocations referenced by a command buffer
@@ -337,6 +336,7 @@ typedef struct {
   uint32_t plane_offsets[MAGMA_MAX_IMAGE_PLANES];
   uint64_t drm_format_modifier;
   uint32_t coherency_domain;
+  uint32_t unused;
 } magma_image_info_t;
 
 #if defined(__cplusplus)

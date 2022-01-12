@@ -57,7 +57,7 @@ class TestConnection : public magma::TestDeviceBase {
   static constexpr uint64_t kUnmappedBufferGpuAddress = 0x1000000;  // arbitrary
 
   void SubmitCommandBuffer(How how, uint64_t flags) {
-    ASSERT_NE(connection_, nullptr);
+    ASSERT_NE(connection_, 0u);
 
     uint64_t buffer_size;
     magma_buffer_t batch_buffer;
@@ -227,7 +227,7 @@ class TestConnection : public magma::TestDeviceBase {
     magma_release_buffer(connection_, batch_buffer);
 
     magma_release_connection(connection_);
-    connection_ = nullptr;
+    connection_ = 0u;
   }
 
  private:

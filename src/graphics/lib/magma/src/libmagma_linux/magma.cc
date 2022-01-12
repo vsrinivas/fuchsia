@@ -56,10 +56,13 @@ magma_status_t magma_poll(magma_poll_item_t* items, uint32_t count, uint64_t tim
     }
   }
 
+  // Ensure host compatibility with 32bit guest
+  static_assert(sizeof(magma_poll_item_t) % 8 == 0);
+
   virtio_magma_poll_ctrl_t request{};
   virtio_magma_poll_resp_t response{};
   request.hdr.type = VIRTIO_MAGMA_CMD_POLL;
-  request.items = reinterpret_cast<uint64_t>(&unwrapped_items[0]);
+  request.items = reinterpret_cast<uintptr_t>(&unwrapped_items[0]);
   // Send byte count so kernel knows how much memory to copy
   request.count = count * sizeof(magma_poll_item_t);
   request.timeout_ns = timeout_ns;
@@ -93,28 +96,28 @@ magma_status_t magma_execute_command_buffer_with_resources2(
   printf("%s\n", __PRETTY_FUNCTION__);
 #endif
 
+  // Ensure host compatibility with 32bit guest
+  static_assert(sizeof(magma_command_buffer) % 8 == 0);
+  static_assert(sizeof(magma_exec_resource) % 8 == 0);
+
   virtmagma_command_buffer virt_command_buffer;
   virt_command_buffer.command_buffer_size = sizeof(magma_command_buffer);
-  virt_command_buffer.command_buffer =
-      reinterpret_cast<decltype(virt_command_buffer.command_buffer)>(command_buffer);
+  virt_command_buffer.command_buffer = reinterpret_cast<uintptr_t>(command_buffer);
   virt_command_buffer.resource_size =
       sizeof(magma_system_exec_resource) * command_buffer->resource_count;
-  virt_command_buffer.resources =
-      reinterpret_cast<decltype(virt_command_buffer.resources)>(resources);
+  virt_command_buffer.resources = reinterpret_cast<uintptr_t>(resources);
   virt_command_buffer.semaphore_size = sizeof(uint64_t) * (command_buffer->wait_semaphore_count +
                                                            command_buffer->signal_semaphore_count);
-  virt_command_buffer.semaphores =
-      reinterpret_cast<decltype(virt_command_buffer.resources)>(semaphore_ids);
+  virt_command_buffer.semaphores = reinterpret_cast<uintptr_t>(semaphore_ids);
 
   virtio_magma_execute_command_buffer_with_resources2_ctrl request{};
   virtio_magma_execute_command_buffer_with_resources2_resp response{};
   request.hdr.type = VIRTIO_MAGMA_CMD_EXECUTE_COMMAND_BUFFER_WITH_RESOURCES2;
 
   auto connection_wrapped = virtmagma_connection_t::Get(connection);
-  request.connection = reinterpret_cast<decltype(request.connection)>(connection_wrapped->Object());
-
+  request.connection = reinterpret_cast<uint64_t>(connection_wrapped->Object());
   request.context_id = context_id;
-  request.command_buffer = reinterpret_cast<decltype(request.command_buffer)>(&virt_command_buffer);
+  request.command_buffer = reinterpret_cast<uintptr_t>(&virt_command_buffer);
 
   int32_t file_descriptor = connection_wrapped->Parent().fd();
 
@@ -141,10 +144,13 @@ magma_status_t magma_virt_create_image(magma_connection_t connection,
 
 #if VIRTMAGMA_DEBUG
   printf("%s\n", __PRETTY_FUNCTION__);
-  printf("connection %lu\n", reinterpret_cast<uintptr_t>(connection_wrapped->Object()));
+  printf("connection %lu\n", reinterpret_cast<uint64_t>(connection_wrapped->Object()));
   printf("create_info %p\n", create_info);
   printf("image_out %p\n", image_out);
 #endif
+
+  // Ensure host compatibility with 32bit guest
+  static_assert(sizeof(magma_image_create_info_t) % 8 == 0);
 
   struct virtmagma_create_image_wrapper wrapper {
     .create_info = reinterpret_cast<uintptr_t>(create_info),
@@ -152,11 +158,8 @@ magma_status_t magma_virt_create_image(magma_connection_t connection,
   };
 
   virtio_magma_virt_create_image_ctrl_t request{
-      .hdr =
-          {
-              .type = VIRTIO_MAGMA_CMD_VIRT_CREATE_IMAGE,
-          },
-      .connection = reinterpret_cast<uintptr_t>(connection_wrapped->Object()),
+      .hdr = {.type = VIRTIO_MAGMA_CMD_VIRT_CREATE_IMAGE},
+      .connection = reinterpret_cast<uint64_t>(connection_wrapped->Object()),
       .create_info = reinterpret_cast<uintptr_t>(&wrapper),
   };
   virtio_magma_virt_create_image_resp_t response{};
@@ -189,6 +192,9 @@ magma_status_t magma_virt_get_image_info(magma_connection_t connection, magma_bu
   auto connection_wrapped = virtmagma_connection_t::Get(connection);
   auto image_wrapped = virtmagma_buffer_t::Get(image);
 
+  // Ensure host compatibility with 32bit guest
+  static_assert(sizeof(magma_image_info_t) % 8 == 0);
+
   struct virtmagma_get_image_info_wrapper wrapper {
     .image_info_out = reinterpret_cast<uintptr_t>(image_info_out),
     .image_info_size = sizeof(magma_image_info_t),
@@ -199,7 +205,7 @@ magma_status_t magma_virt_get_image_info(magma_connection_t connection, magma_bu
           {
               .type = VIRTIO_MAGMA_CMD_VIRT_GET_IMAGE_INFO,
           },
-      .connection = reinterpret_cast<uintptr_t>(connection_wrapped->Object()),
+      .connection = reinterpret_cast<uint64_t>(connection_wrapped->Object()),
       .image = image_wrapped->Object(),
       .image_info_out = reinterpret_cast<uintptr_t>(&wrapper),
   };

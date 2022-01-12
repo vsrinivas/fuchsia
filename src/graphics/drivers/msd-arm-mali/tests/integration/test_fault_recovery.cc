@@ -64,7 +64,7 @@ class TestConnection : public magma::TestDeviceBase {
 
   void SubmitCommandBuffer(How how, uint8_t atom_number, uint8_t atom_dependency,
                            bool protected_mode) {
-    ASSERT_NE(connection_, nullptr);
+    ASSERT_NE(connection_, 0u);
 
     uint64_t size;
     magma_buffer_t job_buffer;

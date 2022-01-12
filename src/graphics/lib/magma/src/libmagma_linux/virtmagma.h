@@ -43,12 +43,12 @@ struct virtmagma_command_buffer {
 };
 
 struct virtmagma_create_image_wrapper {
-  uintptr_t create_info;
+  __u64 create_info;
   __u64 create_info_size;
 };
 
 struct virtmagma_get_image_info_wrapper {
-  uintptr_t image_info_out;
+  __u64 image_info_out;
   __u64 image_info_size;
 };
 
