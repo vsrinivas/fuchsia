@@ -7,18 +7,15 @@ use {
     ffx_core::ffx_plugin,
     ffx_driver::get_device_info,
     ffx_driver_list_hosts_args::DriverListHostsCommand,
-    fidl_fuchsia_driver_development::DriverDevelopmentProxy,
     std::collections::{BTreeMap, BTreeSet},
 };
 
-#[ffx_plugin(
-    "driver_enabled",
-    DriverDevelopmentProxy = "bootstrap/driver_manager:expose:fuchsia.driver.development.DriverDevelopment"
-)]
+#[ffx_plugin("driver_enabled")]
 pub async fn list_hosts(
-    service: DriverDevelopmentProxy,
-    _cmd: DriverListHostsCommand,
+    remote_control: fidl_fuchsia_developer_remotecontrol::RemoteControlProxy,
+    cmd: DriverListHostsCommand,
 ) -> Result<()> {
+    let service = ffx_driver::get_development_proxy(remote_control, cmd.select).await?;
     let device_info = get_device_info(&service, &[]).await?;
 
     let mut driver_hosts = BTreeMap::new();

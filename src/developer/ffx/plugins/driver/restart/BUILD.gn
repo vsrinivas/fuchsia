@@ -10,7 +10,9 @@ ffx_plugin("ffx_driver_restart") {
   with_unit_tests = true
 
   deps = [
+    "//sdk/fidl/fuchsia.developer.remotecontrol:fuchsia.developer.remotecontrol-rustc",
     "//sdk/fidl/fuchsia.driver.development:fuchsia.driver.development-rustc",
+    "//src/developer/ffx/plugins/driver/common:ffx_driver",
   ]
 
   args_sources = [ "src/args.rs" ]

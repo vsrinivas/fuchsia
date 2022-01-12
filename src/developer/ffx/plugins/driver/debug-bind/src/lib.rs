@@ -13,14 +13,12 @@ use {
     fidl_fuchsia_driver_development::{BindRulesBytecode, DriverDevelopmentProxy},
 };
 
-#[ffx_plugin(
-    "driver_enabled",
-    DriverDevelopmentProxy = "bootstrap/driver_manager:expose:fuchsia.driver.development.DriverDevelopment"
-)]
+#[ffx_plugin("driver_enabled")]
 pub async fn debug_bind(
-    service: DriverDevelopmentProxy,
+    remote_control: fidl_fuchsia_developer_remotecontrol::RemoteControlProxy,
     cmd: DriverDebugBindCommand,
 ) -> Result<()> {
+    let service = ffx_driver::get_development_proxy(remote_control, cmd.select).await?;
     debug_bind_impl(service, cmd, &mut std::io::stdout()).await
 }
 

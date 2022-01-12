@@ -33,4 +33,8 @@ pub struct DriverDebugBindCommand {
     /// print out the bind program instructions.
     #[argh(switch, short = 'i', long = "print-instructions")]
     pub print_instructions: bool,
+
+    /// if this exists, the user will be prompted for a component to select.
+    #[argh(switch, short = 's', long = "select")]
+    pub select: bool,
 }

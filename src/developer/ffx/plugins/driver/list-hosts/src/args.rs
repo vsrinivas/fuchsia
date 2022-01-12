@@ -15,4 +15,8 @@ use {argh::FromArgs, ffx_core::ffx_command};
     $ ffx driver list-hosts",
     error_code(1, "Failed to connect to the driver development service")
 )]
-pub struct DriverListHostsCommand {}
+pub struct DriverListHostsCommand {
+    /// if this exists, the user will be prompted for a component to select.
+    #[argh(switch, short = 's', long = "select")]
+    pub select: bool,
+}

@@ -18,4 +18,7 @@ use {argh::FromArgs, ffx_core::ffx_command};
 pub struct DriverRestartCommand {
     #[argh(positional, description = "path of the driver to be restarted.")]
     pub driver_path: String,
+    /// if this exists, the user will be prompted for a component to select.
+    #[argh(switch, short = 's', long = "select")]
+    pub select: bool,
 }
