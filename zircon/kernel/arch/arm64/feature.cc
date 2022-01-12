@@ -378,8 +378,16 @@ void arm64_feature_init() {
     if (isar0.sha1() != arch::ArmIdAa64IsaR0El1::Sha1::kNone) {
       arm64_isa_features |= ZX_ARM64_FEATURE_ISA_SHA1;
     }
-    if (isar0.sha2() != arch::ArmIdAa64IsaR0El1::Sha2::kNone) {
-      arm64_isa_features |= ZX_ARM64_FEATURE_ISA_SHA2;
+    switch (isar0.sha2()) {
+      default:
+      case arch::ArmIdAa64IsaR0El1::Sha2::kSha512:
+        arm64_isa_features |= ZX_ARM64_FEATURE_ISA_SHA512;
+        [[fallthrough]];
+      case arch::ArmIdAa64IsaR0El1::Sha2::kSha256:
+        arm64_isa_features |= ZX_ARM64_FEATURE_ISA_SHA256;
+        break;
+      case arch::ArmIdAa64IsaR0El1::Sha2::kNone:
+        break;
     }
     if (isar0.crc32() != arch::ArmIdAa64IsaR0El1::Crc32::kNone) {
       arm64_isa_features |= ZX_ARM64_FEATURE_ISA_CRC32;
@@ -439,24 +447,24 @@ void arm64_feature_init() {
 }
 
 static void print_isa_features() {
-  const struct {
+  constexpr struct {
     uint32_t bit;
     const char* name;
-  } features[] = {
-      {ZX_ARM64_FEATURE_ISA_FP, "fp"},       {ZX_ARM64_FEATURE_ISA_ASIMD, "asimd"},
-      {ZX_ARM64_FEATURE_ISA_AES, "aes"},     {ZX_ARM64_FEATURE_ISA_PMULL, "pmull"},
-      {ZX_ARM64_FEATURE_ISA_SHA1, "sha1"},   {ZX_ARM64_FEATURE_ISA_SHA2, "sha2"},
-      {ZX_ARM64_FEATURE_ISA_CRC32, "crc32"}, {ZX_ARM64_FEATURE_ISA_ATOMICS, "atomics"},
-      {ZX_ARM64_FEATURE_ISA_RDM, "rdm"},     {ZX_ARM64_FEATURE_ISA_SHA3, "sha3"},
-      {ZX_ARM64_FEATURE_ISA_SM3, "sm3"},     {ZX_ARM64_FEATURE_ISA_SM4, "sm4"},
-      {ZX_ARM64_FEATURE_ISA_DP, "dp"},       {ZX_ARM64_FEATURE_ISA_DPB, "dpb"},
-      {ZX_ARM64_FEATURE_ISA_FHM, "fhm"},     {ZX_ARM64_FEATURE_ISA_TS, "ts"},
-      {ZX_ARM64_FEATURE_ISA_RNDR, "rndr"},
+  } kFeatures[] = {
+      {ZX_ARM64_FEATURE_ISA_FP, "fp"},           {ZX_ARM64_FEATURE_ISA_ASIMD, "asimd"},
+      {ZX_ARM64_FEATURE_ISA_AES, "aes"},         {ZX_ARM64_FEATURE_ISA_PMULL, "pmull"},
+      {ZX_ARM64_FEATURE_ISA_SHA1, "sha1"},       {ZX_ARM64_FEATURE_ISA_SHA256, "sha256"},
+      {ZX_ARM64_FEATURE_ISA_SHA512, "sha512"},   {ZX_ARM64_FEATURE_ISA_CRC32, "crc32"},
+      {ZX_ARM64_FEATURE_ISA_ATOMICS, "atomics"}, {ZX_ARM64_FEATURE_ISA_RDM, "rdm"},
+      {ZX_ARM64_FEATURE_ISA_SHA3, "sha3"},       {ZX_ARM64_FEATURE_ISA_SM3, "sm3"},
+      {ZX_ARM64_FEATURE_ISA_SM4, "sm4"},         {ZX_ARM64_FEATURE_ISA_DP, "dp"},
+      {ZX_ARM64_FEATURE_ISA_DPB, "dpb"},         {ZX_ARM64_FEATURE_ISA_FHM, "fhm"},
+      {ZX_ARM64_FEATURE_ISA_TS, "ts"},           {ZX_ARM64_FEATURE_ISA_RNDR, "rndr"},
   };
 
   printf("ARM ISA Features: ");
   uint col = 0;
-  for (const auto& feature : features) {
+  for (const auto& feature : kFeatures) {
     if (arm64_feature_test(feature.bit)) {
       col += printf("%s ", feature.name);
     }
