@@ -66,11 +66,11 @@ class ::fidl::internal::NaturalClientImpl<::test_inheritance::Super> final
     : public ::fidl::internal::NaturalClientBase {
  public:
   using NaturalClientBase::NaturalClientBase;
-  void foo(
+  void Foo(
       ::test_inheritance::SuperFooRequest&& payload,
       ::fidl::ClientCallback<::test_inheritance::Super::Foo>&& _callback) const;
 
-  void foo(::test_inheritance::SuperFooRequest&& payload,
+  void Foo(::test_inheritance::SuperFooRequest&& payload,
            ::fidl::ClientResponseCallback<::test_inheritance::Super::Foo>&&
                _callback) const;
 };
@@ -164,11 +164,11 @@ class ::fidl::internal::NaturalClientImpl<::test_inheritance::Sub> final
     : public ::fidl::internal::NaturalClientBase {
  public:
   using NaturalClientBase::NaturalClientBase;
-  void foo(
+  void Foo(
       ::test_inheritance::SuperFooRequest&& payload,
       ::fidl::ClientCallback<::test_inheritance::Sub::Foo>&& _callback) const;
 
-  void foo(::test_inheritance::SuperFooRequest&& payload,
+  void Foo(::test_inheritance::SuperFooRequest&& payload,
            ::fidl::ClientResponseCallback<::test_inheritance::Sub::Foo>&&
                _callback) const;
 };

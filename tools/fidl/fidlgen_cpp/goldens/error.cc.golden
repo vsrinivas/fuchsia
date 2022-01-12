@@ -8,7 +8,7 @@ namespace test_error {
 
 #ifdef __Fuchsia__
 }  // namespace test_error
-void fidl::internal::NaturalClientImpl<::test_error::Example>::foo(
+void fidl::internal::NaturalClientImpl<::test_error::Example>::Foo(
     ::test_error::ExampleFooRequest&& payload,
     ::fidl::ClientCallback<::test_error::Example::Foo>&& _callback) const {
   ::fidl::Encoder _encoder{::test_error::kExample_foo_Ordinal};
@@ -21,7 +21,7 @@ void fidl::internal::NaturalClientImpl<::test_error::Example>::foo(
           ::fidl::ClientCallback<::test_error::Example::Foo>>(
           ::test_error::kExample_foo_Ordinal, std::move(_callback)));
 }
-void fidl::internal::NaturalClientImpl<::test_error::Example>::foo(
+void fidl::internal::NaturalClientImpl<::test_error::Example>::Foo(
     ::test_error::ExampleFooRequest&& payload,
     ::fidl::ClientResponseCallback<::test_error::Example::Foo>&& _callback)
     const {

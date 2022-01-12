@@ -8,7 +8,7 @@ namespace test_inheritance {
 
 #ifdef __Fuchsia__
 }  // namespace test_inheritance
-void fidl::internal::NaturalClientImpl<::test_inheritance::Super>::foo(
+void fidl::internal::NaturalClientImpl<::test_inheritance::Super>::Foo(
     ::test_inheritance::SuperFooRequest&& payload,
     ::fidl::ClientCallback<::test_inheritance::Super::Foo>&& _callback) const {
   ::fidl::Encoder _encoder{::test_inheritance::ksuper_foo_Ordinal};
@@ -21,7 +21,7 @@ void fidl::internal::NaturalClientImpl<::test_inheritance::Super>::foo(
           ::fidl::ClientCallback<::test_inheritance::Super::Foo>>(
           ::test_inheritance::ksuper_foo_Ordinal, std::move(_callback)));
 }
-void fidl::internal::NaturalClientImpl<::test_inheritance::Super>::foo(
+void fidl::internal::NaturalClientImpl<::test_inheritance::Super>::Foo(
     ::test_inheritance::SuperFooRequest&& payload,
     ::fidl::ClientResponseCallback<::test_inheritance::Super::Foo>&& _callback)
     const {
@@ -55,7 +55,7 @@ namespace test_inheritance {
 
 #ifdef __Fuchsia__
 }  // namespace test_inheritance
-void fidl::internal::NaturalClientImpl<::test_inheritance::Sub>::foo(
+void fidl::internal::NaturalClientImpl<::test_inheritance::Sub>::Foo(
     ::test_inheritance::SuperFooRequest&& payload,
     ::fidl::ClientCallback<::test_inheritance::Sub::Foo>&& _callback) const {
   ::fidl::Encoder _encoder{::test_inheritance::ksub_foo_Ordinal};
@@ -68,7 +68,7 @@ void fidl::internal::NaturalClientImpl<::test_inheritance::Sub>::foo(
           ::fidl::ClientCallback<::test_inheritance::Sub::Foo>>(
           ::test_inheritance::ksub_foo_Ordinal, std::move(_callback)));
 }
-void fidl::internal::NaturalClientImpl<::test_inheritance::Sub>::foo(
+void fidl::internal::NaturalClientImpl<::test_inheritance::Sub>::Foo(
     ::test_inheritance::SuperFooRequest&& payload,
     ::fidl::ClientResponseCallback<::test_inheritance::Sub::Foo>&& _callback)
     const {

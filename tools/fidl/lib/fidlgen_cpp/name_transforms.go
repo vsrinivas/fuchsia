@@ -65,11 +65,11 @@ type memberContext struct {
 	transforms memberTransforms
 }
 
-// wireMemberContext returns a memberContext that just applies a transform to
-// the wire name, leaving the others alone.
-func wireMemberContext(wireTransform nameTransform) memberContext {
+// wireAndUnifedMemberContext returns a memberContext that applies a transform
+// to the wire and unified name, leaving HLCPP alone.
+func wireAndUnifedMemberContext(transform nameTransform) memberContext {
 	return memberContext{
-		fidlgen.NewNameContext(), memberTransforms{wire: wireTransform},
+		fidlgen.NewNameContext(), memberTransforms{unified: transform, wire: transform},
 	}
 }
 
@@ -133,10 +133,10 @@ var (
 	}
 	// Name of a method
 	// https://google.github.io/styleguide/cppguide.html#Function_Names
-	methodNameContext = wireMemberContext(fidlgen.ToUpperCamelCase)
+	methodNameContext = wireAndUnifedMemberContext(fidlgen.ToUpperCamelCase)
 	// Name of a service member
 	// https://google.github.io/styleguide/cppguide.html#Type_Names
-	serviceMemberContext = wireMemberContext(fidlgen.ToSnakeCase)
+	serviceMemberContext = wireAndUnifedMemberContext(fidlgen.ToSnakeCase)
 	// Name of a constant
 	// https://google.github.io/styleguide/cppguide.html#Constant_Names
 	constantContext = declarationContext{

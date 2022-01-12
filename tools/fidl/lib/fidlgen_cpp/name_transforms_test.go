@@ -280,7 +280,7 @@ func TestMethodNameContext(t *testing.T) {
 		methodNameContext.transform(fidlgen.Identifier("foo")),
 		nameVariants{
 			HLCPP:   makeName("foo"),
-			Unified: makeName("foo"),
+			Unified: makeName("Foo"),
 			Wire:    makeName("Foo"),
 		})
 
@@ -288,7 +288,7 @@ func TestMethodNameContext(t *testing.T) {
 		methodNameContext.transform(fidlgen.Identifier("FOO_BAR")),
 		nameVariants{
 			HLCPP:   makeName("FOO_BAR"),
-			Unified: makeName("FOO_BAR"),
+			Unified: makeName("FooBar"),
 			Wire:    makeName("FooBar"),
 		})
 
@@ -304,7 +304,7 @@ func TestMethodNameContext(t *testing.T) {
 		methodNameContext.transform(fidlgen.Identifier("switch")),
 		nameVariants{
 			HLCPP:   makeName("switch_"),
-			Unified: makeName("switch_"),
+			Unified: makeName("Switch"),
 			Wire:    makeName("Switch"),
 		})
 }
@@ -325,7 +325,7 @@ func TestServiceMemberContext(t *testing.T) {
 		serviceMemberContext.transform(fidlgen.Identifier("FOO_BAR")),
 		nameVariants{
 			HLCPP:   makeName("FOO_BAR"),
-			Unified: makeName("FOO_BAR"),
+			Unified: makeName("foo_bar"),
 			Wire:    makeName("foo_bar"),
 		})
 
@@ -333,7 +333,7 @@ func TestServiceMemberContext(t *testing.T) {
 		serviceMemberContext.transform(fidlgen.Identifier("FooBar")),
 		nameVariants{
 			HLCPP:   makeName("FooBar"),
-			Unified: makeName("FooBar"),
+			Unified: makeName("foo_bar"),
 			Wire:    makeName("foo_bar"),
 		})
 

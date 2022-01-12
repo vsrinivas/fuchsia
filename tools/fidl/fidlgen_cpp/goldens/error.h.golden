@@ -65,11 +65,11 @@ class ::fidl::internal::NaturalClientImpl<::test_error::Example> final
     : public ::fidl::internal::NaturalClientBase {
  public:
   using NaturalClientBase::NaturalClientBase;
-  void foo(
+  void Foo(
       ::test_error::ExampleFooRequest&& payload,
       ::fidl::ClientCallback<::test_error::Example::Foo>&& _callback) const;
 
-  void foo(::test_error::ExampleFooRequest&& payload,
+  void Foo(::test_error::ExampleFooRequest&& payload,
            ::fidl::ClientResponseCallback<::test_error::Example::Foo>&&
                _callback) const;
 };
