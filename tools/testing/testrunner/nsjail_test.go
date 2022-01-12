@@ -166,6 +166,31 @@ func TestBuild(t *testing.T) {
 				"/foo/bar",
 			},
 		},
+		{
+			name: "Test environment variables",
+			cmdBuilder: &NsJailCmdBuilder{
+				Bin:     "/path/to/nsjail",
+				Env: []string{"TEST=test"},
+			},
+			subcmd: []string{"/foo/bar"},
+			want: []string{
+				"/path/to/nsjail",
+				"--keep_env",
+				"--disable_clone_newnet",
+				"--bindmount_ro", "/dev/kvm:/dev/kvm",
+				"--bindmount_ro", "/bin/bash:/bin/bash",
+				"--bindmount_ro", "/lib:/lib",
+				"--bindmount_ro", "/lib64:/lib64",
+				"--bindmount_ro", "/usr/bin/dirname:/usr/bin/dirname",
+				"--bindmount_ro", "/dev/urandom:/dev/urandom",
+				"--bindmount", "/dev/null:/dev/null",
+				"--rlimit_as", "inf",
+				"--rlimit_fsize", "inf",
+				"--env", "TEST=test",
+				"--",
+				"/foo/bar",
+			},
+		},
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {

@@ -31,6 +31,11 @@ type NsJailCmdBuilder struct {
 	// Note that this does not add any required mount points, the caller
 	// is responsible for ensuring that the directory exists in the jail.
 	Cwd string
+	// Env is a set of additional environment variables to pass into
+	// the jail. Takes the form of a list of key=value strings.
+	// This set of environment variables is appended to the calling process'
+	// environment, and overrides any duplicate values
+	Env []string
 	// IsolateNetwork indicates whether we should use a network namespace.
 	IsolateNetwork bool
 	// MountPoints is a list of locations on the current filesystem that
@@ -120,6 +125,9 @@ func (n *NsJailCmdBuilder) Build(subcmd []string) ([]string, error) {
 		"--rlimit_fsize", "inf",
 	)
 
+	for _, v := range n.Env {
+		cmd = append(cmd, "--env", v)
+	}
 	cmd = append(cmd, "--")
 	cmd = append(cmd, subcmd...)
 	return cmd, nil
