@@ -26,6 +26,7 @@ import (
 // Test name is limited to 512 bytes max.
 // https://source.chromium.org/chromium/infra/infra/+/main:go/src/go.chromium.org/luci/resultdb/pbutil/test_result.go;l=44;drc=910bdba5763842c67a81741b7cb26e7f7d2793fc
 const MAX_TEST_ID_SIZE_BYTES = 512
+const MAX_FAIL_REASON_SIZE_BYTES = 1024
 
 // ParseSummary unmarshalls the summary.json file content into runtests.TestSummary struct.
 func ParseSummary(filePath string) (*runtests.TestSummary, error) {
@@ -117,7 +118,7 @@ func testCaseToResultSink(testCases []testparser.TestCaseResult, tags []*resultp
 			continue
 		}
 		if testCase.FailReason != "" {
-			r.FailureReason = &resultpb.FailureReason{PrimaryErrorMessage: testCase.FailReason}
+			r.FailureReason = &resultpb.FailureReason{PrimaryErrorMessage: truncateString(testCase.FailReason, MAX_FAIL_REASON_SIZE_BYTES)}
 		}
 		r.Status = testCaseStatus
 		r.StartTime = timestamppb.New(testDetail.StartTime)
@@ -247,4 +248,26 @@ func isReadable(p string) bool {
 	}
 	_ = f.Close()
 	return true
+}
+
+func truncateString(str string, maxLength int) string {
+	if len(str) <= maxLength {
+		return str
+	}
+	// We want to append "..." to maxLength, which takes up 3 spaces. If maxLength is less than that, just return empty.
+	if maxLength <= 3 {
+		return ""
+	}
+	runes := []rune(str)
+	byteCount := 0
+	for _, char := range runes {
+		if byteCount+len(string(char)) > (maxLength - 3) {
+			if byteCount == 0 {
+				return ""
+			}
+			return str[:byteCount] + "..."
+		}
+		byteCount = byteCount + len(string(char))
+	}
+	return str
 }

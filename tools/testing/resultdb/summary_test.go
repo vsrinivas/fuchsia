@@ -217,3 +217,67 @@ func TestDetermineExpected(t *testing.T) {
 		}
 	}
 }
+func TestTruncateString(t *testing.T) {
+	testCases := []struct {
+		testStr string
+		want    string
+		limit   int // bytes
+	}{
+		{
+			testStr: "ab£cdefg",
+			want:    "",
+			limit:   1,
+		}, {
+			testStr: "ab£cdefg",
+			want:    "ab...",
+			limit:   5,
+		}, {
+			testStr: "ab£cdefg",
+			want:    "ab...",
+			limit:   6,
+		}, {
+			testStr: "ab£cdefg",
+			want:    "ab£...",
+			limit:   7,
+		}, {
+			testStr: "♥LoveFuchsia",
+			want:    "",
+			limit:   3,
+		}, {
+			testStr: "♥LoveFuchsia",
+			want:    "",
+			limit:   4,
+		}, {
+			testStr: "♥LoveFuchsia",
+			want:    "",
+			limit:   5,
+		}, {
+			testStr: "♥LoveFuchsia",
+			want:    "♥...",
+			limit:   6,
+		}, {
+			testStr: "♥LoveFuchsia",
+			want:    "♥L...",
+			limit:   7,
+		}, {
+			testStr: "♥LoveFuchsia",
+			want:    "♥LoveFuc...",
+			limit:   13,
+		}, {
+			testStr: "♥LoveFuchsia",
+			want:    "♥LoveFuchsia",
+			limit:   14,
+		}, {
+			testStr: "♥LoveFuchsia",
+			want:    "♥LoveFuchsia",
+			limit:   100,
+		},
+	}
+	for _, tc := range testCases {
+		r := truncateString(tc.testStr, tc.limit)
+		if r != tc.want {
+			t.Errorf("TestTruncateString failed for input: %q(%d), got %q, want %q",
+				tc.testStr, tc.limit, r, tc.want)
+		}
+	}
+}
