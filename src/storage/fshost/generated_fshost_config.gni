@@ -118,7 +118,7 @@ template("generated_fshost_config") {
       contents += [ "use-default-loader" ]
     }
     if (!defined(invoker.sandbox_decompression) ||
-        !invoker.sandbox_decompression) {
+        invoker.sandbox_decompression) {
       contents += [ "sandbox-decompression" ]
     }
     if (defined(invoker.apply_limits_to_ramdisk) &&
