@@ -21,7 +21,9 @@ fuchsia_unittest_package("compact-image-tests") {
     "//src/lib/vulkan/validation_layers",
   ]
   test_specs = {
-    environments = [ aemu_env ] + magma_libvulkan_hardware_envs
+    # Currently only ARM GPU driver implements the FUCHSIA_memory_control
+    # extension which is required for the tests.
+    environments = arm_gpu_envs
   }
 }
 
