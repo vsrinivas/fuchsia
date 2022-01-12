@@ -11,6 +11,8 @@ rustc_binary("bin") {
   edition = "2018"
 
   deps = [
+    "//sdk/fidl/fuchsia.identity.credential:fuchsia.identity.credential-rustc",
+    "//src/lib/fuchsia",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
     "//src/lib/syslog/rust:syslog",
@@ -24,6 +26,7 @@ rustc_binary("bin") {
   test_deps = []
 
   sources = [
+    "src/credential_manager.rs",
     "src/hash_tree.rs",
     "src/label_generator.rs",
     "src/main.rs",

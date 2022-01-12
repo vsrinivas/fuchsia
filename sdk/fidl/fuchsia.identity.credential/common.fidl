@@ -32,4 +32,8 @@ type CredentialError = flexible enum : uint32 {
     INVALID_LABEL = 4;
     // No free labels available.
     NO_FREE_LABEL = 5;
+    // The requested operation is not supported. This means that the
+    // the implementation of a new feature is not complete. The request should
+    // not be retried.
+    UNSUPPORTED_OPERATION = 6;
 };
