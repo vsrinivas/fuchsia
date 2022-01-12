@@ -36,9 +36,9 @@ impl<T: TpmRequest + Serializable + Sync + Send> TpmCommand for T {
     async fn execute(self, tpm: &TpmDeviceProxy) -> Result<Self::ResponseType, ExecuteError> {
         let mut serializer = Serializer::new();
         self.serialize(&mut serializer);
-
+        let vec = serializer.into_vec();
         let (rc, data): (u16, Vec<u8>) = tpm
-            .execute_vendor_command(0, &serializer.into_vec())
+            .execute_vendor_command(0, &vec)
             .await
             .context("Sending execute request")?
             .map_err(fuchsia_zircon::Status::from_raw)

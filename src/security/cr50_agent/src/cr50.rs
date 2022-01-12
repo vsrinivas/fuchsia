@@ -12,7 +12,9 @@ use crate::{
                 CcdCommand, CcdGetInfoResponse, CcdOpenResponse, CcdPhysicalPresenceResponse,
                 CcdRequest,
             },
-            pinweaver::{PinweaverInsertLeaf, PinweaverResetTree, PROTOCOL_VERSION},
+            pinweaver::{
+                PinweaverInsertLeaf, PinweaverResetTree, PinweaverTryAuth, PROTOCOL_VERSION,
+            },
             wp::WpInfoRequest,
             Serializable, TpmCommand,
         },
@@ -27,8 +29,9 @@ use fidl_fuchsia_tpm::TpmDeviceProxy;
 use fidl_fuchsia_tpm_cr50::{
     CcdCapability, CcdFlags, CcdIndicator, CcdInfo, CcdState, Cr50Rc, Cr50Request,
     Cr50RequestStream, Cr50Status, InsertLeafResponse, PhysicalPresenceEvent,
-    PhysicalPresenceNotifierMarker, PhysicalPresenceState, PinWeaverRequest,
-    PinWeaverRequestStream, WpState,
+    PhysicalPresenceNotifierMarker, PhysicalPresenceState, PinWeaverError, PinWeaverRequest,
+    PinWeaverRequestStream, TryAuthFailed, TryAuthRateLimited, TryAuthResponse, TryAuthSuccess,
+    WpState,
 };
 use fuchsia_async as fasync;
 use fuchsia_syslog::fx_log_warn;
@@ -153,7 +156,56 @@ impl Cr50 {
                     responder.send(&mut fidl_result).context("Replying to request")?;
                 }
                 PinWeaverRequest::RemoveLeaf { .. } => todo!(),
-                PinWeaverRequest::TryAuth { .. } => todo!(),
+                PinWeaverRequest::TryAuth { params, responder } => {
+                    let request = match PinweaverTryAuth::new(params) {
+                        Ok(req) => req,
+                        Err(e) => {
+                            responder.send(&mut Err(e)).context("Replying to request")?;
+                            continue;
+                        }
+                    };
+
+                    let result =
+                        request.execute(&self.proxy).await.context("Executing TPM command")?;
+
+                    let mut fidl_result = match result.ok() {
+                        Ok(_) => {
+                            let mut success = TryAuthSuccess::EMPTY;
+                            let data = result.data.as_ref().unwrap();
+                            success.root_hash = Some(result.root);
+                            success.he_secret = Some(data.high_entropy_secret.to_vec());
+                            success.reset_secret = Some(data.reset_secret.to_vec());
+
+                            // cred metadata is just the whole unimported_leaf_data.
+                            let mut serializer = Serializer::new();
+                            data.unimported_leaf_data.serialize(&mut serializer);
+                            success.cred_metadata = Some(serializer.into_vec());
+
+                            success.mac = Some(data.unimported_leaf_data.hmac);
+                            Ok(TryAuthResponse::Success(success))
+                        }
+                        Err(PinWeaverError::RateLimitReached) => {
+                            let mut rate_limited = TryAuthRateLimited::EMPTY;
+                            rate_limited.time_to_wait =
+                                Some(result.data.as_ref().unwrap().time_diff.into());
+                            Ok(TryAuthResponse::RateLimited(rate_limited))
+                        }
+                        Err(PinWeaverError::LowentAuthFailed) => {
+                            let mut auth_failed = TryAuthFailed::EMPTY;
+                            let data = result.data.as_ref().unwrap();
+                            auth_failed.root_hash = Some(result.root);
+                            // cred metadata is just the whole unimported_leaf_data.
+                            let mut serializer = Serializer::new();
+                            data.unimported_leaf_data.serialize(&mut serializer);
+                            auth_failed.cred_metadata = Some(serializer.into_vec());
+                            auth_failed.mac = Some(data.unimported_leaf_data.hmac);
+                            Ok(TryAuthResponse::Failed(auth_failed))
+                        }
+                        Err(e) => Err(e),
+                    };
+
+                    responder.send(&mut fidl_result).context("Replying to request")?;
+                }
             }
         }
         Ok(())

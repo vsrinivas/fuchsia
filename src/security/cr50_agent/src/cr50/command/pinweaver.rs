@@ -3,8 +3,8 @@
 // found in the LICENSE file.
 
 use fidl_fuchsia_tpm_cr50::{
-    InsertLeafParams, PinWeaverError, DELAY_SCHEDULE_MAX_COUNT, HASH_SIZE, HE_SECRET_MAX_SIZE,
-    LE_SECRET_MAX_SIZE, MAC_SIZE,
+    InsertLeafParams, PinWeaverError, TryAuthParams, DELAY_SCHEDULE_MAX_COUNT, HASH_SIZE,
+    HE_SECRET_MAX_SIZE, LE_SECRET_MAX_SIZE, MAC_SIZE,
 };
 use fuchsia_syslog::fx_log_warn;
 use std::{convert::TryInto, marker::PhantomData};
@@ -181,6 +181,7 @@ impl Serializable for ValidPcrValue {
 }
 
 #[allow(dead_code)]
+#[derive(Debug, Clone, PartialEq)]
 /// Data used by the TPM to process a request.
 pub struct UnimportedLeafData {
     /// Leaf minor version. Changes to this value add fields but cannot remove them. Newer values
@@ -336,6 +337,75 @@ impl PinweaverInsertLeaf {
     }
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+/// Data for a TryAuth request.
+/// https://source.chromium.org/chromiumos/chromiumos/codesearch/+/main:src/platform/cr50/include/pinweaver_types.h;l=291;drc=1c95cff7463ef29bd0c6d087ce8c3d7e17f94c6a
+pub struct PinweaverTryAuth {
+    /// Low entropy secret that is going to be used to authenticate.
+    low_entropy_secret: [u8; LE_SECRET_MAX_SIZE as usize],
+    /// Wrapped leaf data.
+    cred_metadata: Vec<u8>,
+    /// Auxiliary hashes, from bottom left to top right.
+    h_aux: Vec<u8>,
+}
+
+impl Serializable for PinweaverTryAuth {
+    /// Serialization output:
+    /// size of data [u16, little-endian]
+    /// low-entropy secret [u8 array]
+    /// wrapped leaf data [u8 array]
+    /// auxiliary hashes [u8 array]
+    fn serialize(&self, serializer: &mut Serializer) {
+        let size = self.low_entropy_secret.len() + self.cred_metadata.len() + self.h_aux.len();
+        serializer.put_le_u16(size.try_into().unwrap_or_else(|e| {
+            fx_log_warn!("TryAuth request too long! ({:?})", e);
+            0
+        }));
+        self.low_entropy_secret.as_slice().serialize(serializer);
+        self.cred_metadata.as_slice().serialize(serializer);
+        self.h_aux.as_slice().serialize(serializer);
+    }
+}
+
+impl PinweaverTryAuth {
+    pub fn new(
+        params: TryAuthParams,
+    ) -> Result<PinweaverRequest<PinweaverTryAuth, PinweaverTryAuthResponse>, PinWeaverError> {
+        let data = PinweaverTryAuth {
+            low_entropy_secret: params
+                .le_secret
+                .ok_or(PinWeaverError::TypeInvalid)?
+                .try_into()
+                .map_err(|_| PinWeaverError::LengthInvalid)?,
+            cred_metadata: params.cred_metadata.ok_or(PinWeaverError::TypeInvalid)?,
+            h_aux: params.h_aux.ok_or(PinWeaverError::TypeInvalid)?.into_iter().flatten().collect(),
+        };
+
+        Ok(PinweaverRequest::new(PinweaverMessageType::TryAuth, data))
+    }
+}
+
+pub struct PinweaverTryAuthResponse {
+    pub time_diff: u32,
+    pub high_entropy_secret: [u8; HE_SECRET_MAX_SIZE as usize],
+    pub reset_secret: [u8; HE_SECRET_MAX_SIZE as usize],
+    pub unimported_leaf_data: UnimportedLeafData,
+}
+
+impl Deserializable for PinweaverTryAuthResponse {
+    fn deserialize(deserializer: &mut Deserializer) -> Result<Self, DeserializeError> {
+        Ok(PinweaverTryAuthResponse {
+            time_diff: deserializer.take_le_u32()?,
+            high_entropy_secret: deserializer
+                .take(HE_SECRET_MAX_SIZE as usize)?
+                .try_into()
+                .unwrap(),
+            reset_secret: deserializer.take(HE_SECRET_MAX_SIZE as usize)?.try_into().unwrap(),
+            unimported_leaf_data: UnimportedLeafData::deserialize(deserializer)?,
+        })
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -451,5 +521,128 @@ mod tests {
                 0xda, 0xda, 0xda, 0xda, //
             ]
         );
+    }
+
+    #[test]
+    fn test_try_auth() {
+        let mut serializer = Serializer::new();
+        let mut params = TryAuthParams::EMPTY;
+        params.le_secret = Some(vec![0xaa; LE_SECRET_MAX_SIZE as usize]);
+        params.cred_metadata = Some(vec![0xbb; 32]); // artificially reduced to 32 bytes to make test readable.
+        params.h_aux = Some(vec![[0xcc; HASH_SIZE as usize], [0xdd; HASH_SIZE as usize]]);
+        PinweaverTryAuth::new(params).expect("create try auth ok").serialize(&mut serializer);
+
+        let vec = serializer.into_vec();
+        assert_eq!(
+            vec,
+            vec![
+                0x00, 0x25, /* Subcommand::Pinweaver */
+                0x01, 0x04, /* Protocol version and message type */
+                0x80, 0x00, /* Data length (LE) */
+                /* low entropy secret: 32 bytes */
+                0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa,
+                0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa,
+                0xaa, 0xaa, 0xaa, 0xaa, //
+                /* cred metadata: 32 bytes */
+                0xbb, 0xbb, 0xbb, 0xbb, 0xbb, 0xbb, 0xbb, 0xbb, 0xbb, 0xbb, 0xbb, 0xbb, 0xbb, 0xbb,
+                0xbb, 0xbb, 0xbb, 0xbb, 0xbb, 0xbb, 0xbb, 0xbb, 0xbb, 0xbb, 0xbb, 0xbb, 0xbb, 0xbb,
+                0xbb, 0xbb, 0xbb, 0xbb, //
+                /* h_aux: 2*32 bytes */
+                0xcc, 0xcc, 0xcc, 0xcc, 0xcc, 0xcc, 0xcc, 0xcc, 0xcc, 0xcc, 0xcc, 0xcc, 0xcc, 0xcc,
+                0xcc, 0xcc, 0xcc, 0xcc, 0xcc, 0xcc, 0xcc, 0xcc, 0xcc, 0xcc, 0xcc, 0xcc, 0xcc, 0xcc,
+                0xcc, 0xcc, 0xcc, 0xcc, //
+                0xdd, 0xdd, 0xdd, 0xdd, 0xdd, 0xdd, 0xdd, 0xdd, 0xdd, 0xdd, 0xdd, 0xdd, 0xdd, 0xdd,
+                0xdd, 0xdd, 0xdd, 0xdd, 0xdd, 0xdd, 0xdd, 0xdd, 0xdd, 0xdd, 0xdd, 0xdd, 0xdd, 0xdd,
+                0xdd, 0xdd, 0xdd, 0xdd, //
+            ]
+        );
+    }
+
+    #[test]
+    fn test_try_auth_response() {
+        let data = vec![
+            0x00, 0x25, /* Subcommand::Pinweaver */
+            0x01, /* Protocol version */
+            0x20, 0x00, /* Data length (little endian) */
+            0x00, 0x00, 0x00, 0x00, /* Result code */
+            /* Root hash (32 bytes) */
+            0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa,
+            0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa,
+            0xaa, 0xaa, 0xaa, 0xaa, //
+            0x01, 0x00, 0x00, 0x00, /* Time diff (LE) */
+            /* high entropy secret: 32 bytes */
+            0xbb, 0xbb, 0xbb, 0xbb, 0xbb, 0xbb, 0xbb, 0xbb, 0xbb, 0xbb, 0xbb, 0xbb, 0xbb, 0xbb,
+            0xbb, 0xbb, 0xbb, 0xbb, 0xbb, 0xbb, 0xbb, 0xbb, 0xbb, 0xbb, 0xbb, 0xbb, 0xbb, 0xbb,
+            0xbb, 0xbb, 0xbb, 0xbb, //
+            /* reset secret: 32 bytes */
+            0xcc, 0xcc, 0xcc, 0xcc, 0xcc, 0xcc, 0xcc, 0xcc, 0xcc, 0xcc, 0xcc, 0xcc, 0xcc, 0xcc,
+            0xcc, 0xcc, 0xcc, 0xcc, 0xcc, 0xcc, 0xcc, 0xcc, 0xcc, 0xcc, 0xcc, 0xcc, 0xcc, 0xcc,
+            0xcc, 0xcc, 0xcc, 0xcc, //
+            /* leaf data */
+            0x00, 0x00, 0x00, 0x00, /* major/minor (2 LE U16s) */
+            0x01, 0x00, /* pub_len (LE) */
+            0x02, 0x00, /* sec_len (LE) */
+            /* HMAC: 32 bytes */
+            0xcc, 0xcc, 0xcc, 0xcc, 0xcc, 0xcc, 0xcc, 0xcc, 0xcc, 0xcc, 0xcc, 0xcc, 0xcc, 0xcc,
+            0xcc, 0xcc, 0xcc, 0xcc, 0xcc, 0xcc, 0xcc, 0xcc, 0xcc, 0xcc, 0xcc, 0xcc, 0xcc, 0xcc,
+            0xcc, 0xcc, 0xcc, 0xcc, //
+            /* IV: 16 bytes */
+            0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa,
+            0xaa, 0xaa, //
+            /* payload (pub_len + sec_len) */
+            0xaa, 0xbb, 0xcc,
+        ];
+        let mut deserializer = Deserializer::new(data);
+        let response =
+            PinweaverResponse::<PinweaverTryAuthResponse>::deserialize(&mut deserializer)
+                .expect("deserialize ok");
+        assert_eq!(response.result_code, 0);
+        assert_eq!(
+            response.root,
+            [
+                0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa,
+                0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa,
+                0xaa, 0xaa, 0xaa, 0xaa
+            ]
+        );
+        let data = response.data.expect("parsed try auth response");
+        assert_eq!(data.time_diff, 1);
+        assert_eq!(
+            data.high_entropy_secret,
+            [
+                0xbb, 0xbb, 0xbb, 0xbb, 0xbb, 0xbb, 0xbb, 0xbb, 0xbb, 0xbb, 0xbb, 0xbb, 0xbb, 0xbb,
+                0xbb, 0xbb, 0xbb, 0xbb, 0xbb, 0xbb, 0xbb, 0xbb, 0xbb, 0xbb, 0xbb, 0xbb, 0xbb, 0xbb,
+                0xbb, 0xbb, 0xbb, 0xbb,
+            ]
+        );
+        assert_eq!(
+            data.reset_secret,
+            [
+                0xcc, 0xcc, 0xcc, 0xcc, 0xcc, 0xcc, 0xcc, 0xcc, 0xcc, 0xcc, 0xcc, 0xcc, 0xcc, 0xcc,
+                0xcc, 0xcc, 0xcc, 0xcc, 0xcc, 0xcc, 0xcc, 0xcc, 0xcc, 0xcc, 0xcc, 0xcc, 0xcc, 0xcc,
+                0xcc, 0xcc, 0xcc, 0xcc,
+            ]
+        );
+
+        assert_eq!(data.unimported_leaf_data.major, 0);
+        assert_eq!(data.unimported_leaf_data.minor, 0);
+        assert_eq!(data.unimported_leaf_data.pub_len, 1);
+        assert_eq!(data.unimported_leaf_data.sec_len, 2);
+        assert_eq!(
+            data.unimported_leaf_data.hmac,
+            [
+                0xcc, 0xcc, 0xcc, 0xcc, 0xcc, 0xcc, 0xcc, 0xcc, 0xcc, 0xcc, 0xcc, 0xcc, 0xcc, 0xcc,
+                0xcc, 0xcc, 0xcc, 0xcc, 0xcc, 0xcc, 0xcc, 0xcc, 0xcc, 0xcc, 0xcc, 0xcc, 0xcc, 0xcc,
+                0xcc, 0xcc, 0xcc, 0xcc,
+            ]
+        );
+        assert_eq!(
+            data.unimported_leaf_data.iv,
+            [
+                0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa,
+                0xaa, 0xaa,
+            ]
+        );
+        assert_eq!(data.unimported_leaf_data.payload, vec![0xaa, 0xbb, 0xcc]);
     }
 }
