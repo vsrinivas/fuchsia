@@ -293,7 +293,7 @@ func (r *Root) Namespace() namespace {
 	case noVariant:
 		fidlgen.TemplateFatalf("Called Root.Namespace() when currentVariant isn't set.\n")
 	case hlcppVariant:
-		return naturalNamespace(r.Library)
+		return hlcppNamespace(r.Library)
 	case unifiedVariant, wireVariant:
 		return unifiedNamespace(r.Library)
 	}

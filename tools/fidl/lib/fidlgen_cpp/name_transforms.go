@@ -37,7 +37,7 @@ func simpleDeclarationTransform(
 }
 
 type declarationTransforms struct {
-	natural declarationTransform
+	hlcpp   declarationTransform
 	unified declarationTransform
 	wire    declarationTransform
 }
@@ -48,7 +48,7 @@ type declarationContext struct {
 
 func (ctx declarationContext) transform(id fidlgen.CompoundIdentifier) nameVariants {
 	return nameVariants{
-		HLCPP:   ctx.transforms.natural(id, ctx.NameContext),
+		HLCPP:   ctx.transforms.hlcpp(id, ctx.NameContext),
 		Unified: ctx.transforms.unified(id, ctx.NameContext),
 		Wire:    ctx.transforms.wire(id, ctx.NameContext),
 	}
@@ -56,7 +56,7 @@ func (ctx declarationContext) transform(id fidlgen.CompoundIdentifier) nameVaria
 
 type memberTransform func(fidlgen.Identifier) name
 type memberTransforms struct {
-	natural nameTransform
+	hlcpp   nameTransform
 	unified nameTransform
 	wire    nameTransform
 }
@@ -81,7 +81,7 @@ func (ctx memberContext) makeName(n string) name {
 func (ctx memberContext) transform(id fidlgen.Identifier) nameVariants {
 	n := string(id)
 	return nameVariants{
-		HLCPP:   ctx.makeName(ctx.transforms.natural.apply(n)),
+		HLCPP:   ctx.makeName(ctx.transforms.hlcpp.apply(n)),
 		Unified: ctx.makeName(ctx.transforms.unified.apply(n)),
 		Wire:    ctx.makeName(ctx.transforms.wire.apply(n)),
 	}
@@ -126,7 +126,7 @@ var (
 	unionMemberTagContext = memberContext{
 		NameContext: fidlgen.NewNameContext(),
 		transforms: memberTransforms{
-			natural: fidlgen.ConstNameToKCamelCase,
+			hlcpp:   fidlgen.ConstNameToKCamelCase,
 			unified: fidlgen.ConstNameToKCamelCase,
 			wire:    fidlgen.ConstNameToKCamelCase,
 		},
@@ -142,7 +142,7 @@ var (
 	constantContext = declarationContext{
 		NameContext: fidlgen.NewNameContext(),
 		transforms: declarationTransforms{
-			natural: simpleDeclarationTransform(naturalNamespace, nil),
+			hlcpp:   simpleDeclarationTransform(hlcppNamespace, nil),
 			unified: simpleDeclarationTransform(unifiedNamespace, nil),
 			wire:    simpleDeclarationTransform(wireNamespace, fidlgen.ConstNameToKCamelCase),
 		},
@@ -152,7 +152,7 @@ var (
 	typeContext = declarationContext{
 		NameContext: fidlgen.NewNameContext(),
 		transforms: declarationTransforms{
-			natural: simpleDeclarationTransform(naturalNamespace, nil),
+			hlcpp:   simpleDeclarationTransform(hlcppNamespace, nil),
 			unified: simpleDeclarationTransform(unifiedNamespace, nil),
 			wire:    simpleDeclarationTransform(wireNamespace, fidlgen.ToUpperCamelCase),
 		},
@@ -164,14 +164,14 @@ var (
 	serviceContext = declarationContext{
 		NameContext: fidlgen.NewNameContext(),
 		transforms: declarationTransforms{
-			natural: simpleDeclarationTransform(naturalNamespace, nil),
+			hlcpp: simpleDeclarationTransform(hlcppNamespace, nil),
 			// Intentionally using the natural namespace, since we would like
 			// the unified bindings to transparently accept natural types, which
 			// may certainly contain protocol endpoints.
 			// TODO(fxbug.dev/72980): Switch to ClientEnd/ServerEnd and
 			// underscore namespace when corresponding endpoint types can easily
 			// convert into each other.
-			unified: simpleDeclarationTransform(naturalNamespace, nil),
+			unified: simpleDeclarationTransform(hlcppNamespace, nil),
 			wire:    simpleDeclarationTransform(unifiedNamespace, fidlgen.ToUpperCamelCase),
 		},
 	}
@@ -182,7 +182,7 @@ var (
 	protocolContext = declarationContext{
 		NameContext: fidlgen.NewNameContext(),
 		transforms: declarationTransforms{
-			natural: simpleDeclarationTransform(naturalNamespace, nil),
+			hlcpp:   simpleDeclarationTransform(hlcppNamespace, nil),
 			unified: simpleDeclarationTransform(unifiedNamespace, fidlgen.ToUpperCamelCase),
 			wire:    simpleDeclarationTransform(unifiedNamespace, fidlgen.ToUpperCamelCase),
 		},

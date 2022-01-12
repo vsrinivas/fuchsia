@@ -23,7 +23,7 @@ func wireNamespace(library fidlgen.LibraryIdentifier) namespace {
 	return unifiedNamespace(library).append("wire")
 }
 
-func naturalNamespace(library fidlgen.LibraryIdentifier) namespace {
+func hlcppNamespace(library fidlgen.LibraryIdentifier) namespace {
 	parts := libraryParts(library, changePartIfReserved)
 	return namespace(parts)
 }
