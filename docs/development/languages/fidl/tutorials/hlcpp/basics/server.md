@@ -104,18 +104,22 @@ To create a component:
 
 ### Add a dependency on the FIDL library
 
-1. Add `"//examples/fidl/fuchsia.examples"` to the `deps` of the `executable`
-2. Include the bindings into the main file with `#include <fuchsia/examples/cpp/fidl.h>`
+1.  Add the `fuchsia.examples` FIDL library target as a dependency of your
+    `executable` in `examples/fidl/hlcpp/server/BUILD.gn`:
 
-The full `bin` target declaration should now look like this:
+    ```gn
+    executable("bin") {
+      output_name = "fidl_echo_hlcpp_server"
+      sources = [ "main.cc" ]
+      {{ '<strong>' }}deps = [ "//examples/fidl/fuchsia.examples" ]{{ '</strong>' }}
+    }
+    ```
 
-```gn
-executable("bin") {
-  output_name = "fidl_echo_hlcpp_server"
-  sources = [ "main.cc" ]
-  deps = [ "//examples/fidl/fuchsia.examples" ]
-}
-```
+1.  Import the HLCPP bindings at the top of `examples/fidl/hlcpp/server/main.cc`:
+
+    ```cpp
+    {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/hlcpp/server/main.cc" region_tag="fidl_includes" %}
+    ```
 
 ### Add an implementation for the protocol {#impl}
 
@@ -165,6 +169,29 @@ for incoming requests on an [async loop][async-loop].
 
 This complete process is described in further detail in the
 [Life of a protocol open][protocol-open].
+
+### Add new dependencies {#deps}
+
+This new code requires the following additional dependencies:
+
+* `"//zircon/system/ulib/async-loop:async-loop-cpp"` and
+  `"//zircon/system/ulib/async-loop:async-loop-default"`: These libraries contain
+  the async loop code.
+* `"//sdk/lib/sys/cpp"`: The component framework C++ runtime, which contains
+  utility code for interacting with the component's environment.
+
+1.  Add the library targets as dependencies of your `executable` in
+    `examples/fidl/hlcpp/server/BUILD.gn`:
+
+    ```gn
+    {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/hlcpp/server/BUILD.gn" region_tag="bin" highlight="6,7,8" %}
+    ```
+
+1.  Import these dependencies at the top of `examples/fidl/hlcpp/server/main.cc`:
+
+    ```cpp
+    {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/hlcpp/server/main.cc" region_tag="includes" %}
+    ```
 
 ### Initialize the event loop
 
@@ -242,28 +269,6 @@ being passed in, which is generated because of the presence [`[Discoverable]`
 attribute][discoverable] on the `Echo` protocol. In other words, after executing
 this line you should be able to call `ls` on the component's `/out` directory
 and see an entry called `fuchsia.examples.Echo`.
-
-### Add new dependencies {#deps}
-
-This new code requires the following additional dependencies:
-
-* `"//zircon/system/ulib/async-loop:async-loop-cpp"` and `"//zircon/system/ulib/async-loop:async-loop-default"`, which contain the async loop code.
-* `"//sdk/lib/sys/cpp"`: The component framework C++ runtime, which contains
-  utility code for interacting with the component's environment.
-* `"//sdk/lib/fidl/cpp"`: The FIDL C++ runtime, which contains utility code for
-  using the FIDL bindings.
-
-The full `bin` target declaration should now look like this:
-
-```gn
-{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/hlcpp/server/BUILD.gn" region_tag="bin" %}
-```
-
-Import the dependencies by including them at the top of `examples/fidl/hlcpp/server/main.cc`:
-
-```cpp
-{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/hlcpp/server/main.cc" region_tag="includes" %}
-```
 
 ## Test the server
 

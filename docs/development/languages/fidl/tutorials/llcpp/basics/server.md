@@ -41,10 +41,10 @@ To create a component:
 1. Add a `main()` function to `examples/fidl/llcpp/server/main.cc`:
 
    ```cpp
-   #include <stdio.h>
+   #include <iostream>
 
    int main(int argc, const char** argv) {
-     printf("Hello, world!\n");
+     std::cout << "Hello, world!" << std::endl;
      return 0;
    }
    ```
@@ -110,18 +110,22 @@ To create a component:
 
 ### Add a dependency on the FIDL library
 
-1. Add `"//examples/fidl/fuchsia.examples:fuchsia.examples_llcpp"` to the `deps` of the `executable`
-2. Include the bindings into the main file with `#include <fidl/fuchsia.examples/cpp/wire.h>`
+1.  Add the `fuchsia.examples` FIDL library target as a dependency of your
+    `executable` in `examples/fidl/llcpp/server/BUILD.gn`:
 
-The full `bin` target declaration should now look like this:
+    ```gn
+    executable("bin") {
+      output_name = "fidl_echo_llcpp_server"
+      sources = [ "main.cc" ]
+      {{ '<strong>' }}deps = [ "//examples/fidl/fuchsia.examples:fuchsia.examples_llcpp" ]{{ '</strong>' }}
+    }
+    ```
 
-```gn
-executable("bin") {
-  output_name = "fidl_echo_llcpp_server"
-  sources = [ "main.cc" ]
-  deps = [ "//examples/fidl/fuchsia.examples:fuchsia.examples_llcpp" ]
-}
-```
+1.  Import the LLCPP bindings at the top of `examples/fidl/llcpp/server/main.cc`:
+
+    ```cpp
+    {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/llcpp/server/main.cc" region_tag="fidl_includes" %}
+    ```
 
 ### Add an implementation for the protocol {#impl}
 
@@ -171,6 +175,29 @@ for incoming requests on an [async loop][async-loop].
 
 This complete process is described in further detail in the
 [Life of a protocol open][protocol-open].
+
+### Add new dependencies {#deps}
+
+This new code requires the following additional dependencies:
+
+* `"//zircon/system/ulib/async-loop:async-loop-cpp"` and
+  `"//zircon/system/ulib/async-loop:async-loop-default"`: These libraries contain
+  the async loop code.
+* `"//sdk/lib/fdio"` and `"//zircon/system/ulib/svc"`: These libraries are used
+  to interact with the components environment (e.g. for serving protocols).
+
+1.  Add the library targets as dependencies of your `executable` in
+    `examples/fidl/llcpp/server/BUILD.gn`:
+
+    ```gn
+    {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/llcpp/server/BUILD.gn" region_tag="bin" highlight="6,7,8,9,10" %}
+    ```
+
+1.  Import these dependencies at the top of `examples/fidl/llcpp/server/main.cc`:
+
+    ```cpp
+    {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/llcpp/server/main.cc" region_tag="includes" %}
+    ```
 
 ### Initialize the event loop
 
@@ -224,28 +251,6 @@ When the handler is called (i.e. when a client has requested to connect to the
 channel and dispatch them to the `EchoImpl` instance. `EchoImpl`'s call to
 `fidl::BindServer` returns a `fidl::ServerBindingRef`, which is then stored so
 the instance can be able to send events back to the client.
-
-### Add new dependencies {#deps}
-
-This new code requires the following additional dependencies:
-
-* `"//zircon/system/ulib/async-loop:async-loop-cpp"` and `"//zircon/system/ulib/async-loop:async-loop-default"`, which contain the async loop code.
-* `"//sdk/lib/fdio"` and `"//zircon/system/ulib/svc"`: These are libraries used
-  to interact with the components environment (e.g. for serving protocols).
-* `"//zircon/system/ulib/fidl"`: The LLCPP runtime, which contains utility code for
-  using the FIDL bindings, such as the `BindServer` function.
-
-The full `bin` target declaration should now look like this:
-
-```gn
-{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/llcpp/server/BUILD.gn" region_tag="bin" %}
-```
-
-Import the dependencies by including them at the top of `examples/fidl/llcpp/server/main.cc`:
-
-```cpp
-{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/llcpp/server/main.cc" region_tag="includes" %}
-```
 
 ## Test the server
 

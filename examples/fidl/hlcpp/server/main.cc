@@ -2,8 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fuchsia/examples/cpp/fidl.h>
 #include <stdio.h>
+
+// [START fidl_includes]
+#include <fuchsia/examples/cpp/fidl.h>
+// [END fidl_includes]
 
 // [START includes]
 #include <lib/async-loop/cpp/loop.h>

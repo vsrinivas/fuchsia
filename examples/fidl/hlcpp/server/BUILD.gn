@@ -15,7 +15,6 @@ executable("bin") {
   sources = [ "main.cc" ]
   deps = [
     "//examples/fidl/fuchsia.examples",
-    "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",

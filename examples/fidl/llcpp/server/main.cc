@@ -2,8 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// [START includes]
+#include <iostream>
+
+// [START fidl_includes]
 #include <fidl/fuchsia.examples/cpp/wire.h>
+// [END fidl_includes]
+
+// [START includes]
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/fdio/directory.h>
@@ -14,8 +19,6 @@
 #include <zircon/processargs.h>
 #include <zircon/status.h>
 // [END includes]
-
-#include <iostream>
 
 // [START impl]
 // An implementation of the Echo protocol. Protocols are implemented in LLCPP by

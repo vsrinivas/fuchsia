@@ -14,7 +14,6 @@ executable("bin") {
     "//sdk/lib/stdcompat",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
-    "//zircon/system/ulib/fidl",
     "//zircon/system/ulib/svc",
   ]
 }
