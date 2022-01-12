@@ -15,9 +15,7 @@
 #include <cstdint>
 #include <type_traits>
 
-#ifdef __Fuchsia__
-#include <lib/async/dispatcher.h>
-#endif
+extern "C" typedef struct async_dispatcher async_dispatcher_t;
 
 namespace fidl {
 
@@ -235,7 +233,6 @@ struct TransportVTable {
   zx_status_t (*call)(fidl_handle_t handle, CallOptions options, const CallMethodArgs& cargs,
                       uint32_t* out_data_actual_count, uint32_t* out_handles_actual_count);
 
-#ifdef __Fuchsia__
   // Create a waiter object to wait for messages on the transport.
   // No waits are started initially on the waiter. Call Begin() to start waiting.
   // The waiter object is output into |any_transport_waiter|.
@@ -243,7 +240,6 @@ struct TransportVTable {
                                TransportWaitSuccessHandler success_handler,
                                TransportWaitFailureHandler failure_handler,
                                AnyTransportWaiter& any_transport_waiter);
-#endif
 
   // Close the handle.
   void (*close)(fidl_handle_t);
@@ -301,7 +297,6 @@ class AnyUnownedTransport {
                          out_handles_actual_count);
   }
 
-#ifdef __Fuchsia__
   zx_status_t create_waiter(async_dispatcher_t* dispatcher,
                             TransportWaitSuccessHandler success_handler,
                             TransportWaitFailureHandler failure_handler,
@@ -309,7 +304,6 @@ class AnyUnownedTransport {
     return vtable_->create_waiter(handle_, dispatcher, std::move(success_handler),
                                   std::move(failure_handler), any_transport_waiter);
   }
-#endif
 
  private:
   friend class AnyTransport;
@@ -390,7 +384,6 @@ class AnyTransport {
                          out_handles_actual_count);
   }
 
-#ifdef __Fuchsia__
   zx_status_t create_waiter(async_dispatcher_t* dispatcher,
                             TransportWaitSuccessHandler success_handler,
                             TransportWaitFailureHandler failure_handler,
@@ -398,7 +391,6 @@ class AnyTransport {
     return vtable_->create_waiter(handle_, dispatcher, std::move(success_handler),
                                   std::move(failure_handler), any_transport_waiter);
   }
-#endif
 
  private:
   explicit constexpr AnyTransport(const TransportVTable* vtable, fidl_handle_t handle)
