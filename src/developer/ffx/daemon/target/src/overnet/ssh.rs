@@ -8,6 +8,8 @@ use {
 };
 
 static DEFAULT_SSH_OPTIONS: &'static [&str] = &[
+    "-F",
+    "none", // Ignore user and system configuration files.
     "-o",
     "CheckHostIP=no",
     "-o",

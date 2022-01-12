@@ -24,6 +24,8 @@ use {
 pub use port_picker::{pick_unused_port, Port};
 
 static DEFAULT_SSH_OPTIONS: &'static [&str] = &[
+    "-F",
+    "none", // Ignore user and system configuration files.
     "-o",
     "CheckHostIP=no",
     "-o",
