@@ -1,7 +1,6 @@
 {
-    include: [ "syslog/client.shard.cml" ],
+    include: [ "syslog/elf_stdio.shard.cml" ],
     program: {
-        runner: "elf",
         binary: "bin/device-name-provider",
     },
     capabilities: [

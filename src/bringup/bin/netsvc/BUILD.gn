@@ -182,7 +182,23 @@ fuchsia_test_component("netsvc-test-component") {
   ]
 }
 
-fuchsia_test_package("tests") {
+# This component only exists to be included in the integration tests.
+fuchsia_component("test-component") {
+  testonly = true
+  component_name = "netsvc"
+  manifest = "meta/netsvc.cml"
+  deps = [ ":netsvc" ]
+}
+
+group("tests") {
+  testonly = true
+  public_deps = [
+    ":netsvc-tests-package",
+    "test/integration",
+  ]
+}
+
+fuchsia_test_package("netsvc-tests-package") {
   package_name = "netsvc-tests"
   test_components = [
     ":netsvc-stress-test-component",

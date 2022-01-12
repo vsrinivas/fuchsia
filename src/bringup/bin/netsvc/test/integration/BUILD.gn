@@ -1,0 +1,56 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+import("//build/rust/rustc_test.gni")
+
+rustc_test("bin") {
+  output_name = "netsvc_integration_test"
+  deps = [
+    "//sdk/fidl/fuchsia.boot:fuchsia.boot-rustc",
+    "//sdk/fidl/fuchsia.device:fuchsia.device-rustc",
+    "//sdk/fidl/fuchsia.net.interfaces:fuchsia.net.interfaces-rustc",
+    "//src/connectivity/lib/net-declare",
+    "//src/connectivity/lib/net-types",
+    "//src/connectivity/network/testing/netemul-v2/fidl:fuchsia.netemul-rustc",
+    "//src/connectivity/network/testing/netemul/rust:lib",
+    "//src/connectivity/network/tests/integration/common:netstack_testing_common",
+    "//src/connectivity/network/tests/integration/macros:netstack_testing_macros",
+    "//src/lib/async-utils",
+    "//src/lib/fidl/rust/fidl",
+    "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-component",
+    "//src/lib/network/netsvc-proto",
+    "//src/lib/network/packet",
+    "//src/lib/testing/fixture",
+    "//src/lib/zerocopy",
+    "//src/lib/zircon/rust:fuchsia-zircon",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:matches",
+  ]
+  sources = [ "src/lib.rs" ]
+  configs -= [ "//build/config/rust:allow_unused_results" ]
+}
+
+fuchsia_test_component("netsvc-integration-test") {
+  component_name = "netsvc-integration-test"
+  manifest = "meta/netsvc-integration-test.cml"
+  deps = [
+    ":bin",
+    "//src/bringup/bin/device-name-provider:device-name-provider-component",
+    "//src/bringup/bin/netsvc:test-component",
+
+    # netemul-sandbox-v2 is used to create hermetic test realms.
+    "//src/connectivity/network/testing/netemul-v2/service:netemul-sandbox",
+
+    # We inject a network stack to be able to communicate with netsvc.
+    "//src/connectivity/network/netstack:component-debug",
+  ]
+}
+
+fuchsia_test_package("integration") {
+  package_name = "netsvc-integration-test"
+  test_components = [ ":netsvc-integration-test" ]
+}
