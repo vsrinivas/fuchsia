@@ -39,11 +39,20 @@ impl ValueList {
             *values_lock = Some(vec![boxed_value]);
         }
     }
+
+    /// Clears all values from ValueList, rendering it empty.
+    /// `InspectType` values contained will be dropped.
+    pub fn clear(&self) {
+        let mut values_lock = self.values.lock();
+        *values_lock = None;
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::assert_json_diff;
+    use crate::hierarchy::DiagnosticsHierarchy;
     use crate::writer::types::Inspector;
 
     #[fuchsia::test]
@@ -54,5 +63,22 @@ mod tests {
         assert!(value_list.values.lock().is_none());
         value_list.record(child);
         assert_eq!(value_list.values.lock().as_ref().unwrap().len(), 1);
+    }
+
+    #[fuchsia::test]
+    fn value_list_drop_recorded() {
+        let inspector = Inspector::new();
+        let child = inspector.root().create_child("test");
+        let value_list = ValueList::new();
+        assert!(value_list.values.lock().is_none());
+        value_list.record(child);
+        assert_eq!(value_list.values.lock().as_ref().unwrap().len(), 1);
+        assert_json_diff!(inspector, root: {
+            test: {},
+        });
+
+        value_list.clear();
+        assert!(value_list.values.lock().is_none());
+        assert_json_diff!(inspector, root: {});
     }
 }

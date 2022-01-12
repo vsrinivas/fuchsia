@@ -38,6 +38,13 @@ TEST(ValueList, Basic) {
   ASSERT_EQ(1u, hierarchy.node().properties().size());
   EXPECT_EQ("int", hierarchy.node().properties()[0].name());
   EXPECT_EQ(22, hierarchy.node().properties()[0].Get<IntPropertyValue>().value());
+
+  list.clear();
+  result = inspect::ReadFromVmo(inspector.DuplicateVmo());
+  ASSERT_TRUE(result.is_ok());
+  hierarchy = result.take_value();
+
+  ASSERT_EQ(0u, hierarchy.children().size());
 }
 
 TEST(ValueList, Struct) {

@@ -64,6 +64,8 @@ class ValueList final {
     values_.emplace_back(std::make_unique<internal::ValueHolder<T>>(std::move(value)));
   }
 
+  void clear() { values_.clear(); }
+
  private:
   // The list of values.
   std::vector<std::unique_ptr<internal::BaseHolder>> values_;

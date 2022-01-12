@@ -101,6 +101,11 @@ impl Node {
         self.inner.inner_ref().map(|inner_ref| inner_ref.data.record(property));
     }
 
+    /// Drop all recorded data from the node.
+    pub fn clear_recorded(&self) {
+        self.inner.inner_ref().map(|inner_ref| inner_ref.data.clear());
+    }
+
     /// Creates a new `IntProperty` with the given `name` and `value`.
     #[must_use]
     pub fn create_int<'b>(&self, name: impl Into<StringReference<'b>>, value: i64) -> IntProperty {
@@ -597,7 +602,7 @@ impl InnerType for InnerNodeType {
 mod tests {
     use super::*;
     use crate::{
-        reader,
+        assert_json_diff, reader,
         writer::{private::InspectTypeInternal, testing_utils::get_state, Error, NumericProperty},
     };
     use diagnostics_hierarchy::{assert_data_tree, DiagnosticsHierarchy};
@@ -854,6 +859,46 @@ mod tests {
         // Property `a` should be gone as well, given that it was being tracked by `child`.
         assert_data_tree!(inspector, root: {
             b: 2u64,
+        });
+
+        inspector.root().clear_recorded();
+        assert_data_tree!(inspector, root: {});
+    }
+
+    #[fuchsia::test]
+    fn clear_recorded() {
+        let inspector = Inspector::new();
+        let one = inspector.root().create_child("one");
+        let two = inspector.root().create_child("two");
+        let one_recorded = one.create_child("one_recorded");
+        let two_recorded = two.create_child("two_recorded");
+
+        one.record(one_recorded);
+        two.record(two_recorded);
+
+        assert_json_diff!(inspector, root: {
+            one: {
+                one_recorded: {},
+            },
+            two: {
+                two_recorded: {},
+            },
+        });
+
+        two.clear_recorded();
+
+        assert_json_diff!(inspector, root: {
+            one: {
+                one_recorded: {},
+            },
+            two: {},
+        });
+
+        one.clear_recorded();
+
+        assert_json_diff!(inspector, root: {
+            one: {},
+            two: {},
         });
     }
 

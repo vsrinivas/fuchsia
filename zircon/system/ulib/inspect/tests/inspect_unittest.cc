@@ -48,6 +48,23 @@ TEST(Inspect, VmoName) {
   EXPECT_EQ(std::string(name), "InspectHeap");
 }
 
+TEST(Inspect, RecordAndDropInspector) {
+  Inspector insp;
+  insp.GetRoot().CreateChild("name", &insp);
+
+  auto result = inspect::ReadFromVmo(insp.DuplicateVmo());
+  ASSERT_TRUE(result.is_ok());
+  auto hierarchy = result.take_value();
+  ASSERT_EQ(1u, hierarchy.children().size());
+
+  insp.ClearRecorded();
+
+  result = inspect::ReadFromVmo(insp.DuplicateVmo());
+  ASSERT_TRUE(result.is_ok());
+  hierarchy = result.take_value();
+  ASSERT_EQ(0u, hierarchy.children().size());
+}
+
 TEST(Inspect, CreateNodeWithLongStringReferences) {
   auto inspector = std::make_unique<Inspector>();
   const std::string long_with_extent_data(3000, '.');

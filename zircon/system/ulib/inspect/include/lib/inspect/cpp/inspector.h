@@ -118,6 +118,12 @@ class Inspector final {
     value_list_->emplace(std::move(value));
   }
 
+  // Clear the recorded values owned by this Inspector.
+  void ClearRecorded() {
+    std::lock_guard<std::mutex> guard(*value_mutex_);
+    value_list_->clear();
+  }
+
   // Gets the names of the inspectors linked off of this inspector.
   std::vector<std::string> GetChildNames() const;
 
