@@ -233,12 +233,22 @@ can be routed as subdirectories to components that expect them.
     places, which is error-prone. When mistakes are made they can be difficult
     to troubleshoot.
 
+*   `config_data()` target definitions know about the name of the package(s)
+    of components that are expected to use this data. This promotes brittle
+    contracts that are difficult and perilous to evolve. For instance in order
+    for the platform to offer [ICU data][icu-data] to out-of-tree components and
+    their tests, there exists a
+    [hard-coded list of out-of-tree package names][icu-data-configs] in the
+    Fuchsia source tree.
+
 Due to the above, always prefer using `resource()` if possible.
 
 [additional-packaged-resources]: /docs/development/components/build.md#additional-packaged-resources
 [build-components]: /docs/development/components/build.md
 [config-migration]: /docs/development/components/v2/migration.md#config-data
 [gn-placeholders]: https://gn.googlesource.com/gn/+/HEAD/docs/reference.md#placeholders
+[icu-data]: /docs/development/internationalization/icu_data.md
+[icu-data-configs]: /src/lib/icu/tzdata/BUILD.gn
 [legacy-components]: /docs/concepts/components/v1/README.md
 [metafar]: /docs/concepts/packages/package.md#metafar
 [resource]: /build/dist/resource.gni
