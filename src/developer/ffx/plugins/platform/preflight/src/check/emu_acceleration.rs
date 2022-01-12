@@ -61,7 +61,7 @@ impl<'a> EmuAcceleration<'a> {
         let (status, _, _) = (self.command_runner)(&vec!["test", "-r", "/dev/kvm"])?;
         if !status.success() {
             return Ok(Warning(format!(
-                "{}. To resolve, {}",
+                "{} To resolve, {}",
                 NO_KVM_MESSAGE, NO_KVM_RESOLUTION_MESSAGE
             )));
         }
