@@ -284,7 +284,7 @@ function create-main-toc {
     # Appends the category to the global _toc.yaml
     {
       echo "- title: \"${category} commands\""
-      echo "  path: ${toc_prefix}/${norm_cat}"
+      echo "  path: ${toc_prefix}/${norm_cat}.md"
       echo "  section:"
       echo "  - include: ${toc_prefix}/${norm_cat}_toc.yaml"
     } >> "${base_out}/_toc.yaml"
@@ -352,7 +352,7 @@ function handle-command {
   fi
   local summary="${deprecated_str}$(get_summary "${cmd_path}")"
   local cmd_url="cmd/${cmd_name}.md"
-  local cat_url="${norm_cat}"
+  local cat_url="${norm_cat}.md"
 
   local rel_path="${cmd_path#${FUCHSIA_DIR}/}"
 
