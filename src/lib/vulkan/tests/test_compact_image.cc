@@ -173,7 +173,7 @@ TEST(CompactImage, TrimCompactImageDeviceMemoryFUCHSIA) {
   EXPECT_EQ(VK_SUCCESS, vkCreateImage(device, &image_create_info, nullptr, &image));
 
   VkImageMemoryRequirementsInfo2 memory_requirements_info = {
-      .sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_REQUIREMENTS_INFO_2,
+      .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_REQUIREMENTS_INFO_2,
       .image = image,
   };
   VkMemoryDedicatedRequirements memory_dedicated_requirements = {
@@ -223,7 +223,7 @@ TEST(CompactImage, TrimCompactImageDeviceMemoryFUCHSIA) {
       .pNext = nullptr,
       .flags = 0,
       .size = buffer_size,
-      .usage = VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+      .usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
       .sharingMode = VK_SHARING_MODE_EXCLUSIVE,
       .queueFamilyIndexCount = 0,
       .pQueueFamilyIndices = nullptr,
