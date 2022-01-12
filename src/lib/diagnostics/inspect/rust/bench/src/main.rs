@@ -90,7 +90,7 @@ macro_rules! bench_numeric_property_fn {
     };
 }
 
-macro_rules! bench_array_fn_impls {
+macro_rules! bench_arithmetic_array_fn_impls {
     ($name:ident, $type:ty, $Array:expr, [$($size:expr),*]) => {
         $(
             paste::paste! {
@@ -124,9 +124,40 @@ macro_rules! bench_array_fn_impls {
     };
 }
 
-macro_rules! bench_array_fns {
+macro_rules! bench_arithmetic_array_fns {
     ($name:ident, $type:ty, $Array:expr) => {
-        bench_array_fn_impls!($name, $type, $Array, [32, 128, 240]);
+        bench_arithmetic_array_fn_impls!($name, $type, $Array, [32, 128, 240]);
+    };
+}
+
+macro_rules! bench_string_array_fns {
+    ([$($size:expr),*]) => {
+        $(
+            paste::paste! {
+                fn [<bench_string_array_ $size>](root: &Node, iteration: usize) {
+                    let index = iteration % $size;
+                    let array = {
+                        ftrace::duration!("benchmark", concat!("Node::create_string_array/", $size));
+                        root.create_string_array(NAME, $size)
+                    };
+
+                    {
+                        ftrace::duration!("benchmark", concat!("StringArrayProperty::set/", $size));
+                        array.set(index, "one");
+                    }
+
+                    {
+                        ftrace::duration!("benchmark", concat!("StringArrayProperty::clear/", $size));
+                        array.clear();
+                    }
+
+                    {
+                        ftrace::duration!("benchmark", concat!("StringArrayProperty::drop/", $size));
+                        drop(array);
+                    }
+                }
+            }
+        )*
     };
 }
 
@@ -260,9 +291,11 @@ bench_numeric_property_fn!(int, i64, "IntProperty");
 bench_numeric_property_fn!(uint, u64, "UintProperty");
 bench_numeric_property_fn!(double, f64, "DoubleProperty");
 
-bench_array_fns!(int, i64, "IntArrayProperty");
-bench_array_fns!(uint, u64, "UintArrayProperty");
-bench_array_fns!(double, f64, "DoubleArrayProperty");
+bench_arithmetic_array_fns!(int, i64, "IntArrayProperty");
+bench_arithmetic_array_fns!(uint, u64, "UintArrayProperty");
+bench_arithmetic_array_fns!(double, f64, "DoubleArrayProperty");
+
+bench_string_array_fns!([32, 128, 240]);
 
 bench_histogram_fn!(int, i64, "IntLinearHistogramProperty", linear);
 bench_histogram_fn!(uint, u64, "UintLinearHistogramProperty", linear);
@@ -365,6 +398,7 @@ macro_rules! single_iteration_fn {
                     [<bench_int_array_ $array_size>](&root, iteration);
                     [<bench_double_array_ $array_size>](&root, iteration);
                     [<bench_uint_array_ $array_size>](&root, iteration);
+                    [<bench_string_array_ $array_size>](&root, iteration);
 
                     [<bench_int_linear_histogram_ $array_size>](&root);
                     [<bench_uint_linear_histogram_ $array_size>](&root);
