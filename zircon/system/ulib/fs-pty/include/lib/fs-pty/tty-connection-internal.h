@@ -30,10 +30,14 @@ class NullPtyDeviceImpl : public fidl::WireServer<fuchsia_hardware_pty::Device> 
 
   // fuchsia.io.File methods (which were composed by fuchsia.hardware.pty.Device)
   void Read(ReadRequestView request, ReadCompleter::Sync& completer) final;
+  void Read2(Read2RequestView request, Read2Completer::Sync& completer) final;
   void ReadAt(ReadAtRequestView request, ReadAtCompleter::Sync& completer) final;
+  void ReadAt2(ReadAt2RequestView request, ReadAt2Completer::Sync& completer) final;
 
   void Write(WriteRequestView request, WriteCompleter::Sync& completer) final;
+  void Write2(Write2RequestView request, Write2Completer::Sync& completer) final;
   void WriteAt(WriteAtRequestView request, WriteAtCompleter::Sync& completer) final;
+  void WriteAt2(WriteAt2RequestView request, WriteAt2Completer::Sync& completer) final;
 
   void Seek(SeekRequestView request, SeekCompleter::Sync& completer) final;
   void Truncate(TruncateRequestView request, TruncateCompleter::Sync& completer) final;

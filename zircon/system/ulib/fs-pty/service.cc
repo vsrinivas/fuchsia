@@ -71,7 +71,15 @@ void NullPtyDeviceImpl::Read(ReadRequestView request, ReadCompleter::Sync& compl
   ZX_ASSERT(false);
 }
 
+void NullPtyDeviceImpl::Read2(Read2RequestView request, Read2Completer::Sync& completer) {
+  ZX_ASSERT(false);
+}
+
 void NullPtyDeviceImpl::Write(WriteRequestView request, WriteCompleter::Sync& completer) {
+  ZX_ASSERT(false);
+}
+
+void NullPtyDeviceImpl::Write2(Write2RequestView request, Write2Completer::Sync& completer) {
   ZX_ASSERT(false);
 }
 
@@ -103,7 +111,15 @@ void NullPtyDeviceImpl::ReadAt(ReadAtRequestView request, ReadAtCompleter::Sync&
   ZX_ASSERT(false);
 }
 
+void NullPtyDeviceImpl::ReadAt2(ReadAt2RequestView request, ReadAt2Completer::Sync& completer) {
+  ZX_ASSERT(false);
+}
+
 void NullPtyDeviceImpl::WriteAt(WriteAtRequestView request, WriteAtCompleter::Sync& completer) {
+  ZX_ASSERT(false);
+}
+
+void NullPtyDeviceImpl::WriteAt2(WriteAt2RequestView request, WriteAt2Completer::Sync& completer) {
   ZX_ASSERT(false);
 }
 

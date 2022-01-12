@@ -228,6 +228,11 @@ mod tests {
                     assert_eq!(offset, 20);
                     responder.send(zx_status::Status::OK.into_raw(), &contents[..20]).unwrap();
                 }
+                FileRequest::ReadAt2 { count, offset, responder } => {
+                    assert_eq!(count, 50);
+                    assert_eq!(offset, 20);
+                    responder.send(&mut Ok(contents[..20].to_vec())).unwrap();
+                }
                 req => panic!("unhandled request {:?}", req),
             }
             match stream.next().await.unwrap().unwrap() {
@@ -235,6 +240,11 @@ mod tests {
                     assert_eq!(count, 30);
                     assert_eq!(offset, 40);
                     responder.send(zx_status::Status::OK.into_raw(), &contents[20..]).unwrap();
+                }
+                FileRequest::ReadAt2 { count, offset, responder } => {
+                    assert_eq!(count, 30);
+                    assert_eq!(offset, 40);
+                    responder.send(&mut Ok(contents[20..].to_vec())).unwrap();
                 }
                 req => panic!("unhandled request {:?}", req),
             }

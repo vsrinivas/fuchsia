@@ -254,6 +254,16 @@ mod test {
                             responder.send(/*Status*/ 0, &[]).expect("writing file test response");
                         }
                     }
+                    FileRequest::Read2 { count: _, responder } => {
+                        cc = cc + 1;
+                        if cc == 1 {
+                            responder
+                                .send(&mut Ok(data.to_vec()))
+                                .expect("writing file test response");
+                        } else {
+                            responder.send(&mut Ok(vec![])).expect("writing file test response");
+                        }
+                    }
                     FileRequest::GetAttr { responder } => {
                         let mut attrs = NodeAttributes {
                             mode: 0,

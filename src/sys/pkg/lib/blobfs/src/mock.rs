@@ -346,6 +346,11 @@ impl Blob {
                 responder.send(Status::OK.into_raw(), &data[..count]).unwrap();
                 return count;
             }
+            Some(Ok(FileRequest::Read2 { count, responder })) => {
+                let count = min(count.try_into().unwrap(), data.len());
+                responder.send(&mut Ok(data[..count].to_vec())).unwrap();
+                return count;
+            }
             other => panic!("unexpected request: {:?}", other),
         }
     }
@@ -398,11 +403,23 @@ impl Blob {
                     responder.send(Status::OK.into_raw(), &data[pos..pos + count]).unwrap();
                     pos += count;
                 }
+                Some(Ok(FileRequest::Read2 { count, responder })) => {
+                    let avail = data.len() - pos;
+                    let count = min(count.try_into().unwrap(), avail);
+                    responder.send(&mut Ok(data[pos..pos + count].to_vec())).unwrap();
+                    pos += count;
+                }
                 Some(Ok(FileRequest::ReadAt { count, offset, responder })) => {
                     let pos: usize = offset.try_into().unwrap();
                     let avail = data.len() - pos;
                     let count = min(count.try_into().unwrap(), avail);
                     responder.send(Status::OK.into_raw(), &data[pos..pos + count]).unwrap();
+                }
+                Some(Ok(FileRequest::ReadAt2 { count, offset, responder })) => {
+                    let pos: usize = offset.try_into().unwrap();
+                    let avail = data.len() - pos;
+                    let count = min(count.try_into().unwrap(), avail);
+                    responder.send(&mut Ok(data[pos..pos + count].to_vec())).unwrap();
                 }
                 Some(Ok(FileRequest::GetAttr { responder })) => {
                     let mut attr = fidl_fuchsia_io::NodeAttributes::new_empty();

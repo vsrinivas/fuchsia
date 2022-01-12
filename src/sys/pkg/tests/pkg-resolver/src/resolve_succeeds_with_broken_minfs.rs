@@ -9,7 +9,7 @@ use {
     fidl_fuchsia_io::{
         DirectoryControlHandle, DirectoryProxy, DirectoryRequest, DirectoryRequestStream,
         FileControlHandle, FileEvent, FileMarker, FileProxy, FileRequest, FileRequestStream,
-        FileWriteResponder, NodeMarker,
+        FileWrite2Responder, FileWriteResponder, NodeMarker,
     },
     fidl_fuchsia_pkg_ext::RepositoryConfig,
     fidl_fuchsia_pkg_rewrite_ext::Rule,
@@ -284,6 +284,18 @@ impl FailingWriteFileStreamHandler {
         responder.send(status, bytes_written).unwrap();
     }
 
+    async fn handle_write2(self: &Arc<Self>, data: Vec<u8>, responder: FileWrite2Responder) {
+        if self.writes_should_fail() {
+            self.write_fail_count.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+            responder.send(&mut Err(Status::NO_MEMORY.into_raw())).expect("send on write");
+            return;
+        }
+
+        // Don't fail, actually do the write.
+        let mut result = self.backing_file.write2(&data).await.unwrap();
+        responder.send(&mut result).unwrap();
+    }
+
     fn handle_stream(
         self: Arc<Self>,
         mut stream: FileRequestStream,
@@ -318,6 +330,9 @@ impl FailingWriteFileStreamHandler {
                     FileRequest::Write { data, responder } => {
                         self.handle_write(data, responder).await
                     }
+                    FileRequest::Write2 { data, responder } => {
+                        self.handle_write2(data, responder).await
+                    }
                     FileRequest::GetAttr { responder } => {
                         let (status, mut attrs) = self.backing_file.get_attr().await.unwrap();
                         responder.send(status, &mut attrs).unwrap();
@@ -325,6 +340,10 @@ impl FailingWriteFileStreamHandler {
                     FileRequest::Read { count, responder } => {
                         let (status, data) = self.backing_file.read(count).await.unwrap();
                         responder.send(status, &data).unwrap();
+                    }
+                    FileRequest::Read2 { count, responder } => {
+                        let mut result = self.backing_file.read2(count).await.unwrap();
+                        responder.send(&mut result).unwrap();
                     }
                     FileRequest::Close { responder } => {
                         let backing_file_close_response = self.backing_file.close().await.unwrap();
