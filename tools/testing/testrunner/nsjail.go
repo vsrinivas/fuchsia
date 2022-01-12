@@ -52,9 +52,12 @@ func (n *NsJailCmdBuilder) addDefaultMounts() {
 		{
 			Src: "/dev/kvm",
 		},
-		// Many host tests rely on bash.
+		// Many host tests rely on /bin/bash or /bin/sh.
 		{
 			Src: "/bin/bash",
+		},
+		{
+			Src: "/bin/sh",
 		},
 		// /bin/bash, in turn, is dynamically linked and requires that we mount the
 		// system linker.
@@ -64,9 +67,12 @@ func (n *NsJailCmdBuilder) addDefaultMounts() {
 		{
 			Src: "/lib64",
 		},
-		// /usr/bin/dirname is used by the fctui_unittests.
+		// /usr/bin/dirname and /usr/bin/uname are used by the fctui_unittests.
 		{
 			Src: "/usr/bin/dirname",
+		},
+		{
+			Src: "/usr/bin/uname",
 		},
 		// Additional mounts for convenience.
 		{
@@ -91,13 +97,26 @@ func (n *NsJailCmdBuilder) Build(subcmd []string) ([]string, error) {
 	// Add the default mounts.
 	n.addDefaultMounts()
 
+	// Nsjail has a chroot flag but unfortunately it mounts the root
+	// readonly, so we get around this by mounting it manually as
+	// writable. Additionally, this must be mounted first to allow
+	// for sub-mounts.
+	if n.Chroot != "" {
+		n.MountPoints = append(
+			[]*MountPt{
+				{
+					Src:      n.Chroot,
+					Dst:      "/",
+					Writable: true,
+				},
+			}, n.MountPoints...,
+		)
+	}
+
 	// Build the actual command invocation.
 	cmd := []string{n.Bin, "--keep_env"}
 	if !n.IsolateNetwork {
 		cmd = append(cmd, "--disable_clone_newnet")
-	}
-	if n.Chroot != "" {
-		cmd = append(cmd, "--chroot", n.Chroot)
 	}
 	if n.Cwd != "" {
 		cmd = append(cmd, "--cwd", n.Cwd)
