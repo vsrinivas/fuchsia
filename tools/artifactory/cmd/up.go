@@ -737,7 +737,11 @@ func uploadFiles(ctx context.Context, files []artifactory.Upload, dest dataSink,
 func uploadFile(ctx context.Context, upload artifactory.Upload, dest dataSink) error {
 	logger.Debugf(ctx, "object %q: attempting creation", upload.Destination)
 	if err := retryGCSOperation(ctx, func() error {
-		return dest.write(ctx, &upload)
+		err := dest.write(ctx, &upload)
+		if err != nil {
+			logger.Warningf(ctx, "error uploading %q: %s", upload.Destination, err)
+		}
+		return err
 	}); err != nil {
 		return fmt.Errorf("%s: %w", upload.Destination, err)
 	}
