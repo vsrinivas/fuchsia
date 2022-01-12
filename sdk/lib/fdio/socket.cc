@@ -1171,6 +1171,13 @@ struct BaseNetworkSocket : public BaseSocket<T> {
             return proc.Process(client()->GetIpv6MulticastInterface(), [](const auto& response) {
               return static_cast<uint32_t>(response.value);
             });
+          case IPV6_UNICAST_HOPS:
+            return proc.Process(client()->GetIpv6UnicastHops(), [](const auto& response) {
+              return PartialCopy{
+                  .value = response.value,
+                  .allow_char = false,
+              };
+            });
           case IPV6_MULTICAST_HOPS:
             return proc.Process(client()->GetIpv6MulticastHops(), [](const auto& response) {
               return PartialCopy{
@@ -1342,6 +1349,11 @@ struct BaseNetworkSocket : public BaseSocket<T> {
             return proc.Process<IntOrChar>([this](IntOrChar value) {
               return client()->SetIpv6MulticastInterface(value.value);
             });
+          case IPV6_UNICAST_HOPS:
+            return proc.Process<fsocket::wire::OptionalUint8>(
+                [this](fsocket::wire::OptionalUint8 value) {
+                  return client()->SetIpv6UnicastHops(value);
+                });
           case IPV6_MULTICAST_HOPS:
             return proc.Process<fsocket::wire::OptionalUint8>(
                 [this](fsocket::wire::OptionalUint8 value) {

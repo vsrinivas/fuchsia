@@ -292,6 +292,18 @@ protocol BaseNetworkSocket {
         value fuchsia.net.interface_id;
     }) error fuchsia.posix.Errno;
 
+    /// Set `SOL_IPV6` -> `IPV6_UNICAST_HOPS`.
+    // [0, 255] but unset means use default, which is `sysctl net.ipv6.conf.<device>.hop_limit`.
+    // https://github.com/torvalds/linux/blob/6f38be8f2cc/net/ipv6/ipv6_sockglue.c#L742-L749
+    // https://github.com/torvalds/linux/blob/6f38be8f2cc/net/ipv6/ip6_output.c#L291-L294
+    SetIpv6UnicastHops(struct {
+        value OptionalUint8;
+    }) -> (struct {}) error fuchsia.posix.Errno;
+    /// Get `SOL_IPV6` -> `IPV6_UNICAST_HOPS`.
+    GetIpv6UnicastHops() -> (struct {
+        value uint8;
+    }) error fuchsia.posix.Errno;
+
     /// Set `SOL_IPV6` -> `IPV6_MULTICAST_HOPS`.
     // [0, 255] but unset means kernel default, which is 1.
     // https://github.com/torvalds/linux/blob/6f38be8f2cc/net/ipv6/ipv6_sockglue.c#L751-L760

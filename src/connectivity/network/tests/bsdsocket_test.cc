@@ -475,17 +475,21 @@ class SocketOptionTestBase : public testing::Test {
   const int sock_type_;
 };
 
-using SocketKindAndIntOption = std::tuple<int, int, IntSocketOption>;
-
-std::string socketKindAndIntOptionToString(
-    const testing::TestParamInfo<SocketKindAndIntOption>& info) {
-  auto const& [domain, type, sockopt] = info.param;
+std::string socketKindAndOptionToString(int domain, int type, SocketOption opt) {
   std::ostringstream oss;
   oss << socketDomainToString(domain);
   oss << '_' << socketTypeToString(type);
-  oss << '_' << sockopt.option.level_str;
-  oss << '_' << sockopt.option.name_str;
+  oss << '_' << opt.level_str;
+  oss << '_' << opt.name_str;
   return oss.str();
+}
+
+using SocketKindAndIntOption = std::tuple<int, int, IntSocketOption>;
+
+std::string SocketKindAndIntOptionToString(
+    const testing::TestParamInfo<SocketKindAndIntOption>& info) {
+  auto const& [domain, type, int_opt] = info.param;
+  return socketKindAndOptionToString(domain, type, int_opt.option);
 }
 
 // Test functionality common to every integer and pseudo-boolean socket option.
@@ -688,7 +692,7 @@ INSTANTIATE_TEST_SUITE_P(
                              // values without these bits set. See CheckSkipECN test.
                              .valid_values = {0x04, 0xC0, 0xFC},
                              // Larger-than-byte values are accepted but the extra bits are
-                             // merely ignored). See InvalidLargeTOS test.
+                             // merely ignored. See InvalidLargeTOS test.
                              .invalid_values = {},
                          },
                          IntSocketOption{
@@ -742,6 +746,15 @@ INSTANTIATE_TEST_SUITE_P(
                              .invalid_values = {},
                          },
                          IntSocketOption{
+                             .option = STRINGIFIED_SOCKOPT(IPPROTO_IPV6, IPV6_UNICAST_HOPS),
+                             .is_boolean = false,
+                             .default_value = 64,
+                             // -1 is not tested here, it is a special value which resets ttl to
+                             // its default value.
+                             .valid_values = {0, 1, 2, 15, 255},
+                             .invalid_values = {-2, 256},
+                         },
+                         IntSocketOption{
                              .option = STRINGIFIED_SOCKOPT(SOL_SOCKET, SO_NO_CHECK),
                              .is_boolean = true,
                              .default_value = 0,
@@ -762,7 +775,7 @@ INSTANTIATE_TEST_SUITE_P(
                              .valid_values = kBooleanOptionValidValues,
                              .invalid_values = {},
                          })),
-    socketKindAndIntOptionToString);
+    SocketKindAndIntOptionToString);
 
 // TODO(https://github.com/google/gvisor/issues/6972): Test multicast ttl options on SOCK_STREAM
 // sockets. Right now it's complicated because setting these options on a stream socket silently
@@ -789,9 +802,78 @@ INSTANTIATE_TEST_SUITE_P(
                              .valid_values = {0, 1, 2, 15, 128, 255},
                              .invalid_values = {-2, 256},
                          })),
-    socketKindAndIntOptionToString);
+    SocketKindAndIntOptionToString);
 
-// TODO(https://fxbug.dev/90038): Use SocketOptionTestBase instead of SocketOptsTest.
+using SocketKindAndOption = std::tuple<int, int, SocketOption>;
+
+std::string SocketKindAndOptionToString(const testing::TestParamInfo<SocketKindAndOption>& info) {
+  auto const& [domain, type, opt] = info.param;
+  return socketKindAndOptionToString(domain, type, opt);
+}
+
+class SocketOptionSharedTest : public SocketOptionTestBase,
+                               public testing::WithParamInterface<SocketKindAndOption> {
+ protected:
+  SocketOptionSharedTest()
+      : SocketOptionTestBase(std::get<0>(GetParam()), std::get<1>(GetParam())),
+        opt_(std::get<2>(GetParam())) {}
+
+  void SetUp() override { SocketOptionTestBase::SetUp(); }
+
+  void TearDown() override { SocketOptionTestBase::TearDown(); }
+
+  SocketOption opt() const { return opt_; }
+
+ private:
+  const SocketOption opt_;
+};
+
+using TtlHopLimitSocketOptionTest = SocketOptionSharedTest;
+
+TEST_P(TtlHopLimitSocketOptionTest, ResetToDefault) {
+  if (!IsOptionLevelSupportedByDomain(opt().level)) {
+    GTEST_SKIP() << "Option not supported by socket domain";
+  }
+
+  constexpr int kDefaultTTL = 64;
+  constexpr int kNonDefaultValue = kDefaultTTL + 1;
+  ASSERT_EQ(setsockopt(sock().get(), opt().level, opt().name, &kNonDefaultValue,
+                       sizeof(kNonDefaultValue)),
+            0)
+      << strerror(errno);
+
+  // Coherence check.
+  {
+    int get = -1;
+    socklen_t get_len = sizeof(get);
+    ASSERT_EQ(getsockopt(sock().get(), opt().level, opt().name, &get, &get_len), 0)
+        << strerror(errno);
+    ASSERT_EQ(get_len, sizeof(get));
+    EXPECT_EQ(get, kNonDefaultValue);
+  }
+
+  constexpr int kResetValue = -1;
+  ASSERT_EQ(setsockopt(sock().get(), opt().level, opt().name, &kResetValue, sizeof(kResetValue)), 0)
+      << strerror(errno);
+
+  {
+    int get = -1;
+    socklen_t get_len = sizeof(get);
+    ASSERT_EQ(getsockopt(sock().get(), opt().level, opt().name, &get, &get_len), 0)
+        << strerror(errno);
+    ASSERT_EQ(get_len, sizeof(get));
+    EXPECT_EQ(get, kDefaultTTL);
+  }
+}
+
+INSTANTIATE_TEST_SUITE_P(
+    TtlHopLimitSocketOptionTests, TtlHopLimitSocketOptionTest,
+    testing::Combine(testing::Values(AF_INET, AF_INET6), testing::Values(SOCK_DGRAM, SOCK_STREAM),
+                     testing::Values(STRINGIFIED_SOCKOPT(IPPROTO_IP, IP_TTL),
+                                     STRINGIFIED_SOCKOPT(IPPROTO_IPV6, IPV6_UNICAST_HOPS))),
+    SocketKindAndOptionToString);
+
+// TODO(https://fxbug.dev/90038): Use SocketOptionTestBase for these tests.
 class SocketOptsTest : public SocketKindTest {
  protected:
   static bool IsTCP() { return std::get<1>(GetParam()) == SOCK_STREAM; }

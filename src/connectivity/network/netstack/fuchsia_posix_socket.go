@@ -818,6 +818,36 @@ func (ep *endpoint) GetIpv6MulticastHops(fidl.Context) (socket.BaseNetworkSocket
 	), nil
 }
 
+func (ep *endpoint) SetIpv6UnicastHops(_ fidl.Context, value socket.OptionalUint8) (socket.BaseNetworkSocketSetIpv6UnicastHopsResult, error) {
+	v, err := optionalUint8ToInt(value, -1)
+	if err != nil {
+		return socket.BaseNetworkSocketSetIpv6UnicastHopsResultWithErr(tcpipErrorToCode(err)), nil
+	}
+	if err := ep.ep.SetSockOptInt(tcpip.IPv6HopLimitOption, v); err != nil {
+		return socket.BaseNetworkSocketSetIpv6UnicastHopsResultWithErr(tcpipErrorToCode(err)), nil
+	}
+	return socket.BaseNetworkSocketSetIpv6UnicastHopsResultWithResponse(socket.BaseNetworkSocketSetIpv6UnicastHopsResponse{}), nil
+}
+
+func (ep *endpoint) GetIpv6UnicastHops(fidl.Context) (socket.BaseNetworkSocketGetIpv6UnicastHopsResult, error) {
+	value, err := ep.ep.GetSockOptInt(tcpip.IPv6HopLimitOption)
+	if err != nil {
+		return socket.BaseNetworkSocketGetIpv6UnicastHopsResultWithErr(tcpipErrorToCode(err)), nil
+	}
+	if value == -1 {
+		var defaultHopLimit tcpip.DefaultTTLOption
+		if err := ep.ns.stack.NetworkProtocolOption(header.IPv6ProtocolNumber, &defaultHopLimit); err != nil {
+			panic(fmt.Sprintf("stack.NetworkProtocolOption(header.IPv6ProtocolNumber, _): %s", err))
+		}
+		value = int(defaultHopLimit)
+	}
+	return socket.BaseNetworkSocketGetIpv6UnicastHopsResultWithResponse(
+		socket.BaseNetworkSocketGetIpv6UnicastHopsResponse{
+			Value: uint8(value),
+		},
+	), nil
+}
+
 func (ep *endpoint) SetIpv6MulticastLoopback(_ fidl.Context, value bool) (socket.BaseNetworkSocketSetIpv6MulticastLoopbackResult, error) {
 	ep.ep.SocketOptions().SetMulticastLoop(value)
 	return socket.BaseNetworkSocketSetIpv6MulticastLoopbackResultWithResponse(socket.BaseNetworkSocketSetIpv6MulticastLoopbackResponse{}), nil
@@ -844,7 +874,6 @@ func (ep *endpoint) SetIpTtl(_ fidl.Context, value socket.OptionalUint8) (socket
 		return socket.BaseNetworkSocketSetIpTtlResultWithErr(tcpipErrorToCode(err)), nil
 	}
 	return socket.BaseNetworkSocketSetIpTtlResultWithResponse(socket.BaseNetworkSocketSetIpTtlResponse{}), nil
-
 }
 
 func (ep *endpoint) GetIpTtl(fidl.Context) (socket.BaseNetworkSocketGetIpTtlResult, error) {
@@ -853,8 +882,11 @@ func (ep *endpoint) GetIpTtl(fidl.Context) (socket.BaseNetworkSocketGetIpTtlResu
 		return socket.BaseNetworkSocketGetIpTtlResultWithErr(tcpipErrorToCode(err)), nil
 	}
 	if value == 0 {
-		// This is Linux's default TTL.
-		value = 64
+		var defaultTtl tcpip.DefaultTTLOption
+		if err := ep.ns.stack.NetworkProtocolOption(header.IPv4ProtocolNumber, &defaultTtl); err != nil {
+			panic(fmt.Sprintf("stack.NetworkProtocolOption(header.IPv4ProtocolNumber, _): %s", err))
+		}
+		value = int(defaultTtl)
 	}
 	return socket.BaseNetworkSocketGetIpTtlResultWithResponse(socket.BaseNetworkSocketGetIpTtlResponse{Value: uint8(value)}), nil
 }
