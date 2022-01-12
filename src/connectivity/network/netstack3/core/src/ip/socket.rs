@@ -1177,8 +1177,10 @@ mod tests {
         ipv4::{Ipv4OnlyMeta, Ipv4Packet},
         testutil::{parse_ethernet_frame, parse_ip_packet_in_ethernet_frame},
     };
+    use specialize_ip_macro::ip_test;
 
     use super::*;
+    use crate::ip::specialize_ip;
     use crate::testutil::*;
 
     #[test]
@@ -1410,34 +1412,54 @@ mod tests {
         );
     }
 
-    #[test]
-    fn test_send() {
+    #[ip_test]
+    #[specialize_ip]
+    fn test_send<I: Ip>() {
         // Test various edge cases of the
         // `BufferIpSocketContext::send_ip_packet` method.
 
-        // IPv4
+        #[ipv4]
+        let (cfg, socket_builder, proto) = {
+            let mut builder = Ipv4SocketBuilder::default();
+            let _: &mut Ipv4SocketBuilder = builder.ttl(NonZeroU8::new(1).unwrap());
+            (DUMMY_CONFIG_V4, builder, Ipv4Proto::Icmp)
+        };
 
-        let mut ctx = DummyEventDispatcherBuilder::from_config(DUMMY_CONFIG_V4)
-            .build::<DummyEventDispatcher>();
+        #[ipv6]
+        let (cfg, socket_builder, proto) = {
+            let mut builder = Ipv6SocketBuilder::default();
+            let _: &mut Ipv6SocketBuilder = builder.hop_limit(1);
+            (DUMMY_CONFIG_V6, builder, Ipv6Proto::Icmpv6)
+        };
+
+        let DummyEventDispatcherConfig::<_> {
+            local_mac,
+            remote_mac,
+            local_ip,
+            remote_ip,
+            subnet: _,
+        } = cfg;
+
+        let mut ctx =
+            DummyEventDispatcherBuilder::from_config(cfg.clone()).build::<DummyEventDispatcher>();
 
         // Create a normal, routable socket.
-        let mut builder = Ipv4SocketBuilder::default();
-        let _: &mut Ipv4SocketBuilder = builder.ttl(NonZeroU8::new(1).unwrap());
-        let mut sock = IpSocketContext::<Ipv4>::new_ip_socket(
+        let mut sock = IpSocketContext::<I>::new_ip_socket(
             &mut ctx,
             None,
-            DUMMY_CONFIG_V4.remote_ip,
-            Ipv4Proto::Icmp,
+            remote_ip,
+            proto,
             UnroutableBehavior::Close,
-            Some(builder),
+            Some(socket_builder),
         )
         .unwrap();
 
+        #[ipv4]
         let curr_id = ctx.state.ipv4.gen_next_packet_id();
 
         // Send a packet on the socket and make sure that the right contents
         // are sent.
-        BufferIpSocketContext::<Ipv4, _>::send_ip_packet(
+        BufferIpSocketContext::<I, _>::send_ip_packet(
             &mut ctx,
             &sock,
             (&[0u8][..]).into_serializer(),
@@ -1448,111 +1470,55 @@ mod tests {
 
         let (dev, frame) = &ctx.dispatcher.frames_sent()[0];
         assert_eq!(dev, &DeviceId::new_ethernet(0));
-        let (mut body, src_mac, dst_mac, _ethertype) = parse_ethernet_frame(&frame).unwrap();
-        let packet = (&mut body).parse::<Ipv4Packet<&[u8]>>().unwrap();
-        assert_eq!(src_mac, DUMMY_CONFIG_V4.local_mac);
-        assert_eq!(dst_mac, DUMMY_CONFIG_V4.remote_mac);
-        assert_eq!(packet.src_ip(), DUMMY_CONFIG_V4.local_ip.get());
-        assert_eq!(packet.dst_ip(), DUMMY_CONFIG_V4.remote_ip.get());
-        assert_eq!(packet.proto(), Ipv4Proto::Icmp);
-        assert_eq!(packet.ttl(), 1);
-        let Ipv4OnlyMeta { id } = packet.version_specific_meta();
-        assert_eq!(id, curr_id + 1);
-        assert_eq!(body, [0]);
+
+        #[ipv4]
+        {
+            let (mut body, src_mac, dst_mac, _ethertype) = parse_ethernet_frame(&frame).unwrap();
+            let packet = (&mut body).parse::<Ipv4Packet<&[u8]>>().unwrap();
+            assert_eq!(src_mac, local_mac);
+            assert_eq!(dst_mac, remote_mac);
+            assert_eq!(packet.src_ip(), local_ip.get());
+            assert_eq!(packet.dst_ip(), remote_ip.get());
+            assert_eq!(packet.proto(), proto);
+            assert_eq!(packet.ttl(), 1);
+            let Ipv4OnlyMeta { id } = packet.version_specific_meta();
+            assert_eq!(id, curr_id + 1);
+            assert_eq!(body, [0]);
+        }
+
+        #[ipv6]
+        {
+            let (body, src_mac, dst_mac, src_ip, dst_ip, proto, ttl) =
+                parse_ip_packet_in_ethernet_frame::<Ipv6>(&frame).unwrap();
+            assert_eq!(body, [0]);
+            assert_eq!(src_mac, local_mac);
+            assert_eq!(dst_mac, remote_mac);
+            assert_eq!(src_ip, local_ip.get());
+            assert_eq!(dst_ip, remote_ip.get());
+            assert_eq!(proto, proto);
+            assert_eq!(ttl, 1);
+        }
 
         // Try sending a packet which will be larger than the device's MTU,
         // and make sure it fails.
         let body = vec![0u8; crate::ip::Ipv6::MINIMUM_LINK_MTU as usize];
-        assert_eq!(
-            BufferIpSocketContext::<Ipv4, _>::send_ip_packet(
-                &mut ctx,
-                &sock,
-                (&body[..]).into_serializer(),
-            )
-            .unwrap_err()
-            .1,
-            IpSockSendError::Mtu
-        );
-
-        // Make sure that sending on an unroutable socket fails.
-        sock.cached = Err(IpSockUnroutableError::NoRouteToRemoteAddr);
-        assert_eq!(
-            BufferIpSocketContext::<Ipv4, _>::send_ip_packet(
-                &mut ctx,
-                &sock,
-                (&[0u8][..]).into_serializer(),
-            )
-            .unwrap_err()
-            .1,
-            IpSockSendError::Unroutable(IpSockUnroutableError::NoRouteToRemoteAddr)
-        );
-
-        // IPv6
-
-        let mut ctx = DummyEventDispatcherBuilder::from_config(DUMMY_CONFIG_V6)
-            .build::<DummyEventDispatcher>();
-
-        // Create a normal, routable socket.
-        let mut builder = Ipv6SocketBuilder::default();
-        let _: &mut Ipv6SocketBuilder = builder.hop_limit(1);
-        let mut sock = IpSocketContext::<Ipv6>::new_ip_socket(
-            &mut ctx,
-            None,
-            DUMMY_CONFIG_V6.remote_ip,
-            Ipv6Proto::Icmpv6,
-            UnroutableBehavior::Close,
-            Some(builder),
-        )
-        .unwrap();
-
-        // Send a packet on the socket and make sure that the right contents
-        // are sent.
-        BufferIpSocketContext::<Ipv6, _>::send_ip_packet(
+        let res = BufferIpSocketContext::<I, _>::send_ip_packet(
             &mut ctx,
             &sock,
-            (&[0u8][..]).into_serializer(),
-        )
-        .unwrap();
-
-        assert_eq!(ctx.dispatcher.frames_sent().len(), 1);
-
-        let (dev, frame) = &ctx.dispatcher.frames_sent()[0];
-        assert_eq!(dev, &DeviceId::new_ethernet(0));
-        let (body, src_mac, dst_mac, src_ip, dst_ip, proto, ttl) =
-            parse_ip_packet_in_ethernet_frame::<Ipv6>(&frame).unwrap();
-        assert_eq!(body, [0]);
-        assert_eq!(src_mac, DUMMY_CONFIG_V6.local_mac);
-        assert_eq!(dst_mac, DUMMY_CONFIG_V6.remote_mac);
-        assert_eq!(src_ip, DUMMY_CONFIG_V6.local_ip.get());
-        assert_eq!(dst_ip, DUMMY_CONFIG_V6.remote_ip.get());
-        assert_eq!(proto, Ipv6Proto::Icmpv6);
-        assert_eq!(ttl, 1);
-
-        // Try sending a packet which will be larger than the device's MTU,
-        // and make sure it fails.
-        let body = vec![0u8; crate::ip::Ipv6::MINIMUM_LINK_MTU as usize];
-        assert_eq!(
-            BufferIpSocketContext::<Ipv6, _>::send_ip_packet(
-                &mut ctx,
-                &sock,
-                (&body[..]).into_serializer(),
-            )
-            .unwrap_err()
-            .1,
-            IpSockSendError::Mtu
+            (&body[..]).into_serializer(),
         );
+        matches::assert_matches!(res, Err((_, IpSockSendError::Mtu)));
 
         // Make sure that sending on an unroutable socket fails.
         sock.cached = Err(IpSockUnroutableError::NoRouteToRemoteAddr);
-        assert_eq!(
-            BufferIpSocketContext::<Ipv6, _>::send_ip_packet(
-                &mut ctx,
-                &sock,
-                (&[0u8][..]).into_serializer(),
-            )
-            .unwrap_err()
-            .1,
-            IpSockSendError::Unroutable(IpSockUnroutableError::NoRouteToRemoteAddr)
+        let res = BufferIpSocketContext::<I, _>::send_ip_packet(
+            &mut ctx,
+            &sock,
+            (&body[..]).into_serializer(),
+        );
+        matches::assert_matches!(
+            res,
+            Err((_, IpSockSendError::Unroutable(IpSockUnroutableError::NoRouteToRemoteAddr)))
         );
     }
 }
