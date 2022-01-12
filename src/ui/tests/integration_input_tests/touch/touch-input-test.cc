@@ -112,27 +112,30 @@ using ScenicEvent = fuchsia::ui::scenic::Event;
 using GfxEvent = fuchsia::ui::gfx::Event;
 
 // Types imported for the realm_builder library.
-using sys::testing::AboveRoot;
-using sys::testing::CapabilityRoute;
-using sys::testing::Component;
-using sys::testing::LegacyComponentUrl;
-using sys::testing::Mock;
-using sys::testing::MockComponent;
-using sys::testing::MockHandles;
-using sys::testing::Moniker;
+using sys::testing::ChildRef;
+using sys::testing::LocalComponent;
+using sys::testing::LocalComponentHandles;
+using sys::testing::ParentRef;
 using sys::testing::Protocol;
-using sys::testing::Realm;
-using RealmBuilder = sys::testing::Realm::Builder;
+using sys::testing::Route;
+using sys::testing::experimental::RealmRoot;
+using RealmBuilder = sys::testing::experimental::RealmBuilder;
+
+// Alias for Component child name as provided to Realm Builder.
+using ChildName = std::string;
+
+// Alias for Component Legacy URL as provided to Realm Builder.
+using LegacyUrl = std::string;
 
 // Max timeout in failure cases.
 // Set this as low as you can that still works across all test platforms.
 constexpr zx::duration kTimeout = zx::min(5);
 
-constexpr auto kRootPresenterMoniker = Moniker{"root_presenter"};
-constexpr auto kScenicMoniker = Moniker{"scenic"};
-constexpr auto kMockCobaltMoniker = Moniker{"cobalt"};
-constexpr auto kHdcpMoniker = Moniker{"hdcp"};
-constexpr auto kMockResponseListenerMoniker = Moniker{"response_listener"};
+constexpr auto kRootPresenter = "root_presenter";
+constexpr auto kScenic = "scenic";
+constexpr auto kMockCobalt = "cobalt";
+constexpr auto kHdcp = "hdcp";
+constexpr auto kMockResponseListener = "response_listener";
 
 enum class TapLocation { kTopLeft, kTopRight };
 
@@ -147,72 +150,60 @@ using time_utc = zx::basic_time<1>;
 // created below, or by this component. Note, that when I refer to "this component",
 // I'm referring to the test suite, which is itself a component.
 void AddBaseComponents(RealmBuilder* realm_builder) {
-  realm_builder->AddComponent(
-      kRootPresenterMoniker,
-      Component{.source = LegacyComponentUrl{
-                    "fuchsia-pkg://fuchsia.com/touch-input-test#meta/root_presenter.cmx"}});
-  realm_builder->AddComponent(
-      kScenicMoniker, Component{.source = LegacyComponentUrl{
-                                    "fuchsia-pkg://fuchsia.com/touch-input-test#meta/scenic.cmx"}});
-  realm_builder->AddComponent(
-      kMockCobaltMoniker,
-      Component{.source = LegacyComponentUrl{
-                    "fuchsia-pkg://fuchsia.com/mock_cobalt#meta/mock_cobalt.cmx"}});
-  realm_builder->AddComponent(
-      kHdcpMoniker, Component{.source = LegacyComponentUrl{
-                                  "fuchsia-pkg://fuchsia.com/"
-                                  "fake-hardware-display-controller-provider#meta/hdcp.cmx"}});
+  realm_builder->AddLegacyChild(
+      kRootPresenter, "fuchsia-pkg://fuchsia.com/touch-input-test#meta/root_presenter.cmx");
+  realm_builder->AddLegacyChild(kScenic,
+                                "fuchsia-pkg://fuchsia.com/touch-input-test#meta/scenic.cmx");
+  realm_builder->AddLegacyChild(kMockCobalt,
+                                "fuchsia-pkg://fuchsia.com/mock_cobalt#meta/mock_cobalt.cmx");
+  realm_builder->AddLegacyChild(
+      kHdcp, "fuchsia-pkg://fuchsia.com/fake-hardware-display-controller-provider#meta/hdcp.cmx");
 }
 
 void AddBaseRoutes(RealmBuilder* realm_builder) {
   // Capabilities routed from test_manager to components in realm.
+  realm_builder->AddRoute(Route{.capabilities = {Protocol{fuchsia::vulkan::loader::Loader::Name_}},
+                                .source = ParentRef(),
+                                .targets = {ChildRef{kScenic}}});
   realm_builder->AddRoute(
-      CapabilityRoute{.capability = Protocol{fuchsia::vulkan::loader::Loader::Name_},
-                      .source = AboveRoot(),
-                      .targets = {kScenicMoniker}});
+      Route{.capabilities = {Protocol{fuchsia::scheduler::ProfileProvider::Name_}},
+            .source = ParentRef(),
+            .targets = {ChildRef{kScenic}}});
+  realm_builder->AddRoute(Route{.capabilities = {Protocol{fuchsia::sysmem::Allocator::Name_}},
+                                .source = ParentRef(),
+                                .targets = {ChildRef{kScenic}, ChildRef{kHdcp}}});
   realm_builder->AddRoute(
-      CapabilityRoute{.capability = Protocol{fuchsia::scheduler::ProfileProvider::Name_},
-                      .source = AboveRoot(),
-                      .targets = {kScenicMoniker}});
-  realm_builder->AddRoute(CapabilityRoute{.capability = Protocol{fuchsia::sysmem::Allocator::Name_},
-                                          .source = AboveRoot(),
-                                          .targets = {kScenicMoniker, kHdcpMoniker}});
-  realm_builder->AddRoute(
-      CapabilityRoute{.capability = Protocol{fuchsia::tracing::provider::Registry::Name_},
-                      .source = AboveRoot(),
-                      .targets = {kScenicMoniker, kRootPresenterMoniker, kHdcpMoniker}});
+      Route{.capabilities = {Protocol{fuchsia::tracing::provider::Registry::Name_}},
+            .source = ParentRef(),
+            .targets = {ChildRef{kScenic}, ChildRef{kRootPresenter}, ChildRef{kHdcp}}});
 
   // Capabilities routed between siblings in realm.
+  realm_builder->AddRoute(Route{.capabilities = {Protocol{fuchsia::cobalt::LoggerFactory::Name_}},
+                                .source = ChildRef{kMockCobalt},
+                                .targets = {ChildRef{kScenic}}});
   realm_builder->AddRoute(
-      CapabilityRoute{.capability = Protocol{fuchsia::cobalt::LoggerFactory::Name_},
-                      .source = kMockCobaltMoniker,
-                      .targets = {kScenicMoniker}});
+      Route{.capabilities = {Protocol{fuchsia::hardware::display::Provider::Name_}},
+            .source = ChildRef{kHdcp},
+            .targets = {ChildRef{kScenic}}});
+  realm_builder->AddRoute(Route{.capabilities = {Protocol{fuchsia::ui::scenic::Scenic::Name_}},
+                                .source = ChildRef{kScenic},
+                                .targets = {ChildRef{kRootPresenter}}});
   realm_builder->AddRoute(
-      CapabilityRoute{.capability = Protocol{fuchsia::hardware::display::Provider::Name_},
-                      .source = kHdcpMoniker,
-                      .targets = {kScenicMoniker}});
-  realm_builder->AddRoute(
-      CapabilityRoute{.capability = Protocol{fuchsia::ui::scenic::Scenic::Name_},
-                      .source = kScenicMoniker,
-                      .targets = {kRootPresenterMoniker}});
-  realm_builder->AddRoute(
-      CapabilityRoute{.capability = Protocol{fuchsia::ui::pointerinjector::Registry::Name_},
-                      .source = kScenicMoniker,
-                      .targets = {kRootPresenterMoniker}});
+      Route{.capabilities = {Protocol{fuchsia::ui::pointerinjector::Registry::Name_}},
+            .source = ChildRef{kScenic},
+            .targets = {ChildRef{kRootPresenter}}});
 
   // Capabilities routed up to test driver (this component).
   realm_builder->AddRoute(
-      CapabilityRoute{.capability = Protocol{fuchsia::ui::input::InputDeviceRegistry::Name_},
-                      .source = kRootPresenterMoniker,
-                      .targets = {AboveRoot()}});
-  realm_builder->AddRoute(
-      CapabilityRoute{.capability = Protocol{fuchsia::ui::policy::Presenter::Name_},
-                      .source = kRootPresenterMoniker,
-                      .targets = {AboveRoot()}});
-  realm_builder->AddRoute(
-      CapabilityRoute{.capability = Protocol{fuchsia::ui::scenic::Scenic::Name_},
-                      .source = kScenicMoniker,
-                      .targets = {AboveRoot()}});
+      Route{.capabilities = {Protocol{fuchsia::ui::input::InputDeviceRegistry::Name_}},
+            .source = ChildRef{kRootPresenter},
+            .targets = {ParentRef()}});
+  realm_builder->AddRoute(Route{.capabilities = {Protocol{fuchsia::ui::policy::Presenter::Name_}},
+                                .source = ChildRef{kRootPresenter},
+                                .targets = {ParentRef()}});
+  realm_builder->AddRoute(Route{.capabilities = {Protocol{fuchsia::ui::scenic::Scenic::Name_}},
+                                .source = ChildRef{kScenic},
+                                .targets = {ParentRef()}});
 }
 
 // Combines all vectors in `vecs` into one.
@@ -232,7 +223,7 @@ std::vector<T> merge(std::initializer_list<std::vector<T>> vecs) {
 // component. This is accomplished, in part, because the realm_builder
 // library creates the necessary plumbing. It creates a manifest for the component
 // and routes all capabilities to and from it.
-class ResponseListenerServer : public ResponseListener, public MockComponent {
+class ResponseListenerServer : public ResponseListener, public LocalComponent {
  public:
   explicit ResponseListenerServer(async_dispatcher_t* dispatcher) : dispatcher_(dispatcher) {}
 
@@ -245,7 +236,7 @@ class ResponseListenerServer : public ResponseListener, public MockComponent {
   // |MockComponent::Start|
   // When the component framework requests for this component to start, this
   // method will be invoked by the realm_builder library.
-  void Start(std::unique_ptr<MockHandles> mock_handles) override {
+  void Start(std::unique_ptr<LocalComponentHandles> mock_handles) override {
     // When this component starts, add a binding to the test.touch.ResponseListener
     // protocol to this component's outgoing directory.
     FX_CHECK(mock_handles->outgoing()->AddPublicService(
@@ -261,7 +252,7 @@ class ResponseListenerServer : public ResponseListener, public MockComponent {
 
  private:
   async_dispatcher_t* dispatcher_ = nullptr;
-  std::vector<std::unique_ptr<MockHandles>> mock_handles_;
+  std::vector<std::unique_ptr<LocalComponentHandles>> mock_handles_;
   fidl::BindingSet<test::touch::ResponseListener> bindings_;
   fit::function<void(test::touch::PointerData)> respond_callback_;
 };
@@ -297,11 +288,11 @@ class TouchInputBase : public gtest::RealLoopFixture {
 
   // Subclass should implement this method to add components to the test realm
   // next to the base ones added.
-  virtual std::vector<std::pair<Moniker, Component>> GetTestComponents() { return {}; }
+  virtual std::vector<std::pair<ChildName, LegacyUrl>> GetTestComponents() { return {}; }
 
   // Subclass should implement this method to add capability routes to the test
   // realm next to the base ones added.
-  virtual std::vector<CapabilityRoute> GetTestRoutes() { return {}; }
+  virtual std::vector<Route> GetTestRoutes() { return {}; }
 
   // Launches the test client by connecting to fuchsia.ui.app.ViewProvider protocol.
   // This method should only be invoked if this protocol has been exposed from
@@ -514,25 +505,24 @@ class TouchInputBase : public gtest::RealLoopFixture {
   sys::ServiceDirectory& child_services() { return *child_services_; }
 
   RealmBuilder* builder() { return realm_builder_.get(); }
-  Realm* realm() { return realm_.get(); }
+  RealmRoot* realm() { return realm_.get(); }
 
   ResponseListenerServer* response_listener() { return response_listener_.get(); }
 
  private:
-  void BuildRealm(const std::vector<std::pair<Moniker, Component>>& components,
-                  const std::vector<CapabilityRoute>& routes) {
+  void BuildRealm(const std::vector<std::pair<ChildName, LegacyUrl>>& components,
+                  const std::vector<Route>& routes) {
     // Key part of service setup: have this test component vend the
     // |ResponseListener| service in the constructed realm.
     response_listener_ = std::make_unique<ResponseListenerServer>(dispatcher());
-    builder()->AddComponent(kMockResponseListenerMoniker,
-                            Component{.source = Mock{response_listener_.get()}});
+    builder()->AddLocalChild(kMockResponseListener, response_listener_.get());
 
     // Add all components shared by each test to the realm.
     AddBaseComponents(builder());
 
     // Add components specific for this test case to the realm.
-    for (const auto& [moniker, component] : components) {
-      builder()->AddComponent(moniker, component);
+    for (const auto& [name, component] : components) {
+      builder()->AddLegacyChild(name, component);
     }
 
     // Add the necessary routing for each of the base components added above.
@@ -544,7 +534,7 @@ class TouchInputBase : public gtest::RealLoopFixture {
     }
 
     // Finally, build the realm using the provided components and routes.
-    realm_ = std::make_unique<Realm>(builder()->Build());
+    realm_ = std::make_unique<RealmRoot>(builder()->Build());
   }
 
   template <typename TimeT>
@@ -570,7 +560,7 @@ class TouchInputBase : public gtest::RealLoopFixture {
   }
 
   std::unique_ptr<RealmBuilder> realm_builder_;
-  std::unique_ptr<Realm> realm_;
+  std::unique_ptr<RealmRoot> realm_;
 
   std::unique_ptr<ResponseListenerServer> response_listener_;
 
@@ -592,46 +582,46 @@ class TouchInputBase : public gtest::RealLoopFixture {
 
 class FlutterInputTest : public TouchInputBase {
  protected:
-  std::vector<std::pair<Moniker, Component>> GetTestComponents() override {
+  std::vector<std::pair<ChildName, LegacyUrl>> GetTestComponents() override {
     return {
-        std::make_pair(kFlutterClient, Component{.source = kFlutterClientUrl}),
+        std::make_pair(kFlutterClient, kFlutterClientUrl),
     };
   }
 
-  std::vector<CapabilityRoute> GetTestRoutes() override {
-    return merge({GetFlutterRoutes(kFlutterClient),
+  std::vector<Route> GetTestRoutes() override {
+    return merge({GetFlutterRoutes(ChildRef{kFlutterClient}),
                   {
-                      {.capability = Protocol{fuchsia::ui::app::ViewProvider::Name_},
-                       .source = kFlutterClient,
-                       .targets = {AboveRoot()}},
+                      {.capabilities = {Protocol{fuchsia::ui::app::ViewProvider::Name_}},
+                       .source = ChildRef{kFlutterClient},
+                       .targets = {ParentRef()}},
                   }});
   }
 
   // Routes needed to setup Flutter client.
-  static std::vector<CapabilityRoute> GetFlutterRoutes(Moniker target) {
-    return {{.capability = Protocol{test::touch::ResponseListener::Name_},
-             .source = kMockResponseListenerMoniker,
+  static std::vector<Route> GetFlutterRoutes(ChildRef target) {
+    return {{.capabilities = {Protocol{test::touch::ResponseListener::Name_}},
+             .source = ChildRef{kMockResponseListener},
              .targets = {target}},
-            {.capability = Protocol{fuchsia::ui::scenic::Scenic::Name_},
-             .source = kScenicMoniker,
+            {.capabilities = {Protocol{fuchsia::ui::scenic::Scenic::Name_}},
+             .source = ChildRef{kScenic},
              .targets = {target}},
-            {.capability = Protocol{fuchsia::sys::Environment::Name_},
-             .source = AboveRoot(),
+            {.capabilities = {Protocol{fuchsia::sys::Environment::Name_}},
+             .source = ParentRef(),
              .targets = {target}},
-            {.capability = Protocol{fuchsia::vulkan::loader::Loader::Name_},
-             .source = AboveRoot(),
+            {.capabilities = {Protocol{fuchsia::vulkan::loader::Loader::Name_}},
+             .source = ParentRef(),
              .targets = {target}},
-            {.capability = Protocol{fuchsia::tracing::provider::Registry::Name_},
-             .source = AboveRoot(),
+            {.capabilities = {Protocol{fuchsia::tracing::provider::Registry::Name_}},
+             .source = ParentRef(),
              .targets = {target}},
-            {.capability = Protocol{fuchsia::sysmem::Allocator::Name_},
-             .source = AboveRoot(),
+            {.capabilities = {Protocol{fuchsia::sysmem::Allocator::Name_}},
+             .source = ParentRef(),
              .targets = {target}}};
   }
 
-  static constexpr auto kFlutterClient = Moniker{"flutter_client"};
+  static constexpr auto kFlutterClient = "flutter_client";
   static constexpr auto kFlutterClientUrl =
-      LegacyComponentUrl{"fuchsia-pkg://fuchsia.com/one-flutter#meta/one-flutter.cmx"};
+      "fuchsia-pkg://fuchsia.com/one-flutter#meta/one-flutter.cmx";
 };
 
 TEST_F(FlutterInputTest, FlutterTap) {
@@ -652,31 +642,31 @@ TEST_F(FlutterInputTest, FlutterTap) {
 
 class GfxInputTest : public TouchInputBase {
  protected:
-  std::vector<std::pair<Moniker, Component>> GetTestComponents() override {
-    return {std::make_pair(kCppGfxClient, Component{.source = kCppGfxClientUrl})};
+  std::vector<std::pair<ChildName, LegacyUrl>> GetTestComponents() override {
+    return {std::make_pair(kCppGfxClient, kCppGfxClientUrl)};
   }
 
-  std::vector<CapabilityRoute> GetTestRoutes() override {
+  std::vector<Route> GetTestRoutes() override {
     return {
-        {.capability = Protocol{fuchsia::ui::app::ViewProvider::Name_},
-         .source = kCppGfxClient,
-         .targets = {AboveRoot()}},
-        {.capability = Protocol{test::touch::ResponseListener::Name_},
-         .source = kMockResponseListenerMoniker,
-         .targets = {kCppGfxClient}},
-        {.capability = Protocol{fuchsia::ui::scenic::Scenic::Name_},
-         .source = kScenicMoniker,
-         .targets = {kCppGfxClient}},
-        {.capability = Protocol{fuchsia::sys::Environment::Name_},
-         .source = AboveRoot(),
-         .targets = {kCppGfxClient}},
+        {.capabilities = {Protocol{fuchsia::ui::app::ViewProvider::Name_}},
+         .source = ChildRef{kCppGfxClient},
+         .targets = {ParentRef()}},
+        {.capabilities = {Protocol{test::touch::ResponseListener::Name_}},
+         .source = ChildRef{kMockResponseListener},
+         .targets = {ChildRef{kCppGfxClient}}},
+        {.capabilities = {Protocol{fuchsia::ui::scenic::Scenic::Name_}},
+         .source = ChildRef{kScenic},
+         .targets = {ChildRef{kCppGfxClient}}},
+        {.capabilities = {Protocol{fuchsia::sys::Environment::Name_}},
+         .source = ParentRef(),
+         .targets = {ChildRef{kCppGfxClient}}},
     };
   }
 
  private:
-  static constexpr auto kCppGfxClient = Moniker{"gfx_client"};
+  static constexpr auto kCppGfxClient = "gfx_client";
   static constexpr auto kCppGfxClientUrl =
-      LegacyComponentUrl{"fuchsia-pkg://fuchsia.com/touch-gfx-client#meta/touch-gfx-client.cmx"};
+      "fuchsia-pkg://fuchsia.com/touch-gfx-client#meta/touch-gfx-client.cmx";
 };
 
 TEST_F(GfxInputTest, CppGfxClientTap) {
@@ -697,25 +687,25 @@ TEST_F(GfxInputTest, CppGfxClientTap) {
 
 class WebEngineTest : public TouchInputBase {
  protected:
-  std::vector<std::pair<Moniker, Component>> GetTestComponents() {
+  std::vector<std::pair<ChildName, LegacyUrl>> GetTestComponents() {
     return {
-        std::make_pair(kOneChromiumClient, Component{.source = kOneChromiumUrl}),
-        std::make_pair(kFontsProvider, Component{.source = kFontsProviderUrl}),
-        std::make_pair(kTextManager, Component{.source = kTextManagerUrl}),
-        std::make_pair(kIntl, Component{.source = kIntlUrl}),
-        std::make_pair(kMemoryPressureProvider, Component{.source = kMemoryPressureProviderUrl}),
-        std::make_pair(kNetstack, Component{.source = kNetstackUrl}),
-        std::make_pair(kWebContextProvider, Component{.source = kWebContextProviderUrl}),
-        std::make_pair(kSemanticsManager, Component{.source = kSemanticsManagerUrl}),
+        std::make_pair(kOneChromiumClient, kOneChromiumUrl),
+        std::make_pair(kFontsProvider, kFontsProviderUrl),
+        std::make_pair(kTextManager, kTextManagerUrl),
+        std::make_pair(kIntl, kIntlUrl),
+        std::make_pair(kMemoryPressureProvider, kMemoryPressureProviderUrl),
+        std::make_pair(kNetstack, kNetstackUrl),
+        std::make_pair(kWebContextProvider, kWebContextProviderUrl),
+        std::make_pair(kSemanticsManager, kSemanticsManagerUrl),
     };
   }
 
-  std::vector<CapabilityRoute> GetTestRoutes() {
-    return merge({GetWebEngineRoutes(kOneChromiumClient),
+  std::vector<Route> GetTestRoutes() {
+    return merge({GetWebEngineRoutes(ChildRef{kOneChromiumClient}),
                   {
-                      {.capability = Protocol{fuchsia::ui::app::ViewProvider::Name_},
-                       .source = kOneChromiumClient,
-                       .targets = {AboveRoot()}},
+                      {.capabilities = {Protocol{fuchsia::ui::app::ViewProvider::Name_}},
+                       .source = ChildRef{kOneChromiumClient},
+                       .targets = {ParentRef()}},
                   }});
   }
 
@@ -789,106 +779,105 @@ class WebEngineTest : public TouchInputBase {
   }
 
   // Routes needed to setup Chromium client.
-  static std::vector<CapabilityRoute> GetWebEngineRoutes(Moniker target) {
+  static std::vector<Route> GetWebEngineRoutes(ChildRef target) {
     return {
-        {.capability = Protocol{test::touch::ResponseListener::Name_},
-         .source = kMockResponseListenerMoniker,
+        {.capabilities = {Protocol{test::touch::ResponseListener::Name_}},
+         .source = ChildRef{kMockResponseListener},
          .targets = {target}},
-        {.capability = Protocol{fuchsia::fonts::Provider::Name_},
-         .source = kFontsProvider,
+        {.capabilities = {Protocol{fuchsia::fonts::Provider::Name_}},
+         .source = ChildRef{kFontsProvider},
          .targets = {target}},
-        {.capability = Protocol{fuchsia::ui::input::ImeService::Name_},
-         .source = kTextManager,
+        {.capabilities = {Protocol{fuchsia::ui::input::ImeService::Name_}},
+         .source = ChildRef{kTextManager},
          .targets = {target}},
-        {.capability = Protocol{fuchsia::ui::input::ImeVisibilityService::Name_},
-         .source = kTextManager,
+        {.capabilities = {Protocol{fuchsia::ui::input::ImeVisibilityService::Name_}},
+         .source = ChildRef{kTextManager},
          .targets = {target}},
-        {.capability = Protocol{fuchsia::intl::PropertyProvider::Name_},
-         .source = kIntl,
-         .targets = {target, kSemanticsManager}},
-        {.capability = Protocol{fuchsia::memorypressure::Provider::Name_},
-         .source = kMemoryPressureProvider,
+        {.capabilities = {Protocol{fuchsia::intl::PropertyProvider::Name_}},
+         .source = ChildRef{kIntl},
+         .targets = {target, ChildRef{kSemanticsManager}}},
+        {.capabilities = {Protocol{fuchsia::memorypressure::Provider::Name_}},
+         .source = ChildRef{kMemoryPressureProvider},
          .targets = {target}},
-        {.capability = Protocol{fuchsia::netstack::Netstack::Name_},
-         .source = kNetstack,
+        {.capabilities = {Protocol{fuchsia::netstack::Netstack::Name_}},
+         .source = ChildRef{kNetstack},
          .targets = {target}},
-        {.capability = Protocol{fuchsia::net::interfaces::State::Name_},
-         .source = kNetstack,
+        {.capabilities = {Protocol{fuchsia::net::interfaces::State::Name_}},
+         .source = ChildRef{kNetstack},
          .targets = {target}},
-        {.capability = Protocol{fuchsia::accessibility::semantics::SemanticsManager::Name_},
-         .source = kSemanticsManager,
+        {.capabilities = {Protocol{fuchsia::accessibility::semantics::SemanticsManager::Name_}},
+         .source = ChildRef{kSemanticsManager},
          .targets = {target}},
-        {.capability = Protocol{fuchsia::web::ContextProvider::Name_},
-         .source = kWebContextProvider,
+        {.capabilities = {Protocol{fuchsia::web::ContextProvider::Name_}},
+         .source = ChildRef{kWebContextProvider},
          .targets = {target}},
-        {.capability = Protocol{fuchsia::tracing::provider::Registry::Name_},
-         .source = AboveRoot(),
-         .targets = {kFontsProvider, kSemanticsManager}},
-        {.capability = Protocol{fuchsia::ui::scenic::Scenic::Name_},
-         .source = kScenicMoniker,
-         .targets = {kSemanticsManager}},
-        {.capability = Protocol{fuchsia::sys::Environment::Name_},
-         .source = AboveRoot(),
+        {.capabilities = {Protocol{fuchsia::tracing::provider::Registry::Name_}},
+         .source = ParentRef(),
+         .targets = {ChildRef{kFontsProvider}, ChildRef{kSemanticsManager}}},
+        {.capabilities = {Protocol{fuchsia::ui::scenic::Scenic::Name_}},
+         .source = ChildRef{kScenic},
+         .targets = {ChildRef{kSemanticsManager}}},
+        {.capabilities = {Protocol{fuchsia::sys::Environment::Name_}},
+         .source = ParentRef(),
          .targets = {target}},
-        {.capability = Protocol{fuchsia::cobalt::LoggerFactory::Name_},
-         .source = kMockCobaltMoniker,
-         .targets = {kMemoryPressureProvider}},
-        {.capability = Protocol{fuchsia::sysmem::Allocator::Name_},
-         .source = AboveRoot(),
-         .targets = {kMemoryPressureProvider, kOneChromiumClient}},
-        {.capability = Protocol{fuchsia::scheduler::ProfileProvider::Name_},
-         .source = AboveRoot(),
-         .targets = {kMemoryPressureProvider}},
-        {.capability = Protocol{fuchsia::kernel::RootJobForInspect::Name_},
-         .source = AboveRoot(),
-         .targets = {kMemoryPressureProvider}},
-        {.capability = Protocol{fuchsia::kernel::Stats::Name_},
-         .source = AboveRoot(),
-         .targets = {kMemoryPressureProvider}},
-        {.capability = Protocol{fuchsia::tracing::provider::Registry::Name_},
-         .source = AboveRoot(),
-         .targets = {kMemoryPressureProvider}},
-        {.capability = Protocol{fuchsia::ui::scenic::Scenic::Name_},
-         .source = kScenicMoniker,
+        {.capabilities = {Protocol{fuchsia::cobalt::LoggerFactory::Name_}},
+         .source = ChildRef{kMockCobalt},
+         .targets = {ChildRef{kMemoryPressureProvider}}},
+        {.capabilities = {Protocol{fuchsia::sysmem::Allocator::Name_}},
+         .source = ParentRef(),
+         .targets = {ChildRef{kMemoryPressureProvider}, ChildRef{kOneChromiumClient}}},
+        {.capabilities = {Protocol{fuchsia::scheduler::ProfileProvider::Name_}},
+         .source = ParentRef(),
+         .targets = {ChildRef{kMemoryPressureProvider}}},
+        {.capabilities = {Protocol{fuchsia::kernel::RootJobForInspect::Name_}},
+         .source = ParentRef(),
+         .targets = {ChildRef{kMemoryPressureProvider}}},
+        {.capabilities = {Protocol{fuchsia::kernel::Stats::Name_}},
+         .source = ParentRef(),
+         .targets = {ChildRef{kMemoryPressureProvider}}},
+        {.capabilities = {Protocol{fuchsia::tracing::provider::Registry::Name_}},
+         .source = ParentRef(),
+         .targets = {ChildRef{kMemoryPressureProvider}}},
+        {.capabilities = {Protocol{fuchsia::ui::scenic::Scenic::Name_}},
+         .source = ChildRef{kScenic},
          .targets = {target}},
-        {.capability = Protocol{fuchsia::posix::socket::Provider::Name_},
-         .source = kNetstack,
+        {.capabilities = {Protocol{fuchsia::posix::socket::Provider::Name_}},
+         .source = ChildRef{kNetstack},
          .targets = {target}},
     };
   }
 
-  static constexpr auto kOneChromiumClient = Moniker{"chromium_client"};
+  static constexpr auto kOneChromiumClient = "chromium_client";
   static constexpr auto kOneChromiumUrl =
-      LegacyComponentUrl{"fuchsia-pkg://fuchsia.com/one-chromium#meta/one-chromium.cmx"};
+      "fuchsia-pkg://fuchsia.com/one-chromium#meta/one-chromium.cmx";
 
  private:
-  static constexpr auto kFontsProvider = Moniker{"fonts_provider"};
-  static constexpr auto kFontsProviderUrl =
-      LegacyComponentUrl{"fuchsia-pkg://fuchsia.com/fonts#meta/fonts.cmx"};
+  static constexpr auto kFontsProvider = "fonts_provider";
+  static constexpr auto kFontsProviderUrl = "fuchsia-pkg://fuchsia.com/fonts#meta/fonts.cmx";
 
-  static constexpr auto kTextManager = Moniker{"text_manager"};
+  static constexpr auto kTextManager = "text_manager";
   static constexpr auto kTextManagerUrl =
-      LegacyComponentUrl{"fuchsia-pkg://fuchsia.com/text_manager#meta/text_manager.cmx"};
+      "fuchsia-pkg://fuchsia.com/text_manager#meta/text_manager.cmx";
 
-  static constexpr auto kIntl = Moniker{"intl"};
-  static constexpr auto kIntlUrl = LegacyComponentUrl{
-      "fuchsia-pkg://fuchsia.com/intl_property_manager#meta/intl_property_manager.cmx"};
+  static constexpr auto kIntl = "intl";
+  static constexpr auto kIntlUrl =
+      "fuchsia-pkg://fuchsia.com/intl_property_manager#meta/intl_property_manager.cmx";
 
-  static constexpr auto kMemoryPressureProvider = Moniker{"memory_pressure_provider"};
+  static constexpr auto kMemoryPressureProvider = "memory_pressure_provider";
   static constexpr auto kMemoryPressureProviderUrl =
-      LegacyComponentUrl{"fuchsia-pkg://fuchsia.com/memory_monitor#meta/memory_monitor.cmx"};
+      "fuchsia-pkg://fuchsia.com/memory_monitor#meta/memory_monitor.cmx";
 
-  static constexpr auto kNetstack = Moniker{"netstack"};
+  static constexpr auto kNetstack = "netstack";
   static constexpr auto kNetstackUrl =
-      LegacyComponentUrl{"fuchsia-pkg://fuchsia.com/touch-input-test#meta/netstack.cmx"};
+      "fuchsia-pkg://fuchsia.com/touch-input-test#meta/netstack.cmx";
 
-  static constexpr auto kWebContextProvider = Moniker{"web_context_provider"};
+  static constexpr auto kWebContextProvider = "web_context_provider";
   static constexpr auto kWebContextProviderUrl =
-      LegacyComponentUrl{"fuchsia-pkg://fuchsia.com/web_engine#meta/context_provider.cmx"};
+      "fuchsia-pkg://fuchsia.com/web_engine#meta/context_provider.cmx";
 
-  static constexpr auto kSemanticsManager = Moniker{"semantics_manager"};
+  static constexpr auto kSemanticsManager = "semantics_manager";
   static constexpr auto kSemanticsManagerUrl =
-      LegacyComponentUrl{"fuchsia-pkg://fuchsia.com/a11y-manager#meta/a11y-manager.cmx"};
+      "fuchsia-pkg://fuchsia.com/a11y-manager#meta/a11y-manager.cmx";
 
   // The typical latency on devices we've tested is ~60 msec. The retry interval is chosen to be
   // a) Long enough that it's unlikely that we send a new tap while a previous tap is still being
@@ -937,64 +926,64 @@ TEST_F(WebEngineTest, ChromiumTap) {
 class EmbeddingFlutterTest {
  protected:
   // Components needed for Embedding Flutter to be in realm.
-  static std::vector<std::pair<Moniker, Component>> GetEmbeddingFlutterComponents() {
+  static std::vector<std::pair<ChildName, LegacyUrl>> GetEmbeddingFlutterComponents() {
     return {
-        std::make_pair(kEmbeddingFlutter, Component{.source = kEmbeddingFlutterUrl}),
+        std::make_pair(kEmbeddingFlutter, kEmbeddingFlutterUrl),
     };
   }
 
   // Routes needed for Embedding Flutter to run.
-  static std::vector<CapabilityRoute> GetEmbeddingFlutterRoutes() {
+  static std::vector<Route> GetEmbeddingFlutterRoutes() {
     return {
-        {.capability = Protocol{test::touch::TestAppLauncher::Name_},
-         .source = kEmbeddingFlutter,
-         .targets = {AboveRoot()}},
-        {.capability = Protocol{fuchsia::ui::app::ViewProvider::Name_},
-         .source = kEmbeddingFlutter,
-         .targets = {AboveRoot()}},
-        {.capability = Protocol{test::touch::ResponseListener::Name_},
-         .source = kMockResponseListenerMoniker,
-         .targets = {kEmbeddingFlutter}},
-        {.capability = Protocol{fuchsia::ui::scenic::Scenic::Name_},
-         .source = kScenicMoniker,
-         .targets = {kEmbeddingFlutter}},
+        {.capabilities = {Protocol{test::touch::TestAppLauncher::Name_}},
+         .source = ChildRef{kEmbeddingFlutter},
+         .targets = {ParentRef()}},
+        {.capabilities = {Protocol{fuchsia::ui::app::ViewProvider::Name_}},
+         .source = ChildRef{kEmbeddingFlutter},
+         .targets = {ParentRef()}},
+        {.capabilities = {Protocol{test::touch::ResponseListener::Name_}},
+         .source = ChildRef{kMockResponseListener},
+         .targets = {ChildRef{kEmbeddingFlutter}}},
+        {.capabilities = {Protocol{fuchsia::ui::scenic::Scenic::Name_}},
+         .source = ChildRef{kScenic},
+         .targets = {ChildRef{kEmbeddingFlutter}}},
 
         // Needed to launch Embedded Client.
-        {.capability = Protocol{fuchsia::sys::Environment::Name_},
-         .source = AboveRoot(),
-         .targets = {kEmbeddingFlutter}},
-        {.capability = Protocol{fuchsia::sys::Launcher::Name_},
-         .source = AboveRoot(),
-         .targets = {kEmbeddingFlutter}},
+        {.capabilities = {Protocol{fuchsia::sys::Environment::Name_}},
+         .source = ParentRef(),
+         .targets = {ChildRef{kEmbeddingFlutter}}},
+        {.capabilities = {Protocol{fuchsia::sys::Launcher::Name_}},
+         .source = ParentRef(),
+         .targets = {ChildRef{kEmbeddingFlutter}}},
 
         // Needed for Flutter runner.
-        {.capability = Protocol{fuchsia::vulkan::loader::Loader::Name_},
-         .source = AboveRoot(),
-         .targets = {kEmbeddingFlutter}},
-        {.capability = Protocol{fuchsia::tracing::provider::Registry::Name_},
-         .source = AboveRoot(),
-         .targets = {kEmbeddingFlutter}},
-        {.capability = Protocol{fuchsia::sysmem::Allocator::Name_},
-         .source = AboveRoot(),
-         .targets = {kEmbeddingFlutter}},
+        {.capabilities = {Protocol{fuchsia::vulkan::loader::Loader::Name_}},
+         .source = ParentRef(),
+         .targets = {ChildRef{kEmbeddingFlutter}}},
+        {.capabilities = {Protocol{fuchsia::tracing::provider::Registry::Name_}},
+         .source = ParentRef(),
+         .targets = {ChildRef{kEmbeddingFlutter}}},
+        {.capabilities = {Protocol{fuchsia::sysmem::Allocator::Name_}},
+         .source = ParentRef(),
+         .targets = {ChildRef{kEmbeddingFlutter}}},
     };
   }
 
-  static constexpr auto kEmbeddingFlutter = Moniker{"embedding_flutter"};
+  static constexpr auto kEmbeddingFlutter = "embedding_flutter";
   static constexpr auto kEmbeddingFlutterUrl =
-      LegacyComponentUrl{"fuchsia-pkg://fuchsia.com/embedding-flutter#meta/embedding-flutter.cmx"};
+      "fuchsia-pkg://fuchsia.com/embedding-flutter#meta/embedding-flutter.cmx";
 };
 
 class FlutterInFlutterTest : public FlutterInputTest, public EmbeddingFlutterTest {
  protected:
-  std::vector<std::pair<Moniker, Component>> GetTestComponents() override {
+  std::vector<std::pair<ChildName, LegacyUrl>> GetTestComponents() override {
     return merge({EmbeddingFlutterTest::GetEmbeddingFlutterComponents(),
                   FlutterInputTest::GetTestComponents()});
   }
 
-  std::vector<CapabilityRoute> GetTestRoutes() override {
+  std::vector<Route> GetTestRoutes() override {
     return merge({EmbeddingFlutterTest::GetEmbeddingFlutterRoutes(),
-                  FlutterInputTest::GetFlutterRoutes(kEmbeddingFlutter)});
+                  FlutterInputTest::GetFlutterRoutes(ChildRef{kEmbeddingFlutter})});
   }
 };
 
@@ -1037,16 +1026,16 @@ TEST_F(FlutterInFlutterTest, FlutterInFlutterTap) {
 
 class WebInFlutterTest : public WebEngineTest, public EmbeddingFlutterTest {
  protected:
-  std::vector<std::pair<Moniker, Component>> GetTestComponents() override {
+  std::vector<std::pair<ChildName, LegacyUrl>> GetTestComponents() override {
     return merge({
         GetEmbeddingFlutterComponents(),
         WebEngineTest::GetTestComponents(),
     });
   }
 
-  std::vector<CapabilityRoute> GetTestRoutes() override {
+  std::vector<Route> GetTestRoutes() override {
     return merge({EmbeddingFlutterTest::GetEmbeddingFlutterRoutes(),
-                  WebEngineTest::GetWebEngineRoutes(kEmbeddingFlutter)});
+                  WebEngineTest::GetWebEngineRoutes(ChildRef{kEmbeddingFlutter})});
   }
 };
 
