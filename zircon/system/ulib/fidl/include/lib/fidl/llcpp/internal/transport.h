@@ -133,13 +133,13 @@ namespace internal {
 struct CallMethodArgs {
   const void* wr_data;
   const fidl_handle_t* wr_handles;
-  const void* wr_handle_metadata;
+  const fidl_handle_metadata_t* wr_handle_metadata;
   uint32_t wr_data_count;
   uint32_t wr_handles_count;
 
   void* rd_data;
   fidl_handle_t* rd_handles;
-  void* rd_handle_metadata;
+  fidl_handle_metadata_t* rd_handle_metadata;
   uint32_t rd_data_capacity;
   uint32_t rd_handles_capacity;
 };

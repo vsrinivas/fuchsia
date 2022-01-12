@@ -106,7 +106,7 @@ zx_status_t channel_call(fidl_handle_t handle, CallOptions call_options,
                          uint32_t* out_handles_actual_count) {
   zx_handle_disposition_t hds[ZX_CHANNEL_MAX_MSG_HANDLES];
   const fidl_channel_handle_metadata_t* wr_metadata =
-      static_cast<const fidl_channel_handle_metadata_t*>(cargs.wr_handle_metadata);
+      reinterpret_cast<const fidl_channel_handle_metadata_t*>(cargs.wr_handle_metadata);
   for (uint32_t i = 0; i < cargs.wr_handles_count; i++) {
     hds[i] = zx_handle_disposition_t{
         .operation = ZX_HANDLE_OP_MOVE,
@@ -131,7 +131,7 @@ zx_status_t channel_call(fidl_handle_t handle, CallOptions call_options,
       zx_channel_call_etc(handle, ZX_CHANNEL_WRITE_USE_IOVEC, call_options.deadline, &args,
                           out_data_actual_count, out_handles_actual_count);
   fidl_channel_handle_metadata_t* rd_metadata =
-      static_cast<fidl_channel_handle_metadata_t*>(cargs.rd_handle_metadata);
+      reinterpret_cast<fidl_channel_handle_metadata_t*>(cargs.rd_handle_metadata);
   for (uint32_t i = 0; i < *out_handles_actual_count; i++) {
     cargs.rd_handles[i] = his[i].handle;
     rd_metadata[i] = fidl_channel_handle_metadata_t{
