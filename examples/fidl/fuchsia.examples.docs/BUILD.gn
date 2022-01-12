@@ -17,6 +17,7 @@ fidl("fuchsia.examples.docs") {
     "style.test.fidl",
   ]
   public_deps = [
+    "//sdk/fidl/fuchsia.math",
     "//sdk/fidl/fuchsia.mem",
     "//zircon/vdso/zx",
   ]

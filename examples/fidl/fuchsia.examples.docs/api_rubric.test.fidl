@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 library fuchsia.examples.docs;
 
+using fuchsia.math;
 using zx;
 
 // [START ordinals]
@@ -469,3 +470,30 @@ type FileType = strict enum {
     GIF = 1;
 };
 // [END boolean-enum]
+
+// [START absence-1]
+// BAD
+protocol View3 {
+    ReplaceHitRegion(struct {
+        id uint64;
+        // Set to { -1, -1 } to remove.
+        size fuchsia.math.Rect;
+    });
+    ReplaceName(struct {
+        // Set to "" to remove.
+        name string;
+    });
+};
+// [END absence-1]
+
+// [START absence-2]
+protocol View4 {
+    ReplaceHitRegion(struct {
+        id uint64;
+        size box<fuchsia.math.Rect>;
+    });
+    ReplaceName(struct {
+        name string:optional;
+    });
+};
+// [END absence-2]
