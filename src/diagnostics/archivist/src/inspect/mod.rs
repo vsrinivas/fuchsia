@@ -11,7 +11,6 @@ use {
         moniker_rewriter::OutputRewriter,
         ImmutableString,
     },
-    collector::Moniker,
     diagnostics_data::{self as schema, Data, Inspect},
     diagnostics_hierarchy::{DiagnosticsHierarchy, InspectHierarchyMatcher},
     fidl_fuchsia_diagnostics::{self, Selector},
@@ -94,15 +93,6 @@ fn convert_snapshot_to_node_hierarchy(
         ReadSnapshot::Tree(snapshot_tree) => snapshot_tree.try_into(),
         ReadSnapshot::Finished(hierarchy) => Ok(hierarchy),
     }
-}
-
-pub struct BatchResultItem {
-    /// Relative moniker of the component associated with this result.
-    pub moniker: Moniker,
-    /// The url with which the component associated with this result was launched.
-    pub component_url: String,
-    /// The resulting Node hierarchy plus some metadata.
-    pub hierarchy_data: NodeHierarchyData,
 }
 
 impl ReaderServer {
