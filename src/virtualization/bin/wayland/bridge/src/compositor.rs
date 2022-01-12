@@ -379,6 +379,33 @@ impl Surface {
 
         Ok(())
     }
+
+    pub fn hit_test(
+        &self,
+        x: f32,
+        y: f32,
+        client: &Client,
+    ) -> Option<(ObjectRef<Self>, (i32, i32))> {
+        // Iterate over subsurfaces, starting with the top-most surface.
+        for (surface_ref, _) in self.subsurfaces.iter().rev() {
+            if let Some(surface) = surface_ref.try_get(client) {
+                let (x1, y1, x2, y2) = {
+                    let geometry = surface.window_geometry();
+                    (
+                        surface.position.0,
+                        surface.position.1,
+                        surface.position.0 + geometry.width,
+                        surface.position.1 + geometry.height,
+                    )
+                };
+                if x >= x1 as f32 && y >= y1 as f32 && x < x2 as f32 && y < y2 as f32 {
+                    return Some((*surface_ref, surface.position));
+                }
+            }
+        }
+
+        None
+    }
 }
 
 #[cfg(feature = "flatland")]
@@ -651,7 +678,7 @@ impl Surface {
         mut callbacks: Vec<ObjectRef<Callback>>,
     ) -> Result<(), Error> {
         ftrace::duration!("wayland", "Surface::present");
-        if let Ok(surface) = this.get_mut(client) {
+        if let Some(surface) = this.try_get_mut(client) {
             if surface.present_credits == 0 {
                 // Drop frame by adding callbacks to previous frame. There must be at least
                 // one set of pending callbacks when we enter this state.
@@ -671,7 +698,7 @@ impl Surface {
         present_credits: u32,
     ) -> Result<(), Error> {
         ftrace::duration!("wayland", "Surface::add_present_credits");
-        if let Ok(surface) = this.get_mut(client) {
+        if let Some(surface) = this.try_get_mut(client) {
             surface.present_credits += present_credits;
             // Present immediately if needed.
             if surface.present_needed && surface.present_credits > 0 {
@@ -998,7 +1025,7 @@ impl Surface {
         callbacks: Vec<ObjectRef<Callback>>,
     ) -> Result<(), Error> {
         ftrace::duration!("wayland", "Surface::present");
-        if let Ok(surface) = this.get(client) {
+        if let Some(surface) = this.try_get(client) {
             let task_queue = client.task_queue();
             let session = surface
                 .session()
@@ -1016,7 +1043,7 @@ impl Surface {
                             task_queue.post(move |client| {
                                 // If the underlying surface has been destroyed then
                                 // skip sending the done event.
-                                if this.get(client).is_ok() {
+                                if this.try_get(client).is_some() {
                                     callbacks.iter().try_for_each(|callback| {
                                         let time_ms = (info.presentation_time / 1_000_000) as u32;
                                         Callback::done(*callback, client, time_ms)
@@ -1037,33 +1064,6 @@ impl Surface {
 
     pub fn present_internal(this: ObjectRef<Self>, client: &mut Client) -> Result<(), Error> {
         Self::present(this, client, vec![])
-    }
-
-    pub fn hit_test(
-        &self,
-        x: f32,
-        y: f32,
-        client: &Client,
-    ) -> Option<(ObjectRef<Self>, (i32, i32))> {
-        // Iterate over subsurfaces, starting with the top-most surface.
-        for (surface_ref, _) in self.subsurfaces.iter().rev() {
-            if let Some(surface) = surface_ref.try_get(client) {
-                let (x1, y1, x2, y2) = {
-                    let geometry = surface.window_geometry();
-                    (
-                        surface.position.0,
-                        surface.position.1,
-                        surface.position.0 + geometry.width,
-                        surface.position.1 + geometry.height,
-                    )
-                };
-                if x >= x1 as f32 && y >= y1 as f32 && x < x2 as f32 && y < y2 as f32 {
-                    return Some((*surface_ref, surface.position));
-                }
-            }
-        }
-
-        None
     }
 }
 

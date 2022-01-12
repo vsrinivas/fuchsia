@@ -46,11 +46,15 @@ use {
         FlatlandEventStream, FlatlandMarker, ParentViewportWatcherMarker,
         ParentViewportWatcherProxy, TransformId, ViewportProperties,
     },
+    fidl_fuchsia_ui_pointer::{
+        MousePointerSample, MouseSourceMarker, MouseSourceProxy, TouchPointerSample,
+        TouchSourceMarker, TouchSourceProxy,
+    },
     fidl_fuchsia_ui_views::{
         ViewIdentityOnCreation, ViewRefFocusedMarker, ViewRefFocusedProxy, ViewportCreationToken,
     },
     fuchsia_scenic::flatland::{LinkTokenPair, ViewBoundProtocols},
-    std::collections::BTreeSet,
+    std::{collections::BTreeSet, convert::TryInto},
 };
 
 #[cfg(not(feature = "flatland"))]
@@ -677,6 +681,166 @@ impl XdgSurface {
         .detach();
     }
 
+    fn spawn_touch_listener(
+        this: ObjectRef<Self>,
+        touch_source: TouchSourceProxy,
+        task_queue: TaskQueue,
+    ) {
+        fasync::Task::local(async move {
+            let mut responses: Vec<fidl_fuchsia_ui_pointer::TouchResponse> = Vec::new();
+            loop {
+                let result = touch_source.watch(&mut responses.into_iter()).await;
+                match result {
+                    Ok(returned_events) => {
+                        responses = returned_events
+                            .iter()
+                            .map(|event| fidl_fuchsia_ui_pointer::TouchResponse {
+                                response_type: event.pointer_sample.as_ref().and_then(|_| {
+                                    Some(fidl_fuchsia_ui_pointer::TouchResponseType::Yes)
+                                }),
+                                ..fidl_fuchsia_ui_pointer::TouchResponse::EMPTY
+                            })
+                            .collect();
+                        let events = returned_events.clone();
+                        task_queue.post(move |client| {
+                            if let Some(xdg_surface) = this.try_get(client) {
+                                let root_surface_ref = xdg_surface.root_surface_ref;
+                                for event in &events {
+                                    if let Some(TouchPointerSample {
+                                        interaction: Some(interaction),
+                                        phase: Some(phase),
+                                        position_in_viewport: Some(position_in_viewport),
+                                        ..
+                                    }) = event.pointer_sample.as_ref()
+                                    {
+                                        let x = position_in_viewport[0];
+                                        let y = position_in_viewport[1];
+                                        let xdg_surface_ref =
+                                            XdgSurface::get_event_target(root_surface_ref, client)
+                                                .unwrap_or(this);
+                                        let target =
+                                            XdgSurface::hit_test(xdg_surface_ref, x, y, client);
+                                        if let Some((_, surface_ref, offset)) = target {
+                                            if let Some(surface) = surface_ref.try_get(client) {
+                                                let position = {
+                                                    let geometry = surface.window_geometry();
+                                                    [
+                                                        x + geometry.x as f32 - offset.0 as f32,
+                                                        y + geometry.y as f32 - offset.1 as f32,
+                                                    ]
+                                                };
+
+                                                let timestamp = event.timestamp.expect("timestamp");
+                                                client
+                                                    .input_dispatcher
+                                                    .handle_touch_event(
+                                                        surface_ref,
+                                                        timestamp,
+                                                        interaction
+                                                            .interaction_id
+                                                            .try_into()
+                                                            .unwrap(),
+                                                        &position,
+                                                        *phase,
+                                                    )
+                                                    .expect("handle_touch_event");
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                            Ok(())
+                        });
+                    }
+                    Err(fidl::Error::ClientChannelClosed { .. }) => {
+                        return;
+                    }
+                    Err(fidl_error) => {
+                        println!("touch source Watch() error: {:?}", fidl_error);
+                        return;
+                    }
+                }
+            }
+        })
+        .detach();
+    }
+
+    fn spawn_mouse_listener(
+        this: ObjectRef<Self>,
+        mouse_source: MouseSourceProxy,
+        task_queue: TaskQueue,
+    ) {
+        fasync::Task::local(async move {
+            loop {
+                let result = mouse_source.watch().await;
+                match result {
+                    Ok(returned_events) => {
+                        let events = returned_events.clone();
+                        task_queue.post(move |client| {
+                            if let Some(xdg_surface) = this.try_get(client) {
+                                let root_surface_ref = xdg_surface.root_surface_ref;
+                                for event in &events {
+                                    if let Some(MousePointerSample {
+                                        device_id: _,
+                                        position_in_viewport: Some(position_in_viewport),
+                                        relative_motion,
+                                        scroll_v,
+                                        scroll_h,
+                                        pressed_buttons,
+                                        ..
+                                    }) = event.pointer_sample.as_ref()
+                                    {
+                                        let x = position_in_viewport[0];
+                                        let y = position_in_viewport[1];
+                                        let xdg_surface_ref =
+                                            XdgSurface::get_event_target(root_surface_ref, client)
+                                                .unwrap_or(this);
+                                        let target =
+                                            XdgSurface::hit_test(xdg_surface_ref, x, y, client);
+                                        if let Some((_, surface_ref, offset)) = target {
+                                            if let Some(surface) = surface_ref.try_get(client) {
+                                                let position = {
+                                                    let geometry = surface.window_geometry();
+                                                    [
+                                                        x + geometry.x as f32 - offset.0 as f32,
+                                                        y + geometry.y as f32 - offset.1 as f32,
+                                                    ]
+                                                };
+
+                                                let timestamp = event.timestamp.expect("timestamp");
+                                                client
+                                                    .input_dispatcher
+                                                    .handle_pointer_event(
+                                                        surface_ref,
+                                                        timestamp,
+                                                        &position,
+                                                        pressed_buttons,
+                                                        relative_motion,
+                                                        scroll_v,
+                                                        scroll_h,
+                                                    )
+                                                    .expect("handle_mouse_event");
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                            Ok(())
+                        });
+                    }
+                    Err(fidl::Error::ClientChannelClosed { .. }) => {
+                        return;
+                    }
+                    Err(fidl_error) => {
+                        println!("mouse source Watch() error: {:?}", fidl_error);
+                        return;
+                    }
+                }
+            }
+        })
+        .detach();
+    }
+
     fn spawn_child_view_listener(
         this: ObjectRef<Self>,
         child_view_watcher: ChildViewWatcherProxy,
@@ -761,6 +925,36 @@ impl XdgSurface {
             }
         })
         .detach();
+    }
+
+    fn hit_test(
+        this: ObjectRef<Self>,
+        location_x: f32,
+        location_y: f32,
+        client: &Client,
+    ) -> Option<(ObjectRef<Self>, ObjectRef<Surface>, (i32, i32))> {
+        let mut maybe_xdg_surface_ref = Some(this);
+        while let Some(xdg_surface_ref) = maybe_xdg_surface_ref.take() {
+            if let Some(xdg_surface) = xdg_surface_ref.try_get(client) {
+                if let Some((parent_view, view_offset)) = xdg_surface.view.as_ref().map(|v| {
+                    let view = v.lock();
+                    (view.parent(), view.absolute_offset())
+                }) {
+                    let surface_ref = xdg_surface.surface_ref;
+                    if let Some(surface) = surface_ref.try_get(client) {
+                        let x = location_x - view_offset.0 as f32;
+                        let y = location_y - view_offset.1 as f32;
+                        if let Some((surface_ref, offset)) = surface.hit_test(x, y, client) {
+                            let offset_x = offset.0 + view_offset.0;
+                            let offset_y = offset.1 + view_offset.1;
+                            return Some((xdg_surface_ref, surface_ref, (offset_x, offset_y)));
+                        }
+                    }
+                    maybe_xdg_surface_ref = parent_view.as_ref().map(|v| v.lock().xdg_surface());
+                }
+            }
+        }
+        None
     }
 }
 
@@ -1440,8 +1634,16 @@ impl XdgToplevel {
                             let (view_ref_focused, view_ref_focused_request) =
                                 create_proxy::<ViewRefFocusedMarker>()
                                     .expect("failed to create ViewRefFocusedProxy");
+                            let (touch_source, touch_source_request) =
+                                create_proxy::<TouchSourceMarker>()
+                                    .expect("failed to create TouchSourceProxy");
+                            let (mouse_source, mouse_source_request) =
+                                create_proxy::<MouseSourceMarker>()
+                                    .expect("failed to create MouseSourceProxy");
                             let view_bound_protocols = ViewBoundProtocols {
                                 view_ref_focused: Some(view_ref_focused_request),
+                                touch_source: Some(touch_source_request),
+                                mouse_source: Some(mouse_source_request),
                                 ..ViewBoundProtocols::EMPTY
                             };
                             flatland
@@ -1468,6 +1670,16 @@ impl XdgToplevel {
                             XdgSurface::spawn_parent_viewport_listener(
                                 xdg_surface_ref,
                                 parent_viewport_watcher,
+                                task_queue.clone(),
+                            );
+                            XdgSurface::spawn_touch_listener(
+                                xdg_surface_ref,
+                                touch_source,
+                                task_queue.clone(),
+                            );
+                            XdgSurface::spawn_mouse_listener(
+                                xdg_surface_ref,
+                                mouse_source,
                                 task_queue.clone(),
                             );
                             let view_ptr = XdgSurfaceView::new(
@@ -1541,8 +1753,14 @@ impl XdgToplevel {
                 .expect("failed to create ParentViewportWatcherProxy");
         let (view_ref_focused, view_ref_focused_request) =
             create_proxy::<ViewRefFocusedMarker>().expect("failed to create ViewRefFocusedProxy");
+        let (touch_source, touch_source_request) =
+            create_proxy::<TouchSourceMarker>().expect("failed to create TouchSourceProxy");
+        let (mouse_source, mouse_source_request) =
+            create_proxy::<MouseSourceMarker>().expect("failed to create MouseSourceProxy");
         let view_bound_protocols = ViewBoundProtocols {
             view_ref_focused: Some(view_ref_focused_request),
+            touch_source: Some(touch_source_request),
+            mouse_source: Some(mouse_source_request),
             ..ViewBoundProtocols::EMPTY
         };
         flatland
@@ -1571,6 +1789,8 @@ impl XdgToplevel {
             parent_viewport_watcher,
             task_queue.clone(),
         );
+        XdgSurface::spawn_touch_listener(xdg_surface_ref, touch_source, task_queue.clone());
+        XdgSurface::spawn_mouse_listener(xdg_surface_ref, mouse_source, task_queue.clone());
         let view_ptr = XdgSurfaceView::new(
             flatland,
             task_queue.clone(),
@@ -2133,6 +2353,14 @@ impl XdgSurfaceView {
     fn absolute_offset(&self) -> (i32, i32) {
         self.absolute_offset
     }
+
+    fn parent(&self) -> Option<XdgSurfaceViewPtr> {
+        self.parent.clone()
+    }
+
+    fn xdg_surface(&self) -> ObjectRef<XdgSurface> {
+        self.xdg_surface
+    }
 }
 
 #[cfg(feature = "flatland")]
@@ -2507,7 +2735,7 @@ impl XdgSurfaceView {
         let pixel_scale = (scale_x, scale_y);
         if pixel_scale != self.pixel_scale {
             self.pixel_scale = pixel_scale;
-            if let Ok(surface) = self.surface.get_mut(client) {
+            if let Some(surface) = self.surface.try_get_mut(client) {
                 surface.set_pixel_scale(scale_x, scale_y);
             }
             self.update_and_present();
@@ -2586,14 +2814,6 @@ impl XdgSurfaceView {
             inset_from_max: gfx::Vec3 { x: 0.0, y: 0.0, z: 0.0 },
         };
         view_holder.set_view_properties(view_properties);
-    }
-
-    fn parent(&self) -> Option<XdgSurfaceViewPtr> {
-        self.parent.clone()
-    }
-
-    fn xdg_surface(&self) -> ObjectRef<XdgSurface> {
-        self.xdg_surface
     }
 }
 

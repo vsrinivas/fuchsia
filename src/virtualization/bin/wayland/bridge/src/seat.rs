@@ -12,16 +12,16 @@ use {
     fuchsia_zircon::{self as zx, HandleBased},
     std::collections::HashSet,
     wayland::{
-        wl_keyboard, wl_seat, WlKeyboard, WlKeyboardEvent, WlKeyboardRequest, WlPointer,
-        WlPointerRequest, WlSeat, WlSeatEvent, WlSeatRequest, WlTouch, WlTouchRequest,
+        wl_keyboard, wl_pointer, wl_seat, wl_touch, WlKeyboard, WlKeyboardEvent, WlKeyboardRequest,
+        WlPointer, WlPointerRequest, WlSeat, WlSeatEvent, WlSeatRequest, WlTouch, WlTouchRequest,
     },
 };
 
+#[cfg(feature = "flatland")]
+use {fidl_fuchsia_ui_pointer::EventPhase, std::collections::BTreeSet};
+
 #[cfg(not(feature = "flatland"))]
-use {
-    fidl_fuchsia_ui_input::{InputEvent, PointerEvent, PointerEventPhase, PointerEventType},
-    wayland::{wl_pointer, wl_touch},
-};
+use fidl_fuchsia_ui_input::{InputEvent, PointerEvent, PointerEventPhase, PointerEventType};
 
 pub fn usb_to_linux_keycode(usb_keycode: u32) -> u16 {
     match usb_keycode {
@@ -174,6 +174,9 @@ pub struct InputDispatcher {
     event_queue: EventQueue,
     pressed_keys: HashSet<fidl_fuchsia_input::Key>,
     modifiers: u32,
+    #[cfg(feature = "flatland")]
+    pressed_buttons: BTreeSet<u8>,
+    pointer_position: [f32; 2],
     /// The set of bound wl_pointer objects for this client.
     ///
     /// Note we're assuming a single wl_seat for now, so these all are pointers
@@ -271,6 +274,9 @@ impl InputDispatcher {
             event_queue,
             pressed_keys: HashSet::new(),
             modifiers: 0,
+            #[cfg(feature = "flatland")]
+            pressed_buttons: BTreeSet::new(),
+            pointer_position: [-1.0, -1.0],
             pointers: ObjectRefSet::new(),
             v5_pointers: ObjectRefSet::new(),
             keyboards: ObjectRefSet::new(),
@@ -445,17 +451,276 @@ impl InputDispatcher {
         }
         Ok(())
     }
+
+    fn send_pointer_enter(&self, surface: ObjectRef<Surface>, x: f32, y: f32) -> Result<(), Error> {
+        ftrace::duration!("wayland", "InputDispatcher::send_pointer_enter");
+        let serial = self.event_queue.next_serial();
+        self.pointers.iter().try_for_each(|p| {
+            self.event_queue.post(
+                p.id(),
+                wl_pointer::Event::Enter {
+                    serial,
+                    surface: surface.id(),
+                    surface_x: x.into(),
+                    surface_y: y.into(),
+                },
+            )
+        })
+    }
+
+    fn send_pointer_leave(&self, surface: ObjectRef<Surface>) -> Result<(), Error> {
+        ftrace::duration!("wayland", "InputDispatcher::send_pointer_leave");
+        let serial = self.event_queue.next_serial();
+        self.pointers.iter().try_for_each(|p| {
+            self.event_queue
+                .post(p.id(), wl_pointer::Event::Leave { serial, surface: surface.id() })
+        })
+    }
+
+    fn update_pointer_focus(
+        &mut self,
+        new_focus: Option<ObjectRef<Surface>>,
+        position: &[f32; 2],
+    ) -> Result<(), Error> {
+        ftrace::duration!("wayland", "InputDispatcher::update_pointer_focus");
+        if new_focus == self.pointer_focus {
+            return Ok(());
+        }
+
+        let mut needs_frame = false;
+        if let Some(current_focus) = self.pointer_focus {
+            needs_frame = true;
+            self.send_pointer_leave(current_focus)?;
+        }
+
+        if let Some(new_focus) = new_focus {
+            needs_frame = true;
+            self.send_pointer_enter(new_focus, position[0], position[1])?;
+            self.pointer_position = *position;
+        }
+
+        self.pointer_focus = new_focus;
+        if needs_frame {
+            self.send_pointer_frame()?;
+        }
+        Ok(())
+    }
+
+    fn send_pointer_frame(&self) -> Result<(), Error> {
+        ftrace::duration!("wayland", "InputDispatcher::send_pointer_frame");
+        self.v5_pointers
+            .iter()
+            .try_for_each(|p| self.event_queue.post(p.id(), wl_pointer::Event::Frame))
+    }
+
+    fn send_touch_frame(&self) -> Result<(), Error> {
+        ftrace::duration!("wayland", "InputDispatcher::send_touch_frame");
+        self.touches.iter().try_for_each(|p| self.event_queue.post(p.id(), wl_touch::Event::Frame))
+    }
+}
+
+#[cfg(feature = "flatland")]
+impl InputDispatcher {
+    pub fn handle_pointer_event(
+        &mut self,
+        surface: ObjectRef<Surface>,
+        timestamp: i64,
+        position: &[f32; 2],
+        pressed_buttons: &Option<Vec<u8>>,
+        relative_motion: &Option<[f32; 2]>,
+        scroll_v: &Option<i64>,
+        scroll_h: &Option<i64>,
+    ) -> Result<(), Error> {
+        ftrace::duration!("wayland", "InputDispatcher::handle_pointer_event");
+        let time_in_ms = (timestamp / 1_000_000) as u32;
+        let mut needs_frame = false;
+
+        self.update_pointer_focus(Some(surface), position)?;
+
+        if position != &self.pointer_position {
+            self.pointers.iter().try_for_each(|p| {
+                self.event_queue.post(
+                    p.id(),
+                    wl_pointer::Event::Motion {
+                        time: time_in_ms,
+                        surface_x: position[0].into(),
+                        surface_y: position[1].into(),
+                    },
+                )
+            })?;
+            self.pointer_position = *position;
+            needs_frame = true;
+        }
+
+        fn send_button_event(
+            event_queue: &EventQueue,
+            pointers: &ObjectRefSet<Pointer>,
+            time_in_ms: u32,
+            button: u32,
+            state: wl_pointer::ButtonState,
+        ) -> Result<(), Error> {
+            // This is base value for wayland button events. Button value
+            // for button two is this plus 1.
+            const BUTTON_BASE: u32 = 0x10f;
+
+            let serial = event_queue.next_serial();
+            pointers.iter().try_for_each(|p| {
+                event_queue.post(
+                    p.id(),
+                    wl_pointer::Event::Button {
+                        serial,
+                        time: time_in_ms,
+                        button: BUTTON_BASE + button,
+                        state,
+                    },
+                )
+            })
+        }
+
+        let pressed_buttons = pressed_buttons.as_ref().map_or(BTreeSet::new(), |pressed_buttons| {
+            pressed_buttons.iter().map(|b| *b).collect()
+        });
+        for button in self.pressed_buttons.difference(&pressed_buttons) {
+            send_button_event(
+                &self.event_queue,
+                &self.pointers,
+                time_in_ms,
+                *button as u32,
+                wl_pointer::ButtonState::Released,
+            )?;
+            needs_frame = true;
+        }
+        for button in pressed_buttons.difference(&self.pressed_buttons) {
+            send_button_event(
+                &self.event_queue,
+                &self.pointers,
+                time_in_ms,
+                *button as u32,
+                wl_pointer::ButtonState::Pressed,
+            )?;
+            needs_frame = true;
+        }
+        self.pressed_buttons = pressed_buttons;
+
+        fn send_axis_event(
+            event_queue: &EventQueue,
+            pointers: &ObjectRefSet<Pointer>,
+            time_in_ms: u32,
+            axis: wl_pointer::Axis,
+            value: f32,
+        ) -> Result<(), Error> {
+            pointers.iter().try_for_each(|p| {
+                event_queue.post(
+                    p.id(),
+                    wl_pointer::Event::Axis { time: time_in_ms, axis, value: value.into() },
+                )
+            })
+        }
+
+        if let Some(scroll_v) = scroll_v {
+            send_axis_event(
+                &self.event_queue,
+                &self.pointers,
+                time_in_ms,
+                wl_pointer::Axis::VerticalScroll,
+                *scroll_v as f32,
+            )?;
+            needs_frame = true;
+        }
+        if let Some(scroll_h) = scroll_h {
+            send_axis_event(
+                &self.event_queue,
+                &self.pointers,
+                time_in_ms,
+                wl_pointer::Axis::HorizontalScroll,
+                *scroll_h as f32,
+            )?;
+            needs_frame = true;
+        }
+
+        if let Some(relative_motion) = relative_motion {
+            // TODO(fxbug.dev/90180): Implement relative motion.
+            println!("NOT IMPLEMENTED: relative_motion: {:?}", relative_motion);
+        }
+
+        if needs_frame {
+            self.send_pointer_frame()?;
+        }
+
+        Ok(())
+    }
+
+    pub fn handle_touch_event(
+        &mut self,
+        surface: ObjectRef<Surface>,
+        timestamp: i64,
+        id: i32,
+        position: &[f32; 2],
+        phase: EventPhase,
+    ) -> Result<(), Error> {
+        ftrace::duration!("wayland", "InputDispatcher::handle_touch_event");
+        let time_in_ms = (timestamp / 1_000_000) as u32;
+        let mut needs_frame = false;
+        match phase {
+            EventPhase::Change => {
+                self.touches.iter().try_for_each(|t| {
+                    self.event_queue.post(
+                        t.id(),
+                        wl_touch::Event::Motion {
+                            time: time_in_ms,
+                            id,
+                            x: position[0].into(),
+                            y: position[1].into(),
+                        },
+                    )
+                })?;
+                needs_frame = true;
+            }
+            EventPhase::Add => {
+                let serial = self.event_queue.next_serial();
+                self.touches.iter().try_for_each(|t| {
+                    self.event_queue.post(
+                        t.id(),
+                        wl_touch::Event::Down {
+                            serial,
+                            time: time_in_ms,
+                            surface: surface.id(),
+                            id,
+                            x: position[0].into(),
+                            y: position[1].into(),
+                        },
+                    )
+                })?;
+                needs_frame = true;
+            }
+            EventPhase::Remove => {
+                let serial = self.event_queue.next_serial();
+                self.touches.iter().try_for_each(|t| {
+                    self.event_queue
+                        .post(t.id(), wl_touch::Event::Up { serial, time: time_in_ms, id })
+                })?;
+                needs_frame = true;
+            }
+            _ => (),
+        }
+
+        if needs_frame {
+            self.send_touch_frame()?;
+        }
+
+        Ok(())
+    }
 }
 
 #[cfg(not(feature = "flatland"))]
 impl InputDispatcher {
-    fn handle_mouse_event(
+    fn handle_pointer_event(
         &self,
         pointer: &PointerEvent,
         translation: (f32, f32),
         pixel_scale: (f32, f32),
     ) -> Result<(), Error> {
-        ftrace::duration!("wayland", "InputDispatcher::handle_mouse_event");
+        ftrace::duration!("wayland", "InputDispatcher::handle_pointer_event");
         match pointer.phase {
             PointerEventPhase::Move => {
                 self.pointers.iter().try_for_each(|p| {
@@ -558,81 +823,6 @@ impl InputDispatcher {
         Ok(())
     }
 
-    fn send_pointer_frame(&self) -> Result<(), Error> {
-        ftrace::duration!("wayland", "InputDispatcher::send_pointer_frame");
-        self.v5_pointers
-            .iter()
-            .try_for_each(|p| self.event_queue.post(p.id(), wl_pointer::Event::Frame))
-    }
-
-    fn send_touch_frame(&self) -> Result<(), Error> {
-        ftrace::duration!("wayland", "InputDispatcher::send_touch_frame");
-        self.touches.iter().try_for_each(|p| self.event_queue.post(p.id(), wl_touch::Event::Frame))
-    }
-
-    fn send_pointer_enter(
-        &self,
-        surface: ObjectRef<Surface>,
-        pointer: &PointerEvent,
-        translation: (f32, f32),
-        pixel_scale: (f32, f32),
-    ) -> Result<(), Error> {
-        ftrace::duration!("wayland", "InputDispatcher::send_pointer_enter");
-        let serial = self.event_queue.next_serial();
-        self.pointers.iter().try_for_each(|p| {
-            self.event_queue.post(
-                p.id(),
-                wl_pointer::Event::Enter {
-                    serial,
-                    surface: surface.id(),
-                    surface_x: ((pointer.x + translation.0) * pixel_scale.0).into(),
-                    surface_y: ((pointer.y + translation.1) * pixel_scale.1).into(),
-                },
-            )
-        })
-    }
-
-    fn send_pointer_leave(&self, surface: ObjectRef<Surface>) -> Result<(), Error> {
-        ftrace::duration!("wayland", "InputDispatcher::send_pointer_leave");
-        let serial = self.event_queue.next_serial();
-        self.pointers.iter().try_for_each(|p| {
-            self.event_queue
-                .post(p.id(), wl_pointer::Event::Leave { serial, surface: surface.id() })
-        })
-    }
-
-    fn update_pointer_focus(
-        &mut self,
-        new_focus: Option<ObjectRef<Surface>>,
-        pointer: &PointerEvent,
-        translation: (f32, f32),
-        pixel_scale: (f32, f32),
-    ) -> Result<(), Error> {
-        ftrace::duration!("wayland", "InputDispatcher::update_pointer_focus");
-        if new_focus == self.pointer_focus {
-            return Ok(());
-        }
-
-        let mut needs_frame = false;
-        if let Some(current_focus) = self.pointer_focus {
-            needs_frame = true;
-            self.send_pointer_leave(current_focus)?;
-        }
-
-        if let Some(new_focus) = new_focus {
-            needs_frame = true;
-            // TODO: skip a motion event if we've updated focus (since it's in
-            // the pointer event).
-            self.send_pointer_enter(new_focus, pointer, translation, pixel_scale)?;
-        }
-
-        self.pointer_focus = new_focus;
-        if needs_frame {
-            self.send_pointer_frame()?;
-        }
-        Ok(())
-    }
-
     /// Returns the location of pointer events.
     pub fn get_input_event_location(event: &InputEvent) -> Option<(f32, f32)> {
         match event {
@@ -667,16 +857,13 @@ impl InputDispatcher {
                     "dispatch_event_to_client",
                     pointer_trace_hack(pointer.radius_major, pointer.radius_minor)
                 );
+                let x = (pointer.x + pointer_translation.0) * pixel_scale.0;
+                let y = (pointer.y + pointer_translation.1) * pixel_scale.1;
                 // We send pointer focus here since pointer events will be
                 // delivered to whatever view the mouse cursor is over
                 // regardless of if a scenic Focus event has been sent.
-                self.update_pointer_focus(
-                    Some(target_surface),
-                    pointer,
-                    pointer_translation,
-                    pixel_scale,
-                )?;
-                self.handle_mouse_event(pointer, pointer_translation, pixel_scale)?;
+                self.update_pointer_focus(Some(target_surface), &[x, y])?;
+                self.handle_pointer_event(pointer, pointer_translation, pixel_scale)?;
                 self.send_pointer_frame()?;
             }
             InputEvent::Pointer(pointer) if pointer.type_ == PointerEventType::Touch => {
