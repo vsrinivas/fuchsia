@@ -15,6 +15,7 @@ source_set("cpp") {
     "include/lib/fidl/cpp/internal/natural_client_messenger.h",
     "include/lib/fidl/cpp/natural_types.h",
     "include/lib/fidl/cpp/unified_messaging.h",
+    "include/lib/fidl/cpp/unified_messaging_declarations.h",
   ]
   sources = [
     "internal/message_extensions.cc",
