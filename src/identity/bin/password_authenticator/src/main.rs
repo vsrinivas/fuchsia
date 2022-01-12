@@ -8,6 +8,7 @@ mod account_metadata;
 mod constants;
 mod disk_management;
 mod keys;
+mod options;
 mod prototype;
 #[cfg(test)]
 mod testing;
@@ -21,11 +22,12 @@ use fuchsia_async as fasync;
 use fuchsia_component::server::ServiceFs;
 use futures::StreamExt;
 use io_util::directory::open_in_namespace;
-use log::info;
+use log::{error, info};
 
-use crate::account_manager::AccountManager;
-use crate::account_metadata::DataDirAccountMetadataStore;
-use crate::disk_management::DevDiskManager;
+use crate::{
+    account_manager::AccountManager, account_metadata::DataDirAccountMetadataStore,
+    disk_management::DevDiskManager, options::Options,
+};
 
 enum Services {
     AccountManager(AccountManagerRequestStream),
@@ -35,6 +37,13 @@ enum Services {
 async fn main() -> Result<(), Error> {
     fuchsia_syslog::init_with_tags(&["auth"]).expect("Can't init logger");
     info!("Starting password authenticator");
+
+    let options = argh::from_env::<Options>();
+    info!("Command line options = {:?}", options);
+    options.validate().map_err(|err| {
+        error!("Failed to validate command line options: {:?}", err);
+        err
+    })?;
 
     let dev_root = open_in_namespace("/dev", OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE)?;
     let disk_manager = DevDiskManager::new(dev_root);
@@ -51,7 +60,7 @@ async fn main() -> Result<(), Error> {
     // TODO(zarvox): someday, make an inspect entry for this failure mode
     drop(cleanup_res);
 
-    let account_manager = AccountManager::new(disk_manager, account_metadata_store);
+    let account_manager = AccountManager::new(options, disk_manager, account_metadata_store);
 
     let mut fs = ServiceFs::new();
     fs.dir("svc").add_fidl_service(Services::AccountManager);

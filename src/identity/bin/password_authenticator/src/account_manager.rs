@@ -9,6 +9,7 @@ use crate::{
     disk_management::{DiskError, DiskManager, EncryptedBlockDevice, Partition},
     keys::{Key, KeyDerivation},
     prototype::{GLOBAL_ACCOUNT_ID, INSECURE_EMPTY_PASSWORD},
+    Options,
 };
 use anyhow::{anyhow, Context, Error};
 use fidl::endpoints::ServerEnd;
@@ -19,6 +20,9 @@ use futures::{lock::Mutex, prelude::*};
 use log::{error, info, warn};
 use std::{collections::HashMap, sync::Arc};
 
+/// The minimum length of (non-empty) password that is allowed for new accounts, in bytes.
+const MIN_PASSWORD_SIZE: usize = 8;
+
 pub type AccountId = u64;
 
 pub struct AccountManager<DM, AMS>
@@ -26,6 +30,7 @@ where
     DM: DiskManager,
     AMS: AccountMetadataStore,
 {
+    options: Options,
     disk_manager: DM,
     account_metadata_store: Mutex<AMS>,
 
@@ -60,8 +65,9 @@ where
     DM: DiskManager,
     AMS: AccountMetadataStore,
 {
-    pub fn new(disk_manager: DM, account_metadata_store: AMS) -> Self {
+    pub fn new(options: Options, disk_manager: DM, account_metadata_store: AMS) -> Self {
         Self {
+            options,
             disk_manager,
             account_metadata_store: Mutex::new(account_metadata_store),
             accounts: Mutex::new(HashMap::new()),
@@ -222,6 +228,17 @@ where
             return Err(faccount::Error::Internal);
         }
 
+        // Verify that the command line options allow this type of metadata.
+        //
+        // TODO(zarvox, jsankey): Once account deletion is available it probably makes sense to
+        // automatically delete an account that is not allowed by the current command line options
+        // (for example an account that was created with an empty password once allow_null=false)
+        // but for now we simply log a warning and return an error.
+        if !account_metadata.allowed_by_options(&self.options) {
+            warn!("get_account: account metadata is not allowed by current command line options");
+            return Err(faccount::Error::UnsupportedOperation);
+        }
+
         // If account metadata present, derive key (using the appropriate scheme for the
         // AccountMetadata instance).
         let key = account_metadata.derive_key(&password).await?;
@@ -343,13 +360,25 @@ where
             faccount::Error::InvalidRequest
         })?;
 
-        // For incremental deployability, we determine whether to use the null key or an
-        // scrypt-derived key depending on whether the password provided is empty or nonempty.
         let metadata = if password == INSECURE_EMPTY_PASSWORD {
+            if !self.options.allow_null {
+                // Empty passwords are only supported when the allow_null option is true.
+                warn!(
+                    "provision_new_account: refusing to provision account with empty password when \
+                    allow_null=false");
+                return Err(faccount::Error::InvalidRequest);
+            }
             AccountMetadata::new_null(name.to_string())
         } else {
-            if password.len() < 8 {
-                // Passwords, if present, must be a minimum of 8 characters
+            if !(self.options.allow_scrypt || self.options.allow_pinweaver) {
+                // Non-empty passwords are only supported when scrypt or pinweaver is allowed.
+                warn!(
+                    "provision_new_account: refusing to provision account with non-empty password \
+                    when allow_scrypt=false and allow_pinweaver=false"
+                );
+                return Err(faccount::Error::InvalidRequest);
+            } else if password.len() < MIN_PASSWORD_SIZE {
+                // Non-empty passwords must always be at least the minimum length.
                 warn!(
                     "provision_new_account: refusing to provision account with password of \
                       length {}",
@@ -359,6 +388,7 @@ where
             }
             AccountMetadata::new_scrypt(name.to_string())
         };
+
         // For now, we only contemplate one account ID
         let account_id = GLOBAL_ACCOUNT_ID;
 
@@ -502,6 +532,15 @@ mod test {
         lazy_static::lazy_static,
         vfs::execution_scope::ExecutionScope,
     };
+
+    // By default allow any form of password and encryption.
+    const DEFAULT_OPTIONS: Options =
+        Options { allow_null: true, allow_scrypt: true, allow_pinweaver: true };
+    // Define more restrictive options to verify exclusions are implemented correctly.
+    const NULL_ONLY_OPTIONS: Options =
+        Options { allow_null: true, allow_scrypt: false, allow_pinweaver: false };
+    const SCRYPT_ONLY_OPTIONS: Options =
+        Options { allow_null: false, allow_scrypt: true, allow_pinweaver: false };
 
     /// Mock implementation of [`DiskManager`].
     struct MockDiskManager {
@@ -839,7 +878,8 @@ mod test {
             },
         });
         let account_metadata_store = MemoryAccountMetadataStore::new();
-        let account_manager = AccountManager::new(disk_manager, account_metadata_store);
+        let account_manager =
+            AccountManager::new(DEFAULT_OPTIONS, disk_manager, account_metadata_store);
         let account_ids = account_manager.get_account_ids().await.expect("get account ids");
         assert_eq!(account_ids, Vec::<u64>::new());
     }
@@ -850,15 +890,19 @@ mod test {
             MockDiskManager::new().with_partition(make_formatted_account_partition_any_key());
         let account_metadata_store =
             MemoryAccountMetadataStore::new().with_password_account(&GLOBAL_ACCOUNT_ID);
-        let account_manager = AccountManager::new(disk_manager, account_metadata_store);
+        let account_manager =
+            AccountManager::new(DEFAULT_OPTIONS, disk_manager, account_metadata_store);
         let account_ids = account_manager.get_account_ids().await.expect("get account ids");
         assert_eq!(account_ids, vec![GLOBAL_ACCOUNT_ID]);
     }
 
     #[fuchsia::test]
     async fn test_get_account_no_accounts() {
-        let account_manager =
-            AccountManager::new(MockDiskManager::new(), MemoryAccountMetadataStore::new());
+        let account_manager = AccountManager::new(
+            DEFAULT_OPTIONS,
+            MockDiskManager::new(),
+            MemoryAccountMetadataStore::new(),
+        );
         let (_, server) = fidl::endpoints::create_endpoints::<AccountMarker>().unwrap();
         assert_eq!(
             account_manager.get_account(GLOBAL_ACCOUNT_ID, TEST_SCRYPT_PASSWORD, server).await,
@@ -875,7 +919,8 @@ mod test {
             MockDiskManager::new().with_partition(make_formatted_account_partition_any_key());
         let account_metadata_store =
             MemoryAccountMetadataStore::new().with_password_account(&UNSUPPORTED_ACCOUNT_ID);
-        let account_manager = AccountManager::new(disk_manager, account_metadata_store);
+        let account_manager =
+            AccountManager::new(DEFAULT_OPTIONS, disk_manager, account_metadata_store);
         let (_, server) = fidl::endpoints::create_endpoints::<AccountMarker>().unwrap();
         assert_eq!(
             account_manager.get_account(UNSUPPORTED_ACCOUNT_ID, TEST_SCRYPT_PASSWORD, server).await,
@@ -884,13 +929,14 @@ mod test {
     }
 
     #[fuchsia::test]
-    async fn test_get_account_wrong_password() {
+    async fn test_get_account_found_wrong_password() {
         const BAD_PASSWORD: &str = "passwd";
         let disk_manager = MockDiskManager::new()
             .with_partition(make_formatted_account_partition(TEST_SCRYPT_KEY));
         let account_metadata_store =
             MemoryAccountMetadataStore::new().with_password_account(&GLOBAL_ACCOUNT_ID);
-        let account_manager = AccountManager::new(disk_manager, account_metadata_store);
+        let account_manager =
+            AccountManager::new(DEFAULT_OPTIONS, disk_manager, account_metadata_store);
         let (_, server) = fidl::endpoints::create_endpoints::<AccountMarker>().unwrap();
         assert_eq!(
             account_manager.get_account(GLOBAL_ACCOUNT_ID, BAD_PASSWORD, server).await,
@@ -899,12 +945,13 @@ mod test {
     }
 
     #[fuchsia::test]
-    async fn test_get_account_found_no_password() {
+    async fn test_get_account_found_no_password_allowed() {
         let disk_manager = MockDiskManager::new()
             .with_partition(make_formatted_account_partition(INSECURE_EMPTY_KEY));
         let account_metadata_store =
             MemoryAccountMetadataStore::new().with_null_keyed_account(&GLOBAL_ACCOUNT_ID);
-        let account_manager = AccountManager::new(disk_manager, account_metadata_store);
+        let account_manager =
+            AccountManager::new(NULL_ONLY_OPTIONS, disk_manager, account_metadata_store);
         let (client, server) = fidl::endpoints::create_proxy::<AccountMarker>().unwrap();
         account_manager
             .get_account(GLOBAL_ACCOUNT_ID, INSECURE_EMPTY_PASSWORD, server)
@@ -918,12 +965,28 @@ mod test {
     }
 
     #[fuchsia::test]
-    async fn test_get_account_found_correct_password() {
+    async fn test_get_account_found_no_password_not_allowed() {
+        let disk_manager = MockDiskManager::new()
+            .with_partition(make_formatted_account_partition(INSECURE_EMPTY_KEY));
+        let account_metadata_store =
+            MemoryAccountMetadataStore::new().with_null_keyed_account(&GLOBAL_ACCOUNT_ID);
+        let account_manager =
+            AccountManager::new(SCRYPT_ONLY_OPTIONS, disk_manager, account_metadata_store);
+        let (_, server) = fidl::endpoints::create_proxy::<AccountMarker>().unwrap();
+        assert_eq!(
+            account_manager.get_account(GLOBAL_ACCOUNT_ID, INSECURE_EMPTY_PASSWORD, server).await,
+            Err(faccount::Error::UnsupportedOperation)
+        );
+    }
+
+    #[fuchsia::test]
+    async fn test_get_account_found_correct_password_allowed() {
         let disk_manager = MockDiskManager::new()
             .with_partition(make_formatted_account_partition(TEST_SCRYPT_KEY));
         let account_metadata_store =
             MemoryAccountMetadataStore::new().with_password_account(&GLOBAL_ACCOUNT_ID);
-        let account_manager = AccountManager::new(disk_manager, account_metadata_store);
+        let account_manager =
+            AccountManager::new(SCRYPT_ONLY_OPTIONS, disk_manager, account_metadata_store);
         let (client, server) = fidl::endpoints::create_proxy::<AccountMarker>().unwrap();
         account_manager
             .get_account(GLOBAL_ACCOUNT_ID, TEST_SCRYPT_PASSWORD, server)
@@ -937,12 +1000,28 @@ mod test {
     }
 
     #[fuchsia::test]
+    async fn test_get_account_found_correct_password_not_allowed() {
+        let disk_manager = MockDiskManager::new()
+            .with_partition(make_formatted_account_partition(TEST_SCRYPT_KEY));
+        let account_metadata_store =
+            MemoryAccountMetadataStore::new().with_password_account(&GLOBAL_ACCOUNT_ID);
+        let account_manager =
+            AccountManager::new(NULL_ONLY_OPTIONS, disk_manager, account_metadata_store);
+        let (_, server) = fidl::endpoints::create_proxy::<AccountMarker>().unwrap();
+        assert_eq!(
+            account_manager.get_account(GLOBAL_ACCOUNT_ID, TEST_SCRYPT_PASSWORD, server).await,
+            Err(faccount::Error::UnsupportedOperation)
+        );
+    }
+
+    #[fuchsia::test]
     async fn test_multiple_get_account_channels_concurrent() {
         let disk_manager = MockDiskManager::new()
             .with_partition(make_formatted_account_partition(TEST_SCRYPT_KEY));
         let account_metadata_store =
             MemoryAccountMetadataStore::new().with_password_account(&GLOBAL_ACCOUNT_ID);
-        let account_manager = AccountManager::new(disk_manager, account_metadata_store);
+        let account_manager =
+            AccountManager::new(DEFAULT_OPTIONS, disk_manager, account_metadata_store);
         let (client1, server) = fidl::endpoints::create_proxy::<AccountMarker>().unwrap();
         account_manager
             .get_account(GLOBAL_ACCOUNT_ID, TEST_SCRYPT_PASSWORD, server)
@@ -971,7 +1050,8 @@ mod test {
             .with_partition(make_formatted_account_partition(TEST_SCRYPT_KEY));
         let account_metadata_store =
             MemoryAccountMetadataStore::new().with_password_account(&GLOBAL_ACCOUNT_ID);
-        let account_manager = AccountManager::new(disk_manager, account_metadata_store);
+        let account_manager =
+            AccountManager::new(DEFAULT_OPTIONS, disk_manager, account_metadata_store);
         let (client, server) = fidl::endpoints::create_proxy::<AccountMarker>().unwrap();
         account_manager
             .get_account(GLOBAL_ACCOUNT_ID, TEST_SCRYPT_PASSWORD, server)
@@ -1002,7 +1082,8 @@ mod test {
             .with_partition(make_formatted_account_partition(TEST_SCRYPT_KEY));
         let account_metadata_store =
             MemoryAccountMetadataStore::new().with_password_account(&GLOBAL_ACCOUNT_ID);
-        let account_manager = AccountManager::new(disk_manager, account_metadata_store);
+        let account_manager =
+            AccountManager::new(DEFAULT_OPTIONS, disk_manager, account_metadata_store);
         let (client, server) = fidl::endpoints::create_proxy::<AccountMarker>().unwrap();
         account_manager
             .get_account(GLOBAL_ACCOUNT_ID, TEST_SCRYPT_PASSWORD, server)
@@ -1024,7 +1105,8 @@ mod test {
     async fn test_deprecated_provision_new_account_requires_name_in_metadata() {
         let disk_manager = MockDiskManager::new()
             .with_partition(make_formatted_account_partition(TEST_SCRYPT_KEY));
-        let account_manager = AccountManager::new(disk_manager, MemoryAccountMetadataStore::new());
+        let account_manager =
+            AccountManager::new(DEFAULT_OPTIONS, disk_manager, MemoryAccountMetadataStore::new());
         let metadata = faccount::AccountMetadata { name: None, ..faccount::AccountMetadata::EMPTY };
         assert_eq!(
             account_manager.provision_new_account(&metadata, TEST_SCRYPT_PASSWORD).await,
@@ -1036,7 +1118,8 @@ mod test {
     async fn test_deprecated_provision_new_account_on_formatted_block() {
         let disk_manager =
             MockDiskManager::new().with_partition(make_formatted_account_partition_any_key());
-        let account_manager = AccountManager::new(disk_manager, MemoryAccountMetadataStore::new());
+        let account_manager =
+            AccountManager::new(DEFAULT_OPTIONS, disk_manager, MemoryAccountMetadataStore::new());
         assert_eq!(
             account_manager
                 .provision_new_account(&TEST_FACCOUNT_METADATA, TEST_SCRYPT_PASSWORD)
@@ -1050,7 +1133,8 @@ mod test {
     async fn test_deprecated_provision_new_account_on_unformatted_block() {
         let disk_manager =
             MockDiskManager::new().with_partition(make_unformatted_account_partition());
-        let account_manager = AccountManager::new(disk_manager, MemoryAccountMetadataStore::new());
+        let account_manager =
+            AccountManager::new(DEFAULT_OPTIONS, disk_manager, MemoryAccountMetadataStore::new());
         assert_eq!(
             account_manager
                 .provision_new_account(&TEST_FACCOUNT_METADATA, TEST_SCRYPT_PASSWORD)
@@ -1061,10 +1145,11 @@ mod test {
     }
 
     #[fuchsia::test]
-    async fn test_deprecated_provision_new_account_password_empty() {
+    async fn test_deprecated_provision_new_account_password_empty_allowed() {
         let disk_manager =
             MockDiskManager::new().with_partition(make_unformatted_account_partition());
-        let account_manager = AccountManager::new(disk_manager, MemoryAccountMetadataStore::new());
+        let account_manager =
+            AccountManager::new(NULL_ONLY_OPTIONS, disk_manager, MemoryAccountMetadataStore::new());
         assert_eq!(
             account_manager
                 .provision_new_account(&TEST_FACCOUNT_METADATA, INSECURE_EMPTY_PASSWORD)
@@ -1074,11 +1159,32 @@ mod test {
     }
 
     #[fuchsia::test]
+    async fn test_deprecated_provision_new_account_password_empty_not_allowed() {
+        let disk_manager =
+            MockDiskManager::new().with_partition(make_unformatted_account_partition());
+        let account_manager = AccountManager::new(
+            SCRYPT_ONLY_OPTIONS,
+            disk_manager,
+            MemoryAccountMetadataStore::new(),
+        );
+        assert_eq!(
+            account_manager
+                .provision_new_account(&TEST_FACCOUNT_METADATA, INSECURE_EMPTY_PASSWORD)
+                .await,
+            Err(faccount::Error::InvalidRequest)
+        );
+    }
+
+    #[fuchsia::test]
     async fn test_deprecated_provision_new_account_password_too_short() {
         // Passwords must be 8 characters or longer
         let disk_manager =
             MockDiskManager::new().with_partition(make_unformatted_account_partition());
-        let account_manager = AccountManager::new(disk_manager, MemoryAccountMetadataStore::new());
+        let account_manager = AccountManager::new(
+            SCRYPT_ONLY_OPTIONS,
+            disk_manager,
+            MemoryAccountMetadataStore::new(),
+        );
         assert_eq!(
             account_manager.provision_new_account(&TEST_FACCOUNT_METADATA, "7 chars").await,
             Err(faccount::Error::InvalidRequest)
@@ -1090,15 +1196,33 @@ mod test {
     }
 
     #[fuchsia::test]
-    async fn test_deprecated_provision_new_account_password_not_empty() {
+    async fn test_deprecated_provision_new_account_password_not_empty_allowed() {
         let disk_manager =
             MockDiskManager::new().with_partition(make_unformatted_account_partition());
-        let account_manager = AccountManager::new(disk_manager, MemoryAccountMetadataStore::new());
+        let account_manager = AccountManager::new(
+            SCRYPT_ONLY_OPTIONS,
+            disk_manager,
+            MemoryAccountMetadataStore::new(),
+        );
         assert_eq!(
             account_manager
                 .provision_new_account(&TEST_FACCOUNT_METADATA, TEST_SCRYPT_PASSWORD)
                 .await,
             Ok(GLOBAL_ACCOUNT_ID)
+        );
+    }
+
+    #[fuchsia::test]
+    async fn test_deprecated_provision_new_account_password_not_empty_not_allowed() {
+        let disk_manager =
+            MockDiskManager::new().with_partition(make_unformatted_account_partition());
+        let account_manager =
+            AccountManager::new(NULL_ONLY_OPTIONS, disk_manager, MemoryAccountMetadataStore::new());
+        assert_eq!(
+            account_manager
+                .provision_new_account(&TEST_FACCOUNT_METADATA, TEST_SCRYPT_PASSWORD)
+                .await,
+            Err(faccount::Error::InvalidRequest)
         );
     }
 
@@ -1112,7 +1236,8 @@ mod test {
                 bind_behavior: Err(|| DiskError::BindZxcryptDriverFailed(Status::UNAVAILABLE)),
             },
         });
-        let account_manager = AccountManager::new(disk_manager, MemoryAccountMetadataStore::new());
+        let account_manager =
+            AccountManager::new(DEFAULT_OPTIONS, disk_manager, MemoryAccountMetadataStore::new());
         assert_eq!(
             account_manager
                 .provision_new_account(&TEST_FACCOUNT_METADATA, TEST_SCRYPT_PASSWORD)
@@ -1136,7 +1261,8 @@ mod test {
                 }),
             },
         });
-        let account_manager = AccountManager::new(disk_manager, MemoryAccountMetadataStore::new());
+        let account_manager =
+            AccountManager::new(DEFAULT_OPTIONS, disk_manager, MemoryAccountMetadataStore::new());
         assert_eq!(
             account_manager
                 .provision_new_account(&TEST_FACCOUNT_METADATA, TEST_SCRYPT_PASSWORD)
@@ -1160,7 +1286,8 @@ mod test {
                 }),
             },
         });
-        let account_manager = AccountManager::new(disk_manager, MemoryAccountMetadataStore::new());
+        let account_manager =
+            AccountManager::new(DEFAULT_OPTIONS, disk_manager, MemoryAccountMetadataStore::new());
         assert_eq!(
             account_manager
                 .provision_new_account(&TEST_FACCOUNT_METADATA, TEST_SCRYPT_PASSWORD)
@@ -1173,7 +1300,8 @@ mod test {
     async fn test_deprecated_provision_new_account_get_data_directory() {
         let disk_manager =
             MockDiskManager::new().with_partition(make_unformatted_account_partition());
-        let account_manager = AccountManager::new(disk_manager, MemoryAccountMetadataStore::new());
+        let account_manager =
+            AccountManager::new(DEFAULT_OPTIONS, disk_manager, MemoryAccountMetadataStore::new());
         assert_eq!(
             account_manager
                 .provision_new_account(&TEST_FACCOUNT_METADATA, TEST_SCRYPT_PASSWORD)
@@ -1217,7 +1345,8 @@ mod test {
             .with_partition(make_formatted_account_partition(TEST_SCRYPT_KEY));
         let account_metadata_store =
             MemoryAccountMetadataStore::new().with_password_account(&GLOBAL_ACCOUNT_ID);
-        let account_manager = AccountManager::new(disk_manager, account_metadata_store);
+        let account_manager =
+            AccountManager::new(DEFAULT_OPTIONS, disk_manager, account_metadata_store);
 
         let (account, server_end) = fidl::endpoints::create_proxy().unwrap();
         account_manager
@@ -1262,7 +1391,8 @@ mod test {
                     Ok(MockMinfs::simple(scope.clone()))
                 }
             });
-        let account_manager = AccountManager::new(disk_manager, MemoryAccountMetadataStore::new());
+        let account_manager =
+            AccountManager::new(DEFAULT_OPTIONS, disk_manager, MemoryAccountMetadataStore::new());
 
         // Expect a Resource failure.
         assert_eq!(
@@ -1287,7 +1417,8 @@ mod test {
             .with_partition(make_formatted_account_partition(TEST_SCRYPT_KEY));
         let account_metadata_store =
             MemoryAccountMetadataStore::new().with_password_account(&GLOBAL_ACCOUNT_ID);
-        let account_manager = AccountManager::new(disk_manager, account_metadata_store);
+        let account_manager =
+            AccountManager::new(DEFAULT_OPTIONS, disk_manager, account_metadata_store);
 
         let (account, server_end) = fidl::endpoints::create_proxy().unwrap();
         account_manager

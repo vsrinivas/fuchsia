@@ -6,6 +6,7 @@ use {
     crate::{
         account_manager::AccountId,
         keys::{Key, KeyDerivation, KeyError},
+        options::Options,
         prototype::NullKeyDerivation,
     },
     async_trait::async_trait,
@@ -143,6 +144,14 @@ impl AccountMetadata {
             scrypt_params: ScryptParams { salt, log_n: 15, r: 8, p: 1 },
         });
         AccountMetadata { name, authenticator_metadata: meta }
+    }
+
+    /// Returns true iff this type of metadata is allowed by the supplied command line options.
+    pub fn allowed_by_options(&self, options: &Options) -> bool {
+        match self.authenticator_metadata {
+            AuthenticatorMetadata::NullKey(_) => options.allow_null,
+            AuthenticatorMetadata::ScryptOnly(_) => options.allow_scrypt,
+        }
     }
 }
 
@@ -387,6 +396,29 @@ pub mod test {
     // We'll check that we fail to load it.
     const INVALID_METADATA: &[u8] = br#"{"name": "Display Name"}"#;
 
+    // A well-known salt & key for test
+    pub const TEST_SCRYPT_SALT: [u8; 16] =
+        [202, 26, 165, 102, 212, 113, 114, 60, 106, 121, 183, 133, 36, 166, 127, 146];
+    pub const TEST_SCRYPT_PASSWORD: &str = "test password";
+
+    lazy_static! {
+        pub static ref TEST_SCRYPT_METADATA: AccountMetadata =
+            AccountMetadata::test_new_weak_scrypt_with_salt(
+                "Test Display Name".into(),
+                TEST_SCRYPT_SALT,
+            );
+        static ref TEST_NULL_METADATA: AccountMetadata =
+            AccountMetadata::new_null("Test Display Name".into(),);
+    }
+
+    // We have precomputed the key produced by the above fixed salt so that each test that wants to
+    // use one doesn't need to perform an additional key derivation every single time.  A test
+    // ensures that we do the work at least once to make sure our constant is correct.
+    pub const TEST_SCRYPT_KEY: [u8; 32] = [
+        88, 91, 129, 123, 173, 34, 21, 1, 23, 147, 87, 189, 56, 149, 89, 132, 210, 235, 150, 102,
+        129, 93, 202, 53, 115, 170, 162, 217, 254, 115, 216, 181,
+    ];
+
     async fn write_test_file_in_dir(dir: &DirectoryProxy, path: &std::path::Path, data: &[u8]) {
         let file = io_util::open_file(
             &dir,
@@ -454,6 +486,19 @@ pub mod test {
     }
 
     #[fuchsia::test]
+    fn test_allowed_by_options() {
+        const NULL_ONLY_OPTIONS: Options =
+            Options { allow_null: true, allow_scrypt: false, allow_pinweaver: false };
+        const SCRYPT_ONLY_OPTIONS: Options =
+            Options { allow_null: false, allow_scrypt: true, allow_pinweaver: false };
+
+        assert_eq!(TEST_SCRYPT_METADATA.allowed_by_options(&SCRYPT_ONLY_OPTIONS), true);
+        assert_eq!(TEST_SCRYPT_METADATA.allowed_by_options(&NULL_ONLY_OPTIONS), false);
+        assert_eq!(TEST_NULL_METADATA.allowed_by_options(&NULL_ONLY_OPTIONS), true);
+        assert_eq!(TEST_NULL_METADATA.allowed_by_options(&SCRYPT_ONLY_OPTIONS), false);
+    }
+
+    #[fuchsia::test]
     fn test_metadata_goldens() {
         let deserialized = serde_json::from_slice::<AccountMetadata>(NULL_KEY_AND_NAME_DATA)
             .expect("Deserialize golden null auth metadata");
@@ -484,27 +529,6 @@ pub mod test {
             .expect("Reserialize password-only auth metadata");
         assert_eq!(reserialized, SCRYPT_KEY_AND_NAME_DATA);
     }
-
-    // A well-known salt & key for test
-    pub const TEST_SCRYPT_SALT: [u8; 16] =
-        [202, 26, 165, 102, 212, 113, 114, 60, 106, 121, 183, 133, 36, 166, 127, 146];
-    pub const TEST_SCRYPT_PASSWORD: &str = "test password";
-    fn test_scrypt_metadata() -> AccountMetadata {
-        AccountMetadata::test_new_weak_scrypt_with_salt(
-            "Test Display Name".into(),
-            TEST_SCRYPT_SALT,
-        )
-    }
-    lazy_static! {
-        pub static ref TEST_SCRYPT_METADATA: AccountMetadata = test_scrypt_metadata();
-    }
-    // We have precomputed the key produced by the above fixed salt so that each test that wants to
-    // use one doesn't need to perform an additional key derivation every single time.  A test
-    // ensures that we do the work at least once to make sure our constant is correct.
-    pub const TEST_SCRYPT_KEY: [u8; 32] = [
-        88, 91, 129, 123, 173, 34, 21, 1, 23, 147, 87, 189, 56, 149, 89, 132, 210, 235, 150, 102,
-        129, 93, 202, 53, 115, 170, 162, 217, 254, 115, 216, 181,
-    ];
 
     #[fuchsia::test]
     async fn test_scrypt_key_derivation_weak_for_tests() {
