@@ -8,6 +8,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -23,6 +24,7 @@ import (
 	"github.com/pkg/sftp"
 	"golang.org/x/crypto/ssh"
 
+	botanistconstants "go.fuchsia.dev/fuchsia/tools/botanist/constants"
 	"go.fuchsia.dev/fuchsia/tools/debug/elflib"
 	"go.fuchsia.dev/fuchsia/tools/integration/testsharder"
 	"go.fuchsia.dev/fuchsia/tools/lib/clock"
@@ -127,6 +129,8 @@ type SubprocessTester struct {
 	dir               string
 	localOutputDir    string
 	getModuleBuildIDs func(string) ([]string, error)
+	nsjailPath        string
+	nsjailRoot        string
 }
 
 func getModuleBuildIDs(test string) ([]string, error) {
@@ -147,12 +151,14 @@ func getModuleBuildIDs(test string) ([]string, error) {
 
 // NewSubprocessTester returns a SubprocessTester that can execute tests
 // locally with a given working directory and environment.
-func NewSubprocessTester(dir string, env []string, localOutputDir string) Tester {
+func NewSubprocessTester(dir string, env []string, localOutputDir, nsjailPath, nsjailRoot string) Tester {
 	return &SubprocessTester{
 		dir:               dir,
 		env:               env,
 		localOutputDir:    localOutputDir,
 		getModuleBuildIDs: getModuleBuildIDs,
+		nsjailPath:        nsjailPath,
+		nsjailRoot:        nsjailRoot,
 	}
 }
 
@@ -193,7 +199,122 @@ func (t *SubprocessTester) Test(ctx context.Context, test testsharder.Test, stdo
 		ctx, cancel = context.WithTimeout(ctx, test.Timeout)
 		defer cancel()
 	}
-	err := r.Run(ctx, []string{test.Path}, stdout, stderr)
+	testCmd := []string{test.Path}
+	if t.nsjailPath != "" {
+		testCmdBuilder := &NsJailCmdBuilder{
+			Bin: t.nsjailPath,
+			// TODO(rudymathu): Eventually, this should be a more fine grained
+			// property that disables network isolation only on tests that explicitly
+			// request it.
+			IsolateNetwork: false,
+			MountPoints: []*MountPt{
+				{
+					Src:      t.localOutputDir,
+					Writable: true,
+				},
+			},
+		}
+		// Mount TMPDIR as /tmp if it exists. This should always be set in infrastructure.
+		tmpDir := os.Getenv("TMPDIR")
+		if tmpDir != "" {
+			testCmdBuilder.MountPoints = append(
+				testCmdBuilder.MountPoints,
+				&MountPt{
+					Src:      tmpDir,
+					Writable: true,
+				},
+				&MountPt{
+					Src:      tmpDir,
+					Dst:      "/tmp",
+					Writable: true,
+				},
+			)
+		}
+		// Set the root of the NsJail and the working directory.
+		// The working directory is expected to be a subdirectory of the root,
+		// and must be passed in as a relative path to the root.
+		absRoot, err := filepath.Abs(t.nsjailRoot)
+		if err != nil {
+			testResult.FailReason = err.Error()
+			return testResult, nil
+		}
+		testCmdBuilder.Chroot = absRoot
+
+		cwd, err := os.Getwd()
+		if err != nil {
+			testResult.FailReason = err.Error()
+			return testResult, nil
+		}
+		relCwd, err := filepath.Rel(absRoot, cwd)
+		if err != nil {
+			testResult.FailReason = err.Error()
+			return testResult, nil
+		}
+		testCmdBuilder.Cwd = relCwd
+
+		// Mount the testbed config and any serial sockets.
+		testbedConfigPath := os.Getenv(botanistconstants.TestbedConfigEnvKey)
+		if testbedConfigPath != "" {
+			// Mount the actual config.
+			testCmdBuilder.MountPoints = append(testCmdBuilder.MountPoints, &MountPt{Src: testbedConfigPath})
+
+			// Mount the SSH keys and serial sockets for each target in the testbed.
+			type targetInfo struct {
+				SerialSocket string `json:"serial_socket"`
+				SSHKey       string `json:"ssh_key"`
+			}
+			b, err := ioutil.ReadFile(testbedConfigPath)
+			if err != nil {
+				testResult.FailReason = err.Error()
+				return testResult, nil
+			}
+			var testbedConfig []targetInfo
+			if err := json.Unmarshal(b, &testbedConfig); err != nil {
+				testResult.FailReason = err.Error()
+				return testResult, nil
+			}
+			serialSockets := make(map[string]struct{})
+			sshKeys := make(map[string]struct{})
+			for _, config := range testbedConfig {
+				if config.SSHKey != "" {
+					sshKeys[config.SSHKey] = struct{}{}
+				}
+				if config.SerialSocket != "" {
+					serialSockets[config.SerialSocket] = struct{}{}
+				}
+			}
+			for socket := range serialSockets {
+				absSocketPath, err := filepath.Abs(socket)
+				if err != nil {
+					testResult.FailReason = err.Error()
+					return testResult, nil
+				}
+				testCmdBuilder.MountPoints = append(testCmdBuilder.MountPoints, &MountPt{
+					Src:      absSocketPath,
+					Writable: true,
+				})
+			}
+			for key := range sshKeys {
+				absKeyPath, err := filepath.Abs(key)
+				if err != nil {
+					testResult.FailReason = err.Error()
+					return testResult, nil
+				}
+				testCmdBuilder.MountPoints = append(testCmdBuilder.MountPoints, &MountPt{
+					Src: absKeyPath,
+				})
+			}
+		}
+		// TODO(rudymathu): Uncomment this section to enable host test sandboxing.
+		/*
+			testCmd, err = testCmdBuilder.Build(testCmd)
+			if err != nil {
+				testResult.FailReason = err.Error()
+				return testResult, nil
+			}
+		*/
+	}
+	err := r.Run(ctx, testCmd, stdout, stderr)
 	if err == nil {
 		testResult.Result = runtests.TestSuccess
 	} else if errors.Is(err, context.DeadlineExceeded) {

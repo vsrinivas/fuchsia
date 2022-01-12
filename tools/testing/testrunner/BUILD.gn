@@ -21,6 +21,7 @@ go_library("lib") {
     ":constants",
     "//third_party/golibs:github.com/pkg/sftp",
     "//third_party/golibs:golang.org/x/crypto",
+    "//tools/botanist:constants",
     "//tools/build",
     "//tools/debug/elflib",
     "//tools/integration/testsharder:testsharder_lib",

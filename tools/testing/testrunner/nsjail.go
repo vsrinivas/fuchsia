@@ -111,6 +111,15 @@ func (n *NsJailCmdBuilder) Build(subcmd []string) ([]string, error) {
 
 		}
 	}
+
+	// Remove some default rlimits as our emulator tests write large files
+	// and allocate a large amount of RAM.
+	cmd = append(
+		cmd,
+		"--rlimit_as", "inf",
+		"--rlimit_fsize", "inf",
+	)
+
 	cmd = append(cmd, "--")
 	cmd = append(cmd, subcmd...)
 	return cmd, nil
