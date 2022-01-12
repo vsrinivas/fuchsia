@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/images/filesystem_limits.gni")
 import("//build/rust/config.gni")
 
 declare_args() {
@@ -67,10 +68,11 @@ config("bootfs") {
   # TODO(fxbug.dev/63313): use "z" when resolved.
   rustflags = [ "-Copt-level=s" ]
 
-  if (is_debug) {  # Debug builds produce very large Rust binaries
-    # Force ThinLTO to squeeze Rust binaries further so the ZBI doesn't overflow
-    # under any of the extraneous circumstances defined above.
+  if (is_debug &&  # Debug builds produce large Rust binaries
+      max_fuchsia_zbi_size > 0) {  # So large they might not fit in the ZBI
+    # Force ThinLTO to squeeze Rust binaries further.
     # See: fxbug.dev/80514
+    # See: fxbug.dev/91325
     configs = [ "//build/config/lto:thinlto" ]
   }
 
