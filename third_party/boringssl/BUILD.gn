@@ -10,10 +10,6 @@ if (is_fuchsia) {
   import("//build/components.gni")
 }
 
-declare_args() {
-  run_slow_bssl_tests = false
-}
-
 ################################################################################
 # Public targets
 
@@ -194,21 +190,21 @@ executable("bssl") {
 ##############
 if (is_fuchsia) {
   fuchsia_unittest_component("crypto_test_component") {
+    manifest = "meta/crypto_test.cml"
     deps = [ ":crypto_test" ]
   }
   fuchsia_unittest_component("ssl_test_component") {
     deps = [ ":ssl_test" ]
   }
   fuchsia_test_package("boringssl_tests") {
-    test_components = [ ":ssl_test_component" ]
-
-    # This test takes a long time to run, and it is included in every subset
-    # of the Fuchsia build.
-    # TODO(bgoldman): Find a way to skip this test when runtests is set to
-    # skip "large" tests.
-    if (run_slow_bssl_tests) {
-      test_components += [ ":crypto_test_component" ]
-    }
+    test_components = [
+      ":crypto_test_component",
+      ":ssl_test_component",
+    ]
+    deps = [
+      "//src/connectivity/network/netstack:component",
+      "//src/sys/stash:stash_secure_v2",
+    ]
   }
 }
 

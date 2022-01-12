@@ -118,7 +118,7 @@ func main() {
 
 	log.Println()
 	log.Println("To test, run:")
-	log.Println("  $ fx set ... --with //third_party/boringssl:tests --args=run_slow_bssl_tests=true")
+	log.Println("  $ fx set ... --with //third_party/boringssl:tests")
 	log.Println("  $ fx build")
 	log.Println("  $ fx serve")
 	log.Println("  $ fx test boringssl_tests")

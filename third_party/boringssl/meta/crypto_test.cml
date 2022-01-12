@@ -1,0 +1,48 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [
+        "//sdk/lib/syslog/client.shard.cml",
+        "//src/sys/test_runners/gtest/default.shard.cml",
+    ],
+    program: {
+        binary: "bin/crypto_test",
+    },
+    children: [
+        {
+            name: "stash",
+            url: "fuchsia-pkg://fuchsia.com/stash#meta/stash_secure.cm",
+        },
+        {
+            name: "netstack",
+            url: "#meta/netstack.cm",
+        },
+    ],
+    use: [
+        {
+            protocol: [ "fuchsia.posix.socket.Provider" ],
+            from: "#netstack",
+        },
+    ],
+    offer: [
+        {
+            protocol: "fuchsia.logger.LogSink",
+            from: "parent",
+            to: [
+                "#netstack",
+                "#stash",
+            ],
+        },
+        {
+            protocol: "fuchsia.stash.SecureStore",
+            from: "#stash",
+            to: "#netstack",
+        },
+        {
+            storage: "cache",
+            from: "parent",
+            to: "#netstack",
+        },
+    ],
+}
