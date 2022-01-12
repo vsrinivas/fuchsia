@@ -6,9 +6,10 @@ package fidlgen_test
 
 import (
 	"encoding/json"
-	"fmt"
 	"math"
 	"reflect"
+	"sort"
+	"strings"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -20,6 +21,21 @@ import (
 // trailing newline.
 func toDocComment(input string) string {
 	return " " + input + "\n"
+}
+
+// Compares two fidlgen.Locations lexicographically on filename and then on
+// the location within the file.
+func LocationCmp(a, b *fidlgen.Location) bool {
+	if cmp := strings.Compare(a.Filename, b.Filename); cmp != 0 {
+		return cmp < 0
+	}
+	if a.Line != b.Line {
+		return a.Line < b.Line
+	}
+	if a.Column != b.Column {
+		return a.Column < b.Column
+	}
+	return a.Length < b.Length
 }
 
 func TestCanUnmarshalLargeOrdinal(t *testing.T) {
@@ -118,160 +134,375 @@ func TestCanUnmarshalAttributeValue(t *testing.T) {
 	}
 }
 
-func TestCanUnmarshalSignedEnumUnknownValue(t *testing.T) {
-	inputTmpl := `{
-		"enum_declarations": [
-			{
-			"type": "int32",
-			"strict": false,
-			"maybe_unknown_value": %s
-			}
-		]
-	}`
+func TestCanUnmarshalSignedEnums(t *testing.T) {
 
-	cases := []struct {
-		jsonValue     string
-		expectedValue int64
-	}{
-		{"0", 0},
-		{"300", 300},
-		{"-300", -300},
-		{"9223372036854775806", math.MaxInt64 - 1},
-		{"9223372036854775807", math.MaxInt64},
-		{"-9223372036854775808", math.MinInt64},
-	}
-	for _, ex := range cases {
-		root, err := fidlgen.ReadJSONIrContent([]byte(fmt.Sprintf(inputTmpl, ex.jsonValue)))
-		if err != nil {
-			t.Fatalf("failed to read JSON IR: %s", err)
-		}
-		enumOfSignedInt := root.Enums[0]
-		unknownValue, err := enumOfSignedInt.UnknownValueAsInt64()
-		if err != nil {
-			t.Fatalf("failed to retrieve UnknownValueAsInt64: %s", err)
-		}
-		if unknownValue != ex.expectedValue {
-			t.Fatalf("jsonValue '%s': expected %d, actual %d",
-				ex.jsonValue, ex.expectedValue, unknownValue)
-		}
-	}
-}
+	root := fidlgentest.EndToEndTest{T: t}.Single(`
+		library example;
 
-func TestCanUnmarshalUnsignedEnumUnknownValue(t *testing.T) {
-	inputTmpl := `{
-		"enum_declarations": [
-			{
-			"type": "uint32",
-			"strict": false,
-			"maybe_unknown_value": %s
-			}
-		]
-	}`
+		type StrictEnum = strict enum : uint8 {
+			FALSE = 0;
+			TRUE = 1;
+		};
 
-	cases := []struct {
-		jsonValue     string
-		expectedValue uint64
-	}{
-		{"0", 0},
-		{"300", 300},
-		{"18446744073709551614", math.MaxUint64 - 1},
-		{"18446744073709551615", math.MaxUint64},
-	}
-	for _, ex := range cases {
-		root, err := fidlgen.ReadJSONIrContent([]byte(fmt.Sprintf(inputTmpl, ex.jsonValue)))
-		if err != nil {
-			t.Fatalf("failed to read JSON IR: %s", err)
-		}
-		enumOfSignedInt := root.Enums[0]
-		unknownValue, err := enumOfSignedInt.UnknownValueAsUint64()
-		if err != nil {
-			t.Fatalf("failed to retrieve UnknownValueAsUint64: %s", err)
-		}
-		if unknownValue != ex.expectedValue {
-			t.Fatalf("jsonValue '%s': expected %d, actual %d",
-				ex.jsonValue, ex.expectedValue, unknownValue)
-		}
-	}
-}
+		type EmptyEnum = flexible enum : uint16 {};
+		
+		type FlexibleEnum = flexible enum : int64 {
+			FIRST = 1;
+			SECOND = 2;
+		};
+		
+		type FlexibleEnumWithPlaceholder = flexible enum : uint32 {
+			FIRST = 1;
+			SECOND = 2;
+			@unknown
+			PLACEHOLDER = 3;
+		};
+	`)
 
-func TestCanUnmarshalBitsStrictness(t *testing.T) {
-	inputTmpl := `{
-		"bits_declarations": [
-			{
-				"type": {
-					"kind": "primitive",
-					"subtype": "uint32",
-					"type_shape_v1": {},
-					"type_shape_v2": {}
+	// Sort by location for easier comparison with expected values.
+	sort.Slice(root.Enums, func(i, j int) bool {
+		return LocationCmp(&root.Enums[i].Location, &root.Enums[j].Location)
+	})
+
+	expected := []fidlgen.Enum{
+		{
+			Layout: fidlgen.Layout{
+				Decl: fidlgen.Decl{
+					Name: "example/StrictEnum",
 				},
-				"mask": "1",
-				"members": [],
-				"strict": %s
-			}
-		]
-	}`
-
-	cases := []struct {
-		jsonValue     string
-		expectedValue fidlgen.Strictness
-	}{
-		{"false", fidlgen.IsFlexible},
-		{"true", fidlgen.IsStrict},
+			},
+			Type: fidlgen.Uint8,
+			Members: []fidlgen.EnumMember{
+				{
+					Name: "FALSE",
+					Value: fidlgen.Constant{
+						Kind: fidlgen.LiteralConstant,
+						Literal: fidlgen.Literal{
+							Kind:  fidlgen.NumericLiteral,
+							Value: "0",
+						},
+						Value: "0",
+					},
+				},
+				{
+					Name: "TRUE",
+					Value: fidlgen.Constant{
+						Kind: fidlgen.LiteralConstant,
+						Literal: fidlgen.Literal{
+							Kind:  fidlgen.NumericLiteral,
+							Value: "1",
+						},
+						Value: "1",
+					},
+				},
+			},
+			Strictness:      fidlgen.IsStrict,
+			RawUnknownValue: fidlgen.Int64OrUint64FromUint64ForTesting(0),
+		},
+		{
+			Layout: fidlgen.Layout{
+				Decl: fidlgen.Decl{
+					Name: "example/EmptyEnum",
+				},
+			},
+			Type:            fidlgen.Uint16,
+			Members:         []fidlgen.EnumMember{},
+			Strictness:      fidlgen.IsFlexible,
+			RawUnknownValue: fidlgen.Int64OrUint64FromUint64ForTesting(math.MaxUint16),
+		},
+		{
+			Layout: fidlgen.Layout{
+				Decl: fidlgen.Decl{
+					Name: "example/FlexibleEnum",
+				},
+			},
+			Type: fidlgen.Int64,
+			Members: []fidlgen.EnumMember{
+				{
+					Name: "FIRST",
+					Value: fidlgen.Constant{
+						Kind: fidlgen.LiteralConstant,
+						Literal: fidlgen.Literal{
+							Kind:  fidlgen.NumericLiteral,
+							Value: "1",
+						},
+						Value: "1",
+					},
+				},
+				{
+					Name: "SECOND",
+					Value: fidlgen.Constant{
+						Kind: fidlgen.LiteralConstant,
+						Literal: fidlgen.Literal{
+							Kind:  fidlgen.NumericLiteral,
+							Value: "2",
+						},
+						Value: "2",
+					},
+				},
+			},
+			Strictness:      fidlgen.IsFlexible,
+			RawUnknownValue: fidlgen.Int64OrUint64FromInt64ForTesting(math.MaxInt64),
+		},
+		{
+			Layout: fidlgen.Layout{
+				Decl: fidlgen.Decl{
+					Name: "example/FlexibleEnumWithPlaceholder",
+				},
+			},
+			Type: fidlgen.Uint32,
+			Members: []fidlgen.EnumMember{
+				{
+					Name: "FIRST",
+					Value: fidlgen.Constant{
+						Kind: fidlgen.LiteralConstant,
+						Literal: fidlgen.Literal{
+							Kind:  fidlgen.NumericLiteral,
+							Value: "1",
+						},
+						Value: "1",
+					},
+				},
+				{
+					Name: "SECOND",
+					Value: fidlgen.Constant{
+						Kind: fidlgen.LiteralConstant,
+						Literal: fidlgen.Literal{
+							Kind:  fidlgen.NumericLiteral,
+							Value: "2",
+						},
+						Value: "2",
+					},
+				},
+				{
+					Attributes: fidlgen.Attributes{
+						[]fidlgen.Attribute{
+							{
+								Name: fidlgen.Identifier("unknown"),
+								Args: []fidlgen.AttributeArg{},
+							},
+						},
+					},
+					Name: "PLACEHOLDER",
+					Value: fidlgen.Constant{
+						Kind: fidlgen.LiteralConstant,
+						Literal: fidlgen.Literal{
+							Kind:  fidlgen.NumericLiteral,
+							Value: "3",
+						},
+						Value: "3",
+					},
+				},
+			},
+			Strictness:      fidlgen.IsFlexible,
+			RawUnknownValue: fidlgen.Int64OrUint64FromUint64ForTesting(3),
+		},
 	}
-	for _, ex := range cases {
-		root, err := fidlgen.ReadJSONIrContent([]byte(fmt.Sprintf(inputTmpl, ex.jsonValue)))
-		if err != nil {
-			t.Fatalf("failed to read JSON IR: %s", err)
+
+	if len(root.Enums) != len(expected) {
+		t.Fatalf("unexpected number of enum declarations")
+	}
+
+	for i, actual := range root.Enums {
+		// Sanitize Location and NamindContext values, as they're not relevant here.
+		actual.Layout.Decl.Location = fidlgen.Location{}
+		actual.Layout.NamingContext = nil
+		if !reflect.DeepEqual(actual, expected[i]) {
+			t.Errorf("\nexpected: %#v\nactual: %#v\n", expected[i], actual)
 		}
-		bits := root.Bits[0]
-		if bits.Strictness != ex.expectedValue {
-			t.Fatalf("jsonValue '%s': expected %v, actual %v",
-				ex.jsonValue, ex.expectedValue, bits.Strictness)
+	}
+}
+
+func TestCanUnmarshalBits(t *testing.T) {
+	root := fidlgentest.EndToEndTest{T: t}.Single(`
+		library example;
+
+		type Perms = flexible bits : uint8 {
+			R = 0b0001;
+			W = 0b0010;
+			X = 0b0100;
+		};
+
+		type StrictBits = strict bits : uint64 {
+			SMALLEST = 1;
+			BIGGEST = 0x8000000000000000;
+		};
+	`)
+
+	// Sort by location for easier comparison with expected values.
+	sort.Slice(root.Bits, func(i, j int) bool {
+		return LocationCmp(&root.Bits[i].Location, &root.Bits[j].Location)
+	})
+
+	uint8Shape := fidlgen.TypeShape{
+		InlineSize: 1,
+		Alignment:  1,
+	}
+
+	uint64Shape := fidlgen.TypeShape{
+		InlineSize: 8,
+		Alignment:  8,
+	}
+
+	expected := []fidlgen.Bits{
+		{
+			Layout: fidlgen.Layout{
+				Decl: fidlgen.Decl{
+					Name: "example/Perms",
+				},
+			},
+			Type: fidlgen.Type{
+				Kind:             fidlgen.PrimitiveType,
+				PrimitiveSubtype: fidlgen.Uint8,
+				TypeShapeV1:      uint8Shape,
+				TypeShapeV2:      uint8Shape,
+			},
+			Mask: "7",
+			Members: []fidlgen.BitsMember{
+				{
+					Name: "R",
+					Value: fidlgen.Constant{
+						Kind: fidlgen.LiteralConstant,
+						Literal: fidlgen.Literal{
+							Kind:  fidlgen.NumericLiteral,
+							Value: "1",
+						},
+						Value: "1",
+					},
+				},
+				{
+					Name: "W",
+					Value: fidlgen.Constant{
+						Kind: fidlgen.LiteralConstant,
+						Literal: fidlgen.Literal{
+							Kind:  fidlgen.NumericLiteral,
+							Value: "2",
+						},
+						Value: "2",
+					},
+				},
+				{
+					Name: "X",
+					Value: fidlgen.Constant{
+						Kind: fidlgen.LiteralConstant,
+						Literal: fidlgen.Literal{
+							Kind:  fidlgen.NumericLiteral,
+							Value: "4",
+						},
+						Value: "4",
+					},
+				},
+			},
+			Strictness: fidlgen.IsFlexible,
+		},
+		{
+			Layout: fidlgen.Layout{
+				Decl: fidlgen.Decl{
+					Name: "example/StrictBits",
+				},
+			},
+			Type: fidlgen.Type{
+				Kind:             fidlgen.PrimitiveType,
+				PrimitiveSubtype: fidlgen.Uint64,
+				TypeShapeV1:      uint64Shape,
+				TypeShapeV2:      uint64Shape,
+			},
+			Mask: "9223372036854775809",
+			Members: []fidlgen.BitsMember{
+				{
+					Name: "SMALLEST",
+					Value: fidlgen.Constant{
+						Kind: fidlgen.LiteralConstant,
+						Literal: fidlgen.Literal{
+							Kind:  fidlgen.NumericLiteral,
+							Value: "1",
+						},
+						Value: "1",
+					},
+				},
+				{
+					Name: "BIGGEST",
+					Value: fidlgen.Constant{
+						Kind: fidlgen.LiteralConstant,
+						Literal: fidlgen.Literal{
+							Kind:  fidlgen.NumericLiteral,
+							Value: "9223372036854775808",
+						},
+						Value: "9223372036854775808",
+					},
+				},
+			},
+			Strictness: fidlgen.IsStrict,
+		},
+	}
+
+	if len(root.Bits) != len(expected) {
+		t.Fatalf("unexpected number of bits declarations")
+	}
+
+	for i, actual := range root.Bits {
+		// Sanitize Location and NamindContext values, as they're not relevant here.
+		actual.Layout.Decl.Location = fidlgen.Location{}
+		actual.Layout.NamingContext = nil
+		if !reflect.DeepEqual(actual, expected[i]) {
+			t.Errorf("\nexpected: %#v\nactual: %#v\n", expected[i], actual)
 		}
 	}
 }
 
 func TestCanUnmarshalLocation(t *testing.T) {
-	inputTmpl := `{
-		"const_declarations": [
-			{
-				"name": "lib/CONST",
-				"location": {
-				  "filename": "path/to/file.fidl",
-				  "line": 17,
-				  "column": 7,
-				  "length": 18
-				},
-				"type": {
-				  "kind": "primitive",
-				  "subtype": "int32",
-				  "type_shape_v1": {},
-				  "type_shape_v2": {}
-				},
-				"value": {
-				  "kind": "literal",
-				  "value": "0",
-				  "literal": {
-				  "kind": "numeric",
-				      "value": "0",
-					  "expression": "0"
-				  }
-				}
-			}
-		]
-	}`
+	root := fidlgentest.EndToEndTest{T: t}.Single(`
+		library example;
 
-	root, err := fidlgen.ReadJSONIrContent([]byte(inputTmpl))
-	if err != nil {
-		t.Fatalf("failed to read JSON IR: %s", err)
+		const CONST_A bool = false;
+
+		      const CONST_B uint32 = 10;		
+	`)
+
+	// Sort by location for easier comparison with expected values.
+	sort.Slice(root.Consts, func(i, j int) bool {
+		return LocationCmp(&root.Consts[i].Location, &root.Consts[j].Location)
+	})
+
+	expected := []fidlgen.Const{
+		{
+			Decl: fidlgen.Decl{
+				Name: "example/CONST_A",
+				Location: fidlgen.Location{
+					Line:   4,
+					Column: 9,
+					Length: 7,
+				},
+			},
+		},
+		{
+			Decl: fidlgen.Decl{
+				Name: "example/CONST_B",
+				Location: fidlgen.Location{
+					Line:   6,
+					Column: 15,
+					Length: 7,
+				},
+			},
+		},
 	}
-	if len(root.Consts) == 0 {
-		t.Fatalf("failed to parse constant declarations")
+
+	if len(root.Consts) != len(expected) {
+		t.Fatalf("unexpected number of constant declarations")
 	}
-	actual := root.Consts[0].Location
-	expected := fidlgen.Location{"path/to/file.fidl", 17, 7, 18}
-	if !reflect.DeepEqual(actual, expected) {
-		t.Errorf("expected %#v; actual %#v", expected, actual)
+
+	for i, actual := range root.Consts {
+		if actual.Location.Filename == "" {
+			t.Errorf("Constant %s has empty file location", actual.Name)
+		}
+
+		// Sanitize Location.Filename, Value, and Type values, as they're not relevant here.
+		actual.Location.Filename = ""
+		actual.Value = fidlgen.Constant{}
+		actual.Type = fidlgen.Type{}
+		if !reflect.DeepEqual(actual, expected[i]) {
+			t.Errorf("\nexpected: %#v\nactual: %#v\n", expected[i], actual)
+		}
 	}
 }
 

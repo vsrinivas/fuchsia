@@ -1330,6 +1330,17 @@ func (n *int64OrUint64) readUint64() uint64 {
 	return n.u
 }
 
+func Int64OrUint64FromInt64ForTesting(val int64) int64OrUint64 {
+	if val >= 0 {
+		return int64OrUint64{0, uint64(val)}
+	}
+	return int64OrUint64{val, 0}
+}
+
+func Int64OrUint64FromUint64ForTesting(val uint64) int64OrUint64 {
+	return int64OrUint64{0, val}
+}
+
 var _ json.Unmarshaler = (*int64OrUint64)(nil)
 
 func (n *int64OrUint64) UnmarshalJSON(data []byte) error {
