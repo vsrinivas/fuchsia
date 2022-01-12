@@ -83,7 +83,6 @@ group("test_infra") {
   linux_x64_only_tools = [
     "//src/diagnostics/triage:triage_bin",
     "//tools/debug/covargs",
-    "//tools/debug/symbolize",
     "//tools/testing/resultdb",
     "//tools/testing/tefmocheck",
   ]
