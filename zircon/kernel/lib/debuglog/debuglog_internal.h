@@ -200,7 +200,9 @@ class DLog {
   ThreadState notifier_state_;
   ThreadState dumper_state_;
 
-  mutable DECLARE_SPINLOCK(DLog) lock_;
+  // Use MonitoredSpinLock to provide lockup detector diagnostics for the critical sections
+  // protected by this lock.
+  mutable DECLARE_SPINLOCK_WITH_TYPE(DLog, MonitoredSpinLock) lock_;
   DECLARE_LOCK(DLog, Mutex) readers_lock_;
 
   size_t head_ TA_GUARDED(lock_) = 0;

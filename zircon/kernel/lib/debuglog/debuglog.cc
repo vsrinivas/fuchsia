@@ -112,7 +112,7 @@ zx_status_t DLog::Shutdown(zx_time_t deadline) {
   // flow up stream, then a sufficiently speedy write could prevent the
   // dumper thread from terminating.
   {
-    Guard<SpinLock, IrqSave> guard{&lock_};
+    Guard<MonitoredSpinLock, IrqSave> guard{&lock_, SOURCE_TAG};
     this->shutdown_requested_ = true;
   }
 
@@ -210,7 +210,7 @@ zx_status_t DLog::Write(uint32_t severity, uint32_t flags, ktl::string_view str)
 
   bool holding_thread_lock;
   {
-    Guard<SpinLock, IrqSave> guard{&lock_};
+    Guard<MonitoredSpinLock, IrqSave> guard{&lock_, SOURCE_TAG};
 
     hdr.sequence = sequence_count_;
 
@@ -284,7 +284,7 @@ size_t DLog::RenderToCrashlog(ktl::span<char> target_span) const {
   // which would be Very Bad.  Best to just say that we cannot actually recover
   // any portion of the debuglog to the crashlog and move on.
   InterruptDisableGuard irqd;
-  Guard<SpinLock, TryLockNoIrqSave> guard{&lock_};
+  Guard<MonitoredSpinLock, TryLockNoIrqSave> guard{&lock_, SOURCE_TAG};
   if (static_cast<bool>(guard)) {
     return RenderToCrashlogLocked(target_span);
   } else {
@@ -441,7 +441,7 @@ zx_status_t DlogReader::Read(uint32_t flags, dlog_record_t* record, size_t* actu
   zx_status_t status = ZX_ERR_SHOULD_WAIT;
 
   {
-    Guard<SpinLock, IrqSave> guard{&log_->lock_};
+    Guard<MonitoredSpinLock, IrqSave> guard{&log_->lock_, SOURCE_TAG};
 
     size_t rtail = tail_;
 
@@ -528,7 +528,7 @@ void DlogReader::Initialize(NotifyCallback* notify, void* cookie, DLog* log) {
   bool do_notify = false;
 
   {
-    Guard<SpinLock, IrqSave> guard{&log_->lock_};
+    Guard<MonitoredSpinLock, IrqSave> guard{&log_->lock_, SOURCE_TAG};
     tail_ = log_->tail_;
     do_notify = (log_->tail_ != log_->head_);
   }
