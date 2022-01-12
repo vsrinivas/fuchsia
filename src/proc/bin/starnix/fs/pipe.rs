@@ -303,7 +303,7 @@ impl FileOps for PipeFileObject {
         current_task: &CurrentTask,
         data: &[UserBuffer],
     ) -> Result<usize, Errno> {
-        let requested = UserBuffer::get_total_length(data);
+        let requested = UserBuffer::get_total_length(data)?;
         let mut actual = 0;
         let mut user_buffers = UserBufferIterator::new(data);
         file.blocking_op(

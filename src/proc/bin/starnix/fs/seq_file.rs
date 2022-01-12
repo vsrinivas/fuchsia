@@ -78,7 +78,7 @@ impl<C: Default> SeqFileState<C> {
         if offset < self.byte_offset {
             self.reset();
         }
-        let read_size = UserBuffer::get_total_length(data);
+        let read_size = UserBuffer::get_total_length(data)?;
 
         // 1. Grow the buffer until either EOF or it's at least as big as the read request
         while self.byte_offset + self.buf.0.len() < offset + read_size {

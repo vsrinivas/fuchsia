@@ -84,7 +84,7 @@ impl SocketFile {
     ) -> Result<usize, Errno> {
         // TODO: Implement more `flags`.
 
-        let requested = UserBuffer::get_total_length(data);
+        let requested = UserBuffer::get_total_length(data)?;
         let mut actual = 0;
         let mut user_buffers = UserBufferIterator::new(data);
 

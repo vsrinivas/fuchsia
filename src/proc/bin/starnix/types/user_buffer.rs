@@ -5,6 +5,7 @@
 use zerocopy::{AsBytes, FromBytes};
 
 use crate::types::*;
+use crate::{errno, error};
 
 /// Matches iovec_t.
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq, AsBytes, FromBytes)]
@@ -15,14 +16,20 @@ pub struct UserBuffer {
 }
 
 impl UserBuffer {
-    pub fn get_total_length(buffers: &[UserBuffer]) -> usize {
-        let mut total = 0;
+    pub fn get_total_length(buffers: &[UserBuffer]) -> Result<usize, Errno> {
+        let mut total: usize = 0;
         for buffer in buffers {
-            total += buffer.length;
+            total = total.checked_add(buffer.length).ok_or_else(|| errno!(EINVAL))?;
         }
-        total
+        // The docs say we should return EINVAL if "the sum of the iov_len
+        // values overflows an ssize_t value."
+        if total > isize::MAX as usize {
+            return error!(EINVAL);
+        }
+        Ok(total)
     }
 }
+
 pub struct UserBufferIterator<'a> {
     buffers: &'a [UserBuffer],
     index: usize,
@@ -59,6 +66,28 @@ impl<'a> UserBufferIterator<'a> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn test_get_total_length_overflow() {
+        let buffers = vec![
+            UserBuffer { address: UserAddress::from_ptr(0x20), length: usize::MAX - 10 },
+            UserBuffer { address: UserAddress::from_ptr(0x820), length: usize::MAX - 10 },
+            UserBuffer { address: UserAddress::from_ptr(0x3820), length: usize::MAX - 10 },
+        ];
+        assert!(UserBuffer::get_total_length(&buffers).is_err());
+        let buffers = vec![
+            UserBuffer { address: UserAddress::from_ptr(0x20), length: (isize::MAX - 10) as usize },
+            UserBuffer {
+                address: UserAddress::from_ptr(0x820),
+                length: (isize::MAX - 10) as usize,
+            },
+            UserBuffer {
+                address: UserAddress::from_ptr(0x3820),
+                length: (isize::MAX - 10) as usize,
+            },
+        ];
+        assert!(UserBuffer::get_total_length(&buffers).is_err());
+    }
 
     #[test]
     fn test_user_buffer_iterator() {

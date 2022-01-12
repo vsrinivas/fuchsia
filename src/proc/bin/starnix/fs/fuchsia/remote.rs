@@ -159,7 +159,7 @@ impl FsNodeOps for RemoteNode {
 }
 
 fn zxio_read(zxio: &Zxio, current_task: &CurrentTask, data: &[UserBuffer]) -> Result<usize, Errno> {
-    let total = UserBuffer::get_total_length(data);
+    let total = UserBuffer::get_total_length(data)?;
     let mut bytes = vec![0u8; total];
     let actual = zxio.read(&mut bytes).map_err(|status| from_status_like_fdio!(status))?;
     current_task.mm.write_all(data, &bytes[0..actual])?;
@@ -172,7 +172,7 @@ fn zxio_read_at(
     offset: usize,
     data: &[UserBuffer],
 ) -> Result<usize, Errno> {
-    let total = UserBuffer::get_total_length(data);
+    let total = UserBuffer::get_total_length(data)?;
     let mut bytes = vec![0u8; total];
     let actual =
         zxio.read_at(offset as u64, &mut bytes).map_err(|status| from_status_like_fdio!(status))?;
@@ -185,7 +185,7 @@ fn zxio_write(
     current_task: &CurrentTask,
     data: &[UserBuffer],
 ) -> Result<usize, Errno> {
-    let total = UserBuffer::get_total_length(data);
+    let total = UserBuffer::get_total_length(data)?;
     let mut bytes = vec![0u8; total];
     current_task.mm.read_all(data, &mut bytes)?;
     let actual = zxio.write(&bytes).map_err(|status| from_status_like_fdio!(status))?;
@@ -198,7 +198,7 @@ fn zxio_write_at(
     offset: usize,
     data: &[UserBuffer],
 ) -> Result<usize, Errno> {
-    let total = UserBuffer::get_total_length(data);
+    let total = UserBuffer::get_total_length(data)?;
     let mut bytes = vec![0u8; total];
     current_task.mm.read_all(data, &mut bytes)?;
     let actual =

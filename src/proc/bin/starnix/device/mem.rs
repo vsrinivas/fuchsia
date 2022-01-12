@@ -70,7 +70,7 @@ impl FileOps for DevNull {
         _offset: usize,
         data: &[UserBuffer],
     ) -> Result<usize, Errno> {
-        Ok(UserBuffer::get_total_length(data))
+        UserBuffer::get_total_length(data)
     }
 
     fn read_at(
@@ -101,7 +101,7 @@ impl FileOps for DevZero {
         _offset: usize,
         data: &[UserBuffer],
     ) -> Result<usize, Errno> {
-        Ok(UserBuffer::get_total_length(data))
+        UserBuffer::get_total_length(data)
     }
 
     fn read_at(
@@ -174,7 +174,7 @@ impl FileOps for DevRandom {
         _offset: usize,
         data: &[UserBuffer],
     ) -> Result<usize, Errno> {
-        Ok(UserBuffer::get_total_length(data))
+        UserBuffer::get_total_length(data)
     }
 
     fn read_at(
@@ -221,7 +221,7 @@ impl FileOps for DevKmsg {
         _offset: usize,
         data: &[UserBuffer],
     ) -> Result<usize, Errno> {
-        let total = UserBuffer::get_total_length(data);
+        let total = UserBuffer::get_total_length(data)?;
         let mut bytes = vec![0; total];
         current_task.mm.read_all(data, &mut bytes)?;
         log::info!(target: "kmsg", "{}", String::from_utf8_lossy(&bytes).trim_end_matches('\n'));

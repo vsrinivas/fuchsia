@@ -41,7 +41,7 @@ impl FileOps for SeLoad {
         if offset != 0 {
             return error!(EINVAL);
         }
-        let size = UserBuffer::get_total_length(data);
+        let size = UserBuffer::get_total_length(data)?;
         let mut buf = vec![0u8; size];
         current_task.mm.read_all(&data, &mut buf)?;
         log::info!("got selinux policy, length {}, ignoring", size);
@@ -74,7 +74,7 @@ impl FileOps for SeEnforce {
         if offset != 0 {
             return error!(EINVAL);
         }
-        let size = UserBuffer::get_total_length(data);
+        let size = UserBuffer::get_total_length(data)?;
         let mut buf = vec![0u8; size];
         current_task.mm.read_all(&data, &mut buf)?;
         let enforce = parse_int(&buf)?;
@@ -107,7 +107,7 @@ impl FileOps for SeCheckReqProt {
         if offset != 0 {
             return error!(EINVAL);
         }
-        let size = UserBuffer::get_total_length(data);
+        let size = UserBuffer::get_total_length(data)?;
         let mut buf = vec![0u8; size];
         current_task.mm.read_all(&data, &mut buf)?;
         let checkreqprot = parse_int(&buf)?;

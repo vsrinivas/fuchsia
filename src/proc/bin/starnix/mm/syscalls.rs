@@ -259,8 +259,8 @@ pub fn sys_process_vm_readv(
     // avoid doing two copies like other IPC mechanisms require. We should avoid this too at some
     // point.
     let len = std::cmp::min(
-        UserBuffer::get_total_length(&local_iov),
-        UserBuffer::get_total_length(&remote_iov),
+        UserBuffer::get_total_length(&local_iov)?,
+        UserBuffer::get_total_length(&remote_iov)?,
     );
     let mut buf = vec![0u8; len];
     let len = task.mm.read_all(&remote_iov, &mut buf)?;

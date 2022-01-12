@@ -98,7 +98,7 @@ impl VmoFileObject {
     ) -> Result<usize, Errno> {
         let mut info = file.node().info_write();
         let file_length = info.size;
-        let want_read = UserBuffer::get_total_length(data);
+        let want_read = UserBuffer::get_total_length(data)?;
         if want_read > MAX_LFS_FILESIZE - offset {
             return error!(EINVAL);
         }
@@ -122,7 +122,7 @@ impl VmoFileObject {
         data: &[UserBuffer],
     ) -> Result<usize, Errno> {
         let mut info = file.node().info_write();
-        let want_write = UserBuffer::get_total_length(data);
+        let want_write = UserBuffer::get_total_length(data)?;
         if want_write > MAX_LFS_FILESIZE - offset {
             return error!(EINVAL);
         }

@@ -30,7 +30,7 @@ impl FileOps for SignalFd {
         current_task: &CurrentTask,
         data: &[UserBuffer],
     ) -> Result<usize, Errno> {
-        let data_len = UserBuffer::get_total_length(data);
+        let data_len = UserBuffer::get_total_length(data)?;
         let mut buf = Vec::new();
         while buf.len() + std::mem::size_of::<signalfd_siginfo>() <= data_len {
             let signal = current_task

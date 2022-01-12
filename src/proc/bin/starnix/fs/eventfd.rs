@@ -102,7 +102,7 @@ impl FileOps for EventFdFileObject {
         current_task: &CurrentTask,
         data: &[UserBuffer],
     ) -> Result<usize, Errno> {
-        if UserBuffer::get_total_length(data) < DATA_SIZE {
+        if UserBuffer::get_total_length(data)? < DATA_SIZE {
             return error!(EINVAL);
         }
 
