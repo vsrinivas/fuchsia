@@ -14,7 +14,8 @@ use {
     regex::Regex,
     serde::{Deserialize, Serialize},
     serde_json,
-    std::{fs, path::Path},
+    std::{fs, path::Path, string::String},
+    thiserror::Error,
     url::{form_urlencoded, Url},
 };
 
@@ -54,6 +55,49 @@ const EXCHANGE_AUTH_CODE_URL: &str = "https://oauth2.googleapis.com/token";
 ///
 /// See RefreshTokenRequest, OauthTokenResponse.
 const OAUTH_REFRESH_TOKEN_ENDPOINT: &str = "https://www.googleapis.com/oauth2/v3/token";
+
+/// Errors specific to this lib, some may be addressed by the caller.
+#[derive(Error, Debug)]
+pub enum GcsError {
+    /// The refresh token is no longer valid (e.g. expired or revoked).
+    /// Do something similar to `gsutil config` or auth_code_url() to generate a
+    /// new refresh token and try again.
+    #[error("GCS refresh token is invalid. Please generate a new GCS OAUTH2 refresh token.")]
+    NeedNewRefreshToken,
+
+    /// The authorization code is empty string (or None). Likely a mistake in
+    /// the calling application (e.g. calling new_with_code() with an empty
+    /// string).
+    #[error("Empty authorization code passed to GCS. Report as a bug.")]
+    MissingAuthCode,
+
+    /// Likely a mistake in the calling application.
+    #[error("A GCS refresh token is required to gain a new access token. Report as a bug.")]
+    MissingRefreshToken,
+
+    /// May be a network issue. Consider informing the user and offer to retry.
+    #[error(
+        "Unable to refresh GCS access token: HTTP {0}. Check network connection and try again."
+    )]
+    RefreshAccessError(http::StatusCode),
+
+    /// May be a network issue. Consider informing the user and offer to retry.
+    #[error("GCS HttpResponseError: {0}. Check network connection and try again.")]
+    HttpResponseError(http::StatusCode),
+
+    /// May be a network issue. Consider informing the user and offer to retry.
+    #[error("GCS HttpError: {0}. Check network connection and try again.")]
+    HttpError(#[from] http::Error),
+
+    /// May be a network issue. Consider informing the user and offer to retry.
+    #[error("GCS HyperError: {0}. Check network connection and try again.")]
+    HyperError(#[from] hyper::Error),
+
+    /// Possible in-transit corruption, but more likely the GCS protocol
+    /// changed. May need to update GCS lib.
+    #[error("GCS SerdeError: {0}. Report as a bug.")]
+    SerdeError(#[from] serde_json::Error),
+}
 
 /// POST body to [`OAUTH_REFRESH_TOKEN_ENDPOINT`].
 #[derive(Serialize)]
@@ -173,12 +217,12 @@ impl TokenStore {
     /// The `access_token` is not required, but if it happens to be available,
     /// i.e. if a code exchange was just done, it avoids an extra round-trip to
     /// provide it here.
-    pub fn new_with_auth<T>(refresh_token: String, access_token: T) -> Result<Self>
+    pub fn new_with_auth<T>(refresh_token: String, access_token: T) -> Result<Self, GcsError>
     where
         T: Into<Option<String>>,
     {
         if refresh_token.is_empty() {
-            bail!("Empty refresh token passed to new_with_auth. Please report this as a bug.");
+            return Err(GcsError::MissingRefreshToken);
         }
         let access_token = Mutex::new(access_token.into().unwrap_or("".to_string()));
         Ok(Self {
@@ -195,9 +239,12 @@ impl TokenStore {
     /// token.
     /// The `auth_code` must not be an empty string (this will generate an Err
     /// Result.
-    pub async fn new_with_code(https_client: &HttpsClient, auth_code: &str) -> Result<Self> {
+    pub async fn new_with_code(
+        https_client: &HttpsClient,
+        auth_code: &str,
+    ) -> Result<Self, GcsError> {
         if auth_code.is_empty() {
-            bail!("Empty auth code passed to new_with_code. Please report this as a bug.");
+            return Err(GcsError::MissingAuthCode);
         }
         // Add POST parameters to exchange the auth_code for a refresh_token
         // and possibly an access_token.
@@ -228,7 +275,7 @@ impl TokenStore {
                 access_token,
             })
         } else {
-            bail!("Unable to gain new access token.");
+            return Err(GcsError::RefreshAccessError(res.status()));
         }
     }
 
@@ -256,7 +303,7 @@ impl TokenStore {
     }
 
     /// Use the refresh token to get a new access token.
-    async fn refresh_access_token(&self, https_client: &HttpsClient) -> Result<()> {
+    async fn refresh_access_token(&self, https_client: &HttpsClient) -> Result<(), GcsError> {
         match &self.refresh_token {
             Some(refresh_token) => {
                 let req_body = RefreshTokenRequest {
@@ -280,10 +327,13 @@ impl TokenStore {
                     *access_token = info.access_token;
                     Ok(())
                 } else {
-                    bail!("Unable to gain new access token.");
+                    match res.status() {
+                        StatusCode::BAD_REQUEST => return Err(GcsError::NeedNewRefreshToken),
+                        _ => return Err(GcsError::HttpResponseError(res.status())),
+                    }
                 }
             }
-            None => bail!("A refresh token is required to gain new access token."),
+            None => return Err(GcsError::MissingRefreshToken),
         }
     }
 
