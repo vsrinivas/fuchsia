@@ -7,75 +7,36 @@ use {
     anyhow::{anyhow, bail, Context as _, Result},
     async_io::Async,
     async_net::UdpSocket,
-    byteorder::{ByteOrder, LittleEndian},
     ffx_daemon_core::events,
     ffx_daemon_events::{DaemonEvent, TargetInfo, TryIntoTargetInfo, WireTrafficType},
     fuchsia_async::{Task, Timer},
     netext::{get_mcast_interfaces, IsLocalAddr},
+    netsvc_proto::netboot::{
+        NetbootPacket, NetbootPacketBuilder, Opcode, ADVERT_PORT, SERVER_PORT,
+    },
+    packet::{Buf, FragmentedBuffer, InnerPacketBuilder, ParseBuffer, Serializer},
     std::collections::HashSet,
     std::net::{IpAddr, Ipv6Addr, SocketAddr},
+    std::num::NonZeroU16,
     std::sync::{Arc, Weak},
     std::time::Duration,
-    zerocopy::{AsBytes, ByteSlice, FromBytes, LayoutVerified, Unaligned, U32},
+    zerocopy::ByteSlice,
 };
 
 const ZEDBOOT_MCAST_V6: Ipv6Addr = Ipv6Addr::new(0xff02, 0, 0, 0, 0, 0, 0, 1);
-const ZEDBOOT_CMD_SERVER_PORT: u16 = 33330;
-const ZEDBOOT_ADVERT_PORT: u16 = 33331;
-const ZEDBOOT_MAGIC: u32 = 0xAA774217;
 const ZEDBOOT_REDISCOVERY_INTERFACE_INTERVAL: Duration = Duration::from_secs(5);
-
-// Commands
-const ZEDBOOT_REBOOT: u32 = 12;
-const ZEDBOOT_SHELL_CMD: u32 = 6;
-
-const ZEDBOOT_REBOOT_BOOTLOADER_CMD: &str = "dm reboot-bootloader\0";
-const ZEDBOOT_REBOOT_BOOTLOADER_CMD_LEN: usize = 37;
-const ZEDBOOT_REBOOT_RECOVERY_CMD: &str = "dm reboot-recovery\0";
-const ZEDBOOT_REBOOT_RECOVERY_CMD_LEN: usize = 35;
-
-#[derive(FromBytes, AsBytes, Unaligned)]
-#[repr(C)]
-struct ZedbootHeader {
-    magic: U32<LittleEndian>,
-    cookie: U32<LittleEndian>,
-    cmd: U32<LittleEndian>,
-    arg: U32<LittleEndian>,
-}
-
-impl ZedbootHeader {
-    fn new(cookie: u32, cmd: u32, arg: u32) -> Self {
-        Self {
-            magic: U32::<LittleEndian>::from(ZEDBOOT_MAGIC),
-            cookie: U32::<LittleEndian>::from(cookie),
-            cmd: U32::<LittleEndian>::from(cmd),
-            arg: U32::<LittleEndian>::from(arg),
-        }
-    }
-}
-
-struct ZedbootPacket<B: ByteSlice> {
-    header: LayoutVerified<B, ZedbootHeader>,
-    body: B,
-}
-
-impl<B: ByteSlice> ZedbootPacket<B> {
-    fn parse(bytes: B) -> Option<ZedbootPacket<B>> {
-        let (header, body) = LayoutVerified::new_from_prefix(bytes)?;
-        Some(Self { header, body })
-    }
-
-    fn magic(&self) -> u32 {
-        self.header.magic.get()
-    }
-}
 
 pub fn zedboot_discovery(e: events::Queue<DaemonEvent>) -> Result<Task<()>> {
     Ok(Task::local(interface_discovery(e, ZEDBOOT_REDISCOVERY_INTERFACE_INTERVAL)))
 }
 
-async fn port() -> u16 {
-    ffx_config::get("discovery.zedboot.advert_port").await.unwrap_or(ZEDBOOT_ADVERT_PORT)
+async fn port() -> Result<NonZeroU16> {
+    ffx_config::get("discovery.zedboot.advert_port")
+        .await
+        .map(|port| {
+            NonZeroU16::new(port).ok_or_else(|| anyhow::anyhow!("advert port must be nonzero"))
+        })
+        .unwrap_or(Ok(ADVERT_PORT))
 }
 
 // interface_discovery iterates over all multicast interfaces
@@ -97,7 +58,9 @@ pub async fn interface_discovery(e: events::Queue<DaemonEvent>, discovery_interv
     let mut v6_listen_socket: Weak<UdpSocket> = Weak::new();
     loop {
         if v6_listen_socket.upgrade().is_none() {
-            match make_listen_socket((ZEDBOOT_MCAST_V6, port().await).into())
+            match port()
+                .await
+                .and_then(|port| make_listen_socket((ZEDBOOT_MCAST_V6, port.get()).into()))
                 .context("make_listen_socket for IPv6")
             {
                 Ok(sock) => {
@@ -151,30 +114,32 @@ async fn recv_loop(sock: Arc<UdpSocket>, e: events::Queue<DaemonEvent>) {
             }
         };
 
-        let msg = match ZedbootPacket::parse(buf) {
-            Some(msg) => msg,
-            _ => continue,
+        let msg = match buf.parse::<NetbootPacket<_>>() {
+            Ok(msg) => msg,
+            Err(e) => {
+                log::error!("failed to parse netboot packet {:?}", e);
+                continue;
+            }
         };
-
-        if msg.magic() != ZEDBOOT_MAGIC {
-            continue;
-        }
 
         // Note: important, otherwise non-local responders could add themselves.
         if !addr.ip().is_local_addr() {
             continue;
         }
 
-        if let Ok(info) = msg.try_into_target_info(addr) {
-            log::trace!(
-                "zedboot packet from {} ({}) on {}",
-                addr,
-                info.nodename.clone().unwrap_or("<unknown>".to_string()),
-                sock.local_addr().unwrap()
-            );
-            e.push(DaemonEvent::WireTraffic(WireTrafficType::Zedboot(info))).unwrap_or_else(
-                |err| log::debug!("zedboot discovery was unable to publish: {}", err),
-            );
+        match ZedbootPacket(msg).try_into_target_info(addr) {
+            Ok(info) => {
+                log::trace!(
+                    "zedboot packet from {} ({}) on {}",
+                    addr,
+                    info.nodename.clone().unwrap_or("<unknown>".to_string()),
+                    sock.local_addr().unwrap()
+                );
+                e.push(DaemonEvent::WireTraffic(WireTrafficType::Zedboot(info))).unwrap_or_else(
+                    |err| log::debug!("zedboot discovery was unable to publish: {}", err),
+                );
+            }
+            Err(e) => log::error!("failed to extract zedboot target info {:?}", e),
         }
     }
 }
@@ -184,12 +149,17 @@ pub enum ZedbootConvertError {
     NodenameMissing,
 }
 
+/// A newtype for NetbootPacket so we can implement traits for it respecting the
+/// orphan rules.
+struct ZedbootPacket<B: ByteSlice>(NetbootPacket<B>);
+
 impl<B: ByteSlice> TryIntoTargetInfo for ZedbootPacket<B> {
     type Error = ZedbootConvertError;
 
     fn try_into_target_info(self, src: SocketAddr) -> Result<TargetInfo, Self::Error> {
+        let Self(packet) = self;
         let mut nodename = None;
-        let msg = String::from_utf8(self.body.to_vec())
+        let msg = std::str::from_utf8(packet.payload().as_ref())
             .map_err(|_| ZedbootConvertError::NodenameMissing)?;
         for data in msg.split(';') {
             let entry: Vec<&str> = data.split('=').collect();
@@ -255,39 +225,35 @@ async fn make_sender_socket(addr: SocketAddr) -> Result<UdpSocket> {
     Ok(result)
 }
 
-pub async fn reboot(to_addr: TargetAddr) -> Result<()> {
-    let zed = ZedbootHeader::new(1, ZEDBOOT_REBOOT, 0);
+async fn send(opcode: Opcode, body: &str, to_addr: TargetAddr) -> Result<()> {
+    const BUFFER_SIZE: usize = 512;
+    const COOKIE: u32 = 1;
+    const ARG: u32 = 0;
+    let msg = (body.as_bytes())
+        .into_serializer_with(Buf::new([0u8; BUFFER_SIZE], ..))
+        .serialize_no_alloc(NetbootPacketBuilder::new(opcode.into(), COOKIE, ARG))
+        .expect("failed to serialize");
     let mut to_sock: SocketAddr = to_addr.into();
-    to_sock.set_port(ZEDBOOT_CMD_SERVER_PORT);
-    log::info!("Sending Zedboot reboot to {}", to_sock);
+    to_sock.set_port(SERVER_PORT.get());
+    log::info!("Sending {:?} {} to {}", opcode, body, to_sock);
     let sock = make_sender_socket(to_sock).await?;
-    sock.send(zed.as_bytes()).await.map_err(|e| anyhow!("Sending error: {}", e)).map(|_| ())
+    sock.send(msg.as_ref()).await.map_err(|e| anyhow!("Sending error: {}", e)).and_then(|sent| {
+        if sent == msg.len() {
+            Ok(())
+        } else {
+            Err(anyhow::anyhow!("partial send {} of {} bytes", sent, msg.len()))
+        }
+    })
+}
+
+pub async fn reboot(to_addr: TargetAddr) -> Result<()> {
+    send(Opcode::Reboot, "", to_addr).await
 }
 
 pub async fn reboot_to_bootloader(to_addr: TargetAddr) -> Result<()> {
-    let mut buf = [0u8; ZEDBOOT_REBOOT_BOOTLOADER_CMD_LEN];
-    LittleEndian::write_u32(&mut buf[..4], ZEDBOOT_MAGIC);
-    LittleEndian::write_u32(&mut buf[4..8], 1);
-    LittleEndian::write_u32(&mut buf[8..12], ZEDBOOT_SHELL_CMD);
-    LittleEndian::write_u32(&mut buf[12..16], 0);
-    buf[16..].copy_from_slice(&ZEDBOOT_REBOOT_BOOTLOADER_CMD.as_bytes()[..]);
-    let mut to_sock: SocketAddr = to_addr.into();
-    to_sock.set_port(ZEDBOOT_CMD_SERVER_PORT);
-    log::info!("Sending Zedboot reboot to {}", to_sock);
-    let sock = make_sender_socket(to_sock).await?;
-    sock.send(&buf).await.map_err(|e| anyhow!("Sending error: {}", e)).map(|_| ())
+    send(Opcode::ShellCmd, "dm reboot-bootloader\0", to_addr).await
 }
 
 pub async fn reboot_to_recovery(to_addr: TargetAddr) -> Result<()> {
-    let mut buf = [0u8; ZEDBOOT_REBOOT_RECOVERY_CMD_LEN];
-    LittleEndian::write_u32(&mut buf[..4], ZEDBOOT_MAGIC);
-    LittleEndian::write_u32(&mut buf[4..8], 1);
-    LittleEndian::write_u32(&mut buf[8..12], ZEDBOOT_SHELL_CMD);
-    LittleEndian::write_u32(&mut buf[12..16], 0);
-    buf[16..].copy_from_slice(&ZEDBOOT_REBOOT_RECOVERY_CMD.as_bytes()[..]);
-    let mut to_sock: SocketAddr = to_addr.into();
-    to_sock.set_port(ZEDBOOT_CMD_SERVER_PORT);
-    log::info!("Sending Zedboot reboot to {}", to_sock);
-    let sock = make_sender_socket(to_sock).await?;
-    sock.send(&buf).await.map_err(|e| anyhow!("Sending error: {}", e)).map(|_| ())
+    send(Opcode::ShellCmd, "dm reboot-recovery\0", to_addr).await
 }

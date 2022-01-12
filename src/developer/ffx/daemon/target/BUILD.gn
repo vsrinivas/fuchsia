@@ -35,6 +35,7 @@ rustc_library("lib") {
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/mpmc",
+    "//src/lib/network/netsvc-proto",
     "//src/lib/network/packet",
     "//src/lib/usb_bulk/rust:lib",
     "//src/lib/zerocopy",
