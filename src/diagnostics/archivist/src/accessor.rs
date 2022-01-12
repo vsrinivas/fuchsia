@@ -154,8 +154,6 @@ impl ArchiveAccessor {
                     (selectors, _) => (selectors, None),
                 };
 
-                let selectors = selectors.map(|s| s.into_iter().map(Arc::new).collect());
-
                 let unpopulated_container_vec = pipeline.read().fetch_inspect_data(&selectors);
 
                 let per_component_budget_opt = if unpopulated_container_vec.is_empty() {

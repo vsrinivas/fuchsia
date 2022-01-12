@@ -81,7 +81,7 @@ impl Into<NodeHierarchyData> for SnapshotData {
 /// inspect_repo: the DataRepo which holds the access-points for all relevant
 ///               inspect data.
 pub struct ReaderServer {
-    selectors: Option<Vec<Arc<Selector>>>,
+    selectors: Option<Vec<Selector>>,
     output_rewriter: Option<OutputRewriter>,
 }
 
@@ -100,7 +100,7 @@ impl ReaderServer {
     pub fn stream(
         unpopulated_diagnostics_sources: Vec<UnpopulatedInspectDataContainer>,
         performance_configuration: PerformanceConfig,
-        selectors: Option<Vec<Arc<Selector>>>,
+        selectors: Option<Vec<Selector>>,
         output_rewriter: Option<OutputRewriter>,
         stats: Arc<BatchIteratorConnectionStats>,
     ) -> impl Stream<Item = Data<Inspect>> + Send + 'static {
@@ -804,8 +804,7 @@ mod tests {
             selectors::parse_selector::<VerboseError>(r#"test_component.cmx:root/child_2:*"#)
                 .unwrap();
         let inspect_repo = DataRepo::default();
-        let static_selectors_opt =
-            Some(vec![Arc::new(child_1_1_selector), Arc::new(child_2_selector)]);
+        let static_selectors_opt = Some(vec![child_1_1_selector, child_2_selector]);
 
         let pipeline_wrapper =
             Arc::new(RwLock::new(Pipeline::for_test(static_selectors_opt, inspect_repo.clone())));

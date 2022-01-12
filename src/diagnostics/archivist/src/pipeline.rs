@@ -47,7 +47,7 @@ struct PipelineParameters {
 /// to offer filtered access to the central repository.
 pub struct Pipeline {
     /// Static selectors that the pipeline uses. Loaded from configuration.
-    static_selectors: Option<Vec<Arc<Selector>>>,
+    static_selectors: Option<Vec<Selector>>,
 
     /// Log redactor that the pipeline uses.
     log_redactor: Arc<Redactor>,
@@ -134,7 +134,7 @@ impl Pipeline {
     }
 
     #[cfg(test)]
-    pub fn for_test(static_selectors: Option<Vec<Arc<Selector>>>, data_repo: DataRepo) -> Self {
+    pub fn for_test(static_selectors: Option<Vec<Selector>>, data_repo: DataRepo) -> Self {
         Pipeline {
             _pipeline_node: None,
             moniker_to_static_matcher_map: HashMap::new(),
@@ -168,12 +168,7 @@ impl Pipeline {
             config.record_to_inspect(&node);
             _pipeline_node = Some(node);
             if !config.disable_filtering {
-                static_selectors = config.take_inspect_selectors().map(|selectors| {
-                    selectors
-                        .into_iter()
-                        .map(|selector| Arc::new(selector))
-                        .collect::<Vec<Arc<Selector>>>()
-                });
+                static_selectors = config.take_inspect_selectors();
                 redactor = parameters.redactor;
             }
             has_error = Path::new(&path).is_dir() && config.has_error();
@@ -260,7 +255,7 @@ impl Pipeline {
     /// which contain data that should be selected from.
     pub fn fetch_inspect_data(
         &self,
-        component_selectors: &Option<Vec<Arc<Selector>>>,
+        component_selectors: &Option<Vec<Selector>>,
     ) -> Vec<UnpopulatedInspectDataContainer> {
         let moniker_to_static_selector_opt =
             self.static_selectors.as_ref().map(|_| &self.moniker_to_static_matcher_map);
