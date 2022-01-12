@@ -3015,9 +3015,9 @@ dependencies = [
 
 [[package]]
 name = "rust_icu_common"
-version = "1.0.3"
+version = "2.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "68dc162ee5e465ecc6c076efa732a19f25226e024453adcf64bdc760cb2349c3"
+checksum = "10bf0135092b395b5a333e85e6c2c5d8f197cc9ee537c62d00092976141b749c"
 dependencies = [
  "anyhow",
  "rust_icu_sys",
@@ -3026,9 +3026,9 @@ dependencies = [
 
 [[package]]
 name = "rust_icu_sys"
-version = "1.0.3"
+version = "2.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "00b8180bf8c56d9c38ca852b0381d41c500605101f47afc1e36a2f9c8d0b902a"
+checksum = "e70cf879ffb373ac65f5ee1c14fcb8446ed8bc9e6cc6f08ea5aae9094938e807"
 dependencies = [
  "anyhow",
  "lazy_static",
@@ -3038,9 +3038,9 @@ dependencies = [
 
 [[package]]
 name = "rust_icu_ucal"
-version = "1.0.3"
+version = "2.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "604da10d3099d34812720fb4b6186d2a52ede733fecf7499aabaeaa20da5b80a"
+checksum = "d90da6abac4f844cbd146bf5d7b23d3feb47d7cacb086e9a239852657246eea3"
 dependencies = [
  "log",
  "paste",
@@ -3052,9 +3052,9 @@ dependencies = [
 
 [[package]]
 name = "rust_icu_uchar"
-version = "1.0.3"
+version = "2.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ca27702bfe73f0cfecaf5780ae7fb14f682e5f3748c0123215455ae73416b485"
+checksum = "5e388396628ca31f50a07f25377a435d306791066e34cd0a25cf1d2adadf864b"
 dependencies = [
  "log",
  "paste",
@@ -3064,9 +3064,9 @@ dependencies = [
 
 [[package]]
 name = "rust_icu_udat"
-version = "1.0.3"
+version = "2.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "51a49c58352ae54d3736e5c35bbfe0e9eaf852b1ba3ff432afa7a90754f04dc4"
+checksum = "1570a1148ebb169d171b84c8f572298b7025fa2ac4871f45b9f26d752db03a04"
 dependencies = [
  "anyhow",
  "log",
@@ -3081,9 +3081,9 @@ dependencies = [
 
 [[package]]
 name = "rust_icu_udata"
-version = "1.0.3"
+version = "2.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "34a88a3d0af840949fb852a371cc6ea337c8244fac970ac56ce6cd112300f4e3"
+checksum = "507bffb0c26eaad615c694baaf108a586eec330d505d9275fa0ffe57f39fd9e5"
 dependencies = [
  "log",
  "paste",
@@ -3093,9 +3093,9 @@ dependencies = [
 
 [[package]]
 name = "rust_icu_uenum"
-version = "1.0.3"
+version = "2.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2daf1c47fc9a001730fcf9e37a866ac293eb78db323cf83e12ade6526b3a502e"
+checksum = "855daeb469b893d7d925f64804910e6d6e177fd7d1d5c4396409f07656885d67"
 dependencies = [
  "paste",
  "rust_icu_common",
@@ -3104,9 +3104,9 @@ dependencies = [
 
 [[package]]
 name = "rust_icu_uloc"
-version = "1.0.3"
+version = "2.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "094f2e0c71e069adff2170de016dba0b82166eef716eea3727561b54afe1c05e"
+checksum = "e1769b5fd3e39fc3b1d08696087141eccaccf02a4f673fff3694053b3bb63373"
 dependencies = [
  "anyhow",
  "log",
@@ -3119,9 +3119,9 @@ dependencies = [
 
 [[package]]
 name = "rust_icu_unorm2"
-version = "1.0.3"
+version = "2.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a358f44d2c810c6cf27fb0e149786c50550284c939dfc1d05599e3e59813a535"
+checksum = "64dd1a94c478af23cf7ba09ba24b044e155250dd6028918d08a534a40e56072a"
 dependencies = [
  "anyhow",
  "log",
@@ -3136,9 +3136,9 @@ dependencies = [
 
 [[package]]
 name = "rust_icu_ustring"
-version = "1.0.3"
+version = "2.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8512bba1446e148856207a5fe5bbab4fc75fa78b26f204ba9bf19892012a750a"
+checksum = "8a7e885bd8da08bd8549b88d5c955a6b95a7106cb4e763daf7d5f1cddc0649d2"
 dependencies = [
  "log",
  "paste",

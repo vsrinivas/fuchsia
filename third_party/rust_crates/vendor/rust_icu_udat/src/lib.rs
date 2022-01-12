@@ -427,6 +427,17 @@ mod tests {
                     "среда, 31. децембар 1969. 16:01:40 Северноамеричко пацифичко стандардно време",
                 calendar: None,
             },
+            #[cfg(not(feature = "icu_version_69_max"))]
+            Test {
+                name: "Serbian default, with empty timezone defaults to system.",
+                locale: "sr-RS",
+                timezone: "",
+                date: 100000.0,
+                expected:
+                    "четвртак, 1. јануар 1970. 00:01:40 Координисано универзално време",
+                calendar: None,
+            },
+            #[cfg(feature = "icu_version_69_max")]
             Test {
                 name: "Serbian default, with empty timezone defaults to system.",
                 locale: "sr-RS",

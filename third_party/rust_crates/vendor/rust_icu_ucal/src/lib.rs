@@ -389,9 +389,9 @@ mod tests {
 
     #[test]
     fn test_get_tz_data_version() {
-        let re = Regex::new(r"^[0-9][0-9][0-9][0-9][a-z]$").expect("valid regex");
+        let re = Regex::new(r"^[0-9][0-9][0-9][0-9][a-z][a-z0-9]*$").expect("valid regex");
         let tz_version = super::get_tz_data_version().expect("get_tz_data_version works");
-        assert!(re.is_match(&tz_version));
+        assert!(re.is_match(&tz_version), "version was: {:?}", &tz_version);
     }
 
     #[test]

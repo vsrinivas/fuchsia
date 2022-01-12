@@ -2,7 +2,7 @@
 
 Item           | Description
 -------------- | -----------
-ICU 63, 67..69 | [![Test status](https://github.com/google/rust_icu/workflows/Test/badge.svg)](https://github.com/google/rust_icu/workflows/Test/badge.svg)
+ICU 63, 68..70 | [![Test status](https://github.com/google/rust_icu/workflows/Test/badge.svg)](https://github.com/google/rust_icu/workflows/Test/badge.svg)
 Source         | https://github.com/google/rust_icu
 README         | https://github.com/google/rust_icu/blob/main/README.md
 Coverage       | [View report](/coverage/report.md)
@@ -34,8 +34,8 @@ https://github.com/google/rust_icu.
     confirms that ICU support in rust is spotty, so having a functional wrapper
     helps advance the state of the art.
 
-*   Projects such as [Fuchsia OS](https://fuchsia.dev) already depend on ICU,
-    and having rust bindings allow for an easy way to use Unicode algorithms
+*   Projects such as [Fuchsia](https://fuchsia.dev) already depend on ICU,
+    and having rust bindings allows for an easy way to use Unicode algorithms
     without taking on more dependencies.
 
 *   Cooperation on the interface with projects such as the
@@ -108,23 +108,22 @@ The limitations we know of today are as follows:
 
 The compatibility guarantee is as follows:
 
-1. Up to 3 minor releases of `rust_icu` are tested for each major release
-2. Automated tests are executed for last three major ICU library versions in all
+1. Automated tests are executed for last three major ICU library versions in all
    feature combinations of interest.
-3. Automated tests are executed for the ICU library version in use by the docs.rs
+2. Automated tests are executed for the ICU library version in use by the docs.rs
    system (so the documentation could be built).
 
-`rust_icu` version   | ICU 63.x | ICU 64.2 | ICU 65.1 | ICU 66.0.1 | ICU 67.1 | ICU 68.1 | ICU 69.1
--------------------- | -------- | -------- | -------- | ---------- | -------- | -------- | --------
-0.2                  |    ✅    |    ✅    |    ✅    |    ✅      |    ✅    |    ✅    |
-0.3                  |    ✅    |    ✅    |    ✅    |    ✅      |    ✅    |    ✅    |
-0.4                  |    ✅    |    ✅    |    ✅    |    ✅      |    ✅    |    ✅    |
-0.5                  |    ✅    |          |          |            |    ✅    |    ✅    |    ✅
----                  |   ---    |    ---   |   ---    |   ---      |   ---    |   ---    |    ✅
-1.0                  |    ✅    |          |          |            |    ✅    |    ✅    |    ✅
+`rust_icu` version     | ICU 63.x | ICU 67.1 | ICU 68.1 | ICU 69.1 | ICU 70.1
+-------------------- | -------- | -------- | -------- | -------- | -------
+0.5                  |    ✅    |    ✅    |    ✅    |    ✅    |
+---                  |    ---   |    ---   |    ---   |    ---   |
+1.0                  |    ✅    |    ✅    |    ✅    |    ✅    |
+---                  |    ---   |    ---   |    ---   |    ---   |
+2.0                  |    ✅    |          |    ✅    |    ✅    |    ✅
 
-> Prior to a 1.0.0 release, API versions that only differ in the patch version
-> number (0.x.**y**) only should be compatible.
+> If you must use a 0.x relase, please use the release 0.5.  Else, upgrade to
+> 1.0 since 1.0 supports the same ICU versions as 0.5.  If you have an option
+> to do so, upgrade to the latest release as soon as able.
 
 # Features
 
@@ -359,7 +358,8 @@ Before you begin, please ensure the following prerequisites are met:
   are a bit large, so a few GiB are needed to fit all of them.
 * You have an Internet connection.
 
-[docker] https://docs.docker.com/engine/install/
+[docker]: https://docs.docker.com/engine/install/
+[git]: https://git-scm.com
 
 From there, the following sequence of commands will check out, build and test
 the `rust_icu` source code.

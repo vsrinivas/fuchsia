@@ -40,6 +40,7 @@ mod inner {
             "ubrk",
             "ucal",
             "uclean",
+            "ucnv",
             "ucol",
             "udat",
             "udatpg",
@@ -66,6 +67,7 @@ mod inner {
             "u_.*",
             "ubrk_.*",
             "ucal_.*",
+            "ucnv_.*",
             "ucol_.*",
             "udat_.*",
             "udatpg_.*",
@@ -96,6 +98,7 @@ mod inner {
             "UCol.*",
             "UCollation.*",
             "UCollator",
+            "UConverter.*",
             "UData.*",
             "UDate.*",
             "UDateFormat.*",
@@ -416,16 +419,22 @@ macro_rules! versioned_function {{
         if env::var_os("CARGO_FEATURE_ICU_VERSION_IN_ENV").is_some() {
             println!("cargo:rustc-cfg=feature=\"icu_version_in_env\"");
         }
-        let version_major = ICUConfig::version_major_int()?;
-        println!("icu-version-major: {}", version_major);
-        if version_major >= 64 {
+        let icu_major_version = ICUConfig::version_major_int()?;
+        println!("icu-version-major: {}", icu_major_version);
+        if icu_major_version >= 64 {
             println!("cargo:rustc-cfg=feature=\"icu_version_64_plus\"");
         }
-        if version_major >= 67 {
+        if icu_major_version >= 67 {
             println!("cargo:rustc-cfg=feature=\"icu_version_67_plus\"");
         }
-        if version_major >= 68 {
+        if icu_major_version >= 68 {
             println!("cargo:rustc-cfg=feature=\"icu_version_68_plus\"");
+        }
+        // Starting from version 69, the feature flags depending on the version
+        // number work for up to a certain version, so that they can be retired
+        // over time.
+        if icu_major_version <= 69 {
+            println!("cargo:rustc-cfg=feature=\"icu_version_69_max\"");
         }
         Ok(())
     }
