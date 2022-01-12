@@ -349,18 +349,18 @@ fn variants_test_inner(input: TokenStream, variants: &[Variant<'_>]) -> TokenStr
 ///     .await
 /// }
 /// #[fuchsia_async::run_singlethreaded(test)]
-/// async fn test_foo_ns2_netdev() {
+/// async fn test_foo_ns2_netdevice() {
 ///     test_foo::<
 ///         netstack_testing_common::realms::Netstack2,
 ///         netemul::NetworkDevice,
-///     >("test_foo_ns2_netdev").await
+///     >("test_foo_ns2_netdevice").await
 /// }
 /// #[fuchsia_async::run_singlethreaded(test)]
-/// async fn test_foo_ns3_netdev() {
+/// async fn test_foo_ns3_netdevice() {
 ///     test_foo::<
 ///         netstack_testing_common::realms::Netstack3,
 ///         netemul::NetworkDevice,
-///     >("test_foo_ns3_netdev").await
+///     >("test_foo_ns3_netdevice").await
 /// }
 /// ```
 #[proc_macro_attribute]
