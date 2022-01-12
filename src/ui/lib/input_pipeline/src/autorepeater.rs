@@ -437,7 +437,7 @@ mod tests {
         key: Key,
         event_type: KeyEventType,
         key_meaning: Option<KeyMeaning>,
-        repeat_sequence: u64,
+        repeat_sequence: u32,
     ) -> InputEvent {
         testing_utilities::create_keyboard_event_with_key_meaning_and_repeat_sequence(
             key,
@@ -455,7 +455,7 @@ mod tests {
         key: Key,
         event_type: KeyEventType,
         key_meaning: Option<KeyMeaning>,
-        repeat_sequence: u64,
+        repeat_sequence: u32,
     ) -> InputEvent {
         let event = new_event(key, event_type, key_meaning, repeat_sequence);
         // Somewhat surprisingly, this works.

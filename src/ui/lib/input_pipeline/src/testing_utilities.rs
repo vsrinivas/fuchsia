@@ -141,7 +141,7 @@ pub fn create_keyboard_event_with_key_meaning_and_repeat_sequence(
     device_descriptor: &input_device::InputDeviceDescriptor,
     keymap: Option<String>,
     key_meaning: Option<fidl_fuchsia_ui_input3::KeyMeaning>,
-    repeat_sequence: u64,
+    repeat_sequence: u32,
 ) -> input_device::InputEvent {
     let device_event = keyboard_binding::KeyboardEvent::new(key, event_type)
         .into_with_modifiers(modifiers)

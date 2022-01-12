@@ -60,7 +60,7 @@ pub struct KeyboardEvent {
     /// value N here means that this is Nth generated autorepeat for this
     /// keyboard event.  The counter is reset for each new autorepeat key
     /// span.
-    repeat_sequence: u64,
+    repeat_sequence: u32,
 
     /// The currently active autorepeater settings.
     autorepeat_settings: Option<autorepeater::Settings>,
@@ -149,13 +149,13 @@ impl KeyboardEvent {
     /// Returns the repeat sequence number.  If a nonzero number N is returned,
     /// that means this [KeyboardEvent] is the N-th generated autorepeat event.
     /// A zero means this is an event that came from the keyboard driver.
-    pub fn get_repeat_sequence(&self) -> u64 {
+    pub fn get_repeat_sequence(&self) -> u32 {
         self.repeat_sequence
     }
 
     /// Converts [KeyboardEvent] into the same one, but with the repeat sequence
     /// changed.
-    pub fn into_with_repeat_sequence(self, repeat_sequence: u64) -> Self {
+    pub fn into_with_repeat_sequence(self, repeat_sequence: u32) -> Self {
         Self { repeat_sequence, ..self }
     }
 }

@@ -149,6 +149,12 @@ fn create_key_event(
         &lock_state,
     ));
 
+    // Don't insert a spurious Some(0).
+    let repeat_sequence = match event.get_repeat_sequence() {
+        0 => None,
+        s => Some(s),
+    };
+
     fidl_ui_input3::KeyEvent {
         timestamp: Some(event_time.try_into().unwrap_or_default()),
         type_: event.get_event_type().into(),
@@ -156,6 +162,7 @@ fn create_key_event(
         modifiers: event.get_modifiers(),
         lock_state: event.get_lock_state(),
         key_meaning,
+        repeat_sequence,
         ..fidl_ui_input3::KeyEvent::EMPTY
     }
 }
@@ -171,6 +178,7 @@ mod tests {
         futures::StreamExt,
         matches::assert_matches,
         std::convert::TryFrom as _,
+        test_case::test_case,
     };
 
     fn handle_events(
@@ -758,24 +766,32 @@ mod tests {
         assert_ime_receives_events(expected_events, request_stream).await;
     }
 
-    /// If this test fails to compile, it means that a new value is added to the FIDL enum
-    /// NonPrintableKey.  If you see this test fail to compile, please make sure that the match
-    /// statement in `create_key_event` also contains all non-printable key values, since its
-    /// correctness depends on handling all the defined enums.
-    #[test]
-    fn guard_nonprintable_key_enums() {
-        let key = fidl_ui_input3::NonPrintableKey::Enter;
-        assert_eq!(
-            true,
-            match key {
-                // This match is intentionally made to fail to compile if a new enum is added to
-                // NonPrintableKey. See comment at the top of this test before adding a new
-                // match arm here.
-                fidl_ui_input3::NonPrintableKey::Backspace => true,
-                fidl_ui_input3::NonPrintableKey::Tab => true,
-                fidl_ui_input3::NonPrintableKey::Enter => true,
-                fidl_ui_input3::NonPrintableKeyUnknown!() => true,
-            }
-        );
+    #[test_case(
+        keyboard_binding::KeyboardEvent::new(
+            fidl_input::Key::A,
+            fidl_ui_input3::KeyEventType::Pressed),
+        42u64 => fidl_ui_input3::KeyEvent{
+            timestamp: Some(42),
+            type_: Some(fidl_ui_input3::KeyEventType::Pressed),
+            key: Some(fidl_input::Key::A),
+            key_meaning: Some(fidl_ui_input3::KeyMeaning::Codepoint(97)),
+            ..fidl_ui_input3::KeyEvent::EMPTY}; "basic value copy")]
+    #[test_case(
+        keyboard_binding::KeyboardEvent::new(
+            fidl_input::Key::A,
+            fidl_ui_input3::KeyEventType::Pressed)
+            .into_with_repeat_sequence(13),
+        42u64 => fidl_ui_input3::KeyEvent{
+            timestamp: Some(42),
+            type_: Some(fidl_ui_input3::KeyEventType::Pressed),
+            key: Some(fidl_input::Key::A),
+            key_meaning: Some(fidl_ui_input3::KeyMeaning::Codepoint(97)),
+            repeat_sequence: Some(13),
+            ..fidl_ui_input3::KeyEvent::EMPTY}; "repeat_sequence is honored")]
+    fn test_create_key_event(
+        event: keyboard_binding::KeyboardEvent,
+        event_time: input_device::EventTime,
+    ) -> fidl_ui_input3::KeyEvent {
+        super::create_key_event(&event, event_time)
     }
 }
