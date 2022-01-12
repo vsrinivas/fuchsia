@@ -211,6 +211,7 @@ impl fmt::Display for RelativeMoniker {
     }
 }
 
+#[derive(Debug, Eq, PartialEq, Clone, Hash, Default)]
 pub struct PartialRelativeMoniker {
     up_path: Vec<PartialChildMoniker>,
     down_path: Vec<PartialChildMoniker>,

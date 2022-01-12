@@ -153,6 +153,7 @@ fuchsia_package("test_manager_pkg") {
     "cmx_runner",
     "debug_data",
     "debug_data:debug_data_processor",
+    "debug_data:debug_data_rust",
     "//src/diagnostics/archivist:archivist-for-embedding-v2",
   ]
 }
