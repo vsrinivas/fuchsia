@@ -37,12 +37,13 @@ fidl/{{ .LibraryDots }}/cpp/wire_types.h
   {{- EndifFuchsia }}
 
   #include <{{ .Library | Filename "Markers" }}>
+  #include <{{ .Library | Filename "CommonTypesHeader" }}>
   {{ range .Dependencies -}}
     #include <{{ . | Filename "TypesHeader" }}>
   {{ end }}
 
-  {{ range .Bits }}{{ template "Bits:ForwardDeclaration:TypesHeader" . }}{{ end }}
-  {{ range .Enums }}{{ template "Enum:ForwardDeclaration:TypesHeader" . }}{{ end }}
+  {{ range .Bits }}{{ template "Bits:TypesHeader" . }}{{ end }}
+  {{ range .Enums }}{{ template "Enum:TypesHeader" . }}{{ end }}
   {{ range .Structs | SkipRequestResponseDecls }}{{ template "Struct:ForwardDeclaration:TypesHeader" . }}{{ end }}
   {{ range .Tables | SkipRequestResponseDecls }}{{ template "Table:ForwardDeclaration:TypesHeader" . }}{{ end }}
   {{ range .Unions | SkipRequestResponseDecls }}{{ template "Union:ForwardDeclaration:TypesHeader" . }}{{ end }}
@@ -62,11 +63,9 @@ fidl/{{ .LibraryDots }}/cpp/wire_types.h
 
   {{ EnsureNamespace "fidl" }}
 
-  {{ range .Bits }}{{ template "Bits:Traits:TypesHeader" . }}{{ end }}
   {{ range .Structs | SkipRequestResponseDecls }}{{ template "Struct:Traits:TypesHeader" . }}{{ end }}
   {{ range .Tables | SkipRequestResponseDecls }}{{ template "Table:Traits:TypesHeader" . }}{{ end }}
   {{ range .Unions | SkipRequestResponseDecls }}{{ template "Union:Traits:TypesHeader" . }}{{ end }}
-  {{ range .Enums }}{{ template "Enum:Traits:TypesHeader" . }}{{ end }}
 
   {{ EndOfFile }}
 {{ end }}

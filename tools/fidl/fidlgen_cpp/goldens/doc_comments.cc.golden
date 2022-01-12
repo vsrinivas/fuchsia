@@ -2,21 +2,6 @@
 
 #include <test/doccomments/cpp/fidl_v2.h>
 
-#ifdef __Fuchsia__
-
-void ::test_doccomments::Struct::EncodeWithoutValidating(
-    ::fidl::Encoder& encoder, size_t offset) {
-  encoder.Alloc(
-      ::fidl::EncodingInlineSize<::test_doccomments::Struct, ::fidl::Encoder>(
-          &encoder));
-  ::fidl::CodingTraits<::test_doccomments::Struct>::Encode(&encoder, this,
-                                                           offset);
-}
-
-::test_doccomments::Struct::Struct(::fidl::Decoder& decoder)
-    : storage_({::fidl::DecodeAs<int32_t>(&decoder, 0)}) {}
-#endif  // __Fuchsia__
-
 namespace test_doccomments {
 [[maybe_unused]] constexpr inline uint64_t kInterface_Method_Ordinal =
     5017051197196532121lu;
@@ -29,8 +14,7 @@ namespace test_doccomments {
     ::test_doccomments::Interface>::Method() const {
   ::fidl::Encoder _encoder{::test_doccomments::kInterface_Method_Ordinal};
   ::fidl::Result result = messenger().OneWay(
-      &::test::doccomments::_internal::
-          test_doccomments_InterfaceMethodRequestMessageTable,
+      &::test_doccomments::test_doccomments_InterfaceMethodRequestMessageTable,
       ::fidl::internal::EncodeTransactionalMessageWithoutValidating(_encoder));
   return ::fidl::internal::ToFitxResult(result);
 }

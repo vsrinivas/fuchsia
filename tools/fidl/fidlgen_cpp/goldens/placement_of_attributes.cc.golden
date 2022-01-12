@@ -2,39 +2,6 @@
 
 #include <test/placementofattributes/cpp/fidl_v2.h>
 
-#ifdef __Fuchsia__
-
-void ::test_placementofattributes::ExampleStruct::EncodeWithoutValidating(
-    ::fidl::Encoder& encoder, size_t offset) {
-  encoder.Alloc(
-      ::fidl::EncodingInlineSize<::test_placementofattributes::ExampleStruct,
-                                 ::fidl::Encoder>(&encoder));
-  ::fidl::CodingTraits<::test_placementofattributes::ExampleStruct>::Encode(
-      &encoder, this, offset);
-}
-
-::test_placementofattributes::ExampleStruct::ExampleStruct(
-    ::fidl::Decoder& decoder)
-    : storage_({::fidl::DecodeAs<uint32_t>(&decoder, 0)}) {}
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-
-void ::test_placementofattributes::ExampleProtocolMethodRequest::
-    EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset) {
-  encoder.Alloc(::fidl::EncodingInlineSize<
-                ::test_placementofattributes::ExampleProtocolMethodRequest,
-                ::fidl::Encoder>(&encoder));
-  ::fidl::CodingTraits<::test_placementofattributes::
-                           ExampleProtocolMethodRequest>::Encode(&encoder, this,
-                                                                 offset);
-}
-
-::test_placementofattributes::ExampleProtocolMethodRequest::
-    ExampleProtocolMethodRequest(::fidl::Decoder& decoder)
-    : storage_({::fidl::DecodeAs<::test_exampleusing::Empty>(&decoder, 0)}) {}
-#endif  // __Fuchsia__
-
 namespace test_placementofattributes {
 [[maybe_unused]] constexpr inline uint64_t kExampleProtocol_Method_Ordinal =
     6023439637367187273lu;
@@ -48,7 +15,7 @@ namespace test_placementofattributes {
   ::fidl::Encoder _encoder{
       ::test_placementofattributes::kExampleProtocol_Method_Ordinal};
   ::fidl::Result result = messenger().OneWay(
-      &::test::placementofattributes::_internal::
+      &::test_placementofattributes::
           test_placementofattributes_ExampleProtocolMethodRequestMessageTable,
       ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
           _encoder, std::move(payload)));

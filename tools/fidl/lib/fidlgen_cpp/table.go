@@ -65,6 +65,10 @@ func (tm TableMember) NameAndType() (string, Type) {
 	return tm.Name(), tm.Type
 }
 
+func (tm TableMember) StorageName() string {
+	return tm.Name() + "_"
+}
+
 func (c *compiler) compileTableMember(val fidlgen.TableMember, index int) TableMember {
 	t := c.compileType(val.Type)
 

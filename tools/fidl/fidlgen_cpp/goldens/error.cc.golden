@@ -2,51 +2,6 @@
 
 #include <test/error/cpp/fidl_v2.h>
 
-#ifdef __Fuchsia__
-
-void ::test_error::Example_foo_Response::EncodeWithoutValidating(
-    ::fidl::Encoder& encoder, size_t offset) {
-  encoder.Alloc(::fidl::EncodingInlineSize<::test_error::Example_foo_Response,
-                                           ::fidl::Encoder>(&encoder));
-  ::fidl::CodingTraits<::test_error::Example_foo_Response>::Encode(
-      &encoder, this, offset);
-}
-
-::test_error::Example_foo_Response::Example_foo_Response(
-    ::fidl::Decoder& decoder)
-    : storage_({::fidl::DecodeAs<int64_t>(&decoder, 0)}) {}
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-
-void ::test_error::ExampleFooTopResponse::EncodeWithoutValidating(
-    ::fidl::Encoder& encoder, size_t offset) {
-  encoder.Alloc(::fidl::EncodingInlineSize<::test_error::ExampleFooTopResponse,
-                                           ::fidl::Encoder>(&encoder));
-  ::fidl::CodingTraits<::test_error::ExampleFooTopResponse>::Encode(
-      &encoder, this, offset);
-}
-
-::test_error::ExampleFooTopResponse::ExampleFooTopResponse(
-    ::fidl::Decoder& decoder)
-    : storage_(
-          {::fidl::DecodeAs<::test_error::Example_foo_Result>(&decoder, 0)}) {}
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-
-void ::test_error::ExampleFooRequest::EncodeWithoutValidating(
-    ::fidl::Encoder& encoder, size_t offset) {
-  encoder.Alloc(::fidl::EncodingInlineSize<::test_error::ExampleFooRequest,
-                                           ::fidl::Encoder>(&encoder));
-  ::fidl::CodingTraits<::test_error::ExampleFooRequest>::Encode(&encoder, this,
-                                                                offset);
-}
-
-::test_error::ExampleFooRequest::ExampleFooRequest(::fidl::Decoder& decoder)
-    : storage_({::fidl::DecodeAs<::std::string>(&decoder, 0)}) {}
-#endif  // __Fuchsia__
-
 namespace test_error {
 [[maybe_unused]] constexpr inline uint64_t kExample_foo_Ordinal =
     1107623248440401476lu;
@@ -58,7 +13,7 @@ void fidl::internal::NaturalClientImpl<::test_error::Example>::foo(
     ::fidl::ClientCallback<::test_error::Example::Foo>&& _callback) const {
   ::fidl::Encoder _encoder{::test_error::kExample_foo_Ordinal};
   return messenger().TwoWay(
-      &::test::error::_internal::test_error_ExamplefooRequestMessageTable,
+      &::test_error::test_error_ExamplefooRequestMessageTable,
       ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
           _encoder, std::move(payload)),
       ::fidl::internal::MakeResponseContext<
@@ -72,7 +27,7 @@ void fidl::internal::NaturalClientImpl<::test_error::Example>::foo(
     const {
   ::fidl::Encoder _encoder{::test_error::kExample_foo_Ordinal};
   return messenger().TwoWay(
-      &::test::error::_internal::test_error_ExamplefooRequestMessageTable,
+      &::test_error::test_error_ExamplefooRequestMessageTable,
       ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
           _encoder, std::move(payload)),
       ::fidl::internal::MakeResponseContext<

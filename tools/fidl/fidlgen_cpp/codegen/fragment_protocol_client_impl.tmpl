@@ -84,7 +84,7 @@ void {{ $.NaturalClientImpl.NoLeading }}::{{ .Name }}(
     {{- template "ClientAsyncRequestArgumentsWithResult" . }}) const {
   ::fidl::Encoder _encoder{ {{ .OrdinalName }} };
   return messenger().TwoWay(
-      &{{ .Request.HlCodingTable }},
+      &{{ .Request.WireCodingTable }},
       ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
           _encoder {{- if .HasRequestPayload }}, std::move(payload){{ end }}),
       ::fidl::internal::MakeResponseContext<
@@ -98,7 +98,7 @@ void {{ $.NaturalClientImpl.NoLeading }}::{{ .Name }}(
     {{- template "ClientAsyncRequestArgumentsWithResponse" . }}) const {
   ::fidl::Encoder _encoder{ {{ .OrdinalName }} };
   return messenger().TwoWay(
-      &{{ .Request.HlCodingTable }},
+      &{{ .Request.WireCodingTable }},
       ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
           _encoder {{- if .HasRequestPayload }}, std::move(payload){{ end }}),
       ::fidl::internal::MakeResponseContext<
@@ -116,7 +116,7 @@ void {{ $.NaturalClientImpl.NoLeading }}::{{ .Name }}(
     {{- template "ClientRequestArgumentsOneWay" . }}) const {
   ::fidl::Encoder _encoder{ {{ .OrdinalName }} };
   ::fidl::Result result = messenger().OneWay(
-      &{{ .Request.HlCodingTable }},
+      &{{ .Request.WireCodingTable }},
       ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
           _encoder {{- if .HasRequestPayload }}, std::move(payload){{ end }}));
   return ::fidl::internal::ToFitxResult(result);

@@ -18,6 +18,7 @@
 
 #endif  // __Fuchsia__
 
+#include <fidl/test.vectors/cpp/common_types.h>
 #include <fidl/test.vectors/cpp/markers.h>
 
 namespace test_vectors {

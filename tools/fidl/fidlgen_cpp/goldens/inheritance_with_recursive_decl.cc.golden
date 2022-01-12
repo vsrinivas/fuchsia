@@ -2,44 +2,6 @@
 
 #include <test/inheritancewithrecursivedecl/cpp/fidl_v2.h>
 
-#ifdef __Fuchsia__
-
-void ::test_inheritancewithrecursivedecl::ParentFirstRequest::
-    EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset) {
-  encoder.Alloc(::fidl::EncodingInlineSize<
-                ::test_inheritancewithrecursivedecl::ParentFirstRequest,
-                ::fidl::Encoder>(&encoder));
-  ::fidl::CodingTraits<
-      ::test_inheritancewithrecursivedecl::ParentFirstRequest>::Encode(&encoder,
-                                                                       this,
-                                                                       offset);
-}
-
-::test_inheritancewithrecursivedecl::ParentFirstRequest::ParentFirstRequest(
-    ::fidl::Decoder& decoder)
-    : storage_({::fidl::DecodeAs<::fidl::InterfaceRequest<
-          ::test::inheritancewithrecursivedecl::Parent>>(&decoder, 0)}) {}
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-
-void ::test_inheritancewithrecursivedecl::ChildSecondRequest::
-    EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset) {
-  encoder.Alloc(::fidl::EncodingInlineSize<
-                ::test_inheritancewithrecursivedecl::ChildSecondRequest,
-                ::fidl::Encoder>(&encoder));
-  ::fidl::CodingTraits<
-      ::test_inheritancewithrecursivedecl::ChildSecondRequest>::Encode(&encoder,
-                                                                       this,
-                                                                       offset);
-}
-
-::test_inheritancewithrecursivedecl::ChildSecondRequest::ChildSecondRequest(
-    ::fidl::Decoder& decoder)
-    : storage_({::fidl::DecodeAs<::fidl::InterfaceRequest<
-          ::test::inheritancewithrecursivedecl::Parent>>(&decoder, 0)}) {}
-#endif  // __Fuchsia__
-
 namespace test_inheritancewithrecursivedecl {
 [[maybe_unused]] constexpr inline uint64_t kParent_First_Ordinal =
     3973163707930985819lu;
@@ -53,7 +15,7 @@ namespace test_inheritancewithrecursivedecl {
   ::fidl::Encoder _encoder{
       ::test_inheritancewithrecursivedecl::kParent_First_Ordinal};
   ::fidl::Result result = messenger().OneWay(
-      &::test::inheritancewithrecursivedecl::_internal::
+      &::test_inheritancewithrecursivedecl::
           test_inheritancewithrecursivedecl_ParentFirstRequestMessageTable,
       ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
           _encoder, std::move(payload)));
@@ -89,7 +51,7 @@ namespace test_inheritancewithrecursivedecl {
   ::fidl::Encoder _encoder{
       ::test_inheritancewithrecursivedecl::kChild_First_Ordinal};
   ::fidl::Result result = messenger().OneWay(
-      &::test::inheritancewithrecursivedecl::_internal::
+      &::test_inheritancewithrecursivedecl::
           test_inheritancewithrecursivedecl_ChildFirstRequestMessageTable,
       ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
           _encoder, std::move(payload)));
@@ -103,7 +65,7 @@ namespace test_inheritancewithrecursivedecl {
   ::fidl::Encoder _encoder{
       ::test_inheritancewithrecursivedecl::kChild_Second_Ordinal};
   ::fidl::Result result = messenger().OneWay(
-      &::test::inheritancewithrecursivedecl::_internal::
+      &::test_inheritancewithrecursivedecl::
           test_inheritancewithrecursivedecl_ChildSecondRequestMessageTable,
       ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
           _encoder, std::move(payload)));

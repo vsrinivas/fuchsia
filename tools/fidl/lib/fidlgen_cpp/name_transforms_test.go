@@ -43,7 +43,7 @@ func TestBitsMemberContext(t *testing.T) {
 		bitsMemberContext.transform(fidlgen.Identifier("foo")),
 		nameVariants{
 			HLCPP:   makeName("foo"),
-			Unified: makeName("foo"),
+			Unified: makeName("kFoo"),
 			Wire:    makeName("kFoo"),
 		})
 
@@ -51,7 +51,7 @@ func TestBitsMemberContext(t *testing.T) {
 		bitsMemberContext.transform(fidlgen.Identifier("FOO_BAR")),
 		nameVariants{
 			HLCPP:   makeName("FOO_BAR"),
-			Unified: makeName("FOO_BAR"),
+			Unified: makeName("kFooBar"),
 			Wire:    makeName("kFooBar"),
 		})
 
@@ -67,7 +67,7 @@ func TestBitsMemberContext(t *testing.T) {
 		bitsMemberContext.transform(fidlgen.Identifier("switch")),
 		nameVariants{
 			HLCPP:   makeName("switch_"),
-			Unified: makeName("switch_"),
+			Unified: makeName("kSwitch"),
 			Wire:    makeName("kSwitch"),
 		})
 
@@ -75,7 +75,7 @@ func TestBitsMemberContext(t *testing.T) {
 		bitsMemberContext.transform(fidlgen.Identifier("mask")),
 		nameVariants{
 			HLCPP:   makeName("mask"),
-			Unified: makeName("mask"),
+			Unified: makeName("kMask_"),
 			Wire:    makeName("kMask_"),
 		})
 }
@@ -88,7 +88,7 @@ func TestEnumMemberContext(t *testing.T) {
 		enumMemberContext.transform(fidlgen.Identifier("foo")),
 		nameVariants{
 			HLCPP:   makeName("foo"),
-			Unified: makeName("foo"),
+			Unified: makeName("kFoo"),
 			Wire:    makeName("kFoo"),
 		})
 
@@ -96,7 +96,7 @@ func TestEnumMemberContext(t *testing.T) {
 		enumMemberContext.transform(fidlgen.Identifier("FOO_BAR")),
 		nameVariants{
 			HLCPP:   makeName("FOO_BAR"),
-			Unified: makeName("FOO_BAR"),
+			Unified: makeName("kFooBar"),
 			Wire:    makeName("kFooBar"),
 		})
 
@@ -112,7 +112,7 @@ func TestEnumMemberContext(t *testing.T) {
 		enumMemberContext.transform(fidlgen.Identifier("switch")),
 		nameVariants{
 			HLCPP:   makeName("switch_"),
-			Unified: makeName("switch_"),
+			Unified: makeName("kSwitch"),
 			Wire:    makeName("kSwitch"),
 		})
 
@@ -120,7 +120,7 @@ func TestEnumMemberContext(t *testing.T) {
 		enumMemberContext.transform(fidlgen.Identifier("mask")),
 		nameVariants{
 			HLCPP:   makeName("mask"),
-			Unified: makeName("mask"),
+			Unified: makeName("kMask"),
 			Wire:    makeName("kMask"),
 		})
 }
@@ -141,7 +141,7 @@ func TestStructMemberContext(t *testing.T) {
 		structMemberContext.transform(fidlgen.Identifier("FOO_BAR")),
 		nameVariants{
 			HLCPP:   makeName("FOO_BAR"),
-			Unified: makeName("FOO_BAR"),
+			Unified: makeName("foo_bar"),
 			Wire:    makeName("foo_bar"),
 		})
 
@@ -149,7 +149,7 @@ func TestStructMemberContext(t *testing.T) {
 		structMemberContext.transform(fidlgen.Identifier("FooBar")),
 		nameVariants{
 			HLCPP:   makeName("FooBar"),
-			Unified: makeName("FooBar"),
+			Unified: makeName("foo_bar"),
 			Wire:    makeName("foo_bar"),
 		})
 
@@ -178,7 +178,7 @@ func TestTableMemberContext(t *testing.T) {
 		tableMemberContext.transform(fidlgen.Identifier("FOO_BAR")),
 		nameVariants{
 			HLCPP:   makeName("FOO_BAR"),
-			Unified: makeName("FOO_BAR"),
+			Unified: makeName("foo_bar"),
 			Wire:    makeName("foo_bar"),
 		})
 
@@ -186,7 +186,7 @@ func TestTableMemberContext(t *testing.T) {
 		tableMemberContext.transform(fidlgen.Identifier("FooBar")),
 		nameVariants{
 			HLCPP:   makeName("FooBar"),
-			Unified: makeName("FooBar"),
+			Unified: makeName("foo_bar"),
 			Wire:    makeName("foo_bar"),
 		})
 
@@ -215,7 +215,7 @@ func TestUnionMemberContext(t *testing.T) {
 		unionMemberContext.transform(fidlgen.Identifier("FOO_BAR")),
 		nameVariants{
 			HLCPP:   makeName("FOO_BAR"),
-			Unified: makeName("FOO_BAR"),
+			Unified: makeName("foo_bar"),
 			Wire:    makeName("foo_bar"),
 		})
 
@@ -223,7 +223,7 @@ func TestUnionMemberContext(t *testing.T) {
 		unionMemberContext.transform(fidlgen.Identifier("FooBar")),
 		nameVariants{
 			HLCPP:   makeName("FooBar"),
-			Unified: makeName("FooBar"),
+			Unified: makeName("foo_bar"),
 			Wire:    makeName("foo_bar"),
 		})
 
@@ -481,7 +481,7 @@ func TestProtocolContext(t *testing.T) {
 		protocolContext.transform(parseIdent("fidl.test/foo")),
 		nameVariants{
 			HLCPP:   makeName("fidl::test::foo"),
-			Unified: makeName("fidl::test::foo"),
+			Unified: makeName("fidl_test::Foo"),
 			Wire:    makeName("fidl_test::Foo"),
 		})
 
@@ -489,7 +489,7 @@ func TestProtocolContext(t *testing.T) {
 		protocolContext.transform(parseIdent("fidl.test/Foo")),
 		nameVariants{
 			HLCPP:   makeName("fidl::test::Foo"),
-			Unified: makeName("fidl::test::Foo"),
+			Unified: makeName("fidl_test::Foo"),
 			Wire:    makeName("fidl_test::Foo"),
 		})
 
@@ -497,7 +497,7 @@ func TestProtocolContext(t *testing.T) {
 		protocolContext.transform(parseIdent("fidl.test/FidlType")),
 		nameVariants{
 			HLCPP:   makeName("fidl::test::FidlType_"),
-			Unified: makeName("fidl::test::FidlType_"),
+			Unified: makeName("fidl_test::FidlType_"),
 			Wire:    makeName("fidl_test::FidlType_"),
 		})
 
@@ -505,7 +505,7 @@ func TestProtocolContext(t *testing.T) {
 		protocolContext.transform(parseIdent("fidl.test/FOO_BAR")),
 		nameVariants{
 			HLCPP:   makeName("fidl::test::FOO_BAR"),
-			Unified: makeName("fidl::test::FOO_BAR"),
+			Unified: makeName("fidl_test::FooBar"),
 			Wire:    makeName("fidl_test::FooBar"),
 		})
 
@@ -513,7 +513,7 @@ func TestProtocolContext(t *testing.T) {
 		protocolContext.transform(parseIdent("fidl.test/switch")),
 		nameVariants{
 			HLCPP:   makeName("fidl::test::switch_"),
-			Unified: makeName("fidl::test::switch_"),
+			Unified: makeName("fidl_test::Switch"),
 			Wire:    makeName("fidl_test::Switch"),
 		})
 }

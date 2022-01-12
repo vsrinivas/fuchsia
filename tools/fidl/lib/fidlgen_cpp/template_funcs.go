@@ -228,6 +228,7 @@ func renderParams(format formatParam, list interface{}) string {
 var commonTemplateFuncs = template.FuncMap{
 	"Eq":  func(a interface{}, b interface{}) bool { return a == b },
 	"NEq": func(a interface{}, b interface{}) bool { return a != b },
+	"Add": func(a int, b int) int { return a + b },
 
 	"Kinds":       func() interface{} { return Kinds },
 	"FamilyKinds": func() interface{} { return FamilyKinds },

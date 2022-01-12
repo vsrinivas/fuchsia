@@ -2,6 +2,7 @@
 
 #pragma once
 
+#include <fidl/test.foreigntypeinresponseusedthroughcompose/cpp/natural_types.h>
 #include <fidl/test.foreigntypeinresponseusedthroughcompose/cpp/wire.h>
 #include <lib/fidl/cpp/client.h>
 #include <lib/fidl/cpp/internal/codable_base.h>
@@ -10,7 +11,6 @@
 #include <lib/fidl/cpp/natural_types.h>
 #include <lib/fidl/cpp/unified_messaging.h>
 #include <test/bottom/cpp/fidl_v2.h>
-#include <test/foreigntypeinresponseusedthroughcompose/cpp/natural_types.h>
 #include <test/middle/cpp/fidl_v2.h>
 
 namespace fidl {}  // namespace fidl

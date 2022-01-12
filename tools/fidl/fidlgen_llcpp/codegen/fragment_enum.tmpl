@@ -4,7 +4,7 @@
 // found in the LICENSE file.
 */}}
 
-{{- define "Enum:ForwardDeclaration:TypesHeader" }}
+{{- define "Enum:CommonTypesHeader" }}
 {{ EnsureNamespace . }}
 {{ if .IsStrict }}
 {{ .Docs }}
@@ -56,7 +56,7 @@ constexpr const {{ $ }} {{ $.Name }}::{{ $member.Name }} =
 {{ end }}
 {{ end }}
 
-{{- define "Enum:Traits:TypesHeader" }}
+{{- define "Enum:Traits:CommonTypesHeader" }}
 
 template <>
 struct IsFidlType<{{ . }}> : public std::true_type {};
@@ -65,3 +65,26 @@ struct ContainsHandle<{{ . }}> : public std::false_type {};
 
 {{- end }}
 
+{{- define "Enum:TypesHeader" }}
+{{ EnsureNamespace . -}}
+using {{ .Name }} = {{ .Unified }};
+{{- end }}
+
+{{- define "Enum:Traits:NaturalTypesHeader" }}
+  template <>
+  struct CodingTraits<{{ . }}> {
+    static constexpr size_t inline_size_v1_no_ee = sizeof({{ .Type }});
+    static constexpr size_t inline_size_v2 = sizeof({{ .Type }});
+
+    template <class EncoderImpl>
+    static void Encode(EncoderImpl* encoder, {{ . }}* value, size_t offset,
+                      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
+      // TODO: encode
+    }
+    template <typename DecoderImpl>
+    static void Decode(DecoderImpl* decoder, {{ . }}* value, size_t offset) {
+      // TODO: decode
+    }
+  };
+
+{{- end }}

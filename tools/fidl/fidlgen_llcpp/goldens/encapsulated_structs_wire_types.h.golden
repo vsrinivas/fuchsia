@@ -19,6 +19,7 @@
 
 #endif  // __Fuchsia__
 
+#include <fidl/test.encapsulatedstructs/cpp/common_types.h>
 #include <fidl/test.encapsulatedstructs/cpp/markers.h>
 
 namespace test_encapsulatedstructs {

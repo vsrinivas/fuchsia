@@ -2,6 +2,7 @@
 
 #pragma once
 
+#include <fidl/test.bitsconstants/cpp/natural_types.h>
 #include <fidl/test.bitsconstants/cpp/wire.h>
 #include <lib/fidl/cpp/client.h>
 #include <lib/fidl/cpp/internal/codable_base.h>
@@ -9,17 +10,5 @@
 #include <lib/fidl/cpp/internal/natural_client_messenger.h>
 #include <lib/fidl/cpp/natural_types.h>
 #include <lib/fidl/cpp/unified_messaging.h>
-#include <test/bitsconstants/cpp/natural_types.h>
 
-namespace test_bitsconstants {
-using BitsType = ::test::bitsconstants::BitsType;
-const static BitsType BitsTypeMask = ::test::bitsconstants::BitsTypeMask;
-
-constexpr ::test_bitsconstants::BitsType Const3 = ::test::bitsconstants::Const3;
-
-constexpr ::test_bitsconstants::BitsType Const2 = ::test::bitsconstants::Const2;
-
-constexpr ::test_bitsconstants::BitsType Const1 = ::test::bitsconstants::Const1;
-
-}  // namespace test_bitsconstants
 namespace fidl {}  // namespace fidl

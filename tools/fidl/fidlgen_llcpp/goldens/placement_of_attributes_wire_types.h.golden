@@ -20,111 +20,14 @@
 #endif  // __Fuchsia__
 
 #include <fidl/test.exampleusing/cpp/wire_types.h>
+#include <fidl/test.placementofattributes/cpp/common_types.h>
 #include <fidl/test.placementofattributes/cpp/markers.h>
 
 namespace test_placementofattributes {
 namespace wire {
-// |ExampleBits| is strict, hence is guaranteed to only contain
-// members defined in the FIDL schema when receiving it in a message.
-// Sending unknown members will fail at runtime.
-class ExampleBits final {
- public:
-  constexpr ExampleBits() = default;
+using ExampleBits = ::test_placementofattributes::ExampleBits;
 
-  // Constructs an instance of |ExampleBits| from an underlying primitive value,
-  // preserving any bit member not defined in the FIDL schema.
-  explicit constexpr ExampleBits(uint32_t value) : value_(value) {}
-  const static ExampleBits kMember;
-  const static ExampleBits kMask;
-
-  explicit constexpr inline operator uint32_t() const { return value_; }
-  explicit constexpr inline operator bool() const {
-    return static_cast<bool>(value_);
-  }
-  constexpr inline bool operator==(const ExampleBits& other) const {
-    return value_ == other.value_;
-  }
-  constexpr inline bool operator!=(const ExampleBits& other) const {
-    return value_ != other.value_;
-  }
-  constexpr inline ExampleBits operator~() const;
-  constexpr inline ExampleBits operator|(const ExampleBits& other) const;
-  constexpr inline ExampleBits operator&(const ExampleBits& other) const;
-  constexpr inline ExampleBits operator^(const ExampleBits& other) const;
-  constexpr inline void operator|=(const ExampleBits& other);
-  constexpr inline void operator&=(const ExampleBits& other);
-  constexpr inline void operator^=(const ExampleBits& other);
-
-  // Constructs an instance of |ExampleBits| from an underlying primitive value
-  // if the primitive does not contain any unknown members not defined in the
-  // FIDL schema. Otherwise, returns |cpp17::nullopt|.
-  constexpr inline static cpp17::optional<ExampleBits> TryFrom(uint32_t value) {
-    if (value & ~kMask.value_) {
-      return cpp17::nullopt;
-    }
-    return ExampleBits(value & ExampleBits::kMask.value_);
-  }
-
-  // Constructs an instance of |ExampleBits| from an underlying primitive value,
-  // clearing any bit member not defined in the FIDL schema.
-  constexpr inline static ExampleBits TruncatingUnknown(uint32_t value) {
-    return ExampleBits(value & ExampleBits::kMask.value_);
-  }
-
- private:
-  uint32_t value_ = 0;
-};
-constexpr const ::test_placementofattributes::wire::ExampleBits
-    ExampleBits::kMember = ::test_placementofattributes::wire::ExampleBits(1u);
-constexpr const ::test_placementofattributes::wire::ExampleBits
-    ExampleBits::kMask = ::test_placementofattributes::wire::ExampleBits(1u);
-
-constexpr inline ::test_placementofattributes::wire::ExampleBits
-ExampleBits::operator~() const {
-  return ::test_placementofattributes::wire::ExampleBits(
-      static_cast<uint32_t>(~this->value_ & kMask.value_));
-}
-
-constexpr inline ::test_placementofattributes::wire::ExampleBits
-ExampleBits::operator|(
-    const ::test_placementofattributes::wire::ExampleBits& other) const {
-  return ::test_placementofattributes::wire::ExampleBits(
-      static_cast<uint32_t>(this->value_ | other.value_));
-}
-
-constexpr inline ::test_placementofattributes::wire::ExampleBits
-ExampleBits::operator&(
-    const ::test_placementofattributes::wire::ExampleBits& other) const {
-  return ::test_placementofattributes::wire::ExampleBits(
-      static_cast<uint32_t>(this->value_ & other.value_));
-}
-
-constexpr inline ::test_placementofattributes::wire::ExampleBits
-ExampleBits::operator^(
-    const ::test_placementofattributes::wire::ExampleBits& other) const {
-  return ::test_placementofattributes::wire::ExampleBits(
-      static_cast<uint32_t>(this->value_ ^ other.value_));
-}
-
-constexpr inline void ExampleBits::operator|=(
-    const ::test_placementofattributes::wire::ExampleBits& other) {
-  this->value_ |= other.value_;
-}
-
-constexpr inline void ExampleBits::operator&=(
-    const ::test_placementofattributes::wire::ExampleBits& other) {
-  this->value_ &= other.value_;
-}
-
-constexpr inline void ExampleBits::operator^=(
-    const ::test_placementofattributes::wire::ExampleBits& other) {
-  this->value_ ^= other.value_;
-}
-
-enum class ExampleEnum : uint32_t {
-
-  kMember = 1u,
-};
+using ExampleEnum = ::test_placementofattributes::ExampleEnum;
 
 struct ExampleStruct;
 
@@ -430,17 +333,6 @@ constexpr uint32_t kExampleConst = 0u;
 namespace fidl {
 
 template <>
-struct IsFidlType<::test_placementofattributes::wire::ExampleBits>
-    : public std::true_type {};
-template <>
-struct ContainsHandle<::test_placementofattributes::wire::ExampleBits>
-    : public std::false_type {};
-static_assert(
-    std::is_standard_layout_v<::test_placementofattributes::wire::ExampleBits>);
-static_assert(sizeof(::test_placementofattributes::wire::ExampleBits) ==
-              sizeof(uint32_t));
-
-template <>
 struct IsFidlType<::test_placementofattributes::wire::ExampleStruct>
     : public std::true_type {};
 template <>
@@ -479,12 +371,5 @@ struct IsUnion<::test_placementofattributes::wire::ExampleUnion>
     : public std::true_type {};
 static_assert(std::is_standard_layout_v<
               ::test_placementofattributes::wire::ExampleUnion>);
-
-template <>
-struct IsFidlType<::test_placementofattributes::wire::ExampleEnum>
-    : public std::true_type {};
-template <>
-struct ContainsHandle<::test_placementofattributes::wire::ExampleEnum>
-    : public std::false_type {};
 
 }  // namespace fidl

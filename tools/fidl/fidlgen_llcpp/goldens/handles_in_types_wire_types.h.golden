@@ -19,17 +19,12 @@
 
 #endif  // __Fuchsia__
 
+#include <fidl/test.handlesintypes/cpp/common_types.h>
 #include <fidl/test.handlesintypes/cpp/markers.h>
 
 namespace test_handlesintypes {
 namespace wire {
-
-enum class ObjType : uint32_t {
-
-  kNone = 0u,
-
-  kVmo = 3u,
-};
+using ObjType = ::test_handlesintypes::obj_type;
 
 struct HandlesInTypes;
 
@@ -325,12 +320,5 @@ struct IsUnion<::test_handlesintypes::wire::UnionWithHandle>
 static_assert(
     std::is_standard_layout_v<::test_handlesintypes::wire::UnionWithHandle>);
 #endif  // __Fuchsia__
-
-template <>
-struct IsFidlType<::test_handlesintypes::wire::ObjType>
-    : public std::true_type {};
-template <>
-struct ContainsHandle<::test_handlesintypes::wire::ObjType>
-    : public std::false_type {};
 
 }  // namespace fidl

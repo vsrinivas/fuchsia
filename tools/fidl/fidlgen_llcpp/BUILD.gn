@@ -25,10 +25,13 @@ if (is_host) {
       "codegen/driver/fragment_method_client_impl_oneway_buffer.tmpl",
       "codegen/driver/fragment_method_completer_base.tmpl",
       "codegen/driver/fragment_protocol_client_impl.tmpl",
+      "codegen/file_common_types_header.tmpl",
       "codegen/file_header.tmpl",
       "codegen/file_markers.tmpl",
       "codegen/file_messaging_header.tmpl",
       "codegen/file_messaging_source.tmpl",
+      "codegen/file_natural_types_header.tmpl",
+      "codegen/file_natural_types_source.tmpl",
       "codegen/file_test_base.tmpl",
       "codegen/file_types_header.tmpl",
       "codegen/file_types_source.tmpl",
@@ -58,6 +61,9 @@ if (is_host) {
       "codegen/fragment_struct.tmpl",
       "codegen/fragment_table.tmpl",
       "codegen/fragment_union.tmpl",
+      "codegen/natural_struct.tmpl",
+      "codegen/natural_table.tmpl",
+      "codegen/natural_union.tmpl",
       "main.go",
     ]
   }
@@ -95,6 +101,10 @@ if (is_host) {
             generated = "$gen_dir/$include_path/markers.h"
           },
           {
+            golden = "${info.name}_common_types.h.golden"
+            generated = "$gen_dir/$include_path/common_types.h"
+          },
+          {
             golden = "${info.name}_wire_types.h.golden"
             generated = "$gen_dir/$include_path/wire_types.h"
           },
@@ -121,6 +131,14 @@ if (is_host) {
           {
             golden = "${info.name}_driver_wire_messaging.cc.golden"
             generated = "$gen_dir/$include_path/driver/wire_messaging.cc"
+          },
+          {
+            golden = "${info.name}_natural_types.h.golden"
+            generated = "$gen_dir/$include_path/natural_types.h"
+          },
+          {
+            golden = "${info.name}_natural_types.cc.golden"
+            generated = "$gen_dir/$include_path/natural_types.cc"
           },
         ]
       }

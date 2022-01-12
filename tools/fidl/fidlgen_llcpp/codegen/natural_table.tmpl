@@ -1,0 +1,124 @@
+{{/*
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+*/}}
+
+{{- define "Table:ForwardDeclaration:NaturalTypesHeader" }}
+{{ EnsureNamespace . }}
+
+class {{ .Name }};
+{{- end }}
+
+{{- define "Table:NaturalTypesHeader" }}
+{{ EnsureNamespace . }}
+{{ if .IsResourceType }}
+{{- IfdefFuchsia -}}
+{{- end }}
+extern "C" const fidl_type_t {{ .CodingTableType }};
+
+{{ .Docs }}
+class {{ .Name }} final {
+ public:
+  struct Storage final {
+    {{- range .Members -}}
+      {{ .Docs }}
+      ::cpp17::optional<{{ .Type }}> {{ .Name }} {};
+    {{- end }}
+  };
+
+  {{ .Name }}(Storage storage) noexcept : storage_(std::move(storage)) {}
+  {{ .Name }}() noexcept = default;
+  {{ .Name }}({{ .Name }}&&) noexcept = default;
+  {{ .Name }}& operator=({{ .Name }}&&) noexcept = default;
+  {{- if not .IsResourceType }}
+    {{ .Name }}(const {{ .Name }}& other) noexcept : {{ .Name }}(other.CloneStorage()){}
+    {{ .Name }}& operator=(const {{ .Name }}& other) noexcept {
+      storage_ = other.CloneStorage();
+      return *this;
+    }
+  {{- end }}  
+
+  bool IsEmpty() const {
+    {{- if len .Members }}
+      return !(
+        {{- range $i, $m := .Members }}
+          {{- if $i }}||{{ end -}}
+          storage_.{{ .Name }}.has_value()
+        {{- end }}
+      );
+    {{- else }}
+      return true;
+    {{- end }}
+  }
+
+  size_t MaxOrdinal() const;
+
+  {{- range .Members }}
+    {{ .Docs }}
+    const cpp17::optional<{{ .Type }}>& {{ .Name }}() const { return storage_.{{ .Name }}; }
+    {{- .Docs }}
+    ::cpp17::optional<{{ .Type }}>& {{ .Name }}() { return storage_.{{ .Name }}; }
+  {{- end }}
+ private:
+  // TODO(https://fxbug.dev/91252): Box the storage.
+  Storage storage_;
+  {{- if not .IsResourceType }}
+    Storage CloneStorage() const;
+  {{- end }}
+  friend struct ::fidl::internal::NaturalTableCodingTraits<{{ . }}>;
+  static constexpr auto Members = std::make_tuple(
+    {{- range $i, $m := .Members }}
+      {{- if $i }}, {{ end -}}
+      std::make_tuple({{ $m.Ordinal }}, &Storage::{{ $m.Name }},
+        {{- if $m.HandleInformation -}}
+          std::make_optional<::fidl::HandleInformation>({
+            .object_type = {{ $m.HandleInformation.ObjectType }},
+            .rights = {{ $m.HandleInformation.Rights }}
+          })
+        {{- else }}
+          std::nullopt
+        {{- end -}}
+      )
+    {{- end -}}
+  );
+};
+{{ if .IsResourceType }}
+{{- EndifFuchsia -}}
+{{- end }}
+{{- end }}
+
+
+{{- define "Table:Traits:NaturalTypesHeader" }}
+  {{ if .IsResourceType }}
+  template <>
+  struct IsResource<{{ . }}> : public std::true_type {};
+  {{- end }}
+  template <>
+  struct IsFidlType<{{ . }}> : public std::true_type {};
+
+  {{- /*
+  TODO(fxbug.dev/82189): We are reusing the HLCPP coding machinery. For now this
+  is the minimal to support encoding/decoding, without any optimizations. This may
+  change as we gradually move to a complete natural domain object fork.
+  */}}
+
+  template <>
+  struct CodingTraits<{{ . }}> : public ::fidl::internal::NaturalTableCodingTraits<{{ . }}> {};
+{{ end }}
+
+
+{{- define "Table:NaturalTypesSource" }}
+{{- EnsureNamespace "" }}
+
+{{ if not .IsResourceType }}
+{{ . }}::Storage {{ .NoLeading }}::CloneStorage() const {
+    return Storage{
+      {{- range $i, $m := .Members }}
+        {{- if $i }}, {{ end }}
+        ::fidl::internal::NaturalClone(storage_.{{ .Name }})
+      {{- end }}
+    };
+  }
+{{- end }}
+{{- end }}

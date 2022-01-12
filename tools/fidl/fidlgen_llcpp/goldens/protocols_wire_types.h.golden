@@ -21,119 +21,15 @@
 
 #endif  // __Fuchsia__
 
+#include <fidl/test.protocols/cpp/common_types.h>
 #include <fidl/test.protocols/cpp/markers.h>
 
 namespace test_protocols {
 namespace wire {
-// |Rights| is strict, hence is guaranteed to only contain
-// members defined in the FIDL schema when receiving it in a message.
-// Sending unknown members will fail at runtime.
-class Rights final {
- public:
-  constexpr Rights() = default;
+using Rights = ::test_protocols::rights;
 
-  // Constructs an instance of |Rights| from an underlying primitive value,
-  // preserving any bit member not defined in the FIDL schema.
-  explicit constexpr Rights(uint32_t value) : value_(value) {}
-  const static Rights kTransfer;
-  const static Rights kDuplicate;
-  const static Rights kMask;
-
-  explicit constexpr inline operator uint32_t() const { return value_; }
-  explicit constexpr inline operator bool() const {
-    return static_cast<bool>(value_);
-  }
-  constexpr inline bool operator==(const Rights& other) const {
-    return value_ == other.value_;
-  }
-  constexpr inline bool operator!=(const Rights& other) const {
-    return value_ != other.value_;
-  }
-  constexpr inline Rights operator~() const;
-  constexpr inline Rights operator|(const Rights& other) const;
-  constexpr inline Rights operator&(const Rights& other) const;
-  constexpr inline Rights operator^(const Rights& other) const;
-  constexpr inline void operator|=(const Rights& other);
-  constexpr inline void operator&=(const Rights& other);
-  constexpr inline void operator^=(const Rights& other);
-
-  // Constructs an instance of |Rights| from an underlying primitive value
-  // if the primitive does not contain any unknown members not defined in the
-  // FIDL schema. Otherwise, returns |cpp17::nullopt|.
-  constexpr inline static cpp17::optional<Rights> TryFrom(uint32_t value) {
-    if (value & ~kMask.value_) {
-      return cpp17::nullopt;
-    }
-    return Rights(value & Rights::kMask.value_);
-  }
-
-  // Constructs an instance of |Rights| from an underlying primitive value,
-  // clearing any bit member not defined in the FIDL schema.
-  constexpr inline static Rights TruncatingUnknown(uint32_t value) {
-    return Rights(value & Rights::kMask.value_);
-  }
-
- private:
-  uint32_t value_ = 0;
-};
-constexpr const ::test_protocols::wire::Rights Rights::kTransfer =
-    ::test_protocols::wire::Rights(1u);
-constexpr const ::test_protocols::wire::Rights Rights::kDuplicate =
-    ::test_protocols::wire::Rights(2u);
-constexpr const ::test_protocols::wire::Rights Rights::kMask =
-    ::test_protocols::wire::Rights(3u);
-
-constexpr inline ::test_protocols::wire::Rights Rights::operator~() const {
-  return ::test_protocols::wire::Rights(
-      static_cast<uint32_t>(~this->value_ & kMask.value_));
-}
-
-constexpr inline ::test_protocols::wire::Rights Rights::operator|(
-    const ::test_protocols::wire::Rights& other) const {
-  return ::test_protocols::wire::Rights(
-      static_cast<uint32_t>(this->value_ | other.value_));
-}
-
-constexpr inline ::test_protocols::wire::Rights Rights::operator&(
-    const ::test_protocols::wire::Rights& other) const {
-  return ::test_protocols::wire::Rights(
-      static_cast<uint32_t>(this->value_ & other.value_));
-}
-
-constexpr inline ::test_protocols::wire::Rights Rights::operator^(
-    const ::test_protocols::wire::Rights& other) const {
-  return ::test_protocols::wire::Rights(
-      static_cast<uint32_t>(this->value_ ^ other.value_));
-}
-
-constexpr inline void Rights::operator|=(
-    const ::test_protocols::wire::Rights& other) {
-  this->value_ |= other.value_;
-}
-
-constexpr inline void Rights::operator&=(
-    const ::test_protocols::wire::Rights& other) {
-  this->value_ &= other.value_;
-}
-
-constexpr inline void Rights::operator^=(
-    const ::test_protocols::wire::Rights& other) {
-  this->value_ ^= other.value_;
-}
-
-enum class ObjType : uint32_t {
-
-  kNone = 0u,
-
-  kSocket = 14u,
-};
-
-enum class ErrorEnum : uint32_t {
-
-  kErrFoo = 1u,
-
-  kErrBar = 2u,
-};
+using ObjType = ::test_protocols::obj_type;
+using ErrorEnum = ::test_protocols::ErrorEnum;
 
 struct WithErrorSyntaxHandleInResultResponse;
 
@@ -921,14 +817,6 @@ struct ProtocolEnds {
 }  // namespace test_protocols
 namespace fidl {
 
-template <>
-struct IsFidlType<::test_protocols::wire::Rights> : public std::true_type {};
-template <>
-struct ContainsHandle<::test_protocols::wire::Rights> : public std::false_type {
-};
-static_assert(std::is_standard_layout_v<::test_protocols::wire::Rights>);
-static_assert(sizeof(::test_protocols::wire::Rights) == sizeof(uint32_t));
-
 #ifdef __Fuchsia__
 template <>
 struct IsResource<::test_protocols::wire::WithErrorSyntaxHandleInResultResponse>
@@ -1069,17 +957,5 @@ struct IsUnion<::test_protocols::wire::WithErrorSyntaxErrorAsEnumResult>
     : public std::true_type {};
 static_assert(std::is_standard_layout_v<
               ::test_protocols::wire::WithErrorSyntaxErrorAsEnumResult>);
-
-template <>
-struct IsFidlType<::test_protocols::wire::ObjType> : public std::true_type {};
-template <>
-struct ContainsHandle<::test_protocols::wire::ObjType>
-    : public std::false_type {};
-
-template <>
-struct IsFidlType<::test_protocols::wire::ErrorEnum> : public std::true_type {};
-template <>
-struct ContainsHandle<::test_protocols::wire::ErrorEnum>
-    : public std::false_type {};
 
 }  // namespace fidl

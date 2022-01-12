@@ -45,73 +45,12 @@
 
 #endif  // __Fuchsia__
 
+#include <fidl/test.handles/cpp/common_types.h>
 #include <fidl/test.handles/cpp/markers.h>
 
 namespace test_handles {
 namespace wire {
-
-enum class ObjType : uint32_t {
-
-  kNone = 0u,
-
-  kProcess = 1u,
-
-  kThread = 2u,
-
-  kVmo = 3u,
-
-  kChannel = 4u,
-
-  kEvent = 5u,
-
-  kPort = 6u,
-
-  kInterrupt = 9u,
-
-  kPciDevice = 11u,
-
-  kLog = 12u,
-
-  kSocket = 14u,
-
-  kResource = 15u,
-
-  kEventpair = 16u,
-
-  kJob = 17u,
-
-  kVmar = 18u,
-
-  kFifo = 19u,
-
-  kGuest = 20u,
-
-  kVcpu = 21u,
-
-  kTimer = 22u,
-
-  kIommu = 23u,
-
-  kBti = 24u,
-
-  kProfile = 25u,
-
-  kPmt = 26u,
-
-  kSuspendToken = 27u,
-
-  kPager = 28u,
-
-  kException = 29u,
-
-  kClock = 30u,
-
-  kStream = 31u,
-
-  kMsiAllocation = 32u,
-
-  kMsiInterrupt = 33u,
-};
+using ObjType = ::test_handles::obj_type;
 
 struct Handles;
 
@@ -255,11 +194,5 @@ static_assert(offsetof(::test_handles::wire::Handles, request_some_protocol) ==
 static_assert(sizeof(::test_handles::wire::Handles) ==
               ::test_handles::wire::Handles::PrimarySize);
 #endif  // __Fuchsia__
-
-template <>
-struct IsFidlType<::test_handles::wire::ObjType> : public std::true_type {};
-template <>
-struct ContainsHandle<::test_handles::wire::ObjType> : public std::false_type {
-};
 
 }  // namespace fidl

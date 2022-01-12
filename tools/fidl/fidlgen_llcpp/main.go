@@ -15,8 +15,10 @@ func main() {
 	generator := codegen.NewGenerator(flags)
 	generator.GenerateFiles(fidl, []string{
 		"Header", "TestBase", "Markers",
+		"CommonTypesHeader",
 		"TypesHeader", "TypesSource",
 		"MessagingHeader", "MessagingSource",
+		"NaturalTypesHeader", "NaturalTypesSource",
 		"driver/Header",
 		"driver/MessagingHeader", "driver/MessagingSource",
 	})

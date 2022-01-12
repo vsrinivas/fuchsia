@@ -19,6 +19,7 @@
 #endif  // __Fuchsia__
 
 #include <fidl/test.dependent/cpp/wire_types.h>
+#include <fidl/test.importedconstvalues/cpp/common_types.h>
 #include <fidl/test.importedconstvalues/cpp/markers.h>
 
 namespace test_importedconstvalues {

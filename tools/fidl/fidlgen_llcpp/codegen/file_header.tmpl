@@ -19,7 +19,7 @@ fidl/{{ .LibraryDots }}/cpp/wire.h
 #include <{{ .Library | Filename "TypesHeader" }}>
 #include <{{ .Library | Filename "MessagingHeader" }}>
 {{ range .Dependencies -}}
-#include <{{ . | Filename "Header" }}>
+  #include <{{ . | Filename "Header" }}>
 {{ end -}}
 
 {{ "" }}

@@ -20,17 +20,12 @@
 #endif  // __Fuchsia__
 
 #include <fidl/test.someotherlibrary/cpp/wire_types.h>
+#include <fidl/test.typealiases/cpp/common_types.h>
 #include <fidl/test.typealiases/cpp/markers.h>
 
 namespace test_typealiases {
 namespace wire {
-
-enum class ObjType : uint32_t {
-
-  kNone = 0u,
-
-  kChannel = 4u,
-};
+using ObjType = ::test_typealiases::obj_type;
 
 struct ExampleOfUseOfAliases;
 
@@ -109,11 +104,5 @@ static_assert(offsetof(::test_typealiases::wire::ExampleOfUseOfAliases,
 static_assert(sizeof(::test_typealiases::wire::ExampleOfUseOfAliases) ==
               ::test_typealiases::wire::ExampleOfUseOfAliases::PrimarySize);
 #endif  // __Fuchsia__
-
-template <>
-struct IsFidlType<::test_typealiases::wire::ObjType> : public std::true_type {};
-template <>
-struct ContainsHandle<::test_typealiases::wire::ObjType>
-    : public std::false_type {};
 
 }  // namespace fidl

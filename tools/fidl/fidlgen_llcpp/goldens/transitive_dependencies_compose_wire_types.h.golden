@@ -21,6 +21,7 @@
 
 #include <fidl/test.bottom/cpp/wire_types.h>
 #include <fidl/test.middle/cpp/wire_types.h>
+#include <fidl/test.transitivedependenciescompose/cpp/common_types.h>
 #include <fidl/test.transitivedependenciescompose/cpp/markers.h>
 
 namespace fidl {}  // namespace fidl

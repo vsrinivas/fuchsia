@@ -95,7 +95,7 @@ TEST(NaturalStructWithHandle, Decode) {
 TEST(NaturalStruct, Encode) {
   // Set up an object.
   fidl_llcpp_types_test::CopyableStruct obj;
-  obj.set_x(42);
+  obj.x() = 42;
 
   // Perform encoding.
   fidl::internal::EncodeResult result = obj.Internal__Encode();
@@ -139,7 +139,7 @@ TEST(NaturalStructWithHandle, Encode) {
 
   // Set up an object.
   fidl_llcpp_types_test::HandleStruct obj;
-  obj.set_h(std::move(event));
+  obj.h() = std::move(event);
 
   // Perform encoding.
   fidl::internal::EncodeResult result = obj.Internal__Encode();

@@ -2,62 +2,6 @@
 
 #include <test/errorsyntax/cpp/fidl_v2.h>
 
-#ifdef __Fuchsia__
-
-void ::test_errorsyntax::ExampleUseOfErrorSyntax_CallWhichMayFail_Response::
-    EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset) {
-  encoder.Alloc(
-      ::fidl::EncodingInlineSize<
-          ::test_errorsyntax::ExampleUseOfErrorSyntax_CallWhichMayFail_Response,
-          ::fidl::Encoder>(&encoder));
-  ::fidl::CodingTraits<
-      ::test_errorsyntax::ExampleUseOfErrorSyntax_CallWhichMayFail_Response>::
-      Encode(&encoder, this, offset);
-}
-
-::test_errorsyntax::ExampleUseOfErrorSyntax_CallWhichMayFail_Response::
-    ExampleUseOfErrorSyntax_CallWhichMayFail_Response(::fidl::Decoder& decoder)
-    : storage_({::fidl::DecodeAs<int64_t>(&decoder, 0)}) {}
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-
-void ::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse::
-    EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset) {
-  encoder.Alloc(::fidl::EncodingInlineSize<
-                ::test_errorsyntax::
-                    ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse,
-                ::fidl::Encoder>(&encoder));
-  ::fidl::CodingTraits<
-      ::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse>::
-      Encode(&encoder, this, offset);
-}
-
-::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse::
-    ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse(::fidl::Decoder& decoder)
-    : storage_({::fidl::DecodeAs<
-          ::test_errorsyntax::ExampleUseOfErrorSyntax_CallWhichMayFail_Result>(
-          &decoder, 0)}) {}
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-
-void ::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailRequest::
-    EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset) {
-  encoder.Alloc(
-      ::fidl::EncodingInlineSize<
-          ::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailRequest,
-          ::fidl::Encoder>(&encoder));
-  ::fidl::CodingTraits<
-      ::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailRequest>::
-      Encode(&encoder, this, offset);
-}
-
-::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailRequest::
-    ExampleUseOfErrorSyntaxCallWhichMayFailRequest(::fidl::Decoder& decoder)
-    : storage_({::fidl::DecodeAs<::std::string>(&decoder, 0)}) {}
-#endif  // __Fuchsia__
-
 namespace test_errorsyntax {
 [[maybe_unused]] constexpr inline uint64_t
     kExampleUseOfErrorSyntax_ComposedCallWhichMayFail_Ordinal =
@@ -79,7 +23,7 @@ void fidl::internal::NaturalClientImpl<
       ::test_errorsyntax::
           kExampleUseOfErrorSyntax_ComposedCallWhichMayFail_Ordinal};
   return messenger().TwoWay(
-      &::test::errorsyntax::_internal::
+      &::test_errorsyntax::
           test_errorsyntax_ExampleUseOfErrorSyntaxComposedCallWhichMayFailRequestMessageTable,
       ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
           _encoder, std::move(payload)),
@@ -104,7 +48,7 @@ void fidl::internal::NaturalClientImpl<
       ::test_errorsyntax::
           kExampleUseOfErrorSyntax_ComposedCallWhichMayFail_Ordinal};
   return messenger().TwoWay(
-      &::test::errorsyntax::_internal::
+      &::test_errorsyntax::
           test_errorsyntax_ExampleUseOfErrorSyntaxComposedCallWhichMayFailRequestMessageTable,
       ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
           _encoder, std::move(payload)),
@@ -130,7 +74,7 @@ void fidl::internal::NaturalClientImpl<
   ::fidl::Encoder _encoder{
       ::test_errorsyntax::kExampleUseOfErrorSyntax_CallWhichMayFail_Ordinal};
   return messenger().TwoWay(
-      &::test::errorsyntax::_internal::
+      &::test_errorsyntax::
           test_errorsyntax_ExampleUseOfErrorSyntaxCallWhichMayFailRequestMessageTable,
       ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
           _encoder, std::move(payload)),
@@ -153,7 +97,7 @@ void fidl::internal::NaturalClientImpl<
   ::fidl::Encoder _encoder{
       ::test_errorsyntax::kExampleUseOfErrorSyntax_CallWhichMayFail_Ordinal};
   return messenger().TwoWay(
-      &::test::errorsyntax::_internal::
+      &::test_errorsyntax::
           test_errorsyntax_ExampleUseOfErrorSyntaxCallWhichMayFailRequestMessageTable,
       ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
           _encoder, std::move(payload)),

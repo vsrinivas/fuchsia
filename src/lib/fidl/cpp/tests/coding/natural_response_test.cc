@@ -77,7 +77,7 @@ TEST(NaturalResponsePayload, Decode) {
 TEST(NaturalResponsePayload, Encode) {
   // Set up an object.
   fidl_llcpp_types_test::BazFooTopResponse response;
-  response.set_res(fidl_llcpp_types_test::FooResponse{{.bar = 42}});
+  response.res() = fidl_llcpp_types_test::FooResponse{{.bar = 42}};
 
   // Perform encoding.
   fidl::internal::EncodeResult result = response.Internal__Encode();
@@ -124,15 +124,15 @@ TEST(NaturalResponseWithHandle, Encode) {
 
   // Set up an object.
   fidl_llcpp_types_test::MsgWrapperTestXUnionTopResponse response;
-  response.set_result(::fidl_llcpp_types_test::TestXUnion::WithH(std::move(event)));
+  response.result() = ::fidl_llcpp_types_test::TestXUnion::WithH(std::move(event));
 
   // Perform encoding.
   fidl::internal::EncodeResult result = response.Internal__Encode();
   ASSERT_TRUE(result.message().ok(), "Error encoding: %s",
               result.message().error().FormatDescription().c_str());
   // Handles are moved.
-  ASSERT_EQ(fidl_llcpp_types_test::TestXUnion::kH, response.result().Which());
-  ASSERT_EQ(zx::handle(), response.result().h());
+  ASSERT_EQ(fidl_llcpp_types_test::TestXUnion::Tag::kH, response.result().Which());
+  ASSERT_EQ(zx::handle(), response.result().h().value());
 
   // Check encoded bytes.
   fidl::OutgoingMessage& message = result.message();

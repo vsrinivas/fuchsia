@@ -19,6 +19,7 @@
 
 #endif  // __Fuchsia__
 
+#include <fidl/test.protocolrequest/cpp/common_types.h>
 #include <fidl/test.protocolrequest/cpp/markers.h>
 
 namespace fidl {}  // namespace fidl

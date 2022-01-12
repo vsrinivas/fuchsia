@@ -35,36 +35,12 @@ do not support them in the bindings. */}}
 #include <lib/fidl/cpp/natural_types.h>
 #include <lib/fidl/cpp/unified_messaging.h>
 
-#include <{{ .LegacyIncludeDir }}/natural_types.h>
+#include <{{ .UnifiedIncludeDir }}/natural_types.h>
 #include <{{ .UnifiedIncludeDir }}/wire.h>
 
 {{ "" }}
 
-{{- /* Generate our own domain objects. */}}
-{{- range .Decls }}
-{{- if Eq .Kind Kinds.Struct }}{{- template "StructForwardDeclaration" . }}{{- end }}
-{{- end }}
-
-{{- /* Bring the natural domain object types into our namespace. */}}
-{{- range .Decls | SkipRequestResponseDecls }}
-{{- if Eq .Kind Kinds.Bits }}{{ template "NaturalTypeAlias" . }}{{- end }}
-{{- if Eq .Kind Kinds.Enum }}{{ template "NaturalTypeAlias" . }}{{- end }}
-{{- if Eq .Kind Kinds.Table }}{{ template "NaturalTypeAlias" . }}{{- end }}
-{{- if Eq .Kind Kinds.Union }}{{ template "NaturalTypeAlias" . }}{{- end }}
-{{ "" }}
-{{- end }}
-
-{{- /* Generate our own domain objects. */}}
-{{- range .Decls }}
-{{- if Eq .Kind Kinds.Struct }}{{ template "StructDeclaration" . }}{{- end }}
-{{- if Eq .Kind Kinds.Const }}{{ template "ConstDeclaration" . }}{{- end }}
-{{ "" }}
-{{- end }}
-
 {{ EnsureNamespace "fidl" }}
-{{- range .Decls }}
-{{- if Eq .Kind Kinds.Struct }}{{ template "StructTraits" . }}{{- end }}
-{{- end }}
 {{ "" }}
 
 {{- /* Declare natural extensions to the wire messaging layer. */}}

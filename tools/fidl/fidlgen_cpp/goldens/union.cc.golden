@@ -2,146 +2,6 @@
 
 #include <test/union/cpp/fidl_v2.h>
 
-#ifdef __Fuchsia__
-
-void ::test_union::StructWithNullableXUnion::EncodeWithoutValidating(
-    ::fidl::Encoder& encoder, size_t offset) {
-  encoder.Alloc(
-      ::fidl::EncodingInlineSize<::test_union::StructWithNullableXUnion,
-                                 ::fidl::Encoder>(&encoder));
-  ::fidl::CodingTraits<::test_union::StructWithNullableXUnion>::Encode(
-      &encoder, this, offset);
-}
-
-::test_union::StructWithNullableXUnion::StructWithNullableXUnion(
-    ::fidl::Decoder& decoder)
-    : storage_(
-          {::fidl::DecodeAs<::std::unique_ptr<::test_union::OlderSimpleUnion>>(
-              &decoder, 0)}) {}
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-
-void ::test_union::
-    TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse::
-        EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset) {
-  encoder.Alloc(
-      ::fidl::EncodingInlineSize<
-          ::test_union::
-              TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse,
-          ::fidl::Encoder>(&encoder));
-  ::fidl::CodingTraits<
-      ::test_union::
-          TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse>::
-      Encode(&encoder, this, offset);
-}
-
-::test_union::
-    TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse::
-        TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse(
-            ::fidl::Decoder& decoder)
-    : storage_(
-          {::fidl::DecodeAs<::test_union::StrictBoundedXUnion>(&decoder, 0)}) {}
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-
-void ::test_union::Pizza::EncodeWithoutValidating(::fidl::Encoder& encoder,
-                                                  size_t offset) {
-  encoder.Alloc(
-      ::fidl::EncodingInlineSize<::test_union::Pizza, ::fidl::Encoder>(
-          &encoder));
-  ::fidl::CodingTraits<::test_union::Pizza>::Encode(&encoder, this, offset);
-}
-
-::test_union::Pizza::Pizza(::fidl::Decoder& decoder)
-    : storage_({::fidl::DecodeAs<::std::vector<::std::string>>(&decoder, 0)}) {}
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-
-void ::test_union::Pasta::EncodeWithoutValidating(::fidl::Encoder& encoder,
-                                                  size_t offset) {
-  encoder.Alloc(
-      ::fidl::EncodingInlineSize<::test_union::Pasta, ::fidl::Encoder>(
-          &encoder));
-  ::fidl::CodingTraits<::test_union::Pasta>::Encode(&encoder, this, offset);
-}
-
-::test_union::Pasta::Pasta(::fidl::Decoder& decoder)
-    : storage_({::fidl::DecodeAs<::std::string>(&decoder, 0)}) {}
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-
-void ::test_union::
-    TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse::
-        EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset) {
-  encoder.Alloc(
-      ::fidl::EncodingInlineSize<
-          ::test_union::
-              TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse,
-          ::fidl::Encoder>(&encoder));
-  ::fidl::CodingTraits<
-      ::test_union::
-          TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse>::
-      Encode(&encoder, this, offset);
-}
-
-::test_union::
-    TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse::
-        TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse(
-            ::fidl::Decoder& decoder)
-    : storage_(
-          {::fidl::DecodeAs<::test_union::OlderSimpleUnion>(&decoder, 0)}) {}
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-
-void ::test_union::NullableUnionStruct::EncodeWithoutValidating(
-    ::fidl::Encoder& encoder, size_t offset) {
-  encoder.Alloc(::fidl::EncodingInlineSize<::test_union::NullableUnionStruct,
-                                           ::fidl::Encoder>(&encoder));
-  ::fidl::CodingTraits<::test_union::NullableUnionStruct>::Encode(&encoder,
-                                                                  this, offset);
-}
-
-::test_union::NullableUnionStruct::NullableUnionStruct(::fidl::Decoder& decoder)
-    : storage_({::fidl::DecodeAs<::std::unique_ptr<::test_union::Union>>(
-          &decoder, 0)}) {}
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-
-void ::test_union::UnionSandwich::EncodeWithoutValidating(
-    ::fidl::Encoder& encoder, size_t offset) {
-  encoder.Alloc(
-      ::fidl::EncodingInlineSize<::test_union::UnionSandwich, ::fidl::Encoder>(
-          &encoder));
-  ::fidl::CodingTraits<::test_union::UnionSandwich>::Encode(&encoder, this,
-                                                            offset);
-}
-
-::test_union::UnionSandwich::UnionSandwich(::fidl::Decoder& decoder)
-    : storage_({::fidl::DecodeAs<uint32_t>(&decoder, 0),
-                ::fidl::DecodeAs<::test_union::ExplicitXUnion>(&decoder, 8),
-                ::fidl::DecodeAs<uint32_t>(&decoder, 24)}) {}
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-
-void ::test_union::Empty::EncodeWithoutValidating(::fidl::Encoder& encoder,
-                                                  size_t offset) {
-  encoder.Alloc(
-      ::fidl::EncodingInlineSize<::test_union::Empty, ::fidl::Encoder>(
-          &encoder));
-  ::fidl::CodingTraits<::test_union::Empty>::Encode(&encoder, this, offset);
-}
-
-::test_union::Empty::Empty(::fidl::Decoder& decoder)
-    : storage_({::fidl::DecodeAs<uint8_t>(&decoder, 0)}) {}
-#endif  // __Fuchsia__
-
 namespace test_union {
 [[maybe_unused]] constexpr inline uint64_t
     kTestProtocol_StrictXUnionHenceResponseMayBeStackAllocated_Ordinal =
@@ -162,7 +22,7 @@ void fidl::internal::NaturalClientImpl<::test_union::TestProtocol>::
       ::test_union::
           kTestProtocol_StrictXUnionHenceResponseMayBeStackAllocated_Ordinal};
   return messenger().TwoWay(
-      &::test::union_::_internal::
+      &::test_union::
           test_union_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedRequestMessageTable,
       ::fidl::internal::EncodeTransactionalMessageWithoutValidating(_encoder),
       ::fidl::internal::MakeResponseContext<
@@ -185,7 +45,7 @@ void fidl::internal::NaturalClientImpl<::test_union::TestProtocol>::
       ::test_union::
           kTestProtocol_StrictXUnionHenceResponseMayBeStackAllocated_Ordinal};
   return messenger().TwoWay(
-      &::test::union_::_internal::
+      &::test_union::
           test_union_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedRequestMessageTable,
       ::fidl::internal::EncodeTransactionalMessageWithoutValidating(_encoder),
       ::fidl::internal::MakeResponseContext<
@@ -209,7 +69,7 @@ void fidl::internal::NaturalClientImpl<::test_union::TestProtocol>::
       ::test_union::
           kTestProtocol_FlexibleXUnionHenceResponseMustBeHeapAllocated_Ordinal};
   return messenger().TwoWay(
-      &::test::union_::_internal::
+      &::test_union::
           test_union_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedRequestMessageTable,
       ::fidl::internal::EncodeTransactionalMessageWithoutValidating(_encoder),
       ::fidl::internal::MakeResponseContext<
@@ -232,7 +92,7 @@ void fidl::internal::NaturalClientImpl<::test_union::TestProtocol>::
       ::test_union::
           kTestProtocol_FlexibleXUnionHenceResponseMustBeHeapAllocated_Ordinal};
   return messenger().TwoWay(
-      &::test::union_::_internal::
+      &::test_union::
           test_union_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedRequestMessageTable,
       ::fidl::internal::EncodeTransactionalMessageWithoutValidating(_encoder),
       ::fidl::internal::MakeResponseContext<

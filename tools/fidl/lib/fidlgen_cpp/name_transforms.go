@@ -92,7 +92,10 @@ func (ctx memberContext) transform(id fidlgen.Identifier) nameVariants {
 // https://google.github.io/styleguide/cppguide.html#Variable_Names
 func newDataMemberContext() memberContext {
 	return memberContext{
-		fidlgen.NewNameContext(), memberTransforms{wire: fidlgen.ToSnakeCase},
+		fidlgen.NewNameContext(), memberTransforms{
+			unified: fidlgen.ToSnakeCase,
+			wire:    fidlgen.ToSnakeCase,
+		},
 	}
 }
 
@@ -100,7 +103,11 @@ func newDataMemberContext() memberContext {
 // https://google.github.io/styleguide/cppguide.html#Enumerator_Names
 func newConstantMemberContext() memberContext {
 	return memberContext{
-		fidlgen.NewNameContext(), memberTransforms{wire: fidlgen.ConstNameToKCamelCase},
+		NameContext: fidlgen.NewNameContext(),
+		transforms: memberTransforms{
+			unified: fidlgen.ConstNameToKCamelCase,
+			wire:    fidlgen.ConstNameToKCamelCase,
+		},
 	}
 }
 
@@ -176,13 +183,7 @@ var (
 		NameContext: fidlgen.NewNameContext(),
 		transforms: declarationTransforms{
 			natural: simpleDeclarationTransform(naturalNamespace, nil),
-			// Intentionally using the natural namespace, since we would like
-			// the unified bindings to transparently accept natural types, which
-			// may certainly contain protocol endpoints.
-			// TODO(fxbug.dev/72980): Switch to ClientEnd/ServerEnd and
-			// underscore namespace when corresponding endpoint types can easily
-			// convert into each other.
-			unified: simpleDeclarationTransform(naturalNamespace, nil),
+			unified: simpleDeclarationTransform(unifiedNamespace, fidlgen.ToUpperCamelCase),
 			wire:    simpleDeclarationTransform(unifiedNamespace, fidlgen.ToUpperCamelCase),
 		},
 	}

@@ -18,112 +18,14 @@
 
 #endif  // __Fuchsia__
 
+#include <fidl/test.consts/cpp/common_types.h>
 #include <fidl/test.consts/cpp/markers.h>
 
 namespace test_consts {
 namespace wire {
-// |BitsType| is strict, hence is guaranteed to only contain
-// members defined in the FIDL schema when receiving it in a message.
-// Sending unknown members will fail at runtime.
-class BitsType final {
- public:
-  constexpr BitsType() = default;
+using BitsType = ::test_consts::BitsType;
 
-  // Constructs an instance of |BitsType| from an underlying primitive value,
-  // preserving any bit member not defined in the FIDL schema.
-  explicit constexpr BitsType(uint32_t value) : value_(value) {}
-  const static BitsType kValue;
-  const static BitsType kTrue;
-  const static BitsType kMask;
-
-  explicit constexpr inline operator uint32_t() const { return value_; }
-  explicit constexpr inline operator bool() const {
-    return static_cast<bool>(value_);
-  }
-  constexpr inline bool operator==(const BitsType& other) const {
-    return value_ == other.value_;
-  }
-  constexpr inline bool operator!=(const BitsType& other) const {
-    return value_ != other.value_;
-  }
-  constexpr inline BitsType operator~() const;
-  constexpr inline BitsType operator|(const BitsType& other) const;
-  constexpr inline BitsType operator&(const BitsType& other) const;
-  constexpr inline BitsType operator^(const BitsType& other) const;
-  constexpr inline void operator|=(const BitsType& other);
-  constexpr inline void operator&=(const BitsType& other);
-  constexpr inline void operator^=(const BitsType& other);
-
-  // Constructs an instance of |BitsType| from an underlying primitive value
-  // if the primitive does not contain any unknown members not defined in the
-  // FIDL schema. Otherwise, returns |cpp17::nullopt|.
-  constexpr inline static cpp17::optional<BitsType> TryFrom(uint32_t value) {
-    if (value & ~kMask.value_) {
-      return cpp17::nullopt;
-    }
-    return BitsType(value & BitsType::kMask.value_);
-  }
-
-  // Constructs an instance of |BitsType| from an underlying primitive value,
-  // clearing any bit member not defined in the FIDL schema.
-  constexpr inline static BitsType TruncatingUnknown(uint32_t value) {
-    return BitsType(value & BitsType::kMask.value_);
-  }
-
- private:
-  uint32_t value_ = 0;
-};
-constexpr const ::test_consts::wire::BitsType BitsType::kValue =
-    ::test_consts::wire::BitsType(1u);
-constexpr const ::test_consts::wire::BitsType BitsType::kTrue =
-    ::test_consts::wire::BitsType(2u);
-constexpr const ::test_consts::wire::BitsType BitsType::kMask =
-    ::test_consts::wire::BitsType(3u);
-
-constexpr inline ::test_consts::wire::BitsType BitsType::operator~() const {
-  return ::test_consts::wire::BitsType(
-      static_cast<uint32_t>(~this->value_ & kMask.value_));
-}
-
-constexpr inline ::test_consts::wire::BitsType BitsType::operator|(
-    const ::test_consts::wire::BitsType& other) const {
-  return ::test_consts::wire::BitsType(
-      static_cast<uint32_t>(this->value_ | other.value_));
-}
-
-constexpr inline ::test_consts::wire::BitsType BitsType::operator&(
-    const ::test_consts::wire::BitsType& other) const {
-  return ::test_consts::wire::BitsType(
-      static_cast<uint32_t>(this->value_ & other.value_));
-}
-
-constexpr inline ::test_consts::wire::BitsType BitsType::operator^(
-    const ::test_consts::wire::BitsType& other) const {
-  return ::test_consts::wire::BitsType(
-      static_cast<uint32_t>(this->value_ ^ other.value_));
-}
-
-constexpr inline void BitsType::operator|=(
-    const ::test_consts::wire::BitsType& other) {
-  this->value_ |= other.value_;
-}
-
-constexpr inline void BitsType::operator&=(
-    const ::test_consts::wire::BitsType& other) {
-  this->value_ &= other.value_;
-}
-
-constexpr inline void BitsType::operator^=(
-    const ::test_consts::wire::BitsType& other) {
-  this->value_ ^= other.value_;
-}
-
-enum class EnumType : int32_t {
-
-  kValue = 1u,
-
-  kTrue = 2u,
-};
+using EnumType = ::test_consts::EnumType;
 
 extern const char* kUsername;
 
@@ -167,20 +69,4 @@ constexpr uint16_t kAnswer = 42u;
 
 }  // namespace wire
 }  // namespace test_consts
-namespace fidl {
-
-template <>
-struct IsFidlType<::test_consts::wire::BitsType> : public std::true_type {};
-template <>
-struct ContainsHandle<::test_consts::wire::BitsType> : public std::false_type {
-};
-static_assert(std::is_standard_layout_v<::test_consts::wire::BitsType>);
-static_assert(sizeof(::test_consts::wire::BitsType) == sizeof(uint32_t));
-
-template <>
-struct IsFidlType<::test_consts::wire::EnumType> : public std::true_type {};
-template <>
-struct ContainsHandle<::test_consts::wire::EnumType> : public std::false_type {
-};
-
-}  // namespace fidl
+namespace fidl {}  // namespace fidl

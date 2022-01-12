@@ -20,6 +20,7 @@
 
 #endif  // __Fuchsia__
 
+#include <fidl/test.driverhandle/cpp/common_types.h>
 #include <fidl/test.driverhandle/cpp/markers.h>
 
 namespace test_driverhandle {

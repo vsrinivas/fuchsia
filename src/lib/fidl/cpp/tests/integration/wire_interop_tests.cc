@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <fidl/cpp/wire/interop/test/cpp/fidl_v2.h>
+#include <fidl/fidl.cpp.wire.interop.test/cpp/natural_types.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/fidl/cpp/client.h>
 #include <lib/stdcompat/string_view.h>
@@ -74,10 +75,8 @@ const char UnifiedClientToWireServerBase::kDirName[8] = "bar dir";
 
 fidl_cpp_wire_interop_test::Node UnifiedClientToWireServerBase::MakeNaturalFile() {
   fidl_cpp_wire_interop_test::Node node;
-  node.set_name(kFileName);
-  fidl_cpp_wire_interop_test::Kind kind;
-  kind.file().content = kFileContent;
-  node.set_kind(std::move(kind));
+  node.name() = kFileName;
+  node.kind() = fidl_cpp_wire_interop_test::Kind::WithFile({{.content = kFileContent}});
   return node;
 }
 
@@ -93,18 +92,18 @@ fidl_cpp_wire_interop_test::wire::Node UnifiedClientToWireServerBase::MakeWireFi
 }
 
 void UnifiedClientToWireServerBase::CheckNaturalFile(const fidl_cpp_wire_interop_test::Node& node) {
-  EXPECT_TRUE(node.has_name());
+  EXPECT_TRUE(node.name().has_value());
   EXPECT_EQ(kFileName, node.name());
-  EXPECT_TRUE(node.has_kind());
-  EXPECT_EQ(fidl_cpp_wire_interop_test::Kind::Tag::kFile, node.kind().Which());
-  EXPECT_EQ(kFileContent, node.kind().file().content);
+  EXPECT_TRUE(node.kind().has_value());
+  EXPECT_EQ(fidl_cpp_wire_interop_test::Kind::Tag::kFile, node.kind()->Which());
+  EXPECT_EQ(kFileContent, node.kind()->file()->content());
 }
 
 void UnifiedClientToWireServerBase::CheckWireFile(
     const fidl_cpp_wire_interop_test::wire::Node& node) {
-  EXPECT_TRUE(node.has_name());
+  ASSERT_TRUE(node.has_name());
   EXPECT_EQ(fidl::StringView{kFileName}.get(), node.name().get());
-  EXPECT_TRUE(node.has_kind());
+  ASSERT_TRUE(node.has_kind());
   EXPECT_EQ(fidl_cpp_wire_interop_test::wire::Kind::Tag::kFile, node.kind().which());
   std::vector<uint8_t> content(node.kind().file().content.begin(),
                                node.kind().file().content.end());
@@ -113,14 +112,13 @@ void UnifiedClientToWireServerBase::CheckWireFile(
 
 fidl_cpp_wire_interop_test::Node UnifiedClientToWireServerBase::MakeNaturalDir() {
   fidl_cpp_wire_interop_test::Node node;
-  node.set_name(kDirName);
-  fidl_cpp_wire_interop_test::Kind kind;
+  node.name() = kDirName;
 
-  // TODO(fxbug.dev/82189): Use natural domain objects instead of HLCPP domain objects.
-  fidl::cpp::wire::interop::test::Node child = MakeNaturalFile();
-  kind.directory().children = std::make_unique<fidl::cpp::wire::interop::test::Children>();
-  kind.directory().children->elements.emplace_back(std::move(child));
-  node.set_kind(std::move(kind));
+  fidl_cpp_wire_interop_test::Node child = MakeNaturalFile();
+  fidl_cpp_wire_interop_test::Directory directory;
+  directory.children() = std::make_unique<fidl_cpp_wire_interop_test::Children>();
+  directory.children()->elements().emplace_back(std::move(child));
+  node.kind() = fidl_cpp_wire_interop_test::Kind::WithDirectory(std::move(directory));
   return node;
 }
 
@@ -140,14 +138,14 @@ fidl_cpp_wire_interop_test::wire::Node UnifiedClientToWireServerBase::MakeWireDi
 }
 
 void UnifiedClientToWireServerBase::CheckNaturalDir(const fidl_cpp_wire_interop_test::Node& node) {
-  EXPECT_TRUE(node.has_name());
+  ASSERT_TRUE(node.name().has_value());
   EXPECT_EQ(kDirName, node.name());
-  EXPECT_TRUE(node.has_kind());
-  EXPECT_EQ(fidl_cpp_wire_interop_test::Kind::Tag::kDirectory, node.kind().Which());
+  ASSERT_TRUE(node.kind().has_value());
+  ASSERT_EQ(fidl_cpp_wire_interop_test::Kind::Tag::kDirectory, node.kind()->Which());
 
-  const ::fidl::cpp::wire::interop::test::Directory& dir = node.kind().directory();
-  EXPECT_EQ(1, dir.children->elements.size());
-  const fidl_cpp_wire_interop_test::Node& child = dir.children->elements[0];
+  const fidl_cpp_wire_interop_test::Directory& dir = node.kind()->directory().value();
+  EXPECT_EQ(1, dir.children()->elements().size());
+  const fidl_cpp_wire_interop_test::Node& child = dir.children()->elements()[0];
   CheckNaturalFile(child);
 }
 
@@ -258,11 +256,11 @@ TEST_F(UnifiedClientToWireServer, TryRoundTrip) {
         std::move(request),
         [&](fidl::Response<fidl_cpp_wire_interop_test::Interop::TryRoundTrip>& response) {
           // TODO(fxbug.dev/90111): Translate error syntax to `::fitx::result`.
-          fpromise::result<::fidl::cpp::wire::interop::test::Node, zx_status_t> result =
+          fidl_cpp_wire_interop_test::Interop_TryRoundTrip_Result result =
               std::move(response->result());
-          ASSERT_TRUE(result.is_ok());
+          ASSERT_OK(result.err().value_or(ZX_OK));
 
-          ::fidl::cpp::wire::interop::test::Node& node = result.value();
+          fidl_cpp_wire_interop_test::Node node = result.response()->node();
           CheckNaturalDir(node);
           got_response = true;
         });
@@ -298,10 +296,10 @@ TEST_F(UnifiedClientToWireServer, TryRoundTrip) {
         std::move(request),
         [&](fidl::Response<fidl_cpp_wire_interop_test::Interop::TryRoundTrip>& response) {
           // TODO(fxbug.dev/90111): Translate error syntax to `::fitx::result`.
-          fpromise::result<::fidl::cpp::wire::interop::test::Node, zx_status_t> result =
+          fidl_cpp_wire_interop_test::Interop_TryRoundTrip_Result result =
               std::move(response->result());
-          ASSERT_TRUE(result.is_error());
-          EXPECT_STATUS(ZX_ERR_INVALID_ARGS, result.error());
+          ASSERT_TRUE(result.err().has_value());
+          EXPECT_STATUS(ZX_ERR_INVALID_ARGS, result.err().value());
           got_response = true;
         });
     ASSERT_OK(loop().RunUntilIdle());
@@ -339,7 +337,6 @@ TEST_F(UnifiedClientToWireServer, OneWay) {
   };
   Server server;
   fidl::BindServer(loop().dispatcher(), std::move(server_end()), &server);
-
   {
     // Test with natural domain objects.
     fitx::result<fidl::Error> result = client()->OneWay({MakeNaturalFile()});
@@ -347,7 +344,6 @@ TEST_F(UnifiedClientToWireServer, OneWay) {
     ASSERT_OK(loop().RunUntilIdle());
     EXPECT_EQ(1, server.num_calls);
   }
-
   {
     // Test with wire domain objects.
     fidl::Arena arena;

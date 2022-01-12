@@ -21,3 +21,12 @@ extern {{ .Decorator }} {{ .Type }} {{ .Name }};
 {{- end }}
 {{- end }}
 
+{{- define "Const:NaturalTypesHeader" }}
+{{ EnsureNamespace . }}
+{{ .Docs }}
+{{- if .Extern }}
+extern {{ .Decorator }} {{ .Type }} {{ .Name }};
+{{- else }}
+{{ .Decorator }} {{ .Type }} {{ .Name }} = {{ .Value }};
+{{- end }}
+{{- end }}

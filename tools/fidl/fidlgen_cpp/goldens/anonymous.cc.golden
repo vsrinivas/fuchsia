@@ -2,98 +2,6 @@
 
 #include <test/anonymous/cpp/fidl_v2.h>
 
-#ifdef __Fuchsia__
-
-void ::test_anonymous::TableData::EncodeWithoutValidating(
-    ::fidl::Encoder& encoder, size_t offset) {
-  encoder.Alloc(
-      ::fidl::EncodingInlineSize<::test_anonymous::TableData, ::fidl::Encoder>(
-          &encoder));
-  ::fidl::CodingTraits<::test_anonymous::TableData>::Encode(&encoder, this,
-                                                            offset);
-}
-
-::test_anonymous::TableData::TableData(::fidl::Decoder& decoder)
-    : storage_({::fidl::DecodeAs<uint8_t>(&decoder, 0)}) {}
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-
-void ::test_anonymous::SomeProtocolSomeMethodRequest::EncodeWithoutValidating(
-    ::fidl::Encoder& encoder, size_t offset) {
-  encoder.Alloc(
-      ::fidl::EncodingInlineSize<
-          ::test_anonymous::SomeProtocolSomeMethodRequest, ::fidl::Encoder>(
-          &encoder));
-  ::fidl::CodingTraits<::test_anonymous::SomeProtocolSomeMethodRequest>::Encode(
-      &encoder, this, offset);
-}
-
-::test_anonymous::SomeProtocolSomeMethodRequest::SomeProtocolSomeMethodRequest(
-    ::fidl::Decoder& decoder)
-    : storage_(
-          {::fidl::DecodeAs<::test_anonymous::UnionMember>(&decoder, 0),
-           ::fidl::DecodeAs<::test_anonymous::TableMember>(&decoder, 16)}) {}
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-
-void ::test_anonymous::OverrideTest::EncodeWithoutValidating(
-    ::fidl::Encoder& encoder, size_t offset) {
-  encoder.Alloc(::fidl::EncodingInlineSize<::test_anonymous::OverrideTest,
-                                           ::fidl::Encoder>(&encoder));
-  ::fidl::CodingTraits<::test_anonymous::OverrideTest>::Encode(&encoder, this,
-                                                               offset);
-}
-
-::test_anonymous::OverrideTest::OverrideTest(::fidl::Decoder& decoder)
-    : storage_(
-          {::fidl::DecodeAs<::test_anonymous::Op>(&decoder, 0),
-           ::fidl::DecodeAs<::std::unique_ptr<::test_anonymous::Expression>>(
-               &decoder, 8),
-           ::fidl::DecodeAs<::std::unique_ptr<::test_anonymous::Expression>>(
-               &decoder, 24)}) {}
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-
-void ::test_anonymous::SomeProtocol_SomeMethod_Response::
-    EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset) {
-  encoder.Alloc(
-      ::fidl::EncodingInlineSize<
-          ::test_anonymous::SomeProtocol_SomeMethod_Response, ::fidl::Encoder>(
-          &encoder));
-  ::fidl::CodingTraits<
-      ::test_anonymous::SomeProtocol_SomeMethod_Response>::Encode(&encoder,
-                                                                  this, offset);
-}
-
-::test_anonymous::SomeProtocol_SomeMethod_Response::
-    SomeProtocol_SomeMethod_Response(::fidl::Decoder& decoder)
-    : storage_({::fidl::DecodeAs<::test_anonymous::BitsMember>(&decoder, 0)}) {}
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-
-void ::test_anonymous::SomeProtocolSomeMethodTopResponse::
-    EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset) {
-  encoder.Alloc(
-      ::fidl::EncodingInlineSize<
-          ::test_anonymous::SomeProtocolSomeMethodTopResponse, ::fidl::Encoder>(
-          &encoder));
-  ::fidl::CodingTraits<
-      ::test_anonymous::SomeProtocolSomeMethodTopResponse>::Encode(&encoder,
-                                                                   this,
-                                                                   offset);
-}
-
-::test_anonymous::SomeProtocolSomeMethodTopResponse::
-    SomeProtocolSomeMethodTopResponse(::fidl::Decoder& decoder)
-    : storage_(
-          {::fidl::DecodeAs<::test_anonymous::SomeProtocol_SomeMethod_Result>(
-              &decoder, 0)}) {}
-#endif  // __Fuchsia__
-
 namespace test_anonymous {
 [[maybe_unused]] constexpr inline uint64_t kSomeProtocol_SomeMethod_Ordinal =
     2515914517457749720lu;
@@ -107,7 +15,7 @@ void fidl::internal::NaturalClientImpl<::test_anonymous::SomeProtocol>::
             _callback) const {
   ::fidl::Encoder _encoder{::test_anonymous::kSomeProtocol_SomeMethod_Ordinal};
   return messenger().TwoWay(
-      &::test::anonymous::_internal::
+      &::test_anonymous::
           test_anonymous_SomeProtocolSomeMethodRequestMessageTable,
       ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
           _encoder, std::move(payload)),
@@ -124,7 +32,7 @@ void fidl::internal::NaturalClientImpl<::test_anonymous::SomeProtocol>::
             ::test_anonymous::SomeProtocol::SomeMethod>&& _callback) const {
   ::fidl::Encoder _encoder{::test_anonymous::kSomeProtocol_SomeMethod_Ordinal};
   return messenger().TwoWay(
-      &::test::anonymous::_internal::
+      &::test_anonymous::
           test_anonymous_SomeProtocolSomeMethodRequestMessageTable,
       ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
           _encoder, std::move(payload)),

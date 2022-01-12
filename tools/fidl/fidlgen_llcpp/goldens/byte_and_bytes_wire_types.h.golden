@@ -18,6 +18,7 @@
 
 #endif  // __Fuchsia__
 
+#include <fidl/test.byteandbytes/cpp/common_types.h>
 #include <fidl/test.byteandbytes/cpp/markers.h>
 
 namespace test_byteandbytes {

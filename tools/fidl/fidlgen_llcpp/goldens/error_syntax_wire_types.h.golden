@@ -20,6 +20,7 @@
 #endif  // __Fuchsia__
 
 #include <fidl/test.errorsyntax.parent/cpp/wire_types.h>
+#include <fidl/test.errorsyntax/cpp/common_types.h>
 #include <fidl/test.errorsyntax/cpp/markers.h>
 
 namespace test_errorsyntax {

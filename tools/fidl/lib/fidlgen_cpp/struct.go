@@ -14,8 +14,7 @@ import (
 // These correspond to templated classes forward-declared in
 // //src/lib/fidl/include/lib/fidl/cpp/internal/natural_types.h
 var (
-	DesignatedInitializationProxy = internalNs.member("DesignatedInitializationProxy")
-	TypeTraits                    = internalNs.member("TypeTraits")
+	TypeTraits = internalNs.member("TypeTraits")
 )
 
 type Struct struct {
@@ -36,11 +35,6 @@ type Struct struct {
 
 	TypeShapeV1 TypeShape
 	TypeShapeV2 TypeShape
-
-	// DesignatedInitializationProxy is the name of the internal aggregate
-	// type associated with this struct in natural domain objects,
-	// to support designated initialization.
-	DesignatedInitializationProxy name
 
 	// TypeTraits contains information about a natural domain object.
 	TypeTraits name
@@ -86,6 +80,10 @@ func (sm StructMember) NameAndType() (string, Type) {
 	return sm.Name(), sm.Type
 }
 
+func (sm StructMember) StorageName() string {
+	return sm.Name() + "_"
+}
+
 var _ Member = (*StructMember)(nil)
 
 func (c *compiler) compileStructMember(val fidlgen.StructMember) StructMember {
@@ -125,9 +123,8 @@ func (c *compiler) compileStruct(val fidlgen.Struct) *Struct {
 		BackingBufferTypeV2: computeAllocation(
 			TypeShape{val.TypeShapeV2}.MaxTotalSize(), boundednessBounded).
 			BackingBufferType(),
-		DesignatedInitializationProxy: DesignatedInitializationProxy.template(name.Unified),
-		TypeTraits:                    TypeTraits.template(name.Unified),
-		isRequestOrResponse:           val.IsRequestOrResponse,
+		TypeTraits:          TypeTraits.template(name.Unified),
+		isRequestOrResponse: val.IsRequestOrResponse,
 	}
 
 	for _, v := range val.Members {

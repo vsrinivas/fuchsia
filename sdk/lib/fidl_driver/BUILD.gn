@@ -23,3 +23,17 @@ source_set("fidl_driver") {
     "//zircon/system/ulib/fidl:fidl-llcpp",
   ]
 }
+
+source_set("fidl_driver_natural") {
+  sources = [
+    "include/lib/fidl_driver/cpp/natural_types.h",
+    "include/lib/fidl_driver/cpp/transport.h",
+    "transport.cc",
+  ]
+  public_configs = [ ":include" ]
+  public_deps = [
+    "//sdk/lib/driver_runtime",
+    "//sdk/lib/driver_runtime:driver_runtime_cpp",
+    "//src/lib/fidl/cpp",
+  ]
+}

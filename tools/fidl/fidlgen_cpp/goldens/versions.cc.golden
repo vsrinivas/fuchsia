@@ -4,20 +4,6 @@
 
 #ifdef __Fuchsia__
 
-void ::test_versions::Struct::EncodeWithoutValidating(::fidl::Encoder& encoder,
-                                                      size_t offset) {
-  encoder.Alloc(
-      ::fidl::EncodingInlineSize<::test_versions::Struct, ::fidl::Encoder>(
-          &encoder));
-  ::fidl::CodingTraits<::test_versions::Struct>::Encode(&encoder, this, offset);
-}
-
-::test_versions::Struct::Struct(::fidl::Decoder& decoder)
-    : storage_({::fidl::DecodeAs<uint32_t>(&decoder, 0)}) {}
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -40,8 +26,7 @@ namespace test_versions {
 fidl::internal::NaturalClientImpl<::test_versions::Protocol>::Foo() const {
   ::fidl::Encoder _encoder{::test_versions::kProtocol_Foo_Ordinal};
   ::fidl::Result result = messenger().OneWay(
-      &::test::versions::_internal::
-          test_versions_ProtocolFooRequestMessageTable,
+      &::test_versions::test_versions_ProtocolFooRequestMessageTable,
       ::fidl::internal::EncodeTransactionalMessageWithoutValidating(_encoder));
   return ::fidl::internal::ToFitxResult(result);
 }

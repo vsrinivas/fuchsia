@@ -19,6 +19,7 @@
 #endif  // __Fuchsia__
 
 #include <fidl/test.middle/cpp/wire_types.h>
+#include <fidl/test.transitivedependencies/cpp/common_types.h>
 #include <fidl/test.transitivedependencies/cpp/markers.h>
 
 namespace test_transitivedependencies {

@@ -2,6 +2,7 @@
 
 #pragma once
 
+#include <fidl/test.doccomments/cpp/natural_types.h>
 #include <fidl/test.doccomments/cpp/wire.h>
 #include <lib/fidl/cpp/client.h>
 #include <lib/fidl/cpp/internal/codable_base.h>
@@ -9,153 +10,8 @@
 #include <lib/fidl/cpp/internal/natural_client_messenger.h>
 #include <lib/fidl/cpp/natural_types.h>
 #include <lib/fidl/cpp/unified_messaging.h>
-#include <test/doccomments/cpp/natural_types.h>
 
-namespace test_doccomments {
-class Struct;
-
-/// table comment #1
-///
-/// table comment #3
-using Table = ::test::doccomments::Table;
-
-/// strict union comment #1
-///
-/// strict union comment #3
-using StrictUnion = ::test::doccomments::StrictUnion;
-
-/// strict enum comment #1.
-///
-/// strict enum comment #2.
-using MyStrictEnum = ::test::doccomments::MyStrictEnum;
-
-/// strict bits comment #1
-///
-/// strict bits comment #2
-using MyStrictBits = ::test::doccomments::MyStrictBits;
-const static MyStrictBits MyStrictBitsMask =
-    ::test::doccomments::MyStrictBitsMask;
-
-/// flexible enum comment #1.
-///
-/// flexible enum comment #2.
-using MyFlexibleEnum = ::test::doccomments::MyFlexibleEnum;
-
-/// flexible bits comment #1
-///
-/// flexible bits comment #2
-using MyFlexibleBits = ::test::doccomments::MyFlexibleBits;
-
-/// flexible union comment #1
-///
-/// flexible union comment #3
-using FlexibleUnion = ::test::doccomments::FlexibleUnion;
-
-}  // namespace test_doccomments
-template <>
-struct ::fidl::internal::DesignatedInitializationProxy<
-    ::test_doccomments::Struct>
-    final {
- public:
-  /// struct member comment #1
-  ///
-  /// struct member comment #3
-  int32_t Field = {};
-};
-
-namespace test_doccomments {
-/// struct comment #1
-///
-/// struct comment #3
-class Struct final : public ::fidl::internal::CodableBase<Struct> {
- private:
-  friend ::fidl::internal::CodableBase<Struct>;
-  Struct(::fidl::Decoder& decoder);
-  template <typename Payload>
-  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-      ::fidl::Encoder& encoder, Payload&& payload)
-      -> ::fidl::HLCPPOutgoingMessage;
-  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
-
- public:
-  Struct() = default;
-  Struct(int32_t Field) : storage_({Field}) {}
-  Struct(::fidl::internal::DesignatedInitializationProxy<
-         ::test_doccomments::Struct>
-             storage)
-      : storage_(std::move(storage)) {}
-  ~Struct() = default;
-  Struct(Struct&&) noexcept = default;
-  Struct& operator=(Struct&&) noexcept = default;
-
-  /// struct member comment #1
-  ///
-  /// struct member comment #3
-  const int32_t& Field() const { return storage_.Field; }
-
-  /// struct member comment #1
-  ///
-  /// struct member comment #3
-  int32_t& Field() { return storage_.Field; }
-
-  /// struct member comment #1
-  ///
-  /// struct member comment #3
-  Struct& set_Field(int32_t _value) {
-    storage_.Field = std::move(_value);
-    return *this;
-  }
-
- private:
-  friend struct ::fidl::CodingTraits<::test_doccomments::Struct>;
-
-  ::fidl::internal::DesignatedInitializationProxy<::test_doccomments::Struct>
-      storage_ = {};
-};
-
-/// const comment #1
-///
-/// const comment #3
-constexpr int32_t C = ::test::doccomments::C;
-
-}  // namespace test_doccomments
 namespace fidl {
-#ifdef __Fuchsia__
-extern "C" const fidl_type_t test_doccomments_StructTable;
-
-template <>
-struct IsFidlType<::test_doccomments::Struct> : public std::true_type {};
-
-template <>
-struct ::fidl::internal::TypeTraits<::test_doccomments::Struct> final {
- public:
-  static constexpr const fidl_type_t* kCodingTable =
-      &test_doccomments_StructTable;
-};
-
-template <>
-struct CodingTraits<::test_doccomments::Struct> {
-  static constexpr size_t inline_size_v1_no_ee = 4;
-  static constexpr size_t inline_size_v2 = 4;
-
-  template <class EncoderImpl>
-  static void Encode(
-      EncoderImpl* encoder, ::test_doccomments::Struct* value, size_t offset,
-      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
-    [[maybe_unused]] uint32_t field_offset;
-    field_offset =
-        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
-                                                                           : 0;
-    ::fidl::Encode(encoder, &value->storage_.Field, offset + field_offset);
-  }
-
-  template <typename DecoderImpl>
-  static void Decode(DecoderImpl* decoder, ::test_doccomments::Struct* value,
-                     size_t offset) {
-    ::fidl::Decode(decoder, &value->storage_.Field, offset + 0);
-  }
-};
-#endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 }  // namespace fidl

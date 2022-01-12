@@ -20,6 +20,7 @@
 #endif  // __Fuchsia__
 
 #include <fidl/test.bottom/cpp/wire_types.h>
+#include <fidl/test.foreigntypeinresponseusedthroughcompose/cpp/common_types.h>
 #include <fidl/test.foreigntypeinresponseusedthroughcompose/cpp/markers.h>
 #include <fidl/test.middle/cpp/wire_types.h>
 

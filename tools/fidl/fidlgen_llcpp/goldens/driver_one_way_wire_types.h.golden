@@ -19,6 +19,7 @@
 
 #endif  // __Fuchsia__
 
+#include <fidl/test.driveroneway/cpp/common_types.h>
 #include <fidl/test.driveroneway/cpp/markers.h>
 
 namespace test_driveroneway {

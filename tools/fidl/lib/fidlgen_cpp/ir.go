@@ -459,14 +459,14 @@ func (c *compiler) compileType(val fidlgen.Type) Type {
 		r.ElementCount = *val.ElementCount
 	case fidlgen.VectorType:
 		t := c.compileType(*val.ElementType)
+		r.nameVariants.Unified = makeName("std::vector").template(t.Unified)
+		r.nameVariants.Wire = makeName("fidl::VectorView").template(t.Wire)
 		if val.Nullable {
 			r.nameVariants.HLCPP = makeName("fidl::VectorPtr").template(t.HLCPP)
-			r.nameVariants.Unified = makeName("fidl::VectorPtr").template(t.Unified)
+			r.nameVariants.Unified = makeName("cpp17::optional").template(r.nameVariants.Unified)
 		} else {
 			r.nameVariants.HLCPP = makeName("std::vector").template(t.HLCPP)
-			r.nameVariants.Unified = makeName("std::vector").template(t.Unified)
 		}
-		r.nameVariants.Wire = makeName("fidl::VectorView").template(t.Wire)
 		r.WireFamily = FamilyKinds.Vector
 		r.WirePointer = t.WirePointer
 		r.NeedsDtor = true
@@ -474,13 +474,14 @@ func (c *compiler) compileType(val fidlgen.Type) Type {
 		r.IsResource = t.IsResource
 		r.ElementType = &t
 	case fidlgen.StringType:
+		r.Unified = makeName("std::string")
+		r.Wire = makeName("fidl::StringView")
 		if val.Nullable {
 			r.HLCPP = makeName("fidl::StringPtr")
+			r.nameVariants.Unified = makeName("cpp17::optional").template(r.nameVariants.Unified)
 		} else {
 			r.HLCPP = makeName("std::string")
 		}
-		r.Unified = r.HLCPP
-		r.Wire = makeName("fidl::StringView")
 		r.WireFamily = FamilyKinds.String
 		r.NeedsDtor = true
 		r.Kind = TypeKinds.String
@@ -502,7 +503,7 @@ func (c *compiler) compileType(val fidlgen.Type) Type {
 		}
 		r.nameVariants = nameVariants{
 			HLCPP:   makeName("fidl::InterfaceRequest").template(p.HLCPP),
-			Unified: makeName("fidl::InterfaceRequest").template(p.Unified),
+			Unified: makeName(t.Namespace + "::ServerEnd").template(p.Unified),
 			Wire:    makeName(t.Namespace + "::ServerEnd").template(p.Wire),
 		}
 		r.WireFamily = FamilyKinds.Reference
@@ -530,7 +531,7 @@ func (c *compiler) compileType(val fidlgen.Type) Type {
 			}
 			r.nameVariants = nameVariants{
 				HLCPP:   makeName("fidl::InterfaceHandle").template(name.HLCPP),
-				Unified: makeName("fidl::InterfaceHandle").template(name.Unified),
+				Unified: makeName(t.Namespace + "::ClientEnd").template(name.Unified),
 				Wire:    makeName(t.Namespace + "::ClientEnd").template(name.Wire),
 			}
 			r.WireFamily = FamilyKinds.Reference

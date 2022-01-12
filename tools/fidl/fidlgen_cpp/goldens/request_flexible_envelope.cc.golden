@@ -2,96 +2,6 @@
 
 #include <test/requestflexibleenvelope/cpp/fidl_v2.h>
 
-#ifdef __Fuchsia__
-
-void ::test_requestflexibleenvelope::
-    ProtocolRequestStrictResponseFlexibleRequest::EncodeWithoutValidating(
-        ::fidl::Encoder& encoder, size_t offset) {
-  encoder.Alloc(::fidl::EncodingInlineSize<
-                ::test_requestflexibleenvelope::
-                    ProtocolRequestStrictResponseFlexibleRequest,
-                ::fidl::Encoder>(&encoder));
-  ::fidl::CodingTraits<
-      ::test_requestflexibleenvelope::
-          ProtocolRequestStrictResponseFlexibleRequest>::Encode(&encoder, this,
-                                                                offset);
-}
-
-::test_requestflexibleenvelope::ProtocolRequestStrictResponseFlexibleRequest::
-    ProtocolRequestStrictResponseFlexibleRequest(::fidl::Decoder& decoder)
-    : storage_({::fidl::DecodeAs<::test_requestflexibleenvelope::StrictFoo>(
-          &decoder, 0)}) {}
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-
-void ::test_requestflexibleenvelope::
-    ProtocolRequestFlexibleResponseStrictTopResponse::EncodeWithoutValidating(
-        ::fidl::Encoder& encoder, size_t offset) {
-  encoder.Alloc(::fidl::EncodingInlineSize<
-                ::test_requestflexibleenvelope::
-                    ProtocolRequestFlexibleResponseStrictTopResponse,
-                ::fidl::Encoder>(&encoder));
-  ::fidl::CodingTraits<
-      ::test_requestflexibleenvelope::
-          ProtocolRequestFlexibleResponseStrictTopResponse>::Encode(&encoder,
-                                                                    this,
-                                                                    offset);
-}
-
-::test_requestflexibleenvelope::
-    ProtocolRequestFlexibleResponseStrictTopResponse::
-        ProtocolRequestFlexibleResponseStrictTopResponse(
-            ::fidl::Decoder& decoder)
-    : storage_({::fidl::DecodeAs<::test_requestflexibleenvelope::StrictFoo>(
-          &decoder, 0)}) {}
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-
-void ::test_requestflexibleenvelope::
-    ProtocolRequestStrictResponseFlexibleTopResponse::EncodeWithoutValidating(
-        ::fidl::Encoder& encoder, size_t offset) {
-  encoder.Alloc(::fidl::EncodingInlineSize<
-                ::test_requestflexibleenvelope::
-                    ProtocolRequestStrictResponseFlexibleTopResponse,
-                ::fidl::Encoder>(&encoder));
-  ::fidl::CodingTraits<
-      ::test_requestflexibleenvelope::
-          ProtocolRequestStrictResponseFlexibleTopResponse>::Encode(&encoder,
-                                                                    this,
-                                                                    offset);
-}
-
-::test_requestflexibleenvelope::
-    ProtocolRequestStrictResponseFlexibleTopResponse::
-        ProtocolRequestStrictResponseFlexibleTopResponse(
-            ::fidl::Decoder& decoder)
-    : storage_({::fidl::DecodeAs<::test_requestflexibleenvelope::FlexibleFoo>(
-          &decoder, 0)}) {}
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-
-void ::test_requestflexibleenvelope::
-    ProtocolRequestFlexibleResponseStrictRequest::EncodeWithoutValidating(
-        ::fidl::Encoder& encoder, size_t offset) {
-  encoder.Alloc(::fidl::EncodingInlineSize<
-                ::test_requestflexibleenvelope::
-                    ProtocolRequestFlexibleResponseStrictRequest,
-                ::fidl::Encoder>(&encoder));
-  ::fidl::CodingTraits<
-      ::test_requestflexibleenvelope::
-          ProtocolRequestFlexibleResponseStrictRequest>::Encode(&encoder, this,
-                                                                offset);
-}
-
-::test_requestflexibleenvelope::ProtocolRequestFlexibleResponseStrictRequest::
-    ProtocolRequestFlexibleResponseStrictRequest(::fidl::Decoder& decoder)
-    : storage_({::fidl::DecodeAs<::test_requestflexibleenvelope::FlexibleFoo>(
-          &decoder, 0)}) {}
-#endif  // __Fuchsia__
-
 namespace test_requestflexibleenvelope {
 [[maybe_unused]] constexpr inline uint64_t
     kProtocol_RequestStrictResponseFlexible_Ordinal = 700529454616207123lu;
@@ -111,7 +21,7 @@ void fidl::internal::NaturalClientImpl<
   ::fidl::Encoder _encoder{::test_requestflexibleenvelope::
                                kProtocol_RequestStrictResponseFlexible_Ordinal};
   return messenger().TwoWay(
-      &::test::requestflexibleenvelope::_internal::
+      &::test_requestflexibleenvelope::
           test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleRequestMessageTable,
       ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
           _encoder, std::move(payload)),
@@ -135,7 +45,7 @@ void fidl::internal::NaturalClientImpl<
   ::fidl::Encoder _encoder{::test_requestflexibleenvelope::
                                kProtocol_RequestStrictResponseFlexible_Ordinal};
   return messenger().TwoWay(
-      &::test::requestflexibleenvelope::_internal::
+      &::test_requestflexibleenvelope::
           test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleRequestMessageTable,
       ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
           _encoder, std::move(payload)),
@@ -161,7 +71,7 @@ void fidl::internal::NaturalClientImpl<
   ::fidl::Encoder _encoder{::test_requestflexibleenvelope::
                                kProtocol_RequestFlexibleResponseStrict_Ordinal};
   return messenger().TwoWay(
-      &::test::requestflexibleenvelope::_internal::
+      &::test_requestflexibleenvelope::
           test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictRequestMessageTable,
       ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
           _encoder, std::move(payload)),
@@ -185,7 +95,7 @@ void fidl::internal::NaturalClientImpl<
   ::fidl::Encoder _encoder{::test_requestflexibleenvelope::
                                kProtocol_RequestFlexibleResponseStrict_Ordinal};
   return messenger().TwoWay(
-      &::test::requestflexibleenvelope::_internal::
+      &::test_requestflexibleenvelope::
           test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictRequestMessageTable,
       ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
           _encoder, std::move(payload)),

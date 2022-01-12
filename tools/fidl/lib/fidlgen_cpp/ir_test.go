@@ -36,9 +36,7 @@ protocol P {
 	ty = m.RequestArgs[1].Type
 	expectEqual(t, ty.HLCPP.String(), "::std::vector<::fidl::InterfaceHandle<::foo::bar::P>>")
 	expectEqual(t, ty.Wire.String(), "::fidl::VectorView<::fidl::ClientEnd<::foo_bar::P>>")
-	// TODO(fxbug.dev/72980): Switch to ClientEnd/ServerEnd and underscore namespace when
-	// corresponding endpoint types can easily convert into each other.
-	expectEqual(t, ty.Unified.String(), "::std::vector<::fidl::InterfaceHandle<::foo::bar::P>>")
+	expectEqual(t, ty.Unified.String(), "::std::vector<::fidl::ClientEnd<::foo_bar::P>>")
 }
 
 func makeTestName(s string) nameVariants {

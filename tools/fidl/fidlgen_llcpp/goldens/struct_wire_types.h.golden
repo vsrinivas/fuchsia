@@ -18,6 +18,7 @@
 
 #endif  // __Fuchsia__
 
+#include <fidl/test.struct/cpp/common_types.h>
 #include <fidl/test.struct/cpp/markers.h>
 
 namespace test_struct {
