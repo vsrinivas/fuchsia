@@ -49,9 +49,7 @@ struct SocketAddress {
             fidl::ObjectView<fnet::wire::Ipv4SocketAddress>::FromExternal(&storage_.ipv4));
         static_assert(sizeof(storage_.ipv4.address.addr) == sizeof(s.sin_addr.s_addr),
                       "size of IPv4 addresses should be the same");
-        std::copy_n(reinterpret_cast<const uint8_t*>(&s.sin_addr.s_addr),
-                    decltype(storage_.ipv4.address.addr)::size(),
-                    storage_.ipv4.address.addr.begin());
+        memcpy(storage_.ipv4.address.addr.data(), &s.sin_addr.s_addr, sizeof(s.sin_addr.s_addr));
         storage_.ipv4.port = ntohs(s.sin_port);
         return ZX_OK;
       }
@@ -62,7 +60,8 @@ struct SocketAddress {
         const auto& s = *reinterpret_cast<const struct sockaddr_in6*>(addr);
         address_.set_ipv6(
             fidl::ObjectView<fnet::wire::Ipv6SocketAddress>::FromExternal(&storage_.ipv6));
-        static_assert(sizeof(storage_.ipv6.address.addr) == sizeof(s.sin6_addr.s6_addr),
+        static_assert(decltype(storage_.ipv6.address.addr)::size() ==
+                          std::size(decltype(s.sin6_addr.s6_addr){}),
                       "size of IPv6 addresses should be the same");
         std::copy(std::begin(s.sin6_addr.s6_addr), std::end(s.sin6_addr.s6_addr),
                   storage_.ipv6.address.addr.begin());
@@ -112,7 +111,8 @@ struct PacketInfo {
                 fidl::ObjectView<fnet::wire::MacAddress>::FromExternal(&eui48_storage_));
             static_assert(decltype(eui48_storage_.octets)::size() == ETH_ALEN,
                           "eui48 address must have the same size as ETH_ALEN");
-            memcpy(eui48_storage_.octets.data(), s.sll_addr, ETH_ALEN);
+            static_assert(sizeof(s.sll_addr) == ETH_ALEN + 2);
+            std::copy_n(s.sll_addr, ETH_ALEN, eui48_storage_.octets.begin());
             break;
           default:
             return ZX_ERR_NOT_SUPPORTED;
@@ -218,7 +218,7 @@ class FidlControlDataProcessor {
     }
 
     // The user-provided pointer is not guaranteed to be aligned. So instead of casting it into a
-    // struct cmsghdr and writing to it directly, stack-allocate one and then memcpy it.
+    // struct cmsghdr and writing to it directly, stack-allocate one and then copy it.
     struct cmsghdr cmsg = {
         .cmsg_len = cmsg_len,
         .cmsg_level = level,
@@ -233,10 +233,9 @@ class FidlControlDataProcessor {
     size_t bytes_consumed = std::min(CMSG_SPACE(len), bytes_left);
     buffer_ = buffer_.subspan(bytes_consumed);
 
-    return socklen_t(bytes_consumed);
+    return static_cast<socklen_t>(bytes_consumed);
   }
 
- private:
   cpp20::span<unsigned char> buffer_;
 };
 
@@ -258,10 +257,9 @@ socklen_t fidl_to_sockaddr(const fnet::wire::SocketAddress& fidl, void* addr, so
           .sin_family = AF_INET,
           .sin_port = htons(ipv4.port),
       };
-      static_assert(sizeof(ipv4.address.addr) == sizeof(tmp.sin_addr.s_addr),
+      static_assert(sizeof(tmp.sin_addr.s_addr) == sizeof(ipv4.address.addr),
                     "size of IPv4 addresses should be the same");
-      std::copy(ipv4.address.addr.begin(), ipv4.address.addr.end(),
-                reinterpret_cast<uint8_t*>(&tmp.sin_addr.s_addr));
+      memcpy(&tmp.sin_addr.s_addr, ipv4.address.addr.data(), sizeof(ipv4.address.addr));
       // Copy truncated address.
       memcpy(addr, &tmp, std::min(sizeof(tmp), static_cast<size_t>(addr_len)));
       return sizeof(tmp);
@@ -273,9 +271,10 @@ socklen_t fidl_to_sockaddr(const fnet::wire::SocketAddress& fidl, void* addr, so
           .sin6_port = htons(ipv6.port),
           .sin6_scope_id = static_cast<uint32_t>(ipv6.zone_index),
       };
-      static_assert(sizeof(ipv6.address.addr) == sizeof(tmp.sin6_addr.s6_addr),
+      static_assert(std::size(tmp.sin6_addr.s6_addr) == decltype(ipv6.address.addr)::size(),
                     "size of IPv6 addresses should be the same");
-      std::copy(ipv6.address.addr.begin(), ipv6.address.addr.end(), tmp.sin6_addr.s6_addr);
+      std::copy(ipv6.address.addr.begin(), ipv6.address.addr.end(),
+                std::begin(tmp.sin6_addr.s6_addr));
       // Copy truncated address.
       memcpy(addr, &tmp, std::min(sizeof(tmp), static_cast<size_t>(addr_len)));
       return sizeof(tmp);
@@ -310,9 +309,9 @@ void populate_from_fidl_hwaddr(const fpacketsocket::wire::HardwareAddress& addr,
       break;
     case fpacketsocket::wire::HardwareAddress::Tag::kEui48: {
       const fnet::wire::MacAddress& eui48 = addr.eui48();
-      static_assert(sizeof(s.sll_addr) == decltype(eui48.octets)::size() + 2);
+      static_assert(std::size(decltype(s.sll_addr){}) == decltype(eui48.octets)::size() + 2);
+      std::copy(eui48.octets.begin(), eui48.octets.end(), std::begin(s.sll_addr));
       s.sll_halen = decltype(eui48.octets)::size();
-      memcpy(s.sll_addr, eui48.octets.data(), s.sll_halen);
     } break;
   }
 }
@@ -499,14 +498,13 @@ SockOptResult GetSockOptProcessor::StoreOption(const fsocket::wire::OptionalUint
 
 template <>
 SockOptResult GetSockOptProcessor::StoreOption(const fnet::wire::Ipv4Address& value) {
-  static_assert(sizeof(struct in_addr) == decltype(value.addr)::size());
-  return StoreRaw(value.addr.data(), decltype(value.addr)::size());
+  static_assert(sizeof(struct in_addr) == sizeof(value.addr));
+  return StoreRaw(value.addr.data(), sizeof(value.addr));
 }
 
 template <>
 SockOptResult GetSockOptProcessor::StoreOption(const frawsocket::wire::Icmpv6Filter& value) {
-  static_assert(sizeof(icmp6_filter) ==
-                (decltype(value.blocked_types)::size() * sizeof(value.blocked_types[0])));
+  static_assert(sizeof(icmp6_filter) == sizeof(value.blocked_types));
   *optlen_ = std::min(static_cast<socklen_t>(sizeof(icmp6_filter)), *optlen_);
   memcpy(optval_, value.blocked_types.data(), *optlen_);
   return SockOptResult::Ok();
@@ -586,7 +584,8 @@ SockOptResult GetSockOptProcessor::StoreOption(const fsocket::wire::TcpInfo& val
     info.tcpi_reord_seen = value.reorder_seen();
   }
 
-  return StoreRaw(&info, std::min(*optlen_, socklen_t(sizeof(info))));
+  static_assert(sizeof(info) <= std::numeric_limits<socklen_t>::max());
+  return StoreRaw(&info, std::min(*optlen_, static_cast<socklen_t>(sizeof(info))));
 }
 
 // Used for various options that allow the caller to supply larger buffers than needed.
@@ -610,18 +609,18 @@ class SetSockOptProcessor {
   SetSockOptProcessor(const void* optval, socklen_t optlen) : optval_(optval), optlen_(optlen) {}
 
   template <typename T>
-  int16_t Get(T* out) {
+  int16_t Get(T& out) {
     if (optlen_ < sizeof(T)) {
       return EINVAL;
     }
-    memcpy(out, optval_, sizeof(T));
+    memcpy(&out, optval_, sizeof(T));
     return 0;
   }
 
   template <typename T, typename F>
   SockOptResult Process(F f) {
     T v;
-    int16_t result = Get(&v);
+    int16_t result = Get(v);
     if (result) {
       return SockOptResult::Errno(result);
     }
@@ -635,46 +634,45 @@ class SetSockOptProcessor {
 };
 
 template <>
-int16_t SetSockOptProcessor::Get(fidl::StringView* out) {
+int16_t SetSockOptProcessor::Get(fidl::StringView& out) {
   const char* optval = static_cast<const char*>(optval_);
-  *out = fidl::StringView::FromExternal(optval, strnlen(optval, optlen_));
+  out = fidl::StringView::FromExternal(optval, strnlen(optval, optlen_));
   return 0;
 }
 
 template <>
-int16_t SetSockOptProcessor::Get(bool* out) {
+int16_t SetSockOptProcessor::Get(bool& out) {
   int32_t i;
-  int16_t r = Get(&i);
-  *out = i != 0;
+  int16_t r = Get(i);
+  out = i != 0;
   return r;
 }
 
 template <>
-int16_t SetSockOptProcessor::Get(uint32_t* out) {
-  auto* alt = reinterpret_cast<int32_t*>(out);
-  int16_t r = Get(alt);
-  if (r) {
+int16_t SetSockOptProcessor::Get(uint32_t& out) {
+  int32_t& alt = *reinterpret_cast<int32_t*>(&out);
+  if (int16_t r = Get(alt); r) {
     return r;
   }
-  if (*alt < 0) {
+  if (alt < 0) {
     return EINVAL;
   }
   return 0;
 }
 
 template <>
-int16_t SetSockOptProcessor::Get(fsocket::wire::OptionalUint8* out) {
+int16_t SetSockOptProcessor::Get(fsocket::wire::OptionalUint8& out) {
   int32_t i;
-  if (int16_t r = Get(&i); r) {
+  if (int16_t r = Get(i); r) {
     return r;
   }
   if (i < -1 || i > std::numeric_limits<uint8_t>::max()) {
     return EINVAL;
   }
   if (i == -1) {
-    out->set_unset({});
+    out.set_unset({});
   } else {
-    out->set_value(static_cast<uint8_t>(i));
+    out.set_value(static_cast<uint8_t>(i));
   }
   return 0;
 }
@@ -685,16 +683,16 @@ struct OptionalUint8CharAllowed {
 };
 
 template <>
-int16_t SetSockOptProcessor::Get(OptionalUint8CharAllowed* out) {
+int16_t SetSockOptProcessor::Get(OptionalUint8CharAllowed& out) {
   if (optlen_ == sizeof(uint8_t)) {
-    out->inner.set_value(*static_cast<const uint8_t*>(optval_));
+    out.inner.set_value(*static_cast<const uint8_t*>(optval_));
     return 0;
   }
-  return Get(&out->inner);
+  return Get(out.inner);
 }
 
 template <>
-int16_t SetSockOptProcessor::Get(fsocket::wire::IpMulticastMembership* out) {
+int16_t SetSockOptProcessor::Get(fsocket::wire::IpMulticastMembership& out) {
   union {
     struct ip_mreqn reqn;
     struct ip_mreq req;
@@ -702,60 +700,60 @@ int16_t SetSockOptProcessor::Get(fsocket::wire::IpMulticastMembership* out) {
   struct in_addr* local;
   struct in_addr* mcast;
   if (optlen_ < sizeof(struct ip_mreqn)) {
-    if (Get(&r.req) != 0) {
+    if (Get(r.req) != 0) {
       return EINVAL;
     }
-    out->iface = 0;
+    out.iface = 0;
     local = &r.req.imr_interface;
     mcast = &r.req.imr_multiaddr;
   } else {
-    if (Get(&r.reqn) != 0) {
+    if (Get(r.reqn) != 0) {
       return EINVAL;
     }
-    out->iface = r.reqn.imr_ifindex;
+    out.iface = r.reqn.imr_ifindex;
     local = &r.reqn.imr_address;
     mcast = &r.reqn.imr_multiaddr;
   }
-  std::copy_n(reinterpret_cast<const uint8_t*>(local), decltype(out->local_addr.addr)::size(),
-              out->local_addr.addr.begin());
-  std::copy_n(reinterpret_cast<const uint8_t*>(mcast), decltype(out->mcast_addr.addr)::size(),
-              out->mcast_addr.addr.begin());
+  static_assert(sizeof(out.local_addr.addr) == sizeof(*local));
+  memcpy(out.local_addr.addr.data(), local, sizeof(*local));
+  static_assert(sizeof(out.mcast_addr.addr) == sizeof(*mcast));
+  memcpy(out.mcast_addr.addr.data(), mcast, sizeof(*mcast));
   return 0;
 }
 
 template <>
-int16_t SetSockOptProcessor::Get(fsocket::wire::Ipv6MulticastMembership* out) {
+int16_t SetSockOptProcessor::Get(fsocket::wire::Ipv6MulticastMembership& out) {
   struct ipv6_mreq req;
-  if (Get(&req) != 0) {
+  if (Get(req) != 0) {
     return EINVAL;
   }
-  out->iface = req.ipv6mr_interface;
-  auto const& mcast = req.ipv6mr_multiaddr.s6_addr;
-  std::copy(std::begin(mcast), std::end(mcast), out->mcast_addr.addr.begin());
+  out.iface = req.ipv6mr_interface;
+  static_assert(std::size(req.ipv6mr_multiaddr.s6_addr) == decltype(out.mcast_addr.addr)::size());
+  std::copy(std::begin(req.ipv6mr_multiaddr.s6_addr), std::end(req.ipv6mr_multiaddr.s6_addr),
+            out.mcast_addr.addr.begin());
   return 0;
 }
 
 template <>
-int16_t SetSockOptProcessor::Get(frawsocket::wire::Icmpv6Filter* out) {
+int16_t SetSockOptProcessor::Get(frawsocket::wire::Icmpv6Filter& out) {
   struct icmp6_filter filter;
-  if (Get(&filter) != 0) {
+  if (Get(filter) != 0) {
     return EINVAL;
   }
 
-  static_assert(sizeof(filter) ==
-                (decltype(out->blocked_types)::size() * sizeof(out->blocked_types[0])));
-  memcpy(out->blocked_types.data(), &filter, sizeof(filter));
+  static_assert(sizeof(filter) == sizeof(out.blocked_types));
+  memcpy(out.blocked_types.data(), &filter, sizeof(filter));
   return 0;
 }
 
 template <>
-int16_t SetSockOptProcessor::Get(fsocket::wire::TcpCongestionControl* out) {
+int16_t SetSockOptProcessor::Get(fsocket::wire::TcpCongestionControl& out) {
   if (strncmp(static_cast<const char*>(optval_), kCcCubic, optlen_) == 0) {
-    *out = fsocket::wire::TcpCongestionControl::kCubic;
+    out = fsocket::wire::TcpCongestionControl::kCubic;
     return 0;
   }
   if (strncmp(static_cast<const char*>(optval_), kCcReno, optlen_) == 0) {
-    *out = fsocket::wire::TcpCongestionControl::kReno;
+    out = fsocket::wire::TcpCongestionControl::kReno;
     return 0;
   }
   return ENOENT;
@@ -766,14 +764,14 @@ struct IntOrChar {
 };
 
 template <>
-int16_t SetSockOptProcessor::Get(IntOrChar* out) {
-  if (Get(&out->value) == 0) {
+int16_t SetSockOptProcessor::Get(IntOrChar& out) {
+  if (Get(out.value) == 0) {
     return 0;
   }
   if (optlen_ == 0) {
     return EINVAL;
   }
-  out->value = static_cast<const uint8_t*>(optval_)[0];
+  out.value = *static_cast<const uint8_t*>(optval_);
   return 0;
 }
 
@@ -1295,8 +1293,8 @@ struct BaseNetworkSocket : public BaseSocket<T> {
             if (optlen == sizeof(struct in_addr)) {
               return proc.Process<struct in_addr>([this](struct in_addr value) {
                 fnet::wire::Ipv4Address addr;
-                std::copy_n(reinterpret_cast<const uint8_t*>(&value.s_addr), sizeof(value.s_addr),
-                            addr.addr.begin());
+                static_assert(sizeof(addr.addr) == sizeof(value.s_addr));
+                memcpy(addr.addr.data(), &value.s_addr, sizeof(value.s_addr));
                 return client()->SetIpMulticastInterface(0, addr);
               });
             }
@@ -1510,10 +1508,12 @@ Errno zxsio_posix_ioctl(int req, va_list va, F fallback) {
         }
         return Errno(fdio_status_to_errno(result.err()));
       }
-      auto const& name = result.response().name;
-      const size_t n = std::min(name.size(), sizeof(ifr->ifr_name));
-      memcpy(ifr->ifr_name, name.data(), n);
-      ifr->ifr_name[n] = 0;
+      auto const& if_name = result.response().name;
+      const size_t len = std::min(if_name.size(), std::size(ifr->ifr_name));
+      auto it = std::copy_n(if_name.begin(), len, std::begin(ifr->ifr_name));
+      if (it != std::end(ifr->ifr_name)) {
+        *it = 0;
+      }
       return Errno(Errno::Ok);
     }
     case SIOCGIFINDEX: {
@@ -1640,16 +1640,19 @@ Errno zxsio_posix_ioctl(int req, va_list va, F fallback) {
           }
 
           // Write interface name.
-          size_t len = std::min(if_name.size(), sizeof(ifr->ifr_name) - 1);
-          memcpy(ifr->ifr_name, if_name.data(), len);
-          ifr->ifr_name[len] = 0;
+          const size_t len = std::min(if_name.size(), std::size(ifr->ifr_name));
+          auto it = std::copy_n(if_name.begin(), len, std::begin(ifr->ifr_name));
+          if (it != std::end(ifr->ifr_name)) {
+            *it = 0;
+          }
 
           // Write interface address.
           auto& s = *reinterpret_cast<struct sockaddr_in*>(&ifr->ifr_addr);
           const auto& ipv4 = addr.ipv4();
           s.sin_family = AF_INET;
           s.sin_port = 0;
-          std::copy(ipv4.addr.begin(), ipv4.addr.end(), reinterpret_cast<uint8_t*>(&s.sin_addr));
+          static_assert(sizeof(s.sin_addr) == sizeof(ipv4.addr));
+          memcpy(&s.sin_addr, ipv4.addr.data(), sizeof(ipv4.addr));
 
           ifr++;
         }
