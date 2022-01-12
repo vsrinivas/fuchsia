@@ -5,7 +5,6 @@
 #include "phy-device.h"
 
 #include <fidl/fuchsia.wlan.device/cpp/wire.h>
-#include <fuchsia/hardware/wlanphy/c/banjo.h>
 #include <fuchsia/wlan/internal/cpp/fidl.h>
 #include <lib/ddk/debug.h>
 #include <stdio.h>
@@ -36,10 +35,6 @@ static zx_protocol_device_t wlanphy_test_device_ops = {
 };
 #undef DEV
 
-static wlanphy_protocol_ops_t wlanphy_test_ops = {
-    .dummy = nullptr,
-};
-
 class DeviceConnector : public fidl::WireServer<fuchsia_wlan_device::Connector> {
  public:
   DeviceConnector(PhyDevice* device) : device_(device) {}
@@ -64,7 +59,6 @@ zx_status_t PhyDevice::Bind() {
   args.ctx = this;
   args.ops = &wlanphy_test_device_ops;
   args.proto_id = ZX_PROTOCOL_WLANPHY;
-  args.proto_ops = &wlanphy_test_ops;
 
   zx_status_t status = device_add(parent_, &args, &zxdev_);
   if (status != ZX_OK) {
