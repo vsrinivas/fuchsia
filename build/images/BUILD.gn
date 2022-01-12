@@ -948,6 +948,7 @@ if (recovery_is_zedboot) {
 archive_formats = [
   "tar",
   "tgz",
+  "zip",
 ]
 archive_targets = []
 generated_file("archive-images-manifest") {
