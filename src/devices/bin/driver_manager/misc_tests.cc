@@ -207,7 +207,7 @@ TEST(MiscTestCase, DumpState) {
   ASSERT_OK(zx::vmo::create(kBufSize, 0, &vmo));
   VmoWriter writer(std::move(vmo));
 
-  coordinator.DumpState(&writer);
+  coordinator.debug_dump()->DumpState(&writer);
 
   ASSERT_EQ(writer.written(), writer.available());
   ASSERT_LT(writer.written(), kBufSize);

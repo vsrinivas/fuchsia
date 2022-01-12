@@ -39,6 +39,7 @@
 
 #include "lib/async/dispatcher.h"
 #include "src/devices/bin/driver_manager/bind_driver_manager.h"
+#include "src/devices/bin/driver_manager/debug_dump.h"
 #include "src/devices/bin/driver_manager/devfs.h"
 #include "src/devices/bin/driver_manager/device.h"
 #include "src/devices/bin/driver_manager/driver.h"
@@ -55,13 +56,13 @@
 #include "src/devices/bin/driver_manager/v1/suspend_resume_manager.h"
 #include "src/devices/bin/driver_manager/v1/suspend_task.h"
 #include "src/devices/bin/driver_manager/v1/unbind_task.h"
-#include "src/devices/bin/driver_manager/vmo_writer.h"
 
 namespace statecontrol_fidl = fuchsia_hardware_power_statecontrol;
 using statecontrol_fidl::wire::SystemPowerState;
 namespace fdf = fuchsia_driver_framework;
 
 class BindDriverManager;
+class DebugDump;
 class DeviceManager;
 class DriverHostLoaderService;
 class FirmwareLoader;
@@ -125,7 +126,6 @@ struct CoordinatorConfig {
 
 class Coordinator : public fidl::WireServer<fuchsia_driver_development::DriverDevelopment>,
                     public fidl::WireServer<fuchsia_device_manager::Administrator>,
-                    public fidl::WireServer<fuchsia_device_manager::DebugDumper>,
                     public fidl::WireServer<fuchsia_driver_registrar::DriverRegistrar> {
  public:
   Coordinator(const Coordinator&) = delete;
@@ -173,8 +173,6 @@ class Coordinator : public fidl::WireServer<fuchsia_driver_development::DriverDe
                            fbl::RefPtr<DriverHost> target_driver_host);
   zx_status_t PrepareNewProxy(const fbl::RefPtr<Device>& dev,
                               fbl::RefPtr<DriverHost> target_driver_host);
-
-  void DumpState(VmoWriter* vmo) const;
 
   async_dispatcher_t* dispatcher() const { return dispatcher_; }
   const zx::resource& root_resource() const { return config_.root_resource; }
@@ -248,6 +246,9 @@ class Coordinator : public fidl::WireServer<fuchsia_driver_development::DriverDe
 
   FirmwareLoader* firmware_loader() const { return firmware_loader_.get(); }
 
+  // Only exposed for testing.
+  const DebugDump* debug_dump() const { return debug_dump_.get(); }
+
   const zx::vmo& mexec_kernel_zbi() const { return mexec_kernel_zbi_; }
   const zx::vmo& mexec_data_zbi() const { return mexec_data_zbi_; }
 
@@ -266,12 +267,6 @@ class Coordinator : public fidl::WireServer<fuchsia_driver_development::DriverDe
       UnregisterSystemStorageForShutdownRequestView request,
       UnregisterSystemStorageForShutdownCompleter::Sync& completer) override;
 
-  // fuchsia.device.manager/DebugDumper interface
-  void DumpTree(DumpTreeRequestView request, DumpTreeCompleter::Sync& completer) override;
-  void DumpDrivers(DumpDriversRequestView request, DumpDriversCompleter::Sync& completer) override;
-  void DumpBindingProperties(DumpBindingPropertiesRequestView request,
-                             DumpBindingPropertiesCompleter::Sync& completer) override;
-
   zx::status<std::vector<fuchsia_driver_development::wire::DriverInfo>> GetDriverInfo(
       fidl::AnyArena& allocator, const std::vector<const Driver*>& drivers);
   zx::status<std::vector<fuchsia_driver_development::wire::DeviceInfo>> GetDeviceInfo(
@@ -283,9 +278,6 @@ class Coordinator : public fidl::WireServer<fuchsia_driver_development::DriverDe
   void OnOOMEvent(async_dispatcher_t* dispatcher, async::WaitBase* wait, zx_status_t status,
                   const zx_packet_signal_t* signal);
   async::WaitMethod<Coordinator, &Coordinator::OnOOMEvent> wait_on_oom_event_{this};
-
-  void DumpDevice(VmoWriter* vmo, const Device* dev, size_t indent) const;
-  void DumpDeviceProps(VmoWriter* vmo, const Device* dev) const;
 
   zx_status_t NewDriverHost(const char* name, fbl::RefPtr<DriverHost>* out);
 
@@ -319,6 +311,8 @@ class Coordinator : public fidl::WireServer<fuchsia_driver_development::DriverDe
   cpp17::optional<fidl::ServerBindingRef<fuchsia_driver_registrar::DriverRegistrar>>
       driver_registrar_binding_;
   internal::PackageResolver package_resolver_;
+
+  std::unique_ptr<DebugDump> debug_dump_;
 
   std::unique_ptr<FirmwareLoader> firmware_loader_;
 

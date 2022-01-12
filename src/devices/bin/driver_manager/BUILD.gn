@@ -50,6 +50,8 @@ source_set("lib") {
     "composite_device.cc",
     "coordinator.cc",
     "coordinator.h",
+    "debug_dump.cc",
+    "debug_dump.h",
     "devfs.cc",
     "devfs.h",
     "devfs_exporter.cc",
