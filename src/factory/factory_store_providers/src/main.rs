@@ -70,15 +70,21 @@ fn parse_bootfs<'a>(vmo: zx::Vmo) -> Arc<directory::immutable::Simple> {
                 let name = entry.name;
                 let path_parts: Vec<&str> = name.split("/").collect();
                 let payload = entry.payload;
-                tree_builder.add_entry(&path_parts, read_only_const(&payload)).unwrap_or_else(
-                    |err| {
+                tree_builder
+                    .add_entry(
+                        &path_parts,
+                        read_only_const(&payload.unwrap_or_else(|| {
+                            syslog::fx_log_err!("Failed to buffer bootfs entry {}", name);
+                            Vec::new()
+                        })),
+                    )
+                    .unwrap_or_else(|err| {
                         syslog::fx_log_err!(
                             "Failed to add bootfs entry {} to directory: {}",
                             name,
                             err
                         );
-                    },
-                );
+                    });
             }
             Err(err) => syslog::fx_log_err!(tag: "BootfsParser", "{}", err),
         }),

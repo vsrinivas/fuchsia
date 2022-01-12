@@ -11,6 +11,7 @@ use {
     },
     byteorder::{ByteOrder, LittleEndian},
     fuchsia_zircon as zx,
+    std::convert::TryFrom,
     std::{ffi::CStr, mem::size_of, str::Utf8Error},
     thiserror::Error,
     zerocopy::{ByteSlice, LayoutVerified},
@@ -129,14 +130,24 @@ impl BootfsParser {
     }
 
     pub fn iter(&self) -> impl Iterator<Item = Result<BootfsEntry, BootfsParserError>> + '_ {
-        BootfsParserIterator::new(&self)
+        BootfsParserIterator::new(&self, false)
+    }
+
+    pub fn zero_copy_iter(
+        &self,
+    ) -> impl Iterator<Item = Result<BootfsEntry, BootfsParserError>> + '_ {
+        BootfsParserIterator::new(&self, true)
     }
 }
 
 #[derive(Debug)]
 pub struct BootfsEntry {
     pub name: String,
-    pub payload: Vec<u8>,
+    pub offset: u64,
+    pub size: u64,
+
+    // Not filled when doing a zero copy parse of bootfs.
+    pub payload: Option<Vec<u8>>,
 }
 
 #[derive(Debug)]
@@ -145,15 +156,17 @@ struct BootfsParserIterator<'parser> {
     dir_offset: u32,
     entry_index: u32,
     errored: bool,
+    zero_copy: bool,
     parser: &'parser BootfsParser,
 }
 impl<'parser> BootfsParserIterator<'parser> {
-    pub fn new(parser: &'parser BootfsParser) -> Self {
+    pub fn new(parser: &'parser BootfsParser, zero_copy: bool) -> Self {
         Self {
             available_dirsize: parser.dirsize,
             dir_offset: ZBI_BOOTFS_HEADER_SIZE as u32,
             entry_index: 0,
             errored: false,
+            zero_copy,
             parser,
         }
     }
@@ -203,21 +216,34 @@ impl<'parser> Iterator for BootfsParserIterator<'parser> {
         match ZbiBootfsDirent::parse(&dirent_buffer[..]) {
             Ok(dirent) => {
                 // We have a directory entry now, so retrieve the payload.
-                let mut payload = vec![0; dirent.data_len() as usize];
-                if let Err(status) = self
-                    .parser
-                    .vmo
-                    .read(&mut payload, zbi_bootfs_page_align(dirent.data_off()).into())
-                {
-                    self.errored = true;
-                    return Some(Err(BootfsParserError::FailedToReadPayload { status }));
+                let mut payload = None;
+                let offset: u64 = zbi_bootfs_page_align(dirent.data_off()).into();
+                let size: u64 = dirent.data_len().into();
+
+                if !self.zero_copy {
+                    let buffer_size = usize::try_from(size).unwrap_or_else(|_| {
+                        self.errored = true;
+                        return 0;
+                    });
+                    let mut buffer = vec![0; buffer_size];
+                    if let Err(status) = self.parser.vmo.read(&mut buffer, offset) {
+                        self.errored = true;
+                        return Some(Err(BootfsParserError::FailedToReadPayload { status }));
+                    }
+
+                    payload = Some(buffer);
                 }
 
                 self.dir_offset += dirent_buffer.len() as u32;
                 self.available_dirsize -= dirent_size;
                 self.entry_index += 1;
 
-                Some(dirent.name().map(|name| BootfsEntry { name: name.to_owned(), payload }))
+                Some(dirent.name().map(|name| BootfsEntry {
+                    name: name.to_owned(),
+                    offset,
+                    size,
+                    payload,
+                }))
             }
             Err(err) => {
                 self.errored = true;
@@ -232,6 +258,7 @@ mod tests {
     use {
         super::*,
         anyhow::Error,
+        fuchsia_zircon::HandleBased,
         lazy_static::lazy_static,
         std::{collections::HashMap, fs::File, io::prelude::*},
     };
@@ -328,8 +355,35 @@ mod tests {
 
         parser.iter().for_each(|result| {
             let result = result.expect("Failed to process bootfs payload");
-            let BootfsEntry { name, payload } = result;
-            files.insert(name, payload);
+            let BootfsEntry { name, payload, .. } = result;
+            files.insert(name, payload.unwrap());
+        });
+
+        assert_eq!(*GOLDEN_FILES, *files);
+    }
+
+    #[test]
+    fn process_bootfs_zero_copy() {
+        let vmo = read_file_to_vmo(BASIC_BOOTFS_UNCOMPRESSED_FILE).unwrap();
+        let vmo_dup =
+            vmo.duplicate_handle(zx::Rights::SAME_RIGHTS).expect("Failed to duplicate vmo");
+
+        let mut files = Box::new(HashMap::new());
+
+        let parser = BootfsParser::create_from_vmo(vmo_dup).expect("Failed to read bootfs file");
+        parser.zero_copy_iter().for_each(|result| {
+            let result = result.expect("Failed to process bootfs payload");
+            let BootfsEntry { name, offset, size, payload } = result;
+
+            // The zero_copy iterator doesn't make a copy of the files, but using the offset and
+            // size we can read it from the vmo.
+            assert!(payload.is_none());
+
+            let buffer_size = usize::try_from(size).unwrap();
+            let mut bytes = vec![0; buffer_size];
+            vmo.read(&mut bytes, offset).expect("Failed to read data from the vmo");
+
+            files.insert(name, bytes);
         });
 
         assert_eq!(*GOLDEN_FILES, *files);
