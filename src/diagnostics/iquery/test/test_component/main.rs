@@ -77,9 +77,9 @@ async fn main() -> Result<(), Error> {
     int_array.subtract(2, 3);
 
     let uint_array = root.create_uint_array(unique_name("array"), 3);
-    uint_array.set(0, 1);
+    uint_array.set(0, 1u64);
     uint_array.add(1, 10);
-    uint_array.set(2, 3);
+    uint_array.set(2, 3u64);
     uint_array.subtract(2, 1);
 
     let double_array = root.create_double_array(unique_name("array"), 3);

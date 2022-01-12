@@ -9,7 +9,8 @@ use {
     fuchsia_zircon as zx,
     futures::future::BoxFuture,
     inspect_format::{
-        constants, utils, BlockType, {ArrayFormat, Block, LinkNodeDisposition, PropertyFormat},
+        constants, utils, BlockType, Error as FormatError,
+        {ArrayFormat, Block, LinkNodeDisposition, PropertyFormat},
     },
     mapped_vmo::Mapping,
     num_traits::ToPrimitive,
@@ -176,7 +177,7 @@ macro_rules! locked_state_array_fns {
     };
 }
 
-macro_rules! array_fns {
+macro_rules! arithmetic_array_fns {
     ($name:ident, $type:ident, $value:ident) => {
         paste::paste! {
             pub fn [<create_ $name _array>]<'b>(
@@ -408,11 +409,11 @@ impl<'a> LockedStateGuard<'a> {
 
     /// Allocate a STRING_REFERENCE block and necessary EXTENTs.
     #[cfg(test)]
-    pub fn create_string_reference<'b>(
+    pub fn get_or_create_string_reference<'b>(
         &mut self,
         value: impl Into<StringReference<'b>>,
     ) -> Result<Block<Arc<Mapping>>, Error> {
-        self.inner_lock.create_string_reference(value)
+        self.inner_lock.get_or_create_string_reference(value)
     }
 
     /// Free a STRING_REFERENCE block and necessary EXTENTs.
@@ -422,7 +423,7 @@ impl<'a> LockedStateGuard<'a> {
     }
 
     #[cfg(test)]
-    fn load_string(&mut self, index: u32) -> Result<String, Error> {
+    pub fn load_string(&mut self, index: u32) -> Result<String, Error> {
         self.inner_lock.load_key_string(index)
     }
 
@@ -460,6 +461,24 @@ impl<'a> LockedStateGuard<'a> {
     /// Sets all slots of the array at the given index to zero
     pub fn clear_array(&mut self, block_index: u32, start_slot_index: usize) -> Result<(), Error> {
         self.inner_lock.clear_array(block_index, start_slot_index)
+    }
+
+    pub fn create_string_array<'b>(
+        &mut self,
+        name: impl Into<StringReference<'b>>,
+        slots: usize,
+        parent_index: u32,
+    ) -> Result<Block<Arc<Mapping>>, Error> {
+        self.inner_lock.create_string_array(name, slots, parent_index)
+    }
+
+    pub fn set_array_string_slot<'b>(
+        &mut self,
+        block_index: u32,
+        slot_index: usize,
+        value: impl Into<StringReference<'b>>,
+    ) -> Result<(), Error> {
+        self.inner_lock.set_array_string_slot(block_index, slot_index, value)
     }
 
     #[cfg(test)]
@@ -597,7 +616,7 @@ impl InnerState {
     ) -> Result<Block<Arc<Mapping>>, Error> {
         let (value_block, name_block) =
             self.allocate_reserved_value(name, parent_index, constants::MIN_ORDER_SIZE)?;
-        let result = self.create_string_reference(content).and_then(|content_block| {
+        let result = self.get_or_create_string_reference(content).and_then(|content_block| {
             content_block.increment_string_reference_count()?;
             value_block.become_link(
                 name_block.index(),
@@ -642,8 +661,9 @@ impl InnerState {
         Ok(block)
     }
 
-    /// Allocate a STRING_REFERENCE block with the given |value|.
-    fn create_string_reference<'b>(
+    /// Get or allocate a STRING_REFERENCE block with the given |value|.
+    /// When a new string reference is created, its reference count is set to zero.
+    fn get_or_create_string_reference<'b>(
         &mut self,
         value: impl Into<StringReference<'b>>,
     ) -> Result<Block<Arc<Mapping>>, Error> {
@@ -825,14 +845,79 @@ impl InnerState {
     metric_fns!(uint, u64);
     metric_fns!(double, f64);
 
-    array_fns!(int, i64, IntValue);
-    array_fns!(uint, u64, UintValue);
-    array_fns!(double, f64, DoubleValue);
+    arithmetic_array_fns!(int, i64, IntValue);
+    arithmetic_array_fns!(uint, u64, UintValue);
+    arithmetic_array_fns!(double, f64, DoubleValue);
 
-    /// Sets all slots of the array at the given index to zero
+    fn create_string_array<'b>(
+        &mut self,
+        name: impl Into<StringReference<'b>>,
+        slots: usize,
+        parent_index: u32,
+    ) -> Result<Block<Arc<Mapping>>, Error> {
+        // array_element_size will never fail for BlockType::StringReference.
+        let block_size = slots as usize * BlockType::StringReference.array_element_size().unwrap()
+            + constants::MIN_ORDER_SIZE;
+        if block_size > constants::MAX_ORDER_SIZE {
+            return Err(Error::BlockSizeTooBig(block_size));
+        }
+        let (block, name_block) = self.allocate_reserved_value(name, parent_index, block_size)?;
+        block.become_array_value(
+            slots,
+            ArrayFormat::Default,
+            BlockType::StringReference,
+            name_block.index(),
+            parent_index,
+        )?;
+        Ok(block)
+    }
+
+    fn set_array_string_slot<'b>(
+        &mut self,
+        block_index: u32,
+        slot_index: usize,
+        value: impl Into<StringReference<'b>>,
+    ) -> Result<(), Error> {
+        let block = self.heap.get_block(block_index)?;
+        if block.array_slots()? <= slot_index {
+            return Err(Error::VmoFormat(FormatError::ArrayIndexOutOfBounds(slot_index)));
+        }
+
+        let value = value.into();
+        let reference_index = if value.data() != "" {
+            let reference = self.get_or_create_string_reference(value)?;
+            reference.increment_string_reference_count()?;
+            reference.index()
+        } else {
+            constants::EMPTY_STRING_SLOT_INDEX
+        };
+
+        block.array_set_string_slot(slot_index, reference_index)?;
+        Ok(())
+    }
+
+    /// Sets all slots of the array at the given index to zero.
+    /// Does appropriate deallocation on string references in payload.
     fn clear_array(&mut self, block_index: u32, start_slot_index: usize) -> Result<(), Error> {
         let block = self.heap.get_block(block_index)?;
-        block.array_clear(start_slot_index)?;
+        match block.array_entry_type()? {
+            value if value.is_numeric_value() => block.array_clear(start_slot_index)?,
+            BlockType::StringReference => {
+                for i in start_slot_index..block.array_slots()? {
+                    let index = block.array_get_string_index_slot(i)?;
+                    if index == constants::EMPTY_STRING_SLOT_INDEX {
+                        continue;
+                    }
+
+                    block.array_set_string_slot(i, constants::EMPTY_STRING_SLOT_INDEX).unwrap();
+                    let to_free = self.heap.get_block(index)?;
+                    self.release_string_reference(to_free)?;
+                }
+            }
+
+            _ => return Err(Error::InvalidArrayType(block.index())),
+        }
+
         Ok(())
     }
 
@@ -843,7 +928,7 @@ impl InnerState {
         block_size: usize,
     ) -> Result<(Block<Arc<Mapping>>, Block<Arc<Mapping>>), Error> {
         let block = self.heap.allocate_block(block_size)?;
-        let name_block = match self.create_string_reference(name) {
+        let name_block = match self.get_or_create_string_reference(name) {
             Ok(b) => {
                 b.increment_string_reference_count()?;
                 b
@@ -988,7 +1073,7 @@ mod tests {
     fn test_load_string() {
         let outer = get_state(4096);
         let mut state = outer.try_lock().expect("lock state");
-        let block = state.create_string_reference("a value").unwrap();
+        let block = state.get_or_create_string_reference("a value").unwrap();
         assert_eq!(state.load_string(block.index()).unwrap(), "a value");
     }
 
@@ -1319,7 +1404,7 @@ mod tests {
 
         {
             // 4 bytes (4 ASCII characters in UTF-8) will fit inlined with a minimum block size
-            let block = state.create_string_reference("abcd").unwrap();
+            let block = state.get_or_create_string_reference("abcd").unwrap();
             assert_eq!(block.block_type(), BlockType::StringReference);
             assert_eq!(block.order(), 0);
             assert_eq!(state.stats().allocated_blocks, 2);
@@ -1335,7 +1420,7 @@ mod tests {
         }
 
         {
-            let block = state.create_string_reference("longer").unwrap();
+            let block = state.get_or_create_string_reference("longer").unwrap();
             assert_eq!(block.block_type(), BlockType::StringReference);
             assert_eq!(block.order(), 1);
             assert_eq!(block.string_reference_count().unwrap(), 0);
@@ -1352,7 +1437,7 @@ mod tests {
         }
 
         {
-            let block = state.create_string_reference("longer").unwrap();
+            let block = state.get_or_create_string_reference("longer").unwrap();
             let index = block.index();
             assert_eq!(block.order(), 1);
             block.increment_string_reference_count().unwrap();
@@ -1414,6 +1499,71 @@ mod tests {
         let snapshot = Snapshot::try_from(core_state.copy_vmo_bytes()).unwrap();
         let blocks: Vec<ScannedBlock<'_>> = snapshot.scan().collect();
         assert!(blocks[1..].iter().all(|b| b.block_type() == BlockType::Free));
+    }
+
+    #[fuchsia::test]
+    fn test_string_arrays() {
+        let core_state = get_state(4096);
+        {
+            let mut state = core_state.try_lock().expect("lock state");
+            let array = state.create_string_array("array", 4, 0).unwrap();
+            state.set_array_string_slot(array.index(), 0, "0").unwrap();
+            state.set_array_string_slot(array.index(), 1, "1").unwrap();
+            state.set_array_string_slot(array.index(), 2, "2").unwrap();
+            state.set_array_string_slot(array.index(), 3, "3").unwrap();
+
+            // size is 4
+            assert!(state.set_array_string_slot(array.index(), 4, "").is_err());
+            assert!(state.set_array_string_slot(array.index(), 5, "").is_err());
+
+            for i in 0..4 {
+                let idx = array.array_get_string_index_slot(i).unwrap();
+                assert_eq!(i.to_string(), state.load_string(idx).unwrap());
+            }
+
+            assert!(array.array_get_string_index_slot(4).is_err());
+            assert!(array.array_get_string_index_slot(5).is_err());
+
+            state.clear_array(array.index(), 0).unwrap();
+            state.free_value(array.index()).unwrap();
+        }
+
+        let snapshot = Snapshot::try_from(core_state.copy_vmo_bytes()).unwrap();
+        let blocks: Vec<ScannedBlock<'_>> = snapshot.scan().collect();
+        assert!(blocks[1..].iter().all(|b| b.block_type() == BlockType::Free));
+    }
+
+    #[fuchsia::test]
+    fn test_empty_value_string_arrays() {
+        let core_state = get_state(4096);
+        let mut state = core_state.try_lock().expect("lock state");
+        let array = state.create_string_array("array", 4, 0).unwrap();
+
+        state.set_array_string_slot(array.index(), 0, "").unwrap();
+        state.set_array_string_slot(array.index(), 1, "").unwrap();
+        state.set_array_string_slot(array.index(), 2, "").unwrap();
+        state.set_array_string_slot(array.index(), 3, "").unwrap();
+
+        drop(state);
+
+        let snapshot = Snapshot::try_from(core_state.copy_vmo_bytes()).unwrap();
+        let mut state = core_state.try_lock().expect("lock state");
+
+        let blocks: Vec<ScannedBlock<'_>> = snapshot.scan().collect();
+        for b in blocks {
+            if b.block_type() == BlockType::StringReference
+                && state.load_string(b.index()).unwrap() == "array"
+            {
+                continue;
+            }
+
+            assert!(
+                b.block_type() != BlockType::StringReference,
+                "Got unexpected StringReference, index: {}, value (wrapped in single quotes): '{}'",
+                b.index(),
+                b.block_type()
+            );
+        }
     }
 
     #[fuchsia::test]
@@ -1640,11 +1790,11 @@ mod tests {
             assert_eq!(block0_name.order(), 1);
             assert_eq!(state.stats().allocated_blocks, 3);
 
-            let block1 = state.create_string_reference("abcd").unwrap();
+            let block1 = state.get_or_create_string_reference("abcd").unwrap();
             assert_eq!(state.stats().allocated_blocks, 4);
             assert_eq!(block1.order(), 0);
 
-            let block2 = state.create_string_reference("abcd123456789").unwrap();
+            let block2 = state.get_or_create_string_reference("abcd123456789").unwrap();
             assert_eq!(block2.order(), 1);
             assert_eq!(state.stats().allocated_blocks, 5);
 

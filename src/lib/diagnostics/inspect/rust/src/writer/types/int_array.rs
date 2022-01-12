@@ -26,12 +26,14 @@ crate::impl_inspect_type_internal!(IntArrayProperty);
 impl ArrayProperty for IntArrayProperty {
     type Type = i64;
 
-    fn set(&self, index: usize, value: i64) {
+    fn set(&self, index: usize, value: impl Into<Self::Type>) {
         if let Some(ref inner_ref) = self.inner.inner_ref() {
             inner_ref
                 .state
                 .try_lock()
-                .and_then(|mut state| state.set_array_int_slot(inner_ref.block_index, index, value))
+                .and_then(|mut state| {
+                    state.set_array_int_slot(inner_ref.block_index, index, value.into())
+                })
                 .unwrap_or_else(|err| {
                     error!(?err, "Failed to set property");
                 });

@@ -612,13 +612,13 @@ impl<T: ReadableBlockContainer + WritableBlockContainer + BlockContainerEq> Bloc
     }
 
     /// Sets the value of a string ARRAY_VALUE block.
-    /// Note: this is hidden because the writers and readers are not fully developed yet.
-    /// At this point, the function is mainly available for writing tests in other crates.
-    #[doc(hidden)]
     pub fn array_set_string_slot(&self, slot_index: usize, string_index: u32) -> Result<(), Error> {
         self.check_array_entry_type(BlockType::StringReference)?;
         self.check_array_index(slot_index)?;
-        self.check_type_at(string_index, BlockType::StringReference)?;
+        // 0 is used as special value; the reader won't dereference it
+        if string_index != constants::EMPTY_STRING_SLOT_INDEX {
+            self.check_type_at(string_index, BlockType::StringReference)?;
+        }
 
         let type_size = self.array_entry_type_size()?;
         self.container.write_bytes(

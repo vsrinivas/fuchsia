@@ -35,7 +35,7 @@ use {
     crate::reader::snapshot::{ScannedBlock, Snapshot},
     diagnostics_hierarchy::{testing::DiagnosticsHierarchyGetter, *},
     fuchsia_zircon::Vmo,
-    inspect_format::{utils, BlockType, PropertyFormat},
+    inspect_format::{constants, utils, BlockType, PropertyFormat},
     maplit::btreemap,
     std::{borrow::Cow, cmp::min, collections::BTreeMap, convert::TryFrom},
 };
@@ -457,7 +457,7 @@ impl<'a> ScanResult<'a> {
                         let string_idx = block.array_get_string_index_slot(i).unwrap();
                         // default initialize unset values -- 0 index is never a string, it is always
                         // the header block
-                        if string_idx == 0 {
+                        if string_idx == constants::EMPTY_STRING_SLOT_INDEX {
                             return String::new();
                         }
 
@@ -568,67 +568,27 @@ mod tests {
         });
     }
 
-    // TODO: these string array tests are awful right now, but they are refactored in the next CL
-    //          to use the more ergonomic writer API.
-
     #[fuchsia::test]
     async fn read_string_array() {
         let inspector = Inspector::new();
         let root = inspector.root();
 
+        let zero = (0..3000).map(|_| '0').collect::<String>();
         let one: String = "1".into();
         let two: String = "two".into();
         let three: String = "three three three".into();
         let four: String = "fourth".into();
 
-        let child = root.create_child("padding");
-        let child_child = child.create_int("array", 0);
-        let child_child_block = child_child.get_block().unwrap();
-        let name_idx = child_child_block.name_index().unwrap();
-
-        inspector
-            .state()
-            .unwrap()
-            .try_lock()
-            .unwrap()
-            .heap()
-            .get_block(name_idx)
-            .unwrap()
-            .increment_string_reference_count()
-            .unwrap();
-
-        let child1 = root.create_int(one.clone(), 0);
-        let one_idx = child1.get_block().unwrap().name_index().unwrap();
-        let child2 = root.create_int(two.clone(), 0);
-        let two_idx = child2.get_block().unwrap().name_index().unwrap();
-        let child3 = root.create_int(three.clone(), 0);
-        let three_idx = child3.get_block().unwrap().name_index().unwrap();
-        let child4 = root.create_int(four.clone(), 0);
-        let four_idx = child4.get_block().unwrap().name_index().unwrap();
-
-        let node = root.create_double_array("", 50);
-        let node_block = node.get_block().unwrap();
-        node_block.become_free(0);
-        node_block.become_reserved().unwrap();
-        node_block
-            .become_array_value(4, ArrayFormat::Default, BlockType::StringReference, name_idx, 0)
-            .unwrap();
-
-        node_block.array_set_string_slot(0, one_idx).unwrap();
-        node_block.array_set_string_slot(1, two_idx).unwrap();
-        node_block.array_set_string_slot(2, three_idx).unwrap();
-        node_block.array_set_string_slot(3, four_idx).unwrap();
+        let array = root.create_string_array("array", 5);
+        array.set(0, &zero);
+        array.set(1, &one);
+        array.set(2, &two);
+        array.set(3, &three);
+        array.set(4, &four);
 
         let result = read(&inspector).await.unwrap();
         assert_json_diff!(result, root: {
-            padding: {
-                array: 0i64,
-            },
-            "1": 0i64,
-            two: 0i64,
-            "three three three": 0i64,
-            fourth: 0i64,
-            array: vec![one, two, three, four],
+            "array": vec![zero, one, two, three, four],
         });
     }
 
@@ -637,54 +597,18 @@ mod tests {
         let inspector = Inspector::new();
         let root = inspector.root();
 
+        let zero = (0..3000).map(|_| '0').collect::<String>();
         let one: String = "1".into();
-        let two: String = "two".into();
         let four: String = "fourth".into();
 
-        let child = root.create_child("padding");
-        let child_child = child.create_int("array", 0);
-        let child_child_block = child_child.get_block().unwrap();
-        let name_idx = child_child_block.name_index().unwrap();
-
-        inspector
-            .state()
-            .unwrap()
-            .try_lock()
-            .unwrap()
-            .heap()
-            .get_block(name_idx)
-            .unwrap()
-            .increment_string_reference_count()
-            .unwrap();
-
-        let child1 = root.create_int(one.clone(), 0);
-        let one_idx = child1.get_block().unwrap().name_index().unwrap();
-        let child2 = root.create_int(two.clone(), 0);
-        let two_idx = child2.get_block().unwrap().name_index().unwrap();
-        let child4 = root.create_int(four.clone(), 0);
-        let four_idx = child4.get_block().unwrap().name_index().unwrap();
-
-        let node = root.create_double_array("", 50);
-        let node_block = node.get_block().unwrap();
-        node_block.become_free(0);
-        node_block.become_reserved().unwrap();
-        node_block
-            .become_array_value(4, ArrayFormat::Default, BlockType::StringReference, name_idx, 0)
-            .unwrap();
-
-        node_block.array_set_string_slot(0, one_idx).unwrap();
-        node_block.array_set_string_slot(1, two_idx).unwrap();
-        node_block.array_set_string_slot(3, four_idx).unwrap();
+        let array = root.create_string_array("array", 5);
+        array.set(0, &zero);
+        array.set(1, &one);
+        array.set(4, &four);
 
         let result = read(&inspector).await.unwrap();
         assert_json_diff!(result, root: {
-            "padding": {
-                "array": 0i64,
-            },
-            "1": 0i64,
-            "two": 0i64,
-            "fourth": 0i64,
-            "array": vec![one, two, "".into(), four],
+            "array": vec![zero, one, "".into(), "".into(), four],
         });
     }
 

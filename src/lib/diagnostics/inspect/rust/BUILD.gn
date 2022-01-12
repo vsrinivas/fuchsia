@@ -72,6 +72,7 @@ rustc_library("fuchsia-inspect") {
     "src/writer/types/mod.rs",
     "src/writer/types/node.rs",
     "src/writer/types/property.rs",
+    "src/writer/types/string_array.rs",
     "src/writer/types/string_property.rs",
     "src/writer/types/string_reference.rs",
     "src/writer/types/uint_array.rs",

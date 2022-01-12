@@ -78,8 +78,8 @@ pub enum Error {
     #[error("Cannot swap blocks of different order or container")]
     InvalidBlockSwap,
 
-    #[error("Expected a numeric entry type for the array at index {0}")]
-    NonNumericArrayType(u32),
+    #[error("Expected a valid entry type for the array at index {0}")]
+    InvalidArrayType(u32),
 
     #[error("{slots} exceeds the maximum number of slots for order {order}: {max_capacity}")]
     ArrayCapacityExceeded { slots: usize, order: usize, max_capacity: usize },

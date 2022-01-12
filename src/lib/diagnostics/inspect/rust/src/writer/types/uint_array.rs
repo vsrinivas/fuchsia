@@ -26,13 +26,13 @@ crate::impl_inspect_type_internal!(UintArrayProperty);
 impl ArrayProperty for UintArrayProperty {
     type Type = u64;
 
-    fn set(&self, index: usize, value: u64) {
+    fn set(&self, index: usize, value: impl Into<Self::Type>) {
         if let Some(ref inner_ref) = self.inner.inner_ref() {
             inner_ref
                 .state
                 .try_lock()
                 .and_then(|mut state| {
-                    state.set_array_uint_slot(inner_ref.block_index, index, value)
+                    state.set_array_uint_slot(inner_ref.block_index, index, value.into())
                 })
                 .unwrap_or_else(|err| {
                     error!(?err, "Failed to set property");
@@ -120,7 +120,7 @@ mod tests {
             let array = node.create_uint_array("array_property", 5);
             let array_block = array.get_block().unwrap();
 
-            array.set(0, 5);
+            array.set(0, 5u64);
             assert_eq!(array_block.array_get_uint_slot(0).unwrap(), 5);
 
             array.add(0, 5);
@@ -129,8 +129,8 @@ mod tests {
             array.subtract(0, 3);
             assert_eq!(array_block.array_get_uint_slot(0).unwrap(), 7);
 
-            array.set(1, 2);
-            array.set(3, 3);
+            array.set(1, 2u64);
+            array.set(3, 3u64);
 
             for (i, value) in [7, 2, 0, 3, 0].iter().enumerate() {
                 assert_eq!(array_block.array_get_uint_slot(i).unwrap(), *value);

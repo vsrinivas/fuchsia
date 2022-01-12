@@ -7,8 +7,8 @@ use crate::writer::{
     DoubleExponentialHistogramProperty, DoubleLinearHistogramProperty, DoubleProperty, Error,
     Inner, InnerType, InspectType, InspectTypeReparentable, Inspector, IntArrayProperty,
     IntExponentialHistogramProperty, IntLinearHistogramProperty, IntProperty, LazyNode, State,
-    StringProperty, StringReference, UintArrayProperty, UintExponentialHistogramProperty,
-    UintLinearHistogramProperty, UintProperty, ValueList,
+    StringArrayProperty, StringProperty, StringReference, UintArrayProperty,
+    UintExponentialHistogramProperty, UintLinearHistogramProperty, UintProperty, ValueList,
 };
 use diagnostics_hierarchy::{
     ArrayFormat, ExponentialHistogramParams, LinearHistogramParams, LinkNodeDisposition,
@@ -179,6 +179,28 @@ impl Node {
     pub fn record_double<'b>(&self, name: impl Into<StringReference<'b>>, value: f64) {
         let property = self.create_double(name, value);
         self.record(property);
+    }
+
+    /// Creates a new `StringArrayProperty` with the given `name` and `slots`.
+    #[must_use]
+    pub fn create_string_array<'b>(
+        &self,
+        name: impl Into<StringReference<'b>>,
+        slots: usize,
+    ) -> StringArrayProperty<'_> {
+        self.inner
+            .inner_ref()
+            .and_then(|inner_ref| {
+                inner_ref
+                    .state
+                    .try_lock()
+                    .and_then(|mut state| {
+                        state.create_string_array(name, slots, inner_ref.block_index)
+                    })
+                    .map(|block| StringArrayProperty::new(inner_ref.state.clone(), block.index()))
+                    .ok()
+            })
+            .unwrap_or(StringArrayProperty::new_no_op())
     }
 
     /// Creates a new `IntArrayProperty` with the given `name` and `slots`.

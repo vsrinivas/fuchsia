@@ -17,6 +17,7 @@ mod int_property;
 mod lazy_node;
 mod node;
 mod property;
+mod string_array;
 mod string_property;
 mod string_reference;
 mod uint_array;
@@ -29,6 +30,6 @@ pub use {
     base::*, bool_property::*, bytes_property::*, double_array::*, double_exponential_histogram::*,
     double_linear_histogram::*, double_property::*, inspector::*, int_array::*,
     int_exponential_histogram::*, int_linear_histogram::*, int_property::*, lazy_node::*, node::*,
-    property::*, string_property::*, string_reference::*, uint_array::*,
+    property::*, string_array::*, string_property::*, string_reference::*, uint_array::*,
     uint_exponential_histogram::*, uint_linear_histogram::*, uint_property::*, value_list::*,
 };

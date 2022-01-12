@@ -36,7 +36,7 @@ pub trait ArrayProperty {
     type Type;
 
     /// Sets the array value to `value` at the given `index`.
-    fn set(&self, index: usize, value: Self::Type);
+    fn set(&self, index: usize, value: impl Into<Self::Type>);
 
     /// Sets all slots of the array to 0 and releases any references.
     fn clear(&self);
