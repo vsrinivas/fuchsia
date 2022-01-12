@@ -495,16 +495,18 @@ void VirtioWl::HandleCommand(VirtioChain* chain) {
 void VirtioWl::HandleNew(const virtio_wl_ctrl_vfd_new_t* request,
                          virtio_wl_ctrl_vfd_new_t* response) {
   TRACE_DURATION("machina", "VirtioWl::HandleNew");
+  const uint32_t vfd_id = request->vfd_id;
+  const uint32_t request_size = request->size;
 
-  if (request->vfd_id & VIRTWL_VFD_ID_HOST_MASK) {
+  if (vfd_id & VIRTWL_VFD_ID_HOST_MASK) {
     response->hdr.type = VIRTIO_WL_RESP_INVALID_ID;
     return;
   }
 
   zx::vmo vmo;
-  zx_status_t status = zx::vmo::create(request->size, 0, &vmo);
+  zx_status_t status = zx::vmo::create(request_size, 0, &vmo);
   if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "Failed to allocate VMO (size=" << request->size << "): " << status;
+    FX_LOGS(ERROR) << "Failed to allocate VMO (size=" << request_size << "): " << status;
     response->hdr.type = VIRTIO_WL_RESP_OUT_OF_MEMORY;
     return;
   }
@@ -523,7 +525,7 @@ void VirtioWl::HandleNew(const virtio_wl_ctrl_vfd_new_t* request,
   uint64_t size = vfd->size();
 
   bool inserted;
-  std::tie(std::ignore, inserted) = vfds_.insert({request->vfd_id, std::move(vfd)});
+  std::tie(std::ignore, inserted) = vfds_.insert({vfd_id, std::move(vfd)});
   if (!inserted) {
     response->hdr.type = VIRTIO_WL_RESP_INVALID_ID;
     return;
@@ -531,7 +533,7 @@ void VirtioWl::HandleNew(const virtio_wl_ctrl_vfd_new_t* request,
 
   response->hdr.type = VIRTIO_WL_RESP_VFD_NEW;
   response->hdr.flags = 0;
-  response->vfd_id = request->vfd_id;
+  response->vfd_id = vfd_id;
   response->flags = VIRTIO_WL_VFD_READ | VIRTIO_WL_VFD_WRITE;
   response->pfn = addr / PAGE_SIZE;
   response->size = static_cast<uint32_t>(size);
@@ -557,7 +559,7 @@ zx_status_t VirtioWl::HandleSend(const virtio_wl_ctrl_vfd_send_t* request, uint3
     return ZX_OK;
   }
 
-  const auto vfd_count = request->vfd_count;
+  const uint32_t vfd_count = request->vfd_count;
   auto vfds = reinterpret_cast<const uint32_t*>(request + 1);
   uint32_t num_bytes = request_len - sizeof(*request);
 
@@ -632,7 +634,8 @@ void VirtioWl::HandleNewCtx(const virtio_wl_ctrl_vfd_new_t* request,
                             virtio_wl_ctrl_vfd_new_t* response) {
   TRACE_DURATION("machina", "VirtioWl::HandleNewCtx");
 
-  if (request->vfd_id & VIRTWL_VFD_ID_HOST_MASK) {
+  const uint32_t vfd_id = request->vfd_id;
+  if (vfd_id & VIRTWL_VFD_ID_HOST_MASK) {
     response->hdr.type = VIRTIO_WL_RESP_INVALID_ID;
     return;
   }
@@ -645,7 +648,6 @@ void VirtioWl::HandleNewCtx(const virtio_wl_ctrl_vfd_new_t* request,
     return;
   }
 
-  uint32_t vfd_id = request->vfd_id;
   auto vfd = std::make_unique<Connection>(
       std::move(channel), [this, vfd_id](async_dispatcher_t* dispatcher, async::Wait* wait,
                                          zx_status_t status, const zx_packet_signal_t* signal) {
@@ -683,8 +685,8 @@ void VirtioWl::HandleNewCtx(const virtio_wl_ctrl_vfd_new_t* request,
 void VirtioWl::HandleNewPipe(const virtio_wl_ctrl_vfd_new_t* request,
                              virtio_wl_ctrl_vfd_new_t* response) {
   TRACE_DURATION("machina", "VirtioWl::HandleNewPipe");
-
-  if (request->vfd_id & VIRTWL_VFD_ID_HOST_MASK) {
+  const uint32_t vfd_id = request->vfd_id;
+  if (vfd_id & VIRTWL_VFD_ID_HOST_MASK) {
     response->hdr.type = VIRTIO_WL_RESP_INVALID_ID;
     return;
   }
@@ -697,7 +699,6 @@ void VirtioWl::HandleNewPipe(const virtio_wl_ctrl_vfd_new_t* request,
     return;
   }
 
-  uint32_t vfd_id = request->vfd_id;
   auto vfd = std::make_unique<Pipe>(
       std::move(socket), std::move(remote_socket),
       [this, vfd_id](async_dispatcher_t* dispatcher, async::Wait* wait, zx_status_t status,
@@ -737,12 +738,15 @@ void VirtioWl::HandleNewDmabuf(const virtio_wl_ctrl_vfd_new_t* request,
                                virtio_wl_ctrl_vfd_new_t* response) {
   TRACE_DURATION("machina", "VirtioWl::HandleNewDmabuf");
 
-  if (request->vfd_id & VIRTWL_VFD_ID_HOST_MASK) {
+  const uint32_t vfd_id = request->vfd_id;
+  const decltype(virtio_wl_ctrl_vfd_new_t::dmabuf) request_dmabuf = request->dmabuf;
+
+  if (vfd_id & VIRTWL_VFD_ID_HOST_MASK) {
     response->hdr.type = VIRTIO_WL_RESP_INVALID_ID;
     return;
   }
 
-  fuchsia::sysmem::PixelFormatType pixel_format = DrmFormatToSysmemFormat(request->dmabuf.format);
+  fuchsia::sysmem::PixelFormatType pixel_format = DrmFormatToSysmemFormat(request_dmabuf.format);
   if (pixel_format == fuchsia::sysmem::PixelFormatType::INVALID) {
     // Silent error as Sommelier use an invalid format to check for
     // DMABuf support.
@@ -750,7 +754,7 @@ void VirtioWl::HandleNewDmabuf(const virtio_wl_ctrl_vfd_new_t* request,
     return;
   }
 
-  uint32_t min_bytes_per_row = MinBytesPerRow(request->dmabuf.format, request->dmabuf.width);
+  uint32_t min_bytes_per_row = MinBytesPerRow(request_dmabuf.format, request_dmabuf.width);
 
   // Create single buffer collection.
   fuchsia::sysmem::BufferCollectionTokenSyncPtr local_token;
@@ -817,10 +821,10 @@ void VirtioWl::HandleNewDmabuf(const virtio_wl_ctrl_vfd_new_t* request,
   fuchsia::sysmem::ImageFormatConstraints& image_constraints =
       constraints.image_format_constraints[0];
   image_constraints = fuchsia::sysmem::ImageFormatConstraints();
-  image_constraints.min_coded_width = request->dmabuf.width;
-  image_constraints.min_coded_height = request->dmabuf.height;
-  image_constraints.max_coded_width = request->dmabuf.width;
-  image_constraints.max_coded_height = request->dmabuf.height;
+  image_constraints.min_coded_width = request_dmabuf.width;
+  image_constraints.min_coded_height = request_dmabuf.height;
+  image_constraints.max_coded_width = request_dmabuf.width;
+  image_constraints.max_coded_height = request_dmabuf.height;
   image_constraints.min_bytes_per_row = min_bytes_per_row;
   image_constraints.color_spaces_count = 1;
   image_constraints.color_space[0].type = fuchsia::sysmem::ColorSpaceType::SRGB;
@@ -875,7 +879,7 @@ void VirtioWl::HandleNewDmabuf(const virtio_wl_ctrl_vfd_new_t* request,
   uint64_t size = vfd->size();
 
   bool inserted;
-  std::tie(std::ignore, inserted) = vfds_.insert({request->vfd_id, std::move(vfd)});
+  std::tie(std::ignore, inserted) = vfds_.insert({vfd_id, std::move(vfd)});
   if (!inserted) {
     response->hdr.type = VIRTIO_WL_RESP_INVALID_ID;
     return;
@@ -883,7 +887,7 @@ void VirtioWl::HandleNewDmabuf(const virtio_wl_ctrl_vfd_new_t* request,
 
   response->hdr.type = VIRTIO_WL_RESP_VFD_NEW_DMABUF;
   response->hdr.flags = 0;
-  response->vfd_id = request->vfd_id;
+  response->vfd_id = vfd_id;
   response->flags = VIRTIO_WL_VFD_READ | VIRTIO_WL_VFD_WRITE;
   response->pfn = addr / PAGE_SIZE;
   response->size = static_cast<uint32_t>(size);
