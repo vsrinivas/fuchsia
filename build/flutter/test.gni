@@ -173,6 +173,10 @@ if (current_toolchain == dart_toolchain) {
           product = false
           is_aot = false
 
+          # Per dnfield@, flutter unit tests should always be run with asserts
+          # enabled in debug mode
+          is_debug = true
+
           # By default the dart_kernel will not link the current platform.dill but
           # when running host tests this will fail because the sdk patched for
           # fuchsia will be used.

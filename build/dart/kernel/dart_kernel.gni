@@ -88,8 +88,12 @@ template("_convert_kernel_manifest") {
 #  product (required)
 #    Whether this should be built with the product runner.
 #
-#  is_aot required)
+#  is_aot (required)
 #    Whether this kernel is an aot build.
+#
+#  is_debug (optional)
+#    Whether this sources are embedded. Addiitonally, if is_debug, the dart VM
+#    will not run in profile mode.
 #
 #  generate_manifest (optional)
 #    Whether the compiler should generate a kernel manifest containing the list
@@ -125,6 +129,11 @@ template("dart_kernel") {
       "dart_kernel() requires either (main_dart and main_package) or main_dart_file")
   assert(defined(invoker.product), "dart_kernel() requires product")
   assert(defined(invoker.is_aot), "dart_kernel() requires is_aot")
+
+  _is_debug = is_debug
+  if (defined(invoker.is_debug)) {
+    _is_debug = invoker.is_debug
+  }
 
   if (defined(invoker.kernel_target_name)) {
     _kernel_target_name = invoker.kernel_target_name
@@ -268,7 +277,7 @@ template("dart_kernel") {
       ]
     }
 
-    if (is_debug) {
+    if (_is_debug) {
       args += [ "--embed-sources" ]
     } else {
       args += [ "--no-embed-sources" ]
@@ -291,7 +300,7 @@ template("dart_kernel") {
       # This define excludes debugging and profiling code from Flutter.
       args += [ "-Ddart.vm.product=true" ]
     } else {
-      if (!is_debug) {
+      if (!_is_debug) {
         # The following define excludes debugging code from Flutter.
         args += [ "-Ddart.vm.profile=true" ]
       }
