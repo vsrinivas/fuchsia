@@ -247,8 +247,30 @@ func (t *DeviceTarget) Start(ctx context.Context, images []bootserver.Image, arg
 
 	// Boot Fuchsia.
 	if t.config.FastbootSernum != "" {
-		if err := t.flash(ctx, images); err != nil {
+		// Copy images locally, as fastboot does not support flashing
+		// from a remote location.
+		// TODO(rudymathu): Transport these images via isolate for improved caching performance.
+		wd, err := os.Getwd()
+		if err != nil {
 			return err
+		}
+		var imgs []*bootserver.Image
+		for _, img := range images {
+			img := img
+			imgs = append(imgs, &img)
+		}
+		if err := copyImagesToDir(ctx, wd, true, imgs...); err != nil {
+			return err
+		}
+
+		if t.opts.Netboot {
+			if err := t.ramBoot(ctx, imgs); err != nil {
+				return err
+			}
+		} else {
+			if err := t.flash(ctx, imgs); err != nil {
+				return err
+			}
 		}
 	} else {
 		if err := bootserver.Boot(ctx, t.Tftp(), images, args, authorizedKeys); err != nil {
@@ -263,24 +285,26 @@ func (t *DeviceTarget) Start(ctx context.Context, images []bootserver.Image, arg
 	return nil
 }
 
-func (t *DeviceTarget) flash(ctx context.Context, images []bootserver.Image) error {
-	// Download the images to disk.
-	// TODO(rudymathu): Transport these images via isolate for improved caching performance.
-	wd, err := os.Getwd()
-	if err != nil {
-		return err
-	}
-	var imgs []*bootserver.Image
+func (t *DeviceTarget) ramBoot(ctx context.Context, images []*bootserver.Image) error {
+	bootScript := ""
 	for _, img := range images {
-		img := img
-		imgs = append(imgs, &img)
+		if img.Name == "script_fastboot-boot-script" {
+			bootScript = img.Path
+			break
+		}
 	}
-	if err := copyImagesToDir(ctx, wd, true, imgs...); err != nil {
-		return err
+	if bootScript == "" {
+		return errors.New("fastboot boot script not found")
 	}
+	cmd := exec.CommandContext(ctx, bootScript, "-s", t.config.FastbootSernum)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	return cmd.Run()
+}
 
+func (t *DeviceTarget) flash(ctx context.Context, images []*bootserver.Image) error {
 	flashScript := ""
-	for _, img := range imgs {
+	for _, img := range images {
 		if img.Name == "script_flash-script" {
 			flashScript = img.Path
 			break
@@ -291,7 +315,7 @@ func (t *DeviceTarget) flash(ctx context.Context, images []bootserver.Image) err
 	}
 	// Write the public SSH key to disk if one is needed.
 	flashArgs := []string{"-s", t.config.FastbootSernum}
-	if !t.opts.Netboot && len(t.signers) > 0 {
+	if len(t.signers) > 0 {
 		pubkey, err := ioutil.TempFile("", "pubkey*")
 		if err != nil {
 			return err
