@@ -43,13 +43,13 @@ Evictor::Evictor(PmmNode* node, PageQueues* queues) : pmm_node_(node), page_queu
 Evictor::~Evictor() { DisableEviction(); }
 
 bool Evictor::IsEvictionEnabled() const {
-  Guard<SpinLock, IrqSave> guard{&lock_};
+  Guard<MonitoredSpinLock, IrqSave> guard{&lock_, SOURCE_TAG};
   return eviction_enabled_;
 }
 
 void Evictor::EnableEviction() {
   {
-    Guard<SpinLock, IrqSave> guard{&lock_};
+    Guard<MonitoredSpinLock, IrqSave> guard{&lock_, SOURCE_TAG};
     // It's an error to call this whilst the eviction thread is still exiting.
     ASSERT(!eviction_thread_exiting_);
     eviction_enabled_ = true;
@@ -74,7 +74,7 @@ void Evictor::DisableEviction() {
   {
     // Grab the lock and update any state. We cannot actually wait for the eviction thread to
     // complete whilst the lock is held, however.
-    Guard<SpinLock, IrqSave> guard{&lock_};
+    Guard<MonitoredSpinLock, IrqSave> guard{&lock_, SOURCE_TAG};
     if (!eviction_thread_) {
       return;
     }
@@ -91,7 +91,7 @@ void Evictor::DisableEviction() {
   eviction_thread->Join(&res, ZX_TIME_INFINITE);
   DEBUG_ASSERT(res == 0);
   {
-    Guard<SpinLock, IrqSave> guard{&lock_};
+    Guard<MonitoredSpinLock, IrqSave> guard{&lock_, SOURCE_TAG};
     // Now update the state to indicate that eviction is disabled.
     eviction_thread_ = nullptr;
     eviction_enabled_ = false;
@@ -100,34 +100,34 @@ void Evictor::DisableEviction() {
 }
 
 void Evictor::SetDiscardableEvictionsPercent(uint32_t discardable_percent) {
-  Guard<SpinLock, IrqSave> guard{&lock_};
+  Guard<MonitoredSpinLock, IrqSave> guard{&lock_, SOURCE_TAG};
   if (discardable_percent <= 100) {
     discardable_evictions_percent_ = discardable_percent;
   }
 }
 
 void Evictor::DebugSetMinDiscardableAge(zx_time_t age) {
-  Guard<SpinLock, IrqSave> guard{&lock_};
+  Guard<MonitoredSpinLock, IrqSave> guard{&lock_, SOURCE_TAG};
   min_discardable_age_ = age;
 }
 
 void Evictor::SetContinuousEvictionInterval(zx_time_t eviction_interval) {
-  Guard<SpinLock, IrqSave> guard{&lock_};
+  Guard<MonitoredSpinLock, IrqSave> guard{&lock_, SOURCE_TAG};
   default_eviction_interval_ = eviction_interval;
 }
 
 Evictor::EvictionTarget Evictor::DebugGetOneShotEvictionTarget() const {
-  Guard<SpinLock, IrqSave> guard{&lock_};
+  Guard<MonitoredSpinLock, IrqSave> guard{&lock_, SOURCE_TAG};
   return one_shot_eviction_target_;
 }
 
 void Evictor::SetOneShotEvictionTarget(EvictionTarget target) {
-  Guard<SpinLock, IrqSave> guard{&lock_};
+  Guard<MonitoredSpinLock, IrqSave> guard{&lock_, SOURCE_TAG};
   one_shot_eviction_target_ = target;
 }
 
 void Evictor::CombineOneShotEvictionTarget(EvictionTarget target) {
-  Guard<SpinLock, IrqSave> guard{&lock_};
+  Guard<MonitoredSpinLock, IrqSave> guard{&lock_, SOURCE_TAG};
   one_shot_eviction_target_.pending = one_shot_eviction_target_.pending || target.pending;
   one_shot_eviction_target_.level = ktl::max(one_shot_eviction_target_.level, target.level);
   CheckedIncrement(&one_shot_eviction_target_.min_pages_to_free, target.min_pages_to_free);
@@ -143,7 +143,7 @@ Evictor::EvictedPageCounts Evictor::EvictOneShotFromPreloadedTarget() {
   // Create a local copy of the eviction target to operate against.
   EvictionTarget target;
   {
-    Guard<SpinLock, IrqSave> guard{&lock_};
+    Guard<MonitoredSpinLock, IrqSave> guard{&lock_, SOURCE_TAG};
     target = one_shot_eviction_target_;
     one_shot_eviction_target_ = {};
   }
@@ -245,7 +245,7 @@ Evictor::EvictedPageCounts Evictor::EvictUntilTargetsMet(uint64_t min_pages_to_e
       // possible.
       pages_to_free_discardable = pages_to_free;
     } else {
-      Guard<SpinLock, IrqSave> guard{&lock_};
+      Guard<MonitoredSpinLock, IrqSave> guard{&lock_, SOURCE_TAG};
       DEBUG_ASSERT(discardable_evictions_percent_ <= 100);
       pages_to_free_discardable = pages_to_free * discardable_evictions_percent_ / 100;
     }
@@ -291,7 +291,7 @@ uint64_t Evictor::EvictDiscardable(uint64_t target_pages) const {
   // |min_discardable_age_|.
   zx_time_t min_age;
   {
-    Guard<SpinLock, IrqSave> guard{&lock_};
+    Guard<MonitoredSpinLock, IrqSave> guard{&lock_, SOURCE_TAG};
     min_age = min_discardable_age_;
   }
   uint64_t count = VmCowPages::ReclaimPagesFromDiscardableVmos(target_pages, min_age, &freed_list);
@@ -366,7 +366,7 @@ Evictor::EvictedPageCounts Evictor::EvictPagerBacked(uint64_t target_pages,
 void Evictor::EnableContinuousEviction(uint64_t min_mem_to_free, uint64_t free_mem_target,
                                        EvictionLevel eviction_level, Output output) {
   {
-    Guard<SpinLock, IrqSave> guard{&lock_};
+    Guard<MonitoredSpinLock, IrqSave> guard{&lock_, SOURCE_TAG};
     // Combine min target with previously outstanding min target.
     CheckedIncrement(&continuous_eviction_target_.min_pages_to_free, min_mem_to_free / PAGE_SIZE);
     continuous_eviction_target_.free_pages_target = free_mem_target / PAGE_SIZE;
@@ -382,7 +382,7 @@ void Evictor::EnableContinuousEviction(uint64_t min_mem_to_free, uint64_t free_m
 }
 
 void Evictor::DisableContinuousEviction() {
-  Guard<SpinLock, IrqSave> guard{&lock_};
+  Guard<MonitoredSpinLock, IrqSave> guard{&lock_, SOURCE_TAG};
   continuous_eviction_target_ = {};
   // In the next iteration of the eviction thread loop, we will see this value and block
   // indefinitely.
@@ -394,7 +394,7 @@ int Evictor::EvictionThreadLoop() {
     // Block until |next_eviction_interval_| is elapsed.
     zx_time_t wait_interval;
     {
-      Guard<SpinLock, IrqSave> guard{&lock_};
+      Guard<MonitoredSpinLock, IrqSave> guard{&lock_, SOURCE_TAG};
       wait_interval = next_eviction_interval_;
     }
     eviction_signal_.Wait(Deadline::no_slack(zx_time_add_duration(current_time(), wait_interval)));
@@ -419,7 +419,7 @@ int Evictor::EvictionThreadLoop() {
     // Read control parameters into local variables under the lock.
     EvictionTarget target;
     {
-      Guard<SpinLock, IrqSave> guard{&lock_};
+      Guard<MonitoredSpinLock, IrqSave> guard{&lock_, SOURCE_TAG};
       target = continuous_eviction_target_;
     }
 
@@ -448,7 +448,7 @@ int Evictor::EvictionThreadLoop() {
 
     {
       // Update min pages target based on the number of pages evicted.
-      Guard<SpinLock, IrqSave> guard{&lock_};
+      Guard<MonitoredSpinLock, IrqSave> guard{&lock_, SOURCE_TAG};
       if (total_evicted < continuous_eviction_target_.min_pages_to_free) {
         continuous_eviction_target_.min_pages_to_free -= total_evicted;
       } else {

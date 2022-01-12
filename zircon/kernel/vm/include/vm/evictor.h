@@ -176,7 +176,9 @@ class Evictor {
   // overshooting the free memory targets required by various simultaneous eviction requests.
   AutounsignalEvent no_ongoing_eviction_{true};
 
-  mutable DECLARE_SPINLOCK(Evictor) lock_;
+  // Use MonitoredSpinLock to provide lockup detector diagnostics for the critical sections
+  // protected by this lock.
+  mutable DECLARE_SPINLOCK_WITH_TYPE(Evictor, MonitoredSpinLock) lock_;
 
   // The eviction thread used to process asynchronous requests (both one-shot and continuous).
   // Created only if eviction is enabled i.e. |eviction_enabled_| is set to true.
