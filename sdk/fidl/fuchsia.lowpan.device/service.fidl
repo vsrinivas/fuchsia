@@ -48,6 +48,7 @@ type Protocols = resource table {
     5: device_route_extra server_end:DeviceRouteExtra;
     6: counters server_end:Counters;
     7: thread_legacy_joining server_end:fuchsia.lowpan.thread.LegacyJoining;
+    8: thread_dataset server_end:fuchsia.lowpan.thread.Dataset;
 };
 
 /// Struct describing changes to the devices being managed

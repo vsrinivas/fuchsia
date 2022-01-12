@@ -1,0 +1,49 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+library fuchsia.lowpan.thread;
+
+// FYI: The source for this 254 length is the Thread Specification.
+const MAX_DATASET_TLV_LEN uint8 = 254;
+
+/// Datatype for containing a Thread dataset in raw TLV form.
+/// Functionally equivalent to type [`otOperationalDatasetTlvs`][1].
+///
+/// The details of the Thread TLV format are documented in the
+/// [Thread Specification](https://www.threadgroup.org/ThreadSpec).
+///
+/// [1]: https://openthread.io/reference/struct/ot-operational-dataset-tlvs#structot_operational_dataset_tlvs
+alias OperationalDatasetTlvs = bytes:MAX_DATASET_TLV_LEN;
+
+/// Thread Operational Dataset Protocol.
+///
+/// This protocol provides methods related to the management of the
+/// Thread operational dataset in raw TLV form.
+protocol Dataset {
+    /// Fetches and returns the active Thread operational dataset in raw
+    /// TLV form. Functionally equivalent to [`otDatasetGetActiveTlvs()`][2].
+    ///
+    /// This method returns the active dataset, or nothing in the case that
+    /// there is no active operational dataset.
+    ///
+    /// Any error that prevents the operation from completing successfully
+    /// will result in the protocol being closed.
+    ///
+    /// [2]: https://openthread.io/reference/group/api-operational-dataset#otdatasetgetactivetlvs
+    GetActiveTlvs() -> (struct {
+        dataset OperationalDatasetTlvs:optional;
+    });
+
+    /// Sets the active Thread Operational Dataset in raw TLV form.
+    /// Functionally equivalent to [`otDatasetSetActiveTlvs()`][3].
+    ///
+    /// This method returns once the operation has completed successfully.
+    ///
+    /// Any error that prevents the operation from completing successfully
+    /// will result in the protocol being closed.
+    ///
+    /// [3]: https://openthread.io/reference/group/api-operational-dataset#otdatasetsetactivetlvs
+    SetActiveTlvs(struct {
+        dataset OperationalDatasetTlvs;
+    }) -> ();
+};
