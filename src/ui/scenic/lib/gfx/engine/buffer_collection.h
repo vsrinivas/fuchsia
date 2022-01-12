@@ -55,7 +55,7 @@ class BufferCollectionInfo {
     return buffer_collection_info_;
   }
 
-  vk::BufferCollectionFUCHSIAX GetFuchsiaCollection() const { return buffer_collection_fuchsia_; }
+  vk::BufferCollectionFUCHSIA GetFuchsiaCollection() const { return buffer_collection_fuchsia_; }
 
   // TODO: deprecate along with Image.
   fitx::result<fitx::failed, zx::vmo> GetVMO(uint32_t index);
@@ -64,12 +64,12 @@ class BufferCollectionInfo {
 
  private:
   BufferCollectionInfo(fuchsia::sysmem::BufferCollectionSyncPtr buffer_collection_ptr,
-                       vk::BufferCollectionFUCHSIAX buffer_collection_fuchsia)
+                       vk::BufferCollectionFUCHSIA buffer_collection_fuchsia)
       : buffer_collection_ptr_(std::move(buffer_collection_ptr)),
         buffer_collection_fuchsia_(buffer_collection_fuchsia) {}
 
   fuchsia::sysmem::BufferCollectionSyncPtr buffer_collection_ptr_;
-  vk::BufferCollectionFUCHSIAX buffer_collection_fuchsia_;
+  vk::BufferCollectionFUCHSIA buffer_collection_fuchsia_;
   fuchsia::sysmem::BufferCollectionInfo_2 buffer_collection_info_;
 
   std::set<uint32_t> image_resource_ids_;

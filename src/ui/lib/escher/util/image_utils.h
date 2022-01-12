@@ -150,6 +150,8 @@ std::unique_ptr<uint8_t[]> NewNoisePixels(uint32_t width, uint32_t height,
 // Creates a vk::ImageCreateInfo with common default values and |vk_format|.
 vk::ImageCreateInfo GetDefaultImageConstraints(const vk::Format& vk_format);
 
+vk::FormatFeatureFlags GetFormatFeatureFlagsFromUsage(vk::ImageUsageFlags usage);
+
 }  // namespace image_utils
 }  // namespace escher
 

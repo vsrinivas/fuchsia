@@ -8,6 +8,7 @@
 #include <zircon/errors.h>
 
 #include "src/ui/lib/escher/impl/vulkan_utils.h"
+#include "src/ui/lib/escher/util/fuchsia_utils.h"
 #include "src/ui/lib/escher/util/image_utils.h"
 #include "src/ui/scenic/lib/gfx/resources/image.h"
 
@@ -77,15 +78,18 @@ fitx::result<fitx::failed, BufferCollectionInfo> BufferCollectionInfo::New(
   vk::ImageCreateInfo create_info =
       escher::image_utils::GetDefaultImageConstraints(vk::Format::eUndefined);
 
+  auto image_constraints_info =
+      escher::GetDefaultImageConstraintsInfo(create_info, escher->allow_protected_memory());
+
   // Create the vk_collection and set its constraints.
-  vk::BufferCollectionFUCHSIAX vk_collection;
+  vk::BufferCollectionFUCHSIA vk_collection;
   {
-    vk::BufferCollectionCreateInfoFUCHSIAX buffer_collection_create_info;
+    vk::BufferCollectionCreateInfoFUCHSIA buffer_collection_create_info;
     buffer_collection_create_info.collectionToken = vulkan_token.Unbind().TakeChannel().release();
-    vk_collection = escher::ESCHER_CHECKED_VK_RESULT(vk_device.createBufferCollectionFUCHSIAX(
-        buffer_collection_create_info, nullptr, vk_loader));
-    auto vk_result =
-        vk_device.setBufferCollectionConstraintsFUCHSIAX(vk_collection, create_info, vk_loader);
+    vk_collection = escher::ESCHER_CHECKED_VK_RESULT(
+        vk_device.createBufferCollectionFUCHSIA(buffer_collection_create_info, nullptr, vk_loader));
+    auto vk_result = vk_device.setBufferCollectionImageConstraintsFUCHSIA(
+        vk_collection, image_constraints_info.image_constraints, vk_loader);
     FX_DCHECK(vk_result == vk::Result::eSuccess);
   }
 

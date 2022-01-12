@@ -408,5 +408,25 @@ vk::ImageCreateInfo GetDefaultImageConstraints(const vk::Format& vk_format) {
   return create_info;
 }
 
+vk::FormatFeatureFlags GetFormatFeatureFlagsFromUsage(vk::ImageUsageFlags usage) {
+  vk::FormatFeatureFlags result = {};
+  if (usage & vk::ImageUsageFlagBits::eTransferSrc) {
+    result |= vk::FormatFeatureFlagBits::eTransferSrc;
+  }
+  if (usage & vk::ImageUsageFlagBits::eTransferDst) {
+    result |= vk::FormatFeatureFlagBits::eTransferDst;
+  }
+  if (usage & vk::ImageUsageFlagBits::eSampled) {
+    result |= vk::FormatFeatureFlagBits::eSampledImage;
+  }
+  if (usage & vk::ImageUsageFlagBits::eColorAttachment) {
+    result |= vk::FormatFeatureFlagBits::eColorAttachment;
+  }
+  if (usage & vk::ImageUsageFlagBits::eDepthStencilAttachment) {
+    result |= vk::FormatFeatureFlagBits::eDepthStencilAttachment;
+  }
+  return result;
+}
+
 }  // namespace image_utils
 }  // namespace escher

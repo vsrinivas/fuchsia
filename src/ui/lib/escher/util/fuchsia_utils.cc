@@ -4,9 +4,14 @@
 
 #include "src/ui/lib/escher/util/fuchsia_utils.h"
 
+#include <fuchsia/sysmem/cpp/fidl.h>
+
 #include "src/ui/lib/escher/impl/naive_image.h"
 #include "src/ui/lib/escher/util/image_utils.h"
 #include "src/ui/lib/escher/vk/gpu_mem.h"
+
+#include "vulkan/vulkan_enums.hpp"
+#include "vulkan/vulkan_structs.hpp"
 
 namespace escher {
 
@@ -126,6 +131,61 @@ vk::Format SysmemPixelFormatTypeToVkFormat(fuchsia::sysmem::PixelFormatType pixe
       break;
   }
   return vk::Format::eUndefined;
+}
+
+namespace {
+
+// Image formats supported by Escher / Scenic in a priority order.
+const vk::Format kPreferredImageFormats[] = {vk::Format::eR8G8B8A8Srgb, vk::Format::eB8G8R8A8Srgb,
+                                             vk::Format::eG8B8R83Plane420Unorm,
+                                             vk::Format::eG8B8R82Plane420Unorm};
+
+// Color spaces supported by Escher / Scenic.
+const vk::SysmemColorSpaceFUCHSIA kPreferredRgbColorSpace = {
+    static_cast<uint32_t>(fuchsia::sysmem::ColorSpaceType::SRGB)};
+const vk::SysmemColorSpaceFUCHSIA kPreferredYuvColorSpace = {
+    static_cast<uint32_t>(fuchsia::sysmem::ColorSpaceType::REC709)};
+
+}  // namespace
+
+vk::ImageFormatConstraintsInfoFUCHSIA GetDefaultImageFormatConstraintsInfo(
+    const vk::ImageCreateInfo& create_info) {
+  FX_DCHECK(create_info.format != vk::Format::eUndefined);
+  FX_DCHECK(create_info.usage != vk::ImageUsageFlags{});
+  vk::ImageFormatConstraintsInfoFUCHSIA format_info;
+  format_info.setImageCreateInfo(create_info)
+      .setRequiredFormatFeatures(image_utils::GetFormatFeatureFlagsFromUsage(create_info.usage))
+      .setSysmemPixelFormat({})
+      .setColorSpaceCount(1u)
+      .setPColorSpaces(image_utils::IsYuvFormat(create_info.format) ? &kPreferredYuvColorSpace
+                                                                    : &kPreferredRgbColorSpace);
+  return format_info;
+}
+
+ImageConstraintsInfo GetDefaultImageConstraintsInfo(const vk::ImageCreateInfo& create_info,
+                                                    bool allow_protected_memory) {
+  ImageConstraintsInfo result;
+
+  if (create_info.format != vk::Format::eUndefined) {
+    result.format_constraints.push_back(GetDefaultImageFormatConstraintsInfo(create_info));
+  } else {
+    for (const auto format : kPreferredImageFormats) {
+      auto new_create_info = create_info;
+      new_create_info.setFormat(format);
+      result.format_constraints.push_back(GetDefaultImageFormatConstraintsInfo(new_create_info));
+    }
+  }
+
+  result.image_constraints
+      .setFlags(allow_protected_memory ? vk::ImageConstraintsInfoFlagBitsFUCHSIA::eProtectedOptional
+                                       : vk::ImageConstraintsInfoFlagsFUCHSIA{})
+      .setFormatConstraints(result.format_constraints)
+      .setBufferCollectionConstraints(
+          vk::BufferCollectionConstraintsInfoFUCHSIA().setMinBufferCount(1u));
+
+  // The compiler may do named return value optimization here; otherwise it will
+  // invoke the move ctor of |ImageConstraintsInfo|.
+  return result;
 }
 
 }  // namespace escher
