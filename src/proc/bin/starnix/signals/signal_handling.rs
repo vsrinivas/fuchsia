@@ -145,15 +145,14 @@ fn dispatch_signal_handler(
     current_task.registers.rip = action.sa_handler.ptr() as u64;
 }
 
-pub fn restore_from_signal_handler(current_task: &mut CurrentTask) {
+pub fn restore_from_signal_handler(current_task: &mut CurrentTask) -> Result<(), Errno> {
     // The stack pointer was intentionally misaligned, so this must be done
     // again to get the correct address for the stack frame.
     let signal_frame_address = misalign_stack_pointer(current_task.registers.rsp);
     let mut signal_stack_bytes = [0; SIG_STACK_SIZE];
     current_task
         .mm
-        .read_memory(UserAddress::from(signal_frame_address), &mut signal_stack_bytes)
-        .unwrap();
+        .read_memory(UserAddress::from(signal_frame_address), &mut signal_stack_bytes)?;
 
     let signal_stack_frame = SignalStackFrame::from_bytes(signal_stack_bytes);
     let uctx = &signal_stack_frame.context.uc_mcontext;
@@ -181,6 +180,7 @@ pub fn restore_from_signal_handler(current_task: &mut CurrentTask) {
         gs_base: current_task.registers.gs_base,
     };
     current_task.signals.write().mask = signal_stack_frame.context.uc_sigmask;
+    Ok(())
 }
 
 pub fn send_signal(task: &Task, siginfo: SignalInfo) {

@@ -273,7 +273,7 @@ pub fn sys_tgkill(
 }
 
 pub fn sys_rt_sigreturn(current_task: &mut CurrentTask) -> Result<SyscallResult, Errno> {
-    restore_from_signal_handler(current_task);
+    restore_from_signal_handler(current_task)?;
     Ok(SyscallResult::SigReturn)
 }
 
