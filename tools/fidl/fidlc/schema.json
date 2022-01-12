@@ -1007,6 +1007,48 @@
             "minimum": 1,
             "type": "integer"
         },
+        "partial-type-ctor": {
+            "additionalProperties": false,
+            "description": "Description of a type in terms of its composition of other type arguments",
+            "patternProperties": {
+                "^experimental_": {}
+            },
+            "properties": {
+                "name": {
+                    "description": "Fully qualified name of the type",
+                    "type": "string"
+                },
+                "args": {
+                    "description": "Type's list of defining arguments",
+                    "items": {
+                        "$ref": "#/definitions/partial-type-ctor"
+                    },
+                    "type": "array"
+                },
+                "nullable": {
+                    "description": "Flag indicating nullability of the type",
+                    "type": "boolean"
+                },
+                "maybe_size": {
+                    "$ref": "#/definitions/constant",
+                    "description": "Optional number of maximum elements"
+                },
+                "handle_rights": {
+                    "$ref": "#/definitions/constant",
+                    "description": "Optional handle rights"
+                },
+                "maybe_handle_subtype": {
+                    "$ref": "#/definitions/handle-subtype",
+                    "description": "Optional handle subtype"
+                }
+            },
+            "required": [
+                "name",
+                "args",
+                "nullable"
+            ],
+            "type": "object"
+        },
         "primitive-subtype": {
             "description": "Definition of primitive sub-type",
             "oneOf": [
@@ -1534,49 +1576,7 @@
                 }
             ]
         },
-        "type-constructor": {
-            "additionalProperties": false,
-            "description": "Definition of a type constructor",
-            "patternProperties": {
-                "^experimental_": {}
-            },
-            "properties": {
-                "args": {
-                    "description": "List of arguments",
-                    "items": {
-                        "$ref": "#/definitions/type-constructor"
-                    },
-                    "type": "array"
-                },
-                "handle_rights": {
-                    "$ref": "#/definitions/constant",
-                    "description": "Optional handle rights"
-                },
-                "maybe_handle_subtype": {
-                    "$ref": "#/definitions/handle-subtype",
-                    "description": "Optional handle subtype"
-                },
-                "maybe_size": {
-                    "$ref": "#/definitions/constant",
-                    "description": "Optional number of maximum elements"
-                },
-                "name": {
-                    "description": "Name of the type constructor",
-                    "type": "string"
-                },
-                "nullable": {
-                    "description": "Flag indicating nullability",
-                    "type": "boolean"
-                }
-            },
-            "required": [
-                "name",
-                "args",
-                "nullable"
-            ],
-            "type": "object"
-        },
-        "type_alias": {
+        "type-alias": {
             "additionalProperties": false,
             "description": "Definition of a type alias",
             "patternProperties": {
@@ -1596,7 +1596,7 @@
                     "description": "Name of a type alias, i.e. the alias"
                 },
                 "partial_type_ctor": {
-                    "$ref": "#/definitions/type-constructor",
+                    "$ref": "#/definitions/partial-type-ctor",
                     "description": "Type constructor being aliased, possibly partial"
                 }
             },
@@ -1910,7 +1910,7 @@
         "type_alias_declarations": {
             "description": "List of type aliases",
             "items": {
-                "$ref": "#/definitions/type_alias"
+                "$ref": "#/definitions/type-alias"
             },
             "type": "array"
         },

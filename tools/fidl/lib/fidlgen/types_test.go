@@ -506,6 +506,111 @@ func TestCanUnmarshalLocation(t *testing.T) {
 	}
 }
 
+func TestCanUnmarshalTypeAliases(t *testing.T) {
+	// TODO(fxbug.dev/91360): Exercise the associated, currently-broken corner
+	// cases when possible.
+	root := fidlgentest.EndToEndTest{T: t}.Single(`
+		library example;
+
+		alias UintThirtyTwo = uint32;
+		alias Foo = vector<uint32>;
+		alias FooVector = vector<vector<uint32>>;
+		alias Bar = vector<bool>:optional;
+		alias Baz = string:<123>;
+	`)
+
+	// Sort results by location for easier comparison.
+	sort.Slice(root.TypeAliases, func(i, j int) bool {
+		return LocationCmp(&root.TypeAliases[i].Location, &root.TypeAliases[j].Location)
+	})
+
+	expected := []fidlgen.TypeAlias{
+		{
+			Name: "example/UintThirtyTwo",
+			PartialTypeConstructor: fidlgen.PartialTypeConstructor{
+				Name:     "uint32",
+				Args:     []fidlgen.PartialTypeConstructor{},
+				Nullable: false,
+			},
+		},
+		{
+			Name: "example/Foo",
+			PartialTypeConstructor: fidlgen.PartialTypeConstructor{
+				Name: "vector",
+				Args: []fidlgen.PartialTypeConstructor{
+					{
+						Name:     "uint32",
+						Args:     []fidlgen.PartialTypeConstructor{},
+						Nullable: false,
+					},
+				},
+				Nullable: false,
+			},
+		},
+		{
+			Name: "example/FooVector",
+			PartialTypeConstructor: fidlgen.PartialTypeConstructor{
+				Name: "vector",
+				Args: []fidlgen.PartialTypeConstructor{
+					{
+						Name: "vector",
+						Args: []fidlgen.PartialTypeConstructor{
+							{
+								Name:     "uint32",
+								Args:     []fidlgen.PartialTypeConstructor{},
+								Nullable: false,
+							},
+						},
+						Nullable: false,
+					},
+				},
+				Nullable: false,
+			},
+		},
+		{
+			Name: "example/Bar",
+			PartialTypeConstructor: fidlgen.PartialTypeConstructor{
+				Name: "vector",
+				Args: []fidlgen.PartialTypeConstructor{
+					{
+						Name:     "bool",
+						Args:     []fidlgen.PartialTypeConstructor{},
+						Nullable: false,
+					},
+				},
+				Nullable: true,
+			},
+		},
+		{
+			Name: "example/Baz",
+			PartialTypeConstructor: fidlgen.PartialTypeConstructor{
+				Name:     "string",
+				Args:     []fidlgen.PartialTypeConstructor{},
+				Nullable: false,
+				MaybeSize: &fidlgen.Constant{
+					Kind: fidlgen.LiteralConstant,
+					Literal: fidlgen.Literal{
+						Kind:  fidlgen.NumericLiteral,
+						Value: "123",
+					},
+					Value: "123",
+				},
+			},
+		},
+	}
+
+	if len(root.TypeAliases) != len(expected) {
+		t.Fatalf("unexpected number of type aliases")
+	}
+
+	for i, actual := range root.TypeAliases {
+		actual.Decl = fidlgen.Decl{} // Does not matter for the purpose of this comparison.
+		if !reflect.DeepEqual(actual, expected[i]) {
+			t.Errorf("\nexpected: %#v\nactual: %#v", expected[i], actual)
+		}
+	}
+}
+
 func TestParseCompoundIdentifier(t *testing.T) {
 	type testCase struct {
 		input          fidlgen.EncodedCompoundIdentifier

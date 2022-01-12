@@ -704,6 +704,7 @@ func (l *Layout) IsAnonymous() bool {
 
 // Assert that declarations conform to the Declaration interface
 var _ = []Declaration{
+	(*TypeAlias)(nil),
 	(*Union)(nil),
 	(*Table)(nil),
 	(*Struct)(nil),
@@ -712,6 +713,22 @@ var _ = []Declaration{
 	(*Enum)(nil),
 	(*Bits)(nil),
 	(*Const)(nil),
+}
+
+// TypeAlias represents the declaration of a FIDL type alias.
+type TypeAlias struct {
+	Decl
+	Name                   EncodedCompoundIdentifier `json:"name"`
+	PartialTypeConstructor `json:"partial_type_ctor"`
+}
+
+// PartialTypeConstructor represents a FIDL type as it is constructed from
+// other type arguments.
+type PartialTypeConstructor struct {
+	Name      EncodedCompoundIdentifier `json:"name"`
+	Args      []PartialTypeConstructor  `json:"args"`
+	Nullable  bool                      `json:"nullable"`
+	MaybeSize *Constant                 `json:"maybe_size,omitempty"`
 }
 
 // Union represents the declaration of a FIDL union.
@@ -1051,14 +1068,15 @@ type DeclType string
 const (
 	LibraryDeclType DeclType = "library"
 
-	ConstDeclType    DeclType = "const"
-	BitsDeclType     DeclType = "bits"
-	EnumDeclType     DeclType = "enum"
-	ProtocolDeclType DeclType = "interface"
-	ServiceDeclType  DeclType = "service"
-	StructDeclType   DeclType = "struct"
-	TableDeclType    DeclType = "table"
-	UnionDeclType    DeclType = "union"
+	ConstDeclType     DeclType = "const"
+	BitsDeclType      DeclType = "bits"
+	EnumDeclType      DeclType = "enum"
+	ProtocolDeclType  DeclType = "interface"
+	ServiceDeclType   DeclType = "service"
+	StructDeclType    DeclType = "struct"
+	TableDeclType     DeclType = "table"
+	UnionDeclType     DeclType = "union"
+	TypeAliasDelcType DeclType = "type_alias"
 )
 
 type DeclInfo struct {
@@ -1098,6 +1116,7 @@ type Root struct {
 	ExternalStructs []Struct                    `json:"external_struct_declarations,omitempty"`
 	Tables          []Table                     `json:"table_declarations,omitempty"`
 	Unions          []Union                     `json:"union_declarations,omitempty"`
+	TypeAliases     []TypeAlias                 `json:"type_alias_declarations,omitempty"`
 	DeclOrder       []EncodedCompoundIdentifier `json:"declaration_order,omitempty"`
 	Decls           DeclMap                     `json:"declarations,omitempty"`
 	Libraries       []Library                   `json:"library_dependencies,omitempty"`
@@ -1292,6 +1311,12 @@ func (r *Root) ForBindings(language string) Root {
 				}
 			}
 			res.Unions = append(res.Unions, newV)
+			res.Decls[v.Name] = r.Decls[v.Name]
+		}
+	}
+	for _, v := range r.TypeAliases {
+		if !v.BindingsDenylistIncludes(language) {
+			res.TypeAliases = append(res.TypeAliases, v)
 			res.Decls[v.Name] = r.Decls[v.Name]
 		}
 	}
