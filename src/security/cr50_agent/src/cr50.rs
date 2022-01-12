@@ -12,7 +12,7 @@ use crate::{
                 CcdCommand, CcdGetInfoResponse, CcdOpenResponse, CcdPhysicalPresenceResponse,
                 CcdRequest,
             },
-            pinweaver::{PinweaverInsertLeaf, PinweaverResetTree},
+            pinweaver::{PinweaverInsertLeaf, PinweaverResetTree, PROTOCOL_VERSION},
             wp::WpInfoRequest,
             Serializable, TpmCommand,
         },
@@ -114,7 +114,9 @@ impl Cr50 {
     ) -> Result<(), Error> {
         while let Some(request) = stream.try_next().await? {
             match request {
-                PinWeaverRequest::GetVersion { .. } => todo!(), // What should this call?
+                PinWeaverRequest::GetVersion { responder } => {
+                    responder.send(PROTOCOL_VERSION).context("Failed replying to request")?;
+                }
                 PinWeaverRequest::ResetTree { bits_per_level, height, responder } => {
                     let request = PinweaverResetTree::new(bits_per_level, height);
                     // TODO(fxbug.dev/90618): what is the correct way to handle errors in the
@@ -281,5 +283,50 @@ impl Cr50 {
         let req = WpInfoRequest::new();
         let result = req.execute(&self.proxy).await?;
         return Ok(result.get_state());
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use fidl_fuchsia_tpm::{TpmDeviceMarker, TpmDeviceRequest, TpmDeviceRequestStream};
+    use fidl_fuchsia_tpm_cr50::PinWeaverMarker;
+
+    struct FakeTpm {}
+
+    impl FakeTpm {
+        pub fn new() -> Arc<Self> {
+            Arc::new(FakeTpm {})
+        }
+
+        async fn serve(self: Arc<Self>, mut stream: TpmDeviceRequestStream) {
+            while let Some(req) = stream.try_next().await.expect("Getting requests") {
+                match req {
+                    TpmDeviceRequest::GetDeviceId { responder } => responder
+                        .send(&mut Ok((0x1ae0, 0x0028, 0x00)))
+                        .expect("Responding to request"),
+                    TpmDeviceRequest::ExecuteVendorCommand { .. } => todo!(),
+                }
+            }
+        }
+    }
+
+    #[fuchsia::test]
+    async fn test_get_version() {
+        let (proxy, stream) =
+            fidl::endpoints::create_proxy_and_stream::<TpmDeviceMarker>().unwrap();
+        let tpm = FakeTpm::new();
+        fasync::Task::spawn(tpm.serve(stream)).detach();
+
+        let cr50 = Cr50::new(proxy, None);
+
+        let (pinweaver, stream) =
+            fidl::endpoints::create_proxy_and_stream::<PinWeaverMarker>().unwrap();
+        fasync::Task::spawn(async move {
+            cr50.handle_pinweaver_stream(stream).await.expect("Handle pinweaver stream ok");
+        })
+        .detach();
+
+        assert_eq!(pinweaver.get_version().await.expect("Sending fidl request ok"), 1);
     }
 }

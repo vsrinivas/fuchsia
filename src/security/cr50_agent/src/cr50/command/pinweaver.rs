@@ -15,7 +15,7 @@ use crate::{
 };
 
 /// Pinweaver protocol version.
-const PROTOCOL_VERSION: u8 = 1;
+pub const PROTOCOL_VERSION: u8 = 1;
 
 const PCR_CRITERIA_MAX: usize = 2;
 const WRAP_BLOCK_SIZE: usize = 16;
