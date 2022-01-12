@@ -195,7 +195,7 @@ impl Client {
             // We need to shutdown the client. This includes tearing down
             // all views associated with this client.
             self.xdg_surfaces.iter().for_each(|surface| {
-                if let Ok(t) = surface.get(&self) {
+                if let Some(t) = surface.try_get(&self) {
                     t.shutdown(&self);
                 }
             });

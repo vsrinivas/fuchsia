@@ -281,6 +281,29 @@ impl InputDispatcher {
         }
     }
 
+    fn add_keyboard_and_send_focus(&mut self, keyboard: ObjectRef<Keyboard>) -> Result<(), Error> {
+        ftrace::duration!("wayland", "InputDispatcher::add_keyboard_and_send_focus");
+        if let Some(focus) = self.keyboard_focus {
+            let serial = self.event_queue.next_serial();
+            self.event_queue.post(
+                keyboard.id(),
+                wl_keyboard::Event::Enter { serial, surface: focus.id(), keys: wl::Array::new() },
+            )?;
+            self.event_queue.post(
+                keyboard.id(),
+                wl_keyboard::Event::Modifiers {
+                    serial,
+                    mods_depressed: self.modifiers,
+                    mods_latched: 0,
+                    mods_locked: 0,
+                    group: 0,
+                },
+            )?;
+        }
+        assert!(self.keyboards.add(keyboard));
+        Ok(())
+    }
+
     fn send_keyboard_enter(&self, surface: ObjectRef<Surface>) -> Result<(), Error> {
         ftrace::duration!("wayland", "InputDispatcher::send_keyboard_enter");
         let serial = self.event_queue.next_serial();
@@ -347,8 +370,12 @@ impl InputDispatcher {
             let time_in_ms = (event.timestamp.unwrap() / 1_000_000) as u32;
             match event.type_.unwrap() {
                 KeyEventType::Pressed => {
-                    self.pressed_keys.insert(key);
-                    self.send_key_event(key, time_in_ms, wl_keyboard::KeyState::Pressed)?;
+                    // TODO(fxbug.dev/91337): Use repeat_sequence to determine if
+                    // this is a repeat instead of using set of pressed keys.
+                    let not_present = self.pressed_keys.insert(key);
+                    if not_present {
+                        self.send_key_event(key, time_in_ms, wl_keyboard::KeyState::Pressed)?;
+                    }
                 }
                 KeyEventType::Released => {
                     self.pressed_keys.remove(&key);
@@ -696,12 +723,12 @@ impl RequestReceiver<WlSeat> for Seat {
             }
             WlSeatRequest::GetKeyboard { id } => {
                 let keyboard = id.implement(client, Keyboard::new(this))?;
-                assert!(client.input_dispatcher.keyboards.add(keyboard));
                 let (vmo, len) = {
                     let this = this.get(client)?;
                     (this.keymap.duplicate_handle(zx::Rights::SAME_RIGHTS)?, this.keymap_len)
                 };
                 Keyboard::post_keymap(keyboard, client, vmo.into(), len)?;
+                client.input_dispatcher.add_keyboard_and_send_focus(keyboard)?;
             }
             WlSeatRequest::GetTouch { id } => {
                 let touch = id.implement(client, Touch)?;

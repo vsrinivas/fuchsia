@@ -693,8 +693,10 @@ impl XdgSurface {
                     Err(fidl::Error::ClientChannelClosed { .. }) => {
                         let xdg_surface_ref = this;
                         task_queue.post(move |client| {
-                            if let Some(view) = xdg_surface_ref.get(client)?.view.clone() {
-                                view.lock().handle_view_disconnected(id);
+                            if let Some(xdg_surface) = xdg_surface_ref.try_get(client) {
+                                if let Some(view) = xdg_surface.view.as_ref() {
+                                    view.lock().handle_view_disconnected(id);
+                                }
                             }
                             Ok(())
                         });
@@ -724,23 +726,25 @@ impl XdgSurface {
                 match result {
                     Ok(focus_state) => {
                         task_queue.post(move |client| {
-                            let root_surface_ref = this.get(client)?.root_surface_ref;
-                            let xdg_surface_ref =
-                                XdgSurface::get_event_target(root_surface_ref, client)
-                                    .unwrap_or(this);
-                            let surface_ref = xdg_surface_ref.get(client)?.surface_ref;
-                            if surface_ref.try_get(client).is_some() {
-                                let had_focus = client.input_dispatcher.has_focus(surface_ref);
-                                client.input_dispatcher.handle_keyboard_focus(
-                                    source_surface_ref,
-                                    surface_ref,
-                                    focus_state.focused.unwrap(),
-                                )?;
-                                let has_focus = client.input_dispatcher.has_focus(surface_ref);
-                                if had_focus != has_focus {
-                                    // If our focus has changed we need to reconfigure so that the
-                                    // Activated flag can be set or cleared.
-                                    Self::configure(xdg_surface_ref, client)?;
+                            if let Some(xdg_surface) = this.try_get(client) {
+                                let root_surface_ref = xdg_surface.root_surface_ref;
+                                let xdg_surface_ref =
+                                    XdgSurface::get_event_target(root_surface_ref, client)
+                                        .unwrap_or(this);
+                                let surface_ref = xdg_surface_ref.get(client)?.surface_ref;
+                                if surface_ref.try_get(client).is_some() {
+                                    let had_focus = client.input_dispatcher.has_focus(surface_ref);
+                                    client.input_dispatcher.handle_keyboard_focus(
+                                        source_surface_ref,
+                                        surface_ref,
+                                        focus_state.focused.unwrap(),
+                                    )?;
+                                    let has_focus = client.input_dispatcher.has_focus(surface_ref);
+                                    if had_focus != has_focus {
+                                        // If our focus has changed we need to reconfigure so that the
+                                        // Activated flag can be set or cleared.
+                                        Self::configure(xdg_surface_ref, client)?;
+                                    }
                                 }
                             }
                             Ok(())
@@ -1237,7 +1241,7 @@ impl RequestReceiver<xdg_shell::XdgPopup> for XdgPopup {
                 // We need to present here to commit the removal of our
                 // popup. This will inform our parent that our view has
                 // been destroyed.
-                Surface::present(surface_ref, client, vec![])?;
+                Surface::present_internal(surface_ref, client)?;
 
                 #[cfg(feature = "flatland")]
                 surface_ref.get_mut(client)?.clear_flatland();
@@ -1976,7 +1980,7 @@ impl RequestReceiver<xdg_shell::XdgToplevel> for XdgToplevel {
                 // We need to present here to commit the removal of our
                 // toplevel. This will inform our parent that our view has
                 // been destroyed.
-                Surface::present(surface_ref, client, vec![])?;
+                Surface::present_internal(surface_ref, client)?;
 
                 #[cfg(feature = "flatland")]
                 surface_ref.get_mut(client)?.clear_flatland();
@@ -2052,7 +2056,7 @@ type XdgSurfaceViewPtr = Arc<Mutex<XdgSurfaceView>>;
 impl XdgSurfaceView {
     fn present_internal(&mut self) {
         let surface_ref = self.surface;
-        self.task_queue.post(move |client| Surface::present(surface_ref, client, vec![]));
+        self.task_queue.post(move |client| Surface::present_internal(surface_ref, client));
     }
 
     fn update_and_present(&mut self) {

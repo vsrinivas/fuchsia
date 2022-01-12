@@ -619,8 +619,8 @@ impl Surface {
         Ok(())
     }
 
-    fn present_internal(&mut self) -> Result<(), Error> {
-        ftrace::duration!("wayland", "Surface::present_internal");
+    fn present_now(&mut self) -> Result<(), Error> {
+        ftrace::duration!("wayland", "Surface::present_now");
         let flatland = self
             .flatland()
             .ok_or(format_err!("Unable to present surface without a flatland instance."))?;
@@ -630,6 +630,18 @@ impl Surface {
         flatland.borrow_mut().present(0);
         self.present_credits -= 1;
         self.present_needed = false;
+        Ok(())
+    }
+
+    pub fn present_internal(this: ObjectRef<Self>, client: &mut Client) -> Result<(), Error> {
+        ftrace::duration!("wayland", "Surface::present_internal");
+        if let Some(surface) = this.try_get_mut(client) {
+            if surface.present_credits == 0 {
+                surface.present_needed = true;
+            } else {
+                surface.present_now()?;
+            }
+        }
         Ok(())
     }
 
@@ -646,7 +658,7 @@ impl Surface {
                 surface.callbacks.back_mut().expect("no pending frame").append(&mut callbacks);
                 surface.present_needed = true;
             } else {
-                surface.present_internal()?;
+                surface.present_now()?;
                 surface.callbacks.push_back(callbacks);
             }
         }
@@ -663,7 +675,7 @@ impl Surface {
             surface.present_credits += present_credits;
             // Present immediately if needed.
             if surface.present_needed && surface.present_credits > 0 {
-                surface.present_internal()?;
+                surface.present_now()?;
             }
         }
         Ok(())
@@ -1021,6 +1033,10 @@ impl Surface {
             .detach();
         }
         Ok(())
+    }
+
+    pub fn present_internal(this: ObjectRef<Self>, client: &mut Client) -> Result<(), Error> {
+        Self::present(this, client, vec![])
     }
 
     pub fn hit_test(
