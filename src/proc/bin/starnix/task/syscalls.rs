@@ -171,22 +171,30 @@ pub fn sys_sched_getscheduler(_ctx: &CurrentTask, _pid: i32) -> Result<SyscallRe
 pub fn sys_sched_getaffinity(
     current_task: &CurrentTask,
     _pid: pid_t,
-    _cpusetsize: usize,
+    cpusetsize: u32,
     user_mask: UserAddress,
 ) -> Result<SyscallResult, Errno> {
-    let result = vec![0xFFu8; _cpusetsize];
-    current_task.mm.write_memory(user_mask, &result)?;
+    let mask: u64 = u64::MAX;
+    if cpusetsize < (std::mem::size_of_val(&mask) as u32) {
+        return error!(EINVAL);
+    }
+
+    current_task.mm.write_memory(user_mask, &mask.to_ne_bytes())?;
     Ok(SUCCESS)
 }
 
 pub fn sys_sched_setaffinity(
     current_task: &CurrentTask,
     _pid: pid_t,
-    _cpusetsize: usize,
+    cpusetsize: u32,
     user_mask: UserAddress,
 ) -> Result<SyscallResult, Errno> {
-    let mut mask = vec![0x0u8; _cpusetsize];
-    current_task.mm.read_memory(user_mask, &mut mask)?;
+    let mut mask: u64 = 0;
+    if cpusetsize < (std::mem::size_of_val(&mask) as u32) {
+        return error!(EINVAL);
+    }
+
+    current_task.mm.read_memory(user_mask, &mut mask.as_bytes_mut())?;
     // Currently, we ignore the mask and act as if the system reset the mask
     // immediately to allowing all CPUs.
     Ok(SUCCESS)
@@ -523,5 +531,21 @@ mod tests {
             SyscallResult::Success(second_current.get_tid() as u64),
             sys_getsid(&current_task, second_current.get_tid().into()).expect("failed to get sid")
         );
+    }
+
+    #[test]
+    fn test_get_affinity_size() {
+        let (_kernel, current_task) = create_kernel_and_task();
+        let mapped_address = map_memory(&current_task, UserAddress::default(), *PAGE_SIZE);
+        assert_eq!(sys_sched_getaffinity(&current_task, 1, u32::MAX, mapped_address), Ok(SUCCESS));
+        assert_eq!(sys_sched_getaffinity(&current_task, 1, 1, mapped_address), Err(EINVAL));
+    }
+
+    #[test]
+    fn test_set_affinity_size() {
+        let (_kernel, current_task) = create_kernel_and_task();
+        let mapped_address = map_memory(&current_task, UserAddress::default(), *PAGE_SIZE);
+        assert_eq!(sys_sched_setaffinity(&current_task, 1, u32::MAX, mapped_address), Ok(SUCCESS));
+        assert_eq!(sys_sched_setaffinity(&current_task, 1, 1, mapped_address), Err(EINVAL));
     }
 }
