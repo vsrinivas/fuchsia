@@ -300,6 +300,10 @@ TEST_F(ContiguousPooledSystem, UnusedGuardPages) {
   async::TestLoop loop;
   const zx::duration unused_page_check_cycle_period = zx::sec(2);
   const uint32_t loop_time_seconds = unused_page_check_cycle_period.to_secs() + 1;
+
+  EXPECT_EQ(0, kBigVmoSize % (ContiguousPooledMemoryAllocator::kUnusedGuardPatternPeriodPages *
+                              zx_system_get_page_size()));
+
   EXPECT_OK(allocator_.Init());
   allocator_.InitGuardRegion(0, true, unused_page_check_cycle_period, false, false,
                              loop.dispatcher());
@@ -309,6 +313,15 @@ TEST_F(ContiguousPooledSystem, UnusedGuardPages) {
   zx::vmo vmo;
   EXPECT_OK(allocator_.Allocate(kBigVmoSize, {}, &vmo));
   EXPECT_EQ(0u, allocator_.failed_guard_region_checks());
+  // This test is implicitly relying on this allocator behavior for now.
+  //
+  // TODO(dustingreen): Plumb required alignment down to region allocator so we can eliminate a bit
+  // of overhead for a few allocations and so this test can specify
+  // ContiguousPooledMemoryAllocator::kUnusedGuardPatternPeriodPages alignment requirement instead
+  // of just asserting that alignment.  For now this will be true based on internal behavior of
+  // RegionAllocator, but that's not guaranteed by the RegionAllocator interface contract.
+  EXPECT_EQ(0, allocator_.GetVmoRegionOffsetForTest(vmo) %
+               (ContiguousPooledMemoryAllocator::kUnusedGuardPatternPeriodPages * zx_system_get_page_size()));
 
   printf("check for spurious pattern check failure...\n");
 
@@ -327,10 +340,13 @@ TEST_F(ContiguousPooledSystem, UnusedGuardPages) {
   uint64_t just_outside_vmo_offset;
   // pick an offset we know is inside the overall allocator space.
   if (vmo_offset) {
-    just_outside_vmo_offset = vmo_offset - 1;
+    just_outside_vmo_offset = vmo_offset -
+        ContiguousPooledMemoryAllocator::kUnusedGuardPatternPeriodPages * zx_system_get_page_size();
   } else {
     just_outside_vmo_offset = vmo_offset + kBigVmoSize;
   }
+  ZX_ASSERT(just_outside_vmo_offset % (ContiguousPooledMemoryAllocator::kUnusedGuardPatternPeriodPages * zx_system_get_page_size()) == 0);
+  ZX_ASSERT(just_outside_vmo_offset >= 0 && just_outside_vmo_offset < kVmoSize * kVmoCount);
   EXPECT_OK(allocator_.GetPoolVmoForTest().write(&data_to_write, just_outside_vmo_offset,
                                                  sizeof(data_to_write)));
 
@@ -358,6 +374,10 @@ TEST_F(ContiguousPooledSystem, UnusedGuardPages) {
   }
   loop.RunFor(zx::sec(loop_time_seconds));
   // Not strictly required to find the multi-page problem in a single pass - may involve > 1 pass.
+  //
+  // May also only detect the page at vmo_offset due to kUnusedGuardPatternPeriodPages and
+  // kUnusedToPatternPages.
+  //
   // If the multi-page problem is found in >= 1 passes, we'll have at least one more failure than
   // previous count which was 2, so we're looking for >= 3 here.
   EXPECT_GE(allocator_.failed_guard_region_checks(), 3u);
