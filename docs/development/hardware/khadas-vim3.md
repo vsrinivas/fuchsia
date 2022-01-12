@@ -96,9 +96,9 @@ When viewed from the front, the VIM3 has 3 buttons on the left side of the board
 
 ## VIM3 Bootloader
 
-Booting Fuchsia on the VIM3 requires a custom bootloader found at [third-party-mirror.googlesource.com/u-boot/](https://third-party-mirror.googlesource.com/u-boot/), in the `vim3` branch.
-
-You can download the latest built version at [https://chrome-infra-packages.appspot.com/p/fuchsia/prebuilt/third_party/firmware/vim3/+/#instances](https://chrome-infra-packages.appspot.com/p/fuchsia/prebuilt/third_party/firmware/vim3/+/#instances).
+Booting Fuchsia on the VIM3 requires a custom bootloader found at
+`//prebuilt/third_party/firmware/vim3`. It can also be built from source at
+https://third-party-mirror.googlesource.com/u-boot/, in the `vim3` branch.
 
 To find out what version of the bootloader you have, grep for "zircon-bootloader"
 in the kernel boot log. You should see something like: "cmdline: zircon-bootloader=0.12"
@@ -127,10 +127,11 @@ fastboot flashing unlock
 fastboot flashing unlock_critical
 ```
 
-Now you can flash the Fuchsia bootloader.  Assuming you named the bootloader file `u-boot.bin`, type the following commands:
+Now you can flash the Fuchsia bootloader.  Assuming you named the bootloader
+file `u-boot.bin.unsigned`, type the following commands:
 
 ```
-fastboot flash bootloader u-boot.bin
+fastboot flash bootloader u-boot.bin.unsigned
 fastboot reboot
 ```
 

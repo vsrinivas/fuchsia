@@ -65,7 +65,7 @@ firmware_prebuilts_path_suffix = ""
 firmware_prebuilts = [
   {
     type = ""
-    path = "//prebuilt/third_party/firmware/vim3/u-boot.bin"
+    path = "//prebuilt/third_party/firmware/vim3/u-boot.bin.unsigned"
     partition = "bootloader"
   },
 ]
