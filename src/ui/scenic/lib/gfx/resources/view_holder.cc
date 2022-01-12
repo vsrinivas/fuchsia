@@ -48,8 +48,8 @@ void ViewHolder::Connect(ViewLinker::ExportLink link) {
   if (view_tree_updater_) {
     view_tree_updater_->TrackViewHolder(session_id(), GetWeakPtr());
   }
-  link_->Initialize(fit::bind_member(this, &ViewHolder::LinkResolved),
-                    fit::bind_member(this, &ViewHolder::LinkInvalidated));
+  link_->Initialize(fit::bind_member<&ViewHolder::LinkResolved>(this),
+                    fit::bind_member<&ViewHolder::LinkInvalidated>(this));
 }
 
 void ViewHolder::LinkResolved(View* view) {

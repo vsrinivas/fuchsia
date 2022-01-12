@@ -34,12 +34,12 @@ void DisplayManager::BindDefaultDisplayController(
   default_display_controller_listener_ = std::make_shared<display::DisplayControllerListener>(
       std::move(dc_device), default_display_controller_);
   default_display_controller_listener_->InitializeCallbacks(
-      /*on_invalid_cb=*/nullptr, fit::bind_member(this, &DisplayManager::OnDisplaysChanged),
-      fit::bind_member(this, &DisplayManager::OnClientOwnershipChange));
+      /*on_invalid_cb=*/nullptr, fit::bind_member<&DisplayManager::OnDisplaysChanged>(this),
+      fit::bind_member<&DisplayManager::OnClientOwnershipChange>(this));
 
   // Set up callback to handle Vsync notifications, and ask controller to send these notifications.
   default_display_controller_listener_->SetOnVsyncCallback(
-      fit::bind_member(this, &DisplayManager::OnVsync));
+      fit::bind_member<&DisplayManager::OnVsync>(this));
   zx_status_t vsync_status = (*default_display_controller_)->EnableVsync(true);
   if (vsync_status != ZX_OK) {
     FX_LOGS(ERROR) << "Failed to enable vsync, status: " << vsync_status;

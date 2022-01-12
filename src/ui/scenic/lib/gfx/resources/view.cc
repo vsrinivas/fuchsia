@@ -164,8 +164,8 @@ void View::Connect(ViewLinker::ImportLink link) {
   FX_DCHECK(!link.initialized());
 
   link_ = std::move(link);
-  link_->Initialize(fit::bind_member(this, &View::LinkResolved),
-                    fit::bind_member(this, &View::LinkInvalidated));
+  link_->Initialize(fit::bind_member<&View::LinkResolved>(this),
+                    fit::bind_member<&View::LinkInvalidated>(this));
 }
 
 void View::SignalRender() {

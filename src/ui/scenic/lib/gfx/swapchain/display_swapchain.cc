@@ -59,7 +59,7 @@ DisplaySwapchain::DisplaySwapchain(
                         "whether fuchsia.sysmem.Allocator is available in this sandbox";
     }
 
-    display_->SetVsyncCallback(fit::bind_member(this, &DisplaySwapchain::OnVsync));
+    display_->SetVsyncCallback(fit::bind_member<&DisplaySwapchain::OnVsync>(this));
 
     InitializeFrameRecords();
 
