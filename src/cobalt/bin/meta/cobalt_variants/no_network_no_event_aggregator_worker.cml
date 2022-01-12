@@ -11,7 +11,7 @@
             // std::chrono::seconds::max() effectively sets the wait time to zero.
             "--schedule_interval_seconds=999999999",
             "--min_interval_seconds=0",
-            "--event_aggregator_backfill_days=2",
+            "--event_aggregator_backfill_days=0",
             "--start_event_aggregator_worker=false",
             "--test_only_use_fake_clock",
         ],

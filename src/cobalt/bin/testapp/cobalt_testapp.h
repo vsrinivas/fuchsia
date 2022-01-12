@@ -28,7 +28,7 @@
 
 namespace cobalt::testapp {
 
-constexpr size_t kEventAggregatorBackfillDays = 2;
+constexpr size_t kEventAggregatorBackfillDays = 0;
 
 class SystemClock : public util::SystemClockInterface {
   std::chrono::system_clock::time_point now() override { return std::chrono::system_clock::now(); }
