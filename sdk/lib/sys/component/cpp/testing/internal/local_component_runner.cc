@@ -25,12 +25,10 @@ namespace internal {
 
 namespace {
 
-constexpr char LOCAL_COMPONENT_NAME_KEY[] = "LOCAL_COMPONENT_NAME";
-
 std::string ExtractLocalComponentName(const fuchsia::data::Dictionary& program) {
   ZX_ASSERT_MSG(program.has_entries(), "Received empty program from Component Manager");
   for (const auto& entry : program.entries()) {
-    if (entry.key == LOCAL_COMPONENT_NAME_KEY) {
+    if (entry.key == fuchsia::component::test::LOCAL_COMPONENT_NAME_KEY) {
       ZX_ASSERT_MSG(entry.value->is_str(), "Received local component key of wrong type");
       return entry.value->str();
     }

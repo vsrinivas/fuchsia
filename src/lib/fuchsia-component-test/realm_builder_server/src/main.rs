@@ -426,7 +426,7 @@ impl Realm {
         let child_realm_node = RealmNode2::new_from_decl(
             new_decl_with_program_entries(vec![
                 (runner::LOCAL_COMPONENT_ID_KEY.to_string(), local_component_id.into()),
-                (runner::LOCAL_COMPONENT_NAME_KEY.to_string(), child_path.join("/").to_string()),
+                (ftest::LOCAL_COMPONENT_NAME_KEY.to_string(), child_path.join("/").to_string()),
             ]),
             true,
         );
@@ -3802,7 +3802,7 @@ mod tests {
                             value: Some(Box::new(fdata::DictionaryValue::Str("0".to_string()))),
                         },
                         fdata::DictionaryEntry {
-                            key: runner::LOCAL_COMPONENT_NAME_KEY.to_string(),
+                            key: ftest::LOCAL_COMPONENT_NAME_KEY.to_string(),
                             value: Some(Box::new(fdata::DictionaryValue::Str("a".to_string()))),
                         },
                     ]),
@@ -4343,7 +4343,7 @@ mod tests {
                                 value: Some(Box::new(fdata::DictionaryValue::Str("0".to_string()))),
                             },
                             fdata::DictionaryEntry {
-                                key: runner::LOCAL_COMPONENT_NAME_KEY.to_string(),
+                                key: ftest::LOCAL_COMPONENT_NAME_KEY.to_string(),
                                 value: Some(Box::new(fdata::DictionaryValue::Str("a".to_string()))),
                             },
                         ]),
@@ -4602,7 +4602,7 @@ mod tests {
                             value: Some(Box::new(fdata::DictionaryValue::Str("0".to_string()))),
                         },
                         fdata::DictionaryEntry {
-                            key: runner::LOCAL_COMPONENT_NAME_KEY.to_string(),
+                            key: ftest::LOCAL_COMPONENT_NAME_KEY.to_string(),
                             value: Some(Box::new(fdata::DictionaryValue::Str("a/b".to_string()))),
                         },
                     ]),

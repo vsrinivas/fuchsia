@@ -47,6 +47,7 @@ table/member fuchsia.component.test/Event.filter fuchsia.data/Dictionary
 table/member fuchsia.component.test/Event.mode fuchsia.component.decl/EventMode
 table/member fuchsia.component.test/Event.name string:100
 table fuchsia.component.test/Event
+const fuchsia.component.test/LOCAL_COMPONENT_NAME_KEY string "LOCAL_COMPONENT_NAME"
 const fuchsia.component.test/MAX_LEN_ROUTE_ENDPOINTS uint32 100
 const fuchsia.component.test/MAX_MOCK_ID_LENGTH uint32 1000
 table/member fuchsia.component.test/MockComponentStartInfo.ns vector<fuchsia.component.runner/ComponentNamespaceEntry>:32

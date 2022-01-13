@@ -13,6 +13,11 @@ using fuchsia.io;
 using fuchsia.io2;
 using fuchsia.url;
 
+// The Realm Builder Server will include a local component's name in its
+// program dictionary under this string. Clients should use this value when
+// extracting a local component's name.
+const LOCAL_COMPONENT_NAME_KEY string = "LOCAL_COMPONENT_NAME";
+
 type RealmBuilderError = strict enum : uint32 {
     /// An attempt was made to interact with a component declaration for a
     /// component which is located behind a child declaration, and is thus not

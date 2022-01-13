@@ -23,8 +23,6 @@ use {
     },
 };
 
-const LOCAL_COMPONENT_NAME_KEY: &'static str = "LOCAL_COMPONENT_NAME";
-
 struct DirectoryProtocolImpl(fio::DirectoryProxy);
 
 impl MemberOpener for DirectoryProtocolImpl {
@@ -350,7 +348,7 @@ impl LocalComponentRunner {
 }
 
 fn extract_local_component_name(dict: fdata::Dictionary) -> Result<String, Error> {
-    let entry_value = get_dictionary_value(&dict, LOCAL_COMPONENT_NAME_KEY)
+    let entry_value = get_dictionary_value(&dict, ftest::LOCAL_COMPONENT_NAME_KEY)
         .ok_or(format_err!("program section is missing component name"))?;
     if let fdata::DictionaryValue::Str(s) = entry_value {
         return Ok(s.clone());
@@ -432,7 +430,7 @@ mod tests {
                     resolved_url: Some("test://test".to_string()),
                     program: Some(fdata::Dictionary {
                         entries: Some(vec![fdata::DictionaryEntry {
-                            key: LOCAL_COMPONENT_NAME_KEY.to_string(),
+                            key: ftest::LOCAL_COMPONENT_NAME_KEY.to_string(),
                             value: Some(Box::new(fdata::DictionaryValue::Str(component_to_start))),
                         }]),
                         ..fdata::Dictionary::EMPTY

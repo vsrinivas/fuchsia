@@ -23,7 +23,6 @@ use {
 pub const RUNNER_NAME: &'static str = "realm_builder";
 pub const LOCAL_COMPONENT_ID_KEY: &'static str = "local_component_id";
 pub const LEGACY_URL_KEY: &'static str = "legacy_url";
-pub const LOCAL_COMPONENT_NAME_KEY: &'static str = "LOCAL_COMPONENT_NAME";
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct LocalComponentId(String);

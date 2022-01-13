@@ -31,6 +31,8 @@
 #include <src/lib/testing/loop_fixture/real_loop_fixture.h>
 #include <test/placeholders/cpp/fidl.h>
 
+#include "fuchsia/component/test/cpp/fidl.h"
+
 namespace {
 
 // NOLINTNEXTLINE
@@ -77,7 +79,6 @@ class LocalComponentRunnerTest : public gtest::RealLoopFixture {
   }
 
  protected:
-  static constexpr char kLocalComponentEntryKey[] = "LOCAL_COMPONENT_NAME";
   static constexpr char kTestComponentName[] = "test_component";
 
   void CallStart(
@@ -101,7 +102,7 @@ class LocalComponentRunnerTest : public gtest::RealLoopFixture {
   static fuchsia::data::Dictionary CreateValidProgram() {
     fuchsia::data::Dictionary program;
     fuchsia::data::DictionaryEntry entry;
-    entry.key = kLocalComponentEntryKey;
+    entry.key = fuchsia::component::test::LOCAL_COMPONENT_NAME_KEY;
     auto value = fuchsia::data::DictionaryValue::New();
     value->set_str(kTestComponentName);
     entry.value = std::move(value);
