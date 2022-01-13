@@ -80,6 +80,50 @@ glm::ivec4 GetPixel(uint8_t* vmo_host, uint32_t width, uint32_t x, uint32_t y) {
     EXPECT_EQ(black_pixels, kTargetWidth* kTargetHeight - color_count);     \
   }
 
+// Utility function to simplify tests, since setting up a buffer collection is a process that
+// requires a lot of boilerplate code. The |collection_info| and |collection_ptr| need to be
+// kept alive in the test body, so they are passed in as parameters.
+allocation::GlobalBufferCollectionId SetupBufferCollection(
+    const uint32_t& num_buffers, const uint32_t& image_width, const uint32_t& image_height,
+    bool is_target, Renderer* renderer, fuchsia::sysmem::Allocator_Sync* sysmem_allocator,
+    fuchsia::sysmem::BufferCollectionInfo_2* collection_info,
+    fuchsia::sysmem::BufferCollectionSyncPtr& collection_ptr) {
+  // First create the pair of sysmem tokens, one for the client, one for the renderer.
+  auto tokens = flatland::SysmemTokens::Create(sysmem_allocator);
+
+  // Register the collection with the renderer.
+  auto collection_id = allocation::GenerateUniqueBufferCollectionId();
+
+  if (is_target) {
+    auto result = renderer->RegisterRenderTargetCollection(collection_id, sysmem_allocator,
+                                                           std::move(tokens.dup_token));
+    EXPECT_TRUE(result);
+  } else {
+    auto result = renderer->ImportBufferCollection(collection_id, sysmem_allocator,
+                                                   std::move(tokens.dup_token));
+    EXPECT_TRUE(result);
+  }
+
+  // Create a client-side handle to the buffer collection and set the client constraints.
+  auto [buffer_usage, memory_constraints] = GetUsageAndMemoryConstraintsForCpuWriteOften();
+  collection_ptr = CreateBufferCollectionSyncPtrAndSetConstraints(
+      sysmem_allocator, std::move(tokens.local_token),
+      /*image_count*/ num_buffers,
+      /*width*/ image_width,
+      /*height*/ image_height, buffer_usage, fuchsia::sysmem::PixelFormatType::BGRA32,
+      std::make_optional(memory_constraints));
+
+  // Have the client wait for buffers allocated so it can populate its information
+  // struct with the vmo data.
+  {
+    zx_status_t allocation_status = ZX_OK;
+    auto status = collection_ptr->WaitForBuffersAllocated(&allocation_status, collection_info);
+    EXPECT_EQ(status, ZX_OK);
+    EXPECT_EQ(allocation_status, ZX_OK);
+  }
+
+  return collection_id;
+}
 }  // anonymous namespace
 
 // Make sure a valid token can be used to register a buffer collection.
@@ -414,27 +458,12 @@ void MultithreadingTest(Renderer* renderer) {
 // call a custom function.
 void AsyncEventSignalTest(Renderer* renderer, fuchsia::sysmem::Allocator_Sync* sysmem_allocator,
                           bool use_vulkan) {
-  // First create a pairs of sysmem tokens for the render target.
-  auto target_tokens = SysmemTokens::Create(sysmem_allocator);
-
-  // Register the render target with the renderer.
-  fuchsia::sysmem::BufferCollectionInfo_2 target_info = {};
-
-  auto target_id = allocation::GenerateUniqueBufferCollectionId();
-
-  auto result = renderer->RegisterRenderTargetCollection(target_id, sysmem_allocator,
-                                                         std::move(target_tokens.dup_token));
-  EXPECT_TRUE(result);
-
-  // Create a client-side handle to the buffer collection and set the client constraints.
+  // Setup the render target collection.
   const uint32_t kWidth = 64, kHeight = 32;
-  auto client_target_collection = CreateBufferCollectionSyncPtrAndSetConstraints(
-      sysmem_allocator, std::move(target_tokens.local_token),
-      /*image_count*/ 1, kWidth, kHeight);
-  auto allocation_status = ZX_OK;
-  auto status = client_target_collection->WaitForBuffersAllocated(&allocation_status, &target_info);
-  EXPECT_EQ(status, ZX_OK);
-  EXPECT_EQ(allocation_status, ZX_OK);
+  fuchsia::sysmem::BufferCollectionInfo_2 client_target_info;
+  fuchsia::sysmem::BufferCollectionSyncPtr target_ptr;
+  auto target_id = SetupBufferCollection(1, kWidth, kHeight, true, renderer, sysmem_allocator,
+                                         &client_target_info, target_ptr);
 
   // Now that the renderer and client have set their contraints, we can import the render target.
   // Create the render_target image metadata.
@@ -449,7 +478,7 @@ void AsyncEventSignalTest(Renderer* renderer, fuchsia::sysmem::Allocator_Sync* s
   // Create the release fence that will be passed along to the Render()
   // function and be used to signal when we should deregister the collection.
   zx::event release_fence;
-  status = zx::event::create(0, &release_fence);
+  auto status = zx::event::create(0, &release_fence);
   EXPECT_EQ(status, ZX_OK);
 
   // Set up the async::Wait object to wait until the release_fence signals
@@ -632,61 +661,17 @@ VK_TEST_F(VulkanRendererTest, RenderTest) {
       env->GetVulkanDevice(), env->GetFilesystem(), /*gpu_allocator*/ nullptr);
   VkRenderer renderer(unique_escher->GetWeakPtr());
 
-  // First create the pair of sysmem tokens, one for the client, one for the renderer.
-  auto tokens = flatland::SysmemTokens::Create(sysmem_allocator_.get());
+  // Setup renderable texture collection.
+  fuchsia::sysmem::BufferCollectionInfo_2 client_collection_info;
+  fuchsia::sysmem::BufferCollectionSyncPtr collection_ptr;
+  auto collection_id = SetupBufferCollection(1, 60, 40, false, &renderer, sysmem_allocator_.get(),
+                                             &client_collection_info, collection_ptr);
 
-  auto target_tokens = flatland::SysmemTokens::Create(sysmem_allocator_.get());
-
-  // Register the collection with the renderer.
-  auto collection_id = allocation::GenerateUniqueBufferCollectionId();
-
-  auto result = renderer.ImportBufferCollection(collection_id, sysmem_allocator_.get(),
-                                                std::move(tokens.dup_token));
-  EXPECT_TRUE(result);
-
-  // Create a client-side handle to the buffer collection and set the client constraints.
-  auto [buffer_usage, memory_constraints] = GetUsageAndMemoryConstraintsForCpuWriteOften();
-  auto client_collection = CreateBufferCollectionSyncPtrAndSetConstraints(
-      sysmem_allocator_.get(), std::move(tokens.local_token),
-      /*image_count*/ 1,
-      /*width*/ 60,
-      /*height*/ 40, buffer_usage, fuchsia::sysmem::PixelFormatType::BGRA32,
-      std::make_optional(memory_constraints));
-
-  auto target_id = allocation::GenerateUniqueBufferCollectionId();
-
-  result = renderer.RegisterRenderTargetCollection(target_id, sysmem_allocator_.get(),
-                                                   std::move(target_tokens.dup_token));
-  EXPECT_TRUE(result);
-
-  // Create a client-side handle to the buffer collection and set the client constraints.
-  auto client_target = CreateBufferCollectionSyncPtrAndSetConstraints(
-      sysmem_allocator_.get(), std::move(target_tokens.local_token),
-      /*image_count*/ 1,
-      /*width*/ 60,
-      /*height*/ 40, buffer_usage, fuchsia::sysmem::PixelFormatType::BGRA32,
-      std::make_optional(memory_constraints));
-
-  // Have the client wait for buffers allocated so it can populate its information
-  // struct with the vmo data.
-  fuchsia::sysmem::BufferCollectionInfo_2 client_collection_info = {};
-  {
-    zx_status_t allocation_status = ZX_OK;
-    auto status =
-        client_collection->WaitForBuffersAllocated(&allocation_status, &client_collection_info);
-    EXPECT_EQ(status, ZX_OK);
-    EXPECT_EQ(allocation_status, ZX_OK);
-  }
-
-  // Have the client wait for buffers allocated so it can populate its information
-  // struct with the vmo data.
-  fuchsia::sysmem::BufferCollectionInfo_2 client_target_info = {};
-  {
-    zx_status_t allocation_status = ZX_OK;
-    auto status = client_target->WaitForBuffersAllocated(&allocation_status, &client_target_info);
-    EXPECT_EQ(status, ZX_OK);
-    EXPECT_EQ(allocation_status, ZX_OK);
-  }
+  // Setup the render target collection.
+  fuchsia::sysmem::BufferCollectionInfo_2 client_target_info;
+  fuchsia::sysmem::BufferCollectionSyncPtr target_ptr;
+  auto target_id = SetupBufferCollection(1, 60, 40, true, &renderer, sysmem_allocator_.get(),
+                                         &client_target_info, target_ptr);
 
   const uint32_t kTargetWidth = 16;
   const uint32_t kTargetHeight = 8;
@@ -845,61 +830,16 @@ VK_TEST_F(VulkanRendererTest, RotationRenderTest) {
       env->GetVulkanDevice(), env->GetFilesystem(), /*gpu_allocator*/ nullptr);
   VkRenderer renderer(unique_escher->GetWeakPtr());
 
-  // First create the pair of sysmem tokens, one for the client, one for the renderer.
-  auto texture_tokens = flatland::SysmemTokens::Create(sysmem_allocator_.get());
+  fuchsia::sysmem::BufferCollectionInfo_2 client_collection_info;
+  fuchsia::sysmem::BufferCollectionSyncPtr collection_ptr;
+  auto collection_id = SetupBufferCollection(1, 60, 40, false, &renderer, sysmem_allocator_.get(),
+                                             &client_collection_info, collection_ptr);
 
-  auto target_tokens = flatland::SysmemTokens::Create(sysmem_allocator_.get());
-
-  // Register the collection with the renderer.
-  auto collection_id = allocation::GenerateUniqueBufferCollectionId();
-
-  auto result = renderer.ImportBufferCollection(collection_id, sysmem_allocator_.get(),
-                                                std::move(texture_tokens.dup_token));
-  EXPECT_TRUE(result);
-
-  // Create a client-side handle to the buffer collection and set the client constraints.
-  auto [buffer_usage, memory_constraints] = GetUsageAndMemoryConstraintsForCpuWriteOften();
-  auto client_collection = CreateBufferCollectionSyncPtrAndSetConstraints(
-      sysmem_allocator_.get(), std::move(texture_tokens.local_token),
-      /*image_count*/ 1,
-      /*width*/ 60,
-      /*height*/ 40, buffer_usage, fuchsia::sysmem::PixelFormatType::BGRA32,
-      std::make_optional(memory_constraints));
-
-  auto target_id = allocation::GenerateUniqueBufferCollectionId();
-
-  result = renderer.RegisterRenderTargetCollection(target_id, sysmem_allocator_.get(),
-                                                   std::move(target_tokens.dup_token));
-  EXPECT_TRUE(result);
-
-  // Create a client-side handle to the buffer collection and set the client constraints.
-  auto client_target = CreateBufferCollectionSyncPtrAndSetConstraints(
-      sysmem_allocator_.get(), std::move(target_tokens.local_token),
-      /*image_count*/ 2,
-      /*width*/ 60,
-      /*height*/ 40, buffer_usage, fuchsia::sysmem::PixelFormatType::BGRA32,
-      std::make_optional(memory_constraints));
-
-  // Have the client wait for buffers allocated so it can populate its information
-  // struct with the vmo data.
-  fuchsia::sysmem::BufferCollectionInfo_2 client_collection_info = {};
-  {
-    zx_status_t allocation_status = ZX_OK;
-    auto status =
-        client_collection->WaitForBuffersAllocated(&allocation_status, &client_collection_info);
-    EXPECT_EQ(status, ZX_OK);
-    EXPECT_EQ(allocation_status, ZX_OK);
-  }
-
-  // Have the client wait for buffers allocated so it can populate its information
-  // struct with the vmo data.
-  fuchsia::sysmem::BufferCollectionInfo_2 client_target_info = {};
-  {
-    zx_status_t allocation_status = ZX_OK;
-    auto status = client_target->WaitForBuffersAllocated(&allocation_status, &client_target_info);
-    EXPECT_EQ(status, ZX_OK);
-    EXPECT_EQ(allocation_status, ZX_OK);
-  }
+  // Setup the render target collection.
+  fuchsia::sysmem::BufferCollectionInfo_2 client_target_info;
+  fuchsia::sysmem::BufferCollectionSyncPtr target_ptr;
+  auto target_id = SetupBufferCollection(2, 60, 40, true, &renderer, sysmem_allocator_.get(),
+                                         &client_target_info, target_ptr);
 
   const uint32_t kTargetWidth = 32;
   const uint32_t kTargetHeight = 16;
@@ -1137,28 +1077,11 @@ VK_TEST_F(VulkanRendererTest, SolidColorTest) {
       env->GetVulkanDevice(), env->GetFilesystem(), /*gpu_allocator*/ nullptr);
   VkRenderer renderer(unique_escher->GetWeakPtr());
 
-  auto target_tokens = flatland::SysmemTokens::Create(sysmem_allocator_.get());
-  auto target_id = allocation::GenerateUniqueBufferCollectionId();
-  auto result = renderer.RegisterRenderTargetCollection(target_id, sysmem_allocator_.get(),
-                                                        std::move(target_tokens.dup_token));
-  EXPECT_TRUE(result);
-
-  // Create a client-side handle to the render target and set the client constraints.
-  auto [buffer_usage, memory_constraints] = GetUsageAndMemoryConstraintsForCpuWriteOften();
-  auto client_target = CreateBufferCollectionSyncPtrAndSetConstraints(
-      sysmem_allocator_.get(), std::move(target_tokens.local_token),
-      /*image_count*/ 1,
-      /*width*/ 60,
-      /*height*/ 40, buffer_usage, fuchsia::sysmem::PixelFormatType::BGRA32,
-      std::make_optional(memory_constraints));
-
-  fuchsia::sysmem::BufferCollectionInfo_2 client_target_info = {};
-  {
-    zx_status_t allocation_status = ZX_OK;
-    auto status = client_target->WaitForBuffersAllocated(&allocation_status, &client_target_info);
-    EXPECT_EQ(status, ZX_OK);
-    EXPECT_EQ(allocation_status, ZX_OK);
-  }
+  // Setup the render target collection.
+  fuchsia::sysmem::BufferCollectionInfo_2 client_target_info;
+  fuchsia::sysmem::BufferCollectionSyncPtr target_ptr;
+  auto target_id = SetupBufferCollection(1, 60, 40, true, &renderer, sysmem_allocator_.get(),
+                                         &client_target_info, target_ptr);
 
   // Create the render_target image metadata.
   const uint32_t kTargetWidth = 16;
@@ -1226,28 +1149,11 @@ VK_TEST_F(VulkanRendererTest, MultipleSolidColorTest) {
       env->GetVulkanDevice(), env->GetFilesystem(), /*gpu_allocator*/ nullptr);
   VkRenderer renderer(unique_escher->GetWeakPtr());
 
-  auto target_tokens = flatland::SysmemTokens::Create(sysmem_allocator_.get());
-  auto target_id = allocation::GenerateUniqueBufferCollectionId();
-  auto result = renderer.RegisterRenderTargetCollection(target_id, sysmem_allocator_.get(),
-                                                        std::move(target_tokens.dup_token));
-  EXPECT_TRUE(result);
-
-  // Create a client-side handle to the render target and set the client constraints.
-  auto [buffer_usage, memory_constraints] = GetUsageAndMemoryConstraintsForCpuWriteOften();
-  auto client_target = CreateBufferCollectionSyncPtrAndSetConstraints(
-      sysmem_allocator_.get(), std::move(target_tokens.local_token),
-      /*image_count*/ 1,
-      /*width*/ 60,
-      /*height*/ 40, buffer_usage, fuchsia::sysmem::PixelFormatType::BGRA32,
-      std::make_optional(memory_constraints));
-
-  fuchsia::sysmem::BufferCollectionInfo_2 client_target_info = {};
-  {
-    zx_status_t allocation_status = ZX_OK;
-    auto status = client_target->WaitForBuffersAllocated(&allocation_status, &client_target_info);
-    EXPECT_EQ(status, ZX_OK);
-    EXPECT_EQ(allocation_status, ZX_OK);
-  }
+  // Setup the render target collection.
+  fuchsia::sysmem::BufferCollectionInfo_2 client_target_info;
+  fuchsia::sysmem::BufferCollectionSyncPtr target_ptr;
+  auto target_id = SetupBufferCollection(1, 60, 40, true, &renderer, sysmem_allocator_.get(),
+                                         &client_target_info, target_ptr);
 
   // Create the render_target image metadata.
   const uint32_t kTargetWidth = 16;
@@ -1333,58 +1239,16 @@ VK_TEST_F(VulkanRendererTest, TransparencyTest) {
       env->GetVulkanDevice(), env->GetFilesystem(), /*gpu_allocator*/ nullptr);
   VkRenderer renderer(unique_escher->GetWeakPtr());
 
-  // First create the pair of sysmem tokens, one for the client, one for the renderer.
-  auto tokens = flatland::SysmemTokens::Create(sysmem_allocator_.get());
+  fuchsia::sysmem::BufferCollectionInfo_2 client_collection_info;
+  fuchsia::sysmem::BufferCollectionSyncPtr collection_ptr;
+  auto collection_id = SetupBufferCollection(2, 60, 40, false, &renderer, sysmem_allocator_.get(),
+                                             &client_collection_info, collection_ptr);
 
-  auto target_tokens = flatland::SysmemTokens::Create(sysmem_allocator_.get());
-
-  // Register the collection with the renderer.
-  auto collection_id = allocation::GenerateUniqueBufferCollectionId();
-
-  auto result = renderer.ImportBufferCollection(collection_id, sysmem_allocator_.get(),
-                                                std::move(tokens.dup_token));
-  EXPECT_TRUE(result);
-
-  // Create a client-side handle to the buffer collection and set the client constraints.
-  auto [buffer_usage, memory_constraints] = GetUsageAndMemoryConstraintsForCpuWriteOften();
-  auto client_collection = CreateBufferCollectionSyncPtrAndSetConstraints(
-      sysmem_allocator_.get(), std::move(tokens.local_token),
-      /*image_count*/ 2,
-      /*width*/ 60,
-      /*height*/ 40, buffer_usage, fuchsia::sysmem::PixelFormatType::BGRA32,
-      std::make_optional(memory_constraints));
-
-  auto target_id = allocation::GenerateUniqueBufferCollectionId();
-  result = renderer.RegisterRenderTargetCollection(target_id, sysmem_allocator_.get(),
-                                                   std::move(target_tokens.dup_token));
-  EXPECT_TRUE(result);
-
-  // Create a client-side handle to the buffer collection and set the client constraints.
-  auto client_target = CreateBufferCollectionSyncPtrAndSetConstraints(
-      sysmem_allocator_.get(), std::move(target_tokens.local_token),
-      /*image_count*/ 1,
-      /*width*/ 60,
-      /*height*/ 40, buffer_usage, fuchsia::sysmem::PixelFormatType::BGRA32,
-      std::make_optional(memory_constraints));
-
-  // Have the client wait for buffers allocated so it can populate its information
-  // struct with the vmo data.
-  fuchsia::sysmem::BufferCollectionInfo_2 client_collection_info = {};
-  {
-    zx_status_t allocation_status = ZX_OK;
-    auto status =
-        client_collection->WaitForBuffersAllocated(&allocation_status, &client_collection_info);
-    EXPECT_EQ(status, ZX_OK);
-    EXPECT_EQ(allocation_status, ZX_OK);
-  }
-
-  fuchsia::sysmem::BufferCollectionInfo_2 client_target_info = {};
-  {
-    zx_status_t allocation_status = ZX_OK;
-    auto status = client_target->WaitForBuffersAllocated(&allocation_status, &client_target_info);
-    EXPECT_EQ(status, ZX_OK);
-    EXPECT_EQ(allocation_status, ZX_OK);
-  }
+  // Setup the render target collection.
+  fuchsia::sysmem::BufferCollectionInfo_2 client_target_info;
+  fuchsia::sysmem::BufferCollectionSyncPtr target_ptr;
+  auto target_id = SetupBufferCollection(1, 60, 40, true, &renderer, sysmem_allocator_.get(),
+                                         &client_target_info, target_ptr);
 
   const uint32_t kTargetWidth = 16;
   const uint32_t kTargetHeight = 8;
@@ -1506,58 +1370,16 @@ VK_TEST_F(VulkanRendererTest, MultiplyColorTest) {
       env->GetVulkanDevice(), env->GetFilesystem(), /*gpu_allocator*/ nullptr);
   VkRenderer renderer(unique_escher->GetWeakPtr());
 
-  // First create the pair of sysmem tokens, one for the client, one for the renderer.
-  auto tokens = flatland::SysmemTokens::Create(sysmem_allocator_.get());
+  fuchsia::sysmem::BufferCollectionInfo_2 client_collection_info;
+  fuchsia::sysmem::BufferCollectionSyncPtr collection_ptr;
+  auto collection_id = SetupBufferCollection(1, 1, 1, false, &renderer, sysmem_allocator_.get(),
+                                             &client_collection_info, collection_ptr);
 
-  auto target_tokens = flatland::SysmemTokens::Create(sysmem_allocator_.get());
-
-  // Register the collection with the renderer.
-  auto collection_id = allocation::GenerateUniqueBufferCollectionId();
-
-  auto result = renderer.ImportBufferCollection(collection_id, sysmem_allocator_.get(),
-                                                std::move(tokens.dup_token));
-  EXPECT_TRUE(result);
-
-  // Create a client-side handle to the buffer collection and set the client constraints.
-  auto [buffer_usage, memory_constraints] = GetUsageAndMemoryConstraintsForCpuWriteOften();
-  auto client_collection = CreateBufferCollectionSyncPtrAndSetConstraints(
-      sysmem_allocator_.get(), std::move(tokens.local_token),
-      /*image_count*/ 1,
-      /*width*/ 1,
-      /*height*/ 1, buffer_usage, fuchsia::sysmem::PixelFormatType::BGRA32,
-      std::make_optional(memory_constraints));
-
-  auto target_id = allocation::GenerateUniqueBufferCollectionId();
-  result = renderer.RegisterRenderTargetCollection(target_id, sysmem_allocator_.get(),
-                                                   std::move(target_tokens.dup_token));
-  EXPECT_TRUE(result);
-
-  // Create a client-side handle to the buffer collection and set the client constraints.
-  auto client_target = CreateBufferCollectionSyncPtrAndSetConstraints(
-      sysmem_allocator_.get(), std::move(target_tokens.local_token),
-      /*image_count*/ 1,
-      /*width*/ 60,
-      /*height*/ 40, buffer_usage, fuchsia::sysmem::PixelFormatType::BGRA32,
-      std::make_optional(memory_constraints));
-
-  // Have the client wait for buffers allocated so it can populate its information
-  // struct with the vmo data.
-  fuchsia::sysmem::BufferCollectionInfo_2 client_collection_info = {};
-  {
-    zx_status_t allocation_status = ZX_OK;
-    auto status =
-        client_collection->WaitForBuffersAllocated(&allocation_status, &client_collection_info);
-    EXPECT_EQ(status, ZX_OK);
-    EXPECT_EQ(allocation_status, ZX_OK);
-  }
-
-  fuchsia::sysmem::BufferCollectionInfo_2 client_target_info = {};
-  {
-    zx_status_t allocation_status = ZX_OK;
-    auto status = client_target->WaitForBuffersAllocated(&allocation_status, &client_target_info);
-    EXPECT_EQ(status, ZX_OK);
-    EXPECT_EQ(allocation_status, ZX_OK);
-  }
+  // Setup the render target collection.
+  fuchsia::sysmem::BufferCollectionInfo_2 client_target_info;
+  fuchsia::sysmem::BufferCollectionSyncPtr target_ptr;
+  auto target_id = SetupBufferCollection(1, 60, 40, true, &renderer, sysmem_allocator_.get(),
+                                         &client_target_info, target_ptr);
 
   const uint32_t kTargetWidth = 16;
   const uint32_t kTargetHeight = 8;
