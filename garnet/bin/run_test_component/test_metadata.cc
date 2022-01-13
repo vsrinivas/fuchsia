@@ -134,7 +134,7 @@ fuchsia::sys::LaunchInfo TestMetadata::GetLaunchInfo(const rapidjson::Document::
                                       [](const rapidjson::Value& val) { return val.IsString(); })) {
       launch_info.url = array[0].GetString();
       launch_info.arguments.emplace();
-      for (size_t i = 1; i < array.Size(); ++i) {
+      for (rapidjson::SizeType i = 1; i < array.Size(); ++i) {
         launch_info.arguments->push_back(array[i].GetString());
       }
       return launch_info;

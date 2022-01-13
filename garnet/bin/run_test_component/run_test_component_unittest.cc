@@ -27,7 +27,7 @@ TEST(RunTest, ParseArgs) {
   constexpr char component_url[] = "fuchsia-pkg://fuchsia.com/component_hello_world#meta/hello.cmx";
   {
     std::vector<const char*> argv = {kBinName, component_url};
-    auto argc = argv.size();
+    int argc = static_cast<int>(argv.size());
     auto result = ParseArgs(env_services, argc, argv.data());
     EXPECT_FALSE(result.error) << result.error_msg;
     EXPECT_EQ(component_url, result.launch_info.url);
@@ -40,7 +40,7 @@ TEST(RunTest, ParseArgs) {
 
   {
     std::vector<const char*> argv = {kBinName, component_url, "--", "myarg1", "myarg2"};
-    auto argc = argv.size();
+    int argc = static_cast<int>(argv.size());
     auto result = ParseArgs(env_services, argc, argv.data());
     EXPECT_FALSE(result.error) << result.error_msg;
     EXPECT_EQ(component_url, result.launch_info.url);
@@ -56,7 +56,7 @@ TEST(RunTest, ParseArgs) {
   {
     std::vector<const char*> argv = {
         kBinName, "--realm-label=kittens", component_url, "--", "myarg1", "myarg2"};
-    auto argc = argv.size();
+    int argc = static_cast<int>(argv.size());
     auto result = ParseArgs(env_services, argc, argv.data());
     EXPECT_FALSE(result.error) << result.error_msg;
     EXPECT_EQ(component_url, result.launch_info.url);
@@ -72,7 +72,7 @@ TEST(RunTest, ParseArgs) {
   {
     std::vector<const char*> argv = {
         kBinName, "--realm-label=kittens", "--timeout=30", component_url, "--", "myarg1", "myarg2"};
-    auto argc = argv.size();
+    int argc = static_cast<int>(argv.size());
     auto result = ParseArgs(env_services, argc, argv.data());
     EXPECT_FALSE(result.error) << result.error_msg;
     EXPECT_EQ(component_url, result.launch_info.url);
@@ -88,7 +88,7 @@ TEST(RunTest, ParseArgs) {
   {
     std::vector<const char*> argv = {kBinName, "--timeout=-1", component_url,
                                      "--",     "myarg1",       "myarg2"};
-    auto argc = argv.size();
+    int argc = static_cast<int>(argv.size());
     auto result = ParseArgs(env_services, argc, argv.data());
     EXPECT_TRUE(result.error);
   }
@@ -96,7 +96,7 @@ TEST(RunTest, ParseArgs) {
   {
     std::vector<const char*> argv = {kBinName, "--timeout=invalid", component_url, "--", "myarg1",
                                      "myarg2"};
-    auto argc = argv.size();
+    int argc = static_cast<int>(argv.size());
     auto result = ParseArgs(env_services, argc, argv.data());
     EXPECT_TRUE(result.error);
   }
@@ -104,7 +104,7 @@ TEST(RunTest, ParseArgs) {
   {
     std::vector<const char*> argv = {kBinName, "--timeout=100", component_url,
                                      "--",     "myarg1",        "myarg2"};
-    auto argc = argv.size();
+    int argc = static_cast<int>(argv.size());
     auto result = ParseArgs(env_services, argc, argv.data());
     EXPECT_FALSE(result.error) << result.error_msg;
     EXPECT_EQ(component_url, result.launch_info.url);
@@ -120,7 +120,7 @@ TEST(RunTest, ParseArgs) {
   {
     std::vector<const char*> argv = {
         kBinName, "--timeout=3000000000", component_url, "--", "myarg1", "myarg2"};
-    auto argc = argv.size();
+    int argc = static_cast<int>(argv.size());
     auto result = ParseArgs(env_services, argc, argv.data());
     EXPECT_TRUE(result.error);
   }
@@ -128,7 +128,7 @@ TEST(RunTest, ParseArgs) {
   {
     std::vector<const char*> argv = {
         kBinName, "--unknown-argument=gives_error", component_url, "--", "myarg1", "myarg2"};
-    auto argc = argv.size();
+    int argc = static_cast<int>(argv.size());
     auto result = ParseArgs(env_services, argc, argv.data());
     EXPECT_TRUE(result.error);
   }
@@ -141,7 +141,7 @@ TEST(RunTest, ParseArgs) {
                                      "--",
                                      "myarg1",
                                      "myarg2"};
-    auto argc = argv.size();
+    int argc = static_cast<int>(argv.size());
     auto result = ParseArgs(env_services, argc, argv.data());
     EXPECT_FALSE(result.error) << result.error_msg;
     EXPECT_EQ(component_url, result.launch_info.url);
@@ -161,7 +161,7 @@ TEST(RunTest, ParseArgs) {
                                      "--",
                                      "myarg1",
                                      "myarg2"};
-    auto argc = argv.size();
+    int argc = static_cast<int>(argv.size());
     auto result = ParseArgs(env_services, argc, argv.data());
     EXPECT_FALSE(result.error) << result.error_msg;
     EXPECT_EQ(component_url, result.launch_info.url);
@@ -176,7 +176,7 @@ TEST(RunTest, ParseArgs) {
   {
     std::vector<const char*> argv = {
         kBinName, "--min-severity-logs=TRACE", component_url, "--", "myarg1", "myarg2"};
-    auto argc = argv.size();
+    int argc = static_cast<int>(argv.size());
     auto result = ParseArgs(env_services, argc, argv.data());
     EXPECT_FALSE(result.error) << result.error_msg;
     EXPECT_EQ(component_url, result.launch_info.url);
@@ -191,7 +191,7 @@ TEST(RunTest, ParseArgs) {
   {
     std::vector<const char*> argv = {
         kBinName, "--min-severity-logs=invalid", component_url, "--", "myarg1", "myarg2"};
-    auto argc = argv.size();
+    int argc = static_cast<int>(argv.size());
     auto result = ParseArgs(env_services, argc, argv.data());
     EXPECT_TRUE(result.error);
   }
@@ -199,7 +199,7 @@ TEST(RunTest, ParseArgs) {
   {
     std::vector<const char*> argv = {
         kBinName, "--max-log-severity=invalid", component_url, "--", "myarg1", "myarg2"};
-    auto argc = argv.size();
+    int argc = static_cast<int>(argv.size());
     auto result = ParseArgs(env_services, argc, argv.data());
     EXPECT_TRUE(result.error);
   }
@@ -207,7 +207,7 @@ TEST(RunTest, ParseArgs) {
   {
     std::vector<const char*> argv = {
         kBinName, "--max-log-severity=ERROR", component_url, "--", "myarg1", "myarg2"};
-    auto argc = argv.size();
+    int argc = static_cast<int>(argv.size());
     auto result = ParseArgs(env_services, argc, argv.data());
     EXPECT_FALSE(result.error) << result.error_msg;
     EXPECT_EQ(component_url, result.launch_info.url);
@@ -222,7 +222,7 @@ TEST(RunTest, ParseArgs) {
 
   {
     std::vector<const char*> argv = {kBinName, "run_test_component_test_invalid_matcher"};
-    auto argc = argv.size();
+    int argc = static_cast<int>(argv.size());
     auto result = ParseArgs(env_services, argc, argv.data());
     EXPECT_TRUE(result.error);
   }
@@ -230,7 +230,7 @@ TEST(RunTest, ParseArgs) {
   // check that for time being we can pass tets args without using option delimiter(--).
   {
     std::vector<const char*> argv = {kBinName, component_url, "myarg1", "myarg2"};
-    auto argc = argv.size();
+    int argc = static_cast<int>(argv.size());
     auto result = ParseArgs(env_services, argc, argv.data());
     EXPECT_FALSE(result.error) << result.error_msg;
     EXPECT_EQ(component_url, result.launch_info.url);

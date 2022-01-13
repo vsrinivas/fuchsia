@@ -275,7 +275,7 @@ int main(int argc, const char** argv) {
   auto log_collector = std::make_unique<run::LogCollector>(
       [dispather = loop.dispatcher(), restrict_logs, max_severity_allowed,
        &restricted_logs](fuchsia::logger::LogMessage log) {
-        static std::map<uint32_t, uint32_t> dropped_logs_map;
+        static std::map<uint64_t, uint32_t> dropped_logs_map;
         auto log_wrapper = std::make_shared<fuchsia::logger::LogMessage>(std::move(log));
 
         if (restrict_logs && log_wrapper->severity > max_severity_allowed) {
@@ -443,7 +443,7 @@ int main(int argc, const char** argv) {
   auto test_component =
       run::Component::Launch(launcher, std::move(parse_result.launch_info), loop.dispatcher());
 
-  int64_t ret_code = 1;
+  int ret_code = 1;
 
   bool timed_out = false;
   std::unique_ptr<async::TaskClosure> timeout_task;
@@ -473,7 +473,7 @@ int main(int argc, const char** argv) {
                   sys::HumanReadableTerminationReason(termination_reason).c_str());
         }
 
-        ret_code = return_code;
+        ret_code = static_cast<int>(return_code);
 
         loop.Quit();
       };
