@@ -55,11 +55,6 @@ class SysmemConnector : public sysmem_connector {
 
  private:
   struct QueueItem {
-    QueueItem() = default;
-    QueueItem(QueueItem&& to_move) = default;
-    QueueItem& operator=(QueueItem&& to_move) = default;
-    QueueItem(QueueItem& to_copy) = delete;
-    QueueItem& operator=(QueueItem& to_copy) = delete;
     // Exactly one is set.
     zx::channel allocator_request;
     zx::channel service_directory;
