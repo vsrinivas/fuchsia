@@ -2,9 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// TODO(https://fxbug.dev/84961): Fix null safety and remove this language version.
-// @dart=2.9
-
 import 'dart:async';
 
 import 'package:fidl/fidl.dart';
@@ -14,7 +11,7 @@ class ThoughtLeakerImpl extends ThoughtLeaker {
   /// The discoverable name for this service
   static const String serviceName = ThoughtLeaker.$serviceName;
 
-  final String _currentThought;
+  late final String _currentThought;
 
   final _binding = ThoughtLeakerBinding();
 

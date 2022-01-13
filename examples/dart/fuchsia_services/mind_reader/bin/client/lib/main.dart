@@ -2,9 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// TODO(https://fxbug.dev/84961): Fix null safety and remove this language version.
-// @dart=2.9
-
 import 'dart:async';
 
 import 'package:fidl_fuchsia_services_examples/fidl_async.dart';
@@ -32,8 +29,8 @@ void main(List<String> args) {
   _run(thoughtToExpose).then((_) => _shutdown());
 }
 
-Future<void> _run(String thoughtToExpose) async {
-  ServiceList serviceList;
+Future<void> _run(String? thoughtToExpose) async {
+  late ServiceList? serviceList;
 
   if (thoughtToExpose == null) {
     log
@@ -115,7 +112,7 @@ ServiceList _makeServiceList(ThoughtLeakerImpl thoughtLeaker) {
 
 /// Attempts to parse the args for a supplied thought. If no thought is provided
 /// null will be returned.
-String _parseArgs(List<String> args) {
+String? _parseArgs(List<String> args) {
   if (args.length >= 2 && args[0] == '--thought') {
     // temporary workaround for not being able to group args with quotes
     return args[1];

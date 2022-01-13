@@ -7,6 +7,7 @@ import("//build/dart/dart_library.gni")
 
 dart_library("lib") {
   package_name = "mind_reader_server"
+  null_safe = true
   sources = [
     "main.dart",
     "src/_mind_reader_impl.dart",
@@ -23,5 +24,6 @@ dart_library("lib") {
 dart_component("server") {
   component_name = "mind_reader_server"
   manifest = "meta/mind_reader_server.cmx"
+  null_safe = true
   deps = [ ":lib" ]
 }

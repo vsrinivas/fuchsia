@@ -7,6 +7,7 @@ import("//build/dart/dart_library.gni")
 
 dart_library("lib") {
   package_name = "mind_reader_client"
+  null_safe = true
   sources = [
     "main.dart",
     "src/_thought_leaker_impl.dart",
@@ -27,5 +28,6 @@ dart_library("lib") {
 dart_component("client") {
   component_name = "mind_reader_client"
   manifest = "meta/mind_reader_client.cmx"
+  null_safe = true
   deps = [ ":lib" ]
 }
