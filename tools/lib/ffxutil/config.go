@@ -45,6 +45,11 @@ func NewIsolatedFFXConfig(dir string) *FFXConfig {
 	return config
 }
 
+// Env returns the environment that should be set when running ffx with this config.
+func (c *FFXConfig) Env() []string {
+	return c.env
+}
+
 // Set sets values in the config.
 func (c *FFXConfig) Set(key string, value interface{}) {
 	c.config[key] = value

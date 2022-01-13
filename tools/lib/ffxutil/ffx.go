@@ -28,13 +28,17 @@ func runCommand(ctx context.Context, runner *subprocess.Runner, stdout, stderr i
 
 // FFXInstance takes in a path to the ffx tool and runs ffx commands with the provided config.
 type FFXInstance struct {
-	ffxPath    string
-	config     *FFXConfig
-	configPath string
-	runner     *subprocess.Runner
-	stdout     io.Writer
-	stderr     io.Writer
-	target     string
+	ffxPath string
+
+	// Config represents the config associated with this ffx instance.
+	Config *FFXConfig
+	// ConfigPath is the path to the ffx config.
+	ConfigPath string
+
+	runner *subprocess.Runner
+	stdout io.Writer
+	stderr io.Writer
+	target string
 }
 
 // NewFFXInstance creates an isolated FFXInstance.
@@ -60,16 +64,29 @@ func NewFFXInstance(ffxPath string, dir string, env []string, target, sshKey str
 		return nil, err
 	}
 	env = append(env, config.env...)
-	ffx := &FFXInstance{
+	ffx := FFXInstanceWithConfig(ffxPath, dir, env, target, configPath)
+	if ffx != nil {
+		ffx.Config = config
+	}
+	return ffx, nil
+}
+
+func FFXInstanceWithConfig(ffxPath, dir string, env []string, target, configPath string) *FFXInstance {
+	if ffxPath == "" {
+		return nil
+	}
+	return &FFXInstance{
 		ffxPath:    ffxPath,
-		config:     config,
-		configPath: configPath,
+		ConfigPath: configPath,
 		runner:     &subprocess.Runner{Dir: dir, Env: env},
 		stdout:     os.Stdout,
 		stderr:     os.Stderr,
 		target:     target,
 	}
-	return ffx, nil
+}
+
+func (f *FFXInstance) SetTarget(target string) {
+	f.target = target
 }
 
 // SetStdoutStderr sets the stdout and stderr for the ffx commands to write to.
@@ -80,7 +97,7 @@ func (f *FFXInstance) SetStdoutStderr(stdout, stderr io.Writer) {
 
 // Run runs ffx with the associated config and provided args.
 func (f *FFXInstance) Run(ctx context.Context, args ...string) error {
-	args = append([]string{f.ffxPath, "--config", f.configPath}, args...)
+	args = append([]string{f.ffxPath, "--config", f.ConfigPath}, args...)
 	return runCommand(ctx, f.runner, f.stdout, f.stderr, args...)
 }
 
@@ -96,8 +113,10 @@ func (f *FFXInstance) Stop() error {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 	err := f.Run(ctx, "daemon", "stop")
-	if configErr := f.config.Close(); err == nil {
-		err = configErr
+	if f.Config != nil {
+		if configErr := f.Config.Close(); err == nil {
+			err = configErr
+		}
 	}
 	return err
 }

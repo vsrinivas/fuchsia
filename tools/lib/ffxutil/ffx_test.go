@@ -29,18 +29,25 @@ func TestFFXInstance(t *testing.T) {
 
 	ctx := context.Background()
 
-	assertRunsExpectedCmd := func(runErr error, expectedCmd string) {
+	assertRunsExpectedCmd := func(runErr error, stdout *bytes.Buffer, expectedConfigPath, expectedCmd string) {
 		if runErr != nil {
 			t.Errorf("failed to run cmd: %s", runErr)
 		}
 		stdoutStr := stdout.String()
-		if !strings.HasSuffix(strings.TrimSpace(stdoutStr), fmt.Sprintf("--config %s %s", ffx.configPath, expectedCmd)) {
+		if !strings.HasSuffix(strings.TrimSpace(stdoutStr), fmt.Sprintf("--config %s %s", expectedConfigPath, expectedCmd)) {
 			t.Errorf("got %q, want %q", stdoutStr, expectedCmd)
 		}
 	}
-	assertRunsExpectedCmd(ffx.List(ctx), "target list")
+	assertRunsExpectedCmd(ffx.List(ctx), stdout, ffx.ConfigPath, "target list")
 
-	assertRunsExpectedCmd(ffx.TargetWait(ctx), "--target target target wait")
+	assertRunsExpectedCmd(ffx.TargetWait(ctx), stdout, ffx.ConfigPath, "--target target target wait")
+
+	// Create a new instance that uses the same ffx config but runs against a different target.
+	ffx2 := FFXInstanceWithConfig(ffxPath, tmpDir, []string{}, "target2", ffx.ConfigPath)
+	var buf2 []byte
+	stdout2 := bytes.NewBuffer(buf2)
+	ffx2.SetStdoutStderr(stdout2, stdout2)
+	assertRunsExpectedCmd(ffx2.TargetWait(ctx), stdout2, ffx.ConfigPath, "--target target2 target wait")
 
 	// Test expects a run_summary.json to be written in the test output directory.
 	outDir := filepath.Join(tmpDir, "out")
@@ -54,6 +61,8 @@ func TestFFXInstance(t *testing.T) {
 	_, err := ffx.Test(ctx, []TestDef{{TestUrl: "test1", Timeout: 30}}, outDir)
 	assertRunsExpectedCmd(
 		err,
+		stdout,
+		ffx.ConfigPath,
 		fmt.Sprintf(
 			"--target target test run --continue-on-timeout --test-file %s --output-directory %s",
 			filepath.Join(outDir, "test-file.json"), testOutputDir,
@@ -64,7 +73,7 @@ func TestFFXInstance(t *testing.T) {
 	if err := ioutil.WriteFile(filepath.Join(tmpDir, snapshotZipName), []byte("snapshot"), os.ModePerm); err != nil {
 		t.Errorf("failed to write snapshot")
 	}
-	assertRunsExpectedCmd(ffx.Snapshot(ctx, tmpDir, "new_snapshot.zip"), "--target target target snapshot --dir "+tmpDir)
+	assertRunsExpectedCmd(ffx.Snapshot(ctx, tmpDir, "new_snapshot.zip"), stdout, ffx.ConfigPath, "--target target target snapshot --dir "+tmpDir)
 	if _, err := os.Stat(filepath.Join(tmpDir, snapshotZipName)); err == nil {
 		t.Errorf("expected snapshot to be renamed")
 	}
@@ -72,14 +81,14 @@ func TestFFXInstance(t *testing.T) {
 		t.Errorf("failed to rename snapshot to new_snapshot.zip: %s", err)
 	}
 
-	assertRunsExpectedCmd(ffx.GetConfig(ctx), "config get")
+	assertRunsExpectedCmd(ffx.GetConfig(ctx), stdout, ffx.ConfigPath, "config get")
 
-	assertRunsExpectedCmd(ffx.Run(ctx, "random", "cmd", "with", "args"), "random cmd with args")
+	assertRunsExpectedCmd(ffx.Run(ctx, "random", "cmd", "with", "args"), stdout, ffx.ConfigPath, "random cmd with args")
 
-	assertRunsExpectedCmd(ffx.RunWithTarget(ctx, "random", "cmd", "with", "args"), "--target target random cmd with args")
+	assertRunsExpectedCmd(ffx.RunWithTarget(ctx, "random", "cmd", "with", "args"), stdout, ffx.ConfigPath, "--target target random cmd with args")
 
-	assertRunsExpectedCmd(ffx.Stop(), "daemon stop")
-	if _, err := os.Stat(ffx.config.socket); !os.IsNotExist(err) {
-		t.Errorf("failed to remove socket %s: %s", ffx.config.socket, err)
+	assertRunsExpectedCmd(ffx.Stop(), stdout, ffx.ConfigPath, "daemon stop")
+	if _, err := os.Stat(ffx.Config.socket); !os.IsNotExist(err) {
+		t.Errorf("failed to remove socket %s: %s", ffx.Config.socket, err)
 	}
 }
