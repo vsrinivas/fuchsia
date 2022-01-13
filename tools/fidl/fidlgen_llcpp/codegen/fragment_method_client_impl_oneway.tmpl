@@ -4,6 +4,32 @@
 // found in the LICENSE file.
 */}}
 
+
+
+{{- define "Method:WireWeakOnewayClientImpl:MessagingHeader" }}
+  {{ .Docs }}
+  {{- if .DocComments }}
+    //
+  {{- end }}
+  // {{- template "Method:ClientAllocationComment:Helper" . }}
+  ::fidl::Result {{ .Name }}({{ RenderParams .RequestArgs }});
+{{- end }}
+
+
+{{- define "Method:WireWeakOnewayClientImpl:MessagingSource" }}
+  ::fidl::Result {{ .Protocol.WireWeakOnewayClientImpl.NoLeading }}::{{ .Name }}(
+        {{- RenderParams .RequestArgs }}) {
+    FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
+    {{ .WireRequest }} _request_object{ {{ RenderForwardParams .RequestArgs }} };
+    ::fidl::OwnedEncodedMessage<{{ .WireRequest }}, {{ .Transport.Type }}> _request_message(
+        ::fidl::internal::AllowUnownedInputRef{}, &_request_object);
+    return _client_base()->SendOneWay(_request_message.GetOutgoingMessage());
+  }
+{{- end }}
+
+
+
+{{- /* TODO(fxbug.dev/85688): Remove this. */}}
 {{- define "Method:ClientImplOneway:MessagingHeader" }}
   {{- /* Managed flavor */}}
   {{ .Docs }}
@@ -17,6 +43,7 @@
 {{- end }}
 
 
+{{- /* TODO(fxbug.dev/85688): Remove this. */}}
 {{- define "Method:ClientImplOneway:MessagingSource" }}
   {{- IfdefFuchsia -}}
 

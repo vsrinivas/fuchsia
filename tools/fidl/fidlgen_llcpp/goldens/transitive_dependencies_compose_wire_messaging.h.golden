@@ -535,6 +535,28 @@ class ::fidl::internal::WireWeakAsyncBufferClientImpl<
   void GetFoo(::fidl::WireResponseContext<
               ::test_transitivedependenciescompose::Top::GetFoo>* _context);
 };
+
+template <>
+class ::fidl::internal::WireWeakOnewayClientImpl<
+    ::test_transitivedependenciescompose::Top>
+    : public ::fidl::internal::ClientImplBase {
+ public:
+  using ClientImplBase::ClientImplBase;
+};
+
+template <>
+class ::fidl::internal::WireWeakSyncClientImpl<
+    ::test_transitivedependenciescompose::Top>
+    final : public ::fidl::internal::WireWeakOnewayClientImpl<
+                ::test_transitivedependenciescompose::Top> {
+ public:
+  using WireWeakOnewayClientImpl::WireWeakOnewayClientImpl;
+
+  // Allocates 40 bytes of message buffer on the stack. No heap allocation
+  // necessary.
+  ::fidl::WireResult<::test_transitivedependenciescompose::Top::GetFoo>
+  GetFoo();
+};
 namespace fidl {
 #endif  // __Fuchsia__
 

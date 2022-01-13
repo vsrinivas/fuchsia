@@ -707,6 +707,29 @@ class ::fidl::internal::WireWeakAsyncBufferClientImpl<
           ::test_bindingsdenylist::OnlyLibfuzzerAndDeps::
               LibfuzzerNeedsNonemptyProtocol>* _context);
 };
+
+template <>
+class ::fidl::internal::WireWeakOnewayClientImpl<
+    ::test_bindingsdenylist::OnlyLibfuzzerAndDeps>
+    : public ::fidl::internal::ClientImplBase {
+ public:
+  using ClientImplBase::ClientImplBase;
+};
+
+template <>
+class ::fidl::internal::WireWeakSyncClientImpl<
+    ::test_bindingsdenylist::OnlyLibfuzzerAndDeps>
+    final : public ::fidl::internal::WireWeakOnewayClientImpl<
+                ::test_bindingsdenylist::OnlyLibfuzzerAndDeps> {
+ public:
+  using WireWeakOnewayClientImpl::WireWeakOnewayClientImpl;
+
+  // Allocates 32 bytes of message buffer on the stack. No heap allocation
+  // necessary.
+  ::fidl::WireResult<::test_bindingsdenylist::OnlyLibfuzzerAndDeps::
+                         LibfuzzerNeedsNonemptyProtocol>
+  LibfuzzerNeedsNonemptyProtocol();
+};
 namespace fidl {
 #endif  // __Fuchsia__
 
@@ -786,6 +809,23 @@ class ::fidl::internal::WireWeakAsyncBufferClientImpl<
                 ::test_bindingsdenylist::OnlyCppAndDeps> {
  public:
   using WireWeakOnewayBufferClientImpl::WireWeakOnewayBufferClientImpl;
+};
+
+template <>
+class ::fidl::internal::WireWeakOnewayClientImpl<
+    ::test_bindingsdenylist::OnlyCppAndDeps>
+    : public ::fidl::internal::ClientImplBase {
+ public:
+  using ClientImplBase::ClientImplBase;
+};
+
+template <>
+class ::fidl::internal::WireWeakSyncClientImpl<
+    ::test_bindingsdenylist::OnlyCppAndDeps>
+    final : public ::fidl::internal::WireWeakOnewayClientImpl<
+                ::test_bindingsdenylist::OnlyCppAndDeps> {
+ public:
+  using WireWeakOnewayClientImpl::WireWeakOnewayClientImpl;
 };
 #endif  // __Fuchsia__
 

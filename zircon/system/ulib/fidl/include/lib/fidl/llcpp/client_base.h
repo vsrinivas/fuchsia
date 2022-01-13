@@ -272,6 +272,7 @@ class ClientBase {
   // will be notified on a dispatcher thread.
   void AsyncTeardown();
 
+ public:
   // Makes a two-way synchronous call with the transport that is managed by this
   // client.
   //
@@ -297,7 +298,6 @@ class ClientBase {
     return sync_call(std::move(transport));
   }
 
- public:
   // Stores the given asynchronous transaction response context, setting the txid field.
   void PrepareAsyncTxn(ResponseContext* context);
 

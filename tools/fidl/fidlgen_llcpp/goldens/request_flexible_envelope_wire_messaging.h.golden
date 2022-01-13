@@ -979,6 +979,35 @@ class ::fidl::internal::WireWeakAsyncBufferClientImpl<
       ::fidl::WireResponseContext<::test_requestflexibleenvelope::Protocol::
                                       RequestFlexibleResponseStrict>* _context);
 };
+
+template <>
+class ::fidl::internal::WireWeakOnewayClientImpl<
+    ::test_requestflexibleenvelope::Protocol>
+    : public ::fidl::internal::ClientImplBase {
+ public:
+  using ClientImplBase::ClientImplBase;
+};
+
+template <>
+class ::fidl::internal::WireWeakSyncClientImpl<
+    ::test_requestflexibleenvelope::Protocol>
+    final : public ::fidl::internal::WireWeakOnewayClientImpl<
+                ::test_requestflexibleenvelope::Protocol> {
+ public:
+  using WireWeakOnewayClientImpl::WireWeakOnewayClientImpl;
+
+  // Request is heap-allocated. Response is heap-allocated.
+  ::fidl::WireResult<
+      ::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>
+  RequestStrictResponseFlexible(
+      ::test_requestflexibleenvelope::wire::StrictFoo s);
+
+  // Request is heap-allocated. Response is heap-allocated.
+  ::fidl::WireResult<
+      ::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>
+  RequestFlexibleResponseStrict(
+      ::test_requestflexibleenvelope::wire::FlexibleFoo s);
+};
 namespace fidl {
 #endif  // __Fuchsia__
 

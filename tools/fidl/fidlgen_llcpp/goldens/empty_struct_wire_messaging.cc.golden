@@ -319,6 +319,34 @@ void fidl::internal::WireWeakAsyncBufferClientImpl<
       _request_message(_allocation->data, _buffer_size, &_request);
   _client_base()->SendTwoWay(_request_message.GetOutgoingMessage(), _context);
 }
+::fidl::Result fidl::internal::
+    WireWeakOnewayClientImpl<::test_emptystruct::EmptyProtocol>::Send(
+        const ::test_emptystruct::wire::Empty& e) {
+  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
+  ::fidl::WireRequest<::test_emptystruct::EmptyProtocol::Send> _request_object{
+      e};
+  ::fidl::OwnedEncodedMessage<
+      ::fidl::WireRequest<::test_emptystruct::EmptyProtocol::Send>,
+      ::fidl::internal::ChannelTransport>
+      _request_message(::fidl::internal::AllowUnownedInputRef{},
+                       &_request_object);
+  return _client_base()->SendOneWay(_request_message.GetOutgoingMessage());
+}
+
+::fidl::WireResult<::test_emptystruct::EmptyProtocol::SendAndReceive>
+fidl::internal::WireWeakSyncClientImpl<::test_emptystruct::EmptyProtocol>::
+    SendAndReceive(const ::test_emptystruct::wire::Empty& e) {
+  return _client_base()->MakeSyncCallWith(
+      [&](std::shared_ptr<::fidl::internal::AnyTransport> _transport) {
+        ::fidl::WireRequest<::test_emptystruct::EmptyProtocol::SendAndReceive>
+            _request{e};
+        return ::fidl::WireResult<
+            ::test_emptystruct::EmptyProtocol::SendAndReceive>(
+            ::fidl::UnownedClientEnd<::test_emptystruct::EmptyProtocol>(
+                _transport->get<::fidl::internal::ChannelTransport>()),
+            &_request);
+      });
+}
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__

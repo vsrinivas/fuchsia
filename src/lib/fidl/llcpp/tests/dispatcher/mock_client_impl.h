@@ -123,6 +123,20 @@ class ::fidl::internal::WireWeakAsyncBufferClientImpl<fidl_testing::TestProtocol
   using WireWeakOnewayBufferClientImpl::WireWeakOnewayBufferClientImpl;
 };
 
+template <>
+class ::fidl::internal::WireWeakOnewayClientImpl<fidl_testing::TestProtocol>
+    : public ::fidl::internal::ClientImplBase {
+ public:
+  using ClientImplBase::ClientImplBase;
+};
+
+template <>
+class ::fidl::internal::WireWeakSyncClientImpl<fidl_testing::TestProtocol>
+    : public ::fidl::internal::WireWeakOnewayClientImpl<fidl_testing::TestProtocol> {
+ public:
+  using WireWeakOnewayClientImpl::WireWeakOnewayClientImpl;
+};
+
 namespace fidl_testing {
 
 class TestResponseContext : public fidl::internal::ResponseContext {

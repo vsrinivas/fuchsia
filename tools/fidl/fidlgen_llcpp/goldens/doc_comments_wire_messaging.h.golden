@@ -444,6 +444,29 @@ class ::fidl::internal::WireWeakAsyncBufferClientImpl<
  public:
   using WireWeakOnewayBufferClientImpl::WireWeakOnewayBufferClientImpl;
 };
+
+template <>
+class ::fidl::internal::WireWeakOnewayClientImpl<::test_doccomments::Interface>
+    : public ::fidl::internal::ClientImplBase {
+ public:
+  using ClientImplBase::ClientImplBase;
+
+  /// method comment #1
+  ///
+  /// method comment #3
+  //
+  // Allocates 16 bytes of message buffer on the stack. No heap allocation
+  // necessary.
+  ::fidl::Result Method();
+};
+
+template <>
+class ::fidl::internal::WireWeakSyncClientImpl<::test_doccomments::Interface>
+    final : public ::fidl::internal::WireWeakOnewayClientImpl<
+                ::test_doccomments::Interface> {
+ public:
+  using WireWeakOnewayClientImpl::WireWeakOnewayClientImpl;
+};
 namespace fidl {
 #endif  // __Fuchsia__
 

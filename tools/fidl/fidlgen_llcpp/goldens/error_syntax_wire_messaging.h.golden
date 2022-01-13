@@ -993,6 +993,35 @@ class ::fidl::internal::WireWeakAsyncBufferClientImpl<
           ::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>*
           _context);
 };
+
+template <>
+class ::fidl::internal::WireWeakOnewayClientImpl<
+    ::test_errorsyntax::ExampleUseOfErrorSyntax>
+    : public ::fidl::internal::ClientImplBase {
+ public:
+  using ClientImplBase::ClientImplBase;
+};
+
+template <>
+class ::fidl::internal::WireWeakSyncClientImpl<
+    ::test_errorsyntax::ExampleUseOfErrorSyntax>
+    final : public ::fidl::internal::WireWeakOnewayClientImpl<
+                ::test_errorsyntax::ExampleUseOfErrorSyntax> {
+ public:
+  using WireWeakOnewayClientImpl::WireWeakOnewayClientImpl;
+
+  // Allocates 40 bytes of response buffer on the stack. Request is
+  // heap-allocated.
+  ::fidl::WireResult<
+      ::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>
+  ComposedCallWhichMayFail(::fidl::StringView s);
+
+  // Allocates 40 bytes of response buffer on the stack. Request is
+  // heap-allocated.
+  ::fidl::WireResult<
+      ::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>
+  CallWhichMayFail(::fidl::StringView s);
+};
 namespace fidl {
 #endif  // __Fuchsia__
 

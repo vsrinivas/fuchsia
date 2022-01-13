@@ -30,14 +30,25 @@ class Server : public fidl::WireServer<Example> {
   void TwoWay(TwoWayRequestView request, TwoWayCompleter::Sync& completer) override {
     ASSERT_EQ(size_, request->in.size());
     EXPECT_EQ(0, strncmp(data_, request->in.data(), size_));
+    two_way_count_.fetch_add(1);
     completer.Reply(request->in);
   }
 
-  void OneWay(OneWayRequestView, OneWayCompleter::Sync&) override {}
+  void OneWay(OneWayRequestView request, OneWayCompleter::Sync&) override {
+    ASSERT_EQ(size_, request->in.size());
+    EXPECT_EQ(0, strncmp(data_, request->in.data(), size_));
+    one_way_count_.fetch_add(1);
+  }
+
+  unsigned int two_way_count() const { return two_way_count_.load(); }
+
+  unsigned int one_way_count() const { return one_way_count_.load(); }
 
  private:
   const char* data_;
   size_t size_;
+  std::atomic_uint two_way_count_ = 0;
+  std::atomic_uint one_way_count_ = 0;
 };
 
 TEST(GenAPITestCase, TwoWayAsyncManaged) {
@@ -104,6 +115,46 @@ TEST(GenAPITestCase, TwoWayAsyncCallerAllocated) {
   ASSERT_OK(sync_completion_wait(&done, ZX_TIME_INFINITE));
 
   server_binding.Unbind();
+}
+
+TEST(GenAPITestCase, TwoWaySyncManaged) {
+  auto endpoints = fidl::CreateEndpoints<Example>();
+  ASSERT_OK(endpoints.status_value());
+  auto [local, remote] = std::move(*endpoints);
+
+  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
+  ASSERT_OK(loop.StartThread());
+  fidl::WireSharedClient<Example> client(std::move(local), loop.dispatcher());
+
+  static constexpr char kData[] = "TwoWay() sync managed";
+  auto server = std::make_shared<Server>(kData, strlen(kData));
+  fidl::BindServer(loop.dispatcher(), std::move(remote), server);
+
+  fidl::WireResult result = client.sync()->TwoWay(fidl::StringView(kData));
+  ASSERT_OK(result.status());
+  ASSERT_EQ(strlen(kData), result->out.size());
+  EXPECT_EQ(0, strncmp(result->out.data(), kData, strlen(kData)));
+  EXPECT_EQ(1, server->two_way_count());
+  EXPECT_EQ(0, server->one_way_count());
+}
+
+TEST(GenAPITestCase, OneWaySyncManaged) {
+  auto endpoints = fidl::CreateEndpoints<Example>();
+  ASSERT_OK(endpoints.status_value());
+  auto [local, remote] = std::move(*endpoints);
+
+  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
+  fidl::WireClient<Example> client(std::move(local), loop.dispatcher());
+
+  static constexpr char kData[] = "OneWay() sync managed";
+  auto server = std::make_shared<Server>(kData, strlen(kData));
+  fidl::BindServer(loop.dispatcher(), std::move(remote), server);
+
+  fidl::Result result = client.sync()->OneWay(fidl::StringView(kData));
+  EXPECT_OK(result.status());
+  ASSERT_OK(loop.RunUntilIdle());
+  EXPECT_EQ(1, server->one_way_count());
+  EXPECT_EQ(0, server->two_way_count());
 }
 
 TEST(GenAPITestCase, EventManaged) {
@@ -264,7 +315,7 @@ TEST(GenAPITestCase, UnbindInfoEncodeError) {
       fidl::BindServer(loop.dispatcher(), std::move(remote), server.get(), std::move(on_unbound));
 
   // Make a synchronous call which should fail as a result of the server end closing.
-  auto result = client->TwoWay_Sync(fidl::StringView(""));
+  fidl::WireResult result = client.sync()->TwoWay(fidl::StringView(""));
   ASSERT_FALSE(result.ok());
   EXPECT_EQ(ZX_ERR_PEER_CLOSED, result.status());
 

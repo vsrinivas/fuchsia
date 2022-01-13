@@ -203,6 +203,20 @@ void fidl::internal::
       _request_message(_allocation->data, _buffer_size, &_request);
   _client_base()->SendTwoWay(_request_message.GetOutgoingMessage(), _context);
 }
+
+::fidl::WireResult<::test_nullable::SimpleProtocol::Add>
+fidl::internal::WireWeakSyncClientImpl<::test_nullable::SimpleProtocol>::Add(
+    int32_t a, int32_t b) {
+  return _client_base()->MakeSyncCallWith([&](std::shared_ptr<
+                                              ::fidl::internal::AnyTransport>
+                                                  _transport) {
+    ::fidl::WireRequest<::test_nullable::SimpleProtocol::Add> _request{a, b};
+    return ::fidl::WireResult<::test_nullable::SimpleProtocol::Add>(
+        ::fidl::UnownedClientEnd<::test_nullable::SimpleProtocol>(
+            _transport->get<::fidl::internal::ChannelTransport>()),
+        &_request);
+  });
+}
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__

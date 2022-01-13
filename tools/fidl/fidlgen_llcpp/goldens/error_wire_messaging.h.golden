@@ -463,6 +463,24 @@ class ::fidl::internal::WireWeakAsyncBufferClientImpl<::test_error::Example>
   void Foo(::fidl::StringView s,
            ::fidl::WireResponseContext<::test_error::Example::Foo>* _context);
 };
+
+template <>
+class ::fidl::internal::WireWeakOnewayClientImpl<::test_error::Example>
+    : public ::fidl::internal::ClientImplBase {
+ public:
+  using ClientImplBase::ClientImplBase;
+};
+
+template <>
+class ::fidl::internal::WireWeakSyncClientImpl<::test_error::Example> final
+    : public ::fidl::internal::WireWeakOnewayClientImpl<::test_error::Example> {
+ public:
+  using WireWeakOnewayClientImpl::WireWeakOnewayClientImpl;
+
+  // Allocates 40 bytes of response buffer on the stack. Request is
+  // heap-allocated.
+  ::fidl::WireResult<::test_error::Example::Foo> Foo(::fidl::StringView s);
+};
 namespace fidl {
 #endif  // __Fuchsia__
 

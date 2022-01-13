@@ -186,6 +186,19 @@ void fidl::internal::WireWeakAsyncBufferClientImpl<::test_error::Example>::Foo(
       _request_message(_allocation->data, _buffer_size, &_request);
   _client_base()->SendTwoWay(_request_message.GetOutgoingMessage(), _context);
 }
+
+::fidl::WireResult<::test_error::Example::Foo>
+fidl::internal::WireWeakSyncClientImpl<::test_error::Example>::Foo(
+    ::fidl::StringView s) {
+  return _client_base()->MakeSyncCallWith(
+      [&](std::shared_ptr<::fidl::internal::AnyTransport> _transport) {
+        ::fidl::WireRequest<::test_error::Example::Foo> _request{s};
+        return ::fidl::WireResult<::test_error::Example::Foo>(
+            ::fidl::UnownedClientEnd<::test_error::Example>(
+                _transport->get<::fidl::internal::ChannelTransport>()),
+            &_request);
+      });
+}
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__

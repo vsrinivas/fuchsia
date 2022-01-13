@@ -857,6 +857,25 @@ class ::fidl::internal::WireWeakAsyncBufferClientImpl<::test_inheritance::Super>
       ::fidl::StringView s,
       ::fidl::WireResponseContext<::test_inheritance::Super::Foo>* _context);
 };
+
+template <>
+class ::fidl::internal::WireWeakOnewayClientImpl<::test_inheritance::Super>
+    : public ::fidl::internal::ClientImplBase {
+ public:
+  using ClientImplBase::ClientImplBase;
+};
+
+template <>
+class ::fidl::internal::WireWeakSyncClientImpl<::test_inheritance::Super> final
+    : public ::fidl::internal::WireWeakOnewayClientImpl<
+          ::test_inheritance::Super> {
+ public:
+  using WireWeakOnewayClientImpl::WireWeakOnewayClientImpl;
+
+  // Allocates 24 bytes of response buffer on the stack. Request is
+  // heap-allocated.
+  ::fidl::WireResult<::test_inheritance::Super::Foo> Foo(::fidl::StringView s);
+};
 namespace fidl {
 #endif  // __Fuchsia__
 
@@ -954,6 +973,25 @@ class ::fidl::internal::WireWeakAsyncBufferClientImpl<::test_inheritance::Sub>
   // Caller provides the backing storage for FIDL message.
   void Foo(::fidl::StringView s,
            ::fidl::WireResponseContext<::test_inheritance::Sub::Foo>* _context);
+};
+
+template <>
+class ::fidl::internal::WireWeakOnewayClientImpl<::test_inheritance::Sub>
+    : public ::fidl::internal::ClientImplBase {
+ public:
+  using ClientImplBase::ClientImplBase;
+};
+
+template <>
+class ::fidl::internal::WireWeakSyncClientImpl<::test_inheritance::Sub> final
+    : public ::fidl::internal::WireWeakOnewayClientImpl<
+          ::test_inheritance::Sub> {
+ public:
+  using WireWeakOnewayClientImpl::WireWeakOnewayClientImpl;
+
+  // Allocates 24 bytes of response buffer on the stack. Request is
+  // heap-allocated.
+  ::fidl::WireResult<::test_inheritance::Sub::Foo> Foo(::fidl::StringView s);
 };
 #endif  // __Fuchsia__
 

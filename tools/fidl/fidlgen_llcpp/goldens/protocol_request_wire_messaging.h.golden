@@ -1292,6 +1292,40 @@ class ::fidl::internal::WireWeakAsyncBufferClientImpl<
       ::fidl::WireResponseContext<
           ::test_protocolrequest::Parent::GetChildRequest>* _context);
 };
+
+template <>
+class ::fidl::internal::WireWeakOnewayClientImpl<::test_protocolrequest::Parent>
+    : public ::fidl::internal::ClientImplBase {
+ public:
+  using ClientImplBase::ClientImplBase;
+
+  // Allocates 24 bytes of message buffer on the stack. No heap allocation
+  // necessary.
+  ::fidl::Result TakeChild(
+      ::fidl::ClientEnd<::test_protocolrequest::Child>&& c);
+
+  // Allocates 24 bytes of message buffer on the stack. No heap allocation
+  // necessary.
+  ::fidl::Result TakeChildRequest(
+      ::fidl::ServerEnd<::test_protocolrequest::Child>&& r);
+};
+
+template <>
+class ::fidl::internal::WireWeakSyncClientImpl<::test_protocolrequest::Parent>
+    final : public ::fidl::internal::WireWeakOnewayClientImpl<
+                ::test_protocolrequest::Parent> {
+ public:
+  using WireWeakOnewayClientImpl::WireWeakOnewayClientImpl;
+
+  // Allocates 40 bytes of message buffer on the stack. No heap allocation
+  // necessary.
+  ::fidl::WireResult<::test_protocolrequest::Parent::GetChild> GetChild();
+
+  // Allocates 40 bytes of message buffer on the stack. No heap allocation
+  // necessary.
+  ::fidl::WireResult<::test_protocolrequest::Parent::GetChildRequest>
+  GetChildRequest();
+};
 namespace fidl {
 #endif  // __Fuchsia__
 
@@ -1367,6 +1401,21 @@ class ::fidl::internal::WireWeakAsyncBufferClientImpl<
                 ::test_protocolrequest::Child> {
  public:
   using WireWeakOnewayBufferClientImpl::WireWeakOnewayBufferClientImpl;
+};
+
+template <>
+class ::fidl::internal::WireWeakOnewayClientImpl<::test_protocolrequest::Child>
+    : public ::fidl::internal::ClientImplBase {
+ public:
+  using ClientImplBase::ClientImplBase;
+};
+
+template <>
+class ::fidl::internal::WireWeakSyncClientImpl<::test_protocolrequest::Child>
+    final : public ::fidl::internal::WireWeakOnewayClientImpl<
+                ::test_protocolrequest::Child> {
+ public:
+  using WireWeakOnewayClientImpl::WireWeakOnewayClientImpl;
 };
 #endif  // __Fuchsia__
 

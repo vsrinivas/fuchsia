@@ -787,6 +787,28 @@ class ::fidl::internal::WireWeakAsyncBufferClientImpl<
  public:
   using WireWeakOnewayBufferClientImpl::WireWeakOnewayBufferClientImpl;
 };
+
+template <>
+class ::fidl::internal::WireWeakOnewayClientImpl<
+    ::test_inheritancewithrecursivedecl::Parent>
+    : public ::fidl::internal::ClientImplBase {
+ public:
+  using ClientImplBase::ClientImplBase;
+
+  // Allocates 24 bytes of message buffer on the stack. No heap allocation
+  // necessary.
+  ::fidl::Result First(
+      ::fidl::ServerEnd<::test_inheritancewithrecursivedecl::Parent>&& request);
+};
+
+template <>
+class ::fidl::internal::WireWeakSyncClientImpl<
+    ::test_inheritancewithrecursivedecl::Parent>
+    final : public ::fidl::internal::WireWeakOnewayClientImpl<
+                ::test_inheritancewithrecursivedecl::Parent> {
+ public:
+  using WireWeakOnewayClientImpl::WireWeakOnewayClientImpl;
+};
 namespace fidl {
 #endif  // __Fuchsia__
 
@@ -882,6 +904,33 @@ class ::fidl::internal::WireWeakAsyncBufferClientImpl<
                 ::test_inheritancewithrecursivedecl::Child> {
  public:
   using WireWeakOnewayBufferClientImpl::WireWeakOnewayBufferClientImpl;
+};
+
+template <>
+class ::fidl::internal::WireWeakOnewayClientImpl<
+    ::test_inheritancewithrecursivedecl::Child>
+    : public ::fidl::internal::ClientImplBase {
+ public:
+  using ClientImplBase::ClientImplBase;
+
+  // Allocates 24 bytes of message buffer on the stack. No heap allocation
+  // necessary.
+  ::fidl::Result First(
+      ::fidl::ServerEnd<::test_inheritancewithrecursivedecl::Parent>&& request);
+
+  // Allocates 24 bytes of message buffer on the stack. No heap allocation
+  // necessary.
+  ::fidl::Result Second(
+      ::fidl::ServerEnd<::test_inheritancewithrecursivedecl::Parent>&& request);
+};
+
+template <>
+class ::fidl::internal::WireWeakSyncClientImpl<
+    ::test_inheritancewithrecursivedecl::Child>
+    final : public ::fidl::internal::WireWeakOnewayClientImpl<
+                ::test_inheritancewithrecursivedecl::Child> {
+ public:
+  using WireWeakOnewayClientImpl::WireWeakOnewayClientImpl;
 };
 #endif  // __Fuchsia__
 

@@ -70,6 +70,17 @@ fidl::internal::WireClientImpl<::test_doccomments::Interface>::Method() {
       _request_message(_allocation->data, _buffer_size, &_request);
   return _client_base()->SendOneWay(_request_message.GetOutgoingMessage());
 }
+::fidl::Result fidl::internal::WireWeakOnewayClientImpl<
+    ::test_doccomments::Interface>::Method() {
+  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
+  ::fidl::WireRequest<::test_doccomments::Interface::Method> _request_object{};
+  ::fidl::OwnedEncodedMessage<
+      ::fidl::WireRequest<::test_doccomments::Interface::Method>,
+      ::fidl::internal::ChannelTransport>
+      _request_message(::fidl::internal::AllowUnownedInputRef{},
+                       &_request_object);
+  return _client_base()->SendOneWay(_request_message.GetOutgoingMessage());
+}
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__

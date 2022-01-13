@@ -474,6 +474,7 @@ TEST_F(WireClientTest, InvalidAccess) {
     fidl::Arena arena;
     client.buffer(arena);
   });
+  ASSERT_DEATH([&] { client.sync(); });
 }
 
 TEST_F(WireClientTest, Move) {

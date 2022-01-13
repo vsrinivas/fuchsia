@@ -500,6 +500,44 @@ void fidl::internal::WireWeakAsyncBufferClientImpl<
       _request_message(_allocation->data, _buffer_size, &_request);
   _client_base()->SendTwoWay(_request_message.GetOutgoingMessage(), _context);
 }
+
+::fidl::WireResult<
+    ::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>
+fidl::internal::WireWeakSyncClientImpl<
+    ::test_errorsyntax::ExampleUseOfErrorSyntax>::
+    ComposedCallWhichMayFail(::fidl::StringView s) {
+  return _client_base()->MakeSyncCallWith([&](std::shared_ptr<
+                                              ::fidl::internal::AnyTransport>
+                                                  _transport) {
+    ::fidl::WireRequest<
+        ::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>
+        _request{s};
+    return ::fidl::WireResult<
+        ::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>(
+        ::fidl::UnownedClientEnd<::test_errorsyntax::ExampleUseOfErrorSyntax>(
+            _transport->get<::fidl::internal::ChannelTransport>()),
+        &_request);
+  });
+}
+
+::fidl::WireResult<
+    ::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>
+fidl::internal::WireWeakSyncClientImpl<
+    ::test_errorsyntax::ExampleUseOfErrorSyntax>::
+    CallWhichMayFail(::fidl::StringView s) {
+  return _client_base()->MakeSyncCallWith(
+      [&](std::shared_ptr<::fidl::internal::AnyTransport> _transport) {
+        ::fidl::WireRequest<
+            ::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>
+            _request{s};
+        return ::fidl::WireResult<
+            ::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>(
+            ::fidl::UnownedClientEnd<
+                ::test_errorsyntax::ExampleUseOfErrorSyntax>(
+                _transport->get<::fidl::internal::ChannelTransport>()),
+            &_request);
+      });
+}
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__

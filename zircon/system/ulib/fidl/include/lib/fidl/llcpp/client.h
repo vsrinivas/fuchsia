@@ -238,6 +238,16 @@ class WireClient {
         &get(), internal::MakeAnyBufferAllocator(std::forward<MemoryResource>(resource))};
   }
 
+  // Returns a veneer object exposing synchronous calls. Example:
+  //
+  //     fidl::WireClient client(std::move(client_end), some_dispatcher);
+  //     fidl::WireResult result = client.sync()->FooMethod(args);
+  //
+  auto sync() const {
+    ZX_ASSERT(is_valid());
+    return internal::SyncClientVeneer<internal::WireWeakSyncClientImpl<Protocol>>{&get()};
+  }
+
  private:
   // Allow unit tests to peek into the internals of this class.
   friend ::fidl_testing::ClientChecker;
@@ -516,6 +526,16 @@ class WireSharedClient final {
     ZX_ASSERT(is_valid());
     return internal::BufferClientVeneer<internal::WireWeakAsyncBufferClientImpl<Protocol>>{
         &get(), internal::MakeAnyBufferAllocator(std::forward<MemoryResource>(resource))};
+  }
+
+  // Returns a veneer object exposing synchronous calls. Example:
+  //
+  //     fidl::WireClient client(std::move(client_end), some_dispatcher);
+  //     fidl::WireResult result = client.sync()->FooMethod(args);
+  //
+  auto sync() const {
+    ZX_ASSERT(is_valid());
+    return internal::SyncClientVeneer<internal::WireWeakSyncClientImpl<Protocol>>{&get()};
   }
 
  private:

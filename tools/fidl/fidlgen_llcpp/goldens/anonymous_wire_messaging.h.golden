@@ -542,6 +542,27 @@ class ::fidl::internal::WireWeakAsyncBufferClientImpl<
       ::fidl::WireResponseContext<::test_anonymous::SomeProtocol::SomeMethod>*
           _context);
 };
+
+template <>
+class ::fidl::internal::WireWeakOnewayClientImpl<::test_anonymous::SomeProtocol>
+    : public ::fidl::internal::ClientImplBase {
+ public:
+  using ClientImplBase::ClientImplBase;
+};
+
+template <>
+class ::fidl::internal::WireWeakSyncClientImpl<::test_anonymous::SomeProtocol>
+    final : public ::fidl::internal::WireWeakOnewayClientImpl<
+                ::test_anonymous::SomeProtocol> {
+ public:
+  using WireWeakOnewayClientImpl::WireWeakOnewayClientImpl;
+
+  // Allocates 128 bytes of message buffer on the stack. No heap allocation
+  // necessary.
+  ::fidl::WireResult<::test_anonymous::SomeProtocol::SomeMethod> SomeMethod(
+      ::test_anonymous::wire::UnionMember union_member,
+      ::test_anonymous::wire::TableMember table_member);
+};
 namespace fidl {
 #endif  // __Fuchsia__
 

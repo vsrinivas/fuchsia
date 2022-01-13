@@ -122,6 +122,46 @@ AnyIncomingEventDispatcher MakeAnyEventDispatcher(
 
 class ClientBase;
 
+// |ClientImplBase| stores the core state for client messaging
+// implementations that use |ClientBase|, and where the message encoding buffers
+// are managed internally by the implementation.
+class ClientImplBase {
+ public:
+  explicit ClientImplBase(ClientBase* client_base) : client_base_(client_base) {}
+
+ protected:
+  // Used by implementations to access the transport, hence prefixed with an
+  // underscore to avoid the unlikely event of a name collision.
+  ClientBase* _client_base() const { return client_base_; }
+
+ private:
+  ClientBase* client_base_;
+};
+
+// A veneer interface object which delegates calls to |Impl| using the "->"
+// operator.
+template <typename Impl>
+struct SyncClientVeneer {
+ public:
+  explicit SyncClientVeneer(ClientBase* client_base) : impl_(client_base) {}
+
+  // Copying/moving around this object is dangerous as it may lead to dangling
+  // references to the buffer span/arena. Disable these operations for now.
+  SyncClientVeneer(const SyncClientVeneer&) = delete;
+  SyncClientVeneer& operator=(const SyncClientVeneer&) = delete;
+  SyncClientVeneer(SyncClientVeneer&&) = delete;
+  SyncClientVeneer& operator=(SyncClientVeneer&&) = delete;
+
+  // Returns a pointer to the concrete messaging implementation.
+  Impl* operator->() {
+    static_assert(std::is_base_of_v<ClientImplBase, Impl>);
+    return static_cast<Impl*>(&impl_);
+  }
+
+ private:
+  Impl impl_;
+};
+
 // |BufferClientImplBase| stores the core state for client messaging
 // implementations that use |ClientBase|, and where the message encoding buffers
 // are provided by an allocator.

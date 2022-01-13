@@ -82,15 +82,15 @@ int main(int argc, const char** argv) {
   loop.ResetQuit();
 
   // Make a synchronous EchoString call, which blocks until it receives the response,
-  // then returns a ResultOf object for the response.
-  auto result_sync = client->EchoString_Sync("hello");
+  // then returns a WireResult object for the response.
+  fidl::WireResult result_sync = client.sync()->EchoString("hello");
   ZX_ASSERT(result_sync.ok());
   std::string reply_string(result_sync->response.data(), result_sync->response.size());
   std::cout << "Got synchronous response: " << reply_string << std::endl;
 
   // Make a SendString request. The resulting OnString event will be handled by
   // the event handler defined above.
-  auto result_oneway = client->SendString("hi");
+  fidl::Result result_oneway = client->SendString("hi");
   // Check for any synchronous errors.
   ZX_ASSERT(result_oneway.ok());
   loop.Run();

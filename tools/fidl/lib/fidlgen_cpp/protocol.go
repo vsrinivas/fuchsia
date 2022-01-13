@@ -136,8 +136,10 @@ var (
 	WireEventSender                = fidlNs.member("WireEventSender")
 	WireWeakEventSender            = internalNs.member("WireWeakEventSender")
 	WireClientImpl                 = internalNs.member("WireClientImpl")
+	WireWeakOnewayClientImpl       = internalNs.member("WireWeakOnewayClientImpl")
 	WireWeakAsyncBufferClientImpl  = internalNs.member("WireWeakAsyncBufferClientImpl")
 	WireWeakOnewayBufferClientImpl = internalNs.member("WireWeakOnewayBufferClientImpl")
+	WireWeakSyncClientImpl         = internalNs.member("WireWeakSyncClientImpl")
 	WireSyncClientImpl             = internalNs.member("WireSyncClientImpl")
 	WireSyncBufferClientImpl       = internalNs.member("WireSyncBufferClientImpl")
 	WireEventDispatcher            = internalNs.member("WireEventDispatcher")
@@ -171,8 +173,10 @@ type wireTypeNames struct {
 	WireEventSender                name
 	WireWeakEventSender            name
 	WireClientImpl                 name
+	WireWeakOnewayClientImpl       name
 	WireWeakAsyncBufferClientImpl  name
 	WireWeakOnewayBufferClientImpl name
+	WireWeakSyncClientImpl         name
 	WireSyncClientImpl             name
 	WireSyncBufferClientImpl       name
 	WireEventDispatcher            name
@@ -192,8 +196,10 @@ func newWireTypeNames(protocolVariants nameVariants) wireTypeNames {
 		WireEventSender:                WireEventSender.template(p),
 		WireWeakEventSender:            WireWeakEventSender.template(p),
 		WireClientImpl:                 WireClientImpl.template(p),
+		WireWeakOnewayClientImpl:       WireWeakOnewayClientImpl.template(p),
 		WireWeakAsyncBufferClientImpl:  WireWeakAsyncBufferClientImpl.template(p),
 		WireWeakOnewayBufferClientImpl: WireWeakOnewayBufferClientImpl.template(p),
+		WireWeakSyncClientImpl:         WireWeakSyncClientImpl.template(p),
 		WireSyncClientImpl:             WireSyncClientImpl.template(p),
 		WireSyncBufferClientImpl:       WireSyncBufferClientImpl.template(p),
 		WireEventDispatcher:            WireEventDispatcher.template(p),

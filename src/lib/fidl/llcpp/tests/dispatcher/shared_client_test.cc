@@ -286,6 +286,7 @@ TEST_F(WireSharedClientTest, InvalidAccess) {
     fidl::Arena arena;
     client.buffer(arena);
   });
+  ASSERT_DEATH([&] { client.sync(); });
   ASSERT_DEATH([&] { client.AsyncTeardown(); });
 }
 

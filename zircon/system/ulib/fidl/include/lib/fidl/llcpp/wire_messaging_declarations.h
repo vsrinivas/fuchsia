@@ -82,8 +82,6 @@ class WireClientImpl;
 
 // |WireWeakAsyncClientImpl| implements one-way FIDL calls with managed buffers.
 // It borrows the transport through a weak reference when making calls.
-//
-// TODO(fxbug.dev/85688): Generate this class.
 template <typename FidlProtocol>
 class WireWeakOnewayClientImpl;
 
@@ -117,8 +115,6 @@ class WireSyncClientImpl;
 
 // |WireWeakSyncClientImpl| implements synchronous FIDL calls with managed
 // buffers. It borrows the transport through a weak reference when making calls.
-//
-// TODO(fxbug.dev/85688): Generate this class.
 template <typename FidlProtocol>
 class WireWeakSyncClientImpl;
 

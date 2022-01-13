@@ -589,6 +589,60 @@ void fidl::internal::WireWeakAsyncBufferClientImpl<
       _request_message(_allocation->data, _buffer_size, &_request);
   _client_base()->SendTwoWay(_request_message.GetOutgoingMessage(), _context);
 }
+::fidl::Result fidl::internal::
+    WireWeakOnewayClientImpl<::test_protocolrequest::Parent>::TakeChild(
+        ::fidl::ClientEnd<::test_protocolrequest::Child>&& c) {
+  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
+  ::fidl::WireRequest<::test_protocolrequest::Parent::TakeChild>
+      _request_object{std::move(c)};
+  ::fidl::OwnedEncodedMessage<
+      ::fidl::WireRequest<::test_protocolrequest::Parent::TakeChild>,
+      ::fidl::internal::ChannelTransport>
+      _request_message(::fidl::internal::AllowUnownedInputRef{},
+                       &_request_object);
+  return _client_base()->SendOneWay(_request_message.GetOutgoingMessage());
+}
+::fidl::Result fidl::internal::
+    WireWeakOnewayClientImpl<::test_protocolrequest::Parent>::TakeChildRequest(
+        ::fidl::ServerEnd<::test_protocolrequest::Child>&& r) {
+  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
+  ::fidl::WireRequest<::test_protocolrequest::Parent::TakeChildRequest>
+      _request_object{std::move(r)};
+  ::fidl::OwnedEncodedMessage<
+      ::fidl::WireRequest<::test_protocolrequest::Parent::TakeChildRequest>,
+      ::fidl::internal::ChannelTransport>
+      _request_message(::fidl::internal::AllowUnownedInputRef{},
+                       &_request_object);
+  return _client_base()->SendOneWay(_request_message.GetOutgoingMessage());
+}
+
+::fidl::WireResult<::test_protocolrequest::Parent::GetChild> fidl::internal::
+    WireWeakSyncClientImpl<::test_protocolrequest::Parent>::GetChild() {
+  return _client_base()->MakeSyncCallWith(
+      [&](std::shared_ptr<::fidl::internal::AnyTransport> _transport) {
+        ::fidl::WireRequest<::test_protocolrequest::Parent::GetChild>
+            _request{};
+        return ::fidl::WireResult<::test_protocolrequest::Parent::GetChild>(
+            ::fidl::UnownedClientEnd<::test_protocolrequest::Parent>(
+                _transport->get<::fidl::internal::ChannelTransport>()),
+            &_request);
+      });
+}
+
+::fidl::WireResult<::test_protocolrequest::Parent::GetChildRequest>
+fidl::internal::WireWeakSyncClientImpl<
+    ::test_protocolrequest::Parent>::GetChildRequest() {
+  return _client_base()->MakeSyncCallWith(
+      [&](std::shared_ptr<::fidl::internal::AnyTransport> _transport) {
+        ::fidl::WireRequest<::test_protocolrequest::Parent::GetChildRequest>
+            _request{};
+        return ::fidl::WireResult<
+            ::test_protocolrequest::Parent::GetChildRequest>(
+            ::fidl::UnownedClientEnd<::test_protocolrequest::Parent>(
+                _transport->get<::fidl::internal::ChannelTransport>()),
+            &_request);
+      });
+}
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__

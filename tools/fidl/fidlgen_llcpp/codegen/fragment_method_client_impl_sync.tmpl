@@ -12,6 +12,37 @@
 
 
 
+{{- define "Method:WireWeakSyncClientImpl:MessagingHeader" }}
+  {{- .Docs }}
+  {{ if .DocComments }}
+    //
+  {{- end }}
+  // {{- template "Method:ClientAllocationComment:Helper" . }}
+  {{ .WireResult }} {{ .Name }}({{ RenderParams .RequestArgs }});
+{{- end }}
+
+
+
+{{- define "Method:WireWeakSyncClientImpl:MessagingSource" }}
+  {{ EnsureNamespace "" }}
+
+  {{ .WireResult }}
+  {{ .Protocol.WireWeakSyncClientImpl.NoLeading }}::{{ .Name }}({{ RenderParams .RequestArgs }}) {
+    return _client_base()->MakeSyncCallWith(
+        [&] (std::shared_ptr<::fidl::internal::AnyTransport> _transport) {
+          {{ .WireRequest }} _request{ {{ RenderForwardParams .RequestArgs }} };
+          {{- $transport := (printf
+              "::%s::UnownedClientEnd<%s>(_transport->get<%s>())"
+              .Transport.Namespace .Protocol .Transport.Type) }}
+          return {{ .WireResult }}({{- RenderForwardParams (List $transport "&_request") }});
+        });
+  }
+
+{{- end }}
+
+
+
+{{- /* TODO(fxbug.dev/85688): Remove this. */}}
 {{- define "Method:ClientImplSync:MessagingHeader" }}
   {{- /* Sync managed flavor */}}
   {{- .Docs }}
@@ -38,6 +69,7 @@
 
 
 
+{{- /* TODO(fxbug.dev/85688): Remove this. */}}
 {{- define "Method:ClientImplSyncCallerAllocate:MessagingSource" }}
   {{ EnsureNamespace "" }}
 
@@ -60,6 +92,7 @@
 
 
 
+{{- /* TODO(fxbug.dev/85688): Remove this. */}}
 {{- define "Method:ClientImplSyncManaged:MessagingSource" }}
   {{ EnsureNamespace "" }}
 
@@ -79,7 +112,7 @@
 
 
 
-
+{{- /* TODO(fxbug.dev/85688): Remove this. */}}
 {{- define "Method:ClientImplSync:MessagingSource" }}
   {{- template "Method:ClientImplSyncManaged:MessagingSource" . }}
   {{- if or .RequestArgs .ResponseArgs }}
