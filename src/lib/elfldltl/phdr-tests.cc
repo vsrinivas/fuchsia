@@ -27,6 +27,7 @@ constexpr elfldltl::DiagnosticsFlags kFlags = {
 };
 
 constexpr size_t kAlign = 0x1000;  // Example alignment.
+constexpr size_t kPageSize = 0x1000;
 
 constexpr std::string_view kNullWarning = "PT_NULL header encountered";
 
@@ -808,6 +809,654 @@ constexpr auto MetadataObserverIncompatibleEntryAlignmentTest = [](auto&& elf) {
 
 TEST(ElfldltlPhdrTests, MetadataObserverIncompatibleAlignmentSize) {
   TestAllFormats(MetadataObserverIncompatibleEntryAlignmentTest);
+}
+
+constexpr auto LoadObserverNoPhdrTest = [](auto&& elf) {
+  using Elf = std::decay_t<decltype(elf)>;
+  using Phdr = typename Elf::Phdr;
+  using size_type = typename Elf::size_type;
+  using LoadObserver = elfldltl::PhdrLoadObserver<Elf, elfldltl::PhdrLoadPolicy::kBasic>;
+
+  std::vector<std::string> errors;
+  auto diag = elfldltl::CollectStringsDiagnostics(errors, kFlags);
+
+  size_type vaddr_start = 0;
+  size_type vaddr_size = 0;
+  EXPECT_TRUE(elfldltl::DecodePhdrs(diag, cpp20::span<const Phdr>{},
+                                    LoadObserver(kPageSize, vaddr_start, vaddr_size)));
+
+  EXPECT_EQ(0, vaddr_start);
+  EXPECT_EQ(0, vaddr_size);
+  EXPECT_EQ(0, diag.errors());
+  EXPECT_EQ(0, diag.warnings());
+};
+
+TEST(ElfldltlPhdrTests, LoadObserverNoPhdr) { TestAllFormats(LoadObserverNoPhdrTest); }
+
+constexpr auto BasicLoadObserverSmallAlignTest = [](auto&& elf) {
+  using Elf = std::decay_t<decltype(elf)>;
+  using Phdr = typename Elf::Phdr;
+  using size_type = typename Elf::size_type;
+  using LoadObserver = elfldltl::PhdrLoadObserver<Elf, elfldltl::PhdrLoadPolicy::kBasic>;
+
+  constexpr Phdr kPhdrs[] = {
+      {.type = ElfPhdrType::kLoad, .memsz = kPageSize, .align = kPageSize / 2},
+  };
+
+  std::vector<std::string> errors;
+  auto diag = elfldltl::CollectStringsDiagnostics(errors, kFlags);
+
+  size_type vaddr_start = 0;
+  size_type vaddr_size = 0;
+  EXPECT_TRUE(elfldltl::DecodePhdrs(diag, cpp20::span(kPhdrs),
+                                    LoadObserver(kPageSize, vaddr_start, vaddr_size)));
+
+  EXPECT_EQ(1, diag.errors());
+  EXPECT_EQ(0, diag.warnings());
+  ASSERT_EQ(1, errors.size());
+  EXPECT_STREQ("PT_LOAD's `p_align` is not page-aligned", errors.front());
+};
+
+TEST(ElfldltlPhdrTests, BasicLoadObserverSmallAlign) {
+  TestAllFormats(BasicLoadObserverSmallAlignTest);
+}
+
+constexpr auto BasicLoadObserverZeroMemszTest = [](auto&& elf) {
+  using Elf = std::decay_t<decltype(elf)>;
+  using Phdr = typename Elf::Phdr;
+  using size_type = typename Elf::size_type;
+  using LoadObserver = elfldltl::PhdrLoadObserver<Elf, elfldltl::PhdrLoadPolicy::kBasic>;
+
+  constexpr Phdr kPhdrs[] = {
+      {.type = ElfPhdrType::kLoad, .memsz = 0},
+  };
+
+  std::vector<std::string> warnings;
+  auto diag = elfldltl::CollectStringsDiagnostics(warnings, kFlags);
+
+  size_type vaddr_start = 0;
+  size_type vaddr_size = 0;
+  EXPECT_TRUE(elfldltl::DecodePhdrs(diag, cpp20::span(kPhdrs),
+                                    LoadObserver(kPageSize, vaddr_start, vaddr_size)));
+
+  EXPECT_EQ(0, diag.errors());
+  EXPECT_EQ(1, diag.warnings());
+  ASSERT_EQ(1, warnings.size());
+  EXPECT_STREQ("PT_LOAD has `p_memsz == 0`", warnings.front());
+};
+
+TEST(ElfldltlPhdrTests, BasicLoadObserverZeroMemsz) {
+  TestAllFormats(BasicLoadObserverZeroMemszTest);
+}
+
+constexpr auto BasicLoadObserverMemszTooSmallTest = [](auto&& elf) {
+  using Elf = std::decay_t<decltype(elf)>;
+  using Phdr = typename Elf::Phdr;
+  using size_type = typename Elf::size_type;
+  using LoadObserver = elfldltl::PhdrLoadObserver<Elf, elfldltl::PhdrLoadPolicy::kBasic>;
+
+  constexpr Phdr kPhdrs[] = {
+      {.type = ElfPhdrType::kLoad, .filesz = 0x100, .memsz = 0x100 - 1},
+  };
+
+  std::vector<std::string> errors;
+  auto diag = elfldltl::CollectStringsDiagnostics(errors, kFlags);
+
+  size_type vaddr_start = 0;
+  size_type vaddr_size = 0;
+  EXPECT_TRUE(elfldltl::DecodePhdrs(diag, cpp20::span(kPhdrs),
+                                    LoadObserver(kPageSize, vaddr_start, vaddr_size)));
+
+  EXPECT_EQ(1, diag.errors());
+  EXPECT_EQ(0, diag.warnings());
+  ASSERT_EQ(1, errors.size());
+  EXPECT_STREQ("PT_LOAD has `p_memsz < p_filez`", errors.front());
+};
+
+TEST(ElfldltlPhdrTests, BasicLoadObserverMemszTooSmall) {
+  TestAllFormats(BasicLoadObserverMemszTooSmallTest);
+}
+
+constexpr auto BasicLoadObserverMemEndOverflowTest = [](auto&& elf) {
+  using Elf = std::decay_t<decltype(elf)>;
+  using Phdr = typename Elf::Phdr;
+  using size_type = typename Elf::size_type;
+  using LoadObserver = elfldltl::PhdrLoadObserver<Elf, elfldltl::PhdrLoadPolicy::kBasic>;
+
+  constexpr auto kMax = std::numeric_limits<size_type>::max();
+
+  constexpr Phdr kPhdrs[] = {
+      {.type = ElfPhdrType::kLoad, .vaddr = kAlign, .memsz = kMax},
+  };
+
+  std::vector<std::string> errors;
+  auto diag = elfldltl::CollectStringsDiagnostics(errors, kFlags);
+
+  size_type vaddr_start = 0;
+  size_type vaddr_size = 0;
+  EXPECT_TRUE(elfldltl::DecodePhdrs(diag, cpp20::span(kPhdrs),
+                                    LoadObserver(kPageSize, vaddr_start, vaddr_size)));
+
+  EXPECT_EQ(1, diag.errors());
+  EXPECT_EQ(0, diag.warnings());
+  ASSERT_EQ(1, errors.size());
+  EXPECT_STREQ("PT_LOAD has overflowing `p_vaddr + p_memsz`", errors.front());
+};
+
+TEST(ElfldltlPhdrTests, BasicLoadObserverMemEndOverflow) {
+  TestAllFormats(BasicLoadObserverMemEndOverflowTest);
+}
+
+constexpr auto BasicLoadObserverAlignedMemEndOverflowTest = [](auto&& elf) {
+  using Elf = std::decay_t<decltype(elf)>;
+  using Phdr = typename Elf::Phdr;
+  using size_type = typename Elf::size_type;
+  using LoadObserver = elfldltl::PhdrLoadObserver<Elf, elfldltl::PhdrLoadPolicy::kBasic>;
+
+  constexpr auto kMax = std::numeric_limits<size_type>::max();
+
+  constexpr Phdr kPhdrs[] = {
+      {.type = ElfPhdrType::kLoad, .vaddr = 0, .memsz = kMax - kAlign + 2, .align = kAlign},
+  };
+
+  std::vector<std::string> errors;
+  auto diag = elfldltl::CollectStringsDiagnostics(errors, kFlags);
+
+  size_type vaddr_start = 0;
+  size_type vaddr_size = 0;
+  EXPECT_TRUE(elfldltl::DecodePhdrs(diag, cpp20::span(kPhdrs),
+                                    LoadObserver(kPageSize, vaddr_start, vaddr_size)));
+
+  EXPECT_EQ(1, diag.errors());
+  EXPECT_EQ(0, diag.warnings());
+  ASSERT_EQ(1, errors.size());
+  EXPECT_STREQ("PT_LOAD has overflowing `p_align`-aligned `p_vaddr + p_memsz`", errors.front());
+};
+
+TEST(ElfldltlPhdrTests, BasicLoadObserverAlignedMemEndOverflows) {
+  TestAllFormats(BasicLoadObserverAlignedMemEndOverflowTest);
+}
+
+constexpr auto BasicLoadObserverFileEndOverflowTest = [](auto&& elf) {
+  using Elf = std::decay_t<decltype(elf)>;
+  using Phdr = typename Elf::Phdr;
+  using size_type = typename Elf::size_type;
+  using LoadObserver = elfldltl::PhdrLoadObserver<Elf, elfldltl::PhdrLoadPolicy::kBasic>;
+
+  constexpr auto kMax = std::numeric_limits<size_type>::max();
+
+  constexpr Phdr kPhdrs[] = {
+      {
+          .type = ElfPhdrType::kLoad,
+          .offset = 2 * kAlign,
+          .filesz = kMax - kAlign,
+          .memsz = kMax - kAlign,
+          .align = kAlign,
+      },
+  };
+
+  std::vector<std::string> errors;
+  auto diag = elfldltl::CollectStringsDiagnostics(errors, kFlags);
+
+  size_type vaddr_start = 0;
+  size_type vaddr_size = 0;
+  EXPECT_TRUE(elfldltl::DecodePhdrs(diag, cpp20::span(kPhdrs),
+                                    LoadObserver(kPageSize, vaddr_start, vaddr_size)));
+
+  EXPECT_EQ(1, diag.errors());
+  EXPECT_EQ(0, diag.warnings());
+  ASSERT_EQ(1, errors.size());
+  EXPECT_STREQ("PT_LOAD has overflowing `p_offset + p_filesz`", errors.front());
+};
+
+TEST(ElfldltlPhdrTests, BasicLoadObserverFileEndOverflow) {
+  TestAllFormats(BasicLoadObserverFileEndOverflowTest);
+}
+
+constexpr auto BasicLoadObserverAlignedFileEndOverflowTest = [](auto&& elf) {
+  using Elf = std::decay_t<decltype(elf)>;
+  using Phdr = typename Elf::Phdr;
+  using size_type = typename Elf::size_type;
+  using LoadObserver = elfldltl::PhdrLoadObserver<Elf, elfldltl::PhdrLoadPolicy::kBasic>;
+
+  constexpr auto kMax = std::numeric_limits<size_type>::max();
+
+  constexpr Phdr kPhdrs[] = {
+      {
+          .type = ElfPhdrType::kLoad,
+          .offset = 2 * kAlign,
+          .filesz = kMax - 3 * kAlign + 2,
+          .memsz = kMax - 3 * kAlign + 2,
+          .align = kAlign,
+      },
+  };
+
+  std::vector<std::string> errors;
+  auto diag = elfldltl::CollectStringsDiagnostics(errors, kFlags);
+
+  size_type vaddr_start = 0;
+  size_type vaddr_size = 0;
+  EXPECT_TRUE(elfldltl::DecodePhdrs(diag, cpp20::span(kPhdrs),
+                                    LoadObserver(kPageSize, vaddr_start, vaddr_size)));
+
+  EXPECT_EQ(1, diag.errors());
+  EXPECT_EQ(0, diag.warnings());
+  ASSERT_EQ(1, errors.size());
+  EXPECT_STREQ("PT_LOAD has overflowing `p_align`-aligned `p_offset + p_filesz`", errors.front());
+};
+
+TEST(ElfldltlPhdrTests, BasicLoadObserverAlignedFileEndOverflows) {
+  TestAllFormats(BasicLoadObserverAlignedFileEndOverflowTest);
+}
+
+constexpr auto BasicLoadObserverUnorderedTest = [](auto&& elf) {
+  using Elf = std::decay_t<decltype(elf)>;
+  using Phdr = typename Elf::Phdr;
+  using size_type = typename Elf::size_type;
+  using LoadObserver = elfldltl::PhdrLoadObserver<Elf, elfldltl::PhdrLoadPolicy::kBasic>;
+
+  constexpr Phdr kPhdrs[] = {
+      {.type = ElfPhdrType::kLoad, .vaddr = kAlign, .memsz = kAlign, .align = kAlign},
+      {.type = ElfPhdrType::kLoad, .vaddr = 3 * kAlign, .memsz = kAlign, .align = kAlign},
+      {.type = ElfPhdrType::kLoad, .vaddr = 2 * kAlign, .memsz = kAlign, .align = kAlign},
+  };
+
+  std::vector<std::string> errors;
+  auto diag = elfldltl::CollectStringsDiagnostics(errors, kFlags);
+
+  size_type vaddr_start = 0;
+  size_type vaddr_size = 0;
+  EXPECT_TRUE(elfldltl::DecodePhdrs(diag, cpp20::span(kPhdrs),
+                                    LoadObserver(kPageSize, vaddr_start, vaddr_size)));
+
+  EXPECT_EQ(1, diag.errors());
+  EXPECT_EQ(0, diag.warnings());
+  ASSERT_EQ(1, errors.size());
+  EXPECT_STREQ(
+      "PT_LOAD has `p_align`-aligned memory ranges that overlap or do not increase "
+      "monotonically",
+      errors.front());
+};
+
+TEST(ElfldltlPhdrTests, BasicLoadObserverUnordered) {
+  TestAllFormats(BasicLoadObserverUnorderedTest);
+}
+
+constexpr auto BasicLoadObserverOverlappingMemoryRangeTest = [](auto&& elf) {
+  using Elf = std::decay_t<decltype(elf)>;
+  using Phdr = typename Elf::Phdr;
+  using size_type = typename Elf::size_type;
+  using LoadObserver = elfldltl::PhdrLoadObserver<Elf, elfldltl::PhdrLoadPolicy::kBasic>;
+
+  constexpr Phdr kPhdrs[] = {
+      {.type = ElfPhdrType::kLoad, .vaddr = kAlign, .memsz = 2 * kAlign},
+      {.type = ElfPhdrType::kLoad, .vaddr = 2 * kAlign, .memsz = 2 * kAlign},
+  };
+
+  std::vector<std::string> errors;
+  auto diag = elfldltl::CollectStringsDiagnostics(errors, kFlags);
+
+  size_type vaddr_start = 0;
+  size_type vaddr_size = 0;
+  EXPECT_TRUE(elfldltl::DecodePhdrs(diag, cpp20::span(kPhdrs),
+                                    LoadObserver(kPageSize, vaddr_start, vaddr_size)));
+
+  EXPECT_EQ(1, diag.errors());
+  EXPECT_EQ(0, diag.warnings());
+  ASSERT_EQ(1, errors.size());
+  EXPECT_STREQ(
+      "PT_LOAD has `p_align`-aligned memory ranges that overlap or do not increase "
+      "monotonically",
+      errors.front());
+};
+
+TEST(ElfldltlPhdrTests, BasicLoadObserverOverlappingMemoryRange) {
+  TestAllFormats(BasicLoadObserverOverlappingMemoryRangeTest);
+}
+
+constexpr auto BasicLoadObserverCompliantTest = [](auto&& elf) {
+  using Elf = std::decay_t<decltype(elf)>;
+  using Phdr = typename Elf::Phdr;
+  using size_type = typename Elf::size_type;
+  using LoadObserver = elfldltl::PhdrLoadObserver<Elf, elfldltl::PhdrLoadPolicy::kBasic>;
+
+  constexpr Phdr kPhdrs[] = {
+      // [kAlign + 10, 2*kAlign + 10)
+      {
+          .type = ElfPhdrType::kLoad,
+          .offset = 10,
+          .vaddr = kAlign + 10,
+          .memsz = kAlign,
+          .align = kAlign,
+      },
+      // [3*kAlign, (7/2)*kAlign)
+      {
+          .type = ElfPhdrType::kLoad,
+          .offset = kAlign,
+          .vaddr = 3 * kAlign,
+          .memsz = kAlign / 2,
+          .align = kAlign,
+      },
+      // [(37/2)*kAlign, 100*kAlign - 10)
+      {
+          .type = ElfPhdrType::kLoad,
+          .offset = kAlign / 2,
+          .vaddr = 37 * (kAlign / 2),
+          .memsz = 100 * kAlign - 10 - 37 * (kAlign / 2),
+          .align = kAlign,
+      },
+  };
+
+  std::vector<std::string> errors;
+  auto diag = elfldltl::CollectStringsDiagnostics(errors, kFlags);
+
+  size_type vaddr_start = 0;
+  size_type vaddr_size = 0;
+  EXPECT_TRUE(elfldltl::DecodePhdrs(diag, cpp20::span(kPhdrs),
+                                    LoadObserver(kAlign / 2, vaddr_start, vaddr_size)));
+
+  EXPECT_EQ(0, diag.errors());
+  EXPECT_EQ(0, diag.warnings());
+
+  EXPECT_EQ(kAlign, vaddr_start);
+  EXPECT_EQ(99 * kAlign, vaddr_size);
+};
+
+TEST(ElfldltlPhdrTests, BasicLoadObserverCompliant) {
+  TestAllFormats(BasicLoadObserverCompliantTest);
+}
+
+constexpr auto FileRangeMonotonicLoadObserverUnorderedTest = [](auto&& elf) {
+  using Elf = std::decay_t<decltype(elf)>;
+  using Phdr = typename Elf::Phdr;
+  using size_type = typename Elf::size_type;
+  using LoadObserver =
+      elfldltl::PhdrLoadObserver<Elf, elfldltl::PhdrLoadPolicy::kFileRangeMonotonic>;
+
+  constexpr Phdr kPhdrs[] = {
+      {
+          .type = ElfPhdrType::kLoad,
+          .offset = kPageSize,
+          .vaddr = 0,
+          .filesz = kPageSize,
+          .memsz = kPageSize,
+      },
+      {
+          .type = ElfPhdrType::kLoad,
+          .offset = 3 * kPageSize,
+          .vaddr = kPageSize,
+          .filesz = kPageSize,
+          .memsz = kPageSize,
+      },
+      {
+          .type = ElfPhdrType::kLoad,
+          .offset = 2 * kPageSize,
+          .vaddr = 2 * kPageSize,
+          .filesz = kPageSize,
+          .memsz = kPageSize,
+      },
+  };
+
+  std::vector<std::string> errors;
+  auto diag = elfldltl::CollectStringsDiagnostics(errors, kFlags);
+
+  size_type vaddr_start = 0;
+  size_type vaddr_size = 0;
+  EXPECT_TRUE(elfldltl::DecodePhdrs(diag, cpp20::span(kPhdrs),
+                                    LoadObserver(kPageSize, vaddr_start, vaddr_size)));
+
+  EXPECT_EQ(1, diag.errors());
+  EXPECT_EQ(0, diag.warnings());
+  ASSERT_EQ(1, errors.size());
+  EXPECT_STREQ(
+      "PT_LOAD has `p_align`-aligned file offset ranges that overlap or do not "
+      "increase monotonically",
+      errors.front());
+};
+
+TEST(ElfldltlPhdrTests, FileRangeMonotonicLoadObserverUnordered) {
+  TestAllFormats(FileRangeMonotonicLoadObserverUnorderedTest);
+}
+
+constexpr auto FileRangeMonotonicLoadObserverOverlappingAlignedFileRangeTest = [](auto&& elf) {
+  using Elf = std::decay_t<decltype(elf)>;
+  using Phdr = typename Elf::Phdr;
+  using size_type = typename Elf::size_type;
+  using LoadObserver =
+      elfldltl::PhdrLoadObserver<Elf, elfldltl::PhdrLoadPolicy::kFileRangeMonotonic>;
+
+  constexpr Phdr kPhdrs[] = {
+      {
+          .type = ElfPhdrType::kLoad,
+          .offset = 0,
+          .vaddr = 0,
+          .filesz = 3 * (kAlign / 2),
+          .memsz = 3 * (kAlign / 2),
+          .align = kAlign,
+      },
+      {
+          .type = ElfPhdrType::kLoad,
+          .offset = 3 * (kAlign / 2),
+          .vaddr = 5 * (kAlign / 2),
+          .filesz = kAlign,
+          .memsz = kAlign,
+          .align = kAlign,
+      },
+  };
+
+  std::vector<std::string> errors;
+  auto diag = elfldltl::CollectStringsDiagnostics(errors, kFlags);
+
+  size_type vaddr_start = 0;
+  size_type vaddr_size = 0;
+  EXPECT_TRUE(elfldltl::DecodePhdrs(diag, cpp20::span(kPhdrs),
+                                    LoadObserver(kAlign, vaddr_start, vaddr_size)));
+
+  EXPECT_EQ(1, diag.errors());
+  EXPECT_EQ(0, diag.warnings());
+  ASSERT_EQ(1, errors.size());
+  EXPECT_STREQ(
+      "PT_LOAD has `p_align`-aligned file offset ranges that overlap or do not "
+      "increase monotonically",
+      errors.front());
+};
+
+TEST(ElfldltlPhdrTests, FileRangeMonotonicLoadObserverOverlappingAlignedFileRange) {
+  TestAllFormats(FileRangeMonotonicLoadObserverOverlappingAlignedFileRangeTest);
+}
+
+constexpr auto FileRangeMonotonicLoadObserverCompliantTest = [](auto&& elf) {
+  using Elf = std::decay_t<decltype(elf)>;
+  using Phdr = typename Elf::Phdr;
+  using size_type = typename Elf::size_type;
+  using LoadObserver =
+      elfldltl::PhdrLoadObserver<Elf, elfldltl::PhdrLoadPolicy::kFileRangeMonotonic>;
+
+  constexpr Phdr kPhdrs[] = {
+      // memory: [kAlign + 10, (3/2)*kAlign + 10)
+      // file: [kAlign + 10, (3/2)*kAlign + 10)
+      {
+          .type = ElfPhdrType::kLoad,
+          .offset = kAlign + 10,
+          .vaddr = kAlign + 10,
+          .filesz = kAlign / 2,
+          .memsz = kAlign / 2,
+          .align = kAlign,
+      },
+      // memory: [3*kAlign, (7/2)*kAlign)
+      // file: [2*kAlign, 3*kAlign)
+      {
+          .type = ElfPhdrType::kLoad,
+          .offset = 2 * kAlign,
+          .vaddr = 3 * kAlign,
+          .filesz = kAlign / 2,
+          .memsz = kAlign / 2,
+          .align = kAlign,
+      },
+      // memory: [(37/2)*kAlign - 100, 100*kAlign - 10)
+      // file: [(21/2)*kAlign - 100, 11*kAlign - 10)
+      {
+          .type = ElfPhdrType::kLoad,
+          .offset = 21 * (kAlign / 2) - 100,
+          .vaddr = 37 * (kAlign / 2) - 100,
+          .filesz = 11 * kAlign - 10 - 21 * (kAlign / 2) + 100,
+          .memsz = 100 * kAlign - 10 - 37 * (kAlign / 2) + 100,
+          .align = kAlign,
+      },
+  };
+
+  std::vector<std::string> errors;
+  auto diag = elfldltl::CollectStringsDiagnostics(errors, kFlags);
+
+  size_type vaddr_start = 0;
+  size_type vaddr_size = 0;
+  EXPECT_TRUE(elfldltl::DecodePhdrs(diag, cpp20::span(kPhdrs),
+                                    LoadObserver(kAlign, vaddr_start, vaddr_size)));
+
+  // EXPECT_STREQ("", errors.front());
+  EXPECT_EQ(0, diag.errors());
+  EXPECT_EQ(0, diag.warnings());
+  EXPECT_EQ(kAlign, vaddr_start);
+  EXPECT_EQ(99 * kAlign, vaddr_size);
+};
+
+TEST(ElfldltlPhdrTests, FileRangeMonotonicLoadObserverCompliant) {
+  TestAllFormats(FileRangeMonotonicLoadObserverCompliantTest);
+}
+
+constexpr auto ContiguousLoadObserverHighFirstOffsetTest = [](auto&& elf) {
+  using Elf = std::decay_t<decltype(elf)>;
+  using Phdr = typename Elf::Phdr;
+  using size_type = typename Elf::size_type;
+  using LoadObserver = elfldltl::PhdrLoadObserver<Elf, elfldltl::PhdrLoadPolicy::kContiguous>;
+
+  constexpr Phdr kPhdrs[] = {
+      {
+          .type = ElfPhdrType::kLoad,
+          .offset = 0,
+          .vaddr = kAlign,
+          .filesz = kAlign,
+          .memsz = kAlign,
+          .align = kAlign,
+      },
+      {
+          .type = ElfPhdrType::kLoad,
+          .offset = 3 * kAlign,
+          .vaddr = 2 * kAlign,
+          .filesz = kAlign,
+          .memsz = kAlign,
+          .align = kAlign,
+      },
+  };
+
+  std::vector<std::string> errors;
+  auto diag = elfldltl::CollectStringsDiagnostics(errors, kFlags);
+
+  size_type vaddr_start = 0;
+  size_type vaddr_size = 0;
+  EXPECT_TRUE(elfldltl::DecodePhdrs(diag, cpp20::span(kPhdrs),
+                                    LoadObserver(kAlign, vaddr_start, vaddr_size)));
+
+  EXPECT_EQ(1, diag.errors());
+  EXPECT_EQ(0, diag.warnings());
+  ASSERT_EQ(1, errors.size());
+  EXPECT_STREQ("PT_LOAD has `p_align`-aligned file offset ranges that are not contiguous",
+               errors.front());
+};
+
+TEST(ElfldltlPhdrTests, ContiguousLoadObserverHighFirstOffset) {
+  TestAllFormats(ContiguousLoadObserverHighFirstOffsetTest);
+}
+
+constexpr auto ContiguousLoadObserverNonContiguousFileRangesTest = [](auto&& elf) {
+  using Elf = std::decay_t<decltype(elf)>;
+  using Phdr = typename Elf::Phdr;
+  using size_type = typename Elf::size_type;
+  using LoadObserver = elfldltl::PhdrLoadObserver<Elf, elfldltl::PhdrLoadPolicy::kContiguous>;
+
+  constexpr Phdr kPhdrs[] = {
+      {
+          .type = ElfPhdrType::kLoad,
+          .offset = kPageSize,
+          .vaddr = kPageSize,
+          .filesz = kPageSize,
+          .memsz = kPageSize,
+      },
+  };
+
+  std::vector<std::string> errors;
+  auto diag = elfldltl::CollectStringsDiagnostics(errors, kFlags);
+
+  size_type vaddr_start = 0;
+  size_type vaddr_size = 0;
+  EXPECT_TRUE(elfldltl::DecodePhdrs(diag, cpp20::span(kPhdrs),
+                                    LoadObserver(kPageSize, vaddr_start, vaddr_size)));
+
+  EXPECT_EQ(1, diag.errors());
+  EXPECT_EQ(0, diag.warnings());
+  ASSERT_EQ(1, errors.size());
+  EXPECT_STREQ("first PT_LOAD's `p_offset` does not lie within the first page", errors.front());
+};
+
+TEST(ElfldltlPhdrTests, ContiguousLoadObserverNonContiguousFileRanges) {
+  TestAllFormats(ContiguousLoadObserverNonContiguousFileRangesTest);
+}
+
+constexpr auto ContiguousLoadObserverCompliantTest = [](auto&& elf) {
+  using Elf = std::decay_t<decltype(elf)>;
+  using Phdr = typename Elf::Phdr;
+  using size_type = typename Elf::size_type;
+  using LoadObserver = elfldltl::PhdrLoadObserver<Elf, elfldltl::PhdrLoadPolicy::kContiguous>;
+
+  constexpr Phdr kPhdrs[] = {
+      // memory: [kAlign + 10, 2*kAlign + 10)
+      // file: [10, kAlign)
+      {
+          .type = ElfPhdrType::kLoad,
+          .offset = 10,
+          .vaddr = kAlign + 10,
+          .filesz = kAlign - 10,
+          .memsz = kAlign,
+          .align = kAlign,
+      },
+      // memory: [3*kAlign + 10, (9/2)*kAlign + 100)
+      // file: [kAlign + 10, 2*kAlign - 1)
+      {
+          .type = ElfPhdrType::kLoad,
+          .offset = kAlign + 10,
+          .vaddr = 3 * kAlign + 10,
+          .filesz = kAlign - 11,
+          .memsz = 3 * (kAlign / 2) + 90,
+          .align = kAlign,
+      },
+      // memory: [5*kAlign + 100, 6*kAlign + 100)
+      // file: [2*kAlign + 100, 3*kAlign)
+      {
+          .type = ElfPhdrType::kLoad,
+          .offset = 2 * kAlign + 100,
+          .vaddr = 5 * kAlign + 100,
+          .filesz = kAlign - 100,
+          .memsz = kAlign,
+          .align = kAlign,
+      },
+  };
+
+  std::vector<std::string> errors;
+  auto diag = elfldltl::CollectStringsDiagnostics(errors, kFlags);
+
+  size_type vaddr_start = 0;
+  size_type vaddr_size = 0;
+  EXPECT_TRUE(elfldltl::DecodePhdrs(diag, cpp20::span(kPhdrs),
+                                    LoadObserver(kAlign, vaddr_start, vaddr_size)));
+
+  EXPECT_EQ(0, diag.errors());
+  EXPECT_EQ(0, diag.warnings());
+  EXPECT_EQ(kAlign, vaddr_start);
+  EXPECT_EQ(6 * kAlign, vaddr_size);
+};
+
+TEST(ElfldltlPhdrTests, ContiguousLoadObserverCompliant) {
+  TestAllFormats(ContiguousLoadObserverCompliantTest);
 }
 
 }  // namespace

@@ -8,6 +8,7 @@
 #include <lib/stdcompat/bit.h>
 #include <lib/stdcompat/span.h>
 
+#include <limits>
 #include <optional>
 #include <string_view>
 #include <type_traits>
@@ -189,6 +190,8 @@ class PhdrStackObserver : public PhdrSingletonObserver<Elf, ElfPhdrType::kStack>
 
   template <class Diag>
   constexpr bool Finish(Diag& diag) {
+    using namespace std::literals::string_view_literals;
+
     if (!phdr_) {
       if constexpr (CanBeExecutable) {
         executable_ = true;
@@ -287,6 +290,190 @@ using PhdrInterpObserver = PhdrMetadataObserver<Elf, ElfPhdrType::kInterp>;
 
 template <class Elf>
 using PhdrEhFrameHdrObserver = PhdrMetadataObserver<Elf, ElfPhdrType::kEhFrameHdr>;
+
+// PT_LOAD validation policy. Subsequent values extend previous ones.
+enum class PhdrLoadPolicy {
+  // Universal checks for all phdrs are made here (beyond universal checks
+  // already made in `DecodePhdr()`):
+  // * `p_align` is runtime page-aligned.
+  // * `p_memsz >= p_filesz`;
+  // * `p_align`-aligned memory ranges (`[p_vaddr, p_vaddr + p_memsz)`) do
+  //   not overlap and increase monotonically.
+  //
+  // Underspecified, pathological cases like where `p_vaddr + p_memsz` or
+  // `p_offset + p_filesz` overflow are checked as well.
+  kBasic,
+
+  // kFileRangeMonotonic further asserts that
+  // * `p_align`-aligned file offset ranges (`[p_offset, p_offset + p_filesz)`)
+  //   do not overlap and increase monotonically.
+  //
+  // This condition is meaningful for an ELF loader because if a writable
+  // segment overlaps with any other segment, then one needs to map the former
+  // to a COW copy of that part of the file rather than reusing the file data
+  // directly (assuming one cares to not mutate the latter segment).
+  kFileRangeMonotonic,
+
+  // kContiguous further asserts that there is maximal 'contiguity' in the file
+  // and memory layouts:
+  // * `p_align`-aligned memory ranges are contiguous
+  // * `p_align`-aligned file offset ranges are contiguous
+  // * The first `p_offset` lies in the first page.
+  // The first two conditions ensure that the unused space between ranges is
+  // minimal, and permit the ELF file to be loaded as whole. Moreover, when
+  // loading as a whole, the last condition ensures minimality in the unused
+  // space in between the ELF header and the first `p_offset`.
+  kContiguous,
+};
+
+// A PT_LOAD observer for a given metadata policy.
+template <class Elf, PhdrLoadPolicy Policy = PhdrLoadPolicy::kBasic>
+class PhdrLoadObserver : public PhdrObserver<PhdrLoadObserver<Elf, Policy>, ElfPhdrType::kLoad> {
+ private:
+  using Base = PhdrSingletonObserver<Elf, ElfPhdrType::kStack>;
+  using Phdr = typename Elf::Phdr;
+  using size_type = typename Elf::size_type;
+
+ public:
+  // `vaddr_start` and `vaddr_size` are updated to track the size of the
+  // page-aligned memory image throughout observation.
+  PhdrLoadObserver(size_type page_size, size_type& vaddr_start, size_type& vaddr_size)
+      : vaddr_start_(vaddr_start), vaddr_size_(vaddr_size), page_size_(page_size) {
+    ZX_ASSERT(cpp20::has_single_bit(page_size));
+    vaddr_start_ = 0;
+    vaddr_size_ = 0;
+    ZX_DEBUG_ASSERT(NoHeadersSeen());
+  }
+
+  template <class Diag>
+  constexpr bool Observe(Diag& diag, PhdrTypeMatch<ElfPhdrType::kLoad> type, const Phdr& phdr) {
+    using namespace std::literals::string_view_literals;
+
+    // If `p_align` is not page-aligned, then this file cannot be loaded through
+    // normal memory mapping.
+    if (0 < phdr.align() && phdr.align() < page_size_ &&
+        !diag.FormatError("PT_LOAD's `p_align` is not page-aligned"sv)) {
+      return false;
+    }
+
+    if (phdr.memsz() == 0 && !diag.FormatWarning("PT_LOAD has `p_memsz == 0`"sv)) {
+      return false;
+    }
+
+    if (phdr.memsz() < phdr.filesz() && !diag.FormatError("PT_LOAD has `p_memsz < p_filez`"sv)) {
+      return false;
+    }
+
+    // A `p_align` of 0 signifies no alignment constraints. So that we can
+    // uniformally perform the usual alignment arithmetic below, we convert
+    // such a value to 1, which has the same intended effect.
+    auto align = std::max<size_type>(phdr.align(), 1);
+
+    // Technically, having `p_vaddr + p_memsz` or `p_offset + p_filesz` be
+    // exactly 2^64 is kosher per the ELF spec; however, such an ELF is not
+    // usable, so we conventionally error out here along with at the usual
+    // overflow scenarios.
+    constexpr auto kMax = std::numeric_limits<size_type>::max();
+    if (phdr.memsz() > kMax - phdr.vaddr()) [[unlikely]] {
+      return diag.FormatError("PT_LOAD has overflowing `p_vaddr + p_memsz`"sv);
+    }
+    if (phdr.vaddr() + phdr.memsz() > kMax - align + 1) [[unlikely]] {
+      return diag.FormatError("PT_LOAD has overflowing `p_align`-aligned `p_vaddr + p_memsz`"sv);
+    }
+    if (phdr.filesz() > kMax - phdr.offset()) [[unlikely]] {
+      return diag.FormatError("PT_LOAD has overflowing `p_offset + p_filesz`"sv);
+    }
+    if (phdr.offset() + phdr.filesz() > kMax - align + 1) [[unlikely]] {
+      return diag.FormatError("PT_LOAD has overflowing `p_align`-aligned `p_offset + p_filesz`"sv);
+    }
+
+    if (NoHeadersSeen()) {
+      if constexpr (Policy == PhdrLoadPolicy::kContiguous) {
+        if (phdr.offset() >= page_size_ &&
+            !diag.FormatError("first PT_LOAD's `p_offset` does not lie within the first page"sv))
+            [[unlikely]] {
+          return false;
+        }
+      }
+
+      vaddr_start_ = AlignDown(phdr.vaddr(), page_size_);
+      vaddr_size_ = AlignUp(phdr.vaddr() + phdr.memsz(), page_size_) - vaddr_start_;
+      UpdateHighWatermarks(phdr);
+      return true;
+    }
+
+    if (AlignDown(phdr.vaddr(), align) < high_memory_watermark_) [[unlikely]] {
+      return diag.FormatError(
+          "PT_LOAD has `p_align`-aligned memory ranges that overlap or do not increase monotonically"sv);
+    }
+
+    if constexpr (kTrackFileOffsets) {
+      if (AlignDown(phdr.offset(), align) < high_file_watermark_) [[unlikely]] {
+        return diag.FormatError(
+            "PT_LOAD has `p_align`-aligned file offset ranges that overlap or do not increase monotonically"sv);
+      }
+    }
+
+    if constexpr (Policy == PhdrLoadPolicy::kContiguous) {
+      if (AlignDown(phdr.vaddr(), align) != high_memory_watermark_) [[unlikely]] {
+        return diag.FormatError(
+            "PT_LOAD has `p_align`-aligned memory ranges that are not contiguous"sv);
+      }
+
+      if (AlignDown(phdr.offset(), align) != high_file_watermark_) [[unlikely]] {
+        return diag.FormatError(
+            "PT_LOAD has `p_align`-aligned file offset ranges that are not contiguous"sv);
+      }
+    }
+
+    vaddr_size_ = AlignUp(phdr.vaddr() + phdr.memsz(), page_size_) - vaddr_start_;
+    UpdateHighWatermarks(phdr);
+    return true;
+  }
+
+  template <class Diag>
+  constexpr bool Finish(Diag& diag) {
+    return true;
+  }
+
+ private:
+  struct Empty {};
+
+  // Whether the given policy requires tracking file offsets.
+  static constexpr bool kTrackFileOffsets = Policy != PhdrLoadPolicy::kBasic;
+
+  static constexpr size_type AlignUp(size_type value, size_type alignment) {
+    return (value + (alignment - 1)) & -alignment;
+  }
+
+  static constexpr size_type AlignDown(size_type value, size_type alignment) {
+    return value & -alignment;
+  }
+
+  // Whether any PT_LOAD header have yet been observed.
+  bool NoHeadersSeen() const { return vaddr_start_ == 0 && vaddr_size_ == 0; }
+
+  void UpdateHighWatermarks(const Phdr& phdr) {
+    auto align = std::max<size_type>(phdr.align(), 1);  // As above.
+    high_memory_watermark_ = AlignUp(phdr.vaddr() + phdr.memsz(), align);
+
+    if constexpr (kTrackFileOffsets) {
+      high_file_watermark_ = AlignUp(phdr.offset() + phdr.filesz(), align);
+    }
+  }
+
+  // The total, observed page-aligned load segment range in memory.
+  size_type& vaddr_start_;
+  size_type& vaddr_size_;
+
+  // System page size.
+  const size_type page_size_;
+
+  // The highest `p_align`-aligned address and offset seen thus far.
+  size_type high_memory_watermark_;
+  [[no_unique_address]] std::conditional_t<kTrackFileOffsets, size_type, Empty>
+      high_file_watermark_;
+};
 
 }  // namespace elfldltl
 
