@@ -13,6 +13,7 @@ use fidl_fuchsia_net_neighbor_ext as fneighbor_ext;
 use fidl_fuchsia_net_stack as fstack;
 use fidl_fuchsia_net_stack_ext::{self as fstack_ext, FidlReturn as _};
 use fidl_fuchsia_netstack as fnetstack;
+use fidl_fuchsia_netstack_ext as fnetstack_ext;
 use fuchsia_zircon_status as zx;
 use futures::{FutureExt as _, StreamExt as _, TryFutureExt as _, TryStreamExt as _};
 use log::info;
@@ -132,7 +133,7 @@ fn write_jsonified_interfaces_info<
     let value = itertools::process_results(
         interfaces
             .into_iter()
-            .map(fidl_fuchsia_net_stack_ext::InterfaceInfo::from)
+            .map(fstack_ext::InterfaceInfo::from)
             .map(ser::InterfaceView::from)
             .map(serde_json::to_value)
             .map(|res| res.context("failed to serialize InterfaceView")),
@@ -326,7 +327,7 @@ async fn do_if<W: std::io::Write, C: NetCliDepsConnector>(
         opts::IfEnum::Bridge(opts::IfBridge { ids }) => {
             let netstack = connect_with_context::<fnetstack::NetstackMarker, _>(connector).await?;
             let (result, bridge_id) = netstack.bridge_interfaces(&ids).await?;
-            if result.status != fidl_fuchsia_netstack::Status::Ok {
+            if result.status != fnetstack::Status::Ok {
                 return Err(anyhow::anyhow!("{:?}: {}", result.status, result.message));
             } else {
                 info!("network bridge created with id {}", bridge_id);
@@ -428,7 +429,7 @@ async fn do_route<W: std::io::Write, C: NetCliDepsConnector>(
                     itertools::process_results(
                         response
                             .into_iter()
-                            .map(fidl_fuchsia_netstack_ext::RouteTableEntry::from)
+                            .map(fnetstack_ext::RouteTableEntry::from)
                             .map(ser::RouteTableEntry::from)
                             .map(serde_json::to_value),
                         |i| Value::from_iter(i),
@@ -440,12 +441,8 @@ async fn do_route<W: std::io::Write, C: NetCliDepsConnector>(
 
                 t.set_titles(row!["Destination", "Gateway", "NICID", "Metric"]);
                 for entry in response {
-                    let fidl_fuchsia_netstack_ext::RouteTableEntry {
-                        destination,
-                        gateway,
-                        nicid,
-                        metric,
-                    } = entry.into();
+                    let fnetstack_ext::RouteTableEntry { destination, gateway, nicid, metric } =
+                        entry.into();
                     let gateway = match gateway {
                         None => "-".to_string(),
                         Some(g) => format!("{}", g),
@@ -474,15 +471,15 @@ async fn do_route<W: std::io::Write, C: NetCliDepsConnector>(
 }
 
 async fn with_route_table_transaction_and_entry<T, F>(
-    netstack: &fidl_fuchsia_netstack::NetstackProxy,
+    netstack: &fnetstack::NetstackProxy,
     func: T,
 ) -> Result<(), Error>
 where
     F: core::future::Future<Output = Result<i32, fidl::Error>>,
-    T: FnOnce(&fidl_fuchsia_netstack::RouteTableTransactionProxy) -> F,
+    T: FnOnce(&fnetstack::RouteTableTransactionProxy) -> F,
 {
     let (route_table, server_end) =
-        fidl::endpoints::create_proxy::<fidl_fuchsia_netstack::RouteTableTransactionMarker>()?;
+        fidl::endpoints::create_proxy::<fnetstack::RouteTableTransactionMarker>()?;
     let () = zx::Status::ok(netstack.start_route_table_transaction(server_end).await?)?;
     let status = func(&route_table).await?;
     let () = zx::Status::ok(status)?;
@@ -588,7 +585,7 @@ async fn do_metric<C: NetCliDepsConnector>(
         opts::MetricEnum::Set(opts::MetricSet { id, metric }) => {
             let netstack = connect_with_context::<fnetstack::NetstackMarker, _>(connector).await?;
             let result = netstack.set_interface_metric(id, metric).await?;
-            if result.status != fidl_fuchsia_netstack::Status::Ok {
+            if result.status != fnetstack::Status::Ok {
                 Err(anyhow::anyhow!("{:?}: {}", result.status, result.message))
             } else {
                 info!("interface {} metric set to {}", id, metric);
@@ -600,8 +597,7 @@ async fn do_metric<C: NetCliDepsConnector>(
 
 async fn do_dhcp<C: NetCliDepsConnector>(cmd: opts::DhcpEnum, connector: &C) -> Result<(), Error> {
     let netstack = connect_with_context::<fnetstack::NetstackMarker, _>(connector).await?;
-    let (dhcp, server_end) =
-        fidl::endpoints::create_proxy::<fidl_fuchsia_net_dhcp::ClientMarker>()?;
+    let (dhcp, server_end) = fidl::endpoints::create_proxy::<fdhcp::ClientMarker>()?;
     match cmd {
         opts::DhcpEnum::Start(opts::DhcpStart { id }) => {
             let () =
@@ -1082,19 +1078,14 @@ async fn do_dhcpd_clear_leases(server: fdhcp::Server_Proxy) -> Result<(), Error>
 
 #[cfg(test)]
 mod tests {
+    use super::*;
+
     use anyhow::Error;
     use fidl::endpoints::ProtocolMarker;
-    use fidl_fuchsia_net as fnet;
     use fuchsia_async::{self as fasync, TimeoutExt as _};
-    use futures::prelude::*;
     use net_declare::{fidl_mac, fidl_subnet};
     use std::convert::TryFrom as _;
     use test_case::test_case;
-    use {
-        super::*,
-        fidl_fuchsia_net_stack::{AdministrativeStatus, PhysicalStatus, *},
-        fidl_fuchsia_netstack::*,
-    };
 
     const SUBNET_V4: fnet::Subnet = fidl_subnet!("192.168.0.1/32");
     const SUBNET_V6: fnet::Subnet = fidl_subnet!("fd00::1/128");
@@ -1103,8 +1094,8 @@ mod tests {
     const MAC_2: fnet::MacAddress = fidl_mac!("02:03:04:05:06:07");
 
     struct TestConnector {
-        stack: Option<StackProxy>,
-        netstack: Option<NetstackProxy>,
+        stack: Option<fstack::StackProxy>,
+        netstack: Option<fnetstack::NetstackProxy>,
         dhcpd: Option<fdhcp::Server_Proxy>,
     }
 
@@ -1143,7 +1134,7 @@ mod tests {
     }
 
     #[async_trait::async_trait]
-    impl ServiceConnector<NetstackMarker> for TestConnector {
+    impl ServiceConnector<fnetstack::NetstackMarker> for TestConnector {
         async fn connect(
             &self,
         ) -> Result<<fnetstack::NetstackMarker as ProtocolMarker>::Proxy, Error> {
@@ -1155,14 +1146,14 @@ mod tests {
     }
 
     #[async_trait::async_trait]
-    impl ServiceConnector<LogMarker> for TestConnector {
+    impl ServiceConnector<fstack::LogMarker> for TestConnector {
         async fn connect(&self) -> Result<<fstack::LogMarker as ProtocolMarker>::Proxy, Error> {
             Err(anyhow::anyhow!("connect log unimplemented for test connector"))
         }
     }
 
     #[async_trait::async_trait]
-    impl ServiceConnector<StackMarker> for TestConnector {
+    impl ServiceConnector<fstack::StackMarker> for TestConnector {
         async fn connect(&self) -> Result<<fstack::StackMarker as ProtocolMarker>::Proxy, Error> {
             match &self.stack {
                 Some(stack) => Ok(stack.clone()),
@@ -1182,25 +1173,24 @@ mod tests {
         s.trim().lines().map(|s| s.trim()).collect::<Vec<&str>>().join("\n")
     }
 
-    fn get_fake_interface(id: u64, name: &str, mac: Option<[u8; 6]>) -> InterfaceInfo {
-        InterfaceInfo {
+    fn get_fake_interface(id: u64, name: &str, mac: Option<[u8; 6]>) -> fstack::InterfaceInfo {
+        fstack::InterfaceInfo {
             id,
-            properties: InterfaceProperties {
+            properties: fstack::InterfaceProperties {
                 name: name.to_string(),
                 topopath: "loopback".to_string(),
                 filepath: "[none]".to_string(),
-                mac: mac
-                    .map(|octets| Box::new(fidl_fuchsia_hardware_ethernet::MacAddress { octets })),
+                mac: mac.map(|octets| Box::new(fethernet::MacAddress { octets })),
                 mtu: 65536,
                 features: fethernet::Features::Loopback,
-                administrative_status: AdministrativeStatus::Enabled,
-                physical_status: PhysicalStatus::Up,
+                administrative_status: fstack::AdministrativeStatus::Enabled,
+                physical_status: fstack::PhysicalStatus::Up,
                 addresses: vec![],
             },
         }
     }
 
-    fn get_fake_interfaces() -> Vec<InterfaceInfo> {
+    fn get_fake_interfaces() -> Vec<fstack::InterfaceInfo> {
         vec![
             get_fake_interface(1, "lo", None),
             get_fake_interface(10, "eth001", Some([1, 2, 3, 4, 5, 6])),
@@ -1235,9 +1225,9 @@ mod tests {
         const IP_FORWARD: bool = true;
 
         let (stack_controller, mut stack_requests) =
-            fidl::endpoints::create_proxy_and_stream::<StackMarker>().unwrap();
+            fidl::endpoints::create_proxy_and_stream::<fstack::StackMarker>().unwrap();
         let (netstack_controller, _netstack_requests) =
-            fidl::endpoints::create_proxy_and_stream::<NetstackMarker>().unwrap();
+            fidl::endpoints::create_proxy_and_stream::<fnetstack::NetstackMarker>().unwrap();
         let connector = TestConnector {
             stack: Some(stack_controller),
             netstack: Some(netstack_controller),
@@ -1304,8 +1294,8 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn if_del_addr() {
         async fn next_request(
-            requests: &mut StackRequestStream,
-        ) -> (u64, fnet::Subnet, StackDelInterfaceAddressResponder) {
+            requests: &mut fstack::StackRequestStream,
+        ) -> (u64, fnet::Subnet, fstack::StackDelInterfaceAddressResponder) {
             requests
                 .try_next()
                 .await
@@ -1316,8 +1306,8 @@ mod tests {
         }
 
         let (stack, mut requests) =
-            fidl::endpoints::create_proxy_and_stream::<StackMarker>().unwrap();
-        let (netstack, _) = fidl::endpoints::create_proxy::<NetstackMarker>().unwrap();
+            fidl::endpoints::create_proxy_and_stream::<fstack::StackMarker>().unwrap();
+        let (netstack, _) = fidl::endpoints::create_proxy::<fnetstack::NetstackMarker>().unwrap();
         let connector = TestConnector { stack: Some(stack), netstack: Some(netstack), dhcpd: None };
 
         // Make the first request.
@@ -1360,18 +1350,16 @@ mod tests {
             let (id, addr, responder) = next_request(&mut requests).await;
             assert_eq!(id, 2);
             assert_eq!(addr, SUBNET_V6);
-            responder
-                .send(&mut Err(fidl_fuchsia_net_stack::Error::NotFound))
-                .map_err(anyhow::Error::new)
+            responder.send(&mut Err(fstack::Error::NotFound)).map_err(anyhow::Error::new)
         };
         let (fails_response, fails) = futures::future::join(fail_response, fails).await;
         let () = fails_response.expect("responder.send should succeed");
         let fidl_err = fails.expect_err("do_if should fail");
-        let fidl_fuchsia_net_stack_ext::NetstackError(underlying_error) = fidl_err
+        let fstack_ext::NetstackError(underlying_error) = fidl_err
             .root_cause()
-            .downcast_ref::<fidl_fuchsia_net_stack_ext::NetstackError>()
+            .downcast_ref::<fstack_ext::NetstackError>()
             .expect("fidl_err should downcast to NetstackError");
-        assert_eq!(*underlying_error, fidl_fuchsia_net_stack::Error::NotFound);
+        assert_eq!(*underlying_error, fstack::Error::NotFound);
     }
 
     fn wanted_net_if_list_json() -> String {
@@ -1446,9 +1434,9 @@ status      ENABLED | LINK_UP"#,
     #[fasync::run_singlethreaded(test)]
     async fn if_list(json: bool, wanted_output: String) {
         let (stack_controller, mut stack_requests) =
-            fidl::endpoints::create_proxy_and_stream::<StackMarker>().unwrap();
+            fidl::endpoints::create_proxy_and_stream::<fstack::StackMarker>().unwrap();
         let (netstack_controller, _netstack_requests) =
-            fidl::endpoints::create_proxy_and_stream::<NetstackMarker>().unwrap();
+            fidl::endpoints::create_proxy_and_stream::<fnetstack::NetstackMarker>().unwrap();
         let connector = TestConnector {
             stack: Some(stack_controller),
             netstack: Some(netstack_controller),
@@ -1512,7 +1500,7 @@ status      ENABLED | LINK_UP"#,
     #[fasync::run_singlethreaded(test)]
     async fn fwd_list(json: bool, wanted_output: String) {
         let (stack_controller, mut stack_requests) =
-            fidl::endpoints::create_proxy_and_stream::<StackMarker>().unwrap();
+            fidl::endpoints::create_proxy_and_stream::<fstack::StackMarker>().unwrap();
         let connector =
             TestConnector { stack: Some(stack_controller), netstack: None, dhcpd: None };
 
@@ -1569,8 +1557,8 @@ status      ENABLED | LINK_UP"#,
     #[fasync::run_singlethreaded(test)]
     async fn metric_set() {
         async fn next_request(
-            requests: &mut NetstackRequestStream,
-        ) -> (u32, u32, NetstackSetInterfaceMetricResponder) {
+            requests: &mut fnetstack::NetstackRequestStream,
+        ) -> (u32, u32, fnetstack::NetstackSetInterfaceMetricResponder) {
             requests
                 .try_next()
                 .await
@@ -1581,7 +1569,7 @@ status      ENABLED | LINK_UP"#,
         }
 
         let (netstack, mut requests) =
-            fidl::endpoints::create_proxy_and_stream::<NetstackMarker>().unwrap();
+            fidl::endpoints::create_proxy_and_stream::<fnetstack::NetstackMarker>().unwrap();
         let connector = TestConnector { stack: None, netstack: Some(netstack), dhcpd: None };
 
         // both test values have been arbitrarily selected
@@ -1597,7 +1585,10 @@ status      ENABLED | LINK_UP"#,
             assert_eq!(id, expected_id);
             assert_eq!(metric, expected_metric);
             responder
-                .send(&mut NetErr { status: Status::Ok, message: String::from("") })
+                .send(&mut fnetstack::NetErr {
+                    status: fnetstack::Status::Ok,
+                    message: String::from(""),
+                })
                 .map_err(anyhow::Error::new)
         };
         let ((), ()) =
@@ -1606,7 +1597,7 @@ status      ENABLED | LINK_UP"#,
 
     async fn test_do_dhcp(cmd: opts::DhcpEnum) {
         let (netstack, mut requests) =
-            fidl::endpoints::create_proxy_and_stream::<NetstackMarker>().unwrap();
+            fidl::endpoints::create_proxy_and_stream::<fnetstack::NetstackMarker>().unwrap();
         let connector = TestConnector { stack: None, netstack: Some(netstack), dhcpd: None };
         let op = do_dhcp(cmd.clone(), &connector);
         let op_succeeds = async move {
@@ -1665,7 +1656,7 @@ status      ENABLED | LINK_UP"#,
 
     async fn test_modify_route(cmd: opts::RouteEnum) {
         let (netstack, mut requests) =
-            fidl::endpoints::create_proxy_and_stream::<NetstackMarker>().unwrap();
+            fidl::endpoints::create_proxy_and_stream::<fnetstack::NetstackMarker>().unwrap();
         let connector = TestConnector { stack: None, netstack: Some(netstack), dhcpd: None };
         let op = do_route(std::io::sink(), cmd.clone(), &connector);
         let op_succeeds = async move {
@@ -1772,7 +1763,7 @@ status      ENABLED | LINK_UP"#,
     #[fasync::run_singlethreaded(test)]
     async fn route_list(json: bool, wanted_output: String) {
         let (netstack, mut requests) =
-            fidl::endpoints::create_proxy_and_stream::<NetstackMarker>().unwrap();
+            fidl::endpoints::create_proxy_and_stream::<fnetstack::NetstackMarker>().unwrap();
         let connector = TestConnector { stack: None, netstack: Some(netstack), dhcpd: None };
 
         let mut output: Vec<u8> = Vec::new();
@@ -1834,9 +1825,9 @@ status      ENABLED | LINK_UP"#,
 
     #[fasync::run_singlethreaded(test)]
     async fn bridge() {
-        let (stack, _) = fidl::endpoints::create_proxy::<StackMarker>().unwrap();
+        let (stack, _) = fidl::endpoints::create_proxy::<fstack::StackMarker>().unwrap();
         let (netstack, mut requests) =
-            fidl::endpoints::create_proxy_and_stream::<NetstackMarker>().unwrap();
+            fidl::endpoints::create_proxy_and_stream::<fnetstack::NetstackMarker>().unwrap();
         let connector = TestConnector { stack: Some(stack), netstack: Some(netstack), dhcpd: None };
         // interface id test values have been selected arbitrarily
         let bridge_ifs = vec![1, 2, 3];
@@ -1857,8 +1848,8 @@ status      ENABLED | LINK_UP"#,
             assert_eq!(requested_ifs, bridge_ifs);
             let () = netstack_responder
                 .send(
-                    &mut fidl_fuchsia_netstack::NetErr {
-                        status: fidl_fuchsia_netstack::Status::Ok,
+                    &mut fnetstack::NetErr {
+                        status: fnetstack::Status::Ok,
                         message: String::from(""),
                     },
                     bridge_id,
@@ -2378,12 +2369,7 @@ status      ENABLED | LINK_UP"#,
                     opts::dhcpd::SetArg::Option(opts::dhcpd::OptionArg { name }) => {
                         let (opt, responder) =
                             req.into_set_option().expect("request should be of type set option");
-                        assert_eq!(
-                            <opts::dhcpd::Option_ as Into<fidl_fuchsia_net_dhcp::Option_>>::into(
-                                name
-                            ),
-                            opt
-                        );
+                        assert_eq!(<opts::dhcpd::Option_ as Into<fdhcp::Option_>>::into(name), opt);
                         let () =
                             responder.send(&mut Ok(())).expect("responder.send should succeed");
                         Ok(())
@@ -2393,7 +2379,7 @@ status      ENABLED | LINK_UP"#,
                             .into_set_parameter()
                             .expect("request should be of type set parameter");
                         assert_eq!(
-                            <opts::dhcpd::Parameter as Into<fidl_fuchsia_net_dhcp::Parameter>>::into(name),
+                            <opts::dhcpd::Parameter as Into<fdhcp::Parameter>>::into(name),
                             opt
                         );
                         let () =
