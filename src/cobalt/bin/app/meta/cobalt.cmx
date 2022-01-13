@@ -14,8 +14,6 @@
         "services": [
             "fuchsia.buildinfo.Provider",
             "fuchsia.net.http.Loader",
-            "fuchsia.net.name.Lookup",
-            "fuchsia.posix.socket.Provider",
             "fuchsia.scheduler.ProfileProvider",
             "fuchsia.settings.Privacy",
             "fuchsia.sysinfo.SysInfo",
