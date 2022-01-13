@@ -231,39 +231,40 @@ bool Connection::OnMessage() {
     return false;
   }
   std::shared_ptr<Binding> binding = binding_;
-  auto on_read = [this, &binding](
-                     fidl::IncomingMessage msg,
-                     fidl::internal::IncomingTransportContext incoming_transport_context) {
-    if (!msg.ok()) {
+  uint8_t bytes[ZX_CHANNEL_MAX_MSG_BYTES];
+  zx_handle_t handles[ZX_CHANNEL_MAX_MSG_HANDLES];
+  fidl_channel_handle_metadata_t handle_metadata[ZX_CHANNEL_MAX_MSG_HANDLES];
+  fidl::IncomingMessage msg =
+      fidl::MessageRead(binding->channel(), fidl::BufferSpan(bytes, std::size(bytes)), handles,
+                        handle_metadata, ZX_CHANNEL_MAX_MSG_HANDLES);
+  if (!msg.ok()) {
+    return false;
+  }
+
+  auto* header = msg.header();
+  FidlTransaction txn(header->txid, binding);
+
+  ::fidl::DispatchResult dispatch_result = fidl_protocol_.TryDispatch(msg, &txn);
+  if (dispatch_result == ::fidl::DispatchResult::kNotFound) {
+    vnode_->HandleFsSpecificMessage(msg, &txn);
+  }
+
+  switch (txn.ToResult()) {
+    case FidlTransaction::Result::kRepliedSynchronously:
+      // If we get here, the message was successfully handled, synchronously.
+      return binding->StartDispatching() == ZX_OK;
+    case FidlTransaction::Result::kPendingAsyncReply:
+      // If we get here, the transaction was converted to an async one. Dispatching will be resumed
+      // by the transaction when it is completed.
+      return true;
+    case FidlTransaction::Result::kClosed:
       return false;
-    }
-
-    auto* header = msg.header();
-    FidlTransaction txn(header->txid, binding);
-
-    ::fidl::DispatchResult dispatch_result = fidl_protocol_.TryDispatch(msg, &txn);
-    if (dispatch_result == ::fidl::DispatchResult::kNotFound) {
-      vnode_->HandleFsSpecificMessage(msg, &txn);
-    }
-
-    switch (txn.ToResult()) {
-      case FidlTransaction::Result::kRepliedSynchronously:
-        // If we get here, the message was successfully handled, synchronously.
-        return binding->StartDispatching() == ZX_OK;
-      case FidlTransaction::Result::kPendingAsyncReply:
-        // If we get here, the transaction was converted to an async one.
-        // Dispatching will be resumed by the transaction when it is completed.
-        return true;
-      case FidlTransaction::Result::kClosed:
-        return false;
-    }
+  }
 #ifdef __GNUC__
-    // GCC does not infer that the above switch statement will always return by
-    // handling all defined enum members.
-    __builtin_abort();
+  // GCC does not infer that the above switch statement will always return by handling all defined
+  // enum members.
+  __builtin_abort();
 #endif
-  };
-  return fidl::MessageRead(binding->channel(), on_read);
 }
 
 void Connection::SyncTeardown() {
