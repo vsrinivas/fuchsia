@@ -25,15 +25,6 @@
 
 namespace nelson {
 
-static const pbus_dev_t rtc_dev = []() {
-  pbus_dev_t dev = {};
-  dev.name = "rtc";
-  dev.vid = PDEV_VID_GENERIC;
-  dev.pid = PDEV_PID_GENERIC;
-  dev.did = PDEV_DID_RTC_FALLBACK;
-  return dev;
-}();
-
 uint32_t Nelson::GetBoardRev() {
   if (!board_rev_) {
     uint32_t board_rev;
@@ -179,10 +170,6 @@ int Nelson::Thread() {
 
   if ((status = VideoInit()) != ZX_OK) {
     zxlogf(ERROR, "VideoInit failed: %d", status);
-  }
-
-  if ((status = pbus_.DeviceAdd(&rtc_dev)) != ZX_OK) {
-    zxlogf(ERROR, "%s: DeviceAdd failed - RTC: %d", __func__, status);
   }
 
   if ((status = EmmcInit()) != ZX_OK) {
