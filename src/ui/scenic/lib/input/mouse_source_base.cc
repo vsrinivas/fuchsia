@@ -94,6 +94,7 @@ fuchsia::ui::pointer::MousePointerSample MouseSourceBase::NewPointerSample(
   pointer.set_device_id(event.device_id);
 
   pointer.set_position_in_viewport({event.position_in_viewport[0], event.position_in_viewport[1]});
+  pointer.set_relative_motion({event.relative_motion[0], event.relative_motion[1]});
 
   if (event.scroll_v.has_value() && event.scroll_v->scroll_value.has_value()) {
     pointer.set_scroll_v(event.scroll_v->scroll_value.value());

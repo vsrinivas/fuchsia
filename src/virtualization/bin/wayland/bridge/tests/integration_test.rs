@@ -6,18 +6,22 @@
 
 #[cfg(test)]
 mod test {
-    use anyhow::Error;
-    use fidl_fuchsia_virtualization::WaylandDispatcherMarker;
-    use fuchsia_async::{self as fasync};
-    use fuchsia_wayland_core::{self as wl, Interface};
-    use fuchsia_zircon as zx;
-    use wayland::{WlCompositor, WlDataDeviceManager, WlOutput, WlSeat, WlShm, WlSubcompositor};
-    use wp_viewporter::WpViewporter;
-    use xdg_shell::XdgWmBase;
-    use zaura_shell::ZauraShell;
-    use zcr_alpha_compositing_v1::ZcrAlphaCompositingV1;
-    use zcr_secure_output_v1::ZcrSecureOutputV1;
-    use zwp_linux_dmabuf_v1::ZwpLinuxDmabufV1;
+    use {
+        anyhow::Error,
+        fidl_fuchsia_virtualization::WaylandDispatcherMarker,
+        fuchsia_async::{self as fasync},
+        fuchsia_wayland_core::{self as wl, Interface},
+        fuchsia_zircon as zx,
+        wayland::{WlCompositor, WlDataDeviceManager, WlOutput, WlSeat, WlShm, WlSubcompositor},
+        wp_viewporter::WpViewporter,
+        xdg_shell::XdgWmBase,
+        zaura_shell::ZauraShell,
+        zcr_alpha_compositing_v1::ZcrAlphaCompositingV1,
+        zcr_secure_output_v1::ZcrSecureOutputV1,
+        zwp_linux_dmabuf_v1::ZwpLinuxDmabufV1,
+        zwp_pointer_constraints_v1::ZwpPointerConstraintsV1,
+        zwp_relative_pointer_v1::ZwpRelativePointerManagerV1,
+    };
 
     async fn expect_global_with_name<I: Interface>(
         expect_name: u32,
@@ -98,6 +102,8 @@ mod test {
             expect_global_with_name::<ZcrSecureOutputV1>(9, &client_channel).await;
             expect_global_with_name::<WpViewporter>(10, &client_channel).await;
             expect_global_with_name::<ZauraShell>(11, &client_channel).await;
+            expect_global_with_name::<ZwpRelativePointerManagerV1>(12, &client_channel).await;
+            expect_global_with_name::<ZwpPointerConstraintsV1>(13, &client_channel).await;
 
             // Expect callback::done for the sync
             let mut buffer = zx::MessageBuf::new();

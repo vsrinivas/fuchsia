@@ -13,6 +13,8 @@ group("protocols") {
     ":zcr_alpha_compositing_v1",
     ":zcr_secure_output_v1",
     ":zwp_linux_dmabuf_v1",
+    ":zwp_pointer_constraints_v1",
+    ":zwp_relative_pointer_v1",
   ]
 }
 
@@ -44,4 +46,14 @@ wayland_protocol("zcr_alpha_compositing_v1") {
 wayland_protocol("zcr_secure_output_v1") {
   protocol =
       "third_party/chromium.org/secure-output/secure-output-unstable-v1.xml"
+}
+
+wayland_protocol("zwp_pointer_constraints_v1") {
+  protocol = "third_party/freedesktop.org/unstable/pointer-constraints/pointer-constraints-unstable-v1.xml"
+  deps = [ ":wayland" ]
+}
+
+wayland_protocol("zwp_relative_pointer_v1") {
+  protocol = "third_party/freedesktop.org/unstable/relative-pointer/relative-pointer-unstable-v1.xml"
+  deps = [ ":wayland" ]
 }

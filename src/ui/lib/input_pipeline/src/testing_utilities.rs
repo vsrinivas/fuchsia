@@ -416,11 +416,13 @@ pub fn create_mouse_event(
 /// - `phase`: The phase of the touch contact.
 /// - `contact`: The touch contact to create the event for.
 /// - `position`: The position of the contact in the viewport space.
+/// - `relative_motion`: The relative motion fopr the event.
 /// - `event_time`: The time in nanoseconds when the event was first recorded.
 pub fn create_mouse_pointer_sample_event(
     phase: pointerinjector::EventPhase,
     buttons: Vec<mouse_binding::MouseButton>,
     position: crate::utils::Position,
+    relative_motion: Option<[f32; 2]>,
     event_time: input_device::EventTime,
 ) -> pointerinjector::Event {
     let pointer_sample = pointerinjector::PointerSample {
@@ -430,6 +432,7 @@ pub fn create_mouse_pointer_sample_event(
         scroll_v: None,
         scroll_h: None,
         pressed_buttons: Some(buttons),
+        relative_motion,
         ..pointerinjector::PointerSample::EMPTY
     };
     let data = pointerinjector::Data::PointerSample(pointer_sample);

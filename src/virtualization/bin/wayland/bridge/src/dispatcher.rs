@@ -5,8 +5,9 @@
 use {
     crate::{
         alpha_compositing::*, aura_shell::*, compositor::*, data_device_manager::*, display::*,
-        linux_dmabuf::*, object::*, output::*, registry::*, seat::*, secure_output::*, shm::*,
-        subcompositor::*, viewporter::*, xdg_shell::*,
+        linux_dmabuf::*, object::*, output::*, pointer_constraints::*, registry::*,
+        relative_pointer::*, seat::*, secure_output::*, shm::*, subcompositor::*, viewporter::*,
+        xdg_shell::*,
     },
     anyhow::Error,
     fuchsia_zircon::{self as zx, HandleBased},
@@ -20,6 +21,8 @@ use {
     zcr_alpha_compositing_v1::ZcrAlphaCompositingV1,
     zcr_secure_output_v1::ZcrSecureOutputV1,
     zwp_linux_dmabuf_v1::ZwpLinuxDmabufV1,
+    zwp_pointer_constraints_v1::ZwpPointerConstraintsV1,
+    zwp_relative_pointer_v1::ZwpRelativePointerManagerV1,
 };
 
 /// The main FIDL server that listens for incoming client connection
@@ -108,6 +111,12 @@ impl WaylandDispatcher {
         });
         registry.add_global(ZauraShell, move |_, _, _| {
             Ok(Box::new(RequestDispatcher::new(AuraShell::new())))
+        });
+        registry.add_global(ZwpRelativePointerManagerV1, move |_, _, _| {
+            Ok(Box::new(RequestDispatcher::new(RelativePointerManager)))
+        });
+        registry.add_global(ZwpPointerConstraintsV1, move |_, _, _| {
+            Ok(Box::new(RequestDispatcher::new(PointerConstraints)))
         });
 
         Ok(registry.build())

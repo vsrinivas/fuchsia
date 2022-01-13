@@ -6,6 +6,7 @@ use {
     crate::client::{Client, EventQueue},
     crate::compositor::Surface,
     crate::object::{NewObjectExt, ObjectRef, ObjectRefSet, RequestReceiver},
+    crate::relative_pointer::RelativePointer,
     anyhow::Error,
     fidl_fuchsia_ui_input3::{KeyEvent, KeyEventType},
     fuchsia_trace as ftrace, fuchsia_wayland_core as wl,
@@ -183,6 +184,11 @@ pub struct InputDispatcher {
     /// associated with that seat.
     pub pointers: ObjectRefSet<Pointer>,
     pub v5_pointers: ObjectRefSet<Pointer>,
+    /// The set of bound zwp_relative_pointer objects for this client.
+    ///
+    /// Note we're assuming a single wl_seat for now, so these all are relative
+    /// pointers associated with that seat.
+    pub relative_pointers: ObjectRefSet<RelativePointer>,
     /// The set of bound wl_pointer objects for this client.
     ///
     /// Note we're assuming a single wl_seat for now, so these all are keyboards
@@ -279,6 +285,7 @@ impl InputDispatcher {
             pointer_position: [-1.0, -1.0],
             pointers: ObjectRefSet::new(),
             v5_pointers: ObjectRefSet::new(),
+            relative_pointers: ObjectRefSet::new(),
             keyboards: ObjectRefSet::new(),
             touches: ObjectRefSet::new(),
             pointer_focus: None,
@@ -635,8 +642,16 @@ impl InputDispatcher {
         }
 
         if let Some(relative_motion) = relative_motion {
-            // TODO(fxbug.dev/90180): Implement relative motion.
-            println!("NOT IMPLEMENTED: relative_motion: {:?}", relative_motion);
+            let time_in_us = (timestamp / 1_000) as u64;
+            self.relative_pointers.iter().try_for_each(|rp| {
+                RelativePointer::post_relative_motion(
+                    *rp,
+                    &self.event_queue,
+                    time_in_us,
+                    relative_motion[0].into(),
+                    relative_motion[1].into(),
+                )
+            })?;
         }
 
         if needs_frame {

@@ -335,6 +335,7 @@ impl MouseInjectorHandler {
             event_time,
             pointerinjector::EventPhase::Add,
             inner.current_position,
+            None,
         )];
         device_proxy
             .inject(&mut events_to_send.into_iter())
@@ -449,11 +450,18 @@ impl MouseInjectorHandler {
         if let Some(injector) = inner.injectors.get(&mouse_descriptor.device_id) {
             match mouse_event.phase {
                 mouse_binding::MousePhase::Move => {
+                    let relative_motion = match mouse_event.location {
+                        mouse_binding::MouseLocation::Relative(offset) => {
+                            Some([offset.x, offset.y])
+                        }
+                        _ => None,
+                    };
                     let events_to_send = vec![self.create_pointer_sample_event(
                         mouse_event,
                         event_time,
                         pointerinjector::EventPhase::Change,
                         inner.current_position,
+                        relative_motion,
                     )];
                     let _ = injector.inject(&mut events_to_send.into_iter()).await;
                 }
@@ -476,12 +484,14 @@ impl MouseInjectorHandler {
     /// - `event_time`: The time in nanoseconds when the event was first recorded.
     /// - `phase`: The EventPhase to send to Scenic.
     /// - `current_position`: The current cursor position.
+    /// - `relative_motion`: The relative motion to send to Scenic.
     fn create_pointer_sample_event(
         &self,
         mouse_event: &mouse_binding::MouseEvent,
         event_time: input_device::EventTime,
         phase: pointerinjector::EventPhase,
         current_position: Position,
+        relative_motion: Option<[f32; 2]>,
     ) -> pointerinjector::Event {
         let pointer_sample = pointerinjector::PointerSample {
             pointer_id: Some(0),
@@ -490,6 +500,7 @@ impl MouseInjectorHandler {
             scroll_v: None,
             scroll_h: None,
             pressed_buttons: Some(Vec::from_iter(mouse_event.buttons.iter().cloned())),
+            relative_motion,
             ..pointerinjector::PointerSample::EMPTY
         };
         pointerinjector::Event {
@@ -776,7 +787,8 @@ mod tests {
     // location via the cursor location sender.
     #[test_case(
         mouse_binding::MouseLocation::Relative(Position { x: 10.0, y: 15.0 }),
-        Position { x: DISPLAY_WIDTH / 2.0 + 10.0, y: DISPLAY_HEIGHT / 2.0 + 15.0 }; "Valid move event."
+        Position { x: DISPLAY_WIDTH / 2.0 + 10.0, y: DISPLAY_HEIGHT / 2.0 + 15.0 },
+        [10.0, 15.0]; "Valid move event."
     )]
     #[test_case(
         mouse_binding::MouseLocation::Relative(Position {
@@ -786,14 +798,20 @@ mod tests {
         Position {
           x: DISPLAY_WIDTH ,
           y: DISPLAY_HEIGHT,
-        }; "Move event exceeds max bounds."
+        },
+        [DISPLAY_WIDTH + 2.0, DISPLAY_HEIGHT + 2.0]; "Move event exceeds max bounds."
     )]
     #[test_case(
       mouse_binding::MouseLocation::Relative(Position { x: -(DISPLAY_WIDTH + 20.0), y: -(DISPLAY_HEIGHT + 15.0) }),
-      Position { x: 0.0, y: 0.0 }; "Move event exceeds min bounds."
+      Position { x: 0.0, y: 0.0 },
+      [-(DISPLAY_WIDTH + 20.0), -(DISPLAY_HEIGHT + 15.0)]; "Move event exceeds min bounds."
     )]
     #[fuchsia::test(allow_stalls = false)]
-    async fn move_event(move_location: mouse_binding::MouseLocation, expected_position: Position) {
+    async fn move_event(
+        move_location: mouse_binding::MouseLocation,
+        expected_position: Position,
+        expected_relative_motion: [f32; 2],
+    ) {
         // Set up fidl streams.
         let (configuration_proxy, mut configuration_request_stream) =
             fidl::endpoints::create_proxy_and_stream::<pointerinjector_config::SetupMarker>()
@@ -831,12 +849,14 @@ mod tests {
                 pointerinjector::EventPhase::Add,
                 vec![],
                 expected_position,
+                None,
                 event_time,
             ),
             create_mouse_pointer_sample_event(
                 pointerinjector::EventPhase::Change,
                 vec![],
                 expected_position,
+                Some(expected_relative_motion),
                 event_time,
             ),
         ];
@@ -940,12 +960,14 @@ mod tests {
                 pointerinjector::EventPhase::Add,
                 vec![],
                 expected_position,
+                None,
                 event_time,
             ),
             create_mouse_pointer_sample_event(
                 pointerinjector::EventPhase::Change,
                 vec![],
                 expected_position,
+                None,
                 event_time,
             ),
         ];

@@ -106,6 +106,12 @@ InternalMouseEvent MouseInjector::PointerInjectorEventToInternalMouseEvent(
     internal_event.scroll_h = CreateScrollInfo(settings.scroll_h_range.value(), scroll_value);
   }
 
+  // Relative Motion
+  if (pointer_sample.has_relative_motion()) {
+    internal_event.relative_motion = {pointer_sample.relative_motion()[0],
+                                      pointer_sample.relative_motion()[1]};
+  }
+
   return internal_event;
 }
 
