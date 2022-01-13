@@ -223,9 +223,9 @@ void MsiDispatcherImpl::MaskInterrupt() {
   if (has_cap_pvm_) {
     const uint32_t mask = (1 << msi_id());
     if (has_64bit_) {
-      capability_->mask_bits_64 |= mask;
+      capability_->mask_bits_64 = capability_->mask_bits_64 | mask;
     } else {
-      capability_->mask_bits_32 |= mask;
+      capability_->mask_bits_32 = capability_->mask_bits_32 | mask;
     }
     arch::DeviceMemoryBarrier();
   }
@@ -242,9 +242,9 @@ void MsiDispatcherImpl::UnmaskInterrupt() {
   if (has_cap_pvm_) {
     const uint32_t mask = ~(1 << msi_id());
     if (has_64bit_) {
-      capability_->mask_bits_64 &= mask;
+      capability_->mask_bits_64 = capability_->mask_bits_64 & mask;
     } else {
-      capability_->mask_bits_32 &= mask;
+      capability_->mask_bits_32 = capability_->mask_bits_32 & mask;
     }
     arch::DeviceMemoryBarrier();
   }
