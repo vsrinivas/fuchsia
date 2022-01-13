@@ -20,7 +20,7 @@ import("//build/rust/rustc_binary.gni")
 #   base_packages (required):
 #     [list of labels] base_packages forwarded to assemble_system(target_name).
 #
-#   repository_config_files (required):
+#   repository_config_files (optional):
 #     [list of labels] The repository configurations for pkg-resolver, to be
 #     declared as config_data placed in pkg-resolver's repositories directory.
 #
@@ -56,8 +56,6 @@ template("assemble_security_pkg_test_system") {
          "board_name must be defined for $target_name")
   assert(defined(invoker.base_packages),
          "base_packages must be defined for $target_name")
-  assert(defined(invoker.repository_config_files),
-         "repository_config_files must be defined for $target_name")
   assert(defined(invoker.update_version_file),
          "update_version_file must be defined for $target_name")
 
@@ -159,11 +157,17 @@ template("assemble_security_pkg_test_system") {
     package_name = "pkgfs"
   }
 
-  # Configure repositories for pkg-resolver.
-  config_data(labels.repository_config) {
-    for_pkg = "pkg-resolver"
-    outputs = [ "repositories/{{source_file_part}}" ]
-    sources = invoker.repository_config_files
+  assembly_base_packages = [ ":${labels.empty_pkgfs}" ] + invoker.base_packages
+
+  # If explicit repository configurations for for pkg-resolver are defined, add
+  # them as config-data to base packages set.
+  if (defined(invoker.repository_config_files)) {
+    config_data(labels.repository_config) {
+      for_pkg = "pkg-resolver"
+      outputs = [ "repositories/{{source_file_part}}" ]
+      sources = invoker.repository_config_files
+    }
+    assembly_base_packages += [ ":${labels.repository_config}" ]
   }
 
   # Main system assembly.
@@ -171,10 +175,7 @@ template("assemble_security_pkg_test_system") {
     testonly = true
     board_name = invoker.board_name
     bootfs_labels = []
-    base_packages = [
-                      ":${labels.empty_pkgfs}",
-                      ":${labels.repository_config}",
-                    ] + invoker.base_packages
+    base_packages = assembly_base_packages
   }
 
   # Construct an update package for the system assembly.
