@@ -20,6 +20,7 @@ fuchsia_unittest_component("account_common_test") {
 
 fuchsia_unittest_component("identity_common_test") {
   deps = [ "identity_common:identity_common_test" ]
+  manifest = "meta/identity-common-lib-test.cml"
 }
 
 fuchsia_unittest_component("storage_manager_test") {

@@ -7,6 +7,12 @@
 
 // Async task management.
 mod task_group;
+// Staged file atomic write support.
+mod staged_file;
 
-/// Reexport task groups.
 pub use crate::task_group::{cancel_or, TaskGroup, TaskGroupCancel, TaskGroupError};
+
+pub use crate::staged_file::{
+    CleanupStaleFilesError, StagedFile, StagedFileCommitError, StagedFileCreateError,
+    StagedFileWriteError,
+};

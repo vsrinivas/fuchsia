@@ -11,14 +11,10 @@ use {
     },
     async_trait::async_trait,
     fidl_fuchsia_identity_account as faccount,
-    fidl_fuchsia_io::{
-        DirectoryProxy, OPEN_FLAG_CREATE, OPEN_FLAG_TRUNCATE, OPEN_RIGHT_READABLE,
-        OPEN_RIGHT_WRITABLE,
-    },
+    fidl_fuchsia_io::{DirectoryProxy, OPEN_RIGHT_READABLE},
     fidl_fuchsia_io2::UnlinkOptions,
     fuchsia_zircon as zx,
-    log::warn,
-    rand::{thread_rng, Rng},
+    identity_common::StagedFile,
     serde::{Deserialize, Serialize},
     std::str::FromStr,
 };
@@ -57,6 +53,18 @@ pub enum AccountMetadataStoreError {
 
     #[error("Failed to unlink file in backing storage: {0}")]
     UnlinkError(#[source] zx::Status),
+
+    #[error("Failed to create staged file: {0}")]
+    StagedFileCreateError(#[from] identity_common::StagedFileCreateError),
+
+    #[error("Failed to write staged file: {0}")]
+    StagedFileWriteError(#[from] identity_common::StagedFileWriteError),
+
+    #[error("Failed to commit staged file: {0}")]
+    StagedFileCommitError(#[from] identity_common::StagedFileCommitError),
+
+    #[error("Failed to cleanup stale files: {0}")]
+    CleanupStaleFilesError(#[from] identity_common::CleanupStaleFilesError),
 }
 
 impl From<AccountMetadataStoreError> for faccount::Error {
@@ -73,6 +81,10 @@ impl From<AccountMetadataStoreError> for faccount::Error {
             AccountMetadataStoreError::FlushError(_) => faccount::Error::Resource,
             AccountMetadataStoreError::CloseError(_) => faccount::Error::Resource,
             AccountMetadataStoreError::UnlinkError(_) => faccount::Error::Resource,
+            AccountMetadataStoreError::StagedFileCreateError(_) => faccount::Error::Resource,
+            AccountMetadataStoreError::StagedFileWriteError(_) => faccount::Error::Resource,
+            AccountMetadataStoreError::StagedFileCommitError(_) => faccount::Error::Resource,
+            AccountMetadataStoreError::CleanupStaleFilesError(_) => faccount::Error::Resource,
         }
     }
 }
@@ -209,37 +221,12 @@ impl DataDirAccountMetadataStore {
     }
 
     pub async fn cleanup_stale_files(&mut self) -> Result<(), Vec<AccountMetadataStoreError>> {
-        let dirents_res = files_async::readdir(&self.accounts_dir).await;
-        let dirents =
-            dirents_res.map_err(|err| vec![AccountMetadataStoreError::ReaddirError(err.into())])?;
-        let mut failures = Vec::new();
-
-        for d in dirents.iter() {
-            let name = &d.name;
-            // We aim to delete files that don't look like an AccountId (which is a u64),
-            // as well as files that are not the canonical representation of that number.
-            if parse_account_id(&name).is_none() {
-                // Not a valid account id.  Try to remove it.
-                warn!("Removing unexpected file '{}' from account metadata directory", &name);
-                let fidl_res = self.accounts_dir.unlink(&name, UnlinkOptions::EMPTY).await;
-                match fidl_res {
-                    Err(x) => failures.push(AccountMetadataStoreError::FidlError(x.into())),
-                    Ok(unlink_res) => {
-                        if let Err(unlink_err) = unlink_res {
-                            failures.push(AccountMetadataStoreError::UnlinkError(
-                                zx::Status::from_raw(unlink_err),
-                            ));
-                        }
-                    }
-                }
-            }
-        }
-
-        if failures.len() == 0 {
-            Ok(())
-        } else {
-            Err(failures)
-        }
+        StagedFile::cleanup_stale_files(&self.accounts_dir, "temp-").await.map_err(|errors| {
+            errors
+                .into_iter()
+                .map(|err| AccountMetadataStoreError::CleanupStaleFilesError(err))
+                .collect()
+        })
     }
 }
 
@@ -260,26 +247,6 @@ fn parse_account_id(text: &str) -> Option<AccountId> {
         }
         Err(_) => None,
     }
-}
-
-// I'd rather have used the tempfile crate here, but it lacks any ability to open things
-// without making use of paths and namespaces, and we're specifically trying to use a
-// directory handle
-const TEMPFILE_RANDOM_LENGTH: usize = 8usize;
-fn generate_tempfile_name(account_id: &AccountId) -> String {
-    // Generate a tempfile with name "temp-{accountid}-{random}"
-    let id = format_account_id(&account_id);
-    let mut buf = String::with_capacity(TEMPFILE_RANDOM_LENGTH + id.len() + 6);
-    buf.push_str("temp-");
-    buf.push_str(&id);
-    buf.push('-');
-    let mut rng = thread_rng();
-    std::iter::repeat(())
-        .map(|()| rng.sample(rand::distributions::Alphanumeric))
-        .map(char::from)
-        .take(TEMPFILE_RANDOM_LENGTH)
-        .for_each(|c| buf.push(c));
-    return buf;
 }
 
 #[async_trait]
@@ -303,26 +270,16 @@ impl AccountMetadataStore for DataDirAccountMetadataStore {
         metadata: &AccountMetadata,
     ) -> Result<(), AccountMetadataStoreError> {
         let metadata_filename = format_account_id(&account_id);
-        let flags =
-            OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE | OPEN_FLAG_CREATE | OPEN_FLAG_TRUNCATE;
-        let temp_filename = generate_tempfile_name(&account_id);
-        let file = io_util::directory::open_file(&self.accounts_dir, &temp_filename, flags).await?;
+
+        // Tempfiles will have the prefix "temp-{accountid}"
+        let id = format_account_id(&account_id);
+        let tempfile_prefix = format!("temp-{}", id);
+
+        let mut staged_file = StagedFile::new(&self.accounts_dir, &tempfile_prefix).await?;
         let serialized = serde_json::to_vec(&metadata)
             .map_err(|err| AccountMetadataStoreError::SerdeWriteError(err))?;
-
-        // Do the usual atomic commit via tempfile open, write, sync, close, and rename-to-target.
-        // Stale files left by a crash will be cleaned up by calling cleanup_stale_files on the
-        // next startup.
-        io_util::file::write(&file, &serialized).await?;
-        zx::Status::ok(file.sync().await?).map_err(|s| AccountMetadataStoreError::FlushError(s))?;
-        zx::Status::ok(file.close().await?)
-            .map_err(|s| AccountMetadataStoreError::CloseError(s))?;
-
-        // Commit
-        io_util::directory::rename(&self.accounts_dir, &temp_filename, &metadata_filename)
-            .await
-            .map_err(|s| AccountMetadataStoreError::RenameError(s))?;
-
+        staged_file.write(&serialized).await?;
+        staged_file.commit(&metadata_filename).await?;
         Ok(())
     }
 
@@ -471,18 +428,6 @@ pub mod test {
             let parsed = parse_account_id(&s);
             assert_eq!(parsed, expected_parse_result);
         }
-    }
-
-    #[fuchsia::test]
-    fn test_generate_tempfile_name() {
-        let name1 = generate_tempfile_name(&1);
-        let name2 = generate_tempfile_name(&1);
-        let prefix = "temp-1-";
-        assert!(name1.starts_with(prefix));
-        assert!(name2.starts_with(prefix));
-        assert_eq!(name1.len(), prefix.len() + TEMPFILE_RANDOM_LENGTH);
-        assert_eq!(name2.len(), prefix.len() + TEMPFILE_RANDOM_LENGTH);
-        assert_ne!(name1, name2);
     }
 
     #[fuchsia::test]
@@ -745,8 +690,10 @@ pub mod test {
             .expect("open second connection to temp dir");
 
         // Prepare tmp_dir with an account for ID 1
-        // and a tempfile (representing an uncommitted file)
-        let temp_filename = ".Yv8VrVzrCk";
+        // and a tempfile (representing an uncommitted file), this tempfile
+        // matches the "temp-" prefix used when creating and cleaning up
+        // |StagedFile|s.
+        let temp_filename = "temp-12345-9876";
         write_test_file_in_dir(&dir, std::path::Path::new("1"), NULL_KEY_AND_NAME_DATA).await;
         write_test_file_in_dir(&dir, std::path::Path::new(temp_filename), NULL_KEY_AND_NAME_DATA)
             .await;
@@ -756,8 +703,8 @@ pub mod test {
 
         let dirents = files_async::readdir(&dir2).await.expect("readdir");
         assert_eq!(dirents.len(), 2);
-        assert_eq!(dirents[0].name, temp_filename);
-        assert_eq!(dirents[1].name, "1");
+        assert_eq!(dirents[0].name, "1");
+        assert_eq!(dirents[1].name, temp_filename);
 
         metadata_store.cleanup_stale_files().await.expect("cleanup_stale_files");
 
