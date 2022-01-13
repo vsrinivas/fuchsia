@@ -20,6 +20,7 @@ group("tests") {
     "a11y:tests",
     "backlight:tests",
     "bin:tests",
+    "examples:tests",
     "input:tests",
     "lib:tests",
     "light:tests",

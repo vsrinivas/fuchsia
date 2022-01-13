@@ -24,6 +24,12 @@ group("examples") {
   ]
 }
 
+group("tests") {
+  testonly = true
+  public_deps =
+      [ "flatland-view-provider:flatland-view-provider-example-tests" ]
+}
+
 fuchsia_package("flatland-examples") {
   package_name = "flatland-examples"
   deps = [

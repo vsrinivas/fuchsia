@@ -2,24 +2,31 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+mod internal_message;
+mod mouse;
+mod touch;
+
 use {
     async_utils::hanging_get::client::HangingGetStream,
     fidl::endpoints::create_proxy,
     fidl_fuchsia_math as fmath, fidl_fuchsia_sysmem as fsysmem, fidl_fuchsia_ui_app as fapp,
-    fidl_fuchsia_ui_composition as fland, fidl_fuchsia_ui_views as fviews,
+    fidl_fuchsia_ui_composition as fland, fidl_fuchsia_ui_pointer as fptr,
+    fidl_fuchsia_ui_views as fviews,
     flatland_frame_scheduling_lib::*,
     fuchsia_async as fasync,
     fuchsia_component::{self as component, client::connect_to_protocol},
     fuchsia_framebuffer::{
         sysmem::minimum_row_bytes, sysmem::BufferCollectionAllocator, FrameUsage,
     },
-    fuchsia_scenic::{flatland, BufferCollectionTokenPair, ViewRefPair},
+    fuchsia_scenic::{BufferCollectionTokenPair, ViewRefPair},
+    fuchsia_syslog::{fx_log_info, fx_log_warn},
     fuchsia_trace as trace, fuchsia_zircon as zx,
     futures::{
         channel::mpsc::{unbounded, UnboundedSender},
         future,
         prelude::*,
     },
+    internal_message::*,
     log::*,
     std::convert::TryInto,
 };
@@ -63,32 +70,10 @@ fn hsv_to_rgba(h: f32, s: f32, v: f32) -> [u8; 4] {
     return [(r * 255.0) as u8, (g * 255.0) as u8, (b * 255.0) as u8, 255];
 }
 
-enum MessageInternal {
-    CreateView(fviews::ViewCreationToken, fviews::ViewIdentityOnCreation),
-    OnPresentError {
-        error: fland::FlatlandError,
-    },
-    OnNextFrameBegin {
-        additional_present_credits: u32,
-        future_presentation_infos: Vec<flatland::PresentationInfo>,
-    },
-    #[allow(dead_code)]
-    OnFramePresented {
-        frame_presented_info: fidl_fuchsia_scenic_scheduling::FramePresentedInfo,
-    },
-    Relayout {
-        width: u32,
-        height: u32,
-    },
-    FocusChanged {
-        is_focused: bool,
-    },
-}
-
 struct AppModel<'a> {
     flatland: &'a fland::FlatlandProxy,
     allocator: fland::AllocatorProxy,
-    internal_sender: UnboundedSender<MessageInternal>,
+    internal_sender: UnboundedSender<InternalMessage>,
     allocation: Option<fsysmem::BufferCollectionInfo2>,
     sched_lib: &'a dyn SchedulingLib,
     hue: f32,
@@ -101,7 +86,7 @@ impl<'a> AppModel<'a> {
     fn new(
         flatland: &'a fland::FlatlandProxy,
         allocator: fland::AllocatorProxy,
-        internal_sender: UnboundedSender<MessageInternal>,
+        internal_sender: UnboundedSender<InternalMessage>,
         sched_lib: &'a dyn SchedulingLib,
     ) -> AppModel<'a> {
         AppModel {
@@ -198,8 +183,15 @@ impl<'a> AppModel<'a> {
                 .expect("failed to create ParentViewportWatcherProxy");
         let (focused, focused_request) = create_proxy::<fviews::ViewRefFocusedMarker>()
             .expect("failed to create ViewRefFocusedProxy");
+        let (touch, touch_request) =
+            create_proxy::<fptr::TouchSourceMarker>().expect("failed to create TouchSource");
+        let (mouse, mouse_request) =
+            create_proxy::<fptr::MouseSourceMarker>().expect("failed to create MouseSource");
+
         let view_bound_protocols = fland::ViewBoundProtocols {
             view_ref_focused: Some(focused_request),
+            touch_source: Some(touch_request),
+            mouse_source: Some(mouse_request),
             ..fland::ViewBoundProtocols::EMPTY
         };
 
@@ -216,11 +208,13 @@ impl<'a> AppModel<'a> {
 
         Self::spawn_layout_info_watcher(parent_viewport_watcher, self.internal_sender.clone());
         Self::spawn_view_ref_focused_watcher(focused, self.internal_sender.clone());
+        touch::spawn_touch_source_watcher(touch, self.internal_sender.clone());
+        mouse::spawn_mouse_source_watcher(mouse, self.internal_sender.clone());
     }
 
     fn spawn_layout_info_watcher(
         parent_viewport_watcher: fland::ParentViewportWatcherProxy,
-        sender: UnboundedSender<MessageInternal>,
+        sender: UnboundedSender<InternalMessage>,
     ) {
         // NOTE: there may be a race condition if TemporaryFlatlandViewProvider.CreateView() is
         // invoked a second time, causing us to create another graph link.  Because Zircon doesn't
@@ -244,15 +238,15 @@ impl<'a> AppModel<'a> {
                             height = logical_size.height;
                         }
                         sender
-                            .unbounded_send(MessageInternal::Relayout { width, height })
-                            .expect("failed to send MessageInternal.");
+                            .unbounded_send(InternalMessage::Relayout { width, height })
+                            .expect("failed to send InternalMessage.");
                     }
                     Err(fidl::Error::ClientChannelClosed { .. }) => {
-                        info!("ParentViewportWatcher connection closed.");
+                        fx_log_info!("ParentViewportWatcher connection closed.");
                         return; // from spawned task closure
                     }
                     Err(fidl_error) => {
-                        warn!("ParentViewportWatcher GetLayout() error: {:?}", fidl_error);
+                        fx_log_warn!("ParentViewportWatcher GetLayout() error: {:?}", fidl_error);
                         return; // from spawned task closure
                     }
                 }
@@ -263,7 +257,7 @@ impl<'a> AppModel<'a> {
 
     fn spawn_view_ref_focused_watcher(
         focused: fviews::ViewRefFocusedProxy,
-        sender: UnboundedSender<MessageInternal>,
+        sender: UnboundedSender<InternalMessage>,
     ) {
         fasync::Task::spawn(async move {
             let mut focused_stream =
@@ -272,18 +266,18 @@ impl<'a> AppModel<'a> {
                 match result {
                     Ok(fviews::FocusState { focused: Some(focused), .. }) => {
                         sender
-                            .unbounded_send(MessageInternal::FocusChanged { is_focused: focused })
-                            .expect("failed to send MessageInternal.");
+                            .unbounded_send(InternalMessage::FocusChanged { is_focused: focused })
+                            .expect("failed to send InternalMessage.");
                     }
                     Ok(_) => {
                         error!("Missing required field FocusState.focused");
                     }
                     Err(fidl::Error::ClientChannelClosed { .. }) => {
-                        info!("ViewRefFocused connection closed.");
+                        fx_log_info!("ViewRefFocused connection closed.");
                         return; // from spawned task closure
                     }
                     Err(fidl_error) => {
-                        warn!("ViewRefFocused GetLayout() error: {:?}", fidl_error);
+                        fx_log_warn!("ViewRefFocused GetLayout() error: {:?}", fidl_error);
                         return; // from spawned task closure
                     }
                 }
@@ -373,7 +367,7 @@ impl<'a> AppModel<'a> {
     }
 }
 
-fn setup_fidl_services(sender: UnboundedSender<MessageInternal>) {
+fn setup_fidl_services(sender: UnboundedSender<InternalMessage>) {
     let view_provider_cb = move |stream: fapp::ViewProviderRequestStream| {
         let sender = sender.clone();
         fasync::Task::local(
@@ -387,14 +381,14 @@ fn setup_fidl_services(sender: UnboundedSender<MessageInternal>) {
                                 ViewRefPair::new().expect("failed to create ViewRefPair"),
                             );
                             sender
-                                .unbounded_send(MessageInternal::CreateView(
+                                .unbounded_send(InternalMessage::CreateView(
                                     view_creation_token,
                                     view_identity,
                                 ))
-                                .expect("failed to send MessageInternal.");
+                                .expect("failed to send InternalMessage.");
                         }
                         unhandled_req => {
-                            warn!("Unhandled ViewProvider request: {:?}", unhandled_req);
+                            fx_log_warn!("Unhandled ViewProvider request: {:?}", unhandled_req);
                         }
                     };
                     future::ok(())
@@ -415,7 +409,7 @@ fn setup_fidl_services(sender: UnboundedSender<MessageInternal>) {
 
 fn setup_handle_flatland_events(
     event_stream: fland::FlatlandEventStream,
-    sender: UnboundedSender<MessageInternal>,
+    sender: UnboundedSender<InternalMessage>,
 ) {
     fasync::Task::local(
         event_stream
@@ -426,11 +420,11 @@ fn setup_handle_flatland_events(
                             (values.additional_present_credits, values.future_presentation_infos)
                         {
                             sender
-                                .unbounded_send(MessageInternal::OnNextFrameBegin {
+                                .unbounded_send(InternalMessage::OnNextFrameBegin {
                                     additional_present_credits,
                                     future_presentation_infos,
                                 })
-                                .expect("failed to send MessageInternal");
+                                .expect("failed to send InternalMessage");
                         } else {
                             // If not an error, all table fields are guaranteed to be present.
                             unreachable!()
@@ -438,15 +432,15 @@ fn setup_handle_flatland_events(
                     }
                     fland::FlatlandEvent::OnFramePresented { frame_presented_info } => {
                         sender
-                            .unbounded_send(MessageInternal::OnFramePresented {
+                            .unbounded_send(InternalMessage::OnFramePresented {
                                 frame_presented_info,
                             })
-                            .expect("failed to send MessageInternal");
+                            .expect("failed to send InternalMessage");
                     }
                     fland::FlatlandEvent::OnError { error } => {
                         sender
-                            .unbounded_send(MessageInternal::OnPresentError { error })
-                            .expect("failed to send MessageInternal.");
+                            .unbounded_send(InternalMessage::OnPresentError { error })
+                            .expect("failed to send InternalMessage.");
                     }
                 };
                 future::ok(())
@@ -459,9 +453,10 @@ fn setup_handle_flatland_events(
 #[fasync::run_singlethreaded]
 async fn main() {
     fuchsia_trace_provider::trace_provider_create_with_fdio();
-    fuchsia_syslog::init_with_tags(&["flatland-display"]).expect("failed to initialize logger");
+    fuchsia_syslog::init_with_tags(&["flatland-view-provider-example"])
+        .expect("failed to initialize logger");
 
-    let (internal_sender, mut internal_receiver) = unbounded::<MessageInternal>();
+    let (internal_sender, mut internal_receiver) = unbounded::<InternalMessage>();
 
     let flatland =
         connect_to_protocol::<fland::FlatlandMarker>().expect("error connecting to Flatland");
@@ -471,7 +466,7 @@ async fn main() {
 
     let allocator = connect_to_protocol::<fland::AllocatorMarker>()
         .expect("error connecting to Scenic allocator");
-    info!("Established connections to Flatland and Allocator");
+    fx_log_info!("Established connections to Flatland and Allocator");
 
     setup_fidl_services(internal_sender.clone());
     setup_handle_flatland_events(flatland.take_event_stream(), internal_sender.clone());
@@ -485,17 +480,17 @@ async fn main() {
           message = internal_receiver.next().fuse() => {
             if let Some(message) = message {
               match message {
-                MessageInternal::CreateView(view_creation_token, view_identity) => {
+                InternalMessage::CreateView(view_creation_token, view_identity) => {
                       app.create_parent_viewport_watcher(view_creation_token, view_identity);
                   }
-                  MessageInternal::Relayout { width, height } => {
+                  InternalMessage::Relayout { width, height } => {
                       app.on_relayout(width, height);
                   }
-                  MessageInternal::OnPresentError { error } => {
+                  InternalMessage::OnPresentError { error } => {
                       error!("OnPresentError({:?})", error);
                       break;
                   }
-                  MessageInternal::OnNextFrameBegin {
+                  InternalMessage::OnNextFrameBegin {
                       additional_present_credits,
                       future_presentation_infos,
                   } => {
@@ -510,7 +505,7 @@ async fn main() {
                     .collect();
                     sched_lib.on_next_frame_begin(additional_present_credits, infos);
                   }
-                  MessageInternal::OnFramePresented { frame_presented_info } => {
+                  InternalMessage::OnFramePresented { frame_presented_info } => {
                     trace::duration!("gfx", "FlatlandViewProvider::OnFramePresented");
                     let presented_infos = frame_presented_info.presentation_infos
                     .iter()
@@ -526,9 +521,16 @@ async fn main() {
                       zx::Time::from_nanos(frame_presented_info.actual_presentation_time),
                       presented_infos);
                   }
-                  MessageInternal::FocusChanged{ is_focused } => {
+                  InternalMessage::FocusChanged{ is_focused } => {
                     app.is_focused = is_focused;
-                 }
+                  }
+                  InternalMessage::TouchEvent{timestamp, interaction: _, phase, position_in_viewport } => {
+                    fx_log_info!("Received TouchEvent ({},{}) time: {} phase: {:?}", position_in_viewport[0], position_in_viewport[1], timestamp, phase);
+                  },
+                  InternalMessage::MouseEvent{ timestamp, trace_flow_id: _, position_in_viewport,
+                    scroll_v: _, scroll_h: _, pressed_buttons} => {
+                    fx_log_info!("Received MouseEvent time={} x={} y={} buttons={:?}", timestamp, position_in_viewport[0], position_in_viewport[1], pressed_buttons);
+                  },
                 }
             }
           }
