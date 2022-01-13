@@ -10,6 +10,7 @@
 #include <zircon/compiler.h>
 #include <zircon/types.h>
 
+#include <optional>
 #include <string_view>
 
 #include <pretty/sizes.h>
@@ -91,6 +92,15 @@ class FormattedBytes {
   // The formatted string.
   char buff_[MAX_FORMAT_SIZE_LEN];
 };
+
+// Returns the number of bytes represented by a human readable string
+// like "123.4k", 123.4 * 1024 bytes encoded in |formatted_bytes|.
+//
+// If |formatted_bytes| is not correctly formatted then |std::nullopt| is returned.
+//
+// This is a reverse function of |format_size| input |bytes|. Except that it considers
+// absence of unit (e.g. "123") to be in bytes(implicit B).
+std::optional<uint64_t> ParseSizeBytes(std::string_view formatted_bytes);
 
 }  // namespace pretty
 

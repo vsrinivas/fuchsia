@@ -2,6 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/stdcompat/array.h>
+
+#include <cstdint>
+
 #include <pretty/cpp/sizes.h>
 #include <zxtest/zxtest.h>
 
@@ -92,5 +96,73 @@ TEST(CppSizeTest, ToString) {
         EXPECT_EQ(static_cast<char>(unit), str.front());
       }
     }
+  }
+}
+
+TEST(CppSizeTest, ParseSizeFromFormattedString) {
+  struct FormattedTestCases {
+    const size_t expected_bytes;
+    std::string_view input;
+  };
+
+  constexpr uint64_t kKilo = static_cast<uint64_t>(1) << 10;
+  constexpr uint64_t kMega = static_cast<uint64_t>(1) << 20;
+  constexpr uint64_t kGiga = static_cast<uint64_t>(1) << 30;
+  constexpr uint64_t kTera = static_cast<uint64_t>(1) << 40;
+  constexpr uint64_t kPeta = static_cast<uint64_t>(1) << 50;
+  constexpr uint64_t kExa = static_cast<uint64_t>(1) << 60;
+
+  auto test_cases = cpp20::to_array<FormattedTestCases>({
+      // Integral
+      {1234, "1234"},
+      {1234, "1234b"},
+      {1234, "1234B"},
+      {1234 * kKilo, "1234k"},
+      {1234 * kKilo, "1234K"},
+      {1234 * kMega, "1234m"},
+      {1234 * kMega, "1234M"},
+      {1234 * kGiga, "1234g"},
+      {1234 * kGiga, "1234G"},
+      {1234 * kTera, "1234t"},
+      {1234 * kTera, "1234T"},
+      {5 * kPeta, "5p"},
+      {5 * kPeta, "5P"},
+      {2 * kExa, "2e"},
+      {2 * kExa, "2E"},
+
+      // Fractional
+      {10700, "10.4492187500k"},
+      {10700, "10.4492187500K"},
+      {10700 * kKilo, "10.4492187500m"},
+      {10700 * kKilo, "10.4492187500M"},
+      {10700 * kMega, "10.4492187500g"},
+      {10700 * kMega, "10.4492187500G"},
+      {10700 * kGiga, "10.4492187500t"},
+      {10700 * kGiga, "10.4492187500T"},
+      {10700 * kTera, "10.4492187500p"},
+      {10700 * kTera, "10.4492187500P"},
+      {1441151880758558720, "1.25e"},
+      {1441151880758558720, "1.25E"},
+  });
+  // Reuse the test cases that check byte to string conversion,
+  // just swap input and output.
+  for (auto test_case : test_cases) {
+    auto size_or = pretty::ParseSizeBytes(test_case.input);
+    ASSERT_TRUE(size_or.has_value(), "%.*s", static_cast<int>(test_case.input.size()),
+                test_case.input.data());
+    EXPECT_EQ(*size_or, test_case.expected_bytes, "%.*s", static_cast<int>(test_case.input.size()),
+              test_case.input.data());
+  }
+}
+
+TEST(CppSizeTest, ParseSizeFromWithInvalidInputs) {
+  // Reuse the test cases that check byte to string conversion,
+  // just swap input and output.
+  auto invalid_inputs =
+      cpp20::to_array<std::string_view>({{}, "", "1..1", "1w", "b", "AM", "1.AM", "A.1M"});
+
+  for (auto invalid_input : invalid_inputs) {
+    EXPECT_FALSE(pretty::ParseSizeBytes(invalid_input).has_value(), "%.*s",
+                 static_cast<int>(invalid_input.size()), invalid_input.data());
   }
 }

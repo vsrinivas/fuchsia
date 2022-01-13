@@ -2,14 +2,98 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <ctype.h>
+#include <inttypes.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <zircon/assert.h>
+#include <zircon/compiler.h>
+
+#include <cstdint>
+#include <optional>
+#include <string_view>
 
 #include <pretty/cpp/sizes.h>
 #include <pretty/sizes.h>
 
 namespace pretty {
+namespace {
+
+struct EncodedSize {
+  // All numbers before the first '.'.
+  std::string_view integral;
+
+  // All numbers after the first '.'.
+  std::string_view fractional;
+
+  SizeUnit unit;
+
+  uint64_t scale = 1;
+};
+
+std::optional<EncodedSize> ProcessFormattedString(std::string_view formatted) {
+  if (formatted.empty()) {
+    return std::nullopt;
+  }
+
+  EncodedSize encoded;
+  encoded.unit = SizeUnit::kBytes;
+  if (!isdigit(formatted.back())) {
+    encoded.unit = static_cast<SizeUnit>(toupper(formatted.back()));
+    formatted.remove_suffix(1);
+
+    // Look for the unit.
+    switch (encoded.unit) {
+      case SizeUnit::kBytes:
+        encoded.scale = 1;
+        break;
+      case SizeUnit::kKiB:
+        encoded.scale <<= 10;
+        break;
+      case SizeUnit::kMiB:
+        encoded.scale <<= 20;
+        break;
+      case SizeUnit::kGiB:
+        encoded.scale <<= 30;
+        break;
+      case SizeUnit::kTiB:
+        encoded.scale <<= 40;
+        break;
+      case SizeUnit::kPiB:
+        encoded.scale <<= 50;
+        break;
+      case SizeUnit::kEiB:
+        encoded.scale <<= 60;
+        break;
+      default:
+        return std::nullopt;
+    }
+  }
+
+  size_t split_at = formatted.find('.');
+  encoded.integral = formatted;
+
+  // Adjust substrings for presence of decimal values.
+  if (split_at != std::string_view::npos) {
+    encoded.integral = formatted.substr(0, split_at);
+    if (add_overflow(split_at, 1, &split_at) || split_at == formatted.length()) {
+      return std::nullopt;
+    }
+    encoded.fractional = formatted.substr(split_at, formatted.length());
+    // "A.[Unit]" with A being digit is still invalid.
+    if (encoded.fractional.empty()) {
+      return std::nullopt;
+    }
+  }
+
+  if (encoded.integral.empty()) {
+    return std::nullopt;
+  }
+
+  return encoded;
+}
+
+}  // namespace
 
 std::string_view FormattedBytes::ToString(SizeUnit unit) {
   using namespace std::string_view_literals;
@@ -33,6 +117,77 @@ std::string_view FormattedBytes::ToString(SizeUnit unit) {
       return "E"sv;
   }
   return {};
+}
+
+std::optional<uint64_t> ParseSizeBytes(std::string_view formatted_bytes) {
+  auto encoded_size = ProcessFormattedString(formatted_bytes);
+  if (!encoded_size) {
+    return std::nullopt;
+  }
+
+  uint64_t integral = 0;
+  uint64_t base_10 = 1;
+  for (auto it = encoded_size->integral.rbegin(); it != encoded_size->integral.rend(); ++it) {
+    char digit = *it;
+    if (!isdigit(digit)) {
+      return std::nullopt;
+    }
+    unsigned val = digit - '0';
+    uint64_t scaled_val = val * base_10 * encoded_size->scale;
+
+    if (add_overflow(integral, scaled_val, &integral)) {
+      return std::nullopt;
+    }
+    base_10 *= 10;
+  }
+  base_10 = 1;
+
+  uint64_t carry = 0;
+  // This loop provides software division, because for the larger
+  // units its is quite possible to overflow when doing the scaling
+  // of the mantissa.
+  // If one were to use the naive approach:
+  //  * let m be the mantissa as an integer.
+  //  * k the length of the mantissa.
+  //  * u the scaling factor of the provided unit.
+  //
+  // The number of bytes encoded in the mantissa, can be calculated as:
+  //     |m * u / 10^(k)|
+  // The problem arises when |m| * |u| exceeds the capacity of 64 bits.
+  uint64_t fractional = 0;
+  for (char digit : encoded_size->fractional) {
+    if (!isdigit(digit)) {
+      return std::nullopt;
+    }
+    uint64_t val = digit - '0';
+    base_10 *= 10;
+    uint64_t scaled_value = val * encoded_size->scale;
+    // Calculate how many bytes does this digit of the mantissa contributes.
+    if (add_overflow(fractional, scaled_value / base_10, &fractional)) {
+      return std::nullopt;
+    }
+
+    // Bring the carry from 10^-(i - 1) bytes to 10^-(i) bytes.
+    carry = 10 * carry + scaled_value % base_10;
+
+    // Try to consume any part of the accumulated carry.
+    uint64_t consumed_carry = carry / base_10;
+    if (add_overflow(fractional, consumed_carry, &fractional)) {
+      return std::nullopt;
+    }
+
+    // Adjust the units back again.
+    carry %= base_10;
+  }
+
+  // At this point there should be no carry left, unless we were given
+  // a value that is not byte aligned (Y.X bytes) where X is non zero,
+  // after applying the proper scaling.
+  if (carry != 0) {
+    return std::nullopt;
+  }
+
+  return integral + fractional;
 }
 
 }  // namespace pretty

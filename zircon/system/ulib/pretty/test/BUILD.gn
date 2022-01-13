@@ -24,6 +24,7 @@ test("pretty-test") {
   ]
   deps = [
     "//sdk/lib/fdio",
+    "//sdk/lib/stdcompat",
     "//zircon/system/ulib/pretty",
     "//zircon/system/ulib/zxtest",
   ]

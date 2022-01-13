@@ -4,11 +4,12 @@
 
 // Utilities for formatting sizes to make them more human-readable.
 
-#pragma once
-
-#include <zircon/compiler.h>
+#ifndef PRETTY_SIZES_H_
+#define PRETTY_SIZES_H_
 
 #include <stddef.h>
+#include <stdint.h>
+#include <zircon/compiler.h>
 
 __BEGIN_CDECLS
 
@@ -41,3 +42,5 @@ char* format_size_fixed(char* str, size_t str_size, size_t bytes, char unit);
 char* format_size(char* str, size_t str_size, size_t bytes);
 
 __END_CDECLS
+
+#endif  // PRETTY_SIZES_H_
