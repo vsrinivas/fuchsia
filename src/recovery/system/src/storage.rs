@@ -10,10 +10,32 @@ use fidl_fuchsia_paver::{PaverMarker, PaverProxy};
 use fs_management as fs;
 use fuchsia_component::client::connect_to_protocol;
 use fuchsia_zircon as zx;
+use std::{fs::File, rc::Rc};
+
+/// Abstract away format disk operations to allow unit testing.
+pub trait FormatDiskTrait {
+    fn create_fd(&self, handle: zx::Handle) -> Result<File, zx::Status>;
+    fn device_get_topo_path(&self, file: &File) -> Result<String, zx::Status>;
+}
+
+pub type FormatDiskConnector = Rc<Box<dyn FormatDiskTrait>>;
+pub struct FuchsiaFormatDiskConnector;
+
+impl FormatDiskTrait for FuchsiaFormatDiskConnector {
+    fn create_fd(&self, handle: zx::Handle) -> Result<File, zx::Status> {
+        create_fd(handle)
+    }
+    fn device_get_topo_path(&self, file: &File) -> Result<String, zx::Status> {
+        device_get_topo_path(file)
+    }
+}
 
 /// Calls the paver service to format the system volume, and returns the path
 /// to the newly created blobfs and minfs partitions.
-async fn format_disk(paver: PaverProxy) -> Result<(String, String), Error> {
+async fn format_disk(
+    fc: FormatDiskConnector,
+    paver: PaverProxy,
+) -> Result<(String, String), Error> {
     let (data_sink, data_sink_server_end) = fidl::endpoints::create_proxy()?;
     paver.find_data_sink(data_sink_server_end)?;
 
@@ -22,9 +44,9 @@ async fn format_disk(paver: PaverProxy) -> Result<(String, String), Error> {
         Err(err) => return Err(format_err!("failed to wipe volume: {}", err)),
     };
 
-    let file = create_fd(server_end.into_channel().into())?;
+    let file = fc.create_fd(server_end.into_channel().into())?;
 
-    let base_path = device_get_topo_path(&file)?;
+    let base_path = fc.device_get_topo_path(&file)?;
 
     Ok((format!("{}/blobfs-p-1/block", base_path), format!("{}/data-p-2/block", base_path)))
 }
@@ -61,7 +83,8 @@ impl Storage {
     pub async fn new() -> Result<Storage, Error> {
         println!("About to Initialize storage");
         let paver = connect_to_protocol::<PaverMarker>()?;
-        let (blobfs_path, minfs_path) = format_disk(paver.clone()).await?;
+        let fc: FormatDiskConnector = Rc::new(Box::new(FuchsiaFormatDiskConnector {}));
+        let (blobfs_path, minfs_path) = format_disk(fc, paver.clone()).await?;
 
         let blobfs = create_blobfs(blobfs_path)?;
         let minfs = create_minfs(minfs_path)?;
@@ -115,7 +138,10 @@ fn create_minfs_from_channel(
 
 #[cfg(test)]
 mod tests {
-    use super::{create_minfs_from_channel, format_disk, mount_filesystem, Filesystem};
+    use super::{
+        create_minfs_from_channel, format_disk, mount_filesystem, Filesystem, FormatDiskConnector,
+        FormatDiskTrait,
+    };
     use anyhow::Error;
     use fidl::endpoints::ClientEnd;
     use fidl_fuchsia_hardware_block_volume::VolumeManagerMarker;
@@ -127,7 +153,22 @@ mod tests {
     use fuchsia_zircon::Status;
     use futures::prelude::*;
     use ramdevice_client::RamdiskClientBuilder;
-    use std::sync::Arc;
+    use std::{fs::File, rc::Rc, sync::Arc};
+    use tempfile::tempfile;
+
+    const FORMATTED_BLOCK_DEVICE_PATH: &'static str = "/test-formatted-block-device";
+
+    // Mock for a FormatDiskConnector.
+    struct FormatDiskConnectorMock;
+
+    impl FormatDiskTrait for FormatDiskConnectorMock {
+        fn create_fd(&self, _handle: zx::Handle) -> Result<File, zx::Status> {
+            Ok(tempfile().unwrap())
+        }
+        fn device_get_topo_path(&self, _file: &File) -> Result<String, zx::Status> {
+            Ok(String::from(FORMATTED_BLOCK_DEVICE_PATH))
+        }
+    }
 
     // Mock for a Filesystem.
     struct FilesystemMock {
@@ -221,10 +262,7 @@ mod tests {
 
     /// Provides a suitable channel for a faked successful WipeVolume call.
     fn grab_volume() -> ClientEnd<VolumeManagerMarker> {
-        // We need a channel to a device supported by device_get_topo_path.
-        // Grab the system's fist block device.
-        let (client_channel, server_channel) = zx::Channel::create().unwrap();
-        fdio::service_connect("/dev/class/block/000", server_channel).expect("Open block device");
+        let (client_channel, _) = zx::Channel::create().unwrap();
         ClientEnd::<VolumeManagerMarker>::new(client_channel)
     }
 
@@ -262,8 +300,9 @@ mod tests {
     async fn test_calls_paver_service_with_errors() {
         let env = TestEnv::new(MockPaver::new(Status::NOT_SUPPORTED));
         let paver = env.env.connect_to_protocol::<PaverMarker>().unwrap();
+        let fc: FormatDiskConnector = Rc::new(Box::new(FormatDiskConnectorMock {}));
 
-        let path = format_disk(paver.clone()).await;
+        let path = format_disk(fc, paver.clone()).await;
         assert_eq!(
             (String::new(), String::new()),
             match path {
@@ -282,8 +321,9 @@ mod tests {
     async fn test_calls_paver_service() {
         let env = TestEnv::new(MockPaver::new(Status::OK));
         let paver = env.env.connect_to_protocol::<PaverMarker>().unwrap();
+        let fc: FormatDiskConnector = Rc::new(Box::new(FormatDiskConnectorMock {}));
 
-        let result = format_disk(paver.clone()).await;
+        let result = format_disk(fc, paver.clone()).await;
         let (blobfs_path, minfs_path) = match result {
             Ok(paths) => paths,
             Err(err) => {
