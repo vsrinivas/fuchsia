@@ -11,8 +11,10 @@ ffx_plugin("ffx_driver_lspci") {
   with_unit_tests = true
 
   deps = [
+    "//sdk/fidl/fuchsia.developer.remotecontrol:fuchsia.developer.remotecontrol-rustc",
     "//sdk/fidl/fuchsia.hardware.pci:fuchsia.hardware.pci-rustc",
     "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
+    "//src/developer/ffx/plugins/driver/common:ffx_driver",
     "//src/devices/pci/bin/lspci:lib",
     "//third_party/rust_crates:zstd",
   ]

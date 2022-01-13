@@ -37,4 +37,7 @@ pub struct DriverLspci {
     #[argh(option, short = 's')]
     /// [[<bus>]:][slot][.[<func>]]    Show only devices in selected slots
     pub filter: Option<Filter>,
+    /// if this exists, the user will be prompted for a component to select.
+    #[argh(switch, long = "select")]
+    pub select: bool,
 }

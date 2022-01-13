@@ -19,6 +19,10 @@ pub struct DeviceCommand {
     /// the subcommand to run.
     #[argh(subcommand)]
     pub subcommand: DeviceSubCommand,
+
+    /// if this exists, the user will be prompted for a component to select.
+    #[argh(switch, short = 's', long = "select")]
+    pub select: bool,
 }
 
 #[derive(FromArgs, Clone, PartialEq, Debug)]

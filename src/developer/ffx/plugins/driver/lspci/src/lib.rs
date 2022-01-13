@@ -3,13 +3,16 @@
 // found in the LICENSE file.
 use {
     anyhow::Result, ffx_core::ffx_plugin, ffx_driver_lspci_args::DriverLspci,
-    fidl::endpoints::Proxy, fidl_fuchsia_io::DirectoryProxy, lspci::bridge::Bridge,
-    lspci::device::Device, lspci::Args, zstd::block::decompress,
+    fidl::endpoints::Proxy, lspci::bridge::Bridge, lspci::device::Device, lspci::Args,
+    zstd::block::decompress,
 };
 
-#[ffx_plugin("driver_enabled", DirectoryProxy = "bootstrap/driver_manager:expose:dev")]
-
-pub async fn lspci(dev: DirectoryProxy, cmd: DriverLspci) -> Result<()> {
+#[ffx_plugin("driver_enabled")]
+pub async fn lspci(
+    remote_control: fidl_fuchsia_developer_remotecontrol::RemoteControlProxy,
+    cmd: DriverLspci,
+) -> Result<()> {
+    let dev = ffx_driver::get_devfs_proxy(remote_control, cmd.select).await?;
     // Creates the proxy and server
     let (proxy, server) = fidl::endpoints::create_proxy::<fidl_fuchsia_io::NodeMarker>()?;
 

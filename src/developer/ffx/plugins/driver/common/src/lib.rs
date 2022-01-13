@@ -126,6 +126,17 @@ pub async fn user_choose_selector(
     }
 }
 
+pub async fn get_devfs_proxy(
+    remote_control: fremotecontrol::RemoteControlProxy,
+    select: bool,
+) -> Result<fio::DirectoryProxy> {
+    let selector = match select {
+        true => user_choose_selector(&remote_control, "dev").await?,
+        false => "bootstrap/driver_manager:expose:dev".to_string(),
+    };
+    remotecontrol_connect::<fio::DirectoryMarker>(&remote_control, &selector).await
+}
+
 pub async fn get_development_proxy(
     remote_control: fremotecontrol::RemoteControlProxy,
     select: bool,

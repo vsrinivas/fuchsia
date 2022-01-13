@@ -14,4 +14,8 @@ use {argh::FromArgs, ffx_core::ffx_command};
     $ ffx driver lsblk",
     error_code(1, "Failed to connect to the device manager service")
 )]
-pub struct DriverLsblk {}
+pub struct DriverLsblk {
+    /// if this exists, the user will be prompted for a component to select.
+    #[argh(switch, short = 's', long = "select")]
+    pub select: bool,
+}

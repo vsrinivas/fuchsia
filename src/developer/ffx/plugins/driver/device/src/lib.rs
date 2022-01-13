@@ -13,8 +13,12 @@ use {
     std::convert::TryFrom,
 };
 
-#[ffx_plugin("driver_enabled", DirectoryProxy = "bootstrap/driver_manager:expose:dev")]
-pub async fn device(dev: DirectoryProxy, cmd: DeviceCommand) -> Result<()> {
+#[ffx_plugin("driver_enabled")]
+pub async fn device(
+    remote_control: fidl_fuchsia_developer_remotecontrol::RemoteControlProxy,
+    cmd: DeviceCommand,
+) -> Result<()> {
+    let dev = ffx_driver::get_devfs_proxy(remote_control, cmd.select).await?;
     match cmd.subcommand {
         DeviceSubCommand::Bind(BindCommand { ref device_path, ref driver_path }) => {
             let device = connect_to_device(dev, device_path)?;

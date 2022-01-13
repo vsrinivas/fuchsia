@@ -22,8 +22,12 @@ use {
 
 mod guids;
 
-#[ffx_plugin("driver_enabled", fio::DirectoryProxy = "bootstrap/driver_manager:expose:dev")]
-pub async fn lsblk(dev: fio::DirectoryProxy, _cmd: DriverLsblk) -> Result<()> {
+#[ffx_plugin("driver_enabled")]
+pub async fn lsblk(
+    remote_control: fidl_fuchsia_developer_remotecontrol::RemoteControlProxy,
+    cmd: DriverLsblk,
+) -> Result<()> {
+    let dev = ffx_driver::get_devfs_proxy(remote_control, cmd.select).await?;
     println!(
         "{:<3} {:<4} {:<16} {:<20} {:<6} {}",
         "ID", "SIZE", "TYPE", "LABEL", "FLAGS", "DEVICE"
