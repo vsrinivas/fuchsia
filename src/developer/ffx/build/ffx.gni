@@ -85,6 +85,7 @@ template("ffx") {
 
     # https//fxbug.dev/90331
     # Disable remote build until size/memory/flakiness issues are resolved.
+    # TODO(fxbug.dev/82887): delete the below after bug is fixed.
     disable_rbe = true
   }
 

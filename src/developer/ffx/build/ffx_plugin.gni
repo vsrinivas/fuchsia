@@ -145,6 +145,9 @@ template("ffx_plugin") {
       }
 
       args_deps += [ ":" + sub_cmd ]
+
+      # TODO(fxbug.dev/82887): delete the below after bug is fixed.
+      disable_rbe = true
     }
 
     args = output_name + "_args"
@@ -209,6 +212,9 @@ template("ffx_plugin") {
                                "with_unit_tests",
                                "test_deps",
                              ])
+
+      # TODO(fxbug.dev/82887): delete the below after bug is fixed.
+      disable_rbe = true
     }
     if (defined(invoker.args_with_unit_tests) &&
         invoker.args_with_unit_tests == true) {
@@ -291,6 +297,9 @@ template("ffx_plugin") {
                                  "non_rust_deps",
                                  "target_name",
                                ])
+
+        # TODO(fxbug.dev/82887): delete the below after bug is fixed.
+        disable_rbe = true
       }
       suite_deps += [ ":" + execution_lib ]
 
@@ -319,6 +328,9 @@ template("ffx_plugin") {
                                "enforce_source_listing",
                                "with_unit_tests",
                              ])
+
+      # TODO(fxbug.dev/82887): delete the below after bug is fixed.
+      disable_rbe = true
     }
   } else {
     not_needed(invoker, "*")
