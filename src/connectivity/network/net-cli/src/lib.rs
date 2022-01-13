@@ -57,13 +57,13 @@ pub trait ServiceConnector<S: fidl::endpoints::ProtocolMarker> {
 /// all FIDL dependencies required by net-cli.
 #[async_trait::async_trait]
 pub trait NetCliDepsConnector:
-    ServiceConnector<fstack::StackMarker>
-    + ServiceConnector<fnetstack::NetstackMarker>
+    ServiceConnector<fdhcp::Server_Marker>
     + ServiceConnector<ffilter::FilterMarker>
-    + ServiceConnector<fstack::LogMarker>
     + ServiceConnector<fneighbor::ControllerMarker>
     + ServiceConnector<fneighbor::ViewMarker>
-    + ServiceConnector<fdhcp::Server_Marker>
+    + ServiceConnector<fnetstack::NetstackMarker>
+    + ServiceConnector<fstack::LogMarker>
+    + ServiceConnector<fstack::StackMarker>
 {
     /// Acquires a connection to the device at the provided path.
     ///
@@ -1109,23 +1109,12 @@ mod tests {
     }
 
     #[async_trait::async_trait]
-    impl ServiceConnector<StackMarker> for TestConnector {
-        async fn connect(&self) -> Result<<fstack::StackMarker as ProtocolMarker>::Proxy, Error> {
-            match &self.stack {
-                Some(stack) => Ok(stack.clone()),
-                None => Err(anyhow::anyhow!("connector has no stack instance")),
-            }
-        }
-    }
-
-    #[async_trait::async_trait]
-    impl ServiceConnector<NetstackMarker> for TestConnector {
-        async fn connect(
-            &self,
-        ) -> Result<<fnetstack::NetstackMarker as ProtocolMarker>::Proxy, Error> {
-            match &self.netstack {
-                Some(netstack) => Ok(netstack.clone()),
-                None => Err(anyhow::anyhow!("connector has no netstack instance")),
+    impl ServiceConnector<fdhcp::Server_Marker> for TestConnector {
+        async fn connect(&self) -> Result<<fdhcp::Server_Marker as ProtocolMarker>::Proxy, Error> {
+            let TestConnector { stack: _, netstack: _, dhcpd } = self;
+            match dhcpd {
+                Some(dhcpd) => Ok(dhcpd.clone()),
+                None => Err(anyhow::anyhow!("connector has no dhcp server instance")),
             }
         }
     }
@@ -1134,13 +1123,6 @@ mod tests {
     impl ServiceConnector<ffilter::FilterMarker> for TestConnector {
         async fn connect(&self) -> Result<<ffilter::FilterMarker as ProtocolMarker>::Proxy, Error> {
             Err(anyhow::anyhow!("connect filter unimplemented for test connector"))
-        }
-    }
-
-    #[async_trait::async_trait]
-    impl ServiceConnector<LogMarker> for TestConnector {
-        async fn connect(&self) -> Result<<fstack::LogMarker as ProtocolMarker>::Proxy, Error> {
-            Err(anyhow::anyhow!("connect log unimplemented for test connector"))
         }
     }
 
@@ -1161,12 +1143,30 @@ mod tests {
     }
 
     #[async_trait::async_trait]
-    impl ServiceConnector<fdhcp::Server_Marker> for TestConnector {
-        async fn connect(&self) -> Result<<fdhcp::Server_Marker as ProtocolMarker>::Proxy, Error> {
-            let TestConnector { stack: _, netstack: _, dhcpd } = self;
-            match dhcpd {
-                Some(dhcpd) => Ok(dhcpd.clone()),
-                None => Err(anyhow::anyhow!("connector has no dhcp server instance")),
+    impl ServiceConnector<NetstackMarker> for TestConnector {
+        async fn connect(
+            &self,
+        ) -> Result<<fnetstack::NetstackMarker as ProtocolMarker>::Proxy, Error> {
+            match &self.netstack {
+                Some(netstack) => Ok(netstack.clone()),
+                None => Err(anyhow::anyhow!("connector has no netstack instance")),
+            }
+        }
+    }
+
+    #[async_trait::async_trait]
+    impl ServiceConnector<LogMarker> for TestConnector {
+        async fn connect(&self) -> Result<<fstack::LogMarker as ProtocolMarker>::Proxy, Error> {
+            Err(anyhow::anyhow!("connect log unimplemented for test connector"))
+        }
+    }
+
+    #[async_trait::async_trait]
+    impl ServiceConnector<StackMarker> for TestConnector {
+        async fn connect(&self) -> Result<<fstack::StackMarker as ProtocolMarker>::Proxy, Error> {
+            match &self.stack {
+                Some(stack) => Ok(stack.clone()),
+                None => Err(anyhow::anyhow!("connector has no stack instance")),
             }
         }
     }
