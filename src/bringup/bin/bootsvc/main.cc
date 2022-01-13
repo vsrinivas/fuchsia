@@ -54,6 +54,7 @@ struct Resources {
   zx::resource mmio;
   zx::resource irq;
   zx::resource system;
+  zx::resource vmex;
 #if __x86_64__
   zx::resource ioport;
 #elif __aarch64__
@@ -66,6 +67,7 @@ struct Resources {
 // passed on.
 struct Vmos {
   zx::vmo bootfs;
+  zx::vmo bootfs_exec;
   std::vector<zx::vmo> vdsos;
   std::vector<zx::vmo> kernel_files;
 };
@@ -162,24 +164,38 @@ zx_status_t ExtractBootArgsFromImage(std::vector<char>* buf, const zx::vmo& imag
 }
 
 zx_status_t ExtractBootArgsFromBootfs(std::vector<char>* buf,
-                                      const fbl::RefPtr<bootsvc::BootfsService>& bootfs) {
-  // TODO(teisenbe): Rename this file
+                                      const fbl::RefPtr<bootsvc::BootfsService> bootfs,
+                                      zbitl::MapUnownedVmo unowned_bootfs) {
+  // TODO(fxb/91451): Rename this file.
   const char* config_path = "config/devmgr";
 
   // This config file may not be present depending on the device, but errors besides NOT_FOUND
   // should not be ignored.
   zx::vmo config_vmo;
   uint64_t file_size;
-  zx_status_t status = bootfs->Open(config_path, /*executable=*/false, &config_vmo, &file_size);
-  if (status == ZX_ERR_NOT_FOUND) {
-    printf("bootsvc: No boot config found in bootfs, skipping\n");
-    return ZX_OK;
-  } else if (status != ZX_OK) {
-    return status;
+  if (bootfs) {
+    zx_status_t status = bootfs->Open(config_path, /*executable=*/false, &config_vmo, &file_size);
+    if (status == ZX_ERR_NOT_FOUND) {
+      printf("bootsvc: No boot config found in bootfs, skipping\n");
+      return ZX_OK;
+    } else if (status != ZX_OK) {
+      return status;
+    }
+  } else {
+    zbitl::MapUnownedVmo invalid_bootfs_exec;  // We only need a readonly file.
+    zx::status<zx::vmo> result = bootsvc::BootfsService::GetFileFromBootfsVmo(
+        std::move(unowned_bootfs), std::move(invalid_bootfs_exec), config_path, &file_size);
+    if (result.status_value() == ZX_ERR_NOT_FOUND) {
+      printf("bootsvc: No boot config found in bootfs, skipping\n");
+      return ZX_OK;
+    } else if (result.status_value() != ZX_OK) {
+      return result.status_value();
+    }
+    config_vmo = std::move(result.value());
   }
 
   auto config = std::make_unique<char[]>(file_size);
-  status = config_vmo.read(config.get(), 0, file_size);
+  zx_status_t status = config_vmo.read(config.get(), 0, file_size);
   if (status != ZX_OK) {
     return status;
   }
@@ -192,30 +208,26 @@ zx_status_t ExtractBootArgsFromBootfs(std::vector<char>* buf,
 // Load the boot arguments from the BOOTFS and select, text-formatted argument
 // ZBI types.
 zx_status_t LoadBootArgs(const fbl::RefPtr<bootsvc::BootfsService>& bootfs,
-                         const zx::vmo& image_vmo, bootsvc::ItemMap* item_map, zx::vmo* out,
-                         uint64_t* size, std::optional<std::string>* next_program) {
-  std::vector<char> boot_args;
+                         zbitl::MapUnownedVmo unowned_bootfs, const zx::vmo& image_vmo,
+                         bootsvc::ItemMap* item_map, zx::vmo* out, std::vector<char>* boot_args,
+                         uint64_t* size) {
+  printf("bootsvc: Loading remaining boot arguments...\n");
   zx_status_t status;
-
-  status = ExtractBootArgsFromImage(&boot_args, image_vmo, item_map, next_program);
-  ZX_ASSERT_MSG(status == ZX_OK, "Retrieving CMDLINE boot args failed: %s\n",
-                zx_status_get_string(status));
-
-  status = ExtractLegacyBootArgsFromImage(&boot_args, image_vmo, item_map);
+  status = ExtractLegacyBootArgsFromImage(boot_args, image_vmo, item_map);
   ZX_ASSERT_MSG(status == ZX_OK, "Retrieving IMAGE_ARGS boot args failed: %s\n",
                 zx_status_get_string(status));
 
-  status = ExtractBootArgsFromBootfs(&boot_args, bootfs);
+  status = ExtractBootArgsFromBootfs(boot_args, bootfs, std::move(unowned_bootfs));
   ZX_ASSERT_MSG(status == ZX_OK, "Retrieving boot config failed: %s\n",
                 zx_status_get_string(status));
 
   // Copy boot arguments into VMO.
   zx::vmo args_vmo;
-  status = zx::vmo::create(boot_args.size(), 0, &args_vmo);
+  status = zx::vmo::create(boot_args->size(), 0, &args_vmo);
   if (status != ZX_OK) {
     return status;
   }
-  status = args_vmo.write(boot_args.data(), 0, boot_args.size());
+  status = args_vmo.write(boot_args->data(), 0, boot_args->size());
   if (status != ZX_OK) {
     return status;
   }
@@ -224,7 +236,7 @@ zx_status_t LoadBootArgs(const fbl::RefPtr<bootsvc::BootfsService>& bootfs,
     return status;
   }
   *out = std::move(args_vmo);
-  *size = boot_args.size();
+  *size = boot_args->size();
   return ZX_OK;
 }
 
@@ -247,41 +259,71 @@ void LaunchNextProcess(const std::vector<std::string>& args,
                        const zx::vmo& bootargs_vmo, const uint64_t bootargs_size) {
   ZX_DEBUG_ASSERT(!args.empty());
 
-  // Open the executable we will start next
-  zx::vmo program;
-  uint64_t file_size;
-  const char* next_program = args[0].c_str();
-  zx_status_t status = bootfs->Open(next_program, /*executable=*/true, &program, &file_size);
-  ZX_ASSERT_MSG(status == ZX_OK, "bootsvc: failed to open '%s': %s\n", next_program,
-                zx_status_get_string(status));
-  // Get the bootfs fuchsia.io.Node service channel that we will hand to the
-  // next process in the boot chain.
-  zx::channel bootfs_conn;
-  status = bootfs->CreateRootConnection(&bootfs_conn);
-  ZX_ASSERT_MSG(status == ZX_OK, "bootfs conn creation failed: %s\n", zx_status_get_string(status));
-
-  zx::channel svcfs_conn;
-  status = svcfs->CreateRootConnection(&svcfs_conn);
-  ZX_ASSERT_MSG(status == ZX_OK, "svcfs conn creation failed: %s\n", zx_status_get_string(status));
-
+  // Maximum of two handles (bootfs and svcfs), but only svcfs will be set when
+  // --host_bootfs is used.
   const char* nametable[2] = {};
   uint32_t count = 0;
 
+  zx_status_t status;
+  const char* next_program = args[0].c_str();
+
   launchpad_t* lp;
   launchpad_create(0, next_program, &lp);
+
+  // Use the local loader service backed by the bootfs VFS or by a temporary bootfs
+  // image parser if the bootfs VFS is no longer created in bootsvc.
   {
-    // Use the local loader service backed directly by the primary BOOTFS.
     auto loader_conn = loader_svc->Connect();
     ZX_ASSERT_MSG(loader_conn.is_ok(), "failed to connect to BootfsLoaderService : %s\n",
                   loader_conn.status_string());
     zx_handle_t old = launchpad_use_loader_service(lp, loader_conn->TakeChannel().release());
     ZX_ASSERT(old == ZX_HANDLE_INVALID);
   }
-  launchpad_load_from_vmo(lp, program.release());
-  launchpad_clone(lp, LP_CLONE_DEFAULT_JOB);
 
-  launchpad_add_handle(lp, bootfs_conn.release(), PA_HND(PA_NS_DIR, count));
-  nametable[count++] = "/boot";
+  if (bootfs) {
+    zx::vmo program;
+    uint64_t file_size;
+    status = bootfs->Open(next_program, /*executable=*/true, &program, &file_size);
+    ZX_ASSERT_MSG(status == ZX_OK, "bootsvc: failed to open '%s': %s\n", next_program,
+                  zx_status_get_string(status));
+    // Get the bootfs fuchsia.io.Node service channel that we will hand to the
+    // next process in the boot chain.
+    zx::channel bootfs_conn;
+    status = bootfs->CreateRootConnection(&bootfs_conn);
+    ZX_ASSERT_MSG(status == ZX_OK, "bootfs conn creation failed: %s\n",
+                  zx_status_get_string(status));
+
+    launchpad_load_from_vmo(lp, program.release());
+    launchpad_clone(lp, LP_CLONE_DEFAULT_JOB);
+
+    launchpad_add_handle(lp, bootfs_conn.release(), PA_HND(PA_NS_DIR, count));
+    nametable[count++] = "/boot";
+  } else {
+    // Only the executable bootfs vmo is needed since we need an executable next program image.
+    zbitl::MapUnownedVmo invalid_unowned_boofs, unowned_bootfs_exec(vmos.bootfs_exec.borrow());
+
+    zx::status<zx::vmo> result = bootsvc::BootfsService::GetFileFromBootfsVmo(
+        std::move(invalid_unowned_boofs), std::move(unowned_bootfs_exec), next_program,
+        /*size=*/nullptr);
+    ZX_ASSERT_MSG(result.status_value() == ZX_OK, "bootsvc: failed to open '%s': %s\n",
+                  next_program, zx_status_get_string(result.status_value()));
+
+    launchpad_load_from_vmo(lp, result.value().release());
+    launchpad_clone(lp, LP_CLONE_DEFAULT_JOB);
+
+    // Component manager only needs these handles if it's creating bootfs.
+    for (uint16_t i = 0; i < vmos.vdsos.size(); i++) {
+      // Don't overwrite the default VDSO at index i == 0.
+      launchpad_add_handle(lp, vmos.vdsos[i].release(), PA_HND(PA_VMO_VDSO, i + 1));
+    }
+    for (uint16_t i = 0; i < vmos.kernel_files.size(); i++) {
+      launchpad_add_handle(lp, vmos.kernel_files[i].release(), PA_HND(PA_VMO_KERNEL_FILE, i));
+    }
+  }
+
+  zx::channel svcfs_conn;
+  status = svcfs->CreateRootConnection(&svcfs_conn);
+  ZX_ASSERT_MSG(status == ZX_OK, "svcfs conn creation failed: %s\n", zx_status_get_string(status));
   launchpad_add_handle(lp, svcfs_conn.release(), PA_HND(PA_NS_DIR, count));
   nametable[count++] = "/svc";
 
@@ -295,17 +337,6 @@ void LaunchNextProcess(const std::vector<std::string>& args,
 #elif __aarch64__
   launchpad_add_handle(lp, resources.smc.release(), PA_HND(PA_SMC_RESOURCE, 0));
 #endif
-
-  // Temporarily pass these VMO handles to the component manager. This will be
-  // removed once bootsvc stops taking these handles to create bootfs when
-  // component manager is creating its own bootfs.
-  for (uint16_t i = 0; i < vmos.vdsos.size(); i++) {
-    // Don't overwrite the default VDSO at index i == 0.
-    launchpad_add_handle(lp, vmos.vdsos[i].release(), PA_HND(PA_VMO_VDSO, i + 1));
-  }
-  for (uint16_t i = 0; i < vmos.kernel_files.size(); i++) {
-    launchpad_add_handle(lp, vmos.kernel_files[i].release(), PA_HND(PA_VMO_KERNEL_FILE, i));
-  }
 
   // Duplicate the root resource to pass to the next process.
   zx::resource root_rsrc_dup;
@@ -386,6 +417,49 @@ void GetKernelVmos(uint8_t type, std::vector<zx::vmo>* vmos) {
   }
 }
 
+bool UseComponentManagerHostedBootfs(std::vector<std::string> next_args) {
+  for (const std::string& arg : next_args) {
+    if (arg.find("host_bootfs") != std::string::npos) {
+      printf("bootsvc: using component manager hosted bootfs filesystem.\n");
+      return true;
+    }
+  }
+
+  printf(
+      "bootsvc: using the legacy bootfs filesystem. To try the new component manager hosted "
+      "filesystem, pass --host_bootfs as a bootsvc.next argument.\n");
+  return false;
+}
+
+fbl::RefPtr<bootsvc::BootfsService> CreateBootfsService(async_dispatcher_t* dispatcher,
+                                                        const Resources& resources,
+                                                        const Vmos& vmos) {
+  zx::resource vmex_dup;
+  zx_status_t status = resources.vmex.duplicate(ZX_RIGHT_SAME_RIGHTS, &vmex_dup);
+  ZX_ASSERT_MSG(status == ZX_OK && vmex_dup.is_valid(),
+                "Failed to duplicate bootfs_vmex resource: %s\n.", zx_status_get_string(status));
+
+  fbl::RefPtr<bootsvc::BootfsService> bootfs_svc;
+  status = bootsvc::BootfsService::Create(dispatcher, std::move(vmex_dup), &bootfs_svc);
+  ZX_ASSERT_MSG(status == ZX_OK, "BootfsService creation failed: %s\n",
+                zx_status_get_string(status));
+
+  zx::vmo bootfs_dup;
+  status = vmos.bootfs.duplicate(ZX_RIGHT_SAME_RIGHTS, &bootfs_dup);
+  ZX_ASSERT_MSG(status == ZX_OK && bootfs_dup.is_valid(), "Failed to duplicate bootfs vmo: %s\n.",
+                zx_status_get_string(status));
+  ZX_ASSERT(bootfs_dup.is_valid());
+
+  status = bootfs_svc->AddBootfs(std::move(bootfs_dup));
+  ZX_ASSERT_MSG(status == ZX_OK, "Bootfs add failed: %s\n", zx_status_get_string(status));
+
+  printf("bootsvc: Loading kernel VMOs...\n");
+  bootfs_svc->PublishStartupVmos(vmos.vdsos, PA_VMO_VDSO, "PA_VMO_VDSO");
+  bootfs_svc->PublishStartupVmos(vmos.kernel_files, PA_VMO_KERNEL_FILE, "PA_VMO_KERNEL_FILE");
+
+  return bootfs_svc;
+}
+
 }  // namespace
 
 int main(int argc, char** argv) {
@@ -431,40 +505,40 @@ int main(int argc, char** argv) {
   resources.root = std::move(root_resource);
   ZX_ASSERT_MSG(resources.root.is_valid(), "Invalid root resource handle\n");
 
+  // Create a vmex resource for marking bootfs VMO regions as executable.
+  status = zx::resource::create(resources.system, ZX_RSRC_KIND_SYSTEM, ZX_RSRC_SYSTEM_VMEX_BASE, 1,
+                                kBootfsVmexName, sizeof(kBootfsVmexName), &resources.vmex);
+  ZX_ASSERT_MSG(status == ZX_OK, "Failed to create VMEX resource");
+
   Vmos vmos;
   vmos.bootfs = zx::vmo(zx_take_startup_handle(PA_HND(PA_VMO_BOOTFS, 0)));
   ZX_ASSERT_MSG(vmos.bootfs.is_valid(), "Invalid bootfs_resource handle\n");
+
+  zx::vmo vmo;
+  status = vmos.bootfs.duplicate(ZX_RIGHT_SAME_RIGHTS, &vmo);
+  ZX_ASSERT_MSG(status == ZX_OK && vmo.is_valid(), "Failed to duplicate bootfs vmo: %s\n.",
+                zx_status_get_string(status));
+  status = vmo.replace_as_executable(resources.vmex, &vmo);
+  ZX_ASSERT_MSG(status == ZX_OK && vmo.is_valid(), "Failed to mark bootfs vmo as executable: %s",
+                zx_status_get_string(status));
+  vmos.bootfs_exec = std::move(vmo);
+
+  GetKernelVmos(PA_VMO_VDSO, &vmos.vdsos);
+  GetKernelVmos(PA_VMO_KERNEL_FILE, &vmos.kernel_files);
+
+  // We've taken the default VDSO handle (which will be published under /boot/kernel),
+  // so duplicate it and add it back for launchpad to find.
+  zx::vmo default_vdso;
+  status = vmos.vdsos[0].duplicate(ZX_RIGHT_SAME_RIGHTS, &default_vdso);
+  ZX_ASSERT_MSG(status == ZX_OK && default_vdso.is_valid(),
+                "Failed to duplicate default vdso handle: %s\n.", zx_status_get_string(status));
+  launchpad_set_vdso_vmo(default_vdso.release());
 
   // Memfs attempts to read the UTC clock to set file times, but bootsvc starts
   // before component_manager has created the standard UTC clock. Create a
   // process-local clock fixed to zero to avoid clock read errors.
   status = InitializeClock();
   ZX_ASSERT_MSG(status == ZX_OK, "Failed to create clock: %s\n", zx_status_get_string(status));
-
-  // Create a VMEX resource object to provide the bootfs service.
-  // TODO(smpham): Pass VMEX resource from kernel.
-  zx::resource bootfs_vmex_rsrc;
-  status = zx::resource::create(resources.system, ZX_RSRC_KIND_SYSTEM, ZX_RSRC_SYSTEM_VMEX_BASE, 1,
-                                kBootfsVmexName, sizeof(kBootfsVmexName), &bootfs_vmex_rsrc);
-  ZX_ASSERT_MSG(status == ZX_OK, "Failed to create VMEX resource");
-
-  // Set up the bootfs service
-  printf("bootsvc: Creating bootfs service...\n");
-  fbl::RefPtr<bootsvc::BootfsService> bootfs_svc;
-  status =
-      bootsvc::BootfsService::Create(loop.dispatcher(), std::move(bootfs_vmex_rsrc), &bootfs_svc);
-  ZX_ASSERT_MSG(status == ZX_OK, "BootfsService creation failed: %s\n",
-                zx_status_get_string(status));
-
-  // Duplicate the bootfs vmo since the original will be passed onwards to the component manager.
-  zx::vmo bootfs_dup;
-  status = vmos.bootfs.duplicate(ZX_RIGHT_SAME_RIGHTS, &bootfs_dup);
-  ZX_ASSERT_MSG(status == ZX_OK && bootfs_dup.is_valid(), "Failed to duplicate bootfs vmo: %s\n.",
-                zx_status_get_string(status));
-  ZX_ASSERT(bootfs_dup.is_valid());
-
-  status = bootfs_svc->AddBootfs(std::move(bootfs_dup));
-  ZX_ASSERT_MSG(status == ZX_OK, "Bootfs add failed: %s\n", zx_status_get_string(status));
 
   // Process the ZBI boot image
   printf("bootsvc: Retrieving boot image...\n");
@@ -477,18 +551,59 @@ int main(int argc, char** argv) {
   ZX_ASSERT_MSG(status == ZX_OK, "Retrieving boot image failed: %s\n",
                 zx_status_get_string(status));
 
-  // Load boot arguments into VMO
-  printf("bootsvc: Loading boot arguments...\n");
-  zx::vmo args_vmo;
-  uint64_t args_size = 0;
+  // We load the arguments in two steps as the first set of arguments may contain our component
+  // manager hosted bootfs flag. If it doesn't we'll use the legacy method of querying the C++
+  // bootfs VFS for the other arguments, but if it does contain the flag we will not create a
+  // bootfs VFS in bootsvc, and so we will need to parse the bootfs image directly.
+  //
+  // This is temporary as we remove bootfs from bootsvc, and eventually remove bootsvc itself.
+  std::vector<char> boot_args;
   std::optional<std::string> next_program;
-  status = LoadBootArgs(bootfs_svc, image_vmo, &item_map, &args_vmo, &args_size, &next_program);
-  ZX_ASSERT_MSG(status == ZX_OK, "Loading boot arguments failed: %s\n",
+  printf("bootsvc: Loading CMDLINE boot arguments...\n");
+  status = ExtractBootArgsFromImage(&boot_args, image_vmo, &item_map, &next_program);
+  ZX_ASSERT_MSG(status == ZX_OK, "Retrieving CMDLINE boot args failed: %s\n",
                 zx_status_get_string(status));
   if (!next_program) {
     next_program = kBootsvcNextDefault;
   }
   printf("bootsvc: bootsvc.next = %s\n", next_program->c_str());
+  std::vector<std::string> next_args = bootsvc::SplitString(*next_program, ',');
+
+  zx::vmo args_vmo;
+  uint64_t args_size = 0;
+  fbl::RefPtr<bootsvc::BootfsService> bootfs_svc = nullptr;
+  std::shared_ptr<bootsvc::BootfsLoaderService> loader_svc = nullptr;
+
+  bool create_bootfs = !UseComponentManagerHostedBootfs(next_args);
+  if (create_bootfs) {
+    printf("bootsvc: Creating bootfs service...\n");
+    bootfs_svc = CreateBootfsService(loop.dispatcher(), resources, vmos);
+
+    zbitl::MapUnownedVmo invalid_unowned_bootfs;  // Arguments will be loaded from bootfs service.
+
+    // Load the remaining boot arguments using the bootfs VFS.
+    status = LoadBootArgs(bootfs_svc, std::move(invalid_unowned_bootfs), image_vmo, &item_map,
+                          &args_vmo, &boot_args, &args_size);
+    ZX_ASSERT_MSG(status == ZX_OK, "Loading boot arguments failed: %s\n",
+                  zx_status_get_string(status));
+
+    loader_svc = bootsvc::BootfsLoaderService::Create(loop.dispatcher(), bootfs_svc);
+    ZX_ASSERT_MSG(loader_svc != nullptr, "Failed to create bootfs loader service\n");
+  } else {
+    zbitl::MapUnownedVmo unowned_bootfs(vmos.bootfs.borrow());
+
+    // Load the remaining boot arguments by querying the bootfs image directly.
+    status = LoadBootArgs(nullptr, std::move(unowned_bootfs), image_vmo, &item_map, &args_vmo,
+                          &boot_args, &args_size);
+    ZX_ASSERT_MSG(status == ZX_OK, "Loading boot arguments failed: %s\n",
+                  zx_status_get_string(status));
+
+    // Duplicates the bootfs VMOs as needed.
+    loader_svc =
+        bootsvc::BootfsLoaderService::Create(loop.dispatcher(), vmos.bootfs, vmos.bootfs_exec);
+    ZX_ASSERT_MSG(loader_svc != nullptr, "Failed to create bootfs loader service\n");
+  }
+
   // Set up the svcfs service
   printf("bootsvc: Creating svcfs service...\n");
   fbl::RefPtr<bootsvc::SvcfsService> svcfs_svc = bootsvc::SvcfsService::Create(loop.dispatcher());
@@ -500,24 +615,10 @@ int main(int argc, char** argv) {
       fuchsia_boot_FactoryItems_Name,
       bootsvc::CreateFactoryItemsService(loop.dispatcher(), std::move(factory_item_map)));
 
-  // Duplicate and serve certain VMO types from the startup handle table. This is temporary
-  // while we still use these handles in both bootsvc and component manager.
-  printf("bootsvc: Loading kernel VMOs...\n");
-  GetKernelVmos(PA_VMO_VDSO, &vmos.vdsos);
-  bootfs_svc->PublishStartupVmos(vmos.vdsos, PA_VMO_VDSO, "PA_VMO_VDSO");
-
-  GetKernelVmos(PA_VMO_KERNEL_FILE, &vmos.kernel_files);
-  bootfs_svc->PublishStartupVmos(vmos.kernel_files, PA_VMO_KERNEL_FILE, "PA_VMO_KERNEL_FILE");
-
-  // Creating the loader service
-  printf("bootsvc: Creating loader service...\n");
-  auto loader_svc = bootsvc::BootfsLoaderService::Create(loop.dispatcher(), bootfs_svc);
-
   // Launch the next process in the chain.  This must be in a thread, since
   // it may issue requests to the loader, which runs in the async loop that
   // starts running after this.
   printf("bootsvc: Launching next process...\n");
-  std::vector<std::string> next_args = bootsvc::SplitString(*next_program, ',');
   std::thread(LaunchNextProcess, next_args, bootfs_svc, svcfs_svc, loader_svc, std::ref(resources),
               std::ref(vmos), std::cref(log), std::ref(loop), std::cref(args_vmo), args_size)
       .detach();

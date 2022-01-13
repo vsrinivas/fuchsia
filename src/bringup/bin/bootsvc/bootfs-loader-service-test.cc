@@ -82,37 +82,54 @@ static zx::status<zx::vmo> GenerateBootfs(std::vector<BootfsDirectoryEntry> conf
   return zx::ok(std::move(vmo));
 }
 
-class BootfsLoaderServiceTest : public LoaderServiceTest {
+class BootfsLoaderServiceTest : public LoaderServiceTest,
+                                public ::testing::WithParamInterface<bool> {
  public:
   void CreateTestLoader(std::vector<BootfsDirectoryEntry> config,
-                        std::shared_ptr<BootfsLoaderService>* loader) {
+                        std::shared_ptr<BootfsLoaderService>* loader, bool use_bootfs_vfs) {
     zx::resource vmex;
     zx::status<zx::unowned_resource> unowned_vmex = GetVmexResource();
     ASSERT_OK(unowned_vmex.status_value());
     ASSERT_TRUE(unowned_vmex.value()->is_valid());
     ASSERT_OK(unowned_vmex.value()->duplicate(ZX_RIGHT_SAME_RIGHTS, &vmex));
 
-    fbl::RefPtr<BootfsService> bootfs_svc;
-    ASSERT_OK(BootfsService::Create(fs_loop().dispatcher(), std::move(vmex), &bootfs_svc));
-
     auto bootfs_vmo = GenerateBootfs(std::move(config));
     ASSERT_OK(bootfs_vmo.status_value());
-    ASSERT_OK(bootfs_svc->AddBootfs(std::move(bootfs_vmo).value()));
 
-    *loader = BootfsLoaderService::Create(loader_loop().dispatcher(), std::move(bootfs_svc));
+    if (use_bootfs_vfs) {
+      fbl::RefPtr<BootfsService> bootfs_svc;
+      ASSERT_OK(BootfsService::Create(fs_loop().dispatcher(), std::move(vmex), &bootfs_svc));
+      ASSERT_OK(bootfs_svc->AddBootfs(std::move(bootfs_vmo).value()));
+      *loader = BootfsLoaderService::Create(loader_loop().dispatcher(), std::move(bootfs_svc));
+    } else {
+      zx::vmo bootfs = std::move(bootfs_vmo.value());
+      zx::vmo bootfs_exec;
+      zx_status_t status = bootfs.duplicate(ZX_RIGHT_SAME_RIGHTS, &bootfs_exec);
+      ASSERT_EQ(status, ZX_OK);
+      ASSERT_TRUE(bootfs_exec.is_valid());
+
+      status = bootfs_exec.replace_as_executable(vmex, &bootfs_exec);
+      ASSERT_EQ(status, ZX_OK);
+
+      *loader =
+          bootsvc::BootfsLoaderService::Create(loader_loop().dispatcher(), bootfs, bootfs_exec);
+    }
 
     ASSERT_OK(fs_loop().StartThread("fs_loop"));
     ASSERT_OK(loader_loop().StartThread("loader_loop"));
   }
 };
 
-TEST_F(BootfsLoaderServiceTest, LoadObject) {
+INSTANTIATE_TEST_SUITE_P(BootfsLoaderServiceUseBootfsVfs, BootfsLoaderServiceTest,
+                         ::testing::Bool());
+
+TEST_P(BootfsLoaderServiceTest, LoadObject) {
   std::shared_ptr<BootfsLoaderService> loader;
   std::vector<BootfsDirectoryEntry> config = {
       {"lib/libfoo.so", "foo"},
       {"lib/asan/libfoo.so", "asan foo"},
   };
-  ASSERT_NO_FATAL_FAILURE(CreateTestLoader(std::move(config), &loader));
+  ASSERT_NO_FATAL_FAILURE(CreateTestLoader(std::move(config), &loader, GetParam()));
 
   auto status = loader->Connect();
   ASSERT_TRUE(status.is_ok());

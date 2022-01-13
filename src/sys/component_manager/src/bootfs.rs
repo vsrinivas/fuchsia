@@ -313,17 +313,11 @@ impl BootfsSvc {
             ServerEnd::<NodeMarker>::new(directory_server_end.into_channel()),
         );
 
-        // This is a temporary hack where bootsvc is always creating a C++ bootfs, and
-        // component manager needs to unbind the bootsvc bootfs and replace it with
-        // its Rust bootfs. We'll soon refactor bootsvc to not create bootfs when
-        // the 'experimental_bootfs' flag is passed to component manager for more
-        // accurate testing.
-        println!(
-            "[BootfsSvc] Unbinding existing /boot and recreating /boot backed by this \
-            new VFS. This is temporary while both C++ and Rust bootfs implementations exist."
-        );
         let ns = fdio::Namespace::installed()?;
-        ns.unbind("/boot")?;
+        assert!(
+            ns.unbind("/boot").is_err(),
+            "No filesystem should already be bound to /boot when BootfsSvc is starting."
+        );
 
         if let Ok(channel) = directory_proxy.into_channel() {
             ns.bind("/boot", channel.into_zx_channel())?;

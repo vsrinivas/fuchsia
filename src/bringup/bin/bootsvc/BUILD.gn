@@ -51,6 +51,7 @@ source_set("lib") {
     "//src/storage/memfs:memfs-cpp",
     "//zircon/system/ulib/async",
     "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/zbitl",
     "//zircon/system/ulib/zx",
   ]
   deps = [
@@ -66,7 +67,6 @@ source_set("lib") {
     "//zircon/system/ulib/launchpad",
     "//zircon/system/ulib/trace",
     "//zircon/system/ulib/trace-engine",
-    "//zircon/system/ulib/zbitl",
   ]
 
   # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings

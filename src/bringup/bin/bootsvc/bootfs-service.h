@@ -7,6 +7,7 @@
 
 #include <lib/async/dispatcher.h>
 #include <lib/memfs/cpp/vnode.h>
+#include <lib/zbitl/vmo.h>
 #include <lib/zx/resource.h>
 #include <lib/zx/vmo.h>
 
@@ -41,6 +42,12 @@ class BootfsService : public fbl::RefCounted<BootfsService> {
   // |type|. |debug_type_name| is used for debug printing.
   void PublishStartupVmos(const std::vector<zx::vmo>& vmos, uint8_t type,
                           const char* debug_type_name);
+
+  // Reads an object directly from the bootfs image. This is a temporary, and will only
+  // be used while we still have bootsvc but no longer create a bootfs VFS in it.
+  static zx::status<zx::vmo> GetFileFromBootfsVmo(zbitl::MapUnownedVmo unowned_vmo,
+                                                  zbitl::MapUnownedVmo unowned_vmo_exec,
+                                                  const std::string& path, uint64_t* size);
 
  private:
   BootfsService(zx::resource vmex_rsrc);

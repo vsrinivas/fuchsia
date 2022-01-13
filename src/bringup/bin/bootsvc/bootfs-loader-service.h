@@ -20,14 +20,31 @@ class BootfsLoaderService : public loader::LoaderServiceBase {
   // on the given dispatcher.
   static std::shared_ptr<BootfsLoaderService> Create(async_dispatcher_t* dispatcher,
                                                      fbl::RefPtr<BootfsService> bootfs);
+  static std::shared_ptr<BootfsLoaderService> Create(async_dispatcher_t* dispatcher,
+                                                     const zx::vmo& bootfs,
+                                                     const zx::vmo& bootfs_exec);
 
  private:
-  BootfsLoaderService(async_dispatcher_t* dispatcher, fbl::RefPtr<BootfsService> bootfs)
-      : LoaderServiceBase(dispatcher, "bootsvc"), bootfs_(std::move(bootfs)) {}
+  BootfsLoaderService(async_dispatcher_t* dispatcher, fbl::RefPtr<BootfsService> bootfs,
+                      zx::vmo vmo, zx::vmo vmo_exec)
+      : LoaderServiceBase(dispatcher, "bootsvc"),
+        bootfs_(std::move(bootfs)),
+        bootfs_vmo_(std::move(vmo)),
+        bootfs_vmo_exec_(std::move(vmo_exec)) {}
 
   virtual zx::status<zx::vmo> LoadObjectImpl(std::string path) override;
 
+  // The bootfs loader service can find the required libraries via either the
+  // C++ bootfs VFS (if it exists), or directly from the bootfs VMO if the
+  // component manager's Rust bootfs VFS is going to be used instead.
+  //
+  // This is a temporary state. Bootsvc is in the process of being deprecated,
+  // and userboot will load the libraries required for component manager to start
+  // instead.
   fbl::RefPtr<BootfsService> bootfs_;
+
+  zx::vmo bootfs_vmo_;
+  zx::vmo bootfs_vmo_exec_;
 };
 
 }  // namespace bootsvc

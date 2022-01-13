@@ -9,7 +9,6 @@
 #include <lib/stdcompat/string_view.h>
 #include <lib/zbitl/error-stdio.h>
 #include <lib/zbitl/items/bootfs.h>
-#include <lib/zbitl/vmo.h>
 #include <lib/zx/event.h>
 #include <lib/zx/time.h>
 #include <sys/stat.h>
@@ -284,25 +283,13 @@ void BootfsService::PublishStartupVmos(const std::vector<zx::vmo>& vmos, uint8_t
     ZX_ASSERT_MSG(status == ZX_OK && owned_vmo.is_valid(), "Failed to duplicate vmo %s-%d: %s\n.",
                   debug_type_name, i, zx_status_get_string(status));
 
-    // We use an unowned VMO here so we can have some finer control over
-    // whether the handle is closed. This is safe since the owned vmo will
-    // never be closed before this function returns.
-    zx::unowned_vmo vmo(owned_vmo);
-
-    // The first vDSO is the default vDSO.  Since we've taken the startup
-    // handle, launchpad won't find it on its own. So point launchpad at
-    // it instead of closing it.
-    const bool is_default_vdso = (type == PA_VMO_VDSO && i == 0);
-    if (is_default_vdso) {
-      launchpad_set_vdso_vmo(owned_vmo.release());
-    }
-
     // The vDSO VMOs have names like "vdso/default", so those
     // become VMO files at "/boot/kernel/vdso/default".
     char name[kVmoSubdirLen + ZX_MAX_NAME_LEN] = {};
     memcpy(name, kVmoSubdir, kVmoSubdirLen);
     size_t size;
-    status = vmo->get_property(ZX_PROP_NAME, name + kVmoSubdirLen, sizeof(name) - kVmoSubdirLen);
+    status =
+        owned_vmo.get_property(ZX_PROP_NAME, name + kVmoSubdirLen, sizeof(name) - kVmoSubdirLen);
     if (status != ZX_OK) {
       printf("bootsvc: vmo.get_property on %s %u: %s\n", debug_type_name, i,
              zx_status_get_string(status));
@@ -312,7 +299,7 @@ void BootfsService::PublishStartupVmos(const std::vector<zx::vmo>& vmos, uint8_t
       // Nameless VMOs do not get published.
       continue;
     }
-    status = vmo->get_size(&size);
+    status = owned_vmo.get_size(&size);
     if (status != ZX_OK) {
       printf("bootsvc: vmo.get_size on %s %u: %s\n", debug_type_name, i,
              zx_status_get_string(status));
@@ -325,7 +312,7 @@ void BootfsService::PublishStartupVmos(const std::vector<zx::vmo>& vmos, uint8_t
 
     // If the VMO has a precise content size set, use that as the file size.
     uint64_t content_size;
-    status = vmo->get_property(ZX_PROP_VMO_CONTENT_SIZE, &content_size, sizeof(content_size));
+    status = owned_vmo.get_property(ZX_PROP_VMO_CONTENT_SIZE, &content_size, sizeof(content_size));
     if (status != ZX_OK) {
       printf("bootsvc: vmo.get_property on %s %u: %s\n", debug_type_name, i,
              zx_status_get_string(status));
@@ -340,17 +327,50 @@ void BootfsService::PublishStartupVmos(const std::vector<zx::vmo>& vmos, uint8_t
       strcpy(name, kLastPanicFilePath);
     }
 
-    if (owned_vmo.is_valid()) {
-      status = PublishVmo(name, std::move(owned_vmo), 0, size);
-    } else {
-      status = PublishUnownedVmo(name, *vmo, 0, size);
-    }
+    status = PublishVmo(name, std::move(owned_vmo), 0, size);
     if (status != ZX_OK) {
       printf("bootsvc: failed to add %s %u to filesystem as %s: %s\n", debug_type_name, i, name,
              zx_status_get_string(status));
       continue;
     }
   }
+}
+
+// Static.
+zx::status<zx::vmo> BootfsService::GetFileFromBootfsVmo(zbitl::MapUnownedVmo unowned_vmo,
+                                                        zbitl::MapUnownedVmo unowned_vmo_exec,
+                                                        const std::string& path, uint64_t* size) {
+  zbitl::MapUnownedVmo vmo = PathInExecutableDirectory(path) ? unowned_vmo_exec : unowned_vmo;
+  zbitl::MapUnownedVmo vmo_dup = vmo;  // Safe to copy since none of these own the VMO.
+  auto bootfsview_result = BootfsView::Create(std::move(vmo_dup));
+  if (bootfsview_result.is_error()) {
+    zbitl::PrintBootfsError(bootfsview_result.error_value());
+    return zx::error(ZX_ERR_INTERNAL);
+  }
+
+  BootfsView bootfs = std::move(bootfsview_result.value());
+  for (const auto& file : bootfs) {
+    if (file.name != path) {
+      continue;
+    }
+
+    zx::vmo result_vmo;
+    zx_status_t status = vmo.vmo().create_child(ZX_VMO_CHILD_SNAPSHOT | ZX_VMO_CHILD_NO_WRITE,
+                                                file.offset, file.size, &result_vmo);
+    if (status != ZX_OK) {
+      printf("bootsvc: failed to read %s into vmo with error: %s\n", path.c_str(),
+             zx_status_get_string(status));
+      return zx::error(status);
+    } else {
+      if (size != nullptr) {
+        *size = file.size;
+      }
+      return zx::ok(std::move(result_vmo));
+    }
+  }
+
+  printf("bootsvc: failed to find file in bootfs image: %s\n", path.c_str());
+  return zx::error(ZX_ERR_NOT_FOUND);
 }
 
 }  // namespace bootsvc
