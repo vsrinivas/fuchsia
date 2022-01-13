@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use euclid::default::{Transform2D, Vector2D};
-use mold::{AffineTransform, Order as MoldOrder};
+use mold::{GeometryPreservingTransform, Order as MoldOrder};
 use rustc_hash::{FxHashMap, FxHashSet};
 use std::convert::TryFrom;
 
@@ -48,11 +48,7 @@ impl MoldComposition {
                         0.0,
                         1.0,
                     ];
-                    self.composition.insert_in_layer_transformed(
-                        layer_id,
-                        &*print.path,
-                        &transform,
-                    );
+                    self.composition.insert_in_layer(layer_id, &print.path.transform(&transform));
                 }
 
                 (layer_id, raster.translation)
@@ -89,7 +85,7 @@ impl MoldComposition {
             self.cached_display_transform = Some(new_transform);
 
             for layer in self.composition.layers_mut() {
-                let transform = layer.transform().as_slice();
+                let transform = *layer.transform().as_slice();
                 let transform = Transform2D {
                     m11: transform[0],
                     m21: transform[1],
@@ -102,7 +98,7 @@ impl MoldComposition {
                 .then(&new_transform);
 
                 layer.set_transform(
-                    AffineTransform::try_from([
+                    GeometryPreservingTransform::try_from([
                         transform.m11,
                         transform.m21,
                         transform.m12,
@@ -170,7 +166,8 @@ impl Composition<Mold> for MoldComposition {
             });
 
             mold_layer.set_transform(
-                AffineTransform::try_from(mold_transform).unwrap_or_else(|e| panic!("{}", e)),
+                GeometryPreservingTransform::try_from(mold_transform)
+                    .unwrap_or_else(|e| panic!("{}", e)),
             );
 
             self.orders_to_layer_ids.insert(mold_order, id);
@@ -193,8 +190,8 @@ impl Composition<Mold> for MoldComposition {
                     Fill::Solid(color) => mold::Fill::Solid(color.to_linear_bgra()),
                     Fill::Gradient(gradient) => {
                         let mut builder = mold::GradientBuilder::new(
-                            [gradient.start.x, gradient.start.y],
-                            [gradient.end.x, gradient.end.y],
+                            mold::Point::new(gradient.start.x, gradient.start.y),
+                            mold::Point::new(gradient.end.x, gradient.end.y),
                         );
                         builder.r#type(match gradient.r#type {
                             GradientType::Linear => mold::GradientType::Linear,
@@ -228,7 +225,8 @@ impl Composition<Mold> for MoldComposition {
         });
 
         mold_layer.set_transform(
-            AffineTransform::try_from(mold_transform).unwrap_or_else(|e| panic!("{}", e)),
+            GeometryPreservingTransform::try_from(mold_transform)
+                .unwrap_or_else(|e| panic!("{}", e)),
         );
 
         self.orders_to_layer_ids.insert(mold_order, id);

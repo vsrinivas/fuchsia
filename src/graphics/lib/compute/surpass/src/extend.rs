@@ -249,7 +249,27 @@ macro_rules! extend_tuple {
     };
 }
 
+extend_tuple!(ExtendTuple3, (0 A), (1 B), (2 C));
 extend_tuple!(ExtendTuple10, (0 A), (1 B), (2 C), (3 D), (4 E), (5 F), (6 G), (7 H), (8 I), (9 J));
+
+pub struct ExtendVec<'a, T> {
+    vec: &'a mut Vec<T>,
+}
+
+impl<'a, T> ExtendVec<'a, T> {
+    pub fn new(vec: &'a mut Vec<T>) -> Self {
+        Self { vec }
+    }
+}
+
+impl<T: Send> rayon::iter::ParallelExtend<T> for ExtendVec<'_, T> {
+    fn par_extend<I>(&mut self, par_iter: I)
+    where
+        I: rayon::iter::IntoParallelIterator<Item = T>,
+    {
+        self.vec.par_extend(par_iter);
+    }
+}
 
 #[cfg(test)]
 mod tests {

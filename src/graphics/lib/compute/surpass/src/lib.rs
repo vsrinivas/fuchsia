@@ -5,15 +5,19 @@
 mod extend;
 mod layer;
 pub mod painter;
+mod path;
 mod point;
 pub mod rasterizer;
 mod segment;
 mod simd;
+mod transform;
 mod uninitialized;
 
 pub use layer::Layer;
+pub use path::{Path, PathBuilder};
 pub use point::Point;
 pub use segment::{Lines, LinesBuilder, Segment};
+pub use transform::{GeometryPreservingTransform, GeometryPreservingTransformError};
 
 const PIXEL_WIDTH: usize = 16;
 const PIXEL_DOUBLE_WIDTH: usize = PIXEL_WIDTH * 2;

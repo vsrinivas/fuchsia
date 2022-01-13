@@ -12,16 +12,10 @@ use crate::render::generic::{
     Raster, RasterBuilder,
 };
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub(crate) struct Print {
-    pub(crate) path: Rc<mold::Path>,
+    pub(crate) path: mold::Path,
     pub(crate) transform: Transform2D<f32>,
-}
-
-impl PartialEq for Print {
-    fn eq(&self, other: &Self) -> bool {
-        Rc::ptr_eq(&self.path, &other.path) && self.transform == other.transform
-    }
 }
 
 #[derive(Clone, Debug)]
@@ -61,7 +55,7 @@ impl Add for MoldRaster {
                 print.transform.m31 + other.translation.x,
                 print.transform.m32 + other.translation.y,
             );
-            self.prints.push(Print { path: Rc::clone(&print.path), transform });
+            self.prints.push(Print { path: print.path.clone(), transform });
         }
 
         self.layer_details = Rc::new(RefCell::new(None));
@@ -90,7 +84,7 @@ impl MoldRasterBuilder {
 
 impl RasterBuilder<Mold> for MoldRasterBuilder {
     fn add_with_transform(&mut self, path: &MoldPath, transform: &Transform2D<f32>) -> &mut Self {
-        self.prints.push(Print { path: Rc::clone(&path.path), transform: *transform });
+        self.prints.push(Print { path: path.path.clone(), transform: *transform });
         self
     }
 

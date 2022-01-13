@@ -4,7 +4,7 @@
 
 use std::sync::Arc;
 
-use crate::simd::f32x8;
+use crate::{simd::f32x8, Point};
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum FillRule {
@@ -29,13 +29,13 @@ const NO_STOP: f32 = -0.0;
 #[derive(Clone, Debug)]
 pub struct GradientBuilder {
     r#type: GradientType,
-    start: [f32; 2],
-    end: [f32; 2],
+    start: Point<f32>,
+    end: Point<f32>,
     stops: Vec<([f32; 4], f32)>,
 }
 
 impl GradientBuilder {
-    pub fn new(start: [f32; 2], end: [f32; 2]) -> Self {
+    pub fn new(start: Point<f32>, end: Point<f32>) -> Self {
         Self { r#type: GradientType::Linear, start, end, stops: Vec::new() }
     }
 
@@ -82,31 +82,31 @@ impl GradientBuilder {
 #[derive(Clone, Debug, PartialEq)]
 pub struct Gradient {
     r#type: GradientType,
-    start: [f32; 2],
-    end: [f32; 2],
+    start: Point<f32>,
+    end: Point<f32>,
     stops: Arc<[([f32; 4], f32)]>,
 }
 
 impl Gradient {
     fn get_t(&self, x: f32, y: f32) -> f32x8 {
-        let dx = self.end[0] - self.start[0];
-        let dy = self.end[1] - self.start[1];
+        let dx = self.end.x - self.start.x;
+        let dy = self.end.y - self.start.y;
 
         let dot = dx * dx + dy * dy;
         let dot_recip = dot.recip();
 
         match self.r#type {
             GradientType::Linear => {
-                let tx = (x - self.start[0]) * dx * dot_recip;
-                let ty = y - self.start[1];
+                let tx = (x - self.start.x) * dx * dot_recip;
+                let ty = y - self.start.y;
 
                 ((f32x8::indexed() + f32x8::splat(ty)) * f32x8::splat(dy))
                     .mul_add(f32x8::splat(dot_recip), f32x8::splat(tx))
             }
             GradientType::Radial => {
-                let px = x - self.start[0];
+                let px = x - self.start.x;
                 let px2 = f32x8::splat(px * px);
-                let py = f32x8::indexed() + f32x8::splat(y - self.start[1]);
+                let py = f32x8::indexed() + f32x8::splat(y - self.start.y);
 
                 (py.mul_add(py, px2) * f32x8::splat(dot_recip)).sqrt()
             }
@@ -481,7 +481,7 @@ mod tests {
 
     #[test]
     fn linear_gradient() {
-        let mut builder = GradientBuilder::new([0.0, 7.0], [7.0, 0.0]);
+        let mut builder = GradientBuilder::new(Point::new(0.0, 7.0), Point::new(7.0, 0.0));
 
         builder
             .color(color!(0.25))
@@ -522,8 +522,8 @@ mod tests {
     #[test]
     fn radial_gradient() {
         let mut builder = GradientBuilder::new(
-            [0.0, 0.0],
-            [7.0 * (1.0 / 2.0f32.sqrt()), 7.0 * (1.0 / 2.0f32.sqrt())],
+            Point::new(0.0, 0.0),
+            Point::new(7.0 * (1.0 / 2.0f32.sqrt()), 7.0 * (1.0 / 2.0f32.sqrt())),
         );
 
         builder.r#type(GradientType::Radial).color(color!(0.25)).color(color!(0.75));

@@ -15,7 +15,7 @@ use surpass::{
 use crate::{
     buffer::{Buffer, BufferLayerCache},
     layer::{IdSet, Layer, SmallBitSet},
-    path::{Path, PathSegments},
+    Path,
 };
 
 const LINES_GARBAGE_THRESHOLD: usize = 2;
@@ -68,11 +68,8 @@ impl Composition {
         LayerId(mem::replace(&mut self.external_count, count + 1))
     }
 
-    fn insert_segments(
-        &mut self,
-        layer_id: LayerId,
-        segments: PathSegments<'_>,
-    ) -> Option<&mut Layer> {
+    #[inline]
+    pub fn insert_in_layer(&mut self, layer_id: LayerId, path: &Path) -> Option<&mut Layer> {
         let id = self.external_to_internal.get(&layer_id).copied().or_else(|| {
             let id = self.layer_ids.acquire();
 
@@ -90,18 +87,9 @@ impl Composition {
             Some(id)
         })?;
 
-        let mut len = 0;
-        for segment in segments {
-            self.builder().push(
-                id,
-                &surpass::Segment::new(
-                    surpass::Point::new(segment.p0.x, segment.p0.y),
-                    surpass::Point::new(segment.p1.x, segment.p1.y),
-                ),
-            );
-
-            len += 1;
-        }
+        let old_len = self.builder().len();
+        self.builder().push_path(id, path);
+        let len = self.builder().len() - old_len;
 
         let layer = self.layers.entry(id).or_default();
 
@@ -110,21 +98,6 @@ impl Composition {
         layer.len += len;
 
         Some(layer)
-    }
-
-    #[inline]
-    pub fn insert_in_layer(&mut self, layer_id: LayerId, path: &Path) -> Option<&mut Layer> {
-        self.insert_segments(layer_id, path.segments())
-    }
-
-    #[inline]
-    pub fn insert_in_layer_transformed(
-        &mut self,
-        layer_id: LayerId,
-        path: &Path,
-        transform: &[f32; 9],
-    ) -> Option<&mut Layer> {
-        self.insert_segments(layer_id, path.transformed(transform))
     }
 
     #[inline]
@@ -327,7 +300,7 @@ mod tests {
 
     use surpass::TILE_SIZE;
 
-    use crate::{layer::AffineTransform, Fill, FillRule, Func, Point, Style};
+    use crate::{Fill, FillRule, Func, GeometryPreservingTransform, PathBuilder, Point, Style};
 
     const BLACK: [u8; 4] = [0x00, 0x0, 0x00, 0xFF];
     const BLACKF: [f32; 4] = [0.0, 0.0, 0.0, 1.0];
@@ -338,14 +311,15 @@ mod tests {
     const RED_GREEN_50: [u8; 4] = [0xBB, 0xBB, 0x00, 0xFF];
 
     fn pixel_path(x: i32, y: i32) -> Path {
-        let mut path = Path::new();
+        let mut builder = PathBuilder::new();
 
-        path.line(Point::new(x as f32, y as f32), Point::new(x as f32, (y + 1) as f32));
-        path.line(Point::new(x as f32, (y + 1) as f32), Point::new((x + 1) as f32, (y + 1) as f32));
-        path.line(Point::new((x + 1) as f32, (y + 1) as f32), Point::new((x + 1) as f32, y as f32));
-        path.line(Point::new((x + 1) as f32, y as f32), Point::new(x as f32, y as f32));
+        builder.move_to(Point::new(x as f32, y as f32));
+        builder.line_to(Point::new(x as f32, (y + 1) as f32));
+        builder.line_to(Point::new((x + 1) as f32, (y + 1) as f32));
+        builder.line_to(Point::new((x + 1) as f32, y as f32));
+        builder.line_to(Point::new(x as f32, y as f32));
 
-        path
+        builder.build()
     }
 
     fn solid(color: [f32; 4]) -> Props {
@@ -414,7 +388,9 @@ mod tests {
             .insert_in_layer(layer_id, &pixel_path(1, 0))
             .unwrap()
             .set_props(solid(REDF))
-            .set_transform(AffineTransform::try_from([1.0, 0.0, 0.0, 1.0, 0.5, 0.0]).unwrap());
+            .set_transform(
+                GeometryPreservingTransform::try_from([1.0, 0.0, 0.0, 1.0, 0.5, 0.0]).unwrap(),
+            );
 
         composition.render(
             Buffer { buffer: &mut buffer, width: 3, ..Default::default() },
@@ -437,7 +413,7 @@ mod tests {
             .unwrap()
             .set_props(solid(REDF))
             .set_transform(
-                AffineTransform::try_from([
+                GeometryPreservingTransform::try_from([
                     angle.cos(),
                     -angle.sin(),
                     angle.sin(),
@@ -605,7 +581,8 @@ mod tests {
         assert_eq!(buffer[0], RED);
 
         composition.get_mut(layer_id).unwrap().set_transform(
-            AffineTransform::try_from([1.0, 0.0, 0.0, 1.0, TILE_SIZE as f32, 0.0]).unwrap(),
+            GeometryPreservingTransform::try_from([1.0, 0.0, 0.0, 1.0, TILE_SIZE as f32, 0.0])
+                .unwrap(),
         );
 
         composition.render(
@@ -622,7 +599,8 @@ mod tests {
         assert_eq!(buffer[0], BLACK);
 
         composition.get_mut(layer_id).unwrap().set_transform(
-            AffineTransform::try_from([1.0, 0.0, 0.0, 1.0, -(TILE_SIZE as f32), 0.0]).unwrap(),
+            GeometryPreservingTransform::try_from([1.0, 0.0, 0.0, 1.0, -(TILE_SIZE as f32), 0.0])
+                .unwrap(),
         );
 
         composition.render(
@@ -639,7 +617,8 @@ mod tests {
         assert_eq!(buffer[0], RED);
 
         composition.get_mut(layer_id).unwrap().set_transform(
-            AffineTransform::try_from([1.0, 0.0, 0.0, 1.0, 0.0, TILE_SIZE as f32]).unwrap(),
+            GeometryPreservingTransform::try_from([1.0, 0.0, 0.0, 1.0, 0.0, TILE_SIZE as f32])
+                .unwrap(),
         );
 
         composition.render(
@@ -707,10 +686,9 @@ mod tests {
 
         assert_eq!(buffer[0], RED);
 
-        composition
-            .get_mut(layer_id)
-            .unwrap()
-            .set_transform(AffineTransform::try_from([1.0, 0.0, 0.0, 1.0, 1.0, 0.0]).unwrap());
+        composition.get_mut(layer_id).unwrap().set_transform(
+            GeometryPreservingTransform::try_from([1.0, 0.0, 0.0, 1.0, 1.0, 0.0]).unwrap(),
+        );
 
         composition.render(
             Buffer {
@@ -745,31 +723,19 @@ mod tests {
 
     #[test]
     fn even_odd() {
-        let mut path = Path::new();
+        let mut builder = PathBuilder::new();
 
-        path.line(Point::new(0.0, 0.0), Point::new(0.0, TILE_SIZE as f32));
-        path.line(
-            Point::new(0.0, TILE_SIZE as f32),
-            Point::new(3.0 * TILE_SIZE as f32, TILE_SIZE as f32),
-        );
-        path.line(
-            Point::new(3.0 * TILE_SIZE as f32, TILE_SIZE as f32),
-            Point::new(3.0 * TILE_SIZE as f32, 0.0),
-        );
-        path.line(Point::new(3.0 * TILE_SIZE as f32, 0.0), Point::new(TILE_SIZE as f32, 0.0));
-        path.line(
-            Point::new(TILE_SIZE as f32, 0.0),
-            Point::new(TILE_SIZE as f32, TILE_SIZE as f32),
-        );
-        path.line(
-            Point::new(TILE_SIZE as f32, TILE_SIZE as f32),
-            Point::new(2.0 * TILE_SIZE as f32, TILE_SIZE as f32),
-        );
-        path.line(
-            Point::new(2.0 * TILE_SIZE as f32, TILE_SIZE as f32),
-            Point::new(2.0 * TILE_SIZE as f32, 0.0),
-        );
-        path.line(Point::new(2.0 * TILE_SIZE as f32, 0.0), Point::new(0.0, 0.0));
+        builder.move_to(Point::new(0.0, 0.0));
+        builder.line_to(Point::new(0.0, TILE_SIZE as f32));
+        builder.line_to(Point::new(3.0 * TILE_SIZE as f32, TILE_SIZE as f32));
+        builder.line_to(Point::new(3.0 * TILE_SIZE as f32, 0.0));
+        builder.line_to(Point::new(TILE_SIZE as f32, 0.0));
+        builder.line_to(Point::new(TILE_SIZE as f32, TILE_SIZE as f32));
+        builder.line_to(Point::new(2.0 * TILE_SIZE as f32, TILE_SIZE as f32));
+        builder.line_to(Point::new(2.0 * TILE_SIZE as f32, 0.0));
+        builder.line_to(Point::new(0.0, 0.0));
+
+        let path = builder.build();
 
         let mut buffer = [BLACK; 3 * TILE_SIZE * TILE_SIZE];
         let mut composition = Composition::new();
