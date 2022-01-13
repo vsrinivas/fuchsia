@@ -313,7 +313,6 @@ enum RunnerError {
     BadFrameType(FrameType),
     HandshakeError(Error),
     ServiceError(Error),
-    ConnectionFailed(Error),
 }
 
 /// Returns the next link a peer should send to (as forwarding tables change).
@@ -426,8 +425,7 @@ impl Peer {
                 Endpoint::Client,
                 Arc::downgrade(router),
                 conn_id,
-                futures::future::try_join3(
-                    conn.clone().run().map_err(RunnerError::ConnectionFailed),
+                futures::future::try_join(
                     check_connectivity(
                         Arc::downgrade(router),
                         PeerConn::from_quic(conn.clone(), node_id),
@@ -477,8 +475,7 @@ impl Peer {
                 Endpoint::Server,
                 Arc::downgrade(router),
                 conn_id,
-                futures::future::try_join3(
-                    conn.clone().run().map_err(RunnerError::ConnectionFailed),
+                futures::future::try_join(
                     check_connectivity(
                         Arc::downgrade(router),
                         PeerConn::from_quic(conn.clone(), node_id),
