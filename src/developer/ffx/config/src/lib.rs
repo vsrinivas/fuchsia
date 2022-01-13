@@ -52,8 +52,9 @@ const SDK_TYPE_IN_TREE: &str = "in-tree";
 const SDK_NOT_FOUND_HELP: &str = "\
 SDK directory could not be found. Please set with 
 `ffx sdk set root <PATH_TO_SDK_DIR>`\n
-If you are developing in the fuchsia tree, use the Fuchsia build directory, and 
-also run `ffx config set sdk.type in-tree`.\n\n";
+If you are developing in the fuchsia tree, ensure \
+that you are running the `ffx` command (in $FUCHSIA_DIR/.jiri_root) or `fx ffx`, not a built binary.
+Running the binary directly is not supported in the fuchsia tree.\n\n";
 
 #[derive(Debug, PartialEq, Copy, Clone)]
 pub enum ConfigLevel {
