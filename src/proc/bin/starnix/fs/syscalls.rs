@@ -376,6 +376,26 @@ pub fn sys_access(
     sys_faccessat(current_task, FdNumber::AT_FDCWD, user_path, mode)
 }
 
+pub fn sys_stat(
+    current_task: &CurrentTask,
+    user_path: UserCString,
+    buffer: UserRef<stat_t>,
+) -> Result<SyscallResult, Errno> {
+    // TODO(fxbug.dev/91430): Add the `AT_NO_AUTOMOUNT` flag once it is supported in
+    // `sys_newfstatat`.
+    sys_newfstatat(current_task, FdNumber::AT_FDCWD, user_path, buffer, 0)
+}
+
+pub fn sys_lstat(
+    current_task: &CurrentTask,
+    user_path: UserCString,
+    buffer: UserRef<stat_t>,
+) -> Result<SyscallResult, Errno> {
+    // TODO(fxbug.dev/91430): Add the `AT_NO_AUTOMOUNT` flag once it is supported in
+    // `sys_newfstatat`.
+    sys_newfstatat(current_task, FdNumber::AT_FDCWD, user_path, buffer, AT_SYMLINK_NOFOLLOW)
+}
+
 pub fn sys_fstat(
     current_task: &CurrentTask,
     fd: FdNumber,
@@ -395,6 +415,7 @@ pub fn sys_newfstatat(
     flags: u32,
 ) -> Result<SyscallResult, Errno> {
     if flags & !(AT_SYMLINK_NOFOLLOW | AT_EMPTY_PATH) != 0 {
+        // TODO(fxbug.dev/91430): Support the `AT_NO_AUTOMOUNT` flag.
         not_implemented!("newfstatat: flags 0x{:x}", flags);
         return error!(ENOSYS);
     }
