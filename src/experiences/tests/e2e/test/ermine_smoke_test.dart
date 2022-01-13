@@ -77,7 +77,7 @@ void main() {
         print('Verifying Ctrl+Shift+w shortcut is closing terminal');
         await ermine.threeKeyShortcut(Key.leftCtrl, Key.leftShift, Key.w);
         await ermine.driver.waitUntilNoTransientCallbacks();
-        expect(await ermine.lastAction, 'close');
+        await ermine.waitForAction('close');
         expect(await ermine.isStopped(terminalUrl), isTrue);
       });
     });

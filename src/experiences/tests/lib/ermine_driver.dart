@@ -394,6 +394,14 @@ class ErmineDriver {
   /// Returns the last keyboard shortcut action received by ermine shell.
   Future<String> get lastAction async => (await snapshot).lastAction;
 
+  /// Waits for last action to match the supplied value.
+  Future<bool> waitForAction(String action,
+      {Duration timeout = waitForTimeout}) async {
+    return waitFor(() async {
+      return (await lastAction) == action;
+    }, timeout: timeout);
+  }
+
   /// Returns the list of launched views from inspect data.
   Future<List<ViewSnapshot>> get views async => (await snapshot).views;
 

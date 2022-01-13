@@ -6,6 +6,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:fidl_fuchsia_ui_views/fidl_async.dart';
+import 'package:fuchsia_logger/logger.dart';
 import 'package:internationalization/strings.dart';
 import 'package:keyboard_shortcuts/keyboard_shortcuts.dart';
 
@@ -34,6 +35,7 @@ class ShortcutsService {
     _keyboardShortcuts = KeyboardShortcuts.withViewRef(
       hostViewRef,
       actions: actions.map((k, v) => MapEntry(k, () {
+            log.info('Received shortcut action: $k');
             lastShortcutAction = k;
             v();
           })),
@@ -42,6 +44,7 @@ class ShortcutsService {
 
     // Hook up actions to flutter driver handler.
     flutterDriverHandler = (command) async {
+      log.info('Received flutter driver command: $command');
       return actions[command]?.call();
     };
   }
