@@ -33,6 +33,13 @@ namespace linux_runner {
 
 struct AppLaunchRequest {
  public:
+  AppLaunchRequest(
+      fuchsia::sys::Package&& application_arg, fuchsia::sys::StartupInfo&& startup_info_arg,
+      fidl::InterfaceRequest<fuchsia::sys::ComponentController>&& controller_request_arg)
+      : application(std::move(application_arg)),
+        startup_info(std::move(startup_info_arg)),
+        controller_request(std::move(controller_request_arg)) {}
+
   AppLaunchRequest(const AppLaunchRequest&) = delete;
   AppLaunchRequest& operator=(const AppLaunchRequest&) = delete;
 
