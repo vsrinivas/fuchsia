@@ -33,7 +33,7 @@ impl KeyDerivation for NullKeyDerivation {
         if password == INSECURE_EMPTY_PASSWORD {
             Ok(INSECURE_EMPTY_KEY.clone())
         } else {
-            Err(KeyError)
+            Err(KeyError::PasswordError)
         }
     }
 }

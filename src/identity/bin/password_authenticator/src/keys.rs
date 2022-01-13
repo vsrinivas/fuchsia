@@ -5,8 +5,18 @@
 use {async_trait::async_trait, fidl_fuchsia_identity_account as faccount, thiserror::Error};
 
 #[derive(Debug, Error)]
-#[error("failed to derive key from password")]
-pub struct KeyError;
+pub enum KeyError {
+    // TODO(zarvox): remove once NullKey support is removed
+    // This is only needed for NullKeyDerivation -- once we no longer have a key derivation that
+    // would otherwise ignore the password provided, we can simply handle all authentication
+    // failures by letting the resulting derived-key simply not match what the partition will
+    // require to be unsealed.
+    #[error("Password did not meet precondition")]
+    PasswordError,
+
+    #[error("Failed to derive key from password")]
+    KeyDerivationError,
+}
 
 /// A 256-bit key.
 pub type Key = [u8; 32];
@@ -21,7 +31,10 @@ pub trait KeyDerivation {
 }
 
 impl From<KeyError> for faccount::Error {
-    fn from(_: KeyError) -> Self {
-        faccount::Error::Unknown
+    fn from(e: KeyError) -> Self {
+        match e {
+            KeyError::PasswordError => faccount::Error::FailedAuthentication,
+            KeyError::KeyDerivationError => faccount::Error::Internal,
+        }
     }
 }

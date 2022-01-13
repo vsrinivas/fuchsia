@@ -114,9 +114,10 @@ pub struct ScryptParams {
 impl KeyDerivation for ScryptParams {
     async fn derive_key(&self, password: &str) -> Result<Key, KeyError> {
         let mut output = [0u8; 32];
-        let params = scrypt::Params::new(self.log_n, self.r, self.p).map_err(|_| KeyError)?;
+        let params = scrypt::Params::new(self.log_n, self.r, self.p)
+            .map_err(|_| KeyError::KeyDerivationError)?;
         scrypt::scrypt(password.as_bytes(), &self.salt, &params, &mut output)
-            .map_err(|_| KeyError)?;
+            .map_err(|_| KeyError::KeyDerivationError)?;
         Ok(output)
     }
 }
