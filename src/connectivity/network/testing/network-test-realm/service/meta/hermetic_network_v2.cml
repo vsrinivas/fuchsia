@@ -44,6 +44,7 @@
                 "#dhcpv6-client",
                 "#dns-resolver",
                 "#netstack",
+                "#stubs",
             ],
         },
         {
