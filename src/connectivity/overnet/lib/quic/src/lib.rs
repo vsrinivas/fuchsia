@@ -7,15 +7,20 @@
 use anyhow::{format_err, Context as _, Error};
 use async_utils::mutex_ticket::MutexTicket;
 use fuchsia_async::{Task, Timer};
-use futures::{future::poll_fn, lock::Mutex, prelude::*, ready};
+use futures::{
+    future::{poll_fn, Either},
+    lock::Mutex,
+    prelude::*,
+    ready,
+};
 use quiche::{Connection, Shutdown};
+use std::cmp::{max, min};
 use std::collections::BTreeMap;
-use std::future::Future;
 use std::pin::Pin;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
 use std::task::{Context, Poll, Waker};
-use std::time::Instant;
+use std::time::{Duration, Instant};
 
 /// Labels the endpoint of a client/server connection.
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Copy)]
@@ -92,7 +97,8 @@ pub struct ConnState {
     stream_send_init: WakeupMap,
     dgram_send: Wakeup,
     dgram_recv: Wakeup,
-    timeout: Option<Timer>,
+    new_timeout: Wakeup,
+    timeout: Option<Instant>,
     version_negotiation: VersionNegotiationState,
 }
 
@@ -114,14 +120,14 @@ impl ConnState {
 
         match self.conn.send(frame) {
             Ok(n) => {
-                self.update_timeout(ctx);
+                self.update_timeout();
                 self.wake_stream_io();
                 self.dgram_send.ready();
                 Poll::Ready(Ok(Some(n)))
             }
             Err(quiche::Error::Done) if self.conn.is_closed() => Poll::Ready(Ok(None)),
             Err(quiche::Error::Done) => {
-                self.update_timeout(ctx);
+                self.update_timeout();
                 self.conn_send.pending(ctx)
             }
             Err(e) => Poll::Ready(Err(e.into())),
@@ -140,13 +146,35 @@ impl ConnState {
         self.stream_send_init.all_ready();
     }
 
-    fn update_timeout(&mut self, ctx: &mut Context<'_>) {
-        self.timeout = self.conn.timeout().map(|d| Timer::new(Instant::now() + d));
-        if let Some(timer) = self.timeout.as_mut() {
-            if let Poll::Ready(_) = Pin::new(timer).poll(ctx) {
-                log::warn!("Timeout happened immediately!");
-            }
+    fn wait_for_new_timeout(
+        &mut self,
+        ctx: &mut Context<'_>,
+        last_seen: Option<Instant>,
+    ) -> Poll<Option<Instant>> {
+        if last_seen == self.timeout {
+            self.new_timeout.pending(ctx)
+        } else {
+            Poll::Ready(self.timeout)
         }
+    }
+
+    fn update_timeout(&mut self) {
+        // TODO: the max(d, 1ms) below is a hedge against unreasonable values coming out of quiche.
+        // In particular, at least one version has been observed to produce 0 length durations,
+        // which jams us on some platforms/executors into a spin loop, freezing out other activity.
+        let new_timeout =
+            self.conn.timeout().map(|d| Instant::now() + max(d, Duration::from_millis(1)));
+        match (new_timeout, self.timeout) {
+            (None, None) => return,
+            (Some(a), Some(b)) => {
+                if max(a, b) - min(a, b) < Duration::from_millis(1) {
+                    return;
+                }
+            }
+            _ => (),
+        }
+        self.timeout = new_timeout;
+        self.new_timeout.ready();
     }
 }
 
@@ -257,6 +285,7 @@ impl AsyncConnection {
                 dgram_recv: Default::default(),
                 dgram_send: Default::default(),
                 timeout: None,
+                new_timeout: Default::default(),
                 version_negotiation: if endpoint == Endpoint::Server {
                     VersionNegotiationState::Pending(Vec::new())
                 } else {
@@ -279,6 +308,38 @@ impl AsyncConnection {
 
     pub fn accept(scid: &[u8], config: &mut quiche::Config) -> Result<Arc<Self>, Error> {
         Ok(Self::from_connection(quiche::accept(scid, None, config)?, Endpoint::Server))
+    }
+
+    pub async fn run(self: Arc<Self>) -> Result<(), Error> {
+        let mut timeout_lock = MutexTicket::new(&self.io);
+        // TODO: we shouldn't need this: we should just sleep forever if we get a timeout of None.
+        const A_VERY_LONG_TIME: Duration = Duration::from_secs(10000);
+        let timer_for_timeout = move |timeout: Option<Instant>| {
+            Timer::new(timeout.unwrap_or_else(move || Instant::now() + A_VERY_LONG_TIME))
+        };
+
+        let mut current_timeout = None;
+        let mut timeout_fut = timer_for_timeout(current_timeout);
+        loop {
+            let poll_timeout = |ctx: &mut Context<'_>| -> Poll<Option<Instant>> {
+                ready!(timeout_lock.poll(ctx)).wait_for_new_timeout(ctx, current_timeout)
+            };
+            match futures::future::select(poll_fn(poll_timeout), &mut timeout_fut).await {
+                Either::Left((timeout, _)) => {
+                    log::trace!("new timeout: {:?} old timeout: {:?}", timeout, current_timeout);
+                    current_timeout = timeout;
+                    timeout_fut = timer_for_timeout(current_timeout);
+                }
+                Either::Right(_) => {
+                    timeout_fut = Timer::new(A_VERY_LONG_TIME);
+                    let mut io = timeout_lock.lock().await;
+                    io.conn.on_timeout();
+                    io.update_timeout();
+                    io.wake_stream_io();
+                    io.conn_send.ready();
+                }
+            }
+        }
     }
 
     pub async fn close(&self) {
@@ -315,6 +376,7 @@ impl AsyncConnection {
                 return Err(x).with_context(|| format!("quice_trace_id:{}", io.conn.trace_id()));
             }
         }
+        io.update_timeout();
         io.wake_stream_io();
         io.conn_send.ready();
         io.dgram_recv.ready();

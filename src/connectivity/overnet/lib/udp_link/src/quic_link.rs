@@ -81,9 +81,10 @@ async fn run_link(
     receiver: LinkReceiver,
     quic: Arc<AsyncConnection>,
 ) -> Result<(), Error> {
-    futures::future::try_join(
+    futures::future::try_join3(
         link_to_quic(sender, quic.clone()),
         quic_to_link(receiver, quic.clone()),
+        quic.run(),
     )
     .await?;
     Ok(())
