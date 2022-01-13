@@ -307,6 +307,7 @@ class RealmBuilder final {
   // configured to return a non-null value
   // This function can only be called once per Realm::Builder instance.
   // Multiple invocations will result in a panic.
+  // |dispatcher| must outlive the lifetime of the constructed |RealmRoot|.
   RealmRoot Build(async_dispatcher* dispatcher = nullptr);
 
   // A reference to the root `Realm` object.

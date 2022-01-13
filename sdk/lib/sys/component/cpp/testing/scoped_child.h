@@ -61,6 +61,9 @@ class ScopedChild final {
   // fuchsia.component/Realm.DestroyChild asynchronously. This will make the
   // operation non-blocking, which is useful if a test has a slow running
   // teardown or if destruction *must* be async for any other reason.
+  // |dispatcher| must be non-null, or |async_get_default_dispatcher| must be
+  // configured to return a non-null value
+  // |dispatcher| must outlive the lifetime of this object.
   void MakeTeardownAsync(async_dispatcher_t* dispatcher = nullptr);
 
   // Connect to an interface in the exposed directory of the child component.
