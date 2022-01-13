@@ -33,23 +33,18 @@ zx_status_t socket_write(fidl_handle_t handle, WriteOptions write_options, const
   return ZX_OK;
 }
 
-void socket_read(fidl_handle_t handle, std::optional<ReadBuffers> read_buffers,
-                 ReadOptions read_options, TransportReadCallback callback) {
-  ZX_ASSERT_MSG(!read_buffers, "not currently supported");
-
-  uint8_t bytes[ZX_CHANNEL_MAX_MSG_BYTES];
+zx_status_t socket_read(fidl_handle_t handle, const ReadOptions& read_options, void* data,
+                        uint32_t data_capacity, fidl_handle_t* handles, void* handle_metadata,
+                        uint32_t handles_capacity, uint32_t* out_data_actual_count,
+                        uint32_t* out_handles_actual_count) {
   size_t actual;
-  zx_status_t status = zx_socket_read(handle, 0, bytes, ZX_CHANNEL_MAX_MSG_BYTES, &actual);
+  zx_status_t status = zx_socket_read(handle, 0, data, data_capacity, &actual);
   if (status != ZX_OK) {
-    callback(Result::TransportError(status), ReadBuffers{}, IncomingTransportContext());
-    return;
+    return status;
   }
-
-  ReadBuffers out_buffers = {
-      .data = bytes,
-      .data_count = static_cast<uint32_t>(actual),
-  };
-  callback(Result::Ok(), out_buffers, IncomingTransportContext());
+  *out_data_actual_count = static_cast<uint32_t>(actual);
+  *out_handles_actual_count = 0;
+  return ZX_OK;
 }
 
 zx_status_t socket_create_waiter(fidl_handle_t handle, async_dispatcher_t* dispatcher,
@@ -84,14 +79,13 @@ void SocketWaiter::HandleWaitFinished(async_dispatcher_t* dispatcher, zx_status_
     return failure_handler_(fidl::UnbindInfo::PeerClosed(ZX_ERR_PEER_CLOSED));
   }
 
-  fidl::MessageRead(zx::unowned_socket(async_wait_t::object),
-                    [this](IncomingMessage msg,
-                           fidl::internal::IncomingTransportContext incoming_transport_context) {
-                      if (!msg.ok()) {
-                        return failure_handler_(fidl::UnbindInfo{msg});
-                      }
-                      return success_handler_(msg, fidl::internal::IncomingTransportContext());
-                    });
+  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT InlineMessageBuffer<ZX_CHANNEL_MAX_MSG_BYTES> bytes;
+  IncomingMessage msg = fidl::MessageRead(zx::unowned_socket(async_wait_t::object), bytes.view(),
+                                          nullptr, nullptr, 0);
+  if (!msg.ok()) {
+    return failure_handler_(fidl::UnbindInfo{msg});
+  }
+  return success_handler_(msg, internal::IncomingTransportContext());
 }
 
 const CodingConfig SocketTransport::EncodingConfiguration = {};

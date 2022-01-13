@@ -531,9 +531,6 @@ class IncomingMessage : public ::fidl::Result {
 // buffers as needed.
 //
 // Error information is embedded in the returned |IncomingMessage| when applicable.
-//
-// For some transports, this version of MessageRead may involve an extra memcpy that
-// does not exist in the callback version.
 template <typename TransportObject>
 IncomingMessage MessageRead(TransportObject&& transport, ::fidl::BufferSpan bytes_storage,
                             fidl_handle_t* handle_storage,
@@ -542,80 +539,15 @@ IncomingMessage MessageRead(TransportObject&& transport, ::fidl::BufferSpan byte
                             uint32_t handle_capacity, const ReadOptions& options = {}) {
   auto type_erased_transport =
       internal::MakeAnyUnownedTransport(std::forward<TransportObject>(transport));
-  struct ReadResult {
-    Result result;
-    uint32_t num_bytes, num_handles;
-  };
-  ReadResult read_result;
-  type_erased_transport.read(
-      internal::ReadBuffers{
-          .data = bytes_storage.data,
-          .data_count = bytes_storage.capacity,
-          .handles = handle_storage,
-          .handle_metadata = handle_metadata_storage,
-          .handles_count = handle_capacity,
-      },
-      options,
-      [&read_result](Result in_result, internal::ReadBuffers buffers,
-                     fidl::internal::IncomingTransportContext incoming_transport_context) {
-        read_result.result = in_result;
-        read_result.num_bytes = buffers.data_count;
-        read_result.num_handles = buffers.handles_count;
-      });
-  if (!read_result.result.ok()) {
-    return IncomingMessage::Create(read_result.result);
+  uint32_t num_bytes, num_handles;
+  zx_status_t status = type_erased_transport.read(
+      options, bytes_storage.data, bytes_storage.capacity, handle_storage, handle_metadata_storage,
+      handle_capacity, &num_bytes, &num_handles);
+  if (status != ZX_OK) {
+    return IncomingMessage::Create(fidl::Result::TransportError(status));
   }
-  return IncomingMessage::Create(bytes_storage.data, read_result.num_bytes, handle_storage,
-                                 handle_metadata_storage, read_result.num_handles);
-}
-
-// Reads a message from |transport| and calls |callback| with the results.
-//
-// |callback| is called synchronously, before MessageRead completes.
-// It is not safe to use pointers in the arguments of |callback| after the function returns.
-// The return type of |MessageRead| is the same as the return type of |callback|.
-//
-// Error information is embedded in the |IncomingMessage| passed to the callback when applicable.
-//
-// This version of MessageRead allocates 64k stack buffers internally.
-template <typename TransportObject, typename Callback,
-          typename ReturnTypeOfCallback = std::invoke_result_t<
-              Callback, IncomingMessage, fidl::internal::IncomingTransportContext>>
-ReturnTypeOfCallback MessageRead(TransportObject&& transport, Callback callback,
-                                 ReadOptions options = {}) {
-  auto type_erased_transport =
-      internal::MakeAnyUnownedTransport(std::forward<TransportObject>(transport));
-
-  auto call_callback = [&callback](
-                           Result result, internal::ReadBuffers buffers,
-                           fidl::internal::IncomingTransportContext incoming_transport_context) {
-    if (!result.ok()) {
-      return callback(IncomingMessage::Create(result), fidl::internal::IncomingTransportContext());
-    }
-    return callback(
-        IncomingMessage::Create(
-            static_cast<uint8_t*>(buffers.data), buffers.data_count, buffers.handles,
-            static_cast<typename internal::AssociatedTransport<TransportObject>::HandleMetadata*>(
-                buffers.handle_metadata),
-            buffers.handles_count),
-        std::move(incoming_transport_context));
-  };
-
-  if constexpr (std::is_same_v<ReturnTypeOfCallback, void>) {
-    type_erased_transport.read(std::nullopt, options, call_callback);
-    return;
-  } else {
-    ReturnTypeOfCallback ret;
-    // Call read using a wrapping callback that extracts the return argument.
-    type_erased_transport.read(
-        std::nullopt, options,
-        [&ret, call_callback = std::move(call_callback)](
-            Result result, internal::ReadBuffers buffers,
-            fidl::internal::IncomingTransportContext incoming_transport_context) {
-          ret = call_callback(result, buffers, std::move(incoming_transport_context));
-        });
-    return ret;
-  }
+  return IncomingMessage::Create(bytes_storage.data, num_bytes, handle_storage,
+                                 handle_metadata_storage, num_handles);
 }
 
 namespace internal {
