@@ -126,6 +126,7 @@ pub fn dispatch_syscall(
         nanosleep[2],
         newfstatat[4],
         openat[4],
+        pipe[1],
         pipe2[2],
         poll[3],
         ppoll[4],

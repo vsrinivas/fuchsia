@@ -741,6 +741,13 @@ fn get_fd_flags(flags: u32) -> FdFlags {
     }
 }
 
+pub fn sys_pipe(
+    current_task: &CurrentTask,
+    user_pipe: UserRef<FdNumber>,
+) -> Result<SyscallResult, Errno> {
+    sys_pipe2(current_task, user_pipe, 0)
+}
+
 pub fn sys_pipe2(
     current_task: &CurrentTask,
     user_pipe: UserRef<FdNumber>,
