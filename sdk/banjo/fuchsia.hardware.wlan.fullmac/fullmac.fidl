@@ -90,7 +90,7 @@ type WlanFullmacAuthInd = struct {
 
 type WlanFullmacDeauthReq = struct {
     peer_sta_address ieee80211.MacAddr;
-    reason_code ddk.hw.wlan.ieee80211.ReasonCode;
+    reason_code ieee80211.ReasonCode;
 };
 
 type WlanFullmacAssocReq = struct {
@@ -281,7 +281,7 @@ type WlanFullmacDeauthConfirm = struct {
 
 type WlanFullmacDeauthIndication = struct {
     peer_sta_address ieee80211.MacAddr;
-    reason_code ddk.hw.wlan.ieee80211.ReasonCode;
+    reason_code ieee80211.ReasonCode;
     /// locally_initiated is true if deauth is initiated from the device,
     /// and is false if it's initiated remotely (e.g. due to deauth frame)
     locally_initiated bool;
@@ -318,7 +318,7 @@ type WlanFullmacDisassocConfirm = struct {
 
 type WlanFullmacDisassocIndication = struct {
     peer_sta_address ieee80211.MacAddr;
-    reason_code ddk.hw.wlan.ieee80211.ReasonCode;
+    reason_code ieee80211.ReasonCode;
     /// locally_initiated is true if diassoc is initiated from the device,
     /// and is false if it's initiated remotely (e.g. due to disassoc frame)
     locally_initiated bool;
