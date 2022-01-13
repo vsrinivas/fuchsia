@@ -278,6 +278,7 @@ async fn main() {
     let repository = Arc::new(repository_builder.build().await.unwrap())
         .server()
         .bind_to_addr(Ipv4Addr::LOCALHOST)
+        .bind_to_port(443)
         .start()
         .unwrap();
 
