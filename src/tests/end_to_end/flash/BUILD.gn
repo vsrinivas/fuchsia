@@ -120,7 +120,8 @@ group("tests") {
     deps += [ ":flash_script_test($host_toolchain)" ]
   }
 
-  if (board_name == "sherlock") {
-    deps += [ ":ffx_flash_test($host_toolchain)" ]
-  }
+  # TODO(fxbug.dev/91321): Enable test once flakiness is fixed.
+  # if (board_name == "sherlock") {
+  #   deps += [ ":ffx_flash_test($host_toolchain)" ]
+  # }
 }
