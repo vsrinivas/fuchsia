@@ -6,6 +6,7 @@ use fuchsia_zircon::{self as zx, sys::zx_thread_state_general_regs_t, AsHandleRe
 use process_builder::{elf_load, elf_parse};
 use std::ffi::{CStr, CString};
 use std::sync::Arc;
+use zerocopy::AsBytes;
 
 use crate::from_status_like_fdio;
 use crate::fs::FileHandle;
@@ -164,6 +165,9 @@ fn load_elf(
 pub struct ThreadStartInfo {
     pub entry: UserAddress,
     pub stack: UserAddress,
+
+    /// The address of the DT_DEBUG entry.
+    pub dt_debug_address: Option<UserAddress>,
 }
 
 impl ThreadStartInfo {
@@ -207,6 +211,8 @@ pub fn load_executable(
         entry_elf.headers.file_header().entry.wrapping_add(entry_elf.vaddr_bias),
     );
 
+    let dt_debug_address = parse_debug_addr(&main_elf);
+
     // TODO(tbodt): implement MAP_GROWSDOWN and then reset this to 1 page. The current value of
     // this is based on adding 0x1000 each time a segfault appears.
     let stack_size: usize = 0xc000;
@@ -239,13 +245,45 @@ pub fn load_executable(
         (AT_ENTRY, main_elf.vaddr_bias.wrapping_add(main_elf.headers.file_header().entry) as u64),
         (AT_SECURE, 0),
     ];
+
     let stack = populate_initial_stack(&stack_vmo, argv, environ, auxv, stack_base, stack)?;
 
     let mut mm_state = current_task.mm.state.write();
     mm_state.stack_base = stack_base;
     mm_state.stack_size = stack_size;
 
-    Ok(ThreadStartInfo { entry, stack })
+    Ok(ThreadStartInfo { entry, stack, dt_debug_address })
+}
+
+/// Parses the debug address (`DT_DEBUG`) from the provided ELF.
+///
+/// The debug address is read from the `elf_parse::SegmentType::Dynamic` program header,
+/// if such a tag exists.
+///
+/// Returns `None` if no debug tag exists.
+fn parse_debug_addr(elf: &LoadedElf) -> Option<UserAddress> {
+    match elf.headers.program_header_with_type(elf_parse::SegmentType::Dynamic) {
+        Ok(Some(dynamic_header)) => {
+            const ENTRY_SIZE: usize = std::mem::size_of::<elf_parse::Elf64Dyn>();
+            let mut header_bytes = vec![0u8; dynamic_header.filesz as usize];
+            elf.vmo.read(&mut header_bytes, dynamic_header.offset as u64).ok()?;
+
+            for offset in (0..(dynamic_header.filesz as usize)).step_by(ENTRY_SIZE) {
+                let mut dyn_entry = elf_parse::Elf64Dyn::default();
+                let entry_range = offset..(offset + ENTRY_SIZE);
+                dyn_entry.as_bytes_mut().clone_from_slice(&header_bytes[entry_range]);
+
+                if dyn_entry.tag() == Ok(elf_parse::Elf64DynTag::Debug) {
+                    return Some(UserAddress::from(
+                        (dynamic_header.offset + offset + elf.file_base) as u64,
+                    ));
+                }
+            }
+
+            None
+        }
+        _ => None,
+    }
 }
 
 #[cfg(test)]

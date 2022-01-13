@@ -20,23 +20,28 @@ use fuchsia_zircon::{
     self as zx, sys::zx_exception_info_t, sys::zx_thread_state_general_regs_t,
     sys::ZX_EXCEPTION_STATE_HANDLED, sys::ZX_EXCEPTION_STATE_THREAD_EXIT,
     sys::ZX_EXCEPTION_STATE_TRY_NEXT, sys::ZX_EXCP_POLICY_CODE_BAD_SYSCALL,
-    sys::ZX_EXCP_POLICY_ERROR, AsHandleRef, Task as zxTask,
+    sys::ZX_EXCP_POLICY_ERROR, sys::ZX_PROCESS_DEBUG_ADDR_BREAK_ON_SET, AsHandleRef,
+    Task as zxTask,
 };
 use futures::TryStreamExt;
 use log::{error, info};
+use process_builder::elf_parse;
 use rand::Rng;
 use std::convert::TryFrom;
 use std::ffi::CString;
 use std::mem;
 use std::sync::Arc;
+use zerocopy::AsBytes;
 
 use crate::auth::Credentials;
 use crate::device::run_features;
 use crate::errno;
+use crate::from_status_like_fdio;
 use crate::fs::ext4::ExtFilesystem;
 use crate::fs::fuchsia::{create_file_from_handle, RemoteFs, SyslogFile};
 use crate::fs::tmpfs::TmpFs;
 use crate::fs::*;
+use crate::mm::{MappingOptions, PAGE_SIZE};
 use crate::signals::signal_handling::*;
 use crate::strace;
 use crate::syscalls::decls::SyscallDecl;
@@ -44,6 +49,7 @@ use crate::syscalls::table::dispatch_syscall;
 use crate::syscalls::*;
 use crate::task::*;
 use crate::types::*;
+use crate::vmex_resource::VMEX_RESOURCE;
 
 // TODO: Should we move this code into fuchsia_zircon? It seems like part of a better abstraction
 // for exception channels.
@@ -146,9 +152,104 @@ fn run_task(mut current_task: CurrentTask, exceptions: zx::Channel) -> Result<i3
         }
 
         dequeue_signal(&mut current_task);
+
+        // Handle the debug address after the thread is set up to continue, because
+        // `set_process_debug_addr` expects the register state to be in a post-syscall state (most
+        // importantly the instruction pointer needs to be "correct").
+        set_process_debug_addr(&mut current_task)?;
+
         thread.write_state_general_regs(current_task.registers)?;
         exception.set_exception_state(&ZX_EXCEPTION_STATE_HANDLED)?;
     }
+}
+
+/// Sets the ZX_PROP_PROCESS_DEBUG_ADDR of the process.
+///
+/// Sets the process property if a valid address is found in the `DT_DEBUG` entry. If the existing
+/// value of ZX_PROP_PROCESS_DEBUG_ADDR is set to ZX_PROCESS_DEBUG_ADDR_BREAK_ON_SET, the task will
+/// be set up to trigger a software interrupt (for the debugger to catch) before resuming execution
+/// at the current instruction pointer.
+///
+/// If the property is set on the process (i.e., nothing fails and the values are valid),
+/// `current_task.debug_address` will be cleared.
+///
+/// # Parameters:
+/// - `current_task`: The task to set the property for. The register's of this task, the instruction
+///                   pointer specifically, needs to be set to the value with which the task is
+///                   expected to resume.
+fn set_process_debug_addr(current_task: &mut CurrentTask) -> Result<(), Errno> {
+    let dt_debug_address = match current_task.dt_debug_address {
+        Some(dt_debug_address) => dt_debug_address,
+        // The DT_DEBUG entry does not exist, or has already been read and set on the process.
+        None => return Ok(()),
+    };
+
+    // The debug_addres is the pointer located at DT_DEBUG.
+    let mut debug_address = elf_parse::Elf64Dyn::default();
+    current_task.mm.read_object(UserRef::new(dt_debug_address), &mut debug_address)?;
+    if debug_address.value == 0 {
+        // The DT_DEBUG entry is present, but has not yet been set by the linker, check next time.
+        return Ok(());
+    }
+
+    let existing_debug_addr = current_task
+        .thread_group
+        .process
+        .get_debug_addr()
+        .map_err(|err| from_status_like_fdio!(err))?;
+
+    // If existing_debug_addr != ZX_PROCESS_DEBUG_ADDR_BREAK_ON_SET then there is no reason to
+    // insert the interrupt.
+    if existing_debug_addr != ZX_PROCESS_DEBUG_ADDR_BREAK_ON_SET as u64 {
+        // Still set the debug address, and clear the debug address from `current_task` to avoid
+        // entering this function again.
+        current_task
+            .thread_group
+            .process
+            .set_debug_addr(&debug_address.value)
+            .map_err(|err| from_status_like_fdio!(err))?;
+        current_task.dt_debug_address = None;
+        return Ok(());
+    }
+
+    // An executable VMO is mapped into the process, which does two things:
+    //   1. Issues a software interrupt caught by the debugger.
+    //   2. Jumps back to the current instruction pointer of the thread.
+    #[cfg(target_arch = "x86_64")]
+    const INTERRUPT_AND_JUMP: [u8; 7] = [
+        0xcc, // int 3
+        0xff, 0x25, 0x00, 0x00, 0x00, 0x00, // jmp *0x0(%rip)
+    ];
+    let mut instruction_pointer = current_task.registers.rip.as_bytes().to_owned();
+    let mut instructions = INTERRUPT_AND_JUMP.to_vec();
+    instructions.append(&mut instruction_pointer);
+
+    let vmo = Arc::new(
+        zx::Vmo::create(*PAGE_SIZE)
+            .and_then(|vmo| vmo.replace_as_executable(&VMEX_RESOURCE))
+            .map_err(|err| from_status_like_fdio!(err))?,
+    );
+    vmo.write(&instructions, 0).map_err(|e| from_status_like_fdio!(e))?;
+
+    let instruction_pointer = current_task.mm.map(
+        UserAddress::default(),
+        vmo,
+        0,
+        instructions.len(),
+        zx::VmarFlags::PERM_EXECUTE | zx::VmarFlags::PERM_READ,
+        MappingOptions::empty(),
+        None,
+    )?;
+
+    current_task.registers.rip = instruction_pointer.ptr() as u64;
+    current_task
+        .thread_group
+        .process
+        .set_debug_addr(&debug_address.value)
+        .map_err(|err| from_status_like_fdio!(err))?;
+    current_task.dt_debug_address = None;
+
+    Ok(())
 }
 
 fn start_task(
@@ -347,7 +448,7 @@ fn start_component(
 
     let fs = FsContext::new(root_fs);
 
-    let current_task =
+    let mut current_task =
         Task::create_process_without_parent(&kernel, binary_path.clone(), fs.clone())?;
     *current_task.creds.write() = credentials;
     let startup_handles =
@@ -389,6 +490,7 @@ fn start_component(
     argv.extend(args.into_iter());
 
     let start_info = current_task.exec(&argv[0], &argv, &environ)?;
+    current_task.dt_debug_address = start_info.dt_debug_address;
 
     spawn_task(current_task, start_info.to_registers(), |result| {
         // TODO(fxb/74803): Using the component controller's epitaph may not be the best way to

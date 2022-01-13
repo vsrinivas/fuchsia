@@ -76,6 +76,7 @@ pub fn sys_execve(
     strace!(current_task, "execve({:?}, argv={:?}, environ={:?})", path, argv, environ);
     let start_info = current_task.exec(&path, &argv, &environ)?;
     current_task.registers = start_info.to_registers();
+    current_task.dt_debug_address = start_info.dt_debug_address;
     Ok(SUCCESS)
 }
 

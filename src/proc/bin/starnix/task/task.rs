@@ -33,6 +33,20 @@ pub struct CurrentTask {
     /// `self.handle.write_state_general_regs(self.registers)`.
     pub registers: zx::sys::zx_thread_state_general_regs_t,
 
+    /// The address of the DT_DEBUG entry in the process' ELF file.
+    ///
+    /// The value of the DT_DEBUG entry is a pointer to the `r_debug` symbol in the dynamic linker.
+    /// This struct contains a link map, which the debug agent can use to determine which shared
+    /// objects have been loaded.
+    ///
+    /// The lifecycle of this value is as follows (assuming the tag is present):
+    ///   1. Starnix finds the address of the DT_DEBUG entry and sets `debug_address`.
+    ///   2. The dynamic linker sets the value of the DT_DEBUG entry to the address of its `r_debug`
+    ///      symbol.
+    ///   3. Starnix reads the address from the DT_DEBUG entry, writes the address to the process'
+    ///      debug address property, and sets `debug_address` to `None`.
+    pub dt_debug_address: Option<UserAddress>,
+
     /// Exists only to prevent Sync from being implemented, since CurrentTask should only be used
     /// on the thread that runs the task. impl !Sync is a compiler error, the message is confusing
     /// but I think it might be nightly only.
@@ -502,6 +516,7 @@ impl CurrentTask {
     fn new(task: Task) -> CurrentTask {
         CurrentTask {
             task: Arc::new(task),
+            dt_debug_address: None,
             registers: zx::sys::zx_thread_state_general_regs_t::default(),
             _not_sync: PhantomData,
         }
