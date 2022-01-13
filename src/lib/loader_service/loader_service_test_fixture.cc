@@ -73,7 +73,7 @@ void LoaderServiceTest::AddDirectoryEntry(const fbl::RefPtr<memfs::VnodeDir>& ro
   ASSERT_FALSE(entry.path.empty() || entry.path.front() == '/' || entry.path.back() == '/');
 
   zx::vmo vmo;
-  ASSERT_OK(zx::vmo::create(ZX_PAGE_SIZE, 0, &vmo));
+  ASSERT_OK(zx::vmo::create(entry.file_contents.size(), 0, &vmo));
   ASSERT_OK(vmo.write(entry.file_contents.data(), 0, entry.file_contents.size()));
   if (entry.executable) {
     auto vmex_rsrc = GetVmexResource();
@@ -123,9 +123,12 @@ void LoaderServiceTest::LoadObject(fidl::WireSyncClient<fldsvc::Loader>& client,
     ASSERT_TRUE(vmo.is_valid());
     ASSERT_EQ(get_rights(vmo) & ZX_RIGHT_EXECUTE, ZX_RIGHT_EXECUTE);
 
-    char data[ZX_PAGE_SIZE] = {};
-    ASSERT_OK(vmo.read(data, 0, ZX_PAGE_SIZE));
-    ASSERT_EQ(std::string(data), expected.value());
+    std::vector<char> data;
+    data.resize(expected.value().size() + 1);
+    // Null terminator.
+    data[data.size() - 1] = 0;
+    ASSERT_OK(vmo.read(data.data(), 0, expected.value().size()));
+    ASSERT_EQ(std::string(data.data()), expected.value());
   }
 }
 
