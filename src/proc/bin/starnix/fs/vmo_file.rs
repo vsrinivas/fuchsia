@@ -102,16 +102,21 @@ impl VmoFileObject {
         if want_read > MAX_LFS_FILESIZE - offset {
             return error!(EINVAL);
         }
-        let to_read =
-            if file_length < offset + want_read { file_length - offset } else { want_read };
-        let mut buf = vec![0u8; to_read];
-        vmo.read(&mut buf[..], offset as u64).map_err(|_| errno!(EIO))?;
-        // TODO(steveaustin) - write_each might might be more efficient
-        current_task.mm.write_all(data, &mut buf[..])?;
+        let actual = if offset < file_length {
+            let to_read =
+                if file_length < offset + want_read { file_length - offset } else { want_read };
+            let mut buf = vec![0u8; to_read];
+            vmo.read(&mut buf[..], offset as u64).map_err(|_| errno!(EIO))?;
+            // TODO(steveaustin) - write_each might might be more efficient
+            current_task.mm.write_all(data, &mut buf[..])?;
+            to_read
+        } else {
+            0
+        };
         // TODO(steveaustin) - omit updating time_access to allow info to be immutable
         // and thus allow simultaneous reads.
         info.time_access = fuchsia_runtime::utc_time();
-        Ok(to_read)
+        Ok(actual)
     }
 
     pub fn write_at(

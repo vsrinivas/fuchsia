@@ -166,6 +166,41 @@ mod test {
     }
 
     #[fasync::run_singlethreaded(test)]
+    async fn test_read_past_eof() {
+        let (_kernel, current_task) = create_kernel_and_task();
+
+        // Open an empty file
+        let path = b"test.bin";
+        let _file = current_task
+            .fs
+            .root
+            .create_node(path, FileMode::IFREG | FileMode::ALLOW_ALL, DeviceType::NONE)
+            .unwrap();
+        let rd_file = current_task.open_file(path, OpenFlags::RDONLY).unwrap();
+
+        // Verify that attempting to read past the EOF (i.e. at a non-zero offset) returns 0
+        let test_mem_size = 0x10000;
+        let test_vmo = Arc::new(zx::Vmo::create(test_mem_size).unwrap());
+        let flags = zx::VmarFlags::PERM_READ | zx::VmarFlags::PERM_WRITE;
+        let test_addr = current_task
+            .mm
+            .map(
+                UserAddress::default(),
+                test_vmo,
+                0,
+                test_mem_size as usize,
+                flags,
+                MappingOptions::empty(),
+                None,
+            )
+            .unwrap();
+        let buf = [UserBuffer { address: test_addr, length: test_mem_size as usize }];
+        let test_offset = 100;
+        let result = rd_file.read_at(&current_task, test_offset, &buf).unwrap();
+        assert_eq!(result, 0);
+    }
+
+    #[fasync::run_singlethreaded(test)]
     async fn test_permissions() {
         let (_kernel, current_task) = create_kernel_and_task();
 
