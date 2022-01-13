@@ -17,7 +17,8 @@ pub fn assemble(args: ProductArgs) -> Result<()> {
     info!("Loading configuration files.");
     info!("  product: {}", product.display());
 
-    let _product: ProductAssemblyConfig = util::read_config(&product)?;
+    let _product: ProductAssemblyConfig =
+        util::read_config(&product).context("Loading product configuration")?;
 
     let mut builder = ImageAssemblyConfigBuilder::default();
 
