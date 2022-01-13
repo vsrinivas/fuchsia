@@ -18,4 +18,8 @@ use {argh::FromArgs, ffx_core::ffx_command};
 pub struct DriverRegisterCommand {
     #[argh(positional, description = "component URL of the driver to be registered.")]
     pub url: String,
+
+    /// if this exists, the user will be prompted for a component to select.
+    #[argh(switch, short = 's', long = "select")]
+    pub select: bool,
 }

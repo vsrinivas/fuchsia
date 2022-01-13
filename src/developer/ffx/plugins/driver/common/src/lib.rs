@@ -151,3 +151,23 @@ pub async fn get_development_proxy(
     };
     remotecontrol_connect::<DriverDevelopmentMarker>(&remote_control, &selector).await
 }
+
+pub async fn get_registrar_proxy(
+    remote_control: fremotecontrol::RemoteControlProxy,
+    select: bool,
+) -> Result<fidl_fuchsia_driver_registrar::DriverRegistrarProxy> {
+    let selector = match select {
+        true => {
+            user_choose_selector(&remote_control, "fuchsia.driver.registrar.DriverRegistrar")
+                .await?
+        }
+        false => {
+            "bootstrap/driver_manager:expose:fuchsia.driver.registrar.DriverRegistrar".to_string()
+        }
+    };
+    remotecontrol_connect::<fidl_fuchsia_driver_registrar::DriverRegistrarMarker>(
+        &remote_control,
+        &selector,
+    )
+    .await
+}
