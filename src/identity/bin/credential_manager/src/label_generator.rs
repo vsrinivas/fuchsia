@@ -16,6 +16,14 @@ pub struct Label {
     length: u8,
 }
 
+impl Label {
+    /// Returns a String that represents this Label as a directory name.
+    pub fn into_dir_name(&self) -> String {
+        // TODO(arkay): Double check if a particular format is required.
+        format!("{}_{}", self.value, self.length)
+    }
+}
+
 /// Generates Labels for a HashTree.
 /// Labels are bitstring representations of position of the node in the tree.
 #[derive(Debug)]
@@ -86,6 +94,8 @@ impl BitstringLabelGenerator {
 
 #[cfg(test)]
 pub const BAD_LABEL: Label = Label { value: 255, length: 0 };
+#[cfg(test)]
+pub const TEST_LABEL: Label = Label { value: 4, length: 12 };
 
 #[cfg(test)]
 mod test {
@@ -276,5 +286,11 @@ mod test {
         assert_eq!(bits_to_hold_children(129)?, 8);
         assert_eq!(bits_to_hold_children(255)?, 8);
         Ok(())
+    }
+
+    #[test]
+    fn into_dir_name() {
+        let label = Label { value: 4, length: 10 };
+        assert_eq!(label.into_dir_name(), "4_10");
     }
 }
