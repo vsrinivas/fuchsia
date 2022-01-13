@@ -122,9 +122,12 @@ fn shortlist_interfaces(name_pattern: &str, interfaces: &mut Vec<fstack::Interfa
     interfaces.retain(|i| i.properties.name.contains(name_pattern))
 }
 
-fn write_jsonified_interfaces_info<W: std::io::Write>(
+fn write_jsonified_interfaces_info<
+    W: std::io::Write,
+    I: IntoIterator<Item = fstack::InterfaceInfo>,
+>(
     mut out: W,
-    interfaces: Vec<fstack::InterfaceInfo>,
+    interfaces: I,
 ) -> Result<(), Error> {
     let value = itertools::process_results(
         interfaces
@@ -139,9 +142,12 @@ fn write_jsonified_interfaces_info<W: std::io::Write>(
     Ok(())
 }
 
-fn write_tabulated_interfaces_info<W: std::io::Write>(
+fn write_tabulated_interfaces_info<
+    W: std::io::Write,
+    I: IntoIterator<Item = fstack::InterfaceInfo>,
+>(
     mut out: W,
-    interfaces: Vec<fstack::InterfaceInfo>,
+    interfaces: I,
 ) -> Result<(), Error> {
     let mut t = Table::new();
     t.set_format(format::FormatBuilder::new().padding(2, 2).build());
@@ -245,7 +251,8 @@ async fn do_if<W: std::io::Write, C: NetCliDepsConnector>(
             let stack = connect_with_context::<fstack::StackMarker, _>(connector).await?;
             let info =
                 fstack_ext::exec_fidl!(stack.get_interface_info(id), "error getting interface")?;
-            writeln!(out, "{}", fstack_ext::InterfaceInfo::from(info))?;
+            write_tabulated_interfaces_info(out, std::iter::once(info))
+                .context("error tabulating interface info")?;
         }
         opts::IfEnum::IpForward(opts::IfIpForward { cmd }) => {
             let stack = connect_with_context::<fstack::StackMarker, _>(connector).await?;
