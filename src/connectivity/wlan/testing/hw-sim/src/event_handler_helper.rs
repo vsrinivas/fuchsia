@@ -253,6 +253,7 @@ pub struct EventHandlerBuilder<'a> {
     set_channel_action: Box<dyn Action<wlantap::SetChannelArgs> + 'a>,
     tx_action: Box<dyn Action<wlantap::TxArgs> + 'a>,
     phy_event_action: Box<dyn Action<wlantap::WlantapPhyEvent> + 'a>,
+    debug_name: Option<String>,
 }
 
 impl<'a> EventHandlerBuilder<'a> {
@@ -261,6 +262,7 @@ impl<'a> EventHandlerBuilder<'a> {
             set_channel_action: Box::new(NoAction),
             tx_action: Box::new(NoAction),
             phy_event_action: Box::new(NoAction),
+            debug_name: None,
         }
     }
 
@@ -285,6 +287,12 @@ impl<'a> EventHandlerBuilder<'a> {
         self
     }
 
+    // TODO(fxbug.dev/91118) - Added to help investigate hw-sim test. Remove later
+    pub fn on_debug_name(mut self, debug_name: &str) -> Self {
+        self.debug_name = Some(debug_name.to_string());
+        self
+    }
+
     pub fn build(mut self) -> impl FnMut(wlantap::WlantapPhyEvent) + 'a {
         move |event| {
             match event {
@@ -292,7 +300,18 @@ impl<'a> EventHandlerBuilder<'a> {
                     self.set_channel_action.run(&args)
                 }
 
-                wlantap::WlantapPhyEvent::Tx { ref args } => self.tx_action.run(&args),
+                wlantap::WlantapPhyEvent::Tx { ref args } => {
+                    // TODO(fxbug.dev/91118) - Added to help investigate hw-sim test. Remove later
+                    if let Some(debug_name) = &self.debug_name {
+                        log::info!(
+                            "[{}] - Tx({} bytes): {:X?}",
+                            debug_name,
+                            args.packet.data.len(),
+                            args.packet.data
+                        );
+                    }
+                    self.tx_action.run(&args)
+                }
 
                 _ => {}
             }

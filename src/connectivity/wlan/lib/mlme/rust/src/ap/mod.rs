@@ -288,6 +288,8 @@ impl Ap {
                 self.handle_sme_get_minstrel_stats(responder, &req.peer_addr)
             }
             fidl_mlme::MlmeRequest::AuthenticateResp { resp, .. } => {
+                // TODO(fxbug.dev/91118) - Added to help investigate hw-sim test. Remove later
+                info!("Handling MLME auth resp");
                 self.bss.as_mut().ok_or_bss_err()?.handle_mlme_auth_resp(&mut self.ctx, resp)
             }
             fidl_mlme::MlmeRequest::DeauthenticateReq { req, .. } => {

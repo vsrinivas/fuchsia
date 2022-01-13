@@ -97,6 +97,7 @@ async fn multiple_clients_ap() {
             std::i64::MAX.nanos(),
             "serving as an AP",
             EventHandlerBuilder::new()
+                .on_debug_name("ap")
                 .on_tx(
                     Sequence::start()
                         .then(Rx::send(&client1_proxy, WLANCFG_DEFAULT_AP_CHANNEL))
@@ -131,6 +132,7 @@ async fn multiple_clients_ap() {
             std::i64::MAX.nanos(),
             "connecting to AP",
             EventHandlerBuilder::new()
+                .on_debug_name("client1")
                 .on_set_channel(
                     Beacon::send_on_primary_channel(
                         WLANCFG_DEFAULT_AP_CHANNEL.primary,
@@ -172,6 +174,7 @@ async fn multiple_clients_ap() {
             std::i64::MAX.nanos(),
             "connecting to AP",
             EventHandlerBuilder::new()
+                .on_debug_name("client2")
                 .on_set_channel(
                     Beacon::send_on_primary_channel(
                         WLANCFG_DEFAULT_AP_CHANNEL.primary,

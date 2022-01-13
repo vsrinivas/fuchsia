@@ -356,6 +356,8 @@ impl RemoteClient {
                 }
             },
         )?;
+        // TODO(fxbug.dev/91118) - Added to help investigate hw-sim test. Remove later
+        log::info!("Sending auth frame to driver: {} bytes", bytes_written);
         self.send_wlan_frame(ctx, in_buf, bytes_written, TxFlags::NONE)
             .map_err(|s| Error::Status(format!("error sending auth frame"), s))
     }
