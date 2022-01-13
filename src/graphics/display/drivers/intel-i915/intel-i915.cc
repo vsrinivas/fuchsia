@@ -2234,8 +2234,8 @@ zx_status_t Controller::Init() {
                                        .ddi_a_lane_capability_control();
 
   zxlogf(TRACE, "Initializing interrupts");
-  status = interrupts_.Init(fit::bind_member(this, &Controller::HandlePipeVsync),
-                            fit::bind_member(this, &Controller::HandleHotplug), parent(), &pci_,
+  status = interrupts_.Init(fit::bind_member<&Controller::HandlePipeVsync>(this),
+                            fit::bind_member<&Controller::HandleHotplug>(this), parent(), &pci_,
                             mmio_space());
   if (status != ZX_OK) {
     zxlogf(ERROR, "Failed to initialize interrupts");

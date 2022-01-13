@@ -1541,7 +1541,7 @@ Client::Client(Controller* controller, ClientProxy* proxy, bool is_vc, bool use_
       is_vc_(is_vc),
       use_kernel_framebuffer_(use_kernel_framebuffer),
       id_(client_id),
-      fences_(controller->loop().dispatcher(), fit::bind_member(this, &Client::OnFenceFired)) {}
+      fences_(controller->loop().dispatcher(), fit::bind_member<&Client::OnFenceFired>(this)) {}
 
 Client::Client(Controller* controller, ClientProxy* proxy, bool is_vc, bool use_kernel_framebuffer,
                uint32_t client_id, zx::channel server_channel)
@@ -1551,7 +1551,7 @@ Client::Client(Controller* controller, ClientProxy* proxy, bool is_vc, bool use_
       use_kernel_framebuffer_(use_kernel_framebuffer),
       id_(client_id),
       server_handle_(server_channel.get()),
-      fences_(controller->loop().dispatcher(), fit::bind_member(this, &Client::OnFenceFired)),
+      fences_(controller->loop().dispatcher(), fit::bind_member<&Client::OnFenceFired>(this)),
       binding_state_(fidl::WireEventSender<fhd::Controller>(std::move(server_channel))) {}
 
 Client::~Client() { ZX_DEBUG_ASSERT(server_handle_ == ZX_HANDLE_INVALID); }
