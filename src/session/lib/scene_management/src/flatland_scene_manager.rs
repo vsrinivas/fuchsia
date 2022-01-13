@@ -25,6 +25,22 @@ use {
     std::{convert::TryFrom, sync::Arc},
 };
 
+// TODO(fxbug.dev/91061): Make this larger when we have a protocol to
+// determine the hotspot and the cursor component knows how to produce
+// output that doesn't occupy the full viewport.
+const CURSOR_SIZE: (u32, u32) = (18, 29);
+const CURSOR_HOTSPOT: (u32, u32) = (2, 4);
+
+// TODO(fxbug.dev/78201): Remove hardcoded scale when Flatland provides
+// what is needed to determine the cursor scale factor.
+const CURSOR_SCALE_MULTIPLIER: u32 = 5;
+const CURSOR_SCALE_DIVIDER: u32 = 4;
+
+// Converts a cursor size to physical pixels.
+fn physical_cursor_size(value: u32) -> u32 {
+    (CURSOR_SCALE_MULTIPLIER * value) / CURSOR_SCALE_DIVIDER
+}
+
 pub type FlatlandPtr = Arc<Mutex<ui_comp::FlatlandProxy>>;
 
 pub struct TransformContentIdPair {
@@ -292,8 +308,8 @@ impl SceneManager for FlatlandSceneManager {
     }
 
     fn set_cursor_position(&mut self, position: input_pipeline::Position) {
-        let x = position.x.round() as i32;
-        let y = position.y.round() as i32;
+        let x = position.x.round() as i32 - physical_cursor_size(CURSOR_HOTSPOT.0) as i32;
+        let y = position.y.round() as i32 - physical_cursor_size(CURSOR_HOTSPOT.1) as i32;
         let flatland = self.root_flatland.flatland.lock();
         flatland
             .set_translation(&mut self.cursor_transform_id, &mut fmath::Vec_ { x, y })
@@ -479,13 +495,12 @@ impl FlatlandSceneManager {
                 &mut fmath::Vec_ { x: -100, y: -100 },
             )?;
 
-            // TODO(fxbug.dev/91061): Make this larger when we have a protocol to
-            // determine the hotspot and the cursor component knows how to produce
-            // output that doesn't occupy the full viewport.
-            const CURSOR_SIZE: fmath::SizeU = fmath::SizeU { width: 18, height: 29 };
-
+            let cursor_size = fmath::SizeU {
+                width: physical_cursor_size(CURSOR_SIZE.0),
+                height: physical_cursor_size(CURSOR_SIZE.1),
+            };
             let link_properties = ui_comp::ViewportProperties {
-                logical_size: Some(CURSOR_SIZE),
+                logical_size: Some(cursor_size),
                 ..ui_comp::ViewportProperties::EMPTY
             };
 
