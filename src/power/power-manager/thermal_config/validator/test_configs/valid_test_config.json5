@@ -1,0 +1,36 @@
+{
+    clients: {
+        audio: [
+            {
+                state: 1,
+                trip_points: [
+                    {
+                        sensor: '/dev/aml-thermal-pll/thermal',
+                        activate_at: 80,
+                        deactivate_below: 76,
+                    },
+                ],
+            },
+            {
+                state: 2,
+                trip_points: [
+                    {
+                        sensor: '/dev/aml-thermal-pll/thermal',
+                        activate_at: 89,
+                        deactivate_below: 85,
+                    },
+                ],
+            },
+            {
+                state: 3,
+                trip_points: [
+                    {
+                        sensor: '/dev/aml-thermal-pll/thermal',
+                        activate_at: 97,
+                        deactivate_below: 93,
+                    },
+                ],
+            },
+        ],
+    },
+}

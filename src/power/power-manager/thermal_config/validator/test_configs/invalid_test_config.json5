@@ -1,0 +1,16 @@
+{
+    clients: {
+        audio: [
+            {
+                // missing `state` key
+                trip_points: [
+                    {
+                        sensor: '/dev/aml-thermal-pll/thermal',
+                        activate_at: 80,
+                        deactivate_below: 76,
+                    },
+                ],
+            },
+        ],
+    },
+}
