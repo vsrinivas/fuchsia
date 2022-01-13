@@ -30,7 +30,7 @@ rustc_test("compat-shim-test") {
 }
 
 fuchsia_unittest_package("package") {
-  package_name = "compat-shim-test"
+  package_name = "compat-driver-test"
   deps = [
     ":compat-shim-test",
     "//examples/drivers/driver_test_realm/sample-driver",

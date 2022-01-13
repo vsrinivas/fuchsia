@@ -8,7 +8,7 @@ group("tests") {
     "autobind:tests",
     "bind-fail-test",
     "bind-test-v2",
-    "compat-shim:tests",
+    "compat:tests",
     "composite-driver-v1:tests",
     "ddk-environment-test:tests",
     "ddk-fallback-test:tests",
