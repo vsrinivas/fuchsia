@@ -1759,7 +1759,9 @@ func TestStateTransitionAfterLeaseExpirationWithNoResponse(t *testing.T) {
 	c.retransTimeout = func(_ time.Duration) <-chan time.Time {
 		return retransTimeoutCh
 	}
+	wg.Add(1)
 	go func() {
+		defer wg.Done()
 		for i := 0; i < wantInitCount; i++ {
 			signalTimeout(ctx, retransTimeoutCh)
 		}
@@ -1778,11 +1780,11 @@ func TestStateTransitionAfterLeaseExpirationWithNoResponse(t *testing.T) {
 
 	wg.Add(1)
 	go func() {
+		defer wg.Done()
 		// Avoid waiting for ARP on sending DHCPRELEASE.
 		s.AddStaticNeighbor(testNICID, header.IPv4ProtocolNumber, c.Info().Config.ServerAddress, tcpip.LinkAddress([]byte{0, 1, 2, 3, 4, 5}))
 
 		c.Run(ctx)
-		wg.Done()
 	}()
 
 	gotAddr := <-addrCh
