@@ -1,0 +1,21 @@
+{
+    "include": [
+        "syslog/client.shard.cmx"
+    ],
+    "program": {
+        "binary": "bin/factory_reset"
+    },
+    "sandbox": {
+        "dev": [
+            "class/block",
+            "nelson-emmc",
+            "sherlock-emmc",
+            "sys/platform"
+        ],
+        "services": [
+            "fuchsia.hardware.power.statecontrol.Admin",
+            "fuchsia.tee.Application.808032e0-fd9e-4e6f-8896-544735c98480",
+            "fuchsia.tee.DeviceInfo"
+        ]
+    }
+}
