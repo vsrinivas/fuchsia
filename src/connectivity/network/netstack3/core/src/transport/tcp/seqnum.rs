@@ -63,6 +63,12 @@ impl ops::Sub for SeqNum {
 
 impl From<u32> for SeqNum {
     fn from(x: u32) -> Self {
+        Self::new(x)
+    }
+}
+
+impl SeqNum {
+    pub(crate) const fn new(x: u32) -> Self {
         Self(x as i32)
     }
 }
