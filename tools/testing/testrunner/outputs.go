@@ -31,11 +31,14 @@ type TestOutputs struct {
 	tap     *tap.Producer
 }
 
-func CreateTestOutputs(producer *tap.Producer, outDir string) *TestOutputs {
-	return &TestOutputs{
-		OutDir: outDir,
-		tap:    producer,
+func CreateTestOutputs(producer *tap.Producer, outdir string) (*TestOutputs, error) {
+	if outdir == "" {
+		return nil, fmt.Errorf("outdir must be set")
 	}
+	return &TestOutputs{
+		OutDir: outdir,
+		tap:    producer,
+	}, nil
 }
 
 // moveOutputFiles takes the list of outputFiles and moves them to newRelDir.
@@ -135,7 +138,7 @@ func (o *TestOutputs) Record(ctx context.Context, result TestResult) error {
 
 	// If the stdout/stderr file didn't already exist in the test result's OutputFiles,
 	// create it using the bytes from the test Stdio.
-	if o.OutDir != "" && !containsStdio {
+	if !containsStdio {
 		stdioPath := filepath.Join(o.OutDir, stdioPath)
 		pathWriter, err := osmisc.CreateFile(stdioPath)
 		if err != nil {

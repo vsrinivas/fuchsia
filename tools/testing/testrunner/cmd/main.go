@@ -166,7 +166,10 @@ func setupAndExecute(ctx context.Context, flags testrunnerFlags) error {
 
 	tapProducer := tap.NewProducer(os.Stdout)
 	tapProducer.Plan(len(tests))
-	outputs := testrunner.CreateTestOutputs(tapProducer, testOutDir)
+	outputs, err := testrunner.CreateTestOutputs(tapProducer, testOutDir)
+	if err != nil {
+		return fmt.Errorf("failed to create test outputs: %w", err)
+	}
 
 	serialSocketPath := os.Getenv(botanistconstants.SerialSocketEnvKey)
 	execErr := execute(ctx, tests, outputs, addr, sshKeyFile, serialSocketPath, testOutDir, flags)

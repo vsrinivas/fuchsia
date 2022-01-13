@@ -769,9 +769,12 @@ func TestRunAndOutputTests(t *testing.T) {
 			}
 
 			resultsDir := mkdtemp(t, "results")
-			outputs := testrunner.CreateTestOutputs(tap.NewProducer(io.Discard), resultsDir)
+			outputs, err := testrunner.CreateTestOutputs(tap.NewProducer(io.Discard), resultsDir)
+			if err != nil {
+				t.Fatal(err)
+			}
 
-			err := runAndOutputTests(ctx, tc.tests, testerForTest, outputs, mkdtemp(t, "outputs"))
+			err = runAndOutputTests(ctx, tc.tests, testerForTest, outputs, mkdtemp(t, "outputs"))
 			if tc.wantErr != (err != nil) {
 				t.Errorf("want err: %t, got %s", tc.wantErr, err)
 			}
@@ -896,9 +899,12 @@ func TestExecute(t *testing.T) {
 
 			var buf bytes.Buffer
 			producer := tap.NewProducer(&buf)
-			o := testrunner.CreateTestOutputs(producer, "")
+			o, err := testrunner.CreateTestOutputs(producer, mkdtemp(t, "outputs"))
+			if err != nil {
+				t.Fatal(err)
+			}
 			defer o.Close()
-			err := execute(context.Background(), tests, o, net.IPAddr{}, c.sshKeyFile, c.serialSocketPath, t.TempDir(),
+			err = execute(context.Background(), tests, o, net.IPAddr{}, c.sshKeyFile, c.serialSocketPath, t.TempDir(),
 				testrunnerFlags{snapshotFile: "snapshot.zip", ffxExperimental: true})
 			if c.wantErr {
 				if err == nil {

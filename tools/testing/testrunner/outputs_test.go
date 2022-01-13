@@ -105,7 +105,10 @@ func TestRecordingOfOutputs(t *testing.T) {
 	var buf bytes.Buffer
 	producer := tap.NewProducer(&buf)
 	producer.Plan(len(results))
-	o := CreateTestOutputs(producer, outDir)
+	o, err := CreateTestOutputs(producer, outDir)
+	if err != nil {
+		t.Fatal(err)
+	}
 	defer o.Close()
 
 	outputFileA := func(filename string) string {

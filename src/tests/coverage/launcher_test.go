@@ -60,7 +60,10 @@ func TestCoverage(t *testing.T) {
 	var sinks []runtests.DataSinkReference
 	// Create a test outputs object, responsible for producing TAP output,
 	// and recording data sinks.
-	outputs := testrunner.CreateTestOutputs(tap.NewProducer(io.Discard), testOutDir)
+	outputs, err := testrunner.CreateTestOutputs(tap.NewProducer(io.Discard), testOutDir)
+	if err != nil {
+		t.Fatalf("failed to create test outputs: %s", err)
+	}
 	// Copy profiles to the host.
 	err = tester.EnsureSinks(ctx, sinks, outputs)
 	if err != nil {
