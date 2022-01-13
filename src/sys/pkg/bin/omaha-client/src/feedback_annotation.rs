@@ -9,6 +9,7 @@ use {
     },
     futures::lock::Mutex,
     log::error,
+    omaha_client::app_set::AppSet as _,
     std::rc::Rc,
 };
 

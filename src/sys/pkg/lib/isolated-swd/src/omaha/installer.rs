@@ -14,7 +14,7 @@ use {
     futures::prelude::*,
     log::warn,
     omaha_client::{
-        installer::{Installer, ProgressObserver},
+        installer::{AppInstallResult, Installer, ProgressObserver},
         protocol::response::{OmahaStatus, Response},
         request_builder::RequestParams,
     },
@@ -76,13 +76,16 @@ impl Installer for IsolatedInstaller {
         &'a mut self,
         install_plan: &FuchsiaInstallPlan,
         observer: Option<&'a dyn ProgressObserver>,
-    ) -> LocalBoxFuture<'_, Vec<Result<Self::InstallResult, IsolatedInstallError>>> {
+    ) -> LocalBoxFuture<'_, (Self::InstallResult, Vec<AppInstallResult<Self::Error>>)> {
         if let Some(o) = observer.as_ref() {
             o.receive_progress(None, 0., None, None);
         }
 
         if self.blobfs.is_none() {
-            return async move { vec![Err(IsolatedInstallError::AlreadyRun)] }.boxed();
+            return async {
+                ((), vec![AppInstallResult::Failed(IsolatedInstallError::AlreadyRun)])
+            }
+            .boxed();
         }
 
         let updater = Updater::launch_with_components(
@@ -104,7 +107,7 @@ impl Installer for IsolatedInstaller {
             }
             Ok(())
         }
-        .map(|result| vec![result])
+        .map(|result| ((), vec![result.into()]))
         .boxed_local()
     }
 

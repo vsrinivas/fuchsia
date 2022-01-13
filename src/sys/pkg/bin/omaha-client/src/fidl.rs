@@ -645,7 +645,7 @@ mod stub {
     use omaha_client::{
         common::{App, CheckTiming, ProtocolState, UpdateCheckSchedule},
         http_request::StubHttpRequest,
-        installer::{stub::StubInstaller, Plan},
+        installer::stub::{StubInstaller, StubPlan},
         metrics::StubMetricsReporter,
         policy::{CheckDecision, PolicyEngine, UpdateDecision},
         request_builder::RequestParams,
@@ -839,6 +839,7 @@ mod stub {
     impl PolicyEngine for MockPolicyEngine {
         type TimeSource = MockTimeSource;
         type InstallResult = ();
+        type InstallPlan = StubPlan;
 
         fn time_source(&self) -> &Self::TimeSource {
             &self.time_source
@@ -872,7 +873,7 @@ mod stub {
 
         fn update_can_start<'p>(
             &mut self,
-            _proposed_install_plan: &'p impl Plan,
+            _proposed_install_plan: &'p Self::InstallPlan,
         ) -> BoxFuture<'p, UpdateDecision> {
             future::ready(UpdateDecision::Ok).boxed()
         }
@@ -885,7 +886,7 @@ mod stub {
             future::ready(true).boxed()
         }
 
-        fn reboot_needed(&mut self, _install_plan: &impl Plan) -> BoxFuture<'_, bool> {
+        fn reboot_needed(&mut self, _install_plan: &Self::InstallPlan) -> BoxFuture<'_, bool> {
             future::ready(true).boxed()
         }
     }

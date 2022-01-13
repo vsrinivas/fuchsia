@@ -77,6 +77,14 @@ pub struct App {
     pub extra_attributes: Map<String, Value>,
 }
 
+impl App {
+    pub fn get_manifest_version(&self) -> Option<String> {
+        self.update_check.as_ref().and_then(|update_check| {
+            update_check.manifest.as_ref().map(|manifest| manifest.version.clone())
+        })
+    }
+}
+
 #[derive(Clone, Debug, Deserialize, PartialEq)]
 #[serde(field_identifier, rename_all = "lowercase")]
 pub enum OmahaStatus {

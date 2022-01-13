@@ -15,15 +15,15 @@ use futures::executor::block_on;
 
 #[derive(Debug, Default)]
 pub struct MockHttpRequest {
-    // The last request made using this mock.
-    request: Rc<RefCell<Request<Body>>>,
+    // The requests made using this mock.
+    requests: Rc<RefCell<Vec<Request<Body>>>>,
     // The queue of fake responses for the upcoming requests.
     responses: VecDeque<Result<Response<Vec<u8>>, Error>>,
 }
 
 impl HttpRequest for MockHttpRequest {
     fn request(&mut self, req: Request<Body>) -> BoxFuture<'_, Result<Response<Vec<u8>>, Error>> {
-        self.request.replace(req);
+        self.requests.borrow_mut().push(req);
 
         future::ready(if let Some(resp) = self.responses.pop_front() {
             resp
@@ -44,12 +44,12 @@ impl MockHttpRequest {
         Default::default()
     }
 
-    pub fn from_request_cell(request: Rc<RefCell<Request<Body>>>) -> Self {
-        Self { request, ..Default::default() }
+    pub fn from_request_cell(request: Rc<RefCell<Vec<Request<Body>>>>) -> Self {
+        Self { requests: request, ..Default::default() }
     }
 
-    pub fn get_request_cell(&self) -> Rc<RefCell<Request<Body>>> {
-        Rc::clone(&self.request)
+    pub fn get_request_cell(&self) -> Rc<RefCell<Vec<Request<Body>>>> {
+        Rc::clone(&self.requests)
     }
 
     pub fn add_response(&mut self, res: Response<Vec<u8>>) {
@@ -61,25 +61,29 @@ impl MockHttpRequest {
     }
 
     pub fn assert_method(&self, method: &hyper::Method) {
-        assert_eq!(method, self.request.borrow().method());
+        assert_eq!(method, self.requests.borrow().last().unwrap().method());
     }
 
     pub fn assert_uri(&self, uri: &str) {
-        assert_eq!(&uri.parse::<hyper::Uri>().unwrap(), self.request.borrow().uri());
+        assert_eq!(
+            &uri.parse::<hyper::Uri>().unwrap(),
+            self.requests.borrow().last().unwrap().uri()
+        );
     }
 
     pub fn assert_header(&self, key: &str, value: &str) {
-        let request = self.request.borrow();
+        let requests = self.requests.borrow();
+        let request = requests.last().unwrap();
         let headers = request.headers();
         assert!(headers.contains_key(key));
         assert_eq!(headers[key], value);
     }
 
     fn take_request(&self) -> Request<Body> {
-        self.request.replace(Request::default())
+        self.requests.borrow_mut().pop().unwrap()
     }
 
-    pub async fn assert_body(self, body: &[u8]) {
+    pub async fn assert_body(&self, body: &[u8]) {
         let chunks = self
             .take_request()
             .into_body()
@@ -92,7 +96,7 @@ impl MockHttpRequest {
         assert_eq!(body, &chunks[..])
     }
 
-    pub async fn assert_body_str(self, body: &str) {
+    pub async fn assert_body_str(&self, body: &str) {
         let chunks = self
             .take_request()
             .into_body()

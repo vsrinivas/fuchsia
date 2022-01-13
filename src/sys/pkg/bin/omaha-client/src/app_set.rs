@@ -22,11 +22,6 @@ impl FuchsiaAppSet {
         self.package_groups.push(group);
     }
 
-    /// Get the system app id.
-    pub fn get_system_app_id(&self) -> &str {
-        &self.system_app.id
-    }
-
     /// Get the system product id.
     /// Returns empty string if product id not set for the system app.
     pub fn get_system_product_id(&self) -> &str {
@@ -62,6 +57,9 @@ impl AppSet for FuchsiaAppSet {
             std::iter::once(&mut self.system_app)
                 .chain(self.package_groups.iter_mut().map(|pg| &mut pg.app)),
         )
+    }
+    fn get_system_app_id(&self) -> &str {
+        &self.system_app.id
     }
 }
 

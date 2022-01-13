@@ -106,6 +106,7 @@ pub trait Policy {
     type UpdatePolicyData;
     type RebootPolicyData;
     type UpdateCanStartPolicyData;
+    type InstallPlan: Plan;
 
     /// When should the next update happen?
     fn compute_next_update_time(
@@ -132,19 +133,20 @@ pub trait Policy {
     /// be executed at this time.
     fn update_can_start(
         policy_data: &Self::UpdateCanStartPolicyData,
-        proposed_install_plan: &impl Plan,
+        proposed_install_plan: &Self::InstallPlan,
     ) -> UpdateDecision;
 
     /// Given the current PolicyData, is reboot allowed right now.
     fn reboot_allowed(policy_data: &Self::RebootPolicyData, check_options: &CheckOptions) -> bool;
 
     /// Given the InstallPlan, is reboot needed after update has been installed.
-    fn reboot_needed(install_plan: &impl Plan) -> bool;
+    fn reboot_needed(install_plan: &Self::InstallPlan) -> bool;
 }
 
 pub trait PolicyEngine {
     type TimeSource: TimeSource + Clone;
     type InstallResult;
+    type InstallPlan: Plan;
 
     /// Provides the time source used by the PolicyEngine to the state machine.
     fn time_source(&self) -> &Self::TimeSource;
@@ -173,7 +175,7 @@ pub trait PolicyEngine {
     /// be executed at this time.
     fn update_can_start<'p>(
         &mut self,
-        proposed_install_plan: &'p impl Plan,
+        proposed_install_plan: &'p Self::InstallPlan,
     ) -> BoxFuture<'p, UpdateDecision>;
 
     /// Is reboot allowed right now.
@@ -184,7 +186,7 @@ pub trait PolicyEngine {
     ) -> BoxFuture<'_, bool>;
 
     /// Given the InstallPlan, is reboot needed after update has been installed.
-    fn reboot_needed(&mut self, install_plan: &impl Plan) -> BoxFuture<'_, bool>;
+    fn reboot_needed(&mut self, install_plan: &Self::InstallPlan) -> BoxFuture<'_, bool>;
 }
 
 #[cfg(test)]

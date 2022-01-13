@@ -13,12 +13,15 @@ use futures::future::BoxFuture;
 use futures::prelude::*;
 
 /// A stub policy implementation that allows everything immediately.
-pub struct StubPolicy;
+pub struct StubPolicy<P: Plan> {
+    _phantom_data: std::marker::PhantomData<P>,
+}
 
-impl Policy for StubPolicy {
+impl<P: Plan> Policy for StubPolicy<P> {
     type UpdatePolicyData = PolicyData;
     type RebootPolicyData = ();
     type UpdateCanStartPolicyData = ();
+    type InstallPlan = P;
 
     fn compute_next_update_time(
         policy_data: &Self::UpdatePolicyData,
@@ -44,7 +47,7 @@ impl Policy for StubPolicy {
 
     fn update_can_start(
         _policy_data: &Self::UpdateCanStartPolicyData,
-        _proposed_install_plan: &impl Plan,
+        _proposed_install_plan: &Self::InstallPlan,
     ) -> UpdateDecision {
         UpdateDecision::Ok
     }
@@ -56,7 +59,7 @@ impl Policy for StubPolicy {
         true
     }
 
-    fn reboot_needed(_install_plan: &impl Plan) -> bool {
+    fn reboot_needed(_install_plan: &Self::InstallPlan) -> bool {
         true
     }
 }
@@ -64,22 +67,29 @@ impl Policy for StubPolicy {
 /// A stub PolicyEngine that just gathers the current time and hands it off to the StubPolicy as the
 /// PolicyData.
 #[derive(Debug)]
-pub struct StubPolicyEngine<T: TimeSource> {
+pub struct StubPolicyEngine<P: Plan, T: TimeSource> {
     time_source: T,
+    _phantom_data: std::marker::PhantomData<P>,
 }
 
-impl<T: TimeSource> StubPolicyEngine<T> {
+impl<P, T> StubPolicyEngine<P, T>
+where
+    T: TimeSource,
+    P: Plan,
+{
     pub fn new(time_source: T) -> Self {
-        Self { time_source }
+        Self { time_source, _phantom_data: std::marker::PhantomData }
     }
 }
 
-impl<T> PolicyEngine for StubPolicyEngine<T>
+impl<P, T> PolicyEngine for StubPolicyEngine<P, T>
 where
     T: TimeSource + Clone,
+    P: Plan,
 {
     type TimeSource = T;
     type InstallResult = ();
+    type InstallPlan = P;
 
     fn time_source(&self) -> &Self::TimeSource {
         &self.time_source
@@ -91,7 +101,7 @@ where
         scheduling: &UpdateCheckSchedule,
         protocol_state: &ProtocolState,
     ) -> BoxFuture<'_, CheckTiming> {
-        let check_timing = StubPolicy::compute_next_update_time(
+        let check_timing = StubPolicy::<P>::compute_next_update_time(
             &PolicyData::builder().use_timesource(&self.time_source).build(),
             apps,
             scheduling,
@@ -107,7 +117,7 @@ where
         protocol_state: &ProtocolState,
         check_options: &CheckOptions,
     ) -> BoxFuture<'_, CheckDecision> {
-        let decision = StubPolicy::update_check_allowed(
+        let decision = StubPolicy::<P>::update_check_allowed(
             &PolicyData::builder().use_timesource(&self.time_source).build(),
             apps,
             scheduling,
@@ -119,9 +129,9 @@ where
 
     fn update_can_start<'p>(
         &mut self,
-        proposed_install_plan: &'p impl Plan,
+        proposed_install_plan: &'p Self::InstallPlan,
     ) -> BoxFuture<'p, UpdateDecision> {
-        let decision = StubPolicy::update_can_start(&(), proposed_install_plan);
+        let decision = StubPolicy::<P>::update_can_start(&(), proposed_install_plan);
         future::ready(decision).boxed()
     }
 
@@ -130,12 +140,12 @@ where
         check_options: &CheckOptions,
         _install_result: &Self::InstallResult,
     ) -> BoxFuture<'_, bool> {
-        let decision = StubPolicy::reboot_allowed(&(), check_options);
+        let decision = StubPolicy::<P>::reboot_allowed(&(), check_options);
         future::ready(decision).boxed()
     }
 
-    fn reboot_needed(&mut self, install_plan: &impl Plan) -> BoxFuture<'_, bool> {
-        let decision = StubPolicy::reboot_needed(install_plan);
+    fn reboot_needed(&mut self, install_plan: &Self::InstallPlan) -> BoxFuture<'_, bool> {
+        let decision = StubPolicy::<P>::reboot_needed(install_plan);
         future::ready(decision).boxed()
     }
 }
@@ -152,7 +162,7 @@ mod tests {
         let policy_data =
             PolicyData::builder().use_timesource(&MockTimeSource::new_from_now()).build();
         let update_check_schedule = UpdateCheckSchedule::default();
-        let result = StubPolicy::compute_next_update_time(
+        let result = StubPolicy::<StubPlan>::compute_next_update_time(
             &policy_data,
             &[],
             &update_check_schedule,
@@ -167,7 +177,7 @@ mod tests {
         let policy_data =
             PolicyData::builder().use_timesource(&MockTimeSource::new_from_now()).build();
         let check_options = CheckOptions { source: InstallSource::OnDemand };
-        let result = StubPolicy::update_check_allowed(
+        let result = StubPolicy::<StubPlan>::update_check_allowed(
             &policy_data,
             &[],
             &UpdateCheckSchedule::default(),
@@ -186,7 +196,7 @@ mod tests {
         let policy_data =
             PolicyData::builder().use_timesource(&MockTimeSource::new_from_now()).build();
         let check_options = CheckOptions { source: InstallSource::ScheduledTask };
-        let result = StubPolicy::update_check_allowed(
+        let result = StubPolicy::<StubPlan>::update_check_allowed(
             &policy_data,
             &[],
             &UpdateCheckSchedule::default(),

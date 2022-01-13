@@ -4,7 +4,7 @@
 
 use crate::{
     common::{App, CheckOptions, ProtocolState, UpdateCheckSchedule},
-    installer::Plan,
+    installer::stub::StubPlan,
     policy::{CheckDecision, CheckTiming, PolicyEngine, UpdateDecision},
     time::MockTimeSource,
 };
@@ -41,6 +41,7 @@ impl Default for MockPolicyEngine {
 impl PolicyEngine for MockPolicyEngine {
     type TimeSource = MockTimeSource;
     type InstallResult = ();
+    type InstallPlan = StubPlan;
 
     fn time_source(&self) -> &Self::TimeSource {
         &self.time_source
@@ -67,7 +68,7 @@ impl PolicyEngine for MockPolicyEngine {
 
     fn update_can_start<'p>(
         &mut self,
-        _proposed_install_plan: &'p impl Plan,
+        _proposed_install_plan: &'p Self::InstallPlan,
     ) -> BoxFuture<'p, UpdateDecision> {
         future::ready(self.update_decision.clone()).boxed()
     }
@@ -81,7 +82,7 @@ impl PolicyEngine for MockPolicyEngine {
         future::ready(*self.reboot_allowed.borrow()).boxed()
     }
 
-    fn reboot_needed(&mut self, _install_plan: &impl Plan) -> BoxFuture<'_, bool> {
+    fn reboot_needed(&mut self, _install_plan: &Self::InstallPlan) -> BoxFuture<'_, bool> {
         future::ready(*self.reboot_needed.borrow()).boxed()
     }
 }

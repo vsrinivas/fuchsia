@@ -6,7 +6,7 @@ use crate::{
     app_set::{AppSet, AppSetExt as _},
     configuration::Config,
     http_request::HttpRequest,
-    installer::Installer,
+    installer::{Installer, Plan},
     metrics::MetricsReporter,
     policy::PolicyEngine,
     request_builder::RequestParams,
@@ -22,7 +22,7 @@ use crate::{
     app_set::VecAppSet,
     common::App,
     http_request::StubHttpRequest,
-    installer::stub::StubInstaller,
+    installer::stub::{StubInstaller, StubPlan},
     metrics::StubMetricsReporter,
     policy::StubPolicyEngine,
     state_machine::{RebootAfterUpdate, UpdateCheckError},
@@ -203,16 +203,17 @@ where
     }
 }
 
-impl<'a, PE, HR, IN, TM, MR, ST, AS, IR> StateMachineBuilder<PE, HR, IN, TM, MR, ST, AS>
+impl<'a, PE, HR, IN, TM, MR, ST, AS, IR, PL> StateMachineBuilder<PE, HR, IN, TM, MR, ST, AS>
 where
-    PE: 'a + PolicyEngine<InstallResult = IR>,
+    PE: 'a + PolicyEngine<InstallResult = IR, InstallPlan = PL>,
     HR: 'a + HttpRequest,
-    IN: 'a + Installer<InstallResult = IR>,
+    IN: 'a + Installer<InstallResult = IR, InstallPlan = PL>,
     TM: 'a + Timer,
     MR: 'a + MetricsReporter,
     ST: 'a + Storage,
     AS: 'a + AppSet,
     IR: 'static + Send,
+    PL: 'a + Plan,
 {
     pub async fn build(self) -> StateMachine<PE, HR, IN, TM, MR, ST, AS> {
         let StateMachineBuilder {
@@ -285,7 +286,7 @@ where
 #[cfg(test)]
 impl
     StateMachineBuilder<
-        StubPolicyEngine<MockTimeSource>,
+        StubPolicyEngine<StubPlan, MockTimeSource>,
         StubHttpRequest,
         StubInstaller,
         StubTimer,

@@ -35,22 +35,42 @@ pub trait Installer {
     /// Perform the installation as given by the install plan (as parsed form the Omaha server
     /// response).  If given, provide progress via the observer, and a final finished or Error
     /// indication via the Future.
+    /// The returned Vec of AppInstallResult must only include apps that have an update available
+    /// and must be kept in the same order as it appears in the omaha response.
     fn perform_install<'a>(
         &'a mut self,
         install_plan: &'a Self::InstallPlan,
         observer: Option<&'a dyn ProgressObserver>,
-    ) -> LocalBoxFuture<'a, Vec<Result<Self::InstallResult, Self::Error>>>;
+    ) -> LocalBoxFuture<'a, (Self::InstallResult, Vec<AppInstallResult<Self::Error>>)>;
 
     /// Perform a reboot of the system (in whichever manner that the installer needs to perform
     /// a reboot.  This fn should not return unless reboot failed.
     fn perform_reboot(&mut self) -> LocalBoxFuture<'_, Result<(), anyhow::Error>>;
 
     /// Try to create a new Plan from the given response, returning a Error if unable to do so.
+    /// For update with multiple apps, the install plan must keep the order of the apps from the
+    /// response.
     fn try_create_install_plan<'a>(
         &'a self,
         request_params: &'a RequestParams,
         response: &'a Response,
     ) -> LocalBoxFuture<'a, Result<Self::InstallPlan, Self::Error>>;
+}
+
+#[derive(Debug)]
+pub enum AppInstallResult<E> {
+    Installed,
+    Deferred,
+    Failed(E),
+}
+
+impl<E> From<Result<(), E>> for AppInstallResult<E> {
+    fn from(result: Result<(), E>) -> Self {
+        match result {
+            Ok(()) => Self::Installed,
+            Err(e) => Self::Failed(e),
+        }
+    }
 }
 
 /// The trait for observing progress on the initiated installation.

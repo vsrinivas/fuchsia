@@ -7,13 +7,13 @@ use crate::{
     common::{App, CheckOptions, CheckTiming},
     configuration::Config,
     http_request::{self, HttpRequest},
-    installer::{Installer, Plan},
+    installer::{AppInstallResult, Installer, Plan},
     metrics::{ClockType, Metrics, MetricsReporter, UpdateCheckFailureReason},
     policy::{CheckDecision, PolicyEngine, UpdateDecision},
     protocol::{
         self,
         request::{Event, EventErrorCode, EventResult, EventType, InstallSource, GUID},
-        response::{parse_json_response, OmahaStatus, Response},
+        response::{parse_json_response, OmahaStatus, Response, UpdateCheck},
     },
     request_builder::{self, RequestBuilder, RequestParams},
     storage::{Storage, StorageExt},
@@ -32,6 +32,7 @@ use http::{response::Parts, Response as HttpResponse};
 use log::{error, info, warn};
 use std::{
     cmp::min,
+    collections::HashMap,
     convert::TryInto,
     rc::Rc,
     str::Utf8Error,
@@ -224,16 +225,17 @@ enum RebootAfterUpdate<T> {
     NotNeeded,
 }
 
-impl<PE, HR, IN, TM, MR, ST, AS, IR> StateMachine<PE, HR, IN, TM, MR, ST, AS>
+impl<PE, HR, IN, TM, MR, ST, AS, IR, PL> StateMachine<PE, HR, IN, TM, MR, ST, AS>
 where
-    PE: PolicyEngine<InstallResult = IR>,
+    PE: PolicyEngine<InstallResult = IR, InstallPlan = PL>,
     HR: HttpRequest,
-    IN: Installer<InstallResult = IR>,
+    IN: Installer<InstallResult = IR, InstallPlan = PL>,
     TM: Timer,
     MR: MetricsReporter,
     ST: Storage,
     AS: AppSet,
     IR: 'static + Send,
+    PL: Plan,
 {
     /// Ask policy engine for the next update check time and update the context and yield event.
     async fn update_next_update_time(
@@ -806,7 +808,7 @@ where
                     Event::error(EventErrorCode::ParseResponse),
                     &apps,
                     &session_id,
-                    vec![None; apps.len()],
+                    &apps.iter().map(|app| (app.id.clone(), None)).collect(),
                     None,
                     co,
                 )
@@ -825,8 +827,15 @@ where
             info!("Omaha update check status: {} => {:?}", app_id, status);
         }
 
-        let some_app_has_update = statuses.iter().any(|(_id, status)| **status == OmahaStatus::Ok);
-        if !some_app_has_update {
+        let apps_with_update: Vec<_> = response
+            .apps
+            .iter()
+            .filter(|app| {
+                matches!(app.update_check, Some(UpdateCheck { status: OmahaStatus::Ok, .. }))
+            })
+            .collect();
+
+        if apps_with_update.is_empty() {
             // A successful, no-update, check
 
             Self::yield_state(State::NoUpdateAvailable, co).await;
@@ -835,14 +844,12 @@ where
             info!(
                 "At least one app has an update, proceeding to build and process an Install Plan"
             );
-            let next_versions: Vec<_> = response
-                .apps
+            // A map from app id to the new version of the app, if an app has no update, then it
+            // won't appear in this map, if an app has update but there's no version in the omaha
+            // response, then its entry will be None.
+            let next_versions: HashMap<String, Option<String>> = apps_with_update
                 .iter()
-                .map(|app| {
-                    app.update_check.as_ref().and_then(|update_check| {
-                        update_check.manifest.as_ref().map(|manifest| manifest.version.clone())
-                    })
-                })
+                .map(|app| (app.id.clone(), app.get_manifest_version()))
                 .collect();
             let install_plan =
                 match self.installer.try_create_install_plan(&request_params, &response).await {
@@ -856,7 +863,7 @@ where
                             Event::error(EventErrorCode::ConstructInstallPlan),
                             &apps,
                             &session_id,
-                            next_versions.clone(),
+                            &next_versions,
                             None,
                             co,
                         )
@@ -885,7 +892,7 @@ where
                         event,
                         &apps,
                         &session_id,
-                        next_versions.clone(),
+                        &next_versions,
                         None,
                         co,
                     )
@@ -905,7 +912,7 @@ where
                         Event::error(EventErrorCode::DeniedByPolicy),
                         &apps,
                         &session_id,
-                        next_versions.clone(),
+                        &next_versions,
                         None,
                         co,
                     )
@@ -924,7 +931,7 @@ where
                 Event::success(EventType::UpdateDownloadStarted),
                 &apps,
                 &session_id,
-                next_versions.clone(),
+                &next_versions,
                 None,
                 co,
             )
@@ -949,13 +956,15 @@ where
                 }
             };
 
-            let (mut install_results, ()) = future::join(perform_install, yield_progress).await;
-            // TODO(fxbug.dev/88997): handle multiple results properly.
-            let install_result = install_results.remove(0);
+            let ((install_result, mut app_install_results), ()) =
+                future::join(perform_install, yield_progress).await;
+            let no_apps_failed = app_install_results.iter().all(|result| {
+                matches!(result, AppInstallResult::Installed | AppInstallResult::Deferred)
+            });
             let update_finish_time = self.time_source.now_in_walltime();
             let install_duration = match update_finish_time.duration_since(update_start_time) {
                 Ok(duration) => {
-                    let metrics = if install_result.is_ok() {
+                    let metrics = if no_apps_failed {
                         Metrics::SuccessfulUpdateDuration(duration)
                     } else {
                         Metrics::FailedUpdateDuration(duration)
@@ -968,52 +977,108 @@ where
                     None
                 }
             };
-            let install_result = match install_result {
-                Ok(install_result) => install_result,
-                Err(e) => {
-                    co.yield_(StateMachineEvent::InstallerError(Some(Box::new(e)))).await;
-                    Self::yield_state(State::InstallationError, co).await;
-                    self.report_omaha_event_and_update_context(
-                        &request_params,
-                        Event::error(EventErrorCode::Installation),
-                        &apps,
-                        &session_id,
-                        next_versions.clone(),
-                        install_duration,
-                        co,
-                    )
-                    .await;
 
-                    return Self::make_not_updated_result(
-                        response,
-                        update_check::Action::InstallPlanExecutionError,
-                    );
+            let config = self.config.clone();
+            let mut request_builder = RequestBuilder::new(&config, &request_params);
+            let mut events = vec![];
+            let mut installed_apps = vec![];
+            for (response_app, app_install_result) in
+                apps_with_update.iter().zip(&app_install_results)
+            {
+                match apps.iter().find(|app| app.id == response_app.id) {
+                    Some(app) => {
+                        let event = match app_install_result {
+                            AppInstallResult::Installed => {
+                                installed_apps.push(app);
+                                Event::success(EventType::UpdateDownloadFinished)
+                            }
+                            AppInstallResult::Deferred => Event {
+                                event_type: EventType::UpdateComplete,
+                                event_result: EventResult::UpdateDeferred,
+                                ..Event::default()
+                            },
+                            AppInstallResult::Failed(_) => {
+                                Event::error(EventErrorCode::Installation)
+                            }
+                        };
+                        let event = Event {
+                            previous_version: Some(app.version.to_string()),
+                            next_version: response_app.get_manifest_version(),
+                            download_time_ms: install_duration
+                                .and_then(|d| d.as_millis().try_into().ok()),
+                            ..event
+                        };
+                        request_builder = request_builder.add_event(app, &event);
+                        events.push(event);
+                    }
+                    None => {
+                        error!("unknown app id in omaha response: {:?}", response_app.id);
+                    }
                 }
-            };
-
-            self.report_omaha_event_and_update_context(
-                &request_params,
-                Event::success(EventType::UpdateDownloadFinished),
-                &apps,
-                &session_id,
-                next_versions.clone(),
-                install_duration,
-                co,
-            )
-            .await;
+            }
+            request_builder =
+                request_builder.session_id(session_id.clone()).request_id(GUID::new());
+            if let Err(e) = self.do_omaha_request_and_update_context(&request_builder, co).await {
+                for event in events {
+                    self.report_metrics(Metrics::OmahaEventLost(event));
+                }
+                warn!("Unable to report event to Omaha: {:?}", e);
+            }
 
             // TODO: Verify downloaded update if needed.
 
-            self.report_omaha_event_and_update_context(
-                &request_params,
-                Event::success(EventType::UpdateComplete),
-                &apps,
-                &session_id,
-                next_versions.clone(),
-                install_duration,
-                co,
-            )
-            .await;
+            // For apps that successfully installed, we need to report an extra `UpdateComplete` event.
+            if !installed_apps.is_empty() {
+                self.report_omaha_event_and_update_context(
+                    &request_params,
+                    Event::success(EventType::UpdateComplete),
+                    installed_apps,
+                    &session_id,
+                    &next_versions,
+                    install_duration,
+                    co,
+                )
+                .await;
+            }
+
+            let mut errors = vec![];
+            let daystart = response.daystart;
+            let app_responses = response
+                .apps
+                .into_iter()
+                .map(|app| update_check::AppResponse {
+                    app_id: app.id,
+                    cohort: app.cohort,
+                    user_counting: daystart.clone().into(),
+                    result: match app.update_check {
+                        Some(UpdateCheck { status: OmahaStatus::Ok, .. }) => {
+                            match app_install_results.remove(0) {
+                                AppInstallResult::Installed => update_check::Action::Updated,
+                                AppInstallResult::Deferred => {
+                                    update_check::Action::DeferredByPolicy
+                                }
+                                AppInstallResult::Failed(e) => {
+                                    errors.push(e);
+                                    update_check::Action::InstallPlanExecutionError
+                                }
+                            }
+                        }
+                        _ => update_check::Action::NoUpdate,
+                    },
+                })
+                .collect();
+
+            if !errors.is_empty() {
+                for e in errors {
+                    co.yield_(StateMachineEvent::InstallerError(Some(Box::new(e)))).await;
+                }
+                Self::yield_state(State::InstallationError, co).await;
+
+                return Ok((
+                    update_check::Response { app_responses },
+                    RebootAfterUpdate::NotNeeded,
+                ));
+            }
 
             match update_finish_time.duration_since(update_first_seen_time) {
                 Ok(duration) => {
@@ -1026,12 +1091,17 @@ where
                 if let Err(e) = storage.set_time(UPDATE_FINISH_TIME, update_finish_time).await {
                     error!("Unable to persist {}: {}", UPDATE_FINISH_TIME, e);
                 }
-                let target_version = next_versions[0].as_deref().unwrap_or_else(|| {
-                    error!("Target version string not found in Omaha response.");
-                    "UNKNOWN"
-                });
-                if let Err(e) = storage.set_string(TARGET_VERSION, target_version).await {
-                    error!("Unable to persist {}: {}", TARGET_VERSION, e);
+                let app_set = self.app_set.lock().await;
+                let system_app_id = app_set.get_system_app_id();
+                // If not found then this is not a system update, so no need to write target version.
+                if let Some(next_version) = next_versions.get(system_app_id) {
+                    let target_version = next_version.as_deref().unwrap_or_else(|| {
+                        error!("Target version string not found in Omaha response.");
+                        "UNKNOWN"
+                    });
+                    if let Err(e) = storage.set_string(TARGET_VERSION, target_version).await {
+                        error!("Unable to persist {}: {}", TARGET_VERSION, e);
+                    }
                 }
                 storage.commit_or_log().await;
             }
@@ -1042,7 +1112,6 @@ where
                 RebootAfterUpdate::NotNeeded
             };
 
-            let app_responses = Self::make_app_responses(response, update_check::Action::Updated);
             Ok((update_check::Response { app_responses }, reboot_after_update))
         }
     }
@@ -1054,22 +1123,25 @@ where
         &'a mut self,
         request_params: &'a RequestParams,
         event: Event,
-        apps: &[App],
+        apps: impl IntoIterator<Item = &App>,
         session_id: &GUID,
-        next_versions: Vec<Option<String>>,
+        next_versions: &HashMap<String, Option<String>>,
         install_duration: Option<Duration>,
         co: &mut async_generator::Yield<StateMachineEvent>,
     ) {
         let config = self.config.clone();
         let mut request_builder = RequestBuilder::new(&config, request_params);
-        for (app, next_version) in apps.iter().zip(next_versions) {
-            let event = Event {
-                previous_version: Some(app.version.to_string()),
-                next_version,
-                download_time_ms: install_duration.and_then(|d| d.as_millis().try_into().ok()),
-                ..event.clone()
-            };
-            request_builder = request_builder.add_event(app, &event);
+        for app in apps {
+            // Skip apps with no update.
+            if let Some(next_version) = next_versions.get(&app.id) {
+                let event = Event {
+                    previous_version: Some(app.version.to_string()),
+                    next_version: next_version.clone(),
+                    download_time_ms: install_duration.and_then(|d| d.as_millis().try_into().ok()),
+                    ..event.clone()
+                };
+                request_builder = request_builder.add_event(app, &event);
+            }
         }
         request_builder = request_builder.session_id(session_id.clone()).request_id(GUID::new());
         if let Err(e) = self.do_omaha_request_and_update_context(&request_builder, co).await {
@@ -1289,16 +1361,17 @@ fn randomize(n: u64, range: u64) -> u64 {
 }
 
 #[cfg(test)]
-impl<PE, HR, IN, TM, MR, ST, AS, IR> StateMachine<PE, HR, IN, TM, MR, ST, AS>
+impl<PE, HR, IN, TM, MR, ST, AS, IR, PL> StateMachine<PE, HR, IN, TM, MR, ST, AS>
 where
-    PE: PolicyEngine<InstallResult = IR>,
+    PE: PolicyEngine<InstallResult = IR, InstallPlan = PL>,
     HR: HttpRequest,
-    IN: Installer<InstallResult = IR>,
+    IN: Installer<InstallResult = IR, InstallPlan = PL>,
     TM: Timer,
     MR: MetricsReporter,
     ST: Storage,
     AS: AppSet,
     IR: 'static + Send,
+    PL: Plan,
 {
     /// Run perform_update_check once, returning the update check result.
     async fn oneshot(
@@ -1392,7 +1465,7 @@ mod tests {
 
     // Assert that the last request made to |http| is equal to the request built by
     // |request_builder|.
-    async fn assert_request<'a>(http: MockHttpRequest, request_builder: RequestBuilder<'a>) {
+    async fn assert_request<'a>(http: &MockHttpRequest, request_builder: RequestBuilder<'a>) {
         let body = request_builder.build().unwrap().into_body();
         let body = body
             .try_fold(Vec::new(), |mut vec, b| async move {
@@ -1510,7 +1583,7 @@ mod tests {
                 .add_event(&apps[0], &event)
                 .session_id(GUID::from_u128(0))
                 .request_id(GUID::from_u128(2));
-            assert_request(state_machine.http, request_builder).await;
+            assert_request(&state_machine.http, request_builder).await;
         });
     }
 
@@ -1547,7 +1620,7 @@ mod tests {
                 .add_event(&apps[0], &event)
                 .session_id(GUID::from_u128(0))
                 .request_id(GUID::from_u128(2));
-            assert_request(state_machine.http, request_builder).await;
+            assert_request(&state_machine.http, request_builder).await;
         });
     }
 
@@ -1600,7 +1673,129 @@ mod tests {
                 .add_event(&apps[0], &event)
                 .session_id(GUID::from_u128(0))
                 .request_id(GUID::from_u128(3));
-            assert_request(state_machine.http, request_builder).await;
+            assert_request(&state_machine.http, request_builder).await;
+        });
+    }
+
+    #[test]
+    fn test_report_installation_error_multi_app() {
+        block_on(async {
+            // Intentionally made the app order in response and app_set different.
+            let response = json!({"response":{
+              "server": "prod",
+              "protocol": "3.0",
+              "app": [{
+                "appid": "appid_3",
+                "status": "ok",
+                "updatecheck": {
+                  "status": "ok",
+                  "manifest": {
+                      "version": "5.6.7.8",
+                      "actions": {
+                          "action": [],
+                      },
+                      "packages": {
+                          "package": [],
+                      },
+                  }
+                }
+              },{
+                "appid": "appid_1",
+                "status": "ok",
+                "updatecheck": {
+                  "status": "ok",
+                  "manifest": {
+                      "version": "1.2.3.4",
+                      "actions": {
+                          "action": [],
+                      },
+                      "packages": {
+                          "package": [],
+                      },
+                  }
+                }
+              },{
+                "appid": "appid_2",
+                "status": "ok",
+                "updatecheck": {
+                  "status": "noupdate",
+                }
+              }],
+            }});
+            let response = serde_json::to_vec(&response).unwrap();
+            let mut http = MockHttpRequest::new(HttpResponse::new(response));
+            http.add_response(HttpResponse::new(vec![]));
+            let app_set = VecAppSet::new(vec![
+                App::builder("appid_1", [1, 2, 3, 3]).build(),
+                App::builder("appid_2", [9, 9, 9, 9]).build(),
+                App::builder("appid_3", [5, 6, 7, 7]).build(),
+            ]);
+            let app_set = Rc::new(Mutex::new(app_set));
+            let (send_install, mut recv_install) = mpsc::channel(0);
+
+            let mut state_machine = StateMachineBuilder::new_stub()
+                .app_set(Rc::clone(&app_set))
+                .http(http)
+                .installer(BlockingInstaller { on_install: send_install, on_reboot: None })
+                .build()
+                .await;
+
+            let recv_install_fut = async move {
+                let unblock_install = recv_install.next().await.unwrap();
+                unblock_install
+                    .send(vec![AppInstallResult::Deferred, AppInstallResult::Installed])
+                    .unwrap();
+            };
+
+            let (oneshot_result, ()) =
+                future::join(state_machine.oneshot(), recv_install_fut).await;
+            let (response, reboot_after_update) = oneshot_result.unwrap();
+
+            assert_eq!("appid_3", response.app_responses[0].app_id);
+            assert_eq!(Action::DeferredByPolicy, response.app_responses[0].result);
+            assert_eq!("appid_1", response.app_responses[1].app_id);
+            assert_eq!(Action::Updated, response.app_responses[1].result);
+            assert_eq!("appid_2", response.app_responses[2].app_id);
+            assert_eq!(Action::NoUpdate, response.app_responses[2].result);
+            assert_matches!(reboot_after_update, RebootAfterUpdate::Needed(()));
+
+            let request_params = RequestParams::default();
+            let apps = app_set.lock().await.get_apps();
+
+            let mut request_builder = RequestBuilder::new(&state_machine.config, &request_params);
+            let event = Event {
+                previous_version: Some("1.2.3.3".to_string()),
+                next_version: Some("1.2.3.4".to_string()),
+                download_time_ms: Some(0),
+                ..Event::success(EventType::UpdateComplete)
+            };
+            request_builder = request_builder
+                .add_event(&apps[0], &event)
+                .session_id(GUID::from_u128(0))
+                .request_id(GUID::from_u128(4));
+            assert_request(&state_machine.http, request_builder).await;
+
+            let mut request_builder = RequestBuilder::new(&state_machine.config, &request_params);
+            let event1 = Event {
+                previous_version: Some("1.2.3.3".to_string()),
+                next_version: Some("1.2.3.4".to_string()),
+                download_time_ms: Some(0),
+                ..Event::success(EventType::UpdateDownloadFinished)
+            };
+            let event2 = Event {
+                previous_version: Some("5.6.7.7".to_string()),
+                next_version: Some("5.6.7.8".to_string()),
+                download_time_ms: Some(0),
+                event_type: EventType::UpdateComplete,
+                event_result: EventResult::UpdateDeferred,
+                ..Event::default()
+            };
+            request_builder = request_builder
+                .add_event(&apps[2], &event2)
+                .add_event(&apps[0], &event1)
+                .session_id(GUID::from_u128(0))
+                .request_id(GUID::from_u128(3));
+            assert_request(&state_machine.http, request_builder).await;
         });
     }
 
@@ -1664,7 +1859,7 @@ mod tests {
                 .add_event(&apps[0], &event)
                 .session_id(GUID::from_u128(0))
                 .request_id(GUID::from_u128(2));
-            assert_request(state_machine.http, request_builder).await;
+            assert_request(&state_machine.http, request_builder).await;
         });
     }
 
@@ -1699,7 +1894,7 @@ mod tests {
                 .add_event(&apps[0], &event)
                 .session_id(GUID::from_u128(0))
                 .request_id(GUID::from_u128(2));
-            assert_request(state_machine.http, request_builder).await;
+            assert_request(&state_machine.http, request_builder).await;
         });
     }
 
@@ -1750,7 +1945,6 @@ mod tests {
             let response = serde_json::to_vec(&response).unwrap();
             let mut http = MockHttpRequest::new(HttpResponse::new(response.clone()));
             http.add_response(HttpResponse::new(response));
-            let last_request_viewer = MockHttpRequest::from_request_cell(http.get_request_cell());
             let apps = make_test_app_set();
 
             let mut state_machine =
@@ -1776,7 +1970,7 @@ mod tests {
                     .session_id(GUID::from_u128(2))
                     .request_id(GUID::from_u128(3));
             // Check that the second update check used the new app.
-            assert_request(last_request_viewer, expected_request_builder).await;
+            assert_request(&state_machine.http, expected_request_builder).await;
         });
     }
 
@@ -2563,10 +2757,11 @@ mod tests {
             &'a mut self,
             _install_plan: &StubPlan,
             observer: Option<&'a dyn ProgressObserver>,
-        ) -> LocalBoxFuture<'a, Vec<Result<(), Self::Error>>> {
+        ) -> LocalBoxFuture<'a, (Self::InstallResult, Vec<AppInstallResult<Self::Error>>)> {
             if self.install_fails > 0 {
                 self.install_fails -= 1;
-                future::ready(vec![Err(StubInstallErrors::Failed)]).boxed()
+                future::ready(((), vec![AppInstallResult::Failed(StubInstallErrors::Failed)]))
+                    .boxed()
             } else {
                 self.mock_time.advance(INSTALL_DURATION);
                 async move {
@@ -2576,7 +2771,7 @@ mod tests {
                         observer.receive_progress(None, 0.9, None, None).await;
                         observer.receive_progress(None, 1.0, None, None).await;
                     }
-                    vec![Ok(())]
+                    ((), vec![AppInstallResult::Installed])
                 }
                 .boxed_local()
             }
@@ -3113,7 +3308,7 @@ mod tests {
         pool.run_until_stalled();
         assert_eq!(observer.take_states(), vec![]);
 
-        unblock_install.send(Ok(())).unwrap();
+        unblock_install.send(vec![AppInstallResult::Installed]).unwrap();
         pool.run_until_stalled();
         assert_eq!(observer.take_states(), vec![State::WaitingForReboot]);
 
@@ -3236,8 +3431,6 @@ mod tests {
         // Response to the ping.
         http.add_response(make_update_available_response());
         let ping_request_viewer = MockHttpRequest::from_request_cell(http.get_request_cell());
-        let second_ping_request_viewer =
-            MockHttpRequest::from_request_cell(http.get_request_cell());
         let mut mock_time = MockTimeSource::new_from_now();
         mock_time.truncate_submicrosecond_walltime();
         let next_update_time = mock_time.now() + Duration::from_secs(1000);
@@ -3311,7 +3504,7 @@ mod tests {
         for app in &apps {
             expected_request_builder = expected_request_builder.add_ping(&app);
         }
-        pool.run_until(assert_request(ping_request_viewer, expected_request_builder));
+        pool.run_until(assert_request(&ping_request_viewer, expected_request_builder));
 
         pool.run_until(async {
             assert_eq!(
@@ -3357,7 +3550,7 @@ mod tests {
         for app in &apps {
             expected_request_builder = expected_request_builder.add_ping(&app);
         }
-        pool.run_until(assert_request(second_ping_request_viewer, expected_request_builder));
+        pool.run_until(assert_request(&ping_request_viewer, expected_request_builder));
 
         assert!(!*reboot_called.borrow());
 
@@ -3370,7 +3563,7 @@ mod tests {
 
     #[derive(Debug)]
     struct BlockingInstaller {
-        on_install: mpsc::Sender<oneshot::Sender<Result<(), StubInstallErrors>>>,
+        on_install: mpsc::Sender<oneshot::Sender<Vec<AppInstallResult<StubInstallErrors>>>>,
         on_reboot: Option<mpsc::Sender<oneshot::Sender<Result<(), anyhow::Error>>>>,
     }
 
@@ -3383,13 +3576,13 @@ mod tests {
             &mut self,
             _install_plan: &StubPlan,
             _observer: Option<&dyn ProgressObserver>,
-        ) -> LocalBoxFuture<'_, Vec<Result<(), StubInstallErrors>>> {
-            let (send, recv) = oneshot::channel::<Result<(), StubInstallErrors>>();
+        ) -> LocalBoxFuture<'_, (Self::InstallResult, Vec<AppInstallResult<Self::Error>>)> {
+            let (send, recv) = oneshot::channel();
             let send_fut = self.on_install.send(send);
 
             async move {
                 send_fut.await.unwrap();
-                vec![recv.await.unwrap()]
+                ((), recv.await.unwrap())
             }
             .boxed_local()
         }
@@ -3500,7 +3693,7 @@ mod tests {
         pool.run_until_stalled();
         assert_eq!(observer.take_states(), vec![]);
 
-        unblock_install.send(Ok(())).unwrap();
+        unblock_install.send(vec![AppInstallResult::Installed]).unwrap();
         pool.run_until_stalled();
 
         assert_eq!(observer.take_states(), vec![State::WaitingForReboot]);

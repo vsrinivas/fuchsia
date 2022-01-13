@@ -48,11 +48,12 @@ impl Installer for StubInstaller {
         &mut self,
         _install_plan: &StubPlan,
         _observer: Option<&dyn ProgressObserver>,
-    ) -> LocalBoxFuture<'_, Vec<Result<(), StubInstallErrors>>> {
+    ) -> LocalBoxFuture<'_, (Self::InstallResult, Vec<AppInstallResult<Self::Error>>)> {
         if self.should_fail {
-            future::ready(vec![Err(StubInstallErrors::Failed)]).boxed_local()
+            future::ready(((), vec![AppInstallResult::Failed(StubInstallErrors::Failed)]))
+                .boxed_local()
         } else {
-            future::ready(vec![Ok(())]).boxed_local()
+            future::ready(((), vec![AppInstallResult::Installed])).boxed_local()
         }
     }
 

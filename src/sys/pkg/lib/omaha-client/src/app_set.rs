@@ -11,6 +11,7 @@ use {
 pub trait AppSet {
     fn get_apps(&self) -> Vec<App>;
     fn iter_mut_apps(&mut self) -> Box<dyn Iterator<Item = &mut App> + '_>;
+    fn get_system_app_id(&self) -> &str;
 }
 
 pub trait AppSetExt: AppSet {
@@ -59,12 +60,15 @@ pub trait AppSetExt: AppSet {
 
 impl<T> AppSetExt for T where T: AppSet {}
 
+/// An AppSet implementation based on Vec, the first app will be treated as the system app.
 pub struct VecAppSet {
     pub apps: Vec<App>,
 }
 
 impl VecAppSet {
+    /// Panics if the passed apps is empty.
     pub fn new(apps: Vec<App>) -> Self {
+        assert!(!apps.is_empty());
         Self { apps }
     }
 }
@@ -75,6 +79,9 @@ impl AppSet for VecAppSet {
     }
     fn iter_mut_apps(&mut self) -> Box<dyn Iterator<Item = &mut App> + '_> {
         Box::new(self.apps.iter_mut())
+    }
+    fn get_system_app_id(&self) -> &str {
+        &self.apps[0].id
     }
 }
 
@@ -165,5 +172,12 @@ mod tests {
                 App::builder("id2_mutated", [2]).build()
             ]
         );
+    }
+
+    #[test]
+    fn test_get_system_app_id() {
+        let apps = vec![App::builder("id1", [1]).build(), App::builder("id2", [2]).build()];
+        let app_set = VecAppSet::new(apps);
+        assert_eq!(app_set.get_system_app_id(), "id1");
     }
 }
