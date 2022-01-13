@@ -38,26 +38,28 @@ using uint128_t = unsigned __int128;
   static inline constexpr bool trait_name##_v = trait_name<T>::value
 
 ATOMIC_REF_HAS_METHOD_TRAIT(specialization_has_fetch_sub, fetch_add,
-                            typename T::value_type (C::*)(typename T::difference_type,
-                                                          std::memory_order) const noexcept);
+                            std::remove_volatile_t<typename T::value_type> (C::*)(
+                                typename T::difference_type, std::memory_order) const noexcept);
 ATOMIC_REF_HAS_METHOD_TRAIT(specialization_has_fetch_add, fetch_sub,
-                            typename T::value_type (C::*)(typename T::difference_type,
-                                                          std::memory_order) const noexcept);
+                            std::remove_volatile_t<typename T::value_type> (C::*)(
+                                typename T::difference_type, std::memory_order) const noexcept);
 
 ATOMIC_REF_HAS_METHOD_TRAIT(specialization_has_fetch_or, fetch_or,
-                            typename T::value_type (C::*)(typename T::difference_type,
-                                                          std::memory_order) const noexcept);
+                            std::remove_volatile_t<typename T::value_type> (C::*)(
+                                typename T::difference_type, std::memory_order) const noexcept);
 ATOMIC_REF_HAS_METHOD_TRAIT(specialization_has_fetch_and, fetch_and,
-                            typename T::value_type (C::*)(typename T::difference_type,
-                                                          std::memory_order) const noexcept);
+                            std::remove_volatile_t<typename T::value_type> (C::*)(
+                                typename T::difference_type, std::memory_order) const noexcept);
 ATOMIC_REF_HAS_METHOD_TRAIT(specialization_has_fetch_xor, fetch_xor,
-                            typename T::value_type (C::*)(typename T::difference_type,
-                                                          std::memory_order) const noexcept);
+                            std::remove_volatile_t<typename T::value_type> (C::*)(
+                                typename T::difference_type, std::memory_order) const noexcept);
 
 template <typename T>
 void CheckIntegerSpecialization() {
   static_assert(cpp17::is_same_v<typename cpp20::atomic_ref<T>::value_type, T>, "");
-  static_assert(cpp17::is_same_v<typename cpp20::atomic_ref<T>::difference_type, T>, "");
+  static_assert(
+      cpp17::is_same_v<typename cpp20::atomic_ref<T>::difference_type, std::remove_volatile_t<T>>,
+      "");
   static_assert(cpp20::atomic_ref<T>::required_alignment == std::max(alignof(T), sizeof(T)), "");
 }
 
@@ -67,7 +69,7 @@ std::enable_if_t<cpp17::is_pointer_v<T>, T> cast_helper(U u) {
 }
 
 template <typename T, typename U>
-std::enable_if_t<!cpp17::is_pointer_v<T>, T> cast_helper(U u) {
+std::enable_if_t<!cpp17::is_pointer_v<T>, std::remove_volatile_t<T>> cast_helper(U u) {
   return static_cast<T>(u);
 }
 
@@ -266,7 +268,9 @@ void CheckFloatSpecialization() {
   static_assert(!specialization_has_fetch_or_v<cpp20::atomic_ref<T>>, "");
   static_assert(!specialization_has_fetch_xor_v<cpp20::atomic_ref<T>>, "");
   static_assert(cpp17::is_same_v<typename cpp20::atomic_ref<T>::value_type, T>, "");
-  static_assert(cpp17::is_same_v<typename cpp20::atomic_ref<T>::difference_type, T>, "");
+  static_assert(
+      cpp17::is_same_v<typename cpp20::atomic_ref<T>::difference_type, std::remove_volatile_t<T>>,
+      "");
   static_assert(cpp20::atomic_ref<T>::required_alignment == alignof(T), "");
 }
 

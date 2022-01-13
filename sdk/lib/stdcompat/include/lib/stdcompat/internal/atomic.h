@@ -91,20 +91,21 @@ class atomic_ops {
   using storage_t = std::aligned_storage_t<sizeof(T), alignof(T)>;
 
  public:
-  void store(T desired, std::memory_order order = std::memory_order_seq_cst) const noexcept {
+  void store(value_t desired, std::memory_order order = std::memory_order_seq_cst) const noexcept {
     __atomic_store(ptr(), cpp17::addressof(desired), to_builtin_memory_order(order));
   }
 
-  T load(std::memory_order order = std::memory_order_seq_cst) const noexcept {
+  value_t load(std::memory_order order = std::memory_order_seq_cst) const noexcept {
     storage_t store;
     value_t* ret = reinterpret_cast<value_t*>(&store);
     __atomic_load(ptr(), ret, to_builtin_memory_order(order));
     return *ret;
   }
 
-  operator T() const noexcept { return this->load(); }
+  operator value_t() const noexcept { return this->load(); }
 
-  T exchange(T desired, std::memory_order order = std::memory_order_seq_cst) const noexcept {
+  value_t exchange(value_t desired,
+                   std::memory_order order = std::memory_order_seq_cst) const noexcept {
     storage_t store;
     value_t* ret = reinterpret_cast<value_t*>(&store);
     value_t noncv_desired = desired;
@@ -112,13 +113,13 @@ class atomic_ops {
     return *ret;
   }
 
-  bool compare_exchange_weak(T& expected, T desired,
+  bool compare_exchange_weak(T& expected, value_t desired,
                              std::memory_order success = std::memory_order_seq_cst) const noexcept {
     return compare_exchange_weak(expected, desired, success,
                                  compare_exchange_load_memory_order(success));
   }
 
-  bool compare_exchange_weak(T& expected, T desired, std::memory_order success,
+  bool compare_exchange_weak(T& expected, value_t desired, std::memory_order success,
                              std::memory_order failure) const noexcept {
     check_failure_memory_order(failure);
     return compare_exchange(ptr(), expected, desired,
@@ -126,13 +127,13 @@ class atomic_ops {
   }
 
   bool compare_exchange_strong(
-      T& expected, T desired,
+      T& expected, value_t desired,
       std::memory_order success = std::memory_order_seq_cst) const noexcept {
     return compare_exchange_strong(expected, desired, success,
                                    compare_exchange_load_memory_order(success));
   }
 
-  bool compare_exchange_strong(T& expected, T desired, std::memory_order success,
+  bool compare_exchange_strong(T& expected, value_t desired, std::memory_order success,
                                std::memory_order failure) const noexcept {
     check_failure_memory_order(failure);
     return compare_exchange(ptr(), expected, desired,
@@ -157,10 +158,10 @@ struct arithmetic_ops_helper {
   using ptr_type = T*;
 
   // Return type of atomic builtins.
-  using return_type = T;
+  using return_type = std::remove_volatile_t<T>;
 
   // Type of operands used.
-  using operand_type = T;
+  using operand_type = std::remove_volatile_t<T>;
 
   // Arithmetic operands are amplified by this scalar.
   static constexpr size_t modifier = 1;
@@ -236,7 +237,8 @@ class arithmetic_ops<Derived, T, std::enable_if_t<cpp17::is_floating_point_v<T>>
   using value_t = std::remove_volatile_t<T>;
 
  public:
-  T fetch_add(T operand, std::memory_order order = std::memory_order_seq_cst) const noexcept {
+  value_t fetch_add(value_t operand,
+                    std::memory_order order = std::memory_order_seq_cst) const noexcept {
     value_t old_value = derived()->load(std::memory_order_relaxed);
     value_t new_value = old_value + operand;
     while (
@@ -246,7 +248,8 @@ class arithmetic_ops<Derived, T, std::enable_if_t<cpp17::is_floating_point_v<T>>
     return old_value;
   }
 
-  T fetch_sub(T operand, std::memory_order order = std::memory_order_seq_cst) const noexcept {
+  value_t fetch_sub(value_t operand,
+                    std::memory_order order = std::memory_order_seq_cst) const noexcept {
     value_t old_value = derived()->load(std::memory_order_relaxed);
     value_t new_value = old_value - operand;
     while (
@@ -256,8 +259,8 @@ class arithmetic_ops<Derived, T, std::enable_if_t<cpp17::is_floating_point_v<T>>
     return old_value;
   }
 
-  T operator+=(T operand) const noexcept { return fetch_add(operand) + operand; }
-  T operator-=(T operand) const noexcept { return fetch_sub(operand) - operand; }
+  value_t operator+=(value_t operand) const noexcept { return fetch_add(operand) + operand; }
+  value_t operator-=(value_t operand) const noexcept { return fetch_sub(operand) - operand; }
 
  private:
   constexpr T* ptr() const { return static_cast<const Derived*>(this)->ptr_; }
@@ -278,22 +281,29 @@ class bitwise_ops {};
 
 template <typename Derived, typename T>
 class bitwise_ops<Derived, T, std::enable_if_t<cpp17::is_integral_v<T>>> {
+ private:
+  // Removes |volatile| and deprecation messages from static analizers.
+  using value_t = std::remove_cv_t<T>;
+
  public:
-  T fetch_and(T operand, std::memory_order order = std::memory_order_seq_cst) const noexcept {
+  value_t fetch_and(value_t operand,
+                    std::memory_order order = std::memory_order_seq_cst) const noexcept {
     return __atomic_fetch_and(ptr(), operand, to_builtin_memory_order(order));
   }
 
-  T fetch_or(T operand, std::memory_order order = std::memory_order_seq_cst) const noexcept {
+  value_t fetch_or(value_t operand,
+                   std::memory_order order = std::memory_order_seq_cst) const noexcept {
     return __atomic_fetch_or(ptr(), operand, to_builtin_memory_order(order));
   }
 
-  T fetch_xor(T operand, std::memory_order order = std::memory_order_seq_cst) const noexcept {
+  value_t fetch_xor(value_t operand,
+                    std::memory_order order = std::memory_order_seq_cst) const noexcept {
     return __atomic_fetch_xor(ptr(), operand, to_builtin_memory_order(order));
   }
 
-  T operator&=(T operand) const noexcept { return fetch_and(operand) & operand; }
-  T operator|=(T operand) const noexcept { return fetch_or(operand) | operand; }
-  T operator^=(T operand) const noexcept { return fetch_xor(operand) ^ operand; }
+  value_t operator&=(value_t operand) const noexcept { return fetch_and(operand) & operand; }
+  value_t operator|=(value_t operand) const noexcept { return fetch_or(operand) | operand; }
+  value_t operator^=(value_t operand) const noexcept { return fetch_xor(operand) ^ operand; }
 
  private:
   constexpr T* ptr() const { return static_cast<const Derived*>(this)->ptr_; }
