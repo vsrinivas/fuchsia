@@ -110,7 +110,7 @@ func Monotonic(n int64) Time {
 // After waits for duration to elapse and then sends the current monotonic time
 // on the returned channel.
 func After(d Duration) <-chan Time {
-	ch := make(chan Time)
+	ch := make(chan Time, 1)
 	_ = time.AfterFunc(d.stdDuration(), func() {
 		ch <- Now()
 	})
