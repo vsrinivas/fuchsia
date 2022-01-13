@@ -221,19 +221,20 @@ class WireResponseContext : public internal::ResponseContext {
   // |OnResult| is always invoked asynchronously whether in case of success
   // or error, unless the dispatcher is shut down, in which case it will be
   // called synchronously.
-  virtual void OnResult(::fidl::WireUnownedResult<FidlMethod>& result) = 0;
+  virtual void OnResult(::fidl::internal::WireUnownedResultType<FidlMethod>& result) = 0;
 
  private:
   ::cpp17::optional<::fidl::UnbindInfo> OnRawResult(
       ::fidl::IncomingMessage&& msg, internal::IncomingTransportContext transport_context) final {
     if (unlikely(!msg.ok())) {
-      ::fidl::WireUnownedResult<FidlMethod> result{msg.error()};
+      ::fidl::internal::WireUnownedResultType<FidlMethod> result{msg.error()};
       OnResult(result);
       return cpp17::nullopt;
     }
     ::fidl::DecodedMessage<::fidl::WireResponse<FidlMethod>> decoded{std::move(msg)};
     ::fidl::Result maybe_error = decoded;
-    ::fidl::WireUnownedResult<FidlMethod> result(std::move(decoded), std::move(transport_context));
+    ::fidl::internal::WireUnownedResultType<FidlMethod> result(std::move(decoded),
+                                                               std::move(transport_context));
     OnResult(result);
     if (unlikely(!maybe_error.ok())) {
       return ::fidl::UnbindInfo(maybe_error);

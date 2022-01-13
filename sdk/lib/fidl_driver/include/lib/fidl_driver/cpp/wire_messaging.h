@@ -12,4 +12,9 @@
 #include <lib/fidl_driver/cpp/sync_call.h>
 #include <lib/fidl_driver/cpp/transport.h>
 
+namespace fdf {
+template <typename FidlMethod>
+class WireUnownedResult;
+}  // namespace fdf
+
 #endif  // LIB_FIDL_DRIVER_INCLUDE_LIB_FIDL_DRIVER_CPP_WIRE_MESSAGING_H_

@@ -147,7 +147,7 @@ var (
 	WireRequest         = fidlNs.member("WireRequest")
 	WireResponse        = fidlNs.member("WireResponse")
 	WireResult          = fidlNs.member("WireResult")
-	WireUnownedResult   = fidlNs.member("WireUnownedResult")
+	WireUnownedResult   = transportNs.member("WireUnownedResult")
 	WireResponseContext = fidlNs.member("WireResponseContext")
 	WireCompleter       = internalNs.member("WireCompleter")
 	WireCompleterBase   = internalNs.member("WireCompleterBase")

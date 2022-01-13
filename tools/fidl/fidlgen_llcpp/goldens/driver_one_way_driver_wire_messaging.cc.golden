@@ -30,7 +30,7 @@ namespace test_driveroneway {
 
 #ifdef __Fuchsia__
 }  // namespace test_driveroneway
-::fidl::WireUnownedResult<::test_driveroneway::OneWay::Send>::WireUnownedResult(
+::fdf::WireUnownedResult<::test_driveroneway::OneWay::Send>::WireUnownedResult(
     ::fdf::UnownedClientEnd<::test_driveroneway::OneWay> client_end,
     ::fdf::Arena& arena,
     ::fidl::WireRequest<::test_driveroneway::OneWay::Send>* request) {

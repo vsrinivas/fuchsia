@@ -46,7 +46,7 @@ namespace test_drivertwoway {
 
 #ifdef __Fuchsia__
 }  // namespace test_drivertwoway
-::fidl::WireUnownedResult<::test_drivertwoway::TwoWay::Add>::WireUnownedResult(
+::fdf::WireUnownedResult<::test_drivertwoway::TwoWay::Add>::WireUnownedResult(
     ::fdf::UnownedClientEnd<::test_drivertwoway::TwoWay> client_end,
     ::fdf::Arena& arena,
     ::fidl::WireRequest<::test_drivertwoway::TwoWay::Add>* request) {
@@ -94,7 +94,7 @@ void fidl::internal::
    public:
     ResponseContext(Callback cb) : cb_(std::move(cb)) {}
 
-    void OnResult(::fidl::WireUnownedResult<::test_drivertwoway::TwoWay::Add>&
+    void OnResult(::fdf::WireUnownedResult<::test_drivertwoway::TwoWay::Add>&
                       result) override {
       cb_(result);
       delete this;
@@ -120,7 +120,7 @@ void fidl::internal::
    public:
     ResponseContext(Callback cb) : cb_(std::move(cb)) {}
 
-    void OnResult(::fidl::WireUnownedResult<::test_drivertwoway::TwoWay::Add>&
+    void OnResult(::fdf::WireUnownedResult<::test_drivertwoway::TwoWay::Add>&
                       result) override {
       if (result.ok()) {
         ::fidl::WireResponse<::test_drivertwoway::TwoWay::Add>* response =

@@ -50,7 +50,7 @@ TEST(DriverTransport, DISABLED_TwoWayAsync) {
   // The arena is consumed after a single call.
   client.buffer(std::move(*arena))
       ->TwoWay(kRequestPayload,
-               [&done](fidl::WireUnownedResult<::test_transport::TransportTest::TwoWay>& result) {
+               [&done](fdf::WireUnownedResult<::test_transport::TransportTest::TwoWay>& result) {
                  ASSERT_OK(result.status());
                  ASSERT_EQ(kResponsePayload, result->payload);
                  sync_completion_signal(&done);

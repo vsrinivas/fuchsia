@@ -181,7 +181,7 @@ class ::fidl::WireResult<::test_drivertwoway::TwoWay::Add> final
   ::fidl::internal::InlineMessageBuffer<24> bytes_;
 };
 template <>
-class ::fidl::WireUnownedResult<::test_drivertwoway::TwoWay::Add> final
+class ::fdf::WireUnownedResult<::test_drivertwoway::TwoWay::Add> final
     : public ::fidl::Result {
  public:
   explicit WireUnownedResult(
@@ -312,11 +312,11 @@ class ::fidl::internal::WireSyncBufferClientImpl<::test_drivertwoway::TwoWay>
  public:
   // Caller provides the backing storage for FIDL message via an argument to
   // `.buffer()`.
-  ::fidl::WireUnownedResult<::test_drivertwoway::TwoWay::Add> Add(
+  ::fdf::WireUnownedResult<::test_drivertwoway::TwoWay::Add> Add(
       uint16_t addend1, uint16_t addend2) {
     ::fidl::WireRequest<::test_drivertwoway::TwoWay::Add> _request{addend1,
                                                                    addend2};
-    return ::fidl::WireUnownedResult<::test_drivertwoway::TwoWay::Add>(
+    return ::fdf::WireUnownedResult<::test_drivertwoway::TwoWay::Add>(
         _client_end(), _arena(), &_request);
   }
 

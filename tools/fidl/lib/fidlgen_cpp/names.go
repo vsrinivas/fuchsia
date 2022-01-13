@@ -11,9 +11,12 @@ import (
 	"go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen"
 )
 
+const transportNamespaceMarker = "[TRANSPORT]"
+
 var zxNs namespace = newNamespace("zx")
 var fidlNs namespace = newNamespace("fidl")
 var internalNs namespace = fidlNs.append("internal")
+var transportNs namespace = newNamespace(transportNamespaceMarker)
 
 // variant controls how we refer to domain object declarations.
 type variant string
@@ -52,7 +55,11 @@ func (ns namespace) String() string {
 
 // NoLeading returns the fully qualified namespace without the leading ::.
 func (ns namespace) NoLeading() string {
-	return strings.Join(ns, "::")
+	s := strings.Join(ns, "::")
+	if currentTransport != nil {
+		s = strings.Replace(s, transportNamespaceMarker, currentTransport.Namespace, 1)
+	}
+	return s
 }
 
 // append returns a new namespace with an additional component.

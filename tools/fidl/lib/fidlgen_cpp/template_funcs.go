@@ -101,6 +101,24 @@ func endOfFile() string {
 	return ensureNamespace("::")
 }
 
+var currentTransport *Transport
+
+func setTransport(name string) string {
+	if transport, ok := transports[name]; ok {
+		currentTransport = transport
+		return ""
+	}
+	panic(fmt.Sprintf("unknown transport %s", name))
+}
+
+func unsetTransport() string {
+	if currentTransport == nil {
+		panic("cannot unset already unset transport")
+	}
+	currentTransport = nil
+	return ""
+}
+
 // formatParam funcs are helpers that transform a type and name into a string
 // for rendering in a template.
 type formatParam func(string, Type) string
@@ -238,6 +256,9 @@ var commonTemplateFuncs = template.FuncMap{
 	"EndifFuchsia":    endifFuchsia,
 	"EnsureNamespace": ensureNamespace,
 	"EndOfFile":       endOfFile,
+
+	"SetTransport":   setTransport,
+	"UnsetTransport": unsetTransport,
 
 	// UseHLCPP sets the template engine to default to the "hlcpp" domain object
 	// namespace, when printing nameVariants.

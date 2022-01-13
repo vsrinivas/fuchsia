@@ -25,7 +25,8 @@ namespace fidl {
 #ifdef __Fuchsia__
 
 template <typename FidlMethod>
-using WireClientCallback = ::fit::callback<void(::fidl::WireUnownedResult<FidlMethod>&)>;
+using WireClientCallback =
+    ::fit::callback<void(::fidl::internal::WireUnownedResultType<FidlMethod>&)>;
 
 namespace internal {
 

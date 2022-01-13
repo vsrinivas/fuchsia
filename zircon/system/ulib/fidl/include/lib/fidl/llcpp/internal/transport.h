@@ -442,6 +442,11 @@ using ServerEndType = typename Protocol::Transport::template ServerEnd<Protocol>
 template <typename Protocol>
 using ServerBindingRefType = typename Protocol::Transport::template ServerBindingRef<Protocol>;
 
+// The WireUnownedResult type for a given method, e.g. fidl::WireUnownedResult.
+template <typename FidlMethod>
+using WireUnownedResultType =
+    typename FidlMethod::Protocol::Transport::template WireUnownedResult<FidlMethod>;
+
 }  // namespace internal
 }  // namespace fidl
 

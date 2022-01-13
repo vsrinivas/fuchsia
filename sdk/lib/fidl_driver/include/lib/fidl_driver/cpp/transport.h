@@ -20,6 +20,8 @@ template <typename Protocol>
 class ServerEnd;
 template <typename Protocol>
 class ServerBindingRef;
+template <typename FidlMethod>
+class WireUnownedResult;
 }  // namespace fdf
 
 namespace fidl {
@@ -41,6 +43,8 @@ struct DriverTransport {
   using ServerEnd = fdf::ServerEnd<Protocol>;
   template <typename Protocol>
   using ServerBindingRef = fdf::ServerBindingRef<Protocol>;
+  template <typename FidlMethod>
+  using WireUnownedResult = fdf::WireUnownedResult<FidlMethod>;
 
   static const TransportVTable VTable;
   static const CodingConfig EncodingConfiguration;

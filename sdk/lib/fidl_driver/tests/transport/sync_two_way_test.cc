@@ -42,7 +42,7 @@ TEST(DriverTransport, DISABLED_TwoWaySync) {
   fdf::BindServer(dispatcher->get(), std::move(server_end), server);
   zx::status<fdf::Arena> arena = fdf::Arena::Create(0, "");
   fdf::WireSyncClient<test_transport::TransportTest> client(std::move(client_end));
-  fidl::WireUnownedResult<test_transport::TransportTest::TwoWay> result =
+  fdf::WireUnownedResult<test_transport::TransportTest::TwoWay> result =
       client.buffer(std::move(*arena))->TwoWay(kRequestPayload);
   ASSERT_TRUE(result.ok());
   ASSERT_EQ(kResponsePayload, result->payload);
