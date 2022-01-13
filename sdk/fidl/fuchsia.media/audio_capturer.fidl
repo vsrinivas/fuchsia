@@ -59,21 +59,21 @@ type AudioCapturerConfiguration = strict union {
 /// user to the AudioCapturer during the AddPayloadBuffer call.  Please note the
 /// following requirements related to the management of the payload buffer.
 ///
-/// ++ The payload buffer must be supplied before any capture operation may
-///    start.  Any attempt to start capture (via either CaptureAt or
-///    StartAsyncCapture) before a payload buffer has been established is an
-///    error.
-/// ++ The payload buffer may not be changed while there are any capture
-///    operations pending.
-/// ++ The stream type may not be changed after the payload buffer has been set.
-/// ++ The payload buffer must be an integral number of audio frame sizes (in
-///    bytes)
-/// ++ When running in 'async' mode (see below), the payload buffer must be at
-///    least as large as twice the frames_per_packet size specified during
-///    StartAsyncCapture.
-/// ++ The handle to the payload buffer supplied by the user must be readable,
-///    writable, mappable and transferable.
-/// ++ Users should always treat the payload buffer as read-only.
+/// + The payload buffer must be supplied before any capture operation may
+///   start.  Any attempt to start capture (via either CaptureAt or
+///   StartAsyncCapture) before a payload buffer has been established is an
+///   error.
+/// + The payload buffer may not be changed while there are any capture
+///   operations pending.
+/// + The stream type may not be changed after the payload buffer has been set.
+/// + The payload buffer must be an integral number of audio frame sizes (in
+///   bytes)
+/// + When running in 'async' mode (see below), the payload buffer must be at
+///   least as large as twice the frames_per_packet size specified during
+///   StartAsyncCapture.
+/// + The handle to the payload buffer supplied by the user must be readable,
+///   writable, mappable and transferable.
+/// + Users should always treat the payload buffer as read-only.
 ///
 /// ** Synchronous vs. Asynchronous capture mode **
 ///
@@ -120,19 +120,19 @@ type AudioCapturerConfiguration = strict union {
 ///
 /// It is considered an error to attempt any of the following operations.
 ///
-/// ++ To attempt to enter 'async' capture mode when no payload buffer has been
-///    established.
-/// ++ To specify a number of frames to capture per payload which does not permit
-///    at least two contiguous capture payloads to exist in the established
-///    shared payload buffer simultaneously.
-/// ++ To send a region to capture into using the CaptureAt method while the
-///    AudioCapturer instance is running in 'async' mode.
-/// ++ To attempt to call DiscardAllPackets while the AudioCapturer instance is
-///    running in 'async' mode.
-/// ++ To attempt to re-start 'async' mode capturing without having first
-///    stopped.
-/// ++ To attempt any operation except for SetGain while in the process of
-///    stopping.
+/// + To attempt to enter 'async' capture mode when no payload buffer has been
+///   established.
+/// + To specify a number of frames to capture per payload which does not permit
+///   at least two contiguous capture payloads to exist in the established
+///   shared payload buffer simultaneously.
+/// + To send a region to capture into using the CaptureAt method while the
+///   AudioCapturer instance is running in 'async' mode.
+/// + To attempt to call DiscardAllPackets while the AudioCapturer instance is
+///   running in 'async' mode.
+/// + To attempt to re-start 'async' mode capturing without having first
+///   stopped.
+/// + To attempt any operation except for SetGain while in the process of
+///   stopping.
 ///
 /// ** Synchronizing with a StopAsyncCapture operation **
 ///
@@ -204,12 +204,12 @@ type AudioCapturerConfiguration = strict union {
 /// discontinuous. After that, there are only two reasons that a StreamPacket
 /// will ever be discontinuous:
 ///
-/// 1) The user is operating an synchronous mode and does not supply regions to
+/// 1. The user is operating in synchronous mode and does not supply regions to
 ///    be filled quickly enough.  If the next continuous frame of data has not
 ///    been captured by the time it needs to be purged from the source buffers,
 ///    an overflow has occurred and the AudioCapturer will flag the next captured
 ///    region as discontinuous.
-/// 2) The user is operating in asynchronous mode and some internal error
+/// 2. The user is operating in asynchronous mode and some internal error
 ///    prevents the AudioCapturer instance from capturing the next frame of audio
 ///    in a continuous fashion.  This might be high system load or a hardware
 ///    error, but in general it is something which should never normally happen.
@@ -247,25 +247,25 @@ type AudioCapturerConfiguration = strict union {
 ///
 // ** Future Directions (aka TODOs) **
 //
-// ++ Consider adding a 'zero message' capture mode where the AudioCapturer
-//    simply supplies a linear transformation and some buffer parameters (max
-//    audio hold time) each time that it is started in 'async' mode, or each
-//    time an internal overflow occurs in 'async' mode.  Based on this
-//    information, client should know where the capture write pointer is at all
-//    times as a function of the transformation removing the need to send any
-//    buffer position messages.  This would reduce the operational overhead just
-//    about as low as it could go, and could allow for the lowest possible
-//    latency for capture clients.  OTOH - it might be better to achieve this
-//    simply by allowing clients to be granted direct, exclusive access to the
-//    driver level of capture if no resampling, reformatting, or sharing is
-//    needed.
-// ++ Consider providing some mechanism by which users may specify the exact
-//    time at which they want to capture data.
-// ++ Allow for more complex routing/mixing/AEC scenarios and place this under
-//    the control of the policy manager.
-// ++ Define and enforce access permissions and downsampling requirements for
-//    sensitive content.  Enforce using the policy manager.
-// ++ Consider allowing the mixer to produce compressed audio.
+// + Consider adding a 'zero message' capture mode where the AudioCapturer
+//   simply supplies a linear transformation and some buffer parameters (max
+//   audio hold time) each time that it is started in 'async' mode, or each
+//   time an internal overflow occurs in 'async' mode.  Based on this
+//   information, client should know where the capture write pointer is at all
+//   times as a function of the transformation removing the need to send any
+//   buffer position messages.  This would reduce the operational overhead just
+//   about as low as it could go, and could allow for the lowest possible
+//   latency for capture clients.  OTOH - it might be better to achieve this
+//   simply by allowing clients to be granted direct, exclusive access to the
+//   driver level of capture if no resampling, reformatting, or sharing is
+//   needed.
+// + Consider providing some mechanism by which users may specify the exact
+//   time at which they want to capture data.
+// + Allow for more complex routing/mixing/AEC scenarios and place this under
+//   the control of the policy manager.
+// + Define and enforce access permissions and downsampling requirements for
+//   sensitive content.  Enforce using the policy manager.
+// + Consider allowing the mixer to produce compressed audio.
 //
 
 protocol AudioCapturer {
@@ -280,7 +280,7 @@ protocol AudioCapturer {
         stream_type AudioStreamType;
     });
 
-    /// Explicitly specify a region of the shared payload buffer for the audio
+    /// Explicitly specifies a region of the shared payload buffer for the audio
     /// input to capture into.
     CaptureAt(struct {
         payload_buffer_id uint32;
@@ -290,7 +290,7 @@ protocol AudioCapturer {
         captured_packet StreamPacket;
     });
 
-    /// Place the AudioCapturer into 'async' capture mode and begin to produce
+    /// Places the AudioCapturer into 'async' capture mode and begin to produce
     /// packets of exactly 'frames_per_packet' number of frames each. The
     /// OnPacketProduced event (of StreamSink) will be used to inform the client
     /// of produced packets.
@@ -298,7 +298,7 @@ protocol AudioCapturer {
         frames_per_packet uint32;
     });
 
-    /// Stop capturing in 'async' capture mode and (optionally) deliver a callback
+    /// Stops capturing in 'async' capture mode and (optionally) deliver a callback
     /// that may be used by the client if explicit synchronization is needed.
     StopAsyncCapture() -> ();
     StopAsyncCaptureNoReply();

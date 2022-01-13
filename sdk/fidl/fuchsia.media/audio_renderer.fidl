@@ -9,7 +9,6 @@ using zx;
 /// The maximum number of frames that may be contained within a single StreamPacket.
 const MAX_FRAMES_PER_RENDERER_PACKET int64 = 0x3ffff;
 
-///
 /// AudioRenderers can be in one of two states at any time: _configurable_ or _operational_. A
 /// renderer is considered operational whenever it has packets queued to be rendered; otherwise it
 /// is _configurable_. Once an AudioRenderer enters the operational state, calls to "configuring"
@@ -104,14 +103,12 @@ protocol AudioRenderer {
     /// For this reason, specifying PTS units with a frequency greater than 8192x
     /// the frame rate (or NOT calling SetPtsUnits, which accepts the default PTS
     /// unit of 1 nanosec) will result in a default continuity threshold of zero.
-    ///
     SetPtsContinuityThreshold(struct {
         threshold_seconds float32;
     });
 
     /// Retrieves the stream's reference clock. The returned handle will have READ, DUPLICATE
     /// and TRANSFER rights, and will refer to a zx::clock that is MONOTONIC and CONTINUOUS.
-    ///
     GetReferenceClock() -> (resource struct {
         reference_clock zx.handle:CLOCK;
     });
@@ -127,7 +124,6 @@ protocol AudioRenderer {
     /// If a client wants a reference clock that is initially `CLOCK_MONOTONIC` but may
     /// diverge at some later time, they should create a clone of the monotonic clock, set
     /// this as the stream's reference clock, then rate-adjust it subsequently as needed.
-    ///
     SetReferenceClock(resource struct {
         reference_clock zx.handle:<CLOCK, optional>;
     });
@@ -148,7 +144,7 @@ protocol AudioRenderer {
         type AudioStreamType;
     });
 
-    /// Enable or disable notifications about changes to the minimum clock lead
+    /// Enables or disables notifications about changes to the minimum clock lead
     /// time (in nanoseconds) for this AudioRenderer. Calling this method with
     /// 'enabled' set to true will trigger an immediate `OnMinLeadTimeChanged`
     /// event with the current minimum lead time for the AudioRenderer. If the
@@ -161,10 +157,10 @@ protocol AudioRenderer {
     /// the playback clock transformation) in order for the mixer to be able to
     /// mix packet. For example...
     ///
-    /// ++ Let the PTS of packet X be P(X)
-    /// ++ Let the function which transforms PTS -> RefClock be R(p) (this
-    ///    function is determined by the call to Play(...)
-    /// ++ Let the minimum lead time be MLT
+    /// + Let the PTS of packet X be P(X)
+    /// + Let the function which transforms PTS -> RefClock be R(p) (this
+    ///   function is determined by the call to Play(...)
+    /// + Let the minimum lead time be MLT
     ///
     /// If R(P(X)) < RefClock.Now() + MLT
     /// Then the packet is late, and some (or all) of the packet's payload will
@@ -172,9 +168,9 @@ protocol AudioRenderer {
     ///
     // TODO(mpuryear): What should the units be here?  Options include...
     //
-    // 1) Normalized to nanoseconds (this is the current API)
-    // 2) Reference clock units (what happens if the reference clock changes?)
-    // 3) PTS units (what happens when the user changes the PTS units?)
+    // 1. Normalized to nanoseconds (this is the current API)
+    // 2. Reference clock units (what happens if the reference clock changes?)
+    // 3. PTS units (what happens when the user changes the PTS units?)
     //
     // TODO(mpuryear): Should `EnableMinLeadTimeEvents` have an optional -> ()
     // return value for synchronization purposes?  Probably not; users should be
@@ -204,9 +200,9 @@ protocol AudioRenderer {
         min_lead_time_nsec int64;
     });
 
-    /// Immediately put the AudioRenderer into a playing state. Start the advance
+    /// Immediately puts the AudioRenderer into a playing state. Starts the advance
     /// of the media timeline, using specific values provided by the caller (or
-    /// default values if not specified). In an optional callback, return the
+    /// default values if not specified). In an optional callback, returns the
     /// timestamp values ultimately used -- these set the ongoing relationship
     /// between the media and reference timelines (i.e., how to translate between
     /// the domain of presentation timestamps, and the realm of local system
@@ -327,7 +323,7 @@ protocol AudioRenderer {
         media_time int64;
     });
 
-    /// Immediately put the AudioRenderer into the paused state and then report
+    /// Immediately puts the AudioRenderer into the paused state and then report
     /// the relationship between the media and reference timelines which was
     /// established (if requested).
     ///

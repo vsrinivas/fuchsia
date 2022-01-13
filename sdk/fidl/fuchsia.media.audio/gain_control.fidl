@@ -55,7 +55,6 @@ protocol GainControl {
     /// Time 8: Ramp 3 replaces Ramp 2 and starts from current scale
     ///         (approx 0.5).
     /// Time 9: Ramp 3 completes; current scale value is now 0.0 (`MUTED_GAIN_DB`).
-    ///
     SetGainWithRamp(struct {
         gain_db float32;
         duration zx.duration;

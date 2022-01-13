@@ -79,12 +79,12 @@ type Usage = strict union {
 
 @discoverable
 protocol AudioCore {
-    /// Create an AudioRenderer which outputs audio to the default device.
+    /// Creates an AudioRenderer which outputs audio to the default device.
     CreateAudioRenderer(resource struct {
         audio_out_request server_end:AudioRenderer;
     });
 
-    /// Create a new Audio Capturer according to the given requirements.
+    /// Creates an AudioCapturer according to the given requirements.
     ///
     /// `pcm_stream_type` sets the stream type of the stream to be delivered.
     /// It causes the source material to be reformatted/resampled if needed
@@ -104,7 +104,7 @@ protocol AudioCore {
         audio_capturer_request server_end:AudioCapturer;
     });
 
-    /// Create an AudioCapturer which either captures from the current default
+    /// Creates an AudioCapturer which either captures from the current default
     /// audio input device, or loops-back from the current default audio output
     /// device based on value passed for the loopback flag.
     //
@@ -177,14 +177,14 @@ protocol AudioCore {
         enabled bool;
     });
 
-    /// Set the Usage gain applied to Renderers. By default, the gain for all
+    /// Sets the Usage gain applied to Renderers. By default, the gain for all
     /// render usages is set to Unity (0 db).
     SetRenderUsageGain(struct {
         usage AudioRenderUsage;
         gain_db float32;
     });
 
-    /// Set the Usage gain applied to Capturers. By default, the gain for all
+    /// Sets the Usage gain applied to Capturers. By default, the gain for all
     /// capture usages is set to Unity (0 db).
     SetCaptureUsageGain(struct {
         usage AudioCaptureUsage;
@@ -197,8 +197,9 @@ protocol AudioCore {
         volume_control server_end:fuchsia.media.audio.VolumeControl;
     });
 
-    /// Query the volume percentage [0, 1] that maps to a `gain_db` value for a particular `usage`.
-    /// This is the same mapping as used by the VolumeControl from `BindUsageVolumeControl`.
+    /// Queries the volume percentage [0, 1] that maps to a `gain_db` value for a particular
+    /// `usage`. This is the same mapping as used by the VolumeControl from
+    /// `BindUsageVolumeControl`.
     @transitional
     GetVolumeFromDb(struct {
         usage Usage;
@@ -207,7 +208,7 @@ protocol AudioCore {
         volume float32;
     });
 
-    /// Query the decibal value that maps to a volume percentage [0, 1] for a particular `usage`.
+    /// Queries the decibal value that maps to a volume percentage [0, 1] for a particular `usage`.
     /// This is the same mapping as used by the VolumeControl from `BindUsageVolumeControl`.
     @transitional
     GetDbFromVolume(struct {
@@ -217,10 +218,9 @@ protocol AudioCore {
         gain_db float32;
     });
 
-    /// SetInteraction allows changing how audio_core handles interactions of multiple active
-    /// streams simultaneously.  If streams of Usage `active` are processing audio, and streams of
-    /// Usage `affected` are as well, the Behavior specified will be applied to the streams of Usage
-    /// `affected`.
+    /// Sets how audio_core handles interactions of multiple active streams simultaneously.  If
+    /// streams of Usage `active` are processing audio, and streams of Usage `affected` are as well,
+    /// the Behavior specified will be applied to the streams of Usage `affected`.
     SetInteraction(struct {
         active Usage;
         affected Usage;

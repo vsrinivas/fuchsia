@@ -17,6 +17,7 @@ protocol VolumeControl {
     SetVolume(struct {
         volume float32;
     });
+
     /// Sets whether the controlled element is muted. Mute is not the same
     /// as setting volume to 0.0; volume will persist for the duration of
     /// a mute. If volume was 0.5 before mute, volume will resume at 0.5

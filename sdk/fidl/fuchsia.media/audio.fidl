@@ -9,7 +9,7 @@ protocol Audio {
         audio_renderer_request server_end:AudioRenderer;
     });
 
-    /// Create an AudioCapturer which either captures from the current default
+    /// Creates an AudioCapturer which either captures from the current default
     /// audio input device, or loops-back from the current default audio output
     /// device based on value passed for the loopback flag.
     ///
