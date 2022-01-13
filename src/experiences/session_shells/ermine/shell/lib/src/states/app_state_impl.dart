@@ -551,7 +551,7 @@ class AppStateImpl with Disposable implements AppState {
               ? Strings.viewPresentRejectedDesc
               : Strings.defaultPresentErrorDesc;
       const referenceLink =
-          'https://fuchsia.dev/reference/fidl/fuchsia.session#ViewControllerEpitaph';
+          'https://fuchsia.dev/reference/fidl/fuchsia.element#GraphicalPresenter.PresentView';
 
       if (_isPrelistedApp(url)) {
         errors[url] = [description, '$error\n$referenceLink'];
@@ -582,10 +582,12 @@ class AppStateImpl with Disposable implements AppState {
         : errorSpec == 'rejected'
             ? Strings.launchRejectedDesc
             : Strings.defaultProposeErrorDesc;
+    const referenceLink =
+        'https://fuchsia.dev/reference/fidl/fuchsia.element#Manager.ProposeElement';
 
     errors[url] = [
       description,
-      '$proposeError\nhttps://fuchsia.dev/reference/fidl/fuchsia.session#ProposeElementError'
+      '$proposeError\n\n${Strings.moreErrorInformation}\n$referenceLink'
     ];
   }
 
