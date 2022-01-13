@@ -1,0 +1,43 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    collections: [
+        {
+            // Used to run the Network Test Realm (NTR). The NTR generates a
+            // hermetic Netstack that tests can be run against. This collection
+            // is meant to be embedded in the core network realm, so it can use
+            // all available protocols, even the ones that are not routed
+            // outside of the network realm.
+            name: "test-components",
+            durability: "transient",
+        },
+    ],
+    offer: [
+        {
+            protocol: [
+                "fuchsia.device.NameProvider",
+                "fuchsia.logger.LogSink",
+            ],
+            from: "parent",
+            to: [ "#test-components" ],
+        },
+        {
+            // Protocols needed by the Network Test Realm to coordinate its
+            // actions with the system.
+            protocol: [
+                "fuchsia.net.debug.Interfaces",
+                "fuchsia.net.stack.Stack",
+            ],
+            from: "#netstack",
+            to: [ "#test-components" ],
+        },
+        {
+            // The Network Test Realm must be able to read ethernet devices in
+            // order to take over interfaces.
+            directory: "dev-class-ethernet",
+            from: "parent",
+            to: [ "#test-components" ],
+        },
+    ],
+}
