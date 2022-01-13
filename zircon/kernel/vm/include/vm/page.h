@@ -332,7 +332,7 @@ struct vm_page {
   // offset 0x2b
 
   // logically private; use |state()| and |set_state()|
-  ktl::atomic<vm_page_state> state_priv;
+  vm_page_state state_priv;
 
   // offset 0x2c
 
@@ -367,11 +367,13 @@ struct vm_page {
   // future plan to store in a compressed form
   paddr_t paddr() const { return paddr_priv; }
 
-  vm_page_state state() const { return state_priv.load(ktl::memory_order_relaxed); }
+  vm_page_state state() const {
+    return ktl::atomic_ref<const vm_page_state>(state_priv).load(ktl::memory_order_relaxed);
+  }
 
   void set_state(vm_page_state new_state) {
     const vm_page_state old_state = state();
-    state_priv.store(new_state, ktl::memory_order_relaxed);
+    ktl::atomic_ref<vm_page_state>(state_priv).store(new_state, ktl::memory_order_relaxed);
 
     // By only modifying the counters for the current CPU with preemption disabled, we can ensure
     // the values are not modified concurrently. See comment at the definition of |vm_page_counts|.
@@ -433,7 +435,7 @@ static_assert(offsetof(vm_page_t, object.page_queue_priv) % alignof(uint8_t) == 
 
 static_assert(offsetof(vm_page_t, state_priv) == 0x2b);
 static_assert(offsetof(vm_page_t, state_priv) % alignof(decltype(vm_page_t::state_priv)) == 0);
-static_assert(offsetof(vm_page_t, state_priv) % alignof(ktl::atomic<vm_page_state>) == 0);
+static_assert(offsetof(vm_page_t, state_priv) % alignof(vm_page_state) == 0);
 
 static_assert(offsetof(vm_page_t, padding_bytes) == 0x2d);
 
