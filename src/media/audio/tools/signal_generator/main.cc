@@ -182,7 +182,8 @@ void usage(const char* prog_name) {
   printf("  --%s\t\t   Specify a reference time for playback start\n", kRefStartTimeSwitch);
   printf("  --%s[=<PTS>]\t   Specify a PTS value for playback start (%s if no value is provided)\n",
          kMediaStartPtsSwitch, kMediaStartPtsDefault);
-  printf("  --%s\t\t   Apply timestamps to packets\n", kPacketPtsSwitch);
+  printf("  --%s[=PTS]\t   Apply timestamps to packets (Start PTS, if no value is provided)\n",
+         kPacketPtsSwitch);
   printf("  --%s=<NUMER/DENOM> Set PTS units per second. If not set, '--%s' and '--%s'\n",
          kPtsUnitSwitch, kMediaStartPtsSwitch, kPacketPtsSwitch);
   printf("\t\t\t   use the PTS unit 1 nanosecond (1'000'000'000 / 1)\n");
@@ -394,7 +395,14 @@ int main(int argc, const char** argv) {
   }
 
   // Check whether we apply timestamps to each packet (otherwise use NO_TIMESTAMP)
-  media_app.use_pkt_pts(command_line.HasOption(kPacketPtsSwitch));
+  std::string pkt_pts_start_str;
+  if (command_line.GetOptionValue(kPacketPtsSwitch, &pkt_pts_start_str)) {
+    if (pts_start_str != "") {
+      media_app.set_pkt_start_pts(std::stoi(pkt_pts_start_str));
+    }
+    media_app.use_pkt_pts(true);
+  }
+
   // Check whether a PTS unit was specified (otherwise assume 1'000'000'000 per second)
   std::string pts_unit_str;
   if (command_line.GetOptionValue(kPtsUnitSwitch, &pts_unit_str)) {

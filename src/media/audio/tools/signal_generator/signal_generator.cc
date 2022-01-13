@@ -393,7 +393,7 @@ void MediaApp::ConfigureAudioRendererPts() {
 
   if (timestamp_packets_) {
     packet_num_to_pts_ = std::make_unique<TimelineFunction>(
-        media_start_pts_.value_or(0), 0,
+        first_pkt_pts_.value_or(media_start_pts_.value_or(0)), 0,
         static_cast<uint64_t>(frames_per_packet_) * pts_units_numerator_.value_or(1'000'000'000),
         static_cast<uint64_t>(frame_rate_) * pts_units_denominator_.value_or(1));
   }

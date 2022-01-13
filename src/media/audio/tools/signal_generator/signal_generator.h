@@ -90,6 +90,7 @@ class MediaApp {
   void set_ref_start_time(bool set_ref_time) { set_ref_start_time_ = set_ref_time; }
   void set_media_start_pts(int64_t media_start_pts) { media_start_pts_ = media_start_pts; }
   void use_pkt_pts(bool use_pts) { timestamp_packets_ = use_pts; }
+  void set_pkt_start_pts(int64_t pkt_pts_start) { first_pkt_pts_ = pkt_pts_start; }
   void set_pts_units(uint32_t numerator, uint32_t denominator) {
     pts_units_numerator_ = numerator;
     pts_units_denominator_ = denominator;
@@ -218,6 +219,7 @@ class MediaApp {
   std::optional<int64_t> media_start_pts_ = std::nullopt;
 
   bool timestamp_packets_ = false;
+  std::optional<int64_t> first_pkt_pts_ = std::nullopt;
   std::optional<uint32_t> pts_units_numerator_;
   std::optional<uint32_t> pts_units_denominator_;
   std::optional<float> pts_continuity_threshold_secs_ = std::nullopt;
