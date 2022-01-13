@@ -298,8 +298,6 @@ void x86_init_percpu(cpu_num_t cpu_num) {
   }
 
   arch::ApplyX86ErrataWorkarounds(arch::BootCpuidIo{}, hwreg::X86MsrIo{});
-
-  mp_set_curr_cpu_online(true);
 }
 
 void x86_set_local_apic_id(uint32_t apic_id) {

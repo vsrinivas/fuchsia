@@ -182,7 +182,12 @@ int GetContext(int argc, const cmd_args* argv, uint32_t flags) {
 
 }  // namespace
 
-void arch_early_init(void) { x86_mmu_early_init(); }
+void arch_early_init(void) {
+  x86_mmu_early_init();
+
+  // Mark the boot cpu as online here after global constructors have run
+  mp_set_curr_cpu_online(true);
+}
 
 void arch_prevm_init(void) { x86_cpu_feature_init(); }
 
@@ -262,6 +267,7 @@ void arch_resume(void) {
 
   x86_init_percpu(0);
   x86_mmu_percpu_init();
+  mp_set_curr_cpu_online(true);
   x86_pat_sync(cpu_num_to_mask(0));
 
   apic_local_init();
@@ -274,6 +280,11 @@ void arch_resume(void) {
 
 [[noreturn, gnu::noinline]] static void finish_secondary_entry(
     ktl::atomic<unsigned int>* aps_still_booting, Thread* thread, uint cpu_num) {
+  // Mark this cpu as online so MP code can try to deliver IPIs.
+  // Mark here so any code waiting for the cpu to be started will see the cpu
+  // online after the atomic below.
+  mp_set_curr_cpu_online(true);
+
   // Signal that this CPU is initialized.  It is important that after this
   // operation, we do not touch any resources associated with bootstrap
   // besides our Thread and stack, since this is the checkpoint the
