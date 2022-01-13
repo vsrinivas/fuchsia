@@ -31,7 +31,7 @@ The following are some of `ffx` command examples:
 *   Print the device logs:
 
     ```posix-terminal
-    ffx target log watch
+    ffx log
     ```
 
 *   Reboot the device:
