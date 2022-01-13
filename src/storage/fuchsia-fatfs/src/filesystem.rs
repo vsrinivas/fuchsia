@@ -8,12 +8,14 @@ use {
         refs::FatfsDirRef,
         types::{Dir, Disk, FileSystem},
         util::fatfs_error_to_status,
+        FATFS_INFO_NAME, MAX_FILENAME_LEN, VFS_TYPE_FATFS,
     },
     anyhow::Error,
     async_trait::async_trait,
     fatfs::{self, validate_filename, DefaultTimeProvider, FsOptions, LossyOemCpConverter},
+    fidl_fuchsia_io::FilesystemInfo,
     fuchsia_async::{Task, Time, Timer},
-    fuchsia_zircon::Event,
+    fuchsia_zircon::{AsHandleRef, Event},
     fuchsia_zircon::{Duration, Status},
     std::{
         any::Any,
@@ -323,6 +325,30 @@ impl FatFilesystem {
         }
 
         Ok(())
+    }
+
+    pub fn query_filesystem(&self) -> Result<FilesystemInfo, Status> {
+        let fs_lock = self.lock().unwrap();
+
+        let cluster_size = fs_lock.cluster_size() as u64;
+        let total_clusters = fs_lock.total_clusters()? as u64;
+        let free_clusters = fs_lock.free_clusters()? as u64;
+        let total_bytes = cluster_size * total_clusters;
+        let used_bytes = cluster_size * (total_clusters - free_clusters);
+
+        Ok(FilesystemInfo {
+            total_bytes,
+            used_bytes,
+            total_nodes: 0,
+            used_nodes: 0,
+            free_shared_pool_bytes: 0,
+            fs_id: self.fs_id().get_koid()?.raw_koid(),
+            block_size: cluster_size as u32,
+            max_filename_size: MAX_FILENAME_LEN,
+            fs_type: VFS_TYPE_FATFS,
+            padding: 0,
+            name: FATFS_INFO_NAME,
+        })
     }
 }
 

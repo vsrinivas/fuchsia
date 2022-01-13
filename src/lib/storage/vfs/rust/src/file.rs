@@ -4,8 +4,11 @@
 
 //! Module holding different kinds of files and their building blocks.
 use {
-    crate::directory::entry::DirectoryEntry, async_trait::async_trait,
-    fidl_fuchsia_io::NodeAttributes, fidl_fuchsia_mem::Buffer, fuchsia_zircon::Status,
+    crate::directory::entry::DirectoryEntry,
+    async_trait::async_trait,
+    fidl_fuchsia_io::{FilesystemInfo, NodeAttributes},
+    fidl_fuchsia_mem::Buffer,
+    fuchsia_zircon::Status,
 };
 
 /// File nodes backed by VMOs.
@@ -77,4 +80,9 @@ pub trait File: Sync + Send + DirectoryEntry {
     /// the call returns. It merely guarantees that any changes to the file have been propagated
     /// to the next layer in the storage stack.
     async fn sync(&self) -> Result<(), Status>;
+
+    /// Returns information about the filesystem.
+    fn query_filesystem(&self) -> Result<FilesystemInfo, Status> {
+        Err(Status::NOT_SUPPORTED)
+    }
 }

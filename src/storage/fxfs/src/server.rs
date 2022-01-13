@@ -6,7 +6,7 @@ use {
     crate::{
         errors::FxfsError,
         object_store::{
-            filesystem::{Filesystem, OpenFxFilesystem},
+            filesystem::{Filesystem, Info, OpenFxFilesystem},
             volume::root_volume,
         },
         server::volume::FxVolumeAndRoot,
@@ -18,7 +18,10 @@ use {
     fuchsia_zircon::{self as zx},
     futures::stream::{StreamExt, TryStreamExt},
     futures::TryFutureExt,
-    std::sync::atomic::{self, AtomicBool},
+    std::{
+        convert::TryInto,
+        sync::atomic::{self, AtomicBool},
+    },
     vfs::{
         directory::entry::DirectoryEntry, execution_scope::ExecutionScope, path::Path,
         registry::token_registry,
@@ -146,19 +149,9 @@ impl FxfsServer {
             QueryRequest::GetInfo { responder, .. } => {
                 // TODO(csuter): Support all the fields.
                 let info = self.fs.get_info();
-                responder.send(&mut Ok(FilesystemInfo {
-                    total_bytes: info.total_bytes,
-                    used_bytes: info.used_bytes,
-                    total_nodes: TOTAL_NODES,
-                    used_nodes: self.volume.volume().store().object_count(),
-                    free_shared_pool_bytes: 0,
-                    block_size: info.block_size,
-                    fs_id: 0,                               // TODO(csuter)
-                    max_filename_size: MAX_FILENAME as u32, // This is limited by Fuchsia.io
-                    fs_type: VFS_TYPE_FXFS,
-                    padding: 0,
-                    name: FXFS_INFO_NAME,
-                }))?;
+                responder.send(&mut Ok(
+                    info.to_filesystem_info(self.volume.volume().store().object_count())
+                ))?;
             }
             _ => panic!("Unimplemented"),
         }
@@ -181,6 +174,24 @@ impl FxfsServer {
             }
         }
         Ok(())
+    }
+}
+
+impl Info {
+    fn to_filesystem_info(self, object_count: u64) -> FilesystemInfo {
+        FilesystemInfo {
+            total_bytes: self.total_bytes,
+            used_bytes: self.used_bytes,
+            total_nodes: TOTAL_NODES,
+            used_nodes: object_count,
+            free_shared_pool_bytes: 0,
+            fs_id: 0, // TODO(csuter)
+            block_size: self.block_size.try_into().unwrap(),
+            max_filename_size: MAX_FILENAME as u32,
+            fs_type: VFS_TYPE_FXFS,
+            padding: 0,
+            name: FXFS_INFO_NAME,
+        }
     }
 }
 

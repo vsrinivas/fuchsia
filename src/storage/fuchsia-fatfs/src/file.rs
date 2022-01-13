@@ -13,7 +13,9 @@ use {
     },
     async_trait::async_trait,
     fidl::endpoints::ServerEnd,
-    fidl_fuchsia_io::{self as fio, NodeAttributes, NodeMarker, INO_UNKNOWN, MODE_TYPE_FILE},
+    fidl_fuchsia_io::{
+        self as fio, FilesystemInfo, NodeAttributes, NodeMarker, INO_UNKNOWN, MODE_TYPE_FILE,
+    },
     fidl_fuchsia_mem::Buffer,
     fuchsia_syslog::fx_log_err,
     fuchsia_zircon::Status,
@@ -327,6 +329,10 @@ impl VfsFile for FatFile {
 
         file.flush().map_err(fatfs_error_to_status)?;
         Ok(())
+    }
+
+    fn query_filesystem(&self) -> Result<FilesystemInfo, Status> {
+        self.filesystem.query_filesystem()
     }
 }
 

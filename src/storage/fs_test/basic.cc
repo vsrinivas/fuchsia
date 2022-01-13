@@ -5,10 +5,13 @@
 #include <fcntl.h>
 #include <lib/fdio/fd.h>
 #include <sys/stat.h>
+#include <sys/statvfs.h>
 #include <unistd.h>
 #include <zircon/errors.h>
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
+
+#include <numeric>
 
 #include "src/storage/fs_test/fs_test_fixture.h"
 #include "src/storage/minfs/format.h"
@@ -86,6 +89,51 @@ TEST_P(BasicTest, GrowingVolumeWithFileCount) {
     fbl::unique_fd fd(open(GetPath(std::to_string(i)).c_str(), O_CREAT, 0666));
     EXPECT_TRUE(fd);
   }
+}
+
+TEST_P(BasicTest, Statvfs) {
+  struct statvfs buf, buf2;
+  ASSERT_EQ(statvfs(GetPath("").c_str(), &buf), 0);
+
+  std::string test_filename = GetPath("test-file");
+  {
+    fbl::unique_fd fd(open(test_filename.c_str(), O_CREAT | O_RDWR, 0666));
+    ASSERT_TRUE(fd);
+    std::vector<uint8_t> data(128 * 1024);
+    std::iota(data.begin(), data.end(), 0);
+    EXPECT_EQ(write(fd.get(), data.data(), data.size()), static_cast<ssize_t>(data.size()));
+    EXPECT_EQ(fsync(fd.get()), 0);
+
+    ASSERT_EQ(fstatvfs(fd.get(), &buf2), 0);
+
+    // Either the total number of files should have increased (which is possible on FVM backed
+    // filesystems) or the number available should have decreased.  If f_files is zero, assume
+    // the filesystem doesn't support a count of the number of files (e.g. fatfs).
+    EXPECT_TRUE(buf.f_files == 0 || buf2.f_files > buf.f_files || buf2.f_favail < buf.f_favail);
+
+    if (!fs().GetTraits().in_memory) {
+      // Either the total number of blocks should have increased (which is possible on FVM backed
+      // filesystems) or the number available should have decresed
+      EXPECT_TRUE(buf2.f_blocks > buf.f_blocks || buf2.f_bavail < buf.f_bavail);
+    }
+  }
+
+  // It should be possible to run statvfs on a file as well as a directory.
+  ASSERT_EQ(statvfs(test_filename.c_str(), &buf2), 0);
+
+  EXPECT_TRUE(buf.f_files == 0 || buf2.f_files > buf.f_files || buf2.f_favail < buf.f_favail);
+
+  if (!fs().GetTraits().in_memory)
+    EXPECT_TRUE(buf2.f_blocks > buf.f_blocks || buf2.f_bavail < buf.f_bavail);
+
+  // Lastly, check that fstatvfs on a directory works.
+  fbl::unique_fd fd(open(GetPath("").c_str(), O_DIRECTORY | O_RDONLY));
+  ASSERT_EQ(statvfs(test_filename.c_str(), &buf2), 0);
+
+  EXPECT_TRUE(buf.f_files == 0 || buf2.f_files > buf.f_files || buf2.f_favail < buf.f_favail);
+
+  if (!fs().GetTraits().in_memory)
+    EXPECT_TRUE(buf2.f_blocks > buf.f_blocks || buf2.f_bavail < buf.f_bavail);
 }
 
 INSTANTIATE_TEST_SUITE_P(/*no prefix*/, BasicTest, testing::ValuesIn(AllTestFilesystems()),

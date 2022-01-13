@@ -53,6 +53,7 @@ pub trait Directory: IntoAny + Send + Sync {
     /// Called when the directory is closed.
     fn close(&self) -> Result<(), Status>;
 
+    /// Returns information about the filesystem.
     fn query_filesystem(&self) -> Result<FilesystemInfo, Status> {
         Err(Status::NOT_SUPPORTED)
     }

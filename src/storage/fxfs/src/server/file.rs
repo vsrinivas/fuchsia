@@ -21,7 +21,7 @@ use {
     async_trait::async_trait,
     fdio::fdio_sys::{V_IRGRP, V_IROTH, V_IRUSR, V_IWUSR, V_TYPE_FILE},
     fidl::endpoints::ServerEnd,
-    fidl_fuchsia_io::{self as fio, NodeAttributes, NodeMarker},
+    fidl_fuchsia_io::{self as fio, FilesystemInfo, NodeAttributes, NodeMarker},
     fidl_fuchsia_mem::Buffer,
     fuchsia_async as fasync,
     fuchsia_zircon::{self as zx, Status},
@@ -461,6 +461,11 @@ impl File for FxFile {
         // TODO(csuter): at the moment, this doesn't send a flush to the device, which doesn't
         // match minfs.
         self.handle.store().filesystem().sync(SyncOptions::default()).await.map_err(map_to_status)
+    }
+
+    fn query_filesystem(&self) -> Result<FilesystemInfo, Status> {
+        let store = self.handle.store();
+        Ok(store.filesystem().get_info().to_filesystem_info(store.object_count()))
     }
 }
 

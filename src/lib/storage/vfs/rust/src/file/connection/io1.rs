@@ -411,6 +411,13 @@ impl<T: 'static + File> FileConnection<T> {
                 fuchsia_trace::duration!("storage", "File::AdvisoryLock");
                 responder.send(&mut Err(ZX_ERR_NOT_SUPPORTED))?;
             }
+            FileRequest::QueryFilesystem { responder } => {
+                fuchsia_trace::duration!("storage", "Directory::QueryFilesystem");
+                match self.file.query_filesystem() {
+                    Err(status) => responder.send(status.into_raw(), None)?,
+                    Ok(mut info) => responder.send(0, Some(&mut info))?,
+                }
+            }
             // TODO(https://fxbug.dev/77623): Remove when the io1 -> io2 transition is complete.
             _ => panic!("Unhandled request!"),
         }

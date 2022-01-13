@@ -18,7 +18,6 @@ use {
             file::FxFile,
             node::{FxNode, GetResult, OpenedNode},
             volume::FxVolume,
-            FXFS_INFO_NAME, TOTAL_NODES, VFS_TYPE_FXFS,
         },
     },
     anyhow::{bail, Error},
@@ -27,16 +26,15 @@ use {
     fdio::fdio_sys::{V_IRGRP, V_IROTH, V_IRWXU, V_IXGRP, V_IXOTH, V_TYPE_DIR},
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_io::{
-        self as fio, FilesystemInfo, NodeAttributes, NodeMarker, MAX_FILENAME,
-        MODE_TYPE_BLOCK_DEVICE, MODE_TYPE_DIRECTORY, MODE_TYPE_FILE, MODE_TYPE_MASK,
-        MODE_TYPE_SERVICE, MODE_TYPE_SOCKET, OPEN_FLAG_CREATE, OPEN_FLAG_CREATE_IF_ABSENT,
-        OPEN_FLAG_DIRECTORY, OPEN_FLAG_NOT_DIRECTORY, WATCH_MASK_EXISTING,
+        self as fio, FilesystemInfo, NodeAttributes, NodeMarker, MODE_TYPE_BLOCK_DEVICE,
+        MODE_TYPE_DIRECTORY, MODE_TYPE_FILE, MODE_TYPE_MASK, MODE_TYPE_SERVICE, MODE_TYPE_SOCKET,
+        OPEN_FLAG_CREATE, OPEN_FLAG_CREATE_IF_ABSENT, OPEN_FLAG_DIRECTORY, OPEN_FLAG_NOT_DIRECTORY,
+        WATCH_MASK_EXISTING,
     },
     fuchsia_async as fasync,
     fuchsia_zircon::Status,
     std::{
         any::Any,
-        convert::TryInto,
         sync::{Arc, Mutex},
     },
     vfs::{
@@ -619,20 +617,7 @@ impl Directory for FxDirectory {
 
     fn query_filesystem(&self) -> Result<FilesystemInfo, Status> {
         let store = self.directory.store();
-        let info = store.filesystem().get_info();
-        Ok(FilesystemInfo {
-            total_bytes: info.total_bytes,
-            used_bytes: info.used_bytes,
-            total_nodes: TOTAL_NODES,
-            used_nodes: store.object_count(),
-            free_shared_pool_bytes: 0,
-            fs_id: 0, // TODO(csuter)
-            block_size: info.block_size.try_into().unwrap(),
-            max_filename_size: MAX_FILENAME as u32,
-            fs_type: VFS_TYPE_FXFS,
-            padding: 0,
-            name: FXFS_INFO_NAME,
-        })
+        Ok(store.filesystem().get_info().to_filesystem_info(store.object_count()))
     }
 }
 
