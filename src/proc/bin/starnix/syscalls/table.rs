@@ -140,6 +140,7 @@ pub fn dispatch_syscall(
         recvfrom[6],
         recvmmsg[5],
         recvmsg[3],
+        rename[2],
         renameat[4],
         rt_sigaction[4],
         rt_sigprocmask[4],
