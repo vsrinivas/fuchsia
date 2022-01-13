@@ -76,40 +76,6 @@ impl<T> AkmAlgorithm<T> {
     }
 }
 
-pub fn convert_ieee80211_status_code(status: fidl_ieee80211::StatusCode) -> mac::StatusCode {
-    match status {
-        fidl_ieee80211::StatusCode::Success => mac::StatusCode::SUCCESS,
-        fidl_ieee80211::StatusCode::RefusedReasonUnspecified => mac::StatusCode::REFUSED,
-        fidl_ieee80211::StatusCode::AntiCloggingTokenRequired => {
-            mac::StatusCode::ANTI_CLOGGING_TOKEN_REQUIRED
-        }
-        fidl_ieee80211::StatusCode::UnsupportedFiniteCyclicGroup => {
-            mac::StatusCode::UNSUPPORTED_FINITE_CYCLIC_GROUP
-        }
-        fidl_ieee80211::StatusCode::RejectedSequenceTimeout => {
-            mac::StatusCode::REJECTED_SEQUENCE_TIMEOUT
-        }
-        _ => mac::StatusCode::REFUSED,
-    }
-}
-
-pub fn convert_mac_status_code(status: mac::StatusCode) -> fidl_ieee80211::StatusCode {
-    match status {
-        mac::StatusCode::SUCCESS => fidl_ieee80211::StatusCode::Success,
-        mac::StatusCode::REFUSED => fidl_ieee80211::StatusCode::RefusedReasonUnspecified,
-        mac::StatusCode::ANTI_CLOGGING_TOKEN_REQUIRED => {
-            fidl_ieee80211::StatusCode::AntiCloggingTokenRequired
-        }
-        mac::StatusCode::UNSUPPORTED_FINITE_CYCLIC_GROUP => {
-            fidl_ieee80211::StatusCode::UnsupportedFiniteCyclicGroup
-        }
-        mac::StatusCode::REJECTED_SEQUENCE_TIMEOUT => {
-            fidl_ieee80211::StatusCode::RejectedSequenceTimeout
-        }
-        _ => fidl_ieee80211::StatusCode::RefusedReasonUnspecified,
-    }
-}
-
 impl<T: Eq + Clone> AkmAlgorithm<T> {
     pub fn open_supplicant(timeout_timeunit: TimeUnit) -> Self {
         AkmAlgorithm::OpenSupplicant { timeout_timeunit, timeout: None }
@@ -133,7 +99,7 @@ impl<T: Eq + Clone> AkmAlgorithm<T> {
                 actions.send_auth_frame(
                     mac::AuthAlgorithmNumber::OPEN,
                     1,
-                    mac::StatusCode::SUCCESS,
+                    fidl_ieee80211::StatusCode::Success.into(),
                     &[],
                 )?;
                 timeout.replace(actions.schedule_auth_timeout(*timeout_timeunit));
@@ -173,7 +139,9 @@ impl<T: Eq + Clone> AkmAlgorithm<T> {
                 let sae_fields = body.map(|body| body.to_vec()).unwrap_or(vec![]);
                 actions.forward_sme_sae_rx(
                     hdr.auth_txn_seq_num,
-                    convert_mac_status_code(hdr.status_code),
+                    // TODO(fxbug.dev/91353): All reserved values mapped to REFUSED_REASON_UNSPECIFIED.
+                    Option::<fidl_ieee80211::StatusCode>::from(hdr.status_code)
+                        .unwrap_or(fidl_ieee80211::StatusCode::RefusedReasonUnspecified),
                     sae_fields,
                 );
                 Ok(AkmState::InProgress)
@@ -217,7 +185,7 @@ impl<T: Eq + Clone> AkmAlgorithm<T> {
                 actions.send_auth_frame(
                     mac::AuthAlgorithmNumber::SAE,
                     seq_num,
-                    convert_ieee80211_status_code(status_code),
+                    status_code.into(),
                     sae_fields,
                 )?;
                 // The handshake may be complete at this point, but we wait for an SaeResp.
@@ -338,7 +306,7 @@ mod tests {
         assert_eq!(actions.sent_frames.len(), 1);
         assert_eq!(
             actions.sent_frames.remove(0),
-            (mac::AuthAlgorithmNumber::OPEN, 1, mac::StatusCode::SUCCESS, vec![])
+            (mac::AuthAlgorithmNumber::OPEN, 1, fidl_ieee80211::StatusCode::Success.into(), vec![])
         );
         assert_eq!(actions.scheduled_timers.len(), 1);
 
@@ -346,7 +314,7 @@ mod tests {
         let hdr = mac::AuthHdr {
             auth_alg_num: mac::AuthAlgorithmNumber::OPEN,
             auth_txn_seq_num: 2,
-            status_code: mac::StatusCode::SUCCESS,
+            status_code: fidl_ieee80211::StatusCode::Success.into(),
         };
         assert_variant!(
             supplicant.handle_auth_frame(&mut actions, &hdr, None),
@@ -414,7 +382,7 @@ mod tests {
         let hdr = mac::AuthHdr {
             auth_alg_num: mac::AuthAlgorithmNumber::OPEN,
             auth_txn_seq_num: 2,
-            status_code: mac::StatusCode::REFUSED,
+            status_code: fidl_ieee80211::StatusCode::RefusedReasonUnspecified.into(),
         };
         assert_variant!(
             supplicant.handle_auth_frame(&mut actions, &hdr, None),
@@ -450,14 +418,19 @@ mod tests {
         assert_eq!(actions.sent_frames.len(), 1);
         assert_eq!(
             actions.sent_frames[0],
-            (mac::AuthAlgorithmNumber::SAE, 1, mac::StatusCode::SUCCESS, vec![0x12, 0x34])
+            (
+                mac::AuthAlgorithmNumber::SAE,
+                1,
+                fidl_ieee80211::StatusCode::Success.into(),
+                vec![0x12, 0x34]
+            )
         );
         actions.sent_frames.clear();
 
         let hdr = mac::AuthHdr {
             auth_alg_num: mac::AuthAlgorithmNumber::SAE,
             auth_txn_seq_num: 1,
-            status_code: mac::StatusCode::SUCCESS,
+            status_code: fidl_ieee80211::StatusCode::Success.into(),
         };
         assert_variant!(
             supplicant.handle_auth_frame(&mut actions, &hdr, Some(&[0x56, 0x78][..])),

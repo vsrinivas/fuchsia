@@ -289,8 +289,11 @@ impl Associating {
     ) -> Result<Association, ()> {
         self.timeout.take();
 
-        match assoc_resp_hdr.status_code {
-            mac::StatusCode::SUCCESS => {
+        // TODO(fxbug.dev/91353): All reserved values mapped to REFUSED_REASON_UNSPECIFIED.
+        match Option::<fidl_ieee80211::StatusCode>::from(assoc_resp_hdr.status_code)
+            .unwrap_or(fidl_ieee80211::StatusCode::RefusedReasonUnspecified)
+        {
+            fidl_ieee80211::StatusCode::Success => {
                 sta.send_associate_conf_success(
                     assoc_resp_hdr.aid,
                     assoc_resp_hdr.capabilities,
@@ -325,10 +328,7 @@ impl Associating {
             }
             status_code => {
                 error!("association with BSS failed: {:?}", status_code);
-                sta.send_associate_conf_failure(
-                    fidl_ieee80211::StatusCode::from_primitive(status_code.0)
-                        .unwrap_or(fidl_ieee80211::StatusCode::RefusedReasonUnspecified),
-                );
+                sta.send_associate_conf_failure(status_code);
                 Err(())
             }
         }
@@ -1526,7 +1526,7 @@ mod tests {
                 &mac::AuthHdr {
                     auth_alg_num: mac::AuthAlgorithmNumber::OPEN,
                     auth_txn_seq_num: 2,
-                    status_code: mac::StatusCode::SUCCESS,
+                    status_code: fidl_ieee80211::StatusCode::Success.into(),
                 },
                 &[]
             ),
@@ -1562,7 +1562,7 @@ mod tests {
                 &mac::AuthHdr {
                     auth_alg_num: mac::AuthAlgorithmNumber::OPEN,
                     auth_txn_seq_num: 2,
-                    status_code: mac::StatusCode::NOT_IN_SAME_BSS,
+                    status_code: fidl_ieee80211::StatusCode::NotInSameBss.into(),
                 },
                 &[]
             ),
@@ -1680,7 +1680,7 @@ mod tests {
                 &mac::AssocRespHdr {
                     aid: 42,
                     capabilities: mac::CapabilityInfo(52),
-                    status_code: mac::StatusCode::SUCCESS,
+                    status_code: fidl_ieee80211::StatusCode::Success.into(),
                 },
                 &[][..],
             )
@@ -1717,7 +1717,7 @@ mod tests {
                 &mac::AssocRespHdr {
                     aid: 42,
                     capabilities: mac::CapabilityInfo(52),
-                    status_code: mac::StatusCode::SUCCESS,
+                    status_code: fidl_ieee80211::StatusCode::Success.into(),
                 },
                 &[][..],
             )
@@ -1756,7 +1756,7 @@ mod tests {
                 &mac::AssocRespHdr {
                     aid: 42,
                     capabilities: mac::CapabilityInfo(52),
-                    status_code: mac::StatusCode::NOT_IN_SAME_BSS,
+                    status_code: fidl_ieee80211::StatusCode::NotInSameBss.into(),
                 },
                 &[][..],
             )

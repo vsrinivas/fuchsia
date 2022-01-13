@@ -23,7 +23,7 @@ use {
         appendable::Appendable,
         buffer_writer::BufferWriter,
         ie,
-        mac::{self, Aid, AuthAlgorithmNumber, FrameClass, ReasonCode, StatusCode},
+        mac::{self, Aid, AuthAlgorithmNumber, FrameClass, ReasonCode},
         timer::EventId,
         TimeUnit,
     },
@@ -340,19 +340,23 @@ impl RemoteClient {
             AuthAlgorithmNumber::OPEN,
             2,
             match result_code {
-                fidl_mlme::AuthenticateResultCode::Success => StatusCode::SUCCESS,
-                fidl_mlme::AuthenticateResultCode::Refused => StatusCode::REFUSED,
+                fidl_mlme::AuthenticateResultCode::Success => {
+                    fidl_ieee80211::StatusCode::Success.into()
+                }
+                fidl_mlme::AuthenticateResultCode::Refused => {
+                    fidl_ieee80211::StatusCode::RefusedReasonUnspecified.into()
+                }
                 fidl_mlme::AuthenticateResultCode::AntiCloggingTokenRequired => {
-                    StatusCode::ANTI_CLOGGING_TOKEN_REQUIRED
+                    fidl_ieee80211::StatusCode::AntiCloggingTokenRequired.into()
                 }
                 fidl_mlme::AuthenticateResultCode::FiniteCyclicGroupNotSupported => {
-                    StatusCode::UNSUPPORTED_FINITE_CYCLIC_GROUP
+                    fidl_ieee80211::StatusCode::UnsupportedFiniteCyclicGroup.into()
                 }
                 fidl_mlme::AuthenticateResultCode::AuthenticationRejected => {
-                    StatusCode::CHALLENGE_FAILURE
+                    fidl_ieee80211::StatusCode::ChallengeFailure.into()
                 }
                 fidl_mlme::AuthenticateResultCode::AuthFailureTimeout => {
-                    StatusCode::REJECTED_SEQUENCE_TIMEOUT
+                    fidl_ieee80211::StatusCode::RejectedSequenceTimeout.into()
                 }
             },
         )?;
@@ -479,27 +483,29 @@ impl RemoteClient {
                     fidl_mlme::AssociateResultCode::Success => {
                         panic!("Success should have already been handled");
                     }
-                    fidl_mlme::AssociateResultCode::RefusedReasonUnspecified => StatusCode::REFUSED,
+                    fidl_mlme::AssociateResultCode::RefusedReasonUnspecified => {
+                        fidl_ieee80211::StatusCode::RefusedReasonUnspecified.into()
+                    }
                     fidl_mlme::AssociateResultCode::RefusedNotAuthenticated => {
-                        StatusCode::REFUSED_UNAUTHENTICATED_ACCESS_NOT_SUPPORTED
+                        fidl_ieee80211::StatusCode::RefusedUnauthenticatedAccessNotSupported.into()
                     }
                     fidl_mlme::AssociateResultCode::RefusedCapabilitiesMismatch => {
-                        StatusCode::REFUSED_CAPABILITIES_MISMATCH
+                        fidl_ieee80211::StatusCode::RefusedCapabilitiesMismatch.into()
                     }
                     fidl_mlme::AssociateResultCode::RefusedExternalReason => {
-                        StatusCode::REFUSED_EXTERNAL_REASON
+                        fidl_ieee80211::StatusCode::RefusedExternalReason.into()
                     }
                     fidl_mlme::AssociateResultCode::RefusedApOutOfMemory => {
-                        StatusCode::REFUSED_AP_OUT_OF_MEMORY
+                        fidl_ieee80211::StatusCode::RefusedApOutOfMemory.into()
                     }
                     fidl_mlme::AssociateResultCode::RefusedBasicRatesMismatch => {
-                        StatusCode::REFUSED_BASIC_RATES_MISMATCH
+                        fidl_ieee80211::StatusCode::RefusedBasicRatesMismatch.into()
                     }
                     fidl_mlme::AssociateResultCode::RejectedEmergencyServicesNotSupported => {
-                        StatusCode::REJECTED_EMERGENCY_SERVICES_NOT_SUPPORTED
+                        fidl_ieee80211::StatusCode::RejectedEmergencyServicesNotSupported.into()
                     }
                     fidl_mlme::AssociateResultCode::RefusedTemporarily => {
-                        StatusCode::REFUSED_TEMPORARILY
+                        fidl_ieee80211::StatusCode::RefusedTemporarily.into()
                     }
                 },
             ),
@@ -631,7 +637,7 @@ impl RemoteClient {
                             self.addr.clone(),
                             auth_alg_num,
                             2,
-                            StatusCode::UNSUPPORTED_AUTH_ALGORITHM,
+                            fidl_ieee80211::StatusCode::UnsupportedAuthAlgorithm.into(),
                         )
                         .map_err(ClientRejection::WlanSendError)?;
                     return self

@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    fidl_fuchsia_wlan_policy as fidl_policy,
+    fidl_fuchsia_wlan_ieee80211 as fidl_ieee80211, fidl_fuchsia_wlan_policy as fidl_policy,
     fidl_fuchsia_wlan_tap::{self as wlantap, WlantapPhyProxy},
     fuchsia_zircon::DurationNum,
     ieee80211::{Bssid, Ssid},
@@ -35,7 +35,7 @@ fn build_event_handler<'a>(
                             send_association_response(
                                 &CHANNEL,
                                 &bssid,
-                                mac::StatusCode::REFUSED_TEMPORARILY,
+                                fidl_ieee80211::StatusCode::RefusedTemporarily.into(),
                                 &phy,
                             )
                             .expect("Error sending fake association response with failure");

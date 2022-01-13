@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 use {
+    fidl_fuchsia_wlan_ieee80211 as fidl_ieee80211,
     fidl_fuchsia_wlan_tap::WlantapPhyEvent,
     fuchsia_zircon::DurationNum,
     futures::channel::oneshot,
@@ -67,7 +68,7 @@ async fn verify_auth_resp(helper: &mut test_utils::TestHelper) {
                 assert_variant!(
                     mac::MgmtBody::parse({ mgmt_hdr.frame_ctrl }.mgmt_subtype(), body),
                     Some(mac::MgmtBody::Authentication { auth_hdr, .. }) => {
-                        assert_eq!({ auth_hdr.status_code }, mac::StatusCode::SUCCESS);
+                        assert_eq!({ auth_hdr.status_code }, fidl_ieee80211::StatusCode::Success.into());
                         sender.take().map(|s| s.send(()));
                     },
                     "expected authentication frame"
@@ -97,7 +98,10 @@ async fn verify_assoc_resp(helper: &mut test_utils::TestHelper) {
             {
                 match mac::MgmtBody::parse({ mgmt_hdr.frame_ctrl }.mgmt_subtype(), body) {
                     Some(mac::MgmtBody::AssociationResp { assoc_resp_hdr, .. }) => {
-                        assert_eq!({ assoc_resp_hdr.status_code }, mac::StatusCode::SUCCESS);
+                        assert_eq!(
+                            { assoc_resp_hdr.status_code },
+                            fidl_ieee80211::StatusCode::Success.into()
+                        );
                         sender.take().map(|s| s.send(()));
                     }
                     Some(mac::MgmtBody::Unsupported { subtype })

@@ -12,7 +12,7 @@
 
 use {
     crate::error::Error,
-    fuchsia_zircon as zx,
+    fidl_fuchsia_wlan_ieee80211 as fidl_ieee80211, fuchsia_zircon as zx,
     log::error,
     wlan_common::{
         appendable::Appendable, buffer_reader::BufferReader, buffer_writer::BufferWriter,
@@ -221,7 +221,7 @@ impl BlockAckState {
                     // `Closed`. See IEEE Std 802.11-2016, 10.24.2.
                     match read_addba_resp_hdr(state.dialog_token, body) {
                         Ok(response) => {
-                            if { response.status } == mac::StatusCode::SUCCESS {
+                            if { response.status } == fidl_ieee80211::StatusCode::Success.into() {
                                 state.transition_to(Established { is_initiator: true }).into()
                             } else {
                                 // Transition to `Closed` if the remote peer sends a negative
@@ -303,7 +303,7 @@ pub fn write_addba_resp_body<B: Appendable>(
     let body = mac::AddbaRespHdr {
         action: mac::BlockAckAction::ADDBA_RESPONSE,
         dialog_token,
-        status: mac::StatusCode::SUCCESS,
+        status: fidl_ieee80211::StatusCode::Success.into(),
         parameters: mac::BlockAckParameters(0)
             .with_amsdu(true)
             .with_policy(mac::BlockAckPolicy::IMMEDIATE)

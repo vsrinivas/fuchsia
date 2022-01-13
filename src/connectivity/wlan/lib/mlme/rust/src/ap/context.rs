@@ -224,7 +224,7 @@ impl Context {
                 ),
                 mac::AssocRespHdr: &mac::AssocRespHdr {
                     capabilities,
-                    status_code: StatusCode::SUCCESS,
+                    status_code: fidl_ieee80211::StatusCode::Success.into(),
                     aid
                 },
             },
@@ -676,7 +676,7 @@ mod test {
                 CLIENT_ADDR,
                 AuthAlgorithmNumber::FAST_BSS_TRANSITION,
                 3,
-                StatusCode::TRANSACTION_SEQUENCE_ERROR,
+                fidl_ieee80211::StatusCode::TransactionSequenceError.into(),
             )
             .expect("error making auth frame");
         assert_eq!(
@@ -742,7 +742,7 @@ mod test {
             .make_assoc_resp_frame_error(
                 CLIENT_ADDR,
                 mac::CapabilityInfo(0),
-                StatusCode::REJECTED_EMERGENCY_SERVICES_NOT_SUPPORTED,
+                fidl_ieee80211::StatusCode::RejectedEmergencyServicesNotSupported.into(),
             )
             .expect("error making assoc resp frame error");
         assert_eq!(

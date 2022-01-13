@@ -645,7 +645,12 @@ impl<'a> BoundClient<'a> {
 
     /// Sends an authentication frame using Open System authentication.
     pub fn send_open_auth_frame(&mut self) -> Result<(), Error> {
-        self.send_auth_frame(mac::AuthAlgorithmNumber::OPEN, 1, mac::StatusCode::SUCCESS, &[])
+        self.send_auth_frame(
+            mac::AuthAlgorithmNumber::OPEN,
+            1,
+            fidl_ieee80211::StatusCode::Success.into(),
+            &[],
+        )
     }
 
     /// Sends an association request frame based on device capability.

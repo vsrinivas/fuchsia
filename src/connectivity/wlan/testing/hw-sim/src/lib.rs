@@ -227,49 +227,13 @@ pub fn send_sae_authentication_frame(
             mac::AuthHdr: &mac::AuthHdr {
                 auth_alg_num: mac::AuthAlgorithmNumber::SAE,
                 auth_txn_seq_num: sae_frame.seq_num,
-                status_code: convert_to_mac_status_code(sae_frame.status_code),
+                status_code: sae_frame.status_code.into(),
             },
         },
         body: &sae_frame.sae_fields[..],
     })?;
     proxy.rx(0, &buf, &mut create_rx_info(channel, 0))?;
     Ok(())
-}
-
-fn convert_to_mac_status_code(fidl_status_code: fidl_ieee80211::StatusCode) -> mac::StatusCode {
-    match fidl_status_code {
-        fidl_ieee80211::StatusCode::Success => mac::StatusCode::SUCCESS,
-        fidl_ieee80211::StatusCode::RefusedReasonUnspecified => mac::StatusCode::REFUSED,
-        fidl_ieee80211::StatusCode::AntiCloggingTokenRequired => {
-            mac::StatusCode::ANTI_CLOGGING_TOKEN_REQUIRED
-        }
-        fidl_ieee80211::StatusCode::UnsupportedFiniteCyclicGroup => {
-            mac::StatusCode::UNSUPPORTED_FINITE_CYCLIC_GROUP
-        }
-        fidl_ieee80211::StatusCode::RejectedSequenceTimeout => {
-            mac::StatusCode::REJECTED_SEQUENCE_TIMEOUT
-        }
-        _ => mac::StatusCode::REFUSED,
-    }
-}
-
-fn convert_to_ieee80211_status_code(
-    mac_status_code: mac::StatusCode,
-) -> fidl_ieee80211::StatusCode {
-    match mac_status_code {
-        mac::StatusCode::SUCCESS => fidl_ieee80211::StatusCode::Success,
-        mac::StatusCode::REFUSED => fidl_ieee80211::StatusCode::RefusedReasonUnspecified,
-        mac::StatusCode::ANTI_CLOGGING_TOKEN_REQUIRED => {
-            fidl_ieee80211::StatusCode::AntiCloggingTokenRequired
-        }
-        mac::StatusCode::UNSUPPORTED_FINITE_CYCLIC_GROUP => {
-            fidl_ieee80211::StatusCode::UnsupportedFiniteCyclicGroup
-        }
-        mac::StatusCode::REJECTED_SEQUENCE_TIMEOUT => {
-            fidl_ieee80211::StatusCode::RejectedSequenceTimeout
-        }
-        _ => fidl_ieee80211::StatusCode::RefusedReasonUnspecified,
-    }
 }
 
 pub fn send_open_authentication_success(
@@ -290,7 +254,7 @@ pub fn send_open_authentication_success(
             mac::AuthHdr: &mac::AuthHdr {
                 auth_alg_num: mac::AuthAlgorithmNumber::OPEN,
                 auth_txn_seq_num: 2,
-                status_code: mac::StatusCode::SUCCESS,
+                status_code: fidl_ieee80211::StatusCode::Success.into(),
             },
         },
     })?;
@@ -577,8 +541,12 @@ pub fn handle_tx_event<F>(
                                     &mut update_sink,
                                     fidl_mlme::SaeFrame {
                                         peer_sta_address: bssid.0,
-                                        status_code: convert_to_ieee80211_status_code(
+                                        // TODO(fxbug.dev/91353): All reserved values mapped to REFUSED_REASON_UNSPECIFIED.
+                                        status_code: Option::<fidl_ieee80211::StatusCode>::from(
                                             auth_hdr.status_code,
+                                        )
+                                        .unwrap_or(
+                                            fidl_ieee80211::StatusCode::RefusedReasonUnspecified,
                                         ),
                                         seq_num: auth_hdr.auth_txn_seq_num,
                                         sae_fields: elements.to_vec(),
@@ -602,8 +570,13 @@ pub fn handle_tx_event<F>(
                     }
                 }
                 Some(mac::MgmtBody::AssociationReq { .. }) => {
-                    send_association_response(&CHANNEL, bssid, mac::StatusCode::SUCCESS, &phy)
-                        .expect("Error sending fake association response frame.");
+                    send_association_response(
+                        &CHANNEL,
+                        bssid,
+                        fidl_ieee80211::StatusCode::Success.into(),
+                        &phy,
+                    )
+                    .expect("Error sending fake association response frame.");
                     if let Some(authenticator) = authenticator {
                         let mut update_sink = update_sink.as_mut().unwrap_or_else(|| {
                             panic!("No UpdateSink provided with Authenticator.")

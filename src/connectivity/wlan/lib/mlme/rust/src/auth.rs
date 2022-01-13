@@ -4,6 +4,7 @@
 
 use {
     anyhow::{bail, ensure, Error},
+    fidl_fuchsia_wlan_ieee80211 as fidl_ieee80211,
     wlan_common::mac,
 };
 
@@ -11,7 +12,7 @@ pub fn make_open_client_req() -> mac::AuthHdr {
     mac::AuthHdr {
         auth_alg_num: mac::AuthAlgorithmNumber::OPEN,
         auth_txn_seq_num: 1,
-        status_code: mac::StatusCode::SUCCESS,
+        status_code: fidl_ieee80211::StatusCode::Success.into(),
     }
 }
 
@@ -26,7 +27,7 @@ pub enum ValidFrame {
 /// request.
 pub fn validate_ap_resp(auth: &mac::AuthHdr) -> Result<ValidFrame, Error> {
     ensure!(
-        { auth.status_code } == mac::StatusCode::SUCCESS,
+        { auth.status_code } == fidl_ieee80211::StatusCode::Success.into(),
         "invalid status_code: {}",
         { auth.status_code }.0
     );
@@ -60,7 +61,7 @@ mod tests {
                 ValidFrame::SaeCommit => 1,
                 ValidFrame::Open | ValidFrame::SaeConfirm => 2,
             },
-            status_code: mac::StatusCode::SUCCESS,
+            status_code: fidl_ieee80211::StatusCode::Success.into(),
         }
     }
 
@@ -91,7 +92,7 @@ mod tests {
         assert_variant!(validate_ap_resp(&auth_hdr), Err(_));
 
         let mut auth_hdr = make_valid_auth_resp(ValidFrame::Open);
-        auth_hdr.status_code = mac::StatusCode::REFUSED;
+        auth_hdr.status_code = fidl_ieee80211::StatusCode::RefusedReasonUnspecified.into();
         assert_variant!(validate_ap_resp(&auth_hdr), Err(_));
 
         let mut auth_hdr = make_valid_auth_resp(ValidFrame::SaeCommit);
@@ -99,7 +100,7 @@ mod tests {
         assert_variant!(validate_ap_resp(&auth_hdr), Err(_));
 
         let mut auth_hdr = make_valid_auth_resp(ValidFrame::SaeCommit);
-        auth_hdr.status_code = mac::StatusCode::REFUSED;
+        auth_hdr.status_code = fidl_ieee80211::StatusCode::RefusedReasonUnspecified.into();
         assert_variant!(validate_ap_resp(&auth_hdr), Err(_));
     }
 }

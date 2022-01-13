@@ -6,7 +6,7 @@ use {
     anyhow::{format_err, Error},
     diagnostics_hierarchy::{self, DiagnosticsHierarchy, Property, PropertyEntry},
     diagnostics_reader::{ArchiveReader, ComponentSelector, Inspect},
-    fidl_fuchsia_wlan_policy as fidl_policy,
+    fidl_fuchsia_wlan_ieee80211 as fidl_ieee80211, fidl_fuchsia_wlan_policy as fidl_policy,
     fidl_fuchsia_wlan_tap::{self as wlantap, WlantapPhyProxy},
     fuchsia_inspect::testing::{assert_data_tree, AnyProperty},
     fuchsia_zircon::DurationNum,
@@ -76,7 +76,7 @@ fn build_event_handler<'a>(
                             send_association_response(
                                 &CHANNEL,
                                 &bssid,
-                                mac::StatusCode::SUCCESS,
+                                fidl_ieee80211::StatusCode::Success.into(),
                                 &phy,
                             )
                             .expect("Error sending fake association response frame");
