@@ -98,8 +98,6 @@ zx_status_t FvmIsVirtualPartition(const fbl::unique_fd& fd, bool* out) {
 // Describes the state of a partition actively being written
 // out to disk.
 struct PartitionInfo {
-  PartitionInfo() = default;
-
   fvm::PartitionDescriptor* pd = nullptr;
   fvm::PartitionDescriptor aligned_pd = {};
   fbl::unique_fd new_part;
