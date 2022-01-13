@@ -94,6 +94,14 @@ std::optional<std::string> GetVMOName(const zx::vmo& vmo) {
   return name;
 }
 
+zx_status_t GetVMOSize(const zx::vmo& vmo, uint64_t* size) {
+  auto status = vmo.get_prop_content_size(size);
+  if (status != ZX_OK || *size == 0) {
+    status = vmo.get_size(size);
+  }
+  return status;
+}
+
 fbl::String JoinPath(std::string_view parent, std::string_view child) {
   if (parent.empty()) {
     return fbl::String(child);
@@ -222,7 +230,7 @@ std::optional<DumpFile> ProcessDataSinkDump(const std::string& sink_name, const 
   }
 
   uint64_t size;
-  status = file_data.get_size(&size);
+  status = GetVMOSize(file_data, &size);
   if (status != ZX_OK) {
     error_callback(
         fxl::StringPrintf("FAILURE: Cannot get size of VMO \"%s\" for data-sink \"%s\": %s\n",
@@ -368,7 +376,7 @@ void DataSink::ProcessProfile(const zx::vmo& vmo, DataSinkCallback& error_callba
 
   zx_status_t status;
   uint64_t vmo_size;
-  status = vmo.get_size(&vmo_size);
+  status = GetVMOSize(vmo, &vmo_size);
   if (status != ZX_OK) {
     error_callback(
         fxl::StringPrintf("FAILURE: Cannot get size of VMO \"%s\" for data-sink \"%s\": %s\n",

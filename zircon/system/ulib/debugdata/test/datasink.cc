@@ -6,12 +6,10 @@
 #include <lib/debugdata/datasink.h>
 #include <stdlib.h>
 
-#include <format>
-
 #include <fbl/unique_fd.h>
+#include <src/lib/files/file.h>
+#include <src/lib/files/scoped_temp_dir.h>
 #include <zxtest/zxtest.h>
-
-#include "src/lib/files/scoped_temp_dir.h"
 
 namespace {
 
@@ -39,6 +37,7 @@ TEST(DataSinkTest, ProcessData) {
   zx::vmo vmo;
   ASSERT_OK(zx::vmo::create(ZX_PAGE_SIZE, 0, &vmo));
   ASSERT_OK(vmo.write(kTestData, 0, sizeof(kTestData)));
+  ASSERT_OK(vmo.set_prop_content_size(sizeof(kTestData)));
 
   data_sink.ProcessSingleDebugData(kTestSink, std::move(vmo), on_data_collection_error_callback,
                                    on_data_collection_warning_callback);
@@ -59,6 +58,14 @@ TEST(DataSinkTest, ProcessData) {
                                                std::string("llvm-profile/") + kTestProfile};
   ASSERT_EQ(*written_files[kProfileSink].begin(), expected_profile_file);
   ASSERT_EQ(written_files[kTestSink].size(), 1);
+  char test_sink_location[256];
+  sprintf(test_sink_location, "%s/%s", tmp_location.c_str(),
+          written_files[kTestSink].begin()->file.c_str());
+  fbl::unique_fd test_sink_fd(open(test_sink_location, O_RDWR));
+  std::vector<uint8_t> test_sink_content;
+  std::vector<uint8_t> expected(std::begin(kTestData), std::end(kTestData));
+  files::ReadFileDescriptorToVector(test_sink_fd.get(), &test_sink_content);
+  ASSERT_EQ(test_sink_content, expected);
 }
 
 // TODO: Add tests for merging profiles.
