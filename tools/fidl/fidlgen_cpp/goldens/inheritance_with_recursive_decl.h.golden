@@ -8,6 +8,7 @@
 #include <lib/fidl/cpp/internal/codable_base.h>
 #include <lib/fidl/cpp/internal/message_extensions.h>
 #include <lib/fidl/cpp/internal/natural_client_messenger.h>
+#include <lib/fidl/cpp/internal/natural_server_messenger.h>
 #include <lib/fidl/cpp/natural_types.h>
 #include <lib/fidl/cpp/unified_messaging.h>
 
@@ -69,6 +70,93 @@ class ::fidl::internal::NaturalEventDispatcher<
 #ifdef __Fuchsia__
 
 template <>
+class ::fidl::Request<::test_inheritancewithrecursivedecl::Parent::First> final
+    : public ::fidl::internal::MessageBase<
+          ::fidl::Request<::test_inheritancewithrecursivedecl::Parent::First>> {
+ public:
+  Request() = default;
+  ~Request() = default;
+  Request(Request&&) noexcept = default;
+  Request& operator=(Request&&) noexcept = default;
+  Request(::test_inheritancewithrecursivedecl::ParentFirstRequest payload)
+      : payload_(std::move(payload)) {}
+  Request(const Request&) noexcept = delete;
+  Request& operator=(const Request&) noexcept = delete;
+  ::test_inheritancewithrecursivedecl::ParentFirstRequest* operator->() {
+    return &payload_;
+  }
+  const ::test_inheritancewithrecursivedecl::ParentFirstRequest* operator->()
+      const {
+    return &payload_;
+  }
+  ::test_inheritancewithrecursivedecl::ParentFirstRequest& operator*() {
+    return payload_;
+  }
+  const ::test_inheritancewithrecursivedecl::ParentFirstRequest& operator*()
+      const {
+    return payload_;
+  }
+
+ private:
+  ::test_inheritancewithrecursivedecl::ParentFirstRequest payload_;
+};
+
+template <>
+struct ::fidl::internal::MessageTraits<
+    ::fidl::Request<::test_inheritancewithrecursivedecl::Parent::First>>
+    final {
+ public:
+  static constexpr bool kHasPayload = true;
+  using Payload = ::test_inheritancewithrecursivedecl::ParentFirstRequest;
+};
+#endif  // __Fuchsia__
+
+template <>
+class ::fidl::Server<::test_inheritancewithrecursivedecl::Parent>
+    : public ::fidl::internal::IncomingMessageDispatcher {
+ public:
+  Server() = default;
+  virtual ~Server() = default;
+
+  // The FIDL protocol type that is implemented by this server.
+  using _EnclosingProtocol = ::test_inheritancewithrecursivedecl::Parent;
+
+  using FirstRequest =
+      ::fidl::Request<::test_inheritancewithrecursivedecl::Parent::First>;
+  using FirstCompleter = ::fidl::internal::NaturalCompleter<
+      ::test_inheritancewithrecursivedecl::Parent::First>;
+
+  virtual void First(FirstRequest& request,
+                     FirstCompleter::Sync& completer) = 0;
+
+ private:
+  void dispatch_message(
+      ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
+      ::fidl::internal::IncomingTransportContext transport_context) final;
+};
+
+#ifdef __Fuchsia__
+
+template <>
+struct ::fidl::internal::NaturalServerDispatcher<
+    ::test_inheritancewithrecursivedecl::Parent>
+    final {
+  NaturalServerDispatcher() = delete;
+  static void Dispatch(
+      ::fidl::Server<::test_inheritancewithrecursivedecl::Parent>* impl,
+      ::fidl::IncomingMessage&& msg,
+      internal::IncomingTransportContext transport_context,
+      ::fidl::Transaction* txn);
+
+ private:
+  static const ::fidl::internal::MethodEntry entries_[];
+  static const ::fidl::internal::MethodEntry* entries_end_;
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+template <>
 class ::fidl::internal::NaturalClientImpl<
     ::test_inheritancewithrecursivedecl::Child>
     final : public ::fidl::internal::NaturalClientBase {
@@ -117,5 +205,144 @@ class ::fidl::internal::NaturalEventDispatcher<
   std::optional<::fidl::UnbindInfo> DispatchEvent(
       ::fidl::IncomingMessage& msg,
       internal::IncomingTransportContext transport_context) override;
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+template <>
+class ::fidl::Request<::test_inheritancewithrecursivedecl::Child::First> final
+    : public ::fidl::internal::MessageBase<
+          ::fidl::Request<::test_inheritancewithrecursivedecl::Child::First>> {
+ public:
+  Request() = default;
+  ~Request() = default;
+  Request(Request&&) noexcept = default;
+  Request& operator=(Request&&) noexcept = default;
+  Request(::test_inheritancewithrecursivedecl::ParentFirstRequest payload)
+      : payload_(std::move(payload)) {}
+  Request(const Request&) noexcept = delete;
+  Request& operator=(const Request&) noexcept = delete;
+  ::test_inheritancewithrecursivedecl::ParentFirstRequest* operator->() {
+    return &payload_;
+  }
+  const ::test_inheritancewithrecursivedecl::ParentFirstRequest* operator->()
+      const {
+    return &payload_;
+  }
+  ::test_inheritancewithrecursivedecl::ParentFirstRequest& operator*() {
+    return payload_;
+  }
+  const ::test_inheritancewithrecursivedecl::ParentFirstRequest& operator*()
+      const {
+    return payload_;
+  }
+
+ private:
+  ::test_inheritancewithrecursivedecl::ParentFirstRequest payload_;
+};
+
+template <>
+struct ::fidl::internal::MessageTraits<
+    ::fidl::Request<::test_inheritancewithrecursivedecl::Child::First>>
+    final {
+ public:
+  static constexpr bool kHasPayload = true;
+  using Payload = ::test_inheritancewithrecursivedecl::ParentFirstRequest;
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+template <>
+class ::fidl::Request<::test_inheritancewithrecursivedecl::Child::Second> final
+    : public ::fidl::internal::MessageBase<
+          ::fidl::Request<::test_inheritancewithrecursivedecl::Child::Second>> {
+ public:
+  Request() = default;
+  ~Request() = default;
+  Request(Request&&) noexcept = default;
+  Request& operator=(Request&&) noexcept = default;
+  Request(::test_inheritancewithrecursivedecl::ChildSecondRequest payload)
+      : payload_(std::move(payload)) {}
+  Request(const Request&) noexcept = delete;
+  Request& operator=(const Request&) noexcept = delete;
+  ::test_inheritancewithrecursivedecl::ChildSecondRequest* operator->() {
+    return &payload_;
+  }
+  const ::test_inheritancewithrecursivedecl::ChildSecondRequest* operator->()
+      const {
+    return &payload_;
+  }
+  ::test_inheritancewithrecursivedecl::ChildSecondRequest& operator*() {
+    return payload_;
+  }
+  const ::test_inheritancewithrecursivedecl::ChildSecondRequest& operator*()
+      const {
+    return payload_;
+  }
+
+ private:
+  ::test_inheritancewithrecursivedecl::ChildSecondRequest payload_;
+};
+
+template <>
+struct ::fidl::internal::MessageTraits<
+    ::fidl::Request<::test_inheritancewithrecursivedecl::Child::Second>>
+    final {
+ public:
+  static constexpr bool kHasPayload = true;
+  using Payload = ::test_inheritancewithrecursivedecl::ChildSecondRequest;
+};
+#endif  // __Fuchsia__
+
+template <>
+class ::fidl::Server<::test_inheritancewithrecursivedecl::Child>
+    : public ::fidl::internal::IncomingMessageDispatcher {
+ public:
+  Server() = default;
+  virtual ~Server() = default;
+
+  // The FIDL protocol type that is implemented by this server.
+  using _EnclosingProtocol = ::test_inheritancewithrecursivedecl::Child;
+
+  using FirstRequest =
+      ::fidl::Request<::test_inheritancewithrecursivedecl::Child::First>;
+  using FirstCompleter = ::fidl::internal::NaturalCompleter<
+      ::test_inheritancewithrecursivedecl::Child::First>;
+
+  virtual void First(FirstRequest& request,
+                     FirstCompleter::Sync& completer) = 0;
+
+  using SecondRequest =
+      ::fidl::Request<::test_inheritancewithrecursivedecl::Child::Second>;
+  using SecondCompleter = ::fidl::internal::NaturalCompleter<
+      ::test_inheritancewithrecursivedecl::Child::Second>;
+
+  virtual void Second(SecondRequest& request,
+                      SecondCompleter::Sync& completer) = 0;
+
+ private:
+  void dispatch_message(
+      ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
+      ::fidl::internal::IncomingTransportContext transport_context) final;
+};
+
+#ifdef __Fuchsia__
+
+template <>
+struct ::fidl::internal::NaturalServerDispatcher<
+    ::test_inheritancewithrecursivedecl::Child>
+    final {
+  NaturalServerDispatcher() = delete;
+  static void Dispatch(
+      ::fidl::Server<::test_inheritancewithrecursivedecl::Child>* impl,
+      ::fidl::IncomingMessage&& msg,
+      internal::IncomingTransportContext transport_context,
+      ::fidl::Transaction* txn);
+
+ private:
+  static const ::fidl::internal::MethodEntry entries_[];
+  static const ::fidl::internal::MethodEntry* entries_end_;
 };
 #endif  // __Fuchsia__

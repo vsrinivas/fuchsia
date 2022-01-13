@@ -8,6 +8,7 @@
 #include <lib/fidl/cpp/internal/codable_base.h>
 #include <lib/fidl/cpp/internal/message_extensions.h>
 #include <lib/fidl/cpp/internal/natural_client_messenger.h>
+#include <lib/fidl/cpp/internal/natural_server_messenger.h>
 #include <lib/fidl/cpp/natural_types.h>
 #include <lib/fidl/cpp/unified_messaging.h>
 
@@ -61,5 +62,40 @@ class ::fidl::internal::NaturalEventDispatcher<
   std::optional<::fidl::UnbindInfo> DispatchEvent(
       ::fidl::IncomingMessage& msg,
       internal::IncomingTransportContext transport_context) override;
+};
+#endif  // __Fuchsia__
+
+template <>
+class ::fidl::Server<::test_bindingsdenylist::OnlyCppAndDeps>
+    : public ::fidl::internal::IncomingMessageDispatcher {
+ public:
+  Server() = default;
+  virtual ~Server() = default;
+
+  // The FIDL protocol type that is implemented by this server.
+  using _EnclosingProtocol = ::test_bindingsdenylist::OnlyCppAndDeps;
+
+ private:
+  void dispatch_message(
+      ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
+      ::fidl::internal::IncomingTransportContext transport_context) final;
+};
+
+#ifdef __Fuchsia__
+
+template <>
+struct ::fidl::internal::NaturalServerDispatcher<
+    ::test_bindingsdenylist::OnlyCppAndDeps>
+    final {
+  NaturalServerDispatcher() = delete;
+  static void Dispatch(
+      ::fidl::Server<::test_bindingsdenylist::OnlyCppAndDeps>* impl,
+      ::fidl::IncomingMessage&& msg,
+      internal::IncomingTransportContext transport_context,
+      ::fidl::Transaction* txn);
+
+ private:
+  static const ::fidl::internal::MethodEntry entries_[];
+  static const ::fidl::internal::MethodEntry* entries_end_;
 };
 #endif  // __Fuchsia__

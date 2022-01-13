@@ -10,7 +10,6 @@ namespace internal {
 
 ::fidl::DispatchResult TryDispatch(void* impl, ::fidl::IncomingMessage& msg,
                                    fidl::internal::IncomingTransportContext transport_context,
-
                                    ::fidl::Transaction* txn, const MethodEntry* begin,
                                    const MethodEntry* end) {
   if (!msg.ok()) {

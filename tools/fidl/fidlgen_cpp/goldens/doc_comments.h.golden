@@ -8,6 +8,7 @@
 #include <lib/fidl/cpp/internal/codable_base.h>
 #include <lib/fidl/cpp/internal/message_extensions.h>
 #include <lib/fidl/cpp/internal/natural_client_messenger.h>
+#include <lib/fidl/cpp/internal/natural_server_messenger.h>
 #include <lib/fidl/cpp/natural_types.h>
 #include <lib/fidl/cpp/unified_messaging.h>
 
@@ -88,5 +89,72 @@ class ::fidl::internal::NaturalEventDispatcher<::test_doccomments::Interface>
   std::optional<::fidl::UnbindInfo> DispatchEvent(
       ::fidl::IncomingMessage& msg,
       internal::IncomingTransportContext transport_context) override;
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+template <>
+class ::fidl::Request<::test_doccomments::Interface::Method> final
+    : public ::fidl::internal::MessageBase<
+          ::fidl::Request<::test_doccomments::Interface::Method>> {
+ public:
+  Request() = default;
+  ~Request() = default;
+  Request(Request&&) noexcept = default;
+  Request& operator=(Request&&) noexcept = default;
+
+ private:
+};
+
+template <>
+struct ::fidl::internal::MessageTraits<
+    ::fidl::Request<::test_doccomments::Interface::Method>>
+    final {
+ public:
+  static constexpr bool kHasPayload = false;
+};
+#endif  // __Fuchsia__
+
+template <>
+class ::fidl::Server<::test_doccomments::Interface>
+    : public ::fidl::internal::IncomingMessageDispatcher {
+ public:
+  Server() = default;
+  virtual ~Server() = default;
+
+  // The FIDL protocol type that is implemented by this server.
+  using _EnclosingProtocol = ::test_doccomments::Interface;
+
+  using MethodRequest = ::fidl::Request<::test_doccomments::Interface::Method>;
+  using MethodCompleter =
+      ::fidl::internal::NaturalCompleter<::test_doccomments::Interface::Method>;
+
+  /// method comment #1
+  ///
+  /// method comment #3
+  virtual void Method(MethodRequest& request,
+                      MethodCompleter::Sync& completer) = 0;
+
+ private:
+  void dispatch_message(
+      ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
+      ::fidl::internal::IncomingTransportContext transport_context) final;
+};
+
+#ifdef __Fuchsia__
+
+template <>
+struct ::fidl::internal::NaturalServerDispatcher<::test_doccomments::Interface>
+    final {
+  NaturalServerDispatcher() = delete;
+  static void Dispatch(::fidl::Server<::test_doccomments::Interface>* impl,
+                       ::fidl::IncomingMessage&& msg,
+                       internal::IncomingTransportContext transport_context,
+                       ::fidl::Transaction* txn);
+
+ private:
+  static const ::fidl::internal::MethodEntry entries_[];
+  static const ::fidl::internal::MethodEntry* entries_end_;
 };
 #endif  // __Fuchsia__

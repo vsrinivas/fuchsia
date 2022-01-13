@@ -8,6 +8,7 @@
 #include <lib/fidl/cpp/internal/codable_base.h>
 #include <lib/fidl/cpp/internal/message_extensions.h>
 #include <lib/fidl/cpp/internal/natural_client_messenger.h>
+#include <lib/fidl/cpp/internal/natural_server_messenger.h>
 #include <lib/fidl/cpp/natural_types.h>
 #include <lib/fidl/cpp/unified_messaging.h>
 #include <test/errorsyntax/parent/cpp/fidl_v2.h>
@@ -217,5 +218,204 @@ class ::fidl::internal::NaturalEventDispatcher<
   std::optional<::fidl::UnbindInfo> DispatchEvent(
       ::fidl::IncomingMessage& msg,
       internal::IncomingTransportContext transport_context) override;
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+template <>
+class ::fidl::Request<
+    ::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>
+    final : public ::fidl::internal::MessageBase<
+                ::fidl::Request<::test_errorsyntax::ExampleUseOfErrorSyntax::
+                                    ComposedCallWhichMayFail>> {
+ public:
+  Request() = default;
+  ~Request() = default;
+  Request(Request&&) noexcept = default;
+  Request& operator=(Request&&) noexcept = default;
+  Request(::test_errorsyntax_parent::
+              ParentUsesErrorSyntaxComposedCallWhichMayFailRequest payload)
+      : payload_(std::move(payload)) {}
+  ::test_errorsyntax_parent::
+      ParentUsesErrorSyntaxComposedCallWhichMayFailRequest*
+      operator->() {
+    return &payload_;
+  }
+  const ::test_errorsyntax_parent::
+      ParentUsesErrorSyntaxComposedCallWhichMayFailRequest*
+      operator->() const {
+    return &payload_;
+  }
+  ::test_errorsyntax_parent::
+      ParentUsesErrorSyntaxComposedCallWhichMayFailRequest&
+      operator*() {
+    return payload_;
+  }
+  const ::test_errorsyntax_parent::
+      ParentUsesErrorSyntaxComposedCallWhichMayFailRequest&
+      operator*() const {
+    return payload_;
+  }
+
+ private:
+  ::test_errorsyntax_parent::
+      ParentUsesErrorSyntaxComposedCallWhichMayFailRequest payload_;
+};
+
+template <>
+struct ::fidl::internal::MessageTraits<::fidl::Request<
+    ::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>>
+    final {
+ public:
+  static constexpr bool kHasPayload = true;
+  using Payload = ::test_errorsyntax_parent::
+      ParentUsesErrorSyntaxComposedCallWhichMayFailRequest;
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+template <>
+class ::fidl::Request<
+    ::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>
+    final
+    : public ::fidl::internal::MessageBase<::fidl::Request<
+          ::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>> {
+ public:
+  Request() = default;
+  ~Request() = default;
+  Request(Request&&) noexcept = default;
+  Request& operator=(Request&&) noexcept = default;
+  Request(::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailRequest
+              payload)
+      : payload_(std::move(payload)) {}
+  ::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailRequest*
+  operator->() {
+    return &payload_;
+  }
+  const ::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailRequest*
+  operator->() const {
+    return &payload_;
+  }
+  ::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailRequest&
+  operator*() {
+    return payload_;
+  }
+  const ::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailRequest&
+  operator*() const {
+    return payload_;
+  }
+
+ private:
+  ::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailRequest payload_;
+};
+
+template <>
+struct ::fidl::internal::MessageTraits<::fidl::Request<
+    ::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>>
+    final {
+ public:
+  static constexpr bool kHasPayload = true;
+  using Payload =
+      ::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailRequest;
+};
+#endif  // __Fuchsia__
+
+template <>
+class ::fidl::internal::NaturalCompleterBase<
+    ::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>
+    : public ::fidl::CompleterBase {
+ public:
+  void Reply(
+      ::test_errorsyntax_parent::
+          ParentUsesErrorSyntaxComposedCallWhichMayFailTopResponse&& payload);
+
+ protected:
+  using ::fidl::CompleterBase::CompleterBase;
+
+ private:
+  ::fidl::internal::NaturalServerMessenger messenger_{this};
+};
+
+template <>
+struct ::fidl::internal::MethodTypes<
+    ::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail> {
+  using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<
+      ::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>>;
+};
+
+template <>
+class ::fidl::internal::NaturalCompleterBase<
+    ::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>
+    : public ::fidl::CompleterBase {
+ public:
+  void Reply(
+      ::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse&&
+          payload);
+
+ protected:
+  using ::fidl::CompleterBase::CompleterBase;
+
+ private:
+  ::fidl::internal::NaturalServerMessenger messenger_{this};
+};
+
+template <>
+struct ::fidl::internal::MethodTypes<
+    ::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail> {
+  using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<
+      ::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>>;
+};
+
+template <>
+class ::fidl::Server<::test_errorsyntax::ExampleUseOfErrorSyntax>
+    : public ::fidl::internal::IncomingMessageDispatcher {
+ public:
+  Server() = default;
+  virtual ~Server() = default;
+
+  // The FIDL protocol type that is implemented by this server.
+  using _EnclosingProtocol = ::test_errorsyntax::ExampleUseOfErrorSyntax;
+
+  using ComposedCallWhichMayFailRequest = ::fidl::Request<
+      ::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>;
+  using ComposedCallWhichMayFailCompleter = ::fidl::internal::NaturalCompleter<
+      ::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>;
+
+  virtual void ComposedCallWhichMayFail(
+      ComposedCallWhichMayFailRequest& request,
+      ComposedCallWhichMayFailCompleter::Sync& completer) = 0;
+
+  using CallWhichMayFailRequest = ::fidl::Request<
+      ::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>;
+  using CallWhichMayFailCompleter = ::fidl::internal::NaturalCompleter<
+      ::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>;
+
+  virtual void CallWhichMayFail(CallWhichMayFailRequest& request,
+                                CallWhichMayFailCompleter::Sync& completer) = 0;
+
+ private:
+  void dispatch_message(
+      ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
+      ::fidl::internal::IncomingTransportContext transport_context) final;
+};
+
+#ifdef __Fuchsia__
+
+template <>
+struct ::fidl::internal::NaturalServerDispatcher<
+    ::test_errorsyntax::ExampleUseOfErrorSyntax>
+    final {
+  NaturalServerDispatcher() = delete;
+  static void Dispatch(
+      ::fidl::Server<::test_errorsyntax::ExampleUseOfErrorSyntax>* impl,
+      ::fidl::IncomingMessage&& msg,
+      internal::IncomingTransportContext transport_context,
+      ::fidl::Transaction* txn);
+
+ private:
+  static const ::fidl::internal::MethodEntry entries_[];
+  static const ::fidl::internal::MethodEntry* entries_end_;
 };
 #endif  // __Fuchsia__

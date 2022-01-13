@@ -1,0 +1,66 @@
+{{/*
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+*/}}
+
+{{- define "Protocol:Dispatcher:MessagingHeader" }}
+{{- IfdefFuchsia }}
+{{- EnsureNamespace "" }}
+template<>
+struct {{ .NaturalServerDispatcher }} final {
+  {{ .NaturalServerDispatcher.Self }}() = delete;
+  static void Dispatch({{ .NaturalServer }}* impl, ::fidl::IncomingMessage&& msg,
+                       internal::IncomingTransportContext transport_context,
+                       ::fidl::Transaction* txn);
+
+ private:
+  static const ::fidl::internal::MethodEntry entries_[];
+  static const ::fidl::internal::MethodEntry* entries_end_;
+};
+{{- EndifFuchsia }}
+{{- end }}
+
+{{- define "Protocol:Dispatcher:Source" }}
+{{- IfdefFuchsia -}}
+{{ EnsureNamespace "" }}
+
+constexpr ::fidl::internal::MethodEntry {{ .NaturalServerDispatcher.NoLeading }}::entries_[] = {
+  {{- range .ClientMethods }}
+    { {{ .OrdinalName }},
+      [](void* interface, ::fidl::IncomingMessage&& msg,
+        internal::IncomingTransportContext transport_context, ::fidl::Transaction* txn) {
+        ::fitx::result<::fidl::Error, {{ .NaturalRequest }}> decoded =
+            {{ .NaturalRequest }}::DecodeTransactional(std::move(msg));
+        if (decoded.is_error()) {
+          return decoded.error_value().status();
+        }
+        {{ .NaturalCompleter }}::Sync completer(txn);
+        static_cast<{{ $.NaturalServer }}*>(interface)->{{ .Name }}(
+            decoded.value(), completer);
+        return ZX_OK;
+      },
+    },
+  {{- end }}
+};
+
+const ::fidl::internal::MethodEntry* {{ .NaturalServerDispatcher.NoLeading }}::entries_end_ =
+    &entries_[{{- len .ClientMethods -}}];
+
+{{ EnsureNamespace "" }}
+void {{ .NaturalServerDispatcher.NoLeading }}::Dispatch(
+    {{- .NaturalServer }}* impl, ::fidl::IncomingMessage&& msg,
+    internal::IncomingTransportContext transport_context, ::fidl::Transaction* txn) {
+  ::fidl::internal::Dispatch(impl, msg, std::move(transport_context), txn, entries_, entries_end_);
+}
+
+{{- EnsureNamespace "" }}
+void {{ .NaturalServer.NoLeading }}::dispatch_message(
+    ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
+    ::fidl::internal::IncomingTransportContext transport_context) {
+  {{ .NaturalServerDispatcher }}::Dispatch(this, std::move(msg), std::move(transport_context), txn);
+}
+{{- EndifFuchsia -}}
+
+{{- end }}
+

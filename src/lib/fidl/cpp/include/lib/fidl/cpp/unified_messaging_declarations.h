@@ -14,6 +14,21 @@
 // definitions from FIDL protocols in the schema.
 namespace fidl {
 
+// |Request| represents the request of a FIDL method call, using natural
+// types. See |WireRequest| for the equivalent using wire types.
+//
+// When |Method| request has a payload, |Request| will expose the following
+// operators for the user to access the payload:
+//
+//     MethodRequest& operator*();
+//     MethodRequest* operator->();
+//
+// When |Method| request has no payload, those operators will be absent.
+//
+// When |Method| has no request (event), this class will be undefined.
+template <typename Method>
+class Request;
+
 // |Response| represents the response of a FIDL method call, using natural
 // types. See |WireResponse| for the equivalent using wire types.
 //
@@ -78,12 +93,25 @@ class NaturalEventHandlerInterface;
 template <typename FidlProtocol>
 class NaturalEventDispatcher;
 
+// |NaturalServerDispatcher| is a helper type that decodes an incoming message
+// and invokes the corresponding handler in the server implementation.
+template <typename FidlProtocol>
+struct NaturalServerDispatcher;
+
+template <typename FidlMethod>
+class NaturalCompleterBase;
+
 }  // namespace internal
 
 // |AsyncEventHandler| is used by asynchronous clients to handle events using
 // natural types. It also adds a callback for handling errors.
 template <typename Protocol>
 class AsyncEventHandler;
+
+// |Server| is a pure-virtual interface to be implemented by a server, receiving
+// natural types.
+template <typename Protocol>
+class Server;
 
 }  // namespace fidl
 

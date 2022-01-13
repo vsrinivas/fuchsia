@@ -11,6 +11,7 @@
 #include <lib/fidl/cpp/internal/natural_types.h>
 #include <lib/fidl/cpp/unified_messaging_declarations.h>
 #include <lib/fidl/llcpp/message.h>
+#include <lib/fidl/llcpp/transaction.h>
 #include <lib/fidl/llcpp/wire_messaging.h>
 #include <lib/fitx/result.h>
 
@@ -19,6 +20,14 @@
 namespace fidl {
 
 namespace internal {
+
+template <typename FidlMethod>
+struct MethodTypes {
+  using Completer = ::fidl::Completer<>;
+};
+
+template <typename FidlMethod>
+using NaturalCompleter = typename fidl::internal::MethodTypes<FidlMethod>::Completer;
 
 // |MessageBase| is a mixin with common functionalities for transactional
 // message wrappers.

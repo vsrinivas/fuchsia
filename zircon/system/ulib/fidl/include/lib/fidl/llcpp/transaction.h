@@ -157,6 +157,11 @@ class CompleterBase {
   // hook provided to |fidl::BindServer|.
   bool is_reply_needed() const;
 
+  // TODO(fxbug.dev/60240): Use composition instead of inheriting all completers
+  // from |CompleterBase|. This method is unnecessarily exposed to the user.
+  fidl::Result SendReply(::fidl::OutgoingMessage* message,
+                         fidl::internal::OutgoingTransportContext transport_context);
+
  protected:
   explicit CompleterBase(Transaction* transaction, bool owned, bool method_expects_reply)
       : transaction_(transaction), owned_(owned), needs_to_reply_(method_expects_reply) {}
@@ -165,9 +170,6 @@ class CompleterBase {
   CompleterBase& operator=(CompleterBase&& other) noexcept;
 
   ~CompleterBase();
-
-  fidl::Result SendReply(::fidl::OutgoingMessage* message,
-                         fidl::internal::OutgoingTransportContext transport_context);
 
   // Move the contents of |transaction_| to heap and return it.
   std::unique_ptr<Transaction> TakeOwnership();

@@ -90,11 +90,14 @@ func (p Protocol) WithHlMessaging() protocolWithHlMessaging {
 // These correspond to templated classes and functions forward-declared in
 // /src/lib/fidl/cpp/include/lib/fidl/cpp/unified_messaging.h
 var (
-	NaturalRequest                = fidlNs.member("Request")
-	NaturalResponse               = fidlNs.member("Response")
-	NaturalEvent                  = fidlNs.member("Event")
-	MessageTraits                 = internalNs.member("MessageTraits")
-	MessageBase                   = internalNs.member("MessageBase")
+	NaturalRequest     = fidlNs.member("Request")
+	NaturalResponse    = fidlNs.member("Response")
+	NaturalEvent       = fidlNs.member("Event")
+	MessageTraits      = internalNs.member("MessageTraits")
+	MessageBase        = internalNs.member("MessageBase")
+	NaturalMethodTypes = internalNs.member("MethodTypes")
+
+	// Client types
 	NaturalClientImpl             = internalNs.member("NaturalClientImpl")
 	NaturalClientCallbackTraits   = internalNs.member("ClientCallbackTraits")
 	NaturalClientCallback         = fidlNs.member("ClientCallback")
@@ -104,6 +107,12 @@ var (
 	// NaturalEventHandlerInterface is shared between sync and async event handling.
 	NaturalEventHandlerInterface = internalNs.member("NaturalEventHandlerInterface")
 	NaturalEventDispatcher       = internalNs.member("NaturalEventDispatcher")
+
+	// Server types
+	NaturalServer           = fidlNs.member("Server")
+	NaturalServerDispatcher = internalNs.member("NaturalServerDispatcher")
+	NaturalCompleter        = internalNs.member("NaturalCompleter")
+	NaturalCompleterBase    = internalNs.member("NaturalCompleterBase")
 )
 
 type unifiedMessagingDetails struct {
@@ -111,6 +120,8 @@ type unifiedMessagingDetails struct {
 	NaturalAsyncEventHandler     name
 	NaturalEventHandlerInterface name
 	NaturalEventDispatcher       name
+	NaturalServerDispatcher      name
+	NaturalServer                name
 }
 
 func compileUnifiedMessagingDetails(protocol nameVariants, fidl fidlgen.Protocol) unifiedMessagingDetails {
@@ -120,6 +131,8 @@ func compileUnifiedMessagingDetails(protocol nameVariants, fidl fidlgen.Protocol
 		NaturalAsyncEventHandler:     NaturalAsyncEventHandler.template(p),
 		NaturalEventHandlerInterface: NaturalEventHandlerInterface.template(p),
 		NaturalEventDispatcher:       NaturalEventDispatcher.template(p),
+		NaturalServerDispatcher:      NaturalServerDispatcher.template(p),
+		NaturalServer:                NaturalServer.template(p),
 	}
 }
 
@@ -437,6 +450,8 @@ func newWireMethod(name string, wireTypes wireTypeNames, protocolMarker name, me
 
 type unifiedMethod struct {
 	NaturalRequest             name
+	RequestMessageTraits       name
+	RequestMessageBase         name
 	NaturalResponse            name
 	ResponseMessageTraits      name
 	ResponseMessageBase        name
@@ -445,24 +460,35 @@ type unifiedMethod struct {
 	EventMessageBase           name
 	ClientCallbackTraits       name
 	ClientResponseCallbackType name
-	RequestMessageTraits       name
+	NaturalMethodTypes         name
+	NaturalRequestAlias        name
+	NaturalCompleterAlias      name
+	NaturalCompleter           name
+	NaturalCompleterBase       name
 }
 
-func newUnifiedMethod(methodMarker name) unifiedMethod {
+func newUnifiedMethod(methodMarker name, unifiedTypes unifiedMessagingDetails) unifiedMethod {
 	naturalRequest := NaturalRequest.template(methodMarker)
 	naturalResponse := NaturalResponse.template(methodMarker)
 	naturalEvent := NaturalEvent.template(methodMarker)
+	common := unifiedTypes.NaturalServer.nest(methodMarker.Self())
 	return unifiedMethod{
+		NaturalRequest:             naturalRequest,
+		RequestMessageTraits:       MessageTraits.template(naturalRequest),
+		RequestMessageBase:         MessageBase.template(naturalRequest),
 		NaturalResponse:            naturalResponse,
 		ResponseMessageTraits:      MessageTraits.template(naturalResponse),
 		ResponseMessageBase:        MessageBase.template(naturalResponse),
 		NaturalEvent:               naturalEvent,
 		EventMessageTraits:         MessageTraits.template(naturalEvent),
 		EventMessageBase:           MessageBase.template(naturalEvent),
-		NaturalRequest:             naturalRequest,
 		ClientCallbackTraits:       NaturalClientCallbackTraits.template(methodMarker),
 		ClientResponseCallbackType: NaturalClientResponseCallback.template(methodMarker),
-		RequestMessageTraits:       MessageTraits.template(naturalRequest),
+		NaturalMethodTypes:         NaturalMethodTypes.template(methodMarker),
+		NaturalRequestAlias:        common.appendName("Request"),
+		NaturalCompleterAlias:      common.appendName("Completer"),
+		NaturalCompleter:           NaturalCompleter.template(methodMarker),
+		NaturalCompleterBase:       NaturalCompleterBase.template(methodMarker),
 	}
 }
 
@@ -521,6 +547,10 @@ func (m Method) WireRequestViewArg() string {
 }
 
 func (m Method) WireCompleterArg() string {
+	return m.appendName("Completer").nest("Sync").Name()
+}
+
+func (m Method) NaturalCompleterArg() string {
 	return m.appendName("Completer").nest("Sync").Name()
 }
 
@@ -739,7 +769,7 @@ func (c *compiler) compileProtocol(p fidlgen.Protocol) *Protocol {
 			responseTypeShapeV1: TypeShape{responseTypeShapeV1},
 			responseTypeShapeV2: TypeShape{responseTypeShapeV2},
 			wireMethod:          newWireMethod(name.Wire.Name(), wireTypeNames, protocolName.Wire, methodMarker.Wire),
-			unifiedMethod:       newUnifiedMethod(methodMarker.Wire),
+			unifiedMethod:       newUnifiedMethod(methodMarker.Wire, unifiedMessaging),
 			Attributes:          Attributes{v.Attributes},
 			// TODO(fxbug.dev/84834): Use the functionality in //tools/fidl/lib/fidlgen/identifiers.go
 			FullyQualifiedName:        fmt.Sprintf("%s.%s", p.Name, v.Name),

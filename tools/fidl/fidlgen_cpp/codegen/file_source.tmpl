@@ -32,6 +32,10 @@ do not support them in the bindings. */}}
 {{ "" }}
   {{- template "ProtocolEventHandlerDefinition" $protocol }}
 {{ "" }}
+  {{- template "Protocol:Interface:Source" $protocol }}
+{{ "" }}
+  {{- template "Protocol:Dispatcher:Source" $protocol }}
+{{ "" }}
   {{- /* TODO(fxbug.dev/60240): Add more */}}
 {{- end }}
 {{- end }}

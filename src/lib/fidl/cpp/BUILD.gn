@@ -13,6 +13,7 @@ source_set("cpp") {
     "include/lib/fidl/cpp/internal/message_extensions.h",
     "include/lib/fidl/cpp/internal/natural_client_base.h",
     "include/lib/fidl/cpp/internal/natural_client_messenger.h",
+    "include/lib/fidl/cpp/internal/natural_server_messenger.h",
     "include/lib/fidl/cpp/natural_types.h",
     "include/lib/fidl/cpp/unified_messaging.h",
     "include/lib/fidl/cpp/unified_messaging_declarations.h",
@@ -20,6 +21,7 @@ source_set("cpp") {
   sources = [
     "internal/message_extensions.cc",
     "internal/natural_client_messenger.cc",
+    "internal/natural_server_messenger.cc",
   ]
   public_deps = [
     "//sdk/lib/fidl/cpp:cpp_base",
