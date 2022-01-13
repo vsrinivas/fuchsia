@@ -260,9 +260,9 @@ impl<I: IpExt, B: BufferMut, C: TransportIpContext<I> + FrameContext<B, IpPacket
 // it. For the time being, however, we only support protocol numbers that we
 // actually use (TCP and UDP).
 
-/// The execution context for IPv6's transport layer.
+/// The execution context for IPv4's transport layer.
 ///
-/// `Ipv6TransportLayerContext` defines the [`IpTransportContext`] for each IPv6
+/// `Ipv4TransportLayerContext` defines the [`IpTransportContext`] for each IPv4
 /// protocol number. The protocol numbers 1 (ICMP) and 2 (IGMP) are used by the
 /// stack itself, and cannot be overridden.
 pub(crate) trait Ipv4TransportLayerContext {
