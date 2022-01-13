@@ -72,8 +72,8 @@ TEST(ExchangeTest, Runtime) { ASSERT_TRUE(ExchangeCheck3()); }
 #if __cpp_lib_constexpr_algorithms >= 201806L && !defined(LIB_STDCOMPAT_USE_POLYFILLS)
 
 TEST(ExchangeTest, IsAliasWhenAvailable) {
-  constexpr void (*cpp20_exchange)(int&, int&&) = &cpp20::exchange<int>;
-  constexpr void (*std_exchange)(int&, int&&) = &std::exchange<int>;
+  constexpr int (*cpp20_exchange)(int&, int&&) = &cpp20::exchange<int>;
+  constexpr int (*std_exchange)(int&, int&&) = &std::exchange<int>;
   static_assert(cpp20_exchange == std_exchange,
                 "cpp20::exchange must be an alias for std::exchange in c++20.");
 }

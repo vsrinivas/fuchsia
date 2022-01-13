@@ -607,7 +607,10 @@ constexpr int TestIsConstantEvaluated(int x) {
 }
 
 TEST(ContextTraits, IsConstantEvaluated) {
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wconstant-evaluated"
   constexpr decltype(auto) is = cpp20::is_constant_evaluated();
+#pragma GCC diagnostic pop
   static_assert(cpp17::is_same_v<std::decay_t<decltype(is)>, bool>, "");
 
   decltype(auto) is_not = cpp20::is_constant_evaluated();
@@ -630,7 +633,7 @@ TEST(ContextTraits, IsConstantEvaluated) {
 
 #if __cpp_lib_is_constant_evaluated >= 201811L && !defined(LIB_STDCOMPAT_USE_POLYFILLS)
 TEST(ContextTraits, IsConstantEvaluatedIsAliasForStdWhenAvailable) {
-  static_assert(&cpp20::is_consant_evaluated == &std::is_constant_evaluated, "");
+  static_assert(&cpp20::is_constant_evaluated == &std::is_constant_evaluated, "");
 }
 #endif
 

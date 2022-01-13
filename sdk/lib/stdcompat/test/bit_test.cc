@@ -97,7 +97,9 @@ TEST(BitCastTest, WorksInConstexprContext) {
 #if __cpp_lib_bit_cast >= 201806L && !defined(LIB_STDCOMPAT_USE_POLYFILLS)
 
 TEST(BitCastTest, IsAliasForStdBitCastIfAvailable) {
-  static_assert(&std::bit_cast == &cpp20::bit_cast,
+  constexpr unsigned (*cpp20_bit_cast)(const int&) = &cpp20::bit_cast<unsigned, int>;
+  constexpr unsigned (*std_bit_cast)(const int&) = &std::bit_cast<unsigned, int>;
+  static_assert(cpp20_bit_cast == std_bit_cast,
                 "'bit_cast' polyfill must be an alias when std::bit_cast is available.");
 }
 
