@@ -39,11 +39,6 @@
             to: "#system-update-checker",
         },
         {
-            protocol: "fuchsia.pkg.rewrite.Engine",
-            from: "#pkg-resolver",
-            to: "#system-update-checker",
-        },
-        {
             directory: "pkgfs",
             from: "parent",
             as: "pkgfs-system",
