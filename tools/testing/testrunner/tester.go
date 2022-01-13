@@ -443,9 +443,7 @@ func NewFFXTester(ffx FFXInstance, sshTester Tester, localOutputDir string, expe
 }
 
 func (t *FFXTester) EnabledForTest(test testsharder.Test) bool {
-	// TODO(fxbug.dev/84153): Once performance is up to par with running over SSH,
-	// remove experimental condition.
-	return test.IsComponentV2() && t.experimental
+	return test.IsComponentV2()
 }
 
 func (t *FFXTester) Test(ctx context.Context, test testsharder.Test, stdout, stderr io.Writer, outDir string) (*TestResult, error) {
@@ -519,34 +517,6 @@ func (t *FFXTester) processTestResult(runResult *ffxutil.TestRunResult, testsByU
 		test := testsByURL[suiteResult.Name]
 		testResult := BaseTestResultFromTest(test)
 
-		var cases []testparser.TestCaseResult
-		for _, testCase := range suiteResult.Cases {
-			var status testparser.TestCaseStatus
-			switch testCase.Outcome {
-			case ffxutil.TestPassed:
-				status = testparser.Pass
-			case ffxutil.TestSkipped:
-				status = testparser.Skip
-			default:
-				status = testparser.Fail
-			}
-
-			var artifacts []string
-			for artifact := range testCase.Artifacts {
-				artifacts = append(artifacts, artifact)
-			}
-			// TODO(ihuh): Parse out fail reason from the logs.
-			cases = append(cases, testparser.TestCaseResult{
-				DisplayName: testCase.Name,
-				CaseName:    testCase.Name,
-				Status:      status,
-				Format:      "FTF",
-				OutputFiles: artifacts,
-				OutputDir:   filepath.Join(testOutDir, testCase.ArtifactDir),
-			})
-		}
-		testResult.Cases = cases
-
 		switch suiteResult.Outcome {
 		case ffxutil.TestPassed:
 			testResult.Result = runtests.TestSuccess
@@ -557,14 +527,15 @@ func (t *FFXTester) processTestResult(runResult *ffxutil.TestRunResult, testsByU
 		}
 
 		var suiteArtifacts []string
+		var stdioPath string
 		suiteArtifactDir := filepath.Join(testOutDir, suiteResult.ArtifactDir)
 		for artifact, metadata := range suiteResult.Artifacts {
 			if metadata.ArtifactType == ffxutil.ReportType {
 				// Copy the report log into the filename expected by infra.
 				// TODO(fxbug.dev/91013): Remove dependencies on this filename.
 				absPath := filepath.Join(suiteArtifactDir, artifact)
-				newAbsPath := filepath.Join(suiteArtifactDir, runtests.TestOutputFilename)
-				if err := os.Rename(absPath, newAbsPath); err != nil {
+				stdioPath = filepath.Join(suiteArtifactDir, runtests.TestOutputFilename)
+				if err := os.Rename(absPath, stdioPath); err != nil {
 					return testResults, err
 				}
 				suiteArtifacts = append(suiteArtifacts, runtests.TestOutputFilename)
@@ -574,6 +545,47 @@ func (t *FFXTester) processTestResult(runResult *ffxutil.TestRunResult, testsByU
 		}
 		testResult.OutputFiles = suiteArtifacts
 		testResult.OutputDir = suiteArtifactDir
+
+		var cases []testparser.TestCaseResult
+		// TODO(ihuh): Get test cases from ffx summary when we can provide as
+		// much information in the TestCaseResult as testparser.Parse().
+		if t.experimental {
+			for _, testCase := range suiteResult.Cases {
+				var status testparser.TestCaseStatus
+				switch testCase.Outcome {
+				case ffxutil.TestPassed:
+					status = testparser.Pass
+				case ffxutil.TestSkipped:
+					status = testparser.Skip
+				default:
+					status = testparser.Fail
+				}
+
+				var artifacts []string
+				for artifact := range testCase.Artifacts {
+					artifacts = append(artifacts, artifact)
+				}
+				cases = append(cases, testparser.TestCaseResult{
+					DisplayName: testCase.Name,
+					CaseName:    testCase.Name,
+					Status:      status,
+					Format:      "FTF",
+					OutputFiles: artifacts,
+					OutputDir:   filepath.Join(testOutDir, testCase.ArtifactDir),
+				})
+			}
+		} else {
+			if stdioPath == "" {
+				return testResults, fmt.Errorf("failed to find stdio file")
+			}
+			stdioBytes, err := ioutil.ReadFile(stdioPath)
+			if err != nil {
+				return testResults, err
+			}
+			cases = testparser.Parse(stdioBytes)
+		}
+		testResult.Cases = cases
+
 		testResult.StartTime = time.UnixMilli(suiteResult.StartTime)
 		testResult.EndTime = time.UnixMilli(suiteResult.StartTime + suiteResult.DurationMilliseconds)
 		testResults = append(testResults, testResult)

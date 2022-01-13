@@ -248,9 +248,8 @@ func TestFFXTester(t *testing.T) {
 			expectedResult: runtests.TestFailure,
 		},
 		{
-			name:           "run v2 tests with ssh if ffx not experimental",
+			name:           "parse stdio for test cases if not experimental",
 			runV2:          true,
-			sshRunErrs:     []error{nil},
 			expectedResult: runtests.TestSuccess,
 		},
 		{
@@ -332,19 +331,25 @@ func TestFFXTester(t *testing.T) {
 					t.Errorf("tester.Test got result: %s, want result: %s", testResult.Result, c.expectedResult)
 				}
 
-				if c.runV2 && c.experimental {
+				if c.runV2 {
 					if !ffx.ContainsCmd("test") {
 						t.Errorf("failed to call `ffx test`, called: %s", ffx.CmdsCalled)
 					}
-					expectedCaseStatus := testparser.Pass
-					if c.expectedResult != runtests.TestSuccess {
-						expectedCaseStatus = testparser.Fail
-					}
-					if len(testResult.Cases) != 1 {
-						t.Errorf("expected 1 test case, got %d", len(testResult.Cases))
+					if c.experimental {
+						expectedCaseStatus := testparser.Pass
+						if c.expectedResult != runtests.TestSuccess {
+							expectedCaseStatus = testparser.Fail
+						}
+						if len(testResult.Cases) != 1 {
+							t.Errorf("expected 1 test case, got %d", len(testResult.Cases))
+						} else {
+							if testResult.Cases[0].Status != expectedCaseStatus {
+								t.Errorf("test case has status: %s, want: %s", testResult.Cases[0].Status, expectedCaseStatus)
+							}
+						}
 					} else {
-						if testResult.Cases[0].Status != expectedCaseStatus {
-							t.Errorf("test case has status: %s, want: %s", testResult.Cases[0].Status, expectedCaseStatus)
+						if len(testResult.Cases) != 0 {
+							t.Errorf("unexpectedly parsed out %d test cases", len(testResult.Cases))
 						}
 					}
 				} else {

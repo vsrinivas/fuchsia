@@ -179,7 +179,7 @@ func TestBuild(t *testing.T) {
 		{
 			name: "Test environment variables",
 			cmdBuilder: &NsJailCmdBuilder{
-				Bin:     "/path/to/nsjail",
+				Bin: "/path/to/nsjail",
 				Env: []string{"TEST=test"},
 			},
 			subcmd: []string{"/foo/bar"},

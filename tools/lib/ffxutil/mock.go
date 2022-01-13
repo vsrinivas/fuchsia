@@ -39,6 +39,13 @@ func (f *MockFFXInstance) Test(_ context.Context, tests []TestDef, outDir string
 	}
 	var suites []suiteEntry
 	for i, test := range tests {
+		relTestDir := fmt.Sprintf("test%d", i)
+		if err := os.Mkdir(filepath.Join(outDir, relTestDir), os.ModePerm); err != nil {
+			return nil, err
+		}
+		if err := ioutil.WriteFile(filepath.Join(outDir, relTestDir, "report.txt"), []byte("stdio"), os.ModePerm); err != nil {
+			return nil, err
+		}
 		suite := suiteEntry{fmt.Sprintf("summary%d.json", i)}
 		summaryFile := filepath.Join(outDir, suite.Summary)
 		fmt.Println("writing to ", summaryFile)
@@ -55,6 +62,11 @@ func (f *MockFFXInstance) Test(_ context.Context, tests []TestDef, outDir string
 			},
 			StartTime:            time.Now().UnixMilli(),
 			DurationMilliseconds: 1000,
+			Artifacts: map[string]ArtifactMetadata{
+				"report.txt": {
+					ArtifactType: ReportType,
+				}},
+			ArtifactDir: relTestDir,
 		})
 		if err != nil {
 			return nil, err
