@@ -444,7 +444,6 @@ type Example = table {
 
 )FIDL");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrMaxOrdinalNotTable);
-  EXPECT_TRUE(library.errors()[0]->span.has_value());
 }
 
 TEST(TableTests, BadMaxOrdinalNotTableNotPrimitive) {
@@ -522,7 +521,6 @@ type Example = table {
 
 )FIDL");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrMaxOrdinalNotTable);
-  EXPECT_TRUE(library.errors()[0]->span.has_value());
 }
 
 TEST(TableTests, BadTooManyOrdinals) {
@@ -603,7 +601,6 @@ type Example = table {
 
 )FIDL");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrTooManyTableOrdinals);
-  EXPECT_TRUE(library.errors()[0]->span.has_value());
 }
 
 }  // namespace

@@ -114,20 +114,12 @@ std::vector<Diagnostic*> Reporter::Diagnostics() const {
 
   // Sort by file > position > kind (errors then warnings) > message.
   sort(diagnostics.begin(), diagnostics.end(), [](Diagnostic* a, Diagnostic* b) -> bool {
-    if (a->span && b->span) {
-      // SourceSpan overloads the < operator to compare by filename, then
-      // start position, then end position.
-      if (a->span < b->span)
-        return true;
-      if (b->span < a->span)
-        return false;
-    } else {
-      // Sort errors without spans first.
-      if (b->span)
-        return true;
-      if (a->span)
-        return false;
-    }
+    // SourceSpan overloads the < operator to compare by filename, then
+    // start position, then end position.
+    if (a->span < b->span)
+      return true;
+    if (b->span < a->span)
+      return false;
 
     // If neither diagnostic had a span, or if their spans were ==, sort
     // by kind (errors first) and then message.
@@ -144,7 +136,7 @@ std::vector<Diagnostic*> Reporter::Diagnostics() const {
 void Reporter::PrintReports(bool enable_color) const {
   const auto diags = Diagnostics();
   for (const auto& diag : diags) {
-    size_t squiggle_size = diag->span ? diag->span->data().size() : 0;
+    size_t squiggle_size = diag->span.data().size();
     std::string qualifier = diag->kind == DiagnosticKind::kError ? "error" : "warning";
     auto msg = Format(qualifier, diag->span, diag->msg, enable_color, squiggle_size);
     fprintf(stderr, "%s\n", msg.c_str());

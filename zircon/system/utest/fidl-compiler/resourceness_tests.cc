@@ -6,6 +6,7 @@
 #include <fidl/lexer.h>
 #include <fidl/parser.h>
 #include <fidl/source_file.h>
+
 #include <zxtest/zxtest.h>
 
 #include "error_test.h"
@@ -85,13 +86,13 @@ type Three = resource resource resource struct {}; // line 6
   const auto& errors = library.errors();
   ASSERT_EQ(errors.size(), 3);
   ASSERT_ERR(errors[0], fidl::ErrDuplicateModifier);
-  EXPECT_EQ(errors[0]->span->position().line, 5);
+  EXPECT_EQ(errors[0]->span.position().line, 5);
   ASSERT_SUBSTR(errors[0]->msg.c_str(), "resource");
   ASSERT_ERR(errors[1], fidl::ErrDuplicateModifier);
-  EXPECT_EQ(errors[1]->span->position().line, 6);
+  EXPECT_EQ(errors[1]->span.position().line, 6);
   ASSERT_SUBSTR(errors[1]->msg.c_str(), "resource");
   ASSERT_ERR(errors[2], fidl::ErrDuplicateModifier);
-  EXPECT_EQ(errors[2]->span->position().line, 6);
+  EXPECT_EQ(errors[2]->span.position().line, 6);
   ASSERT_SUBSTR(errors[2]->msg.c_str(), "resource");
 }
 

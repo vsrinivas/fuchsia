@@ -87,7 +87,6 @@ type MyStruct = struct {
 )FIDL");
   ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrMismatchedNameTypeAssignment,
                                       fidl::ErrCouldNotResolveMemberDefault);
-  EXPECT_TRUE(library.errors()[0]->span.has_value());
 }
 
 TEST(StructsTests, BadDefaultValuePrimitiveInEnum) {
@@ -146,7 +145,6 @@ type MyStruct = struct {
 )FIDL");
   ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrMismatchedNameTypeAssignment,
                                       fidl::ErrCouldNotResolveMemberDefault);
-  EXPECT_TRUE(library.errors()[0]->span.has_value());
 }
 
 TEST(StructsTests, BadDefaultValuePrimitiveInBits) {
@@ -235,7 +233,6 @@ type Yang = struct {
 };
 )FIDL");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrIncludeCycle);
-  EXPECT_TRUE(library.errors()[0]->span.has_value());
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "struct Yang -> struct Yin -> struct Yang");
 }
 
@@ -248,7 +245,6 @@ type MySelf = struct {
 };
 )FIDL");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrIncludeCycle);
-  EXPECT_TRUE(library.errors()[0]->span.has_value());
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "struct MySelf -> struct MySelf");
 }
 
@@ -269,7 +265,6 @@ type Leaf = struct {
 };
 )FIDL");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrIncludeCycle);
-  EXPECT_TRUE(library.errors()[0]->span.has_value());
   // Leaf sorts before either Yin or Yang, so the cycle finder in sort_step.cc
   // starts there, which leads it to yin before yang.
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "struct Yin -> struct Yang -> struct Yin");
@@ -293,7 +288,6 @@ type Leaf = struct {
 };
 )FIDL");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrIncludeCycle);
-  EXPECT_TRUE(library.errors()[0]->span.has_value());
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "struct Yang -> struct Yin -> struct Yang");
 }
 
@@ -315,7 +309,6 @@ type Intersection = struct {
 };
 )FIDL");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrIncludeCycle);
-  EXPECT_TRUE(library.errors()[0]->span.has_value());
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(),
                 "struct Intersection -> struct Yang -> struct Intersection");
 }
@@ -361,7 +354,6 @@ TEST(StructsTests, BadTypeCannotBeBoxed) {
     std::string fidl_library = "library example;\nusing zx;\n\n" + definition + "\n";
     auto library = WithLibraryZx(fidl_library);
     ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrCannotBeBoxed);
-    EXPECT_TRUE(library.errors()[0]->span.has_value());
   }
 }
 

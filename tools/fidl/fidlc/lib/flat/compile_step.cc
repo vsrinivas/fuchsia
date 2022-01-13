@@ -1433,7 +1433,6 @@ bool CompileStep::ValidateMembers(DeclType* decl, MemberValidator<MemberType> va
 
     auto err = validator(value, member.attributes.get(), member.name);
     if (err) {
-      assert(err->span.has_value());
       Report(std::move(err));
     }
   }

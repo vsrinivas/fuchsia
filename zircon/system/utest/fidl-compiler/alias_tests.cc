@@ -114,7 +114,6 @@ type Message = struct {
 };
 )FIDL");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrIncludeCycle);
-  EXPECT_TRUE(library.errors()[0]->span.has_value());
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "alias uint32 -> alias uint32");
 }
 
@@ -404,7 +403,6 @@ type TheStruct = struct {
 )FIDL");
 
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrIncludeCycle);
-  EXPECT_TRUE(library.errors()[0]->span.has_value());
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(),
                 "alias TheAlias -> struct TheStruct -> alias TheAlias");
 

@@ -6,6 +6,7 @@
 #include <fidl/lexer.h>
 #include <fidl/parser.h>
 #include <fidl/source_file.h>
+
 #include <zxtest/zxtest.h>
 
 #include "error_test.h"
@@ -26,13 +27,13 @@ type Three = strict strict strict union { 1: b bool; }; // line 6
   const auto& errors = library.errors();
   ASSERT_EQ(errors.size(), 3);
   ASSERT_ERR(errors[0], fidl::ErrDuplicateModifier);
-  EXPECT_EQ(errors[0]->span->position().line, 5);
+  EXPECT_EQ(errors[0]->span.position().line, 5);
   ASSERT_SUBSTR(errors[0]->msg.c_str(), "strict");
   ASSERT_ERR(errors[1], fidl::ErrDuplicateModifier);
-  EXPECT_EQ(errors[1]->span->position().line, 6);
+  EXPECT_EQ(errors[1]->span.position().line, 6);
   ASSERT_SUBSTR(errors[1]->msg.c_str(), "strict");
   ASSERT_ERR(errors[2], fidl::ErrDuplicateModifier);
-  EXPECT_EQ(errors[2]->span->position().line, 6);
+  EXPECT_EQ(errors[2]->span.position().line, 6);
   ASSERT_SUBSTR(errors[2]->msg.c_str(), "strict");
 }
 
@@ -45,10 +46,10 @@ type FS = flexible strict union { 1: b bool; }; // line 5
   )FIDL");
   ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrConflictingModifier,
                                       fidl::ErrConflictingModifier);
-  EXPECT_EQ(library.errors()[0]->span->position().line, 4);
+  EXPECT_EQ(library.errors()[0]->span.position().line, 4);
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "strict");
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "flexible");
-  EXPECT_EQ(library.errors()[1]->span->position().line, 5);
+  EXPECT_EQ(library.errors()[1]->span.position().line, 5);
   ASSERT_SUBSTR(library.errors()[1]->msg.c_str(), "strict");
   ASSERT_SUBSTR(library.errors()[1]->msg.c_str(), "flexible");
 }

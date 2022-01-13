@@ -163,7 +163,6 @@ class Parser {
     assert(!ConsumedEOF() && "Already consumed EOF");
     std::unique_ptr<Diagnostic> error = p(last_token_);
     if (error) {
-      assert(error->span.has_value());
       switch (on_no_match) {
         case OnNoMatch::kReportAndConsume:
           reporter_->Report(std::move(error));

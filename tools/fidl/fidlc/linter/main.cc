@@ -52,8 +52,7 @@ fidl::Finding DiagnosticToFinding(const fidl::Diagnostic& diag) {
       check_id = "parse-warning";
       break;
   }
-  assert(diag.span.has_value() && "Parser diagnostics should always have a source span");
-  return fidl::Finding(diag.span.value(), check_id, diag.msg);
+  return fidl::Finding(diag.span, check_id, diag.msg);
 }
 
 void Lint(const fidl::SourceFile& source_file, fidl::Findings* findings,

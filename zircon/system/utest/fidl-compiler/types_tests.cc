@@ -561,7 +561,7 @@ type Foo = struct {
 )FIDL");
 
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrWrongNumberOfLayoutParameters);
-  EXPECT_EQ(library.errors()[0]->span.value().data(), "array");
+  EXPECT_EQ(library.errors()[0]->span.data(), "array");
 }
 
 TEST(NewSyntaxTests, BadNotEnoughParameters) {
@@ -574,7 +574,7 @@ type Foo = struct {
 )FIDL");
 
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrWrongNumberOfLayoutParameters);
-  EXPECT_EQ(library.errors()[0]->span.value().data(), "<8>");
+  EXPECT_EQ(library.errors()[0]->span.data(), "<8>");
 }
 
 TEST(NewSyntaxTests, BadTooManyConstraints) {
@@ -587,7 +587,7 @@ type Foo = struct {
 )FIDL");
 
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrTooManyConstraints);
-  EXPECT_EQ(library.errors()[0]->span.value().data(), "<1, 2, 3>");
+  EXPECT_EQ(library.errors()[0]->span.data(), "<1, 2, 3>");
 }
 
 TEST(NewSyntaxTests, BadParameterizedAnonymousLayout) {

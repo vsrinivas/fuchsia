@@ -56,16 +56,6 @@ class Reporter {
     return false;
   }
 
-  // TODO(fxbug.dev/89213): Remove, all failures should report spans. There is
-  // one error ErrIncludeCycle for which a major change is required to report
-  // with appropriate span information, but other cases should be relatively
-  // direct to improve.
-  template <typename... Args>
-  bool FailNoSpan(const ErrorDef<Args...>& def, const identity_t<Args>&... args) {
-    Report(Diagnostic::MakeError(def, std::nullopt, args...));
-    return false;
-  }
-
   template <typename... Args>
   void Warn(const WarningDef<Args...>& def, SourceSpan span, const identity_t<Args>&... args) {
     Report(Diagnostic::MakeWarning(def, span, args...));
@@ -125,12 +115,6 @@ class ReporterMixin {
   template <typename... Args>
   bool Fail(const ErrorDef<Args...>& def, SourceSpan span, const identity_t<Args>&... args) const {
     return reporter_->Fail(def, span, args...);
-  }
-
-  // TODO(fxbug.dev/89213): Remove.
-  template <typename... Args>
-  bool FailNoSpan(const ErrorDef<Args...>& def, const identity_t<Args>&... args) const {
-    return reporter_->FailNoSpan(def, args...);
   }
 
   template <typename... Args>

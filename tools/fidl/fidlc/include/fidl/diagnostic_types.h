@@ -149,8 +149,7 @@ enum class DiagnosticKind {
 // arguments. It also stores a SourceSpan indicating where the problem occurred.
 struct Diagnostic {
   template <typename... Args>
-  Diagnostic(DiagnosticKind kind, const DiagnosticDef& def, std::optional<SourceSpan> span,
-             const Args&... args)
+  Diagnostic(DiagnosticKind kind, const DiagnosticDef& def, SourceSpan span, const Args&... args)
       : kind(kind), def(def), span(span), msg(internal::FormatDiagnostic(def.msg, args...)) {}
   Diagnostic(const Diagnostic&) = delete;
 
@@ -159,22 +158,20 @@ struct Diagnostic {
   // functions because it doesn't have to try every constructor.
 
   template <typename... Args>
-  static std::unique_ptr<Diagnostic> MakeError(const ErrorDef<Args...>& def,
-                                               std::optional<SourceSpan> span,
+  static std::unique_ptr<Diagnostic> MakeError(const ErrorDef<Args...>& def, SourceSpan span,
                                                const identity_t<Args>&... args) {
     return std::make_unique<Diagnostic>(DiagnosticKind::kError, def, span, args...);
   }
 
   template <typename... Args>
-  static std::unique_ptr<Diagnostic> MakeWarning(const WarningDef<Args...>& def,
-                                                 std::optional<SourceSpan> span,
+  static std::unique_ptr<Diagnostic> MakeWarning(const WarningDef<Args...>& def, SourceSpan span,
                                                  const identity_t<Args>&... args) {
     return std::make_unique<Diagnostic>(DiagnosticKind::kWarning, def, span, args...);
   }
 
   DiagnosticKind kind;
   const DiagnosticDef& def;
-  std::optional<SourceSpan> span;
+  SourceSpan span;
   std::string msg;
 };
 

@@ -197,7 +197,6 @@ using dependent; // duplicated
                       &shared);
   ASSERT_TRUE(library.AddDependentLibrary(std::move(dependency)));
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrDuplicateLibraryImport);
-  EXPECT_TRUE(library.errors()[0]->span.has_value());
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "dependent");
 }
 
@@ -218,7 +217,6 @@ using dependent; // duplicated
                       &shared);
   ASSERT_TRUE(library.AddDependentLibrary(std::move(dependency)));
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrDuplicateLibraryImport);
-  EXPECT_TRUE(library.errors()[0]->span.has_value());
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "dependent");
 }
 
@@ -239,7 +237,6 @@ using dependent as alias; // duplicated
                       &shared);
   ASSERT_TRUE(library.AddDependentLibrary(std::move(dependency)));
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrDuplicateLibraryImport);
-  EXPECT_TRUE(library.errors()[0]->span.has_value());
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "dependent");
 }
 
@@ -260,7 +257,6 @@ using dependent as alias; // duplicated
                       &shared);
   ASSERT_TRUE(library.AddDependentLibrary(std::move(dependency)));
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrDuplicateLibraryImport);
-  EXPECT_TRUE(library.errors()[0]->span.has_value());
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "dependent");
 }
 
@@ -281,7 +277,6 @@ using dependent as alias2; // duplicated
                       &shared);
   ASSERT_TRUE(library.AddDependentLibrary(std::move(dependency)));
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrDuplicateLibraryImport);
-  EXPECT_TRUE(library.errors()[0]->span.has_value());
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "dependent");
 }
 
@@ -307,7 +302,6 @@ using dependent2 as dependent1; // conflict
   ASSERT_TRUE(library.AddDependentLibrary(std::move(dependency1)));
   ASSERT_TRUE(library.AddDependentLibrary(std::move(dependency2)));
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrConflictingLibraryImportAlias);
-  EXPECT_TRUE(library.errors()[0]->span.has_value());
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "dependent2");
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "dependent1");
 }
@@ -334,7 +328,6 @@ using dependent2; // conflict
   ASSERT_TRUE(library.AddDependentLibrary(std::move(dependency1)));
   ASSERT_TRUE(library.AddDependentLibrary(std::move(dependency2)));
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrConflictingLibraryImport);
-  EXPECT_TRUE(library.errors()[0]->span.has_value());
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "dependent2");
 }
 
@@ -360,7 +353,6 @@ using dependent2 as foo; // conflict
   ASSERT_TRUE(library.AddDependentLibrary(std::move(dependency1)));
   ASSERT_TRUE(library.AddDependentLibrary(std::move(dependency2)));
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrConflictingLibraryImportAlias);
-  EXPECT_TRUE(library.errors()[0]->span.has_value());
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "dependent2");
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "foo");
 }

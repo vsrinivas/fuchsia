@@ -17,8 +17,7 @@ void DiagnosticsJson::Generate(const Diagnostic* diagnostic) {
     GenerateObjectMember("category", "fidlc/" + category, Position::kFirst);
 
     GenerateObjectMember("message", diagnostic->msg);
-    if (diagnostic->span)
-      Generate(diagnostic->span.value());
+    Generate(diagnostic->span);
   });
 }
 

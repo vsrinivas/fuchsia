@@ -175,7 +175,6 @@ protocol Narcisse {
 
 )FIDL");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrIncludeCycle);
-  EXPECT_TRUE(library.errors()[0]->span.has_value());
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "protocol Narcisse -> protocol Narcisse");
 }
 
@@ -192,7 +191,6 @@ protocol Yang {
 };
 )FIDL");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrIncludeCycle);
-  EXPECT_TRUE(library.errors()[0]->span.has_value());
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "protocol Yang -> protocol Yin -> protocol Yang");
 }
 
