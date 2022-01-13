@@ -20,10 +20,6 @@ import("//build/rust/rustc_binary.gni")
 #   base_packages (required):
 #     [list of labels] base_packages forwarded to assemble_system(target_name).
 #
-#   repository_config_files (optional):
-#     [list of labels] The repository configurations for pkg-resolver, to be
-#     declared as config_data placed in pkg-resolver's repositories directory.
-#
 #   update_version_file (required):
 #     [string] The file used to designate update version in the assembly's
 #     update package.
@@ -33,10 +29,6 @@ import("//build/rust/rustc_binary.gni")
 #   ${target_name}:
 #     The assemble_system(target_name) { ... } used as a basis for other
 #     targets.
-#
-#   ${target_name}_repository_config:
-#     The pkg-resolver repository configuration described by
-#     repository_config_files.
 #
 #   ${target_name}_update_package:
 #     The update package for the assembled system.
@@ -157,25 +149,12 @@ template("assemble_security_pkg_test_system") {
     package_name = "pkgfs"
   }
 
-  assembly_base_packages = [ ":${labels.empty_pkgfs}" ] + invoker.base_packages
-
-  # If explicit repository configurations for for pkg-resolver are defined, add
-  # them as config-data to base packages set.
-  if (defined(invoker.repository_config_files)) {
-    config_data(labels.repository_config) {
-      for_pkg = "pkg-resolver"
-      outputs = [ "repositories/{{source_file_part}}" ]
-      sources = invoker.repository_config_files
-    }
-    assembly_base_packages += [ ":${labels.repository_config}" ]
-  }
-
   # Main system assembly.
   assemble_system(labels.assembly) {
     testonly = true
     board_name = invoker.board_name
     bootfs_labels = []
-    base_packages = assembly_base_packages
+    base_packages = [ ":${labels.empty_pkgfs}" ] + invoker.base_packages
   }
 
   # Construct an update package for the system assembly.
