@@ -227,7 +227,7 @@ async fn main_inner_async(startup_time: Instant, args: Args) -> Result<(), Error
     let resolver_service_inspect_state = Arc::new(ResolverServiceInspectState::from_node(
         inspector.root().create_child("resolver_service"),
     ));
-    let (package_fetch_queue, package_fetcher) = resolver_service::make_package_fetch_queue(
+    let (package_fetch_queue, package_fetcher) = resolver_service::PackageFetcher::new(
         pkg_cache,
         Arc::clone(&base_package_index),
         Arc::clone(&system_cache_list),

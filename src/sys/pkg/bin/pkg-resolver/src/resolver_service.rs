@@ -39,43 +39,63 @@ use {
 mod inspect;
 pub use inspect::ResolverService as ResolverServiceInspectState;
 
-pub type PackageFetcher =
-    queue::WorkSender<PkgUrl, (), Result<PackageDirectory, pkg::ResolveError>>;
+/// A clonable handle to the package fetch queue.  When all clones of
+/// [`PackageFetcher`] are dropped, the queue will resolve all remaining
+/// packages and terminate its output stream.
+#[derive(Clone)]
+pub struct PackageFetcher(
+    queue::WorkSender<PkgUrl, (), Result<PackageDirectory, pkg::ResolveError>>,
+);
 
-pub fn make_package_fetch_queue(
-    cache: pkg::cache::Client,
-    base_package_index: Arc<BasePackageIndex>,
-    system_cache_list: Arc<CachePackages>,
-    repo_manager: Arc<AsyncRwLock<RepositoryManager>>,
-    rewriter: Arc<AsyncRwLock<RewriteManager>>,
-    blob_fetcher: BlobFetcher,
-    max_concurrency: usize,
-    inspect: Arc<ResolverServiceInspectState>,
-) -> (impl Future<Output = ()>, PackageFetcher) {
-    let (package_fetch_queue, package_fetcher) =
-        queue::work_queue(max_concurrency, move |url: PkgUrl, _: ()| {
-            let cache = cache.clone();
-            let base_package_index = Arc::clone(&base_package_index);
-            let system_cache_list = Arc::clone(&system_cache_list);
-            let repo_manager = Arc::clone(&repo_manager);
-            let rewriter = Arc::clone(&rewriter);
-            let blob_fetcher = blob_fetcher.clone();
-            let inspect = Arc::clone(&inspect);
-            async move {
-                Ok(package_from_base_or_repo_or_cache(
-                    &repo_manager,
-                    &rewriter,
-                    &base_package_index,
-                    &system_cache_list,
-                    &url,
-                    cache,
-                    blob_fetcher,
-                    &inspect,
-                )
-                .await?)
-            }
-        });
-    (package_fetch_queue.into_future(), package_fetcher)
+impl PackageFetcher {
+    /// Creates an unbounded queue that will resolve up to `max_concurrency`
+    /// packages at once.
+    pub fn new(
+        cache: pkg::cache::Client,
+        base_package_index: Arc<BasePackageIndex>,
+        system_cache_list: Arc<CachePackages>,
+        repo_manager: Arc<AsyncRwLock<RepositoryManager>>,
+        rewriter: Arc<AsyncRwLock<RewriteManager>>,
+        blob_fetcher: BlobFetcher,
+        max_concurrency: usize,
+        inspect: Arc<ResolverServiceInspectState>,
+    ) -> (impl Future<Output = ()>, PackageFetcher) {
+        let (package_fetch_queue, package_fetcher) =
+            queue::work_queue(max_concurrency, move |url: PkgUrl, _: ()| {
+                let cache = cache.clone();
+                let base_package_index = Arc::clone(&base_package_index);
+                let system_cache_list = Arc::clone(&system_cache_list);
+                let repo_manager = Arc::clone(&repo_manager);
+                let rewriter = Arc::clone(&rewriter);
+                let blob_fetcher = blob_fetcher.clone();
+                let inspect = Arc::clone(&inspect);
+                async move {
+                    Ok(package_from_base_or_repo_or_cache(
+                        &repo_manager,
+                        &rewriter,
+                        &base_package_index,
+                        &system_cache_list,
+                        &url,
+                        cache,
+                        blob_fetcher,
+                        &inspect,
+                    )
+                    .await?)
+                }
+            });
+        (package_fetch_queue.into_future(), PackageFetcher(package_fetcher))
+    }
+
+    /// Enqueue the given package to be resolved, or attach to an existing
+    /// resolution of the same URL.
+    pub fn push(
+        &self,
+        key: PkgUrl,
+        context: (),
+    ) -> impl Future<Output = Result<Result<PackageDirectory, pkg::ResolveError>, queue::Closed>>
+    {
+        self.0.push(key, context)
+    }
 }
 
 pub async fn run_resolver_service(
