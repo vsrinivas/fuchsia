@@ -343,10 +343,7 @@ TEST_F(InputReportReaderTests, CloseReaderWithOutstandingRead) {
   // Queue a read.
   reader->ReadInputReports(
       [&](fidl::WireUnownedResult<fuchsia_input_report::InputReportsReader::ReadInputReports>&
-              result) {
-        ASSERT_STATUS(ZX_ERR_CANCELED, result.status());
-        ASSERT_EQ(fidl::Reason::kUnbind, result.reason());
-      });
+              result) { ASSERT_TRUE(result.is_canceled()); });
 
   loop.RunUntilIdle();
 
