@@ -1,0 +1,8 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+declare_args() {
+  # Whether or not to enable DFv2 for the current build.
+  enable_dfv2 = false
+}

@@ -2,6 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/drivers/arguments.gni")
+
 bootfs_only = true
 
 product_bootfs_labels = [
@@ -31,6 +33,13 @@ product_bootfs_labels += [
   "//products/kernel_cmdline:netsvc.all-features--true",
   "//products/kernel_cmdline:netsvc.disable--false",
 ]
+
+if (enable_dfv2) {
+  product_bootfs_labels += [
+    "//products/kernel_cmdline:driver_manager.root-driver--platform-bus.so",
+    "//products/kernel_cmdline:driver_manager.use_driver_framework_v2--true",
+  ]
+}
 
 # TODO(fxbug.dev/56988): We shouldn't need runtests, but right now it's used by profile
 # builders, so include it here until we remove that dependency.
