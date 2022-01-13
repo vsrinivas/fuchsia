@@ -12,9 +12,6 @@ namespace chunked_compression {
 // CompressionParams describes the configuration for compression.
 struct CompressionParams {
  public:
-  CompressionParams() = default;
-  ~CompressionParams() = default;
-
   // Validates the configured parameters.
   bool IsValid();
 
