@@ -23,7 +23,7 @@ use {
     fidl::prelude::*,
     fidl_fuchsia_io::{
         FileObject, FileRequest, FileRequestStream, NodeAttributes, NodeInfo, NodeMarker,
-        SeekOrigin, VmoFlags, Vmofile, INO_UNKNOWN, MODE_TYPE_FILE, OPEN_FLAG_DESCRIBE,
+        SeekOrigin, VmoFlags, Vmofile, MODE_TYPE_FILE, OPEN_FLAG_DESCRIBE,
         OPEN_FLAG_NODE_REFERENCE, OPEN_FLAG_TRUNCATE, OPEN_RIGHT_EXECUTABLE, OPEN_RIGHT_READABLE,
         OPEN_RIGHT_WRITABLE,
     },
@@ -644,7 +644,7 @@ impl VmoFileConnection {
                         self.file.is_writable(),
                         self.file.is_executable(),
                     ),
-                id: INO_UNKNOWN,
+                id: self.file.get_inode(),
                 content_size: size,
                 storage_size: capacity,
                 link_count: 1,

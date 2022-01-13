@@ -10,7 +10,7 @@ mod tests;
 
 use crate::directory::{immutable::connection, simple};
 
-use std::sync::Arc;
+use {fidl_fuchsia_io::INO_UNKNOWN, std::sync::Arc};
 
 pub type Connection = connection::io1::ImmutableConnection;
 pub type Simple = simple::Simple<Connection>;
@@ -24,5 +24,9 @@ pub type Simple = simple::Simple<Connection>;
 /// sense that a specific listing (and, potentially, the entries themselves) are generated only
 /// when requested.
 pub fn simple() -> Arc<Simple> {
-    Simple::new(false)
+    Simple::new(false, INO_UNKNOWN)
+}
+
+pub fn simple_with_inode(inode: u64) -> Arc<Simple> {
+    Simple::new(false, inode)
 }

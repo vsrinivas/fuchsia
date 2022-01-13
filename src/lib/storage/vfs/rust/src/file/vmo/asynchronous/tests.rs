@@ -27,8 +27,8 @@ use crate::{
 use super::test_utils::{
     simple_consume_vmo, simple_init_vmo, simple_init_vmo_resizable,
     simple_init_vmo_resizable_with_capacity, simple_init_vmo_with_capacity, simple_read_only,
-    simple_read_write, simple_read_write_resizeable, simple_write_only,
-    simple_write_only_with_capacity,
+    simple_read_only_with_inode, simple_read_write, simple_read_write_resizeable,
+    simple_write_only, simple_write_only_with_capacity,
 };
 
 use {
@@ -809,6 +809,29 @@ fn get_attr_read_only() {
         );
         assert_close!(proxy);
     });
+}
+
+#[test]
+fn get_attr_read_only_with_inode() {
+    run_server_client(
+        OPEN_RIGHT_READABLE,
+        simple_read_only_with_inode(b"Content", 12345),
+        |proxy| async move {
+            assert_get_attr!(
+                proxy,
+                NodeAttributes {
+                    mode: MODE_TYPE_FILE | S_IRUSR,
+                    id: 12345, // Custom inode was specified for this file.
+                    content_size: 7,
+                    storage_size: 100,
+                    link_count: 1,
+                    creation_time: 0,
+                    modification_time: 0,
+                }
+            );
+            assert_close!(proxy);
+        },
+    );
 }
 
 #[test]

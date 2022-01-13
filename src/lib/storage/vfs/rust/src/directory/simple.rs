@@ -32,7 +32,7 @@ use {
     async_trait::async_trait,
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_io::{
-        NodeAttributes, NodeMarker, DIRENT_TYPE_DIRECTORY, INO_UNKNOWN, MODE_TYPE_DIRECTORY,
+        NodeAttributes, NodeMarker, DIRENT_TYPE_DIRECTORY, MODE_TYPE_DIRECTORY,
         OPEN_FLAG_CREATE_IF_ABSENT,
     },
     fuchsia_async::Channel,
@@ -88,6 +88,9 @@ where
     // allows subtyping, but I do not know how to express the same constraint.
     mutable: bool,
 
+    // The inode for this directory. This should either be unique within this VFS, or INO_UNKNOWN.
+    inode: u64,
+
     _connection: PhantomData<Connection>,
 
     fs: SimpleFilesystem<Self>,
@@ -105,11 +108,12 @@ impl<Connection> Simple<Connection>
 where
     Connection: DerivedConnection + 'static,
 {
-    pub(super) fn new(mutable: bool) -> Arc<Self> {
+    pub(super) fn new(mutable: bool, inode: u64) -> Arc<Self> {
         Arc::new(Simple {
             inner: Mutex::new(Inner { entries: BTreeMap::new(), watchers: Watchers::new() }),
             mutable,
             _connection: PhantomData,
+            inode,
             fs: SimpleFilesystem::new(),
             not_found_handler: Mutex::new(None),
         })
@@ -239,7 +243,7 @@ where
     }
 
     fn entry_info(&self) -> EntryInfo {
-        EntryInfo::new(INO_UNKNOWN, DIRENT_TYPE_DIRECTORY)
+        EntryInfo::new(self.inode, DIRENT_TYPE_DIRECTORY)
     }
 }
 
@@ -259,7 +263,7 @@ where
 
         let (mut sink, entries_iter) = match pos {
             TraversalPosition::Start => {
-                match sink.append(&EntryInfo::new(INO_UNKNOWN, DIRENT_TYPE_DIRECTORY), ".") {
+                match sink.append(&EntryInfo::new(self.inode, DIRENT_TYPE_DIRECTORY), ".") {
                     AppendResult::Ok(sink) => {
                         // I wonder why, but rustc can not infer T in
                         //
@@ -337,7 +341,7 @@ where
         Ok(NodeAttributes {
             mode: MODE_TYPE_DIRECTORY
                 | rights_to_posix_mode_bits(/*r*/ true, /*w*/ true, /*x*/ true),
-            id: INO_UNKNOWN,
+            id: self.inode,
             content_size: 0,
             storage_size: 0,
             link_count: 1,

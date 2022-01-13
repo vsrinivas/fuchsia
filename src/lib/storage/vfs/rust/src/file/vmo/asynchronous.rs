@@ -111,7 +111,7 @@ where
     InitVmo: Fn() -> InitVmoFuture + Send + Sync + 'static,
     InitVmoFuture: Future<Output = InitVmoResult> + Send + 'static,
 {
-    VmoFile::new(init_vmo, None, true, false, false)
+    VmoFile::new(init_vmo, None, true, false, false, INO_UNKNOWN)
 }
 
 /// Creates a new read-exec-only `VmoFile` backed by the specified `init_vmo` handler. It is the
@@ -132,7 +132,7 @@ where
     InitVmo: Fn() -> InitVmoFuture + Send + Sync + 'static,
     InitVmoFuture: Future<Output = InitVmoResult> + Send + 'static,
 {
-    VmoFile::new(init_vmo, None, true, false, true)
+    VmoFile::new(init_vmo, None, true, false, true, INO_UNKNOWN)
 }
 
 fn init_vmo<'a>(content: Arc<[u8]>) -> impl Fn() -> BoxFuture<'a, InitVmoResult> + Send + Sync {
@@ -184,6 +184,22 @@ pub fn read_only_const(
 > {
     let content: Arc<[u8]> = bytes.to_vec().clone().into();
     read_only(init_vmo(content.clone()))
+}
+
+/// Creates new non-writeable `VmoFile` backed by the specified `init_vmo` and `consume_vmo`
+/// handlers. Prefer using the read_only, read_exec, etc. helper functions unless a specific
+/// inode is required.
+pub fn create_immutable_vmo_file<InitVmo, InitVmoFuture>(
+    init_vmo: InitVmo,
+    readable: bool,
+    executable: bool,
+    inode: u64,
+) -> Arc<VmoFile<InitVmo, InitVmoFuture, fn(Vmo) -> StubConsumeVmoRes, StubConsumeVmoRes>>
+where
+    InitVmo: Fn() -> InitVmoFuture + Send + Sync + 'static,
+    InitVmoFuture: Future<Output = InitVmoResult> + Send + 'static,
+{
+    VmoFile::new(init_vmo, None, readable, false, executable, inode)
 }
 
 /// Just like `simple_init_vmo`, but allows one to specify the capacity explicitly, instead of
@@ -258,7 +274,7 @@ where
     ConsumeVmo: Fn(Vmo) -> ConsumeVmoFuture + Send + Sync + 'static,
     ConsumeVmoFuture: Future<Output = ConsumeVmoResult> + Send + 'static,
 {
-    VmoFile::new(init_vmo, Some(consume_vmo), false, true, false)
+    VmoFile::new(init_vmo, Some(consume_vmo), false, true, false, INO_UNKNOWN)
 }
 
 /// Creates new `VmoFile` backed by the specified `init_vmo` and `consume_vmo` handlers.
@@ -284,7 +300,7 @@ where
     ConsumeVmo: Fn(Vmo) -> ConsumeVmoFuture + Send + Sync + 'static,
     ConsumeVmoFuture: Future<Output = ConsumeVmoResult> + Send + 'static,
 {
-    VmoFile::new(init_vmo, Some(consume_vmo), true, true, false)
+    VmoFile::new(init_vmo, Some(consume_vmo), true, true, false, INO_UNKNOWN)
 }
 
 /// Implementation of an asynchronous VMO-backed file in a virtual file system. This is created by
@@ -318,6 +334,10 @@ where
 
     /// Specifies if the file can be opened as executable.
     executable: bool,
+
+    /// Specifies the inode for this file. If you don't care or don't know, INO_UNKNOWN can be
+    /// used.
+    inode: u64,
 
     // File connections share state with the file itself.
     // TODO: It should be `pub(in super::connection)` but the compiler claims, `super` does not
@@ -366,6 +386,7 @@ where
         readable: bool,
         writable: bool,
         executable: bool,
+        inode: u64,
     ) -> Arc<Self> {
         // A writable file has to have a `consume_vmo` handler.  Otherwise we may lose updates
         // without realizing it.
@@ -377,6 +398,7 @@ where
             readable,
             writable,
             executable,
+            inode,
             state: Mutex::new(VmoFileState::Uninitialized),
         })
     }
@@ -422,6 +444,10 @@ where
     fn is_executable(&self) -> bool {
         return self.executable;
     }
+
+    fn get_inode(&self) -> u64 {
+        return self.inode;
+    }
 }
 
 impl<InitVmo, InitVmoFuture, ConsumeVmo, ConsumeVmoFuture> DirectoryEntry
@@ -449,6 +475,6 @@ where
     }
 
     fn entry_info(&self) -> EntryInfo {
-        EntryInfo::new(INO_UNKNOWN, DIRENT_TYPE_FILE)
+        EntryInfo::new(self.inode, DIRENT_TYPE_FILE)
     }
 }

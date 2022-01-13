@@ -19,7 +19,7 @@ use crate::{
     directory::{
         entry::{DirectoryEntry, EntryInfo},
         helper::DirectlyMutable,
-        immutable::Simple,
+        immutable::{simple_with_inode, Simple},
         test_utils::{run_server_client, DirentsSameInodeBuilder},
     },
     execution_scope::ExecutionScope,
@@ -73,6 +73,25 @@ fn empty_directory_get_attr() {
             NodeAttributes {
                 mode: MODE_TYPE_DIRECTORY | S_IRUSR | S_IWUSR | S_IXUSR,
                 id: INO_UNKNOWN,
+                content_size: 0,
+                storage_size: 0,
+                link_count: 1,
+                creation_time: 0,
+                modification_time: 0,
+            }
+        );
+        assert_close!(root);
+    });
+}
+
+#[test]
+fn empty_directory_with_custom_inode_get_attr() {
+    run_server_client(OPEN_RIGHT_READABLE, simple_with_inode(12345), |root| async move {
+        assert_get_attr!(
+            root,
+            NodeAttributes {
+                mode: MODE_TYPE_DIRECTORY | S_IRUSR | S_IWUSR | S_IXUSR,
+                id: 12345,
                 content_size: 0,
                 storage_size: 0,
                 link_count: 1,

@@ -16,7 +16,7 @@ use {
     fuchsia_runtime::{take_startup_handle, HandleInfo, HandleType},
     fuchsia_zircon::{self as zx, HandleBased, Resource},
     std::convert::TryFrom,
-    std::mem::swap,
+    std::mem::replace,
     std::sync::Arc,
     vfs::{
         directory::entry::DirectoryEntry, execution_scope::ExecutionScope,
@@ -42,6 +42,11 @@ const KERNEL_VMO_SUBDIRECTORY: &str = "kernel/";
 // TODO(fxb/91230): Move duplicating the vdso handle from bootsvc to userboot.
 const DEFAULT_VDSO_INDEX: u16 = 0;
 
+// Bootfs will sequentially number files and directories starting with this value.
+// This is a self contained immutable filesystem, so we only need to ensure that
+// there are no internal collisions.
+const FIRST_INODE_VALUE: u64 = 1;
+
 // Packages in bootfs can contain both executable and read-only files. For example,
 // 'pkg/my_package/bin' should be executable but 'pkg/my_package/foo' should not.
 const BOOTFS_PACKAGE_PREFIX: &str = "pkg";
@@ -52,6 +57,7 @@ const BOOTFS_EXECUTABLE_PACKAGE_DIRECTORIES: &[&str] = &["bin", "lib"];
 const BOOTFS_EXECUTABLE_DIRECTORIES: &[&str] = &["bin", "driver", "lib", "test"];
 
 pub struct BootfsSvc {
+    next_inode: u64,
     parser: BootfsParser,
     bootfs: zx::Vmo,
     tree_builder: TreeBuilder,
@@ -67,7 +73,18 @@ impl BootfsSvc {
         let bootfs_dup = bootfs.duplicate_handle(zx::Rights::SAME_RIGHTS)?.into();
         let parser = BootfsParser::create_from_vmo(bootfs_dup)?;
 
-        Ok(Self { parser, bootfs, tree_builder: TreeBuilder::empty_dir() })
+        Ok(Self {
+            next_inode: FIRST_INODE_VALUE,
+            parser,
+            bootfs,
+            tree_builder: TreeBuilder::empty_dir(),
+        })
+    }
+
+    fn get_next_inode(inode: &mut u64) -> u64 {
+        let next_inode = *inode;
+        *inode += 1;
+        next_inode
     }
 
     fn file_in_executable_directory(path: &Vec<&str>) -> bool {
@@ -99,6 +116,7 @@ impl BootfsSvc {
         offset: u64,
         size: u64,
         is_exec: bool,
+        inode: u64,
     ) -> Result<Arc<dyn DirectoryEntry>, Error> {
         // If this is a VMO with execution rights, passing zx::VmoChildOptions::NO_WRITE will
         // allow the child to also inherit execution rights. Without that flag execution
@@ -116,13 +134,14 @@ impl BootfsSvc {
                 )
             })?;
 
-        BootfsSvc::create_dir_entry(child, size, is_exec)
+        BootfsSvc::create_dir_entry(child, size, is_exec, inode)
     }
 
     fn create_dir_entry(
         vmo: zx::Vmo,
         size: u64,
         is_exec: bool,
+        inode: u64,
     ) -> Result<Arc<dyn DirectoryEntry>, Error> {
         let init_vmo = move || {
             // This lambda is not FnOnce, so the handle must be duplicated before use so that this
@@ -132,11 +151,7 @@ impl BootfsSvc {
             async move { Ok(vmo::NewVmo { vmo: vmo_dup, size, capacity: size }) }
         };
 
-        if is_exec {
-            Ok(vmo::read_exec(init_vmo))
-        } else {
-            Ok(vmo::read_only(init_vmo))
-        }
+        Ok(vmo::create_immutable_vmo_file(init_vmo, true, is_exec, inode))
     }
 
     /// Read configs from the parsed bootfs image before the filesystem has been fully initialized.
@@ -203,12 +218,12 @@ impl BootfsSvc {
 
                     let is_exec = BootfsSvc::file_in_executable_directory(&path_parts);
                     let vmo = if is_exec { &bootfs_exec } else { &self.bootfs };
-
                     match BootfsSvc::create_dir_entry_with_child(
                         vmo,
                         entry.offset,
                         entry.size,
                         is_exec,
+                        BootfsSvc::get_next_inode(&mut self.next_inode),
                     ) {
                         Ok(dir_entry) => {
                             self.tree_builder.add_entry(&path_parts, dir_entry).unwrap_or_else(
@@ -279,7 +294,12 @@ impl BootfsSvc {
             let info = vmo.info()?;
             let is_exec = (info.handle_rights & zx::Rights::EXECUTE) != zx::Rights::NONE;
 
-            match BootfsSvc::create_dir_entry(vmo, size, is_exec) {
+            match BootfsSvc::create_dir_entry(
+                vmo,
+                size,
+                is_exec,
+                BootfsSvc::get_next_inode(&mut self.next_inode),
+            ) {
                 Ok(dir_entry) => {
                     self.tree_builder.add_entry(&path_parts, dir_entry).unwrap_or_else(|error| {
                         println!(
@@ -300,10 +320,11 @@ impl BootfsSvc {
     pub fn create_and_bind_vfs(&mut self) -> Result<(), Error> {
         println!("[BootfsSvc] Finalizing rust bootfs service.");
 
-        let mut tree_builder: TreeBuilder = TreeBuilder::empty_dir();
-        swap(&mut tree_builder, &mut self.tree_builder);
+        let tree_builder = replace(&mut self.tree_builder, TreeBuilder::empty_dir());
 
-        let vfs = tree_builder.build();
+        let mut get_inode = |_| -> u64 { BootfsSvc::get_next_inode(&mut self.next_inode) };
+
+        let vfs = tree_builder.build_with_inode_generator(&mut get_inode);
         let (directory_proxy, directory_server_end) = create_proxy::<DirectoryMarker>()?;
         vfs.open(
             ExecutionScope::new(),

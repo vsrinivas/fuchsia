@@ -11,7 +11,7 @@
 use crate::directory::{entry::DirectoryEntry, helper::DirectlyMutable, immutable};
 
 use {
-    fidl_fuchsia_io::MAX_FILENAME,
+    fidl_fuchsia_io::{INO_UNKNOWN, MAX_FILENAME},
     itertools::Itertools,
     std::{collections::HashMap, fmt, marker::PhantomData, slice::Iter, sync::Arc},
     thiserror::Error,
@@ -256,17 +256,27 @@ impl TreeBuilder {
         }
     }
 
+    // Helper function for building a tree with a default inode generator. Use if you don't
+    // care about directory inode values.
+    pub fn build(self) -> Arc<immutable::Simple> {
+        let mut generator = |_| -> u64 { INO_UNKNOWN };
+        self.build_with_inode_generator(&mut generator)
+    }
+
     /// Consumes the builder, producing a tree with all the nodes provided to
     /// [`crate::directory::helper::DirectlyMutable::add_entry()`] at their respective locations.
     /// The tree itself is built using [`crate::directory::simple::Simple`]
     /// nodes, and the top level is a directory.
-    pub fn build(self) -> Arc<immutable::Simple> {
+    pub fn build_with_inode_generator(
+        self,
+        get_inode: &mut impl FnMut(String) -> u64,
+    ) -> Arc<immutable::Simple> {
         match self {
             TreeBuilder::Directory(mut entries) => {
-                let res = immutable::simple();
+                let res = immutable::simple_with_inode(get_inode(".".to_string()));
                 for (name, child) in entries.drain() {
                     res.clone()
-                        .add_entry(&name, child.build_dyn())
+                        .add_entry(&name, child.build_dyn(name.clone(), get_inode))
                         .map_err(|status| format!("Status: {}", status))
                         .expect(
                             "Internal error.  We have already checked all the entry names. \
@@ -281,13 +291,17 @@ impl TreeBuilder {
         }
     }
 
-    fn build_dyn(self) -> Arc<dyn DirectoryEntry> {
+    fn build_dyn(
+        self,
+        dir: String,
+        get_inode: &mut impl FnMut(String) -> u64,
+    ) -> Arc<dyn DirectoryEntry> {
         match self {
             TreeBuilder::Directory(mut entries) => {
-                let res = immutable::simple();
+                let res = immutable::simple_with_inode(get_inode(dir));
                 for (name, child) in entries.drain() {
                     res.clone()
-                        .add_entry(&name, child.build_dyn())
+                        .add_entry(&name, child.build_dyn(name.clone(), get_inode))
                         .map_err(|status| format!("Status: {}", status))
                         .expect(
                             "Internal error.  We have already checked all the entry names. \
@@ -356,7 +370,7 @@ mod tests {
 
     // Macros are exported into the root of the crate.
     use crate::{
-        assert_close, assert_event, assert_read, assert_read_dirents,
+        assert_close, assert_event, assert_get_attr_path, assert_read, assert_read_dirents,
         assert_read_dirents_one_listing, assert_read_dirents_path_one_listing,
         open_as_vmo_file_assert_content, open_get_directory_proxy_assert_ok, open_get_proxy_assert,
         open_get_vmo_file_proxy_assert_ok,
@@ -368,9 +382,80 @@ mod tests {
     };
 
     use {
-        fidl_fuchsia_io::{MAX_FILENAME, OPEN_FLAG_DESCRIBE, OPEN_RIGHT_READABLE},
+        fidl_fuchsia_io::{INO_UNKNOWN, MAX_FILENAME, OPEN_FLAG_DESCRIBE, OPEN_RIGHT_READABLE},
         vfs_macros::pseudo_directory,
     };
+
+    #[test]
+    fn vfs_with_custom_inodes() {
+        let mut tree = TreeBuilder::empty_dir();
+        tree.add_entry(&["a", "b", "file"], read_only_static(b"A content")).unwrap();
+        tree.add_entry(&["a", "c", "file"], read_only_static(b"B content")).unwrap();
+
+        let mut get_inode = |name: String| -> u64 {
+            match &name[..] {
+                "a" => 1,
+                "b" => 2,
+                "c" => 3,
+                _ => INO_UNKNOWN,
+            }
+        };
+        let root = tree.build_with_inode_generator(&mut get_inode);
+
+        run_server_client(OPEN_RIGHT_READABLE, root, |root| async move {
+            assert_get_attr_path!(
+                &root,
+                OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE,
+                "a",
+                fidl_fuchsia_io::NodeAttributes {
+                    mode: fidl_fuchsia_io::MODE_TYPE_DIRECTORY
+                        | crate::common::rights_to_posix_mode_bits(
+                            /*r*/ true, /*w*/ true, /*x*/ true
+                        ),
+                    id: 1,
+                    content_size: 0,
+                    storage_size: 0,
+                    link_count: 1,
+                    creation_time: 0,
+                    modification_time: 0,
+                }
+            );
+            assert_get_attr_path!(
+                &root,
+                OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE,
+                "a/b",
+                fidl_fuchsia_io::NodeAttributes {
+                    mode: fidl_fuchsia_io::MODE_TYPE_DIRECTORY
+                        | crate::common::rights_to_posix_mode_bits(
+                            /*r*/ true, /*w*/ true, /*x*/ true
+                        ),
+                    id: 2,
+                    content_size: 0,
+                    storage_size: 0,
+                    link_count: 1,
+                    creation_time: 0,
+                    modification_time: 0,
+                }
+            );
+            assert_get_attr_path!(
+                &root,
+                OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE,
+                "a/c",
+                fidl_fuchsia_io::NodeAttributes {
+                    mode: fidl_fuchsia_io::MODE_TYPE_DIRECTORY
+                        | crate::common::rights_to_posix_mode_bits(
+                            /*r*/ true, /*w*/ true, /*x*/ true
+                        ),
+                    id: 3,
+                    content_size: 0,
+                    storage_size: 0,
+                    link_count: 1,
+                    creation_time: 0,
+                    modification_time: 0,
+                }
+            );
+        });
+    }
 
     #[test]
     fn two_files() {

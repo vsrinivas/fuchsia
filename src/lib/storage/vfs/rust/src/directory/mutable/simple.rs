@@ -20,7 +20,7 @@ use crate::{
     path::Path,
 };
 
-use {fuchsia_zircon::Status, std::sync::Arc};
+use {fidl_fuchsia_io::INO_UNKNOWN, fuchsia_zircon::Status, std::sync::Arc};
 
 pub type Connection = connection::io1::MutableConnection;
 pub type Simple = simple::Simple<Connection>;
@@ -31,7 +31,7 @@ pub type Simple = simple::Simple<Connection>;
 /// [`crate::directory::helper::DirectlyMutable::remove_entry()`] methods.  These directories
 /// content can be modified by the client.  It uses [`Connection`] type for the connection objects.
 pub fn simple() -> Arc<Simple> {
-    Simple::new(true)
+    Simple::new(true, INO_UNKNOWN)
 }
 
 /// Creates an [`EntryConstructor`] that will insert empty mutable directories when asked to create

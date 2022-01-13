@@ -5,8 +5,8 @@
 //! Common utilities used by tests for the VMO backed files.
 
 use super::{
-    read_only, read_write, write_only, ConsumeVmoResult, InitVmoResult, NewVmo, StubConsumeVmoRes,
-    VmoFile,
+    create_immutable_vmo_file, read_only, read_write, write_only, ConsumeVmoResult, InitVmoResult,
+    NewVmo, StubConsumeVmoRes, VmoFile,
 };
 
 use {
@@ -110,6 +110,21 @@ pub fn simple_read_only(
     >,
 > {
     read_only(simple_init_vmo(content))
+}
+
+/// Similar to [`simple_read_only()`], but allows specifying an inode.
+pub fn simple_read_only_with_inode(
+    content: &[u8],
+    inode: u64,
+) -> Arc<
+    VmoFile<
+        impl Fn() -> BoxFuture<'static, InitVmoResult> + Send + Sync + 'static,
+        BoxFuture<'static, InitVmoResult>,
+        fn(Vmo) -> StubConsumeVmoRes,
+        StubConsumeVmoRes,
+    >,
+> {
+    create_immutable_vmo_file(simple_init_vmo(content), true, false, inode)
 }
 
 /// Possible errors for the [`assert_vmo_content()`] function.
