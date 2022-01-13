@@ -126,6 +126,5 @@ type StatusCode = strict enum : uint16 {
 };
 
 // LINT.ThenChange(
-//     //sdk/banjo/ddk.hw.wlan.ieee80211/ieee80211.fidl,
 //     //src/connectivity/wlan/lib/common/rust/src/mac/mgmt/status.rs
 // )

@@ -132,6 +132,5 @@ impl StatusCode {
 }
 
 // LINT.ThenChange(
-//     //sdk/banjo/ddk.hw.wlan.ieee80211/ieee80211.fidl,
 //     //sdk/fidl/fuchsia.wlan.ieee80211/status_code.fidl
 // )
