@@ -285,14 +285,17 @@ func (t *DeviceTarget) Start(ctx context.Context, images []bootserver.Image, arg
 	return nil
 }
 
-func (t *DeviceTarget) ramBoot(ctx context.Context, images []*bootserver.Image) error {
-	bootScript := ""
-	for _, img := range images {
-		if img.Name == "script_fastboot-boot-script" {
-			bootScript = img.Path
-			break
+func getImgByName(imgs []*bootserver.Image, name string) string {
+	for _, img := range imgs {
+		if img.Name == name {
+			return img.Path
 		}
 	}
+	return ""
+}
+
+func (t *DeviceTarget) ramBoot(ctx context.Context, images []*bootserver.Image) error {
+	bootScript := getImgByName(images, "script_fastboot-boot-script")
 	if bootScript == "" {
 		return errors.New("fastboot boot script not found")
 	}
@@ -302,31 +305,49 @@ func (t *DeviceTarget) ramBoot(ctx context.Context, images []*bootserver.Image) 
 	return cmd.Run()
 }
 
-func (t *DeviceTarget) flash(ctx context.Context, images []*bootserver.Image) error {
-	flashScript := ""
-	for _, img := range images {
-		if img.Name == "script_flash-script" {
-			flashScript = img.Path
-			break
-		}
+func (t *DeviceTarget) writePubKey() (string, error) {
+	pubkey, err := ioutil.TempFile("", "pubkey*")
+	if err != nil {
+		return "", err
 	}
+	defer pubkey.Close()
+
+	if _, err := pubkey.Write(ssh.MarshalAuthorizedKey(t.signers[0].PublicKey())); err != nil {
+		return "", err
+	}
+	return pubkey.Name(), nil
+}
+
+func (t *DeviceTarget) flash(ctx context.Context, images []*bootserver.Image) error {
+	var pubkey string
+	var err error
+	if len(t.signers) > 0 {
+		pubkey, err = t.writePubKey()
+		if err != nil {
+			return err
+		}
+		defer os.Remove(pubkey)
+	}
+
+	// TODO(fxbug.dev/91040): Remove experimental condition once stable.
+	if pubkey != "" && t.UseFFXExperimental() {
+		flashManifest := getImgByName(images, "manifest_flash-manifest")
+		if flashManifest == "" {
+			return errors.New("flash manifest not found")
+		}
+		t.ffx.List(ctx)
+		t.ffx.TargetWait(ctx)
+		return t.ffx.Flash(ctx, flashManifest, pubkey)
+	}
+
+	flashScript := getImgByName(images, "script_flash-script")
 	if flashScript == "" {
 		return errors.New("flash script not found")
 	}
 	// Write the public SSH key to disk if one is needed.
 	flashArgs := []string{"-s", t.config.FastbootSernum}
-	if len(t.signers) > 0 {
-		pubkey, err := ioutil.TempFile("", "pubkey*")
-		if err != nil {
-			return err
-		}
-		defer os.Remove(pubkey.Name())
-		defer pubkey.Close()
-
-		if _, err := pubkey.Write(ssh.MarshalAuthorizedKey(t.signers[0].PublicKey())); err != nil {
-			return err
-		}
-		flashArgs = append([]string{fmt.Sprintf("--ssh-key=%s", pubkey.Name())}, flashArgs...)
+	if pubkey != "" {
+		flashArgs = append([]string{fmt.Sprintf("--ssh-key=%s", pubkey)}, flashArgs...)
 	}
 
 	cmd := exec.CommandContext(ctx, flashScript, flashArgs...)

@@ -237,7 +237,13 @@ var (
 
 var ffxInstance = func(ctx context.Context, ffxPath, dir string, env []string, target, sshKey, outputDir string) (testrunner.FFXInstance, error) {
 	ffx, err := func() (testrunner.FFXInstance, error) {
-		ffx, err := ffxutil.NewFFXInstance(ffxPath, dir, env, target, sshKey, outputDir)
+		var ffx *ffxutil.FFXInstance
+		var err error
+		if configPath, ok := os.LookupEnv(botanistconstants.FFXConfigPathEnvKey); ok {
+			ffx = ffxutil.FFXInstanceWithConfig(ffxPath, dir, env, target, configPath)
+		} else {
+			ffx, err = ffxutil.NewFFXInstance(ffxPath, dir, env, target, sshKey, outputDir)
+		}
 		if ffx == nil {
 			// Return nil instead of ffx so that the returned FFXTester
 			// will be the nil interface instead of an interface holding
@@ -289,8 +295,12 @@ func execute(
 	)
 
 	if sshKeyFile != "" {
+		ffxPath, ok := os.LookupEnv(botanistconstants.FFXPathEnvKey)
+		if !ok {
+			ffxPath = flags.ffxPath
+		}
 		ffx, err := ffxInstance(
-			ctx, flags.ffxPath, flags.localWD, localEnv, os.Getenv(botanistconstants.NodenameEnvKey),
+			ctx, ffxPath, flags.localWD, localEnv, os.Getenv(botanistconstants.NodenameEnvKey),
 			sshKeyFile, outputs.OutDir)
 		if err != nil {
 			return err
@@ -302,7 +312,11 @@ func execute(
 			if err != nil {
 				return fmt.Errorf("failed to initialize fuchsia tester: %w", err)
 			}
-			ffxTester := testrunner.NewFFXTester(ffx, t, outputs.OutDir, flags.ffxExperimental)
+			ffxExperimental, err := strconv.ParseBool(os.Getenv(botanistconstants.FFXExperimentalEnvKey))
+			if err != nil {
+				ffxExperimental = flags.ffxExperimental
+			}
+			ffxTester := testrunner.NewFFXTester(ffx, t, outputs.OutDir, ffxExperimental)
 			defer func() {
 				// outputs.Record() moves output files to paths within the output directory
 				// specified by test name.

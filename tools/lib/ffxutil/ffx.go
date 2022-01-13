@@ -121,6 +121,11 @@ func (f *FFXInstance) Stop() error {
 	return err
 }
 
+// Flash flashes the target.
+func (f *FFXInstance) Flash(ctx context.Context, manifest, sshKey string) error {
+	return f.RunWithTarget(ctx, "target", "flash", "--ssh-key", sshKey, manifest)
+}
+
 // List lists all available targets.
 func (f *FFXInstance) List(ctx context.Context, args ...string) error {
 	return f.Run(ctx, append([]string{"target", "list"}, args...)...)

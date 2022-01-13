@@ -13,6 +13,7 @@ import (
 	"io/ioutil"
 	"net"
 	"os"
+	"path/filepath"
 	"strconv"
 	"time"
 
@@ -21,12 +22,14 @@ import (
 	"go.fuchsia.dev/fuchsia/tools/botanist/constants"
 	"go.fuchsia.dev/fuchsia/tools/botanist/targets"
 	"go.fuchsia.dev/fuchsia/tools/lib/environment"
+	"go.fuchsia.dev/fuchsia/tools/lib/ffxutil"
 	"go.fuchsia.dev/fuchsia/tools/lib/flagmisc"
 	"go.fuchsia.dev/fuchsia/tools/lib/logger"
 	"go.fuchsia.dev/fuchsia/tools/lib/serial"
 	"go.fuchsia.dev/fuchsia/tools/lib/subprocess"
 	"go.fuchsia.dev/fuchsia/tools/lib/syslog"
 	"go.fuchsia.dev/fuchsia/tools/net/sshutil"
+	testrunnerconstants "go.fuchsia.dev/fuchsia/tools/testing/testrunner/constants"
 
 	"github.com/google/subcommands"
 	"golang.org/x/sync/errgroup"
@@ -79,6 +82,15 @@ type target interface {
 
 	// Wait waits for the target to finish running.
 	Wait(context.Context) error
+
+	// SetFFX attaches an ffx instance to the target.
+	SetFFX(*targets.FFXInstance)
+
+	// UseFFX returns whether to enable using ffx.
+	UseFFX() bool
+
+	// FFXConfigPath returns the path to the ffx config.
+	FFXConfigPath() string
 }
 
 // RunCommand is a Command implementation for booting a device and running a
@@ -119,6 +131,12 @@ type RunCommand struct {
 	// botanist will spin up a package server to serve packages from this
 	// repository.
 	localRepo string
+
+	// The path to the ffx tool.
+	ffxPath string
+
+	// Whether to enable experimental ffx features.
+	ffxExperimental bool
 }
 
 // targetInfo is the schema for a JSON object used to communicate target
@@ -169,6 +187,8 @@ func (r *RunCommand) SetFlags(f *flag.FlagSet) {
 	f.StringVar(&r.repoURL, "repo", "", "URL at which to configure a package repository; if the placeholder of \"localhost\" will be resolved and scoped as appropriate")
 	f.StringVar(&r.blobURL, "blobs", "", "URL at which to serve a package repository's blobs; if the placeholder of \"localhost\" will be resolved and scoped as appropriate")
 	f.StringVar(&r.localRepo, "local-repo", "", "path to a local package repository; the repo and blobs flags are ignored when this is set")
+	f.StringVar(&r.ffxPath, "ffx", "", "Path to the ffx tool.")
+	f.BoolVar(&r.ffxExperimental, "ffx-experimental", false, "Whether to enable experimental ffx features. If -ffx is not set, this will have no effect.")
 }
 
 func (r *RunCommand) execute(ctx context.Context, args []string) error {
@@ -217,12 +237,26 @@ func (r *RunCommand) execute(ctx context.Context, args []string) error {
 	// This is the primary target that a command will be run against and that
 	// logs will be streamed from.
 	t0 := targetSlice[0]
+	ffx, err := ffxutil.NewFFXInstance(r.ffxPath, "", []string{}, t0.Nodename(), t0.SSHKey(),
+		filepath.Join(os.Getenv(testrunnerconstants.TestOutDirEnvKey), "ffx_outputs"))
+	if err != nil {
+		return err
+	}
+	if ffx != nil {
+		defer ffx.Stop()
+	}
 
-	// Start serial servers for all targets. Will no-op for targets that
-	// already have serial servers.
 	for _, t := range targetSlice {
+		// Start serial servers for all targets. Will no-op for targets that
+		// already have serial servers.
 		if err := t.StartSerialServer(); err != nil {
 			return err
+		}
+		// Attach an ffx instance for all targets. All ffx instances will use the same
+		// config and daemon, but run commands against its own specified target.
+		if ffx != nil {
+			ffxForTarget := ffxutil.FFXInstanceWithConfig(r.ffxPath, "", ffx.Config.Env(), t.Nodename(), ffx.ConfigPath)
+			t.SetFFX(&targets.FFXInstance{ffxForTarget, r.ffxExperimental})
 		}
 	}
 
@@ -408,6 +442,11 @@ func (r *RunCommand) runAgainstTarget(ctx context.Context, t target, args []stri
 		constants.NodenameEnvKey:      t.Nodename(),
 		constants.SerialSocketEnvKey:  t.SerialSocketPath(),
 		constants.TestbedConfigEnvKey: testbedConfig,
+	}
+	if t.UseFFX() {
+		subprocessEnv[constants.FFXPathEnvKey] = r.ffxPath
+		subprocessEnv[constants.FFXExperimentalEnvKey] = strconv.FormatBool(r.ffxExperimental)
+		subprocessEnv[constants.FFXConfigPathEnvKey] = t.FFXConfigPath()
 	}
 
 	// If |netboot| is true, then we assume that fuchsia is not provisioned

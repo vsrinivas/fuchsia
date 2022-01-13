@@ -23,4 +23,8 @@ const (
 	IPv6AddrEnvKey      = "FUCHSIA_IPV6_ADDR"
 	PkgSrvPortKey       = "FUCHSIA_PACKAGE_SERVER_PORT"
 	TestbedConfigEnvKey = "FUCHSIA_TESTBED_CONFIG"
+
+	FFXPathEnvKey         = "FUCHSIA_FFX_PATH"
+	FFXExperimentalEnvKey = "FUCHSIA_FFX_EXPERIMENTAL"
+	FFXConfigPathEnvKey   = "FUCHSIA_FFX_CONFIG_PATH"
 )

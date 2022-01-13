@@ -44,6 +44,7 @@ go_library("targets") {
     "//third_party/golibs:golang.org/x/crypto",
     "//third_party/golibs:golang.org/x/sync",
     "//tools/bootserver:bootserver_lib",
+    "//tools/lib/ffxutil",
     "//tools/lib/iomisc",
     "//tools/lib/logger",
     "//tools/lib/osmisc",
@@ -74,6 +75,7 @@ go_library("main") {
     "//tools/lib/environment",
     "//tools/lib/flagmisc",
     "//tools/testing/runtests",
+    "//tools/testing/testrunner:constants",
   ]
 }
 

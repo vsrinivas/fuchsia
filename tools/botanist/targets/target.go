@@ -22,6 +22,7 @@ import (
 
 	"go.fuchsia.dev/fuchsia/src/sys/pkg/lib/repo"
 	"go.fuchsia.dev/fuchsia/tools/botanist/constants"
+	"go.fuchsia.dev/fuchsia/tools/lib/ffxutil"
 	"go.fuchsia.dev/fuchsia/tools/lib/logger"
 	"go.fuchsia.dev/fuchsia/tools/lib/serial"
 	"go.fuchsia.dev/fuchsia/tools/lib/syslog"
@@ -32,6 +33,14 @@ const (
 	localhostPlaceholder = "localhost"
 	repoID               = "fuchsia-pkg://fuchsia.com"
 )
+
+// FFXInstance is a wrapper around ffxutil.FFXInstance with extra fields to
+// determine how botanist uses ffx.
+type FFXInstance struct {
+	*ffxutil.FFXInstance
+	// Experimental enables running experimental ffx features.
+	Experimental bool
+}
 
 // target is a generic Fuchsia instance.
 // It is not intended to be instantiated directly, but rather embedded into a
@@ -48,6 +57,8 @@ type target struct {
 	ipv4         net.IP
 	ipv6         *net.IPAddr
 	serialServer *serial.Server
+
+	ffx *FFXInstance
 }
 
 // newTarget creates a new generic Fuchsia target.
@@ -63,6 +74,32 @@ func newTarget(ctx context.Context, nodename, serialSocket string, sshKeys []str
 		sshKeys:      sshKeys,
 	}
 	return t, nil
+}
+
+// SetFFX attaches an FFXInstance to the target.
+func (t *target) SetFFX(ffx *FFXInstance) {
+	t.ffx = ffx
+}
+
+// UseFFX returns true if there is an FFXInstance associated with this target.
+// Use to enable stable ffx features.
+func (t *target) UseFFX() bool {
+	return t.ffx != nil && t.ffx.FFXInstance != nil
+}
+
+// UseFFXExperimental returns true if there is an FFXInstance associated with
+// this target and we're running in experimental mode.
+// Use to enable experimental ffx features.
+func (t *target) UseFFXExperimental() bool {
+	return t.UseFFX() && t.ffx.Experimental
+}
+
+// FFXConfigPath returns the path to the ffx config.
+func (t *target) FFXConfigPath() string {
+	if t.ffx != nil {
+		return t.ffx.ConfigPath
+	}
+	return ""
 }
 
 // StartSerialServer spawns a new serial server fo the given target.
