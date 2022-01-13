@@ -24,6 +24,7 @@ test("ftl-test") {
     "ndm_test.cc",
   ]
   deps = [
+    "//src/devices/block/drivers/ftl/tests:shared",
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gtest",
     "//zircon/system/ulib/ftl",

@@ -136,7 +136,7 @@ bool VolumeImpl::OnVolumeAdded(const XfsVol* ftl) {
   return owner_->OnVolumeAdded(ftl->page_size, ftl->num_pages);
 }
 
-std::string VolumeImpl::DiagnoseKnownIssues() {
+std::string VolumeImpl::DiagnoseKnownIssues() const {
   char* result = FtlnDiagnoseIssues(static_cast<FTLN>(vol_));
   if (result == nullptr) {
     return "";
@@ -146,6 +146,8 @@ std::string VolumeImpl::DiagnoseKnownIssues() {
   free(result);
   return result_copy;
 }
+
+void* VolumeImpl::GetInternalVolumeForTest() { return vol_; }
 
 bool VolumeImpl::Created() const { return name_; }
 

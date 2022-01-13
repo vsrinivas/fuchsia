@@ -12,6 +12,7 @@ namespace {
 constexpr uint8_t kWrittenFlag = 1 << 0;
 constexpr uint8_t kFailEccFlag = 1 << 1;
 constexpr uint8_t kBadBlockFlag = 1 << 2;
+constexpr uint8_t kUnsafeEccFlag = 1 << 3;
 
 // Technically, can be used to set / reset more than one flag at a time.
 void SetFlag(uint8_t flag, uint8_t* where) { *where = *where | flag; }
@@ -150,6 +151,7 @@ int NdmRamDriver::NandErase(uint32_t page_num) {
     memset(SpareData(page_num), 0xFF, options_.eb_size);
     SetWritten(page_num, false);
     SetFailEcc(page_num, false);
+    SetUnsafeEcc(page_num, false);
   } while (++page_num < end);
 
   return ftl::kNdmOk;
@@ -210,7 +212,7 @@ int NdmRamDriver::ReadPage(uint32_t page_num, uint8_t* data, uint8_t* spare) {
   }
 
   // Return an occasional kNdmUnsafeEcc.
-  if (ecc_error_interval_++ == test_options_.ecc_error_interval) {
+  if (ecc_error_interval_++ == test_options_.ecc_error_interval || UnsafeEcc(page_num)) {
     ecc_error_interval_ = 0;
     return ftl::kNdmUnsafeEcc;
   }
@@ -281,6 +283,10 @@ bool NdmRamDriver::Written(uint32_t page_num) { return IsFlagSet(kWrittenFlag, &
 
 bool NdmRamDriver::FailEcc(uint32_t page_num) { return IsFlagSet(kFailEccFlag, &flags_[page_num]); }
 
+bool NdmRamDriver::UnsafeEcc(uint32_t page_num) {
+  return IsFlagSet(kUnsafeEccFlag, &flags_[page_num]);
+}
+
 bool NdmRamDriver::BadBlock(uint32_t page_num) {
   return IsFlagSet(kBadBlockFlag, &flags_[page_num / PagesPerBlock()]);
 }
@@ -298,6 +304,14 @@ void NdmRamDriver::SetFailEcc(uint32_t page_num, bool value) {
     SetFlag(kFailEccFlag, &flags_[page_num]);
   } else {
     ClearFlag(kFailEccFlag, &flags_[page_num]);
+  }
+}
+
+void NdmRamDriver::SetUnsafeEcc(uint32_t page_num, bool value) {
+  if (value) {
+    SetFlag(kUnsafeEccFlag, &flags_[page_num]);
+  } else {
+    ClearFlag(kUnsafeEccFlag, &flags_[page_num]);
   }
 }
 
@@ -334,5 +348,6 @@ void NdmRamDriver::OnErasePowerFailure(uint64_t page_number) {
     memset(SpareData(page), 0xFF, options_.eb_size);
     SetWritten(page, true);
     SetFailEcc(page, false);
+    SetUnsafeEcc(page, false);
   }
 }

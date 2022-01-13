@@ -66,7 +66,8 @@ class __EXPORT Volume {
   // Removes the volume and re-attaches to it. This is roughly equivalent to
   // what a shutdown / restart would to in the real world (this functionality
   // is basically intended for testing). Returns an error string, or nullptr
-  // on success. Will synchronously call FtlInstance::OnVolumeAdded on success.
+  // on success. Does not Flush() on detach. Will synchronously call
+  // FtlInstance::OnVolumeAdded on success.
   virtual const char* ReAttach() = 0;
 
   // Synchronously Read or Write num_pages starting at first_page.
@@ -129,7 +130,12 @@ class __EXPORT VolumeImpl final : public Volume {
 
   // Returns empty string if no analysis is given, otherwise the string will
   // contain analysis of the FTL for known issues.
-  std::string DiagnoseKnownIssues();
+  std::string DiagnoseKnownIssues() const;
+
+  // Return an unowned pointer for the internal XfsVol. This supports inspecting and manipulating
+  // internal data while also providing the setup infrastructure that is used in the main code
+  // paths.
+  void* GetInternalVolumeForTest();
 
   DISALLOW_COPY_ASSIGN_AND_MOVE(VolumeImpl);
 

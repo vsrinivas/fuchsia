@@ -65,6 +65,18 @@ class NdmRamDriver final : public ftl::NdmBaseDriver {
     power_failure_triggered_ = false;
   }
 
+  // Access flags for a given page.
+  bool FailEcc(uint32_t page_num);
+  bool UnsafeEcc(uint32_t page_num);
+  bool BadBlock(uint32_t page_num);
+  void SetFailEcc(uint32_t page_num, bool value);
+  void SetUnsafeEcc(uint32_t page_num, bool value);
+  void SetBadBlock(uint32_t page_num, bool value);
+
+  // Access the main data and spare area for a given page.
+  uint8_t* MainData(uint32_t page_num);
+  uint8_t* SpareData(uint32_t page_num);
+
   // NdmDriver interface:
   const char* Init() final;
   const char* Attach(const ftl::Volume* ftl_volume) final;
@@ -93,17 +105,9 @@ class NdmRamDriver final : public ftl::NdmBaseDriver {
   void OnWritePowerFailure(uint64_t page_number, const uint8_t* data, const uint8_t* spare);
   void OnErasePowerFailure(uint64_t page_number);
 
-  // Access the main data and spare area for a given page.
-  uint8_t* MainData(uint32_t page_num);
-  uint8_t* SpareData(uint32_t page_num);
-
   // Access flags for a given page.
   bool Written(uint32_t page_num);
-  bool FailEcc(uint32_t page_num);
-  bool BadBlock(uint32_t page_num);
   void SetWritten(uint32_t page_num, bool value);
-  void SetFailEcc(uint32_t page_num, bool value);
-  void SetBadBlock(uint32_t page_num, bool value);
 
   uint32_t PagesPerBlock() const;
 
@@ -121,7 +125,7 @@ class NdmRamDriver final : public ftl::NdmBaseDriver {
   // Marks that power failure happened.
   bool power_failure_triggered_ = false;
 
-  // Controls simulation of bad blocks.
+  // Controls simulation of power failures.
   int power_failure_delay_ = 0;
 
   uint32_t num_bad_blocks_ = 0;
