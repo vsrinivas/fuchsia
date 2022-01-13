@@ -917,21 +917,27 @@ impl Telemetry {
             }
             TelemetryEvent::Disconnected { track_subsequent_downtime, info } => {
                 self.log_disconnect_event_inspect(&info);
-
                 self.stats_logger.log_stat(StatOp::AddDisconnectCount).await;
-                self.stats_logger.log_disconnect_cobalt_metrics(&info).await;
 
                 let duration = now - self.last_checked_connection_state;
-                if let ConnectionState::Connected(state) = &self.connection_state {
-                    self.stats_logger.queue_stat_op(StatOp::AddConnectedDuration(duration));
-                    // Log device connected to AP metrics right now in case we have not logged it
-                    // to Cobalt yet today.
-                    self.stats_logger
-                        .log_device_connected_cobalt_metrics(
-                            state.multiple_bss_candidates,
-                            &state.latest_ap_state,
-                        )
-                        .await;
+                match &self.connection_state {
+                    ConnectionState::Connected(state) => {
+                        self.stats_logger
+                            .log_disconnect_cobalt_metrics(&info, state.multiple_bss_candidates)
+                            .await;
+                        self.stats_logger.queue_stat_op(StatOp::AddConnectedDuration(duration));
+                        // Log device connected to AP metrics right now in case we have not logged it
+                        // to Cobalt yet today.
+                        self.stats_logger
+                            .log_device_connected_cobalt_metrics(
+                                state.multiple_bss_candidates,
+                                &state.latest_ap_state,
+                            )
+                            .await;
+                    }
+                    _ => {
+                        warn!("Received disconnect event while not connected. Metric may not be logged");
+                    }
                 }
                 let connect_start_time = if info.is_sme_reconnecting {
                     // If `is_sme_reconnecting` is true, we already know that the process of
@@ -1469,6 +1475,13 @@ impl StatsLogger {
         let connected_dur_in_day = c.connected_duration.into_seconds() as f64 / (24 * 3600) as f64;
         let dpdc_ratio = c.disconnect_count as f64 / connected_dur_in_day;
         if dpdc_ratio.is_finite() {
+            let mut metric_events = vec![];
+            metric_events.push(MetricEvent {
+                metric_id: metrics::DISCONNECT_PER_DAY_CONNECTED_7D_METRIC_ID,
+                event_codes: vec![],
+                payload: MetricEventPayload::IntegerValue(float_to_ten_thousandth(dpdc_ratio)),
+            });
+
             let dpdc_ratio_dim = {
                 use metrics::DeviceDisconnectPerDayConnectedBreakdown7dMetricDimensionDpdcRatio::*;
                 match dpdc_ratio {
@@ -1481,12 +1494,16 @@ impl StatsLogger {
                     _ => MoreThan5,
                 }
             };
-            log_cobalt_1dot1!(
+            metric_events.push(MetricEvent {
+                metric_id: metrics::DEVICE_DISCONNECT_PER_DAY_CONNECTED_BREAKDOWN_7D_METRIC_ID,
+                event_codes: vec![dpdc_ratio_dim as u32],
+                payload: MetricEventPayload::Count(1),
+            });
+
+            log_cobalt_1dot1_batch!(
                 self.cobalt_1dot1_proxy,
-                log_occurrence,
-                metrics::DEVICE_DISCONNECT_PER_DAY_CONNECTED_BREAKDOWN_7D_METRIC_ID,
-                1,
-                &[dpdc_ratio_dim as u32],
+                &mut metric_events.iter_mut(),
+                "log_daily_7d_cobalt_metrics",
             );
         }
     }
@@ -1701,7 +1718,11 @@ impl StatsLogger {
         );
     }
 
-    async fn log_disconnect_cobalt_metrics(&mut self, disconnect_info: &DisconnectInfo) {
+    async fn log_disconnect_cobalt_metrics(
+        &mut self,
+        disconnect_info: &DisconnectInfo,
+        multiple_bss_candidates: bool,
+    ) {
         let mut metric_events = vec![];
         metric_events.push(MetricEvent {
             metric_id: metrics::TOTAL_DISCONNECT_COUNT_METRIC_ID,
@@ -1757,6 +1778,26 @@ impl StatsLogger {
         metric_events.push(MetricEvent {
             metric_id: metrics::DISCONNECT_BREAKDOWN_BY_PRIMARY_CHANNEL_METRIC_ID,
             event_codes: vec![disconnect_info.latest_ap_state.channel.primary as u32],
+            payload: MetricEventPayload::Count(1),
+        });
+        let channel_band_dim =
+            convert::convert_channel_band(disconnect_info.latest_ap_state.channel.primary);
+        metric_events.push(MetricEvent {
+            metric_id: metrics::DISCONNECT_BREAKDOWN_BY_CHANNEL_BAND_METRIC_ID,
+            event_codes: vec![channel_band_dim as u32],
+            payload: MetricEventPayload::Count(1),
+        });
+        let is_multi_bss_dim = convert::convert_is_multi_bss(multiple_bss_candidates);
+        metric_events.push(MetricEvent {
+            metric_id: metrics::DISCONNECT_BREAKDOWN_BY_IS_MULTI_BSS_METRIC_ID,
+            event_codes: vec![is_multi_bss_dim as u32],
+            payload: MetricEventPayload::Count(1),
+        });
+        let security_type_dim =
+            convert::convert_security_type(&disconnect_info.latest_ap_state.protection());
+        metric_events.push(MetricEvent {
+            metric_id: metrics::DISCONNECT_BREAKDOWN_BY_SECURITY_TYPE_METRIC_ID,
+            event_codes: vec![security_type_dim as u32],
             payload: MetricEventPayload::Count(1),
         });
 
@@ -3285,6 +3326,11 @@ mod tests {
         // (which equals 40_0000 in TenThousandth unit)
         assert_eq!(dpdc_ratios[0].payload, MetricEventPayload::IntegerValue(40_000));
 
+        let dpdc_ratios_7d =
+            test_helper.get_logged_metrics(metrics::DISCONNECT_PER_DAY_CONNECTED_7D_METRIC_ID);
+        assert_eq!(dpdc_ratios_7d.len(), 1);
+        assert_eq!(dpdc_ratios_7d[0].payload, MetricEventPayload::IntegerValue(40_000));
+
         let device_high_disconnect =
             test_helper.get_logged_metrics(metrics::DEVICE_WITH_HIGH_DISCONNECT_RATE_METRIC_ID);
         assert_eq!(device_high_disconnect.len(), 0);
@@ -3324,6 +3370,13 @@ mod tests {
             test_helper.get_logged_metrics(metrics::DISCONNECT_PER_DAY_CONNECTED_METRIC_ID);
         assert_eq!(dpdc_ratios.len(), 1);
         assert_eq!(dpdc_ratios[0].payload, MetricEventPayload::IntegerValue(0));
+
+        let dpdc_ratios_7d =
+            test_helper.get_logged_metrics(metrics::DISCONNECT_PER_DAY_CONNECTED_7D_METRIC_ID);
+        assert_eq!(dpdc_ratios_7d.len(), 1);
+        // 1 disconnect, 1.25 day connected => 0.8 disconnects per day connected
+        // (which equals 80000 in TenThousandth unit)
+        assert_eq!(dpdc_ratios_7d[0].payload, MetricEventPayload::IntegerValue(8000));
 
         let dpdc_ratio_breakdowns = test_helper
             .get_logged_metrics(metrics::DEVICE_DISCONNECT_PER_DAY_CONNECTED_BREAKDOWN_METRIC_ID);
@@ -3868,8 +3921,40 @@ mod tests {
         assert_eq!(breakdowns_by_channel[0].event_codes, vec![channel.primary as u32]);
         assert_eq!(breakdowns_by_channel[0].payload, MetricEventPayload::Count(1));
 
-        // Check that non-roaming and total disconnects counts and connection durations are logged
-        // but not a roaming disconnect.
+        let breakdowns_by_channel_band =
+            test_helper.get_logged_metrics(metrics::DISCONNECT_BREAKDOWN_BY_CHANNEL_BAND_METRIC_ID);
+        assert_eq!(breakdowns_by_channel_band.len(), 1);
+        assert_eq!(
+            breakdowns_by_channel_band[0].event_codes,
+            vec![
+                metrics::DisconnectBreakdownByChannelBandMetricDimensionChannelBand::Band2Dot4Ghz
+                    as u32
+            ]
+        );
+        assert_eq!(breakdowns_by_channel_band[0].payload, MetricEventPayload::Count(1));
+
+        let breakdowns_by_is_multi_bss =
+            test_helper.get_logged_metrics(metrics::DISCONNECT_BREAKDOWN_BY_IS_MULTI_BSS_METRIC_ID);
+        assert_eq!(breakdowns_by_is_multi_bss.len(), 1);
+        assert_eq!(
+            breakdowns_by_is_multi_bss[0].event_codes,
+            vec![metrics::DisconnectBreakdownByIsMultiBssMetricDimensionIsMultiBss::Yes as u32]
+        );
+        assert_eq!(breakdowns_by_is_multi_bss[0].payload, MetricEventPayload::Count(1));
+
+        let breakdowns_by_security_type = test_helper
+            .get_logged_metrics(metrics::DISCONNECT_BREAKDOWN_BY_SECURITY_TYPE_METRIC_ID);
+        assert_eq!(breakdowns_by_security_type.len(), 1);
+        assert_eq!(
+            breakdowns_by_security_type[0].event_codes,
+            vec![
+                metrics::DisconnectBreakdownBySecurityTypeMetricDimensionSecurityType::Wpa2Personal
+                    as u32
+            ]
+        );
+        assert_eq!(breakdowns_by_security_type[0].payload, MetricEventPayload::Count(1));
+
+        // Check that non-roaming and total disconnects are logged but not a roaming disconnect.
         let roam_connected_duration = test_helper
             .get_logged_metrics(metrics::CONNECTED_DURATION_BEFORE_ROAMING_DISCONNECT_METRIC_ID);
         assert_eq!(roam_connected_duration.len(), 0);
