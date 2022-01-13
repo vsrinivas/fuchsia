@@ -87,7 +87,7 @@
             filter: { path: "diagnostics" },
         },
         {
-            event_stream: "my_stream",
+            event_stream_deprecated: "my_stream",
             subscriptions: [
                 {
                     event: "began",

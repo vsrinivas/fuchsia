@@ -1627,6 +1627,22 @@ mod tests {
                             "mode": "async",
                         }]
                   },
+                  {
+                    "event_stream_deprecated": "my_stream_2",
+                    "subscriptions": [
+                        {
+                           "event": "started",
+                           "mode": "async",
+                        },
+                        {
+                            "event": "stopped",
+                            "mode": "sync",
+                        },
+                        {
+                            "event": "launched",
+                            "mode": "async",
+                        }]
+                  },
                 ],
                 "capabilities": [
                     {
@@ -1662,7 +1678,7 @@ mod tests {
             json!({
                 "use": [ { "path": "/svc/fuchsia.logger.Log" } ]
             }),
-            Err(Error::Validate { schema_name: None, err, .. }) if &err == "`use` declaration is missing a capability keyword, one of: \"service\", \"protocol\", \"directory\", \"storage\", \"runner\", \"event\", \"event_stream\""
+            Err(Error::Validate { schema_name: None, err, .. }) if &err == "`use` declaration is missing a capability keyword, one of: \"service\", \"protocol\", \"directory\", \"storage\", \"runner\", \"event\", \"event_stream\", \"event_stream_deprecated\""
         ),
         test_cml_use_as_with_protocol(
             json!({
@@ -1762,7 +1778,7 @@ mod tests {
                     },
                 ]
             }),
-            Err(Error::Parse { err, .. }) if &err == "unknown field `resolver`, expected one of `service`, `protocol`, `directory`, `storage`, `from`, `path`, `as`, `rights`, `subdir`, `event`, `event_stream`, `filter`, `modes`, `subscriptions`, `dependency`"
+            Err(Error::Parse { err, .. }) if &err == "unknown field `resolver`, expected one of `service`, `protocol`, `directory`, `storage`, `from`, `path`, `as`, `rights`, `subdir`, `event`, `event_stream`, `event_stream_deprecated`, `filter`, `modes`, `subscriptions`, `dependency`"
         ),
 
         test_cml_use_disallows_nested_dirs_directory(
@@ -1861,6 +1877,22 @@ mod tests {
                 "use": [
                     {
                         "event_stream": "stream",
+                        "subscriptions": [
+                            {
+                                "event": "destroyed",
+                                "mode": "async"
+                            }
+                        ],
+                    },
+                ]
+            }),
+            Err(Error::Validate { schema_name: None, err, .. }) if &err == "Event \"destroyed\" in event stream not found in any \"use\" declaration."
+        ),
+        test_cml_use_event_stream_missing_deprecated_events(
+            json!({
+                "use": [
+                    {
+                        "event_stream_deprecated": "stream",
                         "subscriptions": [
                             {
                                 "event": "destroyed",

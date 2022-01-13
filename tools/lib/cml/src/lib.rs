@@ -2017,6 +2017,11 @@ pub struct Use {
     pub subdir: Option<RelativePath>,
     pub event: Option<OneOrMany<Name>>,
     pub event_stream: Option<Name>,
+    /// Placeholder for rename event. This currently holds no meaning
+    /// and gets remapped to event_stream above. It exists solely
+    /// for serde deserialization purposes (to allow event_stream
+    /// to have two names that refer to it).
+    pub event_stream_deprecated: Option<Name>,
     pub filter: Option<Map<String, Value>>,
     pub modes: Option<EventModes>,
     pub subscriptions: Option<EventSubscriptions>,
@@ -2326,7 +2331,16 @@ impl CapabilityClause for Use {
         "use"
     }
     fn supported(&self) -> &[&'static str] {
-        &["service", "protocol", "directory", "storage", "runner", "event", "event_stream"]
+        &[
+            "service",
+            "protocol",
+            "directory",
+            "storage",
+            "runner",
+            "event",
+            "event_stream",
+            "event_stream_deprecated",
+        ]
     }
 }
 
@@ -2791,6 +2805,7 @@ mod tests {
             modes: None,
             subscriptions: None,
             dependency: None,
+            event_stream_deprecated: None,
         }
     }
 
