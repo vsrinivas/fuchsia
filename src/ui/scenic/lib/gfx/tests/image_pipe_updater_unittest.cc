@@ -12,6 +12,7 @@
 #include "src/ui/scenic/lib/gfx/tests/mocks/mocks.h"
 #include "src/ui/scenic/lib/gfx/tests/mocks/util.h"
 #include "src/ui/scenic/lib/scheduling/tests/mocks/frame_scheduler_mocks.h"
+#include "src/ui/scenic/lib/utils/helpers.h"
 
 namespace scenic_impl::gfx::test {
 
@@ -72,10 +73,13 @@ class ImagePipeUpdaterTest : public ::gtest::TestLoopFixture {
 };
 
 TEST_F(ImagePipeUpdaterTest, CleansUpCorrectly) {
+  std::vector<zx::event> release_fences1 = CreateEventArray(1);
+  zx::event fence1 = CopyEvent(release_fences1.at(0));
+  EXPECT_FALSE(utils::IsEventSignalled(fence1, ZX_EVENT_SIGNALED));
   image_pipe_updater_->ScheduleImagePipeUpdate(
       kSchedulingId,
       /*presentation_time=*/zx::time(0), image_pipe_->weak_factory_.GetWeakPtr(),
-      /*acquire_fences=*/{}, /*release_fences=*/{}, /*callback=*/[](auto...) {});
+      /*acquire_fences=*/{}, std::move(release_fences1), /*callback=*/[](auto...) {});
 
   std::vector<std::pair<scheduling::SessionId, int32_t>> result;
   scheduler_->set_remove_session_callback([&result](scheduling::SessionId session_id) {
@@ -91,6 +95,9 @@ TEST_F(ImagePipeUpdaterTest, CleansUpCorrectly) {
   image_pipe_updater_->CleanupImagePipe(kSchedulingId);
   EXPECT_THAT(result, testing::ElementsAre(std::make_pair(kSchedulingId, 1),
                                            std::make_pair(kSchedulingId, 2)));
+
+  // Release fences aren't signalled as the content wasn't replaced.
+  EXPECT_FALSE(utils::IsEventSignalled(fence1, ZX_EVENT_SIGNALED));
 
   // Calling clean up for already cleaned up pipes should not cause extra calls.
   image_pipe_updater_->CleanupImagePipe(kSchedulingId);
