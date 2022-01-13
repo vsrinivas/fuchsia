@@ -66,6 +66,7 @@ if (is_fuchsia) {
     public_deps = [ "//zircon/system/ulib/fbl" ]
     deps = [
       "//sdk/lib/syslog/cpp",
+      "//third_party/re2",
       "//zircon/system/ulib/fbl",
     ]
 

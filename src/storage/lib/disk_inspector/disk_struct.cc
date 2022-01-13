@@ -7,8 +7,9 @@
 #include <lib/syslog/cpp/macros.h>
 
 #include <iostream>
-#include <regex>
 #include <utility>
+
+#include <re2/re2.h>
 
 #include "disk_primitive.h"
 
@@ -105,7 +106,9 @@ zx_status_t DiskStruct::WriteField(void* position, std::vector<std::string> keys
 }
 
 std::string InsertTabAfterNewLine(const std::string& input) {
-  return std::regex_replace(input, std::regex("\n"), "\n\t");
+  std::string output = input;
+  re2::RE2::GlobalReplace(&output, re2::RE2("\n"), "\n\t");
+  return output;
 }
 
 std::string DiskStruct::ToString(void* position, const PrintOptions& options) {
