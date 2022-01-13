@@ -23,10 +23,15 @@ using VkLayerInstanceDispatchTable = struct VkLayerInstanceDispatchTable_;
 
 struct LayerData {
   VkInstance instance = VK_NULL_HANDLE;
+  uint32_t instance_version = VK_API_VERSION_1_0;
   std::unique_ptr<VkLayerDispatchTable> device_dispatch_table;
   std::unique_ptr<VkLayerInstanceDispatchTable> instance_dispatch_table;
   std::unordered_map<VkDebugUtilsMessengerEXT, VkDebugUtilsMessengerCreateInfoEXT> debug_callbacks;
   PFN_vkSetDeviceLoaderData fpSetDeviceLoaderData = nullptr;
+};
+
+struct DeviceData {
+  bool protected_memory_supported = false;
 };
 
 namespace image_pipe_swapchain {

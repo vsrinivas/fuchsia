@@ -663,7 +663,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateDevice(VkPhysicalDevice gpu,
                     device_extensions[i].extensionName)) {
           external_semaphore_extension_available = true;
         }
-        if (!strcmp(VK_FUCHSIA_BUFFER_COLLECTION_X_EXTENSION_NAME,
+        if (!strcmp(VK_FUCHSIA_BUFFER_COLLECTION_EXTENSION_NAME,
                     device_extensions[i].extensionName)) {
           fuchsia_buffer_collection_extension_available = true;
         }
@@ -718,7 +718,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateDevice(VkPhysicalDevice gpu,
 #if defined(VK_USE_PLATFORM_FUCHSIA)
   enabled_extensions.push_back(VK_FUCHSIA_EXTERNAL_MEMORY_EXTENSION_NAME);
   enabled_extensions.push_back(VK_FUCHSIA_EXTERNAL_SEMAPHORE_EXTENSION_NAME);
-  enabled_extensions.push_back(VK_FUCHSIA_BUFFER_COLLECTION_X_EXTENSION_NAME);
+  enabled_extensions.push_back(VK_FUCHSIA_BUFFER_COLLECTION_EXTENSION_NAME);
   enabled_extensions.push_back(VK_KHR_DEDICATED_ALLOCATION_EXTENSION_NAME);
 #elif defined(VK_USE_PLATFORM_WAYLAND_KHR)
   enabled_extensions.push_back(VK_KHR_EXTERNAL_SEMAPHORE_FD_EXTENSION_NAME);

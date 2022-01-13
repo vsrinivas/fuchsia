@@ -28,9 +28,12 @@ loadable_module("swapchain") {
     "image_pipe_surface_async.cc",
     "image_pipe_surface_async.h",
     "image_pipe_swapchain_layer.cc",
+    "vulkan_utils.cc",
+    "vulkan_utils.h",
   ]
   deps = [
     ":surface_header",
+    "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_llcpp",
     "//sdk/lib/fdio",
     "//src/lib/fsl",
     "//third_party/Vulkan-ValidationLayers:micro_layer_common",
@@ -59,6 +62,8 @@ source_set("display") {
     "fuchsia_platform_event.cc",
     "image_pipe_surface_display.cc",
     "image_pipe_surface_display.h",
+    "vulkan_utils.cc",
+    "vulkan_utils.h",
   ]
   deps = [
     ":surface_header",

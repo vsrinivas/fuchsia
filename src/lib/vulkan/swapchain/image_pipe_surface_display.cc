@@ -8,24 +8,33 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <fuchsia/hardware/display/c/fidl.h>
+#include <fuchsia/sysmem/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
 #include <lib/fdio/cpp/caller.h>
 #include <lib/fdio/directory.h>
 #include <limits.h>
 #include <stdio.h>
 #include <string.h>
+#include <vk_dispatch_table_helper.h>
 #include <zircon/pixelformat.h>
 #include <zircon/status.h>
 
 #include <deque>
 
 #include <fbl/unique_fd.h>
+#include <vulkan/vk_layer.h>
 
 #include "src/lib/fsl/handles/object_info.h"
-#include "vk_dispatch_table_helper.h"
-#include "vulkan/vk_layer.h"
+#include "src/lib/vulkan/swapchain/vulkan_utils.h"
+#include "vulkan/vulkan_fuchsia.h"
 
 namespace image_pipe_swapchain {
+
+namespace {
+
+const char* const kTag = "ImagePipeSurfaceDisplay";
+
+}  // namespace
 
 ImagePipeSurfaceDisplay::ImagePipeSurfaceDisplay()
     : loop_(&kAsyncLoopConfigNoAttachToCurrentThread) {}
@@ -51,7 +60,7 @@ bool ImagePipeSurfaceDisplay::Init() {
   {
     DIR* dir = opendir("/dev/class/display-controller");
     if (!dir) {
-      fprintf(stderr, "Can't open directory: %s: %s\n", kDir, strerror(errno));
+      fprintf(stderr, "%s: Can't open directory: %s: %s\n", kTag, kDir, strerror(errno));
       return false;
     }
 
@@ -61,7 +70,7 @@ bool ImagePipeSurfaceDisplay::Init() {
       if (!entry) {
         if (errno != 0) {
           // An error occured while reading the directory.
-          fprintf(stderr, "Warning: error while reading %s: %s\n", kDir, strerror(errno));
+          fprintf(stderr, "%s: Warning: error while reading %s: %s\n", kTag, kDir, strerror(errno));
         }
         break;
       }
@@ -76,20 +85,20 @@ bool ImagePipeSurfaceDisplay::Init() {
   }
 
   if (filename.empty()) {
-    fprintf(stderr, "No display controller.\n");
+    fprintf(stderr, "%s: No display controller.\n", kTag);
     return false;
   }
 
   fbl::unique_fd fd(open(filename.c_str(), O_RDWR));
   if (!fd) {
-    fprintf(stderr, "Could not open display controller: %s\n", strerror(errno));
+    fprintf(stderr, "%s: Could not open display controller: %s\n", kTag, strerror(errno));
     return false;
   }
 
   zx::channel device_server, device_client;
   status = zx::channel::create(0, &device_server, &device_client);
   if (status != ZX_OK) {
-    fprintf(stderr, "Failed to create device channel %d (%s)\n", status,
+    fprintf(stderr, "%s: Failed to create device channel %d (%s)\n", kTag, status,
             zx_status_get_string(status));
     return false;
   }
@@ -97,7 +106,7 @@ bool ImagePipeSurfaceDisplay::Init() {
   zx::channel dc_server, dc_client;
   status = zx::channel::create(0, &dc_server, &dc_client);
   if (status != ZX_OK) {
-    fprintf(stderr, "Failed to create controller channel %d (%s)\n", status,
+    fprintf(stderr, "%s: Failed to create controller channel %d (%s)\n", kTag, status,
             zx_status_get_string(status));
     return false;
   }
@@ -106,12 +115,13 @@ bool ImagePipeSurfaceDisplay::Init() {
   zx_status_t fidl_status = fuchsia_hardware_display_ProviderOpenController(
       caller.borrow_channel(), device_server.release(), dc_server.release(), &status);
   if (fidl_status != ZX_OK) {
-    fprintf(stderr, "Failed to call service handle %d (%s)\n", fidl_status,
+    fprintf(stderr, "%s: Failed to call service handle %d (%s)\n", kTag, fidl_status,
             zx_status_get_string(fidl_status));
     return false;
   }
   if (status != ZX_OK) {
-    fprintf(stderr, "Failed to open controller %d (%s)\n", status, zx_status_get_string(status));
+    fprintf(stderr, "%s: Failed to open controller %d (%s)\n", kTag, status,
+            zx_status_get_string(status));
     return false;
   }
 
@@ -180,19 +190,25 @@ bool ImagePipeSurfaceDisplay::CreateImage(VkDevice device, VkLayerDispatchTable*
                                           VkExtent2D extent, uint32_t image_count,
                                           const VkAllocationCallbacks* pAllocator,
                                           std::vector<ImageInfo>* image_info_out) {
+  // To create BufferCollection, the image must have a valid format.
+  if (format == VK_FORMAT_UNDEFINED) {
+    fprintf(stderr, "%s: Invalid format: %d\n", kTag, format);
+    return false;
+  }
+
   VkResult result;
   fuchsia::sysmem::BufferCollectionTokenSyncPtr local_token;
   zx_status_t status;
   status = sysmem_allocator_->AllocateSharedCollection(local_token.NewRequest());
   if (status != ZX_OK) {
-    fprintf(stderr, "Swapchain: AllocateSharedCollection failed: %d\n", status);
+    fprintf(stderr, "%s: AllocateSharedCollection failed: %d\n", kTag, status);
     return false;
   }
   fuchsia::sysmem::BufferCollectionTokenSyncPtr vulkan_token;
 
   status = local_token->Duplicate(std::numeric_limits<uint32_t>::max(), vulkan_token.NewRequest());
   if (status != ZX_OK) {
-    fprintf(stderr, "Swapchain: Duplicate failed: %d\n", status);
+    fprintf(stderr, "%s: Duplicate failed: %d\n", kTag, status);
     return false;
   }
   fuchsia::sysmem::BufferCollectionTokenSyncPtr display_token;
@@ -200,12 +216,12 @@ bool ImagePipeSurfaceDisplay::CreateImage(VkDevice device, VkLayerDispatchTable*
   status =
       vulkan_token->Duplicate(std::numeric_limits<uint32_t>::max(), display_token.NewRequest());
   if (status != ZX_OK) {
-    fprintf(stderr, "Swapchain: Duplicate failed: %d\n", status);
+    fprintf(stderr, "%s: Duplicate failed: %d\n", kTag, status);
     return false;
   }
   status = vulkan_token->Sync();
   if (status != ZX_OK) {
-    fprintf(stderr, "Swapchain: Sync failed: %d\n", status);
+    fprintf(stderr, "%s: Sync failed: %d\n", kTag, status);
     return false;
   }
 
@@ -217,11 +233,11 @@ bool ImagePipeSurfaceDisplay::CreateImage(VkDevice device, VkLayerDispatchTable*
                                                 got_message_response_ = true;
                                               });
   if (!WaitForAsyncMessage()) {
-    fprintf(stderr, "Swapchain: Display Disconnected\n");
+    fprintf(stderr, "%s: Display Disconnected\n", kTag);
     return false;
   }
   if (status != ZX_OK) {
-    fprintf(stderr, "Swapchain: ImportBufferCollection failed: %d\n", status);
+    fprintf(stderr, "%s: ImportBufferCollection failed: %d\n", kTag, status);
     return false;
   }
 
@@ -265,11 +281,11 @@ bool ImagePipeSurfaceDisplay::CreateImage(VkDevice device, VkLayerDispatchTable*
         got_message_response_ = true;
       });
   if (!WaitForAsyncMessage()) {
-    fprintf(stderr, "Swapchain: Display Disconnected\n");
+    fprintf(stderr, "%s: Display Disconnected\n", kTag);
     return false;
   }
   if (status != ZX_OK) {
-    fprintf(stderr, "Swapchain: SetBufferCollectionConstraints failed: %d\n", status);
+    fprintf(stderr, "%s: SetBufferCollectionConstraints failed: %d\n", kTag, status);
     return false;
   }
 
@@ -296,23 +312,59 @@ bool ImagePipeSurfaceDisplay::CreateImage(VkDevice device, VkLayerDispatchTable*
       .pQueueFamilyIndices = nullptr,  // not used since not sharing
       .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
   };
+  const VkSysmemColorSpaceFUCHSIA kSrgbColorSpace = {
+      .sType = VK_STRUCTURE_TYPE_SYSMEM_COLOR_SPACE_FUCHSIA,
+      .pNext = nullptr,
+      .colorSpace = static_cast<uint32_t>(fuchsia::sysmem::ColorSpaceType::SRGB)};
+  const VkSysmemColorSpaceFUCHSIA kYuvColorSpace = {
+      .sType = VK_STRUCTURE_TYPE_SYSMEM_COLOR_SPACE_FUCHSIA,
+      .pNext = nullptr,
+      .colorSpace = static_cast<uint32_t>(fuchsia::sysmem::ColorSpaceType::REC709)};
 
-  VkBufferCollectionCreateInfoFUCHSIAX import_info = {
-      .sType = VK_STRUCTURE_TYPE_BUFFER_COLLECTION_CREATE_INFO_FUCHSIAX,
+  VkImageFormatConstraintsInfoFUCHSIA format_info = {
+      .sType = VK_STRUCTURE_TYPE_IMAGE_FORMAT_CONSTRAINTS_INFO_FUCHSIA,
+      .pNext = nullptr,
+      .imageCreateInfo = image_create_info,
+      .requiredFormatFeatures = GetFormatFeatureFlagsFromUsage(usage),
+      .sysmemPixelFormat = 0u,
+      .colorSpaceCount = 1,
+      .pColorSpaces = IsYuvFormat(format) ? &kYuvColorSpace : &kSrgbColorSpace,
+  };
+  VkImageConstraintsInfoFUCHSIA image_constraints_info = {
+      .sType = VK_STRUCTURE_TYPE_IMAGE_CONSTRAINTS_INFO_FUCHSIA,
+      .pNext = nullptr,
+      .formatConstraintsCount = 1,
+      .pFormatConstraints = &format_info,
+      .bufferCollectionConstraints =
+          VkBufferCollectionConstraintsInfoFUCHSIA{
+              .sType = VK_STRUCTURE_TYPE_BUFFER_COLLECTION_CONSTRAINTS_INFO_FUCHSIA,
+              .pNext = nullptr,
+              .minBufferCount = 1,
+              .maxBufferCount = 0,
+              .minBufferCountForCamping = 0,
+              .minBufferCountForDedicatedSlack = 0,
+              .minBufferCountForSharedSlack = 0,
+          },
+      .flags = 0u,
+  };
+
+  VkBufferCollectionCreateInfoFUCHSIA import_info = {
+      .sType = VK_STRUCTURE_TYPE_BUFFER_COLLECTION_CREATE_INFO_FUCHSIA,
       .pNext = nullptr,
       .collectionToken = vulkan_token.Unbind().TakeChannel().release(),
   };
-  VkBufferCollectionFUCHSIAX collection;
-  result = pDisp->CreateBufferCollectionFUCHSIAX(device, &import_info, pAllocator, &collection);
+  VkBufferCollectionFUCHSIA collection;
+  result = pDisp->CreateBufferCollectionFUCHSIA(device, &import_info, pAllocator, &collection);
   if (result != VK_SUCCESS) {
-    fprintf(stderr, "Failed to import buffer collection: %d\n", result);
+    fprintf(stderr, "%s: Failed to import buffer collection: %d\n", kTag, result);
     return false;
   }
 
-  result = pDisp->SetBufferCollectionConstraintsFUCHSIAX(device, collection, &image_create_info);
+  result = pDisp->SetBufferCollectionImageConstraintsFUCHSIA(device, collection,
+                                                             &image_constraints_info);
 
   if (result != VK_SUCCESS) {
-    fprintf(stderr, "Failed to import buffer collection: %d\n", result);
+    fprintf(stderr, "%s: Failed to import buffer collection: %d\n", kTag, result);
     return false;
   }
 
@@ -320,7 +372,7 @@ bool ImagePipeSurfaceDisplay::CreateImage(VkDevice device, VkLayerDispatchTable*
   status = sysmem_allocator_->BindSharedCollection(std::move(local_token),
                                                    sysmem_collection.NewRequest());
   if (status != ZX_OK) {
-    fprintf(stderr, "Swapchain: BindSharedCollection failed: %d\n", status);
+    fprintf(stderr, "%s: BindSharedCollection failed: %d\n", kTag, status);
     return false;
   }
   // 1000 should override the generic Magma name.
@@ -333,7 +385,7 @@ bool ImagePipeSurfaceDisplay::CreateImage(VkDevice device, VkLayerDispatchTable*
   constraints.usage.display = fuchsia::sysmem::displayUsageLayer;
   status = sysmem_collection->SetConstraints(true, constraints);
   if (status != ZX_OK) {
-    fprintf(stderr, "Swapchain: SetConstraints failed: %d\n", status);
+    fprintf(stderr, "%s: SetConstraints failed: %d\n", kTag, status);
     return false;
   }
 
@@ -341,14 +393,13 @@ bool ImagePipeSurfaceDisplay::CreateImage(VkDevice device, VkLayerDispatchTable*
   fuchsia::sysmem::BufferCollectionInfo_2 buffer_collection_info{};
   status = sysmem_collection->WaitForBuffersAllocated(&allocation_status, &buffer_collection_info);
   if (status != ZX_OK || allocation_status != ZX_OK) {
-    fprintf(stderr, "Swapchain: WaitForBuffersAllocated failed: %d %d\n", status,
-            allocation_status);
+    fprintf(stderr, "%s: WaitForBuffersAllocated failed: %d %d\n", kTag, status, allocation_status);
     return false;
   }
   sysmem_collection->Close();
 
   if (buffer_collection_info.buffer_count != image_count) {
-    fprintf(stderr, "Swapchain: incorrect image count %d allocated vs. %d requested\n",
+    fprintf(stderr, "%s: incorrect image count %d allocated vs. %d requested\n", kTag,
             buffer_collection_info.buffer_count, image_count);
     return false;
   }
@@ -359,8 +410,8 @@ bool ImagePipeSurfaceDisplay::CreateImage(VkDevice device, VkLayerDispatchTable*
         .pNext = nullptr,
         .handleTypes = VK_EXTERNAL_MEMORY_HANDLE_TYPE_ZIRCON_VMO_BIT_FUCHSIA,
     };
-    VkBufferCollectionImageCreateInfoFUCHSIAX image_format_fuchsia = {
-        .sType = VK_STRUCTURE_TYPE_BUFFER_COLLECTION_IMAGE_CREATE_INFO_FUCHSIAX,
+    VkBufferCollectionImageCreateInfoFUCHSIA image_format_fuchsia = {
+        .sType = VK_STRUCTURE_TYPE_BUFFER_COLLECTION_IMAGE_CREATE_INFO_FUCHSIA,
         .pNext = &external_image_create_info,
         .collection = collection,
         .index = i};
@@ -369,18 +420,18 @@ bool ImagePipeSurfaceDisplay::CreateImage(VkDevice device, VkLayerDispatchTable*
     VkImage image;
     result = pDisp->CreateImage(device, &image_create_info, pAllocator, &image);
     if (result != VK_SUCCESS) {
-      fprintf(stderr, "Swapchain: vkCreateImage failed: %d\n", result);
+      fprintf(stderr, "%s: vkCreateImage failed: %d\n", kTag, result);
       return false;
     }
 
     VkMemoryRequirements memory_requirements;
     pDisp->GetImageMemoryRequirements(device, image, &memory_requirements);
 
-    VkBufferCollectionPropertiesFUCHSIAX properties = {
-        .sType = VK_STRUCTURE_TYPE_BUFFER_COLLECTION_PROPERTIES_FUCHSIAX};
-    result = pDisp->GetBufferCollectionPropertiesFUCHSIAX(device, collection, &properties);
+    VkBufferCollectionPropertiesFUCHSIA properties = {
+        .sType = VK_STRUCTURE_TYPE_BUFFER_COLLECTION_PROPERTIES_FUCHSIA};
+    result = pDisp->GetBufferCollectionPropertiesFUCHSIA(device, collection, &properties);
     if (result != VK_SUCCESS) {
-      fprintf(stderr, "Swapchain: GetBufferCollectionPropertiesFUCHSIA failed: %d\n", status);
+      fprintf(stderr, "%s: GetBufferCollectionPropertiesFUCHSIA failed: %d\n", kTag, status);
       return false;
     }
 
@@ -392,8 +443,8 @@ bool ImagePipeSurfaceDisplay::CreateImage(VkDevice device, VkLayerDispatchTable*
         .sType = VK_STRUCTURE_TYPE_MEMORY_DEDICATED_ALLOCATE_INFO_KHR,
         .image = image,
     };
-    VkImportMemoryBufferCollectionFUCHSIAX import_info = {
-        .sType = VK_STRUCTURE_TYPE_IMPORT_MEMORY_BUFFER_COLLECTION_FUCHSIAX,
+    VkImportMemoryBufferCollectionFUCHSIA import_info = {
+        .sType = VK_STRUCTURE_TYPE_IMPORT_MEMORY_BUFFER_COLLECTION_FUCHSIA,
         .pNext = &dedicated_info,
         .collection = collection,
         .index = i,
@@ -408,12 +459,12 @@ bool ImagePipeSurfaceDisplay::CreateImage(VkDevice device, VkLayerDispatchTable*
     VkDeviceMemory memory;
     result = pDisp->AllocateMemory(device, &alloc_info, pAllocator, &memory);
     if (result != VK_SUCCESS) {
-      fprintf(stderr, "Swapchain: vkAllocateMemory failed: %d\n", result);
+      fprintf(stderr, "%s: vkAllocateMemory failed: %d\n", kTag, result);
       return result;
     }
     result = pDisp->BindImageMemory(device, image, memory, 0);
     if (result != VK_SUCCESS) {
-      fprintf(stderr, "Swapchain: vkBindImageMemory failed: %d\n", result);
+      fprintf(stderr, "%s: vkBindImageMemory failed: %d\n", kTag, result);
       return result;
     }
 
@@ -430,7 +481,7 @@ bool ImagePipeSurfaceDisplay::CreateImage(VkDevice device, VkLayerDispatchTable*
       return false;
     }
     if (status != ZX_OK) {
-      fprintf(stderr, "Swapchain: ImportVmoImage failed: %d\n", status);
+      fprintf(stderr, "%s: ImportVmoImage failed: %d\n", kTag, status);
       return false;
     }
 
@@ -441,7 +492,7 @@ bool ImagePipeSurfaceDisplay::CreateImage(VkDevice device, VkLayerDispatchTable*
     image_id_map[info.image_id] = fb_image_id;
   }
 
-  pDisp->DestroyBufferCollectionFUCHSIAX(device, collection, pAllocator);
+  pDisp->DestroyBufferCollectionFUCHSIA(device, collection, pAllocator);
   display_controller_->ReleaseBufferCollection(kBufferCollectionId);
 
   display_controller_->CreateLayer([this, &status](zx_status_t layer_status, uint64_t layer_id) {
@@ -453,7 +504,7 @@ bool ImagePipeSurfaceDisplay::CreateImage(VkDevice device, VkLayerDispatchTable*
     return false;
   }
   if (status != ZX_OK) {
-    fprintf(stderr, "Swapchain: CreateLayer failed: %d\n", status);
+    fprintf(stderr, "%s: CreateLayer failed: %d\n", kTag, status);
     return false;
   }
 
@@ -484,7 +535,7 @@ void ImagePipeSurfaceDisplay::PresentImage(
 
   auto iter = image_id_map.find(image_id);
   if (iter == image_id_map.end()) {
-    fprintf(stderr, "PresentImage: can't find image_id %u\n", image_id);
+    fprintf(stderr, "%s::PresentImage: can't find image_id %u\n", kTag, image_id);
     return;
   }
 
@@ -496,13 +547,13 @@ void ImagePipeSurfaceDisplay::PresentImage(
     zx_status_t status =
         event.get_info(ZX_INFO_HANDLE_BASIC, &info, sizeof(info), nullptr, nullptr);
     if (status != ZX_OK) {
-      fprintf(stderr, "failed to get event id: %d\n", status);
+      fprintf(stderr, "%s: failed to get event id: %d\n", kTag, status);
       return;
     }
     wait_event_id = info.koid;
     display_controller_->ImportEvent(std::move(event), wait_event_id);
     if (status != ZX_OK) {
-      fprintf(stderr, "fb_import_event failed: %d\n", status);
+      fprintf(stderr, "%s: fb_import_event failed: %d\n", kTag, status);
       return;
     }
   }
@@ -515,13 +566,13 @@ void ImagePipeSurfaceDisplay::PresentImage(
     zx_status_t status =
         event.get_info(ZX_INFO_HANDLE_BASIC, &info, sizeof(info), nullptr, nullptr);
     if (status != ZX_OK) {
-      fprintf(stderr, "failed to get event id: %d\n", status);
+      fprintf(stderr, "%s: failed to get event id: %d\n", kTag, status);
       return;
     }
     signal_event_id = info.koid;
     display_controller_->ImportEvent(std::move(event), signal_event_id);
     if (status != ZX_OK) {
-      fprintf(stderr, "fb_import_event failed: %d\n", status);
+      fprintf(stderr, "%s: fb_import_event failed: %d\n", kTag, status);
       return;
     }
   }

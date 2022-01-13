@@ -4,15 +4,24 @@
 
 #include "image_pipe_surface_async.h"
 
+#include <fidl/fuchsia.sysmem/cpp/wire.h>
 #include <lib/async/cpp/task.h>
 #include <lib/fdio/directory.h>
 #include <lib/trace/event.h>
+#include <vk_dispatch_table_helper.h>
+
+#include <vulkan/vk_layer.h>
 
 #include "src/lib/fsl/handles/object_info.h"
-#include "vk_dispatch_table_helper.h"
-#include "vulkan/vk_layer.h"
+#include "src/lib/vulkan/swapchain/vulkan_utils.h"
 
 namespace image_pipe_swapchain {
+
+namespace {
+
+const char* const kTag = "ImagePipeSurfaceAsync";
+
+}  // namespace
 
 bool ImagePipeSurfaceAsync::Init() {
   zx_status_t status = fdio_service_connect("/svc/fuchsia.sysmem.Allocator",
@@ -33,11 +42,17 @@ bool ImagePipeSurfaceAsync::CreateImage(VkDevice device, VkLayerDispatchTable* p
                                         VkExtent2D extent, uint32_t image_count,
                                         const VkAllocationCallbacks* pAllocator,
                                         std::vector<ImageInfo>* image_info_out) {
+  // To create BufferCollection, the image must have a valid format.
+  if (format == VK_FORMAT_UNDEFINED) {
+    fprintf(stderr, "%s: Invalid format: %d\n", kTag, format);
+    return false;
+  }
+
   // Allocate token for BufferCollection.
   fuchsia::sysmem::BufferCollectionTokenSyncPtr local_token;
   zx_status_t status = sysmem_allocator_->AllocateSharedCollection(local_token.NewRequest());
   if (status != ZX_OK) {
-    fprintf(stderr, "Swapchain: AllocateSharedCollection failed: %d\n", status);
+    fprintf(stderr, "%s: AllocateSharedCollection failed: %d\n", kTag, status);
     return false;
   }
 
@@ -45,18 +60,18 @@ bool ImagePipeSurfaceAsync::CreateImage(VkDevice device, VkLayerDispatchTable* p
   auto scenic_token = std::make_unique<fuchsia::sysmem::BufferCollectionTokenSyncPtr>();
   status = local_token->Duplicate(std::numeric_limits<uint32_t>::max(), scenic_token->NewRequest());
   if (status != ZX_OK) {
-    fprintf(stderr, "Swapchain: Duplicate failed: %d\n", status);
+    fprintf(stderr, "%s: Duplicate failed: %d\n", kTag, status);
     return false;
   }
   fuchsia::sysmem::BufferCollectionTokenSyncPtr vulkan_token;
   status = local_token->Duplicate(std::numeric_limits<uint32_t>::max(), vulkan_token.NewRequest());
   if (status != ZX_OK) {
-    fprintf(stderr, "Swapchain: Duplicate failed: %d\n", status);
+    fprintf(stderr, "%s: Duplicate failed: %d\n", kTag, status);
     return false;
   }
   status = local_token->Sync();
   if (status != ZX_OK) {
-    fprintf(stderr, "Swapchain: Sync failed: %d\n", status);
+    fprintf(stderr, "%s: Sync failed: %d\n", kTag, status);
     return false;
   }
 
@@ -68,14 +83,14 @@ bool ImagePipeSurfaceAsync::CreateImage(VkDevice device, VkLayerDispatchTable* p
   });
 
   // Set swapchain constraints |vulkan_token|.
-  VkBufferCollectionCreateInfoFUCHSIAX import_info = {
-      .sType = VK_STRUCTURE_TYPE_BUFFER_COLLECTION_CREATE_INFO_FUCHSIAX,
+  VkBufferCollectionCreateInfoFUCHSIA import_info = {
+      .sType = VK_STRUCTURE_TYPE_BUFFER_COLLECTION_CREATE_INFO_FUCHSIA,
       .pNext = nullptr,
       .collectionToken = vulkan_token.Unbind().TakeChannel().release(),
   };
-  VkBufferCollectionFUCHSIAX collection;
+  VkBufferCollectionFUCHSIA collection;
   VkResult result =
-      pDisp->CreateBufferCollectionFUCHSIAX(device, &import_info, pAllocator, &collection);
+      pDisp->CreateBufferCollectionFUCHSIA(device, &import_info, pAllocator, &collection);
   if (result != VK_SUCCESS) {
     fprintf(stderr, "Failed to import buffer collection: %d\n", result);
     return false;
@@ -100,7 +115,44 @@ bool ImagePipeSurfaceAsync::CreateImage(VkDevice device, VkLayerDispatchTable* p
       .sharingMode = VK_SHARING_MODE_EXCLUSIVE,
       .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
   };
-  result = pDisp->SetBufferCollectionConstraintsFUCHSIAX(device, collection, &image_create_info);
+  const VkSysmemColorSpaceFUCHSIA kSrgbColorSpace = {
+      .sType = VK_STRUCTURE_TYPE_SYSMEM_COLOR_SPACE_FUCHSIA,
+      .pNext = nullptr,
+      .colorSpace = static_cast<uint32_t>(fuchsia::sysmem::ColorSpaceType::SRGB)};
+  const VkSysmemColorSpaceFUCHSIA kYuvColorSpace = {
+      .sType = VK_STRUCTURE_TYPE_SYSMEM_COLOR_SPACE_FUCHSIA,
+      .pNext = nullptr,
+      .colorSpace = static_cast<uint32_t>(fuchsia::sysmem::ColorSpaceType::REC709)};
+
+  VkImageFormatConstraintsInfoFUCHSIA format_info = {
+      .sType = VK_STRUCTURE_TYPE_IMAGE_FORMAT_CONSTRAINTS_INFO_FUCHSIA,
+      .pNext = nullptr,
+      .imageCreateInfo = image_create_info,
+      .requiredFormatFeatures = GetFormatFeatureFlagsFromUsage(usage),
+      .sysmemPixelFormat = 0u,
+      .colorSpaceCount = 1,
+      .pColorSpaces = IsYuvFormat(format) ? &kYuvColorSpace : &kSrgbColorSpace,
+  };
+  VkImageConstraintsInfoFUCHSIA image_constraints_info = {
+      .sType = VK_STRUCTURE_TYPE_IMAGE_CONSTRAINTS_INFO_FUCHSIA,
+      .pNext = nullptr,
+      .formatConstraintsCount = 1,
+      .pFormatConstraints = &format_info,
+      .bufferCollectionConstraints =
+          VkBufferCollectionConstraintsInfoFUCHSIA{
+              .sType = VK_STRUCTURE_TYPE_BUFFER_COLLECTION_CONSTRAINTS_INFO_FUCHSIA,
+              .pNext = nullptr,
+              .minBufferCount = 1,
+              .maxBufferCount = 0,
+              .minBufferCountForCamping = 0,
+              .minBufferCountForDedicatedSlack = 0,
+              .minBufferCountForSharedSlack = 0,
+          },
+      .flags = 0u,
+  };
+
+  result = pDisp->SetBufferCollectionImageConstraintsFUCHSIA(device, collection,
+                                                             &image_constraints_info);
   if (result != VK_SUCCESS) {
     fprintf(stderr, "Failed to set buffer collection constraints: %d\n", result);
     return false;
@@ -111,7 +163,7 @@ bool ImagePipeSurfaceAsync::CreateImage(VkDevice device, VkLayerDispatchTable* p
   status = sysmem_allocator_->BindSharedCollection(std::move(local_token),
                                                    buffer_collection.NewRequest());
   if (status != ZX_OK) {
-    fprintf(stderr, "Swapchain: BindSharedCollection failed: %d\n", status);
+    fprintf(stderr, "%s: BindSharedCollection failed: %d\n", kTag, status);
     return false;
   }
   fuchsia::sysmem::BufferCollectionConstraints constraints;
@@ -119,7 +171,7 @@ bool ImagePipeSurfaceAsync::CreateImage(VkDevice device, VkLayerDispatchTable* p
   constraints.usage.vulkan = fuchsia::sysmem::vulkanUsageSampled;
   status = buffer_collection->SetConstraints(true, constraints);
   if (status != ZX_OK) {
-    fprintf(stderr, "Swapchain: SetConstraints failed: %d %d\n", image_count, status);
+    fprintf(stderr, "%s: SetConstraints failed: %d %d\n", kTag, image_count, status);
     return false;
   }
 
@@ -128,11 +180,11 @@ bool ImagePipeSurfaceAsync::CreateImage(VkDevice device, VkLayerDispatchTable* p
   fuchsia::sysmem::BufferCollectionInfo_2 buffer_collection_info = {};
   status = buffer_collection->WaitForBuffersAllocated(&allocation_status, &buffer_collection_info);
   if (status != ZX_OK || allocation_status != ZX_OK) {
-    fprintf(stderr, "Swapchain: WaitForBuffersAllocated failed: %d\n", status);
+    fprintf(stderr, "%s: WaitForBuffersAllocated failed: %d\n", kTag, status);
     return false;
   }
   if (buffer_collection_info.buffer_count < image_count) {
-    fprintf(stderr, "Swapchain: Failed to allocate %d buffers: %d\n", image_count, status);
+    fprintf(stderr, "%s: Failed to allocate %d buffers: %d\n", kTag, image_count, status);
     return false;
   }
 
@@ -144,8 +196,8 @@ bool ImagePipeSurfaceAsync::CreateImage(VkDevice device, VkLayerDispatchTable* p
 
   for (uint32_t i = 0; i < image_count; ++i) {
     // Create Vk image.
-    VkBufferCollectionImageCreateInfoFUCHSIAX image_format_fuchsia = {
-        .sType = VK_STRUCTURE_TYPE_BUFFER_COLLECTION_IMAGE_CREATE_INFO_FUCHSIAX,
+    VkBufferCollectionImageCreateInfoFUCHSIA image_format_fuchsia = {
+        .sType = VK_STRUCTURE_TYPE_BUFFER_COLLECTION_IMAGE_CREATE_INFO_FUCHSIA,
         .pNext = nullptr,
         .collection = collection,
         .index = i};
@@ -153,18 +205,18 @@ bool ImagePipeSurfaceAsync::CreateImage(VkDevice device, VkLayerDispatchTable* p
     VkImage image;
     result = pDisp->CreateImage(device, &image_create_info, pAllocator, &image);
     if (result != VK_SUCCESS) {
-      fprintf(stderr, "Swapchain: vkCreateImage failed: %d\n", result);
+      fprintf(stderr, "%s: vkCreateImage failed: %d\n", kTag, result);
       return false;
     }
 
     // Extract memory handles from BufferCollection.
     VkMemoryRequirements memory_requirements;
     pDisp->GetImageMemoryRequirements(device, image, &memory_requirements);
-    VkBufferCollectionPropertiesFUCHSIAX properties = {
-        .sType = VK_STRUCTURE_TYPE_BUFFER_COLLECTION_PROPERTIES_FUCHSIAX};
-    result = pDisp->GetBufferCollectionPropertiesFUCHSIAX(device, collection, &properties);
+    VkBufferCollectionPropertiesFUCHSIA properties = {
+        .sType = VK_STRUCTURE_TYPE_BUFFER_COLLECTION_PROPERTIES_FUCHSIA};
+    result = pDisp->GetBufferCollectionPropertiesFUCHSIA(device, collection, &properties);
     if (result != VK_SUCCESS) {
-      fprintf(stderr, "Swapchain: GetBufferCollectionPropertiesFUCHSIA failed: %d\n", status);
+      fprintf(stderr, "%s: GetBufferCollectionPropertiesFUCHSIA failed: %d\n", kTag, status);
       return false;
     }
     uint32_t memory_type_index =
@@ -173,8 +225,8 @@ bool ImagePipeSurfaceAsync::CreateImage(VkDevice device, VkLayerDispatchTable* p
         .sType = VK_STRUCTURE_TYPE_MEMORY_DEDICATED_ALLOCATE_INFO_KHR,
         .image = image,
     };
-    VkImportMemoryBufferCollectionFUCHSIAX import_info = {
-        .sType = VK_STRUCTURE_TYPE_IMPORT_MEMORY_BUFFER_COLLECTION_FUCHSIAX,
+    VkImportMemoryBufferCollectionFUCHSIA import_info = {
+        .sType = VK_STRUCTURE_TYPE_IMPORT_MEMORY_BUFFER_COLLECTION_FUCHSIA,
         .pNext = &dedicated_info,
         .collection = collection,
         .index = i,
@@ -188,12 +240,12 @@ bool ImagePipeSurfaceAsync::CreateImage(VkDevice device, VkLayerDispatchTable* p
     VkDeviceMemory memory;
     result = pDisp->AllocateMemory(device, &alloc_info, pAllocator, &memory);
     if (result != VK_SUCCESS) {
-      fprintf(stderr, "Swapchain: vkAllocateMemory failed: %d\n", result);
+      fprintf(stderr, "%s: vkAllocateMemory failed: %d\n", kTag, result);
       return false;
     }
     result = pDisp->BindImageMemory(device, image, memory, 0);
     if (result != VK_SUCCESS) {
-      fprintf(stderr, "Swapchain: vkBindImageMemory failed: %d\n", result);
+      fprintf(stderr, "%s: vkBindImageMemory failed: %d\n", kTag, result);
       return false;
     }
 
@@ -214,7 +266,7 @@ bool ImagePipeSurfaceAsync::CreateImage(VkDevice device, VkLayerDispatchTable* p
   }
   buffer_counts_.emplace(current_buffer_id_, image_count);
 
-  pDisp->DestroyBufferCollectionFUCHSIAX(device, collection, pAllocator);
+  pDisp->DestroyBufferCollectionFUCHSIA(device, collection, pAllocator);
   buffer_collection->Close();
 
   return true;
