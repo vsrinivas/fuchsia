@@ -10,6 +10,7 @@ use {
     ::routing::config::RuntimeConfig,
     anyhow::Error,
     component_manager_lib::{
+        bootfs::BootfsSvc,
         builtin_environment::{BuiltinEnvironment, BuiltinEnvironmentBuilder},
         startup,
     },
@@ -26,8 +27,8 @@ fn main() {
     // Make sure we exit if there is a panic. Add this hook before we init the
     // KernelLogger because it installs its own hook and then calls any
     // existing hook.
-    panic::set_hook(Box::new(|_| {
-        println!("Panic in component_manager, aborting process.");
+    panic::set_hook(Box::new(|info| {
+        println!("Panic in component_manager, aborting process. Message: {}", info);
         // TODO remove after 43671 is resolved
         std::thread::spawn(move || {
             let mut nap_duration = Duration::from_secs(1);
@@ -56,7 +57,7 @@ fn main() {
     // Enable tracing in Component Manager
     trace_provider::trace_provider_create_with_fdio();
 
-    let runtime_config = build_runtime_config();
+    let (runtime_config, bootfs_svc) = build_runtime_config();
 
     match runtime_config.log_destination {
         finternal::LogDestination::Syslog => {
@@ -72,7 +73,7 @@ fn main() {
     let num_threads = runtime_config.num_threads;
 
     let fut = async move {
-        let mut builtin_environment = match build_environment(runtime_config).await {
+        let mut builtin_environment = match build_environment(runtime_config, bootfs_svc).await {
             Ok(environment) => environment,
             Err(error) => {
                 error!("Component manager setup failed: {}", error);
@@ -93,7 +94,7 @@ fn main() {
 /// Loads component_manager's config.
 ///
 /// This function panics on failure because the logger is not initialized yet.
-fn build_runtime_config() -> RuntimeConfig {
+fn build_runtime_config() -> (RuntimeConfig, Option<BootfsSvc>) {
     let args = match startup::Arguments::from_args() {
         Ok(args) => args,
         Err(err) => {
@@ -101,19 +102,46 @@ fn build_runtime_config() -> RuntimeConfig {
         }
     };
 
-    let path = PathBuf::from(&args.config);
-    let mut config = match RuntimeConfig::load_from_file(&path) {
-        Ok(config) => config,
-        Err(err) => {
-            panic!("Failed to load runtime config: {}", err);
-        }
-    };
+    let mut config: RuntimeConfig;
+    let mut bootfs_svc: Option<BootfsSvc> = None;
+    if args.host_bootfs {
+        // The Rust bootfs VFS has not been brought up yet, so to find the component manager's
+        // config we must find the config's offset and size in the bootfs VMO, and read from it
+        // directly.
+        bootfs_svc = Some(BootfsSvc::new().expect("Failed to create Rust bootfs"));
+        let canonicalized =
+            if args.config.starts_with("/boot/") { &args.config[6..] } else { &args.config };
+        let config_bytes =
+            match bootfs_svc.as_ref().unwrap().read_config_from_uninitialized_vfs(canonicalized) {
+                Ok(config) => config,
+                Err(error) => {
+                    panic!("Failed to read config from uninitialized vfs with error {}.", error)
+                }
+            };
+
+        config = match RuntimeConfig::load_from_bytes(&config_bytes) {
+            Ok(config) => config,
+            Err(err) => {
+                panic!("Failed to load runtime config: {}", err)
+            }
+        };
+    } else {
+        // This is the legacy path where bootsvc is hosting a C++ bootfs VFS,
+        // and component manager can read its config using standard filesystem APIs.
+        let path = PathBuf::from(&args.config);
+        config = match RuntimeConfig::load_from_file(&path) {
+            Ok(config) => config,
+            Err(err) => {
+                panic!("Failed to load runtime config: {}", err)
+            }
+        };
+    }
 
     match (config.root_component_url.as_ref(), args.root_component_url.as_ref()) {
-        (Some(_url), None) => config,
+        (Some(_url), None) => (config, bootfs_svc),
         (None, Some(url)) => {
             config.root_component_url = Some(url.clone());
-            config
+            (config, bootfs_svc)
         }
         (None, None) => {
             panic!(
@@ -130,13 +158,17 @@ fn build_runtime_config() -> RuntimeConfig {
     }
 }
 
-async fn build_environment(config: RuntimeConfig) -> Result<BuiltinEnvironment, Error> {
+async fn build_environment(
+    config: RuntimeConfig,
+    bootfs_svc: Option<BootfsSvc>,
+) -> Result<BuiltinEnvironment, Error> {
     BuiltinEnvironmentBuilder::new()
         .set_runtime_config(config)
-        .create_utc_clock()
+        .create_utc_clock(&bootfs_svc)
         .await?
         .add_elf_runner()?
         .include_namespace_resolvers()
+        .set_bootfs_svc(bootfs_svc)
         .build()
         .await
 }

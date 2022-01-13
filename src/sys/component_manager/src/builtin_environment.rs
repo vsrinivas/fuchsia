@@ -5,6 +5,7 @@
 use {
     crate::{
         binder::BinderCapabilityHost,
+        bootfs::BootfsSvc,
         builtin::{
             arguments::Arguments as BootArguments,
             capability::BuiltinCapability,
@@ -79,7 +80,7 @@ use {
     fuchsia_component::{client, server::*},
     fuchsia_inspect::{self as inspect, component, health::Reporter, Inspector},
     fuchsia_runtime::{take_startup_handle, HandleType},
-    fuchsia_zircon::{self as zx, Clock, HandleBased},
+    fuchsia_zircon::{self as zx, Clock, HandleBased, Resource},
     futures::lock::Mutex,
     futures::prelude::*,
     log::*,
@@ -92,6 +93,7 @@ pub static SHUTDOWN_TIMEOUT: std::time::Duration = std::time::Duration::from_sec
 pub struct BuiltinEnvironmentBuilder {
     // TODO(60804): Make component manager's namespace injectable here.
     runtime_config: Option<RuntimeConfig>,
+    bootfs_svc: Option<BootfsSvc>,
     runners: Vec<(CapabilityName, Arc<dyn BuiltinRunnerFactory>)>,
     resolvers: ResolverRegistry,
     utc_clock: Option<Arc<Clock>>,
@@ -105,6 +107,7 @@ impl Default for BuiltinEnvironmentBuilder {
     fn default() -> Self {
         Self {
             runtime_config: None,
+            bootfs_svc: None,
             runners: vec![],
             resolvers: ResolverRegistry::default(),
             utc_clock: None,
@@ -130,6 +133,11 @@ impl BuiltinEnvironmentBuilder {
         self
     }
 
+    pub fn set_bootfs_svc(mut self, bootfs_svc: Option<BootfsSvc>) -> Self {
+        self.bootfs_svc = bootfs_svc;
+        self
+    }
+
     pub fn set_inspector(mut self, inspector: Inspector) -> Self {
         self.inspector = Some(inspector);
         self
@@ -144,13 +152,13 @@ impl BuiltinEnvironmentBuilder {
     /// Not every instance of component_manager running on the system maintains a
     /// UTC clock. Only the root component_manager should have the `maintain-utc-clock`
     /// config flag set.
-    pub async fn create_utc_clock(mut self) -> Result<Self, Error> {
+    pub async fn create_utc_clock(mut self, bootfs: &Option<BootfsSvc>) -> Result<Self, Error> {
         let runtime_config = self
             .runtime_config
             .as_ref()
             .ok_or(format_err!("Runtime config should be set to create utc clock."))?;
         self.utc_clock = if runtime_config.maintain_utc_clock {
-            Some(Arc::new(create_utc_clock().await.context("failed to create UTC clock")?))
+            Some(Arc::new(create_utc_clock(&bootfs).await.context("failed to create UTC clock")?))
         } else {
             None
         };
@@ -210,6 +218,20 @@ impl BuiltinEnvironmentBuilder {
     }
 
     pub async fn build(mut self) -> Result<BuiltinEnvironment, Error> {
+        let system_resource_handle =
+            take_startup_handle(HandleType::SystemResource.into()).map(zx::Resource::from);
+        if self.bootfs_svc.is_some() {
+            // Set up the Rust bootfs VFS, and bind to the '/boot' namespace. This should
+            // happen as early as possible when building the component manager as other objects
+            // may require reading from '/boot' for configuration, etc.
+            self.bootfs_svc
+                .unwrap()
+                .ingest_bootfs_vmo(&system_resource_handle)?
+                .publish_kernel_vmo(HandleType::VdsoVmo)?
+                .publish_kernel_vmo(HandleType::KernelFileVmo)?
+                .create_and_bind_vfs()?;
+        }
+
         let runtime_config = self
             .runtime_config
             .ok_or(format_err!("Runtime config is required for BuiltinEnvironment."))?;
@@ -263,6 +285,7 @@ impl BuiltinEnvironmentBuilder {
             runtime_config.namespace_capabilities.clone(),
             runtime_config.builtin_capabilities.clone(),
         ));
+
         let params = ModelParams {
             root_component_url: root_component_url.as_str().to_owned(),
             root_environment: Environment::new_root(
@@ -289,6 +312,7 @@ impl BuiltinEnvironmentBuilder {
             model,
             root_component_url,
             runtime_config,
+            system_resource_handle,
             builtin_runners,
             boot_resolver,
             realm_builder_resolver,
@@ -363,6 +387,7 @@ impl BuiltinEnvironment {
         model: Arc<Model>,
         root_component_url: Url,
         runtime_config: Arc<RuntimeConfig>,
+        system_resource_handle: Option<Resource>,
         builtin_runners: Vec<Arc<BuiltinRunner>>,
         boot_resolver: Option<Arc<FuchsiaBootResolver>>,
         realm_builder_resolver: Option<Arc<RealmBuilderResolver>>,
@@ -423,9 +448,6 @@ impl BuiltinEnvironment {
 
         let root_resource_handle =
             take_startup_handle(HandleType::Resource.into()).map(zx::Resource::from);
-
-        let system_resource_handle =
-            take_startup_handle(HandleType::SystemResource.into()).map(zx::Resource::from);
 
         // Set up BootArguments service.
         let boot_args = BootArguments::new();

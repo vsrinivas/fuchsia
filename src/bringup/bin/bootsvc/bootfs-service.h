@@ -39,7 +39,8 @@ class BootfsService : public fbl::RefCounted<BootfsService> {
 
   // Publishes all of the VMOs from the startup handles table with the given
   // |type|. |debug_type_name| is used for debug printing.
-  void PublishStartupVmos(uint8_t type, const char* debug_type_name);
+  void PublishStartupVmos(const std::vector<zx::vmo>& vmos, uint8_t type,
+                          const char* debug_type_name);
 
  private:
   BootfsService(zx::resource vmex_rsrc);

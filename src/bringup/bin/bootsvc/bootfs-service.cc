@@ -267,22 +267,30 @@ zx_status_t BootfsService::PublishUnownedVmo(std::string_view path, const zx::vm
   return ZX_ERR_INTERNAL;
 }
 
-void BootfsService::PublishStartupVmos(uint8_t type, const char* debug_type_name) {
+void BootfsService::PublishStartupVmos(const std::vector<zx::vmo>& vmos, uint8_t type,
+                                       const char* debug_type_name) {
   constexpr char kVmoSubdir[] = "kernel/";
   constexpr size_t kVmoSubdirLen = sizeof(kVmoSubdir) - 1;
 
-  for (uint16_t i = 0; true; ++i) {
-    zx::vmo owned_vmo(zx_take_startup_handle(PA_HND(type, i)));
-    if (!owned_vmo.is_valid()) {
-      break;
+  printf("bootsvc: Preparing to publish %lu %s vmos.\n", vmos.size(), debug_type_name);
+
+  for (uint16_t i = 0; i < vmos.size(); ++i) {
+    if (!vmos[i].is_valid()) {
+      continue;
     }
+
+    zx::vmo owned_vmo;
+    zx_status_t status = vmos[i].duplicate(ZX_RIGHT_SAME_RIGHTS, &owned_vmo);
+    ZX_ASSERT_MSG(status == ZX_OK && owned_vmo.is_valid(), "Failed to duplicate vmo %s-%d: %s\n.",
+                  debug_type_name, i, zx_status_get_string(status));
+
     // We use an unowned VMO here so we can have some finer control over
-    // whether the handle is closed.   This is safe since |owned_vmo| will
-    // never be closed before |vmo|.
+    // whether the handle is closed. This is safe since the owned vmo will
+    // never be closed before this function returns.
     zx::unowned_vmo vmo(owned_vmo);
 
     // The first vDSO is the default vDSO.  Since we've taken the startup
-    // handle, launchpad won't find it on its own.  So point launchpad at
+    // handle, launchpad won't find it on its own. So point launchpad at
     // it instead of closing it.
     const bool is_default_vdso = (type == PA_VMO_VDSO && i == 0);
     if (is_default_vdso) {
@@ -294,8 +302,7 @@ void BootfsService::PublishStartupVmos(uint8_t type, const char* debug_type_name
     char name[kVmoSubdirLen + ZX_MAX_NAME_LEN] = {};
     memcpy(name, kVmoSubdir, kVmoSubdirLen);
     size_t size;
-    zx_status_t status =
-        vmo->get_property(ZX_PROP_NAME, name + kVmoSubdirLen, sizeof(name) - kVmoSubdirLen);
+    status = vmo->get_property(ZX_PROP_NAME, name + kVmoSubdirLen, sizeof(name) - kVmoSubdirLen);
     if (status != ZX_OK) {
       printf("bootsvc: vmo.get_property on %s %u: %s\n", debug_type_name, i,
              zx_status_get_string(status));

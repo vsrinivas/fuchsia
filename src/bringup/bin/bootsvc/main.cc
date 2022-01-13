@@ -61,6 +61,15 @@ struct Resources {
 #endif
 };
 
+// This is a temporary hack used while bootsvc and component manager
+// are both creating bootfs services, as VMO handles taken need to be
+// passed on.
+struct Vmos {
+  zx::vmo bootfs;
+  std::vector<zx::vmo> vdsos;
+  std::vector<zx::vmo> kernel_files;
+};
+
 // Wire up stdout so that printf() and friends work.
 zx_status_t SetupStdout(const zx::debuglog& log) {
   zx::debuglog dup;
@@ -234,7 +243,7 @@ void LaunchNextProcess(const std::vector<std::string>& args,
                        fbl::RefPtr<bootsvc::BootfsService> bootfs,
                        fbl::RefPtr<bootsvc::SvcfsService> svcfs,
                        std::shared_ptr<bootsvc::BootfsLoaderService> loader_svc,
-                       Resources& resources, const zx::debuglog& log, async::Loop& loop,
+                       Resources& resources, Vmos& vmos, const zx::debuglog& log, async::Loop& loop,
                        const zx::vmo& bootargs_vmo, const uint64_t bootargs_size) {
   ZX_DEBUG_ASSERT(!args.empty());
 
@@ -277,6 +286,7 @@ void LaunchNextProcess(const std::vector<std::string>& args,
   nametable[count++] = "/svc";
 
   // Pass on resources to the next process.
+  launchpad_add_handle(lp, vmos.bootfs.release(), PA_HND(PA_VMO_BOOTFS, 0));
   launchpad_add_handle(lp, resources.mmio.release(), PA_HND(PA_MMIO_RESOURCE, 0));
   launchpad_add_handle(lp, resources.irq.release(), PA_HND(PA_IRQ_RESOURCE, 0));
   launchpad_add_handle(lp, resources.system.release(), PA_HND(PA_SYSTEM_RESOURCE, 0));
@@ -285,6 +295,17 @@ void LaunchNextProcess(const std::vector<std::string>& args,
 #elif __aarch64__
   launchpad_add_handle(lp, resources.smc.release(), PA_HND(PA_SMC_RESOURCE, 0));
 #endif
+
+  // Temporarily pass these VMO handles to the component manager. This will be
+  // removed once bootsvc stops taking these handles to create bootfs when
+  // component manager is creating its own bootfs.
+  for (uint16_t i = 0; i < vmos.vdsos.size(); i++) {
+    // Don't overwrite the default VDSO at index i == 0.
+    launchpad_add_handle(lp, vmos.vdsos[i].release(), PA_HND(PA_VMO_VDSO, i + 1));
+  }
+  for (uint16_t i = 0; i < vmos.kernel_files.size(); i++) {
+    launchpad_add_handle(lp, vmos.kernel_files[i].release(), PA_HND(PA_VMO_KERNEL_FILE, i));
+  }
 
   // Duplicate the root resource to pass to the next process.
   zx::resource root_rsrc_dup;
@@ -353,6 +374,18 @@ void LaunchNextProcess(const std::vector<std::string>& args,
   loop.Quit();
 }
 
+void GetKernelVmos(uint8_t type, std::vector<zx::vmo>* vmos) {
+  zx::vmo vmo;
+  for (uint16_t i = 0;; i++) {
+    vmo = zx::vmo(zx_take_startup_handle(PA_HND(type, i)));
+    if (vmo.is_valid()) {
+      vmos->push_back(std::move(vmo));
+    } else {
+      return;
+    }
+  }
+}
+
 }  // namespace
 
 int main(int argc, char** argv) {
@@ -379,9 +412,6 @@ int main(int argc, char** argv) {
 
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
 
-  zx::vmo bootfs_vmo(zx_take_startup_handle(PA_HND(PA_VMO_BOOTFS, 0)));
-  ZX_ASSERT(bootfs_vmo.is_valid());
-
   // Take the resources.
   printf("bootsvc: Taking resources...\n");
   Resources resources;
@@ -400,6 +430,10 @@ int main(int argc, char** argv) {
 #endif
   resources.root = std::move(root_resource);
   ZX_ASSERT_MSG(resources.root.is_valid(), "Invalid root resource handle\n");
+
+  Vmos vmos;
+  vmos.bootfs = zx::vmo(zx_take_startup_handle(PA_HND(PA_VMO_BOOTFS, 0)));
+  ZX_ASSERT_MSG(vmos.bootfs.is_valid(), "Invalid bootfs_resource handle\n");
 
   // Memfs attempts to read the UTC clock to set file times, but bootsvc starts
   // before component_manager has created the standard UTC clock. Create a
@@ -421,7 +455,15 @@ int main(int argc, char** argv) {
       bootsvc::BootfsService::Create(loop.dispatcher(), std::move(bootfs_vmex_rsrc), &bootfs_svc);
   ZX_ASSERT_MSG(status == ZX_OK, "BootfsService creation failed: %s\n",
                 zx_status_get_string(status));
-  status = bootfs_svc->AddBootfs(std::move(bootfs_vmo));
+
+  // Duplicate the bootfs vmo since the original will be passed onwards to the component manager.
+  zx::vmo bootfs_dup;
+  status = vmos.bootfs.duplicate(ZX_RIGHT_SAME_RIGHTS, &bootfs_dup);
+  ZX_ASSERT_MSG(status == ZX_OK && bootfs_dup.is_valid(), "Failed to duplicate bootfs vmo: %s\n.",
+                zx_status_get_string(status));
+  ZX_ASSERT(bootfs_dup.is_valid());
+
+  status = bootfs_svc->AddBootfs(std::move(bootfs_dup));
   ZX_ASSERT_MSG(status == ZX_OK, "Bootfs add failed: %s\n", zx_status_get_string(status));
 
   // Process the ZBI boot image
@@ -458,10 +500,14 @@ int main(int argc, char** argv) {
       fuchsia_boot_FactoryItems_Name,
       bootsvc::CreateFactoryItemsService(loop.dispatcher(), std::move(factory_item_map)));
 
-  // Consume certain VMO types from the startup handle table
+  // Duplicate and serve certain VMO types from the startup handle table. This is temporary
+  // while we still use these handles in both bootsvc and component manager.
   printf("bootsvc: Loading kernel VMOs...\n");
-  bootfs_svc->PublishStartupVmos(PA_VMO_VDSO, "PA_VMO_VDSO");
-  bootfs_svc->PublishStartupVmos(PA_VMO_KERNEL_FILE, "PA_VMO_KERNEL_FILE");
+  GetKernelVmos(PA_VMO_VDSO, &vmos.vdsos);
+  bootfs_svc->PublishStartupVmos(vmos.vdsos, PA_VMO_VDSO, "PA_VMO_VDSO");
+
+  GetKernelVmos(PA_VMO_KERNEL_FILE, &vmos.kernel_files);
+  bootfs_svc->PublishStartupVmos(vmos.kernel_files, PA_VMO_KERNEL_FILE, "PA_VMO_KERNEL_FILE");
 
   // Creating the loader service
   printf("bootsvc: Creating loader service...\n");
@@ -473,7 +519,7 @@ int main(int argc, char** argv) {
   printf("bootsvc: Launching next process...\n");
   std::vector<std::string> next_args = bootsvc::SplitString(*next_program, ',');
   std::thread(LaunchNextProcess, next_args, bootfs_svc, svcfs_svc, loader_svc, std::ref(resources),
-              std::cref(log), std::ref(loop), std::cref(args_vmo), args_size)
+              std::ref(vmos), std::cref(log), std::ref(loop), std::cref(args_vmo), args_size)
       .detach();
 
   // Begin serving the bootfs fileystem and loader

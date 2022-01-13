@@ -18,6 +18,9 @@ pub struct Arguments {
 
     /// Load component_manager's configuration from this path.
     pub config: String,
+
+    /// Whether to have component manager host bootfs (which backs the '/boot' directory).
+    pub host_bootfs: bool,
 }
 
 impl Arguments {
@@ -48,6 +51,8 @@ impl Arguments {
                     Some(config) => config,
                     None => return Err(format_err!("No value given for '--config'")),
                 }
+            } else if arg == "--host_bootfs" {
+                args.host_bootfs = true;
             } else if arg.starts_with("--") {
                 return Err(format_err!("Unrecognized flag: {}", arg));
             } else {

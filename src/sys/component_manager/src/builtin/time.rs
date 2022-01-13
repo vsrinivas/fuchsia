@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 use {
+    crate::bootfs::BootfsSvc,
     crate::builtin::capability::BuiltinCapability,
     ::routing::capability_source::InternalCapability,
     anyhow::{anyhow, Context, Error},
@@ -56,12 +57,28 @@ impl BuiltinCapability for UtcTimeMaintainer {
     }
 }
 
-async fn read_utc_backstop(path: &str) -> Result<Time, Error> {
-    let file_proxy = file::open_in_namespace(path, OPEN_RIGHT_READABLE)
-        .context("failed to open backstop time file from disk")?;
-    let file_contents = file::read_to_string(&file_proxy)
-        .await
-        .context("failed to read backstop time from disk")?;
+async fn read_utc_backstop(path: &str, bootfs: &Option<BootfsSvc>) -> Result<Time, Error> {
+    let file_contents: String;
+    if bootfs.is_none() {
+        let file_proxy = file::open_in_namespace(path, OPEN_RIGHT_READABLE)
+            .context("failed to open backstop time file from disk")?;
+        file_contents = file::read_to_string(&file_proxy)
+            .await
+            .context("failed to read backstop time from disk")?;
+    } else {
+        let canonicalized = if path.starts_with("/boot/") { &path[6..] } else { &path };
+        let file_bytes =
+            match bootfs.as_ref().unwrap().read_config_from_uninitialized_vfs(canonicalized) {
+                Ok(file) => file,
+                Err(error) => {
+                    return Err(anyhow!(
+                        "Failed to read file from uninitialized vfs with error {}.",
+                        error
+                    ));
+                }
+            };
+        file_contents = String::from_utf8(file_bytes)?;
+    }
     let parsed_time =
         file_contents.trim().parse::<i64>().context("failed to parse backstop time")?;
     Ok(Time::from_nanos(
@@ -72,8 +89,8 @@ async fn read_utc_backstop(path: &str) -> Result<Time, Error> {
 }
 
 /// Creates a UTC kernel clock with a backstop time configured by /boot.
-pub async fn create_utc_clock() -> Result<Clock, Error> {
-    let backstop = read_utc_backstop("/boot/config/build_info/minimum_utc_stamp").await?;
+pub async fn create_utc_clock(bootfs: &Option<BootfsSvc>) -> Result<Clock, Error> {
+    let backstop = read_utc_backstop("/boot/config/build_info/minimum_utc_stamp", &bootfs).await?;
     let clock = Clock::create(ClockOpts::empty(), Some(backstop))
         .map_err(|s| anyhow!("failed to create UTC clock: {}", s))?;
     Ok(clock)

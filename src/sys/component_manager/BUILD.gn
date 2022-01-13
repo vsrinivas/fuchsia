@@ -69,6 +69,7 @@ template("component_manager") {
     "//src/sys/lib/cm_types",
     "//src/sys/lib/component_id_index",
     "//src/sys/lib/config_encoder",
+    "//src/sys/lib/fuchsia-bootfs",
     "//src/sys/lib/moniker",
     "//src/sys/lib/routing",
     "//src/sys/lib/runner",
@@ -96,6 +97,7 @@ template("component_manager") {
   ]
   _sources = [
     "src/binder.rs",
+    "src/bootfs.rs",
     "src/builtin/arguments.rs",
     "src/builtin/capability.rs",
     "src/builtin/cpu_resource.rs",
