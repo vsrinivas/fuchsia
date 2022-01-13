@@ -28,7 +28,7 @@ async fn exec_server() -> Result<(), Error> {
     let stream = ServiceProviderRequestStream::from_channel(chan);
     hoist().publish_service(rcs::RemoteControlMarker::NAME, ClientEnd::new(p))?;
 
-    let service = Rc::new(RemoteControlService::new().unwrap());
+    let service = Rc::new(RemoteControlService::new().await);
 
     let sc1 = service.clone();
     let mut fs = ServiceFs::new_local();

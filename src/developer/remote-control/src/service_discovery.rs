@@ -158,7 +158,9 @@ impl Into<ServiceMatch> for &PathEntry {
     }
 }
 
-async fn connect_and_read_dir(hub_path: &PathBuf) -> Result<Vec<files_async::DirEntry>, Error> {
+pub(crate) async fn connect_and_read_dir(
+    hub_path: &PathBuf,
+) -> Result<Vec<files_async::DirEntry>, Error> {
     let path_str = hub_path.to_string_lossy();
     let proxy = io_util::open_directory_in_namespace(&path_str, io::OPEN_RIGHT_READABLE)?;
     files_async::readdir(&proxy).await.map_err(Into::into)

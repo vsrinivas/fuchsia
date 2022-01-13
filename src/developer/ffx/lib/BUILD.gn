@@ -18,6 +18,7 @@ if (is_host) {
     "rcs",
     "protocols",
     "schema",
+    "selector-maps",
     "symbol-index",
     "tasks",
     "timeout",

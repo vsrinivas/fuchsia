@@ -13,6 +13,7 @@ use {
     fuchsia_async as fasync, fuchsia_zircon as zx,
     futures::future::join,
     futures::prelude::*,
+    selector_maps::{MappingError, SelectorMappingList},
     std::{cell::RefCell, net::SocketAddr, rc::Rc},
     tracing::*,
 };
@@ -25,15 +26,52 @@ const HUB_ROOT: &str = "/discovery_root";
 pub struct RemoteControlService {
     ids: RefCell<Vec<u64>>,
     id_allocator: fn() -> Result<HostIdentifier>,
+    maps: SelectorMappingList,
 }
 
 impl RemoteControlService {
-    pub fn new() -> Result<Self> {
-        return Ok(Self::new_with_allocator(|| HostIdentifier::new()));
+    pub async fn new() -> Self {
+        let f = match io_util::open_file_in_namespace(
+            "/config/data/selector-maps.json",
+            io::OPEN_RIGHT_READABLE,
+        ) {
+            Ok(f) => f,
+            Err(e) => {
+                error!(%e, "failed to open selector maps json file");
+                return Self::new_with_allocator_and_maps(
+                    || HostIdentifier::new(),
+                    SelectorMappingList::default(),
+                );
+            }
+        };
+        let bytes = match io_util::read_file_bytes(&f).await {
+            Ok(b) => b,
+            Err(e) => {
+                error!(?e, "failed to read bytes from selector maps json");
+                return Self::new_with_allocator_and_maps(
+                    || HostIdentifier::new(),
+                    SelectorMappingList::default(),
+                );
+            }
+        };
+        let list: SelectorMappingList = match serde_json::from_slice(bytes.as_slice()) {
+            Ok(m) => m,
+            Err(e) => {
+                error!(?e, "failed to parse selector map json");
+                return Self::new_with_allocator_and_maps(
+                    || HostIdentifier::new(),
+                    SelectorMappingList::default(),
+                );
+            }
+        };
+        return Self::new_with_allocator_and_maps(|| HostIdentifier::new(), list);
     }
 
-    pub(crate) fn new_with_allocator(id_allocator: fn() -> Result<HostIdentifier>) -> Self {
-        return Self { id_allocator, ids: Default::default() };
+    pub(crate) fn new_with_allocator_and_maps(
+        id_allocator: fn() -> Result<HostIdentifier>,
+        maps: SelectorMappingList,
+    ) -> Self {
+        return Self { id_allocator, ids: Default::default(), maps };
     }
 
     pub async fn serve_stream(
@@ -239,11 +277,32 @@ impl RemoteControlService {
         Ok(svc_match.into())
     }
 
+    pub(crate) fn map_selector(
+        self: &Rc<Self>,
+        selector: Selector,
+    ) -> Result<Selector, rcs::ConnectError> {
+        self.maps.map_selector(selector.clone()).map_err(|e| {
+            match e {
+                MappingError::BadSelector(selector_str, err) => {
+                    error!(?selector, ?selector_str, %err, "got invalid selector mapping");
+                }
+                MappingError::BadInputSelector(err) => {
+                    error!(%err, "input selector invalid");
+                }
+                MappingError::Unbounded => {
+                    error!(?selector, %e, "got a cycle in mapping selector");
+                }
+            }
+            rcs::ConnectError::ServiceRerouteFailed
+        })
+    }
+
     pub async fn connect_to_service(
         self: &Rc<Self>,
         selector: Selector,
         service_chan: zx::Channel,
     ) -> Result<rcs::ServiceMatch, rcs::ConnectError> {
+        let selector = self.map_selector(selector.clone())?;
         self.connect_with_matcher(
             &selector,
             service_chan,
@@ -431,6 +490,8 @@ mod tests {
     const SERIAL: &'static str = "test_serial";
     const BOARD_CONFIG: &'static str = "test_board_name";
     const PRODUCT_CONFIG: &'static str = "core";
+    const FAKE_SERVICE_SELECTOR: &'static str = "my/component:expose:some.fake.Service";
+    const MAPPED_SERVICE_SELECTOR: &'static str = "my/other/component:out:some.fake.mapped.Service";
 
     const IPV4_ADDR: [u8; 4] = [127, 0, 0, 1];
     const IPV6_ADDR: [u8; 16] = [127, 1, 2, 3, 4, 5, 6, 7, 8, 9, 1, 2, 3, 4, 5, 6];
@@ -572,15 +633,24 @@ mod tests {
     }
 
     fn make_rcs() -> Rc<RemoteControlService> {
-        Rc::new(RemoteControlService::new_with_allocator(|| {
-            Ok(HostIdentifier {
-                interface_state_proxy: setup_fake_interface_state_service(),
-                name_provider_proxy: setup_fake_name_provider_service(),
-                device_info_proxy: setup_fake_device_service(),
-                build_info_proxy: setup_fake_build_info_service(),
-                boot_timestamp_nanos: BOOT_TIME,
-            })
-        }))
+        make_rcs_with_maps(vec![])
+    }
+
+    fn make_rcs_with_maps(maps: Vec<(&str, &str)>) -> Rc<RemoteControlService> {
+        Rc::new(RemoteControlService::new_with_allocator_and_maps(
+            || {
+                Ok(HostIdentifier {
+                    interface_state_proxy: setup_fake_interface_state_service(),
+                    name_provider_proxy: setup_fake_name_provider_service(),
+                    device_info_proxy: setup_fake_device_service(),
+                    build_info_proxy: setup_fake_build_info_service(),
+                    boot_timestamp_nanos: BOOT_TIME,
+                })
+            },
+            SelectorMappingList::new(
+                maps.iter().map(|s| (s.0.to_string(), s.1.to_string())).collect(),
+            ),
+        ))
     }
 
     fn setup_rcs_proxy() -> rcs::RemoteControlProxy {
@@ -644,6 +714,14 @@ mod tests {
 
     fn wildcard_selector() -> Selector {
         parse_selector::<VerboseError>("*:*:*").unwrap()
+    }
+
+    fn service_selector() -> Selector {
+        parse_selector::<VerboseError>(FAKE_SERVICE_SELECTOR).unwrap()
+    }
+
+    fn mapped_service_selector() -> Selector {
+        parse_selector::<VerboseError>(MAPPED_SERVICE_SELECTOR).unwrap()
     }
 
     async fn no_paths_matcher() -> Result<Vec<PathEntry>> {
@@ -727,6 +805,48 @@ mod tests {
     }
 
     #[fasync::run_singlethreaded(test)]
+    async fn test_map_selector() -> Result<()> {
+        let service = make_rcs_with_maps(vec![(FAKE_SERVICE_SELECTOR, MAPPED_SERVICE_SELECTOR)]);
+
+        assert_eq!(service.map_selector(service_selector()).unwrap(), mapped_service_selector());
+        Ok(())
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_map_selector_broken_mapping() -> Result<()> {
+        let service = make_rcs_with_maps(vec![(FAKE_SERVICE_SELECTOR, "not_a_selector:::::")]);
+
+        assert_matches!(
+            service.map_selector(service_selector()).unwrap_err(),
+            rcs::ConnectError::ServiceRerouteFailed
+        );
+        Ok(())
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_map_selector_unbounded_mapping() -> Result<()> {
+        let service = make_rcs_with_maps(vec![
+            (FAKE_SERVICE_SELECTOR, MAPPED_SERVICE_SELECTOR),
+            (MAPPED_SERVICE_SELECTOR, FAKE_SERVICE_SELECTOR),
+        ]);
+
+        assert_matches!(
+            service.map_selector(service_selector()).unwrap_err(),
+            rcs::ConnectError::ServiceRerouteFailed
+        );
+        Ok(())
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_map_selector_no_matches() -> Result<()> {
+        let service =
+            make_rcs_with_maps(vec![("not/a/match:out:some.Service", MAPPED_SERVICE_SELECTOR)]);
+
+        assert_eq!(service.map_selector(service_selector()).unwrap(), service_selector());
+        Ok(())
+    }
+
+    #[fasync::run_singlethreaded(test)]
     async fn test_select_multiple_matches() -> Result<()> {
         let service = make_rcs();
 
@@ -803,7 +923,7 @@ mod tests {
 
         let mut buf = vec![];
         zx_socket.read_to_end(&mut buf).await.unwrap();
-        assert_eq!(&buf, &[]);
+        assert_eq!(&buf, &Vec::<u8>::default());
 
         // Make sure the forward task shuts down as well.
         assert_matches!(forward_task.await, Ok(()));
@@ -832,7 +952,7 @@ mod tests {
 
         let mut buf = vec![];
         tcp_stream.read_to_end(&mut buf).await.unwrap();
-        assert_eq!(&buf, &[]);
+        assert_eq!(&buf, &Vec::<u8>::default());
 
         // Make sure the forward task shuts down as well.
         assert_matches!(forward_task.await, Ok(()));

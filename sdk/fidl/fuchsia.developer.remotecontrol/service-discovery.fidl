@@ -18,6 +18,8 @@ type ConnectError = strict enum : uint32 {
     SERVICE_DISCOVERY_FAILED = 3;
     // A single service was matched, but connecting to it failed.
     SERVICE_CONNECT_FAILED = 4;
+    // Attempting to reroute the requested service via a selector map failed.
+    SERVICE_REROUTE_FAILED = 5;
 };
 
 type SelectError = strict enum : uint32 {

@@ -592,6 +592,12 @@
             to: "#remote-control",
         },
         {
+            directory: "config-data",
+            from: "parent",
+            to: [ "#remote-control" ],
+            subdir: "remote-control",
+        },
+        {
             protocol: [
                 "fuchsia.diagnostics.ArchiveAccessor",
                 "fuchsia.logger.LogSink",

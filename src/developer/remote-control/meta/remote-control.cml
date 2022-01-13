@@ -16,6 +16,11 @@
             path: "/discovery_root",
         },
         {
+            directory: "config-data",
+            rights: [ "r*" ],
+            path: "/config/data",
+        },
+        {
             protocol: [
                 "fuchsia.buildinfo.Provider",
                 "fuchsia.developer.remotecontrol.RemoteDiagnosticsBridge",
