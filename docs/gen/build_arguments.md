@@ -68,14 +68,14 @@ TODO(fxbug.dev/67565) - remove once external sync FD extensions fully supported
 
 **Current value (from the default):** `false`
 
-From [//third_party/mesa/src/intel/vulkan/BUILD.gn:27](https://fuchsia.googlesource.com/third_party/mesa/+/e729c9981a81001a0e2fd4bb6f93e1ad85324ce2/src/intel/vulkan/BUILD.gn#27)
+From [//third_party/mesa/src/intel/vulkan/BUILD.gn:27](https://fuchsia.googlesource.com/third_party/mesa/+/bb98266df2fcf038a91c8c2bb1a29b507ecbce5a/src/intel/vulkan/BUILD.gn#27)
 
 ### anv_use_max_ram
 Give maximum possible memory to Vulkan heap
 
 **Current value (from the default):** `false`
 
-From [//third_party/mesa/src/intel/vulkan/BUILD.gn:30](https://fuchsia.googlesource.com/third_party/mesa/+/e729c9981a81001a0e2fd4bb6f93e1ad85324ce2/src/intel/vulkan/BUILD.gn#30)
+From [//third_party/mesa/src/intel/vulkan/BUILD.gn:30](https://fuchsia.googlesource.com/third_party/mesa/+/bb98266df2fcf038a91c8c2bb1a29b507ecbce5a/src/intel/vulkan/BUILD.gn#30)
 
 ### asan_default_options
 Default [AddressSanitizer](https://clang.llvm.org/docs/AddressSanitizer.html)
@@ -133,7 +133,7 @@ be visible to Driver Manager. These package labels are also considered to be in 
 
 **Current value for `target_cpu = "arm64"`:** `[]`
 
-From //products/bringup.gni:45
+From //products/bringup.gni:54
 
 **Overridden from the default:** `[]`
 
@@ -141,7 +141,7 @@ From //BUILD.gn:26
 
 **Current value for `target_cpu = "x64"`:** `[]`
 
-From //products/bringup.gni:45
+From //products/bringup.gni:54
 
 **Overridden from the default:** `[]`
 
@@ -506,7 +506,7 @@ otherwise be /system/... at runtime is /boot/... instead.
 
 **Current value for `target_cpu = "arm64"`:** `true`
 
-From //products/bringup.gni:5
+From //products/bringup.gni:7
 
 **Overridden from the default:** `false`
 
@@ -514,7 +514,7 @@ From //build/images/args.gni:14
 
 **Current value for `target_cpu = "x64"`:** `true`
 
-From //products/bringup.gni:5
+From //products/bringup.gni:7
 
 **Overridden from the default:** `false`
 
@@ -1109,6 +1109,13 @@ Enable all dart analysis
 **Current value (from the default):** `true`
 
 From //build/dart/dart_library.gni:16
+
+### enable_dfv2
+Whether or not to enable DFv2 for the current build.
+
+**Current value (from the default):** `false`
+
+From //build/drivers/arguments.gni:7
 
 ### enable_frame_pointers
 Controls whether the compiler emits full stack frames for function calls.
@@ -2412,7 +2419,7 @@ they must be separated into their own list.
 
 **Current value for `target_cpu = "arm64"`:** `[]`
 
-From //products/bringup.gni:43
+From //products/bringup.gni:52
 
 **Overridden from the default:** `[]`
 
@@ -2420,7 +2427,7 @@ From //build/images/args.gni:80
 
 **Current value for `target_cpu = "x64"`:** `[]`
 
-From //products/bringup.gni:43
+From //products/bringup.gni:52
 
 **Overridden from the default:** `[]`
 
@@ -3051,7 +3058,7 @@ package flavors.
 
 **Current value for `target_cpu = "arm64"`:** `[]`
 
-From //products/bringup.gni:63
+From //products/bringup.gni:72
 
 **Overridden from the default:** `[]`
 
@@ -3059,7 +3066,7 @@ From //build/packages/prebuilt_package_with_flavors.gni:29
 
 **Current value for `target_cpu = "x64"`:** `[]`
 
-From //products/bringup.gni:63
+From //products/bringup.gni:72
 
 **Overridden from the default:** `[]`
 
@@ -3140,7 +3147,7 @@ A list of binary labels to include in ZBIs built for this product.
 
 **Current value for `target_cpu = "arm64"`:** `["//build/info:bootfs", "//bundles:bootstrap", "//bundles:debugging", "//bundles:diagnostics-eng", "//bundles/bringup:manual_testing", "//bundles/drivers:bootstrap", "//bundles/drivers:bootstrap-eng", "//bundles/drivers:usb-host-stack", "//bundles/drivers:usb-peripheral-stack", "//bundles/drivers:utils", "//src/diagnostics/archivist:default-service-config", "//products/kernel_cmdline:blobfs.cache-eviction-policy--NEVER_EVICT", "//products/kernel_cmdline:console.shell--true", "//products/kernel_cmdline:kernel.enable-debugging-syscalls--true", "//products/kernel_cmdline:kernel.enable-serial-syscalls--true", "//products/kernel_cmdline:kernel.oom.behavior--jobkill", "//products/kernel_cmdline:netsvc.all-features--true", "//products/kernel_cmdline:netsvc.disable--false", "//src/testing/runtests", "//src/sys/component_manager:component_manager_bootfs_config"]`
 
-From //products/bringup.gni:40
+From //products/bringup.gni:49
 
 **Overridden from the default:** `[]`
 
@@ -3148,7 +3155,7 @@ From //build/product.gni:7
 
 **Current value for `target_cpu = "x64"`:** `["//build/info:bootfs", "//bundles:bootstrap", "//bundles:debugging", "//bundles:diagnostics-eng", "//bundles/bringup:manual_testing", "//bundles/drivers:bootstrap", "//bundles/drivers:bootstrap-eng", "//bundles/drivers:usb-host-stack", "//bundles/drivers:usb-peripheral-stack", "//bundles/drivers:utils", "//src/diagnostics/archivist:default-service-config", "//products/kernel_cmdline:blobfs.cache-eviction-policy--NEVER_EVICT", "//products/kernel_cmdline:console.shell--true", "//products/kernel_cmdline:kernel.enable-debugging-syscalls--true", "//products/kernel_cmdline:kernel.enable-serial-syscalls--true", "//products/kernel_cmdline:kernel.oom.behavior--jobkill", "//products/kernel_cmdline:netsvc.all-features--true", "//products/kernel_cmdline:netsvc.disable--false", "//src/testing/runtests", "//src/sys/component_manager:component_manager_bootfs_config"]`
 
-From //products/bringup.gni:40
+From //products/bringup.gni:49
 
 **Overridden from the default:** `[]`
 
@@ -3308,12 +3315,6 @@ Set to true to make Rust compiles preserve timestamps of unchanged outputs.
 **Current value (from the default):** `false`
 
 From //build/toolchain/restat.gni:13
-
-### run_slow_bssl_tests
-
-**Current value (from the default):** `false`
-
-From //third_party/boringssl/BUILD.gn:14
 
 ### rust_cap_lints
 Sets the maximum lint level.
