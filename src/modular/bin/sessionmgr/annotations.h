@@ -7,7 +7,6 @@
 
 #include <fuchsia/element/cpp/fidl.h>
 #include <fuchsia/modular/cpp/fidl.h>
-#include <fuchsia/session/cpp/fidl.h>
 
 #include <vector>
 
@@ -31,14 +30,6 @@ std::vector<Annotation> Merge(std::vector<Annotation> a, std::vector<Annotation>
 // TODO(fxbug.dev/37645): Template this to return the proper properties
 std::string ToInspect(const fuchsia::modular::AnnotationValue& value);
 
-// Helper function for converting a fuchsia::modular::Annotation to a fuchsia::session::Annotation.
-fuchsia::session::Annotation ToSessionAnnotation(const fuchsia::modular::Annotation& annotation);
-
-// Helper function for converting a vector of fuchsia::modular::Annotations to a
-// fuchsia::session::Annotations object.
-fuchsia::session::Annotations ToSessionAnnotations(
-    const std::vector<fuchsia::modular::Annotation>& annotations);
-
 // Converts a |fuchsia::modular::Annotation| key to a |fuchsia::element::AnnotationKey|.
 //
 // If the key contains a separator from being previously converted from an element
@@ -55,20 +46,6 @@ std::vector<fuchsia::element::Annotation> ToElementAnnotations(
     const std::vector<fuchsia::modular::Annotation>& annotations);
 
 }  // namespace modular::annotations
-
-namespace session::annotations {
-
-// Returns the equivalent |fuchsia::modular::Annotation| for the |fuchsia::session::Annotation|.
-fuchsia::modular::Annotation ToModularAnnotation(const fuchsia::session::Annotation& annotation);
-
-// Returns the equivalent list of |fuchsia::modular::Annotation|s for the
-// |fuchsia::session::Annotations|.
-//
-// If |annotations| does not have |custom_annotations| set, returns an empty vector.
-std::vector<fuchsia::modular::Annotation> ToModularAnnotations(
-    const fuchsia::session::Annotations& annotations);
-
-}  // namespace session::annotations
 
 namespace element::annotations {
 

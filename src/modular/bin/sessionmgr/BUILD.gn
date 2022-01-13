@@ -203,7 +203,6 @@ source_set("annotations") {
   public_deps = [
     "//sdk/fidl/fuchsia.element",
     "//sdk/fidl/fuchsia.modular",
-    "//sdk/fidl/fuchsia.session",
   ]
 }
 

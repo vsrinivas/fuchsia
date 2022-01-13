@@ -11,9 +11,8 @@ use {
         InputDeviceRegistryRequestStream,
     },
     fidl_fuchsia_session::{
-        ElementManagerMarker, ElementManagerProxy, ElementManagerRequest,
-        ElementManagerRequestStream, LaunchConfiguration, LaunchError, LauncherRequest,
-        LauncherRequestStream, RestartError, RestarterRequest, RestarterRequestStream,
+        LaunchConfiguration, LaunchError, LauncherRequest, LauncherRequestStream, RestartError,
+        RestarterRequest, RestarterRequestStream,
     },
     fidl_fuchsia_sessionmanager::StartupRequestStream,
     fidl_fuchsia_ui_accessibility_view::{
@@ -32,7 +31,6 @@ const MAX_CONCURRENT_CONNECTIONS: usize = 10_000;
 /// A request to connect to a protocol exposed by SessionManager.
 enum IncomingRequest {
     Manager(felement::ManagerRequestStream),
-    ElementManager(ElementManagerRequestStream),
     GraphicalPresenter(felement::GraphicalPresenterRequestStream),
     Launcher(LauncherRequestStream),
     Restarter(RestarterRequestStream),
@@ -97,7 +95,6 @@ impl SessionManager {
         let mut fs = ServiceFs::new_local();
         fs.dir("svc")
             .add_fidl_service(IncomingRequest::Manager)
-            .add_fidl_service(IncomingRequest::ElementManager)
             .add_fidl_service(IncomingRequest::GraphicalPresenter)
             .add_fidl_service(IncomingRequest::Launcher)
             .add_fidl_service(IncomingRequest::Restarter)
@@ -149,33 +146,6 @@ impl SessionManager {
                 SessionManager::handle_manager_request_stream(request_stream, manager_proxy)
                     .await
                     .context("Manager request stream got an error.")?;
-            }
-            IncomingRequest::ElementManager(request_stream) => {
-                // Connect to ElementManager served by the session.
-                let (element_manager_proxy, server_end) =
-                    fidl::endpoints::create_proxy::<ElementManagerMarker>()
-                        .context("Failed to create ElementManagerProxy")?;
-                {
-                    let state = self.state.lock().await;
-                    let session_exposed_dir_channel = state
-                        .session_exposed_dir_channel
-                        .as_ref()
-                        .context(
-                        "Failed to connect to ElementManagerProxy because no session was started",
-                    )?;
-                    fdio::service_connect_at(
-                        session_exposed_dir_channel,
-                        "fuchsia.session.ElementManager",
-                        server_end.into_channel(),
-                    )
-                    .context("Failed to connect to ElementManager service")?;
-                }
-                SessionManager::handle_element_manager_request_stream(
-                    request_stream,
-                    element_manager_proxy,
-                )
-                .await
-                .context("Element Manager request stream got an error.")?;
             }
             IncomingRequest::GraphicalPresenter(request_stream) => {
                 // Connect to GraphicalPresenter served by the session.
@@ -289,34 +259,6 @@ impl SessionManager {
             match request {
                 felement::ManagerRequest::ProposeElement { spec, controller, responder } => {
                     let mut result = manager_proxy.propose_element(spec, controller).await?;
-                    responder.send(&mut result)?;
-                }
-            };
-        }
-        Ok(())
-    }
-
-    /// Serves a specified [`ElementManagerRequestStream`].
-    ///
-    /// # Parameters
-    /// - `request_stream`: the ElementManagerRequestStream.
-    /// - `element_manager_proxy`: the ElementManagerProxy that will handle the relayed commands.
-    ///
-    /// # Errors
-    /// When an error is encountered reading from the request stream.
-    pub async fn handle_element_manager_request_stream(
-        mut request_stream: ElementManagerRequestStream,
-        element_manager_proxy: ElementManagerProxy,
-    ) -> Result<(), Error> {
-        while let Some(request) = request_stream
-            .try_next()
-            .await
-            .context("Error handling Element Manager request stream")?
-        {
-            match request {
-                ElementManagerRequest::ProposeElement { spec, element_controller, responder } => {
-                    let mut result =
-                        element_manager_proxy.propose_element(spec, element_controller).await?;
                     responder.send(&mut result)?;
                 }
             };
@@ -567,14 +509,13 @@ impl SessionManager {
 mod tests {
     use {
         super::SessionManager,
-        fidl::encoding::Decodable,
         fidl::endpoints::{create_endpoints, create_proxy_and_stream, spawn_stream_handler},
-        fidl_fuchsia_component as fcomponent,
+        fidl_fuchsia_component as fcomponent, fidl_fuchsia_element as felement,
         fidl_fuchsia_input_injection::{InputDeviceRegistryMarker, InputDeviceRegistryRequest},
         fidl_fuchsia_input_report::InputDeviceMarker,
         fidl_fuchsia_session::{
-            ElementManagerMarker, ElementManagerRequest, ElementSpec, LaunchConfiguration,
-            LauncherMarker, LauncherProxy, RestartError, RestarterMarker, RestarterProxy,
+            LaunchConfiguration, LauncherMarker, LauncherProxy, RestartError, RestarterMarker,
+            RestarterProxy,
         },
         fidl_fuchsia_ui_accessibility_view::{RegistryMarker, RegistryRequest},
         fuchsia_scenic as scenic,
@@ -828,25 +769,24 @@ mod tests {
 
     #[fuchsia::test]
     async fn handle_element_manager_request_stream_propagates_request_to_downstream_service() {
-        let (local_proxy, local_request_stream) = create_proxy_and_stream::<ElementManagerMarker>()
-            .expect("Failed to create local ElementManager proxy and stream");
+        let (local_proxy, local_request_stream) =
+            create_proxy_and_stream::<felement::ManagerMarker>()
+                .expect("Failed to create local Manager proxy and stream");
 
         let (downstream_proxy, mut downstream_request_stream) =
-            create_proxy_and_stream::<ElementManagerMarker>()
-                .expect("Failed to create downstream ElementManager proxy and stream");
+            create_proxy_and_stream::<felement::ManagerMarker>()
+                .expect("Failed to create downstream Manager proxy and stream");
 
         let element_url = "element_url";
         let mut num_elements_proposed = 0;
 
-        let local_server_fut = SessionManager::handle_element_manager_request_stream(
-            local_request_stream,
-            downstream_proxy,
-        );
+        let local_server_fut =
+            SessionManager::handle_manager_request_stream(local_request_stream, downstream_proxy);
 
         let downstream_server_fut = async {
             while let Some(request) = downstream_request_stream.try_next().await.unwrap() {
                 match request {
-                    ElementManagerRequest::ProposeElement { spec, responder, .. } => {
+                    felement::ManagerRequest::ProposeElement { spec, responder, .. } => {
                         num_elements_proposed += 1;
                         assert_eq!(Some(element_url.to_string()), spec.component_url);
                         let _ = responder.send(&mut Ok(()));
@@ -858,14 +798,14 @@ mod tests {
         let propose_and_drop_fut = async {
             local_proxy
                 .propose_element(
-                    ElementSpec {
+                    felement::Spec {
                         component_url: Some(element_url.to_string()),
-                        ..ElementSpec::new_empty()
+                        ..felement::Spec::EMPTY
                     },
                     None,
                 )
                 .await
-                .expect("Failed to propose element")
+                .expect("Failed to call ProposeElement")
                 .expect("Failed to propose element");
 
             std::mem::drop(local_proxy); // Drop proxy to terminate `server_fut`.

@@ -465,7 +465,7 @@
   A protocol used to grant <a href=\"/docs/glossary#session\">session</a> sub-components
   the capability to ask for <a href=\"/docs/concepts/session/element.md\">elements</a>
   to be added to the product experience at runtime."
-  see_also: ["<a href=\"https://fuchsia.dev/reference/fidl/fuchsia.session#ElementManager\">fuchsia.session.ElementManager</a>",
+  see_also: ["<a href=\"https://fuchsia.dev/reference/fidl/fuchsia.element#Manager\">fuchsia.session.ElementManager</a>",
              "<a href=\"/docs/glossary#session-framework\">Session framework</a>",
              "<a href=\"/docs/concepts/session/element.md\">Elements</a>"]
   related_guides: [""]

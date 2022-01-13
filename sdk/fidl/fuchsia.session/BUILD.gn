@@ -5,17 +5,7 @@
 import("//build/fidl/fidl.gni")
 
 fidl("fuchsia.session") {
-  sources = [
-    "annotation.fidl",
-    "element_manager.fidl",
-    "graphical_presenter.fidl",
-    "launcher.fidl",
-  ]
+  sources = [ "launcher.fidl" ]
 
-  public_deps = [
-    "//sdk/fidl/fuchsia.mem",
-    "//sdk/fidl/fuchsia.sys",
-    "//sdk/fidl/fuchsia.ui.views",
-    "//sdk/fidl/fuchsia.url",
-  ]
+  public_deps = [ "//sdk/fidl/fuchsia.url" ]
 }

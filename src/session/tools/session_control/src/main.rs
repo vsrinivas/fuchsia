@@ -7,7 +7,6 @@ use {
     argh::FromArgs,
     fidl_fuchsia_element as felement, fidl_fuchsia_session as fsession, fuchsia_async as fasync,
     fuchsia_component::client::connect_to_protocol_at,
-    std::path::Path,
 };
 
 #[derive(FromArgs, Debug, PartialEq)]
@@ -55,23 +54,6 @@ const SESSION_MANAGER_EXPOSED: &str = "/hub-v2/children/core/children/session-ma
 const SESSION_EXPOSED: &str =
     "/hub-v2/children/core/children/session-manager/children/session:session/exec/expose";
 
-/// The element manager protocol used to add elements to the session.
-/// TODO(fxbug.dev/65758) Remove fuchsia.session.ElementManager
-enum ManagerProxy {
-    Session(fsession::ElementManagerProxy),
-    Element(felement::ManagerProxy),
-}
-
-/// Returns true if there is an entry for the protocol P in the path starting with
-/// `path_prefix`.
-///
-/// This is more reliable than the result returned by connect_to_protocol_at
-/// for protocol entries in /hub-v2.
-fn exists_at<P: fidl::endpoints::DiscoverableProtocolMarker>(path_prefix: &str) -> bool {
-    let protocol_path = format!("{}/{}", path_prefix, P::PROTOCOL_NAME);
-    Path::new(&protocol_path).exists()
-}
-
 #[fasync::run_singlethreaded]
 async fn main() -> Result<(), Error> {
     let Args { command } = argh::from_env();
@@ -106,17 +88,7 @@ async fn main() -> Result<(), Error> {
             }
         }
         Command::Add(AddCommand { element_url }) => {
-            let manager_proxy = if exists_at::<felement::ManagerMarker>(SESSION_EXPOSED) {
-                let proxy = connect_to_protocol_at::<felement::ManagerMarker>(SESSION_EXPOSED)?;
-                Ok(ManagerProxy::Element(proxy))
-            } else if exists_at::<fsession::ElementManagerMarker>(SESSION_EXPOSED) {
-                let proxy =
-                    connect_to_protocol_at::<fsession::ElementManagerMarker>(SESSION_EXPOSED)?;
-                Ok(ManagerProxy::Session(proxy))
-            } else {
-                Err(format_err!("Failed to connect to element manager protocol"))
-            }?;
-
+            let manager_proxy = connect_to_protocol_at::<felement::ManagerMarker>(SESSION_EXPOSED)?;
             match add_element(&element_url, manager_proxy).await {
                 Ok(_) => {
                     println!("Added element: {:?}", element_url);
@@ -172,30 +144,16 @@ async fn restart_session(restarter: fsession::RestarterProxy) -> Result<(), Erro
 ///
 /// # Errors
 /// Returns an error if there is an issue adding the element.
-async fn add_element(element_url: &str, manager_proxy: ManagerProxy) -> Result<(), Error> {
-    match manager_proxy {
-        ManagerProxy::Session(manager) => {
-            let spec = fsession::ElementSpec {
-                component_url: Some(element_url.to_string()),
-                ..fsession::ElementSpec::EMPTY
-            };
-            manager
-                .propose_element(spec, None)
-                .await?
-                .map_err(|err: fsession::ProposeElementError| format_err!("{:?}", err))
-        }
-        ManagerProxy::Element(manager) => {
-            let spec = felement::Spec {
-                component_url: Some(element_url.to_string()),
-                ..felement::Spec::EMPTY
-            };
-            manager
-                .propose_element(spec, None)
-                .await?
-                .map_err(|err: felement::ProposeElementError| format_err!("{:?}", err))
-        }
-    }?;
-    Ok(())
+async fn add_element(
+    element_url: &str,
+    manager_proxy: felement::ManagerProxy,
+) -> Result<(), Error> {
+    let spec =
+        felement::Spec { component_url: Some(element_url.to_string()), ..felement::Spec::EMPTY };
+    manager_proxy
+        .propose_element(spec, None)
+        .await?
+        .map_err(|err: felement::ProposeElementError| format_err!("{:?}", err))
 }
 
 #[cfg(test)]
@@ -285,73 +243,37 @@ mod tests {
 
     /// Tests that an element is added to the session
     #[fasync::run_singlethreaded(test)]
-    async fn test_add_element_fsession() {
-        let (proxy, mut server) = create_proxy_and_stream::<fsession::ElementManagerMarker>()
-            .expect("Failed to create ElementManager FIDL.");
-        let element_url = "test_element";
-
-        let _server_task = fasync::Task::spawn(async move {
-            let propose_request =
-                server.try_next().await.expect("FIDL Error").expect("Stream terminated");
-            let fsession::ElementManagerRequest::ProposeElement { spec, responder, .. } =
-                propose_request;
-            assert_eq!(spec.component_url, Some(element_url.to_string()));
-            let _ = responder.send(&mut Ok(()));
-        });
-
-        assert!(add_element(element_url, ManagerProxy::Session(proxy)).await.is_ok());
-    }
-
-    /// Tests that an element is added to the session
-    #[fasync::run_singlethreaded(test)]
-    async fn test_add_element_fsession_error() {
-        let (proxy, mut server) = create_proxy_and_stream::<fsession::ElementManagerMarker>()
-            .expect("Failed to create ElementManager FIDL.");
-        let element_url = "test_element";
-
-        let _server_task = fasync::Task::spawn(async move {
-            let propose_request =
-                server.try_next().await.expect("FIDL Error").expect("Stream terminated");
-            let fsession::ElementManagerRequest::ProposeElement { responder, .. } = propose_request;
-            let _ = responder.send(&mut Err(fsession::ProposeElementError::Rejected));
-        });
-
-        assert!(add_element(element_url, ManagerProxy::Session(proxy)).await.is_err());
-    }
-
-    /// Tests that an element is added to the session
-    #[fasync::run_singlethreaded(test)]
-    async fn test_add_element_felement() {
-        let (proxy, mut server) = create_proxy_and_stream::<felement::ManagerMarker>()
+    async fn test_add_element() {
+        let (manager, mut manager_server) = create_proxy_and_stream::<felement::ManagerMarker>()
             .expect("Failed to create Manager FIDL.");
         let element_url = "test_element";
 
         let _server_task = fasync::Task::spawn(async move {
             let propose_request =
-                server.try_next().await.expect("FIDL Error").expect("Stream terminated");
+                manager_server.try_next().await.expect("FIDL Error").expect("Stream terminated");
             let felement::ManagerRequest::ProposeElement { spec, responder, .. } = propose_request;
             assert_eq!(spec.component_url, Some(element_url.to_string()));
             let _ = responder.send(&mut Ok(()));
         });
 
-        assert!(add_element(element_url, ManagerProxy::Element(proxy)).await.is_ok());
+        assert!(add_element(element_url, manager).await.is_ok());
     }
 
     /// Tests that an element is added to the session
     #[fasync::run_singlethreaded(test)]
-    async fn test_add_element_felement_error() {
-        let (proxy, mut server) = create_proxy_and_stream::<felement::ManagerMarker>()
+    async fn test_add_element_error() {
+        let (manager, mut manager_server) = create_proxy_and_stream::<felement::ManagerMarker>()
             .expect("Failed to create Manager FIDL.");
         let element_url = "test_element";
 
         let _server_task = fasync::Task::spawn(async move {
             let propose_request =
-                server.try_next().await.expect("FIDL Error").expect("Stream terminated");
+                manager_server.try_next().await.expect("FIDL Error").expect("Stream terminated");
             let felement::ManagerRequest::ProposeElement { responder, .. } = propose_request;
             let _ = responder.send(&mut Err(felement::ProposeElementError::InvalidArgs));
         });
 
-        assert!(add_element(element_url, ManagerProxy::Element(proxy)).await.is_err());
+        assert!(add_element(element_url, manager).await.is_err());
     }
 
     // TODO(fxbug.dev/47730): re-enable these tests.
