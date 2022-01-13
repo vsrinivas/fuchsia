@@ -7,6 +7,112 @@ import("//tools/cmc/build/cmc.gni")
 import("//tools/cmc/build/cml.gni")
 import("//tools/cmc/build/cmx.gni")
 
+# Defines a Fuchsia component's manifest.
+# See: https://fuchsia.dev/fuchsia-src/development/components/build
+#
+# Parameters
+#
+#   manifest (required)
+#     The component manifest.
+#     Type: path
+#
+#   component_name (optional)
+#     The name of the component.
+#     Type: string
+#     Default: target_name
+#
+#   check_includes (optional)
+#     Check against expect_includes() in deps.
+#     Warning: Do not disable this unless there is a good, documented reason.
+#     Type: boolean
+#     Default: true
+#
+#   restricted_features (optional)
+#     The set of restricted CML features to allow. Only applicable to v2 components.
+#     The set of features is allowlisted here: //tools/cmc/build/restricted_features/BUILD.gn
+#     where each feature name is represented by a group of the same name.
+#     Type: list of strings
+#     Default: []
+#
+#   experimental_force_runner (optional)
+#     Set the --experimental-force-runner flag to the given value.
+#     This flag is experimental and may be removed without warning.
+#     Type: string
+#
+#   deps
+#   testonly
+#   visibility
+template("fuchsia_component_manifest") {
+  if (current_toolchain == default_toolchain) {
+    assert(
+        defined(invoker.manifest),
+        "A `manifest` argument was missing when calling fuchsia_component_manifest($target_name)")
+
+    component_name = target_name
+    if (defined(invoker.component_name)) {
+      component_name = invoker.component_name
+    }
+
+    # Handle different manifest versions
+    manifest_extension = get_path_info(invoker.manifest, "extension")
+    if (manifest_extension == "cml") {
+      manifest_processor = "cm"
+      manifest_name = "$component_name.cm"
+    } else if (manifest_extension == "cmx") {
+      manifest_processor = "cmx"
+      manifest_name = "$component_name.cmx"
+    } else {
+      assert(
+          false,
+          "Unknown manifest format for \"${invoker.manifest}\", must be \".cml\" or \".cmx\"")
+    }
+
+    manifest_resource_target = "${target_name}_manifest_resource"
+
+    # Process the manifest
+    target(manifest_processor, target_name) {
+      output_name = "$manifest_extension/$target_name/$manifest_name"
+      forward_variables_from(invoker,
+                             [
+                               "deps",
+                               "manifest",
+                               "metadata",
+                               "restricted_features",
+                               "check_includes",
+                               "testonly",
+                               "visibility",
+                               "experimental_force_runner",
+                             ])
+
+      if (!defined(deps)) {
+        deps = []
+      }
+      deps += [ ":$manifest_resource_target" ]
+      if (manifest_extension == "cmx") {
+        deps += [ "//build/components/cmx:cmx_allowlist" ]
+      }
+
+      if (manifest_extension == "cml") {
+        # NOTE: must be kept in sync with path in fuchsia_structured_config.gni
+        config_values_package_path = "meta/$component_name.cvf"
+      }
+    }
+
+    # Add the manifest
+    resource(manifest_resource_target) {
+      sources = get_target_outputs(":${invoker.target_name}")
+      outputs = [ "meta/$manifest_name" ]
+      visibility = [ ":*" ]
+    }
+  } else {
+    group(target_name) {
+      forward_variables_from(invoker, [ "testonly" ])
+      deps = [ ":$target_name($default_toolchain)" ]
+    }
+    not_needed(invoker, "*")
+  }
+}
+
 # Defines a Fuchsia component.
 # See: https://fuchsia.dev/fuchsia-src/development/components/build
 #
@@ -96,73 +202,103 @@ import("//tools/cmc/build/cmx.gni")
 #     This flag is experimental and may be removed without warning.
 #     Type: string
 #
+#   manifest_compile_target (optional)
+#     Use a fuchsia_component_manifest target instead of supplying the manifest source file.
+#     Type: String
+#
 #   deps
 #   testonly
 #   visibility
 template("fuchsia_component") {
   if (current_toolchain == default_toolchain) {
+    _manifest_defined = defined(invoker.manifest)
+    _manifest_target_defined = defined(invoker.manifest_compile_target)
     assert(
-        defined(invoker.manifest),
-        "A `manifest` argument was missing when calling fuchsia_component($target_name)")
+        (_manifest_defined && !_manifest_target_defined) ||
+            (!_manifest_defined && _manifest_target_defined),
+        "A `manifest` or `manifest_compile_target` argument was missing when calling fuchsia_component($target_name)")
 
-    component_name = target_name
-    if (defined(invoker.component_name)) {
-      component_name = invoker.component_name
-    }
+    if (defined(invoker.manifest)) {
+      # Compile the manifest from source
+      manifest_compile_target = "${target_name}_manifest_compile"
+      fuchsia_component_manifest(manifest_compile_target) {
+        forward_variables_from(invoker,
+                               [
+                                 "deps",
+                                 "component_name",
+                                 "manifest",
+                                 "metadata",
+                                 "restricted_features",
+                                 "check_includes",
+                                 "testonly",
+                                 "visibility",
+                                 "experimental_force_runner",
+                               ])
 
-    # Handle different manifest versions
-    manifest_extension = get_path_info(invoker.manifest, "extension")
-    if (manifest_extension == "cml") {
-      manifest_processor = "cm"
-      manifest_name = "$component_name.cm"
-    } else if (manifest_extension == "cmx") {
-      manifest_processor = "cmx"
-      manifest_name = "$component_name.cmx"
+        if (!defined(deps)) {
+          deps = []
+        }
+
+        if (!defined(component_name)) {
+          component_name = invoker.target_name
+        }
+      }
+      manifest_compile_target = ":$manifest_compile_target"
     } else {
-      assert(
-          false,
-          "Unknown manifest format for \"${invoker.manifest}\", must be \".cml\" or \".cmx\"")
+      manifest_compile_target = invoker.manifest_compile_target
     }
 
-    manifest_resource_target = "${target_name}_manifest_resource"
-
+    # Check that the files the manifest references are going to be packaged
     check_references = true
     if (defined(invoker.check_references)) {
       check_references = invoker.check_references
     }
 
     if (check_references) {
+      # Get the compiled manifest path
+      manifest_outputs = get_target_outputs(manifest_compile_target)
+      compiled_manifest = manifest_outputs[0]
+
       validate_target = "${target_name}_cmc_validate_references"
+
+      cmc_validate_references(validate_target) {
+        forward_variables_from(invoker,
+                               [
+                                 "deps",
+                                 "testonly",
+                               ])
+        if (!defined(deps)) {
+          deps = []
+        }
+        deps += [ "$manifest_compile_target" ]
+        visibility = [ ":*" ]
+        component_manifest = compiled_manifest
+        label = get_label_info(":$target_name", "label_with_toolchain")
+      }
+
+      validate_target = ":$validate_target"
     }
 
-    # Process the manifest
-    target(manifest_processor, target_name) {
-      output_name = "$manifest_extension/$target_name/$manifest_name"
+    # We want to adopt the outputs of the manifest_compile_target, so we
+    # copy them to a new directory.
+    copy(target_name) {
       forward_variables_from(invoker,
                              [
                                "deps",
-                               "manifest",
-                               "restricted_features",
-                               "check_includes",
                                "testonly",
-                               "visibility",
-                               "experimental_force_runner",
                              ])
+      sources = get_target_outputs(manifest_compile_target)
+      outputs =
+          [ "$target_out_dir/${target_name}_manifest/{{source_file_part}}" ]
 
       if (!defined(deps)) {
         deps = []
       }
-      deps += [ ":$manifest_resource_target" ]
-      if (manifest_extension == "cmx") {
-        deps += [ "//build/components/cmx:cmx_allowlist" ]
-      }
-      if (check_references) {
-        deps += [ ":$validate_target" ]
-      }
 
-      if (manifest_extension == "cml") {
-        # NOTE: must be kept in sync with path in fuchsia_structured_config.gni
-        config_values_package_path = "meta/$component_name.cvf"
+      deps += [ manifest_compile_target ]
+
+      if (check_references) {
+        deps += [ validate_target ]
       }
 
       metadata = {
@@ -175,30 +311,6 @@ template("fuchsia_component") {
 
         # Don't collect expected includes via transitive deps of components
         expect_includes_barrier = []
-      }
-    }
-
-    # Add the manifest
-    resource(manifest_resource_target) {
-      sources = get_target_outputs(":${invoker.target_name}")
-      outputs = [ "meta/$manifest_name" ]
-      visibility = [ ":*" ]
-    }
-
-    if (check_references) {
-      # Validate the manifest against packaged files
-      cmc_validate_references(validate_target) {
-        forward_variables_from(invoker,
-                               [
-                                 "deps",
-                                 "testonly",
-                               ])
-        if (!defined(deps)) {
-          deps = []
-        }
-        visibility = [ ":*" ]
-        component_manifest = invoker.manifest
-        label = get_label_info(":$target_name", "label_with_toolchain")
       }
     }
   } else {

@@ -38,7 +38,7 @@ if (is_host) {
     sources = [ get_label_info(
                     "//examples/components/routing/echo_server:echo_server_component(${target_toolchain})",
                     "target_out_dir") +
-                "/cml/echo_server_component/echo_server.cm" ]
+                "/echo_server_component_manifest/echo_server.cm" ]
     outputs = [ "${_example_out}/{{source_file_part}}" ]
     deps = [ "//examples/components/routing/echo_server:echo_server_component(${target_toolchain})" ]
   }

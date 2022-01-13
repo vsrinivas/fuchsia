@@ -10,6 +10,7 @@ use {
 
 enum ComponentManifest {
     Cml(cml::Document),
+    Cm(cm_rust::ComponentDecl),
     Cmx(serde_json::Value),
 }
 
@@ -79,11 +80,12 @@ fn read_package_manifest(path: &PathBuf) -> Result<String, Error> {
 
 fn read_component_manifest(path: &PathBuf) -> Result<ComponentManifest, Error> {
     const BAD_EXTENSION: &str = "Input file does not have a component manifest extension \
-                                 (.cml or .cmx)";
+                                 (.cm or .cml or .cmx)";
     let ext = path.extension().and_then(|e| e.to_str());
     Ok(match ext {
         Some("cmx") => ComponentManifest::Cmx(util::read_cmx(path)?),
         Some("cml") => ComponentManifest::Cml(util::read_cml(path)?),
+        Some("cm") => ComponentManifest::Cm(util::read_cm(path)?),
         _ => {
             return Err(Error::invalid_args(BAD_EXTENSION));
         }
@@ -121,6 +123,30 @@ fn get_program_binary(component_manifest: &ComponentManifest) -> Option<String> 
                 return None;
             }
         },
+        ComponentManifest::Cm(decl) => {
+            let entries = match &decl.program {
+                Some(program) => match &program.info.entries {
+                    Some(entries) => entries,
+                    None => return None,
+                },
+                None => return None,
+            };
+
+            for entry in entries {
+                if entry.key == "binary" {
+                    if let Some(value) = &entry.value {
+                        if let fidl_fuchsia_data::DictionaryValue::Str(ref str) = **value {
+                            return Some(str.clone());
+                        } else {
+                            return None;
+                        }
+                    } else {
+                        return None;
+                    }
+                }
+            }
+            return None;
+        }
     };
 
     match program.get("binary") {
@@ -139,6 +165,9 @@ fn get_component_runner(component_manifest: &ComponentManifest) -> Option<String
         }
         ComponentManifest::Cmx(payload) => {
             payload.get("runner").and_then(|r| r.as_str().map(|s| s.to_owned()))
+        }
+        ComponentManifest::Cm(decl) => {
+            decl.program.as_ref().and_then(|p| p.runner.as_ref().map(|n| n.to_string()))
         }
     }
 }
@@ -200,6 +229,8 @@ fn get_nearest_match<'a>(reference: &'a str, candidates: &'a Vec<String>) -> &'a
 mod tests {
     use {
         super::*,
+        crate::compile::compile,
+        crate::features::FeatureSet,
         matches::assert_matches,
         serde_json::json,
         std::{fmt::Display, fs::File, io::Write},
@@ -211,6 +242,16 @@ mod tests {
         File::create(tmp_dir.path().join(name))
             .unwrap()
             .write_all(format!("{:#}", contents).as_bytes())
+            .unwrap();
+        return path;
+    }
+
+    fn compiled_tmp_file(tmp_dir: &TempDir, name: &str, contents: impl Display) -> PathBuf {
+        let tmp_dir_path = tmp_dir.path().to_path_buf();
+        let path = tmp_dir_path.join(name);
+        let cml_path = tmp_dir_path.join("temp.cml");
+        File::create(&cml_path).unwrap().write_all(format!("{:#}", contents).as_bytes()).unwrap();
+        compile(&cml_path, &path, None, &vec![], &tmp_dir_path, None, &FeatureSet::empty(), &None)
             .unwrap();
         return path;
     }
@@ -270,6 +311,28 @@ mod tests {
             "test.cml",
             r#"{
                 // JSON5, which .cml uses, allows for comments.
+                program: {
+                    runner: "elf",
+                    binary: "bin/hello_world",
+                },
+            }"#,
+        );
+        let package_manifest = tmp_file(
+            &tmp_dir,
+            "test.fini",
+            fini_file!("bin/hello_world=hello_world", "lib/foo=foo"),
+        );
+
+        assert_matches!(validate(&component_manifest, &package_manifest, None), Ok(()));
+    }
+
+    #[test]
+    fn validate_returns_ok_for_proper_cm() {
+        let tmp_dir = TempDir::new().unwrap();
+        let component_manifest = compiled_tmp_file(
+            &tmp_dir,
+            "test.cm",
+            r#"{
                 program: {
                     runner: "elf",
                     binary: "bin/hello_world",

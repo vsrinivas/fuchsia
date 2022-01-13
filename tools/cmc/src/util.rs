@@ -7,10 +7,13 @@ use {
         cml,
         error::{Error, Location},
     },
+    cm_rust::ComponentDecl,
+    fidl::encoding::decode_persistent,
+    fidl_fuchsia_component_decl::Component,
     serde_json::Value,
     serde_json5,
     std::{
-        convert::TryInto,
+        convert::{TryFrom, TryInto},
         fs,
         io::{Read, Write},
         path::{Path, PathBuf},
@@ -96,6 +99,21 @@ pub fn read_cml(file: &Path) -> Result<cml::Document, Error> {
         let serde_json5::Error::Message { location, msg } = e;
         let location = location.map(|l| Location { line: l.line, column: l.column });
         Error::parse(msg, location, Some(file))
+    })
+}
+
+/// Read .cm file and parse into a cm_rust::ComponentDecl.
+pub fn read_cm(file: &Path) -> Result<ComponentDecl, Error> {
+    let mut buffer = vec![];
+    fs::File::open(&file)
+        .map_err(|e| Error::parse(format!("Couldn't open file: {}", e), None, Some(file)))?
+        .read_to_end(&mut buffer)
+        .map_err(|e| Error::parse(format!("Couldn't read file: {}", e), None, Some(file)))?;
+    let fidl_component_decl: Component = decode_persistent(&buffer).map_err(|e| {
+        Error::parse(format!("Couldn't decode bytes to Component FIDL: {}", e), None, Some(file))
+    })?;
+    ComponentDecl::try_from(fidl_component_decl).map_err(|e| {
+        Error::parse(format!("Couldn't convert Component FIDL to cm_rust: {}", e), None, Some(file))
     })
 }
 
