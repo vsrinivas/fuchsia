@@ -40,9 +40,10 @@ TEST(DriverTransport, DISABLED_TwoWaySync) {
 
   auto server = std::make_shared<TestServer>();
   fdf::BindServer(dispatcher->get(), std::move(server_end), server);
-
-  fidl::WireSyncClient<test_transport::TransportTest> client(std::move(client_end));
-  fidl::WireResult<test_transport::TransportTest::TwoWay> result = client->TwoWay(kRequestPayload);
+  zx::status<fdf::Arena> arena = fdf::Arena::Create(0, "");
+  fdf::WireSyncClient<test_transport::TransportTest> client(std::move(client_end));
+  fidl::WireUnownedResult<test_transport::TransportTest::TwoWay> result =
+      client.buffer(std::move(*arena))->TwoWay(kRequestPayload);
   ASSERT_TRUE(result.ok());
   ASSERT_EQ(kResponsePayload, result->payload);
 }

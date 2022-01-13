@@ -186,7 +186,7 @@ class ::fidl::WireUnownedResult<::test_drivertwoway::TwoWay::Add> final
  public:
   explicit WireUnownedResult(
       ::fdf::UnownedClientEnd<::test_drivertwoway::TwoWay> client_end,
-      ::fidl::internal::AnyBufferAllocator& allocator,
+      ::fdf::Arena& arena,
       ::fidl::WireRequest<::test_drivertwoway::TwoWay::Add>* request);
   explicit WireUnownedResult(
       ::fidl::WireResponse<::test_drivertwoway::TwoWay::Add>* response)
@@ -245,6 +245,7 @@ class ::fidl::WireUnownedResult<::test_drivertwoway::TwoWay::Add> final
       const {
     return value();
   }
+
   fdf::Arena& arena() {
     ZX_DEBUG_ASSERT(ok());
     return arena_;
@@ -303,34 +304,9 @@ class ::fidl::internal::WireEventDispatcher<::test_drivertwoway::TwoWay> final
       ::fidl::internal::IncomingTransportContext transport_context) override;
 };
 
-// Methods to make a sync FIDL call directly on an unowned handle or a
-// const reference to a |fdf::ClientEnd<::test_drivertwoway::TwoWay>|,
-// avoiding setting up a client.
-template <>
-class ::fidl::internal::WireSyncClientImpl<::test_drivertwoway::TwoWay> final
-    : public ::fidl::internal::SyncEndpointManagedVeneer<
-          ::fidl::internal::WireSyncClientImpl<::test_drivertwoway::TwoWay>> {
- public:
-  // Allocates 48 bytes of message buffer on the stack. No heap allocation
-  // necessary.
-  ::fidl::WireResult<::test_drivertwoway::TwoWay::Add> Add(uint16_t addend1,
-                                                           uint16_t addend2) {
-    ::fidl::WireRequest<::test_drivertwoway::TwoWay::Add> _request{addend1,
-                                                                   addend2};
-    return ::fidl::WireResult<::test_drivertwoway::TwoWay::Add>(_client_end(),
-                                                                &_request);
-  }
-
- private:
-  ::fdf::UnownedClientEnd<::test_drivertwoway::TwoWay> _client_end() const {
-    return ::fdf::UnownedClientEnd<::test_drivertwoway::TwoWay>(
-        _transport().get<::fidl::internal::DriverTransport>());
-  }
-};
-
 template <>
 class ::fidl::internal::WireSyncBufferClientImpl<::test_drivertwoway::TwoWay>
-    final : public ::fidl::internal::SyncEndpointBufferVeneer<
+    final : public ::fdf::internal::SyncEndpointBufferVeneer<
                 ::fidl::internal::WireSyncBufferClientImpl<
                     ::test_drivertwoway::TwoWay>> {
  public:
@@ -341,7 +317,7 @@ class ::fidl::internal::WireSyncBufferClientImpl<::test_drivertwoway::TwoWay>
     ::fidl::WireRequest<::test_drivertwoway::TwoWay::Add> _request{addend1,
                                                                    addend2};
     return ::fidl::WireUnownedResult<::test_drivertwoway::TwoWay::Add>(
-        _client_end(), _allocator(), &_request);
+        _client_end(), _arena(), &_request);
   }
 
  private:

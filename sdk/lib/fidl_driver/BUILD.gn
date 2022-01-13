@@ -11,6 +11,7 @@ source_set("fidl_driver") {
     "include/lib/fidl_driver/cpp/client.h",
     "include/lib/fidl_driver/cpp/internal/client_details.h",
     "include/lib/fidl_driver/cpp/server.h",
+    "include/lib/fidl_driver/cpp/sync_call.h",
     "include/lib/fidl_driver/cpp/transport.h",
     "include/lib/fidl_driver/cpp/wire_messaging.h",
     "include/lib/fidl_driver/cpp/wire_types.h",

@@ -1,0 +1,32 @@
+{{/*
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+*/}}
+
+{{- define "driver/Protocol:Caller:MessagingHeader" }}
+{{- EnsureNamespace "" }}
+
+template <>
+class {{ .WireSyncBufferClientImpl }} final :
+    public ::fdf::internal::SyncEndpointBufferVeneer<{{ .WireSyncBufferClientImpl }}> {
+ public:
+  {{/* Client-calling functions do not apply to events. */}}
+  {{ range .ClientMethods }}
+    {{- .Docs }}
+    // Caller provides the backing storage for FIDL message via an argument to `.buffer()`.
+    {{ .WireUnownedResult }} {{ .Name }}({{ RenderParams .RequestArgs }}) {
+      {{ .WireRequest }} _request{ {{ RenderForwardParams .RequestArgs }} };
+      return {{ .WireUnownedResult }}(_client_end(), _arena(), &_request);
+    }
+{{ "" }}
+  {{- end }}
+
+ private:
+  ::{{ .Transport.Namespace }}::UnownedClientEnd<{{ . }}> _client_end() const {
+    return ::{{ .Transport.Namespace }}::UnownedClientEnd<{{ . }}>(
+      _transport().get<{{ .Transport.Type }}>());
+  }
+};
+{{- end }}
+

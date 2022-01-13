@@ -67,12 +67,20 @@ struct {{ .WireOrdinal }} final { static constexpr uint64_t value = {{ .Ordinal 
   {{- if .Transport.HasSyncClient }}
   {{- template "Method:Result:MessagingHeader" . }}
   {{- end }}
+  {{- if eq .Transport.Name "Driver" }}
+  {{- template "driver/Method:UnownedResult:MessagingHeader" . }}
+  {{- else }}
   {{- template "Method:UnownedResult:MessagingHeader" . }}
+  {{- end }}
 {{- end }}
 
 {{- template "Protocol:EventHandler:MessagingHeader" . }}
 {{- if .Transport.HasSyncClient }}
+{{- if eq .Transport.Name "Driver" }}
+{{- template "driver/Protocol:Caller:MessagingHeader" . }}
+{{- else }}
 {{- template "Protocol:Caller:MessagingHeader" . }}
+{{- end }}
 {{- end }}
 {{- template "Protocol:Interface:MessagingHeader" . }}
 {{- EndifFuchsia -}}
@@ -147,7 +155,11 @@ extern "C" const fidl_type_t {{ .Response.WireCodingTable.Name }};
     {{- end }}
   {{- if or .RequestArgs .ResponseArgs }}
 {{ "" }}
+    {{- if eq .Transport.Name "Driver" }}
+    {{- template "driver/Method:UnownedResult:MessagingSource" . }}
+    {{- else }}
     {{- template "Method:UnownedResult:MessagingSource" . }}
+    {{- end }}
   {{- end }}
 {{ "" }}
 {{- end }}

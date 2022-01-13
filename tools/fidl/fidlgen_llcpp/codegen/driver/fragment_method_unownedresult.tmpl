@@ -1,17 +1,17 @@
 {{/*
-// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 */}}
 
-{{- define "Method:UnownedResult:MessagingHeader" }}
+{{- define "driver/Method:UnownedResult:MessagingHeader" }}
 {{- EnsureNamespace "" }}
 template<>
 class {{ .WireUnownedResult }} final : public ::fidl::Result {
  public:
   {{- if .Transport.HasSyncClient }}
   {{- $args := (printf "::%s::UnownedClientEnd<%s> client_end" .Transport.Namespace .Protocol) }}
-  {{- $args = (List $args "::fidl::internal::AnyBufferAllocator& allocator") }}
+  {{- $args = (List $args "::fdf::Arena& arena") }}
   {{- $args = (List $args (printf "%s* request" .WireRequest)) }}
   explicit {{ .WireUnownedResult.Self }}({{ RenderParams $args }});
   {{- end }}
@@ -24,7 +24,7 @@ class {{ .WireUnownedResult }} final : public ::fidl::Result {
   explicit {{ .WireUnownedResult.Self }}(
     ::fidl::DecodedMessage<{{ .WireResponse }}>&& decoded,
     ::fidl::internal::IncomingTransportContext context)
-      : ::fidl::Result(decoded)
+      : ::fidl::Result(decoded), arena_(context.release<::fidl::internal::DriverTransport>())
         {
     if (decoded.ok()) {
       bytes_ = reinterpret_cast<uint8_t*>(decoded.PrimaryObject());
@@ -67,8 +67,14 @@ class {{ .WireUnownedResult }} final : public ::fidl::Result {
   {{ .WireResponse }}& operator*() { return value(); }
   const {{ .WireResponse }}& operator*() const { return value(); }
 
+  fdf::Arena& arena() {
+    ZX_DEBUG_ASSERT(ok());
+    return arena_;
+  }
+
  private:
   uint8_t* bytes_;
+  fdf::Arena arena_;
   {{- end }}
 };
 {{- end }}
@@ -76,53 +82,50 @@ class {{ .WireUnownedResult }} final : public ::fidl::Result {
 
 
 
-{{- define "Method:UnownedResult:MessagingSource" }}
+{{- define "driver/Method:UnownedResult:MessagingSource" }}
 {{- if .Transport.HasSyncClient }}
 {{- IfdefFuchsia -}}
 {{- EnsureNamespace "" }}
 {{- $args := (printf "::%s::UnownedClientEnd<%s> client_end" .Transport.Namespace .Protocol) }}
-{{- $args = (List $args "::fidl::internal::AnyBufferAllocator& allocator") }}
+{{- $args = (List $args "::fdf::Arena& arena") }}
 {{- $args = (List $args (printf "%s* request" .WireRequest)) }}
 {{ .WireUnownedResult }}::{{ .WireUnownedResult.Self }}({{ RenderParams $args }}) {
   {{/* TODO(fxbug.dev/86367): Factor out common buffer allocation logic once we have other instances
   of this pattern. */ -}}
 
   {{/* Allocate one buffer for both request/response (if applicable). */ -}}
-  constexpr uint32_t buffer_size = ::fidl::SyncClientMethodBufferSizeInChannel<{{ .Marker }}>();
-  ::fitx::result<::fidl::Error, ::fidl::BufferSpan> allocation = allocator.TryAllocate(buffer_size);
-  if (!allocation.is_ok()) {
-    ::fidl::Result::operator=(allocation.error_value());
-    return;
-  }
-  uint8_t* buffer = allocation->data;
+  {{- if .HasResponse }}
+  constexpr uint32_t buffer_size = std::max(
+    ::fidl::MaxSizeInChannel<::fidl::WireRequest<{{ .Marker }}>, ::fidl::MessageDirection::kSending>(),
+    ::fidl::MaxSizeInChannel<::fidl::WireResponse<{{ .Marker }}>, ::fidl::MessageDirection::kReceiving>());
+  {{- else }}
+  constexpr uint32_t buffer_size =
+    ::fidl::MaxSizeInChannel<::fidl::WireRequest<{{ .Marker }}>, ::fidl::MessageDirection::kSending>();
+  {{- end }}
+  uint8_t* buffer = static_cast<uint8_t*>(arena.Allocate(buffer_size));
 
-{{- if .HasResponse -}}
-  {{/* TODO(fxbug.dev/85843): We should be able optimize this to just the max of
-  the send/receive size, once Zircon channel calls guarantee that the
-  send/receive buffers can overlap.
-
-  For now, the invariant of SyncClientMethodBufferSizeInChannel is that it returns
-  the sum of the request/response size, so we can index into it and get the
-  address of the response buffer. */ -}}
-  constexpr uint32_t request_byte_capacity = ::fidl::MaxSizeInChannel<
-      ::fidl::WireRequest<{{ .Marker }}>, ::fidl::MessageDirection::kSending>();
-  uint8_t* request_bytes = buffer;
-  static_assert(buffer_size > request_byte_capacity);
-  uint32_t response_byte_capacity = buffer_size - request_byte_capacity;
-  uint8_t* response_bytes = &buffer[request_byte_capacity];
-{{- else }}
-  uint32_t request_byte_capacity = buffer_size;
-  uint8_t* request_bytes = buffer;
-{{- end }}
-
-  ::fidl::UnownedEncodedMessage<{{ .WireRequest }}> request_message(
-      request_bytes, request_byte_capacity, request);
+  ::fidl::UnownedEncodedMessage<{{ .WireRequest }}, fidl::internal::DriverTransport> request_message(
+      buffer, buffer_size, request);
   auto& outgoing = request_message.GetOutgoingMessage();
 {{- if .HasResponse }}
-  outgoing.Call<{{ .WireResponse }}>(client_end.handle(), response_bytes, response_byte_capacity);
-  bytes_ = response_bytes;
+  ::fidl::internal::IncomingTransportContext incoming_context;
+  ::fidl::CallOptions call_options = {
+    .outgoing_transport_context =
+     ::fidl::internal::OutgoingTransportContext::Create<fidl::internal::DriverTransport>(
+       arena.release()),
+    .out_incoming_transport_context = &incoming_context,
+  };
+  outgoing.Call<{{ .WireResponse }}>(
+    client_end.handle(), buffer, buffer_size, std::move(call_options));
+  bytes_ = buffer;
+  arena_ = fdf::Arena(incoming_context.release<fidl::internal::DriverTransport>());
 {{- else }}
-  outgoing.Write(client_end.handle());
+  ::fidl::WriteOptions write_options = {
+    .outgoing_transport_context =
+     ::fidl::internal::OutgoingTransportContext::Create<fidl::internal::DriverTransport>(
+       arena.release()),
+  };
+  outgoing.Write(client_end.handle(), std::move(write_options));
 {{- end }}
   ::fidl::Result::operator=(outgoing);
 }
