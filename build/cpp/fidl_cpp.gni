@@ -441,135 +441,116 @@ template("fidl_cpp_family") {
   #
   # LLCPP Bindings
   #
+  # These bindings are defined as a set of layers that build upon each other.
+  # All of the layers are generated in a single fidlgen invocation but are
+  # exposed as separate source_sets to user code so that it's easy to include
+  # just the parts of the bindings that you need.
 
-  # Define LLCPP target, if requested.
-  if (llcpp_public_deps != []) {
-    wire_types_headers = [
-      "fidl/$library_name/cpp/common_types.h",
-      "fidl/$library_name/cpp/markers.h",
-      "fidl/$library_name/cpp/wire_types.h",
-    ]
-    wire_types_sources = [ "fidl/$library_name/cpp/wire_types.cc" ]
-    wire_types_options = {
-      bindings_flavor = "llcpp"
-      bindings_layer = "llcpp_wire_types"
-      generated_headers = wire_types_headers
-      generated_sources = wire_types_sources
-    }
-    wire_types_target = "${target_name}_${wire_types_options.bindings_layer}"
-    fidl_cpp_library(wire_types_target) {
-      forward_variables_from(invoker,
-                             [
-                               "public_deps",
-                               "visibility",
-                             ])
-      forward_variables_from(common_options, "*")
-      forward_variables_from(wire_types_options, "*")
-      additional_public_deps = llcpp_public_deps
-      if (defined(invoker.contains_drivers) && invoker.contains_drivers) {
-        additional_public_deps += [ "//sdk/lib/fidl_driver" ]
-      }
-    }
-
-    wire_channel_messaging_headers = [
-      "fidl/$library_name/cpp/wire.h",
-      "fidl/$library_name/cpp/wire_messaging.h",
-      "fidl/$library_name/cpp/wire_test_base.h",
-    ]
-    wire_channel_messaging_sources =
-        [ "fidl/$library_name/cpp/wire_messaging.cc" ]
-    wire_channel_messaging_options = {
-      bindings_flavor = "llcpp"
-      generated_headers = wire_channel_messaging_headers
-      generated_sources = wire_channel_messaging_sources
-    }
-    wire_channel_messaging_target = "${target_name}_llcpp"
-    fidl_cpp_library(wire_channel_messaging_target) {
-      forward_variables_from(invoker,
-                             [
-                               "public_deps",
-                               "visibility",
-                             ])
-      forward_variables_from(common_options, "*")
-      forward_variables_from(wire_channel_messaging_options, "*")
-      additional_public_deps = llcpp_public_deps + [ ":" + wire_types_target ]
-    }
-
-    llcpp_natural_types_options = {
-      bindings_flavor = "llcpp"
-      generated_headers = [ "fidl/$library_name/cpp/natural_types.h" ]
-      generated_sources = [ "fidl/$library_name/cpp/natural_types.cc" ]
-    }
-    llcpp_natural_types_target = "${target_name}_llcpp_natural_types"
-    fidl_cpp_library(llcpp_natural_types_target) {
-      forward_variables_from(invoker,
-                             [
-                               "public_deps",
-                               "visibility",
-                             ])
-      forward_variables_from(common_options, "*")
-      forward_variables_from(llcpp_natural_types_options, "*")
-      additional_public_deps = llcpp_public_deps + [
-                                 "//sdk/lib/fidl/cpp",
-                                 "//src/lib/fidl/cpp",
-                                 ":" + wire_types_target,
-                               ]
-      if (defined(invoker.contains_drivers) && invoker.contains_drivers) {
-        additional_public_deps +=
-            [ "//sdk/lib/fidl_driver:fidl_driver_natural" ]
-      }
-    }
-
-    wire_driver_messaging_headers = [
-      "fidl/$library_name/cpp/driver/wire.h",
-      "fidl/$library_name/cpp/driver/wire_messaging.h",
-    ]
-    wire_driver_messaging_sources =
-        [ "fidl/$library_name/cpp/driver/wire_messaging.cc" ]
-    wire_driver_messaging_options = {
-      bindings_flavor = "llcpp"
-      bindings_layer = "driver"
-      generated_headers = wire_driver_messaging_headers
-      generated_sources = wire_driver_messaging_sources
-    }
-    wire_driver_messaging_target =
-        "${target_name}_${wire_driver_messaging_options.bindings_layer}"
-    fidl_cpp_library(wire_driver_messaging_target) {
-      forward_variables_from(invoker,
-                             [
-                               "public_deps",
-                               "visibility",
-                             ])
-      forward_variables_from(common_options, "*")
-      forward_variables_from(wire_driver_messaging_options, "*")
-      additional_public_deps = llcpp_public_deps + [
-                                 ":" + wire_types_target,
-                                 "//sdk/lib/fidl_driver",
-                               ]
-    }
-
-    # Single codegen target that generates all the files needed by the LLCPP
-    # libraries above.
-    llcpp_codegen_options = {
-      bindings_flavor = "llcpp"
-      generated_headers = wire_types_headers + wire_channel_messaging_headers +
-                          wire_driver_messaging_headers +
-                          llcpp_natural_types_options.generated_headers
-      generated_sources = wire_types_sources + wire_channel_messaging_sources +
-                          wire_driver_messaging_sources +
-                          llcpp_natural_types_options.generated_sources
-    }
-    llcpp_codegen_target = "${target_name}_llcpp"
-    fidl_cpp_codegen(llcpp_codegen_target) {
-      forward_variables_from(common_options, "*")
-      forward_variables_from(llcpp_codegen_options, "*")
-      fidlgen_tool = "//tools/fidl/fidlgen_llcpp"
-      additional_visibility = [
-        ":$wire_types_target",
-        ":$wire_channel_messaging_target",
-        ":$wire_driver_messaging_target",
-        ":$llcpp_natural_types_target",
+  llcpp_layers = [
+    {
+      layer = "common"
+      headers = [
+        "fidl/$library_name/cpp/common_types.h",
+        "fidl/$library_name/cpp/markers.h",
       ]
+      public_deps = llcpp_public_deps
+    },
+
+    {
+      layer = "wire_types"
+      headers = [ "fidl/$library_name/cpp/wire_types.h" ]
+      sources = [ "fidl/$library_name/cpp/wire_types.cc" ]
+      layer_deps = [ "common" ]
+      if (defined(invoker.contains_drivers) && invoker.contains_drivers) {
+        public_deps = [ "//sdk/lib/fidl_driver" ]
+      }
+    },
+
+    {
+      layer = "llcpp"  # AKA: wire_channel_messaging
+      headers = [
+        "fidl/$library_name/cpp/wire.h",
+        "fidl/$library_name/cpp/wire_messaging.h",
+        "fidl/$library_name/cpp/wire_test_base.h",
+      ]
+      sources = [ "fidl/$library_name/cpp/wire_messaging.cc" ]
+      layer_deps = [ "wire_types" ]
+    },
+
+    {
+      layer = "natural_types"
+      headers = [ "fidl/$library_name/cpp/natural_types.h" ]
+      sources = [ "fidl/$library_name/cpp/natural_types.cc" ]
+      public_deps = [
+        "//sdk/lib/fidl/cpp",
+        "//src/lib/fidl/cpp",
+      ]
+      layer_deps = [ "common" ]
+      if (defined(invoker.contains_drivers) && invoker.contains_drivers) {
+        public_deps += [ "//sdk/lib/fidl_driver:fidl_driver_natural" ]
+      }
+    },
+
+    {
+      layer = "driver"  # AKA: wire_driver_messaging
+      headers = [
+        "fidl/$library_name/cpp/driver/wire.h",
+        "fidl/$library_name/cpp/driver/wire_messaging.h",
+      ]
+      sources = [ "fidl/$library_name/cpp/driver/wire_messaging.cc" ]
+      public_deps = [ "//sdk/lib/fidl_driver" ]
+      layer_deps = [ "wire_types" ]
+    },
+  ]
+
+  not_needed([ "llcpp_layers" ])
+
+  # Define LLCPP targets, if requested.
+  if (llcpp_public_deps != []) {
+    layer_target_prefix = target_name + "_"
+    foreach(layer, llcpp_layers) {
+      fidl_cpp_library(layer_target_prefix + layer.layer) {
+        forward_variables_from(invoker,
+                               [
+                                 "public_deps",
+                                 "visibility",
+                               ])
+        forward_variables_from(common_options, "*")
+        bindings_flavor = "llcpp"
+        if (defined(layer.headers)) {
+          generated_headers = layer.headers
+        }
+        if (defined(layer.sources)) {
+          generated_sources = layer.sources
+        }
+        additional_public_deps = []
+        if (defined(layer.public_deps)) {
+          additional_public_deps += layer.public_deps
+        }
+        if (defined(layer.layer_deps)) {
+          foreach(layer_dep, layer.layer_deps) {
+            additional_public_deps += [ ":${layer_target_prefix}${layer_dep}" ]
+          }
+        }
+      }
+    }
+
+    fidl_cpp_codegen("${target_name}_llcpp") {
+      forward_variables_from(common_options, "*")
+      bindings_flavor = "llcpp"
+      fidlgen_tool = "//tools/fidl/fidlgen_llcpp"
+      generated_headers = []
+      generated_sources = []
+      additional_visibility = []
+      foreach(layer, llcpp_layers) {
+        additional_visibility += [ ":${layer_target_prefix}${layer.layer}" ]
+        if (defined(layer.headers)) {
+          generated_headers += layer.headers
+        }
+        if (defined(layer.sources)) {
+          generated_sources += layer.sources
+        }
+      }
     }
   }
 
@@ -605,7 +586,7 @@ template("fidl_cpp_family") {
       forward_variables_from(cpp_options, "*")
       additional_public_deps = [
         ":${fidl_target_name}_llcpp",
-        ":${fidl_target_name}_llcpp_natural_types",
+        ":${fidl_target_name}_natural_types",
         "//src/lib/fidl/cpp",
       ]
     }
