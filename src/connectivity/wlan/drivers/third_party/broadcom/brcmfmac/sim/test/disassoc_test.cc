@@ -30,8 +30,7 @@ TEST_F(SimTest, Disassoc) {
   ASSERT_EQ(Init(), ZX_OK);
 
   SimInterface client_ifc;
-  ASSERT_EQ(StartInterface(WLAN_INFO_MAC_ROLE_CLIENT, &client_ifc, std::nullopt, kStaMacAddr),
-            ZX_OK);
+  ASSERT_EQ(StartInterface(MAC_ROLE_CLIENT, &client_ifc, std::nullopt, kStaMacAddr), ZX_OK);
 
   client_ifc.AssociateWith(ap, zx::sec(1));
   env_->ScheduleNotification(
@@ -66,8 +65,7 @@ TEST_F(SimTest, SmeDeauthFollowedByFwDisassoc) {
   ASSERT_EQ(Init(), ZX_OK);
 
   SimInterface client_ifc;
-  ASSERT_EQ(StartInterface(WLAN_INFO_MAC_ROLE_CLIENT, &client_ifc, std::nullopt, kStaMacAddr),
-            ZX_OK);
+  ASSERT_EQ(StartInterface(MAC_ROLE_CLIENT, &client_ifc, std::nullopt, kStaMacAddr), ZX_OK);
 
   client_ifc.AssociateWith(ap, zx::sec(1));
   constexpr reason_code_t deauth_reason = REASON_CODE_LEAVING_NETWORK_DISASSOC;

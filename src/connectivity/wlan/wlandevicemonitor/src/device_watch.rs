@@ -98,7 +98,7 @@ fn id_from_path(path: &PathBuf) -> Result<u16, anyhow::Error> {
 mod tests {
     use {
         super::*,
-        fidl_fuchsia_wlan_common as fidl_common,
+        fidl_fuchsia_wlan_common as fidl_wlan_common,
         fidl_fuchsia_wlan_device::{self as fidl_wlan_dev, SupportedPhy},
         fidl_fuchsia_wlan_internal as fidl_internal, fidl_fuchsia_wlan_tap as fidl_wlantap,
         fuchsia_zircon::prelude::*,
@@ -211,7 +211,7 @@ mod tests {
                 SupportedPhy::Ht,
             ],
             driver_features: vec![],
-            mac_role: fidl_wlan_dev::MacRole::Client,
+            mac_role: fidl_wlan_common::MacRole::Client,
             caps: vec![],
             bands: vec![create_2_4_ghz_band_info()],
             name: String::from("devwatchtap"),
@@ -221,7 +221,7 @@ mod tests {
 
     fn create_2_4_ghz_band_info() -> fidl_wlan_dev::BandInfo {
         fidl_wlan_dev::BandInfo {
-            band_id: fidl_common::Band::WlanBand2Ghz,
+            band_id: fidl_wlan_common::Band::WlanBand2Ghz,
             ht_caps: Some(Box::new(fidl_internal::HtCapabilities {
                 bytes: fake_ht_capabilities().as_bytes().try_into().unwrap(),
             })),

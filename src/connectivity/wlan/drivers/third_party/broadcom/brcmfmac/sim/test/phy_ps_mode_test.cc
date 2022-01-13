@@ -38,7 +38,7 @@ void PhyPsModeTest::Init() { ASSERT_EQ(SimTest::Init(), ZX_OK); }
 void PhyPsModeTest::CreateInterface() {
   zx_status_t status;
 
-  status = StartInterface(WLAN_INFO_MAC_ROLE_CLIENT, &client_ifc_);
+  status = StartInterface(MAC_ROLE_CLIENT, &client_ifc_);
   ASSERT_EQ(status, ZX_OK);
 }
 

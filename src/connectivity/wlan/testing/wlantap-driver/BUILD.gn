@@ -36,6 +36,7 @@ fuchsia_driver("wlantap_driver-driver") {
     "//sdk/banjo/fuchsia.hardware.ethernet:fuchsia.hardware.ethernet_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.wlan.phyinfo:fuchsia.hardware.wlan.phyinfo_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.wlanphyimpl:fuchsia.hardware.wlanphyimpl_banjo_cpp",
+    "//sdk/fidl/fuchsia.wlan.common",
     "//sdk/fidl/fuchsia.wlan.common:fuchsia.wlan.common_banjo_c",
     "//sdk/fidl/fuchsia.wlan.device",
     "//sdk/fidl/fuchsia.wlan.internal:fuchsia.wlan.internal_banjo_cpp",

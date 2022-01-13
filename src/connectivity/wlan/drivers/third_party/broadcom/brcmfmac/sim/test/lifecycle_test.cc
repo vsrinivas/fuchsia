@@ -65,7 +65,7 @@ TEST(LifecycleTest, StartWithSmeChannel) {
 
   // Create iface.
   auto [local, _remote] = make_channel();
-  wlanphy_impl_create_iface_req_t create_iface_req{.role = WLAN_INFO_MAC_ROLE_CLIENT,
+  wlanphy_impl_create_iface_req_t create_iface_req{.role = MAC_ROLE_CLIENT,
                                                    .mlme_channel = local.get()};
   uint16_t iface_id;
   status = device->WlanphyImplCreateIface(&create_iface_req, &iface_id);

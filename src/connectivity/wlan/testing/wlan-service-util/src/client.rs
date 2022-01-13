@@ -5,7 +5,7 @@
 use anyhow::{format_err, Context as _, Error};
 use fidl::endpoints;
 use fidl_fuchsia_wlan_common as fidl_common;
-use fidl_fuchsia_wlan_device::MacRole;
+use fidl_fuchsia_wlan_common::MacRole;
 use fidl_fuchsia_wlan_device_service::DeviceServiceProxy;
 use fidl_fuchsia_wlan_ieee80211 as fidl_ieee80211;
 use fidl_fuchsia_wlan_internal as fidl_internal;

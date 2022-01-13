@@ -4,7 +4,7 @@
 
 use anyhow::Context as _;
 use core::sync::atomic::AtomicUsize;
-use fidl_fuchsia_wlan_device as fidl_wlan_dev;
+use fidl_fuchsia_wlan_common as fidl_wlan_common;
 use fidl_fuchsia_wlan_device_service::{self as fidl_svc, DeviceServiceRequest};
 use fidl_fuchsia_wlan_mlme::{self as fidl_mlme, MinstrelStatsResponse};
 use fuchsia_async as fasync;
@@ -163,9 +163,9 @@ fn query_iface(ifaces: &IfaceMap, id: u16) -> Result<fidl_svc::QueryIfaceRespons
     let iface = ifaces.get(&id).ok_or(zx::Status::NOT_FOUND)?;
 
     let role = match iface.device_info.role {
-        fidl_mlme::MacRole::Client => fidl_wlan_dev::MacRole::Client,
-        fidl_mlme::MacRole::Ap => fidl_wlan_dev::MacRole::Ap,
-        fidl_mlme::MacRole::Mesh => fidl_wlan_dev::MacRole::Mesh,
+        fidl_wlan_common::MacRole::Client => fidl_wlan_common::MacRole::Client,
+        fidl_wlan_common::MacRole::Ap => fidl_wlan_common::MacRole::Ap,
+        fidl_wlan_common::MacRole::Mesh => fidl_wlan_common::MacRole::Mesh,
     };
 
     let phy_id = iface.phy_ownership.phy_id;
@@ -392,7 +392,6 @@ mod tests {
     use super::*;
     use crate::test_helper;
     use fidl::endpoints::{create_endpoints, create_proxy, create_proxy_and_stream};
-    use fidl_fuchsia_wlan_device as fidl_dev;
     use fidl_fuchsia_wlan_device_service::IfaceListItem;
     use fidl_fuchsia_wlan_mlme::{self as fidl_mlme, MlmeMarker};
     use fidl_fuchsia_wlan_sme as fidl_sme;
@@ -452,7 +451,7 @@ mod tests {
 
         let response = super::query_iface(&iface_map, 10).expect("querying iface failed");
         let expected = fake_device_info();
-        assert_eq!(response.role, fidl_dev::MacRole::Client);
+        assert_eq!(response.role, fidl_wlan_common::MacRole::Client);
         assert_eq!(response.sta_addr, expected.sta_addr);
         assert_eq!(response.id, 10);
         assert_eq!(response.driver_features, expected.driver_features);
@@ -738,7 +737,7 @@ mod tests {
             // Add the Synth feature without the TempSoftmac feature since this represents an
             // invalid configuration.
             let mut device_info = fake_device_info();
-            device_info.driver_features.push(fidl_fuchsia_wlan_common::DriverFeature::Synth);
+            device_info.driver_features.push(fidl_wlan_common::DriverFeature::Synth);
             responder.send(&mut device_info).expect("failed to send MLME response");
         });
 
@@ -1022,12 +1021,12 @@ mod tests {
 
     fn fake_device_info() -> fidl_mlme::DeviceInfo {
         fidl_mlme::DeviceInfo {
-            role: fidl_mlme::MacRole::Client,
+            role: fidl_wlan_common::MacRole::Client,
             bands: vec![],
             sta_addr: [0xAC; 6],
             driver_features: vec![
-                fidl_fuchsia_wlan_common::DriverFeature::ScanOffload,
-                fidl_fuchsia_wlan_common::DriverFeature::SaeSmeAuth,
+                fidl_wlan_common::DriverFeature::ScanOffload,
+                fidl_wlan_common::DriverFeature::SaeSmeAuth,
             ],
             qos_capable: false,
         }

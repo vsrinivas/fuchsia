@@ -48,7 +48,7 @@ class CrashRecoveryTest : public SimTest {
 
 void CrashRecoveryTest::Init() {
   ASSERT_EQ(SimTest::Init(), ZX_OK);
-  ASSERT_EQ(StartInterface(WLAN_INFO_MAC_ROLE_CLIENT, &client_ifc_), ZX_OK);
+  ASSERT_EQ(StartInterface(MAC_ROLE_CLIENT, &client_ifc_), ZX_OK);
   ap_.EnableBeacon(zx::msec(100));
   brcmf_simdev* sim = device_->GetSim();
   client_ifp_ = brcmf_get_ifp(sim->drvr, client_ifc_.iface_id_);
@@ -62,7 +62,7 @@ void CrashRecoveryTest::RecreateClientIface() {
   // Since the interface was destroyed as part of the recovery process, we
   // need to notify the sim about it before attempting to recreate.
   SimTest::InterfaceDestroyed(&client_ifc_);
-  SimTest::StartInterface(WLAN_INFO_MAC_ROLE_CLIENT, &client_ifc_);
+  SimTest::StartInterface(MAC_ROLE_CLIENT, &client_ifc_);
   brcmf_simdev* sim = device_->GetSim();
   client_ifp_ = brcmf_get_ifp(sim->drvr, client_ifc_.iface_id_);
 }

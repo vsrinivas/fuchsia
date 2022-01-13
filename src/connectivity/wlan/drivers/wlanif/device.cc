@@ -880,7 +880,7 @@ void Device::AuthenticateInd(const wlan_fullmac_auth_ind_t* ind) {
 void Device::DeauthenticateConf(const wlan_fullmac_deauth_confirm_t* resp) {
   std::lock_guard<std::mutex> lock(lock_);
 
-  if (query_info_.role == WLAN_INFO_MAC_ROLE_CLIENT) {
+  if (query_info_.role == MAC_ROLE_CLIENT) {
     eth_device_.SetEthernetStatus(&wlan_fullmac_impl_, false);
   }
 
@@ -899,7 +899,7 @@ void Device::DeauthenticateConf(const wlan_fullmac_deauth_confirm_t* resp) {
 void Device::DeauthenticateInd(const wlan_fullmac_deauth_indication_t* ind) {
   std::lock_guard<std::mutex> lock(lock_);
 
-  if (query_info_.role == WLAN_INFO_MAC_ROLE_CLIENT) {
+  if (query_info_.role == MAC_ROLE_CLIENT) {
     eth_device_.SetEthernetStatus(&wlan_fullmac_impl_, false);
   }
 
@@ -968,7 +968,7 @@ void Device::AssociateInd(const wlan_fullmac_assoc_ind_t* ind) {
 void Device::DisassociateConf(const wlan_fullmac_disassoc_confirm_t* resp) {
   std::lock_guard<std::mutex> lock(lock_);
 
-  if (query_info_.role == WLAN_INFO_MAC_ROLE_CLIENT) {
+  if (query_info_.role == MAC_ROLE_CLIENT) {
     eth_device_.SetEthernetStatus(&wlan_fullmac_impl_, false);
   }
 
@@ -987,7 +987,7 @@ void Device::DisassociateConf(const wlan_fullmac_disassoc_confirm_t* resp) {
 void Device::DisassociateInd(const wlan_fullmac_disassoc_indication_t* ind) {
   std::lock_guard<std::mutex> lock(lock_);
 
-  if (query_info_.role == WLAN_INFO_MAC_ROLE_CLIENT) {
+  if (query_info_.role == MAC_ROLE_CLIENT) {
     eth_device_.SetEthernetStatus(&wlan_fullmac_impl_, false);
   }
 

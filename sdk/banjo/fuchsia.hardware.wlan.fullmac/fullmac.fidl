@@ -7,6 +7,7 @@ using ddk.hw.wlan.ieee80211;
 using fuchsia.hardware.wlan.phyinfo;
 using fuchsia.hardware.ethernet;
 using fuchsia.hardware.wlan.associnfo;
+using fuchsia.wlan.common;
 using fuchsia.wlan.internal;
 using fuchsia.wlan.ieee80211 as ieee80211;
 using zx;
@@ -397,7 +398,7 @@ type WlanFullmacFeature = strict enum : uint32 {
 type WlanFullmacQueryInfo = struct {
     sta_addr ieee80211.MacAddr;
     /// WLAN_MAC_ROLE_*
-    role fuchsia.hardware.wlan.phyinfo.WlanInfoMacRole;
+    role fuchsia.wlan.common.MacRole;
     /// WLAN_FULLMAC_FEATURE_*
     features uint32;
     num_bands uint64;

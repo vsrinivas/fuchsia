@@ -96,7 +96,7 @@ pub async fn get_client_sme(wlan_service: &DeviceServiceProxy, iface_id: u16) ->
 mod tests {
     use {
         super::*,
-        fidl_fuchsia_wlan_device::MacRole::*,
+        fidl_fuchsia_wlan_common::MacRole::*,
         fidl_fuchsia_wlan_device_service::{
             DeviceServiceMarker, DeviceServiceRequest::*, IfaceListItem, ListIfacesResponse,
             QueryIfaceResponse,

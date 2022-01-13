@@ -172,7 +172,7 @@ void CreateSoftAPTest::Init() { ASSERT_EQ(SimTest::Init(), ZX_OK); }
 void CreateSoftAPTest::CreateInterface() {
   zx_status_t status;
 
-  status = SimTest::StartInterface(WLAN_INFO_MAC_ROLE_AP, &softap_ifc_, &sme_protocol_);
+  status = SimTest::StartInterface(MAC_ROLE_AP, &softap_ifc_, &sme_protocol_);
   ASSERT_EQ(status, ZX_OK);
 }
 

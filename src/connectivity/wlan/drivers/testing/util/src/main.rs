@@ -3,7 +3,8 @@
 // found in the LICENSE file.
 
 use anyhow::{format_err, Context as _, Error};
-use fidl_fuchsia_wlan_device as wlan;
+use fidl_fuchsia_wlan_common as wlan_common;
+use fidl_fuchsia_wlan_device as wlan_device;
 use fuchsia_async as fasync;
 use futures::prelude::*;
 use ieee80211::NULL_MAC_ADDR;
@@ -34,7 +35,7 @@ fn open_rdwr<P: AsRef<Path>>(path: P) -> Result<File, Error> {
     OpenOptions::new().read(true).write(true).open(path).map_err(Into::into)
 }
 
-fn get_proxy() -> Result<(fasync::TestExecutor, wlan::PhyProxy), Error> {
+fn get_proxy() -> Result<(fasync::TestExecutor, wlan_device::PhyProxy), Error> {
     let executor = fasync::TestExecutor::new().context("error creating event loop")?;
 
     let phy = wlan_dev::RealDeviceEnv::device_from_path(&dev_wlanphy())?;
@@ -82,8 +83,8 @@ fn query_wlanphy() -> Result<(), Error> {
 
 fn create_wlanintf() -> Result<(), Error> {
     let (mut executor, proxy) = get_proxy()?;
-    let mut req = wlan::CreateIfaceRequest {
-        role: wlan::MacRole::Client,
+    let mut req = wlan_device::CreateIfaceRequest {
+        role: wlan_common::MacRole::Client,
         mlme_channel: None,
         init_sta_addr: NULL_MAC_ADDR,
     };
@@ -95,7 +96,7 @@ fn create_wlanintf() -> Result<(), Error> {
 
 fn destroy_wlanintf(id: u16) -> Result<(), Error> {
     let (mut executor, proxy) = get_proxy()?;
-    let mut req = wlan::DestroyIfaceRequest { id: id };
+    let mut req = wlan_device::DestroyIfaceRequest { id: id };
     let fut = proxy.destroy_iface(&mut req).map_ok(|resp| {
         println!("destroyed intf {} resp: {:?}", id, resp);
     });

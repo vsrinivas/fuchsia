@@ -27,6 +27,16 @@ type PHY = strict enum {
     HEW = 5;
 };
 
+// Numbers defined to guarantee consistent numbering between all code bindings
+// to ease conversion.
+type MacRole = strict enum {
+    CLIENT = 1;
+    AP = 2;
+    MESH = 3;
+};
+@namespaced
+const MAX_SUPPORTED_MAC_ROLES uint8 = 3;
+
 type ChannelBandwidth = strict enum { // Channel Bandwidth
     CBW20 = 0;
     CBW40 = 1;

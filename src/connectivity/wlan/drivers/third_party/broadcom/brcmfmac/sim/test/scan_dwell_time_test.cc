@@ -39,7 +39,7 @@ class ScanTest : public SimTest {
 
 void ScanTest::Init() {
   ASSERT_EQ(SimTest::Init(), ZX_OK);
-  ASSERT_EQ(StartInterface(WLAN_INFO_MAC_ROLE_CLIENT, &client_ifc_), ZX_OK);
+  ASSERT_EQ(StartInterface(MAC_ROLE_CLIENT, &client_ifc_), ZX_OK);
 }
 
 TEST_F(ScanTest, PassiveDwellTime) {

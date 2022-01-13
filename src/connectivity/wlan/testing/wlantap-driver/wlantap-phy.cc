@@ -190,13 +190,13 @@ struct WlantapPhy : wlantap::WlantapPhy, WlantapMac::Listener {
     return std::find(v.cbegin(), v.cend(), t) != v.cend();
   }
 
-  static std::string RoleToString(wlan_device::MacRole role) {
+  static std::string RoleToString(wlan_common::MacRole role) {
     switch (role) {
-      case wlan_device::MacRole::CLIENT:
+      case wlan_common::MacRole::CLIENT:
         return "client";
-      case wlan_device::MacRole::AP:
+      case wlan_common::MacRole::AP:
         return "ap";
-      case wlan_device::MacRole::MESH:
+      case wlan_common::MacRole::MESH:
         return "mesh";
       default:
         return "invalid";
@@ -205,7 +205,7 @@ struct WlantapPhy : wlantap::WlantapPhy, WlantapMac::Listener {
 
   zx_status_t CreateIface(const wlanphy_impl_create_iface_req_t* req, uint16_t* out_iface_id) {
     zxlogf(INFO, "%s: received a 'CreateIface' DDK request", name_.c_str());
-    wlan_device::MacRole dev_role = ConvertMacRole(req->role);
+    wlan_common::MacRole dev_role = ConvertMacRole(req->role);
     auto role_str = RoleToString(dev_role);
     if (phy_config_->mac_role != dev_role) {
       zxlogf(ERROR, "%s: CreateIface(%s): role not supported", name_.c_str(), role_str.c_str());

@@ -4,8 +4,7 @@
 
 use {
     anyhow::{format_err, Error},
-    fidl_fuchsia_wlan_common::DriverFeature,
-    fidl_fuchsia_wlan_mlme::{self as fidl_mlme, DeviceInfo},
+    fidl_fuchsia_wlan_common as fidl_common, fidl_fuchsia_wlan_mlme as fidl_mlme,
     fuchsia_cobalt::CobaltSender,
     fuchsia_inspect_contrib::inspect_log,
     futures::{
@@ -63,7 +62,7 @@ pub struct IfaceDevice {
     pub sme_server: SmeServer,
     pub stats_sched: StatsScheduler,
     pub mlme_proxy: fidl_mlme::MlmeProxy,
-    pub device_info: DeviceInfo,
+    pub device_info: fidl_mlme::DeviceInfo,
     pub shutdown_sender: ShutdownSender,
 }
 
@@ -107,7 +106,7 @@ pub fn create_and_serve_sme(
     iface_tree_holder: Arc<wlan_inspect::iface_mgr::IfaceTreeHolder>,
     cobalt_sender: CobaltSender,
     cobalt_1dot1_proxy: fidl_fuchsia_metrics::MetricEventLoggerProxy,
-    device_info: DeviceInfo,
+    device_info: fidl_mlme::DeviceInfo,
     dev_monitor_proxy: fidl_fuchsia_wlan_device_service::DeviceMonitorProxy,
 ) -> Result<impl Future<Output = Result<(), Error>>, Error> {
     let event_stream = mlme_proxy.take_event_stream();
@@ -131,12 +130,12 @@ pub fn create_and_serve_sme(
     inspect_log!(inspect_tree.device_events.lock().get_mut(), {
         msg: format!("new iface #{} with role '{:?}'", id, device_info.role)
     });
-    if let fidl_mlme::MacRole::Client = device_info.role {
+    if let fidl_common::MacRole::Client = device_info.role {
         inspect_tree.mark_active_client_iface(id, ifaces.clone(), iface_tree_holder.clone());
     }
-    let is_softmac = device_info.driver_features.contains(&DriverFeature::TempSoftmac);
+    let is_softmac = device_info.driver_features.contains(&fidl_common::DriverFeature::TempSoftmac);
     // For testing only: All synthetic devices are softmac devices.
-    if device_info.driver_features.contains(&DriverFeature::Synth) && !is_softmac {
+    if device_info.driver_features.contains(&fidl_common::DriverFeature::Synth) && !is_softmac {
         return Err(format_err!("Synthetic devices must be SoftMAC"));
     }
     ifaces.insert(
@@ -176,7 +175,7 @@ fn create_sme<S>(
     cfg: ServiceCfg,
     proxy: fidl_mlme::MlmeProxy,
     event_stream: fidl_mlme::MlmeEventStream,
-    device_info: &DeviceInfo,
+    device_info: &fidl_mlme::DeviceInfo,
     stats_requests: S,
     cobalt_sender: CobaltSender,
     cobalt_1dot1_proxy: fidl_fuchsia_metrics::MetricEventLoggerProxy,
@@ -190,7 +189,7 @@ where
 {
     let device_info = clone_utils::clone_device_info(device_info);
     let (server, sme_fut) = match device_info.role {
-        fidl_mlme::MacRole::Client => {
+        fidl_common::MacRole::Client => {
             let (sender, receiver) = mpsc::unbounded();
             let fut = station::client::serve(
                 cfg.into(),
@@ -207,13 +206,13 @@ where
             );
             (SmeServer::Client(sender), FutureObj::new(Box::new(fut)))
         }
-        fidl_mlme::MacRole::Ap => {
+        fidl_common::MacRole::Ap => {
             let (sender, receiver) = mpsc::unbounded();
             let fut =
                 station::ap::serve(proxy, device_info, event_stream, receiver, stats_requests);
             (SmeServer::Ap(sender), FutureObj::new(Box::new(fut)))
         }
-        fidl_mlme::MacRole::Mesh => {
+        fidl_common::MacRole::Mesh => {
             let (sender, receiver) = mpsc::unbounded();
             let fut =
                 station::mesh::serve(proxy, device_info, event_stream, receiver, stats_requests);
@@ -235,7 +234,7 @@ mod tests {
         super::*,
         crate::test_helper,
         fidl::endpoints::create_proxy,
-        fidl_fuchsia_wlan_mlme::MlmeMarker,
+        fidl_mlme::MlmeMarker,
         fuchsia_async as fasync,
         fuchsia_cobalt::{self, CobaltSender},
         fuchsia_inspect::assert_data_tree,
@@ -247,9 +246,9 @@ mod tests {
         wlan_common::assert_variant,
     };
 
-    fn fake_device_info() -> DeviceInfo {
+    fn fake_device_info() -> fidl_mlme::DeviceInfo {
         fidl_mlme::DeviceInfo {
-            role: fidl_mlme::MacRole::Client,
+            role: fidl_common::MacRole::Client,
             bands: vec![],
             sta_addr: [0xAC; 6],
             driver_features: vec![],

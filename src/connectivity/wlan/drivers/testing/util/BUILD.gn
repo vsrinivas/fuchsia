@@ -12,6 +12,7 @@ rustc_binary("util") {
   deps = [
     "//sdk/fidl/fuchsia.device:fuchsia.device-rustc",
     "//sdk/fidl/fuchsia.device.test:fuchsia.device.test-rustc",
+    "//sdk/fidl/fuchsia.wlan.common:fuchsia.wlan.common-rustc",
     "//sdk/fidl/fuchsia.wlan.device:fuchsia.wlan.device-rustc",
     "//src/connectivity/wlan/lib/ieee80211",
     "//src/connectivity/wlan/lib/wlan_dev",

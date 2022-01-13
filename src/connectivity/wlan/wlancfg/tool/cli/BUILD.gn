@@ -12,7 +12,6 @@ rustc_binary("bin") {
 
   deps = [
     "//sdk/fidl/fuchsia.wlan.common:fuchsia.wlan.common-rustc",
-    "//sdk/fidl/fuchsia.wlan.device:fuchsia.wlan.device-rustc",
     "//sdk/fidl/fuchsia.wlan.policy:fuchsia.wlan.policy-rustc",
     "//sdk/fidl/fuchsia.wlan.product.deprecatedconfiguration:fuchsia.wlan.product.deprecatedconfiguration-rustc",
     "//src/connectivity/wlan/wlancfg/tool/policy:donut-lib",

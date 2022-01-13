@@ -5,18 +5,6 @@ library fuchsia.hardware.wlan.phyinfo;
 
 using ddk.hw.wlan.ieee80211;
 
-/// Role of a WLAN device.
-type WlanInfoMacRole = strict enum : uint8 {
-    /// Device operating as a non-AP station (i.e., a client of an AP).
-    CLIENT = 0x1;
-
-    /// Device operating as an access point.
-    AP = 0x2;
-
-    /// Device operating as a mesh node.
-    MESH = 0x4;
-};
-
 /// PHY types supporting different MCS and payload data rates.
 /// Based off of dot11PHYType from IEEE 802.11-2016/2020 Annex C + Amendments
 /// These values may be used in a bitfield to indicate support for multiple PHY types.

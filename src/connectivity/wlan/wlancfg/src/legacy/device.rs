@@ -10,7 +10,7 @@ use {
     },
     anyhow::format_err,
     fidl::endpoints::create_proxy,
-    fidl_fuchsia_wlan_device as wlan,
+    fidl_fuchsia_wlan_common as wlan_common,
     fidl_fuchsia_wlan_device_service::{DeviceServiceProxy, DeviceWatcherEvent},
     fuchsia_zircon as zx,
     futures::lock::Mutex,
@@ -94,7 +94,7 @@ async fn on_iface_added_legacy(listener: &Listener, iface_id: u16) -> Result<(),
     let service = listener.proxy.clone();
 
     match response.role {
-        wlan::MacRole::Client => {
+        wlan_common::MacRole::Client => {
             let legacy_shim = listener.legacy_shim.clone();
             let (sme, remote) = create_proxy()
                 .map_err(|e| format_err!("Failed to create a FIDL channel: {}", e))?;
@@ -111,8 +111,8 @@ async fn on_iface_added_legacy(listener: &Listener, iface_id: u16) -> Result<(),
             legacy_shim.set_if_empty(lc);
         }
         // The AP service make direct use of the PhyManager to get interfaces.
-        wlan::MacRole::Ap => {}
-        wlan::MacRole::Mesh => {
+        wlan_common::MacRole::Ap => {}
+        wlan_common::MacRole::Mesh => {
             return Err(format_err!("Unexpectedly observed a mesh iface: {}", iface_id))
         }
     }

@@ -11,6 +11,7 @@ fidl("fuchsia.hardware.wlan.fullmac") {
     "//sdk/banjo/fuchsia.hardware.ethernet",
     "//sdk/banjo/fuchsia.hardware.wlan.associnfo",
     "//sdk/banjo/fuchsia.hardware.wlan.phyinfo",
+    "//sdk/fidl/fuchsia.wlan.common",
     "//sdk/fidl/fuchsia.wlan.ieee80211",
     "//sdk/fidl/fuchsia.wlan.internal",
     "//zircon/vdso/zx",

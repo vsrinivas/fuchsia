@@ -43,7 +43,7 @@ class TimeoutTest : public SimTest {
 // Create our device instance and hook up the callbacks
 void TimeoutTest::Init() {
   ASSERT_EQ(SimTest::Init(), ZX_OK);
-  ASSERT_EQ(StartInterface(WLAN_INFO_MAC_ROLE_CLIENT, &client_ifc_), ZX_OK);
+  ASSERT_EQ(StartInterface(MAC_ROLE_CLIENT, &client_ifc_), ZX_OK);
 }
 
 // Verify scan timeout is triggered.

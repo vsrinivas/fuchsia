@@ -5,8 +5,8 @@
 use {
     anyhow::{format_err, Context as _, Error},
     fidl::endpoints,
+    fidl_fuchsia_wlan_common::MacRole,
     fidl_fuchsia_wlan_common::PowerSaveType,
-    fidl_fuchsia_wlan_device::MacRole,
     fidl_fuchsia_wlan_device_service::{
         self as wlan_service, DeviceMonitorProxy, DeviceServiceProxy, QueryIfaceResponse,
     },

@@ -50,7 +50,7 @@ uint8_t ConvertAssocResultCode(::fuchsia::wlan::mlme::AssociateResultCode code);
 ::fuchsia::wlan::mlme::StartResultCode ConvertStartResultCode(uint8_t code);
 ::fuchsia::wlan::mlme::StopResultCode ConvertStopResultCode(uint8_t code);
 ::fuchsia::wlan::mlme::EapolResultCode ConvertEapolResultCode(uint8_t code);
-::fuchsia::wlan::mlme::MacRole ConvertMacRole(wlan_info_mac_role_t role);
+::fuchsia::wlan::common::MacRole ConvertMacRole(mac_role_t role);
 void ConvertBandCapabilities(::fuchsia::wlan::mlme::BandCapabilities* fidl_band,
                              const wlan_fullmac_band_capabilities_t& band);
 // Convert a Banjo noise floor histogram into FIDL.

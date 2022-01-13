@@ -16,7 +16,7 @@ use {
 pub(crate) fn create_wlantap_config(
     name: String,
     sta_addr: [u8; 6],
-    mac_role: fidl_device::MacRole,
+    mac_role: fidl_common::MacRole,
 ) -> wlantap::WlantapPhyConfig {
     use fidl_fuchsia_wlan_common::DriverFeature;
     use fidl_fuchsia_wlan_device::SupportedPhy;

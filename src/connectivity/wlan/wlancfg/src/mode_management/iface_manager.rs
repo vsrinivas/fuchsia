@@ -24,8 +24,8 @@ use {
     },
     anyhow::{format_err, Error},
     fidl::endpoints::create_proxy,
-    fidl_fuchsia_wlan_common, fidl_fuchsia_wlan_device, fidl_fuchsia_wlan_policy,
-    fidl_fuchsia_wlan_sme, fuchsia_async as fasync,
+    fidl_fuchsia_wlan_common, fidl_fuchsia_wlan_policy, fidl_fuchsia_wlan_sme,
+    fuchsia_async as fasync,
     fuchsia_cobalt::CobaltSender,
     fuchsia_zircon as zx,
     futures::{
@@ -78,7 +78,7 @@ pub(crate) struct ApIfaceContainer {
 #[derive(Clone, Debug)]
 pub struct StateMachineMetadata {
     pub iface_id: u16,
-    pub role: fidl_fuchsia_wlan_device::MacRole,
+    pub role: fidl_fuchsia_wlan_common::MacRole,
 }
 
 async fn create_client_state_machine(
@@ -129,7 +129,7 @@ async fn create_client_state_machine(
     );
 
     let metadata =
-        StateMachineMetadata { iface_id, role: fidl_fuchsia_wlan_device::MacRole::Client };
+        StateMachineMetadata { iface_id, role: fidl_fuchsia_wlan_common::MacRole::Client };
     let fut = future_with_metadata::FutureWithMetadata::new(metadata, Box::pin(fut));
 
     Ok((Box::new(new_client), fut))
@@ -333,7 +333,7 @@ impl IfaceManagerService {
         // Begin running and monitoring the AP state machine future.
         let metadata = StateMachineMetadata {
             iface_id: iface_id,
-            role: fidl_fuchsia_wlan_device::MacRole::Ap,
+            role: fidl_fuchsia_wlan_common::MacRole::Ap,
         };
         let fut = future_with_metadata::FutureWithMetadata::new(metadata, state_machine_fut);
         self.fsm_futures.push(fut);
@@ -572,7 +572,7 @@ impl IfaceManagerService {
         };
 
         match iface_info.role {
-            fidl_fuchsia_wlan_device::MacRole::Client => {
+            fidl_fuchsia_wlan_common::MacRole::Client => {
                 // If this client has already been recorded, take no action.
                 for client in self.clients.iter() {
                     if client.iface_id == iface_id {
@@ -604,11 +604,11 @@ impl IfaceManagerService {
                 client_iface.client_state_machine = Some(new_client);
                 self.clients.push(client_iface);
             }
-            fidl_fuchsia_wlan_device::MacRole::Ap => {
+            fidl_fuchsia_wlan_common::MacRole::Ap => {
                 let ap_iface = self.get_ap(Some(iface_id)).await?;
                 self.aps.push(ap_iface);
             }
-            fidl_fuchsia_wlan_device::MacRole::Mesh => {
+            fidl_fuchsia_wlan_common::MacRole::Mesh => {
                 // Mesh roles are not currently supported.
             }
         }
@@ -1001,7 +1001,7 @@ async fn handle_terminated_state_machine(
     >,
 ) {
     match terminated_fsm.role {
-        fidl_fuchsia_wlan_device::MacRole::Ap => {
+        fidl_fuchsia_wlan_common::MacRole::Ap => {
             // If the state machine exited normally, the IfaceManagerService will have already
             // destroyed the interface.  If not, then the state machine exited because it could not
             // communicate with the SME and the interface is likely unusable.
@@ -1010,7 +1010,7 @@ async fn handle_terminated_state_machine(
                 return;
             }
         }
-        fidl_fuchsia_wlan_device::MacRole::Client => {
+        fidl_fuchsia_wlan_common::MacRole::Client => {
             iface_manager.record_idle_client(terminated_fsm.iface_id);
             initiate_network_selection(
                 &iface_manager,
@@ -1020,7 +1020,7 @@ async fn handle_terminated_state_machine(
             )
             .await;
         }
-        fidl_fuchsia_wlan_device::MacRole::Mesh => {
+        fidl_fuchsia_wlan_common::MacRole::Mesh => {
             // Not yet supported.
             unimplemented!();
         }
@@ -3397,7 +3397,7 @@ mod tests {
                     iface_id: TEST_CLIENT_IFACE_ID, responder
                 }))) => {
                     let mut response = fidl_fuchsia_wlan_device_service::QueryIfaceResponse {
-                        role: fidl_fuchsia_wlan_device::MacRole::Client,
+                        role: fidl_fuchsia_wlan_common::MacRole::Client,
                         id: TEST_CLIENT_IFACE_ID,
                         phy_id: 0,
                         phy_assigned_id: 0,
@@ -3588,7 +3588,7 @@ mod tests {
                     iface_id: TEST_CLIENT_IFACE_ID, responder
                 }) => {
                     let mut response = fidl_fuchsia_wlan_device_service::QueryIfaceResponse {
-                        role: fidl_fuchsia_wlan_device::MacRole::Client,
+                        role: fidl_fuchsia_wlan_common::MacRole::Client,
                         id: TEST_CLIENT_IFACE_ID,
                         phy_id: 0,
                         phy_assigned_id: 0,
@@ -3621,7 +3621,7 @@ mod tests {
                     iface_id: TEST_CLIENT_IFACE_ID, responder
                 }) => {
                     let mut response = fidl_fuchsia_wlan_device_service::QueryIfaceResponse {
-                        role: fidl_fuchsia_wlan_device::MacRole::Client,
+                        role: fidl_fuchsia_wlan_common::MacRole::Client,
                         id: TEST_CLIENT_IFACE_ID,
                         phy_id: 0,
                         phy_assigned_id: 0,
@@ -3693,7 +3693,7 @@ mod tests {
                     iface_id: TEST_AP_IFACE_ID, responder
                 }) => {
                     let mut response = fidl_fuchsia_wlan_device_service::QueryIfaceResponse {
-                        role: fidl_fuchsia_wlan_device::MacRole::Ap,
+                        role: fidl_fuchsia_wlan_common::MacRole::Ap,
                         id: TEST_AP_IFACE_ID,
                         phy_id: 0,
                         phy_assigned_id: 0,
@@ -3802,7 +3802,7 @@ mod tests {
                     iface_id: TEST_CLIENT_IFACE_ID, responder
                 }) => {
                     let mut response = fidl_fuchsia_wlan_device_service::QueryIfaceResponse {
-                        role: fidl_fuchsia_wlan_device::MacRole::Client,
+                        role: fidl_fuchsia_wlan_common::MacRole::Client,
                         id: TEST_CLIENT_IFACE_ID,
                         phy_id: 0,
                         phy_assigned_id: 0,
@@ -3847,7 +3847,7 @@ mod tests {
                     iface_id: TEST_AP_IFACE_ID, responder
                 }) => {
                     let mut response = fidl_fuchsia_wlan_device_service::QueryIfaceResponse {
-                        role: fidl_fuchsia_wlan_device::MacRole::Ap,
+                        role: fidl_fuchsia_wlan_common::MacRole::Ap,
                         id: TEST_AP_IFACE_ID,
                         phy_id: 0,
                         phy_assigned_id: 0,
@@ -4386,7 +4386,7 @@ mod tests {
                 iface_id: TEST_CLIENT_IFACE_ID, responder
             }) => {
                 let mut response = fidl_fuchsia_wlan_device_service::QueryIfaceResponse {
-                    role: fidl_fuchsia_wlan_device::MacRole::Client,
+                    role: fidl_fuchsia_wlan_common::MacRole::Client,
                     id: TEST_CLIENT_IFACE_ID,
                     phy_id: 0,
                     phy_assigned_id: 0,
@@ -4419,7 +4419,7 @@ mod tests {
                 iface_id: TEST_CLIENT_IFACE_ID, responder
             }) => {
                 let mut response = fidl_fuchsia_wlan_device_service::QueryIfaceResponse {
-                    role: fidl_fuchsia_wlan_device::MacRole::Client,
+                    role: fidl_fuchsia_wlan_common::MacRole::Client,
                     id: TEST_CLIENT_IFACE_ID,
                     phy_id: 0,
                     phy_assigned_id: 0,
@@ -5345,7 +5345,7 @@ mod tests {
         let mut network_selection_futures = FuturesUnordered::new();
 
         let metadata = StateMachineMetadata {
-            role: fidl_fuchsia_wlan_device::MacRole::Client,
+            role: fidl_fuchsia_wlan_common::MacRole::Client,
             iface_id: TEST_CLIENT_IFACE_ID,
         };
 
@@ -5391,7 +5391,7 @@ mod tests {
         let mut network_selection_futures = FuturesUnordered::new();
 
         let metadata = StateMachineMetadata {
-            role: fidl_fuchsia_wlan_device::MacRole::Ap,
+            role: fidl_fuchsia_wlan_common::MacRole::Ap,
             iface_id: TEST_AP_IFACE_ID,
         };
 

@@ -102,8 +102,7 @@ wlan_fullmac_impl_ifc_protocol_ops_t SimInterface::default_sme_dispatch_tbl_ = {
         },
 };
 
-zx_status_t SimInterface::Init(std::shared_ptr<simulation::Environment> env,
-                               wlan_info_mac_role_t role) {
+zx_status_t SimInterface::Init(std::shared_ptr<simulation::Environment> env, mac_role_t role) {
   zx_status_t result = zx_channel_create(0, &ch_sme_, &ch_mlme_);
   if (result == ZX_OK) {
     env_ = env;
@@ -126,12 +125,12 @@ void SimInterface::OnAssocConf(const wlan_fullmac_assoc_confirm_t* resp) {
 }
 
 void SimInterface::OnAssocInd(const wlan_fullmac_assoc_ind_t* ind) {
-  ZX_ASSERT(role_ == WLAN_INFO_MAC_ROLE_AP);
+  ZX_ASSERT(role_ == MAC_ROLE_AP);
   stats_.assoc_indications.push_back(*ind);
 }
 
 void SimInterface::OnAuthInd(const wlan_fullmac_auth_ind_t* resp) {
-  ZX_ASSERT(role_ == WLAN_INFO_MAC_ROLE_AP);
+  ZX_ASSERT(role_ == MAC_ROLE_AP);
   stats_.auth_indications.push_back(*resp);
 }
 
@@ -250,7 +249,7 @@ void SimInterface::StartAssoc(const common::MacAddr& bssid, const cssid_t& ssid,
                               const wlan_channel_t& channel) {
   ZX_ASSERT(if_impl_ops_);
   // This should only be performed on a Client interface
-  ZX_ASSERT(role_ == WLAN_INFO_MAC_ROLE_CLIENT);
+  ZX_ASSERT(role_ == MAC_ROLE_CLIENT);
 
   stats_.assoc_attempts++;
 
@@ -276,7 +275,7 @@ void SimInterface::StartAssoc(const common::MacAddr& bssid, const cssid_t& ssid,
 
 void SimInterface::AssociateWith(const simulation::FakeAp& ap, std::optional<zx::duration> delay) {
   // This should only be performed on a Client interface
-  ZX_ASSERT(role_ == WLAN_INFO_MAC_ROLE_CLIENT);
+  ZX_ASSERT(role_ == MAC_ROLE_CLIENT);
 
   common::MacAddr bssid = ap.GetBssid();
   cssid_t ssid = ap.GetSsid();
@@ -293,7 +292,7 @@ void SimInterface::AssociateWith(const simulation::FakeAp& ap, std::optional<zx:
 void SimInterface::DeauthenticateFrom(const common::MacAddr& bssid, reason_code_t reason) {
   ZX_ASSERT(if_impl_ops_);
   // This should only be performed on a Client interface
-  ZX_ASSERT(role_ == WLAN_INFO_MAC_ROLE_CLIENT);
+  ZX_ASSERT(role_ == MAC_ROLE_CLIENT);
 
   wlan_fullmac_deauth_req_t deauth_req = {.reason_code = reason};
   memcpy(deauth_req.peer_sta_address, bssid.byte, ETH_ALEN);
@@ -350,7 +349,7 @@ void SimInterface::StartSoftAp(const cssid_t& ssid, const wlan_channel_t& channe
                                uint32_t beacon_period, uint32_t dtim_period) {
   ZX_ASSERT(if_impl_ops_);
   // This should only be performed on an AP interface
-  ZX_ASSERT(role_ == WLAN_INFO_MAC_ROLE_AP);
+  ZX_ASSERT(role_ == MAC_ROLE_AP);
 
   wlan_fullmac_start_req_t start_req = {
       .bss_type = BSS_TYPE_INFRASTRUCTURE,
@@ -378,7 +377,7 @@ void SimInterface::StartSoftAp(const cssid_t& ssid, const wlan_channel_t& channe
 void SimInterface::StopSoftAp() {
   ZX_ASSERT(if_impl_ops_);
   // This should only be performed on an AP interface
-  ZX_ASSERT(role_ == WLAN_INFO_MAC_ROLE_AP);
+  ZX_ASSERT(role_ == MAC_ROLE_AP);
 
   wlan_fullmac_stop_req_t stop_req;
 
@@ -442,7 +441,7 @@ zx_status_t SimTest::Init() {
 }
 
 zx_status_t SimTest::StartInterface(
-    wlan_info_mac_role_t role, SimInterface* sim_ifc,
+    mac_role_t role, SimInterface* sim_ifc,
     std::optional<const wlan_fullmac_impl_ifc_protocol*> sme_protocol,
     std::optional<common::MacAddr> mac_addr) {
   zx_status_t status;

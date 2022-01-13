@@ -95,8 +95,8 @@ wlan_device::PhyInfo get_info() {
 
   info.supported_mac_roles.resize(0);
 
-  info.supported_mac_roles.push_back(wlan_device::MacRole::CLIENT);
-  info.supported_mac_roles.push_back(wlan_device::MacRole::AP);
+  info.supported_mac_roles.push_back(wlan_common::MacRole::CLIENT);
+  info.supported_mac_roles.push_back(wlan_common::MacRole::AP);
 
   return info;
 }
@@ -135,16 +135,16 @@ void PhyDevice::CreateIface(wlan_device::CreateIfaceRequest req, CreateIfaceCall
     return;
   }
 
-  wlan_info_mac_role_t role = 0;
+  mac_role_t role = 0;
   switch (req.role) {
-    case wlan_device::MacRole::CLIENT:
-      role = WLAN_INFO_MAC_ROLE_CLIENT;
+    case wlan_common::MacRole::CLIENT:
+      role = MAC_ROLE_CLIENT;
       break;
-    case wlan_device::MacRole::AP:
-      role = WLAN_INFO_MAC_ROLE_AP;
+    case wlan_common::MacRole::AP:
+      role = MAC_ROLE_AP;
       break;
-    case wlan_device::MacRole::MESH:
-      role = WLAN_INFO_MAC_ROLE_MESH;
+    case wlan_common::MacRole::MESH:
+      role = MAC_ROLE_MESH;
       break;
     default:
       resp.status = ZX_ERR_NOT_SUPPORTED;

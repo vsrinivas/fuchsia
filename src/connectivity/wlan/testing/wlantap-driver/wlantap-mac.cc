@@ -6,6 +6,7 @@
 
 #include <fuchsia/hardware/wlan/softmac/cpp/banjo.h>
 #include <fuchsia/wlan/common/c/banjo.h>
+#include <fuchsia/wlan/common/cpp/fidl.h>
 #include <fuchsia/wlan/device/cpp/fidl.h>
 #include <fuchsia/wlan/ieee80211/c/banjo.h>
 #include <fuchsia/wlan/internal/cpp/banjo.h>
@@ -21,12 +22,13 @@
 namespace wlan {
 
 namespace wlantap = ::fuchsia::wlan::tap;
+namespace wlan_common = ::fuchsia::wlan::common;
 namespace wlan_device = ::fuchsia::wlan::device;
 
 namespace {
 
 struct WlantapMacImpl : WlantapMac {
-  WlantapMacImpl(zx_device_t* phy_device, uint16_t id, wlan_device::MacRole role,
+  WlantapMacImpl(zx_device_t* phy_device, uint16_t id, wlan_common::MacRole role,
                  const wlantap::WlantapPhyConfig* phy_config, Listener* listener,
                  zx::channel sme_channel)
       : id_(id),
@@ -103,7 +105,7 @@ struct WlantapMacImpl : WlantapMac {
     if (options != 0) {
       return ZX_ERR_INVALID_ARGS;
     }
-    bool expected_remote = self.role_ == wlan_device::MacRole::CLIENT;
+    bool expected_remote = self.role_ == wlan_common::MacRole::CLIENT;
     if (config->remote != expected_remote) {
       return ZX_ERR_INVALID_ARGS;
     }
@@ -212,7 +214,7 @@ struct WlantapMacImpl : WlantapMac {
 
   zx_device_t* device_ = nullptr;
   uint16_t id_;
-  wlan_device::MacRole role_;
+  wlan_common::MacRole role_;
   std::mutex lock_;
   ddk::WlanSoftmacIfcProtocolClient ifc_ __TA_GUARDED(lock_);
   const wlantap::WlantapPhyConfig* phy_config_;
@@ -222,7 +224,7 @@ struct WlantapMacImpl : WlantapMac {
 
 }  // namespace
 
-zx_status_t CreateWlantapMac(zx_device_t* parent_phy, const wlan_device::MacRole role,
+zx_status_t CreateWlantapMac(zx_device_t* parent_phy, const wlan_common::MacRole role,
                              const wlantap::WlantapPhyConfig* phy_config, uint16_t id,
                              WlantapMac::Listener* listener, zx::channel sme_channel,
                              WlantapMac** ret) {

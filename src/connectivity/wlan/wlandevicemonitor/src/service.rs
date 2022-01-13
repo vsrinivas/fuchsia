@@ -517,7 +517,7 @@ mod tests {
 
         // Reply with a fake phy info
         let mut phy_info = fake_phy_info();
-        phy_info.supported_mac_roles.push(fidl_dev::MacRole::Client);
+        phy_info.supported_mac_roles.push(fidl_wlan_common::MacRole::Client);
         responder
             .send(&mut fidl_dev::QueryResponse { status: zx::sys::ZX_OK, info: phy_info })
             .expect("failed to send QueryResponse");
@@ -528,7 +528,7 @@ mod tests {
             exec.run_until_stalled(&mut query_fut),
             Poll::Ready(Ok(Some(roles))) => {
                 assert_eq!(roles.len(), 1);
-                assert_eq!(roles[0], fidl_dev::MacRole::Client);
+                assert_eq!(roles[0], fidl_wlan_common::MacRole::Client);
             }
         );
     }
@@ -1121,7 +1121,7 @@ mod tests {
             &test_values.phys,
             fidl_svc::CreateIfaceRequest {
                 phy_id: 10,
-                role: fidl_dev::MacRole::Client,
+                role: fidl_wlan_common::MacRole::Client,
                 sta_addr: if with_mac { [0, 1, 2, 3, 4, 5] } else { NULL_MAC_ADDR },
             },
         );
@@ -1131,7 +1131,7 @@ mod tests {
         // Validate the PHY request
         assert_variant!(exec.run_until_stalled(&mut phy_stream.next()),
             Poll::Ready(Some(Ok(fidl_dev::PhyRequest::CreateIface { req, responder }))) => {
-                assert_eq!(fidl_dev::MacRole::Client, req.role);
+                assert_eq!(fidl_wlan_common::MacRole::Client, req.role);
 
                 if with_mac {
                     assert_eq!(req.init_sta_addr, [0, 1, 2, 3, 4, 5]);
@@ -1202,7 +1202,7 @@ mod tests {
             &test_values.phys,
             fidl_svc::CreateIfaceRequest {
                 phy_id: 10,
-                role: fidl_dev::MacRole::Client,
+                role: fidl_wlan_common::MacRole::Client,
                 sta_addr: NULL_MAC_ADDR,
             },
         );

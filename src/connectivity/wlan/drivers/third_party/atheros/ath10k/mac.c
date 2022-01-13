@@ -4824,7 +4824,7 @@ static zx_status_t ath10k_mac_set_txbf_conf(struct ath10k_vif* arvif) {
   return ath10k_wmi_vdev_set_param(ar, ar->arvif.vdev_id, ar->wmi.vdev_param->txbf, value);
 }
 
-// Role is one of the supported roles in WLAN_INFO_MAC_ROLE_* values
+// Role is one of the supported roles in MAC_ROLE_* values
 static zx_status_t ath10k_add_interface(struct ath10k* ar, uint32_t vif_role) {
   struct ath10k_vif* arvif = &ar->arvif;
   zx_status_t ret = ZX_OK;
@@ -4880,7 +4880,7 @@ static zx_status_t ath10k_add_interface(struct ath10k* ar, uint32_t vif_role) {
         arvif->vdev_subtype = ath10k_wmi_get_vdev_subtype(ar, WMI_VDEV_SUBTYPE_P2P_DEVICE);
         break;
 #endif  // NEEDS PORTING
-    case WLAN_INFO_MAC_ROLE_CLIENT:
+    case MAC_ROLE_CLIENT:
       arvif->vdev_type = WMI_VDEV_TYPE_STA;
       ath10k_info("adding a station interface (vdev_id=%d) ...\n", arvif->vdev_id);
 #if 0   // NEEDS PORTING
@@ -4894,7 +4894,7 @@ static zx_status_t ath10k_add_interface(struct ath10k* ar, uint32_t vif_role) {
         arvif->vdev_type = WMI_VDEV_TYPE_IBSS;
         break;
 #endif  // NEEDS PORTING
-    case WLAN_INFO_MAC_ROLE_MESH:
+    case MAC_ROLE_MESH:
       if (!BITARR_TEST(ar->wmi.svc_map, WMI_SERVICE_MESH_11S)) {
         ret = ZX_ERR_INVALID_ARGS;
         ath10k_err("the firmware does not support MESH_11S vif subtype\n");
@@ -4907,7 +4907,7 @@ static zx_status_t ath10k_add_interface(struct ath10k* ar, uint32_t vif_role) {
       }
       arvif->vdev_type = WMI_VDEV_TYPE_AP;
       break;
-    case WLAN_INFO_MAC_ROLE_AP:
+    case MAC_ROLE_AP:
       arvif->vdev_type = WMI_VDEV_TYPE_AP;
       ath10k_info("adding an AP interface (vdev_id=%d) ...\n", arvif->vdev_id);
       break;
@@ -4955,7 +4955,7 @@ static zx_status_t ath10k_add_interface(struct ath10k* ar, uint32_t vif_role) {
    * become corrupted, e.g. have garbled IEs or out-of-date TIM bitmap.
    */
   if (/* vif_type == NL80211_IFTYPE_ADHOC || */
-      vif_role == WLAN_INFO_MAC_ROLE_MESH || vif_role == WLAN_INFO_MAC_ROLE_AP) {
+      vif_role == MAC_ROLE_MESH || vif_role == MAC_ROLE_AP) {
     ret = ath10k_msg_buf_alloc(ar, &arvif->beacon_buf, ATH10K_MSG_TYPE_BASE,
                                ATH10K_MAX_BCN_TMPL_SIZE);
     if (ret != ZX_OK) {
