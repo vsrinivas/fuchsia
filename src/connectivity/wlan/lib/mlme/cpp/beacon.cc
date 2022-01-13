@@ -142,7 +142,7 @@ static zx_status_t BuildBeaconOrProbeResponse(const BeaconConfig& config,
     return ZX_ERR_NO_RESOURCES;
   }
 
-  BufferWriter w(*packet);
+  BufferWriter w({packet->data(), packet->size()});
   auto mgmt_hdr = w.Write<MgmtFrameHeader>();
   mgmt_hdr->fc.set_type(FrameType::kManagement);
   mgmt_hdr->fc.set_subtype(T::Subtype());
