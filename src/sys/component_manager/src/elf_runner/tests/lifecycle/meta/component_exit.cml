@@ -34,7 +34,7 @@
             modes: [ "async" ],
         },
         {
-            event_stream: "EventStream",
+            event_stream_deprecated: "EventStream",
             subscriptions: [
                 {
                     event: "components_trigger_requested",

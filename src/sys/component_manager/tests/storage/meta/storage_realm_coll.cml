@@ -43,7 +43,7 @@
             modes: [ "async" ],
         },
         {
-            event_stream: "TestEventStream",
+            event_stream_deprecated: "TestEventStream",
             subscriptions: [
                 {
                     event: "stopped",

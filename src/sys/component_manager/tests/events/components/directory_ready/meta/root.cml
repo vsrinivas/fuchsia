@@ -30,7 +30,7 @@
             modes: [ "async" ],
         },
         {
-            event_stream: "DirectoryReadyStream",
+            event_stream_deprecated: "DirectoryReadyStream",
             subscriptions: [
                 {
                     event: "directory_ready",

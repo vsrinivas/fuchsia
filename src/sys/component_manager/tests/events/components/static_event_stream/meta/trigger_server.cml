@@ -43,7 +43,7 @@
             modes: [ "async" ],
         },
         {
-            event_stream: "EventStream",
+            event_stream_deprecated: "EventStream",
             subscriptions: [
                 {
                     event: "capability_requested",
@@ -52,7 +52,7 @@
             ],
         },
         {
-            event_stream: "second_stream",
+            event_stream_deprecated: "second_stream",
             subscriptions: [
                 {
                     event: "capability_requested",
@@ -61,7 +61,7 @@
             ],
         },
         {
-            event_stream: "resolved_stream",
+            event_stream_deprecated: "resolved_stream",
             subscriptions: [
                 {
                     event: "resolved",

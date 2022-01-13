@@ -7,7 +7,7 @@
             modes: [ "sync" ],
         },
         {
-            event_stream: "StartComponentTree",
+            event_stream_deprecated: "StartComponentTree",
             subscriptions: [
                 {
                     event: "resolved",

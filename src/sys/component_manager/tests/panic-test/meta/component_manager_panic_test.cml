@@ -25,7 +25,7 @@
             modes: [ "sync" ],
         },
         {
-            event_stream: "panic_test_event_stream",
+            event_stream_deprecated: "panic_test_event_stream",
             subscriptions: [
                 {
                     event: "stopped",

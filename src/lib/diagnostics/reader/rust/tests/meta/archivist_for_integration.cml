@@ -52,7 +52,7 @@
             modes: [ "async" ],
         },
         {
-            event_stream: "EventStream",
+            event_stream_deprecated: "EventStream",
             subscriptions: [
                 {
                     event: "capability_requested",

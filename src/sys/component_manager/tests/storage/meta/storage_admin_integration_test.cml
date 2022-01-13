@@ -36,7 +36,7 @@
             modes: [ "async" ],
         },
         {
-            event_stream: "PurgedStorageEventStream",
+            event_stream_deprecated: "PurgedStorageEventStream",
             subscriptions: [
                 {
                     event: "purged",

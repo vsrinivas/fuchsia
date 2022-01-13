@@ -29,7 +29,7 @@
             from: "parent",
         },
         {
-            event_stream: "DestroyedEventStream",
+            event_stream_deprecated: "DestroyedEventStream",
             subscriptions: [
                 {
                     event: "destroyed",

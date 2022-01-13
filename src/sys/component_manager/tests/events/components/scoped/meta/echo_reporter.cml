@@ -23,7 +23,7 @@
             modes: [ "async" ],
         },
         {
-            event_stream: "ScopedEventStream",
+            event_stream_deprecated: "ScopedEventStream",
             subscriptions: [
                 {
                     event: "started",

@@ -37,7 +37,7 @@
             modes: [ "sync" ],
         },
         {
-            event_stream: "DynamicChildEventStream",
+            event_stream_deprecated: "DynamicChildEventStream",
             subscriptions: [
                 {
                     event: "purged",
