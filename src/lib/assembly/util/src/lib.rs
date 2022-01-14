@@ -6,8 +6,10 @@
 
 //! Utility methods and traits used throughout assembly.
 
+mod insert_unique;
 mod meta_package;
 mod path_to_string;
 
+pub use insert_unique::{DuplicateKeyError, InsertUniqueExt, MapEntry};
 pub use meta_package::create_meta_package_file;
 pub use path_to_string::PathToStringExt;

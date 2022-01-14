@@ -16,6 +16,7 @@ if (is_host) {
     ]
     test_deps = [ "//third_party/rust_crates:tempfile" ]
     sources = [
+      "src/insert_unique.rs",
       "src/lib.rs",
       "src/meta_package.rs",
       "src/path_to_string.rs",
