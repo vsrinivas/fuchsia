@@ -43,45 +43,44 @@ type NsJailCmdBuilder struct {
 	MountPoints []*MountPt
 }
 
-// addDefaultMounts adds mounts used by all processes.
+// AddDefaultMounts adds a set of mounts used by existing host tests.
 // This is effectively an allowlist of mounts used by existing tests.
 // Adding to this should be avoided if possible.
-func (n *NsJailCmdBuilder) addDefaultMounts() {
+func (n *NsJailCmdBuilder) AddDefaultMounts() {
 	n.MountPoints = append(n.MountPoints, []*MountPt{
 		// Many host tests run emulators, which requires KVM.
-		{
-			Src: "/dev/kvm",
-		},
+		{Src: "/dev/kvm"},
 		// Many host tests rely on /bin/bash or /bin/sh.
-		{
-			Src: "/bin/bash",
-		},
-		{
-			Src: "/bin/sh",
-		},
+		{Src: "/bin/bash"},
+		{Src: "/bin/sh"},
 		// /bin/bash, in turn, is dynamically linked and requires that we mount the
 		// system linker.
-		{
-			Src: "/lib",
-		},
-		{
-			Src: "/lib64",
-		},
-		// /usr/bin/dirname and /usr/bin/uname are used by the fctui_unittests.
-		{
-			Src: "/usr/bin/dirname",
-		},
-		{
-			Src: "/usr/bin/uname",
-		},
+		{Src: "/lib"},
+		{Src: "/lib64"},
+		// Linux utilities used by a variety of tests.
+		{Src: "/usr/bin/awk"},
+		{Src: "/usr/bin/basename"},
+		{Src: "/usr/bin/cat"},
+		{Src: "/usr/bin/chmod"},
+		{Src: "/usr/bin/cp"},
+		{Src: "/usr/bin/cut"},
+		{Src: "/usr/bin/dirname"},
+		{Src: "/usr/bin/env"},
+		{Src: "/usr/bin/find"},
+		{Src: "/usr/bin/head"},
+		{Src: "/usr/bin/ln"},
+		{Src: "/usr/bin/mkdir"},
+		{Src: "/usr/bin/realpath"},
+		{Src: "/usr/bin/rm"},
+		{Src: "/usr/bin/sed"},
+		{Src: "/usr/bin/sort"},
+		{Src: "/usr/bin/tee"},
+		{Src: "/usr/bin/touch"},
+		{Src: "/usr/bin/uname"},
 		// Additional mounts for convenience.
-		{
-			Src: "/dev/urandom",
-		},
-		{
-			Src:      "/dev/null",
-			Writable: true,
-		},
+		{Src: "/dev/urandom"},
+		{Src: "/dev/zero"},
+		{Src: "/dev/null", Writable: true},
 	}...)
 }
 
@@ -93,9 +92,6 @@ func (n *NsJailCmdBuilder) Build(subcmd []string) ([]string, error) {
 	} else if len(subcmd) == 0 {
 		return nil, errors.New("NsJailCmdBuilder: subcmd cannot be empty")
 	}
-
-	// Add the default mounts.
-	n.addDefaultMounts()
 
 	// Nsjail has a chroot flag but unfortunately it mounts the root
 	// readonly, so we get around this by mounting it manually as

@@ -317,6 +317,7 @@ func (t *SubprocessTester) Test(ctx context.Context, test testsharder.Test, stdo
 				})
 			}
 		}
+		testCmdBuilder.AddDefaultMounts()
 		// TODO(rudymathu): Uncomment this section to enable host test sandboxing.
 		/*
 			testCmd, err = testCmdBuilder.Build(testCmd)
