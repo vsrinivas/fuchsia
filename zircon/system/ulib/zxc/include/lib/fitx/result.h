@@ -7,7 +7,6 @@
 
 #include <lib/fitx/internal/compiler.h>
 #include <lib/fitx/internal/result.h>
-#include <lib/fitx/internal/type_traits.h>
 
 #include <cstddef>
 #include <tuple>
@@ -89,6 +88,8 @@ struct failed {};
 template <typename E>
 class error {
  public:
+  using error_type = E;
+
   // Constructs an error with the given arguments.
   template <typename... Args,
             ::fitx::internal::requires_conditions<std::is_constructible<E, Args...>> = true>
@@ -150,6 +151,8 @@ class success;
 template <typename T>
 class success<T> {
  public:
+  using value_type = T;
+
   // Constructs a success value with the given arguments.
   template <typename... Args,
             ::fitx::internal::requires_conditions<std::is_constructible<T, Args...>> = true>
@@ -223,18 +226,21 @@ class result;
 // Specialization of result for one value type.
 template <typename E, typename T>
 class LIB_FITX_NODISCARD result<E, T> {
-  static_assert(!::fitx::internal::is_success<E>,
+  static_assert(!::fitx::internal::is_success_v<E>,
                 "fitx::success may not be used as the error type of fitx::result!");
-  static_assert(!std::is_same<failed, std::decay_t<T>>::value,
+  static_assert(!cpp17::is_same_v<failed, std::decay_t<T>>,
                 "fitx::failed may not be used as a value type of fitx::result!");
 
   template <typename U>
-  using not_same = ::fitx::internal::negation<std::is_same<result, U>>;
+  using not_same = cpp17::negation<std::is_same<result, U>>;
 
   struct none {};
-  using failed_or_none = std::conditional_t<std::is_same<failed, E>::value, failed, none>;
+  using failed_or_none = std::conditional_t<cpp17::is_same_v<failed, E>, failed, none>;
 
  public:
+  using error_type = E;
+  using value_type = T;
+
   constexpr result(const result&) = default;
   constexpr result& operator=(const result&) = default;
   constexpr result(result&&) = default;
@@ -427,17 +433,19 @@ class LIB_FITX_NODISCARD result<E, T> {
 // Specialization of the result type for zero values.
 template <typename E>
 class LIB_FITX_NODISCARD result<E> {
-  static_assert(!::fitx::internal::is_success<E>,
+  static_assert(!::fitx::internal::is_success_v<E>,
                 "fitx::success may not be used as the error type of fitx::result!");
 
   template <typename U>
-  using not_same = ::fitx::internal::negation<std::is_same<result, U>>;
+  using not_same = cpp17::negation<std::is_same<result, U>>;
 
   template <size_t>
   struct none {};
-  using failure_or_none = std::conditional_t<std::is_same<failed, E>::value, failed, none<1>>;
+  using failure_or_none = std::conditional_t<cpp17::is_same_v<failed, E>, failed, none<1>>;
 
  public:
+  using error_type = E;
+
   constexpr result(const result&) = default;
   constexpr result& operator=(const result&) = default;
   constexpr result(result&&) = default;

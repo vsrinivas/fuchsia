@@ -1174,11 +1174,13 @@ TEST(LibZxCommon, MakeStatusWithReferenceType) {
 
 TEST(LibZxCommon, MakeStatusWithMoveOnlyType) {
   struct Num {
+    constexpr Num(int i) : v(i) {}
+
     // Move only.
-    Num(const Num&) = delete;
-    Num& operator=(const Num&) const = delete;
-    Num(Num&&) = default;
-    Num& operator=(Num&&) = default;
+    constexpr Num(const Num&) = delete;
+    constexpr Num& operator=(const Num&) const = delete;
+    constexpr Num(Num&&) = default;
+    constexpr Num& operator=(Num&&) = default;
 
     int v;
   };
@@ -1186,19 +1188,19 @@ TEST(LibZxCommon, MakeStatusWithMoveOnlyType) {
     if (y == 0) {
       return ZX_ERR_INVALID_ARGS;
     }
-    output = Num{x / y};
+    output = Num(x / y);
     return ZX_OK;
   };
 
   {
-    Num n{};
+    Num n(0);
     auto status = zx::make_status(divide(9, 3, n), std::move(n));
     ASSERT_TRUE(status.is_ok());
     ASSERT_EQ(status.value().v, 3);
   }
 
   {
-    Num n{};
+    Num n(0);
     auto status = zx::make_status(divide(9, 0, n), std::move(n));
     ASSERT_TRUE(status.is_error());
     ASSERT_EQ(status.error_value(), ZX_ERR_INVALID_ARGS);

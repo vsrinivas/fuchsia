@@ -10,7 +10,6 @@ sdk_source_set("fitx") {
   sources = [
     "include/lib/fitx/internal/compiler.h",
     "include/lib/fitx/internal/result.h",
-    "include/lib/fitx/internal/type_traits.h",
     "include/lib/fitx/result.h",
   ]
 }
@@ -30,7 +29,6 @@ zx_library("zxc") {
   sdk_headers = [
     "lib/fitx/internal/compiler.h",
     "lib/fitx/internal/result.h",
-    "lib/fitx/internal/type_traits.h",
     "lib/fitx/result.h",
     "lib/zx/status.h",
   ]
@@ -40,6 +38,7 @@ zx_library("zxc") {
   public_deps = [
     ":fitx",
     ":zx",
+    "//sdk/lib/stdcompat",
   ]
 
   if (is_fuchsia && !is_kernel) {

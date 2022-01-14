@@ -5,7 +5,8 @@
 #ifndef LIB_FITX_INTERNAL_RESULT_H_
 #define LIB_FITX_INTERNAL_RESULT_H_
 
-#include <lib/fitx/internal/type_traits.h>
+#include <lib/fitx/internal/compiler.h>
+#include <lib/stdcompat/type_traits.h>
 
 #include <cstddef>
 #include <tuple>
@@ -14,16 +15,15 @@
 
 namespace fitx {
 
-// Forward declaration.
-template <typename E, typename... Ts>
-class result;
-
 // Forward declarations.
 template <typename E>
 class error;
 
 template <typename... Ts>
 class success;
+
+template <typename E, typename... Ts>
+class result;
 
 namespace internal {
 
@@ -36,62 +36,74 @@ struct arrow_operator {
   static constexpr const T* forward(const T& value) { return &value; }
 };
 template <typename T>
-struct arrow_operator<T, void_t<decltype(std::declval<T>().operator->())>> {
+struct arrow_operator<T, cpp17::void_t<decltype(std::declval<T>().operator->())>> {
   static constexpr T& forward(T& value) { return value; }
   static constexpr const T& forward(const T& value) { return value; }
 };
 
-// Detects whether the given expression evaluates to a fitx::result.
-template <typename E, typename... Ts>
-std::true_type match_result(const ::fitx::result<E, Ts...>&);
-std::false_type match_result(...);
+// Concept helper for constructor, method, and operator overloads.
+template <typename... Conditions>
+using requires_conditions = std::enable_if_t<cpp17::conjunction_v<Conditions...>, bool>;
 
-// Predicate indicating whether type T is an instantiation of fitx::result.
-template <typename T>
-static constexpr bool is_result = decltype(match_result(std::declval<T>()))::value;
+// Detects whether the given expression evaluates to an instance of the template T.
+template <template <typename...> class T>
+struct template_matcher {
+  template <typename... Args>
+  static constexpr std::true_type match(const T<Args...>&);
+  static constexpr std::false_type match(...);
+};
 
-// Predicate indicating whether type T is not an instantiation of fitx::result.
-template <typename T>
-struct not_result_type : bool_constant<!is_result<T>> {};
+template <typename T, template <typename...> class U, typename = bool>
+struct is_match : decltype(template_matcher<U>::match(std::declval<T>())) {};
 
-// Detects whether the given expression evaluates to a fitx::error.
-template <typename E>
-std::true_type match_error(const ::fitx::error<E>&);
-std::false_type match_error(...);
+template <typename T, template <typename...> class U>
+struct is_match<T, U, requires_conditions<std::is_void<T>>> : std::false_type {};
+
+template <typename T, template <typename...> class U>
+static constexpr bool is_match_v = is_match<T, U>::value;
 
 // Predicate indicating whether type T is an instantiation of fitx::error.
 template <typename T>
-static constexpr bool is_error = decltype(match_error(std::declval<T>()))::value;
+struct is_error : is_match<T, ::fitx::error>::type {};
 
-// Detects whether the given expression evaluates to a fitx::ok.
-template <typename... Ts>
-std::true_type match_success(const ::fitx::success<Ts...>&);
-std::false_type match_success(...);
-
-// Predicate indicating whether type T is an instantiation of fitx::ok.
 template <typename T>
-static constexpr bool is_success = decltype(match_success(std::declval<T>()))::value;
+static constexpr bool is_error_v = is_error<T>::value;
+
+// Predicate indicating whether type T is not an instantiation of fitx::error.
+template <typename T>
+struct not_error_type : cpp17::negation<is_error<T>>::type {};
+
+// Predicate indicating whether type T is an instantiation of fitx::success.
+template <typename T>
+struct is_success : is_match<T, ::fitx::success>::type {};
+
+template <typename T>
+static constexpr bool is_success_v = is_success<T>::value;
+
+// Predicate indicating whether type T is an instantiation of fitx::result.
+template <typename T>
+struct is_result : is_match<T, ::fitx::result>::type {};
+
+template <typename T>
+static constexpr bool is_result_v = is_result<T>::value;
+
+// Predicate indicating whether type T is not an instantiation of fitx::result.
+template <typename T>
+struct not_result_type : cpp17::negation<is_result<T>>::type {};
 
 // Determines whether T += U is well defined.
 template <typename T, typename U, typename = void>
 struct has_plus_equals : std::false_type {};
 template <typename T, typename U>
-struct has_plus_equals<T, U, void_t<decltype(std::declval<T>() += std::declval<U>())>>
+struct has_plus_equals<T, U, cpp17::void_t<decltype(std::declval<T>() += std::declval<U>())>>
     : std::true_type {};
-
-// Predicate indicating whether type T is not an instantiation of fitx::error.
-template <typename T>
-struct not_error_type : bool_constant<!is_error<T>> {};
-
-// Concept helper for constructor, method, and operator overloads.
-template <typename... Conditions>
-using requires_conditions = std::enable_if_t<conjunction_v<Conditions...>, bool>;
 
 // Enable if relational operator is convertible to bool and the optional
 // conditions are true.
 template <typename Op, typename... Conditions>
 using enable_rel_op =
-    std::enable_if_t<(std::is_convertible<Op, bool>::value && conjunction_v<Conditions...>), bool>;
+    std::enable_if_t<(cpp17::is_convertible_v<Op, bool> && cpp17::conjunction_v<Conditions...>),
+                     bool>;
 
 // Specifies whether a type is trivially or non-trivially destructible.
 enum class storage_class_e {
@@ -103,8 +115,8 @@ enum class storage_class_e {
 // destructible, storage_class_e::non_trivial otherwise.
 template <typename... Ts>
 static constexpr storage_class_e storage_class_trait =
-    conjunction_v<std::is_trivially_destructible<Ts>...> ? storage_class_e::trivial
-                                                         : storage_class_e::non_trivial;
+    cpp17::conjunction_v<std::is_trivially_destructible<Ts>...> ? storage_class_e::trivial
+                                                                : storage_class_e::non_trivial;
 
 // Trivial type for the default variant of the union below.
 struct empty_type {};
@@ -241,12 +253,11 @@ struct storage_type<storage_class_e::non_trivial, E, T> {
   }
 
   constexpr storage_type(storage_type&& other) noexcept(
-      std::is_nothrow_move_constructible<E>::value &&
-      std::is_nothrow_move_constructible<T>::value) {
+      std::is_nothrow_move_constructible<E>::value&& std::is_nothrow_move_constructible<T>::value) {
     move_from(std::move(other));
   }
   constexpr storage_type& operator=(storage_type&& other) noexcept(
-      std::is_nothrow_move_assignable<E>::value && std::is_nothrow_move_assignable<T>::value) {
+      std::is_nothrow_move_assignable<E>::value&& std::is_nothrow_move_assignable<T>::value) {
     destroy();
     move_from(std::move(other));
     return *this;

@@ -19,10 +19,7 @@ group("tests") {
 test("zxc_unittests") {
   testonly = true
   output_name = "zxc_unittests"
-  sources = [
-    "result_tests.cc",
-    "type_traits_tests.cc",
-  ]
+  sources = [ "result_tests.cc" ]
   deps = [
     "//zircon/system/ulib/zxc",
     "//zircon/system/ulib/zxtest",
