@@ -504,6 +504,14 @@ pub fn sys_ftruncate(
     Ok(SUCCESS)
 }
 
+pub fn sys_mkdir(
+    current_task: &CurrentTask,
+    user_path: UserCString,
+    mode: FileMode,
+) -> Result<SyscallResult, Errno> {
+    sys_mkdirat(current_task, FdNumber::AT_FDCWD, user_path, mode)
+}
+
 pub fn sys_mkdirat(
     current_task: &CurrentTask,
     dir_fd: FdNumber,
