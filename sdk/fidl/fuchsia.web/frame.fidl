@@ -449,13 +449,11 @@ protocol Frame {
     ///
     /// This method will fail with `ZX_ERR_NOT_SUPPORTED` if any value in [`ContentAreaSettings`]
     /// is not supported by the Frame.
-    @transitional
     SetContentAreaSettings(struct {
         settings ContentAreaSettings;
     });
 
     /// Reset the Frame's |ContentAreaSettings| to default values.
-    @transitional
     ResetContentAreaSettings();
 };
 

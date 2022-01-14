@@ -73,6 +73,7 @@ protocol NavigationController {
     /// Returns information for the currently visible content regardless of loading state, or an
     /// empty entry if no content is being displayed.
     @deprecated("Use a NavigationEventListener to receive state changes, instead.")
+    @transitional
     GetVisibleEntry() -> (resource struct {
         entry NavigationState;
     });
