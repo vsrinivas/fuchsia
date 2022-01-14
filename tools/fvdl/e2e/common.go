@@ -115,7 +115,9 @@ func setUp(t *testing.T, intree bool) {
 				t.Fatal(err)
 			}
 		}
-		e2etest.CreateSSHKeyPairFiles(runtimeDir)
+		if err := e2etest.CreateSSHKeyPairFiles(runtimeDir); err != nil {
+			t.Fatal(err)
+		}
 	})
 }
 
