@@ -97,6 +97,9 @@ pub use message::{Message, MessageBuffer};
 mod otbox;
 pub use otbox::*;
 
+mod border_router;
+pub use border_router::*;
+
 mod platform;
 pub use platform::*;
 

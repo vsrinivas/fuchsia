@@ -28,6 +28,7 @@ rustc_library("openthread") {
 
   sources = [
     "src/lib.rs",
+    "src/ot/border_router.rs",
     "src/ot/error.rs",
     "src/ot/ip6.rs",
     "src/ot/link.rs",
@@ -42,17 +43,22 @@ rustc_library("openthread") {
     "src/ot/state.rs",
     "src/ot/tasklets.rs",
     "src/ot/thread.rs",
+    "src/ot/types/border_router_config.rs",
     "src/ot/types/castable.rs",
     "src/ot/types/channel_mask.rs",
     "src/ot/types/device_role.rs",
     "src/ot/types/ext_address.rs",
     "src/ot/types/extended_pan_id.rs",
+    "src/ot/types/external_route_config.rs",
     "src/ot/types/ipv6.rs",
     "src/ot/types/link_mode.rs",
     "src/ot/types/log_region.rs",
     "src/ot/types/mod.rs",
     "src/ot/types/network_key.rs",
     "src/ot/types/network_name.rs",
+    "src/ot/types/operational_dataset.rs",
+    "src/ot/types/route_preference.rs",
+    "src/ot/types/security_policy.rs",
   ]
 
   non_rust_deps = [ "//third_party/openthread:lib-ot-core" ]

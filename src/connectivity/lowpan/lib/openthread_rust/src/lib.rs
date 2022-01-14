@@ -31,6 +31,7 @@ pub mod prelude {
 
     pub use crate::{ot, otsys};
     pub use crate::{OtBox, OtInstanceBox, OtMessageBox};
+    pub use ot::BorderRouter as _;
     pub use ot::Boxable as _;
     pub use ot::Ip6 as _;
     pub use ot::Link as _;
@@ -62,8 +63,8 @@ pub(crate) mod prelude_internal {
     pub use num::FromPrimitive as _;
     pub use ot::Result;
     pub use ot::{
-        types::*, Boxable, Error, Instance, Ip6, Link, Message, MessageBuffer, Platform, Tasklets,
-        Thread,
+        types::*, BorderRouter, Boxable, Error, Instance, Ip6, Link, Message, MessageBuffer,
+        Platform, Tasklets, Thread,
     };
     pub use static_assertions as sa;
 }

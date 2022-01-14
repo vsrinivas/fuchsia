@@ -2,29 +2,39 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+mod border_router_config;
 mod castable;
 mod channel_mask;
 mod device_role;
 mod ext_address;
 mod extended_pan_id;
+mod external_route_config;
 mod ipv6;
 mod link_mode;
 mod log_region;
 mod network_key;
 mod network_name;
+mod operational_dataset;
+mod route_preference;
+mod security_policy;
 
 use crate::prelude_internal::*;
 
+pub use border_router_config::*;
 pub use castable::*;
 pub use channel_mask::*;
 pub use device_role::*;
 pub use ext_address::*;
 pub use extended_pan_id::*;
+pub use external_route_config::*;
 pub use ipv6::*;
 pub use link_mode::*;
 pub use log_region::*;
 pub use network_key::*;
 pub use network_name::*;
+pub use operational_dataset::*;
+pub use route_preference::*;
+pub use security_policy::*;
 
 /// 802.15.4 PAN Identifier. Same type as [`otsys::otPanId`](crate::otsys::otPanId).
 pub type PanId = otPanId;
