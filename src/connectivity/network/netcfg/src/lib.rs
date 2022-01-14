@@ -607,8 +607,7 @@ impl<'a> NetCfg<'a> {
         if !nat_rules.is_empty() {
             let mut nat_rules = netfilter::parser::parse_str_to_nat_rules(&nat_rules.join(""))
                 .context("error parsing NAT rules")?;
-            // TODO(https://fxbug.dev/68280): Change this to cas_filter_rules once update is supported.
-            no_update_filter_rules!(
+            cas_filter_rules!(
                 self.filter,
                 get_nat_rules,
                 update_nat_rules,

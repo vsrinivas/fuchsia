@@ -13,7 +13,6 @@ import (
 
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/fidlconv"
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/sync"
-	syslog "go.fuchsia.dev/fuchsia/src/lib/syslog/go"
 
 	"fidl/fuchsia/net/filter"
 
@@ -25,18 +24,26 @@ import (
 const tag = "filter"
 
 type Filter struct {
-	stack          *stack.Stack
-	defaultV4Table stack.Table
-	defaultV6Table stack.Table
+	stack             *stack.Stack
+	defaultV4Table    stack.Table
+	defaultV6Table    stack.Table
+	defaultV4NATTable stack.Table
+	defaultV6NATTable stack.Table
 
 	filterDisabledNICMatcher filterDisabledNICMatcher
 
 	mu struct {
 		sync.RWMutex
+
 		rules      []filter.Rule
 		v4Table    stack.Table
 		v6Table    stack.Table
 		generation uint32
+
+		natRules      []filter.Nat
+		v4NATTable    stack.Table
+		v6NATTable    stack.Table
+		natGeneration uint32
 	}
 }
 
@@ -44,17 +51,23 @@ func New(s *stack.Stack) *Filter {
 	defaultTables := stack.DefaultTables(s.Clock(), s.Rand())
 	defaultV4Table := defaultTables.GetTable(stack.FilterID, false /* ipv6 */)
 	defaultV6Table := defaultTables.GetTable(stack.FilterID, true /* ipv6 */)
+	defaultV4NATTable := defaultTables.GetTable(stack.NATID, false /* ipv6 */)
+	defaultV6NATTable := defaultTables.GetTable(stack.NATID, true /* ipv6 */)
 
 	f := &Filter{
-		stack:          s,
-		defaultV4Table: defaultV4Table,
-		defaultV6Table: defaultV6Table,
+		stack:             s,
+		defaultV4Table:    defaultV4Table,
+		defaultV6Table:    defaultV6Table,
+		defaultV4NATTable: defaultV4NATTable,
+		defaultV6NATTable: defaultV6NATTable,
 	}
 	f.filterDisabledNICMatcher.init()
 	f.mu.Lock()
+	defer f.mu.Unlock()
 	f.mu.v4Table = defaultV4Table
 	f.mu.v6Table = defaultV6Table
-	f.mu.Unlock()
+	f.mu.v4NATTable = defaultV4NATTable
+	f.mu.v6NATTable = defaultV6NATTable
 	return f
 }
 
@@ -81,13 +94,37 @@ func (f *Filter) disableInterface(id tcpip.NICID) filter.FilterDisableInterfaceR
 }
 
 func (f *Filter) RemovedNIC(id tcpip.NICID) {
-	f.filterDisabledNICMatcher.mu.Lock()
-	defer f.filterDisabledNICMatcher.mu.Unlock()
-	for k, v := range f.filterDisabledNICMatcher.mu.nicNames {
-		if v == id {
-			delete(f.filterDisabledNICMatcher.mu.nicNames, k)
-			break
+	f.mu.Lock()
+	defer f.mu.Unlock()
+
+	func() {
+		f.filterDisabledNICMatcher.mu.Lock()
+		defer f.filterDisabledNICMatcher.mu.Unlock()
+		for k, v := range f.filterDisabledNICMatcher.mu.nicNames {
+			if v == id {
+				delete(f.filterDisabledNICMatcher.mu.nicNames, k)
+				break
+			}
 		}
+	}()
+
+	requiresNATUpdate := false
+	newNATRules := f.mu.natRules[:0]
+	for _, r := range f.mu.natRules {
+		if nicID := tcpip.NICID(r.OutgoingNic); nicID == id {
+			requiresNATUpdate = true
+		} else {
+			newNATRules = append(newNATRules, r)
+		}
+	}
+
+	if requiresNATUpdate {
+		newV4NATTable, newV6NATTable, ok := f.parseNATRules(newNATRules)
+		if !ok {
+			panic(fmt.Sprintf("newNATRules should be valid since it is a subset of previously parsed rules; newNATRules = %#v", newNATRules))
+		}
+
+		f.updateNATRulesLocked(newNATRules, newV4NATTable, newV6NATTable)
 	}
 }
 
@@ -101,14 +138,6 @@ func (f *Filter) getRules() filter.FilterGetRulesResult {
 }
 
 func (f *Filter) updateRules(rules []filter.Rule, generation uint32) filter.FilterUpdateRulesResult {
-	f.mu.RLock()
-	g := f.mu.generation
-	f.mu.RUnlock()
-
-	if generation != g {
-		return filter.FilterUpdateRulesResultWithErr(filter.FilterUpdateRulesErrorGenerationMismatch)
-	}
-
 	v4Table, v6Table, ok := f.parseRules(rules)
 	if !ok {
 		return filter.FilterUpdateRulesResultWithErr(filter.FilterUpdateRulesErrorBadRule)
@@ -126,15 +155,54 @@ func (f *Filter) updateRules(rules []filter.Rule, generation uint32) filter.Filt
 
 	iptables := f.stack.IPTables()
 	if err := iptables.ReplaceTable(stack.FilterID, v4Table, false /* ipv6 */); err != nil {
-		_ = syslog.ErrorTf(tag, "error replacing iptables = %s", err)
-		return filter.FilterUpdateRulesResultWithErr(filter.FilterUpdateRulesErrorInternal)
+		panic(fmt.Sprintf("ReplaceTable(%d, %#v, false): %s", stack.FilterID, v4Table, err))
 	}
 	if err := iptables.ReplaceTable(stack.FilterID, v6Table, true /* ipv6 */); err != nil {
-		_ = syslog.ErrorTf(tag, "error replacing ip6tables = %s", err)
-		return filter.FilterUpdateRulesResultWithErr(filter.FilterUpdateRulesErrorInternal)
+		panic(fmt.Sprintf("ReplaceTable(%d, %#v, false): %s", stack.FilterID, v6Table, err))
 	}
 	f.mu.generation++
 	return filter.FilterUpdateRulesResultWithResponse(filter.FilterUpdateRulesResponse{})
+}
+
+func (f *Filter) getNATRules() filter.FilterGetNatRulesResult {
+	f.mu.RLock()
+	defer f.mu.RUnlock()
+	return filter.FilterGetNatRulesResultWithResponse(filter.FilterGetNatRulesResponse{
+		Rules:      f.mu.natRules,
+		Generation: f.mu.natGeneration,
+	})
+}
+
+func (f *Filter) updateNATRules(rules []filter.Nat, generation uint32) filter.FilterUpdateNatRulesResult {
+	v4Table, v6Table, ok := f.parseNATRules(rules)
+	if !ok {
+		return filter.FilterUpdateNatRulesResultWithErr(filter.FilterUpdateNatRulesErrorBadRule)
+	}
+
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	if f.mu.natGeneration != generation {
+		return filter.FilterUpdateNatRulesResultWithErr(filter.FilterUpdateNatRulesErrorGenerationMismatch)
+	}
+
+	f.updateNATRulesLocked(rules, v4Table, v6Table)
+
+	return filter.FilterUpdateNatRulesResultWithResponse(filter.FilterUpdateNatRulesResponse{})
+}
+
+func (f *Filter) updateNATRulesLocked(rules []filter.Nat, v4Table, v6Table stack.Table) {
+	f.mu.natRules = rules
+	f.mu.v4NATTable = v4Table
+	f.mu.v6NATTable = v6Table
+
+	iptables := f.stack.IPTables()
+	if err := iptables.ReplaceTable(stack.NATID, v4Table, false /* ipv6 */); err != nil {
+		panic(fmt.Sprintf("ReplaceTable(%d, %#v, false): %s", stack.NATID, v4Table, err))
+	}
+	if err := iptables.ReplaceTable(stack.NATID, v6Table, true /* ipv6 */); err != nil {
+		panic(fmt.Sprintf("ReplaceTable(%d, %#v, false): %s", stack.NATID, v6Table, err))
+	}
+	f.mu.natGeneration++
 }
 
 func isPortRangeAny(p filter.PortRange) bool {
@@ -340,6 +408,115 @@ func (f *Filter) parseRules(rules []filter.Rule) (v4Table stack.Table, v6Table s
 			stack.Forward:     0,
 			stack.Output:      1 + len(v6InputRules),
 			stack.Postrouting: 0,
+		},
+	}
+	return v4Table, v6Table, true
+}
+
+func (f *Filter) parseNATRules(natRules []filter.Nat) (v4Table stack.Table, v6Table stack.Table, ok bool) {
+	type ipType int
+	const (
+		_ ipType = iota
+		ipv4Only
+		ipv6Only
+	)
+
+	if len(natRules) == 0 {
+		return f.defaultV4NATTable, f.defaultV6NATTable, true
+	}
+
+	allowPacketsForFilterDisbledNICs := stack.Rule{
+		Matchers: []stack.Matcher{&f.filterDisabledNICMatcher},
+		Target:   &stack.AcceptTarget{},
+	}
+	v4PostroutingRules := []stack.Rule{allowPacketsForFilterDisbledNICs}
+	v6PostroutingRules := []stack.Rule{allowPacketsForFilterDisbledNICs}
+
+	for _, r := range natRules {
+		var ipTypeValue ipType
+		var ipHdrFilter stack.IPHeaderFilter
+		var netProto tcpip.NetworkProtocolNumber
+
+		{
+			subnet := fidlconv.ToTCPIPSubnet(r.SrcSubnet)
+			ipHdrFilter.Src = subnet.ID()
+			ipHdrFilter.SrcMask = tcpip.Address(subnet.Mask())
+
+			switch l := len(ipHdrFilter.Src); l {
+			case header.IPv4AddressSize:
+				ipTypeValue = ipv4Only
+				netProto = header.IPv4ProtocolNumber
+			case header.IPv6AddressSize:
+				ipTypeValue = ipv6Only
+				netProto = header.IPv6ProtocolNumber
+			default:
+				panic(fmt.Sprintf("unexpected address length = %d; address = %#v", l, ipHdrFilter.Src))
+			}
+		}
+
+		var matchers []stack.Matcher
+		ipHdrFilter.CheckProtocol = true
+		switch r.Proto {
+		case filter.SocketProtocolAny:
+			ipHdrFilter.CheckProtocol = false
+		case filter.SocketProtocolIcmp:
+			if ipTypeValue != ipv4Only {
+				return stack.Table{}, stack.Table{}, false
+			}
+
+			ipHdrFilter.Protocol = header.ICMPv4ProtocolNumber
+		case filter.SocketProtocolIcmpv6:
+			if ipTypeValue != ipv6Only {
+				return stack.Table{}, stack.Table{}, false
+			}
+
+			ipHdrFilter.Protocol = header.ICMPv6ProtocolNumber
+		case filter.SocketProtocolTcp:
+			ipHdrFilter.Protocol = header.TCPProtocolNumber
+		case filter.SocketProtocolUdp:
+			ipHdrFilter.Protocol = header.UDPProtocolNumber
+		default:
+			return stack.Table{}, stack.Table{}, false
+		}
+
+		if nicID := tcpip.NICID(r.OutgoingNic); nicID != 0 {
+			if name := f.stack.FindNICNameFromID(nicID); len(name) != 0 {
+				ipHdrFilter.OutputInterface = name
+			} else {
+				// NIC not found.
+				return stack.Table{}, stack.Table{}, false
+			}
+		}
+
+		rule := stack.Rule{
+			Filter:   ipHdrFilter,
+			Matchers: matchers,
+			Target:   &stack.MasqueradeTarget{NetworkProtocol: netProto},
+		}
+
+		switch ipTypeValue {
+		case ipv4Only:
+			v4PostroutingRules = append(v4PostroutingRules, rule)
+		case ipv6Only:
+			v6PostroutingRules = append(v6PostroutingRules, rule)
+		default:
+			panic(fmt.Sprintf("unhandled ipTypeValue = %d", ipTypeValue))
+		}
+	}
+
+	v4PostroutingRules = append(v4PostroutingRules, stack.Rule{Target: &stack.AcceptTarget{}})
+	v6PostroutingRules = append(v6PostroutingRules, stack.Rule{Target: &stack.AcceptTarget{}})
+
+	v4Table = stack.Table{
+		Rules: append([]stack.Rule{{Target: &stack.AcceptTarget{}}}, v4PostroutingRules...),
+		BuiltinChains: [stack.NumHooks]int{
+			stack.Postrouting: 1,
+		},
+	}
+	v6Table = stack.Table{
+		Rules: append([]stack.Rule{{Target: &stack.AcceptTarget{}}}, v6PostroutingRules...),
+		BuiltinChains: [stack.NumHooks]int{
+			stack.Postrouting: 1,
 		},
 	}
 	return v4Table, v6Table, true

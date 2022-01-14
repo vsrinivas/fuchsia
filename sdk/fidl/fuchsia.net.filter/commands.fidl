@@ -9,6 +9,7 @@ using fuchsia.net;
 const MAX_RULES uint32 = 128;
 
 /// A protocol for filtering TCP/IP traffic and Network Address Translation.
+// TODO(https://fxbug.dev/91503): Modernize/upgrade filter/NAT APIs.
 @discoverable
 protocol Filter {
     /// Enable the filter on a specific interface.
@@ -61,7 +62,6 @@ protocol Filter {
     /// + request `rules` The new filter rules to install.
     /// + request `generation` The generation number previously returned from
     ///   GetRules.
-    /// * error Reports `INTERNAL` if the service had an internal error.
     /// * error Reports `GENERATION_MISMATCH` if `generation` is not the
     ///   generation number for the current rules.
     /// * error Reports `BAD_RULE` if `rules` are not valid.
@@ -69,9 +69,8 @@ protocol Filter {
         rules vector<Rule>:MAX_RULES;
         generation uint32;
     }) -> (struct {}) error strict enum {
-        INTERNAL = 1;
-        GENERATION_MISMATCH = 2;
-        BAD_RULE = 3;
+        GENERATION_MISMATCH = 1;
+        BAD_RULE = 2;
     };
 
     /// GetNatRules gets the current NAT rules.
@@ -96,13 +95,15 @@ protocol Filter {
     /// + request `rules` The new NAT rules to install.
     /// + request `generation` The generation number previously returned from
     ///   GetNATRules.
-    /// * error Reports `NOT_SUPPORTED` if the operation is not supported.
+    /// * error Reports `GENERATION_MISMATCH` if `generation` is not the
+    ///   generation number for the current rules.
+    /// * error Reports `BAD_RULE` if `rules` are not valid.
     UpdateNatRules(struct {
         rules vector<Nat>:MAX_RULES;
         generation uint32;
     }) -> (struct {}) error strict enum {
-        // TODO(https://fxbug.dev/68280): Implement NAT API using gvisor iptables.
-        NOT_SUPPORTED = 1;
+        GENERATION_MISMATCH = 1;
+        BAD_RULE = 2;
     };
 
     /// GetRdrRules gets the current RDR rules.

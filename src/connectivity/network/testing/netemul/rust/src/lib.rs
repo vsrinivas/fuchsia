@@ -290,7 +290,7 @@ impl<'a> TestRealm<'a> {
             .with_context(|| format!("failed to stop child component '{}'", child_name))
     }
 
-    /// Like [`join_network_with`], but uses default endpoint configurations.
+    /// Like [`join_network_with_if_name`], but does not allow specifying the interface name.
     ///
     /// Characters may be dropped from the front of `ep_name` if it exceeds the maximum length.
     pub async fn join_network<E, S>(
@@ -303,9 +303,27 @@ impl<'a> TestRealm<'a> {
         E: Endpoint,
         S: Into<Cow<'a, str>>,
     {
+        self.join_network_with_if_name::<E, _>(network, ep_name, if_config, None).await
+    }
+
+    /// Like [`join_network_with`], but uses default endpoint configurations with the specified
+    /// interface name.
+    ///
+    /// Characters may be dropped from the front of `ep_name` if it exceeds the maximum length.
+    pub async fn join_network_with_if_name<E, S>(
+        &self,
+        network: &TestNetwork<'a>,
+        ep_name: S,
+        if_config: &InterfaceConfig,
+        if_name: Option<String>,
+    ) -> Result<TestInterface<'a>>
+    where
+        E: Endpoint,
+        S: Into<Cow<'a, str>>,
+    {
         let endpoint =
             network.create_endpoint::<E, _>(ep_name).await.context("failed to create endpoint")?;
-        self.install_endpoint(endpoint, if_config, None).await
+        self.install_endpoint(endpoint, if_config, if_name).await
     }
 
     /// Joins `network` with by creating an endpoint with `ep_config` and

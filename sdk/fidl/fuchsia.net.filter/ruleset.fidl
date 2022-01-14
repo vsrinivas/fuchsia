@@ -49,13 +49,14 @@ type Rule = struct {
     keep_state bool;
 };
 
-/// NAT is a special rule for Network Address Translation, which rewrites
-/// the address of an outgoing packet.
+/// NAT is a rule for Source Network Address Translation.
+///
+/// The source address of packets matching the rule will updated to an address
+/// belonging to the outgoing interface.
 type Nat = struct {
     proto SocketProtocol;
     src_subnet fuchsia.net.Subnet;
-    new_src_addr fuchsia.net.IpAddress;
-    nic uint32;
+    outgoing_nic uint32;
 };
 
 /// RDR is a special rule for Redirector, which forwards an incoming packet

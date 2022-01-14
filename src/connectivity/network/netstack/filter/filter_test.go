@@ -17,6 +17,7 @@ import (
 	"github.com/google/go-cmp/cmp/cmpopts"
 
 	"gvisor.dev/gvisor/pkg/tcpip"
+	"gvisor.dev/gvisor/pkg/tcpip/header"
 	"gvisor.dev/gvisor/pkg/tcpip/link/loopback"
 	"gvisor.dev/gvisor/pkg/tcpip/network/ipv4"
 	"gvisor.dev/gvisor/pkg/tcpip/network/ipv6"
@@ -760,6 +761,321 @@ func TestFilterEnableInterface(t *testing.T) {
 			enabled := !f.filterDisabledNICMatcher.nicDisabled(nicName)
 			if got, want := enabled, test.enabled; got != want {
 				t.Errorf("got enabled = %t, want = %t", got, want)
+			}
+		})
+	}
+}
+
+func TestNATUpdates(t *testing.T) {
+	const (
+		nicID   = 1
+		nicName = "nicName"
+	)
+
+	cmpOpts := []cmp.Option{
+		// We aren't testing NIC filtering here.
+		cmpopts.IgnoreUnexported(filterDisabledNICMatcher{}),
+	}
+
+	ipv4Addr1Bytes := [4]uint8{10}
+	const ipv4Addr1Prefix = 8
+	ipv4Subnet1 := net.Subnet{
+		Addr:      net.IpAddressWithIpv4(net.Ipv4Address{Addr: ipv4Addr1Bytes}),
+		PrefixLen: ipv4Addr1Prefix,
+	}
+	ipv4TCPIPSubnet1 := tcpip.AddressWithPrefix{
+		Address:   tcpip.Address(ipv4Addr1Bytes[:]),
+		PrefixLen: ipv4Addr1Prefix,
+	}.Subnet()
+
+	ipv4Addr2Bytes := [4]uint8{192}
+	const ipv4Addr2Prefix = 8
+	ipv4Subnet2 := net.Subnet{
+		Addr:      net.IpAddressWithIpv4(net.Ipv4Address{Addr: ipv4Addr2Bytes}),
+		PrefixLen: ipv4Addr2Prefix,
+	}
+	ipv4TCPIPSubnet2 := tcpip.AddressWithPrefix{
+		Address:   tcpip.Address(ipv4Addr2Bytes[:]),
+		PrefixLen: ipv4Addr2Prefix,
+	}.Subnet()
+
+	ipv6Addr1Bytes := [16]uint8{0xfe, 0x80}
+	const ipv6Addr1Prefix = 64
+	ipv6Subnet1 := net.Subnet{
+		Addr:      net.IpAddressWithIpv6(net.Ipv6Address{Addr: ipv6Addr1Bytes}),
+		PrefixLen: ipv6Addr1Prefix,
+	}
+	ipv6TCPIPSubnet1 := tcpip.AddressWithPrefix{
+		Address:   tcpip.Address(ipv6Addr1Bytes[:]),
+		PrefixLen: ipv6Addr1Prefix,
+	}.Subnet()
+
+	ipv6Addr2Bytes := [16]uint8{0xa0}
+	const ipv6Addr2Prefix = 96
+	ipv6Subnet2 := net.Subnet{
+		Addr:      net.IpAddressWithIpv6(net.Ipv6Address{Addr: ipv6Addr2Bytes}),
+		PrefixLen: ipv6Addr2Prefix,
+	}
+	ipv6TCPIPSubnet2 := tcpip.AddressWithPrefix{
+		Address:   tcpip.Address(ipv6Addr2Bytes[:]),
+		PrefixLen: ipv6Addr2Prefix,
+	}.Subnet()
+
+	var emptyFilterDisabledNICMatcher filterDisabledNICMatcher
+	emptyFilterDisabledNICMatcher.init()
+
+	defaultV4Table := func(defaultTables *stack.IPTables) stack.Table {
+		return defaultTables.GetTable(stack.NATID, false /* ipv6 */)
+	}
+	defaultV6Table := func(defaultTables *stack.IPTables) stack.Table {
+		return defaultTables.GetTable(stack.NATID, true /* ipv6 */)
+	}
+
+	tests := []struct {
+		name    string
+		rules   []filter.Nat
+		result  filter.FilterUpdateNatRulesResult
+		v4Table func(*stack.IPTables) stack.Table
+		v6Table func(*stack.IPTables) stack.Table
+	}{
+		{
+			name:    "empty",
+			rules:   nil,
+			result:  filter.FilterUpdateNatRulesResultWithResponse(filter.FilterUpdateNatRulesResponse{}),
+			v4Table: defaultV4Table,
+			v6Table: defaultV6Table,
+		},
+		{
+			name: "IPv4 src with ICMPv6",
+			rules: []filter.Nat{
+				{
+					Proto:     filter.SocketProtocolIcmpv6,
+					SrcSubnet: ipv4Subnet1,
+				},
+			},
+			result:  filter.FilterUpdateNatRulesResultWithErr(filter.FilterUpdateNatRulesErrorBadRule),
+			v4Table: defaultV4Table,
+			v6Table: defaultV6Table,
+		},
+		{
+			name: "IPv6 src with ICMPv4",
+			rules: []filter.Nat{
+				{
+					Proto:     filter.SocketProtocolIcmp,
+					SrcSubnet: ipv6Subnet1,
+				},
+			},
+			result:  filter.FilterUpdateNatRulesResultWithErr(filter.FilterUpdateNatRulesErrorBadRule),
+			v4Table: defaultV4Table,
+			v6Table: defaultV6Table,
+		},
+		{
+			name: "Valid rules",
+			rules: []filter.Nat{
+				{
+					Proto:       filter.SocketProtocolTcp,
+					SrcSubnet:   ipv4Subnet1,
+					OutgoingNic: nicID,
+				},
+				{
+					Proto:     filter.SocketProtocolUdp,
+					SrcSubnet: ipv4Subnet1,
+				},
+				{
+					Proto:     filter.SocketProtocolIcmp,
+					SrcSubnet: ipv4Subnet1,
+				},
+				{
+					Proto:     filter.SocketProtocolAny,
+					SrcSubnet: ipv4Subnet2,
+				},
+				{
+					Proto:     filter.SocketProtocolTcp,
+					SrcSubnet: ipv6Subnet1,
+				},
+				{
+					Proto:     filter.SocketProtocolUdp,
+					SrcSubnet: ipv6Subnet1,
+				},
+				{
+					Proto:     filter.SocketProtocolIcmpv6,
+					SrcSubnet: ipv6Subnet1,
+				},
+				{
+					Proto:       filter.SocketProtocolAny,
+					SrcSubnet:   ipv6Subnet2,
+					OutgoingNic: nicID,
+				},
+			},
+			result: filter.FilterUpdateNatRulesResultWithResponse(filter.FilterUpdateNatRulesResponse{}),
+			v4Table: func(*stack.IPTables) stack.Table {
+				return stack.Table{
+					Rules: []stack.Rule{
+						// Initial Accept for non-postrouting hooks.
+						{
+							Target: &stack.AcceptTarget{},
+						},
+
+						// Postrouting chain.
+						{
+							// Don't run filters on an interface with filters disabled.
+							Matchers: []stack.Matcher{
+								&emptyFilterDisabledNICMatcher,
+							},
+							Target: &stack.AcceptTarget{},
+						},
+						{
+							Filter: stack.IPHeaderFilter{
+								Protocol:        header.TCPProtocolNumber,
+								CheckProtocol:   true,
+								Src:             ipv4TCPIPSubnet1.ID(),
+								SrcMask:         tcpip.Address(ipv4TCPIPSubnet1.Mask()),
+								SrcInvert:       false,
+								OutputInterface: nicName,
+							},
+							Target: &stack.MasqueradeTarget{NetworkProtocol: header.IPv4ProtocolNumber},
+						},
+						{
+							Filter: stack.IPHeaderFilter{
+								Protocol:      header.UDPProtocolNumber,
+								CheckProtocol: true,
+								Src:           ipv4TCPIPSubnet1.ID(),
+								SrcMask:       tcpip.Address(ipv4TCPIPSubnet1.Mask()),
+								SrcInvert:     false,
+							},
+							Target: &stack.MasqueradeTarget{NetworkProtocol: header.IPv4ProtocolNumber},
+						},
+						{
+							Filter: stack.IPHeaderFilter{
+								Protocol:      header.ICMPv4ProtocolNumber,
+								CheckProtocol: true,
+								Src:           ipv4TCPIPSubnet1.ID(),
+								SrcMask:       tcpip.Address(ipv4TCPIPSubnet1.Mask()),
+								SrcInvert:     false,
+							},
+							Target: &stack.MasqueradeTarget{NetworkProtocol: header.IPv4ProtocolNumber},
+						},
+						{
+							Filter: stack.IPHeaderFilter{
+								Src:       ipv4TCPIPSubnet2.ID(),
+								SrcMask:   tcpip.Address(ipv4TCPIPSubnet2.Mask()),
+								SrcInvert: false,
+							},
+							Target: &stack.MasqueradeTarget{NetworkProtocol: header.IPv4ProtocolNumber},
+						},
+						{
+							Target: &stack.AcceptTarget{},
+						},
+					},
+					BuiltinChains: [stack.NumHooks]int{
+						stack.Prerouting:  0,
+						stack.Input:       0,
+						stack.Forward:     0,
+						stack.Output:      0,
+						stack.Postrouting: 1,
+					},
+				}
+			},
+			v6Table: func(*stack.IPTables) stack.Table {
+				return stack.Table{
+					Rules: []stack.Rule{
+						// Initial Accept for non-postrouting hooks.
+						{
+							Target: &stack.AcceptTarget{},
+						},
+
+						// Postrouting chain.
+						{
+							// Don't run filters on an interface with filters disabled.
+							Matchers: []stack.Matcher{
+								&emptyFilterDisabledNICMatcher,
+							},
+							Target: &stack.AcceptTarget{},
+						},
+						{
+							Filter: stack.IPHeaderFilter{
+								Protocol:      header.TCPProtocolNumber,
+								CheckProtocol: true,
+								Src:           ipv6TCPIPSubnet1.ID(),
+								SrcMask:       tcpip.Address(ipv6TCPIPSubnet1.Mask()),
+								SrcInvert:     false,
+							},
+							Target: &stack.MasqueradeTarget{NetworkProtocol: header.IPv6ProtocolNumber},
+						},
+						{
+							Filter: stack.IPHeaderFilter{
+								Protocol:      header.UDPProtocolNumber,
+								CheckProtocol: true,
+								Src:           ipv6TCPIPSubnet1.ID(),
+								SrcMask:       tcpip.Address(ipv6TCPIPSubnet1.Mask()),
+								SrcInvert:     false,
+							},
+							Target: &stack.MasqueradeTarget{NetworkProtocol: header.IPv6ProtocolNumber},
+						},
+						{
+							Filter: stack.IPHeaderFilter{
+								Protocol:      header.ICMPv6ProtocolNumber,
+								CheckProtocol: true,
+								Src:           ipv6TCPIPSubnet1.ID(),
+								SrcMask:       tcpip.Address(ipv6TCPIPSubnet1.Mask()),
+								SrcInvert:     false,
+							},
+							Target: &stack.MasqueradeTarget{NetworkProtocol: header.IPv6ProtocolNumber},
+						},
+						{
+							Filter: stack.IPHeaderFilter{
+								Src:             ipv6TCPIPSubnet2.ID(),
+								SrcMask:         tcpip.Address(ipv6TCPIPSubnet2.Mask()),
+								SrcInvert:       false,
+								OutputInterface: nicName,
+							},
+							Target: &stack.MasqueradeTarget{NetworkProtocol: header.IPv6ProtocolNumber},
+						},
+						{
+							Target: &stack.AcceptTarget{},
+						},
+					},
+					BuiltinChains: [stack.NumHooks]int{
+						stack.Prerouting:  0,
+						stack.Input:       0,
+						stack.Forward:     0,
+						stack.Output:      0,
+						stack.Postrouting: 1,
+					},
+				}
+			},
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			s := stack.New(stack.Options{
+				NetworkProtocols: []stack.NetworkProtocolFactory{ipv4.NewProtocol, ipv6.NewProtocol},
+			})
+
+			opts := stack.NICOptions{Name: nicName}
+			if err := s.CreateNICWithOptions(nicID, loopback.New(), opts); err != nil {
+				t.Fatalf("CreateNICWithOptions(%d, _, %#v): %s", nicID, opts, err)
+			}
+
+			defaultTables := stack.DefaultTables(s.Clock(), s.Rand())
+
+			expectedV4Table := test.v4Table(defaultTables)
+			expectedV6Table := test.v6Table(defaultTables)
+
+			f := New(s)
+			if got, want := f.updateNATRules(test.rules, 0), test.result; got != want {
+				t.Fatalf("got f.updateNATRules(_, 0) = %#v, want = %#v", got, want)
+			}
+
+			iptables := s.IPTables()
+			v4table := iptables.GetTable(stack.NATID, false /* ipv6 */)
+			if diff := cmp.Diff(v4table, expectedV4Table, cmpOpts...); diff != "" {
+				t.Errorf("IPv4 NAT table mispatch (-want +got):\n%s", diff)
+			}
+			v6table := iptables.GetTable(stack.NATID, true /* ipv6 */)
+			if diff := cmp.Diff(v6table, expectedV6Table, cmpOpts...); diff != "" {
+				t.Errorf("IPv6 NAT table mispatch (-want +got):\n%s", diff)
 			}
 		})
 	}

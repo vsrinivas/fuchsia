@@ -312,13 +312,11 @@ fn parse_nat(pair: Pair<'_, Rule>) -> Result<filter::Nat, Error> {
 
     let proto = parse_proto(pairs.next().unwrap());
     let src_subnet = parse_subnet(pairs.next().unwrap())?;
-    let new_src_addr = parse_ipaddr(pairs.next().unwrap())?;
 
     Ok(filter::Nat {
         proto: proto,
         src_subnet: src_subnet,
-        new_src_addr: new_src_addr,
-        nic: 0, // TODO: Support NICID.
+        outgoing_nic: 0, // TODO: Support NICID.
     })
 }
 
@@ -375,14 +373,6 @@ fn validate_rule(rule: &filter::Rule) -> Result<(), Error> {
     Ok(())
 }
 
-fn validate_nat(nat: &filter::Nat) -> Result<(), Error> {
-    if !ip_version_eq(&nat.src_subnet.addr, &nat.new_src_addr) {
-        return Err(Error::Invalid(InvalidReason::MixedIPVersions));
-    }
-
-    Ok(())
-}
-
 fn validate_rdr(rdr: &filter::Rdr) -> Result<(), Error> {
     if !ip_version_eq(&rdr.dst_addr, &rdr.new_dst_addr) {
         return Err(Error::Invalid(InvalidReason::MixedIPVersions));
@@ -418,7 +408,6 @@ pub fn parse_str_to_nat_rules(line: &str) -> Result<Vec<filter::Nat>, Error> {
         match filter_rule.as_rule() {
             Rule::nat => {
                 let nat = parse_nat(filter_rule)?;
-                let () = validate_nat(&nat)?;
                 nat_rules.push(nat);
             }
             Rule::EOI => (),
@@ -796,7 +785,7 @@ mod test {
     }
 
     #[test]
-    fn test_nat_rule_with_from_v4_subnet_to_v4_address() {
+    fn test_nat_rule_from_v4_subnet() {
         assert_eq!(
             parse_str_to_nat_rules("nat from 1.2.3.0/24 -> from 192.168.1.1;"),
             Ok(vec![filter::Nat {
@@ -805,14 +794,13 @@ mod test {
                     addr: net::IpAddress::Ipv4(net::Ipv4Address { addr: [1, 2, 3, 0] }),
                     prefix_len: 24,
                 },
-                new_src_addr: net::IpAddress::Ipv4(net::Ipv4Address { addr: [192, 168, 1, 1] }),
-                nic: 0,
+                outgoing_nic: 0,
             }])
         );
     }
 
     #[test]
-    fn test_nat_rule_with_proto_tcp_from_v4_subnet_to_v4_address() {
+    fn test_nat_rule_with_proto_tcp_from_v4_subnet() {
         assert_eq!(
             parse_str_to_nat_rules("nat proto tcp from 1.2.3.0/24 -> from 192.168.1.1;"),
             Ok(vec![filter::Nat {
@@ -821,8 +809,7 @@ mod test {
                     addr: net::IpAddress::Ipv4(net::Ipv4Address { addr: [1, 2, 3, 0] }),
                     prefix_len: 24,
                 },
-                new_src_addr: net::IpAddress::Ipv4(net::Ipv4Address { addr: [192, 168, 1, 1] }),
-                nic: 0,
+                outgoing_nic: 0,
             }])
         );
     }

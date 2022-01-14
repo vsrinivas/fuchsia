@@ -55,12 +55,12 @@ func (fi *filterImpl) UpdateRules(_ fidl.Context, nrs []filter.Rule, generation 
 	return fi.filter.updateRules(nrs, generation), nil
 }
 
-func (*filterImpl) GetNatRules(fidl.Context) (filter.FilterGetNatRulesResult, error) {
-	return filter.FilterGetNatRulesResultWithResponse(filter.FilterGetNatRulesResponse{}), nil
+func (fi *filterImpl) GetNatRules(fidl.Context) (filter.FilterGetNatRulesResult, error) {
+	return fi.filter.getNATRules(), nil
 }
 
-func (*filterImpl) UpdateNatRules(fidl.Context, []filter.Nat, uint32) (filter.FilterUpdateNatRulesResult, error) {
-	return filter.FilterUpdateNatRulesResultWithErr(filter.FilterUpdateNatRulesErrorNotSupported), nil
+func (fi *filterImpl) UpdateNatRules(_ fidl.Context, natRules []filter.Nat, generation uint32) (filter.FilterUpdateNatRulesResult, error) {
+	return fi.filter.updateNATRules(natRules, generation), nil
 }
 
 func (*filterImpl) GetRdrRules(fidl.Context) (filter.FilterGetRdrRulesResult, error) {
