@@ -42,7 +42,7 @@ fn main() -> Result<(), Error> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::io;
+    use tempfile::TempDir;
 
     fn get_valid_configs() -> Vec<PathBuf> {
         get_configs("valid_test_configs")
@@ -62,11 +62,6 @@ mod tests {
             .collect()
     }
 
-    // Generates a path that a test can use for the stamp file
-    fn stamp_path() -> PathBuf {
-        get_test_directory().join("success.stamp")
-    }
-
     // Gets the parent directory for this test executable (example:
     // out/core.nelson-release/host_x64/)
     fn get_test_directory() -> PathBuf {
@@ -77,30 +72,33 @@ mod tests {
             .to_path_buf()
     }
 
-    // Deletes the file at the given path, if it exists. Any error (other than a missing file in the
-    // first place) causes a panic.
-    fn delete_file(file_path: &PathBuf) {
-        match fs::remove_file(file_path) {
-            Ok(()) => (),
-            Err(e) if e.kind() == io::ErrorKind::NotFound => (),
-            Err(e) => panic!("Failed to delete file at path {:?} (err = {})", file_path, e),
+    // Helper for managing the temporary directory / path of the test-only stamp file
+    struct TestStamp {
+        // Keep ownership of the TempDir. Otherwise, when the TempDir is dropped the directory gets
+        // deleted on the filesystem.
+        _temp_dir: TempDir,
+
+        // A valid path located inside the TempDir that we can use for the test-only stamp file
+        path: PathBuf,
+    }
+
+    impl TestStamp {
+        fn new() -> Self {
+            let temp_dir = TempDir::new().expect("Failed to create TempDir");
+            let path = temp_dir.path().to_path_buf().join("success.validated");
+            Self { _temp_dir: temp_dir, path }
         }
     }
 
     /// Tests that valid thermal configuration files pass the validation.
     #[test]
     fn test_valid_thermal_config() {
-        let stamp_path = stamp_path();
-
         let config_paths = get_valid_configs();
         assert!(!config_paths.is_empty());
 
         for config_path in config_paths {
-            // The test checks that the stamp file gets written after successful validation, so
-            // ensure the stamp file isn't already present on the filesystem
-            delete_file(&stamp_path);
-
-            let flags = Flags { input: config_path.clone(), stamp: stamp_path.clone() };
+            let stamp = TestStamp::new();
+            let flags = Flags { input: config_path.clone(), stamp: stamp.path.clone() };
             match main_impl(flags) {
                 Ok(()) => (),
                 e => {
@@ -111,31 +109,26 @@ mod tests {
                 }
             };
 
-            assert!(stamp_path.exists(), "Stamp file not written");
+            assert!(stamp.path.exists(), "Stamp file not written");
         }
     }
 
     /// Tests that invalid thermal configuration files fail the validation.
     #[test]
     fn test_invalid_thermal_config() {
-        let stamp_path = stamp_path();
-
-        // The test checks that the stamp file is not written if validation fails, so ensure the
-        // stamp file isn't already present on the filesystem
-        delete_file(&stamp_path);
-
         let config_paths = get_invalid_configs();
         assert!(!config_paths.is_empty());
 
         for config_path in config_paths {
-            let flags = Flags { input: config_path.clone(), stamp: stamp_path.clone() };
+            let stamp = TestStamp::new();
+            let flags = Flags { input: config_path.clone(), stamp: stamp.path.clone() };
             assert!(
                 main_impl(flags).is_err(),
                 "Invalid config at path {:?} passed validation",
                 config_path
             );
 
-            assert!(!stamp_path.exists(), "Stamp written after failed validation");
+            assert!(!stamp.path.exists(), "Stamp written after failed validation");
         }
     }
 }
