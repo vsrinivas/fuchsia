@@ -150,13 +150,13 @@ class DataProviderTest : public UnitTestFixture {
   }
 
  protected:
-  void SetUpDataProvider(const AnnotationKeys& annotation_allowlist = kDefaultAnnotations,
-                         const AttachmentKeys& attachment_allowlist = kDefaultAttachments) {
+  void SetUpDataProvider(
+      const AnnotationKeys& annotation_allowlist = kDefaultAnnotations,
+      const AttachmentKeys& attachment_allowlist = kDefaultAttachments,
+      const std::map<std::string, ErrorOr<std::string>>& startup_annotations = {}) {
     datastore_ = std::make_unique<Datastore>(
         dispatcher(), services(), cobalt_.get(), annotation_allowlist, attachment_allowlist,
-        Error::kMissingValue, Error::kMissingValue, Error::kMissingValue, Error::kMissingValue,
-        Error::kMissingValue, Error::kMissingValue, device_id_provider_.get(),
-        inspect_data_budget_.get());
+        startup_annotations, device_id_provider_.get(), inspect_data_budget_.get());
     data_provider_ = std::make_unique<DataProvider>(
         dispatcher(), services(), &clock_, /*is_first_instance=*/true, annotation_allowlist,
         attachment_allowlist, cobalt_.get(), datastore_.get(), inspect_data_budget_.get());

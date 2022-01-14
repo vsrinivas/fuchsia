@@ -135,8 +135,6 @@ source_set("static_annotations") {
   public = [ "static_annotations.h" ]
 
   sources = [
-    "board_name_provider.cc",
-    "board_name_provider.h",
     "static_annotations.cc",
     "static_annotations.h",
   ]

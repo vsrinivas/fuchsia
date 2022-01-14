@@ -46,6 +46,15 @@ namespace forensics {
 
 inline void PrintTo(const Error error, std::ostream* os) { *os << ToString(error); }
 
+template <typename T>
+inline void PrintTo(const ErrorOr<T>& error_or, std::ostream* os) {
+  if (error_or.HasValue()) {
+    *os << error_or.Value();
+  } else {
+    *os << ToString(error_or.Error());
+  }
+}
+
 namespace feedback_data {
 
 namespace pretty {

@@ -26,23 +26,20 @@
 namespace forensics {
 namespace feedback_data {
 
-Datastore::Datastore(
-    async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
-    cobalt::Logger* cobalt, const AnnotationKeys& annotation_allowlist,
-    const AttachmentKeys& attachment_allowlist, const ErrorOr<std::string>& current_boot_id,
-    const ErrorOr<std::string>& previous_boot_id, const ErrorOr<std::string>& current_build_version,
-    const ErrorOr<std::string>& previous_build_version,
-    const ErrorOr<std::string>& last_reboot_reason, const ErrorOr<std::string>& last_reboot_uptime,
-    feedback::DeviceIdProvider* device_id_provider, InspectDataBudget* inspect_data_budget)
-
+Datastore::Datastore(async_dispatcher_t* dispatcher,
+                     std::shared_ptr<sys::ServiceDirectory> services, cobalt::Logger* cobalt,
+                     const AnnotationKeys& annotation_allowlist,
+                     const AttachmentKeys& attachment_allowlist,
+                     const feedback::Annotations& startup_annotations,
+                     feedback::DeviceIdProvider* device_id_provider,
+                     InspectDataBudget* inspect_data_budget)
     : dispatcher_(dispatcher),
       services_(services),
       cobalt_(cobalt),
       annotation_allowlist_(annotation_allowlist),
       attachment_allowlist_(attachment_allowlist),
-      static_annotations_(feedback_data::GetStaticAnnotations(
-          annotation_allowlist_, current_boot_id, previous_boot_id, current_build_version,
-          previous_build_version, last_reboot_reason, last_reboot_uptime)),
+      static_annotations_(
+          feedback_data::GetStaticAnnotations(annotation_allowlist_, startup_annotations)),
       static_attachments_(feedback_data::GetStaticAttachments(attachment_allowlist_)),
       reusable_annotation_providers_(
           GetReusableProviders(dispatcher_, services_, device_id_provider, cobalt_)),

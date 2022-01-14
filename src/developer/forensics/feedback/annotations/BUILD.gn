@@ -1,0 +1,29 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+###############################################################################
+# SOURCES
+###############################################################################
+source_set("annotations") {
+  sources = [
+    "keys.h",
+    "startup_annotations.cc",
+    "startup_annotations.h",
+    "types.h",
+  ]
+
+  public_deps = [
+    "//src/developer/forensics/feedback/reboot_log",
+    "//src/developer/forensics/utils:errors",
+  ]
+
+  deps = [
+    "//sdk/fidl/fuchsia.sysinfo",
+    "//sdk/lib/fdio",
+    "//sdk/lib/syslog/cpp",
+    "//src/developer/forensics/feedback:constants",
+    "//src/lib/files",
+    "//src/lib/fxl",
+  ]
+}

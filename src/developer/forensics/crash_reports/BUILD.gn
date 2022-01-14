@@ -148,6 +148,7 @@ source_set("default_annotations") {
 
   deps = [
     "//sdk/lib/syslog/cpp",
+    "//src/developer/forensics/feedback/annotations",
     "//src/lib/files",
     "//src/lib/fxl",
   ]

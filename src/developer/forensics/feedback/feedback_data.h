@@ -39,16 +39,12 @@ class FeedbackData {
     bool limit_inspect_data;
     bool spawn_system_log_recorder;
     std::optional<zx::duration> delete_previous_boot_logs_time;
-    ErrorOr<std::string> current_boot_id;
-    ErrorOr<std::string> previous_boot_id;
-    ErrorOr<std::string> current_build_version;
-    ErrorOr<std::string> previous_build_version;
-    ErrorOr<std::string> last_reboot_reason;
-    ErrorOr<std::string> last_reboot_uptime;
+    std::string device_id_path;
   };
 
   FeedbackData(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
                timekeeper::Clock* clock, inspect::Node* inspect_root, cobalt::Logger* cobalt,
+               const std::map<std::string, ErrorOr<std::string>>& startup_annotations,
                DeviceIdProvider* device_id_provider, Options options);
 
   void Handle(::fidl::InterfaceRequest<fuchsia::feedback::ComponentDataRegister> request,

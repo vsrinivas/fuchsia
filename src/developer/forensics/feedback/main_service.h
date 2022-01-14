@@ -42,6 +42,7 @@ class MainService {
 
   MainService(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
               timekeeper::Clock* clock, inspect::Node* inspect_root, cobalt::Logger* cobalt,
+              const std::map<std::string, ErrorOr<std::string>>& startup_annotations,
               Options options);
 
   template <typename Protocol>

@@ -12,6 +12,7 @@
 
 #include <memory>
 
+#include "src/developer/forensics/feedback/annotations/types.h"
 #include "src/developer/forensics/feedback/device_id_provider.h"
 #include "src/developer/forensics/feedback_data/annotations/annotation_provider.h"
 #include "src/developer/forensics/feedback_data/annotations/types.h"
@@ -43,12 +44,7 @@ class Datastore {
  public:
   Datastore(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
             cobalt::Logger* cobalt, const AnnotationKeys& annotation_allowlist,
-            const AttachmentKeys& attachment_allowlist, const ErrorOr<std::string>& current_boot_id,
-            const ErrorOr<std::string>& previous_boot_id,
-            const ErrorOr<std::string>& current_build_version,
-            const ErrorOr<std::string>& previous_build_version,
-            const ErrorOr<std::string>& last_reboot_reason,
-            const ErrorOr<std::string>& last_reboot_uptime,
+            const AttachmentKeys& attachment_allowlist, const Annotations& startup_annotations,
             feedback::DeviceIdProvider* device_id_provider, InspectDataBudget* inspect_data_budget);
 
   ::fpromise::promise<Annotations> GetAnnotations(zx::duration timeout);

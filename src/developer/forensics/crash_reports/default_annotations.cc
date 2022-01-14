@@ -6,42 +6,40 @@
 
 #include <lib/syslog/cpp/macros.h>
 
+#include "src/developer/forensics/feedback/annotations/keys.h"
+#include "src/developer/forensics/feedback/annotations/types.h"
 #include "src/lib/files/file.h"
 #include "src/lib/fxl/strings/trim.h"
 
 namespace forensics::crash_reports {
-namespace {
 
-ErrorOr<std::string> ReadStringFromFile(const std::string& filepath) {
-  std::string content;
-  if (!files::ReadFileToString(filepath, &content)) {
-    FX_LOGS(ERROR) << "Failed to read content from " << filepath;
-    return Error::kFileReadFailure;
+ErrorOr<std::string> GetBuildVersion(const feedback::Annotations& startup_annotations) {
+  if (startup_annotations.count(feedback::kBuildVersionKey) != 0) {
+    return startup_annotations.at(feedback::kBuildVersionKey);
   }
-  return std::string(fxl::TrimString(content, "\r\n"));
+
+  return Error::kMissingValue;
 }
 
-}  // namespace
+AnnotationMap BuildDefaultAnnotations(const feedback::Annotations& startup_annotations) {
+  auto GetFromStartup = [&startup_annotations](const std::string& key) -> ErrorOr<std::string> {
+    if (startup_annotations.count(key) != 0) {
+      return startup_annotations.at(key);
+    }
 
-ErrorOr<std::string> GetBuildVersion(const std::string& build_version_path) {
-  return ReadStringFromFile(build_version_path);
-}
+    return Error::kMissingValue;
+  };
 
-crash_reports::AnnotationMap GetDefaultAnnotations(const std::string& build_version_path,
-                                                   const std::string& build_board_path,
-                                                   const std::string& build_product_path,
-                                                   const std::string& build_commit_date_path) {
-  const auto build_version = GetBuildVersion(build_version_path);
-
-  crash_reports::AnnotationMap default_annotations;
+  // TODO(fxbug.dev/70398): Share annotations with feedback_data so synchonous and constant
+  // annotations can be added to crash reports.
+  AnnotationMap default_annotations;
   default_annotations.Set("osName", "Fuchsia")
-      .Set("osVersion", build_version)
-      // TODO(fxbug.dev/70398): These keys are duplicates from feedback data, find a better way to
-      // share them.
-      .Set("build.version", build_version)
-      .Set("build.board", ReadStringFromFile(build_board_path))
-      .Set("build.product", ReadStringFromFile(build_product_path))
-      .Set("build.latest-commit-date", ReadStringFromFile(build_commit_date_path));
+      .Set("osVersion", GetFromStartup(feedback::kBuildVersionKey))
+      .Set(feedback::kBuildVersionKey, GetFromStartup(feedback::kBuildVersionKey))
+      .Set(feedback::kBuildBoardKey, GetFromStartup(feedback::kBuildBoardKey))
+      .Set(feedback::kBuildProductKey, GetFromStartup(feedback::kBuildProductKey))
+      .Set(feedback::kBuildLatestCommitDateKey,
+           GetFromStartup(feedback::kBuildLatestCommitDateKey));
 
   return default_annotations;
 }

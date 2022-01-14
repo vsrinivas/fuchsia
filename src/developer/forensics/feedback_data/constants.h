@@ -12,6 +12,7 @@
 #include <string>
 #include <vector>
 
+#include "src/developer/forensics/feedback/annotations/keys.h"
 #include "src/developer/forensics/utils/cobalt/metrics.h"
 #include "src/developer/forensics/utils/storage_size.h"
 
@@ -33,13 +34,13 @@ static_assert(kMaxNumPlatformAnnotations + kMaxNumNonPlatformAnnotations +
               "debug annotations");
 
 // Platform annotation keys.
-constexpr char kAnnotationBuildBoard[] = "build.board";
-constexpr char kAnnotationBuildIsDebug[] = "build.is_debug";
-constexpr char kAnnotationBuildLatestCommitDate[] = "build.latest-commit-date";
-constexpr char kAnnotationBuildProduct[] = "build.product";
-constexpr char kAnnotationBuildVersion[] = "build.version";
-constexpr char kAnnotationBuildVersionPreviousBoot[] = "build.version.previous-boot";
-constexpr char kAnnotationDeviceBoardName[] = "device.board-name";
+constexpr const char* kAnnotationBuildBoard = feedback::kBuildBoardKey;
+constexpr const char* kAnnotationBuildIsDebug = feedback::kBuildIsDebugKey;
+constexpr const char* kAnnotationBuildLatestCommitDate = feedback::kBuildLatestCommitDateKey;
+constexpr const char* kAnnotationBuildProduct = feedback::kBuildProductKey;
+constexpr const char* kAnnotationBuildVersion = feedback::kBuildVersionKey;
+constexpr const char* kAnnotationBuildVersionPreviousBoot = feedback::kBuildVersionPreviousBootKey;
+constexpr const char* kAnnotationDeviceBoardName = feedback::kDeviceBoardNameKey;
 constexpr char kAnnotationDeviceFeedbackId[] = "device.feedback-id";
 constexpr char kAnnotationDeviceUptime[] = "device.uptime";
 constexpr char kAnnotationDeviceUtcTime[] = "device.utc-time";
@@ -52,10 +53,10 @@ constexpr char kAnnotationHardwareProductModel[] = "hardware.product.model";
 constexpr char kAnnotationHardwareProductName[] = "hardware.product.name";
 constexpr char kAnnotationHardwareProductRegulatoryDomain[] = "hardware.product.regulatory-domain";
 constexpr char kAnnotationHardwareProductSKU[] = "hardware.product.sku";
-constexpr char kAnnotationSystemBootIdCurrent[] = "system.boot-id.current";
-constexpr char kAnnotationSystemBootIdPrevious[] = "system.boot-id.previous";
-constexpr char kAnnotationSystemLastRebootReason[] = "system.last-reboot.reason";
-constexpr char kAnnotationSystemLastRebootUptime[] = "system.last-reboot.uptime";
+constexpr const char* kAnnotationSystemBootIdCurrent = feedback::kSystemBootIdCurrentKey;
+constexpr const char* kAnnotationSystemBootIdPrevious = feedback::kSystemBootIdPreviousKey;
+constexpr const char* kAnnotationSystemLastRebootReason = feedback::kSystemLastRebootReasonKey;
+constexpr const char* kAnnotationSystemLastRebootUptime = feedback::kSystemLastRebootUptimeKey;
 constexpr char kAnnotationSystemTimezonePrimary[] = "system.timezone.primary";
 constexpr char kAnnotationSystemUpdateChannelCurrent[] = "system.update-channel.current";
 constexpr char kAnnotationSystemUpdateChannelTarget[] = "system.update-channel.target";

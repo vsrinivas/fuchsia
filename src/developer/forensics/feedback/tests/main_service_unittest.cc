@@ -35,39 +35,30 @@ class MainServiceTest : public UnitTestFixture {
   MainServiceTest()
       : clock_(dispatcher()),
         cobalt_(dispatcher(), services(), &clock_),
-        main_service_(dispatcher(), services(), &clock_, &InspectRoot(), &cobalt_,
-                      MainService::Options{
-                          .local_device_id_path = std::nullopt,
-                          .last_reboot_options =
-                              LastReboot::Options{
-                                  .is_first_instance = kIsFirstInstance,
-                                  .reboot_log = RebootLog(RebootReason::kUserRequest, "reboot log",
-                                                          zx::sec(100)),
-                                  .graceful_reboot_reason_write_path = "n/a",
-                                  .oom_crash_reporting_delay = zx::sec(1),
-                              },
-                          .crash_reports_options =
-                              CrashReports::Options{
-                                  .config = {},
-                                  .snapshot_manager_max_annotations_size = StorageSize::Bytes(0),
-                                  .snapshot_manager_max_archives_size = StorageSize::Bytes(0),
-                                  .snapshot_manager_window_duration = zx::sec(0),
-                                  .build_version = "build_version",
-                                  .default_annotations = {},
-                              },
-                          .feedback_data_options = FeedbackData::Options{
-                              .config{},
-                              .is_first_instance = kIsFirstInstance,
-                              .limit_inspect_data = false,
-                              .spawn_system_log_recorder = false,
-                              .delete_previous_boot_logs_time = std::nullopt,
-                              .current_boot_id = Error::kMissingValue,
-                              .previous_boot_id = Error::kMissingValue,
-                              .current_build_version = Error::kMissingValue,
-                              .previous_build_version = Error::kMissingValue,
-                              .last_reboot_reason = Error::kMissingValue,
-                              .last_reboot_uptime = Error::kMissingValue,
-                          }}) {
+        main_service_(
+            dispatcher(), services(), &clock_, &InspectRoot(), &cobalt_, /*startup_annotations=*/{},
+            MainService::Options{
+                "",
+                LastReboot::Options{
+                    .is_first_instance = kIsFirstInstance,
+                    .reboot_log = RebootLog(RebootReason::kUserRequest, "reboot log", zx::sec(100)),
+                    .graceful_reboot_reason_write_path = "n/a",
+                    .oom_crash_reporting_delay = zx::sec(1),
+                },
+                CrashReports::Options{
+                    .config = {},
+                    .snapshot_manager_max_annotations_size = StorageSize::Bytes(0),
+                    .snapshot_manager_max_archives_size = StorageSize::Bytes(0),
+                    .snapshot_manager_window_duration = zx::sec(0),
+                },
+                FeedbackData::Options{
+                    .config{},
+                    .is_first_instance = kIsFirstInstance,
+                    .limit_inspect_data = false,
+                    .spawn_system_log_recorder = false,
+                    .delete_previous_boot_logs_time = std::nullopt,
+                },
+            }) {
     AddHandler(main_service_.GetHandler<fuchsia::feedback::LastRebootInfoProvider>());
     AddHandler(main_service_.GetHandler<fuchsia::feedback::CrashReporter>());
     AddHandler(main_service_.GetHandler<fuchsia::feedback::CrashReportingProductRegister>());

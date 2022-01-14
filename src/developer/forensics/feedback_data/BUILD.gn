@@ -57,6 +57,7 @@ source_set("constants") {
 
   public_deps = [
     "//sdk/fidl/fuchsia.feedback",
+    "//src/developer/forensics/feedback/annotations",
     "//src/developer/forensics/utils:storage_size",
     "//src/developer/forensics/utils/cobalt",
   ]

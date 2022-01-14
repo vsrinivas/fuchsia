@@ -8,19 +8,14 @@
 #include <string>
 
 #include "src/developer/forensics/crash_reports/annotation_map.h"
-#include "src/developer/forensics/feedback/constants.h"
+#include "src/developer/forensics/feedback/annotations/types.h"
 #include "src/developer/forensics/utils/errors.h"
 
 namespace forensics::crash_reports {
 
-ErrorOr<std::string> GetBuildVersion(
-    const std::string& build_version_path = feedback::kBuildVersionPath);
+ErrorOr<std::string> GetBuildVersion(const feedback::Annotations& startup_annotations);
 
-crash_reports::AnnotationMap GetDefaultAnnotations(
-    const std::string& build_version_path = feedback::kBuildVersionPath,
-    const std::string& build_board_path = feedback::kBuildBoardPath,
-    const std::string& build_product_path = feedback::kBuildProductPath,
-    const std::string& build_commit_date_path = feedback::kBuildCommitDatePath);
+AnnotationMap BuildDefaultAnnotations(const feedback::Annotations& startup_annotations);
 
 }  // namespace forensics::crash_reports
 

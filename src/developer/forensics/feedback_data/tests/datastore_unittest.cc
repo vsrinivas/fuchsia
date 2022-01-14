@@ -89,12 +89,11 @@ class DatastoreTest : public UnitTestFixture {
 
  protected:
   void SetUpDatastore(const AnnotationKeys& annotation_allowlist,
-                      const AttachmentKeys& attachment_allowlist) {
+                      const AttachmentKeys& attachment_allowlist,
+                      const std::map<std::string, ErrorOr<std::string>>& startup_annotations = {}) {
     datastore_ = std::make_unique<Datastore>(
         dispatcher(), services(), cobalt_.get(), annotation_allowlist, attachment_allowlist,
-        "current_boot_id", "previous_boot_id", "current_build_version", "previous_build_version",
-        "last_reboot_reason", "last_reboot_uptime", device_id_provider_.get(),
-        inspect_data_budget_.get());
+        startup_annotations, device_id_provider_.get(), inspect_data_budget_.get());
   }
 
   void SetUpBoardProviderServer(std::unique_ptr<stubs::BoardInfoProviderBase> server) {
@@ -197,24 +196,51 @@ TEST_F(DatastoreTest, GetAnnotationsAndAttachments_SmokeTest) {
   SetUpDatastore(
       {
           kAnnotationBuildBoard,
-          kAnnotationBuildIsDebug,
-          kAnnotationBuildLatestCommitDate,
           kAnnotationBuildProduct,
+          kAnnotationBuildLatestCommitDate,
           kAnnotationBuildVersion,
           kAnnotationBuildVersionPreviousBoot,
+          kAnnotationBuildIsDebug,
           kAnnotationDeviceBoardName,
-          kAnnotationDeviceUptime,
-          kAnnotationDeviceUtcTime,
+          kAnnotationSystemBootIdCurrent,
+          kAnnotationSystemBootIdPrevious,
           kAnnotationSystemLastRebootReason,
           kAnnotationSystemLastRebootUptime,
+          kAnnotationDeviceUptime,
+          kAnnotationDeviceUtcTime,
       },
       {
           kAttachmentBuildSnapshot,
+      },
+      {
+          {kAnnotationBuildBoard, "board"},
+          {kAnnotationBuildProduct, Error::kTimeout},
+          {kAnnotationBuildLatestCommitDate, "commit-date"},
+          {kAnnotationBuildVersion, "version"},
+          {kAnnotationBuildVersionPreviousBoot, Error::kMissingValue},
+          {kAnnotationBuildIsDebug, "true"},
+          {kAnnotationDeviceBoardName, "board-name"},
+          {kAnnotationSystemBootIdCurrent, "boot-id"},
+          {kAnnotationSystemBootIdPrevious, "previous-boot-id"},
       });
 
   // There is not much we can assert here as no missing annotation nor attachment is fatal and we
   // cannot expect annotations or attachments to be present.
-  GetStaticAnnotations();
+  EXPECT_THAT(
+      GetStaticAnnotations(),
+      UnorderedElementsAreArray({
+          Pair(kAnnotationBuildBoard, ErrorOr<std::string>("board")),
+          Pair(kAnnotationBuildProduct, ErrorOr<std::string>(Error::kTimeout)),
+          Pair(kAnnotationBuildLatestCommitDate, ErrorOr<std::string>("commit-date")),
+          Pair(kAnnotationBuildVersion, ErrorOr<std::string>("version")),
+          Pair(kAnnotationBuildVersionPreviousBoot, ErrorOr<std::string>(Error::kMissingValue)),
+          Pair(kAnnotationBuildIsDebug, ErrorOr<std::string>("true")),
+          Pair(kAnnotationDeviceBoardName, ErrorOr<std::string>("board-name")),
+          Pair(kAnnotationSystemBootIdCurrent, ErrorOr<std::string>("boot-id")),
+          Pair(kAnnotationSystemBootIdPrevious, ErrorOr<std::string>("previous-boot-id")),
+          Pair(kAnnotationSystemLastRebootReason, ErrorOr<std::string>(Error::kMissingValue)),
+          Pair(kAnnotationSystemLastRebootUptime, ErrorOr<std::string>(Error::kMissingValue)),
+      }));
   GetStaticAttachments();
   GetAnnotations();
   GetAttachments();
@@ -360,7 +386,7 @@ TEST_F(DatastoreTest, GetAnnotations_NonPlatformAboveLimit) {
       {
           kAnnotationBuildIsDebug,
       },
-      kDefaultAttachmentsToAvoidSpuriousLogs);
+      kDefaultAttachmentsToAvoidSpuriousLogs, {{kAnnotationBuildIsDebug, "true"}});
 
   // We inject more than the limit in non-platform annotations.
   Annotations non_platform_annotations;
@@ -372,7 +398,7 @@ TEST_F(DatastoreTest, GetAnnotations_NonPlatformAboveLimit) {
   ::fpromise::result<Annotations> annotations = GetAnnotations();
   ASSERT_TRUE(annotations.is_ok());
   EXPECT_THAT(annotations.take_value(), ElementsAreArray({
-                                            Pair(kAnnotationBuildIsDebug, HasValue()),
+                                            Pair(kAnnotationBuildIsDebug, "true"),
                                         }));
 }
 

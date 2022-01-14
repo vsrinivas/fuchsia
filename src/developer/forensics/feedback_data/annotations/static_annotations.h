@@ -7,6 +7,7 @@
 
 #include <string>
 
+#include "src/developer/forensics/feedback/annotations/types.h"
 #include "src/developer/forensics/feedback_data/annotations/types.h"
 #include "src/developer/forensics/utils/errors.h"
 
@@ -16,12 +17,7 @@ namespace feedback_data {
 // Synchronously fetches the static annotations, i.e. the annotations that don't change during a
 // boot cycle.
 Annotations GetStaticAnnotations(const AnnotationKeys& allowlist,
-                                 const ErrorOr<std::string>& current_boot_id,
-                                 const ErrorOr<std::string>& previous_boot_id,
-                                 const ErrorOr<std::string>& current_build_version,
-                                 const ErrorOr<std::string>& previous_build_version,
-                                 const ErrorOr<std::string>& last_reboot_reason,
-                                 const ErrorOr<std::string>& last_reboot_uptime);
+                                 const feedback::Annotations& startup_annotations);
 
 }  // namespace feedback_data
 }  // namespace forensics

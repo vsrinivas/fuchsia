@@ -184,6 +184,27 @@ executable("namespace_init_unittest_exe") {
   ]
 }
 
+executable("startup_annotations_unittest_exe") {
+  testonly = true
+
+  sources = [ "startup_annotations_unittest.cc" ]
+
+  deps = [
+    "//sdk/lib/syslog/cpp",
+    "//src/developer/forensics/feedback:constants",
+    "//src/developer/forensics/feedback/annotations",
+    "//src/developer/forensics/feedback/reboot_log",
+    "//src/developer/forensics/feedback_data:constants",
+    "//src/developer/forensics/testing:gmatchers",
+    "//src/developer/forensics/testing:gpretty_printers",
+    "//src/developer/forensics/testing:scoped_memfs_manager",
+    "//src/lib/files",
+    "//src/lib/fxl/test:gtest_main",
+    "//third_party/googletest:gmock",
+    "//third_party/googletest:gtest",
+  ]
+}
+
 ###############################################################################
 # SOURCES
 ###############################################################################
@@ -341,6 +362,14 @@ fuchsia_component("namespace_init_unittest") {
   deps = [ ":namespace_init_unittest_exe" ]
 }
 
+fuchsia_component("startup_annotations_unittest") {
+  testonly = true
+
+  manifest = "meta/startup_annotations_unittest.cmx"
+
+  deps = [ ":startup_annotations_unittest_exe" ]
+}
+
 ###############################################################################
 # PACKAGES
 ###############################################################################
@@ -362,6 +391,7 @@ fuchsia_test_package("feedback-tests") {
     ":last_reboot_unittest",
     ":main_service_unittest",
     ":namespace_init_unittest",
+    ":startup_annotations_unittest",
   ]
 
   deps = [

@@ -25,6 +25,20 @@ source_set("unit_test_fixture") {
   ]
 }
 
+source_set("scoped_memfs_manager") {
+  testonly = true
+
+  sources = [ "scoped_memfs_manager.h" ]
+
+  public_deps = [
+    "//sdk/lib/syslog/cpp",
+    "//src/storage/memfs",
+    "//zircon/system/ulib/async-loop",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
+  ]
+}
+
 source_set("gmatchers") {
   testonly = true
 

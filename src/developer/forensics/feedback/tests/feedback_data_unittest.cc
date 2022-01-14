@@ -50,19 +50,14 @@ TEST_F(FeedbackDataTest, DeletesPreviousBootLogs) {
   const auto kDeletePreviousBootLogsTime = zx::min(10);
   {
     FeedbackData feedback_data(dispatcher(), services(), Clock(), &InspectRoot(), Cobalt(),
-                               DeviceIdProvider(),
+                               /*startup_annotations=*/{}, DeviceIdProvider(),
                                FeedbackData::Options{
                                    .config = {},
                                    .is_first_instance = true,
                                    .limit_inspect_data = false,
                                    .spawn_system_log_recorder = false,
                                    .delete_previous_boot_logs_time = std::nullopt,
-                                   .current_boot_id = Error::kMissingValue,
-                                   .previous_boot_id = Error::kMissingValue,
-                                   .current_build_version = Error::kMissingValue,
-                                   .previous_build_version = Error::kMissingValue,
-                                   .last_reboot_reason = Error::kMissingValue,
-                                   .last_reboot_uptime = Error::kMissingValue,
+                                   .device_id_path = "n/a",
                                });
 
     RunLoopFor(kDeletePreviousBootLogsTime);
@@ -71,19 +66,14 @@ TEST_F(FeedbackDataTest, DeletesPreviousBootLogs) {
 
   {
     FeedbackData feedback_data(dispatcher(), services(), Clock(), &InspectRoot(), Cobalt(),
-                               DeviceIdProvider(),
+                               /*startup_annotations=*/{}, DeviceIdProvider(),
                                FeedbackData::Options{
                                    .config = {},
                                    .is_first_instance = true,
                                    .limit_inspect_data = false,
                                    .spawn_system_log_recorder = false,
                                    .delete_previous_boot_logs_time = kDeletePreviousBootLogsTime,
-                                   .current_boot_id = Error::kMissingValue,
-                                   .previous_boot_id = Error::kMissingValue,
-                                   .current_build_version = Error::kMissingValue,
-                                   .previous_build_version = Error::kMissingValue,
-                                   .last_reboot_reason = Error::kMissingValue,
-                                   .last_reboot_uptime = Error::kMissingValue,
+                                   .device_id_path = "n/a",
                                });
 
     RunLoopFor(kDeletePreviousBootLogsTime);

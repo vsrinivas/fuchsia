@@ -145,6 +145,7 @@ executable("default_annotations_unittest_exe") {
 
   deps = [
     "//src/developer/forensics/crash_reports:default_annotations",
+    "//src/developer/forensics/feedback/annotations",
     "//src/lib/files",
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gmock",

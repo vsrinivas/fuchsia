@@ -31,14 +31,13 @@ class CrashReports {
     StorageSize snapshot_manager_max_annotations_size;
     StorageSize snapshot_manager_max_archives_size;
     zx::duration snapshot_manager_window_duration;
-    ErrorOr<std::string> build_version;
-    crash_reports::AnnotationMap default_annotations;
   };
 
   CrashReports(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
                timekeeper::Clock* clock, inspect::Node* inspect_root,
-               DeviceIdProvider* device_id_provider, fuchsia::feedback::DataProvider* data_provider,
-               Options options);
+               DeviceIdProvider* device_id_provider,
+               const std::map<std::string, ErrorOr<std::string>>& startup_annotations,
+               fuchsia::feedback::DataProvider* data_provider, Options options);
 
   void Handle(::fidl::InterfaceRequest<fuchsia::feedback::CrashReporter> request,
               ::fit::function<void(zx_status_t)> error_handler);

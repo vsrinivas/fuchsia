@@ -7,6 +7,7 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
+#include "src/developer/forensics/feedback/annotations/keys.h"
 #include "src/lib/files/scoped_temp_dir.h"
 
 namespace forensics::crash_reports {
@@ -15,40 +16,42 @@ namespace {
 using ::testing::Pair;
 using ::testing::UnorderedElementsAreArray;
 
-TEST(DefaultAnnotationsTest, GetBuildVersion) {
-  files::ScopedTempDir temp_dir;
-  std::string build_version_path;
-  ASSERT_TRUE(temp_dir.NewTempFileWithData("build_version", &build_version_path));
-
-  EXPECT_EQ(GetBuildVersion("/bad/path"), Error::kFileReadFailure);
-  EXPECT_EQ(GetBuildVersion(build_version_path), "build_version");
-}
-
-TEST(DefaultAnnotationsTest, GetDefaultAnnotations) {
-  files::ScopedTempDir temp_dir;
-  std::string build_version_path;
-  ASSERT_TRUE(temp_dir.NewTempFileWithData("build_version", &build_version_path));
-
-  std::string build_product_path;
-  ASSERT_TRUE(temp_dir.NewTempFileWithData("build_product", &build_product_path));
-
-  const auto default_annotations = GetDefaultAnnotations(
-      /*build_version_path=*/build_version_path,
-      /*build_board_path=*/"/bad/path",
-      /*build_product_path=*/build_product_path,
-      /*build_commit_date_path=*/"/bad/path");
-
-  EXPECT_THAT(default_annotations.Raw(),
+TEST(DefaultAnnotationsTest, BuildDefaultAnnotations_EmptyStartupAnnotations) {
+  EXPECT_THAT(BuildDefaultAnnotations({}).Raw(),
               UnorderedElementsAreArray({
                   Pair("osName", "Fuchsia"),
-                  Pair("osVersion", "build_version"),
-                  Pair("build.version", "build_version"),
-                  Pair("build.board", "unknown"),
-                  Pair("debug.build.board.error", "file read failure"),
-                  Pair("build.product", "build_product"),
-                  Pair("build.latest-commit-date", "unknown"),
-                  Pair("debug.build.latest-commit-date.error", "file read failure"),
+                  Pair("osVersion", "unknown"),
+                  Pair("debug.osVersion.error", "missing"),
+                  Pair(feedback::kBuildVersionKey, "unknown"),
+                  Pair("debug.build.version.error", "missing"),
+                  Pair(feedback::kBuildBoardKey, "unknown"),
+                  Pair("debug.build.board.error", "missing"),
+                  Pair(feedback::kBuildProductKey, "unknown"),
+                  Pair("debug.build.product.error", "missing"),
+                  Pair(feedback::kBuildLatestCommitDateKey, "unknown"),
+                  Pair("debug.build.latest-commit-date.error", "missing"),
               }));
+}
+
+TEST(DefaultAnnotationsTest, BuildDefaultAnnotations) {
+  EXPECT_THAT(
+      BuildDefaultAnnotations({
+                                  {feedback::kBuildVersionKey, "version"},
+                                  {feedback::kBuildBoardKey, "board"},
+                                  {feedback::kBuildProductKey, Error::kTimeout},
+                                  {feedback::kBuildLatestCommitDateKey, Error::kFileReadFailure},
+                              })
+          .Raw(),
+      UnorderedElementsAreArray({
+          Pair("osName", "Fuchsia"),
+          Pair("osVersion", "version"),
+          Pair(feedback::kBuildVersionKey, "version"),
+          Pair(feedback::kBuildBoardKey, "board"),
+          Pair(feedback::kBuildProductKey, "unknown"),
+          Pair("debug.build.product.error", "timeout"),
+          Pair(feedback::kBuildLatestCommitDateKey, "unknown"),
+          Pair("debug.build.latest-commit-date.error", "file read failure"),
+      }));
 }
 
 }  // namespace
