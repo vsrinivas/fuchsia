@@ -21,10 +21,7 @@ test("device-name-provider-test") {
 
 fuchsia_unittest_component("device-name-provider-test-component") {
   component_name = "device-name-provider-test"
-  deps = [
-    ":device-name-provider-test",
-    "//sdk/lib/driver_test_realm/simple",
-  ]
+  deps = [ ":device-name-provider-test" ]
 }
 
 test("integration-test") {
