@@ -416,6 +416,7 @@ getsid
 getuid
 
 # ZIRCON
+_zx_clock_get_monotonic
 zx_bti_create
 zx_cache_flush
 zx_channel_call
