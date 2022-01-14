@@ -404,6 +404,7 @@ impl SpinelContext {
         let mut extension_names = vec![
             cstr!(b"VK_FUCHSIA_external_memory\0").as_ptr(),
             cstr!(b"VK_FUCHSIA_buffer_collection\0").as_ptr(),
+            cstr!(b"VK_FUCHSIA_buffer_collection_x\0").as_ptr(),
         ];
         extension_names.reserve(
             spn_target_requirements.ext_name_count as usize
@@ -521,7 +522,7 @@ impl SpinelContext {
         };
 
         unsafe {
-            vk!(vk_ext.SetBufferCollectionConstraintsFUCHSIA(
+            vk!(vk_ext.SetBufferCollectionConstraintsFUCHSIAX(
                 device,
                 buffer_collection,
                 &image_create_info(

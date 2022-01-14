@@ -474,12 +474,7 @@ impl VulkanImage {
 
         let mem_reqs = unsafe { init(|ptr| vk.GetImageMemoryRequirements(device, image, ptr)) };
 
-        let mut mem_props = BufferCollectionPropertiesFUCHSIA {
-            sType: STRUCTURE_TYPE_BUFFER_COLLECTION_PROPERTIES_FUCHSIA,
-            pNext: ptr::null(),
-            memoryTypeBits: 0,
-            count: 0,
-        };
+        let mut mem_props = BufferCollectionPropertiesFUCHSIA::default();
         unsafe {
             vk!(vk_ext.GetBufferCollectionPropertiesFUCHSIA(device, collection, &mut mem_props));
         }
