@@ -1,0 +1,45 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+import("//build/rust/rustc_library.gni")
+import("//build/rust/rustc_test.gni")
+import("//src/graphics/lib/magma/gnbuild/magma.gni")
+
+rustc_library("fuchsia-vulkan") {
+  name = "fuchsia_vulkan"
+  version = "0.1.0"
+  edition = "2022"
+
+  with_unit_tests = true
+
+  deps = [
+    "//src/lib/fidl/rust/fidl",
+    "//src/lib/fuchsia-async",
+    "//src/lib/mapped-vmo",
+    "//src/lib/zircon/rust:fuchsia-zircon",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:parking_lot",
+    "//third_party/rust_crates:thiserror",
+    "//third_party/rust_crates:vk-sys",
+  ]
+
+  non_rust_deps = [ "//src/lib/vulkan" ]
+
+  sources = [ "src/lib.rs" ]
+}
+
+fuchsia_unittest_package("fuchsia_vulkan_tests") {
+  manifest = "meta/fuchsia_vulkan_tests.cml"
+  deps = [ ":fuchsia-vulkan_test" ]
+  test_specs = {
+    environments = [ aemu_env ] + magma_libvulkan_hardware_envs
+  }
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":fuchsia_vulkan_tests" ]
+}

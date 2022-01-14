@@ -21,6 +21,7 @@ group("tests") {
     "carnelian:carnelian-tests",
     "flatland-frame-scheduling:tests",
     "fuchsia-framebuffer:fuchsia-framebuffer-tests",
+    "fuchsia-vulkan:fuchsia_vulkan_tests",
     "input-synthesis:tests",
     "keymaps:tests",
     "terminal:tests",

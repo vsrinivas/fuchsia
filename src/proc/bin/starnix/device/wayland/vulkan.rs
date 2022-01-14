@@ -2,12 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// TODO(fxb/89887): Remove this dependency in favor of a vulkan-extension specific import.
-use carnelian::render::generic::spinel::*;
 use fidl::endpoints::ClientEnd;
 use fidl_fuchsia_sysmem as fsysmem;
 use fidl_fuchsia_ui_composition as fuicomp;
 use fuchsia_image_format::*;
+use fuchsia_vulkan::*;
 use fuchsia_zircon as zx;
 use fuchsia_zircon::AsHandleRef;
 use vk_sys as vk;

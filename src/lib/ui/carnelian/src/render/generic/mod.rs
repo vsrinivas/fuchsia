@@ -423,7 +423,7 @@ pub(crate) mod tests {
     // that these tests will be skipped on CI, but be able to run manually through the
     // `carnelian_tests` component.
     fn has_vk_instance() -> bool {
-        let entry_points = super::spinel::entry_points();
+        let entry_points = fuchsia_vulkan::entry_points();
 
         macro_rules! cstr {
             ( $bytes:expr ) => {
