@@ -89,7 +89,7 @@ class AddressSpaceHandlerServer
         ZX_ASSERT(false);
     }
 
-    completer.Reply(ret);
+    completer.ReplySuccess(ret);
   }
 
   void Write(WriteRequestView request, WriteCompleter::Sync& completer) override {
@@ -113,7 +113,7 @@ class AddressSpaceHandlerServer
       default:
         ZX_ASSERT(false);
     }
-    completer.Reply();
+    completer.ReplySuccess();
   }
 
   void Close() {

@@ -28,7 +28,7 @@ protocol AddressSpaceHandler {
     }) -> (struct {
         /// Value returned by read.
         value uint64;
-    });
+    }) error Status;
 
     /// Write a value to this address space.
     Write(struct {
@@ -38,5 +38,5 @@ protocol AddressSpaceHandler {
         width uint32;
         /// Value to be written.
         value uint64;
-    }) -> ();
+    }) -> (struct {}) error Status;
 };
