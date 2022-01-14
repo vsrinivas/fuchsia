@@ -15,6 +15,9 @@
 pub mod ot;
 pub use openthread_sys as otsys;
 
+#[cfg(target_os = "fuchsia")]
+mod otfuchsia;
+
 /// Shorthand for `ot::Box<T>`
 pub type OtBox<T> = ot::Box<T>;
 
