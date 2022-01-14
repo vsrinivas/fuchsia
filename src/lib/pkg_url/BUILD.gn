@@ -14,6 +14,7 @@ source_set("pkg_url") {
   ]
 
   public_deps = [ "//src/lib/fxl" ]
+  deps = [ "//third_party/re2" ]
 }
 
 executable("tests") {

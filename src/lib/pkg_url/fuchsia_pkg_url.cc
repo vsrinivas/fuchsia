@@ -4,8 +4,9 @@
 
 #include "src/lib/pkg_url/fuchsia_pkg_url.h"
 
-#include <regex>
 #include <string>
+
+#include <re2/re2.h>
 
 #include "src/lib/fxl/strings/concatenate.h"
 #include "src/lib/fxl/strings/substitute.h"
@@ -20,7 +21,7 @@ static const std::string kFuchsiaPkgPrefix = "fuchsia-pkg://";
 // 3: package variant
 // 4: package merkle-root hash
 // 5: resource path
-static const std::regex* const kFuchsiaPkgRexp = new std::regex(
+static const re2::RE2* const kFuchsiaPkgRexp = new re2::RE2(
     "^fuchsia-pkg://([^/]+)/([^/#?]+)(?:/([^/"
     "#?]+))?(?:\\?hash=([^&#]+))?(?:#(.+))?$");
 
@@ -37,24 +38,18 @@ bool FuchsiaPkgUrl::Parse(const std::string& url) {
   package_name_.clear();
   resource_path_.clear();
 
-  std::smatch match_data;
-
-  if (!std::regex_match(url, match_data, *kFuchsiaPkgRexp)) {
+  if (!re2::RE2::FullMatch(url, *kFuchsiaPkgRexp, &host_name_, &package_name_, &variant_, &hash_,
+                           &resource_path_)) {
     return false;
   }
 
-  url_ = match_data[0].str();
+  url_ = url;
 
-  host_name_ = match_data[1].str();
-  package_name_ = match_data[2].str();
-  variant_ = match_data[3].str();
   if (variant_.empty()) {
     // TODO(fxbug.dev/4002): Currently this defaults to "0" if not present, but variant
     // will eventually be required in fuchsia-pkg URLs.
     variant_ = "0";
   }
-  hash_ = match_data[4].str();
-  resource_path_ = match_data[5].str();
 
   return true;
 }
