@@ -256,6 +256,10 @@ class Realm final {
   Realm& AddLocalChild(const std::string& child_name, LocalComponent* local_impl,
                        ChildOptions options = kDefaultChildOptions);
 
+  // Create a sub realm as child of this Realm instance. The constructed
+  // Realm is returned.
+  Realm AddChildRealm(const std::string& child_name, ChildOptions options = kDefaultChildOptions);
+
   // Route a capability from one child to another.
   Realm& AddRoute(Route route);
 
@@ -263,10 +267,14 @@ class Realm final {
 
  private:
   explicit Realm(fuchsia::component::test::RealmSyncPtr realm_proxy,
-                 std::shared_ptr<internal::LocalComponentRunner::Builder> local_component_runner);
+                 std::shared_ptr<internal::LocalComponentRunner::Builder> runner_builder,
+                 std::vector<std::string> scope = {});
+
+  std::string GetResolvedName(const std::string& child_name);
 
   fuchsia::component::test::RealmSyncPtr realm_proxy_;
   std::shared_ptr<internal::LocalComponentRunner::Builder> runner_builder_;
+  std::vector<std::string> scope_;
 };
 
 // Use this Builder class to construct a Realm object.
@@ -297,6 +305,11 @@ class RealmBuilder final {
   // See |Realm.AddLocalChild| for more details.
   RealmBuilder& AddLocalChild(const std::string& child_name, LocalComponent* local_impl,
                               ChildOptions options = kDefaultChildOptions);
+
+  // Create a sub realm as child of the root realm. The constructed
+  // Realm is returned.
+  // See |Realm.AddChildRealm| for more details.
+  Realm AddChildRealm(const std::string& child_name, ChildOptions options = kDefaultChildOptions);
 
   // Route a capability for the root realm being constructed.
   // See |Realm.AddRoute| for more details.

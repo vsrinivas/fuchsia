@@ -26,6 +26,7 @@
 
 #include <cstddef>
 #include <memory>
+#include <sstream>
 #include <variant>
 #include <vector>
 
@@ -36,6 +37,7 @@ namespace {
 
 constexpr char kCollectionName[] = "realm_builder";
 constexpr char kFrameworkIntermediaryChildName[] = "realm_builder_server";
+constexpr char kChildPathSeparator[] = "/";
 
 void PanicIfMonikerBad(Moniker& moniker) {
   if (!moniker.path.empty()) {
@@ -290,12 +292,27 @@ Realm& Realm::AddLegacyChild(const std::string& child_name, const std::string& u
 Realm& Realm::AddLocalChild(const std::string& child_name, LocalComponent* local_impl,
                             ChildOptions options) {
   ZX_SYS_ASSERT_NOT_NULL(local_impl);
-  runner_builder_->Register(child_name, local_impl);
+  runner_builder_->Register(GetResolvedName(child_name), local_impl);
   fuchsia::component::test::Realm_AddLocalChild_Result result;
   ZX_SYS_ASSERT_STATUS_AND_RESULT_OK(
       "Realm/AddLocalChild",
       realm_proxy_->AddLocalChild(child_name, ConvertToFidl(options), &result), result);
   return *this;
+}
+
+Realm Realm::AddChildRealm(const std::string& child_name, ChildOptions options) {
+  fuchsia::component::test::RealmSyncPtr sub_realm_proxy;
+  std::vector<std::string> sub_realm_scope = scope_;
+  sub_realm_scope.push_back(child_name);
+  Realm sub_realm(std::move(sub_realm_proxy), runner_builder_, std::move(sub_realm_scope));
+
+  fuchsia::component::test::Realm_AddChildRealm_Result result;
+  ZX_SYS_ASSERT_STATUS_AND_RESULT_OK(
+      "Realm/AddChildRealm",
+      realm_proxy_->AddChildRealm(child_name, ConvertToFidl(options),
+                                  sub_realm.realm_proxy_.NewRequest(), &result),
+      result);
+  return sub_realm;
 }
 
 Realm& Realm::AddRoute(Route route) {
@@ -314,8 +331,23 @@ Realm& Realm::AddRoute(Route route) {
 }
 
 Realm::Realm(fuchsia::component::test::RealmSyncPtr realm_proxy,
-             std::shared_ptr<internal::LocalComponentRunner::Builder> runner_builder)
-    : realm_proxy_(std::move(realm_proxy)), runner_builder_(std::move(runner_builder)) {}
+             std::shared_ptr<internal::LocalComponentRunner::Builder> runner_builder,
+             std::vector<std::string> scope)
+    : realm_proxy_(std::move(realm_proxy)),
+      runner_builder_(std::move(runner_builder)),
+      scope_(std::move(scope)) {}
+
+std::string Realm::GetResolvedName(const std::string& child_name) {
+  if (scope_.empty()) {
+    return child_name;
+  }
+
+  std::stringstream path;
+  for (const auto& s : scope_) {
+    path << s << kChildPathSeparator;
+  }
+  return path.str() + child_name;
+}
 
 // Implementation methods for Realm::Builder.
 
@@ -361,6 +393,11 @@ RealmBuilder& RealmBuilder::AddLocalChild(const std::string& child_name, LocalCo
   ZX_ASSERT_MSG(local_impl != nullptr, "local_impl can't be nullptr");
   root_.AddLocalChild(child_name, local_impl, options);
   return *this;
+}
+
+Realm RealmBuilder::AddChildRealm(const std::string& child_name, ChildOptions options) {
+  ZX_ASSERT_MSG(!child_name.empty(), "child_name can't be empty");
+  return root_.AddChildRealm(child_name, options);
 }
 
 RealmBuilder& RealmBuilder::AddRoute(Route route) {

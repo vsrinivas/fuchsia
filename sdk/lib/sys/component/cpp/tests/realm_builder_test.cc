@@ -183,6 +183,33 @@ TEST_F(RealmBuilderTest, ConnectsToChannelDirectly) {
   EXPECT_EQ(response, fidl::StringPtr("hello"));
 }
 
+TEST_F(RealmBuilderTest, RoutesProtocolFromLocalComponentInSubRealm) {
+  static constexpr char kEchoServer[] = "echo_server";
+  static constexpr char kSubRealm[] = "sub_realm";
+  LocalEchoServer local_echo_server(QuitLoopClosure(), dispatcher());
+  auto realm_builder = RealmBuilder::Create();
+  auto sub_realm = realm_builder.AddChildRealm(kSubRealm);
+
+  // Route test.placeholders.Echo from local Echo server impl to parent.
+  sub_realm.AddLocalChild(kEchoServer, &local_echo_server);
+  sub_realm.AddRoute(Route{.capabilities = {Protocol{test::placeholders::Echo::Name_}},
+                           .source = ChildRef{kEchoServer},
+                           .targets = {ParentRef()}});
+
+  // Route test.placeholders.Echo from sub_realm child to parent.
+  realm_builder.AddRoute(Route{.capabilities = {Protocol{test::placeholders::Echo::Name_}},
+                               .source = ChildRef{kSubRealm},
+                               .targets = {ParentRef()}});
+
+  auto realm = realm_builder.Build(dispatcher());
+  test::placeholders::EchoPtr echo;
+  ASSERT_EQ(realm.Connect(echo.NewRequest()), ZX_OK);
+  echo->EchoString("hello", [](fidl::StringPtr _) {});
+
+  RunLoop();
+  EXPECT_TRUE(local_echo_server.WasCalled());
+}
+
 // This test is nearly identicaly to the RealmBuilderTest.RoutesProtocolFromChild
 // test case above. The only difference is that it provides a svc directory
 // from the sys::Context singleton object to the Realm::Builder::Create method.
