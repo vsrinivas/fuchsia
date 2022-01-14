@@ -85,6 +85,9 @@ pub use types::*;
 mod thread;
 pub use thread::*;
 
+mod ip6;
+pub use ip6::*;
+
 mod state;
 pub use state::*;
 
