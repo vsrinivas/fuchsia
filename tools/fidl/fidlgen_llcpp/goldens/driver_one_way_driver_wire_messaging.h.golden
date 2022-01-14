@@ -133,7 +133,7 @@ class ::fidl::internal::WireEventHandlerInterface<::test_driveroneway::OneWay> {
 };
 
 template <>
-class ::fidl::WireAsyncEventHandler<::test_driveroneway::OneWay>
+class ::fdf::WireAsyncEventHandler<::test_driveroneway::OneWay>
     : public ::fidl::internal::WireEventHandlerInterface<
           ::test_driveroneway::OneWay>,
       public ::fidl::internal::AsyncEventHandler {
@@ -162,10 +162,10 @@ class ::fidl::WireSyncEventHandler<::test_driveroneway::OneWay>
 template <>
 class ::fidl::internal::WireEventDispatcher<::test_driveroneway::OneWay> final
     : public ::fidl::internal::IncomingEventDispatcher<
-          ::fidl::WireAsyncEventHandler<::test_driveroneway::OneWay>> {
+          ::fdf::WireAsyncEventHandler<::test_driveroneway::OneWay>> {
  public:
   explicit WireEventDispatcher(
-      ::fidl::WireAsyncEventHandler<::test_driveroneway::OneWay>* event_handler)
+      ::fdf::WireAsyncEventHandler<::test_driveroneway::OneWay>* event_handler)
       : IncomingEventDispatcher(event_handler) {}
 
  private:

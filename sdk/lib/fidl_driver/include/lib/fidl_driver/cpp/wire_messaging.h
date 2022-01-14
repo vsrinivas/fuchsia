@@ -11,12 +11,6 @@
 #include <lib/fidl_driver/cpp/server.h>
 #include <lib/fidl_driver/cpp/sync_call.h>
 #include <lib/fidl_driver/cpp/transport.h>
-
-namespace fdf {
-template <typename FidlMethod>
-class WireUnownedResult;
-template <typename FidlMethod>
-class WireServer;
-}  // namespace fdf
+#include <lib/fidl_driver/cpp/wire_messaging_declarations.h>
 
 #endif  // LIB_FIDL_DRIVER_INCLUDE_LIB_FIDL_DRIVER_CPP_WIRE_MESSAGING_H_

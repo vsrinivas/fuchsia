@@ -7,6 +7,7 @@
 
 #include <lib/fdf/cpp/arena.h>
 #include <lib/fidl/llcpp/client_base.h>
+#include <lib/fidl_driver/cpp/wire_messaging_declarations.h>
 
 namespace fdf {
 namespace internal {
@@ -60,5 +61,15 @@ struct BufferClientVeneer {
 
 }  // namespace internal
 }  // namespace fdf
+
+namespace fidl::internal {
+template <typename Protocol>
+AnyIncomingEventDispatcher MakeAnyEventDispatcher(
+    fdf::WireAsyncEventHandler<Protocol>* event_handler) {
+  AnyIncomingEventDispatcher event_dispatcher;
+  event_dispatcher.emplace<fidl::internal::WireEventDispatcher<Protocol>>(event_handler);
+  return event_dispatcher;
+}
+}  // namespace fidl::internal
 
 #endif  // LIB_FIDL_DRIVER_INCLUDE_LIB_FIDL_DRIVER_CPP_INTERNAL_CLIENT_DETAILS_H_

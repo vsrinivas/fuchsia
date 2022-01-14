@@ -10,7 +10,7 @@
 #include <lib/fidl/llcpp/client_base.h>
 #include <lib/fidl_driver/cpp/internal/client_details.h>
 #include <lib/fidl_driver/cpp/transport.h>
-#include <lib/fidl_driver/cpp/wire_messaging.h>
+#include <lib/fidl_driver/cpp/wire_messaging_declarations.h>
 
 //
 // Maintainer's note: when updating the documentation and function signatures
@@ -77,7 +77,7 @@ class WireClient {
   // |event_handler->on_fidl_error| handler will be invoked asynchronously with
   // the reason, if specified.
   WireClient(fdf::ClientEnd<Protocol> client_end, fdf_dispatcher_t* dispatcher,
-             fidl::WireAsyncEventHandler<Protocol>* event_handler = nullptr) {
+             fdf::WireAsyncEventHandler<Protocol>* event_handler = nullptr) {
     Bind(std::move(client_end), dispatcher, event_handler);
   }
 
@@ -123,7 +123,7 @@ class WireClient {
   // |WireClient| to a different endpoint, simply replace the |WireClient|
   // variable with a new instance.
   void Bind(fdf::ClientEnd<Protocol> client_end, fdf_dispatcher_t* dispatcher,
-            fidl::WireAsyncEventHandler<Protocol>* event_handler = nullptr) {
+            fdf::WireAsyncEventHandler<Protocol>* event_handler = nullptr) {
     controller_.Bind(std::make_shared<fidl::internal::ClientBase>(),
                      fidl::internal::MakeAnyTransport(client_end.TakeHandle()),
                      fdf_dispatcher_get_async_dispatcher(dispatcher),
@@ -238,7 +238,7 @@ class WireSharedClient final {
   //
   // |event_handler| will be destroyed when teardown completes.
   WireSharedClient(fdf::ClientEnd<Protocol> client_end, fdf_dispatcher_t* dispatcher,
-                   std::unique_ptr<fidl::WireAsyncEventHandler<Protocol>> event_handler) {
+                   std::unique_ptr<fdf::WireAsyncEventHandler<Protocol>> event_handler) {
     Bind(std::move(client_end), dispatcher, std::move(event_handler));
   }
 
@@ -255,7 +255,7 @@ class WireSharedClient final {
   // See |WireSharedClient| above for other behavior aspects of the constructor.
   WireSharedClient(
       fdf::ClientEnd<Protocol> client_end, fdf_dispatcher_t* dispatcher,
-      fidl::WireAsyncEventHandler<Protocol>* event_handler,
+      fdf::WireAsyncEventHandler<Protocol>* event_handler,
       fidl::AnyTeardownObserver teardown_observer = fidl::AnyTeardownObserver::Noop()) {
     Bind(std::move(client_end), dispatcher, event_handler, std::move(teardown_observer));
   }
@@ -316,7 +316,7 @@ class WireSharedClient final {
   //
   // |event_handler| will be destroyed when teardown completes.
   void Bind(fdf::ClientEnd<Protocol> client_end, fdf_dispatcher_t* dispatcher,
-            std::unique_ptr<fidl::WireAsyncEventHandler<Protocol>> event_handler) {
+            std::unique_ptr<fdf::WireAsyncEventHandler<Protocol>> event_handler) {
     auto event_handler_raw = event_handler.get();
     Bind(std::move(client_end), dispatcher, event_handler_raw,
          fidl::AnyTeardownObserver::ByOwning(std::move(event_handler)));
@@ -334,7 +334,7 @@ class WireSharedClient final {
   //
   // See |Bind| above for other behavior aspects of the function.
   void Bind(fdf::ClientEnd<Protocol> client_end, fdf_dispatcher_t* dispatcher,
-            fidl::WireAsyncEventHandler<Protocol>* event_handler,
+            fdf::WireAsyncEventHandler<Protocol>* event_handler,
             fidl::AnyTeardownObserver teardown_observer = fidl::AnyTeardownObserver::Noop()) {
     controller_.Bind(std::make_shared<fidl::internal::ClientBase>(),
                      fidl::internal::MakeAnyTransport(client_end.TakeHandle()),

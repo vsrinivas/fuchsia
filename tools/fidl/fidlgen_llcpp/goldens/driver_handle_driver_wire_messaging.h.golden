@@ -62,7 +62,7 @@ class ::fidl::internal::WireEventHandlerInterface<
 };
 
 template <>
-class ::fidl::WireAsyncEventHandler<::test_driverhandle::DriverProtocol>
+class ::fdf::WireAsyncEventHandler<::test_driverhandle::DriverProtocol>
     : public ::fidl::internal::WireEventHandlerInterface<
           ::test_driverhandle::DriverProtocol>,
       public ::fidl::internal::AsyncEventHandler {
@@ -92,10 +92,10 @@ template <>
 class ::fidl::internal::WireEventDispatcher<::test_driverhandle::DriverProtocol>
     final
     : public ::fidl::internal::IncomingEventDispatcher<
-          ::fidl::WireAsyncEventHandler<::test_driverhandle::DriverProtocol>> {
+          ::fdf::WireAsyncEventHandler<::test_driverhandle::DriverProtocol>> {
  public:
   explicit WireEventDispatcher(
-      ::fidl::WireAsyncEventHandler<::test_driverhandle::DriverProtocol>*
+      ::fdf::WireAsyncEventHandler<::test_driverhandle::DriverProtocol>*
           event_handler)
       : IncomingEventDispatcher(event_handler) {}
 

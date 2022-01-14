@@ -263,7 +263,7 @@ class ::fidl::internal::WireEventHandlerInterface<::test_drivertwoway::TwoWay> {
 };
 
 template <>
-class ::fidl::WireAsyncEventHandler<::test_drivertwoway::TwoWay>
+class ::fdf::WireAsyncEventHandler<::test_drivertwoway::TwoWay>
     : public ::fidl::internal::WireEventHandlerInterface<
           ::test_drivertwoway::TwoWay>,
       public ::fidl::internal::AsyncEventHandler {
@@ -292,10 +292,10 @@ class ::fidl::WireSyncEventHandler<::test_drivertwoway::TwoWay>
 template <>
 class ::fidl::internal::WireEventDispatcher<::test_drivertwoway::TwoWay> final
     : public ::fidl::internal::IncomingEventDispatcher<
-          ::fidl::WireAsyncEventHandler<::test_drivertwoway::TwoWay>> {
+          ::fdf::WireAsyncEventHandler<::test_drivertwoway::TwoWay>> {
  public:
   explicit WireEventDispatcher(
-      ::fidl::WireAsyncEventHandler<::test_drivertwoway::TwoWay>* event_handler)
+      ::fdf::WireAsyncEventHandler<::test_drivertwoway::TwoWay>* event_handler)
       : IncomingEventDispatcher(event_handler) {}
 
  private:
