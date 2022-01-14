@@ -1,0 +1,30 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    children: [
+        {
+            name: "bt-device-id",
+            url: "fuchsia-pkg://fuchsia.com/bt-device-id#meta/bt-device-id.cm",
+            environment: "#full-resolver-env",
+        },
+    ],
+    use: [
+        {
+            protocol: [ "fuchsia.bluetooth.deviceid.DeviceIdentification" ],
+            from: "#bt-device-id",
+        },
+    ],
+    offer: [
+        {
+            protocol: [ "fuchsia.logger.LogSink" ],
+            from: "parent",
+            to: [ "#bt-device-id" ],
+        },
+        {
+            protocol: [ "fuchsia.bluetooth.bredr.Profile" ],
+            from: "#bluetooth-core",
+            to: [ "#bt-device-id" ],
+        },
+    ],
+}
