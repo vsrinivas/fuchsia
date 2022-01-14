@@ -4,7 +4,7 @@
 
 use crate::shutdown_request::ShutdownRequest;
 use crate::types::{Celsius, Nanoseconds, PState, ThermalLoad, Watts};
-use fuchsia_zircon_sys as sys;
+use fuchsia_zircon::sys;
 
 /// Defines the message types and arguments to be used for inter-node communication
 #[derive(Debug, PartialEq)]

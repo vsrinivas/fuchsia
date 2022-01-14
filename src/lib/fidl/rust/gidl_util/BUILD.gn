@@ -11,7 +11,7 @@ rustc_library("gidl_util") {
     "//src/lib/zircon/rust:fuchsia-zircon-status",
   ]
   if (is_fuchsia) {
-    deps += [ "//src/lib/zircon/rust:fuchsia-zircon-sys" ]
+    deps += [ "//src/lib/zircon/rust:fuchsia-zircon" ]
   }
   sources = [ "src/lib.rs" ]
 }

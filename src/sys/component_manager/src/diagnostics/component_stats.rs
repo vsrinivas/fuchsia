@@ -6,7 +6,8 @@ use {
     crate::diagnostics::{
         measurement::Measurement, runtime_stats_source::RuntimeStatsSource, task_info::TaskInfo,
     },
-    fuchsia_async as fasync, fuchsia_inspect as inspect, fuchsia_zircon_sys as zx_sys,
+    fuchsia_async as fasync, fuchsia_inspect as inspect,
+    fuchsia_zircon::sys as zx_sys,
     futures::lock::Mutex,
     injectable_time::MonotonicTime,
     std::{fmt::Debug, sync::Arc},

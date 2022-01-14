@@ -4,7 +4,7 @@
 
 //! Type-safe bindings for Zircon status.
 
-use fuchsia_zircon_sys as sys;
+use fuchsia_zircon_types as sys;
 use std::error;
 use std::ffi::NulError;
 use std::fmt;

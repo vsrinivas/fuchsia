@@ -144,7 +144,7 @@ impl<T> Drop for Disowned<T> {
 /// https://fuchsia.dev/fuchsia-src/concepts/kernel/handles#invalid_handles_and_handle_reuse
 #[cfg(target_os = "fuchsia")]
 pub fn get_info_handle_valid(handle: &Handle) -> Result<(), Status> {
-    use fuchsia_zircon_sys as sys;
+    use fuchsia_zircon::sys;
     Status::ok(unsafe {
         sys::zx_object_get_info(
             handle.raw_handle(),

@@ -16,7 +16,7 @@ use {
     fidl_fuchsia_wlan_sme::{
         ConnectTransactionEvent, ScanTransactionEvent, ScanTransactionEventStream,
     },
-    fuchsia_zircon_status as zx_status, fuchsia_zircon_sys as zx_sys,
+    fuchsia_zircon_status as zx_status, fuchsia_zircon_types as zx_sys,
     futures::prelude::*,
     hex::FromHex,
     ieee80211::Ssid,

@@ -4,7 +4,7 @@
 
 use fuchsia_async as fasync;
 use fuchsia_zircon_status as zx_status;
-use fuchsia_zircon_sys::{
+use fuchsia_zircon_types::{
     zx_handle_t, zx_packet_signal_t, zx_signals_t, zx_status_t, zx_time_t, ZX_ERR_NOT_SUPPORTED,
     ZX_OK,
 };

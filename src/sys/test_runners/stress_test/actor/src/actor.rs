@@ -10,7 +10,7 @@ use {
         ActorRequestStream, Error,
     },
     fuchsia_component::server::ServiceFs,
-    fuchsia_zircon_sys::ZX_CHANNEL_MAX_MSG_BYTES,
+    fuchsia_zircon::sys::ZX_CHANNEL_MAX_MSG_BYTES,
     futures::{future::BoxFuture, StreamExt, TryStreamExt},
     rand::{rngs::SmallRng, SeedableRng},
     rust_measure_tape_for_action::Measurable,

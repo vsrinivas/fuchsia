@@ -11,7 +11,7 @@ use {
     fuchsia_async as fasync,
     fuchsia_inspect::{self as inspect, HistogramProperty, UintLinearHistogramProperty},
     fuchsia_zircon as zx,
-    fuchsia_zircon_sys::{self as zx_sys, zx_system_get_num_cpus},
+    fuchsia_zircon::sys::{self as zx_sys, zx_system_get_num_cpus},
     futures::{future::BoxFuture, lock::Mutex, FutureExt},
     injectable_time::{MonotonicTime, TimeSource},
     lazy_static::lazy_static,

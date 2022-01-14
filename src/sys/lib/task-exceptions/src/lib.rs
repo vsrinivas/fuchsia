@@ -5,8 +5,9 @@
 use {
     anyhow::Error,
     fuchsia_async as fasync,
+    fuchsia_zircon::sys as zx_sys,
     fuchsia_zircon::{self as zx, HandleBased},
-    fuchsia_zircon_sys as zx_sys, futures,
+    futures,
     std::{convert::TryFrom, mem, ptr, task::Poll},
 };
 

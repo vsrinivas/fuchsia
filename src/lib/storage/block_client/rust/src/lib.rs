@@ -13,8 +13,8 @@ use {
     fidl_fuchsia_hardware_block as block,
     fuchsia_async::{self as fasync, FifoReadable, FifoWritable},
     fuchsia_trace as trace,
+    fuchsia_zircon::sys::zx_handle_t,
     fuchsia_zircon::{self as zx, HandleBased},
-    fuchsia_zircon_sys::zx_handle_t,
     futures::{channel::oneshot, executor::block_on},
     lazy_static::lazy_static,
     std::{

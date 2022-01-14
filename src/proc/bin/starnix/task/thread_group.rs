@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use fuchsia_zircon::sys;
 use fuchsia_zircon::{self as zx, AsHandleRef, Task as zxTask};
-use fuchsia_zircon_sys as sys;
 use parking_lot::{Mutex, RwLock};
 use std::collections::HashSet;
 use std::ffi::CStr;

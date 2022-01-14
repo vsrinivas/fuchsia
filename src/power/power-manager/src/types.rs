@@ -9,7 +9,7 @@
 //! developed measurement unit library would probably require const generics, so the compiler can
 //! interpret exponents applied to different unit types.
 
-use fuchsia_zircon_sys as sys;
+use fuchsia_zircon::sys;
 use std::ops;
 
 /// Defines aspects of a measurement unit that are applicable regardless of the scalar type.

@@ -6,8 +6,8 @@ use {
     crate::model::hooks::RuntimeInfo,
     async_trait::async_trait,
     fidl_fuchsia_diagnostics_types::{ComponentDiagnostics, Task as DiagnosticsTask, TaskUnknown},
+    fuchsia_zircon::sys as zx_sys,
     fuchsia_zircon::{self as zx, AsHandleRef, Task},
-    fuchsia_zircon_sys as zx_sys,
     futures::channel::oneshot,
 };
 

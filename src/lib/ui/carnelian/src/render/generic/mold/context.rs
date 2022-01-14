@@ -18,7 +18,7 @@ use fuchsia_component::client::connect_to_protocol;
 use fuchsia_framebuffer::{sysmem::set_allocator_name, PixelFormat};
 use fuchsia_trace::{duration_begin, duration_end};
 use fuchsia_zircon as zx;
-use fuchsia_zircon_sys as sys;
+use fuchsia_zircon::sys;
 
 use crate::{
     drawing::DisplayRotation,

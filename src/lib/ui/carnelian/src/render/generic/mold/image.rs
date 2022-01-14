@@ -7,8 +7,8 @@ use std::{io::Read, mem, slice, sync::Arc};
 use anyhow::Error;
 use fidl_fuchsia_sysmem::{BufferCollectionSynchronousProxy, CoherencyDomain};
 use fuchsia_trace::duration;
+use fuchsia_zircon::sys;
 use fuchsia_zircon::{self as zx, prelude::*};
-use fuchsia_zircon_sys as sys;
 use mapped_vmo::Mapping;
 
 #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]

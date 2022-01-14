@@ -13,7 +13,7 @@ use {
     },
     async_trait::async_trait,
     fidl_fuchsia_test as ftest, fuchsia_async as fasync, fuchsia_zircon as zx,
-    fuchsia_zircon_sys::ZX_CHANNEL_MAX_MSG_BYTES,
+    fuchsia_zircon::sys::ZX_CHANNEL_MAX_MSG_BYTES,
     futures::{
         future::{AbortHandle, Shared},
         lock::Mutex,

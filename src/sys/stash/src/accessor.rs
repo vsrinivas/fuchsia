@@ -10,8 +10,7 @@ use fidl_fuchsia_stash::{
 };
 use fuchsia_async as fasync;
 use fuchsia_syslog::fx_log_warn;
-use fuchsia_zircon_sys;
-use fuchsia_zircon_sys::ZX_CHANNEL_MAX_MSG_BYTES;
+use fuchsia_zircon::sys::ZX_CHANNEL_MAX_MSG_BYTES;
 use futures::lock::Mutex;
 use futures::{TryFutureExt, TryStreamExt};
 use measure_tape_for_stash::Measurable as _;

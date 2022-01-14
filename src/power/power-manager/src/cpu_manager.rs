@@ -9,7 +9,7 @@ use crate::types::{NormPerfs, PState, Watts};
 use anyhow::{bail, format_err, Error};
 use async_trait::async_trait;
 use fuchsia_inspect::{self as inspect, ArrayProperty as _, Property as _};
-use fuchsia_zircon_sys as sys;
+use fuchsia_zircon::sys;
 use serde_derive::Deserialize;
 use serde_json as json;
 use std::cell::Cell;
