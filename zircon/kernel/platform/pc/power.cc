@@ -76,7 +76,7 @@ static void halt_other_cpus(void) {
 
     // spin for a while
     // TODO: find a better way to spin at this low level
-    for (volatile int i = 0; i < 100000000; i++) {
+    for (volatile int i = 0; i < 100000000; i = i + 1) {
       if (halted_cpus.load() == targets) {
         break;
       }

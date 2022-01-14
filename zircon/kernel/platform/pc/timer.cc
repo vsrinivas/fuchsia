@@ -196,7 +196,7 @@ static zx_time_t discrete_time_roundup(zx_time_t t) {
 
 // The PIT timer will keep track of wall time if we aren't using the TSC
 static interrupt_eoi pit_timer_tick(void* arg) {
-  pit_ticks += 1;
+  pit_ticks = pit_ticks + 1;
   return IRQ_EOI_DEACTIVATE;
 }
 

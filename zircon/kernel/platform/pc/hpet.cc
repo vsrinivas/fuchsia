@@ -104,7 +104,7 @@ static void hpet_init(uint level) {
 
   /* Make sure all timers have interrupts disabled */
   for (uint8_t i = 0; i < num_timers; ++i) {
-    hpet_regs->timers[i].conf_caps &= ~TIMER_CONF_INT_EN;
+    hpet_regs->timers[i].conf_caps = hpet_regs->timers[i].conf_caps & ~TIMER_CONF_INT_EN;
   }
 
   /* figure out the ratio of clock monotonic ticks to HPET ticks.  This is the
@@ -176,14 +176,14 @@ void hpet_enable(void) {
   DEBUG_ASSERT(hpet_is_present());
 
   Guard<SpinLock, NoIrqSave> guard{hpet_lock::Get()};
-  hpet_regs->general_config |= GEN_CONF_EN;
+  hpet_regs->general_config = hpet_regs->general_config | GEN_CONF_EN;
 }
 
 void hpet_disable(void) {
   DEBUG_ASSERT(hpet_is_present());
 
   Guard<SpinLock, NoIrqSave> guard{hpet_lock::Get()};
-  hpet_regs->general_config &= ~GEN_CONF_EN;
+  hpet_regs->general_config = hpet_regs->general_config & ~GEN_CONF_EN;
 }
 
 /* Blocks for the requested number of milliseconds.
