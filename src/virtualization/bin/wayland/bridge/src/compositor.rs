@@ -25,7 +25,7 @@ use {
     crate::buffer::ImageInstanceId,
     crate::scenic::FlatlandPtr,
     fidl_fuchsia_math::{RectF, SizeU, Vec_},
-    fidl_fuchsia_ui_composition::TransformId,
+    fidl_fuchsia_ui_composition::{BlendMode, TransformId},
     std::{
         collections::VecDeque,
         sync::atomic::{AtomicUsize, Ordering},
@@ -573,6 +573,15 @@ impl Surface {
                 .borrow()
                 .proxy()
                 .set_content(&mut node.transform_id.clone(), &mut image_content.id.clone())
+                .expect("fidl error");
+
+            // Set blend mode based on if the buffer has an alpha channel.
+            let blend_mode =
+                if content.buffer.has_alpha() { BlendMode::SrcOver } else { BlendMode::Src };
+            node.flatland
+                .borrow()
+                .proxy()
+                .set_image_blending_function(&mut image_content.id.clone(), blend_mode)
                 .expect("fidl error");
 
             // Set image sample region based on current crop params.
