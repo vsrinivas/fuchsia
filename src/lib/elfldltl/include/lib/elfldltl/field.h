@@ -50,11 +50,6 @@ class UnsignedField {
 
   constexpr operator value_type() const { return get(); }
 
-  constexpr bool operator==(const UnsignedField& other) { return value_ == other.value_; }
-  constexpr bool operator!=(const UnsignedField& other) { return value_ != other.value_; }
-  constexpr bool operator==(value_type other) { return *this == UnsignedField{other}; }
-  constexpr bool operator!=(value_type other) { return *this != UnsignedField{other}; }
-
  private:
   static constexpr value_type Convert(std::array<uint8_t, sizeof(value_type)> bytes) {
     auto [first, last] = [&bytes]() {
