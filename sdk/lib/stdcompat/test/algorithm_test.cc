@@ -178,8 +178,9 @@ TEST(IsSortedTest, IsAliasWhenStdIsAvailable) {
   {
     using iterator_type = decltype(std::declval<std::vector<int>>().begin());
     auto comp = [](const int& a, const int& b) -> bool { return false; };
-    constexpr bool (*is_sorted_cpp20)(iterator_type, decltype(comp)) = cpp20::is_sorted;
-    constexpr bool (*is_sorted_std)(iterator_type, decltype(comp)) = std::is_sorted;
+    constexpr bool (*is_sorted_cpp20)(iterator_type, iterator_type, decltype(comp)) =
+        cpp20::is_sorted;
+    constexpr bool (*is_sorted_std)(iterator_type, iterator_type, decltype(comp)) = std::is_sorted;
 
     static_assert(is_sorted_cpp20 == is_sorted_std,
                   "cpp20::is_sorted_std should be an alias of std::sort.");
