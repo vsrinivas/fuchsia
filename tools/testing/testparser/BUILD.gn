@@ -11,7 +11,6 @@ go_library("testparser") {
     "dartsystemtest.go",
     "googletest.go",
     "gotest.go",
-    "result.go",
     "rusttest.go",
     "testparser.go",
     "testparser_test.go",
@@ -19,6 +18,8 @@ go_library("testparser") {
     "vulkanctstest.go",
     "zircon_utest.go",
   ]
+
+  deps = [ "//tools/testing/runtests" ]
 }
 
 group("tests") {

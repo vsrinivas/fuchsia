@@ -7,6 +7,8 @@ package testparser
 import (
 	"regexp"
 	"strings"
+
+	"go.fuchsia.dev/fuchsia/tools/testing/runtests"
 )
 
 var (
@@ -32,9 +34,9 @@ var (
 )
 
 // Parse tests run by the Test Runner Framework (TRF)
-func parseTrfTest(lines [][]byte) []TestCaseResult {
-	var res []TestCaseResult
-	testCases := make(map[string]TestCaseResult)
+func parseTrfTest(lines [][]byte) []runtests.TestCaseResult {
+	var res []runtests.TestCaseResult
+	testCases := make(map[string]runtests.TestCaseResult)
 	errorMessages := make(map[string]*strings.Builder)
 
 	currentTestName := ""
@@ -43,7 +45,7 @@ func parseTrfTest(lines [][]byte) []TestCaseResult {
 		line := string(line)
 		// Stop parsing if running legacy_test, see: fxbug.dev/91055
 		if trfLegacyTest.MatchString(line) {
-			return []TestCaseResult{}
+			return []runtests.TestCaseResult{}
 		}
 		if m := trfTestCasePattern.FindStringSubmatch(line); m != nil {
 			tc := createTRFTestCase(m[2], m[1])
@@ -70,7 +72,7 @@ func parseTrfTest(lines [][]byte) []TestCaseResult {
 
 	for testName, testCase := range testCases {
 		if msg, ok := errorMessages[testName]; ok {
-			if testCase.Status == Fail {
+			if testCase.Status == runtests.TestFailure {
 				testCase.FailReason = msg.String()
 			}
 		}
@@ -79,23 +81,23 @@ func parseTrfTest(lines [][]byte) []TestCaseResult {
 	return res
 }
 
-func createTRFTestCase(caseName, result string) TestCaseResult {
-	var status TestCaseStatus
+func createTRFTestCase(caseName, result string) runtests.TestCaseResult {
+	var status runtests.TestResult
 	switch result {
 	case "PASSED":
-		status = Pass
+		status = runtests.TestSuccess
 	case "FAILED":
-		status = Fail
+		status = runtests.TestFailure
 	case "INCONCLUSIVE":
-		status = Fail
+		status = runtests.TestFailure
 	case "TIMED_OUT":
-		status = Abort
+		status = runtests.TestAborted
 	case "ERROR":
-		status = Fail
+		status = runtests.TestFailure
 	case "SKIPPED":
-		status = Skip
+		status = runtests.TestSkipped
 	}
-	return TestCaseResult{
+	return runtests.TestCaseResult{
 		DisplayName: caseName,
 		CaseName:    caseName,
 		Status:      status,

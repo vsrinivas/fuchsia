@@ -29,7 +29,6 @@ import (
 	"go.fuchsia.dev/fuchsia/tools/lib/retry"
 	"go.fuchsia.dev/fuchsia/tools/net/sshutil"
 	"go.fuchsia.dev/fuchsia/tools/testing/runtests"
-	"go.fuchsia.dev/fuchsia/tools/testing/testparser"
 )
 
 type fakeSSHClient struct {
@@ -256,7 +255,7 @@ func TestFFXTester(t *testing.T) {
 			name:           "ffx test times out",
 			experimental:   true,
 			runV2:          true,
-			expectedResult: runtests.TestTimeout,
+			expectedResult: runtests.TestAborted,
 		},
 		{
 			name:           "run multiple tests",
@@ -284,7 +283,7 @@ func TestFFXTester(t *testing.T) {
 				outcome = ffxutil.TestPassed
 			case runtests.TestFailure:
 				outcome = ffxutil.TestFailed
-			case runtests.TestTimeout:
+			case runtests.TestAborted:
 				outcome = ffxutil.TestTimedOut
 			}
 			ffx := &ffxutil.MockFFXInstance{TestOutcome: outcome}
@@ -336,9 +335,9 @@ func TestFFXTester(t *testing.T) {
 						t.Errorf("failed to call `ffx test`, called: %s", ffx.CmdsCalled)
 					}
 					if c.experimental {
-						expectedCaseStatus := testparser.Pass
+						expectedCaseStatus := runtests.TestSuccess
 						if c.expectedResult != runtests.TestSuccess {
-							expectedCaseStatus = testparser.Fail
+							expectedCaseStatus = runtests.TestFailure
 						}
 						if len(testResult.Cases) != 1 {
 							t.Errorf("expected 1 test case, got %d", len(testResult.Cases))
@@ -463,7 +462,7 @@ func TestSSHTester(t *testing.T) {
 		{
 			name:           "test timeout",
 			runErrs:        []error{fakeSSHExitError{exitStatus: timeoutExitCode}},
-			expectedResult: runtests.TestTimeout,
+			expectedResult: runtests.TestAborted,
 		},
 	}
 	for _, c := range cases {

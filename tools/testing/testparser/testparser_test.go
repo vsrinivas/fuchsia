@@ -11,15 +11,17 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
+
+	"go.fuchsia.dev/fuchsia/tools/testing/runtests"
 )
 
-func compactJson(jsonBytes []byte) []byte {
+func compactJSON(jsonBytes []byte) []byte {
 	buffer := bytes.NewBuffer([]byte{})
 	json.Compact(buffer, jsonBytes)
 	return buffer.Bytes()
 }
 
-func indentJson(jsonBytes []byte) []byte {
+func indentJSON(jsonBytes []byte) []byte {
 	buffer := bytes.NewBuffer([]byte{})
 	json.Indent(buffer, jsonBytes, "", "\t")
 	return buffer.Bytes()
@@ -28,22 +30,22 @@ func indentJson(jsonBytes []byte) []byte {
 func testCase(t *testing.T, stdout string, want string) {
 	t.Helper()
 	actual, _ := json.Marshal(Parse([]byte(stdout)))
-	if !bytes.Equal(actual, compactJson([]byte(want))) {
-		actualIndented := string(indentJson(actual))
-		wantIndented := string(indentJson([]byte(want)))
+	if !bytes.Equal(actual, compactJSON([]byte(want))) {
+		actualIndented := string(indentJSON(actual))
+		wantIndented := string(indentJSON([]byte(want)))
 		t.Errorf("Parse(stdout) = `\n%v\n`; want `\n%v\n`", actualIndented, wantIndented)
 	}
 }
 
-func testCaseCmp(t *testing.T, stdout string, want []TestCaseResult) {
+func testCaseCmp(t *testing.T, stdout string, want []runtests.TestCaseResult) {
 	r := Parse([]byte(stdout))
-	if diff := cmp.Diff(want, r, cmpopts.SortSlices(func(a, b TestCaseResult) bool { return a.DisplayName < b.DisplayName })); diff != "" {
+	if diff := cmp.Diff(want, r, cmpopts.SortSlices(func(a, b runtests.TestCaseResult) bool { return a.DisplayName < b.DisplayName })); diff != "" {
 		t.Errorf("Found mismatch in %s (-want +got):\n%s", stdout, diff)
 	}
 }
 
 func TestParseEmpty(t *testing.T) {
-	testCaseCmp(t, "", []TestCaseResult{})
+	testCaseCmp(t, "", []runtests.TestCaseResult{})
 }
 
 func TestParseInvalid(t *testing.T) {
@@ -53,7 +55,7 @@ Its fleece was white as snow
 And everywhere that Mary went
 The lamb was sure to go
 `
-	testCaseCmp(t, stdout, []TestCaseResult{})
+	testCaseCmp(t, stdout, []runtests.TestCaseResult{})
 }
 
 // If no test cases can be parsed, the output should be an empty slice, not a
@@ -107,43 +109,43 @@ Failed tests: NodeManagerTest.TruncateExceptionCase, VnodeTest.TruncateException
 fuchsia-pkg://fuchsia.com/f2fs-fs-tests#meta/f2fs-unittest.cm completed with result: FAILED
 One or more test runs failed.
 `
-	want := []TestCaseResult{
+	want := []runtests.TestCaseResult{
 		{
 			DisplayName: "BCacheTest.Trim",
 			CaseName:    "BCacheTest.Trim",
-			Status:      "Pass",
+			Status:      runtests.TestSuccess,
 			Format:      "FTF",
 		}, {
 			DisplayName: "BCacheTest.Exception",
 			CaseName:    "BCacheTest.Exception",
-			Status:      "Pass",
+			Status:      runtests.TestSuccess,
 			Format:      "FTF",
 		}, {
 			DisplayName: "CheckpointTest.Version",
 			CaseName:    "CheckpointTest.Version",
-			Status:      "Pass",
+			Status:      runtests.TestSuccess,
 			Format:      "FTF",
 		}, {
 			DisplayName: "FormatFilesystemTest.MkfsOptionsLabel",
 			CaseName:    "FormatFilesystemTest.MkfsOptionsLabel",
-			Status:      "Pass",
+			Status:      runtests.TestSuccess,
 			Format:      "FTF",
 		}, {
 			DisplayName: "NodeManagerTest.TruncateExceptionCase",
 			CaseName:    "NodeManagerTest.TruncateExceptionCase",
-			Status:      "Fail",
+			Status:      runtests.TestFailure,
 			Format:      "FTF",
 			FailReason:  "Error reading test result:File(read call failed: A FIDL client's channel to the service (anonymous) File was closed: PEER_CLOSED",
 		}, {
 			DisplayName: "VnodeTest.TruncateExceptionCase",
 			CaseName:    "VnodeTest.TruncateExceptionCase",
-			Status:      "Fail",
+			Status:      runtests.TestFailure,
 			Format:      "FTF",
 			FailReason:  "Test exited abnormally",
 		}, {
 			DisplayName: "virtualization::virtualization_netdevice::remove_network",
 			CaseName:    "virtualization::virtualization_netdevice::remove_network",
-			Status:      "Abort",
+			Status:      runtests.TestAborted,
 			Format:      "FTF",
 		},
 	}
@@ -181,68 +183,68 @@ Their prints get interleaved with the results.
 [==========] 9 tests from 1 test suite ran. (38 ms total)
 [  PASSED  ] 9 tests.
 `
-	want := []TestCaseResult{
+	want := []runtests.TestCaseResult{
 		{
 			DisplayName: "SynonymDictTest.IsInitializedEmpty",
 			SuiteName:   "SynonymDictTest",
 			CaseName:    "IsInitializedEmpty",
-			Status:      "Pass",
+			Status:      runtests.TestSuccess,
 			Duration:    4000000,
 			Format:      "GoogleTest",
 		}, {
 			DisplayName: "SynonymDictTest.ReadingEmptyFileReturnsFalse",
 			SuiteName:   "SynonymDictTest",
 			CaseName:    "ReadingEmptyFileReturnsFalse",
-			Status:      "Pass",
+			Status:      runtests.TestSuccess,
 			Duration:    3000000,
 			Format:      "GoogleTest",
 		}, {
 			DisplayName: "SynonymDictTest.ReadingNonexistentFileReturnsFalse",
 			SuiteName:   "SynonymDictTest",
 			CaseName:    "ReadingNonexistentFileReturnsFalse",
-			Status:      "Pass",
+			Status:      runtests.TestSuccess,
 			Duration:    4000000,
 			Format:      "GoogleTest",
 		}, {
 			DisplayName: "SynonymDictTest.LoadDictionary",
 			SuiteName:   "SynonymDictTest",
 			CaseName:    "LoadDictionary",
-			Status:      "Pass",
+			Status:      runtests.TestSuccess,
 			Duration:    4000000,
 			Format:      "GoogleTest",
 		}, {
 			DisplayName: "SynonymDictTest.GetSynonymsReturnsListOfWords",
 			SuiteName:   "SynonymDictTest",
 			CaseName:    "GetSynonymsReturnsListOfWords",
-			Status:      "Pass",
+			Status:      runtests.TestSuccess,
 			Duration:    4000000,
 			Format:      "GoogleTest",
 		}, {
 			DisplayName: "SynonymDictTest.GetSynonymsWhenNoSynonymsAreAvailable",
 			SuiteName:   "SynonymDictTest",
 			CaseName:    "GetSynonymsWhenNoSynonymsAreAvailable",
-			Status:      "Pass",
+			Status:      runtests.TestSuccess,
 			Duration:    4000000,
 			Format:      "GoogleTest",
 		}, {
 			DisplayName: "SynonymDictTest.AllWordsAreSynonymsOfEachOther",
 			SuiteName:   "SynonymDictTest",
 			CaseName:    "AllWordsAreSynonymsOfEachOther",
-			Status:      "Pass",
+			Status:      runtests.TestSuccess,
 			Duration:    4000000,
 			Format:      "GoogleTest",
 		}, {
 			DisplayName: "SynonymDictTest.GetSynonymsReturnsListOfWordsWithStubs",
 			SuiteName:   "SynonymDictTest",
 			CaseName:    "GetSynonymsReturnsListOfWordsWithStubs",
-			Status:      "Fail",
+			Status:      runtests.TestFailure,
 			Duration:    4000000,
 			Format:      "GoogleTest",
 		}, {
 			DisplayName: "SynonymDictTest.CompoundWordBug",
 			SuiteName:   "SynonymDictTest",
 			CaseName:    "CompoundWordBug",
-			Status:      "Skip",
+			Status:      runtests.TestSkipped,
 			Duration:    4000000,
 			Format:      "GoogleTest",
 		},
@@ -276,57 +278,57 @@ func TestParseGo(t *testing.T) {
 		--- PASS: TestAdd/add_baz (0.00s)
 ok 8 host_x64/fake_tests (4.378744489s)
 `
-	want := []TestCaseResult{
+	want := []runtests.TestCaseResult{
 		{
 			DisplayName: "TestParseEmpty",
 			CaseName:    "TestParseEmpty",
-			Status:      "Pass",
+			Status:      runtests.TestSuccess,
 			Duration:    10000000,
 			Format:      "Go",
 		}, {
 			DisplayName: "TestParseInvalid",
 			CaseName:    "TestParseInvalid",
-			Status:      "Pass",
+			Status:      runtests.TestSuccess,
 			Duration:    20000000,
 			Format:      "Go",
 		}, {
 			DisplayName: "TestParseGoogleTest",
 			CaseName:    "TestParseGoogleTest",
-			Status:      "Fail",
+			Status:      runtests.TestFailure,
 			Duration:    3000000000,
 			Format:      "Go",
 		}, {
 			DisplayName: "TestFail",
 			CaseName:    "TestFail",
-			Status:      "Fail",
+			Status:      runtests.TestFailure,
 			Format:      "Go",
 		}, {
 			DisplayName: "TestSkip",
 			CaseName:    "TestSkip",
-			Status:      "Skip",
+			Status:      runtests.TestSkipped,
 			Format:      "Go",
 		}, {
 			DisplayName: "TestAdd",
 			CaseName:    "TestAdd",
-			Status:      "Pass",
+			Status:      runtests.TestSuccess,
 			Format:      "Go",
 		}, {
 			DisplayName: "TestAdd/add_foo",
 			SuiteName:   "TestAdd",
 			CaseName:    "add_foo",
-			Status:      "Pass",
+			Status:      runtests.TestSuccess,
 			Format:      "Go",
 		}, {
 			DisplayName: "TestAdd/add_bar",
 			SuiteName:   "TestAdd",
 			CaseName:    "add_bar",
-			Status:      "Pass",
+			Status:      runtests.TestSuccess,
 			Format:      "Go",
 		}, {
 			DisplayName: "TestAdd/add_baz",
 			SuiteName:   "TestAdd",
 			CaseName:    "add_baz",
-			Status:      "Pass",
+			Status:      runtests.TestSuccess,
 			Format:      "Go",
 		},
 	}
@@ -394,11 +396,11 @@ testing.tRunner(0xc00014c120, 0x57a1a8)
 created by testing.(*T).Run
 	/usr/local/google/home/curtisgalloway/src/fuchsia/prebuilt/third_party/go/linux-x64/src/testing/testing.go:1042 +0x357
 	`
-	want := []TestCaseResult{
+	want := []runtests.TestCaseResult{
 		{
 			DisplayName: "TestReboot",
 			CaseName:    "TestReboot",
-			Status:      "Fail",
+			Status:      runtests.TestFailure,
 			Duration:    1000000000,
 			Format:      "Go",
 		},
@@ -480,31 +482,31 @@ Failed tests: legacy_test
 fuchsia-pkg://fuchsia.com/fuchsiatests#meta/some-tests.cm completed with result: FAILED
 One or more test runs failed.`
 
-	want := []TestCaseResult{
+	want := []runtests.TestCaseResult{
 		{
 			DisplayName: "tests::ignored_test",
 			SuiteName:   "tests",
 			CaseName:    "ignored_test",
-			Status:      "Skip",
+			Status:      runtests.TestSkipped,
 			Format:      "Rust",
 		}, {
 			DisplayName: "tests::test_add_hundred",
 			SuiteName:   "tests",
 			CaseName:    "test_add_hundred",
-			Status:      "Pass",
+			Status:      runtests.TestSuccess,
 			Format:      "Rust",
 		}, {
 			DisplayName: "tests::test_add",
 			SuiteName:   "tests",
 			CaseName:    "test_add",
-			Status:      "Fail",
+			Status:      runtests.TestFailure,
 			Format:      "Rust",
 			FailReason:  "thread 'main' panicked at 'assertion failed: `(left != right)`\n  left: `ObjectType(PORT)`,\n  right: `ObjectType(PORT)`', ../../src/lib/zircon/rust/src/channel.rs:761:9`",
 		}, {
 			DisplayName: "tests::test_substract",
 			SuiteName:   "tests",
 			CaseName:    "test_substract",
-			Status:      "Fail",
+			Status:      runtests.TestFailure,
 			Format:      "Rust",
 			FailReason:  "thread 'main' panicked at 'assertion failed: `(left != right)`\n  left: `Err((5, 0))`,\n  right: `Err((5, 0))`', ../../src/lib/zircon/rust/src/channel.rs:783:9",
 		},
@@ -514,7 +516,7 @@ One or more test runs failed.`
 
 func TestParseZircon(t *testing.T) {
 	stdout := `
-CASE minfs_truncate_tests                               [STARTED] 
+CASE minfs_truncate_tests                               [STARTED]
     TestTruncateSmall                                   [RUNNING] [PASSED] (1 ms)
     (TestTruncateLarge<1 << 10, 1000>)                  [RUNNING] [PASSED] (20414 ms)
     (TestTruncateLarge<1 << 15, 500>)                   [RUNNING] [PASSED] (10012 ms)
@@ -522,7 +524,7 @@ CASE minfs_truncate_tests                               [STARTED]
     (TestTruncateLarge<1 << 25, 500>)                   [IGNORED]
 CASE minfs_truncate_tests                               [PASSED]
 
-CASE minfs_sparse_tests                                 [STARTED] 
+CASE minfs_sparse_tests                                 [STARTED]
     (test_sparse<0, 0, kBlockSize>)                     [RUNNING] [PASSED] (19 ms)
     (test_sparse<kBlockSize / 2, 0, kBlockSize>)        [RUNNING] [PASSED] (20 ms)
     (test_sparse<kBlockSize / 2, kBlockSize, kBlockSize>) [RUNNING] [PASSED] (19 ms)
@@ -534,170 +536,170 @@ CASE minfs_sparse_tests                                 [STARTED]
     (test_sparse<kBlockSize * kDirectBlocks + kBlockSize, kBlockSize * kDirectBlocks + 2 * kBlockSize, kBlockSize * 32>) [RUNNING] [PASSED] (25 ms)
 CASE minfs_sparse_tests                                 [PASSED]
 
-CASE minfs_rw_workers_test                              [STARTED] 
+CASE minfs_rw_workers_test                              [STARTED]
     TestWorkSingleThread                                [RUNNING] [PASSED] (40920 ms)
 CASE minfs_rw_workers_test                              [PASSED]
 
-CASE minfs_maxfile_tests                                [STARTED] 
+CASE minfs_maxfile_tests                                [STARTED]
     test_maxfile                                        [RUNNING] [PASSED] (62243 ms)
 CASE minfs_maxfile_tests                                [PASSED]
 
-CASE minfs_directory_tests                              [STARTED] 
+CASE minfs_directory_tests                              [STARTED]
     TestDirectoryLarge                                  [RUNNING] [PASSED] (3251 ms)
     TestDirectoryReaddir                                [RUNNING] [PASSED] (69 ms)
     TestDirectoryReaddirLarge                           [RUNNING] [PASSED] (6414 ms)
 CASE minfs_directory_tests                              [PASSED]
 
-CASE minfs_basic_tests                                  [STARTED] 
+CASE minfs_basic_tests                                  [STARTED]
     test_basic                                          [RUNNING] [PASSED] (21 ms)
 CASE minfs_basic_tests                                  [PASSED]
 ====================================================
 Results for test binary "host_x64-asan/fs-host":
     SUCCESS!  All test cases passed!
-    CASES:  6     SUCCESS:  5     FAILED:  1   
+    CASES:  6     SUCCESS:  5     FAILED:  1
 ====================================================
 `
 
-	want := []TestCaseResult{
+	want := []runtests.TestCaseResult{
 		{
 			DisplayName: "minfs_truncate_tests.TestTruncateSmall",
 			SuiteName:   "minfs_truncate_tests",
 			CaseName:    "TestTruncateSmall",
 			Duration:    1000000,
-			Status:      "Pass",
+			Status:      runtests.TestSuccess,
 			Format:      "Zircon utest",
 		}, {
 			DisplayName: "minfs_truncate_tests.(TestTruncateLarge\u003c1 \u003c\u003c 10, 1000\u003e)",
 			SuiteName:   "minfs_truncate_tests",
 			CaseName:    "(TestTruncateLarge\u003c1 \u003c\u003c 10, 1000\u003e)",
 			Duration:    20414000000,
-			Status:      "Pass",
+			Status:      runtests.TestSuccess,
 			Format:      "Zircon utest",
 		}, {
 			DisplayName: "minfs_truncate_tests.(TestTruncateLarge\u003c1 \u003c\u003c 15, 500\u003e)",
 			SuiteName:   "minfs_truncate_tests",
 			CaseName:    "(TestTruncateLarge\u003c1 \u003c\u003c 15, 500\u003e)",
 			Duration:    10012000000,
-			Status:      "Pass",
+			Status:      runtests.TestSuccess,
 			Format:      "Zircon utest",
 		}, {
 			DisplayName: "minfs_truncate_tests.(TestTruncateLarge\u003c1 \u003c\u003c 20, 500\u003e)",
 			SuiteName:   "minfs_truncate_tests",
 			CaseName:    "(TestTruncateLarge\u003c1 \u003c\u003c 20, 500\u003e)",
 			Duration:    10973000000,
-			Status:      "Fail",
+			Status:      runtests.TestFailure,
 			Format:      "Zircon utest",
 		}, {
 			DisplayName: "minfs_truncate_tests.(TestTruncateLarge\u003c1 \u003c\u003c 25, 500\u003e)",
 			SuiteName:   "minfs_truncate_tests",
 			CaseName:    "(TestTruncateLarge\u003c1 \u003c\u003c 25, 500\u003e)",
 			Duration:    0,
-			Status:      "Skip",
+			Status:      runtests.TestSkipped,
 			Format:      "Zircon utest",
 		}, {
 			DisplayName: "minfs_sparse_tests.(test_sparse\u003c0, 0, kBlockSize\u003e)",
 			SuiteName:   "minfs_sparse_tests",
 			CaseName:    "(test_sparse\u003c0, 0, kBlockSize\u003e)",
 			Duration:    19000000,
-			Status:      "Pass",
+			Status:      runtests.TestSuccess,
 			Format:      "Zircon utest",
 		}, {
 			DisplayName: "minfs_sparse_tests.(test_sparse\u003ckBlockSize / 2, 0, kBlockSize\u003e)",
 			SuiteName:   "minfs_sparse_tests",
 			CaseName:    "(test_sparse\u003ckBlockSize / 2, 0, kBlockSize\u003e)",
 			Duration:    20000000,
-			Status:      "Pass",
+			Status:      runtests.TestSuccess,
 			Format:      "Zircon utest",
 		}, {
 			DisplayName: "minfs_sparse_tests.(test_sparse\u003ckBlockSize / 2, kBlockSize, kBlockSize\u003e)",
 			SuiteName:   "minfs_sparse_tests",
 			CaseName:    "(test_sparse\u003ckBlockSize / 2, kBlockSize, kBlockSize\u003e)",
 			Duration:    19000000,
-			Status:      "Pass",
+			Status:      runtests.TestSuccess,
 			Format:      "Zircon utest",
 		}, {
 			DisplayName: "minfs_sparse_tests.(test_sparse\u003ckBlockSize, 0, kBlockSize\u003e)",
 			SuiteName:   "minfs_sparse_tests",
 			CaseName:    "(test_sparse\u003ckBlockSize, 0, kBlockSize\u003e)",
 			Duration:    19000000,
-			Status:      "Pass",
+			Status:      runtests.TestSuccess,
 			Format:      "Zircon utest",
 		}, {
 			DisplayName: "minfs_sparse_tests.(test_sparse\u003ckBlockSize, kBlockSize / 2, kBlockSize\u003e)",
 			SuiteName:   "minfs_sparse_tests",
 			CaseName:    "(test_sparse\u003ckBlockSize, kBlockSize / 2, kBlockSize\u003e)",
 			Duration:    19000000,
-			Status:      "Pass",
+			Status:      runtests.TestSuccess,
 			Format:      "Zircon utest",
 		}, {
 			DisplayName: "minfs_sparse_tests.(test_sparse\u003ckBlockSize * kDirectBlocks, kBlockSize * kDirectBlocks - kBlockSize, kBlockSize * 2\u003e)",
 			SuiteName:   "minfs_sparse_tests",
 			CaseName:    "(test_sparse\u003ckBlockSize * kDirectBlocks, kBlockSize * kDirectBlocks - kBlockSize, kBlockSize * 2\u003e)",
 			Duration:    20000000,
-			Status:      "Pass",
+			Status:      runtests.TestSuccess,
 			Format:      "Zircon utest",
 		}, {
 			DisplayName: "minfs_sparse_tests.(test_sparse\u003ckBlockSize * kDirectBlocks, kBlockSize * kDirectBlocks - kBlockSize, kBlockSize * 32\u003e)",
 			SuiteName:   "minfs_sparse_tests",
 			CaseName:    "(test_sparse\u003ckBlockSize * kDirectBlocks, kBlockSize * kDirectBlocks - kBlockSize, kBlockSize * 32\u003e)",
 			Duration:    24000000,
-			Status:      "Pass",
+			Status:      runtests.TestSuccess,
 			Format:      "Zircon utest",
 		}, {
 			DisplayName: "minfs_sparse_tests.(test_sparse\u003ckBlockSize * kDirectBlocks + kBlockSize, kBlockSize * kDirectBlocks - kBlockSize, kBlockSize * 32\u003e)",
 			SuiteName:   "minfs_sparse_tests",
 			CaseName:    "(test_sparse\u003ckBlockSize * kDirectBlocks + kBlockSize, kBlockSize * kDirectBlocks - kBlockSize, kBlockSize * 32\u003e)",
 			Duration:    24000000,
-			Status:      "Pass",
+			Status:      runtests.TestSuccess,
 			Format:      "Zircon utest",
 		}, {
 			DisplayName: "minfs_sparse_tests.(test_sparse\u003ckBlockSize * kDirectBlocks + kBlockSize, kBlockSize * kDirectBlocks + 2 * kBlockSize, kBlockSize * 32\u003e)",
 			SuiteName:   "minfs_sparse_tests",
 			CaseName:    "(test_sparse\u003ckBlockSize * kDirectBlocks + kBlockSize, kBlockSize * kDirectBlocks + 2 * kBlockSize, kBlockSize * 32\u003e)",
 			Duration:    25000000,
-			Status:      "Pass",
+			Status:      runtests.TestSuccess,
 			Format:      "Zircon utest",
 		}, {
 			DisplayName: "minfs_rw_workers_test.TestWorkSingleThread",
 			SuiteName:   "minfs_rw_workers_test",
 			CaseName:    "TestWorkSingleThread",
 			Duration:    40920000000,
-			Status:      "Pass",
+			Status:      runtests.TestSuccess,
 			Format:      "Zircon utest",
 		}, {
 			DisplayName: "minfs_maxfile_tests.test_maxfile",
 			SuiteName:   "minfs_maxfile_tests",
 			CaseName:    "test_maxfile",
 			Duration:    62243000000,
-			Status:      "Pass",
+			Status:      runtests.TestSuccess,
 			Format:      "Zircon utest",
 		}, {
 			DisplayName: "minfs_directory_tests.TestDirectoryLarge",
 			SuiteName:   "minfs_directory_tests",
 			CaseName:    "TestDirectoryLarge",
 			Duration:    3251000000,
-			Status:      "Pass",
+			Status:      runtests.TestSuccess,
 			Format:      "Zircon utest",
 		}, {
 			DisplayName: "minfs_directory_tests.TestDirectoryReaddir",
 			SuiteName:   "minfs_directory_tests",
 			CaseName:    "TestDirectoryReaddir",
 			Duration:    69000000,
-			Status:      "Pass",
+			Status:      runtests.TestSuccess,
 			Format:      "Zircon utest",
 		}, {
 			DisplayName: "minfs_directory_tests.TestDirectoryReaddirLarge",
 			SuiteName:   "minfs_directory_tests",
 			CaseName:    "TestDirectoryReaddirLarge",
 			Duration:    6414000000,
-			Status:      "Pass",
+			Status:      runtests.TestSuccess,
 			Format:      "Zircon utest",
 		}, {
 			DisplayName: "minfs_basic_tests.test_basic",
 			SuiteName:   "minfs_basic_tests",
 			CaseName:    "test_basic",
 			Duration:    21000000,
-			Status:      "Pass",
+			Status:      runtests.TestSuccess,
 			Format:      "Zircon utest",
 		},
 	}
@@ -711,7 +713,7 @@ func TestFxb51327(t *testing.T) {
 [----------] Global test environment set-up.
 [----------] 10 tests from UltrasoundTest
 [ RUN      ] UltrasoundTest.CreateRenderer
-[00392.026593][276880][276883][test-devmgr] INFO: 
+[00392.026593][276880][276883][test-devmgr] INFO:
 [00392.026655][276880][276883][test-devmgr] INFO: Running remove task for device 0xc64fcfe910 'Virtual_Audio_Device_(default)'
 [00392.026783][276880][276883][test-devmgr] INFO: Removed device 0xc64fcfe910 'Virtual_Audio_Device_(default)': ZX_OK
 [00392.026793][276880][276883][test-devmgr] INFO: Removing device 0xc64fcfe910 'Virtual_Audio_Device_(default)' parent=0xc64fcfe610
@@ -725,7 +727,7 @@ func TestFxb51327(t *testing.T) {
 [00392.026600][280027][280375][audio_core] ERROR: [src/media/audio/audio_core/audio_driver_v2.cc(75)] AudioDriver failed with error: -24: -24 (ZX_ERR_PEER_CLOSED)
 [       OK ] UltrasoundTest.CreateRenderer (964 ms)
 [ RUN      ] UltrasoundTest.RendererDoesNotSupportSetPcmStreamType
-[00392.169044][276880][276883][test-devmgr] INFO: 
+[00392.169044][276880][276883][test-devmgr] INFO:
 [00392.169124][276880][276883][test-devmgr] INFO: Running remove task for device 0xc64fcfe910 'Virtual_Audio_Device_(default)'
 [00392.169299][276880][276883][test-devmgr] INFO: Removed device 0xc64fcfe910 'Virtual_Audio_Device_(default)': ZX_OK
 [00392.169321][276880][276883][test-devmgr] INFO: Removing device 0xc64fcfe910 'Virtual_Audio_Device_(default)' parent=0xc64fcfe610
@@ -736,7 +738,7 @@ func TestFxb51327(t *testing.T) {
 [00392.168963][280027][280436][audio_core] INFO: [audio_driver_v2.cc(585)] Output shutting down 'Stream channel closed unexpectedly', status:-24
 [       OK ] UltrasoundTest.RendererDoesNotSupportSetPcmStreamType (142 ms)
 [ RUN      ] UltrasoundTest.RendererDoesNotSupportSetUsage
-[00392.281231][276880][276883][test-devmgr] INFO: 
+[00392.281231][276880][276883][test-devmgr] INFO:
 [00392.281289][276880][276883][test-devmgr] INFO: Running remove task for device 0xc64fcfe910 'Virtual_Audio_Device_(default)'
 [00392.281417][276880][276883][test-devmgr] INFO: Removed device 0xc64fcfe910 'Virtual_Audio_Device_(default)': ZX_OK
 [00392.281428][276880][276883][test-devmgr] INFO: Removing device 0xc64fcfe910 'Virtual_Audio_Device_(default)' parent=0xc64fcfe610
@@ -748,7 +750,7 @@ func TestFxb51327(t *testing.T) {
 [00392.281120][280027][280498][audio_core] INFO: [audio_driver_v2.cc(585)] Output shutting down 'Stream channel closed unexpectedly', status:-24
 [       OK ] UltrasoundTest.RendererDoesNotSupportSetUsage (112 ms)
 [ RUN      ] UltrasoundTest.RendererDoesNotSupportBindGainControl
-[00392.423415][276880][276883][test-devmgr] INFO: 
+[00392.423415][276880][276883][test-devmgr] INFO:
 [00392.423473][276880][276883][test-devmgr] INFO: Running remove task for device 0xc64fcfe910 'Virtual_Audio_Device_(default)'
 [00392.423785][276880][276883][test-devmgr] INFO: Removed device 0xc64fcfe910 'Virtual_Audio_Device_(default)': ZX_OK
 [00392.423800][276880][276883][test-devmgr] INFO: Removing device 0xc64fcfe910 'Virtual_Audio_Device_(default)' parent=0xc64fcfe610
@@ -762,7 +764,7 @@ func TestFxb51327(t *testing.T) {
 [00392.423417][280027][280562][audio_core] ERROR: [src/media/audio/audio_core/audio_driver_v2.cc(305)] AudioDriver failed with error: -24: -24 (ZX_ERR_PEER_CLOSED)
 [       OK ] UltrasoundTest.RendererDoesNotSupportBindGainControl (151 ms)
 [ RUN      ] UltrasoundTest.RendererDoesNotSupportSetReferenceClock
-[00392.575423][276880][276883][test-devmgr] INFO: 
+[00392.575423][276880][276883][test-devmgr] INFO:
 [00392.575484][276880][276883][test-devmgr] INFO: Running remove task for device 0xc64fcfe910 'Virtual_Audio_Device_(default)'
 [00392.575618][276880][276883][test-devmgr] INFO: Removed device 0xc64fcfe910 'Virtual_Audio_Device_(default)': ZX_OK
 [00392.575627][276880][276883][test-devmgr] INFO: Removing device 0xc64fcfe910 'Virtual_Audio_Device_(default)' parent=0xc64fcfe610
@@ -772,7 +774,7 @@ func TestFxb51327(t *testing.T) {
 [00392.575361][280027][280625][audio_core] INFO: [audio_driver_v2.cc(585)] Output shutting down 'Stream channel closed unexpectedly', status:-24
 [       OK ] UltrasoundTest.RendererDoesNotSupportSetReferenceClock (143 ms)
 [ RUN      ] UltrasoundTest.CreateCapturer
-[00392.607433][276880][276883][test-devmgr] INFO: 
+[00392.607433][276880][276883][test-devmgr] INFO:
 [00392.607488][276880][276883][test-devmgr] INFO: Running remove task for device 0xc64fcfe910 'Virtual_Audio_Device_(default)'
 [00392.607609][276880][276883][test-devmgr] INFO: Removed device 0xc64fcfe910 'Virtual_Audio_Device_(default)': ZX_OK
 [00392.607620][276880][276883][test-devmgr] INFO: Removing device 0xc64fcfe910 'Virtual_Audio_Device_(default)' parent=0xc64fcfe610
@@ -781,7 +783,7 @@ func TestFxb51327(t *testing.T) {
 [00392.607377][280027][280686][audio_core] INFO: [audio_driver_v2.cc(585)]  Input shutting down 'Stream channel closed unexpectedly', status:-24
 [       OK ] UltrasoundTest.CreateCapturer (32 ms)
 [ RUN      ] UltrasoundTest.CapturerDoesNotSupportSetPcmStreamType
-[00392.649557][276880][276883][test-devmgr] INFO: 
+[00392.649557][276880][276883][test-devmgr] INFO:
 [00392.649636][276880][276883][test-devmgr] INFO: Running remove task for device 0xc64fcfe910 'Virtual_Audio_Device_(default)'
 [00392.649796][276880][276883][test-devmgr] INFO: Removed device 0xc64fcfe910 'Virtual_Audio_Device_(default)': ZX_OK
 [00392.649812][276880][276883][test-devmgr] INFO: Removing device 0xc64fcfe910 'Virtual_Audio_Device_(default)' parent=0xc64fcfe610
@@ -793,7 +795,7 @@ func TestFxb51327(t *testing.T) {
 [00392.649569][280027][280755][audio_core] ERROR: [src/media/audio/audio_core/audio_driver_v2.cc(305)] AudioDriver failed with error: -24: -24 (ZX_ERR_PEER_CLOSED)
 [       OK ] UltrasoundTest.CapturerDoesNotSupportSetPcmStreamType (51 ms)
 [ RUN      ] UltrasoundTest.CapturerDoesNotSupportSetUsage
-[00392.701181][276880][276883][test-devmgr] INFO: 
+[00392.701181][276880][276883][test-devmgr] INFO:
 [00392.701258][276880][276883][test-devmgr] INFO: Running remove task for device 0xc64fcfe910 'Virtual_Audio_Device_(default)'
 [00392.701417][276880][276883][test-devmgr] INFO: Removed device 0xc64fcfe910 'Virtual_Audio_Device_(default)': ZX_OK
 [00392.701431][276880][276883][test-devmgr] INFO: Removing device 0xc64fcfe910 'Virtual_Audio_Device_(default)' parent=0xc64fcfe610
@@ -803,7 +805,7 @@ func TestFxb51327(t *testing.T) {
 [00392.701185][280027][280824][audio_core] ERROR: [src/media/audio/audio_core/audio_driver_v2.cc(305)] AudioDriver failed with error: -24: -24 (ZX_ERR_PEER_CLOSED)
 [       OK ] UltrasoundTest.CapturerDoesNotSupportSetUsage (42 ms)
 [ RUN      ] UltrasoundTest.CapturerDoesNotSupportBindGainControl
-[00392.743724][276880][276883][test-devmgr] INFO: 
+[00392.743724][276880][276883][test-devmgr] INFO:
 [00392.743803][276880][276883][test-devmgr] INFO: Running remove task for device 0xc64fcfe910 'Virtual_Audio_Device_(default)'
 [00392.743971][276880][276883][test-devmgr] INFO: Removed device 0xc64fcfe910 'Virtual_Audio_Device_(default)': ZX_OK
 [00392.743989][276880][276883][test-devmgr] INFO: Removing device 0xc64fcfe910 'Virtual_Audio_Device_(default)' parent=0xc64fcfe610
@@ -813,7 +815,7 @@ func TestFxb51327(t *testing.T) {
 [00392.743738][280027][280891][audio_core] ERROR: [src/media/audio/audio_core/audio_driver_v2.cc(305)] AudioDriver failed with error: -24: -24 (ZX_ERR_PEER_CLOSED)
 [       OK ] UltrasoundTest.CapturerDoesNotSupportBindGainControl (52 ms)
 [ RUN      ] UltrasoundTest.CapturerDoesNotSupportSetReferenceClock
-[00392.795276][276880][276883][test-devmgr] INFO: 
+[00392.795276][276880][276883][test-devmgr] INFO:
 [00392.795333][276880][276883][test-devmgr] INFO: Running remove task for device 0xc64fcfe910 'Virtual_Audio_Device_(default)'
 [00392.795496][276880][276883][test-devmgr] INFO: Removed device 0xc64fcfe910 'Virtual_Audio_Device_(default)': ZX_OK
 [00392.795530][276880][276883][test-devmgr] INFO: Removing device 0xc64fcfe910 'Virtual_Audio_Device_(default)' parent=0xc64fcfe610
@@ -828,81 +830,80 @@ func TestFxb51327(t *testing.T) {
 [  PASSED  ] 13 tests.
 ok 9 fuchsia-pkg://fuchsia.com/audio_pipeline_tests#meta/audio_pipeline_tests.cmx (12.230948553s)
 `
-	want := []TestCaseResult{
+	want := []runtests.TestCaseResult{
 		{
 			DisplayName: "UltrasoundTest.CreateRenderer",
 			SuiteName:   "UltrasoundTest",
 			CaseName:    "CreateRenderer",
 			Duration:    964000000,
-			Status:      "Pass",
+			Status:      runtests.TestSuccess,
 			Format:      "GoogleTest",
 		}, {
 			DisplayName: "UltrasoundTest.RendererDoesNotSupportSetPcmStreamType",
 			SuiteName:   "UltrasoundTest",
 			CaseName:    "RendererDoesNotSupportSetPcmStreamType",
 			Duration:    142000000,
-			Status:      "Pass",
+			Status:      runtests.TestSuccess,
 			Format:      "GoogleTest",
 		}, {
 			DisplayName: "UltrasoundTest.RendererDoesNotSupportSetUsage",
 			SuiteName:   "UltrasoundTest",
 			CaseName:    "RendererDoesNotSupportSetUsage",
 			Duration:    112000000,
-			Status:      "Pass",
+			Status:      runtests.TestSuccess,
 			Format:      "GoogleTest",
 		}, {
 			DisplayName: "UltrasoundTest.RendererDoesNotSupportBindGainControl",
 			SuiteName:   "UltrasoundTest",
 			CaseName:    "RendererDoesNotSupportBindGainControl",
 			Duration:    151000000,
-			Status:      "Pass",
+			Status:      runtests.TestSuccess,
 			Format:      "GoogleTest",
 		}, {
 			DisplayName: "UltrasoundTest.RendererDoesNotSupportSetReferenceClock",
 			SuiteName:   "UltrasoundTest",
 			CaseName:    "RendererDoesNotSupportSetReferenceClock",
 			Duration:    143000000,
-			Status:      "Pass",
+			Status:      runtests.TestSuccess,
 			Format:      "GoogleTest",
 		}, {
 			DisplayName: "UltrasoundTest.CreateCapturer",
 			SuiteName:   "UltrasoundTest",
 			CaseName:    "CreateCapturer",
 			Duration:    32000000,
-			Status:      "Pass",
+			Status:      runtests.TestSuccess,
 			Format:      "GoogleTest",
 		}, {
 			DisplayName: "UltrasoundTest.CapturerDoesNotSupportSetPcmStreamType",
 			SuiteName:   "UltrasoundTest",
 			CaseName:    "CapturerDoesNotSupportSetPcmStreamType",
 			Duration:    51000000,
-			Status:      "Pass",
+			Status:      runtests.TestSuccess,
 			Format:      "GoogleTest",
 		}, {
 			DisplayName: "UltrasoundTest.CapturerDoesNotSupportSetUsage",
 			SuiteName:   "UltrasoundTest",
 			CaseName:    "CapturerDoesNotSupportSetUsage",
 			Duration:    42000000,
-			Status:      "Pass",
+			Status:      runtests.TestSuccess,
 			Format:      "GoogleTest",
 		}, {
 			DisplayName: "UltrasoundTest.CapturerDoesNotSupportBindGainControl",
 			SuiteName:   "UltrasoundTest",
 			CaseName:    "CapturerDoesNotSupportBindGainControl",
 			Duration:    52000000,
-			Status:      "Pass",
+			Status:      runtests.TestSuccess,
 			Format:      "GoogleTest",
 		}, {
 			DisplayName: "UltrasoundTest.CapturerDoesNotSupportSetReferenceClock",
 			SuiteName:   "UltrasoundTest",
 			CaseName:    "CapturerDoesNotSupportSetReferenceClock",
 			Duration:    41000000,
-			Status:      "Pass",
+			Status:      runtests.TestSuccess,
 			Format:      "GoogleTest",
 		},
 	}
 	testCaseCmp(t, stdout, want)
-
 }
 
 // Regression test for fxbug.dev/52363
@@ -917,26 +918,26 @@ test test_observer_stop_api ... ok
 test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out
 ok 61 fuchsia-pkg://fuchsia.com/archivist_integration_tests#meta/logs_integration_rust_tests.cmx (1.04732004s)
 `
-	want := []TestCaseResult{
+	want := []runtests.TestCaseResult{
 		{
 			DisplayName: "listen_for_klog",
 			CaseName:    "listen_for_klog",
-			Status:      "Pass",
+			Status:      runtests.TestSuccess,
 			Format:      "Rust",
 		}, {
 			DisplayName: "listen_for_syslog",
 			CaseName:    "listen_for_syslog",
-			Status:      "Pass",
+			Status:      runtests.TestSuccess,
 			Format:      "Rust",
 		}, {
 			DisplayName: "listen_for_klog_routed_stdio",
 			CaseName:    "listen_for_klog_routed_stdio",
-			Status:      "Pass",
+			Status:      runtests.TestSuccess,
 			Format:      "Rust",
 		}, {
 			DisplayName: "test_observer_stop_api",
 			CaseName:    "test_observer_stop_api",
-			Status:      "Pass",
+			Status:      runtests.TestSuccess,
 			Format:      "Rust",
 		},
 	}
@@ -1008,7 +1009,7 @@ Expected: true
 [stdout - legacy_test]
 [  FAILED  ] Vulkan.ReadbackLoopWithFenceWaitThread (340 ms)
 `
-	want := []TestCaseResult{}
+	want := []runtests.TestCaseResult{}
 	testCaseCmp(t, stdout, want)
 }
 
@@ -1091,20 +1092,20 @@ func TestParseDartSystemTest(t *testing.T) {
   ]
 }
 `
-	want := []TestCaseResult{
+	want := []runtests.TestCaseResult{
 		{
 			DisplayName: "foo_test/group1.test1",
 			SuiteName:   "foo_test/group1",
 			CaseName:    "test1",
 			Duration:    52000000000,
-			Status:      "Pass",
+			Status:      runtests.TestSuccess,
 			Format:      "dart_system_test",
 		}, {
 			DisplayName: "foo_test/group1.test2",
 			SuiteName:   "foo_test/group1",
 			CaseName:    "test2",
 			Duration:    30000000000,
-			Status:      "Fail",
+			Status:      runtests.TestFailure,
 			Format:      "dart_system_test",
 		},
 	}
@@ -1125,30 +1126,30 @@ Fail (bad)
 Test case 'dEQP-VK.renderpass.suballocation.multisample.r32g32_uint.samples_10'..
 `
 
-	want := []TestCaseResult{
+	want := []runtests.TestCaseResult{
 		{
 			DisplayName: "dEQP-VK.renderpass.suballocation.multisample.r32g32_uint.samples_8",
 			SuiteName:   "dEQP-VK.renderpass.suballocation.multisample.r32g32_uint",
 			CaseName:    "samples_8",
-			Status:      "Pass",
+			Status:      runtests.TestSuccess,
 			Format:      "VulkanCtsTest",
 		}, {
 			DisplayName: "dEQP-VK.renderpass.suballocation.multisample.separate_stencil_usage.d32_sfloat_s8_uint.samples_32.test_stencil",
 			SuiteName:   "dEQP-VK.renderpass.suballocation.multisample.separate_stencil_usage.d32_sfloat_s8_uint.samples_32",
 			CaseName:    "test_stencil",
-			Status:      "Skip",
+			Status:      runtests.TestSkipped,
 			Format:      "VulkanCtsTest",
 		}, {
 			DisplayName: "dEQP-VK.renderpass.suballocation.multisample.r32g32_uint.samples_9",
 			SuiteName:   "dEQP-VK.renderpass.suballocation.multisample.r32g32_uint",
 			CaseName:    "samples_9",
-			Status:      "Fail",
+			Status:      runtests.TestFailure,
 			Format:      "VulkanCtsTest",
 		}, {
 			DisplayName: "dEQP-VK.renderpass.suballocation.multisample.r32g32_uint.samples_10",
 			SuiteName:   "dEQP-VK.renderpass.suballocation.multisample.r32g32_uint",
 			CaseName:    "samples_10",
-			Status:      "Fail",
+			Status:      runtests.TestFailure,
 			Format:      "VulkanCtsTest",
 		},
 	}

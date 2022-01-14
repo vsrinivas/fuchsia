@@ -7,12 +7,11 @@ package runtests
 
 import (
 	"time"
-
-	"go.fuchsia.dev/fuchsia/tools/testing/testparser"
 )
 
-// TestResult is the exit result of a test.
-type TestResult string
+// TODO(olivernewman): Move the contents of this file into a separate library as
+// it's no longer specific to runtests - in fact, runtests only implements a
+// subset of the types and fields defined here.
 
 const (
 	// TestSummaryFilename is the summary file name expected by the fuchsia
@@ -21,15 +20,25 @@ const (
 
 	// TestOutputFilename is the default output file name for a test.
 	TestOutputFilename = "stdout-and-stderr.txt"
+)
 
+// TestResult is the exit result of a test.
+type TestResult string
+
+// Possible test statuses, names chosen for consistency with ResultDB:
+// https://chromium.googlesource.com/infra/luci/luci-go/+/15458901113063d2a0d95be2e27a245c4cfd5690/resultdb/proto/v1/test_result.proto#142
+const (
 	// TestSuccess represents a passed test.
 	TestSuccess TestResult = "PASS"
 
 	// TestFailure represents a failed test.
 	TestFailure TestResult = "FAIL"
 
-	// TestTimeout represents a timed out test.
-	TestTimeout TestResult = "TIMED_OUT"
+	// TestAborted represents an aborted test (likely a timeout).
+	TestAborted TestResult = "ABORT"
+
+	// TestSkipped represents a skipped test.
+	TestSkipped TestResult = "SKIP"
 )
 
 // TestSummary is a summary of a suite of test runs. It represents the output
@@ -79,7 +88,7 @@ type TestDetails struct {
 	Result TestResult `json:"result"`
 
 	// Cases is individual test case results.
-	Cases []testparser.TestCaseResult `json:"cases"`
+	Cases []TestCaseResult `json:"cases"`
 
 	// DataSinks gives the data sinks attached to a test.
 	DataSinks DataSinkMap `json:"data_sinks,omitempty"`
@@ -92,4 +101,22 @@ type TestDetails struct {
 
 	// IsTestingFailureMode is true iff this test was produced by tefmocheck.
 	IsTestingFailureMode bool `json:"is_testing_failure_mode"`
+}
+
+// TestCaseResult contains the details of a single test case, nested within a
+// top-level TestDetails.
+type TestCaseResult struct {
+	DisplayName string        `json:"display_name"`
+	SuiteName   string        `json:"suite_name"`
+	CaseName    string        `json:"case_name"`
+	Status      TestResult    `json:"status"`
+	Duration    time.Duration `json:"duration_nanos"`
+	// Format is the test runner used to execute the test.
+	Format string `json:"format"`
+	// FailReason is a concise and distinctive error message captured from stdout when the test case fails.
+	// The message is used to group similar failures and shouldn't contain stacktrace or line numbers.
+	FailReason  string   `json:"fail_reason"`
+	OutputFiles []string `json:"output_files,omitempty"`
+	// The directory where the OutputFiles live if given as relative paths.
+	OutputDir string `json:"output_dir,omitempty"`
 }
