@@ -47,6 +47,7 @@ const FONT: &'static str = "/pkg/data/font.ttf";
 const BOLD_FONT: &'static str = "/pkg/data/bold-font.ttf";
 const ITALIC_FONT: &'static str = "/pkg/data/italic-font.ttf";
 const BOLD_ITALIC_FONT: &'static str = "/pkg/data/bold-italic-font.ttf";
+const FALLBACK_FONT_PREFIX: &'static str = "/pkg/data/fallback-font";
 
 // Default font size.
 const FONT_SIZE: f32 = 16.0;
@@ -224,8 +225,21 @@ impl TerminalViewAssistant {
             load_font(PathBuf::from(ITALIC_FONT)).expect("unable to load italic font data");
         let bold_italic_font = load_font(PathBuf::from(BOLD_ITALIC_FONT))
             .expect("unable to load bold italic font data");
-        let font_set =
-            FontSet::new(font, Some(bold_font), Some(italic_font), Some(bold_italic_font));
+        let mut fallback_fonts = vec![];
+        while let Ok(font) = load_font(PathBuf::from(format!(
+            "{}-{}.ttf",
+            FALLBACK_FONT_PREFIX,
+            fallback_fonts.len() + 1
+        ))) {
+            fallback_fonts.push(font);
+        }
+        let font_set = FontSet::new(
+            font,
+            Some(bold_font),
+            Some(italic_font),
+            Some(bold_italic_font),
+            fallback_fonts,
+        );
         let cell_size = cell_size_from_cell_height(&font_set, FONT_SIZE);
         let size_info = SizeInfo {
             // set the initial size/width to be that of the cell size which prevents

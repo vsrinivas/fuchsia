@@ -93,6 +93,22 @@ if (virtcon_bold_italic_font_path != "") {
   }
 }
 
+if (virtcon_fallback_font_paths != []) {
+  resource_group("fallback_fonts") {
+    files = []
+    suffix = 1
+    foreach(path, virtcon_fallback_font_paths) {
+      files += [
+        {
+          source = path
+          dest = "data/fallback-font-$suffix.ttf"
+        },
+      ]
+      suffix += 1
+    }
+  }
+}
+
 resource("boot_animation") {
   sources = [ virtcon_boot_animation_path ]
   outputs = [ "data/boot-animation.riv" ]
@@ -126,6 +142,10 @@ rustc_binary("bin") {
 
   if (virtcon_bold_italic_font_path != "") {
     deps += [ ":bold_italic_font" ]
+  }
+
+  if (virtcon_fallback_font_paths != []) {
+    deps += [ ":fallback_fonts" ]
   }
 
   configs += [ "//build/config/rust:bootfs" ]

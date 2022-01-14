@@ -165,7 +165,7 @@ mod tests {
     #[test]
     fn can_create_text_grid() -> Result<(), Error> {
         let font = load_font(PathBuf::from(FONT))?;
-        let font_set = FontSet::new(font, None, None, None);
+        let font_set = FontSet::new(font, None, None, None, vec![]);
         let _ = TextGridFacet::<TestListener>::new(
             font_set,
             &Size::new(8.0, 16.0),

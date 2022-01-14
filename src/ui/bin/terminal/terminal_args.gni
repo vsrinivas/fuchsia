@@ -18,4 +18,7 @@ declare_args() {
   # Path to file to use for bold italic font
   terminal_bold_italic_font_path =
       "//prebuilt/third_party/fonts/robotomono/RobotoMono-BoldItalic.ttf"
+
+  # Paths to files to use for fallback fonts
+  terminal_fallback_font_paths = []
 }

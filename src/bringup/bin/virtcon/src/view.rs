@@ -131,6 +131,7 @@ const FONT: &'static str = "/pkg/data/font.ttf";
 const BOLD_FONT: &'static str = "/pkg/data/bold-font.ttf";
 const ITALIC_FONT: &'static str = "/pkg/data/italic-font.ttf";
 const BOLD_ITALIC_FONT: &'static str = "/pkg/data/bold-italic-font.ttf";
+const FALLBACK_FONT_PREFIX: &'static str = "/pkg/data/fallback-font";
 
 impl VirtualConsoleViewAssistant {
     pub fn new(
@@ -152,7 +153,15 @@ impl VirtualConsoleViewAssistant {
         let bold_font = load_font(PathBuf::from(BOLD_FONT)).ok();
         let italic_font = load_font(PathBuf::from(ITALIC_FONT)).ok();
         let bold_italic_font = load_font(PathBuf::from(BOLD_ITALIC_FONT)).ok();
-        let font_set = FontSet::new(font, bold_font, italic_font, bold_italic_font);
+        let mut fallback_fonts = vec![];
+        while let Ok(font) = load_font(PathBuf::from(format!(
+            "{}-{}.ttf",
+            FALLBACK_FONT_PREFIX,
+            fallback_fonts.len() + 1
+        ))) {
+            fallback_fonts.push(font);
+        }
+        let font_set = FontSet::new(font, bold_font, italic_font, bold_italic_font, fallback_fonts);
         let virtcon_mode = VirtconMode::Forced; // We always start out in forced mode.
         let (animation, desired_virtcon_mode) = if boot_animation {
             let file = load_rive(BOOT_ANIMATION)?;

@@ -86,6 +86,22 @@ resource("bold_italic_font") {
   outputs = [ "data/bold-italic-font.ttf" ]
 }
 
+if (terminal_fallback_font_paths != []) {
+  resource_group("fallback_fonts") {
+    files = []
+    suffix = 1
+    foreach(path, terminal_fallback_font_paths) {
+      files += [
+        {
+          source = path
+          dest = "data/fallback-font-$suffix.ttf"
+        },
+      ]
+      suffix += 1
+    }
+  }
+}
+
 rustc_binary("bin") {
   name = "terminal"
   edition = "2018"
@@ -105,6 +121,10 @@ rustc_binary("bin") {
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:thiserror",
   ]
+
+  if (terminal_fallback_font_paths != []) {
+    deps += [ ":fallback_fonts" ]
+  }
 
   sources = [ "src/bin/terminal.rs" ]
 }

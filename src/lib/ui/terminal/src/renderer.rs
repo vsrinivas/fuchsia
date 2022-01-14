@@ -71,6 +71,7 @@ pub struct FontSet {
     bold_font: Option<FontFace>,
     italic_font: Option<FontFace>,
     bold_italic_font: Option<FontFace>,
+    fallback_fonts: Vec<FontFace>,
 }
 
 impl FontSet {
@@ -79,8 +80,9 @@ impl FontSet {
         bold_font: Option<FontFace>,
         italic_font: Option<FontFace>,
         bold_italic_font: Option<FontFace>,
+        fallback_fonts: Vec<FontFace>,
     ) -> Self {
-        Self { font, bold_font, italic_font, bold_italic_font }
+        Self { font, bold_font, italic_font, bold_italic_font, fallback_fonts }
     }
 }
 
@@ -154,12 +156,23 @@ fn maybe_glyph_for_char(
         Flags::BOLD_ITALIC => font_set.bold_italic_font.as_ref(),
         _ => None,
     };
-    let regular_font = &font_set.font;
     let scale = textgrid.scale;
     let offset = textgrid.offset;
 
-    // Try bold/italic font first and fallback to regular font if needed.
-    for font in maybe_bold_italic_font.iter().chain(std::iter::once(&regular_font)) {
+    // Glyph search order:
+    //
+    // 1. Bold/italic font first if appropriate.
+    // 2. Regular font.
+    // 3. Fallback fonts.
+    //
+    // The fallback font can be used to provide icons/emojis
+    // that are not expected to be part of the regular font.
+    for font in maybe_bold_italic_font
+        .iter()
+        .map(|font| *font)
+        .chain(std::iter::once(&font_set.font))
+        .chain(font_set.fallback_fonts.iter())
+    {
         if let Some(glyph_index) = font.face.glyph_index(c) {
             let glyph = Glyph::with_scale_and_offset(context, font, scale, offset, glyph_index);
             return Some(glyph);
@@ -469,7 +482,13 @@ mod tests {
         "../../../../../prebuilt/third_party/fonts/robotomono/RobotoMono-Regular.ttf"
     );
     static FONT_SET: Lazy<FontSet> = Lazy::new(|| {
-        FontSet::new(FontFace::new(&FONT_DATA).expect("Failed to create font"), None, None, None)
+        FontSet::new(
+            FontFace::new(&FONT_DATA).expect("Failed to create font"),
+            None,
+            None,
+            None,
+            vec![],
+        )
     });
 
     struct TestLayerGroup<'a>(&'a mut BTreeMap<SceneOrder, Layer>);
