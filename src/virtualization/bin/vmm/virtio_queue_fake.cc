@@ -39,7 +39,7 @@ zx_status_t VirtioQueueFake::SetNext(uint16_t desc_index, uint16_t next_index) {
 
   std::lock_guard<std::mutex> lock(queue_->mutex_);
   auto& desc = const_cast<volatile vring_desc&>(ring_->desc[desc_index]);
-  desc.flags |= VRING_DESC_F_NEXT;
+  desc.flags = desc.flags | VRING_DESC_F_NEXT;
   desc.next = next_index;
   return ZX_OK;
 }

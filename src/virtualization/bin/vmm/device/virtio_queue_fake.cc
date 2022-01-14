@@ -87,7 +87,7 @@ zx_status_t VirtioQueueFake::SetNext(uint16_t desc_idx, uint16_t next_idx) {
   }
 
   auto& desc = const_cast<volatile vring_desc&>(ring_.desc[desc_idx]);
-  desc.flags |= VRING_DESC_F_NEXT;
+  desc.flags = desc.flags | VRING_DESC_F_NEXT;
   desc.next = next_idx;
   return ZX_OK;
 }
