@@ -111,18 +111,21 @@ zx_status_t DriverWaiter::Begin() {
           return state->failure_handler(fidl::UnbindInfo::DispatcherError(status));
         }
 
-        FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT InlineMessageBuffer<ZX_CHANNEL_MAX_MSG_BYTES> bytes;
-        FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT fidl_handle_t handles[ZX_CHANNEL_MAX_MSG_HANDLES];
-        internal::IncomingTransportContext incoming_transport_context;
-        fidl::ReadOptions read_options = {
-            .out_incoming_transport_context = &incoming_transport_context,
-        };
-        IncomingMessage msg =
-            fidl::MessageRead(fdf::UnownedChannel(state->handle), bytes.view(), handles, nullptr,
-                              ZX_CHANNEL_MAX_MSG_HANDLES, read_options);
-        if (!msg.ok()) {
-          return state->failure_handler(fidl::UnbindInfo{msg});
+        fdf_arena_t* arena;
+        void* data;
+        uint32_t num_bytes;
+        fidl_handle_t* handles;
+        uint32_t num_handles;
+        status =
+            fdf_channel_read(state->handle, 0, &arena, &data, &num_bytes, &handles, &num_handles);
+        if (status != ZX_OK) {
+          return state->failure_handler(fidl::UnbindInfo(fidl::Result::TransportError(status)));
         }
+
+        internal::IncomingTransportContext incoming_transport_context =
+            internal::IncomingTransportContext::Create<fidl::internal::DriverTransport>(arena);
+        fidl::IncomingMessage msg = fidl::IncomingMessage::Create<fidl::internal::DriverTransport>(
+            static_cast<uint8_t*>(data), num_bytes, handles, nullptr, num_handles);
         state->channel_read = std::nullopt;
         return state->success_handler(msg, std::move(incoming_transport_context));
       });
