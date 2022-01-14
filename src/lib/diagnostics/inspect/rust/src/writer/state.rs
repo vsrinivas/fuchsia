@@ -625,8 +625,8 @@ impl InnerState {
             self.allocate_reserved_value(name, parent_index, constants::MIN_ORDER_SIZE)?;
         block.become_property(name_block.index(), parent_index, format)?;
         if let Err(err) = self.inner_set_property_value(&block, &value) {
-            self.heap.free_block(block).expect("Failed to free block");
-            self.heap.free_block(name_block).expect("Failed to free name block");
+            self.heap.free_block(block)?;
+            self.release_string_reference(name_block)?;
             return Err(err);
         }
         Ok(block)
@@ -1166,6 +1166,33 @@ mod tests {
         }
         let snapshot = Snapshot::try_from(core_state.copy_vmo_bytes()).unwrap();
         let blocks: Vec<ScannedBlock<'_>> = snapshot.scan().collect();
+        assert!(blocks[1..].iter().all(|b| b.block_type() == BlockType::Free));
+    }
+
+    #[fuchsia::test]
+    fn test_create_property_cleanup_on_failure() {
+        // this implementation detail is important for the test below to be valid
+        assert_eq!(constants::MAX_ORDER_SIZE, 2048);
+
+        let core_state = get_state(5121); // large enough to fit to max size blocks plus 1024
+        let mut state = core_state.try_lock().expect("lock state");
+        // allocate a max size block and one extent
+        let name: String = (0..3000).map(|_| " ").collect::<String>();
+        // allocate a max size property + at least one extent
+        // the extent won't fit into the VMO, causing allocation failure when the property
+        // is set
+        let payload = [0u8; 4096]; // won't fit into vmo
+
+        // fails because the property is too big, but, allocates the name and should clean it up
+        assert!(state.create_property(&name, &payload, PropertyFormat::Bytes, 0).is_err());
+
+        drop(state);
+
+        let snapshot = Snapshot::try_from(core_state.copy_vmo_bytes()).unwrap();
+        let blocks: Vec<ScannedBlock<'_>> = snapshot.scan().collect();
+
+        // if cleanup happened correctly, the name + extent and property + extent have been freed
+        assert_eq!(blocks[0].block_type(), BlockType::Header);
         assert!(blocks[1..].iter().all(|b| b.block_type() == BlockType::Free));
     }
 
