@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "inotify_test_base.h"
+#include "src/lib/storage/vfs/cpp/inotify_test_base.h"
 
 #include <fcntl.h>
 #include <sys/stat.h>
@@ -12,20 +12,15 @@ namespace fs {
 
 void InotifyTest::SetUp() {
   ASSERT_EQ(memfs_loop_.StartThread(), ZX_OK);
-  zx::channel memfs_root;
-  ASSERT_EQ(memfs_create_filesystem(memfs_loop_.dispatcher(), &memfs_,
-                                    memfs_root.reset_and_get_address()),
-            ZX_OK);
-  ASSERT_OK(fdio_ns_get_installed(&namespace_));
-  ASSERT_OK(fdio_ns_bind(namespace_, kTmpfsPath, memfs_root.release()));
+
+  zx::status<memfs::Setup> memfs = memfs::Setup::Create(memfs_loop_.dispatcher());
+  ASSERT_TRUE(memfs.is_ok());
+
+  ASSERT_EQ(ZX_OK, memfs->MountAt(kTmpfsPath));
+  memfs_ = std::make_unique<memfs::Setup>(std::move(*memfs));
 }
 
-void InotifyTest::TearDown() {
-  ASSERT_OK(fdio_ns_unbind(namespace_, kTmpfsPath));
-  sync_completion_t unmounted;
-  memfs_free_filesystem(memfs_, &unmounted);
-  ASSERT_EQ(ZX_OK, sync_completion_wait(&unmounted, zx::duration::infinite().get()));
-}
+void InotifyTest::TearDown() { memfs_.reset(); }
 
 fbl::RefPtr<fs::RemoteDir> InotifyTest::GetRemoteDir() {
   auto endpoints = fidl::CreateEndpoints<fuchsia_io::Directory>();

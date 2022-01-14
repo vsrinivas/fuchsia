@@ -10,7 +10,6 @@
 #include <lib/fdio/namespace.h>
 #include <lib/file-lock/file-lock.h>
 #include <lib/fpromise/single_threaded_executor.h>
-#include <lib/memfs/memfs.h>
 #include <sys/file.h>
 #include <sys/stat.h>
 #include <unistd.h>
@@ -20,6 +19,7 @@
 
 #include "src/lib/fxl/strings/substitute.h"
 #include "src/lib/storage/vfs/cpp/remote_dir.h"
+#include "src/storage/memfs/setup.h"
 
 namespace {
 constexpr char kTmpfsPath[] = "/fshost-flock-tmp";
@@ -33,20 +33,14 @@ class FlockTest : public zxtest::Test {
 
   void SetUp() override {
     ASSERT_EQ(memfs_loop_.StartThread(), ZX_OK);
-    zx::channel memfs_root;
-    ASSERT_EQ(memfs_create_filesystem(memfs_loop_.dispatcher(), &memfs_,
-                                      memfs_root.reset_and_get_address()),
-              ZX_OK);
-    ASSERT_OK(fdio_ns_get_installed(&namespace_));
-    ASSERT_OK(fdio_ns_bind(namespace_, kTmpfsPath, memfs_root.release()));
+
+    zx::status<memfs::Setup> memfs = memfs::Setup::Create(memfs_loop_.dispatcher());
+    ASSERT_TRUE(memfs.is_ok());
+    ASSERT_EQ(ZX_OK, memfs->MountAt(kTmpfsPath));
+    memfs_ = std::make_unique<memfs::Setup>(std::move(*memfs));
   }
 
-  void TearDown() override {
-    ASSERT_OK(fdio_ns_unbind(namespace_, kTmpfsPath));
-    sync_completion_t unmounted;
-    memfs_free_filesystem(memfs_, &unmounted);
-    ASSERT_EQ(ZX_OK, sync_completion_wait(&unmounted, zx::duration::infinite().get()));
-  }
+  void TearDown() override { memfs_.reset(); }
 
  protected:
   fbl::RefPtr<fs::RemoteDir> GetRemoteDir() {
@@ -92,10 +86,8 @@ class FlockTest : public zxtest::Test {
   std::vector<int> fds_;
   bool use_first_fd_;
 
-  // memfs and namespace related.
-  fdio_ns_t* namespace_;
   async::Loop memfs_loop_;
-  memfs_filesystem_t* memfs_;
+  std::unique_ptr<memfs::Setup> memfs_;
 };
 
 TEST_F(FlockTest, FlockOnDir) {

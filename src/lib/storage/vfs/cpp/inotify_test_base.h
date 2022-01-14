@@ -11,7 +11,6 @@
 #include <lib/fdio/directory.h>
 #include <lib/fdio/namespace.h>
 #include <lib/fpromise/single_threaded_executor.h>
-#include <lib/memfs/memfs.h>
 #include <sys/stat.h>
 
 #include <fbl/unique_fd.h>
@@ -19,8 +18,10 @@
 
 #include "src/lib/fxl/strings/substitute.h"
 #include "src/lib/storage/vfs/cpp/remote_dir.h"
+#include "src/storage/memfs/setup.h"
 
 namespace fs {
+
 class InotifyTest : public zxtest::Test {
  public:
   InotifyTest() : memfs_loop_(&kAsyncLoopConfigNoAttachToCurrentThread) {}
@@ -35,10 +36,11 @@ class InotifyTest : public zxtest::Test {
   void MakeDir(const std::string& path);
 
   static constexpr char kTmpfsPath[] = "/fshost-inotify-tmp";
-  fdio_ns_t* namespace_;
+
   async::Loop memfs_loop_;
-  memfs_filesystem_t* memfs_;
+  std::unique_ptr<memfs::Setup> memfs_;  // Must be destructed before the above loop.
 };
+
 }  // namespace fs
 
 #endif  // SRC_LIB_STORAGE_VFS_CPP_INOTIFY_TEST_BASE_H_

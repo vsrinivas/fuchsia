@@ -16,6 +16,7 @@ config("memfs_config") {
 static_library("memfs-cpp") {
   public = [
     "memfs.h",
+    "setup.h",
     "vnode.h",
     "vnode_dir.h",
     "vnode_file.h",
@@ -25,6 +26,7 @@ static_library("memfs-cpp") {
     "dnode.cc",
     "include/lib/memfs/memfs.h",
     "memfs.cc",
+    "setup.cc",
     "vnode.cc",
     "vnode_dir.cc",
     "vnode_file.cc",
@@ -45,6 +47,7 @@ static_library("memfs-cpp") {
 
     # <lib/memfs/cpp/vnode.h> has #include "src/lib/storage/vfs/cpp/vfs.h> and many other <fs/*.h"
     "//src/lib/storage/vfs/cpp",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
   ]
   deps = [
     "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
@@ -67,7 +70,6 @@ zx_library("memfs") {
   sources = [ "memfs-local.cc" ]
   public_deps = [
     # <lib/memfs/memfs.h> has #include <lib/async/dispatcher.h>.
-    "//sdk/lib/fit",
     "//zircon/system/ulib/async",
 
     # <lib/memfs/memfs.h> has #include <lib/sync/completion.h>.
