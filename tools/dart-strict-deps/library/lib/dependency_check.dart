@@ -32,8 +32,7 @@ Optional<CompilationUnit> parseCompilationUnit(String filePath) {
   try {
     return Optional.of(analyzer
         .parseFile(
-            path: filePath,
-            featureSet: FeatureSet.fromEnableFlags(["non-nullable"]))
+            path: filePath, featureSet: FeatureSet.latestLanguageVersion())
         .unit);
   } on FileSystemException {
     return Optional.absent();
