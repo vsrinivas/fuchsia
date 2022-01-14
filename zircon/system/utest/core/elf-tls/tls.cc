@@ -322,6 +322,8 @@ TEST(ExecutableTlsTest, AlignmentInitializierInMain) {
   VerifyAlignment(info.get(), kMainThreadError);
 }
 
+thread_local uint8_t spam_array[kArraySize] = {BYTES_1024};
+
 struct ArraySpamInfo {
   uint8_t index;
   bool failure;
@@ -335,14 +337,14 @@ int TestArraySpam(void* arg) {
   for (uint8_t iteration = 0; iteration < 100; ++iteration) {
     uint8_t starting_value = static_cast<uint8_t>(info->index + iteration);
     uint8_t value = starting_value;
-    for (auto& byte : array) {
+    for (auto& byte : spam_array) {
       byte = value;
       ++value;
     }
     sched_yield();
     value = starting_value;
     uint8_t failure_offset = 0;
-    for (const auto byte : array) {
+    for (const auto byte : spam_array) {
       if (byte != value) {
         info->failure = true;
         info->actual_value = byte;
