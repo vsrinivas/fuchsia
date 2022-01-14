@@ -42,7 +42,7 @@ void ManagedVfs::Shutdown(ShutdownCallback handler) {
 
         MaybeAsyncFinishShutdown();
       });
-  ZX_DEBUG_ASSERT(status == ZX_OK);
+  ZX_DEBUG_ASSERT_MSG(status == ZX_OK, "status = %s", zx_status_get_string(status));
 }
 
 void ManagedVfs::CloseAllConnectionsForVnode(const Vnode& node,

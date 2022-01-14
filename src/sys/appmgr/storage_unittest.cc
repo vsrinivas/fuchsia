@@ -29,6 +29,15 @@ class StorageTest : public ::gtest::RealLoopFixture {
  protected:
   StorageTest() { ZX_ASSERT(tmp_dir_.NewTempDir(&root_storage_dir_)); }
 
+  void TearDown() override {
+    // Ensure all posted tasks have completed before we shutdown the dispatcher. This is because
+    // the task posted by Namespace::RunShutdownIfNoChildren posts another task to the dispatcher
+    // which completes the shutdown. This will fail if the task is executed as part of the loop's
+    // destructor, since no more tasks can be posted to the dispatcher during shutdown. In the case
+    // this test is dependent on any external tasks, this solution may need to be revisited.
+    RunLoopUntilIdle();
+  }
+
   // Creates a root realm with label = componnet::internal::kRootLabel ("app").
   std::unique_ptr<Realm> CreateRootRealm(const std::string& root_storage_path,
                                          fbl::unique_fd appmgr_config_dir) {
