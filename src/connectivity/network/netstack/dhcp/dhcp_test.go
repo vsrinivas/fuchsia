@@ -2144,7 +2144,11 @@ func TestDecline(t *testing.T) {
 
 func TestClientRestartLeaseTime(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	var wg sync.WaitGroup
+	defer func() {
+		cancel()
+		wg.Wait()
+	}()
 
 	clientStack, _, clientEP, _, c := setupTestEnv(ctx, t, defaultServerCfg)
 	// Always return the same arbitrary time.
@@ -2155,11 +2159,23 @@ func TestClientRestartLeaseTime(t *testing.T) {
 		removeLostAddAcquired(t, clientStack, lost, acquired)
 		acquiredDone <- struct{}{}
 	}
-	clientCtx, clientCancel := context.WithCancel(ctx)
-	// Acquire address and transition to bound state.
-	go c.Run(clientCtx)
-	<-acquiredDone
-
+	var acquisitionCancel context.CancelFunc
+	var mu sync.Mutex
+	c.contextWithTimeout = func(ctx context.Context, _ time.Duration) (context.Context, context.CancelFunc) {
+		mu.Lock()
+		defer mu.Unlock()
+		if acquisitionCancel != nil {
+			t.Fatalf("client has more than 1 context outstanding from contextWithTimeout in an acquisition attempt")
+		}
+		ctx, cancel := context.WithCancel(ctx)
+		acquisitionCancel = func() {
+			mu.Lock()
+			defer mu.Unlock()
+			cancel()
+			acquisitionCancel = nil
+		}
+		return ctx, acquisitionCancel
+	}
 	checkTimes := func(now time.Time, leaseLength, renew, rebind Seconds) {
 		info := c.Info()
 		if got, want := info.LeaseExpiration, now.Add(leaseLength.Duration()); got != want {
@@ -2182,56 +2198,67 @@ func TestClientRestartLeaseTime(t *testing.T) {
 		}
 	}
 	renewTime, rebindTime := defaultRenewTime(defaultLeaseLength), defaultRebindTime(defaultLeaseLength)
-	checkTimes(c.now(), defaultLeaseLength, renewTime, rebindTime)
+	{
+		clientCtx, clientCancel := context.WithCancel(ctx)
+		// Acquire address and transition to bound state.
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			c.Run(clientCtx)
+		}()
+		<-acquiredDone
 
-	// Simulate interface going down.
-	clientCancel()
-	<-acquiredDone
+		checkTimes(c.now(), defaultLeaseLength, renewTime, rebindTime)
 
-	zero := Seconds(0)
-	checkTimes(time.Time{}, zero, zero, zero)
+		// Simulate interface going down.
+		clientCancel()
+		<-acquiredDone
 
-	clientCtx, clientCancel = context.WithCancel(ctx)
-	defer clientCancel()
+		zero := Seconds(0)
+		checkTimes(time.Time{}, zero, zero, zero)
+	}
 
-	writeIntercept := make(chan struct{})
-	intercepts := 0
-	clientEP.onWritePacket = func(pkt *stack.PacketBuffer) (*stack.PacketBuffer, bool) {
-		ipv4Packet := header.IPv4(pkt.Data().AsRange().ToOwnedView())
-		udpPacket := header.UDP(ipv4Packet.Payload())
-		dhcpPacket := hdr(udpPacket.Payload())
-		opts, err := dhcpPacket.options()
-		if err != nil {
-			t.Fatalf("packet missing options: %s", err)
-		}
-		typ, err := opts.dhcpMsgType()
-		if err != nil {
-			t.Fatalf("packet missing message type: %s", err)
-		}
-		if typ == dhcpDISCOVER {
-			// maxIntercepts is selected to cause an acquisition attempt to timeout
-			// given the defaultAcquireTimeout and defaultRetransTime.
-			// maxIntercepts * defaultRetransTime >= defaultAcquireTime
-			const maxIntercepts = 3
-			if intercepts < maxIntercepts {
-				intercepts++
+	{
+		clientCtx, clientCancel := context.WithCancel(ctx)
+		defer func() {
+			clientCancel()
+			// Ensure address removal during client cleanup does not block.
+			<-acquiredDone
+		}()
+
+		initialAcquisitionTimeout := true
+		clientEP.onWritePacket = func(pkt *stack.PacketBuffer) (*stack.PacketBuffer, bool) {
+			ipv4Packet := header.IPv4(pkt.Data().AsRange().ToOwnedView())
+			udpPacket := header.UDP(ipv4Packet.Payload())
+			dhcpPacket := hdr(udpPacket.Payload())
+			opts, err := dhcpPacket.options()
+			if err != nil {
+				t.Fatalf("packet missing options: %s", err)
+			}
+			typ, err := opts.dhcpMsgType()
+			if err != nil {
+				t.Fatalf("packet missing message type: %s", err)
+			}
+			if typ == dhcpDISCOVER && initialAcquisitionTimeout {
+				initialAcquisitionTimeout = false
+				acquisitionCancel()
 				return nil, false
 			}
-			if intercepts == maxIntercepts {
-				writeIntercept <- struct{}{}
-			}
+			return pkt, false
 		}
-		return pkt, false
-	}
-	// Restart client and transition to bound.
-	go c.Run(clientCtx)
-	<-writeIntercept
-	<-acquiredDone
+		// Restart client and transition to bound.
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			c.Run(clientCtx)
+		}()
+		<-acquiredDone
 
-	checkTimes(c.now(), defaultLeaseLength, renewTime, rebindTime)
-	info := c.Info()
-	if info.State != bound {
-		t.Errorf("info.State=%s, want=%s", info.State, bound)
+		checkTimes(c.now(), defaultLeaseLength, renewTime, rebindTime)
+		info := c.Info()
+		if info.State != bound {
+			t.Errorf("info.State=%s, want=%s", info.State, bound)
+		}
 	}
 }
 
