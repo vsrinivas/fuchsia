@@ -143,13 +143,13 @@ fn derive_right(points: &[math::Vec]) -> math::Vec {
 fn droots(vals: &[f32]) -> SmallVec<[f32; 2]> {
     let mut droots = SmallVec::new();
 
-    match vals {
-        &[a, b] => {
+    match *vals {
+        [a, b] => {
             if a != b {
                 droots.push(a / (a - b));
             }
         }
-        &[a, b, c] => {
+        [a, b, c] => {
             let d = a - 2.0 * b + c;
             if d != 0.0 {
                 let m1 = -(b * b - a * c).sqrt();
@@ -473,16 +473,14 @@ impl Bezier {
                     .map(|bezier| {
                         if bezier.is_linear() {
                             bezier.offset(dist)[0].clone()
-                        } else {
-                            if let Self::Cubic(points) = bezier {
-                                if let Some(scaled) = scale(&points, dist) {
-                                    Self::Cubic(scaled)
-                                } else {
-                                    Self::Line([points[0], points[3]]).offset(dist)[0].clone()
-                                }
+                        } else if let Self::Cubic(points) = bezier {
+                            if let Some(scaled) = scale(&points, dist) {
+                                Self::Cubic(scaled)
                             } else {
-                                unreachable!()
+                                Self::Line([points[0], points[3]]).offset(dist)[0].clone()
                             }
+                        } else {
+                            unreachable!()
                         }
                     })
                     .as_ref()

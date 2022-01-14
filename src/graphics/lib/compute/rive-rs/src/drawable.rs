@@ -51,7 +51,7 @@ impl ObjectRef<'_, Drawable> {
         self.clipping_shapes
             .iter()
             .fold(None, |mut option, clipping_shape| {
-                let builder = option.get_or_insert_with(|| CommandPathBuilder::new());
+                let builder = option.get_or_insert_with(CommandPathBuilder::new);
 
                 clipping_shape.as_ref().with_command_path(|path| {
                     if let Some(path) = path {

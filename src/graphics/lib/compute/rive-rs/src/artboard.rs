@@ -525,10 +525,11 @@ impl ObjectRef<'_, Artboard> {
     }
 
     pub fn draw(&self, renderer: &mut impl Renderer, transform: Mat) {
-        let mut artboard_transform = Mat::default();
-
-        artboard_transform.translate_x = self.width() * self.origin_x();
-        artboard_transform.translate_y = self.height() * self.origin_y();
+        let mut artboard_transform = Mat {
+            translate_x: self.width() * self.origin_x(),
+            translate_y: self.height() * self.origin_y(),
+            ..Default::default()
+        };
 
         artboard_transform = artboard_transform * transform;
 

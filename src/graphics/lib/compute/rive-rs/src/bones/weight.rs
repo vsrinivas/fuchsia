@@ -60,7 +60,7 @@ impl Weight {
         let mut deformation = Mat::zero();
         let r = world * math::Vec::new(x, y);
 
-        let encoded_weight_value = |index, data| (data >> index * 8) & 0xFF;
+        let encoded_weight_value = |index, data| (data >> (index * 8)) & 0xFF;
 
         for i in 0usize..4 {
             let weight = encoded_weight_value(i, weights);

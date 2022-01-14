@@ -223,41 +223,38 @@ impl MetricsPath {
             .find(|(_, (len, part_len))| len + part_len > start_len)
             .map(|(i, (len, part_len))| (i, (start_len - len) / part_len));
 
-        match first_part {
-            None => return,
-            Some((first_part_index, start_t)) => {
-                let (last_part_index, end_t) = parts_and_lengths
-                    .enumerate()
-                    .skip(first_part_index)
-                    .find(|(_, (len, part_len))| len + part_len >= end_len)
-                    .map(|(i, (len, part_len))| (i, (end_len - len) / part_len))
-                    .unwrap_or_else(|| (self.parts.len() - 1, 1.0));
+        if let Some((first_part_index, start_t)) = first_part {
+            let (last_part_index, end_t) = parts_and_lengths
+                .enumerate()
+                .skip(first_part_index)
+                .find(|(_, (len, part_len))| len + part_len >= end_len)
+                .map(|(i, (len, part_len))| (i, (end_len - len) / part_len))
+                .unwrap_or_else(|| (self.parts.len() - 1, 1.0));
 
-                let start_t = start_t.clamp(0.0, 1.0);
-                let end_t = end_t.clamp(0.0, 1.0);
+            let start_t = start_t.clamp(0.0, 1.0);
+            let end_t = end_t.clamp(0.0, 1.0);
 
-                if first_part_index == last_part_index {
-                    self.extract_sub_part(first_part_index, start_t, end_t, move_to, builder);
-                } else {
-                    self.extract_sub_part(first_part_index, start_t, 1.0, move_to, builder);
+            if first_part_index == last_part_index {
+                self.extract_sub_part(first_part_index, start_t, end_t, move_to, builder);
+            } else {
+                self.extract_sub_part(first_part_index, start_t, 1.0, move_to, builder);
 
-                    for part in &self.parts[first_part_index + 1..last_part_index] {
-                        match part.r#type {
-                            PathPartType::Line => {
-                                builder.line_to(self.points[part.offset]);
-                            }
-                            PathPartType::Cubic(_) => {
-                                builder.cubic_to(
-                                    self.points[part.offset],
-                                    self.points[part.offset + 1],
-                                    self.points[part.offset + 2],
-                                );
-                            }
+                for part in &self.parts[first_part_index + 1..last_part_index] {
+                    match part.r#type {
+                        PathPartType::Line => {
+                            builder.line_to(self.points[part.offset]);
+                        }
+                        PathPartType::Cubic(_) => {
+                            builder.cubic_to(
+                                self.points[part.offset],
+                                self.points[part.offset + 1],
+                                self.points[part.offset + 2],
+                            );
                         }
                     }
-
-                    self.extract_sub_part(last_part_index, 0.0, end_t, false, builder);
                 }
+
+                self.extract_sub_part(last_part_index, 0.0, end_t, false, builder);
             }
         }
     }

@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use euclid::default::{Transform2D, Vector2D};
-use mold::{GeometryPreservingTransform, Order as MoldOrder};
+use mold::{GeomPresTransform, Order as MoldOrder};
 use rustc_hash::{FxHashMap, FxHashSet};
 use std::convert::TryFrom;
 
@@ -98,7 +98,7 @@ impl MoldComposition {
                 .then(&new_transform);
 
                 layer.set_transform(
-                    GeometryPreservingTransform::try_from([
+                    GeomPresTransform::try_from([
                         transform.m11,
                         transform.m21,
                         transform.m12,
@@ -166,8 +166,7 @@ impl Composition<Mold> for MoldComposition {
             });
 
             mold_layer.set_transform(
-                GeometryPreservingTransform::try_from(mold_transform)
-                    .unwrap_or_else(|e| panic!("{}", e)),
+                GeomPresTransform::try_from(mold_transform).unwrap_or_else(|e| panic!("{}", e)),
             );
 
             self.orders_to_layer_ids.insert(mold_order, id);
@@ -225,8 +224,7 @@ impl Composition<Mold> for MoldComposition {
         });
 
         mold_layer.set_transform(
-            GeometryPreservingTransform::try_from(mold_transform)
-                .unwrap_or_else(|e| panic!("{}", e)),
+            GeomPresTransform::try_from(mold_transform).unwrap_or_else(|e| panic!("{}", e)),
         );
 
         self.orders_to_layer_ids.insert(mold_order, id);

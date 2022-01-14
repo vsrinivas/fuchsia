@@ -9,7 +9,7 @@ use crate::{
     shapes::{paint::TrimPath, CommandPath, MetricsPath},
 };
 
-pub fn as_ref<'a>(object_ref: ObjectRef<'_>) -> impl StrokeEffect + '_ {
+pub fn as_ref(object_ref: ObjectRef<'_>) -> impl StrokeEffect + '_ {
     object_ref.cast::<TrimPath>()
 }
 

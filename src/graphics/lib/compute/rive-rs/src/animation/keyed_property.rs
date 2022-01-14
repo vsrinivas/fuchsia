@@ -81,12 +81,10 @@ impl ObjectRef<'_, KeyedProperty> {
 
         if seconds == to_frame.seconds() {
             to_frame.apply(core, property_key, mix);
+        } else if from_frame.interpolation_type() == 0 {
+            from_frame.apply(core, property_key, mix);
         } else {
-            if from_frame.interpolation_type() == 0 {
-                from_frame.apply(core, property_key, mix);
-            } else {
-                from_frame.apply_interpolation(core, property_key, seconds, to_frame, mix);
-            }
+            from_frame.apply_interpolation(core, property_key, seconds, to_frame, mix);
         }
     }
 }

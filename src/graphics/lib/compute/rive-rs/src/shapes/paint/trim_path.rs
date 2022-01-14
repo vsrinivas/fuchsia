@@ -72,7 +72,7 @@ impl StrokeEffect for ObjectRef<'_, TrimPath> {
 
         let mut render_offset = self.offset().fract();
         if render_offset.is_sign_negative() {
-            render_offset = 1.0 + render_offset;
+            render_offset += 1.0;
         }
 
         // todo!("implement mode 2");

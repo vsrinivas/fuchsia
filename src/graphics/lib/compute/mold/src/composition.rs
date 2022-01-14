@@ -221,7 +221,7 @@ impl Composition {
             #[inline]
             fn is_unchanged(&self, layer_id: u32) -> bool {
                 match self.cache_id {
-                    None => return false,
+                    None => false,
                     Some(cache_id) => {
                         let layer_id = self
                             .orders_to_layers
@@ -271,9 +271,9 @@ impl Composition {
             {
                 duration!("gfx", "BufferLayout::print");
                 layout.print(
-                    &mut buffer.buffer,
+                    buffer.buffer,
                     layers_per_tile.as_mut().map(|layers_per_tile| layers_per_tile.as_mut_slice()),
-                    buffer.flusher.as_ref().map(|flusher| &**flusher),
+                    buffer.flusher.as_deref(),
                     segments,
                     background_color,
                     crop,
@@ -292,6 +292,12 @@ impl Composition {
     }
 }
 
+impl Default for Composition {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -300,7 +306,7 @@ mod tests {
 
     use surpass::TILE_SIZE;
 
-    use crate::{Fill, FillRule, Func, GeometryPreservingTransform, PathBuilder, Point, Style};
+    use crate::{Fill, FillRule, Func, GeomPresTransform, PathBuilder, Point, Style};
 
     const BLACK: [u8; 4] = [0x00, 0x0, 0x00, 0xFF];
     const BLACKF: [f32; 4] = [0.0, 0.0, 0.0, 1.0];
@@ -388,9 +394,7 @@ mod tests {
             .insert_in_layer(layer_id, &pixel_path(1, 0))
             .unwrap()
             .set_props(solid(REDF))
-            .set_transform(
-                GeometryPreservingTransform::try_from([1.0, 0.0, 0.0, 1.0, 0.5, 0.0]).unwrap(),
-            );
+            .set_transform(GeomPresTransform::try_from([1.0, 0.0, 0.0, 1.0, 0.5, 0.0]).unwrap());
 
         composition.render(
             Buffer { buffer: &mut buffer, width: 3, ..Default::default() },
@@ -413,7 +417,7 @@ mod tests {
             .unwrap()
             .set_props(solid(REDF))
             .set_transform(
-                GeometryPreservingTransform::try_from([
+                GeomPresTransform::try_from([
                     angle.cos(),
                     -angle.sin(),
                     angle.sin(),
@@ -581,8 +585,7 @@ mod tests {
         assert_eq!(buffer[0], RED);
 
         composition.get_mut(layer_id).unwrap().set_transform(
-            GeometryPreservingTransform::try_from([1.0, 0.0, 0.0, 1.0, TILE_SIZE as f32, 0.0])
-                .unwrap(),
+            GeomPresTransform::try_from([1.0, 0.0, 0.0, 1.0, TILE_SIZE as f32, 0.0]).unwrap(),
         );
 
         composition.render(
@@ -599,8 +602,7 @@ mod tests {
         assert_eq!(buffer[0], BLACK);
 
         composition.get_mut(layer_id).unwrap().set_transform(
-            GeometryPreservingTransform::try_from([1.0, 0.0, 0.0, 1.0, -(TILE_SIZE as f32), 0.0])
-                .unwrap(),
+            GeomPresTransform::try_from([1.0, 0.0, 0.0, 1.0, -(TILE_SIZE as f32), 0.0]).unwrap(),
         );
 
         composition.render(
@@ -617,8 +619,7 @@ mod tests {
         assert_eq!(buffer[0], RED);
 
         composition.get_mut(layer_id).unwrap().set_transform(
-            GeometryPreservingTransform::try_from([1.0, 0.0, 0.0, 1.0, 0.0, TILE_SIZE as f32])
-                .unwrap(),
+            GeomPresTransform::try_from([1.0, 0.0, 0.0, 1.0, 0.0, TILE_SIZE as f32]).unwrap(),
         );
 
         composition.render(
@@ -686,9 +687,10 @@ mod tests {
 
         assert_eq!(buffer[0], RED);
 
-        composition.get_mut(layer_id).unwrap().set_transform(
-            GeometryPreservingTransform::try_from([1.0, 0.0, 0.0, 1.0, 1.0, 0.0]).unwrap(),
-        );
+        composition
+            .get_mut(layer_id)
+            .unwrap()
+            .set_transform(GeomPresTransform::try_from([1.0, 0.0, 0.0, 1.0, 1.0, 0.0]).unwrap());
 
         composition.render(
             Buffer {

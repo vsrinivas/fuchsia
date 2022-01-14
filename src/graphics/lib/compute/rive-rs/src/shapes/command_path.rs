@@ -12,7 +12,7 @@ use crate::{
     shapes::paint::{StrokeCap, StrokeJoin},
 };
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct CommandPathBuilder {
     commands: Vec<Command>,
 }
@@ -127,7 +127,7 @@ impl CommandPath {
                         }
                     }
 
-                    if let Some(outline) = Outline::new(&curves, true, &style) {
+                    if let Some(outline) = Outline::new(&curves, true, style) {
                         commands.extend(outline.as_commands());
                     }
 
@@ -138,7 +138,7 @@ impl CommandPath {
         }
 
         if !curves.is_empty() {
-            if let Some(outline) = Outline::new(&curves, false, &style) {
+            if let Some(outline) = Outline::new(&curves, false, style) {
                 commands.extend(outline.as_commands());
             }
         }
@@ -226,7 +226,7 @@ impl Outline {
     fn join(&mut self, next_curves: &[Bezier], dist: f32, join: StrokeJoin) {
         let last = self.curves.last().unwrap();
         let first = next_curves.first().unwrap();
-        let (last_ray, first_ray) = self.last_first_ray(&next_curves);
+        let (last_ray, first_ray) = self.last_first_ray(next_curves);
 
         if last.intersect(first) {
             self.curves.push(Bezier::Line([last_ray.point, first_ray.point]));
@@ -324,7 +324,7 @@ impl Outline {
                 self.curves.push(Bezier::Line([projected_first, first_ray.point]));
             }
             StrokeCap::Round => {
-                let mid_ray = last_ray.mid(&first_ray);
+                let mid_ray = last_ray.mid(first_ray);
                 let mid = mid_ray.project(dist);
 
                 let mid_left =
@@ -368,7 +368,7 @@ impl Outline {
             let mut flipside_curves =
                 curves.iter().rev().map(|curve| curve.offset(-dist)).peekable();
 
-            let (last_ray, first_ray) = outline.last_first_ray(&flipside_curves.peek().unwrap());
+            let (last_ray, first_ray) = outline.last_first_ray(flipside_curves.peek().unwrap());
             outline.cap_end(&last_ray, &first_ray, dist, style.cap);
 
             outline.join_curves(flipside_curves, dist, style.join, is_closed);

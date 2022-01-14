@@ -50,7 +50,7 @@ impl GradientBuilder {
     }
 
     pub fn color_with_stop(&mut self, color: [f32; 4], stop: f32) -> &mut Self {
-        if stop < 0.0 || 1.0 < stop {
+        if !(0.0..=1.0).contains(&stop) {
             panic!("gradient stops must be between 0.0 and 1.0");
         }
 

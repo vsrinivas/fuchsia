@@ -6,7 +6,7 @@ use std::collections::HashMap;
 
 use crate::core::BinaryReader;
 
-const FINGERPRINT: &'static [u8] = "RIVE".as_bytes();
+const FINGERPRINT: &[u8] = "RIVE".as_bytes();
 
 /// Rive file runtime header. The header is fonud at the beginning of every
 /// Rive runtime file, and begins with a specific 4-byte format: "RIVE".

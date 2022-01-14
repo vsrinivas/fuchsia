@@ -14,7 +14,7 @@ pub fn try_from(core: Object) -> Option<Object> {
     core.try_cast::<PointsPath>().map(|object| object.into())
 }
 
-pub fn as_ref<'a>(object_ref: ObjectRef<'_>) -> impl Skinnable + '_ {
+pub fn as_ref(object_ref: ObjectRef<'_>) -> impl Skinnable + '_ {
     object_ref.cast::<PointsPath>()
 }
 

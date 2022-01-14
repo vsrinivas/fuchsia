@@ -21,7 +21,7 @@ use rayon::prelude::*;
 
 use crate::{
     extend::{ExtendTuple3, ExtendVec},
-    transform::GeometryPreservingTransform,
+    transform::GeomPresTransform,
     Point, PIXEL_WIDTH,
 };
 
@@ -156,14 +156,14 @@ fn approx_atan2(y: f32, x: f32) -> f32 {
 
     let a = x_abs.min(y_abs) / x_abs.max(y_abs);
     let s = a * a;
-    let mut r = s.mul_add(-0.0464964749, 0.15931422).mul_add(s, -0.327622764).mul_add(s * a, a);
+    let mut r = s.mul_add(-0.046_496_473, 0.159_314_22).mul_add(s, -0.327_622_77).mul_add(s * a, a);
 
     if y_abs > x_abs {
-        r = 1.57079637 - r;
+        r = f32::consts::FRAC_PI_2 - r;
     }
 
     if x < 0.0 {
-        r = 3.14159274 - r;
+        r = f32::consts::PI - r;
     }
 
     if y < 0.0 {
@@ -568,10 +568,10 @@ impl Default for Primitives {
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 enum PathCommand {
-    MoveTo,
-    LineTo,
-    QuadTo,
-    CubicTo,
+    Move,
+    Line,
+    Quad,
+    Cubic,
 }
 #[derive(Debug, Default)]
 struct Lines {
@@ -619,7 +619,7 @@ impl PathData {
             self.y.push(open_point.point.y);
             self.weight.push(open_point.weight);
 
-            self.commands.push(PathCommand::LineTo);
+            self.commands.push(PathCommand::Line);
         }
     }
 
@@ -630,24 +630,24 @@ impl PathData {
             let mut i = 0;
             for command in &self.commands {
                 match command {
-                    PathCommand::MoveTo => {
+                    PathCommand::Move => {
                         i += 1;
 
                         primitives.push_contour(Contour);
                     }
-                    PathCommand::LineTo => {
+                    PathCommand::Line => {
                         i += 1;
 
                         let points = points!(self, i, 2, 1);
                         primitives.push_line(points);
                     }
-                    PathCommand::QuadTo => {
+                    PathCommand::Quad => {
                         i += 2;
 
                         let points = points!(self, i, 3, 2, 1);
                         primitives.push_quad(points);
                     }
-                    PathCommand::CubicTo => {
+                    PathCommand::Cubic => {
                         i += 3;
 
                         let points = points!(self, i, 4, 3, 2, 1);
@@ -669,7 +669,7 @@ impl Default for PathData {
             x: vec![0.0],
             y: vec![0.0],
             weight: vec![1.0],
-            commands: vec![PathCommand::MoveTo],
+            commands: vec![PathCommand::Move],
             open_point_index: 0,
             lines: None,
         }
@@ -679,7 +679,7 @@ impl Default for PathData {
 #[derive(Clone, Debug, Default)]
 pub struct Path {
     inner: Rc<RefCell<PathData>>,
-    transform: Option<GeometryPreservingTransform>,
+    transform: Option<GeomPresTransform>,
 }
 
 impl Path {
@@ -721,7 +721,7 @@ impl Path {
 
     #[inline]
     pub fn transform(&self, transform: &[f32; 9]) -> Self {
-        if let Some(transform) = GeometryPreservingTransform::new(*transform) {
+        if let Some(transform) = GeomPresTransform::new(*transform) {
             return Self { inner: Rc::clone(&self.inner), transform: Some(transform) };
         }
 
@@ -731,7 +731,7 @@ impl Path {
             y: inner.y.clone(),
             weight: inner.weight.clone(),
             commands: inner.commands.clone(),
-            open_point_index: inner.open_point_index.clone(),
+            open_point_index: inner.open_point_index,
             lines: None,
         };
 
@@ -786,7 +786,7 @@ impl PathBuilder {
             let mut inner = self.inner.borrow_mut();
             let len = inner.x.len();
 
-            if matches!(inner.commands[inner.commands.len() - 1], PathCommand::MoveTo) {
+            if matches!(inner.commands[inner.commands.len() - 1], PathCommand::Move) {
                 inner.x[len - 1] = p.x;
                 inner.y[len - 1] = p.y;
                 inner.weight[len - 1] = 1.0;
@@ -799,7 +799,7 @@ impl PathBuilder {
                 inner.y.push(p.y);
                 inner.weight.push(1.0);
 
-                inner.commands.push(PathCommand::MoveTo);
+                inner.commands.push(PathCommand::Move);
 
                 inner.open_point_index = open_point_index;
             }
@@ -817,7 +817,7 @@ impl PathBuilder {
             inner.y.push(p.y);
             inner.weight.push(1.0);
 
-            inner.commands.push(PathCommand::LineTo);
+            inner.commands.push(PathCommand::Line);
         }
 
         self
@@ -836,7 +836,7 @@ impl PathBuilder {
             inner.y.push(p2.y);
             inner.weight.push(1.0);
 
-            inner.commands.push(PathCommand::QuadTo);
+            inner.commands.push(PathCommand::Quad);
         }
 
         self
@@ -859,7 +859,7 @@ impl PathBuilder {
             inner.y.push(p3.y);
             inner.weight.push(1.0);
 
-            inner.commands.push(PathCommand::CubicTo);
+            inner.commands.push(PathCommand::Cubic);
         }
 
         self
@@ -878,7 +878,7 @@ impl PathBuilder {
             inner.y.push(p2.y);
             inner.weight.push(1.0);
 
-            inner.commands.push(PathCommand::QuadTo);
+            inner.commands.push(PathCommand::Quad);
         }
 
         self
@@ -908,7 +908,7 @@ impl PathBuilder {
             inner.y.push(p3.y);
             inner.weight.push(1.0);
 
-            inner.commands.push(PathCommand::CubicTo);
+            inner.commands.push(PathCommand::Cubic);
         }
 
         self

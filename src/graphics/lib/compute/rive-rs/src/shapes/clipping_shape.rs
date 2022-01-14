@@ -78,7 +78,9 @@ impl ObjectRef<'_, ClippingShape> {
 
     pub fn build_dependencies(&self) {
         for shape in self.shapes.iter() {
-            ObjectRef::from(shape.as_ref().path_composer())
+            shape
+                .as_ref()
+                .path_composer()
                 .cast::<Component>()
                 .push_dependent(self.as_object().cast());
         }
@@ -89,7 +91,7 @@ impl ObjectRef<'_, ClippingShape> {
             let mut builder = CommandPathBuilder::new();
 
             for shape in self.shapes.iter() {
-                ObjectRef::from(shape.as_ref().path_composer()).with_world_path(|path| {
+                shape.as_ref().path_composer().with_world_path(|path| {
                     builder.path(
                         path.expect("world_path should already be set on PathComposer"),
                         None,

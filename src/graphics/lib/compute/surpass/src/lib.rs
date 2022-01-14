@@ -17,7 +17,7 @@ pub use layer::Layer;
 pub use path::{Path, PathBuilder};
 pub use point::Point;
 pub use segment::{Lines, LinesBuilder, Segment};
-pub use transform::{GeometryPreservingTransform, GeometryPreservingTransformError};
+pub use transform::{GeomPresTransform, GeomPresTransformError};
 
 const PIXEL_WIDTH: usize = 16;
 const PIXEL_DOUBLE_WIDTH: usize = PIXEL_WIDTH * 2;

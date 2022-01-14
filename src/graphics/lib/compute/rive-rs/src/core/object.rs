@@ -20,11 +20,14 @@ fn any_type_name<T: Any>() -> &'static str {
     any::type_name::<T>().rsplit("::").next().unwrap()
 }
 
+type OnAddedListener = fn(&Rc<dyn Core>, &dyn CoreContext) -> StatusCode;
+type Importer = fn(&Rc<dyn Core>, Object, &ImportStack) -> StatusCode;
+
 pub struct Object<T = ()> {
     weak: Weak<dyn Core>,
-    on_added_dirty: Option<fn(&Rc<dyn Core>, &dyn CoreContext) -> StatusCode>,
-    pub on_added_clean: Option<fn(&Rc<dyn Core>, &dyn CoreContext) -> StatusCode>,
-    import: Option<fn(&Rc<dyn Core>, Object, &ImportStack) -> StatusCode>,
+    on_added_dirty: Option<OnAddedListener>,
+    pub on_added_clean: Option<OnAddedListener>,
+    import: Option<Importer>,
     _phantom: PhantomData<T>,
 }
 
@@ -189,7 +192,7 @@ enum CoreRef<'a, T = ()> {
 impl<'a> CoreRef<'a> {
     pub fn try_cast<'b, C: Core>(&'b self) -> Option<CoreRef<'a, C>> {
         match self {
-            Self::Rc(rc) => rc.is::<C>().then(|| CoreRef::Rc(Rc::clone(&rc))),
+            Self::Rc(rc) => rc.is::<C>().then(|| CoreRef::Rc(Rc::clone(rc))),
             _ => unreachable!(),
         }
     }
@@ -198,7 +201,7 @@ impl<'a> CoreRef<'a> {
 impl<'a, T: Core> CoreRef<'a, T> {
     pub fn try_cast<'b, C: Core>(&'b self) -> Option<CoreRef<'a, C>> {
         match self {
-            Self::Rc(rc) => rc.is::<C>().then(|| CoreRef::Rc(Rc::clone(&rc))),
+            Self::Rc(rc) => rc.is::<C>().then(|| CoreRef::Rc(Rc::clone(rc))),
             Self::Borrow(borrow) => <dyn Core>::try_cast::<C>(*borrow).map(CoreRef::Borrow),
         }
     }
@@ -245,9 +248,9 @@ impl<T> Clone for CoreRef<'_, T> {
 
 pub struct ObjectRef<'a, T = ()> {
     core_ref: CoreRef<'a, T>,
-    on_added_dirty: Option<fn(&Rc<dyn Core>, &dyn CoreContext) -> StatusCode>,
-    on_added_clean: Option<fn(&Rc<dyn Core>, &dyn CoreContext) -> StatusCode>,
-    import: Option<fn(&Rc<dyn Core>, Object, &ImportStack) -> StatusCode>,
+    on_added_dirty: Option<OnAddedListener>,
+    on_added_clean: Option<OnAddedListener>,
+    import: Option<Importer>,
 }
 
 impl<'a, T: Core> From<&'a T> for ObjectRef<'a, T> {

@@ -10,33 +10,33 @@ const MAX_SCALING_FACTOR_X: f32 = 1.0 + MAX_ERROR as f32 / MAX_WIDTH as f32;
 const MAX_SCALING_FACTOR_Y: f32 = 1.0 + MAX_ERROR as f32 / MAX_HEIGHT as f32;
 
 #[derive(Debug, PartialEq)]
-pub enum GeometryPreservingTransformError {
+pub enum GeomPresTransformError {
     ExceededScalingFactor { x: bool, y: bool },
 }
 
-impl fmt::Display for GeometryPreservingTransformError {
+impl fmt::Display for GeomPresTransformError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            GeometryPreservingTransformError::ExceededScalingFactor { x: true, y: false } => {
+            GeomPresTransformError::ExceededScalingFactor { x: true, y: false } => {
                 write!(f, "exceeded scaling factor on the X axis (-1.0 to 1.0)")
             }
-            GeometryPreservingTransformError::ExceededScalingFactor { x: false, y: true } => {
+            GeomPresTransformError::ExceededScalingFactor { x: false, y: true } => {
                 write!(f, "exceeded scaling factor on the Y axis (-1.0 to 1.0)")
             }
-            GeometryPreservingTransformError::ExceededScalingFactor { x: true, y: true } => {
+            GeomPresTransformError::ExceededScalingFactor { x: true, y: true } => {
                 write!(f, "exceeded scaling factor on both axis (-1.0 to 1.0)")
             }
-            _ => panic!("cannot display invalid GeometryPreservingTransformError"),
+            _ => panic!("cannot display invalid GeomPresTransformError"),
         }
     }
 }
 
-impl Error for GeometryPreservingTransformError {}
+impl Error for GeomPresTransformError {}
 
 #[derive(Clone, Debug, PartialEq)]
-pub struct GeometryPreservingTransform([f32; 6]);
+pub struct GeomPresTransform([f32; 6]);
 
-impl GeometryPreservingTransform {
+impl GeomPresTransform {
     #[inline]
     pub fn new(mut transform: [f32; 9]) -> Option<Self> {
         (transform[6].abs() <= f32::EPSILON && transform[7].abs() <= f32::EPSILON)
@@ -83,8 +83,8 @@ impl GeometryPreservingTransform {
     }
 }
 
-impl TryFrom<[f32; 6]> for GeometryPreservingTransform {
-    type Error = GeometryPreservingTransformError;
+impl TryFrom<[f32; 6]> for GeomPresTransform {
+    type Error = GeomPresTransformError;
 
     fn try_from(transform: [f32; 6]) -> Result<Self, Self::Error> {
         let scales_up_x =
@@ -92,16 +92,13 @@ impl TryFrom<[f32; 6]> for GeometryPreservingTransform {
         let scales_up_y =
             transform[1] * transform[1] + transform[3] * transform[3] > MAX_SCALING_FACTOR_Y;
 
-        (!scales_up_x && !scales_up_y).then(|| Self(transform)).ok_or(
-            GeometryPreservingTransformError::ExceededScalingFactor {
-                x: scales_up_x,
-                y: scales_up_y,
-            },
-        )
+        (!scales_up_x && !scales_up_y)
+            .then(|| Self(transform))
+            .ok_or(GeomPresTransformError::ExceededScalingFactor { x: scales_up_x, y: scales_up_y })
     }
 }
 
-impl Default for GeometryPreservingTransform {
+impl Default for GeomPresTransform {
     fn default() -> Self {
         Self([1.0, 0.0, 0.0, 1.0, 0.0, 0.0])
     }
@@ -113,15 +110,14 @@ mod tests {
 
     #[test]
     fn default_identity() {
-        let transform = GeometryPreservingTransform::default();
+        let transform = GeomPresTransform::default();
 
         assert_eq!(transform.transform(Point::new(2.0, 3.0)), Point::new(2.0, 3.0));
     }
 
     #[test]
     fn scale_translate() {
-        let transform =
-            GeometryPreservingTransform::try_from([0.1, 0.5, 0.4, 0.3, 0.5, 0.6]).unwrap();
+        let transform = GeomPresTransform::try_from([0.1, 0.5, 0.4, 0.3, 0.5, 0.6]).unwrap();
 
         assert_eq!(transform.transform(Point::new(2.0, 3.0)), Point::new(2.2, 2.3));
     }
@@ -132,8 +128,8 @@ mod tests {
             [0.1, MAX_SCALING_FACTOR_Y.sqrt(), MAX_SCALING_FACTOR_X.sqrt(), 0.1, 0.5, 0.0];
 
         assert_eq!(
-            GeometryPreservingTransform::try_from(transform),
-            Err(GeometryPreservingTransformError::ExceededScalingFactor { x: true, y: true })
+            GeomPresTransform::try_from(transform),
+            Err(GeomPresTransformError::ExceededScalingFactor { x: true, y: true })
         );
     }
 
@@ -142,8 +138,8 @@ mod tests {
         let transform = [0.1, 0.0, MAX_SCALING_FACTOR_X.sqrt(), 0.0, 0.5, 0.0];
 
         assert_eq!(
-            GeometryPreservingTransform::try_from(transform),
-            Err(GeometryPreservingTransformError::ExceededScalingFactor { x: true, y: false })
+            GeomPresTransform::try_from(transform),
+            Err(GeomPresTransformError::ExceededScalingFactor { x: true, y: false })
         );
     }
 
@@ -152,8 +148,8 @@ mod tests {
         let transform = [0.0, MAX_SCALING_FACTOR_Y.sqrt(), 0.0, 0.1, 0.5, 0.0];
 
         assert_eq!(
-            GeometryPreservingTransform::try_from(transform),
-            Err(GeometryPreservingTransformError::ExceededScalingFactor { x: false, y: true })
+            GeomPresTransform::try_from(transform),
+            Err(GeomPresTransformError::ExceededScalingFactor { x: false, y: true })
         );
     }
 
@@ -161,9 +157,6 @@ mod tests {
     fn correct_scaling_factor() {
         let transform = [1.0, MAX_SCALING_FACTOR_Y.sqrt(), 0.0, 0.0, 0.5, 0.0];
 
-        assert_eq!(
-            GeometryPreservingTransform::try_from(transform),
-            Ok(GeometryPreservingTransform(transform))
-        );
+        assert_eq!(GeomPresTransform::try_from(transform), Ok(GeomPresTransform(transform)));
     }
 }

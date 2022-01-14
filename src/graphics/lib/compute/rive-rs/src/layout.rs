@@ -102,17 +102,15 @@ pub fn align(fit: Fit, alignment: Alignment, frame: Aabb, content: Aabb) -> Mat 
     let frame_half_size = frame.size() * 0.5;
     let translation_vec = frame.min + frame_half_size + alignment.0 * frame_half_size;
 
-    let mut translation = Mat::default();
-    translation.translate_x = translation_vec.x;
-    translation.translate_y = translation_vec.y;
+    let translation = Mat {
+        translate_x: translation_vec.x,
+        translate_y: translation_vec.y,
+        ..Default::default()
+    };
 
-    let mut scale = Mat::default();
-    scale.scale_x = scale_vec.x;
-    scale.scale_y = scale_vec.y;
+    let scale = Mat { scale_x: scale_vec.x, scale_y: scale_vec.y, ..Default::default() };
 
-    let mut translation_back = Mat::default();
-    translation_back.translate_x = pos.x;
-    translation_back.translate_y = pos.y;
+    let translation_back = Mat { translate_x: pos.x, translate_y: pos.y, ..Default::default() };
 
     translation * scale * translation_back
 }

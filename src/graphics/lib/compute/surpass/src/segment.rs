@@ -130,7 +130,7 @@ impl LinesBuilder {
             let layer_id = self.lines.layer_ids[i];
             let should_retain = layer_id
                 .or(prev_layer_id)
-                .map(|layer_id| f(layer_id))
+                .map(&mut f)
                 .expect("consecutive None values should not exist in layer_ids");
             prev_layer_id = layer_id;
 
@@ -181,7 +181,7 @@ impl LinesBuilder {
                 return Default::default();
             }
 
-            let layer = layer_id.map(|layer_id| layers(layer_id)).unwrap_or_default();
+            let layer = layer_id.map(&layers).unwrap_or_default();
 
             if let Some(Layer { is_enabled: false, .. }) = layer {
                 return Default::default();

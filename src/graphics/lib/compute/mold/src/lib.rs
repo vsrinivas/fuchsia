@@ -29,5 +29,5 @@ pub use surpass::{
         BlendMode, Fill, FillRule, Func, Gradient, GradientBuilder, GradientType, Props, Rect,
         Style,
     },
-    GeometryPreservingTransform, GeometryPreservingTransformError, Path, PathBuilder, Point,
+    GeomPresTransform, GeomPresTransformError, Path, PathBuilder, Point,
 };

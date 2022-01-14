@@ -14,7 +14,7 @@ pub use color::Color;
 pub use mat::Mat;
 pub use vec::Vec;
 
-pub const CIRCLE_CONSTANT: f32 = 0.552284749831;
+pub const CIRCLE_CONSTANT: f32 = 0.552_284_8;
 
 pub fn lerp(a: f32, b: f32, ratio: f32) -> f32 {
     a + (b - a) * ratio

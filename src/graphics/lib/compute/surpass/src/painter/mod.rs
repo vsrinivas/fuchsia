@@ -75,10 +75,10 @@ fn doubled_area_to_coverage(doubled_area: i32x8, fill_rule: FillRule) -> f32x8 {
 
 #[inline]
 fn linear_to_srgb_approx_simd(l: f32x8) -> f32x8 {
-    let a = f32x8::splat(0.20101772f32);
-    let b = f32x8::splat(-0.51280147f32);
-    let c = f32x8::splat(1.344401f32);
-    let d = f32x8::splat(-0.030656587f32);
+    let a = f32x8::splat(0.201_017_72f32);
+    let b = f32x8::splat(-0.512_801_47f32);
+    let c = f32x8::splat(1.344_401f32);
+    let d = f32x8::splat(-0.030_656_587f32);
 
     let s = l.sqrt();
     let s2 = l;
@@ -87,21 +87,21 @@ fn linear_to_srgb_approx_simd(l: f32x8) -> f32x8 {
     let m = l * f32x8::splat(12.92);
     let n = a.mul_add(s3, b.mul_add(s2, c.mul_add(s, d)));
 
-    m.select(n, l.le(f32x8::splat(0.0031308)))
+    m.select(n, l.le(f32x8::splat(0.003_130_8)))
 }
 
 #[inline]
 fn linear_to_srgb_approx(l: f32) -> f32 {
-    let a = 0.20101772f32;
-    let b = -0.51280147f32;
-    let c = 1.344401f32;
-    let d = -0.030656587f32;
+    let a = 0.201_017_72f32;
+    let b = -0.512_801_47f32;
+    let c = 1.344_401f32;
+    let d = -0.030_656_587f32;
 
     let s = l.sqrt();
     let s2 = l;
     let s3 = s2 * s;
 
-    if l <= 0.0031308 {
+    if l <= 0.003_130_8 {
         l * 12.92
     } else {
         a.mul_add(s3, b.mul_add(s2, c.mul_add(s, d)))
@@ -279,7 +279,7 @@ impl LayerPainter for Painter {
                             let fill = Self::fill_at(
                                 x + tile_x * TILE_SIZE,
                                 y * f32x8::LANES + tile_y * TILE_SIZE,
-                                &style,
+                                style,
                             );
 
                             self.blend_at(x - 1, y, coverages, apply_clip, fill, style.blend_mode);
@@ -471,7 +471,7 @@ impl Painter {
         }
     }
 
-    pub fn paint_tile_row<'c, P: LayerProps>(
+    pub fn paint_tile_row<P: LayerProps>(
         &mut self,
         workbench: &mut LayerWorkbench,
         y: usize,

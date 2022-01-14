@@ -35,7 +35,7 @@ impl Buffer<'_> {
 
     /// Returns the length required for the allocation of a per-tile buffer.
     pub(crate) fn tiles_len(&self) -> usize {
-        let buffer_width = self.width_stride.unwrap_or_else(|| self.width);
+        let buffer_width = self.width_stride.unwrap_or(self.width);
         let tiles_width = (self.width + (TILE_SIZE - 1)) / TILE_SIZE;
         let buffer_height = self.buffer.len() / buffer_width;
         let tiles_height = (buffer_height + (TILE_SIZE - 1)) / TILE_SIZE;

@@ -5,7 +5,7 @@
 use std::{cmp::Ordering, convert::TryFrom, error::Error, fmt, iter::FromIterator, mem};
 
 use rustc_hash::FxHashMap;
-use surpass::{self, painter::Props, GeometryPreservingTransform, LAYER_LIMIT};
+use surpass::{self, painter::Props, GeomPresTransform, LAYER_LIMIT};
 
 const IDENTITY: &[f32; 6] = &[1.0, 0.0, 0.0, 1.0, 0.0, 0.0];
 
@@ -53,9 +53,7 @@ impl TryFrom<usize> for Order {
     type Error = OrderError;
 
     fn try_from(order: usize) -> Result<Self, OrderError> {
-        u32::try_from(order)
-            .map_err(|_| OrderError::ExceededLayerLimit)
-            .and_then(|x| Self::try_from(x))
+        u32::try_from(order).map_err(|_| OrderError::ExceededLayerLimit).and_then(Self::try_from)
     }
 }
 
@@ -223,16 +221,16 @@ impl Layer {
     }
 
     #[inline]
-    pub fn transform(&self) -> GeometryPreservingTransform {
+    pub fn transform(&self) -> GeomPresTransform {
         self.inner
             .affine_transform
-            .map(|transform| GeometryPreservingTransform::from_affine(transform))
+            .map(GeomPresTransform::from_affine)
             .flatten()
             .unwrap_or_default()
     }
 
     #[inline]
-    pub fn set_transform(&mut self, transform: GeometryPreservingTransform) -> &mut Self {
+    pub fn set_transform(&mut self, transform: GeomPresTransform) -> &mut Self {
         let affine_transform =
             if transform.as_slice() == IDENTITY { None } else { Some(*transform.as_slice()) };
 
