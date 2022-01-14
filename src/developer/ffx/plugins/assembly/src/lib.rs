@@ -25,6 +25,9 @@ pub async fn assembly(cmd: AssemblyCommand) -> Result<()> {
     // an error.
     match cmd.op_class {
         OperationClass::Image(args) => operations::image::assemble(args).context("Image Assembly"),
+        OperationClass::CreateSystem(args) => {
+            operations::create_system::create_system(args).context("Create System")
+        }
         OperationClass::CreateUpdate(args) => {
             operations::create_update::create_update(args).context("Create Update Package")
         }

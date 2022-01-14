@@ -202,6 +202,7 @@ template("assemble_system") {
     images_config = "${image_name}_images_config"
     partitions_config = "${image_name}_partitions_config"
     image_assembler = "${image_name}_image_assembler"
+    create_system = "${image_name}_create_system"
     copy_vbmeta = "${image_name}_copy_vbmeta"
     copy_zbi = "${image_name}_copy_zbi"
     copy_zbi_signed = "${image_name}_copy_zbi_signed"
@@ -244,6 +245,8 @@ template("assemble_system") {
     base_meta_package = "${gendir}/system_image/meta/package"
     images_manifest = "${outdir}/images.json"
     assembly_inputs = "${outdir}/assembly_inputs.json"
+
+    create_system_command_log = "${outdir}/new_commands.json"
 
     # Determine which ZBI we are shipping.
     zbi_final = zbi
@@ -686,6 +689,30 @@ template("assemble_system") {
     }
   }
 
+  ffx_action(labels.create_system) {
+    forward_variables_from(invoker,
+                           [
+                             "testonly",
+                             "visibility",
+                           ])
+    args = [
+      "--config",
+      "assembly_enabled=true",
+      "assembly",
+      "create-system",
+      "--images",
+      rebase_path(files.images_config, root_build_dir),
+      "--gendir",
+      rebase_path(files.gendir, root_build_dir),
+      "--outdir",
+      rebase_path(files.outdir, root_build_dir),
+    ]
+
+    deps = [ ":${labels.images_config}" ]
+    inputs = [ files.images_config ]
+    outputs = [ files.create_system_command_log ]
+  }
+
   #######
   # Optionally, copy the resulting ZBI to the specified directory.
   #
@@ -845,6 +872,7 @@ template("assemble_system") {
     # available to external targets.
     public_deps = [
       ":${labels.assembly_inputs}",
+      ":${labels.create_system}",
       ":${labels.image_assembler}",
       ":${labels.images_config}",
       ":${labels.partitions_config}",

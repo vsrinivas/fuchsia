@@ -21,6 +21,7 @@ pub struct AssemblyCommand {
 #[argh(subcommand)]
 pub enum OperationClass {
     Image(ImageArgs),
+    CreateSystem(CreateSystemArgs),
     CreateUpdate(CreateUpdateArgs),
     ConfigData(ConfigDataArgs),
     Product(ProductArgs),
@@ -45,6 +46,23 @@ pub struct ImageArgs {
     /// log the external commands to gendir as `commands_log.json`.
     #[argh(switch)]
     pub log_commands: bool,
+
+    /// the directory to write assembled outputs to.
+    #[argh(option)]
+    pub outdir: PathBuf,
+
+    /// the directory to write generated intermediate files to.
+    #[argh(option)]
+    pub gendir: Option<PathBuf>,
+}
+
+/// create the system images.
+#[derive(Debug, FromArgs, PartialEq)]
+#[argh(subcommand, name = "create-system")]
+pub struct CreateSystemArgs {
+    /// the configuration file that specifies which images to generate and how.
+    #[argh(option)]
+    pub images: PathBuf,
 
     /// the directory to write assembled outputs to.
     #[argh(option)]
