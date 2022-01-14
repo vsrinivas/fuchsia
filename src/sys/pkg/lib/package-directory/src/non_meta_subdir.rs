@@ -18,10 +18,8 @@ use {
     vfs::{
         common::send_on_open_with_error,
         directory::{
-            connection::{io1::DerivedConnection, util::OpenDirectory},
-            entry::EntryInfo,
-            immutable::connection::io1::{ImmutableConnection, ImmutableConnectionClient},
-            traversal_position::TraversalPosition,
+            connection::io1::DerivedConnection, entry::EntryInfo,
+            immutable::connection::io1::ImmutableConnection, traversal_position::TraversalPosition,
         },
         execution_scope::ExecutionScope,
         path::Path as VfsPath,
@@ -62,12 +60,7 @@ impl vfs::directory::entry::DirectoryEntry for NonMetaSubdir {
                 return;
             }
 
-            let () = ImmutableConnection::create_connection(
-                scope,
-                OpenDirectory::new(self as Arc<dyn ImmutableConnectionClient>),
-                flags,
-                server_end,
-            );
+            let () = ImmutableConnection::create_connection(scope, self, flags, server_end);
             return;
         }
 

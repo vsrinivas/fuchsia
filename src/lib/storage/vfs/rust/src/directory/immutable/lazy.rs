@@ -12,7 +12,7 @@ mod watchers_task;
 use crate::{
     common::{rights_to_posix_mode_bits, send_on_open_with_error},
     directory::{
-        connection::{io1::DerivedConnection, util::OpenDirectory},
+        connection::io1::DerivedConnection,
         dirents_sink,
         entry::{DirectoryEntry, EntryInfo},
         entry_container::Directory,
@@ -192,12 +192,7 @@ impl<T: LazyDirectory> DirectoryEntry for Lazy<T> {
         let name = match path.next() {
             Some(name) => name.to_string(),
             None => {
-                ImmutableConnection::create_connection(
-                    scope,
-                    OpenDirectory::new(self),
-                    flags,
-                    server_end,
-                );
+                ImmutableConnection::create_connection(scope, self, flags, server_end);
                 return;
             }
         };

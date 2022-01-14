@@ -34,7 +34,7 @@ use {
     vfs::{
         common::send_on_open_with_error,
         directory::{
-            connection::{io1::DerivedConnection, util::OpenDirectory},
+            connection::io1::DerivedConnection,
             dirents_sink::{self, AppendResult, Sink},
             entry::{DirectoryEntry, EntryInfo},
             entry_container::{Directory, MutableDirectory},
@@ -569,7 +569,7 @@ impl DirectoryEntry for FatDirectory {
                     .expect("entry should already be open");
                 vfs::directory::mutable::connection::io1::MutableConnection::create_connection(
                     scope,
-                    OpenDirectory::new(entry),
+                    entry.clone(),
                     flags,
                     server_end,
                 );

@@ -6,8 +6,7 @@
 //! content.
 
 use crate::{
-    common::IntoAny,
-    directory::{dirents_sink, traversal_position::TraversalPosition},
+    directory::{dirents_sink, entry::DirectoryEntry, traversal_position::TraversalPosition},
     execution_scope::ExecutionScope,
     filesystem::Filesystem,
 };
@@ -23,7 +22,7 @@ use {
 /// All directories implement this trait.  If a directory can be modified it should
 /// also implement the `MutableDirectory` trait.
 #[async_trait]
-pub trait Directory: IntoAny + Send + Sync {
+pub trait Directory: DirectoryEntry {
     /// Reads directory entries starting from `pos` by adding them to `sink`.
     /// Once finished, should return a sealed sink.
     // The lifetimes here are because of https://github.com/rust-lang/rust/issues/63033.

@@ -51,10 +51,13 @@ impl DerivedConnection for ImmutableConnection {
 
     fn create_connection(
         scope: ExecutionScope,
-        directory: OpenDirectory<Self::Directory>,
+        directory: Arc<Self::Directory>,
         flags: u32,
         server_end: ServerEnd<NodeMarker>,
     ) {
+        // Ensure we close the directory if we fail to create the connection.
+        let directory = OpenDirectory::new(directory);
+
         // TODO(fxbug.dev/82054): These flags should be validated before create_connection is called
         // since at this point the directory resource has already been opened/created.
         let flags = match new_connection_validate_flags(flags) {

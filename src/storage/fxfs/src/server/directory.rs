@@ -40,7 +40,6 @@ use {
     vfs::{
         common::send_on_open_with_error,
         directory::{
-            connection::util::OpenDirectory,
             dirents_sink::{self, AppendResult, Sink},
             entry::{DirectoryEntry, EntryInfo},
             entry_container::{Directory, MutableDirectory},
@@ -448,11 +447,9 @@ impl DirectoryEntry for FxDirectory {
                     if node.is::<FxDirectory>() {
                         MutableConnection::create_connection_async(
                             scope,
-                            OpenDirectory::new(
-                                node.downcast::<FxDirectory>()
-                                    .unwrap_or_else(|_| unreachable!())
-                                    .take(),
-                            ),
+                            node.downcast::<FxDirectory>()
+                                .unwrap_or_else(|_| unreachable!())
+                                .take(),
                             flags,
                             server_end,
                             shutdown,

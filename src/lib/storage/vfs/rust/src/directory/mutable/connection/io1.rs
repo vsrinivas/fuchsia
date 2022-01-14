@@ -78,7 +78,7 @@ impl DerivedConnection for MutableConnection {
 
     fn create_connection(
         scope: ExecutionScope,
-        directory: OpenDirectory<Self::Directory>,
+        directory: Arc<Self::Directory>,
         flags: u32,
         server_end: ServerEnd<NodeMarker>,
     ) {
@@ -138,7 +138,7 @@ impl MutableConnection {
     /// Very similar to create_connection, but creates a connection without spawning a new task.
     pub async fn create_connection_async(
         scope: ExecutionScope,
-        directory: OpenDirectory<dyn MutableConnectionClient>,
+        directory: Arc<dyn MutableConnectionClient>,
         flags: u32,
         server_end: ServerEnd<NodeMarker>,
         shutdown: oneshot::Receiver<()>,
@@ -323,11 +323,14 @@ impl MutableConnection {
 
     fn prepare_connection(
         scope: ExecutionScope,
-        directory: OpenDirectory<dyn MutableConnectionClient>,
+        directory: Arc<dyn MutableConnectionClient>,
         flags: u32,
         server_end: ServerEnd<NodeMarker>,
     ) -> Result<(Self, DirectoryRequestStream), Error> {
-        // TODO(fxbug.dev/82054): These flags should be validated before create_connection is called
+        // Ensure we close the directory if we fail to prepare the connection.
+        let directory = OpenDirectory::new(directory);
+
+        // TODO(fxbug.dev/82054): These flags should be validated before prepare_connection is called
         // since at this point the directory resource has already been opened/created.
         let flags = match new_connection_validate_flags(flags) {
             Ok(updated) => updated,
@@ -534,7 +537,7 @@ mod tests {
             let (proxy, server_end) = fidl::endpoints::create_proxy::<DirectoryMarker>().unwrap();
             MutableConnection::create_connection(
                 self.scope.clone(),
-                OpenDirectory::new(dir.clone()),
+                dir.clone(),
                 flags,
                 server_end.into_channel().into(),
             );

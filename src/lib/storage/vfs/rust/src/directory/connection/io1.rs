@@ -52,7 +52,7 @@ pub trait DerivedConnection: Send + Sync {
     /// If an error occurs, create_connection() must call close() on the directory.
     fn create_connection(
         scope: ExecutionScope,
-        directory: OpenDirectory<Self::Directory>,
+        directory: Arc<Self::Directory>,
         flags: u32,
         server_end: ServerEnd<NodeMarker>,
     );

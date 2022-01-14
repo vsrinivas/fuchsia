@@ -22,11 +22,11 @@ use {
     vfs::{
         common::send_on_open_with_error,
         directory::{
-            connection::{io1::DerivedConnection, util::OpenDirectory},
+            connection::io1::DerivedConnection,
             dirents_sink,
             entry::{DirectoryEntry, EntryInfo},
             entry_container::Directory,
-            immutable::connection::io1::{ImmutableConnection, ImmutableConnectionClient},
+            immutable::connection::io1::ImmutableConnection,
             traversal_position::TraversalPosition,
         },
         execution_scope::ExecutionScope,
@@ -52,7 +52,7 @@ impl PkgfsPackagesVariants {
 
         let () = ImmutableConnection::create_connection(
             ExecutionScope::new(),
-            OpenDirectory::new(Arc::clone(self) as Arc<dyn ImmutableConnectionClient>),
+            self.clone(),
             fidl_fuchsia_io::OPEN_RIGHT_READABLE,
             server_end.into_channel().into(),
         );
@@ -91,12 +91,7 @@ impl DirectoryEntry for PkgfsPackagesVariants {
         }
 
         match path.next().map(|variant| self.variant(variant)) {
-            None => ImmutableConnection::create_connection(
-                scope,
-                OpenDirectory::new(self as Arc<dyn ImmutableConnectionClient>),
-                flags,
-                server_end,
-            ),
+            None => ImmutableConnection::create_connection(scope, self, flags, server_end),
             Some(Some(hash)) => {
                 let blobfs = self.blobfs.clone();
                 scope.clone().spawn(async move {
