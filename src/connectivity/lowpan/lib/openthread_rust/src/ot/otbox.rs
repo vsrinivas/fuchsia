@@ -44,6 +44,8 @@ pub struct Box<T: Boxable>(*mut T::OtType, PhantomData<T>);
 unsafe impl<T: Boxable + Send> Send for Box<T> {}
 unsafe impl<T: Boxable + Sync> Sync for Box<T> {}
 
+impl<T: Boxable + crate::ot::InstanceInterface> crate::ot::InstanceInterface for Box<T> {}
+
 impl<T: Boxable + std::fmt::Debug> std::fmt::Debug for Box<T> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_tuple("OtBox").field(self.as_ref()).finish()

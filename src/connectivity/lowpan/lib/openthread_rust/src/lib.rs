@@ -66,8 +66,8 @@ pub(crate) mod prelude_internal {
     pub use num::FromPrimitive as _;
     pub use ot::Result;
     pub use ot::{
-        types::*, BorderRouter, Boxable, Error, Instance, Ip6, Link, Message, MessageBuffer,
-        Platform, Tasklets, Thread,
+        types::*, BorderRouter, Boxable, Error, Instance, InstanceInterface, Ip6, Link, Message,
+        MessageBuffer, Platform, Tasklets, Thread,
     };
     pub use static_assertions as sa;
 }

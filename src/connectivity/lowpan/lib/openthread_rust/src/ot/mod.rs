@@ -106,6 +106,12 @@ pub use border_router::*;
 mod platform;
 pub use platform::*;
 
+/// Trait implemented by all OpenThread instances.
+pub trait InstanceInterface:
+    Ip6 + Reset + Dataset + Link + State + Tasklets + Thread + BorderRouter + MessageBuffer
+{
+}
+
 /// Returns the OpenThread version string. This is the safe equivalent of
 /// [`otsys::otGetVersionString()`](crate::otsys::otGetVersionString()).
 pub fn get_version_string() -> &'static str {

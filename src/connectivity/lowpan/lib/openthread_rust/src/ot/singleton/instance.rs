@@ -30,6 +30,8 @@ unsafe impl ot::Boxable for Instance {
     }
 }
 
+impl InstanceInterface for Instance {}
+
 impl std::fmt::Debug for Instance {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_tuple("otInstance").field(&self.as_ot_ptr()).finish()
