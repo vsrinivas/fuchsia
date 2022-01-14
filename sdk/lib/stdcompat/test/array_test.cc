@@ -51,18 +51,18 @@ TEST(ToArrayTest, InitializesFromInitializerList) {
 
 TEST(ToArrayTest, IsAliasWhenStdIsAvailable) {
   {
-    std::array<CopyOnly, 10> (*toarray_cpp20)(CopyOnly(&)[10]) = cpp20::to_array;
-    std::array<CopyOnly, 10> (*toarray_std)(CopyOnly(&)[10]) = std::to_array;
+    constexpr std::array<CopyOnly, 10> (*to_array_cpp20)(CopyOnly(&)[10]) = cpp20::to_array;
+    constexpr std::array<CopyOnly, 10> (*to_array_std)(CopyOnly(&)[10]) = std::to_array;
 
-    static_assert(toarray_cpp20 == toarray_std,
+    static_assert(to_array_cpp20 == to_array_std,
                   "cpp20::to_array should be an alias of std::to_array.");
   }
 
   {
-    std::array<MoveOnly, 10> (*toarray_cpp20)(MoveOnly(&&)[10]) = cpp20::to_array;
-    std::array<MoveOnly, 10> (*toarray_std)(MoveOnly(&&)[10]) = std::to_array;
+    constexpr std::array<MoveOnly, 10> (*to_array_cpp20)(MoveOnly(&&)[10]) = cpp20::to_array;
+    constexpr std::array<MoveOnly, 10> (*to_array_std)(MoveOnly(&&)[10]) = std::to_array;
 
-    static_assert(toarray_cpp20 == toarray_std,
+    static_assert(to_array_cpp20 == to_array_std,
                   "cpp20::to_array should be an alias of std::to_array.");
   }
 }
