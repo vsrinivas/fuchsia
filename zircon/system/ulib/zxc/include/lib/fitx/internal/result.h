@@ -314,7 +314,7 @@ struct storage_type<storage_class, E> {
 
   constexpr storage_type() = default;
 
-  constexpr storage_type(const storage_type& other) = default;
+  constexpr storage_type(const storage_type&) = default;
   constexpr storage_type& operator=(const storage_type&) = default;
   constexpr storage_type(storage_type&&) = default;
   constexpr storage_type& operator=(storage_type&&) = default;
@@ -351,15 +351,41 @@ struct storage_type<storage_class_e::non_trivial, E> {
 
   constexpr storage_type() = default;
 
-  constexpr storage_type(const storage_type&) = default;
-  constexpr storage_type& operator=(const storage_type&) = default;
-  constexpr storage_type(storage_type&&) = default;
-  constexpr storage_type& operator=(storage_type&&) = default;
+  constexpr storage_type(const storage_type& other) { copy_from(other); }
+  constexpr storage_type& operator=(const storage_type& other) {
+    destroy();
+    copy_from(other);
+    return *this;
+  }
+
+  constexpr storage_type(storage_type&& other) noexcept(
+      std::is_nothrow_move_constructible<E>::value) {
+    move_from(std::move(other));
+  }
+  constexpr storage_type& operator=(storage_type&& other) noexcept(
+      std::is_nothrow_move_assignable<E>::value) {
+    destroy();
+    move_from(std::move(other));
+    return *this;
+  }
+
+  // Copy/move-constructs over this object's value. If there could be a previous value, callers must
+  // call destroy() first.
+  constexpr void copy_from(const storage_type& other) {
+    state = other.state;
+    if (state == state_e::has_error) {
+      error_or_value.copy_from(error_v, other.error_or_value.error);
+    }
+  }
+  constexpr void move_from(storage_type&& other) {
+    state = other.state;
+    if (state == state_e::has_error) {
+      error_or_value.move_from(error_v, std::move(other.error_or_value.error));
+    }
+  }
 
   constexpr void destroy() {
-    if (state == state_e::has_value) {
-      error_or_value.destroy(value_v);
-    } else if (state == state_e::has_error) {
+    if (state == state_e::has_error) {
       error_or_value.destroy(error_v);
     }
   }
@@ -391,6 +417,7 @@ struct storage_type<storage_class_e::non_trivial, E> {
   state_e state{state_e::empty};
   value_type error_or_value;
 };
+
 // Simplified alias of storage_type.
 template <typename E, typename... Ts>
 using storage = storage_type<storage_class_trait<E, Ts...>, E, Ts...>;

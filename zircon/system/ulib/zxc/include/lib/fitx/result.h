@@ -402,6 +402,13 @@ class LIB_FITX_NODISCARD result<E, T> {
     __builtin_abort();
   }
 
+  constexpr void swap(result& other) {
+    if (&other != this) {
+      using std::swap;
+      swap(storage_, other.storage_);
+    }
+  }
+
  protected:
   // Default constructs a result in empty state.
   constexpr result() = default;
@@ -509,6 +516,13 @@ class LIB_FITX_NODISCARD result<E> {
     __builtin_abort();
   }
 
+  constexpr void swap(result& other) {
+    if (&other != this) {
+      using std::swap;
+      swap(storage_, other.storage_);
+    }
+  }
+
  protected:
   // Default constructs a result in empty state.
   constexpr result() = default;
@@ -523,6 +537,11 @@ class LIB_FITX_NODISCARD result<E> {
 
   ::fitx::internal::storage<E> storage_;
 };
+
+template <typename E, typename... Ts>
+constexpr void swap(result<E, Ts...>& r, result<E, Ts...>& s) {
+  return r.swap(s);
+}
 
 // Relational Operators.
 //

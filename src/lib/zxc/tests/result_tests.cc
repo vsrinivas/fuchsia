@@ -1205,4 +1205,140 @@ TEST(LibZxCommon, MakeStatusWithMoveOnlyType) {
   }
 }
 
+TEST(LibZxCommon, Swap) {
+  {
+    fitx::result<char> result1 = fitx::ok();
+    fitx::result<char> result2 = fitx::ok();
+    EXPECT_TRUE(result1.is_ok());
+    EXPECT_TRUE(result2.is_ok());
+
+    result1.swap(result2);
+    EXPECT_TRUE(result1.is_ok());
+    EXPECT_TRUE(result2.is_ok());
+  }
+  {
+    fitx::result<char> result1 = fitx::error('a');
+    fitx::result<char> result2 = fitx::error('b');
+    EXPECT_EQ(result1.error_value(), 'a');
+    EXPECT_EQ(result2.error_value(), 'b');
+
+    result1.swap(result2);
+    EXPECT_EQ(result1.error_value(), 'b');
+    EXPECT_EQ(result2.error_value(), 'a');
+  }
+  {
+    fitx::result<char> result1 = fitx::ok();
+    fitx::result<char> result2 = fitx::error('a');
+    EXPECT_TRUE(result1.is_ok());
+    EXPECT_TRUE(result2.is_error());
+    EXPECT_EQ(result2.error_value(), 'a');
+
+    result1.swap(result2);
+    EXPECT_TRUE(result1.is_error());
+    EXPECT_TRUE(result2.is_ok());
+    EXPECT_EQ(result1.error_value(), 'a');
+  }
+  {
+    fitx::result<char, int> result1 = fitx::ok(42);
+    fitx::result<char, int> result2 = fitx::ok(43);
+    EXPECT_EQ(result1.value(), 42);
+    EXPECT_EQ(result2.value(), 43);
+
+    result1.swap(result2);
+    EXPECT_EQ(result1.value(), 43);
+    EXPECT_EQ(result2.value(), 42);
+  }
+  {
+    fitx::result<char, int> result1 = fitx::error('a');
+    fitx::result<char, int> result2 = fitx::error('b');
+    EXPECT_EQ(result1.error_value(), 'a');
+    EXPECT_EQ(result2.error_value(), 'b');
+
+    result1.swap(result2);
+    EXPECT_EQ(result1.error_value(), 'b');
+    EXPECT_EQ(result2.error_value(), 'a');
+  }
+  {
+    fitx::result<char, int> result1 = fitx::ok(42);
+    fitx::result<char, int> result2 = fitx::error('a');
+    EXPECT_TRUE(result1.is_ok());
+    EXPECT_TRUE(result2.is_error());
+    EXPECT_EQ(result1.value(), 42);
+    EXPECT_EQ(result2.error_value(), 'a');
+
+    result1.swap(result2);
+    EXPECT_TRUE(result1.is_error());
+    EXPECT_TRUE(result2.is_ok());
+    EXPECT_EQ(result1.error_value(), 'a');
+    EXPECT_EQ(result2.value(), 42);
+  }
+  // Non-trivial
+  {
+    fitx::result<std::string> result1 = fitx::ok();
+    fitx::result<std::string> result2 = fitx::ok();
+    EXPECT_TRUE(result1.is_ok());
+    EXPECT_TRUE(result2.is_ok());
+
+    result1.swap(result2);
+    EXPECT_TRUE(result1.is_ok());
+    EXPECT_TRUE(result2.is_ok());
+  }
+  {
+    fitx::result<std::string> result1 = fitx::error("asdf");
+    fitx::result<std::string> result2 = fitx::error("jkl");
+    EXPECT_STREQ(result1.error_value(), "asdf");
+    EXPECT_STREQ(result2.error_value(), "jkl");
+
+    result1.swap(result2);
+    EXPECT_EQ(result1.error_value(), "jkl");
+    EXPECT_EQ(result2.error_value(), "asdf");
+  }
+  {
+    fitx::result<std::string> result1 = fitx::ok();
+    fitx::result<std::string> result2 = fitx::error("asdf");
+    EXPECT_TRUE(result1.is_ok());
+    EXPECT_TRUE(result2.is_error());
+    EXPECT_STREQ(result2.error_value(), "asdf");
+
+    result1.swap(result2);
+    EXPECT_TRUE(result1.is_error());
+    EXPECT_TRUE(result2.is_ok());
+    EXPECT_EQ(result1.error_value(), "asdf");
+  }
+  {
+    fitx::result<std::string, std::string> result1 = fitx::ok("asdf");
+    fitx::result<std::string, std::string> result2 = fitx::ok("jkl");
+    EXPECT_STREQ(result1.value(), "asdf");
+    EXPECT_STREQ(result2.value(), "jkl");
+
+    result1.swap(result2);
+    EXPECT_EQ(result1.value(), "jkl");
+    EXPECT_EQ(result2.value(), "asdf");
+  }
+  {
+    fitx::result<std::string, std::string> result1 = fitx::error("asdf");
+    fitx::result<std::string, std::string> result2 = fitx::error("jkl");
+    EXPECT_STREQ(result1.error_value(), "asdf");
+    EXPECT_STREQ(result2.error_value(), "jkl");
+
+    result1.swap(result2);
+    EXPECT_EQ(result1.error_value(), "jkl");
+    EXPECT_EQ(result2.error_value(), "asdf");
+  }
+  {
+    fitx::result<std::string, std::string> result1 = fitx::ok("asdf");
+    fitx::result<std::string, std::string> result2 = fitx::error("jkl");
+    EXPECT_TRUE(result1.is_ok());
+    EXPECT_TRUE(result2.is_error());
+    EXPECT_STREQ(result1.value(), "asdf");
+    EXPECT_STREQ(result2.error_value(), "jkl");
+
+    result1.swap(result2);
+    EXPECT_TRUE(result1.is_error());
+    EXPECT_TRUE(result2.is_ok());
+    EXPECT_EQ(result1.error_value(), "jkl");
+    EXPECT_EQ(result2.value(), "asdf");
+  }
+}
+
 }  // anonymous namespace
