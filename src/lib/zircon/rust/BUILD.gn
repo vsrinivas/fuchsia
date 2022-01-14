@@ -135,10 +135,17 @@ rustc_test("fuchsia-zircon-status-tests") {
   sources = [ "fuchsia-zircon-status/src/lib.rs" ]
 }
 
-# Certain unit tests for fuchsia-zircon need dependencies which can't be added
-# to the main library's without causing circular dependencies. Only the test
-# artifact is used, not the main artifact.
-# TODO: If we add test-only deps to rustc_artifact, this can merge back in.
+# Certain tests written as unit tests of fuchsia-zircon make use of other
+# crates which themselves depend on fuchsia-zircon. This causes
+# fuchsia_zircon::foo to be a different type from crate::foo in the context of
+# those unit tests when fuchsia-zircon is built with `with_unit_tests = true`.
+#
+# Since those tests are really integration tests, we should either move them
+# into the "other" crates so that the dependency graph flows in only one
+# direction, or simply move those tests into a dedicated target and redesignate
+# them as integration tests, which they appear to be.
+#
+# TODO(https://fxbug.dev/91562): untangle this web.
 rustc_test("fuchsia-zircon-unittests") {
   edition = "2018"
   output_name = "fuchsia_zircon_tests"
