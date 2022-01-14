@@ -475,6 +475,17 @@ static void CheckIterators(const BalanceTestTree& tree) {
   // Descend the left and right paths from the root. These should reach the
   // leftmost and rightmost nodes in no more iterations than there are nodes,
   // in the worst case.
+  {
+    // Make sure that begin/end/root all give a const_iterator when called on
+    // our const tree reference.
+    [[maybe_unused]] auto begin = tree.begin();
+    [[maybe_unused]] auto end = tree.end();
+    [[maybe_unused]] auto root = tree.root();
+
+    static_assert(std::is_same_v<typename BalanceTestTree::const_iterator, decltype(begin)>);
+    static_assert(std::is_same_v<typename BalanceTestTree::const_iterator, decltype(end)>);
+    static_assert(std::is_same_v<typename BalanceTestTree::const_iterator, decltype(root)>);
+  }
   const auto left_most = tree.cbegin();
   const auto right_most = --tree.cend();
   const auto root = tree.croot();

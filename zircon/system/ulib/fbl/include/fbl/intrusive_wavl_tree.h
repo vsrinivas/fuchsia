@@ -278,6 +278,7 @@ class __POINTER(KeyType_) WAVLTree {
 
   // Iterator accessors to the root node.
   iterator root() { return is_empty() ? end() : iterator(root_); }
+  const_iterator root() const { return is_empty() ? cend() : const_iterator(root_); }
   const_iterator croot() const { return is_empty() ? cend() : const_iterator(root_); }
 
   // make_iterator : construct an iterator out of a pointer to an object
@@ -496,12 +497,20 @@ class __POINTER(KeyType_) WAVLTree {
         // this temp copy of the reference as UNUSED in case the pointer
         // type is unmanaged.
         ZX_DEBUG_ASSERT(ns.parent_ == owner);
-        __UNUSED PtrType leaf = PtrTraits::Reclaim(*link_ptr);
+        PtrType leaf = PtrTraits::Reclaim(*link_ptr);
 
         // This leaf node node now has no parent, and the pointer which
         // pointed to us is now null.
         ns.parent_ = nullptr;
         *link_ptr = nullptr;
+
+        // Now that the node has been removed from the tree, inform any observer
+        // that the node has been cleared by calling RecordErase, but do not
+        // provide any "invalidated" node iterator which exists up-tree of the
+        // node which was just removed.  The entire tree is being cleared, so
+        // any augmented invariant the tree is maintaining is about to become
+        // undefined anyway.
+        Observer::RecordErase(PtrTraits::GetRaw(leaf), iterator());
 
         // If we are removing the root, and it is a leaf node, then we
         // are done.
@@ -750,11 +759,11 @@ class __POINTER(KeyType_) WAVLTree {
     }
 
     typename IterTraits::RefType operator*() const {
-      ZX_DEBUG_ASSERT(node_);
+      ZX_DEBUG_ASSERT(internal::valid_sentinel_ptr(node_));
       return *node_;
     }
     typename IterTraits::RawPtrType operator->() const {
-      ZX_DEBUG_ASSERT(node_);
+      ZX_DEBUG_ASSERT(internal::valid_sentinel_ptr(node_));
       return node_;
     }
 
