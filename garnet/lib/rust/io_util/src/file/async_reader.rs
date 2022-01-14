@@ -27,7 +27,7 @@ pub struct AsyncReader {
 #[derive(Debug)]
 enum State {
     Empty,
-    Forwarding { fut: QueryResponseFut<(i32, Vec<u8>)>, zero_byte_request: bool },
+    Forwarding { fut: QueryResponseFut<Result<Vec<u8>, i32>>, zero_byte_request: bool },
     Bytes { bytes: Vec<u8>, offset: usize },
 }
 
@@ -68,28 +68,36 @@ impl AsyncRead for AsyncReader {
                     } else {
                         fidl_fuchsia_io::MAX_BUF
                     };
-                    self.state =
-                        State::Forwarding { fut: self.file.read(len), zero_byte_request: len == 0 };
+                    self.state = State::Forwarding {
+                        fut: self.file.read2(len),
+                        zero_byte_request: len == 0,
+                    };
                 }
                 State::Forwarding { ref mut fut, ref zero_byte_request } => {
                     match futures::ready!(Pin::new(fut).poll(cx)) {
-                        Ok((status, bytes)) => {
-                            if let Err(e) = zx_status::Status::ok(status) {
-                                self.state = State::Empty;
-                                return Poll::Ready(Err(e.into_io_error()));
-                            }
-                            // If the File.Read request was for zero bytes, but the current
-                            // poll_read is not (because the File.Read request was made by an
-                            // earlier call to poll_read with a zero length buffer) then we should
-                            // not advance to State::Bytes because that would return Ready(Ok(0)),
-                            // which would indicate EOF to the client.
-                            // This handling is done here instead of short-circuiting at the
-                            // beginning of the function so that zero-length poll_reads still
-                            // trigger the validation performed by File.Read.
-                            if *zero_byte_request && buf.len() != 0 {
-                                self.state = State::Empty;
-                            } else {
-                                self.state = State::Bytes { bytes, offset: 0 };
+                        Ok(result) => {
+                            match result {
+                                Err(s) => {
+                                    self.state = State::Empty;
+                                    return Poll::Ready(Err(
+                                        zx_status::Status::from_raw(s).into_io_error()
+                                    ));
+                                }
+                                Ok(bytes) => {
+                                    // If the File.Read request was for zero bytes, but the current
+                                    // poll_read is not (because the File.Read request was made by an
+                                    // earlier call to poll_read with a zero length buffer) then we should
+                                    // not advance to State::Bytes because that would return Ready(Ok(0)),
+                                    // which would indicate EOF to the client.
+                                    // This handling is done here instead of short-circuiting at the
+                                    // beginning of the function so that zero-length poll_reads still
+                                    // trigger the validation performed by File.Read.
+                                    if *zero_byte_request && buf.len() != 0 {
+                                        self.state = State::Empty;
+                                    } else {
+                                        self.state = State::Bytes { bytes, offset: 0 };
+                                    }
+                                }
                             }
                         }
                         Err(e) => {
@@ -184,7 +192,7 @@ mod tests {
         .await;
 
         match stream.next().await.unwrap().unwrap() {
-            FileRequest::Read { count, .. } => {
+            FileRequest::Read2 { count, .. } => {
                 assert_eq!(count, expected_file_read_size);
             }
             req => panic!("unhandled request {:?}", req),
@@ -230,11 +238,9 @@ mod tests {
             while let Some(req) = stream.try_next().await.unwrap() {
                 file_read_requests += 1;
                 match req {
-                    FileRequest::Read { count, responder } => {
+                    FileRequest::Read2 { count, responder } => {
                         assert_eq!(count, 1);
-                        responder
-                            .send(zx_status::Status::OK.into_raw(), &[file_read_requests])
-                            .unwrap();
+                        responder.send(&mut Ok(vec![file_read_requests])).unwrap();
                     }
                     req => panic!("unhandled request {:?}", req),
                 }
@@ -263,9 +269,9 @@ mod tests {
         // Respond to the three byte File.Read request.
         let () = async {
             match stream.next().await.unwrap().unwrap() {
-                FileRequest::Read { count, responder } => {
+                FileRequest::Read2 { count, responder } => {
                     assert_eq!(count, 3);
-                    responder.send(zx_status::Status::OK.into_raw(), b"012").unwrap();
+                    responder.send(&mut Ok(b"012".to_vec())).unwrap();
                 }
                 req => panic!("unhandled request {:?}", req),
             }
@@ -297,9 +303,9 @@ mod tests {
 
         let handle_second_file_request = async {
             match stream.next().await.unwrap().unwrap() {
-                FileRequest::Read { count, responder } => {
+                FileRequest::Read2 { count, responder } => {
                     assert_eq!(count, 4);
-                    responder.send(zx_status::Status::OK.into_raw(), b"3456").unwrap();
+                    responder.send(&mut Ok(b"3456".to_vec())).unwrap();
                 }
                 req => panic!("unhandled request {:?}", req),
             }
@@ -345,9 +351,9 @@ mod tests {
 
         let failing_file_response = async {
             match stream.next().await.unwrap().unwrap() {
-                FileRequest::Read { count, responder } => {
+                FileRequest::Read2 { count, responder } => {
                     assert_eq!(count, 1);
-                    responder.send(zx_status::Status::NO_MEMORY.into_raw(), b"").unwrap();
+                    responder.send(&mut Err(zx_status::Status::NO_MEMORY.into_raw())).unwrap();
                 }
                 req => panic!("unhandled request {:?}", req),
             }
@@ -363,9 +369,9 @@ mod tests {
 
         let succeeding_file_response = async {
             match stream.next().await.unwrap().unwrap() {
-                FileRequest::Read { count, responder } => {
+                FileRequest::Read2 { count, responder } => {
                     assert_eq!(count, 1);
-                    responder.send(zx_status::Status::OK.into_raw(), b"0").unwrap();
+                    responder.send(&mut Ok(b"0".to_vec())).unwrap();
                 }
                 req => panic!("unhandled request {:?}", req),
             }
@@ -391,9 +397,9 @@ mod tests {
 
         // Handle the zero-length File.Read request.
         match stream.next().await.unwrap().unwrap() {
-            FileRequest::Read { count, responder } => {
+            FileRequest::Read2 { count, responder } => {
                 assert_eq!(count, 0);
-                responder.send(zx_status::Status::OK.into_raw(), &[]).unwrap();
+                responder.send(&mut Ok(vec![])).unwrap();
             }
             req => panic!("unhandled request {:?}", req),
         }
@@ -408,9 +414,9 @@ mod tests {
         // not.
         let handle_file_request = async {
             match stream.next().await.unwrap().unwrap() {
-                FileRequest::Read { count, responder } => {
+                FileRequest::Read2 { count, responder } => {
                     assert_eq!(count, 1);
-                    responder.send(zx_status::Status::OK.into_raw(), &[1]).unwrap();
+                    responder.send(&mut Ok(vec![1])).unwrap();
                 }
                 req => panic!("unhandled request {:?}", req),
             }
@@ -448,10 +454,10 @@ mod tests {
                     // Respond to the File.Read request with at most as many bytes as the poll_read
                     // requested.
                     match stream.next().await.unwrap().unwrap() {
-                        FileRequest::Read { count, responder } => {
+                        FileRequest::Read2 { count, responder } => {
                             assert_eq!(count, first_poll_read_len.try_into().unwrap());
                             let resp = vec![7u8; min(file_size, first_poll_read_len)];
-                            responder.send(zx_status::Status::OK.into_raw(), &resp).unwrap();
+                            responder.send(&mut Ok(resp)).unwrap();
                         }
                         req => panic!("unhandled request {:?}", req),
                     }
@@ -465,12 +471,10 @@ mod tests {
                     let handle_conditional_file_request = async {
                         if first_poll_read_len == 0 && second_poll_read_len != 0 {
                             match stream.next().await.unwrap().unwrap() {
-                                FileRequest::Read { count, responder } => {
+                                FileRequest::Read2 { count, responder } => {
                                     assert_eq!(count, second_poll_read_len.try_into().unwrap());
                                     let resp = vec![7u8; min(file_size, second_poll_read_len)];
-                                    responder
-                                        .send(zx_status::Status::OK.into_raw(), &resp)
-                                        .unwrap();
+                                    responder.send(&mut Ok(resp)).unwrap();
                                 }
                                 req => panic!("unhandled request {:?}", req),
                             }

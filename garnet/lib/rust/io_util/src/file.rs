@@ -163,9 +163,10 @@ where
     let mut data = data.as_ref();
 
     while !data.is_empty() {
-        let (status, bytes_written) =
-            file.write(&data[..std::cmp::min(MAX_BUF as usize, data.len())]).await?;
-        zx_status::Status::ok(status).map_err(WriteError::WriteError)?;
+        let bytes_written = file
+            .write2(&data[..std::cmp::min(MAX_BUF as usize, data.len())])
+            .await?
+            .map_err(|s| WriteError::WriteError(zx_status::Status::from_raw(s)))?;
 
         if bytes_written > data.len() as u64 {
             return Err(WriteError::Overwrite);
@@ -199,9 +200,10 @@ pub async fn read(file: &FileProxy) -> Result<Vec<u8>, ReadError> {
     let mut out = Vec::new();
 
     loop {
-        let (status, mut bytes) = file.read(MAX_BUF).await?;
-        zx_status::Status::ok(status).map_err(ReadError::ReadError)?;
-
+        let mut bytes = file
+            .read2(MAX_BUF)
+            .await?
+            .map_err(|s| ReadError::ReadError(zx_status::Status::from_raw(s)))?;
         if bytes.is_empty() {
             break;
         }
@@ -220,8 +222,10 @@ pub async fn read_num_bytes(file: &FileProxy, num_bytes: u64) -> Result<Vec<u8>,
     let mut bytes_left = num_bytes;
     while bytes_left > 0 {
         let bytes_to_read = std::cmp::min(bytes_left, MAX_BUF);
-        let (status, mut bytes) = file.read(bytes_to_read).await?;
-        zx_status::Status::ok(status).map_err(ReadError::ReadError)?;
+        let mut bytes = file
+            .read2(bytes_to_read)
+            .await?
+            .map_err(|s| ReadError::ReadError(zx_status::Status::from_raw(s)))?;
 
         if bytes.is_empty() {
             break;

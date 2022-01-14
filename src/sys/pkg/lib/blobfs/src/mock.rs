@@ -464,6 +464,14 @@ impl Blob {
 
                 data
             }
+            Some(Ok(FileRequest::Write2 { data, responder })) => {
+                if status == Status::OK {
+                    responder.send(&mut Ok(data.len() as u64)).unwrap();
+                } else {
+                    responder.send(&mut Err(status.into_raw())).unwrap();
+                }
+                data
+            }
             other => panic!("unexpected request: {:?}", other),
         }
     }

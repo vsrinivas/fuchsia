@@ -391,20 +391,20 @@ impl Blob<NeedsData> {
     /// Returns the number of bytes written (which may be less than the buffer's size) or the error
     /// encountered during the write.
     async fn write_some(&mut self, buf: &[u8]) -> Result<usize, WriteBlobError> {
-        let (status, actual) = self.proxy.write(buf).await?;
+        let result = self.proxy.write2(buf).await?.map_err(Status::from_raw);
 
-        match Status::from_raw(status) {
-            Status::OK => {}
-            Status::IO_DATA_INTEGRITY => {
+        let actual = match result {
+            Ok(actual) => actual,
+            Err(Status::IO_DATA_INTEGRITY) => {
                 return Err(WriteBlobError::Corrupt);
             }
-            Status::NO_SPACE => {
+            Err(Status::NO_SPACE) => {
                 return Err(WriteBlobError::NoSpace);
             }
-            status => {
+            Err(status) => {
                 return Err(WriteBlobError::UnexpectedResponse(status));
             }
-        }
+        };
 
         if actual > buf.len() as u64 {
             return Err(WriteBlobError::Overwrite);
@@ -1003,8 +1003,8 @@ mod tests {
 
         async fn fail_write(mut self) -> Self {
             match self.stream.next().await {
-                Some(Ok(FileRequest::Write { data: _, responder })) => {
-                    responder.send(Status::NO_SPACE.into_raw(), 0).unwrap();
+                Some(Ok(FileRequest::Write2 { data: _, responder })) => {
+                    responder.send(&mut Err(Status::NO_SPACE.into_raw())).unwrap();
                 }
                 r => panic!("Unexpected request: {:?}", r),
             }
@@ -1013,9 +1013,9 @@ mod tests {
 
         async fn expect_write(mut self, expected_payload: &[u8]) -> Self {
             match self.stream.next().await {
-                Some(Ok(FileRequest::Write { data, responder })) => {
+                Some(Ok(FileRequest::Write2 { data, responder })) => {
                     assert_eq!(data, expected_payload);
-                    responder.send(Status::OK.into_raw(), data.len() as u64).unwrap();
+                    responder.send(&mut Ok(data.len() as u64)).unwrap();
                 }
                 r => panic!("Unexpected request: {:?}", r),
             }
@@ -1028,9 +1028,9 @@ mod tests {
             bytes_to_consume: u64,
         ) -> Self {
             match self.stream.next().await {
-                Some(Ok(FileRequest::Write { data, responder })) => {
+                Some(Ok(FileRequest::Write2 { data, responder })) => {
                     assert_eq!(data, expected_payload);
-                    responder.send(Status::OK.into_raw(), bytes_to_consume).unwrap();
+                    responder.send(&mut Ok(bytes_to_consume)).unwrap();
                 }
                 r => panic!("Unexpected request: {:?}", r),
             }

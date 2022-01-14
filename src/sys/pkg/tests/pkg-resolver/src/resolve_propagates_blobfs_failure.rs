@@ -222,6 +222,10 @@ async fn handle_file_req_fail_write(call_count: Arc<AtomicU64>, req: FileRequest
             call_count.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
             responder.send(Status::NO_MEMORY.into_raw(), 0).expect("send write response");
         }
+        FileRequest::Write2 { data: _data, responder } => {
+            call_count.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+            responder.send(&mut Err(Status::NO_MEMORY.into_raw())).expect("send write response");
+        }
         req => panic!("should only receive write and truncate requests: {:?}", req),
     }
 }

@@ -88,8 +88,15 @@ pub struct AsyncFile {
 #[derive(Debug)]
 enum ReadAtState {
     Empty,
-    Forwarding { fut: QueryResponseFut<(i32, Vec<u8>)>, file_offset: u64, zero_byte_request: bool },
-    Bytes { bytes: Vec<u8>, file_offset: u64 },
+    Forwarding {
+        fut: QueryResponseFut<Result<Vec<u8>, i32>>,
+        file_offset: u64,
+        zero_byte_request: bool,
+    },
+    Bytes {
+        bytes: Vec<u8>,
+        file_offset: u64,
+    },
 }
 
 impl AsyncFile {
@@ -114,30 +121,37 @@ impl AsyncReadAt for AsyncFile {
                         fidl_fuchsia_io::MAX_BUF
                     };
                     self.read_at_state = ReadAtState::Forwarding {
-                        fut: self.file.read_at(len, offset),
+                        fut: self.file.read_at2(len, offset),
                         file_offset: offset,
                         zero_byte_request: len == 0,
                     };
                 }
                 ReadAtState::Forwarding { ref mut fut, file_offset, zero_byte_request } => {
                     match futures::ready!(Pin::new(fut).poll(cx)) {
-                        Ok((status, bytes)) => {
-                            if let Err(e) = zx_status::Status::ok(status) {
-                                self.read_at_state = ReadAtState::Empty;
-                                return Poll::Ready(Err(e.into_io_error()));
-                            }
-                            // If the File.ReadAt request was for zero bytes, but the current
-                            // poll_read_at is not (because the File.ReadAt request was made by an
-                            // earlier call to poll_read_at with a zero length buffer) then we
-                            // should not advance to ReadAtState::Bytes because that would return
-                            // Ready(Ok(0)), which would indicate EOF to the client.
-                            // This handling is done here instead of short-circuiting at the
-                            // beginning of the function so that zero-length poll_read_ats still
-                            // trigger the validation performed by File.ReadAt.
-                            if zero_byte_request && buf.len() != 0 {
-                                self.read_at_state = ReadAtState::Empty;
-                            } else {
-                                self.read_at_state = ReadAtState::Bytes { bytes, file_offset };
+                        Ok(result) => {
+                            match result {
+                                Err(s) => {
+                                    self.read_at_state = ReadAtState::Empty;
+                                    return Poll::Ready(Err(
+                                        zx_status::Status::from_raw(s).into_io_error()
+                                    ));
+                                }
+                                Ok(bytes) => {
+                                    // If the File.ReadAt request was for zero bytes, but the current
+                                    // poll_read_at is not (because the File.ReadAt request was made by an
+                                    // earlier call to poll_read_at with a zero length buffer) then we
+                                    // should not advance to ReadAtState::Bytes because that would return
+                                    // Ready(Ok(0)), which would indicate EOF to the client.
+                                    // This handling is done here instead of short-circuiting at the
+                                    // beginning of the function so that zero-length poll_read_ats still
+                                    // trigger the validation performed by File.ReadAt.
+                                    if zero_byte_request && buf.len() != 0 {
+                                        self.read_at_state = ReadAtState::Empty;
+                                    } else {
+                                        self.read_at_state =
+                                            ReadAtState::Bytes { bytes, file_offset };
+                                    }
+                                }
                             }
                         }
                         Err(e) => {
@@ -263,7 +277,7 @@ mod tests {
         .await;
 
         match stream.next().await.unwrap().unwrap() {
-            FileRequest::ReadAt { count, .. } => {
+            FileRequest::ReadAt2 { count, .. } => {
                 assert_eq!(count, expected_file_read_size);
             }
             req => panic!("unhandled request {:?}", req),
@@ -313,12 +327,10 @@ mod tests {
             while let Some(req) = stream.try_next().await.unwrap() {
                 file_read_requests += 1;
                 match req {
-                    FileRequest::ReadAt { count, offset, responder } => {
+                    FileRequest::ReadAt2 { count, offset, responder } => {
                         assert_eq!(count, 1);
                         assert_eq!(offset, 2);
-                        responder
-                            .send(zx_status::Status::OK.into_raw(), &[file_read_requests])
-                            .unwrap();
+                        responder.send(&mut Ok(vec![file_read_requests])).unwrap();
                     }
                     req => panic!("unhandled request {:?}", req),
                 }
@@ -350,10 +362,10 @@ mod tests {
         // Respond to the three byte File.ReadAt request.
         let () = async {
             match stream.next().await.unwrap().unwrap() {
-                FileRequest::ReadAt { count, offset, responder } => {
+                FileRequest::ReadAt2 { count, offset, responder } => {
                     assert_eq!(count, 3);
                     assert_eq!(offset, 0);
-                    responder.send(zx_status::Status::OK.into_raw(), b"012").unwrap();
+                    responder.send(&mut Ok(b"012".to_vec())).unwrap();
                 }
                 req => panic!("unhandled request {:?}", req),
             }
@@ -386,10 +398,10 @@ mod tests {
 
         let handle_second_file_request = async {
             match stream.next().await.unwrap().unwrap() {
-                FileRequest::ReadAt { count, offset, responder } => {
+                FileRequest::ReadAt2 { count, offset, responder } => {
                     assert_eq!(count, 4);
                     assert_eq!(offset, 3);
-                    responder.send(zx_status::Status::OK.into_raw(), b"3456").unwrap();
+                    responder.send(&mut Ok(b"3456".to_vec())).unwrap();
                 }
                 req => panic!("unhandled request {:?}", req),
             }
@@ -435,10 +447,10 @@ mod tests {
 
         let failing_file_response = async {
             match stream.next().await.unwrap().unwrap() {
-                FileRequest::ReadAt { count, offset, responder } => {
+                FileRequest::ReadAt2 { count, offset, responder } => {
                     assert_eq!(count, 1);
                     assert_eq!(offset, 0);
-                    responder.send(zx_status::Status::NO_MEMORY.into_raw(), b"").unwrap();
+                    responder.send(&mut Err(zx_status::Status::NO_MEMORY.into_raw())).unwrap();
                 }
                 req => panic!("unhandled request {:?}", req),
             }
@@ -454,10 +466,10 @@ mod tests {
 
         let succeeding_file_response = async {
             match stream.next().await.unwrap().unwrap() {
-                FileRequest::ReadAt { count, offset, responder } => {
+                FileRequest::ReadAt2 { count, offset, responder } => {
                     assert_eq!(count, 1);
                     assert_eq!(offset, 0);
-                    responder.send(zx_status::Status::OK.into_raw(), b"0").unwrap();
+                    responder.send(&mut Ok(b"0".to_vec())).unwrap();
                 }
                 req => panic!("unhandled request {:?}", req),
             }
@@ -483,10 +495,10 @@ mod tests {
 
         // Handle the zero-length File.ReadAt request.
         match stream.next().await.unwrap().unwrap() {
-            FileRequest::ReadAt { count, offset, responder } => {
+            FileRequest::ReadAt2 { count, offset, responder } => {
                 assert_eq!(count, 0);
                 assert_eq!(offset, 0);
-                responder.send(zx_status::Status::OK.into_raw(), &[]).unwrap();
+                responder.send(&mut Ok(vec![])).unwrap();
             }
             req => panic!("unhandled request {:?}", req),
         }
@@ -501,10 +513,10 @@ mod tests {
         // is not.
         let handle_file_request = async {
             match stream.next().await.unwrap().unwrap() {
-                FileRequest::ReadAt { count, offset, responder } => {
+                FileRequest::ReadAt2 { count, offset, responder } => {
                     assert_eq!(count, 1);
                     assert_eq!(offset, 0);
-                    responder.send(zx_status::Status::OK.into_raw(), &[1]).unwrap();
+                    responder.send(&mut Ok(vec![1])).unwrap();
                 }
                 req => panic!("unhandled request {:?}", req),
             }
@@ -543,11 +555,11 @@ mod tests {
                         // Respond to the File.ReadAt request with at most as many bytes as the
                         // poll_read_at requested.
                         match stream.next().await.unwrap().unwrap() {
-                            FileRequest::ReadAt { count, offset, responder } => {
+                            FileRequest::ReadAt2 { count, offset, responder } => {
                                 assert_eq!(count, first_poll_read_len.try_into().unwrap());
                                 assert_eq!(offset, 0);
                                 let resp = vec![7u8; min(file_size, first_poll_read_len)];
-                                responder.send(zx_status::Status::OK.into_raw(), &resp).unwrap();
+                                responder.send(&mut Ok(resp)).unwrap();
                             }
                             req => panic!("unhandled request {:?}", req),
                         }
@@ -564,7 +576,7 @@ mod tests {
                         let handle_conditional_file_request = async {
                             if second_request {
                                 match stream.next().await.unwrap().unwrap() {
-                                    FileRequest::ReadAt { count, offset, responder } => {
+                                    FileRequest::ReadAt2 { count, offset, responder } => {
                                         assert_eq!(count, second_poll_read_len.try_into().unwrap());
                                         assert_eq!(offset, second_poll_offset.try_into().unwrap());
                                         let resp = vec![
@@ -574,9 +586,7 @@ mod tests {
                                                 second_poll_read_len
                                             )
                                         ];
-                                        responder
-                                            .send(zx_status::Status::OK.into_raw(), &resp)
-                                            .unwrap();
+                                        responder.send(&mut Ok(resp)).unwrap();
                                     }
                                     req => panic!("unhandled request {:?}", req),
                                 }

@@ -2521,9 +2521,13 @@ mod serve_write_blob_tests {
         let ((), o) = future::join(
             async move {
                 serve_fidl_request!(stream, {
-                    FileRequest::Write{ data: actual_data, responder } => {
+                    FileRequest::Write2 { data: actual_data, responder } => {
                         assert_eq!(data, actual_data);
-                        responder.send(blobfs_response.into_raw(), data.len() as u64).unwrap();
+                        if blobfs_response == zx::Status::OK {
+                            responder.send(&mut Ok(data.len() as u64)).unwrap();
+                        } else {
+                            responder.send(&mut Err(blobfs_response.into_raw())).unwrap();
+                        }
                     },
                 });
 

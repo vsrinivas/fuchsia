@@ -147,9 +147,9 @@ mod test {
 
             // Writing the file should succeed
             let request = file.try_next().await;
-            if let Ok(Some(FileRequest::Write { data, responder })) = request {
+            if let Ok(Some(FileRequest::Write2 { data, responder })) = request {
                 assert_eq!(data, DATA);
-                responder.send(0, data.len() as u64).unwrap();
+                responder.send(&mut Ok(data.len() as u64)).unwrap();
             } else {
                 panic!("did not get write request: {:?}", request)
             }
@@ -172,16 +172,16 @@ mod test {
             // Serve the root directory
             // Reading the file should succeed
             let request = file.try_next().await;
-            if let Ok(Some(FileRequest::Read { responder, .. })) = request {
-                responder.send(0, &DATA).unwrap();
+            if let Ok(Some(FileRequest::Read2 { responder, .. })) = request {
+                responder.send(&mut Ok(DATA.to_vec())).unwrap();
             } else {
                 panic!("did not get read request: {:?}", request)
             }
 
             // Reading the file should not return any more data
             let request = file.try_next().await;
-            if let Ok(Some(FileRequest::Read { responder, .. })) = request {
-                responder.send(0, &[]).unwrap();
+            if let Ok(Some(FileRequest::Read2 { responder, .. })) = request {
+                responder.send(&mut Ok(vec![])).unwrap();
             } else {
                 panic!("did not get read request: {:?}", request)
             }
