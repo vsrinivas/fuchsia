@@ -20,6 +20,7 @@ group("tests") {
     "csa_helper:tests",
     "fcrypto:tests",
     "kms:tests",
+    "pkg_test/assemblies:tests",
     "scrutiny:tests",
     "tee_manager:tests",
     "verifiers:tests",

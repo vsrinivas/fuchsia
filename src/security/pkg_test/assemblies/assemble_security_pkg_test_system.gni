@@ -58,11 +58,13 @@ template("assemble_security_pkg_test_system") {
     assembly_image_assembler = "${assembly_name}_image_assembler"
     empty_pkgfs = "${assembly_name}_empty_pkgfs"
     repository_config = "${assembly_name}_repository_config"
-    packages_json = "${assembly_name}_packages_json"
     update_package = "${assembly_name}_update_package"
     system_resources = "${assembly_name}_system_resources"
-    update_resources_group = "${assembly_name}_update_resources"
+    update_resources_group = "${assembly_name}_update_resources_group"
     update_resources_package = "${assembly_name}_update_resources_package"
+    verify_update_package_resources =
+        "${assembly_name}_verify_update_package_resources"
+    update_resources = "${assembly_name}_update_resources"
   }
 
   directories = {
@@ -86,6 +88,8 @@ template("assemble_security_pkg_test_system") {
         "${directories.update_resources_package_out}/package_manifest.json"
     update_package_manifest_json =
         "${directories.update_out}/update_package_manifest.json"
+    verify_update_package_resources =
+        "${target_out_dir}/${labels.verify_update_package_resources}.ok"
   }
 
   # Resource files with both `local` and `packaged` paths.
@@ -161,8 +165,10 @@ template("assemble_security_pkg_test_system") {
   update_package(labels.update_package) {
     testonly = true
     deps = [
-      ":${labels.assembly_image_assembler}",
       ":${labels.assembly}",
+
+      # Image assembler step in `assemble_system(...)` produces `packages.json`.
+      ":${labels.assembly_image_assembler}",
     ]
     partitions = files.partitions_json
     packages = files.packages_json
@@ -196,8 +202,11 @@ template("assemble_security_pkg_test_system") {
     resource_group(labels.update_resources_group) {
       testonly = true
       deps = [
-        ":${labels.assembly_image_assembler}",
         ":${labels.update_package}",
+
+        # Image assembler step in `assemble_system(...)` produces
+        # `packages.json`.
+        ":${labels.assembly_image_assembler}",
       ]
       files = [
         {
@@ -254,14 +263,47 @@ template("assemble_security_pkg_test_system") {
     }
   }
 
-  # Check update package resources:
+  # Check update package resources: Step 1:
   # Construct a package that contains update resources.
   fuchsia_package(labels.update_resources_package) {
     testonly = true
     deps = [ ":${labels.update_resources_group}" ]
   }
 
-  # TODO(fxbug.dev/91098): Ensure that actual update package blobs are a subset
-  # of package blobs manually included in `labels.update_resources_package`
-  # above.
+  # Check update package resources: Step 2:
+  # Run script that compares blob hashes in the update resources package
+  # (directly above), and the actual update package. The script succeeds when
+  # update resources package contains *at least* the blobs in the update
+  # package.
+
+  action(labels.verify_update_package_resources) {
+    testonly = true
+    script =
+        "//src/security/pkg_test/assemblies/verify_update_package_resources.py"
+    sources = [
+      files.package_manifest_json,
+      files.update_package_manifest_json,
+    ]
+    deps = [
+      ":${labels.update_package}",
+      ":${labels.update_resources_package}",
+    ]
+    outputs = [ files.verify_update_package_resources ]
+    args = [
+      "--package-manifest-path",
+      rebase_path(files.package_manifest_json, root_build_dir),
+      "--update-package-manifest-path",
+      rebase_path(files.update_package_manifest_json, root_build_dir),
+      "--output",
+      rebase_path(files.verify_update_package_resources, root_build_dir),
+    ]
+  }
+
+  # Public update resources gn target: depends on the update resources and their
+  # verification step.
+  group(labels.update_resources) {
+    testonly = true
+    public_deps = [ ":${labels.update_resources_group}" ]
+    deps = [ ":${labels.verify_update_package_resources}" ]
+  }
 }
