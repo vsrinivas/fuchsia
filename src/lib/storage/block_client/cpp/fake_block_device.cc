@@ -113,15 +113,6 @@ void FakeBlockDevice::WaitOnPaused() const __TA_REQUIRES(lock_) {
     pause_condition_.Wait(&lock_);
 }
 
-zx_status_t FakeBlockDevice::ReadBlock(uint64_t block_num, uint64_t fs_block_size,
-                                       void* block) const {
-  zx::ticks start_tick = zx::ticks::now();
-  fbl::AutoLock lock(&lock_);
-  zx_status_t status = block_device_.read(block, block_num * fs_block_size, fs_block_size);
-  stats_.UpdateStats(status == ZX_OK, start_tick, BLOCKIO_READ, fs_block_size);
-  return status;
-}
-
 zx_status_t FakeBlockDevice::FifoTransaction(block_fifo_request_t* requests, size_t count) {
   fbl::AutoLock lock(&lock_);
   const uint32_t block_size = block_size_;

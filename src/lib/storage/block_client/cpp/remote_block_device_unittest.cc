@@ -18,8 +18,8 @@
 #include <fbl/auto_lock.h>
 #include <fbl/condition_variable.h>
 #include <fbl/mutex.h>
+#include <gtest/gtest.h>
 #include <storage/buffer/owned_vmoid.h>
-#include <zxtest/zxtest.h>
 
 namespace block_client {
 namespace {
@@ -119,7 +119,7 @@ class MockBlockDevice {
 
   zx_status_t BlockGetFifo(fidl_txn_t* txn) {
     fzl::fifo<block_fifo_request_t, block_fifo_response_t> client;
-    EXPECT_OK(fzl::create_fifo(BLOCK_FIFO_MAX_DEPTH, 0, &client, &fifo_));
+    EXPECT_EQ(fzl::create_fifo(BLOCK_FIFO_MAX_DEPTH, 0, &client, &fifo_), ZX_OK);
     return fuchsia_hardware_block_BlockGetFifo_reply(txn, ZX_OK, client.release());
   }
 
@@ -143,34 +143,34 @@ class MockBlockDevice {
 // Tests that the RemoteBlockDevice can be created and immediately destroyed.
 TEST(RemoteBlockDeviceTest, Constructor) {
   zx::channel client, server;
-  ASSERT_OK(zx::channel::create(0, &client, &server));
+  ASSERT_EQ(zx::channel::create(0, &client, &server), ZX_OK);
 
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
-  ASSERT_OK(loop.StartThread());
+  ASSERT_EQ(loop.StartThread(), ZX_OK);
 
   MockBlockDevice mock_device;
-  ASSERT_OK(mock_device.Bind(loop.dispatcher(), std::move(server)));
+  ASSERT_EQ(mock_device.Bind(loop.dispatcher(), std::move(server)), ZX_OK);
 
   std::unique_ptr<RemoteBlockDevice> device;
-  ASSERT_OK(RemoteBlockDevice::Create(std::move(client), &device));
+  ASSERT_EQ(RemoteBlockDevice::Create(std::move(client), &device), ZX_OK);
 }
 
 // Tests that a fifo is attached to the block device for the duration of the
 // RemoteBlockDevice lifetime.
 TEST(RemoteBlockDeviceTest, FifoClosedOnDestruction) {
   zx::channel client, server;
-  ASSERT_OK(zx::channel::create(0, &client, &server));
+  ASSERT_EQ(zx::channel::create(0, &client, &server), ZX_OK);
 
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
-  ASSERT_OK(loop.StartThread());
+  ASSERT_EQ(loop.StartThread(), ZX_OK);
 
   MockBlockDevice mock_device;
-  ASSERT_OK(mock_device.Bind(loop.dispatcher(), std::move(server)));
+  ASSERT_EQ(mock_device.Bind(loop.dispatcher(), std::move(server)), ZX_OK);
 
   EXPECT_FALSE(mock_device.FifoAttached());
   {
     std::unique_ptr<RemoteBlockDevice> device;
-    ASSERT_OK(RemoteBlockDevice::Create(std::move(client), &device));
+    ASSERT_EQ(RemoteBlockDevice::Create(std::move(client), &device), ZX_OK);
     EXPECT_TRUE(mock_device.FifoAttached());
   }
   EXPECT_FALSE(mock_device.FifoAttached());
@@ -180,22 +180,22 @@ TEST(RemoteBlockDeviceTest, FifoClosedOnDestruction) {
 // messages with the block device.
 TEST(RemoteBlockDeviceTest, WriteTransactionReadResponse) {
   zx::channel client, server;
-  ASSERT_OK(zx::channel::create(0, &client, &server));
+  ASSERT_EQ(zx::channel::create(0, &client, &server), ZX_OK);
 
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
-  ASSERT_OK(loop.StartThread());
+  ASSERT_EQ(loop.StartThread(), ZX_OK);
 
   MockBlockDevice mock_device;
-  ASSERT_OK(mock_device.Bind(loop.dispatcher(), std::move(server)));
+  ASSERT_EQ(mock_device.Bind(loop.dispatcher(), std::move(server)), ZX_OK);
 
   std::unique_ptr<RemoteBlockDevice> device;
-  ASSERT_OK(RemoteBlockDevice::Create(std::move(client), &device));
+  ASSERT_EQ(RemoteBlockDevice::Create(std::move(client), &device), ZX_OK);
 
   zx::vmo vmo;
-  ASSERT_OK(zx::vmo::create(ZX_PAGE_SIZE, 0, &vmo));
+  ASSERT_EQ(zx::vmo::create(ZX_PAGE_SIZE, 0, &vmo), ZX_OK);
 
   storage::OwnedVmoid vmoid;
-  ASSERT_OK(device->BlockAttachVmo(vmo, &vmoid.GetReference(device.get())));
+  ASSERT_EQ(device->BlockAttachVmo(vmo, &vmoid.GetReference(device.get())), ZX_OK);
   ASSERT_EQ(kGoldenVmoid, vmoid.get());
 
   block_fifo_request_t request;
@@ -210,8 +210,8 @@ TEST(RemoteBlockDeviceTest, WriteTransactionReadResponse) {
   std::thread server_thread([&mock_device, &request] {
     block_fifo_request_t server_request;
     size_t actual;
-    EXPECT_OK(mock_device.ReadFifoRequests(&server_request, &actual));
-    EXPECT_EQ(1, actual);
+    EXPECT_EQ(mock_device.ReadFifoRequests(&server_request, &actual), ZX_OK);
+    EXPECT_EQ(actual, 1u);
     EXPECT_EQ(0, memcmp(&server_request, &request, sizeof(request)));
 
     block_fifo_response_t response;
@@ -219,26 +219,26 @@ TEST(RemoteBlockDeviceTest, WriteTransactionReadResponse) {
     response.reqid = request.reqid;
     response.group = request.group;
     response.count = 1;
-    EXPECT_OK(mock_device.WriteFifoResponse(response));
+    EXPECT_EQ(mock_device.WriteFifoResponse(response), ZX_OK);
   });
 
-  ASSERT_OK(device->FifoTransaction(&request, 1));
+  ASSERT_EQ(device->FifoTransaction(&request, 1), ZX_OK);
   vmoid.TakeId();
   server_thread.join();
 }
 
 TEST(RemoteBlockDeviceTest, VolumeManagerOrdinals) {
   zx::channel client, server;
-  ASSERT_OK(zx::channel::create(0, &client, &server));
+  ASSERT_EQ(zx::channel::create(0, &client, &server), ZX_OK);
 
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
-  ASSERT_OK(loop.StartThread());
+  ASSERT_EQ(loop.StartThread(), ZX_OK);
 
   MockBlockDevice mock_device;
-  ASSERT_OK(mock_device.Bind(loop.dispatcher(), std::move(server)));
+  ASSERT_EQ(mock_device.Bind(loop.dispatcher(), std::move(server)), ZX_OK);
 
   std::unique_ptr<RemoteBlockDevice> device;
-  ASSERT_OK(RemoteBlockDevice::Create(std::move(client), &device));
+  ASSERT_EQ(RemoteBlockDevice::Create(std::move(client), &device), ZX_OK);
 
   // Querying the volume returns an error; the device doesn't implement
   // any FVM protocols. However, VolumeQuery utilizes a distinct
@@ -249,7 +249,7 @@ TEST(RemoteBlockDeviceTest, VolumeManagerOrdinals) {
 
   // Other block functions still function correctly.
   fuchsia_hardware_block_BlockInfo block_info;
-  EXPECT_OK(device->BlockGetInfo(&block_info));
+  EXPECT_EQ(device->BlockGetInfo(&block_info), ZX_OK);
 
   // Sending any FVM method other than "VolumeQuery" also returns an error.
   EXPECT_EQ(ZX_ERR_PEER_CLOSED, device->VolumeExtend(0, 0));
@@ -261,22 +261,22 @@ TEST(RemoteBlockDeviceTest, VolumeManagerOrdinals) {
 
 TEST(RemoteBlockDeviceTest, LargeThreadCountSuceeds) {
   zx::channel client, server;
-  ASSERT_OK(zx::channel::create(0, &client, &server));
+  ASSERT_EQ(zx::channel::create(0, &client, &server), ZX_OK);
 
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
-  ASSERT_OK(loop.StartThread());
+  ASSERT_EQ(loop.StartThread(), ZX_OK);
 
   MockBlockDevice mock_device;
-  ASSERT_OK(mock_device.Bind(loop.dispatcher(), std::move(server)));
+  ASSERT_EQ(mock_device.Bind(loop.dispatcher(), std::move(server)), ZX_OK);
 
   std::unique_ptr<RemoteBlockDevice> device;
-  ASSERT_OK(RemoteBlockDevice::Create(std::move(client), &device));
+  ASSERT_EQ(RemoteBlockDevice::Create(std::move(client), &device), ZX_OK);
 
   zx::vmo vmo;
-  ASSERT_OK(zx::vmo::create(ZX_PAGE_SIZE, 0, &vmo));
+  ASSERT_EQ(zx::vmo::create(ZX_PAGE_SIZE, 0, &vmo), ZX_OK);
 
   storage::OwnedVmoid vmoid;
-  ASSERT_OK(device->BlockAttachVmo(vmo, &vmoid.GetReference(device.get())));
+  ASSERT_EQ(device->BlockAttachVmo(vmo, &vmoid.GetReference(device.get())), ZX_OK);
   ASSERT_EQ(kGoldenVmoid, vmoid.get());
 
   constexpr int kThreadCount = 2 * MAX_TXN_GROUP_COUNT;
@@ -291,7 +291,7 @@ TEST(RemoteBlockDeviceTest, LargeThreadCountSuceeds) {
           request.opcode = BLOCKIO_READ;
           request.vmoid = vmoid;
           request.length = 1;
-          ASSERT_OK(device->FifoTransaction(&request, 1));
+          ASSERT_EQ(device->FifoTransaction(&request, 1), ZX_OK);
           fbl::AutoLock lock(&mutex);
           ++done;
           condition.Signal();
@@ -304,8 +304,8 @@ TEST(RemoteBlockDeviceTest, LargeThreadCountSuceeds) {
     if (request_count < kThreadCount) {
       // Read some more requests.
       size_t count = 0;
-      ASSERT_OK(mock_device.ReadFifoRequests(&requests[request_count], &count));
-      ASSERT_LT(0, count);
+      ASSERT_EQ(mock_device.ReadFifoRequests(&requests[request_count], &count), ZX_OK);
+      ASSERT_GT(count, 0u);
       request_count += count;
     }
     // Check that all the outstanding requests we have use different group IDs.
@@ -320,7 +320,7 @@ TEST(RemoteBlockDeviceTest, LargeThreadCountSuceeds) {
     response.group = requests[done].group;
     response.count = 1;
     int last_done = done;
-    EXPECT_OK(mock_device.WriteFifoResponse(response));
+    EXPECT_EQ(mock_device.WriteFifoResponse(response), ZX_OK);
     // Wait for it to be done.
     fbl::AutoLock lock(&mutex);
     while (done != last_done + 1) {
@@ -334,24 +334,24 @@ TEST(RemoteBlockDeviceTest, LargeThreadCountSuceeds) {
 
 TEST(RemoteBlockDeviceTest, NoHangForErrorsWithMultipleThreads) {
   zx::channel client, server;
-  ASSERT_OK(zx::channel::create(0, &client, &server));
+  ASSERT_EQ(zx::channel::create(0, &client, &server), ZX_OK);
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
-  ASSERT_OK(loop.StartThread());
+  ASSERT_EQ(loop.StartThread(), ZX_OK);
   std::unique_ptr<RemoteBlockDevice> device;
   constexpr int kThreadCount = 4 * MAX_TXN_GROUP_COUNT;
   std::thread threads[kThreadCount];
 
   {
     MockBlockDevice mock_device;
-    ASSERT_OK(mock_device.Bind(loop.dispatcher(), std::move(server)));
+    ASSERT_EQ(mock_device.Bind(loop.dispatcher(), std::move(server)), ZX_OK);
 
-    ASSERT_OK(RemoteBlockDevice::Create(std::move(client), &device));
+    ASSERT_EQ(RemoteBlockDevice::Create(std::move(client), &device), ZX_OK);
 
     zx::vmo vmo;
-    ASSERT_OK(zx::vmo::create(ZX_PAGE_SIZE, 0, &vmo));
+    ASSERT_EQ(zx::vmo::create(ZX_PAGE_SIZE, 0, &vmo), ZX_OK);
 
     storage::OwnedVmoid vmoid;
-    ASSERT_OK(device->BlockAttachVmo(vmo, &vmoid.GetReference(device.get())));
+    ASSERT_EQ(device->BlockAttachVmo(vmo, &vmoid.GetReference(device.get())), ZX_OK);
     ASSERT_EQ(kGoldenVmoid, vmoid.get());
 
     for (int i = 0; i < kThreadCount; ++i) {
@@ -370,7 +370,7 @@ TEST(RemoteBlockDeviceTest, NoHangForErrorsWithMultipleThreads) {
     size_t request_count = 0;
     while (request_count < 2) {
       size_t count = 0;
-      ASSERT_OK(mock_device.ReadFifoRequests(requests, &count));
+      ASSERT_EQ(mock_device.ReadFifoRequests(requests, &count), ZX_OK);
       request_count += count;
     }
 

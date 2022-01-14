@@ -16,9 +16,6 @@ using block_client::BlockDevice;
 class MockDeviceBase : public BlockDevice {
  public:
   virtual ~MockDeviceBase() = default;
-  zx_status_t ReadBlock(uint64_t block_num, uint64_t block_size, void* block) const final {
-    return ZX_ERR_NOT_SUPPORTED;
-  }
   zx_status_t FifoTransaction(block_fifo_request_t* requests, size_t count) final {
     return ZX_ERR_NOT_SUPPORTED;
   }

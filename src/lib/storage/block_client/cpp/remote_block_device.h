@@ -13,6 +13,7 @@
 #include <lib/zx/vmo.h>
 
 #include <memory>
+#include <mutex>
 
 #include "src/lib/storage/block_client/cpp/block_device.h"
 
@@ -30,7 +31,6 @@ class RemoteBlockDevice final : public BlockDevice {
   RemoteBlockDevice(const RemoteBlockDevice&) = delete;
   ~RemoteBlockDevice();
 
-  zx_status_t ReadBlock(uint64_t block_num, uint64_t block_size, void* block) const final;
   zx_status_t FifoTransaction(block_fifo_request_t* requests, size_t count) final;
   zx::status<std::string> GetDevicePath() const final;
   zx_status_t BlockGetInfo(fuchsia_hardware_block_BlockInfo* out_info) const final;

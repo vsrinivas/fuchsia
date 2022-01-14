@@ -15,10 +15,6 @@ class PassThroughReadOnlyBlockDevice : public BlockDevice {
  public:
   explicit PassThroughReadOnlyBlockDevice(block_client::BlockDevice* device) : device_(*device) {}
 
-  zx_status_t ReadBlock(uint64_t block_num, uint64_t block_size, void* block) const override {
-    return device_.ReadBlock(block_num, block_size, block);
-  }
-
   zx_status_t FifoTransaction(block_fifo_request_t* requests, size_t count) override {
     ZX_ASSERT(requests[0].opcode != BLOCKIO_WRITE && requests[0].opcode != BLOCKIO_TRIM);
     return device_.FifoTransaction(requests, count);

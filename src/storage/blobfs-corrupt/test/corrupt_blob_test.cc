@@ -10,16 +10,18 @@
 #include <zxtest/zxtest.h>
 
 #include "src/lib/storage/block_client/cpp/fake_block_device.h"
+#include "src/lib/storage/block_client/cpp/reader.h"
 #include "src/storage/blobfs/format.h"
 #include "src/storage/blobfs/mkfs.h"
 
+namespace blobfs {
 namespace {
 
 using block_client::BlockDevice;
 using block_client::FakeBlockDevice;
 
 constexpr uint32_t kBlockSize = 512;
-constexpr uint32_t kBlocksPerBlobfsBlock = blobfs::kBlobfsBlockSize / kBlockSize;
+constexpr uint32_t kBlocksPerBlobfsBlock = kBlobfsBlockSize / kBlockSize;
 constexpr uint32_t kNumBlocks = 400 * kBlocksPerBlobfsBlock;
 
 // Re-implement BlockDevice around a reference to one so CorruptBlob can continue to take ownership
@@ -28,9 +30,6 @@ class ProxyBlockDevice : public BlockDevice {
  public:
   ProxyBlockDevice(BlockDevice* inner) : inner_(inner) {}
 
-  zx_status_t ReadBlock(uint64_t block_num, uint64_t block_size, void* block) const override {
-    return inner_->ReadBlock(block_num, block_size, block);
-  }
   zx_status_t FifoTransaction(block_fifo_request_t* requests, size_t count) override {
     return inner_->FifoTransaction(requests, count);
   }
@@ -98,7 +97,7 @@ void MockBlockDevice::WriteBlock(uint64_t block_num, uint64_t fs_block_size, con
 
 std::unique_ptr<MockBlockDevice> CreateAndFormatDevice() {
   auto device = std::make_unique<MockBlockDevice>(kNumBlocks, kBlockSize);
-  EXPECT_OK(blobfs::FormatFilesystem(device.get(), blobfs::FilesystemOptions{}));
+  EXPECT_OK(FormatFilesystem(device.get(), FilesystemOptions{}));
   if (CURRENT_TEST_HAS_FAILURES()) {
     return nullptr;
   }
@@ -119,15 +118,15 @@ class BlobfsDiskTest : public ZeroDiskTest {
     device_ = CreateAndFormatDevice();
     ASSERT_TRUE(device_);
 
-    uint8_t block[blobfs::kBlobfsBlockSize] = {};
-    ASSERT_OK(device_->ReadBlock(0, sizeof(block), &block));
-    superblock_ = *reinterpret_cast<blobfs::Superblock*>(block);
+    uint8_t block[kBlobfsBlockSize] = {};
+    ASSERT_OK(block_client::Reader(*device_).Read(0, sizeof(block), &block));
+    superblock_ = *reinterpret_cast<Superblock*>(block);
   }
   void WriteSuperblock() { device_->WriteBlock(0, sizeof(superblock_), &superblock_); }
 
  protected:
   std::unique_ptr<MockBlockDevice> device_;
-  blobfs::Superblock superblock_ = {};
+  Superblock superblock_ = {};
 };
 
 TEST_F(ZeroDiskTest, StartStop) {}
@@ -145,7 +144,7 @@ TEST_F(BlobfsDiskTest, FailsOnNotFound) {
 }
 
 TEST_F(BlobfsDiskTest, FailsOnUncleanDismount) {
-  superblock_.flags &= ~blobfs::kBlobFlagClean;
+  superblock_.flags &= ~kBlobFlagClean;
   ASSERT_NO_FAILURES(WriteSuperblock());
 
   BlobCorruptOptions options;
@@ -159,27 +158,28 @@ TEST_F(BlobfsDiskTest, SucceedsIfFirstNodeMatches) {
   ASSERT_OK(
       options.merkle.Parse("00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff"));
 
-  blobfs::Inode node = {};
-  node.header.flags = blobfs::kBlobFlagAllocated;
+  Inode node = {};
+  node.header.flags = kBlobFlagAllocated;
   options.merkle.CopyTo(node.merkle_root_hash);
   node.blob_size = 20;
   node.extent_count = 1;
-  node.extents[0] = blobfs::Extent(0, 1);
+  node.extents[0] = Extent(0, 1);
 
-  uint8_t block[blobfs::kBlobfsBlockSize] = {};
-  auto node_block_num = blobfs::NodeMapStartBlock(superblock_);
-  ASSERT_OK(device_->ReadBlock(node_block_num, sizeof(block), block));
-  reinterpret_cast<blobfs::Inode*>(block)[0] = node;
+  uint8_t block[kBlobfsBlockSize] = {};
+  auto node_block_num = NodeMapStartBlock(superblock_);
+  block_client::Reader reader(*device_);
+  ASSERT_OK(reader.Read(node_block_num * kBlobfsBlockSize, sizeof(block), block));
+  reinterpret_cast<Inode*>(block)[0] = node;
   ASSERT_NO_FAILURES(device_->WriteBlock(node_block_num, sizeof(block), block));
 
   // Corrupt the blob, and ensure the data block for the blob is different after.
-  auto data_block_num = blobfs::DataStartBlock(superblock_);
-  ASSERT_OK(device_->ReadBlock(data_block_num, sizeof(block), block));
+  auto data_block_num = DataStartBlock(superblock_);
+  ASSERT_OK(reader.Read(data_block_num * kBlobfsBlockSize, sizeof(block), block));
 
   ASSERT_OK(CorruptBlob(std::make_unique<ProxyBlockDevice>(device_.get()), &options));
 
-  uint8_t block_after[blobfs::kBlobfsBlockSize] = {};
-  ASSERT_OK(device_->ReadBlock(data_block_num, sizeof(block_after), block_after));
+  uint8_t block_after[kBlobfsBlockSize] = {};
+  ASSERT_OK(reader.Read(data_block_num * kBlobfsBlockSize, sizeof(block_after), block_after));
   ASSERT_BYTES_NE(block, block_after, 20);
 }
 
@@ -190,28 +190,30 @@ TEST_F(BlobfsDiskTest, SucceedsIfLastNodeMatches) {
   ASSERT_OK(
       options.merkle.Parse("00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff"));
 
-  blobfs::Inode node = {};
-  node.header.flags = blobfs::kBlobFlagAllocated;
+  Inode node = {};
+  node.header.flags = kBlobFlagAllocated;
   options.merkle.CopyTo(node.merkle_root_hash);
   node.blob_size = 20;
   node.extent_count = 1;
-  node.extents[0] = blobfs::Extent(2, 1);
+  node.extents[0] = Extent(2, 1);
 
-  uint8_t block[blobfs::kBlobfsBlockSize] = {};
-  auto node_block_num = blobfs::NodeMapStartBlock(superblock_);
-  ASSERT_OK(device_->ReadBlock(node_block_num, sizeof(block), block));
-  reinterpret_cast<blobfs::Inode*>(block)[blobfs::kBlobfsInodesPerBlock - 1] = node;
+  uint8_t block[kBlobfsBlockSize] = {};
+  auto node_block_num = NodeMapStartBlock(superblock_);
+  block_client::Reader reader(*device_);
+  ASSERT_OK(reader.Read(node_block_num * kBlobfsBlockSize, sizeof(block), block));
+  reinterpret_cast<Inode*>(block)[kBlobfsInodesPerBlock - 1] = node;
   ASSERT_NO_FAILURES(device_->WriteBlock(node_block_num, sizeof(block), block));
 
   // Corrupt the blob, and ensure the data block for the blob is different after.
-  auto data_block_num = blobfs::DataStartBlock(superblock_) + 2;
-  ASSERT_OK(device_->ReadBlock(data_block_num, sizeof(block), block));
+  auto data_block_num = DataStartBlock(superblock_) + 2;
+  ASSERT_OK(reader.Read(data_block_num * kBlobfsBlockSize, sizeof(block), block));
 
   ASSERT_OK(CorruptBlob(std::make_unique<ProxyBlockDevice>(device_.get()), &options));
 
-  uint8_t block_after[blobfs::kBlobfsBlockSize] = {};
-  ASSERT_OK(device_->ReadBlock(data_block_num, sizeof(block_after), block_after));
+  uint8_t block_after[kBlobfsBlockSize] = {};
+  ASSERT_OK(reader.Read(data_block_num * kBlobfsBlockSize, sizeof(block_after), block_after));
   ASSERT_BYTES_NE(block, block_after, 20);
 }
 
 }  // namespace
+}  // namespace blobfs

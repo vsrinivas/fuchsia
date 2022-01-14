@@ -7,6 +7,7 @@
 #include <gtest/gtest.h>
 
 #include "src/lib/storage/block_client/cpp/fake_block_device.h"
+#include "src/lib/storage/block_client/cpp/reader.h"
 #include "src/storage/blobfs/blobfs.h"
 #include "src/storage/blobfs/fsck.h"
 #include "src/storage/blobfs/mkfs.h"
@@ -101,7 +102,7 @@ TEST_F(BlobfsTestAtRev4, NotUpgraded) {
   // Read the superblock, verify the oldest revision is unmodified
   uint8_t block[kBlobfsBlockSize] = {};
   static_assert(sizeof(block) >= sizeof(Superblock));
-  ASSERT_EQ(device->ReadBlock(0, kBlobfsBlockSize, &block), ZX_OK);
+  ASSERT_EQ(block_client::Reader(*device).Read(0, kBlobfsBlockSize, &block), ZX_OK);
   Superblock* info = reinterpret_cast<Superblock*>(block);
   EXPECT_EQ(info->oldest_minor_version, kBlobfsMinorVersionHostToolHandlesNullBlobCorrectly);
 
@@ -115,7 +116,7 @@ TEST_F(BlobfsTestAtFutureRev, OldestMinorVersionSetToDriverMinorVersion) {
   // Read the superblock, verify the oldest revision is set to the current revision
   uint8_t block[kBlobfsBlockSize] = {};
   static_assert(sizeof(block) >= sizeof(Superblock));
-  ASSERT_EQ(device->ReadBlock(0, kBlobfsBlockSize, &block), ZX_OK);
+  ASSERT_EQ(block_client::Reader(*device).Read(0, kBlobfsBlockSize, &block), ZX_OK);
   Superblock* info = reinterpret_cast<Superblock*>(block);
   EXPECT_EQ(info->oldest_minor_version, kBlobfsCurrentMinorVersion);
 

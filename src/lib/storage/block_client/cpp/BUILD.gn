@@ -20,12 +20,14 @@ static_library("cpp") {
     "block_device.h",
     "block_group_registry.h",
     "client.h",
+    "reader.h",
     "remote_block_device.h",
   ]
   sources = [
     "block_device.cc",
     "block_group_registry.cc",
     "client.cc",
+    "reader.cc",
     "remote_block_device.cc",
   ]
 
@@ -49,6 +51,9 @@ static_library("cpp") {
 
     # <block-client/cpp/block-device.h> has #include <lib/zx/status.h>
     "//zircon/system/ulib/zxc",
+
+    # <block-client/cpp/reader.h> has #include <lib/fzl/owned-vmo-mapper.h>
+    "//zircon/system/ulib/fzl",
   ]
   deps = [
     "//sdk/fidl/fuchsia.device:fuchsia.device_llcpp",
@@ -62,6 +67,7 @@ static_library("cpp") {
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/sync",
     "//zircon/system/ulib/zx",
+    "//zircon/third_party/ulib/safemath",
   ]
 
   # TODO(fxbug.dev/69585): This target uses raw zx::channel with LLCPP which is deprecated.
@@ -104,6 +110,7 @@ test("block_client_unit_test") {
   sources = [
     "block_group_registry_unittest.cc",
     "fake_block_device_unittest.cc",
+    "reader_unittest.cc",
     "remote_block_device_unittest.cc",
   ]
 
@@ -113,6 +120,7 @@ test("block_client_unit_test") {
     ":cpp",
     ":fake_device",
     "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
+    "//src/lib/fxl/test:gtest_main",
     "//src/storage/fvm",
     "//zircon/system/ulib/async-loop",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
@@ -121,7 +129,6 @@ test("block_client_unit_test") {
     "//zircon/system/ulib/fzl",
     "//zircon/system/ulib/range",
     "//zircon/system/ulib/storage-metrics",
-    "//zircon/system/ulib/zxtest",
   ]
 
   # TODO(fxbug.dev/85473): This target uses |fidl::WireTryDispatch| which is deprecated.

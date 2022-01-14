@@ -76,7 +76,7 @@ TEST(FormatFilesystemTest, CreateFactoryfsFailureOnUnalignedBlockSize) {
   auto device = std::make_unique<FakeBlockDevice>(kBlockCount, kBlockSize);
   ASSERT_OK(FormatFilesystem(device.get()));
   device->SetBlockSize(kBlockSize + 1);
-  ASSERT_EQ(ZX_ERR_IO, CheckMountability(std::move(device)));
+  ASSERT_EQ(ZX_ERR_INVALID_ARGS, CheckMountability(std::move(device)));
 }
 
 }  // namespace

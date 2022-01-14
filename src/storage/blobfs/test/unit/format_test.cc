@@ -7,6 +7,7 @@
 #include <gtest/gtest.h>
 
 #include "src/lib/storage/block_client/cpp/fake_block_device.h"
+#include "src/lib/storage/block_client/cpp/reader.h"
 #include "src/storage/blobfs/blobfs.h"
 #include "src/storage/blobfs/mkfs.h"
 #include "src/storage/blobfs/test/blobfs_test_setup.h"
@@ -206,7 +207,7 @@ TEST(FormatFilesystemTest, FormatNonFVMDeviceWithTooLargeBlockSize) {
   const uint32_t kBlockSize = kBlobfsBlockSize * 2;
   auto device = std::make_unique<FakeBlockDevice>(kBlockCount, kBlockSize);
   ASSERT_EQ(ZX_ERR_IO_INVALID, FormatFilesystem(device.get(), FilesystemOptions{}));
-  ASSERT_EQ(ZX_ERR_IO, CheckMountability(std::move(device)));
+  ASSERT_EQ(ZX_ERR_INVALID_ARGS, CheckMountability(std::move(device)));
 }
 
 TEST(FormatFilesystemTest, FormatFVMDeviceWithTooLargeBlockSize) {
@@ -217,7 +218,7 @@ TEST(FormatFilesystemTest, FormatFVMDeviceWithTooLargeBlockSize) {
   auto device =
       std::make_unique<FakeFVMBlockDevice>(kBlockCount, kBlockSize, kSliceSize, kSliceCount);
   ASSERT_EQ(ZX_ERR_IO_INVALID, FormatFilesystem(device.get(), FilesystemOptions{}));
-  ASSERT_EQ(ZX_ERR_IO, CheckMountability(std::move(device)));
+  ASSERT_EQ(ZX_ERR_INVALID_ARGS, CheckMountability(std::move(device)));
 }
 
 // Validates that a formatted filesystem, can't be mounted as writable on a read-only device.
@@ -262,7 +263,7 @@ TEST(FormatFilesystemTest, CreateBlobfsFailureOnUnalignedBlockSize) {
   auto device = std::make_unique<FakeBlockDevice>(kBlockCount, kBlockSize);
   ASSERT_EQ(FormatFilesystem(device.get(), FilesystemOptions{}), ZX_OK);
   device->SetBlockSize(kBlockSize + 1);
-  ASSERT_EQ(ZX_ERR_IO, CheckMountability(std::move(device)));
+  ASSERT_EQ(ZX_ERR_INVALID_ARGS, CheckMountability(std::move(device)));
 }
 
 // After formatting a filesystem with block size valid block count N, mounting
@@ -287,18 +288,6 @@ TEST(FormatFilesystemTest, CreateBlobfsSuccessWithMoreBlocks) {
   ASSERT_EQ(CheckMountability(std::move(device)), ZX_OK);
 }
 
-// Blobfs cannot be formatted on an FVM with a slice size smaller than a block size.
-TEST(FormatFilesystemTest, FormatFVMDeviceWithTooSmallSliceSize) {
-  const uint64_t kBlockCount = 1 << 20;
-  const uint32_t kBlockSize = kBlobfsBlockSize;
-  const uint64_t kSliceSize = kBlobfsBlockSize / 2;
-  const uint64_t kSliceCount = 1028;
-  auto device =
-      std::make_unique<FakeFVMBlockDevice>(kBlockCount, kBlockSize, kSliceSize, kSliceCount);
-  ASSERT_EQ(ZX_ERR_IO_INVALID, FormatFilesystem(device.get(), FilesystemOptions{}));
-  ASSERT_EQ(ZX_ERR_INVALID_ARGS, CheckMountability(std::move(device)));
-}
-
 // Blobfs can be formatted on an FVM with a slice slice equal to two blocks.
 TEST(FormatFilesystemTest, FormatFVMDeviceWithSmallestSliceSize) {
   const uint64_t kBlockCount = 1 << 20;
@@ -309,19 +298,6 @@ TEST(FormatFilesystemTest, FormatFVMDeviceWithSmallestSliceSize) {
       std::make_unique<FakeFVMBlockDevice>(kBlockCount, kBlockSize, kSliceSize, kSliceCount);
   ASSERT_EQ(FormatFilesystem(device.get(), FilesystemOptions{}), ZX_OK);
   ASSERT_EQ(CheckMountability(std::move(device)), ZX_OK);
-}
-
-// Blobfs cannot be formatted on an FVM with a slice size that does not divide
-// the blobfs block size.
-TEST(FormatFilesystemTest, FormatFVMDeviceWithNonDivisibleSliceSize) {
-  const uint64_t kBlockCount = 1 << 20;
-  const uint32_t kBlockSize = kBlobfsBlockSize;
-  const uint64_t kSliceSize = kBlobfsBlockSize * 8 + 1;
-  const uint64_t kSliceCount = 1028;
-  auto device =
-      std::make_unique<FakeFVMBlockDevice>(kBlockCount, kBlockSize, kSliceSize, kSliceCount);
-  ASSERT_EQ(ZX_ERR_IO_INVALID, FormatFilesystem(device.get(), FilesystemOptions{}));
-  ASSERT_EQ(ZX_ERR_INVALID_ARGS, CheckMountability(std::move(device)));
 }
 
 TEST(FormatFilesystemTest, FormatNonFVMDeviceDefaultInodeCount) {
@@ -360,7 +336,8 @@ TEST(FormatFilesystemTest, FormattedFilesystemHasSpecifiedOldestRevision) {
 
   uint8_t block[kBlobfsBlockSize] = {};
   static_assert(sizeof(block) >= sizeof(Superblock));
-  ASSERT_EQ(device->ReadBlock(0, kBlobfsBlockSize, &block), ZX_OK);
+  block_client::Reader reader(*device);
+  ASSERT_EQ(reader.Read(0, kBlobfsBlockSize, &block), ZX_OK);
   Superblock* info = reinterpret_cast<Superblock*>(block);
   EXPECT_EQ(1234u, info->oldest_minor_version);
 }
@@ -374,7 +351,8 @@ TEST(FormatFilesystemTest, FormattedFilesystemHasCurrentMinorVersionIfUnspecifie
 
   uint8_t block[kBlobfsBlockSize] = {};
   static_assert(sizeof(block) >= sizeof(Superblock));
-  ASSERT_EQ(device->ReadBlock(0, kBlobfsBlockSize, &block), ZX_OK);
+  block_client::Reader reader(*device);
+  ASSERT_EQ(reader.Read(0, kBlobfsBlockSize, &block), ZX_OK);
   Superblock* info = reinterpret_cast<Superblock*>(block);
   EXPECT_EQ(kBlobfsCurrentMinorVersion, info->oldest_minor_version);
 }

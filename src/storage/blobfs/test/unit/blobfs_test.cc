@@ -17,6 +17,7 @@
 #include <storage/buffer/vmo_buffer.h>
 
 #include "src/lib/storage/block_client/cpp/fake_block_device.h"
+#include "src/lib/storage/block_client/cpp/reader.h"
 #include "src/lib/storage/vfs/cpp/metrics/events.h"
 #include "src/storage/blobfs/blob.h"
 #include "src/storage/blobfs/directory.h"
@@ -140,7 +141,8 @@ TEST_F(BlobfsTest, CleanFlag) {
   // Read the superblock, verify the clean flag is set.
   uint8_t block[kBlobfsBlockSize] = {};
   static_assert(sizeof(block) >= sizeof(Superblock));
-  ASSERT_EQ(device->ReadBlock(0, kBlobfsBlockSize, &block), ZX_OK);
+  block_client::Reader reader(*device);
+  ASSERT_EQ(reader.Read(0, kBlobfsBlockSize, &block), ZX_OK);
   Superblock* info = reinterpret_cast<Superblock*>(block);
   EXPECT_EQ(kBlobFlagClean, (info->flags & kBlobFlagClean));
 }

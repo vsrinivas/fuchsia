@@ -36,6 +36,7 @@
 #include "src/lib/digest/digest.h"
 #include "src/lib/digest/merkle-tree.h"
 #include "src/lib/storage/block_client/cpp/pass_through_read_only_device.h"
+#include "src/lib/storage/block_client/cpp/reader.h"
 #include "src/lib/storage/block_client/cpp/remote_block_device.h"
 #include "src/lib/storage/vfs/cpp/journal/journal.h"
 #include "src/lib/storage/vfs/cpp/journal/replay.h"
@@ -60,6 +61,7 @@
 #include "src/storage/blobfs/transaction.h"
 #include "src/storage/blobfs/transfer_buffer.h"
 #include "src/storage/fvm/client.h"
+
 namespace blobfs {
 namespace {
 
@@ -86,10 +88,10 @@ const char* CachePolicyToString(CachePolicy policy) {
 
 zx_status_t LoadSuperblock(const fuchsia_hardware_block_BlockInfo& block_info, int block_offset,
                            BlockDevice& device, char block[kBlobfsBlockSize]) {
-  zx_status_t status = device.ReadBlock(block_offset * kBlobfsBlockSize / block_info.block_size,
-                                        kBlobfsBlockSize, block);
+  block_client::Reader reader(device);
+  zx_status_t status = reader.Read(block_offset * kBlobfsBlockSize, kBlobfsBlockSize, block);
   if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "could not read info block";
+    FX_LOGS(ERROR) << "could not read info block: " << zx_status_get_string(status);
     return status;
   }
   const Superblock* superblock = reinterpret_cast<Superblock*>(block);
@@ -1048,7 +1050,8 @@ zx_status_t Blobfs::ReloadSuperblock() {
 
   // Re-read the info block from disk.
   char block[kBlobfsBlockSize];
-  if (zx_status_t status = Device()->ReadBlock(0, kBlobfsBlockSize, block); status != ZX_OK) {
+  block_client::Reader reader(*Device());
+  if (zx_status_t status = reader.Read(0, kBlobfsBlockSize, block); status != ZX_OK) {
     FX_LOGS(ERROR) << "could not read info block";
     return status;
   }
@@ -1147,8 +1150,9 @@ zx::status<std::unique_ptr<Superblock>> Blobfs::ReadBackupSuperblock() {
     sync_completion_wait(&sync, ZX_TIME_INFINITE);
   }
   auto superblock = std::make_unique<Superblock>();
-  if (zx_status_t status =
-          block_device_->ReadBlock(kFVMBackupSuperblockOffset, kBlobfsBlockSize, superblock.get());
+  block_client::Reader reader(*block_device_);
+  if (zx_status_t status = reader.Read(kFVMBackupSuperblockOffset * kBlobfsBlockSize,
+                                       kBlobfsBlockSize, superblock.get());
       status != ZX_OK) {
     return zx::error(status);
   }

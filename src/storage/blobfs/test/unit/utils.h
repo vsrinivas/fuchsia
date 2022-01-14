@@ -73,11 +73,6 @@ class MockTransactionManager : public TransactionManager, public block_client::B
     return nullptr;
   }
 
-  // block_client::BlockDevice interfaces.
-  zx_status_t ReadBlock(uint64_t block_num, uint64_t block_size, void* block) const final {
-    return ZX_ERR_NOT_SUPPORTED;
-  }
-
   // FIFO protocol.
   zx_status_t FifoTransaction(block_fifo_request_t* requests, size_t count) final;
 

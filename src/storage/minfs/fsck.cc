@@ -23,13 +23,20 @@
 #include "src/lib/storage/vfs/cpp/journal/format.h"
 #include "src/storage/minfs/format.h"
 #include "zircon/errors.h"
+
 #ifdef __Fuchsia__
+
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 
 #include <storage/buffer/owned_vmoid.h>
+
+#include "src/lib/storage/block_client/cpp/reader.h"
+
 #else
+
 #include <storage/buffer/array_buffer.h>
+
 #endif
 
 #include "src/storage/minfs/minfs_private.h"
@@ -882,7 +889,8 @@ zx::status<Superblock> ReadBackupSuperblock(fs::TransactionHandler* transaction_
                                             block_client::BlockDevice* device, uint32_t max_blocks,
                                             uint32_t backup_location) {
   Superblock backup;
-  if (zx_status_t status = device->ReadBlock(backup_location, kMinfsBlockSize, &backup);
+  block_client::Reader reader(*device);
+  if (zx_status_t status = reader.Read(backup_location * kMinfsBlockSize, kMinfsBlockSize, &backup);
       status != ZX_OK) {
     return zx::error(status);
   }

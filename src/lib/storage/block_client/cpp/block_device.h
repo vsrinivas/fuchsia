@@ -25,15 +25,6 @@ namespace block_client {
 // The normal implementation would be a RemoteBlockDevice which speaks the FIDL/FIFO protocols
 class BlockDevice : public storage::VmoidRegistry {
  public:
-  // Reads one block from the block device using the fuchsia.io.File protocol. The block_size
-  // should match that of the underlying block device (see BlockGetInfo() to query) or the
-  // returned data will be incorrect.
-  //
-  // Favor reading over the FIFO protocol using FifoTransaction() instead.
-  //
-  // TODO(fxbug.dev/33909): Deprecate this interface.
-  virtual zx_status_t ReadBlock(uint64_t block_num, uint64_t block_size, void* block) const = 0;
-
   // FIFO protocol. This is the normal way to read from and write to the block device.
   virtual zx_status_t FifoTransaction(block_fifo_request_t* requests, size_t count) = 0;
 

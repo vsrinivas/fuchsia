@@ -13,6 +13,7 @@
 #include <gtest/gtest.h>
 
 #include "src/lib/storage/block_client/cpp/fake_block_device.h"
+#include "src/lib/storage/block_client/cpp/reader.h"
 #include "src/storage/minfs/format.h"
 #include "src/storage/minfs/fsck.h"
 #include "src/storage/minfs/minfs_private.h"
@@ -203,8 +204,10 @@ TEST(SuperblockTest, TestCorruptSuperblockWithoutCorrection) {
   ASSERT_TRUE(info_or.is_error());
 
   // Read back the superblock and backup superblock.
-  ASSERT_EQ(device.ReadBlock(kSuperblockStart, kMinfsBlockSize, &info), ZX_OK);
-  ASSERT_EQ(device.ReadBlock(kNonFvmSuperblockBackup, kMinfsBlockSize, &backup), ZX_OK);
+  block_client::Reader reader(device);
+  ASSERT_EQ(reader.Read(kSuperblockStart * kMinfsBlockSize, kMinfsBlockSize, &info), ZX_OK);
+  ASSERT_EQ(reader.Read(kNonFvmSuperblockBackup * kMinfsBlockSize, kMinfsBlockSize, &backup),
+            ZX_OK);
 
   // Confirm that the superblock is not updated by backup.
   ASSERT_NE(memcmp(&info, &backup, sizeof(backup)), 0);
@@ -245,8 +248,10 @@ TEST(SuperblockTest, TestCorruptSuperblockWithCorrection) {
   info = info_or.value();
 
   // Read back the superblock and backup superblock.
-  ASSERT_EQ(device.ReadBlock(kSuperblockStart, kMinfsBlockSize, &info), ZX_OK);
-  ASSERT_EQ(device.ReadBlock(kNonFvmSuperblockBackup, kMinfsBlockSize, &backup), ZX_OK);
+  block_client::Reader reader(device);
+  ASSERT_EQ(reader.Read(kSuperblockStart * kMinfsBlockSize, kMinfsBlockSize, &info), ZX_OK);
+  ASSERT_EQ(reader.Read(kNonFvmSuperblockBackup * kMinfsBlockSize, kMinfsBlockSize, &backup),
+            ZX_OK);
 
   // Confirm that the superblock is updated by backup.
   ASSERT_EQ(memcmp(&info, &backup, sizeof(backup)), 0);
@@ -298,8 +303,10 @@ TEST(SuperblockTest, TestRepairSuperblockWithBitmapReconstruction) {
   info = info_or.value();
 
   // Read back the superblock and backup superblock.
-  ASSERT_EQ(device.ReadBlock(kSuperblockStart, kMinfsBlockSize, &info), ZX_OK);
-  ASSERT_EQ(device.ReadBlock(kNonFvmSuperblockBackup, kMinfsBlockSize, &backup), ZX_OK);
+  block_client::Reader reader(device);
+  ASSERT_EQ(reader.Read(kSuperblockStart * kMinfsBlockSize, kMinfsBlockSize, &info), ZX_OK);
+  ASSERT_EQ(reader.Read(kNonFvmSuperblockBackup * kMinfsBlockSize, kMinfsBlockSize, &backup),
+            ZX_OK);
 
   // Confirm that alloc_*_counts are updated correctly in superblock and backup from bitmaps.
   ASSERT_GT(info.alloc_block_count, 0u);

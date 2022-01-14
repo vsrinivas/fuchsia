@@ -9,8 +9,8 @@
 #include <array>
 #include <iterator>
 
+#include <gtest/gtest.h>
 #include <storage/buffer/owned_vmoid.h>
-#include <zxtest/zxtest.h>
 
 #include "src/storage/fvm/format.h"
 
@@ -27,10 +27,10 @@ TEST(FakeBlockDeviceTest, EmptyDevice) {
   const uint32_t kBlockSize = 0;
   std::unique_ptr<BlockDevice> device = std::make_unique<FakeBlockDevice>(kBlockCount, kBlockSize);
   fuchsia_hardware_block_BlockInfo info = {};
-  ASSERT_OK(device->BlockGetInfo(&info));
+  ASSERT_EQ(device->BlockGetInfo(&info), ZX_OK);
   EXPECT_EQ(kBlockCount, info.block_count);
   EXPECT_EQ(kBlockSize, info.block_size);
-  EXPECT_EQ(0, info.flags);
+  EXPECT_EQ(info.flags, 0u);
   EXPECT_EQ(fuchsia_hardware_block_MAX_TRANSFER_UNBOUNDED, info.max_transfer_size);
 }
 
@@ -41,7 +41,7 @@ TEST(FakeBlockDeviceTest, NonEmptyDevice) {
                               .supports_trim = true,
                               .max_transfer_size = kBlockCountDefault * 8});
   fuchsia_hardware_block_BlockInfo info = {};
-  ASSERT_OK(device->BlockGetInfo(&info));
+  ASSERT_EQ(device->BlockGetInfo(&info), ZX_OK);
   EXPECT_EQ(kBlockCountDefault, info.block_count);
   EXPECT_EQ(kBlockSizeDefault, info.block_size);
   EXPECT_TRUE(info.flags & fuchsia_hardware_block_FLAG_TRIM_SUPPORT);
@@ -51,9 +51,9 @@ TEST(FakeBlockDeviceTest, NonEmptyDevice) {
 void CreateAndRegisterVmo(BlockDevice* device, size_t blocks, zx::vmo* vmo,
                           storage::OwnedVmoid* vmoid) {
   fuchsia_hardware_block_BlockInfo info = {};
-  ASSERT_OK(device->BlockGetInfo(&info));
-  ASSERT_OK(zx::vmo::create(blocks * info.block_size, 0, vmo));
-  ASSERT_OK(device->BlockAttachVmo(*vmo, &vmoid->GetReference(device)));
+  ASSERT_EQ(device->BlockGetInfo(&info), ZX_OK);
+  ASSERT_EQ(zx::vmo::create(blocks * info.block_size, 0, vmo), ZX_OK);
+  ASSERT_EQ(device->BlockAttachVmo(*vmo, &vmoid->GetReference(device)), ZX_OK);
 }
 
 TEST(FakeBlockDeviceTest, WriteAndReadUsingFifoTransaction) {
@@ -63,31 +63,31 @@ TEST(FakeBlockDeviceTest, WriteAndReadUsingFifoTransaction) {
   const size_t kVmoBlocks = 4;
   zx::vmo vmo;
   storage::OwnedVmoid vmoid;
-  ASSERT_NO_FAILURES(CreateAndRegisterVmo(device, kVmoBlocks, &vmo, &vmoid));
+  ASSERT_NO_FATAL_FAILURE(CreateAndRegisterVmo(device, kVmoBlocks, &vmo, &vmoid));
 
   // Write some data to the device.
   char src[kVmoBlocks * kBlockSizeDefault];
   memset(src, 'a', sizeof(src));
-  ASSERT_OK(vmo.write(src, 0, sizeof(src)));
+  ASSERT_EQ(vmo.write(src, 0, sizeof(src)), ZX_OK);
   block_fifo_request_t request;
   request.opcode = BLOCKIO_WRITE;
   request.vmoid = vmoid.get();
   request.length = kVmoBlocks;
   request.vmo_offset = 0;
   request.dev_offset = 0;
-  ASSERT_OK(device->FifoTransaction(&request, 1));
+  ASSERT_EQ(device->FifoTransaction(&request, 1), ZX_OK);
 
   fuchsia_hardware_block_BlockStats stats;
   fake_device->GetStats(false, &stats);
-  ASSERT_EQ(1, stats.write.success.total_calls);
+  ASSERT_EQ(stats.write.success.total_calls, 1u);
   ASSERT_EQ(kVmoBlocks * kBlockSizeDefault, stats.write.success.bytes_transferred);
-  ASSERT_GE(stats.write.success.total_time_spent, 0);
+  ASSERT_GE(stats.write.success.total_time_spent, 0u);
 
   // Clear out the registered VMO.
   char dst[kVmoBlocks * kBlockSizeDefault];
   static_assert(sizeof(src) == sizeof(dst), "Mismatched input/output buffer size");
   memset(dst, 0, sizeof(dst));
-  ASSERT_OK(vmo.write(dst, 0, sizeof(dst)));
+  ASSERT_EQ(vmo.write(dst, 0, sizeof(dst)), ZX_OK);
 
   // Read data from the fake back into the registered VMO.
   request.opcode = BLOCKIO_READ;
@@ -95,14 +95,14 @@ TEST(FakeBlockDeviceTest, WriteAndReadUsingFifoTransaction) {
   request.length = kVmoBlocks;
   request.vmo_offset = 0;
   request.dev_offset = 0;
-  ASSERT_OK(device->FifoTransaction(&request, 1));
-  ASSERT_OK(vmo.read(dst, 0, sizeof(dst)));
-  EXPECT_BYTES_EQ(src, dst, sizeof(src));
+  ASSERT_EQ(device->FifoTransaction(&request, 1), ZX_OK);
+  ASSERT_EQ(vmo.read(dst, 0, sizeof(dst)), ZX_OK);
+  EXPECT_EQ(memcmp(src, dst, sizeof(src)), 0);
 
   fake_device->GetStats(false, &stats);
-  ASSERT_EQ(1, stats.read.success.total_calls);
+  ASSERT_EQ(stats.read.success.total_calls, 1u);
   ASSERT_EQ(kVmoBlocks * kBlockSizeDefault, stats.read.success.bytes_transferred);
-  ASSERT_GE(stats.read.success.total_time_spent, 0);
+  ASSERT_GE(stats.read.success.total_time_spent, 0u);
 }
 
 TEST(FakeBlockDeviceTest, FifoTransactionFlush) {
@@ -112,7 +112,7 @@ TEST(FakeBlockDeviceTest, FifoTransactionFlush) {
   const size_t kVmoBlocks = 1;
   zx::vmo vmo;
   storage::OwnedVmoid vmoid;
-  ASSERT_NO_FAILURES(CreateAndRegisterVmo(device, kVmoBlocks, &vmo, &vmoid));
+  ASSERT_NO_FATAL_FAILURE(CreateAndRegisterVmo(device, kVmoBlocks, &vmo, &vmoid));
 
   block_fifo_request_t request;
   request.opcode = BLOCKIO_FLUSH;
@@ -120,13 +120,13 @@ TEST(FakeBlockDeviceTest, FifoTransactionFlush) {
   request.length = 0;
   request.vmo_offset = 0;
   request.dev_offset = 0;
-  EXPECT_OK(device->FifoTransaction(&request, 1));
+  EXPECT_EQ(device->FifoTransaction(&request, 1), ZX_OK);
 
   fuchsia_hardware_block_BlockStats stats;
   fake_device->GetStats(false, &stats);
-  ASSERT_EQ(1, stats.flush.success.total_calls);
-  ASSERT_EQ(0, stats.flush.success.bytes_transferred);
-  ASSERT_GE(stats.flush.success.total_time_spent, 0);
+  ASSERT_EQ(stats.flush.success.total_calls, 1u);
+  ASSERT_EQ(stats.flush.success.bytes_transferred, 0u);
+  ASSERT_GE(stats.flush.success.total_time_spent, 0u);
 }
 
 // Tests that writing followed by a flush acts like a regular write.
@@ -137,11 +137,11 @@ TEST(FakeBlockDeviceTest, FifoTransactionWriteThenFlush) {
   const size_t kVmoBlocks = 1;
   zx::vmo vmo;
   storage::OwnedVmoid vmoid;
-  ASSERT_NO_FAILURES(CreateAndRegisterVmo(device.get(), kVmoBlocks, &vmo, &vmoid));
+  ASSERT_NO_FATAL_FAILURE(CreateAndRegisterVmo(device.get(), kVmoBlocks, &vmo, &vmoid));
 
   char src[kVmoBlocks * kBlockSizeDefault];
   memset(src, 'a', sizeof(src));
-  ASSERT_OK(vmo.write(src, 0, sizeof(src)));
+  ASSERT_EQ(vmo.write(src, 0, sizeof(src)), ZX_OK);
 
   block_fifo_request_t requests[2];
   requests[0].opcode = BLOCKIO_WRITE;
@@ -155,12 +155,12 @@ TEST(FakeBlockDeviceTest, FifoTransactionWriteThenFlush) {
   requests[1].length = 0;
   requests[1].vmo_offset = 0;
   requests[1].dev_offset = 0;
-  EXPECT_OK(device->FifoTransaction(requests, std::size(requests)));
+  EXPECT_EQ(device->FifoTransaction(requests, std::size(requests)), ZX_OK);
 
   char dst[kVmoBlocks * kBlockSizeDefault];
   static_assert(sizeof(src) == sizeof(dst), "Mismatched input/output buffer size");
   memset(dst, 0, sizeof(dst));
-  ASSERT_OK(vmo.write(dst, 0, sizeof(dst)));
+  ASSERT_EQ(vmo.write(dst, 0, sizeof(dst)), ZX_OK);
 
   block_fifo_request_t request;
   request.opcode = BLOCKIO_READ;
@@ -168,9 +168,9 @@ TEST(FakeBlockDeviceTest, FifoTransactionWriteThenFlush) {
   request.length = kVmoBlocks;
   request.vmo_offset = 0;
   request.dev_offset = 0;
-  ASSERT_OK(device->FifoTransaction(&request, 1));
-  ASSERT_OK(vmo.read(dst, 0, sizeof(dst)));
-  EXPECT_BYTES_EQ(src, dst, sizeof(src));
+  ASSERT_EQ(device->FifoTransaction(&request, 1), ZX_OK);
+  ASSERT_EQ(vmo.read(dst, 0, sizeof(dst)), ZX_OK);
+  EXPECT_EQ(memcmp(src, dst, sizeof(src)), 0);
 }
 
 // Tests that flushing followed by a write acts like a regular write.
@@ -181,11 +181,11 @@ TEST(FakeBlockDeviceTest, FifoTransactionFlushThenWrite) {
   const size_t kVmoBlocks = 1;
   zx::vmo vmo;
   storage::OwnedVmoid vmoid;
-  ASSERT_NO_FAILURES(CreateAndRegisterVmo(device.get(), kVmoBlocks, &vmo, &vmoid));
+  ASSERT_NO_FATAL_FAILURE(CreateAndRegisterVmo(device.get(), kVmoBlocks, &vmo, &vmoid));
 
   char src[kVmoBlocks * kBlockSizeDefault];
   memset(src, 'a', sizeof(src));
-  ASSERT_OK(vmo.write(src, 0, sizeof(src)));
+  ASSERT_EQ(vmo.write(src, 0, sizeof(src)), ZX_OK);
 
   block_fifo_request_t requests[2];
   requests[0].opcode = BLOCKIO_FLUSH;
@@ -200,12 +200,12 @@ TEST(FakeBlockDeviceTest, FifoTransactionFlushThenWrite) {
   requests[1].vmo_offset = 0;
   requests[1].dev_offset = 0;
 
-  EXPECT_OK(device->FifoTransaction(requests, std::size(requests)));
+  EXPECT_EQ(device->FifoTransaction(requests, std::size(requests)), ZX_OK);
 
   char dst[kVmoBlocks * kBlockSizeDefault];
   static_assert(sizeof(src) == sizeof(dst), "Mismatched input/output buffer size");
   memset(dst, 0, sizeof(dst));
-  ASSERT_OK(vmo.write(dst, 0, sizeof(dst)));
+  ASSERT_EQ(vmo.write(dst, 0, sizeof(dst)), ZX_OK);
 
   block_fifo_request_t request;
   request.opcode = BLOCKIO_READ;
@@ -213,9 +213,9 @@ TEST(FakeBlockDeviceTest, FifoTransactionFlushThenWrite) {
   request.length = kVmoBlocks;
   request.vmo_offset = 0;
   request.dev_offset = 0;
-  ASSERT_OK(device->FifoTransaction(&request, 1));
-  ASSERT_OK(vmo.read(dst, 0, sizeof(dst)));
-  EXPECT_BYTES_EQ(src, dst, sizeof(src));
+  ASSERT_EQ(device->FifoTransaction(&request, 1), ZX_OK);
+  ASSERT_EQ(vmo.read(dst, 0, sizeof(dst)), ZX_OK);
+  EXPECT_EQ(memcmp(src, dst, sizeof(src)), 0);
 }
 
 TEST(FakeBlockDeviceTest, FifoTransactionClose) {
@@ -225,7 +225,7 @@ TEST(FakeBlockDeviceTest, FifoTransactionClose) {
   const size_t kVmoBlocks = 1;
   zx::vmo vmo;
   storage::OwnedVmoid vmoid;
-  ASSERT_NO_FAILURES(CreateAndRegisterVmo(device, kVmoBlocks, &vmo, &vmoid));
+  ASSERT_NO_FATAL_FAILURE(CreateAndRegisterVmo(device, kVmoBlocks, &vmo, &vmoid));
   vmoid_t id = vmoid.TakeId();
 
   block_fifo_request_t request;
@@ -236,7 +236,7 @@ TEST(FakeBlockDeviceTest, FifoTransactionClose) {
   request.dev_offset = 0;
 
   EXPECT_TRUE(fake_device->IsRegistered(id));
-  EXPECT_OK(device->FifoTransaction(&request, 1));
+  EXPECT_EQ(device->FifoTransaction(&request, 1), ZX_OK);
   EXPECT_FALSE(fake_device->IsRegistered(id));
 }
 
@@ -247,7 +247,7 @@ TEST(FakeBlockDeviceTest, FifoTransactionUnsupportedTrim) {
   const size_t kVmoBlocks = 1;
   zx::vmo vmo;
   storage::OwnedVmoid vmoid;
-  ASSERT_NO_FAILURES(CreateAndRegisterVmo(device, kVmoBlocks, &vmo, &vmoid));
+  ASSERT_NO_FATAL_FAILURE(CreateAndRegisterVmo(device, kVmoBlocks, &vmo, &vmoid));
 
   block_fifo_request_t request;
   request.opcode = BLOCKIO_TRIM;
@@ -259,9 +259,9 @@ TEST(FakeBlockDeviceTest, FifoTransactionUnsupportedTrim) {
 
   fuchsia_hardware_block_BlockStats stats;
   fake_device->GetStats(true, &stats);
-  ASSERT_EQ(1, stats.trim.failure.total_calls);
+  ASSERT_EQ(stats.trim.failure.total_calls, 1u);
   ASSERT_EQ(kVmoBlocks * kBlockSizeDefault, stats.trim.failure.bytes_transferred);
-  ASSERT_GE(stats.trim.failure.total_time_spent, 0);
+  ASSERT_GE(stats.trim.failure.total_time_spent, 0u);
 }
 
 TEST(FakeBlockDeviceTest, ClearStats) {
@@ -271,7 +271,7 @@ TEST(FakeBlockDeviceTest, ClearStats) {
   const size_t kVmoBlocks = 1;
   zx::vmo vmo;
   storage::OwnedVmoid vmoid;
-  ASSERT_NO_FAILURES(CreateAndRegisterVmo(device, kVmoBlocks, &vmo, &vmoid));
+  ASSERT_NO_FATAL_FAILURE(CreateAndRegisterVmo(device, kVmoBlocks, &vmo, &vmoid));
 
   block_fifo_request_t request;
   request.opcode = BLOCKIO_FLUSH;
@@ -279,19 +279,19 @@ TEST(FakeBlockDeviceTest, ClearStats) {
   request.length = 0;
   request.vmo_offset = 0;
   request.dev_offset = 0;
-  EXPECT_OK(device->FifoTransaction(&request, 1));
+  EXPECT_EQ(device->FifoTransaction(&request, 1), ZX_OK);
 
   fuchsia_hardware_block_BlockStats stats;
   fake_device->GetStats(true, &stats);
-  ASSERT_EQ(1, stats.flush.success.total_calls);
-  ASSERT_EQ(0, stats.flush.success.bytes_transferred);
-  ASSERT_GE(stats.flush.success.total_time_spent, 0);
+  ASSERT_EQ(stats.flush.success.total_calls, 1u);
+  ASSERT_EQ(stats.flush.success.bytes_transferred, 0u);
+  ASSERT_GE(stats.flush.success.total_time_spent, 0u);
 
   // We cleared stats during previous GetStats.
   fake_device->GetStats(false, &stats);
-  ASSERT_EQ(0, stats.flush.success.total_calls);
-  ASSERT_EQ(0, stats.flush.success.bytes_transferred);
-  ASSERT_EQ(0, stats.flush.success.total_time_spent);
+  ASSERT_EQ(stats.flush.success.total_calls, 0u);
+  ASSERT_EQ(stats.flush.success.bytes_transferred, 0u);
+  ASSERT_EQ(stats.flush.success.total_time_spent, 0u);
 }
 
 TEST(FakeBlockDeviceTest, BlockLimitPartialyFailTransaction) {
@@ -301,13 +301,13 @@ TEST(FakeBlockDeviceTest, BlockLimitPartialyFailTransaction) {
   const size_t kLimitBlocks = 2;
   zx::vmo vmo;
   storage::OwnedVmoid vmoid;
-  ASSERT_NO_FAILURES(CreateAndRegisterVmo(device.get(), kVmoBlocks, &vmo, &vmoid));
+  ASSERT_NO_FATAL_FAILURE(CreateAndRegisterVmo(device.get(), kVmoBlocks, &vmo, &vmoid));
 
   // Pre-fill the source buffer.
   std::array<uint8_t, kBlockSizeDefault> block;
   memset(block.data(), 'a', block.size());
   for (size_t i = 0; i < kVmoBlocks; i++) {
-    ASSERT_OK(vmo.write(block.data(), i * block.size(), block.size()));
+    ASSERT_EQ(vmo.write(block.data(), i * block.size(), block.size()), ZX_OK);
   }
 
   block_fifo_request_t request;
@@ -318,34 +318,34 @@ TEST(FakeBlockDeviceTest, BlockLimitPartialyFailTransaction) {
   request.dev_offset = 0;
 
   // First, set the transaction limit.
-  EXPECT_EQ(0, device->GetWriteBlockCount());
+  EXPECT_EQ(device->GetWriteBlockCount(), 0u);
   device->SetWriteBlockLimit(2);
 
   ASSERT_EQ(ZX_ERR_IO, device->FifoTransaction(&request, 1));
-  EXPECT_EQ(2, device->GetWriteBlockCount());
+  EXPECT_EQ(device->GetWriteBlockCount(), 2u);
 
   // Read from the device, an observe that the operation was only partially
   // successful.
   std::array<uint8_t, kBlockSizeDefault> zero_block;
   memset(zero_block.data(), 0, zero_block.size());
   for (size_t i = 0; i < kVmoBlocks; i++) {
-    ASSERT_OK(vmo.write(zero_block.data(), i * zero_block.size(), zero_block.size()));
+    ASSERT_EQ(vmo.write(zero_block.data(), i * zero_block.size(), zero_block.size()), ZX_OK);
   }
 
   request.opcode = BLOCKIO_READ;
-  ASSERT_OK(device->FifoTransaction(&request, 1));
+  ASSERT_EQ(device->FifoTransaction(&request, 1), ZX_OK);
 
   // Expect to see valid data for the two blocks that were written.
   for (size_t i = 0; i < kLimitBlocks; i++) {
     std::array<uint8_t, kBlockSizeDefault> dst;
-    ASSERT_OK(vmo.read(dst.data(), i * dst.size(), dst.size()));
-    ASSERT_BYTES_EQ(block.data(), dst.data(), dst.size());
+    ASSERT_EQ(vmo.read(dst.data(), i * dst.size(), dst.size()), ZX_OK);
+    ASSERT_EQ(memcmp(block.data(), dst.data(), dst.size()), 0);
   }
   // Expect to see zero for the two blocks that were not written.
   for (size_t i = kLimitBlocks; i < kVmoBlocks; i++) {
     std::array<uint8_t, kBlockSizeDefault> dst;
-    ASSERT_OK(vmo.read(dst.data(), i * dst.size(), dst.size()));
-    ASSERT_BYTES_EQ(zero_block.data(), dst.data(), dst.size());
+    ASSERT_EQ(vmo.read(dst.data(), i * dst.size(), dst.size()), ZX_OK);
+    ASSERT_EQ(memcmp(zero_block.data(), dst.data(), dst.size()), 0);
   }
 }
 TEST(FakeBlockDeviceTest, BlockLimitFailsDistinctTransactions) {
@@ -354,7 +354,7 @@ TEST(FakeBlockDeviceTest, BlockLimitFailsDistinctTransactions) {
   const size_t kVmoBlocks = 1;
   zx::vmo vmo;
   storage::OwnedVmoid vmoid;
-  ASSERT_NO_FAILURES(CreateAndRegisterVmo(device.get(), kVmoBlocks, &vmo, &vmoid));
+  ASSERT_NO_FATAL_FAILURE(CreateAndRegisterVmo(device.get(), kVmoBlocks, &vmo, &vmoid));
 
   block_fifo_request_t request;
   request.opcode = BLOCKIO_WRITE;
@@ -364,7 +364,7 @@ TEST(FakeBlockDeviceTest, BlockLimitFailsDistinctTransactions) {
   request.dev_offset = 0;
 
   // First, set the transaction limit.
-  EXPECT_EQ(0, device->GetWriteBlockCount());
+  EXPECT_EQ(device->GetWriteBlockCount(), 0u);
   device->SetWriteBlockLimit(3);
 
   // Observe that we can fulfill three transactions...
@@ -373,7 +373,7 @@ TEST(FakeBlockDeviceTest, BlockLimitFailsDistinctTransactions) {
   EXPECT_EQ(ZX_OK, device->FifoTransaction(&request, 1));
 
   // ... But then we see an I/O failure.
-  EXPECT_EQ(3, device->GetWriteBlockCount());
+  EXPECT_EQ(device->GetWriteBlockCount(), 3u);
   EXPECT_EQ(ZX_ERR_IO, device->FifoTransaction(&request, 1));
 }
 
@@ -383,7 +383,7 @@ TEST(FakeBlockDeviceTest, BlockLimitFailsMergedTransactions) {
   const size_t kVmoBlocks = 1;
   zx::vmo vmo;
   storage::OwnedVmoid vmoid;
-  ASSERT_NO_FAILURES(CreateAndRegisterVmo(device.get(), kVmoBlocks, &vmo, &vmoid));
+  ASSERT_NO_FATAL_FAILURE(CreateAndRegisterVmo(device.get(), kVmoBlocks, &vmo, &vmoid));
 
   constexpr size_t kRequests = 3;
   block_fifo_request_t requests[kRequests];
@@ -411,7 +411,7 @@ TEST(FakeBlockDeviceTest, BlockLimitResetsDevice) {
   const size_t kVmoBlocks = 1;
   zx::vmo vmo;
   storage::OwnedVmoid vmoid;
-  ASSERT_NO_FAILURES(CreateAndRegisterVmo(device.get(), kVmoBlocks, &vmo, &vmoid));
+  ASSERT_NO_FATAL_FAILURE(CreateAndRegisterVmo(device.get(), kVmoBlocks, &vmo, &vmoid));
 
   block_fifo_request_t request;
   request.opcode = BLOCKIO_WRITE;
@@ -439,7 +439,7 @@ TEST(FakeBlockDeviceTest, Hook) {
   const size_t kVmoBlocks = 1;
   zx::vmo vmo;
   storage::OwnedVmoid vmoid;
-  ASSERT_NO_FAILURES(CreateAndRegisterVmo(&device, kVmoBlocks, &vmo, &vmoid));
+  ASSERT_NO_FATAL_FAILURE(CreateAndRegisterVmo(&device, kVmoBlocks, &vmo, &vmoid));
   char v = 1;
   ASSERT_EQ(vmo.write(&v, 0, 1), ZX_OK);
 
@@ -457,10 +457,10 @@ TEST(FakeBlockDeviceTest, Hook) {
       EXPECT_EQ(vmo->read(&v, 0, 1), ZX_OK);
       EXPECT_EQ(v, 1);
     }
-    EXPECT_EQ(request.opcode, BLOCKIO_WRITE);
-    EXPECT_EQ(request.vmo_offset, 1234);
-    EXPECT_EQ(request.dev_offset, 5678);
-    EXPECT_EQ(request.length, 5555);
+    EXPECT_EQ(request.opcode, uint32_t{BLOCKIO_WRITE});
+    EXPECT_EQ(request.vmo_offset, 1234u);
+    EXPECT_EQ(request.dev_offset, 5678u);
+    EXPECT_EQ(request.length, 5555u);
     EXPECT_EQ(request.vmoid, vmoid.get());
     return ZX_ERR_WRONG_TYPE;
   });
@@ -474,7 +474,7 @@ TEST(FakeBlockDeviceTest, WipeZeroesDevice) {
   const size_t kVmoBlocks = 1;
   zx::vmo vmo;
   storage::OwnedVmoid vmoid;
-  ASSERT_NO_FAILURES(CreateAndRegisterVmo(&device, kVmoBlocks, &vmo, &vmoid));
+  ASSERT_NO_FATAL_FAILURE(CreateAndRegisterVmo(&device, kVmoBlocks, &vmo, &vmoid));
   char v = 1;
   ASSERT_EQ(vmo.write(&v, 0, 1), ZX_OK);
 
@@ -530,7 +530,7 @@ TEST(FakeFVMBlockDeviceTest, GetVolumeInfo) {
       kBlockCountDefault, kBlockSizeDefault, kSliceSizeDefault, kSliceCountDefault);
   {
     fuchsia_hardware_block_BlockInfo info = {};
-    ASSERT_OK(device->BlockGetInfo(&info));
+    ASSERT_EQ(device->BlockGetInfo(&info), ZX_OK);
     EXPECT_EQ(kBlockCountDefault, info.block_count);
     EXPECT_EQ(kBlockSizeDefault, info.block_size);
   }
@@ -538,9 +538,9 @@ TEST(FakeFVMBlockDeviceTest, GetVolumeInfo) {
   {
     fuchsia_hardware_block_volume_VolumeManagerInfo manager_info = {};
     fuchsia_hardware_block_volume_VolumeInfo volume_info = {};
-    ASSERT_OK(device->VolumeGetInfo(&manager_info, &volume_info));
+    ASSERT_EQ(device->VolumeGetInfo(&manager_info, &volume_info), ZX_OK);
     EXPECT_EQ(kSliceSizeDefault, manager_info.slice_size);
-    EXPECT_EQ(1, manager_info.assigned_slice_count);
+    EXPECT_EQ(manager_info.assigned_slice_count, 1u);
   }
 }
 
@@ -552,14 +552,14 @@ TEST(FakeFVMBlockDeviceTest, QuerySlices) {
   fuchsia_hardware_block_volume_VsliceRange ranges;
   size_t actual_ranges = 0;
   ASSERT_EQ(ZX_OK, device->VolumeQuerySlices(&slice_start, slice_count, &ranges, &actual_ranges));
-  ASSERT_EQ(1, actual_ranges);
+  ASSERT_EQ(actual_ranges, 1u);
   EXPECT_TRUE(ranges.allocated);
-  EXPECT_EQ(1, ranges.count);
+  EXPECT_EQ(ranges.count, 1u);
 
   slice_start = 1;
   actual_ranges = 0;
   ASSERT_EQ(ZX_OK, device->VolumeQuerySlices(&slice_start, slice_count, &ranges, &actual_ranges));
-  ASSERT_EQ(1, actual_ranges);
+  ASSERT_EQ(actual_ranges, 1u);
   EXPECT_FALSE(ranges.allocated);
   EXPECT_EQ(fvm::kMaxVSlices - 1, ranges.count);
 
@@ -567,7 +567,7 @@ TEST(FakeFVMBlockDeviceTest, QuerySlices) {
   actual_ranges = 0;
   ASSERT_EQ(ZX_ERR_OUT_OF_RANGE,
             device->VolumeQuerySlices(&slice_start, slice_count, &ranges, &actual_ranges));
-  ASSERT_EQ(0, actual_ranges);
+  ASSERT_EQ(actual_ranges, 0u);
 }
 
 void CheckAllocatedSlices(BlockDevice* device, const uint64_t* starts, const uint64_t* lengths,
@@ -588,16 +588,16 @@ TEST(FakeFVMBlockDeviceTest, ExtendNoOp) {
 
   fuchsia_hardware_block_volume_VolumeManagerInfo manager_info = {};
   fuchsia_hardware_block_volume_VolumeInfo volume_info = {};
-  ASSERT_OK(device->VolumeGetInfo(&manager_info, &volume_info));
-  EXPECT_EQ(1, manager_info.assigned_slice_count);
+  ASSERT_EQ(device->VolumeGetInfo(&manager_info, &volume_info), ZX_OK);
+  EXPECT_EQ(manager_info.assigned_slice_count, 1u);
 
-  ASSERT_OK(device->VolumeExtend(0, 0));
-  ASSERT_OK(device->VolumeGetInfo(&manager_info, &volume_info));
-  EXPECT_EQ(1, manager_info.assigned_slice_count);
+  ASSERT_EQ(device->VolumeExtend(0, 0), ZX_OK);
+  ASSERT_EQ(device->VolumeGetInfo(&manager_info, &volume_info), ZX_OK);
+  EXPECT_EQ(manager_info.assigned_slice_count, 1u);
 
   uint64_t starts = 0;
   uint64_t lengths = 1;
-  ASSERT_NO_FAILURES(CheckAllocatedSlices(device.get(), &starts, &lengths, 1));
+  ASSERT_NO_FATAL_FAILURE(CheckAllocatedSlices(device.get(), &starts, &lengths, 1));
 }
 
 TEST(FakeFVMBlockDeviceTest, ExtendOverlappingSameStart) {
@@ -606,16 +606,16 @@ TEST(FakeFVMBlockDeviceTest, ExtendOverlappingSameStart) {
 
   fuchsia_hardware_block_volume_VolumeManagerInfo manager_info = {};
   fuchsia_hardware_block_volume_VolumeInfo volume_info = {};
-  ASSERT_OK(device->VolumeGetInfo(&manager_info, &volume_info));
-  EXPECT_EQ(1, manager_info.assigned_slice_count);
+  ASSERT_EQ(device->VolumeGetInfo(&manager_info, &volume_info), ZX_OK);
+  EXPECT_EQ(manager_info.assigned_slice_count, 1u);
 
-  ASSERT_OK(device->VolumeExtend(0, 2));
-  ASSERT_OK(device->VolumeGetInfo(&manager_info, &volume_info));
-  EXPECT_EQ(2, manager_info.assigned_slice_count);
+  ASSERT_EQ(device->VolumeExtend(0, 2), ZX_OK);
+  ASSERT_EQ(device->VolumeGetInfo(&manager_info, &volume_info), ZX_OK);
+  EXPECT_EQ(manager_info.assigned_slice_count, 2u);
 
   uint64_t starts = 0;
   uint64_t lengths = 2;
-  ASSERT_NO_FAILURES(CheckAllocatedSlices(device.get(), &starts, &lengths, 1));
+  ASSERT_NO_FATAL_FAILURE(CheckAllocatedSlices(device.get(), &starts, &lengths, 1));
 }
 
 TEST(FakeFVMBlockDeviceTest, ExtendOverlappingDifferentStart) {
@@ -624,16 +624,16 @@ TEST(FakeFVMBlockDeviceTest, ExtendOverlappingDifferentStart) {
 
   fuchsia_hardware_block_volume_VolumeManagerInfo manager_info = {};
   fuchsia_hardware_block_volume_VolumeInfo volume_info = {};
-  ASSERT_OK(device->VolumeGetInfo(&manager_info, &volume_info));
-  EXPECT_EQ(1, manager_info.assigned_slice_count);
+  ASSERT_EQ(device->VolumeGetInfo(&manager_info, &volume_info), ZX_OK);
+  EXPECT_EQ(manager_info.assigned_slice_count, 1u);
 
-  ASSERT_OK(device->VolumeExtend(1, 2));
-  ASSERT_OK(device->VolumeGetInfo(&manager_info, &volume_info));
-  EXPECT_EQ(3, manager_info.assigned_slice_count);
+  ASSERT_EQ(device->VolumeExtend(1, 2), ZX_OK);
+  ASSERT_EQ(device->VolumeGetInfo(&manager_info, &volume_info), ZX_OK);
+  EXPECT_EQ(manager_info.assigned_slice_count, 3u);
 
   uint64_t starts = 0;
   uint64_t lengths = 3;
-  ASSERT_NO_FAILURES(CheckAllocatedSlices(device.get(), &starts, &lengths, 1));
+  ASSERT_NO_FATAL_FAILURE(CheckAllocatedSlices(device.get(), &starts, &lengths, 1));
 }
 
 TEST(FakeFVMBlockDeviceTest, ExtendNonOverlapping) {
@@ -642,16 +642,16 @@ TEST(FakeFVMBlockDeviceTest, ExtendNonOverlapping) {
 
   fuchsia_hardware_block_volume_VolumeManagerInfo manager_info = {};
   fuchsia_hardware_block_volume_VolumeInfo volume_info = {};
-  ASSERT_OK(device->VolumeGetInfo(&manager_info, &volume_info));
-  EXPECT_EQ(1, manager_info.assigned_slice_count);
+  ASSERT_EQ(device->VolumeGetInfo(&manager_info, &volume_info), ZX_OK);
+  EXPECT_EQ(manager_info.assigned_slice_count, 1u);
 
-  ASSERT_OK(device->VolumeExtend(2, 2));
-  ASSERT_OK(device->VolumeGetInfo(&manager_info, &volume_info));
-  EXPECT_EQ(3, manager_info.assigned_slice_count);
+  ASSERT_EQ(device->VolumeExtend(2, 2), ZX_OK);
+  ASSERT_EQ(device->VolumeGetInfo(&manager_info, &volume_info), ZX_OK);
+  EXPECT_EQ(manager_info.assigned_slice_count, 3u);
 
   uint64_t starts[2] = {0, 2};
   uint64_t lengths[2] = {1, 2};
-  ASSERT_NO_FAILURES(CheckAllocatedSlices(device.get(), starts, lengths, 2));
+  ASSERT_NO_FATAL_FAILURE(CheckAllocatedSlices(device.get(), starts, lengths, 2));
 }
 
 TEST(FakeFVMBlockDeviceTest, ShrinkNoOp) {
@@ -660,12 +660,12 @@ TEST(FakeFVMBlockDeviceTest, ShrinkNoOp) {
 
   fuchsia_hardware_block_volume_VolumeManagerInfo manager_info = {};
   fuchsia_hardware_block_volume_VolumeInfo volume_info = {};
-  ASSERT_OK(device->VolumeGetInfo(&manager_info, &volume_info));
-  EXPECT_EQ(1, manager_info.assigned_slice_count);
+  ASSERT_EQ(device->VolumeGetInfo(&manager_info, &volume_info), ZX_OK);
+  EXPECT_EQ(manager_info.assigned_slice_count, 1u);
 
-  ASSERT_OK(device->VolumeShrink(0, 0));
-  ASSERT_OK(device->VolumeGetInfo(&manager_info, &volume_info));
-  EXPECT_EQ(1, manager_info.assigned_slice_count);
+  ASSERT_EQ(device->VolumeShrink(0, 0), ZX_OK);
+  ASSERT_EQ(device->VolumeGetInfo(&manager_info, &volume_info), ZX_OK);
+  EXPECT_EQ(manager_info.assigned_slice_count, 1u);
 }
 
 TEST(FakeFVMBlockDeviceTest, ShrinkInvalid) {
@@ -674,12 +674,12 @@ TEST(FakeFVMBlockDeviceTest, ShrinkInvalid) {
 
   fuchsia_hardware_block_volume_VolumeManagerInfo manager_info = {};
   fuchsia_hardware_block_volume_VolumeInfo volume_info = {};
-  ASSERT_OK(device->VolumeGetInfo(&manager_info, &volume_info));
-  EXPECT_EQ(1, manager_info.assigned_slice_count);
+  ASSERT_EQ(device->VolumeGetInfo(&manager_info, &volume_info), ZX_OK);
+  EXPECT_EQ(manager_info.assigned_slice_count, 1u);
 
   ASSERT_EQ(ZX_ERR_INVALID_ARGS, device->VolumeShrink(100, 5));
-  ASSERT_OK(device->VolumeGetInfo(&manager_info, &volume_info));
-  EXPECT_EQ(1, manager_info.assigned_slice_count);
+  ASSERT_EQ(device->VolumeGetInfo(&manager_info, &volume_info), ZX_OK);
+  EXPECT_EQ(manager_info.assigned_slice_count, 1u);
 }
 
 // [0, 0) -> Extend
@@ -691,20 +691,20 @@ TEST(FakeFVMBlockDeviceTest, ExtendThenShrinkSubSection) {
 
   fuchsia_hardware_block_volume_VolumeManagerInfo manager_info = {};
   fuchsia_hardware_block_volume_VolumeInfo volume_info = {};
-  ASSERT_OK(device->VolumeGetInfo(&manager_info, &volume_info));
-  EXPECT_EQ(1, manager_info.assigned_slice_count);
+  ASSERT_EQ(device->VolumeGetInfo(&manager_info, &volume_info), ZX_OK);
+  EXPECT_EQ(manager_info.assigned_slice_count, 1u);
 
-  ASSERT_OK(device->VolumeExtend(1, 10));
-  ASSERT_OK(device->VolumeGetInfo(&manager_info, &volume_info));
-  EXPECT_EQ(11, manager_info.assigned_slice_count);
+  ASSERT_EQ(device->VolumeExtend(1, 10), ZX_OK);
+  ASSERT_EQ(device->VolumeGetInfo(&manager_info, &volume_info), ZX_OK);
+  EXPECT_EQ(manager_info.assigned_slice_count, 11u);
 
-  ASSERT_OK(device->VolumeShrink(1, 10));
-  ASSERT_OK(device->VolumeGetInfo(&manager_info, &volume_info));
-  EXPECT_EQ(1, manager_info.assigned_slice_count);
+  ASSERT_EQ(device->VolumeShrink(1, 10), ZX_OK);
+  ASSERT_EQ(device->VolumeGetInfo(&manager_info, &volume_info), ZX_OK);
+  EXPECT_EQ(manager_info.assigned_slice_count, 1u);
 
   uint64_t starts[1] = {0};
   uint64_t lengths[1] = {1};
-  ASSERT_NO_FAILURES(CheckAllocatedSlices(device.get(), starts, lengths, 1));
+  ASSERT_NO_FATAL_FAILURE(CheckAllocatedSlices(device.get(), starts, lengths, 1));
 }
 
 // [0, 0) -> Extend
@@ -717,26 +717,26 @@ TEST(FakeFVMBlockDeviceTest, ExtendThenShrinkPartialOverlap) {
 
   fuchsia_hardware_block_volume_VolumeManagerInfo manager_info = {};
   fuchsia_hardware_block_volume_VolumeInfo volume_info = {};
-  ASSERT_OK(device->VolumeGetInfo(&manager_info, &volume_info));
-  EXPECT_EQ(1, manager_info.assigned_slice_count);
+  ASSERT_EQ(device->VolumeGetInfo(&manager_info, &volume_info), ZX_OK);
+  EXPECT_EQ(manager_info.assigned_slice_count, 1u);
 
-  ASSERT_OK(device->VolumeExtend(5, 10));
-  ASSERT_OK(device->VolumeGetInfo(&manager_info, &volume_info));
-  EXPECT_EQ(11, manager_info.assigned_slice_count);
-
-  // One slice overlaps, one doesn't.
-  ASSERT_OK(device->VolumeShrink(4, 2));
-  ASSERT_OK(device->VolumeGetInfo(&manager_info, &volume_info));
-  EXPECT_EQ(10, manager_info.assigned_slice_count);
+  ASSERT_EQ(device->VolumeExtend(5, 10), ZX_OK);
+  ASSERT_EQ(device->VolumeGetInfo(&manager_info, &volume_info), ZX_OK);
+  EXPECT_EQ(manager_info.assigned_slice_count, 11u);
 
   // One slice overlaps, one doesn't.
-  ASSERT_OK(device->VolumeShrink(14, 2));
-  ASSERT_OK(device->VolumeGetInfo(&manager_info, &volume_info));
-  EXPECT_EQ(9, manager_info.assigned_slice_count);
+  ASSERT_EQ(device->VolumeShrink(4, 2), ZX_OK);
+  ASSERT_EQ(device->VolumeGetInfo(&manager_info, &volume_info), ZX_OK);
+  EXPECT_EQ(manager_info.assigned_slice_count, 10u);
+
+  // One slice overlaps, one doesn't.
+  ASSERT_EQ(device->VolumeShrink(14, 2), ZX_OK);
+  ASSERT_EQ(device->VolumeGetInfo(&manager_info, &volume_info), ZX_OK);
+  EXPECT_EQ(manager_info.assigned_slice_count, 9u);
 
   uint64_t starts[2] = {0, 6};
   uint64_t lengths[2] = {1, 8};
-  ASSERT_NO_FAILURES(CheckAllocatedSlices(device.get(), starts, lengths, 2));
+  ASSERT_NO_FATAL_FAILURE(CheckAllocatedSlices(device.get(), starts, lengths, 2));
 }
 
 // [0, 0) -> Extend
@@ -748,20 +748,20 @@ TEST(FakeFVMBlockDeviceTest, ExtendThenShrinkTotal) {
 
   fuchsia_hardware_block_volume_VolumeManagerInfo manager_info = {};
   fuchsia_hardware_block_volume_VolumeInfo volume_info = {};
-  ASSERT_OK(device->VolumeGetInfo(&manager_info, &volume_info));
-  EXPECT_EQ(1, manager_info.assigned_slice_count);
+  ASSERT_EQ(device->VolumeGetInfo(&manager_info, &volume_info), ZX_OK);
+  EXPECT_EQ(manager_info.assigned_slice_count, 1u);
 
-  ASSERT_OK(device->VolumeExtend(5, 10));
-  ASSERT_OK(device->VolumeGetInfo(&manager_info, &volume_info));
-  EXPECT_EQ(11, manager_info.assigned_slice_count);
+  ASSERT_EQ(device->VolumeExtend(5, 10), ZX_OK);
+  ASSERT_EQ(device->VolumeGetInfo(&manager_info, &volume_info), ZX_OK);
+  EXPECT_EQ(manager_info.assigned_slice_count, 11u);
 
-  ASSERT_OK(device->VolumeShrink(5, 10));
-  ASSERT_OK(device->VolumeGetInfo(&manager_info, &volume_info));
-  EXPECT_EQ(1, manager_info.assigned_slice_count);
+  ASSERT_EQ(device->VolumeShrink(5, 10), ZX_OK);
+  ASSERT_EQ(device->VolumeGetInfo(&manager_info, &volume_info), ZX_OK);
+  EXPECT_EQ(manager_info.assigned_slice_count, 1u);
 
   uint64_t starts[1] = {0};
   uint64_t lengths[1] = {1};
-  ASSERT_NO_FAILURES(CheckAllocatedSlices(device.get(), starts, lengths, 1));
+  ASSERT_NO_FATAL_FAILURE(CheckAllocatedSlices(device.get(), starts, lengths, 1));
 }
 
 // [0, 0) -> Extend
@@ -773,20 +773,20 @@ TEST(FakeFVMBlockDeviceTest, ExtendThenShrinkToSplit) {
 
   fuchsia_hardware_block_volume_VolumeManagerInfo manager_info = {};
   fuchsia_hardware_block_volume_VolumeInfo volume_info = {};
-  ASSERT_OK(device->VolumeGetInfo(&manager_info, &volume_info));
-  EXPECT_EQ(1, manager_info.assigned_slice_count);
+  ASSERT_EQ(device->VolumeGetInfo(&manager_info, &volume_info), ZX_OK);
+  EXPECT_EQ(manager_info.assigned_slice_count, 1u);
 
-  ASSERT_OK(device->VolumeExtend(5, 10));
-  ASSERT_OK(device->VolumeGetInfo(&manager_info, &volume_info));
-  EXPECT_EQ(11, manager_info.assigned_slice_count);
+  ASSERT_EQ(device->VolumeExtend(5, 10), ZX_OK);
+  ASSERT_EQ(device->VolumeGetInfo(&manager_info, &volume_info), ZX_OK);
+  EXPECT_EQ(manager_info.assigned_slice_count, 11u);
 
-  ASSERT_OK(device->VolumeShrink(7, 2));
-  ASSERT_OK(device->VolumeGetInfo(&manager_info, &volume_info));
-  EXPECT_EQ(9, manager_info.assigned_slice_count);
+  ASSERT_EQ(device->VolumeShrink(7, 2), ZX_OK);
+  ASSERT_EQ(device->VolumeGetInfo(&manager_info, &volume_info), ZX_OK);
+  EXPECT_EQ(manager_info.assigned_slice_count, 9u);
 
   uint64_t starts[3] = {0, 5, 9};
   uint64_t lengths[3] = {1, 2, 6};
-  ASSERT_NO_FAILURES(CheckAllocatedSlices(device.get(), starts, lengths, 3));
+  ASSERT_NO_FATAL_FAILURE(CheckAllocatedSlices(device.get(), starts, lengths, 3));
 }
 
 // [0, 0) -> Extend
@@ -801,29 +801,30 @@ TEST(FakeFVMBlockDeviceTest, OverallocateSlices) {
 
   fuchsia_hardware_block_volume_VolumeManagerInfo manager_info = {};
   fuchsia_hardware_block_volume_VolumeInfo volume_info = {};
-  ASSERT_OK(device->VolumeGetInfo(&manager_info, &volume_info));
-  EXPECT_EQ(1, manager_info.assigned_slice_count);
+  ASSERT_EQ(device->VolumeGetInfo(&manager_info, &volume_info), ZX_OK);
+  EXPECT_EQ(manager_info.assigned_slice_count, 1u);
   EXPECT_EQ(kSliceCapacity, manager_info.slice_count);
 
   // Allocate all slices.
-  ASSERT_OK(device->VolumeExtend(1, manager_info.slice_count - manager_info.assigned_slice_count));
-  ASSERT_OK(device->VolumeGetInfo(&manager_info, &volume_info));
+  ASSERT_EQ(device->VolumeExtend(1, manager_info.slice_count - manager_info.assigned_slice_count),
+            ZX_OK);
+  ASSERT_EQ(device->VolumeGetInfo(&manager_info, &volume_info), ZX_OK);
   EXPECT_EQ(kSliceCapacity, manager_info.assigned_slice_count);
 
   // We cannot allocate more slices without remaining space.
   ASSERT_EQ(ZX_ERR_NO_SPACE, device->VolumeExtend(kSliceCapacity, 1));
 
   // However, if we shrink an earlier slice, we can re-allocate.
-  ASSERT_OK(device->VolumeShrink(kSliceCapacity - 1, 1));
-  ASSERT_OK(device->VolumeGetInfo(&manager_info, &volume_info));
+  ASSERT_EQ(device->VolumeShrink(kSliceCapacity - 1, 1), ZX_OK);
+  ASSERT_EQ(device->VolumeGetInfo(&manager_info, &volume_info), ZX_OK);
   EXPECT_EQ(kSliceCapacity - 1, manager_info.assigned_slice_count);
-  ASSERT_OK(device->VolumeExtend(kSliceCapacity, 1));
-  ASSERT_OK(device->VolumeGetInfo(&manager_info, &volume_info));
+  ASSERT_EQ(device->VolumeExtend(kSliceCapacity, 1), ZX_OK);
+  ASSERT_EQ(device->VolumeGetInfo(&manager_info, &volume_info), ZX_OK);
   EXPECT_EQ(kSliceCapacity, manager_info.assigned_slice_count);
 
   uint64_t starts[2] = {0, kSliceCapacity};
   uint64_t lengths[2] = {kSliceCapacity - 1, 1};
-  ASSERT_NO_FAILURES(CheckAllocatedSlices(device.get(), starts, lengths, 2));
+  ASSERT_NO_FATAL_FAILURE(CheckAllocatedSlices(device.get(), starts, lengths, 2));
 }
 
 // [0, 0) -> Extend (overallocate)
@@ -835,25 +836,25 @@ TEST(FakeFVMBlockDeviceTest, PartialOverallocateSlices) {
 
   fuchsia_hardware_block_volume_VolumeManagerInfo manager_info = {};
   fuchsia_hardware_block_volume_VolumeInfo volume_info = {};
-  ASSERT_OK(device->VolumeGetInfo(&manager_info, &volume_info));
-  EXPECT_EQ(1, manager_info.assigned_slice_count);
+  ASSERT_EQ(device->VolumeGetInfo(&manager_info, &volume_info), ZX_OK);
+  EXPECT_EQ(manager_info.assigned_slice_count, 1u);
   EXPECT_EQ(kSliceCapacity, manager_info.slice_count);
 
   // Allocating too many slices up front should not allocate any slices.
   ASSERT_EQ(ZX_ERR_NO_SPACE, device->VolumeExtend(1, manager_info.slice_count));
-  ASSERT_OK(device->VolumeGetInfo(&manager_info, &volume_info));
-  EXPECT_EQ(1, manager_info.assigned_slice_count);
+  ASSERT_EQ(device->VolumeGetInfo(&manager_info, &volume_info), ZX_OK);
+  EXPECT_EQ(manager_info.assigned_slice_count, 1u);
 
   uint64_t starts[1] = {0};
   uint64_t lengths[1] = {1};
-  ASSERT_NO_FAILURES(CheckAllocatedSlices(device.get(), starts, lengths, 1));
+  ASSERT_NO_FATAL_FAILURE(CheckAllocatedSlices(device.get(), starts, lengths, 1));
 }
 
 TEST(FakeFVMBlockDeviceTest, ExtendOutOfRange) {
   std::unique_ptr<BlockDevice> device = std::make_unique<FakeFVMBlockDevice>(
       kBlockCountDefault, kBlockSizeDefault, kSliceSizeDefault, kSliceCountDefault);
-  EXPECT_OK(device->VolumeExtend(fvm::kMaxVSlices - 1, 1));
-  EXPECT_OK(device->VolumeShrink(fvm::kMaxVSlices - 1, 1));
+  EXPECT_EQ(device->VolumeExtend(fvm::kMaxVSlices - 1, 1), ZX_OK);
+  EXPECT_EQ(device->VolumeShrink(fvm::kMaxVSlices - 1, 1), ZX_OK);
 
   EXPECT_EQ(ZX_ERR_OUT_OF_RANGE, device->VolumeExtend(fvm::kMaxVSlices, 1));
   EXPECT_EQ(ZX_ERR_OUT_OF_RANGE, device->VolumeShrink(fvm::kMaxVSlices, 1));

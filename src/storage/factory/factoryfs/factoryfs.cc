@@ -15,6 +15,7 @@
 
 #include <storage/buffer/owned_vmoid.h>
 
+#include "src/lib/storage/block_client/cpp/reader.h"
 #include "src/lib/storage/block_client/cpp/remote_block_device.h"
 #include "src/lib/storage/vfs/cpp/managed_vfs.h"
 #include "src/lib/storage/vfs/cpp/pseudo_dir.h"
@@ -102,7 +103,7 @@ zx::status<std::unique_ptr<Factoryfs>> Factoryfs::Create(async_dispatcher_t* dis
                                                          fs::FuchsiaVfs* vfs) {
   TRACE_DURATION("factoryfs", "Factoryfs::Create");
   Superblock superblock;
-  if (zx_status_t status = device->ReadBlock(0, kFactoryfsBlockSize, &superblock);
+  if (zx_status_t status = block_client::Reader(*device).Read(0, kFactoryfsBlockSize, &superblock);
       status != ZX_OK) {
     FX_LOGS(ERROR) << "could not read info block: " << zx_status_get_string(status);
     return zx::error(status);

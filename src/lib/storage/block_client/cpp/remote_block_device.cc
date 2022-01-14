@@ -35,26 +35,6 @@ zx_status_t BlockCloseFifo(const zx::channel& device) {
 
 }  // namespace
 
-zx_status_t RemoteBlockDevice::ReadBlock(uint64_t block_num, uint64_t block_size,
-                                         void* block) const {
-  uint64_t offset = block_num * block_size;
-  fidl::SyncClientBuffer<fio::File::ReadAt> fidl_buffer;
-  auto result = fidl::WireCall<fio::File>(device_.borrow())
-                    .buffer(fidl_buffer.view())
-                    ->ReadAt(block_size, offset);
-  if (result.status() != ZX_OK) {
-    return result.status();
-  }
-  if (result->s != ZX_OK) {
-    return result->s;
-  }
-  if (result->data.count() != block_size) {
-    return ZX_ERR_IO;
-  }
-  memcpy(block, result->data.data(), result->data.count());
-  return ZX_OK;
-}
-
 zx_status_t RemoteBlockDevice::FifoTransaction(block_fifo_request_t* requests, size_t count) {
   return fifo_client_.Transaction(requests, count);
 }

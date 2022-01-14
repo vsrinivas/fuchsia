@@ -6,7 +6,7 @@
 
 #include <thread>
 
-#include <zxtest/zxtest.h>
+#include <gtest/gtest.h>
 
 namespace block_client {
 namespace {
@@ -44,7 +44,8 @@ TEST(BlockGroupRegistryTest, GroupsResetWithNewRegistry) {
     background_thread.join();
   }
 
-  ASSERT_NO_FAILURES();
+  if (HasFatalFailure())
+    return;
 
   // With a new instance of the registry, observe we can change the group ID of the
   // calling thread.
