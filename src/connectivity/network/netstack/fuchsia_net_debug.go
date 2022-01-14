@@ -10,6 +10,7 @@ package netstack
 import (
 	"syscall/zx/fidl"
 
+	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/fidlconv"
 	syslog "go.fuchsia.dev/fuchsia/src/lib/syslog/go"
 
 	"fidl/fuchsia/net/debug"
@@ -40,4 +41,13 @@ func (ci *debugInterfacesImpl) GetAdmin(_ fidl.Context, nicid uint64, request ad
 		ifs.addAdminConnection(request, false /* strong */)
 		return nil
 	}
+}
+
+func (ci *debugInterfacesImpl) GetMac(_ fidl.Context, nicid uint64) (debug.InterfacesGetMacResult, error) {
+	if nicInfo, ok := ci.ns.stack.NICInfo()[tcpip.NICID(nicid)]; ok {
+		return debug.InterfacesGetMacResultWithResponse(debug.InterfacesGetMacResponse{
+			Mac: fidlconv.ToNetMacAddress(nicInfo.LinkAddress),
+		}), nil
+	}
+	return debug.InterfacesGetMacResultWithErr(debug.InterfacesGetMacErrorNotFound), nil
 }

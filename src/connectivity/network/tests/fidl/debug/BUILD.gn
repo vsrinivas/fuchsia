@@ -7,14 +7,17 @@ import("//build/rust/rustc_test.gni")
 rustc_test("debug") {
   output_name = "netstack_debug_fidl_test"
   deps = [
+    "//sdk/fidl/fuchsia.net:fuchsia.net-rustc",
     "//sdk/fidl/fuchsia.net.debug:fuchsia.net.debug-rustc",
     "//sdk/fidl/fuchsia.net.interfaces:fuchsia.net.interfaces-rustc",
     "//sdk/fidl/fuchsia.net.interfaces.admin:fuchsia.net.interfaces.admin-rustc",
     "//src/connectivity/network/testing/netemul/rust:lib",
     "//src/connectivity/network/tests/integration/common:netstack_testing_common",
     "//src/lib/fidl/rust/fidl",
+    "//src/lib/fuchsia",
     "//src/lib/fuchsia-async",
     "//src/lib/network/fidl_fuchsia_net_interfaces_ext",
+    "//src/lib/testing/fixture",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:matches",
   ]

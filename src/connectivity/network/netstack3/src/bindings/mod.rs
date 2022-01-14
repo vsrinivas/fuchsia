@@ -27,7 +27,9 @@ use std::num::NonZeroU16;
 use std::sync::Arc;
 use std::time::Duration;
 
-use fidl::endpoints::{DiscoverableProtocolMarker, RequestStream};
+use fidl::endpoints::{
+    ControlHandle as _, DiscoverableProtocolMarker, RequestStream, Responder as _,
+};
 use fidl_fuchsia_net_stack as fidl_net_stack;
 use fuchsia_async as fasync;
 use fuchsia_component::server::{ServiceFs, ServiceFsDir};
@@ -598,6 +600,12 @@ impl Netstack {
                                         warn!(
                                             "TODO(https://fxbug.dev/88797): fuchsia.net.debug/Interfaces not implemented"
                                         );
+                                    }
+                                    fidl_fuchsia_net_debug::InterfacesRequest::GetMac {
+                                        id: _,
+                                        responder,
+                                    } => {
+                                        responder.control_handle().shutdown_with_epitaph(zx::Status::NOT_SUPPORTED)
                                     }
                                 }
                                 Result::<(), fidl::Error>::Ok(())
