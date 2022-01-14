@@ -945,7 +945,7 @@ From //build/images/custom_signing.gni:21
 
 **Current value (from the default):** `""`
 
-From [//third_party/Vulkan-Loader/BUILD.gn:22](https://fuchsia.googlesource.com/third_party/Vulkan-Loader/+/dcde9226b0bf2a39ce78a895000ed38ed242b25f/BUILD.gn#22)
+From [//third_party/Vulkan-Loader/BUILD.gn:22](https://fuchsia.googlesource.com/third_party/Vulkan-Loader/+/24e8d64bb21dea82c776dbb068e515b28fb69834/BUILD.gn#22)
 
 ### dart_default_build_cfg
 TODO(fxbug.dev/64153) renable aot builds
@@ -3796,6 +3796,13 @@ From //src/ui/bin/terminal/terminal_args.gni:12
 
 From //src/ui/bin/terminal/terminal_args.gni:20
 
+### terminal_fallback_font_paths
+Paths to files to use for fallback fonts
+
+**Current value (from the default):** `[]`
+
+From //src/ui/bin/terminal/terminal_args.gni:23
+
 ### terminal_font_path
 
 **Current value (from the default):** `"//prebuilt/third_party/fonts/robotomono/RobotoMono-Regular.ttf"`
@@ -4192,7 +4199,14 @@ From //src/bringup/bin/virtcon/virtcon_args.gni:17
 
 **Current value (from the default):** `"//src/bringup/bin/virtcon/data/boot-animation.riv"`
 
-From //src/bringup/bin/virtcon/virtcon_args.gni:21
+From //src/bringup/bin/virtcon/virtcon_args.gni:24
+
+### virtcon_fallback_font_paths
+Paths to files to use for fallback fonts
+
+**Current value (from the default):** `[]`
+
+From //src/bringup/bin/virtcon/virtcon_args.gni:20
 
 ### virtcon_font_path
 
