@@ -44,6 +44,7 @@ use {
     },
     io_util,
     lazy_static::lazy_static,
+    maplit::hashset,
     moniker::RelativeMonikerBase,
     regex::Regex,
     std::{
@@ -70,6 +71,8 @@ const ENCLOSING_ENV_REALM_NAME: &'static str = "enclosing_env";
 const ARCHIVIST_FOR_EMBEDDING_URL: &'static str =
     "fuchsia-pkg://fuchsia.com/test_manager#meta/archivist-for-embedding.cm";
 const HERMETIC_RESOLVER_REALM_NAME: &'static str = "hermetic_resolver";
+const HERMETIC_RESOLVER_CAPABILITY_NAME: &'static str = "hermetic_resolver";
+const HERMETIC_ENVIRONMENT_NAME: &'static str = "hermetic";
 const HERMETIC_TESTS_COLLECTION: &'static str = "tests";
 const SYSTEM_TESTS_COLLECTION: &'static str = "system-tests";
 const CTS_TESTS_COLLECTION: &'static str = "cts-tests";
@@ -813,7 +816,7 @@ impl Suite {
         match RunningSuite::launch(
             &self.test_url,
             test_map,
-            &self.resolver,
+            self.resolver.clone(),
             self.above_root_capabilities_for_test.clone(),
         )
         .await
@@ -904,7 +907,7 @@ pub async fn run_test_manager_query_server(
                 match RunningSuite::launch(
                     &test_url,
                     test_map.clone(),
-                    &resolver,
+                    resolver.clone(),
                     above_root_capabilities_for_test.clone(),
                 )
                 .await
@@ -1097,7 +1100,7 @@ impl RunningSuite {
     async fn launch(
         test_url: &str,
         test_map: Arc<TestMap>,
-        resolver: &ComponentResolverProxy,
+        resolver: Arc<ComponentResolverProxy>,
         above_root_capabilities_for_test: Arc<AboveRootCapabilitiesForTest>,
     ) -> Result<Self, LaunchTestError> {
         let component = resolver
@@ -1134,9 +1137,10 @@ impl RunningSuite {
         let builder = get_realm(
             Arc::downgrade(&archive_accessor_arc),
             test_url,
-            test_package,
+            test_package.as_ref(),
             test_collection,
             above_root_capabilities_for_test,
+            resolver,
         )
         .await
         .map_err(LaunchTestError::InitializeTestRealm)?;
@@ -1427,9 +1431,10 @@ where
 async fn get_realm(
     archive_accessor: Weak<fdiagnostics::ArchiveAccessorProxy>,
     test_url: &str,
-    test_package: String,
+    test_package: &str,
     collection: &str,
     above_root_capabilities_for_test: Arc<AboveRootCapabilitiesForTest>,
+    resolver: Arc<ComponentResolverProxy>,
 ) -> Result<RealmBuilder, RealmBuilderError> {
     let builder = RealmBuilder::new_with_collection(collection.to_string()).await?;
 
@@ -1443,9 +1448,77 @@ async fn get_realm(
 
     let wrapper_realm =
         builder.add_child_realm(WRAPPER_REALM_NAME, ChildOptions::new().eager()).await?;
-    let test_root = wrapper_realm
-        .add_child(TEST_ROOT_REALM_NAME, test_url, ChildOptions::new().eager())
-        .await?;
+
+    // If this is realm is inside the hermetic tests collections, set up the
+    // hermetic resolver local component.
+    let mut test_root_child_opts = ChildOptions::new().eager();
+    if collection.eq(HERMETIC_TESTS_COLLECTION) {
+        let allowed_package_names = hashset! {test_package.to_string()};
+        wrapper_realm
+            .add_local_child(
+                HERMETIC_RESOLVER_REALM_NAME,
+                move |handles| {
+                    Box::pin(resolver::serve_hermetic_resolver(
+                        handles,
+                        allowed_package_names.clone(),
+                        resolver.clone(),
+                        false,
+                    ))
+                },
+                ChildOptions::new(),
+            )
+            .await?;
+
+        // Provide and expose the resolver capability from the resolver to test_wrapper.
+        let mut hermetic_resolver_decl =
+            wrapper_realm.get_component_decl(HERMETIC_RESOLVER_REALM_NAME).await?;
+        hermetic_resolver_decl.exposes.push(cm_rust::ExposeDecl::Resolver(
+            cm_rust::ExposeResolverDecl {
+                source: cm_rust::ExposeSource::Self_,
+                source_name: cm_rust::CapabilityName(String::from(
+                    HERMETIC_RESOLVER_CAPABILITY_NAME,
+                )),
+                target: cm_rust::ExposeTarget::Parent,
+                target_name: cm_rust::CapabilityName(String::from(
+                    HERMETIC_RESOLVER_CAPABILITY_NAME,
+                )),
+            },
+        ));
+        hermetic_resolver_decl.capabilities.push(cm_rust::CapabilityDecl::Resolver(
+            cm_rust::ResolverDecl {
+                name: cm_rust::CapabilityName(String::from(HERMETIC_RESOLVER_CAPABILITY_NAME)),
+                source_path: Some(cm_rust::CapabilityPath {
+                    dirname: String::from("/svc"),
+                    basename: String::from("fuchsia.sys2.ComponentResolver"),
+                }),
+            },
+        ));
+        wrapper_realm
+            .replace_component_decl(HERMETIC_RESOLVER_REALM_NAME, hermetic_resolver_decl)
+            .await?;
+
+        // Create the hermetic environment in the test_wrapper.
+        let mut test_wrapper_decl = wrapper_realm.get_realm_decl().await?;
+        test_wrapper_decl.environments.push(cm_rust::EnvironmentDecl {
+            name: String::from(HERMETIC_ENVIRONMENT_NAME),
+            extends: fdecl::EnvironmentExtends::Realm,
+            resolvers: vec![cm_rust::ResolverRegistration {
+                resolver: cm_rust::CapabilityName(String::from(HERMETIC_RESOLVER_CAPABILITY_NAME)),
+                source: cm_rust::RegistrationSource::Child(String::from(
+                    HERMETIC_RESOLVER_CAPABILITY_NAME,
+                )),
+                scheme: String::from("fuchsia-pkg"),
+            }],
+            runners: vec![],
+            debug_capabilities: vec![],
+            stop_timeout_ms: None,
+        });
+        wrapper_realm.replace_realm_decl(test_wrapper_decl).await?;
+        test_root_child_opts = ChildOptions::new().environment(HERMETIC_ENVIRONMENT_NAME).eager();
+    }
+
+    let test_root =
+        wrapper_realm.add_child(TEST_ROOT_REALM_NAME, test_url, test_root_child_opts).await?;
     let archivist = wrapper_realm
         .add_child(ARCHIVIST_REALM_NAME, ARCHIVIST_FOR_EMBEDDING_URL, ChildOptions::new().eager())
         .await?;
@@ -1456,20 +1529,6 @@ async fn get_realm(
             ChildOptions::new(),
         )
         .await?;
-
-    // If this is realm is inside the hermetic tests collections, set up the
-    // hermetic resolver local component.
-    if collection.eq(HERMETIC_TESTS_COLLECTION) {
-        wrapper_realm
-            .add_local_child(
-                HERMETIC_RESOLVER_REALM_NAME,
-                move |handles| {
-                    Box::pin(resolver::serve_hermetic_resolver(handles, vec![test_package.clone()]))
-                },
-                ChildOptions::new(),
-            )
-            .await?;
-    }
 
     // Parent to archivist
     builder
