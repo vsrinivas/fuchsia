@@ -81,7 +81,7 @@ impl<T: 'static + File> FileConnection<T> {
     /// connection initialization.
     pub fn create_connection(
         scope: ExecutionScope,
-        file: OpenFile<T>,
+        file: Arc<T>,
         flags: u32,
         server_end: ServerEnd<NodeMarker>,
         readable: bool,
@@ -101,7 +101,7 @@ impl<T: 'static + File> FileConnection<T> {
     /// Same as create_connection, but does not spawn a new task.
     pub async fn create_connection_async(
         scope: ExecutionScope,
-        file: OpenFile<T>,
+        file: Arc<T>,
         flags: u32,
         server_end: ServerEnd<NodeMarker>,
         readable: bool,
@@ -109,6 +109,9 @@ impl<T: 'static + File> FileConnection<T> {
         executable: bool,
         shutdown: oneshot::Receiver<()>,
     ) {
+        // RAII helper that ensures that the file is closed if we fail to create the connection.
+        let file = OpenFile::new(file, scope.clone());
+
         let flags = match new_connection_validate_flags(
             flags, readable, writable, executable, /*append_allowed=*/ true,
         ) {
@@ -727,7 +730,7 @@ mod tests {
 
             FileConnection::create_connection(
                 scope.clone(),
-                OpenFile::new(self.clone(), scope),
+                self.clone(),
                 flags,
                 server_end.into_channel().into(),
                 true,
@@ -768,7 +771,7 @@ mod tests {
         let scope = ExecutionScope::new();
         FileConnection::create_connection(
             scope.clone(),
-            OpenFile::new(file.clone(), scope.clone()),
+            file.clone(),
             flags,
             server_end.into_channel().into(),
             true,

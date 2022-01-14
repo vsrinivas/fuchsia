@@ -363,7 +363,7 @@ impl DirectoryEntry for FatFile {
             // Note readable/writable do not override what's set in flags, they merely tell the
             // FileConnection that it's valid to open the file readable/writable.
             scope.clone(),
-            connection::util::OpenFile::new(self, scope),
+            self,
             flags,
             server_end,
             /*readable=*/ true,

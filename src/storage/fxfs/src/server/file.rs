@@ -35,10 +35,7 @@ use {
         common::send_on_open_with_error,
         directory::entry::{DirectoryEntry, EntryInfo},
         execution_scope::ExecutionScope,
-        file::{
-            connection::{self, io1::FileConnection},
-            File,
-        },
+        file::{connection::io1::FileConnection, File},
         path::Path,
     },
 };
@@ -154,7 +151,7 @@ impl FxFile {
             // Note readable/writable/executable do not override what's set in flags, they merely
             // tell the FileConnection which set of rights the file can be opened as.
             scope.clone(),
-            connection::util::OpenFile::new(this.take(), scope),
+            this.take(),
             flags,
             server_end,
             /*readable=*/ true,

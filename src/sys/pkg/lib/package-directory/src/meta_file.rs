@@ -95,7 +95,7 @@ impl vfs::directory::entry::DirectoryEntry for MetaFile {
 
         let () = vfs::file::connection::io1::FileConnection::<Self>::create_connection(
             scope.clone(),
-            vfs::file::connection::util::OpenFile::new(self, scope),
+            self,
             flags,
             server_end,
             // readable/writable do not override what's set in flags, they merely tell the
