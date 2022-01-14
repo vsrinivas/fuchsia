@@ -804,7 +804,10 @@ mod test {
         let mut fake_device = FakeDevice::new(&exec);
         let (mut ctx, _) = make_context(fake_device.as_device());
         let (in_buf, bytes_written) = ctx
-            .make_disassoc_frame(CLIENT_ADDR, mac::ReasonCode::LEAVING_NETWORK_DISASSOC)
+            .make_disassoc_frame(
+                CLIENT_ADDR,
+                fidl_ieee80211::ReasonCode::LeavingNetworkDisassoc.into(),
+            )
             .expect("error making disassoc frame");
         assert_eq!(
             &in_buf.as_slice()[..bytes_written],

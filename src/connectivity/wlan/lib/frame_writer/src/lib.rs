@@ -644,7 +644,7 @@ mod tests {
                 },
                 // Block expression:
                 DeauthHdr: {
-                    &DeauthHdr { reason_code: ReasonCode::MIC_FAILURE }
+                    &DeauthHdr { reason_code: fidl_ieee80211::ReasonCode::MicFailure.into() }
                 },
                 // Repeat and literal expressions:
                 MacAddr: &[2u8; 6],
@@ -708,7 +708,7 @@ mod tests {
                     seq_ctrl: SequenceControl(0x5678),
                 },
                 DeauthHdr: {
-                    &DeauthHdr { reason_code: ReasonCode::MIC_FAILURE }
+                    &DeauthHdr { reason_code: fidl_ieee80211::ReasonCode::MicFailure.into() }
                 },
                 MacAddr: &[2u8; 6],
                 u8: &42u8,
@@ -778,7 +778,7 @@ mod tests {
                     seq_ctrl: SequenceControl(0x5678),
                 },
                 DeauthHdr: {
-                    &DeauthHdr { reason_code: ReasonCode::MIC_FAILURE }
+                    &DeauthHdr { reason_code: fidl_ieee80211::ReasonCode::MicFailure.into() }
                 },
                 MacAddr: &[2u8; 6],
                 u8: &42u8,

@@ -792,7 +792,9 @@ impl Associated {
                 fidl_ieee80211::ReasonCode::LeavingNetworkDeauth,
                 LocallyInitiated(true),
             );
-            if let Err(e) = sta.send_deauth_frame(mac::ReasonCode::LEAVING_NETWORK_DEAUTH) {
+            if let Err(e) =
+                sta.send_deauth_frame(fidl_ieee80211::ReasonCode::LeavingNetworkDeauth.into())
+            {
                 warn!("Failed sending deauth frame {:?}", e);
             }
             self.pre_leaving_associated_state(sta);
@@ -1618,7 +1620,7 @@ mod tests {
 
         state.on_deauth_frame(
             &mut sta,
-            &mac::DeauthHdr { reason_code: mac::ReasonCode::NO_MORE_STAS },
+            &mac::DeauthHdr { reason_code: fidl_ieee80211::ReasonCode::NoMoreStas.into() },
         );
 
         // Verify MLME-AUTHENTICATE.confirm message was sent.
@@ -1645,7 +1647,7 @@ mod tests {
 
         state.on_deauth_frame(
             &mut sta,
-            &mac::DeauthHdr { reason_code: mac::ReasonCode::NO_MORE_STAS },
+            &mac::DeauthHdr { reason_code: fidl_ieee80211::ReasonCode::NoMoreStas.into() },
         );
 
         // Verify MLME-DEAUTHENTICATE.indication message was sent.
@@ -1813,7 +1815,7 @@ mod tests {
 
         state.on_deauth_frame(
             &mut sta,
-            &mac::DeauthHdr { reason_code: mac::ReasonCode::AP_INITIATED },
+            &mac::DeauthHdr { reason_code: fidl_ieee80211::ReasonCode::ApInitiated.into() },
         );
 
         // Verify MLME-ASSOCIATE.confirm message was sent.
@@ -1841,7 +1843,7 @@ mod tests {
 
         state.on_disassoc_frame(
             &mut sta,
-            &mac::DisassocHdr { reason_code: mac::ReasonCode::AP_INITIATED },
+            &mac::DisassocHdr { reason_code: fidl_ieee80211::ReasonCode::ApInitiated.into() },
         );
 
         // Verify MLME-ASSOCIATE.confirm message was sent.
@@ -1929,7 +1931,7 @@ mod tests {
 
         state.on_deauth_frame(
             &mut sta,
-            &mac::DeauthHdr { reason_code: mac::ReasonCode::AP_INITIATED },
+            &mac::DeauthHdr { reason_code: fidl_ieee80211::ReasonCode::ApInitiated.into() },
         );
 
         // Verify MLME-ASSOCIATE.confirm message was sent.
@@ -1972,7 +1974,7 @@ mod tests {
 
         state.on_disassoc_frame(
             &mut sta,
-            &mac::DisassocHdr { reason_code: mac::ReasonCode::AP_INITIATED },
+            &mac::DisassocHdr { reason_code: fidl_ieee80211::ReasonCode::ApInitiated.into() },
         );
 
         // Verify MLME-ASSOCIATE.confirm message was sent.

@@ -4,6 +4,7 @@
 
 use {
     anyhow::format_err,
+    fidl_fuchsia_wlan_ieee80211 as fidl_ieee80211,
     fidl_fuchsia_wlan_policy::{self as fidl_policy},
     fidl_fuchsia_wlan_tap::{WlantapPhyEvent, WlantapPhyProxy},
     fuchsia_async::Task,
@@ -11,7 +12,7 @@ use {
     futures::channel::oneshot,
     ieee80211::{Bssid, Ssid},
     pin_utils::pin_mut,
-    wlan_common::{bss::Protection, mac},
+    wlan_common::bss::Protection,
     wlan_hw_sim::*,
     wlan_rsn::{
         self,
@@ -92,7 +93,7 @@ fn handle_phy_event(
                             send_disassociate(
                                 &channel,
                                 bssid,
-                                mac::ReasonCode::NO_MORE_STAS,
+                                fidl_ieee80211::ReasonCode::NoMoreStas.into(),
                                 &phy,
                             )?;
                             authenticator.reset();

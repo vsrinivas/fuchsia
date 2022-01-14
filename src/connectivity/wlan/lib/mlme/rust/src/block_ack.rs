@@ -490,7 +490,7 @@ mod tests {
         let state = BlockAckState::from(statemachine::testing::new_state(Established {
             is_initiator: true,
         }));
-        let state = state.close(&mut station, mac::ReasonCode::UNSPECIFIED_REASON);
+        let state = state.close(&mut station, fidl_ieee80211::ReasonCode::UnspecifiedReason.into());
         assert_variant!(state, BlockAckState::Closed(_), "not in `Closed` state");
     }
 
@@ -518,7 +518,7 @@ mod tests {
     #[test]
     fn respond_close_block_ack() {
         // Create a buffer describing a DELBA body and read the management action byte.
-        let (n, body) = delba_body(true, mac::ReasonCode::UNSPECIFIED_REASON);
+        let (n, body) = delba_body(true, fidl_ieee80211::ReasonCode::UnspecifiedReason.into());
         let body = &body[..n];
         let (_, body) =
             LayoutVerified::<_, mac::ActionHdr>::new_unaligned_from_prefix(body).unwrap();
@@ -569,7 +569,7 @@ mod tests {
 
     #[test]
     fn write_delba_body() {
-        let (n, body) = delba_body(true, mac::ReasonCode::UNSPECIFIED_REASON);
+        let (n, body) = delba_body(true, fidl_ieee80211::ReasonCode::UnspecifiedReason.into());
         let body = &body[..n];
         assert_eq!(
             body,

@@ -1931,7 +1931,7 @@ mod tests {
         let mut client = me.get_bound_client().expect("client should be present");
 
         client
-            .send_deauth_frame(mac::ReasonCode::AP_INITIATED)
+            .send_deauth_frame(fidl_ieee80211::ReasonCode::ApInitiated.into())
             .expect("error delivering WLAN frame");
         assert_eq!(m.fake_device.wlan_queue.len(), 1);
         #[rustfmt::skip]

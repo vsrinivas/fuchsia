@@ -255,7 +255,10 @@ impl RemoteClient {
         // On BSS idle timeout, we need to tell the client that they've been disassociated, and the
         // SME to transition the client to Authenticated.
         let (in_buf, bytes_written) = ctx
-            .make_disassoc_frame(self.addr.clone(), ReasonCode::REASON_INACTIVITY)
+            .make_disassoc_frame(
+                self.addr.clone(),
+                fidl_ieee80211::ReasonCode::ReasonInactivity.into(),
+            )
             .map_err(ClientRejection::WlanSendError)?;
         self.send_wlan_frame(ctx, in_buf, bytes_written, TxFlags::NONE).map_err(|s| {
             ClientRejection::WlanSendError(Error::Status(
@@ -384,7 +387,7 @@ impl RemoteClient {
         // MLME-DEAUTHENTICATE.confirm is redundant.
 
         let (in_buf, bytes_written) =
-            ctx.make_deauth_frame(self.addr.clone(), ReasonCode(reason_code as u16))?;
+            ctx.make_deauth_frame(self.addr.clone(), reason_code.into())?;
         self.send_wlan_frame(ctx, in_buf, bytes_written, TxFlags::NONE)
             .map_err(|s| Error::Status(format!("error sending deauth frame"), s))
     }
@@ -587,7 +590,7 @@ impl RemoteClient {
         self.change_state(ctx, State::Authenticated).map_err(ClientRejection::DeviceError)?;
         ctx.send_mlme_disassoc_ind(
             self.addr.clone(),
-            fidl_ieee80211::ReasonCode::from_primitive(reason_code.0)
+            Option::<fidl_ieee80211::ReasonCode>::from(reason_code)
                 .unwrap_or(fidl_ieee80211::ReasonCode::UnspecifiedReason),
             LocallyInitiated(false),
         )
@@ -665,7 +668,7 @@ impl RemoteClient {
         self.change_state(ctx, State::Deauthenticated).map_err(ClientRejection::DeviceError)?;
         ctx.send_mlme_deauth_ind(
             self.addr.clone(),
-            fidl_ieee80211::ReasonCode::from_primitive(reason_code.0)
+            Option::<fidl_ieee80211::ReasonCode>::from(reason_code)
                 .unwrap_or(fidl_ieee80211::ReasonCode::UnspecifiedReason),
             LocallyInitiated(false),
         )
@@ -852,15 +855,15 @@ impl RemoteClient {
 
         let reason_code = match frame_class {
             FrameClass::Class1 => panic!("class 1 frames should always be permitted"),
-            FrameClass::Class2 => ReasonCode::INVALID_CLASS2FRAME,
-            FrameClass::Class3 => ReasonCode::INVALID_CLASS3FRAME,
+            FrameClass::Class2 => fidl_ieee80211::ReasonCode::InvalidClass2Frame,
+            FrameClass::Class3 => fidl_ieee80211::ReasonCode::InvalidClass3Frame,
         };
 
         // Safe: |state| is never None and always replaced with Some(..).
         match self.state.as_ref() {
             State::Deauthenticated | State::Authenticating => {
                 let (in_buf, bytes_written) = ctx
-                    .make_deauth_frame(self.addr, reason_code)
+                    .make_deauth_frame(self.addr, reason_code.into())
                     .map_err(ClientRejection::WlanSendError)?;
                 self.send_wlan_frame(ctx, in_buf, bytes_written, TxFlags::NONE).map_err(|s| {
                     ClientRejection::WlanSendError(Error::Status(
@@ -869,17 +872,12 @@ impl RemoteClient {
                     ))
                 })?;
 
-                ctx.send_mlme_deauth_ind(
-                    self.addr,
-                    // Safe: fidl_ieee80211::ReasonCode has a 1:1 mapping with ReasonCode.
-                    fidl_ieee80211::ReasonCode::from_primitive(reason_code.0).unwrap(),
-                    LocallyInitiated(true),
-                )
-                .map_err(ClientRejection::SmeSendError)?;
+                ctx.send_mlme_deauth_ind(self.addr, reason_code, LocallyInitiated(true))
+                    .map_err(ClientRejection::SmeSendError)?;
             }
             State::Authenticated => {
                 let (in_buf, bytes_written) = ctx
-                    .make_disassoc_frame(self.addr, reason_code)
+                    .make_disassoc_frame(self.addr, reason_code.into())
                     .map_err(ClientRejection::WlanSendError)?;
                 self.send_wlan_frame(ctx, in_buf, bytes_written, TxFlags::NONE).map_err(|s| {
                     ClientRejection::WlanSendError(Error::Status(
@@ -888,13 +886,8 @@ impl RemoteClient {
                     ))
                 })?;
 
-                ctx.send_mlme_disassoc_ind(
-                    self.addr,
-                    // Safe: fidl_ieee80211::ReasonCode has a 1:1 mapping with ReasonCode.
-                    fidl_ieee80211::ReasonCode::from_primitive(reason_code.0).unwrap(),
-                    LocallyInitiated(true),
-                )
-                .map_err(ClientRejection::SmeSendError)?;
+                ctx.send_mlme_disassoc_ind(self.addr, reason_code, LocallyInitiated(true))
+                    .map_err(ClientRejection::SmeSendError)?;
             }
             State::Associated { .. } => {
                 panic!("all frames should be permitted for an associated client")
