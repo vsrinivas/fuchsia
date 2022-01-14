@@ -20,9 +20,9 @@ void ::test_union::StructWithNullableXUnion::EncodeWithoutValidating(
               &decoder, 0)}) {}
 #endif  // __Fuchsia__
 
-::test_union::StructWithNullableXUnion::Storage
-test_union::StructWithNullableXUnion::CloneStorage() const {
-  return Storage{::fidl::internal::NaturalClone(storage_.x1)};
+::test_union::StructWithNullableXUnion::Storage_
+test_union::StructWithNullableXUnion::CloneStorage_() const {
+  return Storage_{::fidl::internal::NaturalClone(storage_.x1)};
 }
 #ifdef __Fuchsia__
 
@@ -49,11 +49,11 @@ void ::test_union::
 #endif  // __Fuchsia__
 
 ::test_union::
-    TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse::Storage
+    TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse::Storage_
     test_union::
         TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse::
-            CloneStorage() const {
-  return Storage{::fidl::internal::NaturalClone(storage_.xu)};
+            CloneStorage_() const {
+  return Storage_{::fidl::internal::NaturalClone(storage_.xu)};
 }
 #ifdef __Fuchsia__
 
@@ -69,8 +69,8 @@ void ::test_union::Pizza::EncodeWithoutValidating(::fidl::Encoder& encoder,
     : storage_({::fidl::DecodeAs<::std::vector<::std::string>>(&decoder, 0)}) {}
 #endif  // __Fuchsia__
 
-::test_union::Pizza::Storage test_union::Pizza::CloneStorage() const {
-  return Storage{::fidl::internal::NaturalClone(storage_.toppings)};
+::test_union::Pizza::Storage_ test_union::Pizza::CloneStorage_() const {
+  return Storage_{::fidl::internal::NaturalClone(storage_.toppings)};
 }
 #ifdef __Fuchsia__
 
@@ -86,8 +86,8 @@ void ::test_union::Pasta::EncodeWithoutValidating(::fidl::Encoder& encoder,
     : storage_({::fidl::DecodeAs<::std::string>(&decoder, 0)}) {}
 #endif  // __Fuchsia__
 
-::test_union::Pasta::Storage test_union::Pasta::CloneStorage() const {
-  return Storage{::fidl::internal::NaturalClone(storage_.sauce)};
+::test_union::Pasta::Storage_ test_union::Pasta::CloneStorage_() const {
+  return Storage_{::fidl::internal::NaturalClone(storage_.sauce)};
 }
 #ifdef __Fuchsia__
 
@@ -114,11 +114,11 @@ void ::test_union::
 #endif  // __Fuchsia__
 
 ::test_union::
-    TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse::Storage
+    TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse::Storage_
     test_union::
         TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse::
-            CloneStorage() const {
-  return Storage{::fidl::internal::NaturalClone(storage_.xu)};
+            CloneStorage_() const {
+  return Storage_{::fidl::internal::NaturalClone(storage_.xu)};
 }
 #ifdef __Fuchsia__
 
@@ -135,9 +135,9 @@ void ::test_union::NullableUnionStruct::EncodeWithoutValidating(
           &decoder, 0)}) {}
 #endif  // __Fuchsia__
 
-::test_union::NullableUnionStruct::Storage
-test_union::NullableUnionStruct::CloneStorage() const {
-  return Storage{::fidl::internal::NaturalClone(storage_.the_union)};
+::test_union::NullableUnionStruct::Storage_
+test_union::NullableUnionStruct::CloneStorage_() const {
+  return Storage_{::fidl::internal::NaturalClone(storage_.the_union)};
 }
 #ifdef __Fuchsia__
 
@@ -156,11 +156,11 @@ void ::test_union::UnionSandwich::EncodeWithoutValidating(
                 ::fidl::DecodeAs<uint32_t>(&decoder, 24)}) {}
 #endif  // __Fuchsia__
 
-::test_union::UnionSandwich::Storage test_union::UnionSandwich::CloneStorage()
+::test_union::UnionSandwich::Storage_ test_union::UnionSandwich::CloneStorage_()
     const {
-  return Storage{::fidl::internal::NaturalClone(storage_.a),
-                 ::fidl::internal::NaturalClone(storage_.u),
-                 ::fidl::internal::NaturalClone(storage_.b)};
+  return Storage_{::fidl::internal::NaturalClone(storage_.a),
+                  ::fidl::internal::NaturalClone(storage_.u),
+                  ::fidl::internal::NaturalClone(storage_.b)};
 }
 #ifdef __Fuchsia__
 
@@ -176,8 +176,8 @@ void ::test_union::Empty::EncodeWithoutValidating(::fidl::Encoder& encoder,
     : storage_({::fidl::DecodeAs<uint8_t>(&decoder, 0)}) {}
 #endif  // __Fuchsia__
 
-::test_union::Empty::Storage test_union::Empty::CloneStorage() const {
-  return Storage{::fidl::internal::NaturalClone(storage_.__reserved)};
+::test_union::Empty::Storage_ test_union::Empty::CloneStorage_() const {
+  return Storage_{::fidl::internal::NaturalClone(storage_.__reserved)};
 }
 
 std::shared_ptr<::test_union::UnionWithAttributes::Storage>

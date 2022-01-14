@@ -18,9 +18,9 @@ void ::test_inheritance::SuperFooTopResponse::EncodeWithoutValidating(
     : storage_({::fidl::DecodeAs<int64_t>(&decoder, 0)}) {}
 #endif  // __Fuchsia__
 
-::test_inheritance::SuperFooTopResponse::Storage
-test_inheritance::SuperFooTopResponse::CloneStorage() const {
-  return Storage{::fidl::internal::NaturalClone(storage_.y)};
+::test_inheritance::SuperFooTopResponse::Storage_
+test_inheritance::SuperFooTopResponse::CloneStorage_() const {
+  return Storage_{::fidl::internal::NaturalClone(storage_.y)};
 }
 #ifdef __Fuchsia__
 
@@ -36,7 +36,7 @@ void ::test_inheritance::SuperFooRequest::EncodeWithoutValidating(
     : storage_({::fidl::DecodeAs<::std::string>(&decoder, 0)}) {}
 #endif  // __Fuchsia__
 
-::test_inheritance::SuperFooRequest::Storage
-test_inheritance::SuperFooRequest::CloneStorage() const {
-  return Storage{::fidl::internal::NaturalClone(storage_.s)};
+::test_inheritance::SuperFooRequest::Storage_
+test_inheritance::SuperFooRequest::CloneStorage_() const {
+  return Storage_{::fidl::internal::NaturalClone(storage_.s)};
 }

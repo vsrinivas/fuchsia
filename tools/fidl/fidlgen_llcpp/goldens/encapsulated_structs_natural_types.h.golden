@@ -38,28 +38,16 @@ extern "C" const fidl_type_t
 class NonInlineStructTestStruct final
     : public ::fidl::internal::CodableBase<NonInlineStructTestStruct> {
  private:
-  friend ::fidl::internal::CodableBase<NonInlineStructTestStruct>;
-  friend ::fidl::CodingTraits<NonInlineStructTestStruct>;
-  NonInlineStructTestStruct(::fidl::Decoder& decoder);
-  template <typename Payload>
-  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-      ::fidl::Encoder& encoder, Payload&& payload)
-      -> ::fidl::HLCPPOutgoingMessage;
-  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
+  struct Storage_;
 
  public:
-  struct Storage final {
-    ::std::unique_ptr<::test_encapsulatedstructs::Int16Int8> element{};
-    ::zx::handle h{};
-  };
-
-  NonInlineStructTestStruct(Storage storage) noexcept
+  NonInlineStructTestStruct(Storage_ storage) noexcept
       : storage_(std::move(storage)) {}
   NonInlineStructTestStruct(
       ::std::unique_ptr<::test_encapsulatedstructs::Int16Int8> element,
       ::zx::handle h) noexcept
       : storage_({.element = std::move(element), .h = std::move(h)}) {}
-  NonInlineStructTestStruct() : NonInlineStructTestStruct(Storage{}) {}
+  NonInlineStructTestStruct() : NonInlineStructTestStruct(Storage_{}) {}
 
   NonInlineStructTestStruct(NonInlineStructTestStruct&&) noexcept = default;
   NonInlineStructTestStruct& operator=(NonInlineStructTestStruct&&) noexcept =
@@ -79,7 +67,21 @@ class NonInlineStructTestStruct final
   ::zx::handle& h() { return storage_.h; }
 
  private:
-  Storage storage_;
+  friend ::fidl::internal::CodableBase<NonInlineStructTestStruct>;
+  friend ::fidl::CodingTraits<NonInlineStructTestStruct>;
+  NonInlineStructTestStruct(::fidl::Decoder& decoder);
+  template <typename Payload>
+  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+      ::fidl::Encoder& encoder, Payload&& payload)
+      -> ::fidl::HLCPPOutgoingMessage;
+  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
+
+  struct Storage_ final {
+    ::std::unique_ptr<::test_encapsulatedstructs::Int16Int8> element{};
+    ::zx::handle h{};
+  };
+
+  Storage_ storage_;
 };
 
 #endif  // __Fuchsia__
@@ -88,32 +90,20 @@ extern "C" const fidl_type_t test_encapsulatedstructs_Int8Int32Table;
 
 class Int8Int32 final : public ::fidl::internal::CodableBase<Int8Int32> {
  private:
-  friend ::fidl::internal::CodableBase<Int8Int32>;
-  friend ::fidl::CodingTraits<Int8Int32>;
-  Int8Int32(::fidl::Decoder& decoder);
-  template <typename Payload>
-  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-      ::fidl::Encoder& encoder, Payload&& payload)
-      -> ::fidl::HLCPPOutgoingMessage;
-  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
+  struct Storage_;
 
  public:
-  struct Storage final {
-    int8_t a{};
-    int32_t b{};
-  };
-
-  Int8Int32(Storage storage) noexcept : storage_(std::move(storage)) {}
+  Int8Int32(Storage_ storage) noexcept : storage_(std::move(storage)) {}
   Int8Int32(int8_t a, int32_t b) noexcept
       : storage_({.a = std::move(a), .b = std::move(b)}) {}
-  Int8Int32() : Int8Int32(Storage{}) {}
+  Int8Int32() : Int8Int32(Storage_{}) {}
 
   Int8Int32(Int8Int32&&) noexcept = default;
   Int8Int32& operator=(Int8Int32&&) noexcept = default;
   Int8Int32(const Int8Int32& other) noexcept
-      : Int8Int32(other.CloneStorage()) {}
+      : Int8Int32(other.CloneStorage_()) {}
   Int8Int32& operator=(const Int8Int32& other) noexcept {
-    storage_ = other.CloneStorage();
+    storage_ = other.CloneStorage_();
     return *this;
   }
 
@@ -126,40 +116,42 @@ class Int8Int32 final : public ::fidl::internal::CodableBase<Int8Int32> {
   int32_t& b() { return storage_.b; }
 
  private:
-  Storage storage_;
-  Storage CloneStorage() const;
-};
-
-extern "C" const fidl_type_t test_encapsulatedstructs_Int16Int8Table;
-
-class Int16Int8 final : public ::fidl::internal::CodableBase<Int16Int8> {
- private:
-  friend ::fidl::internal::CodableBase<Int16Int8>;
-  friend ::fidl::CodingTraits<Int16Int8>;
-  Int16Int8(::fidl::Decoder& decoder);
+  friend ::fidl::internal::CodableBase<Int8Int32>;
+  friend ::fidl::CodingTraits<Int8Int32>;
+  Int8Int32(::fidl::Decoder& decoder);
   template <typename Payload>
   friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
       ::fidl::Encoder& encoder, Payload&& payload)
       -> ::fidl::HLCPPOutgoingMessage;
   void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
- public:
-  struct Storage final {
-    int16_t a{};
-    int8_t b{};
+  struct Storage_ final {
+    int8_t a{};
+    int32_t b{};
   };
 
-  Int16Int8(Storage storage) noexcept : storage_(std::move(storage)) {}
+  Storage_ storage_;
+  Storage_ CloneStorage_() const;
+};
+
+extern "C" const fidl_type_t test_encapsulatedstructs_Int16Int8Table;
+
+class Int16Int8 final : public ::fidl::internal::CodableBase<Int16Int8> {
+ private:
+  struct Storage_;
+
+ public:
+  Int16Int8(Storage_ storage) noexcept : storage_(std::move(storage)) {}
   Int16Int8(int16_t a, int8_t b) noexcept
       : storage_({.a = std::move(a), .b = std::move(b)}) {}
-  Int16Int8() : Int16Int8(Storage{}) {}
+  Int16Int8() : Int16Int8(Storage_{}) {}
 
   Int16Int8(Int16Int8&&) noexcept = default;
   Int16Int8& operator=(Int16Int8&&) noexcept = default;
   Int16Int8(const Int16Int8& other) noexcept
-      : Int16Int8(other.CloneStorage()) {}
+      : Int16Int8(other.CloneStorage_()) {}
   Int16Int8& operator=(const Int16Int8& other) noexcept {
-    storage_ = other.CloneStorage();
+    storage_ = other.CloneStorage_();
     return *this;
   }
 
@@ -172,8 +164,22 @@ class Int16Int8 final : public ::fidl::internal::CodableBase<Int16Int8> {
   int8_t& b() { return storage_.b; }
 
  private:
-  Storage storage_;
-  Storage CloneStorage() const;
+  friend ::fidl::internal::CodableBase<Int16Int8>;
+  friend ::fidl::CodingTraits<Int16Int8>;
+  Int16Int8(::fidl::Decoder& decoder);
+  template <typename Payload>
+  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+      ::fidl::Encoder& encoder, Payload&& payload)
+      -> ::fidl::HLCPPOutgoingMessage;
+  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
+
+  struct Storage_ final {
+    int16_t a{};
+    int8_t b{};
+  };
+
+  Storage_ storage_;
+  Storage_ CloneStorage_() const;
 };
 
 extern "C" const fidl_type_t test_encapsulatedstructs_ArrayInt16Int8Table;
@@ -181,32 +187,21 @@ extern "C" const fidl_type_t test_encapsulatedstructs_ArrayInt16Int8Table;
 class ArrayInt16Int8 final
     : public ::fidl::internal::CodableBase<ArrayInt16Int8> {
  private:
-  friend ::fidl::internal::CodableBase<ArrayInt16Int8>;
-  friend ::fidl::CodingTraits<ArrayInt16Int8>;
-  ArrayInt16Int8(::fidl::Decoder& decoder);
-  template <typename Payload>
-  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-      ::fidl::Encoder& encoder, Payload&& payload)
-      -> ::fidl::HLCPPOutgoingMessage;
-  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
+  struct Storage_;
 
  public:
-  struct Storage final {
-    ::std::array<::test_encapsulatedstructs::Int16Int8, 3> arr{};
-  };
-
-  ArrayInt16Int8(Storage storage) noexcept : storage_(std::move(storage)) {}
+  ArrayInt16Int8(Storage_ storage) noexcept : storage_(std::move(storage)) {}
   ArrayInt16Int8(
       ::std::array<::test_encapsulatedstructs::Int16Int8, 3> arr) noexcept
       : storage_({.arr = std::move(arr)}) {}
-  ArrayInt16Int8() : ArrayInt16Int8(Storage{}) {}
+  ArrayInt16Int8() : ArrayInt16Int8(Storage_{}) {}
 
   ArrayInt16Int8(ArrayInt16Int8&&) noexcept = default;
   ArrayInt16Int8& operator=(ArrayInt16Int8&&) noexcept = default;
   ArrayInt16Int8(const ArrayInt16Int8& other) noexcept
-      : ArrayInt16Int8(other.CloneStorage()) {}
+      : ArrayInt16Int8(other.CloneStorage_()) {}
   ArrayInt16Int8& operator=(const ArrayInt16Int8& other) noexcept {
-    storage_ = other.CloneStorage();
+    storage_ = other.CloneStorage_();
     return *this;
   }
 
@@ -219,8 +214,21 @@ class ArrayInt16Int8 final
   }
 
  private:
-  Storage storage_;
-  Storage CloneStorage() const;
+  friend ::fidl::internal::CodableBase<ArrayInt16Int8>;
+  friend ::fidl::CodingTraits<ArrayInt16Int8>;
+  ArrayInt16Int8(::fidl::Decoder& decoder);
+  template <typename Payload>
+  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+      ::fidl::Encoder& encoder, Payload&& payload)
+      -> ::fidl::HLCPPOutgoingMessage;
+  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
+
+  struct Storage_ final {
+    ::std::array<::test_encapsulatedstructs::Int16Int8, 3> arr{};
+  };
+
+  Storage_ storage_;
+  Storage_ CloneStorage_() const;
 };
 
 extern "C" const fidl_type_t
@@ -229,23 +237,10 @@ extern "C" const fidl_type_t
 class StructPaddingTestStruct final
     : public ::fidl::internal::CodableBase<StructPaddingTestStruct> {
  private:
-  friend ::fidl::internal::CodableBase<StructPaddingTestStruct>;
-  friend ::fidl::CodingTraits<StructPaddingTestStruct>;
-  StructPaddingTestStruct(::fidl::Decoder& decoder);
-  template <typename Payload>
-  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-      ::fidl::Encoder& encoder, Payload&& payload)
-      -> ::fidl::HLCPPOutgoingMessage;
-  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
+  struct Storage_;
 
  public:
-  struct Storage final {
-    ::test_encapsulatedstructs::Int16Int8 trailing{};
-    ::test_encapsulatedstructs::Int8Int32 inner{};
-    ::test_encapsulatedstructs::ArrayInt16Int8 array{};
-  };
-
-  StructPaddingTestStruct(Storage storage) noexcept
+  StructPaddingTestStruct(Storage_ storage) noexcept
       : storage_(std::move(storage)) {}
   StructPaddingTestStruct(
       ::test_encapsulatedstructs::Int16Int8 trailing,
@@ -254,16 +249,16 @@ class StructPaddingTestStruct final
       : storage_({.trailing = std::move(trailing),
                   .inner = std::move(inner),
                   .array = std::move(array)}) {}
-  StructPaddingTestStruct() : StructPaddingTestStruct(Storage{}) {}
+  StructPaddingTestStruct() : StructPaddingTestStruct(Storage_{}) {}
 
   StructPaddingTestStruct(StructPaddingTestStruct&&) noexcept = default;
   StructPaddingTestStruct& operator=(StructPaddingTestStruct&&) noexcept =
       default;
   StructPaddingTestStruct(const StructPaddingTestStruct& other) noexcept
-      : StructPaddingTestStruct(other.CloneStorage()) {}
+      : StructPaddingTestStruct(other.CloneStorage_()) {}
   StructPaddingTestStruct& operator=(
       const StructPaddingTestStruct& other) noexcept {
-    storage_ = other.CloneStorage();
+    storage_ = other.CloneStorage_();
     return *this;
   }
 
@@ -288,8 +283,23 @@ class StructPaddingTestStruct final
   ::test_encapsulatedstructs::ArrayInt16Int8& array() { return storage_.array; }
 
  private:
-  Storage storage_;
-  Storage CloneStorage() const;
+  friend ::fidl::internal::CodableBase<StructPaddingTestStruct>;
+  friend ::fidl::CodingTraits<StructPaddingTestStruct>;
+  StructPaddingTestStruct(::fidl::Decoder& decoder);
+  template <typename Payload>
+  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+      ::fidl::Encoder& encoder, Payload&& payload)
+      -> ::fidl::HLCPPOutgoingMessage;
+  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
+
+  struct Storage_ final {
+    ::test_encapsulatedstructs::Int16Int8 trailing{};
+    ::test_encapsulatedstructs::Int8Int32 inner{};
+    ::test_encapsulatedstructs::ArrayInt16Int8 array{};
+  };
+
+  Storage_ storage_;
+  Storage_ CloneStorage_() const;
 };
 
 #ifdef __Fuchsia__
@@ -299,27 +309,15 @@ extern "C" const fidl_type_t test_encapsulatedstructs_TopLevelStructTable;
 class TopLevelStruct final
     : public ::fidl::internal::CodableBase<TopLevelStruct> {
  private:
-  friend ::fidl::internal::CodableBase<TopLevelStruct>;
-  friend ::fidl::CodingTraits<TopLevelStruct>;
-  TopLevelStruct(::fidl::Decoder& decoder);
-  template <typename Payload>
-  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-      ::fidl::Encoder& encoder, Payload&& payload)
-      -> ::fidl::HLCPPOutgoingMessage;
-  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
+  struct Storage_;
 
  public:
-  struct Storage final {
-    ::test_encapsulatedstructs::StructPaddingTestStruct a{};
-    ::test_encapsulatedstructs::NonInlineStructTestStruct b{};
-  };
-
-  TopLevelStruct(Storage storage) noexcept : storage_(std::move(storage)) {}
+  TopLevelStruct(Storage_ storage) noexcept : storage_(std::move(storage)) {}
   TopLevelStruct(
       ::test_encapsulatedstructs::StructPaddingTestStruct a,
       ::test_encapsulatedstructs::NonInlineStructTestStruct b) noexcept
       : storage_({.a = std::move(a), .b = std::move(b)}) {}
-  TopLevelStruct() : TopLevelStruct(Storage{}) {}
+  TopLevelStruct() : TopLevelStruct(Storage_{}) {}
 
   TopLevelStruct(TopLevelStruct&&) noexcept = default;
   TopLevelStruct& operator=(TopLevelStruct&&) noexcept = default;
@@ -341,7 +339,21 @@ class TopLevelStruct final
   }
 
  private:
-  Storage storage_;
+  friend ::fidl::internal::CodableBase<TopLevelStruct>;
+  friend ::fidl::CodingTraits<TopLevelStruct>;
+  TopLevelStruct(::fidl::Decoder& decoder);
+  template <typename Payload>
+  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+      ::fidl::Encoder& encoder, Payload&& payload)
+      -> ::fidl::HLCPPOutgoingMessage;
+  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
+
+  struct Storage_ final {
+    ::test_encapsulatedstructs::StructPaddingTestStruct a{};
+    ::test_encapsulatedstructs::NonInlineStructTestStruct b{};
+  };
+
+  Storage_ storage_;
 };
 
 #endif  // __Fuchsia__

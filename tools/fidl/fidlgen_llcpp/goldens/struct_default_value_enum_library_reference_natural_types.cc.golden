@@ -20,7 +20,7 @@ void ::test_structdefaultvalueenumlibraryreference::Foo::
     : storage_({::fidl::DecodeAs<::test_dependent::MyEnum>(&decoder, 0)}) {}
 #endif  // __Fuchsia__
 
-::test_structdefaultvalueenumlibraryreference::Foo::Storage
-test_structdefaultvalueenumlibraryreference::Foo::CloneStorage() const {
-  return Storage{::fidl::internal::NaturalClone(storage_.field)};
+::test_structdefaultvalueenumlibraryreference::Foo::Storage_
+test_structdefaultvalueenumlibraryreference::Foo::CloneStorage_() const {
+  return Storage_{::fidl::internal::NaturalClone(storage_.field)};
 }

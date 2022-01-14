@@ -20,10 +20,11 @@ void ::test_byteandbytes::ByteAndBytes::EncodeWithoutValidating(
                     &decoder, 40)}) {}
 #endif  // __Fuchsia__
 
-::test_byteandbytes::ByteAndBytes::Storage
-test_byteandbytes::ByteAndBytes::CloneStorage() const {
-  return Storage{::fidl::internal::NaturalClone(storage_.single_byte),
-                 ::fidl::internal::NaturalClone(storage_.many_bytes),
-                 ::fidl::internal::NaturalClone(storage_.only_one_k_bytes),
-                 ::fidl::internal::NaturalClone(storage_.opt_only_one_k_bytes)};
+::test_byteandbytes::ByteAndBytes::Storage_
+test_byteandbytes::ByteAndBytes::CloneStorage_() const {
+  return Storage_{
+      ::fidl::internal::NaturalClone(storage_.single_byte),
+      ::fidl::internal::NaturalClone(storage_.many_bytes),
+      ::fidl::internal::NaturalClone(storage_.only_one_k_bytes),
+      ::fidl::internal::NaturalClone(storage_.opt_only_one_k_bytes)};
 }

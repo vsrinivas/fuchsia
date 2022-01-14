@@ -215,6 +215,28 @@ extern "C" const fidl_type_t test_placementofattributes_ExampleStructTable;
 class ExampleStruct final
     : public ::fidl::internal::CodableBase<ExampleStruct> {
  private:
+  struct Storage_;
+
+ public:
+  ExampleStruct(Storage_ storage) noexcept : storage_(std::move(storage)) {}
+  ExampleStruct(uint32_t member) noexcept
+      : storage_({.member = std::move(member)}) {}
+  ExampleStruct() : ExampleStruct(Storage_{}) {}
+
+  ExampleStruct(ExampleStruct&&) noexcept = default;
+  ExampleStruct& operator=(ExampleStruct&&) noexcept = default;
+  ExampleStruct(const ExampleStruct& other) noexcept
+      : ExampleStruct(other.CloneStorage_()) {}
+  ExampleStruct& operator=(const ExampleStruct& other) noexcept {
+    storage_ = other.CloneStorage_();
+    return *this;
+  }
+
+  uint32_t member() const { return storage_.member; }
+
+  uint32_t& member() { return storage_.member; }
+
+ private:
   friend ::fidl::internal::CodableBase<ExampleStruct>;
   friend ::fidl::CodingTraits<ExampleStruct>;
   ExampleStruct(::fidl::Decoder& decoder);
@@ -224,32 +246,12 @@ class ExampleStruct final
       -> ::fidl::HLCPPOutgoingMessage;
   void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
- public:
-  struct Storage final {
+  struct Storage_ final {
     uint32_t member{};
   };
 
-  ExampleStruct(Storage storage) noexcept : storage_(std::move(storage)) {}
-  ExampleStruct(uint32_t member) noexcept
-      : storage_({.member = std::move(member)}) {}
-  ExampleStruct() : ExampleStruct(Storage{}) {}
-
-  ExampleStruct(ExampleStruct&&) noexcept = default;
-  ExampleStruct& operator=(ExampleStruct&&) noexcept = default;
-  ExampleStruct(const ExampleStruct& other) noexcept
-      : ExampleStruct(other.CloneStorage()) {}
-  ExampleStruct& operator=(const ExampleStruct& other) noexcept {
-    storage_ = other.CloneStorage();
-    return *this;
-  }
-
-  uint32_t member() const { return storage_.member; }
-
-  uint32_t& member() { return storage_.member; }
-
- private:
-  Storage storage_;
-  Storage CloneStorage() const;
+  Storage_ storage_;
+  Storage_ CloneStorage_() const;
 };
 
 extern "C" const fidl_type_t
@@ -257,6 +259,33 @@ extern "C" const fidl_type_t
 
 class ExampleProtocolMethodRequest final
     : public ::fidl::internal::CodableBase<ExampleProtocolMethodRequest> {
+ private:
+  struct Storage_;
+
+ public:
+  ExampleProtocolMethodRequest(Storage_ storage) noexcept
+      : storage_(std::move(storage)) {}
+  ExampleProtocolMethodRequest(::test_exampleusing::Empty arg) noexcept
+      : storage_({.arg = std::move(arg)}) {}
+  ExampleProtocolMethodRequest() : ExampleProtocolMethodRequest(Storage_{}) {}
+
+  ExampleProtocolMethodRequest(ExampleProtocolMethodRequest&&) noexcept =
+      default;
+  ExampleProtocolMethodRequest& operator=(
+      ExampleProtocolMethodRequest&&) noexcept = default;
+  ExampleProtocolMethodRequest(
+      const ExampleProtocolMethodRequest& other) noexcept
+      : ExampleProtocolMethodRequest(other.CloneStorage_()) {}
+  ExampleProtocolMethodRequest& operator=(
+      const ExampleProtocolMethodRequest& other) noexcept {
+    storage_ = other.CloneStorage_();
+    return *this;
+  }
+
+  const ::test_exampleusing::Empty& arg() const { return storage_.arg; }
+
+  ::test_exampleusing::Empty& arg() { return storage_.arg; }
+
  private:
   friend ::fidl::internal::CodableBase<ExampleProtocolMethodRequest>;
   friend ::fidl::CodingTraits<ExampleProtocolMethodRequest>;
@@ -267,37 +296,12 @@ class ExampleProtocolMethodRequest final
       -> ::fidl::HLCPPOutgoingMessage;
   void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
- public:
-  struct Storage final {
+  struct Storage_ final {
     ::test_exampleusing::Empty arg{};
   };
 
-  ExampleProtocolMethodRequest(Storage storage) noexcept
-      : storage_(std::move(storage)) {}
-  ExampleProtocolMethodRequest(::test_exampleusing::Empty arg) noexcept
-      : storage_({.arg = std::move(arg)}) {}
-  ExampleProtocolMethodRequest() : ExampleProtocolMethodRequest(Storage{}) {}
-
-  ExampleProtocolMethodRequest(ExampleProtocolMethodRequest&&) noexcept =
-      default;
-  ExampleProtocolMethodRequest& operator=(
-      ExampleProtocolMethodRequest&&) noexcept = default;
-  ExampleProtocolMethodRequest(
-      const ExampleProtocolMethodRequest& other) noexcept
-      : ExampleProtocolMethodRequest(other.CloneStorage()) {}
-  ExampleProtocolMethodRequest& operator=(
-      const ExampleProtocolMethodRequest& other) noexcept {
-    storage_ = other.CloneStorage();
-    return *this;
-  }
-
-  const ::test_exampleusing::Empty& arg() const { return storage_.arg; }
-
-  ::test_exampleusing::Empty& arg() { return storage_.arg; }
-
- private:
-  Storage storage_;
-  Storage CloneStorage() const;
+  Storage_ storage_;
+  Storage_ CloneStorage_() const;
 };
 
 constexpr uint32_t EXAMPLE_CONST = 0u;

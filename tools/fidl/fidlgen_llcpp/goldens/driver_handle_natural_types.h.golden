@@ -30,25 +30,14 @@ extern "C" const fidl_type_t test_driverhandle_ServerEndWrapperTable;
 class ServerEndWrapper final
     : public ::fidl::internal::CodableBase<ServerEndWrapper> {
  private:
-  friend ::fidl::internal::CodableBase<ServerEndWrapper>;
-  friend ::fidl::CodingTraits<ServerEndWrapper>;
-  ServerEndWrapper(::fidl::Decoder& decoder);
-  template <typename Payload>
-  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-      ::fidl::Encoder& encoder, Payload&& payload)
-      -> ::fidl::HLCPPOutgoingMessage;
-  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
+  struct Storage_;
 
  public:
-  struct Storage final {
-    ::fdf::ServerEnd<::test_driverhandle::DriverProtocol> value{};
-  };
-
-  ServerEndWrapper(Storage storage) noexcept : storage_(std::move(storage)) {}
+  ServerEndWrapper(Storage_ storage) noexcept : storage_(std::move(storage)) {}
   ServerEndWrapper(
       ::fdf::ServerEnd<::test_driverhandle::DriverProtocol> value) noexcept
       : storage_({.value = std::move(value)}) {}
-  ServerEndWrapper() : ServerEndWrapper(Storage{}) {}
+  ServerEndWrapper() : ServerEndWrapper(Storage_{}) {}
 
   ServerEndWrapper(ServerEndWrapper&&) noexcept = default;
   ServerEndWrapper& operator=(ServerEndWrapper&&) noexcept = default;
@@ -62,7 +51,20 @@ class ServerEndWrapper final
   }
 
  private:
-  Storage storage_;
+  friend ::fidl::internal::CodableBase<ServerEndWrapper>;
+  friend ::fidl::CodingTraits<ServerEndWrapper>;
+  ServerEndWrapper(::fidl::Decoder& decoder);
+  template <typename Payload>
+  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+      ::fidl::Encoder& encoder, Payload&& payload)
+      -> ::fidl::HLCPPOutgoingMessage;
+  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
+
+  struct Storage_ final {
+    ::fdf::ServerEnd<::test_driverhandle::DriverProtocol> value{};
+  };
+
+  Storage_ storage_;
 };
 
 #endif  // __Fuchsia__
@@ -74,25 +76,14 @@ extern "C" const fidl_type_t test_driverhandle_ClientEndWrapperTable;
 class ClientEndWrapper final
     : public ::fidl::internal::CodableBase<ClientEndWrapper> {
  private:
-  friend ::fidl::internal::CodableBase<ClientEndWrapper>;
-  friend ::fidl::CodingTraits<ClientEndWrapper>;
-  ClientEndWrapper(::fidl::Decoder& decoder);
-  template <typename Payload>
-  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-      ::fidl::Encoder& encoder, Payload&& payload)
-      -> ::fidl::HLCPPOutgoingMessage;
-  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
+  struct Storage_;
 
  public:
-  struct Storage final {
-    ::fdf::ClientEnd<::test_driverhandle::DriverProtocol> value{};
-  };
-
-  ClientEndWrapper(Storage storage) noexcept : storage_(std::move(storage)) {}
+  ClientEndWrapper(Storage_ storage) noexcept : storage_(std::move(storage)) {}
   ClientEndWrapper(
       ::fdf::ClientEnd<::test_driverhandle::DriverProtocol> value) noexcept
       : storage_({.value = std::move(value)}) {}
-  ClientEndWrapper() : ClientEndWrapper(Storage{}) {}
+  ClientEndWrapper() : ClientEndWrapper(Storage_{}) {}
 
   ClientEndWrapper(ClientEndWrapper&&) noexcept = default;
   ClientEndWrapper& operator=(ClientEndWrapper&&) noexcept = default;
@@ -106,7 +97,20 @@ class ClientEndWrapper final
   }
 
  private:
-  Storage storage_;
+  friend ::fidl::internal::CodableBase<ClientEndWrapper>;
+  friend ::fidl::CodingTraits<ClientEndWrapper>;
+  ClientEndWrapper(::fidl::Decoder& decoder);
+  template <typename Payload>
+  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+      ::fidl::Encoder& encoder, Payload&& payload)
+      -> ::fidl::HLCPPOutgoingMessage;
+  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
+
+  struct Storage_ final {
+    ::fdf::ClientEnd<::test_driverhandle::DriverProtocol> value{};
+  };
+
+  Storage_ storage_;
 };
 
 #endif  // __Fuchsia__

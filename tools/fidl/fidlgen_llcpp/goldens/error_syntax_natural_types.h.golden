@@ -35,6 +35,35 @@ class ExampleUseOfErrorSyntax_CallWhichMayFail_Response final
     : public ::fidl::internal::CodableBase<
           ExampleUseOfErrorSyntax_CallWhichMayFail_Response> {
  private:
+  struct Storage_;
+
+ public:
+  ExampleUseOfErrorSyntax_CallWhichMayFail_Response(Storage_ storage) noexcept
+      : storage_(std::move(storage)) {}
+  ExampleUseOfErrorSyntax_CallWhichMayFail_Response(int64_t value) noexcept
+      : storage_({.value = std::move(value)}) {}
+  ExampleUseOfErrorSyntax_CallWhichMayFail_Response()
+      : ExampleUseOfErrorSyntax_CallWhichMayFail_Response(Storage_{}) {}
+
+  ExampleUseOfErrorSyntax_CallWhichMayFail_Response(
+      ExampleUseOfErrorSyntax_CallWhichMayFail_Response&&) noexcept = default;
+  ExampleUseOfErrorSyntax_CallWhichMayFail_Response& operator=(
+      ExampleUseOfErrorSyntax_CallWhichMayFail_Response&&) noexcept = default;
+  ExampleUseOfErrorSyntax_CallWhichMayFail_Response(
+      const ExampleUseOfErrorSyntax_CallWhichMayFail_Response& other) noexcept
+      : ExampleUseOfErrorSyntax_CallWhichMayFail_Response(
+            other.CloneStorage_()) {}
+  ExampleUseOfErrorSyntax_CallWhichMayFail_Response& operator=(
+      const ExampleUseOfErrorSyntax_CallWhichMayFail_Response& other) noexcept {
+    storage_ = other.CloneStorage_();
+    return *this;
+  }
+
+  int64_t value() const { return storage_.value; }
+
+  int64_t& value() { return storage_.value; }
+
+ private:
   friend ::fidl::internal::CodableBase<
       ExampleUseOfErrorSyntax_CallWhichMayFail_Response>;
   friend ::fidl::CodingTraits<
@@ -46,39 +75,12 @@ class ExampleUseOfErrorSyntax_CallWhichMayFail_Response final
       -> ::fidl::HLCPPOutgoingMessage;
   void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
- public:
-  struct Storage final {
+  struct Storage_ final {
     int64_t value{};
   };
 
-  ExampleUseOfErrorSyntax_CallWhichMayFail_Response(Storage storage) noexcept
-      : storage_(std::move(storage)) {}
-  ExampleUseOfErrorSyntax_CallWhichMayFail_Response(int64_t value) noexcept
-      : storage_({.value = std::move(value)}) {}
-  ExampleUseOfErrorSyntax_CallWhichMayFail_Response()
-      : ExampleUseOfErrorSyntax_CallWhichMayFail_Response(Storage{}) {}
-
-  ExampleUseOfErrorSyntax_CallWhichMayFail_Response(
-      ExampleUseOfErrorSyntax_CallWhichMayFail_Response&&) noexcept = default;
-  ExampleUseOfErrorSyntax_CallWhichMayFail_Response& operator=(
-      ExampleUseOfErrorSyntax_CallWhichMayFail_Response&&) noexcept = default;
-  ExampleUseOfErrorSyntax_CallWhichMayFail_Response(
-      const ExampleUseOfErrorSyntax_CallWhichMayFail_Response& other) noexcept
-      : ExampleUseOfErrorSyntax_CallWhichMayFail_Response(
-            other.CloneStorage()) {}
-  ExampleUseOfErrorSyntax_CallWhichMayFail_Response& operator=(
-      const ExampleUseOfErrorSyntax_CallWhichMayFail_Response& other) noexcept {
-    storage_ = other.CloneStorage();
-    return *this;
-  }
-
-  int64_t value() const { return storage_.value; }
-
-  int64_t& value() { return storage_.value; }
-
- private:
-  Storage storage_;
-  Storage CloneStorage() const;
+  Storage_ storage_;
+  Storage_ CloneStorage_() const;
 };
 
 extern "C" const fidl_type_t
@@ -204,31 +206,17 @@ class ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse final
     : public ::fidl::internal::CodableBase<
           ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse> {
  private:
-  friend ::fidl::internal::CodableBase<
-      ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse>;
-  friend ::fidl::CodingTraits<
-      ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse>;
-  ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse(::fidl::Decoder& decoder);
-  template <typename Payload>
-  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-      ::fidl::Encoder& encoder, Payload&& payload)
-      -> ::fidl::HLCPPOutgoingMessage;
-  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
+  struct Storage_;
 
  public:
-  struct Storage final {
-    ::test_errorsyntax::ExampleUseOfErrorSyntax_CallWhichMayFail_Result
-        result{};
-  };
-
-  ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse(Storage storage) noexcept
+  ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse(Storage_ storage) noexcept
       : storage_(std::move(storage)) {}
   ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse(
       ::test_errorsyntax::ExampleUseOfErrorSyntax_CallWhichMayFail_Result
           result) noexcept
       : storage_({.result = std::move(result)}) {}
   ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse()
-      : ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse(Storage{}) {}
+      : ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse(Storage_{}) {}
 
   ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse(
       ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse&&) noexcept = default;
@@ -237,11 +225,11 @@ class ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse final
   ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse(
       const ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse& other) noexcept
       : ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse(
-            other.CloneStorage()) {}
+            other.CloneStorage_()) {}
   ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse& operator=(
       const ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse&
           other) noexcept {
-    storage_ = other.CloneStorage();
+    storage_ = other.CloneStorage_();
     return *this;
   }
 
@@ -256,8 +244,24 @@ class ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse final
   }
 
  private:
-  Storage storage_;
-  Storage CloneStorage() const;
+  friend ::fidl::internal::CodableBase<
+      ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse>;
+  friend ::fidl::CodingTraits<
+      ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse>;
+  ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse(::fidl::Decoder& decoder);
+  template <typename Payload>
+  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+      ::fidl::Encoder& encoder, Payload&& payload)
+      -> ::fidl::HLCPPOutgoingMessage;
+  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
+
+  struct Storage_ final {
+    ::test_errorsyntax::ExampleUseOfErrorSyntax_CallWhichMayFail_Result
+        result{};
+  };
+
+  Storage_ storage_;
+  Storage_ CloneStorage_() const;
 };
 
 extern "C" const fidl_type_t
@@ -266,6 +270,34 @@ extern "C" const fidl_type_t
 class ExampleUseOfErrorSyntaxCallWhichMayFailRequest final
     : public ::fidl::internal::CodableBase<
           ExampleUseOfErrorSyntaxCallWhichMayFailRequest> {
+ private:
+  struct Storage_;
+
+ public:
+  ExampleUseOfErrorSyntaxCallWhichMayFailRequest(Storage_ storage) noexcept
+      : storage_(std::move(storage)) {}
+  ExampleUseOfErrorSyntaxCallWhichMayFailRequest(::std::string s) noexcept
+      : storage_({.s = std::move(s)}) {}
+  ExampleUseOfErrorSyntaxCallWhichMayFailRequest()
+      : ExampleUseOfErrorSyntaxCallWhichMayFailRequest(Storage_{}) {}
+
+  ExampleUseOfErrorSyntaxCallWhichMayFailRequest(
+      ExampleUseOfErrorSyntaxCallWhichMayFailRequest&&) noexcept = default;
+  ExampleUseOfErrorSyntaxCallWhichMayFailRequest& operator=(
+      ExampleUseOfErrorSyntaxCallWhichMayFailRequest&&) noexcept = default;
+  ExampleUseOfErrorSyntaxCallWhichMayFailRequest(
+      const ExampleUseOfErrorSyntaxCallWhichMayFailRequest& other) noexcept
+      : ExampleUseOfErrorSyntaxCallWhichMayFailRequest(other.CloneStorage_()) {}
+  ExampleUseOfErrorSyntaxCallWhichMayFailRequest& operator=(
+      const ExampleUseOfErrorSyntaxCallWhichMayFailRequest& other) noexcept {
+    storage_ = other.CloneStorage_();
+    return *this;
+  }
+
+  const ::std::string& s() const { return storage_.s; }
+
+  ::std::string& s() { return storage_.s; }
+
  private:
   friend ::fidl::internal::CodableBase<
       ExampleUseOfErrorSyntaxCallWhichMayFailRequest>;
@@ -277,38 +309,12 @@ class ExampleUseOfErrorSyntaxCallWhichMayFailRequest final
       -> ::fidl::HLCPPOutgoingMessage;
   void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
- public:
-  struct Storage final {
+  struct Storage_ final {
     ::std::string s{};
   };
 
-  ExampleUseOfErrorSyntaxCallWhichMayFailRequest(Storage storage) noexcept
-      : storage_(std::move(storage)) {}
-  ExampleUseOfErrorSyntaxCallWhichMayFailRequest(::std::string s) noexcept
-      : storage_({.s = std::move(s)}) {}
-  ExampleUseOfErrorSyntaxCallWhichMayFailRequest()
-      : ExampleUseOfErrorSyntaxCallWhichMayFailRequest(Storage{}) {}
-
-  ExampleUseOfErrorSyntaxCallWhichMayFailRequest(
-      ExampleUseOfErrorSyntaxCallWhichMayFailRequest&&) noexcept = default;
-  ExampleUseOfErrorSyntaxCallWhichMayFailRequest& operator=(
-      ExampleUseOfErrorSyntaxCallWhichMayFailRequest&&) noexcept = default;
-  ExampleUseOfErrorSyntaxCallWhichMayFailRequest(
-      const ExampleUseOfErrorSyntaxCallWhichMayFailRequest& other) noexcept
-      : ExampleUseOfErrorSyntaxCallWhichMayFailRequest(other.CloneStorage()) {}
-  ExampleUseOfErrorSyntaxCallWhichMayFailRequest& operator=(
-      const ExampleUseOfErrorSyntaxCallWhichMayFailRequest& other) noexcept {
-    storage_ = other.CloneStorage();
-    return *this;
-  }
-
-  const ::std::string& s() const { return storage_.s; }
-
-  ::std::string& s() { return storage_.s; }
-
- private:
-  Storage storage_;
-  Storage CloneStorage() const;
+  Storage_ storage_;
+  Storage_ CloneStorage_() const;
 };
 
 }  // namespace test_errorsyntax

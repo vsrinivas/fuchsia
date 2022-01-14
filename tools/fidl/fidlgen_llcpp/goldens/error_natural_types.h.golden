@@ -31,6 +31,28 @@ extern "C" const fidl_type_t test_error_Example_foo_ResponseTable;
 class Example_foo_Response final
     : public ::fidl::internal::CodableBase<Example_foo_Response> {
  private:
+  struct Storage_;
+
+ public:
+  Example_foo_Response(Storage_ storage) noexcept
+      : storage_(std::move(storage)) {}
+  Example_foo_Response(int64_t y) noexcept : storage_({.y = std::move(y)}) {}
+  Example_foo_Response() : Example_foo_Response(Storage_{}) {}
+
+  Example_foo_Response(Example_foo_Response&&) noexcept = default;
+  Example_foo_Response& operator=(Example_foo_Response&&) noexcept = default;
+  Example_foo_Response(const Example_foo_Response& other) noexcept
+      : Example_foo_Response(other.CloneStorage_()) {}
+  Example_foo_Response& operator=(const Example_foo_Response& other) noexcept {
+    storage_ = other.CloneStorage_();
+    return *this;
+  }
+
+  int64_t y() const { return storage_.y; }
+
+  int64_t& y() { return storage_.y; }
+
+ private:
   friend ::fidl::internal::CodableBase<Example_foo_Response>;
   friend ::fidl::CodingTraits<Example_foo_Response>;
   Example_foo_Response(::fidl::Decoder& decoder);
@@ -40,32 +62,12 @@ class Example_foo_Response final
       -> ::fidl::HLCPPOutgoingMessage;
   void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
- public:
-  struct Storage final {
+  struct Storage_ final {
     int64_t y{};
   };
 
-  Example_foo_Response(Storage storage) noexcept
-      : storage_(std::move(storage)) {}
-  Example_foo_Response(int64_t y) noexcept : storage_({.y = std::move(y)}) {}
-  Example_foo_Response() : Example_foo_Response(Storage{}) {}
-
-  Example_foo_Response(Example_foo_Response&&) noexcept = default;
-  Example_foo_Response& operator=(Example_foo_Response&&) noexcept = default;
-  Example_foo_Response(const Example_foo_Response& other) noexcept
-      : Example_foo_Response(other.CloneStorage()) {}
-  Example_foo_Response& operator=(const Example_foo_Response& other) noexcept {
-    storage_ = other.CloneStorage();
-    return *this;
-  }
-
-  int64_t y() const { return storage_.y; }
-
-  int64_t& y() { return storage_.y; }
-
- private:
-  Storage storage_;
-  Storage CloneStorage() const;
+  Storage_ storage_;
+  Storage_ CloneStorage_() const;
 };
 
 extern "C" const fidl_type_t test_error_Example_foo_ResultTable;
@@ -164,33 +166,22 @@ extern "C" const fidl_type_t test_error_ExampleFooTopResponseTable;
 class ExampleFooTopResponse final
     : public ::fidl::internal::CodableBase<ExampleFooTopResponse> {
  private:
-  friend ::fidl::internal::CodableBase<ExampleFooTopResponse>;
-  friend ::fidl::CodingTraits<ExampleFooTopResponse>;
-  ExampleFooTopResponse(::fidl::Decoder& decoder);
-  template <typename Payload>
-  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-      ::fidl::Encoder& encoder, Payload&& payload)
-      -> ::fidl::HLCPPOutgoingMessage;
-  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
+  struct Storage_;
 
  public:
-  struct Storage final {
-    ::test_error::Example_foo_Result result{};
-  };
-
-  ExampleFooTopResponse(Storage storage) noexcept
+  ExampleFooTopResponse(Storage_ storage) noexcept
       : storage_(std::move(storage)) {}
   ExampleFooTopResponse(::test_error::Example_foo_Result result) noexcept
       : storage_({.result = std::move(result)}) {}
-  ExampleFooTopResponse() : ExampleFooTopResponse(Storage{}) {}
+  ExampleFooTopResponse() : ExampleFooTopResponse(Storage_{}) {}
 
   ExampleFooTopResponse(ExampleFooTopResponse&&) noexcept = default;
   ExampleFooTopResponse& operator=(ExampleFooTopResponse&&) noexcept = default;
   ExampleFooTopResponse(const ExampleFooTopResponse& other) noexcept
-      : ExampleFooTopResponse(other.CloneStorage()) {}
+      : ExampleFooTopResponse(other.CloneStorage_()) {}
   ExampleFooTopResponse& operator=(
       const ExampleFooTopResponse& other) noexcept {
-    storage_ = other.CloneStorage();
+    storage_ = other.CloneStorage_();
     return *this;
   }
 
@@ -201,14 +192,48 @@ class ExampleFooTopResponse final
   ::test_error::Example_foo_Result& result() { return storage_.result; }
 
  private:
-  Storage storage_;
-  Storage CloneStorage() const;
+  friend ::fidl::internal::CodableBase<ExampleFooTopResponse>;
+  friend ::fidl::CodingTraits<ExampleFooTopResponse>;
+  ExampleFooTopResponse(::fidl::Decoder& decoder);
+  template <typename Payload>
+  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+      ::fidl::Encoder& encoder, Payload&& payload)
+      -> ::fidl::HLCPPOutgoingMessage;
+  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
+
+  struct Storage_ final {
+    ::test_error::Example_foo_Result result{};
+  };
+
+  Storage_ storage_;
+  Storage_ CloneStorage_() const;
 };
 
 extern "C" const fidl_type_t test_error_ExampleFooRequestTable;
 
 class ExampleFooRequest final
     : public ::fidl::internal::CodableBase<ExampleFooRequest> {
+ private:
+  struct Storage_;
+
+ public:
+  ExampleFooRequest(Storage_ storage) noexcept : storage_(std::move(storage)) {}
+  ExampleFooRequest(::std::string s) noexcept : storage_({.s = std::move(s)}) {}
+  ExampleFooRequest() : ExampleFooRequest(Storage_{}) {}
+
+  ExampleFooRequest(ExampleFooRequest&&) noexcept = default;
+  ExampleFooRequest& operator=(ExampleFooRequest&&) noexcept = default;
+  ExampleFooRequest(const ExampleFooRequest& other) noexcept
+      : ExampleFooRequest(other.CloneStorage_()) {}
+  ExampleFooRequest& operator=(const ExampleFooRequest& other) noexcept {
+    storage_ = other.CloneStorage_();
+    return *this;
+  }
+
+  const ::std::string& s() const { return storage_.s; }
+
+  ::std::string& s() { return storage_.s; }
+
  private:
   friend ::fidl::internal::CodableBase<ExampleFooRequest>;
   friend ::fidl::CodingTraits<ExampleFooRequest>;
@@ -219,31 +244,12 @@ class ExampleFooRequest final
       -> ::fidl::HLCPPOutgoingMessage;
   void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
- public:
-  struct Storage final {
+  struct Storage_ final {
     ::std::string s{};
   };
 
-  ExampleFooRequest(Storage storage) noexcept : storage_(std::move(storage)) {}
-  ExampleFooRequest(::std::string s) noexcept : storage_({.s = std::move(s)}) {}
-  ExampleFooRequest() : ExampleFooRequest(Storage{}) {}
-
-  ExampleFooRequest(ExampleFooRequest&&) noexcept = default;
-  ExampleFooRequest& operator=(ExampleFooRequest&&) noexcept = default;
-  ExampleFooRequest(const ExampleFooRequest& other) noexcept
-      : ExampleFooRequest(other.CloneStorage()) {}
-  ExampleFooRequest& operator=(const ExampleFooRequest& other) noexcept {
-    storage_ = other.CloneStorage();
-    return *this;
-  }
-
-  const ::std::string& s() const { return storage_.s; }
-
-  ::std::string& s() { return storage_.s; }
-
- private:
-  Storage storage_;
-  Storage CloneStorage() const;
+  Storage_ storage_;
+  Storage_ CloneStorage_() const;
 };
 
 }  // namespace test_error

@@ -16,8 +16,8 @@ void ::test_versions::Struct::EncodeWithoutValidating(::fidl::Encoder& encoder,
     : storage_({::fidl::DecodeAs<uint32_t>(&decoder, 0)}) {}
 #endif  // __Fuchsia__
 
-::test_versions::Struct::Storage test_versions::Struct::CloneStorage() const {
-  return Storage{::fidl::internal::NaturalClone(storage_.x)};
+::test_versions::Struct::Storage_ test_versions::Struct::CloneStorage_() const {
+  return Storage_{::fidl::internal::NaturalClone(storage_.x)};
 }
 
 ::test_versions::Table::Storage test_versions::Table::CloneStorage() const {

@@ -113,6 +113,27 @@ extern "C" const fidl_type_t test_anonymous_TableDataTable;
 
 class TableData final : public ::fidl::internal::CodableBase<TableData> {
  private:
+  struct Storage_;
+
+ public:
+  TableData(Storage_ storage) noexcept : storage_(std::move(storage)) {}
+  TableData(uint8_t data) noexcept : storage_({.data = std::move(data)}) {}
+  TableData() : TableData(Storage_{}) {}
+
+  TableData(TableData&&) noexcept = default;
+  TableData& operator=(TableData&&) noexcept = default;
+  TableData(const TableData& other) noexcept
+      : TableData(other.CloneStorage_()) {}
+  TableData& operator=(const TableData& other) noexcept {
+    storage_ = other.CloneStorage_();
+    return *this;
+  }
+
+  uint8_t data() const { return storage_.data; }
+
+  uint8_t& data() { return storage_.data; }
+
+ private:
   friend ::fidl::internal::CodableBase<TableData>;
   friend ::fidl::CodingTraits<TableData>;
   TableData(::fidl::Decoder& decoder);
@@ -122,31 +143,12 @@ class TableData final : public ::fidl::internal::CodableBase<TableData> {
       -> ::fidl::HLCPPOutgoingMessage;
   void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
- public:
-  struct Storage final {
+  struct Storage_ final {
     uint8_t data{};
   };
 
-  TableData(Storage storage) noexcept : storage_(std::move(storage)) {}
-  TableData(uint8_t data) noexcept : storage_({.data = std::move(data)}) {}
-  TableData() : TableData(Storage{}) {}
-
-  TableData(TableData&&) noexcept = default;
-  TableData& operator=(TableData&&) noexcept = default;
-  TableData(const TableData& other) noexcept
-      : TableData(other.CloneStorage()) {}
-  TableData& operator=(const TableData& other) noexcept {
-    storage_ = other.CloneStorage();
-    return *this;
-  }
-
-  uint8_t data() const { return storage_.data; }
-
-  uint8_t& data() { return storage_.data; }
-
- private:
-  Storage storage_;
-  Storage CloneStorage() const;
+  Storage_ storage_;
+  Storage_ CloneStorage_() const;
 };
 
 extern "C" const fidl_type_t test_anonymous_TableMemberTable;
@@ -195,29 +197,17 @@ extern "C" const fidl_type_t test_anonymous_SomeProtocolSomeMethodRequestTable;
 class SomeProtocolSomeMethodRequest final
     : public ::fidl::internal::CodableBase<SomeProtocolSomeMethodRequest> {
  private:
-  friend ::fidl::internal::CodableBase<SomeProtocolSomeMethodRequest>;
-  friend ::fidl::CodingTraits<SomeProtocolSomeMethodRequest>;
-  SomeProtocolSomeMethodRequest(::fidl::Decoder& decoder);
-  template <typename Payload>
-  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-      ::fidl::Encoder& encoder, Payload&& payload)
-      -> ::fidl::HLCPPOutgoingMessage;
-  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
+  struct Storage_;
 
  public:
-  struct Storage final {
-    ::test_anonymous::UnionMember union_member{};
-    ::test_anonymous::TableMember table_member{};
-  };
-
-  SomeProtocolSomeMethodRequest(Storage storage) noexcept
+  SomeProtocolSomeMethodRequest(Storage_ storage) noexcept
       : storage_(std::move(storage)) {}
   SomeProtocolSomeMethodRequest(
       ::test_anonymous::UnionMember union_member,
       ::test_anonymous::TableMember table_member) noexcept
       : storage_({.union_member = std::move(union_member),
                   .table_member = std::move(table_member)}) {}
-  SomeProtocolSomeMethodRequest() : SomeProtocolSomeMethodRequest(Storage{}) {}
+  SomeProtocolSomeMethodRequest() : SomeProtocolSomeMethodRequest(Storage_{}) {}
 
   SomeProtocolSomeMethodRequest(SomeProtocolSomeMethodRequest&&) noexcept =
       default;
@@ -225,10 +215,10 @@ class SomeProtocolSomeMethodRequest final
       SomeProtocolSomeMethodRequest&&) noexcept = default;
   SomeProtocolSomeMethodRequest(
       const SomeProtocolSomeMethodRequest& other) noexcept
-      : SomeProtocolSomeMethodRequest(other.CloneStorage()) {}
+      : SomeProtocolSomeMethodRequest(other.CloneStorage_()) {}
   SomeProtocolSomeMethodRequest& operator=(
       const SomeProtocolSomeMethodRequest& other) noexcept {
-    storage_ = other.CloneStorage();
+    storage_ = other.CloneStorage_();
     return *this;
   }
 
@@ -249,45 +239,46 @@ class SomeProtocolSomeMethodRequest final
   }
 
  private:
-  Storage storage_;
-  Storage CloneStorage() const;
-};
-
-extern "C" const fidl_type_t test_anonymous_OverrideTestTable;
-
-class OverrideTest final : public ::fidl::internal::CodableBase<OverrideTest> {
- private:
-  friend ::fidl::internal::CodableBase<OverrideTest>;
-  friend ::fidl::CodingTraits<OverrideTest>;
-  OverrideTest(::fidl::Decoder& decoder);
+  friend ::fidl::internal::CodableBase<SomeProtocolSomeMethodRequest>;
+  friend ::fidl::CodingTraits<SomeProtocolSomeMethodRequest>;
+  SomeProtocolSomeMethodRequest(::fidl::Decoder& decoder);
   template <typename Payload>
   friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
       ::fidl::Encoder& encoder, Payload&& payload)
       -> ::fidl::HLCPPOutgoingMessage;
   void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
- public:
-  struct Storage final {
-    ::test_anonymous::Op op{};
-    ::std::unique_ptr<::test_anonymous::Expression> left{};
-    ::std::unique_ptr<::test_anonymous::Expression> right{};
+  struct Storage_ final {
+    ::test_anonymous::UnionMember union_member{};
+    ::test_anonymous::TableMember table_member{};
   };
 
-  OverrideTest(Storage storage) noexcept : storage_(std::move(storage)) {}
+  Storage_ storage_;
+  Storage_ CloneStorage_() const;
+};
+
+extern "C" const fidl_type_t test_anonymous_OverrideTestTable;
+
+class OverrideTest final : public ::fidl::internal::CodableBase<OverrideTest> {
+ private:
+  struct Storage_;
+
+ public:
+  OverrideTest(Storage_ storage) noexcept : storage_(std::move(storage)) {}
   OverrideTest(::test_anonymous::Op op,
                ::std::unique_ptr<::test_anonymous::Expression> left,
                ::std::unique_ptr<::test_anonymous::Expression> right) noexcept
       : storage_({.op = std::move(op),
                   .left = std::move(left),
                   .right = std::move(right)}) {}
-  OverrideTest() : OverrideTest(Storage{}) {}
+  OverrideTest() : OverrideTest(Storage_{}) {}
 
   OverrideTest(OverrideTest&&) noexcept = default;
   OverrideTest& operator=(OverrideTest&&) noexcept = default;
   OverrideTest(const OverrideTest& other) noexcept
-      : OverrideTest(other.CloneStorage()) {}
+      : OverrideTest(other.CloneStorage_()) {}
   OverrideTest& operator=(const OverrideTest& other) noexcept {
-    storage_ = other.CloneStorage();
+    storage_ = other.CloneStorage_();
     return *this;
   }
 
@@ -312,8 +303,23 @@ class OverrideTest final : public ::fidl::internal::CodableBase<OverrideTest> {
   }
 
  private:
-  Storage storage_;
-  Storage CloneStorage() const;
+  friend ::fidl::internal::CodableBase<OverrideTest>;
+  friend ::fidl::CodingTraits<OverrideTest>;
+  OverrideTest(::fidl::Decoder& decoder);
+  template <typename Payload>
+  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+      ::fidl::Encoder& encoder, Payload&& payload)
+      -> ::fidl::HLCPPOutgoingMessage;
+  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
+
+  struct Storage_ final {
+    ::test_anonymous::Op op{};
+    ::std::unique_ptr<::test_anonymous::Expression> left{};
+    ::std::unique_ptr<::test_anonymous::Expression> right{};
+  };
+
+  Storage_ storage_;
+  Storage_ CloneStorage_() const;
 };
 
 extern "C" const fidl_type_t test_anonymous_FunctionApplicationTable;
@@ -495,27 +501,16 @@ extern "C" const fidl_type_t
 class SomeProtocol_SomeMethod_Response final
     : public ::fidl::internal::CodableBase<SomeProtocol_SomeMethod_Response> {
  private:
-  friend ::fidl::internal::CodableBase<SomeProtocol_SomeMethod_Response>;
-  friend ::fidl::CodingTraits<SomeProtocol_SomeMethod_Response>;
-  SomeProtocol_SomeMethod_Response(::fidl::Decoder& decoder);
-  template <typename Payload>
-  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-      ::fidl::Encoder& encoder, Payload&& payload)
-      -> ::fidl::HLCPPOutgoingMessage;
-  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
+  struct Storage_;
 
  public:
-  struct Storage final {
-    ::test_anonymous::BitsMember bits_member{};
-  };
-
-  SomeProtocol_SomeMethod_Response(Storage storage) noexcept
+  SomeProtocol_SomeMethod_Response(Storage_ storage) noexcept
       : storage_(std::move(storage)) {}
   SomeProtocol_SomeMethod_Response(
       ::test_anonymous::BitsMember bits_member) noexcept
       : storage_({.bits_member = std::move(bits_member)}) {}
   SomeProtocol_SomeMethod_Response()
-      : SomeProtocol_SomeMethod_Response(Storage{}) {}
+      : SomeProtocol_SomeMethod_Response(Storage_{}) {}
 
   SomeProtocol_SomeMethod_Response(
       SomeProtocol_SomeMethod_Response&&) noexcept = default;
@@ -523,10 +518,10 @@ class SomeProtocol_SomeMethod_Response final
       SomeProtocol_SomeMethod_Response&&) noexcept = default;
   SomeProtocol_SomeMethod_Response(
       const SomeProtocol_SomeMethod_Response& other) noexcept
-      : SomeProtocol_SomeMethod_Response(other.CloneStorage()) {}
+      : SomeProtocol_SomeMethod_Response(other.CloneStorage_()) {}
   SomeProtocol_SomeMethod_Response& operator=(
       const SomeProtocol_SomeMethod_Response& other) noexcept {
-    storage_ = other.CloneStorage();
+    storage_ = other.CloneStorage_();
     return *this;
   }
 
@@ -537,8 +532,21 @@ class SomeProtocol_SomeMethod_Response final
   ::test_anonymous::BitsMember& bits_member() { return storage_.bits_member; }
 
  private:
-  Storage storage_;
-  Storage CloneStorage() const;
+  friend ::fidl::internal::CodableBase<SomeProtocol_SomeMethod_Response>;
+  friend ::fidl::CodingTraits<SomeProtocol_SomeMethod_Response>;
+  SomeProtocol_SomeMethod_Response(::fidl::Decoder& decoder);
+  template <typename Payload>
+  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+      ::fidl::Encoder& encoder, Payload&& payload)
+      -> ::fidl::HLCPPOutgoingMessage;
+  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
+
+  struct Storage_ final {
+    ::test_anonymous::BitsMember bits_member{};
+  };
+
+  Storage_ storage_;
+  Storage_ CloneStorage_() const;
 };
 
 extern "C" const fidl_type_t test_anonymous_SomeProtocol_SomeMethod_ResultTable;
@@ -647,27 +655,16 @@ extern "C" const fidl_type_t
 class SomeProtocolSomeMethodTopResponse final
     : public ::fidl::internal::CodableBase<SomeProtocolSomeMethodTopResponse> {
  private:
-  friend ::fidl::internal::CodableBase<SomeProtocolSomeMethodTopResponse>;
-  friend ::fidl::CodingTraits<SomeProtocolSomeMethodTopResponse>;
-  SomeProtocolSomeMethodTopResponse(::fidl::Decoder& decoder);
-  template <typename Payload>
-  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-      ::fidl::Encoder& encoder, Payload&& payload)
-      -> ::fidl::HLCPPOutgoingMessage;
-  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
+  struct Storage_;
 
  public:
-  struct Storage final {
-    ::test_anonymous::SomeProtocol_SomeMethod_Result result{};
-  };
-
-  SomeProtocolSomeMethodTopResponse(Storage storage) noexcept
+  SomeProtocolSomeMethodTopResponse(Storage_ storage) noexcept
       : storage_(std::move(storage)) {}
   SomeProtocolSomeMethodTopResponse(
       ::test_anonymous::SomeProtocol_SomeMethod_Result result) noexcept
       : storage_({.result = std::move(result)}) {}
   SomeProtocolSomeMethodTopResponse()
-      : SomeProtocolSomeMethodTopResponse(Storage{}) {}
+      : SomeProtocolSomeMethodTopResponse(Storage_{}) {}
 
   SomeProtocolSomeMethodTopResponse(
       SomeProtocolSomeMethodTopResponse&&) noexcept = default;
@@ -675,10 +672,10 @@ class SomeProtocolSomeMethodTopResponse final
       SomeProtocolSomeMethodTopResponse&&) noexcept = default;
   SomeProtocolSomeMethodTopResponse(
       const SomeProtocolSomeMethodTopResponse& other) noexcept
-      : SomeProtocolSomeMethodTopResponse(other.CloneStorage()) {}
+      : SomeProtocolSomeMethodTopResponse(other.CloneStorage_()) {}
   SomeProtocolSomeMethodTopResponse& operator=(
       const SomeProtocolSomeMethodTopResponse& other) noexcept {
-    storage_ = other.CloneStorage();
+    storage_ = other.CloneStorage_();
     return *this;
   }
 
@@ -691,8 +688,21 @@ class SomeProtocolSomeMethodTopResponse final
   }
 
  private:
-  Storage storage_;
-  Storage CloneStorage() const;
+  friend ::fidl::internal::CodableBase<SomeProtocolSomeMethodTopResponse>;
+  friend ::fidl::CodingTraits<SomeProtocolSomeMethodTopResponse>;
+  SomeProtocolSomeMethodTopResponse(::fidl::Decoder& decoder);
+  template <typename Payload>
+  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+      ::fidl::Encoder& encoder, Payload&& payload)
+      -> ::fidl::HLCPPOutgoingMessage;
+  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
+
+  struct Storage_ final {
+    ::test_anonymous::SomeProtocol_SomeMethod_Result result{};
+  };
+
+  Storage_ storage_;
+  Storage_ CloneStorage_() const;
 };
 
 }  // namespace test_anonymous

@@ -249,6 +249,28 @@ extern "C" const fidl_type_t test_arrays_StructSmallArrayTable;
 class StructSmallArray final
     : public ::fidl::internal::CodableBase<StructSmallArray> {
  private:
+  struct Storage_;
+
+ public:
+  StructSmallArray(Storage_ storage) noexcept : storage_(std::move(storage)) {}
+  StructSmallArray(::std::array<uint32_t, 2> a) noexcept
+      : storage_({.a = std::move(a)}) {}
+  StructSmallArray() : StructSmallArray(Storage_{}) {}
+
+  StructSmallArray(StructSmallArray&&) noexcept = default;
+  StructSmallArray& operator=(StructSmallArray&&) noexcept = default;
+  StructSmallArray(const StructSmallArray& other) noexcept
+      : StructSmallArray(other.CloneStorage_()) {}
+  StructSmallArray& operator=(const StructSmallArray& other) noexcept {
+    storage_ = other.CloneStorage_();
+    return *this;
+  }
+
+  const ::std::array<uint32_t, 2>& a() const { return storage_.a; }
+
+  ::std::array<uint32_t, 2>& a() { return storage_.a; }
+
+ private:
   friend ::fidl::internal::CodableBase<StructSmallArray>;
   friend ::fidl::CodingTraits<StructSmallArray>;
   StructSmallArray(::fidl::Decoder& decoder);
@@ -258,38 +280,40 @@ class StructSmallArray final
       -> ::fidl::HLCPPOutgoingMessage;
   void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
- public:
-  struct Storage final {
+  struct Storage_ final {
     ::std::array<uint32_t, 2> a{};
   };
 
-  StructSmallArray(Storage storage) noexcept : storage_(std::move(storage)) {}
-  StructSmallArray(::std::array<uint32_t, 2> a) noexcept
-      : storage_({.a = std::move(a)}) {}
-  StructSmallArray() : StructSmallArray(Storage{}) {}
-
-  StructSmallArray(StructSmallArray&&) noexcept = default;
-  StructSmallArray& operator=(StructSmallArray&&) noexcept = default;
-  StructSmallArray(const StructSmallArray& other) noexcept
-      : StructSmallArray(other.CloneStorage()) {}
-  StructSmallArray& operator=(const StructSmallArray& other) noexcept {
-    storage_ = other.CloneStorage();
-    return *this;
-  }
-
-  const ::std::array<uint32_t, 2>& a() const { return storage_.a; }
-
-  ::std::array<uint32_t, 2>& a() { return storage_.a; }
-
- private:
-  Storage storage_;
-  Storage CloneStorage() const;
+  Storage_ storage_;
+  Storage_ CloneStorage_() const;
 };
 
 extern "C" const fidl_type_t test_arrays_StructLargeArrayTable;
 
 class StructLargeArray final
     : public ::fidl::internal::CodableBase<StructLargeArray> {
+ private:
+  struct Storage_;
+
+ public:
+  StructLargeArray(Storage_ storage) noexcept : storage_(std::move(storage)) {}
+  StructLargeArray(::std::array<uint32_t, 100> a) noexcept
+      : storage_({.a = std::move(a)}) {}
+  StructLargeArray() : StructLargeArray(Storage_{}) {}
+
+  StructLargeArray(StructLargeArray&&) noexcept = default;
+  StructLargeArray& operator=(StructLargeArray&&) noexcept = default;
+  StructLargeArray(const StructLargeArray& other) noexcept
+      : StructLargeArray(other.CloneStorage_()) {}
+  StructLargeArray& operator=(const StructLargeArray& other) noexcept {
+    storage_ = other.CloneStorage_();
+    return *this;
+  }
+
+  const ::std::array<uint32_t, 100>& a() const { return storage_.a; }
+
+  ::std::array<uint32_t, 100>& a() { return storage_.a; }
+
  private:
   friend ::fidl::internal::CodableBase<StructLargeArray>;
   friend ::fidl::CodingTraits<StructLargeArray>;
@@ -300,32 +324,12 @@ class StructLargeArray final
       -> ::fidl::HLCPPOutgoingMessage;
   void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
- public:
-  struct Storage final {
+  struct Storage_ final {
     ::std::array<uint32_t, 100> a{};
   };
 
-  StructLargeArray(Storage storage) noexcept : storage_(std::move(storage)) {}
-  StructLargeArray(::std::array<uint32_t, 100> a) noexcept
-      : storage_({.a = std::move(a)}) {}
-  StructLargeArray() : StructLargeArray(Storage{}) {}
-
-  StructLargeArray(StructLargeArray&&) noexcept = default;
-  StructLargeArray& operator=(StructLargeArray&&) noexcept = default;
-  StructLargeArray(const StructLargeArray& other) noexcept
-      : StructLargeArray(other.CloneStorage()) {}
-  StructLargeArray& operator=(const StructLargeArray& other) noexcept {
-    storage_ = other.CloneStorage();
-    return *this;
-  }
-
-  const ::std::array<uint32_t, 100>& a() const { return storage_.a; }
-
-  ::std::array<uint32_t, 100>& a() { return storage_.a; }
-
- private:
-  Storage storage_;
-  Storage CloneStorage() const;
+  Storage_ storage_;
+  Storage_ CloneStorage_() const;
 };
 
 }  // namespace test_arrays

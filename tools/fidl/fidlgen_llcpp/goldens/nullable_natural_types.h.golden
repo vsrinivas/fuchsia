@@ -46,35 +46,24 @@ extern "C" const fidl_type_t test_nullable_StructWithNullableVectorTable;
 class StructWithNullableVector final
     : public ::fidl::internal::CodableBase<StructWithNullableVector> {
  private:
-  friend ::fidl::internal::CodableBase<StructWithNullableVector>;
-  friend ::fidl::CodingTraits<StructWithNullableVector>;
-  StructWithNullableVector(::fidl::Decoder& decoder);
-  template <typename Payload>
-  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-      ::fidl::Encoder& encoder, Payload&& payload)
-      -> ::fidl::HLCPPOutgoingMessage;
-  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
+  struct Storage_;
 
  public:
-  struct Storage final {
-    ::cpp17::optional<::std::vector<int32_t>> val{};
-  };
-
-  StructWithNullableVector(Storage storage) noexcept
+  StructWithNullableVector(Storage_ storage) noexcept
       : storage_(std::move(storage)) {}
   StructWithNullableVector(
       ::cpp17::optional<::std::vector<int32_t>> val) noexcept
       : storage_({.val = std::move(val)}) {}
-  StructWithNullableVector() : StructWithNullableVector(Storage{}) {}
+  StructWithNullableVector() : StructWithNullableVector(Storage_{}) {}
 
   StructWithNullableVector(StructWithNullableVector&&) noexcept = default;
   StructWithNullableVector& operator=(StructWithNullableVector&&) noexcept =
       default;
   StructWithNullableVector(const StructWithNullableVector& other) noexcept
-      : StructWithNullableVector(other.CloneStorage()) {}
+      : StructWithNullableVector(other.CloneStorage_()) {}
   StructWithNullableVector& operator=(
       const StructWithNullableVector& other) noexcept {
-    storage_ = other.CloneStorage();
+    storage_ = other.CloneStorage_();
     return *this;
   }
 
@@ -85,8 +74,21 @@ class StructWithNullableVector final
   ::cpp17::optional<::std::vector<int32_t>>& val() { return storage_.val; }
 
  private:
-  Storage storage_;
-  Storage CloneStorage() const;
+  friend ::fidl::internal::CodableBase<StructWithNullableVector>;
+  friend ::fidl::CodingTraits<StructWithNullableVector>;
+  StructWithNullableVector(::fidl::Decoder& decoder);
+  template <typename Payload>
+  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+      ::fidl::Encoder& encoder, Payload&& payload)
+      -> ::fidl::HLCPPOutgoingMessage;
+  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
+
+  struct Storage_ final {
+    ::cpp17::optional<::std::vector<int32_t>> val{};
+  };
+
+  Storage_ storage_;
+  Storage_ CloneStorage_() const;
 };
 
 extern "C" const fidl_type_t test_nullable_StructWithNullableUnionTable;
@@ -94,35 +96,24 @@ extern "C" const fidl_type_t test_nullable_StructWithNullableUnionTable;
 class StructWithNullableUnion final
     : public ::fidl::internal::CodableBase<StructWithNullableUnion> {
  private:
-  friend ::fidl::internal::CodableBase<StructWithNullableUnion>;
-  friend ::fidl::CodingTraits<StructWithNullableUnion>;
-  StructWithNullableUnion(::fidl::Decoder& decoder);
-  template <typename Payload>
-  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-      ::fidl::Encoder& encoder, Payload&& payload)
-      -> ::fidl::HLCPPOutgoingMessage;
-  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
+  struct Storage_;
 
  public:
-  struct Storage final {
-    ::std::unique_ptr<::test_nullable::SimpleUnion> val{};
-  };
-
-  StructWithNullableUnion(Storage storage) noexcept
+  StructWithNullableUnion(Storage_ storage) noexcept
       : storage_(std::move(storage)) {}
   StructWithNullableUnion(
       ::std::unique_ptr<::test_nullable::SimpleUnion> val) noexcept
       : storage_({.val = std::move(val)}) {}
-  StructWithNullableUnion() : StructWithNullableUnion(Storage{}) {}
+  StructWithNullableUnion() : StructWithNullableUnion(Storage_{}) {}
 
   StructWithNullableUnion(StructWithNullableUnion&&) noexcept = default;
   StructWithNullableUnion& operator=(StructWithNullableUnion&&) noexcept =
       default;
   StructWithNullableUnion(const StructWithNullableUnion& other) noexcept
-      : StructWithNullableUnion(other.CloneStorage()) {}
+      : StructWithNullableUnion(other.CloneStorage_()) {}
   StructWithNullableUnion& operator=(
       const StructWithNullableUnion& other) noexcept {
-    storage_ = other.CloneStorage();
+    storage_ = other.CloneStorage_();
     return *this;
   }
 
@@ -135,8 +126,21 @@ class StructWithNullableUnion final
   }
 
  private:
-  Storage storage_;
-  Storage CloneStorage() const;
+  friend ::fidl::internal::CodableBase<StructWithNullableUnion>;
+  friend ::fidl::CodingTraits<StructWithNullableUnion>;
+  StructWithNullableUnion(::fidl::Decoder& decoder);
+  template <typename Payload>
+  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+      ::fidl::Encoder& encoder, Payload&& payload)
+      -> ::fidl::HLCPPOutgoingMessage;
+  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
+
+  struct Storage_ final {
+    ::std::unique_ptr<::test_nullable::SimpleUnion> val{};
+  };
+
+  Storage_ storage_;
+  Storage_ CloneStorage_() const;
 };
 
 extern "C" const fidl_type_t test_nullable_StructWithNullableStructTable;
@@ -144,35 +148,24 @@ extern "C" const fidl_type_t test_nullable_StructWithNullableStructTable;
 class StructWithNullableStruct final
     : public ::fidl::internal::CodableBase<StructWithNullableStruct> {
  private:
-  friend ::fidl::internal::CodableBase<StructWithNullableStruct>;
-  friend ::fidl::CodingTraits<StructWithNullableStruct>;
-  StructWithNullableStruct(::fidl::Decoder& decoder);
-  template <typename Payload>
-  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-      ::fidl::Encoder& encoder, Payload&& payload)
-      -> ::fidl::HLCPPOutgoingMessage;
-  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
+  struct Storage_;
 
  public:
-  struct Storage final {
-    ::std::unique_ptr<::test_nullable::Int32Wrapper> val{};
-  };
-
-  StructWithNullableStruct(Storage storage) noexcept
+  StructWithNullableStruct(Storage_ storage) noexcept
       : storage_(std::move(storage)) {}
   StructWithNullableStruct(
       ::std::unique_ptr<::test_nullable::Int32Wrapper> val) noexcept
       : storage_({.val = std::move(val)}) {}
-  StructWithNullableStruct() : StructWithNullableStruct(Storage{}) {}
+  StructWithNullableStruct() : StructWithNullableStruct(Storage_{}) {}
 
   StructWithNullableStruct(StructWithNullableStruct&&) noexcept = default;
   StructWithNullableStruct& operator=(StructWithNullableStruct&&) noexcept =
       default;
   StructWithNullableStruct(const StructWithNullableStruct& other) noexcept
-      : StructWithNullableStruct(other.CloneStorage()) {}
+      : StructWithNullableStruct(other.CloneStorage_()) {}
   StructWithNullableStruct& operator=(
       const StructWithNullableStruct& other) noexcept {
-    storage_ = other.CloneStorage();
+    storage_ = other.CloneStorage_();
     return *this;
   }
 
@@ -185,14 +178,52 @@ class StructWithNullableStruct final
   }
 
  private:
-  Storage storage_;
-  Storage CloneStorage() const;
+  friend ::fidl::internal::CodableBase<StructWithNullableStruct>;
+  friend ::fidl::CodingTraits<StructWithNullableStruct>;
+  StructWithNullableStruct(::fidl::Decoder& decoder);
+  template <typename Payload>
+  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+      ::fidl::Encoder& encoder, Payload&& payload)
+      -> ::fidl::HLCPPOutgoingMessage;
+  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
+
+  struct Storage_ final {
+    ::std::unique_ptr<::test_nullable::Int32Wrapper> val{};
+  };
+
+  Storage_ storage_;
+  Storage_ CloneStorage_() const;
 };
 
 extern "C" const fidl_type_t test_nullable_StructWithNullableStringTable;
 
 class StructWithNullableString final
     : public ::fidl::internal::CodableBase<StructWithNullableString> {
+ private:
+  struct Storage_;
+
+ public:
+  StructWithNullableString(Storage_ storage) noexcept
+      : storage_(std::move(storage)) {}
+  StructWithNullableString(::cpp17::optional<::std::string> val) noexcept
+      : storage_({.val = std::move(val)}) {}
+  StructWithNullableString() : StructWithNullableString(Storage_{}) {}
+
+  StructWithNullableString(StructWithNullableString&&) noexcept = default;
+  StructWithNullableString& operator=(StructWithNullableString&&) noexcept =
+      default;
+  StructWithNullableString(const StructWithNullableString& other) noexcept
+      : StructWithNullableString(other.CloneStorage_()) {}
+  StructWithNullableString& operator=(
+      const StructWithNullableString& other) noexcept {
+    storage_ = other.CloneStorage_();
+    return *this;
+  }
+
+  const ::cpp17::optional<::std::string>& val() const { return storage_.val; }
+
+  ::cpp17::optional<::std::string>& val() { return storage_.val; }
+
  private:
   friend ::fidl::internal::CodableBase<StructWithNullableString>;
   friend ::fidl::CodingTraits<StructWithNullableString>;
@@ -203,35 +234,12 @@ class StructWithNullableString final
       -> ::fidl::HLCPPOutgoingMessage;
   void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
- public:
-  struct Storage final {
+  struct Storage_ final {
     ::cpp17::optional<::std::string> val{};
   };
 
-  StructWithNullableString(Storage storage) noexcept
-      : storage_(std::move(storage)) {}
-  StructWithNullableString(::cpp17::optional<::std::string> val) noexcept
-      : storage_({.val = std::move(val)}) {}
-  StructWithNullableString() : StructWithNullableString(Storage{}) {}
-
-  StructWithNullableString(StructWithNullableString&&) noexcept = default;
-  StructWithNullableString& operator=(StructWithNullableString&&) noexcept =
-      default;
-  StructWithNullableString(const StructWithNullableString& other) noexcept
-      : StructWithNullableString(other.CloneStorage()) {}
-  StructWithNullableString& operator=(
-      const StructWithNullableString& other) noexcept {
-    storage_ = other.CloneStorage();
-    return *this;
-  }
-
-  const ::cpp17::optional<::std::string>& val() const { return storage_.val; }
-
-  ::cpp17::optional<::std::string>& val() { return storage_.val; }
-
- private:
-  Storage storage_;
-  Storage CloneStorage() const;
+  Storage_ storage_;
+  Storage_ CloneStorage_() const;
 };
 
 #ifdef __Fuchsia__
@@ -241,26 +249,15 @@ extern "C" const fidl_type_t test_nullable_StructWithNullableRequestTable;
 class StructWithNullableRequest final
     : public ::fidl::internal::CodableBase<StructWithNullableRequest> {
  private:
-  friend ::fidl::internal::CodableBase<StructWithNullableRequest>;
-  friend ::fidl::CodingTraits<StructWithNullableRequest>;
-  StructWithNullableRequest(::fidl::Decoder& decoder);
-  template <typename Payload>
-  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-      ::fidl::Encoder& encoder, Payload&& payload)
-      -> ::fidl::HLCPPOutgoingMessage;
-  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
+  struct Storage_;
 
  public:
-  struct Storage final {
-    ::fidl::ServerEnd<::test_nullable::SimpleProtocol> val{};
-  };
-
-  StructWithNullableRequest(Storage storage) noexcept
+  StructWithNullableRequest(Storage_ storage) noexcept
       : storage_(std::move(storage)) {}
   StructWithNullableRequest(
       ::fidl::ServerEnd<::test_nullable::SimpleProtocol> val) noexcept
       : storage_({.val = std::move(val)}) {}
-  StructWithNullableRequest() : StructWithNullableRequest(Storage{}) {}
+  StructWithNullableRequest() : StructWithNullableRequest(Storage_{}) {}
 
   StructWithNullableRequest(StructWithNullableRequest&&) noexcept = default;
   StructWithNullableRequest& operator=(StructWithNullableRequest&&) noexcept =
@@ -275,7 +272,20 @@ class StructWithNullableRequest final
   }
 
  private:
-  Storage storage_;
+  friend ::fidl::internal::CodableBase<StructWithNullableRequest>;
+  friend ::fidl::CodingTraits<StructWithNullableRequest>;
+  StructWithNullableRequest(::fidl::Decoder& decoder);
+  template <typename Payload>
+  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+      ::fidl::Encoder& encoder, Payload&& payload)
+      -> ::fidl::HLCPPOutgoingMessage;
+  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
+
+  struct Storage_ final {
+    ::fidl::ServerEnd<::test_nullable::SimpleProtocol> val{};
+  };
+
+  Storage_ storage_;
 };
 
 #endif  // __Fuchsia__
@@ -287,26 +297,15 @@ extern "C" const fidl_type_t test_nullable_StructWithNullableProtocolTable;
 class StructWithNullableProtocol final
     : public ::fidl::internal::CodableBase<StructWithNullableProtocol> {
  private:
-  friend ::fidl::internal::CodableBase<StructWithNullableProtocol>;
-  friend ::fidl::CodingTraits<StructWithNullableProtocol>;
-  StructWithNullableProtocol(::fidl::Decoder& decoder);
-  template <typename Payload>
-  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-      ::fidl::Encoder& encoder, Payload&& payload)
-      -> ::fidl::HLCPPOutgoingMessage;
-  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
+  struct Storage_;
 
  public:
-  struct Storage final {
-    ::fidl::ClientEnd<::test_nullable::SimpleProtocol> val{};
-  };
-
-  StructWithNullableProtocol(Storage storage) noexcept
+  StructWithNullableProtocol(Storage_ storage) noexcept
       : storage_(std::move(storage)) {}
   StructWithNullableProtocol(
       ::fidl::ClientEnd<::test_nullable::SimpleProtocol> val) noexcept
       : storage_({.val = std::move(val)}) {}
-  StructWithNullableProtocol() : StructWithNullableProtocol(Storage{}) {}
+  StructWithNullableProtocol() : StructWithNullableProtocol(Storage_{}) {}
 
   StructWithNullableProtocol(StructWithNullableProtocol&&) noexcept = default;
   StructWithNullableProtocol& operator=(StructWithNullableProtocol&&) noexcept =
@@ -321,7 +320,20 @@ class StructWithNullableProtocol final
   }
 
  private:
-  Storage storage_;
+  friend ::fidl::internal::CodableBase<StructWithNullableProtocol>;
+  friend ::fidl::CodingTraits<StructWithNullableProtocol>;
+  StructWithNullableProtocol(::fidl::Decoder& decoder);
+  template <typename Payload>
+  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+      ::fidl::Encoder& encoder, Payload&& payload)
+      -> ::fidl::HLCPPOutgoingMessage;
+  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
+
+  struct Storage_ final {
+    ::fidl::ClientEnd<::test_nullable::SimpleProtocol> val{};
+  };
+
+  Storage_ storage_;
 };
 
 #endif  // __Fuchsia__
@@ -333,25 +345,14 @@ extern "C" const fidl_type_t test_nullable_StructWithNullableHandleTable;
 class StructWithNullableHandle final
     : public ::fidl::internal::CodableBase<StructWithNullableHandle> {
  private:
-  friend ::fidl::internal::CodableBase<StructWithNullableHandle>;
-  friend ::fidl::CodingTraits<StructWithNullableHandle>;
-  StructWithNullableHandle(::fidl::Decoder& decoder);
-  template <typename Payload>
-  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-      ::fidl::Encoder& encoder, Payload&& payload)
-      -> ::fidl::HLCPPOutgoingMessage;
-  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
+  struct Storage_;
 
  public:
-  struct Storage final {
-    ::zx::vmo val{};
-  };
-
-  StructWithNullableHandle(Storage storage) noexcept
+  StructWithNullableHandle(Storage_ storage) noexcept
       : storage_(std::move(storage)) {}
   StructWithNullableHandle(::zx::vmo val) noexcept
       : storage_({.val = std::move(val)}) {}
-  StructWithNullableHandle() : StructWithNullableHandle(Storage{}) {}
+  StructWithNullableHandle() : StructWithNullableHandle(Storage_{}) {}
 
   StructWithNullableHandle(StructWithNullableHandle&&) noexcept = default;
   StructWithNullableHandle& operator=(StructWithNullableHandle&&) noexcept =
@@ -362,7 +363,20 @@ class StructWithNullableHandle final
   ::zx::vmo& val() { return storage_.val; }
 
  private:
-  Storage storage_;
+  friend ::fidl::internal::CodableBase<StructWithNullableHandle>;
+  friend ::fidl::CodingTraits<StructWithNullableHandle>;
+  StructWithNullableHandle(::fidl::Decoder& decoder);
+  template <typename Payload>
+  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+      ::fidl::Encoder& encoder, Payload&& payload)
+      -> ::fidl::HLCPPOutgoingMessage;
+  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
+
+  struct Storage_ final {
+    ::zx::vmo val{};
+  };
+
+  Storage_ storage_;
 };
 
 #endif  // __Fuchsia__
@@ -459,6 +473,33 @@ extern "C" const fidl_type_t test_nullable_SimpleProtocolAddTopResponseTable;
 class SimpleProtocolAddTopResponse final
     : public ::fidl::internal::CodableBase<SimpleProtocolAddTopResponse> {
  private:
+  struct Storage_;
+
+ public:
+  SimpleProtocolAddTopResponse(Storage_ storage) noexcept
+      : storage_(std::move(storage)) {}
+  SimpleProtocolAddTopResponse(int32_t sum) noexcept
+      : storage_({.sum = std::move(sum)}) {}
+  SimpleProtocolAddTopResponse() : SimpleProtocolAddTopResponse(Storage_{}) {}
+
+  SimpleProtocolAddTopResponse(SimpleProtocolAddTopResponse&&) noexcept =
+      default;
+  SimpleProtocolAddTopResponse& operator=(
+      SimpleProtocolAddTopResponse&&) noexcept = default;
+  SimpleProtocolAddTopResponse(
+      const SimpleProtocolAddTopResponse& other) noexcept
+      : SimpleProtocolAddTopResponse(other.CloneStorage_()) {}
+  SimpleProtocolAddTopResponse& operator=(
+      const SimpleProtocolAddTopResponse& other) noexcept {
+    storage_ = other.CloneStorage_();
+    return *this;
+  }
+
+  int32_t sum() const { return storage_.sum; }
+
+  int32_t& sum() { return storage_.sum; }
+
+ private:
   friend ::fidl::internal::CodableBase<SimpleProtocolAddTopResponse>;
   friend ::fidl::CodingTraits<SimpleProtocolAddTopResponse>;
   SimpleProtocolAddTopResponse(::fidl::Decoder& decoder);
@@ -468,37 +509,12 @@ class SimpleProtocolAddTopResponse final
       -> ::fidl::HLCPPOutgoingMessage;
   void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
- public:
-  struct Storage final {
+  struct Storage_ final {
     int32_t sum{};
   };
 
-  SimpleProtocolAddTopResponse(Storage storage) noexcept
-      : storage_(std::move(storage)) {}
-  SimpleProtocolAddTopResponse(int32_t sum) noexcept
-      : storage_({.sum = std::move(sum)}) {}
-  SimpleProtocolAddTopResponse() : SimpleProtocolAddTopResponse(Storage{}) {}
-
-  SimpleProtocolAddTopResponse(SimpleProtocolAddTopResponse&&) noexcept =
-      default;
-  SimpleProtocolAddTopResponse& operator=(
-      SimpleProtocolAddTopResponse&&) noexcept = default;
-  SimpleProtocolAddTopResponse(
-      const SimpleProtocolAddTopResponse& other) noexcept
-      : SimpleProtocolAddTopResponse(other.CloneStorage()) {}
-  SimpleProtocolAddTopResponse& operator=(
-      const SimpleProtocolAddTopResponse& other) noexcept {
-    storage_ = other.CloneStorage();
-    return *this;
-  }
-
-  int32_t sum() const { return storage_.sum; }
-
-  int32_t& sum() { return storage_.sum; }
-
- private:
-  Storage storage_;
-  Storage CloneStorage() const;
+  Storage_ storage_;
+  Storage_ CloneStorage_() const;
 };
 
 extern "C" const fidl_type_t test_nullable_SimpleProtocolAddRequestTable;
@@ -506,35 +522,23 @@ extern "C" const fidl_type_t test_nullable_SimpleProtocolAddRequestTable;
 class SimpleProtocolAddRequest final
     : public ::fidl::internal::CodableBase<SimpleProtocolAddRequest> {
  private:
-  friend ::fidl::internal::CodableBase<SimpleProtocolAddRequest>;
-  friend ::fidl::CodingTraits<SimpleProtocolAddRequest>;
-  SimpleProtocolAddRequest(::fidl::Decoder& decoder);
-  template <typename Payload>
-  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-      ::fidl::Encoder& encoder, Payload&& payload)
-      -> ::fidl::HLCPPOutgoingMessage;
-  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
+  struct Storage_;
 
  public:
-  struct Storage final {
-    int32_t a{};
-    int32_t b{};
-  };
-
-  SimpleProtocolAddRequest(Storage storage) noexcept
+  SimpleProtocolAddRequest(Storage_ storage) noexcept
       : storage_(std::move(storage)) {}
   SimpleProtocolAddRequest(int32_t a, int32_t b) noexcept
       : storage_({.a = std::move(a), .b = std::move(b)}) {}
-  SimpleProtocolAddRequest() : SimpleProtocolAddRequest(Storage{}) {}
+  SimpleProtocolAddRequest() : SimpleProtocolAddRequest(Storage_{}) {}
 
   SimpleProtocolAddRequest(SimpleProtocolAddRequest&&) noexcept = default;
   SimpleProtocolAddRequest& operator=(SimpleProtocolAddRequest&&) noexcept =
       default;
   SimpleProtocolAddRequest(const SimpleProtocolAddRequest& other) noexcept
-      : SimpleProtocolAddRequest(other.CloneStorage()) {}
+      : SimpleProtocolAddRequest(other.CloneStorage_()) {}
   SimpleProtocolAddRequest& operator=(
       const SimpleProtocolAddRequest& other) noexcept {
-    storage_ = other.CloneStorage();
+    storage_ = other.CloneStorage_();
     return *this;
   }
 
@@ -547,13 +551,48 @@ class SimpleProtocolAddRequest final
   int32_t& b() { return storage_.b; }
 
  private:
-  Storage storage_;
-  Storage CloneStorage() const;
+  friend ::fidl::internal::CodableBase<SimpleProtocolAddRequest>;
+  friend ::fidl::CodingTraits<SimpleProtocolAddRequest>;
+  SimpleProtocolAddRequest(::fidl::Decoder& decoder);
+  template <typename Payload>
+  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+      ::fidl::Encoder& encoder, Payload&& payload)
+      -> ::fidl::HLCPPOutgoingMessage;
+  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
+
+  struct Storage_ final {
+    int32_t a{};
+    int32_t b{};
+  };
+
+  Storage_ storage_;
+  Storage_ CloneStorage_() const;
 };
 
 extern "C" const fidl_type_t test_nullable_Int32WrapperTable;
 
 class Int32Wrapper final : public ::fidl::internal::CodableBase<Int32Wrapper> {
+ private:
+  struct Storage_;
+
+ public:
+  Int32Wrapper(Storage_ storage) noexcept : storage_(std::move(storage)) {}
+  Int32Wrapper(int32_t val) noexcept : storage_({.val = std::move(val)}) {}
+  Int32Wrapper() : Int32Wrapper(Storage_{}) {}
+
+  Int32Wrapper(Int32Wrapper&&) noexcept = default;
+  Int32Wrapper& operator=(Int32Wrapper&&) noexcept = default;
+  Int32Wrapper(const Int32Wrapper& other) noexcept
+      : Int32Wrapper(other.CloneStorage_()) {}
+  Int32Wrapper& operator=(const Int32Wrapper& other) noexcept {
+    storage_ = other.CloneStorage_();
+    return *this;
+  }
+
+  int32_t val() const { return storage_.val; }
+
+  int32_t& val() { return storage_.val; }
+
  private:
   friend ::fidl::internal::CodableBase<Int32Wrapper>;
   friend ::fidl::CodingTraits<Int32Wrapper>;
@@ -564,31 +603,12 @@ class Int32Wrapper final : public ::fidl::internal::CodableBase<Int32Wrapper> {
       -> ::fidl::HLCPPOutgoingMessage;
   void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
- public:
-  struct Storage final {
+  struct Storage_ final {
     int32_t val{};
   };
 
-  Int32Wrapper(Storage storage) noexcept : storage_(std::move(storage)) {}
-  Int32Wrapper(int32_t val) noexcept : storage_({.val = std::move(val)}) {}
-  Int32Wrapper() : Int32Wrapper(Storage{}) {}
-
-  Int32Wrapper(Int32Wrapper&&) noexcept = default;
-  Int32Wrapper& operator=(Int32Wrapper&&) noexcept = default;
-  Int32Wrapper(const Int32Wrapper& other) noexcept
-      : Int32Wrapper(other.CloneStorage()) {}
-  Int32Wrapper& operator=(const Int32Wrapper& other) noexcept {
-    storage_ = other.CloneStorage();
-    return *this;
-  }
-
-  int32_t val() const { return storage_.val; }
-
-  int32_t& val() { return storage_.val; }
-
- private:
-  Storage storage_;
-  Storage CloneStorage() const;
+  Storage_ storage_;
+  Storage_ CloneStorage_() const;
 };
 
 }  // namespace test_nullable

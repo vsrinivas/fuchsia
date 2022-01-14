@@ -24,6 +24,29 @@ extern "C" const fidl_type_t test_escaping_DocCommentWithQuotesTable;
 class DocCommentWithQuotes final
     : public ::fidl::internal::CodableBase<DocCommentWithQuotes> {
  private:
+  struct Storage_;
+
+ public:
+  DocCommentWithQuotes(Storage_ storage) noexcept
+      : storage_(std::move(storage)) {}
+  DocCommentWithQuotes(uint8_t __reserved) noexcept
+      : storage_({.__reserved = std::move(__reserved)}) {}
+  DocCommentWithQuotes() : DocCommentWithQuotes(Storage_{}) {}
+
+  DocCommentWithQuotes(DocCommentWithQuotes&&) noexcept = default;
+  DocCommentWithQuotes& operator=(DocCommentWithQuotes&&) noexcept = default;
+  DocCommentWithQuotes(const DocCommentWithQuotes& other) noexcept
+      : DocCommentWithQuotes(other.CloneStorage_()) {}
+  DocCommentWithQuotes& operator=(const DocCommentWithQuotes& other) noexcept {
+    storage_ = other.CloneStorage_();
+    return *this;
+  }
+
+  uint8_t __reserved() const { return storage_.__reserved; }
+
+  uint8_t& __reserved() { return storage_.__reserved; }
+
+ private:
   friend ::fidl::internal::CodableBase<DocCommentWithQuotes>;
   friend ::fidl::CodingTraits<DocCommentWithQuotes>;
   DocCommentWithQuotes(::fidl::Decoder& decoder);
@@ -33,33 +56,12 @@ class DocCommentWithQuotes final
       -> ::fidl::HLCPPOutgoingMessage;
   void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
- public:
-  struct Storage final {
+  struct Storage_ final {
     uint8_t __reserved = 0u;
   };
 
-  DocCommentWithQuotes(Storage storage) noexcept
-      : storage_(std::move(storage)) {}
-  DocCommentWithQuotes(uint8_t __reserved) noexcept
-      : storage_({.__reserved = std::move(__reserved)}) {}
-  DocCommentWithQuotes() : DocCommentWithQuotes(Storage{}) {}
-
-  DocCommentWithQuotes(DocCommentWithQuotes&&) noexcept = default;
-  DocCommentWithQuotes& operator=(DocCommentWithQuotes&&) noexcept = default;
-  DocCommentWithQuotes(const DocCommentWithQuotes& other) noexcept
-      : DocCommentWithQuotes(other.CloneStorage()) {}
-  DocCommentWithQuotes& operator=(const DocCommentWithQuotes& other) noexcept {
-    storage_ = other.CloneStorage();
-    return *this;
-  }
-
-  uint8_t __reserved() const { return storage_.__reserved; }
-
-  uint8_t& __reserved() { return storage_.__reserved; }
-
- private:
-  Storage storage_;
-  Storage CloneStorage() const;
+  Storage_ storage_;
+  Storage_ CloneStorage_() const;
 };
 
 }  // namespace test_escaping

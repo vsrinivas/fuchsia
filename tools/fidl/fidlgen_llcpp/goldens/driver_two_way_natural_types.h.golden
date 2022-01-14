@@ -27,6 +27,29 @@ extern "C" const fidl_type_t test_drivertwoway_TwoWayAddTopResponseTable;
 class TwoWayAddTopResponse final
     : public ::fidl::internal::CodableBase<TwoWayAddTopResponse> {
  private:
+  struct Storage_;
+
+ public:
+  TwoWayAddTopResponse(Storage_ storage) noexcept
+      : storage_(std::move(storage)) {}
+  TwoWayAddTopResponse(uint16_t sum) noexcept
+      : storage_({.sum = std::move(sum)}) {}
+  TwoWayAddTopResponse() : TwoWayAddTopResponse(Storage_{}) {}
+
+  TwoWayAddTopResponse(TwoWayAddTopResponse&&) noexcept = default;
+  TwoWayAddTopResponse& operator=(TwoWayAddTopResponse&&) noexcept = default;
+  TwoWayAddTopResponse(const TwoWayAddTopResponse& other) noexcept
+      : TwoWayAddTopResponse(other.CloneStorage_()) {}
+  TwoWayAddTopResponse& operator=(const TwoWayAddTopResponse& other) noexcept {
+    storage_ = other.CloneStorage_();
+    return *this;
+  }
+
+  uint16_t sum() const { return storage_.sum; }
+
+  uint16_t& sum() { return storage_.sum; }
+
+ private:
   friend ::fidl::internal::CodableBase<TwoWayAddTopResponse>;
   friend ::fidl::CodingTraits<TwoWayAddTopResponse>;
   TwoWayAddTopResponse(::fidl::Decoder& decoder);
@@ -36,33 +59,12 @@ class TwoWayAddTopResponse final
       -> ::fidl::HLCPPOutgoingMessage;
   void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
- public:
-  struct Storage final {
+  struct Storage_ final {
     uint16_t sum{};
   };
 
-  TwoWayAddTopResponse(Storage storage) noexcept
-      : storage_(std::move(storage)) {}
-  TwoWayAddTopResponse(uint16_t sum) noexcept
-      : storage_({.sum = std::move(sum)}) {}
-  TwoWayAddTopResponse() : TwoWayAddTopResponse(Storage{}) {}
-
-  TwoWayAddTopResponse(TwoWayAddTopResponse&&) noexcept = default;
-  TwoWayAddTopResponse& operator=(TwoWayAddTopResponse&&) noexcept = default;
-  TwoWayAddTopResponse(const TwoWayAddTopResponse& other) noexcept
-      : TwoWayAddTopResponse(other.CloneStorage()) {}
-  TwoWayAddTopResponse& operator=(const TwoWayAddTopResponse& other) noexcept {
-    storage_ = other.CloneStorage();
-    return *this;
-  }
-
-  uint16_t sum() const { return storage_.sum; }
-
-  uint16_t& sum() { return storage_.sum; }
-
- private:
-  Storage storage_;
-  Storage CloneStorage() const;
+  Storage_ storage_;
+  Storage_ CloneStorage_() const;
 };
 
 extern "C" const fidl_type_t test_drivertwoway_TwoWayAddRequestTable;
@@ -70,33 +72,21 @@ extern "C" const fidl_type_t test_drivertwoway_TwoWayAddRequestTable;
 class TwoWayAddRequest final
     : public ::fidl::internal::CodableBase<TwoWayAddRequest> {
  private:
-  friend ::fidl::internal::CodableBase<TwoWayAddRequest>;
-  friend ::fidl::CodingTraits<TwoWayAddRequest>;
-  TwoWayAddRequest(::fidl::Decoder& decoder);
-  template <typename Payload>
-  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-      ::fidl::Encoder& encoder, Payload&& payload)
-      -> ::fidl::HLCPPOutgoingMessage;
-  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
+  struct Storage_;
 
  public:
-  struct Storage final {
-    uint16_t addend1{};
-    uint16_t addend2{};
-  };
-
-  TwoWayAddRequest(Storage storage) noexcept : storage_(std::move(storage)) {}
+  TwoWayAddRequest(Storage_ storage) noexcept : storage_(std::move(storage)) {}
   TwoWayAddRequest(uint16_t addend1, uint16_t addend2) noexcept
       : storage_(
             {.addend1 = std::move(addend1), .addend2 = std::move(addend2)}) {}
-  TwoWayAddRequest() : TwoWayAddRequest(Storage{}) {}
+  TwoWayAddRequest() : TwoWayAddRequest(Storage_{}) {}
 
   TwoWayAddRequest(TwoWayAddRequest&&) noexcept = default;
   TwoWayAddRequest& operator=(TwoWayAddRequest&&) noexcept = default;
   TwoWayAddRequest(const TwoWayAddRequest& other) noexcept
-      : TwoWayAddRequest(other.CloneStorage()) {}
+      : TwoWayAddRequest(other.CloneStorage_()) {}
   TwoWayAddRequest& operator=(const TwoWayAddRequest& other) noexcept {
-    storage_ = other.CloneStorage();
+    storage_ = other.CloneStorage_();
     return *this;
   }
 
@@ -109,8 +99,22 @@ class TwoWayAddRequest final
   uint16_t& addend2() { return storage_.addend2; }
 
  private:
-  Storage storage_;
-  Storage CloneStorage() const;
+  friend ::fidl::internal::CodableBase<TwoWayAddRequest>;
+  friend ::fidl::CodingTraits<TwoWayAddRequest>;
+  TwoWayAddRequest(::fidl::Decoder& decoder);
+  template <typename Payload>
+  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+      ::fidl::Encoder& encoder, Payload&& payload)
+      -> ::fidl::HLCPPOutgoingMessage;
+  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
+
+  struct Storage_ final {
+    uint16_t addend1{};
+    uint16_t addend2{};
+  };
+
+  Storage_ storage_;
+  Storage_ CloneStorage_() const;
 };
 
 }  // namespace test_drivertwoway

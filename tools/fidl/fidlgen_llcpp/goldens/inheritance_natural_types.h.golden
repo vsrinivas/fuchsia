@@ -27,6 +27,28 @@ extern "C" const fidl_type_t test_inheritance_SuperFooTopResponseTable;
 class SuperFooTopResponse final
     : public ::fidl::internal::CodableBase<SuperFooTopResponse> {
  private:
+  struct Storage_;
+
+ public:
+  SuperFooTopResponse(Storage_ storage) noexcept
+      : storage_(std::move(storage)) {}
+  SuperFooTopResponse(int64_t y) noexcept : storage_({.y = std::move(y)}) {}
+  SuperFooTopResponse() : SuperFooTopResponse(Storage_{}) {}
+
+  SuperFooTopResponse(SuperFooTopResponse&&) noexcept = default;
+  SuperFooTopResponse& operator=(SuperFooTopResponse&&) noexcept = default;
+  SuperFooTopResponse(const SuperFooTopResponse& other) noexcept
+      : SuperFooTopResponse(other.CloneStorage_()) {}
+  SuperFooTopResponse& operator=(const SuperFooTopResponse& other) noexcept {
+    storage_ = other.CloneStorage_();
+    return *this;
+  }
+
+  int64_t y() const { return storage_.y; }
+
+  int64_t& y() { return storage_.y; }
+
+ private:
   friend ::fidl::internal::CodableBase<SuperFooTopResponse>;
   friend ::fidl::CodingTraits<SuperFooTopResponse>;
   SuperFooTopResponse(::fidl::Decoder& decoder);
@@ -36,38 +58,39 @@ class SuperFooTopResponse final
       -> ::fidl::HLCPPOutgoingMessage;
   void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
- public:
-  struct Storage final {
+  struct Storage_ final {
     int64_t y{};
   };
 
-  SuperFooTopResponse(Storage storage) noexcept
-      : storage_(std::move(storage)) {}
-  SuperFooTopResponse(int64_t y) noexcept : storage_({.y = std::move(y)}) {}
-  SuperFooTopResponse() : SuperFooTopResponse(Storage{}) {}
-
-  SuperFooTopResponse(SuperFooTopResponse&&) noexcept = default;
-  SuperFooTopResponse& operator=(SuperFooTopResponse&&) noexcept = default;
-  SuperFooTopResponse(const SuperFooTopResponse& other) noexcept
-      : SuperFooTopResponse(other.CloneStorage()) {}
-  SuperFooTopResponse& operator=(const SuperFooTopResponse& other) noexcept {
-    storage_ = other.CloneStorage();
-    return *this;
-  }
-
-  int64_t y() const { return storage_.y; }
-
-  int64_t& y() { return storage_.y; }
-
- private:
-  Storage storage_;
-  Storage CloneStorage() const;
+  Storage_ storage_;
+  Storage_ CloneStorage_() const;
 };
 
 extern "C" const fidl_type_t test_inheritance_SuperFooRequestTable;
 
 class SuperFooRequest final
     : public ::fidl::internal::CodableBase<SuperFooRequest> {
+ private:
+  struct Storage_;
+
+ public:
+  SuperFooRequest(Storage_ storage) noexcept : storage_(std::move(storage)) {}
+  SuperFooRequest(::std::string s) noexcept : storage_({.s = std::move(s)}) {}
+  SuperFooRequest() : SuperFooRequest(Storage_{}) {}
+
+  SuperFooRequest(SuperFooRequest&&) noexcept = default;
+  SuperFooRequest& operator=(SuperFooRequest&&) noexcept = default;
+  SuperFooRequest(const SuperFooRequest& other) noexcept
+      : SuperFooRequest(other.CloneStorage_()) {}
+  SuperFooRequest& operator=(const SuperFooRequest& other) noexcept {
+    storage_ = other.CloneStorage_();
+    return *this;
+  }
+
+  const ::std::string& s() const { return storage_.s; }
+
+  ::std::string& s() { return storage_.s; }
+
  private:
   friend ::fidl::internal::CodableBase<SuperFooRequest>;
   friend ::fidl::CodingTraits<SuperFooRequest>;
@@ -78,31 +101,12 @@ class SuperFooRequest final
       -> ::fidl::HLCPPOutgoingMessage;
   void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
- public:
-  struct Storage final {
+  struct Storage_ final {
     ::std::string s{};
   };
 
-  SuperFooRequest(Storage storage) noexcept : storage_(std::move(storage)) {}
-  SuperFooRequest(::std::string s) noexcept : storage_({.s = std::move(s)}) {}
-  SuperFooRequest() : SuperFooRequest(Storage{}) {}
-
-  SuperFooRequest(SuperFooRequest&&) noexcept = default;
-  SuperFooRequest& operator=(SuperFooRequest&&) noexcept = default;
-  SuperFooRequest(const SuperFooRequest& other) noexcept
-      : SuperFooRequest(other.CloneStorage()) {}
-  SuperFooRequest& operator=(const SuperFooRequest& other) noexcept {
-    storage_ = other.CloneStorage();
-    return *this;
-  }
-
-  const ::std::string& s() const { return storage_.s; }
-
-  ::std::string& s() { return storage_.s; }
-
- private:
-  Storage storage_;
-  Storage CloneStorage() const;
+  Storage_ storage_;
+  Storage_ CloneStorage_() const;
 };
 
 }  // namespace test_inheritance

@@ -126,28 +126,16 @@ class ProtocolRequestStrictResponseFlexibleRequest final
     : public ::fidl::internal::CodableBase<
           ProtocolRequestStrictResponseFlexibleRequest> {
  private:
-  friend ::fidl::internal::CodableBase<
-      ProtocolRequestStrictResponseFlexibleRequest>;
-  friend ::fidl::CodingTraits<ProtocolRequestStrictResponseFlexibleRequest>;
-  ProtocolRequestStrictResponseFlexibleRequest(::fidl::Decoder& decoder);
-  template <typename Payload>
-  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-      ::fidl::Encoder& encoder, Payload&& payload)
-      -> ::fidl::HLCPPOutgoingMessage;
-  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
+  struct Storage_;
 
  public:
-  struct Storage final {
-    ::test_requestflexibleenvelope::StrictFoo s{};
-  };
-
-  ProtocolRequestStrictResponseFlexibleRequest(Storage storage) noexcept
+  ProtocolRequestStrictResponseFlexibleRequest(Storage_ storage) noexcept
       : storage_(std::move(storage)) {}
   ProtocolRequestStrictResponseFlexibleRequest(
       ::test_requestflexibleenvelope::StrictFoo s) noexcept
       : storage_({.s = std::move(s)}) {}
   ProtocolRequestStrictResponseFlexibleRequest()
-      : ProtocolRequestStrictResponseFlexibleRequest(Storage{}) {}
+      : ProtocolRequestStrictResponseFlexibleRequest(Storage_{}) {}
 
   ProtocolRequestStrictResponseFlexibleRequest(
       ProtocolRequestStrictResponseFlexibleRequest&&) noexcept = default;
@@ -155,10 +143,10 @@ class ProtocolRequestStrictResponseFlexibleRequest final
       ProtocolRequestStrictResponseFlexibleRequest&&) noexcept = default;
   ProtocolRequestStrictResponseFlexibleRequest(
       const ProtocolRequestStrictResponseFlexibleRequest& other) noexcept
-      : ProtocolRequestStrictResponseFlexibleRequest(other.CloneStorage()) {}
+      : ProtocolRequestStrictResponseFlexibleRequest(other.CloneStorage_()) {}
   ProtocolRequestStrictResponseFlexibleRequest& operator=(
       const ProtocolRequestStrictResponseFlexibleRequest& other) noexcept {
-    storage_ = other.CloneStorage();
+    storage_ = other.CloneStorage_();
     return *this;
   }
 
@@ -169,8 +157,22 @@ class ProtocolRequestStrictResponseFlexibleRequest final
   ::test_requestflexibleenvelope::StrictFoo& s() { return storage_.s; }
 
  private:
-  Storage storage_;
-  Storage CloneStorage() const;
+  friend ::fidl::internal::CodableBase<
+      ProtocolRequestStrictResponseFlexibleRequest>;
+  friend ::fidl::CodingTraits<ProtocolRequestStrictResponseFlexibleRequest>;
+  ProtocolRequestStrictResponseFlexibleRequest(::fidl::Decoder& decoder);
+  template <typename Payload>
+  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+      ::fidl::Encoder& encoder, Payload&& payload)
+      -> ::fidl::HLCPPOutgoingMessage;
+  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
+
+  struct Storage_ final {
+    ::test_requestflexibleenvelope::StrictFoo s{};
+  };
+
+  Storage_ storage_;
+  Storage_ CloneStorage_() const;
 };
 
 extern "C" const fidl_type_t
@@ -179,6 +181,38 @@ extern "C" const fidl_type_t
 class ProtocolRequestFlexibleResponseStrictTopResponse final
     : public ::fidl::internal::CodableBase<
           ProtocolRequestFlexibleResponseStrictTopResponse> {
+ private:
+  struct Storage_;
+
+ public:
+  ProtocolRequestFlexibleResponseStrictTopResponse(Storage_ storage) noexcept
+      : storage_(std::move(storage)) {}
+  ProtocolRequestFlexibleResponseStrictTopResponse(
+      ::test_requestflexibleenvelope::StrictFoo f) noexcept
+      : storage_({.f = std::move(f)}) {}
+  ProtocolRequestFlexibleResponseStrictTopResponse()
+      : ProtocolRequestFlexibleResponseStrictTopResponse(Storage_{}) {}
+
+  ProtocolRequestFlexibleResponseStrictTopResponse(
+      ProtocolRequestFlexibleResponseStrictTopResponse&&) noexcept = default;
+  ProtocolRequestFlexibleResponseStrictTopResponse& operator=(
+      ProtocolRequestFlexibleResponseStrictTopResponse&&) noexcept = default;
+  ProtocolRequestFlexibleResponseStrictTopResponse(
+      const ProtocolRequestFlexibleResponseStrictTopResponse& other) noexcept
+      : ProtocolRequestFlexibleResponseStrictTopResponse(
+            other.CloneStorage_()) {}
+  ProtocolRequestFlexibleResponseStrictTopResponse& operator=(
+      const ProtocolRequestFlexibleResponseStrictTopResponse& other) noexcept {
+    storage_ = other.CloneStorage_();
+    return *this;
+  }
+
+  const ::test_requestflexibleenvelope::StrictFoo& f() const {
+    return storage_.f;
+  }
+
+  ::test_requestflexibleenvelope::StrictFoo& f() { return storage_.f; }
+
  private:
   friend ::fidl::internal::CodableBase<
       ProtocolRequestFlexibleResponseStrictTopResponse>;
@@ -190,42 +224,12 @@ class ProtocolRequestFlexibleResponseStrictTopResponse final
       -> ::fidl::HLCPPOutgoingMessage;
   void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
- public:
-  struct Storage final {
+  struct Storage_ final {
     ::test_requestflexibleenvelope::StrictFoo f{};
   };
 
-  ProtocolRequestFlexibleResponseStrictTopResponse(Storage storage) noexcept
-      : storage_(std::move(storage)) {}
-  ProtocolRequestFlexibleResponseStrictTopResponse(
-      ::test_requestflexibleenvelope::StrictFoo f) noexcept
-      : storage_({.f = std::move(f)}) {}
-  ProtocolRequestFlexibleResponseStrictTopResponse()
-      : ProtocolRequestFlexibleResponseStrictTopResponse(Storage{}) {}
-
-  ProtocolRequestFlexibleResponseStrictTopResponse(
-      ProtocolRequestFlexibleResponseStrictTopResponse&&) noexcept = default;
-  ProtocolRequestFlexibleResponseStrictTopResponse& operator=(
-      ProtocolRequestFlexibleResponseStrictTopResponse&&) noexcept = default;
-  ProtocolRequestFlexibleResponseStrictTopResponse(
-      const ProtocolRequestFlexibleResponseStrictTopResponse& other) noexcept
-      : ProtocolRequestFlexibleResponseStrictTopResponse(other.CloneStorage()) {
-  }
-  ProtocolRequestFlexibleResponseStrictTopResponse& operator=(
-      const ProtocolRequestFlexibleResponseStrictTopResponse& other) noexcept {
-    storage_ = other.CloneStorage();
-    return *this;
-  }
-
-  const ::test_requestflexibleenvelope::StrictFoo& f() const {
-    return storage_.f;
-  }
-
-  ::test_requestflexibleenvelope::StrictFoo& f() { return storage_.f; }
-
- private:
-  Storage storage_;
-  Storage CloneStorage() const;
+  Storage_ storage_;
+  Storage_ CloneStorage_() const;
 };
 
 extern "C" const fidl_type_t test_requestflexibleenvelope_FlexibleFooTable;
@@ -326,28 +330,16 @@ class ProtocolRequestStrictResponseFlexibleTopResponse final
     : public ::fidl::internal::CodableBase<
           ProtocolRequestStrictResponseFlexibleTopResponse> {
  private:
-  friend ::fidl::internal::CodableBase<
-      ProtocolRequestStrictResponseFlexibleTopResponse>;
-  friend ::fidl::CodingTraits<ProtocolRequestStrictResponseFlexibleTopResponse>;
-  ProtocolRequestStrictResponseFlexibleTopResponse(::fidl::Decoder& decoder);
-  template <typename Payload>
-  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-      ::fidl::Encoder& encoder, Payload&& payload)
-      -> ::fidl::HLCPPOutgoingMessage;
-  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
+  struct Storage_;
 
  public:
-  struct Storage final {
-    ::test_requestflexibleenvelope::FlexibleFoo f{};
-  };
-
-  ProtocolRequestStrictResponseFlexibleTopResponse(Storage storage) noexcept
+  ProtocolRequestStrictResponseFlexibleTopResponse(Storage_ storage) noexcept
       : storage_(std::move(storage)) {}
   ProtocolRequestStrictResponseFlexibleTopResponse(
       ::test_requestflexibleenvelope::FlexibleFoo f) noexcept
       : storage_({.f = std::move(f)}) {}
   ProtocolRequestStrictResponseFlexibleTopResponse()
-      : ProtocolRequestStrictResponseFlexibleTopResponse(Storage{}) {}
+      : ProtocolRequestStrictResponseFlexibleTopResponse(Storage_{}) {}
 
   ProtocolRequestStrictResponseFlexibleTopResponse(
       ProtocolRequestStrictResponseFlexibleTopResponse&&) noexcept = default;
@@ -355,11 +347,11 @@ class ProtocolRequestStrictResponseFlexibleTopResponse final
       ProtocolRequestStrictResponseFlexibleTopResponse&&) noexcept = default;
   ProtocolRequestStrictResponseFlexibleTopResponse(
       const ProtocolRequestStrictResponseFlexibleTopResponse& other) noexcept
-      : ProtocolRequestStrictResponseFlexibleTopResponse(other.CloneStorage()) {
-  }
+      : ProtocolRequestStrictResponseFlexibleTopResponse(
+            other.CloneStorage_()) {}
   ProtocolRequestStrictResponseFlexibleTopResponse& operator=(
       const ProtocolRequestStrictResponseFlexibleTopResponse& other) noexcept {
-    storage_ = other.CloneStorage();
+    storage_ = other.CloneStorage_();
     return *this;
   }
 
@@ -370,8 +362,22 @@ class ProtocolRequestStrictResponseFlexibleTopResponse final
   ::test_requestflexibleenvelope::FlexibleFoo& f() { return storage_.f; }
 
  private:
-  Storage storage_;
-  Storage CloneStorage() const;
+  friend ::fidl::internal::CodableBase<
+      ProtocolRequestStrictResponseFlexibleTopResponse>;
+  friend ::fidl::CodingTraits<ProtocolRequestStrictResponseFlexibleTopResponse>;
+  ProtocolRequestStrictResponseFlexibleTopResponse(::fidl::Decoder& decoder);
+  template <typename Payload>
+  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+      ::fidl::Encoder& encoder, Payload&& payload)
+      -> ::fidl::HLCPPOutgoingMessage;
+  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
+
+  struct Storage_ final {
+    ::test_requestflexibleenvelope::FlexibleFoo f{};
+  };
+
+  Storage_ storage_;
+  Storage_ CloneStorage_() const;
 };
 
 extern "C" const fidl_type_t
@@ -380,6 +386,37 @@ extern "C" const fidl_type_t
 class ProtocolRequestFlexibleResponseStrictRequest final
     : public ::fidl::internal::CodableBase<
           ProtocolRequestFlexibleResponseStrictRequest> {
+ private:
+  struct Storage_;
+
+ public:
+  ProtocolRequestFlexibleResponseStrictRequest(Storage_ storage) noexcept
+      : storage_(std::move(storage)) {}
+  ProtocolRequestFlexibleResponseStrictRequest(
+      ::test_requestflexibleenvelope::FlexibleFoo s) noexcept
+      : storage_({.s = std::move(s)}) {}
+  ProtocolRequestFlexibleResponseStrictRequest()
+      : ProtocolRequestFlexibleResponseStrictRequest(Storage_{}) {}
+
+  ProtocolRequestFlexibleResponseStrictRequest(
+      ProtocolRequestFlexibleResponseStrictRequest&&) noexcept = default;
+  ProtocolRequestFlexibleResponseStrictRequest& operator=(
+      ProtocolRequestFlexibleResponseStrictRequest&&) noexcept = default;
+  ProtocolRequestFlexibleResponseStrictRequest(
+      const ProtocolRequestFlexibleResponseStrictRequest& other) noexcept
+      : ProtocolRequestFlexibleResponseStrictRequest(other.CloneStorage_()) {}
+  ProtocolRequestFlexibleResponseStrictRequest& operator=(
+      const ProtocolRequestFlexibleResponseStrictRequest& other) noexcept {
+    storage_ = other.CloneStorage_();
+    return *this;
+  }
+
+  const ::test_requestflexibleenvelope::FlexibleFoo& s() const {
+    return storage_.s;
+  }
+
+  ::test_requestflexibleenvelope::FlexibleFoo& s() { return storage_.s; }
+
  private:
   friend ::fidl::internal::CodableBase<
       ProtocolRequestFlexibleResponseStrictRequest>;
@@ -391,41 +428,12 @@ class ProtocolRequestFlexibleResponseStrictRequest final
       -> ::fidl::HLCPPOutgoingMessage;
   void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
- public:
-  struct Storage final {
+  struct Storage_ final {
     ::test_requestflexibleenvelope::FlexibleFoo s{};
   };
 
-  ProtocolRequestFlexibleResponseStrictRequest(Storage storage) noexcept
-      : storage_(std::move(storage)) {}
-  ProtocolRequestFlexibleResponseStrictRequest(
-      ::test_requestflexibleenvelope::FlexibleFoo s) noexcept
-      : storage_({.s = std::move(s)}) {}
-  ProtocolRequestFlexibleResponseStrictRequest()
-      : ProtocolRequestFlexibleResponseStrictRequest(Storage{}) {}
-
-  ProtocolRequestFlexibleResponseStrictRequest(
-      ProtocolRequestFlexibleResponseStrictRequest&&) noexcept = default;
-  ProtocolRequestFlexibleResponseStrictRequest& operator=(
-      ProtocolRequestFlexibleResponseStrictRequest&&) noexcept = default;
-  ProtocolRequestFlexibleResponseStrictRequest(
-      const ProtocolRequestFlexibleResponseStrictRequest& other) noexcept
-      : ProtocolRequestFlexibleResponseStrictRequest(other.CloneStorage()) {}
-  ProtocolRequestFlexibleResponseStrictRequest& operator=(
-      const ProtocolRequestFlexibleResponseStrictRequest& other) noexcept {
-    storage_ = other.CloneStorage();
-    return *this;
-  }
-
-  const ::test_requestflexibleenvelope::FlexibleFoo& s() const {
-    return storage_.s;
-  }
-
-  ::test_requestflexibleenvelope::FlexibleFoo& s() { return storage_.s; }
-
- private:
-  Storage storage_;
-  Storage CloneStorage() const;
+  Storage_ storage_;
+  Storage_ CloneStorage_() const;
 };
 
 }  // namespace test_requestflexibleenvelope

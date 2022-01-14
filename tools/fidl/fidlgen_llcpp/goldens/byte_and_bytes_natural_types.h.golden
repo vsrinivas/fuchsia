@@ -22,24 +22,10 @@ extern "C" const fidl_type_t test_byteandbytes_ByteAndBytesTable;
 
 class ByteAndBytes final : public ::fidl::internal::CodableBase<ByteAndBytes> {
  private:
-  friend ::fidl::internal::CodableBase<ByteAndBytes>;
-  friend ::fidl::CodingTraits<ByteAndBytes>;
-  ByteAndBytes(::fidl::Decoder& decoder);
-  template <typename Payload>
-  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-      ::fidl::Encoder& encoder, Payload&& payload)
-      -> ::fidl::HLCPPOutgoingMessage;
-  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
+  struct Storage_;
 
  public:
-  struct Storage final {
-    uint8_t single_byte{};
-    ::std::vector<uint8_t> many_bytes{};
-    ::std::vector<uint8_t> only_one_k_bytes{};
-    ::cpp17::optional<::std::vector<uint8_t>> opt_only_one_k_bytes{};
-  };
-
-  ByteAndBytes(Storage storage) noexcept : storage_(std::move(storage)) {}
+  ByteAndBytes(Storage_ storage) noexcept : storage_(std::move(storage)) {}
   ByteAndBytes(
       uint8_t single_byte, ::std::vector<uint8_t> many_bytes,
       ::std::vector<uint8_t> only_one_k_bytes,
@@ -48,14 +34,14 @@ class ByteAndBytes final : public ::fidl::internal::CodableBase<ByteAndBytes> {
                   .many_bytes = std::move(many_bytes),
                   .only_one_k_bytes = std::move(only_one_k_bytes),
                   .opt_only_one_k_bytes = std::move(opt_only_one_k_bytes)}) {}
-  ByteAndBytes() : ByteAndBytes(Storage{}) {}
+  ByteAndBytes() : ByteAndBytes(Storage_{}) {}
 
   ByteAndBytes(ByteAndBytes&&) noexcept = default;
   ByteAndBytes& operator=(ByteAndBytes&&) noexcept = default;
   ByteAndBytes(const ByteAndBytes& other) noexcept
-      : ByteAndBytes(other.CloneStorage()) {}
+      : ByteAndBytes(other.CloneStorage_()) {}
   ByteAndBytes& operator=(const ByteAndBytes& other) noexcept {
-    storage_ = other.CloneStorage();
+    storage_ = other.CloneStorage_();
     return *this;
   }
 
@@ -87,8 +73,24 @@ class ByteAndBytes final : public ::fidl::internal::CodableBase<ByteAndBytes> {
   }
 
  private:
-  Storage storage_;
-  Storage CloneStorage() const;
+  friend ::fidl::internal::CodableBase<ByteAndBytes>;
+  friend ::fidl::CodingTraits<ByteAndBytes>;
+  ByteAndBytes(::fidl::Decoder& decoder);
+  template <typename Payload>
+  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+      ::fidl::Encoder& encoder, Payload&& payload)
+      -> ::fidl::HLCPPOutgoingMessage;
+  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
+
+  struct Storage_ final {
+    uint8_t single_byte{};
+    ::std::vector<uint8_t> many_bytes{};
+    ::std::vector<uint8_t> only_one_k_bytes{};
+    ::cpp17::optional<::std::vector<uint8_t>> opt_only_one_k_bytes{};
+  };
+
+  Storage_ storage_;
+  Storage_ CloneStorage_() const;
 };
 
 }  // namespace test_byteandbytes

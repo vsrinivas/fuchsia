@@ -24,6 +24,27 @@ extern "C" const fidl_type_t test_importedconstvalues_MyStructTable;
 
 class MyStruct final : public ::fidl::internal::CodableBase<MyStruct> {
  private:
+  struct Storage_;
+
+ public:
+  MyStruct(Storage_ storage) noexcept : storage_(std::move(storage)) {}
+  MyStruct(uint8_t __reserved) noexcept
+      : storage_({.__reserved = std::move(__reserved)}) {}
+  MyStruct() : MyStruct(Storage_{}) {}
+
+  MyStruct(MyStruct&&) noexcept = default;
+  MyStruct& operator=(MyStruct&&) noexcept = default;
+  MyStruct(const MyStruct& other) noexcept : MyStruct(other.CloneStorage_()) {}
+  MyStruct& operator=(const MyStruct& other) noexcept {
+    storage_ = other.CloneStorage_();
+    return *this;
+  }
+
+  uint8_t __reserved() const { return storage_.__reserved; }
+
+  uint8_t& __reserved() { return storage_.__reserved; }
+
+ private:
   friend ::fidl::internal::CodableBase<MyStruct>;
   friend ::fidl::CodingTraits<MyStruct>;
   MyStruct(::fidl::Decoder& decoder);
@@ -33,31 +54,12 @@ class MyStruct final : public ::fidl::internal::CodableBase<MyStruct> {
       -> ::fidl::HLCPPOutgoingMessage;
   void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
- public:
-  struct Storage final {
+  struct Storage_ final {
     uint8_t __reserved = 0u;
   };
 
-  MyStruct(Storage storage) noexcept : storage_(std::move(storage)) {}
-  MyStruct(uint8_t __reserved) noexcept
-      : storage_({.__reserved = std::move(__reserved)}) {}
-  MyStruct() : MyStruct(Storage{}) {}
-
-  MyStruct(MyStruct&&) noexcept = default;
-  MyStruct& operator=(MyStruct&&) noexcept = default;
-  MyStruct(const MyStruct& other) noexcept : MyStruct(other.CloneStorage()) {}
-  MyStruct& operator=(const MyStruct& other) noexcept {
-    storage_ = other.CloneStorage();
-    return *this;
-  }
-
-  uint8_t __reserved() const { return storage_.__reserved; }
-
-  uint8_t& __reserved() { return storage_.__reserved; }
-
- private:
-  Storage storage_;
-  Storage CloneStorage() const;
+  Storage_ storage_;
+  Storage_ CloneStorage_() const;
 };
 
 }  // namespace test_importedconstvalues

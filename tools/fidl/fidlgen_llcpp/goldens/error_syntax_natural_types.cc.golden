@@ -20,10 +20,10 @@ void ::test_errorsyntax::ExampleUseOfErrorSyntax_CallWhichMayFail_Response::
     : storage_({::fidl::DecodeAs<int64_t>(&decoder, 0)}) {}
 #endif  // __Fuchsia__
 
-::test_errorsyntax::ExampleUseOfErrorSyntax_CallWhichMayFail_Response::Storage
+::test_errorsyntax::ExampleUseOfErrorSyntax_CallWhichMayFail_Response::Storage_
 test_errorsyntax::ExampleUseOfErrorSyntax_CallWhichMayFail_Response::
-    CloneStorage() const {
-  return Storage{::fidl::internal::NaturalClone(storage_.value)};
+    CloneStorage_() const {
+  return Storage_{::fidl::internal::NaturalClone(storage_.value)};
 }
 #ifdef __Fuchsia__
 
@@ -45,10 +45,10 @@ void ::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse::
           &decoder, 0)}) {}
 #endif  // __Fuchsia__
 
-::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse::Storage
+::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse::Storage_
 test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse::
-    CloneStorage() const {
-  return Storage{::fidl::internal::NaturalClone(storage_.result)};
+    CloneStorage_() const {
+  return Storage_{::fidl::internal::NaturalClone(storage_.result)};
 }
 #ifdef __Fuchsia__
 
@@ -68,10 +68,10 @@ void ::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailRequest::
     : storage_({::fidl::DecodeAs<::std::string>(&decoder, 0)}) {}
 #endif  // __Fuchsia__
 
-::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailRequest::Storage
-test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailRequest::CloneStorage()
-    const {
-  return Storage{::fidl::internal::NaturalClone(storage_.s)};
+::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailRequest::Storage_
+test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailRequest::
+    CloneStorage_() const {
+  return Storage_{::fidl::internal::NaturalClone(storage_.s)};
 }
 
 std::shared_ptr<::test_errorsyntax::

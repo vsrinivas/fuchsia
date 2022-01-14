@@ -23,22 +23,10 @@ extern "C" const fidl_type_t test_vectors_ExampleUseOfVectorsTable;
 class ExampleUseOfVectors final
     : public ::fidl::internal::CodableBase<ExampleUseOfVectors> {
  private:
-  friend ::fidl::internal::CodableBase<ExampleUseOfVectors>;
-  friend ::fidl::CodingTraits<ExampleUseOfVectors>;
-  ExampleUseOfVectors(::fidl::Decoder& decoder);
-  template <typename Payload>
-  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-      ::fidl::Encoder& encoder, Payload&& payload)
-      -> ::fidl::HLCPPOutgoingMessage;
-  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
+  struct Storage_;
 
  public:
-  struct Storage final {
-    ::std::vector<uint8_t> vector_of_uint8{};
-    ::std::vector<::std::vector<bool>> vector_of_vector_of_bool{};
-  };
-
-  ExampleUseOfVectors(Storage storage) noexcept
+  ExampleUseOfVectors(Storage_ storage) noexcept
       : storage_(std::move(storage)) {}
   ExampleUseOfVectors(
       ::std::vector<uint8_t> vector_of_uint8,
@@ -46,14 +34,14 @@ class ExampleUseOfVectors final
       : storage_({.vector_of_uint8 = std::move(vector_of_uint8),
                   .vector_of_vector_of_bool =
                       std::move(vector_of_vector_of_bool)}) {}
-  ExampleUseOfVectors() : ExampleUseOfVectors(Storage{}) {}
+  ExampleUseOfVectors() : ExampleUseOfVectors(Storage_{}) {}
 
   ExampleUseOfVectors(ExampleUseOfVectors&&) noexcept = default;
   ExampleUseOfVectors& operator=(ExampleUseOfVectors&&) noexcept = default;
   ExampleUseOfVectors(const ExampleUseOfVectors& other) noexcept
-      : ExampleUseOfVectors(other.CloneStorage()) {}
+      : ExampleUseOfVectors(other.CloneStorage_()) {}
   ExampleUseOfVectors& operator=(const ExampleUseOfVectors& other) noexcept {
-    storage_ = other.CloneStorage();
+    storage_ = other.CloneStorage_();
     return *this;
   }
 
@@ -72,8 +60,22 @@ class ExampleUseOfVectors final
   }
 
  private:
-  Storage storage_;
-  Storage CloneStorage() const;
+  friend ::fidl::internal::CodableBase<ExampleUseOfVectors>;
+  friend ::fidl::CodingTraits<ExampleUseOfVectors>;
+  ExampleUseOfVectors(::fidl::Decoder& decoder);
+  template <typename Payload>
+  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+      ::fidl::Encoder& encoder, Payload&& payload)
+      -> ::fidl::HLCPPOutgoingMessage;
+  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
+
+  struct Storage_ final {
+    ::std::vector<uint8_t> vector_of_uint8{};
+    ::std::vector<::std::vector<bool>> vector_of_vector_of_bool{};
+  };
+
+  Storage_ storage_;
+  Storage_ CloneStorage_() const;
 };
 
 }  // namespace test_vectors

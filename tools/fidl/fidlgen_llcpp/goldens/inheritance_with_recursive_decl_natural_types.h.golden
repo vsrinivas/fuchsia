@@ -30,26 +30,16 @@ extern "C" const fidl_type_t
 class ParentFirstRequest final
     : public ::fidl::internal::CodableBase<ParentFirstRequest> {
  private:
-  friend ::fidl::internal::CodableBase<ParentFirstRequest>;
-  friend ::fidl::CodingTraits<ParentFirstRequest>;
-  ParentFirstRequest(::fidl::Decoder& decoder);
-  template <typename Payload>
-  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-      ::fidl::Encoder& encoder, Payload&& payload)
-      -> ::fidl::HLCPPOutgoingMessage;
-  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
+  struct Storage_;
 
  public:
-  struct Storage final {
-    ::fidl::ServerEnd<::test_inheritancewithrecursivedecl::Parent> request{};
-  };
-
-  ParentFirstRequest(Storage storage) noexcept : storage_(std::move(storage)) {}
+  ParentFirstRequest(Storage_ storage) noexcept
+      : storage_(std::move(storage)) {}
   ParentFirstRequest(
       ::fidl::ServerEnd<::test_inheritancewithrecursivedecl::Parent>
           request) noexcept
       : storage_({.request = std::move(request)}) {}
-  ParentFirstRequest() : ParentFirstRequest(Storage{}) {}
+  ParentFirstRequest() : ParentFirstRequest(Storage_{}) {}
 
   ParentFirstRequest(ParentFirstRequest&&) noexcept = default;
   ParentFirstRequest& operator=(ParentFirstRequest&&) noexcept = default;
@@ -64,7 +54,20 @@ class ParentFirstRequest final
   }
 
  private:
-  Storage storage_;
+  friend ::fidl::internal::CodableBase<ParentFirstRequest>;
+  friend ::fidl::CodingTraits<ParentFirstRequest>;
+  ParentFirstRequest(::fidl::Decoder& decoder);
+  template <typename Payload>
+  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+      ::fidl::Encoder& encoder, Payload&& payload)
+      -> ::fidl::HLCPPOutgoingMessage;
+  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
+
+  struct Storage_ final {
+    ::fidl::ServerEnd<::test_inheritancewithrecursivedecl::Parent> request{};
+  };
+
+  Storage_ storage_;
 };
 
 #endif  // __Fuchsia__
@@ -77,26 +80,16 @@ extern "C" const fidl_type_t
 class ChildSecondRequest final
     : public ::fidl::internal::CodableBase<ChildSecondRequest> {
  private:
-  friend ::fidl::internal::CodableBase<ChildSecondRequest>;
-  friend ::fidl::CodingTraits<ChildSecondRequest>;
-  ChildSecondRequest(::fidl::Decoder& decoder);
-  template <typename Payload>
-  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-      ::fidl::Encoder& encoder, Payload&& payload)
-      -> ::fidl::HLCPPOutgoingMessage;
-  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
+  struct Storage_;
 
  public:
-  struct Storage final {
-    ::fidl::ServerEnd<::test_inheritancewithrecursivedecl::Parent> request{};
-  };
-
-  ChildSecondRequest(Storage storage) noexcept : storage_(std::move(storage)) {}
+  ChildSecondRequest(Storage_ storage) noexcept
+      : storage_(std::move(storage)) {}
   ChildSecondRequest(
       ::fidl::ServerEnd<::test_inheritancewithrecursivedecl::Parent>
           request) noexcept
       : storage_({.request = std::move(request)}) {}
-  ChildSecondRequest() : ChildSecondRequest(Storage{}) {}
+  ChildSecondRequest() : ChildSecondRequest(Storage_{}) {}
 
   ChildSecondRequest(ChildSecondRequest&&) noexcept = default;
   ChildSecondRequest& operator=(ChildSecondRequest&&) noexcept = default;
@@ -111,7 +104,20 @@ class ChildSecondRequest final
   }
 
  private:
-  Storage storage_;
+  friend ::fidl::internal::CodableBase<ChildSecondRequest>;
+  friend ::fidl::CodingTraits<ChildSecondRequest>;
+  ChildSecondRequest(::fidl::Decoder& decoder);
+  template <typename Payload>
+  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+      ::fidl::Encoder& encoder, Payload&& payload)
+      -> ::fidl::HLCPPOutgoingMessage;
+  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
+
+  struct Storage_ final {
+    ::fidl::ServerEnd<::test_inheritancewithrecursivedecl::Parent> request{};
+  };
+
+  Storage_ storage_;
 };
 
 #endif  // __Fuchsia__

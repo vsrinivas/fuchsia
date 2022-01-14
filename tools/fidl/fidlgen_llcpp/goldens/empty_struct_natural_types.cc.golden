@@ -17,9 +17,9 @@ void ::test_emptystruct::Empty::EncodeWithoutValidating(
     : storage_({::fidl::DecodeAs<uint8_t>(&decoder, 0)}) {}
 #endif  // __Fuchsia__
 
-::test_emptystruct::Empty::Storage test_emptystruct::Empty::CloneStorage()
+::test_emptystruct::Empty::Storage_ test_emptystruct::Empty::CloneStorage_()
     const {
-  return Storage{::fidl::internal::NaturalClone(storage_.__reserved)};
+  return Storage_{::fidl::internal::NaturalClone(storage_.__reserved)};
 }
 #ifdef __Fuchsia__
 
@@ -37,9 +37,9 @@ void ::test_emptystruct::EmptyProtocolSendRequest::EncodeWithoutValidating(
     : storage_({::fidl::DecodeAs<::test_emptystruct::Empty>(&decoder, 0)}) {}
 #endif  // __Fuchsia__
 
-::test_emptystruct::EmptyProtocolSendRequest::Storage
-test_emptystruct::EmptyProtocolSendRequest::CloneStorage() const {
-  return Storage{::fidl::internal::NaturalClone(storage_.e)};
+::test_emptystruct::EmptyProtocolSendRequest::Storage_
+test_emptystruct::EmptyProtocolSendRequest::CloneStorage_() const {
+  return Storage_{::fidl::internal::NaturalClone(storage_.e)};
 }
 #ifdef __Fuchsia__
 
@@ -58,9 +58,10 @@ void ::test_emptystruct::EmptyProtocolSendAndReceiveTopResponse::
     : storage_({::fidl::DecodeAs<::test_emptystruct::Empty>(&decoder, 0)}) {}
 #endif  // __Fuchsia__
 
-::test_emptystruct::EmptyProtocolSendAndReceiveTopResponse::Storage
-test_emptystruct::EmptyProtocolSendAndReceiveTopResponse::CloneStorage() const {
-  return Storage{::fidl::internal::NaturalClone(storage_.e)};
+::test_emptystruct::EmptyProtocolSendAndReceiveTopResponse::Storage_
+test_emptystruct::EmptyProtocolSendAndReceiveTopResponse::CloneStorage_()
+    const {
+  return Storage_{::fidl::internal::NaturalClone(storage_.e)};
 }
 #ifdef __Fuchsia__
 
@@ -80,9 +81,9 @@ void ::test_emptystruct::EmptyProtocolSendAndReceiveRequest::
     : storage_({::fidl::DecodeAs<::test_emptystruct::Empty>(&decoder, 0)}) {}
 #endif  // __Fuchsia__
 
-::test_emptystruct::EmptyProtocolSendAndReceiveRequest::Storage
-test_emptystruct::EmptyProtocolSendAndReceiveRequest::CloneStorage() const {
-  return Storage{::fidl::internal::NaturalClone(storage_.e)};
+::test_emptystruct::EmptyProtocolSendAndReceiveRequest::Storage_
+test_emptystruct::EmptyProtocolSendAndReceiveRequest::CloneStorage_() const {
+  return Storage_{::fidl::internal::NaturalClone(storage_.e)};
 }
 #ifdef __Fuchsia__
 
@@ -101,7 +102,7 @@ void ::test_emptystruct::EmptyProtocolReceiveRequest::EncodeWithoutValidating(
     : storage_({::fidl::DecodeAs<::test_emptystruct::Empty>(&decoder, 0)}) {}
 #endif  // __Fuchsia__
 
-::test_emptystruct::EmptyProtocolReceiveRequest::Storage
-test_emptystruct::EmptyProtocolReceiveRequest::CloneStorage() const {
-  return Storage{::fidl::internal::NaturalClone(storage_.e)};
+::test_emptystruct::EmptyProtocolReceiveRequest::Storage_
+test_emptystruct::EmptyProtocolReceiveRequest::CloneStorage_() const {
+  return Storage_{::fidl::internal::NaturalClone(storage_.e)};
 }

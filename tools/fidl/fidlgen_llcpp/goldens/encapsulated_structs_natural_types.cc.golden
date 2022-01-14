@@ -39,10 +39,10 @@ void ::test_encapsulatedstructs::Int8Int32::EncodeWithoutValidating(
                 ::fidl::DecodeAs<int32_t>(&decoder, 4)}) {}
 #endif  // __Fuchsia__
 
-::test_encapsulatedstructs::Int8Int32::Storage
-test_encapsulatedstructs::Int8Int32::CloneStorage() const {
-  return Storage{::fidl::internal::NaturalClone(storage_.a),
-                 ::fidl::internal::NaturalClone(storage_.b)};
+::test_encapsulatedstructs::Int8Int32::Storage_
+test_encapsulatedstructs::Int8Int32::CloneStorage_() const {
+  return Storage_{::fidl::internal::NaturalClone(storage_.a),
+                  ::fidl::internal::NaturalClone(storage_.b)};
 }
 #ifdef __Fuchsia__
 
@@ -60,10 +60,10 @@ void ::test_encapsulatedstructs::Int16Int8::EncodeWithoutValidating(
                 ::fidl::DecodeAs<int8_t>(&decoder, 2)}) {}
 #endif  // __Fuchsia__
 
-::test_encapsulatedstructs::Int16Int8::Storage
-test_encapsulatedstructs::Int16Int8::CloneStorage() const {
-  return Storage{::fidl::internal::NaturalClone(storage_.a),
-                 ::fidl::internal::NaturalClone(storage_.b)};
+::test_encapsulatedstructs::Int16Int8::Storage_
+test_encapsulatedstructs::Int16Int8::CloneStorage_() const {
+  return Storage_{::fidl::internal::NaturalClone(storage_.a),
+                  ::fidl::internal::NaturalClone(storage_.b)};
 }
 #ifdef __Fuchsia__
 
@@ -83,9 +83,9 @@ void ::test_encapsulatedstructs::ArrayInt16Int8::EncodeWithoutValidating(
                                                                   0)}) {}
 #endif  // __Fuchsia__
 
-::test_encapsulatedstructs::ArrayInt16Int8::Storage
-test_encapsulatedstructs::ArrayInt16Int8::CloneStorage() const {
-  return Storage{::fidl::internal::NaturalClone(storage_.arr)};
+::test_encapsulatedstructs::ArrayInt16Int8::Storage_
+test_encapsulatedstructs::ArrayInt16Int8::CloneStorage_() const {
+  return Storage_{::fidl::internal::NaturalClone(storage_.arr)};
 }
 #ifdef __Fuchsia__
 
@@ -110,11 +110,11 @@ void ::test_encapsulatedstructs::StructPaddingTestStruct::
                &decoder, 12)}) {}
 #endif  // __Fuchsia__
 
-::test_encapsulatedstructs::StructPaddingTestStruct::Storage
-test_encapsulatedstructs::StructPaddingTestStruct::CloneStorage() const {
-  return Storage{::fidl::internal::NaturalClone(storage_.trailing),
-                 ::fidl::internal::NaturalClone(storage_.inner),
-                 ::fidl::internal::NaturalClone(storage_.array)};
+::test_encapsulatedstructs::StructPaddingTestStruct::Storage_
+test_encapsulatedstructs::StructPaddingTestStruct::CloneStorage_() const {
+  return Storage_{::fidl::internal::NaturalClone(storage_.trailing),
+                  ::fidl::internal::NaturalClone(storage_.inner),
+                  ::fidl::internal::NaturalClone(storage_.array)};
 }
 #ifdef __Fuchsia__
 

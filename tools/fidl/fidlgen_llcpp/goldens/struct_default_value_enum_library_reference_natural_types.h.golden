@@ -25,6 +25,27 @@ extern "C" const fidl_type_t
 
 class Foo final : public ::fidl::internal::CodableBase<Foo> {
  private:
+  struct Storage_;
+
+ public:
+  Foo(Storage_ storage) noexcept : storage_(std::move(storage)) {}
+  Foo(::test_dependent::MyEnum field) noexcept
+      : storage_({.field = std::move(field)}) {}
+  Foo() : Foo(Storage_{}) {}
+
+  Foo(Foo&&) noexcept = default;
+  Foo& operator=(Foo&&) noexcept = default;
+  Foo(const Foo& other) noexcept : Foo(other.CloneStorage_()) {}
+  Foo& operator=(const Foo& other) noexcept {
+    storage_ = other.CloneStorage_();
+    return *this;
+  }
+
+  ::test_dependent::MyEnum field() const { return storage_.field; }
+
+  ::test_dependent::MyEnum& field() { return storage_.field; }
+
+ private:
   friend ::fidl::internal::CodableBase<Foo>;
   friend ::fidl::CodingTraits<Foo>;
   Foo(::fidl::Decoder& decoder);
@@ -34,31 +55,12 @@ class Foo final : public ::fidl::internal::CodableBase<Foo> {
       -> ::fidl::HLCPPOutgoingMessage;
   void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
- public:
-  struct Storage final {
+  struct Storage_ final {
     ::test_dependent::MyEnum field = ::test_dependent::MyEnum::kA;
   };
 
-  Foo(Storage storage) noexcept : storage_(std::move(storage)) {}
-  Foo(::test_dependent::MyEnum field) noexcept
-      : storage_({.field = std::move(field)}) {}
-  Foo() : Foo(Storage{}) {}
-
-  Foo(Foo&&) noexcept = default;
-  Foo& operator=(Foo&&) noexcept = default;
-  Foo(const Foo& other) noexcept : Foo(other.CloneStorage()) {}
-  Foo& operator=(const Foo& other) noexcept {
-    storage_ = other.CloneStorage();
-    return *this;
-  }
-
-  ::test_dependent::MyEnum field() const { return storage_.field; }
-
-  ::test_dependent::MyEnum& field() { return storage_.field; }
-
- private:
-  Storage storage_;
-  Storage CloneStorage() const;
+  Storage_ storage_;
+  Storage_ CloneStorage_() const;
 };
 
 }  // namespace test_structdefaultvalueenumlibraryreference

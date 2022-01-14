@@ -138,26 +138,10 @@ extern "C" const fidl_type_t test_handlesintypes_HandlesInTypesTable;
 class HandlesInTypes final
     : public ::fidl::internal::CodableBase<HandlesInTypes> {
  private:
-  friend ::fidl::internal::CodableBase<HandlesInTypes>;
-  friend ::fidl::CodingTraits<HandlesInTypes>;
-  HandlesInTypes(::fidl::Decoder& decoder);
-  template <typename Payload>
-  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-      ::fidl::Encoder& encoder, Payload&& payload)
-      -> ::fidl::HLCPPOutgoingMessage;
-  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
+  struct Storage_;
 
  public:
-  struct Storage final {
-    ::zx::vmo normal_handle{};
-    ::std::vector<::zx::vmo> handle_in_vec{};
-    ::std::array<::zx::vmo, 5> handle_in_array{};
-    ::std::vector<::std::array<::zx::vmo, 5>> handle_in_mixed_vec_array{};
-    ::test_handlesintypes::TableWithHandle table_with_handle{};
-    ::test_handlesintypes::UnionWithHandle union_with_handle{};
-  };
-
-  HandlesInTypes(Storage storage) noexcept : storage_(std::move(storage)) {}
+  HandlesInTypes(Storage_ storage) noexcept : storage_(std::move(storage)) {}
   HandlesInTypes(
       ::zx::vmo normal_handle, ::std::vector<::zx::vmo> handle_in_vec,
       ::std::array<::zx::vmo, 5> handle_in_array,
@@ -171,7 +155,7 @@ class HandlesInTypes final
              .handle_in_mixed_vec_array = std::move(handle_in_mixed_vec_array),
              .table_with_handle = std::move(table_with_handle),
              .union_with_handle = std::move(union_with_handle)}) {}
-  HandlesInTypes() : HandlesInTypes(Storage{}) {}
+  HandlesInTypes() : HandlesInTypes(Storage_{}) {}
 
   HandlesInTypes(HandlesInTypes&&) noexcept = default;
   HandlesInTypes& operator=(HandlesInTypes&&) noexcept = default;
@@ -220,7 +204,25 @@ class HandlesInTypes final
   }
 
  private:
-  Storage storage_;
+  friend ::fidl::internal::CodableBase<HandlesInTypes>;
+  friend ::fidl::CodingTraits<HandlesInTypes>;
+  HandlesInTypes(::fidl::Decoder& decoder);
+  template <typename Payload>
+  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+      ::fidl::Encoder& encoder, Payload&& payload)
+      -> ::fidl::HLCPPOutgoingMessage;
+  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
+
+  struct Storage_ final {
+    ::zx::vmo normal_handle{};
+    ::std::vector<::zx::vmo> handle_in_vec{};
+    ::std::array<::zx::vmo, 5> handle_in_array{};
+    ::std::vector<::std::array<::zx::vmo, 5>> handle_in_mixed_vec_array{};
+    ::test_handlesintypes::TableWithHandle table_with_handle{};
+    ::test_handlesintypes::UnionWithHandle union_with_handle{};
+  };
+
+  Storage_ storage_;
 };
 
 #endif  // __Fuchsia__

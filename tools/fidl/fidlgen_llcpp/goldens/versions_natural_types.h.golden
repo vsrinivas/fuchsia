@@ -132,6 +132,26 @@ extern "C" const fidl_type_t test_versions_StructTable;
 
 class Struct final : public ::fidl::internal::CodableBase<Struct> {
  private:
+  struct Storage_;
+
+ public:
+  Struct(Storage_ storage) noexcept : storage_(std::move(storage)) {}
+  Struct(uint32_t x) noexcept : storage_({.x = std::move(x)}) {}
+  Struct() : Struct(Storage_{}) {}
+
+  Struct(Struct&&) noexcept = default;
+  Struct& operator=(Struct&&) noexcept = default;
+  Struct(const Struct& other) noexcept : Struct(other.CloneStorage_()) {}
+  Struct& operator=(const Struct& other) noexcept {
+    storage_ = other.CloneStorage_();
+    return *this;
+  }
+
+  uint32_t x() const { return storage_.x; }
+
+  uint32_t& x() { return storage_.x; }
+
+ private:
   friend ::fidl::internal::CodableBase<Struct>;
   friend ::fidl::CodingTraits<Struct>;
   Struct(::fidl::Decoder& decoder);
@@ -141,30 +161,12 @@ class Struct final : public ::fidl::internal::CodableBase<Struct> {
       -> ::fidl::HLCPPOutgoingMessage;
   void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
- public:
-  struct Storage final {
+  struct Storage_ final {
     uint32_t x{};
   };
 
-  Struct(Storage storage) noexcept : storage_(std::move(storage)) {}
-  Struct(uint32_t x) noexcept : storage_({.x = std::move(x)}) {}
-  Struct() : Struct(Storage{}) {}
-
-  Struct(Struct&&) noexcept = default;
-  Struct& operator=(Struct&&) noexcept = default;
-  Struct(const Struct& other) noexcept : Struct(other.CloneStorage()) {}
-  Struct& operator=(const Struct& other) noexcept {
-    storage_ = other.CloneStorage();
-    return *this;
-  }
-
-  uint32_t x() const { return storage_.x; }
-
-  uint32_t& x() { return storage_.x; }
-
- private:
-  Storage storage_;
-  Storage CloneStorage() const;
+  Storage_ storage_;
+  Storage_ CloneStorage_() const;
 };
 
 constexpr uint32_t Const = 0u;

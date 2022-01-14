@@ -53,32 +53,21 @@ extern "C" const fidl_type_t test_padding_Padding7ByteMiddleTable;
 class Padding7ByteMiddle final
     : public ::fidl::internal::CodableBase<Padding7ByteMiddle> {
  private:
-  friend ::fidl::internal::CodableBase<Padding7ByteMiddle>;
-  friend ::fidl::CodingTraits<Padding7ByteMiddle>;
-  Padding7ByteMiddle(::fidl::Decoder& decoder);
-  template <typename Payload>
-  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-      ::fidl::Encoder& encoder, Payload&& payload)
-      -> ::fidl::HLCPPOutgoingMessage;
-  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
+  struct Storage_;
 
  public:
-  struct Storage final {
-    uint8_t a{};
-    uint64_t b{};
-  };
-
-  Padding7ByteMiddle(Storage storage) noexcept : storage_(std::move(storage)) {}
+  Padding7ByteMiddle(Storage_ storage) noexcept
+      : storage_(std::move(storage)) {}
   Padding7ByteMiddle(uint8_t a, uint64_t b) noexcept
       : storage_({.a = std::move(a), .b = std::move(b)}) {}
-  Padding7ByteMiddle() : Padding7ByteMiddle(Storage{}) {}
+  Padding7ByteMiddle() : Padding7ByteMiddle(Storage_{}) {}
 
   Padding7ByteMiddle(Padding7ByteMiddle&&) noexcept = default;
   Padding7ByteMiddle& operator=(Padding7ByteMiddle&&) noexcept = default;
   Padding7ByteMiddle(const Padding7ByteMiddle& other) noexcept
-      : Padding7ByteMiddle(other.CloneStorage()) {}
+      : Padding7ByteMiddle(other.CloneStorage_()) {}
   Padding7ByteMiddle& operator=(const Padding7ByteMiddle& other) noexcept {
-    storage_ = other.CloneStorage();
+    storage_ = other.CloneStorage_();
     return *this;
   }
 
@@ -91,8 +80,22 @@ class Padding7ByteMiddle final
   uint64_t& b() { return storage_.b; }
 
  private:
-  Storage storage_;
-  Storage CloneStorage() const;
+  friend ::fidl::internal::CodableBase<Padding7ByteMiddle>;
+  friend ::fidl::CodingTraits<Padding7ByteMiddle>;
+  Padding7ByteMiddle(::fidl::Decoder& decoder);
+  template <typename Payload>
+  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+      ::fidl::Encoder& encoder, Payload&& payload)
+      -> ::fidl::HLCPPOutgoingMessage;
+  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
+
+  struct Storage_ final {
+    uint8_t a{};
+    uint64_t b{};
+  };
+
+  Storage_ storage_;
+  Storage_ CloneStorage_() const;
 };
 
 extern "C" const fidl_type_t test_padding_Padding7ByteEndTable;
@@ -100,32 +103,20 @@ extern "C" const fidl_type_t test_padding_Padding7ByteEndTable;
 class Padding7ByteEnd final
     : public ::fidl::internal::CodableBase<Padding7ByteEnd> {
  private:
-  friend ::fidl::internal::CodableBase<Padding7ByteEnd>;
-  friend ::fidl::CodingTraits<Padding7ByteEnd>;
-  Padding7ByteEnd(::fidl::Decoder& decoder);
-  template <typename Payload>
-  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-      ::fidl::Encoder& encoder, Payload&& payload)
-      -> ::fidl::HLCPPOutgoingMessage;
-  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
+  struct Storage_;
 
  public:
-  struct Storage final {
-    uint64_t a{};
-    uint8_t b{};
-  };
-
-  Padding7ByteEnd(Storage storage) noexcept : storage_(std::move(storage)) {}
+  Padding7ByteEnd(Storage_ storage) noexcept : storage_(std::move(storage)) {}
   Padding7ByteEnd(uint64_t a, uint8_t b) noexcept
       : storage_({.a = std::move(a), .b = std::move(b)}) {}
-  Padding7ByteEnd() : Padding7ByteEnd(Storage{}) {}
+  Padding7ByteEnd() : Padding7ByteEnd(Storage_{}) {}
 
   Padding7ByteEnd(Padding7ByteEnd&&) noexcept = default;
   Padding7ByteEnd& operator=(Padding7ByteEnd&&) noexcept = default;
   Padding7ByteEnd(const Padding7ByteEnd& other) noexcept
-      : Padding7ByteEnd(other.CloneStorage()) {}
+      : Padding7ByteEnd(other.CloneStorage_()) {}
   Padding7ByteEnd& operator=(const Padding7ByteEnd& other) noexcept {
-    storage_ = other.CloneStorage();
+    storage_ = other.CloneStorage_();
     return *this;
   }
 
@@ -138,8 +129,22 @@ class Padding7ByteEnd final
   uint8_t& b() { return storage_.b; }
 
  private:
-  Storage storage_;
-  Storage CloneStorage() const;
+  friend ::fidl::internal::CodableBase<Padding7ByteEnd>;
+  friend ::fidl::CodingTraits<Padding7ByteEnd>;
+  Padding7ByteEnd(::fidl::Decoder& decoder);
+  template <typename Payload>
+  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+      ::fidl::Encoder& encoder, Payload&& payload)
+      -> ::fidl::HLCPPOutgoingMessage;
+  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
+
+  struct Storage_ final {
+    uint64_t a{};
+    uint8_t b{};
+  };
+
+  Storage_ storage_;
+  Storage_ CloneStorage_() const;
 };
 
 extern "C" const fidl_type_t test_padding_Padding6ByteMiddleTable;
@@ -147,32 +152,21 @@ extern "C" const fidl_type_t test_padding_Padding6ByteMiddleTable;
 class Padding6ByteMiddle final
     : public ::fidl::internal::CodableBase<Padding6ByteMiddle> {
  private:
-  friend ::fidl::internal::CodableBase<Padding6ByteMiddle>;
-  friend ::fidl::CodingTraits<Padding6ByteMiddle>;
-  Padding6ByteMiddle(::fidl::Decoder& decoder);
-  template <typename Payload>
-  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-      ::fidl::Encoder& encoder, Payload&& payload)
-      -> ::fidl::HLCPPOutgoingMessage;
-  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
+  struct Storage_;
 
  public:
-  struct Storage final {
-    uint16_t a{};
-    uint64_t b{};
-  };
-
-  Padding6ByteMiddle(Storage storage) noexcept : storage_(std::move(storage)) {}
+  Padding6ByteMiddle(Storage_ storage) noexcept
+      : storage_(std::move(storage)) {}
   Padding6ByteMiddle(uint16_t a, uint64_t b) noexcept
       : storage_({.a = std::move(a), .b = std::move(b)}) {}
-  Padding6ByteMiddle() : Padding6ByteMiddle(Storage{}) {}
+  Padding6ByteMiddle() : Padding6ByteMiddle(Storage_{}) {}
 
   Padding6ByteMiddle(Padding6ByteMiddle&&) noexcept = default;
   Padding6ByteMiddle& operator=(Padding6ByteMiddle&&) noexcept = default;
   Padding6ByteMiddle(const Padding6ByteMiddle& other) noexcept
-      : Padding6ByteMiddle(other.CloneStorage()) {}
+      : Padding6ByteMiddle(other.CloneStorage_()) {}
   Padding6ByteMiddle& operator=(const Padding6ByteMiddle& other) noexcept {
-    storage_ = other.CloneStorage();
+    storage_ = other.CloneStorage_();
     return *this;
   }
 
@@ -185,8 +179,22 @@ class Padding6ByteMiddle final
   uint64_t& b() { return storage_.b; }
 
  private:
-  Storage storage_;
-  Storage CloneStorage() const;
+  friend ::fidl::internal::CodableBase<Padding6ByteMiddle>;
+  friend ::fidl::CodingTraits<Padding6ByteMiddle>;
+  Padding6ByteMiddle(::fidl::Decoder& decoder);
+  template <typename Payload>
+  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+      ::fidl::Encoder& encoder, Payload&& payload)
+      -> ::fidl::HLCPPOutgoingMessage;
+  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
+
+  struct Storage_ final {
+    uint16_t a{};
+    uint64_t b{};
+  };
+
+  Storage_ storage_;
+  Storage_ CloneStorage_() const;
 };
 
 extern "C" const fidl_type_t test_padding_Padding6ByteEndTable;
@@ -194,32 +202,20 @@ extern "C" const fidl_type_t test_padding_Padding6ByteEndTable;
 class Padding6ByteEnd final
     : public ::fidl::internal::CodableBase<Padding6ByteEnd> {
  private:
-  friend ::fidl::internal::CodableBase<Padding6ByteEnd>;
-  friend ::fidl::CodingTraits<Padding6ByteEnd>;
-  Padding6ByteEnd(::fidl::Decoder& decoder);
-  template <typename Payload>
-  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-      ::fidl::Encoder& encoder, Payload&& payload)
-      -> ::fidl::HLCPPOutgoingMessage;
-  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
+  struct Storage_;
 
  public:
-  struct Storage final {
-    uint64_t a{};
-    uint16_t b{};
-  };
-
-  Padding6ByteEnd(Storage storage) noexcept : storage_(std::move(storage)) {}
+  Padding6ByteEnd(Storage_ storage) noexcept : storage_(std::move(storage)) {}
   Padding6ByteEnd(uint64_t a, uint16_t b) noexcept
       : storage_({.a = std::move(a), .b = std::move(b)}) {}
-  Padding6ByteEnd() : Padding6ByteEnd(Storage{}) {}
+  Padding6ByteEnd() : Padding6ByteEnd(Storage_{}) {}
 
   Padding6ByteEnd(Padding6ByteEnd&&) noexcept = default;
   Padding6ByteEnd& operator=(Padding6ByteEnd&&) noexcept = default;
   Padding6ByteEnd(const Padding6ByteEnd& other) noexcept
-      : Padding6ByteEnd(other.CloneStorage()) {}
+      : Padding6ByteEnd(other.CloneStorage_()) {}
   Padding6ByteEnd& operator=(const Padding6ByteEnd& other) noexcept {
-    storage_ = other.CloneStorage();
+    storage_ = other.CloneStorage_();
     return *this;
   }
 
@@ -232,8 +228,22 @@ class Padding6ByteEnd final
   uint16_t& b() { return storage_.b; }
 
  private:
-  Storage storage_;
-  Storage CloneStorage() const;
+  friend ::fidl::internal::CodableBase<Padding6ByteEnd>;
+  friend ::fidl::CodingTraits<Padding6ByteEnd>;
+  Padding6ByteEnd(::fidl::Decoder& decoder);
+  template <typename Payload>
+  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+      ::fidl::Encoder& encoder, Payload&& payload)
+      -> ::fidl::HLCPPOutgoingMessage;
+  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
+
+  struct Storage_ final {
+    uint64_t a{};
+    uint16_t b{};
+  };
+
+  Storage_ storage_;
+  Storage_ CloneStorage_() const;
 };
 
 extern "C" const fidl_type_t test_padding_Padding5ByteMiddleTable;
@@ -241,33 +251,21 @@ extern "C" const fidl_type_t test_padding_Padding5ByteMiddleTable;
 class Padding5ByteMiddle final
     : public ::fidl::internal::CodableBase<Padding5ByteMiddle> {
  private:
-  friend ::fidl::internal::CodableBase<Padding5ByteMiddle>;
-  friend ::fidl::CodingTraits<Padding5ByteMiddle>;
-  Padding5ByteMiddle(::fidl::Decoder& decoder);
-  template <typename Payload>
-  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-      ::fidl::Encoder& encoder, Payload&& payload)
-      -> ::fidl::HLCPPOutgoingMessage;
-  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
+  struct Storage_;
 
  public:
-  struct Storage final {
-    uint16_t a{};
-    uint8_t b{};
-    uint64_t c{};
-  };
-
-  Padding5ByteMiddle(Storage storage) noexcept : storage_(std::move(storage)) {}
+  Padding5ByteMiddle(Storage_ storage) noexcept
+      : storage_(std::move(storage)) {}
   Padding5ByteMiddle(uint16_t a, uint8_t b, uint64_t c) noexcept
       : storage_({.a = std::move(a), .b = std::move(b), .c = std::move(c)}) {}
-  Padding5ByteMiddle() : Padding5ByteMiddle(Storage{}) {}
+  Padding5ByteMiddle() : Padding5ByteMiddle(Storage_{}) {}
 
   Padding5ByteMiddle(Padding5ByteMiddle&&) noexcept = default;
   Padding5ByteMiddle& operator=(Padding5ByteMiddle&&) noexcept = default;
   Padding5ByteMiddle(const Padding5ByteMiddle& other) noexcept
-      : Padding5ByteMiddle(other.CloneStorage()) {}
+      : Padding5ByteMiddle(other.CloneStorage_()) {}
   Padding5ByteMiddle& operator=(const Padding5ByteMiddle& other) noexcept {
-    storage_ = other.CloneStorage();
+    storage_ = other.CloneStorage_();
     return *this;
   }
 
@@ -284,8 +282,23 @@ class Padding5ByteMiddle final
   uint64_t& c() { return storage_.c; }
 
  private:
-  Storage storage_;
-  Storage CloneStorage() const;
+  friend ::fidl::internal::CodableBase<Padding5ByteMiddle>;
+  friend ::fidl::CodingTraits<Padding5ByteMiddle>;
+  Padding5ByteMiddle(::fidl::Decoder& decoder);
+  template <typename Payload>
+  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+      ::fidl::Encoder& encoder, Payload&& payload)
+      -> ::fidl::HLCPPOutgoingMessage;
+  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
+
+  struct Storage_ final {
+    uint16_t a{};
+    uint8_t b{};
+    uint64_t c{};
+  };
+
+  Storage_ storage_;
+  Storage_ CloneStorage_() const;
 };
 
 extern "C" const fidl_type_t test_padding_Padding5ByteEndTable;
@@ -293,33 +306,20 @@ extern "C" const fidl_type_t test_padding_Padding5ByteEndTable;
 class Padding5ByteEnd final
     : public ::fidl::internal::CodableBase<Padding5ByteEnd> {
  private:
-  friend ::fidl::internal::CodableBase<Padding5ByteEnd>;
-  friend ::fidl::CodingTraits<Padding5ByteEnd>;
-  Padding5ByteEnd(::fidl::Decoder& decoder);
-  template <typename Payload>
-  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-      ::fidl::Encoder& encoder, Payload&& payload)
-      -> ::fidl::HLCPPOutgoingMessage;
-  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
+  struct Storage_;
 
  public:
-  struct Storage final {
-    uint64_t a{};
-    uint16_t b{};
-    uint8_t c{};
-  };
-
-  Padding5ByteEnd(Storage storage) noexcept : storage_(std::move(storage)) {}
+  Padding5ByteEnd(Storage_ storage) noexcept : storage_(std::move(storage)) {}
   Padding5ByteEnd(uint64_t a, uint16_t b, uint8_t c) noexcept
       : storage_({.a = std::move(a), .b = std::move(b), .c = std::move(c)}) {}
-  Padding5ByteEnd() : Padding5ByteEnd(Storage{}) {}
+  Padding5ByteEnd() : Padding5ByteEnd(Storage_{}) {}
 
   Padding5ByteEnd(Padding5ByteEnd&&) noexcept = default;
   Padding5ByteEnd& operator=(Padding5ByteEnd&&) noexcept = default;
   Padding5ByteEnd(const Padding5ByteEnd& other) noexcept
-      : Padding5ByteEnd(other.CloneStorage()) {}
+      : Padding5ByteEnd(other.CloneStorage_()) {}
   Padding5ByteEnd& operator=(const Padding5ByteEnd& other) noexcept {
-    storage_ = other.CloneStorage();
+    storage_ = other.CloneStorage_();
     return *this;
   }
 
@@ -336,8 +336,23 @@ class Padding5ByteEnd final
   uint8_t& c() { return storage_.c; }
 
  private:
-  Storage storage_;
-  Storage CloneStorage() const;
+  friend ::fidl::internal::CodableBase<Padding5ByteEnd>;
+  friend ::fidl::CodingTraits<Padding5ByteEnd>;
+  Padding5ByteEnd(::fidl::Decoder& decoder);
+  template <typename Payload>
+  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+      ::fidl::Encoder& encoder, Payload&& payload)
+      -> ::fidl::HLCPPOutgoingMessage;
+  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
+
+  struct Storage_ final {
+    uint64_t a{};
+    uint16_t b{};
+    uint8_t c{};
+  };
+
+  Storage_ storage_;
+  Storage_ CloneStorage_() const;
 };
 
 extern "C" const fidl_type_t test_padding_Padding4ByteMiddleTable;
@@ -345,32 +360,21 @@ extern "C" const fidl_type_t test_padding_Padding4ByteMiddleTable;
 class Padding4ByteMiddle final
     : public ::fidl::internal::CodableBase<Padding4ByteMiddle> {
  private:
-  friend ::fidl::internal::CodableBase<Padding4ByteMiddle>;
-  friend ::fidl::CodingTraits<Padding4ByteMiddle>;
-  Padding4ByteMiddle(::fidl::Decoder& decoder);
-  template <typename Payload>
-  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-      ::fidl::Encoder& encoder, Payload&& payload)
-      -> ::fidl::HLCPPOutgoingMessage;
-  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
+  struct Storage_;
 
  public:
-  struct Storage final {
-    uint32_t a{};
-    uint64_t b{};
-  };
-
-  Padding4ByteMiddle(Storage storage) noexcept : storage_(std::move(storage)) {}
+  Padding4ByteMiddle(Storage_ storage) noexcept
+      : storage_(std::move(storage)) {}
   Padding4ByteMiddle(uint32_t a, uint64_t b) noexcept
       : storage_({.a = std::move(a), .b = std::move(b)}) {}
-  Padding4ByteMiddle() : Padding4ByteMiddle(Storage{}) {}
+  Padding4ByteMiddle() : Padding4ByteMiddle(Storage_{}) {}
 
   Padding4ByteMiddle(Padding4ByteMiddle&&) noexcept = default;
   Padding4ByteMiddle& operator=(Padding4ByteMiddle&&) noexcept = default;
   Padding4ByteMiddle(const Padding4ByteMiddle& other) noexcept
-      : Padding4ByteMiddle(other.CloneStorage()) {}
+      : Padding4ByteMiddle(other.CloneStorage_()) {}
   Padding4ByteMiddle& operator=(const Padding4ByteMiddle& other) noexcept {
-    storage_ = other.CloneStorage();
+    storage_ = other.CloneStorage_();
     return *this;
   }
 
@@ -383,8 +387,22 @@ class Padding4ByteMiddle final
   uint64_t& b() { return storage_.b; }
 
  private:
-  Storage storage_;
-  Storage CloneStorage() const;
+  friend ::fidl::internal::CodableBase<Padding4ByteMiddle>;
+  friend ::fidl::CodingTraits<Padding4ByteMiddle>;
+  Padding4ByteMiddle(::fidl::Decoder& decoder);
+  template <typename Payload>
+  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+      ::fidl::Encoder& encoder, Payload&& payload)
+      -> ::fidl::HLCPPOutgoingMessage;
+  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
+
+  struct Storage_ final {
+    uint32_t a{};
+    uint64_t b{};
+  };
+
+  Storage_ storage_;
+  Storage_ CloneStorage_() const;
 };
 
 extern "C" const fidl_type_t test_padding_Padding4ByteEndTable;
@@ -392,32 +410,20 @@ extern "C" const fidl_type_t test_padding_Padding4ByteEndTable;
 class Padding4ByteEnd final
     : public ::fidl::internal::CodableBase<Padding4ByteEnd> {
  private:
-  friend ::fidl::internal::CodableBase<Padding4ByteEnd>;
-  friend ::fidl::CodingTraits<Padding4ByteEnd>;
-  Padding4ByteEnd(::fidl::Decoder& decoder);
-  template <typename Payload>
-  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-      ::fidl::Encoder& encoder, Payload&& payload)
-      -> ::fidl::HLCPPOutgoingMessage;
-  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
+  struct Storage_;
 
  public:
-  struct Storage final {
-    uint64_t a{};
-    uint32_t b{};
-  };
-
-  Padding4ByteEnd(Storage storage) noexcept : storage_(std::move(storage)) {}
+  Padding4ByteEnd(Storage_ storage) noexcept : storage_(std::move(storage)) {}
   Padding4ByteEnd(uint64_t a, uint32_t b) noexcept
       : storage_({.a = std::move(a), .b = std::move(b)}) {}
-  Padding4ByteEnd() : Padding4ByteEnd(Storage{}) {}
+  Padding4ByteEnd() : Padding4ByteEnd(Storage_{}) {}
 
   Padding4ByteEnd(Padding4ByteEnd&&) noexcept = default;
   Padding4ByteEnd& operator=(Padding4ByteEnd&&) noexcept = default;
   Padding4ByteEnd(const Padding4ByteEnd& other) noexcept
-      : Padding4ByteEnd(other.CloneStorage()) {}
+      : Padding4ByteEnd(other.CloneStorage_()) {}
   Padding4ByteEnd& operator=(const Padding4ByteEnd& other) noexcept {
-    storage_ = other.CloneStorage();
+    storage_ = other.CloneStorage_();
     return *this;
   }
 
@@ -430,8 +436,22 @@ class Padding4ByteEnd final
   uint32_t& b() { return storage_.b; }
 
  private:
-  Storage storage_;
-  Storage CloneStorage() const;
+  friend ::fidl::internal::CodableBase<Padding4ByteEnd>;
+  friend ::fidl::CodingTraits<Padding4ByteEnd>;
+  Padding4ByteEnd(::fidl::Decoder& decoder);
+  template <typename Payload>
+  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+      ::fidl::Encoder& encoder, Payload&& payload)
+      -> ::fidl::HLCPPOutgoingMessage;
+  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
+
+  struct Storage_ final {
+    uint64_t a{};
+    uint32_t b{};
+  };
+
+  Storage_ storage_;
+  Storage_ CloneStorage_() const;
 };
 
 extern "C" const fidl_type_t test_padding_Padding4ByteAlignmentLength12Table;
@@ -439,24 +459,10 @@ extern "C" const fidl_type_t test_padding_Padding4ByteAlignmentLength12Table;
 class Padding4ByteAlignmentLength12 final
     : public ::fidl::internal::CodableBase<Padding4ByteAlignmentLength12> {
  private:
-  friend ::fidl::internal::CodableBase<Padding4ByteAlignmentLength12>;
-  friend ::fidl::CodingTraits<Padding4ByteAlignmentLength12>;
-  Padding4ByteAlignmentLength12(::fidl::Decoder& decoder);
-  template <typename Payload>
-  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-      ::fidl::Encoder& encoder, Payload&& payload)
-      -> ::fidl::HLCPPOutgoingMessage;
-  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
+  struct Storage_;
 
  public:
-  struct Storage final {
-    uint32_t a{};
-    uint8_t b{};
-    uint16_t c{};
-    uint16_t d{};
-  };
-
-  Padding4ByteAlignmentLength12(Storage storage) noexcept
+  Padding4ByteAlignmentLength12(Storage_ storage) noexcept
       : storage_(std::move(storage)) {}
   Padding4ByteAlignmentLength12(uint32_t a, uint8_t b, uint16_t c,
                                 uint16_t d) noexcept
@@ -464,7 +470,7 @@ class Padding4ByteAlignmentLength12 final
                   .b = std::move(b),
                   .c = std::move(c),
                   .d = std::move(d)}) {}
-  Padding4ByteAlignmentLength12() : Padding4ByteAlignmentLength12(Storage{}) {}
+  Padding4ByteAlignmentLength12() : Padding4ByteAlignmentLength12(Storage_{}) {}
 
   Padding4ByteAlignmentLength12(Padding4ByteAlignmentLength12&&) noexcept =
       default;
@@ -472,10 +478,10 @@ class Padding4ByteAlignmentLength12 final
       Padding4ByteAlignmentLength12&&) noexcept = default;
   Padding4ByteAlignmentLength12(
       const Padding4ByteAlignmentLength12& other) noexcept
-      : Padding4ByteAlignmentLength12(other.CloneStorage()) {}
+      : Padding4ByteAlignmentLength12(other.CloneStorage_()) {}
   Padding4ByteAlignmentLength12& operator=(
       const Padding4ByteAlignmentLength12& other) noexcept {
-    storage_ = other.CloneStorage();
+    storage_ = other.CloneStorage_();
     return *this;
   }
 
@@ -496,8 +502,24 @@ class Padding4ByteAlignmentLength12 final
   uint16_t& d() { return storage_.d; }
 
  private:
-  Storage storage_;
-  Storage CloneStorage() const;
+  friend ::fidl::internal::CodableBase<Padding4ByteAlignmentLength12>;
+  friend ::fidl::CodingTraits<Padding4ByteAlignmentLength12>;
+  Padding4ByteAlignmentLength12(::fidl::Decoder& decoder);
+  template <typename Payload>
+  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+      ::fidl::Encoder& encoder, Payload&& payload)
+      -> ::fidl::HLCPPOutgoingMessage;
+  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
+
+  struct Storage_ final {
+    uint32_t a{};
+    uint8_t b{};
+    uint16_t c{};
+    uint16_t d{};
+  };
+
+  Storage_ storage_;
+  Storage_ CloneStorage_() const;
 };
 
 extern "C" const fidl_type_t test_padding_Padding3ByteMiddleTable;
@@ -505,32 +527,21 @@ extern "C" const fidl_type_t test_padding_Padding3ByteMiddleTable;
 class Padding3ByteMiddle final
     : public ::fidl::internal::CodableBase<Padding3ByteMiddle> {
  private:
-  friend ::fidl::internal::CodableBase<Padding3ByteMiddle>;
-  friend ::fidl::CodingTraits<Padding3ByteMiddle>;
-  Padding3ByteMiddle(::fidl::Decoder& decoder);
-  template <typename Payload>
-  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-      ::fidl::Encoder& encoder, Payload&& payload)
-      -> ::fidl::HLCPPOutgoingMessage;
-  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
+  struct Storage_;
 
  public:
-  struct Storage final {
-    uint8_t a{};
-    uint32_t b{};
-  };
-
-  Padding3ByteMiddle(Storage storage) noexcept : storage_(std::move(storage)) {}
+  Padding3ByteMiddle(Storage_ storage) noexcept
+      : storage_(std::move(storage)) {}
   Padding3ByteMiddle(uint8_t a, uint32_t b) noexcept
       : storage_({.a = std::move(a), .b = std::move(b)}) {}
-  Padding3ByteMiddle() : Padding3ByteMiddle(Storage{}) {}
+  Padding3ByteMiddle() : Padding3ByteMiddle(Storage_{}) {}
 
   Padding3ByteMiddle(Padding3ByteMiddle&&) noexcept = default;
   Padding3ByteMiddle& operator=(Padding3ByteMiddle&&) noexcept = default;
   Padding3ByteMiddle(const Padding3ByteMiddle& other) noexcept
-      : Padding3ByteMiddle(other.CloneStorage()) {}
+      : Padding3ByteMiddle(other.CloneStorage_()) {}
   Padding3ByteMiddle& operator=(const Padding3ByteMiddle& other) noexcept {
-    storage_ = other.CloneStorage();
+    storage_ = other.CloneStorage_();
     return *this;
   }
 
@@ -543,8 +554,22 @@ class Padding3ByteMiddle final
   uint32_t& b() { return storage_.b; }
 
  private:
-  Storage storage_;
-  Storage CloneStorage() const;
+  friend ::fidl::internal::CodableBase<Padding3ByteMiddle>;
+  friend ::fidl::CodingTraits<Padding3ByteMiddle>;
+  Padding3ByteMiddle(::fidl::Decoder& decoder);
+  template <typename Payload>
+  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+      ::fidl::Encoder& encoder, Payload&& payload)
+      -> ::fidl::HLCPPOutgoingMessage;
+  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
+
+  struct Storage_ final {
+    uint8_t a{};
+    uint32_t b{};
+  };
+
+  Storage_ storage_;
+  Storage_ CloneStorage_() const;
 };
 
 extern "C" const fidl_type_t test_padding_Padding3ByteEndTable;
@@ -552,32 +577,20 @@ extern "C" const fidl_type_t test_padding_Padding3ByteEndTable;
 class Padding3ByteEnd final
     : public ::fidl::internal::CodableBase<Padding3ByteEnd> {
  private:
-  friend ::fidl::internal::CodableBase<Padding3ByteEnd>;
-  friend ::fidl::CodingTraits<Padding3ByteEnd>;
-  Padding3ByteEnd(::fidl::Decoder& decoder);
-  template <typename Payload>
-  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-      ::fidl::Encoder& encoder, Payload&& payload)
-      -> ::fidl::HLCPPOutgoingMessage;
-  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
+  struct Storage_;
 
  public:
-  struct Storage final {
-    uint32_t a{};
-    uint8_t b{};
-  };
-
-  Padding3ByteEnd(Storage storage) noexcept : storage_(std::move(storage)) {}
+  Padding3ByteEnd(Storage_ storage) noexcept : storage_(std::move(storage)) {}
   Padding3ByteEnd(uint32_t a, uint8_t b) noexcept
       : storage_({.a = std::move(a), .b = std::move(b)}) {}
-  Padding3ByteEnd() : Padding3ByteEnd(Storage{}) {}
+  Padding3ByteEnd() : Padding3ByteEnd(Storage_{}) {}
 
   Padding3ByteEnd(Padding3ByteEnd&&) noexcept = default;
   Padding3ByteEnd& operator=(Padding3ByteEnd&&) noexcept = default;
   Padding3ByteEnd(const Padding3ByteEnd& other) noexcept
-      : Padding3ByteEnd(other.CloneStorage()) {}
+      : Padding3ByteEnd(other.CloneStorage_()) {}
   Padding3ByteEnd& operator=(const Padding3ByteEnd& other) noexcept {
-    storage_ = other.CloneStorage();
+    storage_ = other.CloneStorage_();
     return *this;
   }
 
@@ -590,8 +603,22 @@ class Padding3ByteEnd final
   uint8_t& b() { return storage_.b; }
 
  private:
-  Storage storage_;
-  Storage CloneStorage() const;
+  friend ::fidl::internal::CodableBase<Padding3ByteEnd>;
+  friend ::fidl::CodingTraits<Padding3ByteEnd>;
+  Padding3ByteEnd(::fidl::Decoder& decoder);
+  template <typename Payload>
+  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+      ::fidl::Encoder& encoder, Payload&& payload)
+      -> ::fidl::HLCPPOutgoingMessage;
+  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
+
+  struct Storage_ final {
+    uint32_t a{};
+    uint8_t b{};
+  };
+
+  Storage_ storage_;
+  Storage_ CloneStorage_() const;
 };
 
 extern "C" const fidl_type_t test_padding_Padding2ByteMiddleTable;
@@ -599,32 +626,21 @@ extern "C" const fidl_type_t test_padding_Padding2ByteMiddleTable;
 class Padding2ByteMiddle final
     : public ::fidl::internal::CodableBase<Padding2ByteMiddle> {
  private:
-  friend ::fidl::internal::CodableBase<Padding2ByteMiddle>;
-  friend ::fidl::CodingTraits<Padding2ByteMiddle>;
-  Padding2ByteMiddle(::fidl::Decoder& decoder);
-  template <typename Payload>
-  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-      ::fidl::Encoder& encoder, Payload&& payload)
-      -> ::fidl::HLCPPOutgoingMessage;
-  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
+  struct Storage_;
 
  public:
-  struct Storage final {
-    uint16_t a{};
-    uint32_t b{};
-  };
-
-  Padding2ByteMiddle(Storage storage) noexcept : storage_(std::move(storage)) {}
+  Padding2ByteMiddle(Storage_ storage) noexcept
+      : storage_(std::move(storage)) {}
   Padding2ByteMiddle(uint16_t a, uint32_t b) noexcept
       : storage_({.a = std::move(a), .b = std::move(b)}) {}
-  Padding2ByteMiddle() : Padding2ByteMiddle(Storage{}) {}
+  Padding2ByteMiddle() : Padding2ByteMiddle(Storage_{}) {}
 
   Padding2ByteMiddle(Padding2ByteMiddle&&) noexcept = default;
   Padding2ByteMiddle& operator=(Padding2ByteMiddle&&) noexcept = default;
   Padding2ByteMiddle(const Padding2ByteMiddle& other) noexcept
-      : Padding2ByteMiddle(other.CloneStorage()) {}
+      : Padding2ByteMiddle(other.CloneStorage_()) {}
   Padding2ByteMiddle& operator=(const Padding2ByteMiddle& other) noexcept {
-    storage_ = other.CloneStorage();
+    storage_ = other.CloneStorage_();
     return *this;
   }
 
@@ -637,8 +653,22 @@ class Padding2ByteMiddle final
   uint32_t& b() { return storage_.b; }
 
  private:
-  Storage storage_;
-  Storage CloneStorage() const;
+  friend ::fidl::internal::CodableBase<Padding2ByteMiddle>;
+  friend ::fidl::CodingTraits<Padding2ByteMiddle>;
+  Padding2ByteMiddle(::fidl::Decoder& decoder);
+  template <typename Payload>
+  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+      ::fidl::Encoder& encoder, Payload&& payload)
+      -> ::fidl::HLCPPOutgoingMessage;
+  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
+
+  struct Storage_ final {
+    uint16_t a{};
+    uint32_t b{};
+  };
+
+  Storage_ storage_;
+  Storage_ CloneStorage_() const;
 };
 
 extern "C" const fidl_type_t test_padding_Padding2ByteEndTable;
@@ -646,32 +676,20 @@ extern "C" const fidl_type_t test_padding_Padding2ByteEndTable;
 class Padding2ByteEnd final
     : public ::fidl::internal::CodableBase<Padding2ByteEnd> {
  private:
-  friend ::fidl::internal::CodableBase<Padding2ByteEnd>;
-  friend ::fidl::CodingTraits<Padding2ByteEnd>;
-  Padding2ByteEnd(::fidl::Decoder& decoder);
-  template <typename Payload>
-  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-      ::fidl::Encoder& encoder, Payload&& payload)
-      -> ::fidl::HLCPPOutgoingMessage;
-  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
+  struct Storage_;
 
  public:
-  struct Storage final {
-    uint32_t a{};
-    uint16_t b{};
-  };
-
-  Padding2ByteEnd(Storage storage) noexcept : storage_(std::move(storage)) {}
+  Padding2ByteEnd(Storage_ storage) noexcept : storage_(std::move(storage)) {}
   Padding2ByteEnd(uint32_t a, uint16_t b) noexcept
       : storage_({.a = std::move(a), .b = std::move(b)}) {}
-  Padding2ByteEnd() : Padding2ByteEnd(Storage{}) {}
+  Padding2ByteEnd() : Padding2ByteEnd(Storage_{}) {}
 
   Padding2ByteEnd(Padding2ByteEnd&&) noexcept = default;
   Padding2ByteEnd& operator=(Padding2ByteEnd&&) noexcept = default;
   Padding2ByteEnd(const Padding2ByteEnd& other) noexcept
-      : Padding2ByteEnd(other.CloneStorage()) {}
+      : Padding2ByteEnd(other.CloneStorage_()) {}
   Padding2ByteEnd& operator=(const Padding2ByteEnd& other) noexcept {
-    storage_ = other.CloneStorage();
+    storage_ = other.CloneStorage_();
     return *this;
   }
 
@@ -684,8 +702,22 @@ class Padding2ByteEnd final
   uint16_t& b() { return storage_.b; }
 
  private:
-  Storage storage_;
-  Storage CloneStorage() const;
+  friend ::fidl::internal::CodableBase<Padding2ByteEnd>;
+  friend ::fidl::CodingTraits<Padding2ByteEnd>;
+  Padding2ByteEnd(::fidl::Decoder& decoder);
+  template <typename Payload>
+  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+      ::fidl::Encoder& encoder, Payload&& payload)
+      -> ::fidl::HLCPPOutgoingMessage;
+  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
+
+  struct Storage_ final {
+    uint32_t a{};
+    uint16_t b{};
+  };
+
+  Storage_ storage_;
+  Storage_ CloneStorage_() const;
 };
 
 extern "C" const fidl_type_t test_padding_Padding2ByteAlignmentLength6Table;
@@ -693,27 +725,14 @@ extern "C" const fidl_type_t test_padding_Padding2ByteAlignmentLength6Table;
 class Padding2ByteAlignmentLength6 final
     : public ::fidl::internal::CodableBase<Padding2ByteAlignmentLength6> {
  private:
-  friend ::fidl::internal::CodableBase<Padding2ByteAlignmentLength6>;
-  friend ::fidl::CodingTraits<Padding2ByteAlignmentLength6>;
-  Padding2ByteAlignmentLength6(::fidl::Decoder& decoder);
-  template <typename Payload>
-  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-      ::fidl::Encoder& encoder, Payload&& payload)
-      -> ::fidl::HLCPPOutgoingMessage;
-  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
+  struct Storage_;
 
  public:
-  struct Storage final {
-    uint8_t a{};
-    uint16_t b{};
-    uint8_t c{};
-  };
-
-  Padding2ByteAlignmentLength6(Storage storage) noexcept
+  Padding2ByteAlignmentLength6(Storage_ storage) noexcept
       : storage_(std::move(storage)) {}
   Padding2ByteAlignmentLength6(uint8_t a, uint16_t b, uint8_t c) noexcept
       : storage_({.a = std::move(a), .b = std::move(b), .c = std::move(c)}) {}
-  Padding2ByteAlignmentLength6() : Padding2ByteAlignmentLength6(Storage{}) {}
+  Padding2ByteAlignmentLength6() : Padding2ByteAlignmentLength6(Storage_{}) {}
 
   Padding2ByteAlignmentLength6(Padding2ByteAlignmentLength6&&) noexcept =
       default;
@@ -721,10 +740,10 @@ class Padding2ByteAlignmentLength6 final
       Padding2ByteAlignmentLength6&&) noexcept = default;
   Padding2ByteAlignmentLength6(
       const Padding2ByteAlignmentLength6& other) noexcept
-      : Padding2ByteAlignmentLength6(other.CloneStorage()) {}
+      : Padding2ByteAlignmentLength6(other.CloneStorage_()) {}
   Padding2ByteAlignmentLength6& operator=(
       const Padding2ByteAlignmentLength6& other) noexcept {
-    storage_ = other.CloneStorage();
+    storage_ = other.CloneStorage_();
     return *this;
   }
 
@@ -741,8 +760,23 @@ class Padding2ByteAlignmentLength6 final
   uint8_t& c() { return storage_.c; }
 
  private:
-  Storage storage_;
-  Storage CloneStorage() const;
+  friend ::fidl::internal::CodableBase<Padding2ByteAlignmentLength6>;
+  friend ::fidl::CodingTraits<Padding2ByteAlignmentLength6>;
+  Padding2ByteAlignmentLength6(::fidl::Decoder& decoder);
+  template <typename Payload>
+  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+      ::fidl::Encoder& encoder, Payload&& payload)
+      -> ::fidl::HLCPPOutgoingMessage;
+  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
+
+  struct Storage_ final {
+    uint8_t a{};
+    uint16_t b{};
+    uint8_t c{};
+  };
+
+  Storage_ storage_;
+  Storage_ CloneStorage_() const;
 };
 
 extern "C" const fidl_type_t test_padding_Padding1ByteMiddleTable;
@@ -750,32 +784,21 @@ extern "C" const fidl_type_t test_padding_Padding1ByteMiddleTable;
 class Padding1ByteMiddle final
     : public ::fidl::internal::CodableBase<Padding1ByteMiddle> {
  private:
-  friend ::fidl::internal::CodableBase<Padding1ByteMiddle>;
-  friend ::fidl::CodingTraits<Padding1ByteMiddle>;
-  Padding1ByteMiddle(::fidl::Decoder& decoder);
-  template <typename Payload>
-  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-      ::fidl::Encoder& encoder, Payload&& payload)
-      -> ::fidl::HLCPPOutgoingMessage;
-  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
+  struct Storage_;
 
  public:
-  struct Storage final {
-    uint8_t a{};
-    uint16_t b{};
-  };
-
-  Padding1ByteMiddle(Storage storage) noexcept : storage_(std::move(storage)) {}
+  Padding1ByteMiddle(Storage_ storage) noexcept
+      : storage_(std::move(storage)) {}
   Padding1ByteMiddle(uint8_t a, uint16_t b) noexcept
       : storage_({.a = std::move(a), .b = std::move(b)}) {}
-  Padding1ByteMiddle() : Padding1ByteMiddle(Storage{}) {}
+  Padding1ByteMiddle() : Padding1ByteMiddle(Storage_{}) {}
 
   Padding1ByteMiddle(Padding1ByteMiddle&&) noexcept = default;
   Padding1ByteMiddle& operator=(Padding1ByteMiddle&&) noexcept = default;
   Padding1ByteMiddle(const Padding1ByteMiddle& other) noexcept
-      : Padding1ByteMiddle(other.CloneStorage()) {}
+      : Padding1ByteMiddle(other.CloneStorage_()) {}
   Padding1ByteMiddle& operator=(const Padding1ByteMiddle& other) noexcept {
-    storage_ = other.CloneStorage();
+    storage_ = other.CloneStorage_();
     return *this;
   }
 
@@ -788,8 +811,22 @@ class Padding1ByteMiddle final
   uint16_t& b() { return storage_.b; }
 
  private:
-  Storage storage_;
-  Storage CloneStorage() const;
+  friend ::fidl::internal::CodableBase<Padding1ByteMiddle>;
+  friend ::fidl::CodingTraits<Padding1ByteMiddle>;
+  Padding1ByteMiddle(::fidl::Decoder& decoder);
+  template <typename Payload>
+  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+      ::fidl::Encoder& encoder, Payload&& payload)
+      -> ::fidl::HLCPPOutgoingMessage;
+  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
+
+  struct Storage_ final {
+    uint8_t a{};
+    uint16_t b{};
+  };
+
+  Storage_ storage_;
+  Storage_ CloneStorage_() const;
 };
 
 extern "C" const fidl_type_t test_padding_Padding1ByteEndTable;
@@ -797,32 +834,20 @@ extern "C" const fidl_type_t test_padding_Padding1ByteEndTable;
 class Padding1ByteEnd final
     : public ::fidl::internal::CodableBase<Padding1ByteEnd> {
  private:
-  friend ::fidl::internal::CodableBase<Padding1ByteEnd>;
-  friend ::fidl::CodingTraits<Padding1ByteEnd>;
-  Padding1ByteEnd(::fidl::Decoder& decoder);
-  template <typename Payload>
-  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-      ::fidl::Encoder& encoder, Payload&& payload)
-      -> ::fidl::HLCPPOutgoingMessage;
-  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
+  struct Storage_;
 
  public:
-  struct Storage final {
-    uint16_t a{};
-    uint8_t b{};
-  };
-
-  Padding1ByteEnd(Storage storage) noexcept : storage_(std::move(storage)) {}
+  Padding1ByteEnd(Storage_ storage) noexcept : storage_(std::move(storage)) {}
   Padding1ByteEnd(uint16_t a, uint8_t b) noexcept
       : storage_({.a = std::move(a), .b = std::move(b)}) {}
-  Padding1ByteEnd() : Padding1ByteEnd(Storage{}) {}
+  Padding1ByteEnd() : Padding1ByteEnd(Storage_{}) {}
 
   Padding1ByteEnd(Padding1ByteEnd&&) noexcept = default;
   Padding1ByteEnd& operator=(Padding1ByteEnd&&) noexcept = default;
   Padding1ByteEnd(const Padding1ByteEnd& other) noexcept
-      : Padding1ByteEnd(other.CloneStorage()) {}
+      : Padding1ByteEnd(other.CloneStorage_()) {}
   Padding1ByteEnd& operator=(const Padding1ByteEnd& other) noexcept {
-    storage_ = other.CloneStorage();
+    storage_ = other.CloneStorage_();
     return *this;
   }
 
@@ -835,8 +860,22 @@ class Padding1ByteEnd final
   uint8_t& b() { return storage_.b; }
 
  private:
-  Storage storage_;
-  Storage CloneStorage() const;
+  friend ::fidl::internal::CodableBase<Padding1ByteEnd>;
+  friend ::fidl::CodingTraits<Padding1ByteEnd>;
+  Padding1ByteEnd(::fidl::Decoder& decoder);
+  template <typename Payload>
+  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+      ::fidl::Encoder& encoder, Payload&& payload)
+      -> ::fidl::HLCPPOutgoingMessage;
+  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
+
+  struct Storage_ final {
+    uint16_t a{};
+    uint8_t b{};
+  };
+
+  Storage_ storage_;
+  Storage_ CloneStorage_() const;
 };
 
 }  // namespace test_padding

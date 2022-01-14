@@ -17,9 +17,9 @@ void ::test_struct::Simple::EncodeWithoutValidating(::fidl::Encoder& encoder,
                 ::fidl::DecodeAs<bool>(&decoder, 1)}) {}
 #endif  // __Fuchsia__
 
-::test_struct::Simple::Storage test_struct::Simple::CloneStorage() const {
-  return Storage{::fidl::internal::NaturalClone(storage_.f1),
-                 ::fidl::internal::NaturalClone(storage_.f2)};
+::test_struct::Simple::Storage_ test_struct::Simple::CloneStorage_() const {
+  return Storage_{::fidl::internal::NaturalClone(storage_.f1),
+                  ::fidl::internal::NaturalClone(storage_.f2)};
 }
 #ifdef __Fuchsia__
 
@@ -37,8 +37,8 @@ void ::test_struct::BasicStruct::EncodeWithoutValidating(
                 ::fidl::DecodeAs<::std::string>(&decoder, 8)}) {}
 #endif  // __Fuchsia__
 
-::test_struct::BasicStruct::Storage test_struct::BasicStruct::CloneStorage()
+::test_struct::BasicStruct::Storage_ test_struct::BasicStruct::CloneStorage_()
     const {
-  return Storage{::fidl::internal::NaturalClone(storage_.x),
-                 ::fidl::internal::NaturalClone(storage_.y)};
+  return Storage_{::fidl::internal::NaturalClone(storage_.x),
+                  ::fidl::internal::NaturalClone(storage_.y)};
 }

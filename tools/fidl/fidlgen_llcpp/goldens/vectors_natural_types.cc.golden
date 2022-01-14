@@ -19,9 +19,9 @@ void ::test_vectors::ExampleUseOfVectors::EncodeWithoutValidating(
                                                                      16)}) {}
 #endif  // __Fuchsia__
 
-::test_vectors::ExampleUseOfVectors::Storage
-test_vectors::ExampleUseOfVectors::CloneStorage() const {
-  return Storage{
+::test_vectors::ExampleUseOfVectors::Storage_
+test_vectors::ExampleUseOfVectors::CloneStorage_() const {
+  return Storage_{
       ::fidl::internal::NaturalClone(storage_.vector_of_uint8),
       ::fidl::internal::NaturalClone(storage_.vector_of_vector_of_bool)};
 }

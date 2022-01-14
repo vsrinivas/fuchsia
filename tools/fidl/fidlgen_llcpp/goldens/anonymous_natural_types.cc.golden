@@ -17,9 +17,9 @@ void ::test_anonymous::TableData::EncodeWithoutValidating(
     : storage_({::fidl::DecodeAs<uint8_t>(&decoder, 0)}) {}
 #endif  // __Fuchsia__
 
-::test_anonymous::TableData::Storage test_anonymous::TableData::CloneStorage()
+::test_anonymous::TableData::Storage_ test_anonymous::TableData::CloneStorage_()
     const {
-  return Storage{::fidl::internal::NaturalClone(storage_.data)};
+  return Storage_{::fidl::internal::NaturalClone(storage_.data)};
 }
 #ifdef __Fuchsia__
 
@@ -40,10 +40,10 @@ void ::test_anonymous::SomeProtocolSomeMethodRequest::EncodeWithoutValidating(
            ::fidl::DecodeAs<::test_anonymous::TableMember>(&decoder, 16)}) {}
 #endif  // __Fuchsia__
 
-::test_anonymous::SomeProtocolSomeMethodRequest::Storage
-test_anonymous::SomeProtocolSomeMethodRequest::CloneStorage() const {
-  return Storage{::fidl::internal::NaturalClone(storage_.union_member),
-                 ::fidl::internal::NaturalClone(storage_.table_member)};
+::test_anonymous::SomeProtocolSomeMethodRequest::Storage_
+test_anonymous::SomeProtocolSomeMethodRequest::CloneStorage_() const {
+  return Storage_{::fidl::internal::NaturalClone(storage_.union_member),
+                  ::fidl::internal::NaturalClone(storage_.table_member)};
 }
 #ifdef __Fuchsia__
 
@@ -64,11 +64,11 @@ void ::test_anonymous::OverrideTest::EncodeWithoutValidating(
                &decoder, 24)}) {}
 #endif  // __Fuchsia__
 
-::test_anonymous::OverrideTest::Storage
-test_anonymous::OverrideTest::CloneStorage() const {
-  return Storage{::fidl::internal::NaturalClone(storage_.op),
-                 ::fidl::internal::NaturalClone(storage_.left),
-                 ::fidl::internal::NaturalClone(storage_.right)};
+::test_anonymous::OverrideTest::Storage_
+test_anonymous::OverrideTest::CloneStorage_() const {
+  return Storage_{::fidl::internal::NaturalClone(storage_.op),
+                  ::fidl::internal::NaturalClone(storage_.left),
+                  ::fidl::internal::NaturalClone(storage_.right)};
 }
 #ifdef __Fuchsia__
 
@@ -88,9 +88,9 @@ void ::test_anonymous::SomeProtocol_SomeMethod_Response::
     : storage_({::fidl::DecodeAs<::test_anonymous::BitsMember>(&decoder, 0)}) {}
 #endif  // __Fuchsia__
 
-::test_anonymous::SomeProtocol_SomeMethod_Response::Storage
-test_anonymous::SomeProtocol_SomeMethod_Response::CloneStorage() const {
-  return Storage{::fidl::internal::NaturalClone(storage_.bits_member)};
+::test_anonymous::SomeProtocol_SomeMethod_Response::Storage_
+test_anonymous::SomeProtocol_SomeMethod_Response::CloneStorage_() const {
+  return Storage_{::fidl::internal::NaturalClone(storage_.bits_member)};
 }
 #ifdef __Fuchsia__
 
@@ -113,9 +113,9 @@ void ::test_anonymous::SomeProtocolSomeMethodTopResponse::
               &decoder, 0)}) {}
 #endif  // __Fuchsia__
 
-::test_anonymous::SomeProtocolSomeMethodTopResponse::Storage
-test_anonymous::SomeProtocolSomeMethodTopResponse::CloneStorage() const {
-  return Storage{::fidl::internal::NaturalClone(storage_.result)};
+::test_anonymous::SomeProtocolSomeMethodTopResponse::Storage_
+test_anonymous::SomeProtocolSomeMethodTopResponse::CloneStorage_() const {
+  return Storage_{::fidl::internal::NaturalClone(storage_.result)};
 }
 
 ::test_anonymous::TableMember::Storage

@@ -111,23 +111,10 @@ extern "C" const fidl_type_t
 class SandwichUnionSize8Alignment4 final
     : public ::fidl::internal::CodableBase<SandwichUnionSize8Alignment4> {
  private:
-  friend ::fidl::internal::CodableBase<SandwichUnionSize8Alignment4>;
-  friend ::fidl::CodingTraits<SandwichUnionSize8Alignment4>;
-  SandwichUnionSize8Alignment4(::fidl::Decoder& decoder);
-  template <typename Payload>
-  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-      ::fidl::Encoder& encoder, Payload&& payload)
-      -> ::fidl::HLCPPOutgoingMessage;
-  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
+  struct Storage_;
 
  public:
-  struct Storage final {
-    uint32_t before{};
-    ::test_unionsandwich::UnionSize8Alignment4 union_{};
-    uint32_t after{};
-  };
-
-  SandwichUnionSize8Alignment4(Storage storage) noexcept
+  SandwichUnionSize8Alignment4(Storage_ storage) noexcept
       : storage_(std::move(storage)) {}
   SandwichUnionSize8Alignment4(
       uint32_t before, ::test_unionsandwich::UnionSize8Alignment4 union_,
@@ -135,7 +122,7 @@ class SandwichUnionSize8Alignment4 final
       : storage_({.before = std::move(before),
                   .union_ = std::move(union_),
                   .after = std::move(after)}) {}
-  SandwichUnionSize8Alignment4() : SandwichUnionSize8Alignment4(Storage{}) {}
+  SandwichUnionSize8Alignment4() : SandwichUnionSize8Alignment4(Storage_{}) {}
 
   SandwichUnionSize8Alignment4(SandwichUnionSize8Alignment4&&) noexcept =
       default;
@@ -143,10 +130,10 @@ class SandwichUnionSize8Alignment4 final
       SandwichUnionSize8Alignment4&&) noexcept = default;
   SandwichUnionSize8Alignment4(
       const SandwichUnionSize8Alignment4& other) noexcept
-      : SandwichUnionSize8Alignment4(other.CloneStorage()) {}
+      : SandwichUnionSize8Alignment4(other.CloneStorage_()) {}
   SandwichUnionSize8Alignment4& operator=(
       const SandwichUnionSize8Alignment4& other) noexcept {
-    storage_ = other.CloneStorage();
+    storage_ = other.CloneStorage_();
     return *this;
   }
 
@@ -167,8 +154,23 @@ class SandwichUnionSize8Alignment4 final
   uint32_t& after() { return storage_.after; }
 
  private:
-  Storage storage_;
-  Storage CloneStorage() const;
+  friend ::fidl::internal::CodableBase<SandwichUnionSize8Alignment4>;
+  friend ::fidl::CodingTraits<SandwichUnionSize8Alignment4>;
+  SandwichUnionSize8Alignment4(::fidl::Decoder& decoder);
+  template <typename Payload>
+  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+      ::fidl::Encoder& encoder, Payload&& payload)
+      -> ::fidl::HLCPPOutgoingMessage;
+  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
+
+  struct Storage_ final {
+    uint32_t before{};
+    ::test_unionsandwich::UnionSize8Alignment4 union_{};
+    uint32_t after{};
+  };
+
+  Storage_ storage_;
+  Storage_ CloneStorage_() const;
 };
 
 extern "C" const fidl_type_t test_unionsandwich_UnionSize36Alignment4Table;
@@ -249,23 +251,10 @@ extern "C" const fidl_type_t
 class SandwichUnionSize36Alignment4 final
     : public ::fidl::internal::CodableBase<SandwichUnionSize36Alignment4> {
  private:
-  friend ::fidl::internal::CodableBase<SandwichUnionSize36Alignment4>;
-  friend ::fidl::CodingTraits<SandwichUnionSize36Alignment4>;
-  SandwichUnionSize36Alignment4(::fidl::Decoder& decoder);
-  template <typename Payload>
-  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-      ::fidl::Encoder& encoder, Payload&& payload)
-      -> ::fidl::HLCPPOutgoingMessage;
-  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
+  struct Storage_;
 
  public:
-  struct Storage final {
-    uint32_t before{};
-    ::test_unionsandwich::UnionSize36Alignment4 union_{};
-    uint32_t after{};
-  };
-
-  SandwichUnionSize36Alignment4(Storage storage) noexcept
+  SandwichUnionSize36Alignment4(Storage_ storage) noexcept
       : storage_(std::move(storage)) {}
   SandwichUnionSize36Alignment4(
       uint32_t before, ::test_unionsandwich::UnionSize36Alignment4 union_,
@@ -273,7 +262,7 @@ class SandwichUnionSize36Alignment4 final
       : storage_({.before = std::move(before),
                   .union_ = std::move(union_),
                   .after = std::move(after)}) {}
-  SandwichUnionSize36Alignment4() : SandwichUnionSize36Alignment4(Storage{}) {}
+  SandwichUnionSize36Alignment4() : SandwichUnionSize36Alignment4(Storage_{}) {}
 
   SandwichUnionSize36Alignment4(SandwichUnionSize36Alignment4&&) noexcept =
       default;
@@ -281,10 +270,10 @@ class SandwichUnionSize36Alignment4 final
       SandwichUnionSize36Alignment4&&) noexcept = default;
   SandwichUnionSize36Alignment4(
       const SandwichUnionSize36Alignment4& other) noexcept
-      : SandwichUnionSize36Alignment4(other.CloneStorage()) {}
+      : SandwichUnionSize36Alignment4(other.CloneStorage_()) {}
   SandwichUnionSize36Alignment4& operator=(
       const SandwichUnionSize36Alignment4& other) noexcept {
-    storage_ = other.CloneStorage();
+    storage_ = other.CloneStorage_();
     return *this;
   }
 
@@ -305,8 +294,23 @@ class SandwichUnionSize36Alignment4 final
   uint32_t& after() { return storage_.after; }
 
  private:
-  Storage storage_;
-  Storage CloneStorage() const;
+  friend ::fidl::internal::CodableBase<SandwichUnionSize36Alignment4>;
+  friend ::fidl::CodingTraits<SandwichUnionSize36Alignment4>;
+  SandwichUnionSize36Alignment4(::fidl::Decoder& decoder);
+  template <typename Payload>
+  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+      ::fidl::Encoder& encoder, Payload&& payload)
+      -> ::fidl::HLCPPOutgoingMessage;
+  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
+
+  struct Storage_ final {
+    uint32_t before{};
+    ::test_unionsandwich::UnionSize36Alignment4 union_{};
+    uint32_t after{};
+  };
+
+  Storage_ storage_;
+  Storage_ CloneStorage_() const;
 };
 
 extern "C" const fidl_type_t test_unionsandwich_UnionSize12Alignment4Table;
@@ -387,23 +391,10 @@ extern "C" const fidl_type_t
 class SandwichUnionSize12Alignment4 final
     : public ::fidl::internal::CodableBase<SandwichUnionSize12Alignment4> {
  private:
-  friend ::fidl::internal::CodableBase<SandwichUnionSize12Alignment4>;
-  friend ::fidl::CodingTraits<SandwichUnionSize12Alignment4>;
-  SandwichUnionSize12Alignment4(::fidl::Decoder& decoder);
-  template <typename Payload>
-  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-      ::fidl::Encoder& encoder, Payload&& payload)
-      -> ::fidl::HLCPPOutgoingMessage;
-  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
+  struct Storage_;
 
  public:
-  struct Storage final {
-    uint32_t before{};
-    ::test_unionsandwich::UnionSize12Alignment4 union_{};
-    int32_t after{};
-  };
-
-  SandwichUnionSize12Alignment4(Storage storage) noexcept
+  SandwichUnionSize12Alignment4(Storage_ storage) noexcept
       : storage_(std::move(storage)) {}
   SandwichUnionSize12Alignment4(
       uint32_t before, ::test_unionsandwich::UnionSize12Alignment4 union_,
@@ -411,7 +402,7 @@ class SandwichUnionSize12Alignment4 final
       : storage_({.before = std::move(before),
                   .union_ = std::move(union_),
                   .after = std::move(after)}) {}
-  SandwichUnionSize12Alignment4() : SandwichUnionSize12Alignment4(Storage{}) {}
+  SandwichUnionSize12Alignment4() : SandwichUnionSize12Alignment4(Storage_{}) {}
 
   SandwichUnionSize12Alignment4(SandwichUnionSize12Alignment4&&) noexcept =
       default;
@@ -419,10 +410,10 @@ class SandwichUnionSize12Alignment4 final
       SandwichUnionSize12Alignment4&&) noexcept = default;
   SandwichUnionSize12Alignment4(
       const SandwichUnionSize12Alignment4& other) noexcept
-      : SandwichUnionSize12Alignment4(other.CloneStorage()) {}
+      : SandwichUnionSize12Alignment4(other.CloneStorage_()) {}
   SandwichUnionSize12Alignment4& operator=(
       const SandwichUnionSize12Alignment4& other) noexcept {
-    storage_ = other.CloneStorage();
+    storage_ = other.CloneStorage_();
     return *this;
   }
 
@@ -443,8 +434,23 @@ class SandwichUnionSize12Alignment4 final
   int32_t& after() { return storage_.after; }
 
  private:
-  Storage storage_;
-  Storage CloneStorage() const;
+  friend ::fidl::internal::CodableBase<SandwichUnionSize12Alignment4>;
+  friend ::fidl::CodingTraits<SandwichUnionSize12Alignment4>;
+  SandwichUnionSize12Alignment4(::fidl::Decoder& decoder);
+  template <typename Payload>
+  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+      ::fidl::Encoder& encoder, Payload&& payload)
+      -> ::fidl::HLCPPOutgoingMessage;
+  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
+
+  struct Storage_ final {
+    uint32_t before{};
+    ::test_unionsandwich::UnionSize12Alignment4 union_{};
+    int32_t after{};
+  };
+
+  Storage_ storage_;
+  Storage_ CloneStorage_() const;
 };
 
 extern "C" const fidl_type_t test_unionsandwich_StructSize16Alignment8Table;
@@ -452,35 +458,23 @@ extern "C" const fidl_type_t test_unionsandwich_StructSize16Alignment8Table;
 class StructSize16Alignment8 final
     : public ::fidl::internal::CodableBase<StructSize16Alignment8> {
  private:
-  friend ::fidl::internal::CodableBase<StructSize16Alignment8>;
-  friend ::fidl::CodingTraits<StructSize16Alignment8>;
-  StructSize16Alignment8(::fidl::Decoder& decoder);
-  template <typename Payload>
-  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-      ::fidl::Encoder& encoder, Payload&& payload)
-      -> ::fidl::HLCPPOutgoingMessage;
-  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
+  struct Storage_;
 
  public:
-  struct Storage final {
-    uint64_t f1{};
-    uint64_t f2{};
-  };
-
-  StructSize16Alignment8(Storage storage) noexcept
+  StructSize16Alignment8(Storage_ storage) noexcept
       : storage_(std::move(storage)) {}
   StructSize16Alignment8(uint64_t f1, uint64_t f2) noexcept
       : storage_({.f1 = std::move(f1), .f2 = std::move(f2)}) {}
-  StructSize16Alignment8() : StructSize16Alignment8(Storage{}) {}
+  StructSize16Alignment8() : StructSize16Alignment8(Storage_{}) {}
 
   StructSize16Alignment8(StructSize16Alignment8&&) noexcept = default;
   StructSize16Alignment8& operator=(StructSize16Alignment8&&) noexcept =
       default;
   StructSize16Alignment8(const StructSize16Alignment8& other) noexcept
-      : StructSize16Alignment8(other.CloneStorage()) {}
+      : StructSize16Alignment8(other.CloneStorage_()) {}
   StructSize16Alignment8& operator=(
       const StructSize16Alignment8& other) noexcept {
-    storage_ = other.CloneStorage();
+    storage_ = other.CloneStorage_();
     return *this;
   }
 
@@ -493,8 +487,22 @@ class StructSize16Alignment8 final
   uint64_t& f2() { return storage_.f2; }
 
  private:
-  Storage storage_;
-  Storage CloneStorage() const;
+  friend ::fidl::internal::CodableBase<StructSize16Alignment8>;
+  friend ::fidl::CodingTraits<StructSize16Alignment8>;
+  StructSize16Alignment8(::fidl::Decoder& decoder);
+  template <typename Payload>
+  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+      ::fidl::Encoder& encoder, Payload&& payload)
+      -> ::fidl::HLCPPOutgoingMessage;
+  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
+
+  struct Storage_ final {
+    uint64_t f1{};
+    uint64_t f2{};
+  };
+
+  Storage_ storage_;
+  Storage_ CloneStorage_() const;
 };
 
 extern "C" const fidl_type_t test_unionsandwich_UnionSize24Alignment8Table;
@@ -577,23 +585,10 @@ extern "C" const fidl_type_t
 class SandwichUnionSize24Alignment8 final
     : public ::fidl::internal::CodableBase<SandwichUnionSize24Alignment8> {
  private:
-  friend ::fidl::internal::CodableBase<SandwichUnionSize24Alignment8>;
-  friend ::fidl::CodingTraits<SandwichUnionSize24Alignment8>;
-  SandwichUnionSize24Alignment8(::fidl::Decoder& decoder);
-  template <typename Payload>
-  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-      ::fidl::Encoder& encoder, Payload&& payload)
-      -> ::fidl::HLCPPOutgoingMessage;
-  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
+  struct Storage_;
 
  public:
-  struct Storage final {
-    uint32_t before{};
-    ::test_unionsandwich::UnionSize24Alignment8 union_{};
-    uint32_t after{};
-  };
-
-  SandwichUnionSize24Alignment8(Storage storage) noexcept
+  SandwichUnionSize24Alignment8(Storage_ storage) noexcept
       : storage_(std::move(storage)) {}
   SandwichUnionSize24Alignment8(
       uint32_t before, ::test_unionsandwich::UnionSize24Alignment8 union_,
@@ -601,7 +596,7 @@ class SandwichUnionSize24Alignment8 final
       : storage_({.before = std::move(before),
                   .union_ = std::move(union_),
                   .after = std::move(after)}) {}
-  SandwichUnionSize24Alignment8() : SandwichUnionSize24Alignment8(Storage{}) {}
+  SandwichUnionSize24Alignment8() : SandwichUnionSize24Alignment8(Storage_{}) {}
 
   SandwichUnionSize24Alignment8(SandwichUnionSize24Alignment8&&) noexcept =
       default;
@@ -609,10 +604,10 @@ class SandwichUnionSize24Alignment8 final
       SandwichUnionSize24Alignment8&&) noexcept = default;
   SandwichUnionSize24Alignment8(
       const SandwichUnionSize24Alignment8& other) noexcept
-      : SandwichUnionSize24Alignment8(other.CloneStorage()) {}
+      : SandwichUnionSize24Alignment8(other.CloneStorage_()) {}
   SandwichUnionSize24Alignment8& operator=(
       const SandwichUnionSize24Alignment8& other) noexcept {
-    storage_ = other.CloneStorage();
+    storage_ = other.CloneStorage_();
     return *this;
   }
 
@@ -633,8 +628,23 @@ class SandwichUnionSize24Alignment8 final
   uint32_t& after() { return storage_.after; }
 
  private:
-  Storage storage_;
-  Storage CloneStorage() const;
+  friend ::fidl::internal::CodableBase<SandwichUnionSize24Alignment8>;
+  friend ::fidl::CodingTraits<SandwichUnionSize24Alignment8>;
+  SandwichUnionSize24Alignment8(::fidl::Decoder& decoder);
+  template <typename Payload>
+  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+      ::fidl::Encoder& encoder, Payload&& payload)
+      -> ::fidl::HLCPPOutgoingMessage;
+  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
+
+  struct Storage_ final {
+    uint32_t before{};
+    ::test_unionsandwich::UnionSize24Alignment8 union_{};
+    uint32_t after{};
+  };
+
+  Storage_ storage_;
+  Storage_ CloneStorage_() const;
 };
 
 }  // namespace test_unionsandwich

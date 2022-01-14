@@ -117,26 +117,15 @@ class WithErrorSyntax_HandleInResult_Response final
     : public ::fidl::internal::CodableBase<
           WithErrorSyntax_HandleInResult_Response> {
  private:
-  friend ::fidl::internal::CodableBase<WithErrorSyntax_HandleInResult_Response>;
-  friend ::fidl::CodingTraits<WithErrorSyntax_HandleInResult_Response>;
-  WithErrorSyntax_HandleInResult_Response(::fidl::Decoder& decoder);
-  template <typename Payload>
-  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-      ::fidl::Encoder& encoder, Payload&& payload)
-      -> ::fidl::HLCPPOutgoingMessage;
-  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
+  struct Storage_;
 
  public:
-  struct Storage final {
-    ::zx::handle h{};
-  };
-
-  WithErrorSyntax_HandleInResult_Response(Storage storage) noexcept
+  WithErrorSyntax_HandleInResult_Response(Storage_ storage) noexcept
       : storage_(std::move(storage)) {}
   WithErrorSyntax_HandleInResult_Response(::zx::handle h) noexcept
       : storage_({.h = std::move(h)}) {}
   WithErrorSyntax_HandleInResult_Response()
-      : WithErrorSyntax_HandleInResult_Response(Storage{}) {}
+      : WithErrorSyntax_HandleInResult_Response(Storage_{}) {}
 
   WithErrorSyntax_HandleInResult_Response(
       WithErrorSyntax_HandleInResult_Response&&) noexcept = default;
@@ -148,7 +137,20 @@ class WithErrorSyntax_HandleInResult_Response final
   ::zx::handle& h() { return storage_.h; }
 
  private:
-  Storage storage_;
+  friend ::fidl::internal::CodableBase<WithErrorSyntax_HandleInResult_Response>;
+  friend ::fidl::CodingTraits<WithErrorSyntax_HandleInResult_Response>;
+  WithErrorSyntax_HandleInResult_Response(::fidl::Decoder& decoder);
+  template <typename Payload>
+  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+      ::fidl::Encoder& encoder, Payload&& payload)
+      -> ::fidl::HLCPPOutgoingMessage;
+  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
+
+  struct Storage_ final {
+    ::zx::handle h{};
+  };
+
+  Storage_ storage_;
 };
 
 #endif  // __Fuchsia__
@@ -264,28 +266,16 @@ class WithErrorSyntaxHandleInResultTopResponse final
     : public ::fidl::internal::CodableBase<
           WithErrorSyntaxHandleInResultTopResponse> {
  private:
-  friend ::fidl::internal::CodableBase<
-      WithErrorSyntaxHandleInResultTopResponse>;
-  friend ::fidl::CodingTraits<WithErrorSyntaxHandleInResultTopResponse>;
-  WithErrorSyntaxHandleInResultTopResponse(::fidl::Decoder& decoder);
-  template <typename Payload>
-  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-      ::fidl::Encoder& encoder, Payload&& payload)
-      -> ::fidl::HLCPPOutgoingMessage;
-  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
+  struct Storage_;
 
  public:
-  struct Storage final {
-    ::test_protocols::WithErrorSyntax_HandleInResult_Result result{};
-  };
-
-  WithErrorSyntaxHandleInResultTopResponse(Storage storage) noexcept
+  WithErrorSyntaxHandleInResultTopResponse(Storage_ storage) noexcept
       : storage_(std::move(storage)) {}
   WithErrorSyntaxHandleInResultTopResponse(
       ::test_protocols::WithErrorSyntax_HandleInResult_Result result) noexcept
       : storage_({.result = std::move(result)}) {}
   WithErrorSyntaxHandleInResultTopResponse()
-      : WithErrorSyntaxHandleInResultTopResponse(Storage{}) {}
+      : WithErrorSyntaxHandleInResultTopResponse(Storage_{}) {}
 
   WithErrorSyntaxHandleInResultTopResponse(
       WithErrorSyntaxHandleInResultTopResponse&&) noexcept = default;
@@ -302,7 +292,21 @@ class WithErrorSyntaxHandleInResultTopResponse final
   }
 
  private:
-  Storage storage_;
+  friend ::fidl::internal::CodableBase<
+      WithErrorSyntaxHandleInResultTopResponse>;
+  friend ::fidl::CodingTraits<WithErrorSyntaxHandleInResultTopResponse>;
+  WithErrorSyntaxHandleInResultTopResponse(::fidl::Decoder& decoder);
+  template <typename Payload>
+  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+      ::fidl::Encoder& encoder, Payload&& payload)
+      -> ::fidl::HLCPPOutgoingMessage;
+  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
+
+  struct Storage_ final {
+    ::test_protocols::WithErrorSyntax_HandleInResult_Result result{};
+  };
+
+  Storage_ storage_;
 };
 
 #endif  // __Fuchsia__
@@ -316,27 +320,15 @@ class HandleRightsProtocolResponseMethodTopResponse final
     : public ::fidl::internal::CodableBase<
           HandleRightsProtocolResponseMethodTopResponse> {
  private:
-  friend ::fidl::internal::CodableBase<
-      HandleRightsProtocolResponseMethodTopResponse>;
-  friend ::fidl::CodingTraits<HandleRightsProtocolResponseMethodTopResponse>;
-  HandleRightsProtocolResponseMethodTopResponse(::fidl::Decoder& decoder);
-  template <typename Payload>
-  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-      ::fidl::Encoder& encoder, Payload&& payload)
-      -> ::fidl::HLCPPOutgoingMessage;
-  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
+  struct Storage_;
 
  public:
-  struct Storage final {
-    ::zx::socket h{};
-  };
-
-  HandleRightsProtocolResponseMethodTopResponse(Storage storage) noexcept
+  HandleRightsProtocolResponseMethodTopResponse(Storage_ storage) noexcept
       : storage_(std::move(storage)) {}
   HandleRightsProtocolResponseMethodTopResponse(::zx::socket h) noexcept
       : storage_({.h = std::move(h)}) {}
   HandleRightsProtocolResponseMethodTopResponse()
-      : HandleRightsProtocolResponseMethodTopResponse(Storage{}) {}
+      : HandleRightsProtocolResponseMethodTopResponse(Storage_{}) {}
 
   HandleRightsProtocolResponseMethodTopResponse(
       HandleRightsProtocolResponseMethodTopResponse&&) noexcept = default;
@@ -348,7 +340,21 @@ class HandleRightsProtocolResponseMethodTopResponse final
   ::zx::socket& h() { return storage_.h; }
 
  private:
-  Storage storage_;
+  friend ::fidl::internal::CodableBase<
+      HandleRightsProtocolResponseMethodTopResponse>;
+  friend ::fidl::CodingTraits<HandleRightsProtocolResponseMethodTopResponse>;
+  HandleRightsProtocolResponseMethodTopResponse(::fidl::Decoder& decoder);
+  template <typename Payload>
+  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+      ::fidl::Encoder& encoder, Payload&& payload)
+      -> ::fidl::HLCPPOutgoingMessage;
+  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
+
+  struct Storage_ final {
+    ::zx::socket h{};
+  };
+
+  Storage_ storage_;
 };
 
 #endif  // __Fuchsia__
@@ -362,27 +368,15 @@ class HandleRightsProtocolResponseMethodRequest final
     : public ::fidl::internal::CodableBase<
           HandleRightsProtocolResponseMethodRequest> {
  private:
-  friend ::fidl::internal::CodableBase<
-      HandleRightsProtocolResponseMethodRequest>;
-  friend ::fidl::CodingTraits<HandleRightsProtocolResponseMethodRequest>;
-  HandleRightsProtocolResponseMethodRequest(::fidl::Decoder& decoder);
-  template <typename Payload>
-  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-      ::fidl::Encoder& encoder, Payload&& payload)
-      -> ::fidl::HLCPPOutgoingMessage;
-  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
+  struct Storage_;
 
  public:
-  struct Storage final {
-    ::zx::socket h{};
-  };
-
-  HandleRightsProtocolResponseMethodRequest(Storage storage) noexcept
+  HandleRightsProtocolResponseMethodRequest(Storage_ storage) noexcept
       : storage_(std::move(storage)) {}
   HandleRightsProtocolResponseMethodRequest(::zx::socket h) noexcept
       : storage_({.h = std::move(h)}) {}
   HandleRightsProtocolResponseMethodRequest()
-      : HandleRightsProtocolResponseMethodRequest(Storage{}) {}
+      : HandleRightsProtocolResponseMethodRequest(Storage_{}) {}
 
   HandleRightsProtocolResponseMethodRequest(
       HandleRightsProtocolResponseMethodRequest&&) noexcept = default;
@@ -394,7 +388,21 @@ class HandleRightsProtocolResponseMethodRequest final
   ::zx::socket& h() { return storage_.h; }
 
  private:
-  Storage storage_;
+  friend ::fidl::internal::CodableBase<
+      HandleRightsProtocolResponseMethodRequest>;
+  friend ::fidl::CodingTraits<HandleRightsProtocolResponseMethodRequest>;
+  HandleRightsProtocolResponseMethodRequest(::fidl::Decoder& decoder);
+  template <typename Payload>
+  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+      ::fidl::Encoder& encoder, Payload&& payload)
+      -> ::fidl::HLCPPOutgoingMessage;
+  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
+
+  struct Storage_ final {
+    ::zx::socket h{};
+  };
+
+  Storage_ storage_;
 };
 
 #endif  // __Fuchsia__
@@ -408,27 +416,15 @@ class HandleRightsProtocolNoResponseMethodRequest final
     : public ::fidl::internal::CodableBase<
           HandleRightsProtocolNoResponseMethodRequest> {
  private:
-  friend ::fidl::internal::CodableBase<
-      HandleRightsProtocolNoResponseMethodRequest>;
-  friend ::fidl::CodingTraits<HandleRightsProtocolNoResponseMethodRequest>;
-  HandleRightsProtocolNoResponseMethodRequest(::fidl::Decoder& decoder);
-  template <typename Payload>
-  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-      ::fidl::Encoder& encoder, Payload&& payload)
-      -> ::fidl::HLCPPOutgoingMessage;
-  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
+  struct Storage_;
 
  public:
-  struct Storage final {
-    ::zx::socket h{};
-  };
-
-  HandleRightsProtocolNoResponseMethodRequest(Storage storage) noexcept
+  HandleRightsProtocolNoResponseMethodRequest(Storage_ storage) noexcept
       : storage_(std::move(storage)) {}
   HandleRightsProtocolNoResponseMethodRequest(::zx::socket h) noexcept
       : storage_({.h = std::move(h)}) {}
   HandleRightsProtocolNoResponseMethodRequest()
-      : HandleRightsProtocolNoResponseMethodRequest(Storage{}) {}
+      : HandleRightsProtocolNoResponseMethodRequest(Storage_{}) {}
 
   HandleRightsProtocolNoResponseMethodRequest(
       HandleRightsProtocolNoResponseMethodRequest&&) noexcept = default;
@@ -440,7 +436,21 @@ class HandleRightsProtocolNoResponseMethodRequest final
   ::zx::socket& h() { return storage_.h; }
 
  private:
-  Storage storage_;
+  friend ::fidl::internal::CodableBase<
+      HandleRightsProtocolNoResponseMethodRequest>;
+  friend ::fidl::CodingTraits<HandleRightsProtocolNoResponseMethodRequest>;
+  HandleRightsProtocolNoResponseMethodRequest(::fidl::Decoder& decoder);
+  template <typename Payload>
+  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+      ::fidl::Encoder& encoder, Payload&& payload)
+      -> ::fidl::HLCPPOutgoingMessage;
+  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
+
+  struct Storage_ final {
+    ::zx::socket h{};
+  };
+
+  Storage_ storage_;
 };
 
 #endif  // __Fuchsia__
@@ -453,26 +463,15 @@ extern "C" const fidl_type_t
 class HandleRightsProtocolAnEventRequest final
     : public ::fidl::internal::CodableBase<HandleRightsProtocolAnEventRequest> {
  private:
-  friend ::fidl::internal::CodableBase<HandleRightsProtocolAnEventRequest>;
-  friend ::fidl::CodingTraits<HandleRightsProtocolAnEventRequest>;
-  HandleRightsProtocolAnEventRequest(::fidl::Decoder& decoder);
-  template <typename Payload>
-  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-      ::fidl::Encoder& encoder, Payload&& payload)
-      -> ::fidl::HLCPPOutgoingMessage;
-  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
+  struct Storage_;
 
  public:
-  struct Storage final {
-    ::zx::socket h{};
-  };
-
-  HandleRightsProtocolAnEventRequest(Storage storage) noexcept
+  HandleRightsProtocolAnEventRequest(Storage_ storage) noexcept
       : storage_(std::move(storage)) {}
   HandleRightsProtocolAnEventRequest(::zx::socket h) noexcept
       : storage_({.h = std::move(h)}) {}
   HandleRightsProtocolAnEventRequest()
-      : HandleRightsProtocolAnEventRequest(Storage{}) {}
+      : HandleRightsProtocolAnEventRequest(Storage_{}) {}
 
   HandleRightsProtocolAnEventRequest(
       HandleRightsProtocolAnEventRequest&&) noexcept = default;
@@ -484,7 +483,20 @@ class HandleRightsProtocolAnEventRequest final
   ::zx::socket& h() { return storage_.h; }
 
  private:
-  Storage storage_;
+  friend ::fidl::internal::CodableBase<HandleRightsProtocolAnEventRequest>;
+  friend ::fidl::CodingTraits<HandleRightsProtocolAnEventRequest>;
+  HandleRightsProtocolAnEventRequest(::fidl::Decoder& decoder);
+  template <typename Payload>
+  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+      ::fidl::Encoder& encoder, Payload&& payload)
+      -> ::fidl::HLCPPOutgoingMessage;
+  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
+
+  struct Storage_ final {
+    ::zx::socket h{};
+  };
+
+  Storage_ storage_;
 };
 
 #endif  // __Fuchsia__
@@ -497,26 +509,15 @@ extern "C" const fidl_type_t
 class ChannelProtocolTakeHandleRequest final
     : public ::fidl::internal::CodableBase<ChannelProtocolTakeHandleRequest> {
  private:
-  friend ::fidl::internal::CodableBase<ChannelProtocolTakeHandleRequest>;
-  friend ::fidl::CodingTraits<ChannelProtocolTakeHandleRequest>;
-  ChannelProtocolTakeHandleRequest(::fidl::Decoder& decoder);
-  template <typename Payload>
-  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-      ::fidl::Encoder& encoder, Payload&& payload)
-      -> ::fidl::HLCPPOutgoingMessage;
-  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
+  struct Storage_;
 
  public:
-  struct Storage final {
-    ::zx::handle h{};
-  };
-
-  ChannelProtocolTakeHandleRequest(Storage storage) noexcept
+  ChannelProtocolTakeHandleRequest(Storage_ storage) noexcept
       : storage_(std::move(storage)) {}
   ChannelProtocolTakeHandleRequest(::zx::handle h) noexcept
       : storage_({.h = std::move(h)}) {}
   ChannelProtocolTakeHandleRequest()
-      : ChannelProtocolTakeHandleRequest(Storage{}) {}
+      : ChannelProtocolTakeHandleRequest(Storage_{}) {}
 
   ChannelProtocolTakeHandleRequest(
       ChannelProtocolTakeHandleRequest&&) noexcept = default;
@@ -528,7 +529,20 @@ class ChannelProtocolTakeHandleRequest final
   ::zx::handle& h() { return storage_.h; }
 
  private:
-  Storage storage_;
+  friend ::fidl::internal::CodableBase<ChannelProtocolTakeHandleRequest>;
+  friend ::fidl::CodingTraits<ChannelProtocolTakeHandleRequest>;
+  ChannelProtocolTakeHandleRequest(::fidl::Decoder& decoder);
+  template <typename Payload>
+  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+      ::fidl::Encoder& encoder, Payload&& payload)
+      -> ::fidl::HLCPPOutgoingMessage;
+  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
+
+  struct Storage_ final {
+    ::zx::handle h{};
+  };
+
+  Storage_ storage_;
 };
 
 #endif  // __Fuchsia__
@@ -542,26 +556,15 @@ class ChannelProtocolMutateSocketTopResponse final
     : public ::fidl::internal::CodableBase<
           ChannelProtocolMutateSocketTopResponse> {
  private:
-  friend ::fidl::internal::CodableBase<ChannelProtocolMutateSocketTopResponse>;
-  friend ::fidl::CodingTraits<ChannelProtocolMutateSocketTopResponse>;
-  ChannelProtocolMutateSocketTopResponse(::fidl::Decoder& decoder);
-  template <typename Payload>
-  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-      ::fidl::Encoder& encoder, Payload&& payload)
-      -> ::fidl::HLCPPOutgoingMessage;
-  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
+  struct Storage_;
 
  public:
-  struct Storage final {
-    ::zx::socket b{};
-  };
-
-  ChannelProtocolMutateSocketTopResponse(Storage storage) noexcept
+  ChannelProtocolMutateSocketTopResponse(Storage_ storage) noexcept
       : storage_(std::move(storage)) {}
   ChannelProtocolMutateSocketTopResponse(::zx::socket b) noexcept
       : storage_({.b = std::move(b)}) {}
   ChannelProtocolMutateSocketTopResponse()
-      : ChannelProtocolMutateSocketTopResponse(Storage{}) {}
+      : ChannelProtocolMutateSocketTopResponse(Storage_{}) {}
 
   ChannelProtocolMutateSocketTopResponse(
       ChannelProtocolMutateSocketTopResponse&&) noexcept = default;
@@ -573,7 +576,20 @@ class ChannelProtocolMutateSocketTopResponse final
   ::zx::socket& b() { return storage_.b; }
 
  private:
-  Storage storage_;
+  friend ::fidl::internal::CodableBase<ChannelProtocolMutateSocketTopResponse>;
+  friend ::fidl::CodingTraits<ChannelProtocolMutateSocketTopResponse>;
+  ChannelProtocolMutateSocketTopResponse(::fidl::Decoder& decoder);
+  template <typename Payload>
+  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+      ::fidl::Encoder& encoder, Payload&& payload)
+      -> ::fidl::HLCPPOutgoingMessage;
+  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
+
+  struct Storage_ final {
+    ::zx::socket b{};
+  };
+
+  Storage_ storage_;
 };
 
 #endif  // __Fuchsia__
@@ -586,26 +602,15 @@ extern "C" const fidl_type_t
 class ChannelProtocolMutateSocketRequest final
     : public ::fidl::internal::CodableBase<ChannelProtocolMutateSocketRequest> {
  private:
-  friend ::fidl::internal::CodableBase<ChannelProtocolMutateSocketRequest>;
-  friend ::fidl::CodingTraits<ChannelProtocolMutateSocketRequest>;
-  ChannelProtocolMutateSocketRequest(::fidl::Decoder& decoder);
-  template <typename Payload>
-  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-      ::fidl::Encoder& encoder, Payload&& payload)
-      -> ::fidl::HLCPPOutgoingMessage;
-  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
+  struct Storage_;
 
  public:
-  struct Storage final {
-    ::zx::socket a{};
-  };
-
-  ChannelProtocolMutateSocketRequest(Storage storage) noexcept
+  ChannelProtocolMutateSocketRequest(Storage_ storage) noexcept
       : storage_(std::move(storage)) {}
   ChannelProtocolMutateSocketRequest(::zx::socket a) noexcept
       : storage_({.a = std::move(a)}) {}
   ChannelProtocolMutateSocketRequest()
-      : ChannelProtocolMutateSocketRequest(Storage{}) {}
+      : ChannelProtocolMutateSocketRequest(Storage_{}) {}
 
   ChannelProtocolMutateSocketRequest(
       ChannelProtocolMutateSocketRequest&&) noexcept = default;
@@ -617,7 +622,20 @@ class ChannelProtocolMutateSocketRequest final
   ::zx::socket& a() { return storage_.a; }
 
  private:
-  Storage storage_;
+  friend ::fidl::internal::CodableBase<ChannelProtocolMutateSocketRequest>;
+  friend ::fidl::CodingTraits<ChannelProtocolMutateSocketRequest>;
+  ChannelProtocolMutateSocketRequest(::fidl::Decoder& decoder);
+  template <typename Payload>
+  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+      ::fidl::Encoder& encoder, Payload&& payload)
+      -> ::fidl::HLCPPOutgoingMessage;
+  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
+
+  struct Storage_ final {
+    ::zx::socket a{};
+  };
+
+  Storage_ storage_;
 };
 
 #endif  // __Fuchsia__
@@ -631,27 +649,16 @@ class WithProtocolEndsServerEndsTopResponse final
     : public ::fidl::internal::CodableBase<
           WithProtocolEndsServerEndsTopResponse> {
  private:
-  friend ::fidl::internal::CodableBase<WithProtocolEndsServerEndsTopResponse>;
-  friend ::fidl::CodingTraits<WithProtocolEndsServerEndsTopResponse>;
-  WithProtocolEndsServerEndsTopResponse(::fidl::Decoder& decoder);
-  template <typename Payload>
-  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-      ::fidl::Encoder& encoder, Payload&& payload)
-      -> ::fidl::HLCPPOutgoingMessage;
-  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
+  struct Storage_;
 
  public:
-  struct Storage final {
-    ::fidl::ServerEnd<::test_protocols::DiscoverableProtocol> out{};
-  };
-
-  WithProtocolEndsServerEndsTopResponse(Storage storage) noexcept
+  WithProtocolEndsServerEndsTopResponse(Storage_ storage) noexcept
       : storage_(std::move(storage)) {}
   WithProtocolEndsServerEndsTopResponse(
       ::fidl::ServerEnd<::test_protocols::DiscoverableProtocol> out) noexcept
       : storage_({.out = std::move(out)}) {}
   WithProtocolEndsServerEndsTopResponse()
-      : WithProtocolEndsServerEndsTopResponse(Storage{}) {}
+      : WithProtocolEndsServerEndsTopResponse(Storage_{}) {}
 
   WithProtocolEndsServerEndsTopResponse(
       WithProtocolEndsServerEndsTopResponse&&) noexcept = default;
@@ -667,7 +674,20 @@ class WithProtocolEndsServerEndsTopResponse final
   }
 
  private:
-  Storage storage_;
+  friend ::fidl::internal::CodableBase<WithProtocolEndsServerEndsTopResponse>;
+  friend ::fidl::CodingTraits<WithProtocolEndsServerEndsTopResponse>;
+  WithProtocolEndsServerEndsTopResponse(::fidl::Decoder& decoder);
+  template <typename Payload>
+  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+      ::fidl::Encoder& encoder, Payload&& payload)
+      -> ::fidl::HLCPPOutgoingMessage;
+  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
+
+  struct Storage_ final {
+    ::fidl::ServerEnd<::test_protocols::DiscoverableProtocol> out{};
+  };
+
+  Storage_ storage_;
 };
 
 #endif  // __Fuchsia__
@@ -680,27 +700,16 @@ extern "C" const fidl_type_t
 class WithProtocolEndsServerEndsRequest final
     : public ::fidl::internal::CodableBase<WithProtocolEndsServerEndsRequest> {
  private:
-  friend ::fidl::internal::CodableBase<WithProtocolEndsServerEndsRequest>;
-  friend ::fidl::CodingTraits<WithProtocolEndsServerEndsRequest>;
-  WithProtocolEndsServerEndsRequest(::fidl::Decoder& decoder);
-  template <typename Payload>
-  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-      ::fidl::Encoder& encoder, Payload&& payload)
-      -> ::fidl::HLCPPOutgoingMessage;
-  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
+  struct Storage_;
 
  public:
-  struct Storage final {
-    ::fidl::ServerEnd<::test_protocols::DiscoverableProtocol> in{};
-  };
-
-  WithProtocolEndsServerEndsRequest(Storage storage) noexcept
+  WithProtocolEndsServerEndsRequest(Storage_ storage) noexcept
       : storage_(std::move(storage)) {}
   WithProtocolEndsServerEndsRequest(
       ::fidl::ServerEnd<::test_protocols::DiscoverableProtocol> in) noexcept
       : storage_({.in = std::move(in)}) {}
   WithProtocolEndsServerEndsRequest()
-      : WithProtocolEndsServerEndsRequest(Storage{}) {}
+      : WithProtocolEndsServerEndsRequest(Storage_{}) {}
 
   WithProtocolEndsServerEndsRequest(
       WithProtocolEndsServerEndsRequest&&) noexcept = default;
@@ -716,7 +725,20 @@ class WithProtocolEndsServerEndsRequest final
   }
 
  private:
-  Storage storage_;
+  friend ::fidl::internal::CodableBase<WithProtocolEndsServerEndsRequest>;
+  friend ::fidl::CodingTraits<WithProtocolEndsServerEndsRequest>;
+  WithProtocolEndsServerEndsRequest(::fidl::Decoder& decoder);
+  template <typename Payload>
+  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+      ::fidl::Encoder& encoder, Payload&& payload)
+      -> ::fidl::HLCPPOutgoingMessage;
+  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
+
+  struct Storage_ final {
+    ::fidl::ServerEnd<::test_protocols::DiscoverableProtocol> in{};
+  };
+
+  Storage_ storage_;
 };
 
 #endif  // __Fuchsia__
@@ -730,27 +752,16 @@ class WithProtocolEndsClientEndsTopResponse final
     : public ::fidl::internal::CodableBase<
           WithProtocolEndsClientEndsTopResponse> {
  private:
-  friend ::fidl::internal::CodableBase<WithProtocolEndsClientEndsTopResponse>;
-  friend ::fidl::CodingTraits<WithProtocolEndsClientEndsTopResponse>;
-  WithProtocolEndsClientEndsTopResponse(::fidl::Decoder& decoder);
-  template <typename Payload>
-  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-      ::fidl::Encoder& encoder, Payload&& payload)
-      -> ::fidl::HLCPPOutgoingMessage;
-  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
+  struct Storage_;
 
  public:
-  struct Storage final {
-    ::fidl::ClientEnd<::test_protocols::DiscoverableProtocol> out{};
-  };
-
-  WithProtocolEndsClientEndsTopResponse(Storage storage) noexcept
+  WithProtocolEndsClientEndsTopResponse(Storage_ storage) noexcept
       : storage_(std::move(storage)) {}
   WithProtocolEndsClientEndsTopResponse(
       ::fidl::ClientEnd<::test_protocols::DiscoverableProtocol> out) noexcept
       : storage_({.out = std::move(out)}) {}
   WithProtocolEndsClientEndsTopResponse()
-      : WithProtocolEndsClientEndsTopResponse(Storage{}) {}
+      : WithProtocolEndsClientEndsTopResponse(Storage_{}) {}
 
   WithProtocolEndsClientEndsTopResponse(
       WithProtocolEndsClientEndsTopResponse&&) noexcept = default;
@@ -766,7 +777,20 @@ class WithProtocolEndsClientEndsTopResponse final
   }
 
  private:
-  Storage storage_;
+  friend ::fidl::internal::CodableBase<WithProtocolEndsClientEndsTopResponse>;
+  friend ::fidl::CodingTraits<WithProtocolEndsClientEndsTopResponse>;
+  WithProtocolEndsClientEndsTopResponse(::fidl::Decoder& decoder);
+  template <typename Payload>
+  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+      ::fidl::Encoder& encoder, Payload&& payload)
+      -> ::fidl::HLCPPOutgoingMessage;
+  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
+
+  struct Storage_ final {
+    ::fidl::ClientEnd<::test_protocols::DiscoverableProtocol> out{};
+  };
+
+  Storage_ storage_;
 };
 
 #endif  // __Fuchsia__
@@ -779,27 +803,16 @@ extern "C" const fidl_type_t
 class WithProtocolEndsClientEndsRequest final
     : public ::fidl::internal::CodableBase<WithProtocolEndsClientEndsRequest> {
  private:
-  friend ::fidl::internal::CodableBase<WithProtocolEndsClientEndsRequest>;
-  friend ::fidl::CodingTraits<WithProtocolEndsClientEndsRequest>;
-  WithProtocolEndsClientEndsRequest(::fidl::Decoder& decoder);
-  template <typename Payload>
-  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-      ::fidl::Encoder& encoder, Payload&& payload)
-      -> ::fidl::HLCPPOutgoingMessage;
-  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
+  struct Storage_;
 
  public:
-  struct Storage final {
-    ::fidl::ClientEnd<::test_protocols::DiscoverableProtocol> in{};
-  };
-
-  WithProtocolEndsClientEndsRequest(Storage storage) noexcept
+  WithProtocolEndsClientEndsRequest(Storage_ storage) noexcept
       : storage_(std::move(storage)) {}
   WithProtocolEndsClientEndsRequest(
       ::fidl::ClientEnd<::test_protocols::DiscoverableProtocol> in) noexcept
       : storage_({.in = std::move(in)}) {}
   WithProtocolEndsClientEndsRequest()
-      : WithProtocolEndsClientEndsRequest(Storage{}) {}
+      : WithProtocolEndsClientEndsRequest(Storage_{}) {}
 
   WithProtocolEndsClientEndsRequest(
       WithProtocolEndsClientEndsRequest&&) noexcept = default;
@@ -815,7 +828,20 @@ class WithProtocolEndsClientEndsRequest final
   }
 
  private:
-  Storage storage_;
+  friend ::fidl::internal::CodableBase<WithProtocolEndsClientEndsRequest>;
+  friend ::fidl::CodingTraits<WithProtocolEndsClientEndsRequest>;
+  WithProtocolEndsClientEndsRequest(::fidl::Decoder& decoder);
+  template <typename Payload>
+  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+      ::fidl::Encoder& encoder, Payload&& payload)
+      -> ::fidl::HLCPPOutgoingMessage;
+  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
+
+  struct Storage_ final {
+    ::fidl::ClientEnd<::test_protocols::DiscoverableProtocol> in{};
+  };
+
+  Storage_ storage_;
 };
 
 #endif  // __Fuchsia__
@@ -827,30 +853,16 @@ class WithErrorSyntax_ResponseAsStruct_Response final
     : public ::fidl::internal::CodableBase<
           WithErrorSyntax_ResponseAsStruct_Response> {
  private:
-  friend ::fidl::internal::CodableBase<
-      WithErrorSyntax_ResponseAsStruct_Response>;
-  friend ::fidl::CodingTraits<WithErrorSyntax_ResponseAsStruct_Response>;
-  WithErrorSyntax_ResponseAsStruct_Response(::fidl::Decoder& decoder);
-  template <typename Payload>
-  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-      ::fidl::Encoder& encoder, Payload&& payload)
-      -> ::fidl::HLCPPOutgoingMessage;
-  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
+  struct Storage_;
 
  public:
-  struct Storage final {
-    int64_t a{};
-    int64_t b{};
-    int64_t c{};
-  };
-
-  WithErrorSyntax_ResponseAsStruct_Response(Storage storage) noexcept
+  WithErrorSyntax_ResponseAsStruct_Response(Storage_ storage) noexcept
       : storage_(std::move(storage)) {}
   WithErrorSyntax_ResponseAsStruct_Response(int64_t a, int64_t b,
                                             int64_t c) noexcept
       : storage_({.a = std::move(a), .b = std::move(b), .c = std::move(c)}) {}
   WithErrorSyntax_ResponseAsStruct_Response()
-      : WithErrorSyntax_ResponseAsStruct_Response(Storage{}) {}
+      : WithErrorSyntax_ResponseAsStruct_Response(Storage_{}) {}
 
   WithErrorSyntax_ResponseAsStruct_Response(
       WithErrorSyntax_ResponseAsStruct_Response&&) noexcept = default;
@@ -858,10 +870,10 @@ class WithErrorSyntax_ResponseAsStruct_Response final
       WithErrorSyntax_ResponseAsStruct_Response&&) noexcept = default;
   WithErrorSyntax_ResponseAsStruct_Response(
       const WithErrorSyntax_ResponseAsStruct_Response& other) noexcept
-      : WithErrorSyntax_ResponseAsStruct_Response(other.CloneStorage()) {}
+      : WithErrorSyntax_ResponseAsStruct_Response(other.CloneStorage_()) {}
   WithErrorSyntax_ResponseAsStruct_Response& operator=(
       const WithErrorSyntax_ResponseAsStruct_Response& other) noexcept {
-    storage_ = other.CloneStorage();
+    storage_ = other.CloneStorage_();
     return *this;
   }
 
@@ -878,8 +890,24 @@ class WithErrorSyntax_ResponseAsStruct_Response final
   int64_t& c() { return storage_.c; }
 
  private:
-  Storage storage_;
-  Storage CloneStorage() const;
+  friend ::fidl::internal::CodableBase<
+      WithErrorSyntax_ResponseAsStruct_Response>;
+  friend ::fidl::CodingTraits<WithErrorSyntax_ResponseAsStruct_Response>;
+  WithErrorSyntax_ResponseAsStruct_Response(::fidl::Decoder& decoder);
+  template <typename Payload>
+  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+      ::fidl::Encoder& encoder, Payload&& payload)
+      -> ::fidl::HLCPPOutgoingMessage;
+  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
+
+  struct Storage_ final {
+    int64_t a{};
+    int64_t b{};
+    int64_t c{};
+  };
+
+  Storage_ storage_;
+  Storage_ CloneStorage_() const;
 };
 
 extern "C" const fidl_type_t
@@ -997,28 +1025,16 @@ class WithErrorSyntaxResponseAsStructTopResponse final
     : public ::fidl::internal::CodableBase<
           WithErrorSyntaxResponseAsStructTopResponse> {
  private:
-  friend ::fidl::internal::CodableBase<
-      WithErrorSyntaxResponseAsStructTopResponse>;
-  friend ::fidl::CodingTraits<WithErrorSyntaxResponseAsStructTopResponse>;
-  WithErrorSyntaxResponseAsStructTopResponse(::fidl::Decoder& decoder);
-  template <typename Payload>
-  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-      ::fidl::Encoder& encoder, Payload&& payload)
-      -> ::fidl::HLCPPOutgoingMessage;
-  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
+  struct Storage_;
 
  public:
-  struct Storage final {
-    ::test_protocols::WithErrorSyntax_ResponseAsStruct_Result result{};
-  };
-
-  WithErrorSyntaxResponseAsStructTopResponse(Storage storage) noexcept
+  WithErrorSyntaxResponseAsStructTopResponse(Storage_ storage) noexcept
       : storage_(std::move(storage)) {}
   WithErrorSyntaxResponseAsStructTopResponse(
       ::test_protocols::WithErrorSyntax_ResponseAsStruct_Result result) noexcept
       : storage_({.result = std::move(result)}) {}
   WithErrorSyntaxResponseAsStructTopResponse()
-      : WithErrorSyntaxResponseAsStructTopResponse(Storage{}) {}
+      : WithErrorSyntaxResponseAsStructTopResponse(Storage_{}) {}
 
   WithErrorSyntaxResponseAsStructTopResponse(
       WithErrorSyntaxResponseAsStructTopResponse&&) noexcept = default;
@@ -1026,10 +1042,10 @@ class WithErrorSyntaxResponseAsStructTopResponse final
       WithErrorSyntaxResponseAsStructTopResponse&&) noexcept = default;
   WithErrorSyntaxResponseAsStructTopResponse(
       const WithErrorSyntaxResponseAsStructTopResponse& other) noexcept
-      : WithErrorSyntaxResponseAsStructTopResponse(other.CloneStorage()) {}
+      : WithErrorSyntaxResponseAsStructTopResponse(other.CloneStorage_()) {}
   WithErrorSyntaxResponseAsStructTopResponse& operator=(
       const WithErrorSyntaxResponseAsStructTopResponse& other) noexcept {
-    storage_ = other.CloneStorage();
+    storage_ = other.CloneStorage_();
     return *this;
   }
 
@@ -1043,8 +1059,22 @@ class WithErrorSyntaxResponseAsStructTopResponse final
   }
 
  private:
-  Storage storage_;
-  Storage CloneStorage() const;
+  friend ::fidl::internal::CodableBase<
+      WithErrorSyntaxResponseAsStructTopResponse>;
+  friend ::fidl::CodingTraits<WithErrorSyntaxResponseAsStructTopResponse>;
+  WithErrorSyntaxResponseAsStructTopResponse(::fidl::Decoder& decoder);
+  template <typename Payload>
+  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+      ::fidl::Encoder& encoder, Payload&& payload)
+      -> ::fidl::HLCPPOutgoingMessage;
+  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
+
+  struct Storage_ final {
+    ::test_protocols::WithErrorSyntax_ResponseAsStruct_Result result{};
+  };
+
+  Storage_ storage_;
+  Storage_ CloneStorage_() const;
 };
 
 extern "C" const fidl_type_t
@@ -1053,6 +1083,34 @@ extern "C" const fidl_type_t
 class WithErrorSyntax_ErrorAsPrimitive_Response final
     : public ::fidl::internal::CodableBase<
           WithErrorSyntax_ErrorAsPrimitive_Response> {
+ private:
+  struct Storage_;
+
+ public:
+  WithErrorSyntax_ErrorAsPrimitive_Response(Storage_ storage) noexcept
+      : storage_(std::move(storage)) {}
+  WithErrorSyntax_ErrorAsPrimitive_Response(uint8_t __reserved) noexcept
+      : storage_({.__reserved = std::move(__reserved)}) {}
+  WithErrorSyntax_ErrorAsPrimitive_Response()
+      : WithErrorSyntax_ErrorAsPrimitive_Response(Storage_{}) {}
+
+  WithErrorSyntax_ErrorAsPrimitive_Response(
+      WithErrorSyntax_ErrorAsPrimitive_Response&&) noexcept = default;
+  WithErrorSyntax_ErrorAsPrimitive_Response& operator=(
+      WithErrorSyntax_ErrorAsPrimitive_Response&&) noexcept = default;
+  WithErrorSyntax_ErrorAsPrimitive_Response(
+      const WithErrorSyntax_ErrorAsPrimitive_Response& other) noexcept
+      : WithErrorSyntax_ErrorAsPrimitive_Response(other.CloneStorage_()) {}
+  WithErrorSyntax_ErrorAsPrimitive_Response& operator=(
+      const WithErrorSyntax_ErrorAsPrimitive_Response& other) noexcept {
+    storage_ = other.CloneStorage_();
+    return *this;
+  }
+
+  uint8_t __reserved() const { return storage_.__reserved; }
+
+  uint8_t& __reserved() { return storage_.__reserved; }
+
  private:
   friend ::fidl::internal::CodableBase<
       WithErrorSyntax_ErrorAsPrimitive_Response>;
@@ -1064,38 +1122,12 @@ class WithErrorSyntax_ErrorAsPrimitive_Response final
       -> ::fidl::HLCPPOutgoingMessage;
   void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
- public:
-  struct Storage final {
+  struct Storage_ final {
     uint8_t __reserved = 0u;
   };
 
-  WithErrorSyntax_ErrorAsPrimitive_Response(Storage storage) noexcept
-      : storage_(std::move(storage)) {}
-  WithErrorSyntax_ErrorAsPrimitive_Response(uint8_t __reserved) noexcept
-      : storage_({.__reserved = std::move(__reserved)}) {}
-  WithErrorSyntax_ErrorAsPrimitive_Response()
-      : WithErrorSyntax_ErrorAsPrimitive_Response(Storage{}) {}
-
-  WithErrorSyntax_ErrorAsPrimitive_Response(
-      WithErrorSyntax_ErrorAsPrimitive_Response&&) noexcept = default;
-  WithErrorSyntax_ErrorAsPrimitive_Response& operator=(
-      WithErrorSyntax_ErrorAsPrimitive_Response&&) noexcept = default;
-  WithErrorSyntax_ErrorAsPrimitive_Response(
-      const WithErrorSyntax_ErrorAsPrimitive_Response& other) noexcept
-      : WithErrorSyntax_ErrorAsPrimitive_Response(other.CloneStorage()) {}
-  WithErrorSyntax_ErrorAsPrimitive_Response& operator=(
-      const WithErrorSyntax_ErrorAsPrimitive_Response& other) noexcept {
-    storage_ = other.CloneStorage();
-    return *this;
-  }
-
-  uint8_t __reserved() const { return storage_.__reserved; }
-
-  uint8_t& __reserved() { return storage_.__reserved; }
-
- private:
-  Storage storage_;
-  Storage CloneStorage() const;
+  Storage_ storage_;
+  Storage_ CloneStorage_() const;
 };
 
 extern "C" const fidl_type_t
@@ -1213,28 +1245,16 @@ class WithErrorSyntaxErrorAsPrimitiveTopResponse final
     : public ::fidl::internal::CodableBase<
           WithErrorSyntaxErrorAsPrimitiveTopResponse> {
  private:
-  friend ::fidl::internal::CodableBase<
-      WithErrorSyntaxErrorAsPrimitiveTopResponse>;
-  friend ::fidl::CodingTraits<WithErrorSyntaxErrorAsPrimitiveTopResponse>;
-  WithErrorSyntaxErrorAsPrimitiveTopResponse(::fidl::Decoder& decoder);
-  template <typename Payload>
-  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-      ::fidl::Encoder& encoder, Payload&& payload)
-      -> ::fidl::HLCPPOutgoingMessage;
-  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
+  struct Storage_;
 
  public:
-  struct Storage final {
-    ::test_protocols::WithErrorSyntax_ErrorAsPrimitive_Result result{};
-  };
-
-  WithErrorSyntaxErrorAsPrimitiveTopResponse(Storage storage) noexcept
+  WithErrorSyntaxErrorAsPrimitiveTopResponse(Storage_ storage) noexcept
       : storage_(std::move(storage)) {}
   WithErrorSyntaxErrorAsPrimitiveTopResponse(
       ::test_protocols::WithErrorSyntax_ErrorAsPrimitive_Result result) noexcept
       : storage_({.result = std::move(result)}) {}
   WithErrorSyntaxErrorAsPrimitiveTopResponse()
-      : WithErrorSyntaxErrorAsPrimitiveTopResponse(Storage{}) {}
+      : WithErrorSyntaxErrorAsPrimitiveTopResponse(Storage_{}) {}
 
   WithErrorSyntaxErrorAsPrimitiveTopResponse(
       WithErrorSyntaxErrorAsPrimitiveTopResponse&&) noexcept = default;
@@ -1242,10 +1262,10 @@ class WithErrorSyntaxErrorAsPrimitiveTopResponse final
       WithErrorSyntaxErrorAsPrimitiveTopResponse&&) noexcept = default;
   WithErrorSyntaxErrorAsPrimitiveTopResponse(
       const WithErrorSyntaxErrorAsPrimitiveTopResponse& other) noexcept
-      : WithErrorSyntaxErrorAsPrimitiveTopResponse(other.CloneStorage()) {}
+      : WithErrorSyntaxErrorAsPrimitiveTopResponse(other.CloneStorage_()) {}
   WithErrorSyntaxErrorAsPrimitiveTopResponse& operator=(
       const WithErrorSyntaxErrorAsPrimitiveTopResponse& other) noexcept {
-    storage_ = other.CloneStorage();
+    storage_ = other.CloneStorage_();
     return *this;
   }
 
@@ -1259,8 +1279,22 @@ class WithErrorSyntaxErrorAsPrimitiveTopResponse final
   }
 
  private:
-  Storage storage_;
-  Storage CloneStorage() const;
+  friend ::fidl::internal::CodableBase<
+      WithErrorSyntaxErrorAsPrimitiveTopResponse>;
+  friend ::fidl::CodingTraits<WithErrorSyntaxErrorAsPrimitiveTopResponse>;
+  WithErrorSyntaxErrorAsPrimitiveTopResponse(::fidl::Decoder& decoder);
+  template <typename Payload>
+  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+      ::fidl::Encoder& encoder, Payload&& payload)
+      -> ::fidl::HLCPPOutgoingMessage;
+  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
+
+  struct Storage_ final {
+    ::test_protocols::WithErrorSyntax_ErrorAsPrimitive_Result result{};
+  };
+
+  Storage_ storage_;
+  Storage_ CloneStorage_() const;
 };
 
 extern "C" const fidl_type_t
@@ -1269,6 +1303,34 @@ extern "C" const fidl_type_t
 class WithErrorSyntax_ErrorAsEnum_Response final
     : public ::fidl::internal::CodableBase<
           WithErrorSyntax_ErrorAsEnum_Response> {
+ private:
+  struct Storage_;
+
+ public:
+  WithErrorSyntax_ErrorAsEnum_Response(Storage_ storage) noexcept
+      : storage_(std::move(storage)) {}
+  WithErrorSyntax_ErrorAsEnum_Response(uint8_t __reserved) noexcept
+      : storage_({.__reserved = std::move(__reserved)}) {}
+  WithErrorSyntax_ErrorAsEnum_Response()
+      : WithErrorSyntax_ErrorAsEnum_Response(Storage_{}) {}
+
+  WithErrorSyntax_ErrorAsEnum_Response(
+      WithErrorSyntax_ErrorAsEnum_Response&&) noexcept = default;
+  WithErrorSyntax_ErrorAsEnum_Response& operator=(
+      WithErrorSyntax_ErrorAsEnum_Response&&) noexcept = default;
+  WithErrorSyntax_ErrorAsEnum_Response(
+      const WithErrorSyntax_ErrorAsEnum_Response& other) noexcept
+      : WithErrorSyntax_ErrorAsEnum_Response(other.CloneStorage_()) {}
+  WithErrorSyntax_ErrorAsEnum_Response& operator=(
+      const WithErrorSyntax_ErrorAsEnum_Response& other) noexcept {
+    storage_ = other.CloneStorage_();
+    return *this;
+  }
+
+  uint8_t __reserved() const { return storage_.__reserved; }
+
+  uint8_t& __reserved() { return storage_.__reserved; }
+
  private:
   friend ::fidl::internal::CodableBase<WithErrorSyntax_ErrorAsEnum_Response>;
   friend ::fidl::CodingTraits<WithErrorSyntax_ErrorAsEnum_Response>;
@@ -1279,38 +1341,12 @@ class WithErrorSyntax_ErrorAsEnum_Response final
       -> ::fidl::HLCPPOutgoingMessage;
   void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
- public:
-  struct Storage final {
+  struct Storage_ final {
     uint8_t __reserved = 0u;
   };
 
-  WithErrorSyntax_ErrorAsEnum_Response(Storage storage) noexcept
-      : storage_(std::move(storage)) {}
-  WithErrorSyntax_ErrorAsEnum_Response(uint8_t __reserved) noexcept
-      : storage_({.__reserved = std::move(__reserved)}) {}
-  WithErrorSyntax_ErrorAsEnum_Response()
-      : WithErrorSyntax_ErrorAsEnum_Response(Storage{}) {}
-
-  WithErrorSyntax_ErrorAsEnum_Response(
-      WithErrorSyntax_ErrorAsEnum_Response&&) noexcept = default;
-  WithErrorSyntax_ErrorAsEnum_Response& operator=(
-      WithErrorSyntax_ErrorAsEnum_Response&&) noexcept = default;
-  WithErrorSyntax_ErrorAsEnum_Response(
-      const WithErrorSyntax_ErrorAsEnum_Response& other) noexcept
-      : WithErrorSyntax_ErrorAsEnum_Response(other.CloneStorage()) {}
-  WithErrorSyntax_ErrorAsEnum_Response& operator=(
-      const WithErrorSyntax_ErrorAsEnum_Response& other) noexcept {
-    storage_ = other.CloneStorage();
-    return *this;
-  }
-
-  uint8_t __reserved() const { return storage_.__reserved; }
-
-  uint8_t& __reserved() { return storage_.__reserved; }
-
- private:
-  Storage storage_;
-  Storage CloneStorage() const;
+  Storage_ storage_;
+  Storage_ CloneStorage_() const;
 };
 
 extern "C" const fidl_type_t
@@ -1320,32 +1356,18 @@ class WithAndWithoutRequestResponseWithRequestWithResponseTopResponse final
     : public ::fidl::internal::CodableBase<
           WithAndWithoutRequestResponseWithRequestWithResponseTopResponse> {
  private:
-  friend ::fidl::internal::CodableBase<
-      WithAndWithoutRequestResponseWithRequestWithResponseTopResponse>;
-  friend ::fidl::CodingTraits<
-      WithAndWithoutRequestResponseWithRequestWithResponseTopResponse>;
-  WithAndWithoutRequestResponseWithRequestWithResponseTopResponse(
-      ::fidl::Decoder& decoder);
-  template <typename Payload>
-  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-      ::fidl::Encoder& encoder, Payload&& payload)
-      -> ::fidl::HLCPPOutgoingMessage;
-  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
+  struct Storage_;
 
  public:
-  struct Storage final {
-    ::std::string ret{};
-  };
-
   WithAndWithoutRequestResponseWithRequestWithResponseTopResponse(
-      Storage storage) noexcept
+      Storage_ storage) noexcept
       : storage_(std::move(storage)) {}
   WithAndWithoutRequestResponseWithRequestWithResponseTopResponse(
       ::std::string ret) noexcept
       : storage_({.ret = std::move(ret)}) {}
   WithAndWithoutRequestResponseWithRequestWithResponseTopResponse()
       : WithAndWithoutRequestResponseWithRequestWithResponseTopResponse(
-            Storage{}) {}
+            Storage_{}) {}
 
   WithAndWithoutRequestResponseWithRequestWithResponseTopResponse(
       WithAndWithoutRequestResponseWithRequestWithResponseTopResponse&&) noexcept =
@@ -1357,11 +1379,11 @@ class WithAndWithoutRequestResponseWithRequestWithResponseTopResponse final
       const WithAndWithoutRequestResponseWithRequestWithResponseTopResponse&
           other) noexcept
       : WithAndWithoutRequestResponseWithRequestWithResponseTopResponse(
-            other.CloneStorage()) {}
+            other.CloneStorage_()) {}
   WithAndWithoutRequestResponseWithRequestWithResponseTopResponse& operator=(
       const WithAndWithoutRequestResponseWithRequestWithResponseTopResponse&
           other) noexcept {
-    storage_ = other.CloneStorage();
+    storage_ = other.CloneStorage_();
     return *this;
   }
 
@@ -1370,8 +1392,24 @@ class WithAndWithoutRequestResponseWithRequestWithResponseTopResponse final
   ::std::string& ret() { return storage_.ret; }
 
  private:
-  Storage storage_;
-  Storage CloneStorage() const;
+  friend ::fidl::internal::CodableBase<
+      WithAndWithoutRequestResponseWithRequestWithResponseTopResponse>;
+  friend ::fidl::CodingTraits<
+      WithAndWithoutRequestResponseWithRequestWithResponseTopResponse>;
+  WithAndWithoutRequestResponseWithRequestWithResponseTopResponse(
+      ::fidl::Decoder& decoder);
+  template <typename Payload>
+  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+      ::fidl::Encoder& encoder, Payload&& payload)
+      -> ::fidl::HLCPPOutgoingMessage;
+  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
+
+  struct Storage_ final {
+    ::std::string ret{};
+  };
+
+  Storage_ storage_;
+  Storage_ CloneStorage_() const;
 };
 
 extern "C" const fidl_type_t
@@ -1381,32 +1419,18 @@ class WithAndWithoutRequestResponseWithRequestWithResponseRequest final
     : public ::fidl::internal::CodableBase<
           WithAndWithoutRequestResponseWithRequestWithResponseRequest> {
  private:
-  friend ::fidl::internal::CodableBase<
-      WithAndWithoutRequestResponseWithRequestWithResponseRequest>;
-  friend ::fidl::CodingTraits<
-      WithAndWithoutRequestResponseWithRequestWithResponseRequest>;
-  WithAndWithoutRequestResponseWithRequestWithResponseRequest(
-      ::fidl::Decoder& decoder);
-  template <typename Payload>
-  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-      ::fidl::Encoder& encoder, Payload&& payload)
-      -> ::fidl::HLCPPOutgoingMessage;
-  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
+  struct Storage_;
 
  public:
-  struct Storage final {
-    ::std::string arg{};
-  };
-
   WithAndWithoutRequestResponseWithRequestWithResponseRequest(
-      Storage storage) noexcept
+      Storage_ storage) noexcept
       : storage_(std::move(storage)) {}
   WithAndWithoutRequestResponseWithRequestWithResponseRequest(
       ::std::string arg) noexcept
       : storage_({.arg = std::move(arg)}) {}
   WithAndWithoutRequestResponseWithRequestWithResponseRequest()
-      : WithAndWithoutRequestResponseWithRequestWithResponseRequest(Storage{}) {
-  }
+      : WithAndWithoutRequestResponseWithRequestWithResponseRequest(
+            Storage_{}) {}
 
   WithAndWithoutRequestResponseWithRequestWithResponseRequest(
       WithAndWithoutRequestResponseWithRequestWithResponseRequest&&) noexcept =
@@ -1418,11 +1442,11 @@ class WithAndWithoutRequestResponseWithRequestWithResponseRequest final
       const WithAndWithoutRequestResponseWithRequestWithResponseRequest&
           other) noexcept
       : WithAndWithoutRequestResponseWithRequestWithResponseRequest(
-            other.CloneStorage()) {}
+            other.CloneStorage_()) {}
   WithAndWithoutRequestResponseWithRequestWithResponseRequest& operator=(
       const WithAndWithoutRequestResponseWithRequestWithResponseRequest&
           other) noexcept {
-    storage_ = other.CloneStorage();
+    storage_ = other.CloneStorage_();
     return *this;
   }
 
@@ -1431,8 +1455,24 @@ class WithAndWithoutRequestResponseWithRequestWithResponseRequest final
   ::std::string& arg() { return storage_.arg; }
 
  private:
-  Storage storage_;
-  Storage CloneStorage() const;
+  friend ::fidl::internal::CodableBase<
+      WithAndWithoutRequestResponseWithRequestWithResponseRequest>;
+  friend ::fidl::CodingTraits<
+      WithAndWithoutRequestResponseWithRequestWithResponseRequest>;
+  WithAndWithoutRequestResponseWithRequestWithResponseRequest(
+      ::fidl::Decoder& decoder);
+  template <typename Payload>
+  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+      ::fidl::Encoder& encoder, Payload&& payload)
+      -> ::fidl::HLCPPOutgoingMessage;
+  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
+
+  struct Storage_ final {
+    ::std::string arg{};
+  };
+
+  Storage_ storage_;
+  Storage_ CloneStorage_() const;
 };
 
 extern "C" const fidl_type_t
@@ -1442,31 +1482,17 @@ class WithAndWithoutRequestResponseWithRequestNoResponseRequest final
     : public ::fidl::internal::CodableBase<
           WithAndWithoutRequestResponseWithRequestNoResponseRequest> {
  private:
-  friend ::fidl::internal::CodableBase<
-      WithAndWithoutRequestResponseWithRequestNoResponseRequest>;
-  friend ::fidl::CodingTraits<
-      WithAndWithoutRequestResponseWithRequestNoResponseRequest>;
-  WithAndWithoutRequestResponseWithRequestNoResponseRequest(
-      ::fidl::Decoder& decoder);
-  template <typename Payload>
-  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-      ::fidl::Encoder& encoder, Payload&& payload)
-      -> ::fidl::HLCPPOutgoingMessage;
-  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
+  struct Storage_;
 
  public:
-  struct Storage final {
-    ::std::string arg{};
-  };
-
   WithAndWithoutRequestResponseWithRequestNoResponseRequest(
-      Storage storage) noexcept
+      Storage_ storage) noexcept
       : storage_(std::move(storage)) {}
   WithAndWithoutRequestResponseWithRequestNoResponseRequest(
       ::std::string arg) noexcept
       : storage_({.arg = std::move(arg)}) {}
   WithAndWithoutRequestResponseWithRequestNoResponseRequest()
-      : WithAndWithoutRequestResponseWithRequestNoResponseRequest(Storage{}) {}
+      : WithAndWithoutRequestResponseWithRequestNoResponseRequest(Storage_{}) {}
 
   WithAndWithoutRequestResponseWithRequestNoResponseRequest(
       WithAndWithoutRequestResponseWithRequestNoResponseRequest&&) noexcept =
@@ -1478,11 +1504,11 @@ class WithAndWithoutRequestResponseWithRequestNoResponseRequest final
       const WithAndWithoutRequestResponseWithRequestNoResponseRequest&
           other) noexcept
       : WithAndWithoutRequestResponseWithRequestNoResponseRequest(
-            other.CloneStorage()) {}
+            other.CloneStorage_()) {}
   WithAndWithoutRequestResponseWithRequestNoResponseRequest& operator=(
       const WithAndWithoutRequestResponseWithRequestNoResponseRequest&
           other) noexcept {
-    storage_ = other.CloneStorage();
+    storage_ = other.CloneStorage_();
     return *this;
   }
 
@@ -1491,8 +1517,24 @@ class WithAndWithoutRequestResponseWithRequestNoResponseRequest final
   ::std::string& arg() { return storage_.arg; }
 
  private:
-  Storage storage_;
-  Storage CloneStorage() const;
+  friend ::fidl::internal::CodableBase<
+      WithAndWithoutRequestResponseWithRequestNoResponseRequest>;
+  friend ::fidl::CodingTraits<
+      WithAndWithoutRequestResponseWithRequestNoResponseRequest>;
+  WithAndWithoutRequestResponseWithRequestNoResponseRequest(
+      ::fidl::Decoder& decoder);
+  template <typename Payload>
+  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+      ::fidl::Encoder& encoder, Payload&& payload)
+      -> ::fidl::HLCPPOutgoingMessage;
+  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
+
+  struct Storage_ final {
+    ::std::string arg{};
+  };
+
+  Storage_ storage_;
+  Storage_ CloneStorage_() const;
 };
 
 extern "C" const fidl_type_t
@@ -1501,6 +1543,42 @@ extern "C" const fidl_type_t
 class WithAndWithoutRequestResponseWithRequestEmptyResponseRequest final
     : public ::fidl::internal::CodableBase<
           WithAndWithoutRequestResponseWithRequestEmptyResponseRequest> {
+ private:
+  struct Storage_;
+
+ public:
+  WithAndWithoutRequestResponseWithRequestEmptyResponseRequest(
+      Storage_ storage) noexcept
+      : storage_(std::move(storage)) {}
+  WithAndWithoutRequestResponseWithRequestEmptyResponseRequest(
+      ::std::string arg) noexcept
+      : storage_({.arg = std::move(arg)}) {}
+  WithAndWithoutRequestResponseWithRequestEmptyResponseRequest()
+      : WithAndWithoutRequestResponseWithRequestEmptyResponseRequest(
+            Storage_{}) {}
+
+  WithAndWithoutRequestResponseWithRequestEmptyResponseRequest(
+      WithAndWithoutRequestResponseWithRequestEmptyResponseRequest&&) noexcept =
+      default;
+  WithAndWithoutRequestResponseWithRequestEmptyResponseRequest& operator=(
+      WithAndWithoutRequestResponseWithRequestEmptyResponseRequest&&) noexcept =
+      default;
+  WithAndWithoutRequestResponseWithRequestEmptyResponseRequest(
+      const WithAndWithoutRequestResponseWithRequestEmptyResponseRequest&
+          other) noexcept
+      : WithAndWithoutRequestResponseWithRequestEmptyResponseRequest(
+            other.CloneStorage_()) {}
+  WithAndWithoutRequestResponseWithRequestEmptyResponseRequest& operator=(
+      const WithAndWithoutRequestResponseWithRequestEmptyResponseRequest&
+          other) noexcept {
+    storage_ = other.CloneStorage_();
+    return *this;
+  }
+
+  const ::std::string& arg() const { return storage_.arg; }
+
+  ::std::string& arg() { return storage_.arg; }
+
  private:
   friend ::fidl::internal::CodableBase<
       WithAndWithoutRequestResponseWithRequestEmptyResponseRequest>;
@@ -1514,46 +1592,12 @@ class WithAndWithoutRequestResponseWithRequestEmptyResponseRequest final
       -> ::fidl::HLCPPOutgoingMessage;
   void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
- public:
-  struct Storage final {
+  struct Storage_ final {
     ::std::string arg{};
   };
 
-  WithAndWithoutRequestResponseWithRequestEmptyResponseRequest(
-      Storage storage) noexcept
-      : storage_(std::move(storage)) {}
-  WithAndWithoutRequestResponseWithRequestEmptyResponseRequest(
-      ::std::string arg) noexcept
-      : storage_({.arg = std::move(arg)}) {}
-  WithAndWithoutRequestResponseWithRequestEmptyResponseRequest()
-      : WithAndWithoutRequestResponseWithRequestEmptyResponseRequest(
-            Storage{}) {}
-
-  WithAndWithoutRequestResponseWithRequestEmptyResponseRequest(
-      WithAndWithoutRequestResponseWithRequestEmptyResponseRequest&&) noexcept =
-      default;
-  WithAndWithoutRequestResponseWithRequestEmptyResponseRequest& operator=(
-      WithAndWithoutRequestResponseWithRequestEmptyResponseRequest&&) noexcept =
-      default;
-  WithAndWithoutRequestResponseWithRequestEmptyResponseRequest(
-      const WithAndWithoutRequestResponseWithRequestEmptyResponseRequest&
-          other) noexcept
-      : WithAndWithoutRequestResponseWithRequestEmptyResponseRequest(
-            other.CloneStorage()) {}
-  WithAndWithoutRequestResponseWithRequestEmptyResponseRequest& operator=(
-      const WithAndWithoutRequestResponseWithRequestEmptyResponseRequest&
-          other) noexcept {
-    storage_ = other.CloneStorage();
-    return *this;
-  }
-
-  const ::std::string& arg() const { return storage_.arg; }
-
-  ::std::string& arg() { return storage_.arg; }
-
- private:
-  Storage storage_;
-  Storage CloneStorage() const;
+  Storage_ storage_;
+  Storage_ CloneStorage_() const;
 };
 
 extern "C" const fidl_type_t
@@ -1562,6 +1606,36 @@ extern "C" const fidl_type_t
 class WithAndWithoutRequestResponseOnWithResponseRequest final
     : public ::fidl::internal::CodableBase<
           WithAndWithoutRequestResponseOnWithResponseRequest> {
+ private:
+  struct Storage_;
+
+ public:
+  WithAndWithoutRequestResponseOnWithResponseRequest(Storage_ storage) noexcept
+      : storage_(std::move(storage)) {}
+  WithAndWithoutRequestResponseOnWithResponseRequest(::std::string ret) noexcept
+      : storage_({.ret = std::move(ret)}) {}
+  WithAndWithoutRequestResponseOnWithResponseRequest()
+      : WithAndWithoutRequestResponseOnWithResponseRequest(Storage_{}) {}
+
+  WithAndWithoutRequestResponseOnWithResponseRequest(
+      WithAndWithoutRequestResponseOnWithResponseRequest&&) noexcept = default;
+  WithAndWithoutRequestResponseOnWithResponseRequest& operator=(
+      WithAndWithoutRequestResponseOnWithResponseRequest&&) noexcept = default;
+  WithAndWithoutRequestResponseOnWithResponseRequest(
+      const WithAndWithoutRequestResponseOnWithResponseRequest& other) noexcept
+      : WithAndWithoutRequestResponseOnWithResponseRequest(
+            other.CloneStorage_()) {}
+  WithAndWithoutRequestResponseOnWithResponseRequest& operator=(
+      const WithAndWithoutRequestResponseOnWithResponseRequest&
+          other) noexcept {
+    storage_ = other.CloneStorage_();
+    return *this;
+  }
+
+  const ::std::string& ret() const { return storage_.ret; }
+
+  ::std::string& ret() { return storage_.ret; }
+
  private:
   friend ::fidl::internal::CodableBase<
       WithAndWithoutRequestResponseOnWithResponseRequest>;
@@ -1574,40 +1648,12 @@ class WithAndWithoutRequestResponseOnWithResponseRequest final
       -> ::fidl::HLCPPOutgoingMessage;
   void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
- public:
-  struct Storage final {
+  struct Storage_ final {
     ::std::string ret{};
   };
 
-  WithAndWithoutRequestResponseOnWithResponseRequest(Storage storage) noexcept
-      : storage_(std::move(storage)) {}
-  WithAndWithoutRequestResponseOnWithResponseRequest(::std::string ret) noexcept
-      : storage_({.ret = std::move(ret)}) {}
-  WithAndWithoutRequestResponseOnWithResponseRequest()
-      : WithAndWithoutRequestResponseOnWithResponseRequest(Storage{}) {}
-
-  WithAndWithoutRequestResponseOnWithResponseRequest(
-      WithAndWithoutRequestResponseOnWithResponseRequest&&) noexcept = default;
-  WithAndWithoutRequestResponseOnWithResponseRequest& operator=(
-      WithAndWithoutRequestResponseOnWithResponseRequest&&) noexcept = default;
-  WithAndWithoutRequestResponseOnWithResponseRequest(
-      const WithAndWithoutRequestResponseOnWithResponseRequest& other) noexcept
-      : WithAndWithoutRequestResponseOnWithResponseRequest(
-            other.CloneStorage()) {}
-  WithAndWithoutRequestResponseOnWithResponseRequest& operator=(
-      const WithAndWithoutRequestResponseOnWithResponseRequest&
-          other) noexcept {
-    storage_ = other.CloneStorage();
-    return *this;
-  }
-
-  const ::std::string& ret() const { return storage_.ret; }
-
-  ::std::string& ret() { return storage_.ret; }
-
- private:
-  Storage storage_;
-  Storage CloneStorage() const;
+  Storage_ storage_;
+  Storage_ CloneStorage_() const;
 };
 
 extern "C" const fidl_type_t
@@ -1616,6 +1662,42 @@ extern "C" const fidl_type_t
 class WithAndWithoutRequestResponseNoRequestWithResponseTopResponse final
     : public ::fidl::internal::CodableBase<
           WithAndWithoutRequestResponseNoRequestWithResponseTopResponse> {
+ private:
+  struct Storage_;
+
+ public:
+  WithAndWithoutRequestResponseNoRequestWithResponseTopResponse(
+      Storage_ storage) noexcept
+      : storage_(std::move(storage)) {}
+  WithAndWithoutRequestResponseNoRequestWithResponseTopResponse(
+      ::std::string ret) noexcept
+      : storage_({.ret = std::move(ret)}) {}
+  WithAndWithoutRequestResponseNoRequestWithResponseTopResponse()
+      : WithAndWithoutRequestResponseNoRequestWithResponseTopResponse(
+            Storage_{}) {}
+
+  WithAndWithoutRequestResponseNoRequestWithResponseTopResponse(
+      WithAndWithoutRequestResponseNoRequestWithResponseTopResponse&&) noexcept =
+      default;
+  WithAndWithoutRequestResponseNoRequestWithResponseTopResponse& operator=(
+      WithAndWithoutRequestResponseNoRequestWithResponseTopResponse&&) noexcept =
+      default;
+  WithAndWithoutRequestResponseNoRequestWithResponseTopResponse(
+      const WithAndWithoutRequestResponseNoRequestWithResponseTopResponse&
+          other) noexcept
+      : WithAndWithoutRequestResponseNoRequestWithResponseTopResponse(
+            other.CloneStorage_()) {}
+  WithAndWithoutRequestResponseNoRequestWithResponseTopResponse& operator=(
+      const WithAndWithoutRequestResponseNoRequestWithResponseTopResponse&
+          other) noexcept {
+    storage_ = other.CloneStorage_();
+    return *this;
+  }
+
+  const ::std::string& ret() const { return storage_.ret; }
+
+  ::std::string& ret() { return storage_.ret; }
+
  private:
   friend ::fidl::internal::CodableBase<
       WithAndWithoutRequestResponseNoRequestWithResponseTopResponse>;
@@ -1629,52 +1711,46 @@ class WithAndWithoutRequestResponseNoRequestWithResponseTopResponse final
       -> ::fidl::HLCPPOutgoingMessage;
   void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
- public:
-  struct Storage final {
+  struct Storage_ final {
     ::std::string ret{};
   };
 
-  WithAndWithoutRequestResponseNoRequestWithResponseTopResponse(
-      Storage storage) noexcept
-      : storage_(std::move(storage)) {}
-  WithAndWithoutRequestResponseNoRequestWithResponseTopResponse(
-      ::std::string ret) noexcept
-      : storage_({.ret = std::move(ret)}) {}
-  WithAndWithoutRequestResponseNoRequestWithResponseTopResponse()
-      : WithAndWithoutRequestResponseNoRequestWithResponseTopResponse(
-            Storage{}) {}
-
-  WithAndWithoutRequestResponseNoRequestWithResponseTopResponse(
-      WithAndWithoutRequestResponseNoRequestWithResponseTopResponse&&) noexcept =
-      default;
-  WithAndWithoutRequestResponseNoRequestWithResponseTopResponse& operator=(
-      WithAndWithoutRequestResponseNoRequestWithResponseTopResponse&&) noexcept =
-      default;
-  WithAndWithoutRequestResponseNoRequestWithResponseTopResponse(
-      const WithAndWithoutRequestResponseNoRequestWithResponseTopResponse&
-          other) noexcept
-      : WithAndWithoutRequestResponseNoRequestWithResponseTopResponse(
-            other.CloneStorage()) {}
-  WithAndWithoutRequestResponseNoRequestWithResponseTopResponse& operator=(
-      const WithAndWithoutRequestResponseNoRequestWithResponseTopResponse&
-          other) noexcept {
-    storage_ = other.CloneStorage();
-    return *this;
-  }
-
-  const ::std::string& ret() const { return storage_.ret; }
-
-  ::std::string& ret() { return storage_.ret; }
-
- private:
-  Storage storage_;
-  Storage CloneStorage() const;
+  Storage_ storage_;
+  Storage_ CloneStorage_() const;
 };
 
 extern "C" const fidl_type_t test_protocols_TransitionalRequestTopResponseTable;
 
 class TransitionalRequestTopResponse final
     : public ::fidl::internal::CodableBase<TransitionalRequestTopResponse> {
+ private:
+  struct Storage_;
+
+ public:
+  TransitionalRequestTopResponse(Storage_ storage) noexcept
+      : storage_(std::move(storage)) {}
+  TransitionalRequestTopResponse(int64_t y) noexcept
+      : storage_({.y = std::move(y)}) {}
+  TransitionalRequestTopResponse()
+      : TransitionalRequestTopResponse(Storage_{}) {}
+
+  TransitionalRequestTopResponse(TransitionalRequestTopResponse&&) noexcept =
+      default;
+  TransitionalRequestTopResponse& operator=(
+      TransitionalRequestTopResponse&&) noexcept = default;
+  TransitionalRequestTopResponse(
+      const TransitionalRequestTopResponse& other) noexcept
+      : TransitionalRequestTopResponse(other.CloneStorage_()) {}
+  TransitionalRequestTopResponse& operator=(
+      const TransitionalRequestTopResponse& other) noexcept {
+    storage_ = other.CloneStorage_();
+    return *this;
+  }
+
+  int64_t y() const { return storage_.y; }
+
+  int64_t& y() { return storage_.y; }
+
  private:
   friend ::fidl::internal::CodableBase<TransitionalRequestTopResponse>;
   friend ::fidl::CodingTraits<TransitionalRequestTopResponse>;
@@ -1685,44 +1761,43 @@ class TransitionalRequestTopResponse final
       -> ::fidl::HLCPPOutgoingMessage;
   void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
- public:
-  struct Storage final {
+  struct Storage_ final {
     int64_t y{};
   };
 
-  TransitionalRequestTopResponse(Storage storage) noexcept
-      : storage_(std::move(storage)) {}
-  TransitionalRequestTopResponse(int64_t y) noexcept
-      : storage_({.y = std::move(y)}) {}
-  TransitionalRequestTopResponse()
-      : TransitionalRequestTopResponse(Storage{}) {}
-
-  TransitionalRequestTopResponse(TransitionalRequestTopResponse&&) noexcept =
-      default;
-  TransitionalRequestTopResponse& operator=(
-      TransitionalRequestTopResponse&&) noexcept = default;
-  TransitionalRequestTopResponse(
-      const TransitionalRequestTopResponse& other) noexcept
-      : TransitionalRequestTopResponse(other.CloneStorage()) {}
-  TransitionalRequestTopResponse& operator=(
-      const TransitionalRequestTopResponse& other) noexcept {
-    storage_ = other.CloneStorage();
-    return *this;
-  }
-
-  int64_t y() const { return storage_.y; }
-
-  int64_t& y() { return storage_.y; }
-
- private:
-  Storage storage_;
-  Storage CloneStorage() const;
+  Storage_ storage_;
+  Storage_ CloneStorage_() const;
 };
 
 extern "C" const fidl_type_t test_protocols_TransitionalRequestRequestTable;
 
 class TransitionalRequestRequest final
     : public ::fidl::internal::CodableBase<TransitionalRequestRequest> {
+ private:
+  struct Storage_;
+
+ public:
+  TransitionalRequestRequest(Storage_ storage) noexcept
+      : storage_(std::move(storage)) {}
+  TransitionalRequestRequest(int64_t x) noexcept
+      : storage_({.x = std::move(x)}) {}
+  TransitionalRequestRequest() : TransitionalRequestRequest(Storage_{}) {}
+
+  TransitionalRequestRequest(TransitionalRequestRequest&&) noexcept = default;
+  TransitionalRequestRequest& operator=(TransitionalRequestRequest&&) noexcept =
+      default;
+  TransitionalRequestRequest(const TransitionalRequestRequest& other) noexcept
+      : TransitionalRequestRequest(other.CloneStorage_()) {}
+  TransitionalRequestRequest& operator=(
+      const TransitionalRequestRequest& other) noexcept {
+    storage_ = other.CloneStorage_();
+    return *this;
+  }
+
+  int64_t x() const { return storage_.x; }
+
+  int64_t& x() { return storage_.x; }
+
  private:
   friend ::fidl::internal::CodableBase<TransitionalRequestRequest>;
   friend ::fidl::CodingTraits<TransitionalRequestRequest>;
@@ -1733,25 +1808,36 @@ class TransitionalRequestRequest final
       -> ::fidl::HLCPPOutgoingMessage;
   void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
- public:
-  struct Storage final {
+  struct Storage_ final {
     int64_t x{};
   };
 
-  TransitionalRequestRequest(Storage storage) noexcept
-      : storage_(std::move(storage)) {}
-  TransitionalRequestRequest(int64_t x) noexcept
-      : storage_({.x = std::move(x)}) {}
-  TransitionalRequestRequest() : TransitionalRequestRequest(Storage{}) {}
+  Storage_ storage_;
+  Storage_ CloneStorage_() const;
+};
 
-  TransitionalRequestRequest(TransitionalRequestRequest&&) noexcept = default;
-  TransitionalRequestRequest& operator=(TransitionalRequestRequest&&) noexcept =
+extern "C" const fidl_type_t test_protocols_TransitionalOneWayRequestTable;
+
+class TransitionalOneWayRequest final
+    : public ::fidl::internal::CodableBase<TransitionalOneWayRequest> {
+ private:
+  struct Storage_;
+
+ public:
+  TransitionalOneWayRequest(Storage_ storage) noexcept
+      : storage_(std::move(storage)) {}
+  TransitionalOneWayRequest(int64_t x) noexcept
+      : storage_({.x = std::move(x)}) {}
+  TransitionalOneWayRequest() : TransitionalOneWayRequest(Storage_{}) {}
+
+  TransitionalOneWayRequest(TransitionalOneWayRequest&&) noexcept = default;
+  TransitionalOneWayRequest& operator=(TransitionalOneWayRequest&&) noexcept =
       default;
-  TransitionalRequestRequest(const TransitionalRequestRequest& other) noexcept
-      : TransitionalRequestRequest(other.CloneStorage()) {}
-  TransitionalRequestRequest& operator=(
-      const TransitionalRequestRequest& other) noexcept {
-    storage_ = other.CloneStorage();
+  TransitionalOneWayRequest(const TransitionalOneWayRequest& other) noexcept
+      : TransitionalOneWayRequest(other.CloneStorage_()) {}
+  TransitionalOneWayRequest& operator=(
+      const TransitionalOneWayRequest& other) noexcept {
+    storage_ = other.CloneStorage_();
     return *this;
   }
 
@@ -1759,15 +1845,6 @@ class TransitionalRequestRequest final
 
   int64_t& x() { return storage_.x; }
 
- private:
-  Storage storage_;
-  Storage CloneStorage() const;
-};
-
-extern "C" const fidl_type_t test_protocols_TransitionalOneWayRequestTable;
-
-class TransitionalOneWayRequest final
-    : public ::fidl::internal::CodableBase<TransitionalOneWayRequest> {
  private:
   friend ::fidl::internal::CodableBase<TransitionalOneWayRequest>;
   friend ::fidl::CodingTraits<TransitionalOneWayRequest>;
@@ -1778,25 +1855,36 @@ class TransitionalOneWayRequest final
       -> ::fidl::HLCPPOutgoingMessage;
   void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
- public:
-  struct Storage final {
+  struct Storage_ final {
     int64_t x{};
   };
 
-  TransitionalOneWayRequest(Storage storage) noexcept
-      : storage_(std::move(storage)) {}
-  TransitionalOneWayRequest(int64_t x) noexcept
-      : storage_({.x = std::move(x)}) {}
-  TransitionalOneWayRequest() : TransitionalOneWayRequest(Storage{}) {}
+  Storage_ storage_;
+  Storage_ CloneStorage_() const;
+};
 
-  TransitionalOneWayRequest(TransitionalOneWayRequest&&) noexcept = default;
-  TransitionalOneWayRequest& operator=(TransitionalOneWayRequest&&) noexcept =
+extern "C" const fidl_type_t test_protocols_TransitionalEventRequestTable;
+
+class TransitionalEventRequest final
+    : public ::fidl::internal::CodableBase<TransitionalEventRequest> {
+ private:
+  struct Storage_;
+
+ public:
+  TransitionalEventRequest(Storage_ storage) noexcept
+      : storage_(std::move(storage)) {}
+  TransitionalEventRequest(int64_t x) noexcept
+      : storage_({.x = std::move(x)}) {}
+  TransitionalEventRequest() : TransitionalEventRequest(Storage_{}) {}
+
+  TransitionalEventRequest(TransitionalEventRequest&&) noexcept = default;
+  TransitionalEventRequest& operator=(TransitionalEventRequest&&) noexcept =
       default;
-  TransitionalOneWayRequest(const TransitionalOneWayRequest& other) noexcept
-      : TransitionalOneWayRequest(other.CloneStorage()) {}
-  TransitionalOneWayRequest& operator=(
-      const TransitionalOneWayRequest& other) noexcept {
-    storage_ = other.CloneStorage();
+  TransitionalEventRequest(const TransitionalEventRequest& other) noexcept
+      : TransitionalEventRequest(other.CloneStorage_()) {}
+  TransitionalEventRequest& operator=(
+      const TransitionalEventRequest& other) noexcept {
+    storage_ = other.CloneStorage_();
     return *this;
   }
 
@@ -1804,15 +1892,6 @@ class TransitionalOneWayRequest final
 
   int64_t& x() { return storage_.x; }
 
- private:
-  Storage storage_;
-  Storage CloneStorage() const;
-};
-
-extern "C" const fidl_type_t test_protocols_TransitionalEventRequestTable;
-
-class TransitionalEventRequest final
-    : public ::fidl::internal::CodableBase<TransitionalEventRequest> {
  private:
   friend ::fidl::internal::CodableBase<TransitionalEventRequest>;
   friend ::fidl::CodingTraits<TransitionalEventRequest>;
@@ -1823,35 +1902,12 @@ class TransitionalEventRequest final
       -> ::fidl::HLCPPOutgoingMessage;
   void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
- public:
-  struct Storage final {
+  struct Storage_ final {
     int64_t x{};
   };
 
-  TransitionalEventRequest(Storage storage) noexcept
-      : storage_(std::move(storage)) {}
-  TransitionalEventRequest(int64_t x) noexcept
-      : storage_({.x = std::move(x)}) {}
-  TransitionalEventRequest() : TransitionalEventRequest(Storage{}) {}
-
-  TransitionalEventRequest(TransitionalEventRequest&&) noexcept = default;
-  TransitionalEventRequest& operator=(TransitionalEventRequest&&) noexcept =
-      default;
-  TransitionalEventRequest(const TransitionalEventRequest& other) noexcept
-      : TransitionalEventRequest(other.CloneStorage()) {}
-  TransitionalEventRequest& operator=(
-      const TransitionalEventRequest& other) noexcept {
-    storage_ = other.CloneStorage();
-    return *this;
-  }
-
-  int64_t x() const { return storage_.x; }
-
-  int64_t& x() { return storage_.x; }
-
- private:
-  Storage storage_;
-  Storage CloneStorage() const;
+  Storage_ storage_;
+  Storage_ CloneStorage_() const;
 };
 
 extern "C" const fidl_type_t test_protocols_TheUnionTable;
@@ -1930,6 +1986,34 @@ extern "C" const fidl_type_t
 class MethodWithUnionUnionMethodRequest final
     : public ::fidl::internal::CodableBase<MethodWithUnionUnionMethodRequest> {
  private:
+  struct Storage_;
+
+ public:
+  MethodWithUnionUnionMethodRequest(Storage_ storage) noexcept
+      : storage_(std::move(storage)) {}
+  MethodWithUnionUnionMethodRequest(::test_protocols::TheUnion u) noexcept
+      : storage_({.u = std::move(u)}) {}
+  MethodWithUnionUnionMethodRequest()
+      : MethodWithUnionUnionMethodRequest(Storage_{}) {}
+
+  MethodWithUnionUnionMethodRequest(
+      MethodWithUnionUnionMethodRequest&&) noexcept = default;
+  MethodWithUnionUnionMethodRequest& operator=(
+      MethodWithUnionUnionMethodRequest&&) noexcept = default;
+  MethodWithUnionUnionMethodRequest(
+      const MethodWithUnionUnionMethodRequest& other) noexcept
+      : MethodWithUnionUnionMethodRequest(other.CloneStorage_()) {}
+  MethodWithUnionUnionMethodRequest& operator=(
+      const MethodWithUnionUnionMethodRequest& other) noexcept {
+    storage_ = other.CloneStorage_();
+    return *this;
+  }
+
+  const ::test_protocols::TheUnion& u() const { return storage_.u; }
+
+  ::test_protocols::TheUnion& u() { return storage_.u; }
+
+ private:
   friend ::fidl::internal::CodableBase<MethodWithUnionUnionMethodRequest>;
   friend ::fidl::CodingTraits<MethodWithUnionUnionMethodRequest>;
   MethodWithUnionUnionMethodRequest(::fidl::Decoder& decoder);
@@ -1939,38 +2023,12 @@ class MethodWithUnionUnionMethodRequest final
       -> ::fidl::HLCPPOutgoingMessage;
   void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
- public:
-  struct Storage final {
+  struct Storage_ final {
     ::test_protocols::TheUnion u{};
   };
 
-  MethodWithUnionUnionMethodRequest(Storage storage) noexcept
-      : storage_(std::move(storage)) {}
-  MethodWithUnionUnionMethodRequest(::test_protocols::TheUnion u) noexcept
-      : storage_({.u = std::move(u)}) {}
-  MethodWithUnionUnionMethodRequest()
-      : MethodWithUnionUnionMethodRequest(Storage{}) {}
-
-  MethodWithUnionUnionMethodRequest(
-      MethodWithUnionUnionMethodRequest&&) noexcept = default;
-  MethodWithUnionUnionMethodRequest& operator=(
-      MethodWithUnionUnionMethodRequest&&) noexcept = default;
-  MethodWithUnionUnionMethodRequest(
-      const MethodWithUnionUnionMethodRequest& other) noexcept
-      : MethodWithUnionUnionMethodRequest(other.CloneStorage()) {}
-  MethodWithUnionUnionMethodRequest& operator=(
-      const MethodWithUnionUnionMethodRequest& other) noexcept {
-    storage_ = other.CloneStorage();
-    return *this;
-  }
-
-  const ::test_protocols::TheUnion& u() const { return storage_.u; }
-
-  ::test_protocols::TheUnion& u() { return storage_.u; }
-
- private:
-  Storage storage_;
-  Storage CloneStorage() const;
+  Storage_ storage_;
+  Storage_ CloneStorage_() const;
 };
 
 extern "C" const fidl_type_t test_protocols_SyscallProtocolMethodCRequestTable;
@@ -1978,26 +2036,14 @@ extern "C" const fidl_type_t test_protocols_SyscallProtocolMethodCRequestTable;
 class SyscallProtocolMethodCRequest final
     : public ::fidl::internal::CodableBase<SyscallProtocolMethodCRequest> {
  private:
-  friend ::fidl::internal::CodableBase<SyscallProtocolMethodCRequest>;
-  friend ::fidl::CodingTraits<SyscallProtocolMethodCRequest>;
-  SyscallProtocolMethodCRequest(::fidl::Decoder& decoder);
-  template <typename Payload>
-  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-      ::fidl::Encoder& encoder, Payload&& payload)
-      -> ::fidl::HLCPPOutgoingMessage;
-  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
+  struct Storage_;
 
  public:
-  struct Storage final {
-    int64_t a{};
-    int64_t b{};
-  };
-
-  SyscallProtocolMethodCRequest(Storage storage) noexcept
+  SyscallProtocolMethodCRequest(Storage_ storage) noexcept
       : storage_(std::move(storage)) {}
   SyscallProtocolMethodCRequest(int64_t a, int64_t b) noexcept
       : storage_({.a = std::move(a), .b = std::move(b)}) {}
-  SyscallProtocolMethodCRequest() : SyscallProtocolMethodCRequest(Storage{}) {}
+  SyscallProtocolMethodCRequest() : SyscallProtocolMethodCRequest(Storage_{}) {}
 
   SyscallProtocolMethodCRequest(SyscallProtocolMethodCRequest&&) noexcept =
       default;
@@ -2005,10 +2051,10 @@ class SyscallProtocolMethodCRequest final
       SyscallProtocolMethodCRequest&&) noexcept = default;
   SyscallProtocolMethodCRequest(
       const SyscallProtocolMethodCRequest& other) noexcept
-      : SyscallProtocolMethodCRequest(other.CloneStorage()) {}
+      : SyscallProtocolMethodCRequest(other.CloneStorage_()) {}
   SyscallProtocolMethodCRequest& operator=(
       const SyscallProtocolMethodCRequest& other) noexcept {
-    storage_ = other.CloneStorage();
+    storage_ = other.CloneStorage_();
     return *this;
   }
 
@@ -2021,8 +2067,22 @@ class SyscallProtocolMethodCRequest final
   int64_t& b() { return storage_.b; }
 
  private:
-  Storage storage_;
-  Storage CloneStorage() const;
+  friend ::fidl::internal::CodableBase<SyscallProtocolMethodCRequest>;
+  friend ::fidl::CodingTraits<SyscallProtocolMethodCRequest>;
+  SyscallProtocolMethodCRequest(::fidl::Decoder& decoder);
+  template <typename Payload>
+  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+      ::fidl::Encoder& encoder, Payload&& payload)
+      -> ::fidl::HLCPPOutgoingMessage;
+  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
+
+  struct Storage_ final {
+    int64_t a{};
+    int64_t b{};
+  };
+
+  Storage_ storage_;
+  Storage_ CloneStorage_() const;
 };
 
 #ifdef __Fuchsia__
@@ -2031,24 +2091,10 @@ extern "C" const fidl_type_t test_protocols_ProtocolEndsTable;
 
 class ProtocolEnds final : public ::fidl::internal::CodableBase<ProtocolEnds> {
  private:
-  friend ::fidl::internal::CodableBase<ProtocolEnds>;
-  friend ::fidl::CodingTraits<ProtocolEnds>;
-  ProtocolEnds(::fidl::Decoder& decoder);
-  template <typename Payload>
-  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-      ::fidl::Encoder& encoder, Payload&& payload)
-      -> ::fidl::HLCPPOutgoingMessage;
-  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
+  struct Storage_;
 
  public:
-  struct Storage final {
-    ::fidl::ClientEnd<::test_protocols::DiscoverableProtocol> client{};
-    ::fidl::ServerEnd<::test_protocols::DiscoverableProtocol> server{};
-    ::fidl::ClientEnd<::test_protocols::DiscoverableProtocol> client_opt{};
-    ::fidl::ServerEnd<::test_protocols::DiscoverableProtocol> server_opt{};
-  };
-
-  ProtocolEnds(Storage storage) noexcept : storage_(std::move(storage)) {}
+  ProtocolEnds(Storage_ storage) noexcept : storage_(std::move(storage)) {}
   ProtocolEnds(
       ::fidl::ClientEnd<::test_protocols::DiscoverableProtocol> client,
       ::fidl::ServerEnd<::test_protocols::DiscoverableProtocol> server,
@@ -2059,7 +2105,7 @@ class ProtocolEnds final : public ::fidl::internal::CodableBase<ProtocolEnds> {
                   .server = std::move(server),
                   .client_opt = std::move(client_opt),
                   .server_opt = std::move(server_opt)}) {}
-  ProtocolEnds() : ProtocolEnds(Storage{}) {}
+  ProtocolEnds() : ProtocolEnds(Storage_{}) {}
 
   ProtocolEnds(ProtocolEnds&&) noexcept = default;
   ProtocolEnds& operator=(ProtocolEnds&&) noexcept = default;
@@ -2101,7 +2147,23 @@ class ProtocolEnds final : public ::fidl::internal::CodableBase<ProtocolEnds> {
   }
 
  private:
-  Storage storage_;
+  friend ::fidl::internal::CodableBase<ProtocolEnds>;
+  friend ::fidl::CodingTraits<ProtocolEnds>;
+  ProtocolEnds(::fidl::Decoder& decoder);
+  template <typename Payload>
+  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+      ::fidl::Encoder& encoder, Payload&& payload)
+      -> ::fidl::HLCPPOutgoingMessage;
+  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
+
+  struct Storage_ final {
+    ::fidl::ClientEnd<::test_protocols::DiscoverableProtocol> client{};
+    ::fidl::ServerEnd<::test_protocols::DiscoverableProtocol> server{};
+    ::fidl::ClientEnd<::test_protocols::DiscoverableProtocol> client_opt{};
+    ::fidl::ServerEnd<::test_protocols::DiscoverableProtocol> server_opt{};
+  };
+
+  Storage_ storage_;
 };
 
 #endif  // __Fuchsia__
@@ -2115,28 +2177,16 @@ class WithProtocolEndsStructContainingEndsTopResponse final
     : public ::fidl::internal::CodableBase<
           WithProtocolEndsStructContainingEndsTopResponse> {
  private:
-  friend ::fidl::internal::CodableBase<
-      WithProtocolEndsStructContainingEndsTopResponse>;
-  friend ::fidl::CodingTraits<WithProtocolEndsStructContainingEndsTopResponse>;
-  WithProtocolEndsStructContainingEndsTopResponse(::fidl::Decoder& decoder);
-  template <typename Payload>
-  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-      ::fidl::Encoder& encoder, Payload&& payload)
-      -> ::fidl::HLCPPOutgoingMessage;
-  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
+  struct Storage_;
 
  public:
-  struct Storage final {
-    ::test_protocols::ProtocolEnds out{};
-  };
-
-  WithProtocolEndsStructContainingEndsTopResponse(Storage storage) noexcept
+  WithProtocolEndsStructContainingEndsTopResponse(Storage_ storage) noexcept
       : storage_(std::move(storage)) {}
   WithProtocolEndsStructContainingEndsTopResponse(
       ::test_protocols::ProtocolEnds out) noexcept
       : storage_({.out = std::move(out)}) {}
   WithProtocolEndsStructContainingEndsTopResponse()
-      : WithProtocolEndsStructContainingEndsTopResponse(Storage{}) {}
+      : WithProtocolEndsStructContainingEndsTopResponse(Storage_{}) {}
 
   WithProtocolEndsStructContainingEndsTopResponse(
       WithProtocolEndsStructContainingEndsTopResponse&&) noexcept = default;
@@ -2148,7 +2198,21 @@ class WithProtocolEndsStructContainingEndsTopResponse final
   ::test_protocols::ProtocolEnds& out() { return storage_.out; }
 
  private:
-  Storage storage_;
+  friend ::fidl::internal::CodableBase<
+      WithProtocolEndsStructContainingEndsTopResponse>;
+  friend ::fidl::CodingTraits<WithProtocolEndsStructContainingEndsTopResponse>;
+  WithProtocolEndsStructContainingEndsTopResponse(::fidl::Decoder& decoder);
+  template <typename Payload>
+  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+      ::fidl::Encoder& encoder, Payload&& payload)
+      -> ::fidl::HLCPPOutgoingMessage;
+  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
+
+  struct Storage_ final {
+    ::test_protocols::ProtocolEnds out{};
+  };
+
+  Storage_ storage_;
 };
 
 #endif  // __Fuchsia__
@@ -2162,28 +2226,16 @@ class WithProtocolEndsStructContainingEndsRequest final
     : public ::fidl::internal::CodableBase<
           WithProtocolEndsStructContainingEndsRequest> {
  private:
-  friend ::fidl::internal::CodableBase<
-      WithProtocolEndsStructContainingEndsRequest>;
-  friend ::fidl::CodingTraits<WithProtocolEndsStructContainingEndsRequest>;
-  WithProtocolEndsStructContainingEndsRequest(::fidl::Decoder& decoder);
-  template <typename Payload>
-  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-      ::fidl::Encoder& encoder, Payload&& payload)
-      -> ::fidl::HLCPPOutgoingMessage;
-  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
+  struct Storage_;
 
  public:
-  struct Storage final {
-    ::test_protocols::ProtocolEnds in{};
-  };
-
-  WithProtocolEndsStructContainingEndsRequest(Storage storage) noexcept
+  WithProtocolEndsStructContainingEndsRequest(Storage_ storage) noexcept
       : storage_(std::move(storage)) {}
   WithProtocolEndsStructContainingEndsRequest(
       ::test_protocols::ProtocolEnds in) noexcept
       : storage_({.in = std::move(in)}) {}
   WithProtocolEndsStructContainingEndsRequest()
-      : WithProtocolEndsStructContainingEndsRequest(Storage{}) {}
+      : WithProtocolEndsStructContainingEndsRequest(Storage_{}) {}
 
   WithProtocolEndsStructContainingEndsRequest(
       WithProtocolEndsStructContainingEndsRequest&&) noexcept = default;
@@ -2195,7 +2247,21 @@ class WithProtocolEndsStructContainingEndsRequest final
   ::test_protocols::ProtocolEnds& in() { return storage_.in; }
 
  private:
-  Storage storage_;
+  friend ::fidl::internal::CodableBase<
+      WithProtocolEndsStructContainingEndsRequest>;
+  friend ::fidl::CodingTraits<WithProtocolEndsStructContainingEndsRequest>;
+  WithProtocolEndsStructContainingEndsRequest(::fidl::Decoder& decoder);
+  template <typename Payload>
+  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+      ::fidl::Encoder& encoder, Payload&& payload)
+      -> ::fidl::HLCPPOutgoingMessage;
+  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
+
+  struct Storage_ final {
+    ::test_protocols::ProtocolEnds in{};
+  };
+
+  Storage_ storage_;
 };
 
 #endif  // __Fuchsia__
@@ -2205,35 +2271,10 @@ extern "C" const fidl_type_t test_protocols_ManyParametersFifteenRequestTable;
 class ManyParametersFifteenRequest final
     : public ::fidl::internal::CodableBase<ManyParametersFifteenRequest> {
  private:
-  friend ::fidl::internal::CodableBase<ManyParametersFifteenRequest>;
-  friend ::fidl::CodingTraits<ManyParametersFifteenRequest>;
-  ManyParametersFifteenRequest(::fidl::Decoder& decoder);
-  template <typename Payload>
-  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-      ::fidl::Encoder& encoder, Payload&& payload)
-      -> ::fidl::HLCPPOutgoingMessage;
-  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
+  struct Storage_;
 
  public:
-  struct Storage final {
-    bool p1{};
-    bool p2{};
-    bool p3{};
-    bool p4{};
-    bool p5{};
-    bool p6{};
-    bool p7{};
-    bool p8{};
-    bool p9{};
-    bool p10{};
-    bool p11{};
-    bool p12{};
-    bool p13{};
-    bool p14{};
-    bool p15{};
-  };
-
-  ManyParametersFifteenRequest(Storage storage) noexcept
+  ManyParametersFifteenRequest(Storage_ storage) noexcept
       : storage_(std::move(storage)) {}
   ManyParametersFifteenRequest(bool p1, bool p2, bool p3, bool p4, bool p5,
                                bool p6, bool p7, bool p8, bool p9, bool p10,
@@ -2254,7 +2295,7 @@ class ManyParametersFifteenRequest final
                   .p13 = std::move(p13),
                   .p14 = std::move(p14),
                   .p15 = std::move(p15)}) {}
-  ManyParametersFifteenRequest() : ManyParametersFifteenRequest(Storage{}) {}
+  ManyParametersFifteenRequest() : ManyParametersFifteenRequest(Storage_{}) {}
 
   ManyParametersFifteenRequest(ManyParametersFifteenRequest&&) noexcept =
       default;
@@ -2262,10 +2303,10 @@ class ManyParametersFifteenRequest final
       ManyParametersFifteenRequest&&) noexcept = default;
   ManyParametersFifteenRequest(
       const ManyParametersFifteenRequest& other) noexcept
-      : ManyParametersFifteenRequest(other.CloneStorage()) {}
+      : ManyParametersFifteenRequest(other.CloneStorage_()) {}
   ManyParametersFifteenRequest& operator=(
       const ManyParametersFifteenRequest& other) noexcept {
-    storage_ = other.CloneStorage();
+    storage_ = other.CloneStorage_();
     return *this;
   }
 
@@ -2330,8 +2371,35 @@ class ManyParametersFifteenRequest final
   bool& p15() { return storage_.p15; }
 
  private:
-  Storage storage_;
-  Storage CloneStorage() const;
+  friend ::fidl::internal::CodableBase<ManyParametersFifteenRequest>;
+  friend ::fidl::CodingTraits<ManyParametersFifteenRequest>;
+  ManyParametersFifteenRequest(::fidl::Decoder& decoder);
+  template <typename Payload>
+  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+      ::fidl::Encoder& encoder, Payload&& payload)
+      -> ::fidl::HLCPPOutgoingMessage;
+  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
+
+  struct Storage_ final {
+    bool p1{};
+    bool p2{};
+    bool p3{};
+    bool p4{};
+    bool p5{};
+    bool p6{};
+    bool p7{};
+    bool p8{};
+    bool p9{};
+    bool p10{};
+    bool p11{};
+    bool p12{};
+    bool p13{};
+    bool p14{};
+    bool p15{};
+  };
+
+  Storage_ storage_;
+  Storage_ CloneStorage_() const;
 };
 
 extern "C" const fidl_type_t
@@ -2445,27 +2513,16 @@ class WithErrorSyntaxErrorAsEnumTopResponse final
     : public ::fidl::internal::CodableBase<
           WithErrorSyntaxErrorAsEnumTopResponse> {
  private:
-  friend ::fidl::internal::CodableBase<WithErrorSyntaxErrorAsEnumTopResponse>;
-  friend ::fidl::CodingTraits<WithErrorSyntaxErrorAsEnumTopResponse>;
-  WithErrorSyntaxErrorAsEnumTopResponse(::fidl::Decoder& decoder);
-  template <typename Payload>
-  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-      ::fidl::Encoder& encoder, Payload&& payload)
-      -> ::fidl::HLCPPOutgoingMessage;
-  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
+  struct Storage_;
 
  public:
-  struct Storage final {
-    ::test_protocols::WithErrorSyntax_ErrorAsEnum_Result result{};
-  };
-
-  WithErrorSyntaxErrorAsEnumTopResponse(Storage storage) noexcept
+  WithErrorSyntaxErrorAsEnumTopResponse(Storage_ storage) noexcept
       : storage_(std::move(storage)) {}
   WithErrorSyntaxErrorAsEnumTopResponse(
       ::test_protocols::WithErrorSyntax_ErrorAsEnum_Result result) noexcept
       : storage_({.result = std::move(result)}) {}
   WithErrorSyntaxErrorAsEnumTopResponse()
-      : WithErrorSyntaxErrorAsEnumTopResponse(Storage{}) {}
+      : WithErrorSyntaxErrorAsEnumTopResponse(Storage_{}) {}
 
   WithErrorSyntaxErrorAsEnumTopResponse(
       WithErrorSyntaxErrorAsEnumTopResponse&&) noexcept = default;
@@ -2473,10 +2530,10 @@ class WithErrorSyntaxErrorAsEnumTopResponse final
       WithErrorSyntaxErrorAsEnumTopResponse&&) noexcept = default;
   WithErrorSyntaxErrorAsEnumTopResponse(
       const WithErrorSyntaxErrorAsEnumTopResponse& other) noexcept
-      : WithErrorSyntaxErrorAsEnumTopResponse(other.CloneStorage()) {}
+      : WithErrorSyntaxErrorAsEnumTopResponse(other.CloneStorage_()) {}
   WithErrorSyntaxErrorAsEnumTopResponse& operator=(
       const WithErrorSyntaxErrorAsEnumTopResponse& other) noexcept {
-    storage_ = other.CloneStorage();
+    storage_ = other.CloneStorage_();
     return *this;
   }
 
@@ -2489,8 +2546,21 @@ class WithErrorSyntaxErrorAsEnumTopResponse final
   }
 
  private:
-  Storage storage_;
-  Storage CloneStorage() const;
+  friend ::fidl::internal::CodableBase<WithErrorSyntaxErrorAsEnumTopResponse>;
+  friend ::fidl::CodingTraits<WithErrorSyntaxErrorAsEnumTopResponse>;
+  WithErrorSyntaxErrorAsEnumTopResponse(::fidl::Decoder& decoder);
+  template <typename Payload>
+  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+      ::fidl::Encoder& encoder, Payload&& payload)
+      -> ::fidl::HLCPPOutgoingMessage;
+  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
+
+  struct Storage_ final {
+    ::test_protocols::WithErrorSyntax_ErrorAsEnum_Result result{};
+  };
+
+  Storage_ storage_;
+  Storage_ CloneStorage_() const;
 };
 
 extern "C" const fidl_type_t
@@ -2498,6 +2568,34 @@ extern "C" const fidl_type_t
 
 class ChannelProtocolMethodBTopResponse final
     : public ::fidl::internal::CodableBase<ChannelProtocolMethodBTopResponse> {
+ private:
+  struct Storage_;
+
+ public:
+  ChannelProtocolMethodBTopResponse(Storage_ storage) noexcept
+      : storage_(std::move(storage)) {}
+  ChannelProtocolMethodBTopResponse(int64_t result) noexcept
+      : storage_({.result = std::move(result)}) {}
+  ChannelProtocolMethodBTopResponse()
+      : ChannelProtocolMethodBTopResponse(Storage_{}) {}
+
+  ChannelProtocolMethodBTopResponse(
+      ChannelProtocolMethodBTopResponse&&) noexcept = default;
+  ChannelProtocolMethodBTopResponse& operator=(
+      ChannelProtocolMethodBTopResponse&&) noexcept = default;
+  ChannelProtocolMethodBTopResponse(
+      const ChannelProtocolMethodBTopResponse& other) noexcept
+      : ChannelProtocolMethodBTopResponse(other.CloneStorage_()) {}
+  ChannelProtocolMethodBTopResponse& operator=(
+      const ChannelProtocolMethodBTopResponse& other) noexcept {
+    storage_ = other.CloneStorage_();
+    return *this;
+  }
+
+  int64_t result() const { return storage_.result; }
+
+  int64_t& result() { return storage_.result; }
+
  private:
   friend ::fidl::internal::CodableBase<ChannelProtocolMethodBTopResponse>;
   friend ::fidl::CodingTraits<ChannelProtocolMethodBTopResponse>;
@@ -2508,44 +2606,49 @@ class ChannelProtocolMethodBTopResponse final
       -> ::fidl::HLCPPOutgoingMessage;
   void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
- public:
-  struct Storage final {
+  struct Storage_ final {
     int64_t result{};
   };
 
-  ChannelProtocolMethodBTopResponse(Storage storage) noexcept
-      : storage_(std::move(storage)) {}
-  ChannelProtocolMethodBTopResponse(int64_t result) noexcept
-      : storage_({.result = std::move(result)}) {}
-  ChannelProtocolMethodBTopResponse()
-      : ChannelProtocolMethodBTopResponse(Storage{}) {}
-
-  ChannelProtocolMethodBTopResponse(
-      ChannelProtocolMethodBTopResponse&&) noexcept = default;
-  ChannelProtocolMethodBTopResponse& operator=(
-      ChannelProtocolMethodBTopResponse&&) noexcept = default;
-  ChannelProtocolMethodBTopResponse(
-      const ChannelProtocolMethodBTopResponse& other) noexcept
-      : ChannelProtocolMethodBTopResponse(other.CloneStorage()) {}
-  ChannelProtocolMethodBTopResponse& operator=(
-      const ChannelProtocolMethodBTopResponse& other) noexcept {
-    storage_ = other.CloneStorage();
-    return *this;
-  }
-
-  int64_t result() const { return storage_.result; }
-
-  int64_t& result() { return storage_.result; }
-
- private:
-  Storage storage_;
-  Storage CloneStorage() const;
+  Storage_ storage_;
+  Storage_ CloneStorage_() const;
 };
 
 extern "C" const fidl_type_t test_protocols_ChannelProtocolMethodBRequestTable;
 
 class ChannelProtocolMethodBRequest final
     : public ::fidl::internal::CodableBase<ChannelProtocolMethodBRequest> {
+ private:
+  struct Storage_;
+
+ public:
+  ChannelProtocolMethodBRequest(Storage_ storage) noexcept
+      : storage_(std::move(storage)) {}
+  ChannelProtocolMethodBRequest(int64_t a, int64_t b) noexcept
+      : storage_({.a = std::move(a), .b = std::move(b)}) {}
+  ChannelProtocolMethodBRequest() : ChannelProtocolMethodBRequest(Storage_{}) {}
+
+  ChannelProtocolMethodBRequest(ChannelProtocolMethodBRequest&&) noexcept =
+      default;
+  ChannelProtocolMethodBRequest& operator=(
+      ChannelProtocolMethodBRequest&&) noexcept = default;
+  ChannelProtocolMethodBRequest(
+      const ChannelProtocolMethodBRequest& other) noexcept
+      : ChannelProtocolMethodBRequest(other.CloneStorage_()) {}
+  ChannelProtocolMethodBRequest& operator=(
+      const ChannelProtocolMethodBRequest& other) noexcept {
+    storage_ = other.CloneStorage_();
+    return *this;
+  }
+
+  int64_t a() const { return storage_.a; }
+
+  int64_t& a() { return storage_.a; }
+
+  int64_t b() const { return storage_.b; }
+
+  int64_t& b() { return storage_.b; }
+
  private:
   friend ::fidl::internal::CodableBase<ChannelProtocolMethodBRequest>;
   friend ::fidl::CodingTraits<ChannelProtocolMethodBRequest>;
@@ -2556,28 +2659,39 @@ class ChannelProtocolMethodBRequest final
       -> ::fidl::HLCPPOutgoingMessage;
   void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
- public:
-  struct Storage final {
+  struct Storage_ final {
     int64_t a{};
     int64_t b{};
   };
 
-  ChannelProtocolMethodBRequest(Storage storage) noexcept
-      : storage_(std::move(storage)) {}
-  ChannelProtocolMethodBRequest(int64_t a, int64_t b) noexcept
-      : storage_({.a = std::move(a), .b = std::move(b)}) {}
-  ChannelProtocolMethodBRequest() : ChannelProtocolMethodBRequest(Storage{}) {}
+  Storage_ storage_;
+  Storage_ CloneStorage_() const;
+};
 
-  ChannelProtocolMethodBRequest(ChannelProtocolMethodBRequest&&) noexcept =
+extern "C" const fidl_type_t test_protocols_ChannelProtocolMethodARequestTable;
+
+class ChannelProtocolMethodARequest final
+    : public ::fidl::internal::CodableBase<ChannelProtocolMethodARequest> {
+ private:
+  struct Storage_;
+
+ public:
+  ChannelProtocolMethodARequest(Storage_ storage) noexcept
+      : storage_(std::move(storage)) {}
+  ChannelProtocolMethodARequest(int64_t a, int64_t b) noexcept
+      : storage_({.a = std::move(a), .b = std::move(b)}) {}
+  ChannelProtocolMethodARequest() : ChannelProtocolMethodARequest(Storage_{}) {}
+
+  ChannelProtocolMethodARequest(ChannelProtocolMethodARequest&&) noexcept =
       default;
-  ChannelProtocolMethodBRequest& operator=(
-      ChannelProtocolMethodBRequest&&) noexcept = default;
-  ChannelProtocolMethodBRequest(
-      const ChannelProtocolMethodBRequest& other) noexcept
-      : ChannelProtocolMethodBRequest(other.CloneStorage()) {}
-  ChannelProtocolMethodBRequest& operator=(
-      const ChannelProtocolMethodBRequest& other) noexcept {
-    storage_ = other.CloneStorage();
+  ChannelProtocolMethodARequest& operator=(
+      ChannelProtocolMethodARequest&&) noexcept = default;
+  ChannelProtocolMethodARequest(
+      const ChannelProtocolMethodARequest& other) noexcept
+      : ChannelProtocolMethodARequest(other.CloneStorage_()) {}
+  ChannelProtocolMethodARequest& operator=(
+      const ChannelProtocolMethodARequest& other) noexcept {
+    storage_ = other.CloneStorage_();
     return *this;
   }
 
@@ -2589,15 +2703,6 @@ class ChannelProtocolMethodBRequest final
 
   int64_t& b() { return storage_.b; }
 
- private:
-  Storage storage_;
-  Storage CloneStorage() const;
-};
-
-extern "C" const fidl_type_t test_protocols_ChannelProtocolMethodARequestTable;
-
-class ChannelProtocolMethodARequest final
-    : public ::fidl::internal::CodableBase<ChannelProtocolMethodARequest> {
  private:
   friend ::fidl::internal::CodableBase<ChannelProtocolMethodARequest>;
   friend ::fidl::CodingTraits<ChannelProtocolMethodARequest>;
@@ -2608,28 +2713,39 @@ class ChannelProtocolMethodARequest final
       -> ::fidl::HLCPPOutgoingMessage;
   void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
- public:
-  struct Storage final {
+  struct Storage_ final {
     int64_t a{};
     int64_t b{};
   };
 
-  ChannelProtocolMethodARequest(Storage storage) noexcept
-      : storage_(std::move(storage)) {}
-  ChannelProtocolMethodARequest(int64_t a, int64_t b) noexcept
-      : storage_({.a = std::move(a), .b = std::move(b)}) {}
-  ChannelProtocolMethodARequest() : ChannelProtocolMethodARequest(Storage{}) {}
+  Storage_ storage_;
+  Storage_ CloneStorage_() const;
+};
 
-  ChannelProtocolMethodARequest(ChannelProtocolMethodARequest&&) noexcept =
+extern "C" const fidl_type_t test_protocols_ChannelProtocolEventARequestTable;
+
+class ChannelProtocolEventARequest final
+    : public ::fidl::internal::CodableBase<ChannelProtocolEventARequest> {
+ private:
+  struct Storage_;
+
+ public:
+  ChannelProtocolEventARequest(Storage_ storage) noexcept
+      : storage_(std::move(storage)) {}
+  ChannelProtocolEventARequest(int64_t a, int64_t b) noexcept
+      : storage_({.a = std::move(a), .b = std::move(b)}) {}
+  ChannelProtocolEventARequest() : ChannelProtocolEventARequest(Storage_{}) {}
+
+  ChannelProtocolEventARequest(ChannelProtocolEventARequest&&) noexcept =
       default;
-  ChannelProtocolMethodARequest& operator=(
-      ChannelProtocolMethodARequest&&) noexcept = default;
-  ChannelProtocolMethodARequest(
-      const ChannelProtocolMethodARequest& other) noexcept
-      : ChannelProtocolMethodARequest(other.CloneStorage()) {}
-  ChannelProtocolMethodARequest& operator=(
-      const ChannelProtocolMethodARequest& other) noexcept {
-    storage_ = other.CloneStorage();
+  ChannelProtocolEventARequest& operator=(
+      ChannelProtocolEventARequest&&) noexcept = default;
+  ChannelProtocolEventARequest(
+      const ChannelProtocolEventARequest& other) noexcept
+      : ChannelProtocolEventARequest(other.CloneStorage_()) {}
+  ChannelProtocolEventARequest& operator=(
+      const ChannelProtocolEventARequest& other) noexcept {
+    storage_ = other.CloneStorage_();
     return *this;
   }
 
@@ -2641,15 +2757,6 @@ class ChannelProtocolMethodARequest final
 
   int64_t& b() { return storage_.b; }
 
- private:
-  Storage storage_;
-  Storage CloneStorage() const;
-};
-
-extern "C" const fidl_type_t test_protocols_ChannelProtocolEventARequestTable;
-
-class ChannelProtocolEventARequest final
-    : public ::fidl::internal::CodableBase<ChannelProtocolEventARequest> {
  private:
   friend ::fidl::internal::CodableBase<ChannelProtocolEventARequest>;
   friend ::fidl::CodingTraits<ChannelProtocolEventARequest>;
@@ -2660,42 +2767,13 @@ class ChannelProtocolEventARequest final
       -> ::fidl::HLCPPOutgoingMessage;
   void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
- public:
-  struct Storage final {
+  struct Storage_ final {
     int64_t a{};
     int64_t b{};
   };
 
-  ChannelProtocolEventARequest(Storage storage) noexcept
-      : storage_(std::move(storage)) {}
-  ChannelProtocolEventARequest(int64_t a, int64_t b) noexcept
-      : storage_({.a = std::move(a), .b = std::move(b)}) {}
-  ChannelProtocolEventARequest() : ChannelProtocolEventARequest(Storage{}) {}
-
-  ChannelProtocolEventARequest(ChannelProtocolEventARequest&&) noexcept =
-      default;
-  ChannelProtocolEventARequest& operator=(
-      ChannelProtocolEventARequest&&) noexcept = default;
-  ChannelProtocolEventARequest(
-      const ChannelProtocolEventARequest& other) noexcept
-      : ChannelProtocolEventARequest(other.CloneStorage()) {}
-  ChannelProtocolEventARequest& operator=(
-      const ChannelProtocolEventARequest& other) noexcept {
-    storage_ = other.CloneStorage();
-    return *this;
-  }
-
-  int64_t a() const { return storage_.a; }
-
-  int64_t& a() { return storage_.a; }
-
-  int64_t b() const { return storage_.b; }
-
-  int64_t& b() { return storage_.b; }
-
- private:
-  Storage storage_;
-  Storage CloneStorage() const;
+  Storage_ storage_;
+  Storage_ CloneStorage_() const;
 };
 
 }  // namespace test_protocols

@@ -32,6 +32,27 @@ extern "C" const fidl_type_t test_emptystruct_EmptyTable;
 
 class Empty final : public ::fidl::internal::CodableBase<Empty> {
  private:
+  struct Storage_;
+
+ public:
+  Empty(Storage_ storage) noexcept : storage_(std::move(storage)) {}
+  Empty(uint8_t __reserved) noexcept
+      : storage_({.__reserved = std::move(__reserved)}) {}
+  Empty() : Empty(Storage_{}) {}
+
+  Empty(Empty&&) noexcept = default;
+  Empty& operator=(Empty&&) noexcept = default;
+  Empty(const Empty& other) noexcept : Empty(other.CloneStorage_()) {}
+  Empty& operator=(const Empty& other) noexcept {
+    storage_ = other.CloneStorage_();
+    return *this;
+  }
+
+  uint8_t __reserved() const { return storage_.__reserved; }
+
+  uint8_t& __reserved() { return storage_.__reserved; }
+
+ private:
   friend ::fidl::internal::CodableBase<Empty>;
   friend ::fidl::CodingTraits<Empty>;
   Empty(::fidl::Decoder& decoder);
@@ -41,37 +62,43 @@ class Empty final : public ::fidl::internal::CodableBase<Empty> {
       -> ::fidl::HLCPPOutgoingMessage;
   void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
- public:
-  struct Storage final {
+  struct Storage_ final {
     uint8_t __reserved = 0u;
   };
 
-  Empty(Storage storage) noexcept : storage_(std::move(storage)) {}
-  Empty(uint8_t __reserved) noexcept
-      : storage_({.__reserved = std::move(__reserved)}) {}
-  Empty() : Empty(Storage{}) {}
-
-  Empty(Empty&&) noexcept = default;
-  Empty& operator=(Empty&&) noexcept = default;
-  Empty(const Empty& other) noexcept : Empty(other.CloneStorage()) {}
-  Empty& operator=(const Empty& other) noexcept {
-    storage_ = other.CloneStorage();
-    return *this;
-  }
-
-  uint8_t __reserved() const { return storage_.__reserved; }
-
-  uint8_t& __reserved() { return storage_.__reserved; }
-
- private:
-  Storage storage_;
-  Storage CloneStorage() const;
+  Storage_ storage_;
+  Storage_ CloneStorage_() const;
 };
 
 extern "C" const fidl_type_t test_emptystruct_EmptyProtocolSendRequestTable;
 
 class EmptyProtocolSendRequest final
     : public ::fidl::internal::CodableBase<EmptyProtocolSendRequest> {
+ private:
+  struct Storage_;
+
+ public:
+  EmptyProtocolSendRequest(Storage_ storage) noexcept
+      : storage_(std::move(storage)) {}
+  EmptyProtocolSendRequest(::test_emptystruct::Empty e) noexcept
+      : storage_({.e = std::move(e)}) {}
+  EmptyProtocolSendRequest() : EmptyProtocolSendRequest(Storage_{}) {}
+
+  EmptyProtocolSendRequest(EmptyProtocolSendRequest&&) noexcept = default;
+  EmptyProtocolSendRequest& operator=(EmptyProtocolSendRequest&&) noexcept =
+      default;
+  EmptyProtocolSendRequest(const EmptyProtocolSendRequest& other) noexcept
+      : EmptyProtocolSendRequest(other.CloneStorage_()) {}
+  EmptyProtocolSendRequest& operator=(
+      const EmptyProtocolSendRequest& other) noexcept {
+    storage_ = other.CloneStorage_();
+    return *this;
+  }
+
+  const ::test_emptystruct::Empty& e() const { return storage_.e; }
+
+  ::test_emptystruct::Empty& e() { return storage_.e; }
+
  private:
   friend ::fidl::internal::CodableBase<EmptyProtocolSendRequest>;
   friend ::fidl::CodingTraits<EmptyProtocolSendRequest>;
@@ -82,35 +109,12 @@ class EmptyProtocolSendRequest final
       -> ::fidl::HLCPPOutgoingMessage;
   void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
- public:
-  struct Storage final {
+  struct Storage_ final {
     ::test_emptystruct::Empty e{};
   };
 
-  EmptyProtocolSendRequest(Storage storage) noexcept
-      : storage_(std::move(storage)) {}
-  EmptyProtocolSendRequest(::test_emptystruct::Empty e) noexcept
-      : storage_({.e = std::move(e)}) {}
-  EmptyProtocolSendRequest() : EmptyProtocolSendRequest(Storage{}) {}
-
-  EmptyProtocolSendRequest(EmptyProtocolSendRequest&&) noexcept = default;
-  EmptyProtocolSendRequest& operator=(EmptyProtocolSendRequest&&) noexcept =
-      default;
-  EmptyProtocolSendRequest(const EmptyProtocolSendRequest& other) noexcept
-      : EmptyProtocolSendRequest(other.CloneStorage()) {}
-  EmptyProtocolSendRequest& operator=(
-      const EmptyProtocolSendRequest& other) noexcept {
-    storage_ = other.CloneStorage();
-    return *this;
-  }
-
-  const ::test_emptystruct::Empty& e() const { return storage_.e; }
-
-  ::test_emptystruct::Empty& e() { return storage_.e; }
-
- private:
-  Storage storage_;
-  Storage CloneStorage() const;
+  Storage_ storage_;
+  Storage_ CloneStorage_() const;
 };
 
 extern "C" const fidl_type_t
@@ -119,6 +123,34 @@ extern "C" const fidl_type_t
 class EmptyProtocolSendAndReceiveTopResponse final
     : public ::fidl::internal::CodableBase<
           EmptyProtocolSendAndReceiveTopResponse> {
+ private:
+  struct Storage_;
+
+ public:
+  EmptyProtocolSendAndReceiveTopResponse(Storage_ storage) noexcept
+      : storage_(std::move(storage)) {}
+  EmptyProtocolSendAndReceiveTopResponse(::test_emptystruct::Empty e) noexcept
+      : storage_({.e = std::move(e)}) {}
+  EmptyProtocolSendAndReceiveTopResponse()
+      : EmptyProtocolSendAndReceiveTopResponse(Storage_{}) {}
+
+  EmptyProtocolSendAndReceiveTopResponse(
+      EmptyProtocolSendAndReceiveTopResponse&&) noexcept = default;
+  EmptyProtocolSendAndReceiveTopResponse& operator=(
+      EmptyProtocolSendAndReceiveTopResponse&&) noexcept = default;
+  EmptyProtocolSendAndReceiveTopResponse(
+      const EmptyProtocolSendAndReceiveTopResponse& other) noexcept
+      : EmptyProtocolSendAndReceiveTopResponse(other.CloneStorage_()) {}
+  EmptyProtocolSendAndReceiveTopResponse& operator=(
+      const EmptyProtocolSendAndReceiveTopResponse& other) noexcept {
+    storage_ = other.CloneStorage_();
+    return *this;
+  }
+
+  const ::test_emptystruct::Empty& e() const { return storage_.e; }
+
+  ::test_emptystruct::Empty& e() { return storage_.e; }
+
  private:
   friend ::fidl::internal::CodableBase<EmptyProtocolSendAndReceiveTopResponse>;
   friend ::fidl::CodingTraits<EmptyProtocolSendAndReceiveTopResponse>;
@@ -129,38 +161,12 @@ class EmptyProtocolSendAndReceiveTopResponse final
       -> ::fidl::HLCPPOutgoingMessage;
   void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
- public:
-  struct Storage final {
+  struct Storage_ final {
     ::test_emptystruct::Empty e{};
   };
 
-  EmptyProtocolSendAndReceiveTopResponse(Storage storage) noexcept
-      : storage_(std::move(storage)) {}
-  EmptyProtocolSendAndReceiveTopResponse(::test_emptystruct::Empty e) noexcept
-      : storage_({.e = std::move(e)}) {}
-  EmptyProtocolSendAndReceiveTopResponse()
-      : EmptyProtocolSendAndReceiveTopResponse(Storage{}) {}
-
-  EmptyProtocolSendAndReceiveTopResponse(
-      EmptyProtocolSendAndReceiveTopResponse&&) noexcept = default;
-  EmptyProtocolSendAndReceiveTopResponse& operator=(
-      EmptyProtocolSendAndReceiveTopResponse&&) noexcept = default;
-  EmptyProtocolSendAndReceiveTopResponse(
-      const EmptyProtocolSendAndReceiveTopResponse& other) noexcept
-      : EmptyProtocolSendAndReceiveTopResponse(other.CloneStorage()) {}
-  EmptyProtocolSendAndReceiveTopResponse& operator=(
-      const EmptyProtocolSendAndReceiveTopResponse& other) noexcept {
-    storage_ = other.CloneStorage();
-    return *this;
-  }
-
-  const ::test_emptystruct::Empty& e() const { return storage_.e; }
-
-  ::test_emptystruct::Empty& e() { return storage_.e; }
-
- private:
-  Storage storage_;
-  Storage CloneStorage() const;
+  Storage_ storage_;
+  Storage_ CloneStorage_() const;
 };
 
 extern "C" const fidl_type_t
@@ -168,6 +174,34 @@ extern "C" const fidl_type_t
 
 class EmptyProtocolSendAndReceiveRequest final
     : public ::fidl::internal::CodableBase<EmptyProtocolSendAndReceiveRequest> {
+ private:
+  struct Storage_;
+
+ public:
+  EmptyProtocolSendAndReceiveRequest(Storage_ storage) noexcept
+      : storage_(std::move(storage)) {}
+  EmptyProtocolSendAndReceiveRequest(::test_emptystruct::Empty e) noexcept
+      : storage_({.e = std::move(e)}) {}
+  EmptyProtocolSendAndReceiveRequest()
+      : EmptyProtocolSendAndReceiveRequest(Storage_{}) {}
+
+  EmptyProtocolSendAndReceiveRequest(
+      EmptyProtocolSendAndReceiveRequest&&) noexcept = default;
+  EmptyProtocolSendAndReceiveRequest& operator=(
+      EmptyProtocolSendAndReceiveRequest&&) noexcept = default;
+  EmptyProtocolSendAndReceiveRequest(
+      const EmptyProtocolSendAndReceiveRequest& other) noexcept
+      : EmptyProtocolSendAndReceiveRequest(other.CloneStorage_()) {}
+  EmptyProtocolSendAndReceiveRequest& operator=(
+      const EmptyProtocolSendAndReceiveRequest& other) noexcept {
+    storage_ = other.CloneStorage_();
+    return *this;
+  }
+
+  const ::test_emptystruct::Empty& e() const { return storage_.e; }
+
+  ::test_emptystruct::Empty& e() { return storage_.e; }
+
  private:
   friend ::fidl::internal::CodableBase<EmptyProtocolSendAndReceiveRequest>;
   friend ::fidl::CodingTraits<EmptyProtocolSendAndReceiveRequest>;
@@ -178,28 +212,36 @@ class EmptyProtocolSendAndReceiveRequest final
       -> ::fidl::HLCPPOutgoingMessage;
   void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
- public:
-  struct Storage final {
+  struct Storage_ final {
     ::test_emptystruct::Empty e{};
   };
 
-  EmptyProtocolSendAndReceiveRequest(Storage storage) noexcept
-      : storage_(std::move(storage)) {}
-  EmptyProtocolSendAndReceiveRequest(::test_emptystruct::Empty e) noexcept
-      : storage_({.e = std::move(e)}) {}
-  EmptyProtocolSendAndReceiveRequest()
-      : EmptyProtocolSendAndReceiveRequest(Storage{}) {}
+  Storage_ storage_;
+  Storage_ CloneStorage_() const;
+};
 
-  EmptyProtocolSendAndReceiveRequest(
-      EmptyProtocolSendAndReceiveRequest&&) noexcept = default;
-  EmptyProtocolSendAndReceiveRequest& operator=(
-      EmptyProtocolSendAndReceiveRequest&&) noexcept = default;
-  EmptyProtocolSendAndReceiveRequest(
-      const EmptyProtocolSendAndReceiveRequest& other) noexcept
-      : EmptyProtocolSendAndReceiveRequest(other.CloneStorage()) {}
-  EmptyProtocolSendAndReceiveRequest& operator=(
-      const EmptyProtocolSendAndReceiveRequest& other) noexcept {
-    storage_ = other.CloneStorage();
+extern "C" const fidl_type_t test_emptystruct_EmptyProtocolReceiveRequestTable;
+
+class EmptyProtocolReceiveRequest final
+    : public ::fidl::internal::CodableBase<EmptyProtocolReceiveRequest> {
+ private:
+  struct Storage_;
+
+ public:
+  EmptyProtocolReceiveRequest(Storage_ storage) noexcept
+      : storage_(std::move(storage)) {}
+  EmptyProtocolReceiveRequest(::test_emptystruct::Empty e) noexcept
+      : storage_({.e = std::move(e)}) {}
+  EmptyProtocolReceiveRequest() : EmptyProtocolReceiveRequest(Storage_{}) {}
+
+  EmptyProtocolReceiveRequest(EmptyProtocolReceiveRequest&&) noexcept = default;
+  EmptyProtocolReceiveRequest& operator=(
+      EmptyProtocolReceiveRequest&&) noexcept = default;
+  EmptyProtocolReceiveRequest(const EmptyProtocolReceiveRequest& other) noexcept
+      : EmptyProtocolReceiveRequest(other.CloneStorage_()) {}
+  EmptyProtocolReceiveRequest& operator=(
+      const EmptyProtocolReceiveRequest& other) noexcept {
+    storage_ = other.CloneStorage_();
     return *this;
   }
 
@@ -207,15 +249,6 @@ class EmptyProtocolSendAndReceiveRequest final
 
   ::test_emptystruct::Empty& e() { return storage_.e; }
 
- private:
-  Storage storage_;
-  Storage CloneStorage() const;
-};
-
-extern "C" const fidl_type_t test_emptystruct_EmptyProtocolReceiveRequestTable;
-
-class EmptyProtocolReceiveRequest final
-    : public ::fidl::internal::CodableBase<EmptyProtocolReceiveRequest> {
  private:
   friend ::fidl::internal::CodableBase<EmptyProtocolReceiveRequest>;
   friend ::fidl::CodingTraits<EmptyProtocolReceiveRequest>;
@@ -226,35 +259,12 @@ class EmptyProtocolReceiveRequest final
       -> ::fidl::HLCPPOutgoingMessage;
   void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
- public:
-  struct Storage final {
+  struct Storage_ final {
     ::test_emptystruct::Empty e{};
   };
 
-  EmptyProtocolReceiveRequest(Storage storage) noexcept
-      : storage_(std::move(storage)) {}
-  EmptyProtocolReceiveRequest(::test_emptystruct::Empty e) noexcept
-      : storage_({.e = std::move(e)}) {}
-  EmptyProtocolReceiveRequest() : EmptyProtocolReceiveRequest(Storage{}) {}
-
-  EmptyProtocolReceiveRequest(EmptyProtocolReceiveRequest&&) noexcept = default;
-  EmptyProtocolReceiveRequest& operator=(
-      EmptyProtocolReceiveRequest&&) noexcept = default;
-  EmptyProtocolReceiveRequest(const EmptyProtocolReceiveRequest& other) noexcept
-      : EmptyProtocolReceiveRequest(other.CloneStorage()) {}
-  EmptyProtocolReceiveRequest& operator=(
-      const EmptyProtocolReceiveRequest& other) noexcept {
-    storage_ = other.CloneStorage();
-    return *this;
-  }
-
-  const ::test_emptystruct::Empty& e() const { return storage_.e; }
-
-  ::test_emptystruct::Empty& e() { return storage_.e; }
-
- private:
-  Storage storage_;
-  Storage CloneStorage() const;
+  Storage_ storage_;
+  Storage_ CloneStorage_() const;
 };
 
 }  // namespace test_emptystruct

@@ -16,9 +16,9 @@ void ::test_arrays::StructSmallArray::EncodeWithoutValidating(
     : storage_({::fidl::DecodeAs<::std::array<uint32_t, 2>>(&decoder, 0)}) {}
 #endif  // __Fuchsia__
 
-::test_arrays::StructSmallArray::Storage
-test_arrays::StructSmallArray::CloneStorage() const {
-  return Storage{::fidl::internal::NaturalClone(storage_.a)};
+::test_arrays::StructSmallArray::Storage_
+test_arrays::StructSmallArray::CloneStorage_() const {
+  return Storage_{::fidl::internal::NaturalClone(storage_.a)};
 }
 #ifdef __Fuchsia__
 
@@ -34,9 +34,9 @@ void ::test_arrays::StructLargeArray::EncodeWithoutValidating(
     : storage_({::fidl::DecodeAs<::std::array<uint32_t, 100>>(&decoder, 0)}) {}
 #endif  // __Fuchsia__
 
-::test_arrays::StructLargeArray::Storage
-test_arrays::StructLargeArray::CloneStorage() const {
-  return Storage{::fidl::internal::NaturalClone(storage_.a)};
+::test_arrays::StructLargeArray::Storage_
+test_arrays::StructLargeArray::CloneStorage_() const {
+  return Storage_{::fidl::internal::NaturalClone(storage_.a)};
 }
 
 ::test_arrays::TableSmallArray::Storage

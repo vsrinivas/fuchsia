@@ -17,9 +17,9 @@ void ::test_doccomments::Struct::EncodeWithoutValidating(
     : storage_({::fidl::DecodeAs<int32_t>(&decoder, 0)}) {}
 #endif  // __Fuchsia__
 
-::test_doccomments::Struct::Storage test_doccomments::Struct::CloneStorage()
+::test_doccomments::Struct::Storage_ test_doccomments::Struct::CloneStorage_()
     const {
-  return Storage{::fidl::internal::NaturalClone(storage_.field)};
+  return Storage_{::fidl::internal::NaturalClone(storage_.field)};
 }
 
 ::test_doccomments::Table::Storage test_doccomments::Table::CloneStorage()

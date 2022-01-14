@@ -24,6 +24,26 @@ extern "C" const fidl_type_t test_transitivedependencies_BazTable;
 
 class Baz final : public ::fidl::internal::CodableBase<Baz> {
  private:
+  struct Storage_;
+
+ public:
+  Baz(Storage_ storage) noexcept : storage_(std::move(storage)) {}
+  Baz(::test_middle::Bar g) noexcept : storage_({.g = std::move(g)}) {}
+  Baz() : Baz(Storage_{}) {}
+
+  Baz(Baz&&) noexcept = default;
+  Baz& operator=(Baz&&) noexcept = default;
+  Baz(const Baz& other) noexcept : Baz(other.CloneStorage_()) {}
+  Baz& operator=(const Baz& other) noexcept {
+    storage_ = other.CloneStorage_();
+    return *this;
+  }
+
+  const ::test_middle::Bar& g() const { return storage_.g; }
+
+  ::test_middle::Bar& g() { return storage_.g; }
+
+ private:
   friend ::fidl::internal::CodableBase<Baz>;
   friend ::fidl::CodingTraits<Baz>;
   Baz(::fidl::Decoder& decoder);
@@ -33,30 +53,12 @@ class Baz final : public ::fidl::internal::CodableBase<Baz> {
       -> ::fidl::HLCPPOutgoingMessage;
   void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
- public:
-  struct Storage final {
+  struct Storage_ final {
     ::test_middle::Bar g{};
   };
 
-  Baz(Storage storage) noexcept : storage_(std::move(storage)) {}
-  Baz(::test_middle::Bar g) noexcept : storage_({.g = std::move(g)}) {}
-  Baz() : Baz(Storage{}) {}
-
-  Baz(Baz&&) noexcept = default;
-  Baz& operator=(Baz&&) noexcept = default;
-  Baz(const Baz& other) noexcept : Baz(other.CloneStorage()) {}
-  Baz& operator=(const Baz& other) noexcept {
-    storage_ = other.CloneStorage();
-    return *this;
-  }
-
-  const ::test_middle::Bar& g() const { return storage_.g; }
-
-  ::test_middle::Bar& g() { return storage_.g; }
-
- private:
-  Storage storage_;
-  Storage CloneStorage() const;
+  Storage_ storage_;
+  Storage_ CloneStorage_() const;
 };
 
 }  // namespace test_transitivedependencies

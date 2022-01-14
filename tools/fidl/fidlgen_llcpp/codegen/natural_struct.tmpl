@@ -19,28 +19,9 @@ extern "C" const fidl_type_t {{ .CodingTableType }};
 {{ .Docs }}
 class {{ .Name }} final : public ::fidl::internal::CodableBase<{{ .Name }}>  {
  private:
-  friend ::fidl::internal::CodableBase<{{ .Name }}>;
-  friend ::fidl::CodingTraits<{{ .Name }}>;
-  {{ .Name }}(::fidl::Decoder& decoder);
-  template <typename Payload>
-  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-      ::fidl::Encoder& encoder, Payload&& payload) -> ::fidl::HLCPPOutgoingMessage;
-  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
-
+  struct Storage_;
  public:
-  struct Storage final {
-    {{- range .Members }}
-      {{- .Docs }}
-      {{ .Type }} {{ .Name }}
-      {{- if .DefaultValue.IsSet }}
-        = {{ .DefaultValue }};
-      {{- else }}
-        {};
-      {{- end }}
-    {{- end }}
-  };
-
-  {{ .Name }}(Storage storage) noexcept : storage_(std::move(storage)) {}
+  {{ .Name }}(Storage_ storage) noexcept : storage_(std::move(storage)) {}
 
   {{- if len .Members }}
     {{ .Name }}(
@@ -55,14 +36,14 @@ class {{ .Name }} final : public ::fidl::internal::CodableBase<{{ .Name }}>  {
     {{- end }}
     }) {}
   {{- end }}
-  {{ .Name }}() : {{ .Name }}(Storage{}) {}
+  {{ .Name }}() : {{ .Name }}(Storage_{}) {}
 
   {{ .Name }}({{ .Name }}&&) noexcept = default;
   {{ .Name }}& operator=({{ .Name }}&&) noexcept = default;
   {{- if not .IsResourceType }}
-    {{ .Name }}(const {{ .Name }}& other) noexcept : {{ .Name }}(other.CloneStorage()){}
+    {{ .Name }}(const {{ .Name }}& other) noexcept : {{ .Name }}(other.CloneStorage_()){}
     {{ .Name }}& operator=(const {{ .Name }}& other) noexcept {
-      storage_ = other.CloneStorage();
+      storage_ = other.CloneStorage_();
       return *this;
     }
   {{- end }}
@@ -84,9 +65,29 @@ class {{ .Name }} final : public ::fidl::internal::CodableBase<{{ .Name }}>  {
     }
   {{- end }}
  private:
-  Storage storage_;
+  friend ::fidl::internal::CodableBase<{{ .Name }}>;
+  friend ::fidl::CodingTraits<{{ .Name }}>;
+  {{ .Name }}(::fidl::Decoder& decoder);
+  template <typename Payload>
+  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+      ::fidl::Encoder& encoder, Payload&& payload) -> ::fidl::HLCPPOutgoingMessage;
+  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
+
+  struct Storage_ final {
+    {{- range .Members }}
+      {{- .Docs }}
+      {{ .Type }} {{ .Name }}
+      {{- if .DefaultValue.IsSet }}
+        = {{ .DefaultValue }};
+      {{- else }}
+        {};
+      {{- end }}
+    {{- end }}
+  };
+
+  Storage_ storage_;
   {{- if not .IsResourceType }}
-    Storage CloneStorage() const;
+    Storage_ CloneStorage_() const;
   {{- end }}
 };
 
@@ -176,8 +177,8 @@ void {{ . }}::EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset) {
 {{- EndifFuchsia -}}
 
 {{- if not .IsResourceType }}
-  {{ . }}::Storage {{ .NoLeading }}::CloneStorage() const {
-    return Storage{
+  {{ . }}::Storage_ {{ .NoLeading }}::CloneStorage_() const {
+    return Storage_{
       {{- range $i, $m := .Members }}
         {{- if $i }}, {{ end }}
         ::fidl::internal::NaturalClone(storage_.{{ .Name }})

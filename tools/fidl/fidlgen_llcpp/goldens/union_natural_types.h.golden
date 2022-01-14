@@ -262,35 +262,24 @@ extern "C" const fidl_type_t test_union_StructWithNullableXUnionTable;
 class StructWithNullableXUnion final
     : public ::fidl::internal::CodableBase<StructWithNullableXUnion> {
  private:
-  friend ::fidl::internal::CodableBase<StructWithNullableXUnion>;
-  friend ::fidl::CodingTraits<StructWithNullableXUnion>;
-  StructWithNullableXUnion(::fidl::Decoder& decoder);
-  template <typename Payload>
-  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-      ::fidl::Encoder& encoder, Payload&& payload)
-      -> ::fidl::HLCPPOutgoingMessage;
-  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
+  struct Storage_;
 
  public:
-  struct Storage final {
-    ::std::unique_ptr<::test_union::OlderSimpleUnion> x1{};
-  };
-
-  StructWithNullableXUnion(Storage storage) noexcept
+  StructWithNullableXUnion(Storage_ storage) noexcept
       : storage_(std::move(storage)) {}
   StructWithNullableXUnion(
       ::std::unique_ptr<::test_union::OlderSimpleUnion> x1) noexcept
       : storage_({.x1 = std::move(x1)}) {}
-  StructWithNullableXUnion() : StructWithNullableXUnion(Storage{}) {}
+  StructWithNullableXUnion() : StructWithNullableXUnion(Storage_{}) {}
 
   StructWithNullableXUnion(StructWithNullableXUnion&&) noexcept = default;
   StructWithNullableXUnion& operator=(StructWithNullableXUnion&&) noexcept =
       default;
   StructWithNullableXUnion(const StructWithNullableXUnion& other) noexcept
-      : StructWithNullableXUnion(other.CloneStorage()) {}
+      : StructWithNullableXUnion(other.CloneStorage_()) {}
   StructWithNullableXUnion& operator=(
       const StructWithNullableXUnion& other) noexcept {
-    storage_ = other.CloneStorage();
+    storage_ = other.CloneStorage_();
     return *this;
   }
 
@@ -303,8 +292,21 @@ class StructWithNullableXUnion final
   }
 
  private:
-  Storage storage_;
-  Storage CloneStorage() const;
+  friend ::fidl::internal::CodableBase<StructWithNullableXUnion>;
+  friend ::fidl::CodingTraits<StructWithNullableXUnion>;
+  StructWithNullableXUnion(::fidl::Decoder& decoder);
+  template <typename Payload>
+  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+      ::fidl::Encoder& encoder, Payload&& payload)
+      -> ::fidl::HLCPPOutgoingMessage;
+  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
+
+  struct Storage_ final {
+    ::std::unique_ptr<::test_union::OlderSimpleUnion> x1{};
+  };
+
+  Storage_ storage_;
+  Storage_ CloneStorage_() const;
 };
 
 extern "C" const fidl_type_t test_union_StrictUnionTable;
@@ -690,32 +692,18 @@ class TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse final
     : public ::fidl::internal::CodableBase<
           TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse> {
  private:
-  friend ::fidl::internal::CodableBase<
-      TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse>;
-  friend ::fidl::CodingTraits<
-      TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse>;
-  TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse(
-      ::fidl::Decoder& decoder);
-  template <typename Payload>
-  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-      ::fidl::Encoder& encoder, Payload&& payload)
-      -> ::fidl::HLCPPOutgoingMessage;
-  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
+  struct Storage_;
 
  public:
-  struct Storage final {
-    ::test_union::StrictBoundedXUnion xu{};
-  };
-
   TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse(
-      Storage storage) noexcept
+      Storage_ storage) noexcept
       : storage_(std::move(storage)) {}
   TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse(
       ::test_union::StrictBoundedXUnion xu) noexcept
       : storage_({.xu = std::move(xu)}) {}
   TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse()
       : TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse(
-            Storage{}) {}
+            Storage_{}) {}
 
   TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse(
       TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse&&) noexcept =
@@ -728,12 +716,12 @@ class TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse final
       const TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse&
           other) noexcept
       : TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse(
-            other.CloneStorage()) {}
+            other.CloneStorage_()) {}
   TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse&
   operator=(
       const TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse&
           other) noexcept {
-    storage_ = other.CloneStorage();
+    storage_ = other.CloneStorage_();
     return *this;
   }
 
@@ -742,8 +730,24 @@ class TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse final
   ::test_union::StrictBoundedXUnion& xu() { return storage_.xu; }
 
  private:
-  Storage storage_;
-  Storage CloneStorage() const;
+  friend ::fidl::internal::CodableBase<
+      TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse>;
+  friend ::fidl::CodingTraits<
+      TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse>;
+  TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse(
+      ::fidl::Decoder& decoder);
+  template <typename Payload>
+  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+      ::fidl::Encoder& encoder, Payload&& payload)
+      -> ::fidl::HLCPPOutgoingMessage;
+  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
+
+  struct Storage_ final {
+    ::test_union::StrictBoundedXUnion xu{};
+  };
+
+  Storage_ storage_;
+  Storage_ CloneStorage_() const;
 };
 
 extern "C" const fidl_type_t test_union_ReverseOrdinalUnionTable;
@@ -839,30 +843,19 @@ extern "C" const fidl_type_t test_union_PizzaTable;
 
 class Pizza final : public ::fidl::internal::CodableBase<Pizza> {
  private:
-  friend ::fidl::internal::CodableBase<Pizza>;
-  friend ::fidl::CodingTraits<Pizza>;
-  Pizza(::fidl::Decoder& decoder);
-  template <typename Payload>
-  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-      ::fidl::Encoder& encoder, Payload&& payload)
-      -> ::fidl::HLCPPOutgoingMessage;
-  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
+  struct Storage_;
 
  public:
-  struct Storage final {
-    ::std::vector<::std::string> toppings{};
-  };
-
-  Pizza(Storage storage) noexcept : storage_(std::move(storage)) {}
+  Pizza(Storage_ storage) noexcept : storage_(std::move(storage)) {}
   Pizza(::std::vector<::std::string> toppings) noexcept
       : storage_({.toppings = std::move(toppings)}) {}
-  Pizza() : Pizza(Storage{}) {}
+  Pizza() : Pizza(Storage_{}) {}
 
   Pizza(Pizza&&) noexcept = default;
   Pizza& operator=(Pizza&&) noexcept = default;
-  Pizza(const Pizza& other) noexcept : Pizza(other.CloneStorage()) {}
+  Pizza(const Pizza& other) noexcept : Pizza(other.CloneStorage_()) {}
   Pizza& operator=(const Pizza& other) noexcept {
-    storage_ = other.CloneStorage();
+    storage_ = other.CloneStorage_();
     return *this;
   }
 
@@ -873,13 +866,46 @@ class Pizza final : public ::fidl::internal::CodableBase<Pizza> {
   ::std::vector<::std::string>& toppings() { return storage_.toppings; }
 
  private:
-  Storage storage_;
-  Storage CloneStorage() const;
+  friend ::fidl::internal::CodableBase<Pizza>;
+  friend ::fidl::CodingTraits<Pizza>;
+  Pizza(::fidl::Decoder& decoder);
+  template <typename Payload>
+  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+      ::fidl::Encoder& encoder, Payload&& payload)
+      -> ::fidl::HLCPPOutgoingMessage;
+  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
+
+  struct Storage_ final {
+    ::std::vector<::std::string> toppings{};
+  };
+
+  Storage_ storage_;
+  Storage_ CloneStorage_() const;
 };
 
 extern "C" const fidl_type_t test_union_PastaTable;
 
 class Pasta final : public ::fidl::internal::CodableBase<Pasta> {
+ private:
+  struct Storage_;
+
+ public:
+  Pasta(Storage_ storage) noexcept : storage_(std::move(storage)) {}
+  Pasta(::std::string sauce) noexcept : storage_({.sauce = std::move(sauce)}) {}
+  Pasta() : Pasta(Storage_{}) {}
+
+  Pasta(Pasta&&) noexcept = default;
+  Pasta& operator=(Pasta&&) noexcept = default;
+  Pasta(const Pasta& other) noexcept : Pasta(other.CloneStorage_()) {}
+  Pasta& operator=(const Pasta& other) noexcept {
+    storage_ = other.CloneStorage_();
+    return *this;
+  }
+
+  const ::std::string& sauce() const { return storage_.sauce; }
+
+  ::std::string& sauce() { return storage_.sauce; }
+
  private:
   friend ::fidl::internal::CodableBase<Pasta>;
   friend ::fidl::CodingTraits<Pasta>;
@@ -890,30 +916,12 @@ class Pasta final : public ::fidl::internal::CodableBase<Pasta> {
       -> ::fidl::HLCPPOutgoingMessage;
   void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
- public:
-  struct Storage final {
+  struct Storage_ final {
     ::std::string sauce{};
   };
 
-  Pasta(Storage storage) noexcept : storage_(std::move(storage)) {}
-  Pasta(::std::string sauce) noexcept : storage_({.sauce = std::move(sauce)}) {}
-  Pasta() : Pasta(Storage{}) {}
-
-  Pasta(Pasta&&) noexcept = default;
-  Pasta& operator=(Pasta&&) noexcept = default;
-  Pasta(const Pasta& other) noexcept : Pasta(other.CloneStorage()) {}
-  Pasta& operator=(const Pasta& other) noexcept {
-    storage_ = other.CloneStorage();
-    return *this;
-  }
-
-  const ::std::string& sauce() const { return storage_.sauce; }
-
-  ::std::string& sauce() { return storage_.sauce; }
-
- private:
-  Storage storage_;
-  Storage CloneStorage() const;
+  Storage_ storage_;
+  Storage_ CloneStorage_() const;
 };
 
 extern "C" const fidl_type_t test_union_StrictPizzaOrPastaTable;
@@ -1374,32 +1382,18 @@ class TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse
     : public ::fidl::internal::CodableBase<
           TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse> {
  private:
-  friend ::fidl::internal::CodableBase<
-      TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse>;
-  friend ::fidl::CodingTraits<
-      TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse>;
-  TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse(
-      ::fidl::Decoder& decoder);
-  template <typename Payload>
-  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-      ::fidl::Encoder& encoder, Payload&& payload)
-      -> ::fidl::HLCPPOutgoingMessage;
-  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
+  struct Storage_;
 
  public:
-  struct Storage final {
-    ::test_union::OlderSimpleUnion xu{};
-  };
-
   TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse(
-      Storage storage) noexcept
+      Storage_ storage) noexcept
       : storage_(std::move(storage)) {}
   TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse(
       ::test_union::OlderSimpleUnion xu) noexcept
       : storage_({.xu = std::move(xu)}) {}
   TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse()
       : TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse(
-            Storage{}) {}
+            Storage_{}) {}
 
   TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse(
       TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse&&) noexcept =
@@ -1412,12 +1406,12 @@ class TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse
       const TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse&
           other) noexcept
       : TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse(
-            other.CloneStorage()) {}
+            other.CloneStorage_()) {}
   TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse&
   operator=(
       const TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse&
           other) noexcept {
-    storage_ = other.CloneStorage();
+    storage_ = other.CloneStorage_();
     return *this;
   }
 
@@ -1426,8 +1420,24 @@ class TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse
   ::test_union::OlderSimpleUnion& xu() { return storage_.xu; }
 
  private:
-  Storage storage_;
-  Storage CloneStorage() const;
+  friend ::fidl::internal::CodableBase<
+      TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse>;
+  friend ::fidl::CodingTraits<
+      TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse>;
+  TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse(
+      ::fidl::Decoder& decoder);
+  template <typename Payload>
+  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+      ::fidl::Encoder& encoder, Payload&& payload)
+      -> ::fidl::HLCPPOutgoingMessage;
+  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
+
+  struct Storage_ final {
+    ::test_union::OlderSimpleUnion xu{};
+  };
+
+  Storage_ storage_;
+  Storage_ CloneStorage_() const;
 };
 
 extern "C" const fidl_type_t test_union_NullableUnionStructTable;
@@ -1435,32 +1445,21 @@ extern "C" const fidl_type_t test_union_NullableUnionStructTable;
 class NullableUnionStruct final
     : public ::fidl::internal::CodableBase<NullableUnionStruct> {
  private:
-  friend ::fidl::internal::CodableBase<NullableUnionStruct>;
-  friend ::fidl::CodingTraits<NullableUnionStruct>;
-  NullableUnionStruct(::fidl::Decoder& decoder);
-  template <typename Payload>
-  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-      ::fidl::Encoder& encoder, Payload&& payload)
-      -> ::fidl::HLCPPOutgoingMessage;
-  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
+  struct Storage_;
 
  public:
-  struct Storage final {
-    ::std::unique_ptr<::test_union::Union> the_union{};
-  };
-
-  NullableUnionStruct(Storage storage) noexcept
+  NullableUnionStruct(Storage_ storage) noexcept
       : storage_(std::move(storage)) {}
   NullableUnionStruct(::std::unique_ptr<::test_union::Union> the_union) noexcept
       : storage_({.the_union = std::move(the_union)}) {}
-  NullableUnionStruct() : NullableUnionStruct(Storage{}) {}
+  NullableUnionStruct() : NullableUnionStruct(Storage_{}) {}
 
   NullableUnionStruct(NullableUnionStruct&&) noexcept = default;
   NullableUnionStruct& operator=(NullableUnionStruct&&) noexcept = default;
   NullableUnionStruct(const NullableUnionStruct& other) noexcept
-      : NullableUnionStruct(other.CloneStorage()) {}
+      : NullableUnionStruct(other.CloneStorage_()) {}
   NullableUnionStruct& operator=(const NullableUnionStruct& other) noexcept {
-    storage_ = other.CloneStorage();
+    storage_ = other.CloneStorage_();
     return *this;
   }
 
@@ -1473,8 +1472,21 @@ class NullableUnionStruct final
   }
 
  private:
-  Storage storage_;
-  Storage CloneStorage() const;
+  friend ::fidl::internal::CodableBase<NullableUnionStruct>;
+  friend ::fidl::CodingTraits<NullableUnionStruct>;
+  NullableUnionStruct(::fidl::Decoder& decoder);
+  template <typename Payload>
+  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+      ::fidl::Encoder& encoder, Payload&& payload)
+      -> ::fidl::HLCPPOutgoingMessage;
+  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
+
+  struct Storage_ final {
+    ::std::unique_ptr<::test_union::Union> the_union{};
+  };
+
+  Storage_ storage_;
+  Storage_ CloneStorage_() const;
 };
 
 extern "C" const fidl_type_t test_union_NewerSimpleUnionTable;
@@ -1951,33 +1963,20 @@ extern "C" const fidl_type_t test_union_UnionSandwichTable;
 class UnionSandwich final
     : public ::fidl::internal::CodableBase<UnionSandwich> {
  private:
-  friend ::fidl::internal::CodableBase<UnionSandwich>;
-  friend ::fidl::CodingTraits<UnionSandwich>;
-  UnionSandwich(::fidl::Decoder& decoder);
-  template <typename Payload>
-  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-      ::fidl::Encoder& encoder, Payload&& payload)
-      -> ::fidl::HLCPPOutgoingMessage;
-  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
+  struct Storage_;
 
  public:
-  struct Storage final {
-    uint32_t a{};
-    ::test_union::ExplicitXUnion u{};
-    uint32_t b{};
-  };
-
-  UnionSandwich(Storage storage) noexcept : storage_(std::move(storage)) {}
+  UnionSandwich(Storage_ storage) noexcept : storage_(std::move(storage)) {}
   UnionSandwich(uint32_t a, ::test_union::ExplicitXUnion u, uint32_t b) noexcept
       : storage_({.a = std::move(a), .u = std::move(u), .b = std::move(b)}) {}
-  UnionSandwich() : UnionSandwich(Storage{}) {}
+  UnionSandwich() : UnionSandwich(Storage_{}) {}
 
   UnionSandwich(UnionSandwich&&) noexcept = default;
   UnionSandwich& operator=(UnionSandwich&&) noexcept = default;
   UnionSandwich(const UnionSandwich& other) noexcept
-      : UnionSandwich(other.CloneStorage()) {}
+      : UnionSandwich(other.CloneStorage_()) {}
   UnionSandwich& operator=(const UnionSandwich& other) noexcept {
-    storage_ = other.CloneStorage();
+    storage_ = other.CloneStorage_();
     return *this;
   }
 
@@ -1994,8 +1993,23 @@ class UnionSandwich final
   uint32_t& b() { return storage_.b; }
 
  private:
-  Storage storage_;
-  Storage CloneStorage() const;
+  friend ::fidl::internal::CodableBase<UnionSandwich>;
+  friend ::fidl::CodingTraits<UnionSandwich>;
+  UnionSandwich(::fidl::Decoder& decoder);
+  template <typename Payload>
+  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+      ::fidl::Encoder& encoder, Payload&& payload)
+      -> ::fidl::HLCPPOutgoingMessage;
+  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
+
+  struct Storage_ final {
+    uint32_t a{};
+    ::test_union::ExplicitXUnion u{};
+    uint32_t b{};
+  };
+
+  Storage_ storage_;
+  Storage_ CloneStorage_() const;
 };
 
 extern "C" const fidl_type_t test_union_ExplicitUnionTable;
@@ -2265,6 +2279,27 @@ extern "C" const fidl_type_t test_union_EmptyTable;
 
 class Empty final : public ::fidl::internal::CodableBase<Empty> {
  private:
+  struct Storage_;
+
+ public:
+  Empty(Storage_ storage) noexcept : storage_(std::move(storage)) {}
+  Empty(uint8_t __reserved) noexcept
+      : storage_({.__reserved = std::move(__reserved)}) {}
+  Empty() : Empty(Storage_{}) {}
+
+  Empty(Empty&&) noexcept = default;
+  Empty& operator=(Empty&&) noexcept = default;
+  Empty(const Empty& other) noexcept : Empty(other.CloneStorage_()) {}
+  Empty& operator=(const Empty& other) noexcept {
+    storage_ = other.CloneStorage_();
+    return *this;
+  }
+
+  uint8_t __reserved() const { return storage_.__reserved; }
+
+  uint8_t& __reserved() { return storage_.__reserved; }
+
+ private:
   friend ::fidl::internal::CodableBase<Empty>;
   friend ::fidl::CodingTraits<Empty>;
   Empty(::fidl::Decoder& decoder);
@@ -2274,31 +2309,12 @@ class Empty final : public ::fidl::internal::CodableBase<Empty> {
       -> ::fidl::HLCPPOutgoingMessage;
   void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
- public:
-  struct Storage final {
+  struct Storage_ final {
     uint8_t __reserved = 0u;
   };
 
-  Empty(Storage storage) noexcept : storage_(std::move(storage)) {}
-  Empty(uint8_t __reserved) noexcept
-      : storage_({.__reserved = std::move(__reserved)}) {}
-  Empty() : Empty(Storage{}) {}
-
-  Empty(Empty&&) noexcept = default;
-  Empty& operator=(Empty&&) noexcept = default;
-  Empty(const Empty& other) noexcept : Empty(other.CloneStorage()) {}
-  Empty& operator=(const Empty& other) noexcept {
-    storage_ = other.CloneStorage();
-    return *this;
-  }
-
-  uint8_t __reserved() const { return storage_.__reserved; }
-
-  uint8_t& __reserved() { return storage_.__reserved; }
-
- private:
-  Storage storage_;
-  Storage CloneStorage() const;
+  Storage_ storage_;
+  Storage_ CloneStorage_() const;
 };
 
 extern "C" const fidl_type_t test_union_XUnionContainingEmptyStructTable;

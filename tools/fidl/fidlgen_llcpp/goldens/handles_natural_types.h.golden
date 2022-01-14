@@ -52,53 +52,10 @@ extern "C" const fidl_type_t test_handles_HandlesTable;
 
 class Handles final : public ::fidl::internal::CodableBase<Handles> {
  private:
-  friend ::fidl::internal::CodableBase<Handles>;
-  friend ::fidl::CodingTraits<Handles>;
-  Handles(::fidl::Decoder& decoder);
-  template <typename Payload>
-  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-      ::fidl::Encoder& encoder, Payload&& payload)
-      -> ::fidl::HLCPPOutgoingMessage;
-  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
+  struct Storage_;
 
  public:
-  struct Storage final {
-    ::zx::handle plain_handle{};
-    ::zx::bti bti_handle{};
-    ::zx::channel channel_handle{};
-    ::zx::clock clock_handle{};
-    ::zx::debuglog debuglog_handle{};
-    ::zx::event event_handle{};
-    ::zx::eventpair eventpair_handle{};
-    ::zx::exception exception_handle{};
-    ::zx::fifo fifo_handle{};
-    ::zx::guest guest_handle{};
-    ::zx::interrupt interrupt_handle{};
-    ::zx::iommu iommu_handle{};
-    ::zx::job job_handle{};
-    ::zx::pager pager_handle{};
-    ::zx::pcidevice pcidevice_handle{};
-    ::zx::pmt pmt_handle{};
-    ::zx::port port_handle{};
-    ::zx::process process_handle{};
-    ::zx::profile profile_handle{};
-    ::zx::resource resource_handle{};
-    ::zx::socket socket_handle{};
-    ::zx::suspendtoken suspendtoken_handle{};
-    ::zx::thread thread_handle{};
-    ::zx::timer timer_handle{};
-    ::zx::vcpu vcpu_handle{};
-    ::zx::vmar vmar_handle{};
-    ::zx::vmo vmo_handle{};
-    ::zx::vmo rights_handle{};
-    ::zx::handle aliased_plain_handle_field{};
-    ::zx::vmo aliased_subtype_handle_field{};
-    ::zx::vmo aliased_rights_handle_field{};
-    ::fidl::ClientEnd<::test_handles::SomeProtocol> some_protocol{};
-    ::fidl::ServerEnd<::test_handles::SomeProtocol> request_some_protocol{};
-  };
-
-  Handles(Storage storage) noexcept : storage_(std::move(storage)) {}
+  Handles(Storage_ storage) noexcept : storage_(std::move(storage)) {}
   Handles(::zx::handle plain_handle, ::zx::bti bti_handle,
           ::zx::channel channel_handle, ::zx::clock clock_handle,
           ::zx::debuglog debuglog_handle, ::zx::event event_handle,
@@ -154,7 +111,7 @@ class Handles final : public ::fidl::internal::CodableBase<Handles> {
                       std::move(aliased_rights_handle_field),
                   .some_protocol = std::move(some_protocol),
                   .request_some_protocol = std::move(request_some_protocol)}) {}
-  Handles() : Handles(Storage{}) {}
+  Handles() : Handles(Storage_{}) {}
 
   Handles(Handles&&) noexcept = default;
   Handles& operator=(Handles&&) noexcept = default;
@@ -335,7 +292,52 @@ class Handles final : public ::fidl::internal::CodableBase<Handles> {
   }
 
  private:
-  Storage storage_;
+  friend ::fidl::internal::CodableBase<Handles>;
+  friend ::fidl::CodingTraits<Handles>;
+  Handles(::fidl::Decoder& decoder);
+  template <typename Payload>
+  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+      ::fidl::Encoder& encoder, Payload&& payload)
+      -> ::fidl::HLCPPOutgoingMessage;
+  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
+
+  struct Storage_ final {
+    ::zx::handle plain_handle{};
+    ::zx::bti bti_handle{};
+    ::zx::channel channel_handle{};
+    ::zx::clock clock_handle{};
+    ::zx::debuglog debuglog_handle{};
+    ::zx::event event_handle{};
+    ::zx::eventpair eventpair_handle{};
+    ::zx::exception exception_handle{};
+    ::zx::fifo fifo_handle{};
+    ::zx::guest guest_handle{};
+    ::zx::interrupt interrupt_handle{};
+    ::zx::iommu iommu_handle{};
+    ::zx::job job_handle{};
+    ::zx::pager pager_handle{};
+    ::zx::pcidevice pcidevice_handle{};
+    ::zx::pmt pmt_handle{};
+    ::zx::port port_handle{};
+    ::zx::process process_handle{};
+    ::zx::profile profile_handle{};
+    ::zx::resource resource_handle{};
+    ::zx::socket socket_handle{};
+    ::zx::suspendtoken suspendtoken_handle{};
+    ::zx::thread thread_handle{};
+    ::zx::timer timer_handle{};
+    ::zx::vcpu vcpu_handle{};
+    ::zx::vmar vmar_handle{};
+    ::zx::vmo vmo_handle{};
+    ::zx::vmo rights_handle{};
+    ::zx::handle aliased_plain_handle_field{};
+    ::zx::vmo aliased_subtype_handle_field{};
+    ::zx::vmo aliased_rights_handle_field{};
+    ::fidl::ClientEnd<::test_handles::SomeProtocol> some_protocol{};
+    ::fidl::ServerEnd<::test_handles::SomeProtocol> request_some_protocol{};
+  };
+
+  Storage_ storage_;
 };
 
 #endif  // __Fuchsia__

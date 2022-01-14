@@ -24,31 +24,19 @@ extern "C" const fidl_type_t test_struct_SimpleTable;
 
 class Simple final : public ::fidl::internal::CodableBase<Simple> {
  private:
-  friend ::fidl::internal::CodableBase<Simple>;
-  friend ::fidl::CodingTraits<Simple>;
-  Simple(::fidl::Decoder& decoder);
-  template <typename Payload>
-  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-      ::fidl::Encoder& encoder, Payload&& payload)
-      -> ::fidl::HLCPPOutgoingMessage;
-  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
+  struct Storage_;
 
  public:
-  struct Storage final {
-    uint8_t f1{};
-    bool f2{};
-  };
-
-  Simple(Storage storage) noexcept : storage_(std::move(storage)) {}
+  Simple(Storage_ storage) noexcept : storage_(std::move(storage)) {}
   Simple(uint8_t f1, bool f2) noexcept
       : storage_({.f1 = std::move(f1), .f2 = std::move(f2)}) {}
-  Simple() : Simple(Storage{}) {}
+  Simple() : Simple(Storage_{}) {}
 
   Simple(Simple&&) noexcept = default;
   Simple& operator=(Simple&&) noexcept = default;
-  Simple(const Simple& other) noexcept : Simple(other.CloneStorage()) {}
+  Simple(const Simple& other) noexcept : Simple(other.CloneStorage_()) {}
   Simple& operator=(const Simple& other) noexcept {
-    storage_ = other.CloneStorage();
+    storage_ = other.CloneStorage_();
     return *this;
   }
 
@@ -61,40 +49,42 @@ class Simple final : public ::fidl::internal::CodableBase<Simple> {
   bool& f2() { return storage_.f2; }
 
  private:
-  Storage storage_;
-  Storage CloneStorage() const;
-};
-
-extern "C" const fidl_type_t test_struct_BasicStructTable;
-
-class BasicStruct final : public ::fidl::internal::CodableBase<BasicStruct> {
- private:
-  friend ::fidl::internal::CodableBase<BasicStruct>;
-  friend ::fidl::CodingTraits<BasicStruct>;
-  BasicStruct(::fidl::Decoder& decoder);
+  friend ::fidl::internal::CodableBase<Simple>;
+  friend ::fidl::CodingTraits<Simple>;
+  Simple(::fidl::Decoder& decoder);
   template <typename Payload>
   friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
       ::fidl::Encoder& encoder, Payload&& payload)
       -> ::fidl::HLCPPOutgoingMessage;
   void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
- public:
-  struct Storage final {
-    uint32_t x{};
-    ::std::string y{};
+  struct Storage_ final {
+    uint8_t f1{};
+    bool f2{};
   };
 
-  BasicStruct(Storage storage) noexcept : storage_(std::move(storage)) {}
+  Storage_ storage_;
+  Storage_ CloneStorage_() const;
+};
+
+extern "C" const fidl_type_t test_struct_BasicStructTable;
+
+class BasicStruct final : public ::fidl::internal::CodableBase<BasicStruct> {
+ private:
+  struct Storage_;
+
+ public:
+  BasicStruct(Storage_ storage) noexcept : storage_(std::move(storage)) {}
   BasicStruct(uint32_t x, ::std::string y) noexcept
       : storage_({.x = std::move(x), .y = std::move(y)}) {}
-  BasicStruct() : BasicStruct(Storage{}) {}
+  BasicStruct() : BasicStruct(Storage_{}) {}
 
   BasicStruct(BasicStruct&&) noexcept = default;
   BasicStruct& operator=(BasicStruct&&) noexcept = default;
   BasicStruct(const BasicStruct& other) noexcept
-      : BasicStruct(other.CloneStorage()) {}
+      : BasicStruct(other.CloneStorage_()) {}
   BasicStruct& operator=(const BasicStruct& other) noexcept {
-    storage_ = other.CloneStorage();
+    storage_ = other.CloneStorage_();
     return *this;
   }
 
@@ -107,8 +97,22 @@ class BasicStruct final : public ::fidl::internal::CodableBase<BasicStruct> {
   ::std::string& y() { return storage_.y; }
 
  private:
-  Storage storage_;
-  Storage CloneStorage() const;
+  friend ::fidl::internal::CodableBase<BasicStruct>;
+  friend ::fidl::CodingTraits<BasicStruct>;
+  BasicStruct(::fidl::Decoder& decoder);
+  template <typename Payload>
+  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+      ::fidl::Encoder& encoder, Payload&& payload)
+      -> ::fidl::HLCPPOutgoingMessage;
+  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
+
+  struct Storage_ final {
+    uint32_t x{};
+    ::std::string y{};
+  };
+
+  Storage_ storage_;
+  Storage_ CloneStorage_() const;
 };
 
 }  // namespace test_struct

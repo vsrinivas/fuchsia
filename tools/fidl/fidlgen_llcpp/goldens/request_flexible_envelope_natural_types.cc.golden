@@ -24,10 +24,10 @@ void ::test_requestflexibleenvelope::
 #endif  // __Fuchsia__
 
 ::test_requestflexibleenvelope::ProtocolRequestStrictResponseFlexibleRequest::
-    Storage
+    Storage_
     test_requestflexibleenvelope::ProtocolRequestStrictResponseFlexibleRequest::
-        CloneStorage() const {
-  return Storage{::fidl::internal::NaturalClone(storage_.s)};
+        CloneStorage_() const {
+  return Storage_{::fidl::internal::NaturalClone(storage_.s)};
 }
 #ifdef __Fuchsia__
 
@@ -54,10 +54,11 @@ void ::test_requestflexibleenvelope::
 #endif  // __Fuchsia__
 
 ::test_requestflexibleenvelope::
-    ProtocolRequestFlexibleResponseStrictTopResponse::Storage
+    ProtocolRequestFlexibleResponseStrictTopResponse::Storage_
     test_requestflexibleenvelope::
-        ProtocolRequestFlexibleResponseStrictTopResponse::CloneStorage() const {
-  return Storage{::fidl::internal::NaturalClone(storage_.f)};
+        ProtocolRequestFlexibleResponseStrictTopResponse::CloneStorage_()
+            const {
+  return Storage_{::fidl::internal::NaturalClone(storage_.f)};
 }
 #ifdef __Fuchsia__
 
@@ -84,10 +85,11 @@ void ::test_requestflexibleenvelope::
 #endif  // __Fuchsia__
 
 ::test_requestflexibleenvelope::
-    ProtocolRequestStrictResponseFlexibleTopResponse::Storage
+    ProtocolRequestStrictResponseFlexibleTopResponse::Storage_
     test_requestflexibleenvelope::
-        ProtocolRequestStrictResponseFlexibleTopResponse::CloneStorage() const {
-  return Storage{::fidl::internal::NaturalClone(storage_.f)};
+        ProtocolRequestStrictResponseFlexibleTopResponse::CloneStorage_()
+            const {
+  return Storage_{::fidl::internal::NaturalClone(storage_.f)};
 }
 #ifdef __Fuchsia__
 
@@ -111,10 +113,10 @@ void ::test_requestflexibleenvelope::
 #endif  // __Fuchsia__
 
 ::test_requestflexibleenvelope::ProtocolRequestFlexibleResponseStrictRequest::
-    Storage
+    Storage_
     test_requestflexibleenvelope::ProtocolRequestFlexibleResponseStrictRequest::
-        CloneStorage() const {
-  return Storage{::fidl::internal::NaturalClone(storage_.s)};
+        CloneStorage_() const {
+  return Storage_{::fidl::internal::NaturalClone(storage_.s)};
 }
 
 std::shared_ptr<::test_requestflexibleenvelope::StrictFoo::Storage>

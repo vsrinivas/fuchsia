@@ -80,32 +80,18 @@ extern "C" const fidl_type_t test_doccomments_StructTable;
 /// struct comment #3
 class Struct final : public ::fidl::internal::CodableBase<Struct> {
  private:
-  friend ::fidl::internal::CodableBase<Struct>;
-  friend ::fidl::CodingTraits<Struct>;
-  Struct(::fidl::Decoder& decoder);
-  template <typename Payload>
-  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-      ::fidl::Encoder& encoder, Payload&& payload)
-      -> ::fidl::HLCPPOutgoingMessage;
-  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
+  struct Storage_;
 
  public:
-  struct Storage final {
-    /// struct member comment #1
-    ///
-    /// struct member comment #3
-    int32_t field{};
-  };
-
-  Struct(Storage storage) noexcept : storage_(std::move(storage)) {}
+  Struct(Storage_ storage) noexcept : storage_(std::move(storage)) {}
   Struct(int32_t field) noexcept : storage_({.field = std::move(field)}) {}
-  Struct() : Struct(Storage{}) {}
+  Struct() : Struct(Storage_{}) {}
 
   Struct(Struct&&) noexcept = default;
   Struct& operator=(Struct&&) noexcept = default;
-  Struct(const Struct& other) noexcept : Struct(other.CloneStorage()) {}
+  Struct(const Struct& other) noexcept : Struct(other.CloneStorage_()) {}
   Struct& operator=(const Struct& other) noexcept {
-    storage_ = other.CloneStorage();
+    storage_ = other.CloneStorage_();
     return *this;
   }
 
@@ -120,8 +106,24 @@ class Struct final : public ::fidl::internal::CodableBase<Struct> {
   int32_t& field() { return storage_.field; }
 
  private:
-  Storage storage_;
-  Storage CloneStorage() const;
+  friend ::fidl::internal::CodableBase<Struct>;
+  friend ::fidl::CodingTraits<Struct>;
+  Struct(::fidl::Decoder& decoder);
+  template <typename Payload>
+  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+      ::fidl::Encoder& encoder, Payload&& payload)
+      -> ::fidl::HLCPPOutgoingMessage;
+  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
+
+  struct Storage_ final {
+    /// struct member comment #1
+    ///
+    /// struct member comment #3
+    int32_t field{};
+  };
+
+  Storage_ storage_;
+  Storage_ CloneStorage_() const;
 };
 
 extern "C" const fidl_type_t test_doccomments_StrictUnionTable;
