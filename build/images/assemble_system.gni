@@ -7,6 +7,7 @@ import("//build/config.gni")
 import("//build/drivers/driver_manifest.gni")
 import("//build/images/assembly/generated_assembly_inputs.gni")
 import("//build/images/assembly/generated_board_config.gni")
+import("//build/images/assembly/generated_images_config.gni")
 import("//build/images/assembly/generated_partitions_config.gni")
 import("//build/images/assembly/generated_product_config.gni")
 import("//build/images/fvm.gni")
@@ -198,6 +199,7 @@ template("assemble_system") {
     all_packages_group = "${image_name}_packages"
     product_config = "${image_name}_product_config"
     board_config = "${image_name}_board_config"
+    images_config = "${image_name}_images_config"
     partitions_config = "${image_name}_partitions_config"
     image_assembler = "${image_name}_image_assembler"
     copy_vbmeta = "${image_name}_copy_vbmeta"
@@ -215,6 +217,7 @@ template("assemble_system") {
   files = {
     product_config = "$target_out_dir/${image_name}_product_config.json"
     board_config = "$target_out_dir/${image_name}_board_config.json"
+    images_config = "$target_out_dir/${image_name}_images_config.json"
     partitions_config = "$target_out_dir/${image_name}_partitions.json"
 
     outdir = "$target_out_dir/$image_name"
@@ -507,6 +510,29 @@ template("assemble_system") {
             invoker.assembly_include_account_in_fvm
       }
     }
+  }
+
+  generated_images_config(labels.images_config) {
+    forward_variables_from(invoker,
+                           [
+                             "testonly",
+                             "visibility",
+                             "zbi_signing_script",
+                             "zbi_signing_args",
+                             "minfs_maximum_bytes",
+                             "minfs_minimum_data_bytes",
+                             "blobfs_maximum_bytes",
+                             "blobfs_minimum_data_bytes",
+                             "blobfs_minimum_inodes",
+                           ])
+
+    output_path = files.images_config
+    zbi_name = "${image_name}"
+    compress_blobs = compress_blobs
+    blob_layout_format = blob_layout_format
+    fvm_slice_size = fvm_slice_size
+    fvm_reserved_slices = fvm_reserved_slices
+    generate_fvm = generate_fvm
   }
 
   generated_partitions_config(labels.partitions_config) {
@@ -820,6 +846,7 @@ template("assemble_system") {
     public_deps = [
       ":${labels.assembly_inputs}",
       ":${labels.image_assembler}",
+      ":${labels.images_config}",
       ":${labels.partitions_config}",
     ]
     if (defined(invoker.output_dir)) {

@@ -1,0 +1,295 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/images/args.gni")
+import("//build/images/fvm.gni")
+import("//build/images/vbmeta.gni")
+
+# Generates an Images Config. See the specification here:
+#   https://fuchsia.googlesource.com/fuchsia/+/refs/heads/main/src/developer/ffx/plugins/assembly/#images-config
+#
+# Parameters:
+#
+#   output_path (required)
+#    [string] Where to write the images config to.
+#
+# ZBI arguments
+#   zbi_name (required)
+#     [string] The name to give the ZBI in the out directory.
+#     Typically: fuchsia, recovery, etc.
+#
+#   zbi_signing_script (optional)
+#     [path] Location of script to use to sign the ZBI.
+#
+#   zbi_signing_args (optional)
+#     [list of strings] Arguments to pass to the signing script.
+#
+# FVM parameters
+#
+#   generate_fvm (optional)
+#     [bool] Whether to generate a FVM image.
+#
+#   fvm_slice_size (optional)
+#     [int] The slice size of the FVM.
+#
+#   fvm_reserved_slices (optional)
+#     [int] The number of slices to reserve in the FVM.
+#
+# MinFS parameters:
+#
+#   minfs_minimum_data_bytes, minfs_maximum_bytes (optional)
+#     [int] Size options for minfs to pass to the fvm tool.
+#
+# BlobFS parameters
+#
+#   blobfs_minimum_inodes, blobfs_minimum_data_bytes, blobfs_maximum_bytes (optional)
+#     [int] Size options for blobfs to pass to the fvm tool.
+#
+#   compress_blobs (optional)
+#     [boolean] Whether the blobs added to the blobfs image should be compressed.
+#
+#   blob_layout_format (optional)
+#     [string] The format blobfs should store blobs in. The valid values are "deprecated_padded" and
+#     "compact". The deprecated padded format is supported only for Astro devices and will be
+#     removed in the future (it wastes space).
+#
+template("generated_images_config") {
+  assert(defined(invoker.output_path), "Need to define output_path")
+  assert(defined(invoker.zbi_name), "Need to define zbi_name")
+
+  # Define an optional vbmeta
+  if (use_vbmeta) {
+    vbmeta = {
+      type = "vbmeta"
+      name = invoker.zbi_name
+      key = rebase_path(avb_key, root_build_dir)
+      key_metadata = rebase_path(avb_atx_metadata, root_build_dir)
+      if (extra_vbmeta_descriptors != false) {
+        additional_descriptors = extra_vbmeta_descriptors
+      }
+    }
+  }
+
+  # Define the ZBI
+  zbi = {
+    type = "zbi"
+    name = invoker.zbi_name
+    compression = "zstd.max"
+
+    # Set the signing script if provided.
+    if (defined(invoker.zbi_signing_script)) {
+      postprocessing_script = {
+        path = rebase_path(invoker.zbi_signing_script, root_build_dir)
+        if (defined(invoker.zbi_signing_args)) {
+          args = invoker.zbi_signing_args
+        }
+      }
+    }
+  }
+
+  # Define the FVMs to generate.
+  standard_fvm = {
+    type = "standard"
+    name = "fvm"
+    filesystems = [
+      "data",
+      "blob",
+    ]
+  }
+
+  sparse_fvm = {
+    type = "sparse"
+    name = "fvm.sparse"
+    filesystems = [
+      "data",
+      "blob",
+    ]
+  }
+
+  blob_sparse_fvm = {
+    type = "sparse"
+    name = "fvm.sparse.blob"
+    filesystems = [
+      "empty-data",
+      "blob",
+    ]
+  }
+
+  emmc_fvm = {
+    type = "standard"
+    name = "fvm.fastboot"
+    filesystems = [
+      "data",
+      "blob",
+    ]
+
+    # EMMC fvms are by default compressed.
+    compress = fvm_fastboot_compression != "none"
+    resize_image_file_to_fit = true
+    truncate_to_length = fvm_emmc_partition_size
+  }
+
+  nand_fvm = {
+    type = "nand"
+    name = "fvm.fastboot"
+    filesystems = [
+      "data",
+      "blob",
+    ]
+    max_disk_size = fvm_max_disk_size
+
+    # NAND fvms are by default uncompressed.
+    compress = fvm_fastboot_compression != "default"
+    block_count = fvm_ftl_nand_block_count
+    oob_size = fvm_ftl_nand_oob_size
+    page_size = fvm_ftl_nand_page_size
+    pages_per_block = fvm_ftl_nand_pages_per_block
+  }
+
+  # Collect all the filesystems that can be put in FVMs.
+  fvm_filesystems = []
+  blobfs = {
+    type = "blobfs"
+
+    # The name of the volume in the FVM.
+    name = "blob"
+
+    # Optionally compress the volume file.
+    if (defined(invoker.compress_blobs)) {
+      compress = invoker.compress_blobs
+    }
+
+    # Optional deprecated layout.
+    if (defined(invoker.blob_layout_format)) {
+      layout = invoker.blob_layout_format
+    }
+
+    # Reserve |minimum_data_bytes| and |minimum_inodes| in the FVM, and ensure
+    # that the final reserved size does not exceed |maximum_bytes|.
+    if (defined(invoker.blobfs_maximum_bytes)) {
+      maximum_bytes = invoker.blobfs_maximum_bytes
+    }
+    if (defined(invoker.blobfs_minimum_data_bytes)) {
+      minimum_data_bytes = invoker.blobfs_minimum_data_bytes
+    }
+    if (defined(invoker.blobfs_minimum_inodes)) {
+      minimum_inodes = invoker.blobfs_minimum_inodes
+    }
+  }
+  fvm_filesystems += [ blobfs ]
+
+  minfs = {
+    type = "minfs"
+
+    # The name of the volume in the FVM.
+    name = "data"
+
+    # Reserve |minimum_data_bytes| in the FVM, and ensure
+    # that the final reserved size does not exceed |maximum_bytes|.
+    if (defined(invoker.minfs_maximum_bytes)) {
+      maximum_bytes = invoker.minfs_maximum_bytes
+    }
+    if (defined(invoker.minfs_minimum_data_bytes)) {
+      minimum_data_bytes = invoker.minfs_minimum_data_bytes
+    }
+  }
+  fvm_filesystems += [ minfs ]
+
+  # Define an optional empty minfs partition
+  empty_minfs = {
+    type = "empty-minfs"
+    name = "empty-data"
+  }
+  fvm_filesystems += [ empty_minfs ]
+
+  # Optionally, reserve some slices in the FVM.
+  if (defined(invoker.fvm_reserved_slices)) {
+    reserved = {
+      type = "reserved"
+
+      # The name of the volume in the FVM.
+      name = "internal"
+
+      # The number of slices to reserve.
+      slices = invoker.fvm_reserved_slices
+    }
+    fvm_filesystems += [ reserved ]
+
+    # Add the reserved space to every FVM.
+    standard_fvm.filesystems += [ "internal" ]
+    sparse_fvm.filesystems += [ "internal" ]
+    blob_sparse_fvm.filesystems += [ "internal" ]
+    emmc_fvm.filesystems += [ "internal" ]
+    nand_fvm.filesystems += [ "internal" ]
+  }
+
+  # Collect the fvms to generate.
+  fvm_outputs = [
+    standard_fvm,
+    sparse_fvm,
+    blob_sparse_fvm,
+  ]
+
+  # Optionally, include a fastboot fvm.
+  if (defined(invoker.generate_fvm) && invoker.generate_fvm &&
+      fvm_partition != "") {
+    if (fvm_emmc_partition_size != false) {
+      fvm_outputs += [ emmc_fvm ]
+      not_needed([ "nand_fvm" ])
+    } else if (fvm_ftl_nand_block_count != false) {
+      fvm_outputs += [ nand_fvm ]
+      not_needed([ "emmc_fvm" ])
+    } else {
+      assert(
+          false,
+          "|fvm_partition| is specified. But failed to determine the target format.")
+    }
+  } else {
+    not_needed([
+                 "emmc_fvm",
+                 "nand_fvm",
+               ])
+  }
+
+  # Define an optional fvm
+  fvm = {
+    type = "fvm"
+
+    # The size of a slice within the FVM.
+    if (defined(invoker.fvm_slice_size)) {
+      slice_size = invoker.fvm_slice_size
+    }
+
+    # The list of filesystems to generate that can be added to the outputs.
+    filesystems = fvm_filesystems
+
+    # The FVM images to generate.
+    outputs = fvm_outputs
+  }
+
+  generated_file(target_name) {
+    forward_variables_from(invoker,
+                           [
+                             "testonly",
+                             "visibility",
+                           ])
+
+    outputs = [ invoker.output_path ]
+    output_conversion = "json"
+
+    # Construct the list of images to assemble.
+    _images = [ zbi ]
+    if (use_vbmeta) {
+      _images += [ vbmeta ]
+    }
+    if (defined(invoker.generate_fvm) && invoker.generate_fvm) {
+      _images += [ fvm ]
+    } else {
+      not_needed([ "fvm" ])
+    }
+    contents = {
+      images = _images
+    }
+  }
+}
