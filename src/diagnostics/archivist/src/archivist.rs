@@ -84,9 +84,6 @@ pub struct ArchivistBuilder {
     /// receiver must close for `Archivist::run` to return gracefully.
     log_sender: mpsc::UnboundedSender<Task<()>>,
 
-    /// Receiver for stream which will process Log connections.
-    listen_receiver: mpsc::UnboundedReceiver<Task<()>>,
-
     /// Sender which is used to close the stream of Log connections after log_sender
     /// completes.
     ///
@@ -100,6 +97,9 @@ pub struct ArchivistBuilder {
 
     /// Recieve stop signal to kill this archivist.
     stop_recv: Option<mpsc::Receiver<()>>,
+
+    /// Task draining the receiver for the `listen_sender`s.
+    drain_listeners_task: fasync::Task<()>,
 }
 
 impl ArchivistBuilder {
@@ -264,13 +264,15 @@ impl ArchivistBuilder {
             archivist,
             log_receiver,
             log_sender,
-            listen_receiver,
             listen_sender,
             pipeline_exists,
             _pipeline_nodes: vec![pipelines_node, feedback_pipeline_node, legacy_pipeline_node],
             _pipeline_configs: vec![feedback_config, legacy_config],
             event_source_registry: EventSourceRegistry::new(events_node),
             stop_recv: None,
+            drain_listeners_task: fasync::Task::spawn(async move {
+                listen_receiver.for_each_concurrent(None, |rx| async move { rx.await }).await;
+            }),
         })
     }
 
@@ -453,14 +455,14 @@ impl ArchivistBuilder {
 
         // Process messages from log sink.
         let log_receiver = self.log_receiver;
-        let listen_receiver = self.listen_receiver;
+        let drain_listeners_task = self.drain_listeners_task;
         let all_msg = async {
             log_receiver.for_each_concurrent(None, |rx| async move { rx.await }).await;
             debug!("Log ingestion stopped.");
             data_repo.terminate_logs();
             logs_budget.terminate();
             debug!("Flushing to listeners.");
-            listen_receiver.for_each_concurrent(None, |rx| async move { rx.await }).await;
+            drain_listeners_task.await;
             debug!("Log listeners and batch iterators stopped.");
             component_removal_task.cancel().await;
             debug!("Not processing more component removal requests.");
