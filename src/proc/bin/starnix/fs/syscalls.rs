@@ -576,6 +576,20 @@ pub fn sys_linkat(
     Ok(SUCCESS)
 }
 
+pub fn sys_rmdir(
+    current_task: &CurrentTask,
+    user_path: UserCString,
+) -> Result<SyscallResult, Errno> {
+    sys_unlinkat(current_task, FdNumber::AT_FDCWD, user_path, AT_REMOVEDIR)
+}
+
+pub fn sys_unlink(
+    current_task: &CurrentTask,
+    user_path: UserCString,
+) -> Result<SyscallResult, Errno> {
+    sys_unlinkat(current_task, FdNumber::AT_FDCWD, user_path, 0)
+}
+
 pub fn sys_unlinkat(
     current_task: &CurrentTask,
     dir_fd: FdNumber,
