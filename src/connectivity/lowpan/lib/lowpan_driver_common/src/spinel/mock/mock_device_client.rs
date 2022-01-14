@@ -50,25 +50,49 @@ impl MockDeviceProxy {
 impl DeviceProxyInterface for MockDeviceProxy {
     type OpenResponseFut = Ready<Result<DeviceOpenResult, fidl::Error>>;
     fn open(&self) -> Self::OpenResponseFut {
-        self.sender.lock().unwrap().start_send(DeviceRequest::Open).unwrap();
-        ready(Ok(Ok(())))
+        let ret = self
+            .sender
+            .lock()
+            .unwrap()
+            .start_send(DeviceRequest::Open)
+            .map_err(|_| fidl_fuchsia_lowpan_spinel::Error::IoError);
+        ready(Ok(ret))
     }
 
     type CloseResponseFut = Ready<Result<DeviceCloseResult, fidl::Error>>;
     fn close(&self) -> Self::CloseResponseFut {
-        self.sender.lock().unwrap().start_send(DeviceRequest::Close).unwrap();
-        ready(Ok(Ok(())))
+        let ret = self
+            .sender
+            .lock()
+            .unwrap()
+            .start_send(DeviceRequest::Close)
+            .map_err(|_| fidl_fuchsia_lowpan_spinel::Error::IoError);
+        ready(Ok(ret))
     }
 
     type GetMaxFrameSizeResponseFut = Ready<Result<u32, fidl::Error>>;
     fn get_max_frame_size(&self) -> Self::GetMaxFrameSizeResponseFut {
-        self.sender.lock().unwrap().start_send(DeviceRequest::GetMaxFrameSize).unwrap();
-        ready(Ok(self.max_frame_size))
+        let ret = self
+            .sender
+            .lock()
+            .unwrap()
+            .start_send(DeviceRequest::GetMaxFrameSize)
+            .map_err(|_| fidl::Error::ClientChannelClosed {
+                status: ZxStatus::PEER_CLOSED,
+                protocol_name: "mock",
+            })
+            .map(|()| self.max_frame_size);
+
+        ready(ret)
     }
 
     fn send_frame(&self, data: &[u8]) -> Result<(), fidl::Error> {
-        self.sender.lock().unwrap().start_send(DeviceRequest::SendFrame(data.to_vec())).unwrap();
-        Ok(())
+        self.sender.lock().unwrap().start_send(DeviceRequest::SendFrame(data.to_vec())).map_err(
+            |_| fidl::Error::ClientChannelClosed {
+                status: ZxStatus::PEER_CLOSED,
+                protocol_name: "mock",
+            },
+        )
     }
 
     fn ready_to_receive_frames(&self, number_of_frames: u32) -> Result<(), fidl::Error> {
@@ -76,8 +100,10 @@ impl DeviceProxyInterface for MockDeviceProxy {
             .lock()
             .unwrap()
             .start_send(DeviceRequest::ReadyToReceiveFrames(number_of_frames))
-            .unwrap();
-        Ok(())
+            .map_err(|_| fidl::Error::ClientChannelClosed {
+                status: ZxStatus::PEER_CLOSED,
+                protocol_name: "mock",
+            })
     }
 
     type OnReadyForSendFramesResponseFut = futures::future::Pending<Result<u32, fidl::Error>>;

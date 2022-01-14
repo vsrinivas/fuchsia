@@ -19,7 +19,7 @@ use std::io;
 pub const PROTOCOL_MAJOR_VERSION: u32 = 4;
 
 #[allow(unused)]
-pub const PROTOCOL_MINOR_VERSION: u32 = 1;
+pub const PROTOCOL_MINOR_VERSION: u32 = 3;
 
 /// Macro for implementing Spinel integer unpacking traits
 /// for types that implement `From<u32>`. Specifically, this

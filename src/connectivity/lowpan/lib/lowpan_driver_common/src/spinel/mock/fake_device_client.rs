@@ -6,7 +6,7 @@ use super::*;
 
 use fidl_fuchsia_lowpan_spinel::DeviceEvent as SpinelDeviceEvent;
 use futures::channel::mpsc;
-use futures::future::LocalBoxFuture;
+use futures::future::BoxFuture;
 use matches::assert_matches;
 use parking_lot::Mutex;
 use spinel_pack::EUI64;
@@ -32,57 +32,14 @@ impl Default for FakeSpinelDevice {
         let mut properties = HashMap::new();
 
         properties.insert(Prop::Net(PropNet::Saved), vec![0x00]);
-        properties.insert(Prop::Net(PropNet::InterfaceUp), vec![0x00]);
-        properties.insert(Prop::Net(PropNet::StackUp), vec![0x00]);
-        properties.insert(Prop::Net(PropNet::Role), vec![0x00]);
 
-        properties.insert(Prop::Net(PropNet::NetworkName), vec![0]);
-        properties.insert(Prop::Net(PropNet::Xpanid), vec![0, 0, 0, 0, 0, 0, 0, 0]);
-        properties.insert(Prop::Net(PropNet::MasterKey), vec![]);
-        properties.insert(Prop::Mac(PropMac::Panid), vec![0, 0]);
-        properties.insert(Prop::Phy(PropPhy::Chan), vec![11]);
-        properties.insert(Prop::Phy(PropPhy::TxPower), vec![0]);
-        properties.insert(Prop::Phy(PropPhy::Enabled), vec![0]);
-        properties.insert(Prop::Mac(PropMac::ScanMask), vec![11, 12, 13]);
-        properties.insert(Prop::Mac(PropMac::ScanPeriod), vec![100]);
-        properties.insert(Prop::Mac(PropMac::ScanState), vec![0]);
-
-        properties.insert(Prop::Thread(PropThread::AllowLocalNetDataChange), vec![0]);
-        properties.insert(Prop::Thread(PropThread::OnMeshNets), vec![]);
-        properties.insert(Prop::Thread(PropThread::OffMeshRoutes), vec![]);
-        properties.insert(
-            Prop::Ipv6(PropIpv6::AddressTable),
-            vec![
-                0x19, 0x00, 0xfe, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-                0x00, 0x00, 0x00, 0x01, 0x40, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x19,
-                0x00, 0xfd, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-                0x00, 0x00, 0x01, 0x40, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
-            ],
-        );
-        properties.insert(
-            Prop::Ipv6(PropIpv6::LlAddr),
-            vec![
-                0xfe, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-                0x00, 0x01,
-            ],
-        );
-        properties.insert(
-            Prop::Ipv6(PropIpv6::MlAddr),
-            vec![
-                0xfd, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-                0x00, 0x01,
-            ],
-        );
-
-        properties.insert(
-            Prop::Mac(PropMac::LongAddr),
-            vec![0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01],
-        );
-
-        FakeSpinelDevice {
+        let ret = FakeSpinelDevice {
             properties: Arc::new(Mutex::new(properties)),
             saved_network: Default::default(),
-        }
+        };
+
+        ret.on_reset();
+        ret
     }
 }
 
@@ -99,6 +56,8 @@ impl FakeSpinelDevice {
         properties.insert(Prop::Phy(PropPhy::Chan), vec![11]);
         properties.insert(Prop::Phy(PropPhy::TxPower), vec![0]);
         properties.insert(Prop::Phy(PropPhy::Enabled), vec![0]);
+        properties.insert(Prop::Phy(PropPhy::ChanPreferred), vec![11, 12, 13]);
+        properties.insert(Prop::Phy(PropPhy::ChanSupported), vec![11, 12, 13]);
         properties.insert(Prop::Mac(PropMac::ScanMask), vec![11, 12, 13]);
         properties.insert(Prop::Mac(PropMac::ScanPeriod), vec![100]);
         properties.insert(Prop::Mac(PropMac::ScanState), vec![0]);
@@ -107,6 +66,17 @@ impl FakeSpinelDevice {
             Prop::Mac(PropMac::LongAddr),
             vec![0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01],
         );
+        properties.insert(Prop::Mac(PropMac::ShortAddr), vec![0, 0]);
+        properties.insert(Prop::Unknown(2048), vec![]); // SPINEL_PROP_RCP_MAC_KEY
+        properties.insert(Prop::Unknown(2049), vec![0, 0, 0, 0]); // SPINEL_PROP_RCP_MAC_FRAME_COUNTER
+        properties.insert(Prop::Unknown(2050), vec![0, 0, 0, 0, 0, 0, 0, 0]); // SPINEL_PROP_RCP_TIMESTAMP
+        properties.insert(Prop::Unknown(2051), vec![0, 0, 0, 0]); // SPINEL_PROP_RCP_ENH_ACK_PROBING
+        properties.insert(Prop::Mac(PropMac::Unknown(4868)), vec![]);
+        properties.insert(Prop::Mac(PropMac::Unknown(4869)), vec![]);
+
+        properties.insert(Prop::Stream(PropStream::Net), vec![]);
+        properties.insert(Prop::Stream(PropStream::NetInsecure), vec![]);
+        properties.insert(Prop::Stream(PropStream::Raw), vec![]);
         properties.insert(Prop::Thread(PropThread::OnMeshNets), vec![]);
         properties.insert(Prop::Thread(PropThread::OffMeshRoutes), vec![]);
         properties.insert(
@@ -686,7 +656,7 @@ impl FakeSpinelDevice {
             Prop::Caps => {
                 spinel_write!(
                     &mut response,
-                    "Ciiiiiii",
+                    "Ciiiiiiiiiii",
                     frame.header,
                     Cmd::PropValueIs,
                     prop,
@@ -694,6 +664,10 @@ impl FakeSpinelDevice {
                     CapNet::Thread(1, 1),
                     Cap::NetSave,
                     Cap::Counters,
+                    Cap::Ot(CapOt::MacRaw),
+                    Cap::Config(CapConfig::Radio),
+                    Cap::Ot(CapOt::LogMetadata),
+                    Cap::Unknown(64),
                     Cap::Ot(CapOt::RadioCoex),
                 )
                 .unwrap();
@@ -708,6 +682,15 @@ impl FakeSpinelDevice {
                     InterfaceType::Thread
                 )
                 .unwrap();
+            }
+            Prop::Unknown(176) => {
+                // RCP API Version
+                spinel_write!(&mut response, "Ciii", frame.header, Cmd::PropValueIs, prop, 3)
+                    .unwrap();
+            }
+            Prop::Phy(PropPhy::Unknown(0x120b)) => {
+                spinel_write!(&mut response, "Ciii", frame.header, Cmd::PropValueIs, prop, 0xFFFF)
+                    .unwrap();
             }
             Prop::Phy(PropPhy::ChanSupported) => {
                 spinel_write!(
@@ -863,7 +846,7 @@ impl FakeSpinelDevice {
             Cmd::PropValueGet => {
                 let mut payload = frame.payload.iter();
                 let prop = Prop::try_unpack(&mut payload);
-                if payload.count() == 0 {
+                if payload.count() == 0 || prop.as_ref().ok() == Some(&Prop::Unknown(2050)) {
                     prop.ok()
                         .and_then(|prop| self.handle_get_prop(frame, prop))
                         .map(|r| vec![r])
@@ -952,7 +935,7 @@ impl FakeSpinelDevice {
 pub fn new_fake_spinel_pair() -> (
     SpinelDeviceSink<MockDeviceProxy>,
     SpinelDeviceStream<MockDeviceProxy, mpsc::Receiver<Result<SpinelDeviceEvent, fidl::Error>>>,
-    LocalBoxFuture<'static, ()>,
+    BoxFuture<'static, ()>,
 ) {
     let (device_sink, device_stream, mut device_event_sender, mut device_request_receiver) =
         new_mock_spinel_pair(2000);
@@ -1044,5 +1027,5 @@ pub fn new_fake_spinel_pair() -> (
         }
     };
 
-    (device_sink, device_stream, ncp_task.boxed_local())
+    (device_sink, device_stream, ncp_task.boxed())
 }

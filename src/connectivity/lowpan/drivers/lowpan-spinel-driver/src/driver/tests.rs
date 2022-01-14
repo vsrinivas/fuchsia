@@ -36,7 +36,7 @@ async fn test_spinel_lowpan_driver() {
         driver.wait_for_state(DriverState::is_initialized).await;
 
         // Verify that our capabilities have been set by this point.
-        assert_eq!(driver.get_driver_state_snapshot().caps.len(), 5, "Capability size mismatch");
+        assert_eq!(driver.get_driver_state_snapshot().caps.len(), 9, "Capability size mismatch");
 
         let mut device_state_stream = driver.watch_device_state();
         let mut identity_stream = driver.watch_identity();
