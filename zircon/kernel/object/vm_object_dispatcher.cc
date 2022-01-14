@@ -194,8 +194,8 @@ zx_info_vmo_t VmoToInfoEntry(const VmObject* vmo, bool is_handle, zx_rights_t ha
   return entry;
 }
 
-zx_info_vmo_t VmObjectDispatcher::GetVmoInfo(void) {
-  zx_info_vmo_t info = VmoToInfoEntry(vmo().get(), true, 0);
+zx_info_vmo_t VmObjectDispatcher::GetVmoInfo(zx_rights_t rights) {
+  zx_info_vmo_t info = VmoToInfoEntry(vmo().get(), true, rights);
   if (initial_mutability_ == InitialMutability::kImmutable) {
     info.flags |= ZX_INFO_VMO_IMMUTABLE;
   }

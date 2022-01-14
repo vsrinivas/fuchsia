@@ -570,12 +570,19 @@ TEST(VmoTestCase, Info) {
   EXPECT_EQ(actual, 1);
   EXPECT_EQ(avail, 1);
 
+  zx_info_handle_basic_t basic_info;
+  status = vmo.get_info(ZX_INFO_HANDLE_BASIC, &basic_info, sizeof(basic_info), &actual, &avail);
+  EXPECT_OK(status, "vm_info_test: info_handle_basic");
+  EXPECT_EQ(actual, 1);
+  EXPECT_EQ(avail, 1);
+
   vmo.reset();
 
   EXPECT_EQ(info.size_bytes, len, "vm_info_test: info_vmo.size_bytes");
   EXPECT_EQ(info.flags, ZX_INFO_VMO_TYPE_PAGED | ZX_INFO_VMO_VIA_HANDLE | ZX_INFO_VMO_RESIZABLE,
             "vm_info_test: info_vmo.flags");
   EXPECT_EQ(info.cache_policy, ZX_CACHE_POLICY_UNCACHED, "vm_info_test: info_vmo.cache_policy");
+  EXPECT_EQ(info.handle_rights, basic_info.rights, "vm_info_test: info_vmo.handle_rights");
 
   if (get_root_resource) {
     zx::iommu iommu;

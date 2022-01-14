@@ -67,7 +67,7 @@ class VmObjectDispatcher final : public SoloDispatcher<VmObjectDispatcher, ZX_DE
 
   zx_status_t SetMappingCachePolicy(uint32_t cache_policy);
 
-  zx_info_vmo_t GetVmoInfo();
+  zx_info_vmo_t GetVmoInfo(zx_rights_t rights);
 
   zx_status_t SetContentSize(uint64_t);
   uint64_t GetContentSize() const;

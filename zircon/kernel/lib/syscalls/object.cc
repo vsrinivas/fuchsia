@@ -489,10 +489,11 @@ zx_status_t sys_object_get_info(zx_handle_t handle, uint32_t topic, user_out_ptr
     case ZX_INFO_VMO: {
       // lookup the dispatcher from handle
       fbl::RefPtr<VmObjectDispatcher> vmo;
-      zx_status_t status = up->handle_table().GetDispatcher(handle, &vmo);
+      zx_rights_t rights;
+      zx_status_t status = up->handle_table().GetDispatcherAndRights(handle, &vmo, &rights);
       if (status != ZX_OK)
         return status;
-      zx_info_vmo_t entry = vmo->GetVmoInfo();
+      zx_info_vmo_t entry = vmo->GetVmoInfo(rights);
       if (topic == ZX_INFO_VMO_V1) {
         zx_info_vmo_v1_t versioned_vmo = VmoInfoToVersion<zx_info_vmo_v1_t>(entry);
         // The V1 layout is a subset of V2
