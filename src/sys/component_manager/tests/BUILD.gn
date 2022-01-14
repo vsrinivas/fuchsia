@@ -12,6 +12,7 @@ group("tests") {
     "attributed_logging:attributed-logging-test",
     "base_resolver_test",
     "binder:tests",
+    "bootfs:tests",
     "collections:collections_integration_test",
     "component-time:tests",
     "crash_introspect:tests",

@@ -132,6 +132,11 @@
             subdir: "class/display-controller",
         },
         {
+            directory: "boot",
+            from: "parent",
+            to: "#test_manager",
+        },
+        {
             directory: "dev",
             from: "parent",
             as: "dev-mediacodec",
