@@ -8,14 +8,12 @@ package testparser
 import (
 	"bytes"
 	"regexp"
-
-	"go.fuchsia.dev/fuchsia/tools/testing/runtests"
 )
 
 // Parse takes stdout from a test program and returns structured results.
 // Internally, a variety of test program stdout formats are supported.
 // If no structured results were identified, an empty slice is returned.
-func Parse(stdout []byte) []runtests.TestCaseResult {
+func Parse(stdout []byte) []TestCaseResult {
 	lines := bytes.Split(stdout, []byte{'\n'})
 	res := []*regexp.Regexp{
 		ctsTestPreamblePattern,
@@ -28,7 +26,7 @@ func Parse(stdout []byte) []runtests.TestCaseResult {
 	}
 	remainingLines, match := firstMatch(lines, res)
 
-	var cases []runtests.TestCaseResult
+	var cases []TestCaseResult
 	switch match {
 	case ctsTestPreamblePattern:
 		cases = parseVulkanCtsTest(remainingLines)
@@ -49,7 +47,7 @@ func Parse(stdout []byte) []runtests.TestCaseResult {
 	// Ensure that an empty set of cases is serialized to JSON as an empty
 	// array, not as null.
 	if cases == nil {
-		cases = []runtests.TestCaseResult{}
+		cases = []TestCaseResult{}
 	}
 	return cases
 }

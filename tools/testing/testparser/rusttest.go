@@ -8,8 +8,6 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
-
-	"go.fuchsia.dev/fuchsia/tools/testing/runtests"
 )
 
 var (
@@ -32,9 +30,9 @@ var (
 	rustTestCaseStderrEnd = regexp.MustCompile(`^(stack backtrace|failures):$`)
 )
 
-func parseRustTest(lines [][]byte) []runtests.TestCaseResult {
-	var res []runtests.TestCaseResult
-	testCases := make(map[string]runtests.TestCaseResult)
+func parseRustTest(lines [][]byte) []TestCaseResult {
+	var res []TestCaseResult
+	testCases := make(map[string]TestCaseResult)
 	errorMessages := make(map[string]*strings.Builder)
 	currentTestName := ""
 	for _, line := range lines {
@@ -68,7 +66,7 @@ func parseRustTest(lines [][]byte) []runtests.TestCaseResult {
 
 	for testName, testCase := range testCases {
 		if msg, ok := errorMessages[testName]; ok {
-			if testCase.Status == runtests.TestFailure {
+			if testCase.Status == Fail {
 				testCase.FailReason = strings.TrimSuffix(msg.String(), "\n")
 			}
 		}
@@ -77,21 +75,21 @@ func parseRustTest(lines [][]byte) []runtests.TestCaseResult {
 	return res
 }
 
-func createRustTestCase(suiteName, caseName, result string) runtests.TestCaseResult {
+func createRustTestCase(suiteName, caseName, result string) TestCaseResult {
 	displayName := caseName
 	if suiteName != "" {
 		displayName = fmt.Sprintf("%s::%s", suiteName, caseName)
 	}
-	var status runtests.TestResult
+	var status TestCaseStatus
 	switch result {
 	case "ok":
-		status = runtests.TestSuccess
+		status = Pass
 	case "FAILED":
-		status = runtests.TestFailure
+		status = Fail
 	case "ignored":
-		status = runtests.TestSkipped
+		status = Skip
 	}
-	return runtests.TestCaseResult{
+	return TestCaseResult{
 		DisplayName: displayName,
 		SuiteName:   suiteName,
 		CaseName:    caseName,

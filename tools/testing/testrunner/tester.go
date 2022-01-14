@@ -331,7 +331,7 @@ func (t *SubprocessTester) Test(ctx context.Context, test testsharder.Test, stdo
 	if err == nil {
 		testResult.Result = runtests.TestSuccess
 	} else if errors.Is(err, context.DeadlineExceeded) {
-		testResult.Result = runtests.TestAborted
+		testResult.Result = runtests.TestTimeout
 	} else {
 		testResult.FailReason = err.Error()
 	}
@@ -522,7 +522,7 @@ func (t *FFXTester) processTestResult(runResult *ffxutil.TestRunResult, testsByU
 		case ffxutil.TestPassed:
 			testResult.Result = runtests.TestSuccess
 		case ffxutil.TestTimedOut:
-			testResult.Result = runtests.TestAborted
+			testResult.Result = runtests.TestTimeout
 		default:
 			testResult.Result = runtests.TestFailure
 		}
@@ -547,26 +547,26 @@ func (t *FFXTester) processTestResult(runResult *ffxutil.TestRunResult, testsByU
 		testResult.OutputFiles = suiteArtifacts
 		testResult.OutputDir = suiteArtifactDir
 
-		var cases []runtests.TestCaseResult
+		var cases []testparser.TestCaseResult
 		// TODO(ihuh): Get test cases from ffx summary when we can provide as
 		// much information in the TestCaseResult as testparser.Parse().
 		if t.experimental {
 			for _, testCase := range suiteResult.Cases {
-				var status runtests.TestResult
+				var status testparser.TestCaseStatus
 				switch testCase.Outcome {
 				case ffxutil.TestPassed:
-					status = runtests.TestSuccess
+					status = testparser.Pass
 				case ffxutil.TestSkipped:
-					status = runtests.TestSkipped
+					status = testparser.Skip
 				default:
-					status = runtests.TestFailure
+					status = testparser.Fail
 				}
 
 				var artifacts []string
 				for artifact := range testCase.Artifacts {
 					artifacts = append(artifacts, artifact)
 				}
-				cases = append(cases, runtests.TestCaseResult{
+				cases = append(cases, testparser.TestCaseResult{
 					DisplayName: testCase.Name,
 					CaseName:    testCase.Name,
 					Status:      status,
@@ -767,7 +767,7 @@ func (t *FuchsiaSSHTester) Test(ctx context.Context, test testsharder.Test, stdo
 	}
 
 	if t.isTimeoutError(test, testErr) {
-		testResult.Result = runtests.TestAborted
+		testResult.Result = runtests.TestTimeout
 	} else if testErr != nil {
 		testResult.FailReason = testErr.Error()
 	} else {

@@ -748,7 +748,7 @@ func TestRunAndOutputTests(t *testing.T) {
 						c := make(chan struct{})
 						t.Cleanup(func() { close(c) })
 						<-c
-						return runtests.TestAborted, nil
+						return runtests.TestTimeout, nil
 					} else if behavior.fatal {
 						return "", fmt.Errorf("fatal error")
 					} else if behavior.fail {

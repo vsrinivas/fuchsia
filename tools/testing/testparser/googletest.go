@@ -8,8 +8,6 @@ import (
 	"fmt"
 	"regexp"
 	"time"
-
-	"go.fuchsia.dev/fuchsia/tools/testing/runtests"
 )
 
 var (
@@ -17,28 +15,28 @@ var (
 	googleTestCasePattern     = regexp.MustCompile(`^\[(       OK |  FAILED  |  SKIPPED )\] (.*?)\.(.*?) \((\d+) ms\)$`)
 )
 
-func parseGoogleTest(lines [][]byte) []runtests.TestCaseResult {
-	var res []runtests.TestCaseResult
+func parseGoogleTest(lines [][]byte) []TestCaseResult {
+	var res []TestCaseResult
 	for _, line := range lines {
 		line := string(line)
 		m := googleTestCasePattern.FindStringSubmatch(line)
 		if m == nil {
 			continue
 		}
-		var status runtests.TestResult
+		var status TestCaseStatus
 		switch m[1] {
 		case "       OK ":
-			status = runtests.TestSuccess
+			status = Pass
 		case "  FAILED  ":
-			status = runtests.TestFailure
+			status = Fail
 		case "  SKIPPED ":
-			status = runtests.TestSkipped
+			status = Skip
 		}
 		suiteName := m[2]
 		caseName := m[3]
 		displayName := fmt.Sprintf("%s.%s", suiteName, caseName)
 		duration, _ := time.ParseDuration(m[4] + "ms")
-		res = append(res, runtests.TestCaseResult{
+		res = append(res, TestCaseResult{
 			DisplayName: displayName,
 			SuiteName:   suiteName,
 			CaseName:    caseName,

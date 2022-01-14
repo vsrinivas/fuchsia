@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"go.fuchsia.dev/fuchsia/tools/testing/runtests"
+	"go.fuchsia.dev/fuchsia/tools/testing/testparser"
 )
 
 // TestResult is the result of executing a test.
@@ -26,7 +27,7 @@ type TestResult struct {
 	FailReason string
 
 	// Cases describes individual test cases.
-	Cases []runtests.TestCaseResult
+	Cases []testparser.TestCaseResult
 
 	// DataSinks gives the data sinks attached to a test.
 	DataSinks runtests.DataSinkReference

@@ -9,8 +9,6 @@ import (
 	"fmt"
 	"regexp"
 	"time"
-
-	"go.fuchsia.dev/fuchsia/tools/testing/runtests"
 )
 
 var dartSystemTestPreamblePattern = regexp.MustCompile(`^\[----------\] Test results JSON:$`)
@@ -30,27 +28,27 @@ type TestCase struct {
 	DurationInSeconds int
 }
 
-func parseDartSystemTest(lines [][]byte) []runtests.TestCaseResult {
+func parseDartSystemTest(lines [][]byte) []TestCaseResult {
 	var jsonBytes []byte
 	for _, line := range lines[1:] {
 		jsonBytes = append(jsonBytes, line...)
 	}
 	parsed := dartSystemTestResults{}
 	if err := json.Unmarshal(jsonBytes, &parsed); err != nil {
-		return []runtests.TestCaseResult{}
+		return []TestCaseResult{}
 	}
 
-	var res []runtests.TestCaseResult
+	var res []TestCaseResult
 	for _, testGroup := range parsed.TestGroups {
 		for _, testCase := range testGroup.TestCases {
-			var status runtests.TestResult
+			var status TestCaseStatus
 			switch testCase.Result {
 			case "PASSED":
-				status = runtests.TestSuccess
+				status = Pass
 			case "FAILED":
-				status = runtests.TestFailure
+				status = Fail
 			}
-			res = append(res, runtests.TestCaseResult{
+			res = append(res, TestCaseResult{
 				DisplayName: fmt.Sprintf("%s.%s", testGroup.Name, testCase.Name),
 				SuiteName:   testGroup.Name,
 				CaseName:    testCase.Name,

@@ -8,8 +8,6 @@ import (
 	"fmt"
 	"regexp"
 	"time"
-
-	"go.fuchsia.dev/fuchsia/tools/testing/runtests"
 )
 
 var (
@@ -18,8 +16,8 @@ var (
 	goTestPanicPattern    = regexp.MustCompile(`^panic: test timed out after (\S+)$`)
 )
 
-func parseGoTest(lines [][]byte) []runtests.TestCaseResult {
-	var res []runtests.TestCaseResult
+func parseGoTest(lines [][]byte) []TestCaseResult {
+	var res []TestCaseResult
 	var preambleName string
 	for _, line := range lines {
 		var matched bool
@@ -29,14 +27,14 @@ func parseGoTest(lines [][]byte) []runtests.TestCaseResult {
 			preambleName = m[1]
 			continue
 		}
-		var status runtests.TestResult
+		var status TestCaseStatus
 		var displayName string
 		var suiteName string
 		var caseName string
 		var duration time.Duration
 		m = goTestPanicPattern.FindStringSubmatch(line)
 		if m != nil {
-			status = runtests.TestFailure
+			status = Fail
 			caseName = preambleName
 			displayName = preambleName
 			duration, _ = time.ParseDuration(m[1])
@@ -46,11 +44,11 @@ func parseGoTest(lines [][]byte) []runtests.TestCaseResult {
 		if m != nil {
 			switch m[1] {
 			case "PASS":
-				status = runtests.TestSuccess
+				status = Pass
 			case "FAIL":
-				status = runtests.TestFailure
+				status = Fail
 			case "SKIP":
-				status = runtests.TestSkipped
+				status = Skip
 			}
 			if m[3] == "" {
 				caseName = m[2]
@@ -64,7 +62,7 @@ func parseGoTest(lines [][]byte) []runtests.TestCaseResult {
 			matched = true
 		}
 		if matched {
-			res = append(res, runtests.TestCaseResult{
+			res = append(res, TestCaseResult{
 				DisplayName: displayName,
 				SuiteName:   suiteName,
 				CaseName:    caseName,

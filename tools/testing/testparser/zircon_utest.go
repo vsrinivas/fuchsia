@@ -8,19 +8,17 @@ import (
 	"fmt"
 	"regexp"
 	"time"
-
-	"go.fuchsia.dev/fuchsia/tools/testing/runtests"
 )
 
 var (
-	zirconUtestPreamblePattern = regexp.MustCompile(`^CASE\s*(.*?)\s*\[STARTED\]$`)
+	zirconUtestPreamblePattern = regexp.MustCompile(`^CASE\s*(.*?)\s*\[STARTED\] $`)
 	zirconUtestPassCasePattern = regexp.MustCompile(`^    (.*?)\s{1,51}\[RUNNING\] \[PASSED\] \((\d+) ms\)$`)
 	zirconUtestFailCasePattern = regexp.MustCompile(`^    (.*?)\s{1,51}\[RUNNING\] \[FAILED\] \((\d+) ms\)$`)
 	zirconUtestSkipCasePattern = regexp.MustCompile(`^    (.*?)\s{1,51}\[IGNORED\]$`)
 )
 
-func parseZirconUtest(lines [][]byte) []runtests.TestCaseResult {
-	var res []runtests.TestCaseResult
+func parseZirconUtest(lines [][]byte) []TestCaseResult {
+	var res []TestCaseResult
 	var suiteName string
 	for _, line := range lines {
 		line := string(line)
@@ -31,11 +29,11 @@ func parseZirconUtest(lines [][]byte) []runtests.TestCaseResult {
 			caseName := m[1]
 			displayName := fmt.Sprintf("%s.%s", suiteName, caseName)
 			duration, _ := time.ParseDuration(m[2] + "ms")
-			res = append(res, runtests.TestCaseResult{
+			res = append(res, TestCaseResult{
 				DisplayName: displayName,
 				SuiteName:   suiteName,
 				CaseName:    caseName,
-				Status:      runtests.TestSuccess,
+				Status:      Pass,
 				Duration:    duration,
 				Format:      "Zircon utest",
 			})
@@ -43,22 +41,22 @@ func parseZirconUtest(lines [][]byte) []runtests.TestCaseResult {
 			caseName := m[1]
 			displayName := fmt.Sprintf("%s.%s", suiteName, caseName)
 			duration, _ := time.ParseDuration(m[2] + "ms")
-			res = append(res, runtests.TestCaseResult{
+			res = append(res, TestCaseResult{
 				DisplayName: displayName,
 				SuiteName:   suiteName,
 				CaseName:    caseName,
-				Status:      runtests.TestFailure,
+				Status:      Fail,
 				Duration:    duration,
 				Format:      "Zircon utest",
 			})
 		} else if m = zirconUtestSkipCasePattern.FindStringSubmatch(line); m != nil {
 			caseName := m[1]
 			displayName := fmt.Sprintf("%s.%s", suiteName, caseName)
-			res = append(res, runtests.TestCaseResult{
+			res = append(res, TestCaseResult{
 				DisplayName: displayName,
 				SuiteName:   suiteName,
 				CaseName:    caseName,
-				Status:      runtests.TestSkipped,
+				Status:      Skip,
 				Format:      "Zircon utest",
 			})
 		}

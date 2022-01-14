@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"go.fuchsia.dev/fuchsia/tools/testing/runtests"
+	"go.fuchsia.dev/fuchsia/tools/testing/testparser"
 )
 
 const checkTestNamePrefix = "testing_failure_mode"
@@ -42,7 +43,7 @@ func RunChecks(checks []FailureModeCheck, to *TestingOutputs, outputsDir string)
 			IsTestingFailureMode: true,
 			// Specify an empty slice so it gets serialized to an empty JSON
 			// array instead of null.
-			Cases:     []runtests.TestCaseResult{},
+			Cases:     []testparser.TestCaseResult{},
 			Result:    runtests.TestFailure,
 			StartTime: time.Now(), // needed by ResultDB
 		}

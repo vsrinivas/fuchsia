@@ -20,6 +20,7 @@ import (
 	"go.fuchsia.dev/fuchsia/tools/lib/osmisc"
 	"go.fuchsia.dev/fuchsia/tools/testing/runtests"
 	"go.fuchsia.dev/fuchsia/tools/testing/tap"
+	"go.fuchsia.dev/fuchsia/tools/testing/testparser"
 )
 
 // TestOutputs manages the test runner's output drivers. Upon completion, if tar output is
@@ -104,7 +105,7 @@ func (o *TestOutputs) Record(ctx context.Context, result TestResult) error {
 		suiteOutputFiles = append(suiteOutputFiles, stdioPath)
 	}
 
-	var cases []runtests.TestCaseResult
+	var cases []testparser.TestCaseResult
 	for i, testCase := range result.Cases {
 		// TODO(ihuh): Using the testCase.DisplayName in the new path name
 		// can cause errors if the name is too long. Find a better way to

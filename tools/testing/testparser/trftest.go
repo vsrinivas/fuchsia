@@ -7,8 +7,6 @@ package testparser
 import (
 	"regexp"
 	"strings"
-
-	"go.fuchsia.dev/fuchsia/tools/testing/runtests"
 )
 
 var (
@@ -34,9 +32,9 @@ var (
 )
 
 // Parse tests run by the Test Runner Framework (TRF)
-func parseTrfTest(lines [][]byte) []runtests.TestCaseResult {
-	var res []runtests.TestCaseResult
-	testCases := make(map[string]runtests.TestCaseResult)
+func parseTrfTest(lines [][]byte) []TestCaseResult {
+	var res []TestCaseResult
+	testCases := make(map[string]TestCaseResult)
 	errorMessages := make(map[string]*strings.Builder)
 
 	currentTestName := ""
@@ -45,7 +43,7 @@ func parseTrfTest(lines [][]byte) []runtests.TestCaseResult {
 		line := string(line)
 		// Stop parsing if running legacy_test, see: fxbug.dev/91055
 		if trfLegacyTest.MatchString(line) {
-			return []runtests.TestCaseResult{}
+			return []TestCaseResult{}
 		}
 		if m := trfTestCasePattern.FindStringSubmatch(line); m != nil {
 			tc := createTRFTestCase(m[2], m[1])
@@ -72,7 +70,7 @@ func parseTrfTest(lines [][]byte) []runtests.TestCaseResult {
 
 	for testName, testCase := range testCases {
 		if msg, ok := errorMessages[testName]; ok {
-			if testCase.Status == runtests.TestFailure {
+			if testCase.Status == Fail {
 				testCase.FailReason = msg.String()
 			}
 		}
@@ -81,23 +79,23 @@ func parseTrfTest(lines [][]byte) []runtests.TestCaseResult {
 	return res
 }
 
-func createTRFTestCase(caseName, result string) runtests.TestCaseResult {
-	var status runtests.TestResult
+func createTRFTestCase(caseName, result string) TestCaseResult {
+	var status TestCaseStatus
 	switch result {
 	case "PASSED":
-		status = runtests.TestSuccess
+		status = Pass
 	case "FAILED":
-		status = runtests.TestFailure
+		status = Fail
 	case "INCONCLUSIVE":
-		status = runtests.TestFailure
+		status = Fail
 	case "TIMED_OUT":
-		status = runtests.TestAborted
+		status = Abort
 	case "ERROR":
-		status = runtests.TestFailure
+		status = Fail
 	case "SKIPPED":
-		status = runtests.TestSkipped
+		status = Skip
 	}
-	return runtests.TestCaseResult{
+	return TestCaseResult{
 		DisplayName: caseName,
 		CaseName:    caseName,
 		Status:      status,

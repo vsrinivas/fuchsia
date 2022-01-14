@@ -650,7 +650,7 @@ func runTestOnce(
 		err = res.err
 		timeout = test.Timeout
 	case <-timeoutCh:
-		result.Result = runtests.TestAborted
+		result.Result = runtests.TestTimeout
 		timeout = outerTestTimeout
 		cancelTest()
 	}
@@ -670,7 +670,7 @@ func runTestOnce(
 	switch result.Result {
 	case runtests.TestFailure:
 		logger.Errorf(ctx, "Test %s failed: %s", test.Name, result.FailReason)
-	case runtests.TestAborted:
+	case runtests.TestTimeout:
 		logger.Errorf(ctx, "Test %s timed out after %s", test.Name, timeout)
 		// TODO(fxbug.dev/49266): Remove once downstream consumers can handle different
 		// result statuses.

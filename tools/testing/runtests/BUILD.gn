@@ -21,6 +21,7 @@ go_library("runtests") {
     "//tools/lib/retry",
     "//tools/net/sshutil",
     "//tools/net/tftp",
+    "//tools/testing/testparser",
   ]
 }
 
