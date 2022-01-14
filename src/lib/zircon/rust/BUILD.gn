@@ -156,9 +156,6 @@ rustc_test("fuchsia-zircon-unittests") {
     "//third_party/rust_crates:matches",
   ]
 
-  # TODO(fxbug.dev/46723): Fix the leaks and remove this.
-  non_rust_deps = [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
-
   sources = common_sources
 }
 
