@@ -51,8 +51,6 @@ static_assert(kFlagPosixDeprecated == fuchsia_io::wire::kOpenFlagPosixDeprecated
 
 constexpr const char* FlagToString(uint32_t flag) {
   switch (flag) {
-    case ZX_FS_RIGHT_ADMIN:
-      return "RIGHT_ADMIN";
     case ZX_FS_RIGHT_READABLE:
       return "RIGHT_READABLE";
     case ZX_FS_RIGHT_WRITABLE:
@@ -158,8 +156,6 @@ void PrintIntoStringBuffer(fbl::StringBuffer<N>* sb, VnodeConnectionOptions opti
       append("read");
     if (options.rights.write)
       append("write");
-    if (options.rights.admin)
-      append("admin");
     if (options.rights.execute)
       append("execute");
     sb->Append("]");

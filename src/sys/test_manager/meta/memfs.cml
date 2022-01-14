@@ -7,10 +7,7 @@
     capabilities: [
         {
             directory: "memfs",
-            rights: [
-                "admin",
-                "rw*",
-            ],
+            rights: [ "rw*" ],
             path: "/svc/fuchsia.io.Directory",
         },
     ],

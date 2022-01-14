@@ -149,21 +149,6 @@ void Binding::AsyncTeardown() {
   ZX_ASSERT(channel_.signal(0, kLocalTeardownSignal) == ZX_OK);
 }
 
-void Connection::UnmountAndShutdown(fit::callback<void(zx_status_t)> callback) {
-  vfs_->UninstallAll(zx::time::infinite());
-  // We need the binding to live on in order to make a reply to this FIDL request. However, the
-  // connection object may be destroyed before the binding. We need to stop the binding from
-  // monitoring further incoming FIDL messages.
-  binding_->DetachFromConnection();
-  FuchsiaVfs::ShutdownCallback closure(
-      [binding = std::move(binding_), callback = std::move(callback)](zx_status_t status) mutable {
-        callback(status);
-      });
-  FuchsiaVfs* vfs = vfs_;
-  SyncTeardown();
-  vfs->Shutdown(std::move(closure));
-}
-
 zx_status_t Connection::StartDispatching(zx::channel channel) {
   ZX_DEBUG_ASSERT(channel);
   ZX_DEBUG_ASSERT(!binding_);

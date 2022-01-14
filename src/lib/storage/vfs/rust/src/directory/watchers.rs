@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 //! Watchers handles a list of watcher connections attached to a directory.  Watchers as described
-//! in io.fidl.
+//! in fuchsia.io.
 
 pub mod event_producers;
 
@@ -66,9 +66,9 @@ impl Watchers {
 
     /// Informs all the connected watchers about the specified event.  While `mask` and `event`
     /// carry the same information, as they are represented by `WATCH_MASK_*` and `WATCH_EVENT_*`
-    /// constants in io.fidl, it is easier when both forms are provided.  `mask` is used to filter
-    /// out those watchers that did not request for observation of this event and `event` is used
-    /// to construct the event object.  The method will operate correctly only if `mask` and
+    /// constants in fuchsia.io, it is easier when both forms are provided.  `mask` is used to
+    /// filter out those watchers that did not request for observation of this event and `event` is
+    /// used to construct the event object.  The method will operate correctly only if `mask` and
     /// `event` match.
     ///
     /// In case of a communication error with any of the watchers, connection to this watcher is

@@ -1172,7 +1172,7 @@ mod tests {
             close_file_checked(file).await;
         }
 
-        // TODO(jfsulliv): Magic number; can we get this from io.fidl?
+        // TODO(jfsulliv): Magic number; can we get this from fuchsia.io?
         const DIRENT_SIZE: u64 = 10; // inode: u64, size: u8, kind: u8
         const BUFFER_SIZE: u64 = DIRENT_SIZE + 2; // Enough space for a 2-byte name.
 

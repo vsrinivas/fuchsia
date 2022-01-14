@@ -68,7 +68,6 @@ class MinfsHarness : public fuchsia::io::test::Io1Harness {
     fuchsia::io::test::Io1Config config;
     config.set_immutable_file(false);
     config.set_immutable_dir(false);
-    config.set_no_admin(false);
     config.set_no_rename(false);
     config.set_no_link(false);
     config.set_no_set_attr(false);

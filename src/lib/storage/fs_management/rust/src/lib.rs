@@ -54,7 +54,6 @@ use {
     fidl_fuchsia_fs::AdminSynchronousProxy,
     fidl_fuchsia_io::{
         DirectorySynchronousProxy, FilesystemInfo, NodeSynchronousProxy, CLONE_FLAG_SAME_RIGHTS,
-        OPEN_RIGHT_ADMIN,
     },
     fuchsia_runtime::{HandleInfo, HandleType},
     fuchsia_zircon::{self as zx, AsHandleRef, Task},
@@ -107,8 +106,7 @@ impl FSInstance {
         export_root.open(
             fidl_fuchsia_io::OPEN_RIGHT_READABLE
                 | fidl_fuchsia_io::OPEN_FLAG_POSIX_EXECUTABLE
-                | fidl_fuchsia_io::OPEN_FLAG_POSIX_WRITABLE
-                | fidl_fuchsia_io::OPEN_RIGHT_ADMIN,
+                | fidl_fuchsia_io::OPEN_FLAG_POSIX_WRITABLE,
             0,
             "root",
             server_end.into(),
@@ -154,7 +152,7 @@ impl FSInstance {
 
         let namespace = Namespace::installed().context("failed to get installed namespace")?;
         namespace
-            .connect(&self.mount_point, OPEN_RIGHT_ADMIN, server_chan)
+            .connect(&self.mount_point, fidl_fuchsia_io::OPEN_RIGHT_READABLE, server_chan)
             .context("failed to connect to filesystem")?;
 
         let proxy = DirectorySynchronousProxy::new(client_chan);

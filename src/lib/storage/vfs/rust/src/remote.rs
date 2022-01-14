@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-//! A node which forwards open requests to a remote io.fidl server.
+//! A node which forwards open requests to a remote fuchsia.io server.
 
 #[cfg(test)]
 mod tests;

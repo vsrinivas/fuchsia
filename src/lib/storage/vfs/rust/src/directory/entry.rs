@@ -18,8 +18,8 @@ use {
 };
 
 /// Information about a directory entry, used to populate ReadDirents() output.
-/// The first element is the inode number, or INO_UNKNOWN (from io.fidl) if not set, and the second
-/// element is one of the DIRENT_TYPE_* constants defined in the io.fidl.
+/// The first element is the inode number, or INO_UNKNOWN (from fuchsia.io) if not set, and the second
+/// element is one of the DIRENT_TYPE_* constants defined in the fuchsia.io.
 #[derive(PartialEq, Eq, Clone)]
 pub struct EntryInfo(u64, u8);
 
@@ -79,8 +79,8 @@ pub trait DirectoryEntry: IntoAny + Sync + Send {
     ///
     /// `flags` holds one or more of the `OPEN_RIGHT_*`, `OPEN_FLAG_*` constants.  Processing of the
     /// `flags` value is specific to the item - in particular, the `OPEN_RIGHT_*` flags need to
-    /// match the item capabilities.  See the io.fidl documentation for the precise semantics of the
-    /// `mode` argument.  Some validation of the `flags` and `mode` fields will have taken place
+    /// match the item capabilities.  See the fuchsia.io documentation for the precise semantics of
+    /// the `mode` argument.  Some validation of the `flags` and `mode` fields will have taken place
     /// prior to this call; `flags` and `mode` will be consistent with each other.
     ///
     /// It is the responsibility of the implementation to strip POSIX flags if the path crosses
@@ -91,7 +91,7 @@ pub trait DirectoryEntry: IntoAny + Sync + Send {
     /// populate the `info` part of the event if `OPEN_FLAG_DESCRIBE` was set.  This also applies
     /// to the error cases.
     ///
-    /// This method is called via either `Open` or `Clone` io.fidl methods.  This is deliberate
+    /// This method is called via either `Open` or `Clone` fuchsia.io methods.  This is deliberate
     /// that this method does not return any errors.  Any errors that occur during this process
     /// should be sent as an `OnOpen` event over the `server_end` connection and the connection is
     /// then closed.  No errors should ever affect the connection where `Open` or `Clone` were

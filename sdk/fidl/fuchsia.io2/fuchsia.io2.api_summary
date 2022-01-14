@@ -274,7 +274,6 @@ enum/member fuchsia.io2/OpenMode.MAYBE_CREATE 2
 enum/member fuchsia.io2/OpenMode.OPEN_EXISTING 1
 enum/member fuchsia.io2/OpenMode.OPEN_MOUNT_POINT 268435456
 strict enum fuchsia.io2/OpenMode uint32
-bits/member fuchsia.io2/Operations.ADMIN 72057594037927936
 bits/member fuchsia.io2/Operations.CONNECT 1
 bits/member fuchsia.io2/Operations.ENUMERATE 64
 bits/member fuchsia.io2/Operations.EXECUTE 8

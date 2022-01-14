@@ -220,9 +220,6 @@ class Connection : public fbl::DoublyLinkedListable<std::unique_ptr<Connection>>
   Result<uint32_t> NodeNodeGetFlags();
   Result<> NodeNodeSetFlags(uint32_t flags);
 
-  // Implements |fuchsia.io/DirectoryAdmin.Unmount|.
-  void UnmountAndShutdown(fit::callback<void(zx_status_t)> callback);
-
  private:
   // The contract of the Vnode API is that there should be a balancing |Close| call for every |Open|
   // call made on a vnode. Calls |Close| on the underlying vnode explicitly if necessary.
@@ -300,8 +297,6 @@ class Binding final {
     connection_->RegisterInflightTransaction();
   }
   void UnregisterInflightTransaction() {
-    // The only way this condition isn't true is when making a reply to
-    // fuchsia.io/DirectoryAdmin.Unmount.
     if (connection_ != nullptr) {
       connection_->UnregisterInflightTransaction();
     }

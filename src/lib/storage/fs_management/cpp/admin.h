@@ -117,8 +117,7 @@ zx::status<fidl::ClientEnd<fuchsia_io::Directory>> FsRootHandle(
     fidl::UnownedClientEnd<fuchsia_io::Directory> export_root,
     uint32_t flags = fuchsia_io::wire::kOpenRightReadable |
                      fuchsia_io::wire::kOpenFlagPosixWritable |
-                     fuchsia_io::wire::kOpenFlagPosixExecutable |
-                     fuchsia_io::wire::kOpenRightAdmin);
+                     fuchsia_io::wire::kOpenFlagPosixExecutable);
 
 }  // namespace fs_management
 

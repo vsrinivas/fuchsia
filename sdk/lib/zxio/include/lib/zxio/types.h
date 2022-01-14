@@ -161,13 +161,11 @@ typedef uint64_t zxio_operations_t;
 #define ZXIO_OPERATION_ENUMERATE ((zxio_operations_t)1ul << 6)
 #define ZXIO_OPERATION_TRAVERSE ((zxio_operations_t)1ul << 7)
 #define ZXIO_OPERATION_MODIFY_DIRECTORY ((zxio_operations_t)1ul << 8)
-#define ZXIO_OPERATION_ADMIN ((zxio_operations_t)0x100000000000000ul)
 
 #define ZXIO_OPERATION_ALL                                                                     \
   (ZXIO_OPERATION_CONNECT | ZXIO_OPERATION_READ_BYTES | ZXIO_OPERATION_WRITE_BYTES |           \
    ZXIO_OPERATION_EXECUTE | ZXIO_OPERATION_GET_ATTRIBUTES | ZXIO_OPERATION_UPDATE_ATTRIBUTES | \
-   ZXIO_OPERATION_ENUMERATE | ZXIO_OPERATION_TRAVERSE | ZXIO_OPERATION_MODIFY_DIRECTORY |      \
-   ZXIO_OPERATION_ADMIN)
+   ZXIO_OPERATION_ENUMERATE | ZXIO_OPERATION_TRAVERSE | ZXIO_OPERATION_MODIFY_DIRECTORY)
 
 typedef zxio_operations_t zxio_rights_t;
 typedef zxio_operations_t zxio_abilities_t;

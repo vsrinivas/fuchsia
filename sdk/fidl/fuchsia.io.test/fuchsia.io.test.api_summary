@@ -13,7 +13,6 @@ table/member fuchsia.io.test/File.name string
 table fuchsia.io.test/File
 table/member fuchsia.io.test/Io1Config.immutable_dir bool
 table/member fuchsia.io.test/Io1Config.immutable_file bool
-table/member fuchsia.io.test/Io1Config.no_admin bool
 table/member fuchsia.io.test/Io1Config.no_execfile bool
 table/member fuchsia.io.test/Io1Config.no_get_buffer bool
 table/member fuchsia.io.test/Io1Config.no_get_token bool

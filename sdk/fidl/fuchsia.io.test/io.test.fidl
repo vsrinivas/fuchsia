@@ -51,32 +51,28 @@ type Io1Config = table {
     /// Remote directories are not supported.
     5: no_remote_dir bool;
 
-    /// The admin right is not supported.
-    6: no_admin bool;
-
     /// The GetBuffer method is not supported.
-    7: no_get_buffer bool;
+    6: no_get_buffer bool;
 
     /// The Rename method is not supported.
-    8: no_rename bool;
+    7: no_rename bool;
 
     /// The Link and Unlink methods are not supported.
-    9: no_link bool;
+    8: no_link bool;
 
     /// The SetAttr method is not supported.
-   10: no_set_attr bool;
+    9: no_set_attr bool;
 
     /// The GetToken method is not supported.
-   11: no_get_token bool;
+   10: no_get_token bool;
 
     /// Path handling does not conform to in-tree behavior.
     /// TODO(fxbug.dev/82672): Ensure all libraries are conformant and remove this option.
     /// Currently the only non-conformant implementation being tested is the SDK VFS.
-   12: non_conformant_path_handling bool;
+   11: non_conformant_path_handling bool;
 };
 
 /// Directory entries should support opening with any combination of read/write/execute rights.
-/// If `no_admin` is false, the admin right should also be supported.
 type Directory = resource table {
     /// Name not required for root directory.
     1: name string;

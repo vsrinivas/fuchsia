@@ -207,7 +207,6 @@ TEST_P(DirectoryPermissionTest, TestCloneWithBadFlags) {
   uint32_t rights[] = {
       fio::wire::kOpenRightReadable,
       fio::wire::kOpenRightWritable,
-      fio::wire::kOpenRightAdmin,
   };
 
   // CLONE_FLAG_SAME_RIGHTS cannot appear together with any specific rights.

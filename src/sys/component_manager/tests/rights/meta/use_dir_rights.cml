@@ -29,14 +29,6 @@
             path: "/read_exec",
         },
         {
-            directory: "read_admin",
-            rights: [
-                "admin",
-                "r*",
-            ],
-            path: "/read_admin",
-        },
-        {
             directory: "read_only_after_scoped",
             rights: [ "r*" ],
             path: "/read_only_after_scoped",

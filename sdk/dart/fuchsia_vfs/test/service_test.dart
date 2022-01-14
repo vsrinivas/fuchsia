@@ -14,7 +14,6 @@ import 'package:zircon/zircon.dart';
 void main() {
   var unsupportedFlags = [
     io_fidl.openFlagDescribe,
-    io_fidl.openRightAdmin,
     io_fidl.openFlagCreate,
     io_fidl.openFlagCreateIfAbsent,
     io_fidl.openFlagDirectory,

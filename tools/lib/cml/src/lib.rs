@@ -718,7 +718,6 @@ pub enum Right {
     Traverse,
     UpdateAttributes,
     WriteBytes,
-    Admin,
 
     // Aliass
     #[serde(rename = "r*")]
@@ -745,7 +744,6 @@ impl fmt::Display for Right {
             Self::Traverse => "traverse",
             Self::UpdateAttributes => "update_attributes",
             Self::WriteBytes => "write_bytes",
-            Self::Admin => "admin",
             Self::ReadAlias => "r*",
             Self::WriteAlias => "w*",
             Self::ExecuteAlias => "x*",
@@ -769,7 +767,6 @@ impl Right {
             Self::Traverse => vec![fio2::Operations::Traverse],
             Self::UpdateAttributes => vec![fio2::Operations::UpdateAttributes],
             Self::WriteBytes => vec![fio2::Operations::WriteBytes],
-            Self::Admin => vec![fio2::Operations::Admin],
             Self::ReadAlias => vec![
                 fio2::Operations::Connect,
                 fio2::Operations::Enumerate,
@@ -2673,7 +2670,6 @@ mod tests {
         ("traverse", Right::Traverse),
         ("update_attributes", Right::UpdateAttributes),
         ("write_bytes", Right::WriteBytes),
-        ("admin", Right::Admin),
         ("r*", Right::ReadAlias),
         ("w*", Right::WriteAlias),
         ("x*", Right::ExecuteAlias),
@@ -2710,7 +2706,6 @@ mod tests {
         (Right::Traverse, vec![fio2::Operations::Traverse]),
         (Right::UpdateAttributes, vec![fio2::Operations::UpdateAttributes]),
         (Right::WriteBytes, vec![fio2::Operations::WriteBytes]),
-        (Right::Admin, vec![fio2::Operations::Admin]),
         (Right::ReadAlias, vec![
             fio2::Operations::Connect,
             fio2::Operations::Enumerate,

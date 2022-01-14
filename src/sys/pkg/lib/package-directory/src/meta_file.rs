@@ -10,8 +10,8 @@ use {
     fidl_fuchsia_io::{
         NodeAttributes, NodeMarker, DIRENT_TYPE_FILE, INO_UNKNOWN, MODE_TYPE_FILE,
         OPEN_FLAG_APPEND, OPEN_FLAG_CREATE, OPEN_FLAG_CREATE_IF_ABSENT, OPEN_FLAG_TRUNCATE,
-        OPEN_RIGHT_ADMIN, OPEN_RIGHT_EXECUTABLE, OPEN_RIGHT_WRITABLE, VMO_FLAG_EXACT,
-        VMO_FLAG_EXEC, VMO_FLAG_PRIVATE, VMO_FLAG_READ, VMO_FLAG_WRITE,
+        OPEN_RIGHT_EXECUTABLE, OPEN_RIGHT_WRITABLE, VMO_FLAG_EXACT, VMO_FLAG_EXEC,
+        VMO_FLAG_PRIVATE, VMO_FLAG_READ, VMO_FLAG_WRITE,
     },
     fuchsia_syslog::fx_log_err,
     fuchsia_zircon as zx,
@@ -82,7 +82,6 @@ impl vfs::directory::entry::DirectoryEntry for MetaFile {
 
         if flags
             & (OPEN_RIGHT_WRITABLE
-                | OPEN_RIGHT_ADMIN
                 | OPEN_RIGHT_EXECUTABLE
                 | OPEN_FLAG_CREATE
                 | OPEN_FLAG_CREATE_IF_ABSENT
@@ -319,7 +318,6 @@ mod tests {
 
         for forbidden_flag in [
             OPEN_RIGHT_WRITABLE,
-            OPEN_RIGHT_ADMIN,
             OPEN_RIGHT_EXECUTABLE,
             OPEN_FLAG_CREATE,
             OPEN_FLAG_CREATE_IF_ABSENT,

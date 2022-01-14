@@ -34,10 +34,7 @@
         },
         {
             directory: "tmp",
-            rights: [
-                "admin",
-                "rw*",
-            ],
+            rights: [ "rw*" ],
             path: "/fs/tmp",
         },
         {

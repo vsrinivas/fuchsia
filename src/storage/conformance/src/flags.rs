@@ -5,10 +5,8 @@
 use fidl_fuchsia_io as io;
 
 /// Set of all rights that are valid to use with the conformance test harness.
-const ALL_RIGHTS_FLAGS: u32 = io::OPEN_RIGHT_READABLE
-    | io::OPEN_RIGHT_WRITABLE
-    | io::OPEN_RIGHT_EXECUTABLE
-    | io::OPEN_RIGHT_ADMIN;
+const ALL_RIGHTS_FLAGS: u32 =
+    io::OPEN_RIGHT_READABLE | io::OPEN_RIGHT_WRITABLE | io::OPEN_RIGHT_EXECUTABLE;
 
 /// Helper struct that encapsulates generation of valid/invalid sets of flags based on
 /// which rights are supported by a particular node type.

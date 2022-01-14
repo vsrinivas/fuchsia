@@ -20,10 +20,9 @@
 
 namespace fidl_codec {
 
-// Imported from sdk/fidl/fuchsia.io/io.fidl.
+// Imported from https://fuchsia.googlesource.com/fuchsia/+/HEAD/sdk/fidl/fuchsia.io/.
 constexpr uint32_t OPEN_RIGHT_READABLE = 0x1;
 constexpr uint32_t OPEN_RIGHT_WRITEABLE = 0x2;
-constexpr uint32_t OPEN_RIGHT_ADMIN = 0x4;
 constexpr uint32_t OPEN_RIGHT_EXECUTABLE = 0x8;
 constexpr uint32_t OPEN_FLAG_CREATE = 0x10000;
 constexpr uint32_t OPEN_FLAG_CREATE_IF_ABSENT = 0x20000;
@@ -175,7 +174,6 @@ void PrettyPrinter::DisplayDirectoryOpenFlags(uint32_t value) {
   const char* separator = "";
   DirectoryOpenCase(OPEN_RIGHT_READABLE);
   DirectoryOpenCase(OPEN_RIGHT_WRITEABLE);
-  DirectoryOpenCase(OPEN_RIGHT_ADMIN);
   DirectoryOpenCase(OPEN_RIGHT_EXECUTABLE);
   DirectoryOpenCase(OPEN_FLAG_CREATE);
   DirectoryOpenCase(OPEN_FLAG_CREATE_IF_ABSENT);

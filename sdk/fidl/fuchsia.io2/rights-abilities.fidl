@@ -43,10 +43,6 @@ type Operations = strict bits : uint64 {
     /// with [`Rights.ENUMERATE`], since one can always probe the directory
     /// contents by triggering name conflicts during node creation.
     MODIFY_DIRECTORY = 0x100;
-
-    // TODO(fxbug.dev/36541)
-    // Temporary operation ported from fuchsia.io to allow OPEN_RIGHT_ADMIN.
-    ADMIN = 0x100000000000000;
 };
 
 /// Alias for directory permission alias r*

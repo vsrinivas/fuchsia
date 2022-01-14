@@ -160,8 +160,7 @@ zx_status_t BindNamespace(zx::channel fs_root_client) {
     if ((status = zx::channel::create(0, &client, &server)) != ZX_OK) {
       return status;
     }
-    if ((status = fdio_open("/fs/system",
-                            ZX_FS_RIGHT_READABLE | ZX_FS_RIGHT_EXECUTABLE | ZX_FS_RIGHT_ADMIN,
+    if ((status = fdio_open("/fs/system", ZX_FS_RIGHT_READABLE | ZX_FS_RIGHT_EXECUTABLE,
                             server.release())) != ZX_OK) {
       FX_LOGS(ERROR) << "cannot open connection to /system: " << status;
       return status;

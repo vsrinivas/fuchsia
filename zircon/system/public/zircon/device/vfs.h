@@ -8,11 +8,11 @@
 #include <zircon/types.h>
 
 // NOTE: All the defines here with the exception of ZX_FS_RIGHTS and ZX_FS_RIGHTS_SPACE are
-// mirrored from the constants in io.fidl, and their values must be kept in sync. These values are
-// redefined here as this header is used for both Fuchsia and host builds.
+// mirrored from the constants in fuchsia.io, and their values must be kept in sync. These values
+// are redefined here as this header is used for both Fuchsia and host builds.
 //
 // The FIDL definition is the source of truth:
-// https://fuchsia.googlesource.com/fuchsia/+/HEAD/zircon/system/fidl/fuchsia-io/io.fidl
+// https://fuchsia.googlesource.com/fuchsia/+/HEAD/sdk/fidl/fuchsia.io/
 // Refer to link for documentation on detailed semantics of the flags.
 //
 // Static assertions in sdk/lib/fdio/unistd.cc ensure that the constants below remain in alignment
@@ -21,11 +21,9 @@
 // Rights
 #define ZX_FS_RIGHT_READABLE 0x00000001U
 #define ZX_FS_RIGHT_WRITABLE 0x00000002U
-#define ZX_FS_RIGHT_ADMIN 0x00000004U
 #define ZX_FS_RIGHT_EXECUTABLE 0x00000008U
 // All known rights.
-#define ZX_FS_RIGHTS \
-  (ZX_FS_RIGHT_READABLE | ZX_FS_RIGHT_WRITABLE | ZX_FS_RIGHT_ADMIN | ZX_FS_RIGHT_EXECUTABLE)
+#define ZX_FS_RIGHTS (ZX_FS_RIGHT_READABLE | ZX_FS_RIGHT_WRITABLE | ZX_FS_RIGHT_EXECUTABLE)
 // A mask for all possible rights including future extensions.
 #define ZX_FS_RIGHTS_SPACE 0x0000FFFFU
 // NOTE: Reserving lower 16 bits for future rights extensions. Flags should start at 0x00010000.

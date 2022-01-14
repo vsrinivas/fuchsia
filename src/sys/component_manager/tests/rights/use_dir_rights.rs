@@ -25,12 +25,8 @@ impl RightsTestCase {
 
     /// Returns every right not available for this path.
     fn unavailable_rights(&self) -> Vec<u32> {
-        let all_rights = [
-            fio::OPEN_RIGHT_READABLE,
-            fio::OPEN_RIGHT_WRITABLE,
-            fio::OPEN_RIGHT_EXECUTABLE,
-            fio::OPEN_RIGHT_ADMIN,
-        ];
+        let all_rights =
+            [fio::OPEN_RIGHT_READABLE, fio::OPEN_RIGHT_WRITABLE, fio::OPEN_RIGHT_EXECUTABLE];
 
         let mut unavailable_rights: Vec<u32> = vec![];
         for right_to_check in all_rights.iter() {
@@ -86,7 +82,6 @@ async fn handle_trigger(event: ftest::TriggerRequest) {
         RightsTestCase::new("/read_write", fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE),
         RightsTestCase::new("/read_write_dup", fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE),
         RightsTestCase::new("/read_exec", fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE),
-        RightsTestCase::new("/read_admin", fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_ADMIN),
         RightsTestCase::new("/read_only_after_scoped", fio::OPEN_RIGHT_READABLE),
     ];
     for test_case in tests.iter() {

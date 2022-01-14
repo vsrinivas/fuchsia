@@ -63,7 +63,7 @@ where
 }
 
 /// A helper to build the "expected" output for a `ReadDirents` call from the Directory protocol in
-/// io.fidl.
+/// fuchsia.io.
 pub struct DirentsSameInodeBuilder {
     expected: Vec<u8>,
     inode: u64,

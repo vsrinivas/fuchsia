@@ -4412,7 +4412,7 @@ mod tests {
                     "path": "/mydir",
                     "rights": ["connect", "enumerate", "read_bytes", "write_bytes",
                                "execute", "update_attributes", "get_attributes", "traverse",
-                               "modify_directory", "admin"],
+                               "modify_directory"],
                   },
                 ]
             }),
@@ -4428,7 +4428,7 @@ mod tests {
                   },
                 ]
             }),
-            Err(Error::Parse { err, .. }) if &err == "unknown variant `cAnnect`, expected one of `connect`, `enumerate`, `execute`, `get_attributes`, `modify_directory`, `read_bytes`, `traverse`, `update_attributes`, `write_bytes`, `admin`, `r*`, `w*`, `x*`, `rw*`, `rx*`"
+            Err(Error::Parse { err, .. }) if &err == "unknown variant `cAnnect`, expected one of `connect`, `enumerate`, `execute`, `get_attributes`, `modify_directory`, `read_bytes`, `traverse`, `update_attributes`, `write_bytes`, `r*`, `w*`, `x*`, `rw*`, `rx*`"
         ),
         test_cml_rights_duplicate(
             json!({

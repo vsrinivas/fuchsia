@@ -18,7 +18,7 @@ use {
         FileProxy, NodeAttributes, NodeMarker, DIRENT_TYPE_DIRECTORY, INO_UNKNOWN,
         MODE_TYPE_DIRECTORY, MODE_TYPE_FILE, MODE_TYPE_MASK, OPEN_FLAG_APPEND, OPEN_FLAG_CREATE,
         OPEN_FLAG_CREATE_IF_ABSENT, OPEN_FLAG_DIRECTORY, OPEN_FLAG_NODE_REFERENCE,
-        OPEN_FLAG_TRUNCATE, OPEN_RIGHT_ADMIN, OPEN_RIGHT_WRITABLE, VMO_FLAG_READ,
+        OPEN_FLAG_TRUNCATE, OPEN_RIGHT_WRITABLE, VMO_FLAG_READ,
     },
     fuchsia_archive::AsyncReader,
     fuchsia_pkg::MetaContents,
@@ -182,7 +182,6 @@ impl vfs::directory::entry::DirectoryEntry for RootDir {
         if path.is_empty() {
             if flags
                 & (OPEN_RIGHT_WRITABLE
-                    | OPEN_RIGHT_ADMIN
                     | OPEN_FLAG_CREATE
                     | OPEN_FLAG_CREATE_IF_ABSENT
                     | OPEN_FLAG_TRUNCATE
@@ -569,7 +568,6 @@ mod tests {
 
         for forbidden_flag in [
             OPEN_RIGHT_WRITABLE,
-            OPEN_RIGHT_ADMIN,
             OPEN_FLAG_CREATE,
             OPEN_FLAG_CREATE_IF_ABSENT,
             OPEN_FLAG_TRUNCATE,

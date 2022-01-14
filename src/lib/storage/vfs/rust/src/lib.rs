@@ -106,7 +106,7 @@ pub use vfs_macros::pseudo_directory;
 /// This macro is identical to [`pseudo_directory!`], except that it constructs instances of
 /// [`directory::mutable::simple()`], allowing the clients connected over the FIDL connection to
 /// modify this directory.  Clients operations are still checked against specific connection
-/// permissions as specified in the `io.fidl` protocol.
+/// permissions as specified in the `fuchsia.io` interface.
 pub use vfs_macros::mut_pseudo_directory;
 
 // This allows the pseudo_directory! macro to use absolute paths within this crate to refer to the

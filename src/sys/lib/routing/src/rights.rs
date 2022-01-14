@@ -65,9 +65,6 @@ impl Rights {
         if rights.contains(fio2::Operations::Execute) {
             flags |= fio::OPEN_RIGHT_EXECUTABLE;
         }
-        if rights.contains(fio2::Operations::Admin) {
-            flags |= fio::OPEN_RIGHT_ADMIN;
-        }
         // Since there is no direct translation for connect in CV1 we must explicitly define it
         // here as both flags.
         //

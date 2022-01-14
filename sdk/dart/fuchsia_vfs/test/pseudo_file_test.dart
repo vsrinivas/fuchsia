@@ -89,7 +89,6 @@ void main() {
       openFlagCreate,
       openFlagCreateIfAbsent,
       openFlagNoRemote,
-      openRightAdmin
     ];
 
     test('onOpen event on flag validation error', () async {

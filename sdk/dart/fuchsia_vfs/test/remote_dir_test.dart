@@ -133,8 +133,8 @@ void main() {
       final dir = _serveLocal(_localDirectory);
 
       // flags and statuses need to be kept in sync
-      final flags = [openFlagNoRemote, openRightAdmin];
-      final statuses = [ZX.ERR_NOT_SUPPORTED, ZX.ERR_ACCESS_DENIED];
+      final flags = [openFlagNoRemote];
+      final statuses = [ZX.ERR_NOT_SUPPORTED];
       expect(flags.length, statuses.length);
 
       for (int i = 0; i < flags.length; i++) {
@@ -158,8 +158,8 @@ void main() {
       final dir = RemoteDir(_remoteDirHandle);
 
       // flags and statuses need to be kept in sync
-      final flags = [openFlagNoRemote, openRightAdmin];
-      final statuses = [ZX.ERR_NOT_SUPPORTED, ZX.ERR_ACCESS_DENIED];
+      final flags = [openFlagNoRemote];
+      final statuses = [ZX.ERR_NOT_SUPPORTED];
       expect(flags.length, statuses.length);
 
       for (int i = 0; i < flags.length; i++) {

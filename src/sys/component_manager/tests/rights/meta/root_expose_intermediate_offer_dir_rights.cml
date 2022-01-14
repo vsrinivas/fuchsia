@@ -32,11 +32,6 @@
             from: "#intermediate_expose_dir_rights",
             to: "#use_dir_rights",
         },
-        {
-            directory: "read_admin",
-            from: "#intermediate_expose_dir_rights",
-            to: "#use_dir_rights",
-        },
 
         // This permission is scoped from rw to r when offered to the child.
         {

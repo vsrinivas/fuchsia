@@ -187,7 +187,7 @@ void RunFsMetrics(const char* path, const StorageMetricOptions options) {
 
 // Retrieves and prints metrics for the block device associated with the filesystem at path.
 void RunBlockMetrics(const char* path, const StorageMetricOptions options) {
-  fbl::unique_fd fd(open(path, O_RDONLY | O_ADMIN));
+  fbl::unique_fd fd(open(path, O_RDONLY));
   if (!fd) {
     fd.reset(open(path, O_RDONLY));
     if (!fd) {

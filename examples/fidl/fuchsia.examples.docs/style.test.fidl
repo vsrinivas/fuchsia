@@ -53,7 +53,7 @@ protocol File {
     /// * error a zx_status value indicating success or failure.
     /// * see [`fuchsia.mem/Buffer`]
     /// [`fuchsia.mem/Buffer`]:
-    ///    https://fuchsia.googlesource.com/fuchsia/+/9853fad50ca70256f0e86201c0e20424f1c25ab5/zircon/system/fidl/fuchsia-io/io.fidl
+    ///    https://fuchsia.googlesource.com/fuchsia/+/HEAD/sdk/fidl/fuchsia.io/
     GetBuffer(struct {
         flags uint32;
     }) -> (resource struct {

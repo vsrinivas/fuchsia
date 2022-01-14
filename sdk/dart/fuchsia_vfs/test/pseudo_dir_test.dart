@@ -210,7 +210,6 @@ void main() {
           openFlagCreateIfAbsent,
           openFlagNoRemote,
           openFlagTruncate,
-          openRightAdmin,
         ];
 
         var i = 0;
@@ -1171,8 +1170,7 @@ class _TestVnode extends Vnode {
 
   @override
   int connect(int flags, int mode, InterfaceRequest<Node> request,
-      [int parentFlags =
-          openRightReadable | openRightWritable | openRightAdmin]) {
+      [int parentFlags = openRightReadable | openRightWritable]) {
     throw UnimplementedError();
   }
 

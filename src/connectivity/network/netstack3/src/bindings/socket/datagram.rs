@@ -927,8 +927,7 @@ where
                 let append_no_remote =
                     flags & fio::OPEN_FLAG_APPEND != 0 || flags & fio::OPEN_FLAG_NO_REMOTE != 0;
                 // Datagram sockets are neither mountable nor executable.
-                let admin_executable =
-                    flags & fio::OPEN_RIGHT_ADMIN != 0 || flags & fio::OPEN_RIGHT_EXECUTABLE != 0;
+                let executable = flags & fio::OPEN_RIGHT_EXECUTABLE != 0;
                 // Cannot specify CLONE_FLAGS_SAME_RIGHTS together with
                 // OPEN_RIGHT_* flags.
                 let conflicting_rights = flags & fio::CLONE_FLAG_SAME_RIGHTS != 0
@@ -943,10 +942,7 @@ where
                     worker.rights &= new_rights;
                 }
 
-                if append_no_remote
-                    || admin_executable
-                    || conflicting_rights
-                    || more_rights_than_original
+                if append_no_remote || executable || conflicting_rights || more_rights_than_original
                 {
                     send_on_open(zx::sys::ZX_ERR_INVALID_ARGS, None);
                     let () = worker.make_handler().await.close();
@@ -1016,7 +1012,10 @@ where
                             responder_send!(responder, zx::Status::NOT_SUPPORTED.into_raw());
                         }
                         fposix_socket::DatagramSocketRequest::Sync2 { responder } => {
-                            responder_send!(responder, &mut Err(zx::Status::NOT_SUPPORTED.into_raw()));
+                            responder_send!(
+                                responder,
+                                &mut Err(zx::Status::NOT_SUPPORTED.into_raw())
+                            );
                         }
                         fposix_socket::DatagramSocketRequest::GetAttr { responder } => {
                             responder_send!(
@@ -2687,8 +2686,6 @@ mod tests {
         expect_clone_invalid_args(&socket, fio::OPEN_FLAG_NO_REMOTE).await;
         // append
         expect_clone_invalid_args(&socket, fio::OPEN_FLAG_APPEND).await;
-        // admin
-        expect_clone_invalid_args(&socket, fio::OPEN_RIGHT_ADMIN).await;
         // executable
         expect_clone_invalid_args(&socket, fio::OPEN_RIGHT_EXECUTABLE).await;
         let () = socket

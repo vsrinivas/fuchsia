@@ -274,7 +274,7 @@ void DeviceControllerConnection::Bind(
       });
 }
 
-// Handler for when a io.fidl open() is called on a device
+// Handler for when a fuchsia.io open() is called on a device
 void DeviceControllerConnection::Open(OpenRequestView request, OpenCompleter::Sync& completer) {
   VLOGD(1, *dev(), "Opening device %p", dev().get());
   if (request->path.size() > 1 && request->path.data()[0] != '.') {

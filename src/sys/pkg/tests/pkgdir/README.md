@@ -27,13 +27,6 @@ connection.
 
 [vfs]: https://cs.opensource.google/fuchsia/fuchsia/+/main:src/lib/storage/vfs/rust/
 
-### `OPEN_RIGHT_ADMIN` not supported
-
-package-directory categorically rejects opening packages with `OPEN_RIGHT_ADMIN`
-in the first place, as those operations are not implemented for packages.
-
-pkgfs allows but ignores `OPEN_RIGHT_ADMIN`.
-
 ### `OPEN_RIGHT_WRITABLE` not supported
 
 package-directory categorically rejects opening packages with
@@ -118,7 +111,7 @@ package-directory checks them for consistency following the
 > The mode type, if set, must always be consistent with the OPEN_FLAG_DIRECTORY
 > and OPEN_FLAG_NOT_DIRECTORY flags, even if an object is not being created.
 
-[rules from fuchsia.io]: https://cs.opensource.google/fuchsia/fuchsia/+/main:sdk/fidl/fuchsia.io/io.fidl;drc=87c8cef94d0de07a4d5d430589a0ec0bb9ae5950
+[rules from fuchsia.io]: https://fuchsia.googlesource.com/fuchsia/+/HEAD/sdk/fidl/fuchsia.io/
 
 pkgfs does not enforce any consistency between mode and these flags.
 
@@ -140,7 +133,7 @@ fuchsia.io:
 *   ".." is disallowed anywhere in the path.
 *   "." is only allowed if the path is exactly ".", but not otherwise.
 
-[rules for paths]: https://cs.opensource.google/fuchsia/fuchsia/+/main:sdk/fidl/fuchsia.io/io.fidl;l=870-873;drc=db215d4621cda6044cb68e229c175162fe71b0b5
+[rules for paths]: https://fuchsia.googlesource.com/fuchsia/+/HEAD/sdk/fidl/fuchsia.io/
 
 pkgfs collapses adjacent "//"s in the path, and allows extra "." segments.
 Additionally, it will remove segments from paths preceding a ".." segment, so an

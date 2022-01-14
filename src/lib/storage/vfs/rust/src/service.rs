@@ -77,7 +77,7 @@ where
 
 /// Represents a node in the file system that hosts a service.  Opening a connection to this node
 /// will switch to FIDL protocol that is different from the file system protocols, described in
-/// io.fidl.  See there for additional details.
+/// fuchsia.io.  See there for additional details.
 ///
 /// Use [`host`] or [`endpoint`] to construct nodes of this type.
 pub struct Service {
@@ -109,7 +109,7 @@ impl Service {
         // `OPEN_FLAG_NODE_REFERENCE` as the `server_end` might be interpreted as a protocol that
         // does not support Node.  So the only thing we can do is to close the channel.  We could
         // have send an epitaph, but they are not supported by Rust and in the next version of
-        // io.fidl the error handing will be different anyways.
+        // fuchsia.io the error handing will be different anyways.
 
         let flags = match new_connection_validate_flags(flags, mode) {
             Ok(updated) => updated,

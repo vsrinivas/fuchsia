@@ -39,9 +39,6 @@ class NodeKind {
   // Node is Executable.
   static constexpr Type kExecutable = 0x0200;
 
-  // Node can be mounted,
-  static constexpr Type kMountable = 0x0400;
-
   // Node can be truncated on open.
   static constexpr Type kCanTruncate = 0x0800;
 

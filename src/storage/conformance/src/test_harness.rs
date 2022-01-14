@@ -102,13 +102,9 @@ async fn connect_to_harness() -> io_test::Io1HarnessProxy {
 
 /// Returns the aggregate of all rights that are supported for Directory objects.
 ///
-/// Must support read, write, execute, and optionally, admin (if no_admin == false).
-fn get_supported_dir_rights(config: &io_test::Io1Config) -> u32 {
-    let mut rights = io::OPEN_RIGHT_READABLE | io::OPEN_RIGHT_WRITABLE | io::OPEN_RIGHT_EXECUTABLE;
-    if !config.no_admin.unwrap_or_default() {
-        rights |= io::OPEN_RIGHT_ADMIN;
-    }
-    rights
+/// Must support read, write, execute.
+fn get_supported_dir_rights(_config: &io_test::Io1Config) -> u32 {
+    io::OPEN_RIGHT_READABLE | io::OPEN_RIGHT_WRITABLE | io::OPEN_RIGHT_EXECUTABLE
 }
 
 /// Returns the aggregate of all rights that are supported for File objects.

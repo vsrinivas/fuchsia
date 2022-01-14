@@ -274,7 +274,7 @@ ZXIO_EXPORT zx_status_t zxio_truncate(zxio_t* io, uint64_t length);
 // These flags are typically set when the file is opened but can be modified by
 // |zxio_flags_set|.
 //
-// See io.fidl for the available |flags|.
+// See fuchsia.io for the available |flags|.
 ZXIO_EXPORT zx_status_t zxio_flags_get(zxio_t* io, uint32_t* out_flags);
 
 // Modifies the flags associated with the file.
@@ -283,7 +283,7 @@ ZXIO_EXPORT zx_status_t zxio_flags_get(zxio_t* io, uint32_t* out_flags);
 //
 //  * |fuchsia::io::OPEN_FLAG_APPEND|.
 //
-// See io.fidl for the available |flags|.
+// See fuchsia.io for the available |flags|.
 ZXIO_EXPORT zx_status_t zxio_flags_set(zxio_t* io, uint32_t flags);
 
 // Gets a token associated with a directory connection.
@@ -291,7 +291,7 @@ ZXIO_EXPORT zx_status_t zxio_flags_set(zxio_t* io, uint32_t flags);
 // This token can be used to identify a directory at a later time, for use
 // in operations involving multiple nodes e.g. rename.
 //
-// See the io.fidl documentation on |fuchsia.io/Directory.GetToken|.
+// See the fuchsia.io documentation on |fuchsia.io/Directory.GetToken|.
 ZXIO_EXPORT zx_status_t zxio_token_get(zxio_t* io, zx_handle_t* out_token);
 
 // Acquires a VMO representing this file, if there is one, with the requested
@@ -359,7 +359,7 @@ zx_status_t zxio_shutdown(zxio_t* io, zxio_shutdown_options_t options);
 //
 // This call blocks on the remote server.
 //
-// See io.fidl for the available |flags| and |mode|.
+// See fuchsia.io for the available |flags| and |mode|.
 ZXIO_EXPORT zx_status_t zxio_open(zxio_t* directory, uint32_t flags, uint32_t mode,
                                   const char* path, size_t path_len, zxio_storage_t* storage);
 
@@ -373,7 +373,7 @@ ZXIO_EXPORT zx_status_t zxio_open(zxio_t* directory, uint32_t flags, uint32_t mo
 // connection can be wrapped in a zxio object by calling
 // zxio_create_with_on_open().
 //
-// See io.fidl for the available |flags| and |mode|.
+// See fuchsia.io for the available |flags| and |mode|.
 ZXIO_EXPORT zx_status_t zxio_open_async(zxio_t* directory, uint32_t flags, uint32_t mode,
                                         const char* path, size_t path_len, zx_handle_t request);
 
@@ -382,7 +382,7 @@ ZXIO_EXPORT zx_status_t zxio_open_async(zxio_t* directory, uint32_t flags, uint3
 // The |watch_descriptor| is the unique ID used to identify the watch filters
 // by the the client.
 //
-// See io.fidl/io2.fidl for the available |mask|.
+// See fuchsia.io/io2 for the available |mask|.
 ZXIO_EXPORT zx_status_t zxio_add_inotify_filter(zxio_t* io, const char* path, size_t path_len,
                                                 uint32_t mask, uint32_t watch_descriptor,
                                                 zx_handle_t socket);

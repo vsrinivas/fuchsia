@@ -21,7 +21,7 @@ abstract class Vnode {
 
   /// Connect to this vnode.
   /// All flags and modes are defined in
-  /// https://fuchsia.googlesource.com/fuchsia/+/HEAD/zircon/system/fidl/fuchsia-io/io.fidl
+  /// https://fuchsia.googlesource.com/fuchsia/+/HEAD/sdk/fidl/fuchsia.io/
   ///
   /// By default param [#parentFlags] is all rights, so that open will allow
   /// all rights requested on the incoming [request].
@@ -39,7 +39,7 @@ abstract class Vnode {
     return flags;
   }
 
-  /// Inode number as defined in io.fidl.
+  /// Inode number as defined in fuchsia.io.
   int inodeNumber();
 
   /// This function is called from [fidl_fuchsia_io.Directory#open].
@@ -77,7 +77,7 @@ abstract class Vnode {
   /// direntTypeSocket
   /// direntTypeService
   ///
-  /// These are defined in io.fidl.
+  /// These are defined in fuchsia.io.
   int type();
 
   void _removeErrorNode(ErrorNodeForSendingEvent e) {

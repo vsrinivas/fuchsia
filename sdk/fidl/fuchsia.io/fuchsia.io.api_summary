@@ -287,7 +287,6 @@ const fuchsia.io/OPEN_FLAG_POSIX_DEPRECATED uint32 16777216
 const fuchsia.io/OPEN_FLAG_POSIX_EXECUTABLE uint32 268435456
 const fuchsia.io/OPEN_FLAG_POSIX_WRITABLE uint32 134217728
 const fuchsia.io/OPEN_FLAG_TRUNCATE uint32 262144
-const fuchsia.io/OPEN_RIGHT_ADMIN uint32 4
 const fuchsia.io/OPEN_RIGHT_EXECUTABLE uint32 8
 const fuchsia.io/OPEN_RIGHT_READABLE uint32 1
 const fuchsia.io/OPEN_RIGHT_WRITABLE uint32 2
@@ -296,7 +295,6 @@ enum/member fuchsia.io/OpenMode.MAYBE_CREATE 2
 enum/member fuchsia.io/OpenMode.OPEN_EXISTING 1
 enum/member fuchsia.io/OpenMode.OPEN_MOUNT_POINT 268435456
 strict enum fuchsia.io/OpenMode uint32
-bits/member fuchsia.io/Operations.ADMIN 72057594037927936
 bits/member fuchsia.io/Operations.CONNECT 1
 bits/member fuchsia.io/Operations.ENUMERATE 64
 bits/member fuchsia.io/Operations.EXECUTE 8

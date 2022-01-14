@@ -19,8 +19,8 @@ use {
 /// Defines the type of the new entry to be created via the [`EntryConstructor::create_entry()`]
 /// call.
 ///
-/// It is set by certain flags in the `flags` argument of the `Directory::Open()` io.fidl call, as
-/// well as the `TYPE` part of the `mode` argument.  While it is possible to issue an `Open` call
+/// It is set by certain flags in the `flags` argument of the `Directory::Open()` fuchsia.io call,
+/// as well as the `TYPE` part of the `mode` argument.  While it is possible to issue an `Open` call
 /// that will try to create, say, a "service" or a "block device", these use cases are undefined at
 /// the moment.  So the library hides them from the library users and will just return an error to
 /// the FIDL client.  Should we have a use case where it would be possible to create a service or
@@ -63,7 +63,7 @@ pub trait EntryConstructor {
 }
 
 impl NewEntryType {
-    /// Given a `flags` and a `mode` arguments for a `Directory::Open()` io.fidl call this method
+    /// Given a `flags` and a `mode` arguments for a `Directory::Open()` fuchsia.io call this method
     /// will select proper type from the [`NewEntryType`] enum or will return an error to be sent
     /// to the
     /// client.

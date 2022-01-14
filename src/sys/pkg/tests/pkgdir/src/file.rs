@@ -14,9 +14,9 @@ use {
         DirectoryProxy, FileProxy, SeekOrigin, MAX_BUF, OPEN_FLAG_APPEND,
         OPEN_FLAG_CREATE_IF_ABSENT, OPEN_FLAG_DESCRIBE, OPEN_FLAG_DIRECTORY,
         OPEN_FLAG_NODE_REFERENCE, OPEN_FLAG_NOT_DIRECTORY, OPEN_FLAG_NO_REMOTE,
-        OPEN_FLAG_POSIX_EXECUTABLE, OPEN_FLAG_POSIX_WRITABLE, OPEN_RIGHT_ADMIN,
-        OPEN_RIGHT_EXECUTABLE, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE, VMO_FLAG_EXACT,
-        VMO_FLAG_EXEC, VMO_FLAG_PRIVATE, VMO_FLAG_READ, VMO_FLAG_WRITE,
+        OPEN_FLAG_POSIX_EXECUTABLE, OPEN_FLAG_POSIX_WRITABLE, OPEN_RIGHT_EXECUTABLE,
+        OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE, VMO_FLAG_EXACT, VMO_FLAG_EXEC, VMO_FLAG_PRIVATE,
+        VMO_FLAG_READ, VMO_FLAG_WRITE,
     },
     fuchsia_zircon as zx,
     io_util::directory::open_file,
@@ -502,8 +502,7 @@ async fn assert_get_flags_content_file(root_dir: &DirectoryProxy) {
     // open flags before returning.
     // https://cs.opensource.google/fuchsia/fuchsia/+/main:src/lib/storage/vfs/cpp/file_connection.cc;l=125;drc=6a01adba247f273496ee8b9227c24252a459a534
     let status_flags = OPEN_FLAG_APPEND | OPEN_FLAG_NODE_REFERENCE;
-    let right_flags =
-        OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE | OPEN_RIGHT_ADMIN | OPEN_RIGHT_EXECUTABLE;
+    let right_flags = OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE | OPEN_RIGHT_EXECUTABLE;
 
     for open_flag in [
         OPEN_RIGHT_READABLE,
@@ -534,7 +533,6 @@ async fn assert_get_flags_meta_file(root_dir: &DirectoryProxy, path: &str) {
     for open_flag in [
         0,
         OPEN_RIGHT_READABLE,
-        OPEN_RIGHT_ADMIN,
         OPEN_FLAG_CREATE_IF_ABSENT,
         OPEN_FLAG_DIRECTORY,
         OPEN_FLAG_NO_REMOTE,

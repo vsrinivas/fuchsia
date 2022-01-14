@@ -41,7 +41,6 @@ class SdkCppHarness : public fuchsia::io::test::Io1Harness {
 
     // Unsupported configuration options:
     config.set_immutable_dir(true);                 // OPEN_FLAG_CREATE is not supported.
-    config.set_no_admin(true);                      // Admin flag is not supported.
     config.set_no_rename(true);                     // vfs::PseudoDir does not support Rename.
     config.set_no_link(true);                       // Link/Unlink is not supported.
     config.set_no_set_attr(true);                   // SetAttr is not supported.

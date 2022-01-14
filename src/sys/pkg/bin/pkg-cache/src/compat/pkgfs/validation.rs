@@ -8,7 +8,7 @@ use {
     fidl_fuchsia_io::{
         NodeAttributes, NodeMarker, DIRENT_TYPE_DIRECTORY, INO_UNKNOWN, MODE_TYPE_DIRECTORY,
         OPEN_FLAG_APPEND, OPEN_FLAG_CREATE, OPEN_FLAG_CREATE_IF_ABSENT, OPEN_FLAG_TRUNCATE,
-        OPEN_RIGHT_ADMIN, OPEN_RIGHT_EXECUTABLE, OPEN_RIGHT_WRITABLE,
+        OPEN_RIGHT_EXECUTABLE, OPEN_RIGHT_WRITABLE,
     },
     fuchsia_zircon as zx,
     std::{
@@ -66,7 +66,6 @@ impl vfs::directory::entry::DirectoryEntry for Validation {
         if path.is_empty() {
             if flags
                 & (OPEN_RIGHT_WRITABLE
-                    | OPEN_RIGHT_ADMIN
                     | OPEN_RIGHT_EXECUTABLE
                     | OPEN_FLAG_CREATE
                     | OPEN_FLAG_CREATE_IF_ABSENT
@@ -195,7 +194,6 @@ mod tests {
 
         for forbidden_flag in [
             OPEN_RIGHT_WRITABLE,
-            OPEN_RIGHT_ADMIN,
             OPEN_RIGHT_EXECUTABLE,
             OPEN_FLAG_CREATE,
             OPEN_FLAG_CREATE_IF_ABSENT,

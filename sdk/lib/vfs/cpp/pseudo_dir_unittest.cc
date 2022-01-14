@@ -525,7 +525,7 @@ TEST_F(PseudoDirConnection, CantReadNodeReferenceDir) {
 }
 
 TEST_F(PseudoDirConnection, ServeOnInvalidFlags) {
-  uint32_t prohibitive_flags[] = {fuchsia::io::OPEN_RIGHT_ADMIN, fuchsia::io::OPEN_FLAG_NO_REMOTE};
+  uint32_t prohibitive_flags[] = {fuchsia::io::OPEN_FLAG_NO_REMOTE};
   uint32_t not_allowed_flags[] = {fuchsia::io::OPEN_FLAG_CREATE,
                                   fuchsia::io::OPEN_FLAG_CREATE_IF_ABSENT,
                                   fuchsia::io::OPEN_FLAG_TRUNCATE, fuchsia::io::OPEN_FLAG_APPEND};
@@ -809,7 +809,7 @@ TEST_F(PseudoDirConnection, OpenDirWithIncorrectMode) {
       SCOPED_TRACE("path: " + path + ", mode: " + std::to_string(mode));
       fuchsia::io::NodeSyncPtr node_ptr;
       // Opening should succeed even with the incorrect mode, since we are not
-      // creating a new resource (see io.fidl for further details on mode handling).
+      // creating a new resource (see fuchsia.io for further details on mode handling).
       AssertOpenPath(ptr, path, node_ptr, fuchsia::io::OPEN_RIGHT_READABLE, mode);
     }
   }
@@ -839,7 +839,7 @@ TEST_F(PseudoDirConnection, OpenFileWithIncorrectMode) {
     SCOPED_TRACE("mode: " + std::to_string(mode));
     fuchsia::io::NodeSyncPtr node_ptr;
     // Opening should succeed even with the incorrect mode, since we are not
-    // creating a new resource (see io.fidl for further details on mode handling).
+    // creating a new resource (see fuchsia.io for further details on mode handling).
     AssertOpenPath(ptr, "file1", node_ptr, fuchsia::io::OPEN_RIGHT_READABLE, mode);
   }
 }
@@ -858,8 +858,7 @@ TEST_F(PseudoDirConnection, CanCloneDirectoryConnection) {
 TEST_F(PseudoDirConnection, CloneFlagSameRightsFailsWithSpecificRights) {
   auto ptr = dir_.Serve();
 
-  uint32_t rights[] = {fuchsia::io::OPEN_RIGHT_READABLE, fuchsia::io::OPEN_RIGHT_WRITABLE,
-                       fuchsia::io::OPEN_RIGHT_ADMIN};
+  uint32_t rights[] = {fuchsia::io::OPEN_RIGHT_READABLE, fuchsia::io::OPEN_RIGHT_WRITABLE};
 
   for (auto right : rights) {
     fuchsia::io::DirectorySyncPtr cloned_ptr;

@@ -60,9 +60,6 @@ class RemoteDir extends Vnode {
   }
 
   int _validateFlags(int flags) {
-    if (flags & openRightAdmin != 0) {
-      return ZX.ERR_ACCESS_DENIED;
-    }
     if (flags & openFlagNoRemote != 0) {
       return ZX.ERR_NOT_SUPPORTED;
     }

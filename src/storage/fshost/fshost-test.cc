@@ -200,7 +200,7 @@ TEST(FshostFsProviderTestCase, CloneBlobExec) {
 
   EXPECT_EQ(server->saved_open_count(), 1u);
   uint32_t expected_flags = ZX_FS_RIGHT_READABLE | ZX_FS_RIGHT_WRITABLE | ZX_FS_RIGHT_EXECUTABLE |
-                            ZX_FS_RIGHT_ADMIN | ZX_FS_FLAG_DIRECTORY | ZX_FS_FLAG_NOREMOTE;
+                            ZX_FS_FLAG_DIRECTORY | ZX_FS_FLAG_NOREMOTE;
   EXPECT_EQ(expected_flags, server->saved_open_flags());
   EXPECT_EQ("blob", server->saved_path());
 

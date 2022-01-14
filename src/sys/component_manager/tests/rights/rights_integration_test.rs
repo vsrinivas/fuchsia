@@ -168,15 +168,12 @@ async fn route_directories_from_component_manager_namespace() {
     let ro_channel = open_at(&dir_request_client, "read_only", flags).unwrap();
     let rw_channel = open_at(&dir_request_client, "read_write", flags).unwrap();
     let rx_channel = open_at(&dir_request_client, "read_exec", flags).unwrap();
-    let ra_channel =
-        open_at(&dir_request_client, "read_admin", flags | fio::OPEN_RIGHT_ADMIN).unwrap();
     let rs_channel = open_at(&dir_request_client, "read_only_after_scoped", flags).unwrap();
     let rd_channel = open_at(&dir_request_client, "read_write", flags).unwrap();
     let dir_handles = vec![
         ("/read_only".to_string(), ro_channel.into()),
         ("/read_write".to_string(), rw_channel.into()),
         ("/read_exec".to_string(), rx_channel.into()),
-        ("/read_admin".to_string(), ra_channel.into()),
         ("/read_only_after_scoped".to_string(), rs_channel.into()),
         ("/read_write_dup".to_string(), rd_channel.into()),
     ];

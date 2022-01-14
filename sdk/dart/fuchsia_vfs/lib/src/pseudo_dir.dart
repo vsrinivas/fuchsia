@@ -270,9 +270,6 @@ class PseudoDir extends Vnode {
     // TODO(fxbug.dev/33058) : do not allow openRightWritable.
 
     // Pseudo directories do not allow mounting, at this point.
-    if (flags & openRightAdmin != 0) {
-      return ZX.ERR_ACCESS_DENIED;
-    }
     if (flags & prohibitedFlags != 0) {
       return ZX.ERR_INVALID_ARGS;
     }

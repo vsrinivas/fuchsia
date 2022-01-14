@@ -119,7 +119,7 @@ zx_status_t VnodeVmo::GetVmo(fuchsia_io::wire::VmoFlags flags, zx::vmo* out_vmo,
   }
 
   // If an exact copy is explicitly requested, but we created a local clone, e.g. because offset_
-  // is non-zero, the request should fail as per io.fidl since it cannot be satisfied.
+  // is non-zero, the request should fail as per fuchsia.io since it cannot be satisfied.
   if (have_local_clone_ && (flags & fuchsia_io::wire::VmoFlags::kSharedBuffer)) {
     return ZX_ERR_NOT_SUPPORTED;
   }

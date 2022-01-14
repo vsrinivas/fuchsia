@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-//! io.fidl and io2.fidl conformance testing harness for the rust psuedo-fs-mt library
+//! fuchsia io/io2 conformance testing harness for the rust psuedo-fs-mt library
 
 use {
     anyhow::{anyhow, Context as _, Error},
@@ -124,8 +124,6 @@ async fn run(mut stream: Io1HarnessRequestStream) -> Result<(), Error> {
                     no_get_token: Some(false),
                     // TODO(fxbug.dev/72801): SetAttr doesn't seem to work, but should?
                     no_set_attr: Some(true),
-                    // Admin is not supported:
-                    no_admin: Some(true),
                     ..Io1Config::EMPTY
                 };
                 responder.send(config)?;

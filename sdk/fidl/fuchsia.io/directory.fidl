@@ -11,8 +11,6 @@ using zx;
 const OPEN_RIGHT_READABLE uint32 = 0x00000001;
 /// Can write to target object.
 const OPEN_RIGHT_WRITABLE uint32 = 0x00000002;
-/// Connection can mount/umount filesystem.
-const OPEN_RIGHT_ADMIN uint32 = 0x00000004;
 /// Connection can map target object executable.
 const OPEN_RIGHT_EXECUTABLE uint32 = 0x00000008;
 

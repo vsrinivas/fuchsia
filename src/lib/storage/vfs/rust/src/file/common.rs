@@ -146,7 +146,7 @@ pub fn get_buffer_validate_flags(
         return Err(zx::Status::ACCESS_DENIED);
     }
 
-    // As documented in the io.fidl protocol, if VMO_FLAG_EXEC is requested, ensure that the
+    // As documented in the fuchsia.io interface, if VMO_FLAG_EXEC is requested, ensure that the
     // connection also has OPEN_RIGHT_READABLE.
     if vmo_flags.contains(VmoFlags::Execute) && connection_flags & OPEN_RIGHT_READABLE == 0 {
         return Err(zx::Status::ACCESS_DENIED);

@@ -43,8 +43,6 @@ int main(int argc, char* argv[]) {
                    rw_dir.NewRequest());
   memfs_dir->Clone(fuchsia::io::OPEN_RIGHT_READABLE | fuchsia::io::OPEN_RIGHT_EXECUTABLE,
                    rx_dir.NewRequest());
-  memfs_dir->Clone(fuchsia::io::OPEN_RIGHT_READABLE | fuchsia::io::OPEN_RIGHT_ADMIN,
-                   ra_dir.NewRequest());
   memfs_dir->Clone(fuchsia::io::OPEN_RIGHT_READABLE | fuchsia::io::OPEN_RIGHT_WRITABLE,
                    r_after_scoped_dir.NewRequest());
 
@@ -55,8 +53,6 @@ int main(int argc, char* argv[]) {
                                 fbl::MakeRefCounted<fs::RemoteDir>(rw_dir.TakeChannel()));
   outgoing.root_dir()->AddEntry("read_exec",
                                 fbl::MakeRefCounted<fs::RemoteDir>(rx_dir.TakeChannel()));
-  outgoing.root_dir()->AddEntry("read_admin",
-                                fbl::MakeRefCounted<fs::RemoteDir>(ra_dir.TakeChannel()));
   outgoing.root_dir()->AddEntry("read_only_after_scoped", fbl::MakeRefCounted<fs::RemoteDir>(
                                                               r_after_scoped_dir.TakeChannel()));
   status = outgoing.ServeFromStartupInfo();

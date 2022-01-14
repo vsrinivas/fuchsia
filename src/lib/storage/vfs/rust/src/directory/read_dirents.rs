@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-//! A sink that can consume directory entry information, encoding them as expected by the `io.fidl`
+//! A sink that can consume directory entry information, encoding them as expected by `fuchsia.io`
 //! `Directory::ReadDirents` result.
 
 use crate::directory::{

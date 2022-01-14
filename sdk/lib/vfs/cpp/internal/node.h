@@ -141,7 +141,7 @@ class Node {
  private:
   // Validate flags on |Serve|.
   //
-  // If the caller specified an invalid combination of flags as per io.fidl,
+  // If the caller specified an invalid combination of flags as per fuchsia.io,
   // returns |ZX_ERR_INVALID_ARGS|.
   //
   // Returns |ZX_ERR_NOT_DIR| if |OPEN_FLAG_DIRECTORY| is set and

@@ -19,10 +19,6 @@
             directory: "read_exec",
             from: "#expose_dir_rights",
         },
-        {
-            directory: "read_admin",
-            from: "#expose_dir_rights",
-        },
 
         // Performs the rights scoping at the expose layer.
         {

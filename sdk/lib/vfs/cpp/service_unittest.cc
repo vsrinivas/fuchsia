@@ -142,7 +142,6 @@ TEST_F(ServiceTest, CannotOpenServiceWithInvalidFlags) {
     AssertInvalidOpen(flag | fuchsia::io::OPEN_RIGHT_READABLE | fuchsia::io::OPEN_RIGHT_WRITABLE, 0,
                       ZX_ERR_NOT_SUPPORTED);
   }
-  AssertInvalidOpen(fuchsia::io::OPEN_RIGHT_ADMIN, 0, ZX_ERR_ACCESS_DENIED);
   AssertInvalidOpen(fuchsia::io::OPEN_RIGHT_READABLE | fuchsia::io::OPEN_FLAG_DIRECTORY, 0,
                     ZX_ERR_NOT_DIR);
 }

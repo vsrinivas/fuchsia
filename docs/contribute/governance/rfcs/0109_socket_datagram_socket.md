@@ -411,4 +411,4 @@ on the operation.
 
 [fsocket]: https://cs.opensource.google/fuchsia/fuchsia/+/main:sdk/fidl/fuchsia.posix.socket/socket.fidl;l=292-295;drc=0661adfd75b2c6c49b7cdb2c4edba7507c1e12ea
 [fsocket-provider-dgram-sock]: https://cs.opensource.google/fuchsia/fuchsia/+/main:sdk/fidl/fuchsia.posix.socket/socket.fidl;l=575;drc=0661adfd75b2c6c49b7cdb2c4edba7507c1e12ea
-[fuchsia-io-NodeInfo]: https://cs.opensource.google/fuchsia/fuchsia/+/main:sdk/fidl/fuchsia.io/io.fidl;l=15;drc=0661adfd75b2c6c49b7cdb2c4edba7507c1e12ea
+[fuchsia-io-NodeInfo]: https://cs.opensource.google/fuchsia/fuchsia/+/main:sdk/fidl/fuchsia.io/node.fidl;l=12?q=NodeInfo%20f:%5C.fidl&ss=fuchsia%2Ffuchsia

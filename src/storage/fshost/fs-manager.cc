@@ -270,7 +270,6 @@ zx_status_t FsManager::ServeRoot(fidl::ServerEnd<fuchsia_io::Directory> server) 
   fs::Rights rights;
   rights.read = true;
   rights.write = true;
-  rights.admin = true;
   rights.execute = true;
   return root_vfs_->ServeDirectory(global_root_, std::move(server), rights);
 }

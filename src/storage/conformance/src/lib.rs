@@ -5,7 +5,7 @@
 #![warn(missing_docs)]
 
 //! Crate to provide fidl logging and test setup helpers for conformance tests
-//! for io.fidl.
+//! for fuchsia.io.
 
 /// Test harness helper struct.
 pub mod test_harness;

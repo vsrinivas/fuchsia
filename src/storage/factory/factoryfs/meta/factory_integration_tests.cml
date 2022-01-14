@@ -17,10 +17,7 @@
         },
         {
             directory: "deprecated-tmp",
-            rights: [
-                "admin",
-                "rw*",
-            ],
+            rights: [ "rw*" ],
             path: "/tmp",
         },
     ],

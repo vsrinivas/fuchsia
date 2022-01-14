@@ -147,8 +147,7 @@ impl<FSC: FSConfig> Filesystem<FSC> {
         export_root.open(
             fidl_fuchsia_io::OPEN_RIGHT_READABLE
                 | fidl_fuchsia_io::OPEN_FLAG_POSIX_EXECUTABLE
-                | fidl_fuchsia_io::OPEN_FLAG_POSIX_WRITABLE
-                | fidl_fuchsia_io::OPEN_RIGHT_ADMIN,
+                | fidl_fuchsia_io::OPEN_FLAG_POSIX_WRITABLE,
             0,
             "root",
             server_end.into_channel().into(),

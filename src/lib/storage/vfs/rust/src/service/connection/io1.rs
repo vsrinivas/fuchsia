@@ -125,7 +125,7 @@ impl Connection {
     }
 
     /// POSIX protection attributes are hard coded, as we are expecting them to be removed from the
-    /// io.fidl altogether.
+    /// fuchsia.io altogether.
     fn posix_protection_attributes(&self) -> u32 {
         POSIX_READ_WRITE_PROTECTION_ATTRIBUTES
     }
@@ -175,9 +175,9 @@ impl Connection {
                 responder.send(ZX_OK, &mut attrs)?;
             }
             FileRequest::SetAttr { flags: _, attributes: _, responder } => {
-                // According to zircon/system/fidl/fuchsia-io/io.fidl the only flag that might be
-                // modified through this call is OPEN_FLAG_APPEND, and it is not supported by the
-                // PseudoFile.
+                // According to https://fuchsia.googlesource.com/fuchsia/+/HEAD/sdk/fidl/fuchsia.io/
+                // the only flag that might be modified through this call is OPEN_FLAG_APPEND, and
+                // it is not supported by the PseudoFile.
                 responder.send(ZX_ERR_NOT_SUPPORTED)?;
             }
             FileRequest::NodeGetFlags { responder } => {

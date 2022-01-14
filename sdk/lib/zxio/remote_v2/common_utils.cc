@@ -103,9 +103,6 @@ zxio_abilities_t ToZxioAbilities(Operations abilities) {
   if (abilities & Operations::kModifyDirectory) {
     zxio_abilities |= ZXIO_OPERATION_MODIFY_DIRECTORY;
   }
-  if (abilities & Operations::kAdmin) {
-    zxio_abilities |= ZXIO_OPERATION_ADMIN;
-  }
   return zxio_abilities;
 }
 
@@ -137,9 +134,6 @@ Operations ToIo2Abilities(zxio_abilities_t zxio_abilities) {
   }
   if (zxio_abilities & ZXIO_OPERATION_MODIFY_DIRECTORY) {
     abilities |= Operations::kModifyDirectory;
-  }
-  if (zxio_abilities & ZXIO_OPERATION_ADMIN) {
-    abilities |= Operations::kAdmin;
   }
   return abilities;
 }

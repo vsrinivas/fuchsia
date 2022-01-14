@@ -70,7 +70,6 @@ fdio_state_t __fdio_global_state = []() constexpr {
 // the corresponding constants in zircon/system/public/zircon/device/vfs.h need to be updated.
 static_assert(ZX_FS_RIGHT_READABLE == fio::wire::kOpenRightReadable, "Flag mismatch!");
 static_assert(ZX_FS_RIGHT_WRITABLE == fio::wire::kOpenRightWritable, "Flag mismatch!");
-static_assert(ZX_FS_RIGHT_ADMIN == fio::wire::kOpenRightAdmin, "Flag mismatch!");
 static_assert(ZX_FS_RIGHT_EXECUTABLE == fio::wire::kOpenRightExecutable, "Flag mismatch!");
 static_assert(ZX_FS_FLAG_CREATE == fio::wire::kOpenFlagCreate, "Flag mismatch!");
 static_assert(ZX_FS_FLAG_EXCLUSIVE == fio::wire::kOpenFlagCreateIfAbsent, "Flag mismatch!");
@@ -87,7 +86,6 @@ static_assert(ZX_FS_FLAG_POSIX_EXECUTABLE == fio::wire::kOpenFlagPosixExecutable
 
 // Verify the O_* flags which align with ZXIO_FS_*.
 static_assert(O_PATH == ZX_FS_FLAG_VNODE_REF_ONLY, "Open Flag mismatch");
-static_assert(O_ADMIN == ZX_FS_RIGHT_ADMIN, "Open Flag mismatch");
 static_assert(O_CREAT == ZX_FS_FLAG_CREATE, "Open Flag mismatch");
 static_assert(O_EXCL == ZX_FS_FLAG_EXCLUSIVE, "Open Flag mismatch");
 static_assert(O_TRUNC == ZX_FS_FLAG_TRUNCATE, "Open Flag mismatch");
@@ -97,7 +95,7 @@ static_assert(O_NOREMOTE == ZX_FS_FLAG_NOREMOTE, "Open Flag mismatch");
 
 // The mask of "1:1" flags which match between both open flag representations.
 constexpr uint32_t kZxioFsMask =
-    O_PATH | O_ADMIN | O_CREAT | O_EXCL | O_TRUNC | O_DIRECTORY | O_APPEND | O_NOREMOTE;
+    O_PATH | O_CREAT | O_EXCL | O_TRUNC | O_DIRECTORY | O_APPEND | O_NOREMOTE;
 
 // TODO(fxbug.dev/81185): Remove kOpenFlagPosixDeprecated after clients have updated to a newer SDK.
 constexpr uint32_t kZxioFsFlags =

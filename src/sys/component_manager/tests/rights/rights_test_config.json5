@@ -43,14 +43,6 @@
             ],
         },
         {
-            directory: "read_admin",
-            path: "/read_admin",
-            rights: [
-                "admin",
-                "r*",
-            ],
-        },
-        {
             directory: "read_only_after_scoped",
             path: "/read_only_after_scoped",
             rights: [

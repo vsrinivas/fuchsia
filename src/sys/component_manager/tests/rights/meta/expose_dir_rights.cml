@@ -24,14 +24,6 @@
             rights: [ "rx*" ],
             path: "/read_exec",
         },
-        {
-            directory: "read_admin",
-            rights: [
-                "admin",
-                "r*",
-            ],
-            path: "/read_admin",
-        },
 
         // This will be scoped to "r*" by the parent before offering it to the sibling.
         {
@@ -52,10 +44,6 @@
         },
         {
             directory: "read_exec",
-            from: "self",
-        },
-        {
-            directory: "read_admin",
             from: "self",
         },
         {

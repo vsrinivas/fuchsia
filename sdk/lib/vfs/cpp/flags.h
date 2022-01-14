@@ -21,8 +21,6 @@ class Flags {
     return (flags & fuchsia::io::OPEN_RIGHT_EXECUTABLE) != 0;
   }
 
-  static bool IsAdminable(uint32_t flags) { return (flags & fuchsia::io::OPEN_RIGHT_ADMIN) != 0; }
-
   static bool IsDirectory(uint32_t flags) {
     return (flags & fuchsia::io::OPEN_FLAG_DIRECTORY) != 0;
   }
@@ -52,9 +50,9 @@ class Flags {
   }
 
   // All known rights.
-  static constexpr uint32_t kFsRights =
-      fuchsia::io::OPEN_RIGHT_READABLE | fuchsia::io::OPEN_RIGHT_WRITABLE |
-      fuchsia::io::OPEN_RIGHT_EXECUTABLE | fuchsia::io::OPEN_RIGHT_ADMIN;
+  static constexpr uint32_t kFsRights = fuchsia::io::OPEN_RIGHT_READABLE |
+                                        fuchsia::io::OPEN_RIGHT_WRITABLE |
+                                        fuchsia::io::OPEN_RIGHT_EXECUTABLE;
 
   // All POSIX flags used for rights expansion.
   // TODO(fxbug.dev/81185): Remove OPEN_FLAG_POSIX_DEPRECATED.

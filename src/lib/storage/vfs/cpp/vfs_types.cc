@@ -67,9 +67,6 @@ VnodeConnectionOptions VnodeConnectionOptions::FromIoV1Flags(uint32_t fidl_flags
   if (fidl_flags & fio::wire::kOpenRightWritable) {
     options.rights.write = true;
   }
-  if (fidl_flags & fio::wire::kOpenRightAdmin) {
-    options.rights.admin = true;
-  }
   if (fidl_flags & fio::wire::kOpenRightExecutable) {
     options.rights.execute = true;
   }
@@ -124,9 +121,6 @@ uint32_t VnodeConnectionOptions::ToIoV1Flags() const {
   }
   if (rights.write) {
     fidl_flags |= fio::wire::kOpenRightWritable;
-  }
-  if (rights.admin) {
-    fidl_flags |= fio::wire::kOpenRightAdmin;
   }
   if (rights.execute) {
     fidl_flags |= fio::wire::kOpenRightExecutable;

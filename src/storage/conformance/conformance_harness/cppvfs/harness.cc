@@ -51,7 +51,6 @@ class TestHarness : public fuchsia::io::test::Io1Harness {
     config.set_immutable_file(false);
     config.set_no_vmofile(false);
     config.set_no_remote_dir(false);
-    config.set_no_admin(false);
     config.set_no_get_token(false);
 
     // PseudoFile/PseudoDir do not support a variety of methods:

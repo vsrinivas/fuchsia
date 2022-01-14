@@ -342,7 +342,7 @@ impl VmoFileConnection {
 
     /// Returns `NodeInfo` for the VMO file.
     async fn get_node_info(&mut self) -> Result<NodeInfo, zx::Status> {
-        // The current io.fidl specification for Vmofile node types specify that the node is
+        // The current fuchsia.io specification for Vmofile node types specify that the node is
         // immutable, thus if the file is writable, we report it as a regular file instead.
         // If this changes in the future, we need to handle size changes in the backing VMO.
         if self.flags & OPEN_FLAG_NODE_REFERENCE != 0 || self.flags & OPEN_RIGHT_WRITABLE != 0 {
@@ -416,9 +416,9 @@ impl VmoFileConnection {
                 .await?;
             }
             FileRequest::SetAttr { flags: _, attributes: _, responder } => {
-                // According to zircon/system/fidl/fuchsia-io/io.fidl the only flag that might be
-                // modified through this call is OPEN_FLAG_APPEND, and it is not supported at the
-                // moment.
+                // According to https://fuchsia.googlesource.com/fuchsia/+/HEAD/sdk/fidl/fuchsia.io/
+                // the only flag that might be modified through this call is OPEN_FLAG_APPEND, and
+                // it is not supported at the moment.
                 responder.send(ZX_ERR_NOT_SUPPORTED)?;
             }
             FileRequest::Read { count, responder } => {
@@ -523,7 +523,7 @@ impl VmoFileConnection {
             }
             FileRequest::SetFlags { flags: _, responder } => {
                 // TODO: Support OPEN_FLAG_APPEND?  It is the only flag that is allowed to be set
-                // via this call according to the io.fidl. It would be nice to have that explicitly
+                // via this call according to fuchsia.io. It would be nice to have that explicitly
                 // encoded in the API instead, I guess.
                 responder.send(ZX_ERR_NOT_SUPPORTED)?;
             }
@@ -907,7 +907,7 @@ impl VmoFileConnection {
             match &*self.file.state().await;
             error: "handle_write_at" => (zx::Status::INTERNAL, None);
             { vmo, size, .. } => {
-                // Logic here matches the io.fidl requirements and matches what works for memfs.
+                // Logic here matches fuchsia.io requirements and matches what works for memfs.
                 // Shared requests are satisfied by duplicating an handle, and private shares are
                 // child VMOs.
                 //

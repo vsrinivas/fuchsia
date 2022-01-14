@@ -252,12 +252,10 @@ async fn validate_directory_rights() {
     let harness = TestHarness::new().await;
     // Create a test directory and ensure we can open it with all supported rights.
     let root = root_directory(vec![file(TEST_FILE, vec![])]);
-    let mut all_rights =
-        io::OPEN_RIGHT_READABLE | io::OPEN_RIGHT_WRITABLE | io::OPEN_RIGHT_EXECUTABLE;
-    if !harness.config.no_admin.unwrap_or_default() {
-        all_rights |= io::OPEN_RIGHT_ADMIN;
-    }
-    let _root_dir = harness.get_directory(root, all_rights);
+    let _root_dir = harness.get_directory(
+        root,
+        io::OPEN_RIGHT_READABLE | io::OPEN_RIGHT_WRITABLE | io::OPEN_RIGHT_EXECUTABLE,
+    );
 }
 
 // Validate allowed rights for File objects (ensures writable files cannot be opened as executable).
@@ -624,8 +622,7 @@ async fn open_child_dir_with_posix_flags() {
             dir_flags
         );
         // Ensure expanded rights do not exceed those of the parent directory connection.
-        let expected_rights = dir_flags & !io::OPEN_RIGHT_ADMIN;
-        assert_eq!(get_node_flags(&child_dir_client).await & expected_rights, expected_rights);
+        assert_eq!(get_node_flags(&child_dir_client).await & dir_flags, dir_flags);
     }
 }
 
@@ -1180,7 +1177,7 @@ async fn file_get_executable_buffer_with_sufficient_rights() {
     }
 
     // We should be able to get an executable VMO in default, exact, and private sharing modes.
-    // Note that the io.fidl protocol requires the connection to have OPEN_RIGHT_READABLE in
+    // Note that the fuchsia.io interface requires the connection to have OPEN_RIGHT_READABLE in
     // addition to OPEN_RIGHT_EXECUTABLE if passing VMO_FLAG_EXEC to the GetBuffer method.
     for sharing_mode in [0, io::VMO_FLAG_EXACT, io::VMO_FLAG_PRIVATE] {
         let file = exec_file(TEST_FILE);
@@ -1216,8 +1213,8 @@ async fn file_get_executable_buffer_with_insufficient_rights() {
             zx::Status::ACCESS_DENIED
         );
     }
-    // The io.fidl protocol additionally specifies that GetBuffer should fail if VMO_FLAG_EXEC is
-    // specified but connection lacks OPEN_RIGHT_READABLE.
+    // The fuchsia.io interface additionally specifies that GetBuffer should fail if VMO_FLAG_EXEC
+    // is specified but connection lacks OPEN_RIGHT_READABLE.
     for file_flags in harness.execfile_rights.valid_combos_without(io::OPEN_RIGHT_READABLE) {
         let file = exec_file(TEST_FILE);
         assert_eq!(

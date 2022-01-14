@@ -209,7 +209,7 @@ TEST_F(PseudoFileTest, ServeOnInValidFlagsForReadWriteFile) {
     SCOPED_TRACE("OPEN_FLAG_DIRECTORY");
     AssertOpen(file_wrapper.file(), dispatcher(), fuchsia::io::OPEN_FLAG_DIRECTORY, ZX_ERR_NOT_DIR);
   }
-  uint32_t not_allowed_flags[] = {fuchsia::io::OPEN_RIGHT_ADMIN, fuchsia::io::OPEN_FLAG_CREATE,
+  uint32_t not_allowed_flags[] = {fuchsia::io::OPEN_FLAG_CREATE,
                                   fuchsia::io::OPEN_FLAG_CREATE_IF_ABSENT,
                                   fuchsia::io::OPEN_FLAG_NO_REMOTE, fuchsia::io::OPEN_FLAG_APPEND};
   for (auto not_allowed_flag : not_allowed_flags) {
@@ -224,13 +224,10 @@ TEST_F(PseudoFileTest, ServeOnInValidFlagsForReadOnlyFile) {
     SCOPED_TRACE("OPEN_FLAG_DIRECTORY");
     AssertOpen(file_wrapper.file(), dispatcher(), fuchsia::io::OPEN_FLAG_DIRECTORY, ZX_ERR_NOT_DIR);
   }
-  uint32_t not_allowed_flags[] = {fuchsia::io::OPEN_RIGHT_ADMIN,
-                                  fuchsia::io::OPEN_FLAG_CREATE,
-                                  fuchsia::io::OPEN_FLAG_CREATE_IF_ABSENT,
-                                  fuchsia::io::OPEN_FLAG_NO_REMOTE,
-                                  fuchsia::io::OPEN_RIGHT_WRITABLE,
-                                  fuchsia::io::OPEN_FLAG_TRUNCATE,
-                                  fuchsia::io::OPEN_FLAG_APPEND};
+  uint32_t not_allowed_flags[] = {
+      fuchsia::io::OPEN_FLAG_CREATE,    fuchsia::io::OPEN_FLAG_CREATE_IF_ABSENT,
+      fuchsia::io::OPEN_FLAG_NO_REMOTE, fuchsia::io::OPEN_RIGHT_WRITABLE,
+      fuchsia::io::OPEN_FLAG_TRUNCATE,  fuchsia::io::OPEN_FLAG_APPEND};
   for (auto not_allowed_flag : not_allowed_flags) {
     SCOPED_TRACE(std::to_string(not_allowed_flag));
     AssertOpen(file_wrapper.file(), dispatcher(), not_allowed_flag, ZX_ERR_NOT_SUPPORTED);

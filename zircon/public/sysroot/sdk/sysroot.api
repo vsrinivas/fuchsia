@@ -58,7 +58,7 @@
   "include/endian.h": "874492341967c8cc8ccb6a2517c6ef24",
   "include/err.h": "6df7a94ea9c794740eaf4b08c8ff6e67",
   "include/errno.h": "1e172852b4561390bf7e31d1e073340f",
-  "include/fcntl.h": "a45b4b7a8d67627c3c03731e9ba9ba58",
+  "include/fcntl.h": "e6716fef94b38156b9b7e32def0978a9",
   "include/features.h": "a4ab19a57e5619cc445fb355ab9eec22",
   "include/fenv.h": "9c9c0049f01d53bbd11c6a41ee7cf408",
   "include/fmtmsg.h": "db25673484ce3f46ea616e082807f055",

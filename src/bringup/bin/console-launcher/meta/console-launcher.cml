@@ -72,15 +72,9 @@
             rights: [ "r*" ],
             path: "/system-delayed",
         },
-
-        // NOTE: /tmp needs admin rights for bringup fs tests which mount a volume
-        // under /tmp.
         {
             directory: "tmp",
-            rights: [
-                "admin",
-                "rw*",
-            ],
+            rights: [ "rw*" ],
             path: "/tmp",
         },
         {

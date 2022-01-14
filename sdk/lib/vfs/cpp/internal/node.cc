@@ -24,7 +24,6 @@ constexpr uint32_t kCommonAllowedFlags =
 
 constexpr std::tuple<NodeKind::Type, uint32_t> kKindFlagMap[] = {
     {NodeKind::kReadable, fuchsia::io::OPEN_RIGHT_READABLE},
-    {NodeKind::kMountable, fuchsia::io::OPEN_RIGHT_ADMIN},
     {NodeKind::kWritable, fuchsia::io::OPEN_RIGHT_WRITABLE},
     {NodeKind::kExecutable, fuchsia::io::OPEN_RIGHT_EXECUTABLE},
     {NodeKind::kAppendable, fuchsia::io::OPEN_FLAG_APPEND},

@@ -13,7 +13,7 @@ use {
         MODE_TYPE_SERVICE, MODE_TYPE_SOCKET, OPEN_FLAG_APPEND, OPEN_FLAG_CREATE,
         OPEN_FLAG_CREATE_IF_ABSENT, OPEN_FLAG_DESCRIBE, OPEN_FLAG_DIRECTORY,
         OPEN_FLAG_NODE_REFERENCE, OPEN_FLAG_NOT_DIRECTORY, OPEN_FLAG_NO_REMOTE,
-        OPEN_FLAG_POSIX_EXECUTABLE, OPEN_FLAG_POSIX_WRITABLE, OPEN_FLAG_TRUNCATE, OPEN_RIGHT_ADMIN,
+        OPEN_FLAG_POSIX_EXECUTABLE, OPEN_FLAG_POSIX_WRITABLE, OPEN_FLAG_TRUNCATE,
         OPEN_RIGHT_EXECUTABLE, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
     },
     fidl_fuchsia_io2::UnlinkOptions,
@@ -74,11 +74,10 @@ async fn open_per_package_source(source: PackageSource) {
     assert_open_content_file(&source, "dir", "dir/file").await;
 }
 
-const ALL_FLAGS: [u32; 17] = [
+const ALL_FLAGS: [u32; 16] = [
     0,
     OPEN_RIGHT_READABLE,
     OPEN_RIGHT_WRITABLE,
-    OPEN_RIGHT_ADMIN,
     OPEN_RIGHT_EXECUTABLE,
     OPEN_FLAG_CREATE,
     OPEN_FLAG_CREATE | OPEN_FLAG_CREATE_IF_ABSENT,
@@ -122,8 +121,6 @@ async fn assert_open_root_directory(
     ];
     if source.is_pkgfs() {
         success_flags.extend_from_slice(&[
-            // "OPEN_RIGHT_ADMIN not supported"
-            OPEN_RIGHT_ADMIN,
             // "OPEN_RIGHT_WRITABLE not supported"
             OPEN_RIGHT_WRITABLE,
             // "OPEN_FLAG_TRUNCATE and OPEN_FLAG_APPEND not supported"
@@ -294,8 +291,6 @@ async fn assert_open_content_directory(
     ];
     if source.is_pkgfs() {
         success_flags.extend_from_slice(&[
-            // "OPEN_RIGHT_ADMIN not supported"
-            OPEN_RIGHT_ADMIN,
             // "OPEN_FLAG_CREATE_IF_ABSENT without OPEN_FLAG_CREATE"
             OPEN_FLAG_CREATE_IF_ABSENT,
             // TODO(fxbug.dev/83844): pkgdir doesn't accept OPEN_FLAG_NO_REMOTE
@@ -479,8 +474,6 @@ async fn assert_open_meta_as_directory_and_file(
     ];
     if source.is_pkgfs() {
         base_directory_success_flags.extend_from_slice(&[
-            // "OPEN_RIGHT_ADMIN not supported"
-            OPEN_RIGHT_ADMIN,
             // "OPEN_FLAG_CREATE_IF_ABSENT without OPEN_FLAG_CREATE"
             OPEN_FLAG_CREATE_IF_ABSENT,
             // TODO(fxbug.dev/83844): pkgdir doesn't accept OPEN_FLAG_NO_REMOTE
@@ -598,8 +591,6 @@ async fn assert_open_meta_as_directory_and_file(
     ];
     if source.is_pkgfs() {
         base_file_flags.extend_from_slice(&[
-            // "OPEN_RIGHT_ADMIN not supported"
-            OPEN_RIGHT_ADMIN,
             // "meta/ directories and files may not be opened with OPEN_RIGHT_EXECUTABLE"
             OPEN_RIGHT_EXECUTABLE,
             // "OPEN_FLAG_CREATE_IF_ABSENT without OPEN_FLAG_CREATE"
@@ -675,8 +666,6 @@ async fn assert_open_meta_subdirectory(
     ];
     if source.is_pkgfs() {
         success_flags.extend_from_slice(&[
-            // "OPEN_RIGHT_ADMIN not supported"
-            OPEN_RIGHT_ADMIN,
             // "OPEN_FLAG_CREATE_IF_ABSENT without OPEN_FLAG_CREATE"
             OPEN_FLAG_CREATE_IF_ABSENT,
             // TODO(fxbug.dev/83844): pkgdir doesn't accept OPEN_FLAG_NO_REMOTE
@@ -737,8 +726,6 @@ async fn assert_open_meta_file(source: &PackageSource, parent_path: &str, child_
     ];
     if source.is_pkgfs() {
         success_flags.extend_from_slice(&[
-            // "OPEN_RIGHT_ADMIN not supported"
-            OPEN_RIGHT_ADMIN,
             // "OPEN_FLAG_CREATE_IF_ABSENT without OPEN_FLAG_CREATE"
             OPEN_FLAG_CREATE_IF_ABSENT,
             // TODO(fxbug.dev/83844): pkgdir doesn't accept OPEN_FLAG_NO_REMOTE
@@ -998,7 +985,6 @@ async fn clone_per_package_source(source: PackageSource) {
         0,
         OPEN_RIGHT_READABLE,
         OPEN_RIGHT_WRITABLE,
-        OPEN_RIGHT_ADMIN,
         OPEN_RIGHT_EXECUTABLE,
         OPEN_FLAG_APPEND,
         OPEN_FLAG_NO_REMOTE,
@@ -1011,10 +997,6 @@ async fn clone_per_package_source(source: PackageSource) {
         }
         if source.is_pkgdir() && (flag & OPEN_FLAG_APPEND != 0) {
             // "OPEN_FLAG_TRUNCATE and OPEN_FLAG_APPEND not supported"
-            continue;
-        }
-        if source.is_pkgdir() && (flag & OPEN_RIGHT_ADMIN != 0) {
-            // "OPEN_RIGHT_ADMIN not supported"
             continue;
         }
         if source.is_pkgdir() && (flag & OPEN_RIGHT_WRITABLE != 0) {

@@ -60,12 +60,11 @@ macro_rules! flag_list {
     };
 }
 
-// flags in same order as they appear in io.fidl in an attempt to make it easier
+// flags in same order as they appear in fuchsia.io in an attempt to make it easier
 // to keep this list up to date. Although if this list gets out of date it's
 // not the end of the world, the debug printer just won't know how to decode
 // them and will hex format the not-decoded flags.
 const OPEN_FLAGS: &[(u32, &str)] = &flag_list![
-    OPEN_RIGHT_ADMIN,
     OPEN_RIGHT_EXECUTABLE,
     OPEN_RIGHT_READABLE,
     OPEN_RIGHT_WRITABLE,
@@ -120,7 +119,7 @@ impl Debug for OpenFlags {
     }
 }
 
-// modes in same order as they appear in io.fidl in an attempt to make it
+// modes in same order as they appear in fuchsia.io in an attempt to make it
 // easier to keep this list up to date. Although if this list gets out of date
 // it's not the end of the world, the debug printer just won't know how to
 // decode them and will octal format the not-decoded flags.

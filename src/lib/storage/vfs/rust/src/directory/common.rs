@@ -13,7 +13,7 @@ use {
         OPEN_FLAGS_ALLOWED_WITH_NODE_REFERENCE, OPEN_FLAG_APPEND, OPEN_FLAG_CREATE,
         OPEN_FLAG_CREATE_IF_ABSENT, OPEN_FLAG_DESCRIBE, OPEN_FLAG_DIRECTORY,
         OPEN_FLAG_NODE_REFERENCE, OPEN_FLAG_NOT_DIRECTORY, OPEN_FLAG_POSIX_DEPRECATED,
-        OPEN_FLAG_POSIX_EXECUTABLE, OPEN_FLAG_POSIX_WRITABLE, OPEN_FLAG_TRUNCATE, OPEN_RIGHT_ADMIN,
+        OPEN_FLAG_POSIX_EXECUTABLE, OPEN_FLAG_POSIX_WRITABLE, OPEN_FLAG_TRUNCATE,
         OPEN_RIGHT_EXECUTABLE, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
     },
     fuchsia_zircon as zx,
@@ -67,10 +67,6 @@ pub fn new_connection_validate_flags(mut flags: u32) -> Result<u32, zx::Status> 
         | OPEN_RIGHT_EXECUTABLE;
 
     let prohibited_flags = OPEN_FLAG_APPEND | OPEN_FLAG_TRUNCATE;
-
-    if flags & OPEN_RIGHT_ADMIN != 0 {
-        return Err(zx::Status::ACCESS_DENIED);
-    }
 
     if flags & prohibited_flags != 0 {
         return Err(zx::Status::INVALID_ARGS);
@@ -199,7 +195,7 @@ mod tests {
             OPEN_FLAG_CREATE, OPEN_FLAG_CREATE_IF_ABSENT, OPEN_FLAG_DESCRIBE, OPEN_FLAG_DIRECTORY,
             OPEN_FLAG_NODE_REFERENCE, OPEN_FLAG_NOT_DIRECTORY, OPEN_FLAG_POSIX_DEPRECATED,
             OPEN_FLAG_POSIX_EXECUTABLE, OPEN_FLAG_POSIX_WRITABLE, OPEN_FLAG_TRUNCATE,
-            OPEN_RIGHT_ADMIN, OPEN_RIGHT_EXECUTABLE, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
+            OPEN_RIGHT_EXECUTABLE, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
         },
         fuchsia_zircon as zx,
     };
@@ -268,12 +264,6 @@ mod tests {
             }
             ncvf_ok(open_flags, expected_rights);
         }
-    }
-
-    #[test]
-    fn new_connection_validate_flags_admin() {
-        // Currently not supported.
-        ncvf_err(OPEN_RIGHT_ADMIN, zx::Status::ACCESS_DENIED);
     }
 
     #[test]
