@@ -57,26 +57,8 @@ func (n *NsJailCmdBuilder) AddDefaultMounts() {
 		// system linker.
 		{Src: "/lib"},
 		{Src: "/lib64"},
-		// Linux utilities used by a variety of tests.
-		{Src: "/usr/bin/awk"},
-		{Src: "/usr/bin/basename"},
-		{Src: "/usr/bin/cat"},
-		{Src: "/usr/bin/chmod"},
-		{Src: "/usr/bin/cp"},
-		{Src: "/usr/bin/cut"},
-		{Src: "/usr/bin/dirname"},
-		{Src: "/usr/bin/env"},
-		{Src: "/usr/bin/find"},
-		{Src: "/usr/bin/head"},
-		{Src: "/usr/bin/ln"},
-		{Src: "/usr/bin/mkdir"},
-		{Src: "/usr/bin/realpath"},
-		{Src: "/usr/bin/rm"},
-		{Src: "/usr/bin/sed"},
-		{Src: "/usr/bin/sort"},
-		{Src: "/usr/bin/tee"},
-		{Src: "/usr/bin/touch"},
-		{Src: "/usr/bin/uname"},
+		// A variety of tests use linux utilities from /usr/bin.
+		{Src: "/usr/bin"},
 		// Additional mounts for convenience.
 		{Src: "/dev/urandom"},
 		{Src: "/dev/zero"},
