@@ -20,7 +20,5 @@ toc:
   path: /docs/development/components/v2/realm_builder.md
 - title: "Migration guides"
   section:
-  - title: "Migrating legacy packages"
-    path: /docs/development/components/package_migration.md
   - title: "Migrating system components"
     path: /docs/development/components/v2/migration.md
