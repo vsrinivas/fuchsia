@@ -202,6 +202,18 @@ inline ostream& operator<<(ostream& out, const fuchsia::ui::views::ViewRef& ref)
   return out;
 }
 
+inline ostream& operator<<(ostream& out, const fuchsia::ui::composition::BlendMode& blend_mode) {
+  switch (blend_mode) {
+    case fuchsia::ui::composition::BlendMode::SRC:
+      out << "SRC";
+      break;
+    case fuchsia::ui::composition::BlendMode::SRC_OVER:
+      out << "SRC_OVER";
+      break;
+  }
+  return out;
+}
+
 ostream& operator<<(ostream& out, const flatland::UberStruct& us) {
   if (us.view_ref) {
     out << *us.view_ref << std::endl;
@@ -222,6 +234,7 @@ ostream& operator<<(ostream& out, const flatland::UberStruct& us) {
       auto it = us.images.find(handle);
       if (it != us.images.end()) {
         out << "  image(" << it->second.width << "x" << it->second.height << ")";
+        out << " blend_mode=" << it->second.blend_mode;
       }
     }
 
