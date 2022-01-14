@@ -177,7 +177,7 @@ impl CapabilityId {
                     .map(|event: &Name| CapabilityId::Event(event.clone()))
                     .collect()),
             };
-        } else if let Some(name) = use_.event_stream() {
+        } else if let Some(name) = use_.event_stream_deprecated() {
             return Ok(vec![CapabilityId::EventStream(name)]);
         }
 
@@ -2013,11 +2013,6 @@ pub struct Use {
     pub rights: Option<Rights>,
     pub subdir: Option<RelativePath>,
     pub event: Option<OneOrMany<Name>>,
-    pub event_stream: Option<Name>,
-    /// Placeholder for rename event. This currently holds no meaning
-    /// and gets remapped to event_stream above. It exists solely
-    /// for serde deserialization purposes (to allow event_stream
-    /// to have two names that refer to it).
     pub event_stream_deprecated: Option<Name>,
     pub filter: Option<Map<String, Value>>,
     pub modes: Option<EventModes>,
@@ -2093,7 +2088,7 @@ pub trait CapabilityClause {
     fn runner(&self) -> Option<OneOrMany<Name>>;
     fn resolver(&self) -> Option<OneOrMany<Name>>;
     fn event(&self) -> Option<OneOrMany<Name>>;
-    fn event_stream(&self) -> Option<Name>;
+    fn event_stream_deprecated(&self) -> Option<Name>;
 
     /// Returns the name of the capability for display purposes.
     /// If `service()` returns `Some`, the capability name must be "service", etc.
@@ -2115,7 +2110,7 @@ pub trait CapabilityClause {
             self.runner(),
             self.resolver(),
             self.event(),
-            self.event_stream().map(|n| OneOrMany::One(n)),
+            self.event_stream_deprecated().map(|n| OneOrMany::One(n)),
         ];
         res.into_iter()
             .map(|o| o.map(|o| o.into_iter().collect::<Vec<Name>>()).unwrap_or(vec![]))
@@ -2170,7 +2165,7 @@ impl CapabilityClause for Capability {
     fn event(&self) -> Option<OneOrMany<Name>> {
         self.event.as_ref().map(|n| OneOrMany::One(n.clone()))
     }
-    fn event_stream(&self) -> Option<Name> {
+    fn event_stream_deprecated(&self) -> Option<Name> {
         None
     }
     fn capability_type(&self) -> &'static str {
@@ -2246,7 +2241,7 @@ impl CapabilityClause for DebugRegistration {
     fn event(&self) -> Option<OneOrMany<Name>> {
         None
     }
-    fn event_stream(&self) -> Option<Name> {
+    fn event_stream_deprecated(&self) -> Option<Name> {
         None
     }
     fn capability_type(&self) -> &'static str {
@@ -2304,8 +2299,8 @@ impl CapabilityClause for Use {
     fn event(&self) -> Option<OneOrMany<Name>> {
         self.event.clone()
     }
-    fn event_stream(&self) -> Option<Name> {
-        self.event_stream.clone()
+    fn event_stream_deprecated(&self) -> Option<Name> {
+        self.event_stream_deprecated.clone()
     }
     fn capability_type(&self) -> &'static str {
         if self.service.is_some() {
@@ -2318,7 +2313,7 @@ impl CapabilityClause for Use {
             "storage"
         } else if self.event.is_some() {
             "event"
-        } else if self.event_stream.is_some() {
+        } else if self.event_stream_deprecated.is_some() {
             "event_stream"
         } else {
             panic!("Missing capability name")
@@ -2405,7 +2400,7 @@ impl CapabilityClause for Expose {
     fn event(&self) -> Option<OneOrMany<Name>> {
         None
     }
-    fn event_stream(&self) -> Option<Name> {
+    fn event_stream_deprecated(&self) -> Option<Name> {
         None
     }
     fn capability_type(&self) -> &'static str {
@@ -2489,7 +2484,7 @@ impl CapabilityClause for Offer {
     fn event(&self) -> Option<OneOrMany<Name>> {
         self.event.clone()
     }
-    fn event_stream(&self) -> Option<Name> {
+    fn event_stream_deprecated(&self) -> Option<Name> {
         None
     }
     fn capability_type(&self) -> &'static str {
@@ -2795,12 +2790,11 @@ mod tests {
             rights: None,
             subdir: None,
             event: None,
-            event_stream: None,
+            event_stream_deprecated: None,
             filter: None,
             modes: None,
             subscriptions: None,
             dependency: None,
-            event_stream_deprecated: None,
         }
     }
 

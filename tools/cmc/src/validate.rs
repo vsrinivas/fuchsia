@@ -445,7 +445,7 @@ impl<'a> ValidationContext<'a> {
             }
         }
 
-        match (use_.event_stream.as_ref(), use_.subscriptions.as_ref()) {
+        match (use_.event_stream_deprecated.as_ref(), use_.subscriptions.as_ref()) {
             (Some(_), Some(subscriptions)) => {
                 let event_names = subscriptions
                     .iter()
@@ -1612,23 +1612,7 @@ mod tests {
                     }
                   },
                   {
-                    "event_stream": "my_stream",
-                    "subscriptions": [
-                        {
-                           "event": "started",
-                           "mode": "async",
-                        },
-                        {
-                            "event": "stopped",
-                            "mode": "sync",
-                        },
-                        {
-                            "event": "launched",
-                            "mode": "async",
-                        }]
-                  },
-                  {
-                    "event_stream_deprecated": "my_stream_2",
+                    "event_stream_deprecated": "my_stream",
                     "subscriptions": [
                         {
                            "event": "started",
@@ -1778,7 +1762,7 @@ mod tests {
                     },
                 ]
             }),
-            Err(Error::Parse { err, .. }) if &err == "unknown field `resolver`, expected one of `service`, `protocol`, `directory`, `storage`, `from`, `path`, `as`, `rights`, `subdir`, `event`, `event_stream`, `event_stream_deprecated`, `filter`, `modes`, `subscriptions`, `dependency`"
+            Err(Error::Parse { err, .. }) if &err == "unknown field `resolver`, expected one of `service`, `protocol`, `directory`, `storage`, `from`, `path`, `as`, `rights`, `subdir`, `event`, `event_stream_deprecated`, `filter`, `modes`, `subscriptions`, `dependency`"
         ),
 
         test_cml_use_disallows_nested_dirs_directory(
@@ -1876,7 +1860,7 @@ mod tests {
             json!({
                 "use": [
                     {
-                        "event_stream": "stream",
+                        "event_stream_deprecated": "stream",
                         "subscriptions": [
                             {
                                 "event": "destroyed",
@@ -1912,7 +1896,7 @@ mod tests {
                         "from": "parent",
                     },
                     {
-                        "event_stream": "stream",
+                        "event_stream_deprecated": "stream",
                         "subscriptions": [
                             {
                                 "event": "destroyed",
@@ -1936,7 +1920,7 @@ mod tests {
                         "from": "parent",
                     },
                     {
-                        "event_stream": "test",
+                        "event_stream_deprecated": "test",
                     },
                 ]
             }),
@@ -1950,7 +1934,7 @@ mod tests {
                         "from": "parent",
                     },
                     {
-                        "event_stream": "test",
+                        "event_stream_deprecated": "test",
                     },
                 ]
             }),

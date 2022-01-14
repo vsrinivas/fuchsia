@@ -291,7 +291,7 @@ fn translate_use(
                     ..fdecl::UseEvent::EMPTY
                 }));
             }
-        } else if let Some(name) = &use_.event_stream {
+        } else if let Some(name) = &use_.event_stream_deprecated {
             let opt_subscriptions = use_.event_subscriptions();
             out_uses.push(fdecl::Use::EventStream(fdecl::UseEventStream {
                 name: Some(name.to_string()),
@@ -1124,7 +1124,7 @@ where
     } else if let Some(_) = in_obj.storage() {
         let path = to_obj.path().expect("no path on use storage");
         Some(OneOrMany::One(path.clone()))
-    } else if let Some(_) = in_obj.event_stream() {
+    } else if let Some(_) = in_obj.event_stream_deprecated() {
         let path = to_obj.path().expect("no path on event stream");
         Some(OneOrMany::One(path.clone()))
     } else {
@@ -1542,7 +1542,7 @@ mod tests {
                         "filter": { "name": "diagnostics" }
                     },
                     {
-                        "event_stream": "foo_stream",
+                        "event_stream_deprecated": "foo_stream",
                         "subscriptions": [
                             {
                                 "event": [ "started", "diagnostics" ],
