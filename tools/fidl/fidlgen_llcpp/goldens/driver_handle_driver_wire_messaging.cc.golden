@@ -33,7 +33,7 @@ const ::fidl::internal::MethodEntry* fidl::internal::WireServerDispatcher<
 
 ::fidl::DispatchResult fidl::internal::
     WireServerDispatcher<::test_driverhandle::DriverProtocol>::TryDispatch(
-        ::fidl::WireServer<::test_driverhandle::DriverProtocol>* impl,
+        ::fdf::WireServer<::test_driverhandle::DriverProtocol>* impl,
         ::fidl::IncomingMessage& msg,
         internal::IncomingTransportContext transport_context,
         ::fidl::Transaction* txn) {
@@ -42,14 +42,14 @@ const ::fidl::internal::MethodEntry* fidl::internal::WireServerDispatcher<
 }
 
 void fidl::internal::WireServerDispatcher<::test_driverhandle::DriverProtocol>::
-    Dispatch(::fidl::WireServer<::test_driverhandle::DriverProtocol>* impl,
+    Dispatch(::fdf::WireServer<::test_driverhandle::DriverProtocol>* impl,
              ::fidl::IncomingMessage&& msg,
              internal::IncomingTransportContext transport_context,
              ::fidl::Transaction* txn) {
   ::fidl::internal::Dispatch(impl, msg, std::move(transport_context), txn,
                              entries_, entries_end_);
 }
-void fidl::WireServer<::test_driverhandle::DriverProtocol>::dispatch_message(
+void fdf::WireServer<::test_driverhandle::DriverProtocol>::dispatch_message(
     ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
     ::fidl::internal::IncomingTransportContext transport_context) {
   ::fidl::internal::WireServerDispatcher<::test_driverhandle::DriverProtocol>::

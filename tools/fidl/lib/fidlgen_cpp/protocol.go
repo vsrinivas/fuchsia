@@ -145,7 +145,7 @@ var (
 	WireEventHandlerInterface      = internalNs.member("WireEventHandlerInterface")
 	WireSyncEventHandler           = fidlNs.member("WireSyncEventHandler")
 	WireAsyncEventHandler          = fidlNs.member("WireAsyncEventHandler")
-	WireServer                     = fidlNs.member("WireServer")
+	WireServer                     = transportNs.member("WireServer")
 	WireEventSender                = fidlNs.member("WireEventSender")
 	WireWeakEventSender            = internalNs.member("WireWeakEventSender")
 	WireClientImpl                 = internalNs.member("WireClientImpl")

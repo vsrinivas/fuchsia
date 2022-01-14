@@ -44,11 +44,11 @@ struct ::fidl::internal::WireServerDispatcher<::test_driveroneway::OneWay>
     final {
   WireServerDispatcher() = delete;
   static ::fidl::DispatchResult TryDispatch(
-      ::fidl::WireServer<::test_driveroneway::OneWay>* impl,
+      ::fdf::WireServer<::test_driveroneway::OneWay>* impl,
       ::fidl::IncomingMessage& msg,
       internal::IncomingTransportContext transport_context,
       ::fidl::Transaction* txn);
-  static void Dispatch(::fidl::WireServer<::test_driveroneway::OneWay>* impl,
+  static void Dispatch(::fdf::WireServer<::test_driveroneway::OneWay>* impl,
                        ::fidl::IncomingMessage&& msg,
                        internal::IncomingTransportContext transport_context,
                        ::fidl::Transaction* txn);
@@ -200,7 +200,7 @@ class ::fidl::internal::WireSyncBufferClientImpl<::test_driveroneway::OneWay>
 // This interface uses typed channels (i.e. |fdf::ClientEnd<SomeProtocol>|
 // and |fdf::ServerEnd<SomeProtocol>|).
 template <>
-class ::fidl::WireServer<::test_driveroneway::OneWay>
+class ::fdf::WireServer<::test_driveroneway::OneWay>
     : public ::fidl::internal::IncomingMessageDispatcher {
  public:
   WireServer() = default;

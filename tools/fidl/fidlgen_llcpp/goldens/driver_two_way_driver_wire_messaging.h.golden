@@ -44,11 +44,11 @@ struct ::fidl::internal::WireServerDispatcher<::test_drivertwoway::TwoWay>
     final {
   WireServerDispatcher() = delete;
   static ::fidl::DispatchResult TryDispatch(
-      ::fidl::WireServer<::test_drivertwoway::TwoWay>* impl,
+      ::fdf::WireServer<::test_drivertwoway::TwoWay>* impl,
       ::fidl::IncomingMessage& msg,
       internal::IncomingTransportContext transport_context,
       ::fidl::Transaction* txn);
-  static void Dispatch(::fidl::WireServer<::test_drivertwoway::TwoWay>* impl,
+  static void Dispatch(::fdf::WireServer<::test_drivertwoway::TwoWay>* impl,
                        ::fidl::IncomingMessage&& msg,
                        internal::IncomingTransportContext transport_context,
                        ::fidl::Transaction* txn);
@@ -359,7 +359,7 @@ struct ::fidl::internal::WireMethodTypes<::test_drivertwoway::TwoWay::Add> {
 // This interface uses typed channels (i.e. |fdf::ClientEnd<SomeProtocol>|
 // and |fdf::ServerEnd<SomeProtocol>|).
 template <>
-class ::fidl::WireServer<::test_drivertwoway::TwoWay>
+class ::fdf::WireServer<::test_drivertwoway::TwoWay>
     : public ::fidl::internal::IncomingMessageDispatcher {
  public:
   WireServer() = default;

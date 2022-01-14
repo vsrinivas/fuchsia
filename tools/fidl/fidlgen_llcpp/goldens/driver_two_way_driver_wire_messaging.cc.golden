@@ -198,7 +198,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<
           auto* primary = decoded.PrimaryObject();
           ::fidl::internal::WireCompleter<
               ::test_drivertwoway::TwoWay::Add>::Sync completer(txn);
-          reinterpret_cast<::fidl::WireServer<::test_drivertwoway::TwoWay>*>(
+          reinterpret_cast<::fdf::WireServer<::test_drivertwoway::TwoWay>*>(
               interface)
               ->Add(
                   primary,
@@ -215,7 +215,7 @@ const ::fidl::internal::MethodEntry* fidl::internal::WireServerDispatcher<
 
 ::fidl::DispatchResult
 fidl::internal::WireServerDispatcher<::test_drivertwoway::TwoWay>::TryDispatch(
-    ::fidl::WireServer<::test_drivertwoway::TwoWay>* impl,
+    ::fdf::WireServer<::test_drivertwoway::TwoWay>* impl,
     ::fidl::IncomingMessage& msg,
     internal::IncomingTransportContext transport_context,
     ::fidl::Transaction* txn) {
@@ -224,14 +224,14 @@ fidl::internal::WireServerDispatcher<::test_drivertwoway::TwoWay>::TryDispatch(
 }
 
 void fidl::internal::WireServerDispatcher<::test_drivertwoway::TwoWay>::
-    Dispatch(::fidl::WireServer<::test_drivertwoway::TwoWay>* impl,
+    Dispatch(::fdf::WireServer<::test_drivertwoway::TwoWay>* impl,
              ::fidl::IncomingMessage&& msg,
              internal::IncomingTransportContext transport_context,
              ::fidl::Transaction* txn) {
   ::fidl::internal::Dispatch(impl, msg, std::move(transport_context), txn,
                              entries_, entries_end_);
 }
-void fidl::WireServer<::test_drivertwoway::TwoWay>::dispatch_message(
+void fdf::WireServer<::test_drivertwoway::TwoWay>::dispatch_message(
     ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
     ::fidl::internal::IncomingTransportContext transport_context) {
   ::fidl::internal::WireServerDispatcher<::test_drivertwoway::TwoWay>::Dispatch(

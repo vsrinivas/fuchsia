@@ -35,12 +35,12 @@ struct ::fidl::internal::WireServerDispatcher<
     final {
   WireServerDispatcher() = delete;
   static ::fidl::DispatchResult TryDispatch(
-      ::fidl::WireServer<::test_driverhandle::DriverProtocol>* impl,
+      ::fdf::WireServer<::test_driverhandle::DriverProtocol>* impl,
       ::fidl::IncomingMessage& msg,
       internal::IncomingTransportContext transport_context,
       ::fidl::Transaction* txn);
   static void Dispatch(
-      ::fidl::WireServer<::test_driverhandle::DriverProtocol>* impl,
+      ::fdf::WireServer<::test_driverhandle::DriverProtocol>* impl,
       ::fidl::IncomingMessage&& msg,
       internal::IncomingTransportContext transport_context,
       ::fidl::Transaction* txn);
@@ -124,7 +124,7 @@ class ::fidl::internal::WireSyncBufferClientImpl<
 // This interface uses typed channels (i.e. |fdf::ClientEnd<SomeProtocol>|
 // and |fdf::ServerEnd<SomeProtocol>|).
 template <>
-class ::fidl::WireServer<::test_driverhandle::DriverProtocol>
+class ::fdf::WireServer<::test_driverhandle::DriverProtocol>
     : public ::fidl::internal::IncomingMessageDispatcher {
  public:
   WireServer() = default;

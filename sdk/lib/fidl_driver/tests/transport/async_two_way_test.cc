@@ -15,7 +15,7 @@
 constexpr uint32_t kRequestPayload = 1234;
 constexpr uint32_t kResponsePayload = 5678;
 
-class TestServer : public fidl::WireServer<test_transport::TransportTest> {
+class TestServer : public fdf::WireServer<test_transport::TransportTest> {
   void TwoWay(TwoWayRequestView request, fdf::Arena arena,
               TwoWayCompleter::Sync& completer) override {
     ZX_ASSERT(request->payload == kRequestPayload);

@@ -15,6 +15,8 @@
 namespace fdf {
 template <typename FidlMethod>
 class WireUnownedResult;
+template <typename FidlMethod>
+class WireServer;
 }  // namespace fdf
 
 #endif  // LIB_FIDL_DRIVER_INCLUDE_LIB_FIDL_DRIVER_CPP_WIRE_MESSAGING_H_

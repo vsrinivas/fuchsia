@@ -272,13 +272,15 @@ protocol P {};
 	root := compile(fidlgentest.EndToEndTest{T: t}.Single(fidl))
 
 	messaging := root.Decls[0].(*Protocol).wireTypeNames
+	setTransport("Driver")
 	assertEqual(t, messaging.WireProtocolMarker.String(), "::fuchsia_foobar::P")
 	assertEqual(t, messaging.WireSyncClient.String(), "::fidl::WireSyncClient<::fuchsia_foobar::P>")
 	assertEqual(t, messaging.WireClient.String(), "::fidl::WireClient<::fuchsia_foobar::P>")
 	assertEqual(t, messaging.WireSyncEventHandler.String(), "::fidl::WireSyncEventHandler<::fuchsia_foobar::P>")
 	assertEqual(t, messaging.WireAsyncEventHandler.String(), "::fidl::WireAsyncEventHandler<::fuchsia_foobar::P>")
-	assertEqual(t, messaging.WireServer.String(), "::fidl::WireServer<::fuchsia_foobar::P>")
+	assertEqual(t, messaging.WireServer.String(), "::fdf::WireServer<::fuchsia_foobar::P>")
 	assertEqual(t, messaging.WireEventSender.String(), "::fidl::WireEventSender<::fuchsia_foobar::P>")
 	assertEqual(t, messaging.WireWeakEventSender.String(), "::fidl::internal::WireWeakEventSender<::fuchsia_foobar::P>")
 	assertEqual(t, messaging.WireClientImpl.String(), "::fidl::internal::WireClientImpl<::fuchsia_foobar::P>")
+	unsetTransport()
 }
