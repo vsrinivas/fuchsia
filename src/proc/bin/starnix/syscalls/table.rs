@@ -125,6 +125,7 @@ pub fn dispatch_syscall(
         munmap[2],
         nanosleep[2],
         newfstatat[4],
+        open[3],
         openat[4],
         pipe[1],
         pipe2[2],

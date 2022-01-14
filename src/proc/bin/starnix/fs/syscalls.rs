@@ -265,6 +265,15 @@ fn lookup_at(
     parent.lookup_child(current_task, &mut context, basename)
 }
 
+pub fn sys_open(
+    current_task: &CurrentTask,
+    user_path: UserCString,
+    flags: u32,
+    mode: FileMode,
+) -> Result<SyscallResult, Errno> {
+    sys_openat(current_task, FdNumber::AT_FDCWD, user_path, flags, mode)
+}
+
 pub fn sys_openat(
     current_task: &CurrentTask,
     dir_fd: FdNumber,
