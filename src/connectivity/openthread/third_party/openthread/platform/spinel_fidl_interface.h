@@ -64,13 +64,11 @@ class SpinelFidlInterface {
    */
   void OnRcpReset(void);
 
-#if OPENTHREAD_SPINEL_CONFIG_RESET_CONNECTION
   /**
    * This method is called when RCP is reset to recreate the connection with it.
    *
    */
   otError ResetConnection(void);
-#endif
 
  private:
   /**
