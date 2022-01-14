@@ -168,7 +168,7 @@ impl KeyboardEvent {
 }
 
 /// A [`KeyboardDeviceDescriptor`] contains information about a specific keyboard device.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct KeyboardDeviceDescriptor {
     /// All the [`fidl_fuchsia_input::Key`]s available on the keyboard device.
     pub keys: Vec<fidl_fuchsia_input::Key>,

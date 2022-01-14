@@ -73,6 +73,7 @@ async fn main() -> Result<(), Error> {
         let cursor_view_provider = connect_to_protocol::<ui_app::ViewProviderMarker>()?;
         Arc::new(Mutex::new(Box::new(
             scene_management::FlatlandSceneManager::new(
+                scenic,
                 display,
                 pointerinjector_flatland,
                 root_flatland,

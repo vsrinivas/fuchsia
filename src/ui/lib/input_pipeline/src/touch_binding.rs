@@ -94,7 +94,7 @@ impl From<&fidl_fuchsia_input_report::ContactInputReport> for TouchContact {
     }
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct TouchDeviceDescriptor {
     /// The id of the connected touch input device.
     pub device_id: u32,
@@ -116,7 +116,7 @@ pub struct TouchDeviceDescriptor {
 /// // Use the scaling factor to scale the contact report's x position.
 /// let hit_location =
 ///     scaling_factor * (contact_report.position_x - contact_descriptor._x_range.start);
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct ContactDeviceDescriptor {
     /// The range of possible x values for this touch contact.
     pub x_range: fidl::Range,

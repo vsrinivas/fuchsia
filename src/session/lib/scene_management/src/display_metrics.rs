@@ -244,6 +244,11 @@ impl DisplayMetrics {
         self.viewing_distance as u32 as f32
     }
 
+    #[inline]
+    pub fn physical_pixel_ratio(&self) -> f32 {
+        self.density_in_pixels_per_mm / Self::DEFAULT_DENSITY
+    }
+
     /// The dimensions used to determine whether or not the device dimensions correspond to
     /// an Acer Switch 12 Alpha. Used to set a default display pixel density.
     const ACER_SWITCH_12_ALPHA_DIMENSIONS: (u32, u32) = (2160, 1440);

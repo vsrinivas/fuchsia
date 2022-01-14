@@ -160,6 +160,18 @@ async fn build_input_pipeline_assembly(
         // handler.
         assembly = add_click_drag_handler(assembly);
 
+        // Add handler to scale pointer motion on high-DPI displays.
+        //
+        // * This handler is added _after_ the click-drag handler, since the
+        //   motion denoising done by click drag handler is a property solely
+        //   of the trackpad, and not of the display.
+        //
+        // * This handler is added _before_ the mouse handler, since _all_
+        //   mouse events should be scaled.
+        let pointer_scale =
+            scene_manager.lock().await.get_display_metrics().physical_pixel_ratio().max(1.0);
+        assembly = add_pointer_motion_scale_handler(assembly, pointer_scale);
+
         if use_flatland {
             assembly = add_flatland_touch_handler(scene_manager.clone(), assembly).await;
             assembly = add_flatland_mouse_handler(scene_manager.clone(), assembly, sender).await;
@@ -251,6 +263,20 @@ fn add_click_drag_handler(assembly: InputPipelineAssembly) -> InputPipelineAssem
     assembly.add_handler(input_pipeline::click_drag_handler::ClickDragHandler::new(
         CLICK_TO_DRAG_THRESHOLD,
     ))
+}
+
+fn add_pointer_motion_scale_handler(
+    assembly: InputPipelineAssembly,
+    scale_factor: f32,
+) -> InputPipelineAssembly {
+    match input_pipeline::pointer_motion_scale_handler::PointerMotionScaleHandler::new(scale_factor)
+    {
+        Ok(handler) => assembly.add_handler(handler),
+        Err(e) => {
+            fx_log_err!("Failed to install pointer scaler: {}", e);
+            assembly
+        }
+    }
 }
 
 pub async fn handle_input_device_registry_request_streams(

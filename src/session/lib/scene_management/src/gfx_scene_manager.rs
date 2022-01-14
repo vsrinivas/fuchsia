@@ -308,6 +308,10 @@ impl SceneManager for GfxSceneManager {
         // This is very ugly, but the entire Gfx implementation will soon be deleted.
         panic!("get_pointerinjector_viewport_watcher_subscription() not implemented for GfxSceneManager.");
     }
+
+    fn get_display_metrics(&self) -> &DisplayMetrics {
+        &self.display_metrics
+    }
 }
 
 impl GfxSceneManager {

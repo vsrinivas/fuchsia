@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::pointerinjector_config,
+    crate::{pointerinjector_config, DisplayMetrics},
     anyhow::Error,
     async_trait::async_trait,
     fidl_fuchsia_ui_app as ui_app, fidl_fuchsia_ui_composition as ui_comp,
@@ -163,6 +163,8 @@ pub trait SceneManager: Send {
     fn get_pointerinjector_viewport_watcher_subscription(
         &self,
     ) -> pointerinjector_config::InjectorViewportSubscriber;
+
+    fn get_display_metrics(&self) -> &DisplayMetrics;
 }
 
 /// Listens for presentation requests and schedules presents.

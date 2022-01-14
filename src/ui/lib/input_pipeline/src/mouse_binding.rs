@@ -89,7 +89,7 @@ pub struct MouseBinding {
     device_descriptor: MouseDeviceDescriptor,
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct MouseDeviceDescriptor {
     /// The id of the connected mouse input device.
     pub device_id: u32,

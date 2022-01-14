@@ -9,6 +9,7 @@ use {
             InjectorViewportSpec, InjectorViewportSubscriber,
         },
         scene_manager::{self, PresentationMessage, PresentationSender, SceneManager},
+        DisplayMetrics,
     },
     anyhow::Error,
     async_trait::async_trait,
@@ -17,7 +18,8 @@ use {
     fidl::endpoints::create_proxy,
     fidl_fuchsia_math as fmath, fidl_fuchsia_ui_app as ui_app,
     fidl_fuchsia_ui_composition::{self as ui_comp, ContentId, TransformId},
-    fidl_fuchsia_ui_views as ui_views, fuchsia_scenic as scenic, fuchsia_scenic,
+    fidl_fuchsia_ui_scenic as ui_scenic, fidl_fuchsia_ui_views as ui_views,
+    fuchsia_scenic as scenic, fuchsia_scenic,
     fuchsia_syslog::{fx_log_info, fx_log_warn},
     futures::channel::mpsc::unbounded,
     input_pipeline::{input_pipeline::InputPipelineAssembly, Size},
@@ -201,6 +203,8 @@ pub struct FlatlandSceneManager {
 
     // Used to track cursor visibility.
     cursor_visibility: bool,
+
+    display_metrics: DisplayMetrics,
 }
 
 #[async_trait]
@@ -382,10 +386,15 @@ impl SceneManager for FlatlandSceneManager {
     fn get_pointerinjector_viewport_watcher_subscription(&self) -> InjectorViewportSubscriber {
         self.viewport_hanging_get.lock().new_subscriber()
     }
+
+    fn get_display_metrics(&self) -> &DisplayMetrics {
+        &self.display_metrics
+    }
 }
 
 impl FlatlandSceneManager {
     pub async fn new(
+        scenic: ui_scenic::ScenicProxy,
         display: ui_comp::FlatlandDisplayProxy,
         root_flatland: ui_comp::FlatlandProxy,
         pointerinjector_flatland: ui_comp::FlatlandProxy,
@@ -591,6 +600,21 @@ impl FlatlandSceneManager {
         let context_view_ref = scenic::duplicate_view_ref(&root_flatland.view_ref)?;
         let target_view_ref = scenic::duplicate_view_ref(&pointerinjector_flatland.view_ref)?;
 
+        // Query display info from Scenic, and compute `DisplayMetrics`.
+        let display_metrics = {
+            let display_info = scenic.get_display_info().await?;
+            let size_in_pixels = Size {
+                width: display_info.width_in_px as f32,
+                height: display_info.height_in_px as f32,
+            };
+            DisplayMetrics::new(
+                size_in_pixels,
+                /* density_in_pixels_per_mm */ None,
+                /* viewing_distance */ None,
+                /* display_rotation */ None,
+            )
+        };
+
         Ok(FlatlandSceneManager {
             _display: display,
             layout_info,
@@ -609,6 +633,7 @@ impl FlatlandSceneManager {
             _viewport_publisher: viewport_publisher,
             cursor_transform_id,
             cursor_visibility: true,
+            display_metrics,
         })
     }
 }

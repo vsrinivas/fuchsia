@@ -52,7 +52,7 @@ pub struct ConsumerControlsBinding {
     device_descriptor: ConsumerControlsDeviceDescriptor,
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct ConsumerControlsDeviceDescriptor {
     /// The list of buttons that this device contains.
     pub buttons: Vec<fidl_input_report::ConsumerControlButton>,

@@ -87,7 +87,7 @@ pub enum InputDeviceEvent {
 /// The descriptor is sent alongside [`InputDeviceEvent`]s so clients can, for example, convert a
 /// touch coordinate to a display coordinate. The descriptor is not expected to change for the
 /// lifetime of a device binding.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub enum InputDeviceDescriptor {
     Keyboard(keyboard_binding::KeyboardDeviceDescriptor),
     ConsumerControls(consumer_controls_binding::ConsumerControlsDeviceDescriptor),
