@@ -5,6 +5,31 @@ protocol/member fuchsia.hardware.block/Block.GetInfo() -> (int32 status,box<fuch
 protocol/member fuchsia.hardware.block/Block.GetStats(bool clear) -> (int32 status,box<fuchsia.hardware.block/BlockStats> stats)
 protocol/member fuchsia.hardware.block/Block.RebindDevice() -> (int32 status)
 protocol fuchsia.hardware.block/Block
+protocol/member fuchsia.hardware.block/BlockAndNode.AttachVmo(zx/handle:VMO vmo) -> (int32 status,box<fuchsia.hardware.block/VmoId> vmoid)
+protocol/member fuchsia.hardware.block/BlockAndNode.Clone(uint32 flags,server_end:fuchsia.io/Node object)
+protocol/member fuchsia.hardware.block/BlockAndNode.Close() -> (int32 s)
+protocol/member fuchsia.hardware.block/BlockAndNode.Close2() -> (fuchsia.io/Node_Close2_Result result)
+protocol/member fuchsia.hardware.block/BlockAndNode.CloseFifo() -> (int32 status)
+protocol/member fuchsia.hardware.block/BlockAndNode.Describe() -> (fuchsia.io/NodeInfo info)
+protocol/member fuchsia.hardware.block/BlockAndNode.Describe2(fuchsia.io/ConnectionInfoQuery query) -> (fuchsia.io/ConnectionInfo info)
+protocol/member fuchsia.hardware.block/BlockAndNode.GetAttr() -> (int32 s,fuchsia.io/NodeAttributes attributes)
+protocol/member fuchsia.hardware.block/BlockAndNode.GetAttributes(fuchsia.io/NodeAttributesQuery query) -> (fuchsia.io/Node_GetAttributes_Result result)
+protocol/member fuchsia.hardware.block/BlockAndNode.GetFifo() -> (int32 status,zx/handle:<FIFO,optional> fifo)
+protocol/member fuchsia.hardware.block/BlockAndNode.GetInfo() -> (int32 status,box<fuchsia.hardware.block/BlockInfo> info)
+protocol/member fuchsia.hardware.block/BlockAndNode.GetStats(bool clear) -> (int32 status,box<fuchsia.hardware.block/BlockStats> stats)
+protocol/member fuchsia.hardware.block/BlockAndNode.IoToIo2Placeholder()
+protocol/member fuchsia.hardware.block/BlockAndNode.NodeGetFlags() -> (int32 s,uint32 flags)
+protocol/member fuchsia.hardware.block/BlockAndNode.NodeSetFlags(uint32 flags) -> (int32 s)
+protocol/member fuchsia.hardware.block/BlockAndNode.OnConnectionInfo -> (fuchsia.io/ConnectionInfo info)
+protocol/member fuchsia.hardware.block/BlockAndNode.OnOpen -> (int32 s,fuchsia.io/NodeInfo:optional info)
+protocol/member fuchsia.hardware.block/BlockAndNode.QueryFilesystem() -> (int32 s,fuchsia.io/FilesystemInfo:optional info)
+protocol/member fuchsia.hardware.block/BlockAndNode.RebindDevice() -> (int32 status)
+protocol/member fuchsia.hardware.block/BlockAndNode.Reopen(fuchsia.io/ConnectionOptions options,zx/handle:CHANNEL object_request)
+protocol/member fuchsia.hardware.block/BlockAndNode.SetAttr(uint32 flags,fuchsia.io/NodeAttributes attributes) -> (int32 s)
+protocol/member fuchsia.hardware.block/BlockAndNode.Sync() -> (int32 s)
+protocol/member fuchsia.hardware.block/BlockAndNode.Sync2() -> (fuchsia.io/Node_Sync2_Result result)
+protocol/member fuchsia.hardware.block/BlockAndNode.UpdateAttributes(fuchsia.io/NodeAttributes2 attributes) -> (fuchsia.io/Node_UpdateAttributes_Result result)
+protocol fuchsia.hardware.block/BlockAndNode
 struct/member fuchsia.hardware.block/BlockInfo.block_count uint64
 struct/member fuchsia.hardware.block/BlockInfo.block_size uint32
 struct/member fuchsia.hardware.block/BlockInfo.flags uint32

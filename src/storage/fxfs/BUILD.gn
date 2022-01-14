@@ -109,8 +109,10 @@ if (is_fuchsia) {
     fxfs_deps += [ "//src/lib/trace/rust:trace" ]
   }
   fxfs_test_deps += [
+    ":fxfs-test-manifest",
     "//garnet/lib/rust/files_async",
     "//garnet/lib/rust/io_util",
+    "//src/lib/storage/fs_management/rust:fs_management",
   ]
   fxfs_sources += [
     "src/object_store/vmo_data_buffer.rs",
@@ -138,6 +140,21 @@ rustc_library("lib") {
 
   if (tracing_enabled && is_fuchsia) {
     features = [ "tracing" ]
+  }
+}
+
+group("fxfs-test-manifest") {
+  metadata = {
+    test_component_manifest_cml = [
+      {
+        use = [
+          {
+            # This allows tests to launch BlobFS
+            protocol = [ "fuchsia.process.Launcher" ]
+          },
+        ]
+      },
+    ]
   }
 }
 

@@ -7,29 +7,42 @@ use {
         server::{errors::map_to_status, file::FxFile, node::OpenedNode},
     },
     anyhow::{bail, Error},
-    fidl_fuchsia_hardware_block::{self as block, BlockRequest},
+    fidl::endpoints::ServerEnd,
+    fidl_fuchsia_hardware_block::{self as block, BlockAndNodeRequest},
+    fidl_fuchsia_io::{
+        self as fio, NodeAttributes, NodeInfo, Service, INO_UNKNOWN, MODE_TYPE_BLOCK_DEVICE,
+        OPEN_FLAG_NODE_REFERENCE,
+    },
     fuchsia_async::{self as fasync, FifoReadable, FifoWritable},
     fuchsia_zircon as zx,
     futures::{stream::TryStreamExt, try_join},
     remote_block_device::{BlockFifoRequest, BlockFifoResponse},
     std::{collections::BTreeMap, option::Option, sync::Mutex},
-    vfs::file::File,
+    vfs::{execution_scope::ExecutionScope, file::File},
 };
 
 /// Implements server to handle Block requests
 pub struct BlockServer {
     file: OpenedNode<FxFile>,
+    scope: ExecutionScope,
     server_channel: Option<zx::Channel>,
     vmos: Mutex<BTreeMap<u16, zx::Vmo>>,
+    maybe_server_fifo: Mutex<Option<zx::Fifo>>,
 }
 
 impl BlockServer {
     /// Creates a new BlockServer given a server channel to listen on.
-    pub fn new(server_channel: zx::Channel, file: OpenedNode<FxFile>) -> BlockServer {
+    pub fn new(
+        scope: ExecutionScope,
+        server_channel: zx::Channel,
+        file: OpenedNode<FxFile>,
+    ) -> BlockServer {
         BlockServer {
             file,
+            scope,
             server_channel: Some(server_channel),
             vmos: Mutex::new(BTreeMap::new()),
+            maybe_server_fifo: Mutex::new(None),
         }
     }
 
@@ -52,40 +65,6 @@ impl BlockServer {
         } else {
             None
         }
-    }
-
-    async fn handle_request(
-        &self,
-        request: BlockRequest,
-        maybe_server_fifo: &Mutex<Option<zx::Fifo>>,
-    ) -> Result<(), Error> {
-        match request {
-            BlockRequest::GetInfo { responder } => {
-                let mut block_info = block::BlockInfo {
-                    block_count: 1024,
-                    block_size: self.file.get_block_size() as u32,
-                    max_transfer_size: 1024 * 1024,
-                    flags: 0,
-                    reserved: 0,
-                };
-                responder.send(zx::sys::ZX_OK, Some(&mut block_info))?;
-            }
-            BlockRequest::GetFifo { responder } => {
-                responder.send(zx::sys::ZX_OK, maybe_server_fifo.lock().unwrap().take())?;
-            }
-            BlockRequest::AttachVmo { vmo, responder } => match self.get_vmo_id(vmo) {
-                Some(vmo_id) => {
-                    responder.send(zx::sys::ZX_OK, Some(&mut block::VmoId { id: vmo_id }))?
-                }
-                None => responder.send(zx::sys::ZX_ERR_NO_RESOURCES, None)?,
-            },
-            BlockRequest::CloseFifo { responder } => {
-                // TODO(fxbug.dev/89873): close fifo
-                responder.send(zx::sys::ZX_OK)?;
-            }
-            _ => bail!("Unexpected message"),
-        }
-        Ok(())
     }
 
     async fn handle_blockio_write(&self, request: &BlockFifoRequest) -> Result<(), Error> {
@@ -120,74 +99,208 @@ impl BlockServer {
         Ok(())
     }
 
-    pub async fn run(&mut self) -> Result<(), Error> {
+    async fn handle_fifo_request(
+        &self,
+        request: BlockFifoRequest,
+        fifo: &fasync::Fifo<BlockFifoRequest, BlockFifoResponse>,
+    ) -> Result<(), Error> {
         fn into_raw_status(result: Result<(), Error>) -> zx::sys::zx_status_t {
             let status: zx::Status = result.map_err(|e| map_to_status(e)).into();
             status.into_raw()
         }
 
-        let server = fidl::endpoints::ServerEnd::<block::BlockMarker>::new(
-            self.server_channel.take().unwrap(),
-        );
+        // TODO(fxbug.dev/89873): use BLOCK_OP_MASK
+        match request.op_code & 0xff {
+            remote_block_device::BLOCKIO_CLOSE_VMO => {
+                let status = {
+                    let mut vmos = self.vmos.lock().unwrap();
+                    match vmos.remove(&request.vmoid) {
+                        Some(_vmo) => zx::Status::OK.into_raw(),
+                        None => zx::Status::NOT_FOUND.into_raw(),
+                    }
+                };
+                let response = BlockFifoResponse {
+                    status,
+                    request_id: request.request_id,
+                    ..Default::default()
+                };
+                fifo.write_entries(std::slice::from_ref(&response)).await?;
+            }
+            remote_block_device::BLOCKIO_WRITE => {
+                let response = BlockFifoResponse {
+                    status: into_raw_status(self.handle_blockio_write(&request).await),
+                    request_id: request.request_id,
+                    ..Default::default()
+                };
+                fifo.write_entries(std::slice::from_ref(&response)).await?;
+            }
+            remote_block_device::BLOCKIO_READ => {
+                let response = BlockFifoResponse {
+                    status: into_raw_status(self.handle_blockio_read(&request).await),
+                    request_id: request.request_id,
+                    ..Default::default()
+                };
+                fifo.write_entries(std::slice::from_ref(&response)).await?;
+            }
+            remote_block_device::BLOCKIO_FLUSH => {
+                let response = BlockFifoResponse {
+                    status: zx::sys::ZX_OK,
+                    request_id: request.request_id,
+                    ..Default::default()
+                };
+                fifo.write_entries(std::slice::from_ref(&response)).await?;
+            }
+            _ => panic!("Unexpected message, request {:?}", request.op_code),
+        }
+        Ok(())
+    }
 
-        // Create a fifo
+    fn handle_request(&self, request: BlockAndNodeRequest) -> Result<(), Error> {
+        match request {
+            BlockAndNodeRequest::GetInfo { responder } => {
+                let mut block_info = block::BlockInfo {
+                    // TODO(fxbug.dev/89873): replace the constants
+                    block_count: 1024,
+                    block_size: self.file.get_block_size() as u32,
+                    max_transfer_size: 1024 * 1024,
+                    flags: 0,
+                    reserved: 0,
+                };
+                responder.send(zx::sys::ZX_OK, Some(&mut block_info))?;
+            }
+            // TODO(fxbug.dev/89873)
+            BlockAndNodeRequest::GetStats { clear: _, responder } => {
+                responder.send(zx::sys::ZX_OK, None)?;
+            }
+            BlockAndNodeRequest::GetFifo { responder } => {
+                responder.send(zx::sys::ZX_OK, self.maybe_server_fifo.lock().unwrap().take())?;
+            }
+            BlockAndNodeRequest::AttachVmo { vmo, responder } => match self.get_vmo_id(vmo) {
+                Some(vmo_id) => {
+                    responder.send(zx::sys::ZX_OK, Some(&mut block::VmoId { id: vmo_id }))?
+                }
+                None => responder.send(zx::sys::ZX_ERR_NO_RESOURCES, None)?,
+            },
+            // TODO(fxbug.dev/89873): close fifo
+            BlockAndNodeRequest::CloseFifo { responder } => {
+                responder.send(zx::sys::ZX_OK)?;
+            }
+            // TODO(fxbug.dev/89873)
+            BlockAndNodeRequest::RebindDevice { responder } => {
+                responder.send(zx::sys::ZX_OK)?;
+            }
+            // TODO(fxbug.dev/89873)
+            BlockAndNodeRequest::IoToIo2Placeholder { control_handle: _ } => {}
+            // TODO(fxbug.dev/89873)
+            BlockAndNodeRequest::Clone { flags: _, object, control_handle: _ } => {
+                let file = OpenedNode::new(self.file.clone());
+                let scope_cloned = self.scope.clone();
+                // use scope sth like scope.spawn , look at open()
+                self.scope.spawn(async move {
+                    let mut cloned_server =
+                        BlockServer::new(scope_cloned, object.into_channel(), file);
+                    let _ = cloned_server.run().await;
+                });
+            }
+            // TODO(fxbug.dev/89873)
+            BlockAndNodeRequest::Reopen { options: _, object_request: _, control_handle: _ } => {}
+            // TODO(fxbug.dev/89873)
+            BlockAndNodeRequest::Close { responder } => {
+                responder.send(zx::sys::ZX_OK)?;
+            }
+            // TODO(fxbug.dev/89873)
+            BlockAndNodeRequest::Close2 { responder } => {
+                responder.send(&mut Ok(()))?;
+            }
+            // TODO(fxbug.dev/89873)
+            BlockAndNodeRequest::Describe { responder } => {
+                let mut info = NodeInfo::Service(Service {});
+                responder.send(&mut info)?;
+            }
+            // TODO(fxbug.dev/89873)
+            BlockAndNodeRequest::Describe2 { query: _, responder } => {
+                let info = fio::ConnectionInfo {
+                    representation: Some(fio::Representation::Connector(fio::ConnectorInfo::EMPTY)),
+                    ..fio::ConnectionInfo::EMPTY
+                };
+                responder.send(info)?;
+            }
+            // TODO(fxbug.dev/89873)
+            BlockAndNodeRequest::Sync { responder } => {
+                responder.send(zx::sys::ZX_ERR_NOT_SUPPORTED)?;
+            }
+            // TODO(fxbug.dev/89873)
+            BlockAndNodeRequest::Sync2 { responder } => {
+                responder.send(&mut Err(zx::sys::ZX_ERR_NOT_SUPPORTED))?;
+            }
+            // TODO(fxbug.dev/89873): get attributes from FxFile
+            BlockAndNodeRequest::GetAttr { responder } => {
+                let mut attrs = NodeAttributes {
+                    mode: MODE_TYPE_BLOCK_DEVICE,
+                    id: INO_UNKNOWN,
+                    content_size: 0,
+                    storage_size: 0,
+                    link_count: 1,
+                    creation_time: 0,
+                    modification_time: 0,
+                };
+                responder.send(zx::sys::ZX_OK, &mut attrs)?;
+            }
+            // TODO(fxbug.dev/89873)
+            BlockAndNodeRequest::SetAttr { flags: _, attributes: _, responder } => {
+                responder.send(zx::sys::ZX_ERR_NOT_SUPPORTED)?;
+            }
+            // TODO(fxbug.dev/89873)
+            BlockAndNodeRequest::NodeGetFlags { responder } => {
+                responder.send(zx::sys::ZX_OK, OPEN_FLAG_NODE_REFERENCE)?;
+            }
+            // TODO(fxbug.dev/89873)
+            BlockAndNodeRequest::NodeSetFlags { flags: _, responder } => {
+                responder.send(zx::sys::ZX_ERR_NOT_SUPPORTED)?;
+            }
+            _ => bail!("Unexpected message"),
+        }
+        Ok(())
+    }
+
+    async fn handle_requests(
+        &self,
+        server: fidl::endpoints::ServerEnd<block::BlockAndNodeMarker>,
+    ) -> Result<(), Error> {
+        server
+            .into_stream()?
+            .map_err(|e| e.into())
+            .try_for_each(|request| async { self.handle_request(request) })
+            .await?;
+        Ok(())
+    }
+
+    pub async fn run(&mut self) -> Result<(), Error> {
+        let server =
+            ServerEnd::<block::BlockAndNodeMarker>::new(self.server_channel.take().unwrap());
+
+        // Create a fifo pair
         let (server_fifo, client_fifo) =
             zx::Fifo::create(16, std::mem::size_of::<BlockFifoRequest>())?;
-        let maybe_server_fifo = std::sync::Mutex::new(Some(client_fifo));
+        self.maybe_server_fifo = Mutex::new(Some(client_fifo));
 
         // Handling requests from fifo
         let fifo_future = async {
             let fifo = fasync::Fifo::<BlockFifoRequest, BlockFifoResponse>::from_fifo(server_fifo)?;
             while let Some(request) = fifo.read_entry().await? {
-                match request.op_code {
-                    remote_block_device::BLOCKIO_CLOSE_VMO => {
-                        let status = {
-                            let mut vmos = self.vmos.lock().unwrap();
-                            match vmos.remove(&request.vmoid) {
-                                Some(_vmo) => zx::Status::OK.into_raw(),
-                                None => zx::Status::NOT_FOUND.into_raw(),
-                            }
-                        };
-                        let response = BlockFifoResponse {
-                            status,
-                            request_id: request.request_id,
-                            ..Default::default()
-                        };
-                        fifo.write_entries(std::slice::from_ref(&response)).await?;
-                    }
-                    remote_block_device::BLOCKIO_WRITE => {
-                        let response = BlockFifoResponse {
-                            status: into_raw_status(self.handle_blockio_write(&request).await),
-                            request_id: request.request_id,
-                            ..Default::default()
-                        };
-                        fifo.write_entries(std::slice::from_ref(&response)).await?;
-                    }
-                    remote_block_device::BLOCKIO_READ => {
-                        let response = BlockFifoResponse {
-                            status: into_raw_status(self.handle_blockio_read(&request).await),
-                            request_id: request.request_id,
-                            ..Default::default()
-                        };
-                        fifo.write_entries(std::slice::from_ref(&response)).await?;
-                    }
-                    _ => panic!("Unexpected message"),
-                }
+                self.handle_fifo_request(request, &fifo).await?;
             }
             Result::<_, Error>::Ok(())
         };
 
         // Handling requests from fidl
         let channel_future = async {
-            server
-                .into_stream()?
-                .map_err(|e| e.into())
-                .try_for_each(|request| self.handle_request(request, &maybe_server_fifo))
-                .await?;
+            self.handle_requests(server).await?;
             // This is temporary for when client doesn't call for fifo
-            maybe_server_fifo.lock().unwrap().take();
+            self.maybe_server_fifo.lock().unwrap().take();
             Ok(())
         };
+
         try_join!(fifo_future, channel_future)?;
         Ok(())
     }
@@ -198,10 +311,13 @@ mod tests {
     use {
         crate::server::testing::TestFixture,
         anyhow::Error,
-        fidl::endpoints::ServerEnd,
+        fidl::endpoints::{ClientEnd, ServerEnd},
+        fidl_fuchsia_hardware_block::BlockAndNodeMarker,
         fidl_fuchsia_io::{
-            MODE_TYPE_BLOCK_DEVICE, OPEN_FLAG_CREATE, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
+            CLONE_FLAG_SAME_RIGHTS, MODE_TYPE_BLOCK_DEVICE, OPEN_FLAG_CREATE, OPEN_RIGHT_READABLE,
+            OPEN_RIGHT_WRITABLE,
         },
+        fs_management::{asynchronous::Filesystem, Blobfs},
         fuchsia_async as fasync, fuchsia_zircon as zx,
         futures::try_join,
         remote_block_device::{BlockClient, RemoteBlockClient, VmoId},
@@ -214,7 +330,77 @@ mod tests {
             zx::Channel::create().expect("Channel::create failed");
         try_join!(
             async {
-                let _remote_block_device = RemoteBlockClient::new(client_channel).await?;
+                let blobfs = Filesystem::from_channel(client_channel, Blobfs::default())
+                    .expect("failed to create filesystem");
+                blobfs.format().await.expect("failed to format blobfs");
+                Result::<_, Error>::Ok(())
+            },
+            async {
+                let fixture = TestFixture::new().await;
+                let root = fixture.root();
+                root.open(
+                    OPEN_FLAG_CREATE | OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
+                    MODE_TYPE_BLOCK_DEVICE,
+                    "foo",
+                    ServerEnd::new(server_channel),
+                )
+                .expect("open failed");
+
+                fixture.close().await;
+                Ok(())
+            }
+        )
+        .expect("client failed");
+    }
+
+    #[fasync::run(10, test)]
+    async fn test_clone() {
+        let (client_channel, server_channel) =
+            zx::Channel::create().expect("Channel::create failed");
+        let (client_channel_copy1, server_channel_copy1) =
+            zx::Channel::create().expect("Channel::create failed");
+        let (client_channel_copy2, server_channel_copy2) =
+            zx::Channel::create().expect("Channel::create failed");
+
+        try_join!(
+            async {
+                // Putting original block device in its own execution scope to test that the
+                // clone will work independent of the original
+                {
+                    let original_block_device =
+                        ClientEnd::<BlockAndNodeMarker>::new(client_channel)
+                            .into_proxy()
+                            .expect("failed to convert to proxy");
+                    original_block_device
+                        .clone(CLONE_FLAG_SAME_RIGHTS, ServerEnd::new(server_channel_copy1))
+                        .expect("clone failed");
+                    original_block_device
+                        .clone(CLONE_FLAG_SAME_RIGHTS, ServerEnd::new(server_channel_copy2))
+                        .expect("clone failed");
+                }
+
+                let block_device_cloned1 = RemoteBlockClient::new(client_channel_copy1)
+                    .await
+                    .expect("create new RemoteBlockClient failed");
+                let block_device_cloned2 = RemoteBlockClient::new(client_channel_copy2)
+                    .await
+                    .expect("create new RemoteBlockClient failed");
+
+                let offset = block_device_cloned1.block_size() as usize;
+                let len = block_device_cloned1.block_size() as usize;
+                // Must write with length as a multiple of the block_size
+                let write_buf = vec![0xa3u8; len];
+                // Write to "foo" via block_device_cloned1
+                block_device_cloned1
+                    .write_at(write_buf[..].into(), offset as u64)
+                    .await
+                    .expect("write_at failed");
+                let mut read_buf = vec![0u8; len];
+                block_device_cloned2
+                    .read_at(read_buf.as_mut_slice().into(), offset as u64)
+                    .await
+                    .expect("read_at failed");
+                assert_eq!(&read_buf, &write_buf);
                 Result::<_, Error>::Ok(())
             },
             async {

@@ -154,7 +154,6 @@ impl<FSC: FSConfig> Filesystem<FSC> {
             server_end.into_channel().into(),
         )?;
         let _ = root_dir.describe().await?;
-
         Ok((process, export_root, root_dir))
     }
 }
