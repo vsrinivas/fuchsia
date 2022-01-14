@@ -27,12 +27,11 @@ use {
     fidl_fuchsia_diagnostics::{self, Selector, StreamMode},
     fidl_fuchsia_io::{DirectoryProxy, CLONE_FLAG_SAME_RIGHTS},
     fidl_fuchsia_logger::{LogInterestSelector, LogMarker, LogRequest, LogRequestStream},
-    fuchsia_async::Task,
-    fuchsia_inspect as inspect, fuchsia_zircon as zx,
+    fuchsia_async as fasync, fuchsia_inspect as inspect, fuchsia_zircon as zx,
     futures::channel::mpsc,
     futures::prelude::*,
     io_util,
-    parking_lot::RwLock,
+    parking_lot::{Mutex, RwLock},
     selectors,
     std::{collections::HashMap, sync::Arc},
     tracing::{debug, error, warn},
@@ -99,8 +98,12 @@ impl DataRepo {
     }
 
     /// Spawn a task to handle requests from components reading the shared log.
-    pub fn handle_log(self, stream: LogRequestStream, sender: mpsc::UnboundedSender<Task<()>>) {
-        if let Err(e) = sender.clone().unbounded_send(Task::spawn(async move {
+    pub fn handle_log(
+        self,
+        stream: LogRequestStream,
+        sender: mpsc::UnboundedSender<fasync::Task<()>>,
+    ) {
+        if let Err(e) = sender.clone().unbounded_send(fasync::Task::spawn(async move {
             if let Err(e) = self.handle_log_requests(stream, sender).await {
                 warn!("error handling Log requests: {}", e);
             }
@@ -114,7 +117,7 @@ impl DataRepo {
     async fn handle_log_requests(
         self,
         mut stream: LogRequestStream,
-        mut sender: mpsc::UnboundedSender<Task<()>>,
+        mut sender: mpsc::UnboundedSender<fasync::Task<()>>,
     ) -> Result<(), LogsError> {
         while let Some(request) = stream.next().await {
             let request = request.map_err(|source| LogsError::HandlingRequests {
@@ -167,7 +170,7 @@ impl DataRepo {
         mode: StreamMode,
     ) -> impl Stream<Item = Arc<MessageWithStats>> + Send + 'static {
         let mut repo = self.write();
-        let (merged, mpx_handle) = Multiplexer::new();
+        let (mut merged, mpx_handle) = Multiplexer::new();
         repo.data_directories
             .iter()
             .filter_map(|(_, c)| c)
@@ -176,6 +179,7 @@ impl DataRepo {
                 mpx_handle.send(n, c);
             });
         repo.logs_multiplexers.add(mode, mpx_handle);
+        merged.set_on_drop_id_sender(repo.logs_multiplexers.cleanup_sender());
 
         merged
     }
@@ -222,7 +226,7 @@ impl DataRepoState {
             data_directories: trie::Trie::new(),
             logs_budget,
             logs_interest: vec![],
-            logs_multiplexers: Default::default(),
+            logs_multiplexers: MultiplexerBroker::new(),
         }))
     }
 
@@ -540,12 +544,32 @@ impl DataRepoState {
 }
 
 /// Ensures that BatchIterators get access to logs from newly started components.
-#[derive(Default)]
 pub struct MultiplexerBroker {
-    live_iterators: Vec<(StreamMode, MultiplexerHandle<Arc<MessageWithStats>>)>,
+    live_iterators: Arc<Mutex<HashMap<usize, (StreamMode, MultiplexerHandle<Arc<MessageWithStats>>)>>>,
+    cleanup_sender: mpsc::UnboundedSender<usize>,
+    _live_iterators_cleanup_task: fasync::Task<()>,
 }
 
 impl MultiplexerBroker {
+    fn new() -> Self {
+        let (cleanup_sender, mut receiver) = mpsc::unbounded();
+        let live_iterators = Arc::new(Mutex::new(HashMap::new()));
+        let live_iterators_clone = live_iterators.clone();
+        Self {
+            live_iterators,
+            cleanup_sender,
+            _live_iterators_cleanup_task: fasync::Task::spawn(async move {
+                while let Some(id) = receiver.next().await {
+                    live_iterators_clone.lock().remove(&id);
+                }
+            }),
+        }
+    }
+
+    fn cleanup_sender(&self) -> mpsc::UnboundedSender<usize> {
+        self.cleanup_sender.clone()
+    }
+
     /// A new BatchIterator has been created and must be notified when future log containers are
     /// created.
     fn add(&mut self, mode: StreamMode, recipient: MultiplexerHandle<Arc<MessageWithStats>>) {
@@ -553,7 +577,7 @@ impl MultiplexerBroker {
             // snapshot streams only want to know about what's currently available
             StreamMode::Snapshot => recipient.close(),
             StreamMode::SnapshotThenSubscribe | StreamMode::Subscribe => {
-                self.live_iterators.push((mode, recipient))
+                self.live_iterators.lock().insert(recipient.multiplexer_id(), (mode, recipient));
             }
         }
     }
@@ -561,14 +585,14 @@ impl MultiplexerBroker {
     /// Notify existing BatchIterators of a new logs container so they can include its messages
     /// in their results.
     pub fn send(&mut self, container: &Arc<LogsArtifactsContainer>) {
-        self.live_iterators.retain(|(mode, recipient)| {
+        self.live_iterators.lock().retain(|_, (mode, recipient)| {
             recipient.send(container.identity.to_string(), container.cursor(*mode))
         });
     }
 
     /// Notify all multiplexers to terminate their streams once sub streams have terminated.
     fn terminate(&mut self) {
-        for (_, recipient) in self.live_iterators.drain(..) {
+        for (_, (_, recipient)) in self.live_iterators.lock().drain() {
             recipient.close();
         }
     }
@@ -582,6 +606,8 @@ mod tests {
         diagnostics_hierarchy::trie::TrieIterableNode,
         fidl_fuchsia_io::DirectoryMarker,
         fuchsia_zircon as zx,
+        selectors,
+        std::time::Duration,
     };
 
     const TEST_URL: &'static str = "fuchsia-pkg://test";
@@ -838,5 +864,22 @@ mod tests {
             selectors::parse_selector("foo.cmx:root").expect("parse selector"),
         )]);
         assert_eq!(0, data_repo.read().fetch_inspect_data(&selectors, None).len());
+    }
+
+    #[fuchsia::test]
+    async fn multiplexer_broker_cleanup() {
+        let repo = DataRepo::default();
+        let stream = repo.logs_cursor(StreamMode::SnapshotThenSubscribe);
+
+        assert_eq!(repo.read().logs_multiplexers.live_iterators.lock().len(), 1);
+
+        // When the multiplexer goes away it must be forgotten by the broker.
+        drop(stream);
+        loop {
+            fasync::Timer::new(Duration::from_millis(100)).await;
+            if repo.read().logs_multiplexers.live_iterators.lock().len() == 0 {
+                break;
+            }
+        }
     }
 }

@@ -4,16 +4,22 @@
 
 use futures::channel::mpsc::{UnboundedReceiver, UnboundedSender};
 use futures::{Stream, StreamExt};
+use lazy_static::lazy_static;
 use std::{
     cmp::Ordering,
     fmt::Debug,
     marker::Unpin,
     pin::Pin,
+    sync::atomic::AtomicUsize,
     task::{Context, Poll},
 };
 use tracing::trace;
 
 pub type PinStream<I> = Pin<Box<dyn DebugStream<Item = I> + Send + 'static>>;
+
+lazy_static! {
+    static ref MULTIPLEXER_ID: std::sync::atomic::AtomicUsize = AtomicUsize::new(0);
+}
 
 /// A Multiplexer takes multiple possibly-ordered streams and attempts to impose a sensible ordering
 /// over the yielded items without risking starvation. New streams can be added to the multiplexer
@@ -23,13 +29,37 @@ pub struct Multiplexer<I> {
     current: Vec<SubStream<I>>,
     incoming: UnboundedReceiver<IncomingStream<PinStream<I>>>,
     incoming_is_live: bool,
+    id: usize,
+
+    /// The multiplexer id will be sent through this channel when the Multiplexer is dropped. This
+    /// is used to clean up MultiplexerHandles in the MultiplexerBroker.
+    on_drop_id_sender: Option<UnboundedSender<usize>>,
 }
 
 impl<I> Multiplexer<I> {
     pub fn new() -> (Self, MultiplexerHandle<I>) {
         let (sender, incoming) = futures::channel::mpsc::unbounded();
-        (Self { current: vec![], incoming, incoming_is_live: true }, MultiplexerHandle { sender })
+        let id = MULTIPLEXER_ID.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+        (
+            Self {
+                current: vec![],
+                incoming,
+                incoming_is_live: true,
+                id,
+                on_drop_id_sender: None,
+            },
+            MultiplexerHandle { sender, id },
+        )
     }
+
+    pub fn id(&self) -> usize {
+        self.id
+    }
+
+    pub fn set_on_drop_id_sender(&mut self, snd: UnboundedSender<usize>) {
+        self.on_drop_id_sender = Some(snd);
+    }
+
 
     /// Drain the incoming channel to be sure we have all live sub-streams available when
     /// considering ordering.
@@ -52,6 +82,14 @@ impl<I> Multiplexer<I> {
                     Poll::Pending => break,
                 }
             }
+        }
+    }
+}
+
+impl<I> Drop for Multiplexer<I> {
+    fn drop(&mut self) {
+        if let Some(snd) = &self.on_drop_id_sender {
+            let _ = snd.unbounded_send(self.id());
         }
     }
 }
@@ -88,12 +126,17 @@ impl<I: Ord + Unpin> Stream for Multiplexer<I> {
 /// A handle to a running multiplexer. Can be used to add new sub-streams to the multiplexer.
 pub struct MultiplexerHandle<I> {
     sender: UnboundedSender<IncomingStream<PinStream<I>>>,
+    id: usize,
 }
 
 impl<I> MultiplexerHandle<I> {
     /// Send a new substream to the multiplexer. Returns `true` if it is still listening.
     pub fn send(&self, name: impl Into<String>, stream: PinStream<I>) -> bool {
         self.sender.unbounded_send(IncomingStream::Next { name: name.into(), stream }).is_ok()
+    }
+
+    pub fn multiplexer_id(&self) -> usize {
+        self.id
     }
 
     /// Notify the multiplexer that no new sub-streams will be arriving.
