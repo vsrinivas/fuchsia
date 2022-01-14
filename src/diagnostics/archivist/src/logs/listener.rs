@@ -32,7 +32,7 @@ pub struct Listener {
     status: Status,
 }
 
-#[derive(PartialEq)]
+#[derive(Debug, PartialEq)]
 enum Status {
     Fine,
     Stale,
@@ -86,12 +86,11 @@ impl Listener {
 
         self.backfill(backlog).await;
         debug!("Done backfilling.");
-
-        pin_utils::pin_mut!(logs);
-        while let Some(message) = logs.next().await {
-            self.send_log(&message).await;
+        if !self.is_healthy() {
+            return;
         }
 
+        self.send_new_logs(logs).await;
         if call_done {
             self.listener.done().ok();
         }
@@ -101,6 +100,19 @@ impl Listener {
     /// Returns whether this listener should continue receiving messages.
     fn is_healthy(&self) -> bool {
         self.status == Status::Fine
+    }
+
+    async fn send_new_logs<S>(&mut self, logs: S)
+    where
+        S: Stream<Item = Arc<MessageWithStats>> + Unpin,
+    {
+        pin_utils::pin_mut!(logs);
+        while let Some(message) = logs.next().await {
+            self.send_log(&message).await;
+            if !self.is_healthy() {
+                break;
+            }
+        }
     }
 
     /// Send all messages currently in the provided buffer to this listener. Attempts to batch up
@@ -122,7 +134,9 @@ impl Listener {
                 if msg_size + FIDL_VECTOR_HEADER_BYTES
                     > fidl_fuchsia_logger::MAX_LOG_MANY_SIZE_BYTES as usize
                 {
-                    trace!("Unable to encode message, it exceeded our MAX_LOG_MANY_SIZE_BYTES by itself.");
+                    trace!(
+                    "Unable to encode message, it exceeded our MAX_LOG_MANY_SIZE_BYTES by itself."
+                );
                     continue;
                 }
 
@@ -239,6 +253,32 @@ mod tests {
         ));
 
         assert_eq!(run_and_consume_backfill(message_vec).await, 4);
+    }
+
+    #[fuchsia::test]
+    async fn verify_client_disconnect() {
+        let message_vec =
+            provide_messages(fidl_fuchsia_logger::MAX_LOG_MANY_SIZE_BYTES as usize, 3);
+        let logs = stream::iter(message_vec);
+
+        let (client_end, mut requests) =
+            fidl::endpoints::create_request_stream::<LogListenerSafeMarker>().unwrap();
+        let mut listener = Listener::new(client_end, None).unwrap();
+
+        let listener_task = fasync::Task::spawn(async move {
+            listener.send_new_logs(logs).await;
+        });
+
+        match requests.next().await.unwrap() {
+            Ok(LogListenerSafeRequest::Log { log: _, responder }) => {
+                responder.send().unwrap();
+            }
+            other => panic!("Unexpected request: {:?}", other),
+        }
+        drop(requests);
+
+        // The task should finish since the `LogListenerSafe` server disconnected.
+        listener_task.await;
     }
 
     async fn run_and_consume_backfill(message_vec: Vec<Arc<MessageWithStats>>) -> usize {
