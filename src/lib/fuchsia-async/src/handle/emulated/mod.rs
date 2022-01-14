@@ -336,6 +336,14 @@ impl Channel {
         Ok((Channel(left), Channel(right)))
     }
 
+    /// Returns true if the channel is closed (i.e. other side was dropped).
+    pub fn is_closed(&self) -> bool {
+        assert!(!self.is_invalid());
+        let (shard, slot, _, _) = unpack_handle(self.0);
+        let tbl = CHANNELS.shards[shard].lock().unwrap();
+        !tbl[slot].liveness.is_open()
+    }
+
     /// Read a message from a channel.
     pub fn read(&self, buf: &mut MessageBuf) -> Result<(), zx_status::Status> {
         let (bytes, handles) = buf.split_mut();
@@ -1425,6 +1433,37 @@ mod test {
     use fuchsia_zircon_status as zx_status;
     use futures::FutureExt;
     use zx_status::Status;
+
+    #[test]
+    fn channel_create_not_closed() {
+        let (a, b) = Channel::create().unwrap();
+        assert_eq!(a.is_closed(), false);
+        assert_eq!(b.is_closed(), false);
+    }
+
+    #[test]
+    fn channel_closed_after_drop() {
+        let (a, _b) = Channel::create().unwrap();
+        let a_copy = Channel::from(unsafe { Handle::from_raw(a.0) });
+        drop(a);
+        assert_eq!(a_copy.is_closed(), true);
+        // Prevent trying to close a again.
+        std::mem::forget(a_copy);
+    }
+
+    #[test]
+    fn channel_drop_left_closes_right() {
+        let (a, b) = Channel::create().unwrap();
+        drop(a);
+        assert_eq!(b.is_closed(), true);
+    }
+
+    #[test]
+    fn channel_drop_right_closes_left() {
+        let (a, b) = Channel::create().unwrap();
+        drop(b);
+        assert_eq!(a.is_closed(), true);
+    }
 
     #[test]
     fn channel_write_read() {

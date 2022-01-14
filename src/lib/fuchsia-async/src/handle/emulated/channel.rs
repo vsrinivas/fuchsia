@@ -36,6 +36,11 @@ impl std::fmt::Debug for Channel {
     }
 }
 impl Channel {
+    /// Returns true if the channel is closed (i.e. other side was dropped).
+    pub fn is_closed(&self) -> bool {
+        self.channel.is_closed()
+    }
+
     /// Writes a message into the channel.
     pub fn write(&self, bytes: &[u8], handles: &mut Vec<Handle>) -> Result<(), zx_status::Status> {
         self.channel.write(bytes, handles)
