@@ -5,6 +5,7 @@
 //! Extensions for fuchsia.net.interfaces.admin.
 
 use fidl_fuchsia_net_interfaces_admin as fnet_interfaces_admin;
+use fuchsia_zircon_status as zx;
 use futures::{FutureExt as _, Stream, StreamExt as _, TryStreamExt as _};
 use thiserror::Error;
 
@@ -220,9 +221,7 @@ impl Control {
         let Self { proxy: _, terminal_event_fut } = self;
         match terminal_event_fut.await {
             Ok(Some(event)) => TerminalError::Terminal(event),
-            Ok(None) => {
-                TerminalError::Fidl(fidl::Error::ClientRead(fuchsia_zircon::Status::PEER_CLOSED))
-            }
+            Ok(None) => TerminalError::Fidl(fidl::Error::ClientRead(zx::Status::PEER_CLOSED)),
             Err(e) => TerminalError::Fidl(e),
         }
     }
@@ -242,9 +241,8 @@ impl Control {
         match futures::future::select(self.terminal_event_fut.clone(), fut).await {
             futures::future::Either::Left((event, _fut)) => {
                 let event = event.map_err(TerminalError::Fidl)?;
-                let event = event.ok_or(TerminalError::Fidl(fidl::Error::ClientRead(
-                    fuchsia_zircon::Status::PEER_CLOSED,
-                )))?;
+                let event = event
+                    .ok_or(TerminalError::Fidl(fidl::Error::ClientRead(zx::Status::PEER_CLOSED)))?;
                 Err(TerminalError::Terminal(event))
             }
             futures::future::Either::Right((query_result, _fut)) => {
@@ -311,6 +309,7 @@ mod test {
     use super::{assignment_state_stream, AddressStateProviderError};
     use fidl::endpoints::{RequestStream as _, Responder as _};
     use fidl_fuchsia_net_interfaces_admin as fnet_interfaces_admin;
+    use fuchsia_zircon_status as zx;
     use futures::{FutureExt as _, StreamExt as _, TryStreamExt as _};
 
     // Test that the terminal event is observed when the server closes its end.
@@ -435,7 +434,7 @@ mod test {
                 matches::assert_matches!(
                     control.get_id().await,
                     Err(super::TerminalError::Fidl(fidl::Error::ClientRead(
-                        fuchsia_zircon::Status::PEER_CLOSED
+                        zx::Status::PEER_CLOSED
                     )))
                 );
             },
@@ -472,17 +471,14 @@ mod test {
         std::mem::drop(request_stream);
         matches::assert_matches!(control.or_terminal_event_no_return(Ok(())), Ok(()));
         matches::assert_matches!(
-            control.or_terminal_event_no_return(Err(fidl::Error::ClientWrite(
-                fuchsia_zircon::Status::INTERNAL
-            ))),
-            Err(super::TerminalError::Fidl(fidl::Error::ClientWrite(
-                fuchsia_zircon::Status::INTERNAL
-            )))
+            control
+                .or_terminal_event_no_return(Err(fidl::Error::ClientWrite(zx::Status::INTERNAL))),
+            Err(super::TerminalError::Fidl(fidl::Error::ClientWrite(zx::Status::INTERNAL)))
         );
+        #[cfg(target_os = "fuchsia")]
         matches::assert_matches!(
-            control.or_terminal_event_no_return(Err(fidl::Error::ClientRead(
-                fuchsia_zircon::Status::PEER_CLOSED
-            ))),
+            control
+                .or_terminal_event_no_return(Err(fidl::Error::ClientRead(zx::Status::PEER_CLOSED))),
             Err(super::TerminalError::Terminal(CLOSE_REASON))
         );
     }

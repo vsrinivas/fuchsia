@@ -11,14 +11,13 @@ mod reachability;
 
 pub use reachability::{is_globally_routable, to_reachability_stream, wait_for_reachability};
 
+use fidl_fuchsia_net_interfaces as fnet_interfaces;
 use fidl_table_validation::*;
+use fuchsia_zircon_types as zx;
 use futures::{Stream, TryStreamExt as _};
 use std::collections::hash_map::{self, HashMap};
 use std::convert::TryFrom as _;
 use thiserror::Error;
-
-use fidl_fuchsia_net_interfaces as fnet_interfaces;
-use fuchsia_zircon as zx;
 
 // TODO(fxbug.dev/66175) Prevent this type from becoming stale.
 /// Properties of a network interface.
@@ -56,7 +55,7 @@ pub struct Address {
     /// that the address will always be valid.
     // TODO(https://fxbug.dev/75531): Replace with zx::Time once there is support for custom
     // conversion functions.
-    pub valid_until: zx::sys::zx_time_t,
+    pub valid_until: zx::zx_time_t,
 }
 
 /// Helper struct implementing Address validation.
@@ -511,7 +510,7 @@ mod tests {
             online: Some(false),
             has_default_ipv4_route: Some(false),
             has_default_ipv6_route: Some(false),
-            addresses: Some(vec![fidl_address(ADDR, zx::Time::INFINITE.into_nanos())]),
+            addresses: Some(vec![fidl_address(ADDR, zx::ZX_TIME_INFINITE)]),
             ..fnet_interfaces::Properties::EMPTY
         }
     }
@@ -528,7 +527,7 @@ mod tests {
             online: Some(true),
             has_default_ipv4_route: Some(true),
             has_default_ipv6_route: Some(true),
-            addresses: Some(vec![fidl_address(ADDR2, zx::Time::INFINITE.into_nanos())]),
+            addresses: Some(vec![fidl_address(ADDR2, zx::ZX_TIME_INFINITE)]),
             ..fnet_interfaces::Properties::EMPTY
         }
     }
@@ -541,7 +540,7 @@ mod tests {
             online: Some(true),
             has_default_ipv4_route: Some(true),
             has_default_ipv6_route: Some(true),
-            addresses: Some(vec![fidl_address(ADDR2, zx::Time::INFINITE.into_nanos())]),
+            addresses: Some(vec![fidl_address(ADDR2, zx::ZX_TIME_INFINITE)]),
             ..fnet_interfaces::Properties::EMPTY
         }
     }
@@ -550,10 +549,7 @@ mod tests {
         fidl_properties_after_change(id).try_into().expect("failed to validate FIDL Properties")
     }
 
-    fn fidl_address(
-        addr: fnet::Subnet,
-        valid_until: zx::sys::zx_time_t,
-    ) -> fnet_interfaces::Address {
+    fn fidl_address(addr: fnet::Subnet, valid_until: zx::zx_time_t) -> fnet_interfaces::Address {
         fnet_interfaces::Address {
             addr: Some(addr),
             valid_until: Some(valid_until),
@@ -657,7 +653,7 @@ mod tests {
             online: Some(false),
             has_default_ipv4_route: Some(false),
             has_default_ipv6_route: Some(false),
-            addresses: Some(vec![fidl_address(ADDR, zx::Time::INFINITE.into_nanos())]),
+            addresses: Some(vec![fidl_address(ADDR, zx::ZX_TIME_INFINITE)]),
             ..fnet_interfaces::Properties::EMPTY
         };
         matches::assert_matches!(
