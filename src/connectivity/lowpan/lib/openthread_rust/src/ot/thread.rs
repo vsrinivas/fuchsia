@@ -4,6 +4,20 @@
 
 use crate::prelude_internal::*;
 
+/// Iterator type for neighbor info
+#[allow(missing_debug_implementations)]
+pub struct NeighborInfoIterator<'a, T: ?Sized> {
+    ot_instance: &'a T,
+    ot_iter: otNeighborInfoIterator,
+}
+
+impl<'a, T: ?Sized + Thread> Iterator for NeighborInfoIterator<'a, T> {
+    type Item = NeighborInfo;
+    fn next(&mut self) -> Option<Self::Item> {
+        self.ot_instance.iter_next_neighbor_info(&mut self.ot_iter)
+    }
+}
+
 /// Methods from the [OpenThread "Thread General" Module][1].
 ///
 /// [1]: https://openthread.io/reference/group/api-thread-general
@@ -99,6 +113,24 @@ pub trait Thread {
     /// Functional equivalent of
     /// [`otsys::otThreadGetMeshLocalPrefix`](crate::otsys::otThreadGetMeshLocalPrefix).
     fn get_mesh_local_prefix(&self) -> &MeshLocalPrefix;
+
+    /// Functional equivalent of
+    /// [`otsys::otThreadGetNextNeighborInfo`](crate::otsys::otThreadGetNextNeighborInfo).
+    // TODO: Determine if the underlying implementation of
+    //       this method has undefined behavior when network data
+    //       is being mutated while iterating. If it is undefined,
+    //       we may need to make it unsafe and provide a safe method
+    //       that collects the results.
+    fn iter_next_neighbor_info(&self, ot_iter: &mut otNeighborInfoIterator)
+        -> Option<NeighborInfo>;
+
+    /// Returns an iterator for iterating over external routes.
+    fn iter_neighbor_info(&self) -> NeighborInfoIterator<'_, Self> {
+        NeighborInfoIterator {
+            ot_instance: self,
+            ot_iter: OT_NEIGHBOR_INFO_ITERATOR_INIT.try_into().unwrap(),
+        }
+    }
 }
 
 impl<T: Thread + Boxable> Thread for ot::Box<T> {
@@ -180,6 +212,13 @@ impl<T: Thread + Boxable> Thread for ot::Box<T> {
 
     fn get_mesh_local_prefix(&self) -> &MeshLocalPrefix {
         self.as_ref().get_mesh_local_prefix()
+    }
+
+    fn iter_next_neighbor_info(
+        &self,
+        ot_iter: &mut otNeighborInfoIterator,
+    ) -> Option<NeighborInfo> {
+        self.as_ref().iter_next_neighbor_info(ot_iter)
     }
 }
 
@@ -288,5 +327,23 @@ impl Thread for Instance {
     fn get_mesh_local_prefix(&self) -> &MeshLocalPrefix {
         unsafe { MeshLocalPrefix::ref_from_ot_ptr(otThreadGetMeshLocalPrefix(self.as_ot_ptr())) }
             .unwrap()
+    }
+
+    fn iter_next_neighbor_info(
+        &self,
+        ot_iter: &mut otNeighborInfoIterator,
+    ) -> Option<NeighborInfo> {
+        unsafe {
+            let mut ret = NeighborInfo::default();
+            match Error::from(otThreadGetNextNeighborInfo(
+                self.as_ot_ptr(),
+                ot_iter as *mut otNeighborInfoIterator,
+                ret.as_ot_mut_ptr(),
+            )) {
+                Error::NotFound => None,
+                Error::None => Some(ret),
+                err => unreachable!("Unexpected error from otThreadGetNextNeighborInfo: {:?}", err),
+            }
+        }
     }
 }

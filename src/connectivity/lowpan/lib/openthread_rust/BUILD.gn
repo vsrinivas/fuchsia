@@ -55,6 +55,7 @@ rustc_library("openthread") {
     "src/ot/types/link_mode.rs",
     "src/ot/types/log_region.rs",
     "src/ot/types/mod.rs",
+    "src/ot/types/neighbor_info.rs",
     "src/ot/types/network_key.rs",
     "src/ot/types/network_name.rs",
     "src/ot/types/operational_dataset.rs",
