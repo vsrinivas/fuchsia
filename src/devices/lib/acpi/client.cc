@@ -14,7 +14,7 @@
 #include "util.h"
 
 namespace acpi {
-zx::status<Client> Client::Create(zx_device_t* parent) {
+zx::status<fidl::ClientEnd<fuchsia_hardware_acpi::Device>> Client::Connect(zx_device_t* parent) {
   zx::channel local, remote;
   zx_status_t status = zx::channel::create(0, &local, &remote);
   if (status != ZX_OK) {
@@ -34,7 +34,15 @@ zx::status<Client> Client::Create(zx_device_t* parent) {
   client.ConnectServer(std::move(remote));
 
   fidl::ClientEnd<fuchsia_hardware_acpi::Device> end(std::move(local));
-  fidl::WireSyncClient<fuchsia_hardware_acpi::Device> wire_client(std::move(end));
+  return zx::ok(std::move(end));
+}
+
+zx::status<Client> Client::Create(zx_device_t* parent) {
+  auto end = Connect(parent);
+  if (end.is_error()) {
+    return end.take_error();
+  }
+  fidl::WireSyncClient<fuchsia_hardware_acpi::Device> wire_client(std::move(end.value()));
 
   return zx::ok(Client(std::move(wire_client)));
 }

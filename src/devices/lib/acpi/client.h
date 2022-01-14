@@ -19,6 +19,10 @@ class Client {
  public:
   // Connect to the ACPI FIDL server by calling ConnectServer() on the "acpi" fragment of |parent|.
   static zx::status<Client> Create(zx_device_t* parent);
+
+  // Connect to the ACPI FIDL server and just return the FIDL ClientEnd.
+  static zx::status<fidl::ClientEnd<fuchsia_hardware_acpi::Device>> Connect(zx_device_t* parent);
+
   // Alternate constructor mainly intended for use in unit tests.
   static Client Create(fidl::WireSyncClient<fuchsia_hardware_acpi::Device> client);
 
