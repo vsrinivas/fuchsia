@@ -6,11 +6,10 @@ use fidl::endpoints::ProtocolMarker as _;
 use fixture::fixture;
 use fuchsia_zircon as zx;
 use futures::{FutureExt as _, Stream, StreamExt as _, TryStreamExt as _};
-use net_declare::std_socket_addr;
 use net_types::Witness as _;
 use netemul::{Endpoint as _, RealmUdpSocket as _};
 use netstack_testing_common::realms::{Netstack2, TestSandboxExt as _};
-use netsvc_proto::netboot;
+use netsvc_proto::{debuglog, netboot};
 use packet::{FragmentedBuffer as _, InnerPacketBuilder as _, ParseBuffer as _, Serializer as _};
 use std::borrow::Cow;
 use std::convert::TryInto as _;
@@ -127,7 +126,7 @@ fn create_netsvc_realm<'a>(
     (realm, fs.flatten().map(|r| r.expect("fs error")))
 }
 
-async fn with_netsvc_and_netstack<F, Fut>(name: &str, test: F)
+async fn with_netsvc_and_netstack_bind_port<F, Fut>(port: u16, name: &str, test: F)
 where
     F: FnOnce(fuchsia_async::net::UdpSocket, u32) -> Fut,
     Fut: futures::Future<Output = ()>,
@@ -166,16 +165,40 @@ where
     .await
     .expect("wait ll address");
 
-    let sock =
-        fuchsia_async::net::UdpSocket::bind_in_realm(&netstack_realm, std_socket_addr!("[::]:0"))
-            .await
-            .expect("bind in realm");
+    let sock = fuchsia_async::net::UdpSocket::bind_in_realm(
+        &netstack_realm,
+        std::net::SocketAddrV6::new(
+            std::net::Ipv6Addr::UNSPECIFIED,
+            port,
+            /* flowinfo */ 0,
+            /* scope id */ 0,
+        )
+        .into(),
+    )
+    .await
+    .expect("bind in realm");
 
     let test_fut = test(sock, interface.id().try_into().expect("interface ID doesn't fit u32"));
     futures::select! {
         () = services.collect().fuse() => panic!("ServiceFs ended unexpectedly"),
         () =  test_fut.fuse() => (),
     }
+}
+
+async fn with_netsvc_and_netstack<F, Fut>(name: &str, test: F)
+where
+    F: FnOnce(fuchsia_async::net::UdpSocket, u32) -> Fut,
+    Fut: futures::Future<Output = ()>,
+{
+    with_netsvc_and_netstack_bind_port(/* unspecified port */ 0, name, test).await
+}
+
+async fn with_netsvc_and_netstack_debuglog_port<F, Fut>(name: &str, test: F)
+where
+    F: FnOnce(fuchsia_async::net::UdpSocket, u32) -> Fut,
+    Fut: futures::Future<Output = ()>,
+{
+    with_netsvc_and_netstack_bind_port(debuglog::MULTICAST_PORT.get(), name, test).await
 }
 
 async fn discover(sock: &fuchsia_async::net::UdpSocket, scope_id: u32) -> std::net::Ipv6Addr {
@@ -279,4 +302,79 @@ async fn discover(sock: &fuchsia_async::net::UdpSocket, scope_id: u32) -> std::n
 #[fuchsia_async::run_singlethreaded(test)]
 async fn can_discover(sock: fuchsia_async::net::UdpSocket, scope_id: u32) {
     let _: std::net::Ipv6Addr = discover(&sock, scope_id).await;
+}
+
+#[fixture(with_netsvc_and_netstack_debuglog_port)]
+#[fuchsia_async::run_singlethreaded(test)]
+async fn debuglog(sock: fuchsia_async::net::UdpSocket, _scope_id: u32) {
+    #[derive(Clone)]
+    enum Ack {
+        Yes,
+        No,
+    }
+    // Test that we observe and acknowledge multiple log messages. Then assert
+    // that an unacknowledged message gets resent.
+    // The delay for retransmission is low on the first retransmission, which
+    // should not make this test unnecessarily long, but we keep it to one
+    // observation of that event.
+    let _: (fuchsia_async::net::UdpSocket, Option<u32>) =
+        futures::stream::iter(std::iter::repeat(Ack::Yes).take(10).chain(std::iter::once(Ack::No)))
+            .fold((sock, None), |(sock, seqno), ack| async move {
+                let mut buf = [0; BUFFER_SIZE];
+                let (n, addr) = sock.recv_from(&mut buf[..]).await.expect("recv_from failed");
+                let mut bv = &buf[..n];
+                let pkt = bv.parse::<debuglog::DebugLogPacket<_>>().expect("parse failed");
+
+                match ack {
+                    Ack::Yes => {
+                        let ack = debuglog::AckPacketBuilder::new(pkt.seqno())
+                            .into_serializer_with(packet::Buf::new([0u8; debuglog::ACK_SIZE], ..))
+                            .serialize_no_alloc_outer()
+                            .expect("failed to serialize");
+                        let sent = sock.send_to(ack.as_ref(), addr).await.expect("send_to failed");
+                        assert_eq!(sent, ack.len());
+                    }
+                    Ack::No => (),
+                }
+
+                let seqno = match seqno {
+                    None => pkt.seqno(),
+                    Some(s) => {
+                        if pkt.seqno() <= s {
+                            // Don't verify repeat or old packets.
+                            return (sock, Some(s));
+                        }
+                        let nxt = s + 1;
+                        assert_eq!(pkt.seqno(), nxt);
+                        nxt
+                    }
+                };
+
+                let nodename = pkt.nodename();
+                assert!(nodename.starts_with("fuchsia-"), "bad nodename {}", nodename);
+                // TODO(https://fxbug.dev/91150): We can assert on message contents
+                // here when we move netsvc to use LogListener.
+                let msg: &str = pkt.data();
+
+                // Wait for a repeat of the packet if we didn't ack.
+                match ack {
+                    Ack::No => {
+                        // NB: we need to read into a new buffer because we use
+                        // variables stored in the old one for comparison.
+                        let mut buf = [0; BUFFER_SIZE];
+                        let (n, next_addr) =
+                            sock.recv_from(&mut buf[..]).await.expect("recv_from failed");
+                        let mut bv = &buf[..n];
+                        let pkt = bv.parse::<debuglog::DebugLogPacket<_>>().expect("parse failed");
+                        assert_eq!(next_addr, addr);
+                        assert_eq!(pkt.seqno(), seqno);
+                        assert_eq!(pkt.nodename(), nodename);
+                        assert_eq!(pkt.data(), msg);
+                    }
+                    Ack::Yes => (),
+                }
+
+                (sock, Some(seqno))
+            })
+            .await;
 }

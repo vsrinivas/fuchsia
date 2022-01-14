@@ -18,6 +18,7 @@ rustc_library("netsvc-proto") {
   ]
 
   sources = [
+    "src/debuglog.rs",
     "src/lib.rs",
     "src/netboot.rs",
   ]

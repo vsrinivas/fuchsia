@@ -11,7 +11,6 @@ rustc_test("bin") {
     "//sdk/fidl/fuchsia.boot:fuchsia.boot-rustc",
     "//sdk/fidl/fuchsia.device:fuchsia.device-rustc",
     "//sdk/fidl/fuchsia.net.interfaces:fuchsia.net.interfaces-rustc",
-    "//src/connectivity/lib/net-declare",
     "//src/connectivity/lib/net-types",
     "//src/connectivity/network/testing/netemul-v2/fidl:fuchsia.netemul-rustc",
     "//src/connectivity/network/testing/netemul/rust:lib",
