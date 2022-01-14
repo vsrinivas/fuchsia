@@ -856,12 +856,14 @@ TEST(PagerWriteback, DirtyZeroAndNonZeroPages) {
     if (rand() % 2) {
       non_zero_count++;
       ASSERT_TRUE(pager.SupplyPages(vmo, i, 1));
-      vmo->GenerateBufferContents(expected.data(), 1, i);
+      vmo->GenerateBufferContents(expected.data() + i * zx_system_get_page_size(), 1, i);
     } else {
       ASSERT_OK(pager.pager().supply_pages(vmo->vmo(), i * zx_system_get_page_size(),
                                            zx_system_get_page_size(), vmo_src, 0));
     }
   }
+
+  ASSERT_TRUE(check_buffer_data(vmo, 0, kNumPages, expected.data(), true));
 
   // Only non-zero pages should be committed.
   zx_info_vmo_t info;
@@ -879,6 +881,7 @@ TEST(PagerWriteback, DirtyZeroAndNonZeroPages) {
   ASSERT_EQ(kNumPages * zx_system_get_page_size(), info.committed_bytes);
   zx_vmo_dirty_range_t range = {.offset = 0, .length = kNumPages};
   ASSERT_TRUE(pager.VerifyDirtyRanges(vmo, &range, 1));
+  ASSERT_TRUE(check_buffer_data(vmo, 0, kNumPages, expected.data(), true));
 }
 
 // Tests that ZX_PAGER_OP_FAIL can fail DIRTY page requests for zero pages.
@@ -906,9 +909,8 @@ TEST(PagerWriteback, FailDirtyRequestsForZeroPages) {
   std::vector<uint8_t> expected(zx_system_get_page_size(), 0);
 
   // Attempt to write to the first page.
-  TestThread t([vmo, &expected]() -> bool {
+  TestThread t([vmo]() -> bool {
     uint8_t data = 0xaa;
-    expected[0] = data;
     return vmo->vmo().write(&data, 0, sizeof(data)) == ZX_OK;
   });
   ASSERT_TRUE(t.Start());
@@ -928,6 +930,7 @@ TEST(PagerWriteback, FailDirtyRequestsForZeroPages) {
 
   // No dirty pages too.
   ASSERT_TRUE(pager.VerifyDirtyRanges(vmo, nullptr, 0));
+  ASSERT_TRUE(check_buffer_data(vmo, 0, 1, expected.data(), true));
 }
 
 // Tests that DIRTY requests are generated for ranges including zero pages as expected.
