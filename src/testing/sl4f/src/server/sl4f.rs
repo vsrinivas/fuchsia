@@ -24,9 +24,6 @@ use crate::{
     },
 };
 
-// Adc related includes
-use crate::adc::facade::AdcFacade;
-
 // Audio related includes
 use crate::audio::facade::AudioFacade;
 
@@ -212,7 +209,6 @@ impl Sl4f {
             keys = String::from,
             values = to_arc_trait_object,
             hashmap!(
-                "adc_facade" => AdcFacade::new(),
                 "audio_facade" => AudioFacade::new()?,
                 "avdtp_facade" => AvdtpFacade::new(),
                 "avrcp_facade" => AvrcpFacade::new(),

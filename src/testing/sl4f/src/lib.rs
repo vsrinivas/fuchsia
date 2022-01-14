@@ -7,7 +7,6 @@
 #[macro_use]
 extern crate anyhow;
 
-pub mod adc;
 pub mod audio;
 pub mod backlight;
 pub mod battery_simulator;
