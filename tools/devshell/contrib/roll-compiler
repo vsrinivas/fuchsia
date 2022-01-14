@@ -49,7 +49,7 @@ before commands are run for any package.
     parser.add_argument("--package", "-p", action="append", help="CIPD package name")
     parser.add_argument(
         "--manifest",
-        default=os.path.join(FUCHSIA_DIR, "integration", "fuchsia", "prebuilts"),
+        default=os.path.join(FUCHSIA_DIR, "integration", "fuchsia", "toolchain"),
         help="Jiri manifest file to edit",
     )
     parser.add_argument("--tag", default="git_revision", help="CIPD tag to publish")
