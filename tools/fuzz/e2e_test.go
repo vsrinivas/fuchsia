@@ -63,10 +63,10 @@ func TestEndToEnd(t *testing.T) {
 	defer runCommand(t, "stop_instance", "-handle", handle)
 
 	// Fetch debug logs
-	out = runCommand(t, "get_logs", "-handle", handle)
-	glog.Info(out)
-	if !strings.Contains(out, "{{{reset}}}") {
-		t.Fatalf("Debug log missing expected content:\n%s", out)
+	log_postboot := runCommand(t, "get_logs", "-handle", handle)
+	glog.Info(log_postboot)
+	if !strings.Contains(log_postboot, "{{{reset}}}") {
+		t.Fatalf("Post-boot debug log missing expected content:\n%s", out)
 	}
 
 	fuzzer := "example-fuzzers/crash_fuzzer"
@@ -157,6 +157,17 @@ func TestEndToEnd(t *testing.T) {
 	glog.Info(out)
 	if m, err := regexp.MatchString(`heap-buffer-overflow`, out); err != nil || !m {
 		t.Fatalf("output missing ASAN crash: %s", out)
+	}
+
+	// Ensure that the debug logs have grown in length, to verify that we are
+	// properly capturing logs after early boot. The above repro of an ASAN
+	// crash is guaranteed to write to the debuglog due to the current
+	// definition of `__sanitizer_log_write`. This behavior may change in the
+	// future, but for now it is the most straightforward way to trigger a
+	// write to the log.
+	log_postrun := runCommand(t, "get_logs", "-handle", handle)
+	if len(log_postrun) <= len(log_postboot) {
+		t.Fatalf("Post-run debug log same size as post-boot log (%d bytes)", len(log_postrun))
 	}
 
 	// Attempt repro, that shouldn't crash

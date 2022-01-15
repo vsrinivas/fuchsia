@@ -8,12 +8,15 @@ import (
 	"bytes"
 	"os"
 	"os/exec"
+	"strings"
 	"testing"
 	"time"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 )
+
+const lateBootMessage = "we made it!"
 
 func TestQemuLauncherHandle(t *testing.T) {
 	launcher := &QemuLauncher{Pid: 4141, TmpDir: "/tmp/woof"}
@@ -197,8 +200,8 @@ func TestQemuLauncher(t *testing.T) {
 	if err := launcher.GetLogs(&out); err != nil {
 		t.Fatalf("Error getting instance logs: %s", err)
 	}
-	if diff := cmp.Diff("qemu logs\n", out.String()); diff != "" {
-		t.Fatalf("Instance logs missing expected content (-want +got):\n%s", diff)
+	if !strings.Contains(out.String(), lateBootMessage) {
+		t.Fatalf("Instance logs (%d bytes) missing late entry", out.Len())
 	}
 
 	if err := launcher.Kill(); err != nil {

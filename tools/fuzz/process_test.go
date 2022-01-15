@@ -7,7 +7,7 @@ package fuzz
 import (
 	"flag"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"math/rand"
 	"os"
 	"os/exec"
@@ -102,25 +102,39 @@ func TestDoProcessMock(t *testing.T) {
 	case "qemu-system-x86_64", "qemu-system-aarch64":
 		stayAlive = true
 		var logFile string
-		// Check for a logfile specified in a chardev parameter
+		// Check for a logfile specified in a serial parameter
 		for j, arg := range args[:len(args)-1] {
-			if arg != "-chardev" {
+			if arg != "-serial" {
 				continue
 			}
-			params := strings.Split(args[j+1], ",")
-			for _, param := range params {
-				kv := strings.SplitN(param, "=", 2)
-				if kv[0] == "logfile" {
-					logFile = kv[1]
-				}
+			parts := strings.SplitN(args[j+1], ":", 2)
+			if parts[0] == "file" {
+				logFile = parts[1]
 			}
 		}
+
+		logWriter := os.Stdout
 		if logFile != "" {
-			if err := ioutil.WriteFile(logFile, []byte("qemu logs\n"), 0o600); err != nil {
+			outFile, err := os.Create(logFile)
+			if err != nil {
 				t.Fatalf("error creating qemu log file: %s", err)
 			}
+			defer outFile.Close()
+			logWriter = outFile
 		}
-		out = fmt.Sprintf("'%s'\n", successfulBootMarker)
+		io.WriteString(logWriter, "early boot\n")
+		io.WriteString(logWriter, successfulBootMarker+"\n")
+
+		// Output >100KB of additional data to ensure we handle large logs correctly
+		filler := strings.Repeat("data", 1024/4)
+		for j := 0; j < 100; j++ {
+			logLine := fmt.Sprintf("%d: %s", j, filler)
+			io.WriteString(logWriter, logLine)
+		}
+
+		// Write a final success marker
+		io.WriteString(logWriter, lateBootMessage+"\n")
+
 		exitCode = 0
 	case "ps":
 		// This is kind of a mess. We can't rely on ps to reflect the killed

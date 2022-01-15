@@ -6,6 +6,7 @@ package fuzz
 
 import (
 	"bufio"
+	"bytes"
 	"crypto/rand"
 	"encoding/hex"
 	"fmt"
@@ -17,7 +18,6 @@ import (
 	"path"
 	"path/filepath"
 	"strconv"
-	"strings"
 	"syscall"
 	"time"
 
@@ -135,16 +135,9 @@ func getQemuInvocation(config qemuConfig) ([]string, error) {
 	qemuCmd.SetFlag("-nographic")
 	qemuCmd.SetFlag("-monitor", "none")
 
-	// Send serial to a log file, while also echoing to stdout (used during
-	// early boot). This is done by enabling the `logfile` option on the qemu
-	// chardev (which the qemu library constructs as a `stdio` device).
-	qemuCmd.AddSerial(
-		qemu.Chardev{
-			ID:      "char0",
-			Logfile: config.logFile,
-			Signal:  false,
-		},
-	)
+	// Send serial to a log file. We don't want to attach directly via stdout,
+	// because the QEMU process needs to be able outlive this one.
+	qemuCmd.SetFlag("-serial", "file:"+config.logFile)
 
 	entropy := make([]byte, 32)
 	if _, err := rand.Read(entropy); err == nil {
@@ -284,34 +277,71 @@ func (q *QemuLauncher) Start() (conn Connector, returnErr error) {
 
 	cmd := NewCommand(invocation[0], invocation[1:]...)
 
+	logFile, err := os.Create(q.logPath())
+	if err != nil {
+		return nil, fmt.Errorf("error creating qemu log: %s", err)
+	}
+	defer logFile.Close()
+
+	// Save output from QEMU itself in case of error. This should be very
+	// minimal in size if present at all.
 	outPipe, err := cmd.StdoutPipe()
 	if err != nil {
 		return nil, fmt.Errorf("error attaching stdout: %s", err)
 	}
 	cmd.Stderr = cmd.Stdout // capture stderr too
 
-	// Save early log in case of error
-	var log []string
+	// Storage for system boot log
+	var logBuf bytes.Buffer
+	logBuf.Grow(64 * 1024) // 64KB should be plenty
 
 	errCh := make(chan error)
 	go func() {
-		scanner := bufio.NewScanner(outPipe)
-		for scanner.Scan() {
-			line := scanner.Text()
-			log = append(log, line)
-			if strings.Contains(line, successfulBootMarker) {
+		logReader := bufio.NewReader(logFile)
+
+		// Tail the QEMU log file
+		for {
+			// Wait for input to be available
+			for readAttempts := 0; ; readAttempts++ {
+				// There is an overall timeout at a higher level, but if we are
+				// not getting any input coming in at all let's check on the
+				// process in case we can bail sooner (and to ensure that the
+				// goroutine eventually gets cleaned up).
+				if q.Pid != 0 && readAttempts > 2 {
+					alive, err := q.IsRunning()
+					if err != nil {
+						errCh <- fmt.Errorf("error checking process status: %s", err)
+						return
+					}
+					if !alive {
+						errCh <- fmt.Errorf("qemu exited early")
+						return
+					}
+				}
+
+				_, err := logReader.Peek(1)
+				if err == nil {
+					break
+				} else if err != io.EOF {
+					errCh <- fmt.Errorf("log peek failed: %s", err)
+					return
+				}
+				time.Sleep(100 * time.Millisecond)
+			}
+
+			if _, err := logBuf.ReadFrom(logReader); err != nil {
+				errCh <- fmt.Errorf("log read failed: %s", err)
+				return
+			}
+
+			// This is not as performant as something like a Scanner, but those
+			// can't recover from EOFs and it doesn't seem worth reimplementing.
+			if bytes.Contains(logBuf.Bytes(), []byte(successfulBootMarker)) {
 				// Early boot has finished
 				errCh <- nil
 				return
 			}
 		}
-
-		if err := scanner.Err(); err != nil {
-			errCh <- fmt.Errorf("failed during scan: %s", err)
-			return
-		}
-
-		errCh <- fmt.Errorf("qemu exited early")
 	}()
 
 	if err := cmd.Start(); err != nil {
@@ -328,9 +358,7 @@ func (q *QemuLauncher) Start() (conn Connector, returnErr error) {
 			// Kill the process, just in case this was an error other than EOF
 			cmd.Process.Kill()
 
-			// Dump the boot log
-			glog.Errorf(strings.Join(log, "\n"))
-
+			dumpLogs(outPipe, logBuf)
 			return nil, fmt.Errorf("error during boot: %s", err)
 		}
 	case <-time.After(q.timeout):
@@ -338,15 +366,14 @@ func (q *QemuLauncher) Start() (conn Connector, returnErr error) {
 		cmd.Process.Kill()
 		<-errCh
 
-		// Dump the boot log
-		glog.Errorf(strings.Join(log, "\n"))
-
+		dumpLogs(outPipe, logBuf)
 		return nil, fmt.Errorf("timeout waiting for boot")
 	}
 
 	glog.Info("Instance started.")
 
 	// Detach from the child, since we will never wait on it
+	outPipe.Close()
 	cmd.Process.Release()
 
 	return NewSSHConnector("localhost", port, q.sshKey), nil
@@ -413,6 +440,16 @@ func (q *QemuLauncher) GetLogs(out io.Writer) error {
 	}
 
 	return nil
+}
+
+// Dump the qemu and boot logs
+func dumpLogs(outPipe io.Reader, logBuf bytes.Buffer) {
+	if errLog, err := ioutil.ReadAll(outPipe); err != nil {
+		glog.Errorf("error reading QEMU output: %s", err)
+	} else {
+		glog.Errorf("QEMU output: %s", errLog)
+	}
+	glog.Errorf("Boot log: %s", logBuf.String())
 }
 
 func loadLauncherFromHandle(build Build, handle Handle) (Launcher, error) {
