@@ -114,7 +114,7 @@ fn expand_component_rec(
     result: &mut Vec<ListComponent>,
 ) {
     let should_include_this = component.should_include(list_filter);
-    let Component { name, is_cmx, is_running, children } = component;
+    let Component { name, is_cmx, is_running, children, .. } = component;
 
     if should_include_this {
         result.push(ListComponent::new(leading, &name, is_cmx, is_running));
@@ -197,22 +197,26 @@ mod test {
             name: "/".to_owned(),
             is_cmx: false,
             is_running: false,
+            ancestors: vec![],
             children: vec![
                 Component {
                     name: "appmgr".to_owned(),
                     is_cmx: false,
                     is_running: true,
+                    ancestors: vec!["/".to_owned()],
                     children: vec![
                         Component {
                             name: "foo.cmx".to_owned(),
                             is_cmx: true,
                             is_running: true,
+                            ancestors: vec!["/".to_owned(), "appmgr".to_owned()],
                             children: vec![],
                         },
                         Component {
                             name: "bar.cmx".to_owned(),
                             is_cmx: true,
                             is_running: true,
+                            ancestors: vec!["/".to_owned(), "appmgr".to_owned()],
                             children: vec![],
                         },
                     ],
@@ -221,21 +225,29 @@ mod test {
                     name: "sys".to_owned(),
                     is_cmx: false,
                     is_running: false,
+                    ancestors: vec!["/".to_owned()],
                     children: vec![
                         Component {
                             name: "baz".to_owned(),
                             is_cmx: false,
                             is_running: true,
+                            ancestors: vec!["/".to_owned(), "sys".to_owned()],
                             children: vec![],
                         },
                         Component {
                             name: "fuzz".to_owned(),
                             is_cmx: false,
                             is_running: false,
+                            ancestors: vec!["/".to_owned(), "sys".to_owned()],
                             children: vec![Component {
                                 name: "hello".to_owned(),
                                 is_cmx: false,
                                 is_running: false,
+                                ancestors: vec![
+                                    "/".to_owned(),
+                                    "sys".to_owned(),
+                                    "fuzz".to_owned(),
+                                ],
                                 children: vec![],
                             }],
                         },

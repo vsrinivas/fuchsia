@@ -28,7 +28,19 @@ use {argh::FromArgs, component_hub::list::ListFilter, ffx_core::ffx_command};
 
     To graph all stopped components in the topology:
 
-    $ ffx component graph --only stopped"
+    $ ffx component graph --only stopped
+
+    To graph the ancestors of a component named `foo`:
+
+    $ ffx component graph --only ancestor:foo
+
+    To graph the descendants of a component named `foo`:
+
+    $ ffx component graph --only descendant:foo
+
+    To graph both the ancestors and descendants of a component named `foo`:
+
+    $ ffx component graph --only relatives:foo"
 )]
 
 pub struct ComponentGraphCommand {

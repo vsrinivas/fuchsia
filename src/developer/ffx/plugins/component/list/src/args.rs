@@ -28,7 +28,19 @@ use {argh::FromArgs, component_hub::list::ListFilter, ffx_core::ffx_command};
 
     To list all stopped components in the topology:
 
-    $ ffx component list --only stopped"
+    $ ffx component list --only stopped
+
+    To list the ancestors of a component named `foo`:
+
+    $ ffx component list --only ancestor:foo
+
+    To list the descendants of a component named `foo`:
+
+    $ ffx component list --only descendant:foo
+
+    To list both the ancestors and descendants of a component named `foo`:
+
+    $ ffx component list --only relatives:foo"
 )]
 
 pub struct ComponentListCommand {
