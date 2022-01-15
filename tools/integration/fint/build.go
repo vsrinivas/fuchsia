@@ -136,7 +136,7 @@ func buildImpl(
 			artifacts.LogFiles["explain_output.txt"] = f.Name()
 			explainSink = f
 		}
-		artifacts.FailureSummary, ninjaErr = runNinja(
+		artifacts.FailureSummary, artifacts.NinjaActionMetrics, ninjaErr = runNinja(
 			ctx,
 			r,
 			targets,
@@ -273,7 +273,7 @@ func ninjaNoopFailureMessage(platform string) string {
 // spec fields and the contents of the build API files. It emits a
 // BuildArtifacts protobuf with only a subset of fields set that should be
 // merged into an existing BuildArtifacts protobuf struct by the caller, since
-// this is more clean than taking a BuildARtifacts pointer as input and
+// this is more clean than taking a BuildArtifacts pointer as input and
 // modifying it.
 func constructNinjaTargets(
 	modules buildModules,

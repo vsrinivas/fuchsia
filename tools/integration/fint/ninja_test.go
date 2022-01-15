@@ -18,8 +18,10 @@ import (
 	"time"
 
 	"github.com/google/go-cmp/cmp"
+	"google.golang.org/protobuf/testing/protocmp"
 
 	"go.fuchsia.dev/fuchsia/tools/build"
+	fintpb "go.fuchsia.dev/fuchsia/tools/integration/fint/proto"
 	"go.fuchsia.dev/fuchsia/tools/lib/streams"
 )
 
@@ -37,6 +39,7 @@ func TestRunNinja(t *testing.T) {
 		fail bool
 		// Mock Ninja stdout.
 		stdout                 string
+		expectedActionData     *fintpb.NinjaActionMetrics
 		expectedFailureMessage string
 	}{
 		{
@@ -45,6 +48,45 @@ func TestRunNinja(t *testing.T) {
                 [1/2] ACTION a.o
                 [2/2] ACTION b.o
             `,
+			expectedActionData: &fintpb.NinjaActionMetrics{
+				InitialActions: 2,
+				FinalActions:   2,
+				ActionsByType: map[string]int32{
+					"ACTION": 2,
+				},
+			},
+		},
+		{
+			name: "multiple action types",
+			stdout: `
+                [1/3] CXX a.o
+                [2/3] RUST crab.rlib
+                [3/3] RUST lobster.rlib
+            `,
+			expectedActionData: &fintpb.NinjaActionMetrics{
+				InitialActions: 3,
+				FinalActions:   3,
+				ActionsByType: map[string]int32{
+					"CXX":  1,
+					"RUST": 2,
+				},
+			},
+		},
+		{
+			name: "restat decreasing action counts",
+			stdout: `
+                [1/300] CXX a.o
+                [2/200] RUST crab.rlib
+                [3/100] RUST lobster.rlib
+            `,
+			expectedActionData: &fintpb.NinjaActionMetrics{
+				InitialActions: 300,
+				FinalActions:   100,
+				ActionsByType: map[string]int32{
+					"CXX":  1,
+					"RUST": 2,
+				},
+			},
 		},
 		{
 			name: "single failed target",
@@ -64,6 +106,39 @@ func TestRunNinja(t *testing.T) {
                 output line 1
                 output line 2
             `,
+			expectedActionData: &fintpb.NinjaActionMetrics{
+				InitialActions: 53672,
+				FinalActions:   53672,
+				ActionsByType: map[string]int32{
+					"CXX": 4,
+				},
+			},
+		},
+		{
+			name: "single failed target decreasing action counts",
+			fail: true,
+			stdout: `
+                [35792/53672] CXX a.o b.o
+                [35793/53672] CXX c.o d.o
+                FAILED: c.o d.o
+                output line 1
+                output line 2
+                [35794/45678] CXX successful/e.o
+                [35795/45678] CXX f.o
+            `,
+			expectedFailureMessage: `
+                [35793/53672] CXX c.o d.o
+                FAILED: c.o d.o
+                output line 1
+                output line 2
+            `,
+			expectedActionData: &fintpb.NinjaActionMetrics{
+				InitialActions: 53672,
+				FinalActions:   45678,
+				ActionsByType: map[string]int32{
+					"CXX": 4,
+				},
+			},
 		},
 		{
 			name: "preserves indentation",
@@ -83,6 +158,13 @@ func TestRunNinja(t *testing.T) {
                         output line 2
                             output line 3
             `,
+			expectedActionData: &fintpb.NinjaActionMetrics{
+				InitialActions: 53672,
+				FinalActions:   53672,
+				ActionsByType: map[string]int32{
+					"CXX": 2,
+				},
+			},
 		},
 		{
 			name: "multiple failed targets",
@@ -94,7 +176,7 @@ func TestRunNinja(t *testing.T) {
                 output line 1
                 output line 2
                 [35792/53672] CXX c.o d.o
-                [35793/53673] CXX e.o
+                [35793/53672] CXX e.o
                 FAILED: e.o
                 output line 3
                 output line 4
@@ -105,11 +187,18 @@ func TestRunNinja(t *testing.T) {
                 FAILED: a.o b.o
                 output line 1
                 output line 2
-                [35793/53673] CXX e.o
+                [35793/53672] CXX e.o
                 FAILED: e.o
                 output line 3
                 output line 4
             `,
+			expectedActionData: &fintpb.NinjaActionMetrics{
+				InitialActions: 53672,
+				FinalActions:   53672,
+				ActionsByType: map[string]int32{
+					"CXX": 5,
+				},
+			},
 		},
 		{
 			name: "last target fails",
@@ -128,6 +217,13 @@ func TestRunNinja(t *testing.T) {
                 output line 1
                 output line 2
             `,
+			expectedActionData: &fintpb.NinjaActionMetrics{
+				InitialActions: 53672,
+				FinalActions:   53672,
+				ActionsByType: map[string]int32{
+					"CXX": 2,
+				},
+			},
 		},
 		{
 			name: "gn gen fails",
@@ -155,6 +251,13 @@ func TestRunNinja(t *testing.T) {
 				../../prebuilt/third_party/gn/linux-x64/gn --root=../.. gen .
 				ninja: error: rebuilding 'build.ninja': subcommand failed
             `,
+			expectedActionData: &fintpb.NinjaActionMetrics{
+				InitialActions: 1,
+				FinalActions:   1,
+				ActionsByType: map[string]int32{
+					"Regenerating": 1,
+				},
+			},
 		},
 		{
 			name: "graph error",
@@ -178,6 +281,13 @@ func TestRunNinja(t *testing.T) {
 			expectedFailureMessage: `
 				ninja: fatal: cannot create file foo
             `,
+			expectedActionData: &fintpb.NinjaActionMetrics{
+				InitialActions: 1,
+				FinalActions:   1,
+				ActionsByType: map[string]int32{
+					"ACTION": 1,
+				},
+			},
 		},
 		{
 			name: "unrecognized failure",
@@ -205,7 +315,7 @@ func TestRunNinja(t *testing.T) {
 				buildDir:  filepath.Join(t.TempDir(), "out"),
 				jobCount:  23, // Arbitrary but distinctive value.
 			}
-			msg, err := runNinja(ctx, r, []string{"foo", "bar"}, false, nil)
+			msg, gotActionData, err := runNinja(ctx, r, []string{"foo", "bar"}, false, nil)
 			if tc.fail {
 				if !errors.Is(err, errSubprocessFailure) {
 					t.Fatalf("Expected a subprocess failure error but got: %s", err)
@@ -237,6 +347,9 @@ func TestRunNinja(t *testing.T) {
 			if diff := cmp.Diff(tc.expectedFailureMessage, msg); diff != "" {
 				t.Errorf("Unexpected failure message diff (-want +got):\n%s", diff)
 			}
+			if diff := cmp.Diff(tc.expectedActionData, gotActionData, protocmp.Transform()); diff != "" {
+				t.Errorf("Unexpected action data diff (-want, +got):\n%s", diff)
+			}
 		})
 	}
 }
@@ -259,7 +372,7 @@ ninja explain: obj/build/foo is dirty`),
 
 	explainSink := new(strings.Builder)
 
-	if _, err := runNinja(ctx, r, []string{"foo", "bar"}, true /* explain */, explainSink); err != nil {
+	if _, _, err := runNinja(ctx, r, []string{"foo", "bar"}, true /* explain */, explainSink); err != nil {
 		t.Fatalf("runNinja failed: %s", err)
 	}
 

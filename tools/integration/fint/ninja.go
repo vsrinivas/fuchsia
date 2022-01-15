@@ -15,11 +15,13 @@ import (
 	"path"
 	"path/filepath"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
 	"unicode"
 
 	"go.fuchsia.dev/fuchsia/tools/build"
+	fintpb "go.fuchsia.dev/fuchsia/tools/integration/fint/proto"
 	"go.fuchsia.dev/fuchsia/tools/lib/osmisc"
 	"go.fuchsia.dev/fuchsia/tools/lib/streams"
 )
@@ -31,7 +33,7 @@ var (
 
 	// ruleRegex matches a regular line of Ninja stdout in the default format,
 	// e.g. "[56/1234] CXX host_x64/foo.o"
-	ruleRegex = regexp.MustCompile(`^\s*\[\d+/\d+\] \S+`)
+	ruleRegex = regexp.MustCompile(`^\s*\[(\d+)/(\d+)\] (\S+) (\S+)`)
 
 	// errorRegex matches a single-line error message that Ninja prints at the
 	// end of its output if it encounters an error that prevents it from even
@@ -182,6 +184,9 @@ type ninjaParser struct {
 	// All lines printed for the rule currently being run, including the first
 	// line that starts with an index like [0/1].
 	currentRuleLines []string
+
+	// Action statistics.
+	ninjaActionData *fintpb.NinjaActionMetrics
 }
 
 func (p *ninjaParser) parse(ctx context.Context) error {
@@ -204,8 +209,26 @@ func (p *ninjaParser) parseLine(line string) error {
 	// significant, especially for compiler error messages.
 	line = strings.TrimRightFunc(line, unicode.IsSpace)
 
-	if ruleRegex.MatchString(line) {
+	ruleMatches := ruleRegex.FindStringSubmatch(line)
+	if len(ruleMatches) == 5 {
+		// Group each rule line with the non-rule lines of text that follow.
 		p.currentRuleLines = nil
+
+		// Track action counts and types.
+		totalActionsTmp, err := strconv.Atoi(ruleMatches[2])
+		if err != nil {
+			return err
+		}
+		totalActions := int32(totalActionsTmp)
+		if p.ninjaActionData == nil {
+			p.ninjaActionData = &fintpb.NinjaActionMetrics{
+				InitialActions: totalActions,
+				ActionsByType:  make(map[string]int32),
+			}
+		}
+		p.ninjaActionData.FinalActions = totalActions
+		actionType := ruleMatches[3]
+		p.ninjaActionData.ActionsByType[actionType] += 1
 	}
 	p.currentRuleLines = append(p.currentRuleLines, line)
 
@@ -254,7 +277,7 @@ func runNinja(
 	targets []string,
 	explain bool,
 	explainSink io.Writer,
-) (string, error) {
+) (string, *fintpb.NinjaActionMetrics, error) {
 	stdioReader, stdioWriter := io.Pipe()
 	defer stdioReader.Close()
 	parser := &ninjaParser{ninjaStdio: stdioReader, explainOutputSink: explainSink}
@@ -301,15 +324,15 @@ func runNinja(
 	}()
 	// Wait for parsing to complete.
 	if parserErr := <-parserErrs; parserErr != nil {
-		return "", parserErr
+		return "", nil, parserErr
 	}
 
 	if err != nil {
-		return parser.failureMessage(), err
+		return parser.failureMessage(), parser.ninjaActionData, err
 	}
 
 	// No failure message necessary if Ninja succeeded.
-	return "", nil
+	return "", parser.ninjaActionData, nil
 }
 
 // ninjaDryRun does a `ninja explain` dry run against a build directory and

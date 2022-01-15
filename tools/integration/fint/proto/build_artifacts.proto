@@ -10,6 +10,20 @@ option go_package = "go.fuchsia.dev/fuchsia/tools/integration/fint/proto";
 
 import "google/protobuf/struct.proto";
 
+// Various ninja build data.
+message NinjaActionMetrics {
+  // The number of actions to complete the build in the beginning.
+  int32 initial_actions = 1;
+
+  // The number of actions executed at the end of the build.
+  // This may be less than the number of initial actions due to `restat`
+  // (dynamic action graph pruning).
+  int32 final_actions = 2;
+
+  // Breakdown of actions executed by type, e.g. "ACTION", "CXX", "STAMP".
+  map<string, int32> actions_by_type = 3;
+}
+
 // BuildArtifacts contains information about the targets built by `fint build`.
 message BuildArtifacts {
   // A brief error log populated in case of a recognized failure mode (e.g. a
@@ -46,6 +60,9 @@ message BuildArtifacts {
 
   // The duration taken by the ninja build step.
   int32 ninja_duration_seconds = 10;
+
+  // Various ninja build data
+  NinjaActionMetrics ninja_action_metrics = 14;
 
   // Mapping from user-friendly title to absolute path for important log files
   // that should be presented by the infrastructure for humans to read. We

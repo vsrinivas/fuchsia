@@ -212,6 +212,13 @@ func TestBuild(t *testing.T) {
 				// failure summary should still attribute the failure to the
 				// original ninja build error.
 				FailureSummary: "[0/1] CXX c.o d.o\nFAILED: c.o d.o\nsomeoutput\n",
+				NinjaActionMetrics: &fintpb.NinjaActionMetrics{
+					InitialActions: 1,
+					FinalActions:   1,
+					ActionsByType: map[string]int32{
+						"CXX": 1,
+					},
+				},
 			},
 			mustRun: []string{`ninja .*-t graph`, `ninja .*-t compdb`},
 		},
