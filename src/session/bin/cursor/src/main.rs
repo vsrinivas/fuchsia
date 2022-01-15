@@ -39,6 +39,7 @@ impl AppAssistant for CursorManagerAppAssistant {
     fn filter_config(&mut self, config: &mut Config) {
         config.view_mode = carnelian::app::ViewMode::Hosted;
         config.input = false;
+        config.needs_blending = true;
     }
 }
 

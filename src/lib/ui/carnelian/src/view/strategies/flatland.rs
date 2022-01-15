@@ -141,6 +141,11 @@ impl Plumber {
 
         let buffers = buffer_allocator.allocate_buffers(true).await.context("allocate_buffers")?;
 
+        let blend_mode = if Config::get().needs_blending {
+            flatland::BlendMode::SrcOver
+        } else {
+            flatland::BlendMode::Src
+        };
         let mut image_ids = BTreeSet::new();
         let mut image_indexes = BTreeMap::new();
         for index in 0..buffers.buffer_count as usize {
@@ -165,6 +170,9 @@ impl Plumber {
                     &mut flatland_image_id,
                     &mut fidl_fuchsia_math::SizeU { width: size.width, height: size.height },
                 )
+                .expect("fidl error");
+            flatland
+                .set_image_blending_function(&mut flatland_image_id, blend_mode)
                 .expect("fidl error");
             // Get all the images at this point, since if we wait until we need them for
             // rendering, Mold's private connection to sysmem has closed and it fails.

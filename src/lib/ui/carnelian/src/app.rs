@@ -152,6 +152,9 @@ pub struct Config {
     #[serde(default)]
     /// Whether input events are needed.
     pub input: bool,
+    #[serde(default)]
+    /// Whether output can be translucent and needs blending.
+    pub needs_blending: bool,
 }
 
 impl Config {
@@ -176,6 +179,7 @@ impl Default for Config {
             display_resource_release_delay: display_resource_release_delay_default(),
             buffer_count: None,
             input: true,
+            needs_blending: false,
         }
     }
 }
