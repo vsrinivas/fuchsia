@@ -5,7 +5,7 @@
 //! Provide Google Cloud Storage (GCS) access.
 
 use {
-    anyhow::{bail, Result},
+    anyhow::{bail, Context, Result},
     async_lock::Mutex,
     fuchsia_hyper::HttpsClient,
     http::{request, StatusCode},
@@ -14,7 +14,12 @@ use {
     regex::Regex,
     serde::{Deserialize, Serialize},
     serde_json,
-    std::{fs, path::Path, string::String},
+    std::{
+        fs,
+        io::{self, BufRead, BufReader, Read, Write},
+        path::Path,
+        string::String,
+    },
     thiserror::Error,
     url::{form_urlencoded, Url},
 };
@@ -483,6 +488,60 @@ pub fn auth_code_url() -> String {
     APPROVE_AUTH_CODE_URL.to_string() + GSUTIL_CLIENT_ID
 }
 
+/// Convert an authorization code to a refresh token.
+pub async fn auth_code_to_refresh(auth_code: &str) -> Result<String> {
+    use fuchsia_hyper::new_https_client;
+    let token_store = TokenStore::new_with_code(&new_https_client(), auth_code).await?;
+    match token_store.refresh_token() {
+        Some(s) => Ok(s.to_string()),
+        None => bail!("auth_code_to_refresh failed"),
+    }
+}
+
+/// Ask the user to visit a URL and copy-paste the auth code provided.
+///
+/// A helper wrapper around get_auth_code_with() using stdin/stdout.
+///
+/// E.g. to get a Refresh Token
+/// ```
+///    let auth_code = get_auth_code()?;
+///    let refresh_token = auth_code_to_refresh(&auth_code).await?;
+/// ```
+pub fn get_auth_code() -> Result<String> {
+    let stdout = io::stdout();
+    let mut output = stdout.lock();
+    let stdin = io::stdin();
+    let mut input = stdin.lock();
+    get_auth_code_with(&mut output, &mut input)
+}
+
+/// Ask the user to visit a URL and copy-paste the authorization code provided.
+///
+/// Consider using `get_auth_code()` for operation with stdin/stdout.
+///
+/// For a GUI, consider creating a separate (custom) function to ask the user to
+/// follow the web flow to get a authorization code (tip: use `auth_code_url()`
+/// to get the URL).
+pub fn get_auth_code_with<W, R>(writer: &mut W, reader: &mut R) -> Result<String>
+where
+    W: Write,
+    R: Read,
+{
+    writeln!(
+        writer,
+        "Please visit this site. Proceed through the web flow to allow access \
+        and copy the authentication code:\
+        \n\n{}\n\nPaste the code (from the web page)
+        \nhere and press return: ",
+        auth_code_url(),
+    )?;
+    writer.flush().expect("flush auth code prompt");
+    let mut auth_code = String::new();
+    let mut buf_reader = BufReader::new(reader);
+    buf_reader.read_line(&mut auth_code).expect("Need an auth_code.");
+    Ok(auth_code.trim().to_string())
+}
+
 /// Fetch an existing refresh token from a .boto (gsutil) configuration file.
 ///
 /// Tip, the `boto_path` is commonly "~/.boto". E.g.
@@ -511,9 +570,27 @@ pub fn read_boto_refresh_token<P: AsRef<Path>>(boto_path: P) -> Result<Option<St
     Ok(refresh_token)
 }
 
+/// Overwrite the 'gs_oauth2_refresh_token' in the file at `boto_path`.
+///
+/// TODO(fxbug.dev/82014): Using an ffx specific token will be preferred once
+/// that feature is created. For the near term, an existing gsutil token is
+/// workable.
+///
+/// Alert: The refresh token is considered a private secret for the user. Do
+///        not print the token to a log or otherwise disclose it.
+pub fn write_boto_refresh_token<P: AsRef<Path>>(boto_path: P, token: &str) -> Result<()> {
+    static GS_UPDATE_REFRESH_TOKEN_RE: OnceCell<Regex> = OnceCell::new();
+    let re = GS_UPDATE_REFRESH_TOKEN_RE
+        .get_or_init(|| Regex::new(r#"(\n\s*gs_oauth2_refresh_token\s*=\s*)\S*"#).expect("regex"));
+    let data = fs::read_to_string(boto_path.as_ref()).context("reading .boto file")?;
+    let data = re.replace(&data, format!("${{1}}{}", token).as_str()).to_string();
+    fs::write(boto_path.as_ref(), data).context("Writing .boto file")?;
+    Ok(())
+}
+
 #[cfg(test)]
 mod test {
-    use {super::*, fuchsia_hyper::new_https_client, hyper::StatusCode};
+    use {super::*, fuchsia_hyper::new_https_client, hyper::StatusCode, tempfile::NamedTempFile};
 
     #[test]
     fn test_approve_auth_code_url() {
@@ -532,6 +609,14 @@ mod test {
                 GSUTIL_CLIENT_ID
             )
         );
+    }
+
+    #[test]
+    fn test_get_auth_code_with() {
+        let mut output: Vec<u8> = Vec::new();
+        let mut input = "fake_auth_code".as_bytes();
+        let auth_code = get_auth_code_with(&mut output, &mut input).expect("auth code");
+        assert_eq!(auth_code, "fake_auth_code");
     }
 
     #[should_panic(expected = "Connection refused")]
@@ -558,6 +643,17 @@ mod test {
             .await
             .expect("client download");
         assert_eq!(res.status(), StatusCode::OK);
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_gcs_read_write_refresh_token() {
+        let boto_path = NamedTempFile::new().expect("temp dir");
+        fs::write(&boto_path, "\ngs_oauth2_refresh_token = original\n").expect("write");
+        let refresh_token = read_boto_refresh_token(&boto_path).expect("").expect("original token");
+        assert_eq!(refresh_token, "original");
+        write_boto_refresh_token(&boto_path, "fake-token").expect("write token");
+        let refresh_token = read_boto_refresh_token(&boto_path).expect("boto").expect("token");
+        assert_eq!(refresh_token, "fake-token");
     }
 
     // This test is marked "ignore" because it actually downloads from GCS,

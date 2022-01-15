@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    anyhow::{anyhow, Context, Result},
+    anyhow::{anyhow, bail, Context, Result},
     errors::{ffx_bail, ffx_error},
     ffx_config::{
         sdk::{Sdk, SdkVersion},
@@ -17,19 +17,22 @@ use {
     fms::Entries,
     gcs::{
         client::ClientFactory,
-        token_store::{read_boto_refresh_token, TokenStore},
+        token_store::{
+            auth_code_to_refresh, get_auth_code, read_boto_refresh_token, write_boto_refresh_token,
+            GcsError, TokenStore,
+        },
     },
     sdk_metadata::Metadata,
     serde::Deserialize,
     std::fs::File,
-    std::io::{BufReader, Write},
-    std::path::PathBuf,
+    std::io::{stdout, BufReader, Write},
+    std::path::{Path, PathBuf},
     tempfile::tempdir,
 };
 
 #[ffx_plugin()]
 pub async fn exec_sdk(command: SdkCommand) -> Result<()> {
-    let mut writer = Box::new(std::io::stdout());
+    let mut writer = Box::new(stdout());
     let sdk = ffx_config::get_sdk().await;
 
     match &command.sub {
@@ -71,28 +74,53 @@ async fn exec_list<W: Write + Sync>(writer: &mut W, sdk: Sdk, cmd: &ListCommand)
     }
 }
 
+/// Prompt the user to visit the OAUTH2 permissions web page and enter a new
+/// refresh token, then write that token to the ~/.boto file.
+async fn update_refresh_token(boto_path: &Path) -> Result<()> {
+    println!("\nThe refresh token in the {:?} file needs to be updated.", boto_path);
+    let auth_code = get_auth_code()?;
+    let refresh_token = auth_code_to_refresh(&auth_code).await?;
+    write_boto_refresh_token(boto_path, &refresh_token)?;
+    Ok(())
+}
+
 /// Execute `list product-bundles` for the SDK (rather than in-tree).
 async fn exec_list_pbms_sdk<W: Write + Sync>(writer: &mut W, version: &String) -> Result<()> {
     let temp_dir = tempdir()?;
-    // TODO(fxb/89584): Change to using ffx client Id and consent screen.
-    let boto: Option<PathBuf> = ffx_config::file("flash.gcs.token").await?;
-    let auth = match boto {
-        Some(boto_path) => {
-            TokenStore::new_with_auth(
-                read_boto_refresh_token(&boto_path)?
-                    .ok_or(anyhow!("Could not read boto token store"))?,
-                /*access_token=*/ None,
-            )?
-        }
-        None => ffx_bail!("GCS authentication not found."),
-    };
-
-    let client_factory = ClientFactory::new(auth);
-    let client = client_factory.create_client();
-
     let product_bundle_container_path = temp_dir.path().join("product_bundles.json");
     let gcs_path = format!("development/{}/sdk/product_bundles.json", version);
-    client.fetch("fuchsia-sdk", &gcs_path, &product_bundle_container_path).await?;
+
+    // TODO(fxb/89584): Change to using ffx client Id and consent screen.
+    let boto: Option<PathBuf> = ffx_config::file("flash.gcs.token")
+        .await
+        .context("getting flash.gcs.token config value")?;
+    let boto_path = match boto {
+        Some(boto_path) => boto_path,
+        None => ffx_bail!(
+            "GCS authentication configuration value \"flash.gcs.token\" not \
+            found. Set this value by running `ffx config set flash.gcs.token <path>` \
+            to the path of the .boto file."
+        ),
+    };
+    loop {
+        let auth = TokenStore::new_with_auth(
+            read_boto_refresh_token(&boto_path)?
+                .ok_or(anyhow!("Could not read boto token store"))?,
+            /*access_token=*/ None,
+        )?;
+
+        let client_factory = ClientFactory::new(auth);
+        let client = client_factory.create_client();
+        match client.fetch("fuchsia-sdk", &gcs_path, &product_bundle_container_path).await {
+            Ok(()) => break,
+            Err(e) => match e.downcast_ref::<GcsError>() {
+                Some(GcsError::NeedNewRefreshToken) => {
+                    update_refresh_token(&boto_path).await.context("Updating refresh token")?
+                }
+                Some(_) | None => bail!("Cannot get product bundle container: {:?}", e),
+            },
+        }
+    }
 
     let mut container = File::open(&product_bundle_container_path).map(BufReader::new)?;
     let mut entries = Entries::new();

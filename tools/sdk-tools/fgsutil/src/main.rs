@@ -10,16 +10,15 @@ use {
     crate::config::{read_config, write_config, Configuration},
     anyhow::{anyhow, bail, Context, Result},
     args::{Args, CatArgs, ConfigArgs, CpArgs, ListArgs, SubCommand},
-    fuchsia_hyper::new_https_client,
     gcs::{
         client::ClientFactory,
         gs_url::split_gs_url,
-        token_store::{auth_code_url, TokenStore},
+        token_store::{auth_code_to_refresh, get_auth_code, TokenStore},
     },
     home::home_dir,
     std::{
         fs::OpenOptions,
-        io::{self, BufRead, BufReader, Read, Write},
+        io::{self, Write},
         path::{Path, PathBuf},
     },
 };
@@ -100,15 +99,6 @@ async fn config_command(_args: &ConfigArgs, config_path: &Path) -> Result<()> {
     Ok(())
 }
 
-/// Convert an authorization code to a refresh token.
-async fn auth_code_to_refresh(auth_code: &str) -> Result<String> {
-    let token_store = TokenStore::new_with_code(&new_https_client(), auth_code).await?;
-    match token_store.refresh_token() {
-        Some(s) => Ok(s.to_string()),
-        None => bail!("auth_code_to_refresh failed"),
-    }
-}
-
 /// Handle the `cp` (copy) command and its args.
 ///
 /// Very limited version of gsutil cp: download one file only.
@@ -145,39 +135,9 @@ async fn list_command(args: &ListArgs, config_path: &Path) -> Result<()> {
     Ok(())
 }
 
-/// Ask the user to visit a URL and copy-paste the auth code provided.
-///
-/// A helper wrapper around get_auth_code_with() using stdin/stdout.
-fn get_auth_code() -> Result<String> {
-    let stdout = io::stdout();
-    let mut output = stdout.lock();
-    let stdin = io::stdin();
-    let mut input = stdin.lock();
-    get_auth_code_with(&mut output, &mut input)
-}
-
-/// Ask the user to visit a URL and copy-paste the auth code provided.
-fn get_auth_code_with<W, R>(writer: &mut W, reader: &mut R) -> Result<String>
-where
-    W: Write,
-    R: Read,
-{
-    writeln!(
-        writer,
-        "Please visit this site and copy the authentication code:\
-        \n\n{}\n\nPaste the auth_code (from website) here and press return: ",
-        auth_code_url(),
-    )?;
-    writer.flush().expect("flush auth code prompt");
-    let mut auth_code = String::new();
-    let mut buf_reader = BufReader::new(reader);
-    buf_reader.read_line(&mut auth_code).expect("Need an auth_code.");
-    Ok(auth_code)
-}
-
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use {super::*, fuchsia_hyper::new_https_client};
 
     async fn gcs_download() -> Result<()> {
         let auth_code = get_auth_code()?;
@@ -211,14 +171,6 @@ mod tests {
             }
         }
         Ok(())
-    }
-
-    #[test]
-    fn test_get_auth_code_with() {
-        let mut output: Vec<u8> = Vec::new();
-        let mut input = "fake_auth_code".as_bytes();
-        let auth_code = get_auth_code_with(&mut output, &mut input).expect("auth code");
-        assert_eq!(auth_code, "fake_auth_code");
     }
 
     /// This test relies on a local file which is not present on test bots, so
