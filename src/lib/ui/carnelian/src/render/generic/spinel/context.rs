@@ -511,9 +511,8 @@ impl SpinelContext {
                 vk!(vk_ext.CreateBufferCollectionFUCHSIA(
                     device,
                     &BufferCollectionCreateInfoFUCHSIA {
-                        sType: STRUCTURE_TYPE_BUFFER_COLLECTION_CREATE_INFO_FUCHSIA,
-                        pNext: ptr::null(),
                         collectionToken: token.into_channel().into_raw(),
+                        ..Default::default()
                     },
                     ptr::null(),
                     ptr,
@@ -521,17 +520,40 @@ impl SpinelContext {
             })
         };
 
+        let default_color_space = SysmemColorSpaceFUCHSIA {
+            colorSpace: fidl_fuchsia_sysmem::ColorSpaceType::Srgb as u32,
+            ..Default::default()
+        };
+
+        let image_format_info = ImageFormatConstraintsInfoFUCHSIA {
+            imageCreateInfo: image_create_info(
+                size.width,
+                size.height,
+                format,
+                vk::IMAGE_TILING_OPTIMAL,
+                ptr::null(),
+            ),
+            requiredFormatFeatures: vk::FORMAT_FEATURE_STORAGE_IMAGE_BIT,
+            colorSpaceCount: 1,
+            pColorSpaces: &default_color_space as *const _,
+            ..Default::default()
+        };
+
+        let image_constraints_info = ImageConstraintsInfoFUCHSIA {
+            formatConstraintsCount: 1,
+            pFormatConstraints: &image_format_info as *const _,
+            bufferCollectionConstraints: BufferCollectionConstraintsInfoFUCHSIA {
+                minBufferCount: 1,
+                ..Default::default()
+            },
+            ..Default::default()
+        };
+
         unsafe {
-            vk!(vk_ext.SetBufferCollectionConstraintsFUCHSIAX(
+            vk!(vk_ext.SetBufferCollectionImageConstraintsFUCHSIA(
                 device,
                 buffer_collection,
-                &image_create_info(
-                    size.width,
-                    size.height,
-                    format,
-                    vk::IMAGE_TILING_OPTIMAL,
-                    ptr::null(),
-                )
+                &image_constraints_info as *const _,
             ));
         }
 
