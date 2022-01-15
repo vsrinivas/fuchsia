@@ -75,8 +75,8 @@ struct TestObject {
     destructor_count = 0;
   }
 
-  inline static volatile int constructor_count{0};
-  inline static volatile int destructor_count{0};
+  inline static ktl::atomic<int> constructor_count{0};
+  inline static ktl::atomic<int> destructor_count{0};
 };
 
 struct TestParent : fbl::RefCounted<TestParent> {
@@ -102,7 +102,7 @@ struct TestParent : fbl::RefCounted<TestParent> {
   Allocator allocator{kReserveSlabs};
 
   static void ResetCounts() { destructor_count = 0; }
-  inline static volatile int destructor_count{0};
+  inline static ktl::atomic<int> destructor_count{0};
 };
 
 template <int retain_slabs, int slab_count, Option option>
