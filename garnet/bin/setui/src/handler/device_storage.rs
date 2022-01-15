@@ -13,7 +13,7 @@ use anyhow::{format_err, Context, Error};
 use fidl::endpoints::create_proxy;
 use fidl_fuchsia_stash::{StoreAccessorProxy, StoreProxy, Value};
 use fuchsia_async::{Task, Timer, WakeupTime};
-use fuchsia_syslog::fx_log_err;
+use fuchsia_syslog::{fx_log_err, fx_log_info};
 use futures::channel::mpsc::UnboundedSender;
 use futures::future::OptionFuture;
 use futures::lock::Mutex;
@@ -21,6 +21,7 @@ use futures::{FutureExt, StreamExt};
 use serde::de::DeserializeOwned;
 use serde::Serialize;
 
+use crate::audio::types::AudioInfo;
 use crate::handler::setting_handler::persist::UpdateState;
 use crate::handler::stash_inspect_logger::StashInspectLoggerHandle;
 
@@ -72,8 +73,13 @@ impl CachedStorage {
     /// Triggers a flush on the given stash proxy.
     async fn stash_flush(&mut self, setting_key: String) {
         if matches!(self.stash_proxy.flush().await, Ok(Err(_)) | Err(_)) {
+            if setting_key == AudioInfo::KEY {
+                fx_log_info!("b/210170985: stash flush for audio failed");
+            }
             // Record the write failure to inspect.
             self.inspect_handle.logger.lock().await.record_flush_failure(setting_key);
+        } else if setting_key == AudioInfo::KEY {
+            fx_log_info!("b/210170985: stash flush for audio finished");
         }
     }
 }
@@ -281,6 +287,9 @@ impl DeviceStorage {
                             _ = next_flush_timer_fuse => {
                                 // Timer triggered, check for pending flushes.
                                 if has_pending_flush {
+                                    if key == AudioInfo::KEY {
+                                        fx_log_info!("b/210170985: flushing audio setting to stash");
+                                    }
                                     cached_storage.lock().await.stash_flush(key.into()).await;
                                     last_flush = Instant::now();
                                     has_pending_flush = false;
@@ -315,6 +324,9 @@ impl DeviceStorage {
         data_as_any: Box<dyn Any + Send + Sync>,
         mapping_fn: Box<dyn FnOnce(&(dyn Any + Send + Sync)) -> String + Send>,
     ) -> Result<UpdateState, Error> {
+        if key == AudioInfo::KEY {
+            fx_log_info!("b/210170985: begin writing new audio setting");
+        }
         let typed_storage = self
             .typed_storage_map
             .get(key)
@@ -345,18 +357,24 @@ impl DeviceStorage {
         };
 
         Ok(if cached_value != Some(&new_value) {
+            if key == AudioInfo::KEY {
+                fx_log_info!("b/210170985: writing new audio setting to stash");
+            }
             let mut serialized = Value::Stringval(new_value);
             let key = prefixed(key);
             cached_storage.stash_proxy.set_value(&key, &mut serialized)?;
             if !self.debounce_writes {
                 // Not debouncing writes for testing, just flush immediately.
-                cached_storage.stash_flush(key).await;
+                cached_storage.stash_flush(key.clone()).await;
             } else {
                 typed_storage.flush_sender.unbounded_send(()).with_context(|| {
                     format!("flush_sender failed to send flush message, associated key is {}", key)
                 })?;
             }
             cached_storage.current_data = Some(data_as_any);
+            if key == AudioInfo::KEY {
+                fx_log_info!("b/210170985: finished writing new audio setting");
+            }
             UpdateState::Updated
         } else {
             UpdateState::Unchanged
