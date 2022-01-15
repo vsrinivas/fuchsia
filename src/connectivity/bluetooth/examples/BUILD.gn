@@ -4,9 +4,16 @@
 
 import("//build/components.gni")
 
-fuchsia_shell_package("examples") {
+fuchsia_shell_package("bt-shell-examples") {
   deps = [
     "bt-le-battery-service",
     "bt-le-heart-rate-peripheral",
+  ]
+}
+
+group("examples") {
+  deps = [
+    ":bt-shell-examples",
+    "bt-device-id-client",
   ]
 }
