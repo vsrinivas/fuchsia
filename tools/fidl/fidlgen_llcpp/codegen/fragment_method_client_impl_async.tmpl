@@ -4,7 +4,7 @@
 // found in the LICENSE file.
 */}}
 
-{{- define "Method:ClientImplAsync:WireMessagingHeader" }}
+{{- define "Method:ClientImplAsync:MessagingHeader" }}
   {{- IfdefFuchsia -}}
   {{- /* Async managed flavor */}}
   {{- .Docs }}
@@ -27,7 +27,7 @@
 {{- end }}
 
 
-{{- define "Method:ClientImplAsync:WireMessagingSource" }}
+{{- define "Method:ClientImplAsync:MessagingSource" }}
   {{- IfdefFuchsia -}}
 
   {{- /* Async managed flavor */}}

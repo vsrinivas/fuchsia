@@ -1,0 +1,15 @@
+{{/*
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+*/}}
+
+{{- define "ProtocolDetailsDefinition" }}
+
+{{- range .Methods }}
+{{- EnsureNamespace .OrdinalName }}
+[[maybe_unused]]
+constexpr inline uint64_t {{ .OrdinalName.Name }} = {{ .Ordinal }}lu;
+{{- end }}
+
+{{- end }}

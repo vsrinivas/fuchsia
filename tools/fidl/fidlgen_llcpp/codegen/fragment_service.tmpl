@@ -4,12 +4,12 @@
 // found in the LICENSE file.
 */}}
 
-{{- define "Service:ForwardDeclaration:WireMessagingHeader" }}
+{{- define "Service:ForwardDeclaration:MessagingHeader" }}
 {{ EnsureNamespace . }}
 class {{ .Name }};
 {{- end }}
 
-{{- define "Service:WireMessagingHeader" }}
+{{- define "Service:MessagingHeader" }}
 {{ EnsureNamespace . }}
 {{ "" }}
 {{- .Docs }}

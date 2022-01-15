@@ -16,7 +16,7 @@ deps = [
 and include the following header:
 
 ```cpp
-#include <fidl/fuchsia.examples/cpp/fidl.h>
+#include <fuchsia/examples/cpp/fidl_v2.h>
 ```
 
 After the unified bindings is sufficiently stable for general use,

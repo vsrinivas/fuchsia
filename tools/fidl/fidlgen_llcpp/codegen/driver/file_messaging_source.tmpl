@@ -28,7 +28,7 @@ do not support them in the bindings. */}}
 
 
 {{- range (call .ProtocolsForTransport "Driver") }}
-  {{ template "Protocol:WireMessagingSource" . }}
+  {{ template "Protocol:MessagingSource" . }}
 {{ end }}
 {{ "" }}
 {{- end }}{{/* if not SingleComponentLibraryName */}}

@@ -492,20 +492,6 @@ template("fidl_cpp_family") {
     },
 
     {
-      layer = "cpp"  # AKA: unified_channel_messaging
-      headers = [
-        "fidl/$library_name/cpp/fidl.h",
-        "fidl/$library_name/cpp/natural_messaging.h",
-      ]
-      sources = [ "fidl/$library_name/cpp/natural_messaging.cc" ]
-      layer_deps = [
-        "llcpp",
-        "natural_types",
-      ]
-      public_deps = [ "//src/lib/fidl/cpp" ]
-    },
-
-    {
       layer = "driver"  # AKA: wire_driver_messaging
       headers = [
         "fidl/$library_name/cpp/driver/wire.h",
@@ -565,6 +551,44 @@ template("fidl_cpp_family") {
           generated_sources += layer.sources
         }
       }
+    }
+  }
+
+  # Unified C++ Bindings
+  #
+  # The unified bindings imports the natural types from HLCPP and the
+  # entire LLCPP bindings, and extends it with messaging APIs that works
+  # with the natural types.
+  #
+
+  # Define the unified bindings target.
+  # Note that we also check llcpp_public_deps here, because we would not
+  # generate the corresponding LLCPP bindings if it was empty.
+  if (llcpp_public_deps != [] && is_fuchsia) {
+    cpp_options = {
+      bindings_flavor = "cpp"
+      generated_headers = [ "$library_name_slashes/cpp/fidl_v2.h" ]
+      generated_sources = [ "$library_name_slashes/cpp/fidl_v2.cc" ]
+    }
+
+    fidl_cpp_codegen("${target_name}_cpp") {
+      forward_variables_from(common_options, "*")
+      forward_variables_from(cpp_options, "*")
+      fidlgen_tool = "//tools/fidl/fidlgen_cpp"
+    }
+    fidl_cpp_library("${target_name}_cpp") {
+      forward_variables_from(invoker,
+                             [
+                               "public_deps",
+                               "visibility",
+                             ])
+      forward_variables_from(common_options, "*")
+      forward_variables_from(cpp_options, "*")
+      additional_public_deps = [
+        ":${fidl_target_name}_llcpp",
+        ":${fidl_target_name}_natural_types",
+        "//src/lib/fidl/cpp",
+      ]
     }
   }
 

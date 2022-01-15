@@ -4,7 +4,7 @@
 // found in the LICENSE file.
 */}}
 
-{{- define "Method:Response:WireMessagingHeader" }}
+{{- define "Method:Response:MessagingHeader" }}
 {{- EnsureNamespace "" }}
 {{- if .Response.IsResource }}
 {{- IfdefFuchsia -}}
@@ -70,7 +70,7 @@ struct {{ .WireResponse }} final {
 
 
 
-{{- define "Method:Response:WireMessagingSource" }}
+{{- define "Method:Response:MessagingSource" }}
   {{- EnsureNamespace "" }}
 {{- if .Response.IsResource }}
 {{- IfdefFuchsia -}}
@@ -91,63 +91,3 @@ struct {{ .WireResponse }} final {
 {{- end }}
 {{- end }}
 
-
-
-{{- define "Method:Response:NaturalMessagingHeader" }}
-{{- IfdefFuchsia -}}
-{{- EnsureNamespace "" }}
-
-template <>
-class {{ .NaturalResponse }} final : public {{ .ResponseMessageBase }} {
- public:
-  {{- with .NaturalResponse }}
-  {{ .Self }}() = default;
-  ~{{ .Self }}() = default;
-  {{ .Self }}({{ .Self }}&&) noexcept = default;
-  {{ .Self }}& operator=({{ .Self }}&&) noexcept = default;
-  {{- end }}
-
-  {{- if .HasResponsePayload }}
-  {{ .NaturalResponse.Self }}({{ .ResponsePayload }} payload) : payload_(std::move(payload)) {}
-  {{- end }}
-
-  {{- if .Response.IsResource }}
-    {{- with .NaturalResponse }}
-  {{ .Self }}(const {{ .Self }}&) noexcept = delete;
-  {{ .Self }}& operator=(const {{ .Self }}&) noexcept = delete;
-    {{- end }}
-  {{- else }}
-    {{- /* TODO(fxbug.dev/82189): Generate copy constructors */}}
-  {{- end }}
-
-  {{- if .HasResponsePayload }}
-  {{ .ResponsePayload }}* operator->() { return &payload_; }
-  const {{ .ResponsePayload }}* operator->() const { return &payload_; }
-  {{ .ResponsePayload }}& operator*() { return payload_; }
-  const {{ .ResponsePayload }}& operator*() const { return payload_; }
-  {{- end }}
-
- private:
-  {{- if .HasResponsePayload }}
-  {{ .ResponsePayload }} payload_;
-  {{- end }}
-};
-
-template <>
-struct {{ .ResponseMessageTraits }} final {
- public:
-  static constexpr bool kHasPayload = {{ .HasResponsePayload }};
-  {{- if .HasResponsePayload }}
-  using Payload = {{ .ResponsePayload }};
-  {{- end }}
-};
-
-
-{{- EndifFuchsia -}}
-{{- end }}
-
-
-
-{{- define "Method:Response:NaturalMessagingSource" }}
-
-{{- end }}

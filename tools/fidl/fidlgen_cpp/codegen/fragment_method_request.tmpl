@@ -1,0 +1,65 @@
+{{/*
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+*/}}
+
+{{- define "MethodRequestDeclaration" }}
+{{- IfdefFuchsia -}}
+{{- EnsureNamespace "" }}
+
+template <>
+class {{ .NaturalRequest }} final : public {{ .RequestMessageBase }} {
+ public:
+  {{- with .NaturalRequest }}
+    {{ .Self }}() = default;
+    ~{{ .Self }}() = default;
+    {{ .Self }}({{ .Self }}&&) noexcept = default;
+    {{ .Self }}& operator=({{ .Self }}&&) noexcept = default;
+  {{- end }}
+
+  {{- if .HasRequestPayload }}
+    {{ .NaturalRequest.Self }}({{ .RequestPayload }} payload) : payload_(std::move(payload)) {}
+  {{- end }}
+
+  {{- if .Request.IsResource }}
+    {{- with .NaturalRequest }}
+      {{ .Self }}(const {{ .Self }}&) noexcept = delete;
+      {{ .Self }}& operator=(const {{ .Self }}&) noexcept = delete;
+    {{- end }}
+  {{- else }}
+    {{- /* TODO(fxbug.dev/82189): Generate copy constructors */}}
+  {{- end }}
+
+  {{- if .HasRequestPayload }}
+    {{ .RequestPayload }}* operator->() { return &payload_; }
+    const {{ .RequestPayload }}* operator->() const { return &payload_; }
+    {{ .RequestPayload }}& operator*() { return payload_; }
+    const {{ .RequestPayload }}& operator*() const { return payload_; }
+  {{- end }}
+
+ private:
+  {{- if .HasRequestPayload }}
+    {{ .RequestPayload }} payload_;
+  {{- end }}
+};
+
+template <>
+struct {{ .RequestMessageTraits }} final {
+ public:
+  static constexpr bool kHasPayload = {{ .HasRequestPayload }};
+  {{- if .HasRequestPayload }}
+    using Payload = {{ .RequestPayload }};
+  {{- end }}
+};
+
+
+{{- EndifFuchsia -}}
+{{- end }}
+
+
+
+{{- define "MethodRequestDefinition" }}
+
+{{- end }}
+

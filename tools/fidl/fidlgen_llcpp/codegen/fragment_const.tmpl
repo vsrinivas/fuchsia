@@ -4,7 +4,7 @@
 // found in the LICENSE file.
 */}}
 
-{{- define "Const:WireTypesHeader" }}
+{{- define "Const:TypesHeader" }}
 {{ EnsureNamespace . }}
 {{ .Docs }}
 {{- if .Extern }}
@@ -14,7 +14,7 @@ extern {{ .Decorator }} {{ .Type }} {{ .Name }};
 {{- end }}
 {{- end }}
 
-{{- define "Const:WireTypesSource" }}
+{{- define "Const:TypesSource" }}
 {{- if .Extern }}
 {{ EnsureNamespace "" }}
 {{ .Decorator }} {{ .Type }} {{ . }} = {{ .Value }};

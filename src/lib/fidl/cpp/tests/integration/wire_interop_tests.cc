@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fidl/fidl.cpp.wire.interop.test/cpp/fidl.h>
+#include <fidl/cpp/wire/interop/test/cpp/fidl_v2.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/fidl/cpp/client.h>
 #include <lib/stdcompat/string_view.h>

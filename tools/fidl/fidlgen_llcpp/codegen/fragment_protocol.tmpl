@@ -4,11 +4,10 @@
 // found in the LICENSE file.
 */}}
 
-{{- define "Protocol:ForwardDeclaration:WireMessagingHeader" }}
+{{- define "Protocol:ForwardDeclaration:MessagingHeader" }}
   {{ EnsureNamespace . }}
   class {{ .Name }};
 {{- end }}
-
 
 
 {{- define "Method:ClientAllocationComment:Helper" -}}
@@ -32,9 +31,7 @@
   {{- end }}
 {{- end }}
 
-
-
-{{- define "Protocol:WireMessagingHeader" }}
+{{- define "Protocol:MessagingHeader" }}
 {{- $protocol := . }}
 {{ "" }}
   {{- range .Methods }}
@@ -53,46 +50,44 @@ struct {{ .WireOrdinal }} final { static constexpr uint64_t value = {{ .Ordinal 
 
 {{ EnsureNamespace . }}
 
-{{- template "Protocol:Details:WireMessagingHeader" . }}
-{{- template "Protocol:Dispatcher:WireMessagingHeader" . }}
+{{- template "Protocol:Details:MessagingHeader" . }}
+{{- template "Protocol:Dispatcher:MessagingHeader" . }}
 
 {{- range .Methods }}
   {{- if .HasRequest }}
-    {{- template "Method:Request:WireMessagingHeader" . }}
+    {{- template "Method:Request:MessagingHeader" . }}
   {{- end }}
   {{- if .HasResponse }}
-    {{- template "Method:Response:WireMessagingHeader" . }}
+    {{- template "Method:Response:MessagingHeader" . }}
   {{- end }}
 {{- end }}
 
 {{- IfdefFuchsia -}}
 {{- range .ClientMethods -}}
   {{- if .Transport.HasSyncClient }}
-  {{- template "Method:Result:WireMessagingHeader" . }}
+  {{- template "Method:Result:MessagingHeader" . }}
   {{- end }}
   {{- if eq .Transport.Name "Driver" }}
   {{- template "driver/Method:UnownedResult:MessagingHeader" . }}
   {{- else }}
-  {{- template "Method:UnownedResult:WireMessagingHeader" . }}
+  {{- template "Method:UnownedResult:MessagingHeader" . }}
   {{- end }}
 {{- end }}
 
-{{- template "Protocol:EventHandler:WireMessagingHeader" . }}
+{{- template "Protocol:EventHandler:MessagingHeader" . }}
 {{- if .Transport.HasSyncClient }}
 {{- if eq .Transport.Name "Driver" }}
 {{- template "driver/Protocol:Caller:MessagingHeader" . }}
 {{- else }}
-{{- template "Protocol:Caller:WireMessagingHeader" . }}
+{{- template "Protocol:Caller:MessagingHeader" . }}
 {{- end }}
 {{- end }}
-{{- template "Protocol:Interface:WireMessagingHeader" . }}
+{{- template "Protocol:Interface:MessagingHeader" . }}
 {{- EndifFuchsia -}}
 
 {{- end }}
 
-
-
-{{- define "Protocol:Traits:WireMessagingHeader" -}}
+{{- define "Protocol:Traits:MessagingHeader" -}}
 {{ $protocol := . -}}
 {{ range .Methods -}}
 {{ $method := . -}}
@@ -139,9 +134,7 @@ static_assert(offsetof({{ $method.WireResponse }}, {{ $param.Name }}) == {{ $par
 {{- end }}
 {{- end }}
 
-
-
-{{- define "Protocol:WireMessagingSource" }}
+{{- define "Protocol:MessagingSource" }}
 {{ $protocol := . -}}
 
 {{- range .Methods }}
@@ -158,14 +151,14 @@ extern "C" const fidl_type_t {{ .Response.WireCodingTable.Name }};
 {{- range .ClientMethods -}}
 {{ "" }}
     {{- if .Transport.HasSyncClient }}
-    {{- template "Method:Result:WireMessagingSource" . }}
+    {{- template "Method:Result:MessagingSource" . }}
     {{- end }}
   {{- if or .RequestArgs .ResponseArgs }}
 {{ "" }}
     {{- if eq .Transport.Name "Driver" }}
     {{- template "driver/Method:UnownedResult:MessagingSource" . }}
     {{- else }}
-    {{- template "Method:UnownedResult:WireMessagingSource" . }}
+    {{- template "Method:UnownedResult:MessagingSource" . }}
     {{- end }}
   {{- end }}
 {{ "" }}
@@ -174,29 +167,29 @@ extern "C" const fidl_type_t {{ .Response.WireCodingTable.Name }};
 {{- if eq .Transport.Name "Driver" }}
 {{ template "Protocol:ClientImpl:driver/MessagingSource" . }}
 {{- else }}
-{{ template "Protocol:ClientImpl:WireMessagingSource" . }}
+{{ template "Protocol:ClientImpl:MessagingSource" . }}
 {{- end }}
 
-{{ template "Protocol:EventHandler:WireMessagingSource" . }}
+{{ template "Protocol:EventHandler:MessagingSource" . }}
 
 {{- /* Server implementation */}}
-{{ template "Protocol:Dispatcher:WireMessagingSource" . }}
+{{ template "Protocol:Dispatcher:MessagingSource" . }}
 
 {{- if .Methods }}
   {{- range .TwoWayMethods -}}
     {{- if eq .Transport.Name "Driver" }}
     {{- template "Method:CompleterBase:driver/MessagingSource" . }}
     {{- else }}
-    {{- template "Method:CompleterBase:WireMessagingSource" . }}
+    {{- template "Method:CompleterBase:MessagingSource" . }}
     {{- end }}
   {{- end }}
 
   {{- range .Methods }}
 
-    {{- if .HasRequest }}{{ template "Method:Request:WireMessagingSource" . }}{{ end }}
+    {{- if .HasRequest }}{{ template "Method:Request:MessagingSource" . }}{{ end }}
     {{ "" }}
 
-    {{- if .HasResponse }}{{ template "Method:Response:WireMessagingSource" . }}{{ end }}
+    {{- if .HasResponse }}{{ template "Method:Response:MessagingSource" . }}{{ end }}
     {{ "" }}
 
   {{- end }}
@@ -204,15 +197,3 @@ extern "C" const fidl_type_t {{ .Response.WireCodingTable.Name }};
 
 {{- end }}
 
-
-
-{{- define "Protocol:NaturalMessagingHeader" }}
-  {{- /* This decouples the natural messaging header from the messaging header. */}}
-  {{- /* For example, we could transition one of them off of coding tables independently. */}}
-  {{- range .Methods }}
-    {{ EnsureNamespace .Request.WireCodingTable }}
-    __LOCAL extern "C" const fidl_type_t {{ .Request.WireCodingTable.Name }};
-    {{ EnsureNamespace .Response.WireCodingTable }}
-    __LOCAL extern "C" const fidl_type_t {{ .Response.WireCodingTable.Name }};
-  {{- end }}
-{{- end }}

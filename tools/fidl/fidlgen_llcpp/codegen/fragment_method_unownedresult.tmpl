@@ -4,7 +4,7 @@
 // found in the LICENSE file.
 */}}
 
-{{- define "Method:UnownedResult:WireMessagingHeader" }}
+{{- define "Method:UnownedResult:MessagingHeader" }}
 {{- EnsureNamespace "" }}
 template<>
 class {{ .WireUnownedResult }} final : public ::fidl::Result {
@@ -76,7 +76,7 @@ class {{ .WireUnownedResult }} final : public ::fidl::Result {
 
 
 
-{{- define "Method:UnownedResult:WireMessagingSource" }}
+{{- define "Method:UnownedResult:MessagingSource" }}
 {{- if .Transport.HasSyncClient }}
 {{- IfdefFuchsia -}}
 {{- EnsureNamespace "" }}

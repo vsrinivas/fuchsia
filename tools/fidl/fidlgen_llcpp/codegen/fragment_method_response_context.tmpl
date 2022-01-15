@@ -4,7 +4,7 @@
 // found in the LICENSE file.
 */}}
 
-{{- define "Method:ResponseContext:WireMessagingHeader" }}
+{{- define "Method:ResponseContext:MessagingHeader" }}
 {{- EnsureNamespace "" }}
 {{- IfdefFuchsia }}
 template<>
@@ -24,7 +24,7 @@ class {{ .WireResponseContext }} : public ::fidl::internal::ResponseContext {
 
 
 
-{{- define "Method:ResponseContext:WireMessagingSource" }}
+{{- define "Method:ResponseContext:MessagingSource" }}
 {{- EnsureNamespace "" }}
 {{- IfdefFuchsia }}
 {{ .WireResponseContext }}::{{ .WireResponseContext.Self }}()

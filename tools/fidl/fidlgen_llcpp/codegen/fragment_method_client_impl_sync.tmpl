@@ -12,7 +12,7 @@
 
 
 
-{{- define "Method:WireWeakSyncClientImpl:WireMessagingHeader" }}
+{{- define "Method:WireWeakSyncClientImpl:MessagingHeader" }}
   {{- .Docs }}
   {{ if .DocComments }}
     //
@@ -23,7 +23,7 @@
 
 
 
-{{- define "Method:WireWeakSyncClientImpl:WireMessagingSource" }}
+{{- define "Method:WireWeakSyncClientImpl:MessagingSource" }}
   {{ EnsureNamespace "" }}
 
   {{ .WireResult }}
@@ -43,7 +43,7 @@
 
 
 {{- /* TODO(fxbug.dev/85688): Remove this. */}}
-{{- define "Method:ClientImplSync:WireMessagingHeader" }}
+{{- define "Method:ClientImplSync:MessagingHeader" }}
   {{- /* Sync managed flavor */}}
   {{- .Docs }}
   {{ if .DocComments }}
@@ -70,7 +70,7 @@
 
 
 {{- /* TODO(fxbug.dev/85688): Remove this. */}}
-{{- define "Method:ClientImplSyncCallerAllocate:WireMessagingSource" }}
+{{- define "Method:ClientImplSyncCallerAllocate:MessagingSource" }}
   {{ EnsureNamespace "" }}
 
   {{- IfdefFuchsia -}}
@@ -93,7 +93,7 @@
 
 
 {{- /* TODO(fxbug.dev/85688): Remove this. */}}
-{{- define "Method:ClientImplSyncManaged:WireMessagingSource" }}
+{{- define "Method:ClientImplSyncManaged:MessagingSource" }}
   {{ EnsureNamespace "" }}
 
   {{- IfdefFuchsia -}}
@@ -113,10 +113,10 @@
 
 
 {{- /* TODO(fxbug.dev/85688): Remove this. */}}
-{{- define "Method:ClientImplSync:WireMessagingSource" }}
-  {{- template "Method:ClientImplSyncManaged:WireMessagingSource" . }}
+{{- define "Method:ClientImplSync:MessagingSource" }}
+  {{- template "Method:ClientImplSyncManaged:MessagingSource" . }}
   {{- if or .RequestArgs .ResponseArgs }}
-    {{- template "Method:ClientImplSyncCallerAllocate:WireMessagingSource" . }}
+    {{- template "Method:ClientImplSyncCallerAllocate:MessagingSource" . }}
   {{- end }}
 {{- end }}
 
