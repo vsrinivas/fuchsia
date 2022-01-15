@@ -90,7 +90,7 @@ if (is_host) {
     foreach(info, fidl_testdata_info) {
       if (info.denylist + [ "fidlgen_hlcpp" ] - [ "fidlgen_hlcpp" ] ==
           info.denylist) {
-        deps += [ "${info.target}_cpp_hlcpp_types_generate($fidl_toolchain)" ]
+        deps += [ "${info.target}_cpp_natural_types_generate($fidl_toolchain)" ]
         gen_dir = "${info.fidl_gen_dir}/${info.target_name}/cpp_natural_types"
         include_path = string_replace(info.library, ".", "/") + "/cpp"
         entries += [
@@ -126,7 +126,7 @@ group("goldens") {
     if (info[denylist_key] + [ "fidlgen_hlcpp" ] - [ "fidlgen_hlcpp" ] ==
         info[denylist_key]) {
       deps += [
-        "${info.target}_cpp_hlcpp_types",
+        "${info.target}_cpp_natural_types",
         "${info.target}_hlcpp",
       ]
     }
