@@ -367,20 +367,20 @@ template("fidl_cpp_family") {
   #
 
   natural_types_options = {
-    bindings_flavor = "cpp_natural_types"
+    bindings_flavor = "cpp_hlcpp_types"
     generated_headers = [ "$library_name_slashes/cpp/natural_types.h" ]
     generated_sources = [ "$library_name_slashes/cpp/natural_types.cc" ]
   }
 
   # Define C++ natural types target.
   # They are generated using the HLCPP backend.
-  fidl_cpp_codegen("${target_name}_cpp_natural_types") {
+  fidl_cpp_codegen("${target_name}_cpp_hlcpp_types") {
     forward_variables_from(common_options, "*")
     forward_variables_from(natural_types_options, "*")
     fidlgen_tool = "//tools/fidl/fidlgen_hlcpp"
     experiments = [ "natural-types" ]
   }
-  fidl_cpp_library("${target_name}_cpp_natural_types") {
+  fidl_cpp_library("${target_name}_cpp_hlcpp_types") {
     forward_variables_from(invoker,
                            [
                              "public_deps",
