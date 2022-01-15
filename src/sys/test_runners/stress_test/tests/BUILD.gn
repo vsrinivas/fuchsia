@@ -34,7 +34,10 @@ fuchsia_test_package("stress-runner-integration-test") {
 
   # This includes the `always_fail`, `always_pass`, `timeout` and `echo` stress tests
   # used in this integration test.
-  deps = [ "test_data" ]
+  deps = [
+    "test_data",
+    "//src/sys/test_manager:test_manager_for_test_cmp",
+  ]
 }
 
 group("tests") {

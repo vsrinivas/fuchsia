@@ -2,6 +2,9 @@
 // allowed by the security policy.
 {
     include: [ "//src/sys/test_manager/meta/common.shard.cml" ],
+    program: {
+        args: [ "test_manager_for_tests.cm" ],
+    },
     environments: [
         {
             name: "test-env",

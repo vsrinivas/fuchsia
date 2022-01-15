@@ -44,6 +44,7 @@ fuchsia_component("inspect_runner_integration_test") {
 fuchsia_test_package("inspect-runner-integration-test") {
   test_components = [ ":inspect_runner_integration_test" ]
   deps = [
+    "//src/sys/test_manager:test_manager_for_test_cmp",
     "//src/sys/test_runners/inspect/test_data/example-tests:archive-example",
     "//src/sys/test_runners/inspect/test_data/example-tests:feedback-example",
     "//src/sys/test_runners/inspect/test_data/example-tests:legacy-example",

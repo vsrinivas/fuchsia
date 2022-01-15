@@ -9,20 +9,51 @@ use {
     fuchsia_component::server::ServiceFs,
     fuchsia_zircon as zx,
     futures::StreamExt,
-    std::sync::Arc,
+    std::{
+        convert::{TryFrom, TryInto},
+        sync::Arc,
+    },
     test_manager_lib::AboveRootCapabilitiesForTest,
     tracing::{info, warn},
 };
 
+const DEFAULT_MANIFEST_NAME: &str = "test_manager.cm";
+
+/// Arguments passed to test manager.
+struct TestManagerArgs {
+    /// optional positional argument that specifies an override for the name of the manifest.
+    manifest_name: Option<String>,
+}
+
+impl TryFrom<std::env::Args> for TestManagerArgs {
+    type Error = Error;
+    fn try_from(args: std::env::Args) -> Result<Self, Self::Error> {
+        let mut args_vec: Vec<_> = args.collect();
+        match args_vec.len() {
+            1 => Ok(Self { manifest_name: None }),
+            2 => Ok(Self { manifest_name: args_vec.pop() }),
+            _ => anyhow::bail!("Unexpected number of arguments: {:?}", args_vec),
+        }
+    }
+}
+
+impl TestManagerArgs {
+    pub fn manifest_name(&self) -> &str {
+        self.manifest_name.as_ref().map(String::as_str).unwrap_or(DEFAULT_MANIFEST_NAME)
+    }
+}
+
 #[fuchsia::component]
 async fn main() -> Result<(), Error> {
     info!("started");
+    let args: TestManagerArgs = std::env::args().try_into()?;
     let mut fs = ServiceFs::new();
     let test_map = test_manager_lib::TestMap::new(zx::Duration::from_minutes(5));
     let test_map_clone = test_map.clone();
     let test_map_clone2 = test_map.clone();
 
-    let routing_info = Arc::new(AboveRootCapabilitiesForTest::new("test_manager.cm").await?);
+    info!("Reading capabilities from {}", args.manifest_name());
+    let routing_info = Arc::new(AboveRootCapabilitiesForTest::new(args.manifest_name()).await?);
     let routing_info_clone = routing_info.clone();
     let resolver = Arc::new(
         connect_to_protocol::<fsys::ComponentResolverMarker>()

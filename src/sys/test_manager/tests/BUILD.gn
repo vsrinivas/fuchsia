@@ -36,6 +36,7 @@ fuchsia_unittest_package("test_manager_test") {
   package_deps_for_infra_only = [
     "//examples/tests:example-tests",
     "//src/sys/test_manager/cmx_runner/tests:cmx_runner_tests",
+    "//src/sys/test_manager/cmx_runner",
     "//src/sys/test_manager/tests/diagnostics_tests:test-manager-diagnostics-tests",
     "//src/sys/test_runners/gtest/test_data:gtest-runner-example-tests",
     "//src/sys/test_runners/starnix:starnix-test-runner",
@@ -44,6 +45,7 @@ fuchsia_unittest_package("test_manager_test") {
   deps = [
     ":test_manager_test_bin",
     "test_data",
+    "//src/sys/test_manager:test_manager_for_test_cmp",
   ]
 
   # There's expected error logs that happen during the test such as not resolving an instance when

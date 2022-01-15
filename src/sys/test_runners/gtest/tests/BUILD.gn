@@ -72,6 +72,7 @@ fuchsia_test_package("gtest-runner-integration-test") {
     ":gtest_runner_integration_test",
     ":gtest_runner_stress_test",
   ]
+  deps = [ "//src/sys/test_manager:test_manager_for_test_cmp" ]
 
   # fxbug.dev/74652: This stress test fails on coverage bot.
   if (is_coverage) {

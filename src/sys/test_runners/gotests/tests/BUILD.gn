@@ -36,6 +36,7 @@ fuchsia_test_package("go-runner-integration-test") {
   package_deps_for_infra_only =
       [ "//src/sys/test_runners/gotests/test_data:go-test-runner-example" ]
   test_components = [ ":go_runner_integration_test" ]
+  deps = [ "//src/sys/test_manager:test_manager_for_test_cmp" ]
 }
 
 group("tests") {

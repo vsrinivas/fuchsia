@@ -150,7 +150,6 @@ fuchsia_package("test_manager_pkg") {
   deps = [
     ":memfs",
     ":test_manager_cmp",
-    ":test_manager_for_test_cmp",
     "cmx_runner",
     "debug_data",
     "debug_data:debug_data_processor",

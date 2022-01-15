@@ -10,7 +10,7 @@
     children: [
         {
             name: "test_manager",
-            url: "fuchsia-pkg://fuchsia.com/test_manager#meta/test_manager_for_tests.cm",
+            url: "#meta/test_manager_for_tests.cm",
         },
     ],
     use: [

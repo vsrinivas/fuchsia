@@ -37,6 +37,7 @@ fuchsia_test_package("legacy-test-runner-integration-test") {
     "//src/sys/test_runners/starnix:starnix-test-runner",
   ]
   test_components = [ ":legacy_test_runner_integration_test" ]
+  deps = [ "//src/sys/test_manager:test_manager_for_test_cmp" ]
 }
 
 group("tests") {
