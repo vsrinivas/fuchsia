@@ -28,6 +28,7 @@ use netstack_testing_common::{
 };
 use netstack_testing_macros::variants_test;
 use test_case::test_case;
+
 const CLIENT_IPV4_SUBNET: fnet::Subnet = fidl_subnet!("192.168.0.2/24");
 const SERVER_IPV4_SUBNET: fnet::Subnet = fidl_subnet!("192.168.0.1/24");
 const CLIENT_MAC_ADDRESS: fnet::MacAddress = fidl_mac!("02:00:00:00:00:01");
@@ -1199,15 +1200,43 @@ async fn setup_masquerate_nat_network<'a, E: netemul::Endpoint>(
         let state_stream = fnet_interfaces_ext::event_stream(
             router_ep2.get_interfaces_watcher().expect("error getting interfaces watcher"),
         );
-        let () = std::mem::drop(net2);
+        futures::pin_mut!(state_stream);
 
-        let mut router_ep2_name = None;
+        // Make sure the interfaces watcher stream knows about router_ep2's existence
+        // so we can reliably observe its removal later.
+        let mut router_ep2_interface_state = fnet_interfaces_ext::existing(
+            &mut state_stream,
+            fnet_interfaces_ext::InterfaceState::Unknown(router_ep2_id),
+        )
+        .await
+        .expect("error reading existing interface event");
+
+        let router_ep2_name = match &router_ep2_interface_state {
+            fnet_interfaces_ext::InterfaceState::Known(fnet_interfaces_ext::Properties {
+                id,
+                name,
+                device_class: _,
+                online: _,
+                addresses: _,
+                has_default_ipv4_route: _,
+                has_default_ipv6_route: _,
+            }) => {
+                assert_eq!(*id, router_ep2_id);
+                name.clone()
+            }
+            fnet_interfaces_ext::InterfaceState::Unknown(id) => {
+                panic!("expected known interface state for router_ep2(id={}); got unknown state for ID = {}",
+                       router_ep2_id, id)
+            }
+        };
+
+        let () = std::mem::drop(net2);
         let () = fnet_interfaces_ext::wait_interface_with_id(
             state_stream,
-            &mut fnet_interfaces_ext::InterfaceState::Unknown(router_ep2_id),
+            &mut router_ep2_interface_state,
             |fnet_interfaces_ext::Properties {
                  id,
-                 name,
+                 name: _,
                  device_class: _,
                  online: _,
                  addresses: _,
@@ -1215,7 +1244,6 @@ async fn setup_masquerate_nat_network<'a, E: netemul::Endpoint>(
                  has_default_ipv6_route: _,
              }| {
                 assert_eq!(*id, router_ep2_id);
-                router_ep2_name = Some(name.clone());
                 None
             },
         )
@@ -1229,7 +1257,6 @@ async fn setup_masquerate_nat_network<'a, E: netemul::Endpoint>(
             },
             |_: ()| panic!("expected to get removed event"),
         );
-        assert_ne!(router_ep2_name, None);
 
         // The NAT rule for a NIC should be removed when the NIC is removed.
         let (got_nat_rules, got_generation) = router_filter
@@ -1240,7 +1267,7 @@ async fn setup_masquerate_nat_network<'a, E: netemul::Endpoint>(
         assert_eq!(got_nat_rules, []);
         assert_eq!(got_generation, generation + 1);
 
-        net2 = net2_factory(router_ep2_name).await;
+        net2 = net2_factory(Some(router_ep2_name)).await;
         let HostNetwork {
             net: _,
             router_ep: router_ep2,
