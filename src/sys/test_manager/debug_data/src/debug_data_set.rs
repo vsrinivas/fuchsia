@@ -153,6 +153,13 @@ async fn serve_debug_data_set_controller(
                     };
                     let _ = responder.send(&mut result)?;
                 }
+                ftest_internal::DebugDataSetControllerRequest::RemoveRealm {
+                    realm_moniker,
+                    ..
+                } => match set.lock().await.remove_realm(realm_moniker) {
+                    Ok(()) => (),
+                    Err(e) => warn!("Error removing a realm: {:?}", e),
+                },
                 ftest_internal::DebugDataSetControllerRequest::Finish { .. } => {
                     finish_called = true;
                     break;
@@ -221,6 +228,18 @@ mod inner {
             Ok(())
         }
 
+        pub fn remove_realm(&mut self, moniker: String) -> Result<(), Error> {
+            let moniker_child = realm_moniker_child(moniker)?;
+            self.realms.remove(&moniker_child);
+            self.running_components
+                .retain(|component_moniker| component_moniker.down_path()[0] != moniker_child);
+            self.destroyed_before_start
+                .retain(|component_moniker| component_moniker.down_path()[0] != moniker_child);
+            self.seen_realms.remove(&moniker_child);
+            self.close_sink_if_done();
+            Ok(())
+        }
+
         pub fn complete_set(&mut self) {
             self.done_adding_realms = true;
             self.close_sink_if_done();
@@ -271,10 +290,6 @@ mod inner {
         fn close_sink_if_done(&mut self) {
             if self.done_adding_realms
                 && self.running_components.is_empty()
-                // TODO(satsukiu): seen realms is intended to protect against the case when the
-                // client calls Finish() before events for the last realm are processed.
-                // However, this can lead to an issue if launching the test fails after client has
-                // registered it with AddRealm. The solution is to add a CancelRealm method.
                 && self.seen_realms.len() == self.realms.len()
             {
                 self.sender.close_channel();
@@ -466,6 +481,30 @@ mod inner {
                 hashmap! {
                     "test-url-1".to_string() => 1,
                     "test-url-2".to_string() => 1
+                }
+            );
+        }
+
+        #[fuchsia::test]
+        async fn remove_realm_before_it_produces_events() {
+            let (send, recv) = mpsc::channel(10);
+            let mut set = DebugDataSet::new(send, |got_data| assert!(got_data));
+            set.add_realm("./test:realm-1".to_string(), "test-url-1".to_string())
+                .expect("add realm");
+            set.handle_event(start_event("./test:realm-1")).await.expect("handle event");
+            set.handle_event(capability_event("./test:realm-1")).await.expect("handle event");
+            set.handle_event(destroy_event("./test:realm-1")).await.expect("handle event");
+            // At this point, realm-1 has stopped, but the set should remain open as we may still
+            // add additional realms.
+            set.add_realm("./test:realm-2".to_string(), "test-url-2".to_string())
+                .expect("add realm");
+            set.remove_realm("./test:realm-2".to_string()).expect("remove realm");
+            set.complete_set();
+            // Requests for only the realm that wasn't removed should be present.
+            assert_eq!(
+                collect_requests_to_count(recv).await,
+                hashmap! {
+                    "test-url-1".to_string() => 1,
                 }
             );
         }

@@ -58,6 +58,15 @@ protocol DebugDataSetController {
         url fuchsia.url.Url;
     }) -> (struct {}) error zx.status;
 
+    /// Remove a test realm that was previously added to the set.
+    /// This is useful in cases where a realm is added, then fails to launch.
+    /// Note that in the case some debug data was already reported for the
+    /// removed realm, that data may be included in the final data.
+    /// If the specified realm is not in the set, the request is ignored.
+    RemoveRealm(struct {
+        realm_moniker string:fuchsia.component.MAX_MONIKER_LENGTH;
+    });
+
     /// An event that signals that debug data has been produced for this set.
     /// Test Manager may use the presence or absence of this event to pass the
     /// iterator channel back to the test executor only on runs that produce
