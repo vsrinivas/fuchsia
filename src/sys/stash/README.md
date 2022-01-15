@@ -1,15 +1,20 @@
 # `stash`
 
-Reviewed on: 2020-03-23
+Reviewed on: 2022-01-13
 
 Stash exists to hold persistent mutable state for early boot system services
-that are restricted from using mutable storage (usually for security reasons).
-Stash may be used to store device-wide state. Stash must not be used to store
-user-specific state, since data isn't saved to a user-encrypted partition.
+that are restricted from using general mutable storage (usually for security
+reasons). Persisted state takes the form of a key/value store, which can be
+accessed over FIDL.
 
-Persisted state takes the form of a key/value store, which can be accessed over
-FIDL. More details on writing a program that uses stash is available
-[here](stash.md).
+Multiple instances of stash are provided, each serving a different
+`fuchsia.stash` protocol. An instance of stash cannot securely identify the
+clients connecting to it and therefore cannot guarantee isolation between those
+clients. This means that the clients of each protocol must be carefully reviewed
+to assess the impact of any compromise in one client on the other clients.
+
+It is likely that stash will be deprecated and new clients are no longer being
+accepted.
 
 ## Building
 
@@ -18,9 +23,9 @@ To add this project to your build, append `--with //src/sys/stash` to the
 
 ## Running
 
-Stash provides the `fuchsia.stash.Store` and `fuchsia.stash.SecureStore` service
-on Fuchsia, and there is a `stash_ctl` command to demonstrate how to access
-these services.
+Stash provides the `fuchsia.stash.Store`, `fuchsia.stash.Store2`, and
+`fuchsia.stash.SecureStore` services on Fuchsia, and there is a `stash_ctl`
+command to demonstrate how to access these services.
 
 ```
 $ fx shell run stash_ctl --help

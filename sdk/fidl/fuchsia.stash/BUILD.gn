@@ -11,8 +11,13 @@ fidl("fuchsia.stash") {
 
   sdk_category = "internal"
 
+  # Stash cannnot not guarantee isolation between clients so its usage must
+  # be carefully managed, see fxbug.dev/47602. We intend to deprecate
+  # stash and are not accepting new clients.
+  #
+  # Please don't add entries to this visibility list without approval
+  # from the people listed in OWNERS.
   visibility = [
-    # fxbug.dev/47602 audit the below
     "//garnet/bin/setui/*",
     "//src/connectivity/bluetooth/core/bt-gap/*",
     "//src/connectivity/bluetooth/testing/*",
