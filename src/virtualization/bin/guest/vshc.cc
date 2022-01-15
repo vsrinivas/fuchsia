@@ -21,6 +21,7 @@
 
 #include "src/lib/fsl/socket/socket_drainer.h"
 #include "src/lib/fsl/tasks/fd_waiter.h"
+#include "src/lib/fxl/strings/string_printf.h"
 #include "src/virtualization/bin/guest/services.h"
 #include "src/virtualization/lib/vsh/util.h"
 #include "src/virtualization/third_party/vm_tools/vsh.pb.h"
@@ -304,6 +305,134 @@ class ConsoleOut {
   uint32_t bytes_left_;
 };
 
+const char kCursorHide[] = "\x1b[?25l";
+const char kCursorShow[] = "\x1b[?25h";
+const char kColor0Normal[] = "\x1b[0m";
+const char kColor1RedBright[] = "\x1b[1;31m";
+const char kColor2GreenBright[] = "\x1b[1;32m";
+const char kColor3Yellow[] = "\x1b[33m";
+const char kColor5Purple[] = "\x1b[35m";
+const char kEraseInLine[] = "\x1b[K";
+const char kSpinner[] = "|/-\\";
+
+int GetContainerStatusIndex(fuchsia::virtualization::ContainerStatus status) {
+  switch (status) {
+    case fuchsia::virtualization::ContainerStatus::TRANSIENT:
+    case fuchsia::virtualization::ContainerStatus::LAUNCHING_GUEST:
+      return 1;
+    case fuchsia::virtualization::ContainerStatus::STARTING_VM:
+      return 2;
+    case fuchsia::virtualization::ContainerStatus::DOWNLOADING:
+      return 4;
+    case fuchsia::virtualization::ContainerStatus::EXTRACTING:
+      return 6;
+    case fuchsia::virtualization::ContainerStatus::STARTING:
+      return 9;
+    case fuchsia::virtualization::ContainerStatus::FAILED:
+    case fuchsia::virtualization::ContainerStatus::READY:
+      return 10;
+  }
+}
+
+std::string GetContainerStatusString(const fuchsia::virtualization::LinuxGuestInfo& info) {
+  switch (info.container_status()) {
+    case fuchsia::virtualization::ContainerStatus::LAUNCHING_GUEST:
+      return std::string("Launching Linux guest");
+    case fuchsia::virtualization::ContainerStatus::STARTING_VM:
+      return std::string("Starting Termina VM");
+    case fuchsia::virtualization::ContainerStatus::DOWNLOADING:
+      return fxl::StringPrintf("Downloading container image (%d%%)", info.download_percent());
+    case fuchsia::virtualization::ContainerStatus::EXTRACTING:
+      return std::string("Extracting container image");
+    case fuchsia::virtualization::ContainerStatus::STARTING:
+      return std::string("Starting container");
+    case fuchsia::virtualization::ContainerStatus::TRANSIENT:
+    case fuchsia::virtualization::ContainerStatus::FAILED:
+    case fuchsia::virtualization::ContainerStatus::READY:
+      return std::string();
+  }
+}
+
+std::string MoveForward(int stage_index) { return fxl::StringPrintf("\x1b[%dC", stage_index); }
+
+// Displays container startup status.
+class ContainerStartup {
+ public:
+  void OnGuestStarted(const fuchsia::virtualization::LinuxGuestInfo& info) {
+    container_status_ = info.container_status();
+    if (container_status_ == fuchsia::virtualization::ContainerStatus::FAILED) {
+      PrintAfterStage(kColor1RedBright, fxl::StringPrintf("Error starting guest: %s\r\n",
+                                                          info.failure_reason().c_str()));
+      Print(fxl::StringPrintf("%s%s", kColor0Normal, kCursorShow));
+    } else if (container_status_ != fuchsia::virtualization::ContainerStatus::READY) {
+      PrintStage(kColor3Yellow, GetContainerStatusString(info));
+    }
+  }
+
+  void OnGuestInfoChanged(const fuchsia::virtualization::LinuxGuestInfo& info) {
+    container_status_ = info.container_status();
+    if (container_status_ == fuchsia::virtualization::ContainerStatus::FAILED) {
+      PrintAfterStage(kColor1RedBright, fxl::StringPrintf("Failed to start container: %s\r\n",
+                                                          info.failure_reason().c_str()));
+      Print(fxl::StringPrintf("\r%s%s%s", kEraseInLine, kColor0Normal, kCursorShow));
+    } else if (container_status_ == fuchsia::virtualization::ContainerStatus::READY) {
+      PrintStage(kColor2GreenBright, "Ready\r\n");
+      Print(fxl::StringPrintf("\r%s%s%s", kEraseInLine, kColor0Normal, kCursorShow));
+    } else {
+      PrintStage(kColor3Yellow, GetContainerStatusString(info));
+    }
+  }
+
+  void PrintProgress() {
+    InitializeProgress();
+    int status_index = GetContainerStatusIndex(container_status_);
+    Print(fxl::StringPrintf("\r%s%s%c", MoveForward(status_index).c_str(), kColor5Purple,
+                            kSpinner[spinner_index_++ & 0x3]));
+  }
+
+  bool IsReady() { return container_status_ == fuchsia::virtualization::ContainerStatus::READY; }
+
+ private:
+  void Print(const std::string& output) { std::cout << output << std::flush; }
+
+  int GetStageIndexCount() {
+    return GetContainerStatusIndex(fuchsia::virtualization::ContainerStatus::READY);
+  }
+
+  void InitializeProgress() {
+    if (progress_initialized_) {
+      return;
+    }
+    progress_initialized_ = true;
+    Print(fxl::StringPrintf("%s%s[%s] ", kCursorHide, kColor5Purple,
+                            std::string(GetStageIndexCount(), ' ').c_str()));
+  }
+
+  void PrintStage(const char* color, const std::string& output) {
+    InitializeProgress();
+    int status_index = GetContainerStatusIndex(container_status_);
+    int status_index_count = GetStageIndexCount();
+    std::string progress(status_index, '=');
+    Print(fxl::StringPrintf("\r%s[%s%s%s%s%s ", kColor5Purple, progress.c_str(),
+                            MoveForward(3 + (status_index_count - status_index)).c_str(),
+                            kEraseInLine, color, output.c_str()));
+    end_of_line_index_ = 4 + status_index_count + static_cast<int>(output.size());
+  }
+
+  void PrintAfterStage(const char* color, const std::string& output) {
+    InitializeProgress();
+    Print(fxl::StringPrintf("\r%s%s%s", MoveForward(end_of_line_index_).c_str(), color,
+                            output.c_str()));
+    end_of_line_index_ += output.size();
+  }
+
+  bool progress_initialized_ = false;
+  int spinner_index_ = 0;
+  fuchsia::virtualization::ContainerStatus container_status_ =
+      fuchsia::virtualization::ContainerStatus::FAILED;
+  int end_of_line_index_ = 0;
+};
+
 }  // namespace
 
 static bool init_shell(const zx::socket& usock, std::vector<std::string> args) {
@@ -364,76 +493,6 @@ static bool init_shell(const zx::socket& usock, std::vector<std::string> args) {
   return true;
 }
 
-static void log_container_status(const fuchsia::virtualization::LinuxGuestInfo& info) {
-  switch (info.container_status()) {
-    case fuchsia::virtualization::ContainerStatus::LAUNCHING_GUEST:
-      std::cout << "Launching Linux guest ..| ";
-      break;
-    case fuchsia::virtualization::ContainerStatus::STARTING_VM:
-      std::cout << "Starting Termina VM ..| ";
-      break;
-    case fuchsia::virtualization::ContainerStatus::DOWNLOADING:
-      std::cout << "\rDownloading container image (" << info.download_percent() << "%) ";
-      break;
-    case fuchsia::virtualization::ContainerStatus::EXTRACTING:
-      std::cout << "Extracting container image ..| ";
-      break;
-    case fuchsia::virtualization::ContainerStatus::STARTING:
-      std::cout << "Starting container ..| ";
-      break;
-    case fuchsia::virtualization::ContainerStatus::TRANSIENT:
-    case fuchsia::virtualization::ContainerStatus::READY:
-      break;
-    case fuchsia::virtualization::ContainerStatus::FAILED:
-      std::cout << "Failed to start container: " << info.failure_reason() << "\n";
-      break;
-  }
-}
-
-static void log_spinner(fuchsia::virtualization::ContainerStatus container_status, size_t ticks) {
-  const char kSpinner[] = {'|', '/', '-', '\\'};
-
-  switch (container_status) {
-    case fuchsia::virtualization::ContainerStatus::LAUNCHING_GUEST:
-    case fuchsia::virtualization::ContainerStatus::STARTING_VM:
-    case fuchsia::virtualization::ContainerStatus::EXTRACTING:
-    case fuchsia::virtualization::ContainerStatus::STARTING:
-      // Move cursor 2 columns to the left.
-      std::cout << "\E[2D";
-      // Add progress indicator for every 20 ticks.
-      if ((ticks % 20) == 0) {
-        std::cout << ".";
-      }
-      // Write the current spinner character.
-      std::cout << kSpinner[ticks % std::size(kSpinner)] << " ";
-      break;
-    case fuchsia::virtualization::ContainerStatus::TRANSIENT:
-    case fuchsia::virtualization::ContainerStatus::DOWNLOADING:
-    case fuchsia::virtualization::ContainerStatus::READY:
-    case fuchsia::virtualization::ContainerStatus::FAILED:
-      break;
-  }
-}
-
-static void log_done(fuchsia::virtualization::ContainerStatus container_status) {
-  switch (container_status) {
-    case fuchsia::virtualization::ContainerStatus::LAUNCHING_GUEST:
-    case fuchsia::virtualization::ContainerStatus::STARTING_VM:
-    case fuchsia::virtualization::ContainerStatus::EXTRACTING:
-    case fuchsia::virtualization::ContainerStatus::STARTING:
-      // Move cursor 2 columns to the left and end line with ". Done".
-      std::cout << "\E[2D. Done\n";
-      break;
-    case fuchsia::virtualization::ContainerStatus::DOWNLOADING:
-      std::cout << "\rDownloading container image ..... Done\n";
-      break;
-    case fuchsia::virtualization::ContainerStatus::TRANSIENT:
-    case fuchsia::virtualization::ContainerStatus::READY:
-    case fuchsia::virtualization::ContainerStatus::FAILED:
-      break;
-  }
-}
-
 zx_status_t handle_vsh(std::optional<uint32_t> o_env_id, std::optional<uint32_t> o_cid,
                        std::optional<uint32_t> o_port, std::vector<std::string> args,
                        async::Loop* loop, sys::ComponentContext* context) {
@@ -459,40 +518,27 @@ zx_status_t handle_vsh(std::optional<uint32_t> o_env_id, std::optional<uint32_t>
       return status;
     }
 
-    fuchsia::virtualization::ContainerStatus container_status =
-        fuchsia::virtualization::ContainerStatus::FAILED;
-    size_t status_ticks = 0;
-
-    linux_manager.events().OnGuestInfoChanged = [&container_status, &status_ticks](
-                                                    std::string label,
-                                                    fuchsia::virtualization::LinuxGuestInfo info) {
-      if (info.container_status() != container_status) {
-        log_done(container_status);
-        container_status = info.container_status();
-        // Reset status ticks after status changed.
-        status_ticks = 0;
-      }
-      log_container_status(info);
-    };
+    ContainerStartup container_startup;
+    linux_manager.events().OnGuestInfoChanged =
+        [&container_startup](std::string label, fuchsia::virtualization::LinuxGuestInfo info) {
+          container_startup.OnGuestInfoChanged(info);
+        };
 
     // Get the initial state of the container and start it if needed.
     linux_manager->StartAndGetLinuxGuestInfo(
-        std::string(kLinuxEnvironmentName), [&container_status, &linux_guest_cid](auto result) {
+        std::string(kLinuxEnvironmentName), [&container_startup, &linux_guest_cid](auto result) {
           linux_guest_cid = result.response().info.cid();
-          container_status = result.response().info.container_status();
-          log_container_status(result.response().info);
-          std::cout << std::flush;
+          container_startup.OnGuestStarted(result.response().info);
         });
     linux_manager_loop.Run(zx::time::infinite(), /*once*/ true);
 
     // Loop until container is ready. We intentionally continue on failure in
-    // case we recover and it gives the user a chance to see the error when
-    // exiting would result in the terminal being closed.
-    while (container_status != fuchsia::virtualization::ContainerStatus::READY) {
-      // 20 ticks per second for the spinner.
-      linux_manager_loop.Run(zx::deadline_after(zx::msec(50)), /*once*/ true);
-      log_spinner(container_status, status_ticks++);
-      std::cout << std::flush;
+    // case we recover. It also gives the user a chance to see the error as
+    // exiting might result in the terminal being closed.
+    while (!container_startup.IsReady()) {
+      container_startup.PrintProgress();
+      // 10 progress updates per second.
+      linux_manager_loop.Run(zx::deadline_after(zx::msec(100)), /*once*/ true);
     }
   }
 
