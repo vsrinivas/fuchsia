@@ -60,7 +60,7 @@ impl RequestReceiver<WlCompositor> for Compositor {
                 id.implement(client, Surface::new(surface_id))?;
             }
             WlCompositorRequest::CreateRegion { id } => {
-                id.implement(client, Region)?;
+                id.implement(client, Region { rects: vec![] })?;
             }
         }
         Ok(())
@@ -159,6 +159,7 @@ pub enum SurfaceCommand {
     AttachBuffer(BufferAttachment),
     ClearBuffer,
     Frame(ObjectRef<Callback>),
+    SetOpaqueRegion(Region),
     SetViewportCropParams(ViewportCropParams),
     ClearViewportCropParams,
     SetViewportScaleParams(ViewportScaleParams),
@@ -214,6 +215,12 @@ pub struct Surface {
     /// object for the provided wl_surface. This request would assign the
     /// xdg_surface role to the wl_surface.
     role: Option<SurfaceRole>,
+
+    /// The opaque region for this surface.
+    ///
+    /// This determines what blend mode to use for surface.
+    #[cfg(feature = "flatland")]
+    opaque_region: Region,
 
     /// The crop parameters are set by a wp_viweport::set_source request.
     ///
@@ -417,6 +424,7 @@ impl Surface {
             position: (0, 0),
             z_order: 0,
             role: None,
+            opaque_region: Region { rects: vec![] },
             crop_params: None,
             scale_params: None,
             frame_callbacks: vec![],
@@ -481,6 +489,9 @@ impl Surface {
             SurfaceCommand::ClearBuffer => {}
             SurfaceCommand::Frame(callback) => {
                 self.frame_callbacks.push(callback);
+            }
+            SurfaceCommand::SetOpaqueRegion(region) => {
+                self.opaque_region = region;
             }
             SurfaceCommand::SetViewportCropParams(params) => {
                 self.crop_params = Some(params);
@@ -575,9 +586,27 @@ impl Surface {
                 .set_content(&mut node.transform_id.clone(), &mut image_content.id.clone())
                 .expect("fidl error");
 
-            // Set blend mode based on if the buffer has an alpha channel.
-            let blend_mode =
-                if content.buffer.has_alpha() { BlendMode::SrcOver } else { BlendMode::Src };
+            // Set blend mode based on the opaque region and if the buffer
+            // has an alpha channel.
+            let blend_mode = if content.buffer.has_alpha() {
+                // Blending is not required if opaque region is set and
+                // matches the size of the surface.
+                if !self.opaque_region.rects.is_empty()
+                    && self.opaque_region.rects.iter().all(|r| {
+                        *r == (
+                            RectKind::Add,
+                            Rect { x: 0, y: 0, width: self.size.width, height: self.size.height },
+                        )
+                    })
+                {
+                    BlendMode::Src
+                } else {
+                    BlendMode::SrcOver
+                }
+            } else {
+                BlendMode::Src
+            };
+
             node.flatland
                 .borrow()
                 .proxy()
@@ -851,6 +880,7 @@ impl Surface {
                 self.frame_callbacks.push(callback);
                 false
             }
+            SurfaceCommand::SetOpaqueRegion(_) => false,
             SurfaceCommand::SetViewportCropParams(params) => {
                 if self.crop_params != Some(params) {
                     self.crop_params = Some(params);
@@ -1164,7 +1194,10 @@ impl RequestReceiver<WlSurface> for Surface {
                 }
             }
             WlSurfaceRequest::Damage { .. } => {}
-            WlSurfaceRequest::SetOpaqueRegion { .. } => {}
+            WlSurfaceRequest::SetOpaqueRegion { region } => {
+                let r = client.get_object::<Region>(region)?.clone();
+                this.get_mut(client)?.enqueue(SurfaceCommand::SetOpaqueRegion(r));
+            }
             WlSurfaceRequest::SetInputRegion { .. } => {}
             WlSurfaceRequest::SetBufferTransform { .. } => {}
             WlSurfaceRequest::SetBufferScale { .. } => {}
@@ -1222,7 +1255,16 @@ impl BufferAttachment {
     }
 }
 
-struct Region;
+#[derive(PartialEq, Clone, Debug)]
+pub enum RectKind {
+    Add,
+    Subtract,
+}
+
+#[derive(PartialEq, Clone, Debug)]
+pub struct Region {
+    pub rects: Vec<(RectKind, Rect)>,
+}
 
 impl RequestReceiver<WlRegion> for Region {
     fn receive(
@@ -1234,8 +1276,14 @@ impl RequestReceiver<WlRegion> for Region {
             WlRegionRequest::Destroy => {
                 client.delete_id(this.id())?;
             }
-            WlRegionRequest::Add { .. } => {}
-            WlRegionRequest::Subtract { .. } => {}
+            WlRegionRequest::Add { x, y, width, height } => {
+                let region = this.get_mut(client)?;
+                region.rects.push((RectKind::Add, Rect { x, y, width, height }));
+            }
+            WlRegionRequest::Subtract { x, y, width, height } => {
+                let region = this.get_mut(client)?;
+                region.rects.push((RectKind::Subtract, Rect { x, y, width, height }));
+            }
         }
         Ok(())
     }
