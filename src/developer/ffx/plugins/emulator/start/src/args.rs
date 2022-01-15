@@ -35,12 +35,6 @@ pub struct StartCommand {
     #[argh(option, default = "EngineType::Femu")]
     pub engine: EngineType,
 
-    /// environment variables for emulator. The argument can be repeated for multiple times
-    /// to add multiple arguments. If not specified, only the environment variable
-    /// (DISPLAY) will be set to run the emulator.
-    #[argh(option)]
-    pub envs: Vec<String>,
-
     /// configure GPU acceleration to run the emulator. Allowed values are "host", "guest",
     /// "swiftshader_indirect", or "auto". Default is "auto". Note: This only affects
     /// FEMU emulator.
