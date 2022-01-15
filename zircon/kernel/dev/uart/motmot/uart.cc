@@ -80,19 +80,29 @@ AutounsignalEvent uart_dputc_event{true};
 DECLARE_SINGLETON_SPINLOCK_WITH_TYPE(uart_spinlock, MonitoredSpinLock);
 }  // namespace
 
+static inline void uartreg_and_eq(uintptr_t base, ptrdiff_t reg, uint32_t flags) {
+  volatile uint32_t* ptr = reinterpret_cast<volatile uint32_t*>(base + reg);
+  *ptr = *ptr & flags;
+}
+
+static inline void uartreg_or_eq(uintptr_t base, ptrdiff_t reg, uint32_t flags) {
+  volatile uint32_t* ptr = reinterpret_cast<volatile uint32_t*>(base + reg);
+  *ptr = *ptr | flags;
+}
+
 // The UINTM register is contended from both IRQ and threaded mode, so protect
 // accesses via the uart_spinlock.
 static inline void motmot_uart_mask_tx() TA_REQ(uart_spinlock::Get()) {
-  UARTREG(uart_base, UART_UINTM) |= (1 << 2);  // txd
+  uartreg_or_eq(uart_base, UART_UINTM, (1 << 2));  // txd
 }
 static inline void motmot_uart_unmask_tx() TA_REQ(uart_spinlock::Get()) {
-  UARTREG(uart_base, UART_UINTM) &= ~(1 << 2);  // txd
+  uartreg_and_eq(uart_base, UART_UINTM, ~(1 << 2));  // txd
 }
 static inline void motmot_uart_mask_rx() TA_REQ(uart_spinlock::Get()) {
-  UARTREG(uart_base, UART_UINTM) |= (1 << 0);  // rxd
+  uartreg_or_eq(uart_base, UART_UINTM, (1 << 0));  // rxd
 }
 static inline void motmot_uart_unmask_rx() TA_REQ(uart_spinlock::Get()) {
-  UARTREG(uart_base, UART_UINTM) &= ~(1 << 0);  // rxd
+  uartreg_and_eq(uart_base, UART_UINTM, ~(1 << 0));  // rxd
 }
 
 static interrupt_eoi motmot_uart_irq(void* arg) {
@@ -323,14 +333,14 @@ void MotMotUartInitLate() {
   UARTREG(uart_base, UART_UFCON) = 0;
 
   // reset rx fifo
-  UARTREG(uart_base, UART_UFCON) |= (1 << 1);
+  uartreg_or_eq(uart_base, UART_UFCON, (1 << 1));
 
   // wait for it to clear
   while (UARTREG(uart_base, UART_UFCON) & (1 << 1))
     ;
 
   // enable fifos
-  UARTREG(uart_base, UART_UFCON) |= (1 << 0);
+  uartreg_or_eq(uart_base, UART_UFCON, (1 << 0));
 
   // enable receive
   // clang-format off
@@ -350,7 +360,7 @@ void MotMotUartInitLate() {
   LTRACEF("UERSTAT %#x\n", UARTREG(uart_base, UART_UERSTAT));
 
   // unmask error interrupt
-  UARTREG(uart_base, UART_UINTM) &= ~(1 << 1);
+  uartreg_and_eq(uart_base, UART_UINTM, ~(1 << 1));
 
   // unmask rx interrupt
   {
