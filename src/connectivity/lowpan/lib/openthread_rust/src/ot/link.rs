@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 use crate::prelude_internal::*;
+use std::time::Duration;
 
 /// Methods from the [OpenThread "Link" Module][1].
 ///
@@ -59,6 +60,15 @@ pub trait Link {
     /// Functional equivalent of
     /// [`otsys::otPlatRadioGetRssi`](crate::otsys::otPlatRadioGetRssi).
     fn get_rssi(&self) -> Decibels;
+
+    /// Starts an active scan. Functional equivalent of
+    /// [`otsys::otLinkActiveScan`](crate::otsys::otLinkActiveScan).
+    ///
+    /// The closure will ultimately be executed via
+    /// [`ot::Tasklets::process`](crate::ot::Tasklets::process).
+    fn start_active_scan<'a, F>(&self, channels: ChannelMask, dwell: Duration, f: F) -> Result
+    where
+        F: FnMut(Option<&ActiveScanResult>) + 'a;
 }
 
 impl<T: Link + Boxable> Link for ot::Box<T> {
@@ -115,6 +125,13 @@ impl<T: Link + Boxable> Link for ot::Box<T> {
 
     fn get_rssi(&self) -> Decibels {
         self.as_ref().get_rssi()
+    }
+
+    fn start_active_scan<'a, F>(&self, channels: ChannelMask, dwell: Duration, f: F) -> Result
+    where
+        F: FnMut(Option<&ActiveScanResult>) + 'a,
+    {
+        self.as_ref().start_active_scan(channels, dwell, f)
     }
 }
 
@@ -185,5 +202,61 @@ impl Link for Instance {
 
     fn get_rssi(&self) -> Decibels {
         unsafe { otPlatRadioGetRssi(self.as_ot_ptr()) }
+    }
+
+    fn start_active_scan<'a, F>(&self, channels: ChannelMask, dwell: Duration, f: F) -> Result
+    where
+        F: FnMut(Option<&ActiveScanResult>) + 'a,
+    {
+        unsafe extern "C" fn _ot_handle_active_scan_result<
+            'a,
+            F: FnMut(Option<&ActiveScanResult>) + 'a,
+        >(
+            result: *mut otActiveScanResult,
+            context: *mut ::std::os::raw::c_void,
+        ) {
+            trace!("_ot_handle_active_scan_result: {:?}", result);
+
+            // Convert the `*otActiveScanResult` into an `Option<&ot::ActiveScanResult>`.
+            let result = ActiveScanResult::ref_from_ot_ptr(result);
+
+            // Reconstitute a reference to our closure.
+            let sender = &mut *(context as *mut F);
+
+            sender(result);
+        }
+
+        let (fn_ptr, fn_box, cb): (_, _, otHandleActiveScanResult) = {
+            let mut x = Box::new(f);
+
+            (
+                x.as_mut() as *mut F as *mut ::std::os::raw::c_void,
+                Some(x as Box<dyn FnMut(Option<&ActiveScanResult>) + 'a>),
+                Some(_ot_handle_active_scan_result::<F>),
+            )
+        };
+
+        unsafe {
+            Error::from(otLinkActiveScan(
+                self.as_ot_ptr(),
+                channels.into(),
+                dwell.as_millis().try_into().unwrap(),
+                cb,
+                fn_ptr,
+            ))
+            .into_result()?;
+
+            // Make sure our object eventually gets cleaned up.
+            // Here we must also transmute our closure to have a 'static lifetime.
+            // We need to do this because the borrow checker cannot infer the
+            // proper lifetime for the singleton instance backing, but
+            // this is guaranteed by the API.
+            self.borrow_backing().active_scan_fn.set(std::mem::transmute::<
+                Option<Box<dyn FnMut(Option<&ActiveScanResult>) + 'a>>,
+                Option<Box<dyn FnMut(Option<&ActiveScanResult>) + 'static>>,
+            >(fn_box));
+        }
+
+        Ok(())
     }
 }

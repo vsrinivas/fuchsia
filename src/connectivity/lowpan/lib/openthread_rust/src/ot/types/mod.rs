@@ -17,6 +17,7 @@ mod network_key;
 mod network_name;
 mod operational_dataset;
 mod route_preference;
+mod scan_results;
 mod security_policy;
 
 use crate::prelude_internal::*;
@@ -36,6 +37,7 @@ pub use network_key::*;
 pub use network_name::*;
 pub use operational_dataset::*;
 pub use route_preference::*;
+pub use scan_results::*;
 pub use security_policy::*;
 
 /// 802.15.4 PAN Identifier. Same type as [`otsys::otPanId`](crate::otsys::otPanId).

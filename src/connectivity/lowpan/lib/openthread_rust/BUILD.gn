@@ -64,6 +64,7 @@ rustc_library("openthread") {
     "src/ot/types/network_name.rs",
     "src/ot/types/operational_dataset.rs",
     "src/ot/types/route_preference.rs",
+    "src/ot/types/scan_results.rs",
     "src/ot/types/security_policy.rs",
     "src/otfuchsia.rs",
   ]
