@@ -28,10 +28,16 @@ rustc_binary("basic_config_receiver_bin") {
   ]
 }
 
-fuchsia_component("basic_config_receiver") {
+fuchsia_component_manifest("basic_config_receiver_manifest") {
   testonly = true
+  component_name = "basic_config_receiver"
   manifest = "meta/receiver.cml"
   restricted_features = [ "structured_config" ]
+}
+
+fuchsia_component("basic_config_receiver") {
+  testonly = true
+  cm_target = ":basic_config_receiver_manifest"
   deps = [ ":basic_config_receiver_bin" ]
 }
 
@@ -57,7 +63,7 @@ template("my_flag_test") {
 
   fuchsia_structured_config_values(values_target) {
     testonly = true
-    component = ":basic_config_receiver"
+    cm_target = ":basic_config_receiver_manifest"
     values = "config/basic_config_values_with_${my_flag}.json5"
   }
 

@@ -37,11 +37,12 @@ import("//tools/configc/build/cvf.gni")
 # ```
 # # ./BUILD.gn
 # fuchsia_component("my_component") {
-#   manifest = "meta/my_component.cml"
+#   cm_target = ":my_component_manifest"
+#   deps = [ ... ]
 # }
 #
 # fuchsia_structured_config_values("my_component_config") {
-#   component = ":my_component"
+#   cm_target = ":my_component_manifest"
 #   values = "config/my_component.json5"
 # }
 # ```
@@ -60,8 +61,8 @@ import("//tools/configc/build/cvf.gni")
 #
 # Parameters
 #
-#   component (required)
-#     The component target for which the definition file will be generated.
+#   cm_target (required)
+#     The fuchsia_component_manifest target for which the definition file will be generated.
 #     Type: GN target
 #
 #   values (required)
@@ -77,13 +78,14 @@ import("//tools/configc/build/cvf.gni")
 #     Standard GN meaning.
 template("fuchsia_structured_config_values") {
   if (current_toolchain == default_toolchain) {
-    assert(defined(invoker.component),
-           "must provide a component with a configuration declaration")
+    assert(
+        defined(invoker.cm_target),
+        "must provide a component manifest target with a configuration declaration")
     assert(defined(invoker.values),
            "must provide a JSON5 file with config values defined")
 
     # TODO(https://fxbug.dev/86798) allow defining manifest in separate gn mod from config
-    component_outputs = get_target_outputs(invoker.component)
+    component_outputs = get_target_outputs(invoker.cm_target)
     compiled_manifest = component_outputs[0]
 
     if (defined(invoker.component_name)) {
@@ -101,7 +103,7 @@ template("fuchsia_structured_config_values") {
       value_file = invoker.values
       deps = [
         ":$manifest_resource_target",
-        "${invoker.component}",
+        "${invoker.cm_target}",
       ]
     }
 

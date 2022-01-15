@@ -18,11 +18,17 @@ rustc_test("integration_test_bin") {
   sources = [ "src/lib.rs" ]
 }
 
+fuchsia_component_manifest("test_manifest") {
+  testonly = true
+  component_name = "test"
+  manifest = "meta/test.cml"
+  restricted_features = [ "structured_config" ]
+}
+
 fuchsia_component("test") {
   testonly = true
-  manifest = "meta/test.cml"
+  cm_target = ":test_manifest"
   deps = [ ":integration_test_bin" ]
-  restricted_features = [ "structured_config" ]
 }
 
 fuchsia_component("foo") {
@@ -32,7 +38,7 @@ fuchsia_component("foo") {
 
 fuchsia_structured_config_values("test_config_values") {
   testonly = true
-  component = ":test"
+  cm_target = ":test_manifest"
   values = "config/config_values.json5"
 }
 
