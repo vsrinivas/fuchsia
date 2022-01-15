@@ -69,6 +69,15 @@ pub trait Link {
     fn start_active_scan<'a, F>(&self, channels: ChannelMask, dwell: Duration, f: F) -> Result
     where
         F: FnMut(Option<&ActiveScanResult>) + 'a;
+
+    /// Starts an energy scan. Functional equivalent of
+    /// [`otsys::otLinkEnergyScan`](crate::otsys::otLinkEnergyScan).
+    ///
+    /// The closure will ultimately be executed via
+    /// [`ot::Tasklets::process`](crate::ot::Tasklets::process).
+    fn start_energy_scan<'a, F>(&self, channels: ChannelMask, dwell: Duration, f: F) -> Result
+    where
+        F: FnMut(Option<&EnergyScanResult>) + 'a;
 }
 
 impl<T: Link + Boxable> Link for ot::Box<T> {
@@ -132,6 +141,13 @@ impl<T: Link + Boxable> Link for ot::Box<T> {
         F: FnMut(Option<&ActiveScanResult>) + 'a,
     {
         self.as_ref().start_active_scan(channels, dwell, f)
+    }
+
+    fn start_energy_scan<'a, F>(&self, channels: ChannelMask, dwell: Duration, f: F) -> Result
+    where
+        F: FnMut(Option<&EnergyScanResult>) + 'a,
+    {
+        self.as_ref().start_energy_scan(channels, dwell, f)
     }
 }
 
@@ -254,6 +270,62 @@ impl Link for Instance {
             self.borrow_backing().active_scan_fn.set(std::mem::transmute::<
                 Option<Box<dyn FnMut(Option<&ActiveScanResult>) + 'a>>,
                 Option<Box<dyn FnMut(Option<&ActiveScanResult>) + 'static>>,
+            >(fn_box));
+        }
+
+        Ok(())
+    }
+
+    fn start_energy_scan<'a, F>(&self, channels: ChannelMask, dwell: Duration, f: F) -> Result
+    where
+        F: FnMut(Option<&EnergyScanResult>) + 'a,
+    {
+        unsafe extern "C" fn _ot_handle_energy_scan_result<
+            'a,
+            F: FnMut(Option<&EnergyScanResult>) + 'a,
+        >(
+            result: *mut otEnergyScanResult,
+            context: *mut ::std::os::raw::c_void,
+        ) {
+            trace!("_ot_handle_energy_scan_result: {:?}", result);
+
+            // Convert the `*otEnergyScanResult` into an `Option<&ot::EnergyScanResult>`.
+            let result = EnergyScanResult::ref_from_ot_ptr(result);
+
+            // Reconstitute a reference to our closure.
+            let sender = &mut *(context as *mut F);
+
+            sender(result);
+        }
+
+        let (fn_ptr, fn_box, cb): (_, _, otHandleEnergyScanResult) = {
+            let mut x = Box::new(f);
+
+            (
+                x.as_mut() as *mut F as *mut ::std::os::raw::c_void,
+                Some(x as Box<dyn FnMut(Option<&EnergyScanResult>) + 'a>),
+                Some(_ot_handle_energy_scan_result::<F>),
+            )
+        };
+
+        unsafe {
+            Error::from(otLinkEnergyScan(
+                self.as_ot_ptr(),
+                channels.into(),
+                dwell.as_millis().try_into().unwrap(),
+                cb,
+                fn_ptr,
+            ))
+            .into_result()?;
+
+            // Make sure our object eventually gets cleaned up.
+            // Here we must also transmute our closure to have a 'static lifetime.
+            // We need to do this because the borrow checker cannot infer the
+            // proper lifetime for the singleton instance backing, but
+            // this is guaranteed by the API.
+            self.borrow_backing().energy_scan_fn.set(std::mem::transmute::<
+                Option<Box<dyn FnMut(Option<&EnergyScanResult>) + 'a>>,
+                Option<Box<dyn FnMut(Option<&EnergyScanResult>) + 'static>>,
             >(fn_box));
         }
 

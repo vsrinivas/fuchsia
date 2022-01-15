@@ -15,6 +15,7 @@ pub(crate) struct InstanceBacking {
     pub ip6_receive_fn: Cell<Option<std::boxed::Box<dyn FnMut(OtMessageBox<'_>)>>>,
     pub ip6_address_fn: Cell<Option<std::boxed::Box<dyn FnMut(Ip6AddressInfo<'_>, bool)>>>,
     pub active_scan_fn: Cell<Option<std::boxed::Box<dyn FnMut(Option<&ActiveScanResult>)>>>,
+    pub energy_scan_fn: Cell<Option<std::boxed::Box<dyn FnMut(Option<&EnergyScanResult>)>>>,
 }
 
 impl InstanceBacking {
@@ -26,6 +27,7 @@ impl InstanceBacking {
             ip6_address_fn: Cell::new(None),
             state_change_fn: Cell::new(None),
             active_scan_fn: Cell::new(None),
+            energy_scan_fn: Cell::new(None),
         }
     }
 }

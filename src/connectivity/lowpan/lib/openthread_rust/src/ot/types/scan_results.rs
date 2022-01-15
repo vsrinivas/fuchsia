@@ -74,3 +74,24 @@ impl ActiveScanResult {
         &self.0.mSteeringData.m8[0..self.0.mSteeringData.mLength as usize]
     }
 }
+
+/// This structure holds information about energy levels detected on a channel.
+///
+/// Functional equivalent of [`otsys::otEnergyScanResult`](crate::otsys::otEnergyScanResult).
+#[derive(Debug, Default, Clone)]
+#[repr(transparent)]
+pub struct EnergyScanResult(pub otEnergyScanResult);
+
+impl_ot_castable!(EnergyScanResult, otEnergyScanResult);
+
+impl EnergyScanResult {
+    /// Channel index.
+    pub fn channel(&self) -> ChannelIndex {
+        self.0.mChannel
+    }
+
+    /// Max RSSI
+    pub fn max_rssi(&self) -> Decibels {
+        self.0.mMaxRssi
+    }
+}
