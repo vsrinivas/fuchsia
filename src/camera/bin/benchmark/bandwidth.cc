@@ -44,7 +44,7 @@ void Bandwidth::Profile(std::ostream& sink, fit::closure callback) {
         MeasureRamChannels([this](std::vector<RamChannelMeasurement> results) {
           WriteResults("Baseline", results);
           camera_device_watcher_->WatchDevices(
-              fit::bind_member(this, &Bandwidth::OnDevicesChanged));
+              fit::bind_member<&Bandwidth::OnDevicesChanged>(this));
         });
       },
       kDelayInterval);
@@ -63,7 +63,7 @@ void Bandwidth::OnDevicesChanged(std::vector<fuchsia::camera3::WatchDevicesEvent
               [this](std::vector<fuchsia::camera3::Configuration> configurations) {
                 camera_configurations_ = std::move(configurations);
                 camera_device_->WatchCurrentConfiguration(
-                    fit::bind_member(this, &Bandwidth::OnConfigurationChanged));
+                    fit::bind_member<&Bandwidth::OnConfigurationChanged>(this));
               });
           // Only attempt to benchmark the sherlock camera.
           return;
@@ -71,7 +71,7 @@ void Bandwidth::OnDevicesChanged(std::vector<fuchsia::camera3::WatchDevicesEvent
       });
     }
   }
-  camera_device_watcher_->WatchDevices(fit::bind_member(this, &Bandwidth::OnDevicesChanged));
+  camera_device_watcher_->WatchDevices(fit::bind_member<&Bandwidth::OnDevicesChanged>(this));
 }
 
 void Bandwidth::OnConfigurationChanged(uint32_t index) {
@@ -85,7 +85,7 @@ void Bandwidth::OnConfigurationChanged(uint32_t index) {
             if (next < camera_configurations_.size()) {
               camera_device_->SetCurrentConfiguration(next);
               camera_device_->WatchCurrentConfiguration(
-                  fit::bind_member(this, &Bandwidth::OnConfigurationChanged));
+                  fit::bind_member<&Bandwidth::OnConfigurationChanged>(this));
             } else {
               sink() << "\n]\n";
               callback_();
