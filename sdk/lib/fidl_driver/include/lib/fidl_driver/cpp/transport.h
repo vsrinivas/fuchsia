@@ -77,7 +77,10 @@ class DriverWaiter : public TransportWaiter {
 
   zx_status_t Begin() override;
 
-  zx_status_t Cancel() override { ZX_PANIC("cancel not implemented"); }
+  zx_status_t Cancel() override {
+    state_->channel_read->Cancel();
+    return ZX_OK;
+  }
 
  private:
   struct State {

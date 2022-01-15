@@ -13,6 +13,8 @@ group("transport") {
 
 fidl("test.transport") {
   sources = [ "transport.test.fidl" ]
+  public_deps = [ "//zircon/vdso/zx" ]
+  contains_drivers = true
 }
 
 test("fidl_driver_transport_tests_bin") {
@@ -20,7 +22,10 @@ test("fidl_driver_transport_tests_bin") {
   sources = [
     "api_test.cc",
     "async_two_way_test.cc",
+    "driver_client_end_test.cc",
+    "one_way_test.cc",
     "sync_two_way_test.cc",
+    "zircon_handle_test.cc",
   ]
   deps = [
     ":test.transport_driver",

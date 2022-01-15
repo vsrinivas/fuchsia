@@ -24,8 +24,6 @@ zx_status_t driver_write(fidl_handle_t handle, WriteOptions write_options, const
   // Note: in order to force the encoder to only output one iovec, only provide an iovec buffer of
   // 1 element to the encoder.
   ZX_ASSERT(data_count == 1);
-  ZX_ASSERT(handles_count == 0);
-  ZX_ASSERT(handle_metadata == nullptr);
 
   const zx_channel_iovec_t& iovec = static_cast<const zx_channel_iovec_t*>(data)[0];
   fdf_arena_t* arena =
@@ -33,9 +31,11 @@ zx_status_t driver_write(fidl_handle_t handle, WriteOptions write_options, const
   void* arena_data = fdf_arena_allocate(arena, iovec.capacity);
   memcpy(arena_data, const_cast<void*>(iovec.buffer), iovec.capacity);
 
-  // TODO(fxbug.dev/90646) Remove const_cast.
+  void* arena_handles = fdf_arena_allocate(arena, handles_count * sizeof(fdf_handle_t));
+  memcpy(arena_handles, handles, handles_count * sizeof(fdf_handle_t));
+
   zx_status_t status = fdf_channel_write(handle, 0, arena, arena_data, iovec.capacity,
-                                         const_cast<fidl_handle_t*>(handles), handles_count);
+                                         static_cast<fdf_handle_t*>(arena_handles), handles_count);
 
   fdf_arena_destroy(arena);
   return status;
@@ -75,6 +75,48 @@ zx_status_t driver_read(fidl_handle_t handle, const ReadOptions& read_options, v
   return ZX_OK;
 }
 
+zx_status_t driver_call(fidl_handle_t handle, CallOptions call_options, const CallMethodArgs& cargs,
+                        uint32_t* out_data_actual_count, uint32_t* out_handles_actual_count) {
+  // Note: in order to force the encoder to only output one iovec, only provide an iovec buffer of
+  // 1 element to the encoder.
+  ZX_ASSERT(cargs.wr_data_count == 1);
+  const zx_channel_iovec_t& iovec = static_cast<const zx_channel_iovec_t*>(cargs.wr_data)[0];
+  fdf_arena_t* arena = call_options.outgoing_transport_context.release<DriverTransport>();
+  void* arena_data = fdf_arena_allocate(arena, iovec.capacity);
+  memcpy(arena_data, const_cast<void*>(iovec.buffer), iovec.capacity);
+
+  void* arena_handles = fdf_arena_allocate(arena, cargs.wr_handles_count * sizeof(fdf_handle_t));
+  memcpy(arena_handles, cargs.wr_handles, cargs.wr_handles_count * sizeof(fdf_handle_t));
+
+  fdf_arena_t* rd_arena;
+  void* rd_data;
+  fdf_handle_t* rd_handles;
+  fdf_channel_call_args args = {
+      .wr_arena = arena,
+      .wr_data = arena_data,
+      .wr_num_bytes = iovec.capacity,
+      .wr_handles = static_cast<fdf_handle_t*>(arena_handles),
+      .wr_num_handles = cargs.wr_handles_count,
+
+      .rd_arena = &rd_arena,
+      .rd_data = &rd_data,
+      .rd_num_bytes = out_data_actual_count,
+      .rd_handles = &rd_handles,
+      .rd_num_handles = out_handles_actual_count,
+  };
+  zx_status_t status = fdf_channel_call(handle, 0, ZX_TIME_INFINITE, &args);
+  fdf_arena_destroy(arena);
+  if (status != ZX_OK) {
+    return status;
+  }
+  memcpy(cargs.rd_data, rd_data, *out_data_actual_count);
+  memcpy(cargs.rd_handles, rd_handles, *out_handles_actual_count * sizeof(fdf_handle_t));
+  *call_options.out_incoming_transport_context =
+      IncomingTransportContext::Create<DriverTransport>(rd_arena);
+
+  return ZX_OK;
+}
+
 zx_status_t driver_create_waiter(fidl_handle_t handle, async_dispatcher_t* dispatcher,
                                  TransportWaitSuccessHandler success_handler,
                                  TransportWaitFailureHandler failure_handler,
@@ -95,6 +137,7 @@ const TransportVTable DriverTransport::VTable = {
     .encoding_configuration = &DriverTransport::EncodingConfiguration,
     .write = driver_write,
     .read = driver_read,
+    .call = driver_call,
     .create_waiter = driver_create_waiter,
     .close = driver_close,
     .close_incoming_transport_context = driver_close_context,

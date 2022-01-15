@@ -10,11 +10,11 @@
 TEST(Endpoints, CreateFromProtocol) {
   // `std::move` pattern
   {
-    auto endpoints = fdf::CreateEndpoints<test_transport::TransportTest>();
+    auto endpoints = fdf::CreateEndpoints<test_transport::TwoWayTest>();
     ASSERT_OK(endpoints.status_value());
     ASSERT_EQ(ZX_OK, endpoints.status_value());
-    fdf::ClientEnd<test_transport::TransportTest> client_end = std::move(endpoints->client);
-    fdf::ServerEnd<test_transport::TransportTest> server_end = std::move(endpoints->server);
+    fdf::ClientEnd<test_transport::TwoWayTest> client_end = std::move(endpoints->client);
+    fdf::ServerEnd<test_transport::TwoWayTest> server_end = std::move(endpoints->server);
 
     ASSERT_TRUE(client_end.is_valid());
     ASSERT_TRUE(server_end.is_valid());
@@ -22,7 +22,7 @@ TEST(Endpoints, CreateFromProtocol) {
 
   // Destructuring pattern
   {
-    auto endpoints = fdf::CreateEndpoints<test_transport::TransportTest>();
+    auto endpoints = fdf::CreateEndpoints<test_transport::TwoWayTest>();
     ASSERT_OK(endpoints.status_value());
     ASSERT_EQ(ZX_OK, endpoints.status_value());
     auto [client_end, server_end] = std::move(endpoints.value());
@@ -35,7 +35,7 @@ TEST(Endpoints, CreateFromProtocol) {
 // Test creating a typed channel endpoint pair using the out-parameter
 // overloads.
 TEST(Endpoints, CreateFromProtocolOutParameterStyleClientRetained) {
-  fdf::ClientEnd<test_transport::TransportTest> client_end;
+  fdf::ClientEnd<test_transport::TwoWayTest> client_end;
   auto server_end = fdf::CreateEndpoints(&client_end);
   ASSERT_OK(server_end.status_value());
   ASSERT_EQ(ZX_OK, server_end.status_value());
@@ -45,7 +45,7 @@ TEST(Endpoints, CreateFromProtocolOutParameterStyleClientRetained) {
 }
 
 TEST(Endpoints, CreateFromProtocolOutParameterStyleServerRetained) {
-  fdf::ServerEnd<test_transport::TransportTest> server_end;
+  fdf::ServerEnd<test_transport::TwoWayTest> server_end;
   auto client_end = fdf::CreateEndpoints(&server_end);
   ASSERT_OK(client_end.status_value());
   ASSERT_EQ(ZX_OK, client_end.status_value());

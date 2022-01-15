@@ -15,12 +15,20 @@
 constexpr uint32_t kRequestPayload = 1234;
 constexpr uint32_t kResponsePayload = 5678;
 
-class TestServer : public fdf::WireServer<test_transport::TransportTest> {
-  void TwoWay(TwoWayRequestView request, fdf::Arena arena,
+struct TestServer : public fdf::WireServer<test_transport::TwoWayTest> {
+  void TwoWay(TwoWayRequestView request, fdf::Arena in_request_arena,
               TwoWayCompleter::Sync& completer) override {
     ZX_ASSERT(request->payload == kRequestPayload);
-    completer.Reply(kResponsePayload, std::move(arena));
+    ASSERT_EQ(fdf_request_arena, in_request_arena.get());
+
+    // Test using a different arena in the response.
+    auto response_arena = fdf::Arena::Create(0, "");
+    fdf_response_arena = response_arena->get();
+    completer.Reply(kResponsePayload, std::move(*response_arena));
   }
+
+  fdf_arena_t* fdf_request_arena;
+  fdf_arena_t* fdf_response_arena;
 };
 
 // TODO(fxbug.dev/87387) Enable this test once fdf::ChannelRead supports Cancel().
@@ -35,15 +43,18 @@ TEST(DriverTransport, DISABLED_TwoWaySync) {
   auto channels = fdf::ChannelPair::Create(0);
   ASSERT_OK(channels.status_value());
 
-  fdf::ServerEnd<test_transport::TransportTest> server_end(std::move(channels->end0));
-  fdf::ClientEnd<test_transport::TransportTest> client_end(std::move(channels->end1));
+  fdf::ServerEnd<test_transport::TwoWayTest> server_end(std::move(channels->end0));
+  fdf::ClientEnd<test_transport::TwoWayTest> client_end(std::move(channels->end1));
 
   auto server = std::make_shared<TestServer>();
   fdf::BindServer(dispatcher->get(), std::move(server_end), server);
   zx::status<fdf::Arena> arena = fdf::Arena::Create(0, "");
-  fdf::WireSyncClient<test_transport::TransportTest> client(std::move(client_end));
-  fdf::WireUnownedResult<test_transport::TransportTest::TwoWay> result =
+  ASSERT_OK(arena.status_value());
+  server->fdf_request_arena = arena->get();
+  fdf::WireSyncClient<test_transport::TwoWayTest> client(std::move(client_end));
+  fdf::WireUnownedResult<test_transport::TwoWayTest::TwoWay> result =
       client.buffer(std::move(*arena))->TwoWay(kRequestPayload);
   ASSERT_TRUE(result.ok());
   ASSERT_EQ(kResponsePayload, result->payload);
+  ASSERT_EQ(server->fdf_response_arena, result.arena().get());
 }

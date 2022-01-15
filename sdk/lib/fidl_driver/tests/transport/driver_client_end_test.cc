@@ -1,4 +1,4 @@
-// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -12,27 +12,15 @@
 
 #include <zxtest/zxtest.h>
 
-constexpr uint32_t kRequestPayload = 1234;
-constexpr uint32_t kResponsePayload = 5678;
-
-struct TestServer : public fdf::WireServer<test_transport::TwoWayTest> {
-  void TwoWay(TwoWayRequestView request, fdf::Arena in_request_arena,
-              TwoWayCompleter::Sync& completer) override {
-    ASSERT_EQ(kRequestPayload, request->payload);
-    ASSERT_EQ(fdf_request_arena, in_request_arena.get());
-
-    // Test using a different arena in the response.
-    auto response_arena = fdf::Arena::Create(0, "");
-    fdf_response_arena = response_arena->get();
-    completer.Reply(kResponsePayload, std::move(*response_arena));
+class TestServer : public fdf::WireServer<test_transport::SendDriverClientEndTest> {
+  void SendDriverClientEnd(SendDriverClientEndRequestView request, fdf::Arena arena,
+                           SendDriverClientEndCompleter::Sync& completer) override {
+    completer.Reply(std::move(request->h), std::move(arena));
   }
-
-  fdf_arena_t* fdf_request_arena;
-  fdf_arena_t* fdf_response_arena;
 };
 
 // TODO(fxbug.dev/87387) Enable this test once fdf::ChannelRead supports Cancel().
-TEST(DriverTransport, DISABLED_TwoWayAsync) {
+TEST(DriverTransport, DISABLED_SendDriverClientEnd) {
   void* driver = reinterpret_cast<void*>(uintptr_t(1));
   fdf_internal_push_driver(driver);
   auto deferred = fit::defer([]() { fdf_internal_pop_driver(); });
@@ -43,27 +31,33 @@ TEST(DriverTransport, DISABLED_TwoWayAsync) {
   auto channels = fdf::ChannelPair::Create(0);
   ASSERT_OK(channels.status_value());
 
-  fdf::ServerEnd<test_transport::TwoWayTest> server_end(std::move(channels->end0));
-  fdf::ClientEnd<test_transport::TwoWayTest> client_end(std::move(channels->end1));
+  fdf::ServerEnd<test_transport::SendDriverClientEndTest> server_end(std::move(channels->end0));
+  fdf::ClientEnd<test_transport::SendDriverClientEndTest> client_end(std::move(channels->end1));
 
   auto server = std::make_shared<TestServer>();
   fdf::BindServer(dispatcher->get(), std::move(server_end), server);
 
-  fdf::WireSharedClient<test_transport::TwoWayTest> client;
+  fdf::WireSharedClient<test_transport::SendDriverClientEndTest> client;
   client.Bind(std::move(client_end), dispatcher->get());
   auto arena = fdf::Arena::Create(0, "");
   ASSERT_OK(arena.status_value());
-  server->fdf_request_arena = arena->get();
+
+  auto channels_to_send = fdf::ChannelPair::Create(0);
+  ASSERT_OK(channels_to_send.status_value());
+  fdf::ClientEnd<test_transport::OneWayTest> client_end_to_send(std::move(channels_to_send->end0));
+  fidl_handle_t handle = client_end_to_send.handle()->get();
+
   sync_completion_t done;
   // TODO(fxbug.dev/91107): Consider taking |const fdf::Arena&| or similar.
   // The arena is consumed after a single call.
   client.buffer(std::move(*arena))
-      ->TwoWay(
-          kRequestPayload,
-          [&done, &server](fdf::WireUnownedResult<::test_transport::TwoWayTest::TwoWay>& result) {
+      ->SendDriverClientEnd(
+          std::move(client_end_to_send),
+          [&done, handle](fdf::WireUnownedResult<
+                          ::test_transport::SendDriverClientEndTest::SendDriverClientEnd>& result) {
             ASSERT_OK(result.status());
-            ASSERT_EQ(kResponsePayload, result->payload);
-            ASSERT_EQ(server->fdf_response_arena, result.arena().get());
+            ASSERT_TRUE(result->h.is_valid());
+            ASSERT_EQ(handle, result->h.handle()->get());
             sync_completion_signal(&done);
           });
 

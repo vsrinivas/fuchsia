@@ -4,11 +4,38 @@
 
 library test.transport;
 
+using zx;
+
 @transport("Driver")
-protocol TransportTest {
+protocol TwoWayTest {
     TwoWay(struct {
         payload uint32;
     }) -> (struct {
         payload uint32;
+    });
+};
+
+@transport("Driver")
+protocol OneWayTest {
+    OneWay(struct {
+        payload uint32;
+    });
+};
+
+@transport("Driver")
+protocol SendDriverClientEndTest {
+    SendDriverClientEnd(resource struct {
+        h client_end:OneWayTest;
+    }) -> (resource struct {
+        h client_end:OneWayTest;
+    });
+};
+
+@transport("Driver")
+protocol SendZirconHandleTest {
+    SendZirconHandle(resource struct {
+        h zx.handle:EVENT;
+    }) -> (resource struct {
+        h zx.handle:EVENT;
     });
 };
