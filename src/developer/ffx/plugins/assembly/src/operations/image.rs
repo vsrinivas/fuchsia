@@ -38,11 +38,14 @@ pub fn assemble(args: ImageArgs) -> Result<()> {
     let gendir = gendir.unwrap_or(outdir.clone());
 
     // Use the sdk to get the host tool paths.
-    let sdk_tools = SdkToolProvider::try_new()?;
+    let sdk_tools = SdkToolProvider::try_new().context("Getting SDK tools")?;
 
     let base_package: Option<BasePackage> = if has_base_package(&product) {
         info!("Creating base package");
-        Some(construct_base_package(&outdir, &gendir, &board.base_package_name, &product)?)
+        Some(
+            construct_base_package(&outdir, &gendir, &board.base_package_name, &product)
+                .context("Creating base package")?,
+        )
     } else {
         info!("Skipping base package creation");
         None
@@ -50,14 +53,17 @@ pub fn assemble(args: ImageArgs) -> Result<()> {
 
     let blobfs_path: Option<PathBuf> = if let Some(base_package) = &base_package {
         info!("Creating the blobfs");
-        Some(construct_blobfs(
-            sdk_tools.get_tool("blobfs")?,
-            &outdir,
-            &gendir,
-            &product,
-            &board.blobfs,
-            &base_package,
-        )?)
+        Some(
+            construct_blobfs(
+                sdk_tools.get_tool("blobfs")?,
+                &outdir,
+                &gendir,
+                &product,
+                &board.blobfs,
+                &base_package,
+            )
+            .context("Creating the blobfs")?,
+        )
     } else {
         info!("Skipping blobfs creation");
         None
@@ -65,7 +71,10 @@ pub fn assemble(args: ImageArgs) -> Result<()> {
 
     let fvms: Option<Fvms> = if let Some(fvm_config) = &board.fvm {
         info!("Creating the fvm");
-        Some(construct_fvm(&sdk_tools, &outdir, &fvm_config, blobfs_path.as_ref())?)
+        Some(
+            construct_fvm(&sdk_tools, &outdir, &fvm_config, blobfs_path.as_ref())
+                .context("Creating the fvm")?,
+        )
     } else {
         info!("Skipping fvm creation");
         None
@@ -93,7 +102,10 @@ pub fn assemble(args: ImageArgs) -> Result<()> {
 
     let vbmeta_path: Option<PathBuf> = if let Some(vbmeta_config) = &board.vbmeta {
         info!("Creating the VBMeta image");
-        Some(construct_vbmeta(&outdir, &board.zbi.name, vbmeta_config, &zbi_path)?)
+        Some(
+            construct_vbmeta(&outdir, &board.zbi.name, vbmeta_config, &zbi_path)
+                .context("Creating the VBMeta image")?,
+        )
     } else {
         info!("Skipping vbmeta creation");
         None
@@ -104,7 +116,11 @@ pub fn assemble(args: ImageArgs) -> Result<()> {
     // package and the
     let (zbi_for_update_path, signed) = if let Some(signing_config) = &board.zbi.signing_script {
         info!("Vendor signing the ZBI");
-        (vendor_sign_zbi(&outdir, &board, signing_config, &zbi_path)?, true)
+        (
+            vendor_sign_zbi(&outdir, &board, signing_config, &zbi_path)
+                .context("Vendor-signing the ZBI")?,
+            true,
+        )
     } else {
         (zbi_path, false)
     };
@@ -135,7 +151,8 @@ pub fn assemble(args: ImageArgs) -> Result<()> {
         .context("Failed to write to images.json")?;
 
     info!("Creating the packages manifest");
-    create_package_manifest(&outdir, &board, &product, base_package.as_ref())?;
+    create_package_manifest(&outdir, &board, &product, base_package.as_ref())
+        .context("Creating the packages manifest")?;
 
     if log_commands {
         let command_log_path = gendir.join("command_log.json");
@@ -160,7 +177,9 @@ fn create_package_manifest(
     let mut add_packages_to_update = |packages: &Vec<PathBuf>| -> Result<()> {
         for package_path in packages {
             let manifest = util::pkg_manifest_from_path(package_path)?;
-            packages_manifest.add_by_manifest(manifest)?;
+            packages_manifest
+                .add_by_manifest(manifest)
+                .context(format!("Adding manifest: {}", package_path.display()))?;
         }
         Ok(())
     };
@@ -175,7 +194,7 @@ fn create_package_manifest(
             base_package.merkle,
         )?;
     }
-    Ok(ser::to_writer(packages_file, &packages_manifest)?)
+    Ok(ser::to_writer(packages_file, &packages_manifest).context("Writing packages manifest")?)
 }
 
 fn read_configs(
