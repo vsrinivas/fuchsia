@@ -4,14 +4,14 @@
 // found in the LICENSE file.
 */}}
 
-{{- define "Union:ForwardDeclaration:TypesHeader" }}
+{{- define "Union:ForwardDeclaration:WireTypesHeader" }}
 {{ EnsureNamespace . }}
 class {{ .Name }};
 {{- end }}
 
 {{/* TODO(fxbug.dev/36441): Remove __Fuchsia__ ifdefs once we have non-Fuchsia
      emulated handles for C++. */}}
-{{- define "Union:TypesHeader" }}
+{{- define "Union:WireTypesHeader" }}
 {{ EnsureNamespace . }}
 {{ if .IsResourceType }}
 {{- IfdefFuchsia -}}
@@ -168,7 +168,7 @@ class {{ .Name }} {
 
 {{/* TODO(fxbug.dev/36441): Remove __Fuchsia__ ifdefs once we have non-Fuchsia
      emulated handles for C++. */}}
-{{- define "Union:TypesSource" }}
+{{- define "Union:WireTypesSource" }}
 {{- if .IsResourceType }}
 {{- IfdefFuchsia -}}
 {{- end }}
@@ -241,7 +241,7 @@ void {{ . }}::_CloseHandles() {
 
 {{/* TODO(fxbug.dev/36441): Remove __Fuchsia__ ifdefs once we have non-Fuchsia
      emulated handles for C++. */}}
-{{- define "Union:Traits:TypesHeader" }}
+{{- define "Union:Traits:WireTypesHeader" }}
 {{ if .IsResourceType }}
 {{- IfdefFuchsia -}}
 template <>

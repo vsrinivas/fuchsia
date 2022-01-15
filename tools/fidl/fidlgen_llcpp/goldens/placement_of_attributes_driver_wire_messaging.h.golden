@@ -16,6 +16,6 @@
 
 #endif  // __Fuchsia__
 
-#include <fidl/test.exampleusing/cpp/wire_messaging.h>
+#include <fidl/test.exampleusing/cpp/driver/wire_messaging.h>
 
 namespace fidl {}  // namespace fidl

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fidl/llcpp/types/test/cpp/fidl_v2.h>
+#include <fidl/fidl.llcpp.types.test/cpp/fidl.h>
 #include <lib/stdcompat/type_traits.h>
 
 #include <zxtest/zxtest.h>

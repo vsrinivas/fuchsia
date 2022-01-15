@@ -271,7 +271,7 @@ The officially supported FIDL language back-ends are:
 * C++:
     * High level: [fidlgen_hlcpp]
     * Low level: [fidlgen_llcpp]
-    * Unified: [fidlgen_cpp] (will eventually replace the other two)
+    * Unified: [fidlgen_llcpp] (shared tooling for all new C++ backends)
 * Dart: [fidlgen_dart]
 * Go: [fidlgen_go]
 * Rust: [fidlgen_rust]
@@ -426,7 +426,6 @@ anonymous [`Name`](#name)s.
 <!-- xrefs -->
 [internal]: /zircon/system/ulib/fidl/include/lib/fidl/internal.h
 [layout-attr]: /docs/reference/fidl/language/attributes.md#layout_layout
-[fidlgen_cpp]: /tools/fidl/fidlgen_cpp
 [fidlgen_dart]: /tools/fidl/fidlgen_dart
 [fidlgen_go]: /tools/fidl/fidlgen_go
 [fidlgen_hlcpp]: /tools/fidl/fidlgen_hlcpp

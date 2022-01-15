@@ -23,7 +23,7 @@ void {{ .Name }}({{ RenderParams .RequestArgs
 void {{ .Name }}({{ RenderParams .RequestArgs
                     (printf "::fit::callback<void (%s*)> _cb" .WireResponse) }});
 
-{{ template "Method:ClientImplAsyncBuffer:MessagingHeader" . }}
+{{ template "Method:ClientImplAsyncBuffer:WireMessagingHeader" . }}
 
 {{ end }}
 

@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 // [START includes]
-#include <fuchsia/examples/cpp/fidl_v2.h>
+#include <fidl/fuchsia.examples/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/fidl/cpp/client.h>

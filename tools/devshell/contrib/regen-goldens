@@ -52,7 +52,6 @@ fx-config-read
 readonly all_tools=(
     "fidlc tools/fidl/fidlc/goldens"
     "fidldoc tools/fidl/fidldoc/goldens"
-    "fidlgen_cpp tools/fidl/fidlgen_cpp/goldens"
     "fidlgen_dart tools/fidl/fidlgen_dart/goldens"
     "fidlgen_go tools/fidl/fidlgen_go/goldens"
     "fidlgen_hlcpp tools/fidl/fidlgen_hlcpp/goldens/bindings"

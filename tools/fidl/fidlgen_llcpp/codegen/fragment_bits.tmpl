@@ -119,7 +119,7 @@ static_assert(std::is_standard_layout_v<{{ . }}>);
 static_assert(sizeof({{ . }}) == sizeof({{ .Type }}));
 {{- end }}
 
-{{- define "Bits:TypesHeader" }}
+{{- define "Bits:WireTypesHeader" }}
 {{ EnsureNamespace . -}}
 using {{ .Name }} = {{ .Unified }};
 {{- end }}

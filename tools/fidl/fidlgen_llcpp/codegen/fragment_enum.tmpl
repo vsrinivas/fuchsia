@@ -65,7 +65,7 @@ struct ContainsHandle<{{ . }}> : public std::false_type {};
 
 {{- end }}
 
-{{- define "Enum:TypesHeader" }}
+{{- define "Enum:WireTypesHeader" }}
 {{ EnsureNamespace . -}}
 using {{ .Name }} = {{ .Unified }};
 {{- end }}

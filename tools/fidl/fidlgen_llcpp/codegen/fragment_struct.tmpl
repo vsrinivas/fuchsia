@@ -4,14 +4,14 @@
 // found in the LICENSE file.
 */}}
 
-{{- define "Struct:ForwardDeclaration:TypesHeader" }}
+{{- define "Struct:ForwardDeclaration:WireTypesHeader" }}
 {{ EnsureNamespace . }}
 struct {{ .Name }};
 {{- end }}
 
 {{/* TODO(fxbug.dev/36441): Remove __Fuchsia__ ifdefs once we have non-Fuchsia
      emulated handles for C++. */}}
-{{- define "Struct:TypesHeader" }}
+{{- define "Struct:WireTypesHeader" }}
 {{ EnsureNamespace . }}
 {{ if .IsResourceType }}
 {{- IfdefFuchsia -}}
@@ -55,7 +55,7 @@ struct {{ .Name }} {
 
 {{/* TODO(fxbug.dev/36441): Remove __Fuchsia__ ifdefs once we have non-Fuchsia
      emulated handles for C++. */}}
-{{- define "Struct:TypesSource" }}
+{{- define "Struct:WireTypesSource" }}
 {{ EnsureNamespace "" }}
 {{ if .IsResourceType }}
 {{- IfdefFuchsia -}}
@@ -70,7 +70,7 @@ void {{ . }}::_CloseHandles() {
 
 {{/* TODO(fxbug.dev/36441): Remove __Fuchsia__ ifdefs once we have non-Fuchsia
      emulated handles for C++. */}}
-{{- define "Struct:Traits:TypesHeader" }}
+{{- define "Struct:Traits:WireTypesHeader" }}
 {{ if .IsResourceType }}
 {{- IfdefFuchsia -}}
 template <>
