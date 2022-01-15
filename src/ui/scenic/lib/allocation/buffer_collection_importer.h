@@ -47,9 +47,23 @@ struct ImageMetadata {
   }
 };
 
+inline std::ostream& operator<<(std::ostream& out,
+                                const fuchsia::ui::composition::BlendMode& blend_mode) {
+  switch (blend_mode) {
+    case fuchsia::ui::composition::BlendMode::SRC:
+      out << "SRC";
+      break;
+    case fuchsia::ui::composition::BlendMode::SRC_OVER:
+      out << "SRC_OVER";
+      break;
+  }
+  return out;
+}
+
 inline std::ostream& operator<<(std::ostream& str, const ImageMetadata& m) {
   str << "size=" << m.width << "x" << m.height << "  multiply_color=(" << m.multiply_color[0] << ","
-      << m.multiply_color[1] << "," << m.multiply_color[2] << "," << m.multiply_color[3] << ")";
+      << m.multiply_color[1] << "," << m.multiply_color[2] << "," << m.multiply_color[3] << ")"
+      << "  blend_mode=" << m.blend_mode;
   return str;
 }
 

@@ -87,6 +87,9 @@ void Engine::RenderScheduledFrame(uint64_t frame_number, zx::time presentation_t
   for (auto& r : image_rectangles) {
     str << "\n        rect: " << r;
   }
+  for (auto& i : images) {
+    str << "\n        image: " << i;
+  }
   FLATLAND_VERBOSE_LOG << str.str();
 #endif
 
