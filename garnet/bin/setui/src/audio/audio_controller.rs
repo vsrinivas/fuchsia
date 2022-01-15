@@ -22,6 +22,7 @@ use crate::trace::TracingNonce;
 use crate::{trace, trace_guard};
 use async_trait::async_trait;
 use fuchsia_async as fasync;
+use fuchsia_syslog::fx_log_info;
 use futures::lock::Mutex;
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -103,6 +104,7 @@ impl VolumeController {
         volume: Vec<SetAudioStream>,
         nonce: TracingNonce,
     ) -> SettingHandlerResult {
+        fx_log_info!("b/210170985: processing set volume request");
         let guard = trace_guard!(nonce, "set volume updating counters");
         // Update counters for changed streams.
         for stream in &volume {
@@ -123,6 +125,7 @@ impl VolumeController {
             self.client.notify(Event::Changed(info)).await;
         }
 
+        fx_log_info!("b/210170985: finished processing set volume request");
         Ok(None)
     }
 
@@ -188,6 +191,7 @@ impl VolumeController {
         };
 
         if push_to_audio_core {
+            fx_log_info!("b/210170985: pushing new volume to audio core");
             let guard = trace_guard!(nonce, "push to core");
             self.check_and_bind_volume_controls(nonce, default_audio_info().streams.iter()).await?;
             drop(guard);
@@ -207,6 +211,7 @@ impl VolumeController {
         drop(calculating_guard);
 
         if let Some(mut stored_value) = stored_value {
+            fx_log_info!("b/210170985: persisting new volume");
             let guard = trace_guard!(nonce, "updating streams and counters");
             stored_value.streams = get_streams_array_from_map(&self.stream_volume_controls);
             stored_value.modified_counters = Some(self.modified_counters.clone());
@@ -214,6 +219,10 @@ impl VolumeController {
 
             let guard = trace_guard!(nonce, "writing setting");
             let write_result = self.client.write_setting(stored_value.into(), false, nonce).await;
+            fx_log_info!(
+                "b/210170985: finshed persisting new volume, notified? {:?}",
+                write_result.notified()
+            );
             drop(guard);
             Ok(write_result.notified())
         } else {

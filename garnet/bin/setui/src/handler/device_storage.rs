@@ -13,7 +13,7 @@ use anyhow::{format_err, Context, Error};
 use fidl::endpoints::create_proxy;
 use fidl_fuchsia_stash::{StoreAccessorProxy, StoreProxy, Value};
 use fuchsia_async::{Task, Timer, WakeupTime};
-use fuchsia_syslog::fx_log_err;
+use fuchsia_syslog::{fx_log_err, fx_log_info};
 use futures::channel::mpsc::UnboundedSender;
 use futures::future::OptionFuture;
 use futures::lock::Mutex;
@@ -21,6 +21,7 @@ use futures::{FutureExt, StreamExt};
 use serde::de::DeserializeOwned;
 use serde::Serialize;
 
+use crate::audio::types::AudioInfo;
 use crate::handler::setting_handler::persist::UpdateState;
 use crate::handler::stash_inspect_logger::StashInspectLoggerHandle;
 
@@ -88,8 +89,13 @@ impl CachedStorage {
             .and_then(|r| r.map_err(|e| format_err!("flush call on stash failed: {:?}", e)))
             .is_err()
         {
+            if setting_key == AudioInfo::KEY {
+                fx_log_info!("b/210170985: stash flush for audio failed");
+            }
             // Record the write failure to inspect.
             self.inspect_handle.logger.lock().await.record_flush_failure(setting_key);
+        } else if setting_key == AudioInfo::KEY {
+            fx_log_info!("b/210170985: stash flush for audio finished");
         }
     }
 }
@@ -294,7 +300,11 @@ impl DeviceStorage {
                         _ = next_commit_timer_fuse => {
                             // Timer triggered, check for pending commits.
                             if let Some(params) = pending_commit {
-                                cached_storage.lock().await.stash_commit(params.flush, key.into()).await;
+                                    if key == AudioInfo::KEY {
+                                        fx_log_info!(
+                                            "b/210170985: flushing audio setting to stash");
+                                    }
+                                    cached_storage.lock().await.stash_commit(params.flush, key.into()).await;
                                 last_commit = Instant::now();
                                 pending_commit = None;
                             }
@@ -326,6 +336,9 @@ impl DeviceStorage {
     where
         T: DeviceStorageCompatible,
     {
+        if T::KEY == AudioInfo::KEY {
+            fx_log_info!("b/210170985: begin writing new audio setting");
+        }
         let typed_storage = self
             .typed_storage_map
             .get(T::KEY)
@@ -367,10 +380,13 @@ impl DeviceStorage {
         Ok(if cached_value != Some(new_value) {
             let mut serialized = Value::Stringval(new_value.serialize_to());
             let key = prefixed(T::KEY);
+            if key == AudioInfo::KEY {
+                fx_log_info!("b/210170985: writing new audio setting to stash");
+            }
             cached_storage.stash_proxy.set_value(&key, &mut serialized)?;
             if !self.debounce_writes {
                 // Not debouncing writes for testing, just commit immediately.
-                cached_storage.stash_commit(flush, key).await;
+                cached_storage.stash_commit(flush, key.clone()).await;
             } else {
                 typed_storage.commit_sender.unbounded_send(CommitParams { flush }).with_context(
                     || {
@@ -385,6 +401,9 @@ impl DeviceStorage {
             }
             cached_storage.current_data =
                 Some(Box::new(new_value.clone()) as Box<dyn Any + Send + Sync>);
+            if key == AudioInfo::KEY {
+                fx_log_info!("b/210170985: finished writing new audio setting");
+            }
             UpdateState::Updated
         } else {
             UpdateState::Unchanged
