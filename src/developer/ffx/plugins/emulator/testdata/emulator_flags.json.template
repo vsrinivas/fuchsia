@@ -96,7 +96,16 @@
                     {{~/if~}}
                     ,downscript=no",
                 "-device",
-                "virtio-net-pci,vectors=8,netdev=net0,mac={{runtime.mac}}",
+                "virtio-net-pci,vectors=8,netdev=net0,mac={{runtime.mac_address}}",
+            {{else}}
+                {{!-- host.networking must be "user"}}
+                "-netdev",
+                "type=user,id=net0,restrict=off
+                {{~#each host.port_map~}}
+                    ,hostfwd=tcp::{{this.host}}-:{{this.guest}}
+                {{~/each~}}",
+                "-device",
+                "virtio-net-pci,vectors=8,netdev=net0,mac={{runtime.mac_address}}",
             {{/if}}
         {{/if}}
         {{! TODO(fxbug.dev/90005): These last few items were hard-coded into

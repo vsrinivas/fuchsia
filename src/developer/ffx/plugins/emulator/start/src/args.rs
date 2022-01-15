@@ -4,7 +4,7 @@
 
 use argh::FromArgs;
 use ffx_core::ffx_command;
-use ffx_emulator_config::{AccelerationMode, EngineType, GpuType};
+use ffx_emulator_config::{AccelerationMode, EngineType, GpuType, NetworkingMode};
 use std::path::PathBuf;
 
 #[ffx_command()]
@@ -13,7 +13,7 @@ use std::path::PathBuf;
 /// Starting Fuchsia Emulator
 pub struct StartCommand {
     /// virtualization acceleration. Valid choices are "none" to disable acceleration, "hyper" to
-    /// use the host's hypervisor interface, KVM on Linux and HVF on macOS, "auto" to use the
+    /// use the host's hypervisor interface, KVM on Linux and HVF on MacOS, "auto" to use the
     /// hypervisor if detected. The default value is "auto".
     #[argh(option, default = "AccelerationMode::Auto")]
     pub accel: AccelerationMode,
@@ -69,9 +69,10 @@ pub struct StartCommand {
     pub name: String,
 
     /// host port mapping for user-networking mode.
-    /// TODO(fxbug.dev/88327): enable SLIRP.
+    /// Syntax is "--port-map <portname>:<port>".
+    /// This flag may be repeated for multiple port mappings.
     #[argh(option)]
-    pub port_map: Option<String>,
+    pub port_map: Vec<String>,
 
     /// use named product information from Product Bundle Metadata (PBM). If no
     /// product bundle is specified and there is an obvious choice, that will be
@@ -86,11 +87,10 @@ pub struct StartCommand {
     #[argh(option)]
     pub start_up_args_template: Option<PathBuf>,
 
-    /// run emulator with network in bridge mode via tun/tap.
-    /// This option is not supported on MacOS.
-    /// TODO(fxbug.dev/88327): Support SLIRP and No network.
-    #[argh(switch, short = 'N')]
-    pub tuntap: bool,
+    /// specify the networking type for the emulator: 'none', 'auto', 'tap' mode with Tun/Tap,
+    /// or 'user' mode with SLiRP.
+    #[argh(option, default = "NetworkingMode::Auto")]
+    pub net: NetworkingMode,
 
     /// enables extra logging for debugging
     #[argh(switch, short = 'V')]

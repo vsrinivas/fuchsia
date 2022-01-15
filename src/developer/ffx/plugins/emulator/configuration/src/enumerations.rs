@@ -128,6 +128,10 @@ display_impl!(LogLevel);
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 #[serde(rename_all = "snake_case")]
 pub enum NetworkingMode {
+    /// Allow the system to determine the best available networking option. Typically
+    /// this means "Tap", falling back to "User" if Tap is unavailable.
+    Auto,
+
     /// Networking will be set up in bridged mode, using an interface such as tun/tap.
     Tap,
 
@@ -140,7 +144,7 @@ pub enum NetworkingMode {
 
 impl Default for NetworkingMode {
     fn default() -> Self {
-        NetworkingMode::None
+        NetworkingMode::Auto
     }
 }
 
@@ -154,6 +158,13 @@ pub struct VirtualCpu {
 
     /// The number of virtual CPUs that will emulated in the virtual device.
     pub count: usize,
+}
+
+/// Holds a single mapping from a host port to the guest.
+#[derive(Clone, Debug, Default, Deserialize, PartialEq, Serialize)]
+pub struct PortMapping {
+    pub guest: u16,
+    pub host: Option<u16>,
 }
 
 #[cfg(test)]

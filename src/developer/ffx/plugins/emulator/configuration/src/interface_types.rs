@@ -8,7 +8,8 @@
 //! runtime.
 
 use crate::enumerations::{
-    AccelerationMode, ConsoleType, EngineType, GpuType, LogLevel, NetworkingMode, VirtualCpu,
+    AccelerationMode, ConsoleType, EngineType, GpuType, LogLevel, NetworkingMode, PortMapping,
+    VirtualCpu,
 };
 use anyhow::Result;
 use async_trait::async_trait;
@@ -147,6 +148,10 @@ pub struct HostConfig {
 
     /// Indicates the operating system the host system is running.
     pub os: String,
+
+    /// Holds a set of named ports, with the mapping from host to guest for each one.
+    /// Generally only useful when networking is set to "user".
+    pub port_map: HashMap<String, PortMapping>,
 }
 
 /// A collection of properties which control/influence the
@@ -179,7 +184,7 @@ pub struct RuntimeConfig {
     pub log_level: LogLevel,
 
     // A generated MAC address for the emulators virtual network.
-    pub mac: String,
+    pub mac_address: String,
 
     /// The human-readable name for this instance. Must be unique from any other current
     /// instance on the host.

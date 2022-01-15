@@ -8,7 +8,7 @@
 use crate::{arg_templates::process_flag_template, serialization::SerializingEngine};
 use anyhow::{anyhow, bail, Result};
 use async_trait::async_trait;
-use ffx_emulator_common::{config, config::FfxConfigWrapper, process};
+use ffx_emulator_common::{config, config::FfxConfigWrapper, process, tap_available};
 use ffx_emulator_config::{
     ConsoleType, DeviceConfig, EmulatorConfiguration, EmulatorEngine, GuestConfig, LogLevel,
     NetworkingMode,
@@ -145,18 +145,6 @@ pub(crate) trait QemuBasedEngine: EmulatorEngine + SerializingEngine {
         Ok(())
     }
 
-    fn tap_available() -> Result<bool> {
-        if std::env::consts::OS != "linux" {
-            return Ok(false);
-        }
-        let output = Command::new("ip")
-            .args(["tuntap", "show"])
-            .output()
-            .expect("failed to run ip to check tun/tap status");
-        let ifname = String::from_utf8_lossy(&output.stdout);
-        Ok(ifname != "")
-    }
-
     fn validate_network_flags(&self, emu_config: &EmulatorConfiguration) -> Result<()> {
         if emu_config.host.networking == NetworkingMode::Tap && std::env::consts::OS == "macos" {
             eprintln!(
@@ -165,7 +153,7 @@ pub(crate) trait QemuBasedEngine: EmulatorEngine + SerializingEngine {
             );
         }
         if emu_config.host.networking == NetworkingMode::Tap {
-            if !Self::tap_available()? {
+            if !tap_available() {
                 eprintln!("To use emu with networking on Linux, configure Tun/Tap:");
                 eprintln!(
                     "  sudo ip tuntap add dev qemu mode tap user $USER && sudo ip link set qemu up"

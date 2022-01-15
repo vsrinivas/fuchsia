@@ -9,6 +9,7 @@ use crate::common::{
 };
 use crate::json::{schema, JsonObject};
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 
 /// Specifics for a CPU.
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
@@ -100,6 +101,13 @@ pub struct VirtualDeviceV1 {
     /// TODO(fxbug.dev/90948): Make this non-optional, as soon as the template file is included
     /// with the SDK.
     pub start_up_args_template: Option<String>,
+
+    /// A map of names to port numbers. These are the ports that need to be available to the
+    /// virtual device, though a given use case may not require all of them. When emulating with
+    /// user-mode networking, these must be mapped to host-side ports to allow communication into
+    /// the emulator from external tools (such as ssh and mDNS). When emulating with Tun/Tap mode
+    /// networking port mapping is superfluous, so we expect this field to be ignored.
+    pub ports: Option<HashMap<String, u16>>,
 }
 
 impl JsonObject for Envelope<VirtualDeviceV1> {

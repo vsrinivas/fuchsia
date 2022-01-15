@@ -6,7 +6,7 @@
 //! interface types. We perform the conversion here to keep dependencies on the sdk_metadata
 //! to a minimum, while improving our ability to fully test the conversion code.
 
-use crate::{DeviceConfig, EmulatorConfiguration, GuestConfig, VirtualCpu};
+use crate::{DeviceConfig, EmulatorConfiguration, GuestConfig, PortMapping, VirtualCpu};
 use anyhow::{anyhow, Result};
 use sdk_metadata::{ProductBundleV1, VirtualDeviceV1};
 use std::path::PathBuf;
@@ -35,6 +35,15 @@ pub fn convert_bundle_to_configs(
 
     if let Some(template) = &virtual_device.start_up_args_template {
         emulator_configuration.runtime.template = fms_path.join(&template);
+    }
+
+    if let Some(ports) = &virtual_device.ports {
+        for (name, port) in ports {
+            emulator_configuration
+                .host
+                .port_map
+                .insert(name.to_owned(), PortMapping { guest: port.to_owned(), host: None });
+        }
     }
 
     if let Some(manifests) = &product_bundle.manifests {
@@ -68,6 +77,7 @@ mod tests {
         AudioDevice, AudioModel, DataAmount, DataUnits, ElementType, EmuManifest, InputDevice,
         Manifests, PointingDevice, Screen, ScreenUnits, TargetArchitecture,
     };
+    use std::collections::HashMap;
 
     #[test]
     fn test_convert_bundle_to_configs() -> Result<()> {
@@ -102,10 +112,12 @@ mod tests {
                 window_size: Screen { height: 480, width: 640, units: ScreenUnits::Pixels },
             },
             start_up_args_template: Some("path/to/template".to_string()),
+            ports: None,
         };
 
         let sdk_root = PathBuf::from("/some/sdk-root");
         let fms_path = PathBuf::from("/some/sdk-path/fms-path");
+
         // Run the conversion, then assert everything in the config matches the manifest data.
         let config = convert_bundle_to_configs(&pb, &device, &sdk_root, &fms_path)?;
         assert_eq!(config.device.audio, device.hardware.audio);
@@ -126,6 +138,8 @@ mod tests {
         assert_eq!(config.guest.kernel_image, expected_kernel);
         assert_eq!(config.guest.zbi_image, expected_zbi);
 
+        assert_eq!(config.host.port_map.len(), 0);
+
         // Adjust all of the values that affect the config, then run it again.
         pb.manifests = Some(Manifests {
             emu: Some(EmuManifest {
@@ -144,7 +158,13 @@ mod tests {
             window_size: Screen { height: 1024, width: 1280, units: ScreenUnits::Pixels },
         };
         device.start_up_args_template = Some("path/to/template".to_string());
-        let config = convert_bundle_to_configs(&pb, &device, &sdk_root, &fms_path)?;
+
+        let mut ports = HashMap::new();
+        ports.insert("ssh".to_string(), 22);
+        ports.insert("debug".to_string(), 2345);
+        device.ports = Some(ports);
+
+        let mut config = convert_bundle_to_configs(&pb, &device, &sdk_root, &fms_path)?;
 
         // Verify that all of the new values are loaded and match the new manifest data.
         assert_eq!(config.device.audio, device.hardware.audio);
@@ -163,6 +183,18 @@ mod tests {
         assert_eq!(config.guest.fvm_image.unwrap(), expected_fvm);
         assert_eq!(config.guest.kernel_image, expected_kernel);
         assert_eq!(config.guest.zbi_image, expected_zbi);
+
+        assert_eq!(config.host.port_map.len(), 2);
+        assert!(config.host.port_map.contains_key("ssh"));
+        assert_eq!(
+            config.host.port_map.remove("ssh").unwrap(),
+            PortMapping { host: None, guest: 22 }
+        );
+        assert!(config.host.port_map.contains_key("debug"));
+        assert_eq!(
+            config.host.port_map.remove("debug").unwrap(),
+            PortMapping { host: None, guest: 2345 }
+        );
         Ok(())
     }
 }
