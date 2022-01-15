@@ -1858,6 +1858,26 @@ impl StatsLogger {
         latest_ap_state: &BssDescription,
         connect_start_time: Option<fasync::Time>,
     ) {
+        let mut metric_events = self.build_establish_connection_cobalt_metrics(
+            code,
+            multiple_bss_candidates,
+            latest_ap_state,
+            connect_start_time,
+        );
+        log_cobalt_1dot1_batch!(
+            self.cobalt_1dot1_proxy,
+            &mut metric_events.iter_mut(),
+            "log_establish_connection_cobalt_metrics",
+        );
+    }
+
+    fn build_establish_connection_cobalt_metrics(
+        &mut self,
+        code: fidl_ieee80211::StatusCode,
+        multiple_bss_candidates: bool,
+        latest_ap_state: &BssDescription,
+        connect_start_time: Option<fasync::Time>,
+    ) -> Vec<MetricEvent> {
         let mut metric_events = vec![];
         metric_events.push(MetricEvent {
             metric_id: metrics::CONNECT_ATTEMPT_BREAKDOWN_BY_STATUS_CODE_METRIC_ID,
@@ -1866,7 +1886,7 @@ impl StatsLogger {
         });
 
         if code != fidl_ieee80211::StatusCode::Success {
-            return;
+            return metric_events;
         }
 
         match connect_start_time {
@@ -1932,12 +1952,7 @@ impl StatsLogger {
             event_codes: vec![],
             payload: MetricEventPayload::StringValue(oui),
         });
-
-        log_cobalt_1dot1_batch!(
-            self.cobalt_1dot1_proxy,
-            &mut metric_events.iter_mut(),
-            "log_establish_connection_cobalt_metrics",
-        );
+        metric_events
     }
 
     async fn log_downtime_cobalt_metrics(
@@ -4199,6 +4214,28 @@ mod tests {
         let per_oui = test_helper.get_logged_metrics(metrics::SUCCESSFUL_CONNECT_PER_OUI_METRIC_ID);
         assert_eq!(per_oui.len(), 1);
         assert_eq!(per_oui[0].payload, MetricEventPayload::StringValue("00F620".to_string()));
+    }
+
+    #[fuchsia::test]
+    fn test_log_connect_attempt_breakdown_by_failed_status_code() {
+        let (mut test_helper, mut test_fut) = setup_test();
+
+        let event = TelemetryEvent::ConnectResult {
+            iface_id: IFACE_ID,
+            result: fake_connect_result(fidl_ieee80211::StatusCode::RefusedCapabilitiesMismatch),
+            multiple_bss_candidates: true,
+            latest_ap_state: random_bss_description!(Wpa2),
+        };
+        test_helper.telemetry_sender.send(event);
+        test_helper.drain_cobalt_events(&mut test_fut);
+
+        let breakdowns_by_status_code = test_helper
+            .get_logged_metrics(metrics::CONNECT_ATTEMPT_BREAKDOWN_BY_STATUS_CODE_METRIC_ID);
+        assert_eq!(breakdowns_by_status_code.len(), 1);
+        assert_eq!(
+            breakdowns_by_status_code[0].event_codes,
+            vec![fidl_ieee80211::StatusCode::RefusedCapabilitiesMismatch as u32]
+        );
     }
 
     #[fuchsia::test]
