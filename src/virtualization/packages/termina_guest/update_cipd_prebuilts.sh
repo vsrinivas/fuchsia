@@ -20,6 +20,26 @@ declare -r FUCHSIA_DIR="${TERMINA_GUEST_DIR}/../../../../"
 # https://storage.googleapis.com/chromeos-image-archive/{tatl|tael}-full/LATEST-master
 declare -r TERMINA_REVISION=R90-13816.B
 
+# Cross compile filed used for building 32bit Vulkan ICD
+meson_cross_file="
+   [binaries]
+   c = '/usr/bin/gcc'
+   cpp = '/usr/bin/g++'
+   ar = '/usr/bin/gcc-ar'
+   strip = '/usr/bin/strip'
+   pkgconfig = '/usr/bin/pkg-config'
+   llvm-config = '/usr/bin/llvm-config32'
+   [properties]
+   c_args = ['-m32']
+   c_link_args = ['-m32']
+   cpp_args = ['-m32']
+   cpp_link_args = ['-m32']
+   [host_machine]
+   system = 'linux'
+   cpu_family = 'x86'
+   cpu = 'i686'
+   endian = 'little'"
+
 print_usage_and_exit() {
   echo "Build Termina images for Machina."
   echo ""
@@ -83,13 +103,57 @@ create_cros_tree() {
     git remote update fuchsia && \
     git checkout fuchsia/main)
 
-  if [ ! -d src/third_party/magma ]; then
-    # Create magma area and build it from fuchsia
-    mkdir -p src/third_party/magma
-    (cd src/third_party/magma && "${FUCHSIA_DIR}/src/graphics/lib/magma/scripts/install-magma-linux.sh")
+  if [ ! -d src/third_party/fuchsia ]; then
+    git clone https://fuchsia.googlesource.com/fuchsia src/third_party/fuchsia
   fi
 
   popd
+}
+
+build_debian_32bit_icd() {
+  local -r debian_dir="$1"
+  local -r arch="$2"
+
+  if [ "${arch}" != "x64" ]; then
+    echo "Debian build only supports x64"
+  fi
+
+  if [ ! -d ${debian_dir} ]; then
+    sudo debootstrap --arch amd64 bullseye ${debian_dir} http://deb.debian.org/debian
+    sudo chroot ${debian_dir} bash -c 'dpkg --add-architecture i386'
+    sudo chroot ${debian_dir} bash -c 'apt update'
+    sudo chroot ${debian_dir} bash -c 'apt install --yes git gcc-multilib g++-multilib meson \
+      python3-setuptools python3-mako rapidjson-dev googletest libvulkan-dev:i386 pkg-config:i386 \
+      bison:i386 flex:i386 libwayland-dev:i386 wayland-protocols libxrandr-dev:i386 libdrm-dev:i386\
+      libx11-xcb-dev:i386 libxcb-dri2-0-dev:i386 libxcb-dri3-dev:i386 libxcb-present-dev:i386 \
+      libxcb-randr0 libxcb-randr0:i386 libxcb-shm0 libxcb-shm0:i386 libxshmfence-dev:i386 \
+      zlib1g-dev:i386'
+
+    sudo chroot ${debian_dir} bash -c 'git clone https://fuchsia.googlesource.com/third_party/mesa'
+    sudo chroot ${debian_dir} bash -c 'git clone https://fuchsia.googlesource.com/fuchsia mesa/subprojects/fuchsia'
+
+    sudo chroot ${debian_dir} bash -c 'mkdir -p mesa/build'
+    sudo chroot ${debian_dir} bash -c "echo \"${meson_cross_file}\" > mesa/build/crossfile"
+
+    sudo chroot ${debian_dir} bash -c 'cd mesa/subprojects/fuchsia && ln -s src/graphics/lib/magma/meson-top/meson.build meson.build'
+    sudo chroot ${debian_dir} bash -c 'cd mesa/subprojects/fuchsia && ln -s src/graphics/lib/magma/meson-top/meson_options.txt meson_options.txt'
+
+    sudo chroot ${debian_dir} bash -c "meson --cross-file mesa/build/crossfile mesa/build mesa \
+      -Ddriver-backend=magma \
+      -Ddri-drivers= \
+      -Dgallium-drivers= \
+      -Dvulkan-drivers=intel \
+      -Dgles1=disabled \
+      -Dgles2=disabled \
+      -Dopengl=false \
+      -Dgbm=disabled \
+      -Degl=disabled \
+      -Dprefix=/usr \
+      -Dlibdir=lib/i386-linux-gnu \
+      -Dfuchsia:with_tests=true"
+  fi
+
+  sudo chroot ${debian_dir} bash -c 'ninja -C mesa/build'
 }
 
 build_angle() {
@@ -230,6 +294,15 @@ main() {
 
   echo "*** Prepare chromeos tree"
   create_cros_tree "${work_dir}/cros" "${termina_revision}"
+
+  if [ "${arch}" == "x64" ]; then
+    echo "*** Prepare debian and build"
+    build_debian_32bit_icd "${work_dir}/debian" "${arch}"
+
+    echo "*** Copy 32bit ICD to chromeos tree"
+    mkdir -p "${work_dir}/cros/src/third_party/chromiumos-overlay/media-libs/mesa/files/lib32"
+    cp -f "${work_dir}/debian/mesa/build/src/intel/vulkan/libvulkan_intel.so" "${work_dir}/cros/src/third_party/chromiumos-overlay/media-libs/mesa/files/lib32/libvulkan_intel.so"
+  fi
 
   echo "*** Prepare ANGLE and build"
   build_angle "${work_dir}/angle" "${arch}"
