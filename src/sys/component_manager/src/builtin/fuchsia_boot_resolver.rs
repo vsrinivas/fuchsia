@@ -172,118 +172,45 @@ mod tests {
         crate::model::{component::ComponentInstance, environment::Environment},
         cm_rust::FidlIntoNative,
         fidl::encoding::encode_persistent,
-        fidl::endpoints::{create_proxy_and_stream, ServerEnd},
+        fidl::endpoints::{create_proxy, ServerEnd},
         fidl_fuchsia_component_decl as fdecl, fidl_fuchsia_data as fdata,
-        fidl_fuchsia_io::{DirectoryMarker, DirectoryRequest, NodeMarker},
-        fuchsia_async as fasync,
-        std::path::PathBuf,
+        fidl_fuchsia_io::{DirectoryMarker, OPEN_RIGHT_EXECUTABLE, OPEN_RIGHT_READABLE},
+        fuchsia_async::Task,
+        io_util::directory::open_in_namespace,
         std::sync::Weak,
         vfs::{
             self, directory::entry::DirectoryEntry, execution_scope::ExecutionScope,
-            file::vmo::asynchronous::read_only_static, pseudo_directory,
+            file::vmo::asynchronous::read_only_static, pseudo_directory, remote::remote_dir,
         },
     };
 
-    // Simulate a fake bootfs Directory service that only contains a single directory
-    // ("packages/hello-world"), using our own package directory (hosted by the real pkgfs) as the
-    // contents.
-    // TODO(fxbug.dev/37534): This is implemented by manually handling the Directory.Open and forwarding
-    // to the test's real package directory because Rust vfs does not yet support
-    // OPEN_RIGHT_EXECUTABLE. Simplify in the future.
-    // TODO: Switch this test to use a hardcoded manifest string & consider removing this test
-    // manifest from the test package completely (after cleaning up other test dependencies).
-    struct FakeBootfs;
+    fn serve_vfs_dir(root: Arc<impl DirectoryEntry>) -> (Task<()>, DirectoryProxy) {
+        let fs_scope = ExecutionScope::new();
+        let (client, server) = create_proxy::<DirectoryMarker>().unwrap();
+        root.open(
+            fs_scope.clone(),
+            OPEN_RIGHT_READABLE | OPEN_RIGHT_EXECUTABLE,
+            0,
+            vfs::path::Path::dot(),
+            ServerEnd::new(server.into_channel()),
+        );
 
-    impl FakeBootfs {
-        pub fn new() -> DirectoryProxy {
-            let (proxy, mut stream) = create_proxy_and_stream::<DirectoryMarker>().unwrap();
-            fasync::Task::local(async move {
-                while let Some(request) = stream.try_next().await.unwrap() {
-                    match request {
-                        DirectoryRequest::Open { flags, mode, path, object, control_handle: _ } => {
-                            Self::handle_open(&path, flags, mode, object)
-                        }
-                        _ => panic!("Fake doesn't support request: {:?}", request),
-                    }
-                }
-            })
-            .detach();
-            proxy
-        }
+        let vfs_task = Task::spawn(async move { fs_scope.wait().await });
 
-        fn handle_open(path_str: &str, flags: u32, mode: u32, server_end: ServerEnd<NodeMarker>) {
-            if path_str.is_empty() {
-                // We don't support this in this fake, drop the server_end
-                return;
-            }
-            let path = Path::new(path_str);
-            let mut path_iter = path.iter();
-
-            match path_iter.next().unwrap().to_str().unwrap() {
-                "packages" => {
-                    // The test URLs used below have "packages/" as the first path component
-                    match path_iter.next().unwrap().to_str().unwrap() {
-                        "hello-world" => {
-                            // Connect the server_end by forwarding to our real package directory, which can handle
-                            // OPEN_RIGHT_EXECUTABLE. Also, pass through the input flags here to ensure that we
-                            // don't artificially pass the test (i.e. the resolver needs to ask for the appropriate
-                            // rights).
-                            let open_path: PathBuf = path_iter.collect();
-                            let pkg = io_util::directory::open_in_namespace(
-                                "/pkg",
-                                fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE,
-                            )
-                            .unwrap();
-                            pkg.open(flags, mode, open_path.to_str().unwrap(), server_end)
-                                .expect("failed to open path");
-                        }
-                        _ => return,
-                    }
-                }
-                "meta" => {
-                    // Provide a cm that will fail due to a missing runner.
-                    let out_dir = pseudo_directory! {
-                        "meta" => pseudo_directory! {
-                            "invalid.cm" => read_only_static(
-                                encode_persistent(&mut fdecl::Component {
-                                    program: Some(fdecl::Program {
-                                        runner: None,
-                                        info: Some(fdata::Dictionary {
-                                            entries: Some(vec![]),
-                                            ..fdata::Dictionary::EMPTY
-                                        }),
-                                        ..fdecl::Program::EMPTY
-                                    }),
-                                    uses: None,
-                                    exposes: None,
-                                    offers: None,
-                                    capabilities: None,
-                                    children: None,
-                                    collections: None,
-                                    environments: None,
-                                    facets: None,
-                                    ..fdecl::Component::EMPTY
-                                }).unwrap()
-                            ),
-                        }
-                    };
-                    out_dir.open(
-                        ExecutionScope::new(),
-                        flags,
-                        fio::MODE_TYPE_FILE,
-                        vfs::path::Path::validate_and_split(path_str)
-                            .expect("received invalid path"),
-                        server_end,
-                    );
-                }
-                _ => return,
-            }
-        }
+        (vfs_task, client)
     }
 
     #[fuchsia::test]
     async fn hello_world_test() -> Result<(), Error> {
-        let resolver = FuchsiaBootResolver::new_from_directory(FakeBootfs::new());
+        let root = pseudo_directory! {
+            "packages" => pseudo_directory! {
+                "hello-world" => remote_dir(
+                    open_in_namespace("/pkg", OPEN_RIGHT_READABLE | OPEN_RIGHT_EXECUTABLE).unwrap(),
+                ),
+            },
+        };
+        let (_task, bootfs) = serve_vfs_dir(root);
+        let resolver = FuchsiaBootResolver::new_from_directory(bootfs);
 
         let root = ComponentInstance::new_root(
             Environment::empty(),
@@ -364,7 +291,26 @@ mod tests {
 
     #[fuchsia::test]
     async fn resolve_errors_test() {
-        let resolver = FuchsiaBootResolver::new_from_directory(FakeBootfs::new());
+        let root = pseudo_directory! {
+            "meta" => pseudo_directory! {
+                // Provide a cm that will fail due to a missing runner.
+                "invalid.cm" => read_only_static(
+                    encode_persistent(&mut fdecl::Component {
+                        program: Some(fdecl::Program {
+                            runner: None,
+                            info: Some(fdata::Dictionary {
+                                entries: Some(vec![]),
+                                ..fdata::Dictionary::EMPTY
+                            }),
+                            ..fdecl::Program::EMPTY
+                        }),
+                        ..fdecl::Component::EMPTY
+                    }).unwrap()
+                ),
+            },
+        };
+        let (_task, bootfs) = serve_vfs_dir(root);
+        let resolver = FuchsiaBootResolver::new_from_directory(bootfs);
         let root = ComponentInstance::new_root(
             Environment::empty(),
             Weak::new(),
