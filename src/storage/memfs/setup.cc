@@ -53,6 +53,17 @@ void Setup::AsyncTearDown(fit::callback<void(zx_status_t)> cb) {
   });
 }
 
+void Setup::ForceSyncTearDownUnsafe() {
+  ZX_DEBUG_ASSERT(memfs_);
+
+  if (!mounted_path_.empty()) {
+    // If unmounting fails we continue with tear-down since there's not much else to do.
+    fdio_ns_unbind(namespace_, mounted_path_.c_str());
+  }
+
+  memfs_.reset();
+}
+
 zx::status<Setup> Setup::Create(async_dispatcher_t* dispatcher) {
   auto fs_endpoints = fidl::CreateEndpoints<fuchsia_io::Directory>();
   if (fs_endpoints.is_error())

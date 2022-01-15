@@ -126,8 +126,12 @@ TEST_F(NsTest, ListFiles) {
       }
   )";
   ASSERT_TRUE(Eval(test_string));
+
+  sync_completion_t unmounted;
+  memfs_free_filesystem(fs, &unmounted);
+  sync_completion_wait(&unmounted, zx::duration::infinite().get());
+
   loop.Shutdown();
-  memfs_uninstall_unsafe(fs, "/ns_test_tmp");
 }
 
 TEST_F(NsTest, ListRootDir) {

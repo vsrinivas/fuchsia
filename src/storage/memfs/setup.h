@@ -58,6 +58,15 @@ class Setup {
   // get deleted and memfs may outlive it.
   void AsyncTearDown(fit::callback<void(zx_status_t)> cb);
 
+  // Forces deletion of the memfs object immediately without synchronizing with the memfs thread.
+  //
+  // This can only be called if the dispatcher it was created with is already shut down or
+  // guaranteed not to run again (in these case the normal shutdown path can't be used because it
+  // will synthronize with it).
+  //
+  // TODO(fxbug.dev/91477): Remove this function.
+  void ForceSyncTearDownUnsafe();
+
   // The channel to the root directory of the filesystem. Users can move this out, close it, or use
   // in-place as they need.
   //

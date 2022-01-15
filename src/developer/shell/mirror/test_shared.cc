@@ -19,8 +19,11 @@ void FileRepo::InitMemRepo(std::string path) {
 }
 
 FileRepo::~FileRepo() {
+  sync_completion_t unmounted;
+  memfs_free_filesystem(fs_, &unmounted);
+  sync_completion_wait(&unmounted, zx::duration::infinite().get());
+
   loop_.Shutdown();
-  memfs_uninstall_unsafe(fs_, path_.c_str());
 }
 
 void FileRepo::WriteFiles(const std::vector<std::pair<std::string, std::string>>& golden) {

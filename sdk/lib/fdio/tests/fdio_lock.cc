@@ -192,17 +192,14 @@ class TempFile {
   ~TempFile() {
     std::for_each(fds_.begin(), fds_.end(), &close);
     unlink(file_name_.c_str());
+
 #ifdef __Fuchsia__
-    {
-      sync_completion_t unmounted;
-      async::PostTask(loop_.dispatcher(), [&unmounted]() { sync_completion_signal(&unmounted); });
-      ASSERT_EQ(sync_completion_wait(&unmounted, zx::duration::infinite().get()), ZX_OK);
-
-      loop_.Shutdown();
-    }
-    memfs_uninstall_unsafe(memfs_, flock_root.c_str());
-
+    sync_completion_t unmounted;
+    memfs_free_filesystem(memfs_, &unmounted);
     memfs_ = nullptr;
+    ASSERT_EQ(sync_completion_wait(&unmounted, zx::duration::infinite().get()), ZX_OK);
+
+    loop_.Shutdown();
 #endif
   }
 

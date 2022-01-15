@@ -67,7 +67,7 @@ zx_library("memfs") {
   sdk_publishable = true
   sdk_headers = [ "lib/memfs/memfs.h" ]
 
-  sources = [ "memfs-local.cc" ]
+  sources = [ "memfs_api.cc" ]
   public_deps = [
     # <lib/memfs/memfs.h> has #include <lib/async/dispatcher.h>.
     "//zircon/system/ulib/async",

@@ -42,6 +42,11 @@ TEST(Console, Sanity) {
   std::ifstream in(filename.c_str());
   std::string actual((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
   ASSERT_STREQ(expected.c_str(), actual.c_str());
+
+  // Synchronously clean up.
+  sync_completion_t unmounted;
+  memfs_free_filesystem(fs, &unmounted);
+  sync_completion_wait(&unmounted, zx::duration::infinite().get());
+
   loop.Shutdown();
-  memfs_uninstall_unsafe(fs, "/test_tmp");
 }

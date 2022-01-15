@@ -32,72 +32,70 @@ namespace {
 namespace fio = fuchsia_io;
 
 TEST(FidlTests, TestFidlBasic) {
+  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
+  ASSERT_EQ(loop.StartThread(), ZX_OK);
+
   memfs_filesystem_t* fs;
-  {
-    async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
-    ASSERT_EQ(loop.StartThread(), ZX_OK);
+  ASSERT_EQ(memfs_install_at(loop.dispatcher(), "/fidltmp", &fs), ZX_OK);
+  fbl::unique_fd fd(open("/fidltmp", O_DIRECTORY | O_RDONLY));
+  ASSERT_GE(fd.get(), 0);
 
-    ASSERT_EQ(memfs_install_at(loop.dispatcher(), "/fidltmp", &fs), ZX_OK);
-    fbl::unique_fd fd(open("/fidltmp", O_DIRECTORY | O_RDONLY));
-    ASSERT_GE(fd.get(), 0);
+  // Create a file
+  const char* filename = "file-a";
+  fd.reset(openat(fd.get(), filename, O_CREAT | O_RDWR));
+  ASSERT_GE(fd.get(), 0);
+  const char* data = "hello";
+  ssize_t datalen = strlen(data);
+  ASSERT_EQ(write(fd.get(), data, datalen), datalen);
+  fd.reset();
 
-    // Create a file
-    const char* filename = "file-a";
-    fd.reset(openat(fd.get(), filename, O_CREAT | O_RDWR));
-    ASSERT_GE(fd.get(), 0);
-    const char* data = "hello";
-    ssize_t datalen = strlen(data);
-    ASSERT_EQ(write(fd.get(), data, datalen), datalen);
-    fd.reset();
+  zx_handle_t h, request;
+  ASSERT_EQ(zx_channel_create(0, &h, &request), ZX_OK);
+  ASSERT_EQ(fdio_service_connect("/fidltmp/file-a", request), ZX_OK);
 
-    zx_handle_t h, request;
-    ASSERT_EQ(zx_channel_create(0, &h, &request), ZX_OK);
-    ASSERT_EQ(fdio_service_connect("/fidltmp/file-a", request), ZX_OK);
+  auto describe_result = fidl::WireCall<fio::File>(zx::unowned_channel(h))->Describe();
+  ASSERT_EQ(describe_result.status(), ZX_OK);
+  ASSERT_TRUE(describe_result.Unwrap()->info.is_file());
+  ASSERT_EQ(describe_result.Unwrap()->info.file().event.get(), ZX_HANDLE_INVALID);
+  zx_handle_close(h);
 
-    auto describe_result = fidl::WireCall<fio::File>(zx::unowned_channel(h))->Describe();
-    ASSERT_EQ(describe_result.status(), ZX_OK);
-    ASSERT_TRUE(describe_result.Unwrap()->info.is_file());
-    ASSERT_EQ(describe_result.Unwrap()->info.file().event.get(), ZX_HANDLE_INVALID);
-    zx_handle_close(h);
+  sync_completion_t unmounted;
+  memfs_free_filesystem(fs, &unmounted);
+  sync_completion_wait(&unmounted, zx::duration::infinite().get());
 
-    loop.Shutdown();
-  }
-  ASSERT_EQ(memfs_uninstall_unsafe(fs, "/fidltmp"), ZX_OK);
-
-  // No way to clean up the namespace entry. See fxbug.dev/31875 for more details.
+  loop.Shutdown();
 }
 
 TEST(FidlTests, TestFidlOpenReadOnly) {
+  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
+  ASSERT_EQ(loop.StartThread(), ZX_OK);
+
   memfs_filesystem_t* fs;
-  {
-    async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
-    ASSERT_EQ(loop.StartThread(), ZX_OK);
+  ASSERT_EQ(memfs_install_at(loop.dispatcher(), "/fidltmp-ro", &fs), ZX_OK);
+  fbl::unique_fd fd(open("/fidltmp-ro", O_DIRECTORY | O_RDONLY));
+  ASSERT_GE(fd.get(), 0);
 
-    ASSERT_EQ(memfs_install_at(loop.dispatcher(), "/fidltmp-ro", &fs), ZX_OK);
-    fbl::unique_fd fd(open("/fidltmp-ro", O_DIRECTORY | O_RDONLY));
-    ASSERT_GE(fd.get(), 0);
+  // Create a file
+  const char* filename = "file-ro";
+  fd.reset(openat(fd.get(), filename, O_CREAT | O_RDWR));
+  ASSERT_GE(fd.get(), 0);
+  fd.reset();
 
-    // Create a file
-    const char* filename = "file-ro";
-    fd.reset(openat(fd.get(), filename, O_CREAT | O_RDWR));
-    ASSERT_GE(fd.get(), 0);
-    fd.reset();
+  zx_handle_t h, request;
+  ASSERT_EQ(zx_channel_create(0, &h, &request), ZX_OK);
+  ASSERT_EQ(fdio_open("/fidltmp-ro/file-ro", ZX_FS_RIGHT_READABLE, request), ZX_OK);
 
-    zx_handle_t h, request;
-    ASSERT_EQ(zx_channel_create(0, &h, &request), ZX_OK);
-    ASSERT_EQ(fdio_open("/fidltmp-ro/file-ro", ZX_FS_RIGHT_READABLE, request), ZX_OK);
+  auto result = fidl::WireCall<fio::File>(zx::unowned_channel(h))->GetFlags();
+  ASSERT_EQ(result.status(), ZX_OK);
+  ASSERT_EQ(result.Unwrap()->s, ZX_OK);
+  ASSERT_EQ(result.Unwrap()->flags, ZX_FS_RIGHT_READABLE);
+  zx_handle_close(h);
 
-    auto result = fidl::WireCall<fio::File>(zx::unowned_channel(h))->GetFlags();
-    ASSERT_EQ(result.status(), ZX_OK);
-    ASSERT_EQ(result.Unwrap()->s, ZX_OK);
-    ASSERT_EQ(result.Unwrap()->flags, ZX_FS_RIGHT_READABLE);
-    zx_handle_close(h);
+  sync_completion_t unmounted;
+  memfs_free_filesystem(fs, &unmounted);
+  sync_completion_wait(&unmounted, zx::duration::infinite().get());
 
-    loop.Shutdown();
-  }
-  memfs_uninstall_unsafe(fs, "/fidltmp-ro");
-
-  // No way to clean up the namespace entry. See fxbug.dev/31875 for more details.
+  loop.Shutdown();
 }
 
 void QueryInfo(const char* path, fuchsia_io::wire::FilesystemInfo* info) {
@@ -120,27 +118,27 @@ void QueryInfo(const char* path, fuchsia_io::wire::FilesystemInfo* info) {
 }
 
 TEST(FidlTests, TestFidlQueryFilesystem) {
-  {
-    async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
-    ASSERT_EQ(loop.StartThread(), ZX_OK);
-    memfs_filesystem_t* fs;
-    ASSERT_EQ(memfs_install_at(loop.dispatcher(), "/fidltmp-basic", &fs), ZX_OK);
-    fbl::unique_fd fd(open("/fidltmp-basic", O_DIRECTORY | O_RDONLY));
-    ASSERT_GE(fd.get(), 0);
+  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
+  ASSERT_EQ(loop.StartThread(), ZX_OK);
 
-    // Sanity checks
-    fuchsia_io::wire::FilesystemInfo info;
-    ASSERT_NO_FATAL_FAILURE(QueryInfo("/fidltmp-basic", &info));
+  memfs_filesystem_t* fs;
+  ASSERT_EQ(memfs_install_at(loop.dispatcher(), "/fidltmp-basic", &fs), ZX_OK);
+  fbl::unique_fd fd(open("/fidltmp-basic", O_DIRECTORY | O_RDONLY));
+  ASSERT_GE(fd.get(), 0);
 
-    // These values are nonsense, but they're the nonsense we expect memfs to generate.
-    ASSERT_EQ(info.total_bytes, UINT64_MAX);
-    ASSERT_EQ(info.used_bytes, 0);
+  // Sanity checks
+  fuchsia_io::wire::FilesystemInfo info;
+  ASSERT_NO_FATAL_FAILURE(QueryInfo("/fidltmp-basic", &info));
 
-    loop.Shutdown();
-    ASSERT_EQ(memfs_uninstall_unsafe(fs, "/fidltmp-basic"), ZX_OK);
-  }
+  // These values are nonsense, but they're the nonsense we expect memfs to generate.
+  ASSERT_EQ(info.total_bytes, UINT64_MAX);
+  ASSERT_EQ(info.used_bytes, 0);
 
-  // No way to clean up the namespace entry. See fxbug.dev/31875 for more details.
+  sync_completion_t unmounted;
+  memfs_free_filesystem(fs, &unmounted);
+  sync_completion_wait(&unmounted, zx::duration::infinite().get());
+
+  loop.Shutdown();
 }
 
 }  // namespace
