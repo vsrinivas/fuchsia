@@ -136,11 +136,11 @@ zx_status_t Device::Bind(std::string_view name) {
 
   fake_device_ = fbl::AdoptRef(new FakeController());
   fake_device_->set_controller_parameters_callback(
-      fit::bind_member(this, &Device::OnControllerParametersChanged));
+      fit::bind_member<&Device::OnControllerParametersChanged>(this));
   fake_device_->set_advertising_state_callback(
-      fit::bind_member(this, &Device::OnLegacyAdvertisingStateChanged));
+      fit::bind_member<&Device::OnLegacyAdvertisingStateChanged>(this));
   fake_device_->set_connection_state_callback(
-      fit::bind_member(this, &Device::OnPeerConnectionStateChanged));
+      fit::bind_member<&Device::OnPeerConnectionStateChanged>(this));
 
   loop_.StartThread("bt_hci_emulator");
 

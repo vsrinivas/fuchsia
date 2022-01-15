@@ -129,7 +129,7 @@ Peer::Peer(bt::DeviceAddress address, fidl::InterfaceRequest<ftest::Peer> reques
   ZX_DEBUG_ASSERT(fake_controller_);
   ZX_DEBUG_ASSERT(binding_.is_bound());
 
-  binding_.set_error_handler(fit::bind_member(this, &Peer::OnChannelClosed));
+  binding_.set_error_handler(fit::bind_member<&Peer::OnChannelClosed>(this));
 }
 
 Peer::~Peer() { CleanUp(); }
