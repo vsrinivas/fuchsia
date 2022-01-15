@@ -360,10 +360,11 @@ class SingleWebDriverConnector {
     await _portForwarder.tearDown();
   }
 
-  /// Searches for a Chrome context whose currently displayed page matches one
-  /// of the provided [hosts]. Returns null if none is found.
-  Future<async_core.WebDriver> webDriverForHosts(List<String> hosts) async {
-    if (await _isCurrentWebDriverShowingHosts(hosts)) {
+  /// Searches for a Chrome context whose current URL satisfies [urlMatcher].
+  /// Returns null if none is found.
+  Future<async_core.WebDriver> webDriverForUrl(
+      bool Function(String) urlMatcher) async {
+    if (await _checkCurrentWebDriver(urlMatcher)) {
       return _webDriver;
     }
 
@@ -375,16 +376,26 @@ class SingleWebDriverConnector {
     for (final remotePort in ports) {
       _log.fine('Trying DevTools on device port $remotePort');
       await _recreateWebDriver(remotePort);
-      if (await _isCurrentWebDriverShowingHosts(hosts)) {
-        final host = Uri.parse(await _webDriver.currentUrl).host;
-        _log.info('Connected to DevTools on device port $remotePort: $host');
+      if (await _checkCurrentWebDriver(urlMatcher)) {
+        var url = await _webDriver.currentUrl;
+        // Truncate extremely long URLs in logs (e.g. data URLs).
+        if (url.length > 80) {
+          url = '${url.substring(0, 80)}... (truncated)';
+        }
+        _log.info('Connected to DevTools on device port $remotePort: $url');
         return _webDriver;
       }
     }
     return null;
   }
 
-  Future<bool> _isCurrentWebDriverShowingHosts(List<String> hosts) async {
+  /// Searches for a Chrome context whose currently displayed page matches one
+  /// of the provided [hosts]. Returns null if none is found.
+  Future<async_core.WebDriver> webDriverForHosts(List<String> hosts) {
+    return webDriverForUrl((url) => hosts.contains(Uri.parse(url).host));
+  }
+
+  Future<bool> _checkCurrentWebDriver(bool Function(String) urlMatcher) async {
     if (_webDriver == null) {
       return false;
     }
@@ -397,7 +408,7 @@ class SingleWebDriverConnector {
     if (url == null) {
       return false;
     }
-    return hosts.contains(Uri.parse(url).host);
+    return urlMatcher(url);
   }
 
   /// Creates a new Webdriver connection using the specified DUT port.
