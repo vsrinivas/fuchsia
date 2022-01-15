@@ -15,7 +15,7 @@ use crate::{
     },
     IntPoint, IntRect, IntSize,
 };
-use euclid::{default::Transform2D, point2, size2, vec2};
+use euclid::{point2, size2, vec2};
 use fidl_fuchsia_input_report as hid_input_report;
 use keymaps::Keymap;
 use std::{collections::HashSet, iter::FromIterator};
@@ -166,24 +166,6 @@ impl<'a> InputReportHandler<'a> {
         device_id: &DeviceId,
         mouse: &hid_input_report::MouseInputReport,
     ) -> Vec<Event> {
-        fn create_mouse_event(
-            event_time: u64,
-            device_id: &DeviceId,
-            button_set: &ButtonSet,
-            cursor_position: IntPoint,
-            transform: &Transform2D<f32>,
-            phase: mouse::Phase,
-        ) -> Event {
-            let cursor_position = transform.transform_point(cursor_position.to_f32()).to_i32();
-            let mouse_event =
-                mouse::Event { buttons: button_set.clone(), phase, location: cursor_position };
-            Event {
-                event_time,
-                device_id: device_id.clone(),
-                event_type: EventType::Mouse(mouse_event),
-            }
-        }
-
         let transform = self.display_rotation.inv_transform(&self.view_size.to_f32());
         let new_cursor_position = self.cursor_position
             + vec2(mouse.movement_x.unwrap_or(0) as i32, mouse.movement_y.unwrap_or(0) as i32);
@@ -201,7 +183,7 @@ impl<'a> InputReportHandler<'a> {
         let button_set = ButtonSet::new(&pressed_buttons);
 
         let move_event = if new_cursor_position != self.cursor_position {
-            let event = create_mouse_event(
+            let event = mouse::create_event(
                 event_time,
                 device_id,
                 &button_set,
@@ -217,7 +199,7 @@ impl<'a> InputReportHandler<'a> {
         self.cursor_position = new_cursor_position;
 
         let newly_pressed = pressed_buttons.difference(&self.pressed_mouse_buttons).map(|button| {
-            create_mouse_event(
+            mouse::create_event(
                 event_time,
                 device_id,
                 &button_set,
@@ -228,7 +210,7 @@ impl<'a> InputReportHandler<'a> {
         });
 
         let released = self.pressed_mouse_buttons.difference(&pressed_buttons).map(|button| {
-            create_mouse_event(
+            mouse::create_event(
                 event_time,
                 device_id,
                 &button_set,

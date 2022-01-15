@@ -5,8 +5,10 @@ use crate::{
     app::{Config, MessageInternal},
     drawing::DisplayRotation,
     geometry::UintSize,
-    input::scenic::ScenicInputHandler,
-    message::Message,
+    input::{
+        flatland::{FlatlandMouseInputHandler, FlatlandTouchInputHandler},
+        key3::KeyboardInputHandler,
+    },
     render::{
         self,
         generic::{self, Backend},
@@ -14,15 +16,15 @@ use crate::{
     },
     view::{
         strategies::base::{FlatlandParams, ViewStrategy, ViewStrategyPtr},
-        ViewAssistantContext, ViewAssistantPtr, ViewDetails, ViewKey,
+        UserInputMessage, ViewAssistantContext, ViewAssistantPtr, ViewDetails, ViewKey,
     },
     Size,
 };
-use anyhow::{Context, Error, Result};
+use anyhow::{bail, Context, Error, Result};
 use async_trait::async_trait;
 use async_utils::hanging_get::client::HangingGetStream;
 use euclid::size2;
-use fidl::endpoints::{create_proxy, create_request_stream};
+use fidl::endpoints::{create_endpoints, create_proxy, create_request_stream};
 use fidl_fuchsia_ui_composition as flatland;
 use fidl_fuchsia_ui_views::ViewRef;
 use fuchsia_async::{self as fasync, OnSignals};
@@ -32,7 +34,7 @@ use fuchsia_scenic::BufferCollectionTokenPair;
 use fuchsia_trace::{self, duration, instant};
 use fuchsia_zircon::{self as zx, Event, HandleBased, Signals, Time};
 use futures::{channel::mpsc::UnboundedSender, prelude::*, StreamExt, TryStreamExt};
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::{BTreeMap, BTreeSet, HashMap};
 
 fn setup_handle_flatland_events(
     event_stream: flatland::FlatlandEventStream,
@@ -216,7 +218,9 @@ pub(crate) struct FlatlandViewStrategy {
     next_image_id: u64,
     previous_present_release_event: Option<Event>,
     current_present_release_event: Option<Event>,
-    input_handler: ScenicInputHandler,
+    flatland_mouse_input_handlers: HashMap<u32, FlatlandMouseInputHandler>,
+    flatland_touch_input_handler: FlatlandTouchInputHandler,
+    keyboard_handler: KeyboardInputHandler,
 }
 
 impl FlatlandViewStrategy {
@@ -256,7 +260,9 @@ impl FlatlandViewStrategy {
             next_image_id: 1,
             previous_present_release_event: None,
             current_present_release_event: None,
-            input_handler: ScenicInputHandler::new(),
+            flatland_mouse_input_handlers: HashMap::new(),
+            flatland_touch_input_handler: FlatlandTouchInputHandler::default(),
+            keyboard_handler: KeyboardInputHandler::new(),
         };
 
         Ok(Box::new(strat))
@@ -279,13 +285,91 @@ impl FlatlandViewStrategy {
         if input {
             let mut view_identity =
                 fidl_fuchsia_ui_views::ViewIdentityOnCreation::from(viewref_pair);
-            let view_bound_protocols = flatland::ViewBoundProtocols::EMPTY;
+            let mut view_bound_protocols = flatland::ViewBoundProtocols::EMPTY;
+
+            let (touch_client, touch_server) = create_endpoints()?;
+            let (mouse_client, mouse_server) = create_endpoints()?;
+
+            view_bound_protocols.touch_source = Some(touch_server);
+            view_bound_protocols.mouse_source = Some(mouse_server);
+
             flatland.create_view2(
                 &mut view_creation_token,
                 &mut view_identity,
                 view_bound_protocols,
                 server_end,
             )?;
+
+            let touch_proxy = touch_client.into_proxy()?;
+            let touch_sender = app_sender.clone();
+
+            fasync::Task::local(async move {
+                let mut events: Vec<fidl_fuchsia_ui_pointer::TouchResponse> = Vec::new();
+                loop {
+                    let result = touch_proxy.watch(&mut events.into_iter()).await;
+                    match result {
+                        Ok(returned_events) => {
+                            events = returned_events
+                                .iter()
+                                .map(|event| fidl_fuchsia_ui_pointer::TouchResponse {
+                                    trace_flow_id: event
+                                        .pointer_sample
+                                        .as_ref()
+                                        .and_then(|_| event.trace_flow_id),
+                                    response_type: event.pointer_sample.as_ref().and_then(|_| {
+                                        Some(fidl_fuchsia_ui_pointer::TouchResponseType::Yes)
+                                    }),
+                                    ..fidl_fuchsia_ui_pointer::TouchResponse::EMPTY
+                                })
+                                .collect();
+                            touch_sender
+                                .unbounded_send(MessageInternal::UserInputMessage(
+                                    view_key,
+                                    UserInputMessage::FlatlandTouchEvents(returned_events),
+                                ))
+                                .expect("failed to send MessageInternal.");
+                        }
+                        Err(fidl::Error::ClientChannelClosed { .. }) => {
+                            println!("touch event connection closed.");
+                            return;
+                        }
+                        Err(fidl_error) => {
+                            println!("touch event connection closed error: {:?}", fidl_error);
+                            return;
+                        }
+                    }
+                }
+            })
+            .detach();
+
+            let mouse_proxy = mouse_client.into_proxy()?;
+            let mouse_sender = app_sender.clone();
+
+            fasync::Task::local(async move {
+                loop {
+                    let result = mouse_proxy.watch().await;
+                    match result {
+                        Ok(returned_events) => {
+                            mouse_sender
+                                .unbounded_send(MessageInternal::UserInputMessage(
+                                    view_key,
+                                    UserInputMessage::FlatlandMouseEvents(returned_events),
+                                ))
+                                .expect("failed to send MessageInternal.");
+                        }
+                        Err(fidl::Error::ClientChannelClosed { .. }) => {
+                            println!("mouse event connection closed.");
+                            return;
+                        }
+                        Err(fidl_error) => {
+                            println!("mouse event connection closed error: {:?}", fidl_error);
+                            return;
+                        }
+                    }
+                }
+            })
+            .detach();
+
             Self::listen_for_key_events(view_ref, &app_sender, view_key)?;
         } else {
             flatland.create_view(&mut view_creation_token, server_end)?;
@@ -545,7 +629,10 @@ impl FlatlandViewStrategy {
                             .send(fidl_fuchsia_ui_input3::KeyEventStatus::Handled)
                             .expect("send");
                         event_sender
-                            .unbounded_send(MessageInternal::ScenicKeyEvent(key, event))
+                            .unbounded_send(MessageInternal::UserInputMessage(
+                                key,
+                                UserInputMessage::ScenicKeyEvent(event),
+                            ))
                             .expect("unbounded_send");
                     }
                 }
@@ -560,6 +647,22 @@ impl FlatlandViewStrategy {
 impl ViewStrategy for FlatlandViewStrategy {
     fn initial_metrics(&self) -> Size {
         size2(1.0, 1.0)
+    }
+
+    fn create_view_assistant_context(&self, view_details: &ViewDetails) -> ViewAssistantContext {
+        ViewAssistantContext {
+            key: view_details.key,
+            size: view_details.logical_size,
+            metrics: view_details.metrics,
+            presentation_time: Default::default(),
+            messages: Vec::new(),
+            buffer_count: None,
+            image_id: Default::default(),
+            image_index: Default::default(),
+            app_sender: self.app_sender.clone(),
+            mouse_cursor_position: None,
+            display_info: None,
+        }
     }
 
     fn setup(&mut self, view_details: &ViewDetails, view_assistant: &mut ViewAssistantPtr) {
@@ -659,42 +762,38 @@ impl ViewStrategy for FlatlandViewStrategy {
             .unwrap_or_else(|e| panic!("handle_focus error: {:?}", e));
     }
 
-    fn handle_scenic_input_event(
+    fn convert_user_input_message(
         &mut self,
-        view_details: &ViewDetails,
-        view_assistant: &mut ViewAssistantPtr,
-        event: &fidl_fuchsia_ui_input::InputEvent,
-    ) -> Vec<Message> {
-        let events = self.input_handler.handle_scenic_input_event(&view_details.metrics, &event);
-
-        let mut render_context =
-            Self::make_view_assistant_context(view_details, 0, 0, self.app_sender.clone());
-        for input_event in events {
-            view_assistant
-                .handle_input_event(&mut render_context, &input_event)
-                .unwrap_or_else(|e| eprintln!("handle_event: {:?}", e));
+        _view_details: &ViewDetails,
+        message: UserInputMessage,
+    ) -> Result<Vec<crate::input::Event>, Error> {
+        match message {
+            UserInputMessage::ScenicKeyEvent(key_event) => {
+                let converted_events = self.keyboard_handler.handle_key_event(&key_event);
+                Ok(converted_events)
+            }
+            UserInputMessage::FlatlandMouseEvents(mouse_events) => {
+                let mut events = Vec::new();
+                for mouse_event in &mouse_events {
+                    if let Some(pointer_sample) = mouse_event.pointer_sample.as_ref() {
+                        let device_id = pointer_sample.device_id.expect("device_id");
+                        let handler_entry = self
+                            .flatland_mouse_input_handlers
+                            .entry(device_id)
+                            .or_insert_with(|| FlatlandMouseInputHandler::new(device_id));
+                        events.extend(handler_entry.handle_mouse_events(&mouse_events));
+                    }
+                }
+                Ok(events)
+            }
+            UserInputMessage::FlatlandTouchEvents(touch_events) => {
+                Ok(self.flatland_touch_input_handler.handle_events(&touch_events))
+            }
+            _ => bail!(
+                "FlatlandViewStrategy::convert_user_input_message does not support {:?}.",
+                message
+            ),
         }
-
-        render_context.messages
-    }
-
-    fn handle_scenic_key_event(
-        &mut self,
-        view_details: &ViewDetails,
-        view_assistant: &mut ViewAssistantPtr,
-        event: &fidl_fuchsia_ui_input3::KeyEvent,
-    ) -> Vec<Message> {
-        let events = self.input_handler.handle_scenic_key_event(&event);
-
-        let mut render_context =
-            Self::make_view_assistant_context(view_details, 0, 0, self.app_sender.clone());
-        for input_event in events {
-            view_assistant
-                .handle_input_event(&mut render_context, &input_event)
-                .unwrap_or_else(|e| eprintln!("handle_event: {:?}", e));
-        }
-
-        render_context.messages
     }
 
     fn image_freed(&mut self, image_id: u64, collection_id: u32) {

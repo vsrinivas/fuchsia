@@ -274,6 +274,7 @@ mod input_report_tests {
 mod scenic_input_tests {
     use super::*;
     use crate::input::{
+        key3::KeyboardInputHandler,
         keyboard,
         scenic::ScenicInputHandler,
         touch, {mouse, EventType},
@@ -284,10 +285,10 @@ mod scenic_input_tests {
     fn test_typed_string() {
         let scenic_events = test_data::hello_world_scenic_input_events();
 
-        let mut scenic_input_handler = ScenicInputHandler::new();
+        let mut keyboard_input_handler = KeyboardInputHandler::new();
         let chars_from_events = scenic_events
             .iter()
-            .map(|event| scenic_input_handler.handle_scenic_key_event(event))
+            .map(|event| keyboard_input_handler.handle_key_event(event))
             .flatten()
             .filter_map(|event| match event.event_type {
                 EventType::Keyboard(keyboard_event) => match keyboard_event.phase {
@@ -308,10 +309,10 @@ mod scenic_input_tests {
 
         // make sure there's one and only one keydown even of the r
         // key with the control modifier set.
-        let mut scenic_input_handler = ScenicInputHandler::new();
+        let mut keyboard_input_handler = KeyboardInputHandler::new();
         let expected_event_count: usize = scenic_events
             .iter()
-            .map(|event| scenic_input_handler.handle_scenic_key_event(event))
+            .map(|event| keyboard_input_handler.handle_key_event(event))
             .flatten()
             .filter_map(|event| match event.event_type {
                 EventType::Keyboard(keyboard_event) => match keyboard_event.phase {
@@ -340,7 +341,7 @@ mod scenic_input_tests {
         let metrics = size2(1.0, 1.0);
         let input_events = scenic_events
             .iter()
-            .map(|event| scenic_input_handler.handle_scenic_input_event(&metrics, event))
+            .map(|event| scenic_input_handler.handle_input_event(&metrics, event))
             .flatten();
 
         let mut start_point = IntPoint::zero();
@@ -377,7 +378,7 @@ mod scenic_input_tests {
         let metrics = size2(1.0, 1.0);
         let input_events = scenic_events
             .iter()
-            .map(|event| scenic_input_handler.handle_scenic_input_event(&metrics, event))
+            .map(|event| scenic_input_handler.handle_input_event(&metrics, event))
             .flatten();
 
         let mut start_point = IntPoint::zero();

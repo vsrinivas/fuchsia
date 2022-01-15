@@ -4,11 +4,10 @@
 use crate::{
     app::strategies::framebuffer::ControllerProxyPtr,
     geometry::{IntSize, Size},
-    input,
-    message::Message,
-    view::{ViewAssistantPtr, ViewDetails},
-    ViewKey,
+    view::{UserInputMessage, ViewAssistantPtr, ViewDetails},
+    ViewAssistantContext, ViewKey,
 };
+use anyhow::Error;
 use async_trait::async_trait;
 use fidl_fuchsia_ui_views::{ViewRef, ViewRefControl, ViewToken};
 
@@ -25,6 +24,8 @@ pub(crate) trait ViewStrategy {
     fn initial_logical_size(&self) -> Size {
         Size::zero()
     }
+
+    fn create_view_assistant_context(&self, _view_details: &ViewDetails) -> ViewAssistantContext;
 
     fn setup(&mut self, _view_details: &ViewDetails, _view_assistant: &mut ViewAssistantPtr);
     async fn render(
@@ -47,28 +48,14 @@ pub(crate) trait ViewStrategy {
         _info: fidl_fuchsia_scenic_scheduling::FuturePresentationTimes,
     ) {
     }
-    fn handle_scenic_input_event(
-        &mut self,
-        _view_details: &ViewDetails,
-        _view_assistant: &mut ViewAssistantPtr,
-        _: &fidl_fuchsia_ui_input::InputEvent,
-    ) -> Vec<Message>;
 
-    fn handle_scenic_key_event(
+    fn convert_user_input_message(
         &mut self,
-        _view_details: &ViewDetails,
-        _view_assistant: &mut ViewAssistantPtr,
-        _: &fidl_fuchsia_ui_input3::KeyEvent,
-    ) -> Vec<Message>;
+        view_details: &ViewDetails,
+        _: UserInputMessage,
+    ) -> Result<Vec<crate::input::Event>, Error>;
 
-    fn handle_input_event(
-        &mut self,
-        _view_details: &ViewDetails,
-        _view_assistant: &mut ViewAssistantPtr,
-        _: &input::Event,
-    ) -> Vec<Message> {
-        Vec::new()
-    }
+    fn inspect_event(&mut self, _view_details: &ViewDetails, _event: &crate::input::Event) {}
 
     fn handle_focus(
         &mut self,

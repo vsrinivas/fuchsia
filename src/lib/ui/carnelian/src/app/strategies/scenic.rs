@@ -4,6 +4,7 @@
 
 use crate::{
     app::{strategies::base::AppStrategy, InternalSender, MessageInternal},
+    input::UserInputMessage,
     view::{
         strategies::{
             base::{FlatlandParams, ScenicParams, ViewStrategyParams, ViewStrategyPtr},
@@ -79,9 +80,9 @@ impl ScenicAppStrategy {
                                 },
                                 fidl_fuchsia_ui_scenic::Event::Input(input_event) => {
                                     sender
-                                        .unbounded_send(MessageInternal::ScenicInputEvent(
+                                        .unbounded_send(MessageInternal::UserInputMessage(
                                             view_key,
-                                            input_event,
+                                            UserInputMessage::ScenicInputEvent(input_event),
                                         ))
                                         .expect("MessageInternal::ScenicInputEvent");
                                 }

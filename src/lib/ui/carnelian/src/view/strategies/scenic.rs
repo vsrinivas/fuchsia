@@ -5,8 +5,7 @@ use crate::{
     app::{Config, MessageInternal},
     drawing::DisplayRotation,
     geometry::UintSize,
-    input::scenic::ScenicInputHandler,
-    message::Message,
+    input::{key3::KeyboardInputHandler, scenic::ScenicInputHandler},
     render::{
         self,
         generic::{self, Backend},
@@ -14,10 +13,10 @@ use crate::{
     },
     view::{
         strategies::base::{ViewStrategy, ViewStrategyPtr},
-        View, ViewAssistantContext, ViewAssistantPtr, ViewDetails, ViewKey,
+        UserInputMessage, View, ViewAssistantContext, ViewAssistantPtr, ViewDetails, ViewKey,
     },
 };
-use anyhow::{Context, Error, Result};
+use anyhow::{bail, Context, Error, Result};
 use async_trait::async_trait;
 use fidl::endpoints::create_request_stream;
 use fidl_fuchsia_ui_gfx::{self as gfx};
@@ -152,6 +151,7 @@ pub(crate) struct ScenicViewStrategy {
     plumber: Option<Plumber>,
     retiring_plumbers: Vec<Plumber>,
     next_image_id: u64,
+    keyboard_handler: KeyboardInputHandler,
     input_handler: ScenicInputHandler,
 }
 
@@ -193,6 +193,7 @@ impl ScenicViewStrategy {
             retiring_plumbers: Vec::new(),
             next_buffer_collection: 1,
             next_image_id: 1,
+            keyboard_handler: KeyboardInputHandler::new(),
             input_handler: ScenicInputHandler::new(),
         };
 
@@ -283,7 +284,10 @@ impl ScenicViewStrategy {
                             .send(fidl_fuchsia_ui_input3::KeyEventStatus::Handled)
                             .expect("send");
                         event_sender
-                            .unbounded_send(MessageInternal::ScenicKeyEvent(key, event))
+                            .unbounded_send(MessageInternal::UserInputMessage(
+                                key,
+                                UserInputMessage::ScenicKeyEvent(event),
+                            ))
                             .expect("unbounded_send");
                     }
                 }
@@ -489,6 +493,22 @@ impl ScenicViewStrategy {
 
 #[async_trait(?Send)]
 impl ViewStrategy for ScenicViewStrategy {
+    fn create_view_assistant_context(&self, view_details: &ViewDetails) -> ViewAssistantContext {
+        ViewAssistantContext {
+            key: view_details.key,
+            size: view_details.logical_size,
+            metrics: view_details.metrics,
+            presentation_time: Default::default(),
+            messages: Vec::new(),
+            buffer_count: None,
+            image_id: Default::default(),
+            image_index: Default::default(),
+            app_sender: self.app_sender.clone(),
+            mouse_cursor_position: None,
+            display_info: None,
+        }
+    }
+
     fn setup(&mut self, view_details: &ViewDetails, view_assistant: &mut ViewAssistantPtr) {
         let render_context = ScenicViewStrategy::make_view_assistant_context(
             view_details,
@@ -620,50 +640,26 @@ impl ViewStrategy for ScenicViewStrategy {
             .unwrap_or_else(|e| panic!("handle_focus error: {:?}", e));
     }
 
-    fn handle_scenic_input_event(
+    fn convert_user_input_message(
         &mut self,
         view_details: &ViewDetails,
-        view_assistant: &mut ViewAssistantPtr,
-        event: &fidl_fuchsia_ui_input::InputEvent,
-    ) -> Vec<Message> {
-        let events = self.input_handler.handle_scenic_input_event(&view_details.metrics, &event);
-
-        let mut render_context = ScenicViewStrategy::make_view_assistant_context(
-            view_details,
-            0,
-            0,
-            self.app_sender.clone(),
-        );
-        for input_event in events {
-            view_assistant
-                .handle_input_event(&mut render_context, &input_event)
-                .unwrap_or_else(|e| eprintln!("handle_event: {:?}", e));
+        message: UserInputMessage,
+    ) -> Result<Vec<crate::input::Event>, Error> {
+        match message {
+            UserInputMessage::ScenicKeyEvent(key_event) => {
+                let converted_events = self.keyboard_handler.handle_key_event(&key_event);
+                Ok(converted_events)
+            }
+            UserInputMessage::ScenicInputEvent(input_event) => {
+                let converted_events =
+                    self.input_handler.handle_input_event(&view_details.metrics, &input_event);
+                Ok(converted_events)
+            }
+            _ => bail!(
+                "ScenicViewStrategy::convert_user_input_message does not support {:?}.",
+                message
+            ),
         }
-
-        render_context.messages
-    }
-
-    fn handle_scenic_key_event(
-        &mut self,
-        view_details: &ViewDetails,
-        view_assistant: &mut ViewAssistantPtr,
-        event: &fidl_fuchsia_ui_input3::KeyEvent,
-    ) -> Vec<Message> {
-        let events = self.input_handler.handle_scenic_key_event(&event);
-
-        let mut render_context = ScenicViewStrategy::make_view_assistant_context(
-            view_details,
-            0,
-            0,
-            self.app_sender.clone(),
-        );
-        for input_event in events {
-            view_assistant
-                .handle_input_event(&mut render_context, &input_event)
-                .unwrap_or_else(|e| eprintln!("handle_event: {:?}", e));
-        }
-
-        render_context.messages
     }
 
     fn image_freed(&mut self, image_id: u64, collection_id: u32) {

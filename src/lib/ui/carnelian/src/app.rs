@@ -6,7 +6,7 @@ use crate::{
     app::strategies::base::{create_app_strategy, AppStrategyPtr},
     drawing::DisplayRotation,
     geometry::Size,
-    input::DeviceId,
+    input::{DeviceId, UserInputMessage},
     message::Message,
     view::{
         strategies::base::ViewStrategyParams, ViewAssistantPtr, ViewController, ViewKey,
@@ -326,8 +326,6 @@ pub(crate) enum MessageInternal {
     CreateView(ViewStrategyParams),
     MetricsChanged(ViewKey, Size),
     SizeChanged(ViewKey, Size),
-    ScenicInputEvent(ViewKey, fidl_fuchsia_ui_input::InputEvent),
-    ScenicKeyEvent(ViewKey, fidl_fuchsia_ui_input3::KeyEvent),
     ScenicPresentSubmitted(ViewKey, fidl_fuchsia_scenic_scheduling::FuturePresentationTimes),
     ScenicPresentDone(ViewKey, fidl_fuchsia_scenic_scheduling::FramePresentedInfo),
     Focus(ViewKey),
@@ -348,6 +346,7 @@ pub(crate) enum MessageInternal {
     DisplayControllerEvent(ControllerEvent),
     SetVirtconMode(VirtconMode),
     ImportAndSetGamaTable(u64, u64, BoxedGammaValues, BoxedGammaValues, BoxedGammaValues),
+    UserInputMessage(ViewKey, UserInputMessage),
 }
 
 /// Future that returns an application assistant.
@@ -419,14 +418,6 @@ impl App {
                 let view = self.get_view(view_id).context("SizeChanged")?;
                 view.handle_size_changed(new_size);
             }
-            MessageInternal::ScenicInputEvent(view_id, event) => {
-                let view = self.get_view(view_id).context("ScenicInputEvent")?;
-                view.handle_scenic_input_event(event);
-            }
-            MessageInternal::ScenicKeyEvent(view_id, event) => {
-                let view = self.get_view(view_id).context("ScenicKeyEvent")?;
-                view.handle_scenic_key_event(event);
-            }
             MessageInternal::ScenicPresentSubmitted(view_id, info) => {
                 let view = self.get_view(view_id).context("ScenicPresentSubmitted")?;
                 view.present_submitted(info);
@@ -473,7 +464,7 @@ impl App {
                     view_id
                 };
                 let view = self.get_view(calculated_view_id).context("InputReport")?;
-                view.handle_input_events(input_events);
+                view.handle_input_events(input_events).context("InputReport")?;
             }
             MessageInternal::KeyboardAutoRepeat(device_id, view_id) => {
                 let input_events = self.strategy.handle_keyboard_autorepeat(&device_id);
@@ -483,7 +474,11 @@ impl App {
                     view_id
                 };
                 let view = self.get_view(calculated_view_id).context("KeyboardAutoRepeat")?;
-                view.handle_input_events(input_events);
+                view.handle_input_events(input_events).context("KeyboardAutoRepeat")?;
+            }
+            MessageInternal::UserInputMessage(view_id, user_input_message) => {
+                let view = self.get_view(view_id).context("UserInputMessage")?;
+                view.handle_user_input_message(user_input_message)?;
             }
             MessageInternal::OwnershipChanged(owned) => {
                 self.ownership_changed(owned);

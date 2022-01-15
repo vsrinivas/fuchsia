@@ -15,11 +15,11 @@ use crate::{
     },
     view::{
         strategies::base::{ViewStrategy, ViewStrategyPtr},
-        DisplayInfo, ViewAssistantContext, ViewAssistantPtr, ViewDetails,
+        DisplayInfo, UserInputMessage, ViewAssistantContext, ViewAssistantPtr, ViewDetails,
     },
-    IntPoint, IntSize, Message, Size, ViewKey,
+    IntPoint, IntSize, Size, ViewKey,
 };
-use anyhow::{ensure, Context, Error};
+use anyhow::{bail, ensure, Context, Error};
 use async_trait::async_trait;
 use euclid::size2;
 use fidl_fuchsia_hardware_display::{ControllerEvent, ControllerProxy, ImageConfig};
@@ -439,6 +439,27 @@ impl ViewStrategy for DisplayDirectViewStrategy {
         self.display.size().to_f32()
     }
 
+    fn create_view_assistant_context(&self, view_details: &ViewDetails) -> ViewAssistantContext {
+        ViewAssistantContext {
+            key: view_details.key,
+            size: match self.display_rotation {
+                DisplayRotation::Deg0 | DisplayRotation::Deg180 => view_details.physical_size,
+                DisplayRotation::Deg90 | DisplayRotation::Deg270 => {
+                    size2(view_details.physical_size.height, view_details.physical_size.width)
+                }
+            },
+            metrics: view_details.metrics,
+            presentation_time: Default::default(),
+            messages: Vec::new(),
+            buffer_count: None,
+            image_id: Default::default(),
+            image_index: Default::default(),
+            app_sender: self.app_sender.clone(),
+            mouse_cursor_position: self.mouse_cursor_position.clone(),
+            display_info: Some(DisplayInfo::from(&self.display.info)),
+        }
+    }
+
     fn setup(&mut self, view_details: &ViewDetails, view_assistant: &mut ViewAssistantPtr) {
         if let Some(available) = self.display_resources().frame_set.get_available_image() {
             let direct_context = self.make_context(view_details, Some(available));
@@ -536,30 +557,15 @@ impl ViewStrategy for DisplayDirectViewStrategy {
             .unwrap_or_else(|e| panic!("handle_focus error: {:?}", e));
     }
 
-    fn handle_scenic_input_event(
+    fn convert_user_input_message(
         &mut self,
-        _: &ViewDetails,
-        _: &mut ViewAssistantPtr,
-        _: &fidl_fuchsia_ui_input::InputEvent,
-    ) -> Vec<Message> {
-        panic!("Scenic events should not be delivered when running under the frame buffer")
+        _view_details: &ViewDetails,
+        _message: UserInputMessage,
+    ) -> Result<Vec<crate::input::Event>, Error> {
+        bail!("convert_user_input_message not used for display_direct.")
     }
 
-    fn handle_scenic_key_event(
-        &mut self,
-        _: &ViewDetails,
-        _: &mut ViewAssistantPtr,
-        _: &fidl_fuchsia_ui_input3::KeyEvent,
-    ) -> Vec<Message> {
-        panic!("Scenic key events should not be delivered when running under the frame buffer")
-    }
-
-    fn handle_input_event(
-        &mut self,
-        view_details: &ViewDetails,
-        view_assistant: &mut ViewAssistantPtr,
-        event: &input::Event,
-    ) -> Vec<Message> {
+    fn inspect_event(&mut self, view_details: &ViewDetails, event: &crate::input::Event) {
         match &event.event_type {
             input::EventType::Mouse(mouse_event) => {
                 self.mouse_cursor_position = Some(mouse_event.location);
@@ -569,12 +575,6 @@ impl ViewStrategy for DisplayDirectViewStrategy {
             }
             _ => (),
         };
-        let mut direct_context = self.make_context(view_details, None);
-        view_assistant
-            .handle_input_event(&mut direct_context, &event)
-            .unwrap_or_else(|e| eprintln!("handle_new_input_event: {:?}", e));
-
-        direct_context.messages
     }
 
     fn image_freed(&mut self, image_id: u64, collection_id: u32) {

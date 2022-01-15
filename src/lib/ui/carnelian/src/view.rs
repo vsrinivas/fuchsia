@@ -5,7 +5,7 @@
 use crate::{
     app::MessageInternal,
     geometry::{IntPoint, Size},
-    input::{self},
+    input::{self, UserInputMessage},
     message::Message,
     render::Context,
     view::strategies::base::ViewStrategyPtr,
@@ -524,49 +524,34 @@ impl ViewController {
         self.strategy.handle_focus(&self.make_view_details(), &mut self.assistant, focus);
     }
 
-    /// Dispatch scenic input events
-    pub fn handle_scenic_input_event(&mut self, event: fidl_fuchsia_ui_input::InputEvent) {
-        match event {
-            fidl_fuchsia_ui_input::InputEvent::Focus(focus_event) => {
-                self.focus(focus_event.focused);
-            }
-            _ => {
-                let messages = self.strategy.handle_scenic_input_event(
-                    &self.make_view_details(),
-                    &mut self.assistant,
-                    &event,
-                );
-                for msg in messages {
-                    self.send_message(msg);
-                }
-            }
+    fn handle_input_events_internal(
+        &mut self,
+        view_details: &ViewDetails,
+        events: Vec<input::Event>,
+    ) -> Result<(), Error> {
+        let mut view_assistant_context = self.strategy.create_view_assistant_context(&view_details);
+        for event in events {
+            self.strategy.inspect_event(view_details, &event);
+            self.assistant.handle_input_event(&mut view_assistant_context, &event)?;
         }
+        Ok(())
     }
 
-    /// Dispatch scenic key events
-    pub fn handle_scenic_key_event(&mut self, event: fidl_fuchsia_ui_input3::KeyEvent) {
-        let messages = self.strategy.handle_scenic_key_event(
-            &self.make_view_details(),
-            &mut self.assistant,
-            &event,
-        );
-        for msg in messages {
-            self.send_message(msg);
-        }
+    pub(crate) fn handle_user_input_message(
+        &mut self,
+        user_input_message: UserInputMessage,
+    ) -> Result<(), Error> {
+        let view_details = self.make_view_details();
+        let events = self.strategy.convert_user_input_message(&view_details, user_input_message)?;
+        self.handle_input_events_internal(&view_details, events)?;
+        Ok(())
     }
 
     /// Handle input events that have been converted to Carnelian's format
-    pub fn handle_input_events(&mut self, events: Vec<input::Event>) {
-        for event in events {
-            let messages = self.strategy.handle_input_event(
-                &self.make_view_details(),
-                &mut self.assistant,
-                &event,
-            );
-            for msg in messages {
-                self.send_message(msg);
-            }
-        }
+    pub fn handle_input_events(&mut self, events: Vec<input::Event>) -> Result<(), Error> {
+        let view_details = self.make_view_details();
+        self.handle_input_events_internal(&view_details, events)?;
+        Ok(())
     }
 
     /// This method sends an arbitrary message to this view to be

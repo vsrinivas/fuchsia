@@ -8,6 +8,7 @@ use crate::{
     view::ViewKey,
 };
 use anyhow::{format_err, Error};
+use euclid::default::Transform2D;
 use fidl::endpoints::create_proxy;
 use fidl_fuchsia_input_report as hid_input_report;
 use fuchsia_async::{self as fasync, Time, TimeoutExt};
@@ -22,6 +23,14 @@ use std::{
     hash::{Hash, Hasher},
     path::{Path, PathBuf},
 };
+
+#[derive(Debug)]
+pub(crate) enum UserInputMessage {
+    ScenicInputEvent(fidl_fuchsia_ui_input::InputEvent),
+    ScenicKeyEvent(fidl_fuchsia_ui_input3::KeyEvent),
+    FlatlandMouseEvents(Vec<fidl_fuchsia_ui_pointer::MouseEvent>),
+    FlatlandTouchEvents(Vec<fidl_fuchsia_ui_pointer::TouchEvent>),
+}
 
 #[derive(Clone, Debug, Default, Eq, PartialEq, Hash)]
 pub struct Button(pub u8);
@@ -113,6 +122,24 @@ pub mod mouse {
         pub buttons: ButtonSet,
         pub phase: Phase,
         pub location: IntPoint,
+    }
+
+    pub fn create_event(
+        event_time: u64,
+        device_id: &DeviceId,
+        button_set: &ButtonSet,
+        cursor_position: IntPoint,
+        transform: &Transform2D<f32>,
+        phase: mouse::Phase,
+    ) -> super::Event {
+        let cursor_position = transform.transform_point(cursor_position.to_f32()).to_i32();
+        let mouse_event =
+            mouse::Event { buttons: button_set.clone(), phase, location: cursor_position };
+        super::Event {
+            event_time,
+            device_id: device_id.clone(),
+            event_type: EventType::Mouse(mouse_event),
+        }
     }
 }
 
@@ -395,6 +422,8 @@ pub(crate) async fn listen_for_user_input(
     Ok(())
 }
 
+pub(crate) mod flatland;
+pub(crate) mod key3;
 pub(crate) mod report;
 pub(crate) mod scenic;
 
