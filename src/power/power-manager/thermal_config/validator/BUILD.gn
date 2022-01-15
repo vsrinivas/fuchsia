@@ -24,12 +24,12 @@ if (is_host) {
   }
 
   host_test_data("valid_test_configs") {
-    sources = [ "test_configs/valid_test_config.json5" ]
+    sources = [ "../test_configs/valid_test_config.json5" ]
     outputs = [ "${root_out_dir}/valid_test_configs/{{source_file_part}}" ]
   }
 
   host_test_data("invalid_test_configs") {
-    sources = [ "test_configs/invalid_test_config.json5" ]
+    sources = [ "../test_configs/invalid_test_config.json5" ]
     outputs = [ "${root_out_dir}/invalid_test_configs/{{source_file_part}}" ]
   }
 }
