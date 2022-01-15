@@ -50,6 +50,7 @@ zx_library("fbl") {
     "fbl/type_info.h",
     "fbl/unique_fd.h",
     "fbl/vector.h",
+    "fbl/wavl_tree_best_node_observer.h",
   ]
 
   sources = [ "alloc_checker.cc" ]

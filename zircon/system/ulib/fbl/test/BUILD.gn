@@ -50,6 +50,7 @@ test("fbl") {
     "type_info_tests.cc",
     "unique_fd_tests.cc",
     "vector_tests.cc",
+    "wavl_tree_best_node_observer_tests.cc",
   ]
 
   deps = [
