@@ -590,17 +590,18 @@ zx_status_t zxio_remote_readv(zxio_t* io, const zx_iovec_t* vector, size_t vecto
       rio, vector, vector_count, flags, out_actual,
       [](zx::unowned_channel control, uint8_t* buffer, size_t capacity, size_t* out_actual) {
         // Explicitly allocating message buffers to avoid heap allocation.
-        fidl::SyncClientBuffer<fio::File::Read2> fidl_buffer;
+        fidl::SyncClientBuffer<fio::File::Read> fidl_buffer;
         auto result = fidl::WireCall(fidl::UnownedClientEnd<fio::File>(control))
                           .buffer(fidl_buffer.view())
-                          ->Read2(capacity);
-        if (result.status() != ZX_OK) {
-          return result.status();
+                          ->Read(capacity);
+        zx_status_t status;
+        if ((status = result.status()) != ZX_OK) {
+          return status;
         }
-        if (result->result.is_err()) {
-          return result->result.err();
+        if ((status = result->s) != ZX_OK) {
+          return status;
         }
-        const auto& data = result->result.response().data;
+        const auto& data = result->data;
         size_t actual = data.count();
         if (actual > capacity) {
           return ZX_ERR_IO;
@@ -625,17 +626,18 @@ zx_status_t zxio_remote_readv_at(zxio_t* io, zx_off_t offset, const zx_iovec_t* 
   return zxio_remote_do_vector(
       rio, vector, vector_count, flags, out_actual,
       [&offset](zx::unowned_channel control, uint8_t* buffer, size_t capacity, size_t* out_actual) {
-        fidl::SyncClientBuffer<fio::File::ReadAt2> fidl_buffer;
+        fidl::SyncClientBuffer<fio::File::ReadAt> fidl_buffer;
         auto result = fidl::WireCall(fidl::UnownedClientEnd<fio::File>(control))
                           .buffer(fidl_buffer.view())
-                          ->ReadAt2(capacity, offset);
-        if (result.status() != ZX_OK) {
-          return result.status();
+                          ->ReadAt(capacity, offset);
+        zx_status_t status;
+        if ((status = result.status()) != ZX_OK) {
+          return status;
         }
-        if (result->result.is_err()) {
-          return result->result.err();
+        if ((status = result->s) != ZX_OK) {
+          return status;
         }
-        const auto& data = result->result.response().data;
+        const auto& data = result->data;
         size_t actual = data.count();
         if (actual > capacity) {
           return ZX_ERR_IO;
@@ -662,17 +664,18 @@ zx_status_t zxio_remote_writev(zxio_t* io, const zx_iovec_t* vector, size_t vect
       rio, vector, vector_count, flags, out_actual,
       [](zx::unowned_channel control, uint8_t* buffer, size_t capacity, size_t* out_actual) {
         // Explicitly allocating message buffers to avoid heap allocation.
-        fidl::SyncClientBuffer<fio::File::Write2> fidl_buffer;
+        fidl::SyncClientBuffer<fio::File::Write> fidl_buffer;
         auto result = fidl::WireCall(fidl::UnownedClientEnd<fio::File>(control))
                           .buffer(fidl_buffer.view())
-                          ->Write2(fidl::VectorView<uint8_t>::FromExternal(buffer, capacity));
-        if (result.status() != ZX_OK) {
-          return result.status();
+                          ->Write(fidl::VectorView<uint8_t>::FromExternal(buffer, capacity));
+        zx_status_t status;
+        if ((status = result.status()) != ZX_OK) {
+          return status;
         }
-        if (result->result.is_err()) {
-          return result->result.err();
+        if ((status = result->s) != ZX_OK) {
+          return status;
         }
-        size_t actual = result->result.response().actual_count;
+        size_t actual = result->actual;
         if (actual > capacity) {
           return ZX_ERR_IO;
         }
@@ -696,18 +699,19 @@ zx_status_t zxio_remote_writev_at(zxio_t* io, zx_off_t offset, const zx_iovec_t*
       rio, vector, vector_count, flags, out_actual,
       [&offset](zx::unowned_channel control, uint8_t* buffer, size_t capacity, size_t* out_actual) {
         // Explicitly allocating message buffers to avoid heap allocation.
-        fidl::SyncClientBuffer<fio::File::WriteAt2> fidl_buffer;
+        fidl::SyncClientBuffer<fio::File::WriteAt> fidl_buffer;
         auto result =
             fidl::WireCall(fidl::UnownedClientEnd<fio::File>(control))
                 .buffer(fidl_buffer.view())
-                ->WriteAt2(fidl::VectorView<uint8_t>::FromExternal(buffer, capacity), offset);
-        if (result.status() != ZX_OK) {
-          return result.status();
+                ->WriteAt(fidl::VectorView<uint8_t>::FromExternal(buffer, capacity), offset);
+        zx_status_t status;
+        if ((status = result.status()) != ZX_OK) {
+          return status;
         }
-        if (result->result.is_err()) {
-          return result->result.err();
+        if ((status = result->s) != ZX_OK) {
+          return status;
         }
-        size_t actual = result->result.response().actual_count;
+        size_t actual = result->actual;
         if (actual > capacity) {
           return ZX_ERR_IO;
         }

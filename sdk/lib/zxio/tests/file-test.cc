@@ -199,7 +199,7 @@ class TestServerChannel final : public CloseCountingFileServer {
     ASSERT_OK(zx::stream::create(ZX_STREAM_MODE_READ | ZX_STREAM_MODE_WRITE, store_, 0, &stream_));
   }
 
-  void Read2(Read2RequestView request, Read2Completer::Sync& completer) override {
+  void Read(ReadRequestView request, ReadCompleter::Sync& completer) override {
     if (request->count > fio::wire::kMaxBuf) {
       completer.Close(ZX_ERR_OUT_OF_RANGE);
       return;
@@ -212,13 +212,13 @@ class TestServerChannel final : public CloseCountingFileServer {
     size_t actual = 0u;
     zx_status_t status = stream_.readv(0, &vec, 1, &actual);
     if (status != ZX_OK) {
-      completer.ReplyError(status);
+      completer.Reply(status, fidl::VectorView<uint8_t>());
       return;
     }
-    completer.ReplySuccess(fidl::VectorView<uint8_t>::FromExternal(buffer, actual));
+    completer.Reply(ZX_OK, fidl::VectorView<uint8_t>::FromExternal(buffer, actual));
   }
 
-  void ReadAt2(ReadAt2RequestView request, ReadAt2Completer::Sync& completer) override {
+  void ReadAt(ReadAtRequestView request, ReadAtCompleter::Sync& completer) override {
     if (request->count > fio::wire::kMaxBuf) {
       completer.Close(ZX_ERR_OUT_OF_RANGE);
       return;
@@ -231,13 +231,13 @@ class TestServerChannel final : public CloseCountingFileServer {
     size_t actual = 0u;
     zx_status_t status = stream_.readv_at(0, request->offset, &vec, 1, &actual);
     if (status != ZX_OK) {
-      completer.ReplyError(status);
+      completer.Reply(status, fidl::VectorView<uint8_t>());
       return;
     }
-    completer.ReplySuccess(fidl::VectorView<uint8_t>::FromExternal(buffer, actual));
+    completer.Reply(ZX_OK, fidl::VectorView<uint8_t>::FromExternal(buffer, actual));
   }
 
-  void Write2(Write2RequestView request, Write2Completer::Sync& completer) override {
+  void Write(WriteRequestView request, WriteCompleter::Sync& completer) override {
     if (request->data.count() > fio::wire::kMaxBuf) {
       completer.Close(ZX_ERR_OUT_OF_RANGE);
       return;
@@ -248,14 +248,10 @@ class TestServerChannel final : public CloseCountingFileServer {
     };
     size_t actual = 0u;
     zx_status_t status = stream_.writev(0, &vec, 1, &actual);
-    if (status != ZX_OK) {
-      completer.ReplyError(status);
-      return;
-    }
-    completer.ReplySuccess(actual);
+    completer.Reply(status, actual);
   }
 
-  void WriteAt2(WriteAt2RequestView request, WriteAt2Completer::Sync& completer) override {
+  void WriteAt(WriteAtRequestView request, WriteAtCompleter::Sync& completer) override {
     if (request->data.count() > fio::wire::kMaxBuf) {
       completer.Close(ZX_ERR_OUT_OF_RANGE);
       return;
@@ -266,11 +262,7 @@ class TestServerChannel final : public CloseCountingFileServer {
     };
     size_t actual = 0u;
     zx_status_t status = stream_.writev_at(0, request->offset, &vec, 1, &actual);
-    if (status != ZX_OK) {
-      completer.ReplyError(status);
-      return;
-    }
-    completer.ReplySuccess(actual);
+    completer.Reply(status, actual);
   }
 
   void Seek(SeekRequestView request, SeekCompleter::Sync& completer) override {
