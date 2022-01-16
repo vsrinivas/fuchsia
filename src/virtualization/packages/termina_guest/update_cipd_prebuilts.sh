@@ -139,6 +139,7 @@ build_debian_32bit_icd() {
     sudo chroot ${debian_dir} bash -c 'cd mesa/subprojects/fuchsia && ln -s src/graphics/lib/magma/meson-top/meson_options.txt meson_options.txt'
 
     sudo chroot ${debian_dir} bash -c "meson --cross-file mesa/build/crossfile mesa/build mesa \
+      -Dbuildtype=release \
       -Ddriver-backend=magma \
       -Ddri-drivers= \
       -Dgallium-drivers= \
@@ -149,8 +150,7 @@ build_debian_32bit_icd() {
       -Dgbm=disabled \
       -Degl=disabled \
       -Dprefix=/usr \
-      -Dlibdir=lib/i386-linux-gnu \
-      -Dfuchsia:with_tests=true"
+      -Dlibdir=lib/i386-linux-gnu"
   fi
 
   sudo chroot ${debian_dir} bash -c 'ninja -C mesa/build'
