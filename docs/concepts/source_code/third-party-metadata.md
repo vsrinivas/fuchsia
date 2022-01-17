@@ -1,4 +1,4 @@
-# README.fuchsia File Syntax
+# README.fuchsia file syntax
 
 `README.fuchsia` files are used to annotate third-party source libraries
 with some useful metadata, such as code origin, version and license.
