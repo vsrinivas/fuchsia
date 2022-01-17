@@ -2,72 +2,23 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/info/info.gni")
 import("//build/rust/rustc_library.gni")
-
-# Since the version only depends on the source checkout and not the toolchain,
-# we only need to generate the version info file once per build.
-# Files passed on the command-line must be relative to support remote builds.
-out_dir = get_label_info(".($default_toolchain)", "target_out_dir")
-base_output_file = "$out_dir/ffx_version_info.txt"
-_source_dir = "//" + rebase_path("src", "//")
-
-rebased_output_file = rebase_path(base_output_file)
-rebased_output_file_src_rel = rebase_path(base_output_file, _source_dir)
-
-rebased_build_version = rebase_path(build_info_files.version)
-rebased_build_version_src_rel =
-    rebase_path(build_info_files.version, _source_dir)
-
-config("env") {
-  rustenv = [
-    "FFX_VERSION_INFO=$rebased_output_file_src_rel",
-    "BUILD_VERSION=$rebased_build_version_src_rel",
-  ]
-}
-
-if (current_toolchain == default_toolchain) {
-  action("gen_version_info") {
-    script = "//src/developer/ffx/lib/version/build/gn_write_version_info.sh"
-
-    # NOTE: Using a depfile instead of explicit sources is intentional
-    # See https://fxbug.dev/77607 for context.
-    depfile = "$target_gen_dir/$target_name.d"
-    args = [
-      rebase_path(rebased_output_file, root_build_dir),
-      rebase_path("//integration/.git", root_build_dir),
-      rebase_path(depfile, root_build_dir),
-    ]
-
-    inputs =
-        [ "//src/developer/ffx/lib/version/build/gn_write_version_info.sh" ]
-    outputs = [ base_output_file ]
-  }
-}
 
 rustc_library("lib") {
   name = "ffx_build_version"
   with_unit_tests = true
   disable_clippy = true  # TODO(fxbug.dev/86506): clippy needs env vars
 
-  configs += [ ":env" ]
-  non_rust_deps = [
-    ":gen_version_info($default_toolchain)",
-    "//build/info:latest-commit-date",
-  ]
-
   deps =
       [ "//sdk/fidl/fuchsia.developer.bridge:fuchsia.developer.bridge-rustc" ]
 
   sources = [ "src/lib.rs" ]
-
-  inputs = [
-    "$rebased_output_file",
-    "$rebased_build_version",
-  ]
 }
 
 group("tests") {
   testonly = true
-  deps = [ ":lib_test($host_toolchain)" ]
+  deps = [
+    ":lib_test($host_toolchain)",
+    "build:truncate($host_toolchain)",
+  ]
 }
