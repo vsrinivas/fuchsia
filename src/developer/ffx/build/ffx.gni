@@ -3,7 +3,6 @@
 # found in the LICENSE file.
 
 import("//build/rust/rustc_binary.gni")
-import("//src/developer/ffx/lib/version/build/ffx_apply_version.gni")
 import("ffx_plugin.gni")
 
 # Defines FFX
@@ -36,8 +35,8 @@ template("ffx") {
     config_data = [ "data/config.json" ]
   }
 
-  rustc_binary(ffx_name + "_bin_unversioned") {
-    output_name = ffx_name + "_unversioned"
+  rustc_binary(ffx_name + "_bin") {
+    output_name = ffx_name
     deps = ffx_deps + [
              ":" + suite_name + "_args",
              ":" + suite_name + "_sub_command",
@@ -90,18 +89,11 @@ template("ffx") {
     disable_rbe = true
   }
 
-  # Replace the special linker sections containing the version information with the real values
-  ffx_apply_version(ffx_name + "_bin") {
-    output_name = ffx_name
-
-    deps = [ ":${ffx_name}_bin_unversioned" ]
-  }
-
   group(ffx_name + "_tests") {
     testonly = true
 
     deps = [
-      ":" + ffx_name + "_bin_unversioned_test",
+      ":" + ffx_name + "_bin_test",
       ":" + suite_name + "_tests",
       "config:tests",
       "core:tests",
