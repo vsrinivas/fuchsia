@@ -49,7 +49,7 @@ use {
         Status,
     },
     futures::future,
-    libc::{S_IRUSR, S_IWUSR, S_IXUSR},
+    libc::{S_IRUSR, S_IXUSR},
     static_assertions::assert_eq_size,
     std::sync::{
         atomic::{AtomicUsize, Ordering},
@@ -71,7 +71,7 @@ fn empty_directory_get_attr() {
         assert_get_attr!(
             root,
             NodeAttributes {
-                mode: MODE_TYPE_DIRECTORY | S_IRUSR | S_IWUSR | S_IXUSR,
+                mode: MODE_TYPE_DIRECTORY | S_IRUSR | S_IXUSR,
                 id: INO_UNKNOWN,
                 content_size: 0,
                 storage_size: 0,
@@ -90,7 +90,7 @@ fn empty_directory_with_custom_inode_get_attr() {
         assert_get_attr!(
             root,
             NodeAttributes {
-                mode: MODE_TYPE_DIRECTORY | S_IRUSR | S_IWUSR | S_IXUSR,
+                mode: MODE_TYPE_DIRECTORY | S_IRUSR | S_IXUSR,
                 id: 12345,
                 content_size: 0,
                 storage_size: 0,

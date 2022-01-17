@@ -7,7 +7,7 @@ use {
     fidl_fuchsia_io::{INO_UNKNOWN, MODE_TYPE_DIRECTORY, MODE_TYPE_FILE},
     futures::StreamExt,
     io_util::{directory, file, node, OPEN_RIGHT_EXECUTABLE, OPEN_RIGHT_READABLE},
-    libc::{S_IRUSR, S_IWUSR, S_IXUSR},
+    libc::{S_IRUSR, S_IXUSR},
 };
 
 // Since this is a system test, we're actually going to verify real system critical files. That
@@ -64,8 +64,11 @@ async fn basic_filenode_test() -> Result<(), Error> {
 #[fuchsia::test]
 async fn basic_directory_test() -> Result<(), Error> {
     // Open the known good file as a node, and check its attributes.
-    let node = node::open_in_namespace(SAMPLE_REQUIRED_DIRECTORY, OPEN_RIGHT_READABLE)
-        .context("failed to open as a readable node")?;
+    let node = node::open_in_namespace(
+        SAMPLE_REQUIRED_DIRECTORY,
+        OPEN_RIGHT_READABLE | OPEN_RIGHT_EXECUTABLE,
+    )
+    .context("failed to open as a readable and executable node")?;
 
     // This node should be an immutable directory, the inode should not be unknown,
     // and creation and modification times should be 0 since system UTC isn't
@@ -74,12 +77,11 @@ async fn basic_directory_test() -> Result<(), Error> {
     assert_eq!(node.get_attr().await?.1.creation_time, 0);
     assert_eq!(node.get_attr().await?.1.modification_time, 0);
 
-    // NOTE: There is a problem with the Rust VFS where this directory is
-    // marked S_IWUSR.
-    let standard_bootfs = MODE_TYPE_DIRECTORY | S_IRUSR;
-    let experimental_bootfs = MODE_TYPE_DIRECTORY | S_IRUSR | S_IWUSR | S_IXUSR;
+    // TODO(fxb/91610): The C++ bootfs VFS uses the wrong POSIX bits (needs S_IXUSR).
+    let cpp_bootfs = MODE_TYPE_DIRECTORY | S_IRUSR;
+    let rust_bootfs = MODE_TYPE_DIRECTORY | S_IRUSR | S_IXUSR;
     let actual_value = node.get_attr().await?.1.mode;
-    assert!(actual_value == standard_bootfs || actual_value == experimental_bootfs);
+    assert!(actual_value == cpp_bootfs || actual_value == rust_bootfs);
 
     node::close(node).await?;
 
@@ -88,8 +90,11 @@ async fn basic_directory_test() -> Result<(), Error> {
 
 #[fuchsia::test]
 async fn check_kernel_vmos() -> Result<(), Error> {
-    let directory = directory::open_in_namespace(KERNEL_VDSO_DIRECTORY, OPEN_RIGHT_READABLE)
-        .context("failed to open kernel vdso directory")?;
+    let directory = directory::open_in_namespace(
+        KERNEL_VDSO_DIRECTORY,
+        OPEN_RIGHT_READABLE | OPEN_RIGHT_EXECUTABLE,
+    )
+    .context("failed to open kernel vdso directory")?;
     let vdsos =
         files_async::readdir(&directory).await.context("failed to read kernel vdso directory")?;
 
@@ -117,8 +122,9 @@ async fn check_kernel_vmos() -> Result<(), Error> {
 async fn check_executable_files() -> Result<(), Error> {
     // Sanitizers nest lib files within '/boot/lib/asan' or '/boot/lib/asan-ubsan' etc., so
     // we need to just search recursively for these files instead.
-    let directory = directory::open_in_namespace("/boot/lib", OPEN_RIGHT_READABLE)
-        .context("failed to open /boot/lib directory")?;
+    let directory =
+        directory::open_in_namespace("/boot/lib", OPEN_RIGHT_READABLE | OPEN_RIGHT_EXECUTABLE)
+            .context("failed to open /boot/lib directory")?;
     let lib_paths = files_async::readdir_recursive(&directory, None)
         .filter_map(|result| async {
             assert!(result.is_ok());

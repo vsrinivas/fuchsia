@@ -330,7 +330,11 @@ where
     async fn get_attrs(&self) -> Result<NodeAttributes, Status> {
         Ok(NodeAttributes {
             mode: MODE_TYPE_DIRECTORY
-                | rights_to_posix_mode_bits(/*r*/ true, /*w*/ true, /*x*/ true),
+                | rights_to_posix_mode_bits(
+                    /*r*/ true,
+                    /*w*/ self.mutable,
+                    /*x*/ true,
+                ),
             id: self.inode,
             content_size: 0,
             storage_size: 0,

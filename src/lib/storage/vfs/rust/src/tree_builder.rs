@@ -410,7 +410,7 @@ mod tests {
                 fidl_fuchsia_io::NodeAttributes {
                     mode: fidl_fuchsia_io::MODE_TYPE_DIRECTORY
                         | crate::common::rights_to_posix_mode_bits(
-                            /*r*/ true, /*w*/ true, /*x*/ true
+                            /*r*/ true, /*w*/ false, /*x*/ true
                         ),
                     id: 1,
                     content_size: 0,
@@ -427,7 +427,7 @@ mod tests {
                 fidl_fuchsia_io::NodeAttributes {
                     mode: fidl_fuchsia_io::MODE_TYPE_DIRECTORY
                         | crate::common::rights_to_posix_mode_bits(
-                            /*r*/ true, /*w*/ true, /*x*/ true
+                            /*r*/ true, /*w*/ false, /*x*/ true
                         ),
                     id: 2,
                     content_size: 0,
@@ -444,7 +444,7 @@ mod tests {
                 fidl_fuchsia_io::NodeAttributes {
                     mode: fidl_fuchsia_io::MODE_TYPE_DIRECTORY
                         | crate::common::rights_to_posix_mode_bits(
-                            /*r*/ true, /*w*/ true, /*x*/ true
+                            /*r*/ true, /*w*/ false, /*x*/ true
                         ),
                     id: 3,
                     content_size: 0,
