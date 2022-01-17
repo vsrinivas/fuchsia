@@ -609,7 +609,6 @@ config("Wno-conversion") {
     "//garnet/bin/insntrace:*",
     "//garnet/bin/insntrace/tests:*",
     "//garnet/bin/ktrace_provider:*",
-    "//garnet/bin/sched:*",
     "//garnet/bin/trace:*",
     "//garnet/bin/trace/tests:*",
     "//garnet/bin/trace_manager:*",
