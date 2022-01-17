@@ -64,8 +64,9 @@ TEST(ExternalDecompressorSetUpTest, DecompressedVmoMissingWrite) {
   ASSERT_EQ(ZX_OK,
             compressed_vmo.duplicate(ZX_DEFAULT_VMO_RIGHTS & (~ZX_RIGHT_WRITE), &decompressed_vmo));
 
+  DecompressorCreatorConnectorImpl connector;
   zx::status<std::unique_ptr<ExternalDecompressorClient>> client_or =
-      ExternalDecompressorClient::Create(decompressed_vmo, compressed_vmo);
+      ExternalDecompressorClient::Create(&connector, decompressed_vmo, compressed_vmo);
   ASSERT_EQ(ZX_ERR_INVALID_ARGS, client_or.status_value());
 }
 
@@ -76,8 +77,9 @@ TEST(ExternalDecompressorSetUpTest, CompressedVmoMissingDuplicate) {
   ASSERT_EQ(ZX_OK, decompressed_vmo.duplicate(ZX_DEFAULT_VMO_RIGHTS & (~ZX_RIGHT_DUPLICATE),
                                               &compressed_vmo));
 
+  DecompressorCreatorConnectorImpl connector;
   zx::status<std::unique_ptr<ExternalDecompressorClient>> client_or =
-      ExternalDecompressorClient::Create(decompressed_vmo, compressed_vmo);
+      ExternalDecompressorClient::Create(&connector, decompressed_vmo, compressed_vmo);
   ASSERT_EQ(ZX_ERR_ACCESS_DENIED, client_or.status_value());
 }
 
@@ -100,7 +102,8 @@ class ExternalDecompressorTest : public ::testing::Test {
     ASSERT_EQ(ZX_OK, decompressed_mapper_.Map(std::move(decompressed_vmo), kMapSize));
 
     zx::status<std::unique_ptr<ExternalDecompressorClient>> client_or =
-        ExternalDecompressorClient::Create(remote_decompressed_vmo, remote_compressed_vmo);
+        ExternalDecompressorClient::Create(&connector_, remote_decompressed_vmo,
+                                           remote_compressed_vmo);
     ASSERT_EQ(ZX_OK, client_or.status_value());
     client_ = std::move(client_or.value());
   }
@@ -109,6 +112,7 @@ class ExternalDecompressorTest : public ::testing::Test {
   uint8_t input_data_[kDataSize];
   fzl::OwnedVmoMapper compressed_mapper_;
   fzl::OwnedVmoMapper decompressed_mapper_;
+  DecompressorCreatorConnectorImpl connector_;
   std::unique_ptr<ExternalDecompressorClient> client_;
 };
 

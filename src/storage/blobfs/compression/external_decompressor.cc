@@ -13,10 +13,18 @@
 
 namespace blobfs {
 
+zx_status_t DecompressorCreatorConnectorImpl::ConnectToDecompressorCreator(
+    zx::channel remote_channel) {
+  return fdio_service_connect("/svc_blobfs/fuchsia.blobfs.internal.DecompressorCreator",
+                              remote_channel.release());
+}
+
 zx::status<std::unique_ptr<ExternalDecompressorClient>> ExternalDecompressorClient::Create(
-    const zx::vmo& decompressed_vmo, const zx::vmo& compressed_vmo) {
+    DecompressorCreatorConnector* connector, const zx::vmo& decompressed_vmo,
+    const zx::vmo& compressed_vmo) {
   std::unique_ptr<ExternalDecompressorClient> client;
   client.reset(new ExternalDecompressorClient());
+  client->connector_ = connector;
 
   zx_status_t status =
       decompressed_vmo.duplicate(ZX_DEFAULT_VMO_RIGHTS, &(client->decompressed_vmo_));
@@ -113,9 +121,7 @@ zx_status_t ExternalDecompressorClient::PrepareDecompressorCreator() {
     return ZX_ERR_NO_RESOURCES;
   }
 
-  zx_status_t status =
-      fdio_service_connect("/svc_blobfs/fuchsia.blobfs.internal.DecompressorCreator",
-                           remote_channel.TakeChannel().release());
+  zx_status_t status = connector_->ConnectToDecompressorCreator(remote_channel.TakeChannel());
   if (status != ZX_OK) {
     FX_LOGS(ERROR) << "Failed to connect to DecompressorCreator service: "
                    << zx_status_get_string(status);

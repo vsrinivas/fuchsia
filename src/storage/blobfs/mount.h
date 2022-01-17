@@ -18,6 +18,7 @@
 
 #include "src/lib/storage/block_client/cpp/block_device.h"
 #include "src/storage/blobfs/cache_policy.h"
+#include "src/storage/blobfs/compression/external_decompressor.h"
 #include "src/storage/blobfs/compression_settings.h"
 
 namespace blobfs {
@@ -50,7 +51,16 @@ struct MountOptions {
   std::optional<CachePolicy> pager_backed_cache_policy = std::nullopt;
 
   CompressionSettings compression_settings{};
+
+  // TODO(fxbug.dev/62177): Default this to true, then remove it altogether after updating tests.
+  // This enables performing decompression in an external component using the
+  // fuchsia.blobfs.internal.DecompressorCreator service.
   bool sandbox_decompression = false;
+
+  // If |sandbox_decompression| is true and this is populated, then it is used to establish fidl
+  // connections to the DecompressorCreator instead of the default implementation that will perform
+  // an |fdio_service_connect| with the given channel.
+  DecompressorCreatorConnector* decompression_connector = nullptr;
 
   int32_t paging_threads = 2;
 #ifndef NDEBUG

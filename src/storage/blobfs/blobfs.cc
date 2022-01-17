@@ -141,7 +141,6 @@ zx::status<std::unique_ptr<Blobfs>> Blobfs::Create(async_dispatcher_t* dispatche
     fvm_required = true;
   }
   const Superblock* superblock = reinterpret_cast<Superblock*>(block);
-
   // Construct the Blobfs object, without intensive validation, since it
   // may require upgrades / journal replays to become valid.
   auto fs = std::unique_ptr<Blobfs>(new Blobfs(
@@ -149,6 +148,13 @@ zx::status<std::unique_ptr<Blobfs>> Blobfs::Create(async_dispatcher_t* dispatche
       options.compression_settings, std::move(vmex_resource), options.pager_backed_cache_policy,
       options.collector_factory, options.metrics_flush_time));
   fs->block_info_ = block_info;
+
+  DecompressorCreatorConnector* decompression_connector = nullptr;
+  if (options.sandbox_decompression) {
+    decompression_connector = options.decompression_connector
+                                  ? options.decompression_connector
+                                  : &(fs->default_decompression_connector_);
+  }
 
   auto fs_ptr = fs.get();
   FX_CHECK(options.paging_threads > 0);
@@ -169,9 +175,8 @@ zx::status<std::unique_ptr<Blobfs>> Blobfs::Create(async_dispatcher_t* dispatche
     worker_resources.push_back(std::make_unique<PageLoader::WorkerResources>(
         std::move(uncompressed_buffer_or).value(), std::move(compressed_buffer_or).value()));
   }
-  auto page_loader_or =
-      PageLoader::Create(std::move(worker_resources), kDecompressionBufferSize,
-                         fs_ptr->GetMetrics().get(), options.sandbox_decompression);
+  auto page_loader_or = PageLoader::Create(std::move(worker_resources), kDecompressionBufferSize,
+                                           fs_ptr->GetMetrics().get(), decompression_connector);
   if (page_loader_or.is_error()) {
     FX_LOGS(ERROR) << "Could not initialize user pager";
     return page_loader_or.take_error();
@@ -295,8 +300,8 @@ zx::status<std::unique_ptr<Blobfs>> Blobfs::Create(async_dispatcher_t* dispatche
     FX_LOGS(ERROR) << "Failed to initialize Vnodes";
     return zx::error(status);
   }
-  zx::status<BlobLoader> loader_or = BlobLoader::Create(
-      fs_ptr, fs_ptr, fs->GetNodeFinder(), fs->GetMetrics(), options.sandbox_decompression);
+  zx::status<BlobLoader> loader_or = BlobLoader::Create(fs_ptr, fs_ptr, fs->GetNodeFinder(),
+                                                        fs->GetMetrics(), decompression_connector);
   if (loader_or.is_error()) {
     FX_LOGS(ERROR) << "Failed to initialize loader: " << loader_or.status_string();
     return loader_or.take_error();

@@ -45,7 +45,7 @@ class BlobLoader {
                                        BlockIteratorProvider* block_iter_provider,
                                        NodeFinder* node_finder,
                                        std::shared_ptr<BlobfsMetrics> metrics,
-                                       bool sandbox_decompression);
+                                       DecompressorCreatorConnector* decompression_connector);
 
   // Loads the merkle tree for the blob referenced |inode|, and prepare a pager-backed VMO for
   // data.

@@ -95,7 +95,7 @@ class PageLoader {
   // size of the scratch buffer to use for decompression.
   [[nodiscard]] static zx::status<std::unique_ptr<PageLoader>> Create(
       std::vector<std::unique_ptr<WorkerResources>> resources, size_t decompression_buffer_size,
-      BlobfsMetrics* metrics, bool sandbox_decompression);
+      BlobfsMetrics* metrics, DecompressorCreatorConnector* decompression_connector);
 
   // Invoked on a read request. Reads in the requested byte range [|offset|, |offset| + |length|)
   // for the inode associated with |info->identifier| into the |transfer_buffer_|, and then moves
@@ -127,7 +127,7 @@ class PageLoader {
     // decompression.
     [[nodiscard]] static zx::status<std::unique_ptr<Worker>> Create(
         std::unique_ptr<WorkerResources> resources, size_t decompression_buffer_size,
-        BlobfsMetrics* metrics, bool sandbox_decompression);
+        BlobfsMetrics* metrics, DecompressorCreatorConnector* decompression_connector);
 
     // See |PageLoader::TransferPages()| which simply selects which Worker to delegate the
     // actual work to.

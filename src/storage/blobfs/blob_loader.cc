@@ -60,7 +60,7 @@ zx::status<BlobLoader> BlobLoader::Create(TransactionManager* txn_manager,
                                           BlockIteratorProvider* block_iter_provider,
                                           NodeFinder* node_finder,
                                           std::shared_ptr<BlobfsMetrics> metrics,
-                                          bool sandbox_decompression) {
+                                          DecompressorCreatorConnector* decompression_connector) {
   fzl::OwnedVmoMapper read_mapper;
   zx_status_t status = read_mapper.CreateAndMap(kTransferBufferSize, "blobfs-loader");
   if (status != ZX_OK) {
@@ -69,7 +69,7 @@ zx::status<BlobLoader> BlobLoader::Create(TransactionManager* txn_manager,
   }
   zx::vmo sandbox_vmo;
   std::unique_ptr<ExternalDecompressorClient> decompressor_client = nullptr;
-  if (sandbox_decompression) {
+  if (decompression_connector) {
     status = zx::vmo::create(kDecompressionBufferSize, 0, &sandbox_vmo);
     if (status != ZX_OK) {
       return zx::error(status);
@@ -77,7 +77,7 @@ zx::status<BlobLoader> BlobLoader::Create(TransactionManager* txn_manager,
     const char* name = "blobfs-sandbox";
     sandbox_vmo.set_property(ZX_PROP_NAME, name, strlen(name));
     zx::status<std::unique_ptr<ExternalDecompressorClient>> client_or =
-        ExternalDecompressorClient::Create(sandbox_vmo, read_mapper.vmo());
+        ExternalDecompressorClient::Create(decompression_connector, sandbox_vmo, read_mapper.vmo());
     if (!client_or.is_ok()) {
       return client_or.take_error();
     } else {

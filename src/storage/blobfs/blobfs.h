@@ -47,6 +47,7 @@
 #include "src/storage/blobfs/blob_loader.h"
 #include "src/storage/blobfs/blobfs_inspect_tree.h"
 #include "src/storage/blobfs/common.h"
+#include "src/storage/blobfs/compression/external_decompressor.h"
 #include "src/storage/blobfs/compression_settings.h"
 #include "src/storage/blobfs/directory.h"
 #include "src/storage/blobfs/format.h"
@@ -297,6 +298,8 @@ class Blobfs : public TransactionManager, public BlockIteratorProvider {
       inspect::Inspector inspector,
       std::function<std::unique_ptr<cobalt_client::Collector>()> collector_factory,
       zx::duration metrics_flush_time);
+
+  DecompressorCreatorConnectorImpl default_decompression_connector_;
 
   // Possibly-null reference to the Vfs associated with this object. See vfs() getter.
   fs::PagedVfs* vfs_ = nullptr;

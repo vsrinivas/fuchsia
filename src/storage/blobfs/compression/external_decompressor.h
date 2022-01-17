@@ -7,6 +7,7 @@
 
 #include <fidl/fuchsia.blobfs.internal/cpp/wire.h>
 #include <fuchsia/blobfs/internal/cpp/fidl.h>
+#include <lib/zx/channel.h>
 #include <lib/zx/fifo.h>
 #include <lib/zx/status.h>
 #include <lib/zx/vmo.h>
@@ -17,6 +18,27 @@
 #include "src/storage/blobfs/compression_settings.h"
 
 namespace blobfs {
+
+// An interface that is passed into the ExternalDecompressorClient to complete connections to a
+// DecompressorCreator fidl service as a form of dependency injection. The DecompressorCreator
+// service is used to create remote decompressor instances that are controlled via fifo, and this
+// interface establishes connections to them. Hence the convoluted name.
+class DecompressorCreatorConnector {
+ public:
+  virtual ~DecompressorCreatorConnector() = default;
+
+  // Passes the `remote_channel` to some DecompressorCreator handler.
+  virtual zx_status_t ConnectToDecompressorCreator(zx::channel remote_channel) = 0;
+};
+
+// The base interface that just calls `fdio_service_connect()` to the expected service path.
+class DecompressorCreatorConnectorImpl final : public DecompressorCreatorConnector {
+ public:
+  DecompressorCreatorConnectorImpl() = default;
+
+  // DecompressorCreatorConnector interface.
+  zx_status_t ConnectToDecompressorCreator(zx::channel remote_channel) final;
+};
 
 // A client class for managing the connection to the decompressor sandbox, sending messages, and
 // returning the status result. This class is *not* thread safe.
@@ -30,7 +52,8 @@ class ExternalDecompressorClient {
   // required on `compressed_vmo`, this permission will be omitted before sending to the external
   // decompressor if present.
   static zx::status<std::unique_ptr<ExternalDecompressorClient>> Create(
-      const zx::vmo& decompressed_vmo, const zx::vmo& compressed_vmo);
+      DecompressorCreatorConnector* connector, const zx::vmo& decompressed_vmo,
+      const zx::vmo& compressed_vmo);
 
   // Sends the request over the fifo, and awaits the response before verifying the resulting size
   // and reporting the status passed from the server. This succeeds only if the resulting
@@ -70,6 +93,9 @@ class ExternalDecompressorClient {
 
   // Fidl connection to the DecompressorCreator.
   fuchsia::blobfs::internal::DecompressorCreatorSyncPtr decompressor_creator_;
+
+  // For completing connections to the DecompressorCreator.
+  DecompressorCreatorConnector* connector_;
 
   // The fifo that communicates with the Decompressor.
   zx::fifo fifo_;

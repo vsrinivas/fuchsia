@@ -144,7 +144,7 @@ PageLoader::Worker::Worker(size_t decompression_buffer_size, BlobfsMetrics* metr
 
 zx::status<std::unique_ptr<PageLoader::Worker>> PageLoader::Worker::Create(
     std::unique_ptr<WorkerResources> resources, size_t decompression_buffer_size,
-    BlobfsMetrics* metrics, bool sandbox_decompression) {
+    BlobfsMetrics* metrics, DecompressorCreatorConnector* decompression_connector) {
   ZX_DEBUG_ASSERT(metrics != nullptr && resources->uncompressed_buffer != nullptr &&
                   resources->uncompressed_buffer->GetVmo().is_valid() &&
                   resources->compressed_buffer != nullptr &&
@@ -181,15 +181,16 @@ zx::status<std::unique_ptr<PageLoader::Worker>> PageLoader::Worker::Create(
     return zx::error(status);
   }
 
-  if (sandbox_decompression) {
+  if (decompression_connector) {
     status = zx::vmo::create(kDecompressionBufferSize, 0, &worker->sandbox_buffer_);
     if (status != ZX_OK) {
       FX_LOGS(ERROR) << "Failed to create sandbox buffer: %s\n" << zx_status_get_string(status);
       return zx::error(status);
     }
 
-    auto client_or = ExternalDecompressorClient::Create(
-        worker->sandbox_buffer_, worker->compressed_transfer_buffer_->GetVmo());
+    auto client_or =
+        ExternalDecompressorClient::Create(decompression_connector, worker->sandbox_buffer_,
+                                           worker->compressed_transfer_buffer_->GetVmo());
     if (!client_or.is_ok()) {
       return zx::error(client_or.status_value());
     }
@@ -495,12 +496,12 @@ PageLoader::PageLoader(std::vector<std::unique_ptr<Worker>> workers)
 
 zx::status<std::unique_ptr<PageLoader>> PageLoader::Create(
     std::vector<std::unique_ptr<WorkerResources>> resources, size_t decompression_buffer_size,
-    BlobfsMetrics* metrics, bool sandbox_decompression) {
+    BlobfsMetrics* metrics, DecompressorCreatorConnector* decompression_connector) {
   std::vector<std::unique_ptr<PageLoader::Worker>> workers;
   ZX_ASSERT(!resources.empty());
   for (auto& res : resources) {
     auto worker_or = PageLoader::Worker::Create(std::move(res), decompression_buffer_size, metrics,
-                                                sandbox_decompression);
+                                                decompression_connector);
     if (worker_or.is_error()) {
       return worker_or.take_error();
     }
