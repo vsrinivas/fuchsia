@@ -130,7 +130,7 @@ pub fn create_and_serve_sme(
     inspect_log!(inspect_tree.device_events.lock().get_mut(), {
         msg: format!("new iface #{} with role '{:?}'", id, device_info.role)
     });
-    if let fidl_common::MacRole::Client = device_info.role {
+    if let fidl_common::WlanMacRole::Client = device_info.role {
         inspect_tree.mark_active_client_iface(id, ifaces.clone(), iface_tree_holder.clone());
     }
     let is_softmac = device_info.driver_features.contains(&fidl_common::DriverFeature::TempSoftmac);
@@ -189,7 +189,7 @@ where
 {
     let device_info = clone_utils::clone_device_info(device_info);
     let (server, sme_fut) = match device_info.role {
-        fidl_common::MacRole::Client => {
+        fidl_common::WlanMacRole::Client => {
             let (sender, receiver) = mpsc::unbounded();
             let fut = station::client::serve(
                 cfg.into(),
@@ -206,13 +206,13 @@ where
             );
             (SmeServer::Client(sender), FutureObj::new(Box::new(fut)))
         }
-        fidl_common::MacRole::Ap => {
+        fidl_common::WlanMacRole::Ap => {
             let (sender, receiver) = mpsc::unbounded();
             let fut =
                 station::ap::serve(proxy, device_info, event_stream, receiver, stats_requests);
             (SmeServer::Ap(sender), FutureObj::new(Box::new(fut)))
         }
-        fidl_common::MacRole::Mesh => {
+        fidl_common::WlanMacRole::Mesh => {
             let (sender, receiver) = mpsc::unbounded();
             let fut =
                 station::mesh::serve(proxy, device_info, event_stream, receiver, stats_requests);
@@ -248,7 +248,7 @@ mod tests {
 
     fn fake_device_info() -> fidl_mlme::DeviceInfo {
         fidl_mlme::DeviceInfo {
-            role: fidl_common::MacRole::Client,
+            role: fidl_common::WlanMacRole::Client,
             bands: vec![],
             sta_addr: [0xAC; 6],
             driver_features: vec![],

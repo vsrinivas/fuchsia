@@ -1887,7 +1887,7 @@ mod tests {
 
     fn fake_device_info() -> fidl_mlme::DeviceInfo {
         fidl_mlme::DeviceInfo {
-            role: fidl_common::MacRole::Client,
+            role: fidl_common::WlanMacRole::Client,
             bands: vec![],
             sta_addr: [0xAC; 6],
             driver_features: vec![],

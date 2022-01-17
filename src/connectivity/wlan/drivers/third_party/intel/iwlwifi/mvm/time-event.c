@@ -167,7 +167,7 @@ out_unlock:
 
 static bool iwl_mvm_te_check_disconnect(struct iwl_mvm* mvm, struct iwl_mvm_vif* mvmvif,
                                         const char* errmsg) {
-  if (mvmvif->mac_role != MAC_ROLE_CLIENT) {
+  if (mvmvif->mac_role != WLAN_MAC_ROLE_CLIENT) {
     return false;
   }
 
@@ -306,7 +306,7 @@ static void iwl_mvm_te_handle_notif(struct iwl_mvm* mvm, struct iwl_mvm_time_eve
         iwl_mvm_roc_finished(mvm);
         break;
 #endif  // NEEDS_PORTING
-      case MAC_ROLE_CLIENT:
+      case WLAN_MAC_ROLE_CLIENT:
         /*
          * By now, we should have finished association
          * and know the dtim period.

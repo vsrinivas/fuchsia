@@ -95,7 +95,7 @@ class PassiveScanTest : public SimTest {
 
 void PassiveScanTest::Init() {
   ASSERT_EQ(SimTest::Init(), ZX_OK);
-  ASSERT_EQ(StartInterface(MAC_ROLE_CLIENT, &client_ifc_), ZX_OK);
+  ASSERT_EQ(StartInterface(WLAN_MAC_ROLE_CLIENT, &client_ifc_), ZX_OK);
   client_ifc_.test_ = this;
   client_ifc_.ClearVerifierFunction();
 }

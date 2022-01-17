@@ -33,7 +33,7 @@ class WlanphyImplDeviceTest : public SingleApTest {
   WlanphyImplDeviceTest()
       : mvmvif_sta_{
             .mvm = iwl_trans_get_mvm(sim_trans_.iwl_trans()),
-            .mac_role = MAC_ROLE_CLIENT,
+            .mac_role = WLAN_MAC_ROLE_CLIENT,
             .bss_conf =
                 {
                     .beacon_int = kListenInterval,
@@ -59,13 +59,13 @@ TEST_F(WlanphyImplDeviceTest, PhyQuery) {
   // Normal case
   ASSERT_EQ(ZX_OK, device_->WlanphyImplQuery(&info));
   EXPECT_EQ(1U, info.supported_mac_roles_count);
-  EXPECT_EQ(MAC_ROLE_CLIENT, info.supported_mac_roles_list[0]);
-  free(static_cast<void*>(const_cast<mac_role_t*>(info.supported_mac_roles_list)));
+  EXPECT_EQ(WLAN_MAC_ROLE_CLIENT, info.supported_mac_roles_list[0]);
+  free(static_cast<void*>(const_cast<wlan_mac_role_t*>(info.supported_mac_roles_list)));
 }
 
 TEST_F(WlanphyImplDeviceTest, PhyPartialCreateCleanup) {
   wlanphy_impl_create_iface_req_t req = {
-      .role = MAC_ROLE_CLIENT,
+      .role = WLAN_MAC_ROLE_CLIENT,
       .mlme_channel = kDummyMlmeChannel,
   };
   uint16_t iface_id;
@@ -85,7 +85,7 @@ TEST_F(WlanphyImplDeviceTest, PhyPartialCreateCleanup) {
 
 TEST_F(WlanphyImplDeviceTest, PhyCreateDestroySingleInterface) {
   wlanphy_impl_create_iface_req_t req = {
-      .role = MAC_ROLE_CLIENT,
+      .role = WLAN_MAC_ROLE_CLIENT,
       .mlme_channel = kDummyMlmeChannel,
   };
   uint16_t iface_id;
@@ -107,7 +107,7 @@ TEST_F(WlanphyImplDeviceTest, PhyCreateDestroySingleInterface) {
   ASSERT_EQ(iface_id, 0);  // the first interface should have id 0.
   struct iwl_mvm_vif* mvmvif = mvm->mvmvif[iface_id];
   ASSERT_NE(mvmvif, nullptr);
-  ASSERT_EQ(mvmvif->mac_role, MAC_ROLE_CLIENT);
+  ASSERT_EQ(mvmvif->mac_role, WLAN_MAC_ROLE_CLIENT);
   // Count includes phy device in addition to the newly created mac device.
   ASSERT_EQ(fake_parent_->descendant_count(), 2);
   device_->parent()->GetLatestChild()->InitOp();
@@ -121,7 +121,7 @@ TEST_F(WlanphyImplDeviceTest, PhyCreateDestroySingleInterface) {
 
 TEST_F(WlanphyImplDeviceTest, PhyCreateDestroyMultipleInterfaces) {
   wlanphy_impl_create_iface_req_t req = {
-      .role = MAC_ROLE_CLIENT,
+      .role = WLAN_MAC_ROLE_CLIENT,
       .mlme_channel = kDummyMlmeChannel,
   };
   uint16_t iface_id;
@@ -131,7 +131,7 @@ TEST_F(WlanphyImplDeviceTest, PhyCreateDestroyMultipleInterfaces) {
   // Add 1st interface
   ASSERT_EQ(device_->WlanphyImplCreateIface(&req, &iface_id), ZX_OK);
   ASSERT_EQ(iface_id, 0);
-  ASSERT_EQ(mvm->mvmvif[iface_id]->mac_role, MAC_ROLE_CLIENT);
+  ASSERT_EQ(mvm->mvmvif[iface_id]->mac_role, WLAN_MAC_ROLE_CLIENT);
   ASSERT_EQ(fake_parent_->descendant_count(), 2);
   device_->parent()->GetLatestChild()->InitOp();
 
@@ -139,7 +139,7 @@ TEST_F(WlanphyImplDeviceTest, PhyCreateDestroyMultipleInterfaces) {
   ASSERT_EQ(device_->WlanphyImplCreateIface(&req, &iface_id), ZX_OK);
   ASSERT_EQ(iface_id, 1);
   ASSERT_NE(mvm->mvmvif[iface_id], nullptr);
-  ASSERT_EQ(mvm->mvmvif[iface_id]->mac_role, MAC_ROLE_CLIENT);
+  ASSERT_EQ(mvm->mvmvif[iface_id]->mac_role, WLAN_MAC_ROLE_CLIENT);
   ASSERT_EQ(fake_parent_->descendant_count(), 3);
   device_->parent()->GetLatestChild()->InitOp();
 
@@ -147,7 +147,7 @@ TEST_F(WlanphyImplDeviceTest, PhyCreateDestroyMultipleInterfaces) {
   ASSERT_EQ(device_->WlanphyImplCreateIface(&req, &iface_id), ZX_OK);
   ASSERT_EQ(iface_id, 2);
   ASSERT_NE(mvm->mvmvif[iface_id], nullptr);
-  ASSERT_EQ(mvm->mvmvif[iface_id]->mac_role, MAC_ROLE_CLIENT);
+  ASSERT_EQ(mvm->mvmvif[iface_id]->mac_role, WLAN_MAC_ROLE_CLIENT);
   ASSERT_EQ(fake_parent_->descendant_count(), 4);
   device_->parent()->GetLatestChild()->InitOp();
 
@@ -161,7 +161,7 @@ TEST_F(WlanphyImplDeviceTest, PhyCreateDestroyMultipleInterfaces) {
   ASSERT_EQ(device_->WlanphyImplCreateIface(&req, &iface_id), ZX_OK);
   ASSERT_EQ(iface_id, 1);
   ASSERT_NE(mvm->mvmvif[iface_id], nullptr);
-  ASSERT_EQ(mvm->mvmvif[iface_id]->mac_role, MAC_ROLE_CLIENT);
+  ASSERT_EQ(mvm->mvmvif[iface_id]->mac_role, WLAN_MAC_ROLE_CLIENT);
   ASSERT_EQ(fake_parent_->descendant_count(), 4);
   device_->parent()->GetLatestChild()->InitOp();
 
@@ -169,7 +169,7 @@ TEST_F(WlanphyImplDeviceTest, PhyCreateDestroyMultipleInterfaces) {
   ASSERT_EQ(device_->WlanphyImplCreateIface(&req, &iface_id), ZX_OK);
   ASSERT_EQ(iface_id, 3);
   ASSERT_NE(mvm->mvmvif[iface_id], nullptr);
-  ASSERT_EQ(mvm->mvmvif[iface_id]->mac_role, MAC_ROLE_CLIENT);
+  ASSERT_EQ(mvm->mvmvif[iface_id]->mac_role, WLAN_MAC_ROLE_CLIENT);
   ASSERT_EQ(fake_parent_->descendant_count(), 5);
   device_->parent()->GetLatestChild()->InitOp();
 

@@ -17,7 +17,7 @@ class SetKeysTest : public SimTest {
   SetKeysTest() = default;
   void SetUp() override {
     ASSERT_EQ(ZX_OK, SimTest::Init());
-    ASSERT_EQ(ZX_OK, StartInterface(MAC_ROLE_CLIENT, &client_ifc_));
+    ASSERT_EQ(ZX_OK, StartInterface(WLAN_MAC_ROLE_CLIENT, &client_ifc_));
   }
   void TearDown() override { EXPECT_EQ(SimTest::DeleteInterface(&client_ifc_), ZX_OK); }
 

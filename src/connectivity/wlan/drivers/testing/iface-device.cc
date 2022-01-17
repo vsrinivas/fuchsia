@@ -53,7 +53,8 @@ static wlan_softmac_protocol_ops_t wlan_softmac_test_protocol_ops = {
 };
 #undef DEV
 
-IfaceDevice::IfaceDevice(zx_device_t* device, mac_role_t role) : parent_(device), role_(role) {}
+IfaceDevice::IfaceDevice(zx_device_t* device, wlan_mac_role_t role)
+    : parent_(device), role_(role) {}
 
 zx_status_t IfaceDevice::Bind() {
   zxlogf(INFO, "wlan::testing::IfaceDevice::Bind()");

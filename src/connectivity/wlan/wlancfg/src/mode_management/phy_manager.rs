@@ -46,7 +46,7 @@ pub enum CreateClientIfacesReason {
 
 /// Stores information about a WLAN PHY and any interfaces that belong to it.
 pub(crate) struct PhyContainer {
-    supported_mac_roles: Vec<fidl_common::MacRole>,
+    supported_mac_roles: Vec<fidl_common::WlanMacRole>,
     // Driver features are tracked for each interface so that callers can request an interface
     // based on capabilities.
     client_ifaces: HashMap<u16, Vec<fidl_common::DriverFeature>>,
@@ -145,7 +145,7 @@ pub struct PhyManager {
 impl PhyContainer {
     /// Stores the PhyInfo associated with a newly discovered PHY and creates empty vectors to hold
     /// interface IDs that belong to this PHY.
-    pub fn new(supported_mac_roles: Vec<fidl_common::MacRole>) -> Self {
+    pub fn new(supported_mac_roles: Vec<fidl_common::WlanMacRole>) -> Self {
         PhyContainer {
             supported_mac_roles,
             client_ifaces: HashMap::new(),
@@ -207,7 +207,7 @@ impl PhyManager {
     }
 
     /// Returns a list of PHY IDs that can have interfaces of the requested MAC role.
-    fn phys_for_role(&self, role: fidl_common::MacRole) -> Vec<u16> {
+    fn phys_for_role(&self, role: fidl_common::WlanMacRole) -> Vec<u16> {
         self.phys
             .iter()
             .filter_map(
@@ -268,12 +268,12 @@ impl PhyManagerApi for PhyManager {
         }
 
         if self.client_connections_enabled
-            && phy_container.supported_mac_roles.contains(&fidl_common::MacRole::Client)
+            && phy_container.supported_mac_roles.contains(&fidl_common::WlanMacRole::Client)
         {
             let iface_id = create_iface(
                 &self.device_monitor,
                 phy_id,
-                fidl_common::MacRole::Client,
+                fidl_common::WlanMacRole::Client,
                 NULL_MAC_ADDR,
             )
             .await?;
@@ -304,7 +304,7 @@ impl PhyManagerApi for PhyManager {
             let driver_features = query_iface_response.driver_features;
 
             match query_iface_response.role {
-                fidl_common::MacRole::Client => {
+                fidl_common::WlanMacRole::Client => {
                     if let Some(old_driver_features) =
                         phy.client_ifaces.insert(iface_id, driver_features.clone())
                     {
@@ -316,13 +316,13 @@ impl PhyManagerApi for PhyManager {
                         warn!("Detected an unexpected client iface id {} created outside of PhyManager", iface_id);
                     }
                 }
-                fidl_common::MacRole::Ap => {
+                fidl_common::WlanMacRole::Ap => {
                     if phy.ap_ifaces.insert(iface_id) {
                         // `.insert()` returns true if the value was not already present
                         warn!("Detected an unexpected AP iface created outside of PhyManager");
                     }
                 }
-                fidl_common::MacRole::Mesh => {
+                fidl_common::WlanMacRole::Mesh => {
                     return Err(PhyManagerError::Unsupported);
                 }
             }
@@ -355,7 +355,7 @@ impl PhyManagerApi for PhyManager {
         let mut error_encountered = Ok(());
 
         if self.client_connections_enabled {
-            let client_capable_phy_ids = self.phys_for_role(fidl_common::MacRole::Client);
+            let client_capable_phy_ids = self.phys_for_role(fidl_common::WlanMacRole::Client);
 
             for client_phy in client_capable_phy_ids.iter() {
                 let phy_container = match self.phys.get_mut(&client_phy) {
@@ -372,7 +372,7 @@ impl PhyManagerApi for PhyManager {
                     let iface_id = match create_iface(
                         &self.device_monitor,
                         *client_phy,
-                        fidl_common::MacRole::Client,
+                        fidl_common::WlanMacRole::Client,
                         NULL_MAC_ADDR,
                     )
                     .await
@@ -410,7 +410,7 @@ impl PhyManagerApi for PhyManager {
     async fn destroy_all_client_ifaces(&mut self) -> Result<(), PhyManagerError> {
         self.client_connections_enabled = false;
 
-        let client_capable_phys = self.phys_for_role(fidl_common::MacRole::Client);
+        let client_capable_phys = self.phys_for_role(fidl_common::WlanMacRole::Client);
         let mut result = Ok(());
 
         for client_phy in client_capable_phys.iter() {
@@ -442,7 +442,7 @@ impl PhyManagerApi for PhyManager {
             return None;
         }
 
-        let client_capable_phys = self.phys_for_role(fidl_common::MacRole::Client);
+        let client_capable_phys = self.phys_for_role(fidl_common::WlanMacRole::Client);
         if client_capable_phys.is_empty() {
             return None;
         }
@@ -468,7 +468,7 @@ impl PhyManagerApi for PhyManager {
     }
 
     async fn create_or_get_ap_iface(&mut self) -> Result<Option<u16>, PhyManagerError> {
-        let ap_capable_phy_ids = self.phys_for_role(fidl_common::MacRole::Ap);
+        let ap_capable_phy_ids = self.phys_for_role(fidl_common::WlanMacRole::Ap);
         if ap_capable_phy_ids.is_empty() {
             return Ok(None);
         }
@@ -482,9 +482,13 @@ impl PhyManagerApi for PhyManager {
                     Some(mac) => mac.to_array(),
                     None => NULL_MAC_ADDR,
                 };
-                let iface_id =
-                    create_iface(&self.device_monitor, *ap_phy_id, fidl_common::MacRole::Ap, mac)
-                        .await?;
+                let iface_id = create_iface(
+                    &self.device_monitor,
+                    *ap_phy_id,
+                    fidl_common::WlanMacRole::Ap,
+                    mac,
+                )
+                .await?;
 
                 let _ = phy_container.ap_ifaces.insert(iface_id);
                 return Ok(Some(iface_id));
@@ -522,7 +526,7 @@ impl PhyManagerApi for PhyManager {
     }
 
     async fn destroy_all_ap_ifaces(&mut self) -> Result<(), PhyManagerError> {
-        let ap_capable_phys = self.phys_for_role(fidl_common::MacRole::Ap);
+        let ap_capable_phys = self.phys_for_role(fidl_common::WlanMacRole::Ap);
         let mut result = Ok(());
 
         for ap_phy in ap_capable_phys.iter() {
@@ -598,7 +602,7 @@ impl PhyManagerApi for PhyManager {
 async fn create_iface(
     proxy: &fidl_service::DeviceMonitorProxy,
     phy_id: u16,
-    role: fidl_common::MacRole,
+    role: fidl_common::WlanMacRole,
     sta_addr: MacAddr,
 ) -> Result<u16, PhyManagerError> {
     let mut request = fidl_service::CreateIfaceRequest { phy_id, role, sta_addr };
@@ -733,11 +737,11 @@ mod tests {
     }
 
     /// Take in the service side of a DeviceMonitor::GetSupportedMacRoles request and respond with
-    /// the given MacRoles responst.
+    /// the given WlanMacRoles responst.
     fn send_get_supported_mac_roles_response(
         exec: &mut TestExecutor,
         server: &mut fidl_service::DeviceMonitorRequestStream,
-        supported_mac_roles: Option<Vec<fidl_common::MacRole>>,
+        supported_mac_roles: Option<Vec<fidl_common::WlanMacRole>>,
     ) {
         assert_variant!(
             exec.run_until_stalled(&mut server.next()),
@@ -830,13 +834,13 @@ mod tests {
     }
 
     /// Create a PhyInfo object for unit testing.
-    fn fake_phy_info(id: u16, mac_roles: Vec<fidl_common::MacRole>) -> fidl_device::PhyInfo {
+    fn fake_phy_info(id: u16, mac_roles: Vec<fidl_common::WlanMacRole>) -> fidl_device::PhyInfo {
         fidl_device::PhyInfo { id: id, dev_path: None, supported_mac_roles: mac_roles }
     }
 
     /// Creates a QueryIfaceResponse from the arguments provided by the caller.
     fn create_iface_response(
-        role: fidl_common::MacRole,
+        role: fidl_common::WlanMacRole,
         id: u16,
         phy_id: u16,
         phy_assigned_id: u16,
@@ -975,7 +979,7 @@ mod tests {
 
         let fake_iface_id = 1;
         let fake_phy_id = 1;
-        let fake_mac_roles = vec![fidl_common::MacRole::Client];
+        let fake_mac_roles = vec![fidl_common::WlanMacRole::Client];
         let phy_info = fake_phy_info(fake_phy_id, fake_mac_roles.clone());
 
         let fake_phy_assigned_id = 0;
@@ -1141,7 +1145,7 @@ mod tests {
         let phy_container = PhyContainer::new(fake_mac_roles);
 
         // Create an IfaceResponse to be sent to the PhyManager when the iface ID is queried
-        let fake_role = fidl_common::MacRole::Client;
+        let fake_role = fidl_common::WlanMacRole::Client;
         let fake_iface_id = 1;
         let fake_phy_assigned_id = 1;
         let fake_sta_addr = [0, 1, 2, 3, 4, 5];
@@ -1197,7 +1201,7 @@ mod tests {
         let fake_mac_roles = Vec::new();
 
         // Create an IfaceResponse to be sent to the PhyManager when the iface ID is queried
-        let fake_role = fidl_common::MacRole::Client;
+        let fake_role = fidl_common::WlanMacRole::Client;
         let fake_iface_id = 1;
         let fake_phy_assigned_id = 1;
         let fake_sta_addr = [0, 1, 2, 3, 4, 5];
@@ -1269,7 +1273,7 @@ mod tests {
         let _ = phy_manager.phys.insert(fake_phy_id, phy_container);
 
         // Create an IfaceResponse to be sent to the PhyManager when the iface ID is queried
-        let fake_role = fidl_common::MacRole::Client;
+        let fake_role = fidl_common::WlanMacRole::Client;
         let fake_iface_id = 1;
         let fake_phy_assigned_id = 1;
         let fake_sta_addr = [0, 1, 2, 3, 4, 5];
@@ -1417,7 +1421,7 @@ mod tests {
         // Create an initial PhyContainer to be inserted into the test PhyManager before the fake
         // iface is added.
         let fake_phy_id = 1;
-        let fake_mac_roles = vec![fidl_common::MacRole::Client];
+        let fake_mac_roles = vec![fidl_common::WlanMacRole::Client];
         let phy_container = PhyContainer::new(fake_mac_roles);
 
         let _ = phy_manager.phys.insert(fake_phy_id, phy_container);
@@ -1440,7 +1444,7 @@ mod tests {
         // Create an initial PhyContainer to be inserted into the test PhyManager before the fake
         // iface is added.
         let fake_phy_id = 1;
-        let fake_mac_roles = vec![fidl_common::MacRole::Client];
+        let fake_mac_roles = vec![fidl_common::WlanMacRole::Client];
         let phy_container = PhyContainer::new(fake_mac_roles);
 
         let _ = phy_manager.phys.insert(fake_phy_id, phy_container);
@@ -1469,7 +1473,7 @@ mod tests {
         // iface is added.
         let fake_iface_id = 1;
         let fake_phy_id = 1;
-        let fake_mac_roles = vec![fidl_common::MacRole::Ap];
+        let fake_mac_roles = vec![fidl_common::WlanMacRole::Ap];
         let mut phy_container = PhyContainer::new(fake_mac_roles);
         let _ = phy_container.ap_ifaces.insert(fake_iface_id);
         let _ = phy_manager.phys.insert(fake_phy_id, phy_container);
@@ -1491,13 +1495,13 @@ mod tests {
         // Create an initial PhyContainer to be inserted into the test PhyManager before the fake
         // iface is added.
         let fake_phy_id = 1;
-        let fake_mac_roles = vec![fidl_common::MacRole::Ap];
+        let fake_mac_roles = vec![fidl_common::WlanMacRole::Ap];
         let mut phy_container = PhyContainer::new(fake_mac_roles);
         let _ = phy_container.ap_ifaces.insert(1);
         let _ = phy_manager.phys.insert(fake_phy_id, phy_container);
         // Create a PhyContainer that has a client iface but no WPA3 support.
         let fake_phy_id_client = 2;
-        let fake_mac_roles_client = vec![fidl_common::MacRole::Client];
+        let fake_mac_roles_client = vec![fidl_common::WlanMacRole::Client];
         let mut phy_container_client = PhyContainer::new(fake_mac_roles_client);
         let driver_features = Vec::new();
         let _ = phy_container_client.client_ifaces.insert(2, driver_features);
@@ -1523,7 +1527,7 @@ mod tests {
         // Create an initial PhyContainer with WPA3 support to be inserted into the test
         // PhyManager
         let fake_phy_id = 1;
-        let fake_mac_roles = vec![fidl_common::MacRole::Client];
+        let fake_mac_roles = vec![fidl_common::WlanMacRole::Client];
         let mut phy_container = PhyContainer::new(fake_mac_roles);
         // Insert the fake iface
         let fake_iface_id = 1;
@@ -1575,7 +1579,7 @@ mod tests {
         // iface is added.
         let fake_iface_id = 1;
         let fake_phy_id = 1;
-        let fake_mac_roles = vec![fidl_common::MacRole::Client];
+        let fake_mac_roles = vec![fidl_common::WlanMacRole::Client];
         let phy_container = PhyContainer::new(fake_mac_roles);
 
         {
@@ -1620,7 +1624,7 @@ mod tests {
         // iface is added.
         let fake_iface_id = 1;
         let fake_phy_id = 1;
-        let fake_mac_roles = vec![fidl_common::MacRole::Ap];
+        let fake_mac_roles = vec![fidl_common::WlanMacRole::Ap];
         let phy_container = PhyContainer::new(fake_mac_roles);
 
         // Insert the fake AP iface and then stop clients
@@ -1673,7 +1677,7 @@ mod tests {
         // Create an initial PhyContainer to be inserted into the test PhyManager before the fake
         // iface is added.
         let fake_phy_id = 1;
-        let fake_mac_roles = vec![fidl_common::MacRole::Ap];
+        let fake_mac_roles = vec![fidl_common::WlanMacRole::Ap];
         let phy_container = PhyContainer::new(fake_mac_roles.clone());
 
         let _ = phy_manager.phys.insert(fake_phy_id, phy_container);
@@ -1713,7 +1717,7 @@ mod tests {
         // Create an initial PhyContainer to be inserted into the test PhyManager before the fake
         // iface is added.
         let fake_phy_id = 1;
-        let fake_mac_roles = vec![fidl_common::MacRole::Ap];
+        let fake_mac_roles = vec![fidl_common::WlanMacRole::Ap];
         let phy_container = PhyContainer::new(fake_mac_roles);
 
         let _ = phy_manager.phys.insert(fake_phy_id, phy_container);
@@ -1744,7 +1748,7 @@ mod tests {
         // Create an initial PhyContainer to be inserted into the test PhyManager before the fake
         // iface is added.
         let fake_phy_id = 1;
-        let fake_mac_roles = vec![fidl_common::MacRole::Client];
+        let fake_mac_roles = vec![fidl_common::WlanMacRole::Client];
         let phy_container = PhyContainer::new(fake_mac_roles);
 
         let _ = phy_manager.phys.insert(fake_phy_id, phy_container);
@@ -1768,7 +1772,7 @@ mod tests {
         // iface is added.
         let fake_iface_id = 1;
         let fake_phy_id = 1;
-        let fake_mac_roles = vec![fidl_common::MacRole::Ap];
+        let fake_mac_roles = vec![fidl_common::WlanMacRole::Ap];
 
         {
             let phy_container = PhyContainer::new(fake_mac_roles.clone());
@@ -1807,7 +1811,7 @@ mod tests {
         // iface is added.
         let fake_iface_id = 1;
         let fake_phy_id = 1;
-        let fake_mac_roles = vec![fidl_common::MacRole::Ap];
+        let fake_mac_roles = vec![fidl_common::WlanMacRole::Ap];
 
         {
             let phy_container = PhyContainer::new(fake_mac_roles);
@@ -1846,7 +1850,7 @@ mod tests {
         // Create an initial PhyContainer to be inserted into the test PhyManager before the fake
         // ifaces are added.
         let fake_phy_id = 1;
-        let fake_mac_roles = vec![fidl_common::MacRole::Ap];
+        let fake_mac_roles = vec![fidl_common::WlanMacRole::Ap];
 
         {
             let phy_container = PhyContainer::new(fake_mac_roles.clone());
@@ -1891,7 +1895,7 @@ mod tests {
         // iface is added.
         let fake_iface_id = 1;
         let fake_phy_id = 1;
-        let fake_mac_roles = vec![fidl_common::MacRole::Client];
+        let fake_mac_roles = vec![fidl_common::WlanMacRole::Client];
 
         {
             let phy_container = PhyContainer::new(fake_mac_roles);
@@ -1929,7 +1933,7 @@ mod tests {
         // iface is added.
         let fake_iface_id = 1;
         let fake_phy_id = 1;
-        let fake_mac_roles = vec![fidl_common::MacRole::Ap];
+        let fake_mac_roles = vec![fidl_common::WlanMacRole::Ap];
         let driver_features = Vec::new();
         let phy_container = PhyContainer::new(fake_mac_roles.clone());
 
@@ -1977,7 +1981,7 @@ mod tests {
         // iface is added.
         let fake_iface_id = 1;
         let fake_phy_id = 1;
-        let fake_mac_role = fidl_common::MacRole::Client;
+        let fake_mac_role = fidl_common::WlanMacRole::Client;
         let fake_mac_roles = vec![fake_mac_role.clone()];
         let phy_container = PhyContainer::new(fake_mac_roles.clone());
 
@@ -2272,7 +2276,7 @@ mod tests {
         let mut test_values = test_setup();
         let mut phy_manager =
             PhyManager::new(test_values.dev_svc_proxy, test_values.monitor_proxy, test_values.node);
-        let fake_mac_roles = vec![fidl_common::MacRole::Client];
+        let fake_mac_roles = vec![fidl_common::WlanMacRole::Client];
 
         // Make it look like client connections have been enabled.
         phy_manager.client_connections_enabled = true;
@@ -2361,7 +2365,7 @@ mod tests {
         let mut test_values = test_setup();
         let mut phy_manager =
             PhyManager::new(test_values.dev_svc_proxy, test_values.monitor_proxy, test_values.node);
-        let fake_mac_roles = vec![fidl_common::MacRole::Client];
+        let fake_mac_roles = vec![fidl_common::WlanMacRole::Client];
 
         // Make it look like client connections have been enabled.
         phy_manager.client_connections_enabled = true;
@@ -2466,7 +2470,7 @@ mod tests {
 
         // Create a fake PHY entry without client interfaces.  Note that client connections have
         // not been set to enabled.
-        let fake_mac_roles = vec![fidl_common::MacRole::Client];
+        let fake_mac_roles = vec![fidl_common::WlanMacRole::Client];
         let _ = phy_manager.phys.insert(0, PhyContainer::new(fake_mac_roles));
 
         // Run recovery and ensure that it completes immediately and does not recover any

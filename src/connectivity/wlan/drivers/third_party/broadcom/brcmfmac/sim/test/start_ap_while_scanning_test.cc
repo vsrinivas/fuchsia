@@ -76,8 +76,8 @@ void ScanAndApStartTest::Init() {
                                              kDefaultChannel);
   ap_->EnableBeacon(zx::msec(60));
 
-  StartInterface(MAC_ROLE_CLIENT, &client_ifc_);
-  StartInterface(MAC_ROLE_AP, &softap_ifc_);
+  StartInterface(WLAN_MAC_ROLE_CLIENT, &client_ifc_);
+  StartInterface(WLAN_MAC_ROLE_AP, &softap_ifc_);
 }
 
 void ScanAndApStartTest::OnScanEnd(const wlan_fullmac_scan_end_t* end) {

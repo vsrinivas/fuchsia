@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    fidl_fuchsia_wlan_common::MacRole::Client,
+    fidl_fuchsia_wlan_common::WlanMacRole::Client,
     fidl_fuchsia_wlan_device_service::{
         CreateIfaceRequest, DeviceMonitorMarker, DeviceServiceMarker,
     },

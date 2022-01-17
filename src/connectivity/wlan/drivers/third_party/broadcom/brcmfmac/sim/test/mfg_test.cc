@@ -26,7 +26,7 @@ class MfgTest : public SimTest {
   static constexpr zx::duration kTestDuration = zx::sec(100);
   // How many devices have been registered by the fake devhost
   uint32_t DeviceCountByProtocolId(uint32_t proto_id);
-  void CreateIF(mac_role_t role);
+  void CreateIF(wlan_mac_role_t role);
   void DelIF(SimInterface* ifc);
   void StartSoftAP();
   void TxAuthAndAssocReq();
@@ -40,13 +40,13 @@ uint32_t MfgTest::DeviceCountByProtocolId(uint32_t proto_id) {
   return dev_mgr_->DeviceCountByProtocolId(proto_id);
 }
 
-void MfgTest::CreateIF(mac_role_t role) {
+void MfgTest::CreateIF(wlan_mac_role_t role) {
   switch (role) {
-    case MAC_ROLE_CLIENT:
-      ASSERT_EQ(StartInterface(MAC_ROLE_CLIENT, &client_ifc_), ZX_OK);
+    case WLAN_MAC_ROLE_CLIENT:
+      ASSERT_EQ(StartInterface(WLAN_MAC_ROLE_CLIENT, &client_ifc_), ZX_OK);
       break;
-    case MAC_ROLE_AP:
-      ASSERT_EQ(StartInterface(MAC_ROLE_AP, &softap_ifc_), ZX_OK);
+    case WLAN_MAC_ROLE_AP:
+      ASSERT_EQ(StartInterface(WLAN_MAC_ROLE_AP, &softap_ifc_), ZX_OK);
       break;
   }
 }
@@ -72,17 +72,17 @@ void MfgTest::TxAuthAndAssocReq() {
 // Check to make sure only one IF can be active at anytime with MFG FW.
 TEST_F(MfgTest, BasicTest) {
   Init();
-  ASSERT_EQ(StartInterface(MAC_ROLE_CLIENT, &client_ifc_), ZX_OK);
+  ASSERT_EQ(StartInterface(WLAN_MAC_ROLE_CLIENT, &client_ifc_), ZX_OK);
 
   // SoftAP If creation should fail as Client IF has already been created.
-  ASSERT_NE(StartInterface(MAC_ROLE_AP, &softap_ifc_, std::nullopt, kDefaultBssid), ZX_OK);
+  ASSERT_NE(StartInterface(WLAN_MAC_ROLE_AP, &softap_ifc_, std::nullopt, kDefaultBssid), ZX_OK);
 
   // Now delete the Client IF and SoftAP creation should pass
   EXPECT_EQ(DeleteInterface(&client_ifc_), ZX_OK);
   EXPECT_EQ(DeviceCountByProtocolId(ZX_PROTOCOL_WLAN_FULLMAC_IMPL), 0u);
-  ASSERT_EQ(StartInterface(MAC_ROLE_AP, &softap_ifc_, std::nullopt, kDefaultBssid), ZX_OK);
+  ASSERT_EQ(StartInterface(WLAN_MAC_ROLE_AP, &softap_ifc_, std::nullopt, kDefaultBssid), ZX_OK);
   // Now that SoftAP IF is created, Client IF creation should fail
-  ASSERT_NE(StartInterface(MAC_ROLE_CLIENT, &client_ifc_), ZX_OK);
+  ASSERT_NE(StartInterface(WLAN_MAC_ROLE_CLIENT, &client_ifc_), ZX_OK);
   EXPECT_EQ(DeleteInterface(&softap_ifc_), ZX_OK);
 }
 
@@ -91,14 +91,14 @@ TEST_F(MfgTest, BasicTest) {
 // SoftAP.
 TEST_F(MfgTest, CheckConnections) {
   Init();
-  StartInterface(MAC_ROLE_CLIENT, &client_ifc_);
+  StartInterface(WLAN_MAC_ROLE_CLIENT, &client_ifc_);
   // Start up our fake AP
   simulation::FakeAp ap(env_.get(), kDefaultBssid, kDefaultSsid, kDefaultChannel);
 
   // Associate to FakeAp
   client_ifc_.AssociateWith(ap, zx::msec(10));
   env_->ScheduleNotification(std::bind(&MfgTest::DelIF, this, &client_ifc_), zx::msec(100));
-  env_->ScheduleNotification(std::bind(&MfgTest::CreateIF, this, MAC_ROLE_AP), zx::msec(200));
+  env_->ScheduleNotification(std::bind(&MfgTest::CreateIF, this, WLAN_MAC_ROLE_AP), zx::msec(200));
   env_->ScheduleNotification(std::bind(&MfgTest::StartSoftAP, this), zx::msec(300));
   // Associate to SoftAP
   env_->ScheduleNotification(std::bind(&MfgTest::TxAuthAndAssocReq, this), zx::msec(400));

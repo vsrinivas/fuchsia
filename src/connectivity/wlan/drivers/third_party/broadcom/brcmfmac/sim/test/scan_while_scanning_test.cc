@@ -21,7 +21,7 @@ TEST_F(SimTest, ScanWhileScanning) {
   ASSERT_EQ(Init(), ZX_OK);
 
   SimInterface client_ifc;
-  StartInterface(MAC_ROLE_CLIENT, &client_ifc);
+  StartInterface(WLAN_MAC_ROLE_CLIENT, &client_ifc);
 
   env_->ScheduleNotification(std::bind(&SimInterface::StartScan, &client_ifc, kFirstScanId, false,
                                        std::optional<const std::vector<uint8_t>>{}),

@@ -37,7 +37,7 @@ type BandCapabilities = struct {
 
 type DeviceInfo = struct {
     sta_addr ieee80211.MacAddr;
-    role fuchsia.wlan.common.MacRole;
+    role fuchsia.wlan.common.WlanMacRole;
     bands vector<BandCapabilities>;
     driver_features vector<fuchsia.wlan.common.DriverFeature>:32;
     qos_capable bool;

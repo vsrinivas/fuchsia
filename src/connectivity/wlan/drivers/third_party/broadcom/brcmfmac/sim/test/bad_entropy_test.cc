@@ -31,7 +31,7 @@ TEST_F(SimTest, ActiveScan) {
   ASSERT_EQ(Init(), ZX_OK);
 
   SimInterface client_ifc;
-  ASSERT_EQ(StartInterface(MAC_ROLE_CLIENT, &client_ifc), ZX_OK);
+  ASSERT_EQ(StartInterface(WLAN_MAC_ROLE_CLIENT, &client_ifc), ZX_OK);
 
   BRCMF_SET_VALUE(getentropy, 1);
 

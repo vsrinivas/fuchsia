@@ -109,14 +109,15 @@ void Device::Unbind() {
   dispatcher_.InitiateShutdown([this] { device_async_remove(zxdev_); });
 }
 
-void ConvertSupportedMacRoles(::std::vector<wlan_common::MacRole>* fidl_supported_mac_roles,
-                              const mac_role_t* banjo_supported_mac_roles_list,
+void ConvertSupportedMacRoles(::std::vector<wlan_common::WlanMacRole>* fidl_supported_mac_roles,
+                              const wlan_mac_role_t* banjo_supported_mac_roles_list,
                               size_t banjo_supported_mac_roles_count) {
   fidl_supported_mac_roles->resize(0);
   for (size_t i = 0; i < banjo_supported_mac_roles_count; i++) {
-    mac_role_t mac_role = banjo_supported_mac_roles_list[i];
-    if (mac_role == MAC_ROLE_CLIENT || mac_role == MAC_ROLE_AP || mac_role == MAC_ROLE_MESH) {
-      fidl_supported_mac_roles->push_back(static_cast<wlan_common::MacRole>(mac_role));
+    wlan_mac_role_t mac_role = banjo_supported_mac_roles_list[i];
+    if (mac_role == WLAN_MAC_ROLE_CLIENT || mac_role == WLAN_MAC_ROLE_AP ||
+        mac_role == WLAN_MAC_ROLE_MESH) {
+      fidl_supported_mac_roles->push_back(static_cast<wlan_common::WlanMacRole>(mac_role));
     }
   }
 }
@@ -135,7 +136,7 @@ void Device::Query(QueryCallback callback) {
 
   // Free the dynamically allocated parts of fuchsia.hardware.wlanphyimpl/WlanphyImplInfo
   if (nullptr != phy_impl_info.supported_mac_roles_list) {
-    free(static_cast<void*>(const_cast<mac_role_t*>(phy_impl_info.supported_mac_roles_list)));
+    free(static_cast<void*>(const_cast<wlan_mac_role_t*>(phy_impl_info.supported_mac_roles_list)));
   }
 
   callback(std::move(resp));
@@ -147,16 +148,16 @@ void Device::CreateIface(wlan_device::CreateIfaceRequest req, CreateIfaceCallbac
   ltrace_fn();
   wlan_device::CreateIfaceResponse resp;
 
-  mac_role_t role = 0;
+  wlan_mac_role_t role = 0;
   switch (req.role) {
-    case wlan_common::MacRole::CLIENT:
-      role = MAC_ROLE_CLIENT;
+    case wlan_common::WlanMacRole::CLIENT:
+      role = WLAN_MAC_ROLE_CLIENT;
       break;
-    case wlan_common::MacRole::AP:
-      role = MAC_ROLE_AP;
+    case wlan_common::WlanMacRole::AP:
+      role = WLAN_MAC_ROLE_AP;
       break;
-    case wlan_common::MacRole::MESH:
-      role = MAC_ROLE_MESH;
+    case wlan_common::WlanMacRole::MESH:
+      role = WLAN_MAC_ROLE_MESH;
       break;
   }
 

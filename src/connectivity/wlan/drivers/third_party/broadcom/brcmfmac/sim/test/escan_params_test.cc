@@ -60,7 +60,7 @@ class EscanArgsTest : public SimTest {
 
 void EscanArgsTest::Init() {
   ASSERT_EQ(SimTest::Init(), ZX_OK);
-  ASSERT_EQ(StartInterface(MAC_ROLE_CLIENT, &client_ifc_), ZX_OK);
+  ASSERT_EQ(StartInterface(WLAN_MAC_ROLE_CLIENT, &client_ifc_), ZX_OK);
 }
 
 void EscanArgsTest::RunScanTest(const wlan_fullmac_scan_req& req) {

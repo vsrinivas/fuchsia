@@ -5,8 +5,8 @@
 use {
     anyhow::{format_err, Context as _, Error},
     fidl::endpoints,
-    fidl_fuchsia_wlan_common::MacRole,
     fidl_fuchsia_wlan_common::PowerSaveType,
+    fidl_fuchsia_wlan_common::WlanMacRole,
     fidl_fuchsia_wlan_device_service::{
         self as wlan_service, DeviceMonitorProxy, DeviceServiceProxy, QueryIfaceResponse,
     },
@@ -390,7 +390,7 @@ async fn print_iface_status(iface_id: u16, dev_svc_proxy: DeviceService) -> Resu
         return Err(format_err!("No response"));
     }
     match resp.unwrap().role {
-        MacRole::Client => {
+        WlanMacRole::Client => {
             let client_sme = get_client_sme(dev_svc_proxy, iface_id).await?;
             let client_status_response = client_sme.status().await?;
             match client_status_response {
@@ -413,7 +413,7 @@ async fn print_iface_status(iface_id: u16, dev_svc_proxy: DeviceService) -> Resu
                 }
             }
         }
-        MacRole::Ap => {
+        WlanMacRole::Ap => {
             let sme = get_ap_sme(dev_svc_proxy, iface_id).await?;
             let status = sme.status().await?;
             println!(
@@ -429,7 +429,7 @@ async fn print_iface_status(iface_id: u16, dev_svc_proxy: DeviceService) -> Resu
                 })
             );
         }
-        MacRole::Mesh => println!("Iface {}: Mesh not supported", iface_id),
+        WlanMacRole::Mesh => println!("Iface {}: Mesh not supported", iface_id),
     }
     Ok(())
 }
@@ -751,7 +751,7 @@ async fn handle_connect_transaction(
 /// interface be checked for support of the given `station_mode`.
 fn result_from_sme_raw_status(
     raw_status: zx_sys::zx_status_t,
-    station_mode: MacRole,
+    station_mode: WlanMacRole,
     iface_id: u16,
 ) -> Result<(), Error> {
     match zx_status::Status::from_raw(raw_status) {
@@ -781,7 +781,7 @@ async fn get_client_sme(
         .get_client_sme(iface_id, remote)
         .await
         .context("error sending GetClientSme request")?;
-    result_from_sme_raw_status(raw_status, MacRole::Client, iface_id).map(|_| proxy)
+    result_from_sme_raw_status(raw_status, WlanMacRole::Client, iface_id).map(|_| proxy)
 }
 
 async fn get_ap_sme(
@@ -793,7 +793,7 @@ async fn get_ap_sme(
         .get_ap_sme(iface_id, remote)
         .await
         .context("error sending GetApSme request")?;
-    result_from_sme_raw_status(raw_status, MacRole::Ap, iface_id).map(|_| proxy)
+    result_from_sme_raw_status(raw_status, WlanMacRole::Ap, iface_id).map(|_| proxy)
 }
 
 async fn get_mesh_sme(
@@ -805,7 +805,7 @@ async fn get_mesh_sme(
         .get_mesh_sme(iface_id, remote)
         .await
         .context("error sending GetMeshSme request")?;
-    result_from_sme_raw_status(raw_status, MacRole::Mesh, iface_id).map(|_| proxy)
+    result_from_sme_raw_status(raw_status, WlanMacRole::Mesh, iface_id).map(|_| proxy)
 }
 
 async fn get_iface_ids(
@@ -1161,16 +1161,26 @@ mod tests {
 
     #[test]
     fn test_result_from_sme_raw_status() {
-        let ok = result_from_sme_raw_status(zx_status::Status::OK.into_raw(), MacRole::Client, 0);
-        let not_found =
-            result_from_sme_raw_status(zx_status::Status::NOT_FOUND.into_raw(), MacRole::Mesh, 1);
-        let not_supported =
-            result_from_sme_raw_status(zx_status::Status::NOT_SUPPORTED.into_raw(), MacRole::Ap, 2);
-        let internal_error =
-            result_from_sme_raw_status(zx_status::Status::INTERNAL.into_raw(), MacRole::Client, 3);
+        let ok =
+            result_from_sme_raw_status(zx_status::Status::OK.into_raw(), WlanMacRole::Client, 0);
+        let not_found = result_from_sme_raw_status(
+            zx_status::Status::NOT_FOUND.into_raw(),
+            WlanMacRole::Mesh,
+            1,
+        );
+        let not_supported = result_from_sme_raw_status(
+            zx_status::Status::NOT_SUPPORTED.into_raw(),
+            WlanMacRole::Ap,
+            2,
+        );
+        let internal_error = result_from_sme_raw_status(
+            zx_status::Status::INTERNAL.into_raw(),
+            WlanMacRole::Client,
+            3,
+        );
         let unrecognized_error = result_from_sme_raw_status(
             zx_status::Status::INTERRUPTED_RETRY.into_raw(),
-            MacRole::Mesh,
+            WlanMacRole::Mesh,
             4,
         );
 

@@ -94,7 +94,7 @@ async fn on_iface_added_legacy(listener: &Listener, iface_id: u16) -> Result<(),
     let service = listener.proxy.clone();
 
     match response.role {
-        wlan_common::MacRole::Client => {
+        wlan_common::WlanMacRole::Client => {
             let legacy_shim = listener.legacy_shim.clone();
             let (sme, remote) = create_proxy()
                 .map_err(|e| format_err!("Failed to create a FIDL channel: {}", e))?;
@@ -111,8 +111,8 @@ async fn on_iface_added_legacy(listener: &Listener, iface_id: u16) -> Result<(),
             legacy_shim.set_if_empty(lc);
         }
         // The AP service make direct use of the PhyManager to get interfaces.
-        wlan_common::MacRole::Ap => {}
-        wlan_common::MacRole::Mesh => {
+        wlan_common::WlanMacRole::Ap => {}
+        wlan_common::WlanMacRole::Mesh => {
             return Err(format_err!("Unexpectedly observed a mesh iface: {}", iface_id))
         }
     }

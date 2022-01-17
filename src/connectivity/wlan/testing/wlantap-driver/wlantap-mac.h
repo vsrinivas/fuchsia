@@ -36,7 +36,8 @@ class WlantapMac {
   virtual ~WlantapMac() = default;
 };
 
-zx_status_t CreateWlantapMac(zx_device_t* parent_phy, const ::fuchsia::wlan::common::MacRole role,
+zx_status_t CreateWlantapMac(zx_device_t* parent_phy,
+                             const ::fuchsia::wlan::common::WlanMacRole role,
                              const ::fuchsia::wlan::tap::WlantapPhyConfig* phy_config, uint16_t id,
                              WlantapMac::Listener* listener, zx::channel sme_channel,
                              WlantapMac** ret);

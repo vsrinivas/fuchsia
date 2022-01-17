@@ -46,7 +46,7 @@ class WlanInterface {
   void DdkAsyncRemove();
   void DdkRelease();
 
-  static const std::vector<mac_role_t> GetMacRoles(struct brcmf_pub* drvr);
+  static const std::vector<wlan_mac_role_t> GetMacRoles(struct brcmf_pub* drvr);
 
   static zx_status_t Query(brcmf_pub* drvr, wlanphy_impl_info_t* out_info);
   static zx_status_t SetCountry(brcmf_pub* drvr, const wlanphy_country_t* country);

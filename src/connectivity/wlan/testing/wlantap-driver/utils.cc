@@ -85,25 +85,25 @@ uint32_t ConvertDriverFeatures(const ::std::vector<wlan_common::DriverFeature>& 
   return ret;
 }
 
-mac_role_t ConvertMacRole(wlan_common::MacRole role) {
+wlan_mac_role_t ConvertMacRole(wlan_common::WlanMacRole role) {
   switch (role) {
-    case wlan_common::MacRole::AP:
-      return MAC_ROLE_AP;
-    case wlan_common::MacRole::CLIENT:
-      return MAC_ROLE_CLIENT;
-    case wlan_common::MacRole::MESH:
-      return MAC_ROLE_MESH;
+    case wlan_common::WlanMacRole::AP:
+      return WLAN_MAC_ROLE_AP;
+    case wlan_common::WlanMacRole::CLIENT:
+      return WLAN_MAC_ROLE_CLIENT;
+    case wlan_common::WlanMacRole::MESH:
+      return WLAN_MAC_ROLE_MESH;
   }
 }
 
-wlan_common::MacRole ConvertMacRole(uint16_t role) {
+wlan_common::WlanMacRole ConvertMacRole(uint16_t role) {
   switch (role) {
-    case MAC_ROLE_AP:
-      return wlan_common::MacRole::AP;
-    case MAC_ROLE_CLIENT:
-      return wlan_common::MacRole::CLIENT;
-    case MAC_ROLE_MESH:
-      return wlan_common::MacRole::MESH;
+    case WLAN_MAC_ROLE_AP:
+      return wlan_common::WlanMacRole::AP;
+    case WLAN_MAC_ROLE_CLIENT:
+      return wlan_common::WlanMacRole::CLIENT;
+    case WLAN_MAC_ROLE_MESH:
+      return wlan_common::WlanMacRole::MESH;
   }
   ZX_ASSERT(0);
 }
@@ -183,7 +183,8 @@ zx_status_t ConvertTapPhyConfig(wlan_softmac_info_t* mac_info,
 zx_status_t ConvertTapPhyConfig(wlanphy_impl_info_t* phy_impl_info,
                                 const wlan_tap::WlantapPhyConfig& tap_phy_config) {
   *phy_impl_info = {};
-  mac_role_t* supported_mac_roles_list = static_cast<mac_role_t*>(calloc(1, sizeof(mac_role_t)));
+  wlan_mac_role_t* supported_mac_roles_list =
+      static_cast<wlan_mac_role_t*>(calloc(1, sizeof(wlan_mac_role_t)));
   supported_mac_roles_list[0] = ConvertMacRole(tap_phy_config.mac_role);
 
   phy_impl_info->supported_mac_roles_list = supported_mac_roles_list;

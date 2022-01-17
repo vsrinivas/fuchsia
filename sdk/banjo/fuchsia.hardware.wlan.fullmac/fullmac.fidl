@@ -398,7 +398,7 @@ type WlanFullmacFeature = strict enum : uint32 {
 type WlanFullmacQueryInfo = struct {
     sta_addr ieee80211.MacAddr;
     /// WLAN_MAC_ROLE_*
-    role fuchsia.wlan.common.MacRole;
+    role fuchsia.wlan.common.WlanMacRole;
     /// WLAN_FULLMAC_FEATURE_*
     features uint32;
     num_bands uint64;

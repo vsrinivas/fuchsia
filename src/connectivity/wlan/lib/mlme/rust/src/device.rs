@@ -934,7 +934,7 @@ mod test_utils {
 
         WlanSoftmacInfo {
             sta_addr: [7u8; 6],
-            mac_role: banjo_common::MacRole::CLIENT,
+            mac_role: banjo_common::WlanMacRole::CLIENT,
             supported_phys: WlanInfoPhyType::ERP | WlanInfoPhyType::HT | WlanInfoPhyType::VHT,
             driver_features: WlanInfoDriverFeature(0),
             caps: WlanInfoHardwareCapability(0),
@@ -1202,7 +1202,7 @@ mod tests {
         let dev = fake_device.as_device();
         let info = dev.wlan_softmac_info();
         assert_eq!(info.sta_addr, [7u8; 6]);
-        assert_eq!(info.mac_role, banjo_common::MacRole::CLIENT);
+        assert_eq!(info.mac_role, banjo_common::WlanMacRole::CLIENT);
         assert_eq!(info.driver_features, WlanInfoDriverFeature(0));
         assert_eq!(info.caps, WlanInfoHardwareCapability(0));
         assert_eq!(info.bands_count, 2);

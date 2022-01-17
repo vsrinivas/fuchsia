@@ -58,7 +58,7 @@ type PhyInfo = struct {
     dev_path string:optional;
 
     supported_mac_roles
-            vector<fuchsia.wlan.common.MacRole>:fuchsia.wlan.common.MAX_SUPPORTED_MAC_ROLES;
+            vector<fuchsia.wlan.common.WlanMacRole>:fuchsia.wlan.common.MAX_SUPPORTED_MAC_ROLES;
 };
 
 type QueryResponse = struct {
@@ -67,7 +67,7 @@ type QueryResponse = struct {
 };
 
 type CreateIfaceRequest = resource struct {
-    role fuchsia.wlan.common.MacRole;
+    role fuchsia.wlan.common.WlanMacRole;
     // TODO(fxbug.dev/29547): Make `mlme_channel` mandatory once all drivers support the channel.
     mlme_channel zx.handle:<CHANNEL, optional>;
     init_sta_addr ieee80211.MacAddr;

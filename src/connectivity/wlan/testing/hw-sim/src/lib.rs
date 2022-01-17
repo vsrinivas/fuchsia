@@ -6,7 +6,7 @@ use {
     anyhow::Error,
     fidl::endpoints::{create_endpoints, create_proxy},
     fidl_fuchsia_wlan_common as fidl_common,
-    fidl_fuchsia_wlan_common::MacRole,
+    fidl_fuchsia_wlan_common::WlanMacRole,
     fidl_fuchsia_wlan_ieee80211 as fidl_ieee80211, fidl_fuchsia_wlan_mlme as fidl_mlme,
     fidl_fuchsia_wlan_policy::{
         self as fidl_policy, Credential, Empty, NetworkConfig, NetworkIdentifier, SecurityType,
@@ -73,7 +73,7 @@ pub fn default_wlantap_config_client() -> WlantapPhyConfig {
 }
 
 pub fn wlantap_config_client(name: String, mac_addr: [u8; 6]) -> WlantapPhyConfig {
-    config::create_wlantap_config(name, mac_addr, MacRole::Client)
+    config::create_wlantap_config(name, mac_addr, WlanMacRole::Client)
 }
 
 pub fn default_wlantap_config_ap() -> WlantapPhyConfig {
@@ -81,7 +81,7 @@ pub fn default_wlantap_config_ap() -> WlantapPhyConfig {
 }
 
 pub fn wlantap_config_ap(name: String, mac_addr: [u8; 6]) -> WlantapPhyConfig {
-    config::create_wlantap_config(name, mac_addr, MacRole::Ap)
+    config::create_wlantap_config(name, mac_addr, WlanMacRole::Ap)
 }
 
 pub fn create_rx_info(channel: &fidl_common::WlanChannel, rssi_dbm: i8) -> WlanRxInfo {

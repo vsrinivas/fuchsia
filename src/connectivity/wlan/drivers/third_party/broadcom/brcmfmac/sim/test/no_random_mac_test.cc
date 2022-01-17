@@ -26,7 +26,7 @@ TEST_F(SimTest, RandomMacNotSupported) {
   ASSERT_EQ(Init(), ZX_OK);
 
   SimInterface client_ifc;
-  ASSERT_EQ(StartInterface(MAC_ROLE_CLIENT, &client_ifc), ZX_OK);
+  ASSERT_EQ(StartInterface(WLAN_MAC_ROLE_CLIENT, &client_ifc), ZX_OK);
 
   env_->ScheduleNotification(std::bind(&SimInterface::StartScan, &client_ifc, kScanTxnId, true,
                                        std::optional<const std::vector<uint8_t>>{}),

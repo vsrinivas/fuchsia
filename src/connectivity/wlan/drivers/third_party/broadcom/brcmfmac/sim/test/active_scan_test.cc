@@ -124,7 +124,7 @@ void ClientIfc::OnScanEnd(const wlan_fullmac_scan_end_t* end) { scan_result_code
 
 void ActiveScanTest::Init() {
   ASSERT_EQ(SimTest::Init(), ZX_OK);
-  ASSERT_EQ(StartInterface(MAC_ROLE_CLIENT, &client_ifc_), ZX_OK);
+  ASSERT_EQ(StartInterface(WLAN_MAC_ROLE_CLIENT, &client_ifc_), ZX_OK);
 
   // Get the interface MAC address
   client_ifc_.GetMacAddr(&sim_fw_mac_);

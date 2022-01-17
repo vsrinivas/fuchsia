@@ -277,7 +277,7 @@ void DataFrameTest::Init() {
   eapol_ind_count = 0;
 
   // Bring up the interface
-  ASSERT_EQ(StartInterface(MAC_ROLE_CLIENT, &client_ifc_, &sme_protocol_), ZX_OK);
+  ASSERT_EQ(StartInterface(WLAN_MAC_ROLE_CLIENT, &client_ifc_, &sme_protocol_), ZX_OK);
 
   // Figure out the interface's mac address
   client_ifc_.GetMacAddr(&ifc_mac_);

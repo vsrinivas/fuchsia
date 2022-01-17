@@ -84,7 +84,7 @@ fn query_wlanphy() -> Result<(), Error> {
 fn create_wlanintf() -> Result<(), Error> {
     let (mut executor, proxy) = get_proxy()?;
     let mut req = wlan_device::CreateIfaceRequest {
-        role: wlan_common::MacRole::Client,
+        role: wlan_common::WlanMacRole::Client,
         mlme_channel: None,
         init_sta_addr: NULL_MAC_ADDR,
     };
