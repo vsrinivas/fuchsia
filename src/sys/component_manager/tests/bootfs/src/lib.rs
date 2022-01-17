@@ -95,6 +95,20 @@ async fn check_kernel_vmos() -> Result<(), Error> {
 
     // We should have added at least the default VDSO.
     assert_ne!(vdsos.len(), 0);
+    directory::close(directory).await?;
+
+    // All VDSOs should have execution rights.
+    for vdso in vdsos {
+        let name = format!("{}/{}", KERNEL_VDSO_DIRECTORY, vdso.name);
+        let file = file::open_in_namespace(&name, OPEN_RIGHT_READABLE | OPEN_RIGHT_EXECUTABLE)
+            .context("failed to open file")?;
+        let data = file::read_num_bytes(&file, 1).await.context(format!(
+            "failed to read a single byte from a vdso opened as read-execute: {}",
+            name
+        ))?;
+        assert_ne!(data.len(), 0);
+        file::close(file).await?;
+    }
 
     Ok(())
 }

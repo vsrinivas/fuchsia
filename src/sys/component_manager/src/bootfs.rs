@@ -291,8 +291,8 @@ impl BootfsSvc {
             let content_size = vmo.get_content_size()?;
             let size = if content_size != 0 { content_size } else { vmo_size };
 
-            let info = vmo.info()?;
-            let is_exec = (info.handle_rights & zx::Rights::EXECUTE) != zx::Rights::NONE;
+            let info = vmo.basic_info()?;
+            let is_exec = info.rights.contains(zx::Rights::EXECUTE);
 
             match BootfsSvc::create_dir_entry(
                 vmo,
