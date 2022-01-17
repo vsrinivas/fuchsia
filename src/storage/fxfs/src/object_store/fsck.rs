@@ -144,11 +144,13 @@ pub async fn fsck_with_options<F: Fn(&FsckIssue)>(
         let layer_set = allocator.tree().immutable_layer_set();
         fsck.verbose(format!("Checking {} layers for allocator...", layer_set.layers.len()));
         for layer in layer_set.layers {
-            fsck.verbose(format!(
-                "Layer file {} for allocator is {} bytes",
-                layer.handle().unwrap().object_id(),
-                layer.handle().unwrap().get_size()
-            ));
+            if let Some(handle) = layer.handle() {
+                fsck.verbose(format!(
+                    "Layer file {} for allocator is {} bytes",
+                    handle.object_id(),
+                    handle.get_size()
+                ));
+            }
             fsck.check_layer_file_contents(
                 allocator.object_id(),
                 layer.handle().map(|h| h.object_id()).unwrap_or(INVALID_OBJECT_ID),
