@@ -48,7 +48,7 @@ pub const BLOCKIO_FLUSH: u32 = 3;
 pub const BLOCKIO_TRIM: u32 = 4;
 pub const BLOCKIO_CLOSE_VMO: u32 = 5;
 
-const BLOCK_OP_MASK: u32 = 0x000000ff;
+pub const BLOCK_OP_MASK: u32 = 0x000000ff;
 
 fn op_code_str(op_code: u32) -> &'static str {
     match op_code & BLOCK_OP_MASK {

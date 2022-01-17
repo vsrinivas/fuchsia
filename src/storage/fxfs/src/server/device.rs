@@ -10,8 +10,8 @@ use {
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_hardware_block::{self as block, BlockAndNodeRequest},
     fidl_fuchsia_io::{
-        self as fio, NodeAttributes, NodeInfo, Service, INO_UNKNOWN, MODE_TYPE_BLOCK_DEVICE,
-        OPEN_FLAG_NODE_REFERENCE,
+        self as fio, NodeAttributes, NodeInfo, NodeMarker, Service, INO_UNKNOWN,
+        MODE_TYPE_BLOCK_DEVICE, OPEN_FLAG_NODE_REFERENCE,
     },
     fuchsia_async::{self as fasync, FifoReadable, FifoWritable},
     fuchsia_zircon as zx,
@@ -109,8 +109,7 @@ impl BlockServer {
             status.into_raw()
         }
 
-        // TODO(fxbug.dev/89873): use BLOCK_OP_MASK
-        match request.op_code & 0xff {
+        match request.op_code & remote_block_device::BLOCK_OP_MASK {
             remote_block_device::BLOCKIO_CLOSE_VMO => {
                 let status = {
                     let mut vmos = self.vmos.lock().unwrap();
@@ -144,7 +143,7 @@ impl BlockServer {
             }
             remote_block_device::BLOCKIO_FLUSH => {
                 let response = BlockFifoResponse {
-                    status: zx::sys::ZX_OK,
+                    status: into_raw_status(self.file.flush().await),
                     request_id: request.request_id,
                     ..Default::default()
                 };
@@ -155,11 +154,20 @@ impl BlockServer {
         Ok(())
     }
 
-    fn handle_request(&self, request: BlockAndNodeRequest) -> Result<(), Error> {
+    fn handle_clone_request(&self, object: ServerEnd<NodeMarker>) {
+        let file = OpenedNode::new(self.file.clone());
+        let scope_cloned = self.scope.clone();
+        self.scope.spawn(async move {
+            let mut cloned_server = BlockServer::new(scope_cloned, object.into_channel(), file);
+            let _ = cloned_server.run().await;
+        });
+    }
+
+    async fn handle_request(&self, request: BlockAndNodeRequest) -> Result<(), Error> {
         match request {
+            // TODO(fxbug.dev/89873): replace the constants
             BlockAndNodeRequest::GetInfo { responder } => {
                 let mut block_info = block::BlockInfo {
-                    // TODO(fxbug.dev/89873): replace the constants
                     block_count: 1024,
                     block_size: self.file.get_block_size() as u32,
                     max_transfer_size: 1024 * 1024,
@@ -191,16 +199,10 @@ impl BlockServer {
             }
             // TODO(fxbug.dev/89873)
             BlockAndNodeRequest::IoToIo2Placeholder { control_handle: _ } => {}
-            // TODO(fxbug.dev/89873)
             BlockAndNodeRequest::Clone { flags: _, object, control_handle: _ } => {
-                let file = OpenedNode::new(self.file.clone());
-                let scope_cloned = self.scope.clone();
-                // use scope sth like scope.spawn , look at open()
-                self.scope.spawn(async move {
-                    let mut cloned_server =
-                        BlockServer::new(scope_cloned, object.into_channel(), file);
-                    let _ = cloned_server.run().await;
-                });
+                // Have to move this into a non-async function to avoid Rust compiler's
+                // complaint about recursive async functions
+                self.handle_clone_request(object);
             }
             // TODO(fxbug.dev/89873)
             BlockAndNodeRequest::Reopen { options: _, object_request: _, control_handle: _ } => {}
@@ -233,18 +235,25 @@ impl BlockServer {
             BlockAndNodeRequest::Sync2 { responder } => {
                 responder.send(&mut Err(zx::sys::ZX_ERR_NOT_SUPPORTED))?;
             }
-            // TODO(fxbug.dev/89873): get attributes from FxFile
             BlockAndNodeRequest::GetAttr { responder } => {
-                let mut attrs = NodeAttributes {
-                    mode: MODE_TYPE_BLOCK_DEVICE,
-                    id: INO_UNKNOWN,
-                    content_size: 0,
-                    storage_size: 0,
-                    link_count: 1,
-                    creation_time: 0,
-                    modification_time: 0,
+                match self.file.get_attrs().await {
+                    Ok(mut attrs) => {
+                        attrs.mode = MODE_TYPE_BLOCK_DEVICE;
+                        responder.send(zx::sys::ZX_OK, &mut attrs)?;
+                    }
+                    Err(e) => {
+                        let mut attrs = NodeAttributes {
+                            mode: 0,
+                            id: INO_UNKNOWN,
+                            content_size: 0,
+                            storage_size: 0,
+                            link_count: 0,
+                            creation_time: 0,
+                            modification_time: 0,
+                        };
+                        responder.send(e.into_raw(), &mut attrs)?;
+                    }
                 };
-                responder.send(zx::sys::ZX_OK, &mut attrs)?;
             }
             // TODO(fxbug.dev/89873)
             BlockAndNodeRequest::SetAttr { flags: _, attributes: _, responder } => {
@@ -270,7 +279,7 @@ impl BlockServer {
         server
             .into_stream()?
             .map_err(|e| e.into())
-            .try_for_each(|request| async { self.handle_request(request) })
+            .try_for_each(|request| self.handle_request(request))
             .await?;
         Ok(())
     }
@@ -331,8 +340,8 @@ mod tests {
         try_join!(
             async {
                 let blobfs = Filesystem::from_channel(client_channel, Blobfs::default())
-                    .expect("failed to create filesystem");
-                blobfs.format().await.expect("failed to format blobfs");
+                    .expect("create filesystem from channel failed");
+                blobfs.format().await.expect("format blobfs failed");
                 Result::<_, Error>::Ok(())
             },
             async {
@@ -350,7 +359,7 @@ mod tests {
                 Ok(())
             }
         )
-        .expect("client failed");
+        .expect("client or server failed");
     }
 
     #[fasync::run(10, test)]
@@ -370,7 +379,7 @@ mod tests {
                     let original_block_device =
                         ClientEnd::<BlockAndNodeMarker>::new(client_channel)
                             .into_proxy()
-                            .expect("failed to convert to proxy");
+                            .expect("convert into proxy failed");
                     original_block_device
                         .clone(CLONE_FLAG_SAME_RIGHTS, ServerEnd::new(server_channel_copy1))
                         .expect("clone failed");
@@ -418,7 +427,7 @@ mod tests {
                 Ok(())
             }
         )
-        .expect("client failed");
+        .expect("client or server failed");
     }
 
     #[fasync::run(10, test)]
@@ -459,7 +468,7 @@ mod tests {
                 Ok(())
             }
         )
-        .expect("client failed");
+        .expect("client or server failed");
     }
 
     #[fasync::run(10, test)]
@@ -491,7 +500,7 @@ mod tests {
                 Ok(())
             }
         )
-        .expect("client failed");
+        .expect("client or server failed");
     }
 
     #[fasync::run(10, test)]
@@ -550,6 +559,67 @@ mod tests {
                 Ok(())
             }
         )
-        .expect("client failed");
+        .expect("client or server failed");
+    }
+
+    #[fasync::run(10, test)]
+    async fn test_flush_is_called() {
+        let (client_channel, server_channel) =
+            zx::Channel::create().expect("Channel::create failed");
+        try_join!(
+            async {
+                let remote_block_device = RemoteBlockClient::new(client_channel).await?;
+                remote_block_device.flush().await.expect("flush failed");
+                Result::<_, Error>::Ok(())
+            },
+            async {
+                let fixture = TestFixture::new().await;
+                let root = fixture.root();
+                root.open(
+                    OPEN_FLAG_CREATE | OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
+                    MODE_TYPE_BLOCK_DEVICE,
+                    "foo",
+                    ServerEnd::new(server_channel),
+                )
+                .expect("open failed");
+
+                fixture.close().await;
+                Ok(())
+            }
+        )
+        .expect("client or server failed");
+    }
+
+    #[fasync::run(10, test)]
+    async fn test_getattr() {
+        let (client_channel, server_channel) =
+            zx::Channel::create().expect("Channel::create failed");
+
+        try_join!(
+            async {
+                let original_block_device = ClientEnd::<BlockAndNodeMarker>::new(client_channel)
+                    .into_proxy()
+                    .expect("convert into proxy failed");
+                let (_status, attr) =
+                    original_block_device.get_attr().await.expect("get_attr failed");
+                assert_eq!(attr.mode, MODE_TYPE_BLOCK_DEVICE);
+                Result::<_, Error>::Ok(())
+            },
+            async {
+                let fixture = TestFixture::new().await;
+                let root = fixture.root();
+                root.open(
+                    OPEN_FLAG_CREATE | OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
+                    MODE_TYPE_BLOCK_DEVICE,
+                    "foo",
+                    ServerEnd::new(server_channel),
+                )
+                .expect("open failed");
+
+                fixture.close().await;
+                Ok(())
+            }
+        )
+        .expect("client or server failed");
     }
 }
