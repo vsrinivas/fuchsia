@@ -209,9 +209,8 @@ protocol DeviceMonitor {
     GetSupportedMacRoles(struct {
         phy_id uint16;
     }) -> (struct {
-        supported_mac_roles
-                vector<fuchsia.wlan.common.WlanMacRole>:<fuchsia.wlan.common.MAX_SUPPORTED_MAC_ROLES, optional>;
-    });
+        supported_mac_roles fuchsia.wlan.common.WlanSupportedMacRoles;
+    }) error zx.status;
     WatchDevices(resource struct {
         watcher server_end:DeviceWatcher;
     });

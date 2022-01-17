@@ -30,12 +30,12 @@ pub(crate) async fn serve_monitor_requests(
             DeviceMonitorRequest::GetDevPath { phy_id, responder } => {
                 responder.send(get_dev_path(&phys, phy_id).as_deref())
             }
-            DeviceMonitorRequest::GetSupportedMacRoles { phy_id, responder } => {
-                match query_phy(&phys, phy_id).await {
-                    Some(mut info) => responder.send(Some(&mut info.supported_mac_roles.drain(..))),
-                    None => responder.send(None),
-                }
-            }
+            DeviceMonitorRequest::GetSupportedMacRoles { phy_id, responder } => responder.send(
+                &mut query_phy(&phys, phy_id)
+                    .await
+                    .map(|info| info.supported_mac_roles)
+                    .map_err(|status| status.into_raw()),
+            ),
             DeviceMonitorRequest::WatchDevices { watcher, control_handle: _ } => {
                 watcher_service
                     .add_watcher(watcher)
@@ -179,22 +179,17 @@ async fn get_ps_mode(
     }
 }
 
-async fn query_phy(phys: &PhyMap, id: u16) -> Option<fidl_dev::PhyInfo> {
-    let phy = phys.get(&id)?;
-    let query_result = phy
-        .proxy
-        .query()
-        .await
-        .map_err(move |e| {
-            error!("query_phy(id = {}): error sending 'Query' request to phy: {}", id, e);
-        })
-        .ok()?;
-    zx::Status::ok(query_result.status)
-        .map_err(move |e| {
-            error!("query_phy(id = {}): returned an error: {}", id, e);
-        })
-        .ok()?;
-    Some(query_result.info)
+async fn query_phy(phys: &PhyMap, id: u16) -> Result<fidl_dev::PhyInfo, zx::Status> {
+    let phy = phys.get(&id).ok_or(zx::Status::NOT_FOUND)?;
+    let query_result = phy.proxy.query().await.map_err(move |e| {
+        error!("query_phy(id = {}): error sending 'Query' request to phy: {}", id, e);
+        zx::Status::INTERNAL
+    })?;
+    zx::Status::ok(query_result.status).map_err(move |e| {
+        error!("query_phy(id = {}): returned an error: {}", id, e);
+        e
+    })?;
+    Ok(query_result.info)
 }
 
 async fn create_iface(
@@ -517,7 +512,7 @@ mod tests {
 
         // Reply with a fake phy info
         let mut phy_info = fake_phy_info();
-        phy_info.supported_mac_roles.push(fidl_wlan_common::WlanMacRole::Client);
+        phy_info.supported_mac_roles.client = true;
         responder
             .send(&mut fidl_dev::QueryResponse { status: zx::sys::ZX_OK, info: phy_info })
             .expect("failed to send QueryResponse");
@@ -526,9 +521,13 @@ mod tests {
         // Our original future should complete now and the client role should be reported.
         assert_variant!(
             exec.run_until_stalled(&mut query_fut),
-            Poll::Ready(Ok(Some(roles))) => {
-                assert_eq!(roles.len(), 1);
-                assert_eq!(roles[0], fidl_wlan_common::WlanMacRole::Client);
+            Poll::Ready(Ok(Ok(supported_mac_roles))) => {
+                assert_eq!(supported_mac_roles,
+                           fidl_wlan_common::WlanSupportedMacRoles {
+                               client: true,
+                               ap: false,
+                               mesh: false,
+                           });
             }
         );
     }
@@ -557,7 +556,10 @@ mod tests {
         assert_variant!(exec.run_until_stalled(&mut service_fut), Poll::Pending);
 
         // The attempt to query the PHY's information should fail.
-        assert_variant!(exec.run_until_stalled(&mut query_fut), Poll::Ready(Ok(None)));
+        assert_variant!(
+            exec.run_until_stalled(&mut query_fut),
+            Poll::Ready(Ok(Err(zx::sys::ZX_ERR_NOT_FOUND)))
+        );
     }
 
     #[test]
@@ -1099,7 +1101,11 @@ mod tests {
         fidl_dev::PhyInfo {
             id: 10,
             dev_path: Some("/dev/null".to_string()),
-            supported_mac_roles: Vec::new(),
+            supported_mac_roles: fidl_wlan_common::WlanSupportedMacRoles {
+                client: false,
+                ap: false,
+                mesh: false,
+            },
         }
     }
 

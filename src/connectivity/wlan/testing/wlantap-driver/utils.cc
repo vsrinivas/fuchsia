@@ -183,12 +183,17 @@ zx_status_t ConvertTapPhyConfig(wlan_softmac_info_t* mac_info,
 zx_status_t ConvertTapPhyConfig(wlanphy_impl_info_t* phy_impl_info,
                                 const wlan_tap::WlantapPhyConfig& tap_phy_config) {
   *phy_impl_info = {};
-  wlan_mac_role_t* supported_mac_roles_list =
-      static_cast<wlan_mac_role_t*>(calloc(1, sizeof(wlan_mac_role_t)));
-  supported_mac_roles_list[0] = ConvertMacRole(tap_phy_config.mac_role);
-
-  phy_impl_info->supported_mac_roles_list = supported_mac_roles_list;
-  phy_impl_info->supported_mac_roles_count = 1;
+  switch (tap_phy_config.mac_role) {
+    case wlan_common::WlanMacRole::CLIENT:
+      phy_impl_info->supported_mac_roles.client = true;
+      break;
+    case wlan_common::WlanMacRole::AP:
+      phy_impl_info->supported_mac_roles.ap = true;
+      break;
+    case wlan_common::WlanMacRole::MESH:
+      phy_impl_info->supported_mac_roles.mesh = true;
+      break;
+  }
   return ZX_OK;
 }
 

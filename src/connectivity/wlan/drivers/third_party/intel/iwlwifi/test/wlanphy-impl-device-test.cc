@@ -58,9 +58,9 @@ TEST_F(WlanphyImplDeviceTest, PhyQuery) {
 
   // Normal case
   ASSERT_EQ(ZX_OK, device_->WlanphyImplQuery(&info));
-  EXPECT_EQ(1U, info.supported_mac_roles_count);
-  EXPECT_EQ(WLAN_MAC_ROLE_CLIENT, info.supported_mac_roles_list[0]);
-  free(static_cast<void*>(const_cast<wlan_mac_role_t*>(info.supported_mac_roles_list)));
+  ASSERT_EQ(info.supported_mac_roles.client, true);
+  ASSERT_EQ(info.supported_mac_roles.ap, false);
+  ASSERT_EQ(info.supported_mac_roles.mesh, false);
 }
 
 TEST_F(WlanphyImplDeviceTest, PhyPartialCreateCleanup) {

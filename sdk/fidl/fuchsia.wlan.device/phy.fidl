@@ -57,8 +57,7 @@ type PhyInfo = struct {
     // The topological path of the phy in the device tree.
     dev_path string:optional;
 
-    supported_mac_roles
-            vector<fuchsia.wlan.common.WlanMacRole>:fuchsia.wlan.common.MAX_SUPPORTED_MAC_ROLES;
+    supported_mac_roles fuchsia.wlan.common.WlanSupportedMacRoles;
 };
 
 type QueryResponse = struct {

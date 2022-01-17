@@ -109,22 +109,15 @@ void Device::Unbind() {
   dispatcher_.InitiateShutdown([this] { device_async_remove(zxdev_); });
 }
 
-void ConvertSupportedMacRoles(::std::vector<wlan_common::WlanMacRole>* fidl_supported_mac_roles,
-                              const wlan_mac_role_t* banjo_supported_mac_roles_list,
-                              size_t banjo_supported_mac_roles_count) {
-  fidl_supported_mac_roles->resize(0);
-  for (size_t i = 0; i < banjo_supported_mac_roles_count; i++) {
-    wlan_mac_role_t mac_role = banjo_supported_mac_roles_list[i];
-    if (mac_role == WLAN_MAC_ROLE_CLIENT || mac_role == WLAN_MAC_ROLE_AP ||
-        mac_role == WLAN_MAC_ROLE_MESH) {
-      fidl_supported_mac_roles->push_back(static_cast<wlan_common::WlanMacRole>(mac_role));
-    }
-  }
+void ConvertSupportedMacRoles(wlan_common::WlanSupportedMacRoles* fidl_supported_mac_roles,
+                              const wlan_supported_mac_roles_t* banjo_supported_mac_roles) {
+  fidl_supported_mac_roles->client = banjo_supported_mac_roles->client;
+  fidl_supported_mac_roles->ap = banjo_supported_mac_roles->ap;
+  fidl_supported_mac_roles->mesh = banjo_supported_mac_roles->mesh;
 }
 
 static void ConvertPhyInfo(wlan_device::PhyInfo* fidl_info, const wlanphy_impl_info_t* banjo_info) {
-  ConvertSupportedMacRoles(&fidl_info->supported_mac_roles, banjo_info->supported_mac_roles_list,
-                           banjo_info->supported_mac_roles_count);
+  ConvertSupportedMacRoles(&fidl_info->supported_mac_roles, &banjo_info->supported_mac_roles);
 }
 
 void Device::Query(QueryCallback callback) {
@@ -133,11 +126,6 @@ void Device::Query(QueryCallback callback) {
   wlanphy_impl_info_t phy_impl_info;
   resp.status = wlanphy_impl_.ops->query(wlanphy_impl_.ctx, &phy_impl_info);
   ConvertPhyInfo(&resp.info, &phy_impl_info);
-
-  // Free the dynamically allocated parts of fuchsia.hardware.wlanphyimpl/WlanphyImplInfo
-  if (nullptr != phy_impl_info.supported_mac_roles_list) {
-    free(static_cast<void*>(const_cast<wlan_mac_role_t*>(phy_impl_info.supported_mac_roles_list)));
-  }
 
   callback(std::move(resp));
 }

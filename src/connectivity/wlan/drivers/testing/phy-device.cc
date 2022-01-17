@@ -90,16 +90,7 @@ zx_status_t PhyDevice::Message(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
 }
 
 namespace {
-wlan_device::PhyInfo get_info() {
-  wlan_device::PhyInfo info;
-
-  info.supported_mac_roles.resize(0);
-
-  info.supported_mac_roles.push_back(wlan_common::WlanMacRole::CLIENT);
-  info.supported_mac_roles.push_back(wlan_common::WlanMacRole::AP);
-
-  return info;
-}
+wlan_device::PhyInfo get_info() { return {.supported_mac_roles = {.client = true, .ap = true}}; }
 }  // namespace
 
 void PhyDevice::Query(QueryCallback callback) {

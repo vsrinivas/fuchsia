@@ -3124,13 +3124,17 @@ static void ath10k_wlan_softmac_band_query_info(struct ath10k* ar,
 // TODO(fxbug.dev/52941): Remove this function in favor of a more targeted query for phy data.
 void ath10k_pci_fill_wlanphy_impl_info(struct ath10k* ar, wlanphy_impl_info_t* phy_info) {
   *phy_info = (wlanphy_impl_info_t){};
-
-  // mac_role
-  wlan_mac_role_t* supported_mac_roles_list = (wlan_mac_role_t*)calloc(1, sizeof(wlan_mac_role_t));
-  supported_mac_roles_list[0] = ar->mac_role;
-
-  phy_info->supported_mac_roles_list = supported_mac_roles_list;
-  phy_info->supported_mac_roles_count = 1;
+  switch (ar->mac_role) {
+    case WLAN_MAC_ROLE_CLIENT:
+      phy_info->supported_mac_roles.client = true;
+      break;
+    case WLAN_MAC_ROLE_AP:
+      phy_info->supported_mac_roles.ap = true;
+      break;
+    case WLAN_MAC_ROLE_MESH:
+      phy_info->supported_mac_roles.mesh = true;
+      break;
+  }
 }
 
 void ath10k_pci_fill_wlan_softmac_info(struct ath10k* ar, wlan_softmac_info_t* mac_info) {

@@ -34,8 +34,12 @@ type WlanMacRole = strict enum {
     AP = 2;
     MESH = 3;
 };
-@namespaced
-const MAX_SUPPORTED_MAC_ROLES uint8 = 3;
+
+type WlanSupportedMacRoles = struct {
+    client bool;
+    ap bool;
+    mesh bool;
+};
 
 type ChannelBandwidth = strict enum { // Channel Bandwidth
     CBW20 = 0;

@@ -5,10 +5,13 @@
 #include <fuchsia/wlan/common/cpp/fidl.h>
 #include <fuchsia/wlan/device/cpp/fidl.h>
 
+#include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
 #include "../device.h"
 #include "../driver.h"
+
+using ::testing::FieldsAre;
 
 namespace wlanphy {
 namespace {
@@ -16,34 +19,30 @@ namespace wlan_common = ::fuchsia::wlan::common;
 namespace wlan_device = ::fuchsia::wlan::device;
 
 TEST(WlanphyTest, ConvertSupportedMacRoles) {
-  const wlan_mac_role_t kClient[] = {WLAN_MAC_ROLE_CLIENT};
-  const wlan_mac_role_t kAp[] = {WLAN_MAC_ROLE_AP};
-  const wlan_mac_role_t kMesh[] = {WLAN_MAC_ROLE_MESH};
-  const wlan_mac_role_t kClientAp[] = {WLAN_MAC_ROLE_CLIENT, WLAN_MAC_ROLE_AP};
-  const wlan_mac_role_t kClientApMesh[] = {WLAN_MAC_ROLE_CLIENT, WLAN_MAC_ROLE_AP,
-                                           WLAN_MAC_ROLE_MESH};
+  const wlan_supported_mac_roles_t kClient = {.client = true};
+  const wlan_supported_mac_roles_t kAp = {.ap = true};
+  const wlan_supported_mac_roles_t kMesh = {.mesh = true};
+  const wlan_supported_mac_roles_t kClientAp = {.client = true, .ap = true};
+  const wlan_supported_mac_roles_t kClientApMesh = {.client = true, .ap = true, .mesh = true};
 
-  std::vector<wlan_common::WlanMacRole> roles;
+  wlan_common::WlanSupportedMacRoles roles;
 
   // Check the return value of the function for each role and some combinations
   // Client
-  ConvertSupportedMacRoles(&roles, kClient, 1);
-  EXPECT_NE(std::find(roles.begin(), roles.end(), wlan_common::WlanMacRole::CLIENT), roles.end());
+  ConvertSupportedMacRoles(&roles, &kClient);
+  EXPECT_THAT(roles, FieldsAre(true, false, false));
   // AP
-  ConvertSupportedMacRoles(&roles, kAp, 1);
-  EXPECT_NE(std::find(roles.begin(), roles.end(), wlan_common::WlanMacRole::AP), roles.end());
+  ConvertSupportedMacRoles(&roles, &kAp);
+  EXPECT_THAT(roles, FieldsAre(false, true, false));
   // Mesh
-  ConvertSupportedMacRoles(&roles, kMesh, 1);
-  EXPECT_NE(std::find(roles.begin(), roles.end(), wlan_common::WlanMacRole::MESH), roles.end());
+  ConvertSupportedMacRoles(&roles, &kMesh);
+  EXPECT_THAT(roles, FieldsAre(false, false, true));
   // Client + AP
-  ConvertSupportedMacRoles(&roles, kClientAp, 2);
-  EXPECT_NE(std::find(roles.begin(), roles.end(), wlan_common::WlanMacRole::CLIENT), roles.end());
-  EXPECT_NE(std::find(roles.begin(), roles.end(), wlan_common::WlanMacRole::AP), roles.end());
+  ConvertSupportedMacRoles(&roles, &kClientAp);
+  EXPECT_THAT(roles, FieldsAre(true, true, false));
   // Client + AP + Mesh
-  ConvertSupportedMacRoles(&roles, kClientApMesh, 3);
-  EXPECT_NE(std::find(roles.begin(), roles.end(), wlan_common::WlanMacRole::CLIENT), roles.end());
-  EXPECT_NE(std::find(roles.begin(), roles.end(), wlan_common::WlanMacRole::AP), roles.end());
-  EXPECT_NE(std::find(roles.begin(), roles.end(), wlan_common::WlanMacRole::MESH), roles.end());
+  ConvertSupportedMacRoles(&roles, &kClientApMesh);
+  EXPECT_THAT(roles, FieldsAre(true, true, true));
 }
 
 wlanphy_impl_protocol_ops_t make_ops_for_get_country(
