@@ -4,19 +4,65 @@
 
 use fidl_fuchsia_developer_bridge::VersionInfo;
 
-#[cfg(not(test))]
-const VERSION_INFO: &str = std::include_str!(std::env!("FFX_VERSION_INFO"));
-#[cfg(not(test))]
-const BUILD_VERSION: &str = std::include_str!(std::env!("BUILD_VERSION"));
-
-#[cfg(not(test))]
-pub fn build_info() -> VersionInfo {
-    build_info_impl(VERSION_INFO.to_string(), BUILD_VERSION.to_string())
+const fn default_version_value() -> [u8; 64] {
+    // Placeholder value to be replaced post-link: "V3RS1ONS" * 8
+    [
+        'V' as u8, '3' as u8, 'R' as u8, 'S' as u8, '1' as u8, 'O' as u8, 'N' as u8, 'S' as u8,
+        'V' as u8, '3' as u8, 'R' as u8, 'S' as u8, '1' as u8, 'O' as u8, 'N' as u8, 'S' as u8,
+        'V' as u8, '3' as u8, 'R' as u8, 'S' as u8, '1' as u8, 'O' as u8, 'N' as u8, 'S' as u8,
+        'V' as u8, '3' as u8, 'R' as u8, 'S' as u8, '1' as u8, 'O' as u8, 'N' as u8, 'S' as u8,
+        'V' as u8, '3' as u8, 'R' as u8, 'S' as u8, '1' as u8, 'O' as u8, 'N' as u8, 'S' as u8,
+        'V' as u8, '3' as u8, 'R' as u8, 'S' as u8, '1' as u8, 'O' as u8, 'N' as u8, 'S' as u8,
+        'V' as u8, '3' as u8, 'R' as u8, 'S' as u8, '1' as u8, 'O' as u8, 'N' as u8, 'S' as u8,
+        'V' as u8, '3' as u8, 'R' as u8, 'S' as u8, '1' as u8, 'O' as u8, 'N' as u8, 'S' as u8,
+    ]
 }
 
-#[cfg(test)]
+const fn default_build_value() -> [u8; 64] {
+    // Placeholder value to be replaced post-link: "BU1LDV3R" * 8
+    [
+        'B' as u8, 'U' as u8, '1' as u8, 'L' as u8, 'D' as u8, 'V' as u8, '3' as u8, 'R' as u8,
+        'B' as u8, 'U' as u8, '1' as u8, 'L' as u8, 'D' as u8, 'V' as u8, '3' as u8, 'R' as u8,
+        'B' as u8, 'U' as u8, '1' as u8, 'L' as u8, 'D' as u8, 'V' as u8, '3' as u8, 'R' as u8,
+        'B' as u8, 'U' as u8, '1' as u8, 'L' as u8, 'D' as u8, 'V' as u8, '3' as u8, 'R' as u8,
+        'B' as u8, 'U' as u8, '1' as u8, 'L' as u8, 'D' as u8, 'V' as u8, '3' as u8, 'R' as u8,
+        'B' as u8, 'U' as u8, '1' as u8, 'L' as u8, 'D' as u8, 'V' as u8, '3' as u8, 'R' as u8,
+        'B' as u8, 'U' as u8, '1' as u8, 'L' as u8, 'D' as u8, 'V' as u8, '3' as u8, 'R' as u8,
+        'B' as u8, 'U' as u8, '1' as u8, 'L' as u8, 'D' as u8, 'V' as u8, '3' as u8, 'R' as u8,
+    ]
+}
+
+#[cfg(target_os = "macos")]
+#[used]
+#[no_mangle]
+// mach-o section specifiers require a segment and section separated by a comma.
+#[link_section = ".FFX_VERSION,.ffx_version"]
+static VERSION_INFO: [u8; 64] = default_version_value();
+
+#[cfg(not(target_os = "macos"))]
+#[used]
+#[no_mangle]
+#[link_section = ".ffx_version"]
+static VERSION_INFO: [u8; 64] = default_version_value();
+
+#[cfg(target_os = "macos")]
+#[used]
+#[no_mangle]
+// mach-o section specifiers require a segment and section separated by a comma.
+#[link_section = ".FFX_BUILD,.ffx_build"]
+static BUILD_VERSION: [u8; 64] = default_build_value();
+
+#[cfg(not(target_os = "macos"))]
+#[used]
+#[no_mangle]
+#[link_section = ".ffx_build"]
+static BUILD_VERSION: [u8; 64] = default_build_value();
+
 pub fn build_info() -> VersionInfo {
-    panic!("build_info should not be called from a test environment");
+    build_info_impl(
+        String::from_utf8_lossy(&VERSION_INFO).to_string(),
+        String::from_utf8_lossy(&BUILD_VERSION).to_string(),
+    )
 }
 
 fn build_info_impl(raw_version_info: String, raw_build_version: String) -> VersionInfo {
