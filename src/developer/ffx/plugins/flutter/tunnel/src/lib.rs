@@ -64,7 +64,10 @@ pub async fn tunnel_impl<W: std::io::Write>(
 
     let show_cmd = iquery::commands::ShowCommand {
         manifest: None,
-        selectors: vec![String::from("flutter_*_runner.cmx")],
+        selectors: vec![
+            String::from("flutter_*_runner.cmx"),
+            String::from("core/session-manager/session\\:session/flutter_*_runner"),
+        ],
         accessor_path: None,
     };
     let provider = DiagnosticsBridgeProvider::new(diagnostics_proxy, rcs_proxy);
