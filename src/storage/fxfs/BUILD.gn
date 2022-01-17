@@ -7,7 +7,6 @@ import("//build/components/fuchsia_unittest_component.gni")
 import("//build/fidl/fidl.gni")
 import("//build/rust/rustc_binary.gni")
 import("//build/rust/rustc_library.gni")
-import("//build/rust/rustc_macro.gni")
 import("//src/storage/fs_test/suite.gni")
 
 # Set to true to enable tracing.  For now this cannot be enabled by default due to
@@ -16,7 +15,6 @@ import("//src/storage/fs_test/suite.gni")
 tracing_enabled = false
 
 fxfs_deps = [
-  ":serialize-macros",
   "//src/lib/async-utils",
   "//src/lib/fuchsia-async",
   "//src/lib/storage/storage_device",
@@ -86,10 +84,6 @@ fxfs_sources = [
   "src/object_store/writeback_cache.rs",
   "src/range.rs",
   "src/round.rs",
-  "src/serialized_types/mod.rs",
-  "src/serialized_types/test_traits.rs",
-  "src/serialized_types/tests.rs",
-  "src/serialized_types/traits.rs",
   "src/testing.rs",
   "src/testing/fake_object.rs",
   "src/trace.rs",
@@ -133,17 +127,6 @@ if (is_fuchsia) {
     "src/server/testing.rs",
     "src/server/volume.rs",
   ]
-}
-
-rustc_macro("serialize-macros") {
-  name = "serialize-macros"
-  deps = [
-    "//third_party/rust_crates:proc-macro2",
-    "//third_party/rust_crates:quote",
-    "//third_party/rust_crates:syn",
-  ]
-  source_root = "src/serialized_types/macros.rs"
-  sources = [ "src/serialized_types/macros.rs" ]
 }
 
 rustc_library("lib") {
