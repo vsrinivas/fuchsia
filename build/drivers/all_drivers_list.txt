@@ -84,8 +84,8 @@
 //src/devices/board/drivers/sherlock:luis-driver
 //src/devices/board/drivers/sherlock:luis-factory-driver
 //src/devices/board/drivers/sherlock:luis-factory-rndis-driver
-//src/devices/board/drivers/sherlock:sherlock-driver
 //src/devices/board/drivers/sherlock:sherlock-dai-test-driver
+//src/devices/board/drivers/sherlock:sherlock-driver
 //src/devices/board/drivers/sherlock:sherlock-factory-driver
 //src/devices/board/drivers/sherlock:sherlock-factory-rndis-driver
 //src/devices/board/drivers/vim3:vim3-driver
@@ -188,6 +188,8 @@
 //src/devices/tests/autobind:driver
 //src/devices/tests/bind-fail-test:fuchsia_driver
 //src/devices/tests/bind-test-v2:bind-test-driver-v2-driver
+//src/devices/tests/compat/leaf:driver
+//src/devices/tests/compat/root:driver
 //src/devices/tests/composite-driver-v1/test-root:driver
 //src/devices/tests/composite-driver-v1:driver
 //src/devices/tests/ddk-environment-test:ddk-environment-test-driver

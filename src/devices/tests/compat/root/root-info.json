@@ -1,0 +1,10 @@
+{
+    "short_description": "Root driver for Compat test",
+    "manufacturer": "",
+    "families": [],
+    "models": [],
+    "areas": [
+        "DriverFramework",
+        "Test"
+    ]
+}

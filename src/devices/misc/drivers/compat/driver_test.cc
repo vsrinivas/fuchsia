@@ -320,7 +320,7 @@ TEST_F(DriverTest, Start_BindFailed) {
   ASSERT_NE(nullptr, v1_test.get());
 
   // Verify v1_test.so state after bind.
-  EXPECT_EQ(ZX_ERR_UNAVAILABLE, v1_test->status);
+  EXPECT_EQ(ZX_ERR_NOT_SUPPORTED, v1_test->status);
   EXPECT_TRUE(v1_test->did_bind);
   EXPECT_FALSE(v1_test->did_create);
   EXPECT_FALSE(v1_test->did_release);

@@ -192,7 +192,7 @@ TEST_F(DeviceTest, GetProtocolFromDevice) {
   zx_protocol_device_t ops{};
   compat::Device without("without-protocol", nullptr, &ops, std::nullopt, std::nullopt, logger(),
                          dispatcher());
-  ASSERT_EQ(ZX_ERR_UNAVAILABLE, without.GetProtocol(ZX_PROTOCOL_BLOCK, nullptr));
+  ASSERT_EQ(ZX_ERR_NOT_SUPPORTED, without.GetProtocol(ZX_PROTOCOL_BLOCK, nullptr));
 
   // Create a device with a get_protocol hook.
   ops.get_protocol = [](void* ctx, uint32_t proto_id, void* protocol) {

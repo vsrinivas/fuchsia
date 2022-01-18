@@ -69,6 +69,10 @@ class Device : public std::enable_shared_from_this<Device> {
   driver::Logger& logger_;
   async_dispatcher_t* const dispatcher_;
 
+  // The default protocol of the device.
+  uint32_t proto_id_ = 0;
+  void* proto_ops_ = nullptr;
+
   std::optional<fit::callback<void()>> vnode_teardown_callback_;
 
   // The device's parent. If this field is set then the Device ptr is guaranteed

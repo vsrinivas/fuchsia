@@ -43,6 +43,7 @@ group("drivers") {
     "autobind:drivers",
     "bind-fail-test:driver",
     "bind-test-v2:bind-test-driver-v2",
+    "compat:drivers",
     "composite-driver-v1:drivers",
     "ddk-environment-test:ddk-environment-test",
     "ddk-fallback-test:ddk-fallback-test",

@@ -27,15 +27,9 @@ async fn test_sample_driver() -> Result<()> {
 
     // Connect to our driver.
     let dev = instance.driver_test_realm_connect_to_dev()?;
-    let node = device_watcher::recursive_wait_and_open_node(&dev, "compat/sample_driver").await?;
-
-    // Turn the Node connection into the driver's FIDL.
-    let driver = fidl_fuchsia_hardware_sample::EchoProxy::new(node.into_channel().unwrap());
-
-    // Call a FIDL method on the driver.
-    let response = driver.echo_string("Hello world!").await.unwrap();
-
-    // Verify the response.
-    assert!(response == "Hello world!");
+    let node = device_watcher::recursive_wait_and_open_node(&dev, "compat/leaf").await?;
+    let driver = fidl_fuchsia_hardware_compat::LeafProxy::new(node.into_channel().unwrap());
+    let response = driver.get_string().await.unwrap();
+    assert_eq!(response, "hello world!");
     Ok(())
 }

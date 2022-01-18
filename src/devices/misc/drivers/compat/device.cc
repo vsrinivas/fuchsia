@@ -80,6 +80,10 @@ zx_status_t Device::Add(device_add_args_t* zx_args, zx_device_t** out) {
   auto device = std::make_shared<Device>(zx_args->name, zx_args->ctx, zx_args->ops, this,
                                          std::nullopt, logger_, dispatcher_);
   auto device_ptr = device.get();
+  if (zx_args->proto_id) {
+    device_ptr->proto_id_ = zx_args->proto_id;
+    device_ptr->proto_ops_ = zx_args->proto_ops;
+  }
 
   // Create NodeAddArgs from `zx_args`.
   fidl::Arena arena;
@@ -194,11 +198,22 @@ void Device::Remove() {
 void Device::RemoveChild(std::shared_ptr<Device>& child) { children_.remove(child); }
 
 zx_status_t Device::GetProtocol(uint32_t proto_id, void* out) const {
-  if (!HasOp(ops_, &zx_protocol_device_t::get_protocol)) {
-    FDF_LOG(WARNING, "Protocol %u for device '%s' unavailable", proto_id, Name());
-    return ZX_ERR_UNAVAILABLE;
+  if (HasOp(linked_device_.ops_, &zx_protocol_device_t::get_protocol)) {
+    return linked_device_.ops_->get_protocol(context_, proto_id, out);
   }
-  return ops_->get_protocol(context_, proto_id, out);
+
+  if ((linked_device_.proto_id_ != proto_id) || (linked_device_.proto_ops_ == nullptr)) {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+
+  struct GenericProtocol {
+    void* ops;
+    void* ctx;
+  };
+  auto proto = static_cast<GenericProtocol*>(out);
+  proto->ops = linked_device_.proto_ops_;
+  proto->ctx = linked_device_.context_;
+  return ZX_OK;
 }
 
 zx_status_t Device::AddMetadata(uint32_t type, const void* data, size_t size) {

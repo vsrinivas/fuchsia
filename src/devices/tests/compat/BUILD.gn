@@ -12,11 +12,25 @@ group("tests") {
   deps = [ ":package" ]
 }
 
+group("drivers") {
+  testonly = true
+  deps = [
+    "leaf:component",
+    "root:component",
+  ]
+}
+
+fidl("fuchsia.hardware.compat") {
+  sources = [ "compat.test.fidl" ]
+  public_deps = [ "//zircon/vdso/zx" ]
+}
+
 rustc_test("compat-shim-test") {
   testonly = true
   source_root = "test.rs"
   sources = [ "test.rs" ]
   deps = [
+    ":fuchsia.hardware.compat-rustc",
     "//examples/drivers/driver_test_realm/sample-driver:fuchsia.hardware.sample-rustc",
     "//sdk/fidl/fuchsia.device.test:fuchsia.device.test-rustc",
     "//sdk/fidl/fuchsia.driver.test:fuchsia.driver.test-rustc",
@@ -33,7 +47,8 @@ fuchsia_unittest_package("package") {
   package_name = "compat-driver-test"
   deps = [
     ":compat-shim-test",
-    "//examples/drivers/driver_test_realm/sample-driver",
+    "leaf:component",
+    "root:component",
     "//src/devices/misc/drivers/test-parent",
   ]
 }
