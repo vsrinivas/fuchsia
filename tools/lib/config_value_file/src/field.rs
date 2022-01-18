@@ -103,32 +103,62 @@ trait JsonValueExt {
     fn expected(&self, ty: JsonTy) -> FieldError;
 }
 
+fn check_integer(v: &JsonValue) -> Result<(), FieldError> {
+    if !v.is_number() {
+        Err(FieldError::JsonTypeMismatch { expected: JsonTy::Number, received: v.ty() })
+    } else if !(v.is_i64()) {
+        Err(FieldError::NumberNotInteger)
+    } else {
+        Ok(())
+    }
+}
+
+fn check_unsigned(v: &JsonValue) -> Result<(), FieldError> {
+    if v.is_u64() {
+        Ok(())
+    } else {
+        Err(FieldError::NumberNotUnsigned)
+    }
+}
+
 impl JsonValueExt for JsonValue {
     fn parse_bool(&self) -> Result<bool, FieldError> {
         self.as_bool().ok_or_else(|| self.expected(JsonTy::Bool))
     }
     fn parse_u8(&self) -> Result<u8, FieldError> {
+        check_integer(self)?;
+        check_unsigned(self)?;
         Ok(<u8>::try_from(self.as_u64().ok_or_else(|| self.expected(JsonTy::Number))?)?)
     }
     fn parse_u16(&self) -> Result<u16, FieldError> {
+        check_integer(self)?;
+        check_unsigned(self)?;
         Ok(<u16>::try_from(self.as_u64().ok_or_else(|| self.expected(JsonTy::Number))?)?)
     }
     fn parse_u32(&self) -> Result<u32, FieldError> {
+        check_integer(self)?;
+        check_unsigned(self)?;
         Ok(<u32>::try_from(self.as_u64().ok_or_else(|| self.expected(JsonTy::Number))?)?)
     }
     fn parse_u64(&self) -> Result<u64, FieldError> {
+        check_integer(self)?;
+        check_unsigned(self)?;
         self.as_u64().ok_or_else(|| self.expected(JsonTy::Number))
     }
     fn parse_i8(&self) -> Result<i8, FieldError> {
+        check_integer(self)?;
         Ok(<i8>::try_from(self.as_i64().ok_or_else(|| self.expected(JsonTy::Number))?)?)
     }
     fn parse_i16(&self) -> Result<i16, FieldError> {
+        check_integer(self)?;
         Ok(<i16>::try_from(self.as_i64().ok_or_else(|| self.expected(JsonTy::Number))?)?)
     }
     fn parse_i32(&self) -> Result<i32, FieldError> {
+        check_integer(self)?;
         Ok(<i32>::try_from(self.as_i64().ok_or_else(|| self.expected(JsonTy::Number))?)?)
     }
     fn parse_i64(&self) -> Result<i64, FieldError> {
+        check_integer(self)?;
         self.as_i64().ok_or_else(|| self.expected(JsonTy::Number))
     }
     fn parse_string(&self, max: u32) -> Result<String, FieldError> {
@@ -166,6 +196,12 @@ impl JsonValueExt for JsonValue {
 pub enum FieldError {
     #[error("Expected value of type {expected}, received {received}.")]
     JsonTypeMismatch { expected: JsonTy, received: JsonTy },
+
+    #[error("Expected number to be unsigned.")]
+    NumberNotUnsigned,
+
+    #[error("Expected number to be an integer.")]
+    NumberNotInteger,
 
     #[error("String of size {actual} provided for a field with maximum of {max}.")]
     StringTooLong { max: usize, actual: usize },
@@ -271,11 +307,10 @@ mod tests {
         type: { uint8 },
         tests: [
             cant_overflow: json!(256) => Err(InvalidNumber(try_from_int_error())),
-            // TODO(https://fxbug.dev/87987) don't report errors that look like matching types
             cant_be_negative: json!(-1) =>
-                Err(JsonTypeMismatch { expected: JsonTy::Number, received: JsonTy::Number }),
+                Err(NumberNotUnsigned),
             cant_be_float: json!(1.0) =>
-                Err(JsonTypeMismatch { expected: JsonTy::Number, received: JsonTy::Number }),
+                Err(NumberNotInteger),
             cant_be_null: json!(null) =>
                 Err(JsonTypeMismatch { expected: JsonTy::Number, received: JsonTy::Null }),
             cant_be_bool: json!(true) =>
@@ -294,11 +329,10 @@ mod tests {
         type: { uint16 },
         tests: [
             cant_overflow: json!(65_536) => Err(InvalidNumber(try_from_int_error())),
-            // TODO(https://fxbug.dev/87987) don't report errors that look like matching types
             cant_be_negative: json!(-1) =>
-                Err(JsonTypeMismatch { expected: JsonTy::Number, received: JsonTy::Number }),
+                Err(NumberNotUnsigned),
             cant_be_float: json!(1.0) =>
-                Err(JsonTypeMismatch { expected: JsonTy::Number, received: JsonTy::Number }),
+                Err(NumberNotInteger),
             cant_be_null: json!(null) =>
                 Err(JsonTypeMismatch { expected: JsonTy::Number, received: JsonTy::Null }),
             cant_be_bool: json!(true) =>
@@ -317,11 +351,10 @@ mod tests {
         type: { uint32 },
         tests: [
             cant_overflow: json!(4_294_967_296u64) => Err(InvalidNumber(try_from_int_error())),
-            // TODO(https://fxbug.dev/87987) don't report errors that look like matching types
             cant_be_negative: json!(-1) =>
-                Err(JsonTypeMismatch { expected: JsonTy::Number, received: JsonTy::Number }),
+                Err(NumberNotUnsigned),
             cant_be_float: json!(1.0) =>
-                Err(JsonTypeMismatch { expected: JsonTy::Number, received: JsonTy::Number }),
+                Err(NumberNotInteger),
             cant_be_null: json!(null) =>
                 Err(JsonTypeMismatch { expected: JsonTy::Number, received: JsonTy::Null }),
             cant_be_bool: json!(true) =>
@@ -339,11 +372,13 @@ mod tests {
         mod: parse_uint64,
         type: { uint64 },
         tests: [
-            // TODO(https://fxbug.dev/87987) don't report errors that look like matching types
+            // TODO(http://fxbug.dev/91616): serde_json5 does not currently support values
+            // between i64::MAX and u64::MAX. Enable this test once this is fixed.
+            // can_be_larger_than_i64_max: json!(9_223_372_036_854_775_808u64)=> Ok(Value::Single(SingleValue::Unsigned64(9_223_372_036_854_775_808u64))),
             cant_be_negative: json!(-1) =>
-                Err(JsonTypeMismatch { expected: JsonTy::Number, received: JsonTy::Number }),
+                Err(NumberNotUnsigned),
             cant_be_float: json!(1.0) =>
-                Err(JsonTypeMismatch { expected: JsonTy::Number, received: JsonTy::Number }),
+                Err(NumberNotInteger),
             cant_be_null: json!(null) =>
                 Err(JsonTypeMismatch { expected: JsonTy::Number, received: JsonTy::Null }),
             cant_be_bool: json!(true) =>
@@ -363,9 +398,8 @@ mod tests {
         tests: [
             cant_underflow: json!(-129) => Err(InvalidNumber(try_from_int_error())),
             cant_overflow: json!(128) => Err(InvalidNumber(try_from_int_error())),
-            // TODO(https://fxbug.dev/87987) don't report errors that look like matching types
             cant_be_float: json!(1.0) =>
-                Err(JsonTypeMismatch { expected: JsonTy::Number, received: JsonTy::Number }),
+                Err(NumberNotInteger),
             cant_be_null: json!(null) =>
                 Err(JsonTypeMismatch { expected: JsonTy::Number, received: JsonTy::Null }),
             cant_be_bool: json!(true) =>
@@ -385,9 +419,8 @@ mod tests {
         tests: [
             cant_underflow: json!(-32_769i32) => Err(InvalidNumber(try_from_int_error())),
             cant_overflow: json!(32_768) => Err(InvalidNumber(try_from_int_error())),
-            // TODO(https://fxbug.dev/87987) don't report errors that look like matching types
             cant_be_float: json!(1.0) =>
-                Err(JsonTypeMismatch { expected: JsonTy::Number, received: JsonTy::Number }),
+                Err(NumberNotInteger),
             cant_be_null: json!(null) =>
                 Err(JsonTypeMismatch { expected: JsonTy::Number, received: JsonTy::Null }),
             cant_be_bool: json!(true) =>
@@ -407,9 +440,8 @@ mod tests {
         tests: [
             cant_underflow: json!(-2_147_483_649i64) => Err(InvalidNumber(try_from_int_error())),
             cant_overflow: json!(2_147_483_648i64) => Err(InvalidNumber(try_from_int_error())),
-            // TODO(https://fxbug.dev/87987) don't report errors that look like matching types
             cant_be_float: json!(1.0) =>
-                Err(JsonTypeMismatch { expected: JsonTy::Number, received: JsonTy::Number }),
+                Err(NumberNotInteger),
             cant_be_null: json!(null) =>
                 Err(JsonTypeMismatch { expected: JsonTy::Number, received: JsonTy::Null }),
             cant_be_bool: json!(true) =>
@@ -427,11 +459,10 @@ mod tests {
         mod: parse_int64,
         type: { int64 },
         tests: [
-            // TODO(https://fxbug.dev/87987) don't report errors that look like matching types
             cant_overflow: json!(9_223_372_036_854_775_808u64) =>
-                Err(JsonTypeMismatch { expected: JsonTy::Number, received: JsonTy::Number }),
+                Err(NumberNotInteger),
             cant_be_float: json!(1.0) =>
-                Err(JsonTypeMismatch { expected: JsonTy::Number, received: JsonTy::Number }),
+                Err(NumberNotInteger),
             cant_be_null: json!(null) =>
                 Err(JsonTypeMismatch { expected: JsonTy::Number, received: JsonTy::Null }),
             cant_be_bool: json!(true) =>
