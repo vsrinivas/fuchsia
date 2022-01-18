@@ -7,6 +7,7 @@
 #include <lib/async/default.h>
 #include <lib/fdio/spawn.h>
 #include <lib/sys/cpp/component_context.h>
+#include <lib/syslog/cpp/log_settings.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/zx/job.h>
 #include <lib/zx/process.h>
@@ -19,6 +20,7 @@ const uint16_t kPort = 22;
 const char* kKeyGenArgs[] = {"/pkg/bin/hostkeygen", nullptr};
 
 int main(int /*argc*/, const char** /*argv*/) {
+  syslog::SetTags({"sshd-host"});
   // We need to close PA_DIRECTORY_REQUEST otherwise clients that expect us to
   // offer services won't know that we've started and are not going to offer
   // any services.
@@ -29,7 +31,7 @@ int main(int /*argc*/, const char** /*argv*/) {
 
   auto service_directory = sys::ComponentContext::Create()->svc();
 
-  FX_SLOG(INFO, "sshd-host starting up", "tag", "sshd-host");
+  FX_SLOG(INFO, "sshd-host starting up");
 
   // Ignore errors while provisioning authorized_keys.
   sshd_host::provision_authorized_keys_from_bootloader_file(service_directory);
