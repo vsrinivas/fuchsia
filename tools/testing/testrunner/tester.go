@@ -1105,6 +1105,12 @@ func (t *FuchsiaSerialTester) Test(ctx context.Context, test testsharder.Test, s
 		testResult.FailReason = err.Error()
 		return testResult, nil
 	} else if !success {
+		if errors.Is(err, io.EOF) {
+			// EOF indicates that serial has become disconnected. That is
+			// unlikely to be caused by this test and we're unlikely to be able
+			// to keep running tests.
+			return nil, err
+		}
 		testResult.FailReason = "test failed"
 		return testResult, nil
 	}
