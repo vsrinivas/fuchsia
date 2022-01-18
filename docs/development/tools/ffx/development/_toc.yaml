@@ -14,3 +14,5 @@ toc:
   path: /docs/development/tools/ffx/development/proxy-plugin.md
 - title: "Experimental plugins"
   path: /docs/development/tools/ffx/development/plugin-experimental.md
+- title: "Migrating selectors"
+  path: /docs/development/tools/ffx/development/migrating-selectors.md
