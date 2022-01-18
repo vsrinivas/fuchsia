@@ -5,7 +5,6 @@
 use diagnostics_data::Severity;
 use fidl_fuchsia_test_manager::{LaunchError, RunBuilderMarker};
 use matches::assert_matches;
-use parking_lot::Mutex;
 use regex::Regex;
 use run_test_suite_lib::{output, Outcome, RunTestSuiteError, TestParams};
 use std::convert::TryInto;
@@ -79,10 +78,9 @@ type TestMuxReporter = run_test_suite_lib::output::MultiplexedReporter<
     run_test_suite_lib::output::DirectoryReporter,
 >;
 
-fn create_shell_reporter() -> (TestShellReporter, Arc<Mutex<Vec<u8>>>) {
-    let output = Arc::new(parking_lot::Mutex::new(vec![]));
-    let shell_reporter = run_test_suite_lib::output::ShellReporter::new_from_arc(output.clone());
-    (shell_reporter, output)
+fn create_shell_reporter(
+) -> (TestShellReporter, run_test_suite_lib::output::ShellWriterView<Vec<u8>>) {
+    run_test_suite_lib::output::ShellReporter::new_expose_writer_for_test()
 }
 
 fn create_dir_reporter() -> (run_test_suite_lib::output::DirectoryReporter, tempfile::TempDir) {
@@ -92,7 +90,8 @@ fn create_dir_reporter() -> (run_test_suite_lib::output::DirectoryReporter, temp
     (dir_reporter, tmp_dir)
 }
 
-fn create_shell_and_dir_reporter() -> (TestMuxReporter, Arc<Mutex<Vec<u8>>>, tempfile::TempDir) {
+fn create_shell_and_dir_reporter(
+) -> (TestMuxReporter, run_test_suite_lib::output::ShellWriterView<Vec<u8>>, tempfile::TempDir) {
     let (shell_reporter, output) = create_shell_reporter();
     let (dir_reporter, tmp_dir) = create_dir_reporter();
     (
@@ -106,7 +105,10 @@ fn create_shell_and_dir_reporter() -> (TestMuxReporter, Arc<Mutex<Vec<u8>>>, tem
 async fn run_test_once(
     test_params: TestParams,
     min_log_severity: Option<Severity>,
-) -> Result<(Outcome, Arc<Mutex<Vec<u8>>>, tempfile::TempDir), RunTestSuiteError> {
+) -> Result<
+    (Outcome, run_test_suite_lib::output::ShellWriterView<Vec<u8>>, tempfile::TempDir),
+    RunTestSuiteError,
+> {
     let (reporter, output, tmp_dir) = create_shell_and_dir_reporter();
     let run_reporter = run_test_suite_lib::output::RunReporter::new(reporter);
     let outcome = run_test_suite_lib::run_tests_and_get_outcome(

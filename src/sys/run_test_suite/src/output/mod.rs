@@ -19,7 +19,7 @@ pub use directory_with_stdout::DirectoryWithStdoutReporter;
 use fidl_fuchsia_test_manager as ftest_manager;
 pub use mux::MultiplexedReporter;
 pub use noop::NoopReporter;
-pub use shell::ShellReporter;
+pub use shell::{ShellReporter, ShellWriterView};
 
 pub type DynArtifact = dyn 'static + Write + Send + Sync;
 pub type DynDirectoryArtifact = dyn 'static + DirectoryWrite + Send + Sync;

@@ -29,10 +29,11 @@ const EXCESSIVE_DURATION: Duration = Duration::from_secs(60);
 /// helps preserve existing behavior where prefixes are added to the start of stdout
 /// and log lines to help a developer understand what produced some output.
 struct ShellWriterHandle<W: 'static + Write + Send + Sync> {
-    inner: Arc<Mutex<W>>,
+    inner: Arc<Mutex<ShellWriterHandleInner<W>>>,
     buffer: Vec<u8>,
     /// Prefix, if any, to prepend to output before writing to the inner writer.
     prefix: Option<Vec<u8>>,
+    handle_id: u32,
 }
 
 impl<W: 'static + Write + Send + Sync> ShellWriterHandle<W> {
@@ -40,11 +41,16 @@ impl<W: 'static + Write + Send + Sync> ShellWriterHandle<W> {
     const BUFFER_CAPACITY: usize = 1024;
 
     /// Create a new handle to a wrapped writer.
-    fn new_handle(inner: Arc<Mutex<W>>, prefix: Option<String>) -> Self {
+    fn new_handle(inner: Arc<Mutex<ShellWriterHandleInner<W>>>, prefix: Option<String>) -> Self {
+        let mut lock = inner.lock();
+        let handle_id = lock.num_handles;
+        lock.num_handles += 1;
+        drop(lock);
         Self {
             inner,
             buffer: Vec::with_capacity(Self::BUFFER_CAPACITY),
             prefix: prefix.map(String::into_bytes),
+            handle_id,
         }
     }
 
@@ -54,6 +60,33 @@ impl<W: 'static + Write + Send + Sync> ShellWriterHandle<W> {
             writer.write_all(buf)?;
         }
         Ok(())
+    }
+}
+
+/// Inner mutable state for |ShellWriterHandle|.
+struct ShellWriterHandleInner<W: 'static + Write + Send + Sync> {
+    /// The writer to which all content is passed.
+    writer: W,
+    /// The id of the last handle that wrote to the writer, used to conditionally
+    /// output a prefix only when the handle writing to the output changes.
+    last_writer_id: Option<u32>,
+    /// The number of handles that have been created. Used to assign ids to handles.
+    num_handles: u32,
+}
+
+impl<W: 'static + Write + Send + Sync> ShellWriterHandleInner<W> {
+    fn new(writer: W) -> Self {
+        Self { writer, last_writer_id: None, num_handles: 0 }
+    }
+}
+
+/// A handle to a writer contained in a |ShellWriterHandle|. This is exposed for testing
+/// purposes.
+pub struct ShellWriterView<W: 'static + Write + Send + Sync>(Arc<Mutex<ShellWriterHandleInner<W>>>);
+
+impl<W: 'static + Write + Send + Sync> ShellWriterView<W> {
+    pub fn lock(&self) -> parking_lot::MappedMutexGuard<'_, W> {
+        parking_lot::MutexGuard::map(self.0.lock(), |handle_inner| &mut handle_inner.writer)
     }
 }
 
@@ -81,9 +114,14 @@ impl<W: 'static + Write + Send + Sync> Write for ShellWriterHandle<W> {
             Some(pos) => (pos, false),
         };
 
+        let mut inner = self.inner.lock();
+        let last_writer_id = inner.last_writer_id.replace(self.handle_id);
+
         let mut bufs_to_write = vec![];
         if let Some(prefix) = self.prefix.as_ref() {
-            bufs_to_write.push(prefix.as_slice());
+            if last_writer_id != Some(self.handle_id) {
+                bufs_to_write.push(prefix.as_slice());
+            }
         }
         if !self.buffer.is_empty() {
             bufs_to_write.push(self.buffer.as_slice());
@@ -93,7 +131,7 @@ impl<W: 'static + Write + Send + Sync> Write for ShellWriterHandle<W> {
             bufs_to_write.push(&[Self::NEWLINE_BYTE]);
         }
 
-        Self::write_bufs(&mut self.inner.lock(), bufs_to_write.as_slice())?;
+        Self::write_bufs(&mut inner.writer, bufs_to_write.as_slice())?;
 
         self.buffer.clear();
         self.buffer.extend_from_slice(&buf[final_byte_pos + 1..]);
@@ -101,19 +139,22 @@ impl<W: 'static + Write + Send + Sync> Write for ShellWriterHandle<W> {
     }
 
     fn flush(&mut self) -> Result<(), Error> {
-        let mut writer = self.inner.lock();
+        let mut inner = self.inner.lock();
+        let last_writer_id = inner.last_writer_id.replace(self.handle_id);
         if !self.buffer.is_empty() {
             self.buffer.push(Self::NEWLINE_BYTE);
             let mut bufs_to_write = vec![];
-            if let Some(prefix) = &self.prefix {
-                bufs_to_write.push(prefix.as_slice());
+            if let Some(prefix) = self.prefix.as_ref() {
+                if last_writer_id != Some(self.handle_id) {
+                    bufs_to_write.push(prefix.as_slice());
+                }
             }
             bufs_to_write.push(self.buffer.as_slice());
 
-            Self::write_bufs(&mut writer, bufs_to_write.as_slice())?;
+            Self::write_bufs(&mut inner.writer, bufs_to_write.as_slice())?;
             self.buffer.clear();
         }
-        writer.flush()
+        inner.writer.flush()
     }
 }
 
@@ -127,8 +168,8 @@ impl<W: 'static + Write + Send + Sync> std::ops::Drop for ShellWriterHandle<W> {
 /// This reporter is intended to provide "live" updates to a developer watching while
 /// tests are executed.
 pub struct ShellReporter<W: 'static + Write + Send + Sync> {
-    /// Arc around the writer, used to dispense more handles.
-    inner: Arc<Mutex<W>>,
+    /// Arc around the writer and state, used to dispense more handles.
+    inner: Arc<Mutex<ShellWriterHandleInner<W>>>,
     /// Map containing known information about each entity.
     entity_state_map: Mutex<HashMap<EntityId, EntityState>>,
     /// Number of completed suites, used to output
@@ -140,7 +181,7 @@ struct EntityState {
     name: String,
     excessive_duration_task: Option<fasync::Task<()>>,
     children: Vec<EntityId>,
-    restricted_logs: Option<Arc<Mutex<Vec<u8>>>>,
+    restricted_logs: Option<ShellWriterView<Vec<u8>>>,
     run_state: EntityRunningState,
 }
 
@@ -166,13 +207,25 @@ impl EntityState {
     }
 }
 
+impl ShellReporter<Vec<u8>> {
+    pub fn new_expose_writer_for_test() -> (Self, ShellWriterView<Vec<u8>>) {
+        let inner = Arc::new(Mutex::new(ShellWriterHandleInner::new(vec![])));
+        let mut entity_state_map = HashMap::new();
+        entity_state_map.insert(EntityId::TestRun, EntityState::new("TEST RUN"));
+        (
+            Self {
+                inner: inner.clone(),
+                entity_state_map: Mutex::new(entity_state_map),
+                completed_suites: AtomicU32::new(0),
+            },
+            ShellWriterView(inner),
+        )
+    }
+}
+
 impl<W: 'static + Write + Send + Sync> ShellReporter<W> {
     pub fn new(inner: W) -> Self {
-        let inner = Arc::new(Mutex::new(inner));
-        Self::new_from_arc(inner)
-    }
-
-    pub fn new_from_arc(inner: Arc<Mutex<W>>) -> Self {
+        let inner = Arc::new(Mutex::new(ShellWriterHandleInner::new(inner)));
         let mut entity_state_map = HashMap::new();
         entity_state_map.insert(EntityId::TestRun, EntityState::new("TEST RUN"));
         Self {
@@ -376,8 +429,8 @@ impl<W: 'static + Write + Send + Sync> Reporter for ShellReporter<W> {
             ArtifactType::Syslog => self.new_writer_handle(None),
             ArtifactType::RestrictedLog => {
                 // Restricted logs are saved for reporting when the entity completes.
-                let log_buffer = Arc::new(Mutex::new(vec![]));
-                entity.restricted_logs = Some(log_buffer.clone());
+                let log_buffer = Arc::new(Mutex::new(ShellWriterHandleInner::new(vec![])));
+                entity.restricted_logs = Some(ShellWriterView(log_buffer.clone()));
                 Box::new(ShellWriterHandle::new_handle(log_buffer, None))
             }
         })
@@ -400,10 +453,16 @@ mod test {
     use crate::output::{CaseId, RunReporter, SuiteId};
     use std::io::ErrorKind;
 
+    fn create_writer_inner_and_view(
+    ) -> (Arc<Mutex<ShellWriterHandleInner<Vec<u8>>>>, ShellWriterView<Vec<u8>>) {
+        let inner = Arc::new(Mutex::new(ShellWriterHandleInner::new(vec![])));
+        (inner.clone(), ShellWriterView(inner))
+    }
+
     #[fuchsia::test]
     fn single_handle() {
-        let output: Arc<Mutex<Vec<u8>>> = Arc::new(Mutex::new(vec![]));
-        let mut write_handle = ShellWriterHandle::new_handle(output.clone(), None);
+        let (handle_inner, output) = create_writer_inner_and_view();
+        let mut write_handle = ShellWriterHandle::new_handle(handle_inner, None);
 
         assert_eq!(write_handle.write(b"hello world").unwrap(), b"hello world".len(),);
         assert!(output.lock().is_empty());
@@ -418,9 +477,9 @@ mod test {
 
     #[fuchsia::test]
     fn single_handle_with_prefix() {
-        let output: Arc<Mutex<Vec<u8>>> = Arc::new(Mutex::new(vec![]));
+        let (handle_inner, output) = create_writer_inner_and_view();
         let mut write_handle =
-            ShellWriterHandle::new_handle(output.clone(), Some("[prefix] ".to_string()));
+            ShellWriterHandle::new_handle(handle_inner, Some("[prefix] ".to_string()));
 
         assert_eq!(write_handle.write(b"hello world").unwrap(), b"hello world".len(),);
         assert!(output.lock().is_empty());
@@ -430,13 +489,13 @@ mod test {
 
         assert_eq!(write_handle.write(b"flushed output").unwrap(), b"flushed output".len(),);
         write_handle.flush().unwrap();
-        assert_eq!(output.lock().as_slice(), b"[prefix] hello world\n[prefix] flushed output\n");
+        assert_eq!(output.lock().as_slice(), b"[prefix] hello world\nflushed output\n");
     }
 
     #[fuchsia::test]
     fn single_handle_multiple_line() {
-        let output: Arc<Mutex<Vec<u8>>> = Arc::new(Mutex::new(vec![]));
-        let mut write_handle = ShellWriterHandle::new_handle(output.clone(), None);
+        let (handle_inner, output) = create_writer_inner_and_view();
+        let mut write_handle = ShellWriterHandle::new_handle(handle_inner, None);
         const WRITE_BYTES: &[u8] = b"This is a \nmultiline output \nwithout newline termination";
         assert_eq!(write_handle.write(WRITE_BYTES).unwrap(), WRITE_BYTES.len(),);
         assert_eq!(output.lock().as_slice(), b"This is a \nmultiline output \n");
@@ -489,8 +548,8 @@ mod test {
         ];
 
         for (case_name, writes) in cases.into_iter() {
-            let output: Arc<Mutex<Vec<u8>>> = Arc::new(Mutex::new(vec![]));
-            let mut write_handle = ShellWriterHandle::new_handle(output.clone(), None);
+            let (handle_inner, output) = create_writer_inner_and_view();
+            let mut write_handle = ShellWriterHandle::new_handle(handle_inner, None);
             for (write_no, (to_write, expected)) in writes.into_iter().enumerate() {
                 assert_eq!(
                     write_handle.write(to_write.as_bytes()).unwrap(),
@@ -512,9 +571,9 @@ mod test {
 
     #[fuchsia::test]
     fn single_handle_with_prefix_multiple_line() {
-        let output: Arc<Mutex<Vec<u8>>> = Arc::new(Mutex::new(vec![]));
+        let (handle_inner, output) = create_writer_inner_and_view();
         let mut write_handle =
-            ShellWriterHandle::new_handle(output.clone(), Some("[prefix] ".to_string()));
+            ShellWriterHandle::new_handle(handle_inner, Some("[prefix] ".to_string()));
         const WRITE_BYTES: &[u8] = b"This is a \nmultiline output \nwithout newline termination";
         assert_eq!(write_handle.write(WRITE_BYTES).unwrap(), WRITE_BYTES.len(),);
         // Note we 'chunk' output in each write to avoid spamming the prefix, so the second
@@ -523,21 +582,24 @@ mod test {
         write_handle.flush().unwrap();
         assert_eq!(
             output.lock().as_slice(),
-            "[prefix] This is a \nmultiline output \n[prefix] without newline termination\n"
-                .as_bytes()
+            "[prefix] This is a \nmultiline output \nwithout newline termination\n".as_bytes()
         );
-        output.lock().clear();
 
         const TERMINATED_BYTES: &[u8] = b"This is \nnewline terminated \noutput\n";
         assert_eq!(write_handle.write(TERMINATED_BYTES).unwrap(), TERMINATED_BYTES.len(),);
-        assert_eq!(output.lock().as_slice(), b"[prefix] This is \nnewline terminated \noutput\n");
+        assert_eq!(
+            output.lock().as_slice(),
+            b"[prefix] This is a \nmultiline output \n\
+            without newline termination\nThis is \nnewline terminated \noutput\n"
+        );
     }
 
     #[fuchsia::test]
     fn multiple_handles() {
-        let output: Arc<Mutex<Vec<u8>>> = Arc::new(Mutex::new(vec![]));
-        let mut handle_1 = ShellWriterHandle::new_handle(output.clone(), Some("[1] ".to_string()));
-        let mut handle_2 = ShellWriterHandle::new_handle(output.clone(), Some("[2] ".to_string()));
+        let (handle_inner, output) = create_writer_inner_and_view();
+        let mut handle_1 =
+            ShellWriterHandle::new_handle(handle_inner.clone(), Some("[1] ".to_string()));
+        let mut handle_2 = ShellWriterHandle::new_handle(handle_inner, Some("[2] ".to_string()));
 
         write!(handle_1, "hi from 1").unwrap();
         write!(handle_2, "hi from 2").unwrap();
@@ -569,25 +631,25 @@ mod test {
             }
         }
 
-        let output = Arc::new(Mutex::new(PartialOutputWriter(vec![])));
+        let inner = Arc::new(Mutex::new(ShellWriterHandleInner::new(PartialOutputWriter(vec![]))));
+        let output = ShellWriterView(inner.clone());
         let mut write_handle =
-            ShellWriterHandle::new_handle(output.clone(), Some("[prefix] ".to_string()));
+            ShellWriterHandle::new_handle(inner.clone(), Some("[prefix] ".to_string()));
         assert_eq!(write_handle.write(b"hello").unwrap(), b"hello".len());
         assert!(output.lock().0.is_empty());
         assert_eq!(write_handle.write(b"\n").unwrap(), b"\n".len());
         assert_eq!(output.lock().0.as_slice(), b"[prefix] hello\n");
 
-        output.lock().0.clear();
         let mut write_handle_2 =
-            ShellWriterHandle::new_handle(output.clone(), Some("[prefix2] ".to_string()));
+            ShellWriterHandle::new_handle(inner, Some("[prefix2] ".to_string()));
 
         assert_eq!(write_handle.write(b"hello").unwrap(), b"hello".len());
         assert_eq!(write_handle_2.write(b"world").unwrap(), b"world".len());
-        assert!(output.lock().0.is_empty());
-        assert_eq!(write_handle.write(b"\n").unwrap(), b"\n".len());
         assert_eq!(output.lock().0.as_slice(), b"[prefix] hello\n");
+        assert_eq!(write_handle.write(b"\n").unwrap(), b"\n".len());
+        assert_eq!(output.lock().0.as_slice(), b"[prefix] hello\nhello\n");
         assert_eq!(write_handle_2.write(b"\n").unwrap(), b"\n".len());
-        assert_eq!(output.lock().0.as_slice(), b"[prefix] hello\n[prefix2] world\n");
+        assert_eq!(output.lock().0.as_slice(), b"[prefix] hello\nhello\n[prefix2] world\n");
     }
 
     #[fuchsia::test]
@@ -612,32 +674,34 @@ mod test {
             }
         }
 
-        let output =
-            Arc::new(Mutex::new(InterruptWriter { buf: vec![], returned_interrupt: false }));
+        let inner = Arc::new(Mutex::new(ShellWriterHandleInner::new(InterruptWriter {
+            buf: vec![],
+            returned_interrupt: false,
+        })));
+        let output = ShellWriterView(inner.clone());
         let mut write_handle =
-            ShellWriterHandle::new_handle(output.clone(), Some("[prefix] ".to_string()));
+            ShellWriterHandle::new_handle(inner.clone(), Some("[prefix] ".to_string()));
         assert_eq!(write_handle.write(b"hello").unwrap(), b"hello".len());
         assert!(output.lock().buf.is_empty());
         assert_eq!(write_handle.write(b"\n").unwrap(), b"\n".len());
         assert_eq!(output.lock().buf.as_slice(), b"[prefix] hello\n");
 
-        output.lock().buf.clear();
         let mut write_handle_2 =
-            ShellWriterHandle::new_handle(output.clone(), Some("[prefix2] ".to_string()));
+            ShellWriterHandle::new_handle(inner.clone(), Some("[prefix2] ".to_string()));
 
         assert_eq!(write_handle.write(b"hello").unwrap(), b"hello".len());
         assert_eq!(write_handle_2.write(b"world").unwrap(), b"world".len());
-        assert!(output.lock().buf.is_empty());
-        assert_eq!(write_handle.write(b"\n").unwrap(), b"\n".len());
         assert_eq!(output.lock().buf.as_slice(), b"[prefix] hello\n");
+        assert_eq!(write_handle.write(b"\n").unwrap(), b"\n".len());
+        assert_eq!(output.lock().buf.as_slice(), b"[prefix] hello\nhello\n");
         assert_eq!(write_handle_2.write(b"\n").unwrap(), b"\n".len());
-        assert_eq!(output.lock().buf.as_slice(), b"[prefix] hello\n[prefix2] world\n");
+        assert_eq!(output.lock().buf.as_slice(), b"[prefix] hello\nhello\n[prefix2] world\n");
     }
 
     #[fuchsia::test]
     async fn report_case_events() {
-        let output = Arc::new(Mutex::new(vec![]));
-        let run_reporter = RunReporter::new_for_test(ShellReporter::new_from_arc(output.clone()));
+        let (shell_reporter, output) = ShellReporter::new_expose_writer_for_test();
+        let run_reporter = RunReporter::new_for_test(shell_reporter);
         let suite_reporter =
             run_reporter.new_suite("test-suite", &SuiteId(0)).await.expect("create suite");
         suite_reporter.started(Timestamp::Unknown).await.expect("case started");
@@ -688,8 +752,8 @@ mod test {
 
     #[fuchsia::test]
     async fn syslog_artifacts() {
-        let output = Arc::new(Mutex::new(vec![]));
-        let run_reporter = RunReporter::new_for_test(ShellReporter::new_from_arc(output.clone()));
+        let (shell_reporter, output) = ShellReporter::new_expose_writer_for_test();
+        let run_reporter = RunReporter::new_for_test(shell_reporter);
         let suite_reporter =
             run_reporter.new_suite("test-suite", &SuiteId(0)).await.expect("create suite");
         suite_reporter.started(Timestamp::Unknown).await.expect("case started");
@@ -718,8 +782,8 @@ mod test {
 
     #[fuchsia::test]
     async fn report_retricted_logs() {
-        let output = Arc::new(Mutex::new(vec![]));
-        let run_reporter = RunReporter::new_for_test(ShellReporter::new_from_arc(output.clone()));
+        let (shell_reporter, output) = ShellReporter::new_expose_writer_for_test();
+        let run_reporter = RunReporter::new_for_test(shell_reporter);
         let suite_reporter =
             run_reporter.new_suite("test-suite", &SuiteId(0)).await.expect("create suite");
         suite_reporter.started(Timestamp::Unknown).await.expect("case started");
@@ -763,8 +827,8 @@ mod test {
 
     #[fuchsia::test]
     async fn stdout_artifacts() {
-        let output = Arc::new(Mutex::new(vec![]));
-        let run_reporter = RunReporter::new_for_test(ShellReporter::new_from_arc(output.clone()));
+        let (shell_reporter, output) = ShellReporter::new_expose_writer_for_test();
+        let run_reporter = RunReporter::new_for_test(shell_reporter);
         let suite_reporter =
             run_reporter.new_suite("test-suite", &SuiteId(0)).await.expect("create suite");
         suite_reporter.started(Timestamp::Unknown).await.expect("case started");
@@ -819,8 +883,8 @@ mod test {
 
     #[fuchsia::test]
     async fn report_unfinished() {
-        let output = Arc::new(Mutex::new(vec![]));
-        let run_reporter = RunReporter::new_for_test(ShellReporter::new_from_arc(output.clone()));
+        let (shell_reporter, output) = ShellReporter::new_expose_writer_for_test();
+        let run_reporter = RunReporter::new_for_test(shell_reporter);
         let suite_reporter =
             run_reporter.new_suite("test-suite", &SuiteId(0)).await.expect("create suite");
         suite_reporter.started(Timestamp::Unknown).await.expect("suite started");
@@ -873,8 +937,8 @@ mod test {
 
     #[fuchsia::test]
     async fn report_cancelled_suite() {
-        let output = Arc::new(Mutex::new(vec![]));
-        let run_reporter = RunReporter::new_for_test(ShellReporter::new_from_arc(output.clone()));
+        let (shell_reporter, output) = ShellReporter::new_expose_writer_for_test();
+        let run_reporter = RunReporter::new_for_test(shell_reporter);
         let suite_reporter =
             run_reporter.new_suite("test-suite", &SuiteId(0)).await.expect("create suite");
         suite_reporter.started(Timestamp::Unknown).await.expect("suite started");
@@ -901,8 +965,8 @@ mod test {
 
     #[fuchsia::test]
     async fn report_suite_did_not_finish() {
-        let output = Arc::new(Mutex::new(vec![]));
-        let run_reporter = RunReporter::new_for_test(ShellReporter::new_from_arc(output.clone()));
+        let (shell_reporter, output) = ShellReporter::new_expose_writer_for_test();
+        let run_reporter = RunReporter::new_for_test(shell_reporter);
         let suite_reporter =
             run_reporter.new_suite("test-suite", &SuiteId(0)).await.expect("create suite");
         suite_reporter.started(Timestamp::Unknown).await.expect("suite started");
