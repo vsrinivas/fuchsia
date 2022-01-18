@@ -52,16 +52,9 @@ const NETSTACK_EXPOSED_DIR: &str =
 const DHCPD_EXPOSED_DIR: &str = "/hub-v2/children/core/children/network/children/dhcpd/exec/expose";
 
 #[async_trait::async_trait]
-impl net_cli::ServiceConnector<fstack::StackMarker> for Connector {
-    async fn connect(&self) -> Result<<fstack::StackMarker as ProtocolMarker>::Proxy, Error> {
-        connect_to_protocol_at::<fstack::StackMarker>(NETSTACK_EXPOSED_DIR)
-    }
-}
-
-#[async_trait::async_trait]
-impl net_cli::ServiceConnector<fnetstack::NetstackMarker> for Connector {
-    async fn connect(&self) -> Result<<fnetstack::NetstackMarker as ProtocolMarker>::Proxy, Error> {
-        connect_to_protocol_at::<fnetstack::NetstackMarker>(NETSTACK_EXPOSED_DIR)
+impl net_cli::ServiceConnector<fdhcp::Server_Marker> for Connector {
+    async fn connect(&self) -> Result<<fdhcp::Server_Marker as ProtocolMarker>::Proxy, Error> {
+        connect_to_protocol_at::<fdhcp::Server_Marker>(DHCPD_EXPOSED_DIR)
     }
 }
 
@@ -69,20 +62,6 @@ impl net_cli::ServiceConnector<fnetstack::NetstackMarker> for Connector {
 impl net_cli::ServiceConnector<ffilter::FilterMarker> for Connector {
     async fn connect(&self) -> Result<<ffilter::FilterMarker as ProtocolMarker>::Proxy, Error> {
         connect_to_protocol_at::<ffilter::FilterMarker>(NETSTACK_EXPOSED_DIR)
-    }
-}
-
-#[async_trait::async_trait]
-impl net_cli::ServiceConnector<fstack::LogMarker> for Connector {
-    async fn connect(&self) -> Result<<fstack::LogMarker as ProtocolMarker>::Proxy, Error> {
-        connect_to_protocol_at::<fstack::LogMarker>(NETSTACK_EXPOSED_DIR)
-    }
-}
-
-#[async_trait::async_trait]
-impl net_cli::ServiceConnector<fdhcp::Server_Marker> for Connector {
-    async fn connect(&self) -> Result<<fdhcp::Server_Marker as ProtocolMarker>::Proxy, Error> {
-        connect_to_protocol_at::<fdhcp::Server_Marker>(DHCPD_EXPOSED_DIR)
     }
 }
 
@@ -99,6 +78,27 @@ impl net_cli::ServiceConnector<fneighbor::ControllerMarker> for Connector {
 impl net_cli::ServiceConnector<fneighbor::ViewMarker> for Connector {
     async fn connect(&self) -> Result<<fneighbor::ViewMarker as ProtocolMarker>::Proxy, Error> {
         connect_to_protocol_at::<fneighbor::ViewMarker>(NETSTACK_EXPOSED_DIR)
+    }
+}
+
+#[async_trait::async_trait]
+impl net_cli::ServiceConnector<fstack::LogMarker> for Connector {
+    async fn connect(&self) -> Result<<fstack::LogMarker as ProtocolMarker>::Proxy, Error> {
+        connect_to_protocol_at::<fstack::LogMarker>(NETSTACK_EXPOSED_DIR)
+    }
+}
+
+#[async_trait::async_trait]
+impl net_cli::ServiceConnector<fstack::StackMarker> for Connector {
+    async fn connect(&self) -> Result<<fstack::StackMarker as ProtocolMarker>::Proxy, Error> {
+        connect_to_protocol_at::<fstack::StackMarker>(NETSTACK_EXPOSED_DIR)
+    }
+}
+
+#[async_trait::async_trait]
+impl net_cli::ServiceConnector<fnetstack::NetstackMarker> for Connector {
+    async fn connect(&self) -> Result<<fnetstack::NetstackMarker as ProtocolMarker>::Proxy, Error> {
+        connect_to_protocol_at::<fnetstack::NetstackMarker>(NETSTACK_EXPOSED_DIR)
     }
 }
 

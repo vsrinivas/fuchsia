@@ -16,13 +16,13 @@ use fidl_fuchsia_net_stack as fstack;
 use fidl_fuchsia_netstack as fnetstack;
 
 const DHCPD_SELECTOR_SUFFIX: &str = "/dhcpd:expose:fuchsia.net.dhcp.Server";
-const STACK_SELECTOR_SUFFIX: &str = "/netstack:expose:fuchsia.net.stack.Stack";
-const NETSTACK_SELECTOR_SUFFIX: &str = "/netstack:expose:fuchsia.netstack.Netstack";
 const FILTER_SELECTOR_SUFFIX: &str = "/netstack:expose:fuchsia.net.filter.Filter";
-const LOG_SELECTOR_SUFFIX: &str = "/netstack:expose:fuchsia.net.stack.Log";
 const NEIGHBOR_CONTROLLER_SELECTOR_SUFFIX: &str =
     "/netstack:expose:fuchsia.net.neighbor.Controller";
 const NEIGHBOR_VIEW_SELECTOR_SUFFIX: &str = "/netstack:expose:fuchsia.net.neighbor.View";
+const LOG_SELECTOR_SUFFIX: &str = "/netstack:expose:fuchsia.net.stack.Log";
+const STACK_SELECTOR_SUFFIX: &str = "/netstack:expose:fuchsia.net.stack.Stack";
+const NETSTACK_SELECTOR_SUFFIX: &str = "/netstack:expose:fuchsia.netstack.Netstack";
 const NETWORK_REALM: &str = "core/network";
 
 struct FfxConnector<'a> {
@@ -55,20 +55,11 @@ impl FfxConnector<'_> {
 }
 
 #[async_trait::async_trait]
-impl net_cli::ServiceConnector<fstack::StackMarker> for FfxConnector<'_> {
+impl net_cli::ServiceConnector<fdhcp::Server_Marker> for FfxConnector<'_> {
     async fn connect(
         &self,
-    ) -> Result<<fstack::StackMarker as ProtocolMarker>::Proxy, anyhow::Error> {
-        self.remotecontrol_connect::<fstack::StackMarker>(STACK_SELECTOR_SUFFIX).await
-    }
-}
-
-#[async_trait::async_trait]
-impl net_cli::ServiceConnector<fnetstack::NetstackMarker> for FfxConnector<'_> {
-    async fn connect(
-        &self,
-    ) -> Result<<fnetstack::NetstackMarker as ProtocolMarker>::Proxy, anyhow::Error> {
-        self.remotecontrol_connect::<fnetstack::NetstackMarker>(NETSTACK_SELECTOR_SUFFIX).await
+    ) -> Result<<fdhcp::Server_Marker as ProtocolMarker>::Proxy, anyhow::Error> {
+        self.remotecontrol_connect::<fdhcp::Server_Marker>(DHCPD_SELECTOR_SUFFIX).await
     }
 }
 
@@ -78,22 +69,6 @@ impl net_cli::ServiceConnector<ffilter::FilterMarker> for FfxConnector<'_> {
         &self,
     ) -> Result<<ffilter::FilterMarker as ProtocolMarker>::Proxy, anyhow::Error> {
         self.remotecontrol_connect::<ffilter::FilterMarker>(FILTER_SELECTOR_SUFFIX).await
-    }
-}
-
-#[async_trait::async_trait]
-impl net_cli::ServiceConnector<fstack::LogMarker> for FfxConnector<'_> {
-    async fn connect(&self) -> Result<<fstack::LogMarker as ProtocolMarker>::Proxy, anyhow::Error> {
-        self.remotecontrol_connect::<fstack::LogMarker>(LOG_SELECTOR_SUFFIX).await
-    }
-}
-
-#[async_trait::async_trait]
-impl net_cli::ServiceConnector<fdhcp::Server_Marker> for FfxConnector<'_> {
-    async fn connect(
-        &self,
-    ) -> Result<<fdhcp::Server_Marker as ProtocolMarker>::Proxy, anyhow::Error> {
-        self.remotecontrol_connect::<fdhcp::Server_Marker>(DHCPD_SELECTOR_SUFFIX).await
     }
 }
 
@@ -115,6 +90,31 @@ impl net_cli::ServiceConnector<fneighbor::ViewMarker> for FfxConnector<'_> {
         &self,
     ) -> Result<<fneighbor::ViewMarker as ProtocolMarker>::Proxy, anyhow::Error> {
         self.remotecontrol_connect::<fneighbor::ViewMarker>(NEIGHBOR_VIEW_SELECTOR_SUFFIX).await
+    }
+}
+
+#[async_trait::async_trait]
+impl net_cli::ServiceConnector<fstack::LogMarker> for FfxConnector<'_> {
+    async fn connect(&self) -> Result<<fstack::LogMarker as ProtocolMarker>::Proxy, anyhow::Error> {
+        self.remotecontrol_connect::<fstack::LogMarker>(LOG_SELECTOR_SUFFIX).await
+    }
+}
+
+#[async_trait::async_trait]
+impl net_cli::ServiceConnector<fstack::StackMarker> for FfxConnector<'_> {
+    async fn connect(
+        &self,
+    ) -> Result<<fstack::StackMarker as ProtocolMarker>::Proxy, anyhow::Error> {
+        self.remotecontrol_connect::<fstack::StackMarker>(STACK_SELECTOR_SUFFIX).await
+    }
+}
+
+#[async_trait::async_trait]
+impl net_cli::ServiceConnector<fnetstack::NetstackMarker> for FfxConnector<'_> {
+    async fn connect(
+        &self,
+    ) -> Result<<fnetstack::NetstackMarker as ProtocolMarker>::Proxy, anyhow::Error> {
+        self.remotecontrol_connect::<fnetstack::NetstackMarker>(NETSTACK_SELECTOR_SUFFIX).await
     }
 }
 
