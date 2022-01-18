@@ -91,7 +91,7 @@ enum CommandTag {
     Release,
 }
 
-interface Command = {
+interface Command {
     tag: CommandTag,
     data: CreateResource | ReleaseResource,
 }
