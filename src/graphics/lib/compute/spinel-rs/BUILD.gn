@@ -11,6 +11,7 @@ rustc_library("spinel-rs") {
   version = "0.1.0"
   edition = "2018"
   deps = [
+    "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:thiserror",
   ]

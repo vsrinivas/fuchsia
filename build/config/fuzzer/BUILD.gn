@@ -24,7 +24,7 @@ variant("fuzzer") {
   # This config should only be used with Rust code to build staticlibs that are
   # subsequently linked by the clang toolchain.
   rustflags = [
-    "-Cpasses=sancov",
+    "-Cpasses=sancov-module",
     "-Cllvm-args=-sanitizer-coverage-level=4",
     "-Cllvm-args=-sanitizer-coverage-trace-compares",
     "-Cllvm-args=-sanitizer-coverage-inline-8bit-counters",

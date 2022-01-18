@@ -59,6 +59,7 @@ rustc_test("term-model_test") {
   # TODO(fxbug.dev/69442) remove this allowance
   configs += [ "//build/config/rust:allow_legacy_derive_helpers" ]
 
-  deps = term_deps
+  deps =
+      term_deps + [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
   sources = term_sources
 }

@@ -10,6 +10,7 @@ rustc_staticlib("bt-hci") {
   with_unit_tests = true
 
   deps = [
+    "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS",
     "//src/connectivity/bluetooth/hci/lib:serial_impl_async_wrapper",
     "//src/lib/async-utils",
     "//src/lib/fuchsia-async",
