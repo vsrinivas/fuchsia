@@ -4,7 +4,7 @@
 
 //! Implementation of the `fuchsia.inspect.Tree` protocol server.
 
-use anyhow::{Context as _, Error};
+use anyhow::Error;
 use fidl;
 use fidl_fuchsia_inspect::{
     TreeContent, TreeNameIteratorRequest, TreeNameIteratorRequestStream, TreeRequest,
@@ -15,7 +15,7 @@ use fuchsia_async as fasync;
 use fuchsia_inspect::{reader::ReadableTree, Inspector};
 use fuchsia_zircon::sys::ZX_CHANNEL_MAX_MSG_BYTES;
 use futures::{TryFutureExt, TryStreamExt};
-use tracing::error;
+use tracing::warn;
 
 #[derive(Clone)]
 pub enum TreeServerSendPreference {
@@ -71,7 +71,7 @@ pub async fn handle_request_stream(
     settings: TreeServerSettings,
     mut stream: TreeRequestStream,
 ) -> Result<(), Error> {
-    while let Some(request) = stream.try_next().await.context("Error running tree server")? {
+    while let Some(request) = stream.try_next().await? {
         match request {
             TreeRequest::GetContent { responder } => {
                 // If freezing fails, full snapshot algo needed on live duplicate
@@ -119,7 +119,7 @@ pub fn spawn_tree_server(
     fasync::Task::spawn(async move {
         handle_request_stream(inspector, settings, stream)
             .await
-            .unwrap_or_else(|e: Error| error!("error running tree server: {:?}", e));
+            .unwrap_or_else(|err: Error| warn!(?err, "failed to run tree server"));
     })
     .detach();
 }
@@ -130,9 +130,7 @@ fn spawn_tree_name_iterator_server(values: Vec<String>, mut stream: TreeNameIter
     fasync::Task::spawn(
         async move {
             let mut values_iter = values.into_iter().peekable();
-            while let Some(request) =
-                stream.try_next().await.context("Error running tree iterator server")?
-            {
+            while let Some(request) = stream.try_next().await? {
                 match request {
                     TreeNameIteratorRequest::GetNext { responder } => {
                         let mut bytes_used: usize = 32; // Page overhead of message header + vector
@@ -160,7 +158,7 @@ fn spawn_tree_name_iterator_server(values: Vec<String>, mut stream: TreeNameIter
             }
             Ok(())
         }
-        .unwrap_or_else(|e: Error| error!("error running tree name iterator server: {:?}", e)),
+        .unwrap_or_else(|err: Error| warn!(?err, "failed to run tree name iterator server")),
     )
     .detach()
 }
