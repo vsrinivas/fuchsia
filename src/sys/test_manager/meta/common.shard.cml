@@ -127,6 +127,12 @@
             protocol: "fuchsia.sys2.StorageAdmin",
             from: "#custom_artifacts",
         },
+        {
+            directory: "kernel_data",
+            from: "parent",
+            rights: [ "r*" ],
+            path: "/kernel_data",
+        },
     ],
     offer: [
         {

@@ -3,7 +3,11 @@
 // found in the LICENSE file.
 
 use {
-    crate::{diagnostics::IsolatedLogsProvider, error::*},
+    crate::{
+        debug_data_server::{serve_debug_data, DebugDataFile},
+        diagnostics::IsolatedLogsProvider,
+        error::*,
+    },
     anyhow::{format_err, Context, Error},
     cm_rust,
     diagnostics_bridge::ArchiveReaderManager,
@@ -19,8 +23,10 @@ use {
     fsys::ComponentResolverProxy,
     ftest::Invocation,
     ftest_manager::{
-        CaseStatus, LaunchError, RunControllerRequest, RunControllerRequestStream,
-        SuiteControllerRequest, SuiteControllerRequestStream, SuiteEvent as FidlSuiteEvent,
+        CaseStatus, DebugDataIteratorMarker, LaunchError, RunControllerRequest,
+        RunControllerRequestStream, RunEvent as FidlRunEvent,
+        RunEventPayload as FidlRunEventPayload, SuiteControllerRequest,
+        SuiteControllerRequestStream, SuiteEvent as FidlSuiteEvent,
         SuiteEventPayload as FidlSuiteEventPayload, SuiteStatus,
     },
     fuchsia_async as fasync,
@@ -58,6 +64,7 @@ use {
     tracing::{debug, error, info, warn},
 };
 
+mod debug_data_server;
 mod diagnostics;
 mod error;
 mod resolver;
@@ -199,9 +206,12 @@ impl TestRunBuilder {
         mut controller: RunControllerRequestStream,
         run_task: fasync::Task<()>,
         stop_sender: oneshot::Sender<()>,
+        event_recv: mpsc::Receiver<RunEvent>,
     ) {
         let mut task = Some(run_task);
         let mut stop_sender = Some(stop_sender);
+        let mut event_recv = event_recv.fuse();
+
         // no need to check controller error.
         while let Ok(Some(request)) = controller.try_next().await {
             match request {
@@ -223,15 +233,21 @@ impl TestRunBuilder {
                     // connection after that.
                 }
                 RunControllerRequest::GetEvents { responder } => {
-                    task = fasync::Task::spawn(async move {
-                        if let Some(t) = task.take() {
-                            t.await;
+                    let mut events = vec![];
+                    // TODO(fxbug.dev/91553): This can block handling Stop and Kill requests if no
+                    // events are available.
+                    if let Some(event) = event_recv.next().await {
+                        events.push(event);
+                        while events.len() < EVENTS_THRESHOLD {
+                            if let Some(Some(event)) = event_recv.next().now_or_never() {
+                                events.push(event);
+                            } else {
+                                break;
+                            }
                         }
-                        let events: Vec<ftest_manager::RunEvent> = vec![];
-                        // maybe client disconnected, no need to check error.
-                        let _ = responder.send(&mut events.into_iter());
-                    })
-                    .into();
+                    }
+
+                    let _ = responder.send(&mut events.into_iter().map(RunEvent::into));
                 }
             }
         }
@@ -243,6 +259,7 @@ impl TestRunBuilder {
 
     async fn run(self, controller: RunControllerRequestStream, test_map: Arc<TestMap>) {
         let (stop_sender, mut stop_recv) = oneshot::channel::<()>();
+        let (event_sender, event_recv) = mpsc::channel::<RunEvent>(16);
         let task = fuchsia_async::Task::spawn(async move {
             // run test suites serially for now
             for suite in self.suites {
@@ -253,8 +270,39 @@ impl TestRunBuilder {
                 }
                 suite.run(test_map.clone()).await;
             }
+
+            // Collect run artifacts
+            let mut debug_tasks = vec![];
+            debug_tasks.push(send_kernel_debug_data(event_sender.clone()));
+            join_all(debug_tasks).await;
         });
-        Self::run_controller(controller, task, stop_sender).await;
+
+        Self::run_controller(controller, task, stop_sender, event_recv).await;
+    }
+}
+
+async fn send_kernel_debug_data(mut event_sender: mpsc::Sender<RunEvent>) {
+    let file = io_util::open_file_in_namespace(
+        "/kernel_data/zircon.elf.profraw",
+        io_util::OPEN_RIGHT_READABLE,
+    );
+    match file {
+        Ok(file) => match io_util::read_file_bytes(&file).await {
+            Ok(contents) => {
+                let (client, task) = serve_debug_data(vec![DebugDataFile {
+                    name: "zircon.elf.profraw".to_string(),
+                    contents,
+                }]);
+                let _ = event_sender.send(RunEvent::kernel_profile(client).into()).await;
+                task.await;
+            }
+            Err(e) => {
+                warn!("Failed to read kernel profile contents {:?}", e);
+            }
+        },
+        Err(e) => {
+            warn!("Failed to open kernel profile contents {:?}", e);
+        }
     }
 }
 
@@ -357,6 +405,38 @@ fn concat_suite_status(initial: SuiteStatus, new: SuiteStatus) -> SuiteStatus {
     return new;
 }
 
+enum RunEventPayload {
+    KernelProfile(ClientEnd<DebugDataIteratorMarker>),
+}
+
+struct RunEvent {
+    timestamp: i64,
+    payload: RunEventPayload,
+}
+
+impl Into<FidlRunEvent> for RunEvent {
+    fn into(self) -> FidlRunEvent {
+        match self.payload {
+            RunEventPayload::KernelProfile(client) => FidlRunEvent {
+                timestamp: Some(self.timestamp),
+                payload: Some(FidlRunEventPayload::Artifact(ftest_manager::Artifact::DebugData(
+                    client,
+                ))),
+                ..FidlRunEvent::EMPTY
+            },
+        }
+    }
+}
+
+impl RunEvent {
+    fn kernel_profile(client: ClientEnd<DebugDataIteratorMarker>) -> Self {
+        Self {
+            timestamp: zx::Time::get_monotonic().into_nanos(),
+            payload: RunEventPayload::KernelProfile(client),
+        }
+    }
+}
+
 enum SuiteEventPayload {
     CaseFound(String, u32),
     CaseStarted(u32),
@@ -369,6 +449,7 @@ enum SuiteEventPayload {
     SuiteStarted,
     SuiteStopped(SuiteStatus),
 }
+
 struct SuiteEvents {
     timestamp: i64,
     payload: SuiteEventPayload,

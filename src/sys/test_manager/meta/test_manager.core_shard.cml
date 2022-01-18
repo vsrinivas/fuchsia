@@ -38,6 +38,16 @@
             from: "parent",
             to: "#test_manager",
         },
+
+        // Needed to collect kernel coverage for tests.
+        {
+            directory: "boot",
+            from: "parent",
+            as: "kernel_data",
+            to: "#test_manager",
+            rights: [ "r*" ],
+            subdir: "kernel/data",
+        },
         {
             protocol: [
                 "fuchsia.sys.Environment",
