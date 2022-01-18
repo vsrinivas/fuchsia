@@ -83,11 +83,6 @@ template("ffx") {
                            ])
 
     configs += [ "//build/config/rust:panic_abort" ]
-
-    # https//fxbug.dev/90331
-    # Disable remote build until size/memory/flakiness issues are resolved.
-    # TODO(fxbug.dev/82887): delete the below after bug is fixed.
-    disable_rbe = true
   }
 
   # Replace the special linker sections containing the version information with the real values
