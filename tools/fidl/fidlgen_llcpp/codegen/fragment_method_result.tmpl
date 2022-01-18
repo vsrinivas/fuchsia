@@ -4,7 +4,7 @@
 // found in the LICENSE file.
 */}}
 
-{{- define "Method:Result:MessagingHeader" }}
+{{- define "Method:Result:WireMessagingHeader" }}
 {{- EnsureNamespace "" }}
 template<>
 class {{ .WireResult }} final : public ::fidl::Result {
@@ -62,7 +62,7 @@ class {{ .WireResult }} final : public ::fidl::Result {
 
 
 
-{{- define "Method:Result:MessagingSource" }}
+{{- define "Method:Result:WireMessagingSource" }}
 {{- IfdefFuchsia -}}
 {{- EnsureNamespace "" }}
 {{ .WireResult }}::{{ .WireResult.Self }}(

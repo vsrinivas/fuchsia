@@ -6,7 +6,7 @@
 
 
 
-{{- define "Method:WireWeakOnewayClientImpl:MessagingHeader" }}
+{{- define "Method:WireWeakOnewayClientImpl:WireMessagingHeader" }}
   {{ .Docs }}
   {{- if .DocComments }}
     //
@@ -16,7 +16,7 @@
 {{- end }}
 
 
-{{- define "Method:WireWeakOnewayClientImpl:MessagingSource" }}
+{{- define "Method:WireWeakOnewayClientImpl:WireMessagingSource" }}
   ::fidl::Result {{ .Protocol.WireWeakOnewayClientImpl.NoLeading }}::{{ .Name }}(
         {{- RenderParams .RequestArgs }}) {
     FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
@@ -30,7 +30,7 @@
 
 
 {{- /* TODO(fxbug.dev/85688): Remove this. */}}
-{{- define "Method:ClientImplOneway:MessagingHeader" }}
+{{- define "Method:ClientImplOneway:WireMessagingHeader" }}
   {{- /* Managed flavor */}}
   {{ .Docs }}
   {{- if .DocComments }}
@@ -44,7 +44,7 @@
 
 
 {{- /* TODO(fxbug.dev/85688): Remove this. */}}
-{{- define "Method:ClientImplOneway:MessagingSource" }}
+{{- define "Method:ClientImplOneway:WireMessagingSource" }}
   {{- IfdefFuchsia -}}
 
   {{- /* Managed flavor */}}

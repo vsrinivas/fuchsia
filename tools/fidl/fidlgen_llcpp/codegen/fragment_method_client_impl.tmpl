@@ -4,39 +4,39 @@
 // found in the LICENSE file.
 */}}
 
-{{- define "Method:ClientImpl:MessagingHeader" }}
+{{- define "Method:ClientImpl:WireMessagingHeader" }}
   {{- if .HasResponse }}
     {{- /* two-way method */}}
 
-    {{- template "Method:ClientImplAsync:MessagingHeader" . }}
+    {{- template "Method:ClientImplAsync:WireMessagingHeader" . }}
     {{- if .Transport.HasSyncClient }}
-    {{- template "Method:ClientImplSync:MessagingHeader" . }}
+    {{- template "Method:ClientImplSync:WireMessagingHeader" . }}
     {{- end }}
 
   {{- else }}
     {{- /* one-way method */}}
 
     {{- /* There is no distinction between sync vs async for one-way methods . */}}
-    {{- template "Method:ClientImplOneway:MessagingHeader" . }}
+    {{- template "Method:ClientImplOneway:WireMessagingHeader" . }}
 
   {{- end }}
 {{- end }}
 
 
-{{- define "Method:ClientImpl:MessagingSource" }}
+{{- define "Method:ClientImpl:WireMessagingSource" }}
   {{- if .HasResponse }}
     {{- /* two-way method */}}
 
-    {{- template "Method:ClientImplAsync:MessagingSource" . }}
+    {{- template "Method:ClientImplAsync:WireMessagingSource" . }}
     {{- if .Transport.HasSyncClient }}
-    {{- template "Method:ClientImplSync:MessagingSource" . }}
+    {{- template "Method:ClientImplSync:WireMessagingSource" . }}
     {{- end }}
 
   {{- else }}
     {{- /* one-way method */}}
 
     {{- /* There is no distinction between sync vs async for one-way methods . */}}
-    {{- template "Method:ClientImplOneway:MessagingSource" . }}
+    {{- template "Method:ClientImplOneway:WireMessagingSource" . }}
   {{- end }}
 {{- end }}
 

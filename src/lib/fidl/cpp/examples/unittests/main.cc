@@ -7,7 +7,7 @@
 #include <gtest/gtest.h>
 
 // [START include]
-#include <fuchsia/examples/cpp/fidl_v2.h>
+#include <fidl/fuchsia.examples/cpp/fidl.h>
 // [END include]
 
 namespace {

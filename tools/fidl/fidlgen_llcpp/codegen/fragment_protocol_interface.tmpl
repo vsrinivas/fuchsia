@@ -4,12 +4,12 @@
 // found in the LICENSE file.
 */}}
 
-{{- define "Protocol:Interface:MessagingHeader" }}
+{{- define "Protocol:Interface:WireMessagingHeader" }}
 {{- range .ClientMethods }}
   {{- if eq .Transport.Name "Driver" }}
   {{- template "Method:CompleterBase:driver/MessagingHeader" . }}
   {{- else }}
-  {{- template "Method:CompleterBase:MessagingHeader" . }}
+  {{- template "Method:CompleterBase:WireMessagingHeader" . }}
   {{- end }}
 {{- end }}
 
@@ -55,3 +55,59 @@ class {{ .WireServer }} : public ::fidl::internal::IncomingMessageDispatcher {
 };
 {{- end }}
 
+
+
+{{- define "Protocol:Interface:NaturalMessagingHeader" }}
+{{- range .ClientMethods }}
+  {{- template "Method:Request:NaturalMessagingHeader" . }}
+{{- end }}
+
+{{- range .TwoWayMethods }}
+  {{- template "Method:CompleterBase:NaturalMessagingHeader" . }}
+{{- end }}
+
+template<>
+class {{ .NaturalServer }} : public ::fidl::internal::IncomingMessageDispatcher {
+  public:
+  {{ .NaturalServer.Self }}() = default;
+  virtual ~{{ .NaturalServer.Self }}() = default;
+
+  // The FIDL protocol type that is implemented by this server.
+  using _EnclosingProtocol = {{ .Wire }};
+
+{{ "" }}
+  {{- range .ClientMethods }}
+  using {{ .NaturalRequestAlias.Self }} = {{ .NaturalRequest }};
+  using {{ .NaturalCompleterAlias.Self }} = {{ .NaturalCompleter }};
+
+  {{ .Docs }}
+  virtual void {{ .Name }}(
+      {{- .NaturalRequestAlias.Self }}& request, {{ .NaturalCompleterArg }}& completer
+  )
+    {{- if .Transitional -}}
+      { completer.Close(ZX_ERR_NOT_SUPPORTED); }
+    {{- else -}}
+      = 0;
+    {{- end }}
+{{ "" }}
+  {{- end }}
+
+  private:
+  {{- /* Note that this implementation is snake_case to avoid name conflicts. */}}
+  void dispatch_message(
+    ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
+    ::fidl::internal::IncomingTransportContext transport_context) final;
+};
+{{- end }}
+
+
+
+{{- define "Protocol:Interface:NaturalMessagingSource" }}
+{{- range .ClientMethods }}
+  {{- template "Method:Request:NaturalMessagingSource" . }}
+{{- end }}
+
+{{- range .TwoWayMethods }}
+  {{- template "Method:CompleterBase:NaturalMessagingSource" . }}
+{{- end }}
+{{- end }}

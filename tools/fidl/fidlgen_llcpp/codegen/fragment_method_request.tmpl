@@ -4,7 +4,7 @@
 // found in the LICENSE file.
 */}}
 
-{{- define "Method:Request:MessagingHeader" }}
+{{- define "Method:Request:WireMessagingHeader" }}
 {{- EnsureNamespace "" }}
 {{- if .Request.IsResource }}
 {{- IfdefFuchsia -}}
@@ -74,7 +74,7 @@ struct {{ .WireRequest }} final {
 
 
 
-{{- define "Method:Request:MessagingSource" }}
+{{- define "Method:Request:WireMessagingSource" }}
   {{- EnsureNamespace "" }}
 
 {{- if .Request.IsResource }}
@@ -94,5 +94,66 @@ struct {{ .WireRequest }} final {
 {{- if .Request.IsResource }}
 {{- EndifFuchsia -}}
 {{- end }}
+{{- end }}
+
+
+
+{{- define "Method:Request:NaturalMessagingHeader" }}
+{{- IfdefFuchsia -}}
+{{- EnsureNamespace "" }}
+
+template <>
+class {{ .NaturalRequest }} final : public {{ .RequestMessageBase }} {
+ public:
+  {{- with .NaturalRequest }}
+    {{ .Self }}() = default;
+    ~{{ .Self }}() = default;
+    {{ .Self }}({{ .Self }}&&) noexcept = default;
+    {{ .Self }}& operator=({{ .Self }}&&) noexcept = default;
+  {{- end }}
+
+  {{- if .HasRequestPayload }}
+    {{ .NaturalRequest.Self }}({{ .RequestPayload }} payload) : payload_(std::move(payload)) {}
+  {{- end }}
+
+  {{- if .Request.IsResource }}
+    {{- with .NaturalRequest }}
+      {{ .Self }}(const {{ .Self }}&) noexcept = delete;
+      {{ .Self }}& operator=(const {{ .Self }}&) noexcept = delete;
+    {{- end }}
+  {{- else }}
+    {{- /* TODO(fxbug.dev/82189): Generate copy constructors */}}
+  {{- end }}
+
+  {{- if .HasRequestPayload }}
+    {{ .RequestPayload }}* operator->() { return &payload_; }
+    const {{ .RequestPayload }}* operator->() const { return &payload_; }
+    {{ .RequestPayload }}& operator*() { return payload_; }
+    const {{ .RequestPayload }}& operator*() const { return payload_; }
+  {{- end }}
+
+ private:
+  {{- if .HasRequestPayload }}
+    {{ .RequestPayload }} payload_;
+  {{- end }}
+};
+
+template <>
+struct {{ .RequestMessageTraits }} final {
+ public:
+  static constexpr bool kHasPayload = {{ .HasRequestPayload }};
+  {{- if .HasRequestPayload }}
+    using Payload = {{ .RequestPayload }};
+  {{- end }}
+};
+
+
+{{- EndifFuchsia -}}
+{{- end }}
+
+
+
+{{- define "Method:Request:NaturalMessagingSource" }}
+
 {{- end }}
 

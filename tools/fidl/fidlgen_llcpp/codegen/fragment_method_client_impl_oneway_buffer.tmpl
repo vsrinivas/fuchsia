@@ -5,7 +5,7 @@
 */}}
 
 
-{{- define "Method:ClientImplOnewayBuffer:MessagingHeader" }}
+{{- define "Method:ClientImplOnewayBuffer:WireMessagingHeader" }}
 {{ .Docs }}
 {{- if .DocComments }}
 //
@@ -15,7 +15,7 @@
 {{ end }}
 
 
-{{- define "Method:ClientImplOnewayBuffer:MessagingSource" }}
+{{- define "Method:ClientImplOnewayBuffer:WireMessagingSource" }}
 ::fidl::Result {{ .Protocol.WireWeakOnewayBufferClientImpl.NoLeading }}::{{ .Name }}(
     {{- RenderParams .RequestArgs }}) {
   constexpr uint32_t _buffer_size = ::fidl::AsyncClientMethodBufferSizeInChannel<{{ .Marker }}>();

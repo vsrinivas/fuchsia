@@ -4,14 +4,14 @@
 // found in the LICENSE file.
 */}}
 
-{{- define "Table:ForwardDeclaration:TypesHeader" }}
+{{- define "Table:ForwardDeclaration:WireTypesHeader" }}
 {{ EnsureNamespace . }}
 class {{ .Name }};
 {{- end }}
 
 {{/* TODO(fxbug.dev/36441): Remove __Fuchsia__ ifdefs once we have non-Fuchsia
      emulated handles for C++. */}}
-{{- define "Table:TypesHeader" }}
+{{- define "Table:WireTypesHeader" }}
 {{ if .IsResourceType }}
 {{- IfdefFuchsia -}}
 {{- end }}
@@ -159,7 +159,7 @@ public:
 
 {{/* TODO(fxbug.dev/36441): Remove __Fuchsia__ ifdefs once we have non-Fuchsia
      emulated handles for C++. */}}
-{{- define "Table:TypesSource" }}
+{{- define "Table:WireTypesSource" }}
 {{ if .IsResourceType }}
 {{ EnsureNamespace "" }}
 {{- IfdefFuchsia -}}
@@ -178,7 +178,7 @@ void {{ . }}::_CloseHandles() {
 
 {{/* TODO(fxbug.dev/36441): Remove __Fuchsia__ ifdefs once we have non-Fuchsia
      emulated handles for C++. */}}
-{{- define "Table:Traits:TypesHeader" }}
+{{- define "Table:Traits:WireTypesHeader" }}
 {{ if .IsResourceType }}
 {{- IfdefFuchsia -}}
 template <>

@@ -5,7 +5,7 @@
 */}}
 
 
-{{- define "Method:ClientImplAsyncBuffer:MessagingHeader" }}
+{{- define "Method:ClientImplAsyncBuffer:WireMessagingHeader" }}
 {{ .Docs }}
 {{- if .DocComments }}
 //
@@ -15,7 +15,7 @@ void {{ .Name }}({{ RenderParams .RequestArgs (printf "%s* _context" .WireRespon
 {{ end }}
 
 
-{{- define "Method:ClientImplAsyncBuffer:MessagingSource" }}
+{{- define "Method:ClientImplAsyncBuffer:WireMessagingSource" }}
 void {{ .Protocol.WireWeakAsyncBufferClientImpl.NoLeading }}::{{ .Name }}(
     {{- RenderParams .RequestArgs (printf "%s* _context" .WireResponseContext) }}) {
   constexpr uint32_t _buffer_size = ::fidl::AsyncClientMethodBufferSizeInChannel<{{ .Marker }}>();

@@ -4,7 +4,7 @@
 // found in the LICENSE file.
 */}}
 
-{{- define "Protocol:EventHandler:MessagingHeader" }}
+{{- define "Protocol:EventHandler:WireMessagingHeader" }}
 {{- EnsureNamespace "" }}
 {{- IfdefFuchsia }}
 template<>
@@ -58,7 +58,7 @@ class {{ .WireEventDispatcher }} final :
 
 
 
-{{- define "Protocol:EventHandler:MessagingSource" }}
+{{- define "Protocol:EventHandler:WireMessagingSource" }}
 {{ EnsureNamespace "" }}
 {{- IfdefFuchsia }}
 {{ if .Transport.HasEvents }}
@@ -161,3 +161,75 @@ std::optional<::fidl::UnbindInfo>
 {{- EndifFuchsia }}
 {{- end }}
 
+
+
+{{- define "Protocol:EventHandler:NaturalMessagingHeader" }}
+{{- EnsureNamespace "" }}
+{{- IfdefFuchsia }}
+template<>
+class {{ .NaturalEventHandlerInterface }} {
+ public:
+  {{ .NaturalEventHandlerInterface.Self }}() = default;
+  virtual ~{{ .NaturalEventHandlerInterface.Self }}() = default;
+  {{- range .Events -}}
+    {{- .Docs }}
+    virtual void {{ .Name }}({{ .NaturalEvent }}&) {}
+  {{- end }}
+};
+
+template<>
+class {{ .NaturalAsyncEventHandler }}
+    : public {{ .NaturalEventHandlerInterface }}, public ::fidl::internal::AsyncEventHandler {
+ public:
+  {{ .NaturalAsyncEventHandler.Self }}() = default;
+};
+
+template <>
+class {{ .NaturalEventDispatcher }} final :
+    public ::fidl::internal::IncomingEventDispatcher<{{ .NaturalAsyncEventHandler }}> {
+ public:
+  explicit {{ .NaturalEventDispatcher.Self }}({{ .NaturalAsyncEventHandler }}* event_handler)
+      : IncomingEventDispatcher(event_handler) {}
+
+ private:
+  std::optional<::fidl::UnbindInfo> DispatchEvent(
+      ::fidl::IncomingMessage& msg,
+      internal::IncomingTransportContext transport_context) override;
+};
+{{- EndifFuchsia }}
+{{- end }}
+
+
+
+{{- define "Protocol:EventHandler:NaturalMessagingSource" }}
+{{- EnsureNamespace "" }}
+{{- IfdefFuchsia }}
+std::optional<::fidl::UnbindInfo>
+{{ .NaturalEventDispatcher.NoLeading }}::DispatchEvent(
+    ::fidl::IncomingMessage& msg,
+    ::fidl::internal::IncomingTransportContext transport_context) {
+  {{- if .Events }}
+  switch (msg.header()->ordinal) {
+  {{- range .Events }}
+    case {{ .OrdinalName }}:
+    {
+      ::fitx::result<::fidl::Error, {{ .NaturalEvent }}> decoded =
+          {{ .NaturalEvent }}::DecodeTransactional(std::move(msg));
+      if (decoded.is_error()) {
+        return ::fidl::UnbindInfo(decoded.error_value());
+      }
+      if (event_handler()) {
+        event_handler()->{{ .Name }}(decoded.value());
+      }
+      return std::nullopt;
+    }
+  {{- end }}
+    default:
+      break;
+  }
+  {{- end }}
+  return ::fidl::UnbindInfo::UnknownOrdinal();
+}
+
+{{- EndifFuchsia }}
+{{- end }}

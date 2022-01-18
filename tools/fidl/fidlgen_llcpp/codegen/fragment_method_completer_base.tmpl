@@ -5,7 +5,7 @@
 */}}
 
 
-{{- define "Method:CompleterBase:MessagingHeader" }}
+{{- define "Method:CompleterBase:WireMessagingHeader" }}
 {{ EnsureNamespace "" }}
 {{- if .HasResponse }}
   template<>
@@ -43,7 +43,9 @@
 {{- end }}
 {{- end }}
 
-{{- define "Method:CompleterBase:MessagingSource" }}
+
+
+{{- define "Method:CompleterBase:WireMessagingSource" }}
 {{ EnsureNamespace "" }}
 {{- IfdefFuchsia -}}
 ::fidl::Result
@@ -115,3 +117,45 @@
 {{- EndifFuchsia -}}
 {{- end }}
 
+
+
+{{- define "Method:NaturalReplySignature:Helper" -}}
+{{- /* TODO(fxbug.dev/60240): Use `const T&` for value types. */}}
+{{- if .HasResponsePayload }}{{ .ResponsePayload }}&& payload{{ end }}
+{{- end }}
+
+
+
+{{- define "Method:CompleterBase:NaturalMessagingHeader" }}
+{{ EnsureNamespace "" }}
+template<>
+class {{ .NaturalCompleterBase }} : public ::fidl::CompleterBase {
+ public:
+  void Reply({{ template "Method:NaturalReplySignature:Helper" . }});
+
+ protected:
+  using ::fidl::CompleterBase::CompleterBase;
+
+ private:
+  ::fidl::internal::NaturalServerMessenger messenger_{this};
+};
+
+template<>
+struct {{ .NaturalMethodTypes }} {
+  using Completer = fidl::Completer<{{ .NaturalCompleterBase }}>;
+};
+{{- end }}
+
+
+
+{{- define "Method:CompleterBase:NaturalMessagingSource" }}
+{{ EnsureNamespace "" }}
+void {{ .NaturalCompleterBase.NoLeading }}::Reply(
+    {{- template "Method:NaturalReplySignature:Helper" . }}) {
+  ::fidl::Encoder _encoder{ {{ .OrdinalName }} };
+  messenger_.SendReply(
+      &{{ .Response.WireCodingTable }},
+      ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+          _encoder {{- if .HasResponsePayload }}, std::move(payload){{ end }}));
+}
+{{- end }}

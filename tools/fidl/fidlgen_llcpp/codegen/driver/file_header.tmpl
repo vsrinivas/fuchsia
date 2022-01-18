@@ -16,7 +16,7 @@ fidl/{{ .LibraryDots }}/cpp/driver/wire.h
 #pragma once
 
 #include <{{ .Library | Filename "Markers" }}>
-#include <{{ .Library | Filename "TypesHeader" }}>
+#include <{{ .Library | Filename "WireTypesHeader" }}>
 #include <{{ .Library | Filename "driver/MessagingHeader" }}>
 {{ range .Dependencies -}}
 #include <{{ . | Filename "driver/Header" }}>

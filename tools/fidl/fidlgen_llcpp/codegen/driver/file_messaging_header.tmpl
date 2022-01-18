@@ -17,7 +17,7 @@ fidl/{{ .LibraryDots }}/cpp/driver/wire_messaging.h
   #pragma once
 
   #include <{{ .Library | Filename "Markers" }}>
-  #include <{{ .Library | Filename "TypesHeader" }}>
+  #include <{{ .Library | Filename "WireTypesHeader" }}>
 
   #include <lib/fidl_driver/cpp/wire_messaging.h>
 
@@ -30,22 +30,22 @@ fidl/{{ .LibraryDots }}/cpp/driver/wire_messaging.h
   {{ EndifFuchsia }}
 
   {{ range .Dependencies -}}
-    #include <{{ . | Filename "MessagingHeader" }}>
+    #include <{{ . | Filename "driver/MessagingHeader" }}>
   {{ end -}}
 
 
   {{- range (call .ProtocolsForTransport "Driver") }}
-    {{ template "Protocol:ForwardDeclaration:MessagingHeader" . }}
+    {{ template "Protocol:ForwardDeclaration:WireMessagingHeader" . }}
   {{- end }}
 
   {{- range (call .ProtocolsForTransport "Driver") }}
-    {{ template "Protocol:MessagingHeader" . }}
+    {{ template "Protocol:WireMessagingHeader" . }}
   {{- end }}
 
   {{ EnsureNamespace "fidl" }}
 
   {{- range (call .ProtocolsForTransport "Driver") }}
-    {{ template "Protocol:Traits:MessagingHeader" . }}
+    {{ template "Protocol:Traits:WireMessagingHeader" . }}
   {{- end }}
 
   {{- range (call .ProtocolsForTransport "Driver") }}

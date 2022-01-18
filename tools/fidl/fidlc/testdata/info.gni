@@ -59,9 +59,6 @@ fidl_testdata_info = [
 
       # TODO(fxbug.dev/72247): Encode libfuzzer dependency on HLCPP and LLCPP.
       "fidlgen_libfuzzer",
-
-      # TODO(fxbug.dev/72247): Encode Unified CPP dependency on HLCPP and LLCPP.
-      "fidlgen_cpp",
     ]
   },
   {
@@ -81,9 +78,6 @@ fidl_testdata_info = [
 
       # TODO(fxbug.dev/72247): Encode libfuzzer dependency on HLCPP and LLCPP.
       "fidlgen_libfuzzer",
-
-      # TODO(fxbug.dev/72247): Encode Unified CPP dependency on HLCPP and LLCPP.
-      "fidlgen_cpp",
     ]
   },
   {
@@ -118,9 +112,6 @@ fidl_testdata_info = [
 
       # TODO(fxbug.dev/62763): Fix undefined_identifier errors.
       "fidlgen_dart",
-
-      # TODO(fxbug.dev/72247): Encode Unified CPP dependency on HLCPP and LLCPP.
-      "fidlgen_cpp",
     ]
   },
   {
@@ -134,9 +125,6 @@ fidl_testdata_info = [
       "fidlgen_libfuzzer",
       "fidlgen_llcpp",
       "fidlgen_rust",
-
-      # TODO(fxbug.dev/72247): Encode Unified CPP dependency on HLCPP and LLCPP.
-      "fidlgen_cpp",
     ]
   },
   {
@@ -150,16 +138,10 @@ fidl_testdata_info = [
       # TODO(fxbug.dev/62523): Make protocol named "Interface" compile.
       "fidlgen_llcpp",
       "fidlgen_libfuzzer",
-
-      # TODO(fxbug.dev/72247): Encode Unified CPP dependency on HLCPP and LLCPP.
-      "fidlgen_cpp",
     ]
     host_build_denylist = [
       # TODO(fxbug.dev/62573): Add ifdefs so that protocols compile on host.
       "fidlgen_llcpp",
-
-      # TODO(fxbug.dev/72247): Encode Unified CPP dependency on HLCPP and LLCPP.
-      "fidlgen_cpp",
     ]
   },
   {
@@ -183,9 +165,6 @@ fidl_testdata_info = [
 
       # TODO(fxbug.dev/72247): Encode libfuzzer dependency on HLCPP and LLCPP.
       "fidlgen_libfuzzer",
-
-      # TODO(fxbug.dev/72247): Encode Unified CPP dependency on HLCPP and LLCPP.
-      "fidlgen_cpp",
     ]
   },
   {
@@ -215,9 +194,6 @@ fidl_testdata_info = [
 
       # TODO(fxbug.dev/72247): Encode libfuzzer dependency on HLCPP and LLCPP.
       "fidlgen_libfuzzer",
-
-      # TODO(fxbug.dev/72247): Encode Unified CPP dependency on HLCPP and LLCPP.
-      "fidlgen_cpp",
     ]
   },
   {
@@ -238,7 +214,6 @@ fidl_testdata_info = [
     denylist = [
       # TODO(fxbug.dev/62533): Fix many issues.
       "fidlgen_hlcpp",
-      "fidlgen_cpp",
       "fidlgen_libfuzzer",
       "fidlgen_llcpp",
     ]
@@ -252,9 +227,6 @@ fidl_testdata_info = [
 
       # TODO(fxbug.dev/72247): Encode libfuzzer dependency on HLCPP and LLCPP.
       "fidlgen_libfuzzer",
-
-      # TODO(fxbug.dev/72247): Encode Unified CPP dependency on HLCPP and LLCPP.
-      "fidlgen_cpp",
     ]
   },
   {
@@ -272,18 +244,12 @@ fidl_testdata_info = [
       # TODO(fxbug.dev/62526): Fix pcidevice.h include issue.
       "fidlgen_llcpp",
 
-      # TODO(fxbug.dev/72247): Encode Unified CPP dependency on HLCPP and LLCPP.
-      "fidlgen_cpp",
-
       # TODO(fxbug.dev/62524): Fix Ord/Hash trait issue with fidl::Resource.
       "fidlgen_rust",
     ]
     host_build_denylist = [
       # TODO(fxbug.dev/62573): Add ifdefs so that protocols compile on host.
       "fidlgen_llcpp",
-
-      # TODO(fxbug.dev/72247): Encode Unified CPP dependency on HLCPP and LLCPP.
-      "fidlgen_cpp",
     ]
   },
   {
@@ -307,9 +273,6 @@ fidl_testdata_info = [
 
       # TODO(fxbug.dev/72247): Encode libfuzzer dependency on HLCPP and LLCPP.
       "fidlgen_libfuzzer",
-
-      # TODO(fxbug.dev/72247): Encode Unified CPP dependency on HLCPP and LLCPP.
-      "fidlgen_cpp",
     ]
   },
   {
@@ -321,9 +284,6 @@ fidl_testdata_info = [
 
       # TODO(fxbug.dev/72247): Encode libfuzzer dependency on HLCPP and LLCPP.
       "fidlgen_libfuzzer",
-
-      # TODO(fxbug.dev/72247): Encode Unified CPP dependency on HLCPP and LLCPP.
-      "fidlgen_cpp",
     ]
   },
   {
@@ -332,9 +292,6 @@ fidl_testdata_info = [
     host_build_denylist = [
       # TODO(fxbug.dev/62573): Add ifdefs so that protocols compile on host.
       "fidlgen_llcpp",
-
-      # TODO(fxbug.dev/72247): Encode Unified CPP dependency on HLCPP and LLCPP.
-      "fidlgen_cpp",
     ]
   },
   {
@@ -354,9 +311,6 @@ fidl_testdata_info = [
 
       # TODO(fxbug.dev/72247): Encode libfuzzer dependency on HLCPP and LLCPP.
       "fidlgen_libfuzzer",
-
-      # TODO(fxbug.dev/72247): Encode Unified CPP dependency on HLCPP and LLCPP.
-      "fidlgen_cpp",
     ]
   },
   {
@@ -368,9 +322,6 @@ fidl_testdata_info = [
 
       # TODO(fxbug.dev/72247): Encode libfuzzer dependency on HLCPP and LLCPP.
       "fidlgen_libfuzzer",
-
-      # TODO(fxbug.dev/72247): Encode Unified CPP dependency on HLCPP and LLCPP.
-      "fidlgen_cpp",
     ]
     host_build_denylist = [
       # TODO(fxbug.dev/62573): Add ifdefs so that protocols compile on host.
@@ -378,9 +329,6 @@ fidl_testdata_info = [
 
       # TODO(fxbug.dev/72247): Encode libfuzzer dependency on HLCPP and LLCPP.
       "fidlgen_libfuzzer",
-
-      # TODO(fxbug.dev/72247): Encode Unified CPP dependency on HLCPP and LLCPP.
-      "fidlgen_cpp",
     ]
   },
   {
@@ -392,9 +340,6 @@ fidl_testdata_info = [
 
       # TODO(fxbug.dev/72247): Encode libfuzzer dependency on HLCPP and LLCPP.
       "fidlgen_libfuzzer",
-
-      # TODO(fxbug.dev/72247): Encode Unified CPP dependency on HLCPP and LLCPP.
-      "fidlgen_cpp",
     ]
   },
   {
@@ -403,9 +348,6 @@ fidl_testdata_info = [
     host_build_denylist = [
       # TODO(fxbug.dev/62573): Add ifdefs so that protocols compile on host.
       "fidlgen_llcpp",
-
-      # TODO(fxbug.dev/72247): Encode Unified CPP dependency on HLCPP and LLCPP.
-      "fidlgen_cpp",
     ]
   },
   {
@@ -417,9 +359,6 @@ fidl_testdata_info = [
 
       # TODO(fxbug.dev/72247): Encode libfuzzer dependency on HLCPP and LLCPP.
       "fidlgen_libfuzzer",
-
-      # TODO(fxbug.dev/72247): Encode Unified CPP dependency on HLCPP and LLCPP.
-      "fidlgen_cpp",
     ]
   },
   {
@@ -471,9 +410,6 @@ fidl_testdata_info = [
 
       # TODO(fxbug.dev/72247): Encode libfuzzer dependency on HLCPP and LLCPP.
       "fidlgen_libfuzzer",
-
-      # TODO(fxbug.dev/72247): Encode Unified CPP dependency on HLCPP and LLCPP.
-      "fidlgen_cpp",
     ]
   },
   {
@@ -491,16 +427,10 @@ fidl_testdata_info = [
       # TODO(fxbug.dev/55889): Escape "union" keyword.
       "fidlgen_llcpp",
       "fidlgen_libfuzzer",
-
-      # TODO(fxbug.dev/72247): Encode Unified CPP dependency on HLCPP and LLCPP.
-      "fidlgen_cpp",
     ]
     host_build_denylist = [
       # TODO(fxbug.dev/62573): Add ifdefs so that protocols compile on host.
       "fidlgen_llcpp",
-
-      # TODO(fxbug.dev/72247): Encode Unified CPP dependency on HLCPP and LLCPP.
-      "fidlgen_cpp",
     ]
   },
   {
@@ -513,9 +443,6 @@ fidl_testdata_info = [
     host_build_denylist = [
       # TODO(fxbug.dev/62573): Add ifdefs so that protocols compile on host.
       "fidlgen_llcpp",
-
-      # TODO(fxbug.dev/72247): Encode Unified CPP dependency on HLCPP and LLCPP.
-      "fidlgen_cpp",
     ]
   },
   {
@@ -536,9 +463,6 @@ fidl_testdata_info = [
     host_build_denylist = [
       # TODO(fxbug.dev/62573): Add ifdefs so that protocols compile on host.
       "fidlgen_llcpp",
-
-      # TODO(fxbug.dev/72247): Encode Unified CPP dependency on HLCPP and LLCPP.
-      "fidlgen_cpp",
     ]
   },
 ]
