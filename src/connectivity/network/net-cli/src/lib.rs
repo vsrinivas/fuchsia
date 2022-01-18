@@ -123,26 +123,6 @@ fn shortlist_interfaces(name_pattern: &str, interfaces: &mut Vec<fstack::Interfa
     interfaces.retain(|i| i.properties.name.contains(name_pattern))
 }
 
-fn write_jsonified_interfaces_info<
-    W: std::io::Write,
-    I: IntoIterator<Item = fstack::InterfaceInfo>,
->(
-    mut out: W,
-    interfaces: I,
-) -> Result<(), Error> {
-    let value = itertools::process_results(
-        interfaces
-            .into_iter()
-            .map(fstack_ext::InterfaceInfo::from)
-            .map(ser::InterfaceView::from)
-            .map(serde_json::to_value)
-            .map(|res| res.context("failed to serialize InterfaceView")),
-        |i| Value::from_iter(i),
-    )?;
-    write!(out, "{}", value)?;
-    Ok(())
-}
-
 fn write_tabulated_interfaces_info<
     W: std::io::Write,
     I: IntoIterator<Item = fstack::InterfaceInfo>,
@@ -220,8 +200,12 @@ async fn do_if<W: std::io::Write, C: NetCliDepsConnector>(
                 let () = shortlist_interfaces(&name_pattern, &mut response);
             }
             if json {
-                write_jsonified_interfaces_info(out, response)
-                    .context("error jsonifying interface info")?;
+                let response: Vec<_> = response
+                    .into_iter()
+                    .map(fstack_ext::InterfaceInfo::from)
+                    .map(ser::InterfaceView::from)
+                    .collect();
+                serde_json::to_writer(out, &response).context("serialize")?;
             } else {
                 write_tabulated_interfaces_info(out, response)
                     .context("error tabulating interface info")?;
@@ -348,18 +332,12 @@ async fn do_fwd<W: std::io::Write, C: NetCliDepsConnector>(
             let response =
                 stack.get_forwarding_table().await.context("error retrieving forwarding table")?;
             if json {
-                write!(
-                    out,
-                    "{}",
-                    itertools::process_results(
-                        response
-                            .into_iter()
-                            .map(fstack_ext::ForwardingEntry::from)
-                            .map(ser::ForwardingEntry::from)
-                            .map(serde_json::to_value),
-                        |i| Value::from_iter(i),
-                    )?,
-                )?;
+                let response: Vec<_> = response
+                    .into_iter()
+                    .map(fstack_ext::ForwardingEntry::from)
+                    .map(ser::ForwardingEntry::from)
+                    .collect();
+                let () = serde_json::to_writer(out, &response).context("serialize")?;
             } else {
                 for entry in response {
                     writeln!(out, "{}", fstack_ext::ForwardingEntry::from(entry))?;
@@ -423,18 +401,12 @@ async fn do_route<W: std::io::Write, C: NetCliDepsConnector>(
                 netstack.get_route_table().await.context("error retrieving routing table")?;
 
             if json {
-                write!(
-                    out,
-                    "{}",
-                    itertools::process_results(
-                        response
-                            .into_iter()
-                            .map(fnetstack_ext::RouteTableEntry::from)
-                            .map(ser::RouteTableEntry::from)
-                            .map(serde_json::to_value),
-                        |i| Value::from_iter(i),
-                    )?
-                )?;
+                let response: Vec<_> = response
+                    .into_iter()
+                    .map(fnetstack_ext::RouteTableEntry::from)
+                    .map(ser::RouteTableEntry::from)
+                    .collect();
+                serde_json::to_writer(out, &response).context("serialize")?;
             } else {
                 let mut t = Table::new();
                 t.set_format(format::FormatBuilder::new().padding(2, 2).build());
@@ -1450,10 +1422,16 @@ status      ENABLED | LINK_UP"#,
 
         let got_output: &str = std::str::from_utf8(&output).unwrap();
 
-        pretty_assertions::assert_eq!(
-            trim_whitespace_for_comparison(got_output),
-            trim_whitespace_for_comparison(&wanted_output),
-        );
+        if json {
+            let got: Value = serde_json::from_str(got_output).unwrap();
+            let want: Value = serde_json::from_str(&wanted_output).unwrap();
+            pretty_assertions::assert_eq!(got, want);
+        } else {
+            pretty_assertions::assert_eq!(
+                trim_whitespace_for_comparison(got_output),
+                trim_whitespace_for_comparison(&wanted_output),
+            );
+        }
     }
 
     fn wanted_fwd_list_json() -> String {
@@ -1528,10 +1506,16 @@ status      ENABLED | LINK_UP"#,
 
         let got_output: &str = std::str::from_utf8(&output).unwrap();
 
-        pretty_assertions::assert_eq!(
-            trim_whitespace_for_comparison(got_output),
-            trim_whitespace_for_comparison(&wanted_output),
-        );
+        if json {
+            let got: Value = serde_json::from_str(got_output).unwrap();
+            let want: Value = serde_json::from_str(&wanted_output).unwrap();
+            pretty_assertions::assert_eq!(got, want);
+        } else {
+            pretty_assertions::assert_eq!(
+                trim_whitespace_for_comparison(got_output),
+                trim_whitespace_for_comparison(&wanted_output),
+            );
+        }
     }
 
     #[fasync::run_singlethreaded(test)]
@@ -1797,10 +1781,16 @@ status      ENABLED | LINK_UP"#,
 
         let got_output: &str = std::str::from_utf8(&output).unwrap();
 
-        pretty_assertions::assert_eq!(
-            trim_whitespace_for_comparison(got_output),
-            trim_whitespace_for_comparison(&wanted_output),
-        );
+        if json {
+            let got: Value = serde_json::from_str(got_output).unwrap();
+            let want: Value = serde_json::from_str(&wanted_output).unwrap();
+            pretty_assertions::assert_eq!(got, want);
+        } else {
+            pretty_assertions::assert_eq!(
+                trim_whitespace_for_comparison(got_output),
+                trim_whitespace_for_comparison(&wanted_output),
+            );
+        }
     }
 
     #[fasync::run_singlethreaded(test)]
