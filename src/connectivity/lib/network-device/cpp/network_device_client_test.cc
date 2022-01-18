@@ -450,7 +450,7 @@ TEST_F(NetDeviceTest, TestEchoPair) {
   ASSERT_OK(tun_pair->GetLeft(CreateClientRequest(&left)).status());
   ASSERT_OK(tun_pair->GetRight(CreateClientRequest(&right)).status());
   {
-    fidl::WireResult result = tun_pair->AddPort_Sync(DefaultPairPortConfig());
+    fidl::WireResult result = tun_pair.sync()->AddPort(DefaultPairPortConfig());
     ASSERT_OK(result.status());
     ASSERT_EQ(result.value().result.which(), tun::wire::DevicePairAddPortResult::Tag::kResponse)
         << zx_status_get_string(result.value().result.err());
@@ -556,7 +556,7 @@ TEST_F(NetDeviceTest, StatusWatcher) {
         << call_count1 << ", call_count2=" << call_count2;
 
     // Set online to false and wait for both watchers again.
-    ASSERT_OK(tun_port->SetOnline_Sync(false).status());
+    ASSERT_OK(tun_port.sync()->SetOnline(false).status());
     expect_online = false;
     ASSERT_TRUE(RunLoopUntilOrFailure([&call_count1, &call_count2]() {
       return call_count1 == 2 && call_count2 == 2;
@@ -567,7 +567,7 @@ TEST_F(NetDeviceTest, StatusWatcher) {
   // not increase.
   for (uint32_t i = 0; i < 3; i++) {
     expect_online = !expect_online;
-    ASSERT_OK(tun_port->SetOnline_Sync(expect_online).status());
+    ASSERT_OK(tun_port.sync()->SetOnline(expect_online).status());
     ASSERT_TRUE(RunLoopUntilOrFailure([&call_count1, &i]() { return call_count1 == 3 + i; }))
         << "call_count1=" << call_count1 << ", call_count2=" << call_count2;
     // call_count2 mustn't change.
