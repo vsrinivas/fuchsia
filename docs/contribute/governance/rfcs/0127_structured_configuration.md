@@ -1289,7 +1289,7 @@ ability for components to receive updates over FIDL.
 [fidl_contrib]: /docs/contribute/contributing-to-fidl/README.md
 [ffx]: /docs/development/tools/ffx/getting-started.md
 [component_instance_id]: /docs/glossary/README.md#component-instance-identifier
-[realm_builder]: /docs/development/components/v2/realm_builder.md
+[realm_builder]: /docs/development/testing/components/realm_builder.md
 [utc_algorithm]: /docs/concepts/time/utc/algorithms.md
 
 [roadmap_spac]: /docs/contribute/roadmap/2021/product_assembly.md

@@ -344,8 +344,8 @@ covered in a [separate roadmap document][oot-system-testing].
 [oot-system-testing]: /docs/contribute/roadmap/2021/oot_system_testing.md
 [overnet]: /src/connectivity/overnet/README.md
 [qemu-download]: /docs/development/idk/download.md#qemu
-[realm-builder]: /docs/development/components/v2/realm_builder.md
-[realm-builder-languages]: /docs/development/components/v2/realm_builder.md#language-feature-matrix
+[realm-builder]: /docs/development/testing/components/realm_builder.md
+[realm-builder-languages]: /docs/development/testing/components/realm_builder.md#language-feature-matrix
 [rfc-0015]: /docs/contribute/governance/rfcs/0015_cts.md
 [rfc-0106]: /docs/contribute/governance/rfcs/0106_manifest_includes_in_sdk.md
 [runner-elf]: /docs/development/testing/components/test_runner_framework.md#elf-test-runner

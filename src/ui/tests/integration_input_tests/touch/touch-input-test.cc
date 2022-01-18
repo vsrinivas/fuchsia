@@ -102,8 +102,8 @@
 // For more information about testing v2 components and realm_builder,
 // visit the following links:
 //
-// Testing: https://fuchsia.dev/fuchsia-src/concepts/testing/v2
-// Realm Builder: https://fuchsia.dev/fuchsia-src/development/components/v2/realm_builder
+// Testing: https://fuchsia.dev/fuchsia-src/development/testing/components
+// Realm Builder: https://fuchsia.dev/fuchsia-src/development/testing/components/realm_builder
 
 namespace {
 

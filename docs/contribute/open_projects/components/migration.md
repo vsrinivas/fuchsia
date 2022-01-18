@@ -195,7 +195,7 @@ Reach out for questions or for status updates:
 [cml]: /docs/concepts/components/v2/component_manifests.md
 [cmx]: /docs/concepts/components/v1/component_manifests.md
 [component_manager]: /docs/concepts/components/v2/component_manager.md
-[doc-realm-builder]: /docs/development/components/v2/realm_builder.md
+[doc-realm-builder]: /docs/development/testing/components/realm_builder.md
 [doc-modular]: /docs/concepts/modular/overview.md
 [fuchsia-component]: https://fuchsia.dev/reference/fidl/fuchsia.component
 [fuchsia-sys2]: https://fuchsia.dev/reference/fidl/fuchsia.sys2

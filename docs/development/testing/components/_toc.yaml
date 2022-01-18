@@ -15,6 +15,8 @@ toc:
   path: /docs/development/testing/components/test_runner_framework.md
 - title: "Integration testing"
   path: /docs/development/testing/components/integration_testing.md
+- title: "Realm builder"
+  path: /docs/development/testing/components/realm_builder.md
 - title: "Hermetic testing using OpaqueTest"
   path: /docs/development/testing/components/opaque_test.md
   status: deprecated

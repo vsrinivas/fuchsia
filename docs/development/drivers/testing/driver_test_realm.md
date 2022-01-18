@@ -107,7 +107,7 @@ The examples can be seen at [//examples/drivers/driver_test_realm/](/examples/dr
 ### Hermetic
 
 Test authors can use
-[RealmBuilder](/docs/development/components/v2/realm_builder.md) to create a new DriverTestRealm for each test.
+[RealmBuilder](/docs/development/testing/components/realm_builder.md) to create a new DriverTestRealm for each test.
 The DriverFramework has provided a helpful library using
 [DriverTestRealm in RealmBuilder](/sdk/lib/driver_test_realm/realm_builder).
 

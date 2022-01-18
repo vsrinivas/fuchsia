@@ -34,7 +34,7 @@ namespace testing {
 // create arbitrarily deep subtrees, and route capabilities between any of the
 // created components.
 // For more information about RealmBuilder, see the following link.
-// https://fuchsia.dev/fuchsia-src/development/components/v2/realm_builder
+// https://fuchsia.dev/fuchsia-src/development/testing/components/realm_builder
 // For examples on how to use this library, see the integration tests
 // found at //sdk/cpp/tests/realm_builder_test.cc
 class Realm final {
@@ -227,7 +227,7 @@ class RealmRoot final {
 // Clients may also use this class to recursively build sub-realms by calling
 // `AddChildRealm`.
 // For more information about RealmBuilder, see the following link.
-// https://fuchsia.dev/fuchsia-src/development/components/v2/realm_builder
+// https://fuchsia.dev/fuchsia-src/development/testing/components/realm_builder
 // For examples on how to use this library, see the integration tests
 // found at //sdk/cpp/tests/realm_builder_test.cc
 class Realm final {

@@ -2098,8 +2098,8 @@ described in the [Vulkan documentation][vulkan].
 [moniker]: /docs/concepts/components/v2/monikers.md
 [protocol-capabilities]: /docs/concepts/components/v2/capabilities/protocol.md
 [protocol-connector]: /src/lib/fuchsia-component/src/client.rs
-[realm-builder-monikers]: /docs/development/components/v2/realm_builder.md#test-component-moniker
-[realm-builder]:/docs/development/components/v2/realm_builder.md
+[realm-builder-monikers]: /docs/development/testing/components/realm_builder.md#test-component-moniker
+[realm-builder]:/docs/development/testing/components/realm_builder.md
 [resource-data]: /docs/development/components/data.md#hermetic_data_files_with_resource
 [rust-lifecycle]: /examples/components/lifecycle
 [scoped-dev-zero-fuchsia]: https://source.chromium.org/chromium/chromium/src/+/main:base/test/scoped_dev_zero_fuchsia.cc

@@ -126,7 +126,7 @@ etc.
 #### What about CTS tests?
 
 The
-[Fuchsia Compatibility Test Suite](/docs/contribute/governance/rfcs/0015_cts?hl=en)
+[Fuchsia Compatibility Test Suite](/docs/contribute/governance/rfcs/0015_cts)
 ensures that the implementations offered by the Fuchsia platform conform to the
 specifications of the Fuchsia platform. An effective CTS will have UI
 integration tests, and so this guidance doc applies to those UI integration
@@ -135,7 +135,7 @@ tests.
 ## Prefer hermeticity
 
 Various types of
-[hermeticity](/docs/concepts/testing/v2/test_runner_framework?hl=en#hermeticity)
+[hermeticity](/docs/concepts/testing/v2/test_runner_framework#hermeticity)
 make our tests more reliable.
 
 ### Package hermeticity
@@ -180,7 +180,7 @@ The advantages of doing so are:
 #### No to `injected-services`
 
 In component framework v1, it's possible to declare
-[`injected-services`](/docs/concepts/testing/v1_test_component?hl=en#integration_testing)
+[`injected-services`](/docs/concepts/testing/v1_test_component#integration_testing)
 in a test's CMX manifest. Declaring `injected-services` is somewhat of an
 anti-pattern. It, too, also constructs a test environment, but *all the test
 executions* run in the *same environment*. If a service component had dirtied
@@ -367,8 +367,8 @@ Example: see
 ### Test setup - Realm Builder
 
 The [Touch Input Test](/src/ui/tests/integration_input_tests/touch/touch-input-test.cc)
-is constructed using the Realm Builder [library](https://fuchsia.dev/fuchsia-src/development/components/v2/realm_builder?hl=en).
-This library is used to construct the test [Realm](https://fuchsia.dev/fuchsia-src/concepts/components/v2/realms)
+is constructed using the Realm Builder [library](/docs/development/testing/components/realm_builder).
+This library is used to construct the test [Realm](/docs/concepts/components/v2/realms)
 in which the components under test operate. The test suite, hereafter test
 driver component, is a v2 component. This is in contrast to the components in
 the constructed realm, e.g. `scenic`, that are at the moment v1 components. This
@@ -445,6 +445,6 @@ patterns to make sure the APIs are sensible and usable, and serve as as a
 foundation for converting an entire product.
 
 *   For example, converting a product to
-    [Session Framework](/docs/concepts/session/introduction?hl=en) has many
+    [Session Framework](/docs/concepts/session/introduction) has many
     moving parts, and validating specific graphics scenarios builds confidence
     in APIs, implementations, and migration strategy.

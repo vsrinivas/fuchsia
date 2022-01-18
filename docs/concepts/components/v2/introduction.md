@@ -44,7 +44,7 @@ The Component Framework includes:
     interact with the system. ([example](/sdk/lib/sys))
 -   Testing tools and libraries to write unit and integration tests that
     exercise one or many components.
-    ([example](/docs/development/components/v2/realm_builder.md))
+    ([example][doc-realm-builder])
 
 ## Capabilities
 
@@ -206,7 +206,7 @@ Further reading:
 [doc-environments]: /docs/concepts/components/v2/environments.md
 [doc-instances]: /docs/concepts/components/v2/topology.md#component-instances
 [doc-lifecycle]: /docs/concepts/components/v2/lifecycle.md
-[doc-realm-builder]: /docs/development/components/v2/realm_builder.md
+[doc-realm-builder]: /docs/development/testing/components/realm_builder.md
 [doc-realms]: /docs/concepts/components/v2/realms.md
 [doc-runners]: /docs/concepts/components/v2/capabilities/runners.md
 [doc-resolvers]: /docs/concepts/components/v2/capabilities/resolvers.md

@@ -2,7 +2,7 @@
 
 The following directory hosts example of usages of the Realm Builder library.
 This is primarily for code references used in the official docs (found at
-//development/components/v2/realm_builder.md), though it serves as a useful guide
+//docs/development/testing/components/realm_builder.md), though it serves as a useful guide
 on its own. The tests are meant to demonstrate compilable code. This means that
 it will always contain the latest API surface of each of the client libraries.
 However, the tests are disabled because they construct invalid realms for demonstration

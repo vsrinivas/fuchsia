@@ -545,7 +545,7 @@ impl RealmInstance {
 
 /// The `RealmBuilder` struct can be used to assemble and create a component realm at runtime.
 /// For more information on what can be done with this struct, please see the [documentation on
-/// fuchsia.dev](https://fuchsia.dev/fuchsia-src/development/components/v2/realm_builder)
+/// fuchsia.dev](https://fuchsia.dev/fuchsia-src/development/testing/components/realm_builder)
 #[derive(Debug)]
 pub struct RealmBuilder {
     root_realm: SubRealmBuilder,

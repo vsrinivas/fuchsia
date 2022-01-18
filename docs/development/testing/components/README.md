@@ -14,5 +14,7 @@ You can find more information below:
     in different languages and using common testing frameworks.
 *   [Complex topologies and integration testing](integration_testing.md):
     testing interactions between multiple components.
+*   [Realm Builder](realm_builder.md): library that facilitates integration
+    testing of components.
 
 [cfv2]: /docs/concepts/components/v2/introduction.md

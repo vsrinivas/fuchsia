@@ -379,7 +379,7 @@ See also:
 [principles-secure]: /docs/concepts/principles/secure.md
 [principles-updatable]: /docs/concepts/principles/updatable.md
 [reader-fuzzer]: /zircon/system/ulib/inspect/tests/reader_fuzzer.cc
-[realm-builder]: /docs/development/components/v2/realm_builder.md
+[realm-builder]: /docs/development/testing/components/realm_builder.md
 [run-e2e-test]: /docs/development/testing/run_an_end_to_end_test.md
 [run-test-component]: /docs/development/run/run-test-component.md
 [rust-stress-test-lib]: /docs/development/testing/rust_stress_test_library.md

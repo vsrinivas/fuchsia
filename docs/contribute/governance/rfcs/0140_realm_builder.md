@@ -1127,7 +1127,7 @@ easier exploration in the future of [deep realm support](#deep-realm-support),
 this approach will allow us to gather more data on the utility of a combined
 offer/expose API, and this approach results in a slightly simpler API.
 
-[realm-builder-docs]: /docs/development/components/v2/realm_builder.md
+[realm-builder-docs]: /docs/development/testing/components/realm_builder.md
 [realm-docs]: /docs/concepts/components/v2/realms.md
 [resolver-docs]: /docs/concepts/components/v2/capabilities/resolvers.md
 [runner-docs]: /docs/concepts/components/v2/capabilities/runners.md
