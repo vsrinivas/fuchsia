@@ -18,6 +18,7 @@ pub mod range;
 #[cfg(target_os = "fuchsia")]
 pub mod remote_crypt;
 pub mod round;
+pub mod serialized_types;
 #[cfg(target_os = "fuchsia")]
 pub mod server;
 #[cfg(test)]
