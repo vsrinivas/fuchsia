@@ -1,0 +1,29 @@
+use fidl::encoding::decode_persistent;
+pub use fidl_goldenconfig::Config;
+use fuchsia_runtime::{take_startup_handle, HandleInfo, HandleType};
+use fuchsia_zircon as zx;
+pub fn get_config() -> Config {
+    let config_vmo: zx::Vmo = take_startup_handle(HandleInfo::new(HandleType::ConfigVmo, 0))
+        .expect("must have been provided with a config vmo")
+        .into();
+    let config_size =
+        config_vmo.get_content_size().expect("must be able to read config vmo content size");
+    assert_ne!(config_size, 0, "config vmo must be non-empty");
+    let mut config_bytes = Vec::new();
+    config_bytes.resize(config_size as usize, 0);
+    config_vmo.read(&mut config_bytes, 0).expect("must be able to read config vmo");
+    let checksum_length = u16::from_le_bytes([config_bytes[0], config_bytes[1]]) as usize;
+    let fidl_start = 2 + checksum_length;
+    let observed_checksum = &config_bytes[2..fidl_start];
+    let expected_checksum = vec![
+        0xf1, 0x57, 0x6a, 0x1e, 0x82, 0xd8, 0x0a, 0xa4, 0xad, 0x7f, 0x16, 0x82, 0x6c, 0x87, 0x8d,
+        0x3c, 0x21, 0x7a, 0x6c, 0xe1, 0x43, 0x30, 0x94, 0xf7, 0xe0, 0x71, 0x25, 0x65, 0x6d, 0x16,
+        0x6b, 0xe6,
+    ];
+    assert_eq!(
+        observed_checksum, expected_checksum,
+        "checksum from config VMO does not match expected checksum"
+    );
+    decode_persistent(&config_bytes[fidl_start..])
+        .expect("must be able to parse bytes as config FIDL")
+}

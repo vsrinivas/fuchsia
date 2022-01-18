@@ -2,15 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use fidl::encoding::decode_persistent;
-use fidl_fuchsia_component_config::ValuesData;
 use fidl_test_structuredconfig_receiver::{
     ConfigReceiverPuppetRequest, ConfigReceiverPuppetRequestStream, ReceiverConfig,
 };
 use fuchsia_component::server::ServiceFs;
-use fuchsia_runtime::{take_startup_handle, HandleInfo, HandleType};
-use fuchsia_zircon as zx;
 use futures::StreamExt;
+use receiver_config::{get_config, Config};
 
 enum IncomingRequest {
     Puppet(ConfigReceiverPuppetRequestStream),
@@ -18,16 +15,22 @@ enum IncomingRequest {
 
 #[fuchsia::component]
 async fn main() {
+    let config = get_config();
+    let receiver_config = generated_to_puppet_defined(config);
+
     let mut fs = ServiceFs::new_local();
     fs.dir("svc").add_fidl_service(IncomingRequest::Puppet);
     fs.take_and_serve_directory_handle().unwrap();
-    fs.for_each_concurrent(None, |request: IncomingRequest| async move {
-        match request {
-            IncomingRequest::Puppet(mut reqs) => {
-                while let Some(Ok(req)) = reqs.next().await {
-                    match req {
-                        ConfigReceiverPuppetRequest::GetConfig { responder } => {
-                            responder.send(&mut received_config()).unwrap()
+    fs.for_each_concurrent(None, move |request: IncomingRequest| {
+        let mut receiver_config = receiver_config.clone();
+        async move {
+            match request {
+                IncomingRequest::Puppet(mut reqs) => {
+                    while let Some(Ok(req)) = reqs.next().await {
+                        match req {
+                            ConfigReceiverPuppetRequest::GetConfig { responder } => {
+                                responder.send(&mut receiver_config).unwrap()
+                            }
                         }
                     }
                 }
@@ -37,32 +40,27 @@ async fn main() {
     .await;
 }
 
-// TODO(https://fxbug.dev/86136) replace with a generated library
-fn received_config() -> ReceiverConfig {
-    let config_vmo: zx::Vmo = take_startup_handle(HandleInfo::new(HandleType::ConfigVmo, 0))
-        .expect("must have been provided with a config vmo")
-        .into();
-    let config_size = config_vmo.get_content_size().expect("must be able to read vmo content size");
-    assert_ne!(config_size, 0, "config vmo must be non-empty");
-
-    let mut config_bytes = Vec::new();
-    config_bytes.resize(config_size as usize, 0);
-    config_vmo.read(&mut config_bytes, 0).expect("must be able to read config vmo");
-
-    let checksum_length = u16::from_le_bytes([config_bytes[0], config_bytes[1]]) as usize;
-    let fidl_start = 2 + checksum_length;
-    let observed_checksum = &config_bytes[2..fidl_start];
-
-    let expected_checksum = {
-        let value_file_raw = std::fs::read("/pkg/meta/basic_config_receiver.cvf").unwrap();
-        let value_file: ValuesData = decode_persistent(&value_file_raw[..]).unwrap();
-        // TODO(https://fxbug.dev/86136) this should be directly in the generated library's source
-        value_file.declaration_checksum.unwrap()
-    };
-    assert_eq!(
-        observed_checksum, expected_checksum,
-        "checksum from component framework must match the packaged one"
-    );
-    decode_persistent(&config_bytes[fidl_start..])
-        .expect("must be able to parse inner config as fidl")
+fn generated_to_puppet_defined(input: Config) -> ReceiverConfig {
+    ReceiverConfig {
+        my_flag: input.my_flag,
+        my_uint8: input.my_uint8,
+        my_uint16: input.my_uint16,
+        my_uint32: input.my_uint32,
+        my_uint64: input.my_uint64,
+        my_int8: input.my_int8,
+        my_int16: input.my_int16,
+        my_int32: input.my_int32,
+        my_int64: input.my_int64,
+        my_string: input.my_string,
+        my_vector_of_flag: input.my_vector_of_flag,
+        my_vector_of_uint8: input.my_vector_of_uint8,
+        my_vector_of_uint16: input.my_vector_of_uint16,
+        my_vector_of_uint32: input.my_vector_of_uint32,
+        my_vector_of_uint64: input.my_vector_of_uint64,
+        my_vector_of_int8: input.my_vector_of_int8,
+        my_vector_of_int16: input.my_vector_of_int16,
+        my_vector_of_int32: input.my_vector_of_int32,
+        my_vector_of_int64: input.my_vector_of_int64,
+        my_vector_of_string: input.my_vector_of_string,
+    }
 }

@@ -120,6 +120,9 @@ template("fidl") {
   if (defined(invoker.contains_drivers)) {
     not_needed(invoker, [ "contains_drivers" ])
   }
+  if (defined(invoker.should_lint)) {
+    not_needed(invoker, [ "should_lint" ])
+  }
 
   # Allow generated targets visibility to their dependant generated targets
   if (defined(invoker.visibility)) {

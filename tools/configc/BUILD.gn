@@ -2,34 +2,89 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/compiled_action.gni")
 import("//build/host.gni")
 import("//build/rust/rustc_binary.gni")
+import("//build/testing/golden_file.gni")
+import("//tools/cmc/build/cml.gni")
+import("//tools/configc/build/config.gni")
 
-rustc_binary("configc") {
-  name = "configc"
+if (is_host) {
+  rustc_binary("configc") {
+    name = "configc"
 
-  deps = [
-    "//sdk/fidl/fuchsia.component.decl:fuchsia.component.decl-rustc",
-    "//src/lib/fidl/rust/fidl",
-    "//src/sys/lib/cm_rust",
-    "//third_party/rust_crates:anyhow",
-    "//third_party/rust_crates:argh",
-    "//third_party/rust_crates:serde_json",
-    "//third_party/rust_crates:serde_json5",
-    "//tools/lib/config_client",
-    "//tools/lib/config_value_file",
-  ]
+    deps = [
+      "//sdk/fidl/fuchsia.component.decl:fuchsia.component.decl-rustc",
+      "//src/lib/fidl/rust/fidl",
+      "//src/sys/lib/cm_rust",
+      "//third_party/rust_crates:anyhow",
+      "//third_party/rust_crates:argh",
+      "//third_party/rust_crates:serde_json",
+      "//third_party/rust_crates:serde_json5",
+      "//tools/lib/config_client",
+      "//tools/lib/config_value_file",
+    ]
 
-  sources = [
-    "src/client_fidl.rs",
-    "src/client_rust.rs",
-    "src/cvf.rs",
-    "src/main.rs",
-  ]
+    sources = [
+      "src/client_fidl.rs",
+      "src/client_rust.rs",
+      "src/cvf.rs",
+      "src/main.rs",
+    ]
+  }
 }
 
 install_host_tools("install") {
-  deps = [ ":configc" ]
+  deps = [ ":configc($host_toolchain)" ]
 
   outputs = [ "configc" ]
+}
+
+# Config Library Golden Tests
+cm("config_manifest") {
+  manifest = "goldens/config_manifest.cml"
+  output_name = "config_manifest.cm"
+  restricted_features = [ "structured_config" ]
+  config_values_package_path = "goldens/config_values.json5"
+}
+
+fidl_config_client_lib_source("fidl_config_lib_golden_gen") {
+  manifest_outputs = get_target_outputs(":config_manifest")
+  compiled_manifest = manifest_outputs[0]
+  name = "goldenconfig"
+  deps = [ ":config_manifest" ]
+  testonly = true
+}
+
+rust_config_client_lib_source("rust_config_lib_golden_gen") {
+  manifest_outputs = get_target_outputs(":config_manifest")
+  compiled_manifest = manifest_outputs[0]
+  name = "goldenconfig"
+  fidl_library_name = "goldenconfig"
+  deps = [ ":config_manifest" ]
+  testonly = true
+}
+
+golden_file("fidl_config_lib_golden_test") {
+  golden = "goldens/config.fidl.golden"
+  lib_outputs = get_target_outputs(":fidl_config_lib_golden_gen")
+  current = lib_outputs[0]
+  deps = [ ":fidl_config_lib_golden_gen" ]
+  testonly = true
+}
+
+golden_file("rust_config_lib_golden_test") {
+  golden = "goldens/config.rs.golden"
+  lib_outputs = get_target_outputs(":rust_config_lib_golden_gen")
+  current = lib_outputs[0]
+  deps = [ ":rust_config_lib_golden_gen" ]
+  testonly = true
+}
+
+group("tests") {
+  testonly = true
+  deps = [
+    ":fidl_config_lib_golden_test",
+    ":rust_config_lib_golden_test",
+  ]
 }

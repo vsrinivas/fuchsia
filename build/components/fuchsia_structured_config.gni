@@ -3,7 +3,9 @@
 # found in the LICENSE file.
 
 import("//build/components/fuchsia_component.gni")
-import("//tools/configc/build/cvf.gni")
+import("//build/fidl/fidl.gni")
+import("//build/rust/rustc_library.gni")
+import("//tools/configc/build/config.gni")
 
 # Defines a configuration value file for a Fuchsia component.
 #
@@ -36,6 +38,11 @@ import("//tools/configc/build/cvf.gni")
 #
 # ```
 # # ./BUILD.gn
+# fuchsia_component_manifest("my_component_manifest") {
+#   component = "my_component"
+#   manifest = "meta/my_component.cml"
+# }
+#
 # fuchsia_component("my_component") {
 #   cm_target = ":my_component_manifest"
 #   deps = [ ... ]
@@ -123,5 +130,162 @@ template("fuchsia_structured_config_values") {
       deps = [ ":$target_name($default_toolchain)" ]
     }
     not_needed(invoker, "*")
+  }
+}
+
+# Defines a Rust configuration client library for a Fuchsia component.
+#
+# A config client library is produced from a component manifest that contains a schema.
+#
+# For example, if a component manifest defines the `enable_foo` flag:
+#
+# ```
+# // ./meta/my_component.cml
+# {
+#   // ...
+#   config: {
+#     enable_foo: { type: "bool" }
+#   }
+# }
+# ```
+#
+# Building the config client library requires the compiled manifest:
+#
+# ```
+# # ./BUILD.gn
+# fuchsia_component_manifest("my_component_manifest") {
+#   component = "my_component"
+#   manifest = "meta/my_component.cml"
+# }
+#
+# fuchsia_component("my_component") {
+#   cm_target = ":my_component_manifest"
+#   deps = [ ... ]
+# }
+#
+# fuchsia_structured_config_rust_lib("my_component_config_lib") {
+#   cm_target = ":my_component_manifest"
+# }
+# ```
+#
+# Finally, a rust binary can import this library for use
+#
+# ```
+# # ./BUILD.gn
+# rustc_binary("my_binary") {
+#   ...
+#   deps = [
+#     ":my_component_config_lib",
+#     ...
+#   ]
+# }
+# ```
+#
+# And in my_binary source, it can be used like this
+#
+# ```
+# use my_component_config_lib:get_config;
+#
+# fn main() {
+#   let config = get_config();
+#   println!("Is foo enabled = {}", config.enable_foo);
+# }
+# ```
+#
+# Parameters
+#
+#   cm_target (required)
+#     The fuchsia_component_manifest target for which the definition file will be generated.
+#     Type: GN target
+#
+#   name (optional)
+#     Name for the generated Rust library. If not specified, the target name is used.
+#     Type: string
+#
+#   testonly (optional)
+#     Standard GN meaning.
+template("fuchsia_structured_config_rust_lib") {
+  fidl_library_name = string_replace(target_name, "_", "")
+  fidl_library_name = string_replace(fidl_library_name, "-", "")
+
+  if (!defined(invoker.name)) {
+    rust_library_name = target_name
+  } else {
+    rust_library_name = invoker.name
+  }
+
+  rust_library_name = string_replace(rust_library_name, ".", "_")
+  rust_library_name = string_replace(rust_library_name, "-", "_")
+
+  fidl_source_target = "${target_name}_fidl_config_lib_source"
+  rust_source_target = "${target_name}_rust_config_lib_source"
+
+  if (current_toolchain == default_toolchain) {
+    assert(defined(invoker.cm_target),
+           "must provide a component manifest target")
+
+    # TODO(https://fxbug.dev/86798) allow defining manifest in separate gn mod from config
+    manifest_outputs = get_target_outputs(invoker.cm_target)
+    compiled_manifest = manifest_outputs[0]
+
+    # generate the client library FIDL source
+    fidl_config_client_lib_source(fidl_source_target) {
+      forward_variables_from(invoker, [ "testonly" ])
+      name = fidl_library_name
+      compiled_manifest = compiled_manifest
+      deps = [ "${invoker.cm_target}" ]
+    }
+
+    # generate the rust source
+    rust_config_client_lib_source(rust_source_target) {
+      forward_variables_from(invoker, [ "testonly" ])
+      name = rust_library_name
+      fidl_library_name = fidl_library_name
+      compiled_manifest = compiled_manifest
+      deps = [ "${invoker.cm_target}" ]
+    }
+  } else {
+    group(fidl_source_target) {
+      forward_variables_from(invoker, [ "testonly" ])
+      deps = [ ":${fidl_source_target}($default_toolchain)" ]
+    }
+    group(rust_source_target) {
+      forward_variables_from(invoker, [ "testonly" ])
+      deps = [ ":${rust_source_target}($default_toolchain)" ]
+    }
+    not_needed(invoker, "*")
+  }
+
+  # Cannot call get_target_outputs on `client_lib_source`, so we must get the path to the
+  # generated source files manually.
+  source_gen_dir =
+      get_label_info(":bogus($default_toolchain)", "target_out_dir")
+  fidl_source_file = "${source_gen_dir}/${fidl_library_name}.fidl"
+  rust_source_file = "${source_gen_dir}/${rust_library_name}.rs"
+
+  # generate the FIDL library
+  fidl_library_target = "${target_name}_fidl_internal"
+  fidl(fidl_library_target) {
+    name = fidl_library_name
+    forward_variables_from(invoker, [ "testonly" ])
+    sources = [ fidl_source_file ]
+    non_fidl_deps = [ ":${fidl_source_target}($default_toolchain)" ]
+    should_lint = false  # disables copyright and library name checks
+  }
+
+  # generate the wrapper Rust library
+  rustc_library(target_name) {
+    name = rust_library_name
+    forward_variables_from(invoker, [ "testonly" ])
+    edition = "2018"
+    sources = [ rust_source_file ]
+    source_root = rust_source_file
+    deps = [
+      ":${fidl_library_target}-rustc",
+      "//src/lib/fidl/rust/fidl",
+      "//src/lib/fuchsia-runtime",
+      "//src/lib/zircon/rust:fuchsia-zircon",
+    ]
+    non_rust_deps = [ ":${rust_source_target}($default_toolchain)" ]
   }
 }

@@ -154,6 +154,7 @@ group("tests_no_e2e") {
     "//tools/codesize:tests",
     "//tools/component_id_index:tests($host_toolchain)",
     "//tools/component_manager_config:tests($host_toolchain)",
+    "//tools/configc:tests",
     "//tools/create:tests",
     "//tools/dart-strict-deps:tests($host_toolchain)",
     "//tools/debug:tests($host_toolchain)",
