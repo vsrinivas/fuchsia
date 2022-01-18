@@ -114,6 +114,7 @@ type ContextFeatureFlags = strict bits : uint64 {
 type CreateContextParams = resource table {
     /// Service directory to be used by the context. The following services must be present in the
     /// directory:
+    /// - [`fuchsia.buildinfo/Provider`]
     /// - [`fuchsia.device/NameProvider`]
     /// - [`fuchsia.fonts/Provider`]
     /// - [`fuchsia.intl/PropertyProvider`]
