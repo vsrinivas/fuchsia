@@ -51,8 +51,12 @@ class AcpiBuffer : public ACPI_BUFFER {
         : length_(buffer.Length), pointer_(static_cast<T*>(buffer.Pointer)) {}
     iterator() : pointer_(nullptr) {}
     T& operator*() { return *pointer_; }
-    bool operator==(const AcpiBuffer::iterator& ai) { return pointer_ == ai.pointer_; }
-    bool operator!=(const AcpiBuffer::iterator& ai) { return !(*this == ai); }
+    friend bool operator==(const AcpiBuffer::iterator& ai, const AcpiBuffer::iterator& bi) {
+      return ai.pointer_ == bi.pointer_;
+    }
+    friend bool operator!=(const AcpiBuffer::iterator& ai, const AcpiBuffer::iterator& bi) {
+      return !(ai == bi);
+    }
     iterator& operator++() {
       length_ -= pointer_->Length;
       pointer_ = reinterpret_cast<T*>(reinterpret_cast<uintptr_t>(pointer_) + pointer_->Length);
