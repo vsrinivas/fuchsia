@@ -13,7 +13,6 @@ import (
 	resultpb "go.chromium.org/luci/resultdb/proto/v1"
 
 	"go.fuchsia.dev/fuchsia/tools/testing/runtests"
-	"go.fuchsia.dev/fuchsia/tools/testing/testparser"
 )
 
 func TestParseSummary(t *testing.T) {
@@ -102,13 +101,13 @@ func createTestSummary(testCount int) *runtests.TestSummary {
 }
 
 func createTestDetailWithTestCase(testCase int) *runtests.TestDetails {
-	t := []testparser.TestCaseResult{}
+	t := []runtests.TestCaseResult{}
 	for i := 0; i < testCase; i++ {
-		t = append(t, testparser.TestCaseResult{
+		t = append(t, runtests.TestCaseResult{
 			DisplayName: fmt.Sprintf("foo/bar_%d", i),
 			SuiteName:   "foo",
 			CaseName:    fmt.Sprintf("bar_%d", i),
-			Status:      testparser.Pass,
+			Status:      runtests.TestSuccess,
 			Format:      "Rust",
 		})
 	}
@@ -217,6 +216,7 @@ func TestDetermineExpected(t *testing.T) {
 		}
 	}
 }
+
 func TestTruncateString(t *testing.T) {
 	testCases := []struct {
 		testStr string

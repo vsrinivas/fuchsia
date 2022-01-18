@@ -20,13 +20,14 @@ import (
 	"google.golang.org/protobuf/types/known/timestamppb"
 
 	"go.fuchsia.dev/fuchsia/tools/testing/runtests"
-	"go.fuchsia.dev/fuchsia/tools/testing/testparser"
 )
 
 // Test name is limited to 512 bytes max.
 // https://source.chromium.org/chromium/infra/infra/+/main:go/src/go.chromium.org/luci/resultdb/pbutil/test_result.go;l=44;drc=910bdba5763842c67a81741b7cb26e7f7d2793fc
-const MAX_TEST_ID_SIZE_BYTES = 512
-const MAX_FAIL_REASON_SIZE_BYTES = 1024
+const (
+	MAX_TEST_ID_SIZE_BYTES     = 512
+	MAX_FAIL_REASON_SIZE_BYTES = 1024
+)
 
 // ParseSummary unmarshalls the summary.json file content into runtests.TestSummary struct.
 func ParseSummary(filePath string) (*runtests.TestSummary, error) {
@@ -93,13 +94,13 @@ func invocationLevelArtifacts(outputRoot string) map[string]*sinkpb.Artifact {
 // testCaseToResultSink converts TestCaseResult defined in //tools/testing/testparser/result.go
 // to ResultSink's TestResult. A testcase will not be converted if test result cannot be
 // mapped to result_sink.Status.
-func testCaseToResultSink(testCases []testparser.TestCaseResult, tags []*resultpb.StringPair, testDetail *runtests.TestDetails) ([]*sinkpb.TestResult, []string) {
+func testCaseToResultSink(testCases []runtests.TestCaseResult, tags []*resultpb.StringPair, testDetail *runtests.TestDetails) ([]*sinkpb.TestResult, []string) {
 	var testResult []*sinkpb.TestResult
 	var testsSkipped []string
 
 	// Ignore error, testStatus will be set to resultpb.TestStatus_STATUS_UNSPECIFIED if error != nil.
 	// And when passed to determineExpected, resultpb.TestStatus_STATUS_UNSPECIFIED will be handled correctly.
-	testStatus, _ := testDetailResultToResultDBStatus(testDetail.Result)
+	testStatus, _ := resultDBStatus(testDetail.Result)
 
 	for _, testCase := range testCases {
 		testID := fmt.Sprintf("%s/%s:%s", testDetail.Name, testCase.SuiteName, testCase.CaseName)
@@ -112,7 +113,7 @@ func testCaseToResultSink(testCases []testparser.TestCaseResult, tags []*resultp
 			TestId: testID,
 			Tags:   append([]*resultpb.StringPair{{Key: "format", Value: testCase.Format}}, tags...),
 		}
-		testCaseStatus, err := testCaseStatusToResultDBStatus(testCase.Status)
+		testCaseStatus, err := resultDBStatus(testCase.Status)
 		if err != nil {
 			log.Printf("[Warn] Skip uploading testcase: %s to ResultDB due to error: %v", testID, err)
 			continue
@@ -148,7 +149,7 @@ func testDetailsToResultSink(tags []*resultpb.StringPair, testDetail *runtests.T
 			{Key: "test_case_count", Value: strconv.Itoa(len(testDetail.Cases))},
 		}, tags...),
 	}
-	testStatus, err := testDetailResultToResultDBStatus(testDetail.Result)
+	testStatus, err := resultDBStatus(testDetail.Result)
 	if err != nil {
 		log.Printf("[Warn] Skip uploading test target: %s to ResultDB due to error: %v", testDetail.Name, err)
 		return nil, testsSkipped, err
@@ -207,26 +208,16 @@ func determineExpected(testStatus resultpb.TestStatus, testCaseStatus resultpb.T
 	return false
 }
 
-func testCaseStatusToResultDBStatus(result testparser.TestCaseStatus) (resultpb.TestStatus, error) {
-	switch result {
-	case testparser.Pass:
-		return resultpb.TestStatus_PASS, nil
-	case testparser.Fail:
-		return resultpb.TestStatus_FAIL, nil
-	case testparser.Skip:
-		return resultpb.TestStatus_SKIP, nil
-	case testparser.Abort:
-		return resultpb.TestStatus_ABORT, nil
-	}
-	return resultpb.TestStatus_STATUS_UNSPECIFIED, fmt.Errorf("cannot map Result: %s to result_sink test_result status", result)
-}
-
-func testDetailResultToResultDBStatus(result runtests.TestResult) (resultpb.TestStatus, error) {
+func resultDBStatus(result runtests.TestResult) (resultpb.TestStatus, error) {
 	switch result {
 	case runtests.TestSuccess:
 		return resultpb.TestStatus_PASS, nil
 	case runtests.TestFailure:
 		return resultpb.TestStatus_FAIL, nil
+	case runtests.TestSkipped:
+		return resultpb.TestStatus_SKIP, nil
+	case runtests.TestAborted:
+		return resultpb.TestStatus_ABORT, nil
 	}
 	return resultpb.TestStatus_STATUS_UNSPECIFIED, fmt.Errorf("cannot map Result: %s to result_sink test_result status", result)
 }

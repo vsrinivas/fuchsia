@@ -20,7 +20,6 @@ import (
 	"go.fuchsia.dev/fuchsia/tools/lib/osmisc"
 	"go.fuchsia.dev/fuchsia/tools/testing/runtests"
 	"go.fuchsia.dev/fuchsia/tools/testing/tap"
-	"go.fuchsia.dev/fuchsia/tools/testing/testparser"
 )
 
 func writeFiles(dir string, pathsToContents map[string]string) error {
@@ -73,11 +72,11 @@ func TestRecordingOfOutputs(t *testing.T) {
 					},
 				},
 			},
-			Cases: []testparser.TestCaseResult{
+			Cases: []runtests.TestCaseResult{
 				{
 					DisplayName: "case1",
 					CaseName:    "case1",
-					Status:      testparser.Fail,
+					Status:      runtests.TestFailure,
 					Format:      "FTF",
 					// Test having the OutputFile be a filename.
 					OutputFiles: []string{caseOutputFile},
@@ -147,11 +146,11 @@ func TestRecordingOfOutputs(t *testing.T) {
 					},
 				},
 			},
-			Cases: []testparser.TestCaseResult{
+			Cases: []runtests.TestCaseResult{
 				{
 					DisplayName: "case1",
 					CaseName:    "case1",
-					Status:      testparser.Fail,
+					Status:      runtests.TestFailure,
 					Format:      "FTF",
 					OutputFiles: []string{testACaseOutputFile},
 				},

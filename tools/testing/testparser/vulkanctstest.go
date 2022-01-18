@@ -7,6 +7,8 @@ package testparser
 import (
 	"regexp"
 	"strings"
+
+	"go.fuchsia.dev/fuchsia/tools/testing/runtests"
 )
 
 var (
@@ -15,8 +17,8 @@ var (
 	ctsTestCasePattern      = regexp.MustCompile(`^(Pass|Fail|QualityWarning|CompatibilityWarning|Pending|NotSupported|ResourceError|InternalError|Crash|Timeout) \(.*\)$`)
 )
 
-func parseVulkanCtsTest(lines [][]byte) []TestCaseResult {
-	var res []TestCaseResult
+func parseVulkanCtsTest(lines [][]byte) []runtests.TestCaseResult {
+	var res []runtests.TestCaseResult
 	var displayName string
 	var suiteName string
 	var caseName string
@@ -34,23 +36,23 @@ func parseVulkanCtsTest(lines [][]byte) []TestCaseResult {
 		if m == nil {
 			continue
 		}
-		var status TestCaseStatus
+		var status runtests.TestResult
 		// List of results is in framework/qphelper/qpTestLog.c
 		switch m[1] {
 		case "Pass", "QualityWarning", "CompatibilityWarning":
-			status = Pass
+			status = runtests.TestSuccess
 		case "Fail",
 			"Pending",
 			"ResourceError",
 			"InternalError",
 			"Crash":
-			status = Fail
+			status = runtests.TestFailure
 		case "NotSupported":
-			status = Skip
+			status = runtests.TestSkipped
 		case "Timeout":
-			status = Abort
+			status = runtests.TestAborted
 		}
-		res = append(res, TestCaseResult{
+		res = append(res, runtests.TestCaseResult{
 			DisplayName: displayName,
 			SuiteName:   suiteName,
 			CaseName:    caseName,
@@ -61,11 +63,11 @@ func parseVulkanCtsTest(lines [][]byte) []TestCaseResult {
 	}
 	// Check for incomplete tests
 	if displayName != "" {
-		res = append(res, TestCaseResult{
+		res = append(res, runtests.TestCaseResult{
 			DisplayName: displayName,
 			SuiteName:   suiteName,
 			CaseName:    caseName,
-			Status:      Fail,
+			Status:      runtests.TestFailure,
 			Format:      "VulkanCtsTest",
 		})
 	}

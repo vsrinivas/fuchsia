@@ -36,6 +36,7 @@ go_library("lib") {
     "//tools/net/sshutil",
     "//tools/testing/runtests",
     "//tools/testing/tap",
+    "//tools/testing/testparser",
   ]
 }
 

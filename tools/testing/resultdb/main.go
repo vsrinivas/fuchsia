@@ -15,9 +15,10 @@ import (
 
 	resultpb "go.chromium.org/luci/resultdb/proto/v1"
 	sinkpb "go.chromium.org/luci/resultdb/sink/proto/v1"
-	"go.fuchsia.dev/fuchsia/tools/lib/flagmisc"
 	"golang.org/x/sync/errgroup"
 	"google.golang.org/protobuf/encoding/protojson"
+
+	"go.fuchsia.dev/fuchsia/tools/lib/flagmisc"
 )
 
 var (
