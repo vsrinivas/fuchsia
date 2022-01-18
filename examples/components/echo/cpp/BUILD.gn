@@ -1,0 +1,53 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+
+group("tests") {
+  testonly = true
+  deps = [ ":echo-cpp-unittests" ]
+}
+
+executable("echo_example_cpp") {
+  output_name = "echo_example_cpp"
+
+  sources = [ "main.cc" ]
+
+  deps = [
+    ":cpp-lib",
+    "//sdk/lib/syslog/cpp",
+    "//zircon/system/ulib/async-default",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
+  ]
+}
+
+source_set("cpp-lib") {
+  sources = [
+    "echo_component.cc",
+    "echo_component.h",
+  ]
+}
+
+fuchsia_component("cpp-component") {
+  component_name = "echo_cpp"
+  manifest = "meta/echo.cml"
+  deps = [ ":echo_example_cpp" ]
+}
+
+executable("echo_example_cpp_test") {
+  sources = [ "echo_unittest.cc" ]
+  deps = [
+    ":cpp-lib",
+    "//src/lib/fxl/test:gtest_main",
+    "//third_party/googletest:gtest",
+  ]
+  testonly = true
+}
+
+#[START unittest]
+fuchsia_unittest_package("echo-cpp-unittests") {
+  deps = [ ":echo_example_cpp_test" ]
+}
+#[END unittest]

@@ -221,7 +221,7 @@ Add an `args` array to supply the list of names to greet:
 `echo-args/meta/echo_args.cml`:
 
 ```json5
-{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/components/echo/meta/echo.cml" region_tag="manifest" adjust_indentation="auto" highlight="15,16,17,18,19,21,22" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/components/echo/rust/meta/echo.cml" region_tag="manifest" adjust_indentation="auto" highlight="15,16,17,18,19,21,22" %}
 ```
 
 ### Log the arguments
@@ -232,7 +232,7 @@ following code:
 `echo-args/src/main.rs`:
 
 ```rust
-{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/components/echo/src/main.rs" region_tag="imports" adjust_indentation="auto" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/components/echo/rust/src/main.rs" region_tag="imports" adjust_indentation="auto" %}
 ```
 
 Replace the `main()` function with the following code:
@@ -240,7 +240,7 @@ Replace the `main()` function with the following code:
 `echo-args/src/main.rs`:
 
 ```rust
-{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/components/echo/src/main.rs" region_tag="main" adjust_indentation="auto" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/components/echo/rust/src/main.rs" region_tag="main" adjust_indentation="auto" %}
 ```
 
 <aside class="key-point">
@@ -257,7 +257,7 @@ Add the following code to implement the `greeting()` function:
 `echo-args/src/main.rs`:
 
 ```rust
-{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/components/echo/src/main.rs" region_tag="greeting" adjust_indentation="auto" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/components/echo/rust/src/main.rs" region_tag="greeting" adjust_indentation="auto" %}
 ```
 
 This function creates a simple string from the list of provided arguments based

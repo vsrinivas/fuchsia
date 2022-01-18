@@ -3,7 +3,6 @@
 # found in the LICENSE file.
 
 import("//build/components.gni")
-import("//build/rust/rustc_binary.gni")
 
 group("echo") {
   testonly = true
@@ -15,40 +14,15 @@ group("echo") {
 
 group("tests") {
   testonly = true
-  deps = [ ":echo-unittests" ]
-}
-
-rustc_binary("echo_example") {
-  # Generates a GN target for unit-tests with the label `bin_test`,
-  # and a binary named `echo_bin_test`.
-  with_unit_tests = true
-
   deps = [
-    "//src/lib/diagnostics/inspect/runtime/rust",
-    "//src/lib/diagnostics/inspect/rust",
-    "//src/lib/fuchsia",
-    "//src/lib/fuchsia-async",
-    "//src/lib/fuchsia-component",
-    "//third_party/rust_crates:anyhow",
-    "//third_party/rust_crates:futures",
-    "//third_party/rust_crates:tracing",
+    "cpp:tests",
+    "rust:tests",
   ]
-
-  sources = [ "src/main.rs" ]
-}
-
-fuchsia_component("echo_example_component") {
-  component_name = "echo"
-  manifest = "meta/echo.cml"
-  deps = [ ":echo_example" ]
 }
 
 fuchsia_package("echo-example") {
-  deps = [ ":echo_example_component" ]
+  deps = [
+    "cpp:cpp-component",
+    "rust:rust-component",
+  ]
 }
-
-# [START unittest]
-fuchsia_unittest_package("echo-unittests") {
-  deps = [ ":echo_example_test" ]
-}
-# [END unittest]

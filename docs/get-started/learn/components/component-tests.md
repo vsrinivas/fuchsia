@@ -126,7 +126,7 @@ one, two, or three arguments:
 `echo-args/src/main.rs`:
 
 ```
-{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/components/echo/src/main.rs" region_tag="test_mod" adjust_indentation="auto" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/components/echo/rust/src/main.rs" region_tag="test_mod" adjust_indentation="auto" %}
 ```
 
 <aside class="key-point">

@@ -18,8 +18,16 @@ $ fx build
 Use `ffx component run` to launch this component into a restricted realm
 for development purposes:
 
+-  **C++**
+
+```bash
+ffx component run fuchsia-pkg://fuchsia.com/echo-example#meta/echo_cpp.cm
 ```
-$ ffx component run fuchsia-pkg://fuchsia.com/echo-example#meta/echo.cm
+
+-  **Rust**
+
+```bash
+$ ffx component run fuchsia-pkg://fuchsia.com/echo-example#meta/echo_rust.cm
 ```
 
 When the above command is run, you can see the following output with `fx log`:
@@ -33,14 +41,36 @@ When the above command is run, you can see the following output with `fx log`:
 Unit tests for echo are available in the `echo-unittests` package.
 Use the `ffx test run` command to run the tests on a target device:
 
-```
-$ ffx test run fuchsia-pkg://fuchsia.com/echo-unittests#meta/echo-unittests.cm
+-  **C++**
+
+```bash
+$ ffx test run fuchsia-pkg://fuchsia.com/echo-cpp-unittests#meta/echo-cpp-unittests.cm
 ```
 
 You should see each of the unit tests execute and pass:
 
 ```
-Running test 'fuchsia-pkg://fuchsia.com/echo-unittests#meta/echo-unittests.cm'
+[RUNNING]       EchoTest.TestGreetOne
+[PASSED]        EchoTest.TestGreetOne
+[RUNNING]       EchoTest.TestGreetTwo
+[PASSED]        EchoTest.TestGreetTwo
+[RUNNING]       EchoTest.TestGreetThree
+[PASSED]        EchoTest.TestGreetThree
+
+3 out of 3 tests passed...
+fuchsia-pkg://fuchsia.com/echo-cpp-unittests#meta/echo-cpp-unittests.cm completed with result: PASSED
+```
+
+-  **Rust**
+
+```bash
+$ ffx test run fuchsia-pkg://fuchsia.com/echo-rust-unittests#meta/echo-rust-unittests.cm
+```
+
+You should see each of the unit tests execute and pass:
+
+```
+Running test 'fuchsia-pkg://fuchsia.com/echo-rust-unittests#meta/echo-rust-unittests.cm'
 [RUNNING]	tests::test_greet_one
 [RUNNING]	tests::test_greet_two
 [RUNNING]	tests::test_greet_three
@@ -50,3 +80,4 @@ Running test 'fuchsia-pkg://fuchsia.com/echo-unittests#meta/echo-unittests.cm'
 
 3 out of 3 tests passed...
 ```
+
