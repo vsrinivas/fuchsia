@@ -191,9 +191,9 @@ Please exercise careful deliberation when stepping off the beaten path.
 [license]: /LICENSE
 [osrb-process]: /docs/contribute/governance/policy/osrb-process.md
 [oss-licensing]: /docs/contribute/governance/policy/open-source-licensing-policies.md
-[owners]: /docs/concepts/source_code/owners.md
-[owners-best-practices]: /docs/concepts/source_code/owners.md#best_practices
-[readme-fuchsia]: /docs/concepts/source_code/third-party-metadata.md
+[owners]: /docs/development/source_code/owners.md
+[owners-best-practices]: /docs/development/source_code/owners.md#best_practices
+[readme-fuchsia]: /docs/development/source_code/third-party-metadata.md
 [rust-third-party]: /docs/development/languages/rust/external_crates.md
-[source-layout]: /docs/concepts/source_code/layout.md
+[source-layout]: /docs/development/source_code/layout.md
 [third-party-googletest]: https://fuchsia.googlesource.com/third_party/github.com/google/googletest/

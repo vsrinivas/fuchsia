@@ -74,7 +74,7 @@ check out the following resources:
 *   [fx workflows](/docs/development/build/fx.md)
 *   [Workflow tips and questions](/docs/development/source_code/workflow_tips_and_faq.md)
 *   [Configure editors](/docs/development/editors/)
-*   [Source code layout](/docs/concepts/source_code/layout.md)
+*   [Source code layout](/docs/development/source_code/layout.md)
 *   [Build system](/docs/development/build/concepts/build_system/index.md)
 
 <!-- Reference links -->

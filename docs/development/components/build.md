@@ -1106,7 +1106,7 @@ You must add your component to the allowlist for the feature in
 [provide-data]: /docs/development/components/data.md
 [rustc-binary]: /build/rust/rustc_binary.gni
 [rustc-test]: /build/rust/rustc_test.gni
-[source-code-layout]: /docs/concepts/source_code/layout.md
+[source-code-layout]: /docs/development/source_code/layout.md
 [source-expansion-placeholders]: https://gn.googlesource.com/gn/+/HEAD/docs/reference.md#placeholders
 [test-environments]: /docs/contribute/testing/environments.md
 [v2-test-component]: /docs/development/testing/components/test_component.md

@@ -75,7 +75,7 @@ In most cases, a package in Fuchsia is a collection of `BLOB`s, which at a
 minimum contains one content-addressed `BLOB` named [`meta.far`](#meta-far).
 
 Note: For more information on the Fuchsia archive format (FAR), see
-[Fuchsia archive format (FAR)](/docs/concepts/source_code/archive_format.md).
+[Fuchsia archive format (FAR)](/docs/development/source_code/archive_format.md).
 
 In Fuchsia, you build a package with the `pm` tool, which exists in the
 `//tools/` directory of the Fuchsia GN SDK.
@@ -89,7 +89,7 @@ A package contains the following:
 ### `meta.far` {#meta-far}
 
 Note: For more information on the Fuchsia archive format (FAR), see
-[Fuchsia archive format (FAR)](/docs/concepts/source_code/archive_format.md).
+[Fuchsia archive format (FAR)](/docs/development/source_code/archive_format.md).
 
 The package metadata archive, `meta.far`, contains metadata about
 a package, presented as the `meta/` directory. `meta.far` has a

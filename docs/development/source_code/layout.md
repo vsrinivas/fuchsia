@@ -123,7 +123,7 @@ pattern:
           Fuchsia Source Tree
         * The code is open source
     * See more details about `third_party` source layout in [third party source
-      management](third-party-management.md)
+      management](/docs/concepts/source_code/third-party-management.md)
  * `tools/` (optional)
    * This directory contains command-line tools provided by the area.  These
      are usually things that can (or must) be built for the development host

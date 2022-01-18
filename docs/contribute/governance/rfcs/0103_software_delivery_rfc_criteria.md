@@ -142,7 +142,7 @@ find that not enough "large" changes are going through the RFC process.
 * [FIDL RFC criteria and process][fidl-criteria]
 
 [current-process]: /docs/contribute/governance/rfcs/rfc_process.md
-[far-format]: /docs/concepts/source_code/archive_format.md
+[far-format]: /docs/development/source_code/archive_format.md
 [fidl-criteria]: 0049_fidl_tuning_process_evolution.md#criteria
 [ota-backstops]: /docs/contribute/governance/rfcs/0071_ota_backstop.md
 [package-schema]: /docs/concepts/packages/package.md#structure-of-a-package

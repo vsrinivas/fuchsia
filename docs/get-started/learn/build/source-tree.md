@@ -135,7 +135,7 @@ but may provide some interesting places to begin exploring:
 * `zircon`: Libraries for interacting with the Zircon kernel.
 
 Note: For more details on how projects are structured in the Fuchsia tree, see
-[Source code layout](/docs/concepts/source_code/layout.md).
+[Source code layout](/docs/development/source_code/layout.md).
 
 
 ## Exercise: Navigate the source tree

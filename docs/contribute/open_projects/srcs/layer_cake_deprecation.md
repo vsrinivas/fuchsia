@@ -77,4 +77,4 @@ Reach out for questions, status updates, or OWNERS approvals:
 *   jamesr@google.com
 *   shayba@google.com
 
-[source-code-layout]: /docs/concepts/source_code/layout.md
+[source-code-layout]: /docs/development/source_code/layout.md

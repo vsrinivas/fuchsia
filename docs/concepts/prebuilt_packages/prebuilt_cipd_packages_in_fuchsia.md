@@ -21,7 +21,7 @@ CIPD packages are typically used to distribute the following files:
     [ELF](https://en.wikipedia.org/wiki/Executable_and_Linkable_Format){: .external}
     binaries generated out-of-tree (for example, Goldfish Vulkan ICD).
 *   Prebuilt Fuchsia archive
-    ([FAR](/docs/concepts/source_code/archive_format.md)) files that contain
+    ([FAR](/docs/development/source_code/archive_format.md)) files that contain
     binaries and metadata for software that is built for Fuchsia by other teams
     (for example,
     [chromium/fuchsia/webrunner-arm64](https://chrome-infra-packages.appspot.com/p/chromium/fuchsia/webrunner-arm64/+/){: .external}).

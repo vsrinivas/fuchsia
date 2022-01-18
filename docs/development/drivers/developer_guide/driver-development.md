@@ -11,7 +11,7 @@ lifecycles.
 
 Drivers may be found throughout the source tree under `driver` subdirectories of
 areas as specified in the
-[source code layout](/docs/concepts/source_code/layout.md) document. Most
+[source code layout](/docs/development/source_code/layout.md) document. Most
 Fuchsia drivers are found under [//src/devices/](/src/devices). They are grouped
 based on the protocols they implement. The driver protocols are defined in
 [ddk/include/lib/ddk/protodefs.h](/src/lib/ddk/include/lib/ddk/protodefs.h). For

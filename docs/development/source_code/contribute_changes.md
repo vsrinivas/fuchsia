@@ -235,6 +235,6 @@ see the following pages:
 *   [Working across different petals](/docs/development/source_code/working_across_petals.md)
 *   [Upload changes from multiple repositories](/docs/development/source_code/upload_changes_from_multiple_repositories.md)
 
-See [Source code layout](/docs/concepts/source_code/layout.md) for more
+See [Source code layout](/docs/development/source_code/layout.md) for more
 information on the structure of the Fuchsia repository.
 
