@@ -211,7 +211,7 @@ pub enum UseDecl {
     Directory(UseDirectoryDecl),
     Storage(UseStorageDecl),
     Event(UseEventDecl),
-    EventStream(UseEventStreamDecl),
+    EventStreamDeprecated(UseEventStreamDeprecatedDecl),
 }
 
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
@@ -306,8 +306,8 @@ fidl_translations_symmetrical_enums!(fdecl::EventMode, EventMode, Sync, Async);
 
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 #[derive(FidlDecl, Debug, Clone, PartialEq, Eq)]
-#[fidl_decl(fidl_table = "fdecl::UseEventStream")]
-pub struct UseEventStreamDecl {
+#[fidl_decl(fidl_table = "fdecl::UseEventStreamDeprecated")]
+pub struct UseEventStreamDeprecatedDecl {
     pub name: CapabilityName,
     pub subscriptions: Vec<EventSubscription>,
 }
@@ -1062,7 +1062,7 @@ impl UseDecl {
             UseDecl::Protocol(d) => Some(&d.target_path),
             UseDecl::Directory(d) => Some(&d.target_path),
             UseDecl::Storage(d) => Some(&d.target_path),
-            UseDecl::Event(_) | UseDecl::EventStream(_) => None,
+            UseDecl::Event(_) | UseDecl::EventStreamDeprecated(_) => None,
         }
     }
 
@@ -1070,7 +1070,7 @@ impl UseDecl {
         match self {
             UseDecl::Event(event_decl) => Some(&event_decl.source_name),
             UseDecl::Storage(storage_decl) => Some(&storage_decl.source_name),
-            UseDecl::EventStream(event_stream_decl) => Some(&event_stream_decl.name),
+            UseDecl::EventStreamDeprecated(event_stream_decl) => Some(&event_stream_decl.name),
             UseDecl::Service(_) | UseDecl::Protocol(_) | UseDecl::Directory(_) => None,
         }
     }
@@ -1202,7 +1202,7 @@ impl From<&UseDecl> for CapabilityTypeName {
             UseDecl::Directory(_) => Self::Directory,
             UseDecl::Storage(_) => Self::Storage,
             UseDecl::Event(_) => Self::Event,
-            UseDecl::EventStream(_) => Self::EventStream,
+            UseDecl::EventStreamDeprecated(_) => Self::EventStream,
         }
     }
 }

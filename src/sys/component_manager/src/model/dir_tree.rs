@@ -103,7 +103,7 @@ impl DirTree {
         // Event and EventStream capabilities are used by the framework itself and not given to
         // components directly.
         match use_ {
-            cm_rust::UseDecl::Event(_) | cm_rust::UseDecl::EventStream(_) => return,
+            cm_rust::UseDecl::Event(_) | cm_rust::UseDecl::EventStreamDeprecated(_) => return,
             _ => {}
         }
 

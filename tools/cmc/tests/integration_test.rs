@@ -125,7 +125,7 @@ fn main() {
                 mode: Some(EventMode::Async),
                 ..UseEvent::EMPTY
             }),
-            Use::EventStream(UseEventStream {
+            Use::EventStreamDeprecated(UseEventStreamDeprecated {
                 name: Some("my_stream".to_string()),
                 subscriptions: Some(vec![
                     EventSubscription {
@@ -144,7 +144,7 @@ fn main() {
                         ..EventSubscription::EMPTY
                     },
                 ]),
-                ..UseEventStream::EMPTY
+                ..UseEventStreamDeprecated::EMPTY
             }),
             Use::Protocol(UseProtocol {
                 dependency_type: Some(DependencyType::Strong),

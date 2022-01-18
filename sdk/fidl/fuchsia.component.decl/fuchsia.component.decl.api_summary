@@ -260,7 +260,7 @@ enum/member fuchsia.component.decl/StorageId.STATIC_INSTANCE_ID_OR_MONIKER 2
 strict enum fuchsia.component.decl/StorageId uint32
 union/member fuchsia.component.decl/Use.directory fuchsia.component.decl/UseDirectory
 union/member fuchsia.component.decl/Use.event fuchsia.component.decl/UseEvent
-union/member fuchsia.component.decl/Use.event_stream fuchsia.component.decl/UseEventStream
+union/member fuchsia.component.decl/Use.event_stream_deprecated fuchsia.component.decl/UseEventStreamDeprecated
 union/member fuchsia.component.decl/Use.protocol fuchsia.component.decl/UseProtocol
 union/member fuchsia.component.decl/Use.service fuchsia.component.decl/UseService
 union/member fuchsia.component.decl/Use.storage fuchsia.component.decl/UseStorage
@@ -279,9 +279,9 @@ table/member fuchsia.component.decl/UseEvent.source fuchsia.component.decl/Ref
 table/member fuchsia.component.decl/UseEvent.source_name string:100
 table/member fuchsia.component.decl/UseEvent.target_name string:100
 table fuchsia.component.decl/UseEvent
-table/member fuchsia.component.decl/UseEventStream.name string:100
-table/member fuchsia.component.decl/UseEventStream.subscriptions vector<fuchsia.component.decl/EventSubscription>:100
-table fuchsia.component.decl/UseEventStream
+table/member fuchsia.component.decl/UseEventStreamDeprecated.name string:100
+table/member fuchsia.component.decl/UseEventStreamDeprecated.subscriptions vector<fuchsia.component.decl/EventSubscription>:100
+table fuchsia.component.decl/UseEventStreamDeprecated
 table/member fuchsia.component.decl/UseProtocol.dependency_type fuchsia.component.decl/DependencyType
 table/member fuchsia.component.decl/UseProtocol.source fuchsia.component.decl/Ref
 table/member fuchsia.component.decl/UseProtocol.source_name string:100

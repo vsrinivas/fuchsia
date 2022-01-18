@@ -293,7 +293,7 @@ fn translate_use(
             }
         } else if let Some(name) = &use_.event_stream_deprecated {
             let opt_subscriptions = use_.event_subscriptions();
-            out_uses.push(fdecl::Use::EventStream(fdecl::UseEventStream {
+            out_uses.push(fdecl::Use::EventStreamDeprecated(fdecl::UseEventStreamDeprecated {
                 name: Some(name.to_string()),
                 subscriptions: opt_subscriptions.map(|subscriptions| {
                     subscriptions
@@ -311,7 +311,7 @@ fn translate_use(
                         })
                         .collect()
                 }),
-                ..fdecl::UseEventStream::EMPTY
+                ..fdecl::UseEventStreamDeprecated::EMPTY
             }));
         } else {
             return Err(Error::internal(format!("no capability in use declaration")));
@@ -1699,7 +1699,7 @@ mod tests {
                             ..fdecl::UseEvent::EMPTY
                         }
                     ),
-                    fdecl::Use::EventStream(fdecl::UseEventStream {
+                    fdecl::Use::EventStreamDeprecated(fdecl::UseEventStreamDeprecated {
                         name: Some("foo_stream".to_string()),
                         subscriptions: Some(vec![
                             fdecl::EventSubscription {
@@ -1718,7 +1718,7 @@ mod tests {
                                 ..fdecl::EventSubscription::EMPTY
                             },
                         ]),
-                        ..fdecl::UseEventStream::EMPTY
+                        ..fdecl::UseEventStreamDeprecated::EMPTY
                     })
                 ]),
                 capabilities: Some(vec![

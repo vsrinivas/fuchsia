@@ -424,7 +424,7 @@ fn get_dependencies_from_uses(decl: &ComponentDecl, dependency_map: &mut Depende
             | UseDecl::Directory(_)
             | UseDecl::Event(_)
             | UseDecl::Storage(_)
-            | UseDecl::EventStream(_) => {
+            | UseDecl::EventStreamDeprecated(_) => {
                 // capabilities which cannot or are not used from a child can be ignored.
                 continue;
             }

@@ -16,7 +16,7 @@ use {
         hooks::{Event, EventPayload, EventType, Hook, HooksRegistration},
     },
     async_trait::async_trait,
-    cm_rust::{CapabilityName, ComponentDecl, EventMode, UseDecl, UseEventStreamDecl},
+    cm_rust::{CapabilityName, ComponentDecl, EventMode, UseDecl, UseEventStreamDeprecatedDecl},
     fidl::endpoints::{create_endpoints, ServerEnd},
     fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync,
     futures::lock::Mutex,
@@ -131,7 +131,10 @@ impl EventStreamProvider {
     ) -> Result<(), ModelError> {
         for use_decl in &decl.uses {
             match use_decl {
-                UseDecl::EventStream(UseEventStreamDecl { name, subscriptions }) => {
+                UseDecl::EventStreamDeprecated(UseEventStreamDeprecatedDecl {
+                    name,
+                    subscriptions,
+                }) => {
                     self.create_static_event_stream(
                         &ExtendedMoniker::ComponentInstance(target_moniker.clone()),
                         name.to_string(),

@@ -376,7 +376,7 @@ impl<'a> ValidationContext<'a> {
                 check_name(u.source_name.as_ref(), "UseStorage", "source_name", &mut self.errors);
                 check_path(u.target_path.as_ref(), "UseStorage", "target_path", &mut self.errors);
             }
-            fdecl::Use::EventStream(e) => {
+            fdecl::Use::EventStreamDeprecated(e) => {
                 self.validate_event_stream(e);
             }
             fdecl::Use::Event(_) => {
@@ -508,7 +508,7 @@ impl<'a> ValidationContext<'a> {
         }
     }
 
-    fn validate_event_stream(&mut self, event_stream: &'a fdecl::UseEventStream) {
+    fn validate_event_stream(&mut self, event_stream: &'a fdecl::UseEventStreamDeprecated) {
         check_name(event_stream.name.as_ref(), "UseEventStream", "name", &mut self.errors);
         if let Some(name) = event_stream.name.as_ref() {
             if !self.all_event_streams.insert(name) {
@@ -2307,10 +2307,10 @@ mod tests {
                         mode: None,
                         ..fdecl::UseEvent::EMPTY
                     }),
-                    fdecl::Use::EventStream(fdecl::UseEventStream {
+                    fdecl::Use::EventStreamDeprecated(fdecl::UseEventStreamDeprecated {
                         name: None,
                         subscriptions: None,
-                        ..fdecl::UseEventStream::EMPTY
+                        ..fdecl::UseEventStreamDeprecated::EMPTY
                     }),
                 ]);
                 decl
@@ -2442,23 +2442,23 @@ mod tests {
                         mode: Some(fdecl::EventMode::Async),
                         ..fdecl::UseEvent::EMPTY
                     }),
-                    fdecl::Use::EventStream(fdecl::UseEventStream {
+                    fdecl::Use::EventStreamDeprecated(fdecl::UseEventStreamDeprecated {
                         name: Some("bar".to_string()),
                         subscriptions: Some(vec!["a".to_string(), "b".to_string()].into_iter().map(|name| fdecl::EventSubscription {
                             event_name: Some(name),
                             mode: Some(fdecl::EventMode::Async),
                             ..fdecl::EventSubscription::EMPTY
                         }).collect()),
-                        ..fdecl::UseEventStream::EMPTY
+                        ..fdecl::UseEventStreamDeprecated::EMPTY
                     }),
-                    fdecl::Use::EventStream(fdecl::UseEventStream {
+                    fdecl::Use::EventStreamDeprecated(fdecl::UseEventStreamDeprecated {
                         name: Some("bleep".to_string()),
                         subscriptions: Some(vec![fdecl::EventSubscription {
                             event_name: Some("started".to_string()),
                             mode: Some(fdecl::EventMode::Sync),
                             ..fdecl::EventSubscription::EMPTY
                         }]),
-                        ..fdecl::UseEventStream::EMPTY
+                        ..fdecl::UseEventStreamDeprecated::EMPTY
                     }),
                 ]);
                 decl
@@ -3175,15 +3175,15 @@ mod tests {
             input = {
                 let mut decl = new_component_decl();
                 decl.uses = Some(vec![
-                    fdecl::Use::EventStream(fdecl::UseEventStream {
+                    fdecl::Use::EventStreamDeprecated(fdecl::UseEventStreamDeprecated {
                         name: Some("bar".to_string()),
                         subscriptions: None,
-                        ..fdecl::UseEventStream::EMPTY
+                        ..fdecl::UseEventStreamDeprecated::EMPTY
                     }),
-                    fdecl::Use::EventStream(fdecl::UseEventStream {
+                    fdecl::Use::EventStreamDeprecated(fdecl::UseEventStreamDeprecated {
                         name: Some("barbar".to_string()),
                         subscriptions: Some(vec![]),
-                        ..fdecl::UseEventStream::EMPTY
+                        ..fdecl::UseEventStreamDeprecated::EMPTY
                     }),
                 ]);
                 decl
@@ -3322,7 +3322,7 @@ mod tests {
                         mode: Some(fdecl::EventMode::Async),
                         ..fdecl::UseEvent::EMPTY
                     }),
-                    fdecl::Use::EventStream(fdecl::UseEventStream {
+                    fdecl::Use::EventStreamDeprecated(fdecl::UseEventStreamDeprecated {
                         name: Some("bar".to_string()),
                         subscriptions: Some(
                             vec!["started".to_string(), "stopped".to_string()]
@@ -3334,7 +3334,7 @@ mod tests {
                                 })
                                 .collect()
                             ),
-                        ..fdecl::UseEventStream::EMPTY
+                        ..fdecl::UseEventStreamDeprecated::EMPTY
                     }),
                     fdecl::Use::Event(fdecl::UseEvent {
                         dependency_type: Some(fdecl::DependencyType::Strong),

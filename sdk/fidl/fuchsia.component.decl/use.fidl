@@ -13,7 +13,7 @@ type Use = flexible union {
     3: directory UseDirectory;
     4: storage UseStorage;
     5: event UseEvent;
-    6: event_stream UseEventStream;
+    6: event_stream_deprecated UseEventStreamDeprecated;
 };
 
 /// Declares a service used by a component, which was offered to it.
@@ -152,7 +152,7 @@ type UseEvent = table {
 };
 
 /// Declares a static EventStream used by a component.
-type UseEventStream = table {
+type UseEventStreamDeprecated = table {
     /// The name of the event stream.
     1: name name;
 

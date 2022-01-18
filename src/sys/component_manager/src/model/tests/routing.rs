@@ -263,7 +263,7 @@ async fn capability_requested_event_at_parent() {
                     filter: None,
                     mode: cm_rust::EventMode::Sync,
                 }))
-                .use_(UseDecl::EventStream(UseEventStreamDecl {
+                .use_(UseDecl::EventStreamDeprecated(UseEventStreamDeprecatedDecl {
                     name: CapabilityName::try_from("StartComponentTree").unwrap(),
                     subscriptions: vec![cm_rust::EventSubscription {
                         event_name: "resolved".into(),
@@ -1631,7 +1631,7 @@ async fn use_runner_from_environment_failed() {
                     filter: None,
                     mode: cm_rust::EventMode::Async,
                 }))
-                .use_(UseDecl::EventStream(UseEventStreamDecl {
+                .use_(UseDecl::EventStreamDeprecated(UseEventStreamDeprecatedDecl {
                     name: CapabilityName::try_from("StartComponentTree").unwrap(),
                     subscriptions: vec![cm_rust::EventSubscription {
                         event_name: "stopped".into(),

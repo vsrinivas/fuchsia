@@ -696,7 +696,7 @@ mod tests {
             ConfigVectorElementType, ConfigVectorType, DependencyType, DirectoryDecl, EventMode,
             EventSubscription, ExposeDecl, ExposeDirectoryDecl, ExposeProtocolDecl, ExposeSource,
             ExposeTarget, ProtocolDecl, UseDecl, UseDirectoryDecl, UseEventDecl,
-            UseEventStreamDecl, UseProtocolDecl, UseSource,
+            UseEventStreamDeprecatedDecl, UseProtocolDecl, UseSource,
         },
         cm_rust_testing::ComponentDeclBuilder,
         fidl::endpoints::ServerEnd,
@@ -1315,7 +1315,7 @@ mod tests {
                         filter: None,
                         mode: cm_rust::EventMode::Async,
                     }))
-                    .use_(UseDecl::EventStream(UseEventStreamDecl {
+                    .use_(UseDecl::EventStreamDeprecated(UseEventStreamDeprecatedDecl {
                         name: CapabilityName::try_from("EventStream").unwrap(),
                         subscriptions: vec![EventSubscription {
                             event_name: "started".to_string(),

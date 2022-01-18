@@ -136,7 +136,7 @@ impl IncomingNamespace {
                     Self::add_storage_use(&mut ns, &mut directory_waiters, use_, component.clone())
                         .await?;
                 }
-                cm_rust::UseDecl::Event(_) | cm_rust::UseDecl::EventStream(_) => {
+                cm_rust::UseDecl::Event(_) | cm_rust::UseDecl::EventStreamDeprecated(_) => {
                     // Event capabilities are handled in model::model,
                     // as these are capabilities used by the framework itself
                     // and not given to components directly.

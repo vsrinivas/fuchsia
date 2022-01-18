@@ -91,7 +91,7 @@ impl From<UseDecl> for CapabilityType {
             UseDecl::Directory(_) => CapabilityType::Directory,
             UseDecl::Storage(_) => CapabilityType::Storage,
             UseDecl::Event(_) => CapabilityType::Event,
-            UseDecl::EventStream(_) => CapabilityType::EventStream,
+            UseDecl::EventStreamDeprecated(_) => CapabilityType::EventStream,
         }
     }
 }

@@ -491,7 +491,7 @@ impl RoutingTest {
                 UseDecl::Service(s) => Some(s.target_path.dirname),
                 UseDecl::Protocol(s) => Some(s.target_path.dirname),
                 UseDecl::Storage(s) => Some(s.target_path.to_string()),
-                UseDecl::Event(_) | UseDecl::EventStream(_) => None,
+                UseDecl::Event(_) | UseDecl::EventStreamDeprecated(_) => None,
             })
             .collect();
         let mut expected_paths = vec![];
