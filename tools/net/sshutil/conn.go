@@ -284,15 +284,17 @@ func (c *Conn) Run(ctx context.Context, command []string, stdout io.Writer, stde
 			log = "ssh command failed with no exit code"
 			err = ConnectionError{err}
 		default:
-			if errors.Is(err, io.EOF) {
-				log = "got EOF trying to run ssh command, the device likely stopped responding to keep-alive pings"
-				err = ConnectionError{err}
-			} else if strings.HasSuffix(err.Error(), "broken pipe") {
-				log = fmt.Sprintf("ssh command failed with error: %s", err)
+			if errors.Is(err, io.EOF) || errors.Is(err, net.ErrClosed) {
+				log = "ssh connection closed, the device likely stopped responding to keep-alive pings"
 				err = ConnectionError{err}
 			} else {
 				log = fmt.Sprintf("ssh command failed with error: %s", err)
-				level = logger.ErrorLevel
+				if strings.HasSuffix(err.Error(), "broken pipe") {
+					err = ConnectionError{err}
+				} else {
+					// Unexpected error, should be reported at a higher level.
+					level = logger.ErrorLevel
+				}
 			}
 		}
 		logger.Logf(ctx, level, "%s. Full command: %v", log, command)
