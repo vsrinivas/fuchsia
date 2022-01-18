@@ -62,8 +62,10 @@ rustc_test("bin") {
   edition = "2018"
   source_root = "integration_test.rs"
   deps = [
+    "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
     "//src/lib/fuchsia",
-    "//src/sys/component_manager/testing:test_utils_lib",
+    "//src/lib/fuchsia-component-test",
+    "//src/sys/lib/cm_rust",
     "//src/sys/lib/component-events",
   ]
 
@@ -104,9 +106,7 @@ fuchsia_component("component-manager-inspect") {
 }
 
 fuchsia_unittest_package("diagnostics-integration-test") {
-  package_deps_for_infra_only =
-      [ "//src/sys/component_manager:component-manager" ]
-  manifest = "meta/diagnostics-integration-test.cmx"
+  manifest = "meta/diagnostics-integration-test.cml"
   deps = [
     ":bin",
     ":child",
@@ -116,6 +116,7 @@ fuchsia_unittest_package("diagnostics-integration-test") {
     ":parent",
     ":reporter",
     "//src/diagnostics/archivist:archivist-for-embedding-v2",
+    "//src/sys/component_manager:component-manager-realm-builder-debug-cmp",
   ]
 }
 
