@@ -415,7 +415,7 @@ vk::Result VulkanImageCreator::CreateCollection(vk::ImageCreateInfo* image_creat
 zx_status_t VulkanImageCreator::GetImageInfo(uint32_t width, uint32_t height, zx::vmo* vmo_out,
                                              zx::eventpair* token_out,
                                              magma_image_info_t* image_info_out) {
-  auto result = collection_->WaitForBuffersAllocated_Sync();
+  auto result = collection_.sync()->WaitForBuffersAllocated();
 
   // Process any epitaphs to detect any allocation errors
   async_handler_->loop().RunUntilIdle();
