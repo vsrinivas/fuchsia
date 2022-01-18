@@ -22,33 +22,33 @@ void ::test_doccomments::Struct::EncodeWithoutValidating(
   return Storage_{::fidl::internal::NaturalClone(storage_.field)};
 }
 
-::test_doccomments::Table::Storage test_doccomments::Table::CloneStorage()
+::test_doccomments::Table::Storage_ test_doccomments::Table::CloneStorage_()
     const {
-  return Storage{::fidl::internal::NaturalClone(storage_.field)};
+  return Storage_{::fidl::internal::NaturalClone(storage_.field)};
 }
 
-std::shared_ptr<::test_doccomments::StrictUnion::Storage>
-test_doccomments::StrictUnion::CloneStorage() const {
-  const Storage& storage = *storage_;
+std::shared_ptr<::test_doccomments::StrictUnion::Storage_>
+test_doccomments::StrictUnion::CloneStorage_() const {
+  const Storage_& storage = *storage_;
   switch (storage_->index()) {
     case 1:
-      return std::make_shared<Storage>(
+      return std::make_shared<Storage_>(
           std::in_place_index<1>,
           ::fidl::internal::NaturalClone(std::get<1>(storage)));
     default:
-      return std::make_shared<Storage>();
+      return std::make_shared<Storage_>();
   }
 }
 
-std::shared_ptr<::test_doccomments::FlexibleUnion::Storage>
-test_doccomments::FlexibleUnion::CloneStorage() const {
-  const Storage& storage = *storage_;
+std::shared_ptr<::test_doccomments::FlexibleUnion::Storage_>
+test_doccomments::FlexibleUnion::CloneStorage_() const {
+  const Storage_& storage = *storage_;
   switch (storage_->index()) {
     case 1:
-      return std::make_shared<Storage>(
+      return std::make_shared<Storage_>(
           std::in_place_index<1>,
           ::fidl::internal::NaturalClone(std::get<1>(storage)));
     default:
-      return std::make_shared<Storage>();
+      return std::make_shared<Storage_>();
   }
 }

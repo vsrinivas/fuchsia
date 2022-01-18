@@ -882,67 +882,67 @@ test_protocols::ChannelProtocolEventARequest::CloneStorage_() const {
 }
 
 std::shared_ptr<
-    ::test_protocols::WithErrorSyntax_ResponseAsStruct_Result::Storage>
-test_protocols::WithErrorSyntax_ResponseAsStruct_Result::CloneStorage() const {
-  const Storage& storage = *storage_;
+    ::test_protocols::WithErrorSyntax_ResponseAsStruct_Result::Storage_>
+test_protocols::WithErrorSyntax_ResponseAsStruct_Result::CloneStorage_() const {
+  const Storage_& storage = *storage_;
   switch (storage_->index()) {
     case 1:
-      return std::make_shared<Storage>(
+      return std::make_shared<Storage_>(
           std::in_place_index<1>,
           ::fidl::internal::NaturalClone(std::get<1>(storage)));
     case 2:
-      return std::make_shared<Storage>(
+      return std::make_shared<Storage_>(
           std::in_place_index<2>,
           ::fidl::internal::NaturalClone(std::get<2>(storage)));
     default:
-      return std::make_shared<Storage>();
+      return std::make_shared<Storage_>();
   }
 }
 
 std::shared_ptr<
-    ::test_protocols::WithErrorSyntax_ErrorAsPrimitive_Result::Storage>
-test_protocols::WithErrorSyntax_ErrorAsPrimitive_Result::CloneStorage() const {
-  const Storage& storage = *storage_;
+    ::test_protocols::WithErrorSyntax_ErrorAsPrimitive_Result::Storage_>
+test_protocols::WithErrorSyntax_ErrorAsPrimitive_Result::CloneStorage_() const {
+  const Storage_& storage = *storage_;
   switch (storage_->index()) {
     case 1:
-      return std::make_shared<Storage>(
+      return std::make_shared<Storage_>(
           std::in_place_index<1>,
           ::fidl::internal::NaturalClone(std::get<1>(storage)));
     case 2:
-      return std::make_shared<Storage>(
+      return std::make_shared<Storage_>(
           std::in_place_index<2>,
           ::fidl::internal::NaturalClone(std::get<2>(storage)));
     default:
-      return std::make_shared<Storage>();
+      return std::make_shared<Storage_>();
   }
 }
 
-std::shared_ptr<::test_protocols::TheUnion::Storage>
-test_protocols::TheUnion::CloneStorage() const {
-  const Storage& storage = *storage_;
+std::shared_ptr<::test_protocols::TheUnion::Storage_>
+test_protocols::TheUnion::CloneStorage_() const {
+  const Storage_& storage = *storage_;
   switch (storage_->index()) {
     case 1:
-      return std::make_shared<Storage>(
+      return std::make_shared<Storage_>(
           std::in_place_index<1>,
           ::fidl::internal::NaturalClone(std::get<1>(storage)));
     default:
-      return std::make_shared<Storage>();
+      return std::make_shared<Storage_>();
   }
 }
 
-std::shared_ptr<::test_protocols::WithErrorSyntax_ErrorAsEnum_Result::Storage>
-test_protocols::WithErrorSyntax_ErrorAsEnum_Result::CloneStorage() const {
-  const Storage& storage = *storage_;
+std::shared_ptr<::test_protocols::WithErrorSyntax_ErrorAsEnum_Result::Storage_>
+test_protocols::WithErrorSyntax_ErrorAsEnum_Result::CloneStorage_() const {
+  const Storage_& storage = *storage_;
   switch (storage_->index()) {
     case 1:
-      return std::make_shared<Storage>(
+      return std::make_shared<Storage_>(
           std::in_place_index<1>,
           ::fidl::internal::NaturalClone(std::get<1>(storage)));
     case 2:
-      return std::make_shared<Storage>(
+      return std::make_shared<Storage_>(
           std::in_place_index<2>,
           ::fidl::internal::NaturalClone(std::get<2>(storage)));
     default:
-      return std::make_shared<Storage>();
+      return std::make_shared<Storage_>();
   }
 }

@@ -75,20 +75,20 @@ test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailRequest::
 }
 
 std::shared_ptr<::test_errorsyntax::
-                    ExampleUseOfErrorSyntax_CallWhichMayFail_Result::Storage>
+                    ExampleUseOfErrorSyntax_CallWhichMayFail_Result::Storage_>
 test_errorsyntax::ExampleUseOfErrorSyntax_CallWhichMayFail_Result::
-    CloneStorage() const {
-  const Storage& storage = *storage_;
+    CloneStorage_() const {
+  const Storage_& storage = *storage_;
   switch (storage_->index()) {
     case 1:
-      return std::make_shared<Storage>(
+      return std::make_shared<Storage_>(
           std::in_place_index<1>,
           ::fidl::internal::NaturalClone(std::get<1>(storage)));
     case 2:
-      return std::make_shared<Storage>(
+      return std::make_shared<Storage_>(
           std::in_place_index<2>,
           ::fidl::internal::NaturalClone(std::get<2>(storage)));
     default:
-      return std::make_shared<Storage>();
+      return std::make_shared<Storage_>();
   }
 }

@@ -73,6 +73,10 @@ class Example_foo_Response final
 extern "C" const fidl_type_t test_error_Example_foo_ResultTable;
 
 class Example_foo_Result final {
+ private:
+  using Storage_ = cpp17::variant<cpp17::monostate,
+                                  ::test_error::Example_foo_Response, uint32_t>;
+
  public:
   // TODO: share union tag types between wire & natural.
   enum class Tag : fidl_union_tag_t {
@@ -80,17 +84,54 @@ class Example_foo_Result final {
     kErr = 2,       // 0x2
   };
 
+  // Create an unknown value of this union.
+  Example_foo_Result() : storage_(std::make_shared<Storage_>()) {}
+
+  Example_foo_Result(Example_foo_Result&&) noexcept = default;
+  Example_foo_Result& operator=(Example_foo_Result&&) noexcept = default;
+  Example_foo_Result(const Example_foo_Result& other) noexcept
+      : Example_foo_Result(other.CloneStorage_()) {}
+  Example_foo_Result& operator=(const Example_foo_Result& other) noexcept {
+    storage_ = other.CloneStorage_();
+    return *this;
+  }
+
+  constexpr ::test_error::Example_foo_Result::Tag Which() const {
+    return Example_foo_Result::IndexToTag(storage_->index());
+  }
+  static Example_foo_Result WithResponse(
+      ::test_error::Example_foo_Response val) {
+    return Example_foo_Result(
+        std::make_shared<Storage_>(std::in_place_index_t<1>{}, std::move(val)));
+  }
+
+  const ::fidl::internal::UnionMemberView<1, Storage_> response() const {
+    return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
+  }
+  ::fidl::internal::UnionMemberView<1, Storage_> response() {
+    return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
+  }
+  static Example_foo_Result WithErr(uint32_t val) {
+    return Example_foo_Result(
+        std::make_shared<Storage_>(std::in_place_index_t<2>{}, std::move(val)));
+  }
+
+  const ::fidl::internal::UnionMemberView<2, Storage_> err() const {
+    return ::fidl::internal::UnionMemberView<2, Storage_>(storage_);
+  }
+  ::fidl::internal::UnionMemberView<2, Storage_> err() {
+    return ::fidl::internal::UnionMemberView<2, Storage_>(storage_);
+  }
+
  private:
-  using Storage = cpp17::variant<cpp17::monostate,
-                                 ::test_error::Example_foo_Response, uint32_t>;
-  std::shared_ptr<Storage> storage_;
-  std::shared_ptr<Storage> CloneStorage() const;
+  std::shared_ptr<Storage_> storage_;
+  std::shared_ptr<Storage_> CloneStorage_() const;
   friend struct ::fidl::internal::NaturalUnionCodingTraits<
       ::test_error::Example_foo_Result>;
   static constexpr std::array<std::optional<::fidl::HandleInformation>, 3>
       Members = {std::nullopt, std::nullopt, std::nullopt};
 
-  explicit Example_foo_Result(std::shared_ptr<Storage> storage)
+  explicit Example_foo_Result(std::shared_ptr<Storage_> storage)
       : storage_(std::move(storage)) {}
 
   static constexpr size_t TagToIndex(
@@ -114,50 +155,6 @@ class Example_foo_Result final {
       default:
         return ::test_error::Example_foo_Result::Tag::kResponse;
     }
-  }
-
- public:
-  // Create an unknown value of this union.
-  Example_foo_Result() : storage_(std::make_shared<Storage>()) {}
-
-  Example_foo_Result(Example_foo_Result&&) noexcept = default;
-  Example_foo_Result& operator=(Example_foo_Result&&) noexcept = default;
-  Example_foo_Result(const Example_foo_Result& other) noexcept
-      : Example_foo_Result(other.CloneStorage()) {}
-  Example_foo_Result& operator=(const Example_foo_Result& other) noexcept {
-    storage_ = other.CloneStorage();
-    return *this;
-  }
-
-  constexpr ::test_error::Example_foo_Result::Tag Which() const {
-    return Example_foo_Result::IndexToTag(storage_->index());
-  }
-  static Example_foo_Result WithResponse(
-      ::test_error::Example_foo_Response val) {
-    return Example_foo_Result(std::make_shared<Storage>(
-        std::in_place_index_t<TagToIndex(
-            ::test_error::Example_foo_Result::Tag::kResponse)>{},
-        std::move(val)));
-  }
-
-  const ::fidl::internal::UnionMemberView<1, Storage> response() const {
-    return ::fidl::internal::UnionMemberView<1, Storage>(storage_);
-  }
-  ::fidl::internal::UnionMemberView<1, Storage> response() {
-    return ::fidl::internal::UnionMemberView<1, Storage>(storage_);
-  }
-  static Example_foo_Result WithErr(uint32_t val) {
-    return Example_foo_Result(std::make_shared<Storage>(
-        std::in_place_index_t<TagToIndex(
-            ::test_error::Example_foo_Result::Tag::kErr)>{},
-        std::move(val)));
-  }
-
-  const ::fidl::internal::UnionMemberView<2, Storage> err() const {
-    return ::fidl::internal::UnionMemberView<2, Storage>(storage_);
-  }
-  ::fidl::internal::UnionMemberView<2, Storage> err() {
-    return ::fidl::internal::UnionMemberView<2, Storage>(storage_);
   }
 };
 

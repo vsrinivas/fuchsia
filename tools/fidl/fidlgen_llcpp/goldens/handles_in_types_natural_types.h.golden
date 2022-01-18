@@ -29,6 +29,9 @@ class UnionWithHandle;
 extern "C" const fidl_type_t test_handlesintypes_UnionWithHandleTable;
 
 class UnionWithHandle final {
+ private:
+  using Storage_ = cpp17::variant<cpp17::monostate, ::zx::vmo>;
+
  public:
   // TODO: share union tag types between wire & natural.
   enum class Tag : fidl_union_tag_t {
@@ -36,9 +39,29 @@ class UnionWithHandle final {
     kUnknown = ::std::numeric_limits<::fidl_union_tag_t>::max(),
   };
 
+  // Create an unknown value of this union.
+  UnionWithHandle() : storage_(std::make_shared<Storage_>()) {}
+
+  UnionWithHandle(UnionWithHandle&&) noexcept = default;
+  UnionWithHandle& operator=(UnionWithHandle&&) noexcept = default;
+
+  constexpr ::test_handlesintypes::UnionWithHandle::Tag Which() const {
+    return UnionWithHandle::IndexToTag(storage_->index());
+  }
+  static UnionWithHandle WithH(::zx::vmo val) {
+    return UnionWithHandle(
+        std::make_shared<Storage_>(std::in_place_index_t<1>{}, std::move(val)));
+  }
+
+  const ::fidl::internal::UnionMemberView<1, Storage_> h() const {
+    return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
+  }
+  ::fidl::internal::UnionMemberView<1, Storage_> h() {
+    return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
+  }
+
  private:
-  using Storage = cpp17::variant<cpp17::monostate, ::zx::vmo>;
-  std::shared_ptr<Storage> storage_;
+  std::shared_ptr<Storage_> storage_;
   friend struct ::fidl::internal::NaturalUnionCodingTraits<
       ::test_handlesintypes::UnionWithHandle>;
   static constexpr std::array<std::optional<::fidl::HandleInformation>, 2>
@@ -46,7 +69,7 @@ class UnionWithHandle final {
                  std::make_optional<::fidl::HandleInformation>(
                      {.object_type = ZX_OBJ_TYPE_VMO, .rights = 0x80000000})};
 
-  explicit UnionWithHandle(std::shared_ptr<Storage> storage)
+  explicit UnionWithHandle(std::shared_ptr<Storage_> storage)
       : storage_(std::move(storage)) {}
 
   static constexpr size_t TagToIndex(
@@ -68,30 +91,6 @@ class UnionWithHandle final {
         return ::test_handlesintypes::UnionWithHandle::Tag::kUnknown;
     }
   }
-
- public:
-  // Create an unknown value of this union.
-  UnionWithHandle() : storage_(std::make_shared<Storage>()) {}
-
-  UnionWithHandle(UnionWithHandle&&) noexcept = default;
-  UnionWithHandle& operator=(UnionWithHandle&&) noexcept = default;
-
-  constexpr ::test_handlesintypes::UnionWithHandle::Tag Which() const {
-    return UnionWithHandle::IndexToTag(storage_->index());
-  }
-  static UnionWithHandle WithH(::zx::vmo val) {
-    return UnionWithHandle(std::make_shared<Storage>(
-        std::in_place_index_t<TagToIndex(
-            ::test_handlesintypes::UnionWithHandle::Tag::kH)>{},
-        std::move(val)));
-  }
-
-  const ::fidl::internal::UnionMemberView<1, Storage> h() const {
-    return ::fidl::internal::UnionMemberView<1, Storage>(storage_);
-  }
-  ::fidl::internal::UnionMemberView<1, Storage> h() {
-    return ::fidl::internal::UnionMemberView<1, Storage>(storage_);
-  }
 };
 
 #endif  // __Fuchsia__
@@ -101,30 +100,31 @@ class UnionWithHandle final {
 extern "C" const fidl_type_t test_handlesintypes_TableWithHandleTable;
 
 class TableWithHandle final {
- public:
-  struct Storage final {
-    ::cpp17::optional<::zx::vmo> h{};
-  };
+ private:
+  struct Storage_;
 
-  TableWithHandle(Storage storage) noexcept : storage_(std::move(storage)) {}
+ public:
+  TableWithHandle(Storage_ storage) noexcept : storage_(std::move(storage)) {}
   TableWithHandle() noexcept = default;
   TableWithHandle(TableWithHandle&&) noexcept = default;
   TableWithHandle& operator=(TableWithHandle&&) noexcept = default;
 
   bool IsEmpty() const { return !(storage_.h.has_value()); }
 
-  size_t MaxOrdinal() const;
-
   const cpp17::optional<::zx::vmo>& h() const { return storage_.h; }
   ::cpp17::optional<::zx::vmo>& h() { return storage_.h; }
 
  private:
+  struct Storage_ final {
+    ::cpp17::optional<::zx::vmo> h{};
+  };
+
   // TODO(https://fxbug.dev/91252): Box the storage.
-  Storage storage_;
+  Storage_ storage_;
   friend struct ::fidl::internal::NaturalTableCodingTraits<
       ::test_handlesintypes::TableWithHandle>;
   static constexpr auto Members = std::make_tuple(std::make_tuple(
-      1, &Storage::h,
+      1, &Storage_::h,
       std::make_optional<::fidl::HandleInformation>(
           {.object_type = ZX_OBJ_TYPE_VMO, .rights = 0x80000000})));
 };

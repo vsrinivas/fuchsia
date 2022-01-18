@@ -2,109 +2,110 @@
 
 #include <fidl/test.table/cpp/natural_types.h>
 
-::test_table::TableWithAttributes::Storage
-test_table::TableWithAttributes::CloneStorage() const {
-  return Storage{::fidl::internal::NaturalClone(storage_.x)};
+::test_table::TableWithAttributes::Storage_
+test_table::TableWithAttributes::CloneStorage_() const {
+  return Storage_{::fidl::internal::NaturalClone(storage_.x)};
 }
 
-::test_table::SimpleTable::Storage test_table::SimpleTable::CloneStorage()
+::test_table::SimpleTable::Storage_ test_table::SimpleTable::CloneStorage_()
     const {
-  return Storage{::fidl::internal::NaturalClone(storage_.x),
-                 ::fidl::internal::NaturalClone(storage_.y)};
+  return Storage_{::fidl::internal::NaturalClone(storage_.x),
+                  ::fidl::internal::NaturalClone(storage_.y)};
 }
 
-::test_table::ReverseOrdinalTable::Storage
-test_table::ReverseOrdinalTable::CloneStorage() const {
-  return Storage{::fidl::internal::NaturalClone(storage_.z),
-                 ::fidl::internal::NaturalClone(storage_.y),
-                 ::fidl::internal::NaturalClone(storage_.x)};
+::test_table::ReverseOrdinalTable::Storage_
+test_table::ReverseOrdinalTable::CloneStorage_() const {
+  return Storage_{::fidl::internal::NaturalClone(storage_.z),
+                  ::fidl::internal::NaturalClone(storage_.y),
+                  ::fidl::internal::NaturalClone(storage_.x)};
 }
 
-::test_table::OlderSimpleTable::Storage
-test_table::OlderSimpleTable::CloneStorage() const {
-  return Storage{::fidl::internal::NaturalClone(storage_.x)};
+::test_table::OlderSimpleTable::Storage_
+test_table::OlderSimpleTable::CloneStorage_() const {
+  return Storage_{::fidl::internal::NaturalClone(storage_.x)};
 }
 
-::test_table::NewerSimpleTable::Storage
-test_table::NewerSimpleTable::CloneStorage() const {
-  return Storage{::fidl::internal::NaturalClone(storage_.x),
-                 ::fidl::internal::NaturalClone(storage_.y),
-                 ::fidl::internal::NaturalClone(storage_.z)};
+::test_table::NewerSimpleTable::Storage_
+test_table::NewerSimpleTable::CloneStorage_() const {
+  return Storage_{::fidl::internal::NaturalClone(storage_.x),
+                  ::fidl::internal::NaturalClone(storage_.y),
+                  ::fidl::internal::NaturalClone(storage_.z)};
 }
 
-::test_table::ExtensionTable::Storage test_table::ExtensionTable::CloneStorage()
+::test_table::ExtensionTable::Storage_
+test_table::ExtensionTable::CloneStorage_() const {
+  return Storage_{};
+}
+
+::test_table::SixtyFourOrdinalTable::Storage_
+test_table::SixtyFourOrdinalTable::CloneStorage_() const {
+  return Storage_{::fidl::internal::NaturalClone(storage_.v1),
+                  ::fidl::internal::NaturalClone(storage_.v2),
+                  ::fidl::internal::NaturalClone(storage_.v3),
+                  ::fidl::internal::NaturalClone(storage_.v4),
+                  ::fidl::internal::NaturalClone(storage_.v5),
+                  ::fidl::internal::NaturalClone(storage_.v6),
+                  ::fidl::internal::NaturalClone(storage_.v7),
+                  ::fidl::internal::NaturalClone(storage_.v8),
+                  ::fidl::internal::NaturalClone(storage_.v9),
+                  ::fidl::internal::NaturalClone(storage_.v10),
+                  ::fidl::internal::NaturalClone(storage_.v11),
+                  ::fidl::internal::NaturalClone(storage_.v12),
+                  ::fidl::internal::NaturalClone(storage_.v13),
+                  ::fidl::internal::NaturalClone(storage_.v14),
+                  ::fidl::internal::NaturalClone(storage_.v15),
+                  ::fidl::internal::NaturalClone(storage_.v16),
+                  ::fidl::internal::NaturalClone(storage_.v17),
+                  ::fidl::internal::NaturalClone(storage_.v18),
+                  ::fidl::internal::NaturalClone(storage_.v19),
+                  ::fidl::internal::NaturalClone(storage_.v20),
+                  ::fidl::internal::NaturalClone(storage_.v21),
+                  ::fidl::internal::NaturalClone(storage_.v22),
+                  ::fidl::internal::NaturalClone(storage_.v23),
+                  ::fidl::internal::NaturalClone(storage_.v24),
+                  ::fidl::internal::NaturalClone(storage_.v25),
+                  ::fidl::internal::NaturalClone(storage_.v26),
+                  ::fidl::internal::NaturalClone(storage_.v27),
+                  ::fidl::internal::NaturalClone(storage_.v28),
+                  ::fidl::internal::NaturalClone(storage_.v29),
+                  ::fidl::internal::NaturalClone(storage_.v30),
+                  ::fidl::internal::NaturalClone(storage_.v31),
+                  ::fidl::internal::NaturalClone(storage_.v32),
+                  ::fidl::internal::NaturalClone(storage_.v33),
+                  ::fidl::internal::NaturalClone(storage_.v34),
+                  ::fidl::internal::NaturalClone(storage_.v35),
+                  ::fidl::internal::NaturalClone(storage_.v36),
+                  ::fidl::internal::NaturalClone(storage_.v37),
+                  ::fidl::internal::NaturalClone(storage_.v38),
+                  ::fidl::internal::NaturalClone(storage_.v39),
+                  ::fidl::internal::NaturalClone(storage_.v40),
+                  ::fidl::internal::NaturalClone(storage_.v41),
+                  ::fidl::internal::NaturalClone(storage_.v42),
+                  ::fidl::internal::NaturalClone(storage_.v43),
+                  ::fidl::internal::NaturalClone(storage_.v44),
+                  ::fidl::internal::NaturalClone(storage_.v45),
+                  ::fidl::internal::NaturalClone(storage_.v46),
+                  ::fidl::internal::NaturalClone(storage_.v47),
+                  ::fidl::internal::NaturalClone(storage_.v48),
+                  ::fidl::internal::NaturalClone(storage_.v49),
+                  ::fidl::internal::NaturalClone(storage_.v50),
+                  ::fidl::internal::NaturalClone(storage_.v51),
+                  ::fidl::internal::NaturalClone(storage_.v52),
+                  ::fidl::internal::NaturalClone(storage_.v53),
+                  ::fidl::internal::NaturalClone(storage_.v54),
+                  ::fidl::internal::NaturalClone(storage_.v55),
+                  ::fidl::internal::NaturalClone(storage_.v56),
+                  ::fidl::internal::NaturalClone(storage_.v57),
+                  ::fidl::internal::NaturalClone(storage_.v58),
+                  ::fidl::internal::NaturalClone(storage_.v59),
+                  ::fidl::internal::NaturalClone(storage_.v60),
+                  ::fidl::internal::NaturalClone(storage_.v61),
+                  ::fidl::internal::NaturalClone(storage_.v62),
+                  ::fidl::internal::NaturalClone(storage_.v63),
+                  ::fidl::internal::NaturalClone(storage_.v64)};
+}
+
+::test_table::EmptyTable::Storage_ test_table::EmptyTable::CloneStorage_()
     const {
-  return Storage{};
-}
-
-::test_table::SixtyFourOrdinalTable::Storage
-test_table::SixtyFourOrdinalTable::CloneStorage() const {
-  return Storage{::fidl::internal::NaturalClone(storage_.v1),
-                 ::fidl::internal::NaturalClone(storage_.v2),
-                 ::fidl::internal::NaturalClone(storage_.v3),
-                 ::fidl::internal::NaturalClone(storage_.v4),
-                 ::fidl::internal::NaturalClone(storage_.v5),
-                 ::fidl::internal::NaturalClone(storage_.v6),
-                 ::fidl::internal::NaturalClone(storage_.v7),
-                 ::fidl::internal::NaturalClone(storage_.v8),
-                 ::fidl::internal::NaturalClone(storage_.v9),
-                 ::fidl::internal::NaturalClone(storage_.v10),
-                 ::fidl::internal::NaturalClone(storage_.v11),
-                 ::fidl::internal::NaturalClone(storage_.v12),
-                 ::fidl::internal::NaturalClone(storage_.v13),
-                 ::fidl::internal::NaturalClone(storage_.v14),
-                 ::fidl::internal::NaturalClone(storage_.v15),
-                 ::fidl::internal::NaturalClone(storage_.v16),
-                 ::fidl::internal::NaturalClone(storage_.v17),
-                 ::fidl::internal::NaturalClone(storage_.v18),
-                 ::fidl::internal::NaturalClone(storage_.v19),
-                 ::fidl::internal::NaturalClone(storage_.v20),
-                 ::fidl::internal::NaturalClone(storage_.v21),
-                 ::fidl::internal::NaturalClone(storage_.v22),
-                 ::fidl::internal::NaturalClone(storage_.v23),
-                 ::fidl::internal::NaturalClone(storage_.v24),
-                 ::fidl::internal::NaturalClone(storage_.v25),
-                 ::fidl::internal::NaturalClone(storage_.v26),
-                 ::fidl::internal::NaturalClone(storage_.v27),
-                 ::fidl::internal::NaturalClone(storage_.v28),
-                 ::fidl::internal::NaturalClone(storage_.v29),
-                 ::fidl::internal::NaturalClone(storage_.v30),
-                 ::fidl::internal::NaturalClone(storage_.v31),
-                 ::fidl::internal::NaturalClone(storage_.v32),
-                 ::fidl::internal::NaturalClone(storage_.v33),
-                 ::fidl::internal::NaturalClone(storage_.v34),
-                 ::fidl::internal::NaturalClone(storage_.v35),
-                 ::fidl::internal::NaturalClone(storage_.v36),
-                 ::fidl::internal::NaturalClone(storage_.v37),
-                 ::fidl::internal::NaturalClone(storage_.v38),
-                 ::fidl::internal::NaturalClone(storage_.v39),
-                 ::fidl::internal::NaturalClone(storage_.v40),
-                 ::fidl::internal::NaturalClone(storage_.v41),
-                 ::fidl::internal::NaturalClone(storage_.v42),
-                 ::fidl::internal::NaturalClone(storage_.v43),
-                 ::fidl::internal::NaturalClone(storage_.v44),
-                 ::fidl::internal::NaturalClone(storage_.v45),
-                 ::fidl::internal::NaturalClone(storage_.v46),
-                 ::fidl::internal::NaturalClone(storage_.v47),
-                 ::fidl::internal::NaturalClone(storage_.v48),
-                 ::fidl::internal::NaturalClone(storage_.v49),
-                 ::fidl::internal::NaturalClone(storage_.v50),
-                 ::fidl::internal::NaturalClone(storage_.v51),
-                 ::fidl::internal::NaturalClone(storage_.v52),
-                 ::fidl::internal::NaturalClone(storage_.v53),
-                 ::fidl::internal::NaturalClone(storage_.v54),
-                 ::fidl::internal::NaturalClone(storage_.v55),
-                 ::fidl::internal::NaturalClone(storage_.v56),
-                 ::fidl::internal::NaturalClone(storage_.v57),
-                 ::fidl::internal::NaturalClone(storage_.v58),
-                 ::fidl::internal::NaturalClone(storage_.v59),
-                 ::fidl::internal::NaturalClone(storage_.v60),
-                 ::fidl::internal::NaturalClone(storage_.v61),
-                 ::fidl::internal::NaturalClone(storage_.v62),
-                 ::fidl::internal::NaturalClone(storage_.v63),
-                 ::fidl::internal::NaturalClone(storage_.v64)};
-}
-
-::test_table::EmptyTable::Storage test_table::EmptyTable::CloneStorage() const {
-  return Storage{};
+  return Storage_{};
 }

@@ -87,6 +87,12 @@ extern "C" const fidl_type_t
     test_errorsyntax_ExampleUseOfErrorSyntax_CallWhichMayFail_ResultTable;
 
 class ExampleUseOfErrorSyntax_CallWhichMayFail_Result final {
+ private:
+  using Storage_ = cpp17::variant<
+      cpp17::monostate,
+      ::test_errorsyntax::ExampleUseOfErrorSyntax_CallWhichMayFail_Response,
+      uint32_t>;
+
  public:
   // TODO: share union tag types between wire & natural.
   enum class Tag : fidl_union_tag_t {
@@ -94,20 +100,65 @@ class ExampleUseOfErrorSyntax_CallWhichMayFail_Result final {
     kErr = 2,       // 0x2
   };
 
+  // Create an unknown value of this union.
+  ExampleUseOfErrorSyntax_CallWhichMayFail_Result()
+      : storage_(std::make_shared<Storage_>()) {}
+
+  ExampleUseOfErrorSyntax_CallWhichMayFail_Result(
+      ExampleUseOfErrorSyntax_CallWhichMayFail_Result&&) noexcept = default;
+  ExampleUseOfErrorSyntax_CallWhichMayFail_Result& operator=(
+      ExampleUseOfErrorSyntax_CallWhichMayFail_Result&&) noexcept = default;
+  ExampleUseOfErrorSyntax_CallWhichMayFail_Result(
+      const ExampleUseOfErrorSyntax_CallWhichMayFail_Result& other) noexcept
+      : ExampleUseOfErrorSyntax_CallWhichMayFail_Result(other.CloneStorage_()) {
+  }
+  ExampleUseOfErrorSyntax_CallWhichMayFail_Result& operator=(
+      const ExampleUseOfErrorSyntax_CallWhichMayFail_Result& other) noexcept {
+    storage_ = other.CloneStorage_();
+    return *this;
+  }
+
+  constexpr ::test_errorsyntax::
+      ExampleUseOfErrorSyntax_CallWhichMayFail_Result::Tag
+      Which() const {
+    return ExampleUseOfErrorSyntax_CallWhichMayFail_Result::IndexToTag(
+        storage_->index());
+  }
+  static ExampleUseOfErrorSyntax_CallWhichMayFail_Result WithResponse(
+      ::test_errorsyntax::ExampleUseOfErrorSyntax_CallWhichMayFail_Response
+          val) {
+    return ExampleUseOfErrorSyntax_CallWhichMayFail_Result(
+        std::make_shared<Storage_>(std::in_place_index_t<1>{}, std::move(val)));
+  }
+
+  const ::fidl::internal::UnionMemberView<1, Storage_> response() const {
+    return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
+  }
+  ::fidl::internal::UnionMemberView<1, Storage_> response() {
+    return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
+  }
+  static ExampleUseOfErrorSyntax_CallWhichMayFail_Result WithErr(uint32_t val) {
+    return ExampleUseOfErrorSyntax_CallWhichMayFail_Result(
+        std::make_shared<Storage_>(std::in_place_index_t<2>{}, std::move(val)));
+  }
+
+  const ::fidl::internal::UnionMemberView<2, Storage_> err() const {
+    return ::fidl::internal::UnionMemberView<2, Storage_>(storage_);
+  }
+  ::fidl::internal::UnionMemberView<2, Storage_> err() {
+    return ::fidl::internal::UnionMemberView<2, Storage_>(storage_);
+  }
+
  private:
-  using Storage = cpp17::variant<
-      cpp17::monostate,
-      ::test_errorsyntax::ExampleUseOfErrorSyntax_CallWhichMayFail_Response,
-      uint32_t>;
-  std::shared_ptr<Storage> storage_;
-  std::shared_ptr<Storage> CloneStorage() const;
+  std::shared_ptr<Storage_> storage_;
+  std::shared_ptr<Storage_> CloneStorage_() const;
   friend struct ::fidl::internal::NaturalUnionCodingTraits<
       ::test_errorsyntax::ExampleUseOfErrorSyntax_CallWhichMayFail_Result>;
   static constexpr std::array<std::optional<::fidl::HandleInformation>, 3>
       Members = {std::nullopt, std::nullopt, std::nullopt};
 
   explicit ExampleUseOfErrorSyntax_CallWhichMayFail_Result(
-      std::shared_ptr<Storage> storage)
+      std::shared_ptr<Storage_> storage)
       : storage_(std::move(storage)) {}
 
   static constexpr size_t TagToIndex(
@@ -138,64 +189,6 @@ class ExampleUseOfErrorSyntax_CallWhichMayFail_Result final {
         return ::test_errorsyntax::
             ExampleUseOfErrorSyntax_CallWhichMayFail_Result::Tag::kResponse;
     }
-  }
-
- public:
-  // Create an unknown value of this union.
-  ExampleUseOfErrorSyntax_CallWhichMayFail_Result()
-      : storage_(std::make_shared<Storage>()) {}
-
-  ExampleUseOfErrorSyntax_CallWhichMayFail_Result(
-      ExampleUseOfErrorSyntax_CallWhichMayFail_Result&&) noexcept = default;
-  ExampleUseOfErrorSyntax_CallWhichMayFail_Result& operator=(
-      ExampleUseOfErrorSyntax_CallWhichMayFail_Result&&) noexcept = default;
-  ExampleUseOfErrorSyntax_CallWhichMayFail_Result(
-      const ExampleUseOfErrorSyntax_CallWhichMayFail_Result& other) noexcept
-      : ExampleUseOfErrorSyntax_CallWhichMayFail_Result(other.CloneStorage()) {}
-  ExampleUseOfErrorSyntax_CallWhichMayFail_Result& operator=(
-      const ExampleUseOfErrorSyntax_CallWhichMayFail_Result& other) noexcept {
-    storage_ = other.CloneStorage();
-    return *this;
-  }
-
-  constexpr ::test_errorsyntax::
-      ExampleUseOfErrorSyntax_CallWhichMayFail_Result::Tag
-      Which() const {
-    return ExampleUseOfErrorSyntax_CallWhichMayFail_Result::IndexToTag(
-        storage_->index());
-  }
-  static ExampleUseOfErrorSyntax_CallWhichMayFail_Result WithResponse(
-      ::test_errorsyntax::ExampleUseOfErrorSyntax_CallWhichMayFail_Response
-          val) {
-    return ExampleUseOfErrorSyntax_CallWhichMayFail_Result(
-        std::make_shared<Storage>(
-            std::in_place_index_t<TagToIndex(
-                ::test_errorsyntax::
-                    ExampleUseOfErrorSyntax_CallWhichMayFail_Result::Tag::
-                        kResponse)>{},
-            std::move(val)));
-  }
-
-  const ::fidl::internal::UnionMemberView<1, Storage> response() const {
-    return ::fidl::internal::UnionMemberView<1, Storage>(storage_);
-  }
-  ::fidl::internal::UnionMemberView<1, Storage> response() {
-    return ::fidl::internal::UnionMemberView<1, Storage>(storage_);
-  }
-  static ExampleUseOfErrorSyntax_CallWhichMayFail_Result WithErr(uint32_t val) {
-    return ExampleUseOfErrorSyntax_CallWhichMayFail_Result(std::make_shared<
-                                                           Storage>(
-        std::in_place_index_t<TagToIndex(
-            ::test_errorsyntax::
-                ExampleUseOfErrorSyntax_CallWhichMayFail_Result::Tag::kErr)>{},
-        std::move(val)));
-  }
-
-  const ::fidl::internal::UnionMemberView<2, Storage> err() const {
-    return ::fidl::internal::UnionMemberView<2, Storage>(storage_);
-  }
-  ::fidl::internal::UnionMemberView<2, Storage> err() {
-    return ::fidl::internal::UnionMemberView<2, Storage>(storage_);
   }
 };
 

@@ -145,7 +145,7 @@ struct NaturalTableCodingTraits {
 
   template <size_t I = std::tuple_size_v<decltype(T::Members)> - 1>
   static size_t MaxOrdinal(T* value) {
-    auto T::Storage::*member_ptr = std::get<1>(std::get<I>(T::Members));
+    auto T::Storage_::*member_ptr = std::get<1>(std::get<I>(T::Members));
     const auto& member = value->storage_.*member_ptr;
     if (member.has_value()) {
       return I + 1;
@@ -177,7 +177,7 @@ struct NaturalTableCodingTraits {
     if constexpr (I < std::tuple_size_v<decltype(T::Members)>) {
       auto member_info = std::get<I>(T::Members);
       size_t member_offset = base + (std::get<0>(member_info) - 1) * sizeof(fidl_envelope_v2_t);
-      auto T::Storage::*member_member_ptr = std::get<1>(member_info);
+      auto T::Storage_::*member_member_ptr = std::get<1>(member_info);
       auto& member_ptr = value->storage_.*(member_member_ptr);
       if (I < count) {
         NaturalEnvelopeDecodeOptional(decoder, &member_ptr, member_offset);
@@ -227,7 +227,7 @@ struct NaturalUnionCodingTraits {
   template <size_t I = 1>
   static void DecodeMember(Decoder* decoder, T* value, size_t envelope_offset, const size_t index) {
     static_assert(I > 0);
-    if constexpr (I < std::variant_size_v<typename T::Storage>) {
+    if constexpr (I < std::variant_size_v<typename T::Storage_>) {
       if (I == index) {
         value->storage_->template emplace<I>();
         NaturalEnvelopeDecode(decoder, &std::get<I>(*value->storage_), envelope_offset);

@@ -31,22 +31,51 @@ class UnionLargeArray;
 extern "C" const fidl_type_t test_arrays_UnionSmallArrayTable;
 
 class UnionSmallArray final {
+ private:
+  using Storage_ = cpp17::variant<cpp17::monostate, ::std::array<uint32_t, 2>>;
+
  public:
   // TODO: share union tag types between wire & natural.
   enum class Tag : fidl_union_tag_t {
     kA = 1,  // 0x1
   };
 
+  // Create an unknown value of this union.
+  UnionSmallArray() : storage_(std::make_shared<Storage_>()) {}
+
+  UnionSmallArray(UnionSmallArray&&) noexcept = default;
+  UnionSmallArray& operator=(UnionSmallArray&&) noexcept = default;
+  UnionSmallArray(const UnionSmallArray& other) noexcept
+      : UnionSmallArray(other.CloneStorage_()) {}
+  UnionSmallArray& operator=(const UnionSmallArray& other) noexcept {
+    storage_ = other.CloneStorage_();
+    return *this;
+  }
+
+  constexpr ::test_arrays::UnionSmallArray::Tag Which() const {
+    return UnionSmallArray::IndexToTag(storage_->index());
+  }
+  static UnionSmallArray WithA(::std::array<uint32_t, 2> val) {
+    return UnionSmallArray(
+        std::make_shared<Storage_>(std::in_place_index_t<1>{}, std::move(val)));
+  }
+
+  const ::fidl::internal::UnionMemberView<1, Storage_> a() const {
+    return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
+  }
+  ::fidl::internal::UnionMemberView<1, Storage_> a() {
+    return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
+  }
+
  private:
-  using Storage = cpp17::variant<cpp17::monostate, ::std::array<uint32_t, 2>>;
-  std::shared_ptr<Storage> storage_;
-  std::shared_ptr<Storage> CloneStorage() const;
+  std::shared_ptr<Storage_> storage_;
+  std::shared_ptr<Storage_> CloneStorage_() const;
   friend struct ::fidl::internal::NaturalUnionCodingTraits<
       ::test_arrays::UnionSmallArray>;
   static constexpr std::array<std::optional<::fidl::HandleInformation>, 2>
       Members = {std::nullopt, std::nullopt};
 
-  explicit UnionSmallArray(std::shared_ptr<Storage> storage)
+  explicit UnionSmallArray(std::shared_ptr<Storage_> storage)
       : storage_(std::move(storage)) {}
 
   static constexpr size_t TagToIndex(::test_arrays::UnionSmallArray::Tag tag) {
@@ -66,57 +95,57 @@ class UnionSmallArray final {
         return ::test_arrays::UnionSmallArray::Tag::kA;
     }
   }
-
- public:
-  // Create an unknown value of this union.
-  UnionSmallArray() : storage_(std::make_shared<Storage>()) {}
-
-  UnionSmallArray(UnionSmallArray&&) noexcept = default;
-  UnionSmallArray& operator=(UnionSmallArray&&) noexcept = default;
-  UnionSmallArray(const UnionSmallArray& other) noexcept
-      : UnionSmallArray(other.CloneStorage()) {}
-  UnionSmallArray& operator=(const UnionSmallArray& other) noexcept {
-    storage_ = other.CloneStorage();
-    return *this;
-  }
-
-  constexpr ::test_arrays::UnionSmallArray::Tag Which() const {
-    return UnionSmallArray::IndexToTag(storage_->index());
-  }
-  static UnionSmallArray WithA(::std::array<uint32_t, 2> val) {
-    return UnionSmallArray(std::make_shared<Storage>(
-        std::in_place_index_t<TagToIndex(
-            ::test_arrays::UnionSmallArray::Tag::kA)>{},
-        std::move(val)));
-  }
-
-  const ::fidl::internal::UnionMemberView<1, Storage> a() const {
-    return ::fidl::internal::UnionMemberView<1, Storage>(storage_);
-  }
-  ::fidl::internal::UnionMemberView<1, Storage> a() {
-    return ::fidl::internal::UnionMemberView<1, Storage>(storage_);
-  }
 };
 
 extern "C" const fidl_type_t test_arrays_UnionLargeArrayTable;
 
 class UnionLargeArray final {
+ private:
+  using Storage_ =
+      cpp17::variant<cpp17::monostate, ::std::array<uint32_t, 100>>;
+
  public:
   // TODO: share union tag types between wire & natural.
   enum class Tag : fidl_union_tag_t {
     kA = 1,  // 0x1
   };
 
+  // Create an unknown value of this union.
+  UnionLargeArray() : storage_(std::make_shared<Storage_>()) {}
+
+  UnionLargeArray(UnionLargeArray&&) noexcept = default;
+  UnionLargeArray& operator=(UnionLargeArray&&) noexcept = default;
+  UnionLargeArray(const UnionLargeArray& other) noexcept
+      : UnionLargeArray(other.CloneStorage_()) {}
+  UnionLargeArray& operator=(const UnionLargeArray& other) noexcept {
+    storage_ = other.CloneStorage_();
+    return *this;
+  }
+
+  constexpr ::test_arrays::UnionLargeArray::Tag Which() const {
+    return UnionLargeArray::IndexToTag(storage_->index());
+  }
+  static UnionLargeArray WithA(::std::array<uint32_t, 100> val) {
+    return UnionLargeArray(
+        std::make_shared<Storage_>(std::in_place_index_t<1>{}, std::move(val)));
+  }
+
+  const ::fidl::internal::UnionMemberView<1, Storage_> a() const {
+    return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
+  }
+  ::fidl::internal::UnionMemberView<1, Storage_> a() {
+    return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
+  }
+
  private:
-  using Storage = cpp17::variant<cpp17::monostate, ::std::array<uint32_t, 100>>;
-  std::shared_ptr<Storage> storage_;
-  std::shared_ptr<Storage> CloneStorage() const;
+  std::shared_ptr<Storage_> storage_;
+  std::shared_ptr<Storage_> CloneStorage_() const;
   friend struct ::fidl::internal::NaturalUnionCodingTraits<
       ::test_arrays::UnionLargeArray>;
   static constexpr std::array<std::optional<::fidl::HandleInformation>, 2>
       Members = {std::nullopt, std::nullopt};
 
-  explicit UnionLargeArray(std::shared_ptr<Storage> storage)
+  explicit UnionLargeArray(std::shared_ptr<Storage_> storage)
       : storage_(std::move(storage)) {}
 
   static constexpr size_t TagToIndex(::test_arrays::UnionLargeArray::Tag tag) {
@@ -136,60 +165,27 @@ class UnionLargeArray final {
         return ::test_arrays::UnionLargeArray::Tag::kA;
     }
   }
-
- public:
-  // Create an unknown value of this union.
-  UnionLargeArray() : storage_(std::make_shared<Storage>()) {}
-
-  UnionLargeArray(UnionLargeArray&&) noexcept = default;
-  UnionLargeArray& operator=(UnionLargeArray&&) noexcept = default;
-  UnionLargeArray(const UnionLargeArray& other) noexcept
-      : UnionLargeArray(other.CloneStorage()) {}
-  UnionLargeArray& operator=(const UnionLargeArray& other) noexcept {
-    storage_ = other.CloneStorage();
-    return *this;
-  }
-
-  constexpr ::test_arrays::UnionLargeArray::Tag Which() const {
-    return UnionLargeArray::IndexToTag(storage_->index());
-  }
-  static UnionLargeArray WithA(::std::array<uint32_t, 100> val) {
-    return UnionLargeArray(std::make_shared<Storage>(
-        std::in_place_index_t<TagToIndex(
-            ::test_arrays::UnionLargeArray::Tag::kA)>{},
-        std::move(val)));
-  }
-
-  const ::fidl::internal::UnionMemberView<1, Storage> a() const {
-    return ::fidl::internal::UnionMemberView<1, Storage>(storage_);
-  }
-  ::fidl::internal::UnionMemberView<1, Storage> a() {
-    return ::fidl::internal::UnionMemberView<1, Storage>(storage_);
-  }
 };
 
 extern "C" const fidl_type_t test_arrays_TableSmallArrayTable;
 
 class TableSmallArray final {
- public:
-  struct Storage final {
-    ::cpp17::optional<::std::array<uint32_t, 2>> a{};
-  };
+ private:
+  struct Storage_;
 
-  TableSmallArray(Storage storage) noexcept : storage_(std::move(storage)) {}
+ public:
+  TableSmallArray(Storage_ storage) noexcept : storage_(std::move(storage)) {}
   TableSmallArray() noexcept = default;
   TableSmallArray(TableSmallArray&&) noexcept = default;
   TableSmallArray& operator=(TableSmallArray&&) noexcept = default;
   TableSmallArray(const TableSmallArray& other) noexcept
-      : TableSmallArray(other.CloneStorage()) {}
+      : TableSmallArray(other.CloneStorage_()) {}
   TableSmallArray& operator=(const TableSmallArray& other) noexcept {
-    storage_ = other.CloneStorage();
+    storage_ = other.CloneStorage_();
     return *this;
   }
 
   bool IsEmpty() const { return !(storage_.a.has_value()); }
-
-  size_t MaxOrdinal() const;
 
   const cpp17::optional<::std::array<uint32_t, 2>>& a() const {
     return storage_.a;
@@ -197,37 +193,38 @@ class TableSmallArray final {
   ::cpp17::optional<::std::array<uint32_t, 2>>& a() { return storage_.a; }
 
  private:
+  struct Storage_ final {
+    ::cpp17::optional<::std::array<uint32_t, 2>> a{};
+  };
+
   // TODO(https://fxbug.dev/91252): Box the storage.
-  Storage storage_;
-  Storage CloneStorage() const;
+  Storage_ storage_;
+  Storage_ CloneStorage_() const;
   friend struct ::fidl::internal::NaturalTableCodingTraits<
       ::test_arrays::TableSmallArray>;
   static constexpr auto Members =
-      std::make_tuple(std::make_tuple(1, &Storage::a, std::nullopt));
+      std::make_tuple(std::make_tuple(1, &Storage_::a, std::nullopt));
 };
 
 extern "C" const fidl_type_t test_arrays_TableLargeArrayTable;
 
 class TableLargeArray final {
- public:
-  struct Storage final {
-    ::cpp17::optional<::std::array<uint32_t, 100>> a{};
-  };
+ private:
+  struct Storage_;
 
-  TableLargeArray(Storage storage) noexcept : storage_(std::move(storage)) {}
+ public:
+  TableLargeArray(Storage_ storage) noexcept : storage_(std::move(storage)) {}
   TableLargeArray() noexcept = default;
   TableLargeArray(TableLargeArray&&) noexcept = default;
   TableLargeArray& operator=(TableLargeArray&&) noexcept = default;
   TableLargeArray(const TableLargeArray& other) noexcept
-      : TableLargeArray(other.CloneStorage()) {}
+      : TableLargeArray(other.CloneStorage_()) {}
   TableLargeArray& operator=(const TableLargeArray& other) noexcept {
-    storage_ = other.CloneStorage();
+    storage_ = other.CloneStorage_();
     return *this;
   }
 
   bool IsEmpty() const { return !(storage_.a.has_value()); }
-
-  size_t MaxOrdinal() const;
 
   const cpp17::optional<::std::array<uint32_t, 100>>& a() const {
     return storage_.a;
@@ -235,13 +232,17 @@ class TableLargeArray final {
   ::cpp17::optional<::std::array<uint32_t, 100>>& a() { return storage_.a; }
 
  private:
+  struct Storage_ final {
+    ::cpp17::optional<::std::array<uint32_t, 100>> a{};
+  };
+
   // TODO(https://fxbug.dev/91252): Box the storage.
-  Storage storage_;
-  Storage CloneStorage() const;
+  Storage_ storage_;
+  Storage_ CloneStorage_() const;
   friend struct ::fidl::internal::NaturalTableCodingTraits<
       ::test_arrays::TableLargeArray>;
   static constexpr auto Members =
-      std::make_tuple(std::make_tuple(1, &Storage::a, std::nullopt));
+      std::make_tuple(std::make_tuple(1, &Storage_::a, std::nullopt));
 };
 
 extern "C" const fidl_type_t test_arrays_StructSmallArrayTable;

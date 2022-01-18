@@ -20,19 +20,19 @@ void ::test_versions::Struct::EncodeWithoutValidating(::fidl::Encoder& encoder,
   return Storage_{::fidl::internal::NaturalClone(storage_.x)};
 }
 
-::test_versions::Table::Storage test_versions::Table::CloneStorage() const {
-  return Storage{::fidl::internal::NaturalClone(storage_.x)};
+::test_versions::Table::Storage_ test_versions::Table::CloneStorage_() const {
+  return Storage_{::fidl::internal::NaturalClone(storage_.x)};
 }
 
-std::shared_ptr<::test_versions::Union::Storage>
-test_versions::Union::CloneStorage() const {
-  const Storage& storage = *storage_;
+std::shared_ptr<::test_versions::Union::Storage_>
+test_versions::Union::CloneStorage_() const {
+  const Storage_& storage = *storage_;
   switch (storage_->index()) {
     case 1:
-      return std::make_shared<Storage>(
+      return std::make_shared<Storage_>(
           std::in_place_index<1>,
           ::fidl::internal::NaturalClone(std::get<1>(storage)));
     default:
-      return std::make_shared<Storage>();
+      return std::make_shared<Storage_>();
   }
 }

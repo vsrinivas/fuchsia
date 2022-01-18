@@ -161,6 +161,12 @@ extern "C" const fidl_type_t
     test_protocols_WithErrorSyntax_HandleInResult_ResultTable;
 
 class WithErrorSyntax_HandleInResult_Result final {
+ private:
+  using Storage_ =
+      cpp17::variant<cpp17::monostate,
+                     ::test_protocols::WithErrorSyntax_HandleInResult_Response,
+                     uint32_t>;
+
  public:
   // TODO: share union tag types between wire & natural.
   enum class Tag : fidl_union_tag_t {
@@ -168,19 +174,52 @@ class WithErrorSyntax_HandleInResult_Result final {
     kErr = 2,       // 0x2
   };
 
+  // Create an unknown value of this union.
+  WithErrorSyntax_HandleInResult_Result()
+      : storage_(std::make_shared<Storage_>()) {}
+
+  WithErrorSyntax_HandleInResult_Result(
+      WithErrorSyntax_HandleInResult_Result&&) noexcept = default;
+  WithErrorSyntax_HandleInResult_Result& operator=(
+      WithErrorSyntax_HandleInResult_Result&&) noexcept = default;
+
+  constexpr ::test_protocols::WithErrorSyntax_HandleInResult_Result::Tag Which()
+      const {
+    return WithErrorSyntax_HandleInResult_Result::IndexToTag(storage_->index());
+  }
+  static WithErrorSyntax_HandleInResult_Result WithResponse(
+      ::test_protocols::WithErrorSyntax_HandleInResult_Response val) {
+    return WithErrorSyntax_HandleInResult_Result(
+        std::make_shared<Storage_>(std::in_place_index_t<1>{}, std::move(val)));
+  }
+
+  const ::fidl::internal::UnionMemberView<1, Storage_> response() const {
+    return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
+  }
+  ::fidl::internal::UnionMemberView<1, Storage_> response() {
+    return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
+  }
+  static WithErrorSyntax_HandleInResult_Result WithErr(uint32_t val) {
+    return WithErrorSyntax_HandleInResult_Result(
+        std::make_shared<Storage_>(std::in_place_index_t<2>{}, std::move(val)));
+  }
+
+  const ::fidl::internal::UnionMemberView<2, Storage_> err() const {
+    return ::fidl::internal::UnionMemberView<2, Storage_>(storage_);
+  }
+  ::fidl::internal::UnionMemberView<2, Storage_> err() {
+    return ::fidl::internal::UnionMemberView<2, Storage_>(storage_);
+  }
+
  private:
-  using Storage =
-      cpp17::variant<cpp17::monostate,
-                     ::test_protocols::WithErrorSyntax_HandleInResult_Response,
-                     uint32_t>;
-  std::shared_ptr<Storage> storage_;
+  std::shared_ptr<Storage_> storage_;
   friend struct ::fidl::internal::NaturalUnionCodingTraits<
       ::test_protocols::WithErrorSyntax_HandleInResult_Result>;
   static constexpr std::array<std::optional<::fidl::HandleInformation>, 3>
       Members = {std::nullopt, std::nullopt, std::nullopt};
 
   explicit WithErrorSyntax_HandleInResult_Result(
-      std::shared_ptr<Storage> storage)
+      std::shared_ptr<Storage_> storage)
       : storage_(std::move(storage)) {}
 
   static constexpr size_t TagToIndex(
@@ -208,50 +247,6 @@ class WithErrorSyntax_HandleInResult_Result final {
         return ::test_protocols::WithErrorSyntax_HandleInResult_Result::Tag::
             kResponse;
     }
-  }
-
- public:
-  // Create an unknown value of this union.
-  WithErrorSyntax_HandleInResult_Result()
-      : storage_(std::make_shared<Storage>()) {}
-
-  WithErrorSyntax_HandleInResult_Result(
-      WithErrorSyntax_HandleInResult_Result&&) noexcept = default;
-  WithErrorSyntax_HandleInResult_Result& operator=(
-      WithErrorSyntax_HandleInResult_Result&&) noexcept = default;
-
-  constexpr ::test_protocols::WithErrorSyntax_HandleInResult_Result::Tag Which()
-      const {
-    return WithErrorSyntax_HandleInResult_Result::IndexToTag(storage_->index());
-  }
-  static WithErrorSyntax_HandleInResult_Result WithResponse(
-      ::test_protocols::WithErrorSyntax_HandleInResult_Response val) {
-    return WithErrorSyntax_HandleInResult_Result(std::make_shared<Storage>(
-        std::in_place_index_t<TagToIndex(
-            ::test_protocols::WithErrorSyntax_HandleInResult_Result::Tag::
-                kResponse)>{},
-        std::move(val)));
-  }
-
-  const ::fidl::internal::UnionMemberView<1, Storage> response() const {
-    return ::fidl::internal::UnionMemberView<1, Storage>(storage_);
-  }
-  ::fidl::internal::UnionMemberView<1, Storage> response() {
-    return ::fidl::internal::UnionMemberView<1, Storage>(storage_);
-  }
-  static WithErrorSyntax_HandleInResult_Result WithErr(uint32_t val) {
-    return WithErrorSyntax_HandleInResult_Result(std::make_shared<Storage>(
-        std::in_place_index_t<TagToIndex(
-            ::test_protocols::WithErrorSyntax_HandleInResult_Result::Tag::
-                kErr)>{},
-        std::move(val)));
-  }
-
-  const ::fidl::internal::UnionMemberView<2, Storage> err() const {
-    return ::fidl::internal::UnionMemberView<2, Storage>(storage_);
-  }
-  ::fidl::internal::UnionMemberView<2, Storage> err() {
-    return ::fidl::internal::UnionMemberView<2, Storage>(storage_);
   }
 };
 
@@ -914,6 +909,11 @@ extern "C" const fidl_type_t
     test_protocols_WithErrorSyntax_ResponseAsStruct_ResultTable;
 
 class WithErrorSyntax_ResponseAsStruct_Result final {
+ private:
+  using Storage_ = cpp17::variant<
+      cpp17::monostate,
+      ::test_protocols::WithErrorSyntax_ResponseAsStruct_Response, uint32_t>;
+
  public:
   // TODO: share union tag types between wire & natural.
   enum class Tag : fidl_union_tag_t {
@@ -921,19 +921,62 @@ class WithErrorSyntax_ResponseAsStruct_Result final {
     kErr = 2,       // 0x2
   };
 
+  // Create an unknown value of this union.
+  WithErrorSyntax_ResponseAsStruct_Result()
+      : storage_(std::make_shared<Storage_>()) {}
+
+  WithErrorSyntax_ResponseAsStruct_Result(
+      WithErrorSyntax_ResponseAsStruct_Result&&) noexcept = default;
+  WithErrorSyntax_ResponseAsStruct_Result& operator=(
+      WithErrorSyntax_ResponseAsStruct_Result&&) noexcept = default;
+  WithErrorSyntax_ResponseAsStruct_Result(
+      const WithErrorSyntax_ResponseAsStruct_Result& other) noexcept
+      : WithErrorSyntax_ResponseAsStruct_Result(other.CloneStorage_()) {}
+  WithErrorSyntax_ResponseAsStruct_Result& operator=(
+      const WithErrorSyntax_ResponseAsStruct_Result& other) noexcept {
+    storage_ = other.CloneStorage_();
+    return *this;
+  }
+
+  constexpr ::test_protocols::WithErrorSyntax_ResponseAsStruct_Result::Tag
+  Which() const {
+    return WithErrorSyntax_ResponseAsStruct_Result::IndexToTag(
+        storage_->index());
+  }
+  static WithErrorSyntax_ResponseAsStruct_Result WithResponse(
+      ::test_protocols::WithErrorSyntax_ResponseAsStruct_Response val) {
+    return WithErrorSyntax_ResponseAsStruct_Result(
+        std::make_shared<Storage_>(std::in_place_index_t<1>{}, std::move(val)));
+  }
+
+  const ::fidl::internal::UnionMemberView<1, Storage_> response() const {
+    return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
+  }
+  ::fidl::internal::UnionMemberView<1, Storage_> response() {
+    return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
+  }
+  static WithErrorSyntax_ResponseAsStruct_Result WithErr(uint32_t val) {
+    return WithErrorSyntax_ResponseAsStruct_Result(
+        std::make_shared<Storage_>(std::in_place_index_t<2>{}, std::move(val)));
+  }
+
+  const ::fidl::internal::UnionMemberView<2, Storage_> err() const {
+    return ::fidl::internal::UnionMemberView<2, Storage_>(storage_);
+  }
+  ::fidl::internal::UnionMemberView<2, Storage_> err() {
+    return ::fidl::internal::UnionMemberView<2, Storage_>(storage_);
+  }
+
  private:
-  using Storage = cpp17::variant<
-      cpp17::monostate,
-      ::test_protocols::WithErrorSyntax_ResponseAsStruct_Response, uint32_t>;
-  std::shared_ptr<Storage> storage_;
-  std::shared_ptr<Storage> CloneStorage() const;
+  std::shared_ptr<Storage_> storage_;
+  std::shared_ptr<Storage_> CloneStorage_() const;
   friend struct ::fidl::internal::NaturalUnionCodingTraits<
       ::test_protocols::WithErrorSyntax_ResponseAsStruct_Result>;
   static constexpr std::array<std::optional<::fidl::HandleInformation>, 3>
       Members = {std::nullopt, std::nullopt, std::nullopt};
 
   explicit WithErrorSyntax_ResponseAsStruct_Result(
-      std::shared_ptr<Storage> storage)
+      std::shared_ptr<Storage_> storage)
       : storage_(std::move(storage)) {}
 
   static constexpr size_t TagToIndex(
@@ -962,59 +1005,6 @@ class WithErrorSyntax_ResponseAsStruct_Result final {
         return ::test_protocols::WithErrorSyntax_ResponseAsStruct_Result::Tag::
             kResponse;
     }
-  }
-
- public:
-  // Create an unknown value of this union.
-  WithErrorSyntax_ResponseAsStruct_Result()
-      : storage_(std::make_shared<Storage>()) {}
-
-  WithErrorSyntax_ResponseAsStruct_Result(
-      WithErrorSyntax_ResponseAsStruct_Result&&) noexcept = default;
-  WithErrorSyntax_ResponseAsStruct_Result& operator=(
-      WithErrorSyntax_ResponseAsStruct_Result&&) noexcept = default;
-  WithErrorSyntax_ResponseAsStruct_Result(
-      const WithErrorSyntax_ResponseAsStruct_Result& other) noexcept
-      : WithErrorSyntax_ResponseAsStruct_Result(other.CloneStorage()) {}
-  WithErrorSyntax_ResponseAsStruct_Result& operator=(
-      const WithErrorSyntax_ResponseAsStruct_Result& other) noexcept {
-    storage_ = other.CloneStorage();
-    return *this;
-  }
-
-  constexpr ::test_protocols::WithErrorSyntax_ResponseAsStruct_Result::Tag
-  Which() const {
-    return WithErrorSyntax_ResponseAsStruct_Result::IndexToTag(
-        storage_->index());
-  }
-  static WithErrorSyntax_ResponseAsStruct_Result WithResponse(
-      ::test_protocols::WithErrorSyntax_ResponseAsStruct_Response val) {
-    return WithErrorSyntax_ResponseAsStruct_Result(std::make_shared<Storage>(
-        std::in_place_index_t<TagToIndex(
-            ::test_protocols::WithErrorSyntax_ResponseAsStruct_Result::Tag::
-                kResponse)>{},
-        std::move(val)));
-  }
-
-  const ::fidl::internal::UnionMemberView<1, Storage> response() const {
-    return ::fidl::internal::UnionMemberView<1, Storage>(storage_);
-  }
-  ::fidl::internal::UnionMemberView<1, Storage> response() {
-    return ::fidl::internal::UnionMemberView<1, Storage>(storage_);
-  }
-  static WithErrorSyntax_ResponseAsStruct_Result WithErr(uint32_t val) {
-    return WithErrorSyntax_ResponseAsStruct_Result(std::make_shared<Storage>(
-        std::in_place_index_t<TagToIndex(
-            ::test_protocols::WithErrorSyntax_ResponseAsStruct_Result::Tag::
-                kErr)>{},
-        std::move(val)));
-  }
-
-  const ::fidl::internal::UnionMemberView<2, Storage> err() const {
-    return ::fidl::internal::UnionMemberView<2, Storage>(storage_);
-  }
-  ::fidl::internal::UnionMemberView<2, Storage> err() {
-    return ::fidl::internal::UnionMemberView<2, Storage>(storage_);
   }
 };
 
@@ -1134,6 +1124,11 @@ extern "C" const fidl_type_t
     test_protocols_WithErrorSyntax_ErrorAsPrimitive_ResultTable;
 
 class WithErrorSyntax_ErrorAsPrimitive_Result final {
+ private:
+  using Storage_ = cpp17::variant<
+      cpp17::monostate,
+      ::test_protocols::WithErrorSyntax_ErrorAsPrimitive_Response, uint32_t>;
+
  public:
   // TODO: share union tag types between wire & natural.
   enum class Tag : fidl_union_tag_t {
@@ -1141,19 +1136,62 @@ class WithErrorSyntax_ErrorAsPrimitive_Result final {
     kErr = 2,       // 0x2
   };
 
+  // Create an unknown value of this union.
+  WithErrorSyntax_ErrorAsPrimitive_Result()
+      : storage_(std::make_shared<Storage_>()) {}
+
+  WithErrorSyntax_ErrorAsPrimitive_Result(
+      WithErrorSyntax_ErrorAsPrimitive_Result&&) noexcept = default;
+  WithErrorSyntax_ErrorAsPrimitive_Result& operator=(
+      WithErrorSyntax_ErrorAsPrimitive_Result&&) noexcept = default;
+  WithErrorSyntax_ErrorAsPrimitive_Result(
+      const WithErrorSyntax_ErrorAsPrimitive_Result& other) noexcept
+      : WithErrorSyntax_ErrorAsPrimitive_Result(other.CloneStorage_()) {}
+  WithErrorSyntax_ErrorAsPrimitive_Result& operator=(
+      const WithErrorSyntax_ErrorAsPrimitive_Result& other) noexcept {
+    storage_ = other.CloneStorage_();
+    return *this;
+  }
+
+  constexpr ::test_protocols::WithErrorSyntax_ErrorAsPrimitive_Result::Tag
+  Which() const {
+    return WithErrorSyntax_ErrorAsPrimitive_Result::IndexToTag(
+        storage_->index());
+  }
+  static WithErrorSyntax_ErrorAsPrimitive_Result WithResponse(
+      ::test_protocols::WithErrorSyntax_ErrorAsPrimitive_Response val) {
+    return WithErrorSyntax_ErrorAsPrimitive_Result(
+        std::make_shared<Storage_>(std::in_place_index_t<1>{}, std::move(val)));
+  }
+
+  const ::fidl::internal::UnionMemberView<1, Storage_> response() const {
+    return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
+  }
+  ::fidl::internal::UnionMemberView<1, Storage_> response() {
+    return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
+  }
+  static WithErrorSyntax_ErrorAsPrimitive_Result WithErr(uint32_t val) {
+    return WithErrorSyntax_ErrorAsPrimitive_Result(
+        std::make_shared<Storage_>(std::in_place_index_t<2>{}, std::move(val)));
+  }
+
+  const ::fidl::internal::UnionMemberView<2, Storage_> err() const {
+    return ::fidl::internal::UnionMemberView<2, Storage_>(storage_);
+  }
+  ::fidl::internal::UnionMemberView<2, Storage_> err() {
+    return ::fidl::internal::UnionMemberView<2, Storage_>(storage_);
+  }
+
  private:
-  using Storage = cpp17::variant<
-      cpp17::monostate,
-      ::test_protocols::WithErrorSyntax_ErrorAsPrimitive_Response, uint32_t>;
-  std::shared_ptr<Storage> storage_;
-  std::shared_ptr<Storage> CloneStorage() const;
+  std::shared_ptr<Storage_> storage_;
+  std::shared_ptr<Storage_> CloneStorage_() const;
   friend struct ::fidl::internal::NaturalUnionCodingTraits<
       ::test_protocols::WithErrorSyntax_ErrorAsPrimitive_Result>;
   static constexpr std::array<std::optional<::fidl::HandleInformation>, 3>
       Members = {std::nullopt, std::nullopt, std::nullopt};
 
   explicit WithErrorSyntax_ErrorAsPrimitive_Result(
-      std::shared_ptr<Storage> storage)
+      std::shared_ptr<Storage_> storage)
       : storage_(std::move(storage)) {}
 
   static constexpr size_t TagToIndex(
@@ -1182,59 +1220,6 @@ class WithErrorSyntax_ErrorAsPrimitive_Result final {
         return ::test_protocols::WithErrorSyntax_ErrorAsPrimitive_Result::Tag::
             kResponse;
     }
-  }
-
- public:
-  // Create an unknown value of this union.
-  WithErrorSyntax_ErrorAsPrimitive_Result()
-      : storage_(std::make_shared<Storage>()) {}
-
-  WithErrorSyntax_ErrorAsPrimitive_Result(
-      WithErrorSyntax_ErrorAsPrimitive_Result&&) noexcept = default;
-  WithErrorSyntax_ErrorAsPrimitive_Result& operator=(
-      WithErrorSyntax_ErrorAsPrimitive_Result&&) noexcept = default;
-  WithErrorSyntax_ErrorAsPrimitive_Result(
-      const WithErrorSyntax_ErrorAsPrimitive_Result& other) noexcept
-      : WithErrorSyntax_ErrorAsPrimitive_Result(other.CloneStorage()) {}
-  WithErrorSyntax_ErrorAsPrimitive_Result& operator=(
-      const WithErrorSyntax_ErrorAsPrimitive_Result& other) noexcept {
-    storage_ = other.CloneStorage();
-    return *this;
-  }
-
-  constexpr ::test_protocols::WithErrorSyntax_ErrorAsPrimitive_Result::Tag
-  Which() const {
-    return WithErrorSyntax_ErrorAsPrimitive_Result::IndexToTag(
-        storage_->index());
-  }
-  static WithErrorSyntax_ErrorAsPrimitive_Result WithResponse(
-      ::test_protocols::WithErrorSyntax_ErrorAsPrimitive_Response val) {
-    return WithErrorSyntax_ErrorAsPrimitive_Result(std::make_shared<Storage>(
-        std::in_place_index_t<TagToIndex(
-            ::test_protocols::WithErrorSyntax_ErrorAsPrimitive_Result::Tag::
-                kResponse)>{},
-        std::move(val)));
-  }
-
-  const ::fidl::internal::UnionMemberView<1, Storage> response() const {
-    return ::fidl::internal::UnionMemberView<1, Storage>(storage_);
-  }
-  ::fidl::internal::UnionMemberView<1, Storage> response() {
-    return ::fidl::internal::UnionMemberView<1, Storage>(storage_);
-  }
-  static WithErrorSyntax_ErrorAsPrimitive_Result WithErr(uint32_t val) {
-    return WithErrorSyntax_ErrorAsPrimitive_Result(std::make_shared<Storage>(
-        std::in_place_index_t<TagToIndex(
-            ::test_protocols::WithErrorSyntax_ErrorAsPrimitive_Result::Tag::
-                kErr)>{},
-        std::move(val)));
-  }
-
-  const ::fidl::internal::UnionMemberView<2, Storage> err() const {
-    return ::fidl::internal::UnionMemberView<2, Storage>(storage_);
-  }
-  ::fidl::internal::UnionMemberView<2, Storage> err() {
-    return ::fidl::internal::UnionMemberView<2, Storage>(storage_);
   }
 };
 
@@ -1913,6 +1898,9 @@ class TransitionalEventRequest final
 extern "C" const fidl_type_t test_protocols_TheUnionTable;
 
 class TheUnion final {
+ private:
+  using Storage_ = cpp17::variant<cpp17::monostate, uint32_t>;
+
  public:
   // TODO: share union tag types between wire & natural.
   enum class Tag : fidl_union_tag_t {
@@ -1920,16 +1908,41 @@ class TheUnion final {
     kUnknown = ::std::numeric_limits<::fidl_union_tag_t>::max(),
   };
 
+  // Create an unknown value of this union.
+  TheUnion() : storage_(std::make_shared<Storage_>()) {}
+
+  TheUnion(TheUnion&&) noexcept = default;
+  TheUnion& operator=(TheUnion&&) noexcept = default;
+  TheUnion(const TheUnion& other) noexcept : TheUnion(other.CloneStorage_()) {}
+  TheUnion& operator=(const TheUnion& other) noexcept {
+    storage_ = other.CloneStorage_();
+    return *this;
+  }
+
+  constexpr ::test_protocols::TheUnion::Tag Which() const {
+    return TheUnion::IndexToTag(storage_->index());
+  }
+  static TheUnion WithV(uint32_t val) {
+    return TheUnion(
+        std::make_shared<Storage_>(std::in_place_index_t<1>{}, std::move(val)));
+  }
+
+  const ::fidl::internal::UnionMemberView<1, Storage_> v() const {
+    return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
+  }
+  ::fidl::internal::UnionMemberView<1, Storage_> v() {
+    return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
+  }
+
  private:
-  using Storage = cpp17::variant<cpp17::monostate, uint32_t>;
-  std::shared_ptr<Storage> storage_;
-  std::shared_ptr<Storage> CloneStorage() const;
+  std::shared_ptr<Storage_> storage_;
+  std::shared_ptr<Storage_> CloneStorage_() const;
   friend struct ::fidl::internal::NaturalUnionCodingTraits<
       ::test_protocols::TheUnion>;
   static constexpr std::array<std::optional<::fidl::HandleInformation>, 2>
       Members = {std::nullopt, std::nullopt};
 
-  explicit TheUnion(std::shared_ptr<Storage> storage)
+  explicit TheUnion(std::shared_ptr<Storage_> storage)
       : storage_(std::move(storage)) {}
 
   static constexpr size_t TagToIndex(::test_protocols::TheUnion::Tag tag) {
@@ -1948,35 +1961,6 @@ class TheUnion final {
       default:
         return ::test_protocols::TheUnion::Tag::kUnknown;
     }
-  }
-
- public:
-  // Create an unknown value of this union.
-  TheUnion() : storage_(std::make_shared<Storage>()) {}
-
-  TheUnion(TheUnion&&) noexcept = default;
-  TheUnion& operator=(TheUnion&&) noexcept = default;
-  TheUnion(const TheUnion& other) noexcept : TheUnion(other.CloneStorage()) {}
-  TheUnion& operator=(const TheUnion& other) noexcept {
-    storage_ = other.CloneStorage();
-    return *this;
-  }
-
-  constexpr ::test_protocols::TheUnion::Tag Which() const {
-    return TheUnion::IndexToTag(storage_->index());
-  }
-  static TheUnion WithV(uint32_t val) {
-    return TheUnion(
-        std::make_shared<Storage>(std::in_place_index_t<TagToIndex(
-                                      ::test_protocols::TheUnion::Tag::kV)>{},
-                                  std::move(val)));
-  }
-
-  const ::fidl::internal::UnionMemberView<1, Storage> v() const {
-    return ::fidl::internal::UnionMemberView<1, Storage>(storage_);
-  }
-  ::fidl::internal::UnionMemberView<1, Storage> v() {
-    return ::fidl::internal::UnionMemberView<1, Storage>(storage_);
   }
 };
 
@@ -2406,6 +2390,12 @@ extern "C" const fidl_type_t
     test_protocols_WithErrorSyntax_ErrorAsEnum_ResultTable;
 
 class WithErrorSyntax_ErrorAsEnum_Result final {
+ private:
+  using Storage_ =
+      cpp17::variant<cpp17::monostate,
+                     ::test_protocols::WithErrorSyntax_ErrorAsEnum_Response,
+                     ::test_protocols::ErrorEnum>;
+
  public:
   // TODO: share union tag types between wire & natural.
   enum class Tag : fidl_union_tag_t {
@@ -2413,19 +2403,61 @@ class WithErrorSyntax_ErrorAsEnum_Result final {
     kErr = 2,       // 0x2
   };
 
+  // Create an unknown value of this union.
+  WithErrorSyntax_ErrorAsEnum_Result()
+      : storage_(std::make_shared<Storage_>()) {}
+
+  WithErrorSyntax_ErrorAsEnum_Result(
+      WithErrorSyntax_ErrorAsEnum_Result&&) noexcept = default;
+  WithErrorSyntax_ErrorAsEnum_Result& operator=(
+      WithErrorSyntax_ErrorAsEnum_Result&&) noexcept = default;
+  WithErrorSyntax_ErrorAsEnum_Result(
+      const WithErrorSyntax_ErrorAsEnum_Result& other) noexcept
+      : WithErrorSyntax_ErrorAsEnum_Result(other.CloneStorage_()) {}
+  WithErrorSyntax_ErrorAsEnum_Result& operator=(
+      const WithErrorSyntax_ErrorAsEnum_Result& other) noexcept {
+    storage_ = other.CloneStorage_();
+    return *this;
+  }
+
+  constexpr ::test_protocols::WithErrorSyntax_ErrorAsEnum_Result::Tag Which()
+      const {
+    return WithErrorSyntax_ErrorAsEnum_Result::IndexToTag(storage_->index());
+  }
+  static WithErrorSyntax_ErrorAsEnum_Result WithResponse(
+      ::test_protocols::WithErrorSyntax_ErrorAsEnum_Response val) {
+    return WithErrorSyntax_ErrorAsEnum_Result(
+        std::make_shared<Storage_>(std::in_place_index_t<1>{}, std::move(val)));
+  }
+
+  const ::fidl::internal::UnionMemberView<1, Storage_> response() const {
+    return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
+  }
+  ::fidl::internal::UnionMemberView<1, Storage_> response() {
+    return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
+  }
+  static WithErrorSyntax_ErrorAsEnum_Result WithErr(
+      ::test_protocols::ErrorEnum val) {
+    return WithErrorSyntax_ErrorAsEnum_Result(
+        std::make_shared<Storage_>(std::in_place_index_t<2>{}, std::move(val)));
+  }
+
+  const ::fidl::internal::UnionMemberView<2, Storage_> err() const {
+    return ::fidl::internal::UnionMemberView<2, Storage_>(storage_);
+  }
+  ::fidl::internal::UnionMemberView<2, Storage_> err() {
+    return ::fidl::internal::UnionMemberView<2, Storage_>(storage_);
+  }
+
  private:
-  using Storage =
-      cpp17::variant<cpp17::monostate,
-                     ::test_protocols::WithErrorSyntax_ErrorAsEnum_Response,
-                     ::test_protocols::ErrorEnum>;
-  std::shared_ptr<Storage> storage_;
-  std::shared_ptr<Storage> CloneStorage() const;
+  std::shared_ptr<Storage_> storage_;
+  std::shared_ptr<Storage_> CloneStorage_() const;
   friend struct ::fidl::internal::NaturalUnionCodingTraits<
       ::test_protocols::WithErrorSyntax_ErrorAsEnum_Result>;
   static constexpr std::array<std::optional<::fidl::HandleInformation>, 3>
       Members = {std::nullopt, std::nullopt, std::nullopt};
 
-  explicit WithErrorSyntax_ErrorAsEnum_Result(std::shared_ptr<Storage> storage)
+  explicit WithErrorSyntax_ErrorAsEnum_Result(std::shared_ptr<Storage_> storage)
       : storage_(std::move(storage)) {}
 
   static constexpr size_t TagToIndex(
@@ -2451,58 +2483,6 @@ class WithErrorSyntax_ErrorAsEnum_Result final {
         return ::test_protocols::WithErrorSyntax_ErrorAsEnum_Result::Tag::
             kResponse;
     }
-  }
-
- public:
-  // Create an unknown value of this union.
-  WithErrorSyntax_ErrorAsEnum_Result()
-      : storage_(std::make_shared<Storage>()) {}
-
-  WithErrorSyntax_ErrorAsEnum_Result(
-      WithErrorSyntax_ErrorAsEnum_Result&&) noexcept = default;
-  WithErrorSyntax_ErrorAsEnum_Result& operator=(
-      WithErrorSyntax_ErrorAsEnum_Result&&) noexcept = default;
-  WithErrorSyntax_ErrorAsEnum_Result(
-      const WithErrorSyntax_ErrorAsEnum_Result& other) noexcept
-      : WithErrorSyntax_ErrorAsEnum_Result(other.CloneStorage()) {}
-  WithErrorSyntax_ErrorAsEnum_Result& operator=(
-      const WithErrorSyntax_ErrorAsEnum_Result& other) noexcept {
-    storage_ = other.CloneStorage();
-    return *this;
-  }
-
-  constexpr ::test_protocols::WithErrorSyntax_ErrorAsEnum_Result::Tag Which()
-      const {
-    return WithErrorSyntax_ErrorAsEnum_Result::IndexToTag(storage_->index());
-  }
-  static WithErrorSyntax_ErrorAsEnum_Result WithResponse(
-      ::test_protocols::WithErrorSyntax_ErrorAsEnum_Response val) {
-    return WithErrorSyntax_ErrorAsEnum_Result(std::make_shared<Storage>(
-        std::in_place_index_t<TagToIndex(
-            ::test_protocols::WithErrorSyntax_ErrorAsEnum_Result::Tag::
-                kResponse)>{},
-        std::move(val)));
-  }
-
-  const ::fidl::internal::UnionMemberView<1, Storage> response() const {
-    return ::fidl::internal::UnionMemberView<1, Storage>(storage_);
-  }
-  ::fidl::internal::UnionMemberView<1, Storage> response() {
-    return ::fidl::internal::UnionMemberView<1, Storage>(storage_);
-  }
-  static WithErrorSyntax_ErrorAsEnum_Result WithErr(
-      ::test_protocols::ErrorEnum val) {
-    return WithErrorSyntax_ErrorAsEnum_Result(std::make_shared<Storage>(
-        std::in_place_index_t<TagToIndex(
-            ::test_protocols::WithErrorSyntax_ErrorAsEnum_Result::Tag::kErr)>{},
-        std::move(val)));
-  }
-
-  const ::fidl::internal::UnionMemberView<2, Storage> err() const {
-    return ::fidl::internal::UnionMemberView<2, Storage>(storage_);
-  }
-  ::fidl::internal::UnionMemberView<2, Storage> err() {
-    return ::fidl::internal::UnionMemberView<2, Storage>(storage_);
   }
 };
 

@@ -79,6 +79,9 @@ class XUnionContainingEmptyStruct;
 extern "C" const fidl_type_t test_union_UnionWithAttributesTable;
 
 class UnionWithAttributes final {
+ private:
+  using Storage_ = cpp17::variant<cpp17::monostate, int64_t>;
+
  public:
   // TODO: share union tag types between wire & natural.
   enum class Tag : fidl_union_tag_t {
@@ -86,16 +89,42 @@ class UnionWithAttributes final {
     kUnknown = ::std::numeric_limits<::fidl_union_tag_t>::max(),
   };
 
+  // Create an unknown value of this union.
+  UnionWithAttributes() : storage_(std::make_shared<Storage_>()) {}
+
+  UnionWithAttributes(UnionWithAttributes&&) noexcept = default;
+  UnionWithAttributes& operator=(UnionWithAttributes&&) noexcept = default;
+  UnionWithAttributes(const UnionWithAttributes& other) noexcept
+      : UnionWithAttributes(other.CloneStorage_()) {}
+  UnionWithAttributes& operator=(const UnionWithAttributes& other) noexcept {
+    storage_ = other.CloneStorage_();
+    return *this;
+  }
+
+  constexpr ::test_union::UnionWithAttributes::Tag Which() const {
+    return UnionWithAttributes::IndexToTag(storage_->index());
+  }
+  static UnionWithAttributes WithX(int64_t val) {
+    return UnionWithAttributes(
+        std::make_shared<Storage_>(std::in_place_index_t<1>{}, std::move(val)));
+  }
+
+  const ::fidl::internal::UnionMemberView<1, Storage_> x() const {
+    return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
+  }
+  ::fidl::internal::UnionMemberView<1, Storage_> x() {
+    return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
+  }
+
  private:
-  using Storage = cpp17::variant<cpp17::monostate, int64_t>;
-  std::shared_ptr<Storage> storage_;
-  std::shared_ptr<Storage> CloneStorage() const;
+  std::shared_ptr<Storage_> storage_;
+  std::shared_ptr<Storage_> CloneStorage_() const;
   friend struct ::fidl::internal::NaturalUnionCodingTraits<
       ::test_union::UnionWithAttributes>;
   static constexpr std::array<std::optional<::fidl::HandleInformation>, 2>
       Members = {std::nullopt, std::nullopt};
 
-  explicit UnionWithAttributes(std::shared_ptr<Storage> storage)
+  explicit UnionWithAttributes(std::shared_ptr<Storage_> storage)
       : storage_(std::move(storage)) {}
 
   static constexpr size_t TagToIndex(
@@ -117,41 +146,15 @@ class UnionWithAttributes final {
         return ::test_union::UnionWithAttributes::Tag::kUnknown;
     }
   }
-
- public:
-  // Create an unknown value of this union.
-  UnionWithAttributes() : storage_(std::make_shared<Storage>()) {}
-
-  UnionWithAttributes(UnionWithAttributes&&) noexcept = default;
-  UnionWithAttributes& operator=(UnionWithAttributes&&) noexcept = default;
-  UnionWithAttributes(const UnionWithAttributes& other) noexcept
-      : UnionWithAttributes(other.CloneStorage()) {}
-  UnionWithAttributes& operator=(const UnionWithAttributes& other) noexcept {
-    storage_ = other.CloneStorage();
-    return *this;
-  }
-
-  constexpr ::test_union::UnionWithAttributes::Tag Which() const {
-    return UnionWithAttributes::IndexToTag(storage_->index());
-  }
-  static UnionWithAttributes WithX(int64_t val) {
-    return UnionWithAttributes(std::make_shared<Storage>(
-        std::in_place_index_t<TagToIndex(
-            ::test_union::UnionWithAttributes::Tag::kX)>{},
-        std::move(val)));
-  }
-
-  const ::fidl::internal::UnionMemberView<1, Storage> x() const {
-    return ::fidl::internal::UnionMemberView<1, Storage>(storage_);
-  }
-  ::fidl::internal::UnionMemberView<1, Storage> x() {
-    return ::fidl::internal::UnionMemberView<1, Storage>(storage_);
-  }
 };
 
 extern "C" const fidl_type_t test_union_UnionTable;
 
 class Union final {
+ private:
+  using Storage_ = cpp17::variant<cpp17::monostate, int32_t, ::std::string,
+                                  ::std::vector<::std::string>>;
+
  public:
   // TODO: share union tag types between wire & natural.
   enum class Tag : fidl_union_tag_t {
@@ -160,16 +163,66 @@ class Union final {
     kVectorStringAlsoNeedsConstructor = 3,  // 0x3
   };
 
+  // Create an unknown value of this union.
+  Union() : storage_(std::make_shared<Storage_>()) {}
+
+  Union(Union&&) noexcept = default;
+  Union& operator=(Union&&) noexcept = default;
+  Union(const Union& other) noexcept : Union(other.CloneStorage_()) {}
+  Union& operator=(const Union& other) noexcept {
+    storage_ = other.CloneStorage_();
+    return *this;
+  }
+
+  constexpr ::test_union::Union::Tag Which() const {
+    return Union::IndexToTag(storage_->index());
+  }
+  static Union WithPrimitive(int32_t val) {
+    return Union(
+        std::make_shared<Storage_>(std::in_place_index_t<1>{}, std::move(val)));
+  }
+
+  const ::fidl::internal::UnionMemberView<1, Storage_> primitive() const {
+    return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
+  }
+  ::fidl::internal::UnionMemberView<1, Storage_> primitive() {
+    return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
+  }
+  static Union WithStringNeedsConstructor(::std::string val) {
+    return Union(
+        std::make_shared<Storage_>(std::in_place_index_t<2>{}, std::move(val)));
+  }
+
+  const ::fidl::internal::UnionMemberView<2, Storage_>
+  string_needs_constructor() const {
+    return ::fidl::internal::UnionMemberView<2, Storage_>(storage_);
+  }
+  ::fidl::internal::UnionMemberView<2, Storage_> string_needs_constructor() {
+    return ::fidl::internal::UnionMemberView<2, Storage_>(storage_);
+  }
+  static Union WithVectorStringAlsoNeedsConstructor(
+      ::std::vector<::std::string> val) {
+    return Union(
+        std::make_shared<Storage_>(std::in_place_index_t<3>{}, std::move(val)));
+  }
+
+  const ::fidl::internal::UnionMemberView<3, Storage_>
+  vector_string_also_needs_constructor() const {
+    return ::fidl::internal::UnionMemberView<3, Storage_>(storage_);
+  }
+  ::fidl::internal::UnionMemberView<3, Storage_>
+  vector_string_also_needs_constructor() {
+    return ::fidl::internal::UnionMemberView<3, Storage_>(storage_);
+  }
+
  private:
-  using Storage = cpp17::variant<cpp17::monostate, int32_t, ::std::string,
-                                 ::std::vector<::std::string>>;
-  std::shared_ptr<Storage> storage_;
-  std::shared_ptr<Storage> CloneStorage() const;
+  std::shared_ptr<Storage_> storage_;
+  std::shared_ptr<Storage_> CloneStorage_() const;
   friend struct ::fidl::internal::NaturalUnionCodingTraits<::test_union::Union>;
   static constexpr std::array<std::optional<::fidl::HandleInformation>, 4>
       Members = {std::nullopt, std::nullopt, std::nullopt, std::nullopt};
 
-  explicit Union(std::shared_ptr<Storage> storage)
+  explicit Union(std::shared_ptr<Storage_> storage)
       : storage_(std::move(storage)) {}
 
   static constexpr size_t TagToIndex(::test_union::Union::Tag tag) {
@@ -195,65 +248,6 @@ class Union final {
       default:
         return ::test_union::Union::Tag::kPrimitive;
     }
-  }
-
- public:
-  // Create an unknown value of this union.
-  Union() : storage_(std::make_shared<Storage>()) {}
-
-  Union(Union&&) noexcept = default;
-  Union& operator=(Union&&) noexcept = default;
-  Union(const Union& other) noexcept : Union(other.CloneStorage()) {}
-  Union& operator=(const Union& other) noexcept {
-    storage_ = other.CloneStorage();
-    return *this;
-  }
-
-  constexpr ::test_union::Union::Tag Which() const {
-    return Union::IndexToTag(storage_->index());
-  }
-  static Union WithPrimitive(int32_t val) {
-    return Union(
-        std::make_shared<Storage>(std::in_place_index_t<TagToIndex(
-                                      ::test_union::Union::Tag::kPrimitive)>{},
-                                  std::move(val)));
-  }
-
-  const ::fidl::internal::UnionMemberView<1, Storage> primitive() const {
-    return ::fidl::internal::UnionMemberView<1, Storage>(storage_);
-  }
-  ::fidl::internal::UnionMemberView<1, Storage> primitive() {
-    return ::fidl::internal::UnionMemberView<1, Storage>(storage_);
-  }
-  static Union WithStringNeedsConstructor(::std::string val) {
-    return Union(std::make_shared<Storage>(
-        std::in_place_index_t<TagToIndex(
-            ::test_union::Union::Tag::kStringNeedsConstructor)>{},
-        std::move(val)));
-  }
-
-  const ::fidl::internal::UnionMemberView<2, Storage> string_needs_constructor()
-      const {
-    return ::fidl::internal::UnionMemberView<2, Storage>(storage_);
-  }
-  ::fidl::internal::UnionMemberView<2, Storage> string_needs_constructor() {
-    return ::fidl::internal::UnionMemberView<2, Storage>(storage_);
-  }
-  static Union WithVectorStringAlsoNeedsConstructor(
-      ::std::vector<::std::string> val) {
-    return Union(std::make_shared<Storage>(
-        std::in_place_index_t<TagToIndex(
-            ::test_union::Union::Tag::kVectorStringAlsoNeedsConstructor)>{},
-        std::move(val)));
-  }
-
-  const ::fidl::internal::UnionMemberView<3, Storage>
-  vector_string_also_needs_constructor() const {
-    return ::fidl::internal::UnionMemberView<3, Storage>(storage_);
-  }
-  ::fidl::internal::UnionMemberView<3, Storage>
-  vector_string_also_needs_constructor() {
-    return ::fidl::internal::UnionMemberView<3, Storage>(storage_);
   }
 };
 
@@ -312,6 +306,10 @@ class StructWithNullableXUnion final
 extern "C" const fidl_type_t test_union_StrictUnionTable;
 
 class StrictUnion final {
+ private:
+  using Storage_ = cpp17::variant<cpp17::monostate, int32_t, ::std::string,
+                                  ::std::vector<::std::string>>;
+
  public:
   // TODO: share union tag types between wire & natural.
   enum class Tag : fidl_union_tag_t {
@@ -320,17 +318,68 @@ class StrictUnion final {
     kVectorStringAlsoNeedsConstructor = 3,  // 0x3
   };
 
+  // Create an unknown value of this union.
+  StrictUnion() : storage_(std::make_shared<Storage_>()) {}
+
+  StrictUnion(StrictUnion&&) noexcept = default;
+  StrictUnion& operator=(StrictUnion&&) noexcept = default;
+  StrictUnion(const StrictUnion& other) noexcept
+      : StrictUnion(other.CloneStorage_()) {}
+  StrictUnion& operator=(const StrictUnion& other) noexcept {
+    storage_ = other.CloneStorage_();
+    return *this;
+  }
+
+  constexpr ::test_union::StrictUnion::Tag Which() const {
+    return StrictUnion::IndexToTag(storage_->index());
+  }
+  static StrictUnion WithPrimitive(int32_t val) {
+    return StrictUnion(
+        std::make_shared<Storage_>(std::in_place_index_t<1>{}, std::move(val)));
+  }
+
+  const ::fidl::internal::UnionMemberView<1, Storage_> primitive() const {
+    return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
+  }
+  ::fidl::internal::UnionMemberView<1, Storage_> primitive() {
+    return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
+  }
+  static StrictUnion WithStringNeedsConstructor(::std::string val) {
+    return StrictUnion(
+        std::make_shared<Storage_>(std::in_place_index_t<2>{}, std::move(val)));
+  }
+
+  const ::fidl::internal::UnionMemberView<2, Storage_>
+  string_needs_constructor() const {
+    return ::fidl::internal::UnionMemberView<2, Storage_>(storage_);
+  }
+  ::fidl::internal::UnionMemberView<2, Storage_> string_needs_constructor() {
+    return ::fidl::internal::UnionMemberView<2, Storage_>(storage_);
+  }
+  static StrictUnion WithVectorStringAlsoNeedsConstructor(
+      ::std::vector<::std::string> val) {
+    return StrictUnion(
+        std::make_shared<Storage_>(std::in_place_index_t<3>{}, std::move(val)));
+  }
+
+  const ::fidl::internal::UnionMemberView<3, Storage_>
+  vector_string_also_needs_constructor() const {
+    return ::fidl::internal::UnionMemberView<3, Storage_>(storage_);
+  }
+  ::fidl::internal::UnionMemberView<3, Storage_>
+  vector_string_also_needs_constructor() {
+    return ::fidl::internal::UnionMemberView<3, Storage_>(storage_);
+  }
+
  private:
-  using Storage = cpp17::variant<cpp17::monostate, int32_t, ::std::string,
-                                 ::std::vector<::std::string>>;
-  std::shared_ptr<Storage> storage_;
-  std::shared_ptr<Storage> CloneStorage() const;
+  std::shared_ptr<Storage_> storage_;
+  std::shared_ptr<Storage_> CloneStorage_() const;
   friend struct ::fidl::internal::NaturalUnionCodingTraits<
       ::test_union::StrictUnion>;
   static constexpr std::array<std::optional<::fidl::HandleInformation>, 4>
       Members = {std::nullopt, std::nullopt, std::nullopt, std::nullopt};
 
-  explicit StrictUnion(std::shared_ptr<Storage> storage)
+  explicit StrictUnion(std::shared_ptr<Storage_> storage)
       : storage_(std::move(storage)) {}
 
   static constexpr size_t TagToIndex(::test_union::StrictUnion::Tag tag) {
@@ -358,72 +407,15 @@ class StrictUnion final {
         return ::test_union::StrictUnion::Tag::kPrimitive;
     }
   }
-
- public:
-  // Create an unknown value of this union.
-  StrictUnion() : storage_(std::make_shared<Storage>()) {}
-
-  StrictUnion(StrictUnion&&) noexcept = default;
-  StrictUnion& operator=(StrictUnion&&) noexcept = default;
-  StrictUnion(const StrictUnion& other) noexcept
-      : StrictUnion(other.CloneStorage()) {}
-  StrictUnion& operator=(const StrictUnion& other) noexcept {
-    storage_ = other.CloneStorage();
-    return *this;
-  }
-
-  constexpr ::test_union::StrictUnion::Tag Which() const {
-    return StrictUnion::IndexToTag(storage_->index());
-  }
-  static StrictUnion WithPrimitive(int32_t val) {
-    return StrictUnion(std::make_shared<Storage>(
-        std::in_place_index_t<TagToIndex(
-            ::test_union::StrictUnion::Tag::kPrimitive)>{},
-        std::move(val)));
-  }
-
-  const ::fidl::internal::UnionMemberView<1, Storage> primitive() const {
-    return ::fidl::internal::UnionMemberView<1, Storage>(storage_);
-  }
-  ::fidl::internal::UnionMemberView<1, Storage> primitive() {
-    return ::fidl::internal::UnionMemberView<1, Storage>(storage_);
-  }
-  static StrictUnion WithStringNeedsConstructor(::std::string val) {
-    return StrictUnion(std::make_shared<Storage>(
-        std::in_place_index_t<TagToIndex(
-            ::test_union::StrictUnion::Tag::kStringNeedsConstructor)>{},
-        std::move(val)));
-  }
-
-  const ::fidl::internal::UnionMemberView<2, Storage> string_needs_constructor()
-      const {
-    return ::fidl::internal::UnionMemberView<2, Storage>(storage_);
-  }
-  ::fidl::internal::UnionMemberView<2, Storage> string_needs_constructor() {
-    return ::fidl::internal::UnionMemberView<2, Storage>(storage_);
-  }
-  static StrictUnion WithVectorStringAlsoNeedsConstructor(
-      ::std::vector<::std::string> val) {
-    return StrictUnion(
-        std::make_shared<Storage>(std::in_place_index_t<TagToIndex(
-                                      ::test_union::StrictUnion::Tag::
-                                          kVectorStringAlsoNeedsConstructor)>{},
-                                  std::move(val)));
-  }
-
-  const ::fidl::internal::UnionMemberView<3, Storage>
-  vector_string_also_needs_constructor() const {
-    return ::fidl::internal::UnionMemberView<3, Storage>(storage_);
-  }
-  ::fidl::internal::UnionMemberView<3, Storage>
-  vector_string_also_needs_constructor() {
-    return ::fidl::internal::UnionMemberView<3, Storage>(storage_);
-  }
 };
 
 extern "C" const fidl_type_t test_union_StrictSimpleXUnionTable;
 
 class StrictSimpleXUnion final {
+ private:
+  using Storage_ =
+      cpp17::variant<cpp17::monostate, int32_t, float, ::std::string>;
+
  public:
   // TODO: share union tag types between wire & natural.
   enum class Tag : fidl_union_tag_t {
@@ -432,17 +424,64 @@ class StrictSimpleXUnion final {
     kS = 3,  // 0x3
   };
 
+  // Create an unknown value of this union.
+  StrictSimpleXUnion() : storage_(std::make_shared<Storage_>()) {}
+
+  StrictSimpleXUnion(StrictSimpleXUnion&&) noexcept = default;
+  StrictSimpleXUnion& operator=(StrictSimpleXUnion&&) noexcept = default;
+  StrictSimpleXUnion(const StrictSimpleXUnion& other) noexcept
+      : StrictSimpleXUnion(other.CloneStorage_()) {}
+  StrictSimpleXUnion& operator=(const StrictSimpleXUnion& other) noexcept {
+    storage_ = other.CloneStorage_();
+    return *this;
+  }
+
+  constexpr ::test_union::StrictSimpleXUnion::Tag Which() const {
+    return StrictSimpleXUnion::IndexToTag(storage_->index());
+  }
+  static StrictSimpleXUnion WithI(int32_t val) {
+    return StrictSimpleXUnion(
+        std::make_shared<Storage_>(std::in_place_index_t<1>{}, std::move(val)));
+  }
+
+  const ::fidl::internal::UnionMemberView<1, Storage_> i() const {
+    return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
+  }
+  ::fidl::internal::UnionMemberView<1, Storage_> i() {
+    return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
+  }
+  static StrictSimpleXUnion WithF(float val) {
+    return StrictSimpleXUnion(
+        std::make_shared<Storage_>(std::in_place_index_t<2>{}, std::move(val)));
+  }
+
+  const ::fidl::internal::UnionMemberView<2, Storage_> f() const {
+    return ::fidl::internal::UnionMemberView<2, Storage_>(storage_);
+  }
+  ::fidl::internal::UnionMemberView<2, Storage_> f() {
+    return ::fidl::internal::UnionMemberView<2, Storage_>(storage_);
+  }
+  static StrictSimpleXUnion WithS(::std::string val) {
+    return StrictSimpleXUnion(
+        std::make_shared<Storage_>(std::in_place_index_t<3>{}, std::move(val)));
+  }
+
+  const ::fidl::internal::UnionMemberView<3, Storage_> s() const {
+    return ::fidl::internal::UnionMemberView<3, Storage_>(storage_);
+  }
+  ::fidl::internal::UnionMemberView<3, Storage_> s() {
+    return ::fidl::internal::UnionMemberView<3, Storage_>(storage_);
+  }
+
  private:
-  using Storage =
-      cpp17::variant<cpp17::monostate, int32_t, float, ::std::string>;
-  std::shared_ptr<Storage> storage_;
-  std::shared_ptr<Storage> CloneStorage() const;
+  std::shared_ptr<Storage_> storage_;
+  std::shared_ptr<Storage_> CloneStorage_() const;
   friend struct ::fidl::internal::NaturalUnionCodingTraits<
       ::test_union::StrictSimpleXUnion>;
   static constexpr std::array<std::optional<::fidl::HandleInformation>, 4>
       Members = {std::nullopt, std::nullopt, std::nullopt, std::nullopt};
 
-  explicit StrictSimpleXUnion(std::shared_ptr<Storage> storage)
+  explicit StrictSimpleXUnion(std::shared_ptr<Storage_> storage)
       : storage_(std::move(storage)) {}
 
   static constexpr size_t TagToIndex(
@@ -471,67 +510,14 @@ class StrictSimpleXUnion final {
         return ::test_union::StrictSimpleXUnion::Tag::kI;
     }
   }
-
- public:
-  // Create an unknown value of this union.
-  StrictSimpleXUnion() : storage_(std::make_shared<Storage>()) {}
-
-  StrictSimpleXUnion(StrictSimpleXUnion&&) noexcept = default;
-  StrictSimpleXUnion& operator=(StrictSimpleXUnion&&) noexcept = default;
-  StrictSimpleXUnion(const StrictSimpleXUnion& other) noexcept
-      : StrictSimpleXUnion(other.CloneStorage()) {}
-  StrictSimpleXUnion& operator=(const StrictSimpleXUnion& other) noexcept {
-    storage_ = other.CloneStorage();
-    return *this;
-  }
-
-  constexpr ::test_union::StrictSimpleXUnion::Tag Which() const {
-    return StrictSimpleXUnion::IndexToTag(storage_->index());
-  }
-  static StrictSimpleXUnion WithI(int32_t val) {
-    return StrictSimpleXUnion(std::make_shared<Storage>(
-        std::in_place_index_t<TagToIndex(
-            ::test_union::StrictSimpleXUnion::Tag::kI)>{},
-        std::move(val)));
-  }
-
-  const ::fidl::internal::UnionMemberView<1, Storage> i() const {
-    return ::fidl::internal::UnionMemberView<1, Storage>(storage_);
-  }
-  ::fidl::internal::UnionMemberView<1, Storage> i() {
-    return ::fidl::internal::UnionMemberView<1, Storage>(storage_);
-  }
-  static StrictSimpleXUnion WithF(float val) {
-    return StrictSimpleXUnion(std::make_shared<Storage>(
-        std::in_place_index_t<TagToIndex(
-            ::test_union::StrictSimpleXUnion::Tag::kF)>{},
-        std::move(val)));
-  }
-
-  const ::fidl::internal::UnionMemberView<2, Storage> f() const {
-    return ::fidl::internal::UnionMemberView<2, Storage>(storage_);
-  }
-  ::fidl::internal::UnionMemberView<2, Storage> f() {
-    return ::fidl::internal::UnionMemberView<2, Storage>(storage_);
-  }
-  static StrictSimpleXUnion WithS(::std::string val) {
-    return StrictSimpleXUnion(std::make_shared<Storage>(
-        std::in_place_index_t<TagToIndex(
-            ::test_union::StrictSimpleXUnion::Tag::kS)>{},
-        std::move(val)));
-  }
-
-  const ::fidl::internal::UnionMemberView<3, Storage> s() const {
-    return ::fidl::internal::UnionMemberView<3, Storage>(storage_);
-  }
-  ::fidl::internal::UnionMemberView<3, Storage> s() {
-    return ::fidl::internal::UnionMemberView<3, Storage>(storage_);
-  }
 };
 
 extern "C" const fidl_type_t test_union_StrictFooTable;
 
 class StrictFoo final {
+ private:
+  using Storage_ = cpp17::variant<cpp17::monostate, ::std::string, int32_t>;
+
  public:
   // TODO: share union tag types between wire & natural.
   enum class Tag : fidl_union_tag_t {
@@ -539,16 +525,53 @@ class StrictFoo final {
     kI = 2,  // 0x2
   };
 
+  // Create an unknown value of this union.
+  StrictFoo() : storage_(std::make_shared<Storage_>()) {}
+
+  StrictFoo(StrictFoo&&) noexcept = default;
+  StrictFoo& operator=(StrictFoo&&) noexcept = default;
+  StrictFoo(const StrictFoo& other) noexcept
+      : StrictFoo(other.CloneStorage_()) {}
+  StrictFoo& operator=(const StrictFoo& other) noexcept {
+    storage_ = other.CloneStorage_();
+    return *this;
+  }
+
+  constexpr ::test_union::StrictFoo::Tag Which() const {
+    return StrictFoo::IndexToTag(storage_->index());
+  }
+  static StrictFoo WithS(::std::string val) {
+    return StrictFoo(
+        std::make_shared<Storage_>(std::in_place_index_t<1>{}, std::move(val)));
+  }
+
+  const ::fidl::internal::UnionMemberView<1, Storage_> s() const {
+    return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
+  }
+  ::fidl::internal::UnionMemberView<1, Storage_> s() {
+    return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
+  }
+  static StrictFoo WithI(int32_t val) {
+    return StrictFoo(
+        std::make_shared<Storage_>(std::in_place_index_t<2>{}, std::move(val)));
+  }
+
+  const ::fidl::internal::UnionMemberView<2, Storage_> i() const {
+    return ::fidl::internal::UnionMemberView<2, Storage_>(storage_);
+  }
+  ::fidl::internal::UnionMemberView<2, Storage_> i() {
+    return ::fidl::internal::UnionMemberView<2, Storage_>(storage_);
+  }
+
  private:
-  using Storage = cpp17::variant<cpp17::monostate, ::std::string, int32_t>;
-  std::shared_ptr<Storage> storage_;
-  std::shared_ptr<Storage> CloneStorage() const;
+  std::shared_ptr<Storage_> storage_;
+  std::shared_ptr<Storage_> CloneStorage_() const;
   friend struct ::fidl::internal::NaturalUnionCodingTraits<
       ::test_union::StrictFoo>;
   static constexpr std::array<std::optional<::fidl::HandleInformation>, 3>
       Members = {std::nullopt, std::nullopt, std::nullopt};
 
-  explicit StrictFoo(std::shared_ptr<Storage> storage)
+  explicit StrictFoo(std::shared_ptr<Storage_> storage)
       : storage_(std::move(storage)) {}
 
   static constexpr size_t TagToIndex(::test_union::StrictFoo::Tag tag) {
@@ -571,68 +594,56 @@ class StrictFoo final {
         return ::test_union::StrictFoo::Tag::kS;
     }
   }
-
- public:
-  // Create an unknown value of this union.
-  StrictFoo() : storage_(std::make_shared<Storage>()) {}
-
-  StrictFoo(StrictFoo&&) noexcept = default;
-  StrictFoo& operator=(StrictFoo&&) noexcept = default;
-  StrictFoo(const StrictFoo& other) noexcept
-      : StrictFoo(other.CloneStorage()) {}
-  StrictFoo& operator=(const StrictFoo& other) noexcept {
-    storage_ = other.CloneStorage();
-    return *this;
-  }
-
-  constexpr ::test_union::StrictFoo::Tag Which() const {
-    return StrictFoo::IndexToTag(storage_->index());
-  }
-  static StrictFoo WithS(::std::string val) {
-    return StrictFoo(std::make_shared<Storage>(
-        std::in_place_index_t<TagToIndex(::test_union::StrictFoo::Tag::kS)>{},
-        std::move(val)));
-  }
-
-  const ::fidl::internal::UnionMemberView<1, Storage> s() const {
-    return ::fidl::internal::UnionMemberView<1, Storage>(storage_);
-  }
-  ::fidl::internal::UnionMemberView<1, Storage> s() {
-    return ::fidl::internal::UnionMemberView<1, Storage>(storage_);
-  }
-  static StrictFoo WithI(int32_t val) {
-    return StrictFoo(std::make_shared<Storage>(
-        std::in_place_index_t<TagToIndex(::test_union::StrictFoo::Tag::kI)>{},
-        std::move(val)));
-  }
-
-  const ::fidl::internal::UnionMemberView<2, Storage> i() const {
-    return ::fidl::internal::UnionMemberView<2, Storage>(storage_);
-  }
-  ::fidl::internal::UnionMemberView<2, Storage> i() {
-    return ::fidl::internal::UnionMemberView<2, Storage>(storage_);
-  }
 };
 
 extern "C" const fidl_type_t test_union_StrictBoundedXUnionTable;
 
 class StrictBoundedXUnion final {
+ private:
+  using Storage_ = cpp17::variant<cpp17::monostate, ::std::vector<uint8_t>>;
+
  public:
   // TODO: share union tag types between wire & natural.
   enum class Tag : fidl_union_tag_t {
     kV = 1,  // 0x1
   };
 
+  // Create an unknown value of this union.
+  StrictBoundedXUnion() : storage_(std::make_shared<Storage_>()) {}
+
+  StrictBoundedXUnion(StrictBoundedXUnion&&) noexcept = default;
+  StrictBoundedXUnion& operator=(StrictBoundedXUnion&&) noexcept = default;
+  StrictBoundedXUnion(const StrictBoundedXUnion& other) noexcept
+      : StrictBoundedXUnion(other.CloneStorage_()) {}
+  StrictBoundedXUnion& operator=(const StrictBoundedXUnion& other) noexcept {
+    storage_ = other.CloneStorage_();
+    return *this;
+  }
+
+  constexpr ::test_union::StrictBoundedXUnion::Tag Which() const {
+    return StrictBoundedXUnion::IndexToTag(storage_->index());
+  }
+  static StrictBoundedXUnion WithV(::std::vector<uint8_t> val) {
+    return StrictBoundedXUnion(
+        std::make_shared<Storage_>(std::in_place_index_t<1>{}, std::move(val)));
+  }
+
+  const ::fidl::internal::UnionMemberView<1, Storage_> v() const {
+    return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
+  }
+  ::fidl::internal::UnionMemberView<1, Storage_> v() {
+    return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
+  }
+
  private:
-  using Storage = cpp17::variant<cpp17::monostate, ::std::vector<uint8_t>>;
-  std::shared_ptr<Storage> storage_;
-  std::shared_ptr<Storage> CloneStorage() const;
+  std::shared_ptr<Storage_> storage_;
+  std::shared_ptr<Storage_> CloneStorage_() const;
   friend struct ::fidl::internal::NaturalUnionCodingTraits<
       ::test_union::StrictBoundedXUnion>;
   static constexpr std::array<std::optional<::fidl::HandleInformation>, 2>
       Members = {std::nullopt, std::nullopt};
 
-  explicit StrictBoundedXUnion(std::shared_ptr<Storage> storage)
+  explicit StrictBoundedXUnion(std::shared_ptr<Storage_> storage)
       : storage_(std::move(storage)) {}
 
   static constexpr size_t TagToIndex(
@@ -652,36 +663,6 @@ class StrictBoundedXUnion final {
       default:
         return ::test_union::StrictBoundedXUnion::Tag::kV;
     }
-  }
-
- public:
-  // Create an unknown value of this union.
-  StrictBoundedXUnion() : storage_(std::make_shared<Storage>()) {}
-
-  StrictBoundedXUnion(StrictBoundedXUnion&&) noexcept = default;
-  StrictBoundedXUnion& operator=(StrictBoundedXUnion&&) noexcept = default;
-  StrictBoundedXUnion(const StrictBoundedXUnion& other) noexcept
-      : StrictBoundedXUnion(other.CloneStorage()) {}
-  StrictBoundedXUnion& operator=(const StrictBoundedXUnion& other) noexcept {
-    storage_ = other.CloneStorage();
-    return *this;
-  }
-
-  constexpr ::test_union::StrictBoundedXUnion::Tag Which() const {
-    return StrictBoundedXUnion::IndexToTag(storage_->index());
-  }
-  static StrictBoundedXUnion WithV(::std::vector<uint8_t> val) {
-    return StrictBoundedXUnion(std::make_shared<Storage>(
-        std::in_place_index_t<TagToIndex(
-            ::test_union::StrictBoundedXUnion::Tag::kV)>{},
-        std::move(val)));
-  }
-
-  const ::fidl::internal::UnionMemberView<1, Storage> v() const {
-    return ::fidl::internal::UnionMemberView<1, Storage>(storage_);
-  }
-  ::fidl::internal::UnionMemberView<1, Storage> v() {
-    return ::fidl::internal::UnionMemberView<1, Storage>(storage_);
   }
 };
 
@@ -753,6 +734,9 @@ class TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse final
 extern "C" const fidl_type_t test_union_ReverseOrdinalUnionTable;
 
 class ReverseOrdinalUnion final {
+ private:
+  using Storage_ = cpp17::variant<cpp17::monostate, uint32_t, uint32_t>;
+
  public:
   // TODO: share union tag types between wire & natural.
   enum class Tag : fidl_union_tag_t {
@@ -760,16 +744,53 @@ class ReverseOrdinalUnion final {
     kFirst = 1,   // 0x1
   };
 
+  // Create an unknown value of this union.
+  ReverseOrdinalUnion() : storage_(std::make_shared<Storage_>()) {}
+
+  ReverseOrdinalUnion(ReverseOrdinalUnion&&) noexcept = default;
+  ReverseOrdinalUnion& operator=(ReverseOrdinalUnion&&) noexcept = default;
+  ReverseOrdinalUnion(const ReverseOrdinalUnion& other) noexcept
+      : ReverseOrdinalUnion(other.CloneStorage_()) {}
+  ReverseOrdinalUnion& operator=(const ReverseOrdinalUnion& other) noexcept {
+    storage_ = other.CloneStorage_();
+    return *this;
+  }
+
+  constexpr ::test_union::ReverseOrdinalUnion::Tag Which() const {
+    return ReverseOrdinalUnion::IndexToTag(storage_->index());
+  }
+  static ReverseOrdinalUnion WithSecond(uint32_t val) {
+    return ReverseOrdinalUnion(
+        std::make_shared<Storage_>(std::in_place_index_t<1>{}, std::move(val)));
+  }
+
+  const ::fidl::internal::UnionMemberView<1, Storage_> second() const {
+    return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
+  }
+  ::fidl::internal::UnionMemberView<1, Storage_> second() {
+    return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
+  }
+  static ReverseOrdinalUnion WithFirst(uint32_t val) {
+    return ReverseOrdinalUnion(
+        std::make_shared<Storage_>(std::in_place_index_t<2>{}, std::move(val)));
+  }
+
+  const ::fidl::internal::UnionMemberView<2, Storage_> first() const {
+    return ::fidl::internal::UnionMemberView<2, Storage_>(storage_);
+  }
+  ::fidl::internal::UnionMemberView<2, Storage_> first() {
+    return ::fidl::internal::UnionMemberView<2, Storage_>(storage_);
+  }
+
  private:
-  using Storage = cpp17::variant<cpp17::monostate, uint32_t, uint32_t>;
-  std::shared_ptr<Storage> storage_;
-  std::shared_ptr<Storage> CloneStorage() const;
+  std::shared_ptr<Storage_> storage_;
+  std::shared_ptr<Storage_> CloneStorage_() const;
   friend struct ::fidl::internal::NaturalUnionCodingTraits<
       ::test_union::ReverseOrdinalUnion>;
   static constexpr std::array<std::optional<::fidl::HandleInformation>, 3>
       Members = {std::nullopt, std::nullopt, std::nullopt};
 
-  explicit ReverseOrdinalUnion(std::shared_ptr<Storage> storage)
+  explicit ReverseOrdinalUnion(std::shared_ptr<Storage_> storage)
       : storage_(std::move(storage)) {}
 
   static constexpr size_t TagToIndex(
@@ -793,49 +814,6 @@ class ReverseOrdinalUnion final {
       default:
         return ::test_union::ReverseOrdinalUnion::Tag::kSecond;
     }
-  }
-
- public:
-  // Create an unknown value of this union.
-  ReverseOrdinalUnion() : storage_(std::make_shared<Storage>()) {}
-
-  ReverseOrdinalUnion(ReverseOrdinalUnion&&) noexcept = default;
-  ReverseOrdinalUnion& operator=(ReverseOrdinalUnion&&) noexcept = default;
-  ReverseOrdinalUnion(const ReverseOrdinalUnion& other) noexcept
-      : ReverseOrdinalUnion(other.CloneStorage()) {}
-  ReverseOrdinalUnion& operator=(const ReverseOrdinalUnion& other) noexcept {
-    storage_ = other.CloneStorage();
-    return *this;
-  }
-
-  constexpr ::test_union::ReverseOrdinalUnion::Tag Which() const {
-    return ReverseOrdinalUnion::IndexToTag(storage_->index());
-  }
-  static ReverseOrdinalUnion WithSecond(uint32_t val) {
-    return ReverseOrdinalUnion(std::make_shared<Storage>(
-        std::in_place_index_t<TagToIndex(
-            ::test_union::ReverseOrdinalUnion::Tag::kSecond)>{},
-        std::move(val)));
-  }
-
-  const ::fidl::internal::UnionMemberView<1, Storage> second() const {
-    return ::fidl::internal::UnionMemberView<1, Storage>(storage_);
-  }
-  ::fidl::internal::UnionMemberView<1, Storage> second() {
-    return ::fidl::internal::UnionMemberView<1, Storage>(storage_);
-  }
-  static ReverseOrdinalUnion WithFirst(uint32_t val) {
-    return ReverseOrdinalUnion(std::make_shared<Storage>(
-        std::in_place_index_t<TagToIndex(
-            ::test_union::ReverseOrdinalUnion::Tag::kFirst)>{},
-        std::move(val)));
-  }
-
-  const ::fidl::internal::UnionMemberView<2, Storage> first() const {
-    return ::fidl::internal::UnionMemberView<2, Storage>(storage_);
-  }
-  ::fidl::internal::UnionMemberView<2, Storage> first() {
-    return ::fidl::internal::UnionMemberView<2, Storage>(storage_);
   }
 };
 
@@ -927,6 +905,10 @@ class Pasta final : public ::fidl::internal::CodableBase<Pasta> {
 extern "C" const fidl_type_t test_union_StrictPizzaOrPastaTable;
 
 class StrictPizzaOrPasta final {
+ private:
+  using Storage_ = cpp17::variant<cpp17::monostate, ::test_union::Pizza,
+                                  ::test_union::Pasta>;
+
  public:
   // TODO: share union tag types between wire & natural.
   enum class Tag : fidl_union_tag_t {
@@ -934,17 +916,53 @@ class StrictPizzaOrPasta final {
     kPasta = 2,  // 0x2
   };
 
+  // Create an unknown value of this union.
+  StrictPizzaOrPasta() : storage_(std::make_shared<Storage_>()) {}
+
+  StrictPizzaOrPasta(StrictPizzaOrPasta&&) noexcept = default;
+  StrictPizzaOrPasta& operator=(StrictPizzaOrPasta&&) noexcept = default;
+  StrictPizzaOrPasta(const StrictPizzaOrPasta& other) noexcept
+      : StrictPizzaOrPasta(other.CloneStorage_()) {}
+  StrictPizzaOrPasta& operator=(const StrictPizzaOrPasta& other) noexcept {
+    storage_ = other.CloneStorage_();
+    return *this;
+  }
+
+  constexpr ::test_union::StrictPizzaOrPasta::Tag Which() const {
+    return StrictPizzaOrPasta::IndexToTag(storage_->index());
+  }
+  static StrictPizzaOrPasta WithPizza(::test_union::Pizza val) {
+    return StrictPizzaOrPasta(
+        std::make_shared<Storage_>(std::in_place_index_t<1>{}, std::move(val)));
+  }
+
+  const ::fidl::internal::UnionMemberView<1, Storage_> pizza() const {
+    return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
+  }
+  ::fidl::internal::UnionMemberView<1, Storage_> pizza() {
+    return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
+  }
+  static StrictPizzaOrPasta WithPasta(::test_union::Pasta val) {
+    return StrictPizzaOrPasta(
+        std::make_shared<Storage_>(std::in_place_index_t<2>{}, std::move(val)));
+  }
+
+  const ::fidl::internal::UnionMemberView<2, Storage_> pasta() const {
+    return ::fidl::internal::UnionMemberView<2, Storage_>(storage_);
+  }
+  ::fidl::internal::UnionMemberView<2, Storage_> pasta() {
+    return ::fidl::internal::UnionMemberView<2, Storage_>(storage_);
+  }
+
  private:
-  using Storage = cpp17::variant<cpp17::monostate, ::test_union::Pizza,
-                                 ::test_union::Pasta>;
-  std::shared_ptr<Storage> storage_;
-  std::shared_ptr<Storage> CloneStorage() const;
+  std::shared_ptr<Storage_> storage_;
+  std::shared_ptr<Storage_> CloneStorage_() const;
   friend struct ::fidl::internal::NaturalUnionCodingTraits<
       ::test_union::StrictPizzaOrPasta>;
   static constexpr std::array<std::optional<::fidl::HandleInformation>, 3>
       Members = {std::nullopt, std::nullopt, std::nullopt};
 
-  explicit StrictPizzaOrPasta(std::shared_ptr<Storage> storage)
+  explicit StrictPizzaOrPasta(std::shared_ptr<Storage_> storage)
       : storage_(std::move(storage)) {}
 
   static constexpr size_t TagToIndex(
@@ -969,54 +987,15 @@ class StrictPizzaOrPasta final {
         return ::test_union::StrictPizzaOrPasta::Tag::kPizza;
     }
   }
-
- public:
-  // Create an unknown value of this union.
-  StrictPizzaOrPasta() : storage_(std::make_shared<Storage>()) {}
-
-  StrictPizzaOrPasta(StrictPizzaOrPasta&&) noexcept = default;
-  StrictPizzaOrPasta& operator=(StrictPizzaOrPasta&&) noexcept = default;
-  StrictPizzaOrPasta(const StrictPizzaOrPasta& other) noexcept
-      : StrictPizzaOrPasta(other.CloneStorage()) {}
-  StrictPizzaOrPasta& operator=(const StrictPizzaOrPasta& other) noexcept {
-    storage_ = other.CloneStorage();
-    return *this;
-  }
-
-  constexpr ::test_union::StrictPizzaOrPasta::Tag Which() const {
-    return StrictPizzaOrPasta::IndexToTag(storage_->index());
-  }
-  static StrictPizzaOrPasta WithPizza(::test_union::Pizza val) {
-    return StrictPizzaOrPasta(std::make_shared<Storage>(
-        std::in_place_index_t<TagToIndex(
-            ::test_union::StrictPizzaOrPasta::Tag::kPizza)>{},
-        std::move(val)));
-  }
-
-  const ::fidl::internal::UnionMemberView<1, Storage> pizza() const {
-    return ::fidl::internal::UnionMemberView<1, Storage>(storage_);
-  }
-  ::fidl::internal::UnionMemberView<1, Storage> pizza() {
-    return ::fidl::internal::UnionMemberView<1, Storage>(storage_);
-  }
-  static StrictPizzaOrPasta WithPasta(::test_union::Pasta val) {
-    return StrictPizzaOrPasta(std::make_shared<Storage>(
-        std::in_place_index_t<TagToIndex(
-            ::test_union::StrictPizzaOrPasta::Tag::kPasta)>{},
-        std::move(val)));
-  }
-
-  const ::fidl::internal::UnionMemberView<2, Storage> pasta() const {
-    return ::fidl::internal::UnionMemberView<2, Storage>(storage_);
-  }
-  ::fidl::internal::UnionMemberView<2, Storage> pasta() {
-    return ::fidl::internal::UnionMemberView<2, Storage>(storage_);
-  }
 };
 
 extern "C" const fidl_type_t test_union_PizzaOrPastaTable;
 
 class PizzaOrPasta final {
+ private:
+  using Storage_ = cpp17::variant<cpp17::monostate, ::test_union::Pizza,
+                                  ::test_union::Pasta>;
+
  public:
   // TODO: share union tag types between wire & natural.
   enum class Tag : fidl_union_tag_t {
@@ -1024,17 +1003,53 @@ class PizzaOrPasta final {
     kPasta = 2,  // 0x2
   };
 
+  // Create an unknown value of this union.
+  PizzaOrPasta() : storage_(std::make_shared<Storage_>()) {}
+
+  PizzaOrPasta(PizzaOrPasta&&) noexcept = default;
+  PizzaOrPasta& operator=(PizzaOrPasta&&) noexcept = default;
+  PizzaOrPasta(const PizzaOrPasta& other) noexcept
+      : PizzaOrPasta(other.CloneStorage_()) {}
+  PizzaOrPasta& operator=(const PizzaOrPasta& other) noexcept {
+    storage_ = other.CloneStorage_();
+    return *this;
+  }
+
+  constexpr ::test_union::PizzaOrPasta::Tag Which() const {
+    return PizzaOrPasta::IndexToTag(storage_->index());
+  }
+  static PizzaOrPasta WithPizza(::test_union::Pizza val) {
+    return PizzaOrPasta(
+        std::make_shared<Storage_>(std::in_place_index_t<1>{}, std::move(val)));
+  }
+
+  const ::fidl::internal::UnionMemberView<1, Storage_> pizza() const {
+    return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
+  }
+  ::fidl::internal::UnionMemberView<1, Storage_> pizza() {
+    return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
+  }
+  static PizzaOrPasta WithPasta(::test_union::Pasta val) {
+    return PizzaOrPasta(
+        std::make_shared<Storage_>(std::in_place_index_t<2>{}, std::move(val)));
+  }
+
+  const ::fidl::internal::UnionMemberView<2, Storage_> pasta() const {
+    return ::fidl::internal::UnionMemberView<2, Storage_>(storage_);
+  }
+  ::fidl::internal::UnionMemberView<2, Storage_> pasta() {
+    return ::fidl::internal::UnionMemberView<2, Storage_>(storage_);
+  }
+
  private:
-  using Storage = cpp17::variant<cpp17::monostate, ::test_union::Pizza,
-                                 ::test_union::Pasta>;
-  std::shared_ptr<Storage> storage_;
-  std::shared_ptr<Storage> CloneStorage() const;
+  std::shared_ptr<Storage_> storage_;
+  std::shared_ptr<Storage_> CloneStorage_() const;
   friend struct ::fidl::internal::NaturalUnionCodingTraits<
       ::test_union::PizzaOrPasta>;
   static constexpr std::array<std::optional<::fidl::HandleInformation>, 3>
       Members = {std::nullopt, std::nullopt, std::nullopt};
 
-  explicit PizzaOrPasta(std::shared_ptr<Storage> storage)
+  explicit PizzaOrPasta(std::shared_ptr<Storage_> storage)
       : storage_(std::move(storage)) {}
 
   static constexpr size_t TagToIndex(::test_union::PizzaOrPasta::Tag tag) {
@@ -1057,54 +1072,15 @@ class PizzaOrPasta final {
         return ::test_union::PizzaOrPasta::Tag::kPizza;
     }
   }
-
- public:
-  // Create an unknown value of this union.
-  PizzaOrPasta() : storage_(std::make_shared<Storage>()) {}
-
-  PizzaOrPasta(PizzaOrPasta&&) noexcept = default;
-  PizzaOrPasta& operator=(PizzaOrPasta&&) noexcept = default;
-  PizzaOrPasta(const PizzaOrPasta& other) noexcept
-      : PizzaOrPasta(other.CloneStorage()) {}
-  PizzaOrPasta& operator=(const PizzaOrPasta& other) noexcept {
-    storage_ = other.CloneStorage();
-    return *this;
-  }
-
-  constexpr ::test_union::PizzaOrPasta::Tag Which() const {
-    return PizzaOrPasta::IndexToTag(storage_->index());
-  }
-  static PizzaOrPasta WithPizza(::test_union::Pizza val) {
-    return PizzaOrPasta(std::make_shared<Storage>(
-        std::in_place_index_t<TagToIndex(
-            ::test_union::PizzaOrPasta::Tag::kPizza)>{},
-        std::move(val)));
-  }
-
-  const ::fidl::internal::UnionMemberView<1, Storage> pizza() const {
-    return ::fidl::internal::UnionMemberView<1, Storage>(storage_);
-  }
-  ::fidl::internal::UnionMemberView<1, Storage> pizza() {
-    return ::fidl::internal::UnionMemberView<1, Storage>(storage_);
-  }
-  static PizzaOrPasta WithPasta(::test_union::Pasta val) {
-    return PizzaOrPasta(std::make_shared<Storage>(
-        std::in_place_index_t<TagToIndex(
-            ::test_union::PizzaOrPasta::Tag::kPasta)>{},
-        std::move(val)));
-  }
-
-  const ::fidl::internal::UnionMemberView<2, Storage> pasta() const {
-    return ::fidl::internal::UnionMemberView<2, Storage>(storage_);
-  }
-  ::fidl::internal::UnionMemberView<2, Storage> pasta() {
-    return ::fidl::internal::UnionMemberView<2, Storage>(storage_);
-  }
 };
 
 extern "C" const fidl_type_t test_union_FlexiblePizzaOrPastaTable;
 
 class FlexiblePizzaOrPasta final {
+ private:
+  using Storage_ = cpp17::variant<cpp17::monostate, ::test_union::Pizza,
+                                  ::test_union::Pasta>;
+
  public:
   // TODO: share union tag types between wire & natural.
   enum class Tag : fidl_union_tag_t {
@@ -1113,17 +1089,53 @@ class FlexiblePizzaOrPasta final {
     kUnknown = ::std::numeric_limits<::fidl_union_tag_t>::max(),
   };
 
+  // Create an unknown value of this union.
+  FlexiblePizzaOrPasta() : storage_(std::make_shared<Storage_>()) {}
+
+  FlexiblePizzaOrPasta(FlexiblePizzaOrPasta&&) noexcept = default;
+  FlexiblePizzaOrPasta& operator=(FlexiblePizzaOrPasta&&) noexcept = default;
+  FlexiblePizzaOrPasta(const FlexiblePizzaOrPasta& other) noexcept
+      : FlexiblePizzaOrPasta(other.CloneStorage_()) {}
+  FlexiblePizzaOrPasta& operator=(const FlexiblePizzaOrPasta& other) noexcept {
+    storage_ = other.CloneStorage_();
+    return *this;
+  }
+
+  constexpr ::test_union::FlexiblePizzaOrPasta::Tag Which() const {
+    return FlexiblePizzaOrPasta::IndexToTag(storage_->index());
+  }
+  static FlexiblePizzaOrPasta WithPizza(::test_union::Pizza val) {
+    return FlexiblePizzaOrPasta(
+        std::make_shared<Storage_>(std::in_place_index_t<1>{}, std::move(val)));
+  }
+
+  const ::fidl::internal::UnionMemberView<1, Storage_> pizza() const {
+    return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
+  }
+  ::fidl::internal::UnionMemberView<1, Storage_> pizza() {
+    return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
+  }
+  static FlexiblePizzaOrPasta WithPasta(::test_union::Pasta val) {
+    return FlexiblePizzaOrPasta(
+        std::make_shared<Storage_>(std::in_place_index_t<2>{}, std::move(val)));
+  }
+
+  const ::fidl::internal::UnionMemberView<2, Storage_> pasta() const {
+    return ::fidl::internal::UnionMemberView<2, Storage_>(storage_);
+  }
+  ::fidl::internal::UnionMemberView<2, Storage_> pasta() {
+    return ::fidl::internal::UnionMemberView<2, Storage_>(storage_);
+  }
+
  private:
-  using Storage = cpp17::variant<cpp17::monostate, ::test_union::Pizza,
-                                 ::test_union::Pasta>;
-  std::shared_ptr<Storage> storage_;
-  std::shared_ptr<Storage> CloneStorage() const;
+  std::shared_ptr<Storage_> storage_;
+  std::shared_ptr<Storage_> CloneStorage_() const;
   friend struct ::fidl::internal::NaturalUnionCodingTraits<
       ::test_union::FlexiblePizzaOrPasta>;
   static constexpr std::array<std::optional<::fidl::HandleInformation>, 3>
       Members = {std::nullopt, std::nullopt, std::nullopt};
 
-  explicit FlexiblePizzaOrPasta(std::shared_ptr<Storage> storage)
+  explicit FlexiblePizzaOrPasta(std::shared_ptr<Storage_> storage)
       : storage_(std::move(storage)) {}
 
   static constexpr size_t TagToIndex(
@@ -1149,54 +1161,15 @@ class FlexiblePizzaOrPasta final {
         return ::test_union::FlexiblePizzaOrPasta::Tag::kUnknown;
     }
   }
-
- public:
-  // Create an unknown value of this union.
-  FlexiblePizzaOrPasta() : storage_(std::make_shared<Storage>()) {}
-
-  FlexiblePizzaOrPasta(FlexiblePizzaOrPasta&&) noexcept = default;
-  FlexiblePizzaOrPasta& operator=(FlexiblePizzaOrPasta&&) noexcept = default;
-  FlexiblePizzaOrPasta(const FlexiblePizzaOrPasta& other) noexcept
-      : FlexiblePizzaOrPasta(other.CloneStorage()) {}
-  FlexiblePizzaOrPasta& operator=(const FlexiblePizzaOrPasta& other) noexcept {
-    storage_ = other.CloneStorage();
-    return *this;
-  }
-
-  constexpr ::test_union::FlexiblePizzaOrPasta::Tag Which() const {
-    return FlexiblePizzaOrPasta::IndexToTag(storage_->index());
-  }
-  static FlexiblePizzaOrPasta WithPizza(::test_union::Pizza val) {
-    return FlexiblePizzaOrPasta(std::make_shared<Storage>(
-        std::in_place_index_t<TagToIndex(
-            ::test_union::FlexiblePizzaOrPasta::Tag::kPizza)>{},
-        std::move(val)));
-  }
-
-  const ::fidl::internal::UnionMemberView<1, Storage> pizza() const {
-    return ::fidl::internal::UnionMemberView<1, Storage>(storage_);
-  }
-  ::fidl::internal::UnionMemberView<1, Storage> pizza() {
-    return ::fidl::internal::UnionMemberView<1, Storage>(storage_);
-  }
-  static FlexiblePizzaOrPasta WithPasta(::test_union::Pasta val) {
-    return FlexiblePizzaOrPasta(std::make_shared<Storage>(
-        std::in_place_index_t<TagToIndex(
-            ::test_union::FlexiblePizzaOrPasta::Tag::kPasta)>{},
-        std::move(val)));
-  }
-
-  const ::fidl::internal::UnionMemberView<2, Storage> pasta() const {
-    return ::fidl::internal::UnionMemberView<2, Storage>(storage_);
-  }
-  ::fidl::internal::UnionMemberView<2, Storage> pasta() {
-    return ::fidl::internal::UnionMemberView<2, Storage>(storage_);
-  }
 };
 
 extern "C" const fidl_type_t test_union_ExplicitPizzaOrPastaTable;
 
 class ExplicitPizzaOrPasta final {
+ private:
+  using Storage_ = cpp17::variant<cpp17::monostate, ::test_union::Pizza,
+                                  ::test_union::Pasta>;
+
  public:
   // TODO: share union tag types between wire & natural.
   enum class Tag : fidl_union_tag_t {
@@ -1204,17 +1177,53 @@ class ExplicitPizzaOrPasta final {
     kPasta = 4,  // 0x4
   };
 
+  // Create an unknown value of this union.
+  ExplicitPizzaOrPasta() : storage_(std::make_shared<Storage_>()) {}
+
+  ExplicitPizzaOrPasta(ExplicitPizzaOrPasta&&) noexcept = default;
+  ExplicitPizzaOrPasta& operator=(ExplicitPizzaOrPasta&&) noexcept = default;
+  ExplicitPizzaOrPasta(const ExplicitPizzaOrPasta& other) noexcept
+      : ExplicitPizzaOrPasta(other.CloneStorage_()) {}
+  ExplicitPizzaOrPasta& operator=(const ExplicitPizzaOrPasta& other) noexcept {
+    storage_ = other.CloneStorage_();
+    return *this;
+  }
+
+  constexpr ::test_union::ExplicitPizzaOrPasta::Tag Which() const {
+    return ExplicitPizzaOrPasta::IndexToTag(storage_->index());
+  }
+  static ExplicitPizzaOrPasta WithPizza(::test_union::Pizza val) {
+    return ExplicitPizzaOrPasta(
+        std::make_shared<Storage_>(std::in_place_index_t<1>{}, std::move(val)));
+  }
+
+  const ::fidl::internal::UnionMemberView<1, Storage_> pizza() const {
+    return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
+  }
+  ::fidl::internal::UnionMemberView<1, Storage_> pizza() {
+    return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
+  }
+  static ExplicitPizzaOrPasta WithPasta(::test_union::Pasta val) {
+    return ExplicitPizzaOrPasta(
+        std::make_shared<Storage_>(std::in_place_index_t<2>{}, std::move(val)));
+  }
+
+  const ::fidl::internal::UnionMemberView<2, Storage_> pasta() const {
+    return ::fidl::internal::UnionMemberView<2, Storage_>(storage_);
+  }
+  ::fidl::internal::UnionMemberView<2, Storage_> pasta() {
+    return ::fidl::internal::UnionMemberView<2, Storage_>(storage_);
+  }
+
  private:
-  using Storage = cpp17::variant<cpp17::monostate, ::test_union::Pizza,
-                                 ::test_union::Pasta>;
-  std::shared_ptr<Storage> storage_;
-  std::shared_ptr<Storage> CloneStorage() const;
+  std::shared_ptr<Storage_> storage_;
+  std::shared_ptr<Storage_> CloneStorage_() const;
   friend struct ::fidl::internal::NaturalUnionCodingTraits<
       ::test_union::ExplicitPizzaOrPasta>;
   static constexpr std::array<std::optional<::fidl::HandleInformation>, 3>
       Members = {std::nullopt, std::nullopt, std::nullopt};
 
-  explicit ExplicitPizzaOrPasta(std::shared_ptr<Storage> storage)
+  explicit ExplicitPizzaOrPasta(std::shared_ptr<Storage_> storage)
       : storage_(std::move(storage)) {}
 
   static constexpr size_t TagToIndex(
@@ -1239,54 +1248,14 @@ class ExplicitPizzaOrPasta final {
         return ::test_union::ExplicitPizzaOrPasta::Tag::kPizza;
     }
   }
-
- public:
-  // Create an unknown value of this union.
-  ExplicitPizzaOrPasta() : storage_(std::make_shared<Storage>()) {}
-
-  ExplicitPizzaOrPasta(ExplicitPizzaOrPasta&&) noexcept = default;
-  ExplicitPizzaOrPasta& operator=(ExplicitPizzaOrPasta&&) noexcept = default;
-  ExplicitPizzaOrPasta(const ExplicitPizzaOrPasta& other) noexcept
-      : ExplicitPizzaOrPasta(other.CloneStorage()) {}
-  ExplicitPizzaOrPasta& operator=(const ExplicitPizzaOrPasta& other) noexcept {
-    storage_ = other.CloneStorage();
-    return *this;
-  }
-
-  constexpr ::test_union::ExplicitPizzaOrPasta::Tag Which() const {
-    return ExplicitPizzaOrPasta::IndexToTag(storage_->index());
-  }
-  static ExplicitPizzaOrPasta WithPizza(::test_union::Pizza val) {
-    return ExplicitPizzaOrPasta(std::make_shared<Storage>(
-        std::in_place_index_t<TagToIndex(
-            ::test_union::ExplicitPizzaOrPasta::Tag::kPizza)>{},
-        std::move(val)));
-  }
-
-  const ::fidl::internal::UnionMemberView<1, Storage> pizza() const {
-    return ::fidl::internal::UnionMemberView<1, Storage>(storage_);
-  }
-  ::fidl::internal::UnionMemberView<1, Storage> pizza() {
-    return ::fidl::internal::UnionMemberView<1, Storage>(storage_);
-  }
-  static ExplicitPizzaOrPasta WithPasta(::test_union::Pasta val) {
-    return ExplicitPizzaOrPasta(std::make_shared<Storage>(
-        std::in_place_index_t<TagToIndex(
-            ::test_union::ExplicitPizzaOrPasta::Tag::kPasta)>{},
-        std::move(val)));
-  }
-
-  const ::fidl::internal::UnionMemberView<2, Storage> pasta() const {
-    return ::fidl::internal::UnionMemberView<2, Storage>(storage_);
-  }
-  ::fidl::internal::UnionMemberView<2, Storage> pasta() {
-    return ::fidl::internal::UnionMemberView<2, Storage>(storage_);
-  }
 };
 
 extern "C" const fidl_type_t test_union_OlderSimpleUnionTable;
 
 class OlderSimpleUnion final {
+ private:
+  using Storage_ = cpp17::variant<cpp17::monostate, int64_t, float>;
+
  public:
   // TODO: share union tag types between wire & natural.
   enum class Tag : fidl_union_tag_t {
@@ -1295,16 +1264,53 @@ class OlderSimpleUnion final {
     kUnknown = ::std::numeric_limits<::fidl_union_tag_t>::max(),
   };
 
+  // Create an unknown value of this union.
+  OlderSimpleUnion() : storage_(std::make_shared<Storage_>()) {}
+
+  OlderSimpleUnion(OlderSimpleUnion&&) noexcept = default;
+  OlderSimpleUnion& operator=(OlderSimpleUnion&&) noexcept = default;
+  OlderSimpleUnion(const OlderSimpleUnion& other) noexcept
+      : OlderSimpleUnion(other.CloneStorage_()) {}
+  OlderSimpleUnion& operator=(const OlderSimpleUnion& other) noexcept {
+    storage_ = other.CloneStorage_();
+    return *this;
+  }
+
+  constexpr ::test_union::OlderSimpleUnion::Tag Which() const {
+    return OlderSimpleUnion::IndexToTag(storage_->index());
+  }
+  static OlderSimpleUnion WithI(int64_t val) {
+    return OlderSimpleUnion(
+        std::make_shared<Storage_>(std::in_place_index_t<1>{}, std::move(val)));
+  }
+
+  const ::fidl::internal::UnionMemberView<1, Storage_> i() const {
+    return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
+  }
+  ::fidl::internal::UnionMemberView<1, Storage_> i() {
+    return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
+  }
+  static OlderSimpleUnion WithF(float val) {
+    return OlderSimpleUnion(
+        std::make_shared<Storage_>(std::in_place_index_t<2>{}, std::move(val)));
+  }
+
+  const ::fidl::internal::UnionMemberView<2, Storage_> f() const {
+    return ::fidl::internal::UnionMemberView<2, Storage_>(storage_);
+  }
+  ::fidl::internal::UnionMemberView<2, Storage_> f() {
+    return ::fidl::internal::UnionMemberView<2, Storage_>(storage_);
+  }
+
  private:
-  using Storage = cpp17::variant<cpp17::monostate, int64_t, float>;
-  std::shared_ptr<Storage> storage_;
-  std::shared_ptr<Storage> CloneStorage() const;
+  std::shared_ptr<Storage_> storage_;
+  std::shared_ptr<Storage_> CloneStorage_() const;
   friend struct ::fidl::internal::NaturalUnionCodingTraits<
       ::test_union::OlderSimpleUnion>;
   static constexpr std::array<std::optional<::fidl::HandleInformation>, 3>
       Members = {std::nullopt, std::nullopt, std::nullopt};
 
-  explicit OlderSimpleUnion(std::shared_ptr<Storage> storage)
+  explicit OlderSimpleUnion(std::shared_ptr<Storage_> storage)
       : storage_(std::move(storage)) {}
 
   static constexpr size_t TagToIndex(::test_union::OlderSimpleUnion::Tag tag) {
@@ -1328,49 +1334,6 @@ class OlderSimpleUnion final {
       default:
         return ::test_union::OlderSimpleUnion::Tag::kUnknown;
     }
-  }
-
- public:
-  // Create an unknown value of this union.
-  OlderSimpleUnion() : storage_(std::make_shared<Storage>()) {}
-
-  OlderSimpleUnion(OlderSimpleUnion&&) noexcept = default;
-  OlderSimpleUnion& operator=(OlderSimpleUnion&&) noexcept = default;
-  OlderSimpleUnion(const OlderSimpleUnion& other) noexcept
-      : OlderSimpleUnion(other.CloneStorage()) {}
-  OlderSimpleUnion& operator=(const OlderSimpleUnion& other) noexcept {
-    storage_ = other.CloneStorage();
-    return *this;
-  }
-
-  constexpr ::test_union::OlderSimpleUnion::Tag Which() const {
-    return OlderSimpleUnion::IndexToTag(storage_->index());
-  }
-  static OlderSimpleUnion WithI(int64_t val) {
-    return OlderSimpleUnion(std::make_shared<Storage>(
-        std::in_place_index_t<TagToIndex(
-            ::test_union::OlderSimpleUnion::Tag::kI)>{},
-        std::move(val)));
-  }
-
-  const ::fidl::internal::UnionMemberView<1, Storage> i() const {
-    return ::fidl::internal::UnionMemberView<1, Storage>(storage_);
-  }
-  ::fidl::internal::UnionMemberView<1, Storage> i() {
-    return ::fidl::internal::UnionMemberView<1, Storage>(storage_);
-  }
-  static OlderSimpleUnion WithF(float val) {
-    return OlderSimpleUnion(std::make_shared<Storage>(
-        std::in_place_index_t<TagToIndex(
-            ::test_union::OlderSimpleUnion::Tag::kF)>{},
-        std::move(val)));
-  }
-
-  const ::fidl::internal::UnionMemberView<2, Storage> f() const {
-    return ::fidl::internal::UnionMemberView<2, Storage>(storage_);
-  }
-  ::fidl::internal::UnionMemberView<2, Storage> f() {
-    return ::fidl::internal::UnionMemberView<2, Storage>(storage_);
   }
 };
 
@@ -1492,6 +1455,10 @@ class NullableUnionStruct final
 extern "C" const fidl_type_t test_union_NewerSimpleUnionTable;
 
 class NewerSimpleUnion final {
+ private:
+  using Storage_ = cpp17::variant<cpp17::monostate, int64_t, ::std::string,
+                                  ::std::vector<::std::string>>;
+
  public:
   // TODO: share union tag types between wire & natural.
   enum class Tag : fidl_union_tag_t {
@@ -1501,17 +1468,64 @@ class NewerSimpleUnion final {
     kUnknown = ::std::numeric_limits<::fidl_union_tag_t>::max(),
   };
 
+  // Create an unknown value of this union.
+  NewerSimpleUnion() : storage_(std::make_shared<Storage_>()) {}
+
+  NewerSimpleUnion(NewerSimpleUnion&&) noexcept = default;
+  NewerSimpleUnion& operator=(NewerSimpleUnion&&) noexcept = default;
+  NewerSimpleUnion(const NewerSimpleUnion& other) noexcept
+      : NewerSimpleUnion(other.CloneStorage_()) {}
+  NewerSimpleUnion& operator=(const NewerSimpleUnion& other) noexcept {
+    storage_ = other.CloneStorage_();
+    return *this;
+  }
+
+  constexpr ::test_union::NewerSimpleUnion::Tag Which() const {
+    return NewerSimpleUnion::IndexToTag(storage_->index());
+  }
+  static NewerSimpleUnion WithI(int64_t val) {
+    return NewerSimpleUnion(
+        std::make_shared<Storage_>(std::in_place_index_t<1>{}, std::move(val)));
+  }
+
+  const ::fidl::internal::UnionMemberView<1, Storage_> i() const {
+    return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
+  }
+  ::fidl::internal::UnionMemberView<1, Storage_> i() {
+    return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
+  }
+  static NewerSimpleUnion WithS(::std::string val) {
+    return NewerSimpleUnion(
+        std::make_shared<Storage_>(std::in_place_index_t<2>{}, std::move(val)));
+  }
+
+  const ::fidl::internal::UnionMemberView<2, Storage_> s() const {
+    return ::fidl::internal::UnionMemberView<2, Storage_>(storage_);
+  }
+  ::fidl::internal::UnionMemberView<2, Storage_> s() {
+    return ::fidl::internal::UnionMemberView<2, Storage_>(storage_);
+  }
+  static NewerSimpleUnion WithV(::std::vector<::std::string> val) {
+    return NewerSimpleUnion(
+        std::make_shared<Storage_>(std::in_place_index_t<3>{}, std::move(val)));
+  }
+
+  const ::fidl::internal::UnionMemberView<3, Storage_> v() const {
+    return ::fidl::internal::UnionMemberView<3, Storage_>(storage_);
+  }
+  ::fidl::internal::UnionMemberView<3, Storage_> v() {
+    return ::fidl::internal::UnionMemberView<3, Storage_>(storage_);
+  }
+
  private:
-  using Storage = cpp17::variant<cpp17::monostate, int64_t, ::std::string,
-                                 ::std::vector<::std::string>>;
-  std::shared_ptr<Storage> storage_;
-  std::shared_ptr<Storage> CloneStorage() const;
+  std::shared_ptr<Storage_> storage_;
+  std::shared_ptr<Storage_> CloneStorage_() const;
   friend struct ::fidl::internal::NaturalUnionCodingTraits<
       ::test_union::NewerSimpleUnion>;
   static constexpr std::array<std::optional<::fidl::HandleInformation>, 4>
       Members = {std::nullopt, std::nullopt, std::nullopt, std::nullopt};
 
-  explicit NewerSimpleUnion(std::shared_ptr<Storage> storage)
+  explicit NewerSimpleUnion(std::shared_ptr<Storage_> storage)
       : storage_(std::move(storage)) {}
 
   static constexpr size_t TagToIndex(::test_union::NewerSimpleUnion::Tag tag) {
@@ -1540,67 +1554,15 @@ class NewerSimpleUnion final {
         return ::test_union::NewerSimpleUnion::Tag::kUnknown;
     }
   }
-
- public:
-  // Create an unknown value of this union.
-  NewerSimpleUnion() : storage_(std::make_shared<Storage>()) {}
-
-  NewerSimpleUnion(NewerSimpleUnion&&) noexcept = default;
-  NewerSimpleUnion& operator=(NewerSimpleUnion&&) noexcept = default;
-  NewerSimpleUnion(const NewerSimpleUnion& other) noexcept
-      : NewerSimpleUnion(other.CloneStorage()) {}
-  NewerSimpleUnion& operator=(const NewerSimpleUnion& other) noexcept {
-    storage_ = other.CloneStorage();
-    return *this;
-  }
-
-  constexpr ::test_union::NewerSimpleUnion::Tag Which() const {
-    return NewerSimpleUnion::IndexToTag(storage_->index());
-  }
-  static NewerSimpleUnion WithI(int64_t val) {
-    return NewerSimpleUnion(std::make_shared<Storage>(
-        std::in_place_index_t<TagToIndex(
-            ::test_union::NewerSimpleUnion::Tag::kI)>{},
-        std::move(val)));
-  }
-
-  const ::fidl::internal::UnionMemberView<1, Storage> i() const {
-    return ::fidl::internal::UnionMemberView<1, Storage>(storage_);
-  }
-  ::fidl::internal::UnionMemberView<1, Storage> i() {
-    return ::fidl::internal::UnionMemberView<1, Storage>(storage_);
-  }
-  static NewerSimpleUnion WithS(::std::string val) {
-    return NewerSimpleUnion(std::make_shared<Storage>(
-        std::in_place_index_t<TagToIndex(
-            ::test_union::NewerSimpleUnion::Tag::kS)>{},
-        std::move(val)));
-  }
-
-  const ::fidl::internal::UnionMemberView<2, Storage> s() const {
-    return ::fidl::internal::UnionMemberView<2, Storage>(storage_);
-  }
-  ::fidl::internal::UnionMemberView<2, Storage> s() {
-    return ::fidl::internal::UnionMemberView<2, Storage>(storage_);
-  }
-  static NewerSimpleUnion WithV(::std::vector<::std::string> val) {
-    return NewerSimpleUnion(std::make_shared<Storage>(
-        std::in_place_index_t<TagToIndex(
-            ::test_union::NewerSimpleUnion::Tag::kV)>{},
-        std::move(val)));
-  }
-
-  const ::fidl::internal::UnionMemberView<3, Storage> v() const {
-    return ::fidl::internal::UnionMemberView<3, Storage>(storage_);
-  }
-  ::fidl::internal::UnionMemberView<3, Storage> v() {
-    return ::fidl::internal::UnionMemberView<3, Storage>(storage_);
-  }
 };
 
 extern "C" const fidl_type_t test_union_FlexibleUnionTable;
 
 class FlexibleUnion final {
+ private:
+  using Storage_ = cpp17::variant<cpp17::monostate, int32_t, ::std::string,
+                                  ::std::vector<::std::string>>;
+
  public:
   // TODO: share union tag types between wire & natural.
   enum class Tag : fidl_union_tag_t {
@@ -1610,17 +1572,68 @@ class FlexibleUnion final {
     kUnknown = ::std::numeric_limits<::fidl_union_tag_t>::max(),
   };
 
+  // Create an unknown value of this union.
+  FlexibleUnion() : storage_(std::make_shared<Storage_>()) {}
+
+  FlexibleUnion(FlexibleUnion&&) noexcept = default;
+  FlexibleUnion& operator=(FlexibleUnion&&) noexcept = default;
+  FlexibleUnion(const FlexibleUnion& other) noexcept
+      : FlexibleUnion(other.CloneStorage_()) {}
+  FlexibleUnion& operator=(const FlexibleUnion& other) noexcept {
+    storage_ = other.CloneStorage_();
+    return *this;
+  }
+
+  constexpr ::test_union::FlexibleUnion::Tag Which() const {
+    return FlexibleUnion::IndexToTag(storage_->index());
+  }
+  static FlexibleUnion WithPrimitive(int32_t val) {
+    return FlexibleUnion(
+        std::make_shared<Storage_>(std::in_place_index_t<1>{}, std::move(val)));
+  }
+
+  const ::fidl::internal::UnionMemberView<1, Storage_> primitive() const {
+    return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
+  }
+  ::fidl::internal::UnionMemberView<1, Storage_> primitive() {
+    return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
+  }
+  static FlexibleUnion WithStringNeedsConstructor(::std::string val) {
+    return FlexibleUnion(
+        std::make_shared<Storage_>(std::in_place_index_t<2>{}, std::move(val)));
+  }
+
+  const ::fidl::internal::UnionMemberView<2, Storage_>
+  string_needs_constructor() const {
+    return ::fidl::internal::UnionMemberView<2, Storage_>(storage_);
+  }
+  ::fidl::internal::UnionMemberView<2, Storage_> string_needs_constructor() {
+    return ::fidl::internal::UnionMemberView<2, Storage_>(storage_);
+  }
+  static FlexibleUnion WithVectorStringAlsoNeedsConstructor(
+      ::std::vector<::std::string> val) {
+    return FlexibleUnion(
+        std::make_shared<Storage_>(std::in_place_index_t<3>{}, std::move(val)));
+  }
+
+  const ::fidl::internal::UnionMemberView<3, Storage_>
+  vector_string_also_needs_constructor() const {
+    return ::fidl::internal::UnionMemberView<3, Storage_>(storage_);
+  }
+  ::fidl::internal::UnionMemberView<3, Storage_>
+  vector_string_also_needs_constructor() {
+    return ::fidl::internal::UnionMemberView<3, Storage_>(storage_);
+  }
+
  private:
-  using Storage = cpp17::variant<cpp17::monostate, int32_t, ::std::string,
-                                 ::std::vector<::std::string>>;
-  std::shared_ptr<Storage> storage_;
-  std::shared_ptr<Storage> CloneStorage() const;
+  std::shared_ptr<Storage_> storage_;
+  std::shared_ptr<Storage_> CloneStorage_() const;
   friend struct ::fidl::internal::NaturalUnionCodingTraits<
       ::test_union::FlexibleUnion>;
   static constexpr std::array<std::optional<::fidl::HandleInformation>, 4>
       Members = {std::nullopt, std::nullopt, std::nullopt, std::nullopt};
 
-  explicit FlexibleUnion(std::shared_ptr<Storage> storage)
+  explicit FlexibleUnion(std::shared_ptr<Storage_> storage)
       : storage_(std::move(storage)) {}
 
   static constexpr size_t TagToIndex(::test_union::FlexibleUnion::Tag tag) {
@@ -1649,72 +1662,14 @@ class FlexibleUnion final {
         return ::test_union::FlexibleUnion::Tag::kUnknown;
     }
   }
-
- public:
-  // Create an unknown value of this union.
-  FlexibleUnion() : storage_(std::make_shared<Storage>()) {}
-
-  FlexibleUnion(FlexibleUnion&&) noexcept = default;
-  FlexibleUnion& operator=(FlexibleUnion&&) noexcept = default;
-  FlexibleUnion(const FlexibleUnion& other) noexcept
-      : FlexibleUnion(other.CloneStorage()) {}
-  FlexibleUnion& operator=(const FlexibleUnion& other) noexcept {
-    storage_ = other.CloneStorage();
-    return *this;
-  }
-
-  constexpr ::test_union::FlexibleUnion::Tag Which() const {
-    return FlexibleUnion::IndexToTag(storage_->index());
-  }
-  static FlexibleUnion WithPrimitive(int32_t val) {
-    return FlexibleUnion(std::make_shared<Storage>(
-        std::in_place_index_t<TagToIndex(
-            ::test_union::FlexibleUnion::Tag::kPrimitive)>{},
-        std::move(val)));
-  }
-
-  const ::fidl::internal::UnionMemberView<1, Storage> primitive() const {
-    return ::fidl::internal::UnionMemberView<1, Storage>(storage_);
-  }
-  ::fidl::internal::UnionMemberView<1, Storage> primitive() {
-    return ::fidl::internal::UnionMemberView<1, Storage>(storage_);
-  }
-  static FlexibleUnion WithStringNeedsConstructor(::std::string val) {
-    return FlexibleUnion(std::make_shared<Storage>(
-        std::in_place_index_t<TagToIndex(
-            ::test_union::FlexibleUnion::Tag::kStringNeedsConstructor)>{},
-        std::move(val)));
-  }
-
-  const ::fidl::internal::UnionMemberView<2, Storage> string_needs_constructor()
-      const {
-    return ::fidl::internal::UnionMemberView<2, Storage>(storage_);
-  }
-  ::fidl::internal::UnionMemberView<2, Storage> string_needs_constructor() {
-    return ::fidl::internal::UnionMemberView<2, Storage>(storage_);
-  }
-  static FlexibleUnion WithVectorStringAlsoNeedsConstructor(
-      ::std::vector<::std::string> val) {
-    return FlexibleUnion(
-        std::make_shared<Storage>(std::in_place_index_t<TagToIndex(
-                                      ::test_union::FlexibleUnion::Tag::
-                                          kVectorStringAlsoNeedsConstructor)>{},
-                                  std::move(val)));
-  }
-
-  const ::fidl::internal::UnionMemberView<3, Storage>
-  vector_string_also_needs_constructor() const {
-    return ::fidl::internal::UnionMemberView<3, Storage>(storage_);
-  }
-  ::fidl::internal::UnionMemberView<3, Storage>
-  vector_string_also_needs_constructor() {
-    return ::fidl::internal::UnionMemberView<3, Storage>(storage_);
-  }
 };
 
 extern "C" const fidl_type_t test_union_FlexibleFooTable;
 
 class FlexibleFoo final {
+ private:
+  using Storage_ = cpp17::variant<cpp17::monostate, ::std::string, int32_t>;
+
  public:
   // TODO: share union tag types between wire & natural.
   enum class Tag : fidl_union_tag_t {
@@ -1723,16 +1678,53 @@ class FlexibleFoo final {
     kUnknown = ::std::numeric_limits<::fidl_union_tag_t>::max(),
   };
 
+  // Create an unknown value of this union.
+  FlexibleFoo() : storage_(std::make_shared<Storage_>()) {}
+
+  FlexibleFoo(FlexibleFoo&&) noexcept = default;
+  FlexibleFoo& operator=(FlexibleFoo&&) noexcept = default;
+  FlexibleFoo(const FlexibleFoo& other) noexcept
+      : FlexibleFoo(other.CloneStorage_()) {}
+  FlexibleFoo& operator=(const FlexibleFoo& other) noexcept {
+    storage_ = other.CloneStorage_();
+    return *this;
+  }
+
+  constexpr ::test_union::FlexibleFoo::Tag Which() const {
+    return FlexibleFoo::IndexToTag(storage_->index());
+  }
+  static FlexibleFoo WithS(::std::string val) {
+    return FlexibleFoo(
+        std::make_shared<Storage_>(std::in_place_index_t<1>{}, std::move(val)));
+  }
+
+  const ::fidl::internal::UnionMemberView<1, Storage_> s() const {
+    return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
+  }
+  ::fidl::internal::UnionMemberView<1, Storage_> s() {
+    return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
+  }
+  static FlexibleFoo WithI(int32_t val) {
+    return FlexibleFoo(
+        std::make_shared<Storage_>(std::in_place_index_t<2>{}, std::move(val)));
+  }
+
+  const ::fidl::internal::UnionMemberView<2, Storage_> i() const {
+    return ::fidl::internal::UnionMemberView<2, Storage_>(storage_);
+  }
+  ::fidl::internal::UnionMemberView<2, Storage_> i() {
+    return ::fidl::internal::UnionMemberView<2, Storage_>(storage_);
+  }
+
  private:
-  using Storage = cpp17::variant<cpp17::monostate, ::std::string, int32_t>;
-  std::shared_ptr<Storage> storage_;
-  std::shared_ptr<Storage> CloneStorage() const;
+  std::shared_ptr<Storage_> storage_;
+  std::shared_ptr<Storage_> CloneStorage_() const;
   friend struct ::fidl::internal::NaturalUnionCodingTraits<
       ::test_union::FlexibleFoo>;
   static constexpr std::array<std::optional<::fidl::HandleInformation>, 3>
       Members = {std::nullopt, std::nullopt, std::nullopt};
 
-  explicit FlexibleFoo(std::shared_ptr<Storage> storage)
+  explicit FlexibleFoo(std::shared_ptr<Storage_> storage)
       : storage_(std::move(storage)) {}
 
   static constexpr size_t TagToIndex(::test_union::FlexibleFoo::Tag tag) {
@@ -1756,68 +1748,57 @@ class FlexibleFoo final {
         return ::test_union::FlexibleFoo::Tag::kUnknown;
     }
   }
-
- public:
-  // Create an unknown value of this union.
-  FlexibleFoo() : storage_(std::make_shared<Storage>()) {}
-
-  FlexibleFoo(FlexibleFoo&&) noexcept = default;
-  FlexibleFoo& operator=(FlexibleFoo&&) noexcept = default;
-  FlexibleFoo(const FlexibleFoo& other) noexcept
-      : FlexibleFoo(other.CloneStorage()) {}
-  FlexibleFoo& operator=(const FlexibleFoo& other) noexcept {
-    storage_ = other.CloneStorage();
-    return *this;
-  }
-
-  constexpr ::test_union::FlexibleFoo::Tag Which() const {
-    return FlexibleFoo::IndexToTag(storage_->index());
-  }
-  static FlexibleFoo WithS(::std::string val) {
-    return FlexibleFoo(std::make_shared<Storage>(
-        std::in_place_index_t<TagToIndex(::test_union::FlexibleFoo::Tag::kS)>{},
-        std::move(val)));
-  }
-
-  const ::fidl::internal::UnionMemberView<1, Storage> s() const {
-    return ::fidl::internal::UnionMemberView<1, Storage>(storage_);
-  }
-  ::fidl::internal::UnionMemberView<1, Storage> s() {
-    return ::fidl::internal::UnionMemberView<1, Storage>(storage_);
-  }
-  static FlexibleFoo WithI(int32_t val) {
-    return FlexibleFoo(std::make_shared<Storage>(
-        std::in_place_index_t<TagToIndex(::test_union::FlexibleFoo::Tag::kI)>{},
-        std::move(val)));
-  }
-
-  const ::fidl::internal::UnionMemberView<2, Storage> i() const {
-    return ::fidl::internal::UnionMemberView<2, Storage>(storage_);
-  }
-  ::fidl::internal::UnionMemberView<2, Storage> i() {
-    return ::fidl::internal::UnionMemberView<2, Storage>(storage_);
-  }
 };
 
 extern "C" const fidl_type_t test_union_FieldCollisionTable;
 
 class FieldCollision final {
+ private:
+  using Storage_ = cpp17::variant<cpp17::monostate, int32_t>;
+
  public:
   // TODO: share union tag types between wire & natural.
   enum class Tag : fidl_union_tag_t {
     kFieldCollisionTag = 1,  // 0x1
   };
 
+  // Create an unknown value of this union.
+  FieldCollision() : storage_(std::make_shared<Storage_>()) {}
+
+  FieldCollision(FieldCollision&&) noexcept = default;
+  FieldCollision& operator=(FieldCollision&&) noexcept = default;
+  FieldCollision(const FieldCollision& other) noexcept
+      : FieldCollision(other.CloneStorage_()) {}
+  FieldCollision& operator=(const FieldCollision& other) noexcept {
+    storage_ = other.CloneStorage_();
+    return *this;
+  }
+
+  constexpr ::test_union::FieldCollision::Tag Which() const {
+    return FieldCollision::IndexToTag(storage_->index());
+  }
+  static FieldCollision WithFieldCollisionTag(int32_t val) {
+    return FieldCollision(
+        std::make_shared<Storage_>(std::in_place_index_t<1>{}, std::move(val)));
+  }
+
+  const ::fidl::internal::UnionMemberView<1, Storage_> field_collision_tag()
+      const {
+    return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
+  }
+  ::fidl::internal::UnionMemberView<1, Storage_> field_collision_tag() {
+    return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
+  }
+
  private:
-  using Storage = cpp17::variant<cpp17::monostate, int32_t>;
-  std::shared_ptr<Storage> storage_;
-  std::shared_ptr<Storage> CloneStorage() const;
+  std::shared_ptr<Storage_> storage_;
+  std::shared_ptr<Storage_> CloneStorage_() const;
   friend struct ::fidl::internal::NaturalUnionCodingTraits<
       ::test_union::FieldCollision>;
   static constexpr std::array<std::optional<::fidl::HandleInformation>, 2>
       Members = {std::nullopt, std::nullopt};
 
-  explicit FieldCollision(std::shared_ptr<Storage> storage)
+  explicit FieldCollision(std::shared_ptr<Storage_> storage)
       : storage_(std::move(storage)) {}
 
   static constexpr size_t TagToIndex(::test_union::FieldCollision::Tag tag) {
@@ -1836,42 +1817,14 @@ class FieldCollision final {
         return ::test_union::FieldCollision::Tag::kFieldCollisionTag;
     }
   }
-
- public:
-  // Create an unknown value of this union.
-  FieldCollision() : storage_(std::make_shared<Storage>()) {}
-
-  FieldCollision(FieldCollision&&) noexcept = default;
-  FieldCollision& operator=(FieldCollision&&) noexcept = default;
-  FieldCollision(const FieldCollision& other) noexcept
-      : FieldCollision(other.CloneStorage()) {}
-  FieldCollision& operator=(const FieldCollision& other) noexcept {
-    storage_ = other.CloneStorage();
-    return *this;
-  }
-
-  constexpr ::test_union::FieldCollision::Tag Which() const {
-    return FieldCollision::IndexToTag(storage_->index());
-  }
-  static FieldCollision WithFieldCollisionTag(int32_t val) {
-    return FieldCollision(std::make_shared<Storage>(
-        std::in_place_index_t<TagToIndex(
-            ::test_union::FieldCollision::Tag::kFieldCollisionTag)>{},
-        std::move(val)));
-  }
-
-  const ::fidl::internal::UnionMemberView<1, Storage> field_collision_tag()
-      const {
-    return ::fidl::internal::UnionMemberView<1, Storage>(storage_);
-  }
-  ::fidl::internal::UnionMemberView<1, Storage> field_collision_tag() {
-    return ::fidl::internal::UnionMemberView<1, Storage>(storage_);
-  }
 };
 
 extern "C" const fidl_type_t test_union_ExplicitXUnionTable;
 
 class ExplicitXUnion final {
+ private:
+  using Storage_ = cpp17::variant<cpp17::monostate, int64_t, float>;
+
  public:
   // TODO: share union tag types between wire & natural.
   enum class Tag : fidl_union_tag_t {
@@ -1880,16 +1833,53 @@ class ExplicitXUnion final {
     kUnknown = ::std::numeric_limits<::fidl_union_tag_t>::max(),
   };
 
+  // Create an unknown value of this union.
+  ExplicitXUnion() : storage_(std::make_shared<Storage_>()) {}
+
+  ExplicitXUnion(ExplicitXUnion&&) noexcept = default;
+  ExplicitXUnion& operator=(ExplicitXUnion&&) noexcept = default;
+  ExplicitXUnion(const ExplicitXUnion& other) noexcept
+      : ExplicitXUnion(other.CloneStorage_()) {}
+  ExplicitXUnion& operator=(const ExplicitXUnion& other) noexcept {
+    storage_ = other.CloneStorage_();
+    return *this;
+  }
+
+  constexpr ::test_union::ExplicitXUnion::Tag Which() const {
+    return ExplicitXUnion::IndexToTag(storage_->index());
+  }
+  static ExplicitXUnion WithI(int64_t val) {
+    return ExplicitXUnion(
+        std::make_shared<Storage_>(std::in_place_index_t<1>{}, std::move(val)));
+  }
+
+  const ::fidl::internal::UnionMemberView<1, Storage_> i() const {
+    return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
+  }
+  ::fidl::internal::UnionMemberView<1, Storage_> i() {
+    return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
+  }
+  static ExplicitXUnion WithF(float val) {
+    return ExplicitXUnion(
+        std::make_shared<Storage_>(std::in_place_index_t<2>{}, std::move(val)));
+  }
+
+  const ::fidl::internal::UnionMemberView<2, Storage_> f() const {
+    return ::fidl::internal::UnionMemberView<2, Storage_>(storage_);
+  }
+  ::fidl::internal::UnionMemberView<2, Storage_> f() {
+    return ::fidl::internal::UnionMemberView<2, Storage_>(storage_);
+  }
+
  private:
-  using Storage = cpp17::variant<cpp17::monostate, int64_t, float>;
-  std::shared_ptr<Storage> storage_;
-  std::shared_ptr<Storage> CloneStorage() const;
+  std::shared_ptr<Storage_> storage_;
+  std::shared_ptr<Storage_> CloneStorage_() const;
   friend struct ::fidl::internal::NaturalUnionCodingTraits<
       ::test_union::ExplicitXUnion>;
   static constexpr std::array<std::optional<::fidl::HandleInformation>, 3>
       Members = {std::nullopt, std::nullopt, std::nullopt};
 
-  explicit ExplicitXUnion(std::shared_ptr<Storage> storage)
+  explicit ExplicitXUnion(std::shared_ptr<Storage_> storage)
       : storage_(std::move(storage)) {}
 
   static constexpr size_t TagToIndex(::test_union::ExplicitXUnion::Tag tag) {
@@ -1912,49 +1902,6 @@ class ExplicitXUnion final {
       default:
         return ::test_union::ExplicitXUnion::Tag::kUnknown;
     }
-  }
-
- public:
-  // Create an unknown value of this union.
-  ExplicitXUnion() : storage_(std::make_shared<Storage>()) {}
-
-  ExplicitXUnion(ExplicitXUnion&&) noexcept = default;
-  ExplicitXUnion& operator=(ExplicitXUnion&&) noexcept = default;
-  ExplicitXUnion(const ExplicitXUnion& other) noexcept
-      : ExplicitXUnion(other.CloneStorage()) {}
-  ExplicitXUnion& operator=(const ExplicitXUnion& other) noexcept {
-    storage_ = other.CloneStorage();
-    return *this;
-  }
-
-  constexpr ::test_union::ExplicitXUnion::Tag Which() const {
-    return ExplicitXUnion::IndexToTag(storage_->index());
-  }
-  static ExplicitXUnion WithI(int64_t val) {
-    return ExplicitXUnion(
-        std::make_shared<Storage>(std::in_place_index_t<TagToIndex(
-                                      ::test_union::ExplicitXUnion::Tag::kI)>{},
-                                  std::move(val)));
-  }
-
-  const ::fidl::internal::UnionMemberView<1, Storage> i() const {
-    return ::fidl::internal::UnionMemberView<1, Storage>(storage_);
-  }
-  ::fidl::internal::UnionMemberView<1, Storage> i() {
-    return ::fidl::internal::UnionMemberView<1, Storage>(storage_);
-  }
-  static ExplicitXUnion WithF(float val) {
-    return ExplicitXUnion(
-        std::make_shared<Storage>(std::in_place_index_t<TagToIndex(
-                                      ::test_union::ExplicitXUnion::Tag::kF)>{},
-                                  std::move(val)));
-  }
-
-  const ::fidl::internal::UnionMemberView<2, Storage> f() const {
-    return ::fidl::internal::UnionMemberView<2, Storage>(storage_);
-  }
-  ::fidl::internal::UnionMemberView<2, Storage> f() {
-    return ::fidl::internal::UnionMemberView<2, Storage>(storage_);
   }
 };
 
@@ -2015,6 +1962,9 @@ class UnionSandwich final
 extern "C" const fidl_type_t test_union_ExplicitUnionTable;
 
 class ExplicitUnion final {
+ private:
+  using Storage_ = cpp17::variant<cpp17::monostate, int32_t, ::std::string>;
+
  public:
   // TODO: share union tag types between wire & natural.
   enum class Tag : fidl_union_tag_t {
@@ -2022,16 +1972,54 @@ class ExplicitUnion final {
     kStringNeedsConstructor = 3,  // 0x3
   };
 
+  // Create an unknown value of this union.
+  ExplicitUnion() : storage_(std::make_shared<Storage_>()) {}
+
+  ExplicitUnion(ExplicitUnion&&) noexcept = default;
+  ExplicitUnion& operator=(ExplicitUnion&&) noexcept = default;
+  ExplicitUnion(const ExplicitUnion& other) noexcept
+      : ExplicitUnion(other.CloneStorage_()) {}
+  ExplicitUnion& operator=(const ExplicitUnion& other) noexcept {
+    storage_ = other.CloneStorage_();
+    return *this;
+  }
+
+  constexpr ::test_union::ExplicitUnion::Tag Which() const {
+    return ExplicitUnion::IndexToTag(storage_->index());
+  }
+  static ExplicitUnion WithPrimitive(int32_t val) {
+    return ExplicitUnion(
+        std::make_shared<Storage_>(std::in_place_index_t<1>{}, std::move(val)));
+  }
+
+  const ::fidl::internal::UnionMemberView<1, Storage_> primitive() const {
+    return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
+  }
+  ::fidl::internal::UnionMemberView<1, Storage_> primitive() {
+    return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
+  }
+  static ExplicitUnion WithStringNeedsConstructor(::std::string val) {
+    return ExplicitUnion(
+        std::make_shared<Storage_>(std::in_place_index_t<2>{}, std::move(val)));
+  }
+
+  const ::fidl::internal::UnionMemberView<2, Storage_>
+  string_needs_constructor() const {
+    return ::fidl::internal::UnionMemberView<2, Storage_>(storage_);
+  }
+  ::fidl::internal::UnionMemberView<2, Storage_> string_needs_constructor() {
+    return ::fidl::internal::UnionMemberView<2, Storage_>(storage_);
+  }
+
  private:
-  using Storage = cpp17::variant<cpp17::monostate, int32_t, ::std::string>;
-  std::shared_ptr<Storage> storage_;
-  std::shared_ptr<Storage> CloneStorage() const;
+  std::shared_ptr<Storage_> storage_;
+  std::shared_ptr<Storage_> CloneStorage_() const;
   friend struct ::fidl::internal::NaturalUnionCodingTraits<
       ::test_union::ExplicitUnion>;
   static constexpr std::array<std::optional<::fidl::HandleInformation>, 3>
       Members = {std::nullopt, std::nullopt, std::nullopt};
 
-  explicit ExplicitUnion(std::shared_ptr<Storage> storage)
+  explicit ExplicitUnion(std::shared_ptr<Storage_> storage)
       : storage_(std::move(storage)) {}
 
   static constexpr size_t TagToIndex(::test_union::ExplicitUnion::Tag tag) {
@@ -2054,55 +2042,14 @@ class ExplicitUnion final {
         return ::test_union::ExplicitUnion::Tag::kPrimitive;
     }
   }
-
- public:
-  // Create an unknown value of this union.
-  ExplicitUnion() : storage_(std::make_shared<Storage>()) {}
-
-  ExplicitUnion(ExplicitUnion&&) noexcept = default;
-  ExplicitUnion& operator=(ExplicitUnion&&) noexcept = default;
-  ExplicitUnion(const ExplicitUnion& other) noexcept
-      : ExplicitUnion(other.CloneStorage()) {}
-  ExplicitUnion& operator=(const ExplicitUnion& other) noexcept {
-    storage_ = other.CloneStorage();
-    return *this;
-  }
-
-  constexpr ::test_union::ExplicitUnion::Tag Which() const {
-    return ExplicitUnion::IndexToTag(storage_->index());
-  }
-  static ExplicitUnion WithPrimitive(int32_t val) {
-    return ExplicitUnion(std::make_shared<Storage>(
-        std::in_place_index_t<TagToIndex(
-            ::test_union::ExplicitUnion::Tag::kPrimitive)>{},
-        std::move(val)));
-  }
-
-  const ::fidl::internal::UnionMemberView<1, Storage> primitive() const {
-    return ::fidl::internal::UnionMemberView<1, Storage>(storage_);
-  }
-  ::fidl::internal::UnionMemberView<1, Storage> primitive() {
-    return ::fidl::internal::UnionMemberView<1, Storage>(storage_);
-  }
-  static ExplicitUnion WithStringNeedsConstructor(::std::string val) {
-    return ExplicitUnion(std::make_shared<Storage>(
-        std::in_place_index_t<TagToIndex(
-            ::test_union::ExplicitUnion::Tag::kStringNeedsConstructor)>{},
-        std::move(val)));
-  }
-
-  const ::fidl::internal::UnionMemberView<2, Storage> string_needs_constructor()
-      const {
-    return ::fidl::internal::UnionMemberView<2, Storage>(storage_);
-  }
-  ::fidl::internal::UnionMemberView<2, Storage> string_needs_constructor() {
-    return ::fidl::internal::UnionMemberView<2, Storage>(storage_);
-  }
 };
 
 extern "C" const fidl_type_t test_union_ExplicitStrictFooTable;
 
 class ExplicitStrictFoo final {
+ private:
+  using Storage_ = cpp17::variant<cpp17::monostate, ::std::string, int32_t>;
+
  public:
   // TODO: share union tag types between wire & natural.
   enum class Tag : fidl_union_tag_t {
@@ -2110,16 +2057,53 @@ class ExplicitStrictFoo final {
     kI = 2,  // 0x2
   };
 
+  // Create an unknown value of this union.
+  ExplicitStrictFoo() : storage_(std::make_shared<Storage_>()) {}
+
+  ExplicitStrictFoo(ExplicitStrictFoo&&) noexcept = default;
+  ExplicitStrictFoo& operator=(ExplicitStrictFoo&&) noexcept = default;
+  ExplicitStrictFoo(const ExplicitStrictFoo& other) noexcept
+      : ExplicitStrictFoo(other.CloneStorage_()) {}
+  ExplicitStrictFoo& operator=(const ExplicitStrictFoo& other) noexcept {
+    storage_ = other.CloneStorage_();
+    return *this;
+  }
+
+  constexpr ::test_union::ExplicitStrictFoo::Tag Which() const {
+    return ExplicitStrictFoo::IndexToTag(storage_->index());
+  }
+  static ExplicitStrictFoo WithS(::std::string val) {
+    return ExplicitStrictFoo(
+        std::make_shared<Storage_>(std::in_place_index_t<1>{}, std::move(val)));
+  }
+
+  const ::fidl::internal::UnionMemberView<1, Storage_> s() const {
+    return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
+  }
+  ::fidl::internal::UnionMemberView<1, Storage_> s() {
+    return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
+  }
+  static ExplicitStrictFoo WithI(int32_t val) {
+    return ExplicitStrictFoo(
+        std::make_shared<Storage_>(std::in_place_index_t<2>{}, std::move(val)));
+  }
+
+  const ::fidl::internal::UnionMemberView<2, Storage_> i() const {
+    return ::fidl::internal::UnionMemberView<2, Storage_>(storage_);
+  }
+  ::fidl::internal::UnionMemberView<2, Storage_> i() {
+    return ::fidl::internal::UnionMemberView<2, Storage_>(storage_);
+  }
+
  private:
-  using Storage = cpp17::variant<cpp17::monostate, ::std::string, int32_t>;
-  std::shared_ptr<Storage> storage_;
-  std::shared_ptr<Storage> CloneStorage() const;
+  std::shared_ptr<Storage_> storage_;
+  std::shared_ptr<Storage_> CloneStorage_() const;
   friend struct ::fidl::internal::NaturalUnionCodingTraits<
       ::test_union::ExplicitStrictFoo>;
   static constexpr std::array<std::optional<::fidl::HandleInformation>, 3>
       Members = {std::nullopt, std::nullopt, std::nullopt};
 
-  explicit ExplicitStrictFoo(std::shared_ptr<Storage> storage)
+  explicit ExplicitStrictFoo(std::shared_ptr<Storage_> storage)
       : storage_(std::move(storage)) {}
 
   static constexpr size_t TagToIndex(::test_union::ExplicitStrictFoo::Tag tag) {
@@ -2143,54 +2127,14 @@ class ExplicitStrictFoo final {
         return ::test_union::ExplicitStrictFoo::Tag::kS;
     }
   }
-
- public:
-  // Create an unknown value of this union.
-  ExplicitStrictFoo() : storage_(std::make_shared<Storage>()) {}
-
-  ExplicitStrictFoo(ExplicitStrictFoo&&) noexcept = default;
-  ExplicitStrictFoo& operator=(ExplicitStrictFoo&&) noexcept = default;
-  ExplicitStrictFoo(const ExplicitStrictFoo& other) noexcept
-      : ExplicitStrictFoo(other.CloneStorage()) {}
-  ExplicitStrictFoo& operator=(const ExplicitStrictFoo& other) noexcept {
-    storage_ = other.CloneStorage();
-    return *this;
-  }
-
-  constexpr ::test_union::ExplicitStrictFoo::Tag Which() const {
-    return ExplicitStrictFoo::IndexToTag(storage_->index());
-  }
-  static ExplicitStrictFoo WithS(::std::string val) {
-    return ExplicitStrictFoo(std::make_shared<Storage>(
-        std::in_place_index_t<TagToIndex(
-            ::test_union::ExplicitStrictFoo::Tag::kS)>{},
-        std::move(val)));
-  }
-
-  const ::fidl::internal::UnionMemberView<1, Storage> s() const {
-    return ::fidl::internal::UnionMemberView<1, Storage>(storage_);
-  }
-  ::fidl::internal::UnionMemberView<1, Storage> s() {
-    return ::fidl::internal::UnionMemberView<1, Storage>(storage_);
-  }
-  static ExplicitStrictFoo WithI(int32_t val) {
-    return ExplicitStrictFoo(std::make_shared<Storage>(
-        std::in_place_index_t<TagToIndex(
-            ::test_union::ExplicitStrictFoo::Tag::kI)>{},
-        std::move(val)));
-  }
-
-  const ::fidl::internal::UnionMemberView<2, Storage> i() const {
-    return ::fidl::internal::UnionMemberView<2, Storage>(storage_);
-  }
-  ::fidl::internal::UnionMemberView<2, Storage> i() {
-    return ::fidl::internal::UnionMemberView<2, Storage>(storage_);
-  }
 };
 
 extern "C" const fidl_type_t test_union_ExplicitFooTable;
 
 class ExplicitFoo final {
+ private:
+  using Storage_ = cpp17::variant<cpp17::monostate, ::std::string, int32_t>;
+
  public:
   // TODO: share union tag types between wire & natural.
   enum class Tag : fidl_union_tag_t {
@@ -2199,16 +2143,53 @@ class ExplicitFoo final {
     kUnknown = ::std::numeric_limits<::fidl_union_tag_t>::max(),
   };
 
+  // Create an unknown value of this union.
+  ExplicitFoo() : storage_(std::make_shared<Storage_>()) {}
+
+  ExplicitFoo(ExplicitFoo&&) noexcept = default;
+  ExplicitFoo& operator=(ExplicitFoo&&) noexcept = default;
+  ExplicitFoo(const ExplicitFoo& other) noexcept
+      : ExplicitFoo(other.CloneStorage_()) {}
+  ExplicitFoo& operator=(const ExplicitFoo& other) noexcept {
+    storage_ = other.CloneStorage_();
+    return *this;
+  }
+
+  constexpr ::test_union::ExplicitFoo::Tag Which() const {
+    return ExplicitFoo::IndexToTag(storage_->index());
+  }
+  static ExplicitFoo WithS(::std::string val) {
+    return ExplicitFoo(
+        std::make_shared<Storage_>(std::in_place_index_t<1>{}, std::move(val)));
+  }
+
+  const ::fidl::internal::UnionMemberView<1, Storage_> s() const {
+    return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
+  }
+  ::fidl::internal::UnionMemberView<1, Storage_> s() {
+    return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
+  }
+  static ExplicitFoo WithI(int32_t val) {
+    return ExplicitFoo(
+        std::make_shared<Storage_>(std::in_place_index_t<2>{}, std::move(val)));
+  }
+
+  const ::fidl::internal::UnionMemberView<2, Storage_> i() const {
+    return ::fidl::internal::UnionMemberView<2, Storage_>(storage_);
+  }
+  ::fidl::internal::UnionMemberView<2, Storage_> i() {
+    return ::fidl::internal::UnionMemberView<2, Storage_>(storage_);
+  }
+
  private:
-  using Storage = cpp17::variant<cpp17::monostate, ::std::string, int32_t>;
-  std::shared_ptr<Storage> storage_;
-  std::shared_ptr<Storage> CloneStorage() const;
+  std::shared_ptr<Storage_> storage_;
+  std::shared_ptr<Storage_> CloneStorage_() const;
   friend struct ::fidl::internal::NaturalUnionCodingTraits<
       ::test_union::ExplicitFoo>;
   static constexpr std::array<std::optional<::fidl::HandleInformation>, 3>
       Members = {std::nullopt, std::nullopt, std::nullopt};
 
-  explicit ExplicitFoo(std::shared_ptr<Storage> storage)
+  explicit ExplicitFoo(std::shared_ptr<Storage_> storage)
       : storage_(std::move(storage)) {}
 
   static constexpr size_t TagToIndex(::test_union::ExplicitFoo::Tag tag) {
@@ -2231,47 +2212,6 @@ class ExplicitFoo final {
       default:
         return ::test_union::ExplicitFoo::Tag::kUnknown;
     }
-  }
-
- public:
-  // Create an unknown value of this union.
-  ExplicitFoo() : storage_(std::make_shared<Storage>()) {}
-
-  ExplicitFoo(ExplicitFoo&&) noexcept = default;
-  ExplicitFoo& operator=(ExplicitFoo&&) noexcept = default;
-  ExplicitFoo(const ExplicitFoo& other) noexcept
-      : ExplicitFoo(other.CloneStorage()) {}
-  ExplicitFoo& operator=(const ExplicitFoo& other) noexcept {
-    storage_ = other.CloneStorage();
-    return *this;
-  }
-
-  constexpr ::test_union::ExplicitFoo::Tag Which() const {
-    return ExplicitFoo::IndexToTag(storage_->index());
-  }
-  static ExplicitFoo WithS(::std::string val) {
-    return ExplicitFoo(std::make_shared<Storage>(
-        std::in_place_index_t<TagToIndex(::test_union::ExplicitFoo::Tag::kS)>{},
-        std::move(val)));
-  }
-
-  const ::fidl::internal::UnionMemberView<1, Storage> s() const {
-    return ::fidl::internal::UnionMemberView<1, Storage>(storage_);
-  }
-  ::fidl::internal::UnionMemberView<1, Storage> s() {
-    return ::fidl::internal::UnionMemberView<1, Storage>(storage_);
-  }
-  static ExplicitFoo WithI(int32_t val) {
-    return ExplicitFoo(std::make_shared<Storage>(
-        std::in_place_index_t<TagToIndex(::test_union::ExplicitFoo::Tag::kI)>{},
-        std::move(val)));
-  }
-
-  const ::fidl::internal::UnionMemberView<2, Storage> i() const {
-    return ::fidl::internal::UnionMemberView<2, Storage>(storage_);
-  }
-  ::fidl::internal::UnionMemberView<2, Storage> i() {
-    return ::fidl::internal::UnionMemberView<2, Storage>(storage_);
   }
 };
 
@@ -2320,6 +2260,9 @@ class Empty final : public ::fidl::internal::CodableBase<Empty> {
 extern "C" const fidl_type_t test_union_XUnionContainingEmptyStructTable;
 
 class XUnionContainingEmptyStruct final {
+ private:
+  using Storage_ = cpp17::variant<cpp17::monostate, ::test_union::Empty>;
+
  public:
   // TODO: share union tag types between wire & natural.
   enum class Tag : fidl_union_tag_t {
@@ -2327,16 +2270,44 @@ class XUnionContainingEmptyStruct final {
     kUnknown = ::std::numeric_limits<::fidl_union_tag_t>::max(),
   };
 
+  // Create an unknown value of this union.
+  XUnionContainingEmptyStruct() : storage_(std::make_shared<Storage_>()) {}
+
+  XUnionContainingEmptyStruct(XUnionContainingEmptyStruct&&) noexcept = default;
+  XUnionContainingEmptyStruct& operator=(
+      XUnionContainingEmptyStruct&&) noexcept = default;
+  XUnionContainingEmptyStruct(const XUnionContainingEmptyStruct& other) noexcept
+      : XUnionContainingEmptyStruct(other.CloneStorage_()) {}
+  XUnionContainingEmptyStruct& operator=(
+      const XUnionContainingEmptyStruct& other) noexcept {
+    storage_ = other.CloneStorage_();
+    return *this;
+  }
+
+  constexpr ::test_union::XUnionContainingEmptyStruct::Tag Which() const {
+    return XUnionContainingEmptyStruct::IndexToTag(storage_->index());
+  }
+  static XUnionContainingEmptyStruct WithEmpty(::test_union::Empty val) {
+    return XUnionContainingEmptyStruct(
+        std::make_shared<Storage_>(std::in_place_index_t<1>{}, std::move(val)));
+  }
+
+  const ::fidl::internal::UnionMemberView<1, Storage_> empty() const {
+    return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
+  }
+  ::fidl::internal::UnionMemberView<1, Storage_> empty() {
+    return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
+  }
+
  private:
-  using Storage = cpp17::variant<cpp17::monostate, ::test_union::Empty>;
-  std::shared_ptr<Storage> storage_;
-  std::shared_ptr<Storage> CloneStorage() const;
+  std::shared_ptr<Storage_> storage_;
+  std::shared_ptr<Storage_> CloneStorage_() const;
   friend struct ::fidl::internal::NaturalUnionCodingTraits<
       ::test_union::XUnionContainingEmptyStruct>;
   static constexpr std::array<std::optional<::fidl::HandleInformation>, 2>
       Members = {std::nullopt, std::nullopt};
 
-  explicit XUnionContainingEmptyStruct(std::shared_ptr<Storage> storage)
+  explicit XUnionContainingEmptyStruct(std::shared_ptr<Storage_> storage)
       : storage_(std::move(storage)) {}
 
   static constexpr size_t TagToIndex(
@@ -2357,38 +2328,6 @@ class XUnionContainingEmptyStruct final {
       default:
         return ::test_union::XUnionContainingEmptyStruct::Tag::kUnknown;
     }
-  }
-
- public:
-  // Create an unknown value of this union.
-  XUnionContainingEmptyStruct() : storage_(std::make_shared<Storage>()) {}
-
-  XUnionContainingEmptyStruct(XUnionContainingEmptyStruct&&) noexcept = default;
-  XUnionContainingEmptyStruct& operator=(
-      XUnionContainingEmptyStruct&&) noexcept = default;
-  XUnionContainingEmptyStruct(const XUnionContainingEmptyStruct& other) noexcept
-      : XUnionContainingEmptyStruct(other.CloneStorage()) {}
-  XUnionContainingEmptyStruct& operator=(
-      const XUnionContainingEmptyStruct& other) noexcept {
-    storage_ = other.CloneStorage();
-    return *this;
-  }
-
-  constexpr ::test_union::XUnionContainingEmptyStruct::Tag Which() const {
-    return XUnionContainingEmptyStruct::IndexToTag(storage_->index());
-  }
-  static XUnionContainingEmptyStruct WithEmpty(::test_union::Empty val) {
-    return XUnionContainingEmptyStruct(std::make_shared<Storage>(
-        std::in_place_index_t<TagToIndex(
-            ::test_union::XUnionContainingEmptyStruct::Tag::kEmpty)>{},
-        std::move(val)));
-  }
-
-  const ::fidl::internal::UnionMemberView<1, Storage> empty() const {
-    return ::fidl::internal::UnionMemberView<1, Storage>(storage_);
-  }
-  ::fidl::internal::UnionMemberView<1, Storage> empty() {
-    return ::fidl::internal::UnionMemberView<1, Storage>(storage_);
   }
 };
 

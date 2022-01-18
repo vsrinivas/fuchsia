@@ -37,22 +37,51 @@ class UnionSize24Alignment8;
 extern "C" const fidl_type_t test_unionsandwich_UnionSize8Alignment4Table;
 
 class UnionSize8Alignment4 final {
+ private:
+  using Storage_ = cpp17::variant<cpp17::monostate, uint32_t>;
+
  public:
   // TODO: share union tag types between wire & natural.
   enum class Tag : fidl_union_tag_t {
     kVariant = 1,  // 0x1
   };
 
+  // Create an unknown value of this union.
+  UnionSize8Alignment4() : storage_(std::make_shared<Storage_>()) {}
+
+  UnionSize8Alignment4(UnionSize8Alignment4&&) noexcept = default;
+  UnionSize8Alignment4& operator=(UnionSize8Alignment4&&) noexcept = default;
+  UnionSize8Alignment4(const UnionSize8Alignment4& other) noexcept
+      : UnionSize8Alignment4(other.CloneStorage_()) {}
+  UnionSize8Alignment4& operator=(const UnionSize8Alignment4& other) noexcept {
+    storage_ = other.CloneStorage_();
+    return *this;
+  }
+
+  constexpr ::test_unionsandwich::UnionSize8Alignment4::Tag Which() const {
+    return UnionSize8Alignment4::IndexToTag(storage_->index());
+  }
+  static UnionSize8Alignment4 WithVariant(uint32_t val) {
+    return UnionSize8Alignment4(
+        std::make_shared<Storage_>(std::in_place_index_t<1>{}, std::move(val)));
+  }
+
+  const ::fidl::internal::UnionMemberView<1, Storage_> variant() const {
+    return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
+  }
+  ::fidl::internal::UnionMemberView<1, Storage_> variant() {
+    return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
+  }
+
  private:
-  using Storage = cpp17::variant<cpp17::monostate, uint32_t>;
-  std::shared_ptr<Storage> storage_;
-  std::shared_ptr<Storage> CloneStorage() const;
+  std::shared_ptr<Storage_> storage_;
+  std::shared_ptr<Storage_> CloneStorage_() const;
   friend struct ::fidl::internal::NaturalUnionCodingTraits<
       ::test_unionsandwich::UnionSize8Alignment4>;
   static constexpr std::array<std::optional<::fidl::HandleInformation>, 2>
       Members = {std::nullopt, std::nullopt};
 
-  explicit UnionSize8Alignment4(std::shared_ptr<Storage> storage)
+  explicit UnionSize8Alignment4(std::shared_ptr<Storage_> storage)
       : storage_(std::move(storage)) {}
 
   static constexpr size_t TagToIndex(
@@ -72,36 +101,6 @@ class UnionSize8Alignment4 final {
       default:
         return ::test_unionsandwich::UnionSize8Alignment4::Tag::kVariant;
     }
-  }
-
- public:
-  // Create an unknown value of this union.
-  UnionSize8Alignment4() : storage_(std::make_shared<Storage>()) {}
-
-  UnionSize8Alignment4(UnionSize8Alignment4&&) noexcept = default;
-  UnionSize8Alignment4& operator=(UnionSize8Alignment4&&) noexcept = default;
-  UnionSize8Alignment4(const UnionSize8Alignment4& other) noexcept
-      : UnionSize8Alignment4(other.CloneStorage()) {}
-  UnionSize8Alignment4& operator=(const UnionSize8Alignment4& other) noexcept {
-    storage_ = other.CloneStorage();
-    return *this;
-  }
-
-  constexpr ::test_unionsandwich::UnionSize8Alignment4::Tag Which() const {
-    return UnionSize8Alignment4::IndexToTag(storage_->index());
-  }
-  static UnionSize8Alignment4 WithVariant(uint32_t val) {
-    return UnionSize8Alignment4(std::make_shared<Storage>(
-        std::in_place_index_t<TagToIndex(
-            ::test_unionsandwich::UnionSize8Alignment4::Tag::kVariant)>{},
-        std::move(val)));
-  }
-
-  const ::fidl::internal::UnionMemberView<1, Storage> variant() const {
-    return ::fidl::internal::UnionMemberView<1, Storage>(storage_);
-  }
-  ::fidl::internal::UnionMemberView<1, Storage> variant() {
-    return ::fidl::internal::UnionMemberView<1, Storage>(storage_);
   }
 };
 
@@ -176,22 +175,52 @@ class SandwichUnionSize8Alignment4 final
 extern "C" const fidl_type_t test_unionsandwich_UnionSize36Alignment4Table;
 
 class UnionSize36Alignment4 final {
+ private:
+  using Storage_ = cpp17::variant<cpp17::monostate, ::std::array<uint8_t, 32>>;
+
  public:
   // TODO: share union tag types between wire & natural.
   enum class Tag : fidl_union_tag_t {
     kVariant = 1,  // 0x1
   };
 
+  // Create an unknown value of this union.
+  UnionSize36Alignment4() : storage_(std::make_shared<Storage_>()) {}
+
+  UnionSize36Alignment4(UnionSize36Alignment4&&) noexcept = default;
+  UnionSize36Alignment4& operator=(UnionSize36Alignment4&&) noexcept = default;
+  UnionSize36Alignment4(const UnionSize36Alignment4& other) noexcept
+      : UnionSize36Alignment4(other.CloneStorage_()) {}
+  UnionSize36Alignment4& operator=(
+      const UnionSize36Alignment4& other) noexcept {
+    storage_ = other.CloneStorage_();
+    return *this;
+  }
+
+  constexpr ::test_unionsandwich::UnionSize36Alignment4::Tag Which() const {
+    return UnionSize36Alignment4::IndexToTag(storage_->index());
+  }
+  static UnionSize36Alignment4 WithVariant(::std::array<uint8_t, 32> val) {
+    return UnionSize36Alignment4(
+        std::make_shared<Storage_>(std::in_place_index_t<1>{}, std::move(val)));
+  }
+
+  const ::fidl::internal::UnionMemberView<1, Storage_> variant() const {
+    return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
+  }
+  ::fidl::internal::UnionMemberView<1, Storage_> variant() {
+    return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
+  }
+
  private:
-  using Storage = cpp17::variant<cpp17::monostate, ::std::array<uint8_t, 32>>;
-  std::shared_ptr<Storage> storage_;
-  std::shared_ptr<Storage> CloneStorage() const;
+  std::shared_ptr<Storage_> storage_;
+  std::shared_ptr<Storage_> CloneStorage_() const;
   friend struct ::fidl::internal::NaturalUnionCodingTraits<
       ::test_unionsandwich::UnionSize36Alignment4>;
   static constexpr std::array<std::optional<::fidl::HandleInformation>, 2>
       Members = {std::nullopt, std::nullopt};
 
-  explicit UnionSize36Alignment4(std::shared_ptr<Storage> storage)
+  explicit UnionSize36Alignment4(std::shared_ptr<Storage_> storage)
       : storage_(std::move(storage)) {}
 
   static constexpr size_t TagToIndex(
@@ -211,37 +240,6 @@ class UnionSize36Alignment4 final {
       default:
         return ::test_unionsandwich::UnionSize36Alignment4::Tag::kVariant;
     }
-  }
-
- public:
-  // Create an unknown value of this union.
-  UnionSize36Alignment4() : storage_(std::make_shared<Storage>()) {}
-
-  UnionSize36Alignment4(UnionSize36Alignment4&&) noexcept = default;
-  UnionSize36Alignment4& operator=(UnionSize36Alignment4&&) noexcept = default;
-  UnionSize36Alignment4(const UnionSize36Alignment4& other) noexcept
-      : UnionSize36Alignment4(other.CloneStorage()) {}
-  UnionSize36Alignment4& operator=(
-      const UnionSize36Alignment4& other) noexcept {
-    storage_ = other.CloneStorage();
-    return *this;
-  }
-
-  constexpr ::test_unionsandwich::UnionSize36Alignment4::Tag Which() const {
-    return UnionSize36Alignment4::IndexToTag(storage_->index());
-  }
-  static UnionSize36Alignment4 WithVariant(::std::array<uint8_t, 32> val) {
-    return UnionSize36Alignment4(std::make_shared<Storage>(
-        std::in_place_index_t<TagToIndex(
-            ::test_unionsandwich::UnionSize36Alignment4::Tag::kVariant)>{},
-        std::move(val)));
-  }
-
-  const ::fidl::internal::UnionMemberView<1, Storage> variant() const {
-    return ::fidl::internal::UnionMemberView<1, Storage>(storage_);
-  }
-  ::fidl::internal::UnionMemberView<1, Storage> variant() {
-    return ::fidl::internal::UnionMemberView<1, Storage>(storage_);
   }
 };
 
@@ -316,22 +314,52 @@ class SandwichUnionSize36Alignment4 final
 extern "C" const fidl_type_t test_unionsandwich_UnionSize12Alignment4Table;
 
 class UnionSize12Alignment4 final {
+ private:
+  using Storage_ = cpp17::variant<cpp17::monostate, ::std::array<uint8_t, 6>>;
+
  public:
   // TODO: share union tag types between wire & natural.
   enum class Tag : fidl_union_tag_t {
     kVariant = 1,  // 0x1
   };
 
+  // Create an unknown value of this union.
+  UnionSize12Alignment4() : storage_(std::make_shared<Storage_>()) {}
+
+  UnionSize12Alignment4(UnionSize12Alignment4&&) noexcept = default;
+  UnionSize12Alignment4& operator=(UnionSize12Alignment4&&) noexcept = default;
+  UnionSize12Alignment4(const UnionSize12Alignment4& other) noexcept
+      : UnionSize12Alignment4(other.CloneStorage_()) {}
+  UnionSize12Alignment4& operator=(
+      const UnionSize12Alignment4& other) noexcept {
+    storage_ = other.CloneStorage_();
+    return *this;
+  }
+
+  constexpr ::test_unionsandwich::UnionSize12Alignment4::Tag Which() const {
+    return UnionSize12Alignment4::IndexToTag(storage_->index());
+  }
+  static UnionSize12Alignment4 WithVariant(::std::array<uint8_t, 6> val) {
+    return UnionSize12Alignment4(
+        std::make_shared<Storage_>(std::in_place_index_t<1>{}, std::move(val)));
+  }
+
+  const ::fidl::internal::UnionMemberView<1, Storage_> variant() const {
+    return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
+  }
+  ::fidl::internal::UnionMemberView<1, Storage_> variant() {
+    return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
+  }
+
  private:
-  using Storage = cpp17::variant<cpp17::monostate, ::std::array<uint8_t, 6>>;
-  std::shared_ptr<Storage> storage_;
-  std::shared_ptr<Storage> CloneStorage() const;
+  std::shared_ptr<Storage_> storage_;
+  std::shared_ptr<Storage_> CloneStorage_() const;
   friend struct ::fidl::internal::NaturalUnionCodingTraits<
       ::test_unionsandwich::UnionSize12Alignment4>;
   static constexpr std::array<std::optional<::fidl::HandleInformation>, 2>
       Members = {std::nullopt, std::nullopt};
 
-  explicit UnionSize12Alignment4(std::shared_ptr<Storage> storage)
+  explicit UnionSize12Alignment4(std::shared_ptr<Storage_> storage)
       : storage_(std::move(storage)) {}
 
   static constexpr size_t TagToIndex(
@@ -351,37 +379,6 @@ class UnionSize12Alignment4 final {
       default:
         return ::test_unionsandwich::UnionSize12Alignment4::Tag::kVariant;
     }
-  }
-
- public:
-  // Create an unknown value of this union.
-  UnionSize12Alignment4() : storage_(std::make_shared<Storage>()) {}
-
-  UnionSize12Alignment4(UnionSize12Alignment4&&) noexcept = default;
-  UnionSize12Alignment4& operator=(UnionSize12Alignment4&&) noexcept = default;
-  UnionSize12Alignment4(const UnionSize12Alignment4& other) noexcept
-      : UnionSize12Alignment4(other.CloneStorage()) {}
-  UnionSize12Alignment4& operator=(
-      const UnionSize12Alignment4& other) noexcept {
-    storage_ = other.CloneStorage();
-    return *this;
-  }
-
-  constexpr ::test_unionsandwich::UnionSize12Alignment4::Tag Which() const {
-    return UnionSize12Alignment4::IndexToTag(storage_->index());
-  }
-  static UnionSize12Alignment4 WithVariant(::std::array<uint8_t, 6> val) {
-    return UnionSize12Alignment4(std::make_shared<Storage>(
-        std::in_place_index_t<TagToIndex(
-            ::test_unionsandwich::UnionSize12Alignment4::Tag::kVariant)>{},
-        std::move(val)));
-  }
-
-  const ::fidl::internal::UnionMemberView<1, Storage> variant() const {
-    return ::fidl::internal::UnionMemberView<1, Storage>(storage_);
-  }
-  ::fidl::internal::UnionMemberView<1, Storage> variant() {
-    return ::fidl::internal::UnionMemberView<1, Storage>(storage_);
   }
 };
 
@@ -508,23 +505,54 @@ class StructSize16Alignment8 final
 extern "C" const fidl_type_t test_unionsandwich_UnionSize24Alignment8Table;
 
 class UnionSize24Alignment8 final {
+ private:
+  using Storage_ = cpp17::variant<cpp17::monostate,
+                                  ::test_unionsandwich::StructSize16Alignment8>;
+
  public:
   // TODO: share union tag types between wire & natural.
   enum class Tag : fidl_union_tag_t {
     kVariant = 1,  // 0x1
   };
 
+  // Create an unknown value of this union.
+  UnionSize24Alignment8() : storage_(std::make_shared<Storage_>()) {}
+
+  UnionSize24Alignment8(UnionSize24Alignment8&&) noexcept = default;
+  UnionSize24Alignment8& operator=(UnionSize24Alignment8&&) noexcept = default;
+  UnionSize24Alignment8(const UnionSize24Alignment8& other) noexcept
+      : UnionSize24Alignment8(other.CloneStorage_()) {}
+  UnionSize24Alignment8& operator=(
+      const UnionSize24Alignment8& other) noexcept {
+    storage_ = other.CloneStorage_();
+    return *this;
+  }
+
+  constexpr ::test_unionsandwich::UnionSize24Alignment8::Tag Which() const {
+    return UnionSize24Alignment8::IndexToTag(storage_->index());
+  }
+  static UnionSize24Alignment8 WithVariant(
+      ::test_unionsandwich::StructSize16Alignment8 val) {
+    return UnionSize24Alignment8(
+        std::make_shared<Storage_>(std::in_place_index_t<1>{}, std::move(val)));
+  }
+
+  const ::fidl::internal::UnionMemberView<1, Storage_> variant() const {
+    return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
+  }
+  ::fidl::internal::UnionMemberView<1, Storage_> variant() {
+    return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
+  }
+
  private:
-  using Storage = cpp17::variant<cpp17::monostate,
-                                 ::test_unionsandwich::StructSize16Alignment8>;
-  std::shared_ptr<Storage> storage_;
-  std::shared_ptr<Storage> CloneStorage() const;
+  std::shared_ptr<Storage_> storage_;
+  std::shared_ptr<Storage_> CloneStorage_() const;
   friend struct ::fidl::internal::NaturalUnionCodingTraits<
       ::test_unionsandwich::UnionSize24Alignment8>;
   static constexpr std::array<std::optional<::fidl::HandleInformation>, 2>
       Members = {std::nullopt, std::nullopt};
 
-  explicit UnionSize24Alignment8(std::shared_ptr<Storage> storage)
+  explicit UnionSize24Alignment8(std::shared_ptr<Storage_> storage)
       : storage_(std::move(storage)) {}
 
   static constexpr size_t TagToIndex(
@@ -544,38 +572,6 @@ class UnionSize24Alignment8 final {
       default:
         return ::test_unionsandwich::UnionSize24Alignment8::Tag::kVariant;
     }
-  }
-
- public:
-  // Create an unknown value of this union.
-  UnionSize24Alignment8() : storage_(std::make_shared<Storage>()) {}
-
-  UnionSize24Alignment8(UnionSize24Alignment8&&) noexcept = default;
-  UnionSize24Alignment8& operator=(UnionSize24Alignment8&&) noexcept = default;
-  UnionSize24Alignment8(const UnionSize24Alignment8& other) noexcept
-      : UnionSize24Alignment8(other.CloneStorage()) {}
-  UnionSize24Alignment8& operator=(
-      const UnionSize24Alignment8& other) noexcept {
-    storage_ = other.CloneStorage();
-    return *this;
-  }
-
-  constexpr ::test_unionsandwich::UnionSize24Alignment8::Tag Which() const {
-    return UnionSize24Alignment8::IndexToTag(storage_->index());
-  }
-  static UnionSize24Alignment8 WithVariant(
-      ::test_unionsandwich::StructSize16Alignment8 val) {
-    return UnionSize24Alignment8(std::make_shared<Storage>(
-        std::in_place_index_t<TagToIndex(
-            ::test_unionsandwich::UnionSize24Alignment8::Tag::kVariant)>{},
-        std::move(val)));
-  }
-
-  const ::fidl::internal::UnionMemberView<1, Storage> variant() const {
-    return ::fidl::internal::UnionMemberView<1, Storage>(storage_);
-  }
-  ::fidl::internal::UnionMemberView<1, Storage> variant() {
-    return ::fidl::internal::UnionMemberView<1, Storage>(storage_);
   }
 };
 

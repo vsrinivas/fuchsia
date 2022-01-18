@@ -27,6 +27,9 @@ class Union;
 extern "C" const fidl_type_t test_versions_UnionTable;
 
 class Union final {
+ private:
+  using Storage_ = cpp17::variant<cpp17::monostate, uint32_t>;
+
  public:
   // TODO: share union tag types between wire & natural.
   enum class Tag : fidl_union_tag_t {
@@ -34,16 +37,41 @@ class Union final {
     kUnknown = ::std::numeric_limits<::fidl_union_tag_t>::max(),
   };
 
+  // Create an unknown value of this union.
+  Union() : storage_(std::make_shared<Storage_>()) {}
+
+  Union(Union&&) noexcept = default;
+  Union& operator=(Union&&) noexcept = default;
+  Union(const Union& other) noexcept : Union(other.CloneStorage_()) {}
+  Union& operator=(const Union& other) noexcept {
+    storage_ = other.CloneStorage_();
+    return *this;
+  }
+
+  constexpr ::test_versions::Union::Tag Which() const {
+    return Union::IndexToTag(storage_->index());
+  }
+  static Union WithX(uint32_t val) {
+    return Union(
+        std::make_shared<Storage_>(std::in_place_index_t<1>{}, std::move(val)));
+  }
+
+  const ::fidl::internal::UnionMemberView<1, Storage_> x() const {
+    return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
+  }
+  ::fidl::internal::UnionMemberView<1, Storage_> x() {
+    return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
+  }
+
  private:
-  using Storage = cpp17::variant<cpp17::monostate, uint32_t>;
-  std::shared_ptr<Storage> storage_;
-  std::shared_ptr<Storage> CloneStorage() const;
+  std::shared_ptr<Storage_> storage_;
+  std::shared_ptr<Storage_> CloneStorage_() const;
   friend struct ::fidl::internal::NaturalUnionCodingTraits<
       ::test_versions::Union>;
   static constexpr std::array<std::optional<::fidl::HandleInformation>, 2>
       Members = {std::nullopt, std::nullopt};
 
-  explicit Union(std::shared_ptr<Storage> storage)
+  explicit Union(std::shared_ptr<Storage_> storage)
       : storage_(std::move(storage)) {}
 
   static constexpr size_t TagToIndex(::test_versions::Union::Tag tag) {
@@ -63,69 +91,42 @@ class Union final {
         return ::test_versions::Union::Tag::kUnknown;
     }
   }
-
- public:
-  // Create an unknown value of this union.
-  Union() : storage_(std::make_shared<Storage>()) {}
-
-  Union(Union&&) noexcept = default;
-  Union& operator=(Union&&) noexcept = default;
-  Union(const Union& other) noexcept : Union(other.CloneStorage()) {}
-  Union& operator=(const Union& other) noexcept {
-    storage_ = other.CloneStorage();
-    return *this;
-  }
-
-  constexpr ::test_versions::Union::Tag Which() const {
-    return Union::IndexToTag(storage_->index());
-  }
-  static Union WithX(uint32_t val) {
-    return Union(std::make_shared<Storage>(
-        std::in_place_index_t<TagToIndex(::test_versions::Union::Tag::kX)>{},
-        std::move(val)));
-  }
-
-  const ::fidl::internal::UnionMemberView<1, Storage> x() const {
-    return ::fidl::internal::UnionMemberView<1, Storage>(storage_);
-  }
-  ::fidl::internal::UnionMemberView<1, Storage> x() {
-    return ::fidl::internal::UnionMemberView<1, Storage>(storage_);
-  }
 };
 
 extern "C" const fidl_type_t test_versions_TableTable;
 
 class Table final {
- public:
-  struct Storage final {
-    ::cpp17::optional<uint32_t> x{};
-  };
+ private:
+  struct Storage_;
 
-  Table(Storage storage) noexcept : storage_(std::move(storage)) {}
+ public:
+  Table(Storage_ storage) noexcept : storage_(std::move(storage)) {}
   Table() noexcept = default;
   Table(Table&&) noexcept = default;
   Table& operator=(Table&&) noexcept = default;
-  Table(const Table& other) noexcept : Table(other.CloneStorage()) {}
+  Table(const Table& other) noexcept : Table(other.CloneStorage_()) {}
   Table& operator=(const Table& other) noexcept {
-    storage_ = other.CloneStorage();
+    storage_ = other.CloneStorage_();
     return *this;
   }
 
   bool IsEmpty() const { return !(storage_.x.has_value()); }
 
-  size_t MaxOrdinal() const;
-
   const cpp17::optional<uint32_t>& x() const { return storage_.x; }
   ::cpp17::optional<uint32_t>& x() { return storage_.x; }
 
  private:
+  struct Storage_ final {
+    ::cpp17::optional<uint32_t> x{};
+  };
+
   // TODO(https://fxbug.dev/91252): Box the storage.
-  Storage storage_;
-  Storage CloneStorage() const;
+  Storage_ storage_;
+  Storage_ CloneStorage_() const;
   friend struct ::fidl::internal::NaturalTableCodingTraits<
       ::test_versions::Table>;
   static constexpr auto Members =
-      std::make_tuple(std::make_tuple(1, &Storage::x, std::nullopt));
+      std::make_tuple(std::make_tuple(1, &Storage_::x, std::nullopt));
 };
 
 extern "C" const fidl_type_t test_versions_StructTable;

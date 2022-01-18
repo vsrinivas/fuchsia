@@ -201,19 +201,19 @@ test_nullable::Int32Wrapper::CloneStorage_() const {
   return Storage_{::fidl::internal::NaturalClone(storage_.val)};
 }
 
-std::shared_ptr<::test_nullable::SimpleUnion::Storage>
-test_nullable::SimpleUnion::CloneStorage() const {
-  const Storage& storage = *storage_;
+std::shared_ptr<::test_nullable::SimpleUnion::Storage_>
+test_nullable::SimpleUnion::CloneStorage_() const {
+  const Storage_& storage = *storage_;
   switch (storage_->index()) {
     case 1:
-      return std::make_shared<Storage>(
+      return std::make_shared<Storage_>(
           std::in_place_index<1>,
           ::fidl::internal::NaturalClone(std::get<1>(storage)));
     case 2:
-      return std::make_shared<Storage>(
+      return std::make_shared<Storage_>(
           std::in_place_index<2>,
           ::fidl::internal::NaturalClone(std::get<2>(storage)));
     default:
-      return std::make_shared<Storage>();
+      return std::make_shared<Storage_>();
   }
 }

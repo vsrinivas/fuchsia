@@ -41,6 +41,9 @@ class SomeProtocol_SomeMethod_Result;
 extern "C" const fidl_type_t test_anonymous_UnionMemberTable;
 
 class UnionMember final {
+ private:
+  using Storage_ = cpp17::variant<cpp17::monostate, uint8_t>;
+
  public:
   // TODO: share union tag types between wire & natural.
   enum class Tag : fidl_union_tag_t {
@@ -48,16 +51,42 @@ class UnionMember final {
     kUnknown = ::std::numeric_limits<::fidl_union_tag_t>::max(),
   };
 
+  // Create an unknown value of this union.
+  UnionMember() : storage_(std::make_shared<Storage_>()) {}
+
+  UnionMember(UnionMember&&) noexcept = default;
+  UnionMember& operator=(UnionMember&&) noexcept = default;
+  UnionMember(const UnionMember& other) noexcept
+      : UnionMember(other.CloneStorage_()) {}
+  UnionMember& operator=(const UnionMember& other) noexcept {
+    storage_ = other.CloneStorage_();
+    return *this;
+  }
+
+  constexpr ::test_anonymous::UnionMember::Tag Which() const {
+    return UnionMember::IndexToTag(storage_->index());
+  }
+  static UnionMember WithUnionData(uint8_t val) {
+    return UnionMember(
+        std::make_shared<Storage_>(std::in_place_index_t<1>{}, std::move(val)));
+  }
+
+  const ::fidl::internal::UnionMemberView<1, Storage_> union_data() const {
+    return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
+  }
+  ::fidl::internal::UnionMemberView<1, Storage_> union_data() {
+    return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
+  }
+
  private:
-  using Storage = cpp17::variant<cpp17::monostate, uint8_t>;
-  std::shared_ptr<Storage> storage_;
-  std::shared_ptr<Storage> CloneStorage() const;
+  std::shared_ptr<Storage_> storage_;
+  std::shared_ptr<Storage_> CloneStorage_() const;
   friend struct ::fidl::internal::NaturalUnionCodingTraits<
       ::test_anonymous::UnionMember>;
   static constexpr std::array<std::optional<::fidl::HandleInformation>, 2>
       Members = {std::nullopt, std::nullopt};
 
-  explicit UnionMember(std::shared_ptr<Storage> storage)
+  explicit UnionMember(std::shared_ptr<Storage_> storage)
       : storage_(std::move(storage)) {}
 
   static constexpr size_t TagToIndex(::test_anonymous::UnionMember::Tag tag) {
@@ -76,36 +105,6 @@ class UnionMember final {
       default:
         return ::test_anonymous::UnionMember::Tag::kUnknown;
     }
-  }
-
- public:
-  // Create an unknown value of this union.
-  UnionMember() : storage_(std::make_shared<Storage>()) {}
-
-  UnionMember(UnionMember&&) noexcept = default;
-  UnionMember& operator=(UnionMember&&) noexcept = default;
-  UnionMember(const UnionMember& other) noexcept
-      : UnionMember(other.CloneStorage()) {}
-  UnionMember& operator=(const UnionMember& other) noexcept {
-    storage_ = other.CloneStorage();
-    return *this;
-  }
-
-  constexpr ::test_anonymous::UnionMember::Tag Which() const {
-    return UnionMember::IndexToTag(storage_->index());
-  }
-  static UnionMember WithUnionData(uint8_t val) {
-    return UnionMember(std::make_shared<Storage>(
-        std::in_place_index_t<TagToIndex(
-            ::test_anonymous::UnionMember::Tag::kUnionData)>{},
-        std::move(val)));
-  }
-
-  const ::fidl::internal::UnionMemberView<1, Storage> union_data() const {
-    return ::fidl::internal::UnionMemberView<1, Storage>(storage_);
-  }
-  ::fidl::internal::UnionMemberView<1, Storage> union_data() {
-    return ::fidl::internal::UnionMemberView<1, Storage>(storage_);
   }
 };
 
@@ -154,25 +153,22 @@ class TableData final : public ::fidl::internal::CodableBase<TableData> {
 extern "C" const fidl_type_t test_anonymous_TableMemberTable;
 
 class TableMember final {
- public:
-  struct Storage final {
-    ::cpp17::optional<::std::vector<::test_anonymous::TableData>> table_data{};
-  };
+ private:
+  struct Storage_;
 
-  TableMember(Storage storage) noexcept : storage_(std::move(storage)) {}
+ public:
+  TableMember(Storage_ storage) noexcept : storage_(std::move(storage)) {}
   TableMember() noexcept = default;
   TableMember(TableMember&&) noexcept = default;
   TableMember& operator=(TableMember&&) noexcept = default;
   TableMember(const TableMember& other) noexcept
-      : TableMember(other.CloneStorage()) {}
+      : TableMember(other.CloneStorage_()) {}
   TableMember& operator=(const TableMember& other) noexcept {
-    storage_ = other.CloneStorage();
+    storage_ = other.CloneStorage_();
     return *this;
   }
 
   bool IsEmpty() const { return !(storage_.table_data.has_value()); }
-
-  size_t MaxOrdinal() const;
 
   const cpp17::optional<::std::vector<::test_anonymous::TableData>>&
   table_data() const {
@@ -183,13 +179,17 @@ class TableMember final {
   }
 
  private:
+  struct Storage_ final {
+    ::cpp17::optional<::std::vector<::test_anonymous::TableData>> table_data{};
+  };
+
   // TODO(https://fxbug.dev/91252): Box the storage.
-  Storage storage_;
-  Storage CloneStorage() const;
+  Storage_ storage_;
+  Storage_ CloneStorage_() const;
   friend struct ::fidl::internal::NaturalTableCodingTraits<
       ::test_anonymous::TableMember>;
   static constexpr auto Members =
-      std::make_tuple(std::make_tuple(2, &Storage::table_data, std::nullopt));
+      std::make_tuple(std::make_tuple(2, &Storage_::table_data, std::nullopt));
 };
 
 extern "C" const fidl_type_t test_anonymous_SomeProtocolSomeMethodRequestTable;
@@ -325,24 +325,19 @@ class OverrideTest final : public ::fidl::internal::CodableBase<OverrideTest> {
 extern "C" const fidl_type_t test_anonymous_FunctionApplicationTable;
 
 class FunctionApplication final {
- public:
-  struct Storage final {
-    ::cpp17::optional<::std::string> func{};
-    ::cpp17::optional<
-        ::std::vector<::std::unique_ptr<::test_anonymous::Expression>>>
-        args{};
-    ::cpp17::optional<::test_anonymous::Flags> flags{};
-  };
+ private:
+  struct Storage_;
 
-  FunctionApplication(Storage storage) noexcept
+ public:
+  FunctionApplication(Storage_ storage) noexcept
       : storage_(std::move(storage)) {}
   FunctionApplication() noexcept = default;
   FunctionApplication(FunctionApplication&&) noexcept = default;
   FunctionApplication& operator=(FunctionApplication&&) noexcept = default;
   FunctionApplication(const FunctionApplication& other) noexcept
-      : FunctionApplication(other.CloneStorage()) {}
+      : FunctionApplication(other.CloneStorage_()) {}
   FunctionApplication& operator=(const FunctionApplication& other) noexcept {
-    storage_ = other.CloneStorage();
+    storage_ = other.CloneStorage_();
     return *this;
   }
 
@@ -350,8 +345,6 @@ class FunctionApplication final {
     return !(storage_.func.has_value() || storage_.args.has_value() ||
              storage_.flags.has_value());
   }
-
-  size_t MaxOrdinal() const;
 
   const cpp17::optional<::std::string>& func() const { return storage_.func; }
   ::cpp17::optional<::std::string>& func() { return storage_.func; }
@@ -373,20 +366,33 @@ class FunctionApplication final {
   ::cpp17::optional<::test_anonymous::Flags>& flags() { return storage_.flags; }
 
  private:
+  struct Storage_ final {
+    ::cpp17::optional<::std::string> func{};
+    ::cpp17::optional<
+        ::std::vector<::std::unique_ptr<::test_anonymous::Expression>>>
+        args{};
+    ::cpp17::optional<::test_anonymous::Flags> flags{};
+  };
+
   // TODO(https://fxbug.dev/91252): Box the storage.
-  Storage storage_;
-  Storage CloneStorage() const;
+  Storage_ storage_;
+  Storage_ CloneStorage_() const;
   friend struct ::fidl::internal::NaturalTableCodingTraits<
       ::test_anonymous::FunctionApplication>;
   static constexpr auto Members =
-      std::make_tuple(std::make_tuple(1, &Storage::func, std::nullopt),
-                      std::make_tuple(3, &Storage::args, std::nullopt),
-                      std::make_tuple(4, &Storage::flags, std::nullopt));
+      std::make_tuple(std::make_tuple(1, &Storage_::func, std::nullopt),
+                      std::make_tuple(3, &Storage_::args, std::nullopt),
+                      std::make_tuple(4, &Storage_::flags, std::nullopt));
 };
 
 extern "C" const fidl_type_t test_anonymous_ExpressionTable;
 
 class Expression final {
+ private:
+  using Storage_ =
+      cpp17::variant<cpp17::monostate, uint64_t, ::test_anonymous::OverrideTest,
+                     ::test_anonymous::FunctionApplication>;
+
  public:
   // TODO: share union tag types between wire & natural.
   enum class Tag : fidl_union_tag_t {
@@ -396,18 +402,66 @@ class Expression final {
     kUnknown = ::std::numeric_limits<::fidl_union_tag_t>::max(),
   };
 
+  // Create an unknown value of this union.
+  Expression() : storage_(std::make_shared<Storage_>()) {}
+
+  Expression(Expression&&) noexcept = default;
+  Expression& operator=(Expression&&) noexcept = default;
+  Expression(const Expression& other) noexcept
+      : Expression(other.CloneStorage_()) {}
+  Expression& operator=(const Expression& other) noexcept {
+    storage_ = other.CloneStorage_();
+    return *this;
+  }
+
+  constexpr ::test_anonymous::Expression::Tag Which() const {
+    return Expression::IndexToTag(storage_->index());
+  }
+  static Expression WithValue(uint64_t val) {
+    return Expression(
+        std::make_shared<Storage_>(std::in_place_index_t<1>{}, std::move(val)));
+  }
+
+  const ::fidl::internal::UnionMemberView<1, Storage_> value() const {
+    return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
+  }
+  ::fidl::internal::UnionMemberView<1, Storage_> value() {
+    return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
+  }
+  static Expression WithBinOp(::test_anonymous::OverrideTest val) {
+    return Expression(
+        std::make_shared<Storage_>(std::in_place_index_t<2>{}, std::move(val)));
+  }
+
+  const ::fidl::internal::UnionMemberView<2, Storage_> bin_op() const {
+    return ::fidl::internal::UnionMemberView<2, Storage_>(storage_);
+  }
+  ::fidl::internal::UnionMemberView<2, Storage_> bin_op() {
+    return ::fidl::internal::UnionMemberView<2, Storage_>(storage_);
+  }
+  static Expression WithFunctionApplication(
+      ::test_anonymous::FunctionApplication val) {
+    return Expression(
+        std::make_shared<Storage_>(std::in_place_index_t<3>{}, std::move(val)));
+  }
+
+  const ::fidl::internal::UnionMemberView<3, Storage_> function_application()
+      const {
+    return ::fidl::internal::UnionMemberView<3, Storage_>(storage_);
+  }
+  ::fidl::internal::UnionMemberView<3, Storage_> function_application() {
+    return ::fidl::internal::UnionMemberView<3, Storage_>(storage_);
+  }
+
  private:
-  using Storage =
-      cpp17::variant<cpp17::monostate, uint64_t, ::test_anonymous::OverrideTest,
-                     ::test_anonymous::FunctionApplication>;
-  std::shared_ptr<Storage> storage_;
-  std::shared_ptr<Storage> CloneStorage() const;
+  std::shared_ptr<Storage_> storage_;
+  std::shared_ptr<Storage_> CloneStorage_() const;
   friend struct ::fidl::internal::NaturalUnionCodingTraits<
       ::test_anonymous::Expression>;
   static constexpr std::array<std::optional<::fidl::HandleInformation>, 4>
       Members = {std::nullopt, std::nullopt, std::nullopt, std::nullopt};
 
-  explicit Expression(std::shared_ptr<Storage> storage)
+  explicit Expression(std::shared_ptr<Storage_> storage)
       : storage_(std::move(storage)) {}
 
   static constexpr size_t TagToIndex(::test_anonymous::Expression::Tag tag) {
@@ -434,64 +488,6 @@ class Expression final {
       default:
         return ::test_anonymous::Expression::Tag::kUnknown;
     }
-  }
-
- public:
-  // Create an unknown value of this union.
-  Expression() : storage_(std::make_shared<Storage>()) {}
-
-  Expression(Expression&&) noexcept = default;
-  Expression& operator=(Expression&&) noexcept = default;
-  Expression(const Expression& other) noexcept
-      : Expression(other.CloneStorage()) {}
-  Expression& operator=(const Expression& other) noexcept {
-    storage_ = other.CloneStorage();
-    return *this;
-  }
-
-  constexpr ::test_anonymous::Expression::Tag Which() const {
-    return Expression::IndexToTag(storage_->index());
-  }
-  static Expression WithValue(uint64_t val) {
-    return Expression(std::make_shared<Storage>(
-        std::in_place_index_t<TagToIndex(
-            ::test_anonymous::Expression::Tag::kValue)>{},
-        std::move(val)));
-  }
-
-  const ::fidl::internal::UnionMemberView<1, Storage> value() const {
-    return ::fidl::internal::UnionMemberView<1, Storage>(storage_);
-  }
-  ::fidl::internal::UnionMemberView<1, Storage> value() {
-    return ::fidl::internal::UnionMemberView<1, Storage>(storage_);
-  }
-  static Expression WithBinOp(::test_anonymous::OverrideTest val) {
-    return Expression(std::make_shared<Storage>(
-        std::in_place_index_t<TagToIndex(
-            ::test_anonymous::Expression::Tag::kBinOp)>{},
-        std::move(val)));
-  }
-
-  const ::fidl::internal::UnionMemberView<2, Storage> bin_op() const {
-    return ::fidl::internal::UnionMemberView<2, Storage>(storage_);
-  }
-  ::fidl::internal::UnionMemberView<2, Storage> bin_op() {
-    return ::fidl::internal::UnionMemberView<2, Storage>(storage_);
-  }
-  static Expression WithFunctionApplication(
-      ::test_anonymous::FunctionApplication val) {
-    return Expression(std::make_shared<Storage>(
-        std::in_place_index_t<TagToIndex(
-            ::test_anonymous::Expression::Tag::kFunctionApplication)>{},
-        std::move(val)));
-  }
-
-  const ::fidl::internal::UnionMemberView<3, Storage> function_application()
-      const {
-    return ::fidl::internal::UnionMemberView<3, Storage>(storage_);
-  }
-  ::fidl::internal::UnionMemberView<3, Storage> function_application() {
-    return ::fidl::internal::UnionMemberView<3, Storage>(storage_);
   }
 };
 
@@ -552,6 +548,12 @@ class SomeProtocol_SomeMethod_Response final
 extern "C" const fidl_type_t test_anonymous_SomeProtocol_SomeMethod_ResultTable;
 
 class SomeProtocol_SomeMethod_Result final {
+ private:
+  using Storage_ =
+      cpp17::variant<cpp17::monostate,
+                     ::test_anonymous::SomeProtocol_SomeMethod_Response,
+                     ::test_anonymous::SomeProtocol_SomeMethod_Error>;
+
  public:
   // TODO: share union tag types between wire & natural.
   enum class Tag : fidl_union_tag_t {
@@ -559,19 +561,60 @@ class SomeProtocol_SomeMethod_Result final {
     kErr = 2,       // 0x2
   };
 
+  // Create an unknown value of this union.
+  SomeProtocol_SomeMethod_Result() : storage_(std::make_shared<Storage_>()) {}
+
+  SomeProtocol_SomeMethod_Result(SomeProtocol_SomeMethod_Result&&) noexcept =
+      default;
+  SomeProtocol_SomeMethod_Result& operator=(
+      SomeProtocol_SomeMethod_Result&&) noexcept = default;
+  SomeProtocol_SomeMethod_Result(
+      const SomeProtocol_SomeMethod_Result& other) noexcept
+      : SomeProtocol_SomeMethod_Result(other.CloneStorage_()) {}
+  SomeProtocol_SomeMethod_Result& operator=(
+      const SomeProtocol_SomeMethod_Result& other) noexcept {
+    storage_ = other.CloneStorage_();
+    return *this;
+  }
+
+  constexpr ::test_anonymous::SomeProtocol_SomeMethod_Result::Tag Which()
+      const {
+    return SomeProtocol_SomeMethod_Result::IndexToTag(storage_->index());
+  }
+  static SomeProtocol_SomeMethod_Result WithResponse(
+      ::test_anonymous::SomeProtocol_SomeMethod_Response val) {
+    return SomeProtocol_SomeMethod_Result(
+        std::make_shared<Storage_>(std::in_place_index_t<1>{}, std::move(val)));
+  }
+
+  const ::fidl::internal::UnionMemberView<1, Storage_> response() const {
+    return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
+  }
+  ::fidl::internal::UnionMemberView<1, Storage_> response() {
+    return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
+  }
+  static SomeProtocol_SomeMethod_Result WithErr(
+      ::test_anonymous::SomeProtocol_SomeMethod_Error val) {
+    return SomeProtocol_SomeMethod_Result(
+        std::make_shared<Storage_>(std::in_place_index_t<2>{}, std::move(val)));
+  }
+
+  const ::fidl::internal::UnionMemberView<2, Storage_> err() const {
+    return ::fidl::internal::UnionMemberView<2, Storage_>(storage_);
+  }
+  ::fidl::internal::UnionMemberView<2, Storage_> err() {
+    return ::fidl::internal::UnionMemberView<2, Storage_>(storage_);
+  }
+
  private:
-  using Storage =
-      cpp17::variant<cpp17::monostate,
-                     ::test_anonymous::SomeProtocol_SomeMethod_Response,
-                     ::test_anonymous::SomeProtocol_SomeMethod_Error>;
-  std::shared_ptr<Storage> storage_;
-  std::shared_ptr<Storage> CloneStorage() const;
+  std::shared_ptr<Storage_> storage_;
+  std::shared_ptr<Storage_> CloneStorage_() const;
   friend struct ::fidl::internal::NaturalUnionCodingTraits<
       ::test_anonymous::SomeProtocol_SomeMethod_Result>;
   static constexpr std::array<std::optional<::fidl::HandleInformation>, 3>
       Members = {std::nullopt, std::nullopt, std::nullopt};
 
-  explicit SomeProtocol_SomeMethod_Result(std::shared_ptr<Storage> storage)
+  explicit SomeProtocol_SomeMethod_Result(std::shared_ptr<Storage_> storage)
       : storage_(std::move(storage)) {}
 
   static constexpr size_t TagToIndex(
@@ -595,57 +638,6 @@ class SomeProtocol_SomeMethod_Result final {
       default:
         return ::test_anonymous::SomeProtocol_SomeMethod_Result::Tag::kResponse;
     }
-  }
-
- public:
-  // Create an unknown value of this union.
-  SomeProtocol_SomeMethod_Result() : storage_(std::make_shared<Storage>()) {}
-
-  SomeProtocol_SomeMethod_Result(SomeProtocol_SomeMethod_Result&&) noexcept =
-      default;
-  SomeProtocol_SomeMethod_Result& operator=(
-      SomeProtocol_SomeMethod_Result&&) noexcept = default;
-  SomeProtocol_SomeMethod_Result(
-      const SomeProtocol_SomeMethod_Result& other) noexcept
-      : SomeProtocol_SomeMethod_Result(other.CloneStorage()) {}
-  SomeProtocol_SomeMethod_Result& operator=(
-      const SomeProtocol_SomeMethod_Result& other) noexcept {
-    storage_ = other.CloneStorage();
-    return *this;
-  }
-
-  constexpr ::test_anonymous::SomeProtocol_SomeMethod_Result::Tag Which()
-      const {
-    return SomeProtocol_SomeMethod_Result::IndexToTag(storage_->index());
-  }
-  static SomeProtocol_SomeMethod_Result WithResponse(
-      ::test_anonymous::SomeProtocol_SomeMethod_Response val) {
-    return SomeProtocol_SomeMethod_Result(std::make_shared<Storage>(
-        std::in_place_index_t<TagToIndex(
-            ::test_anonymous::SomeProtocol_SomeMethod_Result::Tag::
-                kResponse)>{},
-        std::move(val)));
-  }
-
-  const ::fidl::internal::UnionMemberView<1, Storage> response() const {
-    return ::fidl::internal::UnionMemberView<1, Storage>(storage_);
-  }
-  ::fidl::internal::UnionMemberView<1, Storage> response() {
-    return ::fidl::internal::UnionMemberView<1, Storage>(storage_);
-  }
-  static SomeProtocol_SomeMethod_Result WithErr(
-      ::test_anonymous::SomeProtocol_SomeMethod_Error val) {
-    return SomeProtocol_SomeMethod_Result(std::make_shared<Storage>(
-        std::in_place_index_t<TagToIndex(
-            ::test_anonymous::SomeProtocol_SomeMethod_Result::Tag::kErr)>{},
-        std::move(val)));
-  }
-
-  const ::fidl::internal::UnionMemberView<2, Storage> err() const {
-    return ::fidl::internal::UnionMemberView<2, Storage>(storage_);
-  }
-  ::fidl::internal::UnionMemberView<2, Storage> err() {
-    return ::fidl::internal::UnionMemberView<2, Storage>(storage_);
   }
 };
 

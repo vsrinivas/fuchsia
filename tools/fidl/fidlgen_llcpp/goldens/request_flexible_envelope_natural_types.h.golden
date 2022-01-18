@@ -33,6 +33,9 @@ class FlexibleFoo;
 extern "C" const fidl_type_t test_requestflexibleenvelope_StrictFooTable;
 
 class StrictFoo final {
+ private:
+  using Storage_ = cpp17::variant<cpp17::monostate, ::std::string, int32_t>;
+
  public:
   // TODO: share union tag types between wire & natural.
   enum class Tag : fidl_union_tag_t {
@@ -40,16 +43,53 @@ class StrictFoo final {
     kI = 2,  // 0x2
   };
 
+  // Create an unknown value of this union.
+  StrictFoo() : storage_(std::make_shared<Storage_>()) {}
+
+  StrictFoo(StrictFoo&&) noexcept = default;
+  StrictFoo& operator=(StrictFoo&&) noexcept = default;
+  StrictFoo(const StrictFoo& other) noexcept
+      : StrictFoo(other.CloneStorage_()) {}
+  StrictFoo& operator=(const StrictFoo& other) noexcept {
+    storage_ = other.CloneStorage_();
+    return *this;
+  }
+
+  constexpr ::test_requestflexibleenvelope::StrictFoo::Tag Which() const {
+    return StrictFoo::IndexToTag(storage_->index());
+  }
+  static StrictFoo WithS(::std::string val) {
+    return StrictFoo(
+        std::make_shared<Storage_>(std::in_place_index_t<1>{}, std::move(val)));
+  }
+
+  const ::fidl::internal::UnionMemberView<1, Storage_> s() const {
+    return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
+  }
+  ::fidl::internal::UnionMemberView<1, Storage_> s() {
+    return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
+  }
+  static StrictFoo WithI(int32_t val) {
+    return StrictFoo(
+        std::make_shared<Storage_>(std::in_place_index_t<2>{}, std::move(val)));
+  }
+
+  const ::fidl::internal::UnionMemberView<2, Storage_> i() const {
+    return ::fidl::internal::UnionMemberView<2, Storage_>(storage_);
+  }
+  ::fidl::internal::UnionMemberView<2, Storage_> i() {
+    return ::fidl::internal::UnionMemberView<2, Storage_>(storage_);
+  }
+
  private:
-  using Storage = cpp17::variant<cpp17::monostate, ::std::string, int32_t>;
-  std::shared_ptr<Storage> storage_;
-  std::shared_ptr<Storage> CloneStorage() const;
+  std::shared_ptr<Storage_> storage_;
+  std::shared_ptr<Storage_> CloneStorage_() const;
   friend struct ::fidl::internal::NaturalUnionCodingTraits<
       ::test_requestflexibleenvelope::StrictFoo>;
   static constexpr std::array<std::optional<::fidl::HandleInformation>, 3>
       Members = {std::nullopt, std::nullopt, std::nullopt};
 
-  explicit StrictFoo(std::shared_ptr<Storage> storage)
+  explicit StrictFoo(std::shared_ptr<Storage_> storage)
       : storage_(std::move(storage)) {}
 
   static constexpr size_t TagToIndex(
@@ -73,49 +113,6 @@ class StrictFoo final {
       default:
         return ::test_requestflexibleenvelope::StrictFoo::Tag::kS;
     }
-  }
-
- public:
-  // Create an unknown value of this union.
-  StrictFoo() : storage_(std::make_shared<Storage>()) {}
-
-  StrictFoo(StrictFoo&&) noexcept = default;
-  StrictFoo& operator=(StrictFoo&&) noexcept = default;
-  StrictFoo(const StrictFoo& other) noexcept
-      : StrictFoo(other.CloneStorage()) {}
-  StrictFoo& operator=(const StrictFoo& other) noexcept {
-    storage_ = other.CloneStorage();
-    return *this;
-  }
-
-  constexpr ::test_requestflexibleenvelope::StrictFoo::Tag Which() const {
-    return StrictFoo::IndexToTag(storage_->index());
-  }
-  static StrictFoo WithS(::std::string val) {
-    return StrictFoo(std::make_shared<Storage>(
-        std::in_place_index_t<TagToIndex(
-            ::test_requestflexibleenvelope::StrictFoo::Tag::kS)>{},
-        std::move(val)));
-  }
-
-  const ::fidl::internal::UnionMemberView<1, Storage> s() const {
-    return ::fidl::internal::UnionMemberView<1, Storage>(storage_);
-  }
-  ::fidl::internal::UnionMemberView<1, Storage> s() {
-    return ::fidl::internal::UnionMemberView<1, Storage>(storage_);
-  }
-  static StrictFoo WithI(int32_t val) {
-    return StrictFoo(std::make_shared<Storage>(
-        std::in_place_index_t<TagToIndex(
-            ::test_requestflexibleenvelope::StrictFoo::Tag::kI)>{},
-        std::move(val)));
-  }
-
-  const ::fidl::internal::UnionMemberView<2, Storage> i() const {
-    return ::fidl::internal::UnionMemberView<2, Storage>(storage_);
-  }
-  ::fidl::internal::UnionMemberView<2, Storage> i() {
-    return ::fidl::internal::UnionMemberView<2, Storage>(storage_);
   }
 };
 
@@ -235,6 +232,9 @@ class ProtocolRequestFlexibleResponseStrictTopResponse final
 extern "C" const fidl_type_t test_requestflexibleenvelope_FlexibleFooTable;
 
 class FlexibleFoo final {
+ private:
+  using Storage_ = cpp17::variant<cpp17::monostate, ::std::string, int32_t>;
+
  public:
   // TODO: share union tag types between wire & natural.
   enum class Tag : fidl_union_tag_t {
@@ -243,16 +243,53 @@ class FlexibleFoo final {
     kUnknown = ::std::numeric_limits<::fidl_union_tag_t>::max(),
   };
 
+  // Create an unknown value of this union.
+  FlexibleFoo() : storage_(std::make_shared<Storage_>()) {}
+
+  FlexibleFoo(FlexibleFoo&&) noexcept = default;
+  FlexibleFoo& operator=(FlexibleFoo&&) noexcept = default;
+  FlexibleFoo(const FlexibleFoo& other) noexcept
+      : FlexibleFoo(other.CloneStorage_()) {}
+  FlexibleFoo& operator=(const FlexibleFoo& other) noexcept {
+    storage_ = other.CloneStorage_();
+    return *this;
+  }
+
+  constexpr ::test_requestflexibleenvelope::FlexibleFoo::Tag Which() const {
+    return FlexibleFoo::IndexToTag(storage_->index());
+  }
+  static FlexibleFoo WithS(::std::string val) {
+    return FlexibleFoo(
+        std::make_shared<Storage_>(std::in_place_index_t<1>{}, std::move(val)));
+  }
+
+  const ::fidl::internal::UnionMemberView<1, Storage_> s() const {
+    return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
+  }
+  ::fidl::internal::UnionMemberView<1, Storage_> s() {
+    return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
+  }
+  static FlexibleFoo WithI(int32_t val) {
+    return FlexibleFoo(
+        std::make_shared<Storage_>(std::in_place_index_t<2>{}, std::move(val)));
+  }
+
+  const ::fidl::internal::UnionMemberView<2, Storage_> i() const {
+    return ::fidl::internal::UnionMemberView<2, Storage_>(storage_);
+  }
+  ::fidl::internal::UnionMemberView<2, Storage_> i() {
+    return ::fidl::internal::UnionMemberView<2, Storage_>(storage_);
+  }
+
  private:
-  using Storage = cpp17::variant<cpp17::monostate, ::std::string, int32_t>;
-  std::shared_ptr<Storage> storage_;
-  std::shared_ptr<Storage> CloneStorage() const;
+  std::shared_ptr<Storage_> storage_;
+  std::shared_ptr<Storage_> CloneStorage_() const;
   friend struct ::fidl::internal::NaturalUnionCodingTraits<
       ::test_requestflexibleenvelope::FlexibleFoo>;
   static constexpr std::array<std::optional<::fidl::HandleInformation>, 3>
       Members = {std::nullopt, std::nullopt, std::nullopt};
 
-  explicit FlexibleFoo(std::shared_ptr<Storage> storage)
+  explicit FlexibleFoo(std::shared_ptr<Storage_> storage)
       : storage_(std::move(storage)) {}
 
   static constexpr size_t TagToIndex(
@@ -277,49 +314,6 @@ class FlexibleFoo final {
       default:
         return ::test_requestflexibleenvelope::FlexibleFoo::Tag::kUnknown;
     }
-  }
-
- public:
-  // Create an unknown value of this union.
-  FlexibleFoo() : storage_(std::make_shared<Storage>()) {}
-
-  FlexibleFoo(FlexibleFoo&&) noexcept = default;
-  FlexibleFoo& operator=(FlexibleFoo&&) noexcept = default;
-  FlexibleFoo(const FlexibleFoo& other) noexcept
-      : FlexibleFoo(other.CloneStorage()) {}
-  FlexibleFoo& operator=(const FlexibleFoo& other) noexcept {
-    storage_ = other.CloneStorage();
-    return *this;
-  }
-
-  constexpr ::test_requestflexibleenvelope::FlexibleFoo::Tag Which() const {
-    return FlexibleFoo::IndexToTag(storage_->index());
-  }
-  static FlexibleFoo WithS(::std::string val) {
-    return FlexibleFoo(std::make_shared<Storage>(
-        std::in_place_index_t<TagToIndex(
-            ::test_requestflexibleenvelope::FlexibleFoo::Tag::kS)>{},
-        std::move(val)));
-  }
-
-  const ::fidl::internal::UnionMemberView<1, Storage> s() const {
-    return ::fidl::internal::UnionMemberView<1, Storage>(storage_);
-  }
-  ::fidl::internal::UnionMemberView<1, Storage> s() {
-    return ::fidl::internal::UnionMemberView<1, Storage>(storage_);
-  }
-  static FlexibleFoo WithI(int32_t val) {
-    return FlexibleFoo(std::make_shared<Storage>(
-        std::in_place_index_t<TagToIndex(
-            ::test_requestflexibleenvelope::FlexibleFoo::Tag::kI)>{},
-        std::move(val)));
-  }
-
-  const ::fidl::internal::UnionMemberView<2, Storage> i() const {
-    return ::fidl::internal::UnionMemberView<2, Storage>(storage_);
-  }
-  ::fidl::internal::UnionMemberView<2, Storage> i() {
-    return ::fidl::internal::UnionMemberView<2, Storage>(storage_);
   }
 };
 

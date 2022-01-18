@@ -45,6 +45,7 @@ type UnionMember struct {
 	WireOrdinalName   name
 	Offset            int
 	HandleInformation *HandleInformation
+	NaturalIndex      int
 }
 
 func (um UnionMember) UpperCamelCaseName() string {
@@ -82,6 +83,7 @@ func (c *compiler) compileUnion(val fidlgen.Union) *Union {
 			BackingBufferType(),
 	}
 
+	naturalIndex := 1
 	for _, mem := range val.Members {
 		if mem.Reserved {
 			continue
@@ -98,7 +100,9 @@ func (c *compiler) compileUnion(val fidlgen.Union) *Union {
 			WireOrdinalName:   u.WireOrdinalEnum.nest(tag.Wire.Name()),
 			Offset:            mem.Offset,
 			HandleInformation: c.fieldHandleInformation(&mem.Type),
+			NaturalIndex:      naturalIndex,
 		})
+		naturalIndex++
 	}
 
 	return &u

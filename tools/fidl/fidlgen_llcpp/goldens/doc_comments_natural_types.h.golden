@@ -32,27 +32,21 @@ extern "C" const fidl_type_t test_doccomments_TableTable;
 ///
 /// table comment #3
 class Table final {
- public:
-  struct Storage final {
-    /// table field comment #1
-    ///
-    /// table field comment #3
-    ::cpp17::optional<int32_t> field{};
-  };
+ private:
+  struct Storage_;
 
-  Table(Storage storage) noexcept : storage_(std::move(storage)) {}
+ public:
+  Table(Storage_ storage) noexcept : storage_(std::move(storage)) {}
   Table() noexcept = default;
   Table(Table&&) noexcept = default;
   Table& operator=(Table&&) noexcept = default;
-  Table(const Table& other) noexcept : Table(other.CloneStorage()) {}
+  Table(const Table& other) noexcept : Table(other.CloneStorage_()) {}
   Table& operator=(const Table& other) noexcept {
-    storage_ = other.CloneStorage();
+    storage_ = other.CloneStorage_();
     return *this;
   }
 
   bool IsEmpty() const { return !(storage_.field.has_value()); }
-
-  size_t MaxOrdinal() const;
 
   /// table field comment #1
   ///
@@ -64,13 +58,20 @@ class Table final {
   ::cpp17::optional<int32_t>& field() { return storage_.field; }
 
  private:
+  struct Storage_ final {
+    /// table field comment #1
+    ///
+    /// table field comment #3
+    ::cpp17::optional<int32_t> field{};
+  };
+
   // TODO(https://fxbug.dev/91252): Box the storage.
-  Storage storage_;
-  Storage CloneStorage() const;
+  Storage_ storage_;
+  Storage_ CloneStorage_() const;
   friend struct ::fidl::internal::NaturalTableCodingTraits<
       ::test_doccomments::Table>;
   static constexpr auto Members =
-      std::make_tuple(std::make_tuple(1, &Storage::field, std::nullopt));
+      std::make_tuple(std::make_tuple(1, &Storage_::field, std::nullopt));
 };
 
 extern "C" const fidl_type_t test_doccomments_StructTable;
@@ -132,22 +133,51 @@ extern "C" const fidl_type_t test_doccomments_StrictUnionTable;
 ///
 /// strict union comment #3
 class StrictUnion final {
+ private:
+  using Storage_ = cpp17::variant<cpp17::monostate, int32_t>;
+
  public:
   // TODO: share union tag types between wire & natural.
   enum class Tag : fidl_union_tag_t {
     kField = 1,  // 0x1
   };
 
+  // Create an unknown value of this union.
+  StrictUnion() : storage_(std::make_shared<Storage_>()) {}
+
+  StrictUnion(StrictUnion&&) noexcept = default;
+  StrictUnion& operator=(StrictUnion&&) noexcept = default;
+  StrictUnion(const StrictUnion& other) noexcept
+      : StrictUnion(other.CloneStorage_()) {}
+  StrictUnion& operator=(const StrictUnion& other) noexcept {
+    storage_ = other.CloneStorage_();
+    return *this;
+  }
+
+  constexpr ::test_doccomments::StrictUnion::Tag Which() const {
+    return StrictUnion::IndexToTag(storage_->index());
+  }
+  static StrictUnion WithField(int32_t val) {
+    return StrictUnion(
+        std::make_shared<Storage_>(std::in_place_index_t<1>{}, std::move(val)));
+  }
+
+  const ::fidl::internal::UnionMemberView<1, Storage_> field() const {
+    return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
+  }
+  ::fidl::internal::UnionMemberView<1, Storage_> field() {
+    return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
+  }
+
  private:
-  using Storage = cpp17::variant<cpp17::monostate, int32_t>;
-  std::shared_ptr<Storage> storage_;
-  std::shared_ptr<Storage> CloneStorage() const;
+  std::shared_ptr<Storage_> storage_;
+  std::shared_ptr<Storage_> CloneStorage_() const;
   friend struct ::fidl::internal::NaturalUnionCodingTraits<
       ::test_doccomments::StrictUnion>;
   static constexpr std::array<std::optional<::fidl::HandleInformation>, 2>
       Members = {std::nullopt, std::nullopt};
 
-  explicit StrictUnion(std::shared_ptr<Storage> storage)
+  explicit StrictUnion(std::shared_ptr<Storage_> storage)
       : storage_(std::move(storage)) {}
 
   static constexpr size_t TagToIndex(::test_doccomments::StrictUnion::Tag tag) {
@@ -167,36 +197,6 @@ class StrictUnion final {
         return ::test_doccomments::StrictUnion::Tag::kField;
     }
   }
-
- public:
-  // Create an unknown value of this union.
-  StrictUnion() : storage_(std::make_shared<Storage>()) {}
-
-  StrictUnion(StrictUnion&&) noexcept = default;
-  StrictUnion& operator=(StrictUnion&&) noexcept = default;
-  StrictUnion(const StrictUnion& other) noexcept
-      : StrictUnion(other.CloneStorage()) {}
-  StrictUnion& operator=(const StrictUnion& other) noexcept {
-    storage_ = other.CloneStorage();
-    return *this;
-  }
-
-  constexpr ::test_doccomments::StrictUnion::Tag Which() const {
-    return StrictUnion::IndexToTag(storage_->index());
-  }
-  static StrictUnion WithField(int32_t val) {
-    return StrictUnion(std::make_shared<Storage>(
-        std::in_place_index_t<TagToIndex(
-            ::test_doccomments::StrictUnion::Tag::kField)>{},
-        std::move(val)));
-  }
-
-  const ::fidl::internal::UnionMemberView<1, Storage> field() const {
-    return ::fidl::internal::UnionMemberView<1, Storage>(storage_);
-  }
-  ::fidl::internal::UnionMemberView<1, Storage> field() {
-    return ::fidl::internal::UnionMemberView<1, Storage>(storage_);
-  }
 };
 
 extern "C" const fidl_type_t test_doccomments_FlexibleUnionTable;
@@ -205,6 +205,9 @@ extern "C" const fidl_type_t test_doccomments_FlexibleUnionTable;
 ///
 /// flexible union comment #3
 class FlexibleUnion final {
+ private:
+  using Storage_ = cpp17::variant<cpp17::monostate, int32_t>;
+
  public:
   // TODO: share union tag types between wire & natural.
   enum class Tag : fidl_union_tag_t {
@@ -212,16 +215,42 @@ class FlexibleUnion final {
     kUnknown = ::std::numeric_limits<::fidl_union_tag_t>::max(),
   };
 
+  // Create an unknown value of this union.
+  FlexibleUnion() : storage_(std::make_shared<Storage_>()) {}
+
+  FlexibleUnion(FlexibleUnion&&) noexcept = default;
+  FlexibleUnion& operator=(FlexibleUnion&&) noexcept = default;
+  FlexibleUnion(const FlexibleUnion& other) noexcept
+      : FlexibleUnion(other.CloneStorage_()) {}
+  FlexibleUnion& operator=(const FlexibleUnion& other) noexcept {
+    storage_ = other.CloneStorage_();
+    return *this;
+  }
+
+  constexpr ::test_doccomments::FlexibleUnion::Tag Which() const {
+    return FlexibleUnion::IndexToTag(storage_->index());
+  }
+  static FlexibleUnion WithField(int32_t val) {
+    return FlexibleUnion(
+        std::make_shared<Storage_>(std::in_place_index_t<1>{}, std::move(val)));
+  }
+
+  const ::fidl::internal::UnionMemberView<1, Storage_> field() const {
+    return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
+  }
+  ::fidl::internal::UnionMemberView<1, Storage_> field() {
+    return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
+  }
+
  private:
-  using Storage = cpp17::variant<cpp17::monostate, int32_t>;
-  std::shared_ptr<Storage> storage_;
-  std::shared_ptr<Storage> CloneStorage() const;
+  std::shared_ptr<Storage_> storage_;
+  std::shared_ptr<Storage_> CloneStorage_() const;
   friend struct ::fidl::internal::NaturalUnionCodingTraits<
       ::test_doccomments::FlexibleUnion>;
   static constexpr std::array<std::optional<::fidl::HandleInformation>, 2>
       Members = {std::nullopt, std::nullopt};
 
-  explicit FlexibleUnion(std::shared_ptr<Storage> storage)
+  explicit FlexibleUnion(std::shared_ptr<Storage_> storage)
       : storage_(std::move(storage)) {}
 
   static constexpr size_t TagToIndex(
@@ -242,36 +271,6 @@ class FlexibleUnion final {
       default:
         return ::test_doccomments::FlexibleUnion::Tag::kUnknown;
     }
-  }
-
- public:
-  // Create an unknown value of this union.
-  FlexibleUnion() : storage_(std::make_shared<Storage>()) {}
-
-  FlexibleUnion(FlexibleUnion&&) noexcept = default;
-  FlexibleUnion& operator=(FlexibleUnion&&) noexcept = default;
-  FlexibleUnion(const FlexibleUnion& other) noexcept
-      : FlexibleUnion(other.CloneStorage()) {}
-  FlexibleUnion& operator=(const FlexibleUnion& other) noexcept {
-    storage_ = other.CloneStorage();
-    return *this;
-  }
-
-  constexpr ::test_doccomments::FlexibleUnion::Tag Which() const {
-    return FlexibleUnion::IndexToTag(storage_->index());
-  }
-  static FlexibleUnion WithField(int32_t val) {
-    return FlexibleUnion(std::make_shared<Storage>(
-        std::in_place_index_t<TagToIndex(
-            ::test_doccomments::FlexibleUnion::Tag::kField)>{},
-        std::move(val)));
-  }
-
-  const ::fidl::internal::UnionMemberView<1, Storage> field() const {
-    return ::fidl::internal::UnionMemberView<1, Storage>(storage_);
-  }
-  ::fidl::internal::UnionMemberView<1, Storage> field() {
-    return ::fidl::internal::UnionMemberView<1, Storage>(storage_);
   }
 };
 

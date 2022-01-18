@@ -19,22 +19,17 @@ extern "C" const fidl_type_t {{ .CodingTableType }};
 
 {{ .Docs }}
 class {{ .Name }} final {
+ private:
+  struct Storage_;
  public:
-  struct Storage final {
-    {{- range .Members -}}
-      {{ .Docs }}
-      ::cpp17::optional<{{ .Type }}> {{ .Name }} {};
-    {{- end }}
-  };
-
-  {{ .Name }}(Storage storage) noexcept : storage_(std::move(storage)) {}
+  {{ .Name }}(Storage_ storage) noexcept : storage_(std::move(storage)) {}
   {{ .Name }}() noexcept = default;
   {{ .Name }}({{ .Name }}&&) noexcept = default;
   {{ .Name }}& operator=({{ .Name }}&&) noexcept = default;
   {{- if not .IsResourceType }}
-    {{ .Name }}(const {{ .Name }}& other) noexcept : {{ .Name }}(other.CloneStorage()){}
+    {{ .Name }}(const {{ .Name }}& other) noexcept : {{ .Name }}(other.CloneStorage_()){}
     {{ .Name }}& operator=(const {{ .Name }}& other) noexcept {
-      storage_ = other.CloneStorage();
+      storage_ = other.CloneStorage_();
       return *this;
     }
   {{- end }}  
@@ -52,8 +47,6 @@ class {{ .Name }} final {
     {{- end }}
   }
 
-  size_t MaxOrdinal() const;
-
   {{- range .Members }}
     {{ .Docs }}
     const cpp17::optional<{{ .Type }}>& {{ .Name }}() const { return storage_.{{ .Name }}; }
@@ -61,16 +54,23 @@ class {{ .Name }} final {
     ::cpp17::optional<{{ .Type }}>& {{ .Name }}() { return storage_.{{ .Name }}; }
   {{- end }}
  private:
+  struct Storage_ final {
+    {{- range .Members -}}
+      {{ .Docs }}
+      ::cpp17::optional<{{ .Type }}> {{ .Name }} {};
+    {{- end }}
+  };
+
   // TODO(https://fxbug.dev/91252): Box the storage.
-  Storage storage_;
+  Storage_ storage_;
   {{- if not .IsResourceType }}
-    Storage CloneStorage() const;
+    Storage_ CloneStorage_() const;
   {{- end }}
   friend struct ::fidl::internal::NaturalTableCodingTraits<{{ . }}>;
   static constexpr auto Members = std::make_tuple(
     {{- range $i, $m := .Members }}
       {{- if $i }}, {{ end -}}
-      std::make_tuple({{ $m.Ordinal }}, &Storage::{{ $m.Name }},
+      std::make_tuple({{ $m.Ordinal }}, &Storage_::{{ $m.Name }},
         {{- if $m.HandleInformation -}}
           std::make_optional<::fidl::HandleInformation>({
             .object_type = {{ $m.HandleInformation.ObjectType }},
@@ -112,8 +112,8 @@ class {{ .Name }} final {
 {{- EnsureNamespace "" }}
 
 {{ if not .IsResourceType }}
-{{ . }}::Storage {{ .NoLeading }}::CloneStorage() const {
-    return Storage{
+{{ . }}::Storage_ {{ .NoLeading }}::CloneStorage_() const {
+    return Storage_{
       {{- range $i, $m := .Members }}
         {{- if $i }}, {{ end }}
         ::fidl::internal::NaturalClone(storage_.{{ .Name }})

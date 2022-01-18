@@ -384,6 +384,9 @@ class StructWithNullableHandle final
 extern "C" const fidl_type_t test_nullable_SimpleUnionTable;
 
 class SimpleUnion final {
+ private:
+  using Storage_ = cpp17::variant<cpp17::monostate, int32_t, float>;
+
  public:
   // TODO: share union tag types between wire & natural.
   enum class Tag : fidl_union_tag_t {
@@ -391,16 +394,53 @@ class SimpleUnion final {
     kB = 2,  // 0x2
   };
 
+  // Create an unknown value of this union.
+  SimpleUnion() : storage_(std::make_shared<Storage_>()) {}
+
+  SimpleUnion(SimpleUnion&&) noexcept = default;
+  SimpleUnion& operator=(SimpleUnion&&) noexcept = default;
+  SimpleUnion(const SimpleUnion& other) noexcept
+      : SimpleUnion(other.CloneStorage_()) {}
+  SimpleUnion& operator=(const SimpleUnion& other) noexcept {
+    storage_ = other.CloneStorage_();
+    return *this;
+  }
+
+  constexpr ::test_nullable::SimpleUnion::Tag Which() const {
+    return SimpleUnion::IndexToTag(storage_->index());
+  }
+  static SimpleUnion WithA(int32_t val) {
+    return SimpleUnion(
+        std::make_shared<Storage_>(std::in_place_index_t<1>{}, std::move(val)));
+  }
+
+  const ::fidl::internal::UnionMemberView<1, Storage_> a() const {
+    return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
+  }
+  ::fidl::internal::UnionMemberView<1, Storage_> a() {
+    return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
+  }
+  static SimpleUnion WithB(float val) {
+    return SimpleUnion(
+        std::make_shared<Storage_>(std::in_place_index_t<2>{}, std::move(val)));
+  }
+
+  const ::fidl::internal::UnionMemberView<2, Storage_> b() const {
+    return ::fidl::internal::UnionMemberView<2, Storage_>(storage_);
+  }
+  ::fidl::internal::UnionMemberView<2, Storage_> b() {
+    return ::fidl::internal::UnionMemberView<2, Storage_>(storage_);
+  }
+
  private:
-  using Storage = cpp17::variant<cpp17::monostate, int32_t, float>;
-  std::shared_ptr<Storage> storage_;
-  std::shared_ptr<Storage> CloneStorage() const;
+  std::shared_ptr<Storage_> storage_;
+  std::shared_ptr<Storage_> CloneStorage_() const;
   friend struct ::fidl::internal::NaturalUnionCodingTraits<
       ::test_nullable::SimpleUnion>;
   static constexpr std::array<std::optional<::fidl::HandleInformation>, 3>
       Members = {std::nullopt, std::nullopt, std::nullopt};
 
-  explicit SimpleUnion(std::shared_ptr<Storage> storage)
+  explicit SimpleUnion(std::shared_ptr<Storage_> storage)
       : storage_(std::move(storage)) {}
 
   static constexpr size_t TagToIndex(::test_nullable::SimpleUnion::Tag tag) {
@@ -422,49 +462,6 @@ class SimpleUnion final {
       default:
         return ::test_nullable::SimpleUnion::Tag::kA;
     }
-  }
-
- public:
-  // Create an unknown value of this union.
-  SimpleUnion() : storage_(std::make_shared<Storage>()) {}
-
-  SimpleUnion(SimpleUnion&&) noexcept = default;
-  SimpleUnion& operator=(SimpleUnion&&) noexcept = default;
-  SimpleUnion(const SimpleUnion& other) noexcept
-      : SimpleUnion(other.CloneStorage()) {}
-  SimpleUnion& operator=(const SimpleUnion& other) noexcept {
-    storage_ = other.CloneStorage();
-    return *this;
-  }
-
-  constexpr ::test_nullable::SimpleUnion::Tag Which() const {
-    return SimpleUnion::IndexToTag(storage_->index());
-  }
-  static SimpleUnion WithA(int32_t val) {
-    return SimpleUnion(
-        std::make_shared<Storage>(std::in_place_index_t<TagToIndex(
-                                      ::test_nullable::SimpleUnion::Tag::kA)>{},
-                                  std::move(val)));
-  }
-
-  const ::fidl::internal::UnionMemberView<1, Storage> a() const {
-    return ::fidl::internal::UnionMemberView<1, Storage>(storage_);
-  }
-  ::fidl::internal::UnionMemberView<1, Storage> a() {
-    return ::fidl::internal::UnionMemberView<1, Storage>(storage_);
-  }
-  static SimpleUnion WithB(float val) {
-    return SimpleUnion(
-        std::make_shared<Storage>(std::in_place_index_t<TagToIndex(
-                                      ::test_nullable::SimpleUnion::Tag::kB)>{},
-                                  std::move(val)));
-  }
-
-  const ::fidl::internal::UnionMemberView<2, Storage> b() const {
-    return ::fidl::internal::UnionMemberView<2, Storage>(storage_);
-  }
-  ::fidl::internal::UnionMemberView<2, Storage> b() {
-    return ::fidl::internal::UnionMemberView<2, Storage>(storage_);
   }
 };
 

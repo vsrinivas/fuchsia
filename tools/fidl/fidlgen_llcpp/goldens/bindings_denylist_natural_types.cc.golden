@@ -2,15 +2,15 @@
 
 #include <fidl/test.bindingsdenylist/cpp/natural_types.h>
 
-std::shared_ptr<::test_bindingsdenylist::OnlyLlcpp::Storage>
-test_bindingsdenylist::OnlyLlcpp::CloneStorage() const {
-  const Storage& storage = *storage_;
+std::shared_ptr<::test_bindingsdenylist::OnlyLlcpp::Storage_>
+test_bindingsdenylist::OnlyLlcpp::CloneStorage_() const {
+  const Storage_& storage = *storage_;
   switch (storage_->index()) {
     case 1:
-      return std::make_shared<Storage>(
+      return std::make_shared<Storage_>(
           std::in_place_index<1>,
           ::fidl::internal::NaturalClone(std::get<1>(storage)));
     default:
-      return std::make_shared<Storage>();
+      return std::make_shared<Storage_>();
   }
 }

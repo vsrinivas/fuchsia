@@ -45,33 +45,33 @@ test_placementofattributes::ExampleProtocolMethodRequest::CloneStorage_()
   return Storage_{::fidl::internal::NaturalClone(storage_.arg)};
 }
 
-::test_placementofattributes::ExampleTable::Storage
-test_placementofattributes::ExampleTable::CloneStorage() const {
-  return Storage{::fidl::internal::NaturalClone(storage_.member)};
+::test_placementofattributes::ExampleTable::Storage_
+test_placementofattributes::ExampleTable::CloneStorage_() const {
+  return Storage_{::fidl::internal::NaturalClone(storage_.member)};
 }
 
-std::shared_ptr<::test_placementofattributes::ExampleXUnion::Storage>
-test_placementofattributes::ExampleXUnion::CloneStorage() const {
-  const Storage& storage = *storage_;
+std::shared_ptr<::test_placementofattributes::ExampleXUnion::Storage_>
+test_placementofattributes::ExampleXUnion::CloneStorage_() const {
+  const Storage_& storage = *storage_;
   switch (storage_->index()) {
     case 1:
-      return std::make_shared<Storage>(
+      return std::make_shared<Storage_>(
           std::in_place_index<1>,
           ::fidl::internal::NaturalClone(std::get<1>(storage)));
     default:
-      return std::make_shared<Storage>();
+      return std::make_shared<Storage_>();
   }
 }
 
-std::shared_ptr<::test_placementofattributes::ExampleUnion::Storage>
-test_placementofattributes::ExampleUnion::CloneStorage() const {
-  const Storage& storage = *storage_;
+std::shared_ptr<::test_placementofattributes::ExampleUnion::Storage_>
+test_placementofattributes::ExampleUnion::CloneStorage_() const {
+  const Storage_& storage = *storage_;
   switch (storage_->index()) {
     case 1:
-      return std::make_shared<Storage>(
+      return std::make_shared<Storage_>(
           std::in_place_index<1>,
           ::fidl::internal::NaturalClone(std::get<1>(storage)));
     default:
-      return std::make_shared<Storage>();
+      return std::make_shared<Storage_>();
   }
 }

@@ -19,6 +19,14 @@ extern "C" const fidl_type_t {{ .CodingTableType }};
 
 {{ .Docs }}
 class {{ .Name }} final {
+ private:
+  using Storage_ =
+    cpp17::variant<
+      cpp17::monostate
+      {{- range .Members }}
+        , {{- .Type }}
+      {{- end -}}
+    >;
  public:
   // TODO: share union tag types between wire & natural.
   enum class {{ .TagEnum.Self }} : fidl_union_tag_t {
@@ -30,27 +38,53 @@ class {{ .Name }} final {
   {{- end }}
   };
 
- private:
-  using Storage = 
-    cpp17::variant<
-      cpp17::monostate
-      {{- range .Members }}
-        , {{- .Type }}
-      {{- end -}}
-    >;
-  std::shared_ptr<Storage> storage_;
+  // Create an unknown value of this union.
+  {{ .Name }}() : storage_(std::make_shared<Storage_>()) {}
+
+  {{ .Name }}({{ .Name }}&&) noexcept = default;
+  {{ .Name }}& operator=({{ .Name }}&&) noexcept = default;
   {{- if not .IsResourceType }}
-    std::shared_ptr<Storage> CloneStorage() const;
+    {{ .Name }}(const {{ .Name }}& other) noexcept : {{ .Name }}(other.CloneStorage_()){}
+    {{ .Name }}& operator=(const {{ .Name }}& other) noexcept {
+      storage_ = other.CloneStorage_();
+      return *this;
+    }
+  {{- end }}
+
+  constexpr {{ .TagEnum }} Which() const {
+    return {{ .Name }}::IndexToTag(storage_->index());
+  }
+
+  {{- range .Members }}
+    static {{ $.Name }} With{{ .UpperCamelCaseName }}({{ .Type }} val) {
+      return {{ $.Name }}(std::make_shared<Storage_>(
+        std::in_place_index_t<{{ .NaturalIndex }}>{},
+        std::move(val)));
+    }
+
+    const ::fidl::internal::UnionMemberView<{{ .NaturalIndex }}, Storage_>
+        {{ .Name }}() const {
+      return ::fidl::internal::UnionMemberView<{{ .NaturalIndex }}, Storage_>(storage_);
+    }
+    ::fidl::internal::UnionMemberView<{{ .NaturalIndex }}, Storage_> {{ .Name }}() {
+      return ::fidl::internal::UnionMemberView<{{ .NaturalIndex }}, Storage_>(storage_);
+    }
+  {{- end }}
+
+ private:
+  std::shared_ptr<Storage_> storage_;
+  {{- if not .IsResourceType }}
+    std::shared_ptr<Storage_> CloneStorage_() const;
   {{- end }}
   friend struct ::fidl::internal::NaturalUnionCodingTraits<{{ . }}>;
   static constexpr std::array<std::optional<::fidl::HandleInformation>, {{ Add 1 (len .Members) }}> Members = {
     std::nullopt
-    {{- range $i, $m := .Members }}
+    {{- range .Members }}
       ,
-      {{- if $m.HandleInformation -}}
+      {{- if .HandleInformation -}}
         std::make_optional<::fidl::HandleInformation>({
-          .object_type = {{ $m.HandleInformation.ObjectType }},
-          .rights = {{ $m.HandleInformation.Rights }}
+          .object_type = {{ .HandleInformation.ObjectType }},
+          .rights = {{ .HandleInformation.Rights }}
         })
       {{- else }}
         std::nullopt
@@ -59,12 +93,12 @@ class {{ .Name }} final {
   };
 
 
-  explicit {{ .Name }}(std::shared_ptr<Storage> storage) : storage_(std::move(storage)) {}
+  explicit {{ .Name }}(std::shared_ptr<Storage_> storage) : storage_(std::move(storage)) {}
 
   static constexpr size_t TagToIndex({{ .TagEnum }} tag) {
     switch (tag) {
-      {{- range $i, $m := .Members }}
-        case {{ $m.TagName }}: return {{ Add $i 1 }};
+      {{- range .Members }}
+        case {{ .TagName }}: return {{ .NaturalIndex }};
       {{- end }}
       {{- if .IsFlexible }}
         case {{ .TagUnknown }}: return 0;
@@ -74,8 +108,8 @@ class {{ .Name }} final {
 
   static constexpr {{ .TagEnum }} IndexToTag(size_t index) {
     switch (index) {
-      {{- range $i, $m := .Members }}
-        case {{ Add $i 1 }}: return {{ $m.TagName }};
+      {{- range  .Members }}
+        case {{ .NaturalIndex }}: return {{ .TagName }};
       {{- end }}
       {{- if .IsFlexible }}
         default: return {{ .TagUnknown }};
@@ -85,40 +119,6 @@ class {{ .Name }} final {
       {{- end }}
     }
   }
-
- public:
-  // Create an unknown value of this union.
-  {{ .Name }}() : storage_(std::make_shared<Storage>()) {}
-
-  {{ .Name }}({{ .Name }}&&) noexcept = default;
-  {{ .Name }}& operator=({{ .Name }}&&) noexcept = default;
-  {{- if not .IsResourceType }}
-    {{ .Name }}(const {{ .Name }}& other) noexcept : {{ .Name }}(other.CloneStorage()){}
-    {{ .Name }}& operator=(const {{ .Name }}& other) noexcept {
-      storage_ = other.CloneStorage();
-      return *this;
-    }
-  {{- end }}  
-
-  constexpr {{ .TagEnum }} Which() const {
-    return {{ .Name }}::IndexToTag(storage_->index());
-  }
-
-  {{- range $i, $m := .Members }}
-    static {{ $.Name }} With{{ $m.UpperCamelCaseName }}({{ $m.Type }} val) {
-      return {{ $.Name }}(std::make_shared<Storage>(
-        std::in_place_index_t<TagToIndex({{ $m.TagName }})>{},
-        std::move(val)));
-    }
-
-    const ::fidl::internal::UnionMemberView<{{ Add $i 1 }}, Storage>
-        {{ .Name }}() const {
-      return ::fidl::internal::UnionMemberView<{{ Add $i 1 }}, Storage>(storage_);
-    }
-    ::fidl::internal::UnionMemberView<{{ Add $i 1 }}, Storage> {{ $m.Name }}() {
-      return ::fidl::internal::UnionMemberView<{{ Add $i 1 }}, Storage>(storage_);
-    }
-  {{- end }}
 
 };
 
@@ -146,17 +146,17 @@ class {{ .Name }} final {
 {{- EnsureNamespace "" }}
 
 {{ if not .IsResourceType }}
-  std::shared_ptr<{{ . }}::Storage> {{ .NoLeading }}::CloneStorage() const {
-    const Storage& storage = *storage_;
+  std::shared_ptr<{{ . }}::Storage_> {{ .NoLeading }}::CloneStorage_() const {
+    const Storage_& storage = *storage_;
     switch (storage_->index()) {
       {{- range $i, $m := .Members }}
         case {{ Add $i 1 }}:
-          return std::make_shared<Storage>(
+          return std::make_shared<Storage_>(
             std::in_place_index<{{ Add $i 1 }}>,
             ::fidl::internal::NaturalClone(std::get<{{ Add $i 1 }}>(storage)));
       {{- end }}
       default:
-        return std::make_shared<Storage>();
+        return std::make_shared<Storage_>();
     }
   }
 {{- end }}

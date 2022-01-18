@@ -33,6 +33,9 @@ class ExampleUnion;
 extern "C" const fidl_type_t test_placementofattributes_ExampleXUnionTable;
 
 class ExampleXUnion final {
+ private:
+  using Storage_ = cpp17::variant<cpp17::monostate, uint32_t>;
+
  public:
   // TODO: share union tag types between wire & natural.
   enum class Tag : fidl_union_tag_t {
@@ -40,16 +43,42 @@ class ExampleXUnion final {
     kUnknown = ::std::numeric_limits<::fidl_union_tag_t>::max(),
   };
 
+  // Create an unknown value of this union.
+  ExampleXUnion() : storage_(std::make_shared<Storage_>()) {}
+
+  ExampleXUnion(ExampleXUnion&&) noexcept = default;
+  ExampleXUnion& operator=(ExampleXUnion&&) noexcept = default;
+  ExampleXUnion(const ExampleXUnion& other) noexcept
+      : ExampleXUnion(other.CloneStorage_()) {}
+  ExampleXUnion& operator=(const ExampleXUnion& other) noexcept {
+    storage_ = other.CloneStorage_();
+    return *this;
+  }
+
+  constexpr ::test_placementofattributes::ExampleXUnion::Tag Which() const {
+    return ExampleXUnion::IndexToTag(storage_->index());
+  }
+  static ExampleXUnion WithVariant(uint32_t val) {
+    return ExampleXUnion(
+        std::make_shared<Storage_>(std::in_place_index_t<1>{}, std::move(val)));
+  }
+
+  const ::fidl::internal::UnionMemberView<1, Storage_> variant() const {
+    return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
+  }
+  ::fidl::internal::UnionMemberView<1, Storage_> variant() {
+    return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
+  }
+
  private:
-  using Storage = cpp17::variant<cpp17::monostate, uint32_t>;
-  std::shared_ptr<Storage> storage_;
-  std::shared_ptr<Storage> CloneStorage() const;
+  std::shared_ptr<Storage_> storage_;
+  std::shared_ptr<Storage_> CloneStorage_() const;
   friend struct ::fidl::internal::NaturalUnionCodingTraits<
       ::test_placementofattributes::ExampleXUnion>;
   static constexpr std::array<std::optional<::fidl::HandleInformation>, 2>
       Members = {std::nullopt, std::nullopt};
 
-  explicit ExampleXUnion(std::shared_ptr<Storage> storage)
+  explicit ExampleXUnion(std::shared_ptr<Storage_> storage)
       : storage_(std::move(storage)) {}
 
   static constexpr size_t TagToIndex(
@@ -71,57 +100,56 @@ class ExampleXUnion final {
         return ::test_placementofattributes::ExampleXUnion::Tag::kUnknown;
     }
   }
-
- public:
-  // Create an unknown value of this union.
-  ExampleXUnion() : storage_(std::make_shared<Storage>()) {}
-
-  ExampleXUnion(ExampleXUnion&&) noexcept = default;
-  ExampleXUnion& operator=(ExampleXUnion&&) noexcept = default;
-  ExampleXUnion(const ExampleXUnion& other) noexcept
-      : ExampleXUnion(other.CloneStorage()) {}
-  ExampleXUnion& operator=(const ExampleXUnion& other) noexcept {
-    storage_ = other.CloneStorage();
-    return *this;
-  }
-
-  constexpr ::test_placementofattributes::ExampleXUnion::Tag Which() const {
-    return ExampleXUnion::IndexToTag(storage_->index());
-  }
-  static ExampleXUnion WithVariant(uint32_t val) {
-    return ExampleXUnion(std::make_shared<Storage>(
-        std::in_place_index_t<TagToIndex(
-            ::test_placementofattributes::ExampleXUnion::Tag::kVariant)>{},
-        std::move(val)));
-  }
-
-  const ::fidl::internal::UnionMemberView<1, Storage> variant() const {
-    return ::fidl::internal::UnionMemberView<1, Storage>(storage_);
-  }
-  ::fidl::internal::UnionMemberView<1, Storage> variant() {
-    return ::fidl::internal::UnionMemberView<1, Storage>(storage_);
-  }
 };
 
 extern "C" const fidl_type_t test_placementofattributes_ExampleUnionTable;
 
 class ExampleUnion final {
+ private:
+  using Storage_ = cpp17::variant<cpp17::monostate, uint32_t>;
+
  public:
   // TODO: share union tag types between wire & natural.
   enum class Tag : fidl_union_tag_t {
     kVariant = 1,  // 0x1
   };
 
+  // Create an unknown value of this union.
+  ExampleUnion() : storage_(std::make_shared<Storage_>()) {}
+
+  ExampleUnion(ExampleUnion&&) noexcept = default;
+  ExampleUnion& operator=(ExampleUnion&&) noexcept = default;
+  ExampleUnion(const ExampleUnion& other) noexcept
+      : ExampleUnion(other.CloneStorage_()) {}
+  ExampleUnion& operator=(const ExampleUnion& other) noexcept {
+    storage_ = other.CloneStorage_();
+    return *this;
+  }
+
+  constexpr ::test_placementofattributes::ExampleUnion::Tag Which() const {
+    return ExampleUnion::IndexToTag(storage_->index());
+  }
+  static ExampleUnion WithVariant(uint32_t val) {
+    return ExampleUnion(
+        std::make_shared<Storage_>(std::in_place_index_t<1>{}, std::move(val)));
+  }
+
+  const ::fidl::internal::UnionMemberView<1, Storage_> variant() const {
+    return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
+  }
+  ::fidl::internal::UnionMemberView<1, Storage_> variant() {
+    return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
+  }
+
  private:
-  using Storage = cpp17::variant<cpp17::monostate, uint32_t>;
-  std::shared_ptr<Storage> storage_;
-  std::shared_ptr<Storage> CloneStorage() const;
+  std::shared_ptr<Storage_> storage_;
+  std::shared_ptr<Storage_> CloneStorage_() const;
   friend struct ::fidl::internal::NaturalUnionCodingTraits<
       ::test_placementofattributes::ExampleUnion>;
   static constexpr std::array<std::optional<::fidl::HandleInformation>, 2>
       Members = {std::nullopt, std::nullopt};
 
-  explicit ExampleUnion(std::shared_ptr<Storage> storage)
+  explicit ExampleUnion(std::shared_ptr<Storage_> storage)
       : storage_(std::move(storage)) {}
 
   static constexpr size_t TagToIndex(
@@ -142,72 +170,43 @@ class ExampleUnion final {
         return ::test_placementofattributes::ExampleUnion::Tag::kVariant;
     }
   }
-
- public:
-  // Create an unknown value of this union.
-  ExampleUnion() : storage_(std::make_shared<Storage>()) {}
-
-  ExampleUnion(ExampleUnion&&) noexcept = default;
-  ExampleUnion& operator=(ExampleUnion&&) noexcept = default;
-  ExampleUnion(const ExampleUnion& other) noexcept
-      : ExampleUnion(other.CloneStorage()) {}
-  ExampleUnion& operator=(const ExampleUnion& other) noexcept {
-    storage_ = other.CloneStorage();
-    return *this;
-  }
-
-  constexpr ::test_placementofattributes::ExampleUnion::Tag Which() const {
-    return ExampleUnion::IndexToTag(storage_->index());
-  }
-  static ExampleUnion WithVariant(uint32_t val) {
-    return ExampleUnion(std::make_shared<Storage>(
-        std::in_place_index_t<TagToIndex(
-            ::test_placementofattributes::ExampleUnion::Tag::kVariant)>{},
-        std::move(val)));
-  }
-
-  const ::fidl::internal::UnionMemberView<1, Storage> variant() const {
-    return ::fidl::internal::UnionMemberView<1, Storage>(storage_);
-  }
-  ::fidl::internal::UnionMemberView<1, Storage> variant() {
-    return ::fidl::internal::UnionMemberView<1, Storage>(storage_);
-  }
 };
 
 extern "C" const fidl_type_t test_placementofattributes_ExampleTableTable;
 
 class ExampleTable final {
- public:
-  struct Storage final {
-    ::cpp17::optional<uint32_t> member{};
-  };
+ private:
+  struct Storage_;
 
-  ExampleTable(Storage storage) noexcept : storage_(std::move(storage)) {}
+ public:
+  ExampleTable(Storage_ storage) noexcept : storage_(std::move(storage)) {}
   ExampleTable() noexcept = default;
   ExampleTable(ExampleTable&&) noexcept = default;
   ExampleTable& operator=(ExampleTable&&) noexcept = default;
   ExampleTable(const ExampleTable& other) noexcept
-      : ExampleTable(other.CloneStorage()) {}
+      : ExampleTable(other.CloneStorage_()) {}
   ExampleTable& operator=(const ExampleTable& other) noexcept {
-    storage_ = other.CloneStorage();
+    storage_ = other.CloneStorage_();
     return *this;
   }
 
   bool IsEmpty() const { return !(storage_.member.has_value()); }
 
-  size_t MaxOrdinal() const;
-
   const cpp17::optional<uint32_t>& member() const { return storage_.member; }
   ::cpp17::optional<uint32_t>& member() { return storage_.member; }
 
  private:
+  struct Storage_ final {
+    ::cpp17::optional<uint32_t> member{};
+  };
+
   // TODO(https://fxbug.dev/91252): Box the storage.
-  Storage storage_;
-  Storage CloneStorage() const;
+  Storage_ storage_;
+  Storage_ CloneStorage_() const;
   friend struct ::fidl::internal::NaturalTableCodingTraits<
       ::test_placementofattributes::ExampleTable>;
   static constexpr auto Members =
-      std::make_tuple(std::make_tuple(1, &Storage::member, std::nullopt));
+      std::make_tuple(std::make_tuple(1, &Storage_::member, std::nullopt));
 };
 
 extern "C" const fidl_type_t test_placementofattributes_ExampleStructTable;

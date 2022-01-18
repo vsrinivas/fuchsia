@@ -24,22 +24,51 @@ class OnlyLlcpp;
 extern "C" const fidl_type_t test_bindingsdenylist_OnlyLlcppTable;
 
 class OnlyLlcpp final {
+ private:
+  using Storage_ = cpp17::variant<cpp17::monostate, uint32_t>;
+
  public:
   // TODO: share union tag types between wire & natural.
   enum class Tag : fidl_union_tag_t {
     kX = 1,  // 0x1
   };
 
+  // Create an unknown value of this union.
+  OnlyLlcpp() : storage_(std::make_shared<Storage_>()) {}
+
+  OnlyLlcpp(OnlyLlcpp&&) noexcept = default;
+  OnlyLlcpp& operator=(OnlyLlcpp&&) noexcept = default;
+  OnlyLlcpp(const OnlyLlcpp& other) noexcept
+      : OnlyLlcpp(other.CloneStorage_()) {}
+  OnlyLlcpp& operator=(const OnlyLlcpp& other) noexcept {
+    storage_ = other.CloneStorage_();
+    return *this;
+  }
+
+  constexpr ::test_bindingsdenylist::OnlyLlcpp::Tag Which() const {
+    return OnlyLlcpp::IndexToTag(storage_->index());
+  }
+  static OnlyLlcpp WithX(uint32_t val) {
+    return OnlyLlcpp(
+        std::make_shared<Storage_>(std::in_place_index_t<1>{}, std::move(val)));
+  }
+
+  const ::fidl::internal::UnionMemberView<1, Storage_> x() const {
+    return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
+  }
+  ::fidl::internal::UnionMemberView<1, Storage_> x() {
+    return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
+  }
+
  private:
-  using Storage = cpp17::variant<cpp17::monostate, uint32_t>;
-  std::shared_ptr<Storage> storage_;
-  std::shared_ptr<Storage> CloneStorage() const;
+  std::shared_ptr<Storage_> storage_;
+  std::shared_ptr<Storage_> CloneStorage_() const;
   friend struct ::fidl::internal::NaturalUnionCodingTraits<
       ::test_bindingsdenylist::OnlyLlcpp>;
   static constexpr std::array<std::optional<::fidl::HandleInformation>, 2>
       Members = {std::nullopt, std::nullopt};
 
-  explicit OnlyLlcpp(std::shared_ptr<Storage> storage)
+  explicit OnlyLlcpp(std::shared_ptr<Storage_> storage)
       : storage_(std::move(storage)) {}
 
   static constexpr size_t TagToIndex(
@@ -59,36 +88,6 @@ class OnlyLlcpp final {
       default:
         return ::test_bindingsdenylist::OnlyLlcpp::Tag::kX;
     }
-  }
-
- public:
-  // Create an unknown value of this union.
-  OnlyLlcpp() : storage_(std::make_shared<Storage>()) {}
-
-  OnlyLlcpp(OnlyLlcpp&&) noexcept = default;
-  OnlyLlcpp& operator=(OnlyLlcpp&&) noexcept = default;
-  OnlyLlcpp(const OnlyLlcpp& other) noexcept
-      : OnlyLlcpp(other.CloneStorage()) {}
-  OnlyLlcpp& operator=(const OnlyLlcpp& other) noexcept {
-    storage_ = other.CloneStorage();
-    return *this;
-  }
-
-  constexpr ::test_bindingsdenylist::OnlyLlcpp::Tag Which() const {
-    return OnlyLlcpp::IndexToTag(storage_->index());
-  }
-  static OnlyLlcpp WithX(uint32_t val) {
-    return OnlyLlcpp(std::make_shared<Storage>(
-        std::in_place_index_t<TagToIndex(
-            ::test_bindingsdenylist::OnlyLlcpp::Tag::kX)>{},
-        std::move(val)));
-  }
-
-  const ::fidl::internal::UnionMemberView<1, Storage> x() const {
-    return ::fidl::internal::UnionMemberView<1, Storage>(storage_);
-  }
-  ::fidl::internal::UnionMemberView<1, Storage> x() {
-    return ::fidl::internal::UnionMemberView<1, Storage>(storage_);
   }
 };
 
