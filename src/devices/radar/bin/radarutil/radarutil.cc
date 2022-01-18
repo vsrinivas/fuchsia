@@ -220,7 +220,7 @@ zx_status_t RadarUtil::ConnectToDevice(fidl::ClientEnd<BurstReaderProvider> devi
 }
 
 zx_status_t RadarUtil::RegisterVmos() {
-  const auto burst_size = client_->GetBurstSize_Sync();
+  const auto burst_size = client_.sync()->GetBurstSize();
   if (!burst_size.ok()) {
     fprintf(stderr, "Failed to get burst size: %s\n", zx_status_get_string(burst_size.status()));
     return burst_size.status();
@@ -250,7 +250,7 @@ zx_status_t RadarUtil::RegisterVmos() {
     vmo_ids[i] = i;
   }
 
-  const auto result = client_->RegisterVmos_Sync(vmo_ids, vmo_dups);
+  const auto result = client_.sync()->RegisterVmos(vmo_ids, vmo_dups);
   if (!result.ok()) {
     fprintf(stderr, "Failed to register VMOs: %s\n", zx_status_get_string(result.status()));
     return result.status();
@@ -272,7 +272,7 @@ zx_status_t RadarUtil::UnregisterVmos() {
     vmo_ids[i] = i;
   }
 
-  const auto result = client_->UnregisterVmos_Sync(vmo_ids);
+  const auto result = client_.sync()->UnregisterVmos(vmo_ids);
   if (!result.ok()) {
     fprintf(stderr, "Failed to register VMOs: %s\n", zx_status_get_string(result.status()));
     return result.status();
@@ -300,7 +300,7 @@ zx_status_t RadarUtil::Run() {
 
   const zx::duration elapsed = zx::clock::get_monotonic() - start;
 
-  const auto result = client_->StopBursts_Sync();
+  const auto result = client_.sync()->StopBursts();
   if (status != ZX_OK) {
     return status;
   }

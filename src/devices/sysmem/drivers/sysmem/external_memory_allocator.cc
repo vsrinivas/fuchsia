@@ -22,7 +22,7 @@ ExternalMemoryAllocator::~ExternalMemoryAllocator() { ZX_DEBUG_ASSERT(is_empty()
 
 zx_status_t ExternalMemoryAllocator::Allocate(uint64_t size, std::optional<std::string> name,
                                               zx::vmo* parent_vmo) {
-  auto result = heap_->AllocateVmo_Sync(size);
+  auto result = heap_.sync()->AllocateVmo(size);
   if (!result.ok() || result.value().s != ZX_OK) {
     DRIVER_ERROR("HeapAllocate() failed - status: %d status2: %d", result.status(),
                  result.value().s);
@@ -48,7 +48,7 @@ zx_status_t ExternalMemoryAllocator::SetupChildVmo(
     return status;
   }
 
-  auto result = heap_->CreateResource_Sync(std::move(child_vmo_copy), std::move(buffer_settings));
+  auto result = heap_.sync()->CreateResource(std::move(child_vmo_copy), std::move(buffer_settings));
   if (!result.ok() || result.value().s != ZX_OK) {
     DRIVER_ERROR("HeapCreateResource() failed - status: %d status2: %d", result.status(),
                  result.value().s);
@@ -66,7 +66,7 @@ void ExternalMemoryAllocator::Delete(zx::vmo parent_vmo) {
     return;
   }
   auto id = it->second;
-  auto result = heap_->DestroyResource_Sync(id);
+  auto result = heap_.sync()->DestroyResource(id);
   if (!result.ok()) {
     DRIVER_ERROR("HeapDestroyResource() failed - status: %d", result.status());
     // fall-through - this can only fail because resource has

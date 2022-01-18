@@ -553,7 +553,7 @@ ACPI_STATUS Device::AddressSpaceHandler(uint32_t function, ACPI_PHYSICAL_ADDRESS
 
   switch (function) {
     case ACPI_READ: {
-      auto result = client->second->Read_Sync(physical_address, bit_width);
+      auto result = client->second.sync()->Read(physical_address, bit_width);
       if (!result.ok()) {
         zxlogf(ERROR, "FIDL Read failed: %s", result.FormatDescription().data());
         return AE_ERROR;
@@ -565,7 +565,7 @@ ACPI_STATUS Device::AddressSpaceHandler(uint32_t function, ACPI_PHYSICAL_ADDRESS
       break;
     }
     case ACPI_WRITE: {
-      auto result = client->second->Write_Sync(physical_address, bit_width, *value);
+      auto result = client->second.sync()->Write(physical_address, bit_width, *value);
       if (!result.ok()) {
         zxlogf(ERROR, "FIDL Write failed: %s", result.FormatDescription().data());
         return AE_ERROR;

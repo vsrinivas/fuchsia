@@ -299,8 +299,8 @@ TEST_F(SpiDeviceTest, SpiFidlVmoTest) {
   {
     fuchsia_mem::wire::Range vmo = {.offset = 0, .size = 4096};
     ASSERT_OK(cs0_vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &vmo.vmo));
-    auto result = cs0_client->RegisterVmo_Sync(1, std::move(vmo),
-                                               SharedVmoRight::kRead | SharedVmoRight::kWrite);
+    auto result = cs0_client.sync()->RegisterVmo(1, std::move(vmo),
+                                                 SharedVmoRight::kRead | SharedVmoRight::kWrite);
     ASSERT_TRUE(result.ok());
     EXPECT_TRUE(result->result.is_response());
   }
@@ -308,15 +308,15 @@ TEST_F(SpiDeviceTest, SpiFidlVmoTest) {
   {
     fuchsia_mem::wire::Range vmo = {.offset = 0, .size = 4096};
     ASSERT_OK(cs1_vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &vmo.vmo));
-    auto result = cs1_client->RegisterVmo_Sync(2, std::move(vmo),
-                                               SharedVmoRight::kRead | SharedVmoRight::kWrite);
+    auto result = cs1_client.sync()->RegisterVmo(2, std::move(vmo),
+                                                 SharedVmoRight::kRead | SharedVmoRight::kWrite);
     ASSERT_TRUE(result.ok());
     EXPECT_TRUE(result->result.is_response());
   }
 
   ASSERT_OK(cs0_vmo.write(kTestData, 1024, sizeof(kTestData)));
   {
-    auto result = cs0_client->Exchange_Sync(
+    auto result = cs0_client.sync()->Exchange(
         {
             .vmo_id = 1,
             .offset = 1024,
@@ -337,7 +337,7 @@ TEST_F(SpiDeviceTest, SpiFidlVmoTest) {
 
   ASSERT_OK(cs1_vmo.write(kTestData, 1024, sizeof(kTestData)));
   {
-    auto result = cs1_client->Transmit_Sync({
+    auto result = cs1_client.sync()->Transmit({
         .vmo_id = 2,
         .offset = 1024,
         .size = sizeof(kTestData),
@@ -347,7 +347,7 @@ TEST_F(SpiDeviceTest, SpiFidlVmoTest) {
   }
 
   {
-    auto result = cs0_client->Receive_Sync({
+    auto result = cs0_client.sync()->Receive({
         .vmo_id = 1,
         .offset = 1024,
         .size = sizeof(kTestData),
@@ -361,13 +361,13 @@ TEST_F(SpiDeviceTest, SpiFidlVmoTest) {
   }
 
   {
-    auto result = cs0_client->UnregisterVmo_Sync(1);
+    auto result = cs0_client.sync()->UnregisterVmo(1);
     ASSERT_TRUE(result.ok());
     EXPECT_TRUE(result->result.is_response());
   }
 
   {
-    auto result = cs1_client->UnregisterVmo_Sync(2);
+    auto result = cs1_client.sync()->UnregisterVmo(2);
     ASSERT_TRUE(result.ok());
     EXPECT_TRUE(result->result.is_response());
   }
@@ -407,7 +407,7 @@ TEST_F(SpiDeviceTest, SpiFidlVectorTest) {
   spi_impl_.test_mode_ = FakeDdkSpiImpl::SpiTestMode::kTransmit;
   {
     auto tx_buffer = fidl::VectorView<uint8_t>::FromExternal(test_data);
-    auto result = cs0_client->TransmitVector_Sync(tx_buffer);
+    auto result = cs0_client.sync()->TransmitVector(tx_buffer);
     ASSERT_OK(result.status());
     EXPECT_OK(result->status);
   }
@@ -415,7 +415,7 @@ TEST_F(SpiDeviceTest, SpiFidlVectorTest) {
   spi_impl_.current_test_cs_ = 1;
   spi_impl_.test_mode_ = FakeDdkSpiImpl::SpiTestMode::kReceive;
   {
-    auto result = cs1_client->ReceiveVector_Sync(sizeof(test_data));
+    auto result = cs1_client.sync()->ReceiveVector(sizeof(test_data));
     ASSERT_OK(result.status());
     EXPECT_OK(result->status);
     ASSERT_EQ(result->data.count(), std::size(test_data));
@@ -426,7 +426,7 @@ TEST_F(SpiDeviceTest, SpiFidlVectorTest) {
   spi_impl_.test_mode_ = FakeDdkSpiImpl::SpiTestMode::kExchange;
   {
     auto tx_buffer = fidl::VectorView<uint8_t>::FromExternal(test_data);
-    auto result = cs0_client->ExchangeVector_Sync(tx_buffer);
+    auto result = cs0_client.sync()->ExchangeVector(tx_buffer);
     ASSERT_OK(result.status());
     EXPECT_OK(result->status);
     ASSERT_EQ(result->rxdata.count(), std::size(test_data));
@@ -470,7 +470,7 @@ TEST_F(SpiDeviceTest, SpiFidlVectorErrorTest) {
   spi_impl_.test_mode_ = FakeDdkSpiImpl::SpiTestMode::kTransmit;
   {
     auto tx_buffer = fidl::VectorView<uint8_t>::FromExternal(test_data);
-    auto result = cs0_client->TransmitVector_Sync(tx_buffer);
+    auto result = cs0_client.sync()->TransmitVector(tx_buffer);
     ASSERT_OK(result.status());
     EXPECT_OK(result->status);
   }
@@ -478,7 +478,7 @@ TEST_F(SpiDeviceTest, SpiFidlVectorErrorTest) {
   spi_impl_.current_test_cs_ = 1;
   spi_impl_.test_mode_ = FakeDdkSpiImpl::SpiTestMode::kReceive;
   {
-    auto result = cs1_client->ReceiveVector_Sync(sizeof(test_data));
+    auto result = cs1_client.sync()->ReceiveVector(sizeof(test_data));
     ASSERT_OK(result.status());
     EXPECT_EQ(result->status, ZX_ERR_INTERNAL);
     EXPECT_EQ(result->data.count(), 0);
@@ -488,7 +488,7 @@ TEST_F(SpiDeviceTest, SpiFidlVectorErrorTest) {
   spi_impl_.test_mode_ = FakeDdkSpiImpl::SpiTestMode::kExchange;
   {
     auto tx_buffer = fidl::VectorView<uint8_t>::FromExternal(test_data);
-    auto result = cs0_client->ExchangeVector_Sync(tx_buffer);
+    auto result = cs0_client.sync()->ExchangeVector(tx_buffer);
     ASSERT_OK(result.status());
     EXPECT_EQ(result->status, ZX_ERR_INTERNAL);
     EXPECT_EQ(result->rxdata.count(), 0);
@@ -524,37 +524,37 @@ TEST_F(SpiDeviceTest, AssertCsWithSiblingTest) {
   }
 
   {
-    auto result = cs0_client->CanAssertCs_Sync();
+    auto result = cs0_client.sync()->CanAssertCs();
     ASSERT_TRUE(result.ok());
     ASSERT_FALSE(result->can);
   }
 
   {
-    auto result = cs1_client->CanAssertCs_Sync();
+    auto result = cs1_client.sync()->CanAssertCs();
     ASSERT_TRUE(result.ok());
     ASSERT_FALSE(result->can);
   }
 
   {
-    auto result = cs0_client->AssertCs_Sync();
+    auto result = cs0_client.sync()->AssertCs();
     ASSERT_TRUE(result.ok());
     ASSERT_STATUS(result->status, ZX_ERR_NOT_SUPPORTED);
   }
 
   {
-    auto result = cs1_client->AssertCs_Sync();
+    auto result = cs1_client.sync()->AssertCs();
     ASSERT_TRUE(result.ok());
     ASSERT_STATUS(result->status, ZX_ERR_NOT_SUPPORTED);
   }
 
   {
-    auto result = cs0_client->DeassertCs_Sync();
+    auto result = cs0_client.sync()->DeassertCs();
     ASSERT_TRUE(result.ok());
     ASSERT_STATUS(result->status, ZX_ERR_NOT_SUPPORTED);
   }
 
   {
-    auto result = cs1_client->DeassertCs_Sync();
+    auto result = cs1_client.sync()->DeassertCs();
     ASSERT_TRUE(result.ok());
     ASSERT_STATUS(result->status, ZX_ERR_NOT_SUPPORTED);
   }
@@ -579,19 +579,19 @@ TEST_F(SpiDeviceTest, AssertCsNoSiblingTest) {
   }
 
   {
-    auto result = cs0_client->CanAssertCs_Sync();
+    auto result = cs0_client.sync()->CanAssertCs();
     ASSERT_TRUE(result.ok());
     ASSERT_TRUE(result->can);
   }
 
   {
-    auto result = cs0_client->AssertCs_Sync();
+    auto result = cs0_client.sync()->AssertCs();
     ASSERT_TRUE(result.ok());
     ASSERT_OK(result->status);
   }
 
   {
-    auto result = cs0_client->DeassertCs_Sync();
+    auto result = cs0_client.sync()->DeassertCs();
     ASSERT_TRUE(result.ok());
     ASSERT_OK(result->status);
   }
