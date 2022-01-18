@@ -9,6 +9,7 @@ import("//build/flutter/flutter_component.gni")
 
 declare_args() {
   # TODO(http://fxb/85576): Whether or not to launch OOBE workflow on startup.
+  # This feature is still WIP but you can turn it on at your own risk.
   start_oobe = false
 }
 
