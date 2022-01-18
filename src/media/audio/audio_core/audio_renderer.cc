@@ -531,6 +531,13 @@ void AudioRenderer::SetGainWithRampInternal(float gain_db, int64_t duration_ns,
                   << " usec)";
   }
 
+  if (duration_ns <= 0) {
+    FX_LOGS(WARNING) << "SetGainWithRamp ramp duration (" << duration_ns
+                     << " nsec) is non-positive; calling SetGain(" << gain_db << ") instead.";
+    SetGainInternal(gain_db);
+    return;
+  }
+
   if (gain_db > fuchsia::media::audio::MAX_GAIN_DB ||
       gain_db < fuchsia::media::audio::MUTED_GAIN_DB || isnan(gain_db)) {
     FX_LOGS(WARNING) << "SetGainWithRamp(" << gain_db << " dB) out of range.";

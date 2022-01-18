@@ -8,6 +8,7 @@
 
 #include <gtest/gtest.h>
 
+#include "src/media/audio/lib/test/constants.h"
 #include "src/media/audio/lib/test/hermetic_audio_test.h"
 
 // TYPED_TEST_SUITE uses RTTI to print type names, but RTTI is disabled in our build, so
@@ -64,9 +65,9 @@ class GainControlTest : public HermeticAudioTest {
     parent_->BindGainControl(gain_control_2_.NewRequest());
     parent_->BindGainControl(gain_control_1_.NewRequest());
     AddErrorHandler(gain_control_1_,
-                    RendererOrCapturerTraits<RendererOrCapturerT>::Name() + "::GainControl1");
+                    RendererOrCapturerTraits<RendererOrCapturerT>::Name() + "::GainControl-1");
     AddErrorHandler(gain_control_2_,
-                    RendererOrCapturerTraits<RendererOrCapturerT>::Name() + "::GainControl2");
+                    RendererOrCapturerTraits<RendererOrCapturerT>::Name() + "::GainControl-2");
 
     // To ensure there is no crosstalk, we create an unused renderer and capturer
     // and a gain control for each, and verify those gain controls are not called.
@@ -139,6 +140,10 @@ class GainControlTest : public HermeticAudioTest {
 
   void SetGain(float gain_db) { gain_control_1_->SetGain(gain_db); }
   void SetMute(bool mute) { gain_control_1_->SetMute(mute); }
+  void SetGainWithRamp(float gain_db, zx::duration ramp_duration) {
+    gain_control_1_->SetGainWithRamp(gain_db, ramp_duration.get(),
+                                     fuchsia::media::audio::RampType::SCALE_LINEAR);
+  }
 
   RendererOrCapturerT parent_;
   fuchsia::media::audio::GainControlPtr gain_control_1_;
@@ -152,7 +157,17 @@ class GainControlTest : public HermeticAudioTest {
 
 using GainControlTestTypes =
     ::testing::Types<fuchsia::media::AudioRendererPtr, fuchsia::media::AudioCapturerPtr>;
-TYPED_TEST_SUITE(GainControlTest, GainControlTestTypes);
+class GainControlTypeNames {
+ public:
+  template <typename T>
+  static std::string GetName(int) {
+    if (std::is_same<T, fuchsia::media::AudioRendererPtr>())
+      return "AudioRenderer";
+    if (std::is_same<T, fuchsia::media::AudioCapturerPtr>())
+      return "AudioCapturer";
+  }
+};
+TYPED_TEST_SUITE(GainControlTest, GainControlTestTypes, GainControlTypeNames);
 
 TYPED_TEST(GainControlTest, SetGain) {
   constexpr float expect_gain_db = 20.0f;
@@ -228,11 +243,50 @@ TYPED_TEST(GainControlTest, SetGainNaN) {
   EXPECT_FALSE(this->gain_control_2_.is_bound());
 }
 
-// TODO(mpuryear): Ramp-related tests (render). Relevant FIDL signature is:
-//   SetGainWithRamp(float32 gain_db, int64 duration_ns, RampType ramp_type);
+// SetGainWithRamp is not implemented for GainControl interfaces created from AudioCapturer
+class GainControlRampTest : public GainControlTest<fuchsia::media::AudioRendererPtr> {};
 
-// TODO(mpuryear): Validate GainChange notifications of gainramps.
+// Setting ramp target-gain too high should cause a disconnect of the parent and gain interfaces.
+TEST_F(GainControlRampTest, SetGainRampTooHigh) {
+  this->SetGainWithRamp(kTooHighGainDb, zx::msec(1));
 
-// TODO(mpuryear): Ramp-related negative tests, across all scenarios
+  this->ExpectParentDisconnect();
+  EXPECT_FALSE(this->gain_control_1_.is_bound());
+  EXPECT_FALSE(this->gain_control_2_.is_bound());
+}
+
+// Setting ramp target-gain too low should cause a disconnect of the parent and gain interfaces.
+TEST_F(GainControlRampTest, SetGainRampTooLow) {
+  this->SetGainWithRamp(kTooLowGainDb, zx::msec(1));
+
+  this->ExpectParentDisconnect();
+  EXPECT_FALSE(this->gain_control_1_.is_bound());
+  EXPECT_FALSE(this->gain_control_2_.is_bound());
+}
+
+// Setting a gain-ramp with NaN target gain should cause parent and children to disconnect.
+TEST_F(GainControlRampTest, SetGainRampNaN) {
+  this->SetGainWithRamp(NAN, zx::msec(1));
+
+  this->ExpectParentDisconnect();
+  EXPECT_FALSE(this->gain_control_1_.is_bound());
+  EXPECT_FALSE(this->gain_control_2_.is_bound());
+}
+
+// A gain-ramp with zero duration should take effect immediately.
+TEST_F(GainControlRampTest, SetGainRampZeroDuration) {
+  constexpr float expect_gain_db = -20.0f;
+  this->SetGainWithRamp(expect_gain_db, zx::msec(0));
+
+  this->ExpectGainCallback(expect_gain_db, false);
+}
+
+// A gain-ramp with negative duration should take effect immediately (without disconnect).
+TEST_F(GainControlRampTest, SetGainRampNegativeDuration) {
+  constexpr float expect_gain_db = 20.0f;
+  this->SetGainWithRamp(expect_gain_db, zx::msec(-1));
+
+  this->ExpectGainCallback(expect_gain_db, false);
+}
 
 }  // namespace media::audio::test
