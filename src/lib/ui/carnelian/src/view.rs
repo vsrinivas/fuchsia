@@ -9,6 +9,7 @@ use crate::{
     message::Message,
     render::Context,
     view::strategies::base::ViewStrategyPtr,
+    MessageTarget,
 };
 use anyhow::Error;
 use euclid::size2;
@@ -66,7 +67,6 @@ pub struct ViewAssistantContext {
     pub mouse_cursor_position: Option<IntPoint>,
     pub display_info: Option<DisplayInfo>,
 
-    messages: Vec<Message>,
     app_sender: UnboundedSender<MessageInternal>,
 }
 
@@ -84,14 +84,18 @@ impl ViewAssistantContext {
             image_index: Default::default(),
             mouse_cursor_position: Default::default(),
             display_info: Default::default(),
-            messages: Default::default(),
             app_sender: unbounded_sender,
         }
     }
 
     /// Queue up a message for delivery
     pub fn queue_message(&mut self, message: Message) {
-        self.messages.push(message);
+        self.app_sender
+            .unbounded_send(MessageInternal::TargetedMessage(
+                MessageTarget::View(self.key),
+                message,
+            ))
+            .expect("ViewAssistantContext::queue_message - unbounded_send");
     }
 
     /// Request that a render occur for this view at the next
