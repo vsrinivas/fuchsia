@@ -26,15 +26,6 @@
     EXPECT_ERR(library_ref.errors()[0], (error));     \
   }
 
-#define ASSERT_ERRORED_DURING_COMPILE_WITH_DEP(library, dep, error) \
-  {                                                                 \
-    TestLibrary& library_ref = (library);                           \
-    library_ref.AddDependentLibrary(std::move(dep));                \
-    ASSERT_FALSE(library_ref.Compile());                            \
-    ASSERT_EQ(library_ref.errors().size(), 1u);                     \
-    EXPECT_ERR(library_ref.errors()[0], (error));                   \
-  }
-
 #define ASSERT_ERRORED_TWICE_DURING_COMPILE(library, err0, err1) \
   {                                                              \
     TestLibrary& library_ref = (library);                        \

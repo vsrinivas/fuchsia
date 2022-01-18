@@ -96,7 +96,7 @@ type ExampleUnion = union {
   ASSERT_TRUE(library.AddDependentLibrary(std::move(dependency)));
   ASSERT_COMPILED(library);
 
-  EXPECT_TRUE(library.library()->GetAttributes()->Get("on_library"));
+  EXPECT_TRUE(library.attributes()->Get("on_library"));
 
   auto example_bits = library.LookupBits("ExampleBits");
   ASSERT_NOT_NULL(example_bits);
@@ -206,7 +206,7 @@ service ExampleService {
 )FIDL");
   ASSERT_COMPILED(library);
 
-  EXPECT_TRUE(library.library()->GetAttributes()->Get("no_doc"));
+  EXPECT_TRUE(library.attributes()->Get("no_doc"));
 
   auto example_const = library.LookupConstant("EXAMPLE_CONSTANT");
   ASSERT_NOT_NULL(example_const);

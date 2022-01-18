@@ -1324,8 +1324,7 @@ bool CompileStep::ResolveHandleRightsConstant(Resource* resource, Constant* cons
   return true;
 }
 
-bool CompileStep::ResolveHandleSubtypeIdentifier(Resource* resource,
-                                                 const std::unique_ptr<Constant>& constant,
+bool CompileStep::ResolveHandleSubtypeIdentifier(Resource* resource, Constant* constant,
                                                  uint32_t* out_obj_type) {
   // We only support an extremely limited form of resource suitable for
   // handles here, where it must be:
@@ -1336,7 +1335,7 @@ bool CompileStep::ResolveHandleSubtypeIdentifier(Resource* resource,
   if (constant->kind != Constant::Kind::kIdentifier) {
     return false;
   }
-  auto identifier_constant = static_cast<IdentifierConstant*>(constant.get());
+  auto identifier_constant = static_cast<IdentifierConstant*>(constant);
   const Name& handle_subtype_identifier = identifier_constant->name;
 
   auto subtype_property = resource->LookupProperty("subtype");

@@ -37,7 +37,7 @@ bool VectorBaseType::ResolveSizeAndNullability(const LibraryMediator& lib,
   if (num_constraints == 1) {
     LibraryMediator::ResolvedConstraint resolved;
     if (!lib.ResolveConstraintAs(
-            constraints.items[0],
+            constraints.items[0].get(),
             {LibraryMediator::ConstraintKind::kSize, LibraryMediator::ConstraintKind::kNullability},
             nullptr /* resource_decl */, &resolved))
       return lib.Fail(ErrUnexpectedConstraint, constraints.items[0]->span, layout);
@@ -130,7 +130,7 @@ bool HandleType::ApplyConstraints(const flat::LibraryMediator& lib,
     // lone constraint can be either subtype or optional
     auto constraint_span = constraints.items[0]->span;
     LibraryMediator::ResolvedConstraint resolved;
-    if (!lib.ResolveConstraintAs(constraints.items[0],
+    if (!lib.ResolveConstraintAs(constraints.items[0].get(),
                                  {LibraryMediator::ConstraintKind::kHandleSubtype,
                                   LibraryMediator::ConstraintKind::kNullability},
                                  resource_decl, &resolved))
@@ -151,7 +151,7 @@ bool HandleType::ApplyConstraints(const flat::LibraryMediator& lib,
     // the first constraint must be subtype
     auto constraint_span = constraints.items[0]->span;
     uint32_t obj_type = 0;
-    if (!lib.ResolveAsHandleSubtype(resource_decl, constraints.items[0], &obj_type))
+    if (!lib.ResolveAsHandleSubtype(resource_decl, constraints.items[0].get(), &obj_type))
       return lib.Fail(ErrUnexpectedConstraint, constraint_span, layout);
     out_params->subtype_resolved = obj_type;
     out_params->subtype_raw = constraints.items[0].get();
@@ -159,7 +159,7 @@ bool HandleType::ApplyConstraints(const flat::LibraryMediator& lib,
     // the second constraint can either be rights or optional
     constraint_span = constraints.items[1]->span;
     LibraryMediator::ResolvedConstraint resolved;
-    if (!lib.ResolveConstraintAs(constraints.items[1],
+    if (!lib.ResolveConstraintAs(constraints.items[1].get(),
                                  {LibraryMediator::ConstraintKind::kHandleRights,
                                   LibraryMediator::ConstraintKind::kNullability},
                                  resource_decl, &resolved))
@@ -179,7 +179,7 @@ bool HandleType::ApplyConstraints(const flat::LibraryMediator& lib,
   } else if (num_constraints == 3) {
     // no degrees of freedom: must be subtype, followed by rights, then optional
     uint32_t obj_type = 0;
-    if (!lib.ResolveAsHandleSubtype(resource_decl, constraints.items[0], &obj_type))
+    if (!lib.ResolveAsHandleSubtype(resource_decl, constraints.items[0].get(), &obj_type))
       return lib.Fail(ErrUnexpectedConstraint, constraints.items[0]->span, layout);
     out_params->subtype_resolved = obj_type;
     out_params->subtype_raw = constraints.items[0].get();
@@ -243,7 +243,7 @@ bool TransportSideType::ApplyConstraints(const flat::LibraryMediator& lib,
     // could either be a protocol or optional
     auto constraint_span = constraints.items[0]->span;
     LibraryMediator::ResolvedConstraint resolved;
-    if (!lib.ResolveConstraintAs(constraints.items[0],
+    if (!lib.ResolveConstraintAs(constraints.items[0].get(),
                                  {LibraryMediator::ConstraintKind::kProtocol,
                                   LibraryMediator::ConstraintKind::kNullability},
                                  /* resource_decl */ nullptr, &resolved))

@@ -71,9 +71,7 @@ std::optional<Name> ConsumeStep::CompileCompoundIdentifier(
   }
 
   auto filename = compound_identifier->span().source_file().filename();
-  Library* dep_library = nullptr;
-  if (library_->dependencies_.Lookup(filename, library_name, Dependencies::LookupMode::kUse,
-                                     &dep_library)) {
+  if (auto dep_library = library_->dependencies_.LookupAndMarkUsed(filename, library_name)) {
     return Name::CreateSourced(dep_library, decl_name);
   }
 
@@ -89,11 +87,8 @@ std::optional<Name> ConsumeStep::CompileCompoundIdentifier(
   std::vector<std::string_view> member_library_name(library_name);
   member_library_name.pop_back();
 
-  Library* member_dep_library = nullptr;
-  if (library_->dependencies_.Lookup(filename, member_library_name, Dependencies::LookupMode::kUse,
-                                     &member_dep_library)) {
-    return Name::CreateSourced(member_dep_library, member_decl_name,
-                               std::string(member_name.data()));
+  if (auto dep_library = library_->dependencies_.LookupAndMarkUsed(filename, member_library_name)) {
+    return Name::CreateSourced(dep_library, member_decl_name, std::string(member_name.data()));
   }
 
   Fail(ErrUnknownDependentLibrary, components[0]->span(), library_name, member_library_name);
@@ -107,7 +102,7 @@ static void StoreDecl(Decl* decl_ptr, std::vector<std::unique_ptr<T>>* declarati
   declarations->push_back(std::move(t_decl));
 }
 
-bool ConsumeStep::RegisterDecl(std::unique_ptr<Decl> decl) {
+bool ConsumeStep::RegisterDecl(std::unique_ptr<Decl> decl, Decl** out_decl) {
   assert(decl);
 
   auto decl_ptr = decl.release();
@@ -208,6 +203,10 @@ bool ConsumeStep::RegisterDecl(std::unique_ptr<Decl> decl) {
     case Decl::Kind::kConst:
       break;
   }  // switch
+
+  if (out_decl) {
+    *out_decl = decl_ptr;
+  }
   return true;
 }
 
@@ -218,8 +217,7 @@ void ConsumeStep::ConsumeAttributeList(std::unique_ptr<raw::AttributeList> raw_a
   // But for library declarations we consume attributes from each file into
   // library->attributes. In this case it's only null for the first file.
   if (*out_attribute_list == nullptr) {
-    *out_attribute_list =
-        std::make_unique<AttributeList>(std::vector<std::unique_ptr<Attribute>>());
+    *out_attribute_list = std::make_unique<AttributeList>();
   }
   if (!raw_attribute_list) {
     return;
@@ -322,8 +320,8 @@ void ConsumeStep::ConsumeUsing(std::unique_ptr<raw::Using> using_directive) {
     library_name.push_back(component->span().data());
   }
 
-  Library* dep_library = nullptr;
-  if (!library_->all_libraries_->Lookup(library_name, &dep_library)) {
+  Library* dep_library = library_->all_libraries_->Lookup(library_name);
+  if (!dep_library) {
     Fail(ErrUnknownLibrary, using_directive->using_path->components[0]->span(), library_name);
     return;
   }
@@ -367,7 +365,8 @@ void ConsumeStep::ConsumeAliasDeclaration(
     return;
 
   RegisterDecl(std::make_unique<TypeAlias>(std::move(attributes), std::move(alias_name),
-                                           std::move(type_ctor_)));
+                                           std::move(type_ctor_)),
+               /*out_decl=*/nullptr);
 }
 
 void ConsumeStep::ConsumeConstDeclaration(
@@ -387,7 +386,8 @@ void ConsumeStep::ConsumeConstDeclaration(
     return;
 
   RegisterDecl(std::make_unique<Const>(std::move(attributes), std::move(name), std::move(type_ctor),
-                                       std::move(constant)));
+                                       std::move(constant)),
+               /*out_decl=*/nullptr);
 }
 
 // Create a type constructor pointing to an anonymous layout.
@@ -416,11 +416,10 @@ bool ConsumeStep::CreateMethodResult(const std::shared_ptr<NamingContext>& err_v
       std::make_unique<raw::Ordinal64>(sourceElement,
                                        1),  // success case explicitly has ordinal 1
       std::move(success_variant), success_variant_context->name(),
-      std::make_unique<AttributeList>(std::vector<std::unique_ptr<Attribute>>{})};
+      std::make_unique<AttributeList>()};
   Union::Member error_member{
       std::make_unique<raw::Ordinal64>(sourceElement, 2),  // error case explicitly has ordinal 2
-      std::move(error_type_ctor), err_variant_context->name(),
-      std::make_unique<AttributeList>(std::vector<std::unique_ptr<Attribute>>{})};
+      std::move(error_type_ctor), err_variant_context->name(), std::make_unique<AttributeList>()};
   std::vector<Union::Member> result_members;
   result_members.push_back(std::move(success_member));
   result_members.push_back(std::move(error_member));
@@ -435,24 +434,26 @@ bool ConsumeStep::CreateMethodResult(const std::shared_ptr<NamingContext>& err_v
       std::make_unique<AttributeList>(std::move(result_attributes)), std::move(result_name),
       std::move(result_members), types::Strictness::kStrict, std::nullopt /* resourceness */);
   auto result_decl = union_decl.get();
-  if (!RegisterDecl(std::move(union_decl)))
+  if (!RegisterDecl(std::move(union_decl),
+                    /*out_decl=*/nullptr))
     return false;
 
   // Make a new response struct for the method containing just the
   // result union.
   std::vector<Struct::Member> response_members;
-  response_members.push_back(
-      Struct::Member(IdentifierTypeForDecl(result_decl), result_context->name(), nullptr,
-                     std::make_unique<AttributeList>(std::vector<std::unique_ptr<Attribute>>{})));
+  response_members.push_back(Struct::Member(IdentifierTypeForDecl(result_decl),
+                                            result_context->name(), nullptr,
+                                            std::make_unique<AttributeList>()));
 
   const auto& response_context = result_context->parent();
   const Name response_name = Name::CreateAnonymous(library_, response_span, response_context);
   auto struct_decl = std::make_unique<Struct>(
-      /* attributes = */ std::make_unique<AttributeList>(std::vector<std::unique_ptr<Attribute>>{}),
-      response_name, std::move(response_members),
+      /* attributes = */ std::make_unique<AttributeList>(), response_name,
+      std::move(response_members),
       /* resourceness = */ std::nullopt, /* is_request_or_response = */ true);
   auto payload = IdentifierTypeForDecl(struct_decl.get());
-  if (!RegisterDecl(std::move(struct_decl)))
+  if (!RegisterDecl(std::move(struct_decl),
+                    /*out_decl=*/nullptr))
     return false;
 
   *out_payload = std::move(payload);
@@ -575,7 +576,8 @@ void ConsumeStep::ConsumeProtocolDeclaration(
   ConsumeAttributeList(std::move(protocol_declaration->attributes), &attributes);
 
   RegisterDecl(std::make_unique<Protocol>(std::move(attributes), std::move(protocol_name),
-                                          std::move(composed_protocols), std::move(methods)));
+                                          std::move(composed_protocols), std::move(methods)),
+               /*out_decl=*/nullptr);
 }
 
 bool ConsumeStep::ConsumeParameterList(SourceSpan method_name,
@@ -595,17 +597,22 @@ bool ConsumeStep::ConsumeParameterList(SourceSpan method_name,
     return true;
   }
 
+  SourceSpan raw_type_ctor_span = parameter_layout->type_ctor->span();
   std::unique_ptr<TypeConstructor> type_ctor;
+  Decl* inline_decl = nullptr;
   if (!ConsumeTypeConstructor(std::move(parameter_layout->type_ctor), context,
-                              /*raw_attribute_list=*/nullptr, is_request_or_response, &type_ctor))
+                              /*raw_attribute_list=*/nullptr, is_request_or_response, &type_ctor,
+                              &inline_decl))
     return false;
 
-  auto* decl = library_->LookupDeclByName(type_ctor->name);
-  assert(decl);
+  if (!inline_decl) {
+    // TODO(fxbug.dev/76349): Support named types here.
+    return Fail(ErrNamedParameterListTypesNotYetSupported, raw_type_ctor_span);
+  }
 
-  switch (decl->kind) {
+  switch (inline_decl->kind) {
     case Decl::Kind::kStruct: {
-      auto struct_decl = static_cast<Struct*>(decl);
+      auto struct_decl = static_cast<Struct*>(inline_decl);
       if (is_request_or_response && struct_decl->members.empty()) {
         return Fail(ErrEmptyPayloadStructs, method_name, method_name.data());
       }
@@ -613,11 +620,11 @@ bool ConsumeStep::ConsumeParameterList(SourceSpan method_name,
     }
     case Decl::Kind::kBits:
     case Decl::Kind::kEnum: {
-      return Fail(ErrInvalidParameterListType, method_name, decl);
+      return Fail(ErrInvalidParameterListType, method_name, inline_decl);
     }
     case Decl::Kind::kTable:
     case Decl::Kind::kUnion: {
-      return Fail(ErrNotYetSupportedParameterListType, method_name, decl);
+      return Fail(ErrNotYetSupportedParameterListType, method_name, inline_decl);
     }
     default: {
       assert(false && "unexpected decl kind");
@@ -657,7 +664,8 @@ void ConsumeStep::ConsumeResourceDeclaration(
   }
 
   RegisterDecl(std::make_unique<Resource>(std::move(attributes), std::move(name),
-                                          std::move(type_ctor), std::move(properties)));
+                                          std::move(type_ctor), std::move(properties)),
+               /*out_decl=*/nullptr);
 }
 
 void ConsumeStep::ConsumeServiceDeclaration(std::unique_ptr<raw::ServiceDeclaration> service_decl) {
@@ -679,7 +687,8 @@ void ConsumeStep::ConsumeServiceDeclaration(std::unique_ptr<raw::ServiceDeclarat
   ConsumeAttributeList(std::move(service_decl->attributes), &attributes);
 
   RegisterDecl(
-      std::make_unique<Service>(std::move(attributes), std::move(name), std::move(members)));
+      std::make_unique<Service>(std::move(attributes), std::move(name), std::move(members)),
+      /*out_decl=*/nullptr);
 }
 
 void ConsumeStep::MaybeOverrideName(AttributeList& attributes, NamingContext* context) {
@@ -707,7 +716,8 @@ void ConsumeStep::MaybeOverrideName(AttributeList& attributes, NamingContext* co
 template <typename T>
 bool ConsumeStep::ConsumeValueLayout(std::unique_ptr<raw::Layout> layout,
                                      const std::shared_ptr<NamingContext>& context,
-                                     std::unique_ptr<raw::AttributeList> raw_attribute_list) {
+                                     std::unique_ptr<raw::AttributeList> raw_attribute_list,
+                                     Decl** out_decl) {
   std::vector<typename T::Member> members;
   for (auto& mem : layout->members) {
     auto member = static_cast<raw::ValueLayoutMember*>(mem.get());
@@ -727,7 +737,7 @@ bool ConsumeStep::ConsumeValueLayout(std::unique_ptr<raw::Layout> layout,
   if (layout->subtype_ctor != nullptr) {
     if (!ConsumeTypeConstructor(std::move(layout->subtype_ctor), context,
                                 /*raw_attribute_list=*/nullptr, /*is_request_or_response=*/false,
-                                &subtype_ctor))
+                                &subtype_ctor, /*out_inline_decl=*/nullptr))
       return false;
   } else {
     subtype_ctor = TypeConstructor::CreateSizeType();
@@ -747,14 +757,16 @@ bool ConsumeStep::ConsumeValueLayout(std::unique_ptr<raw::Layout> layout,
   }
 
   RegisterDecl(std::make_unique<T>(std::move(attributes), context->ToName(library_, layout->span()),
-                                   std::move(subtype_ctor), std::move(members), strictness));
+                                   std::move(subtype_ctor), std::move(members), strictness),
+               out_decl);
   return true;
 }
 
 template <typename T>
 bool ConsumeStep::ConsumeOrdinaledLayout(std::unique_ptr<raw::Layout> layout,
                                          const std::shared_ptr<NamingContext>& context,
-                                         std::unique_ptr<raw::AttributeList> raw_attribute_list) {
+                                         std::unique_ptr<raw::AttributeList> raw_attribute_list,
+                                         Decl** out_decl) {
   std::vector<typename T::Member> members;
   for (auto& mem : layout->members) {
     auto member = static_cast<raw::OrdinaledLayoutMember*>(mem.get());
@@ -766,9 +778,10 @@ bool ConsumeStep::ConsumeOrdinaledLayout(std::unique_ptr<raw::Layout> layout,
     }
 
     std::unique_ptr<TypeConstructor> type_ctor;
-    if (!ConsumeTypeConstructor(
-            std::move(member->type_ctor), context->EnterMember(member->identifier->span()),
-            /*raw_attribute_list=*/nullptr, /*is_request_or_response=*/false, &type_ctor))
+    if (!ConsumeTypeConstructor(std::move(member->type_ctor),
+                                context->EnterMember(member->identifier->span()),
+                                /*raw_attribute_list=*/nullptr, /*is_request_or_response=*/false,
+                                &type_ctor, /*out_inline_decl=*/nullptr))
       return false;
 
     members.emplace_back(std::move(member->ordinal), std::move(type_ctor),
@@ -788,14 +801,15 @@ bool ConsumeStep::ConsumeOrdinaledLayout(std::unique_ptr<raw::Layout> layout,
     resourceness = layout->modifiers->maybe_resourceness.value_or(types::Resourceness::kValue);
 
   RegisterDecl(std::make_unique<T>(std::move(attributes), context->ToName(library_, layout->span()),
-                                   std::move(members), strictness, resourceness));
+                                   std::move(members), strictness, resourceness),
+               out_decl);
   return true;
 }
 
 bool ConsumeStep::ConsumeStructLayout(std::unique_ptr<raw::Layout> layout,
                                       const std::shared_ptr<NamingContext>& context,
                                       std::unique_ptr<raw::AttributeList> raw_attribute_list,
-                                      bool is_request_or_response) {
+                                      bool is_request_or_response, Decl** out_decl) {
   std::vector<Struct::Member> members;
   for (auto& mem : layout->members) {
     auto member = static_cast<raw::StructLayoutMember*>(mem.get());
@@ -804,9 +818,10 @@ bool ConsumeStep::ConsumeStructLayout(std::unique_ptr<raw::Layout> layout,
     ConsumeAttributeList(std::move(member->attributes), &attributes);
 
     std::unique_ptr<TypeConstructor> type_ctor;
-    if (!ConsumeTypeConstructor(
-            std::move(member->type_ctor), context->EnterMember(member->identifier->span()),
-            /*raw_attribute_list=*/nullptr, /*is_request_or_response=*/false, &type_ctor))
+    if (!ConsumeTypeConstructor(std::move(member->type_ctor),
+                                context->EnterMember(member->identifier->span()),
+                                /*raw_attribute_list=*/nullptr, /*is_request_or_response=*/false,
+                                &type_ctor, /*out_inline_decl=*/nullptr))
       return false;
 
     std::unique_ptr<Constant> default_value;
@@ -826,34 +841,37 @@ bool ConsumeStep::ConsumeStructLayout(std::unique_ptr<raw::Layout> layout,
   if (layout->modifiers != nullptr && layout->modifiers->maybe_resourceness != std::nullopt)
     resourceness = layout->modifiers->maybe_resourceness.value_or(types::Resourceness::kValue);
 
-  RegisterDecl(std::make_unique<Struct>(std::move(attributes),
-                                        context->ToName(library_, layout->span()),
-                                        std::move(members), resourceness, is_request_or_response));
+  RegisterDecl(
+      std::make_unique<Struct>(std::move(attributes), context->ToName(library_, layout->span()),
+                               std::move(members), resourceness, is_request_or_response),
+      out_decl);
   return true;
 }
 
 bool ConsumeStep::ConsumeLayout(std::unique_ptr<raw::Layout> layout,
                                 const std::shared_ptr<NamingContext>& context,
                                 std::unique_ptr<raw::AttributeList> raw_attribute_list,
-                                bool is_request_or_response) {
+                                bool is_request_or_response, Decl** out_decl) {
   switch (layout->kind) {
     case raw::Layout::Kind::kBits: {
-      return ConsumeValueLayout<Bits>(std::move(layout), context, std::move(raw_attribute_list));
+      return ConsumeValueLayout<Bits>(std::move(layout), context, std::move(raw_attribute_list),
+                                      out_decl);
     }
     case raw::Layout::Kind::kEnum: {
-      return ConsumeValueLayout<Enum>(std::move(layout), context, std::move(raw_attribute_list));
+      return ConsumeValueLayout<Enum>(std::move(layout), context, std::move(raw_attribute_list),
+                                      out_decl);
     }
     case raw::Layout::Kind::kStruct: {
       return ConsumeStructLayout(std::move(layout), context, std::move(raw_attribute_list),
-                                 is_request_or_response);
+                                 is_request_or_response, out_decl);
     }
     case raw::Layout::Kind::kTable: {
       return ConsumeOrdinaledLayout<Table>(std::move(layout), context,
-                                           std::move(raw_attribute_list));
+                                           std::move(raw_attribute_list), out_decl);
     }
     case raw::Layout::Kind::kUnion: {
       return ConsumeOrdinaledLayout<Union>(std::move(layout), context,
-                                           std::move(raw_attribute_list));
+                                           std::move(raw_attribute_list), out_decl);
     }
   }
   assert(false && "layouts must be of type bits, enum, struct, table, or union");
@@ -864,7 +882,8 @@ bool ConsumeStep::ConsumeTypeConstructor(std::unique_ptr<raw::TypeConstructor> r
                                          const std::shared_ptr<NamingContext>& context,
                                          std::unique_ptr<raw::AttributeList> raw_attribute_list,
                                          bool is_request_or_response,
-                                         std::unique_ptr<TypeConstructor>* out_type_ctor) {
+                                         std::unique_ptr<TypeConstructor>* out_type_ctor,
+                                         Decl** out_inline_decl) {
   std::vector<std::unique_ptr<LayoutParameter>> params;
   // Fallback to name span. See LayoutParameterList's comment on `span`.
   SourceSpan params_span = raw_type_ctor->layout_ref->span();
@@ -889,7 +908,7 @@ bool ConsumeStep::ConsumeTypeConstructor(std::unique_ptr<raw::TypeConstructor> r
           std::unique_ptr<TypeConstructor> type_ctor;
           if (!ConsumeTypeConstructor(std::move(type_param->type_ctor), context,
                                       /*raw_attribute_list=*/nullptr, is_request_or_response,
-                                      &type_ctor))
+                                      &type_ctor, /*out_inline_decl=*/nullptr))
             return false;
 
           std::unique_ptr<LayoutParameter> consumed =
@@ -931,7 +950,7 @@ bool ConsumeStep::ConsumeTypeConstructor(std::unique_ptr<raw::TypeConstructor> r
     if (inline_ref->attributes != nullptr)
       attributes = std::move(inline_ref->attributes);
     if (!ConsumeLayout(std::move(inline_ref->layout), context, std::move(attributes),
-                       is_request_or_response))
+                       is_request_or_response, out_inline_decl))
       return false;
 
     if (out_type_ctor)
@@ -940,13 +959,6 @@ bool ConsumeStep::ConsumeTypeConstructor(std::unique_ptr<raw::TypeConstructor> r
           std::make_unique<LayoutParameterList>(std::move(params), params_span),
           std::make_unique<TypeConstraints>(std::move(constraints), constraints_span));
     return true;
-  }
-
-  // TODO(fxbug.dev/76349): named parameter lists are not yet allowed, so we
-  //  need to ensure that is_request_or_response is false at this point.  Once
-  //  that feature is enabled, this check can be removed.
-  if (is_request_or_response) {
-    return Fail(ErrNamedParameterListTypesNotYetSupported, raw_type_ctor->span());
   }
 
   auto named_ref = static_cast<raw::NamedLayoutReference*>(raw_type_ctor->layout_ref.get());
@@ -966,7 +978,8 @@ bool ConsumeStep::ConsumeTypeConstructor(std::unique_ptr<raw::TypeConstructor> r
                                          const std::shared_ptr<NamingContext>& context,
                                          std::unique_ptr<TypeConstructor>* out_type) {
   return ConsumeTypeConstructor(std::move(raw_type_ctor), context, /*raw_attribute_list=*/nullptr,
-                                /*is_request_or_response=*/false, out_type);
+                                /*is_request_or_response=*/false, out_type,
+                                /*out_inline_decl=*/nullptr);
 }
 
 void ConsumeStep::ConsumeTypeDecl(std::unique_ptr<raw::TypeDecl> type_decl) {
@@ -982,7 +995,7 @@ void ConsumeStep::ConsumeTypeDecl(std::unique_ptr<raw::TypeDecl> type_decl) {
   ConsumeTypeConstructor(std::move(type_decl->type_ctor), NamingContext::Create(name),
                          std::move(type_decl->attributes),
                          /*is_request_or_response=*/false,
-                         /*out_type=*/nullptr);
+                         /*out_type=*/nullptr, /*out_inline_decl=*/nullptr);
 }
 
 }  // namespace fidl::flat

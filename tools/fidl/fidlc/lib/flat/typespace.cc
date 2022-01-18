@@ -70,7 +70,6 @@ const TypeTemplate* Typespace::LookupTemplate(const flat::Name& name) const {
   return nullptr;
 }
 
-using namespace diagnostics;
 bool TypeTemplate::HasGeneratedName() const { return name_.as_anonymous() != nullptr; }
 
 Typespace Typespace::RootTypes(Reporter* reporter) {

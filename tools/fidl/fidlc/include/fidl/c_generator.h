@@ -44,7 +44,7 @@ class CGenerator {
 
   struct Member {
     flat::Type::Kind kind;
-    flat::Decl::Kind decl_kind;
+    std::optional<flat::Decl::Kind> decl_kind;
     std::string type;
     std::string name;
     // Name of the element type for sequential collections.

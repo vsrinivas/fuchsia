@@ -465,18 +465,6 @@ type Foo = resource struct {
   ASSERT_COMPILED(library);
 }
 
-TEST(ProtocolTests, BadMethodNamedParameterList) {
-  TestLibrary library(R"FIDL(
-library example;
-
-type MyStruct = struct{};
-protocol MyProtocol {
-  MyMethod(S);
-};
-)FIDL");
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrNamedParameterListTypesNotYetSupported);
-}
-
 TEST(ProtocolTests, BadMethodEnumLayout) {
   TestLibrary library(R"FIDL(
 library example;
@@ -542,6 +530,48 @@ protocol MyProtocol {
 };
 )FIDL");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrEmptyPayloadStructs);
+}
+
+// TODO(fxbug.dev/76349): Support named types for requests.
+TEST(ProtocolTests, BadProtocolMethodNamedTypeRequest) {
+  TestLibrary library(R"FIDL(
+library example;
+
+type MyStruct = struct {};
+
+protocol MyProtocol {
+    MyMethod(MyStruct) -> ();
+};
+)FIDL");
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrNamedParameterListTypesNotYetSupported);
+}
+
+// TODO(fxbug.dev/76349): Support named types for requests.
+TEST(ProtocolTests, BadProtocolMethodNamedTypeResponse) {
+  TestLibrary library(R"FIDL(
+library example;
+
+type MyStruct = struct {};
+
+protocol MyProtocol {
+    MyMethod() -> (MyStruct);
+};
+)FIDL");
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrNamedParameterListTypesNotYetSupported);
+}
+
+// TODO(fxbug.dev/76349): Support named types for requests.
+TEST(ProtocolTests, BadProtocolMethodNamedTypeResultPayload) {
+  TestLibrary library(R"FIDL(
+library example;
+
+type MyStruct = struct {};
+
+protocol MyProtocol {
+    MyMethod() -> (MyStruct) error uint32;
+};
+)FIDL");
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrNamedParameterListTypesNotYetSupported);
 }
 
 }  // namespace

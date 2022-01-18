@@ -56,7 +56,7 @@ class CompileStep : public StepBase {
   // Resolve methods
   bool ResolveHandleRightsConstant(Resource* resource, Constant* constant,
                                    const HandleRights** out_rights);
-  bool ResolveHandleSubtypeIdentifier(Resource* resource, const std::unique_ptr<Constant>& constant,
+  bool ResolveHandleSubtypeIdentifier(Resource* resource, Constant* constant,
                                       uint32_t* out_obj_type);
   bool ResolveSizeBound(Constant* size_constant, const Size** out_size);
   bool ResolveOrOperatorConstant(Constant* constant, std::optional<const Type*> opt_type,

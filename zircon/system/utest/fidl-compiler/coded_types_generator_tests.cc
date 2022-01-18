@@ -181,10 +181,8 @@ type Value = resource struct {
 };
 )FIDL");
   ASSERT_COMPILED(library);
-  auto decl = library.library()->LookupDeclByName(fidl::flat::Name::CreateSourced(
-      library.library(), fidl::SourceSpan("Value", library.source_file())));
-  ASSERT_NOT_NULL(decl);
-  const fidl::flat::Struct* str = static_cast<fidl::flat::Struct*>(decl);
+  auto str = library.LookupStruct("Value");
+  ASSERT_NOT_NULL(str);
   auto elem_might_mutate = [&str](size_t index) {
     const fidl::flat::VectorType* vec =
         static_cast<const fidl::flat::VectorType*>(str->members.at(index).type_ctor->type);

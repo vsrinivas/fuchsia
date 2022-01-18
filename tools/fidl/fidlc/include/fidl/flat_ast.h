@@ -271,8 +271,6 @@ struct LayoutParameter {
   // details about the type constructor (e.g. during declaration sorting or
   // JSON generation).
 
-  // TODO(fxbug.dev/75805): The return types should be optional references
-
   // Returns the interpretation of this layout parameter as a type if possible
   // or nullptr otherwise. There are no guarantees that the returned type has
   // been compiled or will actually successfully compile.
@@ -514,14 +512,10 @@ struct Table;
 // See the comment on the StructMember class for why this is a top-level class.
 // TODO(fxbug.dev/37535): Move this to a nested class inside Table::Member.
 struct TableMemberUsed : public Object {
-  TableMemberUsed(std::unique_ptr<TypeConstructor> type_ctor, SourceSpan name,
-                  std::unique_ptr<Constant> maybe_default_value)
-      : type_ctor(std::move(type_ctor)),
-        name(std::move(name)),
-        maybe_default_value(std::move(maybe_default_value)) {}
+  TableMemberUsed(std::unique_ptr<TypeConstructor> type_ctor, SourceSpan name)
+      : type_ctor(std::move(type_ctor)), name(std::move(name)) {}
   std::unique_ptr<TypeConstructor> type_ctor;
   SourceSpan name;
-  std::unique_ptr<Constant> maybe_default_value;
 
   std::any AcceptAny(VisitorAny* visitor) const override;
 
@@ -534,16 +528,10 @@ struct TableMember : public Element, public Object {
   using Used = TableMemberUsed;
 
   TableMember(std::unique_ptr<raw::Ordinal64> ordinal, std::unique_ptr<TypeConstructor> type,
-              SourceSpan name, std::unique_ptr<Constant> maybe_default_value,
-              std::unique_ptr<AttributeList> attributes)
-      : Element(Element::Kind::kTableMember, std::move(attributes)),
-        ordinal(std::move(ordinal)),
-        maybe_used(std::make_unique<Used>(std::move(type), name, std::move(maybe_default_value))) {}
-  TableMember(std::unique_ptr<raw::Ordinal64> ordinal, std::unique_ptr<TypeConstructor> type,
               SourceSpan name, std::unique_ptr<AttributeList> attributes)
       : Element(Element::Kind::kTableMember, std::move(attributes)),
         ordinal(std::move(ordinal)),
-        maybe_used(std::make_unique<Used>(std::move(type), name, nullptr)) {}
+        maybe_used(std::make_unique<Used>(std::move(type), name)) {}
   TableMember(std::unique_ptr<raw::Ordinal64> ordinal, SourceSpan span,
               std::unique_ptr<AttributeList> attributes)
       : Element(Element::Kind::kTableMember, std::move(attributes)),
@@ -810,8 +798,7 @@ class LibraryMediator : private ReporterMixin {
   // Convenience method to iterate through the possible interpretations, returning the first one
   // that succeeds. This is valid because the interpretations are mutually exclusive, since a Name
   // can only ever refer to one kind of thing.
-  bool ResolveConstraintAs(const std::unique_ptr<Constant>& constraint,
-                           const std::vector<ConstraintKind>& interpretations,
+  bool ResolveConstraintAs(Constant* constraint, const std::vector<ConstraintKind>& interpretations,
                            Resource* resource_decl, ResolvedConstraint* out) const;
 
   // These methods forward their implementation to the library_. They are used
@@ -819,8 +806,7 @@ class LibraryMediator : private ReporterMixin {
   bool ResolveType(TypeConstructor* type) const;
   bool ResolveSizeBound(Constant* size_constant, const Size** out_size) const;
   bool ResolveAsOptional(Constant* constant) const;
-  bool ResolveAsHandleSubtype(Resource* resource, const std::unique_ptr<Constant>& constant,
-                              uint32_t* out_obj_type) const;
+  bool ResolveAsHandleSubtype(Resource* resource, Constant* constant, uint32_t* out_obj_type) const;
   bool ResolveAsHandleRights(Resource* resource, Constant* constant,
                              const HandleRights** out_rights) const;
   bool ResolveAsProtocol(const Constant* size_constant, const Protocol** out_decl) const;
@@ -840,6 +826,8 @@ class LibraryMediator : private ReporterMixin {
   CompileStep* compile_step_;
 };
 
+// This class is used to manage a library's set of direct dependencies, i.e.
+// those imported with "using" statements.
 class Dependencies {
  public:
   enum class RegisterResult {
@@ -857,20 +845,17 @@ class Dependencies {
   // Returns true if this dependency set contains a library with the given name and filename.
   bool Contains(std::string_view filename, const std::vector<std::string_view>& name);
 
-  enum class LookupMode {
-    kSilent,
-    kUse,
-  };
-
-  // Looks up a dependent library by |filename| and |name|, and optionally marks
-  // it as used or not.
-  bool Lookup(std::string_view filename, const std::vector<std::string_view>& name, LookupMode mode,
-              Library** out_library) const;
+  // Looks up a dependency by filename (within the importing library, since
+  // "using" statements are file-scoped) and name (of the imported library).
+  // Also marks the library as used. Returns null if no library is found.
+  Library* LookupAndMarkUsed(std::string_view filename,
+                             const std::vector<std::string_view>& name) const;
 
   // VerifyAllDependenciesWereUsed reports an error for each dependency imported
   // with `using` that was never used in the file.
   void VerifyAllDependenciesWereUsed(const Library& for_library, Reporter* reporter);
 
+  // Returns all the dependencies.
   const std::set<Library*>& dependencies() const { return dependencies_aggregate_; }
 
  private:
@@ -909,8 +894,8 @@ class Libraries {
   // Insert |library|.
   bool Insert(std::unique_ptr<Library> library);
 
-  // Lookup a library by its |library_name|.
-  bool Lookup(const std::vector<std::string_view>& library_name, Library** out_library) const;
+  // Lookup a library by its |library_name|, or returns null if none is found.
+  Library* Lookup(const std::vector<std::string_view>& library_name) const;
 
   // Registers a new attribute schema under the given name, and returns it.
   AttributeSchema& AddAttributeSchema(std::string name);
@@ -932,8 +917,7 @@ using MethodHasher = fit::function<raw::Ordinal64(
 
 struct LibraryComparator;
 
-class Library : private Element, private ReporterMixin {
-  friend class AttributeSchema;
+class Library : public Element, private ReporterMixin {
   friend class StepBase;
   friend class ConsumeStep;
   friend class SortStep;
@@ -942,6 +926,7 @@ class Library : private Element, private ReporterMixin {
   friend class VerifyAttributesStep;
   friend class VerifyInlineSizeStep;
   friend class VerifyDependenciesStep;
+  friend class LibraryMediator;
 
  public:
   Library(const Libraries* all_libraries, Reporter* reporter, Typespace* typespace,
@@ -953,12 +938,19 @@ class Library : private Element, private ReporterMixin {
         method_hasher_(std::move(method_hasher)),
         experimental_flags_(experimental_flags) {}
 
+  // Must be called once for each file in the library.
   bool ConsumeFile(std::unique_ptr<raw::File> file);
+  // Must be called once after all files are consumed.
   bool Compile();
-  std::set<const Library*, LibraryComparator> DirectDependencies() const;
 
   const std::vector<std::string_view>& name() const { return library_name_; }
-  const AttributeList* GetAttributes() const { return attributes.get(); }
+
+  // Returns this library's direct dependencies (from "using" statements).
+  const std::set<Library*>& dependencies() const;
+  // Like dependencies(), but also includes indirect dependencies that come from
+  // protocol composition, i.e. what would need to be imported if the composed
+  // methods were copied and pasted into the protocol.
+  std::set<const Library*, LibraryComparator> DirectAndComposedDependencies() const;
 
   // Returns nullptr when the |name| cannot be resolved to a
   // Name. Otherwise it returns the declaration.
@@ -968,10 +960,16 @@ class Library : private Element, private ReporterMixin {
   // Runs it on the library itself, on all Decls, and on all their members.
   void TraverseElements(const fit::function<void(Element*)>& fn);
 
-  const std::set<Library*>& dependencies() const;
+  // TODO(fxbug.dev/7920): Rationalize the use of names. Here, a simple name is
+  // one that is not scoped, it is just text. An anonymous name is one that
+  // is guaranteed to be unique within the library, and a derived name is one
+  // that is library scoped but derived from the concatenated components using
+  // underscores as delimiters.
+  SourceSpan GeneratedSimpleName(std::string_view name);
 
   std::vector<std::string_view> library_name_;
 
+  // TODO(fxbug.dev/91604): Make these private.
   std::vector<std::unique_ptr<Bits>> bits_declarations_;
   std::vector<std::unique_ptr<Const>> const_declarations_;
   std::vector<std::unique_ptr<Enum>> enum_declarations_;
@@ -988,13 +986,6 @@ class Library : private Element, private ReporterMixin {
   std::vector<const Decl*> declaration_order_;
 
  private:
-  // TODO(fxbug.dev/7920): Rationalize the use of names. Here, a simple name is
-  // one that is not scoped, it is just text. An anonymous name is one that
-  // is guaranteed to be unique within the library, and a derived name is one
-  // that is library scoped but derived from the concatenated components using
-  // underscores as delimiters.
-  SourceSpan GeneratedSimpleName(std::string_view name);
-
   Dependencies dependencies_;
   const Libraries* all_libraries_;
 
@@ -1006,9 +997,7 @@ class Library : private Element, private ReporterMixin {
   Typespace* typespace_;
   const MethodHasher method_hasher_;
   const ExperimentalFlags experimental_flags_;
-
   VirtualSourceFile generated_source_file_{"generated"};
-  friend class LibraryMediator;
 };
 
 struct LibraryComparator {

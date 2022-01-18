@@ -103,15 +103,6 @@ bool DeclAllowed(const flat::Decl* decl) {
   }
 }
 
-bool IdentifierAllowed(const flat::Library* library, const flat::Name& name) {
-  if (DeclAlwaysAllowed(name)) {
-    return true;
-  }
-  const flat::Decl* decl = library->LookupDeclByName(name);
-  assert(decl != nullptr);
-  return DeclAllowed(decl);
-}
-
 bool TypeAllowed(const flat::Library* library, const flat::Type* type) {
   assert(type != nullptr);
   // treat box types like we do nullable structs
@@ -119,7 +110,7 @@ bool TypeAllowed(const flat::Library* library, const flat::Type* type) {
     type = static_cast<const flat::BoxType*>(type)->boxed_type;
   if (type->kind == flat::Type::Kind::kIdentifier) {
     auto identifier_type = static_cast<const flat::IdentifierType*>(type);
-    if (!IdentifierAllowed(library, identifier_type->name)) {
+    if (!DeclAllowed(identifier_type->type_decl)) {
       return false;
     }
   }
@@ -178,11 +169,9 @@ CGenerator::Member EmptyStructMember() {
 // Can encode and decode functions be generated for these members?
 bool CanGenerateCodecFunctions(const std::vector<CGenerator::Member>& members) {
   for (const auto& m : members) {
-    switch (m.decl_kind) {
-      case flat::Decl::Kind::kUnion:
-        return false;
-      default:
-        break;
+    if (m.kind == flat::Type::Kind::kIdentifier &&
+        m.decl_kind.value() == flat::Decl::Kind::kUnion) {
+      return false;
     }
   }
   return true;
@@ -244,7 +233,7 @@ void EmitMethodInParamDecl(std::ostream* file, const CGenerator::Member& member)
       *file << member.type << " " << member.name;
       break;
     case flat::Type::Kind::kIdentifier:
-      switch (member.decl_kind) {
+      switch (member.decl_kind.value()) {
         case flat::Decl::Kind::kConst:
         case flat::Decl::Kind::kResource:
         case flat::Decl::Kind::kService:
@@ -303,7 +292,7 @@ void EmitMethodOutParamDecl(std::ostream* file, const CGenerator::Member& member
       *file << member.type << "* out_" << member.name;
       break;
     case flat::Type::Kind::kIdentifier:
-      switch (member.decl_kind) {
+      switch (member.decl_kind.value()) {
         case flat::Decl::Kind::kConst:
         case flat::Decl::Kind::kResource:
         case flat::Decl::Kind::kService:
@@ -390,11 +379,11 @@ bool IsStoredOutOfLine(const CGenerator::Member& member) {
   if (member.kind == flat::Type::Kind::kVector || member.kind == flat::Type::Kind::kString)
     return true;
   if (member.kind == flat::Type::Kind::kIdentifier) {
-    if (member.decl_kind == flat::Decl::Kind::kTable)
+    if (member.decl_kind.value() == flat::Decl::Kind::kTable)
       return true;
     if (member.nullability == types::Nullability::kNullable)
-      return member.decl_kind == flat::Decl::Kind::kStruct ||
-             member.decl_kind == flat::Decl::Kind::kUnion;
+      return member.decl_kind.value() == flat::Decl::Kind::kStruct ||
+             member.decl_kind.value() == flat::Decl::Kind::kUnion;
   }
   return false;
 }
@@ -522,7 +511,7 @@ void EmitLinearizeMessage(std::ostream* file, std::string_view receiver, std::st
         *file << kIndent << receiver << "->" << name << " = " << name << ";\n";
         break;
       case flat::Type::Kind::kIdentifier:
-        switch (member.decl_kind) {
+        switch (member.decl_kind.value()) {
           case flat::Decl::Kind::kConst:
           case flat::Decl::Kind::kResource:
           case flat::Decl::Kind::kService:
@@ -667,15 +656,6 @@ void EnumValue(const flat::Constant* constant, std::string* out_value) {
   *out_value = member_value.str();
 }
 
-flat::Decl::Kind GetDeclKind(const flat::Library* library, const flat::Type* type) {
-  if (type->kind != flat::Type::Kind::kIdentifier)
-    return flat::Decl::Kind::kConst;
-  auto identifier_type = static_cast<const flat::IdentifierType*>(type);
-  auto named_decl = library->LookupDeclByName(identifier_type->name);
-  assert(named_decl && "library must contain declaration");
-  return named_decl->kind;
-}
-
 void ArrayCountsAndElementTypeName(const flat::Library* library, const flat::Type* type,
                                    std::vector<uint32_t>* out_array_counts,
                                    std::string* out_element_type_name) {
@@ -683,7 +663,7 @@ void ArrayCountsAndElementTypeName(const flat::Library* library, const flat::Typ
   for (;;) {
     switch (type->kind) {
       default: {
-        *out_element_type_name = NameFlatCType(type, GetDeclKind(library, type));
+        *out_element_type_name = NameFlatCType(type);
         *out_array_counts = array_counts;
         return;
       }
@@ -705,8 +685,7 @@ CGenerator::Member CreateMember(const flat::Library* library, const T& decl,
   // treat box types like we do nullable structs
   if (type->kind == flat::Type::Kind::kBox)
     type = static_cast<const flat::BoxType*>(type)->boxed_type;
-  auto decl_kind = GetDeclKind(library, type);
-  auto type_name = NameFlatCType(type, decl_kind);
+  auto type_name = NameFlatCType(type);
   std::string element_type_name;
   std::vector<uint32_t> array_counts;
   types::Nullability nullability = types::Nullability::kNonnullable;
@@ -714,6 +693,7 @@ CGenerator::Member CreateMember(const flat::Library* library, const T& decl,
   if (out_allowed) {
     *out_allowed = true;
   }
+  std::optional<flat::Decl::Kind> decl_kind;
   switch (type->kind) {
     case flat::Type::Kind::kBox:
       assert(false && "no box types should appear at this point");
@@ -725,7 +705,7 @@ CGenerator::Member CreateMember(const flat::Library* library, const T& decl,
     case flat::Type::Kind::kVector: {
       auto vector_type = static_cast<const flat::VectorType*>(type);
       const auto element_type = vector_type->element_type;
-      element_type_name = NameFlatCType(element_type, GetDeclKind(library, element_type));
+      element_type_name = NameFlatCType(element_type);
       max_num_elements = vector_type->element_count->value;
       break;
     }
@@ -733,8 +713,9 @@ CGenerator::Member CreateMember(const flat::Library* library, const T& decl,
       auto identifier_type = static_cast<const flat::IdentifierType*>(type);
       nullability = identifier_type->nullability;
       if (out_allowed) {
-        *out_allowed = IdentifierAllowed(library, identifier_type->name);
+        *out_allowed = DeclAllowed(identifier_type->type_decl);
       }
+      decl_kind = identifier_type->type_decl->kind;
       break;
     }
     case flat::Type::Kind::kString: {
@@ -824,8 +805,7 @@ void CGenerator::GeneratePrologues() {
   // ordering prior to output.
   std::set<std::string> add_includes;
   for (const auto& dep_library : library_->dependencies()) {
-    if (dep_library == library_)
-      continue;
+    assert(dep_library != library_ && "dependencies should not include self");
     add_includes.insert(NameLibraryCHeader(dep_library->name()));
   }
   for (const auto& include : add_includes) {
@@ -1408,7 +1388,7 @@ void CGenerator::ProduceProtocolClientImplementation(const NamedProtocol& named_
             file_ << kIndent << "*out_" << name << " = _response->" << name << ";\n";
             break;
           case flat::Type::Kind::kIdentifier:
-            switch (member.decl_kind) {
+            switch (member.decl_kind.value()) {
               case flat::Decl::Kind::kConst:
               case flat::Decl::Kind::kResource:
               case flat::Decl::Kind::kService:
@@ -1545,7 +1525,7 @@ void CGenerator::ProduceProtocolServerImplementation(const NamedProtocol& named_
                 << ", request->" << member.name << ".size";
           break;
         case flat::Type::Kind::kIdentifier:
-          switch (member.decl_kind) {
+          switch (member.decl_kind.value()) {
             case flat::Decl::Kind::kConst:
             case flat::Decl::Kind::kResource:
             case flat::Decl::Kind::kService:

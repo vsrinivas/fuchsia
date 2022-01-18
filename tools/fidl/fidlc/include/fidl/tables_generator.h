@@ -50,8 +50,8 @@ class TablesGenerator {
   template <typename Collection>
   void GenerateArray(const Collection& collection);
 
-  void Generate(const coded::EnumType& struct_type);
-  void Generate(const coded::BitsType& struct_type);
+  void Generate(const coded::EnumType& enum_type);
+  void Generate(const coded::BitsType& bits_type);
   void Generate(const coded::StructType& struct_type);
   void Generate(const coded::TableType& table_type);
   void Generate(const coded::XUnionType& xunion_type);

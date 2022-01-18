@@ -192,11 +192,6 @@ bool SortStep::DeclDependencies(const Decl* decl,
         if (!member.maybe_used)
           continue;
         maybe_add_decl(member.maybe_used->type_ctor.get());
-        if (member.maybe_used->maybe_default_value) {
-          if (!AddConstantDependencies(member.maybe_used->maybe_default_value.get(), &edges)) {
-            return false;
-          }
-        }
       }
       break;
     }

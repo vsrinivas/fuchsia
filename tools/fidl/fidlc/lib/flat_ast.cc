@@ -503,15 +503,9 @@ bool Libraries::Insert(std::unique_ptr<Library> library) {
   return iter.second;
 }
 
-bool Libraries::Lookup(const std::vector<std::string_view>& library_name,
-                       Library** out_library) const {
+Library* Libraries::Lookup(const std::vector<std::string_view>& library_name) const {
   auto iter = all_libraries_.find(library_name);
-  if (iter == all_libraries_.end()) {
-    return false;
-  }
-
-  *out_library = iter->second.get();
-  return true;
+  return iter == all_libraries_.end() ? nullptr : iter->second.get();
 }
 
 AttributeSchema& Libraries::AddAttributeSchema(std::string name) {
@@ -614,24 +608,21 @@ bool Dependencies::Contains(std::string_view filename, const std::vector<std::st
   return per_file.refs.find(name) != per_file.refs.end();
 }
 
-bool Dependencies::Lookup(std::string_view filename, const std::vector<std::string_view>& name,
-                          Dependencies::LookupMode mode, Library** out_library) const {
+Library* Dependencies::LookupAndMarkUsed(std::string_view filename,
+                                         const std::vector<std::string_view>& name) const {
   auto iter1 = by_filename_.find(filename);
   if (iter1 == by_filename_.end()) {
-    return false;
+    return nullptr;
   }
 
   auto iter2 = iter1->second->refs.find(name);
   if (iter2 == iter1->second->refs.end()) {
-    return false;
+    return nullptr;
   }
 
   auto ref = iter2->second;
-  if (mode == Dependencies::LookupMode::kUse) {
-    ref->used = true;
-  }
-  *out_library = ref->library;
-  return true;
+  ref->used = true;
+  return ref->library;
 }
 
 void Dependencies::VerifyAllDependenciesWereUsed(const Library& for_library, Reporter* reporter) {
@@ -695,7 +686,7 @@ bool HasSimpleLayout(const Decl* decl) {
 
 const std::set<Library*>& Library::dependencies() const { return dependencies_.dependencies(); }
 
-std::set<const Library*, LibraryComparator> Library::DirectDependencies() const {
+std::set<const Library*, LibraryComparator> Library::DirectAndComposedDependencies() const {
   std::set<const Library*, LibraryComparator> direct_dependencies;
   auto add_constant_deps = [&](const Constant* constant) {
     if (constant->kind != Constant::Kind::kIdentifier)
@@ -878,7 +869,7 @@ bool LibraryMediator::ResolveParamAsSize(const flat::TypeTemplate* layout,
   return true;
 }
 
-bool LibraryMediator::ResolveConstraintAs(const std::unique_ptr<Constant>& constraint,
+bool LibraryMediator::ResolveConstraintAs(Constant* constraint,
                                           const std::vector<ConstraintKind>& interpretations,
                                           Resource* resource, ResolvedConstraint* out) const {
   for (const auto& constraint_kind : interpretations) {
@@ -894,22 +885,22 @@ bool LibraryMediator::ResolveConstraintAs(const std::unique_ptr<Constant>& const
       case ConstraintKind::kHandleRights: {
         assert(resource &&
                "Compiler bug: must pass resource if trying to resolve to handle rights");
-        if (ResolveAsHandleRights(resource, constraint.get(), &(out->value.handle_rights)))
+        if (ResolveAsHandleRights(resource, constraint, &(out->value.handle_rights)))
           return true;
         break;
       }
       case ConstraintKind::kSize: {
-        if (ResolveSizeBound(constraint.get(), &(out->value.size)))
+        if (ResolveSizeBound(constraint, &(out->value.size)))
           return true;
         break;
       }
       case ConstraintKind::kNullability: {
-        if (ResolveAsOptional(constraint.get()))
+        if (ResolveAsOptional(constraint))
           return true;
         break;
       }
       case ConstraintKind::kProtocol: {
-        if (ResolveAsProtocol(constraint.get(), &(out->value.protocol_decl)))
+        if (ResolveAsProtocol(constraint, &(out->value.protocol_decl)))
           return true;
         break;
       }
@@ -931,8 +922,7 @@ bool LibraryMediator::ResolveAsOptional(Constant* constant) const {
   return compile_step_->ResolveAsOptional(constant);
 }
 
-bool LibraryMediator::ResolveAsHandleSubtype(Resource* resource,
-                                             const std::unique_ptr<Constant>& constant,
+bool LibraryMediator::ResolveAsHandleSubtype(Resource* resource, Constant* constant,
                                              uint32_t* out_obj_type) const {
   return compile_step_->ResolveHandleSubtypeIdentifier(resource, constant, out_obj_type);
 }

@@ -183,8 +183,6 @@ class TestLibrary final {
     return out.str();
   }
 
-  fidl::Reporter* Reporter() { return reporter_; }
-
   const fidl::flat::Bits* LookupBits(std::string_view name) {
     for (const auto& bits_decl : library_->bits_declarations_) {
       if (bits_decl->GetName() == name) {
@@ -278,6 +276,8 @@ class TestLibrary final {
   void set_warnings_as_errors(bool value) { reporter_->set_warnings_as_errors(value); }
 
   fidl::flat::Library* library() const { return library_.get(); }
+  fidl::Reporter* reporter() { return reporter_; }
+  const fidl::flat::AttributeList* attributes() { return library_->attributes.get(); }
 
   const fidl::SourceFile& source_file() const {
     assert(all_sources_.size() == 1 && "convenience method only possible with single source");

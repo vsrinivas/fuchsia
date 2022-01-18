@@ -56,6 +56,8 @@ class TypeTemplate : protected ReporterMixin {
 // shared amongst all uses of said type. For instance, while the text
 // `vector<uint8>:7` may appear multiple times in source, these all indicate
 // the same type.
+//
+// TODO(fxbug.dev/76219): Implement canonicalization.
 class Typespace : private ReporterMixin {
  public:
   explicit Typespace(Reporter* reporter) : ReporterMixin(reporter) {}

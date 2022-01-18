@@ -984,13 +984,13 @@ std::ostringstream JSONGenerator::Produce() {
 
     GenerateObjectMember("name", LibraryName(library_, "."));
 
-    if (auto attributes = library_->GetAttributes(); !attributes->Empty()) {
-      GenerateObjectMember("maybe_attributes", *attributes);
+    if (!library_->attributes->Empty()) {
+      GenerateObjectMember("maybe_attributes", library_->attributes);
     }
 
     GenerateObjectPunctuation(Position::kSubsequent);
     EmitObjectKey("library_dependencies");
-    GenerateArray(library_->DirectDependencies());
+    GenerateArray(library_->DirectAndComposedDependencies());
 
     GenerateObjectMember("bits_declarations", library_->bits_declarations_);
     GenerateObjectMember("const_declarations", library_->const_declarations_);
