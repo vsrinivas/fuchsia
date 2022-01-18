@@ -115,7 +115,7 @@ TEST(OpenclLoader, Features) {
   EXPECT_EQ(kExpectedFeatures, features);
 }
 
-TEST(VulkanLoader, ManifestFs) {
+TEST(OpenclLoader, ManifestFs) {
   fuchsia::opencl::loader::LoaderSyncPtr loader;
   EXPECT_EQ(ZX_OK, fdio_service_connect("/svc/fuchsia.opencl.loader.Loader",
                                         loader.NewRequest().TakeChannel().release()));
