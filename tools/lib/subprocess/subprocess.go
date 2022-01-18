@@ -9,7 +9,6 @@ import (
 	"io"
 	"os"
 	"os/exec"
-	"sync"
 	"syscall"
 	"time"
 
@@ -68,76 +67,67 @@ func (r *Runner) RunWithStdin(ctx context.Context, command []string, stdout io.W
 		logger.Debugf(ctx, "environment of subprocess: %v", cmd.Env)
 	}
 
-	// Spin off handler to exit subprocesses cleanly via SIGTERM.
-	processDone := make(chan struct{})
-	processMu := &sync.Mutex{}
-	go handleSubprocessCleanup(ctx, cmd, processMu, processDone, pgidSet)
-
 	// Ensure that the context still exists before running the subprocess.
 	if ctx.Err() != nil {
 		logger.Debugf(ctx, "context exited before starting subprocess")
 		return ctx.Err()
 	}
 
-	// We need to make this a critical section because running Start changes
-	// cmd.Process, which we attempt to access in the goroutine above. Not locking
-	// causes a data race.
 	logger.Debugf(ctx, "starting: %v", cmd.Args)
-	processMu.Lock()
-	err := cmd.Start()
-	processMu.Unlock()
-	if err != nil {
-		close(processDone)
+	if err := cmd.Start(); err != nil {
 		return err
 	}
-	// Since we wait for the command to complete even if we send a SIGTERM when the
-	// context is canceled, it is up to the underlying command to exit with the
-	// proper exit code after handling a SIGTERM.
-	err = cmd.Wait()
-	close(processDone)
-	return err
-}
 
-func handleSubprocessCleanup(ctx context.Context, cmd *exec.Cmd, processMu *sync.Mutex, processDone chan struct{}, pgidSet bool) {
+	errs := make(chan error)
+
+	go func() {
+		errs <- cmd.Wait()
+	}()
+
 	select {
-	case <-processDone:
+	case err := <-errs:
 		// Process is done so no need to worry about cleanup. Just exit.
+		return err
 	case <-ctx.Done():
-		// We need to check if the process is nil because it won't exist if
-		// it has been SIGKILL'd already by a parent process or if the context
-		// was canceled before the process was started.
-		processMu.Lock()
-		defer processMu.Unlock()
-		if cmd.Process == nil {
-			return
-		}
 		if err := cmd.Process.Signal(syscall.SIGTERM); err != nil {
-			logger.Debugf(ctx, "exited cmd %v with error %s", cmd.Args, err)
+			logger.Debugf(ctx, "exited cmd %v with error: %s", cmd.Args, err)
 		}
 
-		// Wait for the subprocess to exit on its own within the cleanupGracePeriod.
+		// Wait up to `cleanupGracePeriod` for the subprocess to exit on its
+		// own. If it takes too long we'll SIGKILL it.
 		select {
-		case <-processDone:
-			// If the pgid is not set, no need to send an extra SIGKILL to the
-			// process group because it won't work anyway.
-			if !pgidSet {
-				return
+		case <-errs:
+			// The command has completed but it may still have child processes
+			// running that we would like to clean up if possible. Sending a
+			// SIGKILL to clean up the entire process group will only work if
+			// the pgid is set.
+			if pgidSet {
+				killProcess(ctx, cmd, pgidSet)
 			}
 		case <-clock.After(ctx, cleanupGracePeriod):
+			killProcess(ctx, cmd, pgidSet)
+			// Wait for the subprocess to complete after killing it.
+			<-errs
 		}
-		// Send a SIGKILL to force any remaining processes in the group to exit
-		// in the case that the subprocess completed without terminating its
-		// child processes or if the subprocess failed to complete within the
-		// cleanupGracePeriod.
-		logger.Debugf(ctx, "killing process %d", cmd.Process.Pid)
-		pgid := cmd.Process.Pid
-		if pgidSet {
-			// Negating the process ID means interpret it as a process group ID, so
-			// we kill the subprocess and all of its children.
-			pgid = -pgid
-		}
-		if err := syscall.Kill(pgid, syscall.SIGKILL); err != nil {
-			logger.Debugf(ctx, "killed cmd %v with error %s", cmd.Args, err)
-		}
+		// Return the context error instead of the error returned by cmd.Wait()
+		// to indicate to the caller that the command failed as a result of a
+		// context cancellation; in this case the error returned by cmd.Wait()
+		// will generally be more confusing than meaningful.
+		return ctx.Err()
+	}
+}
+
+// killProcess makes a best-effort attempt at killing the subprocess specified
+// by `cmd`, along with all of its child processes if `pgidSet` is true.
+func killProcess(ctx context.Context, cmd *exec.Cmd, pgidSet bool) {
+	logger.Debugf(ctx, "killing process %d", cmd.Process.Pid)
+	pgid := cmd.Process.Pid
+	if pgidSet {
+		// Negating the process ID means interpret it as a process group ID, so
+		// we kill the subprocess and all of its children.
+		pgid = -pgid
+	}
+	if err := syscall.Kill(pgid, syscall.SIGKILL); err != nil {
+		logger.Debugf(ctx, "killed cmd %v with error: %s", cmd.Args, err)
 	}
 }

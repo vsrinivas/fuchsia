@@ -115,9 +115,8 @@ func TestRun(t *testing.T) {
 			if err := r.Run(ctx, command, stdout, stdout); err == nil {
 				t.Errorf("Expected script to terminate early but it completed successfully")
 			} else {
-				var exitError *exec.ExitError
-				if !errors.As(err, &exitError) {
-					t.Errorf("Expected Run() to return exec.ExitError but got: %s", err)
+				if !errors.Is(err, context.Canceled) {
+					t.Errorf("Expected Run() to return context.Canceled but got: %s", err)
 				}
 			}
 		})
@@ -181,9 +180,8 @@ func TestRun(t *testing.T) {
 			if err := r.RunWithStdin(ctx, command, stdout, stdout, nil); err == nil {
 				t.Errorf("Expected script to terminate early but it completed successfully")
 			} else {
-				var exitError *exec.ExitError
-				if !errors.As(err, &exitError) {
-					t.Errorf("Expected Run() to return exec.ExitError but got: %s", err)
+				if !errors.Is(err, context.Canceled) {
+					t.Errorf("Expected Run() to return context.Canceled but got: %s", err)
 				}
 			}
 		})
