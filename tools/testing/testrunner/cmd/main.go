@@ -672,9 +672,6 @@ func runTestOnce(
 		logger.Errorf(ctx, "Test %s failed: %s", test.Name, result.FailReason)
 	case runtests.TestAborted:
 		logger.Errorf(ctx, "Test %s timed out after %s", test.Name, timeout)
-		// TODO(fxbug.dev/49266): Remove once downstream consumers can handle different
-		// result statuses.
-		result.Result = runtests.TestFailure
 	}
 
 	endTime := clock.Now(ctx)

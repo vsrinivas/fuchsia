@@ -221,6 +221,10 @@ func failedTest(name string, runIndex int, duration time.Duration) runtests.Test
 	return testDetails(name, runIndex, duration, runtests.TestFailure)
 }
 
+func timedOutTest(name string, runIndex int, duration time.Duration) runtests.TestDetails {
+	return testDetails(name, runIndex, duration, runtests.TestAborted)
+}
+
 func TestRunAndOutputTests(t *testing.T) {
 	defaultDuration := time.Second
 	perTestTimeout := 3 * time.Minute
@@ -304,7 +308,7 @@ func TestRunAndOutputTests(t *testing.T) {
 				"foo/0": {duration: tooLong},
 			},
 			expectedResults: []runtests.TestDetails{
-				failedTest("foo", 0, tooLong),
+				timedOutTest("foo", 0, tooLong),
 			},
 		},
 		{
@@ -424,7 +428,7 @@ func TestRunAndOutputTests(t *testing.T) {
 			expectedResults: []runtests.TestDetails{
 				failedTest("foo", 0, defaultDuration),
 				failedTest("foo", 1, defaultDuration),
-				failedTest("foo", 2, tooLong),
+				timedOutTest("foo", 2, tooLong),
 				failedTest("foo", 3, defaultDuration),
 				failedTest("foo", 4, defaultDuration),
 			},
@@ -535,7 +539,7 @@ func TestRunAndOutputTests(t *testing.T) {
 				"foo/0": {duration: tooLong},
 			},
 			expectedResults: []runtests.TestDetails{
-				failedTest("foo", 0, tooLong),
+				timedOutTest("foo", 0, tooLong),
 				succeededTest("bar", 0, defaultDuration),
 				succeededTest("foo", 1, defaultDuration),
 			},
@@ -627,7 +631,7 @@ func TestRunAndOutputTests(t *testing.T) {
 				"foo/0": {hang: true, duration: tooLong},
 			},
 			expectedResults: []runtests.TestDetails{
-				failedTest("foo", 0, tooLong),
+				timedOutTest("foo", 0, tooLong),
 				succeededTest("bar", 0, defaultDuration),
 				succeededTest("foo", 1, defaultDuration),
 			},
@@ -683,7 +687,7 @@ func TestRunAndOutputTests(t *testing.T) {
 			expectedResults: []runtests.TestDetails{
 				failedTest("foo", 0, defaultDuration),
 				succeededTest("bar", 0, defaultDuration),
-				failedTest("foo", 1, tooLong),
+				timedOutTest("foo", 1, tooLong),
 				succeededTest("foo", 2, defaultDuration),
 			},
 			expectedOutputs: map[string]string{
