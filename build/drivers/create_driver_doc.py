@@ -31,7 +31,8 @@ def main():
         'families': [],
         'models': [],
         'areas': [],
-        'path': args.driver_path
+        'path': args.driver_path,
+        'supported_system_configurations': []
     }
     if (args.doc_input):
         with open(args.doc_input) as doc_input_file:
@@ -49,6 +50,9 @@ def main():
             documentation['manufacturer'] = doc_contents['manufacturer']
             documentation['families'] = doc_contents['families']
             documentation['models'] = doc_contents['models']
+            if 'supported_system_configurations' in doc_contents.keys():
+                documentation['supported_system_configurations'] = doc_contents[
+                    'supported_system_configurations']
             if len(doc_contents['areas']) < 1:
                 raise Exception(
                     "Driver info file: {}, must include at least one item in \"areas\""
