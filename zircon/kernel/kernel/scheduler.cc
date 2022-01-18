@@ -28,7 +28,6 @@
 #include <kernel/mp.h>
 #include <kernel/percpu.h>
 #include <kernel/scheduler.h>
-#include <kernel/scheduler_internal.h>
 #include <kernel/scheduler_state.h>
 #include <kernel/thread.h>
 #include <kernel/thread_lock.h>
@@ -337,8 +336,8 @@ size_t Scheduler::GetRunnableTasks() const {
 // tree along a perfect partition of minimum finish times with eligible start
 // times.
 //
-// See kernel/scheduler_internal.h for an explanation of how the augmented
-// invariant is maintained.
+// See fbl/wavl_tree_best_node_observer.h for an explanation of how the
+// augmented invariant is maintained.
 Thread* Scheduler::FindEarliestEligibleThread(RunQueue* run_queue, SchedTime eligible_time) {
   return FindEarliestEligibleThread(run_queue, eligible_time, [](const auto iter) { return true; });
 }

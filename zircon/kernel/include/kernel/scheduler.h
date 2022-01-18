@@ -17,6 +17,7 @@
 #include <fbl/function.h>
 #include <fbl/intrusive_pointer_traits.h>
 #include <fbl/intrusive_wavl_tree.h>
+#include <fbl/wavl_tree_best_node_observer.h>
 #include <ffl/fixed.h>
 #include <kernel/scheduler_state.h>
 #include <kernel/thread.h>
@@ -396,31 +397,23 @@ class Scheduler {
 
   // Observer that maintains the subtree invariant min_finish_time as nodes are
   // added to and removed from the run queue.
-  struct SubtreeMinObserver {
-    template <typename Iter>
-    static void RecordInsert(Iter node);
-    template <typename Iter>
-    static void RecordInsertCollision(Thread* node, Iter collision);
-    template <typename Iter>
-    static void RecordInsertReplace(Iter node, Thread* replacement);
-    template <typename Iter>
-    static void RecordInsertTraverse(Thread* node, Iter ancestor);
-    template <typename Iter>
-    static void RecordRotation(Iter pivot, Iter lr_child, Iter rl_child, Iter parent, Iter sibling);
-    template <typename Iter>
-    static void RecordErase(Thread* node, Iter invalidated);
-
-    static void RecordInsertPromote() {}
-    static void RecordInsertRotation() {}
-    static void RecordInsertDoubleRotation() {}
-    static void RecordEraseDemote() {}
-    static void RecordEraseRotation() {}
-    static void RecordEraseDoubleRotation() {}
+  struct SubtreeMinTraits {
+    static SchedTime GetValue(const Thread& node) { return node.scheduler_state().finish_time_; }
+    static SchedTime GetSubtreeBest(const Thread& node) {
+      return node.scheduler_state().min_finish_time_;
+    }
+    static bool Compare(SchedTime a, SchedTime b) { return a < b; }
+    static void AssignBest(Thread& node, SchedTime val) {
+      node.scheduler_state().min_finish_time_ = val;
+    }
+    static void ResetBest(Thread& target) {}
   };
 
+  using SubtreeMinObserver = fbl::WAVLTreeBestNodeObserver<SubtreeMinTraits>;
+
   // Alias of the WAVLTree type for the run queue.
-  using RunQueue = fbl::WAVLTree<SchedTime, Thread*, TaskTraits, fbl::DefaultObjectTag, TaskTraits,
-                                 SubtreeMinObserver>;
+  using RunQueue = fbl::WAVLTree<TaskTraits::KeyType, Thread*, TaskTraits, fbl::DefaultObjectTag,
+                                 TaskTraits, SubtreeMinObserver>;
 
   // Finds the next eligible thread in the given run queue.
   static Thread* FindEarliestEligibleThread(RunQueue* run_queue, SchedTime eligible_time)
