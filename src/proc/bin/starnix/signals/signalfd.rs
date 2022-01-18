@@ -38,7 +38,7 @@ impl FileOps for SignalFd {
                 .write()
                 .take_next_allowed_by_mask(!self.mask)
                 .ok_or(errno!(EAGAIN))?;
-            let siginfo = signalfd_siginfo {
+            let mut siginfo = signalfd_siginfo {
                 ssi_signo: signal.signal.number(),
                 ssi_errno: signal.errno,
                 ssi_code: signal.code,
@@ -48,6 +48,11 @@ impl FileOps for SignalFd {
             // fields into the signalfd_siginfo.
             match signal.detail {
                 SignalDetail::None => {}
+                SignalDetail::SigChld { pid, uid, status } => {
+                    siginfo.ssi_pid = pid as u32;
+                    siginfo.ssi_uid = uid;
+                    siginfo.ssi_status = status;
+                }
             }
             buf.extend_from_slice(siginfo.as_bytes());
         }

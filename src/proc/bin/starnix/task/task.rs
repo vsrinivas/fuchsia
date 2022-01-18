@@ -126,9 +126,26 @@ pub struct Task {
 #[derive(Clone, Debug, PartialEq)]
 pub struct ZombieTask {
     pub id: pid_t,
+    pub uid: uid_t,
     pub parent: pid_t,
-    pub exit_code: Option<i32>,
+    pub exit_code: i32,
     // TODO: Do we need exit_signal?
+}
+
+impl ZombieTask {
+    /// Converts the given exit code to a status code suitable for returning from wait syscalls.
+    pub fn wait_status(&self) -> i32 {
+        let exit_code = self.exit_code;
+        (exit_code & 0xff) << 8
+    }
+
+    pub fn as_signal_info(&self) -> SignalInfo {
+        SignalInfo::new(
+            SIGCHLD,
+            CLD_EXITED,
+            SignalDetail::SigChld { pid: self.id, uid: self.uid, status: self.wait_status() },
+        )
+    }
 }
 
 /// A selector that can match a task. Works as a representation of the pid argument to syscalls
@@ -478,7 +495,17 @@ impl Task {
     }
 
     pub fn as_zombie(&self) -> ZombieTask {
-        ZombieTask { id: self.id, parent: self.parent, exit_code: *self.exit_code.lock() }
+        ZombieTask {
+            id: self.id,
+            uid: self.creds.read().uid,
+            parent: self.parent,
+            exit_code: self
+                .exit_code
+                .lock()
+                .expect("a process should not be exiting without an exit code"),
+            // TODO(tbodt): This expect condition can currently trip if the process crashes.
+            // There needs to be an exit code of some kind in this case too.
+        }
     }
 
     /// Removes and returns any zombie task with the specified `pid`, if such a zombie exists.

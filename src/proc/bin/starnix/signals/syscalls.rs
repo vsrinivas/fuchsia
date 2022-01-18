@@ -360,17 +360,11 @@ fn wait_on_pid(
     }
 }
 
-/// Converts the given exit code to a status code suitable for returning from wait syscalls.
-fn exit_code_to_status(exit_code: Option<i32>) -> i32 {
-    let exit_code = exit_code.expect("a process should not be exiting without an exit code");
-    (exit_code & 0xff) << 8
-}
-
 pub fn sys_waitid(
     current_task: &CurrentTask,
     id_type: u32,
     id: i32,
-    user_info: UserRef<siginfo_t>,
+    user_info: UserAddress,
     options: u32,
 ) -> Result<SyscallResult, Errno> {
     // waitid requires at least one of these options.
@@ -397,13 +391,8 @@ pub fn sys_waitid(
     // wait_on_pid returns None if the task was not waited on. In that case, we don't write out a
     // siginfo. This seems weird but is the correct behavior according to the waitid(2) man page.
     if let Some(zombie_task) = wait_on_pid(current_task, task_selector, options)? {
-        let status = exit_code_to_status(zombie_task.exit_code);
-
-        let mut siginfo = siginfo_t::default();
-        siginfo.si_signo = uapi::SIGCHLD as i32;
-        siginfo.si_code = CLD_EXITED as i32;
-        siginfo.si_status = status;
-        current_task.mm.write_object(user_info, &siginfo)?;
+        let siginfo = zombie_task.as_signal_info();
+        current_task.mm.write_memory(user_info, &siginfo.as_siginfo_bytes())?;
     }
 
     Ok(SUCCESS)
@@ -426,7 +415,7 @@ pub fn sys_wait4(
     };
 
     if let Some(zombie_task) = wait_on_pid(current_task, selector, options)? {
-        let status = exit_code_to_status(zombie_task.exit_code);
+        let status = zombie_task.wait_status();
 
         if !user_rusage.is_null() {
             let usage = rusage::default();
@@ -1026,10 +1015,9 @@ mod tests {
     async fn test_waitid_options() {
         let (_kernel, current_task) = create_kernel_and_task();
         let id = 1;
-        assert_eq!(sys_waitid(&current_task, P_PID, id, UserRef::default(), 0), Err(EINVAL));
-        assert_eq!(sys_waitid(&current_task, P_PID, id, UserRef::default(), WSTOPPED), Err(EINVAL));
+        assert_eq!(sys_waitid(&current_task, P_PID, id, UserAddress::default(), 0), Err(EINVAL));
         assert_eq!(
-            sys_waitid(&current_task, P_PID, id, UserRef::default(), WEXITED | WSTOPPED),
+            sys_waitid(&current_task, P_PID, id, UserAddress::default(), WEXITED | WSTOPPED),
             Err(EINVAL)
         );
     }
@@ -1052,7 +1040,7 @@ mod tests {
         assert!(
             sys_kill(&current_task, current_task.get_pid(), UncheckedSignal::from(SIGCHLD)).is_ok()
         );
-        let zombie = ZombieTask { id: 0, parent: 3, exit_code: Some(1) };
+        let zombie = ZombieTask { id: 0, uid: 0, parent: 3, exit_code: 1 };
         current_task.zombie_children.lock().push(zombie.clone());
         assert_eq!(wait_on_pid(&current_task, TaskSelector::Any, 0), Ok(Some(zombie)));
     }
