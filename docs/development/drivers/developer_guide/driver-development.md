@@ -155,9 +155,9 @@ RPC thread and it will not be able to service other requests in the meantime.
 Instead, it should spawn a new thread to perform lengthy tasks.
 
 The driver should make no assumptions about the state of the hardware in
-`bind()`, resetting the hardware or otherwise ensuring it is in a known state.
-Because the system recovers from a driver crash by re-spawning the driver host,
-the hardware may be in an unknown state when `bind()` is invoked.
+`bind()`. It may need to reset the hardware or otherwise ensure it is in a known
+state. Because the system recovers from a driver crash by re-spawning the driver
+host, the hardware may be in an unknown state when `bind()` is invoked.
 
 A driver is required to publish a `zx_device_t` in `bind()` by calling
 `device_add()`. This is necessary for the driver manager to keep track of the
@@ -238,19 +238,19 @@ driver should spawn a thread to wait on the interrupt handle.
 The kernel will automatically handle masking and unmasking the interrupt as
 appropriate, depending on whether the interrupt is edge-triggered or
 level-triggered. For level-triggered hardware interrupts,
-[zx_interrupt_wait()](/docs/reference/syscalls/interrupt_wait.md) will mask the
-interrupt before returning and unmask the interrupt when it is called again the
-next time. For edge-triggered interrupts, the interrupt remains unmasked.
+[`zx_interrupt_wait()`](/docs/reference/syscalls/interrupt_wait.md) will mask
+the interrupt before returning and unmask the interrupt when it is called again
+the next time. For edge-triggered interrupts, the interrupt remains unmasked.
 
 The interrupt thread should not perform any long-running tasks. For drivers that
 perform lengthy tasks, use a worker thread.
 
 You can signal an interrupt handle with
-[zx_interrupt_trigger()](/docs/reference/syscalls/interrupt_trigger.md) on slot
-**ZX_INTERRUPT_SLOT_USER** to return from `zx_interrupt_wait()`. This is
+[`zx_interrupt_trigger()`](/docs/reference/syscalls/interrupt_trigger.md) on
+slot `ZX_INTERRUPT_SLOT_USER` to return from `zx_interrupt_wait()`. This is
 necessary to shut down the interrupt thread during driver clean up.
 
-## FIDL Messages
+## FIDL messages
 
 ## Non-driver processes
 
@@ -289,11 +289,11 @@ Although drivers run in user space processes, they have a more restricted set of
 rights than normal processes. Drivers are not allowed to access the filesystem,
 including devfs. That means a driver cannot interact with arbitrary devices. If
 your driver needs to do this, consider writing a service component instead. For
-example,the virtual console is implemented by the
+example, the virtual console is implemented by the
 [virtcon](/src/bringup/bin/virtcon) component.
 
 Privileged operations such as `zx_vmo_create_contiguous()` and
-[zx_interrupt_create](/docs/reference/syscalls/interrupt_create.md) require a
+[`zx_interrupt_create`](/docs/reference/syscalls/interrupt_create.md) require a
 root resource handle. This handle is not available to drivers other than the
 system driver ([ACPI](/src/devices/board/drivers/x86) on x86 systems and
 [platform](/src/devices/bus/drivers/platform) on ARM systems). A device should
@@ -304,12 +304,12 @@ Similarly, a driver is not allowed to request arbitrary MMIO ranges, interrupts
 or GPIOs. Bus drivers such as PCI and platform only return the resources
 associated to the child device.
 
-# Advanced Topics and Tips
+## Advanced Topics and Tips
 
-## Taking a long time to initialize
+### Taking a long time to initialize
 
 What if your device takes a long time to initialize? When we discussed the
-**null_bind()** function above, we indicated that a successful return told the
+`null_bind()` function above, we indicated that a successful return told the
 driver manager that the driver is now associated with the device. We can't spend
 a lot of time in the bind function; we're basically expected to initialize our
 device, publish it, and be done.
@@ -324,45 +324,40 @@ as:
 and so on, which might take a long time to do.
 
 You can publish your device as "invisible" by implementing the device `init()`
-hook. The `init()` hook is run after the device is added through
-**device_add()**, and may be used to safely access the device state and to spawn
-a worker thread. The device will remain invisible and is guaranteed not to be
-removed until **device_init_reply()** is called, which may be done from any
-thread. This meets the requirements for the binding function, but nobody is able
-to use your device (because nobody knows about it yet, because it's not
-visible). Now your device can perform the long operations with a background
-thread.
+hook. The `init()` hook is run after the device is added through `device_add()`,
+and may be used to safely access the device state and to spawn a worker thread.
+The device will remain invisible and is guaranteed not to be removed until
+`device_init_reply()` is called, which may be done from any thread. This meets
+the requirements for the binding function, but nobody is able to use your device
+(because nobody knows about it yet, because it's not visible). Now your device
+can perform the long operations with a background thread.
 
-When your device is ready to service client requests, call
-**device_init_reply()** which will cause it to appear in the pathname space.
+When your device is ready to service client requests, call `device_init_reply()`
+which will cause it to appear in the pathname space.
 
-### Power savings
+#### Power savings
 
-Two callouts, **suspend()** and **resume()**, are available for your device in
-order to support power or other resource saving features.
+Two callouts, `suspend()` and `resume()`, are available for your device in order
+to support power or other resource saving features.
 
 Both take a device context pointer and a flags argument, but the flags argument
 is used only in the suspend case.
 
-| Flag                                    | Meaning                            |
-| --------------------------------------- | ---------------------------------- |
-| `DEVICE_SUSPEND_FLAG_REBOOT`            | The driver should shut itself down |
-:                                         : in preparation for a reboot or     :
-:                                         : shutdown of the machine            :
-| `DEVICE_SUSPEND_FLAG_REBOOT_BOOTLOADER` | ?                                  |
-| `DEVICE_SUSPEND_FLAG_REBOOT_RECOVERY`   | ?                                  |
-| `DEVICE_SUSPEND_FLAG_POWEROFF`          | The driver should shut itself down |
-:                                         : in preparation for power off       :
-| `DEVICE_SUSPEND_FLAG_MEXEC`             | @@@ almost nobody uses this except |
-:                                         : for a graphics controller, what    :
-:                                         : does it do? @@@                    :
-| `DEVICE_SUSPEND_FLAG_SUSPEND_RAM`       | The driver should arrange so that  |
-:                                         : it can be restarted from RAM       :
+Flag                                    | Meaning
+--------------------------------------- | -------
+`DEVICE_SUSPEND_FLAG_REBOOT`            | The driver should shut itself down in preparation for a reboot or shutdown of the machine
+`DEVICE_SUSPEND_FLAG_REBOOT_BOOTLOADER` | ?
+`DEVICE_SUSPEND_FLAG_REBOOT_RECOVERY`   | ?
+`DEVICE_SUSPEND_FLAG_POWEROFF`          | The driver should shut itself down in preparation for power off
+`DEVICE_SUSPEND_FLAG_MEXEC`             | The driver should shut itself down in preparation for a [soft reboot](/docs/reference/syscalls/system_mexec.md)
+`DEVICE_SUSPEND_FLAG_SUSPEND_RAM`       | The driver should arrange so that it can be restarted from RAM
 
-<!--- Yeah, I'm just guessing on the flags; they're used so little...-->
+<!---
+Yeah, I'm just guessing on the flags; they're used so little...
 
 For documentation purposes, what should I write? That they are just hints, or
 that you *must* do something because of a given flag, or ... ?
+-->
 
 ## Reference: Support functions
 
@@ -374,19 +369,18 @@ The context block that's passed as the first argument to your driver's protocol
 functions is an opaque data structure. This means that in order to access the
 data elements, you need to call an accessor function:
 
-Function              | Purpose
---------------------- | --------------------------------
-**device_get_name()** | Retrieves the name of the device
+Function            | Purpose
+------------------- | --------------------------------
+`device_get_name()` | Retrieves the name of the device
 
 ### Administrative functions
 
 The following functions are used to administer the device:
 
-| Function                  | Purpose                                       |
-| ------------------------- | --------------------------------------------- |
-| **device_add()**          | Adds a device to a parent                     |
-| **device_async_remove()** | Schedules the removal of a device and all its |
-:                           : children                                      :
+Function                | Purpose
+----------------------- | ------------------------------------------------------
+`device_add()`          | Adds a device to a parent
+`device_async_remove()` | Schedules the removal of a device and all its children
 
 <!---
 @@@ Notes only @@@
