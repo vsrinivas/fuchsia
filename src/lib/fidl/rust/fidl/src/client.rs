@@ -154,12 +154,34 @@ impl Client {
 
     /// Attempt to convert the `Client` back into a channel.
     ///
-    /// This will only succeed if there are no active clones of this `Client`
-    /// and no currently-alive `EventReceiver` or `MessageResponse`s that
-    /// came from this `Client`.
+    /// This will only succeed if there are no active clones of this `Client`,
+    /// no currently-alive `EventReceiver` or `MessageResponse`s that came from
+    /// this `Client`, and no outstanding messages awaiting a response, even if
+    /// that response will be discarded.
     pub fn into_channel(self) -> Result<AsyncChannel, Self> {
+        // We need to check the message_interests table to make sure there are
+        // no outstanding interests, since an interest might still exist even if
+        // all EventReceivers and MessageResponses have been dropped. That would
+        // lead to returning an AsyncChannel which could then later receive the
+        // outstanding response unexpectedly.
+        //
+        // We do try_unwrap before checking the message_interests to avoid a
+        // race where another thread inserts a new value into message_interests
+        // after we check message_interests.is_empty(), but before we get to
+        // try_unwrap. This forces us to create a new Arc if message_interests
+        // isn't empty, since try_unwrap destroys the original Arc.
         match Arc::try_unwrap(self.inner) {
-            Ok(ClientInner { channel, .. }) => Ok(channel),
+            Ok(inner) => {
+                if inner.message_interests.lock().is_empty() || inner.channel.is_closed() {
+                    Ok(inner.channel)
+                } else {
+                    // This creates a new arc if there are outstanding
+                    // interests. This is ok because we never create any weak
+                    // references to ClientInner, otherwise doing this would
+                    // detach weak references.
+                    Err(Self { inner: Arc::new(inner) })
+                }
+            }
             Err(inner) => Err(Self { inner }),
         }
     }
@@ -1628,5 +1650,70 @@ mod tests {
 
         // This should be an error, because the server end is closed.
         query_fut.check().expect_err("Didn't make an error on check");
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn client_into_channel() {
+        // This test doesn't actually do any async work, but the fuchsia
+        // executor must be set up in order to create the channel.
+        let (client_end, _server_end) = zx::Channel::create().unwrap();
+        let client_end = AsyncChannel::from_channel(client_end).unwrap();
+        let client = Client::new(client_end, "test_protocol");
+
+        assert!(client.into_channel().is_ok());
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn client_into_channel_outstanding_messages() {
+        // This test doesn't actually do any async work, but the fuchsia
+        // executor must be set up in order to create the channel.
+        let (client_end, _server_end) = zx::Channel::create().unwrap();
+        let client_end = AsyncChannel::from_channel(client_end).unwrap();
+        let client = Client::new(client_end, "test_protocol");
+
+        {
+            // Create a send future to insert a message interest but drop it
+            // before a response can be received.
+            let _sender = client.send_query::<u8, u8>(&mut SEND_DATA.clone(), SEND_ORDINAL);
+        }
+
+        assert!(client.into_channel().is_err());
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn client_into_channel_outstanding_messages_get_received() {
+        let (client_end, server_end) = zx::Channel::create().unwrap();
+        let client_end = AsyncChannel::from_channel(client_end).unwrap();
+        let client = Client::new(client_end, "test_protocol");
+
+        let server = AsyncChannel::from_channel(server_end).unwrap();
+        let mut buffer = MessageBufEtc::new();
+        let receiver = async move {
+            server.recv_etc_msg(&mut buffer).await.expect("failed to recv msg");
+            let two_way_tx_id = 1u8;
+            assert_eq!(buffer.bytes(), expected_sent_bytes(two_way_tx_id));
+
+            let (bytes, handles) = (&mut vec![], &mut vec![]);
+            let header = TransactionHeader::new(two_way_tx_id as u32, 42);
+            encode_transaction(header, bytes, handles);
+            server.write_etc(bytes, handles).expect("Server channel write failed");
+        };
+
+        // add a timeout to receiver so if test is broken it doesn't take forever
+        let receiver = receiver
+            .on_timeout(300.millis().after_now(), || panic!("did not receiver message in time!"));
+
+        let sender = client
+            .send_query::<u8, u8>(&mut SEND_DATA.clone(), SEND_ORDINAL)
+            .map_ok(|x| assert_eq!(x, SEND_DATA))
+            .unwrap_or_else(|e| panic!("fidl error: {:?}", e));
+
+        // add a timeout to receiver so if test is broken it doesn't take forever
+        let sender = sender
+            .on_timeout(300.millis().after_now(), || panic!("did not receive response in time!"));
+
+        let ((), ()) = join!(receiver, sender);
+
+        assert!(client.into_channel().is_ok());
     }
 }
