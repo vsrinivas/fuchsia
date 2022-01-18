@@ -83,6 +83,9 @@ enum class Type : uint64_t {
   // Memory carved out for the kernel.test.ram.reserve boot option.
   kTestRamReserve,
 
+  // Memory carved out for the ZBI_TYPE_NVRAM region.
+  kNvram,
+
   // A placeholder value signifying the last extended type. It must not be used
   // as an actual type value.
   kMaxExtended,

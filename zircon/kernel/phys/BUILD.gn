@@ -203,6 +203,9 @@ if (toolchain_environment == "kernel.phys" ||
     public_deps = [
       # "main.h" has #include <lib/arch/ticks.h>.
       "//zircon/kernel/lib/arch",
+
+      # "main.h" has #include <lib/mempool/range.h>.
+      "//zircon/kernel/phys/lib/memalloc",
     ]
 
     public_configs = [ ":includes" ]

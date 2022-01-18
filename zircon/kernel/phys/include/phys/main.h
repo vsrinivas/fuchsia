@@ -8,10 +8,12 @@
 #define ZIRCON_KERNEL_PHYS_INCLUDE_PHYS_MAIN_H_
 
 #include <lib/arch/ticks.h>
+#include <lib/memalloc/range.h>
 #include <zircon/boot/image.h>
 #include <zircon/compiler.h>
 
 #include <ktl/byte.h>
+#include <ktl/optional.h>
 #include <ktl/span.h>
 
 // There's never any such object but the static analysis API requires some
@@ -62,7 +64,8 @@ void InitMemory(void* bootloader_data);
 
 // This does most of the InitMemory() work for ZBI executables, where
 // InitMemory() calls it with the ZBI_TYPE_MEM_CONFIG payload from the ZBI.
-void ZbiInitMemory(void* zbi, ktl::span<zbi_mem_range_t> mem_config);
+void ZbiInitMemory(void* zbi, ktl::span<zbi_mem_range_t> mem_config,
+                   ktl::optional<memalloc::Range> extra_special_range = {});
 
 // Perform any architecture-specific set-up.
 void ArchSetUp(void* zbi);
