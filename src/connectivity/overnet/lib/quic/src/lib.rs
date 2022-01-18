@@ -98,6 +98,7 @@ pub struct ConnState {
     dgram_recv: Wakeup,
     new_timeout: Wakeup,
     timeout: Option<Instant>,
+    version_negotiation: VersionNegotiationState,
 }
 
 impl std::fmt::Debug for ConnState {
@@ -112,6 +113,10 @@ impl ConnState {
         ctx: &mut Context<'_>,
         frame: &mut [u8],
     ) -> Poll<Result<Option<usize>, Error>> {
+        if let Some(len) = ready!(self.version_negotiation.poll_send(ctx, frame))? {
+            return Poll::Ready(Ok(Some(len)));
+        }
+
         match self.conn.send(frame) {
             Ok(n) => {
                 self.update_timeout();
@@ -171,6 +176,79 @@ impl ConnState {
     }
 }
 
+/// State of the version negotiation process.
+enum VersionNegotiationState {
+    /// Version negotiation is pending. The `packet` method will instruct the caller to reject all
+    /// packets until it sees an initial frame, at which point it will negotiate a version, which
+    /// will include transitioning to another state, waking all the wakers in the `Vec` as it does.
+    /// `poll_send` will always return `Poll::Pending` in this state, so we won't send any packets
+    /// until we've negotiated a version.
+    Pending(Vec<Waker>),
+
+    /// We've gotten a version header, and will reply with a version negotiation packet.
+    /// The arguments are the scid and dcid used to generate that packet. `poll_send` will generate
+    /// and return the packet when next called and transition to the `Ready` state. The `packet`
+    /// method now does nothing and always returns `true`.
+    PendingSend(Vec<u8>, Vec<u8>),
+
+    /// Version negotiation is complete. Both `packet` and `poll_send` now effectively do nothing.
+    Ready,
+}
+
+impl VersionNegotiationState {
+    /// Check whether we need to send a packet for version negotiation. This will return `Pending`
+    /// if we still need to receive packets to perform negotiation, and `Ready(None)` if negotiation
+    /// is complete. `Ready(Some(..))` means we need to send a packet to continue version
+    /// negotiation; the returned `usize` is the length of the packet, and the `frame` argument has
+    /// been populated with it.
+    fn poll_send(
+        &mut self,
+        ctx: &Context<'_>,
+        frame: &mut [u8],
+    ) -> Poll<Result<Option<usize>, Error>> {
+        match self {
+            VersionNegotiationState::Pending(wakers) => {
+                wakers.push(ctx.waker().clone());
+                Poll::Pending
+            }
+            VersionNegotiationState::PendingSend(scid, dcid) => {
+                let ret = Poll::Ready(Ok(Some(quiche::negotiate_version(&scid, &dcid, frame)?)));
+                *self = VersionNegotiationState::Ready;
+                ret
+            }
+            VersionNegotiationState::Ready => Poll::Ready(Ok(None)),
+        }
+    }
+
+    /// Handle a packet in terms of version negotiation.
+    ///
+    /// If `Ok(true)` is returned, we should pass this packet to `quiche::Connection::recv` next. If
+    /// `Ok(false)` is returned this packet has been gobbled up and shouldn't be processed further.
+    fn packet(&mut self, packet: &mut [u8]) -> Result<bool, Error> {
+        match self {
+            VersionNegotiationState::Pending(wakers) => {
+                let header = quiche::Header::from_slice(packet, quiche::MAX_CONN_ID_LEN)?;
+
+                if header.ty != quiche::Type::Initial {
+                    log::warn!("Dropped packet during version negotiation");
+                    Ok(false)
+                } else {
+                    wakers.drain(..).for_each(Waker::wake);
+
+                    *self = if quiche::version_is_supported(header.version) {
+                        VersionNegotiationState::Ready
+                    } else {
+                        VersionNegotiationState::PendingSend(header.scid.into(), header.dcid.into())
+                    };
+
+                    Ok(true)
+                }
+            }
+            _ => Ok(true),
+        }
+    }
+}
+
 pub struct AsyncConnection {
     trace_id: String,
     next_bidi: AtomicU64,
@@ -205,6 +283,11 @@ impl AsyncConnection {
                 dgram_send: Default::default(),
                 timeout: None,
                 new_timeout: Default::default(),
+                version_negotiation: if endpoint == Endpoint::Server {
+                    VersionNegotiationState::Pending(Vec::new())
+                } else {
+                    VersionNegotiationState::Ready
+                },
             }),
             next_bidi: AtomicU64::new(0),
             next_uni: AtomicU64::new(0),
@@ -268,6 +351,9 @@ impl AsyncConnection {
 
     pub async fn recv(&self, packet: &mut [u8]) -> Result<(), Error> {
         let mut io = self.io.lock().await;
+        if !io.version_negotiation.packet(packet)? {
+            return Ok(());
+        }
         match io.conn.recv(packet) {
             Ok(_) => (),
             Err(quiche::Error::Done) => (),
