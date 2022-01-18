@@ -367,7 +367,7 @@ zx_status_t Device::ConfigureBeacon(std::unique_ptr<Packet> beacon) {
     return ZX_ERR_INVALID_ARGS;
   }
 
-  ZX_DEBUG_ASSERT(ValidateFrame("Malformed beacon template", *beacon));
+  ZX_DEBUG_ASSERT(ValidateFrame("Malformed beacon template", {beacon->data(), beacon->size()}));
 
   wlan_tx_packet_t tx_packet = beacon->AsWlanTxPacket();
   return wlan_softmac_proxy_.ConfigureBeacon(0u, &tx_packet);
