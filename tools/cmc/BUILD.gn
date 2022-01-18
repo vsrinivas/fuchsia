@@ -90,15 +90,22 @@ rustc_binary("cmc_integration_test_bin") {
   sources = [ "tests/integration_test.rs" ]
 }
 
-fuchsia_component("example_component") {
+fuchsia_component_manifest("example_component_manifest") {
   testonly = true
-  check_references = false
   restricted_features = [
     "services",
     "dynamic_offers",
+    "structured_config",
   ]
   component_name = "example"
   manifest = "meta/example.cml"
+}
+
+fuchsia_component("example_component") {
+  cm_target = ":example_component_manifest"
+  deps = [ ":example_component_config_values" ]
+  testonly = true
+  check_references = false
 }
 
 fuchsia_component("cmc_integration_test_component") {
@@ -117,6 +124,12 @@ install_host_tools("install") {
   deps = [ ":cmc" ]
 
   outputs = [ "cmc" ]
+}
+
+fuchsia_structured_config_values("example_component_config_values") {
+  testonly = true
+  cm_target = ":example_component_manifest"
+  values = "config/example_config_values.json5"
 }
 
 group("tests") {

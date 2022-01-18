@@ -171,4 +171,8 @@
         year: "2018",
         metadata: { publisher: "The Books Publisher" },
     },
+    config: {
+        my_flag: { type: "bool" },
+        my_uint8: { type: "uint8" },
+    },
 }

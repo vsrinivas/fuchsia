@@ -1,0 +1,4 @@
+{
+    my_flag: true,
+    my_uint8: 42,
+}

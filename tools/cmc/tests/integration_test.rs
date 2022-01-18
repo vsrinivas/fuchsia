@@ -341,6 +341,28 @@ fn main() {
                 ..Environment::EMPTY
             },
         ];
+
+        let config = Config {
+            fields: Some(vec![
+                ConfigField {
+                    key: Some("my_flag".to_string()),
+                    value_type: Some(ConfigValueType::Bool(ConfigBooleanType::EMPTY)),
+                    ..ConfigField::EMPTY
+                },
+                ConfigField {
+                    key: Some("my_uint8".to_string()),
+                    value_type: Some(ConfigValueType::Uint8(ConfigUnsigned8Type::EMPTY)),
+                    ..ConfigField::EMPTY
+                },
+            ]),
+            declaration_checksum: Some(vec![
+                55, 52, 9, 20, 201, 176, 179, 197, 70, 136, 134, 104, 195, 16, 66, 216, 167, 215,
+                255, 181, 57, 239, 139, 215, 76, 11, 126, 200, 78, 2, 186, 59,
+            ]),
+            value_source: Some(ConfigValueSource::PackagePath("meta/example.cvf".to_string())),
+            ..Config::EMPTY
+        };
+
         Component {
             program: Some(program),
             uses: Some(uses),
@@ -351,6 +373,7 @@ fn main() {
             collections: Some(collections),
             facets: Some(facets),
             environments: Some(envs),
+            config: Some(config),
             ..Component::EMPTY
         }
     };
