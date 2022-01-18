@@ -852,7 +852,13 @@ impl CurrentTask {
 
 impl fmt::Debug for Task {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "task({})", self.id)
+        write!(f, "{}[{}]", self.id, self.command.read().to_string_lossy())
+    }
+}
+
+impl fmt::Debug for CurrentTask {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.task.fmt(f)
     }
 }
 
