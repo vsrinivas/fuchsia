@@ -77,6 +77,11 @@ function fx-flash {
     "./flash.sh" "${flash_args[@]}" "${fastboot_args[@]}"
   fi
 
+  # Ignore the default ffx device if it is not discoverable.
+  if [[ -n "${device}" && ! "$(fx-target-finder-info)" =~ "${device}" ]]; then
+     ffx_args+=("-c" "target.default=")
+  fi
+
   if [[ ! -f "${flash_manifest}" ]]; then
     fx-error "Flash manifest: '${flash_manifest}' not found"
     return 1
