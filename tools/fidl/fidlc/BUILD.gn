@@ -34,6 +34,7 @@ zx_library("fidl") {
     "lib/diagnostics_json.cc",
     "lib/experimental_flags.cc",
     "lib/findings_json.cc",
+    "lib/flat/attribute_schema.cc",
     "lib/flat/attributes.cc",
     "lib/flat/compile_step.cc",
     "lib/flat/consume_step.cc",

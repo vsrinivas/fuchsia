@@ -56,15 +56,50 @@ class Typespace;
 struct Decl;
 class Library;
 class CompileStep;
+class AttributeSchema;
 
 bool HasSimpleLayout(const Decl* decl);
 
 // This is needed (for now) to work around declaration order issues.
 std::string LibraryName(const Library* library, std::string_view separator);
 
-struct Decl : public Attributable {
-  virtual ~Decl() {}
+struct Element {
+  enum struct Kind {
+    kBits,
+    kBitsMember,
+    kConst,
+    kEnum,
+    kEnumMember,
+    kLibrary,
+    kProtocol,
+    kProtocolCompose,
+    kProtocolMethod,
+    kResource,
+    kResourceProperty,
+    kService,
+    kServiceMember,
+    kStruct,
+    kStructMember,
+    kTable,
+    kTableMember,
+    kTypeAlias,
+    kUnion,
+    kUnionMember,
+  };
 
+  Element(const Element&) = delete;
+  Element(Element&&) = default;
+  Element& operator=(Element&&) = default;
+  virtual ~Element() = default;
+
+  Element(Kind kind, std::unique_ptr<AttributeList> attributes)
+      : kind(kind), attributes(std::move(attributes)) {}
+
+  Kind kind;
+  std::unique_ptr<AttributeList> attributes;
+};
+
+struct Decl : public Element {
   enum struct Kind {
     kBits,
     kConst,
@@ -78,35 +113,33 @@ struct Decl : public Attributable {
     kTypeAlias,
   };
 
-  static AttributePlacement AttributePlacement(Kind kind) {
+  static Element::Kind ElementKind(Kind kind) {
     switch (kind) {
       case Kind::kBits:
-        return AttributePlacement::kBitsDecl;
+        return Element::Kind::kBits;
       case Kind::kConst:
-        return AttributePlacement::kConstDecl;
+        return Element::Kind::kConst;
       case Kind::kEnum:
-        return AttributePlacement::kEnumDecl;
+        return Element::Kind::kEnum;
       case Kind::kProtocol:
-        return AttributePlacement::kProtocolDecl;
+        return Element::Kind::kProtocol;
       case Kind::kResource:
-        return AttributePlacement::kResourceDecl;
+        return Element::Kind::kResource;
       case Kind::kService:
-        return AttributePlacement::kServiceDecl;
+        return Element::Kind::kService;
       case Kind::kStruct:
-        return AttributePlacement::kStructDecl;
+        return Element::Kind::kStruct;
       case Kind::kTable:
-        return AttributePlacement::kTableDecl;
+        return Element::Kind::kTable;
       case Kind::kUnion:
-        return AttributePlacement::kUnionDecl;
+        return Element::Kind::kUnion;
       case Kind::kTypeAlias:
-        return AttributePlacement::kTypeAliasDecl;
+        return Element::Kind::kTypeAlias;
     }
   }
 
   Decl(Kind kind, std::unique_ptr<AttributeList> attributes, Name name)
-      : Attributable(AttributePlacement(kind), std::move(attributes)),
-        kind(kind),
-        name(std::move(name)) {}
+      : Element(ElementKind(kind), std::move(attributes)), kind(kind), name(std::move(name)) {}
 
   const Kind kind;
   const Name name;
@@ -336,10 +369,10 @@ struct Const final : public Decl {
 };
 
 struct Enum final : public TypeDecl {
-  struct Member : public Attributable {
+  struct Member : public Element {
     Member(SourceSpan name, std::unique_ptr<Constant> value,
            std::unique_ptr<AttributeList> attributes)
-        : Attributable(AttributePlacement::kEnumMember, std::move(attributes)),
+        : Element(Element::Kind::kEnumMember, std::move(attributes)),
           name(name),
           value(std::move(value)) {}
     SourceSpan name;
@@ -370,10 +403,10 @@ struct Enum final : public TypeDecl {
 };
 
 struct Bits final : public TypeDecl {
-  struct Member : public Attributable {
+  struct Member : public Element {
     Member(SourceSpan name, std::unique_ptr<Constant> value,
            std::unique_ptr<AttributeList> attributes)
-        : Attributable(AttributePlacement::kBitsMember, std::move(attributes)),
+        : Element(Element::Kind::kBitsMember, std::move(attributes)),
           name(name),
           value(std::move(value)) {}
     SourceSpan name;
@@ -400,10 +433,10 @@ struct Bits final : public TypeDecl {
 };
 
 struct Service final : public TypeDecl {
-  struct Member : public Attributable {
+  struct Member : public Element {
     Member(std::unique_ptr<TypeConstructor> type_ctor, SourceSpan name,
            std::unique_ptr<AttributeList> attributes)
-        : Attributable(AttributePlacement::kServiceMember, std::move(attributes)),
+        : Element(Element::Kind::kServiceMember, std::move(attributes)),
           type_ctor(std::move(type_ctor)),
           name(name) {}
 
@@ -426,11 +459,11 @@ struct Struct;
 // was made a top-level class since it's not possible to forward-declare nested classes in C++. For
 // backward-compatibility, Struct::Member is now an alias for this top-level StructMember.
 // TODO(fxbug.dev/37535): Move this to a nested class inside Struct.
-struct StructMember : public Attributable, public Object {
+struct StructMember : public Element, public Object {
   StructMember(std::unique_ptr<TypeConstructor> type_ctor, SourceSpan name,
                std::unique_ptr<Constant> maybe_default_value,
                std::unique_ptr<AttributeList> attributes)
-      : Attributable(AttributePlacement::kStructMember, std::move(attributes)),
+      : Element(Element::Kind::kStructMember, std::move(attributes)),
         type_ctor(std::move(type_ctor)),
         name(std::move(name)),
         maybe_default_value(std::move(maybe_default_value)) {}
@@ -493,23 +526,23 @@ struct TableMemberUsed : public Object {
 
 // See the comment on the StructMember class for why this is a top-level class.
 // TODO(fxbug.dev/37535): Move this to a nested class inside Table.
-struct TableMember : public Attributable, public Object {
+struct TableMember : public Element, public Object {
   using Used = TableMemberUsed;
 
   TableMember(std::unique_ptr<raw::Ordinal64> ordinal, std::unique_ptr<TypeConstructor> type,
               SourceSpan name, std::unique_ptr<Constant> maybe_default_value,
               std::unique_ptr<AttributeList> attributes)
-      : Attributable(AttributePlacement::kTableMember, std::move(attributes)),
+      : Element(Element::Kind::kTableMember, std::move(attributes)),
         ordinal(std::move(ordinal)),
         maybe_used(std::make_unique<Used>(std::move(type), name, std::move(maybe_default_value))) {}
   TableMember(std::unique_ptr<raw::Ordinal64> ordinal, std::unique_ptr<TypeConstructor> type,
               SourceSpan name, std::unique_ptr<AttributeList> attributes)
-      : Attributable(AttributePlacement::kTableMember, std::move(attributes)),
+      : Element(Element::Kind::kTableMember, std::move(attributes)),
         ordinal(std::move(ordinal)),
         maybe_used(std::make_unique<Used>(std::move(type), name, nullptr)) {}
   TableMember(std::unique_ptr<raw::Ordinal64> ordinal, SourceSpan span,
               std::unique_ptr<AttributeList> attributes)
-      : Attributable(AttributePlacement::kTableMember, std::move(attributes)),
+      : Element(Element::Kind::kTableMember, std::move(attributes)),
         ordinal(std::move(ordinal)),
         span(span) {}
 
@@ -560,17 +593,17 @@ struct UnionMemberUsed : public Object {
 
 // See the comment on the StructMember class for why this is a top-level class.
 // TODO(fxbug.dev/37535): Move this to a nested class inside Union.
-struct UnionMember : public Attributable, public Object {
+struct UnionMember : public Element, public Object {
   using Used = UnionMemberUsed;
 
   UnionMember(std::unique_ptr<raw::Ordinal64> ordinal, std::unique_ptr<TypeConstructor> type_ctor,
               SourceSpan name, std::unique_ptr<AttributeList> attributes)
-      : Attributable(AttributePlacement::kUnionMember, std::move(attributes)),
+      : Element(Element::Kind::kUnionMember, std::move(attributes)),
         ordinal(std::move(ordinal)),
         maybe_used(std::make_unique<Used>(std::move(type_ctor), name, std::move(attributes))) {}
   UnionMember(std::unique_ptr<raw::Ordinal64> ordinal, SourceSpan span,
               std::unique_ptr<AttributeList> attributes)
-      : Attributable(AttributePlacement::kUnionMember, std::move(attributes)),
+      : Element(Element::Kind::kUnionMember, std::move(attributes)),
         ordinal(std::move(ordinal)),
         span(span) {}
 
@@ -616,14 +649,14 @@ struct Union final : public TypeDecl {
 
 class Protocol final : public TypeDecl {
  public:
-  struct Method : public Attributable {
+  struct Method : public Element {
     Method(Method&&) = default;
     Method& operator=(Method&&) = default;
 
     Method(std::unique_ptr<AttributeList> attributes, std::unique_ptr<raw::Identifier> identifier,
            SourceSpan name, bool has_request, std::unique_ptr<TypeConstructor> maybe_request,
            bool has_response, std::unique_ptr<TypeConstructor> maybe_response, bool has_error)
-        : Attributable(AttributePlacement::kMethod, std::move(attributes)),
+        : Element(Element::Kind::kProtocolMethod, std::move(attributes)),
           identifier(std::move(identifier)),
           name(name),
           has_request(has_request),
@@ -660,10 +693,9 @@ class Protocol final : public TypeDecl {
     const bool is_composed;
   };
 
-  struct ComposedProtocol : public Attributable {
+  struct ComposedProtocol : public Element {
     ComposedProtocol(std::unique_ptr<AttributeList> attributes, Name name)
-        : Attributable(AttributePlacement::kProtocolCompose, std::move(attributes)),
-          name(std::move(name)) {}
+        : Element(Element::Kind::kProtocolCompose, std::move(attributes)), name(std::move(name)) {}
 
     Name name;
   };
@@ -686,10 +718,10 @@ class Protocol final : public TypeDecl {
 };
 
 struct Resource final : public Decl {
-  struct Property : public Attributable {
+  struct Property : public Element {
     Property(std::unique_ptr<TypeConstructor> type_ctor, SourceSpan name,
              std::unique_ptr<AttributeList> attributes)
-        : Attributable(AttributePlacement::kResourceProperty, std::move(attributes)),
+        : Element(Element::Kind::kResourceProperty, std::move(attributes)),
           type_ctor(std::move(type_ctor)),
           name(name) {}
     std::unique_ptr<TypeConstructor> type_ctor;
@@ -924,6 +956,11 @@ class Dependencies {
 class Libraries {
  public:
   Libraries();
+  Libraries(const Libraries&) = delete;
+  // These must be defined in the source file because AttributeSchema (used in
+  // attribute_schemas_) is only forward declared at this point.
+  ~Libraries();
+  Libraries(Libraries&&) noexcept;
 
   // Insert |library|.
   bool Insert(std::unique_ptr<Library> library);
@@ -932,11 +969,7 @@ class Libraries {
   bool Lookup(const std::vector<std::string_view>& library_name, Library** out_library) const;
 
   // Registers a new attribute schema under the given name, and returns it.
-  AttributeSchema& AddAttributeSchema(std::string name) {
-    auto [it, inserted] = attribute_schemas_.try_emplace(std::move(name));
-    assert(inserted && "do not add schemas twice");
-    return it->second;
-  }
+  AttributeSchema& AddAttributeSchema(std::string name);
 
   const AttributeSchema& RetrieveAttributeSchema(Reporter* reporter, const Attribute* attribute,
                                                  bool warn_on_typo = false) const;
@@ -955,7 +988,7 @@ using MethodHasher = fit::function<raw::Ordinal64(
 
 struct LibraryComparator;
 
-class Library : private Attributable, private ReporterMixin {
+class Library : private Element, private ReporterMixin {
   friend class AttributeSchema;
   friend class StepBase;
   friend class ConsumeStep;
@@ -969,7 +1002,7 @@ class Library : private Attributable, private ReporterMixin {
  public:
   Library(const Libraries* all_libraries, Reporter* reporter, Typespace* typespace,
           MethodHasher method_hasher, ExperimentalFlags experimental_flags)
-      : Attributable(AttributePlacement::kLibrary, nullptr),
+      : Element(Element::Kind::kLibrary, nullptr),
         ReporterMixin(reporter),
         all_libraries_(all_libraries),
         typespace_(typespace),

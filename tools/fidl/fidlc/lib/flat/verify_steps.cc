@@ -4,6 +4,7 @@
 
 #include "fidl/flat/verify_steps.h"
 
+#include "fidl/flat/attribute_schema.h"
 #include "fidl/flat_ast.h"
 
 namespace fidl::flat {
@@ -174,14 +175,14 @@ void VerifyAttributesStep::RunImpl() {
 void VerifyAttributesStep::VerifyDecl(const Decl* decl) {
   assert(decl->compiled && "verification must happen after compilation of decls");
   VerifyAttributes(decl);
-  ForEachDeclMember(decl, [this](const Attributable* member) { VerifyAttributes(member); });
+  ForEachDeclMember(decl, [this](const Element* member) { VerifyAttributes(member); });
 }
 
-void VerifyAttributesStep::VerifyAttributes(const Attributable* attributable) {
-  for (const auto& attribute : attributable->attributes->attributes) {
+void VerifyAttributesStep::VerifyAttributes(const Element* element) {
+  for (const auto& attribute : element->attributes->attributes) {
     const AttributeSchema& schema =
         library_->all_libraries_->RetrieveAttributeSchema(reporter(), attribute.get());
-    schema.Validate(reporter(), attribute.get(), attributable);
+    schema.Validate(reporter(), attribute.get(), element);
   }
 }
 

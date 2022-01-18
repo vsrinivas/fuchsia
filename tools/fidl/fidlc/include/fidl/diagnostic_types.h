@@ -27,8 +27,6 @@ struct Attribute;
 struct AttributeArg;
 struct Constant;
 struct Decl;
-struct IdentifierConstant;
-struct LiteralConstant;
 struct Type;
 class TypeTemplate;
 class Name;

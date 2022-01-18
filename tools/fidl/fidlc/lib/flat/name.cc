@@ -18,17 +18,17 @@ std::string NamingContext::FlattenedName() const {
     return name_override_.value();
 
   switch (kind_) {
-    case ElementKind::kDecl:
+    case Kind::kDecl:
       return std::string(name_.data());
-    case ElementKind::kLayoutMember:
+    case Kind::kLayoutMember:
       return utils::to_upper_camel_case(std::string(name_.data()));
-    case ElementKind::kMethodRequest: {
+    case Kind::kMethodRequest: {
       std::string result = utils::to_upper_camel_case(std::string(parent()->name_.data()));
       result.append(utils::to_upper_camel_case(std::string(name_.data())));
       result.append("Request");
       return result;
     }
-    case ElementKind::kMethodResponse: {
+    case Kind::kMethodResponse: {
       std::string result = utils::to_upper_camel_case(std::string(parent()->name_.data()));
       result.append(utils::to_upper_camel_case(std::string(name_.data())));
       // We can't use [protocol][method]Response, because that may be occupied by
@@ -43,13 +43,13 @@ std::vector<std::string> NamingContext::Context() const {
   std::vector<std::string> names;
   const auto* current = this;
   while (current) {
-    // Internally, we don't store a separate Element to represent whether a layout is
-    // the request or response, since this bit of information is embedded in
-    // the ElementKind. When collapsing the stack of Elements into a list of
-    // strings, we need to flatten this case out to avoid losing this data.
-    if (current->kind_ == ElementKind::kMethodRequest) {
+    // Internally, we don't store a separate context item to represent whether a
+    // layout is the request or response, since this bit of information is
+    // embedded in the Kind. When collapsing the stack of contexts into a list
+    // of strings, we need to flatten this case out to avoid losing this data.
+    if (current->kind_ == Kind::kMethodRequest) {
       names.push_back("Request");
-    } else if (current->kind_ == ElementKind::kMethodResponse) {
+    } else if (current->kind_ == Kind::kMethodResponse) {
       names.push_back("Response");
     }
 

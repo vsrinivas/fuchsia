@@ -4,6 +4,7 @@
 
 #include "fidl/flat_ast.h"
 
+#include "fidl/flat/attribute_schema.h"
 #include "fidl/flat/compile_step.h"
 #include "fidl/flat/consume_step.h"
 #include "fidl/flat/sort_step.h"
@@ -129,13 +130,12 @@ std::vector<std::reference_wrapper<const Union::Member>> Union::MembersSortedByX
   return sorted_members;
 }
 
-bool SimpleLayoutConstraint(Reporter* reporter, const Attribute* attr,
-                            const Attributable* attributable) {
-  assert(attributable);
+bool SimpleLayoutConstraint(Reporter* reporter, const Attribute* attr, const Element* element) {
+  assert(element);
   bool ok = true;
-  switch (attributable->placement) {
-    case AttributePlacement::kProtocolDecl: {
-      auto protocol = static_cast<const Protocol*>(attributable);
+  switch (element->kind) {
+    case Element::Kind::kProtocol: {
+      auto protocol = static_cast<const Protocol*>(element);
       for (const auto& method_with_info : protocol->all_methods) {
         auto* method = method_with_info.method;
         if (!SimpleLayoutConstraint(reporter, attr, method)) {
@@ -144,8 +144,8 @@ bool SimpleLayoutConstraint(Reporter* reporter, const Attribute* attr,
       }
       break;
     }
-    case AttributePlacement::kMethod: {
-      auto method = static_cast<const Protocol::Method*>(attributable);
+    case Element::Kind::kProtocolMethod: {
+      auto method = static_cast<const Protocol::Method*>(element);
       if (method->maybe_request) {
         auto id = static_cast<const flat::IdentifierType*>(method->maybe_request->type);
 
@@ -166,8 +166,8 @@ bool SimpleLayoutConstraint(Reporter* reporter, const Attribute* attr,
       }
       break;
     }
-    case AttributePlacement::kStructDecl: {
-      auto struct_decl = static_cast<const Struct*>(attributable);
+    case Element::Kind::kStruct: {
+      auto struct_decl = static_cast<const Struct*>(element);
       for (const auto& member : struct_decl->members) {
         if (!IsSimple(member.type_ctor->type, reporter)) {
           reporter->Fail(ErrMemberMustBeSimple, member.name, member.name.data());
@@ -198,9 +198,8 @@ bool ParseBound(Reporter* reporter, const Attribute* attribute, std::string_view
   }
 }
 
-bool MaxBytesConstraint(Reporter* reporter, const Attribute* attribute,
-                        const Attributable* attributable) {
-  assert(attributable);
+bool MaxBytesConstraint(Reporter* reporter, const Attribute* attribute, const Element* element) {
+  assert(element);
   auto arg = attribute->GetArg(AttributeArg::kDefaultAnonymousName);
   auto arg_value = static_cast<const flat::StringConstantValue&>(arg->value->Value());
 
@@ -208,9 +207,9 @@ bool MaxBytesConstraint(Reporter* reporter, const Attribute* attribute,
   if (!ParseBound(reporter, attribute, std::string(arg_value.MakeContents()), &bound))
     return false;
   uint32_t max_bytes = std::numeric_limits<uint32_t>::max();
-  switch (attributable->placement) {
-    case AttributePlacement::kProtocolDecl: {
-      auto protocol = static_cast<const Protocol*>(attributable);
+  switch (element->kind) {
+    case Element::Kind::kProtocol: {
+      auto protocol = static_cast<const Protocol*>(element);
       bool ok = true;
       for (const auto& method_with_info : protocol->all_methods) {
         auto* method = method_with_info.method;
@@ -220,8 +219,8 @@ bool MaxBytesConstraint(Reporter* reporter, const Attribute* attribute,
       }
       return ok;
     }
-    case AttributePlacement::kMethod: {
-      auto method = static_cast<const Protocol::Method*>(attributable);
+    case Element::Kind::kProtocolMethod: {
+      auto method = static_cast<const Protocol::Method*>(element);
       bool ok = true;
       if (method->maybe_request) {
         auto id = static_cast<const flat::IdentifierType*>(method->maybe_request->type);
@@ -243,20 +242,20 @@ bool MaxBytesConstraint(Reporter* reporter, const Attribute* attribute,
       }
       return ok;
     }
-    case AttributePlacement::kStructDecl: {
-      auto struct_decl = static_cast<const Struct*>(attributable);
+    case Element::Kind::kStruct: {
+      auto struct_decl = static_cast<const Struct*>(element);
       max_bytes = struct_decl->typeshape(WireFormat::kV1NoEe).InlineSize() +
                   struct_decl->typeshape(WireFormat::kV1NoEe).MaxOutOfLine();
       break;
     }
-    case AttributePlacement::kTableDecl: {
-      auto table_decl = static_cast<const Table*>(attributable);
+    case Element::Kind::kTable: {
+      auto table_decl = static_cast<const Table*>(element);
       max_bytes = table_decl->typeshape(WireFormat::kV1NoEe).InlineSize() +
                   table_decl->typeshape(WireFormat::kV1NoEe).MaxOutOfLine();
       break;
     }
-    case AttributePlacement::kUnionDecl: {
-      auto union_decl = static_cast<const Union*>(attributable);
+    case Element::Kind::kUnion: {
+      auto union_decl = static_cast<const Union*>(element);
       max_bytes = union_decl->typeshape(WireFormat::kV1NoEe).InlineSize() +
                   union_decl->typeshape(WireFormat::kV1NoEe).MaxOutOfLine();
       break;
@@ -272,9 +271,8 @@ bool MaxBytesConstraint(Reporter* reporter, const Attribute* attribute,
   return true;
 }
 
-bool MaxHandlesConstraint(Reporter* reporter, const Attribute* attribute,
-                          const Attributable* attributable) {
-  assert(attributable);
+bool MaxHandlesConstraint(Reporter* reporter, const Attribute* attribute, const Element* element) {
+  assert(element);
   auto arg = attribute->GetArg(AttributeArg::kDefaultAnonymousName);
   auto arg_value = static_cast<const flat::StringConstantValue&>(arg->value->Value());
 
@@ -282,9 +280,9 @@ bool MaxHandlesConstraint(Reporter* reporter, const Attribute* attribute,
   if (!ParseBound(reporter, attribute, std::string(arg_value.MakeContents()), &bound))
     return false;
   uint32_t max_handles = std::numeric_limits<uint32_t>::max();
-  switch (attributable->placement) {
-    case AttributePlacement::kProtocolDecl: {
-      auto protocol = static_cast<const Protocol*>(attributable);
+  switch (element->kind) {
+    case Element::Kind::kProtocol: {
+      auto protocol = static_cast<const Protocol*>(element);
       bool ok = true;
       for (const auto& method_with_info : protocol->all_methods) {
         auto* method = method_with_info.method;
@@ -294,8 +292,8 @@ bool MaxHandlesConstraint(Reporter* reporter, const Attribute* attribute,
       }
       return ok;
     }
-    case AttributePlacement::kMethod: {
-      auto method = static_cast<const Protocol::Method*>(attributable);
+    case Element::Kind::kProtocolMethod: {
+      auto method = static_cast<const Protocol::Method*>(element);
       bool ok = true;
       if (method->maybe_request) {
         auto id = static_cast<const flat::IdentifierType*>(method->maybe_request->type);
@@ -317,18 +315,18 @@ bool MaxHandlesConstraint(Reporter* reporter, const Attribute* attribute,
       }
       return ok;
     }
-    case AttributePlacement::kStructDecl: {
-      auto struct_decl = static_cast<const Struct*>(attributable);
+    case Element::Kind::kStruct: {
+      auto struct_decl = static_cast<const Struct*>(element);
       max_handles = struct_decl->typeshape(WireFormat::kV1NoEe).MaxHandles();
       break;
     }
-    case AttributePlacement::kTableDecl: {
-      auto table_decl = static_cast<const Table*>(attributable);
+    case Element::Kind::kTable: {
+      auto table_decl = static_cast<const Table*>(element);
       max_handles = table_decl->typeshape(WireFormat::kV1NoEe).MaxHandles();
       break;
     }
-    case AttributePlacement::kUnionDecl: {
-      auto union_decl = static_cast<const Union*>(attributable);
+    case Element::Kind::kUnion: {
+      auto union_decl = static_cast<const Union*>(element);
       max_handles = union_decl->typeshape(WireFormat::kV1NoEe).MaxHandles();
       break;
     }
@@ -343,11 +341,10 @@ bool MaxHandlesConstraint(Reporter* reporter, const Attribute* attribute,
   return true;
 }
 
-bool ResultShapeConstraint(Reporter* reporter, const Attribute* attribute,
-                           const Attributable* attributable) {
-  assert(attributable);
-  assert(attributable->placement == AttributePlacement::kUnionDecl);
-  auto union_decl = static_cast<const Union*>(attributable);
+bool ResultShapeConstraint(Reporter* reporter, const Attribute* attribute, const Element* element) {
+  assert(element);
+  assert(element->kind == Element::Kind::kUnion);
+  auto union_decl = static_cast<const Union*>(element);
   assert(union_decl->members.size() == 2);
   auto& error_member = union_decl->members.at(1);
   assert(error_member.maybe_used && "must have an error member");
@@ -385,10 +382,9 @@ static std::string Trim(std::string s) {
   return s;
 }
 
-bool TransportConstraint(Reporter* reporter, const Attribute* attribute,
-                         const Attributable* attributable) {
-  assert(attributable);
-  assert(attributable->placement == AttributePlacement::kProtocolDecl);
+bool TransportConstraint(Reporter* reporter, const Attribute* attribute, const Element* element) {
+  assert(element);
+  assert(element->kind == Element::Kind::kProtocol);
 
   // function-local static pointer to non-trivially-destructible type
   // is allowed by styleguide
@@ -435,15 +431,15 @@ Resource::Property* Resource::LookupProperty(std::string_view name) {
 Libraries::Libraries() {
   AddAttributeSchema("discoverable")
       .RestrictTo({
-          AttributePlacement::kProtocolDecl,
+          Element::Kind::kProtocol,
       });
   AddAttributeSchema(std::string(Attribute::kDocCommentName))
       .AddArg(AttributeArgSchema(ConstantValue::Kind::kString));
   AddAttributeSchema("layout").Deprecate();
   AddAttributeSchema("for_deprecated_c_bindings")
       .RestrictTo({
-          AttributePlacement::kProtocolDecl,
-          AttributePlacement::kStructDecl,
+          Element::Kind::kProtocol,
+          Element::Kind::kStruct,
       })
       .Constrain(SimpleLayoutConstraint);
   AddAttributeSchema("generated_name")
@@ -452,51 +448,54 @@ Libraries::Libraries() {
       .CompileEarly();
   AddAttributeSchema("max_bytes")
       .RestrictTo({
-          AttributePlacement::kProtocolDecl,
-          AttributePlacement::kMethod,
-          AttributePlacement::kStructDecl,
-          AttributePlacement::kTableDecl,
-          AttributePlacement::kUnionDecl,
+          Element::Kind::kProtocol,
+          Element::Kind::kProtocolMethod,
+          Element::Kind::kStruct,
+          Element::Kind::kTable,
+          Element::Kind::kUnion,
       })
       .AddArg(AttributeArgSchema(ConstantValue::Kind::kString))
       .Constrain(MaxBytesConstraint);
   AddAttributeSchema("max_handles")
       .RestrictTo({
-          AttributePlacement::kProtocolDecl,
-          AttributePlacement::kMethod,
-          AttributePlacement::kStructDecl,
-          AttributePlacement::kTableDecl,
-          AttributePlacement::kUnionDecl,
+          Element::Kind::kProtocol,
+          Element::Kind::kProtocolMethod,
+          Element::Kind::kStruct,
+          Element::Kind::kTable,
+          Element::Kind::kUnion,
       })
       .AddArg(AttributeArgSchema(ConstantValue::Kind::kString))
       .Constrain(MaxHandlesConstraint);
   AddAttributeSchema("result")
       .RestrictTo({
-          AttributePlacement::kUnionDecl,
+          Element::Kind::kUnion,
       })
       .Constrain(ResultShapeConstraint);
   AddAttributeSchema("selector")
       .RestrictTo({
-          AttributePlacement::kMethod,
+          Element::Kind::kProtocolMethod,
       })
       .AddArg(AttributeArgSchema(ConstantValue::Kind::kString))
       .UseEarly();
   AddAttributeSchema("transitional")
       .RestrictTo({
-          AttributePlacement::kMethod,
+          Element::Kind::kProtocolMethod,
       })
       .AddArg(AttributeArgSchema(ConstantValue::Kind::kString,
                                  AttributeArgSchema::Optionality::kOptional));
   AddAttributeSchema("transport")
       .RestrictTo({
-          AttributePlacement::kProtocolDecl,
+          Element::Kind::kProtocol,
       })
       .AddArg(AttributeArgSchema(ConstantValue::Kind::kString))
       .Constrain(TransportConstraint);
   AddAttributeSchema("unknown").RestrictTo({
-      AttributePlacement::kEnumMember,
+      Element::Kind::kEnumMember,
   });
 }
+
+Libraries::~Libraries() = default;
+Libraries::Libraries(Libraries&&) noexcept = default;
 
 bool Libraries::Insert(std::unique_ptr<Library> library) {
   std::vector<std::string_view> library_name = library->name();
@@ -513,6 +512,12 @@ bool Libraries::Lookup(const std::vector<std::string_view>& library_name,
 
   *out_library = iter->second.get();
   return true;
+}
+
+AttributeSchema& Libraries::AddAttributeSchema(std::string name) {
+  auto [it, inserted] = attribute_schemas_.try_emplace(std::move(name));
+  assert(inserted && "do not add schemas twice");
+  return it->second;
 }
 
 std::set<std::vector<std::string_view>> Libraries::Unused(const Library* target_library) const {

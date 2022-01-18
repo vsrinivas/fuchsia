@@ -46,29 +46,29 @@ class NamingContext : public std::enable_shared_from_this<NamingContext> {
   // be a place to own all the root nodes, which are not owned by an anonymous name), and
   // doing it manually is even worse.
   static std::shared_ptr<NamingContext> Create(SourceSpan decl_name) {
-    return Create(decl_name, ElementKind::kDecl);
+    return Create(decl_name, Kind::kDecl);
   }
   static std::shared_ptr<NamingContext> Create(const Name& decl_name);
 
   std::shared_ptr<NamingContext> EnterRequest(SourceSpan method_name) {
-    assert(kind_ == ElementKind::kDecl && "request must follow protocol");
-    return Push(method_name, ElementKind::kMethodRequest);
+    assert(kind_ == Kind::kDecl && "request must follow protocol");
+    return Push(method_name, Kind::kMethodRequest);
   }
 
   std::shared_ptr<NamingContext> EnterEvent(SourceSpan method_name) {
-    assert(kind_ == ElementKind::kDecl && "event must follow protocol");
+    assert(kind_ == Kind::kDecl && "event must follow protocol");
     // an event is actually a request from the server's perspective, so we use request in the
     // naming context
-    return Push(method_name, ElementKind::kMethodRequest);
+    return Push(method_name, Kind::kMethodRequest);
   }
 
   std::shared_ptr<NamingContext> EnterResponse(SourceSpan method_name) {
-    assert(kind_ == ElementKind::kDecl && "response must follow protocol");
-    return Push(method_name, ElementKind::kMethodResponse);
+    assert(kind_ == Kind::kDecl && "response must follow protocol");
+    return Push(method_name, Kind::kMethodResponse);
   }
 
   std::shared_ptr<NamingContext> EnterMember(SourceSpan member_name) {
-    return Push(member_name, ElementKind::kLayoutMember);
+    return Push(member_name, Kind::kLayoutMember);
   }
 
   SourceSpan name() const { return name_; }
@@ -91,9 +91,9 @@ class NamingContext : public std::enable_shared_from_this<NamingContext> {
   Name ToName(Library* library, SourceSpan declaration_span);
 
  private:
-  // Each new naming context is represented by a SourceSpan pointing to the name in
-  // question (e.g. protocol/layout/member name), and an ElementKind. The contexts
-  // are represented as linked lists with pointers back up to the parent to avoid
+  // Each new naming context is represented by a SourceSpan pointing to the name
+  // in question (e.g. protocol/layout/member name) and a Kind. The contexts are
+  // represented as linked lists with pointers back up to the parent to avoid
   // storing extraneous copies, thus the naming context for
   //
   //   type Foo = { member_a struct { ... }; member_b struct {...}; };
@@ -109,27 +109,23 @@ class NamingContext : public std::enable_shared_from_this<NamingContext> {
   // appear as the "root" of a naming context. These are enforced somewhat loosely
   // using asserts in the class' public methods.
 
-  enum class ElementKind {
+  enum class Kind {
     kDecl,
     kLayoutMember,
     kMethodRequest,
     kMethodResponse,
   };
-  struct Element {
-    SourceSpan name;
-    ElementKind kind;
-  };
 
-  NamingContext(SourceSpan name, ElementKind kind) : name_(name), kind_(kind) {}
+  NamingContext(SourceSpan name, Kind kind) : name_(name), kind_(kind) {}
 
-  static std::shared_ptr<NamingContext> Create(SourceSpan decl_name, ElementKind kind) {
+  static std::shared_ptr<NamingContext> Create(SourceSpan decl_name, Kind kind) {
     // We need to create a shared pointer but there are only private constructors. Since
     // we don't care about an extra allocation here, we use `new` to get around this
     // (see https://abseil.io/tips/134)
     return std::shared_ptr<NamingContext>(new NamingContext(decl_name, kind));
   }
 
-  std::shared_ptr<NamingContext> Push(SourceSpan name, ElementKind kind) {
+  std::shared_ptr<NamingContext> Push(SourceSpan name, Kind kind) {
     auto ctx = Create(name, kind);
     ctx->parent_ = shared_from_this();
     return ctx;
@@ -137,7 +133,7 @@ class NamingContext : public std::enable_shared_from_this<NamingContext> {
 
   SourceSpan name_;
   std::optional<std::string> name_override_;
-  ElementKind kind_;
+  Kind kind_;
   std::shared_ptr<NamingContext> parent_ = nullptr;
 };
 

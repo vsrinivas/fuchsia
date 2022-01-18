@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <fidl/diagnostics.h>
+#include <fidl/flat/attribute_schema.h>
 #include <fidl/flat_ast.h>
 #include <fidl/lexer.h>
 #include <fidl/parser.h>
@@ -651,10 +652,10 @@ protocol MyProtocol {
 }
 
 bool MustHaveThreeMembers(fidl::Reporter* reporter, const fidl::flat::Attribute* attribute,
-                          const fidl::flat::Attributable* attributable) {
-  switch (attributable->placement) {
-    case fidl::flat::AttributePlacement::kStructDecl: {
-      auto struct_decl = static_cast<const fidl::flat::Struct*>(attributable);
+                          const fidl::flat::Element* element) {
+  switch (element->kind) {
+    case fidl::flat::Element::Kind::kStruct: {
+      auto struct_decl = static_cast<const fidl::flat::Struct*>(element);
       return struct_decl->members.size() == 3;
     }
     default:

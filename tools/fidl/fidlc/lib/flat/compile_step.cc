@@ -7,6 +7,7 @@
 #include <algorithm>
 #include <optional>
 
+#include "fidl/flat/attribute_schema.h"
 #include "fidl/flat_ast.h"
 #include "fidl/names.h"
 #include "fidl/ordinals.h"

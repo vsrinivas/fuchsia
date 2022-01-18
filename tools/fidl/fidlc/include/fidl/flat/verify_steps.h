@@ -10,7 +10,7 @@
 
 namespace fidl::flat {
 
-struct Attributable;
+struct Element;
 
 class VerifyResourcenessStep : public StepBase {
  public:
@@ -39,7 +39,7 @@ class VerifyAttributesStep : public StepBase {
  private:
   void RunImpl() override;
   void VerifyDecl(const Decl* decl);
-  void VerifyAttributes(const Attributable* attributable);
+  void VerifyAttributes(const Element* element);
 };
 
 class VerifyInlineSizeStep : public StepBase {

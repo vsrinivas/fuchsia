@@ -16,6 +16,7 @@ class NamingContext;
 
 struct AttributeList;
 struct TypeConstructor;
+struct LiteralConstant;
 
 // We run a separate ConsumeStep for each file in the library.
 class ConsumeStep : public StepBase {
