@@ -224,17 +224,23 @@ func (c *SSHConnector) Get(targetSrc string, hostDst string) error {
 			if err != nil {
 				return fmt.Errorf("error opening remote file: %s", err)
 			}
-			defer fin.Close()
 
 			fout, err := os.Create(dst)
 			if err != nil {
+				fin.Close()
 				return fmt.Errorf("error creating local file: %s", err)
 			}
-			defer fout.Close()
-			if _, err := io.Copy(fout, fin); err != nil {
+
+			_, err = io.Copy(fout, fin)
+
+			// Close() immediately to free up resources since we're in a
+			// potentially very large loop.
+			fout.Close()
+			fin.Close()
+
+			if err != nil {
 				return fmt.Errorf("error copying file: %s", err)
 			}
-
 		}
 	}
 	return nil
@@ -297,14 +303,21 @@ func (c *SSHConnector) Put(hostSrc string, targetDst string) error {
 			if err != nil {
 				return fmt.Errorf("error opening local file: %s", err)
 			}
-			defer fin.Close()
 
 			fout, err := c.sftpClient.Create(dst)
 			if err != nil {
+				fin.Close()
 				return fmt.Errorf("error creating remote file: %s", err)
 			}
-			defer fout.Close()
-			if _, err := io.Copy(fout, fin); err != nil {
+
+			_, err = io.Copy(fout, fin)
+
+			// Close() immediately to free up resources since we're in a
+			// potentially very large loop.
+			fout.Close()
+			fin.Close()
+
+			if err != nil {
 				return fmt.Errorf("error copying file: %s", err)
 			}
 		}

@@ -9,8 +9,16 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/golang/glog"
 	"go.fuchsia.dev/fuchsia/tools/fuzz"
 )
+
+func exitWithError(message string, err error) {
+	glog.Errorf(message, err)
+	// Also print to stdout, as defined by clusterfuchsia API
+	fmt.Fprintf(os.Stdout, message, err)
+	os.Exit(1)
+}
 
 func main() {
 	// Parse any global flags (e.g. those for glog)
@@ -21,12 +29,10 @@ func main() {
 
 	cmd, err := fuzz.ParseArgs(flag.Args())
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error parsing args: %s\n", err)
-		os.Exit(1)
+		exitWithError("Error parsing args: %s\n", err)
 	}
 
 	if err := cmd.Execute(os.Stdout); err != nil {
-		fmt.Fprintf(os.Stderr, "Error executing command: %s\n", err)
-		os.Exit(1)
+		exitWithError("Error executing command: %s\n", err)
 	}
 }

@@ -7,6 +7,7 @@ package fuzz_test
 import (
 	"bytes"
 	"encoding/binary"
+	"fmt"
 	"io/ioutil"
 	"os"
 	"path"
@@ -211,4 +212,18 @@ func TestEndToEnd(t *testing.T) {
 		t.Fatalf("test files do not match: sent '%s', received '%s'",
 			testFileContents, retrievedContents)
 	}
+
+	// Test bulk putting a lot of small files
+	corpusDir := path.Join(dir, "corpus")
+	if err := os.Mkdir(corpusDir, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	for j := 0; j < 2000; j++ {
+		corpusPath := path.Join(corpusDir, fmt.Sprintf("corpus-%d", j))
+		if err := ioutil.WriteFile(corpusPath, []byte(fmt.Sprintf("%d", j)), 0o600); err != nil {
+			t.Fatalf("error creating local corpus file: %s", err)
+		}
+	}
+	out = runCommand(t, "put_data", "-handle", handle, "-fuzzer", fuzzer,
+		"-src", corpusDir+"/*", "-dst", "data/corpus")
 }
