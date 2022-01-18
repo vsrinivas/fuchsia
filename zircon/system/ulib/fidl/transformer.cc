@@ -758,16 +758,21 @@ class Transformer {
 
 }  // namespace
 
+bool internal__fidl_tranform_is_noop__may_break(fidl_transformation_t transformation,
+                                                const fidl_type_t* type) {
+  bool does_not_contain_envelope =
+      type->type_tag() == kFidlTypeStruct &&
+      type->coded_struct().contains_envelope == kFidlContainsEnvelope_DoesNotContainEnvelope;
+  return transformation == FIDL_TRANSFORMATION_NONE || does_not_contain_envelope;
+}
+
 zx_status_t internal__fidl_transform__may_break(fidl_transformation_t transformation,
                                                 const fidl_type_t* type, const uint8_t* src_bytes,
                                                 uint32_t src_num_bytes, uint8_t* dst_bytes,
                                                 uint32_t dst_num_bytes_capacity,
                                                 uint32_t* out_dst_num_bytes,
                                                 const char** out_error_msg) {
-  bool does_not_contain_envelope =
-      type->type_tag() == kFidlTypeStruct &&
-      type->coded_struct().contains_envelope == kFidlContainsEnvelope_DoesNotContainEnvelope;
-  if (transformation == FIDL_TRANSFORMATION_NONE || does_not_contain_envelope) {
+  if (internal__fidl_tranform_is_noop__may_break(transformation, type)) {
     // Fast path - directly copy if no transformation needs to be performed.
     if (dst_num_bytes_capacity < src_num_bytes) {
       *out_error_msg = "destination capacity too small";

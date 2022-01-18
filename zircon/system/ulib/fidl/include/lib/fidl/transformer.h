@@ -16,6 +16,18 @@ typedef uint32_t fidl_transformation_t;
 #define FIDL_TRANSFORMATION_V1_TO_V2 ((fidl_transformation_t)1u)
 #define FIDL_TRANSFORMATION_V2_TO_V1 ((fidl_transformation_t)2u)
 
+// Returns true iff internal__fidl_transform__may_break is a no-op transform
+// and can be skipped.
+//
+// It is intended to be used short-term to facilitate migrations and
+// MAY CHANGE OR BREAK AT ANY TIME WITHOUT NOTICE.
+//
+// |transformation| indicates the type of transformation to perform.
+//
+// |type| describes the type of both the source and destination objects.
+bool internal__fidl_tranform_is_noop__may_break(fidl_transformation_t transformation,
+                                                const fidl_type_t* type);
+
 // internal__fidl_transform__may_break converts bytes from one version of the FIDL wire format
 // to another.
 //

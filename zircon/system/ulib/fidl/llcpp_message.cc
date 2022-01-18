@@ -162,6 +162,10 @@ void OutgoingMessage::EncodeImpl(const fidl_type_t* message_type, void* data) {
   iovec_message().num_iovecs = num_iovecs_actual;
   iovec_message().num_handles = num_handles_actual;
 
+  if (internal__fidl_tranform_is_noop__may_break(FIDL_TRANSFORMATION_V2_TO_V1, message_type)) {
+    return;
+  }
+
   auto linearized_bytes = CopyBytes();
   uint32_t actual_num_bytes;
   status = internal__fidl_transform__may_break(
@@ -230,7 +234,8 @@ void OutgoingMessage::CallImpl(internal::AnyUnownedTransport transport,
   fidl_message_header_t header;
   memcpy(&header, result_bytes, sizeof(header));
 
-  if ((header.flags[0] & FIDL_MESSAGE_HEADER_FLAGS_0_USE_VERSION_V2) == 0) {
+  if ((header.flags[0] & FIDL_MESSAGE_HEADER_FLAGS_0_USE_VERSION_V2) == 0 &&
+      !internal__fidl_tranform_is_noop__may_break(FIDL_TRANSFORMATION_V1_TO_V2, response_type)) {
     auto transformer_bytes = std::make_unique<uint8_t[]>(ZX_CHANNEL_MAX_MSG_BYTES);
 
     status = internal__fidl_transform__may_break(
@@ -348,20 +353,22 @@ void IncomingMessage::Decode(internal::WireFormatVersion wire_format_version,
       return;
     }
 
-    *out_transformed_buffer = std::make_unique<uint8_t[]>(ZX_CHANNEL_MAX_MSG_BYTES);
+    if (!internal__fidl_tranform_is_noop__may_break(FIDL_TRANSFORMATION_V1_TO_V2, message_type)) {
+      *out_transformed_buffer = std::make_unique<uint8_t[]>(ZX_CHANNEL_MAX_MSG_BYTES);
 
-    uint32_t actual_num_bytes = 0;
-    status = internal__fidl_transform__may_break(
-        FIDL_TRANSFORMATION_V1_TO_V2, message_type, bytes(), byte_actual(),
-        out_transformed_buffer->get(), ZX_CHANNEL_MAX_MSG_BYTES, &actual_num_bytes,
-        error_address());
-    if (status != ZX_OK) {
-      SetResult(fidl::Result::DecodeError(status, *error_address()));
-      return;
+      uint32_t actual_num_bytes = 0;
+      status = internal__fidl_transform__may_break(
+          FIDL_TRANSFORMATION_V1_TO_V2, message_type, bytes(), byte_actual(),
+          out_transformed_buffer->get(), ZX_CHANNEL_MAX_MSG_BYTES, &actual_num_bytes,
+          error_address());
+      if (status != ZX_OK) {
+        SetResult(fidl::Result::DecodeError(status, *error_address()));
+        return;
+      }
+
+      message_.bytes = out_transformed_buffer->get();
+      message_.num_bytes = actual_num_bytes;
     }
-
-    message_.bytes = out_transformed_buffer->get();
-    message_.num_bytes = actual_num_bytes;
   }
 
   fidl_trace(WillLLCPPDecode, message_type, bytes(), byte_actual(), handle_actual());
