@@ -201,7 +201,13 @@ while [ $# -gt 0 ]; do
   esac
   shift
 done
-GIT_FILTER=("$@" :!third_party/rust_crates/vendor/* :!third_party/golibs/vendor/*)
+GIT_FILTER=(
+  "$@"
+  ":(top,exclude)third_party/golibs/vendor"
+  ":(top,exclude)third_party/rust_crates/forks"
+  ":(top,exclude)third_party/rust_crates/mirrors"
+  ":(top,exclude)third_party/rust_crates/vendor"
+)
 
 get_git_files() {
   FILES=$(canonicalize $(git rev-parse --show-toplevel) \
