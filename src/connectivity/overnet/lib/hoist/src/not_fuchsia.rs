@@ -337,13 +337,13 @@ async fn run_overnet(node: Arc<Router>, rx: HostOvernetRequestStream) -> Result<
 pub fn hard_coded_security_context() -> impl SecurityContext {
     return overnet_core::MemoryBuffers {
         node_cert: include_bytes!(
-            "../../../../../../third_party/rust_crates/mirrors/quiche-legacy/examples/cert.crt"
+            "../../../../../../third_party/rust_crates/mirrors/quiche/examples/cert.crt"
         ),
         node_private_key: include_bytes!(
-            "../../../../../../third_party/rust_crates/mirrors/quiche-legacy/examples/cert.key"
+            "../../../../../../third_party/rust_crates/mirrors/quiche/examples/cert.key"
         ),
         root_cert: include_bytes!(
-            "../../../../../../third_party/rust_crates/mirrors/quiche-legacy/examples/rootca.crt"
+            "../../../../../../third_party/rust_crates/mirrors/quiche/examples/rootca.crt"
         ),
     }
     .into_security_context()

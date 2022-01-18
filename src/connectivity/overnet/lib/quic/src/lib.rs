@@ -16,6 +16,7 @@ use futures::{
 use quiche::{Connection, Shutdown};
 use std::cmp::{max, min};
 use std::collections::BTreeMap;
+use std::net::SocketAddr;
 use std::pin::Pin;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
@@ -88,6 +89,7 @@ impl WakeupMap {
 
 /// Current state of a connection - mutex guarded by AsyncConnection.
 pub struct ConnState {
+    local_addr: SocketAddr,
     conn: Pin<Box<Connection>>,
     seen_established: bool,
     closed: bool,
@@ -123,7 +125,7 @@ impl ConnState {
                 self.update_timeout();
                 self.wake_stream_io();
                 self.dgram_send.ready();
-                Poll::Ready(Ok(Some(n)))
+                Poll::Ready(Ok(Some(n.0)))
             }
             Err(quiche::Error::Done) if self.conn.is_closed() => Poll::Ready(Ok(None)),
             Err(quiche::Error::Done) => {
@@ -191,7 +193,7 @@ enum VersionNegotiationState {
     /// The arguments are the scid and dcid used to generate that packet. `poll_send` will generate
     /// and return the packet when next called and transition to the `Ready` state. The `packet`
     /// method now does nothing and always returns `true`.
-    PendingSend(Vec<u8>, Vec<u8>),
+    PendingSend(quiche::ConnectionId<'static>, quiche::ConnectionId<'static>),
 
     /// Version negotiation is complete. Both `packet` and `poll_send` now effectively do nothing.
     Ready,
@@ -240,7 +242,10 @@ impl VersionNegotiationState {
                     *self = if quiche::version_is_supported(header.version) {
                         VersionNegotiationState::Ready
                     } else {
-                        VersionNegotiationState::PendingSend(header.scid.into(), header.dcid.into())
+                        VersionNegotiationState::PendingSend(
+                            header.scid.into_owned(),
+                            header.dcid.into_owned(),
+                        )
                     };
 
                     Ok(true)
@@ -271,10 +276,15 @@ impl std::fmt::Debug for AsyncConnection {
 }
 
 impl AsyncConnection {
-    fn from_connection(conn: Pin<Box<Connection>>, endpoint: Endpoint) -> Arc<Self> {
+    fn from_connection(
+        local_addr: SocketAddr,
+        conn: Pin<Box<Connection>>,
+        endpoint: Endpoint,
+    ) -> Arc<Self> {
         Arc::new(Self {
             trace_id: conn.trace_id().to_string(),
             io: Mutex::new(ConnState {
+                local_addr,
                 conn,
                 seen_established: false,
                 closed: false,
@@ -300,14 +310,23 @@ impl AsyncConnection {
 
     pub fn connect(
         server_name: Option<&str>,
-        scid: &[u8],
+        scid: &quiche::ConnectionId<'_>,
+        to: SocketAddr,
         config: &mut quiche::Config,
     ) -> Result<Arc<Self>, Error> {
-        Ok(Self::from_connection(quiche::connect(server_name, scid, config)?, Endpoint::Client))
+        Ok(Self::from_connection(
+            to,
+            quiche::connect(server_name, scid, to, config)?,
+            Endpoint::Client,
+        ))
     }
 
-    pub fn accept(scid: &[u8], config: &mut quiche::Config) -> Result<Arc<Self>, Error> {
-        Ok(Self::from_connection(quiche::accept(scid, None, config)?, Endpoint::Server))
+    pub fn accept(
+        scid: &quiche::ConnectionId<'_>,
+        from: SocketAddr,
+        config: &mut quiche::Config,
+    ) -> Result<Arc<Self>, Error> {
+        Ok(Self::from_connection(from, quiche::accept(scid, None, from, config)?, Endpoint::Server))
     }
 
     pub async fn run(self: Arc<Self>) -> Result<(), Error> {
@@ -369,11 +388,12 @@ impl AsyncConnection {
         if !io.version_negotiation.packet(packet)? {
             return Ok(());
         }
-        match io.conn.recv(packet) {
+        let from = io.local_addr.clone();
+        match io.conn.recv(packet, quiche::RecvInfo { from }) {
             Ok(_) => (),
             Err(quiche::Error::Done) => (),
             Err(x) => {
-                return Err(x).with_context(|| format!("quice_trace_id:{}", io.conn.trace_id()));
+                return Err(x).with_context(|| format!("quiche_trace_id:{}", io.conn.trace_id()));
             }
         }
         io.update_timeout();
@@ -817,10 +837,10 @@ impl<'b> QuicRead<'b> {
                     io.stream_recv.pending(ctx, self.id)
                 }
             }
-            Err(quiche::Error::InvalidStreamState) if !*self.ready => {
+            Err(quiche::Error::InvalidStreamState(_)) if !*self.ready => {
                 io.stream_recv.pending(ctx, self.id)
             }
-            Err(quiche::Error::InvalidStreamState) if io.conn.stream_finished(self.id) => {
+            Err(quiche::Error::InvalidStreamState(_)) if io.conn.stream_finished(self.id) => {
                 Poll::Ready(Ok((0, true)))
             }
             Err(x) => Poll::Ready(Err(x).with_context(|| {
@@ -934,12 +954,23 @@ mod test_util {
             .sample_iter(&rand::distributions::Standard)
             .take(quiche::MAX_CONN_ID_LEN)
             .collect();
-        let client = AsyncConnection::connect(None, &scid, &mut client_config().unwrap()).unwrap();
+        let client = AsyncConnection::connect(
+            None,
+            &scid.into(),
+            "127.0.0.1:999".parse().unwrap(),
+            &mut client_config().unwrap(),
+        )
+        .unwrap();
         let scid: Vec<u8> = rand::thread_rng()
             .sample_iter(&rand::distributions::Standard)
             .take(quiche::MAX_CONN_ID_LEN)
             .collect();
-        let server = AsyncConnection::accept(&scid, &mut server_config().await.unwrap()).unwrap();
+        let server = AsyncConnection::accept(
+            &scid.into(),
+            "127.0.0.2:999".parse().unwrap(),
+            &mut server_config().await.unwrap(),
+        )
+        .unwrap();
         let forward = futures::future::try_join(
             direct_packets(client.clone(), server.clone()),
             direct_packets(server.clone(), client.clone()),

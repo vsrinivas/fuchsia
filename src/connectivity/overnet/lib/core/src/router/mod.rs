@@ -118,6 +118,7 @@ struct PeerMaps {
 impl PeerMaps {
     async fn get_client(
         &mut self,
+        local_node_id: NodeId,
         peer_node_id: NodeId,
         router: &Arc<Router>,
     ) -> Result<Arc<Peer>, Error> {
@@ -134,7 +135,7 @@ impl PeerMaps {
             }
             Ok(p.clone())
         } else {
-            self.new_client(peer_node_id, router).await
+            self.new_client(local_node_id, peer_node_id, router).await
         }
     }
 
@@ -142,6 +143,7 @@ impl PeerMaps {
         &mut self,
         conn_id: &[u8],
         ty: quiche::Type,
+        local_node_id: NodeId,
         peer_node_id: NodeId,
         router: &Arc<Router>,
     ) -> Result<Arc<Peer>, Error> {
@@ -159,13 +161,16 @@ impl PeerMaps {
                 }
                 Ok(p.clone())
             }
-            (quiche::Type::Initial, _) => self.new_server(peer_node_id, router).await,
+            (quiche::Type::Initial, _) => {
+                self.new_server(local_node_id, peer_node_id, router).await
+            }
             (_, _) => bail!("Packet received for unknown connection"),
         }
     }
 
     async fn new_client(
         &mut self,
+        local_node_id: NodeId,
         peer_node_id: NodeId,
         router: &Arc<Router>,
     ) -> Result<Arc<Peer>, Error> {
@@ -174,6 +179,7 @@ impl PeerMaps {
         let conn_id = ConnectionId::new();
         let peer = Peer::new_client(
             peer_node_id,
+            local_node_id,
             conn_id,
             &mut config,
             router.service_map.new_local_service_observer(),
@@ -186,13 +192,14 @@ impl PeerMaps {
 
     async fn new_server(
         &mut self,
+        local_node_id: NodeId,
         peer_node_id: NodeId,
         router: &Arc<Router>,
     ) -> Result<Arc<Peer>, Error> {
         let mut config =
             router.quiche_config().await.context("creating client configuration for quiche")?;
         let conn_id = ConnectionId::new();
-        let peer = Peer::new_server(peer_node_id, conn_id, &mut config, router)?;
+        let peer = Peer::new_server(peer_node_id, local_node_id, conn_id, &mut config, router)?;
         self.servers.entry(peer_node_id).or_insert(Vec::new()).push(peer.clone());
         self.connections.insert(conn_id, peer.clone());
         Ok(peer)
@@ -572,8 +579,12 @@ impl Router {
                     self.node_id,
                     removed_client_peer_node_id
                 );
-                if let Err(e) =
-                    self.peers.lock().await.get_client(removed_client_peer_node_id, self).await
+                if let Err(e) = self
+                    .peers
+                    .lock()
+                    .await
+                    .get_client(self.node_id, removed_client_peer_node_id, self)
+                    .await
                 {
                     log::trace!(
                         "[{:?}] Failed revibing client peer to {:?}: {:?}",
@@ -599,7 +610,7 @@ impl Router {
     }
 
     async fn client_peer(self: &Arc<Self>, peer_node_id: NodeId) -> Result<Arc<Peer>, Error> {
-        self.peers.lock().await.get_client(peer_node_id, self).await
+        self.peers.lock().await.get_client(self.node_id, peer_node_id, self).await
     }
 
     pub(crate) async fn lookup_peer(
@@ -608,7 +619,7 @@ impl Router {
         ty: quiche::Type,
         peer_node_id: NodeId,
     ) -> Result<Arc<Peer>, Error> {
-        self.peers.lock().await.lookup(conn_id, ty, peer_node_id, self).await
+        self.peers.lock().await.lookup(conn_id, ty, self.node_id, peer_node_id, self).await
     }
 
     fn add_proxied(
@@ -984,7 +995,7 @@ async fn summon_clients(
         *router.current_forwarding_table.lock().await = forwarding_table.clone();
         let mut peers = router.peers.lock().await;
         for (destination, _) in forwarding_table.iter() {
-            let _ = peers.get_client(destination, &router).await?;
+            let _ = peers.get_client(router.node_id, destination, &router).await?;
         }
     }
     Ok(())
