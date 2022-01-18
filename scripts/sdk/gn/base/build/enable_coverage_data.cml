@@ -1,0 +1,8 @@
+{
+    use: [
+        {
+            protocol: "fuchsia.debugdata.DebugData",
+            from: "debug",
+        },
+    ],
+}

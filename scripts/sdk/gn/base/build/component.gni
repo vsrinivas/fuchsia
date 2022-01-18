@@ -5,7 +5,7 @@
 import("cmc.gni")
 
 declare_args() {
-  # Enable code coverage for Fuchsia components. Only applies to v1 components.
+  # Enable code coverage for Fuchsia components.
   fuchsia_code_coverage = false
 }
 
@@ -142,6 +142,21 @@ template("fuchsia_component") {
         output_name = merged_manifest
       }
       manifest = "${target_out_dir}/${merged_manifest}"
+    } else if (_manifest_version == "v2") {
+      merged_manifest = "${target_name}-coverage.cml"
+      cmc_merge(merged_manifest) {
+        forward_variables_from(invoker,
+                               [
+                                 "deps",
+                                 "testonly",
+                               ])
+        sources = [
+          "${fuchsia_sdk}/build/enable_coverage_data.cml",
+          manifest,
+        ]
+        output_name = merged_manifest
+      }
+      manifest = "${target_out_dir}/${merged_manifest}"
     }
   }
 
@@ -166,12 +181,15 @@ template("fuchsia_component") {
     _manifest_source = manifest
   } else if (_manifest_version == "v2") {
     cmc_compile(_cm_validation_target) {
-      forward_variables_from(invoker,
-                             [
-                               "deps",
-                               "testonly",
-                             ])
+      forward_variables_from(invoker, [ "testonly" ])
       manifest = rebase_path(manifest)
+      deps = []
+      if (defined(invoker.deps)) {
+        deps += invoker.deps
+      }
+      if (fuchsia_code_coverage) {
+        deps += [ ":${merged_manifest}" ]
+      }
     }
 
     _compiled_manifest_outputs = get_target_outputs(":$_cm_validation_target")
