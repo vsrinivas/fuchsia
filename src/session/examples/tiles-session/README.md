@@ -11,7 +11,7 @@
 
 ## Current limitations
 *TODO(fxbug.dev/88656): update the following as features are added, and delete when fully-featured.*
-Currently, nothing appears on screen.  `ffx session add ...` causes [`element_manager`](https://osscs.corp.google.com/fuchsia/fuchsia/+/main:src/session/bin/element_manager/README.md) to launch the component and attempt to display it via the [`GraphicalPresenter`](https://osscs.corp.google.com/fuchsia/fuchsia/+/main:sdk/fidl/fuchsia.session/graphical_presenter.fidl) protocol.  The session implements this protocol, but does nothing but log incoming requests.
+Only one view is supported. Adding an additional view replaces the existing one.
 
 # Use cases:
 `tile-session` fills a few roles in the Fuchsia ecosystem:

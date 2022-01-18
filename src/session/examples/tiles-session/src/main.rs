@@ -4,15 +4,19 @@
 
 use {
     anyhow::{anyhow, Context as _, Error},
-    fidl::endpoints::{create_proxy, create_request_stream},
+    fidl::endpoints::RequestStream,
+    fidl::endpoints::{create_proxy, create_request_stream, ControlHandle, Proxy},
     fidl_fuchsia_element as element,
     fidl_fuchsia_session_scene::{
         ManagerMarker as SceneManagerMarker, ManagerProxy as SceneManagerProxy,
     },
-    fidl_fuchsia_ui_app as ui_app, fidl_fuchsia_ui_views as ui_views, fuchsia_async as fasync,
+    fidl_fuchsia_ui_app as ui_app, fidl_fuchsia_ui_composition as ui_comp,
+    fidl_fuchsia_ui_views::{self as ui_views},
+    fuchsia_async as fasync,
     fuchsia_component::{client::connect_to_protocol, server::ServiceFs, server::ServiceObj},
     fuchsia_scenic::{self as scenic, flatland},
     fuchsia_syslog::{fx_log_err, fx_log_warn},
+    fuchsia_zircon as zx,
     futures::{channel::mpsc::UnboundedSender, StreamExt, TryStreamExt},
 };
 
@@ -27,6 +31,18 @@ enum MessageInternal {
         view_controller_request_stream: Option<element::ViewControllerRequestStream>,
         responder: element::GraphicalPresenterPresentViewResponder,
     },
+    DismissClient {
+        control_handle: fidl_fuchsia_element::ViewControllerControlHandle,
+    },
+    ClientDied {},
+    ReceivedClientViewRef {
+        view_ref: ui_views::ViewRef,
+    },
+}
+
+struct RootView {
+    parent_viewport_watcher: ui_comp::ParentViewportWatcherProxy,
+    view_focuser: fidl_fuchsia_ui_views::FocuserProxy,
 }
 
 // The maximum number of concurrent services to serve.
@@ -60,8 +76,10 @@ async fn inner_main() -> Result<(), Error> {
     let mut id_generator = flatland::IdGenerator::new();
 
     let root_transform_id = id_generator.next_transform_id();
-    let _view_ref =
+    let root_view =
         set_scene_manager_root_view(&scene_manager, &flatland, root_transform_id.clone()).await?;
+
+    let layout_info = root_view.parent_viewport_watcher.get_layout().await?;
 
     // TODO(fxbug.dev/88656): do something like this to instantiate the library component that knows
     // how to generate a Flatland scene to lay views out on a tiled grid.  It will be used in the
@@ -94,19 +112,83 @@ async fn inner_main() -> Result<(), Error> {
                 view_controller_request_stream,
                 responder,
             } => {
-                // TODO(fxbug.dev/88656): embed the element in the not-yet-existant tile view.
-                let _ = view_spec;
-                let _ = annotation_controller;
-                let _ = view_controller_request_stream;
+                // We have either a view holder token OR a viewport_creation_token, but for
+                // Flatland we can expect a viewport creation token.
+                let mut viewport_creation_token = match view_spec.viewport_creation_token {
+                    Some(token) => token,
+                    None => {
+                        fx_log_warn!("Client attempted to present Gfx component but only Flatland is supported.");
+                        continue;
+                    }
+                };
 
-                // TODO(fxbug.dev/88656): instead of just sending "success", we need to actually
-                // install the view into the Flatland scene graph, respond to messages on the
-                // ViewControllerRequestStream, etc.
+                // Create a Viewport that houses the view we are creating.
+                let viewport_content_id = id_generator.next_content_id();
+                let viewport_properties = fuchsia_scenic::flatland::ViewportProperties {
+                    logical_size: Some(layout_info.logical_size.unwrap()),
+                    ..ui_comp::ViewportProperties::EMPTY
+                };
+
+                // Attach the client to the scene graph.
+                let (child_view_watcher, child_view_watcher_request) =
+                    create_proxy::<fidl_fuchsia_ui_composition::ChildViewWatcherMarker>()?;
+                flatland.create_viewport(
+                    &mut viewport_content_id.clone(),
+                    &mut viewport_creation_token,
+                    viewport_properties,
+                    child_view_watcher_request,
+                )?;
+
+                let new_view_transform_id = id_generator.next_transform_id();
+                flatland.create_transform(&mut new_view_transform_id.clone())?;
+                flatland.set_content(
+                    &mut new_view_transform_id.clone(),
+                    &mut viewport_content_id.clone(),
+                )?;
+                flatland.add_child(
+                    &mut root_transform_id.clone(),
+                    &mut new_view_transform_id.clone(),
+                )?;
+
+                // Flush the changes.
+                flatland.present(flatland::PresentArgs {
+                    requested_presentation_time: Some(0),
+                    ..flatland::PresentArgs::EMPTY
+                })?;
+
+                // Ignore for now.
+                let _ = annotation_controller;
+
+                // Alert the client that the view has been presented.
+                let view_controller_request_stream = view_controller_request_stream.unwrap();
+                view_controller_request_stream.control_handle().send_on_presented()?;
+
+                run_client_view_controller_request_stream(
+                    view_controller_request_stream,
+                    internal_sender.clone(),
+                );
+                watch_child_view(child_view_watcher, internal_sender.clone());
+
                 if let Err(e) = responder.send(&mut Ok(())) {
                     fx_log_warn!(
                         "Failed to send response for GraphicalPresenter.PresentView(): {}",
                         e
                     );
+                }
+            }
+            MessageInternal::DismissClient { control_handle } => {
+                fx_log_warn!("Gotta destroy client resources!");
+                control_handle.shutdown_with_epitaph(zx::Status::OK);
+            }
+            MessageInternal::ClientDied {} => {
+                fx_log_warn!("Gotta destroy client resources!");
+            }
+            MessageInternal::ReceivedClientViewRef { mut view_ref } => {
+                match root_view.view_focuser.request_focus(&mut view_ref).await {
+                    Ok(_) => {}
+                    Err(e) => {
+                        fx_log_err!("RequestFocus FIDL error: {}", e);
+                    }
                 }
             }
         }
@@ -119,13 +201,16 @@ async fn set_scene_manager_root_view(
     scene_manager: &SceneManagerProxy,
     flatland: &flatland::FlatlandProxy,
     root_transform_id: flatland::TransformId,
-) -> Result<ui_views::ViewRef, Error> {
+) -> Result<RootView, Error> {
     let (view_provider, mut view_provider_request_stream) =
         create_request_stream::<ui_app::ViewProviderMarker>()?;
 
     // Don't await the result yet, because the future will not resolve until we handle the
     // ViewProvider request below.
     let view_ref = scene_manager.set_root_view(view_provider);
+    let (view_focuser, view_focuser_request) =
+        fidl::endpoints::create_proxy::<ui_views::FocuserMarker>()
+            .expect("Failed to create Focuser channel");
 
     while let Some(request) = view_provider_request_stream
         .try_next()
@@ -140,6 +225,9 @@ async fn set_scene_manager_root_view(
                 return Err(anyhow!("ViewProvider impl only handles CreateView2()"));
             }
             ui_app::ViewProviderRequest::CreateView2 { args, .. } => {
+                let (parent_viewport_watcher, parent_viewport_watcher_request) =
+                    create_proxy::<flatland::ParentViewportWatcherMarker>()?;
+
                 if let Some(mut view_creation_token) = args.view_creation_token {
                     flatland.create_transform(&mut root_transform_id.clone())?;
                     flatland.set_root_transform(&mut root_transform_id.clone())?;
@@ -147,10 +235,10 @@ async fn set_scene_manager_root_view(
                     let mut view_identity =
                         ui_views::ViewIdentityOnCreation::from(scenic::ViewRefPair::new()?);
 
-                    let (_parent_viewport_watcher, parent_viewport_watcher_request) =
-                        create_proxy::<flatland::ParentViewportWatcherMarker>()?;
-
-                    let view_bound_protocols = flatland::ViewBoundProtocols::EMPTY;
+                    let view_bound_protocols = flatland::ViewBoundProtocols {
+                        view_focuser: Some(view_focuser_request),
+                        ..flatland::ViewBoundProtocols::EMPTY
+                    };
 
                     flatland.create_view2(
                         &mut view_creation_token,
@@ -168,9 +256,9 @@ async fn set_scene_manager_root_view(
                 }
 
                 // Now that we've handled the ViewProvider request, we can await the ViewRef.
-                let view_ref = view_ref.await?;
+                let _view_ref = view_ref.await?;
 
-                return Ok(view_ref);
+                return Ok(RootView { parent_viewport_watcher, view_focuser });
             }
         }
     }
@@ -261,6 +349,55 @@ fn run_graphical_presenter_service(
         }
         // TODO(fxbug.dev/88656): if the result of try_next() is Err, we should probably log that instead of
         // silently swallowing it.
+    })
+    .detach();
+}
+
+fn run_client_view_controller_request_stream(
+    mut request_stream: fidl_fuchsia_element::ViewControllerRequestStream,
+    internal_sender: UnboundedSender<MessageInternal>,
+) {
+    fasync::Task::local(async move {
+        while let Ok(Some(request)) = request_stream.try_next().await {
+            match request {
+                fidl_fuchsia_element::ViewControllerRequest::Dismiss { control_handle } => {
+                    fx_log_warn!("We should dismiss ourselves!");
+                    internal_sender
+                        .unbounded_send(MessageInternal::DismissClient { control_handle })
+                        .expect("Failed to send MessageInternal::DismissClient");
+                    return;
+                }
+            }
+        }
+    })
+    .detach();
+}
+
+fn watch_child_view(
+    proxy: ui_comp::ChildViewWatcherProxy,
+    internal_sender: UnboundedSender<MessageInternal>,
+) {
+    // Get view ref, then listen for channel closure.
+    fasync::Task::local(async move {
+        match proxy.get_view_ref().await {
+            Ok(view_ref) => {
+                internal_sender
+                    .unbounded_send(MessageInternal::ReceivedClientViewRef { view_ref })
+                    .expect("Failed to send MessageInternal::ReceivedClientViewRef");
+            }
+            Err(_) => {
+                internal_sender
+                    .unbounded_send(MessageInternal::ClientDied {})
+                    .expect("Failed to send MessageInternal::ClientDied");
+                return;
+            }
+        }
+
+        let _ = proxy.on_closed().await;
+
+        internal_sender
+            .unbounded_send(MessageInternal::ClientDied {})
+            .expect("Failed to send MessageInternal::ClientDied");
     })
     .detach();
 }
