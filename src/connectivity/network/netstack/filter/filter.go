@@ -154,12 +154,8 @@ func (f *Filter) updateRules(rules []filter.Rule, generation uint32) filter.Filt
 	f.mu.v6Table = v6Table
 
 	iptables := f.stack.IPTables()
-	if err := iptables.ReplaceTable(stack.FilterID, v4Table, false /* ipv6 */); err != nil {
-		panic(fmt.Sprintf("ReplaceTable(%d, %#v, false): %s", stack.FilterID, v4Table, err))
-	}
-	if err := iptables.ReplaceTable(stack.FilterID, v6Table, true /* ipv6 */); err != nil {
-		panic(fmt.Sprintf("ReplaceTable(%d, %#v, false): %s", stack.FilterID, v6Table, err))
-	}
+	iptables.ReplaceTable(stack.FilterID, v4Table, false /* ipv6 */)
+	iptables.ReplaceTable(stack.FilterID, v6Table, true /* ipv6 */)
 	f.mu.generation++
 	return filter.FilterUpdateRulesResultWithResponse(filter.FilterUpdateRulesResponse{})
 }
@@ -196,12 +192,8 @@ func (f *Filter) updateNATRulesLocked(rules []filter.Nat, v4Table, v6Table stack
 	f.mu.v6NATTable = v6Table
 
 	iptables := f.stack.IPTables()
-	if err := iptables.ReplaceTable(stack.NATID, v4Table, false /* ipv6 */); err != nil {
-		panic(fmt.Sprintf("ReplaceTable(%d, %#v, false): %s", stack.NATID, v4Table, err))
-	}
-	if err := iptables.ReplaceTable(stack.NATID, v6Table, true /* ipv6 */); err != nil {
-		panic(fmt.Sprintf("ReplaceTable(%d, %#v, false): %s", stack.NATID, v6Table, err))
-	}
+	iptables.ReplaceTable(stack.NATID, v4Table, false /* ipv6 */)
+	iptables.ReplaceTable(stack.NATID, v6Table, true /* ipv6 */)
 	f.mu.natGeneration++
 }
 

@@ -731,10 +731,12 @@ func (e *endpoint) handleFragments(r *stack.Route, networkMTU uint32, pkt *stack
 	for {
 		fragPkt, more := buildNextFragment(&pf, networkHeader, transProto, id)
 		if err := handler(fragPkt); err != nil {
+			fragPkt.DecRef()
 			return n, pf.RemainingFragmentCount() + 1, err
 		}
 		n++
 		if !more {
+			fragPkt.DecRef()
 			return n, pf.RemainingFragmentCount(), nil
 		}
 	}
@@ -814,14 +816,14 @@ func (e *endpoint) writePacket(r *stack.Route, pkt *stack.PacketBuffer, protocol
 			// fragment one by one using WritePacket() (current strategy) or if we
 			// want to create a PacketBufferList from the fragments and feed it to
 			// WritePackets(). It'll be faster but cost more memory.
-			return e.nic.WritePacket(r, ProtocolNumber, fragPkt)
+			return e.nic.WritePacket(r, fragPkt)
 		})
 		stats.PacketsSent.IncrementBy(uint64(sent))
 		stats.OutgoingPacketErrors.IncrementBy(uint64(remain))
 		return err
 	}
 
-	if err := e.nic.WritePacket(r, ProtocolNumber, pkt); err != nil {
+	if err := e.nic.WritePacket(r, pkt); err != nil {
 		stats.OutgoingPacketErrors.Increment()
 		return err
 	}
@@ -1899,6 +1901,7 @@ func (e *endpoint) Stats() stack.NetworkEndpointStats {
 }
 
 var _ stack.NetworkProtocol = (*protocol)(nil)
+var _ stack.RejectIPv6WithHandler = (*protocol)(nil)
 var _ fragmentation.TimeoutHandler = (*protocol)(nil)
 
 type protocol struct {
@@ -2122,6 +2125,22 @@ func (p *protocol) allowICMPReply(icmpType header.ICMPv6Type) bool {
 		return p.stack.AllowICMPMessage()
 	}
 	return true
+}
+
+// SendRejectionError implements stack.RejectIPv6WithHandler.
+func (p *protocol) SendRejectionError(pkt *stack.PacketBuffer, rejectWith stack.RejectIPv6WithICMPType, inputHook bool) tcpip.Error {
+	switch rejectWith {
+	case stack.RejectIPv6WithICMPNoRoute:
+		return p.returnError(&icmpReasonNetUnreachable{}, pkt, inputHook)
+	case stack.RejectIPv6WithICMPAddrUnreachable:
+		return p.returnError(&icmpReasonHostUnreachable{}, pkt, inputHook)
+	case stack.RejectIPv6WithICMPPortUnreachable:
+		return p.returnError(&icmpReasonPortUnreachable{}, pkt, inputHook)
+	case stack.RejectIPv6WithICMPAdminProhibited:
+		return p.returnError(&icmpReasonAdministrativelyProhibited{}, pkt, inputHook)
+	default:
+		panic(fmt.Sprintf("unhandled %[1]T = %[1]d", rejectWith))
+	}
 }
 
 // calculateNetworkMTU calculates the network-layer payload MTU based on the

@@ -115,9 +115,9 @@ func (e *endpoint) IsAttached() bool {
 
 func (*endpoint) ARPHardwareType() header.ARPHardwareType { return header.ARPHardwareNone }
 
-func (e *endpoint) WritePacket(r stack.RouteInfo, protocol tcpip.NetworkProtocolNumber, pkt *stack.PacketBuffer) tcpip.Error {
+func (e *endpoint) writePacket(pkt *stack.PacketBuffer) tcpip.Error {
 	newBuf := false
-	if protocol == ipv4.ProtocolNumber {
+	if pkt.NetworkProtocolNumber == ipv4.ProtocolNumber {
 		if fn := e.onWritePacket; fn != nil {
 			pkt, newBuf = fn(pkt)
 			if pkt == nil {
@@ -156,11 +156,16 @@ func (e *endpoint) WritePacket(r stack.RouteInfo, protocol tcpip.NetworkProtocol
 				defer newPkt.DecRef()
 				newPkt.PktType = tcpip.PacketBroadcast
 
-				remote.dispatcher.DeliverNetworkPacket(r.LocalLinkAddress, r.RemoteLinkAddress, protocol, newPkt)
+				remote.dispatcher.DeliverNetworkPacket(
+					pkt.EgressRoute.LocalLinkAddress,
+					pkt.EgressRoute.RemoteLinkAddress,
+					pkt.NetworkProtocolNumber,
+					newPkt,
+				)
 			}()
 		}
 
-		if protocol == ipv4.ProtocolNumber {
+		if pkt.NetworkProtocolNumber == ipv4.ProtocolNumber {
 			if fn := e.onPacketDelivered; fn != nil {
 				fn()
 			}
@@ -170,10 +175,10 @@ func (e *endpoint) WritePacket(r stack.RouteInfo, protocol tcpip.NetworkProtocol
 	return nil
 }
 
-func (e *endpoint) WritePackets(r stack.RouteInfo, pkts stack.PacketBufferList, protocol tcpip.NetworkProtocolNumber) (int, tcpip.Error) {
+func (e *endpoint) WritePackets(pkts stack.PacketBufferList) (int, tcpip.Error) {
 	i := 0
 	for pkt := pkts.Front(); pkt != nil; i, pkt = i+1, pkt.Next() {
-		if err := e.WritePacket(r, protocol, pkt); err != nil {
+		if err := e.writePacket(pkt); err != nil {
 			return i, err
 		}
 	}

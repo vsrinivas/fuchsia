@@ -295,16 +295,12 @@ func TestClient(t *testing.T) {
 						}
 
 						// Use WritePackets to get deterministic batch sizes.
-						count, err := client.WritePackets(
-							stack.RouteInfo{},
-							pkts,
-							0,
-						)
+						count, err := client.WritePackets(pkts)
 						if err != nil {
 							t.Fatal(err)
 						}
 						if got := uint32(count); got != writeSize {
-							t.Fatalf("got WritePackets({}, _, 0) = %d, want %d", got, writeSize)
+							t.Fatalf("got WritePackets(_) = %d, want %d", got, writeSize)
 						}
 
 						dropsBefore := client.TxStats().Drops.Value()
@@ -379,10 +375,10 @@ func TestClient(t *testing.T) {
 							t.Fatalf("got copy(...) = %d, want = %d", n, len(packetHeader))
 						}
 
-						if n, err := client.WritePackets(stack.RouteInfo{}, pkts, 0); err != nil {
-							t.Fatalf("client.WritePackets({}, _, 0): %s", err)
+						if n, err := client.WritePackets(pkts); err != nil {
+							t.Fatalf("WritePackets(_): %s", err)
 						} else if n != 1 {
-							t.Fatalf("got WritePackets({}, _, 0) = %d, want = 1", n)
+							t.Fatalf("got WritePackets(_) = %d, want = 1", n)
 						}
 					}()
 

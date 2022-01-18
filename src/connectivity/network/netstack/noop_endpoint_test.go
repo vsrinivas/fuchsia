@@ -44,12 +44,8 @@ func (ep *noopEndpoint) LinkAddress() tcpip.LinkAddress {
 	return ep.linkAddress
 }
 
-func (*noopEndpoint) WritePacket(stack.RouteInfo, tcpip.NetworkProtocolNumber, *stack.PacketBuffer) tcpip.Error {
-	return nil
-}
-
-func (*noopEndpoint) WritePackets(stack.RouteInfo, stack.PacketBufferList, tcpip.NetworkProtocolNumber) (int, tcpip.Error) {
-	return 0, nil
+func (*noopEndpoint) WritePackets(pkts stack.PacketBufferList) (int, tcpip.Error) {
+	return pkts.Len(), nil
 }
 
 func (*noopEndpoint) WriteRawPacket(*stack.PacketBuffer) tcpip.Error { return &tcpip.ErrNotSupported{} }

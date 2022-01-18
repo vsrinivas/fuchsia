@@ -177,7 +177,7 @@ func (c *Client) write(port network.PortId, pkts stack.PacketBufferList) (int, t
 	})
 }
 
-func (p *Port) WritePackets(_ stack.RouteInfo, pkts stack.PacketBufferList, _ tcpip.NetworkProtocolNumber) (int, tcpip.Error) {
+func (p *Port) WritePackets(pkts stack.PacketBufferList) (int, tcpip.Error) {
 	return p.client.write(p.portInfo.Id, pkts)
 }
 

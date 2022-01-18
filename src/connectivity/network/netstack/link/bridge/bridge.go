@@ -136,7 +136,7 @@ func (ep *Endpoint) LinkAddress() tcpip.LinkAddress {
 
 // WritePackets returns the number of packets in hdrs that were successfully
 // written to all links.
-func (ep *Endpoint) WritePackets(_ stack.RouteInfo, pkts stack.PacketBufferList, _ tcpip.NetworkProtocolNumber) (int, tcpip.Error) {
+func (ep *Endpoint) WritePackets(pkts stack.PacketBufferList) (int, tcpip.Error) {
 	cnt := 0
 	for pkt := pkts.Front(); pkt != nil; pkt = pkt.Next() {
 		ep.AddHeader(ep.LinkAddress(), pkt.EgressRoute.RemoteLinkAddress, pkt.NetworkProtocolNumber, pkt)

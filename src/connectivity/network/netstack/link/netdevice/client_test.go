@@ -405,10 +405,10 @@ func TestClient_WritePackets(t *testing.T) {
 			ReserveHeaderBytes: int(linkEndpoint.MaxHeaderLength()),
 		}))
 
-		if n, err := linkEndpoint.WritePackets(stack.RouteInfo{}, pkts, 0); err != nil {
-			t.Fatalf("WritePackets({}, _, 0): %s", err)
+		if n, err := linkEndpoint.WritePackets(pkts); err != nil {
+			t.Fatalf("WritePackets(_): %s", err)
 		} else if n != 1 {
-			t.Fatalf("got WritePackets({}, _, 0) = %d, want = 1", n)
+			t.Fatalf("got WritePackets(_) = %d, want = 1", n)
 		}
 	}()
 
@@ -497,10 +497,10 @@ func TestWritePackets(t *testing.T) {
 				pkt.NetworkProtocolNumber = protocol
 				pkts.PushBack(pkt)
 
-				if n, err := linkEndpoint.WritePackets(stack.RouteInfo{}, pkts, 0); err != nil {
-					t.Fatalf("WritePackets({}, _, 0): %s", err)
+				if n, err := linkEndpoint.WritePackets(pkts); err != nil {
+					t.Fatalf("WritePackets(_): %s", err)
 				} else if n != 1 {
-					t.Fatalf("got WritePackets({}, _, 0) = %d, want = 1", n)
+					t.Fatalf("got WritePackets(_)) = %d, want = 1", n)
 				}
 			}()
 			readFrameResult, err := tunDev.ReadFrame(ctx)
@@ -1132,12 +1132,12 @@ func TestPairExchangePackets(t *testing.T) {
 			pkts.PushBack(makeTestPacket(prefix, i))
 		}
 		errs <- func() error {
-			n, err := endpoint.WritePackets(stack.RouteInfo{}, pkts, 0)
+			n, err := endpoint.WritePackets(pkts)
 			if err != nil {
-				return fmt.Errorf("WritePackets({}, _, 0): %s", err)
+				return fmt.Errorf("WritePackets(_): %s", err)
 			}
 			if n != int(packetCount) {
-				return fmt.Errorf("got WritePackets({}, _, 0) = %d, want %d", n, packetCount)
+				return fmt.Errorf("got WritePackets(_) = %d, want %d", n, packetCount)
 			}
 			return nil
 		}()

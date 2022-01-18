@@ -186,7 +186,7 @@ func (c *Client) write(pkts stack.PacketBufferList) (int, tcpip.Error) {
 	})
 }
 
-func (c *Client) WritePackets(_ stack.RouteInfo, pkts stack.PacketBufferList, _ tcpip.NetworkProtocolNumber) (int, tcpip.Error) {
+func (c *Client) WritePackets(pkts stack.PacketBufferList) (int, tcpip.Error) {
 	return c.write(pkts)
 }
 

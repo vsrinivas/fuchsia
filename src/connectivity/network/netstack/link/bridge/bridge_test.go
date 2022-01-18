@@ -172,7 +172,7 @@ func (*stubEndpoint) AddHeader(local, remote tcpip.LinkAddress, protocol tcpip.N
 	panic("AddHeader unimplemented")
 }
 
-func (*stubEndpoint) WritePackets(_ stack.RouteInfo, pkts stack.PacketBufferList, _ tcpip.NetworkProtocolNumber) (int, tcpip.Error) {
+func (*stubEndpoint) WritePackets(pkts stack.PacketBufferList) (int, tcpip.Error) {
 	panic("WritePackets unimplemented")
 }
 
@@ -312,12 +312,12 @@ func TestBridgeWritePackets(t *testing.T) {
 				pkts.PushBack(pkt)
 			}
 
-			got, err := bridgeEP.WritePackets(stack.RouteInfo{}, pkts, 0)
+			got, err := bridgeEP.WritePackets(pkts)
 			if err != nil {
-				t.Errorf("bridgeEP.WritePackets({}, _, 0): %s", err)
+				t.Errorf("bridgeEP.WritePackets(_): %s", err)
 			}
 			if got != i {
-				t.Errorf("got bridgeEP.WritePackets({}, _, 0) = %d, want = %d", got, i)
+				t.Errorf("got bridgeEP.WritePackets(_) = %d, want = %d", got, i)
 			}
 
 			for j := 0; j < i; j++ {

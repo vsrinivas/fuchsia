@@ -36,10 +36,7 @@ func (*nullEndpoint) LinkAddress() tcpip.LinkAddress {
 	var l tcpip.LinkAddress
 	return l
 }
-func (*nullEndpoint) WritePacket(stack.RouteInfo, tcpip.NetworkProtocolNumber, *stack.PacketBuffer) tcpip.Error {
-	return nil
-}
-func (*nullEndpoint) WritePackets(_ stack.RouteInfo, pkts stack.PacketBufferList, _ tcpip.NetworkProtocolNumber) (int, tcpip.Error) {
+func (*nullEndpoint) WritePackets(pkts stack.PacketBufferList) (int, tcpip.Error) {
 	return pkts.Len(), nil
 }
 func (*nullEndpoint) WriteRawPacket(*stack.PacketBuffer) tcpip.Error { return &tcpip.ErrNotSupported{} }
