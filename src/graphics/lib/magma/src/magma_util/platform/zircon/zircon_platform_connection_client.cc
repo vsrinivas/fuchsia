@@ -427,7 +427,7 @@ void PrimaryWrapper::UpdateFlowControl(uint64_t new_bytes) {
 }
 
 magma_status_t PrimaryWrapper::Flush() {
-  auto result = client_->Flush_Sync();
+  auto result = client_.sync()->Flush();
   return magma::FromZxStatus(result.status()).get();
 }
 
@@ -436,7 +436,7 @@ magma_status_t PrimaryWrapper::GetError() {
   if (error_ != MAGMA_STATUS_OK)
     return error_;
 
-  auto result = client_->Flush_Sync();
+  auto result = client_.sync()->Flush();
 
   if (!result.ok()) {
     // Only run the loop if the channel has been closed - we don't want to process any

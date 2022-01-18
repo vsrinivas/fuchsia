@@ -53,7 +53,7 @@ class PrimaryWrapper : public fidl::WireAsyncEventHandler<fuchsia_gpu_magma::Pri
   magma_status_t Sync();
 
   auto IsPerformanceCounterAccessAllowed() {
-    return client_->IsPerformanceCounterAccessAllowed_Sync();
+    return client_.sync()->IsPerformanceCounterAccessAllowed();
   }
 
   // Returns: bool wait, uint64_t message count, uint64_t imported bytes

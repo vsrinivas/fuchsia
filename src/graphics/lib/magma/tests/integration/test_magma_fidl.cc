@@ -113,7 +113,7 @@ class TestMagmaFidl : public gtest::RealLoopFixture {
   uint64_t vendor_id() { return vendor_id_; }
 
   bool CheckForUnbind() {
-    primary_->Flush_Sync();
+    primary_.sync()->Flush();
     RunLoopUntilIdle();
     return async_handler_.unbind_info().has_value();
   }
@@ -493,7 +493,7 @@ TEST_F(TestMagmaFidl, EnablePerformanceCounters) {
     }
 
     {
-      auto wire_result = primary_->IsPerformanceCounterAccessAllowed_Sync();
+      auto wire_result = primary_.sync()->IsPerformanceCounterAccessAllowed();
       ASSERT_TRUE(wire_result.ok());
       // Should be enabled if the gpu-performance-counters device matches the device under test
       if (wire_result.Unwrap()->enabled) {
