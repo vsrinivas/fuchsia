@@ -55,7 +55,6 @@ readonly all_tools=(
     "fidlgen_dart tools/fidl/fidlgen_dart/goldens"
     "fidlgen_go tools/fidl/fidlgen_go/goldens"
     "fidlgen_hlcpp tools/fidl/fidlgen_hlcpp/goldens/bindings"
-    "fidlgen_hlcpp_natural_types tools/fidl/fidlgen_hlcpp/goldens/natural_types"
     "fidlgen_libfuzzer tools/fidl/fidlgen_libfuzzer/goldens"
     "fidlgen_llcpp tools/fidl/fidlgen_llcpp/goldens"
     "fidlgen_rust tools/fidl/fidlgen_rust/goldens"

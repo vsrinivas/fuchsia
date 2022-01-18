@@ -80,32 +80,6 @@ if (is_host) {
       }
     }
   }
-
-  golden_test("fidlgen_hlcpp_natural_types_golden_tests") {
-    goldens_dir = "goldens/natural_types"
-    reformat_goldens_bin = "${clang_prefix}/clang-format"
-    reformat_goldens_args = [ "--style=google" ]
-    deps = []
-    entries = []
-    foreach(info, fidl_testdata_info) {
-      if (info.denylist + [ "fidlgen_hlcpp" ] - [ "fidlgen_hlcpp" ] ==
-          info.denylist) {
-        deps += [ "${info.target}_cpp_natural_types_generate($fidl_toolchain)" ]
-        gen_dir = "${info.fidl_gen_dir}/${info.target_name}/cpp_natural_types"
-        include_path = string_replace(info.library, ".", "/") + "/cpp"
-        entries += [
-          {
-            golden = "${info.name}.h.golden"
-            generated = "$gen_dir/$include_path/natural_types.h"
-          },
-          {
-            golden = "${info.name}.cc.golden"
-            generated = "$gen_dir/$include_path/natural_types.cc"
-          },
-        ]
-      }
-    }
-  }
 }
 
 install_host_tools("host") {
@@ -125,10 +99,7 @@ group("goldens") {
   foreach(info, fidl_testdata_info) {
     if (info[denylist_key] + [ "fidlgen_hlcpp" ] - [ "fidlgen_hlcpp" ] ==
         info[denylist_key]) {
-      deps += [
-        "${info.target}_cpp_natural_types",
-        "${info.target}_hlcpp",
-      ]
+      deps += [ "${info.target}_hlcpp" ]
     }
   }
 }
@@ -137,7 +108,6 @@ group("tests") {
   testonly = true
   deps = [
     ":fidlgen_hlcpp_golden_tests($host_toolchain)",
-    ":fidlgen_hlcpp_natural_types_golden_tests($host_toolchain)",
     ":goldens",
     ":goldens($host_toolchain)",
   ]

@@ -5,12 +5,7 @@
 */}}
 
 {{- define "Filename:Header" -}}
-  {{- .LibrarySlashes }}/cpp/
-  {{- if ExperimentEnabled "natural-types" -}}
-    natural_types.h
-  {{- else -}}
-    fidl.h
-  {{- end -}}
+  {{- .LibrarySlashes }}/cpp/fidl.h
 {{- end }}
 
 
@@ -20,20 +15,14 @@
 
 #pragma once
 
-{{ if not (ExperimentEnabled "natural-types") }}
 #include "lib/fidl/cpp/internal/header.h"
-{{- else }}
-#include "lib/fidl/cpp/internal/natural_types_header.h"
-{{- end }}
 
 {{ range .Dependencies -}}
 #include <{{ . | Filename "Header" }}>
 {{ end -}}
 
 {{ template "Header/NaturalTypes" . }}
-{{ if not (ExperimentEnabled "natural-types") -}}
 {{ template "Header/ProxiesAndStubs" . }}
-{{- end }}
 {{ EndOfFile }}
 
 {{ end }}

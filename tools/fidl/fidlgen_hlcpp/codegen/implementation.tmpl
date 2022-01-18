@@ -5,12 +5,7 @@
 */}}
 
 {{- define "Filename:Implementation" -}}
-  {{- .LibrarySlashes }}/cpp/
-  {{- if ExperimentEnabled "natural-types" -}}
-    natural_types.cc
-  {{- else -}}
-    fidl.cc
-  {{- end -}}
+  {{- .LibrarySlashes }}/cpp/fidl.cc
 {{- end }}
 
 
@@ -25,16 +20,10 @@ do not support them in the bindings. */}}
 
 #include <{{ .Library | Filename "Header" }}>
 
-{{ if ExperimentEnabled "natural-types" -}}
-#include "lib/fidl/cpp/internal/natural_types_implementation.h"
-{{ else -}}
 #include "lib/fidl/cpp/internal/implementation.h"
-{{- end }}
 
 {{ template "Implementation/NaturalTypes" . }}
-{{ if not (ExperimentEnabled "natural-types") -}}
 {{ template "Implementation/ProxiesAndStubs" . }}
-{{- end }}
 
 {{- end }}{{/* if not SingleComponentLibraryName */}}
 

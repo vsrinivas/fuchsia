@@ -10,11 +10,8 @@ import (
 )
 
 func main() {
-	flags := cpp.NewCmdlineFlags("hlcpp", []string{"natural-types"})
+	flags := cpp.NewCmdlineFlags("hlcpp", []string{})
 	fidl := flags.ParseAndLoadIR()
 	generator := codegen.NewGenerator(flags)
-	generator.GenerateFiles(fidl, []string{"Header", "Implementation"})
-	if !flags.ExperimentEnabled("natural-types") {
-		generator.GenerateFiles(fidl, []string{"TestBase"})
-	}
+	generator.GenerateFiles(fidl, []string{"Header", "Implementation", "TestBase"})
 }

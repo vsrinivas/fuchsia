@@ -5,12 +5,7 @@
 */}}
 
 {{- define "Filename:TestBase" -}}
-  {{- .LibrarySlashes }}/cpp/
-  {{- if ExperimentEnabled "natural-types" -}}
-    natural_types_test_base.h
-  {{- else -}}
-    fidl_test_base.h
-  {{- end -}}
+  {{- .LibrarySlashes }}/cpp/fidl_test_base.h
 {{- end }}
 
 {{- define "File:TestBase" -}}
