@@ -1093,20 +1093,18 @@ mod tests {
     const MAC_1: fnet::MacAddress = fidl_mac!("01:02:03:04:05:06");
     const MAC_2: fnet::MacAddress = fidl_mac!("02:03:04:05:06:07");
 
+    #[derive(Default)]
     struct TestConnector {
-        stack: Option<fstack::StackProxy>,
-        netstack: Option<fnetstack::NetstackProxy>,
         dhcpd: Option<fdhcp::Server_Proxy>,
+        netstack: Option<fnetstack::NetstackProxy>,
+        stack: Option<fstack::StackProxy>,
     }
 
     #[async_trait::async_trait]
     impl ServiceConnector<fdhcp::Server_Marker> for TestConnector {
         async fn connect(&self) -> Result<<fdhcp::Server_Marker as ProtocolMarker>::Proxy, Error> {
-            let TestConnector { stack: _, netstack: _, dhcpd } = self;
-            match dhcpd {
-                Some(dhcpd) => Ok(dhcpd.clone()),
-                None => Err(anyhow::anyhow!("connector has no dhcp server instance")),
-            }
+            let Self { dhcpd, netstack: _, stack: _ } = self;
+            dhcpd.as_ref().cloned().ok_or(anyhow::anyhow!("connector has no dhcp server instance"))
         }
     }
 
@@ -1138,10 +1136,8 @@ mod tests {
         async fn connect(
             &self,
         ) -> Result<<fnetstack::NetstackMarker as ProtocolMarker>::Proxy, Error> {
-            match &self.netstack {
-                Some(netstack) => Ok(netstack.clone()),
-                None => Err(anyhow::anyhow!("connector has no netstack instance")),
-            }
+            let Self { dhcpd: _, netstack, stack: _ } = self;
+            netstack.as_ref().cloned().ok_or(anyhow::anyhow!("connector has no netstack instance"))
         }
     }
 
@@ -1155,10 +1151,8 @@ mod tests {
     #[async_trait::async_trait]
     impl ServiceConnector<fstack::StackMarker> for TestConnector {
         async fn connect(&self) -> Result<<fstack::StackMarker as ProtocolMarker>::Proxy, Error> {
-            match &self.stack {
-                Some(stack) => Ok(stack.clone()),
-                None => Err(anyhow::anyhow!("connector has no stack instance")),
-            }
+            let Self { dhcpd: _, netstack: _, stack } = self;
+            stack.as_ref().cloned().ok_or(anyhow::anyhow!("connector has no stack instance"))
         }
     }
 
@@ -1226,13 +1220,7 @@ mod tests {
 
         let (stack_controller, mut stack_requests) =
             fidl::endpoints::create_proxy_and_stream::<fstack::StackMarker>().unwrap();
-        let (netstack_controller, _netstack_requests) =
-            fidl::endpoints::create_proxy_and_stream::<fnetstack::NetstackMarker>().unwrap();
-        let connector = TestConnector {
-            stack: Some(stack_controller),
-            netstack: Some(netstack_controller),
-            dhcpd: None,
-        };
+        let connector = TestConnector { stack: Some(stack_controller), ..Default::default() };
 
         let do_if_fut = do_if(
             std::io::sink(),
@@ -1307,8 +1295,7 @@ mod tests {
 
         let (stack, mut requests) =
             fidl::endpoints::create_proxy_and_stream::<fstack::StackMarker>().unwrap();
-        let (netstack, _) = fidl::endpoints::create_proxy::<fnetstack::NetstackMarker>().unwrap();
-        let connector = TestConnector { stack: Some(stack), netstack: Some(netstack), dhcpd: None };
+        let connector = TestConnector { stack: Some(stack), ..Default::default() };
 
         // Make the first request.
         let succeeds = do_if(
@@ -1435,13 +1422,7 @@ status      ENABLED | LINK_UP"#,
     async fn if_list(json: bool, wanted_output: String) {
         let (stack_controller, mut stack_requests) =
             fidl::endpoints::create_proxy_and_stream::<fstack::StackMarker>().unwrap();
-        let (netstack_controller, _netstack_requests) =
-            fidl::endpoints::create_proxy_and_stream::<fnetstack::NetstackMarker>().unwrap();
-        let connector = TestConnector {
-            stack: Some(stack_controller),
-            netstack: Some(netstack_controller),
-            dhcpd: None,
-        };
+        let connector = TestConnector { stack: Some(stack_controller), ..Default::default() };
 
         let mut output: Vec<u8> = Vec::new();
 
@@ -1501,8 +1482,7 @@ status      ENABLED | LINK_UP"#,
     async fn fwd_list(json: bool, wanted_output: String) {
         let (stack_controller, mut stack_requests) =
             fidl::endpoints::create_proxy_and_stream::<fstack::StackMarker>().unwrap();
-        let connector =
-            TestConnector { stack: Some(stack_controller), netstack: None, dhcpd: None };
+        let connector = TestConnector { stack: Some(stack_controller), ..Default::default() };
 
         let mut output: Vec<u8> = Vec::new();
 
@@ -1570,7 +1550,7 @@ status      ENABLED | LINK_UP"#,
 
         let (netstack, mut requests) =
             fidl::endpoints::create_proxy_and_stream::<fnetstack::NetstackMarker>().unwrap();
-        let connector = TestConnector { stack: None, netstack: Some(netstack), dhcpd: None };
+        let connector = TestConnector { netstack: Some(netstack), ..Default::default() };
 
         // both test values have been arbitrarily selected
         let expected_id = 1;
@@ -1598,7 +1578,7 @@ status      ENABLED | LINK_UP"#,
     async fn test_do_dhcp(cmd: opts::DhcpEnum) {
         let (netstack, mut requests) =
             fidl::endpoints::create_proxy_and_stream::<fnetstack::NetstackMarker>().unwrap();
-        let connector = TestConnector { stack: None, netstack: Some(netstack), dhcpd: None };
+        let connector = TestConnector { netstack: Some(netstack), ..Default::default() };
         let op = do_dhcp(cmd.clone(), &connector);
         let op_succeeds = async move {
             let (received_id, dhcp_requests, netstack_responder) = requests
@@ -1657,7 +1637,7 @@ status      ENABLED | LINK_UP"#,
     async fn test_modify_route(cmd: opts::RouteEnum) {
         let (netstack, mut requests) =
             fidl::endpoints::create_proxy_and_stream::<fnetstack::NetstackMarker>().unwrap();
-        let connector = TestConnector { stack: None, netstack: Some(netstack), dhcpd: None };
+        let connector = TestConnector { netstack: Some(netstack), ..Default::default() };
         let op = do_route(std::io::sink(), cmd.clone(), &connector);
         let op_succeeds = async move {
             let (route_table_requests, netstack_responder) = requests
@@ -1764,7 +1744,7 @@ status      ENABLED | LINK_UP"#,
     async fn route_list(json: bool, wanted_output: String) {
         let (netstack, mut requests) =
             fidl::endpoints::create_proxy_and_stream::<fnetstack::NetstackMarker>().unwrap();
-        let connector = TestConnector { stack: None, netstack: Some(netstack), dhcpd: None };
+        let connector = TestConnector { netstack: Some(netstack), ..Default::default() };
 
         let mut output: Vec<u8> = Vec::new();
 
@@ -1825,10 +1805,9 @@ status      ENABLED | LINK_UP"#,
 
     #[fasync::run_singlethreaded(test)]
     async fn bridge() {
-        let (stack, _) = fidl::endpoints::create_proxy::<fstack::StackMarker>().unwrap();
         let (netstack, mut requests) =
             fidl::endpoints::create_proxy_and_stream::<fnetstack::NetstackMarker>().unwrap();
-        let connector = TestConnector { stack: Some(stack), netstack: Some(netstack), dhcpd: None };
+        let connector = TestConnector { netstack: Some(netstack), ..Default::default() };
         // interface id test values have been selected arbitrarily
         let bridge_ifs = vec![1, 2, 3];
         let bridge_id = 4;
@@ -2236,7 +2215,7 @@ status      ENABLED | LINK_UP"#,
         let (stack, mut requests) =
             fidl::endpoints::create_proxy_and_stream::<fstack::StackMarker>()
                 .expect("creating a request stream and proxy for testing should succeed");
-        let connector = TestConnector { stack: Some(stack), netstack: None, dhcpd: None };
+        let connector = TestConnector { stack: Some(stack), ..Default::default() };
         let op = do_ip_fwd(opts::IpFwdEnum::Enable(opts::IpFwdEnable {}), &connector);
         let op_succeeds = async {
             let responder = requests
@@ -2258,7 +2237,7 @@ status      ENABLED | LINK_UP"#,
         let (stack, mut requests) =
             fidl::endpoints::create_proxy_and_stream::<fstack::StackMarker>()
                 .expect("creating a request stream and proxy for testing should succeed");
-        let connector = TestConnector { stack: Some(stack), netstack: None, dhcpd: None };
+        let connector = TestConnector { stack: Some(stack), ..Default::default() };
         let op = do_ip_fwd(opts::IpFwdEnum::Disable(opts::IpFwdDisable {}), &connector);
         let op_succeeds = async {
             let responder = requests
@@ -2319,7 +2298,8 @@ status      ENABLED | LINK_UP"#,
         let (dhcpd, mut requests) =
             fidl::endpoints::create_proxy_and_stream::<fdhcp::Server_Marker>()
                 .expect("failed to create proxy and request stream for dhcp server");
-        let connector = TestConnector { stack: None, netstack: None, dhcpd: Some(dhcpd) };
+
+        let connector = TestConnector { dhcpd: Some(dhcpd), ..Default::default() };
         let op = do_dhcpd(cmd.clone(), &connector);
         let op_succeeds = async move {
             let req = requests
