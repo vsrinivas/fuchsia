@@ -101,7 +101,7 @@ contain any floating point number could have an `Eq`, but a `flexible table`
 which currently has no floating point fields cannot have an `Eq` because
 providing one would violate the source compatibility rules.
 
-Another example comes from [`fidlgen_cpp`] which produces non-owning domain
+Another example comes from `fidlgen_cpp` which produces non-owning domain
 objects. These domain objects can be copied safely if their inline portion is a
 [value, i.e. not a resource][rfc-0057-terminology]. Here again, calculating this
 metadata we call "inline resourceness" requires iteratively calculating this
@@ -144,7 +144,7 @@ currently hand-written
 [zx_clock_t](https://cs.opensource.google/fuchsia/fuchsia/+/master:zircon/system/public/zircon/types.h;drc=be929e769ed3a4315e471fd4a0931fa01490db88;l=43)
 typedef, along with the various `#define` materializing the members of the enum.
 Should the `fuchsia.fonts` library rely on `zx/clock`, this in turn means that
-[`fidlgen_cpp`] needs to know the API contract such that it can generate
+`fidlgen_cpp` needs to know the API contract such that it can generate
 bindings code properly bridging[^1] its code generation and `kazoo`'s.
 
 [^1]: The C-family fidlgens would not want to generate their own domain objects
@@ -457,7 +457,7 @@ leveraged by developer tools such as [`fidl-lsp`] or [`fidlbolt`].
 Tool selection in a given build node should depend on the target (e.g. "generate
 low level c++ code"), as well as the library being compiled (e.g. "library zx").
 We define the total function taking a tuple (target gen, library) and returning
-a tool (e.g. [`kazoo`] or [`fidlgen_cpp`]) to be a global configuration of the
+a tool (e.g. [`kazoo`] or `fidlgen_cpp`) to be a global configuration of the
 toolchain.
 
 For instance, in the Fuchsia Source Tree we would expect the configuration:
@@ -630,7 +630,6 @@ As noted in text.
 [`fidlbolt`]: https://fuchsia.googlesource.com/fidlbolt/
 [`fidlcat`]: /tools/fidlcat/
 [`fidldoc`]: /tools/fidl/fidldoc/
-[`fidlgen_cpp`]: /tools/fidl/fidlgen_cpp/
 [`fidlgen_rust`]: /tools/fidl/fidlgen_rust/
 [`kazoo`]: /zircon/tools/kazoo/
 [`measure-tape`]: /tools/fidl/measure-tape/
