@@ -210,7 +210,7 @@ const std::vector<MatchedDriver> DriverLoader::MatchPropertiesDriverIndex(
   fdf::wire::NodeAddArgs args(allocator);
   args.set_properties(allocator, std::move(props));
 
-  auto result = driver_index_->MatchDriversV1_Sync(std::move(args));
+  auto result = driver_index_.sync()->MatchDriversV1(std::move(args));
   if (!result.ok()) {
     if (result.status() != ZX_OK) {
       LOGF(ERROR, "DriverIndex::MatchDriversV1 failed: %d", result.status());

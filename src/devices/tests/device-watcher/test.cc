@@ -19,7 +19,7 @@ TEST(DeviceWatcherTest, WatchUSBDevice) {
   ASSERT_TRUE(client_end.is_ok());
 
   auto client = fidl::WireClient(std::move(*client_end), loop.dispatcher());
-  auto response = client->NextDevice_Sync();
+  auto response = client.sync()->NextDevice();
   ASSERT_EQ(response.status(), ZX_OK);
 
   using NextDevice = fuchsia_device_manager::DeviceWatcher::NextDevice;
