@@ -57,7 +57,7 @@ zx_status_t SimpleCodecClient::SetProtocol(ddk::CodecProtocolClient proto_client
   }
 
   // The first call from this client shouldn't block.
-  const auto response = codec_->WatchGainState_Sync();
+  const auto response = codec_.sync()->WatchGainState();
   if (!response.ok()) {
     return response.status();
   }
@@ -66,7 +66,7 @@ zx_status_t SimpleCodecClient::SetProtocol(ddk::CodecProtocolClient proto_client
   // Update the stored gain state, and start a hanging get to receive further gain state changes.
   UpdateGainState(&mutable_response);
 
-  auto pes = codec_->GetProcessingElements_Sync();
+  auto pes = codec_.sync()->GetProcessingElements();
   if (pes->result.is_err()) {
     return ZX_OK;  // We allow servers not supporting signal processing.
   }
@@ -85,14 +85,14 @@ zx_status_t SimpleCodecClient::SetProtocol(ddk::CodecProtocolClient proto_client
   return ZX_OK;
 }
 
-zx_status_t SimpleCodecClient::Reset() { return codec_->Reset_Sync().status(); }
+zx_status_t SimpleCodecClient::Reset() { return codec_.sync()->Reset().status(); }
 
-zx_status_t SimpleCodecClient::Stop() { return codec_->Stop_Sync().status(); }
+zx_status_t SimpleCodecClient::Stop() { return codec_.sync()->Stop().status(); }
 
-zx_status_t SimpleCodecClient::Start() { return codec_->Start_Sync().status(); }
+zx_status_t SimpleCodecClient::Start() { return codec_.sync()->Start().status(); }
 
 zx::status<Info> SimpleCodecClient::GetInfo() {
-  const auto result = codec_->GetInfo_Sync();
+  const auto result = codec_.sync()->GetInfo();
   if (!result.ok()) {
     return zx::error(result.status());
   }
@@ -107,7 +107,7 @@ zx::status<Info> SimpleCodecClient::GetInfo() {
 }
 
 zx::status<bool> SimpleCodecClient::IsBridgeable() {
-  const auto result = codec_->IsBridgeable_Sync();
+  const auto result = codec_.sync()->IsBridgeable();
   if (result.ok()) {
     return zx::ok(result.value().supports_bridged_mode);
   }
@@ -119,7 +119,7 @@ zx_status_t SimpleCodecClient::SetBridgedMode(bool bridged) {
 }
 
 zx::status<DaiSupportedFormats> SimpleCodecClient::GetDaiFormats() {
-  auto result = codec_->GetDaiFormats_Sync();
+  auto result = codec_.sync()->GetDaiFormats();
   if (!result.ok()) {
     return zx::error(result.status());
   }
@@ -164,7 +164,7 @@ zx::status<CodecFormatInfo> SimpleCodecClient::SetDaiFormat(DaiFormat format) {
   format2.bits_per_slot = format.bits_per_slot;
   format2.bits_per_sample = format.bits_per_sample;
 
-  const auto ret = codec_->SetDaiFormat_Sync(format2);
+  const auto ret = codec_.sync()->SetDaiFormat(format2);
   if (!ret.ok()) {
     return zx::error(ret.status());
   }
@@ -185,7 +185,7 @@ zx::status<CodecFormatInfo> SimpleCodecClient::SetDaiFormat(DaiFormat format) {
 }
 
 zx::status<GainFormat> SimpleCodecClient::GetGainFormat() {
-  const auto result = codec_->GetGainFormat_Sync();
+  const auto result = codec_.sync()->GetGainFormat();
   if (!result.ok()) {
     return zx::error(result.status());
   }
@@ -231,7 +231,7 @@ zx_status_t SimpleCodecClient::SetAgl(bool agl_enable) {
   }
   fuchsia_hardware_audio::wire::ProcessingElementControl control(allocator);
   control.set_enabled(agl_enable);
-  codec_->SetProcessingElement_Sync(agl_pe_id_.value(), std::move(control));
+  codec_.sync()->SetProcessingElement(agl_pe_id_.value(), std::move(control));
   return ZX_OK;
 }
 
