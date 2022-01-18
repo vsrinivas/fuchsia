@@ -38,7 +38,6 @@ class VerifyAttributesStep : public StepBase {
 
  private:
   void RunImpl() override;
-  void VerifyDecl(const Decl* decl);
   void VerifyAttributes(const Element* element);
 };
 

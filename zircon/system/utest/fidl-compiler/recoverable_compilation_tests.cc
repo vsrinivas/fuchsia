@@ -82,8 +82,8 @@ type Struct = struct {
   EXPECT_FALSE(library.Compile());
   const auto& errors = library.errors();
   ASSERT_EQ(errors.size(), 2);
-  ASSERT_ERR(errors[0], fidl::ErrInvalidAttributePlacement);
-  ASSERT_ERR(errors[1], fidl::ErrTooManyBytes);
+  ASSERT_ERR(errors[0], fidl::ErrTooManyBytes);
+  ASSERT_ERR(errors[1], fidl::ErrInvalidAttributePlacement);
 }
 
 TEST(RecoverableCompilationTests, BadRecoverInAttributeCompile) {

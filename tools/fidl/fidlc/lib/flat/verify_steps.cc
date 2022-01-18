@@ -166,16 +166,7 @@ types::Resourceness VerifyResourcenessStep::EffectiveResourceness(const Type* ty
 }
 
 void VerifyAttributesStep::RunImpl() {
-  VerifyAttributes(library_);
-  for (const Decl* decl : library_->declaration_order_) {
-    VerifyDecl(decl);
-  }
-}
-
-void VerifyAttributesStep::VerifyDecl(const Decl* decl) {
-  assert(decl->compiled && "verification must happen after compilation of decls");
-  VerifyAttributes(decl);
-  ForEachDeclMember(decl, [this](const Element* member) { VerifyAttributes(member); });
+  library_->TraverseElements([&](Element* element) { VerifyAttributes(element); });
 }
 
 void VerifyAttributesStep::VerifyAttributes(const Element* element) {

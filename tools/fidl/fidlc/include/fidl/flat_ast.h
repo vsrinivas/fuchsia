@@ -146,6 +146,10 @@ struct Decl : public Element {
 
   std::string GetName() const;
 
+  // Runs a function on every member of the decl, if it has any. Note that
+  // unlike Library::TraverseElements, it does not call `fn(this)`.
+  void ForEachMember(const fit::function<void(Element*)>& fn);
+
   bool compiling = false;
   bool compiled = false;
 };
@@ -760,66 +764,6 @@ struct TypeAlias final : public Decl {
   std::unique_ptr<TypeConstructor> partial_type_ctor;
 };
 
-template <template <typename> typename Constness, typename MemberFn>
-static void ForEachDeclMemberHelper(Constness<Decl>* decl, MemberFn f) {
-  switch (decl->kind) {
-    case Decl::Kind::kBits:
-      for (auto& member : static_cast<Constness<Bits>*>(decl)->members) {
-        f(&member);
-      }
-      break;
-    case Decl::Kind::kConst:
-      break;
-    case Decl::Kind::kEnum:
-      for (auto& member : static_cast<Constness<Enum>*>(decl)->members) {
-        f(&member);
-      }
-      break;
-    case Decl::Kind::kProtocol:
-      for (auto& method_with_info : static_cast<Constness<Protocol>*>(decl)->all_methods) {
-        f(method_with_info.method);
-      }
-      break;
-    case Decl::Kind::kResource:
-      for (auto& member : static_cast<Constness<Resource>*>(decl)->properties) {
-        f(&member);
-      }
-      break;
-    case Decl::Kind::kService:
-      for (auto& member : static_cast<Constness<Service>*>(decl)->members) {
-        f(&member);
-      }
-      break;
-    case Decl::Kind::kStruct:
-      for (auto& member : static_cast<Constness<Struct>*>(decl)->members) {
-        f(&member);
-      }
-      break;
-    case Decl::Kind::kTable:
-      for (auto& member : static_cast<Constness<Table>*>(decl)->members) {
-        f(&member);
-      }
-      break;
-    case Decl::Kind::kUnion:
-      for (auto& member : static_cast<Constness<Union>*>(decl)->members) {
-        f(&member);
-      }
-      break;
-    case Decl::Kind::kTypeAlias:
-      break;
-  }  // switch
-}
-
-template <typename MemberFn>
-static void ForEachDeclMember(const Decl* decl, MemberFn f) {
-  ForEachDeclMemberHelper<std::add_const_t>(decl, f);
-}
-
-template <typename MemberFn>
-static void ForEachDeclMember(Decl* decl, MemberFn f) {
-  ForEachDeclMemberHelper<std::remove_const_t>(decl, f);
-}
-
 // Wrapper class around a Library to provide specific methods to TypeTemplates.
 // Unlike making a direct friend relationship, this approach:
 // 1. avoids having to declare every TypeTemplate subclass as a friend
@@ -1019,6 +963,10 @@ class Library : private Element, private ReporterMixin {
   // Returns nullptr when the |name| cannot be resolved to a
   // Name. Otherwise it returns the declaration.
   Decl* LookupDeclByName(Name::Key name) const;
+
+  // Runs a function on every element in the library via depth-first traversal.
+  // Runs it on the library itself, on all Decls, and on all their members.
+  void TraverseElements(const fit::function<void(Element*)>& fn);
 
   const std::set<Library*>& dependencies() const;
 

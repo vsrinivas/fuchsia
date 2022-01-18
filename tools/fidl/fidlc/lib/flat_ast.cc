@@ -759,6 +759,65 @@ std::set<const Library*, LibraryComparator> Library::DirectDependencies() const 
   return direct_dependencies;
 }
 
+void Library::TraverseElements(const fit::function<void(Element*)>& fn) {
+  fn(this);
+  for (auto& [name, decl] : declarations_) {
+    fn(decl);
+    decl->ForEachMember(fn);
+  }
+}
+
+void Decl::ForEachMember(const fit::function<void(Element*)>& fn) {
+  switch (kind) {
+    case Decl::Kind::kConst:
+    case Decl::Kind::kTypeAlias:
+      break;
+    case Decl::Kind::kBits:
+      for (auto& member : static_cast<Bits*>(this)->members) {
+        fn(&member);
+      }
+      break;
+    case Decl::Kind::kEnum:
+      for (auto& member : static_cast<Enum*>(this)->members) {
+        fn(&member);
+      }
+      break;
+    case Decl::Kind::kProtocol:
+      for (auto& composed_protocol : static_cast<Protocol*>(this)->composed_protocols) {
+        fn(&composed_protocol);
+      }
+      for (auto& method : static_cast<Protocol*>(this)->methods) {
+        fn(&method);
+      }
+      break;
+    case Decl::Kind::kResource:
+      for (auto& member : static_cast<Resource*>(this)->properties) {
+        fn(&member);
+      }
+      break;
+    case Decl::Kind::kService:
+      for (auto& member : static_cast<Service*>(this)->members) {
+        fn(&member);
+      }
+      break;
+    case Decl::Kind::kStruct:
+      for (auto& member : static_cast<Struct*>(this)->members) {
+        fn(&member);
+      }
+      break;
+    case Decl::Kind::kTable:
+      for (auto& member : static_cast<Table*>(this)->members) {
+        fn(&member);
+      }
+      break;
+    case Decl::Kind::kUnion:
+      for (auto& member : static_cast<Union*>(this)->members) {
+        fn(&member);
+      }
+      break;
+  }  // switch
+}
+
 std::unique_ptr<TypeConstructor> TypeConstructor::CreateSizeType() {
   std::vector<std::unique_ptr<LayoutParameter>> no_params;
   std::vector<std::unique_ptr<Constant>> no_constraints;
