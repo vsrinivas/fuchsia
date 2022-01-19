@@ -10,12 +10,6 @@ use {
     tracing::trace,
 };
 
-use crate::packets::{
-    player_application_settings::{
-        PlayerApplicationSettingAttributeId, SetPlayerApplicationSettingValueCommand,
-    },
-    SONG_LENGTH_NOT_SUPPORTED, SONG_POSITION_NOT_SUPPORTED,
-};
 use crate::peer::*;
 use crate::types::PeerError as Error;
 
@@ -220,6 +214,19 @@ impl Controller {
             }
         }
         Ok(set_settings)
+    }
+
+    pub async fn inform_battery_status(
+        &self,
+        battery_status: fidl_avrcp::BatteryStatus,
+    ) -> Result<(), Error> {
+        let cmd = InformBatteryStatusOfCtCommand::new(battery_status);
+        trace!("inform_battery_status_of_ct command {:?}", cmd);
+        let buf = self.peer.send_vendor_dependent_command(&cmd).await?;
+        let response =
+            InformBatteryStatusOfCtResponse::decode(&buf[..]).map_err(|e| Error::PacketError(e))?;
+        trace!("inform_battery_status_of_ct received response {:?}", response);
+        Ok(())
     }
 
     /// Sends a raw vendor dependent AVC command on the control channel. Returns the response

@@ -129,8 +129,14 @@ impl AvrcpClientController {
                     &mut self.controller.get_play_status().await.map_err(ControllerError::from),
                 )?;
             }
-            ControllerRequest::InformBatteryStatus { battery_status: _, responder } => {
-                responder.send(&mut Err(ControllerError::CommandNotImplemented))?;
+            ControllerRequest::InformBatteryStatus { battery_status, responder } => {
+                responder.send(
+                    &mut self
+                        .controller
+                        .inform_battery_status(battery_status)
+                        .await
+                        .map_err(ControllerError::from),
+                )?;
             }
             ControllerRequest::SetNotificationFilter {
                 notifications,

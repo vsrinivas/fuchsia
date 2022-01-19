@@ -190,7 +190,7 @@ fn target_delegate_volume_handler_already_bound_test() -> Result<(), Error> {
 // 10. Register event notification for position change callbacks and mock responses.
 // 11. Waits until we have a response to all commands from our mock remote service return expected
 //    values and we have received enough position change events.
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn test_peer_manager_with_fidl_client_and_mock_profile() -> Result<(), Error> {
     const REQUESTED_VOLUME: u8 = 0x40;
     const SET_VOLUME: u8 = 0x24;
@@ -315,6 +315,12 @@ async fn test_peer_manager_with_fidl_client_and_mock_profile() -> Result<(), Err
     let set_player_application_settings_fut =
         controller_proxy.set_player_application_settings(settings).fuse();
     pin_mut!(set_player_application_settings_fut);
+    expected_commands += 1;
+
+    let current_battery_status = BatteryStatus::Warning;
+    let inform_battery_status_fut =
+        controller_proxy.inform_battery_status(current_battery_status).fuse();
+    pin_mut!(inform_battery_status_fut);
     expected_commands += 1;
 
     let mut additional_packets: Vec<Vec<u8>> = vec![];
@@ -546,6 +552,15 @@ async fn test_peer_manager_with_fidl_client_and_mock_profile() -> Result<(), Err
                     let _ = avc_command
                         .send_response(AvcResponseType::ImplementedStable, &response[..]);
                 }
+                PduId::InformBatteryStatusOfCT => {
+                    let received_command = InformBatteryStatusOfCtCommand::decode(body)
+                        .expect("InformBatteryStatusOfCt: unable to decode packet body");
+                    assert_eq!(received_command.battery_status(), current_battery_status);
+                    let response = InformBatteryStatusOfCtResponse::new()
+                        .encode_packet()
+                        .expect("Unable to encode response");
+                    let _ = avc_command.send_response(AvcResponseType::Accepted, &response[..]);
+                }
                 _ => {
                     // not entirely correct but just get it off our back for now.
                     let _ = avc_command.send_response(AvcResponseType::NotImplemented, &[]);
@@ -647,6 +662,10 @@ async fn test_peer_manager_with_fidl_client_and_mock_profile() -> Result<(), Err
                 let set_settings = res?.expect("unable to parse set player application settings");
                 assert_eq!(set_settings.scan_mode, Some(fidl_avrcp::ScanMode::GroupScan));
                 assert_eq!(set_settings.shuffle_mode, Some(fidl_avrcp::ShuffleMode::Off));
+            }
+            res = inform_battery_status_fut => {
+                expected_commands -= 1;
+                assert_eq!(res?, Ok(()));
             }
             event = event_stream.select_next_some() => {
                 match event? {
