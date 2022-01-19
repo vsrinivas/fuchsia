@@ -4,31 +4,12 @@
 
 use {
     crate::cobalt,
-    argh::FromArgs,
     fidl::endpoints::Proxy,
     fidl_fuchsia_component as fcomponent, fuchsia_async as fasync, fuchsia_zircon as zx,
     realm_management,
-    serde::{Deserialize, Serialize},
-    serde_json,
-    std::fs,
     thiserror::{self, Error},
     tracing::info,
 };
-
-#[derive(FromArgs)]
-/// The session manager component.
-pub struct SessionManagerArgs {
-    #[argh(option, short = 's')]
-    /// the URL for the session to start.
-    pub session_url: Option<String>,
-}
-
-#[derive(Serialize, Deserialize)]
-/// The session manager component.
-pub struct SessionManagerConfigs {
-    /// the URL for the session to start.
-    pub session_url: String,
-}
 
 /// Errors returned by calls startup functions.
 #[derive(Debug, Error, Clone, PartialEq)]
@@ -58,33 +39,6 @@ const SESSION_NAME: &str = "session";
 /// The name of the child collection the session is added to, must match the declaration in
 /// session_manager.cml.
 const SESSION_CHILD_COLLECTION: &str = "session";
-
-/// The path to the configuration file for the session.
-const CONFIG_PATH: &str = "/config/data/session_manager/startup.config";
-
-/// Gets the session url from `/config/data/startup.config`.
-///
-/// If no configuration file exists, gets the session url from `std::env::args()`.
-/// Fails with a comment about the missing --session_url option if the argument isn't provided.
-///
-/// # Returns
-/// `String` if the session url argument exists, else `None`.
-pub fn get_session_url() -> Option<String> {
-    let mut session_url: Option<String> = None;
-    if let Ok(config_str) = fs::read_to_string(CONFIG_PATH) {
-        if let Ok(session_manager_args) = serde_json::from_str::<SessionManagerConfigs>(&config_str)
-        {
-            session_url = Some(session_manager_args.session_url);
-        }
-    }
-
-    if session_url.is_none() {
-        let SessionManagerArgs { session_url } = argh::from_env();
-        return session_url;
-    }
-
-    session_url
-}
 
 /// Launches the specified session.
 ///

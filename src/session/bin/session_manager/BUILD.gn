@@ -3,7 +3,6 @@
 # found in the LICENSE file.
 
 import("//build/components.gni")
-import("//build/config.gni")
 import("//build/rust/rustc_binary.gni")
 import("//build/rust/rustc_library.gni")
 import("//src/sys/core/build/core_shard.gni")
@@ -53,10 +52,7 @@ rustc_library("lib") {
     "//src/session/fidl/fuchsia.sessionmanager:fuchsia.sessionmanager-rustc",
     "//src/session/lib/realm_management",
     "//third_party/rust_crates:anyhow",
-    "//third_party/rust_crates:argh",
     "//third_party/rust_crates:futures",
-    "//third_party/rust_crates:serde",
-    "//third_party/rust_crates:serde_json",
     "//third_party/rust_crates:thiserror",
     "//third_party/rust_crates:tracing",
   ]
@@ -78,12 +74,22 @@ rustc_library("lib") {
   ]
 }
 
+fuchsia_component_manifest("manifest") {
+  manifest = "meta/session_manager.cml"
+  restricted_features = [ "structured_config" ]
+}
+
+fuchsia_structured_config_rust_lib("session_manager_config") {
+  cm_target = ":manifest"
+}
+
 rustc_binary("bin") {
   name = "session_manager"
   edition = "2018"
 
   deps = [
     ":lib",
+    ":session_manager_config",
     "//sdk/fidl/fuchsia.component:fuchsia.component-rustc",
     "//src/lib/fuchsia",
     "//src/lib/fuchsia-component",
@@ -102,4 +108,9 @@ fuchsia_unittest_package("session_manager_tests") {
       max_severity = "ERROR"
     }
   }
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":session_manager_tests" ]
 }

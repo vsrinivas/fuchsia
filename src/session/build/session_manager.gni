@@ -22,33 +22,30 @@ template("session_manager_package") {
   }
 
   component_target = "${target_name}_component"
-  package_target = "${target_name}_package"
   config_target = "${target_name}_config"
+  manifest_target = "${target_name}_manifest_compile"
+
+  fuchsia_component_manifest(manifest_target) {
+    manifest = "//src/session/bin/session_manager/meta/session_manager.cml"
+    restricted_features = [ "structured_config" ]
+    component_name = "session_manager"
+  }
 
   fuchsia_component(component_target) {
-    component_name = "session_manager"
-    manifest = "//src/session/bin/session_manager/meta/session_manager.cml"
+    cm_target = ":${manifest_target}"
     deps = [ "//src/session/bin/session_manager:bin" ]
   }
 
-  fuchsia_package(package_target) {
+  fuchsia_structured_config_values(config_target) {
+    cm_target = ":${manifest_target}"
+    values = invoker.config
+  }
+
+  fuchsia_package(target_name) {
     package_name = package_name
-    deps = [ ":${component_target}" ]
-  }
-
-  config_data(config_target) {
-    for_pkg = package_name
-    sources = [ invoker.config ]
-    outputs = [ "startup.config" ]
-  }
-
-  group(target_name) {
     deps = [
+      ":${component_target}",
       ":${config_target}",
-      ":${package_target}",
-
-      # Needed by the `session-manager-env` environment in core.cml
-      "//src/sys/universe-resolver",
     ]
   }
 }

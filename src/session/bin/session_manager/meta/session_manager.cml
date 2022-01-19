@@ -136,4 +136,10 @@
             from: "self",
         },
     ],
+    config: {
+        session_url: {
+            type: "string",
+            max_size: 512,
+        },
+    },
 }

@@ -6,7 +6,8 @@ use {
     anyhow::Error,
     fidl_fuchsia_component as fcomponent,
     fuchsia_component::client::connect_to_protocol,
-    session_manager_lib::{session_manager::SessionManager, startup},
+    session_manager_config::{get_config, Config},
+    session_manager_lib::session_manager::SessionManager,
     tracing::info,
 };
 
@@ -15,18 +16,15 @@ async fn main() -> Result<(), Error> {
     let realm = connect_to_protocol::<fcomponent::RealmMarker>()?;
     // Start the startup session, if any, and serve services exposed by session manager.
     let mut session_manager = SessionManager::new(realm);
+    let Config { session_url } = get_config();
     // TODO(fxbug.dev/67789): Using ? here causes errors to not be logged.
-    if let Some(session_url) = startup::get_session_url() {
-        if !session_url.is_empty() {
-            session_manager
-                .launch_startup_session(session_url)
-                .await
-                .expect("failed to launch session");
-        } else {
-            info!("Received an empty startup session URL, waiting for a request.");
-        }
+    if !session_url.is_empty() {
+        session_manager
+            .launch_startup_session(session_url)
+            .await
+            .expect("failed to launch session");
     } else {
-        info!("Did not receive a startup session URL, waiting for a request.");
+        info!("Received an empty startup session URL, waiting for a request.");
     }
     session_manager.serve().await.expect("failed to serve protocols");
 
