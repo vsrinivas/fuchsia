@@ -8,9 +8,12 @@ use {
     async_trait::async_trait,
     fidl_fuchsia_io::{DirectoryProxy, OPEN_FLAG_CREATE, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE},
     fuchsia_zircon as zx,
-    log::warn,
+    identity_common::StagedFile,
+    log::{info, warn},
     thiserror::Error,
 };
+
+const STAGEDFILE_PREFIX: &str = "temp-";
 
 // Contents in a LookupTable are versioned.
 type Version = u64;
@@ -36,6 +39,14 @@ pub enum LookupTableError {
     NotFound,
     #[error("Failed to unlink file in backing storage: {0}")]
     UnlinkError(#[source] zx::Status),
+    #[error("Failed to create staged file: {0}")]
+    StagedFileCreateError(#[from] identity_common::StagedFileCreateError),
+    #[error("Failed to write staged file: {0}")]
+    StagedFileWriteError(#[from] identity_common::StagedFileWriteError),
+    #[error("Failed to commit staged file: {0}")]
+    StagedFileCommitError(#[from] identity_common::StagedFileCommitError),
+    #[error("Failed to cleanup stale files: {0}")]
+    CleanupStaleFilesError(#[from] identity_common::CleanupStaleFilesError),
     #[error("Unknown lookup table error")]
     Unknown,
 }
@@ -68,6 +79,34 @@ impl PersistentLookupTable {
         Self { dir_proxy }
     }
 
+    /// Cleanup stale files in the directory. Ideally, this should be called
+    /// before operating on the |label|.
+    /// If the label does not have a directory, this proceeds optimistically.
+    /// TODO(arkay): Determine the contract for cleaning up stale files.
+    async fn cleanup_stale_files(&mut self, label: &Label) -> Result<(), Vec<LookupTableError>> {
+        // Try to open the label's subdirectory, if it exists.
+        match io_util::directory::open_directory(
+            &self.dir_proxy,
+            &label.into_dir_name(),
+            OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
+        )
+        .await
+        {
+            Ok(child_dir) => StagedFile::cleanup_stale_files(&child_dir, STAGEDFILE_PREFIX)
+                .await
+                .map_err(|errors| {
+                    errors
+                        .into_iter()
+                        .map(|err| LookupTableError::CleanupStaleFilesError(err))
+                        .collect()
+                }),
+            Err(err) => {
+                info!("Could not open subdirectory for label {:?} for cleanup: {}", label, err);
+                Ok(())
+            }
+        }
+    }
+
     /// Retrieve the latest version number of files in a directory.
     async fn get_latest_version(
         &self,
@@ -76,10 +115,14 @@ impl PersistentLookupTable {
         // Look through the directory for the latest version number.
         let dirents = files_async::readdir(dir).await?;
         let mut latest_version = None;
-        // TODO(arkay): Since readdir returns values in a deterministic order
-        // it is possible to avoid looping through all values. We are
-        // continuing to use the loop in order to gain data around if/how
-        // often unexpected filenames are found.
+        // Since files_async::readdir returns files in a deterministic order,
+        // it is possible to avoid looping through all files via padding
+        // filenames. But we are continuing to use the loop in order to gain
+        // data around if/how often unexpected filenames are found, and to
+        // lower the overhead of padding u64 filenames, with the understanding
+        // that we should clean up old versions.
+        // TODO(arkay): Clean up old versions on startup after ensuring we
+        // have caught up to CR50.
         for entry in dirents {
             match parse_version(&entry.name) {
                 Some(version) => match latest_version {
@@ -127,7 +170,6 @@ fn parse_version(val: &str) -> Option<Version> {
 
 #[async_trait]
 impl LookupTable for PersistentLookupTable {
-    // TODO(arkay): Make this an atomic write.
     async fn write(&mut self, label: &Label, data: Vec<u8>) -> Result<(), LookupTableError> {
         // Create the directory if it doesn't already exist.
         let child_dir = io_util::directory::create_directory(
@@ -144,14 +186,9 @@ impl LookupTable for PersistentLookupTable {
             None => 1,
         };
 
-        let versioned_file = io_util::directory::open_file(
-            &child_dir,
-            &format_version(&next_version),
-            OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE | OPEN_FLAG_CREATE,
-        )
-        .await?;
-        versioned_file.write(&data).await?;
-        versioned_file.close().await?;
+        let mut staged_file = StagedFile::new(&child_dir, STAGEDFILE_PREFIX).await?;
+        staged_file.write(&data).await?;
+        staged_file.commit(&format_version(&next_version)).await?;
         Ok(())
     }
 
@@ -383,5 +420,47 @@ mod test {
         assert_eq!(parse_version("-17"), None);
         // Non base-10
         assert_eq!(parse_version("0xff"), None);
+    }
+
+    #[fuchsia::test]
+    async fn test_stale_files_cleaned_up() {
+        let tmp_dir = TempDir::new().unwrap();
+        let dir = io_util::open_directory_in_namespace(
+            tmp_dir.path().to_str().unwrap(),
+            OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
+        )
+        .expect("could not open temp dir");
+
+        // Write a staged file to the label's directory.
+        let child_dir = io_util::directory::create_directory(
+            &dir,
+            &TEST_LABEL.into_dir_name(),
+            OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE | OPEN_FLAG_CREATE,
+        )
+        .await
+        .unwrap();
+        let stale_file = io_util::directory::open_file(
+            &child_dir,
+            &format!("{}01234", STAGEDFILE_PREFIX),
+            OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE | OPEN_FLAG_CREATE,
+        )
+        .await
+        .unwrap();
+        stale_file.write(&b"stale_file_content".to_vec()).await.unwrap();
+        stale_file.close().await.unwrap();
+
+        // Inititalize and cleanup stale files for TEST_LABEL.
+        let mut plt = PersistentLookupTable::new(dir);
+        plt.cleanup_stale_files(&TEST_LABEL).await.unwrap();
+
+        // Check that after initializing the lookup table, we have cleaned up
+        // stale files.
+        let entries = files_async::readdir(&child_dir).await.unwrap();
+        assert!(entries.is_empty());
+
+        // Check that we can write and read from the directory as expected.
+        plt.write(&TEST_LABEL, b"foo bar".to_vec()).await.unwrap();
+        let content = plt.read(&TEST_LABEL).await.unwrap();
+        assert_eq!(content.bytes, b"foo bar".to_vec());
     }
 }
