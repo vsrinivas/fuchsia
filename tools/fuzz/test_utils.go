@@ -48,7 +48,9 @@ func createTempfileWithContents(t *testing.T, contents string, extension string)
 }
 
 // This is used by both the mockBuild and the mock symbolize subprocess
-func fakeSymbolize(in io.Reader, out io.Writer) error {
+func fakeSymbolize(in io.ReadCloser, out io.Writer) error {
+	defer in.Close()
+
 	scanner := bufio.NewScanner(in)
 	for scanner.Scan() {
 		line := scanner.Text()

@@ -5,6 +5,7 @@
 package fuzz
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"regexp"
@@ -51,13 +52,19 @@ func (c *mockInstanceCmd) getOutput() ([]byte, error) {
 		var output []string
 		switch fuzzerName {
 		case "foo/bar":
-			output = []string{
+			// Create 64k of filler to ensure we saturate any pipes on the
+			// output that aren't being properly serviced.
+			filler := make([]string, 1024)
+			for j := 0; j < 1024; j++ {
+				filler[j] = strings.Repeat("data", 64/4)
+			}
+			output = append(filler,
 				fmt.Sprintf("running %v", c.args),
 				"==123==", // pid
 				"MS: ",    // mut
 				"Deadly signal",
 				artifactLine,
-			}
+			)
 		case "fail/nopid":
 			// No PID
 			output = []string{
@@ -81,13 +88,14 @@ func (c *mockInstanceCmd) Output() ([]byte, error) {
 	if c.pipeOut != nil {
 		return nil, fmt.Errorf("Output called after StdoutPipe")
 	}
-	c.Run()
+	if err := c.Run(); err != nil {
+		return nil, err
+	}
 	return c.getOutput()
 }
 
 func (c *mockInstanceCmd) Run() error {
-	err := c.Start()
-	if err != nil {
+	if err := c.Start(); err != nil {
 		return err
 	}
 	return c.Wait()
@@ -117,13 +125,17 @@ func (c *mockInstanceCmd) Start() error {
 				c.errCh <- err
 				return
 			}
-			_, err = c.pipeOut.Write(output)
-			if err != nil {
+			if _, err := c.pipeOut.Write(output); err != nil {
+				// Suppress the ErrClosedPipe error to match the behavior of a
+				// real fuzzer process, which would exit with ErrorExitCode (77
+				// by default).
+				if c.name == "run" && errors.Is(err, io.ErrClosedPipe) {
+					err = &InstanceCmdError{ReturnCode: 77, Command: c.name, Stderr: "pipe"}
+				}
 				c.errCh <- err
 				return
 			}
-			err = c.pipeOut.Close()
-			if err != nil {
+			if err := c.pipeOut.Close(); err != nil {
 				c.errCh <- err
 				return
 			}
@@ -160,7 +172,7 @@ func (c *mockInstanceCmd) Wait() error {
 
 	if c.errCh != nil {
 		if err := <-c.errCh; err != nil {
-			return fmt.Errorf("error in goroutine: %s", err)
+			return err
 		}
 	}
 

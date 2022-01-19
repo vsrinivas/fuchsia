@@ -30,7 +30,7 @@ func (b *mockBuild) Prepare() error {
 		"zbitool": "/path/to/zbi",
 	}
 	for _, k := range []string{"blk", "fvm", "zbi", "blk", "kernel",
-		"symbolize", "llvm-symbolizer", "fuzzers.json"} {
+		"symbolizer", "fuzzers.json"} {
 		b.paths[k] = fmt.Sprintf("/path/to/%s", k)
 	}
 	// Note: qemu is a special case because it needs to be a real tempfile,
@@ -85,7 +85,9 @@ func (b *mockBuild) Path(keys ...string) ([]string, error) {
 	return paths, nil
 }
 
-func (b *mockBuild) Symbolize(in io.Reader, out io.Writer) error {
+func (b *mockBuild) Symbolize(in io.ReadCloser, out io.Writer) error {
+	defer in.Close()
+
 	if b.brokenSymbolizer {
 		return fmt.Errorf("this symbolizer is intentionally broken")
 	}

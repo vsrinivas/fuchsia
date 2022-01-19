@@ -95,11 +95,15 @@ func dumpSyslog(pid int, conn Connector, out io.Writer) error {
 	return nil
 }
 
-func scanForPIDs(conn Connector, out io.WriteCloser, in io.Reader) chan error {
+func scanForPIDs(conn Connector, out io.WriteCloser, in io.ReadCloser) chan error {
 	scanErr := make(chan error, 1)
 
 	go func() {
-		defer out.Close() // Propagate the EOF, so the symbolizer terminates properly
+		// Propagate EOFs, so that:
+		// - The symbolizer terminates properly.
+		defer out.Close()
+		// - The fuzzer doesn't block if an early exit occurs later in the chain.
+		defer in.Close()
 
 		// mutRegex detects output from
 		// MutationDispatcher::PrintMutationSequence
@@ -114,7 +118,10 @@ func scanForPIDs(conn Connector, out io.WriteCloser, in io.Reader) chan error {
 		pid := 0
 		for scanner.Scan() {
 			line := scanner.Text()
-			io.WriteString(out, line+"\n")
+			if _, err := io.WriteString(out, line+"\n"); err != nil {
+				scanErr <- fmt.Errorf("error writing: %s", err)
+				return
+			}
 
 			if m := pidRegex.FindStringSubmatch(line); m != nil {
 				pid, _ = strconv.Atoi(m[1]) // guaranteed parseable due to regex
@@ -162,7 +169,7 @@ func scanForPIDs(conn Connector, out io.WriteCloser, in io.Reader) chan error {
 	return scanErr
 }
 
-func scanForArtifacts(out io.WriteCloser, in io.Reader,
+func scanForArtifacts(out io.WriteCloser, in io.ReadCloser,
 	artifactPrefix, hostArtifactDir string) (chan error, chan []string) {
 
 	// Only replace the directory part of the artifactPrefix, which is
@@ -173,7 +180,11 @@ func scanForArtifacts(out io.WriteCloser, in io.Reader,
 	artifactsCh := make(chan []string, 1)
 
 	go func() {
-		defer out.Close() // Propagate the EOF, so the symbolizer terminates properly
+		// Propagate EOFs, so that:
+		// - The symbolizer terminates properly.
+		defer out.Close()
+		// - scanForPIDs doesn't block if an early exit occurs later in the chain.
+		defer in.Close()
 
 		artifacts := []string{}
 
@@ -188,7 +199,10 @@ func scanForArtifacts(out io.WriteCloser, in io.Reader,
 					line = strings.Replace(line, artifactDir, hostArtifactDir, 2)
 				}
 			}
-			io.WriteString(out, line+"\n")
+			if _, err := io.WriteString(out, line+"\n"); err != nil {
+				scanErr <- fmt.Errorf("error writing: %s", err)
+				return
+			}
 		}
 
 		scanErr <- scanner.Err()
@@ -235,6 +249,13 @@ func (f *Fuzzer) Run(conn Connector, out io.Writer, hostArtifactDir string) ([]s
 		f.options["artifact_prefix"] = "data/"
 	}
 
+	// The overall flow of fuzzer output data is as follows:
+	// fuzzer -> scanForPIDs -> scanForArtifacts -> symbolizer -> out
+	// In addition to the log lines and EOF (on fuzzer exit) that pass from
+	// left to right, an EOF will also be propagated backwards in the case that
+	// any of the intermediate steps exits abnormally, so as not to leave
+	// blocking writes from earlier stages in a hung state.
+
 	cmdline := []string{f.url}
 	for k, v := range f.options {
 		cmdline = append(cmdline, fmt.Sprintf("-%s=%s", k, v))
@@ -264,7 +285,7 @@ func (f *Fuzzer) Run(conn Connector, out io.Writer, hostArtifactDir string) ([]s
 
 	// Start symbolizer goroutine, connected to the output
 	symErr := make(chan error, 1)
-	go func(in io.Reader) {
+	go func(in io.ReadCloser) {
 		symErr <- f.build.Symbolize(in, out)
 	}(fromArtifactScanner)
 

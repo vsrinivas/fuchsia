@@ -157,7 +157,7 @@ func TestDoProcessMock(t *testing.T) {
 		if strings.HasPrefix(string(psOut), "Z") {
 			exitCode = 1
 		}
-	case "symbolize":
+	case "symbolizer":
 		if err := fakeSymbolize(os.Stdin, os.Stdout); err != nil {
 			t.Fatalf("failed during scan: %s", err)
 		}

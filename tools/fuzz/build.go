@@ -41,7 +41,7 @@ type Build interface {
 	// Returns on error, or when `in` has no more data to read.  Processing
 	// will be streamed, line-by-line.
 	// TODO(fxbug.dev/47482): does this belong elsewhere?
-	Symbolize(in io.Reader, out io.Writer) error
+	Symbolize(in io.ReadCloser, out io.Writer) error
 
 	// Returns a list of the names of the fuzzers that are available to run
 	ListFuzzers() []string
@@ -82,15 +82,14 @@ func NewClusterFuzzLegacyBuild() (Build, error) {
 	clangDir := filepath.Join(buildDir, "buildtools", "linux-x64", "clang")
 	build := &BaseBuild{
 		Paths: map[string]string{
-			"zbi":             filepath.Join(targetDir, "fuchsia.zbi"),
-			"fvm":             filepath.Join(buildDir, "out", "default.zircon", "tools", "fvm"),
-			"zbitool":         filepath.Join(buildDir, "out", "default.zircon", "tools", "zbi"),
-			"blk":             filepath.Join(targetDir, "fvm.blk"),
-			"qemu":            filepath.Join(bundleDir, "qemu-for-fuchsia", "bin", "qemu-system-x86_64"),
-			"kernel":          filepath.Join(targetDir, "multiboot.bin"),
-			"symbolize":       filepath.Join(buildDir, "zircon", "prebuilt", "downloads", "symbolize", "linux-x64", "symbolize"),
-			"llvm-symbolizer": filepath.Join(clangDir, "bin", "llvm-symbolizer"),
-			"fuzzers.json":    filepath.Join(buildDir, "out", "default", "fuzzers.json"),
+			"zbi":          filepath.Join(targetDir, "fuchsia.zbi"),
+			"fvm":          filepath.Join(buildDir, "out", "default.zircon", "tools", "fvm"),
+			"zbitool":      filepath.Join(buildDir, "out", "default.zircon", "tools", "zbi"),
+			"blk":          filepath.Join(targetDir, "fvm.blk"),
+			"qemu":         filepath.Join(bundleDir, "qemu-for-fuchsia", "bin", "qemu-system-x86_64"),
+			"kernel":       filepath.Join(targetDir, "multiboot.bin"),
+			"symbolizer":   filepath.Join(buildDir, "zircon", "prebuilt", "downloads", "symbolize", "linux-x64", "symbolizer"),
+			"fuzzers.json": filepath.Join(buildDir, "out", "default", "fuzzers.json"),
 		},
 		IDs: []string{
 			filepath.Join(clangDir, "lib", "debug", ".build_id"),
@@ -187,15 +186,14 @@ func NewLocalFuchsiaBuild() (Build, error) {
 
 	build := &BaseBuild{
 		Paths: map[string]string{
-			"zbi":             filepath.Join(imgDir, "fuchsia.zbi"),
-			"fvm":             filepath.Join(buildDir, hostDir, "fvm"),
-			"zbitool":         filepath.Join(buildDir, hostDir, "zbi"),
-			"blk":             filepath.Join(imgDir, "fvm.blk"),
-			"qemu":            filepath.Join(qemuDir, "bin", binary),
-			"kernel":          filepath.Join(buildDir, kernel),
-			"symbolize":       filepath.Join(buildDir, hostDir, "symbolize"),
-			"llvm-symbolizer": filepath.Join(clangDir, "bin", "llvm-symbolizer"),
-			"fuzzers.json":    filepath.Join(buildDir, "fuzzers.json"),
+			"zbi":          filepath.Join(imgDir, "fuchsia.zbi"),
+			"fvm":          filepath.Join(buildDir, hostDir, "fvm"),
+			"zbitool":      filepath.Join(buildDir, hostDir, "zbi"),
+			"blk":          filepath.Join(imgDir, "fvm.blk"),
+			"qemu":         filepath.Join(qemuDir, "bin", binary),
+			"kernel":       filepath.Join(buildDir, kernel),
+			"symbolizer":   filepath.Join(buildDir, hostDir, "symbolizer"),
+			"fuzzers.json": filepath.Join(buildDir, "fuzzers.json"),
 		},
 		IDs: []string{
 			filepath.Join(clangDir, "lib", "debug", ".build-id"),
@@ -321,18 +319,21 @@ func stripLogPrefix(line string) string {
 // Symbolize reads from in and replaces symbolizer markup with debug
 // information before writing the result to out.  This is blocking, and does
 // not propagate EOFs from in to out.
-func (b *BaseBuild) Symbolize(in io.Reader, out io.Writer) error {
-	paths, err := b.Path("symbolize", "llvm-symbolizer")
+func (b *BaseBuild) Symbolize(in io.ReadCloser, out io.Writer) error {
+	// Close `in` on return so that the fuzzer doesn't block on a write if an
+	// early exit occurs later in the output-processing chain.
+	defer in.Close()
+
+	paths, err := b.Path("symbolizer")
 	if err != nil {
 		return err
 	}
-	symbolize, llvmSymbolizer := paths[0], paths[1]
 
-	args := []string{"-llvm-symbolizer", llvmSymbolizer}
+	args := make([]string, 0, 2*len(b.IDs))
 	for _, dir := range b.IDs {
-		args = append(args, "-build-id-dir", dir)
+		args = append(args, "--build-id-dir", dir)
 	}
-	cmd := NewCommand(symbolize, args...)
+	cmd := NewCommand(paths[0], args...)
 	cmd.Stdin = in
 	pipe, err := cmd.StdoutPipe()
 	if err != nil {

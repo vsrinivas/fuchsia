@@ -135,6 +135,10 @@ func getQemuInvocation(config qemuConfig) ([]string, error) {
 	qemuCmd.SetFlag("-nographic")
 	qemuCmd.SetFlag("-monitor", "none")
 
+	// Override the SeaBIOS serial port to keep it from outputting a terminal
+	// reset on start.
+	qemuCmd.SetFlag("-fw_cfg", "name=etc/sercon-port,string=0")
+
 	// Send serial to a log file. We don't want to attach directly via stdout,
 	// because the QEMU process needs to be able outlive this one.
 	qemuCmd.SetFlag("-serial", "file:"+config.logFile)

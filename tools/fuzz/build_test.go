@@ -6,6 +6,7 @@ package fuzz
 
 import (
 	"bytes"
+	"io"
 	"os"
 	"os/exec"
 	"testing"
@@ -158,13 +159,12 @@ func TestSymbolize(t *testing.T) {
 	defer func() { ExecCommand = exec.Command }()
 
 	build := newBaseBuild()
-	build.Paths["symbolize"] = "symbolize"
-	build.Paths["llvm-symbolizer"] = "llvm-symbolizer"
+	build.Paths["symbolizer"] = "symbolizer"
 
 	// TODO(fxbug.dev/45425): more realistic test data
 	inputData := "[1234.5][klog] INFO: {{{0x41}}}"
 	expectedOutput := "wow.c:1\n"
-	src := bytes.NewBufferString(inputData)
+	src := io.NopCloser(bytes.NewBufferString(inputData))
 	var dst bytes.Buffer
 	if err := build.Symbolize(src, &dst); err != nil {
 		t.Fatalf("error during symbolization: %s", err)
