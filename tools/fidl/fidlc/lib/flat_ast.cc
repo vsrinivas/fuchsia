@@ -498,14 +498,16 @@ Libraries::~Libraries() = default;
 Libraries::Libraries(Libraries&&) noexcept = default;
 
 bool Libraries::Insert(std::unique_ptr<Library> library) {
-  std::vector<std::string_view> library_name = library->name();
-  auto iter = all_libraries_.emplace(library_name, std::move(library));
-  return iter.second;
+  auto [iter, inserted] = libraries_by_name_.try_emplace(library->name(), library.get());
+  if (inserted) {
+    libraries_.push_back(std::move(library));
+  }
+  return inserted;
 }
 
 Library* Libraries::Lookup(const std::vector<std::string_view>& library_name) const {
-  auto iter = all_libraries_.find(library_name);
-  return iter == all_libraries_.end() ? nullptr : iter->second.get();
+  auto iter = libraries_by_name_.find(library_name);
+  return iter == libraries_by_name_.end() ? nullptr : iter->second;
 }
 
 AttributeSchema& Libraries::AddAttributeSchema(std::string name) {
@@ -514,18 +516,22 @@ AttributeSchema& Libraries::AddAttributeSchema(std::string name) {
   return it->second;
 }
 
-std::set<std::vector<std::string_view>> Libraries::Unused(const Library* target_library) const {
-  std::set<std::vector<std::string_view>> unused;
-  for (auto& name_library : all_libraries_)
-    unused.insert(name_library.first);
-  unused.erase(target_library->name());
-  std::set<const Library*> worklist = {target_library};
-  while (worklist.size() != 0) {
+std::set<const Library*, LibraryComparator> Libraries::Unused() const {
+  std::set<const Library*, LibraryComparator> unused;
+  auto target = target_library();
+  assert(target && "must have inserted at least one library");
+  for (auto& library : libraries_) {
+    if (library.get() != target) {
+      unused.insert(library.get());
+    }
+  }
+  std::set<const Library*> worklist = {target};
+  while (!worklist.empty()) {
     auto it = worklist.begin();
     auto next = *it;
     worklist.erase(it);
     for (const auto dependency : next->dependencies()) {
-      unused.erase(dependency->name());
+      unused.erase(dependency);
       worklist.insert(dependency);
     }
   }

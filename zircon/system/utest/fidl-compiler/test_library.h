@@ -70,9 +70,10 @@ class TestLibrary final {
         typespace_(&shared->typespace),
         all_libraries_(&shared->all_libraries),
         all_sources_of_all_libraries_(&shared->all_sources_of_all_libraries),
-        library_(std::make_unique<fidl::flat::Library>(all_libraries_, reporter_, typespace_,
-                                                       GetGeneratedOrdinal64ForTesting,
-                                                       experimental_flags_)) {}
+        owned_library_(std::make_unique<fidl::flat::Library>(all_libraries_, reporter_, typespace_,
+                                                             GetGeneratedOrdinal64ForTesting,
+                                                             experimental_flags_)),
+        library_(owned_library_.get()) {}
 
   explicit TestLibrary(const std::string& raw_source_code,
                        fidl::ExperimentalFlags experimental_flags = fidl::ExperimentalFlags())
@@ -98,14 +99,6 @@ class TestLibrary final {
     all_sources_of_all_libraries_->push_back(std::move(source_file));
   }
 
-  bool AddDependentLibrary(TestLibrary dependent_library) {
-    return all_libraries_->Insert(std::move(dependent_library.library_));
-  }
-
-  bool AddDependentLibrary(TestLibrary* dependent_library) {
-    return all_libraries_->Insert(std::move(dependent_library->library_));
-  }
-
   fidl::flat::AttributeSchema& AddAttributeSchema(std::string name) {
     return all_libraries_->AddAttributeSchema(std::move(name));
   }
@@ -120,6 +113,8 @@ class TestLibrary final {
     return parser.Success();
   }
 
+  // Compiles the library. Must have compiled all dependencies first, using the
+  // same SharedAmongstLibraries object for all of them.
   bool Compile() {
     for (auto source_file : all_sources_) {
       fidl::Lexer lexer(*source_file, reporter_);
@@ -130,8 +125,9 @@ class TestLibrary final {
       if (!library_->ConsumeFile(std::move(ast)))
         return false;
     }
-    compiled_ = library_->Compile();
-    return compiled_;
+    if (!library_->Compile())
+      return false;
+    return all_libraries_->Insert(std::move(owned_library_));
   }
 
   // TODO(pascallouis): remove, this does not use a library.
@@ -172,13 +168,13 @@ class TestLibrary final {
   }
 
   std::string GenerateJSON() {
-    auto json_generator = fidl::JSONGenerator(library_.get());
+    auto json_generator = fidl::JSONGenerator(library_);
     auto out = json_generator.Produce();
     return out.str();
   }
 
   std::string GenerateTables() {
-    auto tables_generator = fidl::TablesGenerator(library_.get());
+    auto tables_generator = fidl::TablesGenerator(library_);
     auto out = tables_generator.Produce();
     return out.str();
   }
@@ -275,7 +271,7 @@ class TestLibrary final {
 
   void set_warnings_as_errors(bool value) { reporter_->set_warnings_as_errors(value); }
 
-  fidl::flat::Library* library() const { return library_.get(); }
+  fidl::flat::Library* library() const { return library_; }
   fidl::Reporter* reporter() { return reporter_; }
   const fidl::flat::AttributeList* attributes() { return library_->attributes.get(); }
 
@@ -327,10 +323,8 @@ class TestLibrary final {
   fidl::flat::Libraries* all_libraries_;
   std::vector<std::unique_ptr<fidl::SourceFile>>* all_sources_of_all_libraries_;
   std::vector<fidl::SourceFile*> all_sources_;
-  std::unique_ptr<fidl::flat::Library> library_;
-
- private:
-  bool compiled_ = false;
+  std::unique_ptr<fidl::flat::Library> owned_library_;
+  fidl::flat::Library* library_;
 };
 
 TestLibrary WithLibraryZx(const std::string& source_code);

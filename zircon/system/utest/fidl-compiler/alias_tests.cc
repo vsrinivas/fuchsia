@@ -440,7 +440,6 @@ alias Bar2 = dependent.Bar;
 
 )FIDL",
                       &shared);
-  ASSERT_TRUE(library.AddDependentLibrary(std::move(dependency)));
   ASSERT_COMPILED(library);
 }
 

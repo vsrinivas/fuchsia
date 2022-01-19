@@ -2938,7 +2938,6 @@ protocol Child {
 };
 )FIDL",
                             &shared);
-  ASSERT_TRUE(child_library.AddDependentLibrary(std::move(parent_library)));
   ASSERT_COMPILED(child_library);
 
   auto child = child_library.LookupProtocol("Child");

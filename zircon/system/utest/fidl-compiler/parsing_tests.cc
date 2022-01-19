@@ -494,7 +494,6 @@ type UseDependent = struct {
 };
 )FIDL",
                       &shared);
-  ASSERT_TRUE(library.AddDependentLibrary(std::move(dependency)));
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrLibraryImportsMustBeGroupedAtTopOfFile);
 }
 

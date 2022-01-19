@@ -882,6 +882,12 @@ class Dependencies {
   std::set<Library*> dependencies_aggregate_;
 };
 
+struct LibraryComparator;
+
+// This class manages a set of libraries along with data structures that are
+// common to all of them (e.g. attribute schemas). The libraries must be
+// inserted in order: first the dependencies (with each one only depending on
+// those that came before it), and lastly the target library.
 class Libraries {
  public:
   Libraries();
@@ -891,22 +897,33 @@ class Libraries {
   ~Libraries();
   Libraries(Libraries&&) noexcept;
 
-  // Insert |library|.
+  // Insert |library|. It must only depend on already-inserted libraries.
   bool Insert(std::unique_ptr<Library> library);
 
   // Lookup a library by its |library_name|, or returns null if none is found.
   Library* Lookup(const std::vector<std::string_view>& library_name) const;
 
+  // Returns the target library, or null if none have been inserted.
+  const Library* target_library() const {
+    return libraries_.empty() ? nullptr : libraries_.back().get();
+  }
+
+  // Returns libraries that were inserted but never used, i.e. that do not occur
+  // in the target libary's dependency tree. Must have inserted at least one.
+  std::set<const Library*, LibraryComparator> Unused() const;
+
   // Registers a new attribute schema under the given name, and returns it.
   AttributeSchema& AddAttributeSchema(std::string name);
 
+  // Gets the schema for an attribute. For unrecognized attributes, returns
+  // AttributeSchema::kUserDefined. If warn_on_typo is true, reports a warning
+  // if the attribute appears to be a typo for an official attribute.
   const AttributeSchema& RetrieveAttributeSchema(Reporter* reporter, const Attribute* attribute,
                                                  bool warn_on_typo = false) const;
 
-  std::set<std::vector<std::string_view>> Unused(const Library* target_library) const;
-
  private:
-  std::map<std::vector<std::string_view>, std::unique_ptr<Library>> all_libraries_;
+  std::vector<std::unique_ptr<Library>> libraries_;
+  std::map<std::vector<std::string_view>, Library*> libraries_by_name_;
   // Use transparent comparator std::less<> to allow std::string_view lookups.
   std::map<std::string, AttributeSchema, std::less<>> attribute_schemas_;
 };
@@ -914,8 +931,6 @@ class Libraries {
 using MethodHasher = fit::function<raw::Ordinal64(
     const std::vector<std::string_view>& library_name, const std::string_view& protocol_name,
     const std::string_view& selector_name, const raw::SourceElement& source_element)>;
-
-struct LibraryComparator;
 
 class Library : public Element, private ReporterMixin {
   friend class StepBase;

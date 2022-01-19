@@ -393,7 +393,6 @@ protocol ExampleDecl1 {
 
 )FIDL",
                         &shared);
-    ASSERT_TRUE(library.AddDependentLibrary(std::move(dependency)));
     ASSERT_COMPILED(library);
 
     auto decl_order = library.declaration_order();

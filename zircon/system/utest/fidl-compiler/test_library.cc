@@ -48,7 +48,6 @@ resource_definition handle : uint32 {
 
   TestLibrary zx_lib("zx.fidl", zx, main_lib.OwnedShared(), flags);
   zx_lib.Compile();
-  main_lib.AddDependentLibrary(std::move(zx_lib));
 
   return main_lib;
 }

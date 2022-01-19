@@ -409,7 +409,6 @@ int compile(fidl::Reporter* reporter, fidl::flat::Typespace* typespace, std::str
             const std::vector<fidl::SourceManager>& source_managers,
             fidl::ExperimentalFlags experimental_flags) {
   fidl::flat::Libraries all_libraries;
-  const fidl::flat::Library* final_library = nullptr;
   for (const auto& source_manager : source_managers) {
     if (source_manager.sources().empty()) {
       continue;
@@ -425,39 +424,40 @@ int compile(fidl::Reporter* reporter, fidl::flat::Typespace* typespace, std::str
     if (!library->Compile()) {
       return 1;
     }
-    final_library = library.get();
     auto library_name = fidl::NameLibrary(library->name());
     if (!all_libraries.Insert(std::move(library))) {
       Fail("Multiple libraries with the same name: '%s'\n", library_name.c_str());
     }
   }
-  if (!final_library) {
+  const fidl::flat::Library* target_library = all_libraries.target_library();
+  if (!target_library) {
     Fail("No library was produced.\n");
   }
-  auto unused_libraries_names = all_libraries.Unused(final_library);
-  // Because the sources of library zx are unconditionally included, we filter
-  // out this library here. We can remove this logic when zx is used in source
-  // like other libraries.
-  unused_libraries_names.erase(std::vector<std::string_view>{"zx"});
-  if (unused_libraries_names.size() != 0) {
+  auto unused_libraries = all_libraries.Unused();
+  // TODO(fxbug.dev/90838): Remove this once all GN rules only include zx
+  // sources when the zx library is actually used.
+  if (auto zx_library = all_libraries.Lookup({"zx"})) {
+    unused_libraries.erase(zx_library);
+  }
+  if (!unused_libraries.empty()) {
     std::string message = "Unused libraries provided via --files: ";
     bool first = true;
-    for (const auto& name : unused_libraries_names) {
+    for (auto library : unused_libraries) {
       if (first) {
         first = false;
       } else {
         message.append(", ");
       }
-      message.append(fidl::NameLibrary(name));
+      message.append(fidl::NameLibrary(library->name()));
     }
     message.append("\n");
     Fail(message.data());
   }
 
   // Verify that the produced library's name matches the expected name.
-  std::string final_name = fidl::NameLibrary(final_library->name());
-  if (!library_name.empty() && final_name != library_name) {
-    Fail("Generated library '%s' did not match --name argument: %s\n", final_name.data(),
+  std::string produced_name = fidl::NameLibrary(target_library->name());
+  if (!library_name.empty() && produced_name != library_name) {
+    Fail("Generated library '%s' did not match --name argument: %s\n", produced_name.data(),
          library_name.data());
   }
 
@@ -480,35 +480,34 @@ int compile(fidl::Reporter* reporter, fidl::flat::Typespace* typespace, std::str
     Write(std::move(dep_file_contents), dep_file_path);
   }
 
-  // We recompile dependencies, and only emit output for the final
-  // library.
+  // We recompile dependencies, and only emit output for the target library.
   for (auto& output : outputs) {
     auto& behavior = output.first;
     auto& file_path = output.second;
 
     switch (behavior) {
       case Behavior::kCHeader: {
-        fidl::CGenerator generator(final_library);
+        fidl::CGenerator generator(target_library);
         Write(generator.ProduceHeader(), file_path);
         break;
       }
       case Behavior::kCClient: {
-        fidl::CGenerator generator(final_library);
+        fidl::CGenerator generator(target_library);
         Write(generator.ProduceClient(), file_path);
         break;
       }
       case Behavior::kCServer: {
-        fidl::CGenerator generator(final_library);
+        fidl::CGenerator generator(target_library);
         Write(generator.ProduceServer(), file_path);
         break;
       }
       case Behavior::kTables: {
-        fidl::TablesGenerator generator(final_library);
+        fidl::TablesGenerator generator(target_library);
         Write(generator.Produce(), file_path);
         break;
       }
       case Behavior::kJSON: {
-        fidl::JSONGenerator generator(final_library);
+        fidl::JSONGenerator generator(target_library);
         Write(generator.Produce(), file_path);
         break;
       }

@@ -194,7 +194,6 @@ protocol FoObaR {};
 service FOoBAR {};
 )FIDL",
                       &shared);
-  ASSERT_TRUE(library.AddDependentLibrary(std::move(dependency)));
   ASSERT_COMPILED(library);
 }
 
@@ -405,7 +404,6 @@ using foobar;
 alias FOOBAR = foobar.Something;
 )FIDL",
                       &shared);
-  ASSERT_TRUE(library.AddDependentLibrary(std::move(dependency)));
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrDeclNameConflictsWithLibraryImportCanonical);
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "FOOBAR");
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "foobar");

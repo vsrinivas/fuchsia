@@ -44,7 +44,6 @@ TEST(DirectDependenciesTests, GoodDirectDepsSimple) {
   };
   )FIDL",
                      &shared);
-    ASSERT_TRUE(dep1.AddDependentLibrary(&dep2));
     ASSERT_COMPILED(dep1);
 
     TestLibrary lib("example.fidl", R"FIDL(
@@ -57,7 +56,6 @@ TEST(DirectDependenciesTests, GoodDirectDepsSimple) {
   };
   )FIDL",
                     &shared);
-    lib.AddDependentLibrary(&dep1);
     ASSERT_COMPILED(lib);
 
     auto deps = lib.library()->DirectAndComposedDependencies();
@@ -90,7 +88,6 @@ protocol Baz {
 };
 )FIDL",
                    &shared);
-  ASSERT_TRUE(dep1.AddDependentLibrary(&dep2));
   ASSERT_COMPILED(dep1);
 
   TestLibrary lib("example.fidl", R"FIDL(
@@ -103,7 +100,6 @@ protocol CapturesDependencyThroughCompose {
 };
 )FIDL",
                   &shared);
-  lib.AddDependentLibrary(&dep1);
   ASSERT_COMPILED(lib);
 
   auto deps = lib.library()->DirectAndComposedDependencies();

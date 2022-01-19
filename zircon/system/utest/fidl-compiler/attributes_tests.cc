@@ -93,7 +93,6 @@ type ExampleUnion = union {
 
 )FIDL",
                       &shared);
-  ASSERT_TRUE(library.AddDependentLibrary(std::move(dependency)));
   ASSERT_COMPILED(library);
 
   EXPECT_TRUE(library.attributes()->Get("on_library"));

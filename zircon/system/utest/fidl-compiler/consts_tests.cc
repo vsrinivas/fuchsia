@@ -475,7 +475,6 @@ using dependency;
 type Example = struct { s string:dependency.MAX; };
 )FIDL",
                       &shared);
-  ASSERT_TRUE(library.AddDependentLibrary(std::move(dependency)));
   // NOTE(fxbug.dev/72924): we provide a more general error because there are multiple
   // possible interpretations.
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrUnexpectedConstraint);
