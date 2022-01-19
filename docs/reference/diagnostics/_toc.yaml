@@ -21,6 +21,9 @@ toc:
 # - title: "Access"
 #   path: /docs/reference/diagnostics/access.md
 
+- title: "Schema"
+  path: /docs/reference/diagnostics/schema.md
+
 - title: "Selectors"
   path: /docs/reference/diagnostics/selectors.md
 
