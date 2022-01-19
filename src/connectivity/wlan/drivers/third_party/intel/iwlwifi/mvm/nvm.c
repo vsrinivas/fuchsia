@@ -34,6 +34,8 @@
  *
  *****************************************************************************/
 
+#include <zircon/status.h>
+
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fw/acpi.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-csr.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-eeprom-parse.h"
@@ -42,6 +44,7 @@
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-prph.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-trans.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm/mvm.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/compiler.h"
 
 #if 0   // NEEDS_PORTING
 /*
@@ -430,14 +433,13 @@ zx_status_t iwl_nvm_init(struct iwl_mvm* mvm) {
   return ret;
 }
 
-#if 0   // NEEDS_PORTING
-struct iwl_mcc_update_resp* iwl_mvm_update_mcc(struct iwl_mvm* mvm, const char* alpha2,
-                                               enum iwl_mcc_source src_id) {
+zx_status_t iwl_mvm_update_mcc(struct iwl_mvm* mvm, const char* alpha2, enum iwl_mcc_source src_id,
+                               struct iwl_mcc_update_resp** out_resp_cp) {
   struct iwl_mcc_update_cmd mcc_update_cmd = {
       .mcc = cpu_to_le16(alpha2[0] << 8 | alpha2[1]),
       .source_id = (uint8_t)src_id,
   };
-  struct iwl_mcc_update_resp* resp_cp;
+  struct iwl_mcc_update_resp* resp_cp = NULL;
   struct iwl_rx_packet* pkt;
   struct iwl_host_cmd cmd = {
       .id = MCC_UPDATE_CMD,
@@ -445,22 +447,26 @@ struct iwl_mcc_update_resp* iwl_mvm_update_mcc(struct iwl_mvm* mvm, const char* 
       .data = {&mcc_update_cmd},
   };
 
-  int ret;
+  zx_status_t ret;
   uint32_t status;
   int resp_len, n_channels;
   uint16_t mcc;
 
-  if (WARN_ON_ONCE(!iwl_mvm_is_lar_supported(mvm))) {
-    return ERR_PTR(-EOPNOTSUPP);
+  if (!iwl_mvm_is_lar_supported(mvm)) {
+    IWL_WARN(mvm, "LAR is not supported. Ignore update MCC.\n");
+    return ZX_ERR_NOT_SUPPORTED;
   }
+
+  ZX_ASSERT(out_resp_cp);
 
   cmd.len[0] = sizeof(struct iwl_mcc_update_cmd);
 
   IWL_DEBUG_LAR(mvm, "send MCC update to FW with '%c%c' src = %d\n", alpha2[0], alpha2[1], src_id);
 
   ret = iwl_mvm_send_cmd(mvm, &cmd);
-  if (ret) {
-    return ERR_PTR(ret);
+  if (ret != ZX_OK) {
+    IWL_ERR(mvm, "MCC update command failed: %s\n", zx_status_get_string(ret));
+    return ret;
   }
 
   pkt = cmd.resp_pkt;
@@ -469,21 +475,22 @@ struct iwl_mcc_update_resp* iwl_mvm_update_mcc(struct iwl_mvm* mvm, const char* 
   if (fw_has_capa(&mvm->fw->ucode_capa, IWL_UCODE_TLV_CAPA_MCC_UPDATE_11AX_SUPPORT)) {
     struct iwl_mcc_update_resp* mcc_resp = (void*)pkt->data;
 
-    n_channels = __le32_to_cpu(mcc_resp->n_channels);
+    n_channels = le32_to_cpu(mcc_resp->n_channels);
     resp_len = sizeof(struct iwl_mcc_update_resp) + n_channels * sizeof(__le32);
-    resp_cp = kmemdup(mcc_resp, resp_len, GFP_KERNEL);
+    resp_cp = calloc(1, resp_len);
     if (!resp_cp) {
-      resp_cp = ERR_PTR(-ENOMEM);
+      ret = ZX_ERR_NO_MEMORY;
       goto exit;
     }
+    memcpy(resp_cp, mcc_resp, resp_len);
   } else {
     struct iwl_mcc_update_resp_v3* mcc_resp_v3 = (void*)pkt->data;
 
-    n_channels = __le32_to_cpu(mcc_resp_v3->n_channels);
+    n_channels = le32_to_cpu(mcc_resp_v3->n_channels);
     resp_len = sizeof(struct iwl_mcc_update_resp) + n_channels * sizeof(__le32);
-    resp_cp = kzalloc(resp_len, GFP_KERNEL);
+    resp_cp = calloc(1, resp_len);
     if (!resp_cp) {
-      resp_cp = ERR_PTR(-ENOMEM);
+      ret = ZX_ERR_NO_MEMORY;
       goto exit;
     }
 
@@ -507,14 +514,17 @@ struct iwl_mcc_update_resp* iwl_mvm_update_mcc(struct iwl_mvm* mvm, const char* 
     resp_cp->mcc = cpu_to_le16(mcc);
   }
 
+  *out_resp_cp = resp_cp;
+
   IWL_DEBUG_LAR(mvm, "MCC response status: 0x%x. new MCC: 0x%x ('%c%c') n_chans: %d\n", status, mcc,
                 mcc >> 8, mcc & 0xff, n_channels);
 
 exit:
   iwl_free_resp(&cmd);
-  return resp_cp;
+  return ret;
 }
 
+#if 0   // NEEDS_PORTING
 int iwl_mvm_init_mcc(struct iwl_mvm* mvm) {
   bool tlv_lar;
   bool nvm_lar;

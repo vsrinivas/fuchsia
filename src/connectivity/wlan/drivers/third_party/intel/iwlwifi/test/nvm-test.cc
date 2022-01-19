@@ -11,14 +11,14 @@ extern "C" {
 }
 
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-drv.h"
-#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/test/single-ap-test.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/test/fake-ucode-capa-test.h"
 
 namespace wlan::testing {
 namespace {
 
-class NvmTest : public SingleApTest {
+class NvmTest : public FakeUcodeCapaTest {
  public:
-  NvmTest() {}
+  NvmTest() : FakeUcodeCapaTest(0, BIT(IWL_UCODE_TLV_CAPA_LAR_SUPPORT)) {}
   ~NvmTest() {}
 };
 
@@ -49,7 +49,7 @@ TEST_F(NvmTest, TestParsingDefaultNvm) {
   // Band and channel info
   // - 2G band
   EXPECT_EQ(data->bands[WLAN_INFO_BAND_TWO_GHZ].band, WLAN_INFO_BAND_TWO_GHZ);
-  EXPECT_EQ(data->bands[WLAN_INFO_BAND_TWO_GHZ].n_channels, 13);
+  EXPECT_EQ(data->bands[WLAN_INFO_BAND_TWO_GHZ].n_channels, 14);
   EXPECT_EQ(data->bands[WLAN_INFO_BAND_TWO_GHZ].channels[0].ch_num, 1);
   // - 5G band
   EXPECT_EQ(data->bands[WLAN_INFO_BAND_FIVE_GHZ].band, WLAN_INFO_BAND_FIVE_GHZ);
@@ -59,6 +59,19 @@ TEST_F(NvmTest, TestParsingDefaultNvm) {
 
 TEST_F(NvmTest, CfgRatesTo80211) {
   EXPECT_EQ(2, cfg_rates_to_80211(1 * 10));  // 1 Mbps
+}
+
+TEST_F(NvmTest, UpdateMcc) {
+  auto mvm = iwl_trans_get_mvm(sim_trans_.iwl_trans());
+  struct iwl_mcc_update_resp *resp;
+
+  mtx_lock(&mvm->mutex);
+  EXPECT_EQ(ZX_OK, iwl_mvm_update_mcc(mvm, "US", MCC_SOURCE_WIFI, &resp));
+  mtx_unlock(&mvm->mutex);
+
+  EXPECT_EQ(resp->mcc, 0x3030);  // default is world-side.
+
+  free(resp);
 }
 
 }  // namespace

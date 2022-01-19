@@ -2006,8 +2006,14 @@ int iwl_mvm_fm_unregister(struct iwl_mvm* mvm);
 #endif
 
 /* Location Aware Regulatory */
-struct iwl_mcc_update_resp* iwl_mvm_update_mcc(struct iwl_mvm* mvm, const char* alpha2,
-                                               enum iwl_mcc_source src_id);
+// Send the 2-byte country code to the firmware.
+//
+// When this function returns ZX_OK, the 'out_resp_cp' will be pointed to a
+// 'struct iwl_mcc_update_resp' object (variable-sized).  It is the caller's responsibility
+// to release the memory.
+zx_status_t iwl_mvm_update_mcc(struct iwl_mvm* mvm, const char* alpha2, enum iwl_mcc_source src_id,
+                               struct iwl_mcc_update_resp** out_resp_cp);
+
 int iwl_mvm_init_mcc(struct iwl_mvm* mvm);
 void iwl_mvm_rx_chub_update_mcc(struct iwl_mvm* mvm, struct iwl_rx_cmd_buffer* rxb);
 struct ieee80211_regdomain* iwl_mvm_get_regdomain(struct wiphy* wiphy, const char* alpha2,
