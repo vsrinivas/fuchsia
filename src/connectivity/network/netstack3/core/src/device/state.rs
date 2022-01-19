@@ -175,6 +175,16 @@ impl<Instant, I: DeviceIpExt<Instant>> IpDeviceState<Instant, I> {
     }
 }
 
+/// The state common to all IPv4 devices.
+pub(crate) struct Ipv4DeviceState<I: Instant> {
+    pub(crate) ip_state: IpDeviceState<I, Ipv4>,
+}
+
+/// The state common to all IPv6 devices.
+pub(crate) struct Ipv6DeviceState<I: Instant> {
+    pub(crate) ip_state: IpDeviceState<I, Ipv6>,
+}
+
 impl<I: Instant> IpDeviceState<I, Ipv6> {
     /// Iterates over the global IPv6 address entries.
     pub(crate) fn iter_global_ipv6_addrs(
@@ -194,15 +204,18 @@ impl<I: Instant> IpDeviceState<I, Ipv6> {
 /// IPv4 and IPv6 state combined.
 pub(crate) struct DualStackIpDeviceState<I: Instant> {
     /// IPv4 state.
-    pub ipv4: IpDeviceState<I, Ipv4>,
+    pub ipv4: Ipv4DeviceState<I>,
 
     /// IPv6 state.
-    pub ipv6: IpDeviceState<I, Ipv6>,
+    pub ipv6: Ipv6DeviceState<I>,
 }
 
 impl<I: Instant> Default for DualStackIpDeviceState<I> {
     fn default() -> DualStackIpDeviceState<I> {
-        DualStackIpDeviceState { ipv4: IpDeviceState::default(), ipv6: IpDeviceState::default() }
+        DualStackIpDeviceState {
+            ipv4: Ipv4DeviceState { ip_state: IpDeviceState::default() },
+            ipv6: Ipv6DeviceState { ip_state: IpDeviceState::default() },
+        }
     }
 }
 
