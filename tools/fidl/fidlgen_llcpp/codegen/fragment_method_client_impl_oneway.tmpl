@@ -26,36 +26,3 @@
     return _client_base()->SendOneWay(_request_message.GetOutgoingMessage());
   }
 {{- end }}
-
-
-
-{{- /* TODO(fxbug.dev/85688): Remove this. */}}
-{{- define "Method:ClientImplOneway:WireMessagingHeader" }}
-  {{- /* Managed flavor */}}
-  {{ .Docs }}
-  {{- if .DocComments }}
-    //
-  {{- end }}
-  // {{- template "Method:ClientAllocationComment:Helper" . }}
-  ::fidl::Result {{ .Name }}(
-    {{ RenderParams .RequestArgs }});
-
-{{- end }}
-
-
-{{- /* TODO(fxbug.dev/85688): Remove this. */}}
-{{- define "Method:ClientImplOneway:WireMessagingSource" }}
-  {{- IfdefFuchsia -}}
-
-  {{- /* Managed flavor */}}
-  ::fidl::Result {{ .Protocol.WireClientImpl.NoLeading }}::{{ .Name }}(
-        {{ RenderParams .RequestArgs }}) {
-    FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-    {{ .WireRequest }} _request_object{ {{ RenderForwardParams .RequestArgs }} };
-    ::fidl::OwnedEncodedMessage<{{ .WireRequest }}, {{ .Transport.Type }}> _request_message(
-        ::fidl::internal::AllowUnownedInputRef{}, &_request_object);
-    return ::fidl::internal::ClientBase::SendOneWay(_request_message.GetOutgoingMessage());
-  }
-
-  {{- EndifFuchsia -}}
-{{- end }}

@@ -26,6 +26,8 @@
 namespace fidl {
 namespace {
 
+using ::fidl_testing::ClientBaseSpy;
+using ::fidl_testing::ClientChecker;
 using ::fidl_testing::TestProtocol;
 using ::fidl_testing::TestResponseContext;
 
@@ -133,8 +135,8 @@ TEST(WireSharedClient, Clone) {
 
   class EventHandler : public fidl::WireAsyncEventHandler<TestProtocol> {
    public:
-    EventHandler(sync_completion_t& did_teardown, WireSharedClient<TestProtocol>& client)
-        : did_teardown_(did_teardown), client_(client) {}
+    EventHandler(sync_completion_t& did_teardown, ClientBaseSpy& spy)
+        : did_teardown_(did_teardown), spy_(spy) {}
 
     void on_fidl_error(::fidl::UnbindInfo info) override {
       EXPECT_EQ(fidl::Reason::kPeerClosed, info.reason());
@@ -143,17 +145,19 @@ TEST(WireSharedClient, Clone) {
 
     ~EventHandler() override {
       // All the transactions should be finished by the time the connection is dropped.
-      EXPECT_EQ(0, client_->GetTxidCount());
+      EXPECT_EQ(0, spy_.GetTxidCount());
       sync_completion_signal(&did_teardown_);
     }
 
    private:
     sync_completion_t& did_teardown_;
-    WireSharedClient<TestProtocol>& client_;
+    ClientBaseSpy& spy_;
   };
 
+  ClientBaseSpy spy;
   client.Bind(std::move(endpoints->client), loop.dispatcher(),
-              std::make_unique<EventHandler>(did_teardown, client));
+              std::make_unique<EventHandler>(did_teardown, spy));
+  spy.set_client(client);
 
   // Create 20 clones of the client, and verify that they can all send messages
   // through the same internal |ClientImpl|.
@@ -161,12 +165,12 @@ TEST(WireSharedClient, Clone) {
   std::vector<std::unique_ptr<TestResponseContext>> contexts;
   for (size_t i = 0; i < kNumClones; i++) {
     auto clone = client.Clone();
-    contexts.emplace_back(std::make_unique<TestResponseContext>(&*clone));
-    // Generate a txid for a ResponseContext.
-    clone->PrepareAsyncTxn(contexts.back().get());
     // Both clone and the client should delegate to the same underlying binding.
-    EXPECT_TRUE(clone->IsPending(contexts.back()->Txid()));
-    EXPECT_TRUE(client->IsPending(contexts.back()->Txid()));
+    EXPECT_EQ(ClientChecker::GetClientBase(client), ClientChecker::GetClientBase(clone));
+    contexts.emplace_back(std::make_unique<TestResponseContext>(&spy));
+    // Generate a txid for a ResponseContext.
+    spy.PrepareAsyncTxn(contexts.back().get());
+    EXPECT_TRUE(spy.IsPending(contexts.back()->Txid()));
     // Send a "response" message with the same txid from the remote end of the channel.
     fidl_message_header_t hdr;
     fidl_init_txn_header(&hdr, contexts.back()->Txid(), 0);
@@ -182,7 +186,8 @@ TEST(WireSharedClient, Clone) {
 // This test performs the following repeatedly:
 // - Clone a |fidl::WireSharedClient| to another |fidl::WireSharedClient| variable.
 // - Destroy the original by letting it go out of scope.
-// - Verify that the new client shares the same internal |ClientImpl|.
+// - Verify that the new client shares the same internal |ClientBase|, which
+//   stores all the transaction state.
 TEST(WireSharedClient, CloneCanExtendClientLifetime) {
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
 
@@ -194,7 +199,8 @@ TEST(WireSharedClient, CloneCanExtendClientLifetime) {
   NormalTeardownObserver observer;
 
   {
-    fidl::internal::WireClientImpl<TestProtocol>* client_ptr = nullptr;
+    using fidl_testing::ClientChecker;
+    fidl::internal::ClientBase* client_ptr = nullptr;
     fidl::WireSharedClient<TestProtocol> outer_clone;
     ASSERT_CLIENT_IMPL_NULL(outer_clone);
 
@@ -206,7 +212,7 @@ TEST(WireSharedClient, CloneCanExtendClientLifetime) {
         fidl::WireSharedClient client(std::move(endpoints->client), loop.dispatcher(),
                                       observer.GetEventHandler());
         ASSERT_CLIENT_IMPL_NOT_NULL(client);
-        client_ptr = &*client;
+        client_ptr = ClientChecker::GetClientBase(client);
 
         ASSERT_OK(loop.RunUntilIdle());
         ASSERT_FALSE(observer.IsTeardown());
@@ -216,7 +222,7 @@ TEST(WireSharedClient, CloneCanExtendClientLifetime) {
       }
 
       ASSERT_CLIENT_IMPL_NOT_NULL(inner_clone);
-      ASSERT_EQ(&*inner_clone, client_ptr);
+      ASSERT_EQ(ClientChecker::GetClientBase(inner_clone), client_ptr);
 
       ASSERT_OK(loop.RunUntilIdle());
       ASSERT_FALSE(observer.IsTeardown());
@@ -226,7 +232,7 @@ TEST(WireSharedClient, CloneCanExtendClientLifetime) {
     }
 
     ASSERT_CLIENT_IMPL_NOT_NULL(outer_clone);
-    ASSERT_EQ(&*outer_clone, client_ptr);
+    ASSERT_EQ(ClientChecker::GetClientBase(outer_clone), client_ptr);
 
     ASSERT_OK(loop.RunUntilIdle());
     ASSERT_FALSE(observer.IsTeardown());
@@ -255,9 +261,9 @@ TEST(WireSharedClient, CloneSupportsExplicitTeardown) {
   ASSERT_OK(loop.RunUntilIdle());
   ASSERT_FALSE(observer.IsTeardown());
 
-  using ::fidl_testing::ClientBaseChecker;
+  using ::fidl_testing::ClientChecker;
   // The channel being managed is still alive.
-  ASSERT_NOT_NULL(ClientBaseChecker::GetTransport(&*clone).get());
+  ASSERT_NOT_NULL(ClientChecker::GetTransport(clone).get());
 
   // Now we call |AsyncTeardown| on the main client, the clone would be torn
   // down too.
@@ -265,8 +271,8 @@ TEST(WireSharedClient, CloneSupportsExplicitTeardown) {
 
   ASSERT_OK(loop.RunUntilIdle());
   EXPECT_TRUE(observer.IsTeardown());
-  EXPECT_NULL(ClientBaseChecker::GetTransport(&*clone).get());
-  EXPECT_NULL(ClientBaseChecker::GetTransport(&*client).get());
+  EXPECT_NULL(ClientChecker::GetTransport(clone).get());
+  EXPECT_NULL(ClientChecker::GetTransport(client).get());
 }
 
 class WireSharedClientTest : public fidl_testing::AsyncLoopAndEndpointsFixture {};
@@ -278,10 +284,7 @@ TEST_F(WireSharedClientTest, DefaultConstruction) {
 
 TEST_F(WireSharedClientTest, InvalidAccess) {
   WireSharedClient<TestProtocol> client;
-  ASSERT_DEATH([&] {
-    client->MakeSyncCallWith(
-        [](std::shared_ptr<fidl::internal::AnyTransport>) { ADD_FAILURE("Should not get here"); });
-  });
+  ASSERT_DEATH([&] { client.operator->(); });
   ASSERT_DEATH([&] {
     fidl::Arena arena;
     client.buffer(arena);
@@ -298,10 +301,7 @@ TEST_F(WireSharedClientTest, Move) {
   WireSharedClient<TestProtocol> client2 = std::move(client);
   EXPECT_FALSE(client.is_valid());
   EXPECT_TRUE(client2.is_valid());
-  ASSERT_DEATH([&] {
-    client->MakeSyncCallWith(
-        [](std::shared_ptr<fidl::internal::AnyTransport>) { ADD_FAILURE("Should not get here"); });
-  });
+  ASSERT_DEATH([&] { client.operator->(); });
 }
 
 }  // namespace

@@ -881,15 +881,23 @@ static_assert(
 
 #ifdef __Fuchsia__
 }  // namespace fidl
-
 template <>
-class ::fidl::internal::WireClientImpl<::test_service::SecondProtocol> final
-    : public ::fidl::internal::ClientBase {
+class ::fidl::internal::WireWeakOnewayClientImpl<::test_service::SecondProtocol>
+    : public ::fidl::internal::ClientImplBase {
  public:
+  using ClientImplBase::ClientImplBase;
+
   // Allocates 16 bytes of message buffer on the stack. No heap allocation
   // necessary.
   ::fidl::Result MethodOnSecond();
-  WireClientImpl() = default;
+};
+
+template <>
+class ::fidl::internal::WireWeakAsyncClientImpl<::test_service::SecondProtocol>
+    final : public ::fidl::internal::WireWeakOnewayClientImpl<
+                ::test_service::SecondProtocol> {
+ public:
+  using WireWeakOnewayClientImpl::WireWeakOnewayClientImpl;
 };
 
 template <>
@@ -910,17 +918,6 @@ class ::fidl::internal::WireWeakAsyncBufferClientImpl<
                 ::test_service::SecondProtocol> {
  public:
   using WireWeakOnewayBufferClientImpl::WireWeakOnewayBufferClientImpl;
-};
-
-template <>
-class ::fidl::internal::WireWeakOnewayClientImpl<::test_service::SecondProtocol>
-    : public ::fidl::internal::ClientImplBase {
- public:
-  using ClientImplBase::ClientImplBase;
-
-  // Allocates 16 bytes of message buffer on the stack. No heap allocation
-  // necessary.
-  ::fidl::Result MethodOnSecond();
 };
 template <>
 class ::fidl::internal::WireWeakSyncClientImpl<::test_service::SecondProtocol>
@@ -983,13 +980,22 @@ class ::fidl::internal::WireWeakEventSender<::test_service::SecondProtocol> {
 #ifdef __Fuchsia__
 
 template <>
-class ::fidl::internal::WireClientImpl<::test_service::FirstProtocol> final
-    : public ::fidl::internal::ClientBase {
+class ::fidl::internal::WireWeakOnewayClientImpl<::test_service::FirstProtocol>
+    : public ::fidl::internal::ClientImplBase {
  public:
+  using ClientImplBase::ClientImplBase;
+
   // Allocates 16 bytes of message buffer on the stack. No heap allocation
   // necessary.
   ::fidl::Result MethodOnFirst();
-  WireClientImpl() = default;
+};
+
+template <>
+class ::fidl::internal::WireWeakAsyncClientImpl<::test_service::FirstProtocol>
+    final : public ::fidl::internal::WireWeakOnewayClientImpl<
+                ::test_service::FirstProtocol> {
+ public:
+  using WireWeakOnewayClientImpl::WireWeakOnewayClientImpl;
 };
 
 template <>
@@ -1010,17 +1016,6 @@ class ::fidl::internal::WireWeakAsyncBufferClientImpl<
                 ::test_service::FirstProtocol> {
  public:
   using WireWeakOnewayBufferClientImpl::WireWeakOnewayBufferClientImpl;
-};
-
-template <>
-class ::fidl::internal::WireWeakOnewayClientImpl<::test_service::FirstProtocol>
-    : public ::fidl::internal::ClientImplBase {
- public:
-  using ClientImplBase::ClientImplBase;
-
-  // Allocates 16 bytes of message buffer on the stack. No heap allocation
-  // necessary.
-  ::fidl::Result MethodOnFirst();
 };
 template <>
 class ::fidl::internal::WireWeakSyncClientImpl<::test_service::FirstProtocol>

@@ -96,10 +96,11 @@ namespace test_transitivedependenciescompose {
 }  // namespace test_transitivedependenciescompose
 #ifdef __Fuchsia__
 
-void fidl::internal::WireClientImpl<::test_transitivedependenciescompose::Top>::
-    GetFoo(::fidl::WireClientCallback<
-           ::test_transitivedependenciescompose::Top::GetFoo>
-               _cb) {
+void fidl::internal::
+    WireWeakAsyncClientImpl<::test_transitivedependenciescompose::Top>::GetFoo(
+        ::fidl::WireClientCallback<
+            ::test_transitivedependenciescompose::Top::GetFoo>
+            _cb) {
   using Callback = decltype(_cb);
   class ResponseContext final
       : public ::fidl::WireResponseContext<
@@ -126,15 +127,15 @@ void fidl::internal::WireClientImpl<::test_transitivedependenciescompose::Top>::
       ::fidl::WireRequest<::test_transitivedependenciescompose::Top::GetFoo>,
       ::fidl::internal::ChannelTransport>
       _request_message(::fidl::internal::AllowUnownedInputRef{}, &_request);
-  ::fidl::internal::ClientBase::SendTwoWay(
-      _request_message.GetOutgoingMessage(), _context);
+  _client_base()->SendTwoWay(_request_message.GetOutgoingMessage(), _context);
 }
 
-void fidl::internal::WireClientImpl<::test_transitivedependenciescompose::Top>::
-    GetFoo(::fit::callback<
-           void(::fidl::WireResponse<
-                ::test_transitivedependenciescompose::Top::GetFoo>* response)>
-               _cb) {
+void fidl::internal::
+    WireWeakAsyncClientImpl<::test_transitivedependenciescompose::Top>::GetFoo(
+        ::fit::callback<
+            void(::fidl::WireResponse<
+                 ::test_transitivedependenciescompose::Top::GetFoo>* response)>
+            _cb) {
   using Callback = decltype(_cb);
   class ResponseContext final
       : public ::fidl::WireResponseContext<
@@ -165,8 +166,7 @@ void fidl::internal::WireClientImpl<::test_transitivedependenciescompose::Top>::
       ::fidl::WireRequest<::test_transitivedependenciescompose::Top::GetFoo>,
       ::fidl::internal::ChannelTransport>
       _request_message(::fidl::internal::AllowUnownedInputRef{}, &_request);
-  ::fidl::internal::ClientBase::SendTwoWay(
-      _request_message.GetOutgoingMessage(), _context);
+  _client_base()->SendTwoWay(_request_message.GetOutgoingMessage(), _context);
 }
 void fidl::internal::WireWeakAsyncBufferClientImpl<
     ::test_transitivedependenciescompose::Top>::

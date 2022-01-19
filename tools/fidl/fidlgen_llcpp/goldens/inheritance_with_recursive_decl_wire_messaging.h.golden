@@ -754,17 +754,26 @@ static_assert(
 
 #ifdef __Fuchsia__
 }  // namespace fidl
-
 template <>
-class ::fidl::internal::WireClientImpl<
+class ::fidl::internal::WireWeakOnewayClientImpl<
     ::test_inheritancewithrecursivedecl::Parent>
-    final : public ::fidl::internal::ClientBase {
+    : public ::fidl::internal::ClientImplBase {
  public:
+  using ClientImplBase::ClientImplBase;
+
   // Allocates 24 bytes of message buffer on the stack. No heap allocation
   // necessary.
   ::fidl::Result First(
       ::fidl::ServerEnd<::test_inheritancewithrecursivedecl::Parent>&& request);
-  WireClientImpl() = default;
+};
+
+template <>
+class ::fidl::internal::WireWeakAsyncClientImpl<
+    ::test_inheritancewithrecursivedecl::Parent>
+    final : public ::fidl::internal::WireWeakOnewayClientImpl<
+                ::test_inheritancewithrecursivedecl::Parent> {
+ public:
+  using WireWeakOnewayClientImpl::WireWeakOnewayClientImpl;
 };
 
 template <>
@@ -786,19 +795,6 @@ class ::fidl::internal::WireWeakAsyncBufferClientImpl<
                 ::test_inheritancewithrecursivedecl::Parent> {
  public:
   using WireWeakOnewayBufferClientImpl::WireWeakOnewayBufferClientImpl;
-};
-
-template <>
-class ::fidl::internal::WireWeakOnewayClientImpl<
-    ::test_inheritancewithrecursivedecl::Parent>
-    : public ::fidl::internal::ClientImplBase {
- public:
-  using ClientImplBase::ClientImplBase;
-
-  // Allocates 24 bytes of message buffer on the stack. No heap allocation
-  // necessary.
-  ::fidl::Result First(
-      ::fidl::ServerEnd<::test_inheritancewithrecursivedecl::Parent>&& request);
 };
 template <>
 class ::fidl::internal::WireWeakSyncClientImpl<
@@ -864,10 +860,12 @@ class ::fidl::internal::WireWeakEventSender<
 #ifdef __Fuchsia__
 
 template <>
-class ::fidl::internal::WireClientImpl<
+class ::fidl::internal::WireWeakOnewayClientImpl<
     ::test_inheritancewithrecursivedecl::Child>
-    final : public ::fidl::internal::ClientBase {
+    : public ::fidl::internal::ClientImplBase {
  public:
+  using ClientImplBase::ClientImplBase;
+
   // Allocates 24 bytes of message buffer on the stack. No heap allocation
   // necessary.
   ::fidl::Result First(
@@ -877,7 +875,15 @@ class ::fidl::internal::WireClientImpl<
   // necessary.
   ::fidl::Result Second(
       ::fidl::ServerEnd<::test_inheritancewithrecursivedecl::Parent>&& request);
-  WireClientImpl() = default;
+};
+
+template <>
+class ::fidl::internal::WireWeakAsyncClientImpl<
+    ::test_inheritancewithrecursivedecl::Child>
+    final : public ::fidl::internal::WireWeakOnewayClientImpl<
+                ::test_inheritancewithrecursivedecl::Child> {
+ public:
+  using WireWeakOnewayClientImpl::WireWeakOnewayClientImpl;
 };
 
 template <>
@@ -903,24 +909,6 @@ class ::fidl::internal::WireWeakAsyncBufferClientImpl<
                 ::test_inheritancewithrecursivedecl::Child> {
  public:
   using WireWeakOnewayBufferClientImpl::WireWeakOnewayBufferClientImpl;
-};
-
-template <>
-class ::fidl::internal::WireWeakOnewayClientImpl<
-    ::test_inheritancewithrecursivedecl::Child>
-    : public ::fidl::internal::ClientImplBase {
- public:
-  using ClientImplBase::ClientImplBase;
-
-  // Allocates 24 bytes of message buffer on the stack. No heap allocation
-  // necessary.
-  ::fidl::Result First(
-      ::fidl::ServerEnd<::test_inheritancewithrecursivedecl::Parent>&& request);
-
-  // Allocates 24 bytes of message buffer on the stack. No heap allocation
-  // necessary.
-  ::fidl::Result Second(
-      ::fidl::ServerEnd<::test_inheritancewithrecursivedecl::Parent>&& request);
 };
 template <>
 class ::fidl::internal::WireWeakSyncClientImpl<

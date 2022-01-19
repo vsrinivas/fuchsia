@@ -866,14 +866,21 @@ static_assert(offsetof(::fidl::WireResponse<
 
 #ifdef __Fuchsia__
 }  // namespace fidl
+template <>
+class ::fidl::internal::WireWeakOnewayClientImpl<::test_union::TestProtocol>
+    : public ::fidl::internal::ClientImplBase {
+ public:
+  using ClientImplBase::ClientImplBase;
+};
 
 template <>
-class ::fidl::internal::WireClientImpl<::test_union::TestProtocol> final
-    : public ::fidl::internal::ClientBase {
+class ::fidl::internal::WireWeakAsyncClientImpl<::test_union::TestProtocol>
+    final : public ::fidl::internal::WireWeakOnewayClientImpl<
+                ::test_union::TestProtocol> {
  public:
-  // Asynchronous variant of
-  // |TestProtocol.StrictXUnionHenceResponseMayBeStackAllocated()|. Allocates 16
-  // bytes of request buffer on the stack. The callback is stored on the heap.
+  using WireWeakOnewayClientImpl::WireWeakOnewayClientImpl;
+  // Allocates 16 bytes of request buffer on the stack. The callback is stored
+  // on the heap.
   void StrictXUnionHenceResponseMayBeStackAllocated(
       ::fidl::WireClientCallback<
           ::test_union::TestProtocol::
@@ -886,10 +893,8 @@ class ::fidl::internal::WireClientImpl<::test_union::TestProtocol> final
                ::test_union::TestProtocol::
                    StrictXUnionHenceResponseMayBeStackAllocated>* response)>
           _cb);
-  // Asynchronous variant of
-  // |TestProtocol.FlexibleXUnionHenceResponseMustBeHeapAllocated()|. Allocates
-  // 16 bytes of request buffer on the stack. The callback is stored on the
-  // heap.
+  // Allocates 16 bytes of request buffer on the stack. The callback is stored
+  // on the heap.
   void FlexibleXUnionHenceResponseMustBeHeapAllocated(
       ::fidl::WireClientCallback<
           ::test_union::TestProtocol::
@@ -902,7 +907,6 @@ class ::fidl::internal::WireClientImpl<::test_union::TestProtocol> final
                ::test_union::TestProtocol::
                    FlexibleXUnionHenceResponseMustBeHeapAllocated>* response)>
           _cb);
-  WireClientImpl() = default;
 };
 
 template <>
@@ -932,13 +936,6 @@ class ::fidl::internal::WireWeakAsyncBufferClientImpl<
       ::fidl::WireResponseContext<
           ::test_union::TestProtocol::
               FlexibleXUnionHenceResponseMustBeHeapAllocated>* _context);
-};
-
-template <>
-class ::fidl::internal::WireWeakOnewayClientImpl<::test_union::TestProtocol>
-    : public ::fidl::internal::ClientImplBase {
- public:
-  using ClientImplBase::ClientImplBase;
 };
 template <>
 class ::fidl::internal::WireWeakSyncClientImpl<::test_union::TestProtocol> final

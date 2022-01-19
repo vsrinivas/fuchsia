@@ -482,13 +482,21 @@ static_assert(
 
 #ifdef __Fuchsia__
 }  // namespace fidl
+template <>
+class ::fidl::internal::WireWeakOnewayClientImpl<
+    ::test_transitivedependenciescompose::Top>
+    : public ::fidl::internal::ClientImplBase {
+ public:
+  using ClientImplBase::ClientImplBase;
+};
 
 template <>
-class ::fidl::internal::WireClientImpl<
+class ::fidl::internal::WireWeakAsyncClientImpl<
     ::test_transitivedependenciescompose::Top>
-    final : public ::fidl::internal::ClientBase {
+    final : public ::fidl::internal::WireWeakOnewayClientImpl<
+                ::test_transitivedependenciescompose::Top> {
  public:
-  // Asynchronous variant of |Top.GetFoo()|.
+  using WireWeakOnewayClientImpl::WireWeakOnewayClientImpl;
   // Allocates 16 bytes of request buffer on the stack. The callback is stored
   // on the heap.
   void GetFoo(::fidl::WireClientCallback<
@@ -500,7 +508,6 @@ class ::fidl::internal::WireClientImpl<
           void(::fidl::WireResponse<
                ::test_transitivedependenciescompose::Top::GetFoo>* response)>
           _cb);
-  WireClientImpl() = default;
 };
 
 template <>
@@ -522,14 +529,6 @@ class ::fidl::internal::WireWeakAsyncBufferClientImpl<
   // Caller provides the backing storage for FIDL message.
   void GetFoo(::fidl::WireResponseContext<
               ::test_transitivedependenciescompose::Top::GetFoo>* _context);
-};
-
-template <>
-class ::fidl::internal::WireWeakOnewayClientImpl<
-    ::test_transitivedependenciescompose::Top>
-    : public ::fidl::internal::ClientImplBase {
- public:
-  using ClientImplBase::ClientImplBase;
 };
 template <>
 class ::fidl::internal::WireWeakSyncClientImpl<

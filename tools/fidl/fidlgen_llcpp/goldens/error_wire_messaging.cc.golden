@@ -80,7 +80,7 @@ namespace test_error {
 }  // namespace test_error
 #ifdef __Fuchsia__
 
-void fidl::internal::WireClientImpl<::test_error::Example>::Foo(
+void fidl::internal::WireWeakAsyncClientImpl<::test_error::Example>::Foo(
     ::fidl::StringView s,
     ::fidl::WireClientCallback<::test_error::Example::Foo> _cb) {
   using Callback = decltype(_cb);
@@ -105,11 +105,10 @@ void fidl::internal::WireClientImpl<::test_error::Example>::Foo(
   ::fidl::OwnedEncodedMessage<::fidl::WireRequest<::test_error::Example::Foo>,
                               ::fidl::internal::ChannelTransport>
       _request_message(::fidl::internal::AllowUnownedInputRef{}, &_request);
-  ::fidl::internal::ClientBase::SendTwoWay(
-      _request_message.GetOutgoingMessage(), _context);
+  _client_base()->SendTwoWay(_request_message.GetOutgoingMessage(), _context);
 }
 
-void fidl::internal::WireClientImpl<::test_error::Example>::Foo(
+void fidl::internal::WireWeakAsyncClientImpl<::test_error::Example>::Foo(
     ::fidl::StringView s,
     ::fit::callback<
         void(::fidl::WireResponse<::test_error::Example::Foo>* response)>
@@ -140,8 +139,7 @@ void fidl::internal::WireClientImpl<::test_error::Example>::Foo(
   ::fidl::OwnedEncodedMessage<::fidl::WireRequest<::test_error::Example::Foo>,
                               ::fidl::internal::ChannelTransport>
       _request_message(::fidl::internal::AllowUnownedInputRef{}, &_request);
-  ::fidl::internal::ClientBase::SendTwoWay(
-      _request_message.GetOutgoingMessage(), _context);
+  _client_base()->SendTwoWay(_request_message.GetOutgoingMessage(), _context);
 }
 void fidl::internal::WireWeakAsyncBufferClientImpl<::test_error::Example>::Foo(
     ::fidl::StringView s,

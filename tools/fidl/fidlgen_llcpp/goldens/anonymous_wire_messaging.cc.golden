@@ -90,11 +90,12 @@ namespace test_anonymous {
 }  // namespace test_anonymous
 #ifdef __Fuchsia__
 
-void fidl::internal::WireClientImpl<::test_anonymous::SomeProtocol>::SomeMethod(
-    ::test_anonymous::wire::UnionMember union_member,
-    ::test_anonymous::wire::TableMember table_member,
-    ::fidl::WireClientCallback<::test_anonymous::SomeProtocol::SomeMethod>
-        _cb) {
+void fidl::internal::WireWeakAsyncClientImpl<::test_anonymous::SomeProtocol>::
+    SomeMethod(
+        ::test_anonymous::wire::UnionMember union_member,
+        ::test_anonymous::wire::TableMember table_member,
+        ::fidl::WireClientCallback<::test_anonymous::SomeProtocol::SomeMethod>
+            _cb) {
   using Callback = decltype(_cb);
   class ResponseContext final
       : public ::fidl::WireResponseContext<
@@ -121,16 +122,16 @@ void fidl::internal::WireClientImpl<::test_anonymous::SomeProtocol>::SomeMethod(
       ::fidl::WireRequest<::test_anonymous::SomeProtocol::SomeMethod>,
       ::fidl::internal::ChannelTransport>
       _request_message(::fidl::internal::AllowUnownedInputRef{}, &_request);
-  ::fidl::internal::ClientBase::SendTwoWay(
-      _request_message.GetOutgoingMessage(), _context);
+  _client_base()->SendTwoWay(_request_message.GetOutgoingMessage(), _context);
 }
 
-void fidl::internal::WireClientImpl<::test_anonymous::SomeProtocol>::SomeMethod(
-    ::test_anonymous::wire::UnionMember union_member,
-    ::test_anonymous::wire::TableMember table_member,
-    ::fit::callback<void(::fidl::WireResponse<
-                         ::test_anonymous::SomeProtocol::SomeMethod>* response)>
-        _cb) {
+void fidl::internal::WireWeakAsyncClientImpl<::test_anonymous::SomeProtocol>::
+    SomeMethod(::test_anonymous::wire::UnionMember union_member,
+               ::test_anonymous::wire::TableMember table_member,
+               ::fit::callback<
+                   void(::fidl::WireResponse<
+                        ::test_anonymous::SomeProtocol::SomeMethod>* response)>
+                   _cb) {
   using Callback = decltype(_cb);
   class ResponseContext final
       : public ::fidl::WireResponseContext<
@@ -161,8 +162,7 @@ void fidl::internal::WireClientImpl<::test_anonymous::SomeProtocol>::SomeMethod(
       ::fidl::WireRequest<::test_anonymous::SomeProtocol::SomeMethod>,
       ::fidl::internal::ChannelTransport>
       _request_message(::fidl::internal::AllowUnownedInputRef{}, &_request);
-  ::fidl::internal::ClientBase::SendTwoWay(
-      _request_message.GetOutgoingMessage(), _context);
+  _client_base()->SendTwoWay(_request_message.GetOutgoingMessage(), _context);
 }
 void fidl::internal::
     WireWeakAsyncBufferClientImpl<::test_anonymous::SomeProtocol>::SomeMethod(

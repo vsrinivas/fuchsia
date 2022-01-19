@@ -36,26 +36,29 @@ class AsyncEventHandler<TestProtocol> : public fidl::internal::AsyncEventHandler
 namespace {
 
 // A fake client that supports capturing the messages sent to the server.
-class FakeClientImpl : public fidl::internal::ClientBase {
+class FakeClientImpl {
  public:
-  FakeClientImpl() {
-    zx::status endpoints = fidl::CreateEndpoints<TestProtocol>();
-    ZX_ASSERT(endpoints.is_ok());
-    endpoints_ = std::move(endpoints.value());
+  explicit FakeClientImpl(fidl::internal::ClientBase* client_base,
+                          fidl::ServerEnd<TestProtocol> server_end)
+      : client_base_(client_base), server_end_(std::move(server_end)) {}
+
+  size_t GetTransactionCount() { return client_base_->GetTransactionCount(); }
+
+  void ForgetAsyncTxn(fidl::internal::ResponseContext* context) {
+    return client_base_->ForgetAsyncTxn(context);
   }
 
-  size_t GetTransactionCount() { return fidl::internal::ClientBase::GetTransactionCount(); }
-
-  fidl::Endpoints<TestProtocol>& endpoints() { return endpoints_; }
+  fidl::ServerEnd<TestProtocol>& server_end() { return server_end_; }
 
   fidl::IncomingMessage ReadFromServer() {
-    return fidl::MessageRead(endpoints_.server.channel(),
+    return fidl::MessageRead(server_end_.channel(),
                              fidl::BufferSpan(read_buffer_.data(), read_buffer_.size()), nullptr,
                              nullptr, 0);
   }
 
  private:
-  fidl::Endpoints<TestProtocol> endpoints_;
+  fidl::internal::ClientBase* client_base_;
+  fidl::ServerEnd<TestProtocol> server_end_;
   FIDL_ALIGNDECL std::array<uint8_t, ZX_CHANNEL_MAX_MSG_BYTES> read_buffer_;
 };
 
@@ -109,35 +112,33 @@ class MockResponseContext : public fidl::internal::ResponseContext {
 
 class NaturalClientMessengerTest : public zxtest::Test {
  public:
-  NaturalClientMessengerTest()
-      : loop_(&kAsyncLoopConfigNeverAttachToThread),
-        controller_(Create(loop_.dispatcher())),
-        impl_(static_cast<FakeClientImpl*>(&controller_.get())),
-        messenger_(impl_) {}
+  NaturalClientMessengerTest() : loop_(&kAsyncLoopConfigNeverAttachToThread) {
+    zx::status endpoints = fidl::CreateEndpoints<TestProtocol>();
+    ZX_ASSERT(endpoints.is_ok());
+
+    fidl::internal::AnyIncomingEventDispatcher event_dispatcher;
+    event_dispatcher.emplace<FakeWireEventDispatcher>();
+    controller_.Bind(fidl::internal::MakeAnyTransport(endpoints->client.TakeChannel()),
+                     loop_.dispatcher(), std::move(event_dispatcher),
+                     fidl::AnyTeardownObserver::Noop(),
+                     fidl::internal::ThreadingPolicy::kCreateAndTeardownFromDispatcherThread);
+
+    impl_ = std::make_unique<FakeClientImpl>(&controller_.get(), std::move(endpoints->server));
+    messenger_.emplace(fidl::internal::NaturalClientMessenger{&controller_.get()});
+  }
 
  protected:
   async::Loop& loop() { return loop_; }
-  FakeClientImpl* impl() { return impl_; }
+  FakeClientImpl* impl() { return impl_.get(); }
   fidl::internal::ClientController& controller() { return controller_; }
-  fidl::internal::NaturalClientMessenger& messenger() { return messenger_; }
+  fidl::internal::NaturalClientMessenger& messenger() { return messenger_.value(); }
   MockResponseContext& context() { return context_; }
 
  private:
-  static fidl::internal::ClientController Create(async_dispatcher_t* dispatcher) {
-    std::shared_ptr impl = std::make_shared<FakeClientImpl>();
-    fidl::internal::ClientController controller;
-    fidl::internal::AnyIncomingEventDispatcher event_dispatcher;
-    event_dispatcher.emplace<FakeWireEventDispatcher>();
-    controller.Bind(impl, fidl::internal::MakeAnyTransport(impl->endpoints().client.TakeChannel()),
-                    dispatcher, std::move(event_dispatcher), fidl::AnyTeardownObserver::Noop(),
-                    fidl::internal::ThreadingPolicy::kCreateAndTeardownFromDispatcherThread);
-    return controller;
-  }
-
   async::Loop loop_;
   fidl::internal::ClientController controller_;
-  FakeClientImpl* impl_;
-  fidl::internal::NaturalClientMessenger messenger_;
+  std::unique_ptr<FakeClientImpl> impl_;
+  std::optional<fidl::internal::NaturalClientMessenger> messenger_;
   MockResponseContext context_;
 };
 

@@ -114,7 +114,6 @@ template <typename Protocol>
 class Client {
  private:
   using NaturalClientImpl = fidl::internal::NaturalClientImpl<Protocol>;
-  using WireClientImpl = fidl::internal::WireClientImpl<Protocol>;
 
  public:
   // Create an initialized client which manages the binding of the client end of
@@ -181,8 +180,7 @@ class Client {
   // variable with a new instance.
   void Bind(fidl::ClientEnd<Protocol> client_end, async_dispatcher_t* dispatcher,
             fidl::AsyncEventHandler<Protocol>* event_handler = nullptr) {
-    controller_.Bind(std::make_shared<WireClientImpl>(),
-                     fidl::internal::MakeAnyTransport(client_end.TakeChannel()), dispatcher,
+    controller_.Bind(fidl::internal::MakeAnyTransport(client_end.TakeChannel()), dispatcher,
                      internal::MakeAnyEventDispatcher(event_handler),
                      fidl::AnyTeardownObserver::Noop(),
                      fidl::internal::ThreadingPolicy::kCreateAndTeardownFromDispatcherThread);
@@ -210,7 +208,10 @@ class Client {
   // Persisting this pointer to a local variable is discouraged, since that
   // results in unsafe borrows. Always prefer making calls directly via the
   // |Client| reference-counting type.
-  WireClientImpl* wire() const { return static_cast<WireClientImpl*>(&controller_.get()); }
+  auto wire() const {
+    return internal::SyncClientVeneer<internal::WireWeakAsyncClientImpl<Protocol>>{
+        &controller_.get()};
+  }
 
  private:
   const NaturalClientImpl& get() const { return natural_client_impl_.value(); }
@@ -308,7 +309,6 @@ template <typename Protocol>
 class SharedClient final {
  private:
   using NaturalClientImpl = fidl::internal::NaturalClientImpl<Protocol>;
-  using WireClientImpl = fidl::internal::WireClientImpl<Protocol>;
 
  public:
   // Creates an initialized |SharedClient| which manages the binding of the
@@ -422,8 +422,7 @@ class SharedClient final {
   void Bind(fidl::ClientEnd<Protocol> client_end, async_dispatcher_t* dispatcher,
             fidl::AsyncEventHandler<Protocol>* event_handler,
             fidl::AnyTeardownObserver teardown_observer = fidl::AnyTeardownObserver::Noop()) {
-    controller_.Bind(std::make_shared<WireClientImpl>(),
-                     fidl::internal::MakeAnyTransport(client_end.TakeChannel()), dispatcher,
+    controller_.Bind(fidl::internal::MakeAnyTransport(client_end.TakeChannel()), dispatcher,
                      internal::MakeAnyEventDispatcher(event_handler), std::move(teardown_observer),
                      fidl::internal::ThreadingPolicy::kCreateAndTeardownFromAnyThread);
     natural_client_impl_ = std::make_shared<NaturalClientImpl>(&controller_.get());
@@ -476,7 +475,10 @@ class SharedClient final {
   // Persisting this pointer to a local variable is discouraged, since that
   // results in unsafe borrows. Always prefer making calls directly via the
   // |Client| reference-counting type.
-  WireClientImpl* wire() const { return static_cast<WireClientImpl*>(&controller_.get()); }
+  auto wire() const {
+    return internal::SyncClientVeneer<internal::WireWeakAsyncClientImpl<Protocol>>{
+        &controller_.get()};
+  }
 
  private:
   const NaturalClientImpl& get() const {

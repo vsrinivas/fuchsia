@@ -657,15 +657,25 @@ static_assert(
 
 #ifdef __Fuchsia__
 }  // namespace fidl
-
 template <>
-class ::fidl::internal::WireClientImpl<::test_emptystruct::EmptyProtocol> final
-    : public ::fidl::internal::ClientBase {
+class ::fidl::internal::WireWeakOnewayClientImpl<
+    ::test_emptystruct::EmptyProtocol>
+    : public ::fidl::internal::ClientImplBase {
  public:
+  using ClientImplBase::ClientImplBase;
+
   // Allocates 24 bytes of message buffer on the stack. No heap allocation
   // necessary.
   ::fidl::Result Send(const ::test_emptystruct::wire::Empty& e);
-  // Asynchronous variant of |EmptyProtocol.SendAndReceive()|.
+};
+
+template <>
+class ::fidl::internal::WireWeakAsyncClientImpl<
+    ::test_emptystruct::EmptyProtocol>
+    final : public ::fidl::internal::WireWeakOnewayClientImpl<
+                ::test_emptystruct::EmptyProtocol> {
+ public:
+  using WireWeakOnewayClientImpl::WireWeakOnewayClientImpl;
   // Allocates 24 bytes of request buffer on the stack. The callback is stored
   // on the heap.
   void SendAndReceive(const ::test_emptystruct::wire::Empty& e,
@@ -679,7 +689,6 @@ class ::fidl::internal::WireClientImpl<::test_emptystruct::EmptyProtocol> final
           void(::fidl::WireResponse<
                ::test_emptystruct::EmptyProtocol::SendAndReceive>* response)>
           _cb);
-  WireClientImpl() = default;
 };
 
 template <>
@@ -706,18 +715,6 @@ class ::fidl::internal::WireWeakAsyncBufferClientImpl<
       const ::test_emptystruct::wire::Empty& e,
       ::fidl::WireResponseContext<
           ::test_emptystruct::EmptyProtocol::SendAndReceive>* _context);
-};
-
-template <>
-class ::fidl::internal::WireWeakOnewayClientImpl<
-    ::test_emptystruct::EmptyProtocol>
-    : public ::fidl::internal::ClientImplBase {
- public:
-  using ClientImplBase::ClientImplBase;
-
-  // Allocates 24 bytes of message buffer on the stack. No heap allocation
-  // necessary.
-  ::fidl::Result Send(const ::test_emptystruct::wire::Empty& e);
 };
 template <>
 class ::fidl::internal::WireWeakSyncClientImpl<

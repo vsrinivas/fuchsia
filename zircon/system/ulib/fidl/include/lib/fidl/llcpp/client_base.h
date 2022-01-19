@@ -245,34 +245,35 @@ class WireResponseContext : public internal::ResponseContext {
 
 namespace internal {
 
-// Base LLCPP client class supporting use with a multithreaded asynchronous dispatcher, safe error
-// handling and teardown, and asynchronous transaction tracking. Users should not directly interact
-// with this class. |ClientBase| objects must be managed via std::shared_ptr.
-class ClientBase {
+// |ClientBase| sends transactional messages and tracks outstanding replies.
+// Different client implementations reference the |ClientBase| to make calls.
+//
+// It supports multi-threaded asynchronous dispatchers, error handling, and
+// thread-safe teardown. Instances are always managed via |std::shared_ptr|.
+class ClientBase final : public std::enable_shared_from_this<ClientBase> {
  public:
-  // Creates an unbound ClientBase. Bind() must be called before any other APIs are invoked.
-  ClientBase() = default;
-  virtual ~ClientBase() = default;
+  // Creates a |ClientBase| by binding to a transport. Notifies
+  // |teardown_observer| on binding teardown.
+  static std::shared_ptr<ClientBase> Create(AnyTransport&& transport,
+                                            async_dispatcher_t* dispatcher,
+                                            AnyIncomingEventDispatcher&& event_dispatcher,
+                                            fidl::AnyTeardownObserver&& teardown_observer,
+                                            ThreadingPolicy threading_policy);
 
- protected:
+  // Creates an unbound ClientBase. Only use it with |std::make_shared|.
+  ClientBase() = default;
+  ~ClientBase() = default;
+
   // Neither copyable nor movable.
   ClientBase(const ClientBase& other) = delete;
   ClientBase& operator=(const ClientBase& other) = delete;
   ClientBase(ClientBase&& other) = delete;
   ClientBase& operator=(ClientBase&& other) = delete;
 
-  // Bind the transport to the dispatcher. Notifies |teardown_observer| on binding
-  // teardown. NOTE: This is not thread-safe and must be called exactly once,
-  // before any other APIs.
-  void Bind(std::shared_ptr<ClientBase> client, AnyTransport transport,
-            async_dispatcher_t* dispatcher, AnyIncomingEventDispatcher&& event_dispatcher,
-            fidl::AnyTeardownObserver&& teardown_observer, ThreadingPolicy threading_policy);
-
   // Asynchronously unbind the client from the dispatcher. |teardown_observer|
   // will be notified on a dispatcher thread.
   void AsyncTeardown();
 
- public:
   // Makes a two-way synchronous call with the transport that is managed by this
   // client.
   //
@@ -355,6 +356,10 @@ class ClientBase {
                                      internal::IncomingTransportContext transport_context);
 
  private:
+  void Bind(AnyTransport&& transport, async_dispatcher_t* dispatcher,
+            AnyIncomingEventDispatcher&& event_dispatcher,
+            fidl::AnyTeardownObserver&& teardown_observer, ThreadingPolicy threading_policy);
+
   // Handles errors in sending one-way or two-way FIDL requests. This may lead
   // to binding teardown.
   void HandleSendError(fidl::Result error);
@@ -372,10 +377,6 @@ class ClientBase {
 
   // Allow unit tests to peek into the internals of this class.
   friend class ::fidl_testing::ClientBaseChecker;
-
-  // TODO(fxbug.dev/82085): Instead of protecting methods and adding friends,
-  // we should use composition over inheriting from ClientBase.
-  friend class ClientController;
 
   // Weak reference to the internal binding state.
   std::weak_ptr<AsyncClientBinding> binding_;
@@ -401,11 +402,10 @@ class ClientBase {
   zx_txid_t txid_base_ __TA_GUARDED(lock_) = 0;
 };
 
-// |ClientController| manages the lifetime of a |ClientImpl| instance.
-// The |ClientImpl| class needs to inherit from |fidl::internal::ClientBase|.
+// |ClientController| manages the lifetime of a |ClientBase| instance.
 //
-// |ClientImpl|s are created when binding a client endpoint to a message
-// dispatcher, via |Bind|. The destruction of |ClientImpl|s is initiated when
+// |ClientBase|s are created when binding a client endpoint to a message
+// dispatcher, via |Bind|. The destruction of |ClientBase|s is initiated when
 // this |ClientController| class destructs, or when |Unbind| is explicitly
 // invoked.
 class ClientController {
@@ -418,18 +418,18 @@ class ClientController {
   ClientController(const ClientController& other) = default;
   ClientController& operator=(const ClientController& other) = default;
 
-  // Binds the client implementation to the |dispatcher| and |client_end|.
-  // Takes ownership of |client_impl| and starts managing its lifetime.
+  // Creates a |ClientBase| and binds it to the |dispatcher| and |client_end|,
+  // starts managing its lifetime.
   //
   // It is an error to call |Bind| more than once on the same controller.
-  void Bind(std::shared_ptr<ClientBase>&& client_impl, AnyTransport client_end,
-            async_dispatcher_t* dispatcher, AnyIncomingEventDispatcher&& event_dispatcher,
+  void Bind(AnyTransport client_end, async_dispatcher_t* dispatcher,
+            AnyIncomingEventDispatcher&& event_dispatcher,
             fidl::AnyTeardownObserver&& teardown_observer, ThreadingPolicy threading_policy);
 
   // Begins to unbind the transport from the dispatcher. In particular, it
-  // triggers the asynchronous destruction of the bound |ClientImpl|. May be
-  // called from any thread. If provided, the |AsyncEventHandler::Unbound| is
-  // invoked asynchronously on a dispatcher thread.
+  // triggers the asynchronous destruction of the bound |ClientBase|. May be
+  // called from any thread. If provided, the teardown observer is notified
+  // asynchronously on a dispatcher thread.
   //
   // |Bind| must have been called before this.
   void Unbind();
@@ -451,7 +451,7 @@ class ClientController {
   // the same transport goes out of scope.
   //
   // Specifically, all clones of a |Client| will share the same |ControlBlock|
-  // instance, which in turn references the |ClientImpl|, and is responsible
+  // instance, which in turn references the |ClientBase|, and is responsible
   // for its teardown via RAII.
   class ControlBlock final {
    public:

@@ -417,12 +417,18 @@ static_assert(offsetof(::fidl::WireResponse<::test_error::Example::Foo>,
 
 #ifdef __Fuchsia__
 }  // namespace fidl
+template <>
+class ::fidl::internal::WireWeakOnewayClientImpl<::test_error::Example>
+    : public ::fidl::internal::ClientImplBase {
+ public:
+  using ClientImplBase::ClientImplBase;
+};
 
 template <>
-class ::fidl::internal::WireClientImpl<::test_error::Example> final
-    : public ::fidl::internal::ClientBase {
+class ::fidl::internal::WireWeakAsyncClientImpl<::test_error::Example> final
+    : public ::fidl::internal::WireWeakOnewayClientImpl<::test_error::Example> {
  public:
-  // Asynchronous variant of |Example.Foo()|.
+  using WireWeakOnewayClientImpl::WireWeakOnewayClientImpl;
   // The request and callback are allocated on the heap.
   void Foo(::fidl::StringView s,
            ::fidl::WireClientCallback<::test_error::Example::Foo> _cb);
@@ -431,7 +437,6 @@ class ::fidl::internal::WireClientImpl<::test_error::Example> final
            ::fit::callback<
                void(::fidl::WireResponse<::test_error::Example::Foo>* response)>
                _cb);
-  WireClientImpl() = default;
 };
 
 template <>
@@ -451,13 +456,6 @@ class ::fidl::internal::WireWeakAsyncBufferClientImpl<::test_error::Example>
   // Caller provides the backing storage for FIDL message.
   void Foo(::fidl::StringView s,
            ::fidl::WireResponseContext<::test_error::Example::Foo>* _context);
-};
-
-template <>
-class ::fidl::internal::WireWeakOnewayClientImpl<::test_error::Example>
-    : public ::fidl::internal::ClientImplBase {
- public:
-  using ClientImplBase::ClientImplBase;
 };
 template <>
 class ::fidl::internal::WireWeakSyncClientImpl<::test_error::Example> final

@@ -35,6 +35,17 @@ class ClientChecker {
   static void AssertImplNull(const ClientLike& client) {
     ASSERT_NULL(client.controller_.client_impl_.get());
   }
+
+  // Gets a pointer to the internal state.
+  template <typename ClientLike>
+  static fidl::internal::ClientBase* GetClientBase(const ClientLike& client) {
+    return client.controller_.client_impl_.get();
+  }
+
+  template <typename ClientLike>
+  static std::shared_ptr<fidl::internal::AnyTransport> GetTransport(const ClientLike& client) {
+    return ClientBaseChecker::GetTransport(GetClientBase(client));
+  }
 };
 
 }  // namespace fidl_testing

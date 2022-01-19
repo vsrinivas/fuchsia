@@ -281,6 +281,6 @@ protocol P {};
 	assertEqual(t, messaging.WireServer.String(), "::fdf::WireServer<::fuchsia_foobar::P>")
 	assertEqual(t, messaging.WireEventSender.String(), "::fidl::WireEventSender<::fuchsia_foobar::P>")
 	assertEqual(t, messaging.WireWeakEventSender.String(), "::fidl::internal::WireWeakEventSender<::fuchsia_foobar::P>")
-	assertEqual(t, messaging.WireClientImpl.String(), "::fidl::internal::WireClientImpl<::fuchsia_foobar::P>")
+	assertEqual(t, messaging.WireWeakAsyncClientImpl.String(), "::fidl::internal::WireWeakAsyncClientImpl<::fuchsia_foobar::P>")
 	unsetTransport()
 }

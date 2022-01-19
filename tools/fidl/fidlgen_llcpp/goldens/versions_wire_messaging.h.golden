@@ -465,12 +465,19 @@ static_assert(sizeof(::fidl::WireRequest<::test_versions::Protocol::Foo>) ==
 
 #ifdef __Fuchsia__
 }  // namespace fidl
+template <>
+class ::fidl::internal::WireWeakOnewayClientImpl<::test_versions::OtherProtocol>
+    : public ::fidl::internal::ClientImplBase {
+ public:
+  using ClientImplBase::ClientImplBase;
+};
 
 template <>
-class ::fidl::internal::WireClientImpl<::test_versions::OtherProtocol> final
-    : public ::fidl::internal::ClientBase {
+class ::fidl::internal::WireWeakAsyncClientImpl<::test_versions::OtherProtocol>
+    final : public ::fidl::internal::WireWeakOnewayClientImpl<
+                ::test_versions::OtherProtocol> {
  public:
-  WireClientImpl() = default;
+  using WireWeakOnewayClientImpl::WireWeakOnewayClientImpl;
 };
 
 template <>
@@ -488,13 +495,6 @@ class ::fidl::internal::WireWeakAsyncBufferClientImpl<
                 ::test_versions::OtherProtocol> {
  public:
   using WireWeakOnewayBufferClientImpl::WireWeakOnewayBufferClientImpl;
-};
-
-template <>
-class ::fidl::internal::WireWeakOnewayClientImpl<::test_versions::OtherProtocol>
-    : public ::fidl::internal::ClientImplBase {
- public:
-  using ClientImplBase::ClientImplBase;
 };
 template <>
 class ::fidl::internal::WireWeakSyncClientImpl<::test_versions::OtherProtocol>
@@ -557,13 +557,22 @@ class ::fidl::internal::WireWeakEventSender<::test_versions::OtherProtocol> {
 #ifdef __Fuchsia__
 
 template <>
-class ::fidl::internal::WireClientImpl<::test_versions::Protocol> final
-    : public ::fidl::internal::ClientBase {
+class ::fidl::internal::WireWeakOnewayClientImpl<::test_versions::Protocol>
+    : public ::fidl::internal::ClientImplBase {
  public:
+  using ClientImplBase::ClientImplBase;
+
   // Allocates 16 bytes of message buffer on the stack. No heap allocation
   // necessary.
   ::fidl::Result Foo();
-  WireClientImpl() = default;
+};
+
+template <>
+class ::fidl::internal::WireWeakAsyncClientImpl<::test_versions::Protocol> final
+    : public ::fidl::internal::WireWeakOnewayClientImpl<
+          ::test_versions::Protocol> {
+ public:
+  using WireWeakOnewayClientImpl::WireWeakOnewayClientImpl;
 };
 
 template <>
@@ -582,17 +591,6 @@ class ::fidl::internal::WireWeakAsyncBufferClientImpl<::test_versions::Protocol>
                 ::test_versions::Protocol> {
  public:
   using WireWeakOnewayBufferClientImpl::WireWeakOnewayBufferClientImpl;
-};
-
-template <>
-class ::fidl::internal::WireWeakOnewayClientImpl<::test_versions::Protocol>
-    : public ::fidl::internal::ClientImplBase {
- public:
-  using ClientImplBase::ClientImplBase;
-
-  // Allocates 16 bytes of message buffer on the stack. No heap allocation
-  // necessary.
-  ::fidl::Result Foo();
 };
 template <>
 class ::fidl::internal::WireWeakSyncClientImpl<::test_versions::Protocol> final

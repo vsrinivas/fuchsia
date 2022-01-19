@@ -28,6 +28,7 @@
 namespace fidl {
 namespace {
 
+using ::fidl_testing::ClientBaseSpy;
 using ::fidl_testing::TestProtocol;
 using ::fidl_testing::TestResponseContext;
 
@@ -48,30 +49,31 @@ TEST(ClientBindingTestCase, AsyncTxn) {
 
   class EventHandler : public fidl::WireAsyncEventHandler<TestProtocol> {
    public:
-    EventHandler(sync_completion_t& unbound, WireSharedClient<TestProtocol>& client)
-        : unbound_(unbound), client_(client) {}
+    EventHandler(sync_completion_t& unbound, ClientBaseSpy& spy) : unbound_(unbound), spy_(spy) {}
 
     void on_fidl_error(::fidl::UnbindInfo info) override {
       EXPECT_EQ(fidl::Reason::kPeerClosed, info.reason());
       EXPECT_EQ(ZX_ERR_PEER_CLOSED, info.status());
       EXPECT_EQ("FIDL endpoint was unbound due to peer closed, status: ZX_ERR_PEER_CLOSED (-24)",
                 info.FormatDescription());
-      EXPECT_EQ(0, client_->GetTxidCount());
+      EXPECT_EQ(0, spy_.GetTxidCount());
       sync_completion_signal(&unbound_);
     }
 
    private:
     sync_completion_t& unbound_;
-    WireSharedClient<TestProtocol>& client_;
+    ClientBaseSpy& spy_;
   };
 
-  client.Bind(std::move(local), loop.dispatcher(), std::make_unique<EventHandler>(unbound, client));
+  ClientBaseSpy spy;
+  client.Bind(std::move(local), loop.dispatcher(), std::make_unique<EventHandler>(unbound, spy));
+  spy.set_client(client);
 
   // Generate a txid for a ResponseContext. Send a "response" message with the same txid from the
   // remote end of the channel.
-  TestResponseContext context(&*client);
-  client->PrepareAsyncTxn(&context);
-  EXPECT_TRUE(client->IsPending(context.Txid()));
+  TestResponseContext context(&spy);
+  spy.PrepareAsyncTxn(&context);
+  EXPECT_TRUE(spy.IsPending(context.Txid()));
   fidl_message_header_t hdr;
   fidl_init_txn_header(&hdr, context.Txid(), 0);
   ASSERT_OK(remote.channel().write(0, &hdr, sizeof(fidl_message_header_t), nullptr, 0));
@@ -94,32 +96,33 @@ TEST(ClientBindingTestCase, ParallelAsyncTxns) {
 
   class EventHandler : public fidl::WireAsyncEventHandler<TestProtocol> {
    public:
-    EventHandler(sync_completion_t& unbound, WireSharedClient<TestProtocol>& client)
-        : unbound_(unbound), client_(client) {}
+    EventHandler(sync_completion_t& unbound, ClientBaseSpy& spy) : unbound_(unbound), spy_(spy) {}
 
     void on_fidl_error(::fidl::UnbindInfo info) override {
       EXPECT_EQ(fidl::Reason::kPeerClosed, info.reason());
       EXPECT_EQ(ZX_ERR_PEER_CLOSED, info.status());
-      EXPECT_EQ(0, client_->GetTxidCount());
+      EXPECT_EQ(0, spy_.GetTxidCount());
       sync_completion_signal(&unbound_);
     }
 
    private:
     sync_completion_t& unbound_;
-    WireSharedClient<TestProtocol>& client_;
+    ClientBaseSpy& spy_;
   };
 
-  client.Bind(std::move(local), loop.dispatcher(), std::make_unique<EventHandler>(unbound, client));
+  ClientBaseSpy spy;
+  client.Bind(std::move(local), loop.dispatcher(), std::make_unique<EventHandler>(unbound, spy));
+  spy.set_client(client);
 
   // In parallel, simulate 10 async transactions and send "response" messages from the remote end of
   // the channel.
   std::vector<std::unique_ptr<TestResponseContext>> contexts;
   std::thread threads[10];
   for (int i = 0; i < 10; ++i) {
-    contexts.emplace_back(std::make_unique<TestResponseContext>(&*client));
-    threads[i] = std::thread([context = contexts[i].get(), remote = &remote.channel(), &client] {
-      client->PrepareAsyncTxn(context);
-      EXPECT_TRUE(client->IsPending(context->Txid()));
+    contexts.emplace_back(std::make_unique<TestResponseContext>(&spy));
+    threads[i] = std::thread([context = contexts[i].get(), remote = &remote.channel(), &spy] {
+      spy.PrepareAsyncTxn(context);
+      EXPECT_TRUE(spy.IsPending(context->Txid()));
       fidl_message_header_t hdr;
       fidl_init_txn_header(&hdr, context->Txid(), 0);
       ASSERT_OK(remote->write(0, &hdr, sizeof(fidl_message_header_t), nullptr, 0));
@@ -144,13 +147,14 @@ TEST(ClientBindingTestCase, ForgetAsyncTxn) {
   WireSharedClient<TestProtocol> client(std::move(local), loop.dispatcher());
 
   // Generate a txid for a ResponseContext.
-  TestResponseContext context(&*client);
-  client->PrepareAsyncTxn(&context);
-  EXPECT_TRUE(client->IsPending(context.Txid()));
+  ClientBaseSpy spy{client};
+  TestResponseContext context(&spy);
+  spy.PrepareAsyncTxn(&context);
+  EXPECT_TRUE(spy.IsPending(context.Txid()));
 
   // Forget the transaction.
-  client->ForgetAsyncTxn(&context);
-  EXPECT_EQ(0, client->GetTxidCount());
+  spy.ForgetAsyncTxn(&context);
+  EXPECT_EQ(0, spy.GetTxidCount());
 }
 
 TEST(ClientBindingTestCase, UnknownResponseTxid) {
@@ -166,8 +170,7 @@ TEST(ClientBindingTestCase, UnknownResponseTxid) {
 
   class EventHandler : public fidl::WireAsyncEventHandler<TestProtocol> {
    public:
-    EventHandler(sync_completion_t& unbound, WireSharedClient<TestProtocol>& client)
-        : unbound_(unbound), client_(client) {}
+    EventHandler(sync_completion_t& unbound, ClientBaseSpy& spy) : unbound_(unbound), spy_(spy) {}
 
     void on_fidl_error(::fidl::UnbindInfo info) override {
       EXPECT_EQ(fidl::Reason::kUnexpectedMessage, info.reason());
@@ -176,19 +179,21 @@ TEST(ClientBindingTestCase, UnknownResponseTxid) {
           "FIDL endpoint was unbound due to unexpected message, "
           "status: ZX_ERR_NOT_FOUND (-25), detail: unknown txid",
           info.FormatDescription());
-      EXPECT_EQ(0, client_->GetTxidCount());
+      EXPECT_EQ(0, spy_.GetTxidCount());
       sync_completion_signal(&unbound_);
     }
 
    private:
     sync_completion_t& unbound_;
-    WireSharedClient<TestProtocol>& client_;
+    ClientBaseSpy& spy_;
   };
 
-  client.Bind(std::move(local), loop.dispatcher(), std::make_unique<EventHandler>(unbound, client));
+  ClientBaseSpy spy;
+  client.Bind(std::move(local), loop.dispatcher(), std::make_unique<EventHandler>(unbound, spy));
+  spy.set_client(client);
 
   // Send a "response" message for which there was no outgoing request.
-  ASSERT_EQ(0, client->GetTxidCount());
+  ASSERT_EQ(0, spy.GetTxidCount());
   fidl_message_header_t hdr;
   fidl_init_txn_header(&hdr, 1, 0);
   ASSERT_OK(remote.channel().write(0, &hdr, sizeof(fidl_message_header_t), nullptr, 0));
@@ -272,8 +277,8 @@ TEST(ClientBindingTestCase, UnbindWhileActiveChannelRefs) {
                                         std::make_unique<EventHandler>(unbound));
 
   // Create a strong reference to the channel.
-  using ::fidl_testing::ClientBaseChecker;
-  std::shared_ptr channel = ClientBaseChecker::GetTransport(&*client);
+  using ::fidl_testing::ClientChecker;
+  std::shared_ptr channel = ClientChecker::GetTransport(client);
 
   // |AsyncTeardown| and the teardown notification should not be blocked by the
   // channel reference.
@@ -314,10 +319,11 @@ TEST(ClientBindingTestCase, ReleaseOutstandingTxnsOnDestroy) {
   auto [local, remote] = std::move(*endpoints);
 
   auto* client = new WireSharedClient<TestProtocol>(std::move(local), loop.dispatcher());
+  ClientBaseSpy spy{*client};
 
   // Create and register a response context which will signal when deleted.
   sync_completion_t done;
-  (*client)->PrepareAsyncTxn(new OnCanceledTestResponseContext(&done));
+  spy.PrepareAsyncTxn(new OnCanceledTestResponseContext(&done));
 
   // Delete the client and ensure that the response context is deleted.
   delete client;
@@ -353,7 +359,8 @@ TEST(ClientBindingTestCase, ReleaseOutstandingTxnsOnPeerClosed) {
 
   // Create and register a response context which will signal when deleted.
   sync_completion_t done;
-  client->PrepareAsyncTxn(new OnErrorTestResponseContext(&done, fidl::Reason::kPeerClosed));
+  ClientBaseSpy spy{client};
+  spy.PrepareAsyncTxn(new OnErrorTestResponseContext(&done, fidl::Reason::kPeerClosed));
 
   // Close the server end and wait for the transaction context to be released.
   remote.reset();
@@ -466,10 +473,7 @@ TEST_F(WireClientTest, DefaultConstruction) {
 
 TEST_F(WireClientTest, InvalidAccess) {
   WireClient<TestProtocol> client;
-  ASSERT_DEATH([&] {
-    client->MakeSyncCallWith(
-        [](std::shared_ptr<fidl::internal::AnyTransport>) { ADD_FAILURE("Should not get here"); });
-  });
+  ASSERT_DEATH([&] { client.operator->(); });
   ASSERT_DEATH([&] {
     fidl::Arena arena;
     client.buffer(arena);
@@ -485,10 +489,7 @@ TEST_F(WireClientTest, Move) {
   WireClient<TestProtocol> client2 = std::move(client);
   EXPECT_FALSE(client.is_valid());
   EXPECT_TRUE(client2.is_valid());
-  ASSERT_DEATH([&] {
-    client->MakeSyncCallWith(
-        [](std::shared_ptr<fidl::internal::AnyTransport>) { ADD_FAILURE("Should not get here"); });
-  });
+  ASSERT_DEATH([&] { client.operator->(); });
 }
 
 TEST_F(WireClientTest, UseOnDispatcherThread) {

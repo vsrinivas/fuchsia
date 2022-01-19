@@ -34,7 +34,7 @@ namespace test_service {
 }  // namespace test_service
 #ifdef __Fuchsia__
 
-::fidl::Result fidl::internal::WireClientImpl<
+::fidl::Result fidl::internal::WireWeakOnewayClientImpl<
     ::test_service::SecondProtocol>::MethodOnSecond() {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::WireRequest<::test_service::SecondProtocol::MethodOnSecond>
@@ -44,8 +44,7 @@ namespace test_service {
       ::fidl::internal::ChannelTransport>
       _request_message(::fidl::internal::AllowUnownedInputRef{},
                        &_request_object);
-  return ::fidl::internal::ClientBase::SendOneWay(
-      _request_message.GetOutgoingMessage());
+  return _client_base()->SendOneWay(_request_message.GetOutgoingMessage());
 }
 ::fidl::Result fidl::internal::WireWeakOnewayBufferClientImpl<
     ::test_service::SecondProtocol>::MethodOnSecond() {
@@ -63,18 +62,6 @@ namespace test_service {
   ::fidl::UnownedEncodedMessage<
       ::fidl::WireRequest<::test_service::SecondProtocol::MethodOnSecond>>
       _request_message(_allocation->data, _buffer_size, &_request);
-  return _client_base()->SendOneWay(_request_message.GetOutgoingMessage());
-}
-::fidl::Result fidl::internal::WireWeakOnewayClientImpl<
-    ::test_service::SecondProtocol>::MethodOnSecond() {
-  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::WireRequest<::test_service::SecondProtocol::MethodOnSecond>
-      _request_object{};
-  ::fidl::OwnedEncodedMessage<
-      ::fidl::WireRequest<::test_service::SecondProtocol::MethodOnSecond>,
-      ::fidl::internal::ChannelTransport>
-      _request_message(::fidl::internal::AllowUnownedInputRef{},
-                       &_request_object);
   return _client_base()->SendOneWay(_request_message.GetOutgoingMessage());
 }
 #endif  // __Fuchsia__
@@ -231,8 +218,8 @@ namespace test_service {
 }  // namespace test_service
 #ifdef __Fuchsia__
 
-::fidl::Result
-fidl::internal::WireClientImpl<::test_service::FirstProtocol>::MethodOnFirst() {
+::fidl::Result fidl::internal::WireWeakOnewayClientImpl<
+    ::test_service::FirstProtocol>::MethodOnFirst() {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::WireRequest<::test_service::FirstProtocol::MethodOnFirst>
       _request_object{};
@@ -241,8 +228,7 @@ fidl::internal::WireClientImpl<::test_service::FirstProtocol>::MethodOnFirst() {
       ::fidl::internal::ChannelTransport>
       _request_message(::fidl::internal::AllowUnownedInputRef{},
                        &_request_object);
-  return ::fidl::internal::ClientBase::SendOneWay(
-      _request_message.GetOutgoingMessage());
+  return _client_base()->SendOneWay(_request_message.GetOutgoingMessage());
 }
 ::fidl::Result fidl::internal::WireWeakOnewayBufferClientImpl<
     ::test_service::FirstProtocol>::MethodOnFirst() {
@@ -259,18 +245,6 @@ fidl::internal::WireClientImpl<::test_service::FirstProtocol>::MethodOnFirst() {
   ::fidl::UnownedEncodedMessage<
       ::fidl::WireRequest<::test_service::FirstProtocol::MethodOnFirst>>
       _request_message(_allocation->data, _buffer_size, &_request);
-  return _client_base()->SendOneWay(_request_message.GetOutgoingMessage());
-}
-::fidl::Result fidl::internal::WireWeakOnewayClientImpl<
-    ::test_service::FirstProtocol>::MethodOnFirst() {
-  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::WireRequest<::test_service::FirstProtocol::MethodOnFirst>
-      _request_object{};
-  ::fidl::OwnedEncodedMessage<
-      ::fidl::WireRequest<::test_service::FirstProtocol::MethodOnFirst>,
-      ::fidl::internal::ChannelTransport>
-      _request_message(::fidl::internal::AllowUnownedInputRef{},
-                       &_request_object);
   return _client_base()->SendOneWay(_request_message.GetOutgoingMessage());
 }
 #endif  // __Fuchsia__

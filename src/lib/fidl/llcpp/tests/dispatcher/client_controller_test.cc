@@ -25,18 +25,15 @@ TEST(ClientController, BindingTwicePanics) {
   ClientController controller;
   fidl::WireAsyncEventHandler<TestProtocol>* event_handler = nullptr;
 
-  controller.Bind(std::make_shared<WireClientImpl<TestProtocol>>(), MakeAnyTransport(std::move(h1)),
-                  loop.dispatcher(), internal::MakeAnyEventDispatcher(event_handler),
-                  fidl::AnyTeardownObserver::Noop(),
-                  fidl::internal::ThreadingPolicy::kCreateAndTeardownFromAnyThread);
+  controller.Bind(MakeAnyTransport(std::move(h1)), loop.dispatcher(),
+                  MakeAnyEventDispatcher(event_handler), fidl::AnyTeardownObserver::Noop(),
+                  ThreadingPolicy::kCreateAndTeardownFromAnyThread);
 
   ASSERT_DEATH([&] {
     fidl_testing::RunWithLsanDisabled([&] {
-      controller.Bind(std::make_shared<WireClientImpl<TestProtocol>>(),
-                      MakeAnyTransport(std::move(h2)), loop.dispatcher(),
-                      internal::MakeAnyEventDispatcher(event_handler),
-                      fidl::AnyTeardownObserver::Noop(),
-                      fidl::internal::ThreadingPolicy::kCreateAndTeardownFromAnyThread);
+      controller.Bind(MakeAnyTransport(std::move(h2)), loop.dispatcher(),
+                      MakeAnyEventDispatcher(event_handler), fidl::AnyTeardownObserver::Noop(),
+                      ThreadingPolicy::kCreateAndTeardownFromAnyThread);
     });
   });
 }

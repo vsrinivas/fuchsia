@@ -896,15 +896,22 @@ static_assert(
 
 #ifdef __Fuchsia__
 }  // namespace fidl
+template <>
+class ::fidl::internal::WireWeakOnewayClientImpl<
+    ::test_errorsyntax::ExampleUseOfErrorSyntax>
+    : public ::fidl::internal::ClientImplBase {
+ public:
+  using ClientImplBase::ClientImplBase;
+};
 
 template <>
-class ::fidl::internal::WireClientImpl<
+class ::fidl::internal::WireWeakAsyncClientImpl<
     ::test_errorsyntax::ExampleUseOfErrorSyntax>
-    final : public ::fidl::internal::ClientBase {
+    final : public ::fidl::internal::WireWeakOnewayClientImpl<
+                ::test_errorsyntax::ExampleUseOfErrorSyntax> {
  public:
-  // Asynchronous variant of
-  // |ExampleUseOfErrorSyntax.ComposedCallWhichMayFail()|. The request and
-  // callback are allocated on the heap.
+  using WireWeakOnewayClientImpl::WireWeakOnewayClientImpl;
+  // The request and callback are allocated on the heap.
   void ComposedCallWhichMayFail(
       ::fidl::StringView s,
       ::fidl::WireClientCallback<
@@ -917,7 +924,6 @@ class ::fidl::internal::WireClientImpl<
           ::fidl::WireResponse<::test_errorsyntax::ExampleUseOfErrorSyntax::
                                    ComposedCallWhichMayFail>* response)>
           _cb);
-  // Asynchronous variant of |ExampleUseOfErrorSyntax.CallWhichMayFail()|.
   // The request and callback are allocated on the heap.
   void CallWhichMayFail(
       ::fidl::StringView s,
@@ -931,7 +937,6 @@ class ::fidl::internal::WireClientImpl<
           ::fidl::WireResponse<::test_errorsyntax::ExampleUseOfErrorSyntax::
                                    CallWhichMayFail>* response)>
           _cb);
-  WireClientImpl() = default;
 };
 
 template <>
@@ -962,14 +967,6 @@ class ::fidl::internal::WireWeakAsyncBufferClientImpl<
       ::fidl::WireResponseContext<
           ::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>*
           _context);
-};
-
-template <>
-class ::fidl::internal::WireWeakOnewayClientImpl<
-    ::test_errorsyntax::ExampleUseOfErrorSyntax>
-    : public ::fidl::internal::ClientImplBase {
- public:
-  using ClientImplBase::ClientImplBase;
 };
 template <>
 class ::fidl::internal::WireWeakSyncClientImpl<

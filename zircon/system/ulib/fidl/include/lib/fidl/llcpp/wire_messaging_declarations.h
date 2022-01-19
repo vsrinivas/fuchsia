@@ -71,15 +71,6 @@ struct WireOrdinal;
 template <typename FidlProtocol>
 class WireWeakEventSender;
 
-// WireClientImpl implements both synchronous and asynchronous FIDL calls,
-// working together with the |::fidl::internal::ClientBase| class to safely
-// borrow transport ownership from the binding object.
-//
-// TODO(fxbug.dev/85688): This class should be decomposed into
-// |WireWeakAsyncClientImpl| and |WireWeakAsyncBufferClientImpl|, then removed.
-template <typename FidlProtocol>
-class WireClientImpl;
-
 // |WireWeakAsyncClientImpl| implements one-way FIDL calls with managed buffers.
 // It borrows the transport through a weak reference when making calls.
 template <typename FidlProtocol>
@@ -87,8 +78,6 @@ class WireWeakOnewayClientImpl;
 
 // |WireWeakAsyncClientImpl| implements asynchronous FIDL calls with managed
 // buffers. It borrows the transport through a weak reference when making calls.
-//
-// TODO(fxbug.dev/85688): Generate this class.
 template <typename FidlProtocol>
 class WireWeakAsyncClientImpl;
 

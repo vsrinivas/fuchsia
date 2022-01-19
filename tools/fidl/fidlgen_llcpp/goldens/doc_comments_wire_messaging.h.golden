@@ -406,11 +406,12 @@ static_assert(
 
 #ifdef __Fuchsia__
 }  // namespace fidl
-
 template <>
-class ::fidl::internal::WireClientImpl<::test_doccomments::Interface> final
-    : public ::fidl::internal::ClientBase {
+class ::fidl::internal::WireWeakOnewayClientImpl<::test_doccomments::Interface>
+    : public ::fidl::internal::ClientImplBase {
  public:
+  using ClientImplBase::ClientImplBase;
+
   /// method comment #1
   ///
   /// method comment #3
@@ -418,7 +419,14 @@ class ::fidl::internal::WireClientImpl<::test_doccomments::Interface> final
   // Allocates 16 bytes of message buffer on the stack. No heap allocation
   // necessary.
   ::fidl::Result Method();
-  WireClientImpl() = default;
+};
+
+template <>
+class ::fidl::internal::WireWeakAsyncClientImpl<::test_doccomments::Interface>
+    final : public ::fidl::internal::WireWeakOnewayClientImpl<
+                ::test_doccomments::Interface> {
+ public:
+  using WireWeakOnewayClientImpl::WireWeakOnewayClientImpl;
 };
 
 template <>
@@ -443,21 +451,6 @@ class ::fidl::internal::WireWeakAsyncBufferClientImpl<
                 ::test_doccomments::Interface> {
  public:
   using WireWeakOnewayBufferClientImpl::WireWeakOnewayBufferClientImpl;
-};
-
-template <>
-class ::fidl::internal::WireWeakOnewayClientImpl<::test_doccomments::Interface>
-    : public ::fidl::internal::ClientImplBase {
- public:
-  using ClientImplBase::ClientImplBase;
-
-  /// method comment #1
-  ///
-  /// method comment #3
-  //
-  // Allocates 16 bytes of message buffer on the stack. No heap allocation
-  // necessary.
-  ::fidl::Result Method();
 };
 template <>
 class ::fidl::internal::WireWeakSyncClientImpl<::test_doccomments::Interface>

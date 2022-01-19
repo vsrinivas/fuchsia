@@ -103,9 +103,6 @@ namespace fidl {
 // arbitrary threads, at the expense of requiring two-phase shutdown.
 template <typename Protocol>
 class WireClient {
- private:
-  using ClientImpl = fidl::internal::WireClientImpl<Protocol>;
-
  public:
   // Create an initialized client which manages the binding of the client end of
   // a channel to a dispatcher, as if that client had been default-constructed
@@ -166,8 +163,7 @@ class WireClient {
   // variable with a new instance.
   void Bind(fidl::internal::ClientEndType<Protocol> client_end, async_dispatcher_t* dispatcher,
             fidl::WireAsyncEventHandler<Protocol>* event_handler = nullptr) {
-    controller_.Bind(std::make_shared<ClientImpl>(),
-                     internal::MakeAnyTransport(client_end.TakeChannel()), dispatcher,
+    controller_.Bind(internal::MakeAnyTransport(client_end.TakeChannel()), dispatcher,
                      internal::MakeAnyEventDispatcher(event_handler),
                      fidl::AnyTeardownObserver::Noop(),
                      fidl::internal::ThreadingPolicy::kCreateAndTeardownFromDispatcherThread);
@@ -182,8 +178,9 @@ class WireClient {
   // Persisting this pointer to a local variable is discouraged, since that
   // results in unsafe borrows. Always prefer making calls directly via the
   // |WireClient| reference-counting type.
-  ClientImpl* operator->() const { return &get(); }
-  ClientImpl& operator*() const { return get(); }
+  auto operator->() const {
+    return internal::SyncClientVeneer<internal::WireWeakAsyncClientImpl<Protocol>>{&get()};
+  }
 
   // Returns a veneer object which exposes the caller-allocating API, using the
   // provided |resource| to allocate buffers necessary for each call. Requests
@@ -252,7 +249,7 @@ class WireClient {
   // Allow unit tests to peek into the internals of this class.
   friend ::fidl_testing::ClientChecker;
 
-  ClientImpl& get() const { return *static_cast<ClientImpl*>(&controller_.get()); }
+  internal::ClientBase& get() const { return controller_.get(); }
 
   WireClient(const WireClient& other) noexcept = delete;
   WireClient& operator=(const WireClient& other) noexcept = delete;
@@ -355,9 +352,6 @@ fidl::AnyTeardownObserver ShareUntilTeardown(std::shared_ptr<T> object) {
 // happen on the thread invoking dispatcher shutdown.
 template <typename Protocol>
 class WireSharedClient final {
- private:
-  using ClientImpl = fidl::internal::WireClientImpl<Protocol>;
-
  public:
   // Creates an initialized |WireSharedClient| which manages the binding of the
   // client end of a channel to a dispatcher.
@@ -473,8 +467,7 @@ class WireSharedClient final {
   void Bind(fidl::internal::ClientEndType<Protocol> client_end, async_dispatcher_t* dispatcher,
             fidl::WireAsyncEventHandler<Protocol>* event_handler,
             fidl::AnyTeardownObserver teardown_observer = fidl::AnyTeardownObserver::Noop()) {
-    controller_.Bind(std::make_shared<ClientImpl>(),
-                     internal::MakeAnyTransport(client_end.TakeHandle()), dispatcher,
+    controller_.Bind(internal::MakeAnyTransport(client_end.TakeHandle()), dispatcher,
                      internal::MakeAnyEventDispatcher(event_handler), std::move(teardown_observer),
                      fidl::internal::ThreadingPolicy::kCreateAndTeardownFromAnyThread);
   }
@@ -515,8 +508,9 @@ class WireSharedClient final {
   // results in unsafe borrows. Always prefer making calls directly via the
   // |WireSharedClient| reference-counting type. A client may be cloned and
   // handed off through the |Clone| method.
-  ClientImpl* operator->() const { return &get(); }
-  ClientImpl& operator*() const { return get(); }
+  auto operator->() const {
+    return internal::SyncClientVeneer<internal::WireWeakAsyncClientImpl<Protocol>>{&get()};
+  }
 
   // Returns a veneer object which exposes the caller-allocating API, using
   // the provided |resource| to allocate buffers necessary for each call.
@@ -542,7 +536,7 @@ class WireSharedClient final {
   // Allow unit tests to peek into the internals of this class.
   friend ::fidl_testing::ClientChecker;
 
-  ClientImpl& get() const { return *static_cast<ClientImpl*>(&controller_.get()); }
+  internal::ClientBase& get() const { return controller_.get(); }
 
   WireSharedClient(const WireSharedClient& other) noexcept = default;
   WireSharedClient& operator=(const WireSharedClient& other) noexcept = default;

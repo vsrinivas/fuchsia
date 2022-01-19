@@ -879,12 +879,21 @@ static_assert(
 
 #ifdef __Fuchsia__
 }  // namespace fidl
+template <>
+class ::fidl::internal::WireWeakOnewayClientImpl<
+    ::test_requestflexibleenvelope::Protocol>
+    : public ::fidl::internal::ClientImplBase {
+ public:
+  using ClientImplBase::ClientImplBase;
+};
 
 template <>
-class ::fidl::internal::WireClientImpl<::test_requestflexibleenvelope::Protocol>
-    final : public ::fidl::internal::ClientBase {
+class ::fidl::internal::WireWeakAsyncClientImpl<
+    ::test_requestflexibleenvelope::Protocol>
+    final : public ::fidl::internal::WireWeakOnewayClientImpl<
+                ::test_requestflexibleenvelope::Protocol> {
  public:
-  // Asynchronous variant of |Protocol.RequestStrictResponseFlexible()|.
+  using WireWeakOnewayClientImpl::WireWeakOnewayClientImpl;
   // The request and callback are allocated on the heap.
   void RequestStrictResponseFlexible(
       ::test_requestflexibleenvelope::wire::StrictFoo s,
@@ -898,7 +907,6 @@ class ::fidl::internal::WireClientImpl<::test_requestflexibleenvelope::Protocol>
           ::fidl::WireResponse<::test_requestflexibleenvelope::Protocol::
                                    RequestStrictResponseFlexible>* response)>
           _cb);
-  // Asynchronous variant of |Protocol.RequestFlexibleResponseStrict()|.
   // The request and callback are allocated on the heap.
   void RequestFlexibleResponseStrict(
       ::test_requestflexibleenvelope::wire::FlexibleFoo s,
@@ -912,7 +920,6 @@ class ::fidl::internal::WireClientImpl<::test_requestflexibleenvelope::Protocol>
           ::fidl::WireResponse<::test_requestflexibleenvelope::Protocol::
                                    RequestFlexibleResponseStrict>* response)>
           _cb);
-  WireClientImpl() = default;
 };
 
 template <>
@@ -942,14 +949,6 @@ class ::fidl::internal::WireWeakAsyncBufferClientImpl<
       ::test_requestflexibleenvelope::wire::FlexibleFoo s,
       ::fidl::WireResponseContext<::test_requestflexibleenvelope::Protocol::
                                       RequestFlexibleResponseStrict>* _context);
-};
-
-template <>
-class ::fidl::internal::WireWeakOnewayClientImpl<
-    ::test_requestflexibleenvelope::Protocol>
-    : public ::fidl::internal::ClientImplBase {
- public:
-  using ClientImplBase::ClientImplBase;
 };
 template <>
 class ::fidl::internal::WireWeakSyncClientImpl<

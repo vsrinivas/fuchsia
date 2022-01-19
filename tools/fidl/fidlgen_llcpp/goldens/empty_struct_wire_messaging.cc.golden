@@ -158,9 +158,9 @@ namespace test_emptystruct {
 }  // namespace test_emptystruct
 #ifdef __Fuchsia__
 
-::fidl::Result
-fidl::internal::WireClientImpl<::test_emptystruct::EmptyProtocol>::Send(
-    const ::test_emptystruct::wire::Empty& e) {
+::fidl::Result fidl::internal::
+    WireWeakOnewayClientImpl<::test_emptystruct::EmptyProtocol>::Send(
+        const ::test_emptystruct::wire::Empty& e) {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::WireRequest<::test_emptystruct::EmptyProtocol::Send> _request_object{
       e};
@@ -169,14 +169,14 @@ fidl::internal::WireClientImpl<::test_emptystruct::EmptyProtocol>::Send(
       ::fidl::internal::ChannelTransport>
       _request_message(::fidl::internal::AllowUnownedInputRef{},
                        &_request_object);
-  return ::fidl::internal::ClientBase::SendOneWay(
-      _request_message.GetOutgoingMessage());
+  return _client_base()->SendOneWay(_request_message.GetOutgoingMessage());
 }
-void fidl::internal::WireClientImpl<::test_emptystruct::EmptyProtocol>::
-    SendAndReceive(const ::test_emptystruct::wire::Empty& e,
-                   ::fidl::WireClientCallback<
-                       ::test_emptystruct::EmptyProtocol::SendAndReceive>
-                       _cb) {
+void fidl::internal::
+    WireWeakAsyncClientImpl<::test_emptystruct::EmptyProtocol>::SendAndReceive(
+        const ::test_emptystruct::wire::Empty& e,
+        ::fidl::WireClientCallback<
+            ::test_emptystruct::EmptyProtocol::SendAndReceive>
+            _cb) {
   using Callback = decltype(_cb);
   class ResponseContext final
       : public ::fidl::WireResponseContext<
@@ -203,12 +203,11 @@ void fidl::internal::WireClientImpl<::test_emptystruct::EmptyProtocol>::
       ::fidl::WireRequest<::test_emptystruct::EmptyProtocol::SendAndReceive>,
       ::fidl::internal::ChannelTransport>
       _request_message(::fidl::internal::AllowUnownedInputRef{}, &_request);
-  ::fidl::internal::ClientBase::SendTwoWay(
-      _request_message.GetOutgoingMessage(), _context);
+  _client_base()->SendTwoWay(_request_message.GetOutgoingMessage(), _context);
 }
 
-void fidl::internal::WireClientImpl<::test_emptystruct::EmptyProtocol>::
-    SendAndReceive(
+void fidl::internal::
+    WireWeakAsyncClientImpl<::test_emptystruct::EmptyProtocol>::SendAndReceive(
         const ::test_emptystruct::wire::Empty& e,
         ::fit::callback<
             void(::fidl::WireResponse<
@@ -244,8 +243,7 @@ void fidl::internal::WireClientImpl<::test_emptystruct::EmptyProtocol>::
       ::fidl::WireRequest<::test_emptystruct::EmptyProtocol::SendAndReceive>,
       ::fidl::internal::ChannelTransport>
       _request_message(::fidl::internal::AllowUnownedInputRef{}, &_request);
-  ::fidl::internal::ClientBase::SendTwoWay(
-      _request_message.GetOutgoingMessage(), _context);
+  _client_base()->SendTwoWay(_request_message.GetOutgoingMessage(), _context);
 }
 ::fidl::Result fidl::internal::
     WireWeakOnewayBufferClientImpl<::test_emptystruct::EmptyProtocol>::Send(
@@ -288,19 +286,6 @@ void fidl::internal::WireWeakAsyncBufferClientImpl<
       ::fidl::WireRequest<::test_emptystruct::EmptyProtocol::SendAndReceive>>
       _request_message(_allocation->data, _buffer_size, &_request);
   _client_base()->SendTwoWay(_request_message.GetOutgoingMessage(), _context);
-}
-::fidl::Result fidl::internal::
-    WireWeakOnewayClientImpl<::test_emptystruct::EmptyProtocol>::Send(
-        const ::test_emptystruct::wire::Empty& e) {
-  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::WireRequest<::test_emptystruct::EmptyProtocol::Send> _request_object{
-      e};
-  ::fidl::OwnedEncodedMessage<
-      ::fidl::WireRequest<::test_emptystruct::EmptyProtocol::Send>,
-      ::fidl::internal::ChannelTransport>
-      _request_message(::fidl::internal::AllowUnownedInputRef{},
-                       &_request_object);
-  return _client_base()->SendOneWay(_request_message.GetOutgoingMessage());
 }
 
 ::fidl::WireResult<::test_emptystruct::EmptyProtocol::SendAndReceive>

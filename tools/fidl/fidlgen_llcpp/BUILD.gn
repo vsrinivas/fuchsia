@@ -43,7 +43,6 @@ if (is_host) {
       "codegen/fragment_bits.tmpl",
       "codegen/fragment_const.tmpl",
       "codegen/fragment_enum.tmpl",
-      "codegen/fragment_method_client_impl.tmpl",
       "codegen/fragment_method_client_impl_async.tmpl",
       "codegen/fragment_method_client_impl_async_buffer.tmpl",
       "codegen/fragment_method_client_impl_oneway.tmpl",

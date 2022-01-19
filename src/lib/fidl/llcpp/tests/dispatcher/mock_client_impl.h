@@ -13,12 +13,79 @@
 
 #include <zxtest/zxtest.h>
 
+#include "client_checkers.h"
+
 namespace fidl_testing {
 
 class TestProtocol {
  public:
   using Transport = fidl::internal::ChannelTransport;
   TestProtocol() = delete;
+};
+
+// |ClientBaseSpy| delegates calls to |ClientBase| but in addition records
+// extra information about the transactions which are useful for unit testing.
+class ClientBaseSpy {
+ public:
+  // In cases the spy needs bound client, but the client also needs a spy,
+  // construct an empty |ClientBaseSpy| first, then call |set_client|.
+  ClientBaseSpy() : client_base_(nullptr) {}
+
+  explicit ClientBaseSpy(fidl::internal::ClientBase* client_base) : client_base_(client_base) {
+    ZX_ASSERT(client_base != nullptr);
+  }
+
+  template <typename ClientLike>
+  explicit ClientBaseSpy(ClientLike&& client)
+      : ClientBaseSpy(ClientChecker::GetClientBase(client)) {}
+
+  template <typename ClientLike>
+  void set_client(ClientLike&& client) {
+    client_base_ = ClientChecker::GetClientBase(client);
+  }
+
+  void PrepareAsyncTxn(fidl::internal::ResponseContext* context) {
+    client_base_->PrepareAsyncTxn(context);
+    std::unique_lock lock(lock_);
+    EXPECT_FALSE(txids_.count(context->Txid()));
+    txids_.insert(context->Txid());
+  }
+
+  void ForgetAsyncTxn(fidl::internal::ResponseContext* context) {
+    {
+      std::unique_lock lock(lock_);
+      txids_.erase(context->Txid());
+    }
+    client_base_->ForgetAsyncTxn(context);
+  }
+
+  void EraseTxid(fidl::internal::ResponseContext* context) {
+    {
+      std::unique_lock lock(lock_);
+      txids_.erase(context->Txid());
+    }
+  }
+
+  template <typename Callable>
+  auto MakeSyncCallWith(Callable&& sync_call) {
+    return client_base_->MakeSyncCallWith(std::forward<Callable>(sync_call));
+  }
+
+  bool IsPending(zx_txid_t txid) {
+    std::unique_lock lock(lock_);
+    return txids_.count(txid);
+  }
+
+  size_t GetTxidCount() {
+    std::unique_lock lock(lock_);
+    EXPECT_EQ(client_base_->GetTransactionCount(), txids_.size());
+    return txids_.size();
+  }
+
+ private:
+  fidl::internal::ClientBase* client_base_;
+  std::mutex lock_;
+  std::unordered_set<zx_txid_t> txids_;
 };
 
 }  // namespace fidl_testing
@@ -58,55 +125,11 @@ class ::fidl::internal::WireEventDispatcher<fidl_testing::TestProtocol>
   }
 };
 
-// TODO(fxbug.dev/85688): This class should be decomposed into
-// |WireWeakAsyncClientImpl| and |WireWeakAsyncBufferClientImpl|, then removed.
 template <>
-class ::fidl::internal::WireClientImpl<fidl_testing::TestProtocol>
-    : public fidl::internal::ClientBase {
+class ::fidl::internal::WireWeakAsyncClientImpl<fidl_testing::TestProtocol>
+    : public fidl::internal::ClientImplBase {
  public:
-  void PrepareAsyncTxn(internal::ResponseContext* context) {
-    internal::ClientBase::PrepareAsyncTxn(context);
-    std::unique_lock lock(lock_);
-    EXPECT_FALSE(txids_.count(context->Txid()));
-    txids_.insert(context->Txid());
-  }
-
-  void ForgetAsyncTxn(internal::ResponseContext* context) {
-    {
-      std::unique_lock lock(lock_);
-      txids_.erase(context->Txid());
-    }
-    internal::ClientBase::ForgetAsyncTxn(context);
-  }
-
-  void EraseTxid(internal::ResponseContext* context) {
-    {
-      std::unique_lock lock(lock_);
-      txids_.erase(context->Txid());
-    }
-  }
-
-  template <typename Callable>
-  auto MakeSyncCallWith(Callable&& sync_call) {
-    return internal::ClientBase::MakeSyncCallWith(std::forward<Callable>(sync_call));
-  }
-
-  bool IsPending(zx_txid_t txid) {
-    std::unique_lock lock(lock_);
-    return txids_.count(txid);
-  }
-
-  size_t GetTxidCount() {
-    std::unique_lock lock(lock_);
-    EXPECT_EQ(internal::ClientBase::GetTransactionCount(), txids_.size());
-    return txids_.size();
-  }
-
-  WireClientImpl() = default;
-
- private:
-  std::mutex lock_;
-  std::unordered_set<zx_txid_t> txids_;
+  using ClientImplBase::ClientImplBase;
 };
 
 template <>
@@ -141,17 +164,17 @@ namespace fidl_testing {
 
 class TestResponseContext : public fidl::internal::ResponseContext {
  public:
-  explicit TestResponseContext(fidl::internal::WireClientImpl<TestProtocol>* client)
-      : fidl::internal::ResponseContext(0), client_(client) {}
+  explicit TestResponseContext(ClientBaseSpy* spy)
+      : fidl::internal::ResponseContext(0), spy_(spy) {}
   cpp17::optional<fidl::UnbindInfo> OnRawResult(
       fidl::IncomingMessage&& msg,
       fidl::internal::IncomingTransportContext transport_context) override {
-    client_->EraseTxid(this);
+    spy_->EraseTxid(this);
     return cpp17::nullopt;
   }
 
  private:
-  fidl::internal::WireClientImpl<TestProtocol>* client_;
+  ClientBaseSpy* spy_;
 };
 
 }  // namespace fidl_testing

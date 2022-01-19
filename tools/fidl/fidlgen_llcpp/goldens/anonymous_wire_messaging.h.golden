@@ -480,12 +480,19 @@ static_assert(
 
 #ifdef __Fuchsia__
 }  // namespace fidl
+template <>
+class ::fidl::internal::WireWeakOnewayClientImpl<::test_anonymous::SomeProtocol>
+    : public ::fidl::internal::ClientImplBase {
+ public:
+  using ClientImplBase::ClientImplBase;
+};
 
 template <>
-class ::fidl::internal::WireClientImpl<::test_anonymous::SomeProtocol> final
-    : public ::fidl::internal::ClientBase {
+class ::fidl::internal::WireWeakAsyncClientImpl<::test_anonymous::SomeProtocol>
+    final : public ::fidl::internal::WireWeakOnewayClientImpl<
+                ::test_anonymous::SomeProtocol> {
  public:
-  // Asynchronous variant of |SomeProtocol.SomeMethod()|.
+  using WireWeakOnewayClientImpl::WireWeakOnewayClientImpl;
   // Allocates 96 bytes of request buffer on the stack. The callback is stored
   // on the heap.
   void SomeMethod(
@@ -501,7 +508,6 @@ class ::fidl::internal::WireClientImpl<::test_anonymous::SomeProtocol> final
           void(::fidl::WireResponse<::test_anonymous::SomeProtocol::SomeMethod>*
                    response)>
           _cb);
-  WireClientImpl() = default;
 };
 
 template <>
@@ -526,13 +532,6 @@ class ::fidl::internal::WireWeakAsyncBufferClientImpl<
       ::test_anonymous::wire::TableMember table_member,
       ::fidl::WireResponseContext<::test_anonymous::SomeProtocol::SomeMethod>*
           _context);
-};
-
-template <>
-class ::fidl::internal::WireWeakOnewayClientImpl<::test_anonymous::SomeProtocol>
-    : public ::fidl::internal::ClientImplBase {
- public:
-  using ClientImplBase::ClientImplBase;
 };
 template <>
 class ::fidl::internal::WireWeakSyncClientImpl<::test_anonymous::SomeProtocol>

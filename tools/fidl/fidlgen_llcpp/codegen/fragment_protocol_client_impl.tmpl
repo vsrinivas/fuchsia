@@ -7,17 +7,24 @@
 {{- define "Protocol:ClientImpl:WireMessagingHeader" }}
 {{- IfdefFuchsia -}}
 {{- EnsureNamespace "" }}
-{{/*
-TODO(fxbug.dev/85688): This class should be decomposed into
-|WireWeakAsyncClientImpl| and |WireWeakAsyncBufferClientImpl|, then removed.
-*/}}
 template<>
-class {{ .WireClientImpl }} final : public ::fidl::internal::ClientBase {
+class {{ .WireWeakOnewayClientImpl }} : public ::fidl::internal::ClientImplBase {
  public:
-  {{- range .ClientMethods }}
-    {{- template "Method:ClientImpl:WireMessagingHeader" . }}
+  using ClientImplBase::ClientImplBase;
+
+  {{- range .OneWayMethods }}
+    {{- template "Method:WireWeakOnewayClientImpl:WireMessagingHeader" . }}
   {{- end }}
-  {{ .WireClientImpl.Self }}() = default;
+};
+
+template<>
+class {{ .WireWeakAsyncClientImpl }} final : public {{ .WireWeakOnewayClientImpl }} {
+ public:
+  using {{ .WireWeakOnewayClientImpl.Self }}::{{ .WireWeakOnewayClientImpl.Self }};
+
+  {{- range .TwoWayMethods }}
+    {{- template "Method:WireWeakAsyncClientImpl:WireMessagingHeader" . }}
+  {{- end }}
 };
 
 template<>
@@ -37,16 +44,6 @@ class {{ .WireWeakAsyncBufferClientImpl }} final : public {{ .WireWeakOnewayBuff
 
   {{- range .TwoWayMethods }}
     {{- template "Method:ClientImplAsyncBuffer:WireMessagingHeader" . }}
-  {{- end }}
-};
-
-template<>
-class {{ .WireWeakOnewayClientImpl }} : public ::fidl::internal::ClientImplBase {
- public:
-  using ClientImplBase::ClientImplBase;
-
-  {{- range .OneWayMethods }}
-    {{- template "Method:WireWeakOnewayClientImpl:WireMessagingHeader" . }}
   {{- end }}
 };
 
@@ -71,17 +68,17 @@ class {{ .WireWeakSyncClientImpl }} final : public {{ .WireWeakOnewayClientImpl 
   {{ EnsureNamespace ""}}
   {{- IfdefFuchsia -}}
 
-  {{- range .ClientMethods }}
-    {{- template "Method:ClientImpl:WireMessagingSource" . }}
+  {{- range .OneWayMethods }}
+    {{- template "Method:WireWeakOnewayClientImpl:WireMessagingSource" . }}
+  {{- end }}
+  {{- range .TwoWayMethods }}
+    {{- template "Method:WireWeakAsyncClientImpl:WireMessagingSource" . }}
   {{- end }}
   {{- range .OneWayMethods }}
     {{- template "Method:ClientImplOnewayBuffer:WireMessagingSource" . }}
   {{- end }}
   {{- range .TwoWayMethods }}
     {{- template "Method:ClientImplAsyncBuffer:WireMessagingSource" . }}
-  {{- end }}
-  {{- range .OneWayMethods }}
-    {{- template "Method:WireWeakOnewayClientImpl:WireMessagingSource" . }}
   {{- end }}
 
   {{- if .Transport.HasSyncClient }}

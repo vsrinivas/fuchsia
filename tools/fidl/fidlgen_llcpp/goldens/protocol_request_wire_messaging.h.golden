@@ -1195,12 +1195,29 @@ static_assert(
 
 #ifdef __Fuchsia__
 }  // namespace fidl
+template <>
+class ::fidl::internal::WireWeakOnewayClientImpl<::test_protocolrequest::Parent>
+    : public ::fidl::internal::ClientImplBase {
+ public:
+  using ClientImplBase::ClientImplBase;
+
+  // Allocates 24 bytes of message buffer on the stack. No heap allocation
+  // necessary.
+  ::fidl::Result TakeChild(
+      ::fidl::ClientEnd<::test_protocolrequest::Child>&& c);
+
+  // Allocates 24 bytes of message buffer on the stack. No heap allocation
+  // necessary.
+  ::fidl::Result TakeChildRequest(
+      ::fidl::ServerEnd<::test_protocolrequest::Child>&& r);
+};
 
 template <>
-class ::fidl::internal::WireClientImpl<::test_protocolrequest::Parent> final
-    : public ::fidl::internal::ClientBase {
+class ::fidl::internal::WireWeakAsyncClientImpl<::test_protocolrequest::Parent>
+    final : public ::fidl::internal::WireWeakOnewayClientImpl<
+                ::test_protocolrequest::Parent> {
  public:
-  // Asynchronous variant of |Parent.GetChild()|.
+  using WireWeakOnewayClientImpl::WireWeakOnewayClientImpl;
   // Allocates 16 bytes of request buffer on the stack. The callback is stored
   // on the heap.
   void GetChild(
@@ -1210,7 +1227,6 @@ class ::fidl::internal::WireClientImpl<::test_protocolrequest::Parent> final
       ::fit::callback<void(::fidl::WireResponse<
                            ::test_protocolrequest::Parent::GetChild>* response)>
           _cb);
-  // Asynchronous variant of |Parent.GetChildRequest()|.
   // Allocates 16 bytes of request buffer on the stack. The callback is stored
   // on the heap.
   void GetChildRequest(::fidl::WireClientCallback<
@@ -1222,17 +1238,6 @@ class ::fidl::internal::WireClientImpl<::test_protocolrequest::Parent> final
           ::fidl::WireResponse<::test_protocolrequest::Parent::GetChildRequest>*
               response)>
           _cb);
-
-  // Allocates 24 bytes of message buffer on the stack. No heap allocation
-  // necessary.
-  ::fidl::Result TakeChild(
-      ::fidl::ClientEnd<::test_protocolrequest::Child>&& c);
-
-  // Allocates 24 bytes of message buffer on the stack. No heap allocation
-  // necessary.
-  ::fidl::Result TakeChildRequest(
-      ::fidl::ServerEnd<::test_protocolrequest::Child>&& r);
-  WireClientImpl() = default;
 };
 
 template <>
@@ -1268,23 +1273,6 @@ class ::fidl::internal::WireWeakAsyncBufferClientImpl<
   void GetChildRequest(
       ::fidl::WireResponseContext<
           ::test_protocolrequest::Parent::GetChildRequest>* _context);
-};
-
-template <>
-class ::fidl::internal::WireWeakOnewayClientImpl<::test_protocolrequest::Parent>
-    : public ::fidl::internal::ClientImplBase {
- public:
-  using ClientImplBase::ClientImplBase;
-
-  // Allocates 24 bytes of message buffer on the stack. No heap allocation
-  // necessary.
-  ::fidl::Result TakeChild(
-      ::fidl::ClientEnd<::test_protocolrequest::Child>&& c);
-
-  // Allocates 24 bytes of message buffer on the stack. No heap allocation
-  // necessary.
-  ::fidl::Result TakeChildRequest(
-      ::fidl::ServerEnd<::test_protocolrequest::Child>&& r);
 };
 template <>
 class ::fidl::internal::WireWeakSyncClientImpl<::test_protocolrequest::Parent>
@@ -1356,10 +1344,18 @@ class ::fidl::internal::WireWeakEventSender<::test_protocolrequest::Parent> {
 #ifdef __Fuchsia__
 
 template <>
-class ::fidl::internal::WireClientImpl<::test_protocolrequest::Child> final
-    : public ::fidl::internal::ClientBase {
+class ::fidl::internal::WireWeakOnewayClientImpl<::test_protocolrequest::Child>
+    : public ::fidl::internal::ClientImplBase {
  public:
-  WireClientImpl() = default;
+  using ClientImplBase::ClientImplBase;
+};
+
+template <>
+class ::fidl::internal::WireWeakAsyncClientImpl<::test_protocolrequest::Child>
+    final : public ::fidl::internal::WireWeakOnewayClientImpl<
+                ::test_protocolrequest::Child> {
+ public:
+  using WireWeakOnewayClientImpl::WireWeakOnewayClientImpl;
 };
 
 template <>
@@ -1377,13 +1373,6 @@ class ::fidl::internal::WireWeakAsyncBufferClientImpl<
                 ::test_protocolrequest::Child> {
  public:
   using WireWeakOnewayBufferClientImpl::WireWeakOnewayBufferClientImpl;
-};
-
-template <>
-class ::fidl::internal::WireWeakOnewayClientImpl<::test_protocolrequest::Child>
-    : public ::fidl::internal::ClientImplBase {
- public:
-  using ClientImplBase::ClientImplBase;
 };
 template <>
 class ::fidl::internal::WireWeakSyncClientImpl<::test_protocolrequest::Child>

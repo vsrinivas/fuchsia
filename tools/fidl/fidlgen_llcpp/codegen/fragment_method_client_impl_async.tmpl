@@ -4,14 +4,11 @@
 // found in the LICENSE file.
 */}}
 
-{{- define "Method:ClientImplAsync:WireMessagingHeader" }}
-  {{- IfdefFuchsia -}}
-  {{- /* Async managed flavor */}}
+{{- define "Method:WireWeakAsyncClientImpl:WireMessagingHeader" }}
   {{- .Docs }}
   {{- if .DocComments }}
     //
   {{- end }}
-  // Asynchronous variant of |{{ .Protocol.Name }}.{{ .Name }}()|.
   {{- if .Request.ClientAllocationV2.IsStack }}
     // Allocates {{ .Request.ClientAllocationV2.Size }} bytes of request buffer on the stack. The callback is stored on the heap.
   {{- else }}
@@ -23,15 +20,12 @@
   void {{ .Name }}({{ RenderParams .RequestArgs
                    (printf "::fit::callback<void (%s* response)> _cb" .WireResponse) }});
 
-  {{- EndifFuchsia -}}
 {{- end }}
 
 
-{{- define "Method:ClientImplAsync:WireMessagingSource" }}
-  {{- IfdefFuchsia -}}
 
-  {{- /* Async managed flavor */}}
-  void {{ .Protocol.WireClientImpl.NoLeading }}::{{ .Name }}(
+{{- define "Method:WireWeakAsyncClientImpl:WireMessagingSource" }}
+  void {{ .Protocol.WireWeakAsyncClientImpl.NoLeading }}::{{ .Name }}(
                     {{ RenderParams .RequestArgs
                     (printf "::fidl::WireClientCallback<%s> _cb" .Marker) }}) {
     using Callback = decltype(_cb);
@@ -54,10 +48,10 @@
     FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
     ::fidl::OwnedEncodedMessage<{{ .WireRequest }}, {{ .Transport.Type }}> _request_message(
           ::fidl::internal::AllowUnownedInputRef{}, &_request);
-    ::fidl::internal::ClientBase::SendTwoWay(_request_message.GetOutgoingMessage(), _context);
+    _client_base()->SendTwoWay(_request_message.GetOutgoingMessage(), _context);
   }
 
-  void {{ .Protocol.WireClientImpl.NoLeading }}::{{ .Name }}(
+  void {{ .Protocol.WireWeakAsyncClientImpl.NoLeading }}::{{ .Name }}(
     {{ RenderParams .RequestArgs
       (printf "::fit::callback<void (%s* response)> _cb" .WireResponse) }}) {
     using Callback = decltype(_cb);
@@ -83,8 +77,7 @@
     FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
     ::fidl::OwnedEncodedMessage<{{ .WireRequest }}, {{ .Transport.Type }}> _request_message(
     ::fidl::internal::AllowUnownedInputRef{}, &_request);
-    ::fidl::internal::ClientBase::SendTwoWay(_request_message.GetOutgoingMessage(), _context);
+    _client_base()->SendTwoWay(_request_message.GetOutgoingMessage(), _context);
   }
 
-  {{- EndifFuchsia -}}
 {{- end }}

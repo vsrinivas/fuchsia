@@ -31,12 +31,14 @@ class AsyncEventHandler<TestProtocol> : public fidl::internal::AsyncEventHandler
 namespace internal {
 
 template <>
-class WireClientImpl<TestProtocol> : public ClientBase {
+class WireWeakAsyncClientImpl<TestProtocol> : public fidl::internal::ClientImplBase {
  public:
+  using ClientImplBase::ClientImplBase;
+
   void SomeWireMethod() {
     GoodMessage msg;
-    fidl::Result result =
-        MakeSyncCallWith([&](std::shared_ptr<fidl::internal::AnyTransport> transport) {
+    fidl::Result result = _client_base()->MakeSyncCallWith(
+        [&](std::shared_ptr<fidl::internal::AnyTransport> transport) {
           zx_status_t status = zx_channel_write_etc(
               transport->get<fidl::internal::ChannelTransport>()->get(), 0,
               static_cast<void*>(msg.message().bytes().data()), msg.message().bytes().actual(),

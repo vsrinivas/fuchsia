@@ -286,8 +286,36 @@ namespace test_protocolrequest {
 }  // namespace test_protocolrequest
 #ifdef __Fuchsia__
 
-void fidl::internal::WireClientImpl<::test_protocolrequest::Parent>::GetChild(
-    ::fidl::WireClientCallback<::test_protocolrequest::Parent::GetChild> _cb) {
+::fidl::Result fidl::internal::
+    WireWeakOnewayClientImpl<::test_protocolrequest::Parent>::TakeChild(
+        ::fidl::ClientEnd<::test_protocolrequest::Child>&& c) {
+  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
+  ::fidl::WireRequest<::test_protocolrequest::Parent::TakeChild>
+      _request_object{std::move(c)};
+  ::fidl::OwnedEncodedMessage<
+      ::fidl::WireRequest<::test_protocolrequest::Parent::TakeChild>,
+      ::fidl::internal::ChannelTransport>
+      _request_message(::fidl::internal::AllowUnownedInputRef{},
+                       &_request_object);
+  return _client_base()->SendOneWay(_request_message.GetOutgoingMessage());
+}
+::fidl::Result fidl::internal::
+    WireWeakOnewayClientImpl<::test_protocolrequest::Parent>::TakeChildRequest(
+        ::fidl::ServerEnd<::test_protocolrequest::Child>&& r) {
+  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
+  ::fidl::WireRequest<::test_protocolrequest::Parent::TakeChildRequest>
+      _request_object{std::move(r)};
+  ::fidl::OwnedEncodedMessage<
+      ::fidl::WireRequest<::test_protocolrequest::Parent::TakeChildRequest>,
+      ::fidl::internal::ChannelTransport>
+      _request_message(::fidl::internal::AllowUnownedInputRef{},
+                       &_request_object);
+  return _client_base()->SendOneWay(_request_message.GetOutgoingMessage());
+}
+void fidl::internal::WireWeakAsyncClientImpl<::test_protocolrequest::Parent>::
+    GetChild(
+        ::fidl::WireClientCallback<::test_protocolrequest::Parent::GetChild>
+            _cb) {
   using Callback = decltype(_cb);
   class ResponseContext final : public ::fidl::WireResponseContext<
                                     ::test_protocolrequest::Parent::GetChild> {
@@ -312,14 +340,14 @@ void fidl::internal::WireClientImpl<::test_protocolrequest::Parent>::GetChild(
       ::fidl::WireRequest<::test_protocolrequest::Parent::GetChild>,
       ::fidl::internal::ChannelTransport>
       _request_message(::fidl::internal::AllowUnownedInputRef{}, &_request);
-  ::fidl::internal::ClientBase::SendTwoWay(
-      _request_message.GetOutgoingMessage(), _context);
+  _client_base()->SendTwoWay(_request_message.GetOutgoingMessage(), _context);
 }
 
-void fidl::internal::WireClientImpl<::test_protocolrequest::Parent>::GetChild(
-    ::fit::callback<void(::fidl::WireResponse<
-                         ::test_protocolrequest::Parent::GetChild>* response)>
-        _cb) {
+void fidl::internal::WireWeakAsyncClientImpl<::test_protocolrequest::Parent>::
+    GetChild(::fit::callback<void(
+                 ::fidl::WireResponse<::test_protocolrequest::Parent::GetChild>*
+                     response)>
+                 _cb) {
   using Callback = decltype(_cb);
   class ResponseContext final : public ::fidl::WireResponseContext<
                                     ::test_protocolrequest::Parent::GetChild> {
@@ -348,10 +376,9 @@ void fidl::internal::WireClientImpl<::test_protocolrequest::Parent>::GetChild(
       ::fidl::WireRequest<::test_protocolrequest::Parent::GetChild>,
       ::fidl::internal::ChannelTransport>
       _request_message(::fidl::internal::AllowUnownedInputRef{}, &_request);
-  ::fidl::internal::ClientBase::SendTwoWay(
-      _request_message.GetOutgoingMessage(), _context);
+  _client_base()->SendTwoWay(_request_message.GetOutgoingMessage(), _context);
 }
-void fidl::internal::WireClientImpl<::test_protocolrequest::Parent>::
+void fidl::internal::WireWeakAsyncClientImpl<::test_protocolrequest::Parent>::
     GetChildRequest(::fidl::WireClientCallback<
                     ::test_protocolrequest::Parent::GetChildRequest>
                         _cb) {
@@ -381,11 +408,10 @@ void fidl::internal::WireClientImpl<::test_protocolrequest::Parent>::
       ::fidl::WireRequest<::test_protocolrequest::Parent::GetChildRequest>,
       ::fidl::internal::ChannelTransport>
       _request_message(::fidl::internal::AllowUnownedInputRef{}, &_request);
-  ::fidl::internal::ClientBase::SendTwoWay(
-      _request_message.GetOutgoingMessage(), _context);
+  _client_base()->SendTwoWay(_request_message.GetOutgoingMessage(), _context);
 }
 
-void fidl::internal::WireClientImpl<::test_protocolrequest::Parent>::
+void fidl::internal::WireWeakAsyncClientImpl<::test_protocolrequest::Parent>::
     GetChildRequest(
         ::fit::callback<
             void(::fidl::WireResponse<
@@ -421,35 +447,7 @@ void fidl::internal::WireClientImpl<::test_protocolrequest::Parent>::
       ::fidl::WireRequest<::test_protocolrequest::Parent::GetChildRequest>,
       ::fidl::internal::ChannelTransport>
       _request_message(::fidl::internal::AllowUnownedInputRef{}, &_request);
-  ::fidl::internal::ClientBase::SendTwoWay(
-      _request_message.GetOutgoingMessage(), _context);
-}
-::fidl::Result
-fidl::internal::WireClientImpl<::test_protocolrequest::Parent>::TakeChild(
-    ::fidl::ClientEnd<::test_protocolrequest::Child>&& c) {
-  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::WireRequest<::test_protocolrequest::Parent::TakeChild>
-      _request_object{std::move(c)};
-  ::fidl::OwnedEncodedMessage<
-      ::fidl::WireRequest<::test_protocolrequest::Parent::TakeChild>,
-      ::fidl::internal::ChannelTransport>
-      _request_message(::fidl::internal::AllowUnownedInputRef{},
-                       &_request_object);
-  return ::fidl::internal::ClientBase::SendOneWay(
-      _request_message.GetOutgoingMessage());
-}
-::fidl::Result fidl::internal::WireClientImpl<::test_protocolrequest::Parent>::
-    TakeChildRequest(::fidl::ServerEnd<::test_protocolrequest::Child>&& r) {
-  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::WireRequest<::test_protocolrequest::Parent::TakeChildRequest>
-      _request_object{std::move(r)};
-  ::fidl::OwnedEncodedMessage<
-      ::fidl::WireRequest<::test_protocolrequest::Parent::TakeChildRequest>,
-      ::fidl::internal::ChannelTransport>
-      _request_message(::fidl::internal::AllowUnownedInputRef{},
-                       &_request_object);
-  return ::fidl::internal::ClientBase::SendOneWay(
-      _request_message.GetOutgoingMessage());
+  _client_base()->SendTwoWay(_request_message.GetOutgoingMessage(), _context);
 }
 ::fidl::Result fidl::internal::
     WireWeakOnewayBufferClientImpl<::test_protocolrequest::Parent>::TakeChild(
@@ -532,32 +530,6 @@ void fidl::internal::WireWeakAsyncBufferClientImpl<
       ::fidl::WireRequest<::test_protocolrequest::Parent::GetChildRequest>>
       _request_message(_allocation->data, _buffer_size, &_request);
   _client_base()->SendTwoWay(_request_message.GetOutgoingMessage(), _context);
-}
-::fidl::Result fidl::internal::
-    WireWeakOnewayClientImpl<::test_protocolrequest::Parent>::TakeChild(
-        ::fidl::ClientEnd<::test_protocolrequest::Child>&& c) {
-  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::WireRequest<::test_protocolrequest::Parent::TakeChild>
-      _request_object{std::move(c)};
-  ::fidl::OwnedEncodedMessage<
-      ::fidl::WireRequest<::test_protocolrequest::Parent::TakeChild>,
-      ::fidl::internal::ChannelTransport>
-      _request_message(::fidl::internal::AllowUnownedInputRef{},
-                       &_request_object);
-  return _client_base()->SendOneWay(_request_message.GetOutgoingMessage());
-}
-::fidl::Result fidl::internal::
-    WireWeakOnewayClientImpl<::test_protocolrequest::Parent>::TakeChildRequest(
-        ::fidl::ServerEnd<::test_protocolrequest::Child>&& r) {
-  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::WireRequest<::test_protocolrequest::Parent::TakeChildRequest>
-      _request_object{std::move(r)};
-  ::fidl::OwnedEncodedMessage<
-      ::fidl::WireRequest<::test_protocolrequest::Parent::TakeChildRequest>,
-      ::fidl::internal::ChannelTransport>
-      _request_message(::fidl::internal::AllowUnownedInputRef{},
-                       &_request_object);
-  return _client_base()->SendOneWay(_request_message.GetOutgoingMessage());
 }
 
 ::fidl::WireResult<::test_protocolrequest::Parent::GetChild> fidl::internal::

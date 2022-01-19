@@ -82,7 +82,7 @@ namespace test_inheritance {
 }  // namespace test_inheritance
 #ifdef __Fuchsia__
 
-void fidl::internal::WireClientImpl<::test_inheritance::Super>::Foo(
+void fidl::internal::WireWeakAsyncClientImpl<::test_inheritance::Super>::Foo(
     ::fidl::StringView s,
     ::fidl::WireClientCallback<::test_inheritance::Super::Foo> _cb) {
   using Callback = decltype(_cb);
@@ -108,11 +108,10 @@ void fidl::internal::WireClientImpl<::test_inheritance::Super>::Foo(
       ::fidl::WireRequest<::test_inheritance::Super::Foo>,
       ::fidl::internal::ChannelTransport>
       _request_message(::fidl::internal::AllowUnownedInputRef{}, &_request);
-  ::fidl::internal::ClientBase::SendTwoWay(
-      _request_message.GetOutgoingMessage(), _context);
+  _client_base()->SendTwoWay(_request_message.GetOutgoingMessage(), _context);
 }
 
-void fidl::internal::WireClientImpl<::test_inheritance::Super>::Foo(
+void fidl::internal::WireWeakAsyncClientImpl<::test_inheritance::Super>::Foo(
     ::fidl::StringView s,
     ::fit::callback<
         void(::fidl::WireResponse<::test_inheritance::Super::Foo>* response)>
@@ -144,8 +143,7 @@ void fidl::internal::WireClientImpl<::test_inheritance::Super>::Foo(
       ::fidl::WireRequest<::test_inheritance::Super::Foo>,
       ::fidl::internal::ChannelTransport>
       _request_message(::fidl::internal::AllowUnownedInputRef{}, &_request);
-  ::fidl::internal::ClientBase::SendTwoWay(
-      _request_message.GetOutgoingMessage(), _context);
+  _client_base()->SendTwoWay(_request_message.GetOutgoingMessage(), _context);
 }
 void fidl::internal::WireWeakAsyncBufferClientImpl<::test_inheritance::Super>::
     Foo(::fidl::StringView s,
@@ -410,7 +408,7 @@ namespace test_inheritance {
 }  // namespace test_inheritance
 #ifdef __Fuchsia__
 
-void fidl::internal::WireClientImpl<::test_inheritance::Sub>::Foo(
+void fidl::internal::WireWeakAsyncClientImpl<::test_inheritance::Sub>::Foo(
     ::fidl::StringView s,
     ::fidl::WireClientCallback<::test_inheritance::Sub::Foo> _cb) {
   using Callback = decltype(_cb);
@@ -435,11 +433,10 @@ void fidl::internal::WireClientImpl<::test_inheritance::Sub>::Foo(
   ::fidl::OwnedEncodedMessage<::fidl::WireRequest<::test_inheritance::Sub::Foo>,
                               ::fidl::internal::ChannelTransport>
       _request_message(::fidl::internal::AllowUnownedInputRef{}, &_request);
-  ::fidl::internal::ClientBase::SendTwoWay(
-      _request_message.GetOutgoingMessage(), _context);
+  _client_base()->SendTwoWay(_request_message.GetOutgoingMessage(), _context);
 }
 
-void fidl::internal::WireClientImpl<::test_inheritance::Sub>::Foo(
+void fidl::internal::WireWeakAsyncClientImpl<::test_inheritance::Sub>::Foo(
     ::fidl::StringView s,
     ::fit::callback<
         void(::fidl::WireResponse<::test_inheritance::Sub::Foo>* response)>
@@ -470,8 +467,7 @@ void fidl::internal::WireClientImpl<::test_inheritance::Sub>::Foo(
   ::fidl::OwnedEncodedMessage<::fidl::WireRequest<::test_inheritance::Sub::Foo>,
                               ::fidl::internal::ChannelTransport>
       _request_message(::fidl::internal::AllowUnownedInputRef{}, &_request);
-  ::fidl::internal::ClientBase::SendTwoWay(
-      _request_message.GetOutgoingMessage(), _context);
+  _client_base()->SendTwoWay(_request_message.GetOutgoingMessage(), _context);
 }
 void fidl::internal::WireWeakAsyncBufferClientImpl<::test_inheritance::Sub>::
     Foo(::fidl::StringView s,

@@ -14,14 +14,24 @@ namespace internal {
 // TODO(madhaviyengar): Move this constant to zircon/fidl.h
 constexpr uint32_t kUserspaceTxidMask = 0x7FFFFFFF;
 
-void ClientBase::Bind(std::shared_ptr<ClientBase> client, fidl::internal::AnyTransport transport,
-                      async_dispatcher_t* dispatcher, AnyIncomingEventDispatcher&& event_dispatcher,
+std::shared_ptr<ClientBase> ClientBase::Create(AnyTransport&& transport,
+                                               async_dispatcher_t* dispatcher,
+                                               AnyIncomingEventDispatcher&& event_dispatcher,
+                                               fidl::AnyTeardownObserver&& teardown_observer,
+                                               ThreadingPolicy threading_policy) {
+  std::shared_ptr client_base = std::make_shared<ClientBase>();
+  client_base->Bind(std::move(transport), dispatcher, std::move(event_dispatcher),
+                    std::move(teardown_observer), threading_policy);
+  return client_base;
+}
+
+void ClientBase::Bind(AnyTransport&& transport, async_dispatcher_t* dispatcher,
+                      AnyIncomingEventDispatcher&& event_dispatcher,
                       AnyTeardownObserver&& teardown_observer, ThreadingPolicy threading_policy) {
   ZX_DEBUG_ASSERT(!binding_.lock());
-  ZX_DEBUG_ASSERT(client.get() == this);
   auto binding = AsyncClientBinding::Create(
       dispatcher, std::make_shared<fidl::internal::AnyTransport>(std::move(transport)),
-      std::move(client), event_dispatcher->event_handler(), std::move(teardown_observer),
+      shared_from_this(), event_dispatcher->event_handler(), std::move(teardown_observer),
       threading_policy);
   binding_ = binding;
   dispatcher_ = dispatcher;
@@ -170,15 +180,13 @@ std::optional<UnbindInfo> ClientBase::Dispatch(
   return context->OnRawResult(std::move(msg), std::move(transport_context));
 }
 
-void ClientController::Bind(std::shared_ptr<ClientBase>&& client_impl,
-                            fidl::internal::AnyTransport client_end, async_dispatcher_t* dispatcher,
+void ClientController::Bind(AnyTransport client_end, async_dispatcher_t* dispatcher,
                             AnyIncomingEventDispatcher&& event_dispatcher,
                             AnyTeardownObserver&& teardown_observer,
                             ThreadingPolicy threading_policy) {
   ZX_ASSERT(!client_impl_);
-  client_impl_ = std::move(client_impl);
-  client_impl_->Bind(client_impl_, std::move(client_end), dispatcher, std::move(event_dispatcher),
-                     std::move(teardown_observer), threading_policy);
+  client_impl_ = ClientBase::Create(std::move(client_end), dispatcher, std::move(event_dispatcher),
+                                    std::move(teardown_observer), threading_policy);
   control_ = std::make_shared<ControlBlock>(client_impl_);
 }
 

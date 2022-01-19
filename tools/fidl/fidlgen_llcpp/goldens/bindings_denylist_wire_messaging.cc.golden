@@ -65,7 +65,7 @@ namespace test_bindingsdenylist {
 }  // namespace test_bindingsdenylist
 #ifdef __Fuchsia__
 
-void fidl::internal::WireClientImpl<
+void fidl::internal::WireWeakAsyncClientImpl<
     ::test_bindingsdenylist::OnlyLibfuzzerAndDeps>::
     LibfuzzerNeedsNonemptyProtocol(
         ::fidl::WireClientCallback<
@@ -101,11 +101,10 @@ void fidl::internal::WireClientImpl<
                               LibfuzzerNeedsNonemptyProtocol>,
       ::fidl::internal::ChannelTransport>
       _request_message(::fidl::internal::AllowUnownedInputRef{}, &_request);
-  ::fidl::internal::ClientBase::SendTwoWay(
-      _request_message.GetOutgoingMessage(), _context);
+  _client_base()->SendTwoWay(_request_message.GetOutgoingMessage(), _context);
 }
 
-void fidl::internal::WireClientImpl<
+void fidl::internal::WireWeakAsyncClientImpl<
     ::test_bindingsdenylist::OnlyLibfuzzerAndDeps>::
     LibfuzzerNeedsNonemptyProtocol(
         ::fit::callback<void(
@@ -146,8 +145,7 @@ void fidl::internal::WireClientImpl<
                               LibfuzzerNeedsNonemptyProtocol>,
       ::fidl::internal::ChannelTransport>
       _request_message(::fidl::internal::AllowUnownedInputRef{}, &_request);
-  ::fidl::internal::ClientBase::SendTwoWay(
-      _request_message.GetOutgoingMessage(), _context);
+  _client_base()->SendTwoWay(_request_message.GetOutgoingMessage(), _context);
 }
 void fidl::internal::WireWeakAsyncBufferClientImpl<
     ::test_bindingsdenylist::OnlyLibfuzzerAndDeps>::

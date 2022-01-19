@@ -80,21 +80,20 @@ class MockEventDispatcher : public fidl::internal::IncomingEventDispatcherBase {
   }
 };
 
-class TestClient : public fidl::internal::ClientBase {
+class TestClient {
  public:
-  void Bind(std::shared_ptr<TestClient> client, zx::socket handle, async_dispatcher_t* dispatcher) {
+  void Bind(zx::socket handle, async_dispatcher_t* dispatcher) {
     fidl::internal::AnyIncomingEventDispatcher event_dispatcher;
     event_dispatcher.emplace<MockEventDispatcher>();
-    fidl::internal::ClientBase::Bind(
-        client, fidl::internal::MakeAnyTransport(std::move(handle)), dispatcher,
-        std::move(event_dispatcher), fidl::AnyTeardownObserver::Noop(),
-        fidl::internal::ThreadingPolicy::kCreateAndTeardownFromAnyThread);
+    client_controller_.Bind(fidl::internal::MakeAnyTransport(std::move(handle)), dispatcher,
+                            std::move(event_dispatcher), fidl::AnyTeardownObserver::Noop(),
+                            fidl::internal::ThreadingPolicy::kCreateAndTeardownFromAnyThread);
   }
 
   void TwoWay(TwoWayRequest request, fit::callback<void(TwoWayResponse)> callback) {
     class TwoWayResponseContext : public fidl::internal::ResponseContext {
      public:
-      TwoWayResponseContext(fit::callback<void(TwoWayResponse)> callback)
+      explicit TwoWayResponseContext(fit::callback<void(TwoWayResponse)> callback)
           : fidl::internal::ResponseContext(kTwoWayOrdinal), callback(std::move(callback)) {}
 
      private:
@@ -112,8 +111,11 @@ class TestClient : public fidl::internal::ClientBase {
     };
     auto* context = new TwoWayResponseContext(std::move(callback));
     fidl::OwnedEncodedMessage<TwoWayRequest, fidl::internal::SocketTransport> encoded(&request);
-    fidl::internal::ClientBase::SendTwoWay(encoded.GetOutgoingMessage(), context);
+    client_controller_.get().SendTwoWay(encoded.GetOutgoingMessage(), context);
   }
+
+ private:
+  fidl::internal::ClientController client_controller_;
 };
 
 struct ProtocolMarker {
@@ -163,12 +165,12 @@ TEST(TransportIntegration, TwoWayAsync) {
   fidl::socket::BindServer(loop.dispatcher(), std::move(server_end), std::make_shared<TestServer>(),
                            std::move(on_unbound));
 
-  auto client = std::make_shared<TestClient>();
-  client->Bind(client, std::move(s2), loop.dispatcher());
+  TestClient client;
+  client.Bind(std::move(s2), loop.dispatcher());
   TwoWayRequest request{.payload = kRequestPayload};
   fidl_init_txn_header(&request.header, kTwoWayTxid, kTwoWayOrdinal);
-  client->TwoWay(request,
-                 [](TwoWayResponse response) { ASSERT_EQ(kResponsePayload, response.payload); });
+  client.TwoWay(request,
+                [](TwoWayResponse response) { ASSERT_EQ(kResponsePayload, response.payload); });
 
   loop.RunUntilIdle();
 }
