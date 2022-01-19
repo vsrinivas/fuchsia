@@ -17,11 +17,8 @@
 #include "src/lib/storage/vfs/cpp/managed_vfs.h"
 #include "src/lib/storage/vfs/cpp/paged_vfs.h"
 #include "src/lib/storage/vfs/cpp/pseudo_dir.h"
-#include "src/lib/storage/vfs/cpp/query_service.h"
 #include "src/storage/blobfs/blobfs.h"
-#include "src/storage/blobfs/health_check_service.h"
 #include "src/storage/blobfs/mount.h"
-#include "src/storage/blobfs/service/startup.h"
 
 namespace blobfs {
 
@@ -56,7 +53,6 @@ class ComponentRunner : public fs::PagedVfs {
 
   // These are initialized when ServeRoot is called.
   fbl::RefPtr<fs::PseudoDir> outgoing_;
-  fbl::RefPtr<StartupService> startup_svc_;
   fidl::WireSharedClient<fuchsia_device_manager::Administrator> driver_admin_;
 
   // These are created when ServeRoot is called, and are consumed by a successful call to
@@ -67,8 +63,6 @@ class ComponentRunner : public fs::PagedVfs {
 
   // These are only initialized by configure after a call to the startup service.
   std::unique_ptr<Blobfs> blobfs_;
-  fbl::RefPtr<HealthCheckService> health_check_svc_;
-  fbl::RefPtr<fs::QueryService> query_svc_;
 };
 
 }  // namespace blobfs

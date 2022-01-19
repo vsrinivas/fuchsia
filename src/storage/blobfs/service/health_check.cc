@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/storage/blobfs/health_check_service.h"
+#include "src/storage/blobfs/service/health_check.h"
 
 #include <fidl/fuchsia.update.verify/cpp/wire.h>
 #include <lib/async/dispatcher.h>

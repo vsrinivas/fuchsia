@@ -82,7 +82,7 @@ test("blobfs_unittest") {
     "unit/format_test.cc",
     "unit/fsck_test.cc",
     "unit/get_allocated_regions_test.cc",
-    "unit/health_check_service_test.cc",
+    "unit/health_check_test.cc",
     "unit/metrics_test.cc",
     "unit/node_populator_test.cc",
     "unit/node_reserver_test.cc",

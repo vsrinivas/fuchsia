@@ -13,9 +13,7 @@
 
 #include "src/lib/storage/vfs/cpp/managed_vfs.h"
 #include "src/lib/storage/vfs/cpp/paged_vfs.h"
-#include "src/lib/storage/vfs/cpp/query_service.h"
 #include "src/storage/blobfs/blobfs.h"
-#include "src/storage/blobfs/health_check_service.h"
 #include "src/storage/blobfs/mount.h"
 
 namespace blobfs {
@@ -51,8 +49,6 @@ class Runner : public fs::PagedVfs {
 
   async::Loop* loop_;
   std::unique_ptr<Blobfs> blobfs_;
-  fbl::RefPtr<fs::QueryService> query_svc_;
-  fbl::RefPtr<HealthCheckService> health_check_svc_;
 };
 
 }  // namespace blobfs

@@ -116,8 +116,6 @@ static_library("blobfs") {
   ]
   if (is_fuchsia) {
     sources += [
-      "admin_service.cc",
-      "admin_service.h",
       "allocator/allocator.cc",
       "blob.cc",
       "blob_cache.cc",
@@ -137,7 +135,6 @@ static_library("blobfs") {
       "directory.cc",
       "format.cc",
       "fsck.cc",
-      "health_check_service.cc",
       "loader_info.h",
       "metrics.cc",
       "mount.cc",
@@ -145,8 +142,14 @@ static_library("blobfs") {
       "page_loader.h",
       "read_metrics.cc",
       "runner.cc",
+      "service/admin.cc",
+      "service/admin.h",
+      "service/health_check.cc",
+      "service/health_check.h",
       "service/lifecycle.cc",
+      "service/lifecycle.h",
       "service/startup.cc",
+      "service/startup.h",
       "transaction.cc",
       "transfer_buffer.cc",
       "transfer_buffer.h",

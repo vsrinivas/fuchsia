@@ -10,7 +10,9 @@
 #include <lib/syslog/cpp/macros.h>
 
 #include "src/lib/storage/vfs/cpp/pseudo_dir.h"
-#include "src/storage/blobfs/admin_service.h"
+#include "src/lib/storage/vfs/cpp/query_service.h"
+#include "src/storage/blobfs/service/admin.h"
+#include "src/storage/blobfs/service/health_check.h"
 
 namespace blobfs {
 
@@ -98,12 +100,11 @@ zx_status_t Runner::ServeRoot(fidl::ServerEnd<fuchsia_io::Directory> root) {
   auto svc_dir = fbl::MakeRefCounted<fs::PseudoDir>(this);
   outgoing->AddEntry("svc", svc_dir);
 
-  query_svc_ = fbl::MakeRefCounted<fs::QueryService>(this);
-  svc_dir->AddEntry(fidl::DiscoverableProtocolName<fuchsia_fs::Query>, query_svc_);
+  svc_dir->AddEntry(fidl::DiscoverableProtocolName<fuchsia_fs::Query>,
+                    fbl::MakeRefCounted<fs::QueryService>(this));
 
-  health_check_svc_ = fbl::MakeRefCounted<HealthCheckService>(loop_->dispatcher(), *blobfs_);
   svc_dir->AddEntry(fidl::DiscoverableProtocolName<fuchsia_update_verify::BlobfsVerifier>,
-                    health_check_svc_);
+                    fbl::MakeRefCounted<HealthCheckService>(loop_->dispatcher(), *blobfs_));
 
   svc_dir->AddEntry(fidl::DiscoverableProtocolName<fuchsia_fs::Admin>,
                     fbl::MakeRefCounted<AdminService>(blobfs_->dispatcher(),

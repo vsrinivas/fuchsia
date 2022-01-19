@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_STORAGE_BLOBFS_HEALTH_CHECK_SERVICE_H_
-#define SRC_STORAGE_BLOBFS_HEALTH_CHECK_SERVICE_H_
+#ifndef SRC_STORAGE_BLOBFS_SERVICE_HEALTH_CHECK_H_
+#define SRC_STORAGE_BLOBFS_SERVICE_HEALTH_CHECK_H_
 
 #ifndef __Fuchsia__
 #error Fuchsia-only Header
@@ -39,4 +39,4 @@ class HealthCheckService : public fidl::WireServer<fuchsia_update_verify::Blobfs
 
 }  // namespace blobfs
 
-#endif  // SRC_STORAGE_BLOBFS_HEALTH_CHECK_SERVICE_H_
+#endif  // SRC_STORAGE_BLOBFS_SERVICE_HEALTH_CHECK_H_

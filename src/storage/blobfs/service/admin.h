@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_STORAGE_BLOBFS_ADMIN_SERVICE_H_
-#define SRC_STORAGE_BLOBFS_ADMIN_SERVICE_H_
+#ifndef SRC_STORAGE_BLOBFS_SERVICE_ADMIN_H_
+#define SRC_STORAGE_BLOBFS_SERVICE_ADMIN_H_
 
 #include "src/lib/storage/vfs/cpp/service.h"
 #include "src/storage/blobfs/runner.h"
@@ -26,4 +26,4 @@ class AdminService : public fidl::WireServer<fuchsia_fs::Admin>, public fs::Serv
 
 }  // namespace blobfs
 
-#endif  // SRC_STORAGE_BLOBFS_ADMIN_SERVICE_H_
+#endif  // SRC_STORAGE_BLOBFS_SERVICE_ADMIN_H_

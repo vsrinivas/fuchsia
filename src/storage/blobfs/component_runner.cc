@@ -10,9 +10,12 @@
 #include <lib/inspect/service/cpp/service.h>
 #include <lib/syslog/cpp/macros.h>
 
+#include "src/lib/storage/vfs/cpp/query_service.h"
 #include "src/lib/storage/vfs/cpp/remote_dir.h"
-#include "src/storage/blobfs/admin_service.h"
+#include "src/storage/blobfs/service/admin.h"
+#include "src/storage/blobfs/service/health_check.h"
 #include "src/storage/blobfs/service/lifecycle.h"
+#include "src/storage/blobfs/service/startup.h"
 
 namespace blobfs {
 
@@ -22,7 +25,7 @@ ComponentRunner::ComponentRunner(async::Loop& loop) : fs::PagedVfs(loop.dispatch
   outgoing_->AddEntry("startup", startup);
 
   FX_LOGS(INFO) << "setting up startup service";
-  startup_svc_ = fbl::MakeRefCounted<StartupService>(
+  auto startup_svc = fbl::MakeRefCounted<StartupService>(
       loop_.dispatcher(), [this](std::unique_ptr<BlockDevice> device, const MountOptions& options) {
         FX_LOGS(INFO) << "configure callback is called";
         zx::status<> status = Configure(std::move(device), options);
@@ -31,7 +34,7 @@ ComponentRunner::ComponentRunner(async::Loop& loop) : fs::PagedVfs(loop.dispatch
         }
         return status;
       });
-  startup->AddEntry(fidl::DiscoverableProtocolName<fuchsia_fs_startup::Startup>, startup_svc_);
+  startup->AddEntry(fidl::DiscoverableProtocolName<fuchsia_fs_startup::Startup>, startup_svc);
 }
 
 void ComponentRunner::RemoveSystemDrivers(fit::callback<void(zx_status_t)> callback) {
@@ -186,12 +189,11 @@ zx::status<> ComponentRunner::Configure(std::unique_ptr<BlockDevice> device,
   diagnostics_dir->AddEntry(fuchsia::inspect::Tree::Name_, inspect_tree);
 
   auto svc_dir = fbl::MakeRefCounted<fs::PseudoDir>(this);
-  query_svc_ = fbl::MakeRefCounted<fs::QueryService>(this);
-  svc_dir->AddEntry(fidl::DiscoverableProtocolName<fuchsia_fs::Query>, query_svc_);
+  svc_dir->AddEntry(fidl::DiscoverableProtocolName<fuchsia_fs::Query>,
+                    fbl::MakeRefCounted<fs::QueryService>(this));
 
-  health_check_svc_ = fbl::MakeRefCounted<HealthCheckService>(loop_.dispatcher(), *blobfs_);
   svc_dir->AddEntry(fidl::DiscoverableProtocolName<fuchsia_update_verify::BlobfsVerifier>,
-                    health_check_svc_);
+                    fbl::MakeRefCounted<HealthCheckService>(loop_.dispatcher(), *blobfs_));
 
   svc_dir->AddEntry(fidl::DiscoverableProtocolName<fuchsia_fs::Admin>,
                     fbl::MakeRefCounted<AdminService>(blobfs_->dispatcher(),
