@@ -13,11 +13,10 @@ namespace fs {
 void InotifyTest::SetUp() {
   ASSERT_EQ(memfs_loop_.StartThread(), ZX_OK);
 
-  zx::status<memfs::Setup> memfs = memfs::Setup::Create(memfs_loop_.dispatcher());
+  zx::status<ScopedMemfs> memfs =
+      ScopedMemfs::CreateMountedAt(memfs_loop_.dispatcher(), kTmpfsPath);
   ASSERT_TRUE(memfs.is_ok());
-
-  ASSERT_EQ(ZX_OK, memfs->MountAt(kTmpfsPath));
-  memfs_ = std::make_unique<memfs::Setup>(std::move(*memfs));
+  memfs_ = std::make_unique<ScopedMemfs>(std::move(*memfs));
 }
 
 void InotifyTest::TearDown() { memfs_.reset(); }

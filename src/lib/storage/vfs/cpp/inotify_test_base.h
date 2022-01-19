@@ -18,7 +18,7 @@
 
 #include "src/lib/fxl/strings/substitute.h"
 #include "src/lib/storage/vfs/cpp/remote_dir.h"
-#include "src/storage/memfs/setup.h"
+#include "src/storage/memfs/scoped_memfs.h"
 
 namespace fs {
 
@@ -38,7 +38,7 @@ class InotifyTest : public zxtest::Test {
   static constexpr char kTmpfsPath[] = "/fshost-inotify-tmp";
 
   async::Loop memfs_loop_;
-  std::unique_ptr<memfs::Setup> memfs_;  // Must be destructed before the above loop.
+  std::unique_ptr<ScopedMemfs> memfs_;  // Must be destructed before the above loop.
 };
 
 }  // namespace fs

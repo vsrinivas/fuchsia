@@ -35,7 +35,7 @@ executable("memory_monitor_unittests") {
     "//src/developer/memory/monitor:lib",
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/testing/loop_fixture",
-    "//src/storage/memfs",
+    "//src/storage/memfs:cpp",
   ]
 
   # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings

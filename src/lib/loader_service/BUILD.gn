@@ -43,7 +43,7 @@ source_set("loader_service_test_fixture") {
     ":loader_service",
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/testing/loop_fixture",
-    "//src/storage/memfs:memfs-cpp",
+    "//src/storage/memfs:lib",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/fbl",

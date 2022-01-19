@@ -5,11 +5,11 @@
 #include <fuchsia/io/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
-#include <lib/memfs/memfs.h>
 #include <lib/svc/outgoing.h>
 #include <lib/zx/channel.h>
 
 #include "src/lib/storage/vfs/cpp/remote_dir.h"
+#include "src/storage/memfs/scoped_memfs.h"
 
 int main(int argc, char* argv[]) {
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
@@ -20,17 +20,14 @@ int main(int argc, char* argv[]) {
     return -1;
   }
 
-  memfs_filesystem_t* vfs;
-  zx::channel memfs_channel;
-  zx_status_t status =
-      memfs_create_filesystem(memfs_loop.dispatcher(), &vfs, memfs_channel.reset_and_get_address());
-  if (status != ZX_OK) {
-    fprintf(stderr, "Failed to create memfs: %d\n", status);
+  zx::status<ScopedMemfs> memfs = ScopedMemfs::Create(memfs_loop.dispatcher());
+  if (memfs.is_error()) {
+    fprintf(stderr, "Failed to create memfs: %s\n", memfs.status_string());
     return -1;
   }
 
   fidl::InterfacePtr<fuchsia::io::Directory> memfs_dir;
-  memfs_dir.Bind(std::move(memfs_channel));
+  memfs_dir.Bind(std::move(memfs->root()));
 
   fidl::InterfaceHandle<fuchsia::io::Node> ro_dir;
   fidl::InterfaceHandle<fuchsia::io::Node> rw_dir;
@@ -55,13 +52,12 @@ int main(int argc, char* argv[]) {
                                 fbl::MakeRefCounted<fs::RemoteDir>(rx_dir.TakeChannel()));
   outgoing.root_dir()->AddEntry("read_only_after_scoped", fbl::MakeRefCounted<fs::RemoteDir>(
                                                               r_after_scoped_dir.TakeChannel()));
-  status = outgoing.ServeFromStartupInfo();
+  zx_status_t status = outgoing.ServeFromStartupInfo();
   if (status != ZX_OK) {
     fprintf(stderr, "Failed to serve outgoing dir: %d\n", status);
     return -1;
   }
 
   loop.Run();
-  memfs_free_filesystem(vfs, nullptr);
   return 0;
 }

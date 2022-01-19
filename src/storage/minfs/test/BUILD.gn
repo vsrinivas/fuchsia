@@ -156,7 +156,7 @@ test("minfs_micro_benchmark") {
     "//src/storage/fvm",
     "//src/storage/gpt",
     "//src/storage/memfs",
-    "//src/storage/memfs:memfs-cpp",
+    "//src/storage/memfs:lib",
     "//src/storage/minfs",
     "//src/storage/testing:storage_driver_test_support",
     "//third_party/googletest:gtest",

@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/cpp/sdk_source_set.gni")
 import("//build/unification/zx_library.gni")
 
 # TODO(brettw) remove this when callers are updated to use full paths.
@@ -9,14 +10,15 @@ config("memfs_config") {
   include_dirs = [ "include" ]
 }
 
-# libmemfs-cpp.a: The C++ client library.
+# The in-memory filesystem implementation.
 #
-# Used to implement the C++ components of Memfs, which
-# can be plugged into ulib/fs.
-static_library("memfs-cpp") {
+# Most users will want to consume the shared library rather than statically linking this
+# implementation. To do that, either use the "memfs" target (C) or the "cpp" target (C++).
+static_library("lib") {
+  output_name = "memfs_lib"
+
   public = [
     "memfs.h",
-    "setup.h",
     "vnode.h",
     "vnode_dir.h",
     "vnode_file.h",
@@ -26,7 +28,6 @@ static_library("memfs-cpp") {
     "dnode.cc",
     "include/lib/memfs/memfs.h",
     "memfs.cc",
-    "setup.cc",
     "vnode.cc",
     "vnode_dir.cc",
     "vnode_file.cc",
@@ -76,7 +77,7 @@ zx_library("memfs") {
     "//zircon/system/ulib/sync",
   ]
   deps = [
-    ":memfs-cpp",
+    ":lib",
     "//sdk/lib/fdio",
     "//src/lib/storage/vfs/cpp",
     "//zircon/system/ulib/fbl",
@@ -85,6 +86,13 @@ zx_library("memfs") {
     "//sdk/lib/fdio:fdio_sdk",
     "//zircon/system/ulib/trace-engine:trace-engine_sdk",
   ]
+}
+
+# A C++ wrapper around the C "memfs" shared library that handles setup and tear-down.
+source_set("cpp") {
+  public = [ "scoped_memfs.h" ]
+
+  public_deps = [ ":memfs" ]
 }
 
 group("tests") {

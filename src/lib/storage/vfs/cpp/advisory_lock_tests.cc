@@ -19,7 +19,7 @@
 
 #include "src/lib/fxl/strings/substitute.h"
 #include "src/lib/storage/vfs/cpp/remote_dir.h"
-#include "src/storage/memfs/setup.h"
+#include "src/storage/memfs/scoped_memfs.h"
 
 namespace {
 constexpr char kTmpfsPath[] = "/fshost-flock-tmp";
@@ -34,10 +34,10 @@ class FlockTest : public zxtest::Test {
   void SetUp() override {
     ASSERT_EQ(memfs_loop_.StartThread(), ZX_OK);
 
-    zx::status<memfs::Setup> memfs = memfs::Setup::Create(memfs_loop_.dispatcher());
+    zx::status<ScopedMemfs> memfs =
+        ScopedMemfs::CreateMountedAt(memfs_loop_.dispatcher(), kTmpfsPath);
     ASSERT_TRUE(memfs.is_ok());
-    ASSERT_EQ(ZX_OK, memfs->MountAt(kTmpfsPath));
-    memfs_ = std::make_unique<memfs::Setup>(std::move(*memfs));
+    memfs_ = std::make_unique<ScopedMemfs>(std::move(*memfs));
   }
 
   void TearDown() override { memfs_.reset(); }
@@ -87,7 +87,7 @@ class FlockTest : public zxtest::Test {
   bool use_first_fd_;
 
   async::Loop memfs_loop_;
-  std::unique_ptr<memfs::Setup> memfs_;
+  std::unique_ptr<ScopedMemfs> memfs_;
 };
 
 TEST_F(FlockTest, FlockOnDir) {

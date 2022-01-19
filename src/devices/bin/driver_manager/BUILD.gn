@@ -132,7 +132,7 @@ source_set("lib") {
     "//src/lib/pkg_url",
     "//src/lib/storage/vfs/cpp",
     "//src/storage/memfs",
-    "//src/storage/memfs:memfs-cpp",
+    "//src/storage/memfs:lib",
     "//src/zircon/lib/zircon",
     "//zircon/system/public",
     "//zircon/system/ulib/async-default",

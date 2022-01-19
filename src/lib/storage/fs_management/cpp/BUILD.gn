@@ -93,7 +93,7 @@ test("fs-management-test") {
     "//src/storage/fvm",
     "//src/storage/gpt",
     "//src/storage/memfs",
-    "//src/storage/memfs:memfs-cpp",
+    "//src/storage/memfs:lib",
     "//src/storage/testing:storage_driver_test_realm",
     "//src/storage/testing:storage_driver_test_support",
     "//third_party/googletest:gtest",

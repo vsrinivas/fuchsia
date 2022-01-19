@@ -11,7 +11,6 @@
 #include <lib/fdio/namespace.h>
 #include <lib/fpromise/single_threaded_executor.h>
 #include <lib/inspect/cpp/reader.h>
-#include <lib/memfs/memfs.h>
 #include <sys/stat.h>
 
 #include <fbl/unique_fd.h>
@@ -19,6 +18,7 @@
 
 #include "src/lib/fxl/strings/substitute.h"
 #include "src/lib/storage/vfs/cpp/remote_dir.h"
+#include "src/storage/memfs/scoped_memfs.h"
 
 namespace {
 
@@ -30,20 +30,13 @@ class InspectManagerTest : public zxtest::Test {
 
   void SetUp() override {
     ASSERT_EQ(memfs_loop_.StartThread(), ZX_OK);
-    zx::channel memfs_root;
-    ASSERT_EQ(memfs_create_filesystem(memfs_loop_.dispatcher(), &memfs_,
-                                      memfs_root.reset_and_get_address()),
-              ZX_OK);
-    ASSERT_OK(fdio_ns_get_installed(&namespace_));
-    ASSERT_OK(fdio_ns_bind(namespace_, kTmpfsPath, memfs_root.release()));
+    zx::status<ScopedMemfs> memfs =
+        ScopedMemfs::CreateMountedAt(memfs_loop_.dispatcher(), kTmpfsPath);
+    ASSERT_TRUE(memfs.is_ok());
+    memfs_ = std::make_unique<ScopedMemfs>(std::move(*memfs));
   }
 
-  void TearDown() override {
-    ASSERT_OK(fdio_ns_unbind(namespace_, kTmpfsPath));
-    sync_completion_t unmounted;
-    memfs_free_filesystem(memfs_, &unmounted);
-    ASSERT_EQ(ZX_OK, sync_completion_wait(&unmounted, zx::duration::infinite().get()));
-  }
+  void TearDown() override { memfs_.reset(); }
 
  protected:
   fbl::RefPtr<fs::RemoteDir> GetRemoteDir() {
@@ -86,9 +79,8 @@ class InspectManagerTest : public zxtest::Test {
     EXPECT_EQ(expected, size_property.Get<inspect::UintPropertyValue>().value());
   }
 
-  fdio_ns_t* namespace_;
   async::Loop memfs_loop_;
-  memfs_filesystem_t* memfs_;
+  std::unique_ptr<ScopedMemfs> memfs_;
 };
 
 TEST_F(InspectManagerTest, ServeStats) {
