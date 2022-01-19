@@ -154,11 +154,8 @@ protocol ConnectTransaction {
 };
 
 type RadioConfig = struct {
-    override_phy bool;
     phy fuchsia.wlan.common.PHY;
-    override_channel_bandwidth bool;
     channel_bandwidth fuchsia.wlan.common.ChannelBandwidth;
-    override_primary_channel bool;
     primary_channel uint8;
 };
 
