@@ -405,7 +405,7 @@ impl Surface {
                         surface.position.1 + geometry.height,
                     )
                 };
-                if x >= x1 as f32 && y >= y1 as f32 && x < x2 as f32 && y < y2 as f32 {
+                if x >= x1 as f32 && y >= y1 as f32 && x <= x2 as f32 && y <= y2 as f32 {
                     return Some((*surface_ref, surface.position));
                 }
             }
