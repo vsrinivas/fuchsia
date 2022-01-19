@@ -50,19 +50,21 @@ func (n *NsJailCmdBuilder) AddDefaultMounts() {
 	n.MountPoints = append(n.MountPoints, []*MountPt{
 		// Many host tests run emulators, which requires KVM.
 		{Src: "/dev/kvm"},
-		// Many host tests rely on /bin/bash or /bin/sh.
-		{Src: "/bin/bash"},
-		{Src: "/bin/sh"},
 		// /bin/bash, in turn, is dynamically linked and requires that we mount the
 		// system linker.
 		{Src: "/lib"},
 		{Src: "/lib64"},
-		// A variety of tests use linux utilities from /usr/bin.
+		// A variety of tests use linux utilities from /usr/bin and /bin.
+		// e.g. https://cs.opensource.google/fuchsia/fuchsia/+/main:sdk/testing/sl4f/client/test/sl4f_client_test.dart;l=69.
 		{Src: "/usr/bin"},
+		{Src: "/bin"},
 		// Additional mounts for convenience.
 		{Src: "/dev/urandom"},
 		{Src: "/dev/zero"},
 		{Src: "/dev/null", Writable: true},
+		// Some host tests utilize ssh-keygen to generate key pairs, which reads
+		// /etc/passwd to figure out the current username.
+		{Src: "/etc/passwd"},
 	}...)
 }
 
@@ -114,12 +116,15 @@ func (n *NsJailCmdBuilder) Build(subcmd []string) ([]string, error) {
 		}
 	}
 
-	// Remove some default rlimits as our emulator tests write large files
-	// and allocate a large amount of RAM.
+	// Overwrite some default nsjail rlimits with our system soft maximums as
+	// the defaults are too restrictive. We should probably tune this a bit
+	// more in the future to absolute values.
 	cmd = append(
 		cmd,
-		"--rlimit_as", "inf",
-		"--rlimit_fsize", "inf",
+		"--rlimit_as", "soft",
+		"--rlimit_fsize", "soft",
+		"--rlimit_nofile", "soft",
+		"--rlimit_nproc", "soft",
 	)
 
 	for _, v := range n.Env {
