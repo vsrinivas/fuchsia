@@ -40,12 +40,12 @@ use {
     log::*,
     moniker::ExtendedMoniker,
     moniker::{
-        AbsoluteMoniker, AbsoluteMonikerBase, PartialAbsoluteMoniker, PartialRelativeMoniker,
+        AbsoluteMonikerBase, PartialAbsoluteMoniker, PartialRelativeMoniker, RelativeMoniker,
         RelativeMonikerBase,
     },
     routing::component_instance::ComponentInstanceInterface,
     std::{
-        convert::TryInto,
+        convert::TryFrom,
         path::PathBuf,
         sync::{Arc, Weak},
     },
@@ -209,12 +209,14 @@ impl StorageAdmin {
                     object,
                     control_handle: _,
                 } => {
-                    let relative_moniker = relative_moniker.as_str().try_into()?;
-                    let abs_moniker =
-                        AbsoluteMoniker::from_relative(component.abs_moniker(), &relative_moniker)?;
+                    let relative_moniker = RelativeMoniker::try_from(relative_moniker.as_str())?;
+                    let abs_moniker = PartialAbsoluteMoniker::from_relative(
+                        component.partial_abs_moniker(),
+                        &relative_moniker.to_partial(),
+                    )?;
                     let instance_id = component
                         .try_get_component_id_index()?
-                        .look_up_moniker(&abs_moniker.to_partial())
+                        .look_up_moniker(&abs_moniker)
                         .cloned();
 
                     let dir_proxy = storage::open_isolated_storage(
@@ -298,19 +300,19 @@ impl StorageAdmin {
                     relative_moniker,
                     responder,
                 } => {
-                    let err_code = match relative_moniker.as_str().try_into() {
+                    let mut response = match RelativeMoniker::try_from(relative_moniker.as_str()) {
                         Err(e) => {
                             warn!("couldn't parse string as relative moniker for storage admin protocol: {:?}", e);
                             Err(fcomponent::Error::InvalidArguments)
                         }
                         Ok(relative_moniker) => {
-                            let abs_moniker = AbsoluteMoniker::from_relative(
-                                component.abs_moniker(),
-                                &relative_moniker,
+                            let abs_moniker = PartialAbsoluteMoniker::from_relative(
+                                component.partial_abs_moniker(),
+                                &relative_moniker.to_partial(),
                             )?;
                             let instance_id = component
                                 .try_get_component_id_index()?
-                                .look_up_moniker(&abs_moniker.to_partial())
+                                .look_up_moniker(&abs_moniker)
                                 .cloned();
                             let res = storage::delete_isolated_storage(
                                 storage_capability_source_info.clone(),
@@ -330,10 +332,7 @@ impl StorageAdmin {
                             }
                         }
                     };
-                    match err_code {
-                        Err(e) => responder.send(&mut Err(e))?,
-                        Ok(()) => responder.send(&mut Ok(()))?,
-                    }
+                    responder.send(&mut response)?
                 }
             }
         }
