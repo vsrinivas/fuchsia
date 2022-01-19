@@ -279,8 +279,10 @@ class GnuHash {
       // up to the number of slots per Addr, since there is always a whole
       // number of Addr words in the overall table.
       const uint32_t bucket_slots = (sizes.nbucket + 1 + kBucketsPerAddr - 1) / kBucketsPerAddr;
+      const uint32_t max_buckets = bucket_slots * kBucketsPerAddr;
 
       if (sizes.nbucket > 0 &&                     // Cannot be empty.
+          sizes.nbucket <= max_buckets &&          // Check for overflow.
           sizes.shift < 32 &&                      // Must be plausible.
           cpp20::has_single_bit(sizes.nfilter) &&  // Must be power of two.
           total_addrs >= sizes.nfilter &&          // Space for the filters.
