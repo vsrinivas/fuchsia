@@ -28,14 +28,12 @@ zx_status_t driver_write(fidl_handle_t handle, WriteOptions write_options, const
   const zx_channel_iovec_t& iovec = static_cast<const zx_channel_iovec_t*>(data)[0];
   fdf_arena_t* arena =
       write_options.outgoing_transport_context.release<internal::DriverTransport>();
-  void* arena_data = fdf_arena_allocate(arena, iovec.capacity);
-  memcpy(arena_data, const_cast<void*>(iovec.buffer), iovec.capacity);
-
   void* arena_handles = fdf_arena_allocate(arena, handles_count * sizeof(fdf_handle_t));
   memcpy(arena_handles, handles, handles_count * sizeof(fdf_handle_t));
 
-  zx_status_t status = fdf_channel_write(handle, 0, arena, arena_data, iovec.capacity,
-                                         static_cast<fdf_handle_t*>(arena_handles), handles_count);
+  zx_status_t status =
+      fdf_channel_write(handle, 0, arena, const_cast<void*>(iovec.buffer), iovec.capacity,
+                        static_cast<fdf_handle_t*>(arena_handles), handles_count);
 
   fdf_arena_destroy(arena);
   return status;
