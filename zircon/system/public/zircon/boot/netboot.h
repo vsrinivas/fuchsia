@@ -109,7 +109,8 @@
 typedef struct board_info {
   char board_name[ZX_MAX_NAME_LEN];
   uint32_t board_revision;
-  uint8_t mac_address[8];
+  uint8_t mac_address[6];
+  uint8_t _padding[2];
 } board_info_t;
 
 #define NB_PATH_MAX 4096
