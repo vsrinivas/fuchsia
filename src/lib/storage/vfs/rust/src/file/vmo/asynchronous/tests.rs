@@ -582,6 +582,18 @@ fn seek_valid_after_size_before_capacity() {
 }
 
 #[test]
+fn seek_triggers_overflow() {
+    run_server_client(
+        OPEN_RIGHT_READABLE,
+        simple_read_only(b"File size and contents don't matter for this test"),
+        |proxy| async move {
+            assert_seek!(proxy, i64::MAX, Start);
+            assert_seek_err!(proxy, 1, Current, Status::OUT_OF_RANGE, i64::MAX as u64);
+        },
+    );
+}
+
+#[test]
 fn seek_invalid_before_0() {
     run_server_client(
         OPEN_RIGHT_READABLE,
@@ -598,20 +610,6 @@ fn seek_invalid_before_0() {
             assert_read!(proxy, " position");
             assert_seek_err!(proxy, -100, End, Status::OUT_OF_RANGE, 13);
             assert_read!(proxy, " is unaffected");
-            assert_close!(proxy);
-        },
-    );
-}
-
-#[test]
-fn seek_invalid_after_capacity() {
-    run_server_client(
-        OPEN_RIGHT_READABLE,
-        read_only(simple_init_vmo_with_capacity(b"Content", 10)),
-        |proxy| async move {
-            assert_seek!(proxy, 8, Start);
-            assert_seek_err!(proxy, 12, Start, Status::OUT_OF_RANGE, 8);
-            assert_seek_err!(proxy, 3, Current, Status::OUT_OF_RANGE, 8);
             assert_close!(proxy);
         },
     );
@@ -638,9 +636,15 @@ fn seek_after_truncate() {
 }
 
 #[test]
-/// Make sure that even if the file content is larger than the capacity, seek does not allow to go
-/// beyond the maximum of the capacity and length.
-fn seek_beyond_capacity_in_large_file() {
+fn seek_empty_file() {
+    run_server_client(OPEN_RIGHT_READABLE, read_only_static(b""), |proxy| async move {
+        assert_seek!(proxy, 0, Start);
+        assert_close!(proxy);
+    });
+}
+
+#[test]
+fn seek_allowed_beyond_capacity() {
     run_server_client(
         OPEN_RIGHT_READABLE,
         read_only(simple_init_vmo_with_capacity(
@@ -650,8 +654,7 @@ fn seek_beyond_capacity_in_large_file() {
             8,
         )),
         |proxy| async move {
-            assert_seek!(proxy, 10, Start);
-            assert_seek_err!(proxy, 12, Start, Status::OUT_OF_RANGE, 10);
+            assert_seek!(proxy, 100, Start);
             assert_close!(proxy);
         },
     );

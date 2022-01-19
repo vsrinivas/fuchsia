@@ -35,7 +35,7 @@ use {
     },
     futures::{lock::MutexGuard, stream::StreamExt},
     static_assertions::assert_eq_size,
-    std::{mem, sync::Arc},
+    std::{convert::TryInto, mem, sync::Arc},
 };
 
 macro_rules! update_initialized_state {
@@ -828,29 +828,30 @@ impl VmoFileConnection {
         let (status, seek) = update_initialized_state! {
             match *self.file.state().await;
             error: "handle_seek" => (zx::Status::INTERNAL, 0);
-            { size, capacity, .. } => {
-                let new_seek = match start {
-                    SeekOrigin::Start => offset as i128,
-
-                    SeekOrigin::Current => {
-                        assert_eq_size!(usize, i64);
-                        self.seek as i128 + offset as i128
-                    }
-
-                    SeekOrigin::End => {
-                        assert_eq_size!(usize, i64, u64);
-                        size as i128 + offset as i128
-                    }
+            { size, .. } => {
+                let new_offset = |current: u64, offset: i64| -> Result<u64, zx::Status> {
+                    // Panic if we've ever managed to overflow an int64.
+                    let current: i64 = current.try_into().unwrap();
+                    current
+                        .checked_add(offset)
+                        .ok_or(zx::Status::OUT_OF_RANGE)?
+                        .try_into()
+                        .map_err(|_| zx::Status::OUT_OF_RANGE)
                 };
 
-                let effective_capacity = core::cmp::max(size as i128, capacity as i128);
-                if new_seek < 0 || new_seek >= effective_capacity {
-                    break (zx::Status::OUT_OF_RANGE, self.seek);
+                match match start {
+                    SeekOrigin::Start => new_offset(0, offset),
+                    SeekOrigin::Current => new_offset(self.seek, offset),
+                    SeekOrigin::End => new_offset(size, offset)
+                } {
+                    Ok(val) => {
+                        self.seek = val;
+                        (zx::Status::OK, val)
+                    }
+                    Err(err) => {
+                        break (err, self.seek);
+                    }
                 }
-                let new_seek = new_seek as u64;
-
-                self.seek = new_seek;
-                (zx::Status::OK, new_seek)
             }
         };
 

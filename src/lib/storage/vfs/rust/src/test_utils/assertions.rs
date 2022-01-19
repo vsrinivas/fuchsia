@@ -198,10 +198,11 @@ macro_rules! assert_seek {
     ($proxy:expr, $pos:expr, Start) => {{
         use $crate::test_utils::assertions::reexport::{SeekOrigin, Status};
 
-        let (status, actual) = $proxy.seek($pos, SeekOrigin::Start).await.expect("seek failed");
+        let (status, actual) =
+            $proxy.seek($pos as i64, SeekOrigin::Start).await.expect("seek failed");
 
         assert_eq!(Status::from_raw(status), Status::OK);
-        assert_eq!(actual, $pos);
+        assert_eq!(actual, $pos as u64);
     }};
     ($proxy:expr, $pos:expr, $start:ident, $expected:expr) => {{
         use $crate::test_utils::assertions::reexport::{SeekOrigin, Status};
