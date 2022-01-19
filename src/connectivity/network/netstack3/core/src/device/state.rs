@@ -256,6 +256,44 @@ impl AddressState {
     }
 }
 
+/// Configuration for an IPv6 address assigned via SLAAC.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(crate) struct SlaacConfig<Instant> {
+    /// The lifetime of the address, or `None` for a link-local address.
+    pub valid_until: Option<Instant>,
+    // TODO(https://fxbug.dev/21428) split this into Static and Temporary enum.
+}
+
+/// The configuration for an IPv6 address.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(crate) enum AddrConfig<Instant> {
+    /// Configured by stateless address autoconfiguration.
+    Slaac(SlaacConfig<Instant>),
+
+    /// Manually configured.
+    Manual,
+}
+
+impl<Instant> AddrConfig<Instant> {
+    /// The configuration for a link-local address configured via SLAAC.
+    ///
+    /// Per [RFC 4862 Section 5.3]: "A link-local address has an infinite preferred and valid
+    /// lifetime; it is never timed out."
+    ///
+    /// [RFC 4862 Section 5.3]: https://tools.ietf.org/html/rfc4862#section-5.3
+    pub(crate) const SLAAC_LINK_LOCAL: Self = Self::Slaac(SlaacConfig { valid_until: None });
+
+    /// Constructs a new `AddrConfig` describing a global address configured via SLAAC.
+    ///
+    /// According to the algorithm specified in [RFC 4862 Section 5.5.3.e], a global address
+    /// determined via SLAAC will always have a non-infinite valid lifetime.
+    ///
+    /// [RFC 4862 Section 5.5.3.e]: https://tools.ietf.org/html/rfc4862#section-5.5.3
+    pub(crate) const fn new_slaac_global(valid_until: Instant) -> Self {
+        Self::Slaac(SlaacConfig { valid_until: Some(valid_until) })
+    }
+}
+
 /// The type of address configuration.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(crate) enum AddrConfigType {
@@ -271,18 +309,16 @@ pub(crate) enum AddrConfigType {
 pub struct AddressEntry<S: IpAddress, Instant, A: Witness<S> + Copy = SpecifiedAddr<S>> {
     addr_sub: AddrSubnet<S, A>,
     pub state: AddressState,
-    config_type: AddrConfigType,
-    pub valid_until: Option<Instant>,
+    pub(crate) config: AddrConfig<Instant>,
 }
 
 impl<S: IpAddress, Instant, A: Witness<S> + Copy> AddressEntry<S, Instant, A> {
     pub(crate) fn new(
         addr_sub: AddrSubnet<S, A>,
         state: AddressState,
-        config_type: AddrConfigType,
-        valid_until: Option<Instant>,
+        config: AddrConfig<Instant>,
     ) -> Self {
-        Self { addr_sub, state, config_type, valid_until }
+        Self { addr_sub, state, config }
     }
 
     pub(crate) fn addr_sub(&self) -> &AddrSubnet<S, A> {
@@ -290,11 +326,23 @@ impl<S: IpAddress, Instant, A: Witness<S> + Copy> AddressEntry<S, Instant, A> {
     }
 
     pub(crate) fn config_type(&self) -> AddrConfigType {
-        self.config_type
+        match self.config {
+            AddrConfig::Slaac(_) => AddrConfigType::Slaac,
+            AddrConfig::Manual => AddrConfigType::Manual,
+        }
     }
 
     pub(crate) fn mark_permanent(&mut self) {
         self.state = AddressState::Assigned;
+    }
+}
+
+impl<S: IpAddress, Instant: Copy, A: Witness<S> + Copy> AddressEntry<S, Instant, A> {
+    pub(crate) fn valid_until(&self) -> Option<Instant> {
+        match &self.config {
+            AddrConfig::Slaac(SlaacConfig { valid_until }) => *valid_until,
+            AddrConfig::Manual => None,
+        }
     }
 }
 

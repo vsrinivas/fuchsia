@@ -10,7 +10,7 @@ pub(crate) mod link;
 pub(crate) mod ndp;
 mod state;
 
-pub(crate) use self::state::{AddrConfigType, AddressEntry, AddressState};
+pub(crate) use self::state::{AddrConfig, AddrConfigType, AddressEntry, AddressState, SlaacConfig};
 
 use alloc::boxed::Box;
 use alloc::vec::Vec;

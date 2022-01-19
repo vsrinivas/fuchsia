@@ -40,7 +40,7 @@ use crate::device::link::LinkDevice;
 use crate::device::ndp::{self, NdpContext, NdpHandler, NdpState, NdpTimerId};
 use crate::device::state::IpDeviceState;
 use crate::device::{
-    AddrConfigType, AddressEntry, AddressError, AddressState, BufferIpDeviceContext,
+    AddrConfig, AddrConfigType, AddressEntry, AddressError, AddressState, BufferIpDeviceContext,
     DeviceIdContext, FrameDestination, IpDeviceContext, RecvIpFrameMeta,
 };
 use crate::ip::gmp::igmp::{IgmpContext, IgmpGroupState, IgmpPacketMetadata, IgmpTimerId};
@@ -431,7 +431,7 @@ pub(super) fn initialize_device<C: EthernetIpDeviceContext>(ctx: &mut C, device_
     // Join the MAC-derived link-local address. Mark it as configured by SLAAC
     // and not set to expire.
     let addr_sub = state.link.mac.to_ipv6_link_local().to_witness();
-    add_ip_addr_subnet_inner(ctx, device_id, addr_sub, AddrConfigType::Slaac, None).expect(
+    add_ip_addr_subnet_inner(ctx, device_id, addr_sub, AddrConfig::SLAAC_LINK_LOCAL).expect(
         "internal invariant violated: uninitialized device already had IP address assigned",
     );
 }
@@ -713,33 +713,30 @@ pub(super) fn add_ip_addr_subnet<C: EthernetIpDeviceContext, A: IpAddress>(
     addr_sub: AddrSubnet<A>,
 ) -> Result<(), AddressError> {
     // Add the IP address and mark it as a manually added address.
-    add_ip_addr_subnet_inner(ctx, device_id, addr_sub, AddrConfigType::Manual, None)
+    add_ip_addr_subnet_inner(ctx, device_id, addr_sub, AddrConfig::Manual)
 }
 
 /// Adds an IP address and associated subnet to this device.
 ///
-/// `config_type` is the way this address is being configured. See
-/// [`AddrConfigType`] for more details.
+/// `config` is the way this address is being configured. See [`AddrConfig`]
+/// for more details.
 ///
 /// For IPv6, this function also joins the solicited-node multicast group and
 /// begins performing Duplicate Address Detection (DAD).
 ///
 /// # Panics
 ///
-/// `add_ip_addr_subnet_inner` panics if `A = Ipv4Addr` and `config_type !=
-/// AddrConfigType::Manual` or `valid_until != None`.
+/// `add_ip_addr_subnet_inner` panics if `A = Ipv4Addr` and `config != AddrConfig::Manual`.
 #[specialize_ip_address]
 fn add_ip_addr_subnet_inner<C: EthernetIpDeviceContext, A: IpAddress>(
     ctx: &mut C,
     device_id: C::DeviceId,
     addr_sub: AddrSubnet<A>,
-    config_type: AddrConfigType,
-    valid_until: Option<C::Instant>,
+    config: AddrConfig<C::Instant>,
 ) -> Result<(), AddressError> {
     #[ipv4addr]
     {
-        assert_eq!(config_type, AddrConfigType::Manual);
-        assert_eq!(valid_until, None);
+        assert_eq!(config, AddrConfig::Manual);
     }
 
     let addr = addr_sub.addr().get();
@@ -763,8 +760,7 @@ fn add_ip_addr_subnet_inner<C: EthernetIpDeviceContext, A: IpAddress>(
         state.ipv6.add_addr(AddressEntry::new(
             addr_sub.to_unicast(),
             AddressState::Tentative,
-            config_type,
-            valid_until,
+            config,
         ));
 
         // Do Duplicate Address Detection on `addr`.
@@ -1368,8 +1364,7 @@ impl<C: EthernetIpDeviceContext> NdpContext<EthernetLinkDevice> for C {
             self,
             device_id,
             addr_sub.to_witness(),
-            AddrConfigType::Slaac,
-            Some(valid_until),
+            AddrConfig::new_slaac_global(valid_until),
         )
     }
 

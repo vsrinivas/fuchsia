@@ -53,7 +53,8 @@ use zerocopy::ByteSlice;
 use crate::context::{CounterContext, RngContext, StateContext, TimerContext};
 use crate::device::link::{LinkAddress, LinkDevice};
 use crate::device::{
-    state::IpDeviceState, AddrConfigType, AddressError, AddressState, DeviceIdContext,
+    state::IpDeviceState, AddrConfig, AddrConfigType, AddressError, AddressState, DeviceIdContext,
+    SlaacConfig,
 };
 use crate::Instant;
 
@@ -517,11 +518,23 @@ pub(crate) trait NdpContext<D: LinkDevice>:
             device_id
         );
 
-        self.get_ip_device_state_mut(device_id)
+        let slaac_config = self
+            .get_ip_device_state_mut(device_id)
             .iter_global_ipv6_addrs_mut()
-            .find(|a| (a.addr_sub().addr() == *addr) && a.config_type() == AddrConfigType::Slaac)
-            .expect("address is not configured via SLAAC on this device")
-            .valid_until = Some(valid_until);
+            .find_map(|a| {
+                if a.addr_sub().addr() == *addr {
+                    match &mut a.config {
+                        AddrConfig::Slaac(slaac) => Some(slaac),
+                        AddrConfig::Manual => None,
+                    }
+                } else {
+                    None
+                }
+            })
+            .expect("address is not configured via SLAAC on this device");
+        match slaac_config {
+            SlaacConfig { valid_until: v } => *v = Some(valid_until),
+        };
     }
 
     /// Is the netstack currently operating as an IPv6 router?
@@ -1676,7 +1689,7 @@ fn apply_slaac_update<'a, D: LinkDevice, C: NdpContext<D>>(
 
         // TODO(https://fxbug.dev/91300): The code below assumes that valid_until is always finite,
         // which it is not. This means the `unwrap` can panic.
-        let entry_valid_until = entry.valid_until.unwrap();
+        let entry_valid_until = entry.valid_until().unwrap();
         let remaining_lifetime = if entry_valid_until < now {
             None
         } else {
@@ -6117,7 +6130,7 @@ mod tests {
     ) {
         assert_eq!(entry.state, AddressState::Assigned);
         assert_eq!(entry.config_type(), AddrConfigType::Slaac);
-        assert_eq!(entry.valid_until, Some(valid_until));
+        assert_eq!(entry.valid_until(), Some(valid_until));
         assert_eq!(
             ctx.dispatcher
                 .timer_events()

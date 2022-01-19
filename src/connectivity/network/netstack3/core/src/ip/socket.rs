@@ -872,7 +872,7 @@ mod ipv6_source_address_selection {
         use net_types::ip::AddrSubnet;
 
         use super::*;
-        use crate::device::AddrConfigType;
+        use crate::device::AddrConfig;
 
         #[test]
         fn test_select_ipv6_source_address() {
@@ -920,8 +920,7 @@ mod ipv6_source_address_selection {
                     AddressEntry::<_, (), _>::new(
                         AddrSubnet::new(Ipv6Addr::from_bytes(bytes), prefix_len).unwrap(),
                         AddressState::Assigned,
-                        AddrConfigType::Manual,
-                        None,
+                        AddrConfig::Manual,
                     )
                 };
 
@@ -963,8 +962,7 @@ mod ipv6_source_address_selection {
                     AddressEntry::<_, (), _>::new(
                         AddrSubnet::new(addr, 128).unwrap(),
                         Assigned,
-                        AddrConfigType::Manual,
-                        None,
+                        AddrConfig::Manual,
                     )
                 };
 
