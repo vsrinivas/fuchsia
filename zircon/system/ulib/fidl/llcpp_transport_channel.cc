@@ -39,9 +39,6 @@ zx_status_t channel_read(fidl_handle_t handle, const ReadOptions& read_options, 
                          uint32_t data_capacity, fidl_handle_t* handles, void* handle_metadata,
                          uint32_t handles_capacity, uint32_t* out_data_actual_count,
                          uint32_t* out_handles_actual_count) {
-#ifndef __Fuchsia__
-  ZX_PANIC("channel_read unsupported on host");
-#else
   uint32_t options = 0;
   if (read_options.discardable) {
     options |= ZX_CHANNEL_READ_MAY_DISCARD;
@@ -63,7 +60,6 @@ zx_status_t channel_read(fidl_handle_t handle, const ReadOptions& read_options, 
     };
   }
   return status;
-#endif
 }
 
 zx_status_t channel_call(fidl_handle_t handle, CallOptions call_options,
