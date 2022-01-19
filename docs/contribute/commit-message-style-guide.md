@@ -63,7 +63,7 @@ Change-Id: I307e5b24df4273661d22c52c81038de50600c76c
 If you want Fuchsia Gerrit to know what issue this change is associated with,
 you need to add the `Bug: <issue-tracker-ID>` line. To associate multiple issues
 with a change, list each bug in a separate line. To link Issue Tracker issues,
-prefix your bug id with `b/`, for example:
+prefix your bug id with `fxbug.dev/`, for example:
 
 ```none {:.devsite-disable-click-to-copy}
 [parent][component] Update component in Fuchsia
@@ -71,7 +71,7 @@ prefix your bug id with `b/`, for example:
 Write the details of a commit message here.
 
 Bug: 82657
-Bug: b/179167977
+Bug: fxbug.dev/179167977
 
 Test: Added test X.
 ```
