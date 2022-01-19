@@ -20,23 +20,24 @@ const (
 // For information about each build API module, see the corresponding
 // `build_api_module` target in //BUILD.gn.
 type Modules struct {
-	buildDir           string
-	apis               []string
-	archives           []Archive
-	args               Args
-	binaries           []Binary
-	checkoutArtifacts  []CheckoutArtifact
-	clippyTargets      []ClippyTarget
-	generatedSources   []string
-	images             []Image
-	packageManifests   []string
-	platforms          []DimensionSet
-	prebuiltBinarySets []PrebuiltBinarySet
-	sdkArchives        []SDKArchive
-	testSpecs          []TestSpec
-	testDurations      []TestDuration
-	tools              Tools
-	zbiTests           []ZBITest
+	buildDir              string
+	apis                  []string
+	archives              []Archive
+	args                  Args
+	assemblyInputArchives []AssemblyInputArchive
+	binaries              []Binary
+	checkoutArtifacts     []CheckoutArtifact
+	clippyTargets         []ClippyTarget
+	generatedSources      []string
+	images                []Image
+	packageManifests      []string
+	platforms             []DimensionSet
+	prebuiltBinarySets    []PrebuiltBinarySet
+	sdkArchives           []SDKArchive
+	testSpecs             []TestSpec
+	testDurations         []TestDuration
+	tools                 Tools
+	zbiTests              []ZBITest
 }
 
 // NewModules returns a Modules associated with a given build directory.
@@ -47,6 +48,7 @@ func NewModules(buildDir string) (*Modules, error) {
 		"api.json":                        &m.apis,
 		"archives.json":                   &m.archives,
 		"args.json":                       &m.args,
+		"assembly_input_archives.json":    &m.assemblyInputArchives,
 		"binaries.json":                   &m.binaries,
 		"checkout_artifacts.json":         &m.checkoutArtifacts,
 		"clippy_target_mapping.json":      &m.clippyTargets,
@@ -91,6 +93,10 @@ func (m Modules) Archives() []Archive {
 
 func (m Modules) Args() Args {
 	return m.args
+}
+
+func (m Modules) AssemblyInputArchives() []AssemblyInputArchive {
+	return m.assemblyInputArchives
 }
 
 func (m Modules) Binaries() []Binary {
