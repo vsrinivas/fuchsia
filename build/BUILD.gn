@@ -137,6 +137,7 @@ group("deprecated_zx_wrapper_allowlist") {
     "//src/lib/ddk/*",
     "//src/lib/ddktl/*",
     "//src/lib/elfldltl/*",
+    "//src/lib/fasync/*",
     "//src/lib/framebuffer/*",
     "//src/lib/llvm-profdata/*",
     "//src/lib/storage/fs_management/*",
