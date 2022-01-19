@@ -28,6 +28,10 @@ group("arrayvec") {
   deps = [ ":arrayvec-v0_7_1" ]
 }
 
+group("assert_matches") {
+  deps = [ ":assert_matches-v1_5_0" ]
+}
+
 if (!(current_os == "fuchsia")) {
   group("async-broadcast") {
     deps = [ ":async-broadcast-v0_2_0" ]
@@ -1268,6 +1272,27 @@ rust_library("arrayvec-v0_7_1") {
     "-Cextra-filename=-2b25e26ec4c0a472",
     "--cfg=feature=\"default\"",
     "--cfg=feature=\"std\"",
+  ]
+}
+
+rust_library("assert_matches-v1_5_0") {
+  crate_name = "assert_matches"
+  crate_root = "//third_party/rust_crates/vendor/assert_matches/src/lib.rs"
+  output_name = "assert_matches-568351bf14d9d02"
+  configs -= [
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
+  ]
+
+  deps = []
+
+  rustenv = []
+
+  rustflags = [
+    "--cap-lints=allow",
+    "--edition=2015",
+    "-Cmetadata=568351bf14d9d02",
+    "-Cextra-filename=-568351bf14d9d02",
   ]
 }
 
