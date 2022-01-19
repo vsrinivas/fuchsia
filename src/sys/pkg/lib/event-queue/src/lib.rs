@@ -182,7 +182,7 @@ where
     clients: Vec<Client<N>>,
     receiver: mpsc::Receiver<Command<N>>,
     events_limit: usize,
-    last_event: Option<N::Event>,
+    prior_events: Vec<N::Event>,
 }
 
 impl<N> EventQueue<N>
@@ -201,7 +201,7 @@ where
     pub fn with_limit(limit: usize) -> (impl Future<Output = ()>, ControlHandle<N>) {
         let (sender, receiver) = mpsc::channel(1);
         let event_queue =
-            EventQueue { clients: Vec::new(), receiver, events_limit: limit, last_event: None };
+            EventQueue { clients: Vec::new(), receiver, events_limit: limit, prior_events: vec![] };
         (event_queue.start(), ControlHandle::new(sender))
     }
 
@@ -242,7 +242,7 @@ where
 
     fn add_client(&mut self, notifier: N) {
         let mut client = Client::new(notifier);
-        if let Some(event) = &self.last_event {
+        for event in &self.prior_events {
             client.queue_event(event.clone(), self.events_limit);
         }
         self.clients.push(client);
@@ -259,7 +259,7 @@ where
                 i += 1;
             }
         }
-        self.last_event = None;
+        self.prior_events = vec![];
     }
 
     fn queue_event(&mut self, event: N::Event) {
@@ -271,7 +271,14 @@ where
                 i += 1;
             }
         }
-        self.last_event = Some(event);
+
+        // Merge this new event with the most recent event, if one exists and is mergable.
+        if let Some(newest_mergable_event) = self.prior_events.last() {
+            if newest_mergable_event.can_merge(&event) {
+                self.prior_events.pop();
+            }
+        }
+        self.prior_events.push(event);
     }
 
     fn try_flush(&mut self, block: BarrierBlock) {
@@ -597,7 +604,9 @@ mod tests {
         // All events prior to the flush now acked, so the flush is done.
         let () = executor.run_singlethreaded(async {
             assert_eq!(receiver1.next().await, Some("second"));
+            assert_eq!(receiver2.next().await, Some("first"));
             assert_eq!(receiver2.next().await, Some("second"));
+            assert_eq!(receiver2.next().await, Some("third"));
         });
         assert_eq!(executor.run_until_stalled(&mut wait_flush), Poll::Ready(Ok(())));
     }
@@ -675,7 +684,7 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn notify_flush_commands_do_not_count_towards_limit() {
-        let (event_queue, mut handle) = EventQueue::<MpscNotifier<&'static str>>::with_limit(2);
+        let (event_queue, mut handle) = EventQueue::<MpscNotifier<&'static str>>::with_limit(3);
         let _event_queue = fasync::Task::local(event_queue);
 
         let (sender1, mut receiver1) = mpsc::channel(0);
@@ -683,7 +692,6 @@ mod tests {
 
         // client 1 will reach the event limit
         handle.add_client(MpscNotifier { sender: sender1 }).await.unwrap();
-        let flush1 = handle.try_flush(Duration::from_secs(1)).await.unwrap();
         handle.queue_event("event1").await.unwrap();
         handle.queue_event("event2").await.unwrap();
 
@@ -691,21 +699,17 @@ mod tests {
         handle.add_client(MpscNotifier { sender: sender2 }).await.unwrap();
         let flush2 = handle.try_flush(Duration::from_secs(1)).await.unwrap();
         handle.queue_event("event3").await.unwrap();
-        let flush3 = handle.try_flush(Duration::from_secs(1)).await.unwrap();
 
-        flush1.await.unwrap();
         assert_eq!(receiver1.next().await, Some("event1"));
-        assert_eq!(receiver1.next().await, None);
+        assert_eq!(receiver1.next().await, Some("event2"));
+        assert_eq!(receiver1.next().await, Some("event3"));
 
+        assert_eq!(receiver2.next().await, Some("event1"));
         assert_eq!(receiver2.next().await, Some("event2"));
-        assert_eq!(receiver2.next().await, Some("event3"));
 
         flush2.await.unwrap();
-        flush3.await.unwrap();
 
-        handle.queue_event("event4").await.unwrap();
-
-        assert_eq!(receiver2.next().await, Some("event4"));
+        assert_eq!(receiver2.next().await, Some("event3"));
         drop(handle);
         assert_eq!(receiver2.next().await, None);
     }
@@ -753,7 +757,7 @@ mod tests {
         handle.queue_event("event3".into()).await.unwrap();
 
         assert_events(&mut stream1, &["event1", "event2", "event3"]).await;
-        assert_events(&mut stream2, &["event2", "event3"]).await;
+        assert_events(&mut stream2, &["event1", "event2", "event3"]).await;
 
         drop(handle);
         assert_matches!(stream1.next().await, None);

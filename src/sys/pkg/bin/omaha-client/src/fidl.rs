@@ -437,41 +437,38 @@ where
             }
         };
 
-        // Attach the monitor if passed for current update.
-        if let Some(monitor) = monitor {
-            if options.allow_attaching_to_existing_update_check == Some(true)
-                || server.borrow().state.manager_state == state_machine::State::Idle
-            {
-                let monitor_proxy = monitor.into_proxy().map_err(|e| {
-                    error!("error getting proxy from monitor: {:?}", e);
-                    CheckNotStartedReason::InvalidOptions
-                })?;
-                let mut monitor_queue = server.borrow().monitor_queue.clone();
-                monitor_queue.add_client(StateNotifier { proxy: monitor_proxy }).await.map_err(
-                    |e| {
-                        error!("error adding client to monitor_queue: {:?}", e);
-                        CheckNotStartedReason::Internal
-                    },
-                )?;
-            }
-        }
-
         let mut state_machine_control = server.borrow().state_machine_control.clone();
 
         let check_options = CheckOptions { source };
 
         match state_machine_control.start_update_check(check_options).await {
-            Ok(StartUpdateCheckResponse::Started) => Ok(()),
+            Ok(StartUpdateCheckResponse::Started) => {}
             Ok(StartUpdateCheckResponse::AlreadyRunning) => {
-                if options.allow_attaching_to_existing_update_check == Some(true) {
-                    Ok(())
-                } else {
-                    Err(CheckNotStartedReason::AlreadyInProgress)
+                if options.allow_attaching_to_existing_update_check != Some(true) {
+                    return Err(CheckNotStartedReason::AlreadyInProgress);
                 }
             }
-            Ok(StartUpdateCheckResponse::Throttled) => Err(CheckNotStartedReason::Throttled),
-            Err(state_machine::StateMachineGone) => Err(CheckNotStartedReason::Internal),
+            Ok(StartUpdateCheckResponse::Throttled) => {
+                return Err(CheckNotStartedReason::Throttled)
+            }
+            Err(state_machine::StateMachineGone) => return Err(CheckNotStartedReason::Internal),
         }
+
+        // Attach the monitor if passed for current update.
+        if let Some(monitor) = monitor {
+            let monitor_proxy = monitor.into_proxy().map_err(|e| {
+                error!("error getting proxy from monitor: {:?}", e);
+                CheckNotStartedReason::InvalidOptions
+            })?;
+            let mut monitor_queue = server.borrow().monitor_queue.clone();
+            monitor_queue.add_client(StateNotifier { proxy: monitor_proxy }).await.map_err(
+                |e| {
+                    error!("error adding client to monitor_queue: {:?}", e);
+                    CheckNotStartedReason::Internal
+                },
+            )?;
+        }
+        Ok(())
     }
 
     async fn handle_set_target(server: Rc<RefCell<Self>>, channel: String) {
