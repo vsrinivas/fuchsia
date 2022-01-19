@@ -531,8 +531,8 @@ where
         writer,
         "Please visit this site. Proceed through the web flow to allow access \
         and copy the authentication code:\
-        \n\n{}\n\nPaste the code (from the web page)
-        \nhere and press return: ",
+        \n\n{}\n\nPaste the code (from the web page) here\
+        \nand press return: ",
         auth_code_url(),
     )?;
     writer.flush().expect("flush auth code prompt");
