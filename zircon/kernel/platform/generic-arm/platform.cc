@@ -223,37 +223,48 @@ static void topology_cpu_init(void) {
   warning_thread->DetachAndResume();
 }
 
-static void process_mem_range(const zbi_mem_range_t& mem_range) {
-  switch (mem_range.type) {
-    case ZBI_MEM_RANGE_RAM:
-      dprintf(INFO, "ZBI: mem arena base %#" PRIx64 " size %#" PRIx64 "\n", mem_range.paddr,
-              mem_range.length);
-      if (arena_count >= kNumArenas) {
-        printf("ZBI: Warning, too many memory arenas, dropping additional\n");
-        break;
-      }
-      mem_arena[arena_count] = pmm_arena_info_t{"ram", 0, mem_range.paddr, mem_range.length};
-      arena_count++;
-      break;
-    case ZBI_MEM_RANGE_PERIPHERAL: {
-      dprintf(INFO, "ZBI: peripheral range base %#" PRIx64 " size %#" PRIx64 "\n", mem_range.paddr,
-              mem_range.length);
-      auto status = add_periph_range(mem_range.paddr, mem_range.length);
-      ASSERT(status == ZX_OK);
-      break;
-    }
-    case ZBI_MEM_RANGE_RESERVED:
+static void process_mem_ranges(ktl::span<const zbi_mem_range_t> ranges) {
+  // First process all the reserved ranges. We do this in case there are reserved regions that
+  // overlap with the RAM regions that occur later in the list. If we didn't process the reserved
+  // regions first, then we might add a pmm arena and have it carve out its vm_page_t array from
+  // what we will later learn is reserved memory.
+  for (const zbi_mem_range_t& mem_range : ranges) {
+    if (mem_range.type == ZBI_MEM_RANGE_RESERVED) {
       dprintf(INFO, "ZBI: reserve mem range base %#" PRIx64 " size %#" PRIx64 "\n", mem_range.paddr,
               mem_range.length);
       boot_reserve_add_range(mem_range.paddr, mem_range.length);
-      break;
-    default:
-      // Treat unknown memory range types as reserved.
-      dprintf(INFO,
-              "ZBI: unknown mem range base %#" PRIx64 " size %#" PRIx64 " (type %" PRIu32 ")\n",
-              mem_range.paddr, mem_range.length, mem_range.type);
-      boot_reserve_add_range(mem_range.paddr, mem_range.length);
-      break;
+    }
+  }
+  for (const zbi_mem_range_t& mem_range : ranges) {
+    switch (mem_range.type) {
+      case ZBI_MEM_RANGE_RAM:
+        dprintf(INFO, "ZBI: mem arena base %#" PRIx64 " size %#" PRIx64 "\n", mem_range.paddr,
+                mem_range.length);
+        if (arena_count >= kNumArenas) {
+          printf("ZBI: Warning, too many memory arenas, dropping additional\n");
+          break;
+        }
+        mem_arena[arena_count] = pmm_arena_info_t{"ram", 0, mem_range.paddr, mem_range.length};
+        arena_count++;
+        break;
+      case ZBI_MEM_RANGE_PERIPHERAL: {
+        dprintf(INFO, "ZBI: peripheral range base %#" PRIx64 " size %#" PRIx64 "\n",
+                mem_range.paddr, mem_range.length);
+        auto status = add_periph_range(mem_range.paddr, mem_range.length);
+        ASSERT(status == ZX_OK);
+        break;
+      }
+      case ZBI_MEM_RANGE_RESERVED:
+        // Already handled the reserved ranges.
+        break;
+      default:
+        // Treat unknown memory range types as reserved.
+        dprintf(INFO,
+                "ZBI: unknown mem range base %#" PRIx64 " size %#" PRIx64 " (type %" PRIu32 ")\n",
+                mem_range.paddr, mem_range.length, mem_range.type);
+        boot_reserve_add_range(mem_range.paddr, mem_range.length);
+        break;
+    }
   }
 }
 
@@ -387,9 +398,7 @@ void ProcessPhysHandoff() {
     boot_reserve_add_range(nvram.base, nvram.length);
   }
 
-  for (const zbi_mem_range_t& range : gPhysHandoff->mem_config.get()) {
-    process_mem_range(range);
-  }
+  process_mem_ranges(gPhysHandoff->mem_config.get());
 }
 
 void platform_early_init(void) {
