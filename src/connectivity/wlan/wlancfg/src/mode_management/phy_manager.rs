@@ -435,6 +435,10 @@ impl PhyManagerApi for PhyManager {
     }
 
     fn get_client(&mut self) -> Option<u16> {
+        if !self.client_connections_enabled {
+            return None;
+        }
+
         let client_capable_phys = self.phys_for_role(MacRole::Client);
         if client_capable_phys.is_empty() {
             return None;
@@ -1427,6 +1431,7 @@ mod tests {
         let test_values = test_setup();
         let mut phy_manager =
             PhyManager::new(test_values.dev_svc_proxy, test_values.monitor_proxy, test_values.node);
+        phy_manager.client_connections_enabled = true;
 
         // Create an initial PhyContainer to be inserted into the test PhyManager before the fake
         // iface is added.
@@ -1528,6 +1533,30 @@ mod tests {
         assert_eq!(client.unwrap(), fake_iface_id)
     }
 
+    /// Tests that PhyManager will not return a client interface when client connections are not
+    /// enabled.
+    #[fuchsia::test]
+    fn get_client_while_stopped() {
+        let _exec = TestExecutor::new().expect("failed to create an executor");
+        let test_values = test_setup();
+
+        // Create a new PhyManager.  On construction, client connections are disabled.
+        let mut phy_manager =
+            PhyManager::new(test_values.dev_svc_proxy, test_values.monitor_proxy, test_values.node);
+        assert!(!phy_manager.client_connections_enabled);
+
+        // Add a PHY with a lingering client interface.
+        let fake_phy_id = 1;
+        let fake_mac_roles = vec![MacRole::Client];
+        let mut phy_container = PhyContainer::new(fake_mac_roles);
+        let _ = phy_container.client_ifaces.insert(1, vec![]);
+        let _ = phy_manager.phys.insert(fake_phy_id, phy_container);
+
+        // Try to get a client interface.  No interface should be returned since client connections
+        // are disabled.
+        assert_eq!(phy_manager.get_client(), None);
+    }
+
     /// Tests the PhyManager's response to stop_client_connection when there is an existing client
     /// iface.  The expectation is that the client iface is destroyed and there is no remaining
     /// record of the iface ID in the PhyManager.
@@ -1569,6 +1598,9 @@ mod tests {
 
         let phy_container = phy_manager.phys.get(&fake_phy_id).unwrap();
         assert!(!phy_container.client_ifaces.contains_key(&fake_iface_id));
+
+        // Verify that the client_connections_enabled has been set to false.
+        assert!(!phy_manager.client_connections_enabled);
     }
 
     /// Tests the PhyManager's response to destroy_all_client_ifaces when no client ifaces are
