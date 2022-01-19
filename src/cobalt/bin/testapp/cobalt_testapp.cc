@@ -56,13 +56,13 @@ constexpr char kCobaltNoEventAggregatorWorker[] = "#meta/cobalt_no_event_aggrega
     std::unique_ptr<sys::testing::ScopedChild> child =                       \
         std::make_unique<sys::testing::ScopedChild>(Connect(variant));       \
     if (!(test)) {                                                           \
-      DropChild(std::move(child));                                           \
+      child->MakeTeardownAsync(loop_->dispatcher());                         \
       child = std::make_unique<sys::testing::ScopedChild>(Connect(variant)); \
       if (!(test)) {                                                         \
         return false;                                                        \
       }                                                                      \
     }                                                                        \
-    DropChild(std::move(child));                                             \
+    child->MakeTeardownAsync(loop_->dispatcher());                           \
   }
 
 bool CobaltTestApp::RunTests() {
@@ -78,7 +78,7 @@ bool CobaltTestApp::RunTests() {
   TRY_TEST(TestLogIntHistogram(&logger_));
   TRY_TEST(TestLogCustomEvent(&logger_));
   TRY_TEST(TestLogCobaltEvent(&logger_));
-  DropChild(std::move(child));
+  child->MakeTeardownAsync(loop_->dispatcher());
 
   return DoLocalAggregationTests(kEventAggregatorBackfillDays, kCobaltNoEventAggregatorWorker);
 }
@@ -124,8 +124,9 @@ sys::testing::ScopedChild CobaltTestApp::Connect(const std::string &variant) {
 
   auto child = sys::testing::ScopedChild::New(
       std::move(realm_proxy), "realm_builder",
-      "cobalt_under_test_" + std::to_string(scoped_child_destructors_.size()), variant);
+      "cobalt_under_test_" + std::to_string(scoped_children_), variant);
   logger_.SetCobaltUnderTestMoniker("realm_builder\\:" + child.GetChildName());
+  scoped_children_ += 1;
 
   fuchsia::cobalt::LoggerFactorySyncPtr logger_factory =
       child.ConnectSync<fuchsia::cobalt::LoggerFactory>();

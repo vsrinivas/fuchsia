@@ -69,22 +69,8 @@ class CobaltTestApp {
   bool use_network_;
   bool test_for_prober_;
   std::unique_ptr<util::SystemClockInterface> clock_;
-
-  // ==================================================================================
-  // TODO(fxbug.dev/83362): Hack to deal with slow destructor.
-  std::vector<std::thread> scoped_child_destructors_;
-  void DropChild(std::unique_ptr<sys::testing::ScopedChild> child) {
-    scoped_child_destructors_.emplace_back(std::thread([child = std::move(child)] {}));
-  }
-
- public:
-  ~CobaltTestApp() {
-    for (std::thread &t : scoped_child_destructors_) {
-      t.join();
-    }
-  }
-  // End: Hack to deal with slow destructor.
-  // ==================================================================================
+  // Counter used to generate unique ScopedChild names.
+  std::size_t scoped_children_ = 0;
 
  private:
   FXL_DISALLOW_COPY_AND_ASSIGN(CobaltTestApp);
