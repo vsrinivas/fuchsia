@@ -244,7 +244,7 @@ mod internal {
         /// IEEE 802.11-2016 12.4.5.4
         /// Maps the given secret element to the shared secret value. Returns None if this is the
         /// identity element for this FCG, indicating that we have in invalid secret element.
-        fn map_to_secret_value(&self, element: &Self::Element) -> Result<Option<Bignum>, Error>;
+        fn map_to_secret_value(&self, element: &Self::Element) -> Result<Option<Vec<u8>>, Error>;
         /// IEEE 802.11-2016 12.4.2: The FCG Element must convert into an octet string such
         /// that it may be included in the confirmation hash when completing SAE.
         fn element_to_octets(&self, element: &Self::Element) -> Result<Vec<u8>, Error>;

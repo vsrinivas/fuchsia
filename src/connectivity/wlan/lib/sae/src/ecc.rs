@@ -120,7 +120,7 @@ impl FiniteCyclicGroup for Group {
     fn generate_pwe(&self, params: &SaeParameters) -> Result<Self::Element, Error> {
         let group_params = self.group.get_params(&self.bn_ctx)?;
         let length = group_params.p.bits();
-        let p_vec = group_params.p.to_vec();
+        let p_vec = group_params.p.to_be_vec(group_params.p.len());
         let (qr, qnr) = generate_qr_and_qnr(&group_params.p, &self.bn_ctx)?;
         // Our loop will set these two values.
         let mut x: Option<Bignum> = None;
@@ -193,13 +193,14 @@ impl FiniteCyclicGroup for Group {
         self.group.get_order(&self.bn_ctx)
     }
 
-    fn map_to_secret_value(&self, element: &Self::Element) -> Result<Option<Bignum>, Error> {
+    fn map_to_secret_value(&self, element: &Self::Element) -> Result<Option<Vec<u8>>, Error> {
         // IEEE 802.11-2016 12.4.4.2.1 (end of section)
         if element.is_point_at_infinity(&self.group) {
             Ok(None)
         } else {
+            let group_params = self.group.get_params(&self.bn_ctx)?;
             let (x, _y) = element.to_affine_coords(&self.group, &self.bn_ctx)?;
-            Ok(Some(x))
+            Ok(Some(x.to_be_vec(group_params.p.len())))
         }
     }
 
@@ -208,8 +209,8 @@ impl FiniteCyclicGroup for Group {
         let group_params = self.group.get_params(&self.bn_ctx)?;
         let length = group_params.p.len();
         let (x, y) = element.to_affine_coords(&self.group, &self.bn_ctx)?;
-        let mut res = x.to_left_padded_vec(length);
-        res.append(&mut y.to_left_padded_vec(length));
+        let mut res = x.to_be_vec(length);
+        res.append(&mut y.to_be_vec(length));
         Ok(res)
     }
 
@@ -273,6 +274,7 @@ mod tests {
     #[test]
     fn generate_pwe() {
         let group = make_group();
+        let group_params = group.group.get_params(&group.bn_ctx).unwrap();
         let params = SaeParameters {
             hmac: Box::new(HmacUtilsImpl::<Sha256>::new()),
             password: Vec::from(TEST_PWD),
@@ -281,13 +283,14 @@ mod tests {
         };
         let pwe = group.generate_pwe(&params).unwrap();
         let (x, y) = pwe.to_affine_coords(&group.group, &group.bn_ctx).unwrap();
-        assert_eq!(x.to_vec(), TEST_PWE_X);
-        assert_eq!(y.to_vec(), TEST_PWE_Y);
+        assert_eq!(x.to_be_vec(group_params.p.len()), TEST_PWE_X);
+        assert_eq!(y.to_be_vec(group_params.p.len()), TEST_PWE_Y);
     }
 
     #[test]
     fn symmetric_generate_pwe() {
         let group = make_group();
+        let group_params = group.group.get_params(&group.bn_ctx).unwrap();
         let params = SaeParameters {
             hmac: Box::new(HmacUtilsImpl::<Sha256>::new()),
             password: Vec::from(TEST_PWD),
@@ -297,8 +300,8 @@ mod tests {
         };
         let pwe = group.generate_pwe(&params).unwrap();
         let (x, y) = pwe.to_affine_coords(&group.group, &group.bn_ctx).unwrap();
-        assert_eq!(x.to_vec(), TEST_PWE_X);
-        assert_eq!(y.to_vec(), TEST_PWE_Y);
+        assert_eq!(x.to_be_vec(group_params.p.len()), TEST_PWE_X);
+        assert_eq!(y.to_be_vec(group_params.p.len()), TEST_PWE_Y);
     }
 
     #[test]

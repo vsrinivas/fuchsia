@@ -50,7 +50,7 @@ impl<E> Commit<E> {
     fn serialize(&self, config: &SaeConfiguration<E>) -> Result<SerializedCommit, Error> {
         let fcg = (config.fcg)()?;
         let scalar_size = fcg.scalar_size()?;
-        let scalar = self.scalar.to_left_padded_vec(scalar_size);
+        let scalar = self.scalar.to_be_vec(scalar_size);
         let element = fcg.element_to_octets(&self.element)?;
         Ok(SerializedCommit { scalar, element })
     }
@@ -152,13 +152,16 @@ fn process_commit<E>(
         None => return Ok(FrameResult::Drop), // This is an auth failure.
     };
     let ctx = BignumCtx::new()?;
-    let keyseed = config.params.hmac.hkdf_extract(&[0u8; 32][..], &k.to_vec()[..]);
-    let sha_ctx = peer_commit.scalar.mod_add(&commit.scalar, &fcg.order()?, &ctx)?.to_vec();
+    let keyseed = config.params.hmac.hkdf_extract(&[0u8; 32][..], &k);
+    let sha_ctx = peer_commit
+        .scalar
+        .mod_add(&commit.scalar, &fcg.order()?, &ctx)?
+        .to_be_vec(fcg.scalar_size()?);
     let q = config.params.hmac.bits();
     let kck_and_pmk =
         config.params.hmac.kdf_hash_length(&keyseed[..], "SAE KCK and PMK", &sha_ctx[..], q + 256);
     let kck = kck_and_pmk[0..q / 8].to_vec();
-    let pmk = kck_and_pmk[q / 8..64].to_vec();
+    let pmk = kck_and_pmk[q / 8..(q + 256) / 8].to_vec();
     let pmkid = sha_ctx[0..16].to_vec();
     Ok(FrameResult::Proceed((peer_commit, Kck(kck), Key { pmk, pmkid })))
 }
@@ -198,11 +201,11 @@ impl<E> SaeNew<E> {
         let order = fcg.order()?;
         let ctx = BignumCtx::new()?;
         let (rand, mask, scalar) = loop {
-            // 2 < rand < order
-            let rand = Bignum::rand(&order.sub(Bignum::new_from_u64(3)?)?)?
-                .add(Bignum::new_from_u64(3)?)?;
-            // 1 < mask < rand
-            let mask = Bignum::rand(&rand.sub(Bignum::new_from_u64(2)?)?)?
+            // 1 < rand < order
+            let rand = Bignum::rand(&order.sub(Bignum::new_from_u64(2)?)?)?
+                .add(Bignum::new_from_u64(2)?)?;
+            // 1 < mask < order
+            let mask = Bignum::rand(&order.sub(Bignum::new_from_u64(2)?)?)?
                 .add(Bignum::new_from_u64(2)?)?;
             let commit_scalar = rand.mod_add(&mask, &order, &ctx)?;
             if !commit_scalar.is_zero() && !commit_scalar.is_one() {
@@ -213,7 +216,10 @@ impl<E> SaeNew<E> {
             .element_from_octets(&self.config.pwe)?
             .ok_or(format_err!("Could not unwrap PWE"))?;
         let element = fcg.inverse_op(fcg.scalar_op(&mask, &pwe)?)?;
-        Ok((rand.to_vec(), Commit { scalar, element }.serialize(&self.config)?))
+        Ok((
+            rand.to_be_vec(fcg.scalar_size()?),
+            Commit { scalar, element }.serialize(&self.config)?,
+        ))
     }
 
     fn send_first_commit(

@@ -239,7 +239,7 @@ mod tests {
         let bignumctx = BignumCtx::new().unwrap();
         let group = EcGroup::new(TEST_GROUP).unwrap();
         let p = group.get_params(&bignumctx).unwrap().p;
-        let p_vec = p.to_vec();
+        let p_vec = p.to_be_vec(p.len());
         let p_bits = p.bits();
 
         let cand_1 =
@@ -274,7 +274,7 @@ mod tests {
         let kck_and_pmk = kdf_hash_length::<Sha256>(
             &hex::decode(TEST_KEYSEED).unwrap(),
             TEST_LABEL_2,
-            &context.to_left_padded_vec(r.len()),
+            &context.to_be_vec(r.len()),
             q + 256,
         );
         assert_eq!(kck_and_pmk.len(), (q + 256) / 8);
