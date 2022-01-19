@@ -19,6 +19,7 @@ namespace {
 constexpr zx::duration kInterval = zx::min(4);  // to save the world
 
 struct MoveOnly {
+  MoveOnly(bool b) : called(b) {}
   MoveOnly(MoveOnly&&) = default;
   bool called;
   FXL_DISALLOW_COPY_AND_ASSIGN(MoveOnly);
