@@ -307,3 +307,5 @@ toc:
   path: /docs/contribute/governance/rfcs/0146_structured_config_schemas_in_cml.md
 - title: "RFC-0147: View System"
   path: /docs/contribute/governance/rfcs/0147_view_system.md
+- title: "RFC-0148: CI Guidelines"
+  path: /docs/contribute/governance/rfcs/0148_ci_guidelines.md

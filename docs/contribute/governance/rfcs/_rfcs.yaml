@@ -1917,3 +1917,16 @@
   consulted: ['sanjayc@google.com', 'hjfreyer@google.com', 'lindkvist@google.com', 'jsankey@google.com']
   submitted: '2021-11-03'
   reviewed: '2022-01-05'
+
+- name: 'RFC-0148'
+  title: 'CI Guidelines'
+  short_description: 'Guidelines for project and infrastructure owners in the Fuchsia ecosystem to create sustainable CI (Continuous Integration) experiences.'
+  authors: ['atyfto@google.com']
+  file: '0148_ci_guidelines.md'
+  area: ['Developer', 'Governance']
+  issue: []
+  gerrit_change_id: ['613084']
+  status: 'Accepted'
+  reviewers: ['maruel@google.com', 'awolter@google.com', 'chaselatta@google.com', 'shayba@google.com', 'nsylvain@google.com', 'mangini@google.com', 'nmulcahey@google.com', 'dgilhooley@google.com', 'lijiaming@google.com', 'hjfreyer@google.com']
+  submitted: '2021-12-02'
+  reviewed: '2022-01-18'
