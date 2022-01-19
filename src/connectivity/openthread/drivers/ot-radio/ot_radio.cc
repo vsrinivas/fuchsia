@@ -51,8 +51,23 @@ void OtRadioDevice::LowpanSpinelDeviceFidlImpl::Bind(
       fidl::BindServer(dispatcher, std::move(channel), this, std::move(on_unbound));
 }
 
+void OtRadioDevice::ResetFrameInspectData() {
+  bool invalid_state = false;
+  for (size_t i = 0; i < pending_tid_->size(); i++) {
+    if (pending_tid_->at(i)) {
+      zxlogf(ERROR, "ot-radio: pending tid %zu while resetting the radio", i);
+      pending_tid_->at(i) = false;
+      invalid_state = true;
+    }
+  }
+  if (!invalid_state) {
+    zxlogf(INFO, "ot-radio: no pending tid while resetting the radio");
+  }
+}
+
 void OtRadioDevice::LowpanSpinelDeviceFidlImpl::Open(OpenRequestView request,
                                                      OpenCompleter::Sync& completer) {
+  ot_radio_obj_.ResetFrameInspectData();
   zx_status_t res = ot_radio_obj_.Reset();
   if (res == ZX_OK) {
     zxlogf(DEBUG, "open succeed, returning");
@@ -229,7 +244,7 @@ zx_status_t OtRadioDevice::Init() {
 
   spinel_framer_ = std::make_unique<ot::SpinelFramer>();
   spinel_framer_->Init(spi_);
-
+  pending_tid_ = std::make_unique<std::vector<bool>>(kNumberOfTid, false);
   return ZX_OK;
 }
 
@@ -259,11 +274,20 @@ zx_status_t OtRadioDevice::ReadRadioPacket() {
   return ZX_OK;
 }
 
+void OtRadioDevice::InspectInboundFrame(uint8_t* frame_buffer, uint16_t length) {
+  uint8_t tid = frame_buffer[0] & 0xF;
+  if (tid != 0 && !pending_tid_->at(tid)) {
+    zxlogf(ERROR, "ot-radio: receiving non-pending tid %hhu from radio", tid);
+  }
+  pending_tid_->at(tid) = false;
+}
+
 zx_status_t OtRadioDevice::HandleRadioRxFrame(uint8_t* frameBuffer, uint16_t length) {
   zxlogf(DEBUG, "ot-radio: received frame of len:%d", length);
   if (power_status_ == OT_SPINEL_DEVICE_ON) {
     auto data = fidl::VectorView<uint8_t>::FromExternal(frameBuffer, length);
     fidl::Result result = (*fidl_binding_)->OnReceiveFrame(std::move(data));
+    InspectInboundFrame(frameBuffer, length);
     if (!result.ok()) {
       zxlogf(ERROR, "ot-radio: failed to send OnReceive() event due to %s",
              result.FormatDescription().c_str());
@@ -279,6 +303,14 @@ zx_status_t OtRadioDevice::HandleRadioRxFrame(uint8_t* frameBuffer, uint16_t len
   return ZX_OK;
 }
 
+void OtRadioDevice::InspectOutboundFrame(uint8_t* frame_buffer, uint16_t length) {
+  uint8_t tid = frame_buffer[0] & 0xF;
+  if (tid != 0 && pending_tid_->at(tid)) {
+    zxlogf(ERROR, "ot-radio: sending pending tid %hhu again to radio", tid);
+  }
+  pending_tid_->at(tid) = true;
+}
+
 zx_status_t OtRadioDevice::RadioPacketTx(uint8_t* frameBuffer, uint16_t length) {
   zxlogf(DEBUG, "ot-radio: RadioPacketTx");
   zx_port_packet packet = {PORT_KEY_TX_TO_RADIO, ZX_PKT_TYPE_USER, ZX_OK, {}};
@@ -287,6 +319,7 @@ zx_status_t OtRadioDevice::RadioPacketTx(uint8_t* frameBuffer, uint16_t length) 
   }
   memcpy(spi_tx_buffer_, frameBuffer, length);
   spi_tx_buffer_len_ = length;
+  InspectOutboundFrame(frameBuffer, length);
   return port_.queue(&packet);
 }
 

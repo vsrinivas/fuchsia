@@ -47,6 +47,7 @@ constexpr uint32_t kMaxFrameSize = 2048;
 constexpr uint8_t kGetNcpVersionTID = 0xc;  // 4 bit TID for GetNCP version spinel cmd
                                             // chosen arbitrarily
 constexpr int kGetNcpVersionMaxRetries = 5;
+constexpr int kNumberOfTid = 15 + 1;
 
 enum {
   PORT_KEY_RADIO_IRQ,
@@ -115,6 +116,10 @@ class OtRadioDevice : public DeviceType {
   zx_status_t RadioPacketTx(uint8_t* frameBuffer, uint16_t length);
   zx_status_t InvokeInterruptHandler();
   bool IsInterruptAsserted();
+  void InspectOutboundFrame(uint8_t* frame_buffer, uint16_t length);
+  void InspectInboundFrame(uint8_t* frame_buffer, uint16_t length);
+  void ResetFrameInspectData();
+
 #ifdef INTERNAL_ACCESS
   zx_status_t CheckFWUpdateRequired(bool* update_fw);
 #endif
@@ -166,6 +171,7 @@ class OtRadioDevice : public DeviceType {
   bool interrupt_is_asserted_ = false;
   bool inbound_frame_available_ = false;
   zx::time hard_reset_end_ = zx::time(0);
+  std::unique_ptr<std::vector<bool>> pending_tid_;
 };
 
 }  // namespace ot
