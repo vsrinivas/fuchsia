@@ -936,8 +936,7 @@ impl<'a> MetricState<'a> {
         })
     }
 
-    // Returns Bool true if the given metric is Missing, false if the metric has a value. Propagates
-    // non-Missing errors.
+    // Returns Bool true if and only if the value for the given metric is any sort of Problem.
     fn is_problem(&self, namespace: &str, operands: &Vec<Expression>) -> MetricValue {
         if operands.len() != 1 {
             return syntax_error(format!(
