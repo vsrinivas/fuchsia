@@ -1,8 +1,8 @@
 {
     include: [
         "//sdk/lib/driver_test_realm/meta/realm_builder.shard.cml",
-        "//src/lib/fuchsia-component-test/meta/fuchsia_component_test.shard.cml",
         "//src/sys/test_runners/rust/default.shard.cml",
+        "sys/component/realm_builder.shard.cml",
         "syslog/client.shard.cml",
     ],
     program: {

@@ -4,12 +4,11 @@
 {
     // [START include_shard_cpp]
     include: [
-        "//src/lib/fuchsia-component-test/meta/fuchsia_component_test.shard.cml",
+        "sys/component/realm_builder.shard.cml",
 
         // [START_EXCLUDE]
         "//src/sys/test_runners/gtest/default.shard.cml",
         "syslog/client.shard.cml",
-
         // [END_EXCLUDE]
     ],
 

@@ -69,7 +69,7 @@ rustc_library("fuchsia-component-test-lib") {
 }
 
 expect_includes("includes") {
-  includes = [ "meta/fuchsia_component_test.shard.cml" ]
+  includes = [ "//sdk/lib/sys/component/realm_builder.shard.cml" ]
 }
 
 fuchsia_unittest_package("fuchsia_component_test_unittests") {
