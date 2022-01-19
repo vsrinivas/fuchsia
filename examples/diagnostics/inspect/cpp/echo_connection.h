@@ -13,8 +13,6 @@ namespace example {
 struct EchoConnectionStats {
   inspect::UintProperty bytes_processed;
   inspect::UintProperty total_requests;
-
-  EchoConnectionStats(EchoConnectionStats&&) = default;
 };
 
 class EchoConnection : public fidl::examples::routing::echo::Echo {
