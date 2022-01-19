@@ -479,8 +479,9 @@ async fn test_wlan_ap_dhcp_server<E: netemul::Endpoint, M: Manager>(name: &str) 
         wait_for_component_stopped(&realm, M::MANAGEMENT_AGENT.get_component_name(), None).fuse();
     futures::pin_mut!(wait_for_netmgr);
 
-    // Add a WLAN AP, make sure the DHCP server gets configured and starts or stops when the
-    // interface is added and brought up or brought down/removed.
+    // Add a WLAN AP, make sure the DHCP server gets configured and starts or
+    // stops when the interface is added and brought up or brought down/removed.
+    // A loop is used to emulate interface flaps.
     for i in 0..=1 {
         let test_fut = wlan_ap_dhcp_server_inner::<E>(&sandbox, &realm, i).fuse();
         futures::pin_mut!(test_fut);
