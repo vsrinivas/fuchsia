@@ -48,28 +48,11 @@ void RootResourceFilter::Finalize() {
     ASSERT(res == ZX_OK);
   }
 
-  zbitl::View zbi(ZbiInPhysmap());
-  for (auto [header, payload] : zbi) {
-    if (header->type != ZBI_TYPE_MEM_CONFIG) {
-      continue;
+  for (const zbi_mem_range_t& mem_range : gPhysHandoff->mem_config.get()) {
+    if (mem_range.type == ZBI_MEM_RANGE_RESERVED) {
+      mmio_deny_.SubtractRegion({.base = mem_range.paddr, .size = mem_range.length},
+                                RegionAllocator::AllowIncomplete::Yes);
     }
-    const zbi_mem_range_t* mem_range = reinterpret_cast<const zbi_mem_range_t*>(payload.data());
-    const uint32_t count = header->length / static_cast<uint32_t>(sizeof(zbi_mem_range_t));
-
-    for (uint32_t i = 0; i < count; i++, mem_range++) {
-      if (mem_range->type == ZBI_MEM_RANGE_RESERVED) {
-        mmio_deny_.SubtractRegion({.base = mem_range->paddr, .size = mem_range->length},
-                                  RegionAllocator::AllowIncomplete::Yes);
-      }
-    }
-  }
-  if (auto result = zbi.take_error(); result.is_error()) {
-    auto error = std::move(result).error_value();
-    dprintf(INFO,
-            "WARNING - error encountered while iterating over ZBI at offset"
-            " %#x: %.*s. Reserved memory regions will not be removed from the"
-            " resource deny list.\n",
-            error.item_offset, static_cast<int>(error.zbi_error.size()), error.zbi_error.data());
   }
 
   // Dump the deny list at spew level for debugging purposes.
