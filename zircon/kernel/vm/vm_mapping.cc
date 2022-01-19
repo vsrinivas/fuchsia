@@ -767,25 +767,38 @@ zx_status_t VmMapping::PageFaultWithVmoCallback(
   MappingProtectionRanges::FlagsRange range =
       ProtectRangesLocked().FlagsRangeAtAddr(base_, size_, va);
 
-  // make sure we have permission to continue
-  if ((pf_flags & VMM_PF_FLAG_USER) && !(range.mmu_flags & ARCH_MMU_FLAG_PERM_USER)) {
-    // user page fault on non user mapped region
-    LTRACEF("permission failure: user fault on non user region\n");
-    return ZX_ERR_ACCESS_DENIED;
+  // Build the mmu flags we need to have based on the page fault. This strategy of building the
+  // flags and then comparing all at once allows the compiler to provide much better code gen.
+  uint needed_mmu_flags = 0;
+  if (pf_flags & VMM_PF_FLAG_USER) {
+    needed_mmu_flags |= ARCH_MMU_FLAG_PERM_USER;
   }
-  if ((pf_flags & VMM_PF_FLAG_WRITE) && !(range.mmu_flags & ARCH_MMU_FLAG_PERM_WRITE)) {
-    // write to a non-writeable region
-    LTRACEF("permission failure: write fault on non-writable region\n");
-    return ZX_ERR_ACCESS_DENIED;
+  if (pf_flags & VMM_PF_FLAG_WRITE) {
+    needed_mmu_flags |= ARCH_MMU_FLAG_PERM_WRITE;
+  } else {
+    needed_mmu_flags |= ARCH_MMU_FLAG_PERM_READ;
   }
-  if (!(pf_flags & VMM_PF_FLAG_WRITE) && !(range.mmu_flags & ARCH_MMU_FLAG_PERM_READ)) {
-    // read to a non-readable region
-    LTRACEF("permission failure: read fault on non-readable region\n");
-    return ZX_ERR_ACCESS_DENIED;
+  if (pf_flags & VMM_PF_FLAG_INSTRUCTION) {
+    needed_mmu_flags |= ARCH_MMU_FLAG_PERM_EXECUTE;
   }
-  if ((pf_flags & VMM_PF_FLAG_INSTRUCTION) && !(range.mmu_flags & ARCH_MMU_FLAG_PERM_EXECUTE)) {
-    // instruction fetch from a no execute region
-    LTRACEF("permission failure: execute fault on no execute region\n");
+  // Check that all the needed flags are present.
+  if (unlikely((range.mmu_flags & needed_mmu_flags) != needed_mmu_flags)) {
+    if ((pf_flags & VMM_PF_FLAG_USER) && !(range.mmu_flags & ARCH_MMU_FLAG_PERM_USER)) {
+      // user page fault on non user mapped region
+      LTRACEF("permission failure: user fault on non user region\n");
+    }
+    if ((pf_flags & VMM_PF_FLAG_WRITE) && !(range.mmu_flags & ARCH_MMU_FLAG_PERM_WRITE)) {
+      // write to a non-writeable region
+      LTRACEF("permission failure: write fault on non-writable region\n");
+    }
+    if (!(pf_flags & VMM_PF_FLAG_WRITE) && !(range.mmu_flags & ARCH_MMU_FLAG_PERM_READ)) {
+      // read to a non-readable region
+      LTRACEF("permission failure: read fault on non-readable region\n");
+    }
+    if ((pf_flags & VMM_PF_FLAG_INSTRUCTION) && !(range.mmu_flags & ARCH_MMU_FLAG_PERM_EXECUTE)) {
+      // instruction fetch from a no execute region
+      LTRACEF("permission failure: execute fault on no execute region\n");
+    }
     return ZX_ERR_ACCESS_DENIED;
   }
 
