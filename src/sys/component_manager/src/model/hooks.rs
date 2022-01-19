@@ -437,19 +437,6 @@ impl Event {
         )
     }
 
-    pub fn child_discovered(
-        target_moniker: AbsoluteMoniker,
-        component_url: impl Into<String>,
-    ) -> Self {
-        let timestamp = zx::Time::get_monotonic();
-        Self::new_internal(
-            target_moniker.into(),
-            component_url.into(),
-            timestamp,
-            Ok(EventPayload::Discovered),
-        )
-    }
-
     #[cfg(test)]
     pub fn new_for_test(
         target_moniker: AbsoluteMoniker,
