@@ -75,9 +75,10 @@ async fn test_oir<E: netemul::Endpoint, M: Manager>(name: &str) {
     .await
     .expect("wait for non loopback interface");
 
-    let () = realm.remove_virtual_device(endpoint_mount_path).await.unwrap_or_else(|e| {
-        panic!("remove virtual device {}: {:?}", endpoint_mount_path.display(), e)
-    });
+    // Block on destruction of the test realm before we allow test interfaces to
+    // be cleaned up.  This avoids test interfaces being removed out from under
+    // components still using them, which can cause spurious errors.
+    realm.shutdown().await.expect("failed to shutdown realm");
 }
 
 /// Tests that stable interface name conflicts are handled gracefully.
