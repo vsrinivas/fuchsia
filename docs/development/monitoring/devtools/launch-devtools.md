@@ -1,6 +1,6 @@
 # Launch Fuchsia DevTools
 
-With [Fuchsia DevTools](/docs/concepts/monitoring/fuchsia-devtools.md), you can:
+With Fuchsia DevTools, you can:
 
 * View CPU and memory usage on your device.
 * [Focus on relevant log messages](/docs/development/monitoring/devtools/devtools-logging.md) with keyword filtering
