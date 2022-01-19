@@ -149,6 +149,9 @@ ChainBoot LoadZirconZbi(KernelStorage::Bootfs kernelfs) {
   // driver state and not just configuration like other BootOptions members do.
   BootOptions& handoff_options = prep.SetBootOptions(*gBootOptions);
 
+  // Use the updated copy from now on.
+  gBootOptions = &handoff_options;
+
   prep.SummarizeMiscZbiItems(boot.DataZbi().storage());
 
   prep.SetInstrumentation();
