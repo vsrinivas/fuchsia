@@ -10,7 +10,9 @@ pub(crate) mod link;
 pub(crate) mod ndp;
 mod state;
 
-pub(crate) use self::state::{AddrConfig, AddrConfigType, AddressEntry, AddressState, SlaacConfig};
+pub(crate) use self::state::{
+    AddrConfig, AddrConfigType, AddressState, Ipv6AddressEntry, SlaacConfig,
+};
 
 use alloc::boxed::Box;
 use alloc::vec::Vec;
@@ -424,7 +426,7 @@ impl AssignedAddress<Ipv4Addr> for AddrSubnet<Ipv4Addr> {
     }
 }
 
-impl<I: Instant> AssignedAddress<Ipv6Addr> for AddressEntry<Ipv6Addr, I, UnicastAddr<Ipv6Addr>> {
+impl<I: Instant> AssignedAddress<Ipv6Addr> for Ipv6AddressEntry<I> {
     fn addr(&self) -> SpecifiedAddr<Ipv6Addr> {
         self.addr_sub().addr().into_specified()
     }
@@ -456,7 +458,7 @@ impl<I: Instant> DeviceIpExt<I> for Ipv4 {
 }
 
 impl<I: Instant> DeviceIpExt<I> for Ipv6 {
-    type AssignedAddress = AddressEntry<Ipv6Addr, I, UnicastAddr<Ipv6Addr>>;
+    type AssignedAddress = Ipv6AddressEntry<I>;
     type GmpState = MldGroupState<I>;
     const DEFAULT_HOP_LIMIT: NonZeroU8 = ndp::HOP_LIMIT_DEFAULT;
 }
@@ -713,7 +715,7 @@ pub fn get_assigned_ip_addr_subnets<D: EventDispatcher, A: IpAddress>(
 pub fn get_ipv6_addr_subnets<D: EventDispatcher>(
     ctx: &Ctx<D>,
     device: DeviceId,
-) -> impl Iterator<Item = &'_ AddressEntry<Ipv6Addr, D::Instant, UnicastAddr<Ipv6Addr>>> + '_ {
+) -> impl Iterator<Item = &'_ Ipv6AddressEntry<D::Instant>> + '_ {
     match device.protocol {
         DeviceProtocol::Ethernet => self::ethernet::get_ipv6_addr_subnets(ctx, device.id.into()),
     }

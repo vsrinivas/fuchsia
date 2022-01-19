@@ -40,8 +40,8 @@ use crate::device::link::LinkDevice;
 use crate::device::ndp::{self, NdpContext, NdpHandler, NdpState, NdpTimerId};
 use crate::device::state::IpDeviceState;
 use crate::device::{
-    AddrConfig, AddrConfigType, AddressEntry, AddressError, AddressState, BufferIpDeviceContext,
-    DeviceIdContext, FrameDestination, IpDeviceContext, RecvIpFrameMeta,
+    AddrConfig, AddrConfigType, AddressError, AddressState, BufferIpDeviceContext, DeviceIdContext,
+    FrameDestination, IpDeviceContext, Ipv6AddressEntry, RecvIpFrameMeta,
 };
 use crate::ip::gmp::igmp::{IgmpContext, IgmpGroupState, IgmpPacketMetadata, IgmpTimerId};
 use crate::ip::gmp::mld::{MldContext, MldFrameMetadata, MldGroupState, MldReportDelay};
@@ -635,7 +635,7 @@ pub(super) fn get_assigned_ip_addr_subnets<C: EthernetIpDeviceContext, A: IpAddr
 pub(super) fn get_ipv6_addr_subnets<C: EthernetIpDeviceContext>(
     ctx: &C,
     device_id: C::DeviceId,
-) -> impl Iterator<Item = &'_ AddressEntry<Ipv6Addr, C::Instant, UnicastAddr<Ipv6Addr>>> + '_ {
+) -> impl Iterator<Item = &'_ Ipv6AddressEntry<C::Instant>> + '_ {
     ctx.get_state_with(device_id).ip.ipv6.iter_addrs()
 }
 
@@ -756,7 +756,7 @@ fn add_ip_addr_subnet_inner<C: EthernetIpDeviceContext, A: IpAddress>(
 
         let state = &mut ctx.get_state_mut_with(device_id).ip;
 
-        state.ipv6.add_addr(AddressEntry::new(
+        state.ipv6.add_addr(Ipv6AddressEntry::new(
             addr_sub.to_unicast(),
             AddressState::Tentative,
             config,

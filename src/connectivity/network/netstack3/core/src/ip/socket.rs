@@ -16,7 +16,7 @@ use packet_formats::{ipv4::Ipv4PacketBuilder, ipv6::Ipv6PacketBuilder};
 use rand::Rng;
 use thiserror::Error;
 
-use crate::device::{AddressEntry, DeviceId};
+use crate::device::{DeviceId, Ipv6AddressEntry};
 use crate::ip::{forwarding::ForwardingTable, IpExt, Ipv6SocketData};
 use crate::socket::Socket;
 use crate::{BufferDispatcher, Ctx, EventDispatcher};
@@ -702,7 +702,7 @@ mod ipv6_source_address_selection {
     pub(super) fn select_ipv6_source_address<
         'a,
         Instant: 'a,
-        I: Iterator<Item = (&'a AddressEntry<Ipv6Addr, Instant, UnicastAddr<Ipv6Addr>>, DeviceId)>,
+        I: Iterator<Item = (&'a Ipv6AddressEntry<Instant>, DeviceId)>,
     >(
         remote_ip: SpecifiedAddr<Ipv6Addr>,
         outbound_device: DeviceId,
@@ -740,9 +740,9 @@ mod ipv6_source_address_selection {
     fn select_ipv6_source_address_cmp<Instant>(
         remote_ip: SpecifiedAddr<Ipv6Addr>,
         outbound_device: DeviceId,
-        a: &AddressEntry<Ipv6Addr, Instant, UnicastAddr<Ipv6Addr>>,
+        a: &Ipv6AddressEntry<Instant>,
         a_device: DeviceId,
-        b: &AddressEntry<Ipv6Addr, Instant, UnicastAddr<Ipv6Addr>>,
+        b: &Ipv6AddressEntry<Instant>,
         b_device: DeviceId,
     ) -> Ordering {
         // TODO(fxbug.dev/46822): Implement rules 2, 4, 5.5, 6, and 7.
@@ -831,8 +831,8 @@ mod ipv6_source_address_selection {
 
     fn rule_8<Instant>(
         remote_ip: SpecifiedAddr<Ipv6Addr>,
-        a: &AddressEntry<Ipv6Addr, Instant, UnicastAddr<Ipv6Addr>>,
-        b: &AddressEntry<Ipv6Addr, Instant, UnicastAddr<Ipv6Addr>>,
+        a: &Ipv6AddressEntry<Instant>,
+        b: &Ipv6AddressEntry<Instant>,
     ) -> Ordering {
         // Per RFC 6724 Section 2.2:
         //
@@ -844,7 +844,7 @@ mod ipv6_source_address_selection {
         //   interface ID).  For example, CommonPrefixLen(fe80::1, fe80::2) is
         //   64.
         fn common_prefix_len<Instant>(
-            src: &AddressEntry<Ipv6Addr, Instant, UnicastAddr<Ipv6Addr>>,
+            src: &Ipv6AddressEntry<Instant>,
             dst: SpecifiedAddr<Ipv6Addr>,
         ) -> u8 {
             core::cmp::min(
@@ -917,7 +917,7 @@ mod ipv6_source_address_selection {
             // Rule 8: Use longest matching prefix.
             {
                 let new_addr_entry = |bytes, prefix_len| {
-                    AddressEntry::<_, (), _>::new(
+                    Ipv6AddressEntry::<()>::new(
                         AddrSubnet::new(Ipv6Addr::from_bytes(bytes), prefix_len).unwrap(),
                         AddressState::Assigned,
                         AddrConfig::Manual,
@@ -959,7 +959,7 @@ mod ipv6_source_address_selection {
 
             {
                 let new_addr_entry = |addr| {
-                    AddressEntry::<_, (), _>::new(
+                    Ipv6AddressEntry::<()>::new(
                         AddrSubnet::new(addr, 128).unwrap(),
                         Assigned,
                         AddrConfig::Manual,

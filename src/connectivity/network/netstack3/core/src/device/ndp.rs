@@ -2541,8 +2541,8 @@ mod tests {
         add_ip_addr_subnet, del_ip_addr,
         ethernet::{EthernetLinkDevice, EthernetTimerId},
         get_assigned_ip_addr_subnets, get_ip_addr_state, get_ipv6_hop_limit, get_mtu,
-        is_in_ip_multicast, is_routing_enabled, set_routing_enabled, AddressEntry, DeviceId,
-        DeviceLayerTimerId, DeviceLayerTimerIdInner, EthernetDeviceId,
+        is_in_ip_multicast, is_routing_enabled, set_routing_enabled, DeviceId, DeviceLayerTimerId,
+        DeviceLayerTimerIdInner, EthernetDeviceId, Ipv6AddressEntry,
     };
     use crate::testutil::{
         self, get_counter_val, run_for, set_logger_for_test, trigger_next_timer,
@@ -6118,7 +6118,7 @@ mod tests {
         ctx: &Ctx<DummyEventDispatcher>,
         device: DeviceId,
         addr_sub: AddrSubnet<Ipv6Addr, UnicastAddr<Ipv6Addr>>,
-    ) -> Option<&AddressEntry<Ipv6Addr, DummyInstant, UnicastAddr<Ipv6Addr>>> {
+    ) -> Option<&Ipv6AddressEntry<DummyInstant>> {
         let mut matching_addrs =
             NdpContext::<EthernetLinkDevice>::get_ip_device_state(ctx, device.id().into())
                 .iter_global_ipv6_addrs()
@@ -6131,7 +6131,7 @@ mod tests {
     fn assert_slaac_lifetimes_enforced(
         ctx: &Ctx<DummyEventDispatcher>,
         device: DeviceId,
-        entry: &AddressEntry<Ipv6Addr, DummyInstant, UnicastAddr<Ipv6Addr>>,
+        entry: &Ipv6AddressEntry<DummyInstant>,
         valid_until: DummyInstant,
         preferred_until: DummyInstant,
     ) {

@@ -5,11 +5,11 @@
 //! State maintained by the device layer.
 
 use alloc::vec::Vec;
-use core::{fmt::Debug, num::NonZeroU8, ops::Deref};
+use core::{fmt::Debug, num::NonZeroU8};
 
 use net_types::{
-    ip::{AddrSubnet, IpAddress, Ipv4, Ipv6, Ipv6Addr, Ipv6Scope},
-    ScopeableAddress as _, SpecifiedAddr, UnicastAddr, Witness,
+    ip::{AddrSubnet, Ipv4, Ipv6, Ipv6Addr, Ipv6Scope},
+    ScopeableAddress as _, UnicastAddr, Witness,
 };
 
 use crate::{
@@ -179,14 +179,14 @@ impl<I: Instant> IpDeviceState<I, Ipv6> {
     /// Iterates over the global IPv6 address entries.
     pub(crate) fn iter_global_ipv6_addrs(
         &self,
-    ) -> impl Iterator<Item = &AddressEntry<Ipv6Addr, I, UnicastAddr<Ipv6Addr>>> + Clone {
+    ) -> impl Iterator<Item = &Ipv6AddressEntry<I>> + Clone {
         self.addrs.iter().filter(|entry| entry.is_global())
     }
 
     /// Iterates mutably over the global IPv6 address entries.
     pub(crate) fn iter_global_ipv6_addrs_mut(
         &mut self,
-    ) -> impl Iterator<Item = &mut AddressEntry<Ipv6Addr, I, UnicastAddr<Ipv6Addr>>> {
+    ) -> impl Iterator<Item = &mut Ipv6AddressEntry<I>> {
         self.addrs.iter_mut().filter(|entry| entry.is_global())
     }
 }
@@ -304,24 +304,24 @@ pub(crate) enum AddrConfigType {
     Manual,
 }
 
-/// Data associated with an IP address on an interface.
+/// Data associated with an IPv6 address on an interface.
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
-pub struct AddressEntry<S: IpAddress, Instant, A: Witness<S> + Copy = SpecifiedAddr<S>> {
-    addr_sub: AddrSubnet<S, A>,
+pub struct Ipv6AddressEntry<Instant> {
+    addr_sub: AddrSubnet<Ipv6Addr, UnicastAddr<Ipv6Addr>>,
     pub state: AddressState,
     pub(crate) config: AddrConfig<Instant>,
 }
 
-impl<S: IpAddress, Instant, A: Witness<S> + Copy> AddressEntry<S, Instant, A> {
+impl<Instant> Ipv6AddressEntry<Instant> {
     pub(crate) fn new(
-        addr_sub: AddrSubnet<S, A>,
+        addr_sub: AddrSubnet<Ipv6Addr, UnicastAddr<Ipv6Addr>>,
         state: AddressState,
         config: AddrConfig<Instant>,
     ) -> Self {
         Self { addr_sub, state, config }
     }
 
-    pub(crate) fn addr_sub(&self) -> &AddrSubnet<S, A> {
+    pub(crate) fn addr_sub(&self) -> &AddrSubnet<Ipv6Addr, UnicastAddr<Ipv6Addr>> {
         &self.addr_sub
     }
 
@@ -335,21 +335,17 @@ impl<S: IpAddress, Instant, A: Witness<S> + Copy> AddressEntry<S, Instant, A> {
     pub(crate) fn mark_permanent(&mut self) {
         self.state = AddressState::Assigned;
     }
+
+    pub(crate) fn is_global(&self) -> bool {
+        self.addr_sub().addr().scope() == Ipv6Scope::Global
+    }
 }
 
-impl<S: IpAddress, Instant: Copy, A: Witness<S> + Copy> AddressEntry<S, Instant, A> {
+impl<Instant: Copy> Ipv6AddressEntry<Instant> {
     pub(crate) fn valid_until(&self) -> Option<Instant> {
         match &self.config {
             AddrConfig::Slaac(SlaacConfig { valid_until }) => *valid_until,
             AddrConfig::Manual => None,
         }
-    }
-}
-
-impl<Instant, A: Witness<Ipv6Addr> + Deref<Target = Ipv6Addr> + Copy>
-    AddressEntry<Ipv6Addr, Instant, A>
-{
-    pub(crate) fn is_global(&self) -> bool {
-        self.addr_sub().addr().scope() == Ipv6Scope::Global
     }
 }
