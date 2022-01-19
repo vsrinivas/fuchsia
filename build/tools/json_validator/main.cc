@@ -9,6 +9,7 @@
 #include <string>
 
 #include <rapidjson/document.h>
+#include <rapidjson/prettywriter.h>
 #include <rapidjson/schema.h>
 #include <rapidjson/stringbuffer.h>
 #include <re2/re2.h>
@@ -140,6 +141,11 @@ int main(int argc, const char** argv) {
     buffer.Clear();
     validator.GetInvalidDocumentPointer().StringifyUriFragment(buffer);
     fprintf(stderr, " - document reference     %s\n", buffer.GetString());
+    buffer.Clear();
+    rapidjson::PrettyWriter<rapidjson::StringBuffer> w(buffer);
+    validator.GetError().Accept(w);
+    fprintf(stderr, " - full error %s\n", buffer.GetString());
+
     return 1;
   }
   if (provider.HasErrors()) {
