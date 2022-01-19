@@ -11,7 +11,6 @@ pub mod audio;
 pub mod backlight;
 pub mod battery_simulator;
 pub mod bluetooth;
-pub mod boot_arguments;
 pub mod common_utils;
 pub mod component;
 pub mod cpu_ctrl;
