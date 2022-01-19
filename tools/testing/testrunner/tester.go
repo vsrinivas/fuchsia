@@ -37,7 +37,6 @@ import (
 	"go.fuchsia.dev/fuchsia/tools/lib/subprocess"
 	"go.fuchsia.dev/fuchsia/tools/net/sshutil"
 	"go.fuchsia.dev/fuchsia/tools/testing/runtests"
-	"go.fuchsia.dev/fuchsia/tools/testing/testparser"
 	"go.fuchsia.dev/fuchsia/tools/testing/testrunner/constants"
 )
 
@@ -426,20 +425,17 @@ type FFXTester struct {
 	// available as an output artifact of `ffx test`.
 	sshTester      Tester
 	localOutputDir string
-	// Whether to run experimental ffx functions.
-	experimental bool
 
 	// The test output dirs from all the calls to Test().
 	testOutDirs []string
 }
 
 // NewFFXTester returns an FFXTester.
-func NewFFXTester(ffx FFXInstance, sshTester Tester, localOutputDir string, experimental bool) *FFXTester {
+func NewFFXTester(ffx FFXInstance, sshTester Tester, localOutputDir string) *FFXTester {
 	return &FFXTester{
 		ffx:            ffx,
 		sshTester:      sshTester,
 		localOutputDir: localOutputDir,
-		experimental:   experimental,
 	}
 }
 
@@ -548,42 +544,43 @@ func (t *FFXTester) processTestResult(runResult *ffxutil.TestRunResult, testsByU
 		testResult.OutputDir = suiteArtifactDir
 
 		var cases []runtests.TestCaseResult
-		// TODO(ihuh): Get test cases from ffx summary when we can provide as
-		// much information in the TestCaseResult as testparser.Parse().
-		if t.experimental {
-			for _, testCase := range suiteResult.Cases {
-				var status runtests.TestResult
-				switch testCase.Outcome {
-				case ffxutil.TestPassed:
-					status = runtests.TestSuccess
-				case ffxutil.TestSkipped:
-					status = runtests.TestSkipped
-				default:
-					status = runtests.TestFailure
-				}
+		for _, testCase := range suiteResult.Cases {
+			var status runtests.TestResult
+			switch testCase.Outcome {
+			case ffxutil.TestPassed:
+				status = runtests.TestSuccess
+			case ffxutil.TestSkipped:
+				status = runtests.TestSkipped
+			default:
+				status = runtests.TestFailure
+			}
 
-				var artifacts []string
-				for artifact := range testCase.Artifacts {
-					artifacts = append(artifacts, artifact)
+			var artifacts []string
+			var failReason string
+			testCaseArtifactDir := filepath.Join(testOutDir, testCase.ArtifactDir)
+			for artifact, metadata := range testCase.Artifacts {
+				// Get the failReason from the stderr log.
+				// TODO(ihuh): The stderr log may contain unsymbolized logs.
+				// Consider symbolizing them within ffx or testrunner.
+				if metadata.ArtifactType == ffxutil.StderrType {
+					stderrBytes, err := ioutil.ReadFile(filepath.Join(testCaseArtifactDir, artifact))
+					if err != nil {
+						failReason = fmt.Sprintf("failed to read stderr for test case %s: %s", testCase.Name, err)
+					} else {
+						failReason = string(stderrBytes)
+					}
 				}
-				cases = append(cases, runtests.TestCaseResult{
-					DisplayName: testCase.Name,
-					CaseName:    testCase.Name,
-					Status:      status,
-					Format:      "FTF",
-					OutputFiles: artifacts,
-					OutputDir:   filepath.Join(testOutDir, testCase.ArtifactDir),
-				})
+				artifacts = append(artifacts, artifact)
 			}
-		} else {
-			if stdioPath == "" {
-				return testResults, fmt.Errorf("failed to find stdio file")
-			}
-			stdioBytes, err := ioutil.ReadFile(stdioPath)
-			if err != nil {
-				return testResults, err
-			}
-			cases = testparser.Parse(stdioBytes)
+			cases = append(cases, runtests.TestCaseResult{
+				DisplayName: testCase.Name,
+				CaseName:    testCase.Name,
+				Status:      status,
+				FailReason:  failReason,
+				Format:      "FTF",
+				OutputFiles: artifacts,
+				OutputDir:   testCaseArtifactDir,
+			})
 		}
 		testResult.Cases = cases
 

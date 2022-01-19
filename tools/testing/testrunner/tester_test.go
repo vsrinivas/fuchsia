@@ -222,7 +222,6 @@ func (*fakeDataSinkCopier) Close() error {
 func TestFFXTester(t *testing.T) {
 	cases := []struct {
 		name           string
-		experimental   bool
 		runV2          bool
 		sshRunErrs     []error
 		expectedResult runtests.TestResult
@@ -230,36 +229,26 @@ func TestFFXTester(t *testing.T) {
 	}{
 		{
 			name:           "run v1 tests with ssh",
-			experimental:   true,
 			sshRunErrs:     []error{nil},
 			expectedResult: runtests.TestSuccess,
 		},
 		{
 			name:           "run v2 tests with ffx",
-			experimental:   true,
 			runV2:          true,
 			expectedResult: runtests.TestSuccess,
 		},
 		{
 			name:           "ffx test fails",
-			experimental:   true,
 			runV2:          true,
 			expectedResult: runtests.TestFailure,
 		},
 		{
-			name:           "parse stdio for test cases if not experimental",
-			runV2:          true,
-			expectedResult: runtests.TestSuccess,
-		},
-		{
 			name:           "ffx test times out",
-			experimental:   true,
 			runV2:          true,
 			expectedResult: runtests.TestAborted,
 		},
 		{
 			name:           "run multiple tests",
-			experimental:   true,
 			runV2:          true,
 			expectedResult: runtests.TestSuccess,
 			testMulti:      true,
@@ -287,7 +276,7 @@ func TestFFXTester(t *testing.T) {
 				outcome = ffxutil.TestTimedOut
 			}
 			ffx := &ffxutil.MockFFXInstance{TestOutcome: outcome}
-			tester := NewFFXTester(ffx, sshTester, "", c.experimental)
+			tester := NewFFXTester(ffx, sshTester, "")
 
 			defer func() {
 				if err := tester.Close(); err != nil {
@@ -334,21 +323,15 @@ func TestFFXTester(t *testing.T) {
 					if !ffx.ContainsCmd("test") {
 						t.Errorf("failed to call `ffx test`, called: %s", ffx.CmdsCalled)
 					}
-					if c.experimental {
-						expectedCaseStatus := runtests.TestSuccess
-						if c.expectedResult != runtests.TestSuccess {
-							expectedCaseStatus = runtests.TestFailure
-						}
-						if len(testResult.Cases) != 1 {
-							t.Errorf("expected 1 test case, got %d", len(testResult.Cases))
-						} else {
-							if testResult.Cases[0].Status != expectedCaseStatus {
-								t.Errorf("test case has status: %s, want: %s", testResult.Cases[0].Status, expectedCaseStatus)
-							}
-						}
+					expectedCaseStatus := runtests.TestSuccess
+					if c.expectedResult != runtests.TestSuccess {
+						expectedCaseStatus = runtests.TestFailure
+					}
+					if len(testResult.Cases) != 1 {
+						t.Errorf("expected 1 test case, got %d", len(testResult.Cases))
 					} else {
-						if len(testResult.Cases) != 0 {
-							t.Errorf("unexpectedly parsed out %d test cases", len(testResult.Cases))
+						if testResult.Cases[0].Status != expectedCaseStatus {
+							t.Errorf("test case has status: %s, want: %s", testResult.Cases[0].Status, expectedCaseStatus)
 						}
 					}
 				} else {

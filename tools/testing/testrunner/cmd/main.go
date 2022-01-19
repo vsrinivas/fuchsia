@@ -315,11 +315,7 @@ func execute(
 			if err != nil {
 				return fmt.Errorf("failed to initialize fuchsia tester: %w", err)
 			}
-			ffxExperimental, err := strconv.ParseBool(os.Getenv(botanistconstants.FFXExperimentalEnvKey))
-			if err != nil {
-				ffxExperimental = flags.ffxExperimental
-			}
-			ffxTester := testrunner.NewFFXTester(ffx, t, outputs.OutDir, ffxExperimental)
+			ffxTester := testrunner.NewFFXTester(ffx, t, outputs.OutDir)
 			defer func() {
 				// outputs.Record() moves output files to paths within the output directory
 				// specified by test name.
