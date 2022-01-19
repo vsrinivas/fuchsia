@@ -14,9 +14,9 @@ use {
 
 const TEMPFILE_RANDOM_LENGTH: usize = 8usize;
 
-/// Describes an error encountered creating a staged file.
+/// Describes an error with StagedFile usage.
 #[derive(thiserror::Error, Debug)]
-pub enum StagedFileCreateError {
+pub enum StagedFileError {
     /// Invalid arguments.
     #[error("Invalid arguments to create a staged file: {0}")]
     InvalidArguments(String),
@@ -28,26 +28,10 @@ pub enum StagedFileCreateError {
     /// Failed during a FIDL call.
     #[error("Failed during FIDL call: {0}")]
     FidlError(#[from] fidl::Error),
-}
-
-/// Describes an error writing to the staged file.
-#[derive(thiserror::Error, Debug)]
-pub enum StagedFileWriteError {
-    /// Failed during a FIDL call.
-    #[error("Failed during FIDL call: {0}")]
-    FidlError(#[from] fidl::Error),
 
     /// Failed to write to the staged file.
     #[error("Failed to write to backing storage: {0}")]
     WriteError(#[from] io_util::file::WriteError),
-}
-
-/// Describes an error committing the staged file.
-#[derive(thiserror::Error, Debug)]
-pub enum StagedFileCommitError {
-    /// Failed during a FIDL call.
-    #[error("Failed during FIDL call: {0}")]
-    FidlError(#[from] fidl::Error),
 
     /// Failed to rename the staged file.
     #[error("Failed to rename temp file to target: {0}")]
@@ -60,18 +44,10 @@ pub enum StagedFileCommitError {
     /// Failed to close the staged file.
     #[error("Failed to close backing storage: {0}")]
     CloseError(#[source] zx::Status),
-}
 
-/// Describes an error cleaning up stale files.
-#[derive(thiserror::Error, Debug)]
-pub enum CleanupStaleFilesError {
     /// Failed to readdir.
     #[error("Failed to readdir: {0}")]
     ReaddirError(#[from] files_async::Error),
-
-    /// Failed during a FIDL call.
-    #[error("Failed during FIDL call: {0}")]
-    FidlError(#[from] fidl::Error),
 
     /// Failed to unlink file.
     #[error("Failed to unlink file: {0}")]
@@ -106,9 +82,9 @@ impl<'a> StagedFile<'a> {
     pub async fn new(
         dir_proxy: &'a DirectoryProxy,
         tempfile_prefix: &str,
-    ) -> Result<StagedFile<'a>, StagedFileCreateError> {
+    ) -> Result<StagedFile<'a>, StagedFileError> {
         if tempfile_prefix.len() == 0 {
-            return Err(StagedFileCreateError::InvalidArguments(String::from(
+            return Err(StagedFileError::InvalidArguments(String::from(
                 "filename_prefix must not be empty",
             )));
         }
@@ -126,7 +102,7 @@ impl<'a> StagedFile<'a> {
     /// Writes data to the backing staged file proxy.
     /// This file is not guaranteed to be persisted until commit is called,
     /// at which point it will be renamed to |target_filename|.
-    pub async fn write(&mut self, data: &[u8]) -> Result<(), StagedFileWriteError> {
+    pub async fn write(&mut self, data: &[u8]) -> Result<(), StagedFileError> {
         self.file_proxy.write(data).await?;
         Ok(())
     }
@@ -136,18 +112,18 @@ impl<'a> StagedFile<'a> {
     /// Calling commit does not guarantee that |target_filename| will be
     /// available, but it does guarantee atomicity of the file if it does
     /// exist.
-    pub async fn commit(self, target_filename: &str) -> Result<(), StagedFileCommitError> {
+    pub async fn commit(self, target_filename: &str) -> Result<(), StagedFileError> {
         // Do the usual atomic commit via sync, close, and rename-to-target.
         // Stale files left by a crash should be cleaned up by calling cleanup_stale_files on the
         // next startup.
         zx::Status::ok((&self.file_proxy).sync().await?)
-            .map_err(|s| StagedFileCommitError::FlushError(s))?;
+            .map_err(|s| StagedFileError::FlushError(s))?;
         zx::Status::ok((&self.file_proxy).close().await?)
-            .map_err(|s| StagedFileCommitError::CloseError(s))?;
+            .map_err(|s| StagedFileError::CloseError(s))?;
 
         io_util::directory::rename(self.dir_proxy, &self.temp_filename, target_filename)
             .await
-            .map_err(|s| StagedFileCommitError::RenameError(s))?;
+            .map_err(|s| StagedFileError::RenameError(s))?;
         Ok(())
     }
 
@@ -156,10 +132,9 @@ impl<'a> StagedFile<'a> {
     pub async fn cleanup_stale_files(
         dir_proxy: &DirectoryProxy,
         tempfile_prefix: &str,
-    ) -> Result<(), Vec<CleanupStaleFilesError>> {
+    ) -> Result<(), Vec<StagedFileError>> {
         let dirents_res = files_async::readdir(dir_proxy).await;
-        let dirents =
-            dirents_res.map_err(|err| vec![CleanupStaleFilesError::ReaddirError(err.into())])?;
+        let dirents = dirents_res.map_err(|err| vec![StagedFileError::ReaddirError(err.into())])?;
         let mut failures = Vec::new();
 
         for d in dirents.iter() {
@@ -169,12 +144,12 @@ impl<'a> StagedFile<'a> {
                 warn!("Removing unexpected file '{}' from directory", &name);
                 let fidl_res = dir_proxy.unlink(&name, UnlinkOptions::EMPTY).await;
                 match fidl_res {
-                    Err(x) => failures.push(CleanupStaleFilesError::FidlError(x.into())),
+                    Err(x) => failures.push(StagedFileError::FidlError(x.into())),
                     Ok(unlink_res) => {
                         if let Err(unlink_err) = unlink_res {
-                            failures.push(CleanupStaleFilesError::UnlinkError(
-                                zx::Status::from_raw(unlink_err),
-                            ));
+                            failures.push(StagedFileError::UnlinkError(zx::Status::from_raw(
+                                unlink_err,
+                            )));
                         }
                     }
                 }

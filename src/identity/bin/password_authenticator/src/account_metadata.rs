@@ -54,17 +54,8 @@ pub enum AccountMetadataStoreError {
     #[error("Failed to unlink file in backing storage: {0}")]
     UnlinkError(#[source] zx::Status),
 
-    #[error("Failed to create staged file: {0}")]
-    StagedFileCreateError(#[from] identity_common::StagedFileCreateError),
-
-    #[error("Failed to write staged file: {0}")]
-    StagedFileWriteError(#[from] identity_common::StagedFileWriteError),
-
-    #[error("Failed to commit staged file: {0}")]
-    StagedFileCommitError(#[from] identity_common::StagedFileCommitError),
-
-    #[error("Failed to cleanup stale files: {0}")]
-    CleanupStaleFilesError(#[from] identity_common::CleanupStaleFilesError),
+    #[error("Failed to operate on staged file: {0}")]
+    StagedFileError(#[from] identity_common::StagedFileError),
 }
 
 impl From<AccountMetadataStoreError> for faccount::Error {
@@ -81,10 +72,7 @@ impl From<AccountMetadataStoreError> for faccount::Error {
             AccountMetadataStoreError::FlushError(_) => faccount::Error::Resource,
             AccountMetadataStoreError::CloseError(_) => faccount::Error::Resource,
             AccountMetadataStoreError::UnlinkError(_) => faccount::Error::Resource,
-            AccountMetadataStoreError::StagedFileCreateError(_) => faccount::Error::Resource,
-            AccountMetadataStoreError::StagedFileWriteError(_) => faccount::Error::Resource,
-            AccountMetadataStoreError::StagedFileCommitError(_) => faccount::Error::Resource,
-            AccountMetadataStoreError::CleanupStaleFilesError(_) => faccount::Error::Resource,
+            AccountMetadataStoreError::StagedFileError(_) => faccount::Error::Resource,
         }
     }
 }
@@ -223,10 +211,7 @@ impl DataDirAccountMetadataStore {
 
     pub async fn cleanup_stale_files(&mut self) -> Result<(), Vec<AccountMetadataStoreError>> {
         StagedFile::cleanup_stale_files(&self.accounts_dir, "temp-").await.map_err(|errors| {
-            errors
-                .into_iter()
-                .map(|err| AccountMetadataStoreError::CleanupStaleFilesError(err))
-                .collect()
+            errors.into_iter().map(|err| AccountMetadataStoreError::StagedFileError(err)).collect()
         })
     }
 }

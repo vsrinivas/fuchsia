@@ -39,14 +39,8 @@ pub enum LookupTableError {
     NotFound,
     #[error("Failed to unlink file in backing storage: {0}")]
     UnlinkError(#[source] zx::Status),
-    #[error("Failed to create staged file: {0}")]
-    StagedFileCreateError(#[from] identity_common::StagedFileCreateError),
-    #[error("Failed to write staged file: {0}")]
-    StagedFileWriteError(#[from] identity_common::StagedFileWriteError),
-    #[error("Failed to commit staged file: {0}")]
-    StagedFileCommitError(#[from] identity_common::StagedFileCommitError),
-    #[error("Failed to cleanup stale files: {0}")]
-    CleanupStaleFilesError(#[from] identity_common::CleanupStaleFilesError),
+    #[error("Failed to operate on staged file: {0}")]
+    StagedFileError(#[from] identity_common::StagedFileError),
     #[error("Unknown lookup table error")]
     Unknown,
 }
@@ -95,10 +89,7 @@ impl PersistentLookupTable {
             Ok(child_dir) => StagedFile::cleanup_stale_files(&child_dir, STAGEDFILE_PREFIX)
                 .await
                 .map_err(|errors| {
-                    errors
-                        .into_iter()
-                        .map(|err| LookupTableError::CleanupStaleFilesError(err))
-                        .collect()
+                    errors.into_iter().map(|err| LookupTableError::StagedFileError(err)).collect()
                 }),
             Err(err) => {
                 info!("Could not open subdirectory for label {:?} for cleanup: {}", label, err);
