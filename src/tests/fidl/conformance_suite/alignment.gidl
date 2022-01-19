@@ -2,6 +2,22 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+success("ThreeByte_randomly_generated") {
+    value = ThreeByte{
+        elem1: 78,
+        elem2: 228,
+        elem3: 31,
+    },
+    bytes = {
+        v1, v2 = [
+            num(78):1, // elem1
+            num(228):1, // elem2
+            num(31):1, // elem3
+            padding:5,
+        ],
+    },
+}
+
 success("3ByteObjectAlignmentInStruct") {
     value = ThreeByteInStruct{
         elem1: ThreeByte{
@@ -24,6 +40,20 @@ success("3ByteObjectAlignmentInStruct") {
         v1, v2 = [
             0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08,
             0x09, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        ],
+    },
+}
+
+success("FiveByte_randomly_generated") {
+    value = FiveByte{
+        elem1: 3372452902,
+        elem2: 104,
+    },
+    bytes = {
+        v1, v2 = [
+            num(3372452902):4, // elem1
+            num(104):1, // elem2
+            padding:3,
         ],
     },
 }

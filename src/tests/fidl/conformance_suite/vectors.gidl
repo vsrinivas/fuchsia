@@ -2,6 +2,32 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+success("VectorWithLimit_randomly_generated") {
+    value = VectorWithLimit{
+        v: [113, 200],
+    },
+    bytes = {
+        v1, v2 = [
+            num(2):8, repeat(0xFF):8, // v length, presence
+            113, 200, // v
+            padding:6,
+        ],
+    },
+}
+
+success("VectorWrapper_randomly_generated") {
+    value = VectorWrapper{
+        v: [218, 190, 69, 67, 101, 72, 44, 22],
+    },
+    bytes = {
+        v1, v2 = [
+            num(8):8, repeat(0xFF):8, // v length, presence
+            // v
+            218, 190, 69, 67, 101, 72, 44, 22,
+        ],
+    },
+}
+
 encode_failure("VectorExceedsLimit") {
     // TODO(fxbug.dev/37304) Enforce size bounds in rust
     bindings_denylist = [rust],

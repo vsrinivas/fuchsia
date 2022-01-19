@@ -2,6 +2,20 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+success("Length2String") {
+    value = Length2StringWrapper{
+        length_2_string: "ab",
+    },
+    bytes = {
+        v1, v2 = [
+            num(2):8, // count
+            repeat(0xFF):8, // presence
+            0x61, 0x62, // length_2_string
+            padding:6,
+        ],
+    },
+}
+
 encode_failure("StringExceedsLimit") {
     // TODO(fxbug.dev/37304) Enforce size bounds in rust
     bindings_denylist = [rust],

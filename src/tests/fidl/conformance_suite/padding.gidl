@@ -342,6 +342,20 @@ decode_failure("BadPaddingEndOfInlineObject2ByteUpperByte") {
     err = INVALID_PADDING_BYTE,
 }
 
+success("Struct3Byte_randomly_generated") {
+    value = Struct3Byte{
+        a: 25110,
+        b: 93,
+    },
+    bytes = {
+        v1, v2 = [
+            num(25110):2, // a
+            93, // b
+            padding:5,
+        ],
+    },
+}
+
 success("CorrectPaddingEndOfInlineObject3Byte") {
     bindings_denylist = [c, llcpp],
     value = PaddingEndOfInlineObject3Byte{
@@ -419,6 +433,20 @@ decode_failure("BadPaddingEndOfInlineObject4ByteUpperByte") {
     err = INVALID_PADDING_BYTE,
 }
 
+success("Struct5Byte_randomly_generated") {
+    value = Struct5Byte{
+        a: -686561937,
+        b: -21,
+    },
+    bytes = {
+        v1, v2 = [
+            num(-686561937):4, // a
+            num(-21):1, // b
+            padding:3,
+        ],
+    },
+}
+
 success("CorrectPaddingEndOfInlineObject5Byte") {
     value = PaddingEndOfInlineObject5Byte{
         a: Struct5Byte{
@@ -457,6 +485,20 @@ decode_failure("BadPaddingEndOfInlineObject5ByteUpperByte") {
         ],
     },
     err = INVALID_PADDING_BYTE,
+}
+
+success("Struct6Byte_randomly_generated") {
+    value = Struct6Byte{
+        a: 990827621,
+        b: 977,
+    },
+    bytes = {
+        v1, v2 = [
+            num(990827621):4, // a
+            num(977):2, // b
+            padding:2,
+        ],
+    },
 }
 
 success("CorrectPaddingEndOfInlineObject6Byte") {
@@ -528,6 +570,15 @@ decode_failure("BadPaddingEndOfInlineObject7Byte") {
         ],
     },
     err = INVALID_PADDING_BYTE,
+}
+
+success("Struct8Byte_randomly_generated") {
+    value = Struct8Byte{
+        a: 5134020299206246228,
+    },
+    bytes = {
+        v1, v2 = [num(5134020299206246228):8],
+    },
 }
 
 success("CorrectPaddingEndOfInlineObjectBeforeNextObject1Byte") {

@@ -222,6 +222,19 @@ success("Sandwich2Case1") {
     },
 }
 
+success("StructSize16Align8_randomly_generated") {
+    value = StructSize16Align8{
+        f1: 8119191415388800797,
+        f2: 3921240220962863111,
+    },
+    bytes = {
+        v1, v2 = [
+            num(8119191415388800797):8, // f1
+            num(3921240220962863111):8, // f2
+        ],
+    },
+}
+
 success("Sandwich3Case1") {
     value = Sandwich3{
         before: 0x04030201,
@@ -693,6 +706,20 @@ success("Sandwich5Case2WithHdr") {
             0xa4, 0xa5, 0xa6, 0xa7, // UnionOfUnion.UnionSize24Alignment8.data [cont.]
             0xa8, 0xa9, 0xaa, 0xab, // UnionOfUnion.UnionSize24Alignment8.data [cont.]
             0xac, 0xad, 0xae, 0xaf, // UnionOfUnion.UnionSize24Alignment8.data [cont.]
+        ],
+    },
+}
+
+success("StructSize3Align2_randomly_generated") {
+    value = StructSize3Align2{
+        f1: 8940,
+        f2: 203,
+    },
+    bytes = {
+        v1, v2 = [
+            num(8940):2, // f1
+            203, // f2
+            padding:5,
         ],
     },
 }
@@ -1528,6 +1555,20 @@ success("Size5Alignment1Array") {
             0x05, 0x06, 0x07, 0x08, // a.data[0] & a.data[1]
             0x09, 0x0a, 0x0b, 0x0c, // a.data[1] & a.data[2]
             0x0d, 0x0e, 0x0f, 0x00, // a.data[2] & padding
+        ],
+    },
+}
+
+success("Size5Alignment4_randomly_generated") {
+    value = Size5Alignment4{
+        four: 1063731487,
+        one: 225,
+    },
+    bytes = {
+        v1, v2 = [
+            num(1063731487):4, // four
+            225, // one
+            padding:3,
         ],
     },
 }

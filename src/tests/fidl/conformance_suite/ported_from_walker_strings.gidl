@@ -51,6 +51,28 @@ success("MultipleNonnullableStrings") {
     },
 }
 
+success("MultipleShortNonnullableStrings_randomly_generated") {
+    value = MultipleShortNonnullableStrings{
+        s0: "Vnug",
+        s1: "ESik0LJSVSfATkN6nNkOyWf8bV4Cd3BW",
+    },
+    bytes = {
+        v1, v2 = [
+            num(4):8, repeat(0xFF):8, // s0 length, presence
+            num(32):8, repeat(0xFF):8, // s1 length, presence
+
+            // s0: "Vnug"
+            0x56, 0x6E, 0x75, 0x67, padding:4,
+
+            // s1: "ESik0LJSVSfATkN6nNkOyWf8bV4Cd3BW"
+            0x45, 0x53, 0x69, 0x6B, 0x30, 0x4C, 0x4A, 0x53,
+            0x56, 0x53, 0x66, 0x41, 0x54, 0x6B, 0x4E, 0x36,
+            0x6E, 0x4E, 0x6B, 0x4F, 0x79, 0x57, 0x66, 0x38,
+            0x62, 0x56, 0x34, 0x43, 0x64, 0x33, 0x42, 0x57,
+        ],
+    },
+}
+
 decode_failure("AbsentNonnullableStringError") {
     type = UnboundedNonnullableString,
     bytes = {
@@ -179,4 +201,26 @@ decode_failure("PresentNullableBoundedStringShortError") {
         ],
     },
     err = STRING_TOO_LONG,
+}
+
+success("MultipleShortNullableStrings_randomly_generated") {
+    value = MultipleShortNullableStrings{
+        s0: "9hOr",
+        s1: "wfBgk43fkdmteaUBINdbZg5SPcE",
+    },
+    bytes = {
+        v1, v2 = [
+            num(4):8, repeat(0xFF):8, // s0 length, presence
+            num(27):8, repeat(0xFF):8, // s1 length, presence
+
+            // s0 "9fOr"
+            0x39, 0x68, 0x4F, 0x72, padding:4,
+
+            // s1 "wfBgk43fkdmteaUBINdbZg5SPcE"
+            0x77, 0x66, 0x42, 0x67, 0x6B, 0x34, 0x33, 0x66,
+            0x6B, 0x64, 0x6D, 0x74, 0x65, 0x61, 0x55, 0x42,
+            0x49, 0x4E, 0x64, 0x62, 0x5A, 0x67, 0x35, 0x53,
+            0x50, 0x63, 0x45, padding:5,
+        ],
+    },
 }

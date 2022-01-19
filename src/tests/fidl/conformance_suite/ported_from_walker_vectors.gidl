@@ -468,6 +468,26 @@ success("AbsentNullableBoundedVectorOfUint32") {
     },
 }
 
+success("MultipleBoundedNonnullableVectorsOfUint32s_randomly_generated") {
+    value = MultipleBoundedNonnullableVectorsOfUint32s{
+        vu0: [1025582817, 2776683438],
+        vu1: [1151223630, 483621226, 3773133636, 3428471921, 3913167363, 3828621297, 1893799997],
+    },
+    bytes = {
+        v1, v2 = [
+            num(2):8, repeat(0xFF):8, // vu0 length, presence
+            num(7):8, repeat(0xFF):8, // vu1 length, presence
+
+            // vu0
+            num(1025582817):4, num(2776683438):4,
+
+            // vu1
+            num(1151223630):4, num(483621226):4, num(3773133636):4, num(3428471921):4,
+            num(3913167363):4, num(3828621297):4, num(1893799997):4, padding:4,
+        ],
+    },
+}
+
 decode_failure("PresentNonnullableBoundedVectorOfUint32ShortError") {
     // TODO(fxbug.dev/37304): Validate bounds in Rust.
     bindings_denylist = [rust],
@@ -516,4 +536,31 @@ decode_failure("PresentNullableBoundedVectorOfUint32ShortError") {
         ],
     },
     err = COUNT_EXCEEDS_LIMIT,
+}
+
+success("MultipleNonnullableVectorsOfUint32s_randomly_generated") {
+    value = MultipleNonnullableVectorsOfUint32s{
+        vu0: [
+            2109779047, 1880292994, 1717719637, 310643115,
+            985910586, 701234169, 2618282161,
+        ],
+        vu1: [
+            842458034, 4060234085, 845176054, 82316015,
+            2030863917, 140317742, 2650810212, 3263465718,
+        ],
+    },
+    bytes = {
+        v1, v2 = [
+            num(7):8, repeat(0xFF):8, // vu0 length, presence
+            num(8):8, repeat(0xFF):8, // vu1 length, presence
+
+            // vu0
+            num(2109779047):4, num(1880292994):4, num(1717719637):4, num(310643115):4,
+            num(985910586):4, num(701234169):4, num(2618282161):4, padding:4,
+
+            // vu1
+            num(842458034):4, num(4060234085):4, num(845176054):4, num(82316015):4,
+            num(2030863917):4, num(140317742):4, num(2650810212):4, num(3263465718):4,
+        ],
+    },
 }

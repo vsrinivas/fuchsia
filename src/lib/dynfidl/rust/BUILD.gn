@@ -14,10 +14,7 @@ group("rust") {
 
 group("tests") {
   testonly = true
-  deps = [
-    ":fidl_dynfidl_conformance_tests",
-    "tests",
-  ]
+  deps = [ ":fidl_dynfidl_conformance_tests" ]
 }
 
 rustc_library("dynfidl") {
