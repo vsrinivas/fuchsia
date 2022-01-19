@@ -28,7 +28,8 @@ use netstack3_core::{
     context::{InstantContext, RngContext, TimerContext},
     icmp::{BufferIcmpContext, IcmpConnId, IcmpContext, IcmpIpExt},
     BufferUdpContext, Ctx, DeviceId, DeviceLayerEventDispatcher, EntryDest, EntryEither, IpExt,
-    IpSockCreationError, StackStateBuilder, TimerId, UdpConnId, UdpContext, UdpListenerId,
+    IpSockCreationError, Ipv6DeviceConfiguration, StackStateBuilder, TimerId, UdpConnId,
+    UdpContext, UdpListenerId,
 };
 use packet::{Buf, BufferMut, Serializer};
 use packet_formats::icmp::{IcmpEchoReply, IcmpMessage, IcmpUnusedCode};
@@ -367,9 +368,11 @@ impl TestStack {
         use netstack3_core::NdpConfigurations;
         let mut builder = StackStateBuilder::default();
         let mut config = NdpConfigurations::default();
-        config.set_dup_addr_detect_transmits(None);
         config.set_max_router_solicitations(None);
         builder.device_builder().set_default_ndp_configs(config);
+        let mut config = Ipv6DeviceConfiguration::default();
+        config.set_dad_transmits(None);
+        builder.device_builder().set_default_ipv6_config(config);
         let ctx = TestContext::new(builder);
         TestStack { ctx, endpoint_ids: HashMap::new() }
     }

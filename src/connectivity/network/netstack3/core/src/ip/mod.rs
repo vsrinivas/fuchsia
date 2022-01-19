@@ -1540,7 +1540,7 @@ fn receive_ipv6_packet_action<D: EventDispatcher>(
                     increment_counter!(ctx, "receive_ipv6_packet_action::deliver_unicast");
                     ReceivePacketAction::Deliver
                 }
-                AddressState::Tentative => {
+                AddressState::Tentative { dad_transmits_remaining: _ } => {
                     // If the destination address is tentative (which implies
                     // that we are still performing NDP's Duplicate Address
                     // Detection on it), then we don't consider the address
@@ -2607,9 +2607,11 @@ mod tests {
         let _: &mut Ipv4StateBuilder = state_builder.ipv4_builder().forward(true);
         let _: &mut Ipv6StateBuilder = state_builder.ipv6_builder().forward(true);
         let mut ndp_configs = crate::device::ndp::NdpConfigurations::default();
-        ndp_configs.set_dup_addr_detect_transmits(None);
         ndp_configs.set_max_router_solicitations(None);
         state_builder.device_builder().set_default_ndp_configs(ndp_configs);
+        let mut ipv6_config = crate::device::Ipv6DeviceConfiguration::default();
+        ipv6_config.set_dad_transmits(None);
+        state_builder.device_builder().set_default_ipv6_config(ipv6_config);
         let device = DeviceId::new_ethernet(0);
         let mut alice = DummyEventDispatcherBuilder::from_config(dummy_config.swap())
             .build_with(state_builder, DummyEventDispatcher::default());
@@ -2679,9 +2681,11 @@ mod tests {
         let mut state_builder = StackStateBuilder::default();
         let _: &mut Ipv6StateBuilder = state_builder.ipv6_builder().forward(true);
         let mut ndp_configs = crate::device::ndp::NdpConfigurations::default();
-        ndp_configs.set_dup_addr_detect_transmits(None);
         ndp_configs.set_max_router_solicitations(None);
         state_builder.device_builder().set_default_ndp_configs(ndp_configs);
+        let mut ipv6_config = crate::device::Ipv6DeviceConfiguration::default();
+        ipv6_config.set_dad_transmits(None);
+        state_builder.device_builder().set_default_ipv6_config(ipv6_config);
         let mut dispatcher_builder = DummyEventDispatcherBuilder::from_config(dummy_config.clone());
         let extra_ip = UnicastAddr::new(Ipv6Addr::from_bytes([
             0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 192, 168, 0, 100,

@@ -180,9 +180,54 @@ pub(crate) struct Ipv4DeviceState<I: Instant> {
     pub(crate) ip_state: IpDeviceState<I, Ipv4>,
 }
 
+impl<I: Instant> Default for Ipv4DeviceState<I> {
+    fn default() -> Ipv4DeviceState<I> {
+        Ipv4DeviceState { ip_state: Default::default() }
+    }
+}
+
+/// Configuration common to all IPv6 devices.
+#[derive(Clone)]
+pub struct Ipv6DeviceConfiguration {
+    /// The value for NDP's DupAddrDetectTransmits parameter as defined by
+    /// [RFC 4862 section 5.1].
+    ///
+    /// A value of `None` means DAD will not be performed on the interface.
+    ///
+    /// [RFC 4862 section 5.1]: https://datatracker.ietf.org/doc/html/rfc4862#section-5.1
+    pub(crate) dad_transmits: Option<NonZeroU8>,
+}
+
+impl Ipv6DeviceConfiguration {
+    /// Sets the value for NDP's DupAddrDetectTransmits parameter as defined by
+    /// [RFC 4862 section 5.1].
+    ///
+    /// A value of `None` means DAD will not be performed on the interface.
+    ///
+    /// [RFC 4862 section 5.1]: https://datatracker.ietf.org/doc/html/rfc4862#section-5.1
+    pub fn set_dad_transmits(&mut self, v: Option<NonZeroU8>) {
+        self.dad_transmits = v;
+    }
+}
+
+impl Default for Ipv6DeviceConfiguration {
+    fn default() -> Ipv6DeviceConfiguration {
+        Ipv6DeviceConfiguration {
+            dad_transmits: NonZeroU8::new(super::ndp::DUP_ADDR_DETECT_TRANSMITS),
+        }
+    }
+}
+
 /// The state common to all IPv6 devices.
 pub(crate) struct Ipv6DeviceState<I: Instant> {
     pub(crate) ip_state: IpDeviceState<I, Ipv6>,
+    pub(crate) config: Ipv6DeviceConfiguration,
+}
+
+impl<I: Instant> Default for Ipv6DeviceState<I> {
+    fn default() -> Ipv6DeviceState<I> {
+        Ipv6DeviceState { ip_state: Default::default(), config: Default::default() }
+    }
 }
 
 impl<I: Instant> IpDeviceState<I, Ipv6> {
@@ -213,8 +258,8 @@ pub(crate) struct DualStackIpDeviceState<I: Instant> {
 impl<I: Instant> Default for DualStackIpDeviceState<I> {
     fn default() -> DualStackIpDeviceState<I> {
         DualStackIpDeviceState {
-            ipv4: Ipv4DeviceState { ip_state: IpDeviceState::default() },
-            ipv6: Ipv6DeviceState { ip_state: IpDeviceState::default() },
+            ipv4: Ipv4DeviceState::default(),
+            ipv6: Ipv6DeviceState::default(),
         }
     }
 }
@@ -244,7 +289,10 @@ pub(crate) enum AddressState {
     /// The address is considered unassigned to an interface for normal
     /// operations, but has the intention of being assigned in the future (e.g.
     /// once NDP's Duplicate Address Detection is completed).
-    Tentative,
+    ///
+    /// When `dad_transmits_remaining` is `None`, then no more DAD messages need
+    /// to be sent and DAD may be resolved.
+    Tentative { dad_transmits_remaining: Option<NonZeroU8> },
 
     /// The address is considered deprecated on an interface. Existing
     /// connections using the address will be fine, however new connections
@@ -260,7 +308,10 @@ impl AddressState {
 
     /// Is this address tentative?
     pub(crate) fn is_tentative(self) -> bool {
-        self == AddressState::Tentative
+        match self {
+            AddressState::Assigned | AddressState::Deprecated => false,
+            AddressState::Tentative { dad_transmits_remaining: _ } => true,
+        }
     }
 
     /// Is this address deprecated?
@@ -318,10 +369,11 @@ pub(crate) enum AddrConfigType {
 }
 
 /// Data associated with an IPv6 address on an interface.
+// TODO(https://fxbug.dev/91753): Should this be generalized for loopback?
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub(crate) struct Ipv6AddressEntry<Instant> {
-    addr_sub: AddrSubnet<Ipv6Addr, UnicastAddr<Ipv6Addr>>,
-    pub state: AddressState,
+    pub(crate) addr_sub: AddrSubnet<Ipv6Addr, UnicastAddr<Ipv6Addr>>,
+    pub(crate) state: AddressState,
     pub(crate) config: AddrConfig<Instant>,
 }
 

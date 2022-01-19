@@ -499,9 +499,11 @@ impl DummyEventDispatcherBuilder {
         // Most tests do not need NDP's DAD or router solicitation so disable it
         // here.
         let mut ndp_configs = crate::device::ndp::NdpConfigurations::default();
-        ndp_configs.set_dup_addr_detect_transmits(None);
         ndp_configs.set_max_router_solicitations(None);
         stack_builder.device_builder().set_default_ndp_configs(ndp_configs);
+        let mut ipv6_config = crate::device::Ipv6DeviceConfiguration::default();
+        ipv6_config.set_dad_transmits(None);
+        stack_builder.device_builder().set_default_ipv6_config(ipv6_config);
 
         f(&mut stack_builder);
         self.build_with(stack_builder, D::default())

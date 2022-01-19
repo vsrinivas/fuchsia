@@ -18,10 +18,7 @@
 //!
 //! [RFC 4861]: https://tools.ietf.org/html/rfc4861
 
-use alloc::collections::{
-    hash_map::{self, HashMap},
-    HashSet,
-};
+use alloc::collections::{HashMap, HashSet};
 use core::fmt::Debug;
 use core::marker::PhantomData;
 use core::num::NonZeroU8;
@@ -172,6 +169,9 @@ pub(crate) trait NdpHandler<D: LinkDevice>: DeviceIdContext<D> {
     /// be done with the state.
     fn deinitialize(&mut self, device_id: Self::DeviceId);
 
+    /// Returns the configured retransmit timer.
+    fn retrans_timer(&self, device_id: Self::DeviceId) -> Duration;
+
     /// Updates the NDP Configurations for a `device_id`.
     ///
     /// Note, some values may not take effect immediately, and may only take
@@ -186,41 +186,6 @@ pub(crate) trait NdpHandler<D: LinkDevice>: DeviceIdContext<D> {
     ///    take effect the next time routers are explicitly solicited. Current
     ///    router solicitation will continue using the old value.
     fn set_configurations(&mut self, device_id: Self::DeviceId, configs: NdpConfigurations);
-
-    /// Gets the NDP Configurations for a `device_id`.
-    fn get_configurations(&self, device_id: Self::DeviceId) -> &NdpConfigurations;
-
-    /// Begin the Duplicate Address Detection process.
-    ///
-    /// If the device is configured to not do DAD, then this method will
-    /// immediately assign `tentative_addr` to the device.
-    ///
-    /// # Panics
-    ///
-    /// Panics if DAD is already being performed on this address.
-    fn start_duplicate_address_detection(
-        &mut self,
-        device_id: Self::DeviceId,
-        tentative_addr: UnicastAddr<Ipv6Addr>,
-    );
-
-    /// Cancels the Duplicate Address Detection process.
-    ///
-    /// Note, the address will now be in a tentative state forever unless the
-    /// caller assigns a new address to the device (DAD will restart),
-    /// explicitly restarts DAD, or the device receives a Neighbor Solicitation
-    /// or Neighbor Advertisement message (the address will be found to be a
-    /// duplicate and unassigned from the device).
-    ///
-    /// # Panics
-    ///
-    /// Panics if we are not currently performing DAD for `tentative_addr` on
-    /// `device_id`.
-    fn cancel_duplicate_address_detection(
-        &mut self,
-        device_id: Self::DeviceId,
-        tentative_addr: UnicastAddr<Ipv6Addr>,
-    );
 
     /// Start soliciting routers.
     ///
@@ -276,28 +241,12 @@ where
         deinitialize(self, device_id)
     }
 
+    fn retrans_timer(&self, device_id: Self::DeviceId) -> Duration {
+        self.get_state_with(device_id).retrans_timer
+    }
+
     fn set_configurations(&mut self, device_id: Self::DeviceId, configs: NdpConfigurations) {
         set_ndp_configurations(self, device_id, configs)
-    }
-
-    fn get_configurations(&self, device_id: Self::DeviceId) -> &NdpConfigurations {
-        get_ndp_configurations(self, device_id)
-    }
-
-    fn start_duplicate_address_detection(
-        &mut self,
-        device_id: Self::DeviceId,
-        tentative_addr: UnicastAddr<Ipv6Addr>,
-    ) {
-        start_duplicate_address_detection(self, device_id, tentative_addr)
-    }
-
-    fn cancel_duplicate_address_detection(
-        &mut self,
-        device_id: Self::DeviceId,
-        tentative_addr: UnicastAddr<Ipv6Addr>,
-    ) {
-        cancel_duplicate_address_detection(self, device_id, tentative_addr)
     }
 
     fn start_soliciting_routers(&mut self, device_id: Self::DeviceId) {
@@ -369,7 +318,7 @@ pub(crate) trait NdpContext<D: LinkDevice>:
             .iter_addrs()
             .filter(|entry| match entry.state {
                 AddressState::Assigned | AddressState::Deprecated => true,
-                AddressState::Tentative => false,
+                AddressState::Tentative { dad_transmits_remaining: _ } => false,
             })
             .map(|entry| entry.addr_sub().addr());
 
@@ -586,18 +535,6 @@ fn deinitialize<D: LinkDevice, C: NdpContext<D>>(ctx: &mut C, device_id: C::Devi
 /// Per interface configurations for NDP.
 #[derive(Debug, Clone)]
 pub struct NdpConfigurations {
-    /// Value for NDP's DUP_ADDR_DETECT_TRANSMITS parameter.
-    ///
-    /// As per [RFC 4862 section 5.1], the DUP_ADDR_DETECT_TRANSMITS is
-    /// configurable per interface.
-    ///
-    /// A value of `None` means DAD will not be performed on the interface.
-    ///
-    /// Default: [`DUP_ADDR_DETECT_TRANSMITS`].
-    ///
-    /// [RFC 4862 section 5.1]: https://tools.ietf.org/html/rfc4862#section-5.1
-    dup_addr_detect_transmits: Option<NonZeroU8>,
-
     /// Value for NDP's MAX_RTR_SOLICITATIONS parameter to configure how many
     /// router solicitation messages to send on interface enable.
     ///
@@ -612,26 +549,11 @@ pub struct NdpConfigurations {
 
 impl Default for NdpConfigurations {
     fn default() -> Self {
-        Self {
-            dup_addr_detect_transmits: NonZeroU8::new(DUP_ADDR_DETECT_TRANSMITS),
-            max_router_solicitations: NonZeroU8::new(MAX_RTR_SOLICITATIONS),
-        }
+        Self { max_router_solicitations: NonZeroU8::new(MAX_RTR_SOLICITATIONS) }
     }
 }
 
 impl NdpConfigurations {
-    /// Get the value for NDP's DUP_ADDR_DETECT_TRANSMITS parameter.
-    pub fn get_dup_addr_detect_transmits(&self) -> Option<NonZeroU8> {
-        self.dup_addr_detect_transmits
-    }
-
-    /// Set the value for NDP's DUP_ADDR_DETECT_TRANSMITS parameter.
-    ///
-    /// A value of `None` means DAD will not be performed on the interface.
-    pub fn set_dup_addr_detect_transmits(&mut self, v: Option<NonZeroU8>) {
-        self.dup_addr_detect_transmits = v;
-    }
-
     /// Get the value for NDP's MAX_RTR_SOLICITATIONS parameter.
     pub fn get_max_router_solicitations(&self) -> Option<NonZeroU8> {
         self.max_router_solicitations
@@ -670,10 +592,6 @@ pub(crate) struct NdpState<D: LinkDevice> {
 
     /// List of on-link prefixes.
     on_link_prefixes: HashSet<AddrSubnet<Ipv6Addr, UnicastAddr<Ipv6Addr>>>,
-
-    /// Number of Neighbor Solicitation messages left to send before we can
-    /// assume that an IPv6 address is not currently in use.
-    dad_transmits_remaining: HashMap<UnicastAddr<Ipv6Addr>, u8>,
 
     /// Number of remaining Router Solicitation messages to send.
     router_solicitations_remaining: u8,
@@ -731,7 +649,6 @@ impl<D: LinkDevice> NdpState<D> {
         let mut ret = Self {
             neighbors: NeighborTable::default(),
             default_routers: HashSet::new(),
-            dad_transmits_remaining: HashMap::new(),
             on_link_prefixes: HashSet::new(),
             router_solicitations_remaining: 0,
 
@@ -873,15 +790,6 @@ impl<D: LinkDevice> NdpState<D> {
 
         self.retrans_timer = v;
     }
-
-    // NDP Configurations.
-
-    /// Set the number of Neighbor Solicitation messages to send when performing
-    /// DAD.
-    #[cfg(test)]
-    pub(crate) fn set_dad_transmits(&mut self, v: Option<NonZeroU8>) {
-        self.configs.set_dup_addr_detect_transmits(v);
-    }
 }
 
 /// The identifier for timer events in NDP operations.
@@ -897,9 +805,6 @@ pub(crate) struct NdpTimerId<D: LinkDevice, DeviceId> {
 pub(crate) enum InnerNdpTimerId {
     /// This is used to retry sending Neighbor Discovery Protocol requests.
     LinkAddressResolution { neighbor_addr: UnicastAddr<Ipv6Addr> },
-    /// This is used to resend Duplicate Address Detection Neighbor Solicitation
-    /// messages if `DUP_ADDR_DETECTION_TRANSMITS` is greater than one.
-    DadNsTransmit { addr: UnicastAddr<Ipv6Addr> },
     /// Timer to send Router Solicitation messages.
     RouterSolicitationTransmit,
     /// Timer to invalidate a router.
@@ -928,13 +833,6 @@ impl<D: LinkDevice, DeviceId: Copy> NdpTimerId<D, DeviceId> {
         neighbor_addr: UnicastAddr<Ipv6Addr>,
     ) -> NdpTimerId<D, DeviceId> {
         NdpTimerId::new(device_id, InnerNdpTimerId::LinkAddressResolution { neighbor_addr })
-    }
-
-    pub(crate) fn new_dad_ns_transmission(
-        device_id: DeviceId,
-        tentative_addr: UnicastAddr<Ipv6Addr>,
-    ) -> NdpTimerId<D, DeviceId> {
-        NdpTimerId::new(device_id, InnerNdpTimerId::DadNsTransmit { addr: tentative_addr })
     }
 
     pub(crate) fn new_router_solicitation(device_id: DeviceId) -> NdpTimerId<D, DeviceId> {
@@ -1007,31 +905,6 @@ fn handle_timer<D: LinkDevice, C: NdpContext<D>>(ctx: &mut C, id: NdpTimerId<D, 
                 unreachable!("handle_timer: timer for neighbor {:?} address resolution should not exist if no entry exists", neighbor_addr);
             }
         }
-        InnerNdpTimerId::DadNsTransmit { addr } => {
-            // Get device NDP state.
-            let ndp_state = ctx.get_state_mut_with(id.device_id);
-            let entry = match ndp_state.dad_transmits_remaining.entry(addr) {
-                hash_map::Entry::Vacant(entry) => {
-                    let _: hash_map::VacantEntry<'_, _, _> = entry;
-                    unreachable!("handle_timer: timer for address {:?} duplicate address detection should not exist if no retransmit state exists", addr);
-                }
-                hash_map::Entry::Occupied(entry) => entry,
-            };
-
-            // We have finished.
-            if *entry.get() == 0 {
-                let _: u8 = entry.remove();
-
-                // `unique_address_determined` may panic if we attempt to
-                // resolve an `addr` that is not tentative on the device with id
-                // `id.device_id`. However, we can only reach here if `addr` was
-                // tentative on `id.device_id` and we are performing DAD so we
-                // know `unique_address_determined` will not panic.
-                ctx.unique_address_determined_wrapper(id.device_id, addr);
-            } else {
-                do_duplicate_address_detection(ctx, id.device_id, addr);
-            }
-        }
         InnerNdpTimerId::RouterSolicitationTransmit => do_router_solicitation(ctx, id.device_id),
         InnerNdpTimerId::RouterInvalidation { ip } => {
             // Invalidate the router.
@@ -1070,13 +943,6 @@ fn set_ndp_configurations<D: LinkDevice, C: NdpContext<D>>(
     configs: NdpConfigurations,
 ) {
     ctx.get_state_mut_with(device_id).configs = configs;
-}
-
-fn get_ndp_configurations<D: LinkDevice, C: NdpContext<D>>(
-    ctx: &C,
-    device_id: C::DeviceId,
-) -> &NdpConfigurations {
-    &ctx.get_state_with(device_id).configs
 }
 
 fn lookup<D: LinkDevice, C: NdpContext<D>>(
@@ -1449,92 +1315,6 @@ fn send_router_solicitation<D: LinkDevice, C: NdpContext<D>>(
     }
 }
 
-fn start_duplicate_address_detection<D: LinkDevice, C: NdpContext<D>>(
-    ctx: &mut C,
-    device_id: C::DeviceId,
-    tentative_addr: UnicastAddr<Ipv6Addr>,
-) {
-    let ndp_state = ctx.get_state_mut_with(device_id);
-
-    let transmits = ndp_state.configs.dup_addr_detect_transmits;
-
-    if let Some(transmits) = transmits {
-        // Must not already be performing DAD on the device.
-        assert_eq!(ndp_state.dad_transmits_remaining.insert(tentative_addr, transmits.get()), None);
-
-        trace!("ndp::start_duplicate_address_detection: starting duplicate address detection for address {:?} on device {:?}", tentative_addr, device_id);
-
-        do_duplicate_address_detection(ctx, device_id, tentative_addr);
-    } else {
-        // Must not already be performing DAD on the device.
-        assert!(!ndp_state.dad_transmits_remaining.contains_key(&tentative_addr));
-
-        // DAD is turned off since the interface's DUP_ADDR_DETECT_TRANSMIT
-        // parameter is `None`.
-        trace!("ndp::start_duplicate_address_detection: assigning address {:?} on device {:?} immediately because duplicate address detection is disabled", tentative_addr, device_id);
-
-        ctx.unique_address_determined_wrapper(device_id, tentative_addr);
-    }
-}
-
-fn cancel_duplicate_address_detection<D: LinkDevice, C: NdpContext<D>>(
-    ctx: &mut C,
-    device_id: C::DeviceId,
-    tentative_addr: UnicastAddr<Ipv6Addr>,
-) {
-    trace!("ndp::cancel_duplicate_address_detection: cancelling duplicate address detection for address {:?} on device {:?}", tentative_addr, device_id);
-
-    let _: Option<C::Instant> =
-        ctx.cancel_timer(NdpTimerId::new_dad_ns_transmission(device_id, tentative_addr).into());
-
-    // `unwrap` may panic if we have no entry in `dad_transmits_remaining` for
-    // `tentative_addr` which means that we are not performing DAD on
-    // `tentative_add`. This case is documented as a panic condition.
-    let _: u8 =
-        ctx.get_state_mut_with(device_id).dad_transmits_remaining.remove(&tentative_addr).unwrap();
-}
-
-/// Send another DAD message (Neighbor Solicitation).
-///
-/// # Panics
-///
-/// Panics if the DAD process has not been started for `tentative_addr` on
-/// `device_id`.
-fn do_duplicate_address_detection<D: LinkDevice, C: NdpContext<D>>(
-    ctx: &mut C,
-    device_id: C::DeviceId,
-    tentative_addr: UnicastAddr<Ipv6Addr>,
-) {
-    trace!("do_duplicate_address_detection: tentative_addr {:?}", tentative_addr);
-
-    let ndp_state = ctx.get_state_mut_with(device_id);
-
-    // We MUST have already started the DAD process if we reach this point.
-    let remaining = ndp_state.dad_transmits_remaining.get_mut(&tentative_addr).unwrap();
-    assert!(*remaining > 0);
-    *remaining -= 1;
-
-    // Uses same RETRANS_TIMER definition per RFC 4862 section-5.1
-    let retrans_timer = ndp_state.retrans_timer;
-
-    let src_ll = ctx.get_link_layer_addr(device_id);
-    // TODO(https://fxbug.dev/85055): Either panic or guarantee that this error
-    // can't happen statically?
-    let _ = send_ndp_packet::<_, _, &[u8], _>(
-        ctx,
-        device_id,
-        Ipv6::UNSPECIFIED_ADDRESS,
-        tentative_addr.to_solicited_node_address().into_specified(),
-        NeighborSolicitation::new(tentative_addr.get()),
-        &[NdpOptionBuilder::SourceLinkLayerAddress(src_ll.bytes())],
-    );
-
-    let _: Option<C::Instant> = ctx.schedule_timer(
-        retrans_timer,
-        NdpTimerId::new_dad_ns_transmission(device_id, tentative_addr).into(),
-    );
-}
-
 fn send_neighbor_solicitation<D: LinkDevice, C: NdpContext<D>>(
     ctx: &mut C,
     device_id: C::DeviceId,
@@ -1606,7 +1386,7 @@ fn send_neighbor_advertisement<D: LinkDevice, C: NdpContext<D>>(
 /// Helper function to send MTU packet over an NdpDevice to `dst_ip`.
 // TODO(https://fxbug.dev/85055): Is it possible to guarantee that some types of
 // errors don't happen?
-fn send_ndp_packet<D: LinkDevice, C: NdpContext<D>, B: ByteSlice, M>(
+pub(super) fn send_ndp_packet<D: LinkDevice, C: NdpContext<D>, B: ByteSlice, M>(
     ctx: &mut C,
     device_id: C::DeviceId,
     src_ip: Ipv6Addr,
@@ -1852,17 +1632,6 @@ pub(crate) trait NdpPacketHandler<DeviceId> {
         dst_ip: SpecifiedAddr<Ipv6Addr>,
         packet: NdpPacket<B>,
     );
-}
-
-fn duplicate_address_detected<D: LinkDevice, C: NdpContext<D>>(
-    ctx: &mut C,
-    device_id: C::DeviceId,
-    addr: UnicastAddr<Ipv6Addr>,
-) {
-    cancel_duplicate_address_detection(ctx, device_id, addr);
-
-    // Let's notify our device.
-    ctx.duplicate_address_detected(device_id, addr);
 }
 
 pub(crate) fn receive_ndp_packet<D: LinkDevice, C: NdpContext<D>, B>(
@@ -2192,7 +1961,7 @@ pub(crate) fn receive_ndp_packet<D: LinkDevice, C: NdpContext<D>, B>(
                         "receive_ndp_packet: Received NDP NS: duplicate address {:?} detected on device {:?}", target_address, device_id
                     );
 
-                    duplicate_address_detected(ctx, device_id, target_address);
+                    ctx.duplicate_address_detected(device_id, target_address);
                 }
 
                 // `target_address` is tentative on `device_id` so we do not
@@ -2284,9 +2053,9 @@ pub(crate) fn receive_ndp_packet<D: LinkDevice, C: NdpContext<D>, B>(
                 .find_addr(&target_address)
                 .map(|entry| entry.state)
             {
-                Some(AddressState::Tentative) => {
-                    trace!("receive_ndp_packet: NDP NA has a target address {:?} that is tentative on device {:?}", target_address, device_id);
-                    duplicate_address_detected(ctx, device_id, target_address);
+                Some(AddressState::Tentative { dad_transmits_remaining }) => {
+                    trace!("receive_ndp_packet: NDP NA has a target address {:?} that is tentative on device {:?}; dad_transmits_remaining={:?}", target_address, device_id, dad_transmits_remaining);
+                    ctx.duplicate_address_detected(device_id, target_address);
                     return;
                 }
                 Some(AddressState::Assigned) | Some(AddressState::Deprecated) => {
@@ -2556,7 +2325,6 @@ mod tests {
 
     type IcmpParseArgs = packet_formats::icmp::IcmpParseArgs<Ipv6Addr>;
 
-    // We assume Ethernet since that's what all of our tests use.
     impl From<NdpTimerId<EthernetLinkDevice, EthernetDeviceId>> for TimerId {
         fn from(id: NdpTimerId<EthernetLinkDevice, EthernetDeviceId>) -> Self {
             TimerId(TimerIdInner::DeviceLayer(DeviceLayerTimerId(
@@ -2645,32 +2413,18 @@ mod tests {
     fn test_ndp_configurations() {
         let mut c = NdpConfigurations::default();
         let solicits = NonZeroU8::new(MAX_RTR_SOLICITATIONS);
-        assert_eq!(c.get_dup_addr_detect_transmits(), NonZeroU8::new(DUP_ADDR_DETECT_TRANSMITS));
-        assert_eq!(c.get_max_router_solicitations(), solicits);
-
-        let transmits = None;
-        c.set_dup_addr_detect_transmits(transmits);
-        assert_eq!(c.get_dup_addr_detect_transmits(), transmits);
-        assert_eq!(c.get_max_router_solicitations(), solicits);
-
-        let transmits = NonZeroU8::new(100);
-        c.set_dup_addr_detect_transmits(transmits);
-        assert_eq!(c.get_dup_addr_detect_transmits(), transmits);
         assert_eq!(c.get_max_router_solicitations(), solicits);
 
         let solicits = None;
         c.set_max_router_solicitations(solicits);
-        assert_eq!(c.get_dup_addr_detect_transmits(), transmits);
         assert_eq!(c.get_max_router_solicitations(), solicits);
 
         let solicits = NonZeroU8::new(2);
         c.set_max_router_solicitations(solicits);
-        assert_eq!(c.get_dup_addr_detect_transmits(), transmits);
         assert_eq!(c.get_max_router_solicitations(), solicits);
 
         // Max Router Solicitations gets saturated at `MAX_RTR_SOLICITATIONS`.
         c.set_max_router_solicitations(NonZeroU8::new(MAX_RTR_SOLICITATIONS + 1));
-        assert_eq!(c.get_dup_addr_detect_transmits(), transmits);
         assert_eq!(c.get_max_router_solicitations(), NonZeroU8::new(MAX_RTR_SOLICITATIONS));
     }
 
@@ -2944,6 +2698,17 @@ mod tests {
         assert!(!is_in_ip_multicast(net.context("remote"), device_id, multicast_addr));
     }
 
+    fn dad_timer_id(id: EthernetDeviceId, addr: UnicastAddr<Ipv6Addr>) -> TimerId {
+        // We assume Ethernet since that's what all of our tests use.
+        TimerId(TimerIdInner::DeviceLayer(DeviceLayerTimerId(DeviceLayerTimerIdInner::Ethernet(
+            EthernetTimerId::Dad(crate::device::DadTimerId {
+                device_id: id,
+                addr,
+                _marker: PhantomData,
+            }),
+        ))))
+    }
+
     #[test]
     fn test_dad_duplicate_address_detected_advertisement() {
         // Tests whether a duplicate address will get detected by advertisement
@@ -2974,10 +2739,9 @@ mod tests {
         );
 
         // Enable DAD.
-        let mut ndp_configs = NdpConfigurations::default();
-        ndp_configs.set_max_router_solicitations(None);
-        crate::device::set_ndp_configurations(net.context("local"), device_id, ndp_configs.clone());
-        crate::device::set_ndp_configurations(net.context("remote"), device_id, ndp_configs);
+        let ipv6_config = crate::device::Ipv6DeviceConfiguration::default();
+        crate::device::set_ipv6_configuration(net.context("local"), device_id, ipv6_config.clone());
+        crate::device::set_ipv6_configuration(net.context("remote"), device_id, ipv6_config);
 
         let addr = AddrSubnet::new(local_ip().get(), 128).unwrap();
         let multicast_addr = local_ip().to_solicited_node_address();
@@ -2988,7 +2752,7 @@ mod tests {
 
         assert_eq!(
             testutil::trigger_next_timer(net.context("local")).unwrap(),
-            NdpTimerId::new_dad_ns_transmission(device_id.id().into(), local_ip()).into()
+            dad_timer_id(device_id.id().into(), local_ip())
         );
 
         assert!(NdpContext::<EthernetLinkDevice>::get_ip_device_state(
@@ -3047,7 +2811,7 @@ mod tests {
                 .find_addr(&addr)
                 .unwrap()
                 .state,
-            AddressState::Tentative,
+            AddressState::Tentative { dad_transmits_remaining: None },
         );
         let addr = remote_ip();
         assert_eq!(
@@ -3061,7 +2825,7 @@ mod tests {
                 .find_addr(&addr)
                 .unwrap()
                 .state,
-            AddressState::Tentative,
+            AddressState::Tentative { dad_transmits_remaining: None },
         );
     }
 
@@ -3070,24 +2834,24 @@ mod tests {
         let mut stack_builder = StackStateBuilder::default();
         let mut ndp_configs = crate::device::ndp::NdpConfigurations::default();
         ndp_configs.set_max_router_solicitations(None);
-        ndp_configs.set_dup_addr_detect_transmits(None);
         stack_builder.device_builder().set_default_ndp_configs(ndp_configs);
+        let mut ipv6_config = crate::device::Ipv6DeviceConfiguration::default();
+        ipv6_config.set_dad_transmits(None);
+        stack_builder.device_builder().set_default_ipv6_config(ipv6_config);
         let mut ctx = Ctx::new(stack_builder.build(), DummyEventDispatcher::default());
         let dev_id = ctx.state.add_ethernet_device(local_mac(), Ipv6::MINIMUM_LINK_MTU.into());
         crate::device::initialize_device(&mut ctx, dev_id);
 
         // Enable DAD.
-        StateContext::<NdpState<EthernetLinkDevice>, _>::get_state_mut_with(
-            &mut ctx,
-            dev_id.id().into(),
-        )
-        .set_dad_transmits(NonZeroU8::new(3));
+        let mut ipv6_config = crate::device::Ipv6DeviceConfiguration::default();
+        ipv6_config.set_dad_transmits(NonZeroU8::new(3));
+        crate::device::set_ipv6_configuration(&mut ctx, dev_id, ipv6_config);
         add_ip_addr_subnet(&mut ctx, dev_id, AddrSubnet::new(local_ip().get(), 128).unwrap())
             .unwrap();
         for _ in 0..3 {
             assert_eq!(
                 testutil::trigger_next_timer(&mut ctx).unwrap(),
-                NdpTimerId::new_dad_ns_transmission(dev_id.id().into(), local_ip()).into()
+                dad_timer_id(dev_id.id().into(), local_ip())
             );
         }
         assert!(NdpContext::<EthernetLinkDevice>::get_ip_device_state(&ctx, dev_id.id().into())
@@ -3119,16 +2883,10 @@ mod tests {
             },
         );
 
-        StateContext::<NdpState<EthernetLinkDevice>, _>::get_state_mut_with(
-            net.context("local"),
-            device_id.id().into(),
-        )
-        .set_dad_transmits(NonZeroU8::new(3));
-        StateContext::<NdpState<EthernetLinkDevice>, _>::get_state_mut_with(
-            net.context("remote"),
-            device_id.id().into(),
-        )
-        .set_dad_transmits(NonZeroU8::new(3));
+        let mut ipv6_config = crate::device::Ipv6DeviceConfiguration::default();
+        ipv6_config.set_dad_transmits(NonZeroU8::new(3));
+        crate::device::set_ipv6_configuration(net.context("local"), device_id, ipv6_config.clone());
+        crate::device::set_ipv6_configuration(net.context("remote"), device_id, ipv6_config);
 
         add_ip_addr_subnet(
             net.context("local"),
@@ -3137,8 +2895,7 @@ mod tests {
         )
         .unwrap();
 
-        let expected_timer_id =
-            NdpTimerId::new_dad_ns_transmission(device_id.id().into(), local_ip()).into();
+        let expected_timer_id = dad_timer_id(device_id.id().into(), local_ip());
         // During the first and second period, the remote host is still down.
         assert_eq!(testutil::trigger_next_timer(net.context("local")).unwrap(), expected_timer_id);
         assert_eq!(testutil::trigger_next_timer(net.context("local")).unwrap(), expected_timer_id);
@@ -3180,9 +2937,11 @@ mod tests {
         assert_empty(ctx.dispatcher.frames_sent());
 
         let mut ndp_configs = NdpConfigurations::default();
-        ndp_configs.set_dup_addr_detect_transmits(NonZeroU8::new(3));
         ndp_configs.set_max_router_solicitations(None);
         crate::device::set_ndp_configurations(&mut ctx, dev_id, ndp_configs);
+        let mut ipv6_config = crate::device::Ipv6DeviceConfiguration::default();
+        ipv6_config.set_dad_transmits(NonZeroU8::new(3));
+        crate::device::set_ipv6_configuration(&mut ctx, dev_id, ipv6_config);
 
         // Add an IP.
         add_ip_addr_subnet(&mut ctx, dev_id, AddrSubnet::new(local_ip().get(), 128).unwrap())
@@ -3193,8 +2952,7 @@ mod tests {
         assert_eq!(ctx.dispatcher.frames_sent().len(), 1);
 
         // Send another NS.
-        let local_timer_id =
-            NdpTimerId::new_dad_ns_transmission(dev_id.id().into(), local_ip()).into();
+        let local_timer_id = dad_timer_id(dev_id.id().into(), local_ip());
         assert_eq!(run_for(&mut ctx, Duration::from_secs(1)), [local_timer_id]);
         assert_eq!(ctx.dispatcher.frames_sent().len(), 2);
 
@@ -3210,8 +2968,7 @@ mod tests {
         assert_eq!(ctx.dispatcher.frames_sent().len(), 3);
 
         // Run to the end for DAD for local ip
-        let remote_timer_id =
-            NdpTimerId::new_dad_ns_transmission(dev_id.id().into(), remote_ip()).into();
+        let remote_timer_id = dad_timer_id(dev_id.id().into(), remote_ip());
         assert_eq!(
             run_for(&mut ctx, Duration::from_secs(2)),
             [local_timer_id, remote_timer_id, local_timer_id, remote_timer_id]
@@ -3246,9 +3003,11 @@ mod tests {
 
         // Enable DAD.
         let mut ndp_configs = NdpConfigurations::default();
-        ndp_configs.set_dup_addr_detect_transmits(NonZeroU8::new(3));
         ndp_configs.set_max_router_solicitations(None);
         crate::device::set_ndp_configurations(&mut ctx, dev_id, ndp_configs);
+        let mut ipv6_config = crate::device::Ipv6DeviceConfiguration::default();
+        ipv6_config.set_dad_transmits(NonZeroU8::new(3));
+        crate::device::set_ipv6_configuration(&mut ctx, dev_id, ipv6_config);
 
         assert_empty(ctx.dispatcher.frames_sent());
 
@@ -3261,8 +3020,7 @@ mod tests {
         assert_eq!(ctx.dispatcher.frames_sent().len(), 1);
 
         // Send another NS.
-        let local_timer_id =
-            NdpTimerId::new_dad_ns_transmission(dev_id.id().into(), local_ip()).into();
+        let local_timer_id = dad_timer_id(dev_id.id().into(), local_ip());
         assert_eq!(run_for(&mut ctx, Duration::from_secs(1)), [local_timer_id]);
         assert_eq!(ctx.dispatcher.frames_sent().len(), 2);
 
@@ -3278,8 +3036,7 @@ mod tests {
         assert_eq!(ctx.dispatcher.frames_sent().len(), 3);
 
         // Run 1s
-        let remote_timer_id =
-            NdpTimerId::new_dad_ns_transmission(dev_id.id().into(), remote_ip()).into();
+        let remote_timer_id = dad_timer_id(dev_id.id().into(), remote_ip());
         assert_eq!(run_for(&mut ctx, Duration::from_secs(1)), [local_timer_id, remote_timer_id]);
         assert!(get_ip_addr_state(&ctx, dev_id, &local_ip().into_specified())
             .unwrap()
@@ -4142,9 +3899,9 @@ mod tests {
         let dummy_config = Ipv6::DUMMY_CONFIG;
 
         let mut stack_builder = StackStateBuilder::default();
-        let mut ndp_configs = NdpConfigurations::default();
-        ndp_configs.set_dup_addr_detect_transmits(None);
-        stack_builder.device_builder().set_default_ndp_configs(ndp_configs);
+        let mut ipv6_config = crate::device::Ipv6DeviceConfiguration::default();
+        ipv6_config.set_dad_transmits(None);
+        stack_builder.device_builder().set_default_ipv6_config(ipv6_config);
         let mut ctx = Ctx::new(stack_builder.build(), DummyEventDispatcher::default());
 
         assert_empty(ctx.dispatcher.frames_sent());
@@ -4228,8 +3985,10 @@ mod tests {
         // Configure MAX_RTR_SOLICITATIONS in the stack.
 
         let mut stack_builder = StackStateBuilder::default();
-        let mut ndp_configs = NdpConfigurations::default();
-        ndp_configs.set_dup_addr_detect_transmits(None);
+        let mut ipv6_config = crate::device::Ipv6DeviceConfiguration::default();
+        ipv6_config.set_dad_transmits(None);
+        stack_builder.device_builder().set_default_ipv6_config(ipv6_config);
+        let mut ndp_configs = crate::device::ndp::NdpConfigurations::default();
         ndp_configs.set_max_router_solicitations(NonZeroU8::new(2));
         stack_builder.device_builder().set_default_ndp_configs(ndp_configs);
         let mut ctx = Ctx::new(stack_builder.build(), DummyEventDispatcher::default());
@@ -4289,9 +4048,9 @@ mod tests {
 
         let mut state_builder = StackStateBuilder::default();
         let _: &mut Ipv6StateBuilder = state_builder.ipv6_builder().forward(false);
-        let mut ndp_configs = NdpConfigurations::default();
-        ndp_configs.set_dup_addr_detect_transmits(None);
-        state_builder.device_builder().set_default_ndp_configs(ndp_configs);
+        let mut ipv6_config = crate::device::Ipv6DeviceConfiguration::default();
+        ipv6_config.set_dad_transmits(None);
+        state_builder.device_builder().set_default_ipv6_config(ipv6_config);
         let mut ctx = DummyEventDispatcherBuilder::default()
             .build_with(state_builder, DummyEventDispatcher::default());
 
@@ -4343,9 +4102,9 @@ mod tests {
 
         let mut state_builder = StackStateBuilder::default();
         let _: &mut Ipv6StateBuilder = state_builder.ipv6_builder().forward(true);
-        let mut ndp_configs = NdpConfigurations::default();
-        ndp_configs.set_dup_addr_detect_transmits(None);
-        state_builder.device_builder().set_default_ndp_configs(ndp_configs);
+        let mut ipv6_config = crate::device::Ipv6DeviceConfiguration::default();
+        ipv6_config.set_dad_transmits(None);
+        state_builder.device_builder().set_default_ipv6_config(ipv6_config);
         let mut ctx = DummyEventDispatcherBuilder::default()
             .build_with(state_builder, DummyEventDispatcher::default());
 
@@ -4442,9 +4201,10 @@ mod tests {
         assert_empty(ctx.dispatcher.timer_events());
 
         // Enable DAD for the device.
-        let mut ndp_configs = crate::device::get_ndp_configurations(&ctx, device).clone();
-        ndp_configs.set_dup_addr_detect_transmits(NonZeroU8::new(3));
-        crate::device::set_ndp_configurations(&mut ctx, device, ndp_configs.clone());
+        const DUP_ADDR_DETECT_TRANSMITS: u8 = 3;
+        let mut ipv6_config = crate::device::Ipv6DeviceConfiguration::default();
+        ipv6_config.set_dad_transmits(NonZeroU8::new(DUP_ADDR_DETECT_TRANSMITS));
+        crate::device::set_ipv6_configuration(&mut ctx, device, ipv6_config.clone());
 
         // Updating the IP should start the DAD process.
         add_ip_addr_subnet(
@@ -4465,19 +4225,18 @@ mod tests {
                 .find_addr(&dummy_config.remote_ip.try_into().unwrap())
                 .unwrap()
                 .state,
-            AddressState::Tentative
+            AddressState::Tentative {
+                dad_transmits_remaining: NonZeroU8::new(DUP_ADDR_DETECT_TRANSMITS - 1)
+            }
         );
         assert_eq!(ctx.dispatcher.frames_sent().len(), 1);
         assert_eq!(ctx.dispatcher.timer_events().count(), 1);
 
         // Disable DAD during DAD.
-        ndp_configs.set_dup_addr_detect_transmits(None);
-        crate::device::set_ndp_configurations(&mut ctx, device, ndp_configs.clone());
-        let expected_timer_id = NdpTimerId::new_dad_ns_transmission(
-            device.id().into(),
-            dummy_config.remote_ip.try_into().unwrap(),
-        )
-        .into();
+        ipv6_config.set_dad_transmits(None);
+        crate::device::set_ipv6_configuration(&mut ctx, device, ipv6_config.clone());
+        let expected_timer_id =
+            dad_timer_id(device.id().into(), dummy_config.remote_ip.try_into().unwrap());
         // Allow already started DAD to complete (2 more more NS, 3 more timers).
         assert_eq!(trigger_next_timer(&mut ctx).unwrap(), expected_timer_id);
         assert_eq!(ctx.dispatcher.frames_sent().len(), 2);
@@ -4885,8 +4644,10 @@ mod tests {
 
         let config = Ipv6::DUMMY_CONFIG;
         let mut state_builder = StackStateBuilder::default();
+        let mut ipv6_config = crate::device::Ipv6DeviceConfiguration::default();
+        ipv6_config.set_dad_transmits(None);
+        state_builder.device_builder().set_default_ipv6_config(ipv6_config);
         let mut ndp_configs = NdpConfigurations::default();
-        ndp_configs.set_dup_addr_detect_transmits(None);
         ndp_configs.set_max_router_solicitations(None);
         state_builder.device_builder().set_default_ndp_configs(ndp_configs);
         let _: &mut Ipv6StateBuilder = state_builder.ipv6_builder().forward(true);
@@ -4954,9 +4715,11 @@ mod tests {
         let expected_addr_sub = AddrSubnet::from_witness(expected_addr, prefix_length).unwrap();
 
         // Enable DAD for future IPs.
-        let mut ndp_configs = NdpConfigurations::default();
-        ndp_configs.set_max_router_solicitations(None);
-        crate::device::set_ndp_configurations(&mut ctx, device, ndp_configs);
+        crate::device::set_ipv6_configuration(
+            &mut ctx,
+            device,
+            crate::device::Ipv6DeviceConfiguration::default(),
+        );
 
         // Receive a new RA with new prefix (not autonomous)
 
@@ -5035,7 +4798,7 @@ mod tests {
             .last()
             .unwrap();
         assert_eq!(*entry.addr_sub(), expected_addr_sub);
-        assert_eq!(entry.state, AddressState::Tentative);
+        assert_eq!(entry.state, AddressState::Tentative { dad_transmits_remaining: None });
         assert_eq!(entry.config_type(), AddrConfigType::Slaac);
 
         // Make sure deprecate and invalidation timers are set.
@@ -5072,7 +4835,7 @@ mod tests {
         // Complete DAD
         assert_eq!(
             run_for(&mut ctx, Duration::from_secs(1)),
-            vec!(NdpTimerId::new_dad_ns_transmission(device.id().into(), expected_addr).into())
+            vec!(dad_timer_id(device.id().into(), expected_addr))
         );
 
         let entry = NdpContext::<EthernetLinkDevice>::get_ip_device_state(&ctx, device.id().into())
@@ -5211,9 +4974,11 @@ mod tests {
         let expected_addr = UnicastAddr::new(Ipv6Addr::from(expected_addr)).unwrap();
 
         // Enable DAD for future IPs.
-        let mut ndp_configs = NdpConfigurations::default();
-        ndp_configs.set_max_router_solicitations(None);
-        crate::device::set_ndp_configurations(&mut ctx, device, ndp_configs);
+        crate::device::set_ipv6_configuration(
+            &mut ctx,
+            device,
+            crate::device::Ipv6DeviceConfiguration::default(),
+        );
 
         // Receive a new RA with new prefix (autonomous).
         //
@@ -5264,9 +5029,11 @@ mod tests {
                     == NdpTimerId::new_invalidate_slaac_address(device.id().into(), expected_addr)
                         .into()
         }));
-        assert_empty(ctx.dispatcher.timer_events().filter(|x| {
-            *x.1 == NdpTimerId::new_dad_ns_transmission(device.id().into(), expected_addr).into()
-        }));
+        assert_empty(
+            ctx.dispatcher
+                .timer_events()
+                .filter(|x| *x.1 == dad_timer_id(device.id().into(), expected_addr)),
+        );
 
         assert_eq!(run_for(&mut ctx, Duration::from_secs(1)), []);
 
@@ -5294,9 +5061,11 @@ mod tests {
         let expected_addr_sub = AddrSubnet::from_witness(expected_addr, prefix_length).unwrap();
 
         // Enable DAD for future IPs.
-        let mut ndp_configs = NdpConfigurations::default();
-        ndp_configs.set_max_router_solicitations(None);
-        crate::device::set_ndp_configurations(&mut ctx, device, ndp_configs);
+        crate::device::set_ipv6_configuration(
+            &mut ctx,
+            device,
+            crate::device::Ipv6DeviceConfiguration::default(),
+        );
 
         // Receive a new RA with new prefix (autonomous).
         //
@@ -5342,7 +5111,7 @@ mod tests {
             .last()
             .unwrap();
         assert_eq!(*entry.addr_sub(), expected_addr_sub);
-        assert_eq!(entry.state, AddressState::Tentative);
+        assert_eq!(entry.state, AddressState::Tentative { dad_transmits_remaining: None });
         assert_eq!(entry.config_type(), AddrConfigType::Slaac);
 
         // Make sure deprecate and invalidation timers are set.
@@ -5378,16 +5147,14 @@ mod tests {
         assert_eq!(
             ctx.dispatcher
                 .timer_events()
-                .filter(|x| (*x.1
-                    == NdpTimerId::new_dad_ns_transmission(device.id().into(), expected_addr)
-                        .into()))
+                .filter(|x| (*x.1 == dad_timer_id(device.id().into(), expected_addr)))
                 .count(),
             1
         );
 
         assert_eq!(
             run_for(&mut ctx, Duration::from_secs(1)),
-            vec!(NdpTimerId::new_dad_ns_transmission(device.id().into(), expected_addr).into())
+            vec!(dad_timer_id(device.id().into(), expected_addr))
         );
 
         let entry = NdpContext::<EthernetLinkDevice>::get_ip_device_state(&ctx, device.id().into())
@@ -5605,9 +5372,11 @@ mod tests {
                 .count(),
             1
         );
-        assert_empty(ctx.dispatcher.timer_events().filter(|x| {
-            *x.1 == NdpTimerId::new_dad_ns_transmission(device.id().into(), expected_addr).into()
-        }));
+        assert_empty(
+            ctx.dispatcher
+                .timer_events()
+                .filter(|x| *x.1 == dad_timer_id(device.id().into(), expected_addr)),
+        );
 
         assert_eq!(run_for(&mut ctx, Duration::from_secs(1)), vec!());
 
@@ -5978,9 +5747,11 @@ mod tests {
         );
 
         // Enable DAD for future IPs.
-        let mut ndp_configs = NdpConfigurations::default();
-        ndp_configs.set_max_router_solicitations(None);
-        crate::device::set_ndp_configurations(&mut ctx, device, ndp_configs);
+        crate::device::set_ipv6_configuration(
+            &mut ctx,
+            device,
+            crate::device::Ipv6DeviceConfiguration::default(),
+        );
 
         // Set the retransmit timer between neighbor solicitations to be greater
         // than the preferred lifetime of the prefix.
@@ -6029,7 +5800,7 @@ mod tests {
             .last()
             .unwrap();
         assert_eq!(*entry.addr_sub(), expected_addr_sub);
-        assert_eq!(entry.state, AddressState::Tentative);
+        assert_eq!(entry.state, AddressState::Tentative { dad_transmits_remaining: None });
         assert_eq!(entry.config_type(), AddrConfigType::Slaac);
 
         // Make sure deprecate and invalidation timers are set.

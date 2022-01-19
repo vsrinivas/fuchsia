@@ -28,26 +28,29 @@ use packet_formats::arp::{peek_arp_types, ArpHardwareType, ArpNetworkType};
 use packet_formats::ethernet::{
     EtherType, EthernetFrame, EthernetFrameBuilder, EthernetFrameLengthCheck, EthernetIpExt,
 };
+use packet_formats::icmp::ndp::{options::NdpOptionBuilder, NeighborSolicitation};
 use specialize_ip_macro::specialize_ip_address;
 
-use crate::assert_empty;
-use crate::context::{DualStateContext, FrameContext, StateContext, TimerHandler};
-use crate::data_structures::ref_counted_hash_map::{InsertResult, RefCountedHashSet, RemoveResult};
-use crate::device::arp::{
-    self, ArpContext, ArpDeviceIdContext, ArpFrameMetadata, ArpState, ArpTimerId,
-};
-use crate::device::link::LinkDevice;
-use crate::device::ndp::{self, NdpContext, NdpHandler, NdpState, NdpTimerId};
-use crate::device::state::IpDeviceState;
-use crate::device::{
-    AddrConfig, AddrConfigType, AddressError, AddressState, BufferIpDeviceContext, DeviceIdContext,
-    FrameDestination, IpDeviceContext, Ipv6AddressEntry, RecvIpFrameMeta,
-};
-use crate::ip::gmp::igmp::{IgmpContext, IgmpGroupState, IgmpPacketMetadata, IgmpTimerId};
-use crate::ip::gmp::mld::{MldContext, MldFrameMetadata, MldGroupState, MldReportDelay};
-use crate::ip::gmp::{GmpHandler, GroupJoinResult, GroupLeaveResult, MulticastGroupSet};
 #[cfg(test)]
 use crate::Ctx;
+use crate::{
+    assert_empty,
+    context::{DualStateContext, FrameContext, StateContext, TimerHandler},
+    data_structures::ref_counted_hash_map::{InsertResult, RefCountedHashSet, RemoveResult},
+    device::{
+        arp::{self, ArpContext, ArpDeviceIdContext, ArpFrameMetadata, ArpState, ArpTimerId},
+        link::LinkDevice,
+        ndp::{self, NdpContext, NdpHandler, NdpState, NdpTimerId},
+        state::{IpDeviceState, Ipv6DeviceConfiguration, Ipv6DeviceState},
+        AddrConfig, AddrConfigType, AddressError, AddressState, BufferIpDeviceContext, DadTimerId,
+        DeviceIdContext, FrameDestination, IpDeviceContext, Ipv6AddressEntry, RecvIpFrameMeta,
+    },
+    ip::gmp::{
+        igmp::{IgmpContext, IgmpGroupState, IgmpPacketMetadata, IgmpTimerId},
+        mld::{MldContext, MldFrameMetadata, MldGroupState, MldReportDelay},
+        GmpHandler, GroupJoinResult, GroupLeaveResult, MulticastGroupSet,
+    },
+};
 
 const ETHERNET_MAX_PENDING_FRAMES: usize = 10;
 
@@ -339,6 +342,7 @@ impl EthernetDeviceState {
 pub(crate) enum EthernetTimerId<D> {
     Arp(ArpTimerId<EthernetLinkDevice, Ipv4Addr, D>),
     Ndp(NdpTimerId<EthernetLinkDevice, D>),
+    Dad(DadTimerId<EthernetLinkDevice, D>),
     Igmp(IgmpTimerId<EthernetLinkDevice, D>),
     Mld(MldReportDelay<EthernetLinkDevice, D>),
 }
@@ -352,6 +356,12 @@ impl<D> From<ArpTimerId<EthernetLinkDevice, Ipv4Addr, D>> for EthernetTimerId<D>
 impl<D> From<NdpTimerId<EthernetLinkDevice, D>> for EthernetTimerId<D> {
     fn from(id: NdpTimerId<EthernetLinkDevice, D>) -> EthernetTimerId<D> {
         EthernetTimerId::Ndp(id)
+    }
+}
+
+impl<D> From<DadTimerId<EthernetLinkDevice, D>> for EthernetTimerId<D> {
+    fn from(id: DadTimerId<EthernetLinkDevice, D>) -> EthernetTimerId<D> {
+        EthernetTimerId::Dad(id)
     }
 }
 
@@ -375,6 +385,9 @@ pub(super) fn handle_timer<C: EthernetIpDeviceContext>(
     match id {
         EthernetTimerId::Arp(id) => arp::handle_timer(ctx, id.into()),
         EthernetTimerId::Ndp(id) => <C as NdpHandler<EthernetLinkDevice>>::handle_timer(ctx, id),
+        EthernetTimerId::Dad(DadTimerId { device_id, addr, _marker }) => {
+            do_duplicate_address_detection(ctx, device_id, addr)
+        }
         EthernetTimerId::Igmp(id) => TimerHandler::handle_timer(ctx, id),
         EthernetTimerId::Mld(id) => TimerHandler::handle_timer(ctx, id),
     }
@@ -386,6 +399,13 @@ pub(super) fn handle_timer<C: EthernetIpDeviceContext>(
 impl_timer_context!(
     DeviceIdContext<EthernetLinkDevice>,
     EthernetTimerId<<C as DeviceIdContext<EthernetLinkDevice>>::DeviceId>,
+    ArpTimerId<EthernetLinkDevice, Ipv4Addr, <C as DeviceIdContext<EthernetLinkDevice>>::DeviceId>,
+    EthernetTimerId::Arp(id),
+    id
+);
+impl_timer_context!(
+    DeviceIdContext<EthernetLinkDevice>,
+    EthernetTimerId<<C as DeviceIdContext<EthernetLinkDevice>>::DeviceId>,
     NdpTimerId<EthernetLinkDevice, <C as DeviceIdContext<EthernetLinkDevice>>::DeviceId>,
     EthernetTimerId::Ndp(id),
     id
@@ -393,8 +413,8 @@ impl_timer_context!(
 impl_timer_context!(
     DeviceIdContext<EthernetLinkDevice>,
     EthernetTimerId<<C as DeviceIdContext<EthernetLinkDevice>>::DeviceId>,
-    ArpTimerId<EthernetLinkDevice, Ipv4Addr, <C as DeviceIdContext<EthernetLinkDevice>>::DeviceId>,
-    EthernetTimerId::Arp(id),
+    DadTimerId<EthernetLinkDevice, <C as DeviceIdContext<EthernetLinkDevice>>::DeviceId>,
+    EthernetTimerId::Dad(id),
     id
 );
 impl_timer_context!(
@@ -678,30 +698,6 @@ fn get_ip_addr_state_inner<C: EthernetIpDeviceContext, A: IpAddress>(
     }
 }
 
-/// Gets the state of an IPv6 address on a device with the an optional
-/// configuration type.
-///
-/// If `config_type` is provided, only the state of an address that type will be
-/// returned.
-///
-/// Returns `None` if `addr` is not associated with `device_id`.
-// TODO(ghanan): Use `SpecializedAddr` for `addr`.
-fn get_ipv6_addr_state_with_config<C: EthernetIpDeviceContext>(
-    ctx: &C,
-    device_id: C::DeviceId,
-    addr: &Ipv6Addr,
-    config_type: Option<AddrConfigType>,
-) -> Option<AddressState> {
-    ctx.get_state_with(device_id).ip.ipv6.ip_state.iter_addrs().find_map(|a| {
-        if a.addr_sub().addr().get() == *addr && config_type.map_or(true, |c| c == a.config_type())
-        {
-            Some(a.state)
-        } else {
-            None
-        }
-    })
-}
-
 /// Adds an IP address and associated subnet to this device.
 ///
 /// For IPv6, this function also joins the solicited-node multicast group and
@@ -756,17 +752,76 @@ fn add_ip_addr_subnet_inner<C: EthernetIpDeviceContext, A: IpAddress>(
 
         let state = &mut ctx.get_state_mut_with(device_id).ip;
 
-        state.ipv6.ip_state.add_addr(Ipv6AddressEntry::new(
-            addr_sub.to_unicast(),
-            AddressState::Tentative,
+        let addr_sub = addr_sub.to_unicast();
+        let Ipv6DeviceState { ref mut ip_state, config: Ipv6DeviceConfiguration { dad_transmits } } =
+            state.ipv6;
+        let () = ip_state.add_addr(Ipv6AddressEntry::new(
+            addr_sub,
+            AddressState::Tentative { dad_transmits_remaining: dad_transmits },
             config,
         ));
 
-        // Do Duplicate Address Detection on `addr`.
-        ctx.start_duplicate_address_detection(device_id, addr_sub.ipv6_unicast_addr());
+        let () = do_duplicate_address_detection(ctx, device_id, addr_sub.addr());
     }
 
     Ok(())
+}
+
+/// Do duplicate address detection.
+///
+/// # Panics
+///
+/// Panics if tentative state for the address is not found.
+fn do_duplicate_address_detection<C: EthernetIpDeviceContext>(
+    ctx: &mut C,
+    device_id: C::DeviceId,
+    addr: UnicastAddr<Ipv6Addr>,
+) {
+    let Ipv6AddressEntry { addr_sub: _, state, config: _ } = ctx
+        .get_state_mut_with(device_id)
+        .ip
+        .ipv6
+        .ip_state
+        .iter_addrs_mut()
+        .find(|e| e.addr_sub().addr() == addr)
+        .expect("should find an address we are performing DAD on");
+
+    let remaining = match state {
+        AddressState::Tentative { dad_transmits_remaining } => dad_transmits_remaining,
+        AddressState::Assigned | AddressState::Deprecated => {
+            panic!("expected address to be tentative")
+        }
+    };
+
+    match remaining {
+        None => {
+            *state = AddressState::Assigned;
+            ctx.unique_address_determined_wrapper(device_id, addr);
+        }
+        Some(non_zero_remaining) => {
+            *remaining = NonZeroU8::new(non_zero_remaining.get() - 1);
+
+            // Uses same RETRANS_TIMER definition per RFC 4862 section-5.1
+            let retrans_timer = ctx.retrans_timer(device_id);
+
+            let src_ll = ctx.get_link_layer_addr(device_id);
+            // TODO(https://fxbug.dev/85055): Either panic or guarantee that this error
+            // can't happen statically?
+            let _ = ndp::send_ndp_packet::<_, _, &[u8], _>(
+                ctx,
+                device_id,
+                Ipv6::UNSPECIFIED_ADDRESS,
+                addr.to_solicited_node_address().into_specified(),
+                NeighborSolicitation::new(addr.get()),
+                &[NdpOptionBuilder::SourceLinkLayerAddress(&src_ll.bytes())],
+            );
+
+            let _: Option<C::Instant> = ctx.schedule_timer(
+                retrans_timer,
+                DadTimerId { device_id, addr, _marker: core::marker::PhantomData }.into(),
+            );
+        }
+    }
 }
 
 /// Removes an IP address and associated subnet from this device.
@@ -819,30 +874,31 @@ fn del_ip_addr_inner<C: EthernetIpDeviceContext, A: IpAddress>(
             // TODO(fxbug.dev/69196): Give `addr` the type
             // `UnicastAddr<Ipv6Addr>` for IPv6 instead of doing this dynamic
             // check here.
-            if let Some((addr, state)) = UnicastAddr::new(addr).and_then(|addr| {
-                get_ipv6_addr_state_with_config(ctx, device_id, &addr, config_type)
-                    .map(|state| (addr, state))
-            }) {
-                if state.is_tentative() {
-                    // Cancel current duplicate address detection for `addr` as
-                    // we are removing this IP.
-                    //
-                    // `cancel_duplicate_address_detection` may panic if we are
-                    // not performing DAD on `addr`. However, we will only reach
-                    // here if `addr` is marked as tentative. If `addr` is
-                    // marked as tentative, then we know that we are performing
-                    // DAD on it. Given this, we know
-                    // `cancel_duplicate_address_detection` will not panic.
-                    ctx.cancel_duplicate_address_detection(device_id, addr);
-                }
+            let addr = if let Some(addr) = UnicastAddr::new(addr) {
+                addr
             } else {
                 return Err(AddressError::NotFound);
+            };
+
+            if !ctx
+                .get_state_with(device_id)
+                .ip
+                .ipv6
+                .ip_state
+                .iter_addrs()
+                .any(|e| e.addr_sub().addr() == addr)
+            {
+                return Err(AddressError::NotFound);
             }
+
+            let _: Option<C::Instant> = ctx.cancel_timer(
+                DadTimerId { device_id, addr, _marker: core::marker::PhantomData }.into(),
+            );
 
             let state = &mut ctx.get_state_mut_with(device_id).ip;
 
             let original_size = state.ipv6.ip_state.iter_addrs().len();
-            state.ipv6.ip_state.retain_addrs(|x| x.addr_sub().addr().get() != addr);
+            state.ipv6.ip_state.retain_addrs(|x| x.addr_sub().addr() != addr);
             let new_size = state.ipv6.ip_state.iter_addrs().len();
 
             // Since we just checked earlier if we had the address, we must have
@@ -1167,6 +1223,14 @@ pub(super) fn insert_ndp_table_entry<C: EthernetIpDeviceContext>(
     <C as NdpHandler<_>>::insert_static_neighbor(ctx, device_id, addr, mac)
 }
 
+pub(super) fn set_ipv6_configuration<C: EthernetIpDeviceContext>(
+    ctx: &mut C,
+    device_id: C::DeviceId,
+    config: Ipv6DeviceConfiguration,
+) {
+    ctx.get_state_mut_with(device_id).ip.ipv6.config = config;
+}
+
 /// Deinitializes and cleans up state for ethernet devices
 ///
 /// After this function is called, the ethernet device should not be used and
@@ -1323,18 +1387,8 @@ impl<C: EthernetIpDeviceContext> NdpContext<EthernetLinkDevice> for C {
     }
 
     fn duplicate_address_detected(&mut self, device_id: C::DeviceId, addr: UnicastAddr<Ipv6Addr>) {
-        let state = &mut self.get_state_mut_with(device_id).ip;
-
-        let original_size = state.ipv6.ip_state.iter_addrs().len();
-        state.ipv6.ip_state.retain_addrs(|x| x.addr_sub().addr() != addr);
-        assert_eq!(
-            state.ipv6.ip_state.iter_addrs().len(),
-            original_size - 1,
-            "duplicate address detected, but not in our list of addresses"
-        );
-
-        // Leave the the solicited-node multicast group.
-        leave_ip_multicast(self, device_id, addr.to_solicited_node_address());
+        let () = del_ip_addr_inner(self, device_id, &addr.get(), None)
+            .expect("expected to delete an address we are performing DAD on");
 
         // TODO: we need to pick a different address depending on what flow we
         // are using.
@@ -1399,8 +1453,8 @@ impl<C: EthernetIpDeviceContext> NdpContext<EthernetLinkDevice> for C {
             AddressState::Assigned => {
                 entry.state = AddressState::Deprecated;
             }
-            AddressState::Tentative => {
-                trace!("ethernet::deprecate_slaac_addr: invalidating the deprecated tentative address {:?} on device {:?}", addr, device_id);
+            AddressState::Tentative { dad_transmits_remaining } => {
+                trace!("ethernet::deprecate_slaac_addr: invalidating the deprecated tentative address {:?} on device {:?} with dad_transmits_remaining = {:?}", addr, device_id, dad_transmits_remaining);
                 // If `addr` is currently tentative on `device_id`, the
                 // address should simply be invalidated as new connections
                 // should not use a deprecated address, and we should have
@@ -1858,9 +1912,11 @@ mod tests {
         // Most tests do not need NDP's DAD or router solicitation so disable it
         // here.
         let mut ndp_configs = ndp::NdpConfigurations::default();
-        ndp_configs.set_dup_addr_detect_transmits(None);
         ndp_configs.set_max_router_solicitations(None);
         state_builder.device_builder().set_default_ndp_configs(ndp_configs);
+        let mut ipv6_config = crate::device::Ipv6DeviceConfiguration::default();
+        ipv6_config.set_dad_transmits(None);
+        state_builder.device_builder().set_default_ipv6_config(ipv6_config);
         let mut builder = DummyEventDispatcherBuilder::from_config(config.clone());
         add_arp_or_ndp_table_entry(&mut builder, device.id(), src_ip.get(), src_mac);
         let mut ctx = builder.build_with(state_builder, DummyEventDispatcher::default());

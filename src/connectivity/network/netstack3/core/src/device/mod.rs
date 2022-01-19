@@ -10,6 +10,7 @@ pub(crate) mod link;
 pub(crate) mod ndp;
 mod state;
 
+pub use self::state::Ipv6DeviceConfiguration;
 pub(crate) use self::state::{
     AddrConfig, AddrConfigType, AddressState, Ipv6AddressEntry, SlaacConfig,
 };
@@ -34,23 +35,37 @@ use packet_formats::icmp::{mld::MldPacket, ndp::NdpPacket};
 use specialize_ip_macro::specialize_ip_address;
 use zerocopy::ByteSlice;
 
-use crate::context::{
-    CounterContext, DualStateContext, FrameContext, InstantContext, RecvFrameContext, RngContext,
-    TimerContext,
+use crate::{
+    context::{
+        CounterContext, DualStateContext, FrameContext, InstantContext, RecvFrameContext,
+        RngContext, TimerContext,
+    },
+    data_structures::{IdMap, IdMapCollectionKey},
+    device::{
+        ethernet::{
+            EthernetDeviceState, EthernetDeviceStateBuilder, EthernetLinkDevice, EthernetTimerId,
+        },
+        link::LinkDevice,
+        ndp::{NdpHandler, NdpPacketHandler},
+        state::{CommonDeviceState, DeviceState, InitializationStatus, IpLinkDeviceState},
+    },
+    ip::{
+        gmp::{
+            igmp::{IgmpGroupState, IgmpPacketHandler},
+            mld::{MldGroupState, MldPacketHandler},
+        },
+        socket::IpSockUpdate,
+    },
+    BufferDispatcher, Ctx, EventDispatcher, Instant, StackState,
 };
-use crate::data_structures::{IdMap, IdMapCollectionKey};
-use crate::device::ethernet::{
-    EthernetDeviceState, EthernetDeviceStateBuilder, EthernetLinkDevice, EthernetTimerId,
-};
-use crate::device::link::LinkDevice;
-use crate::device::ndp::{NdpHandler, NdpPacketHandler};
-use crate::device::state::{
-    CommonDeviceState, DeviceState, InitializationStatus, IpLinkDeviceState,
-};
-use crate::ip::gmp::igmp::{IgmpGroupState, IgmpPacketHandler};
-use crate::ip::gmp::mld::{MldGroupState, MldPacketHandler};
-use crate::ip::socket::IpSockUpdate;
-use crate::{BufferDispatcher, Ctx, EventDispatcher, Instant, StackState};
+
+/// A timer ID for duplicate address detection.
+#[derive(Copy, Clone, Eq, PartialEq, Debug, Hash)]
+pub(crate) struct DadTimerId<D: LinkDevice, DeviceId> {
+    device_id: DeviceId,
+    addr: UnicastAddr<Ipv6Addr>,
+    _marker: PhantomData<D>,
+}
 
 /// An execution context which provides a `DeviceId` type for various device
 /// layer internals to share.
@@ -364,18 +379,13 @@ impl FrameDestination {
 }
 
 /// Builder for a [`DeviceLayerState`].
-#[derive(Clone)]
+#[derive(Clone, Default)]
 pub struct DeviceStateBuilder {
     /// Default values for NDP's configurations for new interfaces.
     ///
     /// See [`ndp::NdpConfigurations`].
     default_ndp_configs: ndp::NdpConfigurations,
-}
-
-impl Default for DeviceStateBuilder {
-    fn default() -> Self {
-        Self { default_ndp_configs: ndp::NdpConfigurations::default() }
-    }
+    default_ipv6_config: Ipv6DeviceConfiguration,
 }
 
 impl DeviceStateBuilder {
@@ -386,9 +396,15 @@ impl DeviceStateBuilder {
         self.default_ndp_configs = v;
     }
 
+    /// Set the default IPv6 device configuration or new interfaces.
+    pub fn set_default_ipv6_config(&mut self, v: Ipv6DeviceConfiguration) {
+        self.default_ipv6_config = v;
+    }
+
     /// Build the [`DeviceLayerState`].
     pub(crate) fn build<I: Instant>(self) -> DeviceLayerState<I> {
-        DeviceLayerState { ethernet: IdMap::new(), default_ndp_configs: self.default_ndp_configs }
+        let Self { default_ndp_configs, default_ipv6_config } = self;
+        DeviceLayerState { ethernet: IdMap::new(), default_ndp_configs, default_ipv6_config }
     }
 }
 
@@ -396,6 +412,7 @@ impl DeviceStateBuilder {
 pub(crate) struct DeviceLayerState<I: Instant> {
     ethernet: IdMap<DeviceState<IpLinkDeviceState<I, EthernetDeviceState>>>,
     default_ndp_configs: ndp::NdpConfigurations,
+    default_ipv6_config: Ipv6DeviceConfiguration,
 }
 
 impl<I: Instant> DeviceLayerState<I> {
@@ -405,10 +422,14 @@ impl<I: Instant> DeviceLayerState<I> {
     /// MTU. The MTU will be taken as a limit on the size of Ethernet payloads -
     /// the Ethernet header is not counted towards the MTU.
     pub(crate) fn add_ethernet_device(&mut self, mac: UnicastAddr<Mac>, mtu: u32) -> DeviceId {
+        let Self { ethernet, default_ndp_configs, default_ipv6_config } = self;
+
         let mut builder = EthernetDeviceStateBuilder::new(mac, mtu);
-        builder.set_ndp_configs(self.default_ndp_configs.clone());
-        let ethernet_state = DeviceState::new(IpLinkDeviceState::new(builder.build()));
-        let id = self.ethernet.push(ethernet_state);
+        builder.set_ndp_configs(default_ndp_configs.clone());
+        let mut ethernet_state = IpLinkDeviceState::new(builder.build());
+        ethernet_state.ip.ipv6.config = default_ipv6_config.clone();
+        let ethernet_state = DeviceState::new(ethernet_state);
+        let id = ethernet.push(ethernet_state);
         debug!("adding Ethernet device with ID {} and MTU {}", id, mtu);
         DeviceId::new_ethernet(id)
     }
@@ -1175,16 +1196,15 @@ pub fn set_ndp_configurations<D: EventDispatcher>(
     }
 }
 
-/// Gets the NDP Configurations for a `device`.
-#[cfg(test)]
-pub fn get_ndp_configurations<D: EventDispatcher>(
-    ctx: &Ctx<D>,
+/// Updates the IPv6 Configuration for a `device`.
+#[cfg_attr(not(test), allow(dead_code))]
+pub(crate) fn set_ipv6_configuration<D: EventDispatcher>(
+    ctx: &mut Ctx<D>,
     device: DeviceId,
-) -> &ndp::NdpConfigurations {
+    config: Ipv6DeviceConfiguration,
+) {
     match device.protocol {
-        DeviceProtocol::Ethernet => {
-            <Ctx<_> as NdpHandler<EthernetLinkDevice>>::get_configurations(ctx, device.id.into())
-        }
+        DeviceProtocol::Ethernet => ethernet::set_ipv6_configuration(ctx, device.id.into(), config),
     }
 }
 

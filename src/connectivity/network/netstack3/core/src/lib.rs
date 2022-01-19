@@ -48,7 +48,7 @@ pub use crate::data_structures::{Entry, IdMap, IdMapCollection, IdMapCollectionK
 pub use crate::device::ndp::NdpConfigurations;
 pub use crate::device::{
     get_assigned_ip_addr_subnets, initialize_device, receive_frame, remove_device, DeviceId,
-    DeviceLayerEventDispatcher,
+    DeviceLayerEventDispatcher, Ipv6DeviceConfiguration,
 };
 pub use crate::error::{LocalAddressError, NetstackError, RemoteAddressError, SocketError};
 pub use crate::ip::socket::{IpSockCreationError, IpSockSendError, IpSockUnroutableError};
