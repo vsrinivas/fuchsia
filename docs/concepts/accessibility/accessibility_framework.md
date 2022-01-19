@@ -46,7 +46,7 @@ Accessibility manager code lives in
 ## Settings
 
 Accessibility settings will be managed through
-[SetUI](/docs/concepts/settings/introduction.md), which is responsible for
+[SetUI](/docs/development/settings/introduction.md), which is responsible for
 storing settings locally and notifying the Accessibility Manager when settings
 change. This is done via the
 [fuchsia.settings.accessibility](/sdk/fidl/fuchsia.settings/accessibility.fidl)
