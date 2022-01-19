@@ -922,7 +922,6 @@ class ::fidl::internal::WireWeakOnewayClientImpl<::test_service::SecondProtocol>
   // necessary.
   ::fidl::Result MethodOnSecond();
 };
-
 template <>
 class ::fidl::internal::WireWeakSyncClientImpl<::test_service::SecondProtocol>
     final : public ::fidl::internal::WireWeakOnewayClientImpl<
@@ -1023,7 +1022,6 @@ class ::fidl::internal::WireWeakOnewayClientImpl<::test_service::FirstProtocol>
   // necessary.
   ::fidl::Result MethodOnFirst();
 };
-
 template <>
 class ::fidl::internal::WireWeakSyncClientImpl<::test_service::FirstProtocol>
     final : public ::fidl::internal::WireWeakOnewayClientImpl<

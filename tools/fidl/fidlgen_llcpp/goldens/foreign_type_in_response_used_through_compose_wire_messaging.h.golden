@@ -539,20 +539,6 @@ class ::fidl::internal::WireClientImpl<
                    ::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>*
                        response)>
                   _cb);
-
-  // Synchronous variant of |GetFoo.GetFoo()|.
-  // Allocates 40 bytes of message buffer on the stack. No heap allocation
-  // necessary.
-  ::fidl::WireResult<
-      ::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>
-  GetFoo_Sync();
-
-  // Synchronous variant of |GetFoo.GetFoo()|.
-  // Caller provides the backing storage for FIDL message via request and
-  // response buffers.
-  ::fidl::WireUnownedResult<
-      ::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>
-  GetFoo_Sync(::fidl::BufferSpan _buffer_span);
   WireClientImpl() = default;
 };
 
@@ -585,7 +571,6 @@ class ::fidl::internal::WireWeakOnewayClientImpl<
  public:
   using ClientImplBase::ClientImplBase;
 };
-
 template <>
 class ::fidl::internal::WireWeakSyncClientImpl<
     ::test_foreigntypeinresponseusedthroughcompose::Top>

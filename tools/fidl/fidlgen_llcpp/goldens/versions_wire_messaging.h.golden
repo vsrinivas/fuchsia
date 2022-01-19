@@ -496,7 +496,6 @@ class ::fidl::internal::WireWeakOnewayClientImpl<::test_versions::OtherProtocol>
  public:
   using ClientImplBase::ClientImplBase;
 };
-
 template <>
 class ::fidl::internal::WireWeakSyncClientImpl<::test_versions::OtherProtocol>
     final : public ::fidl::internal::WireWeakOnewayClientImpl<
@@ -595,7 +594,6 @@ class ::fidl::internal::WireWeakOnewayClientImpl<::test_versions::Protocol>
   // necessary.
   ::fidl::Result Foo();
 };
-
 template <>
 class ::fidl::internal::WireWeakSyncClientImpl<::test_versions::Protocol> final
     : public ::fidl::internal::WireWeakOnewayClientImpl<

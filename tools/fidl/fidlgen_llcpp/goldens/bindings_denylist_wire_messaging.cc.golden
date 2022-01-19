@@ -149,24 +149,6 @@ void fidl::internal::WireClientImpl<
   ::fidl::internal::ClientBase::SendTwoWay(
       _request_message.GetOutgoingMessage(), _context);
 }
-::fidl::WireResult<::test_bindingsdenylist::OnlyLibfuzzerAndDeps::
-                       LibfuzzerNeedsNonemptyProtocol>
-fidl::internal::WireClientImpl<::test_bindingsdenylist::OnlyLibfuzzerAndDeps>::
-    LibfuzzerNeedsNonemptyProtocol_Sync() {
-  return ::fidl::internal::ClientBase::MakeSyncCallWith(
-      [&](std::shared_ptr<::fidl::internal::AnyTransport> _transport) {
-        ::fidl::WireRequest<::test_bindingsdenylist::OnlyLibfuzzerAndDeps::
-                                LibfuzzerNeedsNonemptyProtocol>
-            _request{};
-        return ::fidl::WireResult<
-            ::test_bindingsdenylist::OnlyLibfuzzerAndDeps::
-                LibfuzzerNeedsNonemptyProtocol>(
-            ::fidl::UnownedClientEnd<
-                ::test_bindingsdenylist::OnlyLibfuzzerAndDeps>(
-                _transport->get<fidl::internal::ChannelTransport>()),
-            &_request);
-      });
-}
 void fidl::internal::WireWeakAsyncBufferClientImpl<
     ::test_bindingsdenylist::OnlyLibfuzzerAndDeps>::
     LibfuzzerNeedsNonemptyProtocol(

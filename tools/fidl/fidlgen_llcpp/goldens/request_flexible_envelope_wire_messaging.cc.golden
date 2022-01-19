@@ -284,43 +284,6 @@ void fidl::internal::WireClientImpl<::test_requestflexibleenvelope::Protocol>::
   ::fidl::internal::ClientBase::SendTwoWay(
       _request_message.GetOutgoingMessage(), _context);
 }
-::fidl::WireResult<
-    ::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>
-fidl::internal::WireClientImpl<::test_requestflexibleenvelope::Protocol>::
-    RequestStrictResponseFlexible_Sync(
-        ::test_requestflexibleenvelope::wire::StrictFoo s) {
-  return ::fidl::internal::ClientBase::MakeSyncCallWith(
-      [&](std::shared_ptr<::fidl::internal::AnyTransport> _transport) {
-        ::fidl::WireRequest<::test_requestflexibleenvelope::Protocol::
-                                RequestStrictResponseFlexible>
-            _request{s};
-        return ::fidl::WireResult<::test_requestflexibleenvelope::Protocol::
-                                      RequestStrictResponseFlexible>(
-            ::fidl::UnownedClientEnd<::test_requestflexibleenvelope::Protocol>(
-                _transport->get<fidl::internal::ChannelTransport>()),
-            &_request);
-      });
-}
-::fidl::WireUnownedResult<
-    ::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>
-fidl::internal::WireClientImpl<::test_requestflexibleenvelope::Protocol>::
-    RequestStrictResponseFlexible_Sync(
-        ::fidl::BufferSpan _buffer_span,
-        ::test_requestflexibleenvelope::wire::StrictFoo s) {
-  auto _allocator = ::fidl::internal::MakeAnyBufferAllocator(_buffer_span);
-  return ::fidl::internal::ClientBase::MakeSyncCallWith(
-      [&](std::shared_ptr<::fidl::internal::AnyTransport> _transport) {
-        ::fidl::WireRequest<::test_requestflexibleenvelope::Protocol::
-                                RequestStrictResponseFlexible>
-            _request{s};
-        return ::fidl::WireUnownedResult<
-            ::test_requestflexibleenvelope::Protocol::
-                RequestStrictResponseFlexible>(
-            ::fidl::UnownedClientEnd<::test_requestflexibleenvelope::Protocol>(
-                _transport->get<fidl::internal::ChannelTransport>()),
-            _allocator, &_request);
-      });
-}
 void fidl::internal::WireClientImpl<::test_requestflexibleenvelope::Protocol>::
     RequestFlexibleResponseStrict(
         ::test_requestflexibleenvelope::wire::FlexibleFoo s,
@@ -403,43 +366,6 @@ void fidl::internal::WireClientImpl<::test_requestflexibleenvelope::Protocol>::
       _request_message(::fidl::internal::AllowUnownedInputRef{}, &_request);
   ::fidl::internal::ClientBase::SendTwoWay(
       _request_message.GetOutgoingMessage(), _context);
-}
-::fidl::WireResult<
-    ::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>
-fidl::internal::WireClientImpl<::test_requestflexibleenvelope::Protocol>::
-    RequestFlexibleResponseStrict_Sync(
-        ::test_requestflexibleenvelope::wire::FlexibleFoo s) {
-  return ::fidl::internal::ClientBase::MakeSyncCallWith(
-      [&](std::shared_ptr<::fidl::internal::AnyTransport> _transport) {
-        ::fidl::WireRequest<::test_requestflexibleenvelope::Protocol::
-                                RequestFlexibleResponseStrict>
-            _request{s};
-        return ::fidl::WireResult<::test_requestflexibleenvelope::Protocol::
-                                      RequestFlexibleResponseStrict>(
-            ::fidl::UnownedClientEnd<::test_requestflexibleenvelope::Protocol>(
-                _transport->get<fidl::internal::ChannelTransport>()),
-            &_request);
-      });
-}
-::fidl::WireUnownedResult<
-    ::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>
-fidl::internal::WireClientImpl<::test_requestflexibleenvelope::Protocol>::
-    RequestFlexibleResponseStrict_Sync(
-        ::fidl::BufferSpan _buffer_span,
-        ::test_requestflexibleenvelope::wire::FlexibleFoo s) {
-  auto _allocator = ::fidl::internal::MakeAnyBufferAllocator(_buffer_span);
-  return ::fidl::internal::ClientBase::MakeSyncCallWith(
-      [&](std::shared_ptr<::fidl::internal::AnyTransport> _transport) {
-        ::fidl::WireRequest<::test_requestflexibleenvelope::Protocol::
-                                RequestFlexibleResponseStrict>
-            _request{s};
-        return ::fidl::WireUnownedResult<
-            ::test_requestflexibleenvelope::Protocol::
-                RequestFlexibleResponseStrict>(
-            ::fidl::UnownedClientEnd<::test_requestflexibleenvelope::Protocol>(
-                _transport->get<fidl::internal::ChannelTransport>()),
-            _allocator, &_request);
-      });
 }
 void fidl::internal::WireWeakAsyncBufferClientImpl<
     ::test_requestflexibleenvelope::Protocol>::

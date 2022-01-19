@@ -4,14 +4,6 @@
 // found in the LICENSE file.
 */}}
 
-{{- define "Method:ClientImplSyncCallerAllocateArguments:Helper" -}}
-{{- /* TODO(fxbug.dev/85688): Replace with a `.buffer()` accessor on the client object. */}}
-{{- $args := (List "::fidl::BufferSpan _buffer_span" .RequestArgs) }}
-{{- RenderParams $args }}
-{{- end }}
-
-
-
 {{- define "Method:WireWeakSyncClientImpl:WireMessagingHeader" }}
   {{- .Docs }}
   {{ if .DocComments }}
@@ -39,84 +31,3 @@
   }
 
 {{- end }}
-
-
-
-{{- /* TODO(fxbug.dev/85688): Remove this. */}}
-{{- define "Method:ClientImplSync:WireMessagingHeader" }}
-  {{- /* Sync managed flavor */}}
-  {{- .Docs }}
-  {{ if .DocComments }}
-    //
-  {{- end }}
-  // Synchronous variant of |{{ $.Name }}.{{ .Name }}()|.
-  // {{- template "Method:ClientAllocationComment:Helper" . }}
-  {{ .WireResult }} {{ .Name }}_Sync({{ RenderParams .RequestArgs }});
-
-  {{- /* Sync caller-allocate flavor */}}
-  {{- if or .RequestArgs .ResponseArgs }}
-    {{ .Docs }}
-    {{- if .DocComments }}
-      //
-    {{- end }}
-    // Synchronous variant of |{{ $.Name }}.{{ .Name }}()|.
-    // Caller provides the backing storage for FIDL message via request and
-    // response buffers.
-    {{ .WireUnownedResult }} {{ .Name }}{{ if .HasResponse }}_Sync{{ end }}(
-        {{- template "Method:ClientImplSyncCallerAllocateArguments:Helper" . }});
-  {{- end }}
-{{- end }}
-
-
-
-{{- /* TODO(fxbug.dev/85688): Remove this. */}}
-{{- define "Method:ClientImplSyncCallerAllocate:WireMessagingSource" }}
-  {{ EnsureNamespace "" }}
-
-  {{- IfdefFuchsia -}}
-
-  {{ .WireUnownedResult }}
-  {{ .Protocol.WireClientImpl.NoLeading }}::{{ .Name }}_Sync(
-      {{- template "Method:ClientImplSyncCallerAllocateArguments:Helper" . }}) {
-    auto _allocator = ::fidl::internal::MakeAnyBufferAllocator(_buffer_span);
-    return ::fidl::internal::ClientBase::MakeSyncCallWith([&] (std::shared_ptr<::fidl::internal::AnyTransport> _transport) {
-      {{ .WireRequest }} _request{ {{ RenderForwardParams .RequestArgs }} };
-      {{- $args := (printf "::%s::UnownedClientEnd<%s>(_transport->get<fidl::internal::ChannelTransport>())" .Transport.Namespace .Protocol) }}
-      {{- $args = (List $args "_allocator" "&_request") }}
-      return {{ .WireUnownedResult }}({{ RenderForwardParams $args }});
-    });
-  }
-
-  {{- EndifFuchsia -}}
-{{- end }}
-
-
-
-{{- /* TODO(fxbug.dev/85688): Remove this. */}}
-{{- define "Method:ClientImplSyncManaged:WireMessagingSource" }}
-  {{ EnsureNamespace "" }}
-
-  {{- IfdefFuchsia -}}
-  {{ .WireResult }}
-  {{ .Protocol.WireClientImpl.NoLeading }}::{{ .Name }}_Sync({{ RenderParams .RequestArgs }}) {
-    return ::fidl::internal::ClientBase::MakeSyncCallWith([&] (std::shared_ptr<::fidl::internal::AnyTransport> _transport) {
-      {{ .WireRequest }} _request{ {{ RenderForwardParams .RequestArgs }} };
-      {{- $args := (printf "::%s::UnownedClientEnd<%s>(_transport->get<fidl::internal::ChannelTransport>())" .Transport.Namespace .Protocol) }}
-      {{- $args = (List $args "&_request") }}
-      return {{ .WireResult }}({{- RenderForwardParams $args }});
-    });
-  }
-
-  {{- EndifFuchsia -}}
-{{- end }}
-
-
-
-{{- /* TODO(fxbug.dev/85688): Remove this. */}}
-{{- define "Method:ClientImplSync:WireMessagingSource" }}
-  {{- template "Method:ClientImplSyncManaged:WireMessagingSource" . }}
-  {{- if or .RequestArgs .ResponseArgs }}
-    {{- template "Method:ClientImplSyncCallerAllocate:WireMessagingSource" . }}
-  {{- end }}
-{{- end }}
-

@@ -431,17 +431,6 @@ class ::fidl::internal::WireClientImpl<::test_error::Example> final
            ::fit::callback<
                void(::fidl::WireResponse<::test_error::Example::Foo>* response)>
                _cb);
-
-  // Synchronous variant of |Foo.Foo()|.
-  // Allocates 40 bytes of response buffer on the stack. Request is
-  // heap-allocated.
-  ::fidl::WireResult<::test_error::Example::Foo> Foo_Sync(::fidl::StringView s);
-
-  // Synchronous variant of |Foo.Foo()|.
-  // Caller provides the backing storage for FIDL message via request and
-  // response buffers.
-  ::fidl::WireUnownedResult<::test_error::Example::Foo> Foo_Sync(
-      ::fidl::BufferSpan _buffer_span, ::fidl::StringView s);
   WireClientImpl() = default;
 };
 
@@ -470,7 +459,6 @@ class ::fidl::internal::WireWeakOnewayClientImpl<::test_error::Example>
  public:
   using ClientImplBase::ClientImplBase;
 };
-
 template <>
 class ::fidl::internal::WireWeakSyncClientImpl<::test_error::Example> final
     : public ::fidl::internal::WireWeakOnewayClientImpl<::test_error::Example> {

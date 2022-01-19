@@ -292,42 +292,6 @@ void fidl::internal::WireClientImpl<::test_union::TestProtocol>::
   ::fidl::internal::ClientBase::SendTwoWay(
       _request_message.GetOutgoingMessage(), _context);
 }
-::fidl::WireResult<
-    ::test_union::TestProtocol::StrictXUnionHenceResponseMayBeStackAllocated>
-fidl::internal::WireClientImpl<::test_union::TestProtocol>::
-    StrictXUnionHenceResponseMayBeStackAllocated_Sync() {
-  return ::fidl::internal::ClientBase::MakeSyncCallWith(
-      [&](std::shared_ptr<::fidl::internal::AnyTransport> _transport) {
-        ::fidl::WireRequest<::test_union::TestProtocol::
-                                StrictXUnionHenceResponseMayBeStackAllocated>
-            _request{};
-        return ::fidl::WireResult<
-            ::test_union::TestProtocol::
-                StrictXUnionHenceResponseMayBeStackAllocated>(
-            ::fidl::UnownedClientEnd<::test_union::TestProtocol>(
-                _transport->get<fidl::internal::ChannelTransport>()),
-            &_request);
-      });
-}
-::fidl::WireUnownedResult<
-    ::test_union::TestProtocol::StrictXUnionHenceResponseMayBeStackAllocated>
-fidl::internal::WireClientImpl<::test_union::TestProtocol>::
-    StrictXUnionHenceResponseMayBeStackAllocated_Sync(
-        ::fidl::BufferSpan _buffer_span) {
-  auto _allocator = ::fidl::internal::MakeAnyBufferAllocator(_buffer_span);
-  return ::fidl::internal::ClientBase::MakeSyncCallWith(
-      [&](std::shared_ptr<::fidl::internal::AnyTransport> _transport) {
-        ::fidl::WireRequest<::test_union::TestProtocol::
-                                StrictXUnionHenceResponseMayBeStackAllocated>
-            _request{};
-        return ::fidl::WireUnownedResult<
-            ::test_union::TestProtocol::
-                StrictXUnionHenceResponseMayBeStackAllocated>(
-            ::fidl::UnownedClientEnd<::test_union::TestProtocol>(
-                _transport->get<fidl::internal::ChannelTransport>()),
-            _allocator, &_request);
-      });
-}
 void fidl::internal::WireClientImpl<::test_union::TestProtocol>::
     FlexibleXUnionHenceResponseMustBeHeapAllocated(
         ::fidl::WireClientCallback<
@@ -413,42 +377,6 @@ void fidl::internal::WireClientImpl<::test_union::TestProtocol>::
       _request_message(::fidl::internal::AllowUnownedInputRef{}, &_request);
   ::fidl::internal::ClientBase::SendTwoWay(
       _request_message.GetOutgoingMessage(), _context);
-}
-::fidl::WireResult<
-    ::test_union::TestProtocol::FlexibleXUnionHenceResponseMustBeHeapAllocated>
-fidl::internal::WireClientImpl<::test_union::TestProtocol>::
-    FlexibleXUnionHenceResponseMustBeHeapAllocated_Sync() {
-  return ::fidl::internal::ClientBase::MakeSyncCallWith(
-      [&](std::shared_ptr<::fidl::internal::AnyTransport> _transport) {
-        ::fidl::WireRequest<::test_union::TestProtocol::
-                                FlexibleXUnionHenceResponseMustBeHeapAllocated>
-            _request{};
-        return ::fidl::WireResult<
-            ::test_union::TestProtocol::
-                FlexibleXUnionHenceResponseMustBeHeapAllocated>(
-            ::fidl::UnownedClientEnd<::test_union::TestProtocol>(
-                _transport->get<fidl::internal::ChannelTransport>()),
-            &_request);
-      });
-}
-::fidl::WireUnownedResult<
-    ::test_union::TestProtocol::FlexibleXUnionHenceResponseMustBeHeapAllocated>
-fidl::internal::WireClientImpl<::test_union::TestProtocol>::
-    FlexibleXUnionHenceResponseMustBeHeapAllocated_Sync(
-        ::fidl::BufferSpan _buffer_span) {
-  auto _allocator = ::fidl::internal::MakeAnyBufferAllocator(_buffer_span);
-  return ::fidl::internal::ClientBase::MakeSyncCallWith(
-      [&](std::shared_ptr<::fidl::internal::AnyTransport> _transport) {
-        ::fidl::WireRequest<::test_union::TestProtocol::
-                                FlexibleXUnionHenceResponseMustBeHeapAllocated>
-            _request{};
-        return ::fidl::WireUnownedResult<
-            ::test_union::TestProtocol::
-                FlexibleXUnionHenceResponseMustBeHeapAllocated>(
-            ::fidl::UnownedClientEnd<::test_union::TestProtocol>(
-                _transport->get<fidl::internal::ChannelTransport>()),
-            _allocator, &_request);
-      });
 }
 void fidl::internal::WireWeakAsyncBufferClientImpl<::test_union::TestProtocol>::
     StrictXUnionHenceResponseMayBeStackAllocated(

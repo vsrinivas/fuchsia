@@ -800,7 +800,6 @@ class ::fidl::internal::WireWeakOnewayClientImpl<
   ::fidl::Result First(
       ::fidl::ServerEnd<::test_inheritancewithrecursivedecl::Parent>&& request);
 };
-
 template <>
 class ::fidl::internal::WireWeakSyncClientImpl<
     ::test_inheritancewithrecursivedecl::Parent>
@@ -923,7 +922,6 @@ class ::fidl::internal::WireWeakOnewayClientImpl<
   ::fidl::Result Second(
       ::fidl::ServerEnd<::test_inheritancewithrecursivedecl::Parent>&& request);
 };
-
 template <>
 class ::fidl::internal::WireWeakSyncClientImpl<
     ::test_inheritancewithrecursivedecl::Child>

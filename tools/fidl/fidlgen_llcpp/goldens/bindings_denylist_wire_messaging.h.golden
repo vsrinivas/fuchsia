@@ -674,14 +674,6 @@ class ::fidl::internal::WireClientImpl<
           ::fidl::WireResponse<::test_bindingsdenylist::OnlyLibfuzzerAndDeps::
                                    LibfuzzerNeedsNonemptyProtocol>* response)>
           _cb);
-
-  // Synchronous variant of
-  // |LibfuzzerNeedsNonemptyProtocol.LibfuzzerNeedsNonemptyProtocol()|.
-  // Allocates 32 bytes of message buffer on the stack. No heap allocation
-  // necessary.
-  ::fidl::WireResult<::test_bindingsdenylist::OnlyLibfuzzerAndDeps::
-                         LibfuzzerNeedsNonemptyProtocol>
-  LibfuzzerNeedsNonemptyProtocol_Sync();
   WireClientImpl() = default;
 };
 
@@ -715,7 +707,6 @@ class ::fidl::internal::WireWeakOnewayClientImpl<
  public:
   using ClientImplBase::ClientImplBase;
 };
-
 template <>
 class ::fidl::internal::WireWeakSyncClientImpl<
     ::test_bindingsdenylist::OnlyLibfuzzerAndDeps>
@@ -818,7 +809,6 @@ class ::fidl::internal::WireWeakOnewayClientImpl<
  public:
   using ClientImplBase::ClientImplBase;
 };
-
 template <>
 class ::fidl::internal::WireWeakSyncClientImpl<
     ::test_bindingsdenylist::OnlyCppAndDeps>

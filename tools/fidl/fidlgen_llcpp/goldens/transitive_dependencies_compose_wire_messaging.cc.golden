@@ -168,35 +168,6 @@ void fidl::internal::WireClientImpl<::test_transitivedependenciescompose::Top>::
   ::fidl::internal::ClientBase::SendTwoWay(
       _request_message.GetOutgoingMessage(), _context);
 }
-::fidl::WireResult<::test_transitivedependenciescompose::Top::GetFoo>
-fidl::internal::WireClientImpl<
-    ::test_transitivedependenciescompose::Top>::GetFoo_Sync() {
-  return ::fidl::internal::ClientBase::MakeSyncCallWith(
-      [&](std::shared_ptr<::fidl::internal::AnyTransport> _transport) {
-        ::fidl::WireRequest<::test_transitivedependenciescompose::Top::GetFoo>
-            _request{};
-        return ::fidl::WireResult<
-            ::test_transitivedependenciescompose::Top::GetFoo>(
-            ::fidl::UnownedClientEnd<::test_transitivedependenciescompose::Top>(
-                _transport->get<fidl::internal::ChannelTransport>()),
-            &_request);
-      });
-}
-::fidl::WireUnownedResult<::test_transitivedependenciescompose::Top::GetFoo>
-fidl::internal::WireClientImpl<::test_transitivedependenciescompose::Top>::
-    GetFoo_Sync(::fidl::BufferSpan _buffer_span) {
-  auto _allocator = ::fidl::internal::MakeAnyBufferAllocator(_buffer_span);
-  return ::fidl::internal::ClientBase::MakeSyncCallWith(
-      [&](std::shared_ptr<::fidl::internal::AnyTransport> _transport) {
-        ::fidl::WireRequest<::test_transitivedependenciescompose::Top::GetFoo>
-            _request{};
-        return ::fidl::WireUnownedResult<
-            ::test_transitivedependenciescompose::Top::GetFoo>(
-            ::fidl::UnownedClientEnd<::test_transitivedependenciescompose::Top>(
-                _transport->get<fidl::internal::ChannelTransport>()),
-            _allocator, &_request);
-      });
-}
 void fidl::internal::WireWeakAsyncBufferClientImpl<
     ::test_transitivedependenciescompose::Top>::
     GetFoo(::fidl::WireResponseContext<

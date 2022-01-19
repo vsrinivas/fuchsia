@@ -264,38 +264,6 @@ void fidl::internal::WireClientImpl<::test_protocols::HandleRightsProtocol>::
   ::fidl::internal::ClientBase::SendTwoWay(
       _request_message.GetOutgoingMessage(), _context);
 }
-::fidl::WireResult<::test_protocols::HandleRightsProtocol::ResponseMethod>
-fidl::internal::WireClientImpl<::test_protocols::HandleRightsProtocol>::
-    ResponseMethod_Sync(::zx::socket&& h) {
-  return ::fidl::internal::ClientBase::MakeSyncCallWith(
-      [&](std::shared_ptr<::fidl::internal::AnyTransport> _transport) {
-        ::fidl::WireRequest<
-            ::test_protocols::HandleRightsProtocol::ResponseMethod>
-            _request{std::move(h)};
-        return ::fidl::WireResult<
-            ::test_protocols::HandleRightsProtocol::ResponseMethod>(
-            ::fidl::UnownedClientEnd<::test_protocols::HandleRightsProtocol>(
-                _transport->get<fidl::internal::ChannelTransport>()),
-            &_request);
-      });
-}
-::fidl::WireUnownedResult<
-    ::test_protocols::HandleRightsProtocol::ResponseMethod>
-fidl::internal::WireClientImpl<::test_protocols::HandleRightsProtocol>::
-    ResponseMethod_Sync(::fidl::BufferSpan _buffer_span, ::zx::socket&& h) {
-  auto _allocator = ::fidl::internal::MakeAnyBufferAllocator(_buffer_span);
-  return ::fidl::internal::ClientBase::MakeSyncCallWith(
-      [&](std::shared_ptr<::fidl::internal::AnyTransport> _transport) {
-        ::fidl::WireRequest<
-            ::test_protocols::HandleRightsProtocol::ResponseMethod>
-            _request{std::move(h)};
-        return ::fidl::WireUnownedResult<
-            ::test_protocols::HandleRightsProtocol::ResponseMethod>(
-            ::fidl::UnownedClientEnd<::test_protocols::HandleRightsProtocol>(
-                _transport->get<fidl::internal::ChannelTransport>()),
-            _allocator, &_request);
-      });
-}
 ::fidl::Result fidl::internal::WireWeakOnewayBufferClientImpl<
     ::test_protocols::HandleRightsProtocol>::NoResponseMethod(::zx::socket&&
                                                                   h) {
@@ -1272,25 +1240,6 @@ void fidl::internal::WireClientImpl<
   ::fidl::internal::ClientBase::SendTwoWay(
       _request_message.GetOutgoingMessage(), _context);
 }
-::fidl::WireResult<
-    ::test_protocols::WithAndWithoutRequestResponse::NoRequestEmptyResponse>
-fidl::internal::WireClientImpl<
-    ::test_protocols::WithAndWithoutRequestResponse>::
-    NoRequestEmptyResponse_Sync() {
-  return ::fidl::internal::ClientBase::MakeSyncCallWith(
-      [&](std::shared_ptr<::fidl::internal::AnyTransport> _transport) {
-        ::fidl::WireRequest<::test_protocols::WithAndWithoutRequestResponse::
-                                NoRequestEmptyResponse>
-            _request{};
-        return ::fidl::WireResult<
-            ::test_protocols::WithAndWithoutRequestResponse::
-                NoRequestEmptyResponse>(
-            ::fidl::UnownedClientEnd<
-                ::test_protocols::WithAndWithoutRequestResponse>(
-                _transport->get<fidl::internal::ChannelTransport>()),
-            &_request);
-      });
-}
 void fidl::internal::WireClientImpl<
     ::test_protocols::WithAndWithoutRequestResponse>::
     NoRequestWithResponse(::fidl::WireClientCallback<
@@ -1373,45 +1322,6 @@ void fidl::internal::WireClientImpl<
       _request_message(::fidl::internal::AllowUnownedInputRef{}, &_request);
   ::fidl::internal::ClientBase::SendTwoWay(
       _request_message.GetOutgoingMessage(), _context);
-}
-::fidl::WireResult<
-    ::test_protocols::WithAndWithoutRequestResponse::NoRequestWithResponse>
-fidl::internal::WireClientImpl<
-    ::test_protocols::WithAndWithoutRequestResponse>::
-    NoRequestWithResponse_Sync() {
-  return ::fidl::internal::ClientBase::MakeSyncCallWith(
-      [&](std::shared_ptr<::fidl::internal::AnyTransport> _transport) {
-        ::fidl::WireRequest<::test_protocols::WithAndWithoutRequestResponse::
-                                NoRequestWithResponse>
-            _request{};
-        return ::fidl::WireResult<
-            ::test_protocols::WithAndWithoutRequestResponse::
-                NoRequestWithResponse>(
-            ::fidl::UnownedClientEnd<
-                ::test_protocols::WithAndWithoutRequestResponse>(
-                _transport->get<fidl::internal::ChannelTransport>()),
-            &_request);
-      });
-}
-::fidl::WireUnownedResult<
-    ::test_protocols::WithAndWithoutRequestResponse::NoRequestWithResponse>
-fidl::internal::WireClientImpl<
-    ::test_protocols::WithAndWithoutRequestResponse>::
-    NoRequestWithResponse_Sync(::fidl::BufferSpan _buffer_span) {
-  auto _allocator = ::fidl::internal::MakeAnyBufferAllocator(_buffer_span);
-  return ::fidl::internal::ClientBase::MakeSyncCallWith(
-      [&](std::shared_ptr<::fidl::internal::AnyTransport> _transport) {
-        ::fidl::WireRequest<::test_protocols::WithAndWithoutRequestResponse::
-                                NoRequestWithResponse>
-            _request{};
-        return ::fidl::WireUnownedResult<
-            ::test_protocols::WithAndWithoutRequestResponse::
-                NoRequestWithResponse>(
-            ::fidl::UnownedClientEnd<
-                ::test_protocols::WithAndWithoutRequestResponse>(
-                _transport->get<fidl::internal::ChannelTransport>()),
-            _allocator, &_request);
-      });
 }
 ::fidl::Result fidl::internal::WireClientImpl<
     ::test_protocols::WithAndWithoutRequestResponse>::
@@ -1515,46 +1425,6 @@ void fidl::internal::WireClientImpl<
   ::fidl::internal::ClientBase::SendTwoWay(
       _request_message.GetOutgoingMessage(), _context);
 }
-::fidl::WireResult<
-    ::test_protocols::WithAndWithoutRequestResponse::WithRequestEmptyResponse>
-fidl::internal::WireClientImpl<
-    ::test_protocols::WithAndWithoutRequestResponse>::
-    WithRequestEmptyResponse_Sync(::fidl::StringView arg) {
-  return ::fidl::internal::ClientBase::MakeSyncCallWith(
-      [&](std::shared_ptr<::fidl::internal::AnyTransport> _transport) {
-        ::fidl::WireRequest<::test_protocols::WithAndWithoutRequestResponse::
-                                WithRequestEmptyResponse>
-            _request{arg};
-        return ::fidl::WireResult<
-            ::test_protocols::WithAndWithoutRequestResponse::
-                WithRequestEmptyResponse>(
-            ::fidl::UnownedClientEnd<
-                ::test_protocols::WithAndWithoutRequestResponse>(
-                _transport->get<fidl::internal::ChannelTransport>()),
-            &_request);
-      });
-}
-::fidl::WireUnownedResult<
-    ::test_protocols::WithAndWithoutRequestResponse::WithRequestEmptyResponse>
-fidl::internal::WireClientImpl<
-    ::test_protocols::WithAndWithoutRequestResponse>::
-    WithRequestEmptyResponse_Sync(::fidl::BufferSpan _buffer_span,
-                                  ::fidl::StringView arg) {
-  auto _allocator = ::fidl::internal::MakeAnyBufferAllocator(_buffer_span);
-  return ::fidl::internal::ClientBase::MakeSyncCallWith(
-      [&](std::shared_ptr<::fidl::internal::AnyTransport> _transport) {
-        ::fidl::WireRequest<::test_protocols::WithAndWithoutRequestResponse::
-                                WithRequestEmptyResponse>
-            _request{arg};
-        return ::fidl::WireUnownedResult<
-            ::test_protocols::WithAndWithoutRequestResponse::
-                WithRequestEmptyResponse>(
-            ::fidl::UnownedClientEnd<
-                ::test_protocols::WithAndWithoutRequestResponse>(
-                _transport->get<fidl::internal::ChannelTransport>()),
-            _allocator, &_request);
-      });
-}
 void fidl::internal::WireClientImpl<
     ::test_protocols::WithAndWithoutRequestResponse>::
     WithRequestWithResponse(
@@ -1640,46 +1510,6 @@ void fidl::internal::WireClientImpl<
       _request_message(::fidl::internal::AllowUnownedInputRef{}, &_request);
   ::fidl::internal::ClientBase::SendTwoWay(
       _request_message.GetOutgoingMessage(), _context);
-}
-::fidl::WireResult<
-    ::test_protocols::WithAndWithoutRequestResponse::WithRequestWithResponse>
-fidl::internal::WireClientImpl<
-    ::test_protocols::WithAndWithoutRequestResponse>::
-    WithRequestWithResponse_Sync(::fidl::StringView arg) {
-  return ::fidl::internal::ClientBase::MakeSyncCallWith(
-      [&](std::shared_ptr<::fidl::internal::AnyTransport> _transport) {
-        ::fidl::WireRequest<::test_protocols::WithAndWithoutRequestResponse::
-                                WithRequestWithResponse>
-            _request{arg};
-        return ::fidl::WireResult<
-            ::test_protocols::WithAndWithoutRequestResponse::
-                WithRequestWithResponse>(
-            ::fidl::UnownedClientEnd<
-                ::test_protocols::WithAndWithoutRequestResponse>(
-                _transport->get<fidl::internal::ChannelTransport>()),
-            &_request);
-      });
-}
-::fidl::WireUnownedResult<
-    ::test_protocols::WithAndWithoutRequestResponse::WithRequestWithResponse>
-fidl::internal::WireClientImpl<
-    ::test_protocols::WithAndWithoutRequestResponse>::
-    WithRequestWithResponse_Sync(::fidl::BufferSpan _buffer_span,
-                                 ::fidl::StringView arg) {
-  auto _allocator = ::fidl::internal::MakeAnyBufferAllocator(_buffer_span);
-  return ::fidl::internal::ClientBase::MakeSyncCallWith(
-      [&](std::shared_ptr<::fidl::internal::AnyTransport> _transport) {
-        ::fidl::WireRequest<::test_protocols::WithAndWithoutRequestResponse::
-                                WithRequestWithResponse>
-            _request{arg};
-        return ::fidl::WireUnownedResult<
-            ::test_protocols::WithAndWithoutRequestResponse::
-                WithRequestWithResponse>(
-            ::fidl::UnownedClientEnd<
-                ::test_protocols::WithAndWithoutRequestResponse>(
-                _transport->get<fidl::internal::ChannelTransport>()),
-            _allocator, &_request);
-      });
 }
 ::fidl::Result fidl::internal::WireWeakOnewayBufferClientImpl<
     ::test_protocols::WithAndWithoutRequestResponse>::NoRequestNoResponse() {
@@ -2725,34 +2555,6 @@ void fidl::internal::WireClientImpl<::test_protocols::Transitional>::Request(
   ::fidl::internal::ClientBase::SendTwoWay(
       _request_message.GetOutgoingMessage(), _context);
 }
-::fidl::WireResult<::test_protocols::Transitional::Request>
-fidl::internal::WireClientImpl<::test_protocols::Transitional>::Request_Sync(
-    int64_t x) {
-  return ::fidl::internal::ClientBase::MakeSyncCallWith(
-      [&](std::shared_ptr<::fidl::internal::AnyTransport> _transport) {
-        ::fidl::WireRequest<::test_protocols::Transitional::Request> _request{
-            x};
-        return ::fidl::WireResult<::test_protocols::Transitional::Request>(
-            ::fidl::UnownedClientEnd<::test_protocols::Transitional>(
-                _transport->get<fidl::internal::ChannelTransport>()),
-            &_request);
-      });
-}
-::fidl::WireUnownedResult<::test_protocols::Transitional::Request>
-fidl::internal::WireClientImpl<::test_protocols::Transitional>::Request_Sync(
-    ::fidl::BufferSpan _buffer_span, int64_t x) {
-  auto _allocator = ::fidl::internal::MakeAnyBufferAllocator(_buffer_span);
-  return ::fidl::internal::ClientBase::MakeSyncCallWith(
-      [&](std::shared_ptr<::fidl::internal::AnyTransport> _transport) {
-        ::fidl::WireRequest<::test_protocols::Transitional::Request> _request{
-            x};
-        return ::fidl::WireUnownedResult<
-            ::test_protocols::Transitional::Request>(
-            ::fidl::UnownedClientEnd<::test_protocols::Transitional>(
-                _transport->get<fidl::internal::ChannelTransport>()),
-            _allocator, &_request);
-      });
-}
 ::fidl::Result fidl::internal::WireClientImpl<
     ::test_protocols::Transitional>::OneWay(int64_t x) {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
@@ -3671,38 +3473,6 @@ void fidl::internal::WireClientImpl<::test_protocols::WithProtocolEnds>::
   ::fidl::internal::ClientBase::SendTwoWay(
       _request_message.GetOutgoingMessage(), _context);
 }
-::fidl::WireResult<::test_protocols::WithProtocolEnds::ClientEnds>
-fidl::internal::WireClientImpl<::test_protocols::WithProtocolEnds>::
-    ClientEnds_Sync(
-        ::fidl::ClientEnd<::test_protocols::DiscoverableProtocol>&& in) {
-  return ::fidl::internal::ClientBase::MakeSyncCallWith(
-      [&](std::shared_ptr<::fidl::internal::AnyTransport> _transport) {
-        ::fidl::WireRequest<::test_protocols::WithProtocolEnds::ClientEnds>
-            _request{std::move(in)};
-        return ::fidl::WireResult<
-            ::test_protocols::WithProtocolEnds::ClientEnds>(
-            ::fidl::UnownedClientEnd<::test_protocols::WithProtocolEnds>(
-                _transport->get<fidl::internal::ChannelTransport>()),
-            &_request);
-      });
-}
-::fidl::WireUnownedResult<::test_protocols::WithProtocolEnds::ClientEnds>
-fidl::internal::WireClientImpl<::test_protocols::WithProtocolEnds>::
-    ClientEnds_Sync(
-        ::fidl::BufferSpan _buffer_span,
-        ::fidl::ClientEnd<::test_protocols::DiscoverableProtocol>&& in) {
-  auto _allocator = ::fidl::internal::MakeAnyBufferAllocator(_buffer_span);
-  return ::fidl::internal::ClientBase::MakeSyncCallWith(
-      [&](std::shared_ptr<::fidl::internal::AnyTransport> _transport) {
-        ::fidl::WireRequest<::test_protocols::WithProtocolEnds::ClientEnds>
-            _request{std::move(in)};
-        return ::fidl::WireUnownedResult<
-            ::test_protocols::WithProtocolEnds::ClientEnds>(
-            ::fidl::UnownedClientEnd<::test_protocols::WithProtocolEnds>(
-                _transport->get<fidl::internal::ChannelTransport>()),
-            _allocator, &_request);
-      });
-}
 void fidl::internal::WireClientImpl<::test_protocols::WithProtocolEnds>::
     ServerEnds(::fidl::ServerEnd<::test_protocols::DiscoverableProtocol>&& in,
                ::fidl::WireClientCallback<
@@ -3777,38 +3547,6 @@ void fidl::internal::WireClientImpl<::test_protocols::WithProtocolEnds>::
       _request_message(::fidl::internal::AllowUnownedInputRef{}, &_request);
   ::fidl::internal::ClientBase::SendTwoWay(
       _request_message.GetOutgoingMessage(), _context);
-}
-::fidl::WireResult<::test_protocols::WithProtocolEnds::ServerEnds>
-fidl::internal::WireClientImpl<::test_protocols::WithProtocolEnds>::
-    ServerEnds_Sync(
-        ::fidl::ServerEnd<::test_protocols::DiscoverableProtocol>&& in) {
-  return ::fidl::internal::ClientBase::MakeSyncCallWith(
-      [&](std::shared_ptr<::fidl::internal::AnyTransport> _transport) {
-        ::fidl::WireRequest<::test_protocols::WithProtocolEnds::ServerEnds>
-            _request{std::move(in)};
-        return ::fidl::WireResult<
-            ::test_protocols::WithProtocolEnds::ServerEnds>(
-            ::fidl::UnownedClientEnd<::test_protocols::WithProtocolEnds>(
-                _transport->get<fidl::internal::ChannelTransport>()),
-            &_request);
-      });
-}
-::fidl::WireUnownedResult<::test_protocols::WithProtocolEnds::ServerEnds>
-fidl::internal::WireClientImpl<::test_protocols::WithProtocolEnds>::
-    ServerEnds_Sync(
-        ::fidl::BufferSpan _buffer_span,
-        ::fidl::ServerEnd<::test_protocols::DiscoverableProtocol>&& in) {
-  auto _allocator = ::fidl::internal::MakeAnyBufferAllocator(_buffer_span);
-  return ::fidl::internal::ClientBase::MakeSyncCallWith(
-      [&](std::shared_ptr<::fidl::internal::AnyTransport> _transport) {
-        ::fidl::WireRequest<::test_protocols::WithProtocolEnds::ServerEnds>
-            _request{std::move(in)};
-        return ::fidl::WireUnownedResult<
-            ::test_protocols::WithProtocolEnds::ServerEnds>(
-            ::fidl::UnownedClientEnd<::test_protocols::WithProtocolEnds>(
-                _transport->get<fidl::internal::ChannelTransport>()),
-            _allocator, &_request);
-      });
 }
 void fidl::internal::WireClientImpl<::test_protocols::WithProtocolEnds>::
     StructContainingEnds(
@@ -3888,39 +3626,6 @@ void fidl::internal::WireClientImpl<::test_protocols::WithProtocolEnds>::
       _request_message(::fidl::internal::AllowUnownedInputRef{}, &_request);
   ::fidl::internal::ClientBase::SendTwoWay(
       _request_message.GetOutgoingMessage(), _context);
-}
-::fidl::WireResult<::test_protocols::WithProtocolEnds::StructContainingEnds>
-fidl::internal::WireClientImpl<::test_protocols::WithProtocolEnds>::
-    StructContainingEnds_Sync(::test_protocols::wire::ProtocolEnds&& in) {
-  return ::fidl::internal::ClientBase::MakeSyncCallWith(
-      [&](std::shared_ptr<::fidl::internal::AnyTransport> _transport) {
-        ::fidl::WireRequest<
-            ::test_protocols::WithProtocolEnds::StructContainingEnds>
-            _request{std::move(in)};
-        return ::fidl::WireResult<
-            ::test_protocols::WithProtocolEnds::StructContainingEnds>(
-            ::fidl::UnownedClientEnd<::test_protocols::WithProtocolEnds>(
-                _transport->get<fidl::internal::ChannelTransport>()),
-            &_request);
-      });
-}
-::fidl::WireUnownedResult<
-    ::test_protocols::WithProtocolEnds::StructContainingEnds>
-fidl::internal::WireClientImpl<::test_protocols::WithProtocolEnds>::
-    StructContainingEnds_Sync(::fidl::BufferSpan _buffer_span,
-                              ::test_protocols::wire::ProtocolEnds&& in) {
-  auto _allocator = ::fidl::internal::MakeAnyBufferAllocator(_buffer_span);
-  return ::fidl::internal::ClientBase::MakeSyncCallWith(
-      [&](std::shared_ptr<::fidl::internal::AnyTransport> _transport) {
-        ::fidl::WireRequest<
-            ::test_protocols::WithProtocolEnds::StructContainingEnds>
-            _request{std::move(in)};
-        return ::fidl::WireUnownedResult<
-            ::test_protocols::WithProtocolEnds::StructContainingEnds>(
-            ::fidl::UnownedClientEnd<::test_protocols::WithProtocolEnds>(
-                _transport->get<fidl::internal::ChannelTransport>()),
-            _allocator, &_request);
-      });
 }
 void fidl::internal::WireWeakAsyncBufferClientImpl<
     ::test_protocols::WithProtocolEnds>::
@@ -5050,35 +4755,6 @@ void fidl::internal::WireClientImpl<::test_protocols::WithErrorSyntax>::
   ::fidl::internal::ClientBase::SendTwoWay(
       _request_message.GetOutgoingMessage(), _context);
 }
-::fidl::WireResult<::test_protocols::WithErrorSyntax::ResponseAsStruct>
-fidl::internal::WireClientImpl<
-    ::test_protocols::WithErrorSyntax>::ResponseAsStruct_Sync() {
-  return ::fidl::internal::ClientBase::MakeSyncCallWith(
-      [&](std::shared_ptr<::fidl::internal::AnyTransport> _transport) {
-        ::fidl::WireRequest<::test_protocols::WithErrorSyntax::ResponseAsStruct>
-            _request{};
-        return ::fidl::WireResult<
-            ::test_protocols::WithErrorSyntax::ResponseAsStruct>(
-            ::fidl::UnownedClientEnd<::test_protocols::WithErrorSyntax>(
-                _transport->get<fidl::internal::ChannelTransport>()),
-            &_request);
-      });
-}
-::fidl::WireUnownedResult<::test_protocols::WithErrorSyntax::ResponseAsStruct>
-fidl::internal::WireClientImpl<::test_protocols::WithErrorSyntax>::
-    ResponseAsStruct_Sync(::fidl::BufferSpan _buffer_span) {
-  auto _allocator = ::fidl::internal::MakeAnyBufferAllocator(_buffer_span);
-  return ::fidl::internal::ClientBase::MakeSyncCallWith(
-      [&](std::shared_ptr<::fidl::internal::AnyTransport> _transport) {
-        ::fidl::WireRequest<::test_protocols::WithErrorSyntax::ResponseAsStruct>
-            _request{};
-        return ::fidl::WireUnownedResult<
-            ::test_protocols::WithErrorSyntax::ResponseAsStruct>(
-            ::fidl::UnownedClientEnd<::test_protocols::WithErrorSyntax>(
-                _transport->get<fidl::internal::ChannelTransport>()),
-            _allocator, &_request);
-      });
-}
 void fidl::internal::WireClientImpl<::test_protocols::WithErrorSyntax>::
     ErrorAsPrimitive(::fidl::WireClientCallback<
                      ::test_protocols::WithErrorSyntax::ErrorAsPrimitive>
@@ -5153,35 +4829,6 @@ void fidl::internal::WireClientImpl<::test_protocols::WithErrorSyntax>::
   ::fidl::internal::ClientBase::SendTwoWay(
       _request_message.GetOutgoingMessage(), _context);
 }
-::fidl::WireResult<::test_protocols::WithErrorSyntax::ErrorAsPrimitive>
-fidl::internal::WireClientImpl<
-    ::test_protocols::WithErrorSyntax>::ErrorAsPrimitive_Sync() {
-  return ::fidl::internal::ClientBase::MakeSyncCallWith(
-      [&](std::shared_ptr<::fidl::internal::AnyTransport> _transport) {
-        ::fidl::WireRequest<::test_protocols::WithErrorSyntax::ErrorAsPrimitive>
-            _request{};
-        return ::fidl::WireResult<
-            ::test_protocols::WithErrorSyntax::ErrorAsPrimitive>(
-            ::fidl::UnownedClientEnd<::test_protocols::WithErrorSyntax>(
-                _transport->get<fidl::internal::ChannelTransport>()),
-            &_request);
-      });
-}
-::fidl::WireUnownedResult<::test_protocols::WithErrorSyntax::ErrorAsPrimitive>
-fidl::internal::WireClientImpl<::test_protocols::WithErrorSyntax>::
-    ErrorAsPrimitive_Sync(::fidl::BufferSpan _buffer_span) {
-  auto _allocator = ::fidl::internal::MakeAnyBufferAllocator(_buffer_span);
-  return ::fidl::internal::ClientBase::MakeSyncCallWith(
-      [&](std::shared_ptr<::fidl::internal::AnyTransport> _transport) {
-        ::fidl::WireRequest<::test_protocols::WithErrorSyntax::ErrorAsPrimitive>
-            _request{};
-        return ::fidl::WireUnownedResult<
-            ::test_protocols::WithErrorSyntax::ErrorAsPrimitive>(
-            ::fidl::UnownedClientEnd<::test_protocols::WithErrorSyntax>(
-                _transport->get<fidl::internal::ChannelTransport>()),
-            _allocator, &_request);
-      });
-}
 void fidl::internal::WireClientImpl<::test_protocols::WithErrorSyntax>::
     ErrorAsEnum(::fidl::WireClientCallback<
                 ::test_protocols::WithErrorSyntax::ErrorAsEnum>
@@ -5253,35 +4900,6 @@ void fidl::internal::WireClientImpl<::test_protocols::WithErrorSyntax>::
       _request_message(::fidl::internal::AllowUnownedInputRef{}, &_request);
   ::fidl::internal::ClientBase::SendTwoWay(
       _request_message.GetOutgoingMessage(), _context);
-}
-::fidl::WireResult<::test_protocols::WithErrorSyntax::ErrorAsEnum>
-fidl::internal::WireClientImpl<
-    ::test_protocols::WithErrorSyntax>::ErrorAsEnum_Sync() {
-  return ::fidl::internal::ClientBase::MakeSyncCallWith(
-      [&](std::shared_ptr<::fidl::internal::AnyTransport> _transport) {
-        ::fidl::WireRequest<::test_protocols::WithErrorSyntax::ErrorAsEnum>
-            _request{};
-        return ::fidl::WireResult<
-            ::test_protocols::WithErrorSyntax::ErrorAsEnum>(
-            ::fidl::UnownedClientEnd<::test_protocols::WithErrorSyntax>(
-                _transport->get<fidl::internal::ChannelTransport>()),
-            &_request);
-      });
-}
-::fidl::WireUnownedResult<::test_protocols::WithErrorSyntax::ErrorAsEnum>
-fidl::internal::WireClientImpl<::test_protocols::WithErrorSyntax>::
-    ErrorAsEnum_Sync(::fidl::BufferSpan _buffer_span) {
-  auto _allocator = ::fidl::internal::MakeAnyBufferAllocator(_buffer_span);
-  return ::fidl::internal::ClientBase::MakeSyncCallWith(
-      [&](std::shared_ptr<::fidl::internal::AnyTransport> _transport) {
-        ::fidl::WireRequest<::test_protocols::WithErrorSyntax::ErrorAsEnum>
-            _request{};
-        return ::fidl::WireUnownedResult<
-            ::test_protocols::WithErrorSyntax::ErrorAsEnum>(
-            ::fidl::UnownedClientEnd<::test_protocols::WithErrorSyntax>(
-                _transport->get<fidl::internal::ChannelTransport>()),
-            _allocator, &_request);
-      });
 }
 void fidl::internal::WireClientImpl<::test_protocols::WithErrorSyntax>::
     HandleInResult(::fidl::WireClientCallback<
@@ -5355,35 +4973,6 @@ void fidl::internal::WireClientImpl<::test_protocols::WithErrorSyntax>::
       _request_message(::fidl::internal::AllowUnownedInputRef{}, &_request);
   ::fidl::internal::ClientBase::SendTwoWay(
       _request_message.GetOutgoingMessage(), _context);
-}
-::fidl::WireResult<::test_protocols::WithErrorSyntax::HandleInResult>
-fidl::internal::WireClientImpl<
-    ::test_protocols::WithErrorSyntax>::HandleInResult_Sync() {
-  return ::fidl::internal::ClientBase::MakeSyncCallWith(
-      [&](std::shared_ptr<::fidl::internal::AnyTransport> _transport) {
-        ::fidl::WireRequest<::test_protocols::WithErrorSyntax::HandleInResult>
-            _request{};
-        return ::fidl::WireResult<
-            ::test_protocols::WithErrorSyntax::HandleInResult>(
-            ::fidl::UnownedClientEnd<::test_protocols::WithErrorSyntax>(
-                _transport->get<fidl::internal::ChannelTransport>()),
-            &_request);
-      });
-}
-::fidl::WireUnownedResult<::test_protocols::WithErrorSyntax::HandleInResult>
-fidl::internal::WireClientImpl<::test_protocols::WithErrorSyntax>::
-    HandleInResult_Sync(::fidl::BufferSpan _buffer_span) {
-  auto _allocator = ::fidl::internal::MakeAnyBufferAllocator(_buffer_span);
-  return ::fidl::internal::ClientBase::MakeSyncCallWith(
-      [&](std::shared_ptr<::fidl::internal::AnyTransport> _transport) {
-        ::fidl::WireRequest<::test_protocols::WithErrorSyntax::HandleInResult>
-            _request{};
-        return ::fidl::WireUnownedResult<
-            ::test_protocols::WithErrorSyntax::HandleInResult>(
-            ::fidl::UnownedClientEnd<::test_protocols::WithErrorSyntax>(
-                _transport->get<fidl::internal::ChannelTransport>()),
-            _allocator, &_request);
-      });
 }
 void fidl::internal::WireWeakAsyncBufferClientImpl<
     ::test_protocols::WithErrorSyntax>::
@@ -6605,34 +6194,6 @@ void fidl::internal::WireClientImpl<::test_protocols::ChannelProtocol>::MethodB(
   ::fidl::internal::ClientBase::SendTwoWay(
       _request_message.GetOutgoingMessage(), _context);
 }
-::fidl::WireResult<::test_protocols::ChannelProtocol::MethodB>
-fidl::internal::WireClientImpl<::test_protocols::ChannelProtocol>::MethodB_Sync(
-    int64_t a, int64_t b) {
-  return ::fidl::internal::ClientBase::MakeSyncCallWith(
-      [&](std::shared_ptr<::fidl::internal::AnyTransport> _transport) {
-        ::fidl::WireRequest<::test_protocols::ChannelProtocol::MethodB>
-            _request{a, b};
-        return ::fidl::WireResult<::test_protocols::ChannelProtocol::MethodB>(
-            ::fidl::UnownedClientEnd<::test_protocols::ChannelProtocol>(
-                _transport->get<fidl::internal::ChannelTransport>()),
-            &_request);
-      });
-}
-::fidl::WireUnownedResult<::test_protocols::ChannelProtocol::MethodB>
-fidl::internal::WireClientImpl<::test_protocols::ChannelProtocol>::MethodB_Sync(
-    ::fidl::BufferSpan _buffer_span, int64_t a, int64_t b) {
-  auto _allocator = ::fidl::internal::MakeAnyBufferAllocator(_buffer_span);
-  return ::fidl::internal::ClientBase::MakeSyncCallWith(
-      [&](std::shared_ptr<::fidl::internal::AnyTransport> _transport) {
-        ::fidl::WireRequest<::test_protocols::ChannelProtocol::MethodB>
-            _request{a, b};
-        return ::fidl::WireUnownedResult<
-            ::test_protocols::ChannelProtocol::MethodB>(
-            ::fidl::UnownedClientEnd<::test_protocols::ChannelProtocol>(
-                _transport->get<fidl::internal::ChannelTransport>()),
-            _allocator, &_request);
-      });
-}
 void fidl::internal::WireClientImpl<::test_protocols::ChannelProtocol>::
     TakeHandle(::zx::handle&& h,
                ::fidl::WireClientCallback<
@@ -6708,35 +6269,6 @@ void fidl::internal::WireClientImpl<::test_protocols::ChannelProtocol>::
   ::fidl::internal::ClientBase::SendTwoWay(
       _request_message.GetOutgoingMessage(), _context);
 }
-::fidl::WireResult<::test_protocols::ChannelProtocol::TakeHandle>
-fidl::internal::WireClientImpl<
-    ::test_protocols::ChannelProtocol>::TakeHandle_Sync(::zx::handle&& h) {
-  return ::fidl::internal::ClientBase::MakeSyncCallWith(
-      [&](std::shared_ptr<::fidl::internal::AnyTransport> _transport) {
-        ::fidl::WireRequest<::test_protocols::ChannelProtocol::TakeHandle>
-            _request{std::move(h)};
-        return ::fidl::WireResult<
-            ::test_protocols::ChannelProtocol::TakeHandle>(
-            ::fidl::UnownedClientEnd<::test_protocols::ChannelProtocol>(
-                _transport->get<fidl::internal::ChannelTransport>()),
-            &_request);
-      });
-}
-::fidl::WireUnownedResult<::test_protocols::ChannelProtocol::TakeHandle>
-fidl::internal::WireClientImpl<::test_protocols::ChannelProtocol>::
-    TakeHandle_Sync(::fidl::BufferSpan _buffer_span, ::zx::handle&& h) {
-  auto _allocator = ::fidl::internal::MakeAnyBufferAllocator(_buffer_span);
-  return ::fidl::internal::ClientBase::MakeSyncCallWith(
-      [&](std::shared_ptr<::fidl::internal::AnyTransport> _transport) {
-        ::fidl::WireRequest<::test_protocols::ChannelProtocol::TakeHandle>
-            _request{std::move(h)};
-        return ::fidl::WireUnownedResult<
-            ::test_protocols::ChannelProtocol::TakeHandle>(
-            ::fidl::UnownedClientEnd<::test_protocols::ChannelProtocol>(
-                _transport->get<fidl::internal::ChannelTransport>()),
-            _allocator, &_request);
-      });
-}
 void fidl::internal::WireClientImpl<::test_protocols::ChannelProtocol>::
     MutateSocket(::zx::socket&& a,
                  ::fidl::WireClientCallback<
@@ -6811,35 +6343,6 @@ void fidl::internal::WireClientImpl<::test_protocols::ChannelProtocol>::
       _request_message(::fidl::internal::AllowUnownedInputRef{}, &_request);
   ::fidl::internal::ClientBase::SendTwoWay(
       _request_message.GetOutgoingMessage(), _context);
-}
-::fidl::WireResult<::test_protocols::ChannelProtocol::MutateSocket>
-fidl::internal::WireClientImpl<
-    ::test_protocols::ChannelProtocol>::MutateSocket_Sync(::zx::socket&& a) {
-  return ::fidl::internal::ClientBase::MakeSyncCallWith(
-      [&](std::shared_ptr<::fidl::internal::AnyTransport> _transport) {
-        ::fidl::WireRequest<::test_protocols::ChannelProtocol::MutateSocket>
-            _request{std::move(a)};
-        return ::fidl::WireResult<
-            ::test_protocols::ChannelProtocol::MutateSocket>(
-            ::fidl::UnownedClientEnd<::test_protocols::ChannelProtocol>(
-                _transport->get<fidl::internal::ChannelTransport>()),
-            &_request);
-      });
-}
-::fidl::WireUnownedResult<::test_protocols::ChannelProtocol::MutateSocket>
-fidl::internal::WireClientImpl<::test_protocols::ChannelProtocol>::
-    MutateSocket_Sync(::fidl::BufferSpan _buffer_span, ::zx::socket&& a) {
-  auto _allocator = ::fidl::internal::MakeAnyBufferAllocator(_buffer_span);
-  return ::fidl::internal::ClientBase::MakeSyncCallWith(
-      [&](std::shared_ptr<::fidl::internal::AnyTransport> _transport) {
-        ::fidl::WireRequest<::test_protocols::ChannelProtocol::MutateSocket>
-            _request{std::move(a)};
-        return ::fidl::WireUnownedResult<
-            ::test_protocols::ChannelProtocol::MutateSocket>(
-            ::fidl::UnownedClientEnd<::test_protocols::ChannelProtocol>(
-                _transport->get<fidl::internal::ChannelTransport>()),
-            _allocator, &_request);
-      });
 }
 ::fidl::Result fidl::internal::WireWeakOnewayBufferClientImpl<
     ::test_protocols::ChannelProtocol>::MethodA(int64_t a, int64_t b) {

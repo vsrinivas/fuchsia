@@ -898,24 +898,6 @@ class ::fidl::internal::WireClientImpl<::test_requestflexibleenvelope::Protocol>
           ::fidl::WireResponse<::test_requestflexibleenvelope::Protocol::
                                    RequestStrictResponseFlexible>* response)>
           _cb);
-
-  // Synchronous variant of
-  // |RequestStrictResponseFlexible.RequestStrictResponseFlexible()|. Request is
-  // heap-allocated. Response is heap-allocated.
-  ::fidl::WireResult<
-      ::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>
-  RequestStrictResponseFlexible_Sync(
-      ::test_requestflexibleenvelope::wire::StrictFoo s);
-
-  // Synchronous variant of
-  // |RequestStrictResponseFlexible.RequestStrictResponseFlexible()|. Caller
-  // provides the backing storage for FIDL message via request and response
-  // buffers.
-  ::fidl::WireUnownedResult<
-      ::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>
-  RequestStrictResponseFlexible_Sync(
-      ::fidl::BufferSpan _buffer_span,
-      ::test_requestflexibleenvelope::wire::StrictFoo s);
   // Asynchronous variant of |Protocol.RequestFlexibleResponseStrict()|.
   // The request and callback are allocated on the heap.
   void RequestFlexibleResponseStrict(
@@ -930,24 +912,6 @@ class ::fidl::internal::WireClientImpl<::test_requestflexibleenvelope::Protocol>
           ::fidl::WireResponse<::test_requestflexibleenvelope::Protocol::
                                    RequestFlexibleResponseStrict>* response)>
           _cb);
-
-  // Synchronous variant of
-  // |RequestFlexibleResponseStrict.RequestFlexibleResponseStrict()|. Request is
-  // heap-allocated. Response is heap-allocated.
-  ::fidl::WireResult<
-      ::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>
-  RequestFlexibleResponseStrict_Sync(
-      ::test_requestflexibleenvelope::wire::FlexibleFoo s);
-
-  // Synchronous variant of
-  // |RequestFlexibleResponseStrict.RequestFlexibleResponseStrict()|. Caller
-  // provides the backing storage for FIDL message via request and response
-  // buffers.
-  ::fidl::WireUnownedResult<
-      ::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>
-  RequestFlexibleResponseStrict_Sync(
-      ::fidl::BufferSpan _buffer_span,
-      ::test_requestflexibleenvelope::wire::FlexibleFoo s);
   WireClientImpl() = default;
 };
 
@@ -987,7 +951,6 @@ class ::fidl::internal::WireWeakOnewayClientImpl<
  public:
   using ClientImplBase::ClientImplBase;
 };
-
 template <>
 class ::fidl::internal::WireWeakSyncClientImpl<
     ::test_requestflexibleenvelope::Protocol>

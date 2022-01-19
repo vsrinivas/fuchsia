@@ -164,37 +164,6 @@ void fidl::internal::WireClientImpl<::test_anonymous::SomeProtocol>::SomeMethod(
   ::fidl::internal::ClientBase::SendTwoWay(
       _request_message.GetOutgoingMessage(), _context);
 }
-::fidl::WireResult<::test_anonymous::SomeProtocol::SomeMethod>
-fidl::internal::WireClientImpl<::test_anonymous::SomeProtocol>::SomeMethod_Sync(
-    ::test_anonymous::wire::UnionMember union_member,
-    ::test_anonymous::wire::TableMember table_member) {
-  return ::fidl::internal::ClientBase::MakeSyncCallWith(
-      [&](std::shared_ptr<::fidl::internal::AnyTransport> _transport) {
-        ::fidl::WireRequest<::test_anonymous::SomeProtocol::SomeMethod>
-            _request{union_member, table_member};
-        return ::fidl::WireResult<::test_anonymous::SomeProtocol::SomeMethod>(
-            ::fidl::UnownedClientEnd<::test_anonymous::SomeProtocol>(
-                _transport->get<fidl::internal::ChannelTransport>()),
-            &_request);
-      });
-}
-::fidl::WireUnownedResult<::test_anonymous::SomeProtocol::SomeMethod>
-fidl::internal::WireClientImpl<::test_anonymous::SomeProtocol>::SomeMethod_Sync(
-    ::fidl::BufferSpan _buffer_span,
-    ::test_anonymous::wire::UnionMember union_member,
-    ::test_anonymous::wire::TableMember table_member) {
-  auto _allocator = ::fidl::internal::MakeAnyBufferAllocator(_buffer_span);
-  return ::fidl::internal::ClientBase::MakeSyncCallWith(
-      [&](std::shared_ptr<::fidl::internal::AnyTransport> _transport) {
-        ::fidl::WireRequest<::test_anonymous::SomeProtocol::SomeMethod>
-            _request{union_member, table_member};
-        return ::fidl::WireUnownedResult<
-            ::test_anonymous::SomeProtocol::SomeMethod>(
-            ::fidl::UnownedClientEnd<::test_anonymous::SomeProtocol>(
-                _transport->get<fidl::internal::ChannelTransport>()),
-            _allocator, &_request);
-      });
-}
 void fidl::internal::
     WireWeakAsyncBufferClientImpl<::test_anonymous::SomeProtocol>::SomeMethod(
         ::test_anonymous::wire::UnionMember union_member,

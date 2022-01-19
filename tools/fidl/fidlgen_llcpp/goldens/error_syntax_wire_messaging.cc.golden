@@ -290,43 +290,6 @@ void fidl::internal::WireClientImpl<
   ::fidl::internal::ClientBase::SendTwoWay(
       _request_message.GetOutgoingMessage(), _context);
 }
-::fidl::WireResult<
-    ::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>
-fidl::internal::WireClientImpl<::test_errorsyntax::ExampleUseOfErrorSyntax>::
-    ComposedCallWhichMayFail_Sync(::fidl::StringView s) {
-  return ::fidl::internal::ClientBase::MakeSyncCallWith(
-      [&](std::shared_ptr<::fidl::internal::AnyTransport> _transport) {
-        ::fidl::WireRequest<::test_errorsyntax::ExampleUseOfErrorSyntax::
-                                ComposedCallWhichMayFail>
-            _request{s};
-        return ::fidl::WireResult<::test_errorsyntax::ExampleUseOfErrorSyntax::
-                                      ComposedCallWhichMayFail>(
-            ::fidl::UnownedClientEnd<
-                ::test_errorsyntax::ExampleUseOfErrorSyntax>(
-                _transport->get<fidl::internal::ChannelTransport>()),
-            &_request);
-      });
-}
-::fidl::WireUnownedResult<
-    ::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>
-fidl::internal::WireClientImpl<::test_errorsyntax::ExampleUseOfErrorSyntax>::
-    ComposedCallWhichMayFail_Sync(::fidl::BufferSpan _buffer_span,
-                                  ::fidl::StringView s) {
-  auto _allocator = ::fidl::internal::MakeAnyBufferAllocator(_buffer_span);
-  return ::fidl::internal::ClientBase::MakeSyncCallWith([&](std::shared_ptr<
-                                                            ::fidl::internal::
-                                                                AnyTransport>
-                                                                _transport) {
-    ::fidl::WireRequest<
-        ::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>
-        _request{s};
-    return ::fidl::WireUnownedResult<
-        ::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>(
-        ::fidl::UnownedClientEnd<::test_errorsyntax::ExampleUseOfErrorSyntax>(
-            _transport->get<fidl::internal::ChannelTransport>()),
-        _allocator, &_request);
-  });
-}
 void fidl::internal::WireClientImpl<
     ::test_errorsyntax::ExampleUseOfErrorSyntax>::
     CallWhichMayFail(
@@ -411,42 +374,6 @@ void fidl::internal::WireClientImpl<
       _request_message(::fidl::internal::AllowUnownedInputRef{}, &_request);
   ::fidl::internal::ClientBase::SendTwoWay(
       _request_message.GetOutgoingMessage(), _context);
-}
-::fidl::WireResult<
-    ::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>
-fidl::internal::WireClientImpl<::test_errorsyntax::ExampleUseOfErrorSyntax>::
-    CallWhichMayFail_Sync(::fidl::StringView s) {
-  return ::fidl::internal::ClientBase::MakeSyncCallWith(
-      [&](std::shared_ptr<::fidl::internal::AnyTransport> _transport) {
-        ::fidl::WireRequest<
-            ::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>
-            _request{s};
-        return ::fidl::WireResult<
-            ::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>(
-            ::fidl::UnownedClientEnd<
-                ::test_errorsyntax::ExampleUseOfErrorSyntax>(
-                _transport->get<fidl::internal::ChannelTransport>()),
-            &_request);
-      });
-}
-::fidl::WireUnownedResult<
-    ::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>
-fidl::internal::WireClientImpl<::test_errorsyntax::ExampleUseOfErrorSyntax>::
-    CallWhichMayFail_Sync(::fidl::BufferSpan _buffer_span,
-                          ::fidl::StringView s) {
-  auto _allocator = ::fidl::internal::MakeAnyBufferAllocator(_buffer_span);
-  return ::fidl::internal::ClientBase::MakeSyncCallWith(
-      [&](std::shared_ptr<::fidl::internal::AnyTransport> _transport) {
-        ::fidl::WireRequest<
-            ::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>
-            _request{s};
-        return ::fidl::WireUnownedResult<
-            ::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>(
-            ::fidl::UnownedClientEnd<
-                ::test_errorsyntax::ExampleUseOfErrorSyntax>(
-                _transport->get<fidl::internal::ChannelTransport>()),
-            _allocator, &_request);
-      });
 }
 void fidl::internal::WireWeakAsyncBufferClientImpl<
     ::test_errorsyntax::ExampleUseOfErrorSyntax>::

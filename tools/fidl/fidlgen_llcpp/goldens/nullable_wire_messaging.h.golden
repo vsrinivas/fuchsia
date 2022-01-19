@@ -461,18 +461,6 @@ class ::fidl::internal::WireClientImpl<::test_nullable::SimpleProtocol> final
       ::fit::callback<void(
           ::fidl::WireResponse<::test_nullable::SimpleProtocol::Add>* response)>
           _cb);
-
-  // Synchronous variant of |Add.Add()|.
-  // Allocates 48 bytes of message buffer on the stack. No heap allocation
-  // necessary.
-  ::fidl::WireResult<::test_nullable::SimpleProtocol::Add> Add_Sync(int32_t a,
-                                                                    int32_t b);
-
-  // Synchronous variant of |Add.Add()|.
-  // Caller provides the backing storage for FIDL message via request and
-  // response buffers.
-  ::fidl::WireUnownedResult<::test_nullable::SimpleProtocol::Add> Add_Sync(
-      ::fidl::BufferSpan _buffer_span, int32_t a, int32_t b);
   WireClientImpl() = default;
 };
 
@@ -504,7 +492,6 @@ class ::fidl::internal::WireWeakOnewayClientImpl<
  public:
   using ClientImplBase::ClientImplBase;
 };
-
 template <>
 class ::fidl::internal::WireWeakSyncClientImpl<::test_nullable::SimpleProtocol>
     final : public ::fidl::internal::WireWeakOnewayClientImpl<

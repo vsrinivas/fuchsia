@@ -247,36 +247,6 @@ void fidl::internal::WireClientImpl<::test_emptystruct::EmptyProtocol>::
   ::fidl::internal::ClientBase::SendTwoWay(
       _request_message.GetOutgoingMessage(), _context);
 }
-::fidl::WireResult<::test_emptystruct::EmptyProtocol::SendAndReceive>
-fidl::internal::WireClientImpl<::test_emptystruct::EmptyProtocol>::
-    SendAndReceive_Sync(const ::test_emptystruct::wire::Empty& e) {
-  return ::fidl::internal::ClientBase::MakeSyncCallWith(
-      [&](std::shared_ptr<::fidl::internal::AnyTransport> _transport) {
-        ::fidl::WireRequest<::test_emptystruct::EmptyProtocol::SendAndReceive>
-            _request{e};
-        return ::fidl::WireResult<
-            ::test_emptystruct::EmptyProtocol::SendAndReceive>(
-            ::fidl::UnownedClientEnd<::test_emptystruct::EmptyProtocol>(
-                _transport->get<fidl::internal::ChannelTransport>()),
-            &_request);
-      });
-}
-::fidl::WireUnownedResult<::test_emptystruct::EmptyProtocol::SendAndReceive>
-fidl::internal::WireClientImpl<::test_emptystruct::EmptyProtocol>::
-    SendAndReceive_Sync(::fidl::BufferSpan _buffer_span,
-                        const ::test_emptystruct::wire::Empty& e) {
-  auto _allocator = ::fidl::internal::MakeAnyBufferAllocator(_buffer_span);
-  return ::fidl::internal::ClientBase::MakeSyncCallWith(
-      [&](std::shared_ptr<::fidl::internal::AnyTransport> _transport) {
-        ::fidl::WireRequest<::test_emptystruct::EmptyProtocol::SendAndReceive>
-            _request{e};
-        return ::fidl::WireUnownedResult<
-            ::test_emptystruct::EmptyProtocol::SendAndReceive>(
-            ::fidl::UnownedClientEnd<::test_emptystruct::EmptyProtocol>(
-                _transport->get<fidl::internal::ChannelTransport>()),
-            _allocator, &_request);
-      });
-}
 ::fidl::Result fidl::internal::
     WireWeakOnewayBufferClientImpl<::test_emptystruct::EmptyProtocol>::Send(
         const ::test_emptystruct::wire::Empty& e) {

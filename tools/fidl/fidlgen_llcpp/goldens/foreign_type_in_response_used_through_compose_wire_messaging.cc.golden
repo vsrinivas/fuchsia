@@ -186,41 +186,6 @@ void fidl::internal::
   ::fidl::internal::ClientBase::SendTwoWay(
       _request_message.GetOutgoingMessage(), _context);
 }
-::fidl::WireResult<::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>
-fidl::internal::WireClientImpl<
-    ::test_foreigntypeinresponseusedthroughcompose::Top>::GetFoo_Sync() {
-  return ::fidl::internal::ClientBase::MakeSyncCallWith(
-      [&](std::shared_ptr<::fidl::internal::AnyTransport> _transport) {
-        ::fidl::WireRequest<
-            ::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>
-            _request{};
-        return ::fidl::WireResult<
-            ::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>(
-            ::fidl::UnownedClientEnd<
-                ::test_foreigntypeinresponseusedthroughcompose::Top>(
-                _transport->get<fidl::internal::ChannelTransport>()),
-            &_request);
-      });
-}
-::fidl::WireUnownedResult<
-    ::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>
-fidl::internal::WireClientImpl<
-    ::test_foreigntypeinresponseusedthroughcompose::Top>::
-    GetFoo_Sync(::fidl::BufferSpan _buffer_span) {
-  auto _allocator = ::fidl::internal::MakeAnyBufferAllocator(_buffer_span);
-  return ::fidl::internal::ClientBase::MakeSyncCallWith(
-      [&](std::shared_ptr<::fidl::internal::AnyTransport> _transport) {
-        ::fidl::WireRequest<
-            ::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>
-            _request{};
-        return ::fidl::WireUnownedResult<
-            ::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>(
-            ::fidl::UnownedClientEnd<
-                ::test_foreigntypeinresponseusedthroughcompose::Top>(
-                _transport->get<fidl::internal::ChannelTransport>()),
-            _allocator, &_request);
-      });
-}
 void fidl::internal::WireWeakAsyncBufferClientImpl<
     ::test_foreigntypeinresponseusedthroughcompose::Top>::
     GetFoo(::fidl::WireResponseContext<

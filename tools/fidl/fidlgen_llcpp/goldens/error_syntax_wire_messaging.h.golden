@@ -917,22 +917,6 @@ class ::fidl::internal::WireClientImpl<
           ::fidl::WireResponse<::test_errorsyntax::ExampleUseOfErrorSyntax::
                                    ComposedCallWhichMayFail>* response)>
           _cb);
-
-  // Synchronous variant of
-  // |ComposedCallWhichMayFail.ComposedCallWhichMayFail()|.
-  // Allocates 40 bytes of response buffer on the stack. Request is
-  // heap-allocated.
-  ::fidl::WireResult<
-      ::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>
-  ComposedCallWhichMayFail_Sync(::fidl::StringView s);
-
-  // Synchronous variant of
-  // |ComposedCallWhichMayFail.ComposedCallWhichMayFail()|. Caller provides the
-  // backing storage for FIDL message via request and response buffers.
-  ::fidl::WireUnownedResult<
-      ::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>
-  ComposedCallWhichMayFail_Sync(::fidl::BufferSpan _buffer_span,
-                                ::fidl::StringView s);
   // Asynchronous variant of |ExampleUseOfErrorSyntax.CallWhichMayFail()|.
   // The request and callback are allocated on the heap.
   void CallWhichMayFail(
@@ -947,20 +931,6 @@ class ::fidl::internal::WireClientImpl<
           ::fidl::WireResponse<::test_errorsyntax::ExampleUseOfErrorSyntax::
                                    CallWhichMayFail>* response)>
           _cb);
-
-  // Synchronous variant of |CallWhichMayFail.CallWhichMayFail()|.
-  // Allocates 40 bytes of response buffer on the stack. Request is
-  // heap-allocated.
-  ::fidl::WireResult<
-      ::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>
-  CallWhichMayFail_Sync(::fidl::StringView s);
-
-  // Synchronous variant of |CallWhichMayFail.CallWhichMayFail()|.
-  // Caller provides the backing storage for FIDL message via request and
-  // response buffers.
-  ::fidl::WireUnownedResult<
-      ::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>
-  CallWhichMayFail_Sync(::fidl::BufferSpan _buffer_span, ::fidl::StringView s);
   WireClientImpl() = default;
 };
 
@@ -1001,7 +971,6 @@ class ::fidl::internal::WireWeakOnewayClientImpl<
  public:
   using ClientImplBase::ClientImplBase;
 };
-
 template <>
 class ::fidl::internal::WireWeakSyncClientImpl<
     ::test_errorsyntax::ExampleUseOfErrorSyntax>

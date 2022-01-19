@@ -886,23 +886,6 @@ class ::fidl::internal::WireClientImpl<::test_union::TestProtocol> final
                ::test_union::TestProtocol::
                    StrictXUnionHenceResponseMayBeStackAllocated>* response)>
           _cb);
-
-  // Synchronous variant of
-  // |StrictXUnionHenceResponseMayBeStackAllocated.StrictXUnionHenceResponseMayBeStackAllocated()|.
-  // Allocates 80 bytes of message buffer on the stack. No heap allocation
-  // necessary.
-  ::fidl::WireResult<
-      ::test_union::TestProtocol::StrictXUnionHenceResponseMayBeStackAllocated>
-  StrictXUnionHenceResponseMayBeStackAllocated_Sync();
-
-  // Synchronous variant of
-  // |StrictXUnionHenceResponseMayBeStackAllocated.StrictXUnionHenceResponseMayBeStackAllocated()|.
-  // Caller provides the backing storage for FIDL message via request and
-  // response buffers.
-  ::fidl::WireUnownedResult<
-      ::test_union::TestProtocol::StrictXUnionHenceResponseMayBeStackAllocated>
-  StrictXUnionHenceResponseMayBeStackAllocated_Sync(
-      ::fidl::BufferSpan _buffer_span);
   // Asynchronous variant of
   // |TestProtocol.FlexibleXUnionHenceResponseMustBeHeapAllocated()|. Allocates
   // 16 bytes of request buffer on the stack. The callback is stored on the
@@ -919,23 +902,6 @@ class ::fidl::internal::WireClientImpl<::test_union::TestProtocol> final
                ::test_union::TestProtocol::
                    FlexibleXUnionHenceResponseMustBeHeapAllocated>* response)>
           _cb);
-
-  // Synchronous variant of
-  // |FlexibleXUnionHenceResponseMustBeHeapAllocated.FlexibleXUnionHenceResponseMustBeHeapAllocated()|.
-  // Allocates 16 bytes of request buffer on the stack. Response is
-  // heap-allocated.
-  ::fidl::WireResult<::test_union::TestProtocol::
-                         FlexibleXUnionHenceResponseMustBeHeapAllocated>
-  FlexibleXUnionHenceResponseMustBeHeapAllocated_Sync();
-
-  // Synchronous variant of
-  // |FlexibleXUnionHenceResponseMustBeHeapAllocated.FlexibleXUnionHenceResponseMustBeHeapAllocated()|.
-  // Caller provides the backing storage for FIDL message via request and
-  // response buffers.
-  ::fidl::WireUnownedResult<::test_union::TestProtocol::
-                                FlexibleXUnionHenceResponseMustBeHeapAllocated>
-  FlexibleXUnionHenceResponseMustBeHeapAllocated_Sync(
-      ::fidl::BufferSpan _buffer_span);
   WireClientImpl() = default;
 };
 
@@ -974,7 +940,6 @@ class ::fidl::internal::WireWeakOnewayClientImpl<::test_union::TestProtocol>
  public:
   using ClientImplBase::ClientImplBase;
 };
-
 template <>
 class ::fidl::internal::WireWeakSyncClientImpl<::test_union::TestProtocol> final
     : public ::fidl::internal::WireWeakOnewayClientImpl<

@@ -50,6 +50,7 @@ class {{ .WireWeakOnewayClientImpl }} : public ::fidl::internal::ClientImplBase 
   {{- end }}
 };
 
+{{- if .Transport.HasSyncClient }}
 template<>
 class {{ .WireWeakSyncClientImpl }} final : public {{ .WireWeakOnewayClientImpl }} {
  public:
@@ -59,6 +60,7 @@ class {{ .WireWeakSyncClientImpl }} final : public {{ .WireWeakOnewayClientImpl 
     {{- template "Method:WireWeakSyncClientImpl:WireMessagingHeader" . }}
   {{- end }}
 };
+{{- end }}
 
 {{- EndifFuchsia -}}
 {{- end }}
@@ -81,8 +83,11 @@ class {{ .WireWeakSyncClientImpl }} final : public {{ .WireWeakOnewayClientImpl 
   {{- range .OneWayMethods }}
     {{- template "Method:WireWeakOnewayClientImpl:WireMessagingSource" . }}
   {{- end }}
-  {{- range .TwoWayMethods }}
-    {{- template "Method:WireWeakSyncClientImpl:WireMessagingSource" . }}
+
+  {{- if .Transport.HasSyncClient }}
+    {{- range .TwoWayMethods }}
+      {{- template "Method:WireWeakSyncClientImpl:WireMessagingSource" . }}
+    {{- end }}
   {{- end }}
 
   {{- EndifFuchsia -}}

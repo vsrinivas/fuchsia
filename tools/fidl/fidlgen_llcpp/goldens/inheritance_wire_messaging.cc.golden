@@ -147,31 +147,6 @@ void fidl::internal::WireClientImpl<::test_inheritance::Super>::Foo(
   ::fidl::internal::ClientBase::SendTwoWay(
       _request_message.GetOutgoingMessage(), _context);
 }
-::fidl::WireResult<::test_inheritance::Super::Foo>
-fidl::internal::WireClientImpl<::test_inheritance::Super>::Foo_Sync(
-    ::fidl::StringView s) {
-  return ::fidl::internal::ClientBase::MakeSyncCallWith(
-      [&](std::shared_ptr<::fidl::internal::AnyTransport> _transport) {
-        ::fidl::WireRequest<::test_inheritance::Super::Foo> _request{s};
-        return ::fidl::WireResult<::test_inheritance::Super::Foo>(
-            ::fidl::UnownedClientEnd<::test_inheritance::Super>(
-                _transport->get<fidl::internal::ChannelTransport>()),
-            &_request);
-      });
-}
-::fidl::WireUnownedResult<::test_inheritance::Super::Foo>
-fidl::internal::WireClientImpl<::test_inheritance::Super>::Foo_Sync(
-    ::fidl::BufferSpan _buffer_span, ::fidl::StringView s) {
-  auto _allocator = ::fidl::internal::MakeAnyBufferAllocator(_buffer_span);
-  return ::fidl::internal::ClientBase::MakeSyncCallWith(
-      [&](std::shared_ptr<::fidl::internal::AnyTransport> _transport) {
-        ::fidl::WireRequest<::test_inheritance::Super::Foo> _request{s};
-        return ::fidl::WireUnownedResult<::test_inheritance::Super::Foo>(
-            ::fidl::UnownedClientEnd<::test_inheritance::Super>(
-                _transport->get<fidl::internal::ChannelTransport>()),
-            _allocator, &_request);
-      });
-}
 void fidl::internal::WireWeakAsyncBufferClientImpl<::test_inheritance::Super>::
     Foo(::fidl::StringView s,
         ::fidl::WireResponseContext<::test_inheritance::Super::Foo>* _context) {
@@ -497,30 +472,6 @@ void fidl::internal::WireClientImpl<::test_inheritance::Sub>::Foo(
       _request_message(::fidl::internal::AllowUnownedInputRef{}, &_request);
   ::fidl::internal::ClientBase::SendTwoWay(
       _request_message.GetOutgoingMessage(), _context);
-}
-::fidl::WireResult<::test_inheritance::Sub::Foo> fidl::internal::WireClientImpl<
-    ::test_inheritance::Sub>::Foo_Sync(::fidl::StringView s) {
-  return ::fidl::internal::ClientBase::MakeSyncCallWith(
-      [&](std::shared_ptr<::fidl::internal::AnyTransport> _transport) {
-        ::fidl::WireRequest<::test_inheritance::Sub::Foo> _request{s};
-        return ::fidl::WireResult<::test_inheritance::Sub::Foo>(
-            ::fidl::UnownedClientEnd<::test_inheritance::Sub>(
-                _transport->get<fidl::internal::ChannelTransport>()),
-            &_request);
-      });
-}
-::fidl::WireUnownedResult<::test_inheritance::Sub::Foo>
-fidl::internal::WireClientImpl<::test_inheritance::Sub>::Foo_Sync(
-    ::fidl::BufferSpan _buffer_span, ::fidl::StringView s) {
-  auto _allocator = ::fidl::internal::MakeAnyBufferAllocator(_buffer_span);
-  return ::fidl::internal::ClientBase::MakeSyncCallWith(
-      [&](std::shared_ptr<::fidl::internal::AnyTransport> _transport) {
-        ::fidl::WireRequest<::test_inheritance::Sub::Foo> _request{s};
-        return ::fidl::WireUnownedResult<::test_inheritance::Sub::Foo>(
-            ::fidl::UnownedClientEnd<::test_inheritance::Sub>(
-                _transport->get<fidl::internal::ChannelTransport>()),
-            _allocator, &_request);
-      });
 }
 void fidl::internal::WireWeakAsyncBufferClientImpl<::test_inheritance::Sub>::
     Foo(::fidl::StringView s,

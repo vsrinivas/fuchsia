@@ -348,7 +348,6 @@ class ::fidl::internal::WireWeakOnewayClientImpl<
   // necessary.
   ::fidl::Result Method(const ::test_exampleusing::wire::Empty& arg);
 };
-
 template <>
 class ::fidl::internal::WireWeakSyncClientImpl<
     ::test_placementofattributes::ExampleProtocol>

@@ -459,7 +459,6 @@ class ::fidl::internal::WireWeakOnewayClientImpl<::test_doccomments::Interface>
   // necessary.
   ::fidl::Result Method();
 };
-
 template <>
 class ::fidl::internal::WireWeakSyncClientImpl<::test_doccomments::Interface>
     final : public ::fidl::internal::WireWeakOnewayClientImpl<

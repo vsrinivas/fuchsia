@@ -823,18 +823,6 @@ class ::fidl::internal::WireClientImpl<::test_inheritance::Super> final
            ::fit::callback<void(
                ::fidl::WireResponse<::test_inheritance::Super::Foo>* response)>
                _cb);
-
-  // Synchronous variant of |Foo.Foo()|.
-  // Allocates 24 bytes of response buffer on the stack. Request is
-  // heap-allocated.
-  ::fidl::WireResult<::test_inheritance::Super::Foo> Foo_Sync(
-      ::fidl::StringView s);
-
-  // Synchronous variant of |Foo.Foo()|.
-  // Caller provides the backing storage for FIDL message via request and
-  // response buffers.
-  ::fidl::WireUnownedResult<::test_inheritance::Super::Foo> Foo_Sync(
-      ::fidl::BufferSpan _buffer_span, ::fidl::StringView s);
   WireClientImpl() = default;
 };
 
@@ -864,7 +852,6 @@ class ::fidl::internal::WireWeakOnewayClientImpl<::test_inheritance::Super>
  public:
   using ClientImplBase::ClientImplBase;
 };
-
 template <>
 class ::fidl::internal::WireWeakSyncClientImpl<::test_inheritance::Super> final
     : public ::fidl::internal::WireWeakOnewayClientImpl<
@@ -941,18 +928,6 @@ class ::fidl::internal::WireClientImpl<::test_inheritance::Sub> final
            ::fit::callback<void(
                ::fidl::WireResponse<::test_inheritance::Sub::Foo>* response)>
                _cb);
-
-  // Synchronous variant of |Foo.Foo()|.
-  // Allocates 24 bytes of response buffer on the stack. Request is
-  // heap-allocated.
-  ::fidl::WireResult<::test_inheritance::Sub::Foo> Foo_Sync(
-      ::fidl::StringView s);
-
-  // Synchronous variant of |Foo.Foo()|.
-  // Caller provides the backing storage for FIDL message via request and
-  // response buffers.
-  ::fidl::WireUnownedResult<::test_inheritance::Sub::Foo> Foo_Sync(
-      ::fidl::BufferSpan _buffer_span, ::fidl::StringView s);
   WireClientImpl() = default;
 };
 
@@ -981,7 +956,6 @@ class ::fidl::internal::WireWeakOnewayClientImpl<::test_inheritance::Sub>
  public:
   using ClientImplBase::ClientImplBase;
 };
-
 template <>
 class ::fidl::internal::WireWeakSyncClientImpl<::test_inheritance::Sub> final
     : public ::fidl::internal::WireWeakOnewayClientImpl<

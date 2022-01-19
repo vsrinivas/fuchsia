@@ -679,19 +679,6 @@ class ::fidl::internal::WireClientImpl<::test_emptystruct::EmptyProtocol> final
           void(::fidl::WireResponse<
                ::test_emptystruct::EmptyProtocol::SendAndReceive>* response)>
           _cb);
-
-  // Synchronous variant of |SendAndReceive.SendAndReceive()|.
-  // Allocates 48 bytes of message buffer on the stack. No heap allocation
-  // necessary.
-  ::fidl::WireResult<::test_emptystruct::EmptyProtocol::SendAndReceive>
-  SendAndReceive_Sync(const ::test_emptystruct::wire::Empty& e);
-
-  // Synchronous variant of |SendAndReceive.SendAndReceive()|.
-  // Caller provides the backing storage for FIDL message via request and
-  // response buffers.
-  ::fidl::WireUnownedResult<::test_emptystruct::EmptyProtocol::SendAndReceive>
-  SendAndReceive_Sync(::fidl::BufferSpan _buffer_span,
-                      const ::test_emptystruct::wire::Empty& e);
   WireClientImpl() = default;
 };
 
@@ -732,7 +719,6 @@ class ::fidl::internal::WireWeakOnewayClientImpl<
   // necessary.
   ::fidl::Result Send(const ::test_emptystruct::wire::Empty& e);
 };
-
 template <>
 class ::fidl::internal::WireWeakSyncClientImpl<
     ::test_emptystruct::EmptyProtocol>

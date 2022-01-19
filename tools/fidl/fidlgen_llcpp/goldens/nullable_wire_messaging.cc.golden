@@ -152,35 +152,6 @@ void fidl::internal::WireClientImpl<::test_nullable::SimpleProtocol>::Add(
   ::fidl::internal::ClientBase::SendTwoWay(
       _request_message.GetOutgoingMessage(), _context);
 }
-::fidl::WireResult<::test_nullable::SimpleProtocol::Add>
-fidl::internal::WireClientImpl<::test_nullable::SimpleProtocol>::Add_Sync(
-    int32_t a, int32_t b) {
-  return ::fidl::internal::ClientBase::MakeSyncCallWith([&](std::shared_ptr<
-                                                            ::fidl::internal::
-                                                                AnyTransport>
-                                                                _transport) {
-    ::fidl::WireRequest<::test_nullable::SimpleProtocol::Add> _request{a, b};
-    return ::fidl::WireResult<::test_nullable::SimpleProtocol::Add>(
-        ::fidl::UnownedClientEnd<::test_nullable::SimpleProtocol>(
-            _transport->get<fidl::internal::ChannelTransport>()),
-        &_request);
-  });
-}
-::fidl::WireUnownedResult<::test_nullable::SimpleProtocol::Add>
-fidl::internal::WireClientImpl<::test_nullable::SimpleProtocol>::Add_Sync(
-    ::fidl::BufferSpan _buffer_span, int32_t a, int32_t b) {
-  auto _allocator = ::fidl::internal::MakeAnyBufferAllocator(_buffer_span);
-  return ::fidl::internal::ClientBase::MakeSyncCallWith([&](std::shared_ptr<
-                                                            ::fidl::internal::
-                                                                AnyTransport>
-                                                                _transport) {
-    ::fidl::WireRequest<::test_nullable::SimpleProtocol::Add> _request{a, b};
-    return ::fidl::WireUnownedResult<::test_nullable::SimpleProtocol::Add>(
-        ::fidl::UnownedClientEnd<::test_nullable::SimpleProtocol>(
-            _transport->get<fidl::internal::ChannelTransport>()),
-        _allocator, &_request);
-  });
-}
 void fidl::internal::
     WireWeakAsyncBufferClientImpl<::test_nullable::SimpleProtocol>::Add(
         int32_t a, int32_t b,

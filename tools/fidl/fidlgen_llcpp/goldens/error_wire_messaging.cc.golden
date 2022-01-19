@@ -143,30 +143,6 @@ void fidl::internal::WireClientImpl<::test_error::Example>::Foo(
   ::fidl::internal::ClientBase::SendTwoWay(
       _request_message.GetOutgoingMessage(), _context);
 }
-::fidl::WireResult<::test_error::Example::Foo> fidl::internal::WireClientImpl<
-    ::test_error::Example>::Foo_Sync(::fidl::StringView s) {
-  return ::fidl::internal::ClientBase::MakeSyncCallWith(
-      [&](std::shared_ptr<::fidl::internal::AnyTransport> _transport) {
-        ::fidl::WireRequest<::test_error::Example::Foo> _request{s};
-        return ::fidl::WireResult<::test_error::Example::Foo>(
-            ::fidl::UnownedClientEnd<::test_error::Example>(
-                _transport->get<fidl::internal::ChannelTransport>()),
-            &_request);
-      });
-}
-::fidl::WireUnownedResult<::test_error::Example::Foo>
-fidl::internal::WireClientImpl<::test_error::Example>::Foo_Sync(
-    ::fidl::BufferSpan _buffer_span, ::fidl::StringView s) {
-  auto _allocator = ::fidl::internal::MakeAnyBufferAllocator(_buffer_span);
-  return ::fidl::internal::ClientBase::MakeSyncCallWith(
-      [&](std::shared_ptr<::fidl::internal::AnyTransport> _transport) {
-        ::fidl::WireRequest<::test_error::Example::Foo> _request{s};
-        return ::fidl::WireUnownedResult<::test_error::Example::Foo>(
-            ::fidl::UnownedClientEnd<::test_error::Example>(
-                _transport->get<fidl::internal::ChannelTransport>()),
-            _allocator, &_request);
-      });
-}
 void fidl::internal::WireWeakAsyncBufferClientImpl<::test_error::Example>::Foo(
     ::fidl::StringView s,
     ::fidl::WireResponseContext<::test_error::Example::Foo>* _context) {

@@ -351,33 +351,6 @@ void fidl::internal::WireClientImpl<::test_protocolrequest::Parent>::GetChild(
   ::fidl::internal::ClientBase::SendTwoWay(
       _request_message.GetOutgoingMessage(), _context);
 }
-::fidl::WireResult<::test_protocolrequest::Parent::GetChild> fidl::internal::
-    WireClientImpl<::test_protocolrequest::Parent>::GetChild_Sync() {
-  return ::fidl::internal::ClientBase::MakeSyncCallWith(
-      [&](std::shared_ptr<::fidl::internal::AnyTransport> _transport) {
-        ::fidl::WireRequest<::test_protocolrequest::Parent::GetChild>
-            _request{};
-        return ::fidl::WireResult<::test_protocolrequest::Parent::GetChild>(
-            ::fidl::UnownedClientEnd<::test_protocolrequest::Parent>(
-                _transport->get<fidl::internal::ChannelTransport>()),
-            &_request);
-      });
-}
-::fidl::WireUnownedResult<::test_protocolrequest::Parent::GetChild>
-fidl::internal::WireClientImpl<::test_protocolrequest::Parent>::GetChild_Sync(
-    ::fidl::BufferSpan _buffer_span) {
-  auto _allocator = ::fidl::internal::MakeAnyBufferAllocator(_buffer_span);
-  return ::fidl::internal::ClientBase::MakeSyncCallWith(
-      [&](std::shared_ptr<::fidl::internal::AnyTransport> _transport) {
-        ::fidl::WireRequest<::test_protocolrequest::Parent::GetChild>
-            _request{};
-        return ::fidl::WireUnownedResult<
-            ::test_protocolrequest::Parent::GetChild>(
-            ::fidl::UnownedClientEnd<::test_protocolrequest::Parent>(
-                _transport->get<fidl::internal::ChannelTransport>()),
-            _allocator, &_request);
-      });
-}
 void fidl::internal::WireClientImpl<::test_protocolrequest::Parent>::
     GetChildRequest(::fidl::WireClientCallback<
                     ::test_protocolrequest::Parent::GetChildRequest>
@@ -450,35 +423,6 @@ void fidl::internal::WireClientImpl<::test_protocolrequest::Parent>::
       _request_message(::fidl::internal::AllowUnownedInputRef{}, &_request);
   ::fidl::internal::ClientBase::SendTwoWay(
       _request_message.GetOutgoingMessage(), _context);
-}
-::fidl::WireResult<::test_protocolrequest::Parent::GetChildRequest>
-fidl::internal::WireClientImpl<
-    ::test_protocolrequest::Parent>::GetChildRequest_Sync() {
-  return ::fidl::internal::ClientBase::MakeSyncCallWith(
-      [&](std::shared_ptr<::fidl::internal::AnyTransport> _transport) {
-        ::fidl::WireRequest<::test_protocolrequest::Parent::GetChildRequest>
-            _request{};
-        return ::fidl::WireResult<
-            ::test_protocolrequest::Parent::GetChildRequest>(
-            ::fidl::UnownedClientEnd<::test_protocolrequest::Parent>(
-                _transport->get<fidl::internal::ChannelTransport>()),
-            &_request);
-      });
-}
-::fidl::WireUnownedResult<::test_protocolrequest::Parent::GetChildRequest>
-fidl::internal::WireClientImpl<::test_protocolrequest::Parent>::
-    GetChildRequest_Sync(::fidl::BufferSpan _buffer_span) {
-  auto _allocator = ::fidl::internal::MakeAnyBufferAllocator(_buffer_span);
-  return ::fidl::internal::ClientBase::MakeSyncCallWith(
-      [&](std::shared_ptr<::fidl::internal::AnyTransport> _transport) {
-        ::fidl::WireRequest<::test_protocolrequest::Parent::GetChildRequest>
-            _request{};
-        return ::fidl::WireUnownedResult<
-            ::test_protocolrequest::Parent::GetChildRequest>(
-            ::fidl::UnownedClientEnd<::test_protocolrequest::Parent>(
-                _transport->get<fidl::internal::ChannelTransport>()),
-            _allocator, &_request);
-      });
 }
 ::fidl::Result
 fidl::internal::WireClientImpl<::test_protocolrequest::Parent>::TakeChild(

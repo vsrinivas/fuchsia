@@ -501,21 +501,6 @@ class ::fidl::internal::WireClientImpl<::test_anonymous::SomeProtocol> final
           void(::fidl::WireResponse<::test_anonymous::SomeProtocol::SomeMethod>*
                    response)>
           _cb);
-
-  // Synchronous variant of |SomeMethod.SomeMethod()|.
-  // Allocates 128 bytes of message buffer on the stack. No heap allocation
-  // necessary.
-  ::fidl::WireResult<::test_anonymous::SomeProtocol::SomeMethod>
-  SomeMethod_Sync(::test_anonymous::wire::UnionMember union_member,
-                  ::test_anonymous::wire::TableMember table_member);
-
-  // Synchronous variant of |SomeMethod.SomeMethod()|.
-  // Caller provides the backing storage for FIDL message via request and
-  // response buffers.
-  ::fidl::WireUnownedResult<::test_anonymous::SomeProtocol::SomeMethod>
-  SomeMethod_Sync(::fidl::BufferSpan _buffer_span,
-                  ::test_anonymous::wire::UnionMember union_member,
-                  ::test_anonymous::wire::TableMember table_member);
   WireClientImpl() = default;
 };
 
@@ -549,7 +534,6 @@ class ::fidl::internal::WireWeakOnewayClientImpl<::test_anonymous::SomeProtocol>
  public:
   using ClientImplBase::ClientImplBase;
 };
-
 template <>
 class ::fidl::internal::WireWeakSyncClientImpl<::test_anonymous::SomeProtocol>
     final : public ::fidl::internal::WireWeakOnewayClientImpl<

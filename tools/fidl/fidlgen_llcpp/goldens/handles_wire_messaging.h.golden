@@ -184,7 +184,6 @@ class ::fidl::internal::WireWeakOnewayClientImpl<::test_handles::SomeProtocol>
  public:
   using ClientImplBase::ClientImplBase;
 };
-
 template <>
 class ::fidl::internal::WireWeakSyncClientImpl<::test_handles::SomeProtocol>
     final : public ::fidl::internal::WireWeakOnewayClientImpl<
