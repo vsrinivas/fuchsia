@@ -37,6 +37,9 @@ protocol GraphicalPresenter {
     /// + `annotation_controller` a handle to make changes to the respective element's
     ///    annotations
     /// + `view_controller_request` an optional request for a controller for the view
+    /// * error `view_spec`  must contain `view_holder_token` and `view_ref` for Gfx views,
+    ///   OR `viewport_creation_token` for Flatland views, but never both. If both are
+    ///   set, error `PresentViewError.INVALID_ARGS` is thrown.
     /// * error `PresentViewError.INVALID_ARGS` if `spec.view_holder_token` or
     ///   `spec.view_ref` are missing or invalid
     /// * error `PresentViewError` if the view could not be presented
@@ -55,16 +58,16 @@ type PresentViewError = strict enum {
 
 /// A description of a view that can be presented by a `GraphicalPresenter`.
 type ViewSpec = resource table {
-    /// The view holder token for the presented view. Either this field or |viewport_creation_token|
-    /// is required. If both are set, error `PresentViewError.INVALID_ARGS` is thrown.
+    /// The view holder token for the presented Gfx view. Must be unset for
+    /// Flatland views.
     1: view_holder_token fuchsia.ui.views.ViewHolderToken;
 
-    /// The `ViewRef` of the presented view. Required.
+    /// The `ViewRef` of the presented Gfx view. Must be unset for Flatland
+    /// views.
     2: view_ref fuchsia.ui.views.ViewRef;
 
-    /// The viewport creation token for the presented Flatland view. Either this field or
-    /// |view_holder_token| is required. If both are set, error `PresentViewError.INVALID_ARGS` is
-    /// thrown.
+    /// The viewport creation token for the presented Flatland view. Must be
+    /// unset for Gfx views.
     4: viewport_creation_token fuchsia.ui.views.ViewportCreationToken;
 
     /// The annotations associated with the presented view.
