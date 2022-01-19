@@ -322,7 +322,8 @@ class FlashmapClientTest : public zxtest::Test {
       : flashmap_(kFakeFlashSize, kDefaultAreas), loop_(&kAsyncLoopConfigNeverAttachToThread) {}
   void SetUp() override {
     ASSERT_OK(loop_.StartThread("test-fidl-loop"));
-    flashmap_.SetAreaContents("GBB", MakeGbb("FUCHSIA TEST 1412", 0xab));
+    auto gbb = MakeGbb("FUCHSIA TEST 1412", 0xab);
+    flashmap_.SetAreaContents("GBB", gbb);
     auto fmap = flashmap_.GetClient(loop_.dispatcher());
     ASSERT_OK(fmap.status_value());
     auto cros_acpi = cros_acpi_.GetClient(loop_.dispatcher());
@@ -424,7 +425,8 @@ TEST_F(FlashmapClientTest, TestFirmwareUpdateWrongBoardID) {
   memset(firmware_image.data(), 0xbc, firmware_image.size());
   flashmap_.SetAreaContents("RW_SECTION_B", firmware_image);
   flashmap_.SetAreaContents("RW_SECTION_A", firmware_image);
-  flashmap_.SetAreaContents("GBB", MakeGbb("EVE TEST 1412", 0xab));
+  auto gbb = MakeGbb("EVE TEST 1412", 0xab);
+  flashmap_.SetAreaContents("GBB", gbb);
 
   // Firmware update should succeed but not touch the firmware.
   auto status = client_->Write(new_image, kFakeFlashSize);
@@ -444,7 +446,8 @@ TEST_F(FlashmapClientTest, TestFirmwareUpdateWrongKey) {
   memset(firmware_image.data(), 0xbc, firmware_image.size());
   flashmap_.SetAreaContents("RW_SECTION_B", firmware_image);
   flashmap_.SetAreaContents("RW_SECTION_A", firmware_image);
-  flashmap_.SetAreaContents("GBB", MakeGbb("FUCHSIA TEST 1412", 0xbb));
+  auto gbb = MakeGbb("FUCHSIA TEST 1412", 0xbb);
+  flashmap_.SetAreaContents("GBB", gbb);
 
   auto status = client_->Write(new_image, kFakeFlashSize);
   ASSERT_OK(status.status_value());
@@ -463,7 +466,8 @@ TEST_F(FlashmapClientTest, TestFirmwareUpdateHWIDCompatible) {
   memset(firmware_image.data(), 0xbc, firmware_image.size());
   flashmap_.SetAreaContents("RW_SECTION_B", firmware_image);
   flashmap_.SetAreaContents("RW_SECTION_A", firmware_image);
-  flashmap_.SetAreaContents("GBB", MakeGbb("FUCHSIA A8K-BDP", 0xab));
+  auto gbb = MakeGbb("FUCHSIA A8K-BDP", 0xab);
+  flashmap_.SetAreaContents("GBB", gbb);
 
   auto status = client_->Write(new_image, kFakeFlashSize);
   ASSERT_OK(status.status_value());
