@@ -431,6 +431,9 @@ zx_status_t PmmNode::AllocRange(paddr_t address, size_t count, list_node* list) 
   DEBUG_ASSERT(Thread::Current::memory_allocation_state().IsEnabled());
   // list must be initialized prior to calling this
   DEBUG_ASSERT(list);
+  // On error scenarios we will free the list, so make sure the caller didn't leave anything in
+  // there.
+  DEBUG_ASSERT(list_is_empty(list));
 
   size_t allocated = 0;
   if (count == 0) {

@@ -117,9 +117,15 @@ zx_status_t alloc_pages_greater_than(paddr_t lower_bound, size_t count, size_t l
   while (count) {
     // TODO: replace with pmm routine that can allocate while excluding a range.
     size_t actual = 0;
-    zx_status_t status = pmm_alloc_range(lower_bound, count, &list);
+    list_node alloc_list = LIST_INITIAL_VALUE(alloc_list);
+    zx_status_t status = pmm_alloc_range(lower_bound, count, &alloc_list);
     if (status == ZX_OK) {
       actual = count;
+      if (list_is_empty(&list)) {
+        list_move(&alloc_list, &list);
+      } else {
+        list_splice_after(&alloc_list, list_peek_tail(&list));
+      }
     }
 
     for (size_t i = 0; i < actual; i++) {

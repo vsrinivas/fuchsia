@@ -20,6 +20,8 @@
 static const size_t NUM_RESERVES = 16;
 static reserve_range_t res[NUM_RESERVES];
 static size_t res_idx;
+// Used directly by boot_reserve_wire, and implicitly by boot_reserve_unwire_page
+static list_node reserved_page_list = LIST_INITIAL_VALUE(reserved_page_list);
 
 void boot_reserve_init() {
   // add the kernel to the boot reserve list
@@ -62,18 +64,24 @@ zx_status_t boot_reserve_add_range(paddr_t pa, size_t len) {
 
 // iterate through the reserved ranges and mark them as WIRED in the pmm
 void boot_reserve_wire() {
-  static list_node reserved_page_list = LIST_INITIAL_VALUE(reserved_page_list);
-
+  // This should only be called once to populate the list.
+  ASSERT(list_is_empty(&reserved_page_list));
   for (size_t i = 0; i < res_idx; i++) {
     dprintf(INFO, "PMM: boot reserve marking WIRED [%#" PRIxPTR ", %#" PRIxPTR "]\n", res[i].pa,
             res[i].pa + res[i].len - 1);
 
     size_t pages = ROUNDUP_PAGE_SIZE(res[i].len) / PAGE_SIZE;
-    zx_status_t status = pmm_alloc_range(res[i].pa, pages, &reserved_page_list);
+    list_node alloc_page_list = LIST_INITIAL_VALUE(alloc_page_list);
+    zx_status_t status = pmm_alloc_range(res[i].pa, pages, &alloc_page_list);
     if (status != ZX_OK) {
       printf("PMM: unable to reserve reserved range [%#" PRIxPTR ", %#" PRIxPTR "]\n", res[i].pa,
              res[i].pa + res[i].len - 1);
       continue;  // this is probably fatal but go ahead and continue
+    }
+    if (list_is_empty(&reserved_page_list)) {
+      list_move(&alloc_page_list, &reserved_page_list);
+    } else {
+      list_splice_after(&alloc_page_list, list_peek_tail(&reserved_page_list));
     }
   }
 
