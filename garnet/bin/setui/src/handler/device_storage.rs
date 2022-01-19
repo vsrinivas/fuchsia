@@ -155,7 +155,10 @@ pub trait DeviceStorageCompatible:
 /// impl DeviceStorageConvertible for SomeSettingInfo {
 ///     type Storable = StorableSomeSettingInfo;
 ///     fn get_storable(&self) -> Cow<'_, Self::Storable> {
-///         Cow::Owned(Self { storable_field: self.storable_field })
+///         Cow::Owned(Self {
+///             storable_field: self.storable_field,
+///             hardware_backed_field: String::new()
+///         })
 ///     }
 /// }
 ///
@@ -166,7 +169,7 @@ pub trait DeviceStorageCompatible:
 ///     fn into(self) -> SomeSettingInfo {
 ///         SomeSettingInfo {
 ///             storable_field: self.storable_field,
-///             hardware_back_field: String::new(),
+///             hardware_backed_field: String::new(),
 ///         }
 ///     }
 /// }
