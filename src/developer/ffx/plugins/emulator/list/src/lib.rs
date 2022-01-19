@@ -5,7 +5,7 @@
 use anyhow::Result;
 use ffx_core::ffx_plugin;
 use ffx_emulator_common::config::FfxConfigWrapper;
-use ffx_emulator_engines::get_all_instances;
+use ffx_emulator_engines::{get_all_instances, serialization::read_from_disk};
 use ffx_emulator_list_args::ListCommand;
 
 #[ffx_plugin("emu.experimental")]
@@ -14,7 +14,13 @@ pub async fn list(_cmd: ListCommand) -> Result<()> {
     let instance_list = get_all_instances(&ffx_config).await?;
     for entry in instance_list {
         if let Some(instance) = entry.as_path().file_name() {
-            println!("{}", instance.to_str().unwrap());
+            let name = instance.to_str().unwrap();
+            let engine = read_from_disk(&entry)?;
+            if engine.is_running() {
+                println!("[Active]    {}", name);
+            } else {
+                println!("[Inactive]  {}", name);
+            }
         }
     }
     Ok(())

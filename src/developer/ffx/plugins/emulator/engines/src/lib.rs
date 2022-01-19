@@ -12,7 +12,7 @@ pub mod serialization;
 
 use femu::FemuEngine;
 use qemu::QemuEngine;
-use serialization::{read_from_disk, SERIALIZE_FILE_NAME};
+use serialization::read_from_disk;
 
 use anyhow::{bail, Context, Result};
 use ffx_emulator_common::config::{FfxConfigWrapper, EMU_INSTANCE_ROOT_DIR};
@@ -23,6 +23,8 @@ use ffx_emulator_config::{
 use std::{fs::create_dir_all, path::PathBuf};
 
 pub use femu::FemuEngine as TestEngineDoNotUseOutsideOfTests;
+
+pub(crate) const SERIALIZE_FILE_NAME: &str = "engine.json";
 
 /// The EngineBuilder is used to create and configure an EmulatorEngine, while ensuring the
 /// configuration will result in a valid emulation instance.
@@ -197,7 +199,12 @@ pub async fn get_all_instances(ffx_config: &FfxConfigWrapper) -> Result<Vec<Path
     if root.is_dir() {
         for entry in root.read_dir()? {
             if let Ok(entry) = entry {
-                result.push(entry.path());
+                if !entry.path().is_dir() {
+                    continue;
+                }
+                if entry.path().join(SERIALIZE_FILE_NAME).exists() {
+                    result.push(entry.path());
+                }
             }
         }
     }
@@ -207,7 +214,7 @@ pub async fn get_all_instances(ffx_config: &FfxConfigWrapper) -> Result<Vec<Path
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::fs::File;
+    use std::fs::{remove_file, File};
     use tempfile::tempdir;
 
     #[fuchsia_async::run_singlethreaded(test)]
@@ -259,17 +266,48 @@ mod tests {
             .expect("Couldn't convert Path to str")
             .to_string();
         config.overrides.insert(EMU_INSTANCE_ROOT_DIR, temp_dir.clone());
+
+        // Create three mock instance directories, and make sure they're all included.
         let path1 = PathBuf::from(&temp_dir).join("path1");
         create_dir_all(path1.as_path())?;
+        let file1_path = path1.join(SERIALIZE_FILE_NAME);
+        let _file1 = File::create(&file1_path)?;
+
         let path2 = PathBuf::from(&temp_dir).join("path2");
         create_dir_all(path2.as_path())?;
+        let file2_path = path2.join(SERIALIZE_FILE_NAME);
+        let _file2 = File::create(&file2_path)?;
+
         let path3 = PathBuf::from(&temp_dir).join("path3");
         create_dir_all(path3.as_path())?;
+        let file3_path = path3.join(SERIALIZE_FILE_NAME);
+        let _file3 = File::create(&file3_path)?;
 
         let instances = get_all_instances(&config).await?;
         assert!(instances.contains(&path1));
         assert!(instances.contains(&path2));
         assert!(instances.contains(&path3));
+
+        // If the directory doesn't contain an engine.json file, it's not an instance.
+        // Remove the file for path2, and make sure it's excluded from the results.
+        assert!(remove_file(&file2_path).is_ok());
+
+        let instances = get_all_instances(&config).await?;
+        assert!(instances.contains(&path1));
+        assert!(!instances.contains(&path2));
+        assert!(instances.contains(&path3));
+
+        // Other files in the root shouldn't be included either. Create an empty file in the root
+        // and make sure it's excluded too.
+        let file_path = PathBuf::from(&temp_dir).join("empty_file");
+        let _empty_file = File::create(&file_path)?;
+
+        let instances = get_all_instances(&config).await?;
+        assert!(instances.contains(&path1));
+        assert!(!instances.contains(&path2));
+        assert!(instances.contains(&path3));
+        assert!(!instances.contains(&file_path));
+
         Ok(())
     }
 

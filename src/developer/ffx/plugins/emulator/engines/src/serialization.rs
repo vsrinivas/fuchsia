@@ -2,13 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::{FemuEngine, QemuEngine};
+use crate::{FemuEngine, QemuEngine, SERIALIZE_FILE_NAME};
 use anyhow::{anyhow, Result};
 use ffx_emulator_config::EmulatorEngine;
 use serde::{Deserialize, Serialize};
 use std::{fs::File, path::PathBuf};
-
-pub(crate) const SERIALIZE_FILE_NAME: &str = "engine.json";
 
 pub fn read_from_disk(instance_directory: &PathBuf) -> Result<Box<dyn EmulatorEngine>> {
     // Get the engine's location, which is in the instance directory.

@@ -33,9 +33,11 @@ pub async fn shutdown(cmd: ShutdownCommand) -> Result<()> {
         if result.is_err() {
             println!("{:?}", result.unwrap_err());
         }
-        let cleanup = clean_up_instance_dir(&path).await;
-        if cleanup.is_err() {
-            println!("{:?}", cleanup.unwrap_err());
+        if !cmd.persist {
+            let cleanup = clean_up_instance_dir(&path).await;
+            if cleanup.is_err() {
+                println!("{:?}", cleanup.unwrap_err());
+            }
         }
     }
     Ok(())

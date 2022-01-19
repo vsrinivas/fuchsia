@@ -14,6 +14,10 @@ pub struct ShutdownCommand {
     #[argh(switch)]
     pub all: bool,
 
+    /// don't remove the state directory on shutdown, just terminate the emulator.
+    #[argh(switch, short = 'p')]
+    pub persist: bool,
+
     /// name of the instance to shutdown, as specified to the start command.
     /// See a list of available instances by running `ffx emu list`.
     #[argh(positional, default = "\"fuchsia-emulator\".to_string()")]
