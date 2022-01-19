@@ -23,12 +23,6 @@ strict enum fuchsia.wlan.common/DriverFeature uint32
 enum/member fuchsia.wlan.common/GuardInterval.LONG_GI 1
 enum/member fuchsia.wlan.common/GuardInterval.SHORT_GI 2
 strict enum fuchsia.wlan.common/GuardInterval uint8
-enum/member fuchsia.wlan.common/PHY.ERP 2
-enum/member fuchsia.wlan.common/PHY.HEW 5
-enum/member fuchsia.wlan.common/PHY.HR 1
-enum/member fuchsia.wlan.common/PHY.HT 3
-enum/member fuchsia.wlan.common/PHY.VHT 4
-strict enum fuchsia.wlan.common/PHY uint32
 enum/member fuchsia.wlan.common/PowerSaveType.FAST_PS_MODE 1
 enum/member fuchsia.wlan.common/PowerSaveType.PS_MODE_OFF 0
 enum/member fuchsia.wlan.common/PowerSaveType.PS_POLL_MODE 2
@@ -50,6 +44,19 @@ enum/member fuchsia.wlan.common/WlanMacRole.AP 2
 enum/member fuchsia.wlan.common/WlanMacRole.CLIENT 1
 enum/member fuchsia.wlan.common/WlanMacRole.MESH 3
 strict enum fuchsia.wlan.common/WlanMacRole uint32
+enum/member fuchsia.wlan.common/WlanPhyType.CDMG 512
+enum/member fuchsia.wlan.common/WlanPhyType.CMMG 1024
+enum/member fuchsia.wlan.common/WlanPhyType.DMG 32
+enum/member fuchsia.wlan.common/WlanPhyType.DSSS 1
+enum/member fuchsia.wlan.common/WlanPhyType.ERP 8
+enum/member fuchsia.wlan.common/WlanPhyType.HE 2048
+enum/member fuchsia.wlan.common/WlanPhyType.HR 2
+enum/member fuchsia.wlan.common/WlanPhyType.HT 16
+enum/member fuchsia.wlan.common/WlanPhyType.OFDM 4
+enum/member fuchsia.wlan.common/WlanPhyType.S1G 256
+enum/member fuchsia.wlan.common/WlanPhyType.TVHT 128
+enum/member fuchsia.wlan.common/WlanPhyType.VHT 64
+strict enum fuchsia.wlan.common/WlanPhyType uint32
 struct/member fuchsia.wlan.common/WlanSupportedMacRoles.ap bool
 struct/member fuchsia.wlan.common/WlanSupportedMacRoles.client bool
 struct/member fuchsia.wlan.common/WlanSupportedMacRoles.mesh bool

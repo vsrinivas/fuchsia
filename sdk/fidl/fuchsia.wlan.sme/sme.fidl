@@ -154,7 +154,7 @@ protocol ConnectTransaction {
 };
 
 type RadioConfig = struct {
-    phy fuchsia.wlan.common.PHY;
+    phy fuchsia.wlan.common.WlanPhyType;
     channel_bandwidth fuchsia.wlan.common.ChannelBandwidth;
     primary_channel uint8;
 };
