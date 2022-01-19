@@ -1360,11 +1360,7 @@ mod tests {
         pin_utils::pin_mut,
         std::convert::TryFrom,
         test_case::test_case,
-        wlan_common::{
-            assert_variant,
-            channel::{Cbw, Phy},
-            random_fidl_bss_description, RadioConfig,
-        },
+        wlan_common::{assert_variant, random_fidl_bss_description},
     };
 
     // Responses that FakePhyManager will provide
@@ -1734,7 +1730,11 @@ mod tests {
     }
 
     fn create_ap_config(ssid: &ap_types::Ssid, password: &str) -> ap_fsm::ApConfig {
-        let radio_config = RadioConfig::new(Phy::Ht, Cbw::Cbw20, 6);
+        let radio_config = fidl_fuchsia_wlan_sme::RadioConfig {
+            phy: fidl_fuchsia_wlan_common::Phy::Ht,
+            channel_bandwidth: fidl_fuchsia_wlan_common::ChannelBandwidth::Cbw20,
+            primary_channel: 6,
+        };
         ap_fsm::ApConfig {
             id: ap_types::NetworkIdentifier {
                 ssid: ssid.clone(),

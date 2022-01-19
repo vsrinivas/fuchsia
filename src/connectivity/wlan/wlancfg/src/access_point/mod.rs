@@ -7,7 +7,7 @@ use {
     anyhow::{format_err, Error},
     fidl::epitaph::ChannelEpitaphExt,
     fidl_fuchsia_wlan_common as fidl_common, fidl_fuchsia_wlan_policy as fidl_policy,
-    fuchsia_zircon as zx,
+    fidl_fuchsia_wlan_sme as fidl_sme, fuchsia_zircon as zx,
     futures::{
         channel::mpsc,
         future::BoxFuture,
@@ -19,10 +19,6 @@ use {
     },
     log::{error, info, warn},
     std::sync::Arc,
-    wlan_common::{
-        channel::{Cbw, Phy},
-        RadioConfig,
-    },
 };
 
 pub mod state_machine;
@@ -324,7 +320,11 @@ fn derive_ap_config(
         fidl_policy::OperatingBand::Only5Ghz => 36,
     };
 
-    let radio_config = RadioConfig::new(Phy::Ht, Cbw::Cbw20, channel);
+    let radio_config = fidl_sme::RadioConfig {
+        phy: fidl_common::Phy::Ht,
+        channel_bandwidth: fidl_common::ChannelBandwidth::Cbw20,
+        primary_channel: channel,
+    };
 
     Ok(state_machine::ApConfig {
         id: network_id.into(),

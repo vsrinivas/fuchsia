@@ -14,7 +14,7 @@ use {
         },
     },
     anyhow::format_err,
-    fidl_fuchsia_wlan_sme as fidl_sme,
+    fidl_fuchsia_wlan_common as fidl_common, fidl_fuchsia_wlan_sme as fidl_sme,
     fuchsia_async::{self as fasync, DurationExt},
     fuchsia_zircon::{self as zx, DurationNum},
     futures::{
@@ -27,10 +27,7 @@ use {
     parking_lot::Mutex,
     std::sync::Arc,
     void::ResultVoidErrExt,
-    wlan_common::{
-        channel::{Cbw, Channel, Phy},
-        RadioConfig,
-    },
+    wlan_common::channel::{Cbw, Channel, Phy},
 };
 
 const AP_STATUS_INTERVAL_SEC: i64 = 10;
@@ -106,7 +103,7 @@ pub enum ManualRequest {
 pub struct ApConfig {
     pub id: types::NetworkIdentifier,
     pub credential: Vec<u8>,
-    pub radio_config: RadioConfig,
+    pub radio_config: fidl_sme::RadioConfig,
     pub mode: types::ConnectivityMode,
     pub band: types::OperatingBand,
 }
@@ -116,7 +113,7 @@ impl From<ApConfig> for fidl_sme::ApConfig {
         fidl_sme::ApConfig {
             ssid: config.id.ssid.to_vec(),
             password: config.credential,
-            radio_cfg: config.radio_config.to_fidl(),
+            radio_cfg: config.radio_config,
         }
     }
 }
@@ -320,11 +317,6 @@ async fn starting_state(
     responder: Option<oneshot::Sender<()>>,
     state_tracker: Arc<ApStateTracker>,
 ) -> Result<State, ExitReason> {
-    // Apply default PHY, CBW, and channel settings.
-    let _ = req.radio_config.phy.get_or_insert(DEFAULT_PHY);
-    let _ = req.radio_config.cbw.get_or_insert(DEFAULT_CBW);
-    let _ = req.radio_config.primary_channel.get_or_insert(DEFAULT_CHANNEL);
-
     // Send a stop request to ensure that the AP begins in an unstarting state.
     let stop_result = match proxy.stop().await {
         Ok(fidl_sme::StopApResultCode::Success) => Ok(()),
@@ -500,7 +492,7 @@ async fn started_state(
         fasync::Interval::new(zx::Duration::from_seconds(AP_STATUS_INTERVAL_SEC));
 
     // Channel bandwidth is required for frequency computation when reporting state updates.
-    let cbw = req.radio_config.cbw.as_ref().map_or(Cbw::Cbw20, |cbw| *cbw);
+    let cbw = req.radio_config.channel_bandwidth;
 
     loop {
         select! {
@@ -561,10 +553,7 @@ mod tests {
         futures::{stream::StreamFuture, task::Poll, Future},
         pin_utils::pin_mut,
         std::convert::TryFrom,
-        wlan_common::{
-            assert_variant,
-            channel::{Cbw, Phy},
-        },
+        wlan_common::{assert_variant, channel::Cbw},
     };
 
     struct TestValues {
@@ -625,7 +614,11 @@ mod tests {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let test_values = test_setup();
 
-        let radio_config = RadioConfig::new(Phy::Ht, Cbw::Cbw20, 6);
+        let radio_config = fidl_sme::RadioConfig {
+            phy: fidl_common::Phy::Ht,
+            channel_bandwidth: fidl_common::ChannelBandwidth::Cbw20,
+            primary_channel: 6,
+        };
         let req = ApConfig {
             id: create_network_id(),
             credential: vec![],
@@ -693,7 +686,11 @@ mod tests {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let test_values = test_setup();
 
-        let radio_config = RadioConfig::new(Phy::Ht, Cbw::Cbw20, 6);
+        let radio_config = fidl_sme::RadioConfig {
+            phy: fidl_common::Phy::Ht,
+            channel_bandwidth: fidl_common::ChannelBandwidth::Cbw20,
+            primary_channel: 6,
+        };
         let req = ApConfig {
             id: create_network_id(),
             credential: vec![],
@@ -752,7 +749,11 @@ mod tests {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let test_values = test_setup();
 
-        let radio_config = RadioConfig::new(Phy::Ht, Cbw::Cbw20, 6);
+        let radio_config = fidl_sme::RadioConfig {
+            phy: fidl_common::Phy::Ht,
+            channel_bandwidth: fidl_common::ChannelBandwidth::Cbw20,
+            primary_channel: 6,
+        };
         let req = ApConfig {
             id: create_network_id(),
             credential: vec![],
@@ -799,7 +800,11 @@ mod tests {
         // Issue a start request.
         let mut ap = AccessPoint::new(test_values.ap_req_sender);
         let (sender, mut receiver) = oneshot::channel();
-        let radio_config = RadioConfig::new(Phy::Ht, Cbw::Cbw20, 6);
+        let radio_config = fidl_sme::RadioConfig {
+            phy: fidl_common::Phy::Ht,
+            channel_bandwidth: fidl_common::ChannelBandwidth::Cbw20,
+            primary_channel: 6,
+        };
         let req = ApConfig {
             id: create_network_id(),
             credential: vec![],
@@ -838,7 +843,11 @@ mod tests {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let test_values = test_setup();
 
-        let radio_config = RadioConfig::new(Phy::Ht, Cbw::Cbw20, 6);
+        let radio_config = fidl_sme::RadioConfig {
+            phy: fidl_common::Phy::Ht,
+            channel_bandwidth: fidl_common::ChannelBandwidth::Cbw20,
+            primary_channel: 6,
+        };
         let req = ApConfig {
             id: create_network_id(),
             credential: vec![],
@@ -897,7 +906,11 @@ mod tests {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let test_values = test_setup();
 
-        let radio_config = RadioConfig::new(Phy::Ht, Cbw::Cbw20, 6);
+        let radio_config = fidl_sme::RadioConfig {
+            phy: fidl_common::Phy::Ht,
+            channel_bandwidth: fidl_common::ChannelBandwidth::Cbw20,
+            primary_channel: 6,
+        };
         let req = ApConfig {
             id: create_network_id(),
             credential: vec![],
@@ -960,7 +973,11 @@ mod tests {
         // Drop the serving side of the SME so that a status request will result in an error.
         drop(test_values.sme_req_stream);
 
-        let radio_config = RadioConfig::new(Phy::Ht, Cbw::Cbw20, 6);
+        let radio_config = fidl_sme::RadioConfig {
+            phy: fidl_common::Phy::Ht,
+            channel_bandwidth: fidl_common::ChannelBandwidth::Cbw20,
+            primary_channel: 6,
+        };
         let req = ApConfig {
             id: create_network_id(),
             credential: vec![],
@@ -1068,7 +1085,11 @@ mod tests {
 
         // Issue a start request.
         let (sender, mut receiver) = oneshot::channel();
-        let radio_config = RadioConfig::new(Phy::Ht, Cbw::Cbw20, 6);
+        let radio_config = fidl_sme::RadioConfig {
+            phy: fidl_common::Phy::Ht,
+            channel_bandwidth: fidl_common::ChannelBandwidth::Cbw20,
+            primary_channel: 6,
+        };
         let req = ApConfig {
             id: create_network_id(),
             credential: vec![],
@@ -1238,7 +1259,11 @@ mod tests {
 
         // Issue a start request.
         let (start_sender, mut start_receiver) = oneshot::channel();
-        let radio_config = RadioConfig::new(Phy::Ht, Cbw::Cbw20, 6);
+        let radio_config = fidl_sme::RadioConfig {
+            phy: fidl_common::Phy::Ht,
+            channel_bandwidth: fidl_common::ChannelBandwidth::Cbw20,
+            primary_channel: 6,
+        };
         let req = ApConfig {
             id: create_network_id(),
             credential: vec![],
@@ -1375,7 +1400,11 @@ mod tests {
         let test_values = test_setup();
 
         let (start_sender, mut start_receiver) = oneshot::channel();
-        let radio_config = RadioConfig::new(Phy::Ht, Cbw::Cbw20, 6);
+        let radio_config = fidl_sme::RadioConfig {
+            phy: fidl_common::Phy::Ht,
+            channel_bandwidth: fidl_common::ChannelBandwidth::Cbw20,
+            primary_channel: 6,
+        };
         let req = ApConfig {
             id: create_network_id(),
             credential: vec![],
@@ -1460,7 +1489,11 @@ mod tests {
         let test_values = test_setup();
 
         let (start_sender, mut start_receiver) = oneshot::channel();
-        let radio_config = RadioConfig::new(Phy::Ht, Cbw::Cbw20, 6);
+        let radio_config = fidl_sme::RadioConfig {
+            phy: fidl_common::Phy::Ht,
+            channel_bandwidth: fidl_common::ChannelBandwidth::Cbw20,
+            primary_channel: 6,
+        };
         let req = ApConfig {
             id: create_network_id(),
             credential: vec![],
@@ -1506,7 +1539,11 @@ mod tests {
 
         // Issue a second start request.
         let (second_start_sender, mut second_start_receiver) = oneshot::channel();
-        let radio_config = RadioConfig::new(Phy::Ht, Cbw::Cbw20, 6);
+        let radio_config = fidl_sme::RadioConfig {
+            phy: fidl_common::Phy::Ht,
+            channel_bandwidth: fidl_common::ChannelBandwidth::Cbw20,
+            primary_channel: 6,
+        };
         let req = ApConfig {
             id: create_network_id(),
             credential: vec![],
@@ -1576,7 +1613,11 @@ mod tests {
         let test_values = test_setup();
 
         let (start_sender, mut start_receiver) = oneshot::channel();
-        let radio_config = RadioConfig::new(Phy::Ht, Cbw::Cbw20, 6);
+        let radio_config = fidl_sme::RadioConfig {
+            phy: fidl_common::Phy::Ht,
+            channel_bandwidth: fidl_common::ChannelBandwidth::Cbw20,
+            primary_channel: 6,
+        };
         let req = ApConfig {
             id: create_network_id(),
             credential: vec![],
@@ -1649,7 +1690,11 @@ mod tests {
         drop(test_values.sme_req_stream);
 
         let (start_sender, _start_receiver) = oneshot::channel();
-        let radio_config = RadioConfig::new(Phy::Ht, Cbw::Cbw20, 6);
+        let radio_config = fidl_sme::RadioConfig {
+            phy: fidl_common::Phy::Ht,
+            channel_bandwidth: fidl_common::ChannelBandwidth::Cbw20,
+            primary_channel: 6,
+        };
         let req = ApConfig {
             id: create_network_id(),
             credential: vec![],
@@ -1680,7 +1725,11 @@ mod tests {
         let mut test_values = test_setup();
 
         let (start_sender, _start_receiver) = oneshot::channel();
-        let radio_config = RadioConfig::new(Phy::Ht, Cbw::Cbw20, 6);
+        let radio_config = fidl_sme::RadioConfig {
+            phy: fidl_common::Phy::Ht,
+            channel_bandwidth: fidl_common::ChannelBandwidth::Cbw20,
+            primary_channel: 6,
+        };
         let req = ApConfig {
             id: create_network_id(),
             credential: vec![],
@@ -1735,7 +1784,11 @@ mod tests {
         let mut test_values = test_setup();
 
         let (start_sender, mut start_receiver) = oneshot::channel();
-        let radio_config = RadioConfig::new(Phy::Ht, Cbw::Cbw20, 6);
+        let radio_config = fidl_sme::RadioConfig {
+            phy: fidl_common::Phy::Ht,
+            channel_bandwidth: fidl_common::ChannelBandwidth::Cbw20,
+            primary_channel: 6,
+        };
         let req = ApConfig {
             id: create_network_id(),
             credential: vec![],
@@ -1835,7 +1888,11 @@ mod tests {
         let mut test_values = test_setup();
 
         let (start_sender, mut start_receiver) = oneshot::channel();
-        let radio_config = RadioConfig::new(Phy::Ht, Cbw::Cbw20, 6);
+        let radio_config = fidl_sme::RadioConfig {
+            phy: fidl_common::Phy::Ht,
+            channel_bandwidth: fidl_common::ChannelBandwidth::Cbw20,
+            primary_channel: 6,
+        };
         let req = ApConfig {
             id: create_network_id(),
             credential: vec![],
@@ -1942,7 +1999,11 @@ mod tests {
         let mut test_values = test_setup();
 
         let (start_sender, mut start_receiver) = oneshot::channel();
-        let radio_config = RadioConfig::new(Phy::Ht, Cbw::Cbw20, 6);
+        let radio_config = fidl_sme::RadioConfig {
+            phy: fidl_common::Phy::Ht,
+            channel_bandwidth: fidl_common::ChannelBandwidth::Cbw20,
+            primary_channel: 6,
+        };
         let req = ApConfig {
             id: create_network_id(),
             credential: vec![],
@@ -2056,7 +2117,11 @@ mod tests {
         let mut test_values = test_setup();
 
         let (start_sender, _) = oneshot::channel();
-        let radio_config = RadioConfig::new(Phy::Ht, Cbw::Cbw20, 6);
+        let radio_config = fidl_sme::RadioConfig {
+            phy: fidl_common::Phy::Ht,
+            channel_bandwidth: fidl_common::ChannelBandwidth::Cbw20,
+            primary_channel: 6,
+        };
         let req = ApConfig {
             id: create_network_id(),
             credential: vec![],
@@ -2137,7 +2202,11 @@ mod tests {
         let mut test_values = test_setup();
 
         // Create a start request and enter the state machine with a manual start request.
-        let radio_config = RadioConfig::new(Phy::Ht, Cbw::Cbw20, 6);
+        let radio_config = fidl_sme::RadioConfig {
+            phy: fidl_common::Phy::Ht,
+            channel_bandwidth: fidl_common::ChannelBandwidth::Cbw20,
+            primary_channel: 6,
+        };
         let requested_config = ApConfig {
             id: create_network_id(),
             credential: vec![],
@@ -2262,7 +2331,11 @@ mod tests {
         // Make a request to start the access point.
         let mut ap = AccessPoint::new(test_values.ap_req_sender);
         let (sender, _receiver) = oneshot::channel();
-        let radio_config = RadioConfig::new(Phy::Ht, Cbw::Cbw20, 6);
+        let radio_config = fidl_sme::RadioConfig {
+            phy: fidl_common::Phy::Ht,
+            channel_bandwidth: fidl_common::ChannelBandwidth::Cbw20,
+            primary_channel: 6,
+        };
         let config = ApConfig {
             id: create_network_id(),
             credential: vec![],

@@ -11,7 +11,7 @@ use {
     },
     anyhow::Error,
     async_trait::async_trait,
-    fidl_fuchsia_wlan_sme as fidl_sme,
+    fidl_fuchsia_wlan_common as fidl_common, fidl_fuchsia_wlan_sme as fidl_sme,
     futures::channel::{mpsc, oneshot},
 };
 
@@ -235,11 +235,7 @@ mod tests {
         pin_utils::pin_mut,
         std::convert::TryFrom,
         test_case::test_case,
-        wlan_common::{
-            assert_variant,
-            channel::{Cbw, Phy},
-            RadioConfig,
-        },
+        wlan_common::assert_variant,
     };
 
     struct TestValues {
@@ -1053,7 +1049,11 @@ mod tests {
                 security_type: types::SecurityType::None,
             },
             credential: vec![],
-            radio_config: RadioConfig::new(Phy::Ht, Cbw::Cbw20, 6),
+            radio_config: fidl_sme::RadioConfig {
+                phy: fidl_common::Phy::Ht,
+                channel_bandwidth: fidl_common::ChannelBandwidth::Cbw20,
+                primary_channel: 6,
+            },
             mode: types::ConnectivityMode::Unrestricted,
             band: types::OperatingBand::Any,
         }
