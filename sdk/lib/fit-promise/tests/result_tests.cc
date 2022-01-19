@@ -13,6 +13,8 @@ struct Copyable {
 };
 
 struct MoveOnly {
+  MoveOnly(int i) : data(i) {}
+
   MoveOnly(const MoveOnly&) = delete;
   MoveOnly(MoveOnly&&) = default;
   MoveOnly& operator=(const MoveOnly&) = delete;
@@ -244,7 +246,8 @@ static_assert(fpromise::result<>().is_pending(), "");
 static_assert(!fpromise::result<>().is_ok(), "");
 static_assert(!fpromise::result<>(), "");
 static_assert(!fpromise::result<>().is_error(), "");
-static_assert(fpromise::result<>(fpromise::pending()).state() == fpromise::result_state::pending, "");
+static_assert(fpromise::result<>(fpromise::pending()).state() == fpromise::result_state::pending,
+              "");
 static_assert(fpromise::result<>(fpromise::pending()).is_pending(), "");
 static_assert(!fpromise::result<>(fpromise::pending()).is_ok(), "");
 static_assert(!fpromise::result<>(fpromise::pending()), "");
@@ -265,7 +268,9 @@ static_assert(!fpromise::result<>(fpromise::error()).is_pending(), "");
 static_assert(!fpromise::result<>(fpromise::error()).is_ok(), "");
 static_assert(fpromise::result<>(fpromise::error()), "");
 static_assert(fpromise::result<>(fpromise::error()).is_error(), "");
-static_assert(fpromise::result<void, int>(fpromise::error(1)).state() == fpromise::result_state::error, "");
+static_assert(fpromise::result<void, int>(fpromise::error(1)).state() ==
+                  fpromise::result_state::error,
+              "");
 static_assert(!fpromise::result<void, int>(fpromise::error(1)).is_pending(), "");
 static_assert(!fpromise::result<void, int>(fpromise::error(1)).is_ok(), "");
 static_assert(fpromise::result<void, int>(fpromise::error(1)), "");
