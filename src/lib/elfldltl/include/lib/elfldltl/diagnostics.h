@@ -122,7 +122,7 @@ struct DiagnosticsFlags {
 
   // If true, then warnings are treated like errors and obey the multiple_errors
   // setting too.  If false, then always keep going after a warning.
-  bool strict = true;
+  bool warnings_are_errors = true;
 
   // If true, do extra work to diagnose more errors that could be ignored.
   bool extra_checking = false;
@@ -132,7 +132,7 @@ struct DiagnosticsFlags {
 // of the values fixed, or to change the default value of a mutable flag.
 struct DiagnosticsPanicFlags {
   [[no_unique_address]] std::false_type multiple_errors;
-  [[no_unique_address]] std::true_type strict;
+  [[no_unique_address]] std::true_type warnings_are_errors;
   [[no_unique_address]] std::false_type extra_checking;
 };
 
@@ -178,7 +178,7 @@ class Diagnostics {
   constexpr bool FormatWarning(std::string_view error, Args&&... args) {
     ++warnings_;
     return report_(error, std::forward<Args>(args)...) &&
-           (flags_.multiple_errors || !flags_.strict);
+           (flags_.multiple_errors || !flags_.warnings_are_errors);
   }
 
   // Reset the counters.
@@ -224,7 +224,7 @@ class Diagnostics {
   [[no_unique_address]] Report report_;
   [[no_unique_address]] Flags flags_;
   [[no_unique_address]] Count<kCount, &Flags::multiple_errors> errors_;
-  [[no_unique_address]] Count<kCount, &Flags::strict> warnings_;
+  [[no_unique_address]] Count<kCount, &Flags::warnings_are_errors> warnings_;
 };
 
 // This returns a Diagnostics object that crashes immediately for any error or

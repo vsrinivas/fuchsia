@@ -22,7 +22,7 @@ using elfldltl::ElfPhdrType;
 // Diagnostic flags for signaling as much information as possible.
 constexpr elfldltl::DiagnosticsFlags kFlags = {
     .multiple_errors = true,
-    .strict = false,
+    .warnings_are_errors = false,
     .extra_checking = true,
 };
 
