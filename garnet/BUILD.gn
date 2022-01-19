@@ -9,6 +9,14 @@ group("garnet") {
     "bin",
     "examples",
 
-    # TODO: Add more.
+    # TODO(fxbug.dev/36063): Add more.
+  ]
+}
+
+group("tests") {
+  testonly = true
+
+  deps = [
+    # TODO(fxbug.dev/36063): remove //garnet finally, then this debt will be gone.
   ]
 }
