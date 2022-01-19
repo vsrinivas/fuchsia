@@ -2,17 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <arpa/inet.h>
 #include <errno.h>
-#include <netdb.h>
 #include <netinet/in.h>
 #include <netinet/tcp.h>
 #include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
 #include <sys/socket.h>
-#include <sys/types.h>
-#include <unistd.h>
 
 // I got these results running this test on my local linux machine:
 //
@@ -55,49 +50,25 @@
 
 union val {
   int i_val;
-  struct linger linger_val;
-  struct timeval timeval_val;
 };
 
 static char strres[128];
 
 static char* sock_str_flag(union val* ptr, int len) {
-  if (len != sizeof(int))
+  if (len != sizeof(int)) {
     snprintf(strres, sizeof(strres), "size (%d) not sizeof(int)", len);
-  else
+  } else {
     snprintf(strres, sizeof(strres), "%s", (ptr->i_val == 0) ? "off" : "on");
+  }
   return (strres);
 }
 
 static char* sock_str_int(union val* ptr, int len) {
-  if (len != sizeof(int))
+  if (len != sizeof(int)) {
     snprintf(strres, sizeof(strres), "size (%d) not sizeof(int)", len);
-  else
+  } else {
     snprintf(strres, sizeof(strres), "%d", ptr->i_val);
-  return (strres);
-}
-
-static char* sock_str_linger(union val* ptr, int len) {
-  struct linger* lptr = &ptr->linger_val;
-
-  if (len != sizeof(struct linger))
-    snprintf(strres, sizeof(strres), "size (%d) not sizeof(struct linger)",
-             len);
-  else
-    snprintf(strres, sizeof(strres), "l_onoff:%d, l_linger:%d", lptr->l_onoff,
-             lptr->l_linger);
-  return (strres);
-}
-
-static char* sock_str_timeval(union val* ptr, int len) {
-  struct timeval* tvptr = &ptr->timeval_val;
-
-  if (len != sizeof(struct timeval))
-    snprintf(strres, sizeof(strres), "size (%d) not sizeof(struct timeval)",
-             len);
-  else
-    snprintf(strres, sizeof(strres), "%lds %ldusec", tvptr->tv_sec,
-             tvptr->tv_usec);
+  }
   return (strres);
 }
 
@@ -106,62 +77,40 @@ struct sock_opts {
   int opt_level;
   int opt_name;
   char* (*opt_val_str)(union val*, int);
-} sock_opts_table[] = {
-    {"SO_BROADCAST", SOL_SOCKET, SO_BROADCAST, sock_str_flag},
-    {"SO_DEBUG", SOL_SOCKET, SO_DEBUG, sock_str_flag},
-    {"SO_DONTROUTE", SOL_SOCKET, SO_DONTROUTE, sock_str_flag},
-    {"SO_ERROR", SOL_SOCKET, SO_ERROR, sock_str_int},
-    {"SO_KEEPALIVE", SOL_SOCKET, SO_KEEPALIVE, sock_str_flag},
-    {"SO_LINGER", SOL_SOCKET, SO_LINGER, sock_str_linger},
-    {"SO_OOBINLINE", SOL_SOCKET, SO_OOBINLINE, sock_str_flag},
-    {"SO_RCVBUF", SOL_SOCKET, SO_RCVBUF, sock_str_int},
-    {"SO_SNDBUF", SOL_SOCKET, SO_SNDBUF, sock_str_int},
-    {"SO_RCVLOWAT", SOL_SOCKET, SO_RCVLOWAT, sock_str_int},
-    {"SO_SNDLOWAT", SOL_SOCKET, SO_SNDLOWAT, sock_str_int},
-    {"SO_RCVTIMEO", SOL_SOCKET, SO_RCVTIMEO, sock_str_timeval},
-    {"SO_SNDTIMEO", SOL_SOCKET, SO_SNDTIMEO, sock_str_timeval},
-    {"SO_REUSEADDR", SOL_SOCKET, SO_REUSEADDR, sock_str_flag},
-    {"SO_REUSEPORT", SOL_SOCKET, SO_REUSEPORT, sock_str_flag},
-    {"SO_TYPE", SOL_SOCKET, SO_TYPE, sock_str_int},
-    {"SO_DOMAIN", SOL_SOCKET, SO_DOMAIN, sock_str_int},
-    {"IP_TOS", IPPROTO_IP, IP_TOS, sock_str_int},
-    {"IP_TTL", IPPROTO_IP, IP_TTL, sock_str_int},
-    {"IP_MULTICAST_TTL", IPPROTO_IP, IP_MULTICAST_TTL, sock_str_int},
-    {"IPV6_UNICAST_HOPS", IPPROTO_IPV6, IPV6_UNICAST_HOPS, sock_str_int},
-    {"IPV6_V6ONLY", IPPROTO_IPV6, IPV6_V6ONLY, sock_str_flag},
-    {"TCP_NODELAY", IPPROTO_TCP, TCP_NODELAY, sock_str_flag},
-    {"TCP_MAXSEG", IPPROTO_TCP, TCP_MAXSEG, sock_str_int},
-    {"TCP_CORK", IPPROTO_TCP, TCP_CORK, sock_str_flag},
-    {"TCP_KEEPIDLE", IPPROTO_TCP, TCP_KEEPIDLE, sock_str_int},
-    {"TCP_KEEPINTVL", IPPROTO_TCP, TCP_KEEPINTVL, sock_str_int},
-    {"TCP_KEEPCNT", IPPROTO_TCP, TCP_KEEPCNT, sock_str_int},
-    {"TCP_SYNCNT", IPPROTO_TCP, TCP_SYNCNT, sock_str_int},
-    {"TCP_LINGER2", IPPROTO_TCP, TCP_LINGER2, sock_str_int},
-    {"TCP_DEFER_ACCEPT", IPPROTO_TCP, TCP_DEFER_ACCEPT, sock_str_int},
-    {"TCP_WINDOW_CLAMP", IPPROTO_TCP, TCP_WINDOW_CLAMP, sock_str_int},
-    {"TCP_INFO", IPPROTO_TCP, TCP_INFO, sock_str_int},
-    {"TCP_QUICKACK", IPPROTO_TCP, TCP_QUICKACK, sock_str_flag},
-    {NULL, 0, 0, NULL}};
+} sock_opts_table[] = {{"SO_BROADCAST", SOL_SOCKET, SO_BROADCAST, sock_str_flag},
+                       {"SO_DEBUG", SOL_SOCKET, SO_DEBUG, sock_str_flag},
+                       {"SO_DONTROUTE", SOL_SOCKET, SO_DONTROUTE, sock_str_flag},
+                       {"SO_KEEPALIVE", SOL_SOCKET, SO_KEEPALIVE, sock_str_flag},
+                       {"SO_OOBINLINE", SOL_SOCKET, SO_OOBINLINE, sock_str_flag},
+                       {"SO_SNDLOWAT", SOL_SOCKET, SO_SNDLOWAT, sock_str_int},
+                       {"SO_REUSEADDR", SOL_SOCKET, SO_REUSEADDR, sock_str_flag},
+                       {"IPV6_V6ONLY", IPPROTO_IPV6, IPV6_V6ONLY, sock_str_flag},
+                       {"TCP_MAXSEG", IPPROTO_TCP, TCP_MAXSEG, sock_str_int},
+                       {"TCP_CORK", IPPROTO_TCP, TCP_CORK, sock_str_flag},
+                       {"TCP_KEEPINTVL", IPPROTO_TCP, TCP_KEEPINTVL, sock_str_int},
+                       {"TCP_KEEPCNT", IPPROTO_TCP, TCP_KEEPCNT, sock_str_int},
+                       {"TCP_SYNCNT", IPPROTO_TCP, TCP_SYNCNT, sock_str_int},
+                       {"TCP_LINGER2", IPPROTO_TCP, TCP_LINGER2, sock_str_int},
+                       {"TCP_DEFER_ACCEPT", IPPROTO_TCP, TCP_DEFER_ACCEPT, sock_str_int},
+                       {"TCP_WINDOW_CLAMP", IPPROTO_TCP, TCP_WINDOW_CLAMP, sock_str_int},
+                       {"TCP_QUICKACK", IPPROTO_TCP, TCP_QUICKACK, sock_str_flag},
+                       {NULL, 0, 0, NULL}};
 
-int test_setsockopt(int fd, struct sock_opts* ptr, union val* valp,
-                    socklen_t len) {
+int test_setsockopt(int fd, struct sock_opts* ptr, union val* valp, socklen_t len) {
   if (setsockopt(fd, ptr->opt_level, ptr->opt_name, valp, len) == -1) {
     printf("setsockopt error (%d)", errno);
   } else {
     union val new_val;
     new_val.i_val = 0xdeadbeef;
     socklen_t new_len = sizeof(new_val);
-    if (getsockopt(fd, ptr->opt_level, ptr->opt_name, &new_val, &new_len) ==
-        -1) {
+    if (getsockopt(fd, ptr->opt_level, ptr->opt_name, &new_val, &new_len) == -1) {
       printf("getsockopt error (%d)", errno);
     } else if (new_val.i_val == (int)0xdeadbeef) {
       printf("setsockopt unchanged");
     } else if (len != new_len) {
-      printf("getsockopt returned a different size (%d) than expected (%d)",
-             new_len, len);
+      printf("getsockopt returned a different size (%d) than expected (%d)", new_len, len);
     } else if (memcmp(valp, &new_val, len) != 0) {
-      printf("getsockopt returned a different val (%s)",
-             ptr->opt_val_str(&new_val, new_len));
+      printf("getsockopt returned a different val (%s)", ptr->opt_val_str(&new_val, new_len));
       printf(" than expected (%s)", ptr->opt_val_str(valp, len));
     } else {
       printf("setsockopt success = %s", ptr->opt_val_str(valp, len));
@@ -192,9 +141,9 @@ int main(int argc, char** argv) {
     }
 
     printf("%s: ", ptr->opt_str);
-    if (ptr->opt_val_str == NULL)
+    if (ptr->opt_val_str == NULL) {
       printf("(undefined)\n");
-    else {
+    } else {
       union val ini_val;
       len = sizeof(ini_val);
       if (getsockopt(fd, ptr->opt_level, ptr->opt_name, &ini_val, &len) == -1) {
