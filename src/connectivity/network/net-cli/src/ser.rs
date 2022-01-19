@@ -6,28 +6,8 @@
 //! JSON serialization to avoid coupling too closely to particular FIDL
 //! protocols.
 
-use itertools::Itertools as _;
-
-enum SubnetEnum {
-    V4(Subnet<std::net::Ipv4Addr>),
-    V6(Subnet<std::net::Ipv6Addr>),
-}
-
-impl From<fidl_fuchsia_net_ext::Subnet> for SubnetEnum {
-    fn from(ext: fidl_fuchsia_net_ext::Subnet) -> SubnetEnum {
-        let fidl_fuchsia_net_ext::Subnet {
-            addr: fidl_fuchsia_net_ext::IpAddress(addr),
-            prefix_len,
-        } = ext;
-        match addr {
-            std::net::IpAddr::V4(addr) => SubnetEnum::V4(Subnet { addr, prefix_len }),
-            std::net::IpAddr::V6(addr) => SubnetEnum::V6(Subnet { addr, prefix_len }),
-        }
-    }
-}
-
 #[derive(serde::Serialize)]
-struct Subnet<T = std::net::IpAddr> {
+struct Subnet<T> {
     addr: T,
     prefix_len: u8,
 }
@@ -50,13 +30,23 @@ struct Addresses {
 
 impl From<Vec<fidl_fuchsia_net_ext::Subnet>> for Addresses {
     fn from(addresses: Vec<fidl_fuchsia_net_ext::Subnet>) -> Addresses {
-        let (ipv4, ipv6): (Vec<_>, Vec<_>) = addresses
-            .into_iter()
-            .map(SubnetEnum::from)
-            .partition_map(|subnet_enum| match subnet_enum {
-                SubnetEnum::V4(subnet) => itertools::Either::Left(subnet),
-                SubnetEnum::V6(subnet) => itertools::Either::Right(subnet),
-            });
+        use itertools::Itertools as _;
+
+        let (ipv4, ipv6): (Vec<_>, Vec<_>) = addresses.into_iter().partition_map(
+            |fidl_fuchsia_net_ext::Subnet {
+                 addr: fidl_fuchsia_net_ext::IpAddress(addr),
+                 prefix_len,
+             }| {
+                match addr {
+                    std::net::IpAddr::V4(addr) => {
+                        itertools::Either::Left(Subnet { addr, prefix_len })
+                    }
+                    std::net::IpAddr::V6(addr) => {
+                        itertools::Either::Right(Subnet { addr, prefix_len })
+                    }
+                }
+            },
+        );
         Addresses { ipv4, ipv6 }
     }
 }
@@ -152,7 +142,7 @@ impl From<fidl_fuchsia_net_stack_ext::InterfaceInfo> for InterfaceView {
 #[derive(serde::Serialize)]
 /// Intermediary struct for serializing IP forwarding table entries into JSON.
 pub struct ForwardingEntry {
-    subnet: Subnet,
+    subnet: Subnet<std::net::IpAddr>,
     destination: ForwardingDestination,
 }
 
@@ -186,7 +176,7 @@ impl From<fidl_fuchsia_net_stack_ext::ForwardingDestination> for ForwardingDesti
 #[derive(serde::Serialize)]
 /// Intermediary struct for serializing route table entries into JSON.
 pub struct RouteTableEntry {
-    destination: Subnet,
+    destination: Subnet<std::net::IpAddr>,
     gateway: Option<std::net::IpAddr>,
     nicid: u64,
     metric: u32,
