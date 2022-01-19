@@ -35,7 +35,7 @@ zxtest::Message trace_message = zxtest::Message(kMessage, kLocation);
 void AssertionHasValues() {
   std::vector<zxtest::Message*> empty_traces{&trace_message};
   Assertion assertion(kDescription, kExpectedSymbol, kExpectedValue, kActualSymbol, kActualValue,
-                      kLocation, kIsFatal, std::move(empty_traces));
+                      kLocation, kIsFatal, empty_traces);
 
   ZX_ASSERT_MSG(assertion.description() == kDescription, "Assertion::description() is incorrect.");
 
