@@ -54,7 +54,7 @@ fuchsia_shell_package("odu") {
 }
 
 fuchsia_unittest_package("odu_tests") {
-  manifest = "meta/odu_bin_test.cmx"
+  manifest = "meta/odu_bin_test.cml"
   deps = [ ":bin_test" ]
 }
 

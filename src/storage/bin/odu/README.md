@@ -1,6 +1,6 @@
 # odu: A generic filesystem benchmarking utility for fuchsia
 
-The tool can built built for host as well as for target by adding
+The tool can be built for host as well as for target by adding
 `--with --with //src/storage/bin/odu,//src/storage/bin/odu:odu_host` (the host side binary can be
 found in `out/<target>/host_x64/odu`).
 
