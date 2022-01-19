@@ -712,7 +712,7 @@ pub fn get_assigned_ip_addr_subnets<D: EventDispatcher, A: IpAddress>(
 
 /// Get the IPv6 address/subnet pairs associated with this device, including
 /// tentative and deprecated addresses.
-pub fn get_ipv6_addr_subnets<D: EventDispatcher>(
+pub(crate) fn get_ipv6_addr_subnets<D: EventDispatcher>(
     ctx: &Ctx<D>,
     device: DeviceId,
 ) -> impl Iterator<Item = &'_ Ipv6AddressEntry<D::Instant>> + '_ {

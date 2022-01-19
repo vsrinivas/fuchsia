@@ -236,7 +236,7 @@ impl<I: Instant, D> IpLinkDeviceState<I, D> {
 
 /// The various states an IP address can be on an interface.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum AddressState {
+pub(crate) enum AddressState {
     /// The address is assigned to an interface and can be considered bound to
     /// it (all packets destined to the address will be accepted).
     Assigned,
@@ -319,7 +319,7 @@ pub(crate) enum AddrConfigType {
 
 /// Data associated with an IPv6 address on an interface.
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
-pub struct Ipv6AddressEntry<Instant> {
+pub(crate) struct Ipv6AddressEntry<Instant> {
     addr_sub: AddrSubnet<Ipv6Addr, UnicastAddr<Ipv6Addr>>,
     pub state: AddressState,
     pub(crate) config: AddrConfig<Instant>,
