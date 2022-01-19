@@ -7,7 +7,7 @@ use fidl_test_structuredconfig_receiver::{
 };
 use fuchsia_component::server::ServiceFs;
 use futures::StreamExt;
-use receiver_config::{get_config, Config};
+use receiver_config::Config;
 
 enum IncomingRequest {
     Puppet(ConfigReceiverPuppetRequestStream),
@@ -15,7 +15,7 @@ enum IncomingRequest {
 
 #[fuchsia::component]
 async fn main() {
-    let config = get_config();
+    let config = Config::from_args();
     let receiver_config = generated_to_puppet_defined(config);
 
     let mut fs = ServiceFs::new_local();
