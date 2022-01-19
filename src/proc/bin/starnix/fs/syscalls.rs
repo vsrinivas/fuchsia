@@ -889,25 +889,57 @@ pub fn sys_mount(
     source_addr: UserCString,
     target_addr: UserCString,
     filesystemtype_addr: UserCString,
-    _flags: u64,
+    flags: u32,
     _data_addr: UserAddress,
 ) -> Result<SyscallResult, Errno> {
-    let mut buf = [0u8; PATH_MAX as usize];
-    let source = current_task.mm.read_c_string(source_addr, &mut buf)?;
-    let mut buf = [0u8; PATH_MAX as usize];
-    let target = current_task.mm.read_c_string(target_addr, &mut buf)?;
-    let mut buf = [0u8; PATH_MAX as usize];
-    let fs_type = current_task.mm.read_c_string(filesystemtype_addr, &mut buf)?;
-    strace!(
-        current_task,
-        "mount(source={:?}, target={:?}, type={:?})",
-        String::from_utf8_lossy(source),
-        String::from_utf8_lossy(target),
-        String::from_utf8_lossy(fs_type)
-    );
+    let flags = MountFlags::from_bits(flags).ok_or_else(|| {
+        not_implemented!(
+            "unsupported mount flags: {:#x}",
+            flags & !MountFlags::from_bits_truncate(flags).bits()
+        );
+        errno!(EINVAL)
+    })?;
 
-    let fs = create_filesystem(current_task.kernel(), source, fs_type, b"")?;
-    current_task.lookup_path_from_root(target)?.mount(fs)?;
+    let mut buf = [0u8; PATH_MAX as usize];
+    let target_path = current_task.mm.read_c_string(target_addr, &mut buf)?;
+    // TODO(tbodt): Figure out why it's not easy to allow relative paths here, then fix that, then
+    // allow relative paths
+    let target = current_task.lookup_path_from_root(target_path)?;
+
+    if flags.contains(MountFlags::BIND) {
+        let mut buf = [0u8; PATH_MAX as usize];
+        let source = current_task.mm.read_c_string(source_addr, &mut buf)?;
+        log::info!(
+            "{:?} mount(source={:?}, target={:?}, MS_BIND)",
+            current_task,
+            String::from_utf8_lossy(source),
+            String::from_utf8_lossy(target_path),
+        );
+
+        if flags.contains(MountFlags::REC) {
+            not_implemented!("MS_REC unimplemented");
+        }
+
+        // TODO(tbodt): relative paths
+        let source = current_task.lookup_path_from_root(source)?;
+        target.mount(WhatToMount::Dir(source.entry), flags)?;
+    } else {
+        let mut buf = [0u8; PATH_MAX as usize];
+        let source = current_task.mm.read_c_string(source_addr, &mut buf)?;
+        let mut buf = [0u8; PATH_MAX as usize];
+        let fs_type = current_task.mm.read_c_string(filesystemtype_addr, &mut buf)?;
+        strace!(
+            current_task,
+            "mount(source={:?}, target={:?}, type={:?})",
+            String::from_utf8_lossy(source),
+            String::from_utf8_lossy(target_path),
+            String::from_utf8_lossy(fs_type)
+        );
+
+        let fs = create_filesystem(current_task.kernel(), source, fs_type, b"")?;
+        target.mount(fs, flags)?;
+    }
+
     Ok(SUCCESS)
 }
 

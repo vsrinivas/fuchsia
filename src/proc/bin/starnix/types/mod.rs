@@ -5,6 +5,7 @@
 mod device_type;
 mod errno;
 mod file_mode;
+mod mount_flags;
 mod open_flags;
 mod resource_limits;
 mod signals;
@@ -19,6 +20,7 @@ pub mod uapi;
 pub use device_type::*;
 pub use errno::*;
 pub use file_mode::*;
+pub use mount_flags::*;
 pub use open_flags::*;
 pub use resource_limits::*;
 pub use signals::*;

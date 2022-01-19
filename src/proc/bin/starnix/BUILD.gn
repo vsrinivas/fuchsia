@@ -177,6 +177,7 @@ if (target_cpu == "x64") {
       "types/errno.rs",
       "types/file_mode.rs",
       "types/mod.rs",
+      "types/mount_flags.rs",
       "types/open_flags.rs",
       "types/range_ext.rs",
       "types/resource_limits.rs",

@@ -44,8 +44,9 @@ impl Namespace {
             .set(Arc::new(Mount {
                 namespace: Arc::downgrade(&namespace),
                 mountpoint: None,
-                _fs: fs,
                 root,
+                _flags: MountFlags::empty(),
+                _fs: fs,
             }))
             .is_err()
         {
@@ -67,6 +68,7 @@ struct Mount {
     namespace: Weak<Namespace>,
     mountpoint: Option<(Weak<Mount>, DirEntryHandle)>,
     root: DirEntryHandle,
+    _flags: MountFlags,
     _fs: FileSystemHandle,
 }
 type MountHandle = Arc<Mount>;
@@ -348,7 +350,7 @@ impl NamespaceNode {
         components.join(&b'/')
     }
 
-    pub fn mount(&self, root: WhatToMount) -> Result<(), Errno> {
+    pub fn mount(&self, root: WhatToMount, flags: MountFlags) -> Result<(), Errno> {
         if let Some(namespace) = self.namespace() {
             match namespace.mount_points.write().entry(self.clone()) {
                 Entry::Occupied(_) => {
@@ -368,6 +370,7 @@ impl NamespaceNode {
                         namespace: mount.namespace.clone(),
                         mountpoint: Some((Arc::downgrade(&mount), self.entry.clone())),
                         root,
+                        _flags: flags,
                         _fs: fs,
                     }));
                     Ok(())
@@ -437,7 +440,8 @@ mod test {
             .root()
             .lookup_child(&current_task, &mut context, b"dev")
             .expect("failed to lookup dev");
-        dev.mount(WhatToMount::Fs(dev_fs)).expect("failed to mount dev root node");
+        dev.mount(WhatToMount::Fs(dev_fs), MountFlags::empty())
+            .expect("failed to mount dev root node");
 
         let mut context = LookupContext::default();
         let dev = ns
@@ -471,7 +475,8 @@ mod test {
             .root()
             .lookup_child(&current_task, &mut context, b"dev")
             .expect("failed to lookup dev");
-        dev.mount(WhatToMount::Fs(dev_fs)).expect("failed to mount dev root node");
+        dev.mount(WhatToMount::Fs(dev_fs), MountFlags::empty())
+            .expect("failed to mount dev root node");
         let mut context = LookupContext::default();
         let new_dev = ns
             .root()
@@ -506,7 +511,8 @@ mod test {
             .root()
             .lookup_child(&current_task, &mut context, b"dev")
             .expect("failed to lookup dev");
-        dev.mount(WhatToMount::Fs(dev_fs)).expect("failed to mount dev root node");
+        dev.mount(WhatToMount::Fs(dev_fs), MountFlags::empty())
+            .expect("failed to mount dev root node");
 
         let mut context = LookupContext::default();
         let dev = ns

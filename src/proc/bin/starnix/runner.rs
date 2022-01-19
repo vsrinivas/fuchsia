@@ -452,13 +452,15 @@ fn start_component(
         let (mount_point, child_fs) =
             create_filesystem_from_spec(&kernel, Some(&current_task), &pkg, mount_spec)?;
         let mount_point = current_task.lookup_path_from_root(mount_point)?;
-        mount_point.mount(child_fs)?;
+        mount_point.mount(child_fs, MountFlags::empty())?;
     }
 
     // Hack to allow mounting apexes before apexd is working.
     // TODO(tbodt): Remove once apexd works.
     if let Some(apexes) = apex_hack {
-        current_task.lookup_path_from_root(b"apex")?.mount(WhatToMount::Fs(TmpFs::new()))?;
+        current_task
+            .lookup_path_from_root(b"apex")?
+            .mount(WhatToMount::Fs(TmpFs::new()), MountFlags::empty())?;
         let apex_dir = current_task.lookup_path_from_root(b"apex")?;
         for apex in apexes {
             let apex = apex.as_bytes();
@@ -469,7 +471,7 @@ fn start_component(
             )?;
             let apex_source =
                 current_task.lookup_path_from_root(&[b"system/apex/", apex].concat())?;
-            apex_subdir.mount(WhatToMount::Dir(apex_source.entry))?;
+            apex_subdir.mount(WhatToMount::Dir(apex_source.entry), MountFlags::empty())?;
         }
     }
 
