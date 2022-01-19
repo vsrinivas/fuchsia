@@ -7,20 +7,20 @@
 #![allow(unused)]
 
 mod boringssl;
-mod crypto_utils;
 mod ecc;
 mod frame;
+pub mod hmac_utils;
 mod state;
 
-pub use crypto_utils::kdf_sha256;
 pub use frame::{AntiCloggingTokenMsg, CommitMsg, ConfirmMsg};
 use {
     anyhow::{bail, Error},
     boringssl::{Bignum, EcGroupId},
     fidl_fuchsia_wlan_ieee80211 as fidl_ieee80211,
+    hmac_utils::{HmacUtils, HmacUtilsImpl},
     ieee80211::MacAddr,
     log::warn,
-    mundane::{hash::Digest, hmac},
+    mundane::hash::Sha256,
     wlan_common::ie::rsn::akm::{self, Akm, AKM_PSK, AKM_SAE},
 };
 
@@ -150,13 +150,15 @@ pub fn new_sae_handshake(
     mac: MacAddr,
     peer_mac: MacAddr,
 ) -> Result<Box<dyn SaeHandshake>, Error> {
-    let (h, cn) = match akm.suite_type {
-        akm::SAE | akm::FT_SAE => (h, cn),
+    match akm.suite_type {
+        akm::SAE | akm::FT_SAE => (),
         _ => bail!("Cannot construct SAE handshake with AKM {:?}", akm),
     };
-    let params = internal::SaeParameters { h, cn, password, sta_a_mac: mac, sta_b_mac: peer_mac };
-    match group_id {
+    let (hmac, group_constructor) = match group_id {
         DEFAULT_GROUP_ID => {
+            // IEEE 802.11-2020 12.4.2
+            // Group 19 has a 256-bit prime length, thus we use SHA256.
+            let hmac = Box::new(HmacUtilsImpl::<Sha256>::new());
             let group_constructor = Box::new(|| {
                 ecc::Group::new(EcGroupId::P256).map(|group| {
                     Box::new(group)
@@ -167,10 +169,14 @@ pub fn new_sae_handshake(
                         >
                 })
             });
-            Ok(Box::new(state::SaeHandshakeImpl::new(group_constructor, params)?))
+            (hmac, group_constructor)
         }
         _ => bail!("Unsupported SAE group id: {}", group_id),
-    }
+    };
+    Ok(Box::new(state::SaeHandshakeImpl::new(
+        group_constructor,
+        internal::SaeParameters { hmac, password, sta_a_mac: mac, sta_b_mac: peer_mac },
+    )?))
 }
 
 /// Creates a new SAE handshake in response to a first message from a peer, using the FCG indiated
@@ -253,49 +259,14 @@ mod internal {
         fn element_size(&self) -> Result<usize, Error>;
     }
 
-    #[derive(Clone)]
     pub struct SaeParameters {
-        // IEEE 802.11-2016 12.4.2: SAE theoretically supports arbitrary H and CN functions,
-        // although the standard only uses HMAC-SHA-256.
-        pub h: fn(salt: &[u8], ikm: &[u8]) -> Vec<u8>,
-        #[allow(unused)]
-        pub cn: fn(key: &[u8], counter: u16, data: Vec<&[u8]>) -> Vec<u8>,
+        pub hmac: Box<dyn HmacUtils + Send>,
         // IEEE 802.11-2016 12.4.3
         pub password: Vec<u8>,
         // IEEE 802.11-2016 12.4.4.2.2: The two MacAddrs are needed for generating a password seed.
         pub sta_a_mac: MacAddr,
         pub sta_b_mac: MacAddr,
     }
-
-    impl SaeParameters {
-        pub fn pwd_seed(&self, counter: u8) -> Vec<u8> {
-            let (big_mac, little_mac) = match self.sta_a_mac.cmp(&self.sta_b_mac) {
-                std::cmp::Ordering::Less => (self.sta_b_mac, self.sta_a_mac),
-                _ => (self.sta_a_mac, self.sta_b_mac),
-            };
-            let mut salt = vec![];
-            salt.extend_from_slice(&big_mac[..]);
-            salt.extend_from_slice(&little_mac[..]);
-            let mut ikm = self.password.clone();
-            ikm.push(counter);
-            (self.h)(&salt[..], &ikm[..])
-        }
-    }
-}
-
-fn h(salt: &[u8], ikm: &[u8]) -> Vec<u8> {
-    let mut hasher = hmac::HmacSha256::new(salt);
-    hasher.update(ikm);
-    hasher.finish().bytes().to_vec()
-}
-
-fn cn(key: &[u8], counter: u16, data: Vec<&[u8]>) -> Vec<u8> {
-    let mut hasher = hmac::HmacSha256::new(key);
-    hasher.update(&counter.to_le_bytes());
-    for data_part in data {
-        hasher.update(data_part);
-    }
-    hasher.finish().bytes().to_vec()
 }
 
 #[cfg(test)]
@@ -309,38 +280,6 @@ mod tests {
     const TEST_PWD: &'static str = "thisisreallysecret";
     const TEST_STA_A: MacAddr = [0x7b, 0x88, 0x56, 0x20, 0x2d, 0x8d];
     const TEST_STA_B: MacAddr = [0xe2, 0x47, 0x1c, 0x0a, 0x5a, 0xcb];
-    const TEST_PWD_SEED: [u8; 32] = [
-        0x69, 0xf6, 0x90, 0x99, 0x83, 0x67, 0x53, 0x92, 0xd0, 0xa3, 0xa8, 0x82, 0x47, 0xff, 0xef,
-        0x20, 0x41, 0x3e, 0xe9, 0x72, 0x15, 0x87, 0x29, 0x42, 0x44, 0x15, 0xe1, 0x39, 0x46, 0xec,
-        0xc2, 0x06,
-    ];
-
-    #[test]
-    fn pwd_seed() {
-        let params = SaeParameters {
-            h,
-            cn,
-            password: Vec::from(TEST_PWD),
-            sta_a_mac: TEST_STA_A,
-            sta_b_mac: TEST_STA_B,
-        };
-        let seed = params.pwd_seed(1);
-        assert_eq!(&seed[..], &TEST_PWD_SEED[..]);
-    }
-
-    #[test]
-    fn symmetric_pwd_seed() {
-        let params = SaeParameters {
-            h,
-            cn,
-            password: Vec::from(TEST_PWD),
-            // The password seed should not change depending on the order of mac addresses.
-            sta_a_mac: TEST_STA_B,
-            sta_b_mac: TEST_STA_A,
-        };
-        let seed = params.pwd_seed(1);
-        assert_eq!(&seed[..], &TEST_PWD_SEED[..]);
-    }
 
     #[test]
     fn bad_akm() {

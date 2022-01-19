@@ -3,12 +3,11 @@
 // found in the LICENSE file.
 
 use {
-    super::{
+    crate::{
         boringssl::{self, Bignum, BignumCtx, EcGroup, EcGroupId, EcGroupParams, EcPoint},
         internal::FiniteCyclicGroup,
         internal::SaeParameters,
     },
-    crate::crypto_utils::kdf_sha256,
     anyhow::Error,
     log::warn,
     num::integer::Integer,
@@ -120,7 +119,7 @@ impl FiniteCyclicGroup for Group {
     // IEEE 802.11-2016 12.4.4.2.2
     fn generate_pwe(&self, params: &SaeParameters) -> Result<Self::Element, Error> {
         let group_params = self.group.get_params(&self.bn_ctx)?;
-        let length = group_params.p.bits() as u16;
+        let length = group_params.p.bits();
         let p_vec = group_params.p.to_vec();
         let (qr, qnr) = generate_qr_and_qnr(&group_params.p, &self.bn_ctx)?;
         // Our loop will set these two values.
@@ -129,9 +128,20 @@ impl FiniteCyclicGroup for Group {
 
         let mut counter = 1;
         while counter <= MIN_PWE_ITER || x.is_none() {
-            let pwd_seed = params.pwd_seed(counter);
-            // IEEE 802.11-2016 9.4.2.25.3 Table 9-133 specifies SHA-256 as the hash function.
-            let pwd_value = kdf_sha256(&pwd_seed[..], KDF_LABEL, &p_vec[..], length);
+            let pwd_seed = {
+                let (big_mac, little_mac) = match params.sta_a_mac.cmp(&params.sta_b_mac) {
+                    std::cmp::Ordering::Less => (params.sta_b_mac, params.sta_a_mac),
+                    _ => (params.sta_a_mac, params.sta_b_mac),
+                };
+                let mut salt = vec![];
+                salt.extend_from_slice(&big_mac[..]);
+                salt.extend_from_slice(&little_mac[..]);
+                let mut ikm = params.password.clone();
+                ikm.push(counter as u8);
+                params.hmac.hkdf_extract(&salt[..], &ikm[..])
+            };
+            let pwd_value =
+                params.hmac.kdf_hash_length(&pwd_seed[..], KDF_LABEL, &p_vec[..], length);
             // This is a candidate value for our PWE x-coord. We now determine whether or not it
             // has all of our desired properties to form a PWE.
             let pwd_value = Bignum::new_from_slice(&pwd_value[..])?;
@@ -226,8 +236,7 @@ impl FiniteCyclicGroup for Group {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use ieee80211::MacAddr;
+    use {super::*, crate::hmac_utils::HmacUtilsImpl, ieee80211::MacAddr, mundane::hash::Sha256};
 
     // IEEE 802.11-2016 provides an incorrect SAE test vector.
     // IEEE 802.11-18/1104r0: New Test Vectors for SAE
@@ -265,11 +274,26 @@ mod tests {
     fn generate_pwe() {
         let group = make_group();
         let params = SaeParameters {
-            h: super::super::h,
-            cn: super::super::cn,
+            hmac: Box::new(HmacUtilsImpl::<Sha256>::new()),
             password: Vec::from(TEST_PWD),
             sta_a_mac: TEST_STA_A,
             sta_b_mac: TEST_STA_B,
+        };
+        let pwe = group.generate_pwe(&params).unwrap();
+        let (x, y) = pwe.to_affine_coords(&group.group, &group.bn_ctx).unwrap();
+        assert_eq!(x.to_vec(), TEST_PWE_X);
+        assert_eq!(y.to_vec(), TEST_PWE_Y);
+    }
+
+    #[test]
+    fn symmetric_generate_pwe() {
+        let group = make_group();
+        let params = SaeParameters {
+            hmac: Box::new(HmacUtilsImpl::<Sha256>::new()),
+            password: Vec::from(TEST_PWD),
+            // The PWE should not change depending on the order of mac addresses.
+            sta_a_mac: TEST_STA_B,
+            sta_b_mac: TEST_STA_A,
         };
         let pwe = group.generate_pwe(&params).unwrap();
         let (x, y) = pwe.to_affine_coords(&group.group, &group.bn_ctx).unwrap();

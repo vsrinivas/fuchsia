@@ -11,7 +11,6 @@ use {
         AntiCloggingTokenMsg, CommitMsg, ConfirmMsg, Key, RejectReason, SaeHandshake, SaeUpdate,
         SaeUpdateSink, Timeout,
     },
-    crate::crypto_utils::kdf_sha256,
     anyhow::{bail, format_err, Error},
     log::{error, warn},
     wlan_statemachine::*,
@@ -153,11 +152,13 @@ fn process_commit<E>(
         None => return Ok(FrameResult::Drop), // This is an auth failure.
     };
     let ctx = BignumCtx::new()?;
-    let keyseed = (config.params.h)(&[0u8; 32][..], &k.to_vec()[..]);
+    let keyseed = config.params.hmac.hkdf_extract(&[0u8; 32][..], &k.to_vec()[..]);
     let sha_ctx = peer_commit.scalar.mod_add(&commit.scalar, &fcg.order()?, &ctx)?.to_vec();
-    let kck_and_pmk = kdf_sha256(&keyseed[..], "SAE KCK and PMK", &sha_ctx[..], 512);
-    let kck = kck_and_pmk[0..32].to_vec();
-    let pmk = kck_and_pmk[32..64].to_vec();
+    let q = config.params.hmac.bits();
+    let kck_and_pmk =
+        config.params.hmac.kdf_hash_length(&keyseed[..], "SAE KCK and PMK", &sha_ctx[..], q + 256);
+    let kck = kck_and_pmk[0..q / 8].to_vec();
+    let pmk = kck_and_pmk[q / 8..64].to_vec();
     let pmkid = sha_ctx[0..16].to_vec();
     Ok(FrameResult::Proceed((peer_commit, Kck(kck), Key { pmk, pmkid })))
 }
@@ -172,10 +173,10 @@ fn compute_confirm<E>(
     commit1: &SerializedCommit,
     commit2: &SerializedCommit,
 ) -> Result<Vec<u8>, RejectReason> {
-    Ok((config.params.cn)(
+    Ok(config.params.hmac.confirm(
         &kck.0[..],
         send_confirm,
-        vec![&commit1.scalar[..], &commit1.element[..], &commit2.scalar[..], &commit2.element[..]],
+        &[&commit1.scalar[..], &commit1.element[..], &commit2.scalar[..], &commit2.element[..]],
     ))
 }
 
@@ -719,9 +720,11 @@ mod test {
             self as sae,
             boringssl::{Bignum, EcGroupId},
             ecc,
+            hmac_utils::HmacUtilsImpl,
         },
         hex::FromHex,
         ieee80211::MacAddr,
+        mundane::hash::Sha256,
         wlan_common::assert_variant,
     };
 
@@ -752,8 +755,7 @@ mod test {
 
     fn make_ecc_config() -> SaeConfiguration<<ecc::Group as FiniteCyclicGroup>::Element> {
         let params = SaeParameters {
-            h: sae::h,
-            cn: sae::cn,
+            hmac: Box::new(HmacUtilsImpl::<Sha256>::new()),
             password: Vec::from(TEST_PWD),
             sta_a_mac: TEST_STA_A,
             sta_b_mac: TEST_STA_B,
