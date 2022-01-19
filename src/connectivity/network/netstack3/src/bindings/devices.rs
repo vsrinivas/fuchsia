@@ -6,7 +6,7 @@ use std::collections::hash_map::{self, HashMap};
 
 use ethernet as eth;
 use fidl_fuchsia_hardware_ethernet::Features;
-use fidl_fuchsia_hardware_ethernet::MacAddress;
+use net_types::{ethernet::Mac, UnicastAddr};
 use netstack3_core::{DeviceId, Entry, IdMapCollection, IdMapCollectionKey};
 
 pub type BindingId = u64;
@@ -281,7 +281,7 @@ where
 pub struct CommonInfo {
     path: String,
     client: eth::Client,
-    mac: MacAddress,
+    mac: UnicastAddr<Mac>,
     mtu: u32,
     features: Features,
     admin_enabled: bool,
@@ -292,7 +292,7 @@ impl CommonInfo {
     pub fn new(
         path: String,
         client: eth::Client,
-        mac: MacAddress,
+        mac: UnicastAddr<Mac>,
         mtu: u32,
         features: Features,
         admin_enabled: bool,
@@ -341,7 +341,7 @@ impl<C> DeviceInfo<C, CommonInfo> {
         &mut self.info.client
     }
 
-    pub fn mac(&self) -> MacAddress {
+    pub fn mac(&self) -> UnicastAddr<Mac> {
         self.info.mac
     }
 

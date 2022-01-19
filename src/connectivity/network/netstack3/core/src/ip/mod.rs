@@ -2687,7 +2687,7 @@ mod tests {
             0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 192, 168, 0, 100,
         ]))
         .unwrap();
-        let extra_mac = Mac::new([13, 14, 15, 16, 17, 18]);
+        let extra_mac = UnicastAddr::new(Mac::new([12, 13, 14, 15, 16, 17])).unwrap();
         dispatcher_builder.add_ndp_table_entry(0, extra_ip, extra_mac);
         dispatcher_builder.add_ndp_table_entry(
             0,
@@ -3151,7 +3151,7 @@ mod tests {
                 64,
                 IpProto::Udp.into(),
             ))
-            .encapsulate(EthernetFrameBuilder::new(config.remote_mac, dst_mac, I::ETHER_TYPE))
+            .encapsulate(EthernetFrameBuilder::new(config.remote_mac.get(), dst_mac, I::ETHER_TYPE))
             .serialize_vec_outer()
             .ok()
             .unwrap()

@@ -1473,8 +1473,8 @@ mod tests {
         {
             let (mut body, src_mac, dst_mac, _ethertype) = parse_ethernet_frame(&frame).unwrap();
             let packet = (&mut body).parse::<Ipv4Packet<&[u8]>>().unwrap();
-            assert_eq!(src_mac, local_mac);
-            assert_eq!(dst_mac, remote_mac);
+            assert_eq!(src_mac, local_mac.get());
+            assert_eq!(dst_mac, remote_mac.get());
             assert_eq!(packet.src_ip(), local_ip.get());
             assert_eq!(packet.dst_ip(), remote_ip.get());
             assert_eq!(packet.proto(), proto);
@@ -1489,8 +1489,8 @@ mod tests {
             let (body, src_mac, dst_mac, src_ip, dst_ip, proto, ttl) =
                 parse_ip_packet_in_ethernet_frame::<Ipv6>(&frame).unwrap();
             assert_eq!(body, [0]);
-            assert_eq!(src_mac, local_mac);
-            assert_eq!(dst_mac, remote_mac);
+            assert_eq!(src_mac, local_mac.get());
+            assert_eq!(dst_mac, remote_mac.get());
             assert_eq!(src_ip, local_ip.get());
             assert_eq!(dst_ip, remote_ip.get());
             assert_eq!(proto, proto);

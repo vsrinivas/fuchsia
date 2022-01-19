@@ -2256,8 +2256,8 @@ mod tests {
                 )
                 .unwrap();
 
-            assert_eq!(src_mac, I::DUMMY_CONFIG.local_mac);
-            assert_eq!(dst_mac, I::DUMMY_CONFIG.remote_mac);
+            assert_eq!(src_mac, I::DUMMY_CONFIG.local_mac.get());
+            assert_eq!(dst_mac, I::DUMMY_CONFIG.remote_mac.get());
             assert_eq!(src_ip, I::DUMMY_CONFIG.local_ip.get());
             assert_eq!(dst_ip, I::DUMMY_CONFIG.remote_ip.get());
             assert_eq!(message, expect_message);

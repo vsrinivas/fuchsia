@@ -504,6 +504,7 @@ mod tests {
     use fidl_fuchsia_net_stack as fidl_net_stack;
     use net_types::ethernet::Mac;
     use net_types::ip::{Ipv4Addr, Ipv6Addr};
+    use net_types::UnicastAddr;
 
     use super::*;
     use crate::bindings::Netstack;
@@ -518,12 +519,11 @@ mod tests {
             // we need a valid context to be able to create DeviceIds, so
             // we just create it, get the device id and then destroy everything
             let netstack = Netstack::new();
-            let core = netstack
-                .ctx
-                .try_lock()
-                .unwrap()
-                .state
-                .add_ethernet_device(Mac::new([1, 2, 3, 4, 5, 6]), 1500);
+            let core =
+                netstack.ctx.try_lock().unwrap().state.add_ethernet_device(
+                    UnicastAddr::new(Mac::new([2, 3, 4, 5, 6, 7])).unwrap(),
+                    1500,
+                );
             Self { binding: 1, core }
         }
     }

@@ -12,6 +12,7 @@ use core::marker::PhantomData;
 use core::time::Duration;
 
 use log::{debug, error};
+use net_types::{UnicastAddr, UnicastAddress, Witness as _};
 use packet::{BufferMut, EmptyBuf, InnerPacketBuilder};
 use packet_formats::arp::{ArpOp, ArpPacket, ArpPacketBuilder, HType, PType};
 
@@ -37,12 +38,12 @@ use crate::device::link::LinkDevice;
 ///
 /// `ArpDevice` is implemented for all `L: LinkDevice where L::Address: HType`.
 pub(crate) trait ArpDevice {
-    type HType: HType;
+    type HType: HType + UnicastAddress;
 }
 
 impl<L: LinkDevice> ArpDevice for L
 where
-    L::Address: HType,
+    L::Address: HType + UnicastAddress,
 {
     type HType = L::Address;
 }
@@ -161,7 +162,7 @@ pub(crate) trait ArpContext<D: ArpDevice, P: PType>:
     fn get_protocol_addr(&self, device_id: Self::DeviceId) -> Option<P>;
 
     /// Get the hardware address of this interface.
-    fn get_hardware_addr(&self, device_id: Self::DeviceId) -> D::HType;
+    fn get_hardware_addr(&self, device_id: Self::DeviceId) -> UnicastAddr<D::HType>;
 
     /// Notifies the device layer that the hardware address `hw_addr` was
     /// resolved for the given protocol address `proto_addr`.
@@ -325,7 +326,7 @@ impl<D: ArpDevice, P: PType, C: ArpContext<D, P>> TimerHandler<ArpTimerId<D, P, 
                         ArpFrameMetadata { device_id: id.device_id, dst_addr: D::HType::BROADCAST },
                         ArpPacketBuilder::new(
                             ArpOp::Request,
-                            self_hw_addr,
+                            self_hw_addr.get(),
                             sender_protocol_addr,
                             // This is meaningless, since RFC 826 does not
                             // specify the behaviour. However, the broadcast
@@ -496,7 +497,7 @@ impl<D: ArpDevice, P: PType, B: BufferMut, C: BufferArpContext<D, P, B>>
                 ArpFrameMetadata { device_id, dst_addr: packet.sender_hardware_address() },
                 ArpPacketBuilder::new(
                     ArpOp::Response,
-                    self_hw_addr,
+                    self_hw_addr.get(),
                     packet.target_protocol_address(),
                     packet.sender_hardware_address(),
                     packet.sender_protocol_address(),
@@ -584,7 +585,7 @@ fn send_arp_request<D: ArpDevice, P: PType, C: ArpContext<D, P>>(
             ArpFrameMetadata { device_id, dst_addr: D::HType::BROADCAST },
             ArpPacketBuilder::new(
                 ArpOp::Request,
-                self_hw_addr,
+                self_hw_addr.get(),
                 sender_protocol_addr,
                 // This is meaningless, since RFC 826 does not specify the
                 // behaviour. However, the broadcast address is sensible, as
@@ -746,7 +747,7 @@ mod tests {
     /// address resolution failure events.
     struct DummyArpCtx {
         proto_addr: Option<Ipv4Addr>,
-        hw_addr: Mac,
+        hw_addr: UnicastAddr<Mac>,
         addr_resolved: Vec<(Ipv4Addr, Mac)>,
         addr_resolution_failed: Vec<Ipv4Addr>,
         addr_resolution_expired: Vec<Ipv4Addr>,
@@ -757,7 +758,7 @@ mod tests {
         fn default() -> DummyArpCtx {
             DummyArpCtx {
                 proto_addr: Some(TEST_LOCAL_IPV4),
-                hw_addr: TEST_LOCAL_MAC,
+                hw_addr: UnicastAddr::new(TEST_LOCAL_MAC).unwrap(),
                 addr_resolved: Vec::new(),
                 addr_resolution_failed: Vec::new(),
                 addr_resolution_expired: Vec::new(),
@@ -781,7 +782,7 @@ mod tests {
             self.get_ref().proto_addr
         }
 
-        fn get_hardware_addr(&self, _device_id: ()) -> Mac {
+        fn get_hardware_addr(&self, _device_id: ()) -> UnicastAddr<Mac> {
             self.get_ref().hw_addr
         }
 
@@ -983,7 +984,7 @@ mod tests {
                 self.get_ref().proto_addr
             }
 
-            fn get_hardware_addr(&self, _device_id: usize) -> Mac {
+            fn get_hardware_addr(&self, _device_id: usize) -> UnicastAddr<Mac> {
                 self.get_ref().hw_addr
             }
 
@@ -1267,7 +1268,7 @@ mod tests {
                 host_iter.clone().map(|cfg| {
                     let ArpHostConfig { name, proto_addr, hw_addr } = cfg;
                     let mut ctx = DummyCtx::default();
-                    ctx.get_mut().hw_addr = *hw_addr;
+                    ctx.get_mut().hw_addr = UnicastAddr::new(*hw_addr).unwrap();
                     ctx.get_mut().proto_addr = Some(*proto_addr);
                     (*name, ctx)
                 })

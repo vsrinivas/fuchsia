@@ -200,14 +200,14 @@ impl<C: EthernetIpDeviceContext> MldContext<EthernetLinkDevice> for C {
 
 /// Builder for [`EthernetDeviceState`].
 pub(crate) struct EthernetDeviceStateBuilder {
-    mac: Mac,
+    mac: UnicastAddr<Mac>,
     mtu: u32,
     ndp_configs: ndp::NdpConfigurations,
 }
 
 impl EthernetDeviceStateBuilder {
     /// Create a new `EthernetDeviceStateBuilder`.
-    pub(crate) fn new(mac: Mac, mtu: u32) -> Self {
+    pub(crate) fn new(mac: UnicastAddr<Mac>, mtu: u32) -> Self {
         // TODO(joshlf): Add a minimum MTU for all Ethernet devices such that
         //  you cannot create an `EthernetDeviceState` with an MTU smaller than
         //  the minimum. The absolute minimum needs to be at least the minimum
@@ -247,7 +247,7 @@ impl EthernetDeviceStateBuilder {
 /// The state associated with an Ethernet device.
 pub(crate) struct EthernetDeviceState {
     /// Mac address of the device this state is for.
-    mac: Mac,
+    mac: UnicastAddr<Mac>,
 
     /// The value this netstack assumes as the device's current MTU.
     mtu: u32,
@@ -315,7 +315,7 @@ impl EthernetDeviceState {
     /// address, `dst_mac` is the broadcast MAC address, or it is one of the
     /// multicast MAC addresses the device has joined.
     fn should_accept(&self, dst_mac: &Mac) -> bool {
-        (self.mac == *dst_mac)
+        (self.mac.get() == *dst_mac)
             || dst_mac.is_broadcast()
             || (MulticastAddr::new(*dst_mac)
                 .map(|a| self.link_multicast_groups.contains(&a))
@@ -462,9 +462,8 @@ pub(super) fn send_ip_frame<
     #[ipv4addr]
     let dst_mac = match MulticastAddr::from_witness(local_addr) {
         Some(multicast) => Ok(Mac::from(&multicast)),
-        None => {
-            arp::lookup(ctx, device_id, local_mac, local_addr.get()).ok_or(IpAddr::V4(local_addr))
-        }
+        None => arp::lookup(ctx, device_id, local_mac.get(), local_addr.get())
+            .ok_or(IpAddr::V4(local_addr)),
     };
     #[ipv6addr]
     let dst_mac = match UnicastOrMulticastIpv6Addr::from_specified(local_addr) {
@@ -479,7 +478,7 @@ pub(super) fn send_ip_frame<
             .send_frame(
                 device_id.into(),
                 body.with_mtu(mtu as usize).encapsulate(EthernetFrameBuilder::new(
-                    local_mac,
+                    local_mac.get(),
                     dst_mac,
                     A::Version::ETHER_TYPE,
                 )),
@@ -1194,7 +1193,7 @@ impl<
         let src = self.get_state_with(meta.device_id).link.mac;
         self.send_frame(
             meta.device_id,
-            body.encapsulate(EthernetFrameBuilder::new(src, meta.dst_addr, EtherType::Arp)),
+            body.encapsulate(EthernetFrameBuilder::new(src.get(), meta.dst_addr, EtherType::Arp)),
         )
         .map_err(Nested::into_inner)
     }
@@ -1220,7 +1219,7 @@ impl<C: EthernetIpDeviceContext> ArpContext<EthernetLinkDevice, Ipv4Addr> for C 
     fn get_hardware_addr(
         &self,
         device_id: <C as ArpDeviceIdContext<EthernetLinkDevice>>::DeviceId,
-    ) -> Mac {
+    ) -> UnicastAddr<Mac> {
         self.get_state_with(device_id.into()).link.mac
     }
     fn address_resolved(
@@ -1258,7 +1257,7 @@ impl<C: EthernetIpDeviceContext> StateContext<NdpState<EthernetLinkDevice>, C::D
 }
 
 impl<C: EthernetIpDeviceContext> NdpContext<EthernetLinkDevice> for C {
-    fn get_link_layer_addr(&self, device_id: C::DeviceId) -> Mac {
+    fn get_link_layer_addr(&self, device_id: C::DeviceId) -> UnicastAddr<Mac> {
         self.get_state_with(device_id).link.mac
     }
 
@@ -1466,7 +1465,7 @@ fn mac_resolved<C: EthernetIpDeviceContext>(
             //  than an Ethernet minimum frame body size.
             let res = ctx.send_frame(
                 device_id.into(),
-                frame.encapsulate(EthernetFrameBuilder::new(src_mac, dst_mac, ether_type)),
+                frame.encapsulate(EthernetFrameBuilder::new(src_mac.get(), dst_mac, ether_type)),
             );
             if let Err(_) = res {
                 // TODO(joshlf): Do we want to handle this differently?
@@ -1537,7 +1536,7 @@ mod tests {
     }
 
     impl DummyEthernetCtx {
-        fn new(mac: Mac, mtu: u32) -> DummyEthernetCtx {
+        fn new(mac: UnicastAddr<Mac>, mtu: u32) -> DummyEthernetCtx {
             DummyEthernetCtx {
                 state: IpLinkDeviceState::new(EthernetDeviceStateBuilder::new(mac, mtu).build()),
             }
@@ -1614,7 +1613,7 @@ mod tests {
                 &mut ctx,
                 DummyDeviceId,
                 DUMMY_CONFIG_V4.remote_ip.get(),
-                DUMMY_CONFIG_V4.remote_mac,
+                DUMMY_CONFIG_V4.remote_mac.get(),
             );
             let _ = send_ip_frame(
                 &mut ctx,
@@ -1795,7 +1794,7 @@ mod tests {
         }
 
         let src_ip = I::get_other_ip_address(3);
-        let src_mac = Mac::new([10, 11, 12, 13, 14, 15]);
+        let src_mac = UnicastAddr::new(Mac::new([10, 11, 12, 13, 14, 15])).unwrap();
         let config = I::DUMMY_CONFIG;
         let device = DeviceId::new_ethernet(0);
         let frame_dst = FrameDestination::Unicast;
@@ -1928,8 +1927,8 @@ mod tests {
                 IpProto::Tcp.into(),
             ))
             .encapsulate(EthernetFrameBuilder::new(
-                config.remote_mac,
-                config.local_mac,
+                config.remote_mac.get(),
+                config.local_mac.get(),
                 I::ETHER_TYPE,
             ))
             .serialize_vec_outer()
@@ -1954,7 +1953,11 @@ mod tests {
                 64,
                 IpProto::Tcp.into(),
             ))
-            .encapsulate(EthernetFrameBuilder::new(config.remote_mac, other_mac, I::ETHER_TYPE))
+            .encapsulate(EthernetFrameBuilder::new(
+                config.remote_mac.get(),
+                other_mac,
+                I::ETHER_TYPE,
+            ))
             .serialize_vec_outer()
             .ok()
             .unwrap()
@@ -1993,20 +1996,32 @@ mod tests {
 
         // Add ip1 (ok)
         crate::device::add_ip_addr_subnet(&mut ctx, device, as1).unwrap();
-        assert_eq!(crate::device::get_ip_addr_state(&ctx, device, &ip1), Some(AddressState::Assigned));
+        assert_eq!(
+            crate::device::get_ip_addr_state(&ctx, device, &ip1),
+            Some(AddressState::Assigned)
+        );
         assert_eq!(crate::device::get_ip_addr_state(&ctx, device, &ip2), None);
         assert_eq!(crate::device::get_ip_addr_state(&ctx, device, &ip3), None);
 
         // Add ip2 (ok)
         crate::device::add_ip_addr_subnet(&mut ctx, device, as2).unwrap();
-        assert_eq!(crate::device::get_ip_addr_state(&ctx, device, &ip1), Some(AddressState::Assigned));
-        assert_eq!(crate::device::get_ip_addr_state(&ctx, device, &ip2), Some(AddressState::Assigned));
+        assert_eq!(
+            crate::device::get_ip_addr_state(&ctx, device, &ip1),
+            Some(AddressState::Assigned)
+        );
+        assert_eq!(
+            crate::device::get_ip_addr_state(&ctx, device, &ip2),
+            Some(AddressState::Assigned)
+        );
         assert_eq!(crate::device::get_ip_addr_state(&ctx, device, &ip3), None);
 
         // Del ip1 (ok)
         crate::device::del_ip_addr(&mut ctx, device, &ip1).unwrap();
         assert_eq!(crate::device::get_ip_addr_state(&ctx, device, &ip1), None);
-        assert_eq!(crate::device::get_ip_addr_state(&ctx, device, &ip2), Some(AddressState::Assigned));
+        assert_eq!(
+            crate::device::get_ip_addr_state(&ctx, device, &ip2),
+            Some(AddressState::Assigned)
+        );
         assert_eq!(crate::device::get_ip_addr_state(&ctx, device, &ip3), None);
 
         // Del ip1 again (ip1 not found)
@@ -2015,7 +2030,10 @@ mod tests {
             AddressError::NotFound
         );
         assert_eq!(crate::device::get_ip_addr_state(&ctx, device, &ip1), None);
-        assert_eq!(crate::device::get_ip_addr_state(&ctx, device, &ip2), Some(AddressState::Assigned));
+        assert_eq!(
+            crate::device::get_ip_addr_state(&ctx, device, &ip2),
+            Some(AddressState::Assigned)
+        );
         assert_eq!(crate::device::get_ip_addr_state(&ctx, device, &ip3), None);
 
         // Add ip2 again (ip2 already exists)
@@ -2024,7 +2042,10 @@ mod tests {
             AddressError::AlreadyExists
         );
         assert_eq!(crate::device::get_ip_addr_state(&ctx, device, &ip1), None);
-        assert_eq!(crate::device::get_ip_addr_state(&ctx, device, &ip2), Some(AddressState::Assigned));
+        assert_eq!(
+            crate::device::get_ip_addr_state(&ctx, device, &ip2),
+            Some(AddressState::Assigned)
+        );
         assert_eq!(crate::device::get_ip_addr_state(&ctx, device, &ip3), None);
 
         // Add ip2 with different subnet (ip2 already exists)
@@ -2038,7 +2059,10 @@ mod tests {
             AddressError::AlreadyExists
         );
         assert_eq!(crate::device::get_ip_addr_state(&ctx, device, &ip1), None);
-        assert_eq!(crate::device::get_ip_addr_state(&ctx, device, &ip2), Some(AddressState::Assigned));
+        assert_eq!(
+            crate::device::get_ip_addr_state(&ctx, device, &ip2),
+            Some(AddressState::Assigned)
+        );
         assert_eq!(crate::device::get_ip_addr_state(&ctx, device, &ip3), None);
     }
 

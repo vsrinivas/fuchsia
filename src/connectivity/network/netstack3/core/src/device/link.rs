@@ -9,7 +9,7 @@
 
 use core::fmt::Debug;
 
-use net_types::ethernet::Mac;
+use net_types::{ethernet::Mac, UnicastAddress};
 use zerocopy::{AsBytes, FromBytes, Unaligned};
 
 /// The type of address used by a link device.
@@ -53,7 +53,7 @@ impl LinkAddress for Mac {
 /// is only intended to exist at the type level, never instantiated at runtime.
 pub(crate) trait LinkDevice: 'static + Copy + Clone {
     /// The type of address used to address link devices of this type.
-    type Address: LinkAddress;
+    type Address: LinkAddress + UnicastAddress;
 }
 
 /// Utilities for testing link devices.
@@ -79,6 +79,13 @@ pub(crate) mod testutil {
     #[derive(FromBytes, AsBytes, Unaligned, Copy, Clone, Debug, Hash, PartialEq, Eq)]
     #[repr(transparent)]
     pub(crate) struct DummyLinkAddress([u8; DUMMY_LINK_ADDRESS_LEN]);
+
+    impl UnicastAddress for DummyLinkAddress {
+        fn is_unicast(&self) -> bool {
+            let Self(bytes) = self;
+            bytes != &[0xff]
+        }
+    }
 
     impl LinkAddress for DummyLinkAddress {
         const BYTES_LENGTH: usize = DUMMY_LINK_ADDRESS_LEN;

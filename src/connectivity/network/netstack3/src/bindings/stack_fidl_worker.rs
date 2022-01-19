@@ -23,7 +23,7 @@ use fidl_fuchsia_net_stack::{
 };
 use futures::{TryFutureExt as _, TryStreamExt as _};
 use log::{debug, error};
-use net_types::{ethernet::Mac, SpecifiedAddr};
+use net_types::{ethernet::Mac, SpecifiedAddr, UnicastAddr, Witness as _};
 use netstack3_core::{
     add_ip_addr_subnet, add_route, del_device_route, del_ip_addr, get_all_ip_addr_subnets,
     get_all_routes, initialize_device, Ctx, EntryEither,
@@ -188,13 +188,15 @@ where
             .await
             .map(|s| s.contains(ethernet_worker::DeviceStatus::Online))
             .unwrap_or(false);
+        let mac_addr = UnicastAddr::new(Mac::new(info.mac.octets))
+            .ok_or(fidl_net_stack::Error::NotSupported)?;
         // We do not support updating the device's mac-address, mtu, and
         // features during it's lifetime, their cached states are hence not
         // updated once initialized.
         let comm_info = CommonInfo::new(
             topological_path,
             client,
-            info.mac.into(),
+            mac_addr,
             info.mtu,
             info.features,
             true,
@@ -203,7 +205,7 @@ where
 
         let devices: &mut Devices = dispatcher.as_mut();
         let id = if online {
-            let eth_id = state.add_ethernet_device(Mac::new(info.mac.octets), info.mtu);
+            let eth_id = state.add_ethernet_device(mac_addr, info.mtu);
             devices.add_active_device(eth_id, comm_info)
         } else {
             Some(devices.add_device(comm_info))
@@ -273,7 +275,9 @@ where
                     name: "[TBD]".to_owned(), // TODO(porce): Follow up to populate the name
                     topopath: device.path().clone(),
                     filepath: "[TBD]".to_owned(), // TODO(porce): Follow up to populate
-                    mac: Some(Box::new(device.mac())),
+                    mac: Some(Box::new(fidl_fuchsia_hardware_ethernet::MacAddress {
+                        octets: device.mac().get().bytes(),
+                    })),
                     mtu: device.mtu(),
                     features: device.features(),
                     administrative_status: if device.admin_enabled() {
@@ -314,7 +318,9 @@ where
                 name: "[TBD]".to_owned(), // TODO(porce): Follow up to populate the name
                 topopath: device.path().clone(),
                 filepath: "[TBD]".to_owned(), // TODO(porce): Follow up to populate
-                mac: Some(Box::new(device.mac())),
+                mac: Some(Box::new(fidl_fuchsia_hardware_ethernet::MacAddress {
+                    octets: device.mac().get().bytes(),
+                })),
                 mtu: device.mtu(),
                 features: device.features(),
                 administrative_status: if device.admin_enabled() {

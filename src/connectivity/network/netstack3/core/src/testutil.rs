@@ -335,11 +335,11 @@ pub(crate) struct DummyEventDispatcherConfig<A: IpAddress> {
     /// subnet).
     pub(crate) local_ip: SpecifiedAddr<A>,
     /// The MAC address of our interface to the local network.
-    pub(crate) local_mac: Mac,
+    pub(crate) local_mac: UnicastAddr<Mac>,
     /// The remote host's IP address (must be in subnet if provided).
     pub(crate) remote_ip: SpecifiedAddr<A>,
     /// The remote host's MAC address.
-    pub(crate) remote_mac: Mac,
+    pub(crate) remote_mac: UnicastAddr<Mac>,
 }
 
 /// A `DummyEventDispatcherConfig` with reasonable values for an IPv4 network.
@@ -347,9 +347,9 @@ pub(crate) const DUMMY_CONFIG_V4: DummyEventDispatcherConfig<Ipv4Addr> = unsafe 
     DummyEventDispatcherConfig {
         subnet: Subnet::new_unchecked(Ipv4Addr::new([192, 168, 0, 0]), 16),
         local_ip: SpecifiedAddr::new_unchecked(Ipv4Addr::new([192, 168, 0, 1])),
-        local_mac: Mac::new([0, 1, 2, 3, 4, 5]),
+        local_mac: UnicastAddr::new_unchecked(Mac::new([0, 1, 2, 3, 4, 5])),
         remote_ip: SpecifiedAddr::new_unchecked(Ipv4Addr::new([192, 168, 0, 2])),
-        remote_mac: Mac::new([6, 7, 8, 9, 10, 11]),
+        remote_mac: UnicastAddr::new_unchecked(Mac::new([6, 7, 8, 9, 10, 11])),
     }
 };
 
@@ -363,11 +363,11 @@ pub(crate) const DUMMY_CONFIG_V6: DummyEventDispatcherConfig<Ipv6Addr> = unsafe 
         local_ip: SpecifiedAddr::new_unchecked(Ipv6Addr::from_bytes([
             0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 192, 168, 0, 1,
         ])),
-        local_mac: Mac::new([0, 1, 2, 3, 4, 5]),
+        local_mac: UnicastAddr::new_unchecked(Mac::new([0, 1, 2, 3, 4, 5])),
         remote_ip: SpecifiedAddr::new_unchecked(Ipv6Addr::from_bytes([
             0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 192, 168, 0, 2,
         ])),
-        remote_mac: Mac::new([6, 7, 8, 9, 10, 11]),
+        remote_mac: UnicastAddr::new_unchecked(Mac::new([6, 7, 8, 9, 10, 11])),
     }
 };
 
@@ -393,9 +393,9 @@ impl<A: IpAddress> DummyEventDispatcherConfig<A> {
 /// state configured.
 #[derive(Clone, Default)]
 pub(crate) struct DummyEventDispatcherBuilder {
-    devices: Vec<(Mac, Option<(IpAddr, SubnetEither)>)>,
-    arp_table_entries: Vec<(usize, Ipv4Addr, Mac)>,
-    ndp_table_entries: Vec<(usize, UnicastAddr<Ipv6Addr>, Mac)>,
+    devices: Vec<(UnicastAddr<Mac>, Option<(IpAddr, SubnetEither)>)>,
+    arp_table_entries: Vec<(usize, Ipv4Addr, UnicastAddr<Mac>)>,
+    ndp_table_entries: Vec<(usize, UnicastAddr<Ipv6Addr>, UnicastAddr<Mac>)>,
     // usize refers to index into devices Vec.
     device_routes: Vec<(SubnetEither, usize)>,
     routes: Vec<(SubnetEither, SpecifiedAddr<IpAddr>)>,
@@ -436,7 +436,7 @@ impl DummyEventDispatcherBuilder {
     ///
     /// `add_device` returns a key which can be used to refer to the device in
     /// future calls to `add_arp_table_entry` and `add_device_route`.
-    pub(crate) fn add_device(&mut self, mac: Mac) -> usize {
+    pub(crate) fn add_device(&mut self, mac: UnicastAddr<Mac>) -> usize {
         let idx = self.devices.len();
         self.devices.push((mac, None));
         idx
@@ -446,14 +446,24 @@ impl DummyEventDispatcherBuilder {
     ///
     /// `add_device_with_ip` is like `add_device`, except that it takes an
     /// associated IP address and subnet to assign to the device.
-    pub(crate) fn add_device_with_ip<A: IpAddress>(&mut self, mac: Mac, ip: A, subnet: Subnet<A>) {
+    pub(crate) fn add_device_with_ip<A: IpAddress>(
+        &mut self,
+        mac: UnicastAddr<Mac>,
+        ip: A,
+        subnet: Subnet<A>,
+    ) {
         let idx = self.devices.len();
         self.devices.push((mac, Some((ip.into(), subnet.into()))));
         self.device_routes.push((subnet.into(), idx));
     }
 
     /// Add an ARP table entry for a device's ARP table.
-    pub(crate) fn add_arp_table_entry(&mut self, device: usize, ip: Ipv4Addr, mac: Mac) {
+    pub(crate) fn add_arp_table_entry(
+        &mut self,
+        device: usize,
+        ip: Ipv4Addr,
+        mac: UnicastAddr<Mac>,
+    ) {
         self.arp_table_entries.push((device, ip, mac));
     }
 
@@ -462,7 +472,7 @@ impl DummyEventDispatcherBuilder {
         &mut self,
         device: usize,
         ip: UnicastAddr<Ipv6Addr>,
-        mac: Mac,
+        mac: UnicastAddr<Mac>,
     ) {
         self.ndp_table_entries.push((device, ip, mac));
     }
@@ -540,7 +550,7 @@ impl DummyEventDispatcherBuilder {
         }
         for (idx, ip, mac) in ndp_table_entries {
             let device = *idx_to_device_id.get(&idx).unwrap();
-            crate::device::insert_ndp_table_entry(&mut ctx, device, ip, mac);
+            crate::device::insert_ndp_table_entry(&mut ctx, device, ip, mac.get());
         }
         for (subnet, idx) in device_routes {
             let device = *idx_to_device_id.get(&idx).unwrap();
@@ -575,7 +585,7 @@ pub(crate) fn add_arp_or_ndp_table_entry<A: IpAddress>(
     builder: &mut DummyEventDispatcherBuilder,
     device: usize,
     ip: A,
-    mac: Mac,
+    mac: UnicastAddr<Mac>,
 ) {
     match ip.into() {
         IpAddr::V4(ip) => builder.add_arp_table_entry(device, ip, mac),
@@ -1530,9 +1540,9 @@ mod tests {
         let a = "alice";
         let b = "bob";
         let c = "calvin";
-        let mac_a = Mac::new([1, 2, 3, 4, 5, 6]);
-        let mac_b = Mac::new([1, 2, 3, 4, 5, 7]);
-        let mac_c = Mac::new([1, 2, 3, 4, 5, 8]);
+        let mac_a = UnicastAddr::new(Mac::new([2, 3, 4, 5, 6, 7])).unwrap();
+        let mac_b = UnicastAddr::new(Mac::new([2, 3, 4, 5, 6, 8])).unwrap();
+        let mac_c = UnicastAddr::new(Mac::new([2, 3, 4, 5, 6, 9])).unwrap();
         let ip_a = I::get_other_ip_address(1);
         let ip_b = I::get_other_ip_address(2);
         let ip_c = I::get_other_ip_address(3);

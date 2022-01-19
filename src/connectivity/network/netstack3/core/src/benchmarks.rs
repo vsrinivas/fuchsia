@@ -10,7 +10,7 @@
 use alloc::vec;
 use core::time::Duration;
 
-use net_types::ip::Ipv4;
+use net_types::{ip::Ipv4, Witness as _};
 use packet::{Buf, BufferMut, InnerPacketBuilder, Serializer};
 use packet_formats::ethernet::{
     testutil::{
@@ -177,8 +177,8 @@ fn bench_forward_minimum<B: Bencher>(b: &mut B, frame_size: usize) {
             IpProto::Udp.into(),
         ))
         .encapsulate(EthernetFrameBuilder::new(
-            DUMMY_CONFIG_V4.remote_mac,
-            DUMMY_CONFIG_V4.local_mac,
+            DUMMY_CONFIG_V4.remote_mac.get(),
+            DUMMY_CONFIG_V4.local_mac.get(),
             EtherType::Ipv4,
         ))
         .serialize_vec_outer()

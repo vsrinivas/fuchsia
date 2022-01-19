@@ -69,7 +69,7 @@ use core::time;
 
 use net_types::ethernet::Mac;
 use net_types::ip::{AddrSubnetEither, IpAddr, Ipv4, Ipv4Addr, Ipv6, Ipv6Addr, SubnetEither};
-use net_types::SpecifiedAddr;
+use net_types::{SpecifiedAddr, UnicastAddr};
 use packet::{Buf, BufferMut, EmptyBuf};
 
 use crate::context::{InstantContext, RngContext, TimerContext};
@@ -196,7 +196,7 @@ impl<D: EventDispatcher> StackState<D> {
     /// See [`initialize_device`] for more information.
     ///
     /// [`initialize_device`]: crate::device::initialize_device
-    pub fn add_ethernet_device(&mut self, mac: Mac, mtu: u32) -> DeviceId {
+    pub fn add_ethernet_device(&mut self, mac: UnicastAddr<Mac>, mtu: u32) -> DeviceId {
         self.device.add_ethernet_device(mac, mtu)
     }
 }
@@ -508,14 +508,20 @@ mod test {
 
         // Add IP (OK).
         let () = add_ip_addr_subnet(&mut ctx, device, addr_subnet).unwrap();
-        assert_eq!(get_all_ip_addr_subnets(&ctx, device).find(|&a| a == addr_subnet), Some(addr_subnet));
+        assert_eq!(
+            get_all_ip_addr_subnets(&ctx, device).find(|&a| a == addr_subnet),
+            Some(addr_subnet)
+        );
 
         // Add IP again (already exists).
         assert_eq!(
             add_ip_addr_subnet(&mut ctx, device, addr_subnet).unwrap_err(),
             NetstackError::Exists
         );
-        assert_eq!(get_all_ip_addr_subnets(&ctx, device).find(|&a| a == addr_subnet), Some(addr_subnet));
+        assert_eq!(
+            get_all_ip_addr_subnets(&ctx, device).find(|&a| a == addr_subnet),
+            Some(addr_subnet)
+        );
 
         // Add IP with different subnet (already exists).
         let wrong_addr_subnet = AddrSubnetEither::new(ip, prefix - 1).unwrap();
@@ -523,7 +529,10 @@ mod test {
             add_ip_addr_subnet(&mut ctx, device, wrong_addr_subnet).unwrap_err(),
             NetstackError::Exists
         );
-        assert_eq!(get_all_ip_addr_subnets(&ctx, device).find(|&a| a == addr_subnet), Some(addr_subnet));
+        assert_eq!(
+            get_all_ip_addr_subnets(&ctx, device).find(|&a| a == addr_subnet),
+            Some(addr_subnet)
+        );
 
         let ip = SpecifiedAddr::new(ip).unwrap();
         // Del IP (ok).

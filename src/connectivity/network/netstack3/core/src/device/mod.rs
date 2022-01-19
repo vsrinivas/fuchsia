@@ -23,6 +23,8 @@ use net_types::ethernet::Mac;
 use net_types::ip::{
     AddrSubnet, Ip, IpAddress, IpVersion, Ipv4, Ipv4Addr, Ipv6, Ipv6Addr, Ipv6SourceAddr,
 };
+#[cfg(test)]
+use net_types::Witness as _;
 use net_types::{MulticastAddr, SpecifiedAddr, UnicastAddr};
 use nonzero_ext::nonzero;
 use packet::{Buf, BufferMut, EmptyBuf, Serializer};
@@ -400,7 +402,7 @@ impl<I: Instant> DeviceLayerState<I> {
     /// `add` adds a new `EthernetDeviceState` with the given MAC address and
     /// MTU. The MTU will be taken as a limit on the size of Ethernet payloads -
     /// the Ethernet header is not counted towards the MTU.
-    pub(crate) fn add_ethernet_device(&mut self, mac: Mac, mtu: u32) -> DeviceId {
+    pub(crate) fn add_ethernet_device(&mut self, mac: UnicastAddr<Mac>, mtu: u32) -> DeviceId {
         let mut builder = EthernetDeviceStateBuilder::new(mac, mtu);
         builder.set_ndp_configs(self.default_ndp_configs.clone());
         let ethernet_state = DeviceState::new(IpLinkDeviceState::new(builder.build()));
@@ -1114,11 +1116,11 @@ pub(super) fn insert_static_arp_table_entry<D: EventDispatcher>(
     ctx: &mut Ctx<D>,
     device: DeviceId,
     addr: Ipv4Addr,
-    mac: Mac,
+    mac: UnicastAddr<Mac>,
 ) {
     match device.protocol {
         DeviceProtocol::Ethernet => {
-            self::ethernet::insert_static_arp_table_entry(ctx, device.id.into(), addr, mac)
+            self::ethernet::insert_static_arp_table_entry(ctx, device.id.into(), addr, mac.get())
         }
     }
 }

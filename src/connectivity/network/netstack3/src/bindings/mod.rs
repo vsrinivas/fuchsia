@@ -37,7 +37,6 @@ use fuchsia_zircon as zx;
 use futures::channel::mpsc;
 use futures::{lock::Mutex, sink::SinkExt as _, FutureExt as _, StreamExt as _, TryStreamExt as _};
 use log::{debug, error, warn};
-use net_types::ethernet::Mac;
 use packet::{BufferMut, Serializer};
 use packet_formats::icmp::{IcmpEchoReply, IcmpMessage, IcmpUnusedCode};
 use rand::rngs::OsRng;
@@ -405,9 +404,8 @@ where
             // two stages: add device to the core to get an id, then reach into
             // the driver to get updated info before triggering the core to
             // allow traffic on the interface.
-            let generate_core_id = |info: &DeviceInfo| {
-                state.add_ethernet_device(Mac::new(info.mac().octets), info.mtu())
-            };
+            let generate_core_id =
+                |info: &DeviceInfo| state.add_ethernet_device(info.mac(), info.mtu());
             match dispatcher.as_mut().activate_device(id, generate_core_id) {
                 Ok(device_info) => {
                     // we can unwrap core_id here because activate_device just

@@ -340,7 +340,7 @@ pub(crate) trait NdpContext<D: LinkDevice>:
     + TimerContext<NdpTimerId<D, <Self as DeviceIdContext<D>>::DeviceId>>
 {
     /// Get the link layer address for a device.
-    fn get_link_layer_addr(&self, device_id: Self::DeviceId) -> D::Address;
+    fn get_link_layer_addr(&self, device_id: Self::DeviceId) -> UnicastAddr<D::Address>;
 
     /// Get the interface identifier for a device as defined by RFC 4291 section 2.5.1.
     fn get_interface_identifier(&self, device_id: Self::DeviceId) -> [u8; 8];
@@ -2565,8 +2565,15 @@ mod tests {
         }
     }
 
-    const TEST_LOCAL_MAC: Mac = Mac::new([0, 1, 2, 3, 4, 5]);
-    const TEST_REMOTE_MAC: Mac = Mac::new([6, 7, 8, 9, 10, 11]);
+    // TODO(https://github.com/rust-lang/rust/issues/67441): Make these constants once const
+    // Option::unwrap is stablized
+    fn local_mac() -> UnicastAddr<Mac> {
+        UnicastAddr::new(Mac::new([0, 1, 2, 3, 4, 5])).unwrap()
+    }
+
+    fn remote_mac() -> UnicastAddr<Mac> {
+        UnicastAddr::new(Mac::new([6, 7, 8, 9, 10, 11])).unwrap()
+    }
 
     fn local_ip() -> UnicastAddr<Ipv6Addr> {
         UnicastAddr::from_witness(DUMMY_CONFIG_V6.local_ip).unwrap()
@@ -2672,7 +2679,7 @@ mod tests {
         set_logger_for_test();
         let mut ctx = DummyEventDispatcherBuilder::default().build::<DummyEventDispatcher>();
         let dev_id =
-            ctx.state.device.add_ethernet_device(TEST_LOCAL_MAC, Ipv6::MINIMUM_LINK_MTU.into());
+            ctx.state.device.add_ethernet_device(local_mac(), Ipv6::MINIMUM_LINK_MTU.into());
         crate::device::initialize_device(&mut ctx, dev_id);
         // Now we have to manually assign the IP addresses, see
         // `EthernetLinkDevice::get_ipv6_addr`
@@ -2706,9 +2713,9 @@ mod tests {
     fn test_address_resolution() {
         set_logger_for_test();
         let mut local = DummyEventDispatcherBuilder::default();
-        assert_eq!(local.add_device(TEST_LOCAL_MAC), 0);
+        assert_eq!(local.add_device(local_mac()), 0);
         let mut remote = DummyEventDispatcherBuilder::default();
-        assert_eq!(remote.add_device(TEST_REMOTE_MAC), 0);
+        assert_eq!(remote.add_device(remote_mac()), 0);
         let device_id = DeviceId::new_ethernet(0);
 
         let mut net = DummyNetwork::new(
@@ -2800,7 +2807,7 @@ mod tests {
         .neighbors
         .get_neighbor_state(&remote_ip())
         .unwrap();
-        assert_eq!(local_neighbor.link_address.unwrap(), TEST_REMOTE_MAC,);
+        assert_eq!(local_neighbor.link_address.unwrap(), remote_mac().get(),);
         // Remote must be reachable from local since it responded with an NA
         // message with the solicited flag set.
         assert_eq!(local_neighbor.state, NeighborEntryState::Reachable,);
@@ -2812,7 +2819,7 @@ mod tests {
         .neighbors
         .get_neighbor_state(&local_ip())
         .unwrap();
-        assert_eq!(remote_neighbor.link_address.unwrap(), TEST_LOCAL_MAC,);
+        assert_eq!(remote_neighbor.link_address.unwrap(), local_mac().get(),);
         // Local must be marked as stale because remote got an NS from it but
         // has not itself sent any packets to it and confirmed that local
         // actually received it.
@@ -2843,7 +2850,7 @@ mod tests {
         set_logger_for_test();
         let mut ctx = DummyEventDispatcherBuilder::default().build::<DummyEventDispatcher>();
         let dev_id =
-            ctx.state.device.add_ethernet_device(TEST_LOCAL_MAC, Ipv6::MINIMUM_LINK_MTU.into());
+            ctx.state.device.add_ethernet_device(local_mac(), Ipv6::MINIMUM_LINK_MTU.into());
         crate::device::initialize_device(&mut ctx, dev_id);
         // Now we have to manually assign the IP addresses, see
         // `EthernetLinkDevice::get_ipv6_addr`
@@ -2875,7 +2882,7 @@ mod tests {
         // them should be able to detect each other is using the same address,
         // so they will both give up using that address.
         set_logger_for_test();
-        let mac = Mac::new([1, 2, 3, 4, 5, 6]);
+        let mac = UnicastAddr::new(Mac::new([6, 5, 4, 3, 2, 1])).unwrap();
         let ll_addr: Ipv6Addr = mac.to_ipv6_link_local().addr().get();
         let multicast_addr = ll_addr.to_solicited_node_address();
         let local = DummyEventDispatcherBuilder::default();
@@ -2946,9 +2953,9 @@ mod tests {
         // address.
         set_logger_for_test();
         let mut local = DummyEventDispatcherBuilder::default();
-        assert_eq!(local.add_device(TEST_LOCAL_MAC), 0);
+        assert_eq!(local.add_device(local_mac()), 0);
         let mut remote = DummyEventDispatcherBuilder::default();
-        assert_eq!(remote.add_device(TEST_REMOTE_MAC), 0);
+        assert_eq!(remote.add_device(remote_mac()), 0);
         let device_id = DeviceId::new_ethernet(0);
 
         let mut net = DummyNetwork::new(
@@ -3031,7 +3038,7 @@ mod tests {
         // `1` (see `DUP_ADDR_DETECT_TRANSMITS`).
         let mut ctx = DummyEventDispatcherBuilder::default()
             .build_with(StackStateBuilder::default(), DummyEventDispatcher::default());
-        let dev_id = ctx.state.add_ethernet_device(TEST_LOCAL_MAC, Ipv6::MINIMUM_LINK_MTU.into());
+        let dev_id = ctx.state.add_ethernet_device(local_mac(), Ipv6::MINIMUM_LINK_MTU.into());
         crate::device::initialize_device(&mut ctx, dev_id);
         let addr = local_ip();
         add_ip_addr_subnet(&mut ctx, dev_id, AddrSubnet::new(addr.get(), 128).unwrap()).unwrap();
@@ -3066,7 +3073,7 @@ mod tests {
         ndp_configs.set_dup_addr_detect_transmits(None);
         stack_builder.device_builder().set_default_ndp_configs(ndp_configs);
         let mut ctx = Ctx::new(stack_builder.build(), DummyEventDispatcher::default());
-        let dev_id = ctx.state.add_ethernet_device(TEST_LOCAL_MAC, Ipv6::MINIMUM_LINK_MTU.into());
+        let dev_id = ctx.state.add_ethernet_device(local_mac(), Ipv6::MINIMUM_LINK_MTU.into());
         crate::device::initialize_device(&mut ctx, dev_id);
 
         // Enable DAD.
@@ -3095,7 +3102,7 @@ mod tests {
         // Test if the implementation is correct when we have more than 1 NS
         // packets to send.
         set_logger_for_test();
-        let mac = Mac::new([1, 2, 3, 4, 5, 6]);
+        let mac = UnicastAddr::new(Mac::new([6, 5, 4, 3, 2, 1])).unwrap();
         let mut local = DummyEventDispatcherBuilder::default();
         assert_eq!(local.add_device(mac), 0);
         let mut remote = DummyEventDispatcherBuilder::default();
@@ -3167,7 +3174,7 @@ mod tests {
     #[test]
     fn test_dad_multiple_ips_simultaneously() {
         let mut ctx = DummyEventDispatcherBuilder::default().build::<DummyEventDispatcher>();
-        let dev_id = ctx.state.add_ethernet_device(TEST_LOCAL_MAC, Ipv6::MINIMUM_LINK_MTU.into());
+        let dev_id = ctx.state.add_ethernet_device(local_mac(), Ipv6::MINIMUM_LINK_MTU.into());
         crate::device::initialize_device(&mut ctx, dev_id);
 
         assert_empty(ctx.dispatcher.frames_sent());
@@ -3234,7 +3241,7 @@ mod tests {
     #[test]
     fn test_dad_cancel_when_ip_removed() {
         let mut ctx = DummyEventDispatcherBuilder::default().build::<DummyEventDispatcher>();
-        let dev_id = ctx.state.add_ethernet_device(TEST_LOCAL_MAC, Ipv6::MINIMUM_LINK_MTU.into());
+        let dev_id = ctx.state.add_ethernet_device(local_mac(), Ipv6::MINIMUM_LINK_MTU.into());
         crate::device::initialize_device(&mut ctx, dev_id);
 
         // Enable DAD.
@@ -3893,7 +3900,7 @@ mod tests {
         let config = Ipv6::DUMMY_CONFIG;
         let mut ctx = DummyEventDispatcherBuilder::default().build::<DummyEventDispatcher>();
         let hw_mtu = 5000;
-        let device = ctx.state.add_ethernet_device(TEST_LOCAL_MAC, hw_mtu);
+        let device = ctx.state.add_ethernet_device(local_mac(), hw_mtu);
         let device_id = device.id().into();
         let src_mac = Mac::new([10, 11, 12, 13, 14, 15]);
         let src_ip = src_mac.to_ipv6_link_local().addr();
@@ -4123,7 +4130,7 @@ mod tests {
             code: IcmpUnusedCode,
         ) {
             let dummy_config = Ipv6::DUMMY_CONFIG;
-            assert_eq!(src_mac, dummy_config.local_mac);
+            assert_eq!(src_mac, dummy_config.local_mac.get());
             assert_eq!(src_ip, dummy_config.local_mac.to_ipv6_link_local().addr().get());
             assert_eq!(message, RouterSolicitation::default());
             assert_eq!(code, IcmpUnusedCode);
@@ -4201,14 +4208,14 @@ mod tests {
                     // have a source IP address set.
                     assert_eq!(p.body().iter().count(), 1);
                     if let Some(ll) = get_source_link_layer_option::<Mac, _>(p.body()) {
-                        assert_eq!(ll, dummy_config.local_mac);
+                        assert_eq!(ll, dummy_config.local_mac.get());
                     } else {
                         panic!("Should have a source link layer option");
                     }
                 },
             )
             .unwrap();
-        assert_eq!(src_mac, dummy_config.local_mac);
+        assert_eq!(src_mac, dummy_config.local_mac.get());
         assert_eq!(src_ip, dummy_config.local_ip.get());
         assert_eq!(message, RouterSolicitation::default());
         assert_eq!(code, IcmpUnusedCode);
@@ -4558,7 +4565,7 @@ mod tests {
         let device = ctx.state.add_ethernet_device(config.local_mac, Ipv6::MINIMUM_LINK_MTU.into());
         crate::device::initialize_device(&mut ctx, device);
 
-        let neighbor_mac = config.remote_mac;
+        let neighbor_mac = config.remote_mac.get();
         let neighbor_ip = neighbor_mac.to_ipv6_link_local().addr();
         let all_nodes_addr = Ipv6::ALL_NODES_LINK_LOCAL_MULTICAST_ADDRESS.into_specified();
 
