@@ -150,7 +150,7 @@ VK_TEST_P(DisplayCompositorParameterizedSmokeTest, FullscreenRectangleTest) {
   // we still use the VkRenderer so that all of the same constraints we'd expect to
   // see set in a real production setting are reproduced here.
   auto [escher, renderer] = NewVkRenderer();
-  auto display_compositor = std::make_unique<flatland::DisplayCompositor>(
+  auto display_compositor = std::make_shared<flatland::DisplayCompositor>(
       dispatcher(), display_manager_->default_display_controller(), renderer,
       utils::CreateSysmemAllocatorSyncPtr("display_compositor_pixeltest"),
       BufferCollectionImportMode::AttemptDisplayConstraints);
@@ -221,7 +221,7 @@ VK_TEST_P(DisplayCompositorParameterizedSmokeTest, FullscreenRectangleTest) {
   DisplayInfo display_info{
       .dimensions = glm::uvec2(display->width_in_px(), display->height_in_px()),
       .formats = {kPixelFormat}};
-  display_compositor->AddDisplay(display->display_id(), display_info, /*num_vmos*/ 0,
+  display_compositor->AddDisplay(display, display_info, /*num_vmos*/ 0,
                                  /*out_collection_info*/ nullptr);
 
   // Setup the uberstruct data.

@@ -353,7 +353,7 @@ VK_TEST_P(DisplayCompositorParameterizedPixelTest, FullscreenRectangleTest) {
   // constraints. By using the null renderer, we can demonstrate that the rendering is being done
   // directly by the display controller hardware, and not the software renderer.
   auto [escher, renderer] = NewVkRenderer();
-  auto display_compositor = std::make_unique<flatland::DisplayCompositor>(
+  auto display_compositor = std::make_shared<flatland::DisplayCompositor>(
       dispatcher(), display_manager_->default_display_controller(), renderer,
       utils::CreateSysmemAllocatorSyncPtr("display_compositor_pixeltest"),
       BufferCollectionImportMode::AttemptDisplayConstraints);
@@ -431,7 +431,7 @@ VK_TEST_P(DisplayCompositorParameterizedPixelTest, FullscreenRectangleTest) {
   DisplayInfo display_info{
       .dimensions = glm::uvec2(display->width_in_px(), display->height_in_px()),
       .formats = {kPixelFormat}};
-  display_compositor->AddDisplay(display->display_id(), display_info, /*num_vmos*/ 0,
+  display_compositor->AddDisplay(display, display_info, /*num_vmos*/ 0,
                                  /*out_buffer_collection*/ nullptr);
 
   // Setup the uberstruct data.
@@ -467,7 +467,7 @@ VK_TEST_P(DisplayCompositorParameterizedPixelTest, FullscreenRectangleTest) {
 // the display hardware.
 VK_TEST_P(DisplayCompositorParameterizedPixelTest, FullscreenSolidColorRectangleTest) {
   auto renderer = NewNullRenderer();
-  auto display_compositor = std::make_unique<flatland::DisplayCompositor>(
+  auto display_compositor = std::make_shared<flatland::DisplayCompositor>(
       dispatcher(), display_manager_->default_display_controller(), renderer,
       utils::CreateSysmemAllocatorSyncPtr("display_compositor_pixeltest"),
       BufferCollectionImportMode::AttemptDisplayConstraints);
@@ -542,7 +542,7 @@ VK_TEST_P(DisplayCompositorParameterizedPixelTest, FullscreenSolidColorRectangle
   DisplayInfo display_info{
       .dimensions = glm::uvec2(display->width_in_px(), display->height_in_px()),
       .formats = {kPixelFormat}};
-  display_compositor->AddDisplay(display->display_id(), display_info, /*num_vmos*/ 0,
+  display_compositor->AddDisplay(display, display_info, /*num_vmos*/ 0,
                                  /*out_buffer_collection*/ nullptr);
 
   // Setup the uberstruct data.
@@ -624,7 +624,7 @@ VK_TEST_P(DisplayCompositorFallbackParameterizedPixelTest, SoftwareRenderingTest
 
   // Use the VK renderer here so we can make use of software rendering.
   auto [escher, renderer] = NewVkRenderer();
-  auto display_compositor = std::make_unique<flatland::DisplayCompositor>(
+  auto display_compositor = std::make_shared<flatland::DisplayCompositor>(
       dispatcher(), display_manager_->default_display_controller(), renderer,
       utils::CreateSysmemAllocatorSyncPtr("display_compositor_pixeltest"),
       BufferCollectionImportMode::AttemptDisplayConstraints);
@@ -695,8 +695,8 @@ VK_TEST_P(DisplayCompositorFallbackParameterizedPixelTest, SoftwareRenderingTest
   DisplayInfo display_info{
       .dimensions = glm::uvec2(display->width_in_px(), display->height_in_px()),
       .formats = {kPixelFormat}};
-  auto render_target_collection_id = display_compositor->AddDisplay(
-      display->display_id(), display_info, /*num_vmos*/ 2, &render_target_info);
+  auto render_target_collection_id =
+      display_compositor->AddDisplay(display, display_info, /*num_vmos*/ 2, &render_target_info);
   EXPECT_NE(render_target_collection_id, 0U);
 
   // Now we can finally render.
@@ -800,7 +800,7 @@ VK_TEST_F(DisplayCompositorPixelTest, OverlappingTransparencyTest) {
 
   // Use the VK renderer here so we can make use of software rendering.
   auto [escher, renderer] = NewVkRenderer();
-  auto display_compositor = std::make_unique<flatland::DisplayCompositor>(
+  auto display_compositor = std::make_shared<flatland::DisplayCompositor>(
       dispatcher(), display_manager_->default_display_controller(), renderer,
       utils::CreateSysmemAllocatorSyncPtr("display_compositor_pixeltest"),
       BufferCollectionImportMode::AttemptDisplayConstraints);
@@ -833,8 +833,8 @@ VK_TEST_F(DisplayCompositorPixelTest, OverlappingTransparencyTest) {
   DisplayInfo display_info{
       .dimensions = glm::uvec2(display->width_in_px(), display->height_in_px()),
       .formats = {kPixelFormat}};
-  auto render_target_collection_id = display_compositor->AddDisplay(
-      display->display_id(), display_info, /*num_vmos*/ 2, &render_target_info);
+  auto render_target_collection_id =
+      display_compositor->AddDisplay(display, display_info, /*num_vmos*/ 2, &render_target_info);
   EXPECT_NE(render_target_collection_id, 0U);
 
   // Now we can finally render.

@@ -29,6 +29,8 @@ class MockDisplayController : public fuchsia::hardware::display::testing::Contro
 
   MOCK_METHOD(void, ApplyConfig, ());
 
+  MOCK_METHOD(void, GetLatestAppliedConfigStamp, (GetLatestAppliedConfigStampCallback));
+
   MOCK_METHOD(void, CheckConfig, (bool, CheckConfigCallback));
 
   MOCK_METHOD(void, ImportBufferCollection,

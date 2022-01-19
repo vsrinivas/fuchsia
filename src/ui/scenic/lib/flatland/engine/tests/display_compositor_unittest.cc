@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <memory>
+
 #include "src/lib/fsl/handles/object_info.h"
 #include "src/ui/scenic/lib/display/tests/mock_display_controller.h"
 #include "src/ui/scenic/lib/flatland/buffers/util.h"
@@ -56,7 +58,7 @@ class DisplayCompositorTest : public DisplayCompositorTestBase {
         std::make_shared<fuchsia::hardware::display::ControllerSyncPtr>();
     shared_display_controller->Bind(std::move(controller_channel_client));
 
-    display_compositor_ = std::make_unique<flatland::DisplayCompositor>(
+    display_compositor_ = std::make_shared<flatland::DisplayCompositor>(
         dispatcher(), std::move(shared_display_controller), renderer_,
         utils::CreateSysmemAllocatorSyncPtr("display_compositor_unittest"),
         BufferCollectionImportMode::AttemptDisplayConstraints);
@@ -90,11 +92,19 @@ class DisplayCompositorTest : public DisplayCompositorTestBase {
     display_compositor_->import_mode_ = import_mode;
   }
 
+  void SendOnVsyncEvent(fuchsia::hardware::display::ConfigStamp stamp) {
+    display_compositor_->OnVsync(zx::time(), stamp);
+  }
+
+  std::deque<DisplayCompositor::ApplyConfigInfo> GetPendingApplyConfigs() {
+    return display_compositor_->pending_apply_configs_;
+  }
+
  protected:
   const zx_pixel_format_t kPixelFormat = ZX_PIXEL_FORMAT_RGB_x888;
   std::unique_ptr<flatland::MockDisplayController> mock_display_controller_;
   std::shared_ptr<flatland::MockRenderer> renderer_;
-  std::unique_ptr<flatland::DisplayCompositor> display_compositor_;
+  std::shared_ptr<flatland::DisplayCompositor> display_compositor_;
   fuchsia::sysmem::AllocatorSyncPtr sysmem_allocator_;
 };
 
@@ -380,6 +390,74 @@ TEST_F(DisplayCompositorTest, ImportImageErrorCases) {
   server.join();
 }
 
+// This test checks that DisplayCompositor properly processes ConfigStamp from Vsync.
+TEST_F(DisplayCompositorTest, VsyncConfigStampAreProcessed) {
+  auto session = CreateSession();
+  const TransformHandle root_handle = session.graph().CreateTransform();
+  uint64_t display_id = 1;
+  glm::uvec2 resolution(1024, 768);
+  DisplayInfo display_info = {resolution, {kPixelFormat}};
+
+  // Set the mock display controller functions and wait for messages.
+  auto mock = mock_display_controller_.get();
+  std::thread server([&mock]() mutable {
+    // We have to wait for 2 times:
+    // - 2 calls to DiscardConfig
+    // - 2 calls to CheckConfig
+    // - 2 calls to ApplyConfig
+    // - 2 calls to GetLatestAppliedConfigStamp
+    // - 1 call to DiscardConfig
+    // TODO(fxbug.dev/71264): Use function call counters from display's MockDisplayController.
+    for (uint32_t i = 0; i < 9; i++) {
+      mock->WaitForMessage();
+    }
+  });
+
+  EXPECT_CALL(*mock, CheckConfig(_, _))
+      .WillRepeatedly(
+          testing::Invoke([&](bool, MockDisplayController::CheckConfigCallback callback) {
+            fuchsia::hardware::display::ConfigResult result =
+                fuchsia::hardware::display::ConfigResult::OK;
+            std::vector<fuchsia::hardware::display::ClientCompositionOp> ops;
+            callback(result, ops);
+          }));
+  EXPECT_CALL(*mock, ApplyConfig()).WillRepeatedly(Return());
+
+  const uint64_t kConfigStamp1 = 234;
+  EXPECT_CALL(*mock, GetLatestAppliedConfigStamp(_))
+      .WillOnce(
+          testing::Invoke([&](MockDisplayController::GetLatestAppliedConfigStampCallback callback) {
+            fuchsia::hardware::display::ConfigStamp stamp = {kConfigStamp1};
+            callback(stamp);
+          }));
+  display_compositor_->RenderFrame(1, zx::time(1), {}, {},
+                                   [](const scheduling::FrameRenderer::Timestamps&) {});
+
+  const uint64_t kConfigStamp2 = 123;
+  EXPECT_CALL(*mock, GetLatestAppliedConfigStamp(_))
+      .WillOnce(
+          testing::Invoke([&](MockDisplayController::GetLatestAppliedConfigStampCallback callback) {
+            fuchsia::hardware::display::ConfigStamp stamp = {kConfigStamp2};
+            callback(stamp);
+          }));
+  display_compositor_->RenderFrame(2, zx::time(2), {}, {},
+                                   [](const scheduling::FrameRenderer::Timestamps&) {});
+
+  EXPECT_EQ(2u, GetPendingApplyConfigs().size());
+
+  // Sending another vsync should be skipped.
+  const uint64_t kConfigStamp3 = 345;
+  SendOnVsyncEvent({kConfigStamp3});
+  EXPECT_EQ(2u, GetPendingApplyConfigs().size());
+
+  // Sending later vsync should signal and remove the earlier one too.
+  SendOnVsyncEvent({kConfigStamp2});
+  EXPECT_EQ(0u, GetPendingApplyConfigs().size());
+
+  display_compositor_.reset();
+  server.join();
+}
+
 // When compositing directly to a hardware display layer, the display controller
 // takes in source and destination Frame object types, which mirrors flatland usage.
 // The source frames are nonnormalized UV coordinates and the destination frames are
@@ -482,10 +560,11 @@ TEST_F(DisplayCompositorTest, HardwareFrameCorrectnessTest) {
     // - 2 calls to set the layer primary positions
     // - 1 call to check the config
     // - 1 call to apply the config
+    // - 1 call to GetLatestAppliedConfigStamp
     // - 1 call to DiscardConfig
-    // -2 calls to destroy layer.
+    // - 2 calls to destroy layer.
     // TODO(fxbug.dev/71264): Use function call counters from display's MockDisplayController.
-    for (uint32_t i = 0; i < 21; i++) {
+    for (uint32_t i = 0; i < 22; i++) {
       mock->WaitForMessage();
     }
   });
@@ -577,11 +656,20 @@ TEST_F(DisplayCompositorTest, HardwareFrameCorrectnessTest) {
         callback(result, ops);
       }));
 
-  EXPECT_CALL(*mock, ApplyConfig()).WillOnce(Return());
+  EXPECT_CALL(*renderer_.get(), ChoosePreferredPixelFormat(_));
 
   DisplayInfo display_info = {resolution, {kPixelFormat}};
-  display_compositor_->AddDisplay(display_id, display_info, /*num_vmos*/ 0,
+  scenic_impl::display::Display display(display_id, resolution.x, resolution.y);
+  display_compositor_->AddDisplay(&display, display_info, /*num_vmos*/ 0,
                                   /*out_buffer_collection*/ nullptr);
+
+  EXPECT_CALL(*mock, ApplyConfig()).WillOnce(Return());
+  EXPECT_CALL(*mock, GetLatestAppliedConfigStamp(_))
+      .WillOnce(
+          testing::Invoke([&](MockDisplayController::GetLatestAppliedConfigStampCallback callback) {
+            fuchsia::hardware::display::ConfigStamp stamp = {1};
+            callback(stamp);
+          }));
 
   display_compositor_->RenderFrame(
       1, zx::time(1),

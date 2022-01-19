@@ -20,15 +20,6 @@ namespace flatland {
 
 namespace {
 
-// Since Scenic's wakeup time is hardcoded to be 14ms from vsync, it is safe to assume that
-// waking up 14ms in the future will be after vsync has occurred.
-constexpr zx::duration kFakeVsyncDuration = zx::msec(14);
-
-// The duration we wait for display controller's signal event. Vsync might not happening
-// within the hardcoded time in kFakeVsyncDuration, so this wait helps to ensure it is safe to reuse
-// image.
-constexpr zx::time kDisplaySignalWaitDuration = zx::time::infinite();
-
 // Debugging color used to highlight images that have gone through the GPU rendering path.
 const std::array<float, 4> kDebugColor = {0.9, 0.5, 0.5, 1};
 
@@ -480,11 +471,15 @@ void DisplayCompositor::DiscardConfig() {
   (*display_controller_.get())->CheckConfig(/*discard*/ true, &result, &ops);
 }
 
-void DisplayCompositor::ApplyConfig() {
+fuchsia::hardware::display::ConfigStamp DisplayCompositor::ApplyConfig() {
   TRACE_DURATION("gfx", "flatland::DisplayCompositor::ApplyConfig");
   std::unique_lock<std::mutex> lock(lock_);
   auto status = (*display_controller_.get())->ApplyConfig();
   FX_DCHECK(status == ZX_OK);
+  fuchsia::hardware::display::ConfigStamp pending_config_stamp;
+  status = (*display_controller_.get())->GetLatestAppliedConfigStamp(&pending_config_stamp);
+  FX_DCHECK(status == ZX_OK);
+  return pending_config_stamp;
 }
 
 void DisplayCompositor::RenderFrame(uint64_t frame_number, zx::time presentation_time,
@@ -556,12 +551,11 @@ void DisplayCompositor::RenderFrame(uint64_t frame_number, zx::time presentation
       // Reset the event data.
       auto& event_data = display_engine_data.frame_event_datas[curr_vmo];
 
-      // TODO(fxbug.dev/77414): Once we are calling ApplyConfig2() here, we can expect the retired
-      // event to already have been signaled and verify this without waiting. But we wait now
-      // because vsync might not happening within the hardcoded time in kFakeVsyncDuration.
+      // TODO(fxbug.dev/91737): Remove this after the direct-to-display path is stable.
+      // We expect the retired event to already have been signaled. Verify this without waiting.
       {
-        zx_status_t status = event_data.signal_event.wait_one(ZX_EVENT_SIGNALED,
-                                                              kDisplaySignalWaitDuration, nullptr);
+        zx_status_t status =
+            event_data.signal_event.wait_one(ZX_EVENT_SIGNALED, zx::time(), nullptr);
         if (status != ZX_OK) {
           FX_DCHECK(status == ZX_ERR_TIMED_OUT) << "unexpected status: " << status;
           FX_LOGS(ERROR)
@@ -629,24 +623,43 @@ void DisplayCompositor::RenderFrame(uint64_t frame_number, zx::time presentation
   // should obtain the fences for that frame and pass them directly to ApplyConfig2().
   // ReleaseFenceManager is somewhat poorly suited to this, because it was designed for an old
   // version of ApplyConfig2(), which latter proved to be infeasible for some drivers to implement.
-  // For the time being, we fake a vsync event with a hardcoded timer.
-  ApplyConfig();
-  async::PostDelayedTask(
-      async_get_default_dispatcher(),
-      [weak = weak_factory_.GetWeakPtr(), frame_number, display_ids{std::move(display_ids)}]() {
-        if (auto thiz = weak.get()) {
-          for (auto display_id : display_ids) {
-            thiz->OnVsync(display_id, frame_number, zx::time(zx_clock_get_monotonic()));
-          }
-        }
-      },
-      kFakeVsyncDuration);
+  const auto& config_stamp = ApplyConfig();
+  pending_apply_configs_.push_back({.config_stamp = config_stamp, .frame_number = frame_number});
 }
 
-void DisplayCompositor::OnVsync(uint64_t display_id, uint64_t frame_number, zx::time timestamp) {
-  FX_DCHECK(display_id == 1) << "currently expect hardcoded display_id == 1, not " << display_id;
+void DisplayCompositor::OnVsync(zx::time timestamp,
+                                fuchsia::hardware::display::ConfigStamp applied_config_stamp) {
   TRACE_DURATION("gfx", "Flatland::DisplayCompositor::OnVsync");
-  release_fence_manager_.OnVsync(frame_number, timestamp);
+
+  // We might receive multiple OnVsync() callbacks with the same |applied_config_stamp| if the scene
+  // doesn't change. Early exit for these cases.
+  if (last_presented_config_stamp_.has_value() &&
+      fidl::Equals(applied_config_stamp, last_presented_config_stamp_.value())) {
+    return;
+  }
+
+  // Verify that the configuration from Vsync is in the [pending_apply_configs_] queue.
+  auto vsync_frame_it = std::find_if(pending_apply_configs_.begin(), pending_apply_configs_.end(),
+                                     [applied_config_stamp](const ApplyConfigInfo& info) {
+                                       return fidl::Equals(info.config_stamp, applied_config_stamp);
+                                     });
+
+  // It is possible that the config stamp doesn't match any config applied by this DisplayCompositor
+  // instance. i.e. it could be from another client. Thus we just ignore these events.
+  if (vsync_frame_it == pending_apply_configs_.end()) {
+    FX_LOGS(INFO) << "The config stamp <" << applied_config_stamp.value << "> was not generated "
+                  << "by current DisplayCompositor. Vsync event skipped.";
+    return;
+  }
+
+  // Handle the presented ApplyConfig() call, as well as the skipped ones.
+  auto it = pending_apply_configs_.begin();
+  auto end = std::next(vsync_frame_it);
+  while (it != end) {
+    release_fence_manager_.OnVsync(it->frame_number, timestamp);
+    it = pending_apply_configs_.erase(it);
+  }
+  last_presented_config_stamp_ = applied_config_stamp;
 }
 
 DisplayCompositor::FrameEventData DisplayCompositor::NewFrameEventData() {
@@ -672,8 +685,9 @@ DisplayCompositor::FrameEventData DisplayCompositor::NewFrameEventData() {
 }
 
 allocation::GlobalBufferCollectionId DisplayCompositor::AddDisplay(
-    uint64_t display_id, DisplayInfo info, uint32_t num_vmos,
+    scenic_impl::display::Display* display, DisplayInfo info, uint32_t num_vmos,
     fuchsia::sysmem::BufferCollectionInfo_2* out_collection_info) {
+  const auto display_id = display->display_id();
   FX_DCHECK(display_engine_data_map_.find(display_id) == display_engine_data_map_.end())
       << "DisplayCompositor::AddDisplay(): display already exists: " << display_id;
 
@@ -695,6 +709,15 @@ allocation::GlobalBufferCollectionId DisplayCompositor::AddDisplay(
   for (uint32_t i = 0; i < 2; i++) {
     display_engine_data.layers.push_back(CreateDisplayLayer());
   }
+
+  // Add vsync callback on display. Note that this will overwrite the existing callback on
+  // |display| and other clients won't receive any, i.e. gfx.
+  display->SetVsyncCallback(
+      [weak_ref = weak_from_this()](zx::time timestamp,
+                                    fuchsia::hardware::display::ConfigStamp applied_config_stamp) {
+        if (auto ref = weak_ref.lock())
+          ref->OnVsync(timestamp, applied_config_stamp);
+      });
 
   // Exit early if there are no vmos to create.
   if (num_vmos == 0) {

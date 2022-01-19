@@ -8,8 +8,12 @@
 #include <fuchsia/sysmem/cpp/fidl.h>
 #include <lib/async/dispatcher.h>
 
+#include <deque>
+#include <memory>
+
 #include "src/lib/fxl/memory/weak_ptr.h"
 #include "src/ui/scenic/lib/allocation/buffer_collection_importer.h"
+#include "src/ui/scenic/lib/display/display.h"
 #include "src/ui/scenic/lib/display/util.h"
 #include "src/ui/scenic/lib/flatland/engine/engine_types.h"
 #include "src/ui/scenic/lib/flatland/engine/release_fence_manager.h"
@@ -30,7 +34,8 @@ class DisplayCompositorTest;
 // BufferCollectionImporter interface is how Flatland instances communicate with the
 // DisplayCompositor, providing it with the necessary data to render without exposing to Flatland
 // the DisplayController or other dependencies.
-class DisplayCompositor final : public allocation::BufferCollectionImporter {
+class DisplayCompositor final : public allocation::BufferCollectionImporter,
+                                public std::enable_shared_from_this<DisplayCompositor> {
  public:
   // TODO(fxbug.dev/66807): The DisplayCompositor has multiple parts of its code where usage of the
   // display controller is protected by locks, because of the multithreaded environment of flatland.
@@ -81,7 +86,7 @@ class DisplayCompositor final : public allocation::BufferCollectionImporter {
   // TODO(fxbug.dev/59646): We need to figure out exactly how we want the display to anchor
   // to the Flatland hierarchy.
   allocation::GlobalBufferCollectionId AddDisplay(
-      uint64_t display_id, DisplayInfo info, uint32_t num_vmos,
+      scenic_impl::display::Display* display, DisplayInfo info, uint32_t num_vmos,
       fuchsia::sysmem::BufferCollectionInfo_2* out_collection_info);
 
  private:
@@ -92,7 +97,7 @@ class DisplayCompositor final : public allocation::BufferCollectionImporter {
   // Notifies the compositor that a vsync has occurred, in response to a display configuration
   // applied by the compositor.  It is the compositor's responsibility to signal any release fences
   // corresponding to the frame identified by |frame_number|.
-  void OnVsync(uint64_t display_id, uint64_t frame_number, zx::time timestamp);
+  void OnVsync(zx::time timestamp, fuchsia::hardware::display::ConfigStamp applied_config_stamp);
 
   struct DisplayConfigResponse {
     // Whether or not the config can be successfully applied or not.
@@ -158,9 +163,10 @@ class DisplayCompositor final : public allocation::BufferCollectionImporter {
   // Erases the configuration that has been set on the display controller.
   void DiscardConfig();
 
-  // Applies the config to the display controller. This should only be called after CheckConfig
-  // has verified that the config is okay, since ApplyConfig does not return any errors.
-  void ApplyConfig();
+  // Applies the config to the display controller and returns the ConfigStamp associated with this
+  // config. ConfigStamp is provided by the display controller. This should only be called after
+  // CheckConfig has verified that the config is okay, since ApplyConfig does not return any errors.
+  fuchsia::hardware::display::ConfigStamp ApplyConfig();
 
   // Returns the image id used by the display controller.
   uint64_t InternalImageId(allocation::GlobalImageId image_id) const;
@@ -206,6 +212,21 @@ class DisplayCompositor final : public allocation::BufferCollectionImporter {
       buffer_collection_pixel_format_;
 
   ReleaseFenceManager release_fence_manager_;
+
+  // Stores information about the last ApplyConfig() call to display.
+  struct ApplyConfigInfo {
+    fuchsia::hardware::display::ConfigStamp config_stamp;
+    uint64_t frame_number;
+  };
+
+  // A queue storing all display frame configurations that are applied but not yet shown on the
+  // display device.
+  std::deque<ApplyConfigInfo> pending_apply_configs_;
+
+  // Stores the ConfigStamp information of the latest frame shown on the display. If no frame
+  // has been presented, its value will be nullopt.
+  std::optional<fuchsia::hardware::display::ConfigStamp> last_presented_config_stamp_ =
+      std::nullopt;
 
   fuchsia::sysmem::AllocatorSyncPtr sysmem_allocator_;
 

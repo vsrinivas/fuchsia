@@ -112,7 +112,7 @@ void Engine::RenderScheduledFrame(uint64_t frame_number, zx::time presentation_t
         .formats = {ZX_PIXEL_FORMAT_ARGB_8888}};
 
     fuchsia::sysmem::BufferCollectionInfo_2 render_target_info;
-    flatland_compositor_->AddDisplay(hw_display->display_id(), display_info,
+    flatland_compositor_->AddDisplay(hw_display, display_info,
                                      /*num_vmos*/ kNumDisplayFramebuffers, &render_target_info);
   }
 
