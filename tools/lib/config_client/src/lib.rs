@@ -104,10 +104,11 @@ const RESERVED_WORDS: [&str; 73] = [
     "WaitForEvent",
 ];
 
+const FIDL_LIBRARY_NAME: &str = "cf.sc.internal";
+const RUST_FIDL_LIBRARY_NAME: &str = "fidl_cf_sc_internal";
+
 /// Create a custom FIDL library source file containing all the fields of a config declaration
-pub fn create_fidl_source(library_name: &str, config_decl: &ConfigDecl) -> String {
-    // TODO(http://fxbug.dev/90685): Add additional verification of library name for FIDL
-    // source files
+pub fn create_fidl_source(config_decl: &ConfigDecl) -> String {
     let mut fidl_struct_fields = vec![];
     for ConfigField { key, value_type } in &config_decl.fields {
         let fidl_type = config_value_type_to_fidl_type(&value_type);
@@ -123,20 +124,16 @@ pub fn create_fidl_source(library_name: &str, config_decl: &ConfigDecl) -> Strin
 type Config = struct {{
 {}
 }};",
-        library_name,
+        FIDL_LIBRARY_NAME,
         fidl_struct_fields.join("\n")
     );
     output
 }
 
 /// Create a Rust wrapper file containing all the fields of a config declaration
-pub fn create_rust_wrapper(
-    library_name: &str,
-    config_decl: &ConfigDecl,
-) -> Result<String, SourceGenError> {
-    let library_name = parse_str::<Ident>(&format!("fidl_{}", library_name)).map_err(|source| {
-        SourceGenError::InvalidIdentifier { input: library_name.to_string(), source }
-    })?;
+pub fn create_rust_wrapper(config_decl: &ConfigDecl) -> Result<String, SourceGenError> {
+    let library_name = parse_str::<Ident>(RUST_FIDL_LIBRARY_NAME)
+        .expect("rust library name must always be a valid identifier.");
     let expected_checksum = &config_decl.declaration_checksum;
 
     let expected_checksum =
@@ -387,8 +384,8 @@ mod tests {
             },
         };
 
-        let observed_fidl_src = create_fidl_source("testcomponent", &decl);
-        let expected_fidl_src = "library testcomponent;
+        let observed_fidl_src = create_fidl_source(&decl);
+        let expected_fidl_src = "library cf.sc.internal;
 type Config = struct {
 my_flag bool;
 my_uint8 uint8;
@@ -413,10 +410,10 @@ my_vector_of_string vector<string:100>:100;
 };";
         assert_eq!(observed_fidl_src, expected_fidl_src);
 
-        let actual_rust_src = create_rust_wrapper("testcomponent", &decl).unwrap();
+        let actual_rust_src = create_rust_wrapper(&decl).unwrap();
 
         let expected_rust_src = quote! {
-            use fidl_testcomponent::Config as FidlConfig;
+            use fidl_cf_sc_internal::Config as FidlConfig;
             use fidl::encoding::decode_persistent;
             use fuchsia_runtime::{take_startup_handle, HandleInfo, HandleType};
             use fuchsia_zircon as zx;
@@ -514,8 +511,8 @@ my_vector_of_string vector<string:100>:100;
             ServerMode: { bool },
         };
 
-        let observed_fidl_src = create_fidl_source("testcomponent", &decl);
-        let expected_fidl_src = "library testcomponent;
+        let observed_fidl_src = create_fidl_source(&decl);
+        let expected_fidl_src = "library cf.sc.internal;
 type Config = struct {
 snake_case_string bool;
 lower_camel_case_string bool;
@@ -530,10 +527,10 @@ server_mode_ bool;
 };";
         assert_eq!(observed_fidl_src, expected_fidl_src);
 
-        let actual_rust_src = create_rust_wrapper("testcomponent", &decl).unwrap();
+        let actual_rust_src = create_rust_wrapper(&decl).unwrap();
 
         let expected_rust_src = quote! {
-            use fidl_testcomponent::Config as FidlConfig;
+            use fidl_cf_sc_internal::Config as FidlConfig;
             use fidl::encoding::decode_persistent;
             use fuchsia_runtime::{take_startup_handle, HandleInfo, HandleType};
             use fuchsia_zircon as zx;
@@ -593,45 +590,5 @@ server_mode_ bool;
         }.to_string();
 
         assert_eq!(actual_rust_src, expected_rust_src);
-    }
-
-    #[test]
-    fn bad_library_name() {
-        let decl = config_decl! {
-            ck@ test_checksum(),
-            my_flag: { bool },
-            my_uint8: { uint8 },
-            my_uint16: { uint16 },
-            my_uint32: { uint32 },
-            my_uint64: { uint64 },
-            my_int8: { int8 },
-            my_int16: { int16 },
-            my_int32: { int32 },
-            my_int64: { int64 },
-            my_string: { string, max_size: 100 },
-            my_vector_of_flag: { vector, element: bool, max_count: 100 },
-            my_vector_of_uint8: { vector, element: uint8, max_count: 100 },
-            my_vector_of_uint16: { vector, element: uint16, max_count: 100 },
-            my_vector_of_uint32: { vector, element: uint32, max_count: 100 },
-            my_vector_of_uint64: { vector, element: uint64, max_count: 100 },
-            my_vector_of_int8: { vector, element: int8, max_count: 100 },
-            my_vector_of_int16: { vector, element: int16, max_count: 100 },
-            my_vector_of_int32: { vector, element: int32, max_count: 100 },
-            my_vector_of_int64: { vector, element: int64, max_count: 100 },
-            my_vector_of_string: {
-                vector,
-                element: { string, max_size: 100 },
-                max_count: 100
-            },
-        };
-
-        create_rust_wrapper("bad.library.name", &decl)
-            .expect_err("Rust source compilation accepted bad identifier for library name");
-
-        create_rust_wrapper("bad-library-name", &decl)
-            .expect_err("Rust source compilation accepted bad identifier for library name");
-
-        create_rust_wrapper("bad+library+name", &decl)
-            .expect_err("Rust source compilation accepted bad identifier for library name");
     }
 }

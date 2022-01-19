@@ -22,10 +22,6 @@ pub struct GenerateFidlSource {
     #[argh(option)]
     cm: PathBuf,
 
-    /// name of the FIDL library
-    #[argh(option)]
-    library_name: String,
-
     /// path to which to output FIDL source file
     #[argh(option)]
     output: PathBuf,
@@ -47,7 +43,7 @@ impl GenerateFidlSource {
             .as_ref()
             .ok_or_else(|| anyhow::format_err!("missing config declaration in manifest"))?;
 
-        let fidl_contents = config_client::create_fidl_source(&self.library_name, config_decl);
+        let fidl_contents = config_client::create_fidl_source(config_decl);
 
         let formatted_fidl_contents = format_source(self.fidl_format, fidl_contents)?;
 

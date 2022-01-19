@@ -23,10 +23,6 @@ pub struct GenerateRustSource {
     #[argh(option)]
     cm: PathBuf,
 
-    /// name of the FIDL library
-    #[argh(option)]
-    library_name: String,
-
     /// path to which to output Rust source file
     #[argh(option)]
     output: PathBuf,
@@ -52,8 +48,8 @@ impl GenerateRustSource {
             .as_ref()
             .ok_or_else(|| anyhow::format_err!("missing config declaration in manifest"))?;
 
-        let rust_contents = config_client::create_rust_wrapper(&self.library_name, config_decl)
-            .context("creating rust wrapper")?;
+        let rust_contents =
+            config_client::create_rust_wrapper(config_decl).context("creating rust wrapper")?;
 
         let formatted_rust_contents =
             format_source(self.rustfmt, self.rustfmt_config, rust_contents)?;

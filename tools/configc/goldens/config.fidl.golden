@@ -1,4 +1,4 @@
-library goldenconfig;
+library cf.sc.internal;
 type Config = struct {
     my_flag bool;
     my_int16 int16;

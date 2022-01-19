@@ -60,7 +60,6 @@ rust_config_client_lib_source("rust_config_lib_golden_gen") {
   manifest_outputs = get_target_outputs(":config_manifest")
   compiled_manifest = manifest_outputs[0]
   name = "goldenconfig"
-  fidl_library_name = "goldenconfig"
   deps = [ ":config_manifest" ]
   testonly = true
 }

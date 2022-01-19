@@ -205,9 +205,6 @@ template("fuchsia_structured_config_values") {
 #   testonly (optional)
 #     Standard GN meaning.
 template("fuchsia_structured_config_rust_lib") {
-  fidl_library_name = string_replace(target_name, "_", "")
-  fidl_library_name = string_replace(fidl_library_name, "-", "")
-
   if (!defined(invoker.name)) {
     rust_library_name = target_name
   } else {
@@ -231,7 +228,7 @@ template("fuchsia_structured_config_rust_lib") {
     # generate the client library FIDL source
     fidl_config_client_lib_source(fidl_source_target) {
       forward_variables_from(invoker, [ "testonly" ])
-      name = fidl_library_name
+      name = invoker.target_name
       compiled_manifest = compiled_manifest
       deps = [ "${invoker.cm_target}" ]
     }
@@ -239,8 +236,7 @@ template("fuchsia_structured_config_rust_lib") {
     # generate the rust source
     rust_config_client_lib_source(rust_source_target) {
       forward_variables_from(invoker, [ "testonly" ])
-      name = rust_library_name
-      fidl_library_name = fidl_library_name
+      name = invoker.target_name
       compiled_manifest = compiled_manifest
       deps = [ "${invoker.cm_target}" ]
     }
@@ -260,13 +256,15 @@ template("fuchsia_structured_config_rust_lib") {
   # generated source files manually.
   source_gen_dir =
       get_label_info(":bogus($default_toolchain)", "target_out_dir")
-  fidl_source_file = "${source_gen_dir}/${fidl_library_name}.fidl"
-  rust_source_file = "${source_gen_dir}/${rust_library_name}.rs"
+  fidl_source_file = "${source_gen_dir}/${target_name}.fidl"
+  rust_source_file = "${source_gen_dir}/${target_name}.rs"
 
   # generate the FIDL library
   fidl_library_target = "${target_name}_fidl_internal"
   fidl(fidl_library_target) {
-    name = fidl_library_name
+    # The library name is a hard coded string that is also used internally by
+    # configc when generating FIDL and Rust source files. It is not visible to the end user.
+    name = "cf.sc.internal"
     forward_variables_from(invoker, [ "testonly" ])
     sources = [ fidl_source_file ]
     non_fidl_deps = [ ":${fidl_source_target}($default_toolchain)" ]

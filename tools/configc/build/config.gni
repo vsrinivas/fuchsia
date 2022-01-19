@@ -125,8 +125,6 @@ template("fidl_config_client_lib_source") {
       "fidl",
       "--cm",
       rebase_path(compiled_manifest, root_build_dir),
-      "--library-name",
-      name,
       "--output",
       rebase_path(source_file_path, root_build_dir),
       "--fidl-format",
@@ -154,10 +152,6 @@ template("fidl_config_client_lib_source") {
 #     Compiled manifest for which the source files should be generated.
 #     Type: path
 #
-#   fidl_library_name (required)
-#     Name for the generated FIDL library.
-#     Type: string
-#
 #   name (optional)
 #     Name for the generated Rust library. If not specified, the target name is used.
 #     Type: string
@@ -171,8 +165,6 @@ template("fidl_config_client_lib_source") {
 template("rust_config_client_lib_source") {
   assert(defined(invoker.compiled_manifest),
          "the path to a compiled component manifest must be specified")
-  assert(defined(invoker.fidl_library_name),
-         "the FIDL library name for this configuration must be specified")
   compiled_manifest = invoker.compiled_manifest
 
   compiled_action(target_name) {
@@ -181,7 +173,6 @@ template("rust_config_client_lib_source") {
                              "deps",
                              "metadata",
                              "name",
-                             "fidl_library_name",
                              "testonly",
                              "visibility",
                            ])
@@ -208,8 +199,6 @@ template("rust_config_client_lib_source") {
       "rust",
       "--cm",
       rebase_path(compiled_manifest, root_build_dir),
-      "--library-name",
-      fidl_library_name,
       "--output",
       rebase_path(source_file_path, root_build_dir),
       "--rustfmt",
