@@ -72,10 +72,10 @@ class StringList {
     constexpr iterator(const iterator&) = default;
     constexpr iterator& operator=(const iterator&) = default;
 
-    constexpr bool operator==(iterator& other) const {
+    constexpr bool operator==(const iterator& other) const {
       return len_ == other.len_ && rest_.size() == other.rest_.size();
     }
-    constexpr bool operator!=(iterator& other) const { return !(*this == other); }
+    constexpr bool operator!=(const iterator& other) const { return !(*this == other); }
 
     constexpr iterator& operator++() {  // prefix
       if (len_ == std::string_view::npos) {
