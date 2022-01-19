@@ -15,12 +15,16 @@ rustc_library("netsvc-proto") {
     "//src/connectivity/lib/net-types",
     "//src/lib/network/packet",
     "//src/lib/zerocopy",
+    "//third_party/rust_crates:arrayvec",
+    "//third_party/rust_crates:thiserror",
+    "//third_party/rust_crates:unicase",
   ]
 
   sources = [
     "src/debuglog.rs",
     "src/lib.rs",
     "src/netboot.rs",
+    "src/tftp.rs",
   ]
 
   test_deps = [ "//third_party/rust_crates:matches" ]
