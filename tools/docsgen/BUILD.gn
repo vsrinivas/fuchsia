@@ -169,16 +169,32 @@ python_binary(_helpdoc_script_target) {
   deps = []
 }
 
+_docsgen_transforms_script_target = "docsgen_transforms"
+python_binary(_docsgen_transforms_script_target) {
+  main_source = "//tools/docsgen/docsgen_transforms.py"
+  output_name = "docsgen_transforms.pyz"
+  sources = []
+  deps = []
+}
+
 if (is_host) {
   python_host_test("gen_helpdocs_test") {
     main_source = "gen_helpdocs_test.py"
     sources = [ "gen_helpdocs.py" ]
   }
+
+  python_host_test("docsgen_transforms_test") {
+    main_source = "docsgen_transforms_test.py"
+    sources = [ "docsgen_transforms.py" ]
+  }
 }
 
 group("tests") {
   testonly = true
-  deps = [ ":gen_helpdocs_test($host_toolchain)" ]
+  deps = [
+    ":docsgen_transforms_test($host_toolchain)",
+    ":gen_helpdocs_test($host_toolchain)",
+  ]
 }
 
 # Runs one time python helpdoc generation script.
