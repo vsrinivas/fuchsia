@@ -20,11 +20,7 @@ use {
     futures::{channel::oneshot, future, join, stream::TryStreamExt, FutureExt, TryFutureExt},
     pin_utils::pin_mut,
     std::{panic, thread, time},
-    wlan_common::{
-        bss::Protection::Open,
-        channel::{Cbw, Phy},
-        fake_fidl_bss_description, RadioConfig,
-    },
+    wlan_common::{bss::Protection::Open, fake_fidl_bss_description},
     wlan_hw_sim::*,
 };
 
@@ -119,8 +115,6 @@ async fn multiple_clients_ap() {
             channel: WLANCFG_DEFAULT_AP_CHANNEL,
         ),
         credential: Credential::None(fidl_sme::Empty {}),
-        radio_cfg: RadioConfig::new(Phy::Ht, Cbw::Cbw20, WLANCFG_DEFAULT_AP_CHANNEL.primary)
-            .to_fidl(),
         deprecated_scan_type: fidl_common::ScanType::Passive,
         multiple_bss_candidates: false, // only used for metrics, select arbitrary value
     };
@@ -161,8 +155,6 @@ async fn multiple_clients_ap() {
             channel: WLANCFG_DEFAULT_AP_CHANNEL,
         ),
         credential: Credential::None(fidl_sme::Empty {}),
-        radio_cfg: RadioConfig::new(Phy::Ht, Cbw::Cbw20, WLANCFG_DEFAULT_AP_CHANNEL.primary)
-            .to_fidl(),
         deprecated_scan_type: fidl_common::ScanType::Passive,
         multiple_bss_candidates: false, // only used for metrics, select arbitrary value
     };

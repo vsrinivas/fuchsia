@@ -265,22 +265,6 @@ pub struct ClientConnectCmd {
     #[structopt(short = "hash", long = "hash", help = "WPA2 PSK as hex string")]
     pub psk: Option<String>,
     #[structopt(
-        short = "y",
-        long = "phy",
-        raw(possible_values = "&PhyArg::variants()"),
-        raw(case_insensitive = "true"),
-        help = "Specify an upper bound"
-    )]
-    pub phy: Option<PhyArg>,
-    #[structopt(
-        short = "w",
-        long = "cbw",
-        raw(possible_values = "&CbwArg::variants()"),
-        raw(case_insensitive = "true"),
-        help = "Specify an upper bound"
-    )]
-    pub cbw: Option<CbwArg>,
-    #[structopt(
         short = "s",
         long = "scan-type",
         default_value = "passive",

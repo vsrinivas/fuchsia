@@ -8,7 +8,7 @@ use {
     crate::{
         capabilities::{intersect_with_ap_as_client, ClientCapabilities},
         client::{
-            capabilities::derive_join_channel_and_capabilities,
+            capabilities::derive_join_capabilities,
             event::{self, Event},
             info::{DisconnectInfo, DisconnectSource},
             internal::Context,
@@ -17,9 +17,7 @@ use {
             ConnectFailure, ConnectResult, ConnectTransactionEvent, ConnectTransactionSink,
             EstablishRsnaFailure, EstablishRsnaFailureReason, ServingApInfo,
         },
-        mlme_event_name,
-        phy_selection::derive_phy_cbw,
-        MlmeRequest, MlmeSink,
+        mlme_event_name, MlmeRequest, MlmeSink,
     },
     anyhow::bail,
     fidl_fuchsia_wlan_ieee80211 as fidl_ieee80211, fidl_fuchsia_wlan_internal as fidl_internal,
@@ -39,7 +37,6 @@ use {
         format::MacFmt as _,
         ie::{self, rsn::cipher},
         timer::EventId,
-        RadioConfig,
     },
     wlan_rsn::{
         auth,
@@ -63,7 +60,6 @@ pub struct ConnectCommand {
     pub bss: Box<BssDescription>,
     pub connect_txn_sink: ConnectTransactionSink,
     pub protection: Protection,
-    pub radio_cfg: RadioConfig,
 }
 
 #[derive(Debug)]
@@ -75,7 +71,7 @@ pub struct Idle {
 pub struct Joining {
     cfg: ClientConfig,
     cmd: ConnectCommand,
-    derived_channel: Channel,
+    channel: Channel,
     capability_info: Option<ClientCapabilities>,
     protection_ie: Option<ProtectionIe>,
 }
@@ -84,7 +80,7 @@ pub struct Joining {
 pub struct Authenticating {
     cfg: ClientConfig,
     cmd: ConnectCommand,
-    derived_channel: Channel,
+    channel: Channel,
     capability_info: Option<ClientCapabilities>,
     protection_ie: Option<ProtectionIe>,
 }
@@ -93,7 +89,7 @@ pub struct Authenticating {
 pub struct Associating {
     cfg: ClientConfig,
     cmd: ConnectCommand,
-    derived_channel: Channel,
+    channel: Channel,
     capability_info: Option<ClientCapabilities>,
     protection_ie: Option<ProtectionIe>,
 }
@@ -106,11 +102,10 @@ pub struct Associated {
     auth_method: Option<auth::MethodName>,
     last_signal_report_time: zx::Time,
     link_state: LinkState,
-    radio_cfg: RadioConfig,
     capability_info: Option<ClientCapabilities>,
     // TODO(fxbug.dev/82653): There are two channels, one in `latest_ap_state` and one here.
     //                        Revisit how we should handle this for OnChannelSwitched event.
-    derived_channel: Channel,
+    channel: Channel,
     protection_ie: Option<ProtectionIe>,
     // TODO(fxbug.dev/82654): Remove `wmm_param` field when wlanstack telemetry is deprecated.
     wmm_param: Option<ie::WmmParam>,
@@ -191,7 +186,7 @@ impl Joining {
                 Ok(Authenticating {
                     cfg: self.cfg,
                     cmd: self.cmd,
-                    derived_channel: self.derived_channel,
+                    channel: self.channel,
                     capability_info: self.capability_info,
                     protection_ie: self.protection_ie,
                 })
@@ -231,7 +226,7 @@ impl Authenticating {
                 Ok(Associating {
                     cfg: self.cfg,
                     cmd: self.cmd,
-                    derived_channel: self.derived_channel,
+                    channel: self.channel,
                     capability_info: self.capability_info,
 
                     protection_ie: self.protection_ie,
@@ -373,7 +368,7 @@ impl Associating {
                         return Err(Idle { cfg: self.cfg });
                     }
                     context.mlme_sink.send(MlmeRequest::FinalizeAssociation(
-                        negotiated_cap.to_fidl_negotiated_capabilities(&self.derived_channel),
+                        negotiated_cap.to_fidl_negotiated_capabilities(&self.channel),
                     ))
                 }
 
@@ -428,8 +423,7 @@ impl Associating {
             last_signal_report_time: now(),
             latest_ap_state: self.cmd.bss,
             link_state,
-            radio_cfg: self.cmd.radio_cfg,
-            derived_channel: self.derived_channel,
+            channel: self.channel,
             capability_info: self.capability_info,
             protection_ie: self.protection_ie,
             wmm_param,
@@ -595,7 +589,6 @@ impl Associated {
             bss: self.latest_ap_state,
             connect_txn_sink: self.connect_txn_sink,
             protection,
-            radio_cfg: self.radio_cfg,
         };
         send_mlme_assoc_req(
             cmd.bss.bssid.clone(),
@@ -606,7 +599,7 @@ impl Associated {
         Associating {
             cfg: self.cfg,
             cmd,
-            derived_channel: self.derived_channel,
+            channel: self.channel,
             capability_info: self.capability_info,
             protection_ie: self.protection_ie,
         }
@@ -1025,13 +1018,13 @@ impl ClientState {
     }
 
     pub fn connect(self, cmd: ConnectCommand, context: &mut Context) -> Self {
-        let (derived_channel, capability_info) = match derive_join_channel_and_capabilities(
+        let channel = Channel::from(cmd.bss.channel);
+        let capability_info = match derive_join_capabilities(
             Channel::from(cmd.bss.channel),
-            cmd.radio_cfg.cbw,
             cmd.bss.rates(),
             &context.device_info,
         ) {
-            Ok(chan_and_cap) => chan_and_cap,
+            Ok(capability_info) => capability_info,
             Err(e) => {
                 error!("Failed building join capabilities: {}", e);
                 return self;
@@ -1052,18 +1045,13 @@ impl ClientState {
         let start_state = self.state_name();
         let cfg = self.disconnect_internal(context);
 
-        let mut selected_bss = cmd.bss.clone();
-        let (phy_to_use, cbw_to_use) =
-            derive_phy_cbw(&selected_bss, &context.device_info, &cmd.radio_cfg);
-        selected_bss.channel.cbw = cbw_to_use;
+        let selected_bss = cmd.bss.clone();
 
         context.mlme_sink.send(MlmeRequest::Join(fidl_mlme::JoinRequest {
             selected_bss: (*selected_bss).into(),
             join_failure_timeout: DEFAULT_JOIN_FAILURE_TIMEOUT,
             nav_sync_delay: 0,
             op_rates: vec![],
-            phy: phy_to_use,
-            channel_bandwidth: cbw_to_use,
         }));
         context.att_id += 1;
 
@@ -1080,13 +1068,7 @@ impl ClientState {
         let state = Self::new(cfg.clone());
         match state {
             Self::Idle(state) => state
-                .transition_to(Joining {
-                    cfg,
-                    cmd,
-                    derived_channel,
-                    capability_info,
-                    protection_ie,
-                })
+                .transition_to(Joining { cfg, cmd, channel, capability_info, protection_ie })
                 .into(),
             _ => unreachable!(),
         }
@@ -1493,7 +1475,7 @@ mod tests {
             rsn::rsne::Rsne,
         },
         test_utils::fake_stas::IesOverrides,
-        timer, RadioConfig,
+        timer,
     };
     use wlan_rsn::{key::exchange::Key, rsna::SecAssocStatus};
     use wlan_rsn::{
@@ -1736,7 +1718,7 @@ mod tests {
         let state = ClientState::from(testing::new_state(Joining {
             cfg: ClientConfig::default(),
             cmd,
-            derived_channel: fake_channel(),
+            channel: fake_channel(),
             capability_info: None,
             protection_ie: None,
         }));
@@ -1764,7 +1746,7 @@ mod tests {
         let state = ClientState::from(testing::new_state(Authenticating {
             cfg: ClientConfig::default(),
             cmd,
-            derived_channel: fake_channel(),
+            channel: fake_channel(),
             capability_info: None,
             protection_ie: None,
         }));
@@ -1797,7 +1779,7 @@ mod tests {
         let state = ClientState::from(testing::new_state(Associating {
             cfg: ClientConfig::default(),
             cmd,
-            derived_channel: fake_channel(),
+            channel: fake_channel(),
             capability_info: None,
             protection_ie: None,
         }));
@@ -2137,7 +2119,7 @@ mod tests {
         let state = ClientState::from(testing::new_state(Associating {
             cfg: ClientConfig::default(),
             cmd: command,
-            derived_channel: fake_channel(),
+            channel: fake_channel(),
             capability_info: None,
             protection_ie: None,
         }));
@@ -2452,7 +2434,7 @@ mod tests {
         let state = ClientState::from(testing::new_state(Associating {
             cfg: ClientConfig::default(),
             cmd,
-            derived_channel: fake_channel(),
+            channel: fake_channel(),
             capability_info: None,
             protection_ie: None,
         }));
@@ -3357,7 +3339,6 @@ mod tests {
             )),
             connect_txn_sink,
             protection: Protection::Open,
-            radio_cfg: RadioConfig::default(),
         };
         (cmd, connect_txn_stream)
     }
@@ -3370,7 +3351,6 @@ mod tests {
             ),
             connect_txn_sink,
             protection: Protection::Open,
-            radio_cfg: RadioConfig::default(),
         };
         (cmd, connect_txn_stream)
     }
@@ -3381,7 +3361,6 @@ mod tests {
             bss: Box::new(fake_bss_description!(Wep, ssid: Ssid::try_from("wep").unwrap())),
             connect_txn_sink,
             protection: Protection::Wep(wep_deprecated::Key::Bits40([3; 5])),
-            radio_cfg: RadioConfig::default(),
         };
         (cmd, connect_txn_stream)
     }
@@ -3399,7 +3378,6 @@ mod tests {
                     .expect("invalid NegotiatedProtection"),
                 supplicant: Box::new(supplicant),
             }),
-            radio_cfg: RadioConfig::default(),
         };
         (cmd, connect_txn_stream)
     }
@@ -3418,7 +3396,6 @@ mod tests {
                     .expect("invalid NegotiatedProtection"),
                 supplicant: Box::new(supplicant),
             }),
-            radio_cfg: RadioConfig::default(),
         };
         (cmd, connect_txn_stream)
     }
@@ -3437,7 +3414,6 @@ mod tests {
                     .expect("invalid NegotiatedProtection"),
                 supplicant: Box::new(supplicant),
             }),
-            radio_cfg: RadioConfig::default(),
         };
         (cmd, connect_txn_stream)
     }
@@ -3454,7 +3430,7 @@ mod tests {
         testing::new_state(Joining {
             cfg: ClientConfig::default(),
             cmd,
-            derived_channel: fake_channel(),
+            channel: fake_channel(),
             capability_info: None,
             protection_ie: None,
         })
@@ -3471,7 +3447,7 @@ mod tests {
         testing::new_state(Authenticating {
             cfg: ClientConfig::default(),
             cmd,
-            derived_channel: fake_channel(),
+            channel: fake_channel(),
             capability_info: None,
             protection_ie: None,
         })
@@ -3482,7 +3458,7 @@ mod tests {
         testing::new_state(Associating {
             cfg: ClientConfig::default(),
             cmd,
-            derived_channel: fake_channel(),
+            channel: fake_channel(),
             capability_info: None,
             protection_ie: None,
         })
@@ -3513,8 +3489,7 @@ mod tests {
             connect_txn_sink: cmd.connect_txn_sink,
             last_signal_report_time: zx::Time::ZERO,
             link_state,
-            radio_cfg: RadioConfig::default(),
-            derived_channel: fake_channel(),
+            channel: fake_channel(),
             capability_info: None,
             protection_ie: None,
             wmm_param: None,
@@ -3542,8 +3517,7 @@ mod tests {
             auth_method,
             last_signal_report_time: zx::Time::ZERO,
             link_state,
-            radio_cfg: RadioConfig::default(),
-            derived_channel: fake_channel(),
+            channel: fake_channel(),
             capability_info: None,
             protection_ie: None,
             wmm_param,

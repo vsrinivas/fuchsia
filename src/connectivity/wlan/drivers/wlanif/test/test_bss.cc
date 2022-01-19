@@ -65,12 +65,10 @@ wlan_mlme::StopRequest CreateStopReq() {
 
 wlan_mlme::JoinRequest CreateJoinReq() {
   wlan_mlme::JoinRequest req;
+  req.selected_bss = CreateBssDescription();
   req.join_failure_timeout = kJoinTimeout;
   req.nav_sync_delay = 20;
   req.op_rates = {12, 24, 48};
-  req.phy = wlan::common::ToFidl(kBssPhy);
-  req.channel_bandwidth = wlan::common::ToFidl(kBssChannel).cbw;
-  req.selected_bss = CreateBssDescription();
   return req;
 }
 

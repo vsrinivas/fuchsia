@@ -649,8 +649,6 @@ impl From<Connect> for wlan_dev::opts::ClientCmd {
             iface_id: arg.iface_id,
             password: arg.password,
             psk: arg.psk,
-            phy: arg.phy.map(|p| wlan_dev::opts::PhyArg::from(p)),
-            cbw: arg.cbw.map(|w| wlan_dev::opts::CbwArg::from(w)),
             scan_type: wlan_dev::opts::ScanTypeArg::from(arg.scan_type),
             ssid: arg.ssid,
         })

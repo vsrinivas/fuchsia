@@ -184,7 +184,6 @@ type ConnectRequest = struct {
     multiple_bss_candidates bool;
     credential Credential;
 
-    radio_cfg RadioConfig;
     /// Deprecated. SME makes internal decision on whether to perform a passive or active
     /// scan during connect. Setting this field will not affect anything for FullMAC, but
     /// currently SoftMAC still honor this argument.

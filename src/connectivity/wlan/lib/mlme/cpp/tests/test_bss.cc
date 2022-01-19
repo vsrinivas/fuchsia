@@ -135,8 +135,6 @@ wlan_mlme::JoinRequest CreateJoinRequest(bool rsn) {
   req.join_failure_timeout = kJoinTimeout;
   req.nav_sync_delay = 20;
   req.op_rates = {12, 24, 48};
-  req.phy = wlan::common::ToFidl(kBssPhy);
-  req.channel_bandwidth = wlan::common::ToFidl(kBssChannel).cbw;
   req.selected_bss = CreateBssDescription(rsn);
   return req;
 }

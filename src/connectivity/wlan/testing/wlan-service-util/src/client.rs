@@ -59,14 +59,6 @@ pub async fn connect(
         ssid: target_ssid.clone().into(),
         bss_description: target_bss_desc,
         credential,
-        radio_cfg: fidl_sme::RadioConfig {
-            override_phy: false,
-            phy: fidl_common::Phy::Ht,
-            override_channel_bandwidth: false,
-            channel_bandwidth: fidl_common::ChannelBandwidth::Cbw20,
-            override_primary_channel: false,
-            primary_channel: 0,
-        },
         deprecated_scan_type: fidl_common::ScanType::Passive,
         multiple_bss_candidates: false, // only used for metrics, select an arbitrary value
     };
