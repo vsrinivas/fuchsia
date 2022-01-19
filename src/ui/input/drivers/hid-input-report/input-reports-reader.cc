@@ -92,6 +92,7 @@ void InputReportsReader::ReceiveReport(const uint8_t* raw_report, size_t raw_rep
     return;
   }
 
+  report.set_report_id(device->InputReportId());
   report.set_event_time(report_allocator_, time);
   report.set_trace_id(report_allocator_, TRACE_NONCE());
 

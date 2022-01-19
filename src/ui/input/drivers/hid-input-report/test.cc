@@ -424,7 +424,8 @@ TEST_F(HidDevTest, SensorTest) {
   fuchsia_input_report::wire::DeviceDescriptor& desc = result->descriptor;
   ASSERT_TRUE(desc.has_sensor());
   ASSERT_TRUE(desc.sensor().has_input());
-  fuchsia_input_report::wire::SensorInputDescriptor& sensor_desc = desc.sensor().input();
+  ASSERT_EQ(desc.sensor().input().count(), 1);
+  fuchsia_input_report::wire::SensorInputDescriptor& sensor_desc = desc.sensor().input()[0];
   ASSERT_TRUE(sensor_desc.has_values());
   ASSERT_EQ(4, sensor_desc.values().count());
 

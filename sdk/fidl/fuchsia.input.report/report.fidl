@@ -23,6 +23,9 @@ type InputReport = table {
 
     /// Unique ID to connect trace async begin/end events.
     3: trace_id uint64;
+    /// The Descriptor that describes this InputReport will have a matching
+    /// ReportID. If this doesn't exist, report_id is 0.
+    8: report_id uint8;
 };
 
 /// A single report containing output information for an input device.

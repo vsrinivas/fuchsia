@@ -613,15 +613,16 @@ async fn read_sensor_and_get_brightness(
     spline: &Spline<f32, f32>,
     max_brightness: f64,
 ) -> f32 {
-    let lux = {
+    loop {
         // Get the sensor reading in its own mutex block
         let sensor = sensor.lock().await;
         // TODO(kpt) Do we need a Mutex if sensor is only read?
         let fut = sensor.read();
-        let report = fut.await.expect("Could not read from the sensor");
-        report.illuminance
-    };
-    brightness_curve_lux_to_nits(lux, spline).await / max_brightness as f32
+        if let Some(report) = fut.await.expect("Could not read from the sensor") {
+            return brightness_curve_lux_to_nits(report.illuminance, spline).await
+                / max_brightness as f32;
+        }
+    }
 }
 
 async fn brightness_curve_lux_to_nits(lux: f32, spline: &Spline<f32, f32>) -> f32 {
@@ -746,13 +747,13 @@ mod tests {
 
     #[async_trait]
     impl SensorControl for MockSensor {
-        async fn read(&self) -> Result<AmbientLightInputRpt, Error> {
-            Ok(AmbientLightInputRpt {
+        async fn read(&self) -> Result<Option<AmbientLightInputRpt>, Error> {
+            Ok(Some(AmbientLightInputRpt {
                 illuminance: self.illuminence,
                 red: 0.0,
                 green: 0.0,
                 blue: 0.0,
-            })
+            }))
         }
     }
 

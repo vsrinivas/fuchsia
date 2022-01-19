@@ -9,7 +9,7 @@ use anyhow::{format_err, Context as _, Error};
 use async_trait::async_trait;
 use fidl_fuchsia_input_report::{
     DeviceDescriptor, InputDeviceMarker, InputDeviceProxy, InputReportsReaderMarker,
-    InputReportsReaderProxy, SensorAxis, SensorType,
+    InputReportsReaderProxy, SensorInputDescriptor, SensorType,
 };
 use fuchsia_syslog::fx_log_info;
 
@@ -24,6 +24,7 @@ pub struct AmbientLightInputRpt {
 struct AmbientLightComponent {
     pub report_index: usize,
     pub exponent: i32,
+    pub report_id: u8, // report ID associated with descriptor
 }
 
 struct AmbientLightInputReportReaderProxy {
@@ -55,32 +56,41 @@ async fn open_sensor_input_report_reader<'a>() -> Result<AmbientLightInputReport
         let device_path = device_path.to_str().expect("Bad path");
         let device = open_input_report_device(device_path)?;
 
-        let get_sensor_input_axes =
-            |descriptor: &'a DeviceDescriptor| -> Result<&'a Vec<SensorAxis>, Error> {
+        let get_sensor_input =
+            |descriptor: &'a DeviceDescriptor| -> Result<&'a Vec<SensorInputDescriptor>, Error> {
                 let sensor = descriptor.sensor.as_ref().context("device has no sensor")?;
-                let input = sensor.input.as_ref().context("sensor has no input descriptor")?;
-                let values = input.values.as_ref().context("input descriptor has no values")?;
-                Ok(values)
+                let input_desc = sensor.input.as_ref().context("sensor has no input descriptor")?;
+                Ok(input_desc)
             };
 
         if let Ok(descriptor) = device.get_descriptor().await {
-            match get_sensor_input_axes(&descriptor) {
-                Ok(axes) => {
+            match get_sensor_input(&descriptor) {
+                Ok(input_desc) => {
                     let mut illuminance = None;
                     let mut red = None;
                     let mut green = None;
                     let mut blue = None;
 
-                    for (i, val) in axes.iter().enumerate() {
-                        let component = AmbientLightComponent {
-                            report_index: i,
-                            exponent: val.axis.unit.exponent,
-                        };
-                        match val.type_ {
-                            SensorType::LightIlluminance => illuminance = Some(component),
-                            SensorType::LightRed => red = Some(component),
-                            SensorType::LightGreen => green = Some(component),
-                            SensorType::LightBlue => blue = Some(component),
+                    for input in input_desc {
+                        match &input.values {
+                            Some(axes) => {
+                                for (i, val) in axes.iter().enumerate() {
+                                    let component = AmbientLightComponent {
+                                        report_index: i,
+                                        exponent: val.axis.unit.exponent,
+                                        report_id: input.report_id.unwrap_or(0),
+                                    };
+                                    match val.type_ {
+                                        SensorType::LightIlluminance => {
+                                            illuminance = Some(component)
+                                        }
+                                        SensorType::LightRed => red = Some(component),
+                                        SensorType::LightGreen => green = Some(component),
+                                        SensorType::LightBlue => blue = Some(component),
+                                        _ => {}
+                                    }
+                                }
+                            }
                             _ => {}
                         }
                     }
@@ -111,12 +121,16 @@ async fn open_sensor_input_report_reader<'a>() -> Result<AmbientLightInputReport
 /// Reads the sensor's input report and decodes it.
 async fn read_sensor_input_report(
     device: &AmbientLightInputReportReaderProxy,
-) -> Result<AmbientLightInputRpt, Error> {
+) -> Result<Option<AmbientLightInputRpt>, Error> {
     let r = device.proxy.read_input_reports().await;
 
     match r {
         Ok(Ok(reports)) => {
             for report in reports {
+                if report.report_id.unwrap_or(0) != device.illuminance.as_ref().unwrap().report_id {
+                    continue;
+                }
+
                 if let Some(sensor) = report.sensor {
                     if let Some(values) = sensor.values {
                         let f = |component: &Option<AmbientLightComponent>| match component {
@@ -135,11 +149,11 @@ async fn read_sensor_input_report(
                         let green = f(&device.green);
                         let blue = f(&device.blue);
 
-                        return Ok(AmbientLightInputRpt { illuminance, red, blue, green });
+                        return Ok(Some(AmbientLightInputRpt { illuminance, red, blue, green }));
                     }
                 }
             }
-            Err(format_err!("No valid sensor reports"))
+            Ok(None)
         }
         Ok(Err(e)) => Err(format_err!("ReadInputReports error: {}", e)),
         Err(e) => Err(format_err!("FIDL call failed: {}", e)),
@@ -147,8 +161,8 @@ async fn read_sensor_input_report(
 }
 
 /// TODO(lingxueluo) Default and temporary report when sensor is not valid(fxbug.dev/42782).
-fn default_report() -> Result<AmbientLightInputRpt, Error> {
-    Ok(AmbientLightInputRpt { illuminance: 200.0, red: 200.0, green: 200.0, blue: 200.0 })
+fn default_report() -> Result<Option<AmbientLightInputRpt>, Error> {
+    Ok(Some(AmbientLightInputRpt { illuminance: 200.0, red: 200.0, green: 200.0, blue: 200.0 }))
 }
 
 pub struct Sensor {
@@ -167,7 +181,7 @@ impl Sensor {
         }
     }
 
-    async fn read(&self) -> Result<AmbientLightInputRpt, Error> {
+    async fn read(&self) -> Result<Option<AmbientLightInputRpt>, Error> {
         if self.proxy.is_none() {
             default_report()
         } else {
@@ -178,12 +192,12 @@ impl Sensor {
 
 #[async_trait]
 pub trait SensorControl: Send {
-    async fn read(&self) -> Result<AmbientLightInputRpt, Error>;
+    async fn read(&self) -> Result<Option<AmbientLightInputRpt>, Error>;
 }
 
 #[async_trait]
 impl SensorControl for Sensor {
-    async fn read(&self) -> Result<AmbientLightInputRpt, Error> {
+    async fn read(&self) -> Result<Option<AmbientLightInputRpt>, Error> {
         self.read().await
     }
 }
@@ -196,10 +210,11 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn test_open_sensor_error() {
         let sensor = Sensor { proxy: None };
-        let ambient_light_input_rpt = sensor.read().await.unwrap();
-        assert_eq!(ambient_light_input_rpt.illuminance, 200.0);
-        assert_eq!(ambient_light_input_rpt.red, 200.0);
-        assert_eq!(ambient_light_input_rpt.green, 200.0);
-        assert_eq!(ambient_light_input_rpt.blue, 200.0);
+        if let Some(ambient_light_input_rpt) = sensor.read().await.unwrap() {
+            assert_eq!(ambient_light_input_rpt.illuminance, 200.0);
+            assert_eq!(ambient_light_input_rpt.red, 200.0);
+            assert_eq!(ambient_light_input_rpt.green, 200.0);
+            assert_eq!(ambient_light_input_rpt.blue, 200.0);
+        }
     }
 }

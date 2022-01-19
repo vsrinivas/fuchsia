@@ -26,7 +26,9 @@ zx_status_t PrintInputDescriptor(std::string filename, Printer* printer,
         }
         if (result->descriptor.has_sensor()) {
           if (result->descriptor.sensor().has_input()) {
-            PrintSensorDesc(printer, result->descriptor.sensor().input());
+            for (const auto& input : result->descriptor.sensor().input()) {
+              PrintSensorDesc(printer, input);
+            }
           }
         }
         if (result->descriptor.has_touch()) {
@@ -79,6 +81,9 @@ void PrintSensorDesc(Printer* printer,
   }
 
   printer->IncreaseIndent();
+  if (sensor_desc.has_report_id()) {
+    printer->Print("ReportID: %02d\n", sensor_desc.report_id());
+  }
   for (size_t i = 0; i < sensor_desc.values().count(); i++) {
     printer->Print("Value %02d:\n", i);
     printer->IncreaseIndent();
@@ -214,6 +219,9 @@ void PrintInputReports(std::string filename, Printer* printer,
           if (report.has_trace_id()) {
             TRACE_FLOW_END("input", "input_report", report.trace_id());
           }
+          if (report.has_report_id()) {
+            printer->Print("ReportID: %02d\n", report.report_id());
+          }
           if (report.has_mouse()) {
             auto& mouse = report.mouse();
             PrintMouseInputReport(printer, mouse);
@@ -257,6 +265,9 @@ void GetAndPrintInputReport(std::string filename,
         }
         if (report.has_trace_id()) {
           TRACE_FLOW_END("input", "input_report", report.trace_id());
+        }
+        if (report.has_report_id()) {
+          printer->Print("ReportID: %02d\n", report.report_id());
         }
         if (report.has_mouse()) {
           auto& mouse = report.mouse();

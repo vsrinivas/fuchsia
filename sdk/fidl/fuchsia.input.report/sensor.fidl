@@ -3,6 +3,10 @@
 // found in the LICENSE file.
 library fuchsia.input.report;
 
+/// A hardcoded number of max reports. Because report ID is only 8 bits, only 255
+/// different reports are allowed at a time.
+const MAX_REPORT_COUNT uint32 = 255;
+
 /// A hardcoded number of max sensor values. This should be increased in the future
 /// if we ever see a sensor with more values.
 const SENSOR_MAX_VALUES uint32 = 100;
@@ -51,6 +55,9 @@ type SensorInputDescriptor = table {
     /// Each `SensorAxis` in `values` describes what a sensor is measuring and its range.
     /// These will directly correspond to the values in `SensorReport`.
     1: values vector<SensorAxis>:SENSOR_MAX_VALUES;
+    /// ReportID of current descriptor. Report with same report ID should be
+    /// associated with this descriptor.
+    2: report_id uint8;
 };
 
 /// `SensorReportingState` determines when a sensor will send reports.
@@ -81,12 +88,15 @@ type SensorFeatureDescriptor = table {
     5: threshold_low vector<SensorAxis>:SENSOR_MAX_VALUES;
     /// Describes the minimum and maximum sampling rate this sensor supports.
     6: sampling_rate Axis;
+    /// ReportID of current descriptor. Report with same report ID should be
+    /// associated with this descriptor.
+    7: report_id uint8;
 };
 
 /// The capabilities of a sensor device.
 type SensorDescriptor = table {
-    1: input SensorInputDescriptor;
-    2: feature SensorFeatureDescriptor;
+    1: input vector<SensorInputDescriptor>:MAX_REPORT_COUNT;
+    2: feature vector<SensorFeatureDescriptor>:MAX_REPORT_COUNT;
 };
 
 /// `SensorReport` gives the values measured by a sensor at a given point in time.

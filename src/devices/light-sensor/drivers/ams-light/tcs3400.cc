@@ -363,9 +363,10 @@ void Tcs3400Device::GetDescriptor(GetDescriptorRequestView request,
   sensor_axes[2] = MakeLightSensorAxis(fuchsia_input_report::wire::SensorType::kLightGreen);
   sensor_axes[3] = MakeLightSensorAxis(fuchsia_input_report::wire::SensorType::kLightBlue);
 
-  const auto input_descriptor =
-      fuchsia_input_report::wire::SensorInputDescriptor(allocator).set_values(allocator,
-                                                                              sensor_axes);
+  fidl::VectorView<fuchsia_input_report::wire::SensorInputDescriptor> input_descriptor(allocator,
+                                                                                       1);
+  input_descriptor[0].Allocate(allocator);
+  input_descriptor[0].set_values(allocator, sensor_axes);
 
   auto sensitivity_axes = SensorAxisVector(allocator, 1);
   sensitivity_axes[0] = {
@@ -381,13 +382,16 @@ void Tcs3400Device::GetDescriptor(GetDescriptorRequestView request,
   threshold_low_axes[0] =
       MakeLightSensorAxis(fuchsia_input_report::wire::SensorType::kLightIlluminance);
 
-  const auto feature_descriptor = fuchsia_input_report::wire::SensorFeatureDescriptor(allocator)
-                                      .set_report_interval(allocator, kReportIntervalAxis)
-                                      .set_supports_reporting_state(true)
-                                      .set_sensitivity(allocator, sensitivity_axes)
-                                      .set_threshold_high(allocator, threshold_high_axes)
-                                      .set_threshold_low(allocator, threshold_low_axes)
-                                      .set_sampling_rate(allocator, kSamplingRateAxis);
+  fidl::VectorView<fuchsia_input_report::wire::SensorFeatureDescriptor> feature_descriptor(
+      allocator, 1);
+  feature_descriptor[0].Allocate(allocator);
+  feature_descriptor[0]
+      .set_report_interval(allocator, kReportIntervalAxis)
+      .set_supports_reporting_state(true)
+      .set_sensitivity(allocator, sensitivity_axes)
+      .set_threshold_high(allocator, threshold_high_axes)
+      .set_threshold_low(allocator, threshold_low_axes)
+      .set_sampling_rate(allocator, kSamplingRateAxis);
 
   const auto sensor_descriptor = fuchsia_input_report::wire::SensorDescriptor(allocator)
                                      .set_input(allocator, input_descriptor)

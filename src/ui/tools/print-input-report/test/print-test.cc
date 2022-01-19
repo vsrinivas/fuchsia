@@ -17,6 +17,7 @@
 #include <gtest/gtest.h>
 #include <hid/usages.h>
 
+#include "fuchsia/input/report/cpp/fidl.h"
 #include "src/ui/input/testing/fake_input_report_device/fake.h"
 #include "src/ui/tools/print-input-report/devices.h"
 #include "src/ui/tools/print-input-report/printer.h"
@@ -217,7 +218,8 @@ TEST_F(PrintInputReport, PrintMouseInputDescriptor) {
 
 TEST_F(PrintInputReport, PrintSensorInputDescriptor) {
   auto descriptor = std::make_unique<fuchsia::input::report::DeviceDescriptor>();
-  auto values = descriptor->mutable_sensor()->mutable_input()->mutable_values();
+  descriptor->mutable_sensor()->mutable_input()->emplace_back();
+  auto values = descriptor->mutable_sensor()->mutable_input()->back().mutable_values();
 
   fuchsia::input::report::SensorAxis axis;
   axis.axis.unit.type = fuchsia::input::report::UnitType::SI_LINEAR_VELOCITY;
@@ -586,7 +588,8 @@ TEST_F(PrintInputReport, PrintConsumerControlReport) {
 
 TEST_F(PrintInputReport, PrintInputDescriptorWithExponents) {
   auto descriptor = std::make_unique<fuchsia::input::report::DeviceDescriptor>();
-  auto values = descriptor->mutable_sensor()->mutable_input()->mutable_values();
+  descriptor->mutable_sensor()->mutable_input()->emplace_back();
+  auto values = descriptor->mutable_sensor()->mutable_input()->back().mutable_values();
 
   fuchsia::input::report::SensorAxis axis;
   axis.axis.unit.type = fuchsia::input::report::UnitType::SI_LINEAR_VELOCITY;

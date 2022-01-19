@@ -56,7 +56,16 @@ ParseResult Sensor::ParseReportDescriptor(const hid::ReportDescriptor& hid_repor
 
 ParseResult Sensor::CreateDescriptor(fidl::AnyArena& allocator,
                                      fuchsia_input_report::wire::DeviceDescriptor& descriptor) {
-  fuchsia_input_report::wire::SensorInputDescriptor input(allocator);
+  // Find the first SensorInputDescriptor that isn't filled out yet.
+  uint32_t index = 0;
+  for (; index < descriptor.sensor().input().count(); index++) {
+    if (descriptor.sensor().input()[index].IsEmpty()) {
+      break;
+    }
+  }
+  fuchsia_input_report::wire::SensorInputDescriptor& input = descriptor.sensor().input()[index];
+  input.Allocate(allocator);
+  input.set_report_id(report_id_);
 
   // Set the values array.
   {
@@ -70,10 +79,6 @@ ParseResult Sensor::CreateDescriptor(fidl::AnyArena& allocator,
     }
     input.set_values(allocator, std::move(values));
   }
-
-  fuchsia_input_report::wire::SensorDescriptor sensor(allocator);
-  sensor.set_input(allocator, std::move(input));
-  descriptor.set_sensor(allocator, std::move(sensor));
 
   return ParseResult::kOk;
 }

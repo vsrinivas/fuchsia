@@ -153,8 +153,9 @@ TEST_F(AccelerationInputDeviceTest, Descriptor) {
         EXPECT_FALSE(descriptor.has_consumer_control());
 
         ASSERT_TRUE(descriptor.sensor().has_input());
-        ASSERT_TRUE(descriptor.sensor().input().has_values());
-        const auto& values = descriptor.sensor().input().values();
+        ASSERT_EQ(descriptor.sensor().input().count(), 1UL);
+        ASSERT_TRUE(descriptor.sensor().input()[0].has_values());
+        const auto& values = descriptor.sensor().input()[0].values();
 
         ASSERT_EQ(values.count(), 3u);
         EXPECT_EQ(values[0].type, fuchsia_input_report::wire::SensorType::kAccelerometerX);
@@ -291,8 +292,9 @@ TEST_F(GyroscopeInputDeviceTest, Descriptor) {
         EXPECT_FALSE(descriptor.has_consumer_control());
 
         ASSERT_TRUE(descriptor.sensor().has_input());
-        ASSERT_TRUE(descriptor.sensor().input().has_values());
-        const auto& values = descriptor.sensor().input().values();
+        ASSERT_EQ(descriptor.sensor().input().count(), 1UL);
+        ASSERT_TRUE(descriptor.sensor().input()[0].has_values());
+        const auto& values = descriptor.sensor().input()[0].values();
 
         ASSERT_EQ(values.count(), 3u);
         EXPECT_EQ(values[0].type, fuchsia_input_report::wire::SensorType::kGyroscopeX);
@@ -428,8 +430,9 @@ TEST_F(RgbcLightInputDeviceTest, Descriptor) {
         EXPECT_FALSE(descriptor.has_consumer_control());
 
         ASSERT_TRUE(descriptor.sensor().has_input());
-        ASSERT_TRUE(descriptor.sensor().input().has_values());
-        const auto& values = descriptor.sensor().input().values();
+        ASSERT_EQ(descriptor.sensor().input().count(), 1UL);
+        ASSERT_TRUE(descriptor.sensor().input()[0].has_values());
+        const auto& values = descriptor.sensor().input()[0].values();
 
         ASSERT_EQ(values.count(), 4u);
         EXPECT_EQ(values[0].type, fuchsia_input_report::wire::SensorType::kLightRed);

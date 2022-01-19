@@ -36,32 +36,38 @@ TEST(SensorTest, AmbientLight) {
 
   hid_input_report::TestDescriptorAllocator descriptor_allocator;
   fuchsia_input_report::wire::DeviceDescriptor descriptor(descriptor_allocator);
+  fuchsia_input_report::wire::SensorDescriptor sensor_desc(descriptor_allocator);
+  fidl::VectorView<fuchsia_input_report::wire::SensorInputDescriptor> input(descriptor_allocator,
+                                                                            1);
+  sensor_desc.set_input(descriptor_allocator, std::move(input));
+  descriptor.set_sensor(descriptor_allocator, std::move(sensor_desc));
   EXPECT_EQ(hid_input_report::ParseResult::kOk,
             sensor.CreateDescriptor(descriptor_allocator, descriptor));
   EXPECT_TRUE(descriptor.has_sensor());
   EXPECT_TRUE(descriptor.sensor().has_input());
 
   // Check the descriptor.
-  ASSERT_EQ(4, descriptor.sensor().input().values().count());
+  ASSERT_EQ(1, descriptor.sensor().input().count());
+  ASSERT_EQ(4, descriptor.sensor().input()[0].values().count());
 
-  ASSERT_EQ(descriptor.sensor().input().values()[0].type,
+  ASSERT_EQ(descriptor.sensor().input()[0].values()[0].type,
             fuchsia_input_report::wire::SensorType::kLightIlluminance);
-  ASSERT_EQ(descriptor.sensor().input().values()[0].axis.unit.type,
+  ASSERT_EQ(descriptor.sensor().input()[0].values()[0].axis.unit.type,
             fuchsia_input_report::wire::UnitType::kNone);
 
-  ASSERT_EQ(descriptor.sensor().input().values()[1].type,
+  ASSERT_EQ(descriptor.sensor().input()[0].values()[1].type,
             fuchsia_input_report::wire::SensorType::kLightRed);
-  ASSERT_EQ(descriptor.sensor().input().values()[1].axis.unit.type,
+  ASSERT_EQ(descriptor.sensor().input()[0].values()[1].axis.unit.type,
             fuchsia_input_report::wire::UnitType::kNone);
 
-  ASSERT_EQ(descriptor.sensor().input().values()[2].type,
+  ASSERT_EQ(descriptor.sensor().input()[0].values()[2].type,
             fuchsia_input_report::wire::SensorType::kLightBlue);
-  ASSERT_EQ(descriptor.sensor().input().values()[2].axis.unit.type,
+  ASSERT_EQ(descriptor.sensor().input()[0].values()[2].axis.unit.type,
             fuchsia_input_report::wire::UnitType::kNone);
 
-  ASSERT_EQ(descriptor.sensor().input().values()[3].type,
+  ASSERT_EQ(descriptor.sensor().input()[0].values()[3].type,
             fuchsia_input_report::wire::SensorType::kLightGreen);
-  ASSERT_EQ(descriptor.sensor().input().values()[3].axis.unit.type,
+  ASSERT_EQ(descriptor.sensor().input()[0].values()[3].axis.unit.type,
             fuchsia_input_report::wire::UnitType::kNone);
 
   // Create the report.

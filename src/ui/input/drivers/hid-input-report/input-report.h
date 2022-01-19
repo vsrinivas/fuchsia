@@ -110,6 +110,8 @@ class InputReport : public DeviceType,
   uint64_t report_count_ = 0;
   zx::duration total_latency_ = {};
   zx::duration max_latency_ = {};
+
+  uint32_t sensor_count_ = 0;
 };
 
 }  // namespace hid_input_report_dev

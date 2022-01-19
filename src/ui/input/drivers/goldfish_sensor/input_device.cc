@@ -135,8 +135,9 @@ void AccelerationInputDevice::GetDescriptor(GetDescriptorRequestView request,
   sensor_axes[1].type = fir_fidl::SensorType::kAccelerometerY;
   sensor_axes[2].type = fir_fidl::SensorType::kAccelerometerZ;
 
-  fir_fidl::SensorInputDescriptor sensor_input_descriptor(allocator);
-  sensor_input_descriptor.set_values(allocator, std::move(sensor_axes));
+  fidl::VectorView<fir_fidl::SensorInputDescriptor> sensor_input_descriptor(allocator, 1);
+  sensor_input_descriptor[0].Allocate(allocator);
+  sensor_input_descriptor[0].set_values(allocator, std::move(sensor_axes));
 
   fir_fidl::SensorDescriptor sensor_descriptor(allocator);
   sensor_descriptor.set_input(allocator, std::move(sensor_input_descriptor));
@@ -249,8 +250,9 @@ void GyroscopeInputDevice::GetDescriptor(GetDescriptorRequestView request,
   sensor_axes[1].type = fir_fidl::SensorType::kGyroscopeY;
   sensor_axes[2].type = fir_fidl::SensorType::kGyroscopeZ;
 
-  fir_fidl::SensorInputDescriptor sensor_input_descriptor(allocator);
-  sensor_input_descriptor.set_values(allocator, std::move(sensor_axes));
+  fidl::VectorView<fir_fidl::SensorInputDescriptor> sensor_input_descriptor(allocator, 1);
+  sensor_input_descriptor[0].Allocate(allocator);
+  sensor_input_descriptor[0].set_values(allocator, std::move(sensor_axes));
 
   fir_fidl::SensorDescriptor sensor_descriptor(allocator);
   sensor_descriptor.set_input(allocator, std::move(sensor_input_descriptor));
@@ -366,8 +368,9 @@ void RgbcLightInputDevice::GetDescriptor(GetDescriptorRequestView request,
   sensor_axes[2].type = fir_fidl::SensorType::kLightBlue;
   sensor_axes[3].type = fir_fidl::SensorType::kLightIlluminance;
 
-  fir_fidl::SensorInputDescriptor sensor_input_descriptor(allocator);
-  sensor_input_descriptor.set_values(allocator, std::move(sensor_axes));
+  fidl::VectorView<fir_fidl::SensorInputDescriptor> sensor_input_descriptor(allocator, 1);
+  sensor_input_descriptor[0].Allocate(allocator);
+  sensor_input_descriptor[0].set_values(allocator, std::move(sensor_axes));
 
   fir_fidl::SensorDescriptor sensor_descriptor(allocator);
   sensor_descriptor.set_input(allocator, std::move(sensor_input_descriptor));

@@ -130,6 +130,7 @@ impl SerializableSensorAxis {
 #[derive(Clone, Debug, Serialize, PartialEq, Eq)]
 pub struct SerializableSensorInputDescriptor {
     pub values: Option<Vec<SerializableSensorAxis>>,
+    pub report_id: Option<u8>,
 }
 
 impl SerializableSensorInputDescriptor {
@@ -139,6 +140,7 @@ impl SerializableSensorInputDescriptor {
                 .values
                 .as_ref()
                 .map(|values| values.iter().map(SerializableSensorAxis::new).collect()),
+            report_id: sensor_input.report_id,
         }
     }
 }
@@ -150,6 +152,7 @@ pub struct SerializableSensorFeatureDescriptor {
     pub sensitivity: Option<Vec<SerializableSensorAxis>>,
     pub threshold_high: Option<Vec<SerializableSensorAxis>>,
     pub threshold_low: Option<Vec<SerializableSensorAxis>>,
+    pub report_id: Option<u8>,
 }
 
 impl SerializableSensorFeatureDescriptor {
@@ -167,21 +170,27 @@ impl SerializableSensorFeatureDescriptor {
             threshold_low: sensor_feature.threshold_low.as_ref().map(|threshold_low| {
                 threshold_low.iter().map(SerializableSensorAxis::new).collect()
             }),
+            report_id: sensor_feature.report_id,
         }
     }
 }
 
 #[derive(Clone, Debug, Serialize, PartialEq, Eq)]
 pub struct SerializableSensorDescriptor {
-    pub input: Option<SerializableSensorInputDescriptor>,
-    pub feature: Option<SerializableSensorFeatureDescriptor>,
+    pub input: Option<Vec<SerializableSensorInputDescriptor>>,
+    pub feature: Option<Vec<SerializableSensorFeatureDescriptor>>,
 }
 
 impl SerializableSensorDescriptor {
     pub fn new(sensor: &SensorDescriptor) -> Self {
         SerializableSensorDescriptor {
-            input: sensor.input.as_ref().map(SerializableSensorInputDescriptor::new),
-            feature: sensor.feature.as_ref().map(SerializableSensorFeatureDescriptor::new),
+            input: sensor
+                .input
+                .as_ref()
+                .map(|input| input.iter().map(SerializableSensorInputDescriptor::new).collect()),
+            feature: sensor.feature.as_ref().map(|feature| {
+                feature.iter().map(SerializableSensorFeatureDescriptor::new).collect()
+            }),
         }
     }
 }

@@ -97,6 +97,9 @@ bool InputReport::ParseHidInputReportDescriptor(const hid::ReportDescriptor* rep
   if (result != hid_input_report::ParseResult::kOk) {
     return false;
   }
+  if (device->GetDeviceType() == hid_input_report::DeviceType::kSensor) {
+    sensor_count_++;
+  }
   devices_.push_back(std::move(device));
   return true;
 }
@@ -177,6 +180,14 @@ void InputReport::GetDescriptor(GetDescriptorRequestView request,
   fidl_info.version = info.version;
   descriptor.set_device_info(descriptor_allocator, std::move(fidl_info));
 
+  if (sensor_count_) {
+    fidl::VectorView<fuchsia_input_report::wire::SensorInputDescriptor> input(descriptor_allocator,
+                                                                              sensor_count_);
+    fuchsia_input_report::wire::SensorDescriptor sensor(descriptor_allocator);
+    sensor.set_input(descriptor_allocator, std::move(input));
+    descriptor.set_sensor(descriptor_allocator, std::move(sensor));
+  }
+
   for (auto& device : devices_) {
     device->CreateDescriptor(descriptor_allocator, descriptor);
   }
@@ -255,6 +266,7 @@ void InputReport::GetInputReport(GetInputReportRequestView request,
       return;
     }
 
+    report.set_report_id(device->InputReportId());
     report.set_event_time(allocator, zx_clock_get_monotonic());
     report.set_trace_id(allocator, TRACE_NONCE());
   }

@@ -38,6 +38,10 @@ pub struct Sensor {
     /// over IPC. Since the interface can be implemented by various drivers and devices, we need to
     /// keep track of the order so we can properly deserialize the response.
     sensor_axes: Vec<SensorAxis>,
+
+    /// ReportID: the report ID of the sensor with a light illuminance axis. Reports with matching
+    /// report ID will match the format of `sensor_axes`.
+    report_id: u8,
 }
 
 impl Sensor {
@@ -49,15 +53,27 @@ impl Sensor {
         call!(proxy => get_input_reports_reader(server))?;
         let reader = service_context.wrap_proxy(reader).await;
 
-        let sensor_axes = proxy
+        let (sensor_axes, report_id) = proxy
             .call_async(InputDeviceProxy::get_descriptor)
             .await?
             .sensor
             .and_then(|sensor| sensor.input)
-            .and_then(|input| input.values)
+            .and_then(|input_desc| {
+                // Find input report that has a light illuminance axis, but is not limited to just a light illuminance axis
+                for input in input_desc {
+                    if let Some(values) = input.values {
+                        for val in &values {
+                            if val.type_ == SensorType::LightIlluminance {
+                                return Some((values, input.report_id.unwrap_or(0)));
+                            }
+                        }
+                    }
+                }
+                None
+            })
             .ok_or_else(|| format_err!("Missing sensor descriptors"))?;
 
-        Ok(Self { reader, sensor_axes })
+        Ok(Self { reader, sensor_axes, report_id })
     }
 }
 
@@ -101,8 +117,12 @@ async fn get_reports(sensor: &Sensor) -> Result<InputReport, Error> {
 }
 
 /// Reads the sensor's HID record and decodes it.
-pub(super) async fn read_sensor(sensor: &Sensor) -> Result<AmbientLightInputRpt, Error> {
+pub(super) async fn read_sensor(sensor: &Sensor) -> Result<Option<AmbientLightInputRpt>, Error> {
     let report = get_reports(sensor).await?;
+
+    if report.report_id.unwrap_or(0) != sensor.report_id {
+        return Ok(None);
+    }
 
     let rpt_id = report.trace_id.ok_or_else(|| format_err!("Report missing trace_id"))?;
     let report = report.sensor.ok_or_else(|| format_err!("Report missing sensor"))?;
@@ -129,7 +149,7 @@ pub(super) async fn read_sensor(sensor: &Sensor) -> Result<AmbientLightInputRpt,
 
     if let (Some(illuminance), Some(red), Some(green), Some(blue)) = (illuminance, red, green, blue)
     {
-        Ok(AmbientLightInputRpt { rpt_id, illuminance, red, green, blue })
+        Ok(Some(AmbientLightInputRpt { rpt_id, illuminance, red, green, blue }))
     } else {
         Err(format_err!("Missing light data from sensor report"))
     }
@@ -198,10 +218,10 @@ pub(crate) mod testing {
             }),
             mouse: None,
             sensor: Some(SensorDescriptor {
-                input: Some(SensorInputDescriptor {
+                input: Some(vec![SensorInputDescriptor {
                     values: Some(axes),
                     ..SensorInputDescriptor::EMPTY
-                }),
+                }]),
                 feature: None,
                 ..SensorDescriptor::EMPTY
             }),
@@ -269,6 +289,7 @@ pub(crate) mod testing {
 mod tests {
     use super::*;
     use crate::service_context::ServiceContext;
+    use fuchsia_syslog::fx_log_info;
     use futures::future;
 
     #[fuchsia_async::run_until_stalled(test)]
@@ -283,11 +304,14 @@ mod tests {
 
         let result = read_sensor(&sensor).await;
         match result {
-            Ok(input_rpt) => {
+            Ok(Some(input_rpt)) => {
                 assert_eq!(input_rpt.illuminance, testing::TEST_LUX_VAL);
                 assert_eq!(input_rpt.red, testing::TEST_RED_VAL);
                 assert_eq!(input_rpt.green, testing::TEST_GREEN_VAL);
                 assert_eq!(input_rpt.blue, testing::TEST_BLUE_VAL);
+            }
+            Ok(_) => {
+                fx_log_info!("No report found!");
             }
             Err(e) => {
                 panic!("Sensor read failed: {:?}", e);

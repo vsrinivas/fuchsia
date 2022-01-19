@@ -77,6 +77,7 @@ table/member fuchsia.input.report/InputReport.consumer_control fuchsia.input.rep
 table/member fuchsia.input.report/InputReport.event_time int64
 table/member fuchsia.input.report/InputReport.keyboard fuchsia.input.report/KeyboardInputReport
 table/member fuchsia.input.report/InputReport.mouse fuchsia.input.report/MouseInputReport
+table/member fuchsia.input.report/InputReport.report_id uint8
 table/member fuchsia.input.report/InputReport.sensor fuchsia.input.report/SensorInputReport
 table/member fuchsia.input.report/InputReport.touch fuchsia.input.report/TouchInputReport
 table/member fuchsia.input.report/InputReport.trace_id uint64
@@ -109,6 +110,7 @@ enum/member fuchsia.input.report/LedType.NUM_LOCK 1
 enum/member fuchsia.input.report/LedType.SCROLL_LOCK 3
 strict enum fuchsia.input.report/LedType uint32
 const fuchsia.input.report/MAX_DEVICE_REPORT_COUNT uint32 50
+const fuchsia.input.report/MAX_REPORT_COUNT uint32 255
 const fuchsia.input.report/MOUSE_MAX_NUM_BUTTONS uint32 32
 table/member fuchsia.input.report/MouseDescriptor.input fuchsia.input.report/MouseInputDescriptor
 table fuchsia.input.report/MouseDescriptor
@@ -139,9 +141,10 @@ const fuchsia.input.report/SENSOR_MAX_VALUES uint32 100
 struct/member fuchsia.input.report/SensorAxis.axis fuchsia.input.report/Axis
 struct/member fuchsia.input.report/SensorAxis.type fuchsia.input.report/SensorType
 struct fuchsia.input.report/SensorAxis
-table/member fuchsia.input.report/SensorDescriptor.feature fuchsia.input.report/SensorFeatureDescriptor
-table/member fuchsia.input.report/SensorDescriptor.input fuchsia.input.report/SensorInputDescriptor
+table/member fuchsia.input.report/SensorDescriptor.feature vector<fuchsia.input.report/SensorFeatureDescriptor>:255
+table/member fuchsia.input.report/SensorDescriptor.input vector<fuchsia.input.report/SensorInputDescriptor>:255
 table fuchsia.input.report/SensorDescriptor
+table/member fuchsia.input.report/SensorFeatureDescriptor.report_id uint8
 table/member fuchsia.input.report/SensorFeatureDescriptor.report_interval fuchsia.input.report/Axis
 table/member fuchsia.input.report/SensorFeatureDescriptor.sampling_rate fuchsia.input.report/Axis
 table/member fuchsia.input.report/SensorFeatureDescriptor.sensitivity vector<fuchsia.input.report/SensorAxis>:100
@@ -156,6 +159,7 @@ table/member fuchsia.input.report/SensorFeatureReport.sensitivity vector<int64>:
 table/member fuchsia.input.report/SensorFeatureReport.threshold_high vector<int64>:100
 table/member fuchsia.input.report/SensorFeatureReport.threshold_low vector<int64>:100
 table fuchsia.input.report/SensorFeatureReport
+table/member fuchsia.input.report/SensorInputDescriptor.report_id uint8
 table/member fuchsia.input.report/SensorInputDescriptor.values vector<fuchsia.input.report/SensorAxis>:100
 table fuchsia.input.report/SensorInputDescriptor
 table/member fuchsia.input.report/SensorInputReport.values vector<int64>:100

@@ -600,7 +600,9 @@ TEST_F(Tcs3400Test, GetDescriptor) {
   ASSERT_TRUE(response->descriptor.has_device_info());
   ASSERT_TRUE(response->descriptor.has_sensor());
   ASSERT_TRUE(response->descriptor.sensor().has_input());
-  ASSERT_EQ(response->descriptor.sensor().input().values().count(), 4);
+  ASSERT_EQ(response->descriptor.sensor().input().count(), 1);
+  ASSERT_TRUE(response->descriptor.sensor().input()[0].has_values());
+  ASSERT_EQ(response->descriptor.sensor().input()[0].values().count(), 4);
 
   EXPECT_EQ(response->descriptor.device_info().vendor_id,
             static_cast<uint32_t>(fuchsia_input_report::wire::VendorId::kGoogle));
@@ -608,7 +610,7 @@ TEST_F(Tcs3400Test, GetDescriptor) {
       response->descriptor.device_info().product_id,
       static_cast<uint32_t>(fuchsia_input_report::wire::VendorGoogleProductId::kAmsLightSensor));
 
-  const auto& sensor_axes = response->descriptor.sensor().input().values();
+  const auto& sensor_axes = response->descriptor.sensor().input()[0].values();
   EXPECT_EQ(sensor_axes[0].type, fuchsia_input_report::wire::SensorType::kLightIlluminance);
   EXPECT_EQ(sensor_axes[1].type, fuchsia_input_report::wire::SensorType::kLightRed);
   EXPECT_EQ(sensor_axes[2].type, fuchsia_input_report::wire::SensorType::kLightGreen);
@@ -622,7 +624,8 @@ TEST_F(Tcs3400Test, GetDescriptor) {
   }
 
   ASSERT_TRUE(response->descriptor.sensor().has_feature());
-  const auto& feature_descriptor = response->descriptor.sensor().feature();
+  ASSERT_EQ(response->descriptor.sensor().feature().count(), 1);
+  const auto& feature_descriptor = response->descriptor.sensor().feature()[0];
 
   ASSERT_TRUE(feature_descriptor.has_report_interval());
   ASSERT_TRUE(feature_descriptor.has_supports_reporting_state());

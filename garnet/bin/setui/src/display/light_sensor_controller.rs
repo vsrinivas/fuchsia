@@ -237,12 +237,20 @@ where
 }
 
 async fn get_sensor_data(sensor: &Sensor) -> LightData {
-    let sensor_data = read_sensor(&sensor).await.expect("Could not read from the sensor");
-    let lux = sensor_data.illuminance as f32;
-    let red = sensor_data.red as f32;
-    let green = sensor_data.green as f32;
-    let blue = sensor_data.blue as f32;
-    LightData { illuminance: lux, color: fidl_fuchsia_ui_types::ColorRgb { red, green, blue } }
+    loop {
+        if let Some(sensor_data) =
+            read_sensor(&sensor).await.expect("Could not read from the sensor")
+        {
+            let lux = sensor_data.illuminance as f32;
+            let red = sensor_data.red as f32;
+            let green = sensor_data.green as f32;
+            let blue = sensor_data.blue as f32;
+            return LightData {
+                illuminance: lux,
+                color: fidl_fuchsia_ui_types::ColorRgb { red, green, blue },
+            };
+        }
+    }
 }
 
 #[cfg(test)]

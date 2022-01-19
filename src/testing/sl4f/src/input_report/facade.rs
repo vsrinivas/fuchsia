@@ -332,7 +332,7 @@ mod tests {
                 device_info: Some(DeviceInfo { vendor_id: 1, product_id: 2, version: 3 }),
                 mouse: None,
                 sensor: Some(SensorDescriptor {
-                    input: Some(SensorInputDescriptor {
+                    input: Some(vec![SensorInputDescriptor {
                         values: Some(vec![
                             SensorAxis {
                                 axis: Axis {
@@ -360,8 +360,8 @@ mod tests {
                             },
                         ]),
                         ..SensorInputDescriptor::EMPTY
-                    }),
-                    feature: Some(SensorFeatureDescriptor {
+                    }]),
+                    feature: Some(vec![SensorFeatureDescriptor {
                         report_interval: Some(Axis {
                             range: Range { min: 0, max: 1000000000 },
                             unit: Unit { type_: UnitType::Seconds, exponent: 0 },
@@ -389,7 +389,7 @@ mod tests {
                             type_: SensorType::LightIlluminance,
                         }]),
                         ..SensorFeatureDescriptor::EMPTY
-                    }),
+                    }]),
                     ..SensorDescriptor::EMPTY
                 }),
                 touch: Some(TouchDescriptor {
@@ -455,7 +455,8 @@ mod tests {
                         version: 3,
                     }),
                     sensor: Some(SerializableSensorDescriptor {
-                        input: Some(SerializableSensorInputDescriptor {
+                        input: Some(vec![SerializableSensorInputDescriptor {
+                            report_id: None,
                             values: Some(vec![
                                 SerializableSensorAxis {
                                     axis: SerializableAxis {
@@ -488,8 +489,9 @@ mod tests {
                                     type_: SensorType::LightIlluminance.into_primitive(),
                                 },
                             ])
-                        }),
-                        feature: Some(SerializableSensorFeatureDescriptor {
+                        }]),
+                        feature: Some(vec![SerializableSensorFeatureDescriptor {
+                            report_id: None,
                             report_interval: Some(SerializableAxis {
                                 range: SerializableRange { min: 0, max: 1000000000 },
                                 unit: SerializableUnit {
@@ -528,7 +530,7 @@ mod tests {
                                 },
                                 type_: SensorType::LightIlluminance.into_primitive(),
                             }]),
-                        }),
+                        }]),
                     }),
                     touch: Some(SerializableTouchDescriptor {
                         input: Some(SerializableTouchInputDescriptor {
