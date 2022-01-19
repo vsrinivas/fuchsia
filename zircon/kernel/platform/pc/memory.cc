@@ -27,6 +27,7 @@
 #include <lk/init.h>
 #include <object/handle.h>
 #include <object/resource_dispatcher.h>
+#include <vm/bootreserve.h>
 #include <vm/vm.h>
 
 #include "platform_p.h"
@@ -82,6 +83,17 @@ static zx_status_t mem_arena_init(ktl::span<const zbi_mem_range_t> ranges) {
 
   LTRACEF("%zu memory ranges from physboot\n", ranges.size());
   zbitl::MemRangeMerger merged_ranges(ranges.begin(), ranges.end());
+  // First process all the reserved ranges. We do this in case there are reserved regions that
+  // overlap with the RAM regions that occur later in the list. If we didn't process the reserved
+  // regions first, then we might add a pmm arena and have it carve out its vm_page_t array from
+  // what we will later learn is reserved memory.
+  for (const zbi_mem_range_t& range : merged_ranges) {
+    LTRACEF("Range at %#" PRIx64 " of %#" PRIx64 " bytes is %sreserved.\n", range.paddr,
+            range.length, range.type == ZBI_MEM_RANGE_RESERVED ? "" : "not ");
+    if (range.type == ZBI_MEM_RANGE_RESERVED) {
+      boot_reserve_add_range(range.paddr, range.length);
+    }
+  }
   for (const zbi_mem_range_t& range : merged_ranges) {
     LTRACEF("Range at %#" PRIx64 " of %#" PRIx64 " bytes is %smemory.\n", range.paddr, range.length,
             range.type == ZBI_MEM_RANGE_RAM ? "" : "not ");
