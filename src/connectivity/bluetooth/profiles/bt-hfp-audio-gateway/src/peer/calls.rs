@@ -9,6 +9,7 @@ use {
     },
     crate::{
         error::{CallError, Error},
+        inspect::CallEntryInspect,
         peer::procedure::{dtmf::DtmfCode, hold::CallHoldAction},
     },
     async_utils::{
@@ -19,7 +20,8 @@ use {
         CallAction as FidlCallAction, CallProxy, NextCall, PeerHandlerProxy, RedialLast,
         TransferActive,
     },
-    fuchsia_async as fasync,
+    fuchsia_async as fasync, fuchsia_inspect as inspect,
+    fuchsia_inspect_derive::{AttachError, Inspect},
     futures::stream::{FusedStream, Stream, StreamExt},
     std::{
         convert::{TryFrom, TryInto},
@@ -32,7 +34,7 @@ use {
 pub use {fidl_fuchsia_bluetooth_hfp::CallState, number::Number, types::Direction};
 
 /// Defines the types associated with a phone number.
-mod number;
+pub mod number;
 
 /// Defines the collection used to identify and store calls.
 mod call_list;
@@ -58,6 +60,8 @@ struct CallEntry {
     state_updated_at: fasync::Time,
     /// Direction of the call.
     direction: Direction,
+    /// Inspect node
+    inspect: CallEntryInspect,
 }
 
 impl TryFrom<NextCall> for CallEntry {
@@ -76,10 +80,27 @@ impl TryFrom<NextCall> for CallEntry {
     }
 }
 
+impl Inspect for &mut CallEntry {
+    fn iattach(self, parent: &inspect::Node, name: impl AsRef<str>) -> Result<(), AttachError> {
+        let _ = self.inspect.iattach(parent, name)?;
+        self.inspect.set_number(self.number.clone());
+        self.inspect.set_call_direction(self.direction);
+        self.inspect.set_call_state(self.state);
+        Ok(())
+    }
+}
+
 impl CallEntry {
     pub fn new(proxy: CallProxy, number: Number, state: CallState, direction: Direction) -> Self {
         let state_updated_at = fasync::Time::now();
-        Self { proxy, number, state, state_updated_at, direction }
+        Self {
+            proxy,
+            number,
+            state,
+            state_updated_at,
+            direction,
+            inspect: CallEntryInspect::default(),
+        }
     }
 
     /// Update the state. `state_updated_at` is changed only if self.state != state.
@@ -87,6 +108,7 @@ impl CallEntry {
         if self.state != state {
             self.state_updated_at = fasync::Time::now();
             self.state = state;
+            self.inspect.set_call_state(state);
         }
     }
 
@@ -190,6 +212,15 @@ pub(crate) struct Calls {
     reported_indicators: CallIndicators,
     /// The Calls Stream terminated state.
     terminated: bool,
+    /// Root inspect for all Calls
+    inspect_node: inspect::Node,
+}
+
+impl Inspect for &mut Calls {
+    fn iattach(self, parent: &inspect::Node, name: impl AsRef<str>) -> Result<(), AttachError> {
+        self.inspect_node = parent.create_child(name.as_ref());
+        Ok(())
+    }
 }
 
 impl Calls {
@@ -204,12 +235,16 @@ impl Calls {
             pending: Default::default(),
             reported_indicators: CallIndicators::default(),
             terminated: false,
+            inspect_node: Default::default(),
         }
     }
 
     /// Insert a new call. Returns the index of the call inserted.
     fn handle_new_call(&mut self, call: NextCall) -> Result<CallIdx, Error> {
-        let call: CallEntry = call.try_into()?;
+        let mut call: CallEntry = call.try_into()?;
+        if let Err(e) = call.iattach(&self.inspect_node, inspect::unique_name("call_")) {
+            warn!("Failed to attach CallEntryInspect to Calls: {}", e)
+        }
         let proxy = call.proxy.clone();
         let index = self.current_calls.insert(call);
         let call_state = HangingGetStream::new_with_fn_ptr(proxy, CallProxy::watch_state);

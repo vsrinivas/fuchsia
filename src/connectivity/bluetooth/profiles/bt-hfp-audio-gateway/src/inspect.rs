@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use fidl_fuchsia_bluetooth_hfp::NetworkInformation;
+use fidl_fuchsia_bluetooth_hfp::{CallState, NetworkInformation};
 use fuchsia_async as fasync;
 use fuchsia_bluetooth::types::PeerId;
 use fuchsia_inspect::{self as inspect, Property};
@@ -12,6 +12,8 @@ use lazy_static::lazy_static;
 use std::collections::VecDeque;
 
 use crate::features::{codecs_to_string, CodecId, HfFeatures};
+use crate::peer::calls::number::Number;
+use crate::peer::calls::types::Direction;
 use crate::peer::service_level_connection::SlcState;
 
 lazy_static! {
@@ -73,6 +75,43 @@ impl NetworkInformationInspect {
         let signal = info.signal_strength.map_or("".to_string(), |s| format!("{:?}", s));
         self.signal_strength.set(&signal);
         self.roaming.set(info.roaming.unwrap_or(false));
+    }
+}
+
+#[derive(Default, Debug)]
+pub struct CallEntryInspect {
+    number: inspect::StringProperty,
+    is_incoming: inspect::BoolProperty,
+    call_state: inspect::StringProperty,
+    inspect_node: inspect::Node,
+    //TODO(fxbug.dev/91250): Persist previous states, record their associated change times
+}
+
+impl Inspect for &mut CallEntryInspect {
+    fn iattach(self, parent: &inspect::Node, name: impl AsRef<str>) -> Result<(), AttachError> {
+        self.inspect_node = parent.create_child(name.as_ref());
+        self.number = self.inspect_node.create_string("number", "");
+        self.is_incoming = self.inspect_node.create_bool("is_incoming", false);
+        self.call_state = self.inspect_node.create_string("call_state", "");
+        Ok(())
+    }
+}
+
+impl CallEntryInspect {
+    pub fn set_number(&mut self, number: Number) {
+        self.number.set(String::from(number).as_str());
+    }
+
+    pub fn set_call_direction(&mut self, direction: Direction) {
+        let is_incoming = match direction {
+            Direction::MobileTerminated => true,
+            Direction::MobileOriginated => false,
+        };
+        self.is_incoming.set(is_incoming);
+    }
+
+    pub fn set_call_state(&mut self, call_state: CallState) {
+        self.call_state.set(format!("{:?}", call_state).as_str());
     }
 }
 
@@ -237,6 +276,32 @@ mod tests {
     use fidl_fuchsia_bluetooth_hfp::SignalStrength;
     use fuchsia_inspect::{assert_data_tree, testing::AnyProperty};
     use fuchsia_inspect_derive::WithInspect;
+
+    #[test]
+    fn call_entry_inspect_tree() {
+        let inspect = inspect::Inspector::new();
+        let mut call_entry =
+            CallEntryInspect::default().with_inspect(inspect.root(), "call").unwrap();
+        call_entry.set_number(Number::from("1234567"));
+        call_entry.set_call_direction(Direction::MobileTerminated);
+        call_entry.set_call_state(CallState::IncomingRinging);
+        assert_data_tree!(inspect, root: {
+            call: {
+                number: "\"1234567\"",
+                is_incoming: true,
+                call_state: "IncomingRinging",
+            }
+        });
+
+        call_entry.set_call_state(CallState::Terminated);
+        assert_data_tree!(inspect, root: {
+            call: {
+                number: "\"1234567\"",
+                is_incoming: true,
+                call_state: "Terminated",
+            }
+        });
+    }
 
     #[test]
     fn peer_task_inspect_tree() {

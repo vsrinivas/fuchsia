@@ -76,6 +76,10 @@ root:
         task:
           peer_id
           connected_peer_handler: (true / false)
+          calls:
+            call_0:
+              call_state
+              is_incoming
           network:
             service_available
             signal_strength

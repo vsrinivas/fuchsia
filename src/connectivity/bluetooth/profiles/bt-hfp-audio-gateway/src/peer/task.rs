@@ -185,7 +185,9 @@ impl PeerTask {
             connection_behavior,
             hfp_sender,
         )?;
-        let _ = peer.iattach(inspect, "task");
+        if let Err(e) = peer.iattach(inspect, "task") {
+            warn!("Failed to attach PeerTaskInspect to provided inspect node: {}", e)
+        }
         let task = Task::local(peer.run(receiver).map(|_| ()));
         Ok((task, sender))
     }
@@ -207,7 +209,9 @@ impl PeerTask {
             info!("Connection request from {}", self.id);
         }
         self.connection.connect(channel);
-        let _ = self.connection.iattach(self.inspect.node(), "service_level_connection");
+        if let Err(e) = self.connection.iattach(self.inspect.node(), "service_level_connection") {
+            warn!("Failed to attach ServiceLevelConnection to PeerTaskInspect: {}", e)
+        }
         if let Some(id) = self.manager_id {
             self.notify_peer_connected(id).await;
             self.setup_handler().await?;
@@ -228,7 +232,9 @@ impl PeerTask {
             .await?
             .map_err(|e| format_err!("Profile connection request error: {:?}", e))?;
         self.connection.connect(channel.try_into()?);
-        let _ = self.connection.iattach(self.inspect.node(), "service_level_connection");
+        if let Err(e) = self.connection.iattach(self.inspect.node(), "service_level_connection") {
+            warn!("Failed to attach ServiceLevelConnection to PeerTaskInspect: {}", e)
+        }
         if let Some(id) = self.manager_id {
             self.notify_peer_connected(id).await;
             self.setup_handler()
@@ -301,6 +307,9 @@ impl PeerTask {
             }
 
             self.calls = Calls::new(Some(handler.clone()));
+            if let Err(e) = self.calls.iattach(self.inspect.node(), "calls") {
+                warn!("Failed to attach Calls to PeerTaskInspect: {}", e)
+            }
 
             self.create_network_updates_stream(handler);
         }
@@ -348,6 +357,9 @@ impl PeerTask {
         }
 
         self.calls = Calls::new(Some(handler.clone()));
+        if let Err(e) = self.calls.iattach(self.inspect.node(), "calls") {
+            warn!("Failed to attach Calls to PeerTaskInspect: {}", e)
+        }
 
         self.create_network_updates_stream(handler.clone());
         self.set_handler(Some(handler));
