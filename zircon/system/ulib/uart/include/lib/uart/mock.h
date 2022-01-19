@@ -143,11 +143,11 @@ class Driver {
  private:
   template <typename Expected>
   struct ExpectedBase {
-    bool operator==(Expected) const { return true; }
+    friend constexpr bool operator==(const Expected&, const Expected&) { return true; }
   };
   struct ExpectedLock {
     bool unlock = false;
-    bool operator==(ExpectedLock other) const { return unlock == other.unlock; }
+    constexpr bool operator==(const ExpectedLock& other) const { return unlock == other.unlock; }
   };
   struct ExpectedWait : public ExpectedBase<ExpectedWait> {};
   struct ExpectedInit : public ExpectedBase<ExpectedInit> {};
@@ -157,7 +157,7 @@ class Driver {
   };  // -> size_t (count of ExpectedChar to follow)
   struct ExpectedChar {
     uint8_t c;
-    bool operator==(ExpectedChar other) const { return c == other.c; }
+    constexpr bool operator==(const ExpectedChar& other) const { return c == other.c; }
   };
   using Expected = std::variant<ExpectedLock, ExpectedWait, ExpectedInit, ExpectedTxEnable,
                                 ExpectedTxReady, ExpectedWrite, ExpectedChar>;

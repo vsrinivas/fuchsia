@@ -1,14 +1,15 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
-#pragma once
-
-#include <zxtest/zxtest.h>
+#ifndef LIB_MOCK_FUNCTION_MOCK_FUNCTION_H_
+#define LIB_MOCK_FUNCTION_MOCK_FUNCTION_H_
 
 #include <memory>
 #include <tuple>
 #include <utility>
 #include <vector>
+
+#include <zxtest/zxtest.h>
 
 namespace mock_function {
 
@@ -197,3 +198,5 @@ class MockFunction<void, Ts...> {
 };
 
 }  // namespace mock_function
+
+#endif  // LIB_MOCK_FUNCTION_MOCK_FUNCTION_H_
