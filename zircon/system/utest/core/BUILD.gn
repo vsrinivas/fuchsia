@@ -177,7 +177,7 @@ test("standalone") {
       configs -= fdio_config
     }
   }
-  deps = core_tests + unified_only
+  deps = all_bootfs_tests + unified_only
   sources = [
     "standalone-init.cc",
     "standalone-io.cc",
