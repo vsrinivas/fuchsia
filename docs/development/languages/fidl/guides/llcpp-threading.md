@@ -170,8 +170,8 @@ alive. For example, if an object contains a `fidl::WireClient` and captures
 `this` in result callbacks, then manipulating the captured this within the
 result callbacks after destroying the object will lead to use-after-free. One
 way to avoid it is to return immediately if the error was due to destroying the
-`fidl::WireClient` (you may identify it by checking that the error reason is
-`fidl::Reason::kUnbind`). Using the `MyDevice` example above:
+`fidl::WireClient` (you may identify it by checking `is_canceled()` on the
+error). Using the `MyDevice` example above:
 
 ```cpp
 void MyDevice::DoOtherThing() {
@@ -179,7 +179,7 @@ void MyDevice::DoOtherThing() {
   // accessed in the callback.
   client_.Foo(args, [this] (fidl::WireUnownedResult<Foo>& result) {
     if (!result.ok()) {
-      if (result.error().reason() == fidl::Reason::kUnbind) {
+      if (result.error().is_canceled()) {
         // When we receive a cancellation error, |MyDevice| has already
         // destructed. The captured |this| pointer is invalid. We must not
         // access any member objects.

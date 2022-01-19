@@ -447,12 +447,10 @@ struct MakeMoveRequest final {
 
 For this example, the following types are generated:
 
-* `TicTacToe::StartGameRequest`
-* `TicTacToe::MakeMoveRequest`
-* `TicTacToe::MakeMoveResponse`
-* `TicTacToe::OnOpponentMoveResponse`
-
-<!-- TODO: zeroargmessage -->
+* `fidl::WireRequest<TicTacToe::StartGame>`
+* `fidl::WireRequest<TicTacToe::MakeMove>`
+* `fidl::WireResponse<TicTacToe::MakeMove>`
+* `fidl::WireResponse<TicTacToe::OnOpponentMove>`
 
 The naming scheme for requests is `[Method]Request`, and the naming scheme for
 both responses and events is `[Method]Response`.
@@ -500,7 +498,7 @@ calls as well as asynchronous event handling.
 
 A client is created with a client-end `fidl::ClientEnd<P>` to the protocol `P`,
 an `async_dispatcher_t*`, and an optional pointer to an
-[`AsyncEventHandler`](#async-event-handlers) that defines the methods to be
+[`WireAsyncEventHandler`](#async-event-handlers) that defines the methods to be
 called when a FIDL event is received or when the client is unbound. If the
 virtual method for a particular event is not overridden, the event is ignored.
 
@@ -509,16 +507,17 @@ class EventHandler : public fidl::WireAsyncEventHandler<TicTacToe> {
  public:
   EventHandler() = default;
 
-  void OnOpponentMove(OnOpponentMoveResponse* event) override { /* ... */ }
+  void OnOpponentMove(fidl::WireResponse<OnOpponentMove>* event) override {
+    /* ... */
+  }
 
   void on_fidl_error(fidl::UnbindInfo unbind_info) override { /* ... */ }
 };
 
 fidl::ClientEnd<TicTacToe> client_end = /* logic to connect to the protocol */;
 EventHandler event_handler;
-WireClient<TicTacToe> client;
-zx_status_t status = client.Bind(
-    std::move(client_end), dispatcher, &event_handler);
+fidl::WireClient<TicTacToe> client;
+client.Bind(std::move(client_end), dispatcher, &event_handler);
 ```
 
 The binding may be torn down automatically in case of the server-end being
@@ -530,55 +529,74 @@ actively tear down the bindings by destroying the client object.
 You can invoke outgoing FIDL APIs through the `fidl::WireClient` instance.
 Dereferencing a `fidl::WireClient` provides access to the following methods:
 
-* `fidl::Result StartGame(bool start_first)`: Managed variant of a fire
+* For `StartGame` (fire and forget):
+
+    * `fidl::Result StartGame(bool start_first)`: Managed variant of a fire and
+      forget method.
+
+* For `MakeMove` (two way):
+
+    * `void MakeMove(uint8_t row, uint8_t col,
+      fit::callback<void(fidl::WireResponse<TicTacToe::MakeMove>*)> cb)`:
+      Managed variant of an asynchronous two way method. It takes a callback to
+      handle responses as the last argument. The callback is executed on
+      response on a dispatcher thread. In case of error, the callback is
+      destructed without invocation. The callback is referred to as the
+      **response callback**.
+
+    * `void MakeMove(uint8_t row, uint8_t col,
+      fit::callback<void(fidl::WireUnownedResult<TicTacToe::MakeMove>&)> cb)`:
+      Managed variant of an asynchronous two way method. It takes a callback to
+      handle results as the last argument. The callback is executed exactly
+      once, either when the call succeeds or fails. The executing thread is a
+      dispatcher thread unless the dispatcher is shutting down. The callback is
+      referred to as the **result callback**.
+
+Note: the response callback is suitable when there is no need to propagate error
+information on a per-call basis. Terminal errors are always funneled through the
+[central error handler](#central-error-handler). The result callback is suitable
+when the user needs to propagate errors for each FIDL call to their originators.
+For example, a server may need to make another FIDL call while handling an
+existing FIDL call, and need to fail the original call in case of errors.
+However, because the callbacks are invoked asynchronously, be ware of
+[use-after-free bugs when destroying a client][result-callback-use-after-free]
+when result callbacks are used: the objects captured by the callback may not be
+valid.
+
+`fidl::WireClient::buffer` provides access to the following methods:
+
+* `fidl::Result StartGame(bool start_first)`: Caller-allocated variant of a fire
   and forget method.
-* `fidl::Result StartGame(::fidl::BufferSpan _request_buffer, bool
-  start_first)`: Caller-allocated variant of a fire and forget method.
-* `fidl::Result MakeMove(uint8_t row, uint8_t col,
-  fit::callback<void(fidl::WireResponse<TicTacToe::MakeMove>* response)>
-  _cb)`: Managed variant of an asynchronous two way method. It takes a
-  callback to handle responses as the last argument. The callback is executed
-  on response in a dispatcher thread. The returned `fidl::Result` refers
-  just to the status of the outgoing call.
-* `fidl::Result MakeMove(fidl::BufferSpan _request_buffer, uint8_t row, uint8_t
-  col, MakeMoveResponseContext* _context)`: Asynchronous, caller-allocated
+* `void MakeMove(uint8_t row, uint8_t col,
+  fidl::WireResponseContext<MakeMove>* context)`: Asynchronous, caller-allocated
   variant of a two way method. The final argument is a response context, which
   is explained below.
-* `ResultOf::MakeMove MakeMove_Sync(uint8_t row, uint8_t col)`: Synchronous,
+
+`fidl::WireClient::sync` provides access to the following methods:
+
+* `fidl::WireResult<MakeMove> MakeMove(uint8_t row, uint8_t col)`: Synchronous,
   managed variant of a two way method. The same method exists on
   `WireSyncClient`.
-* `UnownedResultOf::MakeMove_Sync(fidl::BufferSpan _request_buffer, uint8_t row,
-  uint8_t col, fidl::BufferSpan _response_buffer)`: Synchronous,
-  caller-allocated variant of a two way method. The same method exists on
-  `WireSyncClient`.
 
-Note: One-way and synchronous two-way FIDL methods have a similar API to the
-[`WireSyncClient`](#sync-client) versions. Aside from one-way methods directly
-returning `fidl::StatusAndError` and the added `_Sync` on the synchronous
-methods, the behavior is identical.
-
-Each two way method has a response context that is used in the caller-allocated,
-asynchronous case. `TicTacToe` has only one response context,
-`TicTacToe::MakeMoveResponseContext`, which has pure virtual methods that
-should be overridden to handle responses:
+Each asynchronous two way method has a response context that is used in the
+caller-allocated, asynchronous case. `TicTacToe` has only one response context,
+`TicTacToe::MakeMoveResponseContext`, which has pure virtual methods that should
+be overridden to handle responses:
 
 ```c++
 virtual void OnResult(fidl::WireUnownedResult<MakeMove>& result) = 0;
-virtual void OnCanceled() = 0;
 ```
 
-Exactly one of the two methods is called for a single response: `OnResult` is
-called with a result object either representing a successfully decoded response
-or an error that is specific to this call. `OnCanceled` is called when the
-two-way call is canceled due to unrelated errors or when the user destroys the
-client object. You are responsible for ensuring that the response context object
-outlives the duration of the entire async call, since the `fidl::WireClient`
-borrows the context object by address to avoid implicit allocation.
+`OnResult` is called with a result object either representing a successfully
+decoded response or an error. You are responsible for ensuring that the response
+context object outlives the duration of the entire async call, since the
+`fidl::WireClient` borrows the context object by address to avoid implicit
+allocation.
 
-##### Centralized error handler
+##### Centralized error handler {#central-error-handler}
 
 When the binding is torn down due to an error,
-`fidl::AsyncEventHandler<TicTacToe>::on_fidl_error` will be invoked from the
+`fidl::WireAsyncEventHandler<TicTacToe>::on_fidl_error` will be invoked from the
 dispatcher thread with the detailed reason. When the error is dispatcher
 shutdown, `on_fidl_error` will be invoked from the thread that is calling
 dispatcher shutdown. It is recommended to put any central logic for logging or
@@ -593,42 +611,38 @@ following methods:
 * `~WireSyncClient()`: Default destructor.
 * `WireSyncClient(&&)`: Default move constructor.
 * `WireSyncClient& operator=(WireSyncClient&&)`: Default move assignment.
-* `fidl::ClientEnd<TicTacToe>& client_end()`: Returns a mutable reference to
-  the underlying [client endpoint](#typed-channels).
 * `const fidl::ClientEnd<TicTacToe>& client_end() const`: Returns the underlying
-  client endpoint as a const.
-* `const zx::channel& channel() const`: Returns the underlying channel as a
-  const. Prefer using the `client_end()` accessors for improved type-safety.
-* `zx::channel* mutable_channel()`: Returns the underlying channel as mutable.
-* `TicTacToe::ResultOf::StartGame StartGame(bool start_first)`: Owned variant of
-  a fire and forget method call, which takes the parameters as arguments and
-  returns the `ResultOf` class. Buffer allocation for requests and responses are
-  entirely handled within this function, as is the case in simple C bindings.
-  The bindings calculate a safe buffer size specific to this call at compile
-  time based on FIDL wire-format and maximum length constraints. The buffers are
-  allocated on the stack if they fit under 512 bytes, or else on the heap.
-  In general, the managed flavor is easier to use, but may result in extra
-  allocation. See [ResultOf](#resultof) for details on buffer
-  management.
-* `TicTacToe::UnownedResultOf::StartGame StartGame(fidl::BufferSpan, bool
-  start_first)`: Caller-allocated variant of a fire and forget call, which takes
-  in backing storage for the request buffer, as well as request parameters, and
-  returns an `UnownedResultOf`.
-* `ResultOf::MakeMove MakeMove(uint8_t row, uint8_t col)`: Owned variant of a
-  two way method call, which takes the parameters as arguments and returns the
-  `ResultOf` class.
-* `UnownedResultOf::MakeMove(fidl::BufferSpan _request_buffer, uint8_t row,
-  uint8_t col, fidl::BufferSpan _response_buffer)`: Caller-allocated variant of
-  a two way method, which takes in backing storage for the request buffer,
-  followed by the request parameters, and finally backing storage for the
-  response buffer, and returns an `UnownedResultOf`.
+  [client endpoint](#typed-channels).
+* `fidl::Result StartGame(bool start_first)`: Managed variant of a fire and
+  forget method call. Buffer allocation for requests are entirely handled within
+  this function.
+* `fidl::WireResult<TicTacToe::MakeMove> MakeMove(uint8_t row, uint8_t col)`:
+  Managed variant of a two way method call, which takes the parameters as
+  arguments and returns a `WireResult` object. Buffer allocation for requests
+  and responses are entirely handled within this function. The bindings
+  calculate a safe buffer size specific to this call at compile time based on
+  FIDL wire-format and maximum length constraints. The buffers are allocated on
+  the stack if they fit under 512 bytes, or else on the heap. See
+  [WireResult](#result) for details on buffer management.
 * `fidl::Result HandleOneEvent(SyncEventHandler& event_handler)`: Blocks to
-  consume exactly one event from the channel. See [Events](#events)
+  consume exactly one event from the channel. See [Events](#events).
+
+`fidl::WireSyncClient<TicTacToe>::buffer` provides the following methods:
+
+* `fidl::WireUnownedResult<TicTacToe::StartGame> StartGame(bool start_first)`:
+  Caller-allocated variant of a fire and forget call, which takes in backing
+  storage for the request buffer passed as the argument to `buffer`, as well as
+  request parameters, and returns an `fidl::WireUnownedResult`.
+
+* `fidl::WireUnownedResult<TicTacToe::MakeMove> MakeMove(uint8_t row, uint8_t
+  col)`: Caller-allocated variant of a two way method, which requests both the
+  space for encoding the request and the space for receiving the response from
+  the same memory resource that is passed to the `buffer` method.
 
 Note that each method has both an owned and caller-allocated variant. In brief,
 the owned variant of each method handles memory allocation for requests and
-responses, whereas the caller-allocated variant allows the user to pass in the
-buffers themselves. The owned variant is easier to use, but may result in extra
+responses, whereas the caller-allocated variant allows the user to provide the
+buffer themselves. The owned variant is easier to use, but may result in extra
 allocation.
 
 #### WireCall {#client-call}
@@ -638,22 +652,25 @@ allocation.
 constructed with a `fidl::UnownedClientEnd<TicTacToe>` i.e. it borrows the
 client endpoint:
 
-* `ResultOf::StartGame StartGame(bool start_first)`: Owned variant of
+* `fidl::WireResult<StartGame> StartGame(bool start_first)`: Owned variant of
   `StartGame`.
-* `UnownedResultOf::StartGame StartGame(fidl::BufferSpan _request_buffer, bool
-  start_first)`: Caller-allocated variant of `StartGame`.
-* `ResultOf::MakeMove MakeMove(uint8_t row, uint8_t col)`: Owned variant of
-  `MakeMove`.
-* `UnownedResultOf::MakeMove MakeMove(fidl::BufferSpan _request_buffer, uint8_t
-  row, uint8_t col, fidl::BufferSpan _response_buffer);`: Caller-allocated
-  variant of `MakeMove`.
+* `fidl::WireResult<MakeMove> MakeMove(uint8_t row, uint8_t col)`: Owned variant
+  of `MakeMove`.
 
-#### Result, ResultOf and UnownedResultOf {#resultof}
+`fidl::WireCall<TicTacToe>(client_end).buffer` provides the following methods:
+
+* `fidl::WireUnownedResult<StartGame> StartGame(bool start_first)`:
+  Caller-allocated variant of `StartGame`.
+* `fidl::WireUnownedResult<MakeMove> MakeMove(uint8_t row, uint8_t col);`:
+  Caller-allocated variant of `MakeMove`.
+
+#### Result, WireResult, and WireUnownedResult {#result}
 
 The managed variants of each method of `WireSyncClient` and `WireCall` all
-return a `ResultOf::` type, whereas the caller-allocating variants all return an
-`UnownedResultOf::`. Fire and forget methods on `fidl::WireClient` return a
-`Result`. These types define the same set of methods:
+return a `fidl::WireResult<Method>` type, whereas the caller-allocating variants
+all return an `fidl::WireUnownedResult<Method>`. Fire and forget methods on
+`fidl::WireClient` return a `fidl::Result`. These types define the same set of
+methods:
 
 *   `zx_status status() const` returns the transport status. it returns the
     first error encountered during (if applicable) linearizing, encoding, making
@@ -665,68 +682,49 @@ return a `ResultOf::` type, whereas the caller-allocating variants all return an
     when status is `ZX_OK`.
 *   `const char* error_message() const` contains a brief error message when
     status is not `ZX_OK`. Otherwise, returns `nullptr`.
-*   **(only for ResultOf and UnownedResultOf for two-way calls)** `T* Unwrap()`
+*   **(only for WireResult and WireUnownedResult for two-way calls)** `T* Unwrap()`
     returns a pointer to the [response struct](#request-response-structs). For
-    `ResultOf::`, the pointer points to memory owned by the result object. For
-    `UnownedResultOf::`, the pointer points to the caller-provided buffer.
+    `WireResult`, the pointer points to memory owned by the result object. For
+    `WireUnownedResult`, the pointer points to the caller-provided buffer.
     `Unwrap()` should only be called when the status is `ZX_OK`.
 
-Additionally, `ResultOf` and `UnownedResultOf` for two-way calls will
+Additionally, `WireResult` and `WireUnownedResult` for two-way calls will
 implement dereference operators that return the response struct itself.
 This allows code such as:
 
 ```cpp
-auto result = client->MakeMove_Sync(0, 0);
-auto response = result->Unwrap();
+fidl::WireResult result = client.sync()->MakeMove(0, 0);
+auto response = result.Unwrap();
 bool success = response->success;
 ```
 
 To be simplified to:
 
 ```cpp
-auto result = client->MakeMove_Sync(0, 0);
+fidl::WireResult result = client.sync()->MakeMove(0, 0);
 bool success = result->success;
 ```
 
-> `ResultOf` manages ownership of all buffer and handles, while `::Unwrap()`
-> returns a view over it. Therefore, this object must outlive any references
-> to the unwrapped response.
+> `WireResult<Method>` manages ownership of all buffer and handles, while
+> `::Unwrap()` returns a view over it. Therefore, this object must outlive any
+> references to the unwrapped response.
 
 ##### Allocation strategy And move semantics
 
-`ResultOf::` stores the response buffer inline if the message is guaranteed
-to fit under 512 bytes. Since the result object is usually instantiated on the
+`WireResult` stores the response buffer inline if the message is guaranteed to
+fit under 512 bytes. Since the result object is usually instantiated on the
 caller's stack, this effectively means the response is stack-allocated when it
 is reasonably small. If the maximal response size exceeds 512 bytes,
-`ResultOf::` instead contains a `std::unique_ptr` to a heap-allocated buffer.
+`WireResult` instead contains a heap-allocated buffer.
 
-Therefore, a `std::move()` on `ResultOf::Foo` may be costly if the response
-buffer is inline: the content has to be copied, and pointers to out-of-line
-objects have to be updated to locations within the destination object.
-Consider the following snippet:
+Therefore, `std::move()` on `WireResult` is not supported. The content has to be
+copied if the buffer is inline, and pointers to out-of-line objects have to be
+updated to locations within the destination object, these are surprising
+overheads for a move operation that is commonly understood to be low cost.
 
-```cpp
-int CountPlanets(ResultOf::ScanForPlanets result) { /* ... */ }
-
-auto result = client->ScanForPlanets();
-SpaceShip::ScanForPlanetsResponse* response = result.Unwrap();
-Planet* planet = &response->planets[0];
-int count = CountPlanets(std::move(result));    // Costly
-// In addition, |response| and |planet| are invalidated due to the move
-```
-
-It may be written more efficiently as:
-
-```cpp
-int CountPlanets(fidl::VectorView<SpaceShip::Planet> planets) { /* ... */ }
-
-auto result = client.ScanForPlanets();
-int count = CountPlanets(result.Unwrap()->planets);
-```
-
-> If the result object need to be passed around multiple function calls,
-> consider pre-allocating a buffer in the outer-most function and use the
-> caller-allocating flavor.
+If the result object need to be passed around multiple function calls, consider
+pre-allocating a buffer in the outer-most function and use the caller-allocating
+flavor.
 
 ### Server
 
@@ -761,6 +759,7 @@ handler. This a view of the request (a pointer). All the request arguments are
 accessed using the arrow operator and the argument name.
 
 For example:
+
 * `request->start_first`
 * `request->row`
 
@@ -848,17 +847,17 @@ ways to create the buffer:
 // 1. On the stack
 using StartGame = TicTacToe::StartGame;
 fidl::SyncClientBuffer<StartGame> buffer;
-auto result = client.StartGame(buffer.view(), true);
+auto result = client.buffer(buffer.view())->StartGame(true);
 
 // 2. On the heap
 auto buffer = std::make_unique<fidl::SyncClientBuffer<StartGame>>();
-auto result = client.StartGame(buffer->view(), true);
+auto result = client.buffer(buffer->view())->StartGame(true);
 
 // 3. Some other means, e.g. thread-local storage
 constexpr uint32_t buffer_size = fidl::SyncClientMethodBufferSizeInChannel<StartGame>();
 uint8_t* buffer = allocate_buffer_of_size(buffer_size);
 fidl::BufferSpan buffer_span(/* data = */buffer, /* capacity = */request_size);
-auto result = client.StartGame(buffer_span, true);
+auto result = client.buffer(buffer_span)->StartGame(true);
 
 // Check the transport status (encoding error, channel writing error, etc.)
 if (result.status() != ZX_OK) {
@@ -869,11 +868,11 @@ if (result.status() != ZX_OK) {
 ```
 
 > When the caller-allocating flavor is used, the `result` object borrows the
-> request and response buffers (hence its type is under `UnownedResultOf`).
+> request and response buffers (hence its type is under `WireUnownedResult`).
 > Make sure the buffers outlive the `result` object.
-> See [UnownedResultOf](#resultof-and-unownedresultof).
+> See [WireUnownedResult](#result).
 
-Note: Buffers passed to the bindings must be aligned to 8 bytes. The
+Note: buffers passed to the bindings must be aligned to 8 bytes. The
 `fidl::SyncClientBuffer` helper class does this automatically. For an
 asynchronous client, use `fidl::AsyncClientBuffer`. Failure to align would
 result in a run-time error.
@@ -886,11 +885,11 @@ on the type of [client](#client) being used.
 #### Async client {#async-event-handlers}
 
 When using a `fidl::WireClient`, events can be handled asynchronously by passing
-the class a `TicTacToe::AsyncEventHandler*`. The `AsyncEventHandler` class has
-the following members:
+the class a `fidl::WireAsyncEventHandler<TicTacToe>*`. The
+`WireAsyncEventHandler` class has the following members:
 
-* `virtual void OnOpponentMove(OnOpponentMoveResponse* message) {}`: handler for
-  the OnOpponentMove event (one method per event).
+* `virtual void OnOpponentMove(fidl::WireResponse<OnOpponentMove>* event) {}`:
+  handler for the OnOpponentMove event (one method per event).
 
 * `virtual on_fidl_error(::fidl::UnbindInfo info) {}`: method called when the
   client encounters a terminal error.
@@ -900,18 +899,18 @@ To be able to handle events and errors, a class that inherits from
 
 #### Sync client {#sync-event-handlers}
 
-For `SyncClient` and `Call` clients, events are handled synchronously by calling
+In `WireSyncClient`, events are handled synchronously by calling
 a `HandleOneEvent` function and passing it a
 `fidl::WireSyncEventHandler<TicTacToe>`.
 
 `WireSyncEventHandler` is a class that contains a pure virtual method for each
 event. In this example, it consists of the following member:
 
-* `virtual void OnOpponentMove(TicTacToe::OnOpponentMoveResponse* event) = 0`:
-  The handle for the OnOpponentMove event.
-* `virtual zx_status_t Unknown() { return ZX_ERR_NOT_SUPPORTED; }`:
-  The status to be returned by `HandleOneEvent` if an unknown event is found.
-  This method should be overridden only if a specific status is needed.
+* `virtual void OnOpponentMove(fidl::WireResponse<TicTacToe::OnOpponentMove>*
+  event) = 0`: The handle for the OnOpponentMove event.
+* `virtual zx_status_t Unknown() { return ZX_ERR_NOT_SUPPORTED; }`: The status
+  to be returned by `HandleOneEvent` if an unknown event is found. This method
+  should be overridden only if a specific status is needed.
 
 To be able to handle events, a class that inherits from `SyncEventHandler` must
 be defined. This class must define the virtual methods for the events it wants
@@ -921,10 +920,10 @@ be allocated.
 There are two ways to handle one event. Each one use an instance of the user
 defined event handler class:
 
-* `::fidl::Result TicTacToe::SyncClient::HandleOneEvent(
+* `::fidl::Result fidl::WireSyncClient<TicTacToe>::HandleOneEvent(
        SyncEventHandler& event_handler)`:
   A bound version for sync clients.
-* `::fidl::Result TicTacToe::SyncEventHandler::HandleOneEvent(
+* `::fidl::Result fidl::WireSyncEventHandler<TicTacToe>::HandleOneEvent(
        fidl::UnownedClientEnd<TicTacToe> client_end)`:
   An unbound version that
   uses an `fidl::UnownedClientEnd<TicTacToe>` to handle one event for a
@@ -1223,6 +1222,7 @@ completer)`, respectively.
 [lang-resource]: /docs/reference/fidl/language/language.md#value-vs-resource
 [lang-protocols]: /docs/reference/fidl/language/language.md#protocols
 [lang-protocol-composition]: /docs/reference/fidl/language/language.md#protocol-composition
+[result-callback-use-after-free]: /docs/development/languages/fidl/guides/llcpp-threading.md#additional_use-after-free_risks_in_result_callbacks
 [union-lexicon]: /docs/reference/fidl/language/lexicon.md#union-terms
 [unknown-attr]: /docs/reference/fidl/language/attributes.md#unknown
 [zircon-channel]: /docs/reference/kernel_objects/channel.md

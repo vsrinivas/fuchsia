@@ -197,8 +197,8 @@ response callback takes a pointer to the response message directly.
 #### Synchronous call
 
 The client object also allows synchronous calls, which will block until the
-response is received and return the response object. These are suffixed with
-`_Sync` (e.g. `client->EchoString_Sync()`).
+response is received and return the response object. These may be selected
+using the `.sync()` accessor. (e.g. `client.sync()->EchoString()`).
 
 
 ```cpp
