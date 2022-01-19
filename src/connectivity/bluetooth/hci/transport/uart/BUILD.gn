@@ -24,7 +24,10 @@ fuchsia_driver("bt-transport-uart-driver") {
     "//build/config:all_source",
     "//build/config/fuchsia:enable_zircon_asserts",
   ]
-  sources = [ "bt-transport-uart.c" ]
+  sources = [
+    "bt_transport_uart.cc",
+    "bt_transport_uart.h",
+  ]
   deps = [
     ":bt_transport_uart_bind",
     "//sdk/banjo/fuchsia.hardware.bt.hci:fuchsia.hardware.bt.hci_banjo_cpp",
