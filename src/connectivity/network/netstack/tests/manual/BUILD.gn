@@ -5,7 +5,6 @@
 import("//build/components.gni")
 
 names = [
-  "selecttest",
   "sockopttest",
   "gethostbyname_test",
 ]
