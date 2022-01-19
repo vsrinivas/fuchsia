@@ -386,9 +386,14 @@ fuchsia_unittest_package("foo-tests") {
 
 ## Hermeticity
 
-A test is *hermetic* if it [uses][manifests-use] or [offers][manifests-offer] no
-capabilities from the [test root's](#tests-as-components) parent. The tests are
-by default hermetic unless explicitly stated otherwise.
+A test is *hermetic* if it:
+
+1. Does not [use][manifests-use] or [offer][manifests-offer] any
+capabilities from the [test root's](#tests-as-components) parent.
+1. Does not [resolve][resolvers] any components outside of the test package.
+
+The tests are by default hermetic unless explicitly stated otherwise.
+
 
 ### Hermetic capabilities for tests
 
@@ -449,6 +454,28 @@ Add a use declaration in test's manifest file to use these capabilities.
 
 The framework also provides some [capabilities][framework-capabilities] to all
 the components and can be used by test components if required.
+
+
+### Hermetic component resolution
+
+Hermetic test components are launched in a realm that utilizes the hermetic
+component resolver. This resolver disallows resolving URLs outside of the
+test's package. This is necessary for enforcing hermeticity, as we don't
+want the availability of an arbitrary component on the system or in an
+associated package server to affect the outcome of a test.
+
+Attempts to resolve a component not in the test's package will be met with a
+`PackageNotFound` error and the following message in the syslog:
+
+```
+failed to resolve component fuchsia-pkg://fuchsia.com/[package_name]#meta/[component_name]: package [package_name] is not in the set of allowed packages...
+```
+
+Note: This is currently only a warning, but will start failing soon.
+
+You can avoid this error by including any components your test relies on
+to the test package - see [this CL](https://fxrev.dev/608222) for an example of
+how to do this.
 
 ### Legacy non-hermetic tests
 
@@ -584,6 +611,7 @@ Components in the test realm may play various roles in the test, as follows:
 [integration-testing]: /docs/development/testing/components/integration_testing.md
 [manifests-offer]: https://fuchsia.dev/reference/cml#offer
 [manifests-use]: https://fuchsia.dev/reference/cml#use
+[resolvers]:  /docs/concepts/components/v2/capabilities/resolvers.md
 [runners]: /docs/concepts/components/v2/capabilities/runners.md
 [test-suite-protocol]: /docs/concepts/components/v2/realms.md
 [unit-tests]: /docs/development/components/build.md#unit_tests_with_generated_manifests
