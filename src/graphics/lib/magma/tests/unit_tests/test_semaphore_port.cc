@@ -24,7 +24,8 @@ class TestSemaphorePort {
 
     // Makes a copy of the semaphores vector
     auto wait_set = std::make_unique<magma::SemaphorePort::WaitSet>(
-        [this](magma::SemaphorePort::WaitSet* wait_set) { ++this->callback_count_; }, semaphores);
+        [this](magma::SemaphorePort::WaitSet* wait_set) { callback_count_ = callback_count_ + 1; },
+        semaphores);
 
     EXPECT_TRUE(semaphore_port->AddWaitSet(std::move(wait_set)));
 
