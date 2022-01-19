@@ -53,15 +53,16 @@ const (
 	targetDirName   = "targets"
 
 	// Names of directories to be uploaded to in GCS.
-	buildsDirName      = "builds"
-	buildAPIDirName    = "build_api"
-	buildidDirName     = "buildid"
-	debugDirName       = "debug"
-	hostTestDirName    = "host_tests"
-	imageDirName       = "images"
-	packageDirName     = "packages"
-	sdkArchivesDirName = "sdk"
-	toolDirName        = "tools"
+	assemblyInputArchivesDirName = "assembly"
+	buildsDirName                = "builds"
+	buildAPIDirName              = "build_api"
+	buildidDirName               = "buildid"
+	debugDirName                 = "debug"
+	hostTestDirName              = "host_tests"
+	imageDirName                 = "images"
+	packageDirName               = "packages"
+	sdkArchivesDirName           = "sdk"
+	toolDirName                  = "tools"
 
 	// A record of all of the fuchsia debug symbols processed.
 	// This is eventually consumed by crash reporting infrastructure.
@@ -134,6 +135,8 @@ artifactory up -bucket $GCS_BUCKET -namespace $NAMESPACE <build directory>
 Uploads artifacts from a build to $GCS_BUCKET with the following structure:
 
 ├── $GCS_BUCKET
+│   │   ├── assembly
+│   │   │   └── <assembly input archives>
 │   │   ├── blobs
 │   │   │   └── <blob names>
 │   │   ├── debug
@@ -327,6 +330,9 @@ func (cmd upCommand) execute(ctx context.Context, buildDir string) error {
 		}
 	}
 	files = append(files, buildAPIs...)
+
+	assemblyInputArchives := artifactory.AssemblyInputArchiveUploads(m, path.Join(buildsNamespaceDir, assemblyInputArchivesDirName))
+	files = append(files, assemblyInputArchives...)
 
 	sdkArchives := artifactory.SDKArchiveUploads(m, path.Join(buildsNamespaceDir, sdkArchivesDirName))
 	files = append(files, sdkArchives...)
