@@ -688,7 +688,7 @@ TEST_F(PtyTestCase, ServerClosesWhenClientPresent) {
   // Write some data to the client, so we can verify the client can drain the
   // buffer still.
 
-  uint8_t kTestData[] = u8"hello world";
+  uint8_t kTestData[] = "hello world";
   {
     auto result = server->Write(fidl::VectorView<uint8_t>::FromExternal(kTestData));
     ASSERT_OK(result.status());
@@ -749,8 +749,8 @@ TEST_F(PtyTestCase, ServerReadClientCooked) {
 
   // In cooked mode, client writes should have \n transformed to \r\n, and
   // control chars untouched.
-  uint8_t kTestData[] = u8"hello\x03 world\ntest message\n";
-  const uint8_t kExpectedReadback[] = u8"hello\x03 world\r\ntest message\r\n";
+  uint8_t kTestData[] = "hello\x03 world\ntest message\n";
+  const uint8_t kExpectedReadback[] = "hello\x03 world\r\ntest message\r\n";
   {
     auto result = client->Write(fidl::VectorView<uint8_t>::FromExternal(kTestData));
     ASSERT_OK(result.status());
@@ -781,9 +781,9 @@ TEST_F(PtyTestCase, ServerWriteClientCooked) {
 
   // In cooked mode, server writes should have newlines untouched and control
   // chars should cause a short write
-  uint8_t kTestData[] = u8"hello world\ntest\x03 message\n";
+  uint8_t kTestData[] = "hello world\ntest\x03 message\n";
   // We expect to read this back, but without the trailing nul
-  const uint8_t kExpectedReadbackWithNul[] = u8"hello world\ntest";
+  const uint8_t kExpectedReadbackWithNul[] = "hello world\ntest";
   {
     auto result = server->Write(fidl::VectorView<uint8_t>::FromExternal(kTestData));
     ASSERT_OK(result.status());
@@ -821,7 +821,7 @@ TEST_F(PtyTestCase, ServerReadClientRaw) {
   }
 
   // In raw mode, client writes should be untouched.
-  uint8_t kTestData[] = u8"hello\x03 world\ntest message\n";
+  uint8_t kTestData[] = "hello\x03 world\ntest message\n";
   {
     auto result = client->Write(fidl::VectorView<uint8_t>::FromExternal(kTestData));
     ASSERT_OK(result.status());
@@ -859,7 +859,7 @@ TEST_F(PtyTestCase, ServerWriteClientRaw) {
   }
 
   // In raw mode, server writes should be untouched.
-  uint8_t kTestData[] = u8"hello world\ntest\x03 message\n";
+  uint8_t kTestData[] = "hello world\ntest\x03 message\n";
   {
     auto result = server->Write(fidl::VectorView<uint8_t>::FromExternal(kTestData));
     ASSERT_OK(result.status());

@@ -47,7 +47,7 @@ TEST(ConsoleTestCase, Read) {
 
 // Verify that calling Write() writes data to the TxSink
 TEST(ConsoleTestCase, Write) {
-  uint8_t kExpectedBuffer[] = u8"Hello World";
+  uint8_t kExpectedBuffer[] = "Hello World";
   size_t kExpectedLength = sizeof(kExpectedBuffer) - 1;
 
   // Cause the RX thread to exit
