@@ -1502,10 +1502,10 @@ mod tests {
     /// Tests the response of the PhyManager when a wpa3 capable client iface is requested and
     /// a matching client iface is present.  The expectation is that the PhyManager should reply
     /// with the iface ID of the client iface.
-    #[test_case(fidl_common::DriverFeature::SaeDriverAuth)]
-    #[test_case(fidl_common::DriverFeature::SaeSmeAuth)]
+    #[test_case(vec![fidl_common::DriverFeature::SaeDriverAuth, fidl_common::DriverFeature::Mfp])]
+    #[test_case(vec![fidl_common::DriverFeature::SaeSmeAuth, fidl_common::DriverFeature::Mfp])]
     #[fuchsia::test(add_test_attr = false)]
-    fn get_configured_wpa3_client(wpa3_feature: fidl_common::DriverFeature) {
+    fn get_configured_wpa3_client(wpa3_features: Vec<fidl_common::DriverFeature>) {
         let _exec = TestExecutor::new().expect("failed to create an executor");
         let test_values = test_setup();
         let mut phy_manager =
@@ -1518,8 +1518,8 @@ mod tests {
         let mut phy_container = PhyContainer::new(fake_mac_roles);
         // Insert the fake iface
         let fake_iface_id = 1;
-        let driver_features = vec![wpa3_feature];
-        let _ = phy_container.client_ifaces.insert(fake_iface_id, driver_features);
+
+        let _ = phy_container.client_ifaces.insert(fake_iface_id, wpa3_features);
 
         let _ = phy_manager.phys.insert(fake_phy_id, phy_container);
 
@@ -2461,7 +2461,11 @@ mod tests {
         let test_values = test_setup();
 
         // Create a phy with the feature that indicates WPA3 support.
-        let driver_features = vec![fidl_common::DriverFeature::ScanOffload, wpa3_feature];
+        let driver_features = vec![
+            fidl_common::DriverFeature::ScanOffload,
+            fidl_common::DriverFeature::Mfp,
+            wpa3_feature,
+        ];
         let fake_phy_id = 0;
 
         let mut phy_manager =

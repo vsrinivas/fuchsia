@@ -497,11 +497,12 @@ impl Rsne {
             && features_supported
     }
 
+    /// Check if this is a supported WPA3-Personal or WPA3-Personal transition AP per the WFA WPA3 specification.
     /// Supported Ciphers and AKMs:
     /// Group Data Ciphers: CCMP-128, TKIP
     /// Pairwise Cipher: CCMP-128
-    /// AKM: SAE
-    /// The MFPR bit is required, except for Wpa2/Wpa3 compatibility mode.
+    /// AKM: SAE (also PSK in transition mode)
+    /// The MFPR bit is required, except for transition mode.
     pub fn is_wpa3_rsn_compatible(&self, driver_features: &Vec<DriverFeature>) -> bool {
         let group_data_supported = self.group_data_cipher_suite.as_ref().map_or(false, |c| {
             c.has_known_usage()
@@ -519,10 +520,14 @@ impl Rsne {
             .rsn_capabilities
             .as_ref()
             .map_or(false, |caps| caps.is_wpa3_compatible(wpa2_compatibility_mode));
-        let features_supported = self
+        let mut features_supported = self
             .rsn_capabilities
             .as_ref()
             .map_or(true, |caps| caps.is_compatible_with_features(driver_features));
+        // WFA WPA3 specification v3.0: 2.3 rule 7: Verify that we actually support MFP, regardless of whether
+        // the features bits indicate we need that support. SAE without MFP is not a valid configuration.
+        features_supported &=
+            driver_features.contains(&fidl_fuchsia_wlan_common::DriverFeature::Mfp);
         group_data_supported
             && pairwise_supported
             && sae_supported
@@ -1204,6 +1209,7 @@ mod tests {
     fn test_wpa3_transition_mode() {
         let a_rsne = Rsne::wpa2_wpa3_rsne();
         assert_eq!(a_rsne.is_wpa2_rsn_compatible(&vec![]), true);
+        assert_eq!(a_rsne.is_wpa3_rsn_compatible(&vec![]), false);
         assert_eq!(a_rsne.is_wpa3_rsn_compatible(&vec![DriverFeature::Mfp]), true);
 
         let s_rsne = a_rsne

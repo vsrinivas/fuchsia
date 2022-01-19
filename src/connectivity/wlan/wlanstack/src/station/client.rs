@@ -53,10 +53,11 @@ pub async fn serve<S>(
 where
     S: Stream<Item = StatsRequest> + Unpin,
 {
-    let wpa3_supported = device_info.driver_features.iter().any(|f| {
-        f == &fidl_common::DriverFeature::SaeSmeAuth
-            || f == &fidl_common::DriverFeature::SaeDriverAuth
-    });
+    let wpa3_supported =
+        device_info.driver_features.iter().any(|f| {
+            f == &fidl_common::DriverFeature::SaeSmeAuth
+                || f == &fidl_common::DriverFeature::SaeDriverAuth
+        }) && device_info.driver_features.contains(&fidl_common::DriverFeature::Mfp);
     let cfg = client_sme::ClientConfig::from_config(cfg, wpa3_supported);
     let is_softmac = device_info.driver_features.contains(&fidl_common::DriverFeature::TempSoftmac);
     let (sme, mlme_stream, info_stream, time_stream) =
