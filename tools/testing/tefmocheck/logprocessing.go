@@ -19,8 +19,8 @@ import (
 // SplitTestLogs splits logBytes into per-test logs,
 // writes those per-test logs to files in outDir, and returns a slice of TestLogs.
 // The logs will be written to the parent directory of path.
-func SplitTestLogs(logBytes []byte, logBaseName, outDir string) ([]TestLog, error) {
-	testLogs, err := splitLogByTest(logBytes)
+func SplitTestLogs(logBytes []byte, logBaseName, outDir string, testNames []string) ([]TestLog, error) {
+	testLogs, err := splitLogByTest(logBytes, testNames)
 	if err != nil {
 		return nil, err
 	}
@@ -52,6 +52,11 @@ func SplitTestLogs(logBytes []byte, logBaseName, outDir string) ([]TestLog, erro
 
 var testPlanRE = regexp.MustCompile(`1\.\.(\d+)\n`)
 
+// For ffx tests run with the -test-file flag, the testFinishedRE shows up
+// for all tests at the end after all tests are run, so we split on the test
+// start log instead.
+var ffxTestStartedRE = regexp.MustCompile(`Running test '(\S+)'`)
+
 const testPlanSubmatches = 2
 
 // TestLog represents an individual test's slice of a larger log file.
@@ -77,7 +82,7 @@ type TestLog struct {
 // It exists separately because this code was originally written in google3.
 //
 // Returns a slice of TestLogs.
-func splitLogByTest(input []byte) ([]TestLog, error) {
+func splitLogByTest(input []byte, testNames []string) ([]TestLog, error) {
 	var ret []TestLog
 	// Everything up to and including tapVersionBytes is a prefix that we skip.
 	tapVersionBytes := []byte("TAP version 13\n")
@@ -96,6 +101,7 @@ func splitLogByTest(input []byte) ([]TestLog, error) {
 		if err != nil {
 			return ret, fmt.Errorf("failed to compile regexp: %v", err)
 		}
+		var testName string
 		const testFinishedSubmatches = 3
 		for len(data) > 0 {
 			advanceForLine, line := len(data), data
@@ -116,11 +122,31 @@ func splitLogByTest(input []byte) ([]TestLog, error) {
 				// We've seen everything before the first line of the first test
 				break
 			} else {
-				matches := testFinishedRE.FindSubmatch(line)
-				if len(matches) != testFinishedSubmatches {
-					continue
+				matches := ffxTestStartedRE.FindSubmatch(line)
+				if len(matches) != 2 {
+					matches = testFinishedRE.FindSubmatch(line)
+					if len(matches) != testFinishedSubmatches {
+						continue
+					} else if testName == "" {
+						testName = string(matches[testFinishedSubmatches-1])
+					}
+				} else {
+					newTestName := string(matches[1])
+					if testName == "" && newTestName == testNames[testsSeen] {
+						testName = newTestName
+						continue
+					} else if int(testsSeen+1) < len(testNames) && newTestName == testNames[testsSeen+1] {
+						// A new test started, so reset the data so this line gets
+						// included in the next TestLog.
+						advance -= advanceForLine
+						data = append(line, data...)
+					} else {
+						// We found a match but it doesn't match either the
+						// current or next test, so just continue to the next line.
+						continue
+					}
 				}
-				ret = append(ret, TestLog{string(matches[testFinishedSubmatches-1]), input[i : i+advance], ""})
+				ret = append(ret, TestLog{testName, input[i : i+advance], ""})
 				testsSeen += 1
 				break
 			}
