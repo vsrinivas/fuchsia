@@ -232,11 +232,13 @@ class RegionList final {
   // Insert *region* to the region list.
   void InsertRegion(fbl::RefPtr<T> region) { regions_.insert(region); }
 
-  // Find the region that covers addr, returns nullptr if not found.
-  T* FindRegion(vaddr_t addr) const {
+  // Use a static template to allow for returning a const and non-const pointer depending on the
+  // constness of self.
+  template <typename S, typename R>
+  static R* FindRegion(S self, vaddr_t addr) {
     // Find the first region with a base greater than *addr*.  If a region
     // exists for *addr*, it will be immediately before it.
-    auto itr = --regions_.upper_bound(addr);
+    auto itr = --self->regions_.upper_bound(addr);
     if (!itr.IsValid()) {
       return nullptr;
     }
@@ -250,8 +252,14 @@ class RegionList final {
       return nullptr;
     }
 
-    return &*itr.CopyPointer();
+    return &*itr;
   }
+
+  // Find the region that covers addr, returns nullptr if not found.
+  const T* FindRegion(vaddr_t addr) const {
+    return FindRegion<const RegionList<T>*, T>(this, addr);
+  }
+  T* FindRegion(vaddr_t addr) { return FindRegion<RegionList<T>*, T>(this, addr); }
 
   // Find the region that contains |base|, or if that doesn't exist, the first region that contains
   // an address greater than |base|.
