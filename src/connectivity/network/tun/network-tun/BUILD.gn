@@ -5,6 +5,7 @@
 import("//build/components.gni")
 import("//build/config.gni")
 import("//build/test.gni")
+import("//src/sys/core/build/core_shard.gni")
 
 source_set("src") {
   sources = [
@@ -64,7 +65,10 @@ fuchsia_component("component-v2") {
 }
 
 fuchsia_package("network-tun") {
-  deps = [ ":component" ]
+  deps = [
+    ":component",
+    ":component-v2",
+  ]
 }
 
 test("network_tun_unittest") {
@@ -85,6 +89,10 @@ test("network_tun_unittest") {
 
 fuchsia_unittest_package("network-tun-test") {
   deps = [ ":network_tun_unittest" ]
+}
+
+core_shard("network-tun-core-shard") {
+  shard_file = "meta/network-tun.core_shard.cml"
 }
 
 group("tests") {

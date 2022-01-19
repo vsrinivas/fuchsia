@@ -70,6 +70,11 @@ resource("default_environment_schema") {
 }
 
 # The default weavestack package contains no applets.
+# TODO(https://fxbug.dev/91735): Remove this comment once core_shard dependency can
+# be expressed. Until then, this comment helps identify dependency:
+# weavestack-core-shard depends on:
+# //src/connectivity/network/tun/network-tun:network-tun-core-shard.
+# So, products using weavestack-core-shard must also use network-tun-core-shard.
 weavestack_package_v2("weavestack") {
   component_shard_file =
       "//src/connectivity/weave/meta/weavestack.core_shard.cml"

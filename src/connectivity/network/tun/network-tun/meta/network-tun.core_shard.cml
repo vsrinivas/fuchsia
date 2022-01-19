@@ -1,0 +1,26 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    children: [
+        {
+            name: "network-tun",
+            url: "fuchsia-pkg://fuchsia.com/network-tun#meta/network-tun.cm",
+
+            // We need full resolver because product configurations move this
+            // to cache package set. So full resolver is needed as base resolver
+            // isn't sufficient. The reason product configurations do this is
+            // for faster iterations, as for dynamically invoked components,
+            // just relaunching them updates them if they are in the cache set.
+            // Things in the base set would require an OTA update.
+            environment: "#full-resolver-env",
+        },
+    ],
+    offer: [
+        {
+            protocol: "fuchsia.logger.LogSink",
+            from: "parent",
+            to: [ "#network-tun" ],
+        },
+    ],
+}
