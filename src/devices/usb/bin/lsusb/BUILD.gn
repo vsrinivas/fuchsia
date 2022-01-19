@@ -58,9 +58,6 @@ rustc_library("lib") {
 rustc_binary("lsusb") {
   if (is_fuchsia) {
     configs += [ "//build/config/rust:bootfs" ]
-
-    # Can't dynamically link libstd and libtest for ZBI binaries
-    configs -= [ "//build/config/fuchsia:dynamic_rust_standard_library" ]
   }
 
   deps = [

@@ -27,9 +27,6 @@ rustc_binary("bin") {
 
   configs += [ "//build/config/rust:bootfs" ]
 
-  # Can't dynamically link libstd and libtest for ZBI binaries
-  configs -= [ "//build/config/fuchsia:dynamic_rust_standard_library" ]
-
   # Generates a GN target for unit-tests with the label `bin_test`, and
   # a binary named `driver_index_bin_test`.
   with_unit_tests = true

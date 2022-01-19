@@ -18,9 +18,6 @@ rustc_binary("bin") {
 
   configs += [ "//build/config/rust:bootfs" ]
 
-  # Can't dynamically link libstd and libtest for ZBI binaries
-  configs -= [ "//build/config/fuchsia:dynamic_rust_standard_library" ]
-
   deps = [
     "//sdk/fidl/fuchsia.acpi.chromeos:fuchsia.acpi.chromeos-rustc",
     "//sdk/fidl/fuchsia.device:fuchsia.device-rustc",

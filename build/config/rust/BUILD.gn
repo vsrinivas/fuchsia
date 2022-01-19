@@ -73,10 +73,7 @@ config("bootfs") {
 
   # Can't dynamically link libstd and libtest for ZBI binaries.
   # TODO(fxbug.dev/83081): reconsider this.
-  # TODO(fxbug.dev/83131): re-enable the below, remove subtraction of
-  # dynamic_rust_standard_library config from targets that use bootfs.
-  # See: https://fuchsia-review.googlesource.com/c/fuchsia/+/570385/comments/2fb50a51_c8fef636
-  #rustflags += [ "-Cprefer-dynamic=no" ]
+  rustflags += [ "-Cprefer-dynamic=no" ]
 }
 
 config("netstack3_only_specialization_feature") {

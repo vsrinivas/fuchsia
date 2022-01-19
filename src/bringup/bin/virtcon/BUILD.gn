@@ -149,9 +149,6 @@ rustc_binary("bin") {
   }
 
   configs += [ "//build/config/rust:bootfs" ]
-
-  # Can't dynamically link libstd and libtest for ZBI binaries
-  configs -= [ "//build/config/fuchsia:dynamic_rust_standard_library" ]
 }
 
 resource("font_test") {

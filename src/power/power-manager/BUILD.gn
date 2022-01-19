@@ -32,9 +32,6 @@ rustc_binary("bin") {
 
   configs += [ "//build/config/rust:bootfs" ]
 
-  # Can't dynamically link libstd and libtest for ZBI binaries
-  configs -= [ "//build/config/fuchsia:dynamic_rust_standard_library" ]
-
   deps = [
     ":power_manager_metrics_rustlib",
     "//garnet/lib/rust/io_util",

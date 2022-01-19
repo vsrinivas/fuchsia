@@ -1957,13 +1957,18 @@ template("_fuchsia_binary") {
         data_deps += [ "//build/toolchain/runtime:static-libc++-deps" ]
       }
       if (defined(crate_root)) {
-        should_add_shared_rust_runtime = true
+        should_add_shared_rust_runtime = false
         dynamic_rust_config =
             [ "//build/config/fuchsia:dynamic_rust_standard_library" ]
-        if (!defined(configs) ||
-            configs + dynamic_rust_config - dynamic_rust_config == configs) {
-          # For rustc, static linking is the default. So we only add a runtime if
-          # the dynamic linking config is present.
+        if (defined(configs) &&
+            configs + dynamic_rust_config - dynamic_rust_config != configs) {
+          should_add_shared_rust_runtime = true
+        }
+        bootfs_rust_config = [ "//build/config/rust:bootfs" ]
+        if (defined(configs) &&
+            configs + bootfs_rust_config - bootfs_rust_config != configs) {
+          # Never add dynamic stdlib for bootfs binaries.
+          # TODO(fxbug.dev/83081): reconsider this.
           should_add_shared_rust_runtime = false
         }
         if (should_add_shared_rust_runtime) {

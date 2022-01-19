@@ -32,8 +32,7 @@ rustc_binary("bin") {
     "//third_party/rust_crates:structopt",
   ]
 
-  # Use static linking since we're in the zbi.
-  configs -= [ "//build/config/fuchsia:dynamic_rust_standard_library" ]
+  configs += [ "//build/config/rust:bootfs" ]
 
   sources = [
     "src/main.rs",
