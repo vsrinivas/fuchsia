@@ -39,10 +39,10 @@ VkReadbackTest::VkReadbackTest(uint32_t exported_memory_handle)
 
 VkReadbackTest::~VkReadbackTest() {
   if (image_initialized_) {
-    if (VK_NULL_HANDLE != device_memory_) {
+    if (vk::DeviceMemory(VK_NULL_HANDLE) != device_memory_) {
       ctx_->device()->freeMemory(device_memory_, nullptr /* allocator */);
     }
-    if (VK_NULL_HANDLE != imported_device_memory_) {
+    if (vk::DeviceMemory(VK_NULL_HANDLE) != imported_device_memory_) {
       ctx_->device()->freeMemory(imported_device_memory_, nullptr /* allocator */);
     }
   }
