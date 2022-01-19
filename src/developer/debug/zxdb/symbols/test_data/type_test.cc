@@ -52,7 +52,7 @@ EXPORT void PassRValueRef(int&& rval_ref) {}
 EXPORT int DoStructCall(const Struct& arg1, int arg2) {
   // This uses "volatile" to prevent the values from being optimized out.
   volatile int var1 = 2;
-  var1 *= 2;
+  var1 = var1 * 2;
 
   // Introduce a lexical scope with another varuable in it.
   {

@@ -40,7 +40,7 @@ int ThreadFunction(void*) {
   while (true) {
     // We use write to avoid deadlocking with the outside libc calls.
     write(1, kBeacon, sizeof(kBeacon));
-    kVariableToChange++;
+    kVariableToChange = kVariableToChange + 1;
     zx_nanosleep(zx_deadline_after(ZX_SEC(1)));
   }
 
