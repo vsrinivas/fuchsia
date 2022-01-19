@@ -318,7 +318,7 @@ void TestDevice::CreateFvmPart(size_t device_size, size_t block_size) {
   ASSERT_NO_FATAL_FAILURE(CreateRamdisk(fvm_header.fvm_partition_size, block_size));
 
   // Format the ramdisk as FVM
-  ASSERT_OK(fvm_init(ramdisk_get_block_fd(ramdisk_), fvm::kBlockSize));
+  ASSERT_OK(fs_management::FvmInit(ramdisk_get_block_fd(ramdisk_), fvm::kBlockSize));
 
   // Bind the FVM driver to the now-formatted disk
   ASSERT_NO_FATAL_FAILURE(BindFvmDriver());
@@ -339,8 +339,10 @@ void TestDevice::CreateFvmPart(size_t device_size, size_t block_size) {
     req.guid[i] = i;
   }
   snprintf(req.name, BLOCK_NAME_LEN, "data");
-  fvm_part_.reset(fvm_allocate_partition_with_devfs(dev_root.get(), fvm_fd.get(), &req));
-  ASSERT_TRUE(fvm_part_);
+  auto fvm_part_or =
+      fs_management::FvmAllocatePartitionWithDevfs(dev_root.get(), fvm_fd.get(), &req);
+  ASSERT_EQ(fvm_part_or.status_value(), ZX_OK);
+  fvm_part_ = *std::move(fvm_part_or);
   parent_caller_.reset(fvm_part_.get());
 
   // Save the topological path for rebinding.  The topological path will be

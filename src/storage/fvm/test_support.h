@@ -109,7 +109,7 @@ class DeviceRef {
  protected:
   // Borrowed FD to the root of devfs.
   int devfs_root_;
-  fbl::StringBuffer<kPathMax> path_;
+  std::string path_;
   fbl::unique_fd fd_;
   mutable zx::unowned_channel channel_;
 };

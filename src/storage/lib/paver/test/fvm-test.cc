@@ -81,7 +81,7 @@ TEST_F(FvmTest, TryBindEmpty) {
 
 TEST_F(FvmTest, TryBindAlreadyFormatted) {
   ASSERT_NO_FAILURES(CreateRamdisk());
-  ASSERT_OK(fvm_init(borrow_fd(), kSliceSize));
+  ASSERT_OK(fs_management::FvmInit(borrow_fd(), kSliceSize));
   fbl::unique_fd fvm_part = FvmPartitionFormat(
       devfs_root(), fd(), SparseHeaderForSliceSize(kSliceSize), paver::BindOption::TryBind);
   ASSERT_TRUE(fvm_part.is_valid());
@@ -100,7 +100,7 @@ TEST_F(FvmTest, TryBindAlreadyBound) {
 
 TEST_F(FvmTest, TryBindAlreadyFormattedWrongSliceSize) {
   ASSERT_NO_FAILURES(CreateRamdisk());
-  ASSERT_OK(fvm_init(borrow_fd(), kSliceSize * 2));
+  ASSERT_OK(fs_management::FvmInit(borrow_fd(), kSliceSize * 2));
   fbl::unique_fd fvm_part = FvmPartitionFormat(
       devfs_root(), fd(), SparseHeaderForSliceSize(kSliceSize), paver::BindOption::TryBind);
   ASSERT_TRUE(fvm_part.is_valid());
@@ -110,8 +110,8 @@ TEST_F(FvmTest, TryBindAlreadyFormattedWithSmallerSize) {
   constexpr size_t kBlockDeviceInitialSize = 1000 * kSliceSize;
   constexpr size_t kBlockDeviceMaxSize = 100000 * kSliceSize;
   ASSERT_NO_FAILURES(CreateRamdiskWithBlockCount(kBlockDeviceMaxSize / kBlockSize));
-  ASSERT_OK(
-      fvm_init_preallocated(borrow_fd(), kBlockDeviceInitialSize, kBlockDeviceMaxSize, kSliceSize));
+  ASSERT_OK(fs_management::FvmInitPreallocated(borrow_fd(), kBlockDeviceInitialSize,
+                                               kBlockDeviceMaxSize, kSliceSize));
   // Same slice size but can reference up to 200 Slices, which is far less than what the
   // preallocated can have.
   fvm::SparseImage header =
@@ -127,8 +127,8 @@ TEST_F(FvmTest, TryBindAlreadyFormattedWithBiggerSize) {
   constexpr size_t kBlockDeviceInitialSize = 1000 * kSliceSize;
   constexpr size_t kBlockDeviceMaxSize = 100000 * kSliceSize;
   ASSERT_NO_FAILURES(CreateRamdiskWithBlockCount(kBlockDeviceMaxSize / kBlockSize));
-  ASSERT_OK(fvm_init_preallocated(borrow_fd(), kBlockDeviceInitialSize, kBlockDeviceMaxSize / 100,
-                                  kSliceSize));
+  ASSERT_OK(fs_management::FvmInitPreallocated(borrow_fd(), kBlockDeviceInitialSize,
+                                               kBlockDeviceMaxSize / 100, kSliceSize));
   // Same slice size but can reference up to 200 Slices, which is far less than what the
   // preallocated can have.
   fvm::SparseImage header = SparseHeaderForSliceSizeAndMaxDiskSize(kSliceSize, kBlockDeviceMaxSize);

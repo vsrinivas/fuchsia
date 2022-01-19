@@ -280,15 +280,14 @@ TEST(Flash, DeletePartition) {
   memcpy(request.type, kTestPartGUID.bytes(), sizeof(request.type));
 
   // Create a partition.
-  fbl::unique_fd fd(fvm_allocate_partition(fvm_fd.get(), &request));
-  ASSERT_TRUE(fd);
+  ASSERT_EQ(fs_management::FvmAllocatePartition(fvm_fd.get(), &request).status_value(), ZX_OK);
 
   StatusLine status;
   DestroyFlashTestPartitions(&status);
-  PartitionMatcher matcher{
+  fs_management::PartitionMatcher matcher{
       .type_guid = kTestPartGUID.bytes(),
   };
-  ASSERT_TRUE(open_partition(&matcher, 0, nullptr) != ZX_OK);
+  ASSERT_NE(fs_management::OpenPartition(&matcher, 0, nullptr).status_value(), ZX_OK);
 }
 
 }  // namespace

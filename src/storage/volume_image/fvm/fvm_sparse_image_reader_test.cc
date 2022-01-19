@@ -129,20 +129,20 @@ TEST(FvmSparseImageReaderTest, PartitionsInImagePassFsck) {
   ASSERT_TRUE(result.is_ok());
 
   uint8_t minfs_guid[] = GUID_DATA_VALUE;
-  char path[PATH_MAX];
-  PartitionMatcher matcher{
+  fs_management::PartitionMatcher matcher{
       .type_guid = minfs_guid,
   };
-  fd.reset(open_partition(&matcher, zx::duration::infinite().get(), path));
-  ASSERT_TRUE(fd);
-  fd.reset();
+
+  ASSERT_EQ(fs_management::OpenPartition(&matcher, zx::duration::infinite().get(), nullptr)
+                .status_value(),
+            ZX_OK);
 
   // Attempt to fsck minfs.
   {
-    char path[PATH_MAX];
-    fd.reset(open_partition(&matcher, zx::duration::infinite().get(), path));
-    ASSERT_TRUE(fd);
-    fd.reset();
+    std::string path;
+    ASSERT_EQ(fs_management::OpenPartition(&matcher, zx::duration::infinite().get(), &path)
+                  .status_value(),
+              ZX_OK);
 
     // And finally run fsck on the volume.
     fs_management::FsckOptions options{
@@ -158,13 +158,13 @@ TEST(FvmSparseImageReaderTest, PartitionsInImagePassFsck) {
   // Attempt to fsck blobfs.
   {
     uint8_t blobfs_guid[] = GUID_BLOB_VALUE;
-    char path[PATH_MAX];
-    PartitionMatcher matcher{
+    std::string path;
+    fs_management::PartitionMatcher matcher{
         .type_guid = blobfs_guid,
     };
-    fd.reset(open_partition(&matcher, zx::duration::infinite().get(), path));
-    ASSERT_TRUE(fd);
-    fd.reset();
+    ASSERT_EQ(fs_management::OpenPartition(&matcher, zx::duration::infinite().get(), &path)
+                  .status_value(),
+              ZX_OK);
 
     // And finally run fsck on the volume.
     fs_management::FsckOptions options{

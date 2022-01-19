@@ -40,5 +40,5 @@ rustc_library("utils") {
     "mod.rs",
   ]
 
-  non_rust_deps = [ "//src/lib/storage/fs_management" ]
+  non_rust_deps = [ "//src/lib/storage/fs_management/c" ]
 }

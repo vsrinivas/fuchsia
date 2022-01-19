@@ -153,8 +153,8 @@ void FvmTest::CreateFVM(uint64_t block_size, uint64_t block_count, uint64_t slic
   fbl::unique_fd fd(open(ramdisk_path_, O_RDWR));
   ASSERT_TRUE(fd);
 
-  ASSERT_OK(fvm_init_preallocated(fd.get(), block_count * block_size, block_count * block_size,
-                                  slice_size));
+  ASSERT_OK(fs_management::FvmInitPreallocated(fd.get(), block_count * block_size,
+                                               block_count * block_size, slice_size));
 
   zx::channel fvm_channel;
   ASSERT_OK(fdio_get_service_handle(fd.get(), fvm_channel.reset_and_get_address()));
@@ -191,17 +191,17 @@ void FvmTest::FVMRebind(const partition_entry_t* entries, size_t entry_count) {
 
 void FVMCheckSliceSize(const fbl::unique_fd& fd, size_t expected_slice_size) {
   ASSERT_TRUE(fd);
-  VolumeManagerInfo volume_info;
-  ASSERT_EQ(fvm_query(fd.get(), &volume_info), ZX_OK, "Failed to query fvm\n");
-  ASSERT_EQ(expected_slice_size, volume_info.slice_size, "Unexpected slice size\n");
+  auto volume_info_or = fs_management::FvmQuery(fd.get());
+  ASSERT_EQ(volume_info_or.status_value(), ZX_OK, "Failed to query fvm\n");
+  ASSERT_EQ(expected_slice_size, volume_info_or->slice_size, "Unexpected slice size\n");
 }
 
 void FVMCheckAllocatedCount(const fbl::unique_fd& fd, size_t expected_allocated,
                             size_t expected_total) {
-  VolumeManagerInfo volume_info;
-  ASSERT_EQ(fvm_query(fd.get(), &volume_info), ZX_OK);
-  ASSERT_EQ(volume_info.slice_count, expected_total);
-  ASSERT_EQ(volume_info.assigned_slice_count, expected_allocated);
+  auto volume_info_or = fs_management::FvmQuery(fd.get());
+  ASSERT_EQ(volume_info_or.status_value(), ZX_OK);
+  ASSERT_EQ(volume_info_or->slice_count, expected_total);
+  ASSERT_EQ(volume_info_or->assigned_slice_count, expected_allocated);
 }
 
 enum class ValidationResult {
@@ -269,8 +269,9 @@ constexpr uint8_t kTestPartGUIDBlob[] = GUID_TEST_BLOB_VALUE;
 constexpr char kTestPartName3[] = "system";
 constexpr uint8_t kTestPartGUIDSystem[] = GUID_TEST_SYS_VALUE;
 
-constexpr PartitionMatcher part_matcher(const uint8_t* type_guid, const uint8_t* instance_guid) {
-  return PartitionMatcher{.type_guid = type_guid, .instance_guid = instance_guid};
+constexpr fs_management::PartitionMatcher part_matcher(const uint8_t* type_guid,
+                                                       const uint8_t* instance_guid) {
+  return fs_management::PartitionMatcher{.type_guid = type_guid, .instance_guid = instance_guid};
 }
 
 class VmoBuf;
@@ -488,7 +489,7 @@ TEST_F(FvmTest, TestTooSmall) {
   fbl::unique_fd fd(ramdisk_device());
   ASSERT_TRUE(fd);
   size_t slice_size = block_size * block_count;
-  ASSERT_EQ(fvm_init(fd.get(), slice_size), ZX_ERR_NO_SPACE);
+  ASSERT_EQ(fs_management::FvmInit(fd.get(), slice_size), ZX_ERR_NO_SPACE);
   ValidateFVM(ramdisk_device(), ValidationResult::Corrupted);
 }
 
@@ -513,7 +514,7 @@ TEST_F(FvmTest, TestLarge) {
   ASSERT_EQ(status, ZX_OK);
   ASSERT_LT(block_info.max_transfer_size, fvm_header.GetMetadataAllocatedBytes());
 
-  ASSERT_EQ(fvm_init(fd.get(), slice_size), ZX_OK);
+  ASSERT_EQ(fs_management::FvmInit(fd.get(), slice_size), ZX_OK);
 
   auto resp = fidl::WireCall<fuchsia_device::Controller>(zx::unowned_channel(channel->get()))
                   ->Bind(::fidl::StringView(FVM_DRIVER_LIB));
@@ -551,8 +552,10 @@ TEST_F(FvmTest, TestAllocateOne) {
   memcpy(request.guid, kTestUniqueGUID, BLOCK_GUID_LEN);
   strcpy(request.name, kTestPartName1);
   memcpy(request.type, kTestPartGUIDData, BLOCK_GUID_LEN);
-  fbl::unique_fd vp_fd(fvm_allocate_partition_with_devfs(devfs_root().get(), fd.get(), &request));
-  ASSERT_TRUE(vp_fd);
+  auto vp_fd_or =
+      fs_management::FvmAllocatePartitionWithDevfs(devfs_root().get(), fd.get(), &request);
+  ASSERT_EQ(vp_fd_or.status_value(), ZX_OK);
+  fbl::unique_fd vp_fd = *std::move(vp_fd_or);
 
   // Check that the name matches what we provided
   char name[fvm::kMaxVPartitionNameLength + 1];
@@ -573,8 +576,9 @@ TEST_F(FvmTest, TestAllocateOne) {
   // Try accessing the block again after closing / re-opening it.
   ASSERT_EQ(close(vp_fd.release()), 0);
   auto matcher = part_matcher(kTestPartGUIDData, kTestUniqueGUID);
-  vp_fd.reset(open_partition_with_devfs(devfs_root().get(), &matcher, 0, nullptr));
-  ASSERT_TRUE(vp_fd, "Couldn't re-open Data VPart");
+  vp_fd_or = fs_management::OpenPartitionWithDevfs(devfs_root().get(), &matcher, 0, nullptr);
+  ASSERT_EQ(vp_fd_or.status_value(), ZX_OK, "Couldn't re-open Data VPart");
+  vp_fd = *std::move(vp_fd_or);
   CheckWriteReadBlock(vp_fd.get(), 0, 1);
 
   ASSERT_EQ(close(vp_fd.release()), 0);
@@ -599,18 +603,24 @@ TEST_F(FvmTest, TestAllocateMany) {
   memcpy(request.guid, kTestUniqueGUID, BLOCK_GUID_LEN);
   strcpy(request.name, kTestPartName1);
   memcpy(request.type, kTestPartGUIDData, BLOCK_GUID_LEN);
-  fbl::unique_fd data_fd(fvm_allocate_partition_with_devfs(devfs_root().get(), fd.get(), &request));
-  ASSERT_TRUE(data_fd);
+  auto data_fd_or =
+      fs_management::FvmAllocatePartitionWithDevfs(devfs_root().get(), fd.get(), &request);
+  ASSERT_EQ(data_fd_or.status_value(), ZX_OK);
+  fbl::unique_fd data_fd = *std::move(data_fd_or);
 
   strcpy(request.name, kTestPartName2);
   memcpy(request.type, kTestPartGUIDBlob, BLOCK_GUID_LEN);
-  fbl::unique_fd blob_fd(fvm_allocate_partition_with_devfs(devfs_root().get(), fd.get(), &request));
-  ASSERT_TRUE(blob_fd);
+  auto blob_fd_or =
+      fs_management::FvmAllocatePartitionWithDevfs(devfs_root().get(), fd.get(), &request);
+  ASSERT_EQ(blob_fd_or.status_value(), ZX_OK);
+  fbl::unique_fd blob_fd = *std::move(blob_fd_or);
 
   strcpy(request.name, kTestPartName3);
   memcpy(request.type, kTestPartGUIDSystem, BLOCK_GUID_LEN);
-  fbl::unique_fd sys_fd(fvm_allocate_partition_with_devfs(devfs_root().get(), fd.get(), &request));
-  ASSERT_TRUE(sys_fd);
+  auto sys_fd_or =
+      fs_management::FvmAllocatePartitionWithDevfs(devfs_root().get(), fd.get(), &request);
+  ASSERT_EQ(sys_fd_or.status_value(), ZX_OK);
+  fbl::unique_fd sys_fd = *std::move(sys_fd_or);
 
   CheckWriteReadBlock(data_fd.get(), 0, 1);
   CheckWriteReadBlock(blob_fd.get(), 0, 1);
@@ -633,9 +643,9 @@ TEST_F(FvmTest, TestVPartitionExtend) {
   fbl::unique_fd fd = fvm_device();
   ASSERT_TRUE(fd);
 
-  VolumeManagerInfo volume_info;
-  ASSERT_EQ(fvm_query(fd.get(), &volume_info), ZX_OK);
-  size_t slice_size = volume_info.slice_size;
+  auto volume_info_or = fs_management::FvmQuery(fd.get());
+  ASSERT_EQ(volume_info_or.status_value(), ZX_OK);
+  size_t slice_size = volume_info_or->slice_size;
   constexpr uint64_t kDiskSize = kBlockSize * kBlockCount;
   size_t slices_total = UsableSlicesCount(kDiskSize, slice_size);
   size_t slices_left = slices_total;
@@ -650,8 +660,10 @@ TEST_F(FvmTest, TestVPartitionExtend) {
   memcpy(request.guid, kTestUniqueGUID, BLOCK_GUID_LEN);
   strcpy(request.name, kTestPartName1);
   memcpy(request.type, kTestPartGUIDData, BLOCK_GUID_LEN);
-  fbl::unique_fd vp_fd(fvm_allocate_partition_with_devfs(devfs_root().get(), fd.get(), &request));
-  ASSERT_TRUE(vp_fd, "Couldn't open Volume");
+  auto vp_fd_or =
+      fs_management::FvmAllocatePartitionWithDevfs(devfs_root().get(), fd.get(), &request);
+  ASSERT_EQ(vp_fd_or.status_value(), ZX_OK, "Couldn't open Volume");
+  fbl::unique_fd vp_fd = *std::move(vp_fd_or);
   slices_left--;
   FVMCheckAllocatedCount(fd, slices_total - slices_left, slices_total);
 
@@ -723,8 +735,9 @@ TEST_F(FvmTest, TestVPartitionExtend) {
   // We can't allocate a new VPartition
   strcpy(request.name, kTestPartName2);
   memcpy(request.type, kTestPartGUIDBlob, BLOCK_GUID_LEN);
-  ASSERT_LT(fvm_allocate_partition_with_devfs(devfs_root().get(), fd.get(), &request), 0,
-            "Expected VPart allocation failure");
+  ASSERT_NE(fs_management::FvmAllocatePartitionWithDevfs(devfs_root().get(), fd.get(), &request)
+                .status_value(),
+            ZX_OK, "Expected VPart allocation failure");
 
   FVMCheckSliceSize(fvm_device(), kSliceSize);
   ValidateFVM(ramdisk_device());
@@ -748,8 +761,10 @@ TEST_F(FvmTest, TestVPartitionExtendSparse) {
   memcpy(request.guid, kTestUniqueGUID, BLOCK_GUID_LEN);
   strcpy(request.name, kTestPartName1);
   memcpy(request.type, kTestPartGUIDData, BLOCK_GUID_LEN);
-  fbl::unique_fd vp_fd(fvm_allocate_partition_with_devfs(devfs_root().get(), fd.get(), &request));
-  ASSERT_TRUE(vp_fd);
+  auto vp_fd_or =
+      fs_management::FvmAllocatePartitionWithDevfs(devfs_root().get(), fd.get(), &request);
+  ASSERT_EQ(vp_fd_or.status_value(), ZX_OK);
+  fbl::unique_fd vp_fd = *std::move(vp_fd_or);
   CheckWriteReadBlock(vp_fd.get(), 0, 1);
 
   // Double check that we can access a block at this vslice address
@@ -805,9 +820,9 @@ TEST_F(FvmTest, TestVPartitionShrink) {
   fbl::unique_fd fd(fvm_device());
   ASSERT_TRUE(fd);
 
-  VolumeManagerInfo volume_info;
-  ASSERT_EQ(fvm_query(fd.get(), &volume_info), ZX_OK);
-  size_t slice_size = volume_info.slice_size;
+  auto volume_info_or = fs_management::FvmQuery(fd.get());
+  ASSERT_EQ(volume_info_or.status_value(), ZX_OK);
+  size_t slice_size = volume_info_or->slice_size;
   const size_t kDiskSize = kBlockSize * kBlockCount;
   size_t slices_total = UsableSlicesCount(kDiskSize, slice_size);
   size_t slices_left = slices_total;
@@ -822,8 +837,10 @@ TEST_F(FvmTest, TestVPartitionShrink) {
   memcpy(request.guid, kTestUniqueGUID, BLOCK_GUID_LEN);
   strcpy(request.name, kTestPartName1);
   memcpy(request.type, kTestPartGUIDData, BLOCK_GUID_LEN);
-  fbl::unique_fd vp_fd(fvm_allocate_partition_with_devfs(devfs_root().get(), fd.get(), &request));
-  ASSERT_TRUE(vp_fd, "Couldn't open Volume");
+  auto vp_fd_or =
+      fs_management::FvmAllocatePartitionWithDevfs(devfs_root().get(), fd.get(), &request);
+  ASSERT_EQ(vp_fd_or.status_value(), ZX_OK, "Couldn't open Volume");
+  fbl::unique_fd vp_fd = *std::move(vp_fd_or);
   slices_left--;
 
   fdio_cpp::UnownedFdioCaller partition_caller(vp_fd.get());
@@ -928,9 +945,9 @@ TEST_F(FvmTest, TestVPartitionSplit) {
   fbl::unique_fd fd(fvm_device());
   ASSERT_TRUE(fd);
 
-  VolumeManagerInfo volume_info;
-  ASSERT_EQ(fvm_query(fd.get(), &volume_info), ZX_OK);
-  size_t slice_size = volume_info.slice_size;
+  auto volume_info_or = fs_management::FvmQuery(fd.get());
+  ASSERT_EQ(volume_info_or.status_value(), ZX_OK);
+  size_t slice_size = volume_info_or->slice_size;
   size_t slices_left = UsableSlicesCount(kBlockSize * kBlockCount, kSliceSize);
 
   // Allocate one VPart
@@ -941,8 +958,10 @@ TEST_F(FvmTest, TestVPartitionSplit) {
   memcpy(request.guid, kTestUniqueGUID, BLOCK_GUID_LEN);
   strcpy(request.name, kTestPartName1);
   memcpy(request.type, kTestPartGUIDData, BLOCK_GUID_LEN);
-  fbl::unique_fd vp_fd(fvm_allocate_partition_with_devfs(devfs_root().get(), fd.get(), &request));
-  ASSERT_TRUE(vp_fd);
+  auto vp_fd_or =
+      fs_management::FvmAllocatePartitionWithDevfs(devfs_root().get(), fd.get(), &request);
+  ASSERT_EQ(vp_fd_or.status_value(), ZX_OK);
+  fbl::unique_fd vp_fd = *std::move(vp_fd_or);
   slices_left--;
 
   fdio_cpp::UnownedFdioCaller partition_caller(vp_fd.get());
@@ -1092,22 +1111,29 @@ TEST_F(FvmTest, TestVPartitionDestroy) {
   memcpy(request.guid, kTestUniqueGUID, BLOCK_GUID_LEN);
   strcpy(request.name, kTestPartName1);
   memcpy(request.type, kTestPartGUIDData, BLOCK_GUID_LEN);
-  fbl::unique_fd data_fd(fvm_allocate_partition_with_devfs(devfs_root().get(), fd.get(), &request));
-  ASSERT_TRUE(data_fd);
+
+  auto data_fd_or =
+      fs_management::FvmAllocatePartitionWithDevfs(devfs_root().get(), fd.get(), &request);
+  ASSERT_EQ(data_fd_or.status_value(), ZX_OK);
+  fbl::unique_fd data_fd = *std::move(data_fd_or);
   fdio_cpp::UnownedFdioCaller data_caller(data_fd.get());
   zx::unowned_channel data_channel(data_caller.borrow_channel());
 
   strcpy(request.name, kTestPartName2);
   memcpy(request.type, kTestPartGUIDBlob, BLOCK_GUID_LEN);
-  fbl::unique_fd blob_fd(fvm_allocate_partition_with_devfs(devfs_root().get(), fd.get(), &request));
-  ASSERT_TRUE(blob_fd);
+  auto blob_fd_or =
+      fs_management::FvmAllocatePartitionWithDevfs(devfs_root().get(), fd.get(), &request);
+  ASSERT_EQ(blob_fd_or.status_value(), ZX_OK);
+  fbl::unique_fd blob_fd = *std::move(blob_fd_or);
   fdio_cpp::UnownedFdioCaller blob_caller(blob_fd.get());
   zx::unowned_channel blob_channel(blob_caller.borrow_channel());
 
   strcpy(request.name, kTestPartName3);
   memcpy(request.type, kTestPartGUIDSystem, BLOCK_GUID_LEN);
-  fbl::unique_fd sys_fd(fvm_allocate_partition_with_devfs(devfs_root().get(), fd.get(), &request));
-  ASSERT_TRUE(sys_fd);
+  auto sys_fd_or =
+      fs_management::FvmAllocatePartitionWithDevfs(devfs_root().get(), fd.get(), &request);
+  ASSERT_EQ(sys_fd_or.status_value(), ZX_OK);
+  fbl::unique_fd sys_fd = *std::move(sys_fd_or);
   fdio_cpp::UnownedFdioCaller sys_caller(sys_fd.get());
   zx::unowned_channel sys_channel(sys_caller.borrow_channel());
 
@@ -1154,8 +1180,10 @@ TEST_F(FvmTest, TestVPartitionQuery) {
   memcpy(request.guid, kTestUniqueGUID, BLOCK_GUID_LEN);
   strcpy(request.name, kTestPartName1);
   memcpy(request.type, kTestPartGUIDData, BLOCK_GUID_LEN);
-  fbl::unique_fd part_fd(fvm_allocate_partition_with_devfs(devfs_root().get(), fd.get(), &request));
-  ASSERT_TRUE(part_fd);
+  auto part_fd_or =
+      fs_management::FvmAllocatePartitionWithDevfs(devfs_root().get(), fd.get(), &request);
+  ASSERT_EQ(part_fd_or.status_value(), ZX_OK);
+  fbl::unique_fd part_fd = *std::move(part_fd_or);
   fdio_cpp::FdioCaller partition_caller(std::move(part_fd));
   zx::unowned_channel partition_channel(partition_caller.borrow_channel());
 
@@ -1168,8 +1196,8 @@ TEST_F(FvmTest, TestVPartitionQuery) {
       ZX_OK);
   ASSERT_EQ(status, ZX_OK);
 
-  VolumeManagerInfo volume_info;
-  ASSERT_EQ(fvm_query(fd.get(), &volume_info), ZX_OK);
+  auto volume_info_or = fs_management::FvmQuery(fd.get());
+  ASSERT_EQ(volume_info_or.status_value(), ZX_OK);
 
   // Query various vslice ranges
   uint64_t start_slices[6];
@@ -1197,7 +1225,7 @@ TEST_F(FvmTest, TestVPartitionQuery) {
   ASSERT_TRUE(ranges[2].allocated);
   ASSERT_EQ(ranges[2].count, 10);
   ASSERT_FALSE(ranges[3].allocated);
-  ASSERT_EQ(ranges[3].count, volume_info.max_virtual_slice - 50);
+  ASSERT_EQ(ranges[3].count, volume_info_or->max_virtual_slice - 50);
   ASSERT_TRUE(ranges[4].allocated);
   ASSERT_EQ(ranges[4].count, 5);
   ASSERT_FALSE(ranges[5].allocated);
@@ -1225,13 +1253,13 @@ TEST_F(FvmTest, TestVPartitionQuery) {
   ASSERT_TRUE(ranges[2].allocated);
   ASSERT_EQ(ranges[2].count, 10);
   ASSERT_FALSE(ranges[3].allocated);
-  ASSERT_EQ(ranges[3].count, volume_info.max_virtual_slice - 50);
+  ASSERT_EQ(ranges[3].count, volume_info_or->max_virtual_slice - 50);
   ASSERT_TRUE(ranges[4].allocated);
   ASSERT_EQ(ranges[4].count, 5);
   ASSERT_TRUE(ranges[5].allocated);
   ASSERT_EQ(ranges[5].count, 15);
 
-  start_slices[0] = volume_info.max_virtual_slice + 1;
+  start_slices[0] = volume_info_or->max_virtual_slice + 1;
   ASSERT_EQ(fuchsia_hardware_block_volume_VolumeQuerySlices(partition_channel->get(), start_slices,
                                                             std::size(start_slices), &status,
                                                             ranges, &actual_ranges_count),
@@ -1251,9 +1279,9 @@ TEST_F(FvmTest, TestSliceAccessContiguous) {
   fbl::unique_fd fd = fvm_device();
   ASSERT_TRUE(fd);
 
-  VolumeManagerInfo volume_info;
-  ASSERT_EQ(fvm_query(fd.get(), &volume_info), ZX_OK);
-  size_t slice_size = volume_info.slice_size;
+  auto volume_info_or = fs_management::FvmQuery(fd.get());
+  ASSERT_EQ(volume_info_or.status_value(), ZX_OK);
+  size_t slice_size = volume_info_or->slice_size;
 
   // Allocate one VPart
   alloc_req_t request;
@@ -1262,8 +1290,10 @@ TEST_F(FvmTest, TestSliceAccessContiguous) {
   memcpy(request.guid, kTestUniqueGUID, BLOCK_GUID_LEN);
   strcpy(request.name, kTestPartName1);
   memcpy(request.type, kTestPartGUIDData, BLOCK_GUID_LEN);
-  fbl::unique_fd vp_fd(fvm_allocate_partition_with_devfs(devfs_root().get(), fd.get(), &request));
-  ASSERT_TRUE(vp_fd);
+  auto vp_fd_or =
+      fs_management::FvmAllocatePartitionWithDevfs(devfs_root().get(), fd.get(), &request);
+  ASSERT_EQ(vp_fd_or.status_value(), ZX_OK);
+  fbl::unique_fd vp_fd = *std::move(vp_fd_or);
 
   fdio_cpp::UnownedFdioCaller partition_caller(vp_fd.get());
   zx::unowned_channel partition_channel(partition_caller.borrow_channel());
@@ -1320,9 +1350,9 @@ TEST_F(FvmTest, TestSliceAccessMany) {
   fbl::unique_fd fd(fvm_device());
   ASSERT_TRUE(fd);
 
-  VolumeManagerInfo volume_info;
-  ASSERT_EQ(fvm_query(fd.get(), &volume_info), ZX_OK);
-  ASSERT_EQ(volume_info.slice_size, kSliceSize);
+  auto volume_info_or = fs_management::FvmQuery(fd.get());
+  ASSERT_EQ(volume_info_or.status_value(), ZX_OK);
+  ASSERT_EQ(volume_info_or->slice_size, kSliceSize);
 
   // Allocate one VPart
   alloc_req_t request;
@@ -1331,8 +1361,10 @@ TEST_F(FvmTest, TestSliceAccessMany) {
   memcpy(request.guid, kTestUniqueGUID, BLOCK_GUID_LEN);
   strcpy(request.name, kTestPartName1);
   memcpy(request.type, kTestPartGUIDData, BLOCK_GUID_LEN);
-  fbl::unique_fd vp_fd(fvm_allocate_partition_with_devfs(devfs_root().get(), fd.get(), &request));
-  ASSERT_TRUE(vp_fd);
+  auto vp_fd_or =
+      fs_management::FvmAllocatePartitionWithDevfs(devfs_root().get(), fd.get(), &request);
+  ASSERT_EQ(vp_fd_or.status_value(), ZX_OK);
+  fbl::unique_fd vp_fd = *std::move(vp_fd_or);
 
   fdio_cpp::UnownedFdioCaller partition_caller(vp_fd.get());
   zx::unowned_channel partition_channel(partition_caller.borrow_channel());
@@ -1400,8 +1432,7 @@ TEST_F(FvmTest, TestSliceAccessNonContiguousPhysical) {
   fbl::unique_fd fd(fvm_device());
   ASSERT_TRUE(fd);
 
-  VolumeManagerInfo volume_info;
-  ASSERT_EQ(fvm_query(fd.get(), &volume_info), ZX_OK);
+  ASSERT_EQ(fs_management::FvmQuery(fd.get()).status_value(), ZX_OK);
 
   alloc_req_t request;
   memset(&request, 0, sizeof(request));
@@ -1425,8 +1456,10 @@ TEST_F(FvmTest, TestSliceAccessNonContiguousPhysical) {
   for (size_t i = 0; i < std::size(vparts); i++) {
     strcpy(request.name, vparts[i].name);
     memcpy(request.type, vparts[i].guid, BLOCK_GUID_LEN);
-    vparts[i].fd.reset(fvm_allocate_partition_with_devfs(devfs_root().get(), fd.get(), &request));
-    ASSERT_TRUE(vparts[i].fd);
+    auto fd_or =
+        fs_management::FvmAllocatePartitionWithDevfs(devfs_root().get(), fd.get(), &request);
+    ASSERT_EQ(fd_or.status_value(), ZX_OK);
+    vparts[i].fd = *std::move(fd_or);
   }
 
   fdio_cpp::UnownedFdioCaller partition_caller(vparts[0].fd.get());
@@ -1543,8 +1576,7 @@ TEST_F(FvmTest, TestSliceAccessNonContiguousVirtual) {
   fbl::unique_fd fd = fvm_device();
   ASSERT_TRUE(fd);
 
-  VolumeManagerInfo volume_info;
-  ASSERT_EQ(fvm_query(fd.get(), &volume_info), ZX_OK);
+  ASSERT_EQ(fs_management::FvmQuery(fd.get()).status_value(), ZX_OK);
 
   alloc_req_t request;
   memset(&request, 0, sizeof(request));
@@ -1569,8 +1601,10 @@ TEST_F(FvmTest, TestSliceAccessNonContiguousVirtual) {
   for (size_t i = 0; i < std::size(vparts); i++) {
     strcpy(request.name, vparts[i].name);
     memcpy(request.type, vparts[i].guid, BLOCK_GUID_LEN);
-    vparts[i].fd.reset(fvm_allocate_partition_with_devfs(devfs_root().get(), fd.get(), &request));
-    ASSERT_TRUE(vparts[i].fd);
+    auto fd_or =
+        fs_management::FvmAllocatePartitionWithDevfs(devfs_root().get(), fd.get(), &request);
+    ASSERT_EQ(fd_or.status_value(), ZX_OK);
+    vparts[i].fd = *std::move(fd_or);
   }
 
   fdio_cpp::UnownedFdioCaller partition_caller(vparts[0].fd.get());
@@ -1638,8 +1672,7 @@ TEST_F(FvmTest, TestPersistenceSimple) {
   size_t slices_left = UsableSlicesCount(kDiskSize, kSliceSize);
   const uint64_t kSliceCount = slices_left;
 
-  VolumeManagerInfo volume_info;
-  ASSERT_EQ(fvm_query(fd.get(), &volume_info), ZX_OK);
+  ASSERT_EQ(fs_management::FvmQuery(fd.get()).status_value(), ZX_OK);
 
   // Allocate one VPart
   alloc_req_t request;
@@ -1648,8 +1681,10 @@ TEST_F(FvmTest, TestPersistenceSimple) {
   memcpy(request.guid, kTestUniqueGUID, BLOCK_GUID_LEN);
   strcpy(request.name, kTestPartName1);
   memcpy(request.type, kTestPartGUIDData, BLOCK_GUID_LEN);
-  fbl::unique_fd vp_fd(fvm_allocate_partition_with_devfs(devfs_root().get(), fd.get(), &request));
-  ASSERT_TRUE(vp_fd);
+  auto vp_fd_or =
+      fs_management::FvmAllocatePartitionWithDevfs(devfs_root().get(), fd.get(), &request);
+  ASSERT_EQ(vp_fd_or.status_value(), ZX_OK);
+  fbl::unique_fd vp_fd = *std::move(vp_fd_or);
   slices_left--;
 
   fdio_cpp::UnownedFdioCaller partition_caller(vp_fd.get());
@@ -1686,8 +1721,9 @@ TEST_F(FvmTest, TestPersistenceSimple) {
   ASSERT_TRUE(fd, "Failed to rebind FVM driver");
 
   auto matcher = part_matcher(kTestPartGUIDData, kTestUniqueGUID);
-  vp_fd.reset(open_partition_with_devfs(devfs_root().get(), &matcher, 0, nullptr));
-  ASSERT_TRUE(vp_fd, "Couldn't re-open Data VPart");
+  vp_fd_or = fs_management::OpenPartitionWithDevfs(devfs_root().get(), &matcher, 0, nullptr);
+  ASSERT_EQ(vp_fd_or.status_value(), ZX_OK, "Couldn't re-open Data VPart");
+  vp_fd = *std::move(vp_fd_or);
   CheckRead(vp_fd.get(), 0, block_info.block_size, buf.get());
 
   // Try extending the vpartition, and checking that the extension persists.
@@ -1719,7 +1755,9 @@ TEST_F(FvmTest, TestPersistenceSimple) {
   fd = fvm_device();
 
   matcher = part_matcher(kTestPartGUIDData, kTestUniqueGUID);
-  vp_fd.reset(open_partition_with_devfs(devfs_root().get(), &matcher, 0, nullptr));
+  vp_fd_or = fs_management::OpenPartitionWithDevfs(devfs_root().get(), &matcher, 0, nullptr);
+  ASSERT_EQ(vp_fd_or.status_value(), ZX_OK);
+  vp_fd = *std::move(vp_fd_or);
 
   partition_caller.reset(vp_fd.get());
   partition_channel = zx::unowned_channel(partition_caller.borrow_channel());
@@ -1758,8 +1796,9 @@ TEST_F(FvmTest, TestPersistenceSimple) {
   fd = fvm_device();
 
   matcher = part_matcher(kTestPartGUIDData, kTestUniqueGUID);
-  vp_fd.reset(open_partition_with_devfs(devfs_root().get(), &matcher, 0, nullptr));
-  ASSERT_TRUE(vp_fd, "Couldn't re-open Data VPart");
+  vp_fd_or = fs_management::OpenPartitionWithDevfs(devfs_root().get(), &matcher, 0, nullptr);
+  ASSERT_EQ(vp_fd_or.status_value(), ZX_OK, "Couldn't re-open Data VPart");
+  vp_fd = *std::move(vp_fd_or);
   partition_caller.reset(vp_fd.get());
   partition_channel = zx::unowned_channel(partition_caller.borrow_channel());
 
@@ -1783,8 +1822,9 @@ void CorruptMountHelper(const fbl::unique_fd& devfs_root, const char* partition_
             ZX_OK);
 
   auto matcher = part_matcher(kTestPartGUIDData, kTestUniqueGUID);
-  fbl::unique_fd vp_fd(open_partition_with_devfs(devfs_root.get(), &matcher, 0, nullptr));
-  ASSERT_TRUE(vp_fd);
+  auto vp_fd_or = fs_management::OpenPartitionWithDevfs(devfs_root.get(), &matcher, 0, nullptr);
+  ASSERT_EQ(vp_fd_or.status_value(), ZX_OK);
+  fbl::unique_fd vp_fd(*std::move(vp_fd_or));
   fuchsia_hardware_block_volume_VsliceRange
       ranges[fuchsia_hardware_block_volume_MAX_SLICE_REQUESTS];
   fuchsia_hardware_block_volume_VsliceRange
@@ -1841,8 +1881,9 @@ void CorruptMountHelper(const fbl::unique_fd& devfs_root, const char* partition_
 
   {
     auto matcher = part_matcher(kTestPartGUIDData, kTestUniqueGUID);
-    vp_fd.reset(open_partition_with_devfs(devfs_root.get(), &matcher, 0, nullptr));
-    ASSERT_TRUE(vp_fd);
+    vp_fd_or = fs_management::OpenPartitionWithDevfs(devfs_root.get(), &matcher, 0, nullptr);
+    ASSERT_EQ(vp_fd_or.status_value(), ZX_OK);
+    vp_fd = *std::move(vp_fd_or);
 
     fdio_cpp::UnownedFdioCaller partition_caller(vp_fd.get());
     zx::unowned_channel partition_channel(partition_caller.borrow_channel());
@@ -1898,8 +1939,9 @@ void CorruptMountHelper(const fbl::unique_fd& devfs_root, const char* partition_
             ZX_OK);
 
   matcher = part_matcher(kTestPartGUIDData, kTestUniqueGUID);
-  vp_fd.reset(open_partition_with_devfs(devfs_root.get(), &matcher, 0, nullptr));
-  ASSERT_TRUE(vp_fd);
+  vp_fd_or = fs_management::OpenPartitionWithDevfs(devfs_root.get(), &matcher, 0, nullptr);
+  ASSERT_EQ(vp_fd_or.status_value(), ZX_OK);
+  vp_fd = *std::move(vp_fd_or);
   fdio_cpp::UnownedFdioCaller partition_caller(vp_fd.get());
   zx::unowned_channel partition_channel(partition_caller.borrow_channel());
 
@@ -1925,9 +1967,9 @@ TEST_F(FvmTest, TestCorruptMount) {
   fbl::unique_fd fd = fvm_device();
   ASSERT_TRUE(fd);
 
-  VolumeManagerInfo volume_info;
-  ASSERT_EQ(fvm_query(fd.get(), &volume_info), ZX_OK);
-  ASSERT_EQ(kSliceSize, volume_info.slice_size);
+  auto volume_info_or = fs_management::FvmQuery(fd.get());
+  ASSERT_EQ(volume_info_or.status_value(), ZX_OK);
+  ASSERT_EQ(kSliceSize, volume_info_or->slice_size);
 
   // Allocate one VPart
   alloc_req_t request;
@@ -1936,9 +1978,9 @@ TEST_F(FvmTest, TestCorruptMount) {
   memcpy(request.guid, kTestUniqueGUID, BLOCK_GUID_LEN);
   strcpy(request.name, kTestPartName1);
   memcpy(request.type, kTestPartGUIDData, BLOCK_GUID_LEN);
-  fbl::unique_fd vp_fd(fvm_allocate_partition_with_devfs(devfs_root().get(), fd.get(), &request));
-  ASSERT_TRUE(vp_fd);
-  ASSERT_EQ(close(vp_fd.release()), 0);
+  ASSERT_EQ(fs_management::FvmAllocatePartitionWithDevfs(devfs_root().get(), fd.get(), &request)
+                .status_value(),
+            ZX_OK);
 
   char partition_path[PATH_MAX];
   snprintf(partition_path, sizeof(partition_path), "%s/%s-p-1/block", fvm_path(), kTestPartName1);
@@ -1982,8 +2024,7 @@ TEST_F(FvmTest, TestVPartitionUpgrade) {
   // Short-hand for asking if we can open a partition.
   auto openable = [this](const uint8_t* typeGUID, const uint8_t* instanceGUID) {
     auto matcher = part_matcher(typeGUID, instanceGUID);
-    fbl::unique_fd fd(open_partition_with_devfs(devfs_root().get(), &matcher, 0, nullptr));
-    return fd.is_valid();
+    return fs_management::OpenPartitionWithDevfs(devfs_root().get(), &matcher, 0, nullptr).is_ok();
   };
 
   // Allocate two VParts, one active, and one inactive.
@@ -1994,18 +2035,18 @@ TEST_F(FvmTest, TestVPartitionUpgrade) {
   memcpy(request.guid, kTestUniqueGUID, BLOCK_GUID_LEN);
   strcpy(request.name, kTestPartName1);
   memcpy(request.type, kTestPartGUIDData, BLOCK_GUID_LEN);
-  fbl::unique_fd vp_fd(
-      fvm_allocate_partition_with_devfs(devfs_root().get(), volume_manager.fd().get(), &request));
-  ASSERT_TRUE(vp_fd, "Couldn't open Volume");
-  ASSERT_EQ(close(vp_fd.release()), 0);
+  ASSERT_EQ(fs_management::FvmAllocatePartitionWithDevfs(devfs_root().get(),
+                                                         volume_manager.fd().get(), &request)
+                .status_value(),
+            ZX_OK, "Couldn't open Volume");
 
   request.flags = 0;
   memcpy(request.guid, kTestUniqueGUID2, BLOCK_GUID_LEN);
   strcpy(request.name, kTestPartName2);
-  vp_fd.reset(
-      fvm_allocate_partition_with_devfs(devfs_root().get(), volume_manager.fd().get(), &request));
-  ASSERT_TRUE(vp_fd, "Couldn't open volume");
-  ASSERT_EQ(close(vp_fd.release()), 0);
+  ASSERT_EQ(fs_management::FvmAllocatePartitionWithDevfs(devfs_root().get(),
+                                                         volume_manager.fd().get(), &request)
+                .status_value(),
+            ZX_OK, "Couldn't open volume");
 
   const partition_entry_t entries[] = {
       {kTestPartName2, 2},
@@ -2025,10 +2066,10 @@ TEST_F(FvmTest, TestVPartitionUpgrade) {
   request.flags = fuchsia_hardware_block_volume_ALLOCATE_PARTITION_FLAG_INACTIVE;
   memcpy(request.guid, kTestUniqueGUID, BLOCK_GUID_LEN);
   strcpy(request.name, kTestPartName1);
-  fbl::unique_fd new_fd(
-      fvm_allocate_partition_with_devfs(devfs_root().get(), volume_manager.fd().get(), &request));
-  ASSERT_TRUE(new_fd, "Couldn't open new volume");
-  ASSERT_EQ(close(new_fd.release()), 0);
+  ASSERT_EQ(fs_management::FvmAllocatePartitionWithDevfs(devfs_root().get(),
+                                                         volume_manager.fd().get(), &request)
+                .status_value(),
+            ZX_OK, "Couldn't open new volume");
 
   Upgrade(volume_manager, kTestUniqueGUID2, kTestUniqueGUID, ZX_OK);
 
@@ -2066,10 +2107,10 @@ TEST_F(FvmTest, TestVPartitionUpgrade) {
   request.flags = fuchsia_hardware_block_volume_ALLOCATE_PARTITION_FLAG_INACTIVE;
   memcpy(request.guid, kTestUniqueGUID2, BLOCK_GUID_LEN);
   strcpy(request.name, kTestPartName2);
-  new_fd.reset(
-      fvm_allocate_partition_with_devfs(devfs_root().get(), volume_manager.fd().get(), &request));
-  ASSERT_TRUE(new_fd, "Couldn't open volume");
-  ASSERT_EQ(close(new_fd.release()), 0);
+  ASSERT_EQ(fs_management::FvmAllocatePartitionWithDevfs(devfs_root().get(),
+                                                         volume_manager.fd().get(), &request)
+                .status_value(),
+            ZX_OK, "Couldn't open volume");
 
   uint8_t fake_guid[BLOCK_GUID_LEN];
   memset(fake_guid, 0, BLOCK_GUID_LEN);
@@ -2091,9 +2132,9 @@ TEST_F(FvmTest, TestVPartitionUpgrade) {
 
   // Destroy and reallocate the first partition as inactive.
   auto matcher = part_matcher(kTestPartGUIDData, kTestUniqueGUID);
-  vp_fd.reset(open_partition_with_devfs(devfs_root().get(), &matcher, 0, nullptr));
-  ASSERT_TRUE(vp_fd, "Couldn't open volume");
-  fdio_cpp::FdioCaller partition_caller(std::move(vp_fd));
+  auto vp_fd_or = fs_management::OpenPartitionWithDevfs(devfs_root().get(), &matcher, 0, nullptr);
+  ASSERT_EQ(vp_fd_or.status_value(), ZX_OK, "Couldn't open volume");
+  fdio_cpp::FdioCaller partition_caller(*std::move(vp_fd_or));
   zx_status_t status;
   ASSERT_EQ(fuchsia_hardware_block_volume_VolumeDestroy(partition_caller.borrow_channel(), &status),
             ZX_OK);
@@ -2102,10 +2143,10 @@ TEST_F(FvmTest, TestVPartitionUpgrade) {
   request.flags = fuchsia_hardware_block_volume_ALLOCATE_PARTITION_FLAG_INACTIVE;
   memcpy(request.guid, kTestUniqueGUID, BLOCK_GUID_LEN);
   strcpy(request.name, kTestPartName1);
-  new_fd.reset(
-      fvm_allocate_partition_with_devfs(devfs_root().get(), volume_manager.fd().get(), &request));
-  ASSERT_TRUE(new_fd, "Couldn't open volume");
-  ASSERT_EQ(close(new_fd.release()), 0);
+  ASSERT_EQ(fs_management::FvmAllocatePartitionWithDevfs(devfs_root().get(),
+                                                         volume_manager.fd().get(), &request)
+                .status_value(),
+            ZX_OK);
 
   // Upgrade the partition with old_guid == new_guid.
   // This should activate the partition.
@@ -2130,8 +2171,8 @@ TEST_F(FvmTest, TestMounting) {
   fbl::unique_fd fd = fvm_device();
   ASSERT_TRUE(fd);
 
-  VolumeManagerInfo volume_info;
-  ASSERT_EQ(fvm_query(fd.get(), &volume_info), ZX_OK);
+  auto volume_info_or = fs_management::FvmQuery(fd.get());
+  ASSERT_EQ(volume_info_or.status_value(), ZX_OK);
 
   // Allocate one VPart
   alloc_req_t request;
@@ -2140,8 +2181,10 @@ TEST_F(FvmTest, TestMounting) {
   memcpy(request.guid, kTestUniqueGUID, BLOCK_GUID_LEN);
   strcpy(request.name, kTestPartName1);
   memcpy(request.type, kTestPartGUIDData, BLOCK_GUID_LEN);
-  fbl::unique_fd vp_fd(fvm_allocate_partition_with_devfs(devfs_root().get(), fd.get(), &request));
-  ASSERT_TRUE(vp_fd);
+  auto vp_fd_or =
+      fs_management::FvmAllocatePartitionWithDevfs(devfs_root().get(), fd.get(), &request);
+  ASSERT_EQ(vp_fd_or.status_value(), ZX_OK);
+  fbl::unique_fd vp_fd(*std::move(vp_fd_or));
 
   // Format the VPart as minfs
   char partition_path[PATH_MAX];
@@ -2186,8 +2229,8 @@ TEST_F(FvmTest, TestMkfs) {
   fbl::unique_fd fd = fvm_device();
   ASSERT_TRUE(fd);
 
-  VolumeManagerInfo volume_info;
-  ASSERT_EQ(fvm_query(fd.get(), &volume_info), ZX_OK);
+  auto volume_info_or = fs_management::FvmQuery(fd.get());
+  ASSERT_EQ(volume_info_or.status_value(), ZX_OK);
 
   // Allocate one VPart.
   alloc_req_t request;
@@ -2196,8 +2239,10 @@ TEST_F(FvmTest, TestMkfs) {
   memcpy(request.guid, kTestUniqueGUID, BLOCK_GUID_LEN);
   strcpy(request.name, kTestPartName1);
   memcpy(request.type, kTestPartGUIDData, BLOCK_GUID_LEN);
-  fbl::unique_fd vp_fd(fvm_allocate_partition_with_devfs(devfs_root().get(), fd.get(), &request));
-  ASSERT_TRUE(vp_fd);
+  auto vp_fd_or =
+      fs_management::FvmAllocatePartitionWithDevfs(devfs_root().get(), fd.get(), &request);
+  ASSERT_EQ(vp_fd_or.status_value(), ZX_OK);
+  fbl::unique_fd vp_fd(*std::move(vp_fd_or));
 
   // Format the VPart as minfs.
   char partition_path[PATH_MAX];
@@ -2276,8 +2321,8 @@ TEST_F(FvmTest, TestCorruptionOk) {
   fbl::unique_fd ramdisk_fd = ramdisk_device();
   ASSERT_TRUE(ramdisk_fd);
 
-  VolumeManagerInfo volume_info;
-  ASSERT_EQ(fvm_query(fd.get(), &volume_info), ZX_OK);
+  auto volume_info_or = fs_management::FvmQuery(fd.get());
+  ASSERT_EQ(volume_info_or.status_value(), ZX_OK);
 
   // Allocate one VPart (writes to backup)
   alloc_req_t request;
@@ -2286,8 +2331,10 @@ TEST_F(FvmTest, TestCorruptionOk) {
   memcpy(request.guid, kTestUniqueGUID, BLOCK_GUID_LEN);
   strcpy(request.name, kTestPartName1);
   memcpy(request.type, kTestPartGUIDData, BLOCK_GUID_LEN);
-  fbl::unique_fd vp_fd(fvm_allocate_partition_with_devfs(devfs_root().get(), fd.get(), &request));
-  ASSERT_TRUE(vp_fd);
+  auto vp_fd_or =
+      fs_management::FvmAllocatePartitionWithDevfs(devfs_root().get(), fd.get(), &request);
+  ASSERT_EQ(vp_fd_or.status_value(), ZX_OK);
+  fbl::unique_fd vp_fd(*std::move(vp_fd_or));
 
   // Extend the vpart (writes to primary)
   fdio_cpp::UnownedFdioCaller partition_caller(vp_fd.get());
@@ -2333,8 +2380,9 @@ TEST_F(FvmTest, TestCorruptionOk) {
   fd = fvm_device();
 
   auto matcher = part_matcher(kTestPartGUIDData, kTestUniqueGUID);
-  vp_fd.reset(open_partition_with_devfs(devfs_root().get(), &matcher, 0, nullptr));
-  ASSERT_TRUE(vp_fd, "Couldn't re-open Data VPart");
+  vp_fd_or = fs_management::OpenPartitionWithDevfs(devfs_root().get(), &matcher, 0, nullptr);
+  ASSERT_EQ(vp_fd_or.status_value(), ZX_OK, "Couldn't re-open Data VPart");
+  vp_fd = *std::move(vp_fd_or);
 
   // The slice extension is still accessible.
   CheckWriteReadBlock(vp_fd.get(), 0, 1);
@@ -2359,9 +2407,9 @@ TEST_F(FvmTest, TestCorruptionRegression) {
   fbl::unique_fd ramdisk_fd = ramdisk_device();
   ASSERT_TRUE(ramdisk_fd);
 
-  VolumeManagerInfo volume_info;
-  ASSERT_EQ(fvm_query(fd.get(), &volume_info), ZX_OK);
-  size_t slice_size = volume_info.slice_size;
+  auto volume_info_or = fs_management::FvmQuery(fd.get());
+  ASSERT_EQ(volume_info_or.status_value(), ZX_OK);
+  size_t slice_size = volume_info_or->slice_size;
 
   // Allocate one VPart (writes to backup)
   alloc_req_t request;
@@ -2370,8 +2418,10 @@ TEST_F(FvmTest, TestCorruptionRegression) {
   memcpy(request.guid, kTestUniqueGUID, BLOCK_GUID_LEN);
   strcpy(request.name, kTestPartName1);
   memcpy(request.type, kTestPartGUIDData, BLOCK_GUID_LEN);
-  fbl::unique_fd vp_fd(fvm_allocate_partition_with_devfs(devfs_root().get(), fd.get(), &request));
-  ASSERT_TRUE(vp_fd);
+  auto vp_fd_or =
+      fs_management::FvmAllocatePartitionWithDevfs(devfs_root().get(), fd.get(), &request);
+  ASSERT_EQ(vp_fd_or.status_value(), ZX_OK);
+  fbl::unique_fd vp_fd(*std::move(vp_fd_or));
 
   fdio_cpp::UnownedFdioCaller partition_caller(vp_fd.get());
   zx::unowned_channel partition_channel(partition_caller.borrow_channel());
@@ -2415,8 +2465,9 @@ TEST_F(FvmTest, TestCorruptionRegression) {
   fd = fvm_device();
 
   auto matcher = part_matcher(kTestPartGUIDData, kTestUniqueGUID);
-  vp_fd.reset(open_partition_with_devfs(devfs_root().get(), &matcher, 0, nullptr));
-  ASSERT_TRUE(vp_fd);
+  vp_fd_or = fs_management::OpenPartitionWithDevfs(devfs_root().get(), &matcher, 0, nullptr);
+  ASSERT_EQ(vp_fd_or.status_value(), ZX_OK);
+  vp_fd = *std::move(vp_fd_or);
 
   // The slice extension is no longer accessible
   CheckWriteReadBlock(vp_fd.get(), 0, 1);
@@ -2444,8 +2495,10 @@ TEST_F(FvmTest, TestCorruptionUnrecoverable) {
   memcpy(request.guid, kTestUniqueGUID, BLOCK_GUID_LEN);
   strcpy(request.name, kTestPartName1);
   memcpy(request.type, kTestPartGUIDData, BLOCK_GUID_LEN);
-  fbl::unique_fd vp_fd(fvm_allocate_partition_with_devfs(devfs_root().get(), fd.get(), &request));
-  ASSERT_TRUE(vp_fd);
+  auto vp_fd_or =
+      fs_management::FvmAllocatePartitionWithDevfs(devfs_root().get(), fd.get(), &request);
+  ASSERT_EQ(vp_fd_or.status_value(), ZX_OK);
+  fbl::unique_fd vp_fd(*std::move(vp_fd_or));
 
   fdio_cpp::UnownedFdioCaller partition_caller(vp_fd.get());
   zx::unowned_channel partition_channel(partition_caller.borrow_channel());
@@ -2537,7 +2590,7 @@ TEST_F(FvmTest, TestAbortDriverLoadSmallDevice) {
   fbl::unique_fd ramdisk_fd(ramdisk_device());
 
   // Init fvm with a partition bigger than the underlying disk.
-  fvm_init_with_size(ramdisk_fd.get(), kFvmPartitionSize, kSliceSize);
+  fs_management::FvmInitWithSize(ramdisk_fd.get(), kFvmPartitionSize, kSliceSize);
 
   zx::channel fvm_channel;
   // Try to bind an fvm to the disk.

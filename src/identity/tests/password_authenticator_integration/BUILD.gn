@@ -38,7 +38,7 @@ rustc_test("driver") {
   sources = [ "src/account_manager.rs" ]
 
   # For fvm_init()
-  non_rust_deps = [ "//src/lib/storage/fs_management" ]
+  non_rust_deps = [ "//src/lib/storage/fs_management/c" ]
 }
 
 fuchsia_component("password-authenticator-integration-test") {

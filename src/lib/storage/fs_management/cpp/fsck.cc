@@ -83,22 +83,23 @@ zx_status_t FsckFat(const char* device_path, const FsckOptions& options, LaunchC
 }  // namespace
 
 __EXPORT
-zx_status_t Fsck(const char* device_path, DiskFormat df, const FsckOptions& options,
+zx_status_t Fsck(std::string_view device_path, DiskFormat df, const FsckOptions& options,
                  LaunchCallback cb) {
+  std::string device_path_str(device_path);
   // N.B. Make sure to release crypt_client in any new error paths here.
   switch (df) {
     case kDiskFormatFactoryfs:
-      return FsckNativeFs(device_path, options, cb, GetBinaryPath("factoryfs").c_str());
+      return FsckNativeFs(device_path_str.c_str(), options, cb, GetBinaryPath("factoryfs").c_str());
     case kDiskFormatMinfs:
-      return FsckNativeFs(device_path, options, cb, GetBinaryPath("minfs").c_str());
+      return FsckNativeFs(device_path_str.c_str(), options, cb, GetBinaryPath("minfs").c_str());
     case kDiskFormatFxfs:
-      return FsckNativeFs(device_path, options, cb, GetBinaryPath("fxfs").c_str());
+      return FsckNativeFs(device_path_str.c_str(), options, cb, GetBinaryPath("fxfs").c_str());
     case kDiskFormatFat:
-      return FsckFat(device_path, options, cb);
+      return FsckFat(device_path_str.c_str(), options, cb);
     case kDiskFormatBlobfs:
-      return FsckNativeFs(device_path, options, cb, GetBinaryPath("blobfs").c_str());
+      return FsckNativeFs(device_path_str.c_str(), options, cb, GetBinaryPath("blobfs").c_str());
     case kDiskFormatF2fs:
-      return FsckNativeFs(device_path, options, cb, GetBinaryPath("f2fs").c_str());
+      return FsckNativeFs(device_path_str.c_str(), options, cb, GetBinaryPath("f2fs").c_str());
     default:
       auto* format = CustomDiskFormat::Get(df);
       if (format == nullptr) {
@@ -106,7 +107,7 @@ zx_status_t Fsck(const char* device_path, DiskFormat df, const FsckOptions& opti
           zx_handle_close(options.crypt_client);
         return ZX_ERR_NOT_SUPPORTED;
       }
-      return FsckNativeFs(device_path, options, cb, format->binary_path().c_str());
+      return FsckNativeFs(device_path_str.c_str(), options, cb, format->binary_path().c_str());
   }
 }
 

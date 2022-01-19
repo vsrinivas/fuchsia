@@ -45,7 +45,7 @@ zx::status<std::string> CreateFvmInstance(const std::string& device_path, size_t
     FX_LOGS(ERROR) << "Could not open test disk";
     return zx::error(ZX_ERR_BAD_STATE);
   }
-  auto status = zx::make_status(fvm_init(fd.get(), slice_size));
+  auto status = zx::make_status(fs_management::FvmInit(fd.get(), slice_size));
   if (status.is_error()) {
     FX_LOGS(ERROR) << "Could not format disk with FVM";
     return status.take_error();
@@ -87,23 +87,21 @@ zx::status<std::string> CreateFvmPartition(const std::string& device_path, size_
   memcpy(request.type, options.type ? options.type->data() : kTestPartGUID, sizeof(request.type));
   memcpy(request.guid, kTestUniqueGUID, sizeof(request.guid));
 
-  auto fd = fbl::unique_fd(fvm_allocate_partition(fvm_fd.get(), &request));
-  if (!fd) {
+  if (auto fd_or = fs_management::FvmAllocatePartition(fvm_fd.get(), &request); fd_or.is_error()) {
     FX_LOGS(ERROR) << "Could not allocate FVM partition (slice count: "
                    << options.initial_fvm_slice_count << ")";
-    return zx::error(ZX_ERR_BAD_STATE);
+    return fd_or.take_error();
   }
   fvm_fd.reset();
 
-  char partition_path[PATH_MAX];
-  PartitionMatcher matcher{
+  std::string partition_path;
+  fs_management::PartitionMatcher matcher{
       .type_guid = request.type,
       .instance_guid = kTestUniqueGUID,
   };
-  fd.reset(open_partition(&matcher, 0, partition_path));
-  if (!fd) {
+  if (auto fd_or = fs_management::OpenPartition(&matcher, 0, &partition_path); fd_or.is_error()) {
     FX_LOGS(ERROR) << "Could not locate FVM partition";
-    return zx::error(ZX_ERR_BAD_STATE);
+    return fd_or.take_error();
   }
   return zx::ok(partition_path);
 }

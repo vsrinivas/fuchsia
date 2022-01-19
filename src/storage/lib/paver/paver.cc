@@ -645,25 +645,26 @@ zx::status<> DataSinkImpl::WriteDataFile(fidl::StringView filename,
   const char* mount_path = "/volume/data";
   const uint8_t data_guid[] = GUID_DATA_VALUE;
   char minfs_path[PATH_MAX] = {0};
-  char path[PATH_MAX] = {0};
+  std::string partition_path;
   zx::status<> status = zx::ok();
 
   const std::string data_partition_names[] = {std::string(fshost::kDataPartitionLabel),
                                               std::string(fshost::kLegacyDataPartitionLabel)};
   const char* c_data_partition_names[] = {data_partition_names[0].c_str(),
                                           data_partition_names[1].c_str()};
-  PartitionMatcher matcher{
+  fs_management::PartitionMatcher matcher{
       .type_guid = data_guid,
       .labels = c_data_partition_names,
       .num_labels = 2,
   };
-  fbl::unique_fd part_fd(open_partition_with_devfs(devfs_root_.get(), &matcher, ZX_SEC(1), path));
-  if (!part_fd) {
+  auto part_fd_or = fs_management::OpenPartitionWithDevfs(devfs_root_.get(), &matcher, ZX_SEC(1),
+                                                          &partition_path);
+  if (part_fd_or.is_error()) {
     ERROR("DATA partition not found in FVM\n");
-    return zx::error(ZX_ERR_NOT_FOUND);
+    return part_fd_or.take_error();
   }
 
-  auto disk_format = fs_management::DetectDiskFormat(part_fd.get());
+  auto disk_format = fs_management::DetectDiskFormat(part_fd_or->get());
   fbl::unique_fd mountpoint_dev_fd;
   // By the end of this switch statement, mountpoint_dev_fd needs to be an
   // open handle to the block device that we want to mount at mount_path.
@@ -671,12 +672,12 @@ zx::status<> DataSinkImpl::WriteDataFile(fidl::StringView filename,
     case fs_management::kDiskFormatMinfs:
       // If the disk we found is actually minfs, we can just use the block
       // device path we were given by open_partition.
-      strncpy(minfs_path, path, PATH_MAX);
+      strncpy(minfs_path, partition_path.c_str(), PATH_MAX);
       mountpoint_dev_fd.reset(open(minfs_path, O_RDWR));
       break;
 
     case fs_management::kDiskFormatZxcrypt: {
-      zxcrypt::VolumeManager zxc_volume(std::move(part_fd), devfs_root_.duplicate());
+      zxcrypt::VolumeManager zxc_volume(*std::move(part_fd_or), devfs_root_.duplicate());
 
       // Most of the time we'll expect the volume to actually already be
       // unsealed, because we created it and unsealed it moments ago to
@@ -713,7 +714,7 @@ zx::status<> DataSinkImpl::WriteDataFile(fidl::StringView filename,
     } break;
 
     default:
-      ERROR("unsupported disk format at %s\n", path);
+      ERROR("unsupported disk format at %s\n", partition_path.c_str());
       return zx::error(ZX_ERR_NOT_SUPPORTED);
   }
 
@@ -728,6 +729,7 @@ zx::status<> DataSinkImpl::WriteDataFile(fidl::StringView filename,
   int filename_size = static_cast<int>(filename.size());
 
   // mkdir any intermediate directories between mount_path and basename(filename).
+  char path[PATH_MAX];
   snprintf(path, sizeof(path), "%s/%.*s", mount_path, filename_size, filename.data());
   size_t cur = strlen(mount_path);
   size_t max = strlen(path) - strlen(basename(path));

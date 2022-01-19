@@ -151,12 +151,14 @@ zx_status_t FlashIo(const BlockDevice& device, size_t bytes_to_test, size_t tran
     if ((pending_signals & ZX_FIFO_WRITABLE) != 0 && !ready_to_send.empty() && bytes_to_send > 0) {
       reqid_t reqid = ready_to_send.front();
       reqs[reqid].dev_offset = dev_off / blksize;
-      reqs[reqid].length = static_cast<uint32_t>(std::min(transfer_size, bytes_to_send) / static_cast<uint32_t>(blksize));
+      reqs[reqid].length = static_cast<uint32_t>(std::min(transfer_size, bytes_to_send) /
+                                                 static_cast<uint32_t>(blksize));
       if (is_write_test) {
         vmo_byte_offset = reqs[reqid].vmo_offset * blksize;
         for (size_t i = 0; i < reqs[reqid].length; i++) {
           uint64_t value = reqs[reqid].dev_offset + i;
-          WriteBlockData(device.vmo_addr + vmo_byte_offset + blksize * i, static_cast<uint32_t>(blksize), value);
+          WriteBlockData(device.vmo_addr + vmo_byte_offset + blksize * i,
+                         static_cast<uint32_t>(blksize), value);
         }
       }
       zx_status_t r = SendFifoRequest(device.fifo, reqs[reqid]);
@@ -184,7 +186,8 @@ zx_status_t FlashIo(const BlockDevice& device, size_t bytes_to_test, size_t tran
         vmo_byte_offset = reqs[reqid].vmo_offset * blksize;
         for (size_t i = 0; i < reqs[reqid].length; i++) {
           uint64_t value = reqs[reqid].dev_offset + i;
-          VerifyBlockData(device.vmo_addr + vmo_byte_offset + blksize * i, static_cast<uint32_t>(blksize), value);
+          VerifyBlockData(device.vmo_addr + vmo_byte_offset + blksize * i,
+                          static_cast<uint32_t>(blksize), value);
         }
       }
       if (bytes_to_send > 0) {
@@ -254,20 +257,21 @@ std::unique_ptr<TemporaryFvmPartition> TemporaryFvmPartition::Create(int fvm_fd,
   memcpy(request.type, kTestPartGUID.bytes(), sizeof(request.type));
 
   // Create a new partition.
-  fbl::unique_fd fd(fvm_allocate_partition(fvm_fd, &request));
-  if (!fd) {
+  fbl::unique_fd fd;
+  if (auto fd_or = fs_management::FvmAllocatePartition(fvm_fd, &request); fd_or.is_error()) {
     fprintf(stderr, "Error: Could not allocate and open FVM partition\n");
     return nullptr;
+  } else {
+    fd = *std::move(fd_or);
   }
 
-  char partition_path[PATH_MAX];
-  PartitionMatcher matcher{
+  std::string partition_path;
+  fs_management::PartitionMatcher matcher{
       .type_guid = kTestPartGUID.bytes(),
       .instance_guid = unique_guid.bytes(),
   };
-  fd.reset(open_partition(&matcher, 0, partition_path));
-  if (!fd) {
-    destroy_partition(unique_guid.bytes(), kTestPartGUID.bytes());
+  if (auto fd_or = fs_management::OpenPartition(&matcher, 0, &partition_path); fd_or.is_error()) {
+    fs_management::DestroyPartition(unique_guid.bytes(), kTestPartGUID.bytes());
     fprintf(stderr, "Could not locate FVM partition\n");
     return nullptr;
   }
@@ -280,7 +284,7 @@ TemporaryFvmPartition::TemporaryFvmPartition(std::string partition_path, uuid::U
     : partition_path_(std::move(partition_path)), unique_guid_(unique_guid) {}
 
 TemporaryFvmPartition::~TemporaryFvmPartition() {
-  ZX_ASSERT(destroy_partition(unique_guid_.bytes(), kTestPartGUID.bytes()) == ZX_OK);
+  ZX_ASSERT(fs_management::DestroyPartition(unique_guid_.bytes(), kTestPartGUID.bytes()) == ZX_OK);
 }
 
 std::string TemporaryFvmPartition::GetPartitionPath() { return partition_path_; }
@@ -295,16 +299,17 @@ bool StressFlash(StatusLine* status, const CommandLineArgs& args, zx::duration d
   }
 
   // Calculate available space and number of slices needed.
-  fuchsia_hardware_block_volume_VolumeManagerInfo fvm_info;
-  if (fvm_query(fvm_fd.get(), &fvm_info) != ZX_OK) {
+  auto fvm_info_or = fs_management::FvmQuery(fvm_fd.get());
+  if (fvm_info_or.is_error()) {
     status->Log("Error: Could not get FVM info\n");
     return false;
   }
 
   // Default to using all available disk space.
-  uint64_t slices_available = fvm_info.slice_count - fvm_info.assigned_slice_count;
-  uint64_t bytes_to_test = slices_available * fvm_info.slice_size -
-                           RoundUp(kMinFvmFreeSpace, fvm_info.slice_size) - kMinPartitionFreeSpace;
+  uint64_t slices_available = fvm_info_or->slice_count - fvm_info_or->assigned_slice_count;
+  uint64_t bytes_to_test = slices_available * fvm_info_or->slice_size -
+                           RoundUp(kMinFvmFreeSpace, fvm_info_or->slice_size) -
+                           kMinPartitionFreeSpace;
 
   // If a value was specified and does not exceed the free disk space, use that.
   if (args.mem_to_test_megabytes.has_value()) {
@@ -317,7 +322,8 @@ bool StressFlash(StatusLine* status, const CommandLineArgs& args, zx::duration d
       return false;
     }
   }
-  uint64_t slices_requested = RoundUp(bytes_to_test, fvm_info.slice_size) / fvm_info.slice_size;
+  uint64_t slices_requested =
+      RoundUp(bytes_to_test, fvm_info_or->slice_size) / fvm_info_or->slice_size;
 
   std::unique_ptr<TemporaryFvmPartition> fvm_partition =
       TemporaryFvmPartition::Create(fvm_fd.get(), slices_requested);
@@ -394,7 +400,7 @@ bool StressFlash(StatusLine* status, const CommandLineArgs& args, zx::duration d
 void DestroyFlashTestPartitions(StatusLine* status) {
   uint32_t count = 0;
   // Remove any partitions from previous tests
-  while (destroy_partition(nullptr, kTestPartGUID.bytes()) == ZX_OK) {
+  while (fs_management::DestroyPartition(nullptr, kTestPartGUID.bytes()) == ZX_OK) {
     count++;
   }
   status->Log("Deleted %u partitions", count);

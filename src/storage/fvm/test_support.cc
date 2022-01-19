@@ -81,7 +81,7 @@ zx::unowned_channel GetChannel(int fd) {
 
 DeviceRef::DeviceRef(const fbl::unique_fd& devfs_root, const std::string& path, fbl::unique_fd fd)
     : devfs_root_(devfs_root.get()), fd_(std::move(fd)), channel_(GetChannel(fd_.get())) {
-  path_.Append(path.c_str());
+  path_.append(path.c_str());
 }
 
 void DeviceRef::Reconnect() {
@@ -209,23 +209,24 @@ std::unique_ptr<VPartitionAdapter> VPartitionAdapter::Create(const fbl::unique_f
     return nullptr;
   }
 
-  char out_path[kPathMax] = {};
-  PartitionMatcher matcher{
+  std::string out_path;
+  fs_management::PartitionMatcher matcher{
       .type_guid = type.data(),
       .instance_guid = guid.data(),
   };
-  fbl::unique_fd device_fd(
-      open_partition_with_devfs(devfs_root.get(), &matcher, kDeviceWaitTime.get(), out_path));
-  if (!device_fd.is_valid()) {
+  auto device_fd_or = fs_management::OpenPartitionWithDevfs(devfs_root.get(), &matcher,
+                                                            kDeviceWaitTime.get(), &out_path);
+  if (device_fd_or.is_error()) {
     ADD_FAILURE("Unable to obtain handle for partition.");
     return nullptr;
   }
-  return std::make_unique<VPartitionAdapter>(devfs_root, GetChannel(device_fd.get()), out_path,
-                                             std::move(device_fd), name, guid, type);
+  auto channel = GetChannel(device_fd_or->get());
+  return std::make_unique<VPartitionAdapter>(devfs_root, std::move(channel), out_path.c_str(),
+                                             *std::move(device_fd_or), name, guid, type);
 }
 
 VPartitionAdapter::~VPartitionAdapter() {
-  destroy_partition_with_devfs(devfs_root_, guid_.data(), type_.data());
+  fs_management::DestroyPartitionWithDevfs(devfs_root_, guid_.data(), type_.data());
 }
 
 zx_status_t VPartitionAdapter::Extend(uint64_t offset, uint64_t length) {
@@ -239,16 +240,14 @@ zx_status_t VPartitionAdapter::Extend(uint64_t offset, uint64_t length) {
 }
 
 void VPartitionAdapter::Reconnect() {
-  char out_path[kPathMax] = {};
-  PartitionMatcher matcher{
+  fs_management::PartitionMatcher matcher{
       .type_guid = type_.data(),
       .instance_guid = guid_.data(),
   };
-  fd_.reset(
-      open_partition_with_devfs(devfs_root_, &matcher, zx::duration::infinite().get(), out_path));
-  ASSERT_TRUE(fd_.get());
-  path_.Clear();
-  path_.Append(out_path);
+  auto fd_or = fs_management::OpenPartitionWithDevfs(devfs_root_, &matcher,
+                                                     zx::duration::infinite().get(), &path_);
+  ASSERT_EQ(fd_or.status_value(), ZX_OK);
+  fd_ = *std::move(fd_or);
   channel_ = GetChannel(fd_.get());
 }
 
@@ -273,8 +272,8 @@ std::unique_ptr<FvmAdapter> FvmAdapter::CreateGrowable(const fbl::unique_fd& dev
     return nullptr;
   }
 
-  if (fvm_init_preallocated(device->fd(), initial_block_count * block_size,
-                            maximum_block_count * block_size, slice_size) != ZX_OK) {
+  if (fs_management::FvmInitPreallocated(device->fd(), initial_block_count * block_size,
+                                         maximum_block_count * block_size, slice_size) != ZX_OK) {
     return nullptr;
   }
 
@@ -310,7 +309,9 @@ std::unique_ptr<FvmAdapter> FvmAdapter::CreateGrowable(const fbl::unique_fd& dev
   return std::make_unique<FvmAdapter>(devfs_root, fvm_path.c_str(), std::move(device_fd), device);
 }
 
-FvmAdapter::~FvmAdapter() { fvm_destroy_with_devfs(devfs_root_, block_device_->path()); }
+FvmAdapter::~FvmAdapter() {
+  fs_management::FvmDestroyWithDevfs(devfs_root_, block_device_->path());
+}
 
 zx_status_t FvmAdapter::AddPartition(const fbl::unique_fd& devfs_root, const std::string& name,
                                      const Guid& guid, const Guid& type, uint64_t slice_count,
@@ -391,7 +392,13 @@ zx_status_t FvmAdapter::Rebind(fbl::Vector<VPartitionAdapter*> vpartitions) {
   return ZX_OK;
 }
 
-zx_status_t FvmAdapter::Query(VolumeManagerInfo* info) const { return fvm_query(fd(), info); }
+zx_status_t FvmAdapter::Query(VolumeManagerInfo* info) const {
+  if (auto info_or = fs_management::FvmQuery(fd()); info_or.is_error())
+    return info_or.error_value();
+  else
+    *info = *std::move(info_or);
+  return ZX_OK;
+}
 
 fbl::Array<uint8_t> MakeRandomBuffer(size_t size, unsigned int* seed) {
   fbl::Array data(new uint8_t[size], size);

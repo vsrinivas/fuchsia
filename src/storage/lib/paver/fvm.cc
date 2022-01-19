@@ -355,8 +355,8 @@ fbl::unique_fd FvmPartitionFormat(const fbl::unique_fd& devfs_root, fbl::unique_
     uint64_t max_disk_size =
         (header.maximum_disk_size == 0) ? initial_disk_size : header.maximum_disk_size;
 
-    zx_status_t status = fvm_init_preallocated(partition_fd.get(), initial_disk_size, max_disk_size,
-                                               header.slice_size);
+    zx_status_t status = fs_management::FvmInitPreallocated(partition_fd.get(), initial_disk_size,
+                                                            max_disk_size, header.slice_size);
     if (status != ZX_OK) {
       ERROR("Failed to initialize fvm: %s\n", zx_status_get_string(status));
       return fbl::unique_fd();
@@ -433,10 +433,14 @@ void RecommendWipe(const char* problem) {
 // until there are none left.
 zx_status_t WipeAllFvmPartitionsWithGUID(const fbl::unique_fd& fvm_fd, const uint8_t type_guid[]) {
   fbl::unique_fd old_part;
-  PartitionMatcher matcher{
+  fs_management::PartitionMatcher matcher{
       .type_guid = type_guid,
   };
-  while ((old_part.reset(open_partition(&matcher, ZX_MSEC(500), nullptr))), old_part) {
+  for (;;) {
+    auto old_part_or = fs_management::OpenPartition(&matcher, ZX_MSEC(500), nullptr);
+    if (old_part_or.is_error())
+      break;
+    old_part = *std::move(old_part_or);
     bool is_vpartition;
     if (FvmIsVirtualPartition(old_part, &is_vpartition) != ZX_OK) {
       ERROR("Couldn't confirm old vpartition type\n");
@@ -564,11 +568,13 @@ zx_status_t AllocatePartitions(const fbl::unique_fd& devfs_root, const fbl::uniq
     memcpy(&alloc.guid, uuid::Uuid::Generate().bytes(), uuid::kUuidSize);
     memcpy(&alloc.name, (*parts)[p].pd->name, sizeof(alloc.name));
     LOG("Allocating partition %s consisting of %zu slices\n", alloc.name, alloc.slice_count);
-    (*parts)[p].new_part.reset(
-        fvm_allocate_partition_with_devfs(devfs_root.get(), fvm_fd.get(), &alloc));
-    if (!(*parts)[p].new_part) {
+    if (auto fd_or =
+            fs_management::FvmAllocatePartitionWithDevfs(devfs_root.get(), fvm_fd.get(), &alloc);
+        fd_or.is_error()) {
       ERROR("Couldn't allocate partition\n");
       return ZX_ERR_NO_SPACE;
+    } else {
+      (*parts)[p].new_part = *std::move(fd_or);
     }
 
     // Add filter drivers.
@@ -679,11 +685,11 @@ zx::status<> FvmStreamPartitions(const fbl::unique_fd& devfs_root,
 
   // Contend with issues from an image that may be too large for this device.
   VolumeManagerInfo info;
-  status = zx::make_status(fvm_query(
-      fvm_fd.get(), reinterpret_cast<fuchsia_hardware_block_volume_VolumeManagerInfo*>(&info)));
-  if (status.is_error()) {
+  if (auto info_or = fs_management::FvmQuery(fvm_fd.get()); info_or.is_error()) {
     ERROR("Failed to acquire FVM info: %s\n", status.status_string());
-    return status.take_error();
+    return info_or.take_error();
+  } else {
+    info = reinterpret_cast<VolumeManagerInfo&>(*info_or);
   }
   size_t free_slices = info.slice_count - info.assigned_slice_count;
   if (info.slice_count < requested_slices) {

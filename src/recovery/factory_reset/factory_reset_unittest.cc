@@ -177,7 +177,7 @@ class FactoryResetTest : public Test {
     int fd = -1;
     ASSERT_EQ(fdio_fd_create(disk.get(), &fd), ZX_OK);
     ASSERT_GE(fd, 0);
-    ASSERT_EQ(fvm_init_with_size(fd, kDeviceSize, kSliceSize), ZX_OK);
+    ASSERT_EQ(fs_management::FvmInitWithSize(fd, kDeviceSize, kSliceSize), ZX_OK);
 
     fbl::unique_fd ramctl;
     WaitForDevice(kRamCtlPath, &ramctl);

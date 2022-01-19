@@ -94,7 +94,7 @@ zx_status_t Mkfs(const char* device_path, DiskFormat df, LaunchCallback cb,
                  const MkfsOptions& options);
 
 // Check and repair a device with a requested disk format.
-zx_status_t Fsck(const char* device_path, DiskFormat df, const FsckOptions& options,
+zx_status_t Fsck(std::string_view device_path, DiskFormat df, const FsckOptions& options,
                  LaunchCallback cb);
 
 // Initialize the filesystem present on |device_handle|, returning a connection to the outgoing

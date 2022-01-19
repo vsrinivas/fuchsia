@@ -37,7 +37,7 @@ pub const DEV_PATH: &'static str = "/hub/exec/expose/dev";
 pub const BLOCK_PATH: &'static str = "/hub/exec/expose/dev/class/block";
 pub const RAMCTL_PATH: &'static str = "/hub/exec/expose/dev/sys/platform/00:00:2d/ramctl";
 
-#[link(name = "fs-management")]
+#[link(name = "fvm")]
 extern "C" {
     // This function initializes FVM on a fuchsia.hardware.block.Block device
     // with a given slice size.

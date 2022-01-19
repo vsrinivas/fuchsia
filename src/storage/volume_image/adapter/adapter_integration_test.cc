@@ -225,19 +225,21 @@ fpromise::result<storage::RamDisk, std::string> LaunchFvm(zx::vmo& fvm_vmo) {
 
 void CheckPartitionsInRamdisk(const FvmDescriptor& fvm_descriptor) {
   for (const auto& partition : fvm_descriptor.partitions()) {
-    std::array<char, PATH_MAX> partition_path = {};
-    PartitionMatcher matcher{
+    std::string partition_path;
+    fs_management::PartitionMatcher matcher{
         .type_guid = partition.volume().type.data(),
     };
-    fbl::unique_fd partition_fd(open_partition(&matcher, zx::sec(10).get(), partition_path.data()));
-    ASSERT_TRUE(partition_fd.is_valid());
+    auto partition_fd_or =
+        fs_management::OpenPartition(&matcher, zx::sec(10).get(), &partition_path);
+    ASSERT_EQ(partition_fd_or.status_value(), ZX_OK);
 
     if (partition.volume().name == "my-empty-partition") {
       // Check that allocated slices are equal to the slice count for max bytes.
       std::unique_ptr<block_client::RemoteBlockDevice> block_device;
       zx::channel channel;
-      ASSERT_EQ(fdio_get_service_handle(partition_fd.release(), channel.reset_and_get_address()),
-                ZX_OK);
+      ASSERT_EQ(
+          fdio_get_service_handle(partition_fd_or->release(), channel.reset_and_get_address()),
+          ZX_OK);
       ASSERT_EQ(block_client::RemoteBlockDevice::Create(std::move(channel), &block_device), ZX_OK);
       std::array<uint64_t, 2> slice_start = {0, 2};
       using VsliceRange = fuchsia_hardware_block_volume_VsliceRange;
@@ -262,8 +264,9 @@ void CheckPartitionsInRamdisk(const FvmDescriptor& fvm_descriptor) {
       // Check that allocated slices are equal to the slice count for max bytes.
       std::unique_ptr<block_client::RemoteBlockDevice> block_device;
       zx::channel channel;
-      ASSERT_EQ(fdio_get_service_handle(partition_fd.release(), channel.reset_and_get_address()),
-                ZX_OK);
+      ASSERT_EQ(
+          fdio_get_service_handle(partition_fd_or->release(), channel.reset_and_get_address()),
+          ZX_OK);
       ASSERT_EQ(block_client::RemoteBlockDevice::Create(std::move(channel), &block_device), ZX_OK);
       std::array<uint64_t, 2> slice_start = {0, 4};
       using VsliceRange = fuchsia_hardware_block_volume_VsliceRange;
@@ -291,7 +294,7 @@ void CheckPartitionsInRamdisk(const FvmDescriptor& fvm_descriptor) {
         .force = true,
     };
     EXPECT_EQ(
-        fs_management::Fsck(partition_path.data(),
+        fs_management::Fsck(partition_path,
                             partition.volume().name == "blobfs" ? fs_management::kDiskFormatBlobfs
                                                                 : fs_management::kDiskFormatMinfs,
                             fsck_options, &launch_stdio_sync),

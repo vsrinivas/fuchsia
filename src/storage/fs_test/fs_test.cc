@@ -253,8 +253,7 @@ zx::status<std::pair<RamDevice, std::string>> CreateRamDevice(
                    0x02, 0x03, 0x04},
           .name = "dummy",
       };
-      fbl::unique_fd fd(fvm_allocate_partition(fvm_fd.get(), &request));
-      if (!fd) {
+      if (fs_management::FvmAllocatePartition(fvm_fd.get(), &request).is_error()) {
         std::cout << "Could not allocate dummy FVM partition" << std::endl;
         return zx::error(ZX_ERR_BAD_STATE);
       }

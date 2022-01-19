@@ -32,12 +32,201 @@
 #include <utility>
 
 #include <fbl/string_printf.h>
-#include <fbl/unique_fd.h>
 
 #include "src/lib/storage/fs_management/cpp/fvm_internal.h"
 #include "src/storage/fvm/fvm.h"
 
 namespace fs_management {
+
+namespace {
+
+constexpr char kBlockDevPath[] = "/dev/class/block/";
+constexpr char kBlockDevRelativePath[] = "class/block/";
+// Overwrites the FVM and waits for it to disappear from devfs.
+//
+// devfs_root_fd: (OPTIONAL) A connection to devfs. If supplied, |path| is relative to this root.
+// parent_fd: An fd to the parent of the FVM device.
+// path: The path to the FVM device. Relative to |devfs_root_fd| if supplied.
+zx_status_t DestroyFvmAndWait(int devfs_root_fd, fbl::unique_fd parent_fd, fbl::unique_fd driver_fd,
+                              const char* path) {
+  auto volume_info_or = fs_management::FvmQuery(driver_fd.get());
+  if (volume_info_or.is_error()) {
+    return ZX_ERR_WRONG_TYPE;
+  }
+
+  struct FvmDestroyer {
+    int devfs_root_fd;
+    uint64_t slice_size;
+    const char* path;
+    bool destroyed;
+  } destroyer;
+  destroyer.devfs_root_fd = devfs_root_fd;
+  destroyer.slice_size = volume_info_or->slice_size;
+  destroyer.path = path;
+  destroyer.destroyed = false;
+
+  auto cb = [](int dirfd, int event, const char* fn, void* cookie) {
+    auto destroyer = static_cast<FvmDestroyer*>(cookie);
+    if (event == WATCH_EVENT_WAITING) {
+      zx_status_t status = ZX_ERR_INTERNAL;
+      if (destroyer->devfs_root_fd != -1) {
+        status =
+            FvmOverwriteWithDevfs(destroyer->devfs_root_fd, destroyer->path, destroyer->slice_size);
+      } else {
+        status = FvmOverwrite(destroyer->path, destroyer->slice_size);
+      }
+      destroyer->destroyed = true;
+      return status;
+    }
+    if ((event == WATCH_EVENT_REMOVE_FILE) && !strcmp(fn, "fvm")) {
+      return ZX_ERR_STOP;
+    }
+    return ZX_OK;
+  };
+  if (zx_status_t status =
+          fdio_watch_directory(parent_fd.get(), cb, zx::time::infinite().get(), &destroyer);
+      status != ZX_ERR_STOP) {
+    return status;
+  }
+  return ZX_OK;
+}
+
+// Helper function to overwrite FVM given the slice_size
+zx_status_t FvmOverwriteImpl(const fbl::unique_fd& fd, size_t slice_size) {
+  fuchsia_hardware_block_BlockInfo block_info;
+  fdio_cpp::UnownedFdioCaller disk_connection(fd.get());
+  zx::unowned_channel channel(disk_connection.borrow_channel());
+  zx_status_t status;
+  zx_status_t io_status = fuchsia_hardware_block_BlockGetInfo(channel->get(), &status, &block_info);
+  if (io_status != ZX_OK) {
+    return io_status;
+  } else if (status != ZX_OK) {
+    return status;
+  }
+
+  size_t disk_size = block_info.block_count * block_info.block_size;
+  fvm::Header header = fvm::Header::FromDiskSize(fvm::kMaxUsablePartitions, disk_size, slice_size);
+
+  // Overwrite all the metadata from the beginning of the device to the start of the data.
+  // TODO(jfsulliv) Use MetadataBuffer::BytesNeeded() when that's ready.
+  size_t metadata_size = header.GetDataStartOffset();
+  std::unique_ptr<uint8_t[]> buf(new uint8_t[metadata_size]);
+  memset(buf.get(), 0, metadata_size);
+
+  if (lseek(fd.get(), 0, SEEK_SET) < 0) {
+    return ZX_ERR_IO;
+  }
+  if (write(fd.get(), buf.get(), metadata_size) != static_cast<ssize_t>(metadata_size)) {
+    fprintf(stderr, "FvmOverwriteImpl: Failed to write metadata\n");
+    return ZX_ERR_IO;
+  }
+
+  io_status = fuchsia_hardware_block_BlockRebindDevice(channel->get(), &status);
+  if (io_status != ZX_OK) {
+    return io_status;
+  }
+  return status;
+}
+
+zx_status_t FvmAllocatePartitionImpl(int fvm_fd, const alloc_req_t* request) {
+  fdio_cpp::UnownedFdioCaller caller(fvm_fd);
+
+  fuchsia_hardware_block_partition::wire::Guid type_guid;
+  memcpy(type_guid.value.data(), request->type, BLOCK_GUID_LEN);
+  fuchsia_hardware_block_partition::wire::Guid instance_guid;
+  memcpy(instance_guid.value.data(), request->guid, BLOCK_GUID_LEN);
+
+  // TODO(fxbug.dev/52757): Add name_size to alloc_req_t.
+  //
+  // Here, we rely on request->name being a C-style string terminated by \x00,
+  // but no greater than BLOCK_NAME_LEN. Instead, we should add a name_size
+  // field to the alloc_req_t object to pass this explicitly.
+  size_t request_name_size = BLOCK_NAME_LEN;
+  for (size_t i = 0; i < BLOCK_NAME_LEN; i++) {
+    if (request->name[i] == 0) {
+      request_name_size = i;
+      break;
+    }
+  }
+  fidl::UnownedClientEnd<fuchsia_hardware_block_volume::VolumeManager> client(
+      caller.borrow_channel());
+  auto response = fidl::WireCall(client)->AllocatePartition(
+      request->slice_count, type_guid, instance_guid,
+      fidl::StringView::FromExternal(request->name, request_name_size), request->flags);
+  if (response.status() != ZX_OK) {
+    return response.status();
+  }
+  if (response->status != ZX_OK) {
+    return response->status;
+  }
+  return ZX_OK;
+}
+
+// Takes ownership of |dir|.
+zx::status<fbl::unique_fd> OpenPartitionImpl(DIR* dir, std::string_view out_path_base,
+                                             const PartitionMatcher* matcher, zx_duration_t timeout,
+                                             std::string* out_path) {
+  ZX_ASSERT(matcher != nullptr);
+  auto cleanup = fit::defer([&]() { closedir(dir); });
+
+  struct AllocHelperInfo {
+    const PartitionMatcher* matcher;
+    std::string_view out_path_base;
+    std::string* out_path;
+    fbl::unique_fd out_partition;
+  } info;
+
+  info.matcher = matcher;
+  info.out_path_base = out_path_base;
+  info.out_path = out_path;
+  info.out_partition.reset();
+
+  auto cb = [](int dirfd, int event, const char* fn, void* cookie) {
+    if (event != WATCH_EVENT_ADD_FILE) {
+      return ZX_OK;
+    } else if ((strcmp(fn, ".") == 0) || strcmp(fn, "..") == 0) {
+      return ZX_OK;
+    }
+    auto info = static_cast<AllocHelperInfo*>(cookie);
+    fbl::unique_fd devfd(openat(dirfd, fn, O_RDWR));
+    if (!devfd) {
+      return ZX_OK;
+    }
+
+    fdio_cpp::UnownedFdioCaller connection(devfd.get());
+    zx::unowned_channel channel(connection.borrow_channel());
+    if (PartitionMatches(channel, *(info->matcher))) {
+      info->out_partition = std::move(devfd);
+      if (info->out_path) {
+        *info->out_path = std::string(info->out_path_base);
+        info->out_path->append(fn);
+      }
+      return ZX_ERR_STOP;
+    }
+    return ZX_OK;
+  };
+
+  zx_time_t deadline = zx_deadline_after(timeout);
+  if (zx_status_t status = fdio_watch_directory(dirfd(dir), cb, deadline, &info);
+      status != ZX_ERR_STOP) {
+    return zx::error(status);
+  }
+  return zx::ok(std::move(info.out_partition));
+}
+
+zx_status_t DestroyPartitionImpl(fbl::unique_fd&& fd) {
+  fdio_cpp::FdioCaller partition_caller(std::move(fd));
+
+  zx_status_t status;
+  zx_status_t io_status =
+      fuchsia_hardware_block_volume_VolumeDestroy(partition_caller.borrow_channel(), &status);
+  if (io_status) {
+    return io_status;
+  }
+  return status;
+}
+
+}  // namespace
 
 bool PartitionMatches(zx::unowned_channel& partition_channel, const PartitionMatcher& matcher) {
   ZX_ASSERT(matcher.type_guid || matcher.instance_guid || matcher.num_labels > 0);
@@ -85,66 +274,9 @@ bool PartitionMatches(zx::unowned_channel& partition_channel, const PartitionMat
   return true;
 }
 
-}  // namespace fs_management
-
-namespace {
-
-constexpr char kBlockDevPath[] = "/dev/class/block/";
-constexpr char kBlockDevRelativePath[] = "class/block/";
-// Overwrites the FVM and waits for it to disappear from devfs.
-//
-// devfs_root_fd: (OPTIONAL) A connection to devfs. If supplied, |path| is relative to this root.
-// parent_fd: An fd to the parent of the FVM device.
-// path: The path to the FVM device. Relative to |devfs_root_fd| if supplied.
-zx_status_t DestroyFVMAndWait(int devfs_root_fd, fbl::unique_fd parent_fd, fbl::unique_fd driver_fd,
-                              const char* path) {
-  fuchsia_hardware_block_volume_VolumeManagerInfo volume_info;
-  zx_status_t status = fvm_query(driver_fd.get(), &volume_info);
-  if (status != ZX_OK) {
-    return ZX_ERR_WRONG_TYPE;
-  }
-
-  struct fvm_destroyer {
-    int devfs_root_fd;
-    uint64_t slice_size;
-    const char* path;
-    bool destroyed;
-  } destroyer;
-  destroyer.devfs_root_fd = devfs_root_fd;
-  destroyer.slice_size = volume_info.slice_size;
-  destroyer.path = path;
-  destroyer.destroyed = false;
-
-  auto cb = [](int dirfd, int event, const char* fn, void* cookie) {
-    auto destroyer = static_cast<fvm_destroyer*>(cookie);
-    if (event == WATCH_EVENT_WAITING) {
-      zx_status_t status = ZX_ERR_INTERNAL;
-      if (destroyer->devfs_root_fd != -1) {
-        status = fvm_overwrite_with_devfs(destroyer->devfs_root_fd, destroyer->path,
-                                          destroyer->slice_size);
-      } else {
-        status = fvm_overwrite(destroyer->path, destroyer->slice_size);
-      }
-      destroyer->destroyed = true;
-      return status;
-    }
-    if ((event == WATCH_EVENT_REMOVE_FILE) && !strcmp(fn, "fvm")) {
-      return ZX_ERR_STOP;
-    }
-    return ZX_OK;
-  };
-  status = fdio_watch_directory(parent_fd.get(), cb, zx::time::infinite().get(), &destroyer);
-  if (status != ZX_ERR_STOP) {
-    return status;
-  }
-  return ZX_OK;
-}
-
-}  // namespace
-
 __EXPORT
-zx_status_t fvm_init_preallocated(int fd, uint64_t initial_volume_size, uint64_t max_volume_size,
-                                  size_t slice_size) {
+zx_status_t FvmInitPreallocated(int fd, uint64_t initial_volume_size, uint64_t max_volume_size,
+                                size_t slice_size) {
   if (slice_size % fvm::kBlockSize != 0) {
     // Alignment
     return ZX_ERR_INVALID_ARGS;
@@ -203,12 +335,12 @@ zx_status_t fvm_init_preallocated(int fd, uint64_t initial_volume_size, uint64_t
 }
 
 __EXPORT
-zx_status_t fvm_init_with_size(int fd, uint64_t volume_size, size_t slice_size) {
-  return fvm_init_preallocated(fd, volume_size, volume_size, slice_size);
+zx_status_t FvmInitWithSize(int fd, uint64_t volume_size, size_t slice_size) {
+  return FvmInitPreallocated(fd, volume_size, volume_size, slice_size);
 }
 
 __EXPORT
-zx_status_t fvm_init(int fd, size_t slice_size) {
+zx_status_t FvmInit(int fd, size_t slice_size) {
   // The metadata layout of the FVM is dependent on the
   // size of the FVM's underlying partition.
   fuchsia_hardware_block_BlockInfo block_info;
@@ -224,70 +356,32 @@ zx_status_t fvm_init(int fd, size_t slice_size) {
     return ZX_ERR_BAD_STATE;
   }
 
-  return fvm_init_with_size(fd, block_info.block_count * block_info.block_size, slice_size);
-}
-
-// Helper function to overwrite FVM given the slice_size
-zx_status_t fvm_overwrite_impl(const fbl::unique_fd& fd, size_t slice_size) {
-  fuchsia_hardware_block_BlockInfo block_info;
-  fdio_cpp::UnownedFdioCaller disk_connection(fd.get());
-  zx::unowned_channel channel(disk_connection.borrow_channel());
-  zx_status_t status;
-  zx_status_t io_status = fuchsia_hardware_block_BlockGetInfo(channel->get(), &status, &block_info);
-  if (io_status != ZX_OK) {
-    return io_status;
-  } else if (status != ZX_OK) {
-    return status;
-  }
-
-  size_t disk_size = block_info.block_count * block_info.block_size;
-  fvm::Header header = fvm::Header::FromDiskSize(fvm::kMaxUsablePartitions, disk_size, slice_size);
-
-  // Overwrite all the metadata from the beginning of the device to the start of the data.
-  // TODO(jfsulliv) Use MetadataBuffer::BytesNeeded() when that's ready.
-  size_t metadata_size = header.GetDataStartOffset();
-  std::unique_ptr<uint8_t[]> buf(new uint8_t[metadata_size]);
-  memset(buf.get(), 0, metadata_size);
-
-  if (lseek(fd.get(), 0, SEEK_SET) < 0) {
-    return ZX_ERR_IO;
-  }
-  if (write(fd.get(), buf.get(), metadata_size) != static_cast<ssize_t>(metadata_size)) {
-    fprintf(stderr, "fvm_overwrite_impl: Failed to write metadata\n");
-    return ZX_ERR_IO;
-  }
-
-  io_status = fuchsia_hardware_block_BlockRebindDevice(channel->get(), &status);
-  if (io_status != ZX_OK) {
-    return io_status;
-  }
-  return status;
+  return FvmInitWithSize(fd, block_info.block_count * block_info.block_size, slice_size);
 }
 
 __EXPORT
-zx_status_t fvm_overwrite(const char* path, size_t slice_size) {
+zx_status_t FvmOverwrite(const char* path, size_t slice_size) {
   fbl::unique_fd fd(open(path, O_RDWR));
   if (!fd) {
-    fprintf(stderr, "fvm_overwrite: Failed to open block device\n");
+    fprintf(stderr, "FvmOverwrite: Failed to open block device\n");
     return ZX_ERR_BAD_STATE;
   }
-  return fvm_overwrite_impl(fd, slice_size);
+  return FvmOverwriteImpl(fd, slice_size);
 }
 
 __EXPORT
-zx_status_t fvm_overwrite_with_devfs(int devfs_root_fd, const char* relative_path,
-                                     size_t slice_size) {
+zx_status_t FvmOverwriteWithDevfs(int devfs_root_fd, const char* relative_path, size_t slice_size) {
   fbl::unique_fd fd(openat(devfs_root_fd, relative_path, O_RDWR));
   if (!fd) {
-    fprintf(stderr, "fvm_overwrite_with_devfs: Failed to open block device\n");
+    fprintf(stderr, "FvmOverwriteWithDevfs: Failed to open block device\n");
     return ZX_ERR_BAD_STATE;
   }
-  return fvm_overwrite_impl(fd, slice_size);
+  return FvmOverwriteImpl(fd, slice_size);
 }
 
 // Helper function to destroy FVM
 __EXPORT
-zx_status_t fvm_destroy(const char* path) {
+zx_status_t FvmDestroy(const char* path) {
   fbl::String driver_path = fbl::StringPrintf("%s/fvm", path);
 
   fbl::unique_fd parent_fd(open(path, O_RDONLY | O_DIRECTORY));
@@ -298,11 +392,11 @@ zx_status_t fvm_destroy(const char* path) {
   if (!fvm_fd) {
     return ZX_ERR_NOT_FOUND;
   }
-  return DestroyFVMAndWait(-1, std::move(parent_fd), std::move(fvm_fd), path);
+  return DestroyFvmAndWait(-1, std::move(parent_fd), std::move(fvm_fd), path);
 }
 
 __EXPORT
-zx_status_t fvm_destroy_with_devfs(int devfs_root_fd, const char* relative_path) {
+zx_status_t FvmDestroyWithDevfs(int devfs_root_fd, const char* relative_path) {
   fbl::String driver_path = fbl::StringPrintf("%s/fvm", relative_path);
 
   fbl::unique_fd parent_fd(openat(devfs_root_fd, relative_path, O_RDONLY | O_DIRECTORY));
@@ -313,69 +407,38 @@ zx_status_t fvm_destroy_with_devfs(int devfs_root_fd, const char* relative_path)
   if (!fvm_fd) {
     return ZX_ERR_NOT_FOUND;
   }
-  return DestroyFVMAndWait(devfs_root_fd, std::move(parent_fd), std::move(fvm_fd), relative_path);
-}
-
-int fvm_allocate_partition_impl(int fvm_fd, const alloc_req_t* request) {
-  fdio_cpp::UnownedFdioCaller caller(fvm_fd);
-
-  fuchsia_hardware_block_partition::wire::Guid type_guid;
-  memcpy(type_guid.value.data(), request->type, BLOCK_GUID_LEN);
-  fuchsia_hardware_block_partition::wire::Guid instance_guid;
-  memcpy(instance_guid.value.data(), request->guid, BLOCK_GUID_LEN);
-
-  // TODO(fxbug.dev/52757): Add name_size to alloc_req_t.
-  //
-  // Here, we rely on request->name being a C-style string terminated by \x00,
-  // but no greater than BLOCK_NAME_LEN. Instead, we should add a name_size
-  // field to the alloc_req_t object to pass this explicitely.
-  size_t request_name_size = BLOCK_NAME_LEN;
-  for (size_t i = 0; i < BLOCK_NAME_LEN; i++) {
-    if (request->name[i] == 0) {
-      request_name_size = i;
-      break;
-    }
-  }
-  fidl::UnownedClientEnd<fuchsia_hardware_block_volume::VolumeManager> client(
-      caller.borrow_channel());
-  auto response = fidl::WireCall(client)->AllocatePartition(
-      request->slice_count, type_guid, instance_guid,
-      fidl::StringView::FromExternal(request->name, request_name_size), request->flags);
-  if (response.status() != ZX_OK || response->status != ZX_OK) {
-    return -1;
-  }
-  return 0;
+  return DestroyFvmAndWait(devfs_root_fd, std::move(parent_fd), std::move(fvm_fd), relative_path);
 }
 
 // Helper function to allocate, find, and open VPartition.
 __EXPORT
-int fvm_allocate_partition(int fvm_fd, const alloc_req_t* request) {
-  int alloc_status = fvm_allocate_partition_impl(fvm_fd, request);
-  if (alloc_status != 0) {
-    return alloc_status;
+zx::status<fbl::unique_fd> FvmAllocatePartition(int fvm_fd, const alloc_req_t* request) {
+  if (zx_status_t status = FvmAllocatePartitionImpl(fvm_fd, request); status != ZX_OK) {
+    return zx::error(status);
   }
   PartitionMatcher matcher{
       .type_guid = request->type,
       .instance_guid = request->guid,
   };
-  return open_partition(&matcher, ZX_SEC(10), nullptr);
+  return OpenPartition(&matcher, ZX_SEC(10), nullptr);
 }
 
 __EXPORT
-int fvm_allocate_partition_with_devfs(int devfs_root_fd, int fvm_fd, const alloc_req_t* request) {
-  int alloc_status = fvm_allocate_partition_impl(fvm_fd, request);
+zx::status<fbl::unique_fd> FvmAllocatePartitionWithDevfs(int devfs_root_fd, int fvm_fd,
+                                                         const alloc_req_t* request) {
+  int alloc_status = FvmAllocatePartitionImpl(fvm_fd, request);
   if (alloc_status != 0) {
-    return alloc_status;
+    return zx::error(alloc_status);
   }
   PartitionMatcher matcher{
       .type_guid = request->type,
       .instance_guid = request->guid,
   };
-  return open_partition_with_devfs(devfs_root_fd, &matcher, ZX_SEC(10), nullptr);
+  return OpenPartitionWithDevfs(devfs_root_fd, &matcher, ZX_SEC(10), nullptr);
 }
 
 __EXPORT
-zx_status_t fvm_query(int fvm_fd, fuchsia_hardware_block_volume_VolumeManagerInfo* out) {
+zx::status<fuchsia_hardware_block_volume_VolumeManagerInfo> FvmQuery(int fvm_fd) {
   fdio_cpp::UnownedFdioCaller caller(fvm_fd);
 
   auto response =
@@ -384,126 +447,65 @@ zx_status_t fvm_query(int fvm_fd, fuchsia_hardware_block_volume_VolumeManagerInf
           ->GetInfo();
 
   if (response.status() != ZX_OK)
-    return response.status();
+    return zx::error(response.status());
   if (response->status != ZX_OK)
-    return response->status;
-  *out = reinterpret_cast<fuchsia_hardware_block_volume_VolumeManagerInfo&>(*response->info);
-  return ZX_OK;
-}
+    return zx::error(response->status);
 
-// Takes ownership of |dir|.
-int open_partition_impl(DIR* dir, const char* out_path_base, const PartitionMatcher* matcher,
-                        zx_duration_t timeout, char* out_path) {
-  ZX_ASSERT(matcher != nullptr);
-  auto cleanup = fit::defer([&]() { closedir(dir); });
-
-  typedef struct {
-    const PartitionMatcher* matcher;
-    const char* out_path_base;
-    char* out_path;
-    fbl::unique_fd out_partition;
-  } alloc_helper_info_t;
-
-  alloc_helper_info_t info;
-  info.matcher = matcher;
-  info.out_path_base = out_path_base;
-  info.out_path = out_path;
-  info.out_partition.reset();
-
-  auto cb = [](int dirfd, int event, const char* fn, void* cookie) {
-    if (event != WATCH_EVENT_ADD_FILE) {
-      return ZX_OK;
-    } else if ((strcmp(fn, ".") == 0) || strcmp(fn, "..") == 0) {
-      return ZX_OK;
-    }
-    auto info = static_cast<alloc_helper_info_t*>(cookie);
-    fbl::unique_fd devfd(openat(dirfd, fn, O_RDWR));
-    if (!devfd) {
-      return ZX_OK;
-    }
-
-    fdio_cpp::UnownedFdioCaller connection(devfd.get());
-    zx::unowned_channel channel(connection.borrow_channel());
-    if (fs_management::PartitionMatches(channel, *(info->matcher))) {
-      info->out_partition = std::move(devfd);
-      if (info->out_path) {
-        strcpy(info->out_path, info->out_path_base);
-        strcat(info->out_path, fn);
-      }
-      return ZX_ERR_STOP;
-    }
-    return ZX_OK;
-  };
-
-  zx_time_t deadline = zx_deadline_after(timeout);
-  if (fdio_watch_directory(dirfd(dir), cb, deadline, &info) != ZX_ERR_STOP) {
-    return -1;
-  }
-  return info.out_partition.release();
+  return zx::ok(
+      reinterpret_cast<fuchsia_hardware_block_volume_VolumeManagerInfo&>(*response->info));
 }
 
 __EXPORT
-int open_partition(const PartitionMatcher* matcher, zx_duration_t timeout, char* out_path) {
+zx::status<fbl::unique_fd> OpenPartition(const PartitionMatcher* matcher, zx_duration_t timeout,
+                                         std::string* out_path) {
   DIR* dir = opendir(kBlockDevPath);
   if (dir == nullptr) {
-    return -1;
+    return zx::error(ZX_ERR_IO);
   }
 
-  return open_partition_impl(dir, kBlockDevPath, matcher, timeout, out_path);
+  return OpenPartitionImpl(dir, kBlockDevPath, matcher, timeout, out_path);
 }
 
 __EXPORT
-int open_partition_with_devfs(int devfs_root_fd, const PartitionMatcher* matcher,
-                              zx_duration_t timeout, char* out_path_relative) {
+zx::status<fbl::unique_fd> OpenPartitionWithDevfs(int devfs_root_fd,
+                                                  const PartitionMatcher* matcher,
+                                                  zx_duration_t timeout,
+                                                  std::string* out_path_relative) {
   fbl::unique_fd block_dev_fd(openat(devfs_root_fd, kBlockDevRelativePath, O_RDONLY));
   if (!block_dev_fd) {
-    return -1;
+    return zx::error(ZX_ERR_IO);
   }
   DIR* dir = fdopendir(block_dev_fd.get());
   if (dir == nullptr) {
-    return -1;
+    return zx::error(ZX_ERR_IO);
   }
 
-  return open_partition_impl(dir, kBlockDevRelativePath, matcher, timeout, out_path_relative);
-}
-
-zx_status_t destroy_partition_impl(fbl::unique_fd&& fd) {
-  fdio_cpp::FdioCaller partition_caller(std::move(fd));
-
-  zx_status_t status;
-  zx_status_t io_status =
-      fuchsia_hardware_block_volume_VolumeDestroy(partition_caller.borrow_channel(), &status);
-  if (io_status) {
-    return io_status;
-  }
-  return status;
+  return OpenPartitionImpl(dir, kBlockDevRelativePath, matcher, timeout, out_path_relative);
 }
 
 __EXPORT
-zx_status_t destroy_partition(const uint8_t* uniqueGUID, const uint8_t* typeGUID) {
-  char path[PATH_MAX];
+zx_status_t DestroyPartition(const uint8_t* uniqueGUID, const uint8_t* typeGUID) {
   PartitionMatcher matcher{
       .type_guid = typeGUID,
       .instance_guid = uniqueGUID,
   };
-  fbl::unique_fd fd(open_partition(&matcher, 0, path));
-  if (!fd) {
-    return ZX_ERR_IO;
-  }
-  return destroy_partition_impl(std::move(fd));
+  auto fd_or = OpenPartition(&matcher, 0, nullptr);
+  if (fd_or.is_error())
+    return fd_or.status_value();
+  return DestroyPartitionImpl(*std::move(fd_or));
 }
 
 __EXPORT
-zx_status_t destroy_partition_with_devfs(int devfs_root_fd, const uint8_t* uniqueGUID,
-                                         const uint8_t* typeGUID) {
-  char relative_path[PATH_MAX];
+zx_status_t DestroyPartitionWithDevfs(int devfs_root_fd, const uint8_t* uniqueGUID,
+                                      const uint8_t* typeGUID) {
   PartitionMatcher matcher{
       .type_guid = typeGUID,
       .instance_guid = uniqueGUID,
   };
-  fbl::unique_fd fd(open_partition_with_devfs(devfs_root_fd, &matcher, 0, relative_path));
-  if (!fd) {
-    return ZX_ERR_IO;
-  }
-  return destroy_partition_impl(std::move(fd));
+  auto fd_or = OpenPartitionWithDevfs(devfs_root_fd, &matcher, 0, nullptr);
+  if (fd_or.is_error())
+    return fd_or.status_value();
+  return DestroyPartitionImpl(*std::move(fd_or));
 }
+
+}  // namespace fs_management
