@@ -6,6 +6,7 @@ Fuchsia. This document details how OTA updates work on Fuchsia.
 The update process is divided into the following phases:
 
 * [Checking for an update](#checking-for-update)
+* [Monitoring update progress](#monitoring-update)
 * [Staging an update](#staging-update)
 * [Verifying an update](#verifying-update)
 
@@ -97,6 +98,24 @@ of the update package that is fetched is checked against the last known
 hash. If the hashes are the same, no update is triggered. If the hashes
 are different, the vbmeta and ZBI are  checked for changes to determine
 if an update is necessary.
+
+## Monitoring {#monitoring-update}
+
+If a client is interested in monitoring update progress and status, they could implement
+[`fuchsia.update.AttemptsMonitor`][attempts-monitor-fidl] protocol and provide the client end to
+`MonitorAllUpdateChecks()` method of [`fuchsia.update.Manager`][update-manager-fidl] FIDL
+protocol. [`fuchsia.update.AttemptsMonitor`][attempts-monitor-fidl] instance will only receive
+messages when an update is started by another method, or if an update is currently in progress. This
+will not trigger a new update.
+
+[`fuchsia.update.AttemptsMonitor`][attempts-monitor-fidl] instance will receive `OnStart` message
+which will contain server end to the [`fuchsia.update.Monitor`][monitor-fidl] protocol. This allows
+client to receive and process `OnState` messages, informing about the update state changes.
+
+Another option is to implement [`fuchsia.update.Monitor`][monitor-fidl] and provide the client end
+to `CheckNow()` method of the [`fuchsia.update.Manager`][update-manager-fidl] protocol. This will
+start [checking for an update](#checking-for-update). It will only monitor the update that's
+currently running and will close the handle once the update completes.
 
 ## Staging an update {#staging-update}
 
@@ -429,3 +448,6 @@ After this, the update is considered committed. This means:
 [flow-c]: https://cs.opensource.google/fuchsia/fuchsia/+/main:src/firmware/lib/abr/flow.c;l=197;drc=bea16aa2d8a0bbc293a82ed44e03525ebe13bc94
 [replace-retained-packages-fidl]: https://cs.opensource.google/fuchsia/fuchsia/+/main:sdk/fidl/fuchsia.pkg/cache.fidl;l=216;drc=a265f6e224c76f783a14bce7c24b085b90cc3ad8
 [system-updater-url-fidl]: https://cs.opensource.google/fuchsia/fuchsia/+/main:src/sys/pkg/fidl/fuchsia.update.installer/installer.fidl;l=53;drc=896f3220d71b442b44da13bc04a5634993488330
+[update-manager-fidl]: https://cs.opensource.google/fuchsia/fuchsia/+/main:sdk/fidl/fuchsia.update/update.fidl;l=12;drc=ad0a3e8d6b96313a92807556c50e1935aa377a45
+[attempts-monitor-fidl]: https://cs.opensource.google/fuchsia/fuchsia/+/main:sdk/fidl/fuchsia.update/update.fidl;l=104;drc=ad0a3e8d6b96313a92807556c50e1935aa377a45
+[monitor-fidl]: https://cs.opensource.google/fuchsia/fuchsia/+/main:sdk/fidl/fuchsia.update/update.fidl;l=128;drc=ad0a3e8d6b96313a92807556c50e1935aa377a45
