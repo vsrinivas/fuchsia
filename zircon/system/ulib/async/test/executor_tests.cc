@@ -79,10 +79,11 @@ TEST(ExecutorTests, suspending_and_resuming_tasks) {
       fpromise::make_promise([&](fpromise::context& context) -> fpromise::result<> {
         if (++run_count[2] == 100)
           return fpromise::ok();
-        std::async(std::launch::async, [&, s = context.suspend_task()]() mutable {
-          resume_count[2]++;
-          s.resume_task();
-        });
+        [[maybe_unused]] auto a =
+            std::async(std::launch::async, [&, s = context.suspend_task()]() mutable {
+              resume_count[2]++;
+              s.resume_task();
+            });
         return fpromise::pending();
       }));
 
@@ -101,14 +102,16 @@ TEST(ExecutorTests, suspending_and_resuming_tasks) {
       fpromise::make_promise([&](fpromise::context& context) -> fpromise::result<> {
         if (++run_count[4] == 100)
           return fpromise::ok();
-        std::async(std::launch::async, [&, s = context.suspend_task()]() mutable {
-          resume_count[4]++;
-          s.resume_task();
-        });
-        std::async(std::launch::async, [&, s = context.suspend_task()]() mutable {
-          resume_count4b++;  // use a different variable to avoid data races
-          s.resume_task();
-        });
+        [[maybe_unused]] auto a =
+            std::async(std::launch::async, [&, s = context.suspend_task()]() mutable {
+              resume_count[4]++;
+              s.resume_task();
+            });
+        [[maybe_unused]] auto b =
+            std::async(std::launch::async, [&, s = context.suspend_task()]() mutable {
+              resume_count4b++;  // use a different variable to avoid data races
+              s.resume_task();
+            });
         return fpromise::pending();
       }));
 
@@ -157,7 +160,7 @@ TEST(ExecutorTests, abandoning_tasks) {
       fpromise::make_promise([&, d = fit::defer([&] { destruction[2]++; })](
                                  fpromise::context& context) -> fpromise::result<> {
         run_count[2]++;
-        std::async(std::launch::async, [s = context.suspend_task()] {});
+        [[maybe_unused]] auto a = std::async(std::launch::async, [s = context.suspend_task()] {});
         return fpromise::pending();
       }));
 
