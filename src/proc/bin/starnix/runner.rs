@@ -17,11 +17,10 @@ use fuchsia_async as fasync;
 use fuchsia_component::client as fclient;
 use fuchsia_runtime::{HandleInfo, HandleType};
 use fuchsia_zircon::{
-    self as zx, sys::zx_exception_info_t, sys::zx_thread_state_general_regs_t,
-    sys::ZX_EXCEPTION_STATE_HANDLED, sys::ZX_EXCEPTION_STATE_THREAD_EXIT,
-    sys::ZX_EXCEPTION_STATE_TRY_NEXT, sys::ZX_EXCP_POLICY_CODE_BAD_SYSCALL,
-    sys::ZX_EXCP_POLICY_ERROR, sys::ZX_PROCESS_DEBUG_ADDR_BREAK_ON_SET, AsHandleRef,
-    Task as zxTask,
+    self as zx, sys::zx_exception_info_t, sys::ZX_EXCEPTION_STATE_HANDLED,
+    sys::ZX_EXCEPTION_STATE_THREAD_EXIT, sys::ZX_EXCEPTION_STATE_TRY_NEXT,
+    sys::ZX_EXCP_POLICY_CODE_BAD_SYSCALL, sys::ZX_EXCP_POLICY_ERROR,
+    sys::ZX_PROCESS_DEBUG_ADDR_BREAK_ON_SET, AsHandleRef, Task as zxTask,
 };
 use futures::TryStreamExt;
 use log::{error, info};
@@ -252,10 +251,7 @@ fn set_process_debug_addr(current_task: &mut CurrentTask) -> Result<(), Errno> {
     Ok(())
 }
 
-fn start_task(
-    current_task: &CurrentTask,
-    registers: zx_thread_state_general_regs_t,
-) -> Result<zx::Channel, zx::Status> {
+fn start_task(current_task: &CurrentTask) -> Result<zx::Channel, zx::Status> {
     let exceptions = current_task.thread.create_exception_channel()?;
     let suspend_token = current_task.thread.suspend()?;
     if current_task.id == current_task.thread_group.leader {
@@ -270,21 +266,18 @@ fn start_task(
         current_task.thread.start(0, 0, 0, 0)?;
     }
     current_task.thread.wait_handle(zx::Signals::THREAD_SUSPENDED, zx::Time::INFINITE)?;
-    current_task.thread.write_state_general_regs(registers)?;
+    current_task.thread.write_state_general_regs(current_task.registers)?;
     mem::drop(suspend_token);
     Ok(exceptions)
 }
 
-pub fn spawn_task<F>(
-    current_task: CurrentTask,
-    registers: zx_thread_state_general_regs_t,
-    task_complete: F,
-) where
+pub fn spawn_task<F>(current_task: CurrentTask, task_complete: F)
+where
     F: FnOnce(Result<i32, Error>) + Send + Sync + 'static,
 {
     std::thread::spawn(move || {
         task_complete(|| -> Result<i32, Error> {
-            let exceptions = start_task(&current_task, registers)?;
+            let exceptions = start_task(&current_task)?;
             run_task(current_task, exceptions)
         }());
     });
@@ -489,10 +482,9 @@ fn start_component(
     let mut argv = vec![binary_path];
     argv.extend(args.into_iter());
 
-    let start_info = current_task.exec(&argv[0], &argv, &environ)?;
-    current_task.dt_debug_address = start_info.dt_debug_address;
+    current_task.exec(&argv[0], &argv, &environ)?;
 
-    spawn_task(current_task, start_info.to_registers(), |result| {
+    spawn_task(current_task, |result| {
         // TODO(fxb/74803): Using the component controller's epitaph may not be the best way to
         // communicate the exit code. The component manager could interpret certain epitaphs as starnix
         // being unstable, and chose to terminate starnix as a result.

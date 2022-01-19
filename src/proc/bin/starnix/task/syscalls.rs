@@ -24,20 +24,19 @@ pub fn sys_clone(
     user_child_tid: UserRef<pid_t>,
     user_tls: UserAddress,
 ) -> Result<SyscallResult, Errno> {
-    let new_task = current_task.clone_task(flags, user_parent_tid, user_child_tid)?;
+    let mut new_task = current_task.clone_task(flags, user_parent_tid, user_child_tid)?;
     let tid = new_task.id;
 
-    let mut registers = current_task.registers;
-    registers.rax = 0;
+    new_task.registers = current_task.registers;
+    new_task.registers.rax = 0;
     if !user_stack.is_null() {
-        registers.rsp = user_stack.ptr() as u64;
+        new_task.registers.rsp = user_stack.ptr() as u64;
     }
-
     if flags & (CLONE_SETTLS as u64) != 0 {
-        registers.fs_base = user_tls.ptr() as u64;
+        new_task.registers.fs_base = user_tls.ptr() as u64;
     }
 
-    spawn_task(new_task, registers, |_| {});
+    spawn_task(new_task, |_| {});
     Ok(tid.into())
 }
 
@@ -74,9 +73,7 @@ pub fn sys_execve(
     let argv = read_c_string_vector(&current_task.mm, user_argv, &mut buf)?;
     let environ = read_c_string_vector(&current_task.mm, user_environ, &mut buf)?;
     strace!(current_task, "execve({:?}, argv={:?}, environ={:?})", path, argv, environ);
-    let start_info = current_task.exec(&path, &argv, &environ)?;
-    current_task.registers = start_info.to_registers();
-    current_task.dt_debug_address = start_info.dt_debug_address;
+    current_task.exec(&path, &argv, &environ)?;
     Ok(SUCCESS)
 }
 

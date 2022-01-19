@@ -330,7 +330,7 @@ mod tests {
         assert_eq!(stack_start_addr, original_stack_start_addr - payload_size);
     }
 
-    fn exec_hello_starnix(current_task: &CurrentTask) -> Result<(), Errno> {
+    fn exec_hello_starnix(current_task: &mut CurrentTask) -> Result<(), Errno> {
         let argv = vec![CString::new("bin/hello_starnix").unwrap()];
         current_task.exec(&argv[0], &argv, &&vec![])?;
         Ok(())
@@ -338,15 +338,15 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_load_hello_starnix() {
-        let (_kernel, current_task) = create_kernel_and_task_with_pkgfs();
-        exec_hello_starnix(&current_task).expect("failed to load executable");
+        let (_kernel, mut current_task) = create_kernel_and_task_with_pkgfs();
+        exec_hello_starnix(&mut current_task).expect("failed to load executable");
         assert!(current_task.mm.get_mapping_count() > 0);
     }
 
     #[fasync::run_singlethreaded(test)]
     async fn test_snapshot_hello_starnix() {
-        let (kernel, current_task) = create_kernel_and_task_with_pkgfs();
-        exec_hello_starnix(&current_task).expect("failed to load executable");
+        let (kernel, mut current_task) = create_kernel_and_task_with_pkgfs();
+        exec_hello_starnix(&mut current_task).expect("failed to load executable");
 
         let current2 = create_task(&kernel, "another-task");
         current_task.mm.snapshot_to(&current2.mm).expect("failed to snapshot mm");

@@ -811,23 +811,39 @@ impl CurrentTask {
     }
 
     pub fn exec(
-        &self,
+        &mut self,
         path: &CStr,
         argv: &Vec<CString>,
         environ: &Vec<CString>,
-    ) -> Result<ThreadStartInfo, Errno> {
+    ) -> Result<(), Errno> {
         let executable = self.open_file(path.to_bytes(), OpenFlags::RDONLY)?;
+        if let Err(err) = self.finish_exec(path, executable, argv, environ) {
+            // TODO(tbodt): Replace this panic with a log and force a SIGSEGV.
+            panic!("{:?} unrecoverable error in exec: {}", self, err);
+        }
+        Ok(())
+    }
 
+    /// After the memory is unmapped, any failure in exec is unrecoverable and results in the
+    /// process crashing. This function is for that second half; any error returned from this
+    /// function will be considered unrecoverable.
+    fn finish_exec(
+        &mut self,
+        path: &CStr,
+        executable: FileHandle,
+        argv: &Vec<CString>,
+        environ: &Vec<CString>,
+    ) -> Result<(), Errno> {
         // TODO: Implement #!interpreter [optional-arg]
 
-        // TODO: All threads other than the calling thread are destroyed.
-
-        // TODO: The dispositions of any signals that are being caught are
-        //       reset to the default.
+        self.mm.exec(executable.name.clone()).map_err(|status| from_status_like_fdio!(status))?;
+        let start_info = load_executable(self, executable, argv, environ)?;
+        self.registers = start_info.to_registers();
+        self.dt_debug_address = start_info.dt_debug_address;
 
         self.signals.write().alt_stack = None;
 
-        self.mm.exec(executable.name.clone()).map_err(|status| from_status_like_fdio!(status))?;
+        // TODO: All threads other than the calling thread are destroyed.
 
         // TODO: The file descriptor table is unshared, undoing the effect of
         //       the CLONE_FILES flag of clone(2).
@@ -840,13 +856,16 @@ impl CurrentTask {
         // For now, we do not implement that behavior.
         self.files.exec();
 
+        // TODO: The dispositions of any signals that are being caught are
+        //       reset to the default.
+
         // TODO: POSIX timers are not preserved.
 
         // TODO: The termination signal is reset to SIGCHLD.
 
         self.thread_group.set_name(path)?;
         *self.command.write() = path.to_owned();
-        Ok(load_executable(self, executable, argv, environ)?)
+        Ok(())
     }
 }
 
