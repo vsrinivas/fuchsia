@@ -23,15 +23,15 @@ namespace {
   return strncmp(result->vendor.data(), "coreboot", result->vendor.size()) == 0;
 }
 
-zx_status_t GetBoardName(fidl::UnownedClientEnd<fuchsia_sysinfo::SysInfo> sysinfo,
-                         char* real_board_name) {
+zx::status<> GetBoardName(fidl::UnownedClientEnd<fuchsia_sysinfo::SysInfo> sysinfo,
+                          char* real_board_name) {
   fidl::WireResult result = fidl::WireCall(sysinfo)->GetBoardName();
   if (!result.ok()) {
-    return false;
+    return zx::error(result.status());
   }
   const auto& response = result.value();
   if (response.status != ZX_OK) {
-    return false;
+    return zx::error(response.status);
   }
 
   size_t strlen = std::min<size_t>(ZX_MAX_NAME_LEN, response.name.size());
@@ -50,63 +50,69 @@ zx_status_t GetBoardName(fidl::UnownedClientEnd<fuchsia_sysinfo::SysInfo> sysinf
   }
 #endif
 
-  return ZX_OK;
+  return zx::ok();
 }
 
-zx_status_t GetBoardRevision(fidl::UnownedClientEnd<fuchsia_sysinfo::SysInfo> sysinfo,
-                             uint32_t* board_revision) {
+zx::status<uint32_t> GetBoardRevision(fidl::UnownedClientEnd<fuchsia_sysinfo::SysInfo> sysinfo) {
   fidl::WireResult result = fidl::WireCall(sysinfo)->GetBoardRevision();
   if (!result.ok()) {
-    return false;
+    return zx::error(result.status());
   }
   const auto& response = result.value();
   if (response.status != ZX_OK) {
-    return false;
+    return zx::error(response.status);
   }
-  *board_revision = response.revision;
-  return ZX_OK;
+  return zx::ok(response.revision);
 }
 
 }  // namespace
 
-bool CheckBoardName(fidl::UnownedClientEnd<fuchsia_sysinfo::SysInfo> sysinfo, const char* name,
-                    size_t length) {
+zx::status<bool> CheckBoardName(fidl::UnownedClientEnd<fuchsia_sysinfo::SysInfo> sysinfo,
+                                const char* name, size_t length) {
   if (!sysinfo) {
-    return false;
+    return zx::error(ZX_ERR_BAD_HANDLE);
   }
 
   char real_board_name[ZX_MAX_NAME_LEN] = {};
-  if (GetBoardName(sysinfo, real_board_name) != ZX_OK) {
-    return false;
+
+  if (zx::status<> status = GetBoardName(sysinfo, real_board_name); status.is_error()) {
+    return status.take_error();
   }
   length = std::min(length, ZX_MAX_NAME_LEN);
 
-  return strncmp(real_board_name, name, length) == 0;
+  return zx::ok(strncmp(real_board_name, name, length) == 0);
 }
 
-bool ReadBoardInfo(fidl::UnownedClientEnd<fuchsia_sysinfo::SysInfo> sysinfo, void* data,
-                   off_t offset, size_t* length) {
+zx::status<> ReadBoardInfo(fidl::UnownedClientEnd<fuchsia_sysinfo::SysInfo> sysinfo, void* data,
+                           off_t offset, size_t* length) {
   if (!sysinfo) {
-    return false;
+    return zx::error(ZX_ERR_BAD_HANDLE);
   }
 
   if (*length < sizeof(board_info_t) || offset != 0) {
-    return false;
+    return zx::error(ZX_ERR_INVALID_ARGS);
   }
 
   auto* board_info = static_cast<board_info_t*>(data);
   memset(board_info, 0, sizeof(*board_info));
 
-  if (GetBoardName(sysinfo, board_info->board_name) != ZX_OK) {
-    return false;
+  if (zx::status<> status = GetBoardName(sysinfo, board_info->board_name); status.is_error()) {
+    return status.take_error();
   }
 
-  if (GetBoardRevision(sysinfo, &board_info->board_revision) != ZX_OK) {
-    return false;
+  {
+    zx::status status = GetBoardRevision(sysinfo);
+    if (status.is_error()) {
+      return status.take_error();
+    }
+    // NB: memcpy here to avoid possible misaligned access since we receive raw
+    // data bytes from caller.
+    static_assert(sizeof(board_info->board_revision) == sizeof(status.value()));
+    memcpy(&board_info->board_revision, &status.value(), sizeof(board_info->board_revision));
   }
 
   *length = sizeof(board_info_t);
-  return true;
+  return zx::ok();
 }
 
 size_t BoardInfoSize() { return sizeof(board_info_t); }

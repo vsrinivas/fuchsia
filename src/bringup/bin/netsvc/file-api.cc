@@ -113,7 +113,12 @@ tftp_status FileApi::Read(void* data, size_t* length, off_t offset) {
 
   switch (type_) {
     case NetfileType::kBoardInfo: {
-      return ReadBoardInfo(sysinfo_, data, offset, length) ? TFTP_NO_ERROR : TFTP_ERR_BAD_STATE;
+      zx::status<> status = ReadBoardInfo(sysinfo_, data, offset, length);
+      if (status.is_error()) {
+        printf("netsvc: Failed to read board information: %s\n", status.status_string());
+        return TFTP_ERR_BAD_STATE;
+      }
+      return TFTP_NO_ERROR;
     }
     case NetfileType::kNetCopy: {
       ssize_t read_len = netcp_->Read(data, offset, *length);
@@ -147,15 +152,17 @@ tftp_status FileApi::Write(const void* data, size_t* length, off_t offset) {
       return paver_->Write(data, length, offset);
 
     case NetfileType::kBoardInfo: {
-      tftp_status status = CheckBoardName(sysinfo_, reinterpret_cast<const char*>(data), *length)
-                               ? TFTP_NO_ERROR
-                               : TFTP_ERR_BAD_STATE;
-      if (status == TFTP_NO_ERROR) {
-        printf("netsvc: Board name validation passed\n");
-      } else {
-        printf("netsvc: Board name validation failed\n");
+      zx::status status = CheckBoardName(sysinfo_, reinterpret_cast<const char*>(data), *length);
+      if (status.is_error()) {
+        printf("netsvc: Failed to check board name: %s\n", status.status_string());
+        return TFTP_ERR_BAD_STATE;
       }
-      return status;
+      if (!status.value()) {
+        printf("netsvc: Board name validation failed\n");
+        return TFTP_ERR_BAD_STATE;
+      }
+      printf("netsvc: Board name validation succeeded\n");
+      return TFTP_NO_ERROR;
     }
     case NetfileType::kNetCopy: {
       ssize_t write_result = netcp_->Write(reinterpret_cast<const char*>(data), offset, *length);
