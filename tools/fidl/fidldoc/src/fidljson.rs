@@ -8,7 +8,7 @@ use serde::Serialize;
 use serde_json::Map;
 use serde_json::Value;
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::fs::File;
 use std::io;
 use std::io::prelude::*;
@@ -67,17 +67,55 @@ impl FidlJson {
     }
 
     pub fn resolve_method_payloads(&mut self) {
-        let mut payloads = HashMap::<String, &Value>::new();
-        for strukt in self.struct_declarations.iter() {
-            if strukt["is_request_or_response"].as_bool().unwrap() {
-                payloads.insert(strukt["name"].as_str().unwrap().to_string(), strukt);
+        // Take note off all types used as transactional message bodies.
+        let mut payload_types = HashSet::<String>::new();
+        for interface in self.interface_declarations.iter_mut() {
+            let methods = interface["methods"].as_array_mut().unwrap();
+            for method in methods.iter_mut() {
+                let m = method.as_object_mut().unwrap();
+                let req = m.get("maybe_request_payload");
+                if req.is_some() {
+                    let typ = req.unwrap();
+                    payload_types.insert(typ["identifier"].as_str().unwrap().to_string());
+                }
+
+                let resp = m.get("maybe_response_payload");
+                if resp.is_some() {
+                    let typ = resp.unwrap();
+                    payload_types.insert(typ["identifier"].as_str().unwrap().to_string());
+                }
             }
         }
-        for strukt in self.external_struct_declarations.iter() {
-            if strukt["is_request_or_response"].as_bool().unwrap() {
-                payloads.insert(strukt["name"].as_str().unwrap().to_string(), strukt);
-            }
+
+        // Remove decls used only as payloads from struct_declarations and
+        // external_struct_declarations, since we do not need standalone documentation for those
+        // types.
+        let mut payloads = HashMap::<String, Value>::new();
+        let struct_lists =
+            vec![&mut self.struct_declarations, &mut self.external_struct_declarations];
+        for struct_list in struct_lists {
+            struct_list.retain(|strukt| {
+                let strukt_name = strukt["name"].as_str().unwrap().to_string();
+                if payload_types.contains(&strukt_name) {
+                    // A naming context of len == 1 means the declaration is anonymous, and does
+                    // not need documentation for its standalone type. It can thus be removed from
+                    // the declaration list altogether, and its definition can be moved into the
+                    // payload store instead.
+                    if strukt["naming_context"].as_array().unwrap().len() > 1 {
+                        payloads.insert(strukt_name, strukt.to_owned());
+                        return false;
+                    }
+
+                    // This declaration is used both as a top-level type which needds its own
+                    // documentation, as well as a payload, so it needs to be cloned into the
+                    // payload store.
+                    payloads.insert(strukt_name, strukt.clone());
+                }
+                true
+            });
         }
+
+        // Insert copies of extracted payloads into the method definitions that utilize them.
         for interface in self.interface_declarations.iter_mut() {
             let methods = interface["methods"].as_array_mut().unwrap();
             for method in methods.iter_mut() {
