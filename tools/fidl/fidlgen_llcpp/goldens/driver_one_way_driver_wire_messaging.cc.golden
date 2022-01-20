@@ -11,22 +11,6 @@ namespace test_driveroneway {
 extern "C" const fidl_type_t test_driveroneway_OneWaySendRequestMessageTable;
 
 extern "C" const fidl_type_t test_driveroneway_OneWaySendResponseMessageTable;
-#ifdef __Fuchsia__
-}  // namespace test_driveroneway
-::fidl::WireResult<::test_driveroneway::OneWay::Send>::WireResult(
-    ::fdf::UnownedClientEnd<::test_driveroneway::OneWay> client,
-    ::fidl::WireRequest<::test_driveroneway::OneWay::Send>* request) {
-  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::OwnedEncodedMessage<
-      ::fidl::WireRequest<::test_driveroneway::OneWay::Send>,
-      ::fidl::internal::DriverTransport>
-      request_message(::fidl::internal::AllowUnownedInputRef{}, request);
-  auto& outgoing = request_message.GetOutgoingMessage();
-  outgoing.Write(client.handle());
-  SetResult(outgoing);
-}
-namespace test_driveroneway {
-#endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 }  // namespace test_driveroneway

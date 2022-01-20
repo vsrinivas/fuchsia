@@ -10,39 +10,6 @@ namespace test_drivertwoway {
 extern "C" const fidl_type_t test_drivertwoway_TwoWayAddRequestMessageTable;
 
 extern "C" const fidl_type_t test_drivertwoway_TwoWayAddResponseMessageTable;
-#ifdef __Fuchsia__
-}  // namespace test_drivertwoway
-::fidl::WireResult<::test_drivertwoway::TwoWay::Add>::WireResult(
-    ::fdf::UnownedClientEnd<::test_drivertwoway::TwoWay> client,
-    ::fidl::WireRequest<::test_drivertwoway::TwoWay::Add>* request) {
-  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::OwnedEncodedMessage<
-      ::fidl::WireRequest<::test_drivertwoway::TwoWay::Add>,
-      ::fidl::internal::DriverTransport>
-      request_message(::fidl::internal::AllowUnownedInputRef{}, request);
-  auto& outgoing = request_message.GetOutgoingMessage();
-  outgoing.Call<::fidl::WireResponse<::test_drivertwoway::TwoWay::Add>>(
-      client.handle(), bytes_.data(), static_cast<uint32_t>(bytes_.size()));
-  SetResult(outgoing);
-}
-
-::fidl::WireResult<::test_drivertwoway::TwoWay::Add>::WireResult(
-    ::fdf::UnownedClientEnd<::test_drivertwoway::TwoWay> client,
-    ::fidl::WireRequest<::test_drivertwoway::TwoWay::Add>* request,
-    zx_time_t deadline) {
-  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::OwnedEncodedMessage<
-      ::fidl::WireRequest<::test_drivertwoway::TwoWay::Add>,
-      ::fidl::internal::DriverTransport>
-      request_message(::fidl::internal::AllowUnownedInputRef{}, request);
-  auto& outgoing = request_message.GetOutgoingMessage();
-  outgoing.Call<::fidl::WireResponse<::test_drivertwoway::TwoWay::Add>>(
-      client.handle(), bytes_.data(), static_cast<uint32_t>(bytes_.size()),
-      fidl::CallOptions{.deadline = deadline});
-  SetResult(outgoing);
-}
-namespace test_drivertwoway {
-#endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 }  // namespace test_drivertwoway

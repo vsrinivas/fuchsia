@@ -95,21 +95,6 @@ struct ::fidl::WireRequest<::test_driveroneway::OneWay::Send> final {
 #ifdef __Fuchsia__
 
 template <>
-class ::fidl::WireResult<::test_driveroneway::OneWay::Send> final
-    : public ::fidl::Result {
- public:
-  WireResult(::fdf::UnownedClientEnd<::test_driveroneway::OneWay> client,
-             ::fidl::WireRequest<::test_driveroneway::OneWay::Send>* request);
-  explicit WireResult(const ::fidl::Result& result) : ::fidl::Result(result) {}
-  WireResult(WireResult&&) = delete;
-  WireResult(const WireResult&) = delete;
-  WireResult* operator=(WireResult&&) = delete;
-  WireResult* operator=(const WireResult&) = delete;
-  ~WireResult() = default;
-
- private:
-};
-template <>
 class ::fdf::WireUnownedResult<::test_driveroneway::OneWay::Send> final
     : public ::fidl::Result {
  public:

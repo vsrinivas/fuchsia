@@ -127,60 +127,6 @@ struct ::fidl::WireResponse<::test_drivertwoway::TwoWay::Add> final {
 #ifdef __Fuchsia__
 
 template <>
-class ::fidl::WireResult<::test_drivertwoway::TwoWay::Add> final
-    : public ::fidl::Result {
- public:
-  WireResult(::fdf::UnownedClientEnd<::test_drivertwoway::TwoWay> client,
-             ::fidl::WireRequest<::test_drivertwoway::TwoWay::Add>* request);
-  WireResult(::fdf::UnownedClientEnd<::test_drivertwoway::TwoWay> client,
-             ::fidl::WireRequest<::test_drivertwoway::TwoWay::Add>* request,
-             zx_time_t _deadline);
-  explicit WireResult(const ::fidl::Result& result) : ::fidl::Result(result) {}
-  WireResult(WireResult&&) = delete;
-  WireResult(const WireResult&) = delete;
-  WireResult* operator=(WireResult&&) = delete;
-  WireResult* operator=(const WireResult&) = delete;
-  ~WireResult() = default;
-
-  ::fidl::WireResponse<::test_drivertwoway::TwoWay::Add>* Unwrap() {
-    ZX_DEBUG_ASSERT(ok());
-    return reinterpret_cast<
-        ::fidl::WireResponse<::test_drivertwoway::TwoWay::Add>*>(bytes_.data());
-  }
-  const ::fidl::WireResponse<::test_drivertwoway::TwoWay::Add>* Unwrap() const {
-    ZX_DEBUG_ASSERT(ok());
-    return reinterpret_cast<
-        const ::fidl::WireResponse<::test_drivertwoway::TwoWay::Add>*>(
-        bytes_.data());
-  }
-
-  ::fidl::WireResponse<::test_drivertwoway::TwoWay::Add>& value() {
-    return *Unwrap();
-  }
-  const ::fidl::WireResponse<::test_drivertwoway::TwoWay::Add>& value() const {
-    return *Unwrap();
-  }
-
-  ::fidl::WireResponse<::test_drivertwoway::TwoWay::Add>* operator->() {
-    return &value();
-  }
-  const ::fidl::WireResponse<::test_drivertwoway::TwoWay::Add>* operator->()
-      const {
-    return &value();
-  }
-
-  ::fidl::WireResponse<::test_drivertwoway::TwoWay::Add>& operator*() {
-    return value();
-  }
-  const ::fidl::WireResponse<::test_drivertwoway::TwoWay::Add>& operator*()
-      const {
-    return value();
-  }
-
- private:
-  ::fidl::internal::InlineMessageBuffer<24> bytes_;
-};
-template <>
 class ::fdf::WireUnownedResult<::test_drivertwoway::TwoWay::Add> final
     : public ::fidl::Result {
  public:

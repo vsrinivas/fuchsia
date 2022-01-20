@@ -68,7 +68,9 @@ struct {{ .WireOrdinal }} final { static constexpr uint64_t value = {{ .Ordinal 
 {{- IfdefFuchsia -}}
 {{- range .ClientMethods -}}
   {{- if .Transport.HasSyncClient }}
+  {{- if eq .Transport.Name "Channel" }}
   {{- template "Method:Result:WireMessagingHeader" . }}
+  {{- end }}
   {{- end }}
   {{- if eq .Transport.Name "Driver" }}
   {{- template "driver/Method:UnownedResult:MessagingHeader" . }}
@@ -158,7 +160,9 @@ extern "C" const fidl_type_t {{ .Response.WireCodingTable.Name }};
 {{- range .ClientMethods -}}
 {{ "" }}
     {{- if .Transport.HasSyncClient }}
+    {{- if eq .Transport.Name "Channel" }}
     {{- template "Method:Result:WireMessagingSource" . }}
+    {{- end }}
     {{- end }}
   {{- if or .RequestArgs .ResponseArgs }}
 {{ "" }}
