@@ -419,7 +419,7 @@ executable("device_unittests") {
 }
 
 fuchsia_unittest_package("device_unittests_package") {
-  manifest = "meta/device_unittests.cmx"
+  manifest = "meta/device_unittests.cml"
   package_name = "device_unittests"
   deps = [ ":device_unittests" ]
   test_specs = {
