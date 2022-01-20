@@ -249,6 +249,7 @@ void main(List<String> arguments) {
       await instance.run(log, sl4fDriver, fidlcatPath, RunMode.withAgent, [
         '--messages=.*EchoString',
         '--exclude-syscalls=zx_channel_create',
+        '--exclude-syscalls=zx_handle_close',
         'run',
         'fuchsia-pkg://fuchsia.com/echo_client_placeholder#meta/echo_client.cmx'
       ]);
@@ -258,13 +259,13 @@ void main(List<String> arguments) {
       /// The first and second displayed messages must be EchoString (everything else has been
       /// filtered out).
       expect(
-          lines[4],
+          lines[2],
           contains('sent request test.placeholders/Echo.EchoString = {\n'
               '    value: string = "hello world"\n'
               '  }'),
           reason: instance.additionalResult);
       expect(
-          lines[5],
+          lines[3],
           contains('received response test.placeholders/Echo.EchoString = {\n'
               '      response: string = "hello world"\n'
               '    }'),
