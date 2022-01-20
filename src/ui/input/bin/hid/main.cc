@@ -291,6 +291,7 @@ static int hid_input_thread(void* arg) {
   } else {
     lprintf("hid: thread found wrong command %d\n", args->command);
   }
+  fflush(stdout);
 
   delete args;
   return status;
