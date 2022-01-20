@@ -642,9 +642,9 @@ impl Surface {
         }
 
         let mut translation = if let Some(window_geometry) = self.window_geometry.as_ref() {
-            Vec_ { x: -window_geometry.x, y: -window_geometry.y }
+            Vec_ { x: self.position.0 - window_geometry.x, y: self.position.1 - window_geometry.y }
         } else {
-            Vec_ { x: 0, y: 0 }
+            Vec_ { x: self.position.0, y: self.position.1 }
         };
         node.flatland
             .borrow()

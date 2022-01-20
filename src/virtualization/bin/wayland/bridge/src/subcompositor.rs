@@ -9,14 +9,11 @@ use {
     },
     crate::display::Callback,
     crate::object::{NewObjectExt, ObjectRef, RequestReceiver},
-    anyhow::Error,
+    anyhow::{format_err, Error},
     fuchsia_wayland_core as wl,
     std::mem,
     wayland::{WlSubcompositor, WlSubcompositorRequest, WlSubsurface, WlSubsurfaceRequest},
 };
-
-#[cfg(not(feature = "flatland"))]
-use anyhow::format_err;
 
 /// An implementation of the wl_subcompositor global.
 ///
@@ -162,13 +159,40 @@ impl Subsurface {
 
 #[cfg(feature = "flatland")]
 impl Subsurface {
-    fn attach_to_parent(&self, _client: &mut Client) -> Result<(), Error> {
-        // TODO(fxb/83658): Implement Flatland subsurface support.
+    fn attach_to_parent(&self, client: &mut Client) -> Result<(), Error> {
+        let flatland = match self.parent_ref.get(client)?.flatland() {
+            Some(s) => s.clone(),
+            None => return Err(format_err!("Parent surface has no flatland instance!")),
+        };
+        self.surface_ref.get_mut(client)?.set_flatland(flatland.clone())?;
+
+        // Unwrap here since we have just determined both surfaces have a
+        // flatland instance, which is the only prerequisite for having a transform.
+        let parent_transform = self.parent_ref.get(client)?.transform().unwrap();
+        let child_transform = self.surface_ref.get(client)?.transform().unwrap();
+        flatland
+            .borrow()
+            .proxy()
+            .add_child(&mut parent_transform.clone(), &mut child_transform.clone())
+            .expect("fidl error");
+
         Ok(())
     }
 
-    fn detach_from_parent(&self, _client: &Client) -> Result<(), Error> {
-        // TODO(fxb/83658): Implement Flatland subsurface support.
+    fn detach_from_parent(&self, client: &Client) -> Result<(), Error> {
+        if let Some(flatland) = self.parent_ref.get(client)?.flatland() {
+            // Unwrap here since we have just determined parent surface has a
+            // flatland instance, which is the only prerequisite for having a
+            // transform.
+            let parent_transform = *self.parent_ref.get(client)?.transform().unwrap();
+            if let Some(child_transform) = self.surface_ref.get(client)?.transform() {
+                flatland
+                    .borrow()
+                    .proxy()
+                    .remove_child(&mut parent_transform.clone(), &mut child_transform.clone())
+                    .expect("fidl error");
+            }
+        }
         Ok(())
     }
 }
