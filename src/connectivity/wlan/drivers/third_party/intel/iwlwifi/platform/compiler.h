@@ -136,7 +136,7 @@ static inline uint16_t be16_to_cpup(const uint16_t* x) {
 static inline void __set_bit(unsigned long bit, volatile unsigned long* addr) {
   volatile unsigned long* p = addr + (bit / BITS_PER_LONG);
   const unsigned long mask = 1ul << (bit % BITS_PER_LONG);
-  *p |= mask;
+  *p = *p | mask;
 }
 
 // Atomic operations.  DANGER DANGER DANGER HERE BE DRAGONS
