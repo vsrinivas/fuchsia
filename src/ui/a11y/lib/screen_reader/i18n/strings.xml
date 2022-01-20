@@ -42,6 +42,12 @@
     <string name="role_table_column_header">Column header</string>
     <!-- Spoken message that describes a table cell. -->
     <string name="role_table_cell">Cell</string>
+    <!-- Spoken message that indicates the size of a set of elements. -->
+    <string name="set_size"><xliff:g id="num_items" example="7">{num_items}</xliff:g> items</string>
+    <!-- Spoken message that the user has entered a list of elements. -->
+    <string name="entered_list">Entered list</string>
+    <!-- Spoken message that the user has exited a list of elements. -->
+    <string name="exited_list">Exited list</string>
     <!-- Spoken message that summarizes a table. -->
     <string name="table_summary">
         <xliff:g id="table_name" example="days of the week">{table_name}</xliff:g>,        <xliff:g id="table_rows" example="10">{table_rows}</xliff:g> by <xliff:g id="table_columns" example="7">{table_columns}</xliff:g>
