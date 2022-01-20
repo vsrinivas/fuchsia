@@ -413,6 +413,7 @@ static interrupt_eoi arm_ipi_halt_handler(void*) {
 
   arch_disable_ints();
   while (true) {
+    __wfi();
   }
 
   return IRQ_EOI_DEACTIVATE;
