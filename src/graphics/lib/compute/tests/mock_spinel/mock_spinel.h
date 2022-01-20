@@ -204,16 +204,16 @@ struct Path
       return result;
     }
 
-    bool
-    operator==(const Iterator & other)
+    friend constexpr bool
+    operator==(const Iterator & lhs, const Iterator & rhs)
     {
-      return ptr == other.ptr;
+      return lhs.ptr == rhs.ptr;
     }
 
-    bool
-    operator!=(const Iterator & other)
+    friend constexpr bool
+    operator!=(const Iterator & lhs, const Iterator & rhs)
     {
-      return ptr != other.ptr;
+      return lhs.ptr != rhs.ptr;
     }
 
     const float * ptr;
