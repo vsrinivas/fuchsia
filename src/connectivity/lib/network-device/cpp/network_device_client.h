@@ -41,12 +41,6 @@ struct SessionConfig {
 //
 // A newtype for fuchsia.hardware.network/DeviceInfo with owned values.
 struct DeviceInfo {
-  DeviceInfo() = default;
-  DeviceInfo(const DeviceInfo&) = delete;
-  DeviceInfo(DeviceInfo&&) = default;
-  DeviceInfo& operator=(DeviceInfo&&) = default;
-  DeviceInfo& operator=(const DeviceInfo&) = delete;
-
   static zx::status<DeviceInfo> Create(const netdev::wire::DeviceInfo& fidl);
 
   uint8_t min_descriptor_length;

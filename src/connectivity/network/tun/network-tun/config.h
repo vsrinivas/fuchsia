@@ -13,9 +13,6 @@ namespace tun {
 
 class BasePortConfig {
  public:
-  BasePortConfig() = delete;
-  BasePortConfig(BasePortConfig&&) = default;
-
   static std::optional<BasePortConfig> Create(const fuchsia_net_tun::wire::BasePortConfig& config);
 
   uint8_t port_id;
