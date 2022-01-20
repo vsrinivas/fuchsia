@@ -13,14 +13,14 @@
 
 namespace {
 
-[[maybe_unused]] static bool IsChromebook(
+[[maybe_unused]] zx::status<bool> IsChromebook(
     fidl::UnownedClientEnd<fuchsia_sysinfo::SysInfo> sysinfo) {
   fidl::WireResult result = fidl::WireCall(sysinfo)->GetBootloaderVendor();
   zx_status_t status = result.ok() ? result->status : result.status();
   if (status != ZX_OK) {
-    return status;
+    return zx::error(status);
   }
-  return strncmp(result->vendor.data(), "coreboot", result->vendor.size()) == 0;
+  return zx::ok(strncmp(result->vendor.data(), "coreboot", result->vendor.size()) == 0);
 }
 
 zx::status<> GetBoardName(fidl::UnownedClientEnd<fuchsia_sysinfo::SysInfo> sysinfo,
@@ -43,10 +43,16 @@ zx::status<> GetBoardName(fidl::UnownedClientEnd<fuchsia_sysinfo::SysInfo> sysin
   // Special case x64. All x64 boards should get one of "chromebook-x64" or "x64" instead of the
   // more specific name from the BIOS (e.g. "NUC7i5DNHE".)
 #if __x86_64__
-  if (IsChromebook(sysinfo)) {
-    strcpy(real_board_name, "chromebook-x64");
-  } else {
-    strcpy(real_board_name, "x64");
+  {
+    zx::status is_chromebook = IsChromebook(sysinfo);
+    if (is_chromebook.is_error()) {
+      return is_chromebook.take_error();
+    }
+    if (is_chromebook.value()) {
+      strcpy(real_board_name, "chromebook-x64");
+    } else {
+      strcpy(real_board_name, "x64");
+    }
   }
 #endif
 
