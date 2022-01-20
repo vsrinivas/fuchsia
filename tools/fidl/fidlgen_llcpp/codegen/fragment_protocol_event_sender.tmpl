@@ -45,30 +45,33 @@ class {{ .WireEventSender }} {
 };
 
 template<>
-class {{ .WireWeakEventSender }} {
+class {{ .WireWeakEventSender }} : public ::fidl::internal::WeakEventSenderBase {
  public:
-  {{ .WireWeakEventSender.Self }}(std::weak_ptr<::fidl::internal::AsyncServerBinding>&& binding)
-      : inner_(std::move(binding)) {}
+  using WeakEventSenderBase::WeakEventSenderBase;
 {{ "" }}
 
   {{- range .Events }}
     {{- .Docs }}
-    fidl::Result {{ .Name }}({{ RenderParams .ResponseArgs }}) const;
+    fidl::Result {{ .Name }}({{ RenderParams .ResponseArgs }});
 
-    {{- if .ResponseArgs }}
-    {{ .Docs }}
-    // Caller provides the backing storage for FIDL message via response buffers.
-    fidl::Result {{ .Name }}(
-        {{- RenderParams "::fidl::BufferSpan _buffer" .ResponseArgs }}) const;
-    {{- end }}
 {{ "" }}
   {{- end }}
-
- private:
-  friend ServerBindingRefImpl<{{ $ }}, typename {{ $ }}::Transport>;
-
-  ::fidl::internal::WeakEventSenderInner inner_;
 };
+
+template<>
+class {{ .WireWeakBufferEventSender }} : public ::fidl::internal::WeakBufferEventSenderBase {
+ public:
+  using WeakBufferEventSenderBase::WeakBufferEventSenderBase;
+{{ "" }}
+
+  {{- range .Events }}
+    {{- .Docs }}
+    fidl::Result {{ .Name }}({{ RenderParams .ResponseArgs }});
+
+{{ "" }}
+  {{- end }}
+};
+
 {{- EndifFuchsia -}}
 {{- end }}
 
@@ -106,28 +109,34 @@ fidl::Result {{ $.WireEventSender.NoLeading }}::{{ .Name }}(
 
     {{- /* Weak, managed */}}
 fidl::Result {{ $.WireWeakEventSender.NoLeading }}::{{ .Name }}(
-    {{- RenderParams .ResponseArgs }}) const {
+    {{- RenderParams .ResponseArgs }}) {
   {{ .WireResponse }} _response{ {{- RenderForwardParams .ResponseArgs }} };
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::OwnedEncodedMessage<{{ .WireResponse }}, {{ .Transport.Type }}> _response_message{
       ::fidl::internal::AllowUnownedInputRef{}, &_response
   };
-  return inner_.SendEvent(_response_message.GetOutgoingMessage());
+  return _inner().SendEvent(_response_message.GetOutgoingMessage());
 }
 
     {{- /* Weak, caller-allocated */}}
-    {{- if .ResponseArgs }}
 {{ "" }}
-fidl::Result {{ $.WireWeakEventSender.NoLeading }}::{{ .Name }}(
-    {{- RenderParams "::fidl::BufferSpan _buffer" .ResponseArgs }}) const {
+fidl::Result {{ $.WireWeakBufferEventSender.NoLeading }}::{{ .Name }}(
+    {{- RenderParams .ResponseArgs }}) {
+  constexpr uint32_t _buffer_size = ::fidl::ServerReplyBufferSizeInChannel<{{ .Marker }}>();
+  ::fitx::result<::fidl::Error, ::fidl::BufferSpan> _allocation =
+      _allocator().TryAllocate(_buffer_size);
+  if (!_allocation.is_ok()) {
+    _inner().HandleSendError(_allocation.error_value());
+    return _allocation.error_value();
+  }
+
   {{ .WireResponse }} _response{ {{- RenderForwardParams .ResponseArgs }} };
-  ::fidl::UnownedEncodedMessage<{{ .WireResponse }}> _response_message(
-        _buffer.data, _buffer.capacity, &_response);
-  return inner_.SendEvent(_response_message.GetOutgoingMessage());
+  ::fidl::UnownedEncodedMessage<{{ .WireResponse }}, {{ .Transport.Type }}> _response_message(
+      _allocation->data, _buffer_size, &_response);
+  return _inner().SendEvent(_response_message.GetOutgoingMessage());
 }
 {{ "" }}
 
-    {{- end }}
   {{- end }}
 {{- EndifFuchsia -}}
 {{- end }}

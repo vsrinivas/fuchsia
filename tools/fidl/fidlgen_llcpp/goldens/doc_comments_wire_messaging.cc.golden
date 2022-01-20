@@ -235,14 +235,34 @@ fidl::Result fidl::WireEventSender<::test_doccomments::Interface>::OnEvent()
   return ::fidl::Result{_message};
 }
 
-fidl::Result fidl::internal::WireWeakEventSender<
-    ::test_doccomments::Interface>::OnEvent() const {
+fidl::Result
+fidl::internal::WireWeakEventSender<::test_doccomments::Interface>::OnEvent() {
   ::fidl::WireResponse<::test_doccomments::Interface::OnEvent> _response{};
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::OwnedEncodedMessage<
       ::fidl::WireResponse<::test_doccomments::Interface::OnEvent>,
       ::fidl::internal::ChannelTransport>
       _response_message{::fidl::internal::AllowUnownedInputRef{}, &_response};
-  return inner_.SendEvent(_response_message.GetOutgoingMessage());
+  return _inner().SendEvent(_response_message.GetOutgoingMessage());
 }
+
+fidl::Result fidl::internal::WireWeakBufferEventSender<
+    ::test_doccomments::Interface>::OnEvent() {
+  constexpr uint32_t _buffer_size = ::fidl::ServerReplyBufferSizeInChannel<
+      ::test_doccomments::Interface::OnEvent>();
+  ::fitx::result<::fidl::Error, ::fidl::BufferSpan> _allocation =
+      _allocator().TryAllocate(_buffer_size);
+  if (!_allocation.is_ok()) {
+    _inner().HandleSendError(_allocation.error_value());
+    return _allocation.error_value();
+  }
+
+  ::fidl::WireResponse<::test_doccomments::Interface::OnEvent> _response{};
+  ::fidl::UnownedEncodedMessage<
+      ::fidl::WireResponse<::test_doccomments::Interface::OnEvent>,
+      ::fidl::internal::ChannelTransport>
+      _response_message(_allocation->data, _buffer_size, &_response);
+  return _inner().SendEvent(_response_message.GetOutgoingMessage());
+}
+
 #endif  // __Fuchsia__

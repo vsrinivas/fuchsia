@@ -6,6 +6,7 @@
 #define LIB_FIDL_LLCPP_INTERNAL_SERVER_DETAILS_H_
 
 #include <lib/fidl/llcpp/async_binding.h>
+#include <lib/fidl/llcpp/internal/arrow.h>
 #include <lib/fidl/llcpp/internal/endpoints.h>
 #include <lib/fidl/llcpp/internal/transport.h>
 #include <lib/fidl/llcpp/message.h>
@@ -98,13 +99,41 @@ class WeakEventSenderInner {
   // Errors are returned to the caller.
   fidl::Result SendEvent(::fidl::OutgoingMessage& message) const;
 
-  const std::weak_ptr<::fidl::internal::AsyncServerBinding>& binding() const { return binding_; }
-
- private:
   // Handles errors in sending events. This may lead to binding teardown.
   void HandleSendError(fidl::Result error) const;
 
+  const std::weak_ptr<::fidl::internal::AsyncServerBinding>& binding() const { return binding_; }
+
+ private:
   std::weak_ptr<::fidl::internal::AsyncServerBinding> binding_;
+};
+
+// Base class for all weak event senders with managed memory allocation.
+class WeakEventSenderBase {
+ public:
+  explicit WeakEventSenderBase(std::weak_ptr<AsyncServerBinding> binding)
+      : inner_(std::move(binding)) {}
+
+ protected:
+  WeakEventSenderInner& _inner() { return inner_; }
+
+ private:
+  WeakEventSenderInner inner_;
+};
+
+// Base class for all weak event senders with caller-controlled memory allocation.
+struct WeakBufferEventSenderBase {
+  explicit WeakBufferEventSenderBase(std::weak_ptr<AsyncServerBinding> binding,
+                                     AnyBufferAllocator&& allocator)
+      : inner_(std::move(binding)), allocator_(std::move(allocator)) {}
+
+ protected:
+  WeakEventSenderInner& _inner() { return inner_; }
+  AnyBufferAllocator& _allocator() { return allocator_; }
+
+ private:
+  WeakEventSenderInner inner_;
+  AnyBufferAllocator allocator_;
 };
 
 //

@@ -44,17 +44,21 @@ class CallerAllocatingFixture : public ::zxtest::Test {
     zx::status server_end = fidl::CreateEndpoints(&client_end_);
     ASSERT_OK(server_end.status_value());
     server_ = std::make_shared<Frobinator>();
-    fidl::BindServer(loop_->dispatcher(), std::move(*server_end), server_);
+    binding_ref_ = fidl::BindServer(loop_->dispatcher(), std::move(*server_end), server_);
   }
 
   std::unique_ptr<async::Loop>& loop() { return loop_; }
   fidl::ClientEnd<test::Frobinator>& client_end() { return client_end_; }
+  const fidl::ServerBindingRef<test::Frobinator>& binding_ref() const {
+    return binding_ref_.value();
+  }
   size_t frob_count() const { return server_->frob_count(); }
 
  private:
   std::unique_ptr<async::Loop> loop_;
   fidl::ClientEnd<test::Frobinator> client_end_;
   std::shared_ptr<Frobinator> server_;
+  std::optional<fidl::ServerBindingRef<test::Frobinator>> binding_ref_;
 };
 
 bool IsPointerInBufferSpan(void* pointer, fidl::BufferSpan buffer_span) {
@@ -232,4 +236,77 @@ TEST_F(WireSharedClientTest, OneWayCallerAllocate) {
   EXPECT_OK(buffered->Frob("test").status());
   loop()->RunUntilIdle();
   EXPECT_EQ(4, frob_count());
+}
+
+namespace {
+
+class WireSendEventTest : public CallerAllocatingFixture {};
+
+class ExpectHrobEventHandler : public fidl::WireAsyncEventHandler<test::Frobinator> {
+ public:
+  explicit ExpectHrobEventHandler(std::string expected) : expected_(std::move(expected)) {}
+
+  void Hrob(fidl::WireResponse<test::Frobinator::Hrob>* event) final {
+    EXPECT_EQ(event->value.get(), expected_);
+    hrob_count_++;
+  }
+
+  void on_fidl_error(fidl::UnbindInfo info) final {
+    ADD_FAILURE("Unexpected error: %s", info.FormatDescription().c_str());
+  }
+
+  int hrob_count() const { return hrob_count_; }
+
+ private:
+  std::string expected_;
+  int hrob_count_ = 0;
+};
+
+class ExpectPeerClosedEventHandler : public fidl::WireAsyncEventHandler<test::Frobinator> {
+ public:
+  ExpectPeerClosedEventHandler() = default;
+
+  void Hrob(fidl::WireResponse<test::Frobinator::Hrob>* event) final {
+    ADD_FAILURE("Unexpected Hrob event: %s", std::string(event->value.get()).c_str());
+  }
+
+  void on_fidl_error(fidl::UnbindInfo info) final {
+    EXPECT_EQ(fidl::Reason::kPeerClosed, info.reason());
+    peer_closed_ = true;
+  }
+
+  bool peer_closed() const { return peer_closed_; }
+
+ private:
+  bool peer_closed_ = false;
+};
+
+}  // namespace
+
+TEST_F(WireSendEventTest, CallerAllocate) {
+  fidl::Arena arena;
+  ExpectHrobEventHandler event_handler{"test"};
+  fidl::WireClient client(std::move(client_end()), loop()->dispatcher(), &event_handler);
+  fidl::Result result = fidl::WireSendEvent(binding_ref()).buffer(arena)->Hrob("test");
+
+  EXPECT_OK(result.status());
+  loop()->RunUntilIdle();
+  EXPECT_EQ(1, event_handler.hrob_count());
+}
+
+TEST_F(WireSendEventTest, CallerAllocateInsufficientBufferSize) {
+  uint8_t small_buffer[8];
+  ExpectPeerClosedEventHandler event_handler;
+  fidl::WireClient client(std::move(client_end()), loop()->dispatcher(), &event_handler);
+  fidl::Result result = fidl::WireSendEvent(binding_ref())
+                            .buffer(fidl::BufferSpan(small_buffer, sizeof(small_buffer)))
+                            ->Hrob("test");
+
+  EXPECT_STATUS(ZX_ERR_BUFFER_TOO_SMALL, result.status());
+  EXPECT_EQ(fidl::Reason::kEncodeError, result.reason());
+  // Server is unbound due to the error.
+  loop()->RunUntilIdle();
+  EXPECT_TRUE(event_handler.peer_closed());
+  fidl::Result error = fidl::WireSendEvent(binding_ref())->Hrob("test");
+  EXPECT_TRUE(error.is_canceled());
 }

@@ -10,6 +10,7 @@
 #include <lib/fidl/cpp/unified_messaging.h>
 #include <lib/fidl/llcpp/channel.h>
 #include <lib/fidl/llcpp/client.h>
+#include <lib/fidl/llcpp/internal/arrow.h>
 
 namespace fidl {
 
@@ -209,8 +210,7 @@ class Client {
   // results in unsafe borrows. Always prefer making calls directly via the
   // |Client| reference-counting type.
   auto wire() const {
-    return internal::SyncClientVeneer<internal::WireWeakAsyncClientImpl<Protocol>>{
-        &controller_.get()};
+    return internal::Arrow<internal::WireWeakAsyncClientImpl<Protocol>>{&controller_.get()};
   }
 
  private:
@@ -476,8 +476,7 @@ class SharedClient final {
   // results in unsafe borrows. Always prefer making calls directly via the
   // |Client| reference-counting type.
   auto wire() const {
-    return internal::SyncClientVeneer<internal::WireWeakAsyncClientImpl<Protocol>>{
-        &controller_.get()};
+    return internal::Arrow<internal::WireWeakAsyncClientImpl<Protocol>>{&controller_.get()};
   }
 
  private:

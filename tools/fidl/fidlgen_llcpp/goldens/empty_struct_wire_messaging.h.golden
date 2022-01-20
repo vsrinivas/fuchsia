@@ -772,23 +772,21 @@ class ::fidl::WireEventSender<::test_emptystruct::EmptyProtocol> {
 };
 
 template <>
-class ::fidl::internal::WireWeakEventSender<::test_emptystruct::EmptyProtocol> {
+class ::fidl::internal::WireWeakEventSender<::test_emptystruct::EmptyProtocol>
+    : public ::fidl::internal::WeakEventSenderBase {
  public:
-  WireWeakEventSender(
-      std::weak_ptr<::fidl::internal::AsyncServerBinding>&& binding)
-      : inner_(std::move(binding)) {}
+  using WeakEventSenderBase::WeakEventSenderBase;
 
-  fidl::Result Receive(const ::test_emptystruct::wire::Empty& e) const;
+  fidl::Result Receive(const ::test_emptystruct::wire::Empty& e);
+};
 
-  // Caller provides the backing storage for FIDL message via response buffers.
-  fidl::Result Receive(::fidl::BufferSpan _buffer,
-                       const ::test_emptystruct::wire::Empty& e) const;
+template <>
+class ::fidl::internal::WireWeakBufferEventSender<
+    ::test_emptystruct::EmptyProtocol>
+    : public ::fidl::internal::WeakBufferEventSenderBase {
+ public:
+  using WeakBufferEventSenderBase::WeakBufferEventSenderBase;
 
- private:
-  friend ServerBindingRefImpl<
-      ::test_emptystruct::EmptyProtocol,
-      typename ::test_emptystruct::EmptyProtocol::Transport>;
-
-  ::fidl::internal::WeakEventSenderInner inner_;
+  fidl::Result Receive(const ::test_emptystruct::wire::Empty& e);
 };
 #endif  // __Fuchsia__

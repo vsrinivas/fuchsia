@@ -9,6 +9,7 @@
 #define LIB_FIDL_LLCPP_CHANNEL_H_
 
 #include <lib/fidl/llcpp/client.h>
+#include <lib/fidl/llcpp/internal/arrow.h>
 #include <lib/fidl/llcpp/internal/transport_channel.h>
 #include <lib/fidl/llcpp/server.h>
 #include <lib/fidl/llcpp/sync_call.h>
@@ -457,6 +458,20 @@ internal::SyncEndpointVeneer<internal::WireSyncClientImpl, FidlProtocol> WireCal
     const fidl::UnownedClientEnd<FidlProtocol>& client_end) {
   return internal::SyncEndpointVeneer<internal::WireSyncClientImpl, FidlProtocol>(
       fidl::internal::MakeAnyUnownedTransport(client_end.handle()));
+}
+
+// Return an interface for sending FIDL events over the endpoint managed by
+// |binding_ref|. Call it like:
+//
+//     fidl::WireSendEvent(server_binding_ref)->FooEvent(args...);
+//
+template <typename FidlProtocol>
+internal::WeakEventSenderVeneer<internal::WireWeakEventSender, FidlProtocol> WireSendEvent(
+    const ServerBindingRef<FidlProtocol>& binding_ref) {
+  return internal::WeakEventSenderVeneer<internal::WireWeakEventSender, FidlProtocol>(
+      internal::BorrowBinding(
+          static_cast<const fidl::ServerBindingRefImpl<FidlProtocol, internal::ChannelTransport>&>(
+              binding_ref)));
 }
 
 }  // namespace fidl

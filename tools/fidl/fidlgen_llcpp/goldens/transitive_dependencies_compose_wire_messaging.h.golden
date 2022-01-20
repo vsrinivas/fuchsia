@@ -581,17 +581,17 @@ class ::fidl::WireEventSender<::test_transitivedependenciescompose::Top> {
 
 template <>
 class ::fidl::internal::WireWeakEventSender<
-    ::test_transitivedependenciescompose::Top> {
+    ::test_transitivedependenciescompose::Top>
+    : public ::fidl::internal::WeakEventSenderBase {
  public:
-  WireWeakEventSender(
-      std::weak_ptr<::fidl::internal::AsyncServerBinding>&& binding)
-      : inner_(std::move(binding)) {}
+  using WeakEventSenderBase::WeakEventSenderBase;
+};
 
- private:
-  friend ServerBindingRefImpl<
-      ::test_transitivedependenciescompose::Top,
-      typename ::test_transitivedependenciescompose::Top::Transport>;
-
-  ::fidl::internal::WeakEventSenderInner inner_;
+template <>
+class ::fidl::internal::WireWeakBufferEventSender<
+    ::test_transitivedependenciescompose::Top>
+    : public ::fidl::internal::WeakBufferEventSenderBase {
+ public:
+  using WeakBufferEventSenderBase::WeakBufferEventSenderBase;
 };
 #endif  // __Fuchsia__

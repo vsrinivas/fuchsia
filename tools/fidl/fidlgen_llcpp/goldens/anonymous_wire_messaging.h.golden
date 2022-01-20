@@ -582,17 +582,17 @@ class ::fidl::WireEventSender<::test_anonymous::SomeProtocol> {
 };
 
 template <>
-class ::fidl::internal::WireWeakEventSender<::test_anonymous::SomeProtocol> {
+class ::fidl::internal::WireWeakEventSender<::test_anonymous::SomeProtocol>
+    : public ::fidl::internal::WeakEventSenderBase {
  public:
-  WireWeakEventSender(
-      std::weak_ptr<::fidl::internal::AsyncServerBinding>&& binding)
-      : inner_(std::move(binding)) {}
+  using WeakEventSenderBase::WeakEventSenderBase;
+};
 
- private:
-  friend ServerBindingRefImpl<
-      ::test_anonymous::SomeProtocol,
-      typename ::test_anonymous::SomeProtocol::Transport>;
-
-  ::fidl::internal::WeakEventSenderInner inner_;
+template <>
+class ::fidl::internal::WireWeakBufferEventSender<
+    ::test_anonymous::SomeProtocol>
+    : public ::fidl::internal::WeakBufferEventSenderBase {
+ public:
+  using WeakBufferEventSenderBase::WeakBufferEventSenderBase;
 };
 #endif  // __Fuchsia__

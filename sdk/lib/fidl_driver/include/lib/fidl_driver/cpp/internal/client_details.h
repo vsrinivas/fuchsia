@@ -34,31 +34,6 @@ class BufferClientImplBase {
   fdf::Arena arena_;
 };
 
-// A veneer interface object which delegates calls to |Impl| using the "->"
-// operator.
-template <typename Impl>
-struct BufferClientVeneer {
- public:
-  BufferClientVeneer(fidl::internal::ClientBase* client_base, fdf::Arena&& arena)
-      : impl_(client_base, std::move(arena)) {}
-
-  // Copying/moving around this object is dangerous as it may lead to dangling
-  // references to the |ClientBase|. Disable these operations for now.
-  BufferClientVeneer(const BufferClientVeneer&) = delete;
-  BufferClientVeneer& operator=(const BufferClientVeneer&) = delete;
-  BufferClientVeneer(BufferClientVeneer&&) = delete;
-  BufferClientVeneer& operator=(BufferClientVeneer&&) = delete;
-
-  // Returns a pointer to the concrete messaging implementation.
-  Impl* operator->() {
-    static_assert(std::is_base_of_v<BufferClientImplBase, Impl>);
-    return static_cast<Impl*>(&impl_);
-  }
-
- private:
-  Impl impl_;
-};
-
 }  // namespace internal
 }  // namespace fdf
 

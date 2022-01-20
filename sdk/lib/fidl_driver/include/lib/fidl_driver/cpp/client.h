@@ -182,8 +182,8 @@ class WireClient {
   // TODO(fxbug.dev/91107): Consider taking |const fdf::Arena&| or similar.
   auto buffer(fdf::Arena&& arena) const {
     ZX_ASSERT(is_valid());
-    return fdf::internal::BufferClientVeneer<
-        fidl::internal::WireWeakAsyncBufferClientImpl<Protocol>>{&get(), std::move(arena)};
+    return fidl::internal::Arrow<fidl::internal::WireWeakAsyncBufferClientImpl<Protocol>>{
+        &get(), std::move(arena)};
   }
 
  private:
@@ -375,8 +375,8 @@ class WireSharedClient final {
   // TODO(fxbug.dev/91107): Consider taking |const fdf::Arena&| or similar.
   auto buffer(fdf::Arena&& arena) const {
     ZX_ASSERT(is_valid());
-    return fdf::internal::BufferClientVeneer<
-        fidl::internal::WireWeakAsyncBufferClientImpl<Protocol>>{&get(), std::move(arena)};
+    return fidl::internal::Arrow<fidl::internal::WireWeakAsyncBufferClientImpl<Protocol>>{
+        &get(), std::move(arena)};
   }
 
  private:

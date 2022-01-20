@@ -992,16 +992,16 @@ class ::fidl::WireEventSender<::test_union::TestProtocol> {
 };
 
 template <>
-class ::fidl::internal::WireWeakEventSender<::test_union::TestProtocol> {
+class ::fidl::internal::WireWeakEventSender<::test_union::TestProtocol>
+    : public ::fidl::internal::WeakEventSenderBase {
  public:
-  WireWeakEventSender(
-      std::weak_ptr<::fidl::internal::AsyncServerBinding>&& binding)
-      : inner_(std::move(binding)) {}
+  using WeakEventSenderBase::WeakEventSenderBase;
+};
 
- private:
-  friend ServerBindingRefImpl<::test_union::TestProtocol,
-                              typename ::test_union::TestProtocol::Transport>;
-
-  ::fidl::internal::WeakEventSenderInner inner_;
+template <>
+class ::fidl::internal::WireWeakBufferEventSender<::test_union::TestProtocol>
+    : public ::fidl::internal::WeakBufferEventSenderBase {
+ public:
+  using WeakBufferEventSenderBase::WeakBufferEventSenderBase;
 };
 #endif  // __Fuchsia__

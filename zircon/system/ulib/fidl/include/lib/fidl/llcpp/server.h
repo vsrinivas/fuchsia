@@ -6,6 +6,7 @@
 #define LIB_FIDL_LLCPP_SERVER_H_
 
 #include <lib/fidl/llcpp/async_binding.h>
+#include <lib/fidl/llcpp/internal/arrow.h>
 #include <lib/fidl/llcpp/internal/endpoints.h>
 #include <lib/fidl/llcpp/internal/server_details.h>
 #include <lib/fidl/llcpp/wire_messaging_declarations.h>
@@ -13,6 +14,17 @@
 #include <zircon/types.h>
 
 namespace fidl {
+
+template <typename Protocol, typename Transport>
+class ServerBindingRefImpl;
+
+namespace internal {
+
+template <typename Protocol, typename Transport>
+std::weak_ptr<AsyncServerBinding> BorrowBinding(
+    const fidl::ServerBindingRefImpl<Protocol, Transport>&);
+
+}  // namespace internal
 
 template <typename Protocol, typename Transport>
 class ServerBindingRefImpl {
@@ -67,7 +79,7 @@ class ServerBindingRefImpl<Protocol, fidl::internal::ChannelTransport> {
   // WARNING: While it is safe to invoke Unbind() from any thread, it is unsafe to wait on the
   // OnUnboundFn from a dispatcher thread, as that will likely deadlock.
   void Unbind() {
-    if (auto binding = event_sender_.inner_.binding().lock())
+    if (auto binding = binding_.lock())
       binding->StartTeardown(std::move(binding));
   }
 
@@ -77,18 +89,17 @@ class ServerBindingRefImpl<Protocol, fidl::internal::ChannelTransport> {
   //
   // This may be called from any thread.
   void Close(zx_status_t epitaph) {
-    if (auto binding = event_sender_.inner_.binding().lock())
+    if (auto binding = binding_.lock())
       binding->Close(std::move(binding), epitaph);
   }
 
   // Return the interface for sending FIDL events. If the server has been unbound, calls on the
   // interface return error with status ZX_ERR_CANCELED.
-  //
-  // Persisting this pointer to a local variable is discouraged, since that
-  // results in unsafe borrows. Always prefer making calls directly via the
-  // |fidl::ServerBindingRef| reference-counting type.
-  const fidl::internal::WireWeakEventSender<Protocol>* operator->() const { return &event_sender_; }
-  const fidl::internal::WireWeakEventSender<Protocol>& operator*() const { return event_sender_; }
+  // TODO(fxbug.dev/85688): Migrate to |fidl::WireSendEvent| and remove this function.
+  auto operator->() const {
+    return internal::Arrow<internal::WireWeakEventSender<Protocol>>(binding_);
+  }
+  auto operator*() const { return internal::WireWeakEventSender<Protocol>(binding_); }
 
  private:
   // This is so that only |BindServerTypeErased| will be able to construct a
@@ -97,11 +108,24 @@ class ServerBindingRefImpl<Protocol, fidl::internal::ChannelTransport> {
       async_dispatcher_t* dispatcher, fidl::internal::ServerEndType<Protocol> server_end,
       internal::IncomingMessageDispatcher* interface, internal::AnyOnUnboundFn on_unbound);
 
-  explicit ServerBindingRefImpl(std::weak_ptr<internal::AsyncServerBinding> internal_binding)
-      : event_sender_(std::move(internal_binding)) {}
+  friend std::weak_ptr<internal::AsyncServerBinding> internal::BorrowBinding(
+      const ServerBindingRefImpl&);
 
-  fidl::internal::WireWeakEventSender<Protocol> event_sender_;
+  explicit ServerBindingRefImpl(std::weak_ptr<internal::AsyncServerBinding> internal_binding)
+      : binding_(std::move(internal_binding)) {}
+
+  std::weak_ptr<internal::AsyncServerBinding> binding_;
 };
+
+namespace internal {
+
+template <typename Protocol, typename Transport>
+std::weak_ptr<AsyncServerBinding> BorrowBinding(
+    const fidl::ServerBindingRefImpl<Protocol, Transport>& binding_ref) {
+  return binding_ref.binding_;
+}
+
+}  // namespace internal
 
 }  // namespace fidl
 

@@ -3189,18 +3189,18 @@ class ::fidl::WireEventSender<::test_bindingsdenylist::ImportsSameNameContext> {
 
 template <>
 class ::fidl::internal::WireWeakEventSender<
-    ::test_bindingsdenylist::ImportsSameNameContext> {
+    ::test_bindingsdenylist::ImportsSameNameContext>
+    : public ::fidl::internal::WeakEventSenderBase {
  public:
-  WireWeakEventSender(
-      std::weak_ptr<::fidl::internal::AsyncServerBinding>&& binding)
-      : inner_(std::move(binding)) {}
+  using WeakEventSenderBase::WeakEventSenderBase;
+};
 
- private:
-  friend ServerBindingRefImpl<
-      ::test_bindingsdenylist::ImportsSameNameContext,
-      typename ::test_bindingsdenylist::ImportsSameNameContext::Transport>;
-
-  ::fidl::internal::WeakEventSenderInner inner_;
+template <>
+class ::fidl::internal::WireWeakBufferEventSender<
+    ::test_bindingsdenylist::ImportsSameNameContext>
+    : public ::fidl::internal::WeakBufferEventSenderBase {
+ public:
+  using WeakBufferEventSenderBase::WeakBufferEventSenderBase;
 };
 #endif  // __Fuchsia__
 
@@ -3281,18 +3281,18 @@ class ::fidl::WireEventSender<::test_bindingsdenylist::Allowed> {
 };
 
 template <>
-class ::fidl::internal::WireWeakEventSender<::test_bindingsdenylist::Allowed> {
+class ::fidl::internal::WireWeakEventSender<::test_bindingsdenylist::Allowed>
+    : public ::fidl::internal::WeakEventSenderBase {
  public:
-  WireWeakEventSender(
-      std::weak_ptr<::fidl::internal::AsyncServerBinding>&& binding)
-      : inner_(std::move(binding)) {}
+  using WeakEventSenderBase::WeakEventSenderBase;
+};
 
- private:
-  friend ServerBindingRefImpl<
-      ::test_bindingsdenylist::Allowed,
-      typename ::test_bindingsdenylist::Allowed::Transport>;
-
-  ::fidl::internal::WeakEventSenderInner inner_;
+template <>
+class ::fidl::internal::WireWeakBufferEventSender<
+    ::test_bindingsdenylist::Allowed>
+    : public ::fidl::internal::WeakBufferEventSenderBase {
+ public:
+  using WeakBufferEventSenderBase::WeakBufferEventSenderBase;
 };
 #endif  // __Fuchsia__
 
@@ -3401,18 +3401,18 @@ class ::fidl::WireEventSender<::test_bindingsdenylist::OnlyLibfuzzerAndDeps> {
 
 template <>
 class ::fidl::internal::WireWeakEventSender<
-    ::test_bindingsdenylist::OnlyLibfuzzerAndDeps> {
+    ::test_bindingsdenylist::OnlyLibfuzzerAndDeps>
+    : public ::fidl::internal::WeakEventSenderBase {
  public:
-  WireWeakEventSender(
-      std::weak_ptr<::fidl::internal::AsyncServerBinding>&& binding)
-      : inner_(std::move(binding)) {}
+  using WeakEventSenderBase::WeakEventSenderBase;
+};
 
- private:
-  friend ServerBindingRefImpl<
-      ::test_bindingsdenylist::OnlyLibfuzzerAndDeps,
-      typename ::test_bindingsdenylist::OnlyLibfuzzerAndDeps::Transport>;
-
-  ::fidl::internal::WeakEventSenderInner inner_;
+template <>
+class ::fidl::internal::WireWeakBufferEventSender<
+    ::test_bindingsdenylist::OnlyLibfuzzerAndDeps>
+    : public ::fidl::internal::WeakBufferEventSenderBase {
+ public:
+  using WeakBufferEventSenderBase::WeakBufferEventSenderBase;
 };
 #endif  // __Fuchsia__
 
@@ -3495,18 +3495,18 @@ class ::fidl::WireEventSender<::test_bindingsdenylist::OnlyCppAndDeps> {
 
 template <>
 class ::fidl::internal::WireWeakEventSender<
-    ::test_bindingsdenylist::OnlyCppAndDeps> {
+    ::test_bindingsdenylist::OnlyCppAndDeps>
+    : public ::fidl::internal::WeakEventSenderBase {
  public:
-  WireWeakEventSender(
-      std::weak_ptr<::fidl::internal::AsyncServerBinding>&& binding)
-      : inner_(std::move(binding)) {}
+  using WeakEventSenderBase::WeakEventSenderBase;
+};
 
- private:
-  friend ServerBindingRefImpl<
-      ::test_bindingsdenylist::OnlyCppAndDeps,
-      typename ::test_bindingsdenylist::OnlyCppAndDeps::Transport>;
-
-  ::fidl::internal::WeakEventSenderInner inner_;
+template <>
+class ::fidl::internal::WireWeakBufferEventSender<
+    ::test_bindingsdenylist::OnlyCppAndDeps>
+    : public ::fidl::internal::WeakBufferEventSenderBase {
+ public:
+  using WeakBufferEventSenderBase::WeakBufferEventSenderBase;
 };
 #endif  // __Fuchsia__
 
@@ -3711,17 +3711,17 @@ class ::fidl::WireEventSender<::test_bindingsdenylist::DenyEachBinding> {
 
 template <>
 class ::fidl::internal::WireWeakEventSender<
-    ::test_bindingsdenylist::DenyEachBinding> {
+    ::test_bindingsdenylist::DenyEachBinding>
+    : public ::fidl::internal::WeakEventSenderBase {
  public:
-  WireWeakEventSender(
-      std::weak_ptr<::fidl::internal::AsyncServerBinding>&& binding)
-      : inner_(std::move(binding)) {}
+  using WeakEventSenderBase::WeakEventSenderBase;
+};
 
- private:
-  friend ServerBindingRefImpl<
-      ::test_bindingsdenylist::DenyEachBinding,
-      typename ::test_bindingsdenylist::DenyEachBinding::Transport>;
-
-  ::fidl::internal::WeakEventSenderInner inner_;
+template <>
+class ::fidl::internal::WireWeakBufferEventSender<
+    ::test_bindingsdenylist::DenyEachBinding>
+    : public ::fidl::internal::WeakBufferEventSenderBase {
+ public:
+  using WeakBufferEventSenderBase::WeakBufferEventSenderBase;
 };
 #endif  // __Fuchsia__

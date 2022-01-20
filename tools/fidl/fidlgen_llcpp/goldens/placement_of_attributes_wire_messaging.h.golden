@@ -393,17 +393,17 @@ class ::fidl::WireEventSender<::test_placementofattributes::ExampleProtocol> {
 
 template <>
 class ::fidl::internal::WireWeakEventSender<
-    ::test_placementofattributes::ExampleProtocol> {
+    ::test_placementofattributes::ExampleProtocol>
+    : public ::fidl::internal::WeakEventSenderBase {
  public:
-  WireWeakEventSender(
-      std::weak_ptr<::fidl::internal::AsyncServerBinding>&& binding)
-      : inner_(std::move(binding)) {}
+  using WeakEventSenderBase::WeakEventSenderBase;
+};
 
- private:
-  friend ServerBindingRefImpl<
-      ::test_placementofattributes::ExampleProtocol,
-      typename ::test_placementofattributes::ExampleProtocol::Transport>;
-
-  ::fidl::internal::WeakEventSenderInner inner_;
+template <>
+class ::fidl::internal::WireWeakBufferEventSender<
+    ::test_placementofattributes::ExampleProtocol>
+    : public ::fidl::internal::WeakBufferEventSenderBase {
+ public:
+  using WeakBufferEventSenderBase::WeakBufferEventSenderBase;
 };
 #endif  // __Fuchsia__

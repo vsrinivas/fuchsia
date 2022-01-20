@@ -962,18 +962,18 @@ class ::fidl::WireEventSender<::test_service::SecondProtocol> {
 };
 
 template <>
-class ::fidl::internal::WireWeakEventSender<::test_service::SecondProtocol> {
+class ::fidl::internal::WireWeakEventSender<::test_service::SecondProtocol>
+    : public ::fidl::internal::WeakEventSenderBase {
  public:
-  WireWeakEventSender(
-      std::weak_ptr<::fidl::internal::AsyncServerBinding>&& binding)
-      : inner_(std::move(binding)) {}
+  using WeakEventSenderBase::WeakEventSenderBase;
+};
 
- private:
-  friend ServerBindingRefImpl<
-      ::test_service::SecondProtocol,
-      typename ::test_service::SecondProtocol::Transport>;
-
-  ::fidl::internal::WeakEventSenderInner inner_;
+template <>
+class ::fidl::internal::WireWeakBufferEventSender<
+    ::test_service::SecondProtocol>
+    : public ::fidl::internal::WeakBufferEventSenderBase {
+ public:
+  using WeakBufferEventSenderBase::WeakBufferEventSenderBase;
 };
 #endif  // __Fuchsia__
 
@@ -1058,17 +1058,16 @@ class ::fidl::WireEventSender<::test_service::FirstProtocol> {
 };
 
 template <>
-class ::fidl::internal::WireWeakEventSender<::test_service::FirstProtocol> {
+class ::fidl::internal::WireWeakEventSender<::test_service::FirstProtocol>
+    : public ::fidl::internal::WeakEventSenderBase {
  public:
-  WireWeakEventSender(
-      std::weak_ptr<::fidl::internal::AsyncServerBinding>&& binding)
-      : inner_(std::move(binding)) {}
+  using WeakEventSenderBase::WeakEventSenderBase;
+};
 
- private:
-  friend ServerBindingRefImpl<
-      ::test_service::FirstProtocol,
-      typename ::test_service::FirstProtocol::Transport>;
-
-  ::fidl::internal::WeakEventSenderInner inner_;
+template <>
+class ::fidl::internal::WireWeakBufferEventSender<::test_service::FirstProtocol>
+    : public ::fidl::internal::WeakBufferEventSenderBase {
+ public:
+  using WeakBufferEventSenderBase::WeakBufferEventSenderBase;
 };
 #endif  // __Fuchsia__

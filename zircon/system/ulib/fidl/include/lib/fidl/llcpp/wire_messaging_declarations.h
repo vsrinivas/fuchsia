@@ -66,10 +66,15 @@ struct WireOrdinal;
 
 #ifdef __Fuchsia__
 
-// WireWeakEventSender borrows the server endpoint from a binding object and
-// exposes methods for sending events.
+// |WireWeakEventSender| borrows the server endpoint from a binding object and
+// exposes methods for sending events using managed memory allocation.
 template <typename FidlProtocol>
 class WireWeakEventSender;
+
+// |WireWeakBufferEventSender| borrows the server endpoint from a binding object and
+// exposes methods for sending events using caller-controlled allocation.
+template <typename FidlProtocol>
+class WireWeakBufferEventSender;
 
 // |WireWeakAsyncClientImpl| implements one-way FIDL calls with managed buffers.
 // It borrows the transport through a weak reference when making calls.

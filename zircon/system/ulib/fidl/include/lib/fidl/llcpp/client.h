@@ -179,7 +179,7 @@ class WireClient {
   // results in unsafe borrows. Always prefer making calls directly via the
   // |WireClient| reference-counting type.
   auto operator->() const {
-    return internal::SyncClientVeneer<internal::WireWeakAsyncClientImpl<Protocol>>{&get()};
+    return internal::Arrow<internal::WireWeakAsyncClientImpl<Protocol>>{&get()};
   }
 
   // Returns a veneer object which exposes the caller-allocating API, using the
@@ -231,7 +231,7 @@ class WireClient {
   template <typename MemoryResource>
   auto buffer(MemoryResource&& resource) const {
     ZX_ASSERT(is_valid());
-    return internal::BufferClientVeneer<internal::WireWeakAsyncBufferClientImpl<Protocol>>{
+    return internal::Arrow<internal::WireWeakAsyncBufferClientImpl<Protocol>>{
         &get(), internal::MakeAnyBufferAllocator(std::forward<MemoryResource>(resource))};
   }
 
@@ -242,7 +242,7 @@ class WireClient {
   //
   auto sync() const {
     ZX_ASSERT(is_valid());
-    return internal::SyncClientVeneer<internal::WireWeakSyncClientImpl<Protocol>>{&get()};
+    return internal::Arrow<internal::WireWeakSyncClientImpl<Protocol>>{&get()};
   }
 
  private:
@@ -509,7 +509,7 @@ class WireSharedClient final {
   // |WireSharedClient| reference-counting type. A client may be cloned and
   // handed off through the |Clone| method.
   auto operator->() const {
-    return internal::SyncClientVeneer<internal::WireWeakAsyncClientImpl<Protocol>>{&get()};
+    return internal::Arrow<internal::WireWeakAsyncClientImpl<Protocol>>{&get()};
   }
 
   // Returns a veneer object which exposes the caller-allocating API, using
@@ -518,7 +518,7 @@ class WireSharedClient final {
   template <typename MemoryResource>
   auto buffer(MemoryResource&& resource) const {
     ZX_ASSERT(is_valid());
-    return internal::BufferClientVeneer<internal::WireWeakAsyncBufferClientImpl<Protocol>>{
+    return internal::Arrow<internal::WireWeakAsyncBufferClientImpl<Protocol>>{
         &get(), internal::MakeAnyBufferAllocator(std::forward<MemoryResource>(resource))};
   }
 
@@ -529,7 +529,7 @@ class WireSharedClient final {
   //
   auto sync() const {
     ZX_ASSERT(is_valid());
-    return internal::SyncClientVeneer<internal::WireWeakSyncClientImpl<Protocol>>{&get()};
+    return internal::Arrow<internal::WireWeakSyncClientImpl<Protocol>>{&get()};
   }
 
  private:

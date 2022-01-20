@@ -15,6 +15,8 @@
 
 #include <zxtest/zxtest.h>
 
+#include "lsan_disabler.h"
+
 //
 // Mock FIDL protocol and its |WireServer| definition.
 //
@@ -85,8 +87,10 @@ TEST(BindServerTestCase, DispatcherWasShutDown) {
   loop.Shutdown();
 
   ASSERT_DEATH(([&] {
-    fidl::BindServer(loop.dispatcher(), std::move(endpoints->server),
-                     std::make_unique<TestServer>());
+    fidl_testing::RunWithLsanDisabled([&] {
+      fidl::BindServer(loop.dispatcher(), std::move(endpoints->server),
+                       std::make_unique<TestServer>());
+    });
   }));
 }
 

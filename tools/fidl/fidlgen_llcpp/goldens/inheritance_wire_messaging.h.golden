@@ -898,17 +898,17 @@ class ::fidl::WireEventSender<::test_inheritance::Super> {
 };
 
 template <>
-class ::fidl::internal::WireWeakEventSender<::test_inheritance::Super> {
+class ::fidl::internal::WireWeakEventSender<::test_inheritance::Super>
+    : public ::fidl::internal::WeakEventSenderBase {
  public:
-  WireWeakEventSender(
-      std::weak_ptr<::fidl::internal::AsyncServerBinding>&& binding)
-      : inner_(std::move(binding)) {}
+  using WeakEventSenderBase::WeakEventSenderBase;
+};
 
- private:
-  friend ServerBindingRefImpl<::test_inheritance::Super,
-                              typename ::test_inheritance::Super::Transport>;
-
-  ::fidl::internal::WeakEventSenderInner inner_;
+template <>
+class ::fidl::internal::WireWeakBufferEventSender<::test_inheritance::Super>
+    : public ::fidl::internal::WeakBufferEventSenderBase {
+ public:
+  using WeakBufferEventSenderBase::WeakBufferEventSenderBase;
 };
 #endif  // __Fuchsia__
 
@@ -1000,16 +1000,16 @@ class ::fidl::WireEventSender<::test_inheritance::Sub> {
 };
 
 template <>
-class ::fidl::internal::WireWeakEventSender<::test_inheritance::Sub> {
+class ::fidl::internal::WireWeakEventSender<::test_inheritance::Sub>
+    : public ::fidl::internal::WeakEventSenderBase {
  public:
-  WireWeakEventSender(
-      std::weak_ptr<::fidl::internal::AsyncServerBinding>&& binding)
-      : inner_(std::move(binding)) {}
+  using WeakEventSenderBase::WeakEventSenderBase;
+};
 
- private:
-  friend ServerBindingRefImpl<::test_inheritance::Sub,
-                              typename ::test_inheritance::Sub::Transport>;
-
-  ::fidl::internal::WeakEventSenderInner inner_;
+template <>
+class ::fidl::internal::WireWeakBufferEventSender<::test_inheritance::Sub>
+    : public ::fidl::internal::WeakBufferEventSenderBase {
+ public:
+  using WeakBufferEventSenderBase::WeakBufferEventSenderBase;
 };
 #endif  // __Fuchsia__

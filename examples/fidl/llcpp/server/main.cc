@@ -50,7 +50,7 @@ class EchoImpl final : public fidl::WireServer<fuchsia_examples::Echo> {
   // fire and forget methods, the completer can be used to close the channel with an epitaph.
   void SendString(SendStringRequestView request, SendStringCompleter::Sync& completer) override {
     if (binding_) {
-      binding_.value()->OnString(request->value);
+      fidl::WireSendEvent(binding_.value())->OnString(request->value);
     }
   }
 

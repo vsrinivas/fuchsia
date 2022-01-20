@@ -1026,17 +1026,17 @@ class ::fidl::WireEventSender<::test_errorsyntax::ExampleUseOfErrorSyntax> {
 
 template <>
 class ::fidl::internal::WireWeakEventSender<
-    ::test_errorsyntax::ExampleUseOfErrorSyntax> {
+    ::test_errorsyntax::ExampleUseOfErrorSyntax>
+    : public ::fidl::internal::WeakEventSenderBase {
  public:
-  WireWeakEventSender(
-      std::weak_ptr<::fidl::internal::AsyncServerBinding>&& binding)
-      : inner_(std::move(binding)) {}
+  using WeakEventSenderBase::WeakEventSenderBase;
+};
 
- private:
-  friend ServerBindingRefImpl<
-      ::test_errorsyntax::ExampleUseOfErrorSyntax,
-      typename ::test_errorsyntax::ExampleUseOfErrorSyntax::Transport>;
-
-  ::fidl::internal::WeakEventSenderInner inner_;
+template <>
+class ::fidl::internal::WireWeakBufferEventSender<
+    ::test_errorsyntax::ExampleUseOfErrorSyntax>
+    : public ::fidl::internal::WeakBufferEventSenderBase {
+ public:
+  using WeakBufferEventSenderBase::WeakBufferEventSenderBase;
 };
 #endif  // __Fuchsia__

@@ -8176,23 +8176,22 @@ class ::fidl::WireEventSender<::test_protocols::HandleRightsProtocol> {
 
 template <>
 class ::fidl::internal::WireWeakEventSender<
-    ::test_protocols::HandleRightsProtocol> {
+    ::test_protocols::HandleRightsProtocol>
+    : public ::fidl::internal::WeakEventSenderBase {
  public:
-  WireWeakEventSender(
-      std::weak_ptr<::fidl::internal::AsyncServerBinding>&& binding)
-      : inner_(std::move(binding)) {}
+  using WeakEventSenderBase::WeakEventSenderBase;
 
-  fidl::Result AnEvent(::zx::socket&& h) const;
+  fidl::Result AnEvent(::zx::socket&& h);
+};
 
-  // Caller provides the backing storage for FIDL message via response buffers.
-  fidl::Result AnEvent(::fidl::BufferSpan _buffer, ::zx::socket&& h) const;
+template <>
+class ::fidl::internal::WireWeakBufferEventSender<
+    ::test_protocols::HandleRightsProtocol>
+    : public ::fidl::internal::WeakBufferEventSenderBase {
+ public:
+  using WeakBufferEventSenderBase::WeakBufferEventSenderBase;
 
- private:
-  friend ServerBindingRefImpl<
-      ::test_protocols::HandleRightsProtocol,
-      typename ::test_protocols::HandleRightsProtocol::Transport>;
-
-  ::fidl::internal::WeakEventSenderInner inner_;
+  fidl::Result AnEvent(::zx::socket&& h);
 };
 #endif  // __Fuchsia__
 
@@ -8399,26 +8398,26 @@ class ::fidl::WireEventSender<::test_protocols::WithAndWithoutRequestResponse> {
 
 template <>
 class ::fidl::internal::WireWeakEventSender<
-    ::test_protocols::WithAndWithoutRequestResponse> {
+    ::test_protocols::WithAndWithoutRequestResponse>
+    : public ::fidl::internal::WeakEventSenderBase {
  public:
-  WireWeakEventSender(
-      std::weak_ptr<::fidl::internal::AsyncServerBinding>&& binding)
-      : inner_(std::move(binding)) {}
+  using WeakEventSenderBase::WeakEventSenderBase;
 
-  fidl::Result OnEmptyResponse() const;
+  fidl::Result OnEmptyResponse();
 
-  fidl::Result OnWithResponse(::fidl::StringView ret) const;
+  fidl::Result OnWithResponse(::fidl::StringView ret);
+};
 
-  // Caller provides the backing storage for FIDL message via response buffers.
-  fidl::Result OnWithResponse(::fidl::BufferSpan _buffer,
-                              ::fidl::StringView ret) const;
+template <>
+class ::fidl::internal::WireWeakBufferEventSender<
+    ::test_protocols::WithAndWithoutRequestResponse>
+    : public ::fidl::internal::WeakBufferEventSenderBase {
+ public:
+  using WeakBufferEventSenderBase::WeakBufferEventSenderBase;
 
- private:
-  friend ServerBindingRefImpl<
-      ::test_protocols::WithAndWithoutRequestResponse,
-      typename ::test_protocols::WithAndWithoutRequestResponse::Transport>;
+  fidl::Result OnEmptyResponse();
 
-  ::fidl::internal::WeakEventSenderInner inner_;
+  fidl::Result OnWithResponse(::fidl::StringView ret);
 };
 #endif  // __Fuchsia__
 
@@ -8530,23 +8529,22 @@ class ::fidl::WireEventSender<::test_protocols::Transitional> {
 };
 
 template <>
-class ::fidl::internal::WireWeakEventSender<::test_protocols::Transitional> {
+class ::fidl::internal::WireWeakEventSender<::test_protocols::Transitional>
+    : public ::fidl::internal::WeakEventSenderBase {
  public:
-  WireWeakEventSender(
-      std::weak_ptr<::fidl::internal::AsyncServerBinding>&& binding)
-      : inner_(std::move(binding)) {}
+  using WeakEventSenderBase::WeakEventSenderBase;
 
-  fidl::Result Event(int64_t x) const;
+  fidl::Result Event(int64_t x);
+};
 
-  // Caller provides the backing storage for FIDL message via response buffers.
-  fidl::Result Event(::fidl::BufferSpan _buffer, int64_t x) const;
+template <>
+class ::fidl::internal::WireWeakBufferEventSender<
+    ::test_protocols::Transitional>
+    : public ::fidl::internal::WeakBufferEventSenderBase {
+ public:
+  using WeakBufferEventSenderBase::WeakBufferEventSenderBase;
 
- private:
-  friend ServerBindingRefImpl<
-      ::test_protocols::Transitional,
-      typename ::test_protocols::Transitional::Transport>;
-
-  ::fidl::internal::WeakEventSenderInner inner_;
+  fidl::Result Event(int64_t x);
 };
 #endif  // __Fuchsia__
 
@@ -8635,18 +8633,18 @@ class ::fidl::WireEventSender<::test_protocols::MethodWithUnion> {
 };
 
 template <>
-class ::fidl::internal::WireWeakEventSender<::test_protocols::MethodWithUnion> {
+class ::fidl::internal::WireWeakEventSender<::test_protocols::MethodWithUnion>
+    : public ::fidl::internal::WeakEventSenderBase {
  public:
-  WireWeakEventSender(
-      std::weak_ptr<::fidl::internal::AsyncServerBinding>&& binding)
-      : inner_(std::move(binding)) {}
+  using WeakEventSenderBase::WeakEventSenderBase;
+};
 
- private:
-  friend ServerBindingRefImpl<
-      ::test_protocols::MethodWithUnion,
-      typename ::test_protocols::MethodWithUnion::Transport>;
-
-  ::fidl::internal::WeakEventSenderInner inner_;
+template <>
+class ::fidl::internal::WireWeakBufferEventSender<
+    ::test_protocols::MethodWithUnion>
+    : public ::fidl::internal::WeakBufferEventSenderBase {
+ public:
+  using WeakBufferEventSenderBase::WeakBufferEventSenderBase;
 };
 #endif  // __Fuchsia__
 
@@ -8801,19 +8799,18 @@ class ::fidl::WireEventSender<::test_protocols::WithProtocolEnds> {
 };
 
 template <>
-class ::fidl::internal::WireWeakEventSender<
-    ::test_protocols::WithProtocolEnds> {
+class ::fidl::internal::WireWeakEventSender<::test_protocols::WithProtocolEnds>
+    : public ::fidl::internal::WeakEventSenderBase {
  public:
-  WireWeakEventSender(
-      std::weak_ptr<::fidl::internal::AsyncServerBinding>&& binding)
-      : inner_(std::move(binding)) {}
+  using WeakEventSenderBase::WeakEventSenderBase;
+};
 
- private:
-  friend ServerBindingRefImpl<
-      ::test_protocols::WithProtocolEnds,
-      typename ::test_protocols::WithProtocolEnds::Transport>;
-
-  ::fidl::internal::WeakEventSenderInner inner_;
+template <>
+class ::fidl::internal::WireWeakBufferEventSender<
+    ::test_protocols::WithProtocolEnds>
+    : public ::fidl::internal::WeakBufferEventSenderBase {
+ public:
+  using WeakBufferEventSenderBase::WeakBufferEventSenderBase;
 };
 #endif  // __Fuchsia__
 
@@ -8905,18 +8902,18 @@ class ::fidl::WireEventSender<::test_protocols::ManyParameters> {
 };
 
 template <>
-class ::fidl::internal::WireWeakEventSender<::test_protocols::ManyParameters> {
+class ::fidl::internal::WireWeakEventSender<::test_protocols::ManyParameters>
+    : public ::fidl::internal::WeakEventSenderBase {
  public:
-  WireWeakEventSender(
-      std::weak_ptr<::fidl::internal::AsyncServerBinding>&& binding)
-      : inner_(std::move(binding)) {}
+  using WeakEventSenderBase::WeakEventSenderBase;
+};
 
- private:
-  friend ServerBindingRefImpl<
-      ::test_protocols::ManyParameters,
-      typename ::test_protocols::ManyParameters::Transport>;
-
-  ::fidl::internal::WeakEventSenderInner inner_;
+template <>
+class ::fidl::internal::WireWeakBufferEventSender<
+    ::test_protocols::ManyParameters>
+    : public ::fidl::internal::WeakBufferEventSenderBase {
+ public:
+  using WeakBufferEventSenderBase::WeakBufferEventSenderBase;
 };
 #endif  // __Fuchsia__
 
@@ -9081,18 +9078,18 @@ class ::fidl::WireEventSender<::test_protocols::WithErrorSyntax> {
 };
 
 template <>
-class ::fidl::internal::WireWeakEventSender<::test_protocols::WithErrorSyntax> {
+class ::fidl::internal::WireWeakEventSender<::test_protocols::WithErrorSyntax>
+    : public ::fidl::internal::WeakEventSenderBase {
  public:
-  WireWeakEventSender(
-      std::weak_ptr<::fidl::internal::AsyncServerBinding>&& binding)
-      : inner_(std::move(binding)) {}
+  using WeakEventSenderBase::WeakEventSenderBase;
+};
 
- private:
-  friend ServerBindingRefImpl<
-      ::test_protocols::WithErrorSyntax,
-      typename ::test_protocols::WithErrorSyntax::Transport>;
-
-  ::fidl::internal::WeakEventSenderInner inner_;
+template <>
+class ::fidl::internal::WireWeakBufferEventSender<
+    ::test_protocols::WithErrorSyntax>
+    : public ::fidl::internal::WeakBufferEventSenderBase {
+ public:
+  using WeakBufferEventSenderBase::WeakBufferEventSenderBase;
 };
 #endif  // __Fuchsia__
 
@@ -9182,18 +9179,18 @@ class ::fidl::WireEventSender<::test_protocols::DiscoverableProtocol> {
 
 template <>
 class ::fidl::internal::WireWeakEventSender<
-    ::test_protocols::DiscoverableProtocol> {
+    ::test_protocols::DiscoverableProtocol>
+    : public ::fidl::internal::WeakEventSenderBase {
  public:
-  WireWeakEventSender(
-      std::weak_ptr<::fidl::internal::AsyncServerBinding>&& binding)
-      : inner_(std::move(binding)) {}
+  using WeakEventSenderBase::WeakEventSenderBase;
+};
 
- private:
-  friend ServerBindingRefImpl<
-      ::test_protocols::DiscoverableProtocol,
-      typename ::test_protocols::DiscoverableProtocol::Transport>;
-
-  ::fidl::internal::WeakEventSenderInner inner_;
+template <>
+class ::fidl::internal::WireWeakBufferEventSender<
+    ::test_protocols::DiscoverableProtocol>
+    : public ::fidl::internal::WeakBufferEventSenderBase {
+ public:
+  using WeakBufferEventSenderBase::WeakBufferEventSenderBase;
 };
 #endif  // __Fuchsia__
 
@@ -9357,22 +9354,21 @@ class ::fidl::WireEventSender<::test_protocols::ChannelProtocol> {
 };
 
 template <>
-class ::fidl::internal::WireWeakEventSender<::test_protocols::ChannelProtocol> {
+class ::fidl::internal::WireWeakEventSender<::test_protocols::ChannelProtocol>
+    : public ::fidl::internal::WeakEventSenderBase {
  public:
-  WireWeakEventSender(
-      std::weak_ptr<::fidl::internal::AsyncServerBinding>&& binding)
-      : inner_(std::move(binding)) {}
+  using WeakEventSenderBase::WeakEventSenderBase;
 
-  fidl::Result EventA(int64_t a, int64_t b) const;
+  fidl::Result EventA(int64_t a, int64_t b);
+};
 
-  // Caller provides the backing storage for FIDL message via response buffers.
-  fidl::Result EventA(::fidl::BufferSpan _buffer, int64_t a, int64_t b) const;
+template <>
+class ::fidl::internal::WireWeakBufferEventSender<
+    ::test_protocols::ChannelProtocol>
+    : public ::fidl::internal::WeakBufferEventSenderBase {
+ public:
+  using WeakBufferEventSenderBase::WeakBufferEventSenderBase;
 
- private:
-  friend ServerBindingRefImpl<
-      ::test_protocols::ChannelProtocol,
-      typename ::test_protocols::ChannelProtocol::Transport>;
-
-  ::fidl::internal::WeakEventSenderInner inner_;
+  fidl::Result EventA(int64_t a, int64_t b);
 };
 #endif  // __Fuchsia__

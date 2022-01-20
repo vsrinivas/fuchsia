@@ -500,22 +500,26 @@ class ::fidl::WireEventSender<::test_doccomments::Interface> {
 };
 
 template <>
-class ::fidl::internal::WireWeakEventSender<::test_doccomments::Interface> {
+class ::fidl::internal::WireWeakEventSender<::test_doccomments::Interface>
+    : public ::fidl::internal::WeakEventSenderBase {
  public:
-  WireWeakEventSender(
-      std::weak_ptr<::fidl::internal::AsyncServerBinding>&& binding)
-      : inner_(std::move(binding)) {}
+  using WeakEventSenderBase::WeakEventSenderBase;
 
   /// event comment #1
   ///
   /// event comment #3
-  fidl::Result OnEvent() const;
+  fidl::Result OnEvent();
+};
 
- private:
-  friend ServerBindingRefImpl<
-      ::test_doccomments::Interface,
-      typename ::test_doccomments::Interface::Transport>;
+template <>
+class ::fidl::internal::WireWeakBufferEventSender<::test_doccomments::Interface>
+    : public ::fidl::internal::WeakBufferEventSenderBase {
+ public:
+  using WeakBufferEventSenderBase::WeakBufferEventSenderBase;
 
-  ::fidl::internal::WeakEventSenderInner inner_;
+  /// event comment #1
+  ///
+  /// event comment #3
+  fidl::Result OnEvent();
 };
 #endif  // __Fuchsia__

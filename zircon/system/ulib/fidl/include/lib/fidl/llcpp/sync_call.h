@@ -5,11 +5,13 @@
 #ifndef LIB_FIDL_LLCPP_SYNC_CALL_H_
 #define LIB_FIDL_LLCPP_SYNC_CALL_H_
 
+#include <lib/fidl/llcpp/async_binding.h>
 #include <lib/fidl/llcpp/coding.h>
+#include <lib/fidl/llcpp/internal/arrow.h>
 #include <lib/fidl/llcpp/internal/endpoints.h>
+#include <lib/fidl/llcpp/internal/server_details.h>
 #include <lib/fidl/llcpp/message_storage.h>
 #include <lib/fidl/llcpp/traits.h>
-#include <lib/fidl/llcpp/wire_messaging_declarations.h>
 
 #include <cstddef>
 #include <cstdint>
@@ -113,6 +115,13 @@ struct CallerAllocatingImpl;
 template <typename FidlProtocol>
 struct CallerAllocatingImpl<WireSyncClientImpl, FidlProtocol> {
   using Type = WireSyncBufferClientImpl<FidlProtocol>;
+};
+
+// Associate |WireWeakEventSender| (managed) and |WireWeakBufferEventSender|
+// (caller-allocating).
+template <typename FidlProtocol>
+struct CallerAllocatingImpl<WireWeakEventSender, FidlProtocol> {
+  using Type = WireWeakBufferEventSender<FidlProtocol>;
 };
 
 // A veneer interface object for client/server messaging implementations that
@@ -263,6 +272,32 @@ class SyncEndpointVeneer final {
 
  private:
   fidl::internal::AnyUnownedTransport transport_;
+};
+
+template <template <typename FidlProtocol> class SyncImpl, typename FidlProtocol>
+class WeakEventSenderVeneer final {
+ private:
+  using CallerAllocatingImpl =
+      typename ::fidl::internal::CallerAllocatingImpl<SyncImpl, FidlProtocol>::Type;
+
+ public:
+  explicit WeakEventSenderVeneer(std::weak_ptr<::fidl::internal::AsyncServerBinding> binding)
+      : binding_(std::move(binding)) {}
+
+  // Returns a veneer object for sending events with managed memory allocation.
+  Arrow<SyncImpl<FidlProtocol>> operator->() { return Arrow<SyncImpl<FidlProtocol>>(binding_); }
+
+  // Returns a veneer object which exposes the caller-allocating API, using
+  // the provided |resource| to allocate buffers necessary for each event.
+  // See documentation on |SyncEndpointVeneer::buffer| for detailed behavior.
+  template <typename MemoryResource>
+  auto buffer(MemoryResource&& resource) {
+    return Arrow<CallerAllocatingImpl>{
+        binding_, MakeAnyBufferAllocator(std::forward<MemoryResource>(resource))};
+  }
+
+ private:
+  std::weak_ptr<::fidl::internal::AsyncServerBinding> binding_;
 };
 
 }  // namespace internal

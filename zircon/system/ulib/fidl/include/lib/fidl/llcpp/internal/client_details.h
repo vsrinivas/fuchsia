@@ -5,6 +5,7 @@
 #ifndef LIB_FIDL_LLCPP_INTERNAL_CLIENT_DETAILS_H_
 #define LIB_FIDL_LLCPP_INTERNAL_CLIENT_DETAILS_H_
 
+#include <lib/fidl/llcpp/internal/arrow.h>
 #include <lib/fidl/llcpp/message.h>
 #include <lib/fidl/llcpp/result.h>
 #include <lib/fidl/llcpp/wire_messaging_declarations.h>
@@ -138,30 +139,6 @@ class ClientImplBase {
   ClientBase* client_base_;
 };
 
-// A veneer interface object which delegates calls to |Impl| using the "->"
-// operator.
-template <typename Impl>
-struct SyncClientVeneer {
- public:
-  explicit SyncClientVeneer(ClientBase* client_base) : impl_(client_base) {}
-
-  // Copying/moving around this object is dangerous as it may lead to dangling
-  // references to the buffer span/arena. Disable these operations for now.
-  SyncClientVeneer(const SyncClientVeneer&) = delete;
-  SyncClientVeneer& operator=(const SyncClientVeneer&) = delete;
-  SyncClientVeneer(SyncClientVeneer&&) = delete;
-  SyncClientVeneer& operator=(SyncClientVeneer&&) = delete;
-
-  // Returns a pointer to the concrete messaging implementation.
-  Impl* operator->() {
-    static_assert(std::is_base_of_v<ClientImplBase, Impl>);
-    return static_cast<Impl*>(&impl_);
-  }
-
- private:
-  Impl impl_;
-};
-
 // |BufferClientImplBase| stores the core state for client messaging
 // implementations that use |ClientBase|, and where the message encoding buffers
 // are provided by an allocator.
@@ -182,31 +159,6 @@ class BufferClientImplBase {
  private:
   ClientBase* client_base_;
   AnyBufferAllocator allocator_;
-};
-
-// A veneer interface object which delegates calls to |Impl| using the "->"
-// operator.
-template <typename Impl>
-struct BufferClientVeneer {
- public:
-  BufferClientVeneer(ClientBase* client_base, AnyBufferAllocator&& allocator)
-      : impl_(client_base, std::move(allocator)) {}
-
-  // Copying/moving around this object is dangerous as it may lead to dangling
-  // references to the buffer span/arena. Disable these operations for now.
-  BufferClientVeneer(const BufferClientVeneer&) = delete;
-  BufferClientVeneer& operator=(const BufferClientVeneer&) = delete;
-  BufferClientVeneer(BufferClientVeneer&&) = delete;
-  BufferClientVeneer& operator=(BufferClientVeneer&&) = delete;
-
-  // Returns a pointer to the concrete messaging implementation.
-  Impl* operator->() {
-    static_assert(std::is_base_of_v<BufferClientImplBase, Impl>);
-    return static_cast<Impl*>(&impl_);
-  }
-
- private:
-  Impl impl_;
 };
 
 }  // namespace internal

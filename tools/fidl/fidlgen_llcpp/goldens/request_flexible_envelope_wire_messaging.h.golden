@@ -1008,17 +1008,17 @@ class ::fidl::WireEventSender<::test_requestflexibleenvelope::Protocol> {
 
 template <>
 class ::fidl::internal::WireWeakEventSender<
-    ::test_requestflexibleenvelope::Protocol> {
+    ::test_requestflexibleenvelope::Protocol>
+    : public ::fidl::internal::WeakEventSenderBase {
  public:
-  WireWeakEventSender(
-      std::weak_ptr<::fidl::internal::AsyncServerBinding>&& binding)
-      : inner_(std::move(binding)) {}
+  using WeakEventSenderBase::WeakEventSenderBase;
+};
 
- private:
-  friend ServerBindingRefImpl<
-      ::test_requestflexibleenvelope::Protocol,
-      typename ::test_requestflexibleenvelope::Protocol::Transport>;
-
-  ::fidl::internal::WeakEventSenderInner inner_;
+template <>
+class ::fidl::internal::WireWeakBufferEventSender<
+    ::test_requestflexibleenvelope::Protocol>
+    : public ::fidl::internal::WeakBufferEventSenderBase {
+ public:
+  using WeakBufferEventSenderBase::WeakBufferEventSenderBase;
 };
 #endif  // __Fuchsia__

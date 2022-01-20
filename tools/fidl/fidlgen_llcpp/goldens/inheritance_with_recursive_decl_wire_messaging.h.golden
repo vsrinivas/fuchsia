@@ -842,18 +842,18 @@ class ::fidl::WireEventSender<::test_inheritancewithrecursivedecl::Parent> {
 
 template <>
 class ::fidl::internal::WireWeakEventSender<
-    ::test_inheritancewithrecursivedecl::Parent> {
+    ::test_inheritancewithrecursivedecl::Parent>
+    : public ::fidl::internal::WeakEventSenderBase {
  public:
-  WireWeakEventSender(
-      std::weak_ptr<::fidl::internal::AsyncServerBinding>&& binding)
-      : inner_(std::move(binding)) {}
+  using WeakEventSenderBase::WeakEventSenderBase;
+};
 
- private:
-  friend ServerBindingRefImpl<
-      ::test_inheritancewithrecursivedecl::Parent,
-      typename ::test_inheritancewithrecursivedecl::Parent::Transport>;
-
-  ::fidl::internal::WeakEventSenderInner inner_;
+template <>
+class ::fidl::internal::WireWeakBufferEventSender<
+    ::test_inheritancewithrecursivedecl::Parent>
+    : public ::fidl::internal::WeakBufferEventSenderBase {
+ public:
+  using WeakBufferEventSenderBase::WeakBufferEventSenderBase;
 };
 #endif  // __Fuchsia__
 
@@ -954,17 +954,17 @@ class ::fidl::WireEventSender<::test_inheritancewithrecursivedecl::Child> {
 
 template <>
 class ::fidl::internal::WireWeakEventSender<
-    ::test_inheritancewithrecursivedecl::Child> {
+    ::test_inheritancewithrecursivedecl::Child>
+    : public ::fidl::internal::WeakEventSenderBase {
  public:
-  WireWeakEventSender(
-      std::weak_ptr<::fidl::internal::AsyncServerBinding>&& binding)
-      : inner_(std::move(binding)) {}
+  using WeakEventSenderBase::WeakEventSenderBase;
+};
 
- private:
-  friend ServerBindingRefImpl<
-      ::test_inheritancewithrecursivedecl::Child,
-      typename ::test_inheritancewithrecursivedecl::Child::Transport>;
-
-  ::fidl::internal::WeakEventSenderInner inner_;
+template <>
+class ::fidl::internal::WireWeakBufferEventSender<
+    ::test_inheritancewithrecursivedecl::Child>
+    : public ::fidl::internal::WeakBufferEventSenderBase {
+ public:
+  using WeakBufferEventSenderBase::WeakBufferEventSenderBase;
 };
 #endif  // __Fuchsia__
