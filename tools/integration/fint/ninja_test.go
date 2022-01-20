@@ -57,6 +57,21 @@ func TestRunNinja(t *testing.T) {
 			},
 		},
 		{
+			name: "success with regenerating ninja files",
+			stdout: `
+                [0/1] Regenerating ninja files
+                [1/3] ACTION a.o
+                [2/3] ACTION b.o
+            `,
+			expectedActionData: &fintpb.NinjaActionMetrics{
+				InitialActions: 3,
+				FinalActions:   3,
+				ActionsByType: map[string]int32{
+					"ACTION": 2,
+				},
+			},
+		},
+		{
 			name: "multiple action types",
 			stdout: `
                 [1/3] CXX a.o
@@ -251,13 +266,6 @@ func TestRunNinja(t *testing.T) {
 				../../prebuilt/third_party/gn/linux-x64/gn --root=../.. gen .
 				ninja: error: rebuilding 'build.ninja': subcommand failed
             `,
-			expectedActionData: &fintpb.NinjaActionMetrics{
-				InitialActions: 1,
-				FinalActions:   1,
-				ActionsByType: map[string]int32{
-					"Regenerating": 1,
-				},
-			},
 		},
 		{
 			name: "graph error",

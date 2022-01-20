@@ -214,21 +214,26 @@ func (p *ninjaParser) parseLine(line string) error {
 		// Group each rule line with the non-rule lines of text that follow.
 		p.currentRuleLines = nil
 
-		// Track action counts and types.
-		totalActionsTmp, err := strconv.Atoi(ruleMatches[2])
-		if err != nil {
-			return err
-		}
-		totalActions := int32(totalActionsTmp)
-		if p.ninjaActionData == nil {
-			p.ninjaActionData = &fintpb.NinjaActionMetrics{
-				InitialActions: totalActions,
-				ActionsByType:  make(map[string]int32),
+		// Ignore the line:
+		//   [0/1] Regenerating ninja files
+		actionIndex, err := strconv.Atoi(ruleMatches[1])
+		if err == nil && actionIndex > 0 {
+			// Track action counts and types.
+			totalActionsTmp, err := strconv.Atoi(ruleMatches[2])
+			if err != nil {
+				return err
 			}
+			totalActions := int32(totalActionsTmp)
+			if p.ninjaActionData == nil {
+				p.ninjaActionData = &fintpb.NinjaActionMetrics{
+					InitialActions: totalActions,
+					ActionsByType:  make(map[string]int32),
+				}
+			}
+			p.ninjaActionData.FinalActions = totalActions
+			actionType := ruleMatches[3]
+			p.ninjaActionData.ActionsByType[actionType] += 1
 		}
-		p.ninjaActionData.FinalActions = totalActions
-		actionType := ruleMatches[3]
-		p.ninjaActionData.ActionsByType[actionType] += 1
 	}
 	p.currentRuleLines = append(p.currentRuleLines, line)
 
