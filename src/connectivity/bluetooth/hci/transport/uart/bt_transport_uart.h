@@ -10,6 +10,8 @@
 #include <lib/zx/event.h>
 #include <threads.h>
 
+#include <mutex>
+
 #include <ddktl/device.h>
 #include <ddktl/fidl.h>
 
@@ -58,33 +60,39 @@ class BtTransportUart : public BtTransportUartType, public ddk::BtHciProtocol<Bt
   };
 
   // Returns length of current event packet being received
+  // Must only be called in the read callback (HciHandleUartReadEvents).
   size_t EventPacketLength();
 
   // Returns length of current ACL data packet being received
+  // Must only be called in the read callback (HciHandleUartReadEvents).
   size_t AclPacketLength();
 
-  static void ChannelCleanupLocked(ClientChannel* channel);
+  // Returns the ClientChannel corresponding to |handle|, or nullptr if there is no such channel.
+  ClientChannel* MatchClientChannel(zx_handle_t handle) __TA_EXCLUDES(mutex_);
 
-  void SnoopChannelWriteLocked(uint8_t flags, uint8_t* bytes, size_t length);
+  void ChannelCleanupLocked(ClientChannel* channel) __TA_REQUIRES(mutex_);
 
-  void HciBeginShutdown();
+  void SnoopChannelWriteLocked(uint8_t flags, uint8_t* bytes, size_t length) __TA_REQUIRES(mutex_);
 
-  void SerialWrite(void* buffer, size_t length);
+  void HciBeginShutdown() __TA_EXCLUDES(mutex_);
 
-  void HciHandleClientChannel(ClientChannel* chan, zx_signals_t pending);
+  void SerialWrite(void* buffer, size_t length) __TA_EXCLUDES(mutex_);
 
-  void HciHandleUartReadEvents(const uint8_t* buf, size_t length);
+  void HciHandleClientChannel(ClientChannel* chan, zx_signals_t pending) __TA_EXCLUDES(mutex_);
 
-  void HciReadComplete(zx_status_t status, const uint8_t* buffer, size_t length);
+  void HciHandleUartReadEvents(const uint8_t* buf, size_t length) __TA_EXCLUDES(mutex_);
 
-  void HciWriteComplete(zx_status_t status);
+  void HciReadComplete(zx_status_t status, const uint8_t* buffer, size_t length)
+      __TA_EXCLUDES(mutex_);
 
-  static int HciThread(void* arg);
+  void HciWriteComplete(zx_status_t status) __TA_EXCLUDES(mutex_);
 
-  zx_status_t HciOpenChannel(ClientChannel* in_channel, zx_handle_t in);
+  static int HciThread(void* arg) __TA_EXCLUDES(mutex_);
+
+  zx_status_t HciOpenChannel(ClientChannel* in_channel, zx_handle_t in) __TA_EXCLUDES(mutex_);
 
   // Adds the device.
-  zx_status_t Bind();
+  zx_status_t Bind() __TA_EXCLUDES(mutex_);
 
   // 1 byte packet indicator + 3 byte header + payload
   static constexpr uint32_t kCmdBufSize = 255 + 4;
@@ -104,32 +112,40 @@ class BtTransportUart : public BtTransportUartType, public ddk::BtHciProtocol<Bt
   // 1 byte packet indicator + 2 byte header + payload
   static constexpr uint32_t kEventBufSize = 255 + 3;
 
-  serial_impl_async_protocol_t serial_;
+  serial_impl_async_protocol_t serial_ __TA_GUARDED(mutex_);
 
-  ClientChannel cmd_channel_;
-  ClientChannel acl_channel_;
-  ClientChannel snoop_channel_;
+  ClientChannel cmd_channel_ __TA_GUARDED(mutex_);
+  ClientChannel acl_channel_ __TA_GUARDED(mutex_);
+  ClientChannel snoop_channel_ __TA_GUARDED(mutex_);
 
   // Signaled any time something changes that the work thread needs to know about.
   zx::event wakeup_event_;
 
-  thrd_t thread_;
+  thrd_t thread_ __TA_GUARDED(mutex_);
   std::atomic_bool shutting_down_;
-  bool thread_running_;
-  bool can_write_;
+  bool thread_running_ __TA_GUARDED(mutex_);
+
+  // True if there is not a UART write pending. Set to false when a write is initiated, and set to
+  // true when the write completes.
+  bool can_write_ __TA_GUARDED(mutex_);
 
   // type of current packet being read from the UART
+  // Must only be used in the UART read callback (HciHandleUartReadEvents).
   BtHciPacketIndicator cur_uart_packet_type_;
 
   // for accumulating HCI events
+  // Must only be used in the UART read callback (HciHandleUartReadEvents).
   uint8_t event_buffer_[kEventBufSize];
+  // Must only be used in the UART read callback (HciHandleUartReadEvents).
   size_t event_buffer_offset_;
 
   // for accumulating ACL data packets
+  // Must only be used in the UART read callback (HciHandleUartReadEvents).
   uint8_t acl_buffer_[kAclMaxFrameSize];
+  // Must only be used in the UART read callback (HciHandleUartReadEvents).
   size_t acl_buffer_offset_;
 
-  mtx_t mutex_;
+  std::mutex mutex_;
 };
 
 }  // namespace bt_transport_uart
