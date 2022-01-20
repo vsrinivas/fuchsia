@@ -27,6 +27,8 @@
 
 #include <wlan/common/ieee80211.h>
 
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/compiler.h"
+
 #if defined(__cplusplus)
 extern "C" {
 #endif  // defined(__cplusplus)
@@ -44,6 +46,34 @@ extern "C" {
 #define IEEE80211_SCTL_SEQ_MASK 0xfff
 #define IEEE80211_SCTL_SEQ_OFFSET 4
 #define IEEE80211_SEQ_TO_SN(seq) (((seq) >> IEEE80211_SCTL_SEQ_OFFSET) & IEEE80211_SCTL_SEQ_MASK)
+
+/* 802.11n HT capabilities masks (for cap_info) */
+#define IEEE80211_HT_CAP_LDPC_CODING 0x0001
+#define IEEE80211_HT_CAP_SUP_WIDTH_20_40 0x0002
+#define IEEE80211_HT_CAP_SM_PS 0x000C
+#define IEEE80211_HT_CAP_SM_PS_SHIFT 2
+#define IEEE80211_HT_CAP_GRN_FLD 0x0010
+#define IEEE80211_HT_CAP_SGI_20 0x0020
+#define IEEE80211_HT_CAP_SGI_40 0x0040
+#define IEEE80211_HT_CAP_TX_STBC 0x0080
+#define IEEE80211_HT_CAP_RX_STBC 0x0300
+#define IEEE80211_HT_CAP_RX_STBC_SHIFT 8
+#define IEEE80211_HT_CAP_DELAY_BA 0x0400
+#define IEEE80211_HT_CAP_MAX_AMSDU 0x0800
+#define IEEE80211_HT_CAP_DSSSCCK40 0x1000
+#define IEEE80211_HT_CAP_RESERVED 0x2000
+#define IEEE80211_HT_CAP_40MHZ_INTOLERANT 0x4000
+#define IEEE80211_HT_CAP_LSIG_TXOP_PROT 0x8000
+
+/* 802.11n HT capability MSC set */
+#define IEEE80211_HT_MCS_RX_HIGHEST_MASK 0x3ff
+#define IEEE80211_HT_MCS_TX_DEFINED 0x01
+#define IEEE80211_HT_MCS_TX_RX_DIFF 0x02
+
+#define IEEE80211_HT_MCS_TX_MAX_STREAMS_MASK 0x0C
+#define IEEE80211_HT_MCS_TX_MAX_STREAMS_SHIFT 2
+#define IEEE80211_HT_MCS_TX_MAX_STREAMS 4
+#define IEEE80211_HT_MCS_TX_UNEQUAL_MODULATION 0x10
 
 // The order of access categories is not clearly specified in 802.11-2016 Std.
 // Therefore it cannot be moved into ieee80211 banjo file.
@@ -66,6 +96,18 @@ enum ieee80211_max_ampdu_length_exp {
   IEEE80211_HT_MAX_AMPDU_16K = 1,
   IEEE80211_HT_MAX_AMPDU_32K = 2,
   IEEE80211_HT_MAX_AMPDU_64K = 3
+};
+
+/* Minimum MPDU start spacing */
+enum ieee80211_min_mpdu_spacing {
+  IEEE80211_HT_MPDU_DENSITY_NONE = 0, /* No restriction */
+  IEEE80211_HT_MPDU_DENSITY_0_25 = 1, /* 1/4 usec */
+  IEEE80211_HT_MPDU_DENSITY_0_5 = 2,  /* 1/2 usec */
+  IEEE80211_HT_MPDU_DENSITY_1 = 3,    /* 1 usec */
+  IEEE80211_HT_MPDU_DENSITY_2 = 4,    /* 2 usec */
+  IEEE80211_HT_MPDU_DENSITY_4 = 5,    /* 4 usec */
+  IEEE80211_HT_MPDU_DENSITY_8 = 6,    /* 8 usec */
+  IEEE80211_HT_MPDU_DENSITY_16 = 7    /* 16 usec */
 };
 
 enum ieee80211_roc_type {
@@ -95,7 +137,6 @@ struct cfg80211_scan_request;
 struct cfg80211_sched_scan_request;
 struct cfg80211_wowlan;
 struct ieee80211_key_conf;
-struct ieee80211_sta_ht_cap;
 struct ieee80211_scan_ies;
 struct ieee80211_tdls_ch_sw_params;
 
@@ -127,12 +168,28 @@ struct ieee80211_channel {
   int max_power;
 };
 
+struct ieee80211_mcs_info {
+  uint8_t rx_mask[IEEE80211_HT_MCS_MASK_LEN];
+  __le16 rx_highest_le;
+  uint8_t tx_params;
+  uint8_t reserved[3];
+} __packed;
+
+struct ieee80211_sta_ht_cap {
+  uint16_t cap; /* use IEEE80211_HT_CAP_ */
+  bool ht_supported;
+  uint8_t ampdu_factor;
+  uint8_t ampdu_density;
+  struct ieee80211_mcs_info mcs;
+};
+
 struct ieee80211_supported_band {
   wlan_info_band_t band;
   struct ieee80211_channel* channels;
   int n_channels;
   uint16_t* bitrates;
   int n_bitrates;
+  struct ieee80211_sta_ht_cap ht_cap;
 };
 
 struct ieee80211_tx_queue_params {

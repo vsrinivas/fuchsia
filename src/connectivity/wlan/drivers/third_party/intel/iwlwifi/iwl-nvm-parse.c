@@ -744,10 +744,11 @@ static void iwl_init_sbands(struct iwl_trans* trans, struct iwl_nvm_data* data,
   sband->bitrates = &iwl_cfg80211_rates[RATES_24_OFFS];
   sband->n_bitrates = N_RATES_24;
   n_used += iwl_init_sband_channels(data, sband, n_channels, WLAN_INFO_BAND_TWO_GHZ);
-#if 0   // NEEDS_PORTING
-  // TODO(36683): HT support.
-  iwl_init_ht_hw_capab(cfg, data, &sband->ht_cap, NL80211_BAND_2GHZ, tx_chains, rx_chains);
 
+  iwl_init_ht_hw_capab(cfg, data, &sband->ht_cap, WLAN_INFO_BAND_TWO_GHZ, tx_chains, rx_chains);
+
+#if 0   // NEEDS_PORTING
+  // TODO(84773): HE support.
   if (data->sku_cap_11ax_enable && !iwlwifi_mod_params.disable_11ax) {
     iwl_init_he_hw_capab(sband, tx_chains, rx_chains);
   }
@@ -758,13 +759,16 @@ static void iwl_init_sbands(struct iwl_trans* trans, struct iwl_nvm_data* data,
   sband->bitrates = &iwl_cfg80211_rates[RATES_52_OFFS];
   sband->n_bitrates = N_RATES_52;
   n_used += iwl_init_sband_channels(data, sband, n_channels, WLAN_INFO_BAND_FIVE_GHZ);
+
+  iwl_init_ht_hw_capab(cfg, data, &sband->ht_cap, WLAN_INFO_BAND_FIVE_GHZ, tx_chains, rx_chains);
+
 #if 0   // NEEDS_PORTING
-  // TODO(36683): HT support.
-  iwl_init_ht_hw_capab(cfg, data, &sband->ht_cap, NL80211_BAND_5GHZ, tx_chains, rx_chains);
+  // TODO(36684): Supports VHT (802.11ac)
   if (data->sku_cap_11ac_enable && !iwlwifi_mod_params.disable_11ac) {
     iwl_init_vht_hw_capab(trans, data, &sband->vht_cap, tx_chains, rx_chains);
   }
 
+  // TODO(84773): HE support.
   if (data->sku_cap_11ax_enable && !iwlwifi_mod_params.disable_11ax) {
     iwl_init_he_hw_capab(sband, tx_chains, rx_chains);
   }

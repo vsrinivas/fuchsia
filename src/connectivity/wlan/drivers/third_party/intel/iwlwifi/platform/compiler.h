@@ -251,6 +251,14 @@ static inline size_t find_first_bit(unsigned* bits, const size_t num_bits) {
   return MIN(num_bits, ret);
 }
 
+// This function calculates the hamming weight of an 8-bit bitmap.
+static inline uint8_t hweight8(uint8_t bitmap) {
+  uint8_t hw = bitmap - ((bitmap >> 1) & 0x55);
+  hw = (hw & 0x33) + ((hw >> 2) & 0x33);
+  hw = (hw + (hw >> 4)) & 0x0F;
+  return hw;
+}
+
 #if defined(__cplusplus)
 }  // extern "C"
 #endif  // defined(__cplusplus)

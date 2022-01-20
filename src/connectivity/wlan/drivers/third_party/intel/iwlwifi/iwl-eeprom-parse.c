@@ -682,12 +682,11 @@ int iwl_init_sband_channels(struct iwl_nvm_data* data, struct ieee80211_supporte
   return n;
 }
 
-#if 0                           // NEEDS_PORTING
 #define MAX_BIT_RATE_40_MHZ 150 /* Mbps */
 #define MAX_BIT_RATE_20_MHZ 72  /* Mbps */
 
 void iwl_init_ht_hw_capab(const struct iwl_cfg* cfg, struct iwl_nvm_data* data,
-                          struct ieee80211_sta_ht_cap* ht_info, enum nl80211_band band,
+                          struct ieee80211_sta_ht_cap* ht_info, wlan_info_band_t band,
                           uint8_t tx_chains, uint8_t rx_chains) {
   int max_bit_rate = 0;
 
@@ -754,8 +753,8 @@ void iwl_init_ht_hw_capab(const struct iwl_cfg* cfg, struct iwl_nvm_data* data,
 
   /* Highest supported Rx data rate */
   max_bit_rate *= rx_chains;
-  WARN_ON(max_bit_rate & ~IEEE80211_HT_MCS_RX_HIGHEST_MASK);
-  ht_info->mcs.rx_highest = cpu_to_le16(max_bit_rate);
+  ZX_ASSERT(~(max_bit_rate & ~IEEE80211_HT_MCS_RX_HIGHEST_MASK));
+  ht_info->mcs.rx_highest_le = cpu_to_le16(max_bit_rate);
 
   /* Tx MCS capabilities */
   ht_info->mcs.tx_params = IEEE80211_HT_MCS_TX_DEFINED;
@@ -764,6 +763,8 @@ void iwl_init_ht_hw_capab(const struct iwl_cfg* cfg, struct iwl_nvm_data* data,
     ht_info->mcs.tx_params |= ((tx_chains - 1) << IEEE80211_HT_MCS_TX_MAX_STREAMS_SHIFT);
   }
 }
+
+#if 0   // NEEDS_PORTING
 
 static void iwl_init_sbands(struct device* dev, const struct iwl_cfg* cfg,
                             struct iwl_nvm_data* data, const uint8_t* eeprom, size_t eeprom_size) {
@@ -881,4 +882,4 @@ err_free:
   return NULL;
 }
 IWL_EXPORT_SYMBOL(iwl_parse_eeprom_data);
-#endif                          // NEEDS_PORTING
+#endif  // NEEDS_PORTING

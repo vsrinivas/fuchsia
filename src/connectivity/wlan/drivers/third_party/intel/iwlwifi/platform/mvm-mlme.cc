@@ -119,13 +119,13 @@ void fill_band_infos(const struct iwl_nvm_data* nvm_data, const wlan_info_band_t
     wlan_info_band_info_t* band_info = &band_infos[band_idx];                  // destination
 
     band_info->band = band_id;
-    band_info->ht_supported = nvm_data->sku_cap_11n_enable;
-    // TODO(43517): Better handling of driver features bits/flags
-    band_info->ht_caps.ht_capability_info =
-        IEEE80211_HT_CAPS_CHAN_WIDTH | IEEE80211_HT_CAPS_SMPS_DYNAMIC;
-    band_info->ht_caps.ampdu_params = (3 << IEEE80211_AMPDU_RX_LEN_SHIFT) |  // (64K - 1) bytes
-                                      (6 << IEEE80211_AMPDU_DENSITY_SHIFT);  // 8 us
-    // TODO(36683): band_info->ht_caps->supported_mcs_set =
+    band_info->ht_supported = sband->ht_cap.ht_supported;
+    band_info->ht_caps.ht_capability_info = sband->ht_cap.cap;
+    band_info->ht_caps.ampdu_params =
+        (sband->ht_cap.ampdu_factor << IEEE80211_AMPDU_RX_LEN_SHIFT) |   // (64K - 1) bytes
+        (sband->ht_cap.ampdu_density << IEEE80211_AMPDU_DENSITY_SHIFT);  // 8 us
+    memcpy(&band_info->ht_caps.supported_mcs_set, &sband->ht_cap.mcs,
+           sizeof(struct ieee80211_mcs_info));
     // TODO(36684): band_info->vht_caps =
 
     ZX_ASSERT(sband->n_bitrates <= static_cast<int>(std::size(band_info->rates)));
