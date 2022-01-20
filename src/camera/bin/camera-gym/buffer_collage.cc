@@ -167,7 +167,7 @@ fpromise::promise<uint32_t> BufferCollage::AddCollection(
     auto& view = collection_views_[collection_id];
     std::ostringstream oss;
     oss << " (" << collection_id << ")";
-    SetRemoveCollectionViewOnError(view.collection, collection_id, "Collection" + oss.str());
+    SetStopOnError(view.collection, "Collection" + oss.str());
     SetStopOnError(view.image_pipe, "Image Pipe" + oss.str());
     view.image_format = image_format;
     constexpr uint32_t kTitleWidth = 768;
@@ -372,20 +372,6 @@ void BufferCollage::SetStopOnError(fidl::InterfacePtr<T>& p, std::string name) {
     FX_PLOGS(ERROR, status) << name << " disconnected unexpectedly.";
     p = nullptr;
     Stop();
-  });
-}
-
-template <typename T>
-void BufferCollage::SetRemoveCollectionViewOnError(fidl::InterfacePtr<T>& p, uint32_t view_id,
-                                                   std::string name) {
-  p.set_error_handler([this, view_id, name, &p](zx_status_t status) {
-    FX_PLOGS(WARNING, status) << name << " view_id=" << view_id << " disconnected unexpectedly.";
-    p = nullptr;
-    if (collection_views_.find(view_id) == collection_views_.end()) {
-      FX_LOGS(INFO) << name << " view_id=" << view_id << " already removed.";
-      return;
-    }
-    RemoveCollection(view_id);
   });
 }
 
