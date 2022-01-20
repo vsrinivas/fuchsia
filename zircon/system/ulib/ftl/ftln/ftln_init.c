@@ -1185,12 +1185,16 @@ static int init_ftln(FTLN ftl) {
       // Clear free block flag and read count, set map block flag.
       SET_MAP_BLK(ftl->bdata[b]);  // clr free flag & read wear count
 
-      // Set wear count of copy to be one higher than source block.
+      // Set wear count of copy to be one higher than source block. This ensures
+      // that the source and destination blocks can be differentiated from one
+      // another.
       if (ftl->blk_wc_lag[ftl->high_bc_mblk])
         ftl->blk_wc_lag[b] = ftl->blk_wc_lag[ftl->high_bc_mblk] - 1;
       else {
-        ftl->blk_wc_lag[ftl->high_bc_mblk] = 1;
-        ftl->blk_wc_lag[b] = 0;
+        // We don't care about tracking low count here, we're setting to the
+        // highest anyways.
+        ui32 dummy_low_cnt = 0;
+        set_wc_lag(ftl, b, ftl->high_wc + 1, &dummy_low_cnt);
       }
 
       // Copy the used pages to a free block, then erase the original.
