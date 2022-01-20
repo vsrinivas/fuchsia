@@ -161,14 +161,12 @@ impl Hub {
         server_end: &mut zx::Channel,
     ) -> Result<(), ModelError> {
         let instance_map = self.instances.lock().await;
-        if !instance_map.contains_key(&abs_moniker) {
-            return Err(ModelError::open_directory_error(
-                abs_moniker.to_partial(),
-                relative_path.into_string(),
-            ));
-        }
+        let instance = instance_map.get(&abs_moniker).ok_or(ModelError::open_directory_error(
+            abs_moniker.to_partial(),
+            relative_path.clone().into_string(),
+        ))?;
         let server_end = channel::take_channel(server_end);
-        instance_map[&abs_moniker].directory.clone().open(
+        instance.directory.clone().open(
             self.scope.clone(),
             flags,
             open_mode,
@@ -248,11 +246,11 @@ impl Hub {
                 // In the children directory, the child's instance id is not used
                 trace::duration!("component_manager", "hub:add_instance_to_parent");
                 let partial_moniker = leaf.to_partial();
-                instance_map[&parent_moniker].children_directory.add_node(
-                    partial_moniker.as_str(),
-                    controlled.clone(),
-                    &abs_moniker,
-                )?;
+                instance_map
+                    .get_mut(&parent_moniker)
+                    .ok_or(ModelError::instance_not_found(parent_moniker.to_partial()))?
+                    .children_directory
+                    .add_node(partial_moniker.as_str(), controlled.clone(), &abs_moniker)?;
             }
         }
         Ok(())
@@ -419,7 +417,7 @@ impl Hub {
 
         let instance = instance_map
             .get_mut(target_moniker)
-            .expect(&format!("Unable to find instance {} in map.", target_moniker));
+            .ok_or(ModelError::instance_not_found(target_moniker.to_partial()))?;
 
         // If the resolved directory already exists, report error.
         assert!(!instance.has_resolved_directory);
@@ -470,7 +468,7 @@ impl Hub {
 
         let instance = instance_map
             .get_mut(target_moniker)
-            .expect(&format!("Unable to find instance {} in map.", target_moniker));
+            .ok_or(ModelError::instance_not_found(target_moniker.to_partial()))?;
 
         // Don't create an execution directory if it already exists
         if instance.has_execution_directory {
@@ -547,29 +545,31 @@ impl Hub {
         let mut instance_map = self.instances.lock().await;
         instance_map
             .remove(&target_moniker)
-            .expect("the dynamic component must exist in the instance map");
+            .ok_or(ModelError::instance_not_found(target_moniker.to_partial()))?;
         Ok(())
     }
 
     async fn on_stopped_async(&self, target_moniker: &AbsoluteMoniker) -> Result<(), ModelError> {
         trace::duration!("component_manager", "hub:on_stopped_async");
         let mut instance_map = self.instances.lock().await;
-        instance_map[target_moniker].directory.remove_node("exec")?;
-        instance_map
+        let mut instance = instance_map
             .get_mut(target_moniker)
-            .expect("instance must exist")
-            .has_execution_directory = false;
+            .ok_or(ModelError::instance_not_found(target_moniker.to_partial()))?;
+
+        instance.directory.remove_node("exec")?;
+        instance.has_execution_directory = false;
         Ok(())
     }
 
     async fn on_destroyed_async(&self, target_moniker: &AbsoluteMoniker) -> Result<(), ModelError> {
         trace::duration!("component_manager", "hub:on_destroyed_async");
         let parent_moniker = target_moniker.parent().expect("A root component cannot be destroyed");
-        let instance_map = self.instances.lock().await;
-        if !instance_map.contains_key(&parent_moniker) {
+        let mut instance_map = self.instances.lock().await;
+        let instance = match instance_map.get_mut(&parent_moniker) {
+            Some(i) => i,
             // Evidently this a duplicate dispatch of Destroyed.
-            return Ok(());
-        }
+            None => return Ok(()),
+        };
 
         let leaf = target_moniker.leaf().expect("A root component cannot be destroyed");
 
@@ -578,7 +578,7 @@ impl Hub {
         // are two concurrent `DestroyChild` operations. In such cases we should probably cause
         // this update to no-op instead of returning an error.
         let partial_moniker = leaf.to_partial();
-        instance_map[&parent_moniker]
+        instance
             .children_directory
             .remove_node(partial_moniker.as_str())
             .map_err(|_| ModelError::remove_entry_error(leaf.as_str()))?;
