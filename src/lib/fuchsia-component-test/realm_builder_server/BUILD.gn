@@ -9,12 +9,14 @@ rustc_binary("realm_builder_server_bin") {
   name = "realm_builder_server"
   with_unit_tests = true
   sources = [
+    "src/builtin.rs",
     "src/main.rs",
     "src/resolver.rs",
     "src/runner.rs",
   ]
 
   deps = [
+    "//garnet/lib/rust/files_async",
     "//garnet/lib/rust/io_util",
     "//sdk/fidl/fuchsia.component:fuchsia.component-rustc",
     "//sdk/fidl/fuchsia.component.decl:fuchsia.component.decl-rustc",

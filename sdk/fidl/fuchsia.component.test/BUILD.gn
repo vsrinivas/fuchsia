@@ -15,6 +15,7 @@ fidl("fuchsia.component.test") {
     "//sdk/fidl/fuchsia.data",
     "//sdk/fidl/fuchsia.io",
     "//sdk/fidl/fuchsia.io2",
+    "//sdk/fidl/fuchsia.mem",
     "//sdk/fidl/fuchsia.url",
   ]
 

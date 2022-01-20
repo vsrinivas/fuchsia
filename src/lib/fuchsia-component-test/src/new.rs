@@ -1401,6 +1401,12 @@ mod tests {
             from: fdecl::Ref,
             to: Vec<fdecl::Ref>,
         },
+        #[allow(unused)]
+        ReadOnlyDirectory {
+            name: String,
+            to: Vec<fdecl::Ref>,
+            directory_contents: ftest::DirectoryContents,
+        },
     }
 
     fn handle_realm_stream(
@@ -1496,6 +1502,18 @@ mod tests {
                     ftest::RealmRequest::AddRoute { responder, capabilities, from, to } => {
                         report_requests
                             .send(ServerRequest::AddRoute { capabilities, from, to })
+                            .await
+                            .unwrap();
+                        responder.send(&mut Ok(())).unwrap();
+                    }
+                    ftest::RealmRequest::ReadOnlyDirectory {
+                        responder,
+                        name,
+                        to,
+                        directory_contents,
+                    } => {
+                        report_requests
+                            .send(ServerRequest::ReadOnlyDirectory { name, to, directory_contents })
                             .await
                             .unwrap();
                         responder.send(&mut Ok(())).unwrap();

@@ -42,12 +42,18 @@ table/member fuchsia.component.test/DirectoryCapability.name string:100
 table/member fuchsia.component.test/DirectoryCapability.path string:1024
 table/member fuchsia.component.test/DirectoryCapability.rights fuchsia.io2/Operations
 table fuchsia.component.test/DirectoryCapability
+struct/member fuchsia.component.test/DirectoryContents.entries vector<fuchsia.component.test/DirectoryEntry>:1024
+resource struct fuchsia.component.test/DirectoryContents
+struct/member fuchsia.component.test/DirectoryEntry.file_contents fuchsia.mem/Buffer
+struct/member fuchsia.component.test/DirectoryEntry.file_path string:100
+resource struct fuchsia.component.test/DirectoryEntry
 table/member fuchsia.component.test/Event.as string:100
 table/member fuchsia.component.test/Event.filter fuchsia.data/Dictionary
 table/member fuchsia.component.test/Event.mode fuchsia.component.decl/EventMode
 table/member fuchsia.component.test/Event.name string:100
 table fuchsia.component.test/Event
 const fuchsia.component.test/LOCAL_COMPONENT_NAME_KEY string "LOCAL_COMPONENT_NAME"
+const fuchsia.component.test/MAX_DIRECTORY_ENTRIES uint32 1024
 const fuchsia.component.test/MAX_LEN_ROUTE_ENDPOINTS uint32 100
 const fuchsia.component.test/MAX_MOCK_ID_LENGTH uint32 1000
 table/member fuchsia.component.test/MockComponentStartInfo.ns vector<fuchsia.component.runner/ComponentNamespaceEntry>:32
@@ -68,6 +74,7 @@ protocol/member fuchsia.component.test/Realm.AddLocalChild(string:100 name,fuchs
 protocol/member fuchsia.component.test/Realm.AddRoute(vector<fuchsia.component.test/Capability2> capabilities,fuchsia.component.decl/Ref from,vector<fuchsia.component.decl/Ref> to) -> (fuchsia.component.test/Realm_AddRoute_Result result)
 protocol/member fuchsia.component.test/Realm.GetComponentDecl(string:100 name) -> (fuchsia.component.test/Realm_GetComponentDecl_Result result)
 protocol/member fuchsia.component.test/Realm.GetRealmDecl() -> (fuchsia.component.test/Realm_GetRealmDecl_Result result)
+protocol/member fuchsia.component.test/Realm.ReadOnlyDirectory(string:100 name,vector<fuchsia.component.decl/Ref> to,fuchsia.component.test/DirectoryContents directory_contents) -> (fuchsia.component.test/Realm_ReadOnlyDirectory_Result result)
 protocol/member fuchsia.component.test/Realm.ReplaceComponentDecl(string:100 name,fuchsia.component.decl/Component component_decl) -> (fuchsia.component.test/Realm_ReplaceComponentDecl_Result result)
 protocol/member fuchsia.component.test/Realm.ReplaceRealmDecl(fuchsia.component.decl/Component component_decl) -> (fuchsia.component.test/Realm_ReplaceRealmDecl_Result result)
 protocol fuchsia.component.test/Realm
@@ -186,6 +193,10 @@ struct fuchsia.component.test/Realm_GetRealmDecl_Response
 union/member fuchsia.component.test/Realm_GetRealmDecl_Result.err fuchsia.component.test/RealmBuilderError2
 union/member fuchsia.component.test/Realm_GetRealmDecl_Result.response fuchsia.component.test/Realm_GetRealmDecl_Response
 strict union fuchsia.component.test/Realm_GetRealmDecl_Result
+struct fuchsia.component.test/Realm_ReadOnlyDirectory_Response
+union/member fuchsia.component.test/Realm_ReadOnlyDirectory_Result.err fuchsia.component.test/RealmBuilderError2
+union/member fuchsia.component.test/Realm_ReadOnlyDirectory_Result.response fuchsia.component.test/Realm_ReadOnlyDirectory_Response
+strict union fuchsia.component.test/Realm_ReadOnlyDirectory_Result
 struct fuchsia.component.test/Realm_ReplaceComponentDecl_Response
 union/member fuchsia.component.test/Realm_ReplaceComponentDecl_Result.err fuchsia.component.test/RealmBuilderError2
 union/member fuchsia.component.test/Realm_ReplaceComponentDecl_Result.response fuchsia.component.test/Realm_ReplaceComponentDecl_Response

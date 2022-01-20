@@ -8,7 +8,7 @@ use {
     fidl::endpoints::{ProtocolMarker, RequestStream, ServerEnd},
     fidl_fuchsia_component as fcomponent, fidl_fuchsia_component_decl as fcdecl,
     fidl_fuchsia_component_runner as fcrunner, fidl_fuchsia_component_test as ftest,
-    fidl_fuchsia_data as fdata, fidl_fuchsia_io as fio,
+    fidl_fuchsia_data as fdata, fidl_fuchsia_io as fio, fidl_fuchsia_io2 as fio2,
     fuchsia_component::server as fserver,
     fuchsia_zircon_status as zx_status,
     futures::{future::BoxFuture, join, lock::Mutex, FutureExt, StreamExt, TryStreamExt},
@@ -31,6 +31,7 @@ use {
     vfs::execution_scope::ExecutionScope,
 };
 
+mod builtin;
 mod resolver;
 mod runner;
 
@@ -362,6 +363,26 @@ impl Realm {
                         }
                     }
                 }
+                ftest::RealmRequest::ReadOnlyDirectory {
+                    name,
+                    to,
+                    directory_contents,
+                    responder,
+                } => {
+                    if self.realm_has_been_built.load(Ordering::Relaxed) {
+                        responder.send(&mut Err(ftest::RealmBuilderError2::BuildAlreadyCalled))?;
+                        continue;
+                    }
+                    match self.read_only_directory(name, to, directory_contents).await {
+                        Ok(()) => {
+                            responder.send(&mut Ok(()))?;
+                        }
+                        Err(e) => {
+                            warn!("unable to add route: {:?}", e);
+                            responder.send(&mut Err(e.into()))?;
+                        }
+                    }
+                }
             }
         }
         Ok(())
@@ -508,6 +529,57 @@ impl Realm {
         component_decl: fcdecl::Component,
     ) -> Result<(), RealmBuilderError> {
         self.realm_node.replace_decl_with_untrusted(component_decl).await
+    }
+
+    async fn read_only_directory(
+        &self,
+        directory_name: String,
+        to: Vec<fcdecl::Ref>,
+        directory_contents: ftest::DirectoryContents,
+    ) -> Result<(), RealmBuilderError> {
+        // Add a new component to the realm to serve the directory capability from
+        let dir_name = directory_name.clone();
+        let directory_contents = Arc::new(directory_contents);
+        let local_component_id = self
+            .runner
+            .register_builtin_component(move |outgoing_dir| {
+                builtin::read_only_directory(
+                    dir_name.clone(),
+                    directory_contents.clone(),
+                    outgoing_dir,
+                )
+                .boxed()
+            })
+            .await;
+        let string_id: String = local_component_id.clone().into();
+        let child_name = format!("read-only-directory-{}", string_id);
+
+        let mut child_path = self.realm_path.clone();
+        child_path.push(child_name.clone());
+
+        let child_realm_node = RealmNode2::new_from_decl(
+            new_decl_with_program_entries(vec![(
+                runner::LOCAL_COMPONENT_ID_KEY.to_string(),
+                local_component_id.into(),
+            )]),
+            true,
+        );
+        self.realm_node
+            .add_child(child_name.clone(), ftest::ChildOptions::EMPTY, child_realm_node)
+            .await?;
+        let path = Some(format!("/{}", directory_name));
+        self.realm_node
+            .route_capabilities(
+                vec![ftest::Capability2::Directory(ftest::Directory {
+                    name: Some(directory_name),
+                    rights: Some(fio2::R_STAR_DIR),
+                    path,
+                    ..ftest::Directory::EMPTY
+                })],
+                fcdecl::Ref::Child(fcdecl::ChildRef { name: child_name.clone(), collection: None }),
+                to,
+            )
+            .await
     }
 }
 
@@ -2776,7 +2848,8 @@ mod tests {
             create_endpoints, create_proxy, create_proxy_and_stream, create_request_stream,
             ClientEnd,
         },
-        fidl_fuchsia_io2 as fio2, fuchsia_async as fasync,
+        fidl_fuchsia_io2 as fio2, fidl_fuchsia_mem as fmem, fuchsia_async as fasync,
+        fuchsia_zircon as zx,
         maplit::hashmap,
         matches::assert_matches,
         std::convert::TryInto,
@@ -3354,9 +3427,9 @@ mod tests {
                 .clone()
                 .remove(&id.to_string())
             {
-                Some(runner::ControlHandleOrRunnerProxy::RunnerProxy(rp)) => rp,
-                Some(runner::ControlHandleOrRunnerProxy::ControlHandle(_)) => {
-                    panic!("unexpected control handle")
+                Some(runner::ComponentImplementer::RunnerProxy(rp)) => rp,
+                Some(_) => {
+                    panic!("unexpected component implementer")
                 }
                 None => panic!("value unexpectedly missing"),
             };
@@ -4793,6 +4866,108 @@ mod tests {
             &mut vec![].iter_mut(),
         ))
         .await;
+    }
+
+    #[fuchsia::test]
+    async fn read_only_directory() {
+        let mut realm_and_builder_task = RealmAndBuilderTask::new();
+        realm_and_builder_task
+            .realm_proxy
+            .add_child("a", "test://a", ftest::ChildOptions::EMPTY)
+            .await
+            .expect("failed to call add_child")
+            .expect("add_child returned an error");
+        realm_and_builder_task
+            .realm_proxy
+            .read_only_directory(
+                "data",
+                &mut vec![fcdecl::Ref::Child(fcdecl::ChildRef {
+                    name: "a".to_string(),
+                    collection: None,
+                })]
+                .iter_mut(),
+                &mut ftest::DirectoryContents {
+                    entries: vec![ftest::DirectoryEntry {
+                        file_path: "hippos".to_string(),
+                        file_contents: {
+                            let value = "rule!";
+                            let vmo =
+                                zx::Vmo::create(value.len() as u64).expect("failed to create vmo");
+                            vmo.write(value.as_bytes(), 0).expect("failed to write to vmo");
+                            fmem::Buffer { vmo, size: value.len() as u64 }
+                        },
+                    }],
+                },
+            )
+            .await
+            .expect("failed to call read_only_directory")
+            .expect("read_only_directory returned an error");
+        let tree_from_resolver = realm_and_builder_task.call_build_and_get_tree().await;
+        let read_only_dir_decl = cm_rust::ComponentDecl {
+            program: Some(cm_rust::ProgramDecl {
+                runner: Some(crate::runner::RUNNER_NAME.try_into().unwrap()),
+                info: fdata::Dictionary {
+                    entries: Some(vec![fdata::DictionaryEntry {
+                        key: runner::LOCAL_COMPONENT_ID_KEY.to_string(),
+                        value: Some(Box::new(fdata::DictionaryValue::Str("0".to_string()))),
+                    }]),
+                    ..fdata::Dictionary::EMPTY
+                },
+            }),
+            capabilities: vec![cm_rust::CapabilityDecl::Directory(cm_rust::DirectoryDecl {
+                name: "data".into(),
+                source_path: Some("/data".try_into().unwrap()),
+                rights: fio2::R_STAR_DIR,
+            })],
+            exposes: vec![cm_rust::ExposeDecl::Directory(cm_rust::ExposeDirectoryDecl {
+                source: cm_rust::ExposeSource::Self_,
+                source_name: "data".into(),
+                target: cm_rust::ExposeTarget::Parent,
+                target_name: "data".into(),
+                rights: Some(fio2::R_STAR_DIR),
+                subdir: None,
+            })],
+            ..cm_rust::ComponentDecl::default()
+        };
+        let mut expected_tree = ComponentTree {
+            decl: cm_rust::ComponentDecl {
+                children: vec![cm_rust::ChildDecl {
+                    name: "a".to_string(),
+                    url: "test://a".to_string(),
+                    startup: fcdecl::StartupMode::Lazy,
+                    on_terminate: None,
+                    environment: None,
+                }],
+                offers: vec![cm_rust::OfferDecl::Directory(cm_rust::OfferDirectoryDecl {
+                    source: cm_rust::OfferSource::Child(cm_rust::ChildRef {
+                        name: "read-only-directory-0".to_string(),
+                        collection: None,
+                    }),
+                    source_name: "data".into(),
+                    target: cm_rust::OfferTarget::Child(cm_rust::ChildRef {
+                        name: "a".to_string(),
+                        collection: None,
+                    }),
+                    target_name: "data".into(),
+                    dependency_type: cm_rust::DependencyType::Strong,
+                    rights: Some(fio2::R_STAR_DIR),
+                    subdir: None,
+                })],
+                ..cm_rust::ComponentDecl::default()
+            },
+            children: vec![(
+                "read-only-directory-0".to_string(),
+                ftest::ChildOptions::EMPTY,
+                ComponentTree { decl: read_only_dir_decl, children: vec![] },
+            )],
+        };
+        expected_tree.add_binder_expose();
+        assert_eq!(expected_tree, tree_from_resolver);
+        assert!(realm_and_builder_task
+            .runner
+            .local_component_proxies()
+            .await
+            .contains_key(&"0".to_string()));
     }
 
     // TODO(88429): The following test is impossible to write until sub-realms are supported

@@ -9,6 +9,7 @@ using fuchsia.component.decl;
 using fuchsia.component.runner;
 using fuchsia.component.types;
 using fuchsia.data;
+using fuchsia.mem;
 using fuchsia.io;
 using fuchsia.io2;
 using fuchsia.url;
@@ -436,6 +437,23 @@ type ChildOptions = table {
     3: on_terminate fuchsia.component.decl.OnTerminate;
 };
 
+const MAX_DIRECTORY_ENTRIES uint32 = 1024;
+
+/// The contents of a directory that should be provided by the realm builder
+/// server.
+type DirectoryContents = resource struct {
+    entries vector<DirectoryEntry>:MAX_DIRECTORY_ENTRIES;
+};
+
+type DirectoryEntry = resource struct {
+    /// The path to the file. Valid examples include `foo.txt` and
+    /// `foo/bar.json`.
+    file_path fuchsia.component.name;
+
+    /// The contents of the file.
+    file_contents fuchsia.mem.Buffer;
+};
+
 protocol Realm {
     /// Adds a component to the realm.
     ///
@@ -647,5 +665,24 @@ protocol Realm {
 
         /// The locations that should be able to access `capabilities`.
         to vector<fuchsia.component.decl.Ref>:MAX;
+    }) -> (struct {}) error RealmBuilderError2;
+
+    /// Offers a directory capability to a component in this realm. The
+    /// directory will be read-only (i.e. have `r*` rights), and will have the
+    /// contents described in `directory_contents`.
+    ///
+    /// Errors:
+    /// - `NO_SUCH_TARGET`: `offer-to` references a non-existent child.
+    /// - `BUILD_ALREADY_CALLED`: The `Builder.Build` function has been called
+    ///   for this realm, and thus this `Realm` channel can no longer be used.
+    ReadOnlyDirectory(resource struct {
+        /// The name of the directory capability.
+        name fuchsia.component.name;
+
+        /// The target that this directory will be offered to.
+        to vector<fuchsia.component.decl.Ref>:MAX;
+
+        /// The contents of the directory.
+        directory_contents DirectoryContents;
     }) -> (struct {}) error RealmBuilderError2;
 };
