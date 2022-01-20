@@ -21,8 +21,8 @@ use {
         futures::{FutureExt as _, StreamExt as _},
         DurationExt as _, TimeoutExt as _,
     },
-    fuchsia_component_test::{
-        ChildOptions, RealmBuilder, RealmInstance, RouteBuilder, RouteEndpoint,
+    fuchsia_component_test::new::{
+        Capability, ChildOptions, RealmBuilder, RealmInstance, Ref, Route,
     },
     fuchsia_driver_test::{DriverTestRealmBuilder, DriverTestRealmInstance},
     fuchsia_zircon::{self as zx, sys::zx_status_t, Status},
@@ -70,44 +70,42 @@ struct TestEnv {
 impl TestEnv {
     async fn build() -> TestEnv {
         let builder = RealmBuilder::new().await.unwrap();
-        builder.driver_test_realm_setup().await.unwrap()
-            .add_child("password_authenticator", "fuchsia-pkg://fuchsia.com/password-authenticator-integration-tests#meta/password-authenticator.cm", ChildOptions::new()).await.unwrap()
-            .add_route(RouteBuilder::protocol("fuchsia.logger.LogSink")
-                .source(RouteEndpoint::AboveRoot)
-                .targets(vec![
-                    RouteEndpoint::component("password_authenticator"),
-                ])
-            ).await.unwrap()
+        builder.driver_test_realm_setup().await.unwrap();
+        let password_authenticator = builder
+            .add_child("password_authenticator", "fuchsia-pkg://fuchsia.com/password-authenticator-integration-tests#meta/password-authenticator.cm", ChildOptions::new()).await.unwrap();
+        builder
+            .add_route(
+                Route::new()
+                    .capability(Capability::protocol_by_name("fuchsia.logger.LogSink"))
+                    .capability(Capability::protocol_by_name("fuchsia.process.Launcher"))
+                    .capability(Capability::storage("data"))
+                    .from(Ref::parent())
+                    .to(&password_authenticator),
+            )
+            .await
+            .unwrap();
 
-            .add_route(RouteBuilder::protocol("fuchsia.process.Launcher")
-                .source(RouteEndpoint::AboveRoot)
-                .targets(vec![
-                    RouteEndpoint::component("password_authenticator"),
-                ])
-            ).await.unwrap()
+        // Expose AccountManager so we can test it
+        builder
+            .add_route(
+                Route::new()
+                    .capability(Capability::protocol::<AccountManagerMarker>())
+                    .from(&password_authenticator)
+                    .to(Ref::parent()),
+            )
+            .await
+            .unwrap();
 
-            .add_route(RouteBuilder::storage("data", "/data")
-                .source(RouteEndpoint::AboveRoot)
-                .targets(vec![
-                    RouteEndpoint::component("password_authenticator"),
-                ])
-            ).await.unwrap()
-
-            // Expose AccountManager so we can test it
-            .add_route(RouteBuilder::protocol("fuchsia.identity.account.AccountManager")
-                .source(RouteEndpoint::component("password_authenticator"))
-                .targets(vec![
-                    RouteEndpoint::AboveRoot,
-                ])
-            ).await.unwrap()
-
-            // Expose /dev from DriverTestrealm to password_authenticator, which makes use of it.
-            .add_route(RouteBuilder::directory("dev", "/dev", fidl_fuchsia_io2::RW_STAR_DIR)
-                .source(RouteEndpoint::component("driver_test_realm"))
-                .targets(vec![
-                    RouteEndpoint::component("password_authenticator"),
-                ])
-            ).await.unwrap();
+        // Offer /dev from DriverTestrealm to password_authenticator, which makes use of it.
+        builder
+            .add_route(
+                Route::new()
+                    .capability(Capability::directory("dev"))
+                    .from(Ref::child("driver_test_realm"))
+                    .to(&password_authenticator),
+            )
+            .await
+            .unwrap();
 
         let realm_instance = builder.build().await.unwrap();
         let args = fidl_fuchsia_driver_test::RealmArgs {
