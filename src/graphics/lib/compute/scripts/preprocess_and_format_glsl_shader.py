@@ -36,6 +36,13 @@ def main(argv):
         help='Include directory used during pre-processing')
 
     parser.add_argument(
+        '-D',
+        '--defines',
+        action='append',
+        default=[],
+        help='GLSL defines')
+
+    parser.add_argument(
         '-o', '--output', default='-', help='Output path, use - for stdout.')
 
     parser.add_argument('input', help="Input GLSL shader script path.")
@@ -49,6 +56,10 @@ def main(argv):
 
     for include_dir in args.include_dir:
         cmd_args.append('-I%s' % include_dir)
+
+    for define in args.defines:
+        cmd_args.append('-D%s' % define)
+
     try:
         preprocessed_script = subprocess.check_output(cmd_args)
     except subprocess.CalledProcessError as e:

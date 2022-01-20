@@ -28,6 +28,7 @@ declare_args() {
   #
   graphics_compute_generate_debug_shaders = true
 
+  #
   # At times we may want to compare the performance of unoptimized
   # vs. optimized shaders.  On desktop platforms, use of spirv-opt
   # doesn't appear to provide major performance improvements but it
@@ -37,6 +38,13 @@ declare_args() {
   # attributing code generation bugs.
   #
   graphics_compute_skip_spirv_opt = false
+
+  #
+  # If you're using GPU-assisted validation then it's useful to
+  # include debug info in combination with skipping the spirv-opt and
+  # spirv-reduce pass.
+  #
+  graphics_compute_generate_spirv_debug_info = true
 }
 
 #
@@ -108,6 +116,9 @@ template("graphics_compute_generate_debug_glsl_shader_foreach") {
     }
     foreach(_define, _defines) {
       args += [ "-D" + _define ]
+    }
+    if (is_fuchsia) {
+      args += [ "-D__Fuchsia__" ]
     }
     if (!defined(deps)) {
       deps = []
@@ -193,6 +204,9 @@ template("graphics_compute_compile_glsl_shader_foreach") {
       rebase_path(outputs[0], root_build_dir),
       "{{source}}",
     ]
+    if (graphics_compute_generate_spirv_debug_info) {
+      args += [ "-g" ]
+    }
     if (defined(invoker.include_dirs)) {
       foreach(_include_dir, invoker.include_dirs) {
         args += [ "-I" + rebase_path(_include_dir, root_build_dir) ]
@@ -202,6 +216,9 @@ template("graphics_compute_compile_glsl_shader_foreach") {
       foreach(_define, invoker.defines) {
         args += [ "-D" + _define ]
       }
+    }
+    if (is_fuchsia) {
+      args += [ "-D__Fuchsia__" ]
     }
     if (defined(invoker.args)) {
       args += invoker.args
