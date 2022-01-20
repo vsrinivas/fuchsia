@@ -6,8 +6,12 @@ import("//build/zircon/migrated_targets.gni")
 
 # TODO(schottm): make sdk_source_set when zxc is in the SDK
 source_set("fasync-source-set") {
-  sources = [ "include/lib/fasync/internal/compiler.h" ]
-  public_deps = []
+  sources = [
+    "include/lib/fasync/internal/compiler.h",
+    "include/lib/fasync/internal/type_traits.h",
+    "include/lib/fasync/type_traits.h",
+  ]
+  public_deps = [ "//zircon/system/ulib/zxc" ]
 }
 
 zx_library("fasync") {
@@ -15,11 +19,18 @@ zx_library("fasync") {
 
   sdk_publishable = false
   sdk_name = "fasync-experimental-driver-only"
-  sdk_headers = [ "lib/fasync/internal/compiler.h" ]
+  sdk_headers = [
+    "lib/fasync/internal/compiler.h",
+    "lib/fasync/internal/type_traits.h",
+    "lib/fasync/type_traits.h",
+  ]
 
   sources = []
   deps = []
-  public_deps = [ ":fasync-source-set" ]
+  public_deps = [
+    ":fasync-source-set",
+    "//zircon/system/ulib/zxc",
+  ]
 }
 
 group("tests") {

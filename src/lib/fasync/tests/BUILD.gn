@@ -15,7 +15,10 @@ group("tests") {
 }
 
 test("fasync-test") {
-  sources = [ "compiler_tests.cc" ]
+  sources = [
+    "compiler_tests.cc",
+    "type_traits_tests.cc",
+  ]
   deps = [
     "//src/lib/fasync",
     "//zircon/system/ulib/zxtest",
