@@ -348,7 +348,15 @@ static inline void x86_write_gs_offset32(uintptr_t offset, uint32_t val) {
 typedef uint64_t x86_flags_t;
 
 static inline uint64_t x86_save_flags() {
-  uint64_t state;
+  // This is marked uninitialized since although it is declared as an output only (i.e. not an
+  // input+output) operand the compiler may still decide to pattern fill it. Specifically if this
+  // method got inlined such that the flags are going to get saved directly to memory that target
+  // memory will get pattern filled, then immediately overwritten by the popq.
+  // Alternatively if the output operand were marked as reg only, instead of reg+mem the compiler
+  // would realize it never needs to pattern fill, however it produces slightly worse code gen as,
+  // in scenarios where the final flags do want to get stored to memory, it forces an intermediate
+  // register to be used.
+  uint64_t __UNINITIALIZED state;
 
   __asm__ volatile(
       "pushfq;"
