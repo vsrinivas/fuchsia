@@ -4,7 +4,7 @@
 
 use crate::config::{FastbootConfig, FvmConfig, FvmFilesystemEntry};
 
-use anyhow::{Context, Result};
+use anyhow::Result;
 use assembly_fvm::{Filesystem, FvmBuilder, FvmType, NandFvmBuilder};
 use assembly_minfs::MinFSBuilder;
 use assembly_tool::ToolProvider;
@@ -45,23 +45,20 @@ pub fn construct_fvm(
                         anyhow::bail!("BlobFS configuration exists, but BlobFS was not generated");
                     }
                 };
-                filesystems.push(Filesystem::BlobFS {
-                    path: path.to_path_buf(),
-                    attributes: attributes.clone(),
-                });
+                filesystems
+                    .push(Filesystem { path: path.to_path_buf(), attributes: attributes.clone() });
             }
             FvmFilesystemEntry::MinFS { attributes } => {
                 let minfs_path = outdir.as_ref().join("data.blk");
                 let builder = MinFSBuilder::new(tools.get_tool("minfs")?);
                 builder.build(&minfs_path)?;
-                filesystems.push(Filesystem::MinFS {
+                filesystems.push(Filesystem {
                     path: minfs_path.to_path_buf(),
                     attributes: attributes.clone(),
                 });
             }
         };
     }
-    filesystems.push(Filesystem::Reserved { slices: fvm_config.reserved_slices });
 
     // Build a default FVM that is non-sparse.
     let default_path = outdir.as_ref().join("fvm.blk");
@@ -69,13 +66,14 @@ pub fn construct_fvm(
         tools.get_tool("fvm")?,
         &default_path,
         fvm_config.slice_size,
-        false,
-        FvmType::Standard { resize_image_file_to_fit: false, truncate_to_length: None },
+        fvm_config.reserved_slices,
+        None,
+        FvmType::Default,
     );
     for fs in &filesystems {
         fvm_builder.filesystem(fs.clone());
     }
-    fvm_builder.build().context("building standard fvm")?;
+    fvm_builder.build()?;
 
     // Build a sparse FVM for paving.
     let sparse_path = outdir.as_ref().join("fvm.sparse.blk");
@@ -83,13 +81,14 @@ pub fn construct_fvm(
         tools.get_tool("fvm")?,
         &sparse_path,
         fvm_config.slice_size,
-        true,
-        FvmType::Sparse { max_disk_size: fvm_config.max_disk_size },
+        fvm_config.reserved_slices,
+        fvm_config.max_disk_size,
+        FvmType::Sparse { empty_minfs: false },
     );
     for fs in &filesystems {
         sparse_fvm_builder.filesystem(fs.clone());
     }
-    sparse_fvm_builder.build().context("building sparse fvm")?;
+    sparse_fvm_builder.build()?;
 
     // Build a sparse FVM with an empty minfs.
     let sparse_blob_path = outdir.as_ref().join("fvm.blob.sparse.blk");
@@ -97,50 +96,41 @@ pub fn construct_fvm(
         tools.get_tool("fvm")?,
         &sparse_blob_path,
         fvm_config.slice_size,
-        true,
-        FvmType::Sparse { max_disk_size: fvm_config.max_disk_size },
+        fvm_config.reserved_slices,
+        fvm_config.max_disk_size,
+        FvmType::Sparse { empty_minfs: true },
     );
-    // In this case, we want an empty minfs partition, so we strip the minfs partition out
-    // of the filesystems we pass through such that the FVM does not attempt to create two
-    // partitions with the same name.
+    // In this case we have set the "empty_minfs" flag above which causes FVM to create an empty
+    // minfs partition named "data". We must strip that partition out of the filesystems we pass
+    // through such that FVM does not attempt to create two partitions with the same name.
     //
     // TODO(fxbug.dev/85165): Generate an empty image instead of a standard minfs image for this
     // case. This empty image could be passed through directly as a filesystem and the special
     // "with-empty-minfs" could be removed.
     for fs in &filesystems {
-        match fs {
-            Filesystem::BlobFS { path: _, attributes: _ }
-            | Filesystem::EmptyMinFS
-            | Filesystem::EmptyAccount
-            | Filesystem::Reserved { slices: _ } => {
-                sparse_blob_fvm_builder.filesystem(fs.clone());
-            }
-            _ => {}
+        if fs.attributes.name != "data" {
+            sparse_blob_fvm_builder.filesystem(fs.clone());
         }
     }
-    sparse_blob_fvm_builder.filesystem(Filesystem::EmptyMinFS);
-    sparse_blob_fvm_builder.build().context("building sparse blob fvm")?;
+    sparse_blob_fvm_builder.build()?;
 
     // Build a sparse fastboot-supported FVM if needed.
     let fastboot_path: Option<PathBuf> = match &fvm_config.fastboot {
         // EMMC formatted FVM.
         Some(FastbootConfig::Emmc { compression, length }) => {
             let emmc_path = outdir.as_ref().join("fvm.fastboot.blk");
-            let compress = compression != "none";
             let mut emmc_fvm_builder = FvmBuilder::new(
                 tools.get_tool("fvm")?,
                 &emmc_path,
                 fvm_config.slice_size,
-                compress,
-                FvmType::Standard {
-                    resize_image_file_to_fit: true,
-                    truncate_to_length: Some(*length),
-                },
+                fvm_config.reserved_slices,
+                fvm_config.max_disk_size,
+                FvmType::Emmc { compression: compression.clone(), length: *length },
             );
             for fs in &filesystems {
                 emmc_fvm_builder.filesystem(fs.clone());
             }
-            emmc_fvm_builder.build().context("building emmc fvm")?;
+            emmc_fvm_builder.build()?;
             Some(emmc_path)
         }
 
@@ -164,7 +154,7 @@ pub fn construct_fvm(
                 pages_per_block: *pages_per_block,
                 block_count: *block_count,
             };
-            nand_fvm_builder.build().context("building nand fvm")?;
+            nand_fvm_builder.build()?;
             Some(nand_path)
         }
 
