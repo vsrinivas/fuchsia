@@ -1,3 +1,5 @@
+include /src/fidl/OWNERS
 include /src/sys/component_manager/OWNERS
 
 # COMPONENT: ComponentFramework>SDK
+# COMPONENT: FIDL
