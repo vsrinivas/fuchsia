@@ -163,6 +163,10 @@ type Root struct {
 }
 
 func NewRoot(ir fidlgen.Root, outputBase string, templates *template.Template, options Options) *Root {
+	// Do a first pass of the protocols, creating a set of all names of types that are used as a
+	// transactional message bodies.
+	mbtn := ir.GetMessageBodyTypeNames()
+
 	constsByName := make(map[fidlgen.EncodedCompoundIdentifier]*fidlgen.Const)
 	for index, member := range ir.Consts {
 		constsByName[member.Name] = &ir.Consts[index]
@@ -178,11 +182,11 @@ func NewRoot(ir fidlgen.Root, outputBase string, templates *template.Template, o
 		protocolsByName[member.Name] = &ir.Protocols[index]
 	}
 
-	// filter out all anonymous structs
+	// Filter out all anonymous message body structs.
 	allStructs := ir.Structs
 	ir.Structs = make([]fidlgen.Struct, 0)
 	for _, member := range allStructs {
-		if member.IsRequestOrResponse {
+		if _, ok := mbtn[member.Name]; ok && member.IsAnonymous() {
 			continue
 		}
 		ir.Structs = append(ir.Structs, member)

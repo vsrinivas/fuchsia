@@ -459,7 +459,7 @@ type compiler struct {
 	decls                  fidlgen.DeclInfoMap
 	library                fidlgen.LibraryIdentifier
 	externCrates           map[string]struct{}
-	requestResponsePayload map[fidlgen.EncodedCompoundIdentifier]fidlgen.Struct
+	messageBodyStructs     map[fidlgen.EncodedCompoundIdentifier]fidlgen.Struct
 	structs                map[fidlgen.EncodedCompoundIdentifier]fidlgen.Struct
 	results                map[fidlgen.EncodedCompoundIdentifier]Result
 	handleMetadataWrappers map[string]HandleMetadataWrapper
@@ -868,7 +868,7 @@ func (c *compiler) compileProtocol(val fidlgen.Protocol) Protocol {
 	for _, v := range val.Methods {
 		var compiledRequestParameterList []Parameter
 		if v.RequestPayload != nil {
-			if val, ok := c.requestResponsePayload[v.RequestPayload.Identifier]; ok {
+			if val, ok := c.messageBodyStructs[v.RequestPayload.Identifier]; ok {
 				if len(val.Members) > maximumAllowedParameters {
 					panic(fmt.Sprintf(
 						`Method %s.%s has %d parameters, but the FIDL Rust bindings `+
@@ -886,7 +886,7 @@ func (c *compiler) compileProtocol(val fidlgen.Protocol) Protocol {
 		var compiledResponseParameterList []Parameter
 		var foundResult *Result
 		if v.ResponsePayload != nil {
-			if val, ok := c.requestResponsePayload[v.ResponsePayload.Identifier]; ok {
+			if val, ok := c.messageBodyStructs[v.ResponsePayload.Identifier]; ok {
 				if len(val.Members) == 1 && val.Members[0].Type.Kind == fidlgen.IdentifierType {
 					responseType := val.Members[0].Type
 					if result, ok := c.results[responseType.Identifier]; ok {
@@ -1550,16 +1550,19 @@ func Compile(r fidlgen.Root) Root {
 	root := Root{}
 	thisLibParsed := fidlgen.ParseLibraryName(r.Name)
 	c := compiler{
-		r.DeclsWithDependencies(),
-		thisLibParsed,
-		map[string]struct{}{},
-		map[fidlgen.EncodedCompoundIdentifier]fidlgen.Struct{},
-		map[fidlgen.EncodedCompoundIdentifier]fidlgen.Struct{},
-		map[fidlgen.EncodedCompoundIdentifier]Result{},
-		map[string]HandleMetadataWrapper{},
+		decls:                  r.DeclsWithDependencies(),
+		library:                thisLibParsed,
+		externCrates:           map[string]struct{}{},
+		messageBodyStructs:     map[fidlgen.EncodedCompoundIdentifier]fidlgen.Struct{},
+		structs:                map[fidlgen.EncodedCompoundIdentifier]fidlgen.Struct{},
+		results:                map[fidlgen.EncodedCompoundIdentifier]Result{},
+		handleMetadataWrappers: map[string]HandleMetadataWrapper{},
 	}
 
-	// TODO(azaslavsky): maybe combine these with the loops below?
+	// Do a first pass of the protocols, creating a set of all names of types that are used as a
+	// transactional message bodies.
+	mbtn := r.GetMessageBodyTypeNames()
+
 	for _, s := range r.Structs {
 		c.structs[s.Name] = s
 	}
@@ -1585,16 +1588,16 @@ func Compile(r fidlgen.Root) Root {
 	}
 
 	for _, v := range r.Structs {
-		if v.IsRequestOrResponse {
-			c.requestResponsePayload[v.Name] = v
+		if _, ok := mbtn[v.Name]; ok && v.IsAnonymous() {
+			c.messageBodyStructs[v.Name] = v
 		} else {
 			root.Structs = append(root.Structs, c.compileStruct(v))
 		}
 	}
 
 	for _, v := range r.ExternalStructs {
-		if v.IsRequestOrResponse {
-			c.requestResponsePayload[v.Name] = v
+		if _, ok := mbtn[v.Name]; ok && v.IsAnonymous() {
+			c.messageBodyStructs[v.Name] = v
 		} else {
 			root.ExternalStructs = append(root.ExternalStructs, c.compileStruct(v))
 		}

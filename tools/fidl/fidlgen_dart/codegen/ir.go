@@ -441,10 +441,10 @@ func libraryPrefix(library fidlgen.LibraryIdentifier) string {
 
 type compiler struct {
 	Root
-	decls                  fidlgen.DeclInfoMap
-	library                fidlgen.LibraryIdentifier
-	typesRoot              fidlgen.Root
-	requestResponsePayload map[fidlgen.EncodedCompoundIdentifier]fidlgen.Struct
+	decls              fidlgen.DeclInfoMap
+	library            fidlgen.LibraryIdentifier
+	typesRoot          fidlgen.Root
+	messageBodyStructs map[fidlgen.EncodedCompoundIdentifier]fidlgen.Struct
 }
 
 func (c *compiler) findStruct(name fidlgen.EncodedCompoundIdentifier) (Struct, bool) {
@@ -462,7 +462,7 @@ func (c *compiler) findStruct(name fidlgen.EncodedCompoundIdentifier) (Struct, b
 }
 
 func (c *compiler) getPayload(name fidlgen.EncodedCompoundIdentifier) fidlgen.Struct {
-	val, ok := c.requestResponsePayload[name]
+	val, ok := c.messageBodyStructs[name]
 	if !ok {
 		panic(fmt.Sprintf("Unknown request/response struct: %s", name))
 	}
@@ -1156,11 +1156,15 @@ resource: %t,
 func Compile(r fidlgen.Root) Root {
 	r = r.ForBindings("dart")
 	c := compiler{
-		decls:                  r.DeclsWithDependencies(),
-		library:                fidlgen.ParseLibraryName(r.Name),
-		typesRoot:              r,
-		requestResponsePayload: map[fidlgen.EncodedCompoundIdentifier]fidlgen.Struct{},
+		decls:              r.DeclsWithDependencies(),
+		library:            fidlgen.ParseLibraryName(r.Name),
+		typesRoot:          r,
+		messageBodyStructs: map[fidlgen.EncodedCompoundIdentifier]fidlgen.Struct{},
 	}
+
+	// Do a first pass of the protocols, creating a set of all names of types that are used as a
+	// transactional message bodies.
+	mbtn := r.GetMessageBodyTypeNames()
 
 	c.Root.LibraryName = fmt.Sprintf("fidl_%s", formatLibraryName(c.library))
 
@@ -1177,16 +1181,16 @@ func Compile(r fidlgen.Root) Root {
 	}
 
 	for _, v := range r.Structs {
-		if v.IsRequestOrResponse {
-			c.requestResponsePayload[v.Name] = v
+		if _, ok := mbtn[v.Name]; ok && v.IsAnonymous() {
+			c.messageBodyStructs[v.Name] = v
 		} else {
 			c.Root.Structs = append(c.Root.Structs, c.compileStruct(v))
 		}
 	}
 
 	for _, v := range r.ExternalStructs {
-		if v.IsRequestOrResponse {
-			c.requestResponsePayload[v.Name] = v
+		if _, ok := mbtn[v.Name]; ok && v.IsAnonymous() {
+			c.messageBodyStructs[v.Name] = v
 		} else {
 			c.Root.ExternalStructs = append(c.Root.ExternalStructs, c.compileStruct(v))
 		}

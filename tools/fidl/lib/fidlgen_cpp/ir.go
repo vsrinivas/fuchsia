@@ -383,12 +383,12 @@ func codingTableName(ident fidlgen.EncodedCompoundIdentifier) string {
 }
 
 type compiler struct {
-	symbolPrefix           string
-	decls                  fidlgen.DeclInfoMap
-	library                fidlgen.LibraryIdentifier
-	handleTypes            map[fidlgen.HandleSubtype]struct{}
-	resultForUnion         map[fidlgen.EncodedCompoundIdentifier]*Result
-	requestResponsePayload map[fidlgen.EncodedCompoundIdentifier]fidlgen.Struct
+	symbolPrefix       string
+	decls              fidlgen.DeclInfoMap
+	library            fidlgen.LibraryIdentifier
+	handleTypes        map[fidlgen.HandleSubtype]struct{}
+	resultForUnion     map[fidlgen.EncodedCompoundIdentifier]*Result
+	messageBodyStructs map[fidlgen.EncodedCompoundIdentifier]fidlgen.Struct
 	// anonymousChildren maps a layout (defined by its naming context key) to
 	// the anonymous layouts defined directly within that layout. We opt to flatten
 	// the naming context and use a map rather than a trie like structure for
@@ -600,14 +600,18 @@ func compile(r fidlgen.Root) *Root {
 	}
 
 	c := compiler{
-		symbolPrefix:           formatLibraryPrefix(root.Library),
-		decls:                  r.DeclsWithDependencies(),
-		library:                fidlgen.ParseLibraryName(r.Name),
-		handleTypes:            make(map[fidlgen.HandleSubtype]struct{}),
-		resultForUnion:         make(map[fidlgen.EncodedCompoundIdentifier]*Result),
-		requestResponsePayload: make(map[fidlgen.EncodedCompoundIdentifier]fidlgen.Struct),
-		anonymousChildren:      make(map[namingContextKey][]ScopedLayout),
+		symbolPrefix:       formatLibraryPrefix(root.Library),
+		decls:              r.DeclsWithDependencies(),
+		library:            fidlgen.ParseLibraryName(r.Name),
+		handleTypes:        make(map[fidlgen.HandleSubtype]struct{}),
+		resultForUnion:     make(map[fidlgen.EncodedCompoundIdentifier]*Result),
+		messageBodyStructs: make(map[fidlgen.EncodedCompoundIdentifier]fidlgen.Struct),
+		anonymousChildren:  make(map[namingContextKey][]ScopedLayout),
 	}
+
+	// Do a first pass of the protocols, creating a set of all names of types that are used as a
+	// transactional message bodies.
+	mbtn := r.GetMessageBodyTypeNames()
 
 	addAnonymousLayouts := func(layout fidlgen.Layout) {
 		if !layout.IsAnonymous() {
@@ -664,17 +668,21 @@ func compile(r fidlgen.Root) *Root {
 	}
 
 	for _, v := range r.Structs {
-		if v.IsRequestOrResponse {
-			c.requestResponsePayload[v.Name] = v
+		anonMessageBody := false
+		if _, ok := mbtn[v.Name]; ok && v.IsAnonymous() {
+			c.messageBodyStructs[v.Name] = v
+			anonMessageBody = true
 		}
-		decls[v.Name] = c.compileStruct(v)
+		decls[v.Name] = c.compileStruct(v, anonMessageBody)
 	}
 
 	for _, v := range r.ExternalStructs {
-		if v.IsRequestOrResponse {
-			c.requestResponsePayload[v.Name] = v
+		anonMessageBody := false
+		if _, ok := mbtn[v.Name]; ok && v.IsAnonymous() {
+			c.messageBodyStructs[v.Name] = v
+			anonMessageBody = true
 		}
-		extDecls[v.Name] = c.compileStruct(v)
+		extDecls[v.Name] = c.compileStruct(v, anonMessageBody)
 	}
 
 	for _, v := range r.Protocols {

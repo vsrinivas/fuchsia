@@ -449,16 +449,15 @@ type compiler struct {
 	// FIDL library.
 	libraryDeps map[string]string
 
+	// messageBodyStructs is a mapping from ECI to Structs for all request/response structs. This
+	// is used to lookup typeshape info when constructing the Methods and their Parameters.
+	messageBodyStructs map[fidlgen.EncodedCompoundIdentifier]Struct
+
 	// usedLibraryDeps is identical to libraryDeps except it is built up as references
 	// are made into libraryDeps. Thus, after Compile is run, it contains the subset of
 	// libraryDeps that's actually being used. The purpose is to figure out which
 	// dependencies need to be imported.
 	usedLibraryDeps map[string]string
-
-	// requestResponseStructs is a mapping from ECI to Structs for all request/response
-	// structs (which are currently equivalent to all the anonymous structs). This is
-	// used to lookup typeshape info when constructing the Methods and their Parameters.
-	requestResponseStructs map[fidlgen.EncodedCompoundIdentifier]Struct
 }
 
 // Contains the full set of reserved golang keywords, in addition to a set of
@@ -607,7 +606,7 @@ func (c *compiler) computeHandleSubtype(t fidlgen.Type) (fidlgen.ObjectType, boo
 	return fidlgen.ObjectTypeNone, false
 }
 
-func (_ *compiler) compileIdentifier(id fidlgen.Identifier, export bool, ext string) string {
+func (*compiler) compileIdentifier(id fidlgen.Identifier, export bool, ext string) string {
 	str := string(id)
 	if export {
 		str = fidlgen.ToUpperCamelCase(str)
@@ -639,7 +638,7 @@ func (c *compiler) compileCompoundIdentifier(eci fidlgen.EncodedCompoundIdentifi
 	return strings.Join(strs, ".")
 }
 
-func (_ *compiler) compileLiteral(val fidlgen.Literal) string {
+func (*compiler) compileLiteral(val fidlgen.Literal) string {
 	switch val.Kind {
 	case fidlgen.NumericLiteral:
 		return val.Value
@@ -990,7 +989,7 @@ func (c *compiler) compileMethod(protocolName fidlgen.EncodedCompoundIdentifier,
 		HasResponse:     val.HasResponse,
 	}
 	if val.HasRequest && val.RequestPayload != nil {
-		requestStruct, ok := c.requestResponseStructs[val.RequestPayload.Identifier]
+		requestStruct, ok := c.messageBodyStructs[val.RequestPayload.Identifier]
 		if !ok {
 			panic(fmt.Sprintf("unknown request struct: %v", val.RequestPayload))
 		}
@@ -998,7 +997,7 @@ func (c *compiler) compileMethod(protocolName fidlgen.EncodedCompoundIdentifier,
 		r.Request = &requestStruct
 	}
 	if val.HasResponse && val.ResponsePayload != nil {
-		responseStruct, ok := c.requestResponseStructs[val.ResponsePayload.Identifier]
+		responseStruct, ok := c.messageBodyStructs[val.ResponsePayload.Identifier]
 		if !ok {
 			panic(fmt.Sprintf("unknown response struct: %v", val.ResponsePayload))
 		}
@@ -1072,12 +1071,16 @@ func Compile(fidlData fidlgen.Root) Root {
 
 	// Instantiate a compiler context.
 	c := compiler{
-		decls:                  fidlData.DeclsWithDependencies(),
-		library:                libraryName,
-		libraryDeps:            godeps,
-		usedLibraryDeps:        make(map[string]string),
-		requestResponseStructs: make(map[fidlgen.EncodedCompoundIdentifier]Struct),
+		decls:              fidlData.DeclsWithDependencies(),
+		library:            libraryName,
+		libraryDeps:        godeps,
+		messageBodyStructs: make(map[fidlgen.EncodedCompoundIdentifier]Struct),
+		usedLibraryDeps:    make(map[string]string),
 	}
+
+	// Do a first pass of the protocols, creating a set of all names of types that are used as a
+	// transactional message bodies.
+	mbtn := fidlData.GetMessageBodyTypeNames()
 
 	// Compile fidlData into r.
 	r := Root{
@@ -1097,11 +1100,8 @@ func Compile(fidlData fidlgen.Root) Root {
 	for _, v := range fidlData.Structs {
 		// TODO(fxbug.dev/56727) Consider filtering out structs that are not used because they are
 		// only referenced by channel transports.
-		if v.IsRequestOrResponse {
-			// these Structs still need to have their correct name (...Response or
-			// ...Request) generated, which occurs in compileMethod. Only then
-			// are they appended to r.Structs.
-			c.requestResponseStructs[v.Name] = c.compileStruct(v)
+		if _, ok := mbtn[v.Name]; ok && v.IsAnonymous() {
+			c.messageBodyStructs[v.Name] = c.compileStruct(v)
 		} else {
 			r.Structs = append(r.Structs, c.compileStruct(v))
 		}
@@ -1109,11 +1109,8 @@ func Compile(fidlData fidlgen.Root) Root {
 	for _, v := range fidlData.ExternalStructs {
 		// TODO(fxbug.dev/56727) Consider filtering out structs that are not used because they are
 		// only referenced by channel transports.
-		if v.IsRequestOrResponse {
-			// these Structs still need to have their correct name (...Response or
-			// ...Request) generated, which occurs in compileMethod. Only then
-			// are they appended to r.Structs.
-			c.requestResponseStructs[v.Name] = c.compileStruct(v)
+		if _, ok := mbtn[v.Name]; ok && v.IsAnonymous() {
+			c.messageBodyStructs[v.Name] = c.compileStruct(v)
 		} else {
 			r.ExternalStructs = append(r.ExternalStructs, c.compileStruct(v))
 		}

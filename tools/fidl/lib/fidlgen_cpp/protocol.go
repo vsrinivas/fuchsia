@@ -720,7 +720,7 @@ func (c *compiler) compileProtocol(p fidlgen.Protocol) *Protocol {
 		if v.RequestPayload != nil {
 			requestTypeShapeV1 = v.RequestPayload.TypeShapeV1
 			requestTypeShapeV2 = v.RequestPayload.TypeShapeV2
-			if val, ok := c.requestResponsePayload[v.RequestPayload.Identifier]; ok {
+			if val, ok := c.messageBodyStructs[v.RequestPayload.Identifier]; ok {
 				requestPayloadStruct = val
 				requestChildren = c.anonymousChildren[toKey(val.NamingContext)]
 			}
@@ -737,7 +737,7 @@ func (c *compiler) compileProtocol(p fidlgen.Protocol) *Protocol {
 		if v.ResponsePayload != nil {
 			responseTypeShapeV1 = v.ResponsePayload.TypeShapeV1
 			responseTypeShapeV2 = v.ResponsePayload.TypeShapeV2
-			if val, ok := c.requestResponsePayload[v.ResponsePayload.Identifier]; ok {
+			if val, ok := c.messageBodyStructs[v.ResponsePayload.Identifier]; ok {
 				responsePayloadStruct = val
 				responseChildren = c.anonymousChildren[toKey(val.NamingContext)]
 			}

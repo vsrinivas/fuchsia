@@ -145,8 +145,8 @@ type compiler struct {
 	// library is the identifier for the current library.
 	library fidlgen.LibraryIdentifier
 
-	// anonymous structs used only as method request/response payloads
-	payloads map[fidlgen.EncodedCompoundIdentifier]*fidlgen.Struct
+	// anonymous structs used only as method request/response messageBodyStructs
+	messageBodyStructs map[fidlgen.EncodedCompoundIdentifier]*fidlgen.Struct
 }
 
 var reservedWords = map[string]struct{}{
@@ -590,7 +590,7 @@ func (c *compiler) compileMethod(protocolName fidlgen.EncodedCompoundIdentifier,
 	if val.HasRequest {
 		var payload *fidlgen.Struct
 		if payloadID, ok := val.GetRequestPayloadIdentifier(); ok {
-			payload = c.payloads[payloadID]
+			payload = c.messageBodyStructs[payloadID]
 		}
 		request, requestHandles := c.compileParameters(r.Name+RequestSuffix, r.Ordinal, payload)
 		r.Request = &request
@@ -601,7 +601,7 @@ func (c *compiler) compileMethod(protocolName fidlgen.EncodedCompoundIdentifier,
 	if val.HasResponse {
 		var payload *fidlgen.Struct
 		if payloadID, ok := val.GetResponsePayloadIdentifier(); ok {
-			payload = c.payloads[payloadID]
+			payload = c.messageBodyStructs[payloadID]
 		}
 		suffix := ResponseSuffix
 		if !val.HasRequest {
@@ -631,14 +631,18 @@ func compile(fidlData fidlgen.Root) Root {
 	root := Root{}
 	libraryName := fidlgen.ParseLibraryName(fidlData.Name)
 	c := compiler{
-		decls:    fidlData.DeclsWithDependencies(),
-		structs:  make(StructMap),
-		unions:   make(UnionMap),
-		enums:    make(EnumMap),
-		bits:     make(BitsMap),
-		library:  libraryName,
-		payloads: make(map[fidlgen.EncodedCompoundIdentifier]*fidlgen.Struct),
+		decls:              fidlData.DeclsWithDependencies(),
+		structs:            make(StructMap),
+		unions:             make(UnionMap),
+		enums:              make(EnumMap),
+		bits:               make(BitsMap),
+		library:            libraryName,
+		messageBodyStructs: make(map[fidlgen.EncodedCompoundIdentifier]*fidlgen.Struct),
 	}
+
+	// Do a first pass of the protocols, creating a set of all names of types that are used as a
+	// transactional message bodies.
+	mbtn := fidlData.GetMessageBodyTypeNames()
 
 	root.HeaderPath = fmt.Sprintf("%s/c/fidl.h", formatLibraryPath(libraryName))
 
@@ -655,10 +659,9 @@ func compile(fidlData fidlgen.Root) Root {
 	}
 
 	for _, v := range fidlData.Structs {
-		// TODO(fxbug.dev/7704) remove once anonymous structs are supported
-		if v.IsRequestOrResponse {
+		if _, ok := mbtn[v.Name]; ok && v.IsAnonymous() {
 			v := v
-			c.payloads[v.Name] = &v
+			c.messageBodyStructs[v.Name] = &v
 			continue
 		}
 		c.structs[v.Name] = v
@@ -682,9 +685,9 @@ func compile(fidlData fidlgen.Root) Root {
 
 	for _, v := range fidlData.ExternalStructs {
 		// TODO(fxbug.dev/7704) remove once anonymous structs are supported
-		if v.IsRequestOrResponse {
+		if _, ok := mbtn[v.Name]; ok && v.IsAnonymous() {
 			v := v
-			c.payloads[v.Name] = &v
+			c.messageBodyStructs[v.Name] = &v
 		}
 	}
 

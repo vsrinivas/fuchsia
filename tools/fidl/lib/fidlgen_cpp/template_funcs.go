@@ -291,7 +291,7 @@ var commonTemplateFuncs = template.FuncMap{
 		var filtered []Kinded
 		for _, decl := range decls {
 			if s, ok := decl.(*Struct); ok {
-				if s.IsRequestOrResponse() {
+				if s.IsAnonymousRequestOrResponse() {
 					continue
 				}
 			}

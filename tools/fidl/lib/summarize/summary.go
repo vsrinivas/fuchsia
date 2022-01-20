@@ -91,10 +91,6 @@ func (s *summarizer) addTables(tables []fidlgen.Table) {
 // addStructs adds the elements corresponding to the FIDL structs.
 func (s *summarizer) addStructs(structs []fidlgen.Struct) {
 	for _, st := range structs {
-		if st.IsRequestOrResponse {
-			// Disregard anonymous payload structs for API summarization.
-			continue
-		}
 		for _, m := range st.Members {
 			s.addElement(newMember(
 				&s.symbols, st.Name, m.Name, m.Type, fidlgen.StructDeclType, m.MaybeDefaultValue))
@@ -138,6 +134,23 @@ func serialize(e []Element) []ElementStr {
 	return ret
 }
 
+// filterStructs takes the list of structs, and excludes all structs that are used as anonymous
+// transactional message bodies, as those are explicitly disregarded by the summarizer.
+func filterStructs(structs []fidlgen.Struct, root fidlgen.Root) []fidlgen.Struct {
+	out := make([]fidlgen.Struct, 0)
+
+	// Do a first pass of the protocols, creating a set of all names of types that are used as a
+	// transactional message bodies.
+	mbtn := root.GetMessageBodyTypeNames()
+
+	for _, s := range structs {
+		if _, ok := mbtn[s.Name]; !ok || !s.IsAnonymous() {
+			out = append(out, s)
+		}
+	}
+	return out
+}
+
 // Elements returns the API elements found in the supplied AST root in a
 // canonical ordering.
 func Elements(root fidlgen.Root) []Element {
@@ -150,7 +163,7 @@ func Elements(root fidlgen.Root) []Element {
 	s.addConsts(root.Consts)
 	s.addBits(root.Bits)
 	s.addEnums(root.Enums)
-	s.addStructs(root.Structs)
+	s.addStructs(filterStructs(root.Structs, root))
 	s.addTables(root.Tables)
 	s.addUnions(root.Unions)
 	s.addProtocols(root.Protocols)

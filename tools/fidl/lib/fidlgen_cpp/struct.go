@@ -39,18 +39,18 @@ type Struct struct {
 	// TypeTraits contains information about a natural domain object.
 	TypeTraits name
 
-	isEmptyStruct       bool
-	isRequestOrResponse bool
+	isEmptyStruct                bool
+	isAnonymousRequestOrResponse bool
 }
 
 func (*Struct) Kind() declKind {
 	return Kinds.Struct
 }
 
-// IsRequestOrResponse indicates whether this struct is used as a method
+// IsAnonymousRequestOrResponse indicates whether this struct is used as a method
 // request/response.
-func (s *Struct) IsRequestOrResponse() bool {
-	return s.isRequestOrResponse
+func (s *Struct) IsAnonymousRequestOrResponse() bool {
+	return s.isAnonymousRequestOrResponse
 }
 
 var _ Kinded = (*Struct)(nil)
@@ -105,7 +105,7 @@ func (c *compiler) compileStructMember(val fidlgen.StructMember) StructMember {
 	}
 }
 
-func (c *compiler) compileStruct(val fidlgen.Struct) *Struct {
+func (c *compiler) compileStruct(val fidlgen.Struct, anonMessageBody bool) *Struct {
 	name := c.compileNameVariants(val.Name)
 	codingTableType := c.compileCodingTableType(val.Name)
 	r := Struct{
@@ -123,8 +123,8 @@ func (c *compiler) compileStruct(val fidlgen.Struct) *Struct {
 		BackingBufferTypeV2: computeAllocation(
 			TypeShape{val.TypeShapeV2}.MaxTotalSize(), boundednessBounded).
 			BackingBufferType(),
-		TypeTraits:          TypeTraits.template(name.Unified),
-		isRequestOrResponse: val.IsRequestOrResponse,
+		TypeTraits:                   TypeTraits.template(name.Unified),
+		isAnonymousRequestOrResponse: anonMessageBody,
 	}
 
 	for _, v := range val.Members {

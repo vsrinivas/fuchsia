@@ -847,11 +847,10 @@ func (t *Table) SortedMembersNoReserved() []TableMember {
 // Struct represents a declaration of a FIDL struct.
 type Struct struct {
 	Layout
-	IsRequestOrResponse bool           `json:"is_request_or_response"`
-	Members             []StructMember `json:"members"`
-	Resourceness        `json:"resource"`
-	TypeShapeV1         TypeShape `json:"type_shape_v1"`
-	TypeShapeV2         TypeShape `json:"type_shape_v2"`
+	Members      []StructMember `json:"members"`
+	Resourceness `json:"resource"`
+	TypeShapeV1  TypeShape `json:"type_shape_v1"`
+	TypeShapeV2  TypeShape `json:"type_shape_v2"`
 }
 
 // StructMember represents the declaration of a field in a FIDL struct.
@@ -1222,6 +1221,23 @@ func (r *Root) DeclsWithDependencies() DeclInfoMap {
 		}
 	}
 	return decls
+}
+
+// GetMessageBodyTypeNames calculates set of ECI's that refer to types used as message bodies by
+// this library.
+func (r *Root) GetMessageBodyTypeNames() map[EncodedCompoundIdentifier]struct{} {
+	mbtn := map[EncodedCompoundIdentifier]struct{}{}
+	for _, protocol := range r.Protocols {
+		for _, method := range protocol.Methods {
+			if method.RequestPayload != nil {
+				mbtn[method.RequestPayload.Identifier] = struct{}{}
+			}
+			if method.ResponsePayload != nil {
+				mbtn[method.ResponsePayload.Identifier] = struct{}{}
+			}
+		}
+	}
+	return mbtn
 }
 
 // deniedContexts produces a list of scopedNamingContexts. Any types/methods that begin with the
