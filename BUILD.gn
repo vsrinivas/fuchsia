@@ -885,6 +885,7 @@ build_api_module("zbi_tests") {
   data_keys = [ "zbi_tests" ]
   deps = [
     "build/images",
+    "build/unification/zbi:tests",
     "build/zircon/zbi_tests",
   ]
 }
@@ -1033,6 +1034,7 @@ group("default") {
     "//:host",
     "//build/images:packages",
     "//build/input:build_only",
+    "//build/unification",
     "//sdk",
   ]
 
