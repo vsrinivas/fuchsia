@@ -194,7 +194,9 @@ std::unique_ptr<Buffer> GetBuffer(size_t len);
 class Packet
     : public fbl::DoublyLinkedListable<std::unique_ptr<Packet>, fbl::NodeOptions::AllowMove> {
  public:
-  typedef uint8_t value_type;
+  using value_type = uint8_t;
+  using iterator = value_type*;
+  using const_iterator = const value_type*;
 
   enum class Peer {
     kUnknown,
@@ -219,6 +221,11 @@ class Packet
   uint8_t* data() { return buffer_->data(); }
 
   size_t size() const { return len_; }
+
+  iterator begin() { return data(); }
+  const_iterator cbegin() const { return data(); }
+  iterator end() { return begin() + size(); }
+  const_iterator cend() const { return cbegin() + size(); }
 
   // Length can only be made shorter at this time.
   zx_status_t set_len(size_t len) {
