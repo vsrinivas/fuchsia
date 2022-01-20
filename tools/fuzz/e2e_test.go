@@ -116,8 +116,13 @@ func TestEndToEnd(t *testing.T) {
 	glog.Info(out)
 
 	// TODO(fxbug.dev/45425): validate output more
-	if m, err := regexp.MatchString(`deadly signal`, out); err != nil || !m {
+	if !strings.Contains(out, "deadly signal") {
 		t.Fatalf("output missing signal: %s", out)
+	}
+
+	// This format is emitted by the Go symbolizer, but not the C++ symbolizer
+	if !strings.Contains(out, "(anonymous namespace)::crasher") {
+		t.Fatalf("stack trace missing expected symbol: %s", out)
 	}
 
 	artifactRegex := regexp.MustCompile(`Test unit written to (\S+)`)

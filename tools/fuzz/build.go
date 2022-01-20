@@ -82,14 +82,15 @@ func NewClusterFuzzLegacyBuild() (Build, error) {
 	clangDir := filepath.Join(buildDir, "buildtools", "linux-x64", "clang")
 	build := &BaseBuild{
 		Paths: map[string]string{
-			"zbi":          filepath.Join(targetDir, "fuchsia.zbi"),
-			"fvm":          filepath.Join(buildDir, "out", "default.zircon", "tools", "fvm"),
-			"zbitool":      filepath.Join(buildDir, "out", "default.zircon", "tools", "zbi"),
-			"blk":          filepath.Join(targetDir, "fvm.blk"),
-			"qemu":         filepath.Join(bundleDir, "qemu-for-fuchsia", "bin", "qemu-system-x86_64"),
-			"kernel":       filepath.Join(targetDir, "multiboot.bin"),
-			"symbolizer":   filepath.Join(buildDir, "zircon", "prebuilt", "downloads", "symbolize", "linux-x64", "symbolizer"),
-			"fuzzers.json": filepath.Join(buildDir, "out", "default", "fuzzers.json"),
+			"zbi":             filepath.Join(targetDir, "fuchsia.zbi"),
+			"fvm":             filepath.Join(buildDir, "out", "default.zircon", "tools", "fvm"),
+			"zbitool":         filepath.Join(buildDir, "out", "default.zircon", "tools", "zbi"),
+			"blk":             filepath.Join(targetDir, "fvm.blk"),
+			"qemu":            filepath.Join(bundleDir, "qemu-for-fuchsia", "bin", "qemu-system-x86_64"),
+			"kernel":          filepath.Join(targetDir, "multiboot.bin"),
+			"llvm-symbolizer": filepath.Join(clangDir, "bin", "llvm-symbolizer"),
+			"symbolizer":      filepath.Join(buildDir, "zircon", "prebuilt", "downloads", "symbolize", "linux-x64", "symbolize"),
+			"fuzzers.json":    filepath.Join(buildDir, "out", "default", "fuzzers.json"),
 		},
 		IDs: []string{
 			filepath.Join(clangDir, "lib", "debug", ".build_id"),
@@ -186,14 +187,15 @@ func NewLocalFuchsiaBuild() (Build, error) {
 
 	build := &BaseBuild{
 		Paths: map[string]string{
-			"zbi":          filepath.Join(imgDir, "fuchsia.zbi"),
-			"fvm":          filepath.Join(buildDir, hostDir, "fvm"),
-			"zbitool":      filepath.Join(buildDir, hostDir, "zbi"),
-			"blk":          filepath.Join(imgDir, "fvm.blk"),
-			"qemu":         filepath.Join(qemuDir, "bin", binary),
-			"kernel":       filepath.Join(buildDir, kernel),
-			"symbolizer":   filepath.Join(buildDir, hostDir, "symbolizer"),
-			"fuzzers.json": filepath.Join(buildDir, "fuzzers.json"),
+			"zbi":             filepath.Join(imgDir, "fuchsia.zbi"),
+			"fvm":             filepath.Join(buildDir, hostDir, "fvm"),
+			"zbitool":         filepath.Join(buildDir, hostDir, "zbi"),
+			"blk":             filepath.Join(imgDir, "fvm.blk"),
+			"qemu":            filepath.Join(qemuDir, "bin", binary),
+			"kernel":          filepath.Join(buildDir, kernel),
+			"llvm-symbolizer": filepath.Join(clangDir, "bin", "llvm-symbolizer"),
+			"symbolizer":      filepath.Join(buildDir, hostDir, "symbolize"),
+			"fuzzers.json":    filepath.Join(buildDir, "fuzzers.json"),
 		},
 		IDs: []string{
 			filepath.Join(clangDir, "lib", "debug", ".build-id"),
@@ -324,16 +326,18 @@ func (b *BaseBuild) Symbolize(in io.ReadCloser, out io.Writer) error {
 	// early exit occurs later in the output-processing chain.
 	defer in.Close()
 
-	paths, err := b.Path("symbolizer")
+	paths, err := b.Path("symbolizer", "llvm-symbolizer")
 	if err != nil {
 		return err
 	}
 
-	args := make([]string, 0, 2*len(b.IDs))
+	symbolizer, llvmSymbolizer := paths[0], paths[1]
+
+	args := []string{"-llvm-symbolizer", llvmSymbolizer}
 	for _, dir := range b.IDs {
-		args = append(args, "--build-id-dir", dir)
+		args = append(args, "-build-id-dir", dir)
 	}
-	cmd := NewCommand(paths[0], args...)
+	cmd := NewCommand(symbolizer, args...)
 	cmd.Stdin = in
 	pipe, err := cmd.StdoutPipe()
 	if err != nil {

@@ -160,6 +160,7 @@ func TestSymbolize(t *testing.T) {
 
 	build := newBaseBuild()
 	build.Paths["symbolizer"] = "symbolizer"
+	build.Paths["llvm-symbolizer"] = "llvm-symbolizer"
 
 	// TODO(fxbug.dev/45425): more realistic test data
 	inputData := "[1234.5][klog] INFO: {{{0x41}}}"
