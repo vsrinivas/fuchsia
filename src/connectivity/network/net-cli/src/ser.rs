@@ -7,9 +7,9 @@
 //! protocols.
 
 #[derive(serde::Serialize)]
-struct Subnet<T> {
-    addr: T,
-    prefix_len: u8,
+pub(crate) struct Subnet<T> {
+    pub(crate) addr: T,
+    pub(crate) prefix_len: u8,
 }
 
 impl From<fidl_fuchsia_net_ext::Subnet> for Subnet<std::net::IpAddr> {
@@ -23,13 +23,13 @@ impl From<fidl_fuchsia_net_ext::Subnet> for Subnet<std::net::IpAddr> {
 }
 
 #[derive(serde::Serialize)]
-struct Addresses {
-    ipv4: Vec<Subnet<std::net::Ipv4Addr>>,
-    ipv6: Vec<Subnet<std::net::Ipv6Addr>>,
+pub(crate) struct Addresses {
+    pub(crate) ipv4: Vec<Subnet<std::net::Ipv4Addr>>,
+    pub(crate) ipv6: Vec<Subnet<std::net::Ipv6Addr>>,
 }
 
-impl From<Vec<fidl_fuchsia_net_ext::Subnet>> for Addresses {
-    fn from(addresses: Vec<fidl_fuchsia_net_ext::Subnet>) -> Addresses {
+impl<I: Iterator<Item = fidl_fuchsia_net_ext::Subnet>> From<I> for Addresses {
+    fn from(addresses: I) -> Addresses {
         use itertools::Itertools as _;
 
         let (ipv4, ipv6): (Vec<_>, Vec<_>) = addresses.into_iter().partition_map(
@@ -52,89 +52,75 @@ impl From<Vec<fidl_fuchsia_net_ext::Subnet>> for Addresses {
 }
 
 #[derive(serde::Serialize)]
-struct Features {
-    wlan: bool,
-    synthetic: bool,
-    loopback: bool,
+pub(crate) enum DeviceClass {
+    Loopback,
+    Virtual,
+    Ethernet,
+    Wlan,
+    Ppp,
+    Bridge,
+    WlanAp,
 }
 
-impl From<fidl_fuchsia_hardware_ethernet::Features> for Features {
-    fn from(features: fidl_fuchsia_hardware_ethernet::Features) -> Features {
-        Features {
-            wlan: features.contains(fidl_fuchsia_hardware_ethernet::Features::Wlan),
-            synthetic: features.contains(fidl_fuchsia_hardware_ethernet::Features::Synthetic),
-            loopback: features.contains(fidl_fuchsia_hardware_ethernet::Features::Loopback),
+impl From<fidl_fuchsia_net_interfaces::DeviceClass> for DeviceClass {
+    fn from(device_class: fidl_fuchsia_net_interfaces::DeviceClass) -> Self {
+        match device_class {
+            fidl_fuchsia_net_interfaces::DeviceClass::Loopback(
+                fidl_fuchsia_net_interfaces::Empty,
+            ) => Self::Loopback,
+            fidl_fuchsia_net_interfaces::DeviceClass::Device(device_class) => match device_class {
+                fidl_fuchsia_hardware_network::DeviceClass::Virtual => Self::Virtual,
+                fidl_fuchsia_hardware_network::DeviceClass::Ethernet => Self::Ethernet,
+                fidl_fuchsia_hardware_network::DeviceClass::Wlan => Self::Wlan,
+                fidl_fuchsia_hardware_network::DeviceClass::Ppp => Self::Ppp,
+                fidl_fuchsia_hardware_network::DeviceClass::Bridge => Self::Bridge,
+                fidl_fuchsia_hardware_network::DeviceClass::WlanAp => Self::WlanAp,
+            },
         }
     }
 }
 
-// Allow dead code for use in static assertion.
-#[allow(dead_code)]
-const fn all_known_features() -> u32 {
-    // It would be better not to use bits(), but the `|` operator on Features
-    // is not const.
-    fidl_fuchsia_hardware_ethernet::Features::Wlan.bits()
-        | fidl_fuchsia_hardware_ethernet::Features::Synthetic.bits()
-        | fidl_fuchsia_hardware_ethernet::Features::Loopback.bits()
-}
-
-// Assert that we exhaust every Feature bitflag in the above struct.
-static_assertions::const_assert_eq!(
-    all_known_features(),
-    fidl_fuchsia_hardware_ethernet::Features::all().bits(),
-);
-
 #[derive(serde::Serialize)]
-/// Intermediary struct for serializing InterfaceProperties into JSON.
-pub struct InterfaceView {
-    nicid: u64,
-    name: String,
-    topopath: String,
-    filepath: String,
-    mac: Option<fidl_fuchsia_net_ext::MacAddress>,
-    mtu: u32,
-    features: Features,
-    admin_up: bool,
-    link_up: bool,
-    addresses: Addresses,
+/// Intermediary struct for serializing interface properties into JSON.
+pub(crate) struct InterfaceView {
+    pub(crate) nicid: u64,
+    pub(crate) name: String,
+    pub(crate) device_class: DeviceClass,
+    pub(crate) online: bool,
+    pub(crate) addresses: Addresses,
+    pub(crate) mac: Option<fidl_fuchsia_net_ext::MacAddress>,
 }
 
-impl From<fidl_fuchsia_net_stack_ext::InterfaceInfo> for InterfaceView {
-    fn from(info: fidl_fuchsia_net_stack_ext::InterfaceInfo) -> InterfaceView {
-        let fidl_fuchsia_net_stack_ext::InterfaceInfo {
-            id,
-            properties:
-                fidl_fuchsia_net_stack_ext::InterfaceProperties {
-                    name,
-                    topopath,
-                    filepath,
-                    mac,
-                    mtu,
-                    features,
-                    administrative_status,
-                    physical_status,
-                    addresses,
-                },
-        } = info;
+impl From<(fidl_fuchsia_net_interfaces_ext::Properties, Option<fidl_fuchsia_net::MacAddress>)>
+    for InterfaceView
+{
+    fn from(
+        t: (fidl_fuchsia_net_interfaces_ext::Properties, Option<fidl_fuchsia_net::MacAddress>),
+    ) -> InterfaceView {
+        let (
+            fidl_fuchsia_net_interfaces_ext::Properties {
+                id,
+                name,
+                device_class,
+                online,
+                addresses,
+                has_default_ipv4_route: _,
+                has_default_ipv6_route: _,
+            },
+            mac,
+        ) = t;
         InterfaceView {
             nicid: id,
             name,
-            topopath,
-            filepath,
-            mac: mac.map(|fidl_fuchsia_hardware_ethernet_ext::MacAddress { octets }| {
-                fidl_fuchsia_net_ext::MacAddress { octets }
-            }),
-            mtu,
-            features: features.into(),
-            admin_up: match administrative_status {
-                fidl_fuchsia_net_stack_ext::AdministrativeStatus::ENABLED => true,
-                fidl_fuchsia_net_stack_ext::AdministrativeStatus::DISABLED => false,
-            },
-            link_up: match physical_status {
-                fidl_fuchsia_net_stack_ext::PhysicalStatus::UP => true,
-                fidl_fuchsia_net_stack_ext::PhysicalStatus::DOWN => false,
-            },
-            addresses: addresses.into(),
+            device_class: device_class.into(),
+            online,
+            addresses: addresses
+                .into_iter()
+                .map(|fidl_fuchsia_net_interfaces_ext::Address { addr, valid_until: _ }| {
+                    addr.into()
+                })
+                .into(),
+            mac: mac.map(Into::into),
         }
     }
 }

@@ -5,8 +5,10 @@
 use anyhow::{Context as _, Error};
 use fidl::endpoints::ProtocolMarker;
 use fidl_fuchsia_hardware_ethernet as fethernet;
+use fidl_fuchsia_net_debug as fdebug;
 use fidl_fuchsia_net_dhcp as fdhcp;
 use fidl_fuchsia_net_filter as ffilter;
+use fidl_fuchsia_net_interfaces as finterfaces;
 use fidl_fuchsia_net_neighbor as fneighbor;
 use fidl_fuchsia_net_stack as fstack;
 use fidl_fuchsia_netstack as fnetstack;
@@ -52,6 +54,13 @@ const NETSTACK_EXPOSED_DIR: &str =
 const DHCPD_EXPOSED_DIR: &str = "/hub-v2/children/core/children/network/children/dhcpd/exec/expose";
 
 #[async_trait::async_trait]
+impl net_cli::ServiceConnector<fdebug::InterfacesMarker> for Connector {
+    async fn connect(&self) -> Result<<fdebug::InterfacesMarker as ProtocolMarker>::Proxy, Error> {
+        connect_to_protocol_at::<fdebug::InterfacesMarker>(NETSTACK_EXPOSED_DIR)
+    }
+}
+
+#[async_trait::async_trait]
 impl net_cli::ServiceConnector<fdhcp::Server_Marker> for Connector {
     async fn connect(&self) -> Result<<fdhcp::Server_Marker as ProtocolMarker>::Proxy, Error> {
         connect_to_protocol_at::<fdhcp::Server_Marker>(DHCPD_EXPOSED_DIR)
@@ -62,6 +71,13 @@ impl net_cli::ServiceConnector<fdhcp::Server_Marker> for Connector {
 impl net_cli::ServiceConnector<ffilter::FilterMarker> for Connector {
     async fn connect(&self) -> Result<<ffilter::FilterMarker as ProtocolMarker>::Proxy, Error> {
         connect_to_protocol_at::<ffilter::FilterMarker>(NETSTACK_EXPOSED_DIR)
+    }
+}
+
+#[async_trait::async_trait]
+impl net_cli::ServiceConnector<finterfaces::StateMarker> for Connector {
+    async fn connect(&self) -> Result<<finterfaces::StateMarker as ProtocolMarker>::Proxy, Error> {
+        connect_to_protocol_at::<finterfaces::StateMarker>(NETSTACK_EXPOSED_DIR)
     }
 }
 

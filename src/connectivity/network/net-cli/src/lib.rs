@@ -5,9 +5,12 @@
 use anyhow::{Context as _, Error};
 use fidl_fuchsia_hardware_ethernet as fethernet;
 use fidl_fuchsia_net as fnet;
+use fidl_fuchsia_net_debug as fdebug;
 use fidl_fuchsia_net_dhcp as fdhcp;
 use fidl_fuchsia_net_ext as fnet_ext;
 use fidl_fuchsia_net_filter as ffilter;
+use fidl_fuchsia_net_interfaces as finterfaces;
+use fidl_fuchsia_net_interfaces_ext as finterfaces_ext;
 use fidl_fuchsia_net_neighbor as fneighbor;
 use fidl_fuchsia_net_neighbor_ext as fneighbor_ext;
 use fidl_fuchsia_net_stack as fstack;
@@ -20,6 +23,7 @@ use log::info;
 use netfilter::FidlReturn as _;
 use prettytable::{cell, format, row, Row, Table};
 use serde_json::{json, value::Value};
+use std::collections::hash_map::HashMap;
 use std::{iter::FromIterator as _, str::FromStr as _};
 
 mod opts;
@@ -58,8 +62,10 @@ pub trait ServiceConnector<S: fidl::endpoints::ProtocolMarker> {
 /// all FIDL dependencies required by net-cli.
 #[async_trait::async_trait]
 pub trait NetCliDepsConnector:
-    ServiceConnector<fdhcp::Server_Marker>
+    ServiceConnector<fdebug::InterfacesMarker>
+    + ServiceConnector<fdhcp::Server_Marker>
     + ServiceConnector<ffilter::FilterMarker>
+    + ServiceConnector<finterfaces::StateMarker>
     + ServiceConnector<fneighbor::ControllerMarker>
     + ServiceConnector<fneighbor::ViewMarker>
     + ServiceConnector<fnetstack::NetstackMarker>
@@ -119,60 +125,68 @@ pub async fn do_root<C: NetCliDepsConnector>(
     }
 }
 
-fn shortlist_interfaces(name_pattern: &str, interfaces: &mut Vec<fstack::InterfaceInfo>) {
-    interfaces.retain(|i| i.properties.name.contains(name_pattern))
+fn shortlist_interfaces(
+    name_pattern: &str,
+    interfaces: &mut HashMap<u64, finterfaces_ext::Properties>,
+) {
+    interfaces.retain(
+        |_: &u64,
+         finterfaces_ext::Properties {
+             id: _,
+             name,
+             device_class: _,
+             online: _,
+             addresses: _,
+             has_default_ipv4_route: _,
+             has_default_ipv6_route: _,
+         }| name.contains(name_pattern),
+    )
 }
 
 fn write_tabulated_interfaces_info<
     W: std::io::Write,
-    I: IntoIterator<Item = fstack::InterfaceInfo>,
+    I: IntoIterator<Item = ser::InterfaceView>,
 >(
     mut out: W,
     interfaces: I,
 ) -> Result<(), Error> {
     let mut t = Table::new();
     t.set_format(format::FormatBuilder::new().padding(2, 2).build());
-
-    for (i, info) in interfaces.into_iter().enumerate() {
+    for (i, ser::InterfaceView { nicid, name, device_class, online, addresses, mac }) in
+        interfaces.into_iter().enumerate()
+    {
         if i > 0 {
             let () = add_row(&mut t, row![]);
         }
 
-        let fstack_ext::InterfaceInfo {
-            id,
-            properties:
-                fstack_ext::InterfaceProperties {
-                    name,
-                    topopath,
-                    filepath,
-                    mac,
-                    mtu,
-                    features,
-                    administrative_status,
-                    physical_status,
-                    addresses,
-                },
-        } = info.into();
-
-        let () = add_row(&mut t, row!["nicid", id]);
+        let () = add_row(&mut t, row!["nicid", nicid]);
         let () = add_row(&mut t, row!["name", name]);
-        let () = add_row(&mut t, row!["topopath", topopath]);
-        let () = add_row(&mut t, row!["filepath", filepath]);
-
-        let () = if let Some(mac) = mac {
-            add_row(&mut t, row!["mac", mac])
-        } else {
-            add_row(&mut t, row!["mac", "-"])
-        };
-
-        let () = add_row(&mut t, row!["mtu", mtu]);
-        let () = add_row(&mut t, row!["features", format!("{:?}", features)]);
         let () = add_row(
             &mut t,
-            row!["status", format!("{} | {}", administrative_status, physical_status)],
+            row![
+                "device class",
+                match device_class {
+                    ser::DeviceClass::Loopback => "loopback",
+                    ser::DeviceClass::Virtual => "virtual",
+                    ser::DeviceClass::Ethernet => "ethernet",
+                    ser::DeviceClass::Wlan => "wlan",
+                    ser::DeviceClass::Ppp => "ppp",
+                    ser::DeviceClass::Bridge => "bridge",
+                    ser::DeviceClass::WlanAp => "wlan-ap",
+                }
+            ],
         );
-        for addr in addresses {
-            let () = add_row(&mut t, row!["addr", addr]);
+        let () = add_row(&mut t, row!["online", online]);
+        let ser::Addresses { ipv4, ipv6 } = addresses;
+        for ser::Subnet { addr, prefix_len } in ipv4 {
+            let () = add_row(&mut t, row!["addr", format!("{}/{}", addr, prefix_len)]);
+        }
+        for ser::Subnet { addr, prefix_len } in ipv6 {
+            let () = add_row(&mut t, row!["addr", format!("{}/{}", addr, prefix_len)]);
+        }
+        match mac {
+            None => add_row(&mut t, row!["mac", "-"]),
+            Some(mac) => add_row(&mut t, row!["mac", mac]),
         }
     }
     writeln!(out, "{}", t)?;
@@ -194,20 +208,36 @@ async fn do_if<W: std::io::Write, C: NetCliDepsConnector>(
 ) -> Result<(), Error> {
     match cmd {
         opts::IfEnum::List(opts::IfList { name_pattern, json }) => {
-            let stack = connect_with_context::<fstack::StackMarker, _>(connector).await?;
-            let mut response = stack.list_interfaces().await.context("error getting response")?;
+            let debug_interfaces =
+                connect_with_context::<fdebug::InterfacesMarker, _>(connector).await?;
+            let interface_state =
+                connect_with_context::<finterfaces::StateMarker, _>(connector).await?;
+            let stream = finterfaces_ext::event_stream_from_state(&interface_state)?;
+            let mut response = finterfaces_ext::existing(stream, HashMap::new()).await?;
             if let Some(name_pattern) = name_pattern {
                 let () = shortlist_interfaces(&name_pattern, &mut response);
             }
+            let response = response.into_values().map(|properties| async {
+                let finterfaces_ext::Properties { id, .. } = &properties;
+                let mac = debug_interfaces.get_mac(*id).await.context("call get_mac")?;
+                Ok::<_, Error>((properties, mac))
+            });
+            let response = futures::future::try_join_all(response).await?;
+            let mut response: Vec<_> = response
+                .into_iter()
+                .filter_map(|(properties, mac)| match mac {
+                    Err(fdebug::InterfacesGetMacError::NotFound) => None,
+                    Ok(mac) => {
+                        let mac = mac.map(|box_| *box_);
+                        Some((properties, mac).into())
+                    }
+                })
+                .collect();
+            let () = response.sort_by_key(|ser::InterfaceView { nicid, .. }| *nicid);
             if json {
-                let response: Vec<_> = response
-                    .into_iter()
-                    .map(fstack_ext::InterfaceInfo::from)
-                    .map(ser::InterfaceView::from)
-                    .collect();
                 serde_json::to_writer(out, &response).context("serialize")?;
             } else {
-                write_tabulated_interfaces_info(out, response)
+                write_tabulated_interfaces_info(out, response.into_iter())
                     .context("error tabulating interface info")?;
             }
         }
@@ -233,11 +263,34 @@ async fn do_if<W: std::io::Write, C: NetCliDepsConnector>(
             info!("Deleted interface {}", id);
         }
         opts::IfEnum::Get(opts::IfGet { id }) => {
-            let stack = connect_with_context::<fstack::StackMarker, _>(connector).await?;
-            let info =
-                fstack_ext::exec_fidl!(stack.get_interface_info(id), "error getting interface")?;
-            write_tabulated_interfaces_info(out, std::iter::once(info))
-                .context("error tabulating interface info")?;
+            let debug_interfaces =
+                connect_with_context::<fdebug::InterfacesMarker, _>(connector).await?;
+            let interface_state =
+                connect_with_context::<finterfaces::StateMarker, _>(connector).await?;
+            let stream = finterfaces_ext::event_stream_from_state(&interface_state)?;
+            let response =
+                finterfaces_ext::existing(stream, finterfaces_ext::InterfaceState::Unknown(id))
+                    .await?;
+            match response {
+                finterfaces_ext::InterfaceState::Unknown(id) => {
+                    return Err(anyhow::anyhow!("interface with id={} not found", id));
+                }
+                finterfaces_ext::InterfaceState::Known(properties) => {
+                    let finterfaces_ext::Properties { id, .. } = &properties;
+                    let mac = debug_interfaces.get_mac(*id).await.context("call get_mac")?;
+                    match mac {
+                        Err(fdebug::InterfacesGetMacError::NotFound) => {
+                            return Err(anyhow::anyhow!("interface with id={} not found", id));
+                        }
+                        Ok(mac) => {
+                            let mac = mac.map(|box_| *box_);
+                            let view = (properties, mac).into();
+                            write_tabulated_interfaces_info(out, std::iter::once(view))
+                                .context("error tabulating interface info")?;
+                        }
+                    };
+                }
+            }
         }
         opts::IfEnum::IpForward(opts::IfIpForward { cmd }) => {
             let stack = connect_with_context::<fstack::StackMarker, _>(connector).await?;
@@ -1054,6 +1107,7 @@ mod tests {
 
     use anyhow::Error;
     use fidl::endpoints::ProtocolMarker;
+    use fidl_fuchsia_hardware_network as fhardware_network;
     use fuchsia_async::{self as fasync, TimeoutExt as _};
     use net_declare::{fidl_mac, fidl_subnet};
     use std::convert::TryFrom as _;
@@ -1067,15 +1121,32 @@ mod tests {
 
     #[derive(Default)]
     struct TestConnector {
+        debug_interfaces: Option<fdebug::InterfacesProxy>,
         dhcpd: Option<fdhcp::Server_Proxy>,
+        interfaces_state: Option<finterfaces::StateProxy>,
         netstack: Option<fnetstack::NetstackProxy>,
         stack: Option<fstack::StackProxy>,
     }
 
     #[async_trait::async_trait]
+    impl ServiceConnector<fdebug::InterfacesMarker> for TestConnector {
+        async fn connect(
+            &self,
+        ) -> Result<<fdebug::InterfacesMarker as ProtocolMarker>::Proxy, Error> {
+            let Self { debug_interfaces, dhcpd: _, interfaces_state: _, netstack: _, stack: _ } =
+                self;
+            debug_interfaces
+                .as_ref()
+                .cloned()
+                .ok_or(anyhow::anyhow!("connector has no dhcp server instance"))
+        }
+    }
+
+    #[async_trait::async_trait]
     impl ServiceConnector<fdhcp::Server_Marker> for TestConnector {
         async fn connect(&self) -> Result<<fdhcp::Server_Marker as ProtocolMarker>::Proxy, Error> {
-            let Self { dhcpd, netstack: _, stack: _ } = self;
+            let Self { debug_interfaces: _, dhcpd, interfaces_state: _, netstack: _, stack: _ } =
+                self;
             dhcpd.as_ref().cloned().ok_or(anyhow::anyhow!("connector has no dhcp server instance"))
         }
     }
@@ -1084,6 +1155,20 @@ mod tests {
     impl ServiceConnector<ffilter::FilterMarker> for TestConnector {
         async fn connect(&self) -> Result<<ffilter::FilterMarker as ProtocolMarker>::Proxy, Error> {
             Err(anyhow::anyhow!("connect filter unimplemented for test connector"))
+        }
+    }
+
+    #[async_trait::async_trait]
+    impl ServiceConnector<finterfaces::StateMarker> for TestConnector {
+        async fn connect(
+            &self,
+        ) -> Result<<finterfaces::StateMarker as ProtocolMarker>::Proxy, Error> {
+            let Self { debug_interfaces: _, dhcpd: _, interfaces_state, netstack: _, stack: _ } =
+                self;
+            interfaces_state
+                .as_ref()
+                .cloned()
+                .ok_or(anyhow::anyhow!("connector has no interfaces state instance"))
         }
     }
 
@@ -1108,7 +1193,8 @@ mod tests {
         async fn connect(
             &self,
         ) -> Result<<fnetstack::NetstackMarker as ProtocolMarker>::Proxy, Error> {
-            let Self { dhcpd: _, netstack, stack: _ } = self;
+            let Self { debug_interfaces: _, dhcpd: _, interfaces_state: _, netstack, stack: _ } =
+                self;
             netstack.as_ref().cloned().ok_or(anyhow::anyhow!("connector has no netstack instance"))
         }
     }
@@ -1123,7 +1209,8 @@ mod tests {
     #[async_trait::async_trait]
     impl ServiceConnector<fstack::StackMarker> for TestConnector {
         async fn connect(&self) -> Result<<fstack::StackMarker as ProtocolMarker>::Proxy, Error> {
-            let Self { dhcpd: _, netstack: _, stack } = self;
+            let Self { debug_interfaces: _, dhcpd: _, interfaces_state: _, netstack: _, stack } =
+                self;
             stack.as_ref().cloned().ok_or(anyhow::anyhow!("connector has no stack instance"))
         }
     }
@@ -1139,39 +1226,80 @@ mod tests {
         s.trim().lines().map(|s| s.trim()).collect::<Vec<&str>>().join("\n")
     }
 
-    fn get_fake_interface(id: u64, name: &str, mac: Option<[u8; 6]>) -> fstack::InterfaceInfo {
-        fstack::InterfaceInfo {
-            id,
-            properties: fstack::InterfaceProperties {
+    fn get_fake_interface(
+        id: u64,
+        name: &'static str,
+        device_class: finterfaces::DeviceClass,
+        octets: Option<[u8; 6]>,
+    ) -> (finterfaces_ext::Properties, Option<fnet::MacAddress>) {
+        (
+            finterfaces_ext::Properties {
+                id,
                 name: name.to_string(),
-                topopath: "loopback".to_string(),
-                filepath: "[none]".to_string(),
-                mac: mac.map(|octets| Box::new(fethernet::MacAddress { octets })),
-                mtu: 65536,
-                features: fethernet::Features::Loopback,
-                administrative_status: fstack::AdministrativeStatus::Enabled,
-                physical_status: fstack::PhysicalStatus::Up,
-                addresses: vec![],
+                device_class,
+                online: true,
+                addresses: Vec::new(),
+                has_default_ipv4_route: false,
+                has_default_ipv6_route: false,
             },
-        }
-    }
-
-    fn get_fake_interfaces() -> Vec<fstack::InterfaceInfo> {
-        vec![
-            get_fake_interface(1, "lo", None),
-            get_fake_interface(10, "eth001", Some([1, 2, 3, 4, 5, 6])),
-            get_fake_interface(20, "eth002", Some([1, 2, 3, 4, 5, 7])),
-            get_fake_interface(30, "eth003", Some([1, 2, 3, 4, 5, 8])),
-            get_fake_interface(100, "wlan001", Some([2, 2, 3, 4, 5, 6])),
-            get_fake_interface(200, "wlan002", Some([2, 2, 3, 4, 5, 7])),
-            get_fake_interface(300, "wlan003", Some([2, 2, 3, 4, 5, 8])),
-        ]
+            octets.map(|octets| fnet::MacAddress { octets }),
+        )
     }
 
     fn shortlist_interfaces_by_nicid(name_pattern: &str) -> Vec<u64> {
-        let mut interfaces = get_fake_interfaces();
+        let mut interfaces = IntoIterator::into_iter([
+            get_fake_interface(
+                1,
+                "lo",
+                finterfaces::DeviceClass::Loopback(finterfaces::Empty),
+                None,
+            ),
+            get_fake_interface(
+                10,
+                "eth001",
+                finterfaces::DeviceClass::Device(fhardware_network::DeviceClass::Ethernet),
+                Some([1, 2, 3, 4, 5, 6]),
+            ),
+            get_fake_interface(
+                20,
+                "eth002",
+                finterfaces::DeviceClass::Device(fhardware_network::DeviceClass::Ethernet),
+                Some([1, 2, 3, 4, 5, 7]),
+            ),
+            get_fake_interface(
+                30,
+                "eth003",
+                finterfaces::DeviceClass::Device(fhardware_network::DeviceClass::Ethernet),
+                Some([1, 2, 3, 4, 5, 8]),
+            ),
+            get_fake_interface(
+                100,
+                "wlan001",
+                finterfaces::DeviceClass::Device(fhardware_network::DeviceClass::Wlan),
+                Some([2, 2, 3, 4, 5, 6]),
+            ),
+            get_fake_interface(
+                200,
+                "wlan002",
+                finterfaces::DeviceClass::Device(fhardware_network::DeviceClass::Wlan),
+                Some([2, 2, 3, 4, 5, 7]),
+            ),
+            get_fake_interface(
+                300,
+                "wlan003",
+                finterfaces::DeviceClass::Device(fhardware_network::DeviceClass::Wlan),
+                Some([2, 2, 3, 4, 5, 8]),
+            ),
+        ])
+        .map(|(properties, _): (_, Option<fnet::MacAddress>)| {
+            let finterfaces_ext::Properties { id, .. } = &properties;
+            (*id, properties)
+        })
+        .collect();
         let () = shortlist_interfaces(name_pattern, &mut interfaces);
-        interfaces.into_iter().map(|i| i.id).collect()
+        let mut interfaces: Vec<_> = interfaces.into_keys().collect();
+        let () = interfaces.sort();
+        interfaces
     }
 
     #[test]
@@ -1326,40 +1454,35 @@ mod tests {
             {
                 "addresses": {
                     "ipv4": [],
-                    "ipv6": []
+                    "ipv6": [],
                 },
-                "admin_up": true,
-                "features": {
-                    "loopback": true,
-                    "synthetic": false,
-                    "wlan": false,
-                },
-                "filepath": "[none]",
-                "link_up": true,
-                "mac": null,
-                "mtu": 65536,
+                "device_class": "Loopback",
+                "mac": "00:00:00:00:00:00",
                 "name": "lo",
                 "nicid": 1,
-                "topopath": "loopback"
-                },
+                "online": true,
+            },
             {
                 "addresses": {
                     "ipv4": [],
-                    "ipv6": []
+                    "ipv6": [],
                 },
-                "admin_up": true,
-                "features": {
-                    "loopback": true,
-                    "synthetic": false,
-                    "wlan": false,
-                },
-                "filepath": "[none]",
-                "link_up": true,
+                "device_class": "Ethernet",
                 "mac": "01:02:03:04:05:06",
-                "mtu": 65536,
                 "name": "eth001",
                 "nicid": 10,
-                "topopath": "loopback"
+                "online": true,
+            },
+            {
+                "addresses": {
+                    "ipv4": [],
+                    "ipv6": [],
+                },
+                "device_class": "Virtual",
+                "mac": null,
+                "name": "virt001",
+                "nicid": 20,
+                "online": true,
             },
         ])
         .to_string()
@@ -1368,23 +1491,24 @@ mod tests {
     fn wanted_net_if_list_tabular() -> String {
         String::from(
             r#"
-nicid       1
-name        lo
-topopath    loopback
-filepath    [none]
-mac         -
-mtu         65536
-features    Loopback
-status      ENABLED | LINK_UP
+nicid           1
+name            lo
+device class    loopback
+online          true
+mac             00:00:00:00:00:00
 
-nicid       10
-name        eth001
-topopath    loopback
-filepath    [none]
-mac         01:02:03:04:05:06
-mtu         65536
-features    Loopback
-status      ENABLED | LINK_UP"#,
+nicid           10
+name            eth001
+device class    ethernet
+online          true
+mac             01:02:03:04:05:06
+
+nicid           20
+name            virt001
+device class    virtual
+online          true
+mac             -
+"#,
         )
     }
 
@@ -1392,33 +1516,121 @@ status      ENABLED | LINK_UP"#,
     #[test_case(false, wanted_net_if_list_tabular() ; "in tabular format")]
     #[fasync::run_singlethreaded(test)]
     async fn if_list(json: bool, wanted_output: String) {
-        let (stack_controller, mut stack_requests) =
-            fidl::endpoints::create_proxy_and_stream::<fstack::StackMarker>().unwrap();
-        let connector = TestConnector { stack: Some(stack_controller), ..Default::default() };
+        let (debug_interfaces, debug_interfaces_stream) =
+            fidl::endpoints::create_proxy_and_stream::<fdebug::InterfacesMarker>().unwrap();
+        let (interfaces_state, interfaces_state_stream) =
+            fidl::endpoints::create_proxy_and_stream::<finterfaces::StateMarker>().unwrap();
 
         let mut output: Vec<u8> = Vec::new();
 
-        let do_if_fut = do_if(
-            &mut output,
-            opts::IfEnum::List(opts::IfList { name_pattern: None, json }),
-            &connector,
-        );
-        let requests_fut = async {
-            let responder = stack_requests
-                .try_next()
-                .await
-                .expect("stack FIDL error")
-                .expect("request stream should not have ended")
-                .into_list_interfaces()
-                .expect("request should be of type ListInterfaces");
-            let () = responder
-                .send(&mut get_fake_interfaces().iter_mut().take(2))
-                .expect("responder.send should succeed");
-            Ok(())
-        };
-        let ((), ()) = futures::future::try_join(do_if_fut, requests_fut)
+        let do_if_fut = async {
+            let connector = TestConnector {
+                debug_interfaces: Some(debug_interfaces),
+                interfaces_state: Some(interfaces_state),
+                ..Default::default()
+            };
+            do_if(
+                &mut output,
+                opts::IfEnum::List(opts::IfList { name_pattern: None, json }),
+                &connector,
+            )
+            .map(|res| res.expect("if list"))
             .await
-            .expect("listing interfaces should succeed");
+        };
+        let watcher_stream = interfaces_state_stream
+            .and_then(|req| match req {
+                finterfaces::StateRequest::GetWatcher {
+                    options: _,
+                    watcher,
+                    control_handle: _,
+                } => futures::future::ready(watcher.into_stream()),
+            })
+            .try_flatten()
+            .map(|res| res.expect("watcher stream error"));
+        let (interfaces, mac_addresses): (Vec<_>, HashMap<_, _>) = IntoIterator::into_iter([
+            get_fake_interface(
+                1,
+                "lo",
+                finterfaces::DeviceClass::Loopback(finterfaces::Empty),
+                Some([0, 0, 0, 0, 0, 0]),
+            ),
+            get_fake_interface(
+                10,
+                "eth001",
+                finterfaces::DeviceClass::Device(fhardware_network::DeviceClass::Ethernet),
+                Some([1, 2, 3, 4, 5, 6]),
+            ),
+            get_fake_interface(
+                20,
+                "virt001",
+                finterfaces::DeviceClass::Device(fhardware_network::DeviceClass::Virtual),
+                None,
+            ),
+        ])
+        .map(|(properties, mac)| {
+            let finterfaces_ext::Properties { id, .. } = &properties;
+            let id = *id;
+            (properties, (id, mac))
+        })
+        .unzip();
+        let interfaces =
+            futures::stream::iter(interfaces.into_iter().map(Some).chain(std::iter::once(None)));
+        let watcher_fut = watcher_stream.zip(interfaces).for_each(|(req, properties)| match req {
+            finterfaces::WatcherRequest::Watch { responder } => {
+                let mut event = properties.map_or(
+                    finterfaces::Event::Idle(finterfaces::Empty),
+                    |finterfaces_ext::Properties {
+                         id,
+                         name,
+                         device_class,
+                         online,
+                         addresses,
+                         has_default_ipv4_route,
+                         has_default_ipv6_route,
+                     }| {
+                        finterfaces::Event::Existing(finterfaces::Properties {
+                            id: Some(id),
+                            name: Some(name),
+                            device_class: Some(device_class),
+                            online: Some(online),
+                            addresses: Some(
+                                addresses
+                                    .into_iter()
+                                    .map(|finterfaces_ext::Address { addr, valid_until }| {
+                                        finterfaces::Address {
+                                            addr: Some(addr),
+                                            valid_until: Some(valid_until),
+                                            ..finterfaces::Address::EMPTY
+                                        }
+                                    })
+                                    .collect(),
+                            ),
+                            has_default_ipv4_route: Some(has_default_ipv4_route),
+                            has_default_ipv6_route: Some(has_default_ipv6_route),
+                            ..finterfaces::Properties::EMPTY
+                        })
+                    },
+                );
+                let () = responder.send(&mut event).expect("send watcher event");
+                futures::future::ready(())
+            }
+        });
+        let debug_fut = debug_interfaces_stream
+            .map(|res| res.expect("debug interfaces stream error"))
+            .for_each_concurrent(None, |req| {
+                let (id, responder) = req.into_get_mac().expect("get_mac request");
+                let () = responder
+                    .send(
+                        &mut mac_addresses
+                            .get(&id)
+                            .copied()
+                            .map(|option| option.map(Box::new))
+                            .ok_or(fdebug::InterfacesGetMacError::NotFound),
+                    )
+                    .expect("send get_mac response");
+                futures::future::ready(())
+            });
+        let ((), (), ()) = futures::future::join3(do_if_fut, watcher_fut, debug_fut).await;
 
         let got_output: &str = std::str::from_utf8(&output).unwrap();
 

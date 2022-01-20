@@ -9,14 +9,18 @@ use anyhow::Context as _;
 use ffx_core::ffx_plugin;
 use fidl::endpoints::ProtocolMarker;
 use fidl_fuchsia_developer_remotecontrol as fremotecontrol;
+use fidl_fuchsia_net_debug as fdebug;
 use fidl_fuchsia_net_dhcp as fdhcp;
 use fidl_fuchsia_net_filter as ffilter;
+use fidl_fuchsia_net_interfaces as finterfaces;
 use fidl_fuchsia_net_neighbor as fneighbor;
 use fidl_fuchsia_net_stack as fstack;
 use fidl_fuchsia_netstack as fnetstack;
 
+const DEBUG_SELECTOR_SUFFIX: &str = "/netstack:expose:fuchsia.net.debug.Interfaces";
 const DHCPD_SELECTOR_SUFFIX: &str = "/dhcpd:expose:fuchsia.net.dhcp.Server";
 const FILTER_SELECTOR_SUFFIX: &str = "/netstack:expose:fuchsia.net.filter.Filter";
+const INTERFACES_SELECTOR_SUFFIX: &str = "/netstack:expose:fuchsia.net.interfaces.State";
 const NEIGHBOR_CONTROLLER_SELECTOR_SUFFIX: &str =
     "/netstack:expose:fuchsia.net.neighbor.Controller";
 const NEIGHBOR_VIEW_SELECTOR_SUFFIX: &str = "/netstack:expose:fuchsia.net.neighbor.View";
@@ -55,6 +59,15 @@ impl FfxConnector<'_> {
 }
 
 #[async_trait::async_trait]
+impl net_cli::ServiceConnector<fdebug::InterfacesMarker> for FfxConnector<'_> {
+    async fn connect(
+        &self,
+    ) -> Result<<fdebug::InterfacesMarker as ProtocolMarker>::Proxy, anyhow::Error> {
+        self.remotecontrol_connect::<fdebug::InterfacesMarker>(DEBUG_SELECTOR_SUFFIX).await
+    }
+}
+
+#[async_trait::async_trait]
 impl net_cli::ServiceConnector<fdhcp::Server_Marker> for FfxConnector<'_> {
     async fn connect(
         &self,
@@ -69,6 +82,15 @@ impl net_cli::ServiceConnector<ffilter::FilterMarker> for FfxConnector<'_> {
         &self,
     ) -> Result<<ffilter::FilterMarker as ProtocolMarker>::Proxy, anyhow::Error> {
         self.remotecontrol_connect::<ffilter::FilterMarker>(FILTER_SELECTOR_SUFFIX).await
+    }
+}
+
+#[async_trait::async_trait]
+impl net_cli::ServiceConnector<finterfaces::StateMarker> for FfxConnector<'_> {
+    async fn connect(
+        &self,
+    ) -> Result<<finterfaces::StateMarker as ProtocolMarker>::Proxy, anyhow::Error> {
+        self.remotecontrol_connect::<finterfaces::StateMarker>(INTERFACES_SELECTOR_SUFFIX).await
     }
 }
 
