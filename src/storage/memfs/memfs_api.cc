@@ -98,24 +98,6 @@ struct memfs_filesystem {
         });
   }
 
-  // Forces deletion of the memfs object immediately without synchronizing with the memfs thread.
-  //
-  // This can only be called if the dispatcher it was created with is already shut down or
-  // guaranteed not to run again (in these case the normal shutdown path can't be used because it
-  // will synthronize with it).
-  //
-  // TODO(fxbug.dev/91477): Remove this function.
-  void ForceSyncTearDownUnsafe() {
-    ZX_DEBUG_ASSERT(memfs_);
-
-    if (!mounted_path_.empty()) {
-      // If unmounting fails we continue with tear-down since there's not much else to do.
-      fdio_ns_unbind(namespace_, mounted_path_.c_str());
-    }
-
-    memfs_.reset();
-  }
-
   // The channel to the root directory of the filesystem. Users can move this out, close it, or use
   // in-place as they need.
   //
@@ -163,15 +145,6 @@ zx_status_t memfs_install_at(async_dispatcher_t* dispatcher, const char* path,
     return status;
 
   *out_fs = new memfs_filesystem_t(std::move(*setup_or));
-  return ZX_OK;
-}
-
-zx_status_t memfs_uninstall_unsafe(memfs_filesystem_t* fs, const char* path) {
-  ZX_DEBUG_ASSERT(fs);
-
-  fs->ForceSyncTearDownUnsafe();
-
-  delete fs;
   return ZX_OK;
 }
 

@@ -14,57 +14,44 @@ __BEGIN_CDECLS
 
 typedef struct memfs_filesystem memfs_filesystem_t;
 
-// Given an async dispatcher, create an in-memory filesystem.
+// Create an in-memory filesystem. It will run on the given dispatcher.
 //
-// The number of pages in this memfs is bounded by the amount of
-// available physical memory.
+// The number of pages in this memfs is bounded by the amount of available physical memory.
 //
-// Returns the MemFS filesystem object in |out_fs|. This object
-// must be freed by memfs_free_filesystem.
+// Returns the MemFS filesystem object in |out_fs|. This object must be freed by
+// memfs_free_filesystem().
 //
-// Returns a handle to the root directory in |out_root|.
+// Returns a handle to the root directory in |out_root|. The caller can install it in the local
+// namespace (mount it at a given path for the current process) or use it directly for file
+// operations. Many callers will want to install it in the local namespace and can use
+// memfs_install_at() for convenience instead of this function.
 __EXPORT zx_status_t memfs_create_filesystem(async_dispatcher_t* dispatcher,
                                              memfs_filesystem_t** out_fs, zx_handle_t* out_root);
 
-// Frees a MemFS filesystem, unmounting any sub-filesystems that
-// may exist.
+// Creates an in-memory filesystem and installs it into the local namespace at the given path.
+// This is an alternative to memfs_create_filesystem() for convenience; see that function for
+// more.
 //
-// Requires that the async handler dispatcher provided to
-// |memfs_create_filesystem| still be running.
+// Returns the MemFS filesystem object in |out_fs|. This object must be freed by
+// memfs_free_filesystem().
 //
-// Signals the optional argument |unmounted| when memfs has torn down.
-__EXPORT void memfs_free_filesystem(memfs_filesystem_t* fs, sync_completion_t* unmounted);
-
-// Creates an in-memory filesystem and installs it into the local namespace at
-// the given path.
-//
-// Operations on the filesystem are serviced by the given async dispatcher.
-//
-// Returns the MemFS filesystem object in |out_fs|.  This object may be freed by
-// memfs_uninstall_unsafe. See memfs_uninstall_unsafe for how to avoid use-after-free bugs when
-// freeing that memory.
-//
-// The number of pages in this memfs is bounded by the amount of
-// available physical memory.
-//
-// Returns |ZX_ERR_ALREADY_EXISTS| if |path| already exists in the namespace for
-// this process.
+// Returns |ZX_ERR_ALREADY_EXISTS| if |path| already exists in the namespace for this process.
 __EXPORT zx_status_t memfs_install_at(async_dispatcher_t* dispatcher, const char* path,
                                       memfs_filesystem_t** out_fs);
 
-// Removes the in-memory filesystem |fs| installed into the local namespace at |path|.
+// Frees a MemFS filesystem, unmounting any sub-filesystems that may exist. If memfs_install_at()
+// was used, the installation in the local namespace will be removed before this function returns.
 //
-// If there are pending operations on the file system, uninstalling the file system can result in a
-// use-after-free. To avoid this problem, the caller must shutdown the async_dispatcher_t passed to
-// memfs_install_at before calling memfs_uninstall_unsafe.
+// Requires that the async handler dispatcher provided to memfs_create_filesystem() or
+// memfs_install_at() still be running. Otherwise the completion argument will never be signaled.
 //
-// Typically, memfs_uninstall_unsafe is only useful in unit tests where the caller has complete
-// control over all pending operations. In production code, prefer to clean up by exiting the
-// process.
-//
-// On error, |fs| is not freed.  Errors may include all errors from fdio_ns_unbind and
-// fdio_ns_get_installed.
-__EXPORT zx_status_t memfs_uninstall_unsafe(memfs_filesystem_t* fs, const char* path);
+// Signals the optional argument |unmounted| when memfs has torn down. If this is null the
+// filesystem will still be torn down asynchronously (possibly in the future) which requires that
+// the dispatcher still be running. Because the caller can't know when minfs is done cleaning
+// up without the completion signal, passing null is only recommended when the dispatcher runs
+// for the duration of the process (typically minfs cleanup is not required if the process is
+// exiting).
+__EXPORT void memfs_free_filesystem(memfs_filesystem_t* fs, sync_completion_t* unmounted);
 
 __END_CDECLS
 

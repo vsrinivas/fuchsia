@@ -1,4 +1,3 @@
 memfs_create_filesystem
 memfs_free_filesystem
 memfs_install_at
-memfs_uninstall_unsafe
