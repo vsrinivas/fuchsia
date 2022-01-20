@@ -29,23 +29,16 @@ class BuildEnvTest(TestCaseWithFactory):
         build_dir = os.path.join(fuchsia_dir, 'build_dir')
         self.host.mkdir(build_dir)
 
-        # No $FUCHSIA_DIR/out/default/host_x64/symbolize
-        symbolizer_exec = os.path.join(build_dir, 'host_x64', 'symbolize')
+        # No $FUCHSIA_DIR/out/default/host_x64/symbolizer
+        symbolizer_exec = os.path.join(build_dir, 'host_x64', 'symbolizer')
         self.assertError(
             lambda: buildenv.configure(build_dir),
             'Invalid symbolizer executable: {}'.format(symbolizer_exec))
         self.host.touch(symbolizer_exec)
 
-        # No $FUCHSIA_DIR/prebuild/third_party/clang/bin/llvm-symbolizer
+        # No $FUCHSIA_DIR/.../.build-id
         clang_dir = os.path.join(
             fuchsia_dir, 'prebuilt', 'third_party', 'clang', self.host.platform)
-        llvm_symbolizer = os.path.join(clang_dir, 'bin', 'llvm-symbolizer')
-        self.assertError(
-            lambda: buildenv.configure(build_dir),
-            'Invalid LLVM symbolizer: {}'.format(llvm_symbolizer))
-        self.host.touch(llvm_symbolizer)
-
-        # No $FUCHSIA_DIR/.../.build-id
         build_id_dirs = [
             os.path.join(clang_dir, 'lib', 'debug', '.build-id'),
             os.path.join(build_dir, '.build-id'),
@@ -78,10 +71,7 @@ class BuildEnvTest(TestCaseWithFactory):
         self.assertEqual(buildenv.build_dir, buildenv.abspath(build_dir))
         self.assertEqual(
             buildenv.symbolizer_exec,
-            buildenv.abspath(build_dir + '/host_x64/symbolize'))
-        self.assertEqual(
-            buildenv.llvm_symbolizer,
-            buildenv.abspath(clang_dir + '/bin/llvm-symbolizer'))
+            buildenv.abspath(build_dir + '/host_x64/symbolizer'))
         self.assertEqual(
             buildenv.build_id_dirs, [
                 buildenv.abspath(clang_dir + '/lib/debug/.build-id'),

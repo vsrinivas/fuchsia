@@ -186,12 +186,9 @@ class TestCaseWithFactory(TestCaseWithIO):
             ssh=True)
 
     def symbolize_cmd(self):
-        cmd = [
-            self.buildenv.symbolizer_exec, '-llvm-symbolizer',
-            self.buildenv.llvm_symbolizer
-        ]
+        cmd = [self.buildenv.symbolizer_exec]
         for build_id_dir in self.buildenv.build_id_dirs:
-            cmd += ['-build-id-dir', build_id_dir]
+            cmd += ['--build-id-dir', build_id_dir]
         return cmd
 
     def infra_testrunner_cmd(self, out_dir, test_file):

@@ -24,7 +24,6 @@ class BuildEnv(object):
       cli:              Associated CLI object.
       build_dir:        Path to the Fuchsia build output.
       symbolizer_exec:  Path to the Fuchsia symbolizer executable.
-      llvm_symbolizer:  Path to the LLVM/Clang symbolizer library.
       build_id_dirs:    List of paths to symbolizer debug symbols.
       gsutil:           Path to the Google Cloud Storage utility.
       llvm_cov:         Path to the LLVM/Clang coverage tool.
@@ -41,7 +40,6 @@ class BuildEnv(object):
         self._fuchsia_dir = fuchsia_dir
         self._build_dir = None
         self._symbolizer_exec = None
-        self._llvm_symbolizer = None
         self._build_id_dirs = None
         self._gsutil = None
         self._llvm_cov = None
@@ -73,19 +71,6 @@ class BuildEnv(object):
             self.host.error(
                 'Invalid symbolizer executable: {}'.format(symbolizer_exec))
         self._symbolizer_exec = symbolizer_exec
-
-    @property
-    def llvm_symbolizer(self):
-        assert self._llvm_symbolizer, 'LLVM symbolizer not set.'
-        return self._llvm_symbolizer
-
-    @llvm_symbolizer.setter
-    def llvm_symbolizer(self, llvm_symbolizer):
-        llvm_symbolizer = self.abspath(llvm_symbolizer)
-        if not self.host.isfile(llvm_symbolizer):
-            self.host.error(
-                'Invalid LLVM symbolizer: {}'.format(llvm_symbolizer))
-        self._llvm_symbolizer = llvm_symbolizer
 
     @property
     def build_id_dirs(self):
@@ -153,8 +138,7 @@ class BuildEnv(object):
         """Sets multiple properties based on the given build directory."""
         self._build_dir = self.abspath(build_dir)
         clang_dir = '//prebuilt/third_party/clang/' + self.host.platform
-        self.symbolizer_exec = build_dir + '/host_x64/symbolize'
-        self.llvm_symbolizer = clang_dir + '/bin/llvm-symbolizer'
+        self.symbolizer_exec = build_dir + '/host_x64/symbolizer'
         self.build_id_dirs = [
             clang_dir + '/lib/debug/.build-id',
             build_dir + '/.build-id',
@@ -376,11 +360,11 @@ class BuildEnv(object):
         Returns:
             Bytes representing symbolized lines.
         """
-        cmd = [self.symbolizer_exec, '-llvm-symbolizer', self.llvm_symbolizer]
+        cmd = [self.symbolizer_exec]
         for build_id_dir in self.build_id_dirs:
-            cmd += ['-build-id-dir', build_id_dir]
+            cmd += ['--build-id-dir', build_id_dir]
         if json_output:
-            cmd += ['-json-output', json_output]
+            cmd += ['--json-output', json_output]
         process = self.host.create_process(cmd)
         process.stdin = subprocess.PIPE
         process.stdout = subprocess.PIPE

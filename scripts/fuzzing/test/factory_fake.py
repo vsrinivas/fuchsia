@@ -44,10 +44,7 @@ class FakeFactory(Factory):
         build_dir = buildenv.abspath(fuchsia_dir, "build_dir")
         self.host.mkdir(build_dir)
         self.host.cwd = build_dir
-        self.host.touch(build_dir + '/host_x64/symbolize')
-        self.host.touch(
-            '{}/prebuilt/third_party/clang/{}/bin/llvm-symbolizer'.format(
-                fuchsia_dir, self.host.platform))
+        self.host.touch(build_dir + '/host_x64/symbolizer')
         self.host.mkdir(
             '{}/prebuilt/third_party/clang/{}/lib/debug/.build-id'.format(
                 fuchsia_dir, self.host.platform))
