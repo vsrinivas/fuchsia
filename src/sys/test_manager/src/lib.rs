@@ -16,10 +16,10 @@ use {
     fidl::prelude::*,
     fidl_fuchsia_component_decl as fdecl,
     fidl_fuchsia_component_test::Capability2 as RBCapability,
-    fidl_fuchsia_data as fdata, fidl_fuchsia_debugdata as fdebugdata,
-    fidl_fuchsia_diagnostics as fdiagnostics, fidl_fuchsia_io as fio, fidl_fuchsia_mem as fmem,
-    fidl_fuchsia_sys as fv1sys, fidl_fuchsia_sys2 as fsys, fidl_fuchsia_test as ftest,
-    fidl_fuchsia_test_internal as ftest_internal, fidl_fuchsia_test_manager as ftest_manager,
+    fidl_fuchsia_debugdata as fdebugdata, fidl_fuchsia_diagnostics as fdiagnostics,
+    fidl_fuchsia_io as fio, fidl_fuchsia_sys as fv1sys, fidl_fuchsia_sys2 as fsys,
+    fidl_fuchsia_test as ftest, fidl_fuchsia_test_internal as ftest_internal,
+    fidl_fuchsia_test_manager as ftest_manager,
     fsys::ComponentResolverProxy,
     ftest::Invocation,
     ftest_manager::{
@@ -67,6 +67,7 @@ use {
 mod debug_data_server;
 mod diagnostics;
 mod error;
+mod facet;
 mod resolver;
 
 pub const TEST_ROOT_REALM_NAME: &'static str = "test_root";
@@ -96,7 +97,6 @@ lazy_static! {
     .copied()
     .collect();
 }
-const TEST_TYPE_FACET_KEY: &'static str = "fuchsia.test.type";
 
 struct TestMapValue {
     test_url: String,
@@ -1127,55 +1127,6 @@ impl Drop for ScopedTestMapEntry {
     }
 }
 
-fn get_test_realm(decl: &fdecl::Component) -> Result<&'static str, FacetError> {
-    if let Some(obj) = &decl.facets {
-        let entries = match &obj.entries {
-            Some(e) => e,
-            None => return Ok(HERMETIC_TESTS_COLLECTION),
-        };
-        for entry in entries {
-            if entry.key == TEST_TYPE_FACET_KEY {
-                let test_type =
-                    entry.value.as_ref().ok_or(FacetError::NullFacet(TEST_TYPE_FACET_KEY))?;
-                match test_type.as_ref() {
-                    fdata::DictionaryValue::Str(s) => {
-                        if TEST_TYPE_REALM_MAP.contains_key(s.as_str()) {
-                            return Ok(TEST_TYPE_REALM_MAP[s.as_str()]);
-                        }
-                        return Err(FacetError::InvalidFacetValue(
-                            TEST_TYPE_FACET_KEY,
-                            format!("{:?}", s),
-                            format!(
-                                "one of {}",
-                                TEST_TYPE_REALM_MAP
-                                    .keys()
-                                    .map(|k| k.to_string())
-                                    .collect::<Vec<_>>()
-                                    .join(", ")
-                            ),
-                        ));
-                    }
-                    fdata::DictionaryValue::StrVec(s) => {
-                        return Err(FacetError::InvalidFacetValue(
-                            TEST_TYPE_FACET_KEY,
-                            format!("{:?}", s),
-                            format!(
-                                "one of {}",
-                                TEST_TYPE_REALM_MAP
-                                    .keys()
-                                    .map(|k| k.to_string())
-                                    .collect::<Vec<_>>()
-                                    .join(", ")
-                            ),
-                        ));
-                    }
-                };
-            }
-        }
-    }
-    Ok(HERMETIC_TESTS_COLLECTION)
-}
-
 impl RunningSuite {
     /// Launch a suite component.
     async fn launch(
@@ -1184,26 +1135,8 @@ impl RunningSuite {
         resolver: Arc<ComponentResolverProxy>,
         above_root_capabilities_for_test: Arc<AboveRootCapabilitiesForTest>,
     ) -> Result<Self, LaunchTestError> {
-        let component = resolver
-            .resolve(test_url)
-            .await
-            .map_err(|e| LaunchTestError::ResolveTest(e.into()))?
-            .map_err(|e| LaunchTestError::ResolveTest(format_err!("{:?}", e)))?;
-        let bytes = match component.decl.unwrap() {
-            fmem::Data::Bytes(bytes) => bytes,
-            fmem::Data::Buffer(buffer) => {
-                let mut contents = Vec::<u8>::new();
-                contents.resize(buffer.size as usize, 0);
-                buffer.vmo.read(&mut contents, 0).map_err(LaunchTestError::ManifestIo)?;
-                contents
-            }
-            _ => return Err(LaunchTestError::InvalidResolverData),
-        };
-        let component_decl: fdecl::Component = fidl::encoding::decode_persistent(&bytes)
-            .map_err(|e| LaunchTestError::InvalidManifest(e.into()))?;
-
-        let test_collection = get_test_realm(&component_decl)?;
-        info!("Starting '{}' in '{}' collection.", test_url, test_collection);
+        let facets = facet::get_suite_facets(test_url, &*resolver).await?;
+        info!("Starting '{}' in '{}' collection.", test_url, facets.collection);
 
         // This archive accessor will be served by the embedded archivist.
         let (archive_accessor, archive_accessor_server_end) =
@@ -1219,7 +1152,7 @@ impl RunningSuite {
             Arc::downgrade(&archive_accessor_arc),
             test_url,
             test_package.as_ref(),
-            test_collection,
+            facets.collection,
             above_root_capabilities_for_test,
             resolver,
         )
@@ -1245,7 +1178,7 @@ impl RunningSuite {
                 logs_iterator_task: None,
                 instance,
                 archive_accessor: archive_accessor_arc,
-                test_collection: test_collection,
+                test_collection: facets.collection,
             })
         };
 
@@ -2125,8 +2058,8 @@ async fn gen_enclosing_env(handles: LocalComponentHandles) -> Result<(), Error> 
 mod tests {
     use {
         super::*, fasync::pin_mut, fidl::endpoints::create_proxy_and_stream,
-        fidl_fuchsia_data as fdata, ftest_internal::InfoMarker, maplit::hashset,
-        matches::assert_matches, std::ops::Add, zx::DurationNum,
+        ftest_internal::InfoMarker, maplit::hashset, matches::assert_matches, std::ops::Add,
+        zx::DurationNum,
     };
 
     #[fasync::run_singlethreaded(test)]
@@ -2482,145 +2415,6 @@ mod tests {
                 artifact: ftest_manager::Artifact::Log(ftest_manager::Syslog::Batch(_)),
             }))
         );
-    }
-
-    #[test]
-    fn get_test_realm_works() {
-        const TEST_FACET: &str = "fuchsia.test";
-
-        // test that default hermetic value is true
-        let mut decl = fdecl::Component::EMPTY;
-        assert_eq!(get_test_realm(&decl).unwrap(), HERMETIC_TESTS_COLLECTION);
-
-        // empty facet
-        decl.facets =
-            Some(fdata::Dictionary { entries: vec![].into(), ..fdata::Dictionary::EMPTY });
-        assert_eq!(get_test_realm(&decl).unwrap(), HERMETIC_TESTS_COLLECTION);
-
-        // empty facet
-        decl.facets = Some(fdata::Dictionary { entries: None, ..fdata::Dictionary::EMPTY });
-        assert_eq!(get_test_realm(&decl).unwrap(), HERMETIC_TESTS_COLLECTION);
-
-        // make sure that the func can handle some other facet key
-        decl.facets = Some(fdata::Dictionary {
-            entries: vec![fdata::DictionaryEntry { key: "somekey".into(), value: None }].into(),
-            ..fdata::Dictionary::EMPTY
-        });
-        assert_eq!(get_test_realm(&decl).unwrap(), HERMETIC_TESTS_COLLECTION);
-
-        // test facet with some other key works
-        decl.facets = Some(fdata::Dictionary {
-            entries: vec![
-                fdata::DictionaryEntry { key: "somekey".into(), value: None },
-                fdata::DictionaryEntry {
-                    key: format!("{}.somekey", TEST_FACET),
-                    value: Some(fdata::DictionaryValue::Str("some_string".into()).into()),
-                },
-            ]
-            .into(),
-            ..fdata::Dictionary::EMPTY
-        });
-        assert_eq!(get_test_realm(&decl).unwrap(), HERMETIC_TESTS_COLLECTION);
-
-        decl.facets = Some(fdata::Dictionary {
-            entries: vec![
-                fdata::DictionaryEntry { key: "somekey".into(), value: None },
-                fdata::DictionaryEntry {
-                    key: format!("{}.somekey", TEST_FACET),
-                    value: Some(fdata::DictionaryValue::Str("some_string".into()).into()),
-                },
-                fdata::DictionaryEntry {
-                    key: TEST_TYPE_FACET_KEY.into(),
-                    value: Some(fdata::DictionaryValue::Str("hermetic".into()).into()),
-                },
-            ]
-            .into(),
-            ..fdata::Dictionary::EMPTY
-        });
-        assert_eq!(get_test_realm(&decl).unwrap(), HERMETIC_TESTS_COLLECTION);
-
-        decl.facets = Some(fdata::Dictionary {
-            entries: vec![
-                fdata::DictionaryEntry { key: "somekey".into(), value: None },
-                fdata::DictionaryEntry {
-                    key: format!("{}.somekey", TEST_FACET),
-                    value: Some(fdata::DictionaryValue::Str("some_string".into()).into()),
-                },
-                fdata::DictionaryEntry {
-                    key: TEST_TYPE_FACET_KEY.into(),
-                    value: Some(fdata::DictionaryValue::Str("system".into()).into()),
-                },
-            ]
-            .into(),
-            ..fdata::Dictionary::EMPTY
-        });
-        assert_eq!(get_test_realm(&decl).unwrap(), SYSTEM_TESTS_COLLECTION);
-
-        decl.facets = Some(fdata::Dictionary {
-            entries: vec![
-                fdata::DictionaryEntry { key: "somekey".into(), value: None },
-                fdata::DictionaryEntry {
-                    key: format!("{}.somekey", TEST_FACET),
-                    value: Some(fdata::DictionaryValue::Str("some_string".into()).into()),
-                },
-                fdata::DictionaryEntry {
-                    key: TEST_TYPE_FACET_KEY.into(),
-                    value: Some(fdata::DictionaryValue::Str("cts".into()).into()),
-                },
-            ]
-            .into(),
-            ..fdata::Dictionary::EMPTY
-        });
-        assert_eq!(get_test_realm(&decl).unwrap(), CTS_TESTS_COLLECTION);
-
-        decl.facets = Some(fdata::Dictionary {
-            entries: vec![
-                fdata::DictionaryEntry { key: "somekey".into(), value: None },
-                fdata::DictionaryEntry {
-                    key: format!("{}.somekey", TEST_FACET),
-                    value: Some(fdata::DictionaryValue::Str("some_string".into()).into()),
-                },
-                fdata::DictionaryEntry {
-                    key: TEST_TYPE_FACET_KEY.into(),
-                    value: Some(fdata::DictionaryValue::Str("vulkan".into()).into()),
-                },
-            ]
-            .into(),
-            ..fdata::Dictionary::EMPTY
-        });
-        assert_eq!(get_test_realm(&decl).unwrap(), VULKAN_TESTS_COLLECTION);
-
-        // invalid facets
-        decl.facets = Some(fdata::Dictionary {
-            entries: vec![
-                fdata::DictionaryEntry { key: "somekey".into(), value: None },
-                fdata::DictionaryEntry {
-                    key: format!("{}.somekey", TEST_FACET),
-                    value: Some(fdata::DictionaryValue::Str("some_string".into()).into()),
-                },
-                fdata::DictionaryEntry {
-                    key: TEST_TYPE_FACET_KEY.into(),
-                    value: Some(fdata::DictionaryValue::Str("some_other_collection".into()).into()),
-                },
-            ]
-            .into(),
-            ..fdata::Dictionary::EMPTY
-        });
-        let _ = get_test_realm(&decl).expect_err("this should have failed");
-
-        decl.facets = Some(fdata::Dictionary {
-            entries: vec![
-                fdata::DictionaryEntry { key: "somekey".into(), value: None },
-                fdata::DictionaryEntry {
-                    key: format!("{}.somekey", TEST_FACET),
-                    value: Some(fdata::DictionaryValue::Str("some_string".into()).into()),
-                },
-                fdata::DictionaryEntry { key: TEST_TYPE_FACET_KEY.into(), value: None },
-            ]
-            .into(),
-            ..fdata::Dictionary::EMPTY
-        });
-        let _ = get_test_realm(&decl).expect_err("this should have failed");
     }
 
     #[test]

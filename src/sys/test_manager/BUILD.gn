@@ -101,6 +101,7 @@ rustc_library("lib") {
     "src/debug_data_server.rs",
     "src/diagnostics.rs",
     "src/error.rs",
+    "src/facet.rs",
     "src/lib.rs",
     "src/resolver.rs",
   ]
