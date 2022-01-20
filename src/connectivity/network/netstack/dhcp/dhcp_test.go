@@ -674,7 +674,7 @@ func TestAcquisitionAfterNAK(t *testing.T) {
 				return context.WithCancel(ctx)
 			}
 			timeoutCh := make(chan time.Time)
-			c.retransTimeout = func(_ time.Duration) <-chan time.Time {
+			c.retransTimeout = func(time.Duration) <-chan time.Time {
 				return timeoutCh
 			}
 
@@ -1761,7 +1761,7 @@ func TestStateTransitionAfterLeaseExpirationWithNoResponse(t *testing.T) {
 	// Manually signal N timeouts so the client does not race on a select between
 	// <-ctx.Done() and <-c.retransTimeout() for the N+1th timeout.
 	retransTimeoutCh := make(chan time.Time)
-	c.retransTimeout = func(_ time.Duration) <-chan time.Time {
+	c.retransTimeout = func(time.Duration) <-chan time.Time {
 		return retransTimeoutCh
 	}
 	wg.Add(1)
@@ -1940,6 +1940,15 @@ func TestClientRestartIPHeader(t *testing.T) {
 		packets <- packet
 
 		return pkt, false
+	}
+
+	// Stub retransmission and acquisition timeouts such that they never timeout.
+	// Otherwise, unexpected timeouts will lead to superfluous sent packets.
+	c.retransTimeout = func(time.Duration) <-chan time.Time {
+		return nil
+	}
+	c.contextWithTimeout = func(ctx context.Context, _ time.Duration) (context.Context, context.CancelFunc) {
+		return context.WithCancel(ctx)
 	}
 
 	for i := 0; i < iterations; i++ {
