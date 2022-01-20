@@ -54,12 +54,6 @@ class Flags {
                                         fuchsia::io::OPEN_RIGHT_WRITABLE |
                                         fuchsia::io::OPEN_RIGHT_EXECUTABLE;
 
-  // All POSIX flags used for rights expansion.
-  // TODO(fxbug.dev/81185): Remove OPEN_FLAG_POSIX_DEPRECATED.
-  static constexpr uint32_t kFsAllPosixFlags = fuchsia::io::OPEN_FLAG_POSIX_DEPRECATED |
-                                               fuchsia::io::OPEN_FLAG_POSIX_WRITABLE |
-                                               fuchsia::io::OPEN_FLAG_POSIX_EXECUTABLE;
-
   // All lower 16 bits are reserved for future rights extensions.
   static constexpr uint32_t kFsRightsSpace = 0x0000FFFF;
 

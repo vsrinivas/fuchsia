@@ -260,12 +260,6 @@ void DirectoryConnection::Open(OpenRequestView request, OpenCompleter::Sync& com
   if (open_options.flags.clone_same_rights) {
     return write_error(std::move(request->object), ZX_ERR_INVALID_ARGS);
   }
-  // Reject the Open() call if we haven't gotten OPEN_FLAG_NODE_REFERENCE,
-  // nor have any OPEN_RIGHT_* or OPEN_FLAG_POSIX_*.
-  if (!open_options.flags.node_reference && !open_options.rights.any() &&
-      !open_options.flags.posix_write && !open_options.flags.posix_execute) {
-    return write_error(std::move(request->object), ZX_ERR_INVALID_ARGS);
-  }
 
   // Check for directory rights inheritance
   zx_status_t status = EnforceHierarchicalRights(options().rights, open_options, &open_options);

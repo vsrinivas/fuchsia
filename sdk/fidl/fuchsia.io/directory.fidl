@@ -244,9 +244,6 @@ protocol Directory {
     /// Exceeding those rights causes an access denied error to be transmitted in the
     /// `OnOpen` event if applicable, and the `object` connection closed.
     ///
-    /// The caller must specify either one or more of the `OPEN_RIGHT_*` flags, or
-    /// the `OPEN_FLAG_NODE_REFERENCE` flag.
-    ///
     /// `mode` is only used if an object is created and indicates the type of object to be
     /// created. An unsupported mode will cause the connection to be closed.
     /// The mode type, if set, must always be consistent with the OPEN_FLAG_DIRECTORY and

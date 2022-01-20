@@ -915,7 +915,7 @@ TEST_F(PseudoDirConnection, OpeningWithNoRightsAndNoNodeReference) {
   dir_.AddSharedEntry("subdir1", subdir1.dir());
   auto ptr = dir_.Serve();
   fuchsia::io::DirectorySyncPtr new_ptr;
-  AssertOpenPath(ptr, "subdir1", new_ptr, 0, 0, ZX_ERR_INVALID_ARGS);
+  AssertOpenPath(ptr, "subdir1", new_ptr, 0, 0, ZX_OK);
 }
 
 TEST_F(PseudoDirConnection, DirectoryRightsAreHierarchical) {

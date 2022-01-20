@@ -517,6 +517,9 @@ async fn open_dir_with_insufficient_rights() {
     let root_dir = harness.get_directory(root, 0);
 
     for dir_flags in harness.dir_rights.valid_combos() {
+        if dir_flags == 0 {
+            continue;
+        }
         let (client, server) = create_proxy::<io::NodeMarker>().expect("Cannot create proxy.");
         root_dir
             .open(dir_flags | io::OPEN_FLAG_DESCRIBE, io::MODE_TYPE_DIRECTORY, ".", server)
@@ -648,7 +651,7 @@ async fn open_dir_without_describe_flag() {
 async fn open_file_without_describe_flag() {
     let harness = TestHarness::new().await;
 
-    for file_flags in harness.file_rights.valid_combos_with(io::OPEN_RIGHT_READABLE) {
+    for file_flags in harness.file_rights.valid_combos() {
         assert_eq!(file_flags & io::OPEN_FLAG_DESCRIBE, 0);
         let root = root_directory(vec![file(TEST_FILE, vec![])]);
         let test_dir = harness.get_directory(root, harness.dir_rights.all());
@@ -669,6 +672,7 @@ async fn open_file_with_extra_rights() {
     // Combinations to test of the form (directory flags, [file flag combinations]).
     // All file flags should have more rights than those of the directory flags.
     let test_right_combinations = [
+        (0, harness.file_rights.valid_combos()),
         (io::OPEN_RIGHT_READABLE, harness.file_rights.valid_combos_with(io::OPEN_RIGHT_WRITABLE)),
         (io::OPEN_RIGHT_WRITABLE, harness.file_rights.valid_combos_with(io::OPEN_RIGHT_READABLE)),
     ];
@@ -677,15 +681,14 @@ async fn open_file_with_extra_rights() {
     let root_dir = harness.get_directory(root, harness.dir_rights.all());
 
     for (dir_flags, file_flag_combos) in test_right_combinations.iter() {
-        if file_flag_combos.is_empty() {
-            continue;
-        }
-
         let dir_proxy =
             open_node::<io::DirectoryMarker>(&root_dir, *dir_flags, io::MODE_TYPE_DIRECTORY, ".")
                 .await;
 
         for file_flags in file_flag_combos {
+            if *file_flags == 0 {
+                continue; // The rights in file_flags must *exceed* those in dir_flags.
+            }
             // Ensure the combination is valid (e.g. that file_flags is requesting more rights
             // than those in dir_flags).
             assert!(

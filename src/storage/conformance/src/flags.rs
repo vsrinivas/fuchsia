@@ -62,7 +62,6 @@ pub fn build_flag_combinations(constant_flags: u32, variable_flags: u32) -> Vec<
             vec.push(vec[i] | flag);
         }
     }
-    vec.retain(|element| *element != 0);
 
     vec
 }
@@ -93,11 +92,11 @@ mod tests {
     }
 
     #[test]
-    fn test_build_flag_combinations_without_empty_rights() {
+    fn test_build_flag_combinations_with_empty_rights() {
         let constant_flags = 0;
         let variable_flags = 0b011;
         let generated_combinations = build_flag_combinations(constant_flags, variable_flags);
-        let expected_result = [0b001, 0b010, 0b011];
+        let expected_result = [0b000, 0b001, 0b010, 0b011];
         assert_eq!(generated_combinations, expected_result);
     }
 
@@ -113,8 +112,9 @@ mod tests {
     fn test_rights_combos() {
         const TEST_RIGHTS: u32 =
             io::OPEN_RIGHT_READABLE | io::OPEN_RIGHT_WRITABLE | io::OPEN_RIGHT_EXECUTABLE;
-        // We should get R, W, X, RW, RX, WX, RWX (7 in total).
-        const EXPECTED_COMBOS: [u32; 7] = [
+        // We should get 0, R, W, X, RW, RX, WX, RWX (8 in total).
+        const EXPECTED_COMBOS: [u32; 8] = [
+            0,
             io::OPEN_RIGHT_READABLE,
             io::OPEN_RIGHT_WRITABLE,
             io::OPEN_RIGHT_EXECUTABLE,
@@ -148,8 +148,9 @@ mod tests {
         }
 
         // Test that combinations excluding READABLE are generated correctly.
-        // We should get W, X, and WX (3 in total).
-        const EXPECTED_NONREADABLE_COMBOS: [u32; 3] = [
+        // We should get 0, W, X, and WX (4 in total).
+        const EXPECTED_NONREADABLE_COMBOS: [u32; 4] = [
+            0,
             io::OPEN_RIGHT_WRITABLE,
             io::OPEN_RIGHT_EXECUTABLE,
             io::OPEN_RIGHT_WRITABLE | io::OPEN_RIGHT_EXECUTABLE,

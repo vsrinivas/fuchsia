@@ -33,14 +33,8 @@ zx_status_t LookupNode(fbl::RefPtr<Vnode> vn, std::string_view name, fbl::RefPtr
 
 // Validate open flags as much as they can be validated independently of the target node.
 zx_status_t PrevalidateOptions(VnodeConnectionOptions options) {
-  if (!options.rights.write) {
-    if (options.flags.truncate) {
-      return ZX_ERR_INVALID_ARGS;
-    }
-  } else if (!options.rights.any()) {
-    if (!options.flags.node_reference) {
-      return ZX_ERR_INVALID_ARGS;
-    }
+  if (!options.rights.write && options.flags.truncate) {
+    return ZX_ERR_INVALID_ARGS;
   }
   return ZX_OK;
 }

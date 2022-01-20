@@ -197,11 +197,6 @@ void Directory::Open(uint32_t open_flags, uint32_t parent_flags, uint32_t mode, 
     Node::SendOnOpenEventOnError(open_flags, std::move(request), ZX_ERR_INVALID_ARGS);
     return;
   }
-  if (!Flags::IsNodeReference(open_flags) &&
-      !(open_flags & (Flags::kFsRights | Flags::kFsAllPosixFlags))) {
-    Node::SendOnOpenEventOnError(open_flags, std::move(request), ZX_ERR_INVALID_ARGS);
-    return;
-  }
   if (!Flags::StricterOrSameRights(open_flags, parent_flags)) {
     Node::SendOnOpenEventOnError(open_flags, std::move(request), ZX_ERR_ACCESS_DENIED);
     return;
