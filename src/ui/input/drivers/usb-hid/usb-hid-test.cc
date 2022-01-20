@@ -12,13 +12,13 @@
 #include <lib/ddk/platform-defs.h>
 #include <lib/fdio/fdio.h>
 #include <lib/fdio/watcher.h>
+#include <lib/fit/function.h>
 #include <lib/usb-virtual-bus-launcher/usb-virtual-bus-launcher.h>
 #include <sys/stat.h>
 #include <unistd.h>
 #include <zircon/hw/usb.h>
 #include <zircon/syscalls.h>
 
-#include <fbl/function.h>
 #include <fbl/string.h>
 #include <hid/boot.h>
 #include <zxtest/zxtest.h>
