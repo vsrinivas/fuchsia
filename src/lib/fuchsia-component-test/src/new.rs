@@ -11,10 +11,12 @@ use {
     },
     fidl_fuchsia_component as fcomponent, fidl_fuchsia_component_decl as fdecl,
     fidl_fuchsia_component_test as ftest, fidl_fuchsia_data as fdata, fidl_fuchsia_io as fio,
-    fidl_fuchsia_io2 as fio2, fuchsia_async as fasync,
+    fidl_fuchsia_io2 as fio2, fidl_fuchsia_mem as fmem, fuchsia_async as fasync,
     fuchsia_component::client as fclient,
+    fuchsia_zircon as zx,
     futures::{future::BoxFuture, lock::Mutex},
     std::{
+        collections::HashMap,
         fmt::{self, Display, Formatter},
         sync::Arc,
     },
@@ -852,6 +854,18 @@ impl RealmBuilder {
     pub async fn add_route(&self, route: Route) -> Result<(), Error> {
         self.root_realm.add_route(route).await
     }
+
+    /// Creates and routes a read-only directory capability to the given targets. The directory
+    /// capability will have the given name, and anyone accessing the directory will see the given
+    /// contents.
+    pub async fn read_only_directory(
+        &self,
+        directory_name: impl Into<String>,
+        to: Vec<impl Into<Ref>>,
+        directory_contents: DirectoryContents,
+    ) -> Result<(), Error> {
+        self.root_realm.read_only_directory(directory_name, to, directory_contents).await
+    }
 }
 
 #[derive(Debug)]
@@ -1014,6 +1028,82 @@ impl SubRealmBuilder {
             fut.await??;
         }
         Ok(())
+    }
+
+    /// Creates and routes a read-only directory capability to the given targets. The directory
+    /// capability will have the given name, and anyone accessing the directory will see the given
+    /// contents.
+    pub async fn read_only_directory(
+        &self,
+        directory_name: impl Into<String>,
+        to: Vec<impl Into<Ref>>,
+        directory_contents: DirectoryContents,
+    ) -> Result<(), Error> {
+        let to: Vec<Ref> = to.into_iter().map(|t| t.into()).collect();
+        for target in &to {
+            target.check_scope(&self.realm_path)?;
+        }
+        let mut to = to.into_iter().map(Into::into).collect::<Vec<_>>();
+
+        let fut = self.realm_proxy.read_only_directory(
+            &directory_name.into(),
+            &mut to.iter_mut(),
+            &mut directory_contents.into(),
+        );
+        fut.await??;
+        Ok(())
+    }
+}
+
+/// Contains the contents of a read-only directory that Realm Builder should provide to a realm.
+/// Used with the `RealmBuilder::read_only_directory` function.
+pub struct DirectoryContents {
+    contents: HashMap<String, fmem::Buffer>,
+}
+
+impl DirectoryContents {
+    pub fn new() -> Self {
+        Self { contents: HashMap::new() }
+    }
+
+    pub fn add_file(mut self, path: impl Into<String>, contents: impl Into<Vec<u8>>) -> Self {
+        let contents: Vec<u8> = contents.into();
+        let vmo = zx::Vmo::create(4096).expect("failed to create a VMO");
+        vmo.write(&contents, 0).expect("failed to write to VMO");
+        let buffer = fmem::Buffer { vmo, size: contents.len() as u64 };
+        self.contents.insert(path.into(), buffer);
+        self
+    }
+}
+
+impl Clone for DirectoryContents {
+    fn clone(&self) -> Self {
+        let mut new_self = Self::new();
+        for (path, buf) in self.contents.iter() {
+            new_self.contents.insert(
+                path.clone(),
+                fmem::Buffer {
+                    vmo: buf
+                        .vmo
+                        .create_child(zx::VmoChildOptions::SNAPSHOT_AT_LEAST_ON_WRITE, 0, buf.size)
+                        .expect("failed to clone VMO"),
+                    size: buf.size,
+                },
+            );
+        }
+        new_self
+    }
+}
+
+impl From<DirectoryContents> for ftest::DirectoryContents {
+    fn from(input: DirectoryContents) -> ftest::DirectoryContents {
+        ftest::DirectoryContents {
+            entries: input
+                .contents
+                .into_iter()
+                .map(|(path, buf)| ftest::DirectoryEntry { file_path: path, file_contents: buf })
+                .collect(),
+        }
     }
 }
 
@@ -1401,11 +1491,9 @@ mod tests {
             from: fdecl::Ref,
             to: Vec<fdecl::Ref>,
         },
-        #[allow(unused)]
         ReadOnlyDirectory {
             name: String,
             to: Vec<fdecl::Ref>,
-            directory_contents: ftest::DirectoryContents,
         },
     }
 
@@ -1506,14 +1594,9 @@ mod tests {
                             .unwrap();
                         responder.send(&mut Ok(())).unwrap();
                     }
-                    ftest::RealmRequest::ReadOnlyDirectory {
-                        responder,
-                        name,
-                        to,
-                        directory_contents,
-                    } => {
+                    ftest::RealmRequest::ReadOnlyDirectory { responder, name, to, .. } => {
                         report_requests
-                            .send(ServerRequest::ReadOnlyDirectory { name, to, directory_contents })
+                            .send(ServerRequest::ReadOnlyDirectory { name, to })
                             .await
                             .unwrap();
                         responder.send(&mut Ok(())).unwrap();
@@ -1590,6 +1673,33 @@ mod tests {
                 if &name == expected_name && options == expected_options =>
             {
                 receive_requests
+            }
+            req => panic!("match failed, received unexpected server request: {:?}", req),
+        }
+    }
+
+    fn assert_read_only_directory(
+        receive_server_requests: &mut mpsc::UnboundedReceiver<ServerRequest>,
+        expected_directory_name: &str,
+        expected_targets: Vec<impl Into<Ref>>,
+    ) {
+        let expected_targets = expected_targets
+            .into_iter()
+            .map(|t| {
+                let t: Ref = t.into();
+                t
+            })
+            .map(|t| {
+                let t: fdecl::Ref = t.into();
+                t
+            })
+            .collect::<Vec<_>>();
+
+        match receive_server_requests.next().now_or_never() {
+            Some(Some(ServerRequest::ReadOnlyDirectory { name, to, .. }))
+                if &name == expected_directory_name && to == expected_targets =>
+            {
+                return;
             }
             req => panic!("match failed, received unexpected server request: {:?}", req),
         }
@@ -1998,6 +2108,28 @@ mod tests {
         assert_matches!(receive_server_requests.next().now_or_never(), None);
     }
 
+    #[fuchsia::test]
+    async fn read_only_directory() {
+        let (builder, _server_task, mut receive_server_requests) =
+            new_realm_builder_and_server_task();
+        let child_a = builder.add_child("a", "test://a", ChildOptions::new()).await.unwrap();
+        builder
+            .read_only_directory(
+                "config",
+                vec![&child_a],
+                DirectoryContents::new().add_file("config.json", "{ \"hippos\": \"rule!\" }"),
+            )
+            .await
+            .unwrap();
+
+        assert_matches!(
+            receive_server_requests.next().await,
+            Some(ServerRequest::AddChild { name, url, options })
+                if &name == "a" && &url == "test://a" && options == ChildOptions::new().into()
+        );
+        assert_read_only_directory(&mut receive_server_requests, "config", vec![&child_a]);
+    }
+
     #[test]
     fn realm_builder_works_with_send() {
         // This test exercises realm builder on a multi-threaded executor, so that we can guarantee
@@ -2033,6 +2165,14 @@ mod tests {
                         .to(&child_b)
                         .to(&child_realm_a)
                         .to(Ref::parent()),
+                )
+                .await
+                .unwrap();
+            builder
+                .read_only_directory(
+                    "config",
+                    vec![&child_e],
+                    DirectoryContents::new().add_file("config.json", "{ \"hippos\": \"rule!\" }"),
                 )
                 .await
                 .unwrap();

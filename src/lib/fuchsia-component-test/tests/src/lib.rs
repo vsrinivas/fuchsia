@@ -13,7 +13,10 @@ use {
     fuchsia_component::server as fserver,
     fuchsia_component_test::{
         error::Error as RealmBuilderError,
-        new::{Capability, ChildOptions, LocalComponentHandles, RealmBuilder, Ref, Route},
+        new::{
+            Capability, ChildOptions, DirectoryContents, LocalComponentHandles, RealmBuilder, Ref,
+            Route,
+        },
     },
     futures::{channel::mpsc, future::pending, FutureExt, SinkExt, StreamExt, TryStreamExt},
     io_util,
@@ -1340,6 +1343,80 @@ async fn fail_to_set_invalid_decls() -> Result<(), Error> {
         target_name: "fuchsia.examples.Echo".into(),
     }));
     assert_matches!(builder.replace_realm_decl(realm_decl).await, Ok(()));
+
+    Ok(())
+}
+
+#[fuchsia::test]
+async fn read_only_directory() -> Result<(), Error> {
+    let builder = RealmBuilder::new().await?;
+
+    let local_component_impl = |mut send_file_contents: mpsc::Sender<String>,
+                                handles: LocalComponentHandles| async move {
+        let config_dir = handles.clone_from_namespace("config").expect("failed to open /config");
+        let config_file =
+            io_util::directory::open_file(&config_dir, "config.txt", io_util::OPEN_RIGHT_READABLE)
+                .await
+                .expect("failed to open config.txt");
+        let config_file_contents =
+            io_util::read_file(&config_file).await.expect("failed to read config.txt");
+        send_file_contents
+            .send(config_file_contents)
+            .await
+            .expect("failed to send config.txt contents");
+        Ok(())
+    };
+
+    let (send_a_file_contents, mut receive_a_file_contents) = mpsc::channel(1);
+    let child_a = builder
+        .add_local_child(
+            "a",
+            move |handles| local_component_impl(send_a_file_contents.clone(), handles).boxed(),
+            ChildOptions::new().eager(),
+        )
+        .await?;
+    builder
+        .read_only_directory(
+            "config",
+            vec![&child_a],
+            DirectoryContents::new().add_file("config.txt", "a"),
+        )
+        .await
+        .unwrap();
+
+    let (send_b_file_contents, mut receive_b_file_contents) = mpsc::channel(1);
+    let child_b = builder
+        .add_local_child(
+            "b",
+            move |handles| local_component_impl(send_b_file_contents.clone(), handles).boxed(),
+            ChildOptions::new().eager(),
+        )
+        .await?;
+    builder
+        .read_only_directory(
+            "config",
+            vec![(&child_b).into(), Ref::parent()],
+            DirectoryContents::new().add_file("config.txt", "b"),
+        )
+        .await
+        .unwrap();
+
+    let instance = builder.build().await?;
+
+    assert_eq!(receive_a_file_contents.next().await, Some("a".to_string()),);
+    assert_eq!(receive_b_file_contents.next().await, Some("b".to_string()),);
+
+    let exposed_dir = instance.root.get_exposed_dir();
+    let config_file = io_util::directory::open_file(
+        &exposed_dir,
+        "config/config.txt",
+        io_util::OPEN_RIGHT_READABLE,
+    )
+    .await
+    .expect("failed to open config.txt");
+    let config_file_contents =
+        io_util::read_file(&config_file).await.expect("failed to read config.txt");
+    assert_eq!("b".to_string(), config_file_contents);
 
     Ok(())
 }
