@@ -130,6 +130,9 @@ template("access_ota_blob_as_executable") {
       ":fshost_v0-component",
       ":fshost_v1-component",
 
+      # Paver service for update flow.
+      "//src/security/pkg_test/paver:security_pkg_paver-component",
+
       # Production SWD components.
       "//src/sys/pkg/bin/pkg-cache:component",
       "//src/sys/pkg/bin/pkg-resolver:component",

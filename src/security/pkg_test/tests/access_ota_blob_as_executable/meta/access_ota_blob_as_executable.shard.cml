@@ -29,6 +29,10 @@
             // Test instantiated running system version "v0".
             url: "#meta/fake_boot_arguments_v0.cm",
         },
+        {
+            name: "paver",
+            url: "#meta/security_pkg_paver.cm",
+        },
 
         // Non-production dependencies.
         {
@@ -164,6 +168,7 @@
                 "#cobalt",
                 "#fake_boot_arguments",
                 "#fshost",
+                "#paver",
                 "#pkg-cache",
                 "#pkg-resolver",
                 "#pkg_server",
