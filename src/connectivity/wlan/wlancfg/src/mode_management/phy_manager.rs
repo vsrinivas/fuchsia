@@ -348,7 +348,7 @@ impl PhyManagerApi for PhyManager {
             self.client_connections_enabled = true;
         }
 
-        let mut recovered_iface_ids = Vec::new();
+        let mut available_iface_ids = Vec::new();
         let mut error_encountered = Ok(());
 
         if self.client_connections_enabled {
@@ -388,15 +388,19 @@ impl PhyManagerApi for PhyManager {
                             Vec::new()
                         });
                     let _ = phy_container.client_ifaces.insert(iface_id, driver_features);
-
-                    recovered_iface_ids.push(iface_id);
                 }
+
+                // Regardless of whether or not new interfaces were created or existing interfaces
+                // were discovered, notify the caller of all interface IDs available for this PHY.
+                let mut available_interfaces =
+                    phy_container.client_ifaces.keys().into_iter().cloned().collect();
+                available_iface_ids.append(&mut available_interfaces);
             }
         }
 
         match error_encountered {
-            Ok(()) => Ok(recovered_iface_ids),
-            Err(e) => Err((recovered_iface_ids, e)),
+            Ok(()) => Ok(available_iface_ids),
+            Err(e) => Err((available_iface_ids, e)),
         }
     }
 
@@ -2482,6 +2486,55 @@ mod tests {
         // Verify that there are no client interfaces.
         for (_, phy_container) in phy_manager.phys {
             assert!(phy_container.client_ifaces.is_empty());
+        }
+    }
+
+    /// Tests the case where client connections are re-started following an unsuccessful stop
+    /// client connections request.
+    #[fuchsia::test]
+    fn test_start_after_unsuccessful_stop() {
+        let mut exec = TestExecutor::new().expect("failed to create an executor");
+        let test_values = test_setup();
+        let mut phy_manager =
+            PhyManager::new(test_values.dev_svc_proxy, test_values.monitor_proxy, test_values.node);
+
+        // Verify that client connections are initially stopped.
+        assert!(!phy_manager.client_connections_enabled);
+
+        // Create a PHY with a lingering client interface.
+        let fake_phy_id = 1;
+        let fake_mac_roles = vec![MacRole::Client];
+        let mut phy_container = PhyContainer::new(fake_mac_roles);
+        // Insert the fake iface
+        let fake_iface_id = 1;
+        let driver_features = vec![];
+        let _ = phy_container.client_ifaces.insert(fake_iface_id, driver_features);
+        let _ = phy_manager.phys.insert(fake_phy_id, phy_container);
+
+        // Try creating all client interfaces due to recovery and ensure that no interfaces are
+        // returned.
+        {
+            let start_client_future =
+                phy_manager.create_all_client_ifaces(CreateClientIfacesReason::RecoverClientIfaces);
+            pin_mut!(start_client_future);
+            assert_variant!(
+                exec.run_until_stalled(&mut start_client_future),
+                Poll::Ready(Ok(vec)) => {
+                assert!(vec.is_empty())
+            });
+        }
+
+        // Create all client interfaces with the reason set to StartClientConnections and verify
+        // that the existing interface is returned.
+        {
+            let start_client_future = phy_manager
+                .create_all_client_ifaces(CreateClientIfacesReason::StartClientConnections);
+            pin_mut!(start_client_future);
+            assert_variant!(
+                exec.run_until_stalled(&mut start_client_future),
+                Poll::Ready(Ok(vec)) => {
+                assert_eq!(vec, vec![1])
+            });
         }
     }
 

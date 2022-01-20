@@ -745,11 +745,11 @@ impl IfaceManagerService {
 
     async fn start_client_connections(&mut self) -> Result<(), Error> {
         let mut phy_manager = self.phy_manager.lock().await;
-        match phy_manager
+        let lingering_ifaces = match phy_manager
             .create_all_client_ifaces(CreateClientIfacesReason::StartClientConnections)
             .await
         {
-            Ok(_) => {
+            Ok(lingering_ifaces) => {
                 // Send an update to the update listener indicating that client connections are now
                 // enabled.
                 let update = listener::ClientStateUpdate {
@@ -761,7 +761,9 @@ impl IfaceManagerService {
                     .unbounded_send(listener::Message::NotifyListeners(update))
                 {
                     error!("Failed to send state update: {:?}", e)
-                };
+                }
+
+                lingering_ifaces
             }
             Err((_, phy_manager_error)) => {
                 return Err(format_err!(
@@ -769,6 +771,17 @@ impl IfaceManagerService {
                     phy_manager_error
                 ));
             }
+        };
+
+        // Resume any lingering client interfaces.
+        drop(phy_manager);
+        for iface_id in lingering_ifaces {
+            match self.get_client(Some(iface_id)).await {
+                Ok(iface) => self.clients.push(iface),
+                Err(e) => {
+                    error!("failed to resume client {}: {:?}", iface_id, e);
+                }
+            };
         }
 
         if self.clients_enabled_time.is_none() {
@@ -1505,6 +1518,7 @@ mod tests {
         wpa3_iface: Option<u16>,
         country_code: Option<[u8; REGION_CODE_LEN]>,
         client_connections_enabled: bool,
+        client_ifaces: Vec<u16>,
     }
 
     #[async_trait]
@@ -1528,7 +1542,7 @@ mod tests {
             _reason: CreateClientIfacesReason,
         ) -> Result<Vec<u16>, (Vec<u16>, PhyManagerError)> {
             if self.create_iface_ok {
-                Ok(vec![TEST_CLIENT_IFACE_ID])
+                Ok(self.client_ifaces.clone())
             } else {
                 Err((vec![], PhyManagerError::IfaceCreateFailure))
             }
@@ -1708,6 +1722,7 @@ mod tests {
             set_country_ok: true,
             country_code: None,
             client_connections_enabled: true,
+            client_ifaces: vec![TEST_CLIENT_IFACE_ID],
         };
         let mut iface_manager = IfaceManagerService::new(
             Arc::new(Mutex::new(phy_manager)),
@@ -1764,6 +1779,7 @@ mod tests {
             set_country_ok: true,
             country_code: None,
             client_connections_enabled: true,
+            client_ifaces: vec![],
         };
         let mut iface_manager = IfaceManagerService::new(
             Arc::new(Mutex::new(phy_manager)),
@@ -2305,6 +2321,7 @@ mod tests {
             set_country_ok: true,
             country_code: None,
             client_connections_enabled: true,
+            client_ifaces: vec![TEST_CLIENT_IFACE_ID],
         }));
 
         // Configure the mock CSM with the expected connect request
@@ -2731,6 +2748,7 @@ mod tests {
             set_country_ok: true,
             country_code: None,
             client_connections_enabled: true,
+            client_ifaces: vec![TEST_CLIENT_IFACE_ID],
         }));
 
         // Create a PhyManager with a single, known client iface.
@@ -2960,6 +2978,7 @@ mod tests {
             set_country_ok: true,
             country_code: None,
             client_connections_enabled: true,
+            client_ifaces: vec![],
         }));
 
         {
@@ -2969,6 +2988,74 @@ mod tests {
         }
 
         assert!(iface_manager.clients_enabled_time.is_none());
+    }
+
+    /// Tests the case where there is a lingering client interface to ensure that it is resumed to
+    /// a working state.
+    #[fuchsia::test]
+    fn test_start_clients_with_lingering_iface() {
+        let mut exec = fuchsia_async::TestExecutor::new().expect("failed to create an executor");
+
+        // Create an IfaceManager with no clients and client connections initially disabled.  Seed
+        // it with a PhyManager that knows of a lingering client interface.
+        let mut test_values = test_setup(&mut exec);
+        let (mut iface_manager, _) = create_iface_manager_with_client(&test_values, false);
+        iface_manager.phy_manager = Arc::new(Mutex::new(FakePhyManager {
+            create_iface_ok: true,
+            destroy_iface_ok: true,
+            wpa3_iface: None,
+            set_country_ok: true,
+            country_code: None,
+            client_connections_enabled: false,
+            client_ifaces: vec![TEST_CLIENT_IFACE_ID],
+        }));
+
+        // Delete all client records initially.
+        iface_manager.clients.clear();
+
+        {
+            let start_fut = iface_manager.start_client_connections();
+            pin_mut!(start_fut);
+
+            // The request should stall out while attempting to get a client interface.
+            assert_variant!(exec.run_until_stalled(&mut start_fut), Poll::Pending);
+
+            assert_variant!(
+                exec.run_until_stalled(&mut test_values.device_service_stream.next()),
+                Poll::Ready(Some(Ok(fidl_fuchsia_wlan_device_service::DeviceServiceRequest::GetClientSme {
+                    iface_id: TEST_CLIENT_IFACE_ID, sme: _, responder
+                }))) => {
+                    // Send back a positive acknowledgement.
+                    assert!(responder.send(fuchsia_zircon::sys::ZX_OK).is_ok());
+                }
+            );
+
+            // The request should stall again while querying the iface properties.
+            assert_variant!(exec.run_until_stalled(&mut start_fut), Poll::Pending);
+            assert_variant!(
+                exec.run_until_stalled(&mut test_values.device_service_stream.next()),
+                Poll::Ready(Some(Ok(fidl_fuchsia_wlan_device_service::DeviceServiceRequest::QueryIface {
+                    iface_id: TEST_CLIENT_IFACE_ID, responder
+                }))) => {
+                    let mut response = fidl_fuchsia_wlan_device_service::QueryIfaceResponse {
+                        role: fidl_fuchsia_wlan_device::MacRole::Client,
+                        id: TEST_CLIENT_IFACE_ID,
+                        phy_id: 0,
+                        phy_assigned_id: 0,
+                        sta_addr: [0; 6],
+                        driver_features: Vec::new(),
+                    };
+                    responder
+                        .send(fuchsia_zircon::sys::ZX_OK, Some(&mut response))
+                        .expect("Failed to send iface response");
+                }
+            );
+
+            // The request should complete successfully.
+            assert_variant!(exec.run_until_stalled(&mut start_fut), Poll::Ready(Ok(())));
+        }
+
+        assert!(!iface_manager.clients.is_empty());
     }
 
     /// Tests the case where the IfaceManager is able to request that the AP state machine start
@@ -4582,7 +4669,8 @@ mod tests {
             wpa3_iface: None,
             set_country_ok: true,
             country_code: None,
-            client_connections_enabled: true
+            client_connections_enabled: true,
+            client_ifaces: vec![],
         },
         TestType::Pass;
         "successfully started client connections"
@@ -4594,7 +4682,8 @@ mod tests {
             wpa3_iface: None,
             set_country_ok: true,
             country_code: None,
-            client_connections_enabled: true
+            client_connections_enabled: true,
+            client_ifaces: vec![TEST_CLIENT_IFACE_ID]
         },
         TestType::Fail;
         "failed to start client connections"
@@ -4606,7 +4695,8 @@ mod tests {
             wpa3_iface: None,
             set_country_ok: true,
             country_code: None,
-            client_connections_enabled: true
+            client_connections_enabled: true,
+            client_ifaces: vec![TEST_CLIENT_IFACE_ID]
         },
         TestType::ClientError;
         "client dropped receiver"
@@ -4654,7 +4744,8 @@ mod tests {
             wpa3_iface: None,
             set_country_ok: true,
             country_code: None,
-            client_connections_enabled: true
+            client_connections_enabled: true,
+            client_ifaces: vec![TEST_CLIENT_IFACE_ID]
         },
         TestType::Pass;
         "successfully stopped client connections"
@@ -4666,7 +4757,8 @@ mod tests {
             wpa3_iface: None,
             set_country_ok: true,
             country_code: None,
-            client_connections_enabled: true
+            client_connections_enabled: true,
+            client_ifaces: vec![TEST_CLIENT_IFACE_ID]
         },
         TestType::Fail;
         "failed to stop client connections"
@@ -4678,7 +4770,8 @@ mod tests {
             wpa3_iface: None,
             set_country_ok: true,
             country_code: None,
-            client_connections_enabled: true
+            client_connections_enabled: true,
+            client_ifaces: vec![TEST_CLIENT_IFACE_ID]
         },
         TestType::ClientError;
         "client dropped receiver"
@@ -5428,6 +5521,7 @@ mod tests {
             set_country_ok: true,
             country_code: None,
             client_connections_enabled: true,
+            client_ifaces: vec![TEST_CLIENT_IFACE_ID],
         }));
         let fut = iface_manager.has_wpa3_capable_client();
         pin_mut!(fut);
@@ -5451,6 +5545,7 @@ mod tests {
             set_country_ok: true,
             country_code: None,
             client_connections_enabled: true,
+            client_ifaces: vec![TEST_CLIENT_IFACE_ID],
         }));
         let fut = iface_manager.has_wpa3_capable_client();
         pin_mut!(fut);
@@ -5515,6 +5610,7 @@ mod tests {
             wpa3_iface: None,
             country_code: None,
             client_connections_enabled,
+            client_ifaces: vec![],
         }));
 
         let mut iface_manager = IfaceManagerService::new(
