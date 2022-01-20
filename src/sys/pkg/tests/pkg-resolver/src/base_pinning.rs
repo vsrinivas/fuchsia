@@ -4,11 +4,11 @@
 
 /// This module tests pkg-resolver's behavior when resolving base packages.
 use {
+    assert_matches::assert_matches,
     fuchsia_async as fasync,
     fuchsia_pkg_testing::{Package, PackageBuilder, RepositoryBuilder, SystemImageBuilder},
     fuchsia_zircon::Status,
     lib::{pkgfs_with_system_image_and_pkg, TestEnvBuilder, EMPTY_REPO_PATH},
-    matches::assert_matches,
     std::sync::Arc,
 };
 

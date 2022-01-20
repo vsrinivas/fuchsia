@@ -3,9 +3,9 @@
 // found in the LICENSE file.
 
 use {
-    fidl::endpoints::ProtocolMarker, fidl_fuchsia_debugdata::DebugDataMarker,
-    fuchsia_component::client::connect_to_protocol, fuchsia_zircon_status as zx_status,
-    matches::assert_matches,
+    assert_matches::assert_matches, fidl::endpoints::ProtocolMarker,
+    fidl_fuchsia_debugdata::DebugDataMarker, fuchsia_component::client::connect_to_protocol,
+    fuchsia_zircon_status as zx_status,
 };
 
 #[fuchsia_async::run_singlethreaded(test)]

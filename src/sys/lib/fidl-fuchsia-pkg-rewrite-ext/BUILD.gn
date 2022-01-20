@@ -25,8 +25,8 @@ rustc_library("fidl-fuchsia-pkg-rewrite-ext") {
 
   test_deps = [
     "//src/lib/fuchsia-async",
+    "//third_party/rust_crates:assert_matches",
     "//third_party/rust_crates:futures",
-    "//third_party/rust_crates:matches",
   ]
 
   sources = [

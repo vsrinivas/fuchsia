@@ -724,9 +724,9 @@ async fn replace_retained_packages(
 mod tests {
     use {
         super::*,
+        assert_matches::assert_matches,
         fuchsia_async as fasync,
         fuchsia_pkg_testing::{make_epoch_json, TestUpdatePackage},
-        matches::assert_matches,
     };
 
     // Simulate the cobalt test hanging indefinitely, and ensure we time out correctly.

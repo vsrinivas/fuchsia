@@ -43,8 +43,8 @@ pub(crate) async fn epoch(proxy: &DirectoryProxy) -> Result<Option<u64>, ParseEp
 #[cfg(test)]
 mod tests {
     use {
-        super::*, crate::TestUpdatePackage, fuchsia_async as fasync, matches::assert_matches,
-        serde_json::json,
+        super::*, crate::TestUpdatePackage, assert_matches::assert_matches,
+        fuchsia_async as fasync, serde_json::json,
     };
 
     #[fasync::run_singlethreaded(test)]

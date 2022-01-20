@@ -49,9 +49,9 @@ async fn handle_channel_control_cmd_impl(
 #[cfg(test)]
 mod tests {
     use {
-        super::*, fidl::endpoints::create_proxy_and_stream,
+        super::*, assert_matches::assert_matches, fidl::endpoints::create_proxy_and_stream,
         fidl_fuchsia_update_channelcontrol::ChannelControlRequest, fuchsia_async as fasync,
-        futures::prelude::*, matches::assert_matches,
+        futures::prelude::*,
     };
 
     async fn perform_channel_control_test<V>(argument: args::channel::Command, verifier: V)

@@ -222,10 +222,10 @@ mod tests {
     use {
         super::*,
         crate::{compat::pkgfs::testing::FakeSink, index::register_dynamic_package},
+        assert_matches::assert_matches,
         fidl_fuchsia_io::OPEN_RIGHT_READABLE,
         fuchsia_pkg::{PackagePath, PackageVariant},
         fuchsia_pkg_testing::{blobfs::Fake as FakeBlobfs, PackageBuilder},
-        matches::assert_matches,
         std::collections::HashSet,
         vfs::directory::{entry::EntryInfo, entry_container::Directory},
     };

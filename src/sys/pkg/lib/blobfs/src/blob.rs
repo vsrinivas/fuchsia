@@ -342,11 +342,11 @@ mod tests {
     use {
         super::*,
         crate::Client,
+        assert_matches::assert_matches,
         blobfs_ramdisk::{BlobfsRamdisk, Ramdisk},
         fuchsia_async as fasync,
         fuchsia_merkle::MerkleTree,
         maplit::hashset,
-        matches::assert_matches,
         rand::prelude::*,
     };
 

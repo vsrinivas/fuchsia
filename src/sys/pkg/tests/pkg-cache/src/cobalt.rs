@@ -5,6 +5,7 @@
 /// This module tests the Cobalt metrics reporting.
 use {
     crate::TestEnv,
+    assert_matches::assert_matches,
     blobfs_ramdisk::BlobfsRamdisk,
     cobalt_client::traits::AsEventCodes,
     cobalt_sw_delivery_registry as metrics,
@@ -12,7 +13,6 @@ use {
     fuchsia_async as fasync,
     fuchsia_pkg_testing::SystemImageBuilder,
     fuchsia_zircon as zx,
-    matches::assert_matches,
     pkgfs_ramdisk::PkgfsRamdisk,
 };
 

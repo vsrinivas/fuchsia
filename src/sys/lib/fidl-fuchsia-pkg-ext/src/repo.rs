@@ -580,7 +580,7 @@ impl From<RepositoryUrl> for fidl::RepositoryUrl {
 #[cfg(test)]
 mod tests {
     use {
-        super::*, matches::assert_matches, proptest::prelude::*, serde_json::json,
+        super::*, assert_matches::assert_matches, proptest::prelude::*, serde_json::json,
         std::convert::TryInto,
     };
     fn verify_json_serde<T>(expected_value: T, expected_json: serde_json::Value)

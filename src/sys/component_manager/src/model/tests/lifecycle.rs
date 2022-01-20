@@ -20,6 +20,7 @@ use {
         },
     },
     ::routing::{config::AllowlistEntry, policy::PolicyError},
+    assert_matches::assert_matches,
     cm_rust::{
         CapabilityPath, ComponentDecl, EventMode, RegistrationSource, RunnerDecl,
         RunnerRegistration,
@@ -30,7 +31,6 @@ use {
     fidl_fuchsia_hardware_power_statecontrol as fstatecontrol, fuchsia_async as fasync,
     fuchsia_zircon as zx,
     futures::{future::pending, join, lock::Mutex, prelude::*},
-    matches::assert_matches,
     moniker::{AbsoluteMoniker, AbsoluteMonikerBase, PartialAbsoluteMoniker, PartialChildMoniker},
     std::sync::Arc,
     std::{collections::HashSet, convert::TryFrom},

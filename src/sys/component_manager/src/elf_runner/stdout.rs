@@ -198,6 +198,7 @@ mod tests {
             MockServiceRequest,
         },
         anyhow::{anyhow, format_err, Context, Error},
+        assert_matches::assert_matches,
         async_trait::async_trait,
         fidl_fuchsia_component_runner as fcrunner,
         fidl_fuchsia_logger::LogSinkRequest,
@@ -205,7 +206,6 @@ mod tests {
         fuchsia_zircon as zx,
         futures::{FutureExt, SinkExt, StreamExt},
         log::Level,
-        matches::assert_matches,
         rand::{
             distributions::{Alphanumeric, DistString as _},
             thread_rng,

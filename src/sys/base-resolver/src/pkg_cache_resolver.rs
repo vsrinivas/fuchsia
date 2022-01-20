@@ -114,7 +114,7 @@ async fn resolve_pkg_cache(
 
 #[cfg(test)]
 mod tests {
-    use {super::*, fidl_fuchsia_mem as fmem, matches::assert_matches};
+    use {super::*, assert_matches::assert_matches, fidl_fuchsia_mem as fmem};
 
     #[fuchsia::test]
     fn pkg_cache_path_does_not_panic() {

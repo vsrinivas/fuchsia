@@ -138,7 +138,7 @@ impl SystemImage {
 
 #[cfg(test)]
 mod tests {
-    use {super::*, fuchsia_pkg_testing::SystemImageBuilder, matches::assert_matches};
+    use {super::*, assert_matches::assert_matches, fuchsia_pkg_testing::SystemImageBuilder};
 
     struct TestEnv {
         _blobfs: blobfs_ramdisk::BlobfsRamdisk,

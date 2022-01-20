@@ -48,9 +48,9 @@ pub fn do_health_verification<'a>(
 mod tests {
     use {
         super::*,
+        assert_matches::assert_matches,
         fidl_fuchsia_update_verify as fidl,
         futures::{future::BoxFuture, pin_mut, task::Poll},
-        matches::assert_matches,
         mock_verifier::{Hook, MockVerifierService},
         std::sync::Arc,
     };

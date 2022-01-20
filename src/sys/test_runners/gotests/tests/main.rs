@@ -257,7 +257,7 @@ async fn launch_and_run_sample_test_helper(parallel: Option<u16>) {
                 assert_eq!(event, RunEvent::case_stderr(test_case, msg))
             }
             RunEventMatch::AnyStderr => {
-                matches::assert_matches!(event, RunEvent::CaseStderr { .. })
+                assert_matches::assert_matches!(event, RunEvent::CaseStderr { .. })
             }
         }
     }

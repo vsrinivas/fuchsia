@@ -571,10 +571,10 @@ mod testing {
 mod test {
     use super::testing::*;
     use super::*;
+    use assert_matches::assert_matches;
     use fidl::endpoints::{create_proxy, create_proxy_and_stream};
     use futures::Future;
     use maplit::hashmap;
-    use matches::assert_matches;
     use std::sync::atomic::{AtomicU32, Ordering};
 
     /// A |DebugRequestHandler| implementation that counts the number of requests per state, and

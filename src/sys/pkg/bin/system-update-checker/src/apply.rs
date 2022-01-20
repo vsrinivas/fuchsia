@@ -176,12 +176,12 @@ async fn monitor_update_progress(
 mod test_apply_system_update_impl {
     use super::*;
     use crate::update_manager::tests::FakeTargetChannelUpdater;
+    use assert_matches::assert_matches;
     use fidl_fuchsia_update_installer::RebootControllerRequest;
     use fidl_fuchsia_update_installer_ext::{
         PrepareFailureReason, Progress, UpdateInfo, UpdateInfoAndProgress,
     };
     use fuchsia_async as fasync;
-    use matches::assert_matches;
     use proptest::prelude::*;
 
     struct DoNothingUpdateInstaller;

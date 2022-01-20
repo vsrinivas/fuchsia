@@ -3,13 +3,13 @@
 // found in the LICENSE file.
 
 use {
+    assert_matches::assert_matches,
     component_events::events::{
         Destroyed, DirectoryReady, Event, EventMode, EventSource, EventSubscription, Running,
         Started,
     },
     fidl_fuchsia_sys2 as fsys,
     fuchsia_component_test::ScopedInstance,
-    matches::assert_matches,
     regex::Regex,
     std::{collections::BTreeSet, convert::TryFrom, iter::FromIterator},
     tracing::*,

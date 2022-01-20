@@ -6,6 +6,7 @@
 
 use {
     anyhow::{anyhow, Error},
+    assert_matches::assert_matches,
     blobfs_ramdisk::BlobfsRamdisk,
     fidl::endpoints::ClientEnd,
     fidl_fuchsia_cobalt::CobaltEvent,
@@ -35,7 +36,6 @@ use {
     futures::{future::BoxFuture, prelude::*},
     io_util::file::*,
     maplit::hashmap,
-    matches::assert_matches,
     mock_boot_arguments::MockBootArgumentsService,
     mock_paver::{MockPaverService, MockPaverServiceBuilder},
     mock_verifier::MockVerifierService,

@@ -479,6 +479,7 @@ mod tests {
             Controllable, Controller, LaunchError, LauncherConfigArgs,
         },
         anyhow::{Context, Error},
+        assert_matches::assert_matches,
         async_trait::async_trait,
         fidl::endpoints::{create_endpoints, create_proxy, ClientEnd},
         fidl_fuchsia_component_runner::{self as fcrunner, ComponentControllerProxy},
@@ -486,7 +487,6 @@ mod tests {
         fuchsia_runtime::{HandleInfo, HandleType},
         fuchsia_zircon::{self as zx, HandleBased},
         futures::{future::BoxFuture, prelude::*},
-        matches::assert_matches,
         std::{
             boxed::Box,
             convert::{TryFrom, TryInto},

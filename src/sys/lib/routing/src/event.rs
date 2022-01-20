@@ -167,7 +167,7 @@ fn is_subset(prev_value: &DictionaryValue, next_value: &DictionaryValue) -> bool
 
 #[cfg(test)]
 mod tests {
-    use {super::*, cm_rust::EventMode, maplit::hashmap, matches::assert_matches};
+    use {super::*, assert_matches::assert_matches, cm_rust::EventMode, maplit::hashmap};
 
     #[test]
     fn test_mode_set_walk_state() {

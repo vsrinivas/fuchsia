@@ -2057,9 +2057,9 @@ async fn gen_enclosing_env(handles: LocalComponentHandles) -> Result<(), Error> 
 #[cfg(test)]
 mod tests {
     use {
-        super::*, fasync::pin_mut, fidl::endpoints::create_proxy_and_stream,
-        ftest_internal::InfoMarker, maplit::hashset, matches::assert_matches, std::ops::Add,
-        zx::DurationNum,
+        super::*, assert_matches::assert_matches, fasync::pin_mut,
+        fidl::endpoints::create_proxy_and_stream, ftest_internal::InfoMarker, maplit::hashset,
+        std::ops::Add, zx::DurationNum,
     };
 
     #[fasync::run_singlethreaded(test)]

@@ -82,7 +82,7 @@ where
 
 #[cfg(test)]
 mod tests {
-    use {super::*, hyper::StatusCode, matches::assert_matches};
+    use {super::*, assert_matches::assert_matches, hyper::StatusCode};
 
     #[test]
     fn http_errors_aborts_on_io_error() {

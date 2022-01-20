@@ -264,7 +264,7 @@ impl FromStr for HttpContentRange {
 
 #[cfg(test)]
 mod tests {
-    use {super::*, matches::assert_matches};
+    use {super::*, assert_matches::assert_matches};
 
     #[test]
     fn parse_http_byte_range_success() {

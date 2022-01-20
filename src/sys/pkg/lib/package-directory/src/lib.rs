@@ -202,11 +202,11 @@ async fn read_dirents<'a>(
 mod tests {
     use {
         super::*,
+        assert_matches::assert_matches,
         fidl_fuchsia_io::{FileMarker, NodeEvent, NodeProxy},
         fuchsia_hash::Hash,
         fuchsia_pkg_testing::{blobfs::Fake as FakeBlobfs, PackageBuilder},
         futures::StreamExt,
-        matches::assert_matches,
         std::any::Any,
         vfs::directory::dirents_sink::{self, Sealed, Sink},
     };

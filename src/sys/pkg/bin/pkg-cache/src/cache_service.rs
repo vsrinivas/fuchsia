@@ -1017,13 +1017,13 @@ async fn serve_blob_info_iterator(
 mod serve_needed_blobs_tests {
     use {
         super::*,
+        assert_matches::assert_matches,
         fidl_fuchsia_io::FileMarker,
         fidl_fuchsia_pkg::{BlobInfoIteratorMarker, BlobInfoIteratorProxy, NeededBlobsProxy},
         fuchsia_async::Timer,
         fuchsia_hash::HashRangeFull,
         fuchsia_inspect as finspect,
         futures::future::Either,
-        matches::assert_matches,
         std::time::Duration,
     };
 
@@ -2228,10 +2228,10 @@ mod serve_needed_blobs_tests {
 mod get_handler_tests {
     use super::serve_needed_blobs_tests::*;
     use super::*;
+    use assert_matches::assert_matches;
     use fidl_fuchsia_pkg::NeededBlobsProxy;
     use fuchsia_cobalt::{CobaltConnector, ConnectionType};
     use fuchsia_inspect as finspect;
-    use matches::assert_matches;
 
     fn spawn_get_with_mocks(
         meta_blob_info: BlobInfo,
@@ -2420,9 +2420,9 @@ mod get_handler_tests {
 mod serve_write_blob_tests {
     use {
         super::*,
+        assert_matches::assert_matches,
         fidl_fuchsia_io::{FileMarker, FileProxy},
         futures::task::Poll,
-        matches::assert_matches,
         proptest::prelude::*,
         proptest_derive::Arbitrary,
     };

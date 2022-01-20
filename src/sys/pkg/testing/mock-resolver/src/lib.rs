@@ -406,7 +406,7 @@ impl ResolveHandler {
 
 #[cfg(test)]
 mod tests {
-    use {super::*, fidl_fuchsia_pkg::ResolveError, matches::assert_matches};
+    use {super::*, assert_matches::assert_matches, fidl_fuchsia_pkg::ResolveError};
 
     async fn read_file(dir_proxy: &DirectoryProxy, path: &str) -> String {
         let file_proxy =

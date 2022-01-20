@@ -390,13 +390,13 @@ fn try_create_install_plan_impl(
 mod tests {
     use {
         super::*,
+        assert_matches::assert_matches,
         fidl_fuchsia_update_installer::{
             FailPrepareData, InstallationProgress, InstallerRequest, InstallerRequestStream,
             RebootControllerRequest, State, UpdateInfo,
         },
         fuchsia_async as fasync,
         futures::future::BoxFuture,
-        matches::assert_matches,
         omaha_client::protocol::response::{App, Manifest, Package, Packages, UpdateCheck},
         parking_lot::Mutex,
         std::{convert::TryInto, sync::Arc, task::Poll},

@@ -30,9 +30,9 @@ pub(crate) async fn hash(proxy: &DirectoryProxy) -> Result<Hash, HashError> {
 mod tests {
     use {
         super::*,
+        assert_matches::assert_matches,
         fuchsia_async as fasync,
         io_util::directory::open_in_namespace,
-        matches::assert_matches,
         std::{fs::File, io::Write as _},
         tempfile::tempdir,
     };

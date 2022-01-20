@@ -60,7 +60,7 @@ pub fn validate_name(name: &[u8]) -> Result<&[u8], Error> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use matches::assert_matches;
+    use assert_matches::assert_matches;
 
     #[test]
     fn valid_names() {

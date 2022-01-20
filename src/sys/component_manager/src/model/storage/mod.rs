@@ -413,10 +413,10 @@ mod tests {
                 test_helpers::{self, component_decl_with_test_runner},
             },
         },
+        assert_matches::assert_matches,
         cm_rust::*,
         cm_rust_testing::ComponentDeclBuilder,
         component_id_index, fidl_fuchsia_io2 as fio2,
-        matches::assert_matches,
         moniker::{AbsoluteMonikerBase, PartialAbsoluteMoniker},
         rand::{self, distributions::Alphanumeric, Rng},
         std::{

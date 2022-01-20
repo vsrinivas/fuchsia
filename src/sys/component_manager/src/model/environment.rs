@@ -178,13 +178,13 @@ mod tests {
         ::routing::{
             config::RuntimeConfig, environment::DebugRegistration, error::ComponentInstanceError,
         },
+        assert_matches::assert_matches,
         cm_rust::{CapabilityName, RegistrationSource, RunnerRegistration},
         cm_rust_testing::{
             ChildDeclBuilder, CollectionDeclBuilder, ComponentDeclBuilder, EnvironmentDeclBuilder,
         },
         fidl_fuchsia_component as fcomponent,
         maplit::hashmap,
-        matches::assert_matches,
         moniker::{AbsoluteMonikerBase, PartialAbsoluteMoniker},
         std::{collections::HashMap, sync::Weak},
     };

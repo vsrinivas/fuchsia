@@ -330,8 +330,8 @@ pub mod tests {
             error::ModelError,
             testing::test_helpers::ActionsTest,
         },
+        assert_matches::assert_matches,
         fuchsia_async as fasync,
-        matches::assert_matches,
     };
 
     async fn register_action_in_new_task<A>(

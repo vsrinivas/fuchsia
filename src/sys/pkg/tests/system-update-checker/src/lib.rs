@@ -5,6 +5,7 @@
 #![cfg(test)]
 use {
     anyhow::anyhow,
+    assert_matches::assert_matches,
     fidl_fuchsia_io2 as fio2,
     fidl_fuchsia_paver::{self as paver, PaverRequestStream},
     fidl_fuchsia_update::{
@@ -22,7 +23,6 @@ use {
     fuchsia_pkg_testing::make_packages_json,
     fuchsia_zircon as zx,
     futures::{channel::mpsc, prelude::*},
-    matches::assert_matches,
     mock_installer::MockUpdateInstallerService,
     mock_paver::{hooks as mphooks, MockPaverService, MockPaverServiceBuilder, PaverEvent},
     mock_resolver::MockResolverService,

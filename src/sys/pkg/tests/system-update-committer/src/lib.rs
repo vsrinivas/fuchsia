@@ -4,6 +4,7 @@
 
 use {
     anyhow::anyhow,
+    assert_matches::assert_matches,
     diagnostics_hierarchy::DiagnosticsHierarchy,
     diagnostics_reader::{ArchiveReader, ComponentSelector, Inspect},
     fidl_fuchsia_paver::{Configuration, ConfigurationStatus},
@@ -16,7 +17,6 @@ use {
     fuchsia_inspect::{assert_data_tree, testing::AnyProperty},
     fuchsia_zircon::{self as zx, AsHandleRef},
     futures::{channel::oneshot, prelude::*},
-    matches::assert_matches,
     mock_paver::{hooks as mphooks, MockPaverService, MockPaverServiceBuilder, PaverEvent},
     mock_reboot::{MockRebootService, RebootReason},
     mock_verifier::MockVerifierService,

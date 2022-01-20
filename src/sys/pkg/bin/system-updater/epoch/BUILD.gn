@@ -15,8 +15,8 @@ if (is_host) {
     "//third_party/rust_crates:thiserror",
   ]
   _generator_test_deps = [
+    "//third_party/rust_crates:assert_matches",
     "//third_party/rust_crates:indoc",
-    "//third_party/rust_crates:matches",
     "//third_party/rust_crates:proptest",
   ]
   _generator_sources = [

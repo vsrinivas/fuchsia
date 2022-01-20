@@ -5,8 +5,8 @@
 #![cfg(test)]
 
 use {
+    assert_matches::assert_matches,
     fuchsia_archive::{ChunkType, Error, Reader, DIR_CHUNK_TYPE, DIR_NAMES_CHUNK_TYPE},
-    matches::assert_matches,
     std::{fs::File, path::Path},
 };
 
@@ -34,7 +34,7 @@ macro_rules! tests {
                 super::*,
                 fuchsia_async as fasync,
                 fuchsia_archive::AsyncReader,
-                matches::assert_matches,
+                assert_matches::assert_matches,
             };
 
             $(

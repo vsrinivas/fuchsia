@@ -61,6 +61,6 @@ async fn binder() {
 
     // Channel should be closing now.
     for evt_stream in binders.iter_mut() {
-        matches::assert_matches!(evt_stream.next().await, None);
+        assert_matches::assert_matches!(evt_stream.next().await, None);
     }
 }

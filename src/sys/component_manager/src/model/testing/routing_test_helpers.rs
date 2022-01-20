@@ -976,8 +976,8 @@ impl Drop for ScopedNamespaceDir<'_> {
 /// Contains functions to use capabilities in routing tests.
 pub mod capability_util {
     use {
-        super::*, anyhow::format_err, cm_rust::NativeIntoFidl, fidl::endpoints::ProtocolMarker,
-        fidl_fuchsia_sys2::EventSourceMarker, matches::assert_matches, std::path::PathBuf,
+        super::*, anyhow::format_err, assert_matches::assert_matches, cm_rust::NativeIntoFidl,
+        fidl::endpoints::ProtocolMarker, fidl_fuchsia_sys2::EventSourceMarker, std::path::PathBuf,
     };
 
     /// Looks up `resolved_url` in the namespace, and attempts to read ${path}/hippo. The file

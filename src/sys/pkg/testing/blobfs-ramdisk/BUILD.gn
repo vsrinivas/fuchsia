@@ -31,8 +31,8 @@ rustc_library("blobfs-ramdisk") {
 
   test_deps = [
     "//src/lib/storage/ramdevice_client",
+    "//third_party/rust_crates:assert_matches",
     "//third_party/rust_crates:maplit",
-    "//third_party/rust_crates:matches",
   ]
 
   sources = [

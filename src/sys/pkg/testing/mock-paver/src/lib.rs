@@ -658,10 +658,10 @@ impl MockPaverService {
 pub mod tests {
     use {
         super::*,
+        assert_matches::assert_matches,
         fidl_fuchsia_paver as paver,
         fuchsia_zircon::{self as zx, VmoOptions},
         futures::task::Poll,
-        matches::assert_matches,
     };
 
     struct MockPaverForTest {

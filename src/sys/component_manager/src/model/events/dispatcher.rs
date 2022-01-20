@@ -232,9 +232,9 @@ mod tests {
         super::*,
         crate::{capability::CapabilitySource, model::events::registry::ExecutionMode},
         ::routing::capability_source::InternalCapability,
+        assert_matches::assert_matches,
         fuchsia_zircon as zx,
         futures::StreamExt,
-        matches::assert_matches,
         moniker::{AbsoluteMoniker, AbsoluteMonikerBase},
         std::{
             convert::TryInto,

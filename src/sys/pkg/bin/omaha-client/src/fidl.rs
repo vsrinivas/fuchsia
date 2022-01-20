@@ -893,12 +893,12 @@ mod stub {
 mod tests {
     use super::*;
     use crate::channel::ChannelConfig;
+    use assert_matches::assert_matches;
     use fidl::endpoints::{create_proxy_and_stream, create_request_stream};
     use fidl_fuchsia_update::{self as update, ManagerMarker, MonitorMarker, MonitorRequest};
     use fidl_fuchsia_update_channel::ProviderMarker;
     use fidl_fuchsia_update_channelcontrol::ChannelControlMarker;
     use fuchsia_inspect::{assert_data_tree, Inspector};
-    use matches::assert_matches;
     use omaha_client::{common::App, protocol::Cohort};
 
     fn spawn_fidl_server<M: fidl::endpoints::ProtocolMarker>(

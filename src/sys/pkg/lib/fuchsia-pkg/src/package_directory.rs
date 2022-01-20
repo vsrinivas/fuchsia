@@ -155,8 +155,8 @@ impl OpenRights {
 #[cfg(target_os = "fuchsia")]
 mod tests {
     use super::*;
+    use assert_matches::assert_matches;
     use fidl::endpoints::Proxy;
-    use matches::assert_matches;
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn open_close() {

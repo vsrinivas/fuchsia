@@ -153,8 +153,8 @@ pub fn from_json_str(json: &str, filename: &Path) -> Result<Value, Error> {
 mod tests {
     use super::*;
     use anyhow::format_err;
+    use assert_matches::assert_matches;
     use cm_types;
-    use matches::assert_matches;
 
     #[test]
     fn test_parse_error() {

@@ -121,7 +121,7 @@ pub struct Revert {}
 
 #[cfg(test)]
 mod tests {
-    use {super::*, matches::assert_matches};
+    use {super::*, assert_matches::assert_matches};
 
     #[test]
     fn test_unknown_option() {

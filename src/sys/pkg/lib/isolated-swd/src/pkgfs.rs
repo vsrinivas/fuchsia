@@ -77,9 +77,9 @@ impl Pkgfs {
 pub mod for_tests {
     use {
         super::*,
+        assert_matches::assert_matches,
         blobfs_ramdisk::BlobfsRamdisk,
         fuchsia_pkg_testing::Package,
-        matches::assert_matches,
         pkgfs::{
             self,
             install::{BlobCreateError, BlobKind, BlobWriteSuccess},

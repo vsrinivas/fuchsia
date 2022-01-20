@@ -161,11 +161,11 @@ impl vfs::directory::entry_container::Directory for MetaSubdir {
 mod tests {
     use {
         super::*,
+        assert_matches::assert_matches,
         fidl::{AsyncChannel, Channel},
         fidl_fuchsia_io::{DirectoryMarker, FileMarker, OPEN_FLAG_DESCRIBE, OPEN_RIGHT_READABLE},
         fuchsia_pkg_testing::{blobfs::Fake as FakeBlobfs, PackageBuilder},
         futures::stream::StreamExt as _,
-        matches::assert_matches,
         vfs::directory::{entry::DirectoryEntry, entry_container::Directory},
     };
 

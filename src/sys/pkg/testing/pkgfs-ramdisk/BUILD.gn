@@ -28,8 +28,8 @@ rustc_library("pkgfs-ramdisk") {
 
   test_deps = [
     "//src/sys/pkg/lib/fuchsia-pkg",
+    "//third_party/rust_crates:assert_matches",
     "//third_party/rust_crates:maplit",
-    "//third_party/rust_crates:matches",
     "//third_party/rust_crates:tempfile",
   ]
 

@@ -362,11 +362,11 @@ impl Package {
 mod tests {
     use {
         super::*,
+        assert_matches::assert_matches,
         fuchsia_async as fasync,
         fuchsia_pkg_testing::PackageBuilder,
         fuchsia_url::pkg_url::PinnedPkgUrl,
         maplit::{hashmap, hashset},
-        matches::assert_matches,
         std::str::FromStr,
     };
 

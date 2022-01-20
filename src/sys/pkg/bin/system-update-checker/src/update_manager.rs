@@ -615,6 +615,7 @@ impl CommitQuerier for RealCommitQuerier {
 pub(crate) mod tests {
     use super::*;
     use crate::errors;
+    use assert_matches::assert_matches;
     use event_queue::{ClosedClient, Notify};
     use fuchsia_async::{DurationExt, TimeoutExt};
     use fuchsia_zircon::prelude::*;
@@ -622,7 +623,6 @@ pub(crate) mod tests {
     use futures::channel::oneshot;
     use futures::future::BoxFuture;
     use futures::lock::Mutex as AsyncMutex;
-    use matches::assert_matches;
     use parking_lot::Mutex;
     use std::sync::atomic::{AtomicU64, Ordering};
 

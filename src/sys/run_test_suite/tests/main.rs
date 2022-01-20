@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use assert_matches::assert_matches;
 use diagnostics_data::Severity;
 use fidl_fuchsia_test_manager::{LaunchError, RunBuilderMarker};
-use matches::assert_matches;
 use regex::Regex;
 use run_test_suite_lib::{output, Outcome, RunTestSuiteError, TestParams};
 use std::convert::TryInto;

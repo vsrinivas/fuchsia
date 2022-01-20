@@ -58,11 +58,11 @@ mod tests {
         },
         UpdateManager, UpdateManagerRequest,
     };
+    use assert_matches::assert_matches;
     use fidl_fuchsia_update_ext::{CheckOptions, State};
     use fuchsia_async::DurationExt;
     use fuchsia_zircon::DurationNum;
     use futures::task::Poll;
-    use matches::assert_matches;
     use std::sync::Arc;
 
     #[test]

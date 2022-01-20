@@ -255,13 +255,13 @@ impl From<&ResolverError> for fsys::ResolverError {
 mod tests {
     use {
         super::*,
+        assert_matches::assert_matches,
         fake_pkgfs::{Entry, MockDir, MockFile},
         fidl::encoding::encode_persistent,
         fidl::endpoints::{create_proxy, ServerEnd},
         fidl::prelude::*,
         fidl_fuchsia_component_config as fconfig, fidl_fuchsia_component_decl as fdecl,
         fidl_fuchsia_io::{DirectoryMarker, DirectoryObject, NodeInfo, NodeMarker},
-        matches::assert_matches,
         std::sync::Arc,
     };
 

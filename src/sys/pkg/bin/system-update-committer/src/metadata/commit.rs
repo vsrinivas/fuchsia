@@ -44,9 +44,9 @@ pub async fn do_commit(
 mod tests {
     use {
         super::*,
+        assert_matches::assert_matches,
         fuchsia_async as fasync,
         fuchsia_zircon::Status,
-        matches::assert_matches,
         mock_paver::{hooks as mphooks, MockPaverServiceBuilder, PaverEvent},
         std::sync::Arc,
     };

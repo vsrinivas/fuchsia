@@ -148,13 +148,13 @@ impl vfs::directory::entry_container::Directory for Validation {
 mod tests {
     use {
         super::*,
+        assert_matches::assert_matches,
         blobfs_ramdisk::BlobfsRamdisk,
         fidl::{AsyncChannel, Channel},
         fidl_fuchsia_io::{
             DirectoryMarker, FileMarker, DIRENT_TYPE_FILE, OPEN_FLAG_DESCRIBE, OPEN_RIGHT_READABLE,
         },
         futures::stream::StreamExt as _,
-        matches::assert_matches,
         vfs::directory::{entry::DirectoryEntry, entry_container::Directory},
     };
 

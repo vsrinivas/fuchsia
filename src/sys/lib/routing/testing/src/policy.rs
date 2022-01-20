@@ -4,11 +4,11 @@
 
 use {
     anyhow::Error,
+    assert_matches::assert_matches,
     cm_rust::{
         CapabilityName, CapabilityTypeName, ProtocolDecl, StorageDecl, StorageDirectorySource,
     },
     fidl_fuchsia_component_decl as fdecl,
-    matches::assert_matches,
     moniker::{AbsoluteMoniker, AbsoluteMonikerBase, ExtendedMoniker, PartialAbsoluteMoniker},
     routing::{
         capability_source::{CapabilitySourceInterface, ComponentCapability, InternalCapability},

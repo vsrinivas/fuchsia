@@ -68,9 +68,9 @@ async fn handle_debug_data_request(
 #[cfg(test)]
 mod test {
     use super::*;
+    use assert_matches::assert_matches;
     use fidl::{endpoints::create_proxy, AsHandleRef};
     use futures::FutureExt;
-    use matches::assert_matches;
 
     fn create_proxy_and_message(
         test_url: &str,

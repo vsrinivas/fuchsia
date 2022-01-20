@@ -6,6 +6,7 @@
 /// state (successfully handles retries) when the TUF server errors while
 /// servicing fuchsia.pkg.PackageResolver.Resolve FIDL requests.
 use {
+    assert_matches::assert_matches,
     fuchsia_async as fasync,
     fuchsia_merkle::MerkleTree,
     fuchsia_pkg_testing::{
@@ -16,7 +17,6 @@ use {
         extra_blob_contents, make_pkg_with_extra_blobs, ResolverVariant, TestEnvBuilder,
         EMPTY_REPO_PATH, FILE_SIZE_LARGE_ENOUGH_TO_TRIGGER_HYPER_BATCHING,
     },
-    matches::assert_matches,
     std::{net::Ipv4Addr, sync::Arc},
 };
 

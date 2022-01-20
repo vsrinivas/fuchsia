@@ -419,9 +419,9 @@ pub(crate) mod tests {
     use {
         super::*,
         anyhow::Error,
+        assert_matches::assert_matches,
         fuchsia_async as fasync,
         fuchsia_inspect::assert_data_tree,
-        matches::assert_matches,
         serde_json::json,
         std::{io, path::Path},
     };

@@ -5,6 +5,7 @@
 #![cfg(test)]
 use {
     anyhow::anyhow,
+    assert_matches::assert_matches,
     diagnostics_reader::{ArchiveReader, /*ComponentSelector, */ Inspect},
     fidl_fuchsia_io2 as fio2,
     fidl_fuchsia_paver::{self as paver, PaverRequestStream},
@@ -35,7 +36,6 @@ use {
         channel::{mpsc, oneshot},
         prelude::*,
     },
-    matches::assert_matches,
     mock_crash_reporter::{CrashReport, MockCrashReporterService, ThrottleHook},
     mock_installer::MockUpdateInstallerService,
     mock_omaha_server::{OmahaResponse, OmahaServer},
@@ -1284,7 +1284,7 @@ async fn test_omaha_client_perform_pending_reboot_after_out_of_space() {
 
 /// Verifies the signature of the CrashReport is what's expected.
 fn assert_signature(report: CrashReport, expected_signature: &str) {
-    matches::assert_matches!(
+    assert_matches::assert_matches!(
         report,
         CrashReport {
             crash_signature: Some(signature),

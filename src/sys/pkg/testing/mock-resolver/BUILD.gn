@@ -25,7 +25,7 @@ rustc_library("mock-resolver") {
 
   test_deps = [
     "//garnet/lib/rust/io_util",
-    "//third_party/rust_crates:matches",
+    "//third_party/rust_crates:assert_matches",
   ]
 
   sources = [ "src/lib.rs" ]

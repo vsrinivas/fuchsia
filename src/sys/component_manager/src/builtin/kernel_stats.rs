@@ -265,7 +265,7 @@ mod tests {
         let kernel_stats_provider = serve_kernel_stats(OnError::Ignore).await.unwrap();
 
         // The server should close the channel when it receives an invalid argument
-        matches::assert_matches!(
+        assert_matches::assert_matches!(
             kernel_stats_provider.get_cpu_load(0).await,
             Err(fidl::Error::ClientChannelClosed { .. })
         );

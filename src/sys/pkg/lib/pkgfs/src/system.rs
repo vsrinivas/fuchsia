@@ -108,8 +108,8 @@ impl Client {
 #[cfg(test)]
 mod tests {
     use {
-        super::*, blobfs_ramdisk::BlobfsRamdisk, fuchsia_pkg_testing::SystemImageBuilder,
-        matches::assert_matches, pkgfs_ramdisk::PkgfsRamdisk, std::io::Read as _,
+        super::*, assert_matches::assert_matches, blobfs_ramdisk::BlobfsRamdisk,
+        fuchsia_pkg_testing::SystemImageBuilder, pkgfs_ramdisk::PkgfsRamdisk, std::io::Read as _,
     };
 
     #[fuchsia_async::run_singlethreaded(test)]

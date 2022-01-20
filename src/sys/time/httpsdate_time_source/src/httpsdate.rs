@@ -206,11 +206,11 @@ mod test {
     use crate::diagnostics::FakeDiagnostics;
     use crate::sampler::FakeSampler;
     use anyhow::format_err;
+    use assert_matches::assert_matches;
     use fidl_fuchsia_time_external::TimeSample;
     use futures::{channel::mpsc::channel, future::ready, stream::StreamExt, task::Poll as FPoll};
     use httpdate_hyper::HttpsDateError;
     use lazy_static::lazy_static;
-    use matches::assert_matches;
     use std::sync::Arc;
 
     /// Test retry strategy with minimal wait periods.

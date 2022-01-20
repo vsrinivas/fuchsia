@@ -28,7 +28,7 @@ rustc_library("fidl-fuchsia-update-installer-ext") {
 
   test_deps = [
     "//src/lib/fuchsia-async",
-    "//third_party/rust_crates:matches",
+    "//third_party/rust_crates:assert_matches",
     "//third_party/rust_crates:serde_json",
   ]
 

@@ -4,11 +4,11 @@
 
 use {
     anyhow::{Context, Error},
+    assert_matches::assert_matches,
     component_events::{events::*, matcher::*},
     fidl_fuchsia_component as fcomponent, fidl_test_policy as ftest, fuchsia_async as fasync,
     fuchsia_component::client,
     fuchsia_zircon::{self as zx, AsHandleRef},
-    matches::assert_matches,
     security_policy_test_util::{open_exposed_dir, start_policy_test},
 };
 

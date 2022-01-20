@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 use {
+    assert_matches::assert_matches,
     fidl_fuchsia_update_installer::{
         InstallerMarker, InstallerProxy, InstallerRequest, InstallerRequestStream, MonitorProxy,
         Options, RebootControllerRequest, UpdateNotStartedReason,
@@ -10,7 +11,6 @@ use {
     fidl_fuchsia_update_installer_ext::{State, StateId},
     fuchsia_async as fasync,
     futures::{channel::mpsc, prelude::*},
-    matches::assert_matches,
     parking_lot::Mutex,
     pretty_assertions::assert_eq,
     std::sync::Arc,

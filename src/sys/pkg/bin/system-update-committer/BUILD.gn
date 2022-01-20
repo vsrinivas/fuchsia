@@ -36,7 +36,7 @@ rustc_library("lib") {
     "//src/sys/pkg/testing/mock-paver",
     "//src/sys/pkg/testing/mock-reboot",
     "//src/sys/pkg/testing/mock-verifier:lib",
-    "//third_party/rust_crates:matches",
+    "//third_party/rust_crates:assert_matches",
     "//third_party/rust_crates:parking_lot",
     "//third_party/rust_crates:proptest",
   ]

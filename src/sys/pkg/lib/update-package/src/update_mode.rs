@@ -99,8 +99,8 @@ pub(crate) async fn update_mode(
 #[cfg(test)]
 mod tests {
     use {
-        super::*, crate::TestUpdatePackage, fuchsia_async as fasync, matches::assert_matches,
-        proptest::prelude::*, serde_json::json,
+        super::*, crate::TestUpdatePackage, assert_matches::assert_matches,
+        fuchsia_async as fasync, proptest::prelude::*, serde_json::json,
     };
 
     fn valid_update_mode_json_value(mode: &str) -> serde_json::Value {

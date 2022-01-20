@@ -4,12 +4,12 @@
 
 use {
     super::*,
+    assert_matches::assert_matches,
     chrono::prelude::*,
     fidl_fuchsia_pkg::PackageUrl,
     fidl_fuchsia_update_installer::{
         CompleteData, FetchData, InstallationProgress, Options, State, UpdateInfo, UpdateResult,
     },
-    matches::assert_matches,
     pretty_assertions::assert_eq,
     serde_json::json,
 };

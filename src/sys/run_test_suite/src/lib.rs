@@ -843,8 +843,8 @@ impl From<SuiteRunOptions> for fidl_fuchsia_test_manager::RunOptions {
 #[cfg(test)]
 mod test {
     use super::*;
+    use assert_matches::assert_matches;
     use fidl::endpoints::create_proxy_and_stream;
-    use matches::assert_matches;
 
     const TEST_URL: &str = "test.cm";
 

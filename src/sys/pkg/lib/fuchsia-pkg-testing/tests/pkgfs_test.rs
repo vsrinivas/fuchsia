@@ -5,6 +5,7 @@
 #![cfg(test)]
 use {
     crate::*,
+    assert_matches::assert_matches,
     blobfs_ramdisk::BlobfsRamdisk,
     fidl_fuchsia_io2::UnlinkOptions,
     fuchsia_async as fasync,
@@ -12,7 +13,6 @@ use {
     fuchsia_pkg::{OpenRights, PackageDirectory},
     fuchsia_pkg_testing::{Package, PackageBuilder, SystemImageBuilder, VerificationError},
     fuchsia_zircon::Status,
-    matches::assert_matches,
     pkgfs_ramdisk::PkgfsRamdisk,
     std::{
         fmt::Debug,

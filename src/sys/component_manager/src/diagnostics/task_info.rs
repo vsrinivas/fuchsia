@@ -269,10 +269,10 @@ mod tests {
     use {
         super::*,
         crate::diagnostics::testing::FakeTask,
+        assert_matches::assert_matches,
         diagnostics_hierarchy::ArrayContent,
         fuchsia_inspect::testing::{assert_data_tree, AnyProperty},
         injectable_time::FakeTime,
-        matches::assert_matches,
         std::sync::Arc,
     };
 

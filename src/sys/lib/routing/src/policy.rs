@@ -404,7 +404,7 @@ mod tests {
         crate::config::{
             ChildPolicyAllowlists, JobPolicyAllowlists, RuntimeConfig, SecurityPolicy,
         },
-        matches::assert_matches,
+        assert_matches::assert_matches,
         moniker::{AbsoluteMonikerBase, PartialAbsoluteMoniker, PartialChildMoniker},
         std::collections::HashMap,
     };

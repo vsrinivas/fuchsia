@@ -355,6 +355,7 @@ pub enum Error {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use assert_matches::assert_matches;
     use fidl::endpoints::{DiscoverableProtocolMarker, RequestStream};
     use fidl_fuchsia_boot::{ArgumentsRequest, ArgumentsRequestStream};
     use fidl_fuchsia_cobalt::{SystemDataUpdaterRequest, SystemDataUpdaterRequestStream};
@@ -369,7 +370,6 @@ mod tests {
     use futures::prelude::*;
     use futures::task::Poll;
     use futures::{future::FutureExt, stream::StreamExt};
-    use matches::assert_matches;
     use parking_lot::Mutex;
     use serde_json::{json, Value};
     use std::sync::Arc;

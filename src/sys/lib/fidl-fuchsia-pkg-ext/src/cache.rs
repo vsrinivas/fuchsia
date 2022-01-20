@@ -512,6 +512,7 @@ pub enum WriteBlobError {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use assert_matches::assert_matches;
     use fidl::prelude::*;
     use fidl_fuchsia_io::{DirectoryRequestStream, FileMarker, FileRequest, FileRequestStream};
     use fidl_fuchsia_pkg::{
@@ -519,7 +520,6 @@ mod tests {
         PackageCacheGetResponder, PackageCacheMarker, PackageCacheOpenResponder,
         PackageCacheRequest, PackageCacheRequestStream,
     };
-    use matches::assert_matches;
 
     struct MockPackageCache {
         stream: PackageCacheRequestStream,

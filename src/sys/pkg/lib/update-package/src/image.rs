@@ -206,7 +206,7 @@ pub(crate) async fn open(proxy: &DirectoryProxy, image: &Image) -> Result<Buffer
 #[cfg(test)]
 mod tests {
     use {
-        super::*, crate::TestUpdatePackage, matches::assert_matches, proptest::prelude::*,
+        super::*, crate::TestUpdatePackage, assert_matches::assert_matches, proptest::prelude::*,
         proptest_derive::Arbitrary,
     };
 

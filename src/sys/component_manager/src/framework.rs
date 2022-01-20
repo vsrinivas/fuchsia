@@ -453,6 +453,7 @@ mod tests {
                 testing::{mocks::*, out_dir::OutDir, test_helpers::*, test_hook::*},
             },
         },
+        assert_matches::assert_matches,
         cm_rust::{
             self, CapabilityName, CapabilityPath, ComponentDecl, EventMode, ExposeDecl,
             ExposeProtocolDecl, ExposeSource, ExposeTarget,
@@ -466,7 +467,6 @@ mod tests {
         fuchsia_component::client,
         futures::{lock::Mutex, poll, task::Poll},
         io_util::{OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE},
-        matches::assert_matches,
         moniker::PartialAbsoluteMoniker,
         routing_test_helpers::component_decl_with_exposed_binder,
         std::collections::HashSet,

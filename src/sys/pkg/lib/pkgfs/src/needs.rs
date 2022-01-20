@@ -301,10 +301,10 @@ mod tests {
     use {
         super::*,
         crate::install::{BlobCreateError, BlobKind, BlobWriteSuccess},
+        assert_matches::assert_matches,
         fuchsia_hash::HashRangeFull,
         fuchsia_pkg_testing::PackageBuilder,
         maplit::hashset,
-        matches::assert_matches,
         pkgfs_ramdisk::PkgfsRamdisk,
     };
 

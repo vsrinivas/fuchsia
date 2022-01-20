@@ -223,11 +223,11 @@ impl vfs::file::File for MetaFile {
 mod tests {
     use {
         super::*,
+        assert_matches::assert_matches,
         fidl::{endpoints::Proxy as _, AsHandleRef as _},
         fidl_fuchsia_io::{FileProxy, NodeProxy, OPEN_FLAG_DESCRIBE},
         fuchsia_pkg_testing::{blobfs::Fake as FakeBlobfs, PackageBuilder},
         futures::stream::StreamExt as _,
-        matches::assert_matches,
         std::convert::{TryFrom as _, TryInto as _},
         vfs::{directory::entry::DirectoryEntry, file::File},
     };

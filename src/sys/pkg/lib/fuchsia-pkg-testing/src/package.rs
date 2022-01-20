@@ -627,7 +627,7 @@ impl PackageDir {
 
 #[cfg(test)]
 mod tests {
-    use {super::*, fuchsia_merkle::MerkleTree, matches::assert_matches, std::io::Read};
+    use {super::*, assert_matches::assert_matches, fuchsia_merkle::MerkleTree, std::io::Read};
 
     #[test]
     #[should_panic(expected = r#""data" is not a directory"#)]

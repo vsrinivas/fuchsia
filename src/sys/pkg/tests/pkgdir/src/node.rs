@@ -255,7 +255,7 @@ async fn close_per_package_source(source: PackageSource) {
         let status = node.close().await.unwrap();
         let () = zx::Status::ok(status).unwrap();
 
-        matches::assert_matches!(
+        assert_matches::assert_matches!(
             node.close().await,
             Err(fidl::Error::ClientChannelClosed { status: zx::Status::PEER_CLOSED, .. })
         );

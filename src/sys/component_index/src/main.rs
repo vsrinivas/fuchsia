@@ -140,10 +140,10 @@ mod tests {
 
     mod fuzzy_search_server {
         use super::*;
+        use assert_matches::assert_matches;
         use fidl::endpoints::create_proxy_and_stream;
         use fidl_fuchsia_sys_index::ComponentIndexMarker;
         use futures::pin_mut;
-        use matches::assert_matches;
 
         #[fasync::run_until_stalled(test)]
         async fn reports_matching_component_to_client() -> Result<(), Error> {

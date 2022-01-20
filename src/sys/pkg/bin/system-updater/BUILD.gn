@@ -72,7 +72,7 @@ rustc_binary("bin") {
     "//src/sys/pkg/lib/fuchsia-pkg-testing",
     "//src/sys/pkg/lib/version",
     "//src/sys/pkg/testing/mock-paver",
-    "//third_party/rust_crates:matches",
+    "//third_party/rust_crates:assert_matches",
     "//third_party/rust_crates:pretty_assertions",
     "//third_party/rust_crates:proptest",
     "//third_party/rust_crates:tempfile",

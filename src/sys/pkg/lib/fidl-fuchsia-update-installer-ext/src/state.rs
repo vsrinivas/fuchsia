@@ -861,8 +861,8 @@ fn arb_info_and_progress() -> impl Strategy<Value = (UpdateInfo, Progress)> {
 mod tests {
     use {
         super::*,
+        assert_matches::assert_matches,
         fuchsia_inspect::{assert_data_tree, Inspector},
-        matches::assert_matches,
         serde_json::json,
     };
 

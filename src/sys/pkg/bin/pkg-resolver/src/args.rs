@@ -73,7 +73,7 @@ fn parse_unsigned_integer_as_seconds(flag: &str) -> Result<Duration, String> {
 
 #[cfg(test)]
 mod tests {
-    use {super::*, matches::assert_matches};
+    use {super::*, assert_matches::assert_matches};
 
     #[test]
     fn local_mirror_allowed() {

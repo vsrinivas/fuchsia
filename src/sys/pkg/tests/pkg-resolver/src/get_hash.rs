@@ -4,11 +4,11 @@
 
 /// This module tests the fuchsia.pkg.PackageResolver.GetHash FIDL method
 use {
+    assert_matches::assert_matches,
     fuchsia_async as fasync,
     fuchsia_pkg_testing::RepositoryBuilder,
     fuchsia_zircon::Status,
     lib::{make_pkg_with_extra_blobs, TestEnvBuilder, EMPTY_REPO_PATH},
-    matches::assert_matches,
     std::sync::Arc,
 };
 

@@ -4,6 +4,7 @@
 
 use {
     super::*,
+    assert_matches::assert_matches,
     fidl_fuchsia_io::{
         DirectoryProxy, FileEvent, FileInfo, FileMarker, FileObject, FileProxy, NodeInfo,
         Representation,
@@ -12,7 +13,6 @@ use {
     fuchsia_zircon::Status,
     futures::StreamExt,
     maplit::btreeset,
-    matches::assert_matches,
     std::{io::Write, time::Duration},
 };
 

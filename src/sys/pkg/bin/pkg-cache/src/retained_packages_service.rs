@@ -62,10 +62,10 @@ async fn collect_blob_ids(
 mod tests {
     use {
         super::*,
+        assert_matches::assert_matches,
         fidl_fuchsia_pkg_ext::{serve_fidl_iterator, BlobId},
         fuchsia_hash::Hash,
         futures::Future,
-        matches::assert_matches,
     };
 
     const ZEROES_HASH: &'static str =

@@ -120,7 +120,7 @@ mod tests {
 
         let config = Config::from_url_and_options(update_url, options);
 
-        matches::assert_matches!(
+        assert_matches::assert_matches!(
             config,
             Config {
                 initiator: Initiator::Manual,

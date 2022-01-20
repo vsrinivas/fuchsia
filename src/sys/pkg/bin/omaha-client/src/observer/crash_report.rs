@@ -146,7 +146,7 @@ pub enum ControlRequest {
 #[cfg(test)]
 /// Verifies the signature of the CrashReport is what's expected.
 pub fn assert_signature(report: CrashReport, expected_signature: &str) {
-    matches::assert_matches!(
+    assert_matches::assert_matches!(
         report,
         CrashReport {
             crash_signature: Some(signature),
@@ -161,8 +161,8 @@ pub fn assert_signature(report: CrashReport, expected_signature: &str) {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use assert_matches::assert_matches;
     use fuchsia_async::{self as fasync, Task};
-    use matches::assert_matches;
     use mock_crash_reporter::{MockCrashReporterService, ThrottleHook};
     use omaha_client::time::MockTimeSource;
     use std::sync::Arc;

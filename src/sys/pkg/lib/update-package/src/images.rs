@@ -113,9 +113,9 @@ mod tests {
     use {
         super::*,
         crate::{TestUpdatePackage, UpdatePackage},
+        assert_matches::assert_matches,
         fidl_fuchsia_io::DirectoryMarker,
         maplit::btreeset,
-        matches::assert_matches,
         std::sync::Arc,
         vfs::{
             directory::entry::DirectoryEntry, execution_scope::ExecutionScope,

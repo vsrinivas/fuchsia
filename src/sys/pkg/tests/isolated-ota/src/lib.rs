@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 use {
     anyhow::{Context, Error},
+    assert_matches::assert_matches,
     blobfs_ramdisk::BlobfsRamdisk,
     fidl::endpoints::{ClientEnd, RequestStream, ServerEnd},
     fidl_fuchsia_io::{
@@ -22,7 +23,6 @@ use {
     futures::prelude::*,
     http::uri::Uri,
     isolated_ota::{download_and_apply_update, OmahaConfig, UpdateError},
-    matches::assert_matches,
     mock_omaha_server::{OmahaResponse, OmahaServer},
     mock_paver::{hooks as mphooks, MockPaverService, MockPaverServiceBuilder, PaverEvent},
     serde_json::json,

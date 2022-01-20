@@ -377,6 +377,7 @@ mod tests {
         super::*,
         crate::model::hooks::Hooks,
         anyhow::{format_err, Context},
+        assert_matches::assert_matches,
         fidl::endpoints::{ClientEnd, ProtocolMarker, Proxy, ServerEnd},
         fidl_fuchsia_io as fio,
         fidl_test_processbuilder::{UtilMarker, UtilProxy},
@@ -384,7 +385,6 @@ mod tests {
         fuchsia_runtime::{job_default, HandleType},
         fuchsia_zircon::HandleBased,
         futures::lock::Mutex,
-        matches::assert_matches,
         moniker::{AbsoluteMoniker, AbsoluteMonikerBase},
         std::{mem, sync::Weak},
         vfs::{

@@ -500,7 +500,7 @@ fn make_buffer(contents: impl AsRef<[u8]>) -> Buffer {
 mod tests {
     use {
         super::*,
-        matches::assert_matches,
+        assert_matches::assert_matches,
         mock_paver::{hooks as mphooks, MockPaverServiceBuilder, PaverEvent},
         std::sync::Arc,
         update_package::ImageType,
@@ -944,7 +944,7 @@ mod tests {
 mod abr_not_supported_tests {
     use {
         super::*,
-        matches::assert_matches,
+        assert_matches::assert_matches,
         mock_paver::{hooks as mphooks, MockPaverServiceBuilder, PaverEvent},
         std::sync::Arc,
         update_package::ImageType,

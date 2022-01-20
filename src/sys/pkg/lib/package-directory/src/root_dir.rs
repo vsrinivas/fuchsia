@@ -349,6 +349,7 @@ fn open_meta_as_file(flags: u32, mode: u32) -> bool {
 mod tests {
     use {
         super::*,
+        assert_matches::assert_matches,
         fidl::endpoints::{create_proxy, Proxy as _},
         fidl::{AsyncChannel, Channel},
         fidl_fuchsia_io::{
@@ -357,7 +358,6 @@ mod tests {
         },
         fuchsia_pkg_testing::{blobfs::Fake as FakeBlobfs, PackageBuilder},
         futures::stream::StreamExt as _,
-        matches::assert_matches,
         proptest::{prelude::ProptestConfig, prop_assert, proptest},
         vfs::directory::{entry::DirectoryEntry, entry_container::Directory},
     };

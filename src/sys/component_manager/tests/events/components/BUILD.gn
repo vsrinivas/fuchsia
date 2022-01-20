@@ -99,7 +99,7 @@ rustc_binary("resolved_error_reporter_bin") {
     "//src/sys/component_manager/tests/fidl:echofactory-rustc",
     "//src/sys/lib/component-events",
     "//third_party/rust_crates:anyhow",
-    "//third_party/rust_crates:matches",
+    "//third_party/rust_crates:assert_matches",
   ]
 
   sources = [ "resolved_error/reporter.rs" ]
@@ -233,9 +233,9 @@ rustc_binary("directory_ready_root_bin") {
     "//src/sys/component_manager/tests/fidl:components-rustc",
     "//src/sys/lib/component-events",
     "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:assert_matches",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:maplit",
-    "//third_party/rust_crates:matches",
   ]
 
   sources = [ "directory_ready/root.rs" ]
@@ -273,7 +273,7 @@ rustc_binary("synthesis_reporter_bin") {
     "//src/sys/component_manager/tests/fidl:echofactory-rustc",
     "//src/sys/lib/component-events",
     "//third_party/rust_crates:anyhow",
-    "//third_party/rust_crates:matches",
+    "//third_party/rust_crates:assert_matches",
     "//third_party/rust_crates:regex",
     "//third_party/rust_crates:tracing",
   ]

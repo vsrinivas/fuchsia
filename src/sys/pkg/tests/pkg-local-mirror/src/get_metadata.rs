@@ -5,12 +5,12 @@
 /// This module tests calls to the get_metadata API.
 use {
     super::*,
+    assert_matches::assert_matches,
     fidl::endpoints::create_proxy,
     fidl_fuchsia_io::FileEvent::OnOpen_,
     fidl_fuchsia_pkg::{GetMetadataError, RepositoryUrl},
     fuchsia_zircon::Status,
     futures::channel::oneshot,
-    matches::assert_matches,
     vfs::file::vmo::read_only_static,
 };
 

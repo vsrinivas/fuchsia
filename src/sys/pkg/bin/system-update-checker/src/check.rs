@@ -273,6 +273,7 @@ pub mod test_check_for_system_update_impl {
     use {
         super::*,
         crate::update_manager::tests::FakeTargetChannelUpdater,
+        assert_matches::assert_matches,
         fidl_fuchsia_paver::Configuration,
         fidl_fuchsia_pkg::{
             PackageResolverGetHashResult, PackageResolverResolveResult, PackageUrl,
@@ -281,7 +282,6 @@ pub mod test_check_for_system_update_impl {
         futures::{TryFutureExt, TryStreamExt},
         lazy_static::lazy_static,
         maplit::hashmap,
-        matches::assert_matches,
         mock_paver::MockPaverServiceBuilder,
         parking_lot::Mutex,
         std::{collections::hash_map::HashMap, fs, sync::Arc},
@@ -1346,7 +1346,7 @@ pub mod test_check_for_system_update_impl {
 
 #[cfg(test)]
 mod test_compare_buffer {
-    use {super::*, fidl_fuchsia_mem::Buffer, fuchsia_zircon::Vmo, matches::assert_matches};
+    use {super::*, assert_matches::assert_matches, fidl_fuchsia_mem::Buffer, fuchsia_zircon::Vmo};
 
     fn buffer(data: &[u8]) -> Buffer {
         let size = data.len() as u64;
@@ -1408,7 +1408,7 @@ mod test_compare_buffer {
 #[cfg(test)]
 mod test_real_file_system {
     use super::*;
-    use matches::assert_matches;
+    use assert_matches::assert_matches;
     use proptest::prelude::*;
     use std::fs;
     use std::io::{self, Write};

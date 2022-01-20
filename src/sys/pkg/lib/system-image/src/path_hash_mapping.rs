@@ -87,7 +87,7 @@ impl<T> PathHashMapping<T> {
 #[cfg(test)]
 mod tests {
     use {
-        super::*, fuchsia_pkg::test::random_package_path, matches::assert_matches,
+        super::*, assert_matches::assert_matches, fuchsia_pkg::test::random_package_path,
         proptest::prelude::*,
     };
 

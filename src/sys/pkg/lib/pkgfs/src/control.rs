@@ -96,11 +96,11 @@ impl Client {
 mod tests {
     use {
         super::*,
+        assert_matches::assert_matches,
         fidl::endpoints::create_proxy_and_stream,
         fidl_fuchsia_io::{DirectoryMarker, DirectoryRequest},
         fuchsia_async as fasync,
         futures_util::stream::TryStreamExt,
-        matches::assert_matches,
     };
 
     #[fasync::run_singlethreaded(test)]

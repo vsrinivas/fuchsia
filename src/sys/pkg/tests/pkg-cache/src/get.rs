@@ -4,6 +4,7 @@
 
 use {
     crate::{do_fetch, get_missing_blobs, verify_fetches_succeed, write_blob, TestEnv},
+    assert_matches::assert_matches,
     blobfs_ramdisk::BlobfsRamdisk,
     fidl_fuchsia_io::{DirectoryMarker, FileMarker},
     fidl_fuchsia_pkg::{BlobInfo, BlobInfoIteratorMarker, NeededBlobsMarker},
@@ -12,7 +13,6 @@ use {
     fuchsia_pkg_testing::{PackageBuilder, SystemImageBuilder},
     fuchsia_zircon::Status,
     futures::prelude::*,
-    matches::assert_matches,
     pkgfs_ramdisk::PkgfsRamdisk,
 };
 

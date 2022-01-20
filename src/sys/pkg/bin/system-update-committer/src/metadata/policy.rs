@@ -98,9 +98,9 @@ mod tests {
         super::*,
         crate::metadata::errors::VerifyFailureReason,
         anyhow::anyhow,
+        assert_matches::assert_matches,
         fuchsia_async as fasync,
         fuchsia_zircon::Status,
-        matches::assert_matches,
         mock_paver::{hooks as mphooks, MockPaverServiceBuilder, PaverEvent},
         std::sync::Arc,
     };

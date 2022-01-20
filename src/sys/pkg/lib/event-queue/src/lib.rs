@@ -435,6 +435,7 @@ impl<E> ClientCommand<E> {
 mod tests {
     use {
         super::*,
+        assert_matches::assert_matches,
         fidl::endpoints::create_proxy_and_stream,
         fidl_test_pkg_eventqueue::{
             ExampleEventMonitorMarker, ExampleEventMonitorProxy, ExampleEventMonitorProxyInterface,
@@ -442,7 +443,6 @@ mod tests {
         },
         fuchsia_async as fasync,
         futures::{future::BoxFuture, pin_mut, task::Poll},
-        matches::assert_matches,
     };
 
     struct FidlNotifier {

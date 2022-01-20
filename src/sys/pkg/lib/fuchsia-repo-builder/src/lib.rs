@@ -537,10 +537,10 @@ mod tests {
     use super::*;
 
     use {
+        assert_matches::assert_matches,
         chrono::offset::{TimeZone as _, Utc},
         fuchsia_async::{self as fasync, futures::AsyncReadExt as _},
         lazy_static::lazy_static,
-        matches::assert_matches,
         std::iter::once,
         tuf::{crypto::Ed25519PrivateKey, interchange::Json},
     };

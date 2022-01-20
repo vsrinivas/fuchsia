@@ -7,6 +7,7 @@ use {
         get_missing_blobs, replace_retained_packages, verify_fetches_succeed, write_blob,
         write_meta_far, write_needed_blobs, TestEnv,
     },
+    assert_matches::assert_matches,
     blobfs_ramdisk::BlobfsRamdisk,
     fidl_fuchsia_io::{DirectoryMarker, FileMarker},
     fidl_fuchsia_pkg::{BlobInfo, NeededBlobsMarker, PackageCacheMarker},
@@ -19,7 +20,6 @@ use {
     fuchsia_zircon as zx,
     fuchsia_zircon::Status,
     futures::prelude::*,
-    matches::assert_matches,
     pkgfs_ramdisk::PkgfsRamdisk,
     std::collections::HashMap,
 };

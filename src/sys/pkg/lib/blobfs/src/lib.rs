@@ -353,9 +353,9 @@ impl Client {
 #[cfg(test)]
 mod tests {
     use {
-        super::*, blobfs_ramdisk::BlobfsRamdisk, fidl_fuchsia_io::DirectoryRequest,
-        fuchsia_async as fasync, fuchsia_merkle::MerkleTree, futures::stream::TryStreamExt,
-        maplit::hashset, matches::assert_matches, std::io::Write as _,
+        super::*, assert_matches::assert_matches, blobfs_ramdisk::BlobfsRamdisk,
+        fidl_fuchsia_io::DirectoryRequest, fuchsia_async as fasync, fuchsia_merkle::MerkleTree,
+        futures::stream::TryStreamExt, maplit::hashset, std::io::Write as _,
     };
 
     #[fasync::run_singlethreaded(test)]

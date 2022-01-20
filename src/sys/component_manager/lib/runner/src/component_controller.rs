@@ -109,7 +109,7 @@ impl<'a> ComponentController {
 
 #[cfg(test)]
 mod tests {
-    use {super::*, fidl::prelude::*, matches::assert_matches};
+    use {super::*, assert_matches::assert_matches, fidl::prelude::*};
 
     #[fuchsia::test]
     async fn handles_diagnostics_event() {

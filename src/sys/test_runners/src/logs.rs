@@ -185,9 +185,9 @@ mod tests {
     use {
         super::*,
         anyhow::{format_err, Context, Error},
+        assert_matches::assert_matches,
         fuchsia_async::{self as fasync, futures::try_join},
         fuchsia_zircon as zx,
-        matches::assert_matches,
         rand::{
             distributions::{Alphanumeric, DistString as _},
             thread_rng,

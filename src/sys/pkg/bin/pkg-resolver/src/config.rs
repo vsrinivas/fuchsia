@@ -97,7 +97,7 @@ enum ConfigLoadError {
 
 #[cfg(test)]
 mod tests {
-    use {super::*, matches::assert_matches, serde_json::json};
+    use {super::*, assert_matches::assert_matches, serde_json::json};
 
     fn verify_load_dyn(input: serde_json::Value, expected: Config) {
         assert_eq!(

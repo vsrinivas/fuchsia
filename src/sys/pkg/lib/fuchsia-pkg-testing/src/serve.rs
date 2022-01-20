@@ -510,7 +510,7 @@ mod tests {
     use {
         super::*,
         crate::{package::PackageBuilder, repo::RepositoryBuilder},
-        matches::assert_matches,
+        assert_matches::assert_matches,
     };
 
     #[fuchsia_async::run_singlethreaded(test)]

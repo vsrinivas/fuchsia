@@ -197,8 +197,8 @@ mod tests {
     use {
         super::*,
         crate::{index::dynamic::Package, test_utils::add_meta_far_to_blobfs},
+        assert_matches::assert_matches,
         maplit::{hashmap, hashset},
-        matches::assert_matches,
     };
 
     fn hash(n: u8) -> Hash {

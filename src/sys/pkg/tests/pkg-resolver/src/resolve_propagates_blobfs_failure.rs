@@ -9,6 +9,7 @@
 /// resolve_propagates_pkgcache_failure.rs tests should be added for pkg-resolver.
 use {
     anyhow::Error,
+    assert_matches::assert_matches,
     blobfs_ramdisk::BlobfsRamdisk,
     fidl::endpoints::{ClientEnd, RequestStream, ServerEnd},
     fidl_fuchsia_io::{
@@ -21,7 +22,6 @@ use {
     fuchsia_zircon::Status,
     futures::{future::BoxFuture, prelude::*},
     lib::{extra_blob_contents, make_pkg_with_extra_blobs, PkgFs, TestEnvBuilder, EMPTY_REPO_PATH},
-    matches::assert_matches,
     pkgfs_ramdisk::PkgfsRamdisk,
     std::sync::{atomic::AtomicU64, Arc},
 };

@@ -16,9 +16,9 @@ rustc_library("fuchsia-archive") {
   ]
   test_deps = [
     "//src/lib/fuchsia-async",
+    "//third_party/rust_crates:assert_matches",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:itertools",
-    "//third_party/rust_crates:matches",
   ]
   sources = [
     "src/async_read.rs",
@@ -38,7 +38,7 @@ rustc_test("reject-invalid-fars-test") {
     "//garnet/lib/rust/io_util",
     "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
     "//src/lib/fuchsia-async",
-    "//third_party/rust_crates:matches",
+    "//third_party/rust_crates:assert_matches",
   ]
 
   sources = [ "tests/reject_invalid_fars.rs" ]

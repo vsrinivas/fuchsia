@@ -85,11 +85,11 @@ mod tests {
         super::errors::{VerifyError, VerifyFailureReason},
         super::*,
         crate::config::Mode,
+        assert_matches::assert_matches,
         configuration::Configuration,
         fasync::OnSignals,
         fidl_fuchsia_update_verify as fidl, fuchsia_async as fasync,
         fuchsia_zircon::{AsHandleRef, Status},
-        matches::assert_matches,
         mock_paver::{hooks as mphooks, MockPaverServiceBuilder, PaverEvent},
         mock_verifier::MockVerifierService,
         std::sync::{

@@ -4,6 +4,7 @@
 
 #![cfg(test)]
 use {
+    assert_matches::assert_matches,
     blobfs_ramdisk::{BlobfsRamdisk, Ramdisk},
     fidl_fuchsia_pkg_rewrite_ext::Rule,
     fuchsia_async as fasync,
@@ -14,7 +15,6 @@ use {
     },
     fuchsia_zircon::Status,
     lib::{TestEnvBuilder, EMPTY_REPO_PATH},
-    matches::assert_matches,
     pkgfs_ramdisk::PkgfsRamdisk,
     rand::prelude::*,
     std::io::Read,

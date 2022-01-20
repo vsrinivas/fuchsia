@@ -170,12 +170,12 @@ impl Stream for UpdateAttempt {
 mod tests {
     use {
         super::*,
+        assert_matches::assert_matches,
         fidl_fuchsia_update_installer::{
             InstallationProgress, InstallerMarker, InstallerRequest, MonitorProxy,
         },
         fuchsia_async as fasync,
         futures::stream::StreamExt,
-        matches::assert_matches,
     };
 
     const TEST_URL: &str = "fuchsia-pkg://fuchsia.com/update/0";

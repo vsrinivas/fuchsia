@@ -260,11 +260,11 @@ mod tests {
     use crate::fidl::{FidlServerBuilder, MockOrRealStateMachineController};
     use crate::installer::InstallerFailure;
     use anyhow::anyhow;
+    use assert_matches::assert_matches;
     use fidl_fuchsia_feedback::CrashReport;
     use fuchsia_async::{self as fasync, Task};
     use fuchsia_inspect::Inspector;
     use futures::channel::mpsc;
-    use matches::assert_matches;
     use mock_crash_reporter::{MockCrashReporterService, ThrottleHook};
     use omaha_client::time::MockTimeSource;
     use omaha_client::{

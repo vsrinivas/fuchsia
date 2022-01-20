@@ -219,9 +219,9 @@ fn kill_pkgfs(process: Scoped<fuchsia_zircon::Process>) -> Result<(), Error> {
 mod tests {
     use {
         super::*,
+        assert_matches::assert_matches,
         fuchsia_pkg::CreationManifest,
         maplit::{btreemap, hashset},
-        matches::assert_matches,
         std::{
             collections::HashSet,
             fs,

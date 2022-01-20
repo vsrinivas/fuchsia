@@ -119,11 +119,11 @@ mod tests {
     use crate::update_manager::{
         CommitQuerier, TargetChannelUpdater, UpdateApplier, UpdateChecker,
     };
+    use assert_matches::assert_matches;
     use fidl::endpoints::create_proxy_and_stream;
     use fidl_fuchsia_update::{ManagerMarker, ManagerProxy, MonitorRequest, MonitorRequestStream};
     use fidl_fuchsia_update_ext::{Initiator, InstallationErrorData, InstallingData, UpdateInfo};
     use fuchsia_async as fasync;
-    use matches::assert_matches;
     use std::sync::Arc;
 
     async fn spawn_update_service<T, C, A, Cq>(

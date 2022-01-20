@@ -575,7 +575,7 @@ impl TryFrom<component_internal::SecurityPolicy> for SecurityPolicy {
 #[cfg(test)]
 mod tests {
     use {
-        super::*, cm_types::ParseError, fidl_fuchsia_io2 as fio2, matches::assert_matches,
+        super::*, assert_matches::assert_matches, cm_types::ParseError, fidl_fuchsia_io2 as fio2,
         moniker::AbsoluteMoniker, std::path::PathBuf, tempfile::TempDir,
     };
 

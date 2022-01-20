@@ -141,13 +141,13 @@ impl vfs::file::File for MetaAsFile {
 mod tests {
     use {
         super::*,
+        assert_matches::assert_matches,
         fidl_fuchsia_io::{
             DirectoryMarker, FileMarker, DIRENT_TYPE_FILE, OPEN_FLAG_DESCRIBE, OPEN_RIGHT_READABLE,
             VMO_FLAG_EXACT, VMO_FLAG_PRIVATE, VMO_FLAG_READ,
         },
         fuchsia_pkg_testing::{blobfs::Fake as FakeBlobfs, PackageBuilder},
         futures::stream::StreamExt as _,
-        matches::assert_matches,
         std::convert::TryInto as _,
         vfs::{directory::entry::DirectoryEntry, file::File},
     };

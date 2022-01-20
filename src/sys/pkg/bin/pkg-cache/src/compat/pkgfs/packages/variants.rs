@@ -206,10 +206,10 @@ mod tests {
     use {
         super::*,
         crate::compat::pkgfs::testing::FakeSink,
+        assert_matches::assert_matches,
         fidl_fuchsia_io::OPEN_RIGHT_READABLE,
         fuchsia_pkg_testing::{blobfs::Fake as FakeBlobfs, PackageBuilder},
         maplit::{btreeset, convert_args, hashmap},
-        matches::assert_matches,
         std::str::FromStr,
     };
 

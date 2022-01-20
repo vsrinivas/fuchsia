@@ -4,6 +4,7 @@
 
 use {
     anyhow::Error,
+    assert_matches::assert_matches,
     blobfs_ramdisk::BlobfsRamdisk,
     cobalt_client::traits::AsEventCodes,
     diagnostics_hierarchy::{testing::TreeAssertion, DiagnosticsHierarchy},
@@ -35,7 +36,6 @@ use {
     fuchsia_url::pkg_url::RepoUrl,
     fuchsia_zircon::{self as zx, Status},
     futures::{future::BoxFuture, prelude::*},
-    matches::assert_matches,
     mock_boot_arguments::MockBootArgumentsService,
     parking_lot::Mutex,
     pkgfs_ramdisk::PkgfsRamdisk,

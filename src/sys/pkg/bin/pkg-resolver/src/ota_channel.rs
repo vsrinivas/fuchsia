@@ -289,7 +289,7 @@ mod test {
         )
         .await;
 
-        matches::assert_matches!(res, Ok(None));
+        assert_matches::assert_matches!(res, Ok(None));
         assert_data_tree!(
             inspector,
             root: contains {

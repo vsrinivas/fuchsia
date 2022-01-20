@@ -7,6 +7,7 @@ use {
         replace_retained_packages, verify_fetches_succeed, verify_packages_cached, write_meta_far,
         write_needed_blobs, TestEnv,
     },
+    assert_matches::assert_matches,
     blobfs_ramdisk::BlobfsRamdisk,
     fidl_fuchsia_io::DirectoryMarker,
     fidl_fuchsia_pkg::{BlobInfo, NeededBlobsMarker},
@@ -14,7 +15,6 @@ use {
     fuchsia_pkg_testing::{PackageBuilder, SystemImageBuilder},
     fuchsia_zircon as zx,
     futures::TryFutureExt,
-    matches::assert_matches,
     pkgfs_ramdisk::PkgfsRamdisk,
 };
 

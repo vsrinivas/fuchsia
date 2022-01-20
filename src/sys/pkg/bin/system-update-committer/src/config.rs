@@ -77,7 +77,7 @@ enum ConfigLoadError {
 #[cfg(test)]
 pub(crate) mod tests {
 
-    use {super::*, matches::assert_matches, serde_json::json};
+    use {super::*, assert_matches::assert_matches, serde_json::json};
 
     pub struct ConfigBuilder;
     impl ConfigBuilder {

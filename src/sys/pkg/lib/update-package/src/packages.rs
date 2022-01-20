@@ -117,7 +117,7 @@ pub(crate) async fn packages(proxy: &DirectoryProxy) -> Result<Vec<PkgUrl>, Pars
 
 #[cfg(test)]
 mod tests {
-    use {super::*, crate::TestUpdatePackage, matches::assert_matches, serde_json::json};
+    use {super::*, crate::TestUpdatePackage, assert_matches::assert_matches, serde_json::json};
 
     fn pkg_urls(v: Vec<&str>) -> Vec<PkgUrl> {
         v.into_iter().map(|s| PkgUrl::parse(s).unwrap()).collect()

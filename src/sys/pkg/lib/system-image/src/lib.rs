@@ -57,7 +57,7 @@ pub enum SystemImageHashError {
 #[cfg(test)]
 mod test_get_system_image_hash {
     use {
-        super::*, fuchsia_async as fasync, matches::assert_matches,
+        super::*, assert_matches::assert_matches, fuchsia_async as fasync,
         mock_boot_arguments::MockBootArgumentsService, std::collections::HashMap, std::sync::Arc,
     };
 

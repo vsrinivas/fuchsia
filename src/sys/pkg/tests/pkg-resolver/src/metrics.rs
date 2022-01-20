@@ -4,6 +4,7 @@
 
 /// This module tests the Cobalt metrics reporting.
 use {
+    assert_matches::assert_matches,
     cobalt_client::traits::AsEventCodes,
     cobalt_sw_delivery_registry as metrics,
     fidl::endpoints::create_endpoints,
@@ -15,7 +16,6 @@ use {
     },
     fuchsia_zircon::Status,
     lib::{make_repo, make_repo_config, MountsBuilder, TestEnv, TestEnvBuilder, EMPTY_REPO_PATH},
-    matches::assert_matches,
     serde_json::json,
     std::{net::Ipv4Addr, sync::Arc},
 };

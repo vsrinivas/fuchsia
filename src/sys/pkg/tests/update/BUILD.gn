@@ -25,8 +25,8 @@ rustc_test("driver") {
     "//src/sys/pkg/testing/mock-paver",
     "//src/sys/pkg/testing/mock-reboot",
     "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:assert_matches",
     "//third_party/rust_crates:futures",
-    "//third_party/rust_crates:matches",
     "//third_party/rust_crates:parking_lot",
     "//third_party/rust_crates:pretty_assertions",
   ]

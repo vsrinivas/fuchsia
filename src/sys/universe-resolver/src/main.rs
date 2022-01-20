@@ -234,6 +234,7 @@ mod tests {
     use {
         super::*,
         anyhow::Error,
+        assert_matches::assert_matches,
         fidl::{encoding::encode_persistent, endpoints::ServerEnd},
         fidl_fuchsia_component_config as fconfig, fidl_fuchsia_component_decl as fdecl,
         fidl_fuchsia_mem,
@@ -246,7 +247,6 @@ mod tests {
         },
         fuchsia_zircon::Vmo,
         futures::{channel::mpsc, join, lock::Mutex},
-        matches::assert_matches,
         std::{boxed::Box, sync::Arc},
         vfs::{
             directory::entry::DirectoryEntry,

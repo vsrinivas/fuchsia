@@ -339,9 +339,9 @@ struct CreationManifestV1 {
 mod tests {
     use super::*;
     use crate::test::*;
+    use assert_matches::assert_matches;
     use fuchsia_url::errors::ResourcePathError::PathStartsWithSlash;
     use maplit::btreemap;
-    use matches::assert_matches;
     use proptest::prelude::*;
     use serde_json::json;
     use std::fs::create_dir;

@@ -325,6 +325,7 @@ mod tests {
     use {
         super::*,
         crate::DEFAULT_TUF_METADATA_TIMEOUT,
+        assert_matches::assert_matches,
         fuchsia_async as fasync,
         fuchsia_pkg_testing::{
             serve::{responder, HttpResponder, ServedRepository, ServedRepositoryBuilder},
@@ -333,7 +334,6 @@ mod tests {
         fuchsia_url::pkg_url::RepoUrl,
         futures::{channel::mpsc, stream::StreamExt},
         http_sse::Event,
-        matches::assert_matches,
         std::{
             path::{Path, PathBuf},
             sync::Arc,

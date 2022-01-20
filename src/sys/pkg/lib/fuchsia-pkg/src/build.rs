@@ -164,8 +164,8 @@ fn get_external_content_infos<'a, 'b>(
 mod test_build_with_file_system {
     use super::*;
     use crate::test::*;
+    use assert_matches::assert_matches;
     use maplit::{btreemap, hashmap};
-    use matches::assert_matches;
     use proptest::prelude::*;
     use rand::{Rng as _, SeedableRng as _};
     use std::collections::{HashMap, HashSet};

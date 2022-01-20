@@ -204,8 +204,8 @@ impl MockPackage {
 #[cfg(test)]
 mod tests {
     use {
-        super::*, crate::install::BlobKind, fuchsia_pkg_testing::PackageBuilder,
-        matches::assert_matches, pkgfs_ramdisk::PkgfsRamdisk,
+        super::*, crate::install::BlobKind, assert_matches::assert_matches,
+        fuchsia_pkg_testing::PackageBuilder, pkgfs_ramdisk::PkgfsRamdisk,
     };
 
     #[fuchsia_async::run_singlethreaded(test)]

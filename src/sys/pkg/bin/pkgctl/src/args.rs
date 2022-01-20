@@ -320,7 +320,7 @@ fn repo_config_format(value: &str) -> Result<RepoConfigFormat, String> {
 
 #[cfg(test)]
 mod tests {
-    use {super::*, matches::assert_matches};
+    use {super::*, assert_matches::assert_matches};
 
     const REPO_URL: &str = "fuchsia-pkg://fuchsia.com";
     const CONFIG_JSON: &str = r#"{"version": "1", "content": []}"#;

@@ -60,7 +60,7 @@ rustc_library("fuchsia-pkg-testing") {
     "//third_party/rust_crates:walkdir",
   ]
 
-  test_deps = [ "//third_party/rust_crates:matches" ]
+  test_deps = [ "//third_party/rust_crates:assert_matches" ]
 
   sources = [
     "src/blobfs.rs",
@@ -108,8 +108,8 @@ rustc_test("pkgfs_test") {
     "//src/sys/pkg/testing/blobfs-ramdisk",
     "//src/sys/pkg/testing/pkgfs-ramdisk",
     "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:assert_matches",
     "//third_party/rust_crates:libc",
-    "//third_party/rust_crates:matches",
     "//third_party/rust_crates:openat",
     "//third_party/rust_crates:serde_json",
   ]

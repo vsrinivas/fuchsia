@@ -9,6 +9,7 @@ pub mod storage;
 pub mod storage_admin;
 
 use {
+    assert_matches::assert_matches,
     async_trait::async_trait,
     cm_rust::{
         CapabilityDecl, CapabilityName, CapabilityPath, CapabilityTypeName, ComponentDecl,
@@ -27,7 +28,6 @@ use {
     fidl_fuchsia_component as fcomponent, fidl_fuchsia_component_decl as fdecl,
     fidl_fuchsia_data as fdata, fuchsia_zircon_status as zx,
     maplit::hashmap,
-    matches::assert_matches,
     moniker::{
         AbsoluteMoniker, AbsoluteMonikerBase, ChildMonikerBase, ExtendedMoniker,
         PartialAbsoluteMoniker, RelativeMoniker, RelativeMonikerBase,

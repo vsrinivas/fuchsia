@@ -98,13 +98,13 @@ where
 mod tests {
     use {
         super::*,
+        assert_matches::assert_matches,
         fidl::endpoints::create_proxy_and_stream,
         fidl_fuchsia_pkg_rewrite::{
             EditTransactionRequest, EngineMarker, EngineProxy, EngineRequest, RuleIteratorRequest,
         },
         fuchsia_async as fasync,
         futures::TryStreamExt,
-        matches::assert_matches,
         std::{
             convert::TryInto,
             sync::{

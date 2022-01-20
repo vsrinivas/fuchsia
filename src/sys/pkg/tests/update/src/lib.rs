@@ -4,6 +4,7 @@
 
 #![cfg(test)]
 use {
+    assert_matches::assert_matches,
     fidl_fuchsia_paver::Configuration,
     fidl_fuchsia_sys::{LauncherProxy, TerminationReason},
     fidl_fuchsia_update as fidl_update,
@@ -19,7 +20,6 @@ use {
     },
     fuchsia_zircon::{self as zx, EventPair, HandleBased, Peered},
     futures::{channel::mpsc, lock::Mutex as AsyncMutex, prelude::*},
-    matches::assert_matches,
     mock_installer::{
         CapturedRebootControllerRequest, CapturedUpdateInstallerRequest, MockUpdateInstallerService,
     },

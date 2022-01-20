@@ -54,8 +54,8 @@ rustc_binary("bin") {
   ]
 
   test_deps = [
+    "//third_party/rust_crates:assert_matches",
     "//third_party/rust_crates:lazy_static",
-    "//third_party/rust_crates:matches",
   ]
 }
 

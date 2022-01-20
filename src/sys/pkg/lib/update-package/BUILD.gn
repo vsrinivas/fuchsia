@@ -31,8 +31,8 @@ rustc_library("update-package") {
   test_deps = [
     "//src/lib/fuchsia-async",
     "//src/lib/storage/vfs/rust:vfs",
+    "//third_party/rust_crates:assert_matches",
     "//third_party/rust_crates:maplit",
-    "//third_party/rust_crates:matches",
     "//third_party/rust_crates:proptest",
     "//third_party/rust_crates:proptest-derive",
     "//third_party/rust_crates:tempfile",

@@ -548,11 +548,11 @@ mod tests {
     use {
         super::*,
         anyhow::{Context as _, Error},
+        assert_matches::assert_matches,
         fidl_fuchsia_test::{
             Result_ as TestResult, RunListenerMarker, RunOptions, Status, SuiteMarker,
         },
         itertools::Itertools,
-        matches::assert_matches,
         pretty_assertions::assert_eq,
         test_runners_lib::cases::TestCaseInfo,
         test_runners_test_lib::{

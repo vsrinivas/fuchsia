@@ -522,9 +522,9 @@ impl Blob<NeedsData> {
 mod tests {
     use {
         super::*,
+        assert_matches::assert_matches,
         fuchsia_merkle::MerkleTree,
         fuchsia_pkg_testing::{Package, PackageBuilder},
-        matches::assert_matches,
         pkgfs_ramdisk::PkgfsRamdisk,
         std::io::Read,
     };

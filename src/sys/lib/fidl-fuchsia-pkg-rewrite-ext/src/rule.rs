@@ -343,7 +343,7 @@ mod serde_tests {
 #[cfg(test)]
 mod rule_tests {
     use super::*;
-    use matches::assert_matches;
+    use assert_matches::assert_matches;
     use proptest::prelude::*;
 
     macro_rules! test_new_error {

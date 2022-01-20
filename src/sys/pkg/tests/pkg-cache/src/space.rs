@@ -4,6 +4,7 @@
 
 use {
     crate::{get_missing_blobs, write_blob, TestEnv},
+    assert_matches::assert_matches,
     blobfs_ramdisk::{BlobfsRamdisk, Ramdisk},
     fidl_fuchsia_io::{DirectoryMarker, FileMarker},
     fidl_fuchsia_paver as paver,
@@ -14,7 +15,6 @@ use {
     fuchsia_pkg_testing::{Package, PackageBuilder, SystemImageBuilder},
     fuchsia_zircon::{self as zx, Status},
     futures::TryFutureExt,
-    matches::assert_matches,
     mock_paver::{hooks as mphooks, MockPaverServiceBuilder, PaverEvent},
     pkgfs_ramdisk::PkgfsRamdisk,
     rand::prelude::*,

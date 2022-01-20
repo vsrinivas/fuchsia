@@ -139,10 +139,10 @@ mod tests {
         },
         ::routing::config::{AllowlistEntry, JobPolicyAllowlists, SecurityPolicy},
         anyhow::Error,
+        assert_matches::assert_matches,
         cm_rust::{CapabilityDecl, RunnerDecl},
         cm_rust_testing::*,
         futures::{lock::Mutex, prelude::*},
-        matches::assert_matches,
         moniker::{AbsoluteMoniker, AbsoluteMonikerBase, PartialAbsoluteMoniker},
         std::sync::Weak,
     };

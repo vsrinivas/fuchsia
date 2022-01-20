@@ -49,7 +49,7 @@ pub(crate) async fn verify(proxy: &DirectoryProxy) -> Result<(), VerifyNameError
 
 #[cfg(test)]
 mod tests {
-    use {super::*, crate::TestUpdatePackage, matches::assert_matches};
+    use {super::*, crate::TestUpdatePackage, assert_matches::assert_matches};
 
     fn make_meta_package(name: &str, variant: &str) -> Vec<u8> {
         let meta_package =

@@ -34,6 +34,7 @@ use {
         route_capability,
     },
     anyhow::Error,
+    assert_matches::assert_matches,
     async_trait::async_trait,
     cm_rust::*,
     cm_rust_testing::*,
@@ -47,7 +48,6 @@ use {
     futures::{join, lock::Mutex, StreamExt, TryStreamExt},
     log::*,
     maplit::hashmap,
-    matches::assert_matches,
     moniker::{AbsoluteMoniker, AbsoluteMonikerBase, ChildMonikerBase, PartialAbsoluteMoniker},
     routing_test_helpers::{
         default_service_capability, instantiate_common_routing_tests, RoutingTestModel,

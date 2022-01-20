@@ -443,9 +443,9 @@ mod tests {
             capability_source::ComponentCapability, component_instance::ComponentInstanceInterface,
             error::ComponentInstanceError,
         },
+        assert_matches::assert_matches,
         cm_rust::ProtocolDecl,
         fuchsia_async as fasync, fuchsia_zircon as zx,
-        matches::assert_matches,
         moniker::AbsoluteMoniker,
     };
 

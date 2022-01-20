@@ -223,7 +223,7 @@ fn try_create_install_plan(
 mod tests {
     use {
         super::*,
-        matches::assert_matches,
+        assert_matches::assert_matches,
         omaha_client::protocol::response::{App, Manifest, Package, Packages, UpdateCheck},
     };
 

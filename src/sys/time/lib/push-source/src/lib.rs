@@ -259,11 +259,11 @@ impl UpdateAlgorithm for TestUpdateAlgorithm {
 #[cfg(test)]
 mod test {
     use super::*;
+    use assert_matches::assert_matches;
     use fidl::{endpoints::create_proxy_and_stream, Error as FidlError};
     use fidl_fuchsia_time_external::{PushSourceMarker, PushSourceProxy};
     use fuchsia_async as fasync;
     use futures::{FutureExt, SinkExt};
-    use matches::assert_matches;
 
     struct TestHarness {
         /// The PushSource under test.

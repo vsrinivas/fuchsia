@@ -7,6 +7,7 @@
 /// different types of packages and when blobfs and pkgfs are in
 /// various intermediate states.
 use {
+    assert_matches::assert_matches,
     fidl_fuchsia_pkg_ext::MirrorConfigBuilder,
     fuchsia_async as fasync,
     fuchsia_inspect::assert_data_tree,
@@ -18,7 +19,6 @@ use {
         extra_blob_contents, make_pkg_with_extra_blobs, resolve_package, test_package_bin,
         test_package_cmx, ResolverVariant, TestEnv, TestEnvBuilder, EMPTY_REPO_PATH,
     },
-    matches::assert_matches,
     rand::prelude::*,
     std::{
         collections::HashSet,

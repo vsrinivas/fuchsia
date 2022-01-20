@@ -1428,11 +1428,11 @@ mod tests {
             MockTimeSource, PartialComplexTime,
         },
     };
+    use assert_matches::assert_matches;
     use futures::executor::{block_on, LocalPool};
     use futures::future::LocalBoxFuture;
     use futures::task::LocalSpawnExt;
     use log::info;
-    use matches::assert_matches;
     use pretty_assertions::assert_eq;
     use serde_json::json;
     use std::cell::RefCell;

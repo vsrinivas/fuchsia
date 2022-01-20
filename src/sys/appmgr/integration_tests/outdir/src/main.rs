@@ -6,15 +6,14 @@
 
 use {
     anyhow::{format_err, Error},
+    assert_matches::assert_matches,
     fdio,
     fidl::endpoints::{create_endpoints, create_proxy, Proxy},
     fidl_fidl_examples_echo as fidl_echo, fidl_fuchsia_io as fio,
     fidl_fuchsia_sys_internal as fsys_internal, fuchsia_async as fasync,
     fuchsia_runtime::{HandleInfo, HandleType},
     fuchsia_zircon::HandleBased,
-    io_util,
-    matches::assert_matches,
-    scoped_task,
+    io_util, scoped_task,
     std::{ffi::CString, path::Path},
     vfs::{
         directory::entry::DirectoryEntry, execution_scope::ExecutionScope,

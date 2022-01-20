@@ -49,7 +49,9 @@ pub(crate) async fn verify_board(
 
 #[cfg(test)]
 mod tests {
-    use {super::*, crate::TestUpdatePackage, fuchsia_async as fasync, matches::assert_matches};
+    use {
+        super::*, crate::TestUpdatePackage, assert_matches::assert_matches, fuchsia_async as fasync,
+    };
 
     #[fasync::run_singlethreaded(test)]
     async fn verify_board_success_file_exists() {

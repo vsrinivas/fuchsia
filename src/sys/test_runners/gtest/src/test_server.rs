@@ -711,9 +711,9 @@ mod tests {
     use {
         super::*,
         anyhow::{Context as _, Error},
+        assert_matches::assert_matches,
         fidl_fuchsia_test::{RunListenerMarker, RunOptions, SuiteMarker},
         fio::OPEN_RIGHT_WRITABLE,
-        matches::assert_matches,
         pretty_assertions::assert_eq,
         std::fs,
         test_runners_test_lib::{

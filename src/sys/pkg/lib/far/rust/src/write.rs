@@ -117,8 +117,8 @@ mod tests {
     use {
         super::*,
         crate::tests::example_archive,
+        assert_matches::assert_matches,
         itertools::assert_equal,
-        matches::assert_matches,
         std::{
             collections::BTreeMap,
             io::{Cursor, Read},

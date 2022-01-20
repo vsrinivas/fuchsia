@@ -101,7 +101,7 @@ impl ConfigBuilder {
 
 #[cfg(test)]
 mod tests {
-    use {super::*, matches::assert_matches, serde_json::json};
+    use {super::*, assert_matches::assert_matches, serde_json::json};
 
     fn verify_load(input: serde_json::Value, expected: Config) {
         let input = input.to_string();

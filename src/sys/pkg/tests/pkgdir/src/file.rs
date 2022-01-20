@@ -8,6 +8,7 @@
 
 use {
     crate::{dirs_to_test, just_pkgfs_for_now, repeat_by_n, PackageSource},
+    assert_matches::assert_matches,
     fidl::endpoints::create_proxy,
     fidl::AsHandleRef,
     fidl_fuchsia_io::{
@@ -20,7 +21,6 @@ use {
     },
     fuchsia_zircon as zx,
     io_util::directory::open_file,
-    matches::assert_matches,
     std::{
         cmp,
         convert::{TryFrom as _, TryInto},

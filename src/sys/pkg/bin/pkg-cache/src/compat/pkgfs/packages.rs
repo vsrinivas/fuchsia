@@ -188,11 +188,11 @@ mod tests {
     use {
         super::*,
         crate::{compat::pkgfs::testing::FakeSink, index::register_dynamic_package},
+        assert_matches::assert_matches,
         fidl_fuchsia_io::OPEN_RIGHT_READABLE,
         fuchsia_pkg::PackagePath,
         fuchsia_pkg_testing::{blobfs::Fake as FakeBlobfs, PackageBuilder},
         maplit::{convert_args, hashmap},
-        matches::assert_matches,
         std::collections::HashSet,
     };
 

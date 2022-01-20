@@ -47,9 +47,9 @@ rustc_test("binder_integration_test_bin") {
     "//src/lib/fuchsia",
     "//src/lib/fuchsia-component",
     "//src/sys/lib/component-events",
+    "//third_party/rust_crates:assert_matches",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:log",
-    "//third_party/rust_crates:matches",
   ]
 
   sources = [ "src/binder_integration_test.rs" ]

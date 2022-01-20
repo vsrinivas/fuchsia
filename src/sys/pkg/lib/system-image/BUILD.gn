@@ -35,7 +35,7 @@ rustc_library("system-image") {
     "//src/sys/pkg/lib/fuchsia-pkg-testing",
     "//src/sys/pkg/testing/blobfs-ramdisk",
     "//src/sys/pkg/testing/mock-boot-arguments:lib",
-    "//third_party/rust_crates:matches",
+    "//third_party/rust_crates:assert_matches",
   ]
 
   sources = [

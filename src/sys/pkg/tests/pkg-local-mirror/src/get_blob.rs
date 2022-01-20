@@ -4,9 +4,10 @@
 
 /// This module tests calls to the get_blob API.
 use {
-    super::*, fidl::endpoints::create_proxy, fidl_fuchsia_io::FileEvent::OnOpen_,
-    fidl_fuchsia_pkg::GetBlobError, fidl_fuchsia_pkg_ext::BlobId, fuchsia_zircon::Status,
-    futures::channel::oneshot, matches::assert_matches, vfs::file::vmo::read_only_static,
+    super::*, assert_matches::assert_matches, fidl::endpoints::create_proxy,
+    fidl_fuchsia_io::FileEvent::OnOpen_, fidl_fuchsia_pkg::GetBlobError,
+    fidl_fuchsia_pkg_ext::BlobId, fuchsia_zircon::Status, futures::channel::oneshot,
+    vfs::file::vmo::read_only_static,
 };
 
 async fn verify_get_blob_with_read_success(env: &TestEnv, blob: &str, file_contents: &str) {

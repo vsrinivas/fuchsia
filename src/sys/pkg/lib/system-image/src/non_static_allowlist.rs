@@ -49,7 +49,7 @@ impl NonStaticAllowList {
 
 #[cfg(test)]
 mod tests {
-    use {super::*, fuchsia_pkg::PackagePathSegmentError, matches::assert_matches};
+    use {super::*, assert_matches::assert_matches, fuchsia_pkg::PackagePathSegmentError};
 
     fn into_hashset(names: &[&str]) -> HashSet<PackageName> {
         names

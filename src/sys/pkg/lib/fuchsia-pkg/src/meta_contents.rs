@@ -175,9 +175,9 @@ mod tests {
     use {
         super::*,
         crate::test::*,
+        assert_matches::assert_matches,
         fuchsia_url::{errors::ResourcePathError, test::*},
         maplit::hashmap,
-        matches::assert_matches,
         proptest::prelude::*,
         std::str::FromStr,
     };

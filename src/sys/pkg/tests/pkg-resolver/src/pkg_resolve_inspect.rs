@@ -4,6 +4,7 @@
 
 use {
     anyhow::format_err,
+    assert_matches::assert_matches,
     fidl_fuchsia_pkg_ext::RepositoryConfigBuilder,
     fidl_fuchsia_pkg_rewrite_ext::{Rule, RuleConfig},
     fuchsia_async as fasync,
@@ -17,7 +18,6 @@ use {
     futures::FutureExt as _,
     lib::MountsBuilder,
     lib::{TestEnvBuilder, EMPTY_REPO_PATH},
-    matches::assert_matches,
     std::sync::Arc,
 };
 
