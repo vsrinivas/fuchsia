@@ -2775,8 +2775,12 @@ mod tests {
         ));
     }
 
-    #[ip_test]
-    fn test_icmp_connections<I: Ip + TestIpExt>() {
+    enum IcmpConnectionType {
+        Local,
+        Remote,
+    }
+
+    fn test_icmp_connection<I: Ip + TestIpExt>(conn_type: IcmpConnectionType) {
         crate::testutil::set_logger_for_test();
 
         let recv_icmp_packet_name = match I::VERSION {
@@ -2789,44 +2793,68 @@ mod tests {
         };
 
         let config = I::DUMMY_CONFIG;
-        let mut net =
-            crate::testutil::new_dummy_network_from_config("alice", "bob", config.clone());
+
+        const LOCAL_CTX_NAME: &str = "alice";
+        const REMOTE_CTX_NAME: &str = "bob";
+        let mut net = crate::testutil::new_dummy_network_from_config(
+            LOCAL_CTX_NAME,
+            REMOTE_CTX_NAME,
+            config.clone(),
+        );
 
         let icmp_id = 13;
 
+        let (remote_addr, ctx_name_receiving_req) = match conn_type {
+            IcmpConnectionType::Local => (config.local_ip, LOCAL_CTX_NAME),
+            IcmpConnectionType::Remote => (config.remote_ip, REMOTE_CTX_NAME),
+        };
+
         let conn = I::new_icmp_connection(
-            net.context("alice"),
+            net.context(LOCAL_CTX_NAME),
             Some(config.local_ip),
-            config.remote_ip,
+            remote_addr,
             icmp_id,
         )
         .unwrap();
 
         let echo_body = vec![1, 2, 3, 4];
 
-        I::send_icmp_echo_request(net.context("alice"), conn, 7, Buf::new(echo_body.clone(), ..))
-            .unwrap();
+        I::send_icmp_echo_request(
+            net.context(LOCAL_CTX_NAME),
+            conn,
+            7,
+            Buf::new(echo_body.clone(), ..),
+        )
+        .unwrap();
 
         net.run_until_idle().unwrap();
+
         assert_eq!(
-            *net.context("bob")
+            *net.context(ctx_name_receiving_req)
                 .state
                 .test_counters
                 .get(&format!("{}::echo_request", recv_icmp_packet_name)),
             1
         );
         assert_eq!(
-            *net.context("alice")
+            *net.context(LOCAL_CTX_NAME)
                 .state
                 .test_counters
                 .get(&format!("{}::echo_reply", recv_icmp_packet_name)),
             1
         );
-        let replies = net.context("alice").dispatcher.take_icmp_replies(conn);
-        assert!(!replies.is_empty());
-        let (seq, body) = &replies[0];
-        assert_eq!(*seq, 7);
-        assert_eq!(*body, echo_body);
+        let replies = net.context(LOCAL_CTX_NAME).dispatcher.take_icmp_replies(conn);
+        assert_matches::assert_matches!(&replies[..], [(7, body)] if *body == echo_body);
+    }
+
+    #[ip_test]
+    fn test_local_icmp_connection<I: Ip + TestIpExt>() {
+        test_icmp_connection::<I>(IcmpConnectionType::Local);
+    }
+
+    #[ip_test]
+    fn test_remote_icmp_connection<I: Ip + TestIpExt>() {
+        test_icmp_connection::<I>(IcmpConnectionType::Remote);
     }
 
     // Tests that only require an ICMP stack. Unlike the preceding tests, these

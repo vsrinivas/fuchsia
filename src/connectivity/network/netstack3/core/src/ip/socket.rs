@@ -4,19 +4,21 @@
 
 //! IPv4 and IPv6 sockets.
 
+use alloc::vec::Vec;
 use core::cmp::Ordering;
+use core::convert::Infallible;
 use core::marker::PhantomData;
 use core::num::NonZeroU8;
 
 use net_types::ip::{Ip, Ipv4, Ipv4Addr, Ipv6, Ipv6Addr};
 use net_types::{SpecifiedAddr, UnicastAddr};
-use packet::{BufferMut, Serializer};
+use packet::{Buf, BufferMut, Either, SerializeError, Serializer};
 use packet_formats::ip::{Ipv4Proto, Ipv6Proto};
 use packet_formats::{ipv4::Ipv4PacketBuilder, ipv6::Ipv6PacketBuilder};
 use rand::Rng;
 use thiserror::Error;
 
-use crate::device::{DeviceId, Ipv6AddressEntry};
+use crate::device::{DeviceId, FrameDestination, Ipv6AddressEntry};
 use crate::ip::{forwarding::ForwardingTable, IpExt, Ipv6SocketData};
 use crate::socket::Socket;
 use crate::{BufferDispatcher, Ctx, EventDispatcher};
@@ -78,6 +80,15 @@ pub enum IpSockSendError {
     /// The socket is currently unroutable.
     #[error("the socket is currently unroutable: {}", _0)]
     Unroutable(#[from] IpSockUnroutableError),
+}
+
+impl From<SerializeError<Infallible>> for IpSockSendError {
+    fn from(err: SerializeError<Infallible>) -> IpSockSendError {
+        match err {
+            SerializeError::Alloc(err) => match err {},
+            SerializeError::Mtu => IpSockSendError::Mtu,
+        }
+    }
 }
 
 /// An error in sending a packet on a temporary IP socket.
@@ -308,6 +319,13 @@ struct IpSockDefinition<I: IpExt> {
     per_proto_data: I::SocketData,
 }
 
+#[derive(Clone, PartialEq)]
+#[cfg_attr(test, derive(Debug))]
+enum NextHop<I: Ip> {
+    Local,
+    Remote(SpecifiedAddr<I::Addr>),
+}
+
 /// Information which is cached inside an [`IpSock`].
 ///
 /// This information is cached as an optimization, but is not part of the
@@ -318,7 +336,7 @@ struct IpSockDefinition<I: IpExt> {
 struct CachedInfo<I: IpExt, D> {
     builder: I::PacketBuilder,
     device: D,
-    next_hop: SpecifiedAddr<I::Addr>,
+    next_hop: NextHop<I>,
 }
 
 /// An update to the information cached in an [`IpSock`].
@@ -409,9 +427,21 @@ fn compute_ipv4_cached_info<D: EventDispatcher>(
     super::lookup_route(ctx, defn.remote_ip)
         .ok_or(IpSockUnroutableError::NoRouteToRemoteAddr)
         .and_then(|dst| {
-            if !crate::device::get_assigned_ip_addr_subnets::<_, Ipv4Addr>(ctx, dst.device)
-                .any(|addr_sub| defn.local_ip == addr_sub.addr())
+            let mut local_on_device = false;
+            let mut next_hop = NextHop::Remote(dst.next_hop);
+            for addr_sub in
+                crate::device::get_assigned_ip_addr_subnets::<_, Ipv4Addr>(ctx, dst.device)
             {
+                let assigned_addr = addr_sub.addr();
+                local_on_device = local_on_device || assigned_addr == defn.local_ip;
+                if assigned_addr == defn.remote_ip {
+                    next_hop = NextHop::Local;
+                }
+                if local_on_device && next_hop == NextHop::Local {
+                    break;
+                }
+            }
+            if !local_on_device {
                 return Err(IpSockUnroutableError::LocalAddrNotAssigned);
             }
 
@@ -423,7 +453,7 @@ fn compute_ipv4_cached_info<D: EventDispatcher>(
                     defn.proto,
                 ),
                 device: dst.device,
-                next_hop: dst.next_hop,
+                next_hop,
             })
         })
 }
@@ -450,11 +480,20 @@ fn compute_ipv6_cached_info<D: EventDispatcher>(
                 return Err(IpSockUnroutableError::LocalAddrNotAssigned);
             }
 
+            let next_hop =
+                if crate::device::get_assigned_ip_addr_subnets::<_, Ipv6Addr>(ctx, dst.device)
+                    .any(|addr_sub| addr_sub.addr() == defn.remote_ip)
+                {
+                    NextHop::Local
+                } else {
+                    NextHop::Remote(dst.next_hop)
+                };
+
             let mut builder =
                 Ipv6PacketBuilder::new(defn.local_ip, defn.remote_ip, defn.hop_limit, defn.proto);
             builder.flowlabel(defn.per_proto_data.flow_label);
 
-            Ok(CachedInfo { builder, device: dst.device, next_hop: dst.next_hop })
+            Ok(CachedInfo { builder, device: dst.device, next_hop })
         })
 }
 
@@ -482,7 +521,7 @@ impl<D: EventDispatcher> IpSocketContext<Ipv4> for Ctx<D> {
             .and_then(|dst| {
                 if let Some(local_ip) = local_ip {
                     if crate::device::get_assigned_ip_addr_subnets::<_, Ipv4Addr>(self, dst.device)
-                        .any(|addr_sub| local_ip == addr_sub.addr())
+                        .any(|addr_sub| addr_sub.addr() == local_ip)
                     {
                         Ok(local_ip)
                     } else {
@@ -632,12 +671,36 @@ impl<B: BufferMut, D: BufferDispatcher<B>> BufferIpSocketContext<Ipv4, B> for Ct
                     &socket.defn.local_ip,
                     *device
                 ));
-
                 let mut builder = builder.clone();
                 builder.id(self.state.ipv4.gen_next_packet_id());
+                let encapsulated = body.encapsulate(builder);
 
-                crate::device::send_ip_frame(self, *device, *next_hop, body.encapsulate(builder))
-                    .map_err(|ser| (ser.into_inner(), IpSockSendError::Mtu))
+                match next_hop {
+                    NextHop::Local => {
+                        let buffer = encapsulated
+                            .serialize_vec_outer()
+                            .map_err(|(err, ser)| (ser.into_inner(), err.into()))?;
+                        match buffer {
+                            Either::A(buffer) => crate::ip::receive_ipv4_packet(
+                                self,
+                                *device,
+                                FrameDestination::Unicast,
+                                buffer,
+                            ),
+                            Either::B(buffer) => crate::ip::receive_ipv4_packet::<Buf<Vec<u8>>, _>(
+                                self,
+                                *device,
+                                FrameDestination::Unicast,
+                                buffer,
+                            ),
+                        }
+                        Ok(())
+                    }
+                    NextHop::Remote(next_hop) => {
+                        crate::device::send_ip_frame(self, *device, *next_hop, encapsulated)
+                            .map_err(|ser| (ser.into_inner(), IpSockSendError::Mtu))
+                    }
+                }
             }
             Err(err) => Err((body, (*err).into())),
         }
@@ -671,9 +734,35 @@ impl<B: BufferMut, D: BufferDispatcher<B>> BufferIpSocketContext<Ipv6, B> for Ct
                     &socket.defn.local_ip,
                     *device
                 ));
+                let encapsulated = body.encapsulate(builder);
 
-                crate::device::send_ip_frame(self, *device, *next_hop, body.encapsulate(builder))
-                    .map_err(|ser| (ser.into_inner(), IpSockSendError::Mtu))
+                match next_hop {
+                    NextHop::Local => {
+                        let buffer = encapsulated
+                            .serialize_vec_outer()
+                            .map_err(|(err, ser)| (ser.into_inner(), err.into()))?;
+
+                        match buffer {
+                            Either::A(buffer) => crate::ip::receive_ipv6_packet(
+                                self,
+                                *device,
+                                FrameDestination::Unicast,
+                                buffer,
+                            ),
+                            Either::B(buffer) => crate::ip::receive_ipv6_packet::<Buf<Vec<u8>>, _>(
+                                self,
+                                *device,
+                                FrameDestination::Unicast,
+                                buffer,
+                            ),
+                        }
+                        Ok(())
+                    }
+                    NextHop::Remote(next_hop) => {
+                        crate::device::send_ip_frame(self, *device, *next_hop, encapsulated)
+                            .map_err(|ser| (ser.into_inner(), IpSockSendError::Mtu))
+                    }
+                }
             }
             Err(err) => Err((body, (*err).into())),
         }
@@ -1168,8 +1257,8 @@ pub(crate) mod testutil {
 mod tests {
     use alloc::vec;
 
-    use net_types::Witness;
-    use packet::{InnerPacketBuilder, ParseBuffer};
+    use net_types::{ip::AddrSubnet, Witness};
+    use packet::{Buf, InnerPacketBuilder, ParseBuffer};
     use packet_formats::{
         ip::IpPacket,
         ipv4::{Ipv4OnlyMeta, Ipv4Packet},
@@ -1209,7 +1298,7 @@ mod tests {
                     Ipv4Proto::Icmp,
                 ),
                 device: DeviceId::new_ethernet(0),
-                next_hop: DUMMY_CONFIG_V4.remote_ip,
+                next_hop: NextHop::Remote(DUMMY_CONFIG_V4.remote_ip),
             }),
         };
 
@@ -1319,7 +1408,7 @@ mod tests {
                     Ipv6Proto::Icmpv6,
                 ),
                 device: DeviceId::new_ethernet(0),
-                next_hop: DUMMY_CONFIG_V6.remote_ip,
+                next_hop: NextHop::Remote(DUMMY_CONFIG_V6.remote_ip),
             }),
         };
 
@@ -1408,6 +1497,122 @@ mod tests {
             ),
             Err(IpSockUnroutableError::NoRouteToRemoteAddr.into())
         );
+    }
+
+    enum LocalDeliveryDestinationType {
+        SameAddress,
+        DifferentAddress,
+    }
+
+    #[specialize_ip]
+    fn test_send_local<I: Ip>(destination_type: LocalDeliveryDestinationType) {
+        set_logger_for_test();
+
+        use packet_formats::icmp::{IcmpEchoRequest, IcmpPacketBuilder, IcmpUnusedCode};
+
+        #[ipv4]
+        let (subnet, from_ip, to_ip, local_mac, proto, socket_builder) = {
+            let DummyEventDispatcherConfig::<Ipv4Addr> {
+                subnet,
+                local_ip,
+                remote_ip,
+                local_mac,
+                remote_mac: _,
+            } = DUMMY_CONFIG_V4;
+
+            (subnet, local_ip, remote_ip, local_mac, Ipv4Proto::Icmp, Ipv4SocketBuilder::default())
+        };
+
+        #[ipv6]
+        let (subnet, from_ip, to_ip, local_mac, proto, socket_builder) = {
+            let DummyEventDispatcherConfig::<Ipv6Addr> {
+                subnet,
+                local_ip,
+                remote_ip,
+                local_mac,
+                remote_mac: _,
+            } = DUMMY_CONFIG_V6;
+            (
+                subnet,
+                local_ip,
+                remote_ip,
+                local_mac,
+                Ipv6Proto::Icmpv6,
+                Ipv6SocketBuilder::default(),
+            )
+        };
+
+        let mut builder = DummyEventDispatcherBuilder::default();
+        let device_id = builder.add_device(local_mac);
+        let mut ctx = builder.build::<DummyEventDispatcher>();
+
+        let () = crate::device::add_ip_addr_subnet(
+            &mut ctx,
+            device_id.into(),
+            AddrSubnet::new(from_ip.get(), 16).unwrap(),
+        )
+        .unwrap();
+        let () = crate::device::add_ip_addr_subnet(
+            &mut ctx,
+            device_id.into(),
+            AddrSubnet::new(to_ip.get(), 16).unwrap(),
+        )
+        .unwrap();
+        let () = crate::ip::add_device_route(&mut ctx, subnet, device_id.into()).unwrap();
+
+        let to_ip = match destination_type {
+            LocalDeliveryDestinationType::SameAddress => from_ip,
+            LocalDeliveryDestinationType::DifferentAddress => to_ip,
+        };
+
+        let sock = IpSocketContext::<I>::new_ip_socket(
+            &mut ctx,
+            Some(from_ip),
+            to_ip,
+            proto,
+            UnroutableBehavior::Close,
+            Some(socket_builder),
+        )
+        .unwrap();
+
+        let reply = IcmpEchoRequest::new(0, 0).reply();
+        let body = &[1, 2, 3, 4];
+        let buffer = Buf::new(body.to_vec(), ..)
+            .encapsulate(IcmpPacketBuilder::<I, &[u8], _>::new(
+                from_ip,
+                to_ip,
+                IcmpUnusedCode,
+                reply,
+            ))
+            .serialize_vec_outer()
+            .unwrap();
+
+        // Send an echo packet on the socket and validate that the packet is
+        // delivered locally.
+        BufferIpSocketContext::<I, _>::send_ip_packet(
+            &mut ctx,
+            &sock,
+            buffer.into_inner().buffer_view().as_ref().into_serializer(),
+        )
+        .unwrap();
+
+        assert_eq!(ctx.dispatcher.frames_sent().len(), 0);
+
+        #[ipv4]
+        assert_eq!(get_counter_val(&mut ctx, "dispatch_receive_ipv4_packet"), 1);
+
+        #[ipv6]
+        assert_eq!(get_counter_val(&mut ctx, "dispatch_receive_ipv6_packet"), 1);
+    }
+
+    #[ip_test]
+    fn test_send_local_same_address<I: Ip>() {
+        test_send_local::<I>(LocalDeliveryDestinationType::SameAddress);
+    }
+
+    #[ip_test]
+    fn test_send_local_different_address<I: Ip>() {
+        test_send_local::<I>(LocalDeliveryDestinationType::DifferentAddress);
     }
 
     #[ip_test]
