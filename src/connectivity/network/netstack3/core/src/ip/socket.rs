@@ -1505,7 +1505,7 @@ mod tests {
             &sock,
             (&body[..]).into_serializer(),
         );
-        matches::assert_matches!(res, Err((_, IpSockSendError::Mtu)));
+        assert_matches::assert_matches!(res, Err((_, IpSockSendError::Mtu)));
 
         // Make sure that sending on an unroutable socket fails.
         sock.cached = Err(IpSockUnroutableError::NoRouteToRemoteAddr);
@@ -1514,7 +1514,7 @@ mod tests {
             &sock,
             (&body[..]).into_serializer(),
         );
-        matches::assert_matches!(
+        assert_matches::assert_matches!(
             res,
             Err((_, IpSockSendError::Unroutable(IpSockUnroutableError::NoRouteToRemoteAddr)))
         );

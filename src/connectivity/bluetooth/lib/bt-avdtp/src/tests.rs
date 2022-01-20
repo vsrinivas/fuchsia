@@ -3,11 +3,11 @@
 // found in the LICENSE file.
 
 use {
+    assert_matches::assert_matches,
     fuchsia_async as fasync,
     fuchsia_bluetooth::types::Channel,
     fuchsia_zircon::{self as zx, Status},
     futures::{executor::block_on, future, StreamExt, TryStreamExt},
-    matches::assert_matches,
     std::result,
 };
 

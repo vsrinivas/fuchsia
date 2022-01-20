@@ -522,7 +522,7 @@ mod tests {
             ..fidl_fuchsia_net_dhcp::AddressPool::EMPTY
         };
 
-        matches::assert_matches!(
+        assert_matches::assert_matches!(
             ManagedAddresses::try_from_fidl(correct_pool),
             Ok(ManagedAddresses {
                 mask,

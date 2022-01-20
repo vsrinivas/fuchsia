@@ -254,7 +254,7 @@ fn assert_entry(
     match_state: fidl_fuchsia_net_neighbor::EntryState,
     match_mac: fidl_fuchsia_net::MacAddress,
 ) {
-    matches::assert_matches!(
+    assert_matches::assert_matches!(
         entry,
         fidl_fuchsia_net_neighbor::Entry {
             interface: Some(interface),
@@ -969,7 +969,7 @@ async fn neigh_unreachable_entries() {
         let entry = entries.remove(&(alice.ep.id(), BOB_IP)).expect("missing IPv4 neighbor entry");
         assert!(entries.is_empty(), "unexpected neighbors remaining in list: {:?}", entries);
 
-        matches::assert_matches!(
+        assert_matches::assert_matches!(
             entry,
             fidl_fuchsia_net_neighbor::Entry {
                 interface: Some(interface),

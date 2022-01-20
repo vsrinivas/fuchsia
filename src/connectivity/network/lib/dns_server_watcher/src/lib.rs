@@ -156,11 +156,11 @@ mod tests {
         // `DHCPV6_SERVER2` would normally only come from an interface with ID
         // `DHCPV6_SERVER2_INTERFACE_ID`, but we are just testing deduplication
         // logic here.
-        matches::assert_matches!(
+        assert_matches::assert_matches!(
             dhcpv6.insert(DHCPV6_SERVER1_INTERFACE_ID, vec![DHCPV6_SERVER1, DHCPV6_SERVER2]),
             None
         );
-        matches::assert_matches!(
+        assert_matches::assert_matches!(
             dhcpv6.insert(DHCPV6_SERVER2_INTERFACE_ID, vec![DHCPV6_SERVER1, DHCPV6_SERVER2]),
             None
         );
@@ -194,11 +194,11 @@ mod tests {
         // is observed by a higher priority source, then use the higher source for
         // ordering.
         let mut dhcpv6 = HashMap::new();
-        matches::assert_matches!(
+        assert_matches::assert_matches!(
             dhcpv6.insert(DHCPV6_SERVER1_INTERFACE_ID, vec![DHCPV6_SERVER1]),
             None
         );
-        matches::assert_matches!(
+        assert_matches::assert_matches!(
             dhcpv6.insert(DHCPV6_SERVER2_INTERFACE_ID, vec![DHCPV6_SERVER2]),
             None
         );
@@ -234,7 +234,7 @@ mod tests {
             ..DnsServer_::EMPTY
         };
         let mut dhcpv6 = HashMap::new();
-        matches::assert_matches!(
+        assert_matches::assert_matches!(
             dhcpv6.insert(
                 DHCPV6_SERVER1_INTERFACE_ID,
                 vec![dhcpv6_with_ndp_address(), DHCPV6_SERVER1]
@@ -271,11 +271,11 @@ mod tests {
         };
 
         let mut dhcpv6 = HashMap::new();
-        matches::assert_matches!(
+        assert_matches::assert_matches!(
             dhcpv6.insert(DHCPV6_SERVER1_INTERFACE_ID, vec![DHCPV6_SERVER1]),
             None
         );
-        matches::assert_matches!(
+        assert_matches::assert_matches!(
             dhcpv6.insert(DHCPV6_SERVER2_INTERFACE_ID, vec![DHCPV6_SERVER2]),
             None
         );

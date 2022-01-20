@@ -228,10 +228,10 @@ impl FusedStream for BatteryClient {
 mod tests {
     use super::*;
 
+    use assert_matches::assert_matches;
     use async_utils::PollExt;
     use fuchsia_async as fasync;
     use futures::pin_mut;
-    use matches::assert_matches;
 
     fn setup_battery_client(
     ) -> (fasync::TestExecutor, BatteryClient, fpower::BatteryInfoWatcherProxy) {

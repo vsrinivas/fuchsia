@@ -272,7 +272,7 @@ pub fn connect_and_advertise() -> Result<(ProfileProxy, ProfileClient), Error> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use matches::assert_matches;
+    use assert_matches::assert_matches;
 
     fn build_attributes(
         service_class: bool,

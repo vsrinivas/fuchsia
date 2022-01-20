@@ -4,7 +4,7 @@
 
 //! Core DHCPv6 client state transitions.
 
-use matches::assert_matches;
+use assert_matches::assert_matches;
 use num::{rational::Ratio, CheckedMul};
 use packet::serialize::InnerPacketBuilder;
 use packet_formats_dhcp::v6;

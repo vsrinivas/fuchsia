@@ -674,7 +674,7 @@ mod tests {
         // Check that the expected request was passed into the peer via `hfp`.
         let peer_request =
             peer_receiver.receiver.next().await.expect("Peer received the BatteryLevel request");
-        matches::assert_matches!(peer_request, PeerRequest::BatteryLevel(1));
+        assert_matches::assert_matches!(peer_request, PeerRequest::BatteryLevel(1));
     }
 
     #[fuchsia::test(allow_stalls = false)]
@@ -720,7 +720,7 @@ mod tests {
             .next()
             .await
             .expect("Peer received the ConnectionBehavior request");
-        matches::assert_matches!(
+        assert_matches::assert_matches!(
             peer_request,
             PeerRequest::Behavior(ConnectionBehavior { autoconnect: false })
         );

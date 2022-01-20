@@ -595,7 +595,7 @@ mod types {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use matches::assert_matches;
+    use assert_matches::assert_matches;
 
     // Safety: These are safe because none of the values are zero.
     const TX_BUFFERS: NonZeroU16 = unsafe { NonZeroU16::new_unchecked(1) };

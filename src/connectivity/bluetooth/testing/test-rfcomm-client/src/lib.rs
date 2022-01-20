@@ -385,6 +385,7 @@ impl RfcommManager {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use assert_matches::assert_matches;
     use async_utils::PollExt;
     use bt_rfcomm::profile::build_rfcomm_protocol;
     use fidl::endpoints::Proxy;
@@ -392,7 +393,6 @@ mod tests {
     use fidl_fuchsia_bluetooth_bredr::{ProfileMarker, ProfileRequestStream};
     use fidl_fuchsia_bluetooth_rfcomm_test::{RfcommTestMarker, RfcommTestRequestStream};
     use fixture::fixture;
-    use matches::assert_matches;
     use std::convert::TryInto;
 
     type TestFixture = (RfcommManager, ProfileRequestStream, RfcommTestRequestStream);

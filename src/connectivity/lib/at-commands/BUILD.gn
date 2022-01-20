@@ -134,7 +134,7 @@ group("tests") {
 rustc_test("lib_tests") {
   edition = "2018"
   deps = [
-    "//third_party/rust_crates:matches",
+    "//third_party/rust_crates:assert_matches",
     "//third_party/rust_crates:num-derive",
     "//third_party/rust_crates:num-traits",
     "//third_party/rust_crates:pest",

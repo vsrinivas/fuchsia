@@ -132,9 +132,9 @@ async fn respond_to_get_update(
 #[cfg(test)]
 mod tests {
     use {
-        super::*, fidl_fuchsia_location_namedplace::RegulatoryRegionWatcherMarker,
-        fuchsia_async as fasync, matches::assert_matches, pin_utils::pin_mut, std::task::Poll,
-        tempfile::TempDir,
+        super::*, assert_matches::assert_matches,
+        fidl_fuchsia_location_namedplace::RegulatoryRegionWatcherMarker, fuchsia_async as fasync,
+        pin_utils::pin_mut, std::task::Poll, tempfile::TempDir,
     };
 
     #[test]

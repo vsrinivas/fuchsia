@@ -324,7 +324,7 @@ pub struct UnsupportedReportingStatus(i64);
 #[cfg(test)]
 mod tests {
     use super::*;
-    use matches::assert_matches;
+    use assert_matches::assert_matches;
 
     #[fuchsia::test]
     fn update_hf_indicators_with_invalid_values_is_error() {

@@ -52,7 +52,7 @@ async fn get_admin_unknown() {
         fidl::endpoints::create_proxy::<fidl_fuchsia_net_interfaces_admin::ControlMarker>()
             .expect("create proxy");
     let () = debug_interfaces.get_admin(id + 1, server_end).expect("get admin failed");
-    matches::assert_matches!(
+    assert_matches::assert_matches!(
         admin_control.take_event_stream().try_collect::<Vec<_>>().await.as_ref().map(Vec::as_slice),
         // TODO(https://fxbug.dev/8018): Sending epitaphs not supported in Go.
         Ok([])
@@ -165,14 +165,14 @@ async fn get_mac() {
     };
 
     // Loopback has the all-zero MAC address.
-    matches::assert_matches!(
+    assert_matches::assert_matches!(
         get_mac(loopback_id).await,
         Ok(Ok(Some(fidl_fuchsia_net::MacAddress { octets: [0, 0, 0, 0, 0, 0] })))
     );
     // Virtual interfaces do not have MAC addresses.
-    matches::assert_matches!(get_mac(virtual_id).await, Ok(Ok(None)));
+    assert_matches::assert_matches!(get_mac(virtual_id).await, Ok(Ok(None)));
     // Unknown NIC ID produces an error.
-    matches::assert_matches!(
+    assert_matches::assert_matches!(
         get_mac(virtual_id + 1).await,
         Ok(Err(fidl_fuchsia_net_debug::InterfacesGetMacError::NotFound))
     );

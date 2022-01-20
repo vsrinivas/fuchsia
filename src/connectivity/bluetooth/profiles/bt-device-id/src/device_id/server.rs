@@ -192,13 +192,13 @@ impl DeviceIdServer {
 pub(crate) mod tests {
     use super::*;
 
+    use assert_matches::assert_matches;
     use async_test_helpers::run_while;
     use async_utils::PollExt;
     use fidl::client::QueryResponseFut;
     use fidl_fuchsia_bluetooth::ErrorCode;
     use fuchsia_async as fasync;
     use futures::{pin_mut, SinkExt};
-    use matches::assert_matches;
 
     use crate::device_id::service_record::tests::minimal_record;
     use crate::DEFAULT_MAX_DEVICE_ID_ADVERTISEMENTS;

@@ -231,13 +231,13 @@ impl DeviceWatcher {
 mod tests {
     use super::*;
     use {
+        assert_matches::assert_matches,
         fidl_fuchsia_device_test::{
             DeviceSynchronousProxy, RootDeviceSynchronousProxy, CONTROL_DEVICE,
         },
         fidl_fuchsia_driver_test as fdt,
         fuchsia_component_test::new::{RealmBuilder, RealmInstance},
         fuchsia_driver_test::{DriverTestRealmBuilder, DriverTestRealmInstance},
-        matches::assert_matches,
     };
 
     const TIMEOUT: zx::Duration = zx::Duration::from_seconds(10);

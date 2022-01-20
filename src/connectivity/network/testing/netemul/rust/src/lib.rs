@@ -475,7 +475,7 @@ impl<'a> TestRealm<'a> {
             .await
             .context("error on realm event stream")?;
         // Ensure there are no more events sent on the event stream after `OnShutdown`.
-        matches::assert_matches!(events[..], [fnetemul::ManagedRealmEvent::OnShutdown {}]);
+        assert_matches::assert_matches!(events[..], [fnetemul::ManagedRealmEvent::OnShutdown {}]);
         Ok(())
     }
 

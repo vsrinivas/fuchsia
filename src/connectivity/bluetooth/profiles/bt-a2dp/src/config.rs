@@ -225,7 +225,7 @@ impl A2dpConfiguration {
 mod tests {
     use super::*;
 
-    use matches::assert_matches;
+    use assert_matches::assert_matches;
     #[test]
     fn test_channel_mode_from_str() {
         let channel_string = "basic".to_string();

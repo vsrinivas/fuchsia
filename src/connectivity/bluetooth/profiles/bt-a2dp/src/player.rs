@@ -487,7 +487,7 @@ impl Player {
 #[cfg(test)]
 pub(crate) mod tests {
     use super::*;
-    use matches::assert_matches;
+    use assert_matches::assert_matches;
 
     use {
         fidl::endpoints::create_proxy_and_stream,

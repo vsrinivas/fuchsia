@@ -75,7 +75,7 @@ impl Encodable for NonSupportedCommandParams {
 mod tests {
     use super::*;
 
-    use matches::assert_matches;
+    use assert_matches::assert_matches;
 
     #[test]
     fn test_decode_invalid_buf() {

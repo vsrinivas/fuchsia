@@ -474,7 +474,7 @@ impl Encodable for Frame {
 mod tests {
     use super::*;
 
-    use matches::assert_matches;
+    use assert_matches::assert_matches;
     use mux_commands::{MuxCommandParams, RemotePortNegotiationParams};
     use std::convert::TryFrom;
 

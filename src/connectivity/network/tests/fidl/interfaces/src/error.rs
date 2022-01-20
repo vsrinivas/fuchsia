@@ -104,7 +104,7 @@ async fn interfaces_watcher_hanging_get() {
 
     // Try hanging-get twice, and we should get NOT_SUPPORTED back.
     for _ in 0..2 {
-        matches::assert_matches!(
+        assert_matches::assert_matches!(
             watcher.watch().await,
             Err(fidl::Error::ClientChannelClosed {
                 status: zx::Status::NOT_SUPPORTED,

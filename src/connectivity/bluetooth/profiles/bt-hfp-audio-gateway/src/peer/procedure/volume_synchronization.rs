@@ -109,7 +109,7 @@ impl Procedure for VolumeSynchronizationProcedure {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use matches::assert_matches;
+    use assert_matches::assert_matches;
     use std::convert::TryInto;
 
     #[test]

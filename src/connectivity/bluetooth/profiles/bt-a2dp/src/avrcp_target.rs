@@ -260,7 +260,7 @@ mod tests {
             x => panic!("Expected GetState request but got: {:?}", x),
         }
         let result = exec.run_until_stalled(&mut wait_fut);
-        matches::assert_matches!(result, Poll::Ready(Ok(_)));
+        assert_matches::assert_matches!(result, Poll::Ready(Ok(_)));
     }
 
     #[test]
@@ -276,6 +276,6 @@ mod tests {
         drop(stream);
 
         let result = exec.run_until_stalled(&mut wait_fut);
-        matches::assert_matches!(result, Poll::Ready(Err(_)));
+        assert_matches::assert_matches!(result, Poll::Ready(Err(_)));
     }
 }

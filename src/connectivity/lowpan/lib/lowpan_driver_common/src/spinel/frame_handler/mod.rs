@@ -360,10 +360,10 @@ pub(crate) mod tests {
     use super::mock;
     use super::*;
 
+    use assert_matches::assert_matches;
     use fidl_fuchsia_lowpan_spinel::DeviceEvent as SpinelDeviceEvent;
     use fuchsia_async as fasync;
     use futures::future::{join, select};
-    use matches::assert_matches;
     use mock::DeviceRequest;
     use std::convert::TryInto;
 

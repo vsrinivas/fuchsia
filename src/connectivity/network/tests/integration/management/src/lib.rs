@@ -552,5 +552,5 @@ async fn observes_stop_events<M: Manager>(name: &str) {
     // NB: event::result below borrows from event, it needs to be in a different
     // statement.
     let events::StoppedPayload { status } = event.result().expect("error event on stopped");
-    matches::assert_matches!(status, events::ExitStatus::Clean);
+    assert_matches::assert_matches!(status, events::ExitStatus::Clean);
 }

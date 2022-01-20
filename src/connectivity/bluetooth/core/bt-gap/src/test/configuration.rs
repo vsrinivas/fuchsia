@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 use {
+    assert_matches::assert_matches,
     fidl::encoding::Decodable,
     fidl_fuchsia_bluetooth_host::{HostRequest, HostRequestStream, HostSetConnectableResponder},
     fidl_fuchsia_bluetooth_sys::{
@@ -11,7 +12,6 @@ use {
     },
     fuchsia_bluetooth::types::HostId,
     futures::{future, stream::TryStreamExt},
-    matches::assert_matches,
 };
 
 use crate::{
@@ -141,9 +141,7 @@ async fn set_secure_connections_only() {
             .await;
         assert_matches!(
             response,
-            Ok(sys::Settings {
-                le_security_mode: Some(LeSecurityMode::SecureConnectionsOnly), ..
-            })
+            Ok(sys::Settings { le_security_mode: Some(LeSecurityMode::SecureConnectionsOnly), .. })
         );
         Ok(())
     };

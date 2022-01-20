@@ -365,6 +365,7 @@ impl MockPeer {
 mod tests {
     use super::*;
     use {
+        assert_matches::assert_matches,
         bt_rfcomm::{
             profile::{is_rfcomm_protocol, server_channel_from_protocol},
             ServerChannel,
@@ -375,7 +376,6 @@ mod tests {
         fuchsia_bluetooth::profile::ProtocolDescriptor,
         fuchsia_component::{fuchsia_single_component_package_url, server::ServiceFs},
         futures::{lock::Mutex, pin_mut, task::Poll},
-        matches::assert_matches,
         std::convert::TryFrom,
     };
 

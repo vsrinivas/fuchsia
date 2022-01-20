@@ -273,7 +273,7 @@ where
 pub(crate) mod tests {
     use super::*;
     use crate::spinel::mock::*;
-    use matches::assert_matches;
+    use assert_matches::assert_matches;
 
     #[test]
     fn test_spinel_device_client_step_by_step() {

@@ -237,8 +237,8 @@ impl From<&DeviceIdentificationService> for Vec<bredr::ServiceDefinition> {
 pub(crate) mod tests {
     use super::*;
 
+    use assert_matches::assert_matches;
     use fidl_fuchsia_bluetooth_deviceid::DeviceIdentificationRecord;
-    use matches::assert_matches;
     use std::convert::TryInto;
 
     /// Returns a device version of 2.0.6.

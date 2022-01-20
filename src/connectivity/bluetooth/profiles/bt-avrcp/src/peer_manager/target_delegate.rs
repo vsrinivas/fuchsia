@@ -273,6 +273,7 @@ impl TargetDelegate {
 mod tests {
     use super::*;
 
+    use assert_matches::assert_matches;
     use fidl::endpoints::create_proxy_and_stream;
     use fidl_fuchsia_bluetooth_avrcp::{
         Equalizer, PlayerApplicationSettings, ShuffleMode, TargetHandlerMarker,
@@ -280,7 +281,6 @@ mod tests {
     };
     use fuchsia_async as fasync;
     use futures::StreamExt;
-    use matches::assert_matches;
     use std::task::Poll;
 
     // This also gets tested at a service level. Test that we get a TargetBound error on double set.

@@ -646,7 +646,7 @@ async fn duplicate_address_detection<E: netemul::Endpoint>(name: &str) {
 
     // Add an address and expect it to fail DAD because we simulate another node
     // performing DAD at the same time.
-    matches::assert_matches!(
+    assert_matches::assert_matches!(
         add_address_for_dad(
             &iface,
             &fake_ep,
@@ -661,7 +661,7 @@ async fn duplicate_address_detection<E: netemul::Endpoint>(name: &str) {
     );
     // Add an address and expect it to fail DAD because we simulate another node
     // already owning the address.
-    matches::assert_matches!(
+    assert_matches::assert_matches!(
         add_address_for_dad(
             &iface,
             &fake_ep,

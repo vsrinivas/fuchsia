@@ -769,10 +769,10 @@ pub(crate) mod tests {
             },
             procedure::dtmf::DtmfCode,
         },
+        assert_matches::assert_matches,
         fuchsia_async as fasync,
         fuchsia_bluetooth::types::Channel,
         futures::io::AsyncWriteExt,
-        matches::assert_matches,
         std::{convert::TryFrom, mem::Discriminant},
     };
 

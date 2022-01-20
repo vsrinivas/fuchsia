@@ -53,8 +53,8 @@ impl Procedure for VolumeControlProcedure {
 mod tests {
     use super::*;
     use crate::peer::gain_control::Gain;
+    use assert_matches::assert_matches;
     use at_commands as at;
-    use matches::assert_matches;
     use std::convert::TryFrom;
 
     #[test]

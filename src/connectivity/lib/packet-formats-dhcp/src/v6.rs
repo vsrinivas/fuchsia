@@ -1021,7 +1021,7 @@ impl InnerPacketBuilder for MessageBuilder<'_> {
 
 #[cfg(test)]
 mod tests {
-    use {super::*, matches::assert_matches, std::str::FromStr, test_case::test_case};
+    use {super::*, assert_matches::assert_matches, std::str::FromStr, test_case::test_case};
 
     fn test_buf_with_no_options() -> Vec<u8> {
         let builder = MessageBuilder::new(MessageType::Solicit, [1, 2, 3], &[]);

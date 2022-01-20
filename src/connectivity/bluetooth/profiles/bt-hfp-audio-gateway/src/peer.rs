@@ -307,8 +307,8 @@ pub(crate) mod fake {
 #[cfg(test)]
 mod tests {
     use {
-        super::*, async_utils::PollExt, fidl_fuchsia_bluetooth_bredr::ProfileMarker,
-        fuchsia_async as fasync, futures::pin_mut, matches::assert_matches,
+        super::*, assert_matches::assert_matches, async_utils::PollExt,
+        fidl_fuchsia_bluetooth_bredr::ProfileMarker, fuchsia_async as fasync, futures::pin_mut,
     };
 
     use crate::audio::TestAudioControl;

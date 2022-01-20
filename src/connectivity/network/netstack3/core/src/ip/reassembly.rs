@@ -37,7 +37,7 @@ use core::cmp::Ordering;
 use core::convert::TryFrom;
 use core::time::Duration;
 
-use matches::assert_matches;
+use assert_matches::assert_matches;
 use net_types::ip::{Ip, IpAddress};
 use packet::BufferViewMut;
 use packet_formats::ip::{IpExtByteSlice, IpPacket};
@@ -1043,7 +1043,7 @@ mod tests {
         let mut buffer =
             Buf::new(body.to_vec(), ..).encapsulate(builder).serialize_vec_outer().unwrap();
         let packet = buffer.parse::<Ipv4Packet<_>>().unwrap();
-        matches::assert_matches!(
+        assert_matches::assert_matches!(
             process_fragment::<Ipv4, _, &[u8]>(&mut ctx, packet),
             FragmentProcessingState::NotNeeded(unfragmented) if unfragmented.body() == body
         );
@@ -1063,7 +1063,7 @@ mod tests {
         let mut buffer =
             Buf::new(vec![1, 2, 3, 4, 5], ..).encapsulate(builder).serialize_vec_outer().unwrap();
         let packet = buffer.parse::<Ipv6Packet<_>>().unwrap();
-        matches::assert_matches!(
+        assert_matches::assert_matches!(
             process_fragment::<Ipv6, _, &[u8]>(&mut ctx, packet),
             FragmentProcessingState::InvalidFragment
         );

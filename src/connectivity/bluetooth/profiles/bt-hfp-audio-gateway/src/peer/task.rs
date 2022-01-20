@@ -901,6 +901,7 @@ fn stream_item_map_or_log<T, E: fmt::Debug>(
 mod tests {
     use {
         super::*,
+        assert_matches::assert_matches,
         async_test_helpers::run_while,
         async_utils::PollExt,
         at_commands::{self as at, SerDe},
@@ -920,7 +921,6 @@ mod tests {
             stream::{FusedStream, Stream},
             SinkExt,
         },
-        matches::assert_matches,
         proptest::prelude::*,
         std::convert::TryFrom,
         zx::AsHandleRef,

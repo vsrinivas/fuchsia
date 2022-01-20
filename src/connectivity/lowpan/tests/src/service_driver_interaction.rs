@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 use anyhow::{format_err, Context as _, Error};
+use assert_matches::assert_matches;
 use fasync::Time;
 use fidl::endpoints::create_endpoints;
 use fidl_fuchsia_lowpan_device::{DeviceExtraMarker, DeviceMarker, LookupMarker, Protocols};
@@ -11,7 +12,6 @@ use fuchsia_async as fasync;
 use fuchsia_async::TimeoutExt;
 use fuchsia_component::client::{connect_to_protocol, launch, launcher};
 use futures::prelude::*;
-use matches::assert_matches;
 
 const DEFAULT_TIMEOUT: fuchsia_zircon::Duration = fuchsia_zircon::Duration::from_seconds(50);
 

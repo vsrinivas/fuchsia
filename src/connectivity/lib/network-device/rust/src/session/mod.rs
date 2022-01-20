@@ -545,7 +545,7 @@ mod tests {
         buffer::NETWORK_DEVICE_DESCRIPTOR_LENGTH, buffer::NETWORK_DEVICE_DESCRIPTOR_VERSION,
         DeviceInfo, Error,
     };
-    use matches::assert_matches;
+    use assert_matches::assert_matches;
     use std::{num::NonZeroU32, ops::Deref};
     use test_case::test_case;
 

@@ -5,6 +5,7 @@
 //! Implements a DHCPv6 client.
 use {
     anyhow::{Context as _, Result},
+    assert_matches::assert_matches,
     async_utils::futures::{FutureExt as _, ReplaceValue},
     dhcpv6_core,
     dns_server_watcher::DEFAULT_DNS_PORT,
@@ -23,7 +24,6 @@ use {
         stream::futures_unordered::FuturesUnordered,
         Future, FutureExt as _, StreamExt as _, TryStreamExt as _,
     },
-    matches::assert_matches,
     packet::ParsablePacket,
     packet_formats_dhcp::v6,
     rand::{rngs::StdRng, SeedableRng},

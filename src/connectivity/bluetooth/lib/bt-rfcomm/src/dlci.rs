@@ -171,7 +171,7 @@ impl From<ServerChannel> for u8 {
 mod tests {
     use super::*;
 
-    use matches::assert_matches;
+    use assert_matches::assert_matches;
 
     #[test]
     fn test_create_dlci() {

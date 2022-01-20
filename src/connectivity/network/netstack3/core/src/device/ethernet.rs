@@ -12,8 +12,8 @@ use core::fmt::Debug;
 use core::mem;
 use core::num::NonZeroU8;
 
+use assert_matches::assert_matches;
 use log::{debug, trace};
-use matches::assert_matches;
 use net_types::ethernet::Mac;
 use net_types::ip::{
     AddrSubnet, Ip, IpAddr, IpAddress, IpVersion, Ipv4, Ipv4Addr, Ipv6, Ipv6Addr,
@@ -1571,7 +1571,7 @@ fn mac_resolution_failed<C: EthernetIpDeviceContext>(
 mod tests {
     use alloc::vec;
 
-    use matches::assert_matches;
+    use assert_matches::assert_matches;
     use packet::Buf;
     use packet_formats::icmp::{IcmpDestUnreachable, IcmpIpExt};
     use packet_formats::ip::{IpExt, IpPacketBuilder, IpProto};

@@ -197,9 +197,9 @@ fn send_general_reject(command: AvctpCommand, status_code: StatusCode) -> Result
 #[cfg(test)]
 mod tests {
     use super::*;
+    use assert_matches::assert_matches;
     use fuchsia_bluetooth::types::Channel;
     use futures::StreamExt;
-    use matches::assert_matches;
 
     #[fuchsia::test]
     /// Tests handling an invalid browse channel PDU returns an error.

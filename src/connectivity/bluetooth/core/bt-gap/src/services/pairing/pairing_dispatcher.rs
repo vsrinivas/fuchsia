@@ -316,6 +316,7 @@ mod test {
     use super::*;
     use {
         anyhow::Error,
+        assert_matches::assert_matches,
         fidl_fuchsia_bluetooth::Appearance,
         fidl_fuchsia_bluetooth_sys as sys, fuchsia_async as fasync,
         fuchsia_bluetooth::types::Address,
@@ -323,7 +324,6 @@ mod test {
             future::{self, BoxFuture, Future, FutureExt},
             stream::TryStreamExt,
         },
-        matches::assert_matches,
     };
 
     fn simple_test_peer(id: PeerId) -> Peer {

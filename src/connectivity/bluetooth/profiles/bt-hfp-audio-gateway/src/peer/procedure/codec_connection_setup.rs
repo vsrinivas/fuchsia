@@ -115,7 +115,7 @@ mod tests {
     use super::*;
 
     use crate::features::{AgFeatures, HfFeatures};
-    use matches::assert_matches;
+    use assert_matches::assert_matches;
 
     #[test]
     fn correct_marker() {

@@ -928,6 +928,7 @@ fn codectype_to_availability_metric(
 mod tests {
     use super::*;
 
+    use assert_matches::assert_matches;
     use fidl::endpoints::create_proxy_and_stream;
     use fidl_fuchsia_bluetooth::ErrorCode;
     use fidl_fuchsia_bluetooth_bredr::{
@@ -936,7 +937,6 @@ mod tests {
     use fidl_fuchsia_cobalt::CobaltEvent;
     use futures::channel::mpsc;
     use futures::pin_mut;
-    use matches::assert_matches;
     use std::convert::TryInto;
     use std::task::Poll;
 

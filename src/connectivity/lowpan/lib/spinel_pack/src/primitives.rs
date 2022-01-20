@@ -791,7 +791,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use matches::assert_matches;
+    use assert_matches::assert_matches;
 
     /// A verification that Spinel structs with
     /// both `d` and `D` fields compile correctly.

@@ -1217,7 +1217,7 @@ mod tests {
             .await
             .expect("error on realm event stream");
         // Ensure there are no more events sent on the event stream after `OnShutdown`.
-        matches::assert_matches!(events[..], [fnetemul::ManagedRealmEvent::OnShutdown {}]);
+        assert_matches::assert_matches!(events[..], [fnetemul::ManagedRealmEvent::OnShutdown {}]);
         assert_eq!(
             counter.on_closed().await,
             Ok(zx::Signals::CHANNEL_PEER_CLOSED),
@@ -1562,7 +1562,7 @@ mod tests {
                 server_end.into_channel(),
             )
             .expect("failed to connect to network context through counter");
-        matches::assert_matches!(
+        assert_matches::assert_matches!(
             network_context.setup(&mut Vec::new().iter_mut()).await,
             Ok((zx::sys::ZX_OK, Some(_setup_handle)))
         );
@@ -2340,7 +2340,7 @@ mod tests {
             .expect("stop child component failed");
         let err =
             counter.increment().await.expect_err("increment call on stopped child should fail");
-        matches::assert_matches!(
+        assert_matches::assert_matches!(
             err,
             fidl::Error::ClientChannelClosed { status, protocol_name }
                 if status == zx::Status::PEER_CLOSED &&

@@ -35,9 +35,9 @@ rustc_binary("bin") {
     "//src/lib/zircon/rust:fuchsia-zircon",
     "//src/sys/lib/cm_rust",
     "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:assert_matches",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:log",
-    "//third_party/rust_crates:matches",
     "//third_party/rust_crates:pin-utils",
     "//third_party/rust_crates:thiserror",
   ]
@@ -52,7 +52,7 @@ rustc_binary("bin") {
     "//src/lib/fuchsia",
     "//src/lib/storage/fuchsia-vfs-watcher",
     "//src/lib/testing/fixture",
-    "//third_party/rust_crates:matches",
+    "//third_party/rust_crates:assert_matches",
   ]
   sources = [ "src/main.rs" ]
   configs -= [ "//build/config/rust:allow_unused_results" ]

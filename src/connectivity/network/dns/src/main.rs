@@ -1085,11 +1085,11 @@ mod tests {
         sync::Arc,
     };
 
+    use assert_matches::assert_matches;
     use dns::test_util::*;
     use dns::DEFAULT_PORT;
     use fuchsia_inspect::{assert_data_tree, testing::NonZeroUintProperty, tree_assertion};
     use futures::future::TryFutureExt as _;
-    use matches::assert_matches;
     use net_declare::{fidl_ip, std_ip, std_ip_v4, std_ip_v6};
     use net_types::ip::Ip as _;
     use pin_utils::pin_mut;

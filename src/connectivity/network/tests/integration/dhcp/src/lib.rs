@@ -177,7 +177,7 @@ async fn assert_client_acquires_addr(
         // Enable the interface and assert that binding fails before the address is acquired.
         let () = client_interface.stop_dhcp().await.expect("failed to stop DHCP");
         let () = client_interface.set_link_up(true).await.expect("failed to bring link up");
-        matches::assert_matches!(
+        assert_matches::assert_matches!(
             bind(&client_realm, expected_acquired).await,
             Err(e @ anyhow::Error {..})
                 if e.downcast_ref::<std::io::Error>()
@@ -846,7 +846,7 @@ async fn acquire_dhcp_server_after_restart<E: netemul::Endpoint>(
                 dhcp_server.stop_serving().await.expect("failed to call dhcp/Server.StopServing")
             }
             PersistenceMode::Ephemeral => {
-                matches::assert_matches!(
+                assert_matches::assert_matches!(
                     dhcp_server
                         .start_serving()
                         .await
@@ -891,7 +891,7 @@ async fn acquire_dhcp_server_after_restart<E: netemul::Endpoint>(
                     .expect("dhcp/Server.ClearLeases returned error");
             }
             PersistenceMode::Ephemeral => {
-                matches::assert_matches!(
+                assert_matches::assert_matches!(
                     dhcp_server
                         .start_serving()
                         .await

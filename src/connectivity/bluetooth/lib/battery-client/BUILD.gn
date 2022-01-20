@@ -26,7 +26,7 @@ rustc_library("battery-client") {
     "//src/lib/async-utils",
     "//src/lib/fuchsia",
     "//src/lib/fuchsia-async",
-    "//third_party/rust_crates:matches",
+    "//third_party/rust_crates:assert_matches",
   ]
 
   sources = [

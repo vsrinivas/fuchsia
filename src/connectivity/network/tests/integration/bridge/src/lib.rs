@@ -9,8 +9,8 @@ use std::{collections::HashMap, convert::TryFrom as _};
 use fuchsia_async::{DurationExt as _, TimeoutExt as _};
 
 use anyhow::anyhow;
+use assert_matches::assert_matches;
 use futures::{SinkExt as _, StreamExt as _, TryFutureExt as _};
-use matches::assert_matches;
 use net_declare::{fidl_subnet, std_socket_addr_v4};
 use netstack_testing_common::{
     interfaces, ping as ping_helper,

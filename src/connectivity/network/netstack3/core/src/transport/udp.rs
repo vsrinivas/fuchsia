@@ -684,7 +684,7 @@ pub fn send_udp<I: IpExt, B: BufferMut, C: BufferUdpStateContext<I, B>>(
     let ret = send_udp_conn(ctx, tmp_conn, body).map_err(NetstackError::SendUdp);
     let info = remove_udp_conn(ctx, tmp_conn);
     if cfg!(debug_assertions) {
-        matches::assert_matches!(info, UdpConnInfo {
+        assert_matches::assert_matches!(info, UdpConnInfo {
             local_ip: removed_local_ip,
             local_port: removed_local_port,
             remote_ip: removed_remote_ip,

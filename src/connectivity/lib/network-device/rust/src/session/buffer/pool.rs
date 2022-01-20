@@ -985,9 +985,9 @@ impl AllocKind for Rx {
 mod tests {
     use super::*;
 
+    use assert_matches::assert_matches;
     use fuchsia_async as fasync;
     use futures::future::FutureExt;
-    use matches::assert_matches;
     use test_case::test_case;
 
     use std::collections::HashSet;

@@ -59,7 +59,7 @@ impl Procedure for RingProcedure {
 mod tests {
     use super::*;
     use crate::peer::calls::{Call, Direction};
-    use {fidl_fuchsia_bluetooth_hfp::CallState, matches::assert_matches};
+    use {assert_matches::assert_matches, fidl_fuchsia_bluetooth_hfp::CallState};
 
     #[test]
     fn correct_marker() {

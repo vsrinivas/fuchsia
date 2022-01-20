@@ -155,7 +155,7 @@ async fn add_address_errors() {
             }
         };
         async move {
-            matches::assert_matches!(
+            assert_matches::assert_matches!(
                 interfaces::add_address_wait_assigned(&control, addr.clone(), VALID_ADDRESS_PARAMETERS).await,
                 Err(fidl_fuchsia_net_interfaces_ext::admin::AddressStateProviderError::AddressRemoved(
                     fidl_fuchsia_net_interfaces_admin::AddressRemovalReason::AlreadyAssigned
@@ -174,7 +174,7 @@ async fn add_address_errors() {
                 addr: fidl_ip_v4!("1.1.1.1"),
                 prefix_len: 33,
             });
-        matches::assert_matches!(
+        assert_matches::assert_matches!(
             interfaces::add_address_wait_assigned(
                 &control,
                 invalid_address,
@@ -205,7 +205,7 @@ async fn add_address_errors() {
             temporary: Some(true),
             ..fidl_fuchsia_net_interfaces_admin::AddressParameters::EMPTY
         };
-        matches::assert_matches!(
+        assert_matches::assert_matches!(
             interfaces::add_address_wait_assigned(&control, fidl_if_addr!("fe80::1"), parameters,)
                 .await,
             Err(fidl_fuchsia_net_interfaces_ext::admin::AddressStateProviderError::AddressRemoved(
@@ -226,13 +226,13 @@ async fn add_address_errors() {
         )
         .await
         .expect("add address");
-        matches::assert_matches!(
+        assert_matches::assert_matches!(
             address_state_provider
                 .update_address_properties(fidl_fuchsia_net_interfaces_admin::AddressProperties::EMPTY)
                 .await,
             Err(err) if err.is_closed()
         );
-        matches::assert_matches!(
+        assert_matches::assert_matches!(
             address_state_provider.take_event_stream().try_next().await,
             Ok(Some(
                 fidl_fuchsia_net_interfaces_admin::AddressStateProviderEvent::OnAddressRemoved {
@@ -323,7 +323,7 @@ async fn add_address_removal<E: netemul::Endpoint>(name: &str) {
             fidl_fuchsia_net_interfaces_admin::AddressRemovalReason::InterfaceRemoved
         );
 
-        matches::assert_matches!(
+        assert_matches::assert_matches!(
             control.wait_termination().await,
             fidl_fuchsia_net_interfaces_ext::admin::TerminalError::Terminal(
                 fidl_fuchsia_net_interfaces_admin::InterfaceRemovedReason::User
@@ -783,7 +783,7 @@ async fn device_control_owns_interfaces_lifetimes(detach: bool) {
 
             // Observe interface creation in watcher.
             let event = watcher.select_next_some().await;
-            matches::assert_matches!(
+            assert_matches::assert_matches!(
                 event,
                 fidl_fuchsia_net_interfaces::Event::Added(
                     fidl_fuchsia_net_interfaces::Properties { id: Some(id), .. }
@@ -873,7 +873,7 @@ async fn device_control_owns_interfaces_lifetimes(detach: bool) {
         let ports_are_detached_fut =
             ports_detached_stream.map(|_port_index: u8| ()).collect::<()>();
         let control_closed_fut = control_wait_termination_stream.for_each(|termination| {
-            matches::assert_matches!(
+            assert_matches::assert_matches!(
                 termination,
                 fidl_fuchsia_net_interfaces_ext::admin::TerminalError::Terminal(
                     fidl_fuchsia_net_interfaces_admin::InterfaceRemovedReason::PortClosed
@@ -1133,7 +1133,7 @@ async fn device_control_closes_on_device_close() {
     // Drop the device and observe the control channel closing because the
     // device was destroyed.
     std::mem::drop(endpoint);
-    matches::assert_matches!(device_control.take_event_stream().next().await, None);
+    assert_matches::assert_matches!(device_control.take_event_stream().next().await, None);
 
     // The channel could've been closed by a Netstack crash, consume from the
     // watcher to ensure that's not the case.
@@ -1262,7 +1262,7 @@ async fn installer_creates_datapath() {
 
     let mut buff = [0; PAYLOAD.len() + 1];
     let (read, from) = bob_sock.recv_from(&mut buff[..]).await.expect("recvfrom");
-    matches::assert_matches!(from, std::net::SocketAddr::V4(addr) if addr.ip().octets() == ALICE_IP.addr.addr);
+    assert_matches::assert_matches!(from, std::net::SocketAddr::V4(addr) if addr.ip().octets() == ALICE_IP.addr.addr);
     assert_eq!(read, payload_bytes.len());
     assert_eq!(&buff[..read], payload_bytes);
 }
@@ -1319,7 +1319,7 @@ async fn control_enable_disable() {
 
     // Expect the added event.
     let event = watcher.select_next_some().await;
-    matches::assert_matches!(event,
+    assert_matches::assert_matches!(event,
         fidl_fuchsia_net_interfaces::Event::Added(
                 fidl_fuchsia_net_interfaces::Properties {
                     id: Some(id), online: Some(online), ..
@@ -1421,7 +1421,7 @@ async fn control_owns_interface_lifetime(detach: bool) {
 
     // Expect the added event.
     let event = watcher.select_next_some().await;
-    matches::assert_matches!(event,
+    assert_matches::assert_matches!(event,
         fidl_fuchsia_net_interfaces::Event::Added(
                 fidl_fuchsia_net_interfaces::Properties {
                     id: Some(id), ..
@@ -1460,13 +1460,13 @@ async fn control_owns_interface_lifetime(detach: bool) {
         std::mem::drop(control);
 
         let event = watcher.select_next_some().await;
-        matches::assert_matches!(event,
+        assert_matches::assert_matches!(event,
             fidl_fuchsia_net_interfaces::Event::Removed(id) if id == iface_id
         );
 
         // The debug control channel is a weak ref, it didn't prevent destruction,
         // but is closed now.
-        matches::assert_matches!(
+        assert_matches::assert_matches!(
             debug_control.wait_termination().await,
             fidl_fuchsia_net_interfaces_ext::admin::TerminalError::Terminal(
                 fidl_fuchsia_net_interfaces_admin::InterfaceRemovedReason::User

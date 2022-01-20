@@ -21,7 +21,7 @@ rustc_test("routes") {
     "//src/lib/network/fidl_fuchsia_net_interfaces_ext",
     "//src/lib/zircon/rust:fuchsia-zircon",
     "//third_party/rust_crates:anyhow",
-    "//third_party/rust_crates:matches",
+    "//third_party/rust_crates:assert_matches",
   ]
   sources = [ "src/lib.rs" ]
   configs -= [ "//build/config/rust:allow_unused_results" ]

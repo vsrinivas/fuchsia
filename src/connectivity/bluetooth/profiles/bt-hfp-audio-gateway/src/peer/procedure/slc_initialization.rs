@@ -444,7 +444,7 @@ mod tests {
     use super::*;
 
     use crate::features::{CodecId, HfFeatures};
-    use matches::assert_matches;
+    use assert_matches::assert_matches;
 
     #[test]
     fn supported_features_received_transition_to_codec_negotiation() {

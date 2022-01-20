@@ -178,7 +178,7 @@ impl Encodable for ModemStatusParams {
 mod tests {
     use super::*;
 
-    use matches::assert_matches;
+    use assert_matches::assert_matches;
 
     #[test]
     fn test_decode_modem_status_invalid_buf() {

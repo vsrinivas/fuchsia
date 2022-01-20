@@ -572,12 +572,12 @@ async fn main() -> Result<(), anyhow::Error> {
 mod tests {
     use super::*;
 
+    use assert_matches::assert_matches;
     use async_utils::PollExt;
     use fidl::encoding::Decodable;
     use fidl::endpoints::{create_proxy, create_proxy_and_stream, create_request_stream};
     use fidl_fuchsia_bluetooth_bredr::*;
     use futures::{pin_mut, task::Poll};
-    use matches::assert_matches;
 
     async fn get_next_profile_test_request(
         stream: &mut ProfileTestRequestStream,

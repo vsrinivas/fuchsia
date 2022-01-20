@@ -4,6 +4,7 @@
 
 use {
     anyhow::Error,
+    assert_matches::assert_matches,
     fidl::endpoints,
     fidl_fuchsia_bluetooth_host::{HostMarker, HostRequest},
     fidl_fuchsia_bluetooth_sys::AccessMarker,
@@ -12,7 +13,6 @@ use {
         Address, HostId, PeerId, Technology,
     },
     futures::{future, stream::TryStreamExt},
-    matches::assert_matches,
     parking_lot::RwLock,
     std::{path::Path, sync::Arc},
 };

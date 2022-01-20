@@ -703,6 +703,7 @@ impl From<FidlCallAction> for CallAction {
 mod tests {
     use {
         super::*,
+        assert_matches::assert_matches,
         async_utils::PollExt,
         fidl::endpoints::ClientEnd,
         fidl_fuchsia_bluetooth_hfp::{
@@ -710,7 +711,6 @@ mod tests {
             PeerHandlerMarker, PeerHandlerRequest, PeerHandlerRequestStream,
         },
         fuchsia_async as fasync,
-        matches::assert_matches,
     };
 
     #[fuchsia::test]

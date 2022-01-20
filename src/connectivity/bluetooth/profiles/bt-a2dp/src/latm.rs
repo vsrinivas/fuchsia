@@ -550,7 +550,7 @@ impl<'a> AudioMuxElement<'a> {
 mod test {
 
     use super::*;
-    use matches::assert_matches;
+    use assert_matches::assert_matches;
 
     #[test]
     fn test_audio_specific_config() {

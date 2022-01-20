@@ -347,8 +347,8 @@ impl Encodable for MuxCommand {
 mod tests {
     use super::*;
 
+    use assert_matches::assert_matches;
     use dlc_parameter_negotiation::CreditBasedFlowHandshake;
-    use matches::assert_matches;
     use modem_status::ModemStatusSignals;
 
     #[test]

@@ -308,9 +308,9 @@ where
 mod tests {
     use super::*;
     use crate::bindings::{context::Lockable, integration_tests::set_logger_for_test};
+    use assert_matches::assert_matches;
     use fuchsia_zircon::{self as zx, DurationNum};
     use futures::{channel::mpsc, lock::Mutex, task::Poll, Future, StreamExt};
-    use matches::assert_matches;
     use std::sync::Arc;
 
     type TestDispatcher = TimerDispatcher<usize>;

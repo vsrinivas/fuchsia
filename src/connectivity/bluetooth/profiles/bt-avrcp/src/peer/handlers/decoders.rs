@@ -232,7 +232,7 @@ impl Command {
 #[cfg(test)]
 mod test {
     use super::*;
-    use matches::assert_matches;
+    use assert_matches::assert_matches;
 
     // AvcCommand is hard to mock
     #[test]

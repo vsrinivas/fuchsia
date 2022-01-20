@@ -36,7 +36,7 @@ rustc_library("lib") {
 
   test_deps = [
     "//src/connectivity/lib/net-declare",
-    "//third_party/rust_crates:matches",
+    "//third_party/rust_crates:assert_matches",
   ]
 
   sources = [
@@ -87,7 +87,7 @@ rustc_binary("bin") {
   test_deps = [
     "//sdk/fidl/fuchsia.stash:fuchsia.stash-rustc",
     "//src/connectivity/lib/net-declare",
-    "//third_party/rust_crates:matches",
+    "//third_party/rust_crates:assert_matches",
     "//third_party/rust_crates:rand",
   ]
 

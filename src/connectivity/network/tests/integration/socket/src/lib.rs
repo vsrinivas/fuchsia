@@ -640,7 +640,7 @@ async fn test_ip_endpoint_packets() {
 
     // Send the same data again, but with an IPv6 frame type, expect that it'll
     // fail parsing and no response will be generated.
-    matches::assert_matches!(
+    assert_matches::assert_matches!(
         write_frame_and_read_with_timeout(
             &tun_dev,
             fidl_fuchsia_net_tun::Frame {
@@ -717,7 +717,7 @@ async fn test_ip_endpoint_packets() {
 
     // Send the same data again, but with an IPv4 frame type, expect that it'll
     // fail parsing and no response will be generated.
-    matches::assert_matches!(
+    assert_matches::assert_matches!(
         write_frame_and_read_with_timeout(
             &tun_dev,
             fidl_fuchsia_net_tun::Frame {

@@ -97,11 +97,11 @@ mod tests {
     use super::*;
     use crate::host_device::HostDevice;
     use {
+        assert_matches::assert_matches,
         fidl::encoding::Decodable,
         fidl_fuchsia_bluetooth_host::{HostMarker, HostRequest},
         fuchsia_bluetooth::types::{Address, HostId},
         futures::{future, join, stream::TryStreamExt},
-        matches::assert_matches,
         std::collections::HashSet,
         tempfile::NamedTempFile,
     };

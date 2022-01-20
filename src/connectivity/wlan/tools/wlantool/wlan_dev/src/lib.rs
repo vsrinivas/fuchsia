@@ -925,12 +925,12 @@ fn print_minstrel_stats(mut peer: Box<Peer>) {
 mod tests {
     use {
         super::*,
+        assert_matches::assert_matches,
         fidl::endpoints::create_proxy,
         fidl_fuchsia_wlan_device_service::{DeviceMonitorMarker, DeviceServiceMarker},
         fuchsia_async as fasync,
         futures::task::Poll,
         ieee80211::SsidError,
-        matches::assert_matches,
         pin_utils::pin_mut,
         wlan_common::assert_variant,
     };

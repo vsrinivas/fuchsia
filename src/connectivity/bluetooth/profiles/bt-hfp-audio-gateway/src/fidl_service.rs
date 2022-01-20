@@ -87,8 +87,9 @@ pub async fn run_services(
 #[cfg(test)]
 mod tests {
     use {
-        super::*, fidl::endpoints::RequestStream, fidl_fuchsia_bluetooth_bredr as bredr,
-        fidl_fuchsia_bluetooth_hfp::*, futures::channel::mpsc, matches::assert_matches,
+        super::*, assert_matches::assert_matches, fidl::endpoints::RequestStream,
+        fidl_fuchsia_bluetooth_bredr as bredr, fidl_fuchsia_bluetooth_hfp::*,
+        futures::channel::mpsc,
     };
 
     #[fuchsia::test(allow_stalls = false)]

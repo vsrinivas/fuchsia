@@ -33,7 +33,7 @@ rustc_library("test-rfcomm-client") {
     "//src/lib/async-utils",
     "//src/lib/fuchsia",
     "//src/lib/testing/fixture",
-    "//third_party/rust_crates:matches",
+    "//third_party/rust_crates:assert_matches",
   ]
 
   sources = [ "src/lib.rs" ]

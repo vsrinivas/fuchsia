@@ -1072,11 +1072,11 @@ impl SignaledTask for Session {
 mod tests {
     use super::*;
 
+    use assert_matches::assert_matches;
     use async_utils::PollExt;
     use fuchsia_async as fasync;
     use fuchsia_inspect::testing::AnyProperty;
     use futures::{pin_mut, task::Poll, Future};
-    use matches::assert_matches;
     use std::convert::TryFrom;
 
     use crate::{rfcomm::session::multiplexer::ParameterNegotiationState, rfcomm::test_util::*};

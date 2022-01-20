@@ -549,10 +549,10 @@ mod tests {
     use super::*;
     use crate::peer::RemotePeerHandle;
     use crate::peer_manager::TargetDelegate;
+    use assert_matches::assert_matches;
     use fidl::endpoints::{create_endpoints, create_proxy, create_proxy_and_stream};
     use fidl_fuchsia_bluetooth_bredr::ProfileMarker;
     use futures::task::Poll;
-    use matches::assert_matches;
     use pin_utils::pin_mut;
     use std::sync::Arc;
 

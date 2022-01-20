@@ -24,8 +24,8 @@ use core::marker::PhantomData;
 use core::num::NonZeroU8;
 use core::time::Duration;
 
+use assert_matches::assert_matches;
 use log::{debug, error, trace};
-use matches::assert_matches;
 use net_types::ip::{AddrSubnet, Ip, IpAddress, Ipv6, Ipv6Addr, Ipv6Scope, Ipv6SourceAddr, Subnet};
 use net_types::{
     LinkLocalAddress, LinkLocalUnicastAddr, MulticastAddr, MulticastAddress, ScopeableAddress,
@@ -4123,7 +4123,7 @@ mod tests {
 
         // Should have sent a frame and have a router solicitation timer setup.
         assert_eq!(ctx.dispatcher.frames_sent().len(), 1);
-        matches::assert_matches!(
+        assert_matches::assert_matches!(
             parse_icmp_packet_in_ip_packet_in_ethernet_frame::<Ipv6, _, RouterSolicitation, _>(
                 &ctx.dispatcher.frames_sent()[0].1,
                 |_| {},
@@ -4154,7 +4154,7 @@ mod tests {
 
         // Should have sent a router solicitation.
         assert_eq!(ctx.dispatcher.frames_sent().len(), 2);
-        matches::assert_matches!(
+        assert_matches::assert_matches!(
             parse_icmp_packet_in_ip_packet_in_ethernet_frame::<Ipv6, _, RouterSolicitation, _>(
                 &ctx.dispatcher.frames_sent()[1].1,
                 |_| {},

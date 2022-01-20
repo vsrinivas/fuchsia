@@ -87,8 +87,8 @@ impl FusedStream for Ringer {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use assert_matches::assert_matches;
     use futures::StreamExt;
-    use matches::assert_matches;
 
     #[fuchsia::test]
     fn ringer_fused_stream_implementation() {

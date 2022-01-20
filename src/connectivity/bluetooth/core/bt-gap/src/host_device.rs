@@ -423,7 +423,7 @@ pub(crate) mod test {
                 if let HostRequest::StartDiscovery { responder } = req {
                     assert!(!host_info.read().discovering);
                     host_info.write().discovering = true;
-                    matches::assert_matches!(responder.send(&mut Ok(())), Ok(()));
+                    assert_matches::assert_matches!(responder.send(&mut Ok(())), Ok(()));
                 }
                 // Clear discovery field of host info
                 else if let HostRequest::StopDiscovery { control_handle: _ } = req {
@@ -432,7 +432,7 @@ pub(crate) mod test {
                 }
                 // Update host with current info state
                 else if let HostRequest::WatchState { responder } = req {
-                    matches::assert_matches!(
+                    assert_matches::assert_matches!(
                         responder.send(FidlHostInfo::from(host_info.read().clone())),
                         Ok(())
                     );

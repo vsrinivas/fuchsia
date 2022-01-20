@@ -102,7 +102,7 @@ where
             Entry::Vacant(entry) => {
                 let id = Self::alloc_id(last_id);
                 let core_id = entry.key().clone();
-                matches::assert_matches!(id_map.insert(id, core_id.clone()), None);
+                assert_matches::assert_matches!(id_map.insert(id, core_id.clone()), None);
                 let _: &mut DeviceInfo<_, _> =
                     entry.insert(DeviceInfo { id, core_id: Some(core_id.clone()), info });
                 Some(id)
@@ -180,7 +180,7 @@ where
                         }
                         Entry::Vacant(vacant) => {
                             let mut info = inactive.remove();
-                            matches::assert_matches!(
+                            assert_matches::assert_matches!(
                                 std::mem::replace(&mut info.core_id, Some(core_id.clone())),
                                 None
                             );
@@ -372,7 +372,7 @@ impl<C> DeviceInfo<C, CommonInfo> {
 
 #[cfg(test)]
 mod tests {
-    use matches::assert_matches;
+    use assert_matches::assert_matches;
 
     use super::*;
 

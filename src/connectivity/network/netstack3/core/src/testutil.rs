@@ -14,8 +14,8 @@ use core::hash::Hash;
 use core::ops;
 use core::time::Duration;
 
+use assert_matches::assert_matches;
 use log::{debug, trace};
-use matches::assert_matches;
 use net_types::ethernet::Mac;
 use net_types::ip::{
     AddrSubnet, Ip, IpAddr, IpAddress, Ipv4, Ipv4Addr, Ipv6, Ipv6Addr, Subnet, SubnetEither,

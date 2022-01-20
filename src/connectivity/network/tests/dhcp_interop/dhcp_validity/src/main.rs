@@ -4,10 +4,10 @@
 
 use {
     anyhow::{Context as _, Error},
+    assert_matches::assert_matches,
     dhcp_validity_lib::{configure_dhcp_server, verify_v4_addr_present, verify_v6_dns_servers},
     dns_server_watcher::DEFAULT_DNS_PORT,
     fidl_fuchsia_net as fnet, fidl_fuchsia_net_name as fnetname, fuchsia_async as fasync,
-    matches::assert_matches,
     net_declare::{fidl_ip, fidl_ip_v6},
 };
 

@@ -97,7 +97,7 @@ impl Procedure for TransferHfIndicatorProcedure {
 mod tests {
     use super::*;
     use crate::peer::indicators::HfIndicator;
-    use matches::assert_matches;
+    use assert_matches::assert_matches;
 
     #[test]
     fn correct_marker() {

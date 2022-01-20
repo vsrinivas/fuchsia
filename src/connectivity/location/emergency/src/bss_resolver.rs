@@ -514,8 +514,8 @@ mod tests {
     mod response_success_reporting {
         use {
             super::super::{test_doubles::HttpByteResponder, *},
+            assert_matches::assert_matches,
             fuchsia_async as fasync,
-            matches::assert_matches,
         };
 
         #[fasync::run_until_stalled(test)]
@@ -559,8 +559,8 @@ mod tests {
     mod response_success_contents {
         use {
             super::super::{test_doubles::HttpByteResponder, *},
+            assert_matches::assert_matches,
             fuchsia_async as fasync,
-            matches::assert_matches,
         };
 
         #[fasync::run_until_stalled(test)]

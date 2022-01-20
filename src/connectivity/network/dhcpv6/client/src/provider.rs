@@ -43,11 +43,11 @@ mod tests {
     use {
         super::*,
         anyhow::{anyhow, Error},
+        assert_matches::assert_matches,
         fidl::endpoints::create_endpoints,
         fidl_fuchsia_net_dhcpv6::{ClientConfig, ClientProviderMarker},
         fuchsia_async as fasync,
         futures::join,
-        matches::assert_matches,
         net_declare::fidl_socket_addr_v6,
     };
 

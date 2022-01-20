@@ -2370,29 +2370,32 @@ mod tests {
 
     #[test]
     fn test_client_identifier_from_str() {
-        matches::assert_matches!(
+        assert_matches::assert_matches!(
             ClientIdentifier::from_str("id:1234567890abcd"),
             Ok(ClientIdentifier { .. })
         );
-        matches::assert_matches!(
+        assert_matches::assert_matches!(
             ClientIdentifier::from_str("chaddr:1234567890ab"),
             Ok(ClientIdentifier { .. })
         );
         // incorrect type prefix
-        matches::assert_matches!(ClientIdentifier::from_str("option:1234567890"), Err(..));
+        assert_matches::assert_matches!(ClientIdentifier::from_str("option:1234567890"), Err(..));
         // extra field
-        matches::assert_matches!(ClientIdentifier::from_str("id:1234567890:extra"), Err(..));
+        assert_matches::assert_matches!(ClientIdentifier::from_str("id:1234567890:extra"), Err(..));
         // no type prefix
-        matches::assert_matches!(ClientIdentifier::from_str("1234567890"), Err(..));
+        assert_matches::assert_matches!(ClientIdentifier::from_str("1234567890"), Err(..));
         // no delimiter
-        matches::assert_matches!(ClientIdentifier::from_str("id1234567890"), Err(..));
+        assert_matches::assert_matches!(ClientIdentifier::from_str("id1234567890"), Err(..));
         // incorrect delimiter
-        matches::assert_matches!(ClientIdentifier::from_str("id-1234567890"), Err(..));
+        assert_matches::assert_matches!(ClientIdentifier::from_str("id-1234567890"), Err(..));
         // invalid hex digits
-        matches::assert_matches!(ClientIdentifier::from_str("id:1234567890abcdefg"), Err(..));
+        assert_matches::assert_matches!(
+            ClientIdentifier::from_str("id:1234567890abcdefg"),
+            Err(..)
+        );
         // odd number of hex digits
-        matches::assert_matches!(ClientIdentifier::from_str("id:123456789"), Err(..));
+        assert_matches::assert_matches!(ClientIdentifier::from_str("id:123456789"), Err(..));
         // insufficient digits for chaddr
-        matches::assert_matches!(ClientIdentifier::from_str("chaddr:1234567890"), Err(..));
+        assert_matches::assert_matches!(ClientIdentifier::from_str("chaddr:1234567890"), Err(..));
     }
 }

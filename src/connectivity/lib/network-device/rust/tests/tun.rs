@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 //! Fuchsia netdevice client tun test
+use assert_matches::assert_matches;
 use fidl::endpoints;
 use fidl_fuchsia_hardware_network as netdev;
 use fidl_fuchsia_net_tun as tun;
@@ -13,7 +14,6 @@ use futures::{
     future::{Future, FutureExt as _},
     stream::TryStreamExt as _,
 };
-use matches::assert_matches;
 use netdevice_client::{Client, Error, Port, Session};
 use std::{
     convert::TryInto as _,

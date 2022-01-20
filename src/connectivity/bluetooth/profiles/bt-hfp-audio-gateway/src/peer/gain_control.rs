@@ -245,8 +245,8 @@ impl FusedStream for GainControl {
 #[cfg(test)]
 mod tests {
     use {
-        super::*, async_utils::PollExt, fidl_fuchsia_bluetooth_bredr as bredr,
-        fuchsia_async as fasync, matches::assert_matches,
+        super::*, assert_matches::assert_matches, async_utils::PollExt,
+        fidl_fuchsia_bluetooth_bredr as bredr, fuchsia_async as fasync,
     };
 
     #[fuchsia::test]

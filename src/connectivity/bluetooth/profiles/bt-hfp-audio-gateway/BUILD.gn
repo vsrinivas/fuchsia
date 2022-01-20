@@ -53,7 +53,7 @@ rustc_binary("bin") {
   test_deps = [
     "//sdk/fidl/fuchsia.bluetooth:fuchsia.bluetooth-rustc",
     "//src/connectivity/bluetooth/lib/async-helpers:async-test-helpers",
-    "//third_party/rust_crates:matches",
+    "//third_party/rust_crates:assert_matches",
     "//third_party/rust_crates:proptest",
   ]
 

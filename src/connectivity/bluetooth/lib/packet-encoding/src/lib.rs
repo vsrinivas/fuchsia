@@ -137,13 +137,13 @@ pub trait Encodable: ::core::marker::Sized {
 #[cfg(test)]
 #[no_implicit_prelude]
 mod test {
+    use ::assert_matches::assert_matches;
     use ::core::{
         assert, assert_eq,
         convert::{From, TryFrom},
         option::Option::Some,
         panic,
     };
-    use ::matches::assert_matches;
 
     #[derive(Debug, PartialEq)]
     pub(crate) enum TestError {

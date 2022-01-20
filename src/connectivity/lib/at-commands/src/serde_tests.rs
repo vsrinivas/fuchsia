@@ -9,7 +9,7 @@ use crate::{
     highlevel::Command,
     serde::{DeserializeBytes, DeserializeError, DeserializeErrorCause, DeserializeResult, SerDe},
 };
-use {matches::assert_matches, std::io::Cursor};
+use {assert_matches::assert_matches, std::io::Cursor};
 
 #[test]
 fn serialize() {

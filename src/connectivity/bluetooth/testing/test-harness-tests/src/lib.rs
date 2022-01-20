@@ -25,13 +25,13 @@ mod test {
         use {
             super::*,
             anyhow::format_err,
+            assert_matches::assert_matches,
             fuchsia, fuchsia_async as fasync,
             futures::{
                 channel::oneshot,
                 future::{self, BoxFuture},
                 pin_mut, FutureExt,
             },
-            matches::assert_matches,
             parking_lot::Mutex,
             std::{sync::Arc, task::Poll},
             test_harness::{SharedState, TestHarness},

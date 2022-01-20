@@ -137,7 +137,7 @@ impl Encodable for ParameterNegotiationParams {
 mod tests {
     use super::*;
 
-    use matches::assert_matches;
+    use assert_matches::assert_matches;
 
     #[test]
     fn test_parse_too_small_buf() {

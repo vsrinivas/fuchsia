@@ -510,13 +510,13 @@ impl SignaledTask for SessionChannel {
 mod tests {
     use super::*;
 
+    use assert_matches::assert_matches;
     use async_utils::PollExt;
     use bt_rfcomm::frame::FrameData;
     use fuchsia_async::DurationExt;
     use fuchsia_inspect_derive::WithInspect;
     use fuchsia_zircon::DurationNum;
     use futures::{channel::mpsc, pin_mut, task::Poll};
-    use matches::assert_matches;
     use std::convert::TryFrom;
 
     use crate::rfcomm::test_util::{expect_frame, expect_user_data_frame, poll_stream};

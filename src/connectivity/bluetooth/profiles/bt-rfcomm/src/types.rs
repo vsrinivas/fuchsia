@@ -186,6 +186,7 @@ impl Drop for ServiceGroup {
 #[cfg(test)]
 pub(crate) mod tests {
     use super::*;
+    use assert_matches::assert_matches;
     use fidl::{encoding::Decodable, endpoints::create_proxy_and_stream};
     use fidl_fuchsia_bluetooth_bredr::{
         Channel, ProfileDescriptor, ProtocolIdentifier, ServiceClassProfileIdentifier,
@@ -194,7 +195,6 @@ pub(crate) mod tests {
     use fuchsia_bluetooth::profile::{DataElement, ProtocolDescriptor};
     use fuchsia_bluetooth::types::{PeerId, Uuid};
     use futures::{stream::StreamExt, task::Poll};
-    use matches::assert_matches;
     use std::convert::TryFrom;
 
     /// Defines a Protocol requesting RFCOMM with the provided server `channel`.

@@ -4,6 +4,7 @@
 
 use {
     anyhow::Error,
+    assert_matches::assert_matches,
     bt_avctp::{AvcCommand, AvcPeer, AvcResponseType},
     fidl::endpoints::{create_endpoints, create_proxy, create_proxy_and_stream},
     fidl_fuchsia_bluetooth_avrcp::{self as fidl_avrcp, *},
@@ -16,7 +17,6 @@ use {
     },
     fuchsia_zircon as zx,
     futures::{channel::mpsc, future::FutureExt, stream::StreamExt, task::Poll},
-    matches::assert_matches,
     packet_encoding::{Decodable, Encodable},
     pin_utils::pin_mut,
     std::collections::HashSet,

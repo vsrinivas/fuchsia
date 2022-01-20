@@ -35,8 +35,8 @@ rustc_binary("bin") {
   ]
 
   test_deps = [
+    "//third_party/rust_crates:assert_matches",
     "//third_party/rust_crates:futures-test",
-    "//third_party/rust_crates:matches",
   ]
 
   sources = [

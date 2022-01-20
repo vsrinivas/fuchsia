@@ -183,9 +183,9 @@ impl PubSubHubInner {
 mod tests {
     use {
         super::*,
+        assert_matches::assert_matches,
         fuchsia_async as fasync,
         futures_test::task::new_count_waker,
-        matches::assert_matches,
         std::{
             future::Future,
             io::Write,

@@ -693,7 +693,7 @@ pub struct DhcpStop {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use matches::assert_matches;
+    use assert_matches::assert_matches;
     use test_case::test_case;
 
     #[test_case("24", 24 ; "from prefix length")]

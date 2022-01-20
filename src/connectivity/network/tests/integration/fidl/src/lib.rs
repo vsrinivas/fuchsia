@@ -282,7 +282,7 @@ async fn add_del_interface_address<N: Netstack>(name: &str) {
     .expect("retrieve existing interface");
     // We use contains here because netstack can generate link-local addresses
     // that can't be predicted.
-    matches::assert_matches!(
+    assert_matches::assert_matches!(
         interface,
         fidl_fuchsia_net_interfaces_ext::InterfaceState::Known(p)
             if p.addresses.contains(&fidl_fuchsia_net_interfaces_ext::Address {
@@ -306,7 +306,7 @@ async fn add_del_interface_address<N: Netstack>(name: &str) {
     .expect("retrieve existing interface");
     // We use contains here because netstack can generate link-local addresses
     // that can't be predicted.
-    matches::assert_matches!(
+    assert_matches::assert_matches!(
         interface,
         fidl_fuchsia_net_interfaces_ext::InterfaceState::Known(p)
             if !p.addresses.contains(&fidl_fuchsia_net_interfaces_ext::Address {

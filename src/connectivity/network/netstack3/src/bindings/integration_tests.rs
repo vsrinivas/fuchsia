@@ -9,6 +9,7 @@ use std::ops::DerefMut as _;
 use std::sync::{Arc, Once};
 
 use anyhow::{format_err, Context as _, Error};
+use assert_matches::assert_matches;
 use fidl::encoding::Decodable;
 use fidl_fuchsia_net as fidl_net;
 use fidl_fuchsia_net_stack::{self as fidl_net_stack, AdministrativeStatus, PhysicalStatus};
@@ -18,7 +19,6 @@ use fidl_fuchsia_netemul_sandbox as sandbox;
 use fuchsia_async as fasync;
 use fuchsia_component::client;
 use futures::lock::Mutex;
-use matches::assert_matches;
 use net_types::{
     ethernet::Mac,
     ip::{AddrSubnetEither, IpAddr, Ipv4Addr, Ipv6Addr, SubnetEither},

@@ -525,7 +525,7 @@ pub mod tests {
     // Tests for conversions from fuchsia.bluetooth.sys API
     mod from_sys {
         use super::*;
-        use matches::assert_matches;
+        use assert_matches::assert_matches;
 
         fn default_ltk() -> sys::Ltk {
             sys::Ltk {

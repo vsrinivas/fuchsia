@@ -262,16 +262,19 @@ mod tests {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn stash_new_with_prefix() {
-        matches::assert_matches!(Stash::new_with_prefix("stash_new", "valid"), Ok(Stash { .. }));
-        matches::assert_matches!(
+        assert_matches::assert_matches!(
+            Stash::new_with_prefix("stash_new", "valid"),
+            Ok(Stash { .. })
+        );
+        assert_matches::assert_matches!(
             Stash::new_with_prefix("stash_new", "invalid-"),
             Err(StashError::InvalidPrefix { .. })
         );
-        matches::assert_matches!(
+        assert_matches::assert_matches!(
             Stash::new_with_prefix("stash_new", "invalid:"),
             Err(StashError::InvalidPrefix { .. })
         );
-        matches::assert_matches!(
+        assert_matches::assert_matches!(
             Stash::new_with_prefix("stash_new", ""),
             Err(StashError::EmptyPrefix)
         );
@@ -483,7 +486,7 @@ mod tests {
     async fn load_parameters_with_no_stashed_parameters_returns_err() {
         let (stash, _id) = new_stash("load_parameters_with_no_stashed_parameters_returns_err")
             .expect("failed to create stash");
-        matches::assert_matches!(
+        assert_matches::assert_matches!(
             stash.load_parameters().await.expect_err("load_parameters should have returned err"),
             StashError::MissingValue(String { .. })
         );

@@ -26,9 +26,9 @@ rustc_test("interfaces") {
     "//src/lib/network/fidl_fuchsia_net_interfaces_ext",
     "//src/lib/zircon/rust:fuchsia-zircon",
     "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:assert_matches",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:itertools",
-    "//third_party/rust_crates:matches",
     "//third_party/rust_crates:pin-utils",
   ]
   sources = [ "src/lib.rs" ]
@@ -49,7 +49,7 @@ rustc_test("error") {
     "//src/lib/fuchsia-async",
     "//src/lib/network/fidl_fuchsia_net_interfaces_ext",
     "//src/lib/zircon/rust:fuchsia-zircon",
-    "//third_party/rust_crates:matches",
+    "//third_party/rust_crates:assert_matches",
   ]
   source_root = "src/error.rs"
   sources = [ "src/error.rs" ]

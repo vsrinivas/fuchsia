@@ -875,8 +875,8 @@ where
 
 #[cfg(test)]
 mod test {
+    use assert_matches::assert_matches;
     use core::convert::Infallible as Never;
-    use matches::assert_matches;
 
     use super::*;
     use crate::ip::gmp::{Action, GmpAction, MemberState};

@@ -230,11 +230,11 @@ mod tests {
     mod single_call_success {
         use {
             super::super::*,
+            assert_matches::assert_matches,
             fidl_fuchsia_wlan_policy::{
                 Compatibility::Supported, NetworkIdentifier, SecurityType::Wpa2,
             },
             fuchsia_async as fasync,
-            matches::assert_matches,
             std::convert::TryFrom,
             test_doubles::FakeScanResultIterator,
         };

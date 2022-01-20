@@ -333,7 +333,7 @@ mod tests {
                 );
             };
             pin_mut!(test_fut);
-            matches::assert_matches!(
+            assert_matches::assert_matches!(
                 fasync::TestExecutor::new()
                     .expect("internal error: failed to create executor")
                     .run_until_stalled(&mut test_fut),
@@ -375,10 +375,10 @@ mod tests {
     mod emergency_provider {
         use {
             super::*,
+            assert_matches::assert_matches,
             emergency_lib::bss_resolver::ResolverError,
             fidl_fuchsia_cobalt::EventPayload::ElapsedMicros,
             fidl_fuchsia_location_position::{EmergencyProviderMarker, Position, PositionExtras},
-            matches::assert_matches,
             test_case::test_case,
         };
 
@@ -619,7 +619,7 @@ mod tests {
                 );
             };
             pin_mut!(test_fut);
-            matches::assert_matches!(
+            assert_matches::assert_matches!(
                 fasync::TestExecutor::new()
                     .expect("internal error: failed to create executor")
                     .run_until_stalled(&mut test_fut),
@@ -669,7 +669,7 @@ mod tests {
                 );
             };
             pin_mut!(test_fut);
-            matches::assert_matches!(
+            assert_matches::assert_matches!(
                 fasync::TestExecutor::new()
                     .expect("internal error: failed to create executor")
                     .run_until_stalled(&mut test_fut),

@@ -1944,7 +1944,7 @@ mod tests {
         let (control, _control_server_end) =
             fidl_fuchsia_net_interfaces_ext::admin::Control::create_endpoints()
                 .expect("create endpoints");
-        matches::assert_matches!(
+        assert_matches::assert_matches!(
             netcfg.interface_states.insert(INTERFACE_ID, InterfaceState::new_host(control)),
             None
         );
@@ -2111,7 +2111,7 @@ mod tests {
         let (control, _control_server_end) =
             fidl_fuchsia_net_interfaces_ext::admin::Control::create_endpoints()
                 .expect("create endpoints");
-        matches::assert_matches!(
+        assert_matches::assert_matches!(
             netcfg.interface_states.insert(INTERFACE_ID, InterfaceState::new_host(control)),
             None
         );
@@ -2185,7 +2185,7 @@ mod tests {
         .await
         .context("error handling client termination due to empty addresses")?;
         assert!(!dns_watchers.contains_key(&DHCPV6_DNS_SOURCE), "should not have a watcher");
-        matches::assert_matches!(client_server.try_next().await, Ok(None));
+        assert_matches::assert_matches!(client_server.try_next().await, Ok(None));
 
         // Should start a new DHCPv6 client when we get an interface changed event that shows the
         // interface as up with an link-local address.
@@ -2222,7 +2222,7 @@ mod tests {
         .await
         .context("error handling client termination due to interface down")?;
         assert!(!dns_watchers.contains_key(&DHCPV6_DNS_SOURCE), "should not have a watcher");
-        matches::assert_matches!(client_server.try_next().await, Ok(None));
+        assert_matches::assert_matches!(client_server.try_next().await, Ok(None));
 
         // Should start a new DHCPv6 client when we get an interface changed event that shows the
         // interface as up with an link-local address.
@@ -2263,7 +2263,7 @@ mod tests {
         )
         .await
         .context("error handling client termination due to address change")?;
-        matches::assert_matches!(client_server.try_next().await, Ok(None));
+        assert_matches::assert_matches!(client_server.try_next().await, Ok(None));
         let _client_server = check_new_client(
             &mut servers.dhcpv6_client_provider,
             LINK_LOCAL_SOCKADDR1,
@@ -2316,7 +2316,7 @@ mod tests {
         .await
         .context("error handling client termination due to interface removal")?;
         assert!(!dns_watchers.contains_key(&DHCPV6_DNS_SOURCE), "should not have a watcher");
-        matches::assert_matches!(client_server.try_next().await, Ok(None));
+        assert_matches::assert_matches!(client_server.try_next().await, Ok(None));
         assert!(!netcfg.interface_states.contains_key(&INTERFACE_ID));
 
         Ok(())

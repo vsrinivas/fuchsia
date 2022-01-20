@@ -952,11 +952,11 @@ impl<T: Driver> ServeTo<LegacyJoiningRequestStream> for T {
 mod tests {
     use super::*;
     use crate::DummyDevice;
+    use assert_matches::assert_matches;
     use fidl::endpoints::create_endpoints;
     use fidl_fuchsia_lowpan_device::{BeaconInfoStreamMarker, DeviceExtraMarker};
     use fidl_fuchsia_lowpan_device::{EnergyScanParameters, EnergyScanResultStreamMarker};
     use fuchsia_async as fasync;
-    use matches::assert_matches;
 
     #[fasync::run_until_stalled(test)]
     async fn test_send_mfg_command() {

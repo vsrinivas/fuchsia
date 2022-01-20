@@ -1845,7 +1845,7 @@ pub mod tests {
                 ResponseTarget::Unicast(expected_dest, None)
             ))
         );
-        matches::assert_matches!(
+        assert_matches::assert_matches!(
             server.store.expect("missing store").actions().as_slice(),
             [DataStoreAction::StoreClientRecord {client_id: id, ..}] if *id == client_id
         );
@@ -1870,7 +1870,7 @@ pub mod tests {
             server.dispatch(disc),
             Ok(ServerAction::SendResponse(expected_offer, ResponseTarget::Broadcast))
         );
-        matches::assert_matches!(
+        assert_matches::assert_matches!(
             server.store.expect("missing store").actions().as_slice(),
             [DataStoreAction::StoreClientRecord {client_id: id, ..}] if *id == client_id
         );
@@ -1903,7 +1903,7 @@ pub mod tests {
                 ResponseTarget::Unicast(offer_ip, Some(chaddr))
             ))
         );
-        matches::assert_matches!(
+        assert_matches::assert_matches!(
             server.store.expect("missing store").actions().as_slice(),
             [DataStoreAction::StoreClientRecord {client_id: id, ..}] if *id == client_id
         );
@@ -1935,7 +1935,7 @@ pub mod tests {
             server.dispatch(disc),
             Ok(ServerAction::SendResponse(expected_offer, ResponseTarget::Unicast(giaddr, None)))
         );
-        matches::assert_matches!(
+        assert_matches::assert_matches!(
             server.store.expect("missing store").actions().as_slice(),
             [DataStoreAction::StoreClientRecord {client_id: id, ..}] if *id == client_id
         );
@@ -2002,7 +2002,7 @@ pub mod tests {
         assert_eq!(server.pool.allocated.len(), 1);
         assert_eq!(server.records.len(), 1);
         assert_eq!(server.records.get(&client_id), Some(&expected_client_record));
-        matches::assert_matches!(
+        assert_matches::assert_matches!(
             server.store.expect("missing store").actions().as_slice(),
             [DataStoreAction::StoreClientRecord {client_id: id, ..}] if *id == client_id
         );
@@ -2026,7 +2026,7 @@ pub mod tests {
             .get(&client_id)
             .unwrap_or_else(|| panic!("server records missing entry for {}", client_id))
             .clone();
-        matches::assert_matches!(
+        assert_matches::assert_matches!(
             server.store.expect("missing store").actions().as_slice(),
             [
                 DataStoreAction::StoreClientRecord { client_id: id, record },
@@ -2057,7 +2057,7 @@ pub mod tests {
         assert!(server.pool.allocated.insert(bound_client_ip));
         assert!(server.pool.universe.insert(bound_client_ip));
 
-        matches::assert_matches!(
+        assert_matches::assert_matches!(
             server.records.insert(
                 ClientIdentifier::from(&disc),
                 LeaseRecord::new(
@@ -2074,7 +2074,7 @@ pub mod tests {
         let response = server.dispatch(disc).unwrap();
 
         assert_eq!(extract_message(response).yiaddr, bound_client_ip);
-        matches::assert_matches!(
+        assert_matches::assert_matches!(
             server.store.expect("missing store").actions().as_slice(),
             [
                 DataStoreAction::StoreClientRecord {client_id: id, record: LeaseRecord {current: Some(ip), previous: None, .. }},
@@ -2092,7 +2092,7 @@ pub mod tests {
 
         assert!(server.pool.universe.insert(bound_client_ip));
 
-        matches::assert_matches!(
+        assert_matches::assert_matches!(
             server.records.insert(
                 ClientIdentifier::from(&disc),
                 LeaseRecord::new(
@@ -2119,7 +2119,7 @@ pub mod tests {
 
         assert!(server.pool.universe.insert(bound_client_ip));
 
-        matches::assert_matches!(
+        assert_matches::assert_matches!(
             server.records.insert(
                 ClientIdentifier::from(&disc),
                 // Manually initialize because new() assumes an unexpired lease.
@@ -2141,7 +2141,7 @@ pub mod tests {
         let response = server.dispatch(disc).unwrap();
 
         assert_eq!(extract_message(response).yiaddr, bound_client_ip);
-        matches::assert_matches!(
+        assert_matches::assert_matches!(
             server.store.expect("missing store").actions().as_slice(),
             [DataStoreAction::StoreClientRecord {client_id: id, ..}] if *id == client_id
         );
@@ -2160,7 +2160,7 @@ pub mod tests {
         assert!(server.pool.allocated.insert(bound_client_ip));
         assert!(server.pool.universe.insert(free_ip));
 
-        matches::assert_matches!(
+        assert_matches::assert_matches!(
             server.records.insert(
                 ClientIdentifier::from(&disc),
                 // Manually initialize because new() assumes an unexpired lease.
@@ -2182,7 +2182,7 @@ pub mod tests {
         let response = server.dispatch(disc).unwrap();
 
         assert_eq!(extract_message(response).yiaddr, free_ip);
-        matches::assert_matches!(
+        assert_matches::assert_matches!(
             server.store.expect("missing store").actions().as_slice(),
             [DataStoreAction::StoreClientRecord {client_id: id, ..}] if *id == client_id
         );
@@ -2202,7 +2202,7 @@ pub mod tests {
 
         disc.options.push(DhcpOption::RequestedIpAddress(requested_ip));
 
-        matches::assert_matches!(
+        assert_matches::assert_matches!(
             server.records.insert(
                 ClientIdentifier::from(&disc),
                 // Manually initialize because new() assumes an unexpired lease.
@@ -2224,7 +2224,7 @@ pub mod tests {
         let response = server.dispatch(disc).unwrap();
 
         assert_eq!(extract_message(response).yiaddr, requested_ip);
-        matches::assert_matches!(
+        assert_matches::assert_matches!(
             server.store.expect("missing store").actions().as_slice(),
             [DataStoreAction::StoreClientRecord {client_id: id, ..}] if *id == client_id
         );
@@ -2247,7 +2247,7 @@ pub mod tests {
 
         disc.options.push(DhcpOption::RequestedIpAddress(requested_ip));
 
-        matches::assert_matches!(
+        assert_matches::assert_matches!(
             server.records.insert(
                 ClientIdentifier::from(&disc),
                 // Manually initialize because new() assumes an unexpired lease.
@@ -2269,7 +2269,7 @@ pub mod tests {
         let response = server.dispatch(disc).unwrap();
 
         assert_eq!(extract_message(response).yiaddr, free_ip);
-        matches::assert_matches!(
+        assert_matches::assert_matches!(
             server.store.expect("missing store").actions().as_slice(),
             [DataStoreAction::StoreClientRecord {client_id: id, ..}] if *id == client_id
         );
@@ -2296,7 +2296,7 @@ pub mod tests {
         let response = server.dispatch(disc).unwrap();
 
         assert_eq!(extract_message(response).yiaddr, requested_ip);
-        matches::assert_matches!(
+        assert_matches::assert_matches!(
             server.store.expect("missing store").actions().as_slice(),
             [DataStoreAction::StoreClientRecord {client_id: id, ..}] if *id == client_id
         );
@@ -2319,7 +2319,7 @@ pub mod tests {
         let response = server.dispatch(disc).unwrap();
 
         assert_eq!(extract_message(response).yiaddr, free_ip_1);
-        matches::assert_matches!(
+        assert_matches::assert_matches!(
             server.store.expect("missing store").actions().as_slice(),
             [DataStoreAction::StoreClientRecord {client_id: id, ..}] if *id == client_id
         );
@@ -2415,7 +2415,7 @@ pub mod tests {
         let server_id = server.params.server_ips.first().unwrap();
         let router = get_router(&server).expect("failed to get router from server");
         let dns_server = get_dns_server(&server).expect("failed to get dns server from the server");
-        matches::assert_matches!(
+        assert_matches::assert_matches!(
             server.records.insert(
                 ClientIdentifier::from(&req),
                 LeaseRecord::new(
@@ -2463,7 +2463,7 @@ pub mod tests {
         let client_id = ClientIdentifier::from(&req);
 
         assert!(server.pool.allocated.insert(requested_ip));
-        matches::assert_matches!(
+        assert_matches::assert_matches!(
             server.records.insert(
                 client_id.clone(),
                 LeaseRecord::new(Some(requested_ip), Vec::new(), time_source.now(), std::u32::MAX)
@@ -2482,7 +2482,7 @@ pub mod tests {
         let mut req = new_test_request_selecting_state(&server, random_ipv4_generator());
 
         // Update request to have a server ip different from actual server ip.
-        matches::assert_matches!(
+        assert_matches::assert_matches!(
             req.options.remove(req.options.len() - 1),
             DhcpOption::ServerIdentifier { .. }
         );
@@ -2524,7 +2524,7 @@ pub mod tests {
 
         assert!(server.pool.allocated.insert(server_offered_ip));
 
-        matches::assert_matches!(
+        assert_matches::assert_matches!(
             server.records.insert(
                 ClientIdentifier::from(&req),
                 LeaseRecord::new(
@@ -2561,7 +2561,7 @@ pub mod tests {
         assert!(server.pool.universe.insert(requested_ip));
         assert!(server.pool.allocated.insert(requested_ip));
 
-        matches::assert_matches!(
+        assert_matches::assert_matches!(
             server.records.insert(
                 ClientIdentifier::from(&req),
                 LeaseRecord::new(Some(requested_ip), Vec::new(), time_source.now(), std::u32::MIN)
@@ -2587,7 +2587,7 @@ pub mod tests {
         let requested_ip = random_ipv4_generator();
         let req = new_test_request_selecting_state(&server, requested_ip);
 
-        matches::assert_matches!(
+        assert_matches::assert_matches!(
             server.records.insert(
                 ClientIdentifier::from(&req),
                 LeaseRecord::new(Some(requested_ip), Vec::new(), time_source.now(), std::u32::MAX)
@@ -2635,7 +2635,7 @@ pub mod tests {
         let server_id = server.params.server_ips.first().unwrap();
         let router = get_router(&server).expect("failed to get router");
         let dns_server = get_dns_server(&server).expect("failed to get dns server");
-        matches::assert_matches!(
+        assert_matches::assert_matches!(
             server.records.insert(
                 ClientIdentifier::from(&req),
                 LeaseRecord::new(
@@ -2732,7 +2732,7 @@ pub mod tests {
 
         let server_cached_ip = std_ip_v4!("192.165.25.10");
         assert!(server.pool.allocated.insert(server_cached_ip));
-        matches::assert_matches!(
+        assert_matches::assert_matches!(
             server.records.insert(
                 ClientIdentifier::from(&req),
                 LeaseRecord::new(
@@ -2772,7 +2772,7 @@ pub mod tests {
         assert!(server.pool.universe.insert(init_reboot_client_ip));
         assert!(server.pool.allocated.insert(init_reboot_client_ip));
         // Expire client binding to make it invalid.
-        matches::assert_matches!(
+        assert_matches::assert_matches!(
             server.records.insert(
                 ClientIdentifier::from(&req),
                 LeaseRecord::new(
@@ -2807,7 +2807,7 @@ pub mod tests {
         req.options.push(DhcpOption::RequestedIpAddress(init_reboot_client_ip));
         server.params.server_ips = vec![std_ip_v4!("192.165.25.1")];
 
-        matches::assert_matches!(
+        assert_matches::assert_matches!(
             server.records.insert(
                 ClientIdentifier::from(&req),
                 LeaseRecord::new(
@@ -2848,7 +2848,7 @@ pub mod tests {
         let server_id = server.params.server_ips.first().unwrap();
         let router = get_router(&server).expect("failed to get router");
         let dns_server = get_dns_server(&server).expect("failed to get dns server");
-        matches::assert_matches!(
+        assert_matches::assert_matches!(
             server.records.insert(
                 ClientIdentifier::from(&req),
                 LeaseRecord::new(
@@ -2921,7 +2921,7 @@ pub mod tests {
         assert!(server.pool.allocated.insert(bound_client_ip));
         req.ciaddr = client_renewal_ip;
 
-        matches::assert_matches!(
+        assert_matches::assert_matches!(
             server.records.insert(
                 ClientIdentifier::from(&req),
                 LeaseRecord::new(
@@ -2960,7 +2960,7 @@ pub mod tests {
         assert!(server.pool.allocated.insert(bound_client_ip));
         req.ciaddr = bound_client_ip;
 
-        matches::assert_matches!(
+        assert_matches::assert_matches!(
             server.records.insert(
                 ClientIdentifier::from(&req),
                 LeaseRecord::new(
@@ -2993,7 +2993,7 @@ pub mod tests {
         let bound_client_ip = random_ipv4_generator();
         req.ciaddr = bound_client_ip;
 
-        matches::assert_matches!(
+        assert_matches::assert_matches!(
             server.records.insert(
                 ClientIdentifier::from(&req),
                 LeaseRecord::new(
@@ -3115,13 +3115,13 @@ pub mod tests {
         let () = server.release_expired_leases().expect("failed to release expired leases");
 
         let client_ips: BTreeSet<_> = [client_1_ip, client_2_ip, client_3_ip].into();
-        matches::assert_matches!(server.records.get(&client_1_id), Some(LeaseRecord {current: Some(ip), previous: None, ..}) if *ip == client_1_ip);
-        matches::assert_matches!(server.records.get(&client_2_id), Some(LeaseRecord {current: Some(ip), previous: None, ..}) if *ip == client_2_ip);
-        matches::assert_matches!(server.records.get(&client_3_id), Some(LeaseRecord {current: Some(ip), previous: None, ..}) if *ip == client_3_ip);
+        assert_matches::assert_matches!(server.records.get(&client_1_id), Some(LeaseRecord {current: Some(ip), previous: None, ..}) if *ip == client_1_ip);
+        assert_matches::assert_matches!(server.records.get(&client_2_id), Some(LeaseRecord {current: Some(ip), previous: None, ..}) if *ip == client_2_ip);
+        assert_matches::assert_matches!(server.records.get(&client_3_id), Some(LeaseRecord {current: Some(ip), previous: None, ..}) if *ip == client_3_ip);
         let available: Vec<_> = server.pool.available().collect();
         assert!(available.is_empty(), "{:?}", available);
         assert_eq!(server.pool.allocated, client_ips);
-        matches::assert_matches!(
+        assert_matches::assert_matches!(
             server.store.expect("missing store").actions().as_slice(),
             [
                 DataStoreAction::StoreClientRecord { client_id: id_1, record: LeaseRecord { current: Some(ip1), previous: None, ..}, .. },
@@ -3174,9 +3174,9 @@ pub mod tests {
         let () = server.release_expired_leases().expect("failed to release expired leases");
 
         assert_eq!(server.records.len(), 3);
-        matches::assert_matches!(server.records.get(&client_1_id), Some(LeaseRecord {current: None, previous: Some(ip), ..}) if *ip == client_1_ip);
-        matches::assert_matches!(server.records.get(&client_2_id), Some(LeaseRecord {current: None, previous: Some(ip), ..}) if *ip == client_2_ip);
-        matches::assert_matches!(server.records.get(&client_3_id), Some(LeaseRecord {current: None, previous: Some(ip), ..}) if *ip == client_3_ip);
+        assert_matches::assert_matches!(server.records.get(&client_1_id), Some(LeaseRecord {current: None, previous: Some(ip), ..}) if *ip == client_1_ip);
+        assert_matches::assert_matches!(server.records.get(&client_2_id), Some(LeaseRecord {current: None, previous: Some(ip), ..}) if *ip == client_2_ip);
+        assert_matches::assert_matches!(server.records.get(&client_3_id), Some(LeaseRecord {current: None, previous: Some(ip), ..}) if *ip == client_3_ip);
         assert_eq!(
             server.pool.available().collect::<HashSet<_>>(),
             [client_1_ip, client_2_ip, client_3_ip].into(),
@@ -3184,7 +3184,7 @@ pub mod tests {
         assert!(server.pool.allocated.is_empty(), "{:?}", server.pool.allocated);
         // Delete actions occur in non-deterministic (HashMap iteration) order, so we must not
         // assert on the ordering of the deleted ids.
-        matches::assert_matches!(
+        assert_matches::assert_matches!(
             &server.store.expect("missing store").actions().as_slice()[..],
             [
                 DataStoreAction::StoreClientRecord { client_id: id_1, record: LeaseRecord { current: Some(ip1), previous: None, ..}, .. },
@@ -3246,12 +3246,12 @@ pub mod tests {
         let () = server.release_expired_leases().expect("failed to release expired leases");
 
         let client_ips: BTreeSet<_> = [client_1_ip, client_3_ip].into();
-        matches::assert_matches!(server.records.get(&client_1_id), Some(LeaseRecord {current: Some(ip), previous: None, ..}) if *ip == client_1_ip);
-        matches::assert_matches!(server.records.get(&client_2_id), Some(LeaseRecord {current: None, previous: Some(ip), ..}) if *ip == client_2_ip);
-        matches::assert_matches!(server.records.get(&client_3_id), Some(LeaseRecord {current: Some(ip), previous: None, ..}) if *ip == client_3_ip);
+        assert_matches::assert_matches!(server.records.get(&client_1_id), Some(LeaseRecord {current: Some(ip), previous: None, ..}) if *ip == client_1_ip);
+        assert_matches::assert_matches!(server.records.get(&client_2_id), Some(LeaseRecord {current: None, previous: Some(ip), ..}) if *ip == client_2_ip);
+        assert_matches::assert_matches!(server.records.get(&client_3_id), Some(LeaseRecord {current: Some(ip), previous: None, ..}) if *ip == client_3_ip);
         assert_eq!(server.pool.available().collect::<Vec<_>>(), vec![client_2_ip]);
         assert_eq!(server.pool.allocated, client_ips);
-        matches::assert_matches!(
+        assert_matches::assert_matches!(
             server.store.expect("missing store").actions().as_slice(),
             [
                 DataStoreAction::StoreClientRecord { client_id: id_1, record: LeaseRecord { current: Some(ip1), previous: None, ..}, .. },
@@ -3281,7 +3281,7 @@ pub mod tests {
             LeaseRecord::new(client_addr, opts, time_source.now(), u32::MAX).unwrap()
         };
 
-        matches::assert_matches!(
+        assert_matches::assert_matches!(
             server
                 .records
                 .insert(client_id.clone(), test_client_record(Some(release_ip), opts.clone())),
@@ -3289,7 +3289,7 @@ pub mod tests {
         );
 
         assert_eq!(server.dispatch(release), Ok(ServerAction::AddressRelease(release_ip)));
-        matches::assert_matches!(
+        assert_matches::assert_matches!(
             server.store.expect("missing store").actions().as_slice(),
             [
                 DataStoreAction::StoreClientRecord { client_id: id, record: LeaseRecord {current: None, previous: Some(ip), options, ..}}
@@ -3298,7 +3298,7 @@ pub mod tests {
         assert!(!server.pool.addr_is_allocated(release_ip), "addr marked allocated");
         assert!(server.pool.addr_is_available(release_ip), "addr not marked available");
         assert!(server.records.contains_key(&client_id), "client record not retained");
-        matches::assert_matches!(
+        assert_matches::assert_matches!(
             server.records.get(&client_id),
             Some(LeaseRecord {current: None, previous: Some(ip), options, lease_length_seconds, ..})
                if *ip == release_ip && *options == opts && *lease_length_seconds == u32::MAX
@@ -3358,7 +3358,7 @@ pub mod tests {
         assert!(server.pool.allocated.insert(declined_ip));
         assert!(server.pool.universe.insert(declined_ip));
 
-        matches::assert_matches!(
+        assert_matches::assert_matches!(
             server.records.insert(
                 client_id.clone(),
                 LeaseRecord::new(Some(declined_ip), Vec::new(), time_source.now(), std::u32::MAX)
@@ -3371,7 +3371,7 @@ pub mod tests {
         assert!(!server.pool.addr_is_available(declined_ip), "addr still marked available");
         assert!(server.pool.addr_is_allocated(declined_ip), "addr not marked allocated");
         assert!(!server.records.contains_key(&client_id), "client record incorrectly retained");
-        matches::assert_matches!(
+        assert_matches::assert_matches!(
             server.store.expect("missing store").actions().as_slice(),
             [DataStoreAction::Delete { client_id: id }] if *id == client_id
         );
@@ -3386,7 +3386,7 @@ pub mod tests {
         let client_id = ClientIdentifier::from(&decline);
 
         decline.options.push(DhcpOption::RequestedIpAddress(declined_ip));
-        matches::assert_matches!(
+        assert_matches::assert_matches!(
             server.records.insert(
                 client_id.clone(),
                 LeaseRecord::new(Some(declined_ip), Vec::new(), time_source.now(), std::u32::MAX)
@@ -3400,7 +3400,7 @@ pub mod tests {
         assert!(!server.pool.addr_is_available(declined_ip), "addr still marked available");
         assert!(server.pool.addr_is_allocated(declined_ip), "addr not marked allocated");
         assert!(!server.records.contains_key(&client_id), "client record incorrectly retained");
-        matches::assert_matches!(
+        assert_matches::assert_matches!(
             server.store.expect("missing store").actions().as_slice(),
             [DataStoreAction::Delete { client_id: id }] if *id == client_id
         );
@@ -3422,7 +3422,7 @@ pub mod tests {
 
         // Server contains client bindings which reflect a different address
         // than the one being declined.
-        matches::assert_matches!(
+        assert_matches::assert_matches!(
             server.records.insert(
                 client_id.clone(),
                 LeaseRecord::new(
@@ -3460,7 +3460,7 @@ pub mod tests {
 
         assert!(server.pool.universe.insert(declined_ip));
 
-        matches::assert_matches!(
+        assert_matches::assert_matches!(
             server.records.insert(
                 client_id.clone(),
                 LeaseRecord::new(Some(declined_ip), Vec::new(), time_source.now(), std::u32::MIN)
@@ -3473,7 +3473,7 @@ pub mod tests {
         assert!(!server.pool.addr_is_available(declined_ip), "addr still marked available");
         assert!(server.pool.addr_is_allocated(declined_ip), "addr not marked allocated");
         assert!(!server.records.contains_key(&client_id), "client record incorrectly retained");
-        matches::assert_matches!(
+        assert_matches::assert_matches!(
             server.store.expect("failed to create ").actions().as_slice(),
             [DataStoreAction::Delete { client_id: id }] if *id == client_id
         );
@@ -3514,7 +3514,7 @@ pub mod tests {
         decline.options.push(DhcpOption::RequestedIpAddress(declined_ip));
 
         assert!(server.pool.allocated.insert(declined_ip));
-        matches::assert_matches!(
+        assert_matches::assert_matches!(
             server.records.insert(
                 client_id.clone(),
                 LeaseRecord::new(Some(declined_ip), Vec::new(), time_source.now(), std::u32::MAX)
@@ -3570,7 +3570,7 @@ pub mod tests {
             server.records.get(&client_id).unwrap().lease_length_seconds,
             client_requested_time,
         );
-        matches::assert_matches!(
+        assert_matches::assert_matches!(
             server.store.expect("missing store").actions().as_slice(),
             [DataStoreAction::StoreClientRecord {client_id: id, ..}] if *id == client_id
         );
@@ -3612,7 +3612,7 @@ pub mod tests {
             server.records.get(&client_id).unwrap().lease_length_seconds,
             server_max_lease_time,
         );
-        matches::assert_matches!(
+        assert_matches::assert_matches!(
             server.store.expect("missing store").actions().as_slice(),
             [DataStoreAction::StoreClientRecord {client_id: id, ..}] if *id == client_id
         );
@@ -3629,7 +3629,7 @@ pub mod tests {
     fn test_server_dispatcher_get_option_with_set_option_returns_option() {
         let mut server = new_test_minimal_server();
         let option = || fidl_fuchsia_net_dhcp::Option_::SubnetMask(fidl_ip_v4!("255.255.255.0"));
-        matches::assert_matches!(
+        assert_matches::assert_matches!(
             server.options_repo.insert(
                 OptionCode::SubnetMask,
                 DhcpOption::try_from_fidl(option())
@@ -3665,7 +3665,7 @@ pub mod tests {
         let code = stored_option.code();
         let result = server.options_repo.get(&code);
         assert_eq!(result, Some(&stored_option));
-        matches::assert_matches!(
+        assert_matches::assert_matches!(
             server.store.expect("missing store").actions().as_slice(),
             [
                 DataStoreAction::StoreOptions { opts },
@@ -3689,7 +3689,7 @@ pub mod tests {
             time_source: TestSystemTime::with_current_time(),
         };
         let () = server.dispatch_set_option(fidl_mask).expect("failed to set dhcp option");
-        matches::assert_matches!(
+        assert_matches::assert_matches!(
             server.store.expect("missing store").actions().as_slice(),
             [
                 DataStoreAction::StoreOptions { opts },
@@ -3708,7 +3708,7 @@ pub mod tests {
             });
         let mut server = new_test_minimal_server();
         let () = server.dispatch_set_parameter(fidl_lease).expect("failed to set parameter");
-        matches::assert_matches!(
+        assert_matches::assert_matches!(
             server.store.expect("missing store").actions().next(),
             Some(DataStoreAction::StoreParameters {
                 params: ServerParameters {
@@ -3772,7 +3772,7 @@ pub mod tests {
             server.dispatch_set_parameter(duplicated_static_assignment),
             Err(fuchsia_zircon::Status::INVALID_ARGS)
         );
-        matches::assert_matches!(
+        assert_matches::assert_matches!(
             server.store.expect("missing store").actions().as_slice(),
             [DataStoreAction::StoreParameters { params }] if *params == server.params
         );
@@ -3783,14 +3783,14 @@ pub mod tests {
         let mut server = new_test_minimal_server();
         let mask = || fidl_fuchsia_net_dhcp::Option_::SubnetMask(fidl_ip_v4!("255.255.255.0"));
         let hostname = || fidl_fuchsia_net_dhcp::Option_::HostName(String::from("testhostname"));
-        matches::assert_matches!(
+        assert_matches::assert_matches!(
             server.options_repo.insert(
                 OptionCode::SubnetMask,
                 DhcpOption::try_from_fidl(mask()).expect("failed to convert dhcp option from fidl")
             ),
             None
         );
-        matches::assert_matches!(
+        assert_matches::assert_matches!(
             server.options_repo.insert(
                 OptionCode::HostName,
                 DhcpOption::try_from_fidl(hostname())
@@ -3830,7 +3830,7 @@ pub mod tests {
             .load_options()
             .expect("failed to load options");
         assert_eq!(empty_map, stored_opts);
-        matches::assert_matches!(
+        assert_matches::assert_matches!(
             server.store.expect("missing store").actions().as_slice(),
             [
                 DataStoreAction::StoreOptions { opts },
@@ -3851,7 +3851,7 @@ pub mod tests {
         let () =
             server.dispatch_reset_parameters(&default_params).expect("failed to reset parameters");
         assert_eq!(default_params, server.params);
-        matches::assert_matches!(
+        assert_matches::assert_matches!(
             server.store.expect("missing store").actions().as_slice(),
             [DataStoreAction::StoreParameters { params }] if *params == default_params
         );
@@ -3891,7 +3891,7 @@ pub mod tests {
             .load_client_records()
             .expect("load_client_records() failed");
         assert_eq!(empty_map, stored_leases);
-        matches::assert_matches!(
+        assert_matches::assert_matches!(
             server.store.expect("missing store").actions().as_slice(),
             [
                 DataStoreAction::Delete { client_id: id },
@@ -3910,7 +3910,7 @@ pub mod tests {
     #[test]
     fn test_set_address_pool_fails_if_leases_present() {
         let mut server = new_test_minimal_server();
-        matches::assert_matches!(
+        assert_matches::assert_matches!(
             server.records.insert(
                 ClientIdentifier::from(MacAddr::new([1, 2, 3, 4, 5, 6])),
                 LeaseRecord::default(),
@@ -3945,7 +3945,7 @@ pub mod tests {
             ))
             .expect("failed to set parameter");
         assert_eq!(server.pool.available().count(), 3);
-        matches::assert_matches!(
+        assert_matches::assert_matches!(
             server.store.expect("missing store").actions().as_slice(),
             [DataStoreAction::StoreParameters { params }] if *params == server.params
         );
@@ -3996,7 +3996,7 @@ pub mod tests {
                 .expect("failed to create server");
         // Create a temporary because assert_matches! doesn't like turbo-fish type annotation.
         let contents: Vec<(&ClientIdentifier, &LeaseRecord)> = server.records.iter().collect();
-        matches::assert_matches!(
+        assert_matches::assert_matches!(
             contents.as_slice(),
             [(id, LeaseRecord {current: None, previous: Some(ip), ..})] if **id == client_id && *ip == client_ip
         );
@@ -4004,7 +4004,7 @@ pub mod tests {
 
         assert_eq!(server.pool.available().collect::<Vec<_>>(), vec![client_ip]);
 
-        matches::assert_matches!(
+        assert_matches::assert_matches!(
             server.store.expect("missing store").actions().as_slice(),
             [
                 DataStoreAction::StoreClientRecord{ client_id: id1, record },
@@ -4100,14 +4100,14 @@ pub mod tests {
             offer.options
         );
         let t1 = rand::random::<u32>();
-        matches::assert_matches!(
+        assert_matches::assert_matches!(
             server
                 .options_repo
                 .insert(OptionCode::RenewalTimeValue, DhcpOption::RenewalTimeValue(t1)),
             None
         );
         let t2 = rand::random::<u32>();
-        matches::assert_matches!(
+        assert_matches::assert_matches!(
             server
                 .options_repo
                 .insert(OptionCode::RebindingTimeValue, DhcpOption::RebindingTimeValue(t2)),

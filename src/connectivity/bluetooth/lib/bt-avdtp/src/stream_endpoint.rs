@@ -551,13 +551,13 @@ mod tests {
         Request,
     };
 
+    use assert_matches::assert_matches;
     use fidl::endpoints::create_request_stream;
     use fidl_fuchsia_bluetooth_bredr as bredr;
     use fuchsia_async as fasync;
     use fuchsia_zircon as zx;
     use futures::io::AsyncWriteExt;
     use futures::stream::StreamExt;
-    use matches::assert_matches;
 
     const REMOTE_ID_VAL: u8 = 1;
     const REMOTE_ID: StreamEndpointId = StreamEndpointId(REMOTE_ID_VAL);

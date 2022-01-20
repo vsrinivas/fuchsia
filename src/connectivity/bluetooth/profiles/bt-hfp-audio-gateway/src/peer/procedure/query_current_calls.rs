@@ -131,7 +131,7 @@ pub fn build_clcc_response(call: Call) -> Option<at::Response> {
 mod tests {
     use super::*;
     use crate::peer::calls::{Direction, Number};
-    use matches::assert_matches;
+    use assert_matches::assert_matches;
 
     #[test]
     fn correct_marker() {

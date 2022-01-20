@@ -1070,7 +1070,7 @@ mod tests {
     fn test_handle_failed_parse() {
         let server = RefCell::new(ServerDispatcherRuntime::new(CannedDispatcher::new()));
         let mut handler = MessageHandler::new(&server);
-        matches::assert_matches!(
+        assert_matches::assert_matches!(
             handler.handle_from_sender(
                 &[0xFF, 0x00, 0xBA, 0x03],
                 std::net::SocketAddrV4::new(Ipv4Addr::UNSPECIFIED.into(), 0),

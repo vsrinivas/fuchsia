@@ -288,6 +288,7 @@ impl RfcommServer {
 mod tests {
     use super::*;
 
+    use assert_matches::assert_matches;
     use async_utils::PollExt;
     use bt_rfcomm::{frame::mux_commands::*, frame::*, Role, DLCI};
     use fidl::encoding::Decodable;
@@ -298,7 +299,6 @@ mod tests {
     use fuchsia_inspect::assert_data_tree;
     use fuchsia_inspect_derive::WithInspect;
     use futures::{pin_mut, task::Poll, AsyncWriteExt, StreamExt};
-    use matches::assert_matches;
 
     use crate::rfcomm::test_util::{expect_frame_received_by_peer, send_peer_frame};
 

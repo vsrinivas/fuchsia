@@ -145,9 +145,9 @@ impl RequestTracker {
 pub(crate) mod tests {
     use super::*;
     use crate::spinel::*;
+    use assert_matches::assert_matches;
     use futures::prelude::*;
     use futures::task::Poll;
-    use matches::assert_matches;
 
     #[test]
     fn test_request_tracker_cancel() {

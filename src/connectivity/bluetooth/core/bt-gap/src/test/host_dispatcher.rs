@@ -10,6 +10,7 @@ use crate::{
 };
 use {
     anyhow::{format_err, Error},
+    assert_matches::assert_matches,
     async_helpers::hanging_get::asynchronous as hanging_get,
     fidl::encoding::Decodable,
     fidl_fuchsia_bluetooth::Appearance,
@@ -21,7 +22,6 @@ use {
     },
     fuchsia_inspect::{self as inspect, assert_data_tree},
     futures::{channel::mpsc, future::join, stream::TryStreamExt, FutureExt},
-    matches::assert_matches,
     std::{
         collections::{HashMap, HashSet},
         path::Path,

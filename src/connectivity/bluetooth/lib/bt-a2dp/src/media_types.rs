@@ -568,7 +568,7 @@ impl From<AacCodecInfo> for avdtp::ServiceCapability {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use matches::assert_matches;
+    use assert_matches::assert_matches;
 
     #[test]
     /// Unit test for the SBC media codec info generation.
