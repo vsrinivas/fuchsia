@@ -1,0 +1,154 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components/fuchsia_test_component.gni")
+import("//build/components/fuchsia_test_package.gni")
+import("//build/rust/rustc_test.gni")
+import(
+    "//src/security/pkg_test/assemblies/assemble_security_pkg_test_system.gni")
+
+template("access_ota_blob_as_executable") {
+  assert(defined(invoker.base_packages),
+         "base_packages must be defined for $target_name")
+  assert(defined(invoker.test_binary_name),
+         "test_binary_name must be defined for $target_name")
+  assert(defined(invoker.test_component_manifest),
+         "test_component_manifest must be defined for $target_name")
+  assembly_base_packages = invoker.base_packages
+  test_binary_name = invoker.test_binary_name
+  test_component_manifest = invoker.test_component_manifest
+
+  test_name = target_name
+
+  # System assembly for base system version at start of test.
+  assemble_security_pkg_test_system("${test_name}_v0") {
+    board_name = board_name
+    base_packages = [ "//src/security/pkg_test/assemblies/hello_world_v0:hello_world-package" ] + assembly_base_packages
+    packaged_assembly_directory = "access_ota_blob_as_executable_v0"
+    update_version_file = "//src/security/pkg_test/assemblies/v0_version.txt"
+  }
+
+  # System assembly for system version to OTA from package server.
+  assemble_security_pkg_test_system("${test_name}_v1") {
+    board_name = board_name
+    base_packages = [ "//src/security/pkg_test/assemblies/hello_world_v1:hello_world-package" ] + assembly_base_packages
+    packaged_assembly_directory = "access_ota_blob_as_executable_v1"
+    update_version_file = "//src/security/pkg_test/assemblies/v1_version.txt"
+  }
+
+  # Filesystem host for base system.
+  fuchsia_test_component("fshost_v0-component") {
+    component_name = "fshost_v0"
+    manifest = "//src/security/pkg_test/tests/access_ota_blob_as_executable/meta/fshost_v0.cml"
+    deps = [ "//src/security/pkg_test/fshost:fshost-binary" ]
+  }
+
+  # Filesystem host for package server.
+  fuchsia_test_component("fshost_v1-component") {
+    component_name = "fshost_v1"
+    manifest = "//src/security/pkg_test/tests/access_ota_blob_as_executable/meta/fshost_v1.cml"
+    deps = [ "//src/security/pkg_test/fshost:fshost-binary" ]
+  }
+
+  # Fake boot arguments for base system.
+  fuchsia_test_component("fake_boot_arguments_v0-component") {
+    component_name = "fake_boot_arguments_v0"
+    manifest = "//src/security/pkg_test/tests/access_ota_blob_as_executable/meta/fake_boot_arguments_v0.cml"
+    deps = [
+      "//src/security/pkg_test/fake_boot_arguments:fake_boot_arguments-binary",
+    ]
+  }
+
+  fuchsia_test_component("fake_boot_arguments_v1-component") {
+    component_name = "fake_boot_arguments_v1"
+    manifest = "//src/security/pkg_test/tests/access_ota_blob_as_executable/meta/fake_boot_arguments_v1.cml"
+    deps = [
+      "//src/security/pkg_test/fake_boot_arguments:fake_boot_arguments-binary",
+    ]
+  }
+
+  # Component for package server configured to serve "v1" OTA.
+  fuchsia_test_component("${test_name}_v1-pkg_server-component") {
+    component_name = "pkg_server"
+    manifest = "//src/security/pkg_test/tests/access_ota_blob_as_executable/meta/pkg_server.cml"
+    deps = [
+      ":${test_name}_v1_system_resources",
+      ":${test_name}_v1_update_resources",
+      "//src/security/pkg_test/pkg_server:pkg_server-binary",
+    ]
+  }
+
+  # Top-level test component that composes its own filesystem host, SWD stack, and
+  # package server for receiving OTA.
+  rustc_test("${test_name}-test") {
+    output_name = test_binary_name
+    edition = "2018"
+    source_root = "//src/security/pkg_test/tests/access_ota_blob_as_executable/src/main.rs"
+    data_deps = [
+      ":${test_name}_v0_system_resources",
+      "//src/security/pkg_test/assemblies/hello_world_v0:meta_far",
+    ]
+    deps = [
+      "//garnet/lib/rust/files_async",
+      "//garnet/lib/rust/io_util",
+      "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
+      "//sdk/fidl/fuchsia.mem:fuchsia.mem-rustc",
+      "//sdk/fidl/fuchsia.pkg:fuchsia.pkg-rustc",
+      "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
+      "//src/lib/fidl/rust/fidl",
+      "//src/lib/fuchsia",
+      "//src/lib/fuchsia-async",
+      "//src/lib/fuchsia-component",
+      "//src/lib/zircon/rust:fuchsia-zircon",
+      "//src/security/pkg_test/pkg_server:test.security.pkg-rustc",
+      "//src/sys/pkg/lib/fuchsia-merkle",
+      "//third_party/rust_crates:anyhow",
+      "//third_party/rust_crates:futures",
+      "//third_party/rust_crates:openat",
+      "//third_party/rust_crates:regex",
+    ]
+    sources = [
+      "//src/security/pkg_test/tests/access_ota_blob_as_executable/src/main.rs",
+    ]
+  }
+
+  fuchsia_test_component("${test_name}-component") {
+    component_name = test_name
+    manifest = test_component_manifest
+    deps = [ ":${test_name}-test" ]
+  }
+
+  fuchsia_test_package("${test_name}-package") {
+    package_name = test_name
+    test_components = [ ":${test_name}-component" ]
+    deps = [
+      # Package server configured to serve "v1" OTA update.
+      ":${test_name}_v1-pkg_server-component",
+
+      # Filesystem hosts for both test system and package server subsystem.
+      ":fshost_v0-component",
+      ":fshost_v1-component",
+
+      # Production SWD components.
+      "//src/sys/pkg/bin/pkg-cache:component",
+      "//src/sys/pkg/bin/pkg-resolver:component",
+
+      # Production network components for OTA update.
+      "//src/connectivity/network/dns:component",
+      "//src/connectivity/network/netstack:component",
+
+      # Mock SWD component dependencies.
+      ":fake_boot_arguments_v0-component",
+      ":fake_boot_arguments_v1-component",
+    ]
+
+    # TODO(fxbug.dev/88453): Mock `fuchsia.cobalt.LoggerFactory` to suppress ERROR
+    # logs from pkg-cache.
+    test_specs = {
+      log_settings = {
+        max_severity = "FATAL"
+      }
+    }
+  }
+}

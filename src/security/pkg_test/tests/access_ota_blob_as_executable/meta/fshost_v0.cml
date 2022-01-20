@@ -1,0 +1,14 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [ "//src/security/pkg_test/fshost/meta/fshost.shard.cml" ],
+    program: {
+        args: [
+            "--fvm-block-file-path",
+            "/pkg/data/assemblies/access_ota_blob_as_executable_v0/fvm.blk",
+            "--system-image-path",
+            "/pkg/data/assemblies/access_ota_blob_as_executable_v0/base.far",
+        ],
+    },
+}

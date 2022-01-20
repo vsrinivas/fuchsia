@@ -60,6 +60,7 @@ group("non_hermetic_deps") {
   # //build/images/assemble_system.gni no longer needs `hermetic_deps = false`.
   visibility += [
     "//build/images/*",
+    "//src/security/pkg_test/tests/*",
     "//third_party/network-conformance/images/*",
   ]
 

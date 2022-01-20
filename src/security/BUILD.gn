@@ -21,6 +21,7 @@ group("tests") {
     "fcrypto:tests",
     "kms:tests",
     "pkg_test/assemblies:tests",
+    "pkg_test/tests",
     "scrutiny:tests",
     "tee_manager:tests",
     "verifiers:tests",

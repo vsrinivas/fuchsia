@@ -24,6 +24,10 @@ import("//build/rust/rustc_binary.gni")
 #     [string] The file used to designate update version in the assembly's
 #     update package.
 #
+#   packaged_assembly_directory (required):
+#     [string] The subdirectory in data/assemblies where the
+#     packaged-in-a-fuchsia-package copy of assembled artifacts will be stored.
+#
 # Public targets:
 #
 #   ${target_name}:
@@ -35,13 +39,13 @@ import("//build/rust/rustc_binary.gni")
 #
 #   ${target_name}_system_resources:
 #     The resources required for serving the assembled system as installed on
-#     device. Resources reside in package's data/assemblies/${target_name}
-#     directory.
+#     device. Resources reside in package's
+#     data/assemblies/${packaged_assembly_directory} directory.
 #
 #   ${target_name}_update_resources:
 #     The resources required for serving the update package associated with the
 #     assembled system. Resources reside in package's
-#     data/assemblies/${target_name} directory.
+#     data/assemblies/${packaged_assembly_directory} directory.
 
 template("assemble_security_pkg_test_system") {
   assert(defined(invoker.board_name),
@@ -50,8 +54,15 @@ template("assemble_security_pkg_test_system") {
          "base_packages must be defined for $target_name")
   assert(defined(invoker.update_version_file),
          "update_version_file must be defined for $target_name")
+  assert(defined(invoker.packaged_assembly_directory),
+         "packaged_assembly_directory must be defined for $target_name")
 
   assembly_name = target_name
+  if (current_toolchain == target_toolchain) {
+    packaged_assembly_directory = invoker.packaged_assembly_directory
+  } else {
+    not_needed(invoker, [ "packaged_assembly_directory" ])
+  }
 
   labels = {
     assembly = assembly_name
@@ -96,40 +107,43 @@ template("assemble_security_pkg_test_system") {
   if (current_toolchain == target_toolchain) {
     fvm_blk_resource = {
       local = "${directories.assembly_out}/fvm.blk"
-      packaged = "data/assemblies/${assembly_name}/fvm.blk"
+      packaged = "data/assemblies/${packaged_assembly_directory}/fvm.blk"
     }
     base_far_resource = {
       local = "${directories.assembly_out}/base.far"
-      packaged = "data/assemblies/${assembly_name}/base.far"
+      packaged = "data/assemblies/${packaged_assembly_directory}/base.far"
     }
     zbi_resource = {
       local = "${directories.assembly_out}/${assembly_name}.zbi"
-      packaged = "data/assemblies/${assembly_name}/update/zbi"
+      packaged = "data/assemblies/${packaged_assembly_directory}/update/zbi"
     }
     update_far_resource = {
       local = "${directories.update_out}/update.far"
-      packaged = "data/assemblies/${assembly_name}/update/update.far"
+      packaged =
+          "data/assemblies/${packaged_assembly_directory}/update/update.far"
     }
     version_resource = {
       local = invoker.update_version_file
-      packaged = "data/assemblies/${assembly_name}/update/version"
+      packaged = "data/assemblies/${packaged_assembly_directory}/update/version"
     }
     board_resource = {
       local = "${directories.update_gen}/board"
-      packaged = "data/assemblies/${assembly_name}/update/board"
+      packaged = "data/assemblies/${packaged_assembly_directory}/update/board"
     }
     packages_json_resource = {
       local = "${directories.update_gen}/packages.json"
-      packaged = "data/assemblies/${assembly_name}/update/packages.json"
+      packaged =
+          "data/assemblies/${packaged_assembly_directory}/update/packages.json"
     }
     epoch_json_resource = {
       local = "${directories.update_gen}/epoch.json"
-      packaged = "data/assemblies/${assembly_name}/update/epoch.json"
+      packaged =
+          "data/assemblies/${packaged_assembly_directory}/update/epoch.json"
     }
     if (use_vbmeta) {
       vbmeta_resource = {
         local = "${directories.assembly_out}/${assembly_name}.vbmeta"
-        packaged = "data/assemblies/${assembly_name}/update/fuchsia.vbmeta"
+        packaged = "data/assemblies/${packaged_assembly_directory}/update/fuchsia.vbmeta"
       }
     }
     firmware_resources = []
@@ -140,7 +154,7 @@ template("assemble_security_pkg_test_system") {
       firmware_resources += [
         {
           local = _firmware_path
-          packaged = "data/assemblies/${assembly_name}/update/${_firmware_file}"
+          packaged = "data/assemblies/${packaged_assembly_directory}/update/${_firmware_file}"
         },
       ]
     }

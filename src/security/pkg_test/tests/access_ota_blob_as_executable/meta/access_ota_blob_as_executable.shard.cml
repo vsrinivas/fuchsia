@@ -1,0 +1,180 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [
+        "//sdk/lib/inspect/client.shard.cml",
+        "//sdk/lib/syslog/client.shard.cml",
+        "//src/sys/test_manager/system-test.shard.cml", // For fuchsia.kernel.VmexResource.
+        "//src/sys/test_runners/rust/default.shard.cml",
+    ],
+
+    // Note: Manifests including this shard must provide a program binary.
+    children: [
+        {
+            name: "fshost",
+
+            // Test instantiated running system version "v0".
+            url: "#meta/fshost_v0.cm",
+            startup: "eager",
+        },
+        {
+            name: "pkg_server",
+            url: "#meta/pkg_server.cm",
+        },
+        {
+            name: "fake_boot_arguments",
+
+            // Test instantiated running system version "v0".
+            url: "#meta/fake_boot_arguments_v0.cm",
+        },
+        {
+            name: "pkg-cache",
+            url: "#meta/pkg-cache.cm",
+        },
+        {
+            name: "pkg-resolver",
+            url: "#meta/pkg-resolver.cm",
+        },
+    ],
+    capabilities: [
+        {
+            storage: "data",
+            from: "#fshost",
+            backing_dir: "memfs",
+            storage_id: "static_instance_id_or_moniker",
+        },
+    ],
+    use: [
+        {
+            protocol: "fuchsia.sys2.StorageAdmin",
+            from: "#data",
+        },
+        {
+            protocol: "fuchsia.pkg.PackageCache",
+            from: "#pkg-cache",
+        },
+        {
+            protocol: "fuchsia.pkg.PackageResolver",
+            from: "#pkg-resolver",
+        },
+        {
+            protocol: "test.security.pkg.PackageServer",
+            from: "#pkg_server",
+        },
+    ],
+    offer: [
+        {
+            directory: "blob",
+            from: "parent",
+            to: "#pkg_server",
+        },
+        {
+            storage: "tmp",
+            from: "parent",
+            to: "#pkg_server",
+        },
+        {
+            directory: [
+                "blob",
+                "pkgfs",
+            ],
+            from: "#fshost",
+            to: "#pkg-cache",
+        },
+        {
+            protocol: [
+                "fuchsia.kernel.VmexResource",
+                "fuchsia.process.Launcher",
+            ],
+            from: "parent",
+            to: [
+                "#fshost",
+                "#pkg_server",
+            ],
+        },
+        {
+            directory: "pkgfs",
+            from: "#fshost",
+            as: "pkgfs-system",
+            to: "#pkg-resolver",
+            subdir: "system",
+        },
+        {
+            directory: "pkgfs",
+            from: "#fshost",
+            as: "config-data",
+            to: "#pkg-resolver",
+            subdir: "packages/config-data/0/meta/data/pkg-resolver",
+        },
+        {
+            directory: "root-ssl-certificates",
+            from: "parent",
+            as: "root-ssl-certificates",
+            to: "#pkg-resolver",
+        },
+        {
+            storage: "data",
+            from: "self",
+            to: "#pkg-resolver",
+        },
+        {
+            protocol: "fuchsia.pkg.PackageCache",
+            from: "#pkg-cache",
+            to: "#pkg-resolver",
+        },
+        {
+            protocol: "fuchsia.tracing.provider.Registry",
+            from: "parent",
+            to: [
+                "#pkg-cache",
+                "#pkg-resolver",
+                "#pkg_server",
+            ],
+        },
+        {
+            protocol: "fuchsia.boot.Arguments",
+            from: "#fake_boot_arguments",
+            to: [
+                "#pkg-cache",
+                "#pkg-resolver",
+            ],
+        },
+        {
+            protocol: "fuchsia.logger.LogSink",
+            from: "parent",
+            to: [
+                "#fake_boot_arguments",
+                "#fshost",
+                "#pkg-cache",
+                "#pkg-resolver",
+                "#pkg_server",
+            ],
+        },
+
+        // TODO(fxbug.dev/88453): Add production components or custom protocol
+        // implementations.
+        // {
+        //     protocol: "fuchsia.update.CommitStatusProvider",
+        //     from: "???",
+        //     to: "#pkg-cache",
+        // },
+        // {
+        //     protocol: "fuchsia.cobalt.LoggerFactory",
+        //     from: "???",
+        //     to: [
+        //         "#pkg-cache",
+        //         "#pkg-resolver",
+        //     ],
+        // },
+        // {
+        //     protocol: [
+        //         "fuchsia.net.name.Lookup",
+        //         "fuchsia.posix.socket.Provider",
+        //         "fuchsia.pkg.LocalMirror",
+        //     ],
+        //     from: "???",
+        //     to: "#pkg-resolver",
+        // },
+    ],
+}
