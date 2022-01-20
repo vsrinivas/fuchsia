@@ -1,8 +1,0 @@
-# Copyright 2020 The Fuchsia Authors. All rights reserved.
-# Use of this source code is governed by a BSD-style license that can be
-# found in the LICENSE file.
-
-# This is referenced from several targets from //vendor/...
-group("linux-arm64") {
-  public_deps = [ "//zircon/tools/zbi($linux_arm64_toolchain)" ]
-}
