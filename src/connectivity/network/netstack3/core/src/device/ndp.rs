@@ -172,7 +172,7 @@ pub(crate) trait NdpHandler<D: LinkDevice>: DeviceIdContext<D> {
     /// Returns the configured retransmit timer.
     fn retrans_timer(&self, device_id: Self::DeviceId) -> Duration;
 
-    /// Updates the NDP Configurations for a `device_id`.
+    /// Updates the NDP configuration for a `device_id`.
     ///
     /// Note, some values may not take effect immediately, and may only take
     /// effect the next time they are used. These scenarios documented below:
@@ -185,7 +185,7 @@ pub(crate) trait NdpHandler<D: LinkDevice>: DeviceIdContext<D> {
     ///  - Updates to [`NdpConfiguration::max_router_solicitations`] will only
     ///    take effect the next time routers are explicitly solicited. Current
     ///    router solicitation will continue using the old value.
-    fn set_configurations(&mut self, device_id: Self::DeviceId, configs: NdpConfigurations);
+    fn set_configuration(&mut self, device_id: Self::DeviceId, config: NdpConfiguration);
 
     /// Start soliciting routers.
     ///
@@ -245,8 +245,8 @@ where
         self.get_state_with(device_id).retrans_timer
     }
 
-    fn set_configurations(&mut self, device_id: Self::DeviceId, configs: NdpConfigurations) {
-        set_ndp_configurations(self, device_id, configs)
+    fn set_configuration(&mut self, device_id: Self::DeviceId, config: NdpConfiguration) {
+        set_ndp_configuration(self, device_id, config)
     }
 
     fn start_soliciting_routers(&mut self, device_id: Self::DeviceId) {
@@ -532,9 +532,9 @@ fn deinitialize<D: LinkDevice, C: NdpContext<D>>(ctx: &mut C, device_id: C::Devi
     // state as uninitialized?
 }
 
-/// Per interface configurations for NDP.
+/// Per interface configuration for NDP.
 #[derive(Debug, Clone)]
-pub struct NdpConfigurations {
+pub struct NdpConfiguration {
     /// Value for NDP's MAX_RTR_SOLICITATIONS parameter to configure how many
     /// router solicitation messages to send on interface enable.
     ///
@@ -547,13 +547,13 @@ pub struct NdpConfigurations {
     max_router_solicitations: Option<NonZeroU8>,
 }
 
-impl Default for NdpConfigurations {
+impl Default for NdpConfiguration {
     fn default() -> Self {
         Self { max_router_solicitations: NonZeroU8::new(MAX_RTR_SOLICITATIONS) }
     }
 }
 
-impl NdpConfigurations {
+impl NdpConfiguration {
     /// Get the value for NDP's MAX_RTR_SOLICITATIONS parameter.
     pub fn get_max_router_solicitations(&self) -> Option<NonZeroU8> {
         self.max_router_solicitations
@@ -637,15 +637,12 @@ pub(crate) struct NdpState<D: LinkDevice> {
     /// [RFC 4861 section 6.3.2]: https://tools.ietf.org/html/rfc4861#section-6.3.2
     retrans_timer: Duration,
 
-    //
-    // NDP configurations.
-    //
-    /// NDP Configurations.
-    configs: NdpConfigurations,
+    /// NDP configuration.
+    config: NdpConfiguration,
 }
 
 impl<D: LinkDevice> NdpState<D> {
-    pub(crate) fn new(configs: NdpConfigurations) -> Self {
+    pub(crate) fn new(config: NdpConfiguration) -> Self {
         let mut ret = Self {
             neighbors: NeighborTable::default(),
             default_routers: HashSet::new(),
@@ -655,7 +652,7 @@ impl<D: LinkDevice> NdpState<D> {
             base_reachable_time: REACHABLE_TIME_DEFAULT,
             reachable_time: REACHABLE_TIME_DEFAULT,
             retrans_timer: RETRANS_TIMER_DEFAULT,
-            configs,
+            config,
         };
 
         // Calculate an actually random `reachable_time` value instead of using
@@ -937,12 +934,12 @@ fn handle_timer<D: LinkDevice, C: NdpContext<D>>(ctx: &mut C, id: NdpTimerId<D, 
     }
 }
 
-fn set_ndp_configurations<D: LinkDevice, C: NdpContext<D>>(
+fn set_ndp_configuration<D: LinkDevice, C: NdpContext<D>>(
     ctx: &mut C,
     device_id: C::DeviceId,
-    configs: NdpConfigurations,
+    config: NdpConfiguration,
 ) {
-    ctx.get_state_mut_with(device_id).configs = configs;
+    ctx.get_state_mut_with(device_id).config = config;
 }
 
 fn lookup<D: LinkDevice, C: NdpContext<D>>(
@@ -1193,7 +1190,7 @@ fn start_soliciting_routers<D: LinkDevice, C: NdpContext<D>>(ctx: &mut C, device
     // MUST NOT already be performing router solicitation.
     assert_eq!(ndp_state.router_solicitations_remaining, 0);
 
-    if let Some(v) = ndp_state.configs.max_router_solicitations {
+    if let Some(v) = ndp_state.config.max_router_solicitations {
         trace!(
             "ndp::start_soliciting_routers: start soliciting routers for device: {:?}",
             device_id
@@ -2410,8 +2407,8 @@ mod tests {
     }
 
     #[test]
-    fn test_ndp_configurations() {
-        let mut c = NdpConfigurations::default();
+    fn test_ndp_configuration() {
+        let mut c = NdpConfiguration::default();
         let solicits = NonZeroU8::new(MAX_RTR_SOLICITATIONS);
         assert_eq!(c.get_max_router_solicitations(), solicits);
 
@@ -2644,9 +2641,9 @@ mod tests {
         let device_id = DeviceId::new_ethernet(0);
 
         let mut stack_builder = StackStateBuilder::default();
-        let mut ndp_configs = NdpConfigurations::default();
-        ndp_configs.set_max_router_solicitations(None);
-        stack_builder.device_builder().set_default_ndp_configs(ndp_configs);
+        let mut ndp_config = NdpConfiguration::default();
+        ndp_config.set_max_router_solicitations(None);
+        stack_builder.device_builder().set_default_ndp_config(ndp_config);
 
         // We explicitly call `build_with` when building our contexts below
         // because `build` will set the default NDP parameter
@@ -2832,9 +2829,9 @@ mod tests {
     #[test]
     fn test_dad_three_transmits_no_conflicts() {
         let mut stack_builder = StackStateBuilder::default();
-        let mut ndp_configs = crate::device::ndp::NdpConfigurations::default();
-        ndp_configs.set_max_router_solicitations(None);
-        stack_builder.device_builder().set_default_ndp_configs(ndp_configs);
+        let mut ndp_config = crate::device::ndp::NdpConfiguration::default();
+        ndp_config.set_max_router_solicitations(None);
+        stack_builder.device_builder().set_default_ndp_config(ndp_config);
         let mut ipv6_config = crate::device::Ipv6DeviceConfiguration::default();
         ipv6_config.set_dad_transmits(None);
         stack_builder.device_builder().set_default_ipv6_config(ipv6_config);
@@ -2936,9 +2933,9 @@ mod tests {
 
         assert_empty(ctx.dispatcher.frames_sent());
 
-        let mut ndp_configs = NdpConfigurations::default();
-        ndp_configs.set_max_router_solicitations(None);
-        crate::device::set_ndp_configurations(&mut ctx, dev_id, ndp_configs);
+        let mut ndp_config = NdpConfiguration::default();
+        ndp_config.set_max_router_solicitations(None);
+        crate::device::set_ndp_configuration(&mut ctx, dev_id, ndp_config);
         let mut ipv6_config = crate::device::Ipv6DeviceConfiguration::default();
         ipv6_config.set_dad_transmits(NonZeroU8::new(3));
         crate::device::set_ipv6_configuration(&mut ctx, dev_id, ipv6_config);
@@ -3002,9 +2999,9 @@ mod tests {
         crate::device::initialize_device(&mut ctx, dev_id);
 
         // Enable DAD.
-        let mut ndp_configs = NdpConfigurations::default();
-        ndp_configs.set_max_router_solicitations(None);
-        crate::device::set_ndp_configurations(&mut ctx, dev_id, ndp_configs);
+        let mut ndp_config = NdpConfiguration::default();
+        ndp_config.set_max_router_solicitations(None);
+        crate::device::set_ndp_configuration(&mut ctx, dev_id, ndp_config);
         let mut ipv6_config = crate::device::Ipv6DeviceConfiguration::default();
         ipv6_config.set_dad_transmits(NonZeroU8::new(3));
         crate::device::set_ipv6_configuration(&mut ctx, dev_id, ipv6_config);
@@ -3988,9 +3985,9 @@ mod tests {
         let mut ipv6_config = crate::device::Ipv6DeviceConfiguration::default();
         ipv6_config.set_dad_transmits(None);
         stack_builder.device_builder().set_default_ipv6_config(ipv6_config);
-        let mut ndp_configs = crate::device::ndp::NdpConfigurations::default();
-        ndp_configs.set_max_router_solicitations(NonZeroU8::new(2));
-        stack_builder.device_builder().set_default_ndp_configs(ndp_configs);
+        let mut ndp_config = crate::device::ndp::NdpConfiguration::default();
+        ndp_config.set_max_router_solicitations(NonZeroU8::new(2));
+        stack_builder.device_builder().set_default_ndp_config(ndp_config);
         let mut ctx = Ctx::new(stack_builder.build(), DummyEventDispatcher::default());
 
         assert_empty(ctx.dispatcher.frames_sent());
@@ -4168,7 +4165,7 @@ mod tests {
     }
 
     #[test]
-    fn test_set_ndp_configs_dup_addr_detect_transmits() {
+    fn test_set_ndp_config_dup_addr_detect_transmits() {
         // Test that updating the DupAddrDetectTransmits parameter on an
         // interface updates the number of DAD messages (NDP Neighbor
         // Solicitations) sent before concluding that an address is not a
@@ -4647,9 +4644,9 @@ mod tests {
         let mut ipv6_config = crate::device::Ipv6DeviceConfiguration::default();
         ipv6_config.set_dad_transmits(None);
         state_builder.device_builder().set_default_ipv6_config(ipv6_config);
-        let mut ndp_configs = NdpConfigurations::default();
-        ndp_configs.set_max_router_solicitations(None);
-        state_builder.device_builder().set_default_ndp_configs(ndp_configs);
+        let mut ndp_config = NdpConfiguration::default();
+        ndp_config.set_max_router_solicitations(None);
+        state_builder.device_builder().set_default_ndp_config(ndp_config);
         let _: &mut Ipv6StateBuilder = state_builder.ipv6_builder().forward(true);
         let mut ctx = DummyEventDispatcherBuilder::default()
             .build_with(state_builder, DummyEventDispatcher::default());

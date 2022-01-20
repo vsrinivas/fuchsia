@@ -381,19 +381,19 @@ impl FrameDestination {
 /// Builder for a [`DeviceLayerState`].
 #[derive(Clone, Default)]
 pub struct DeviceStateBuilder {
-    /// Default values for NDP's configurations for new interfaces.
+    /// Default values for NDP's configuration for new interfaces.
     ///
-    /// See [`ndp::NdpConfigurations`].
-    default_ndp_configs: ndp::NdpConfigurations,
+    /// See [`ndp::NdpConfiguration`].
+    default_ndp_config: ndp::NdpConfiguration,
     default_ipv6_config: Ipv6DeviceConfiguration,
 }
 
 impl DeviceStateBuilder {
-    /// Set the default values for NDP's configurations for new interfaces.
+    /// Set the default values for NDP's configuration for new interfaces.
     ///
-    /// See [`ndp::NdpConfigurations`] for more details.
-    pub fn set_default_ndp_configs(&mut self, v: ndp::NdpConfigurations) {
-        self.default_ndp_configs = v;
+    /// See [`ndp::NdpConfiguration`] for more details.
+    pub fn set_default_ndp_config(&mut self, v: ndp::NdpConfiguration) {
+        self.default_ndp_config = v;
     }
 
     /// Set the default IPv6 device configuration or new interfaces.
@@ -403,15 +403,15 @@ impl DeviceStateBuilder {
 
     /// Build the [`DeviceLayerState`].
     pub(crate) fn build<I: Instant>(self) -> DeviceLayerState<I> {
-        let Self { default_ndp_configs, default_ipv6_config } = self;
-        DeviceLayerState { ethernet: IdMap::new(), default_ndp_configs, default_ipv6_config }
+        let Self { default_ndp_config, default_ipv6_config } = self;
+        DeviceLayerState { ethernet: IdMap::new(), default_ndp_config, default_ipv6_config }
     }
 }
 
 /// The state associated with the device layer.
 pub(crate) struct DeviceLayerState<I: Instant> {
     ethernet: IdMap<DeviceState<IpLinkDeviceState<I, EthernetDeviceState>>>,
-    default_ndp_configs: ndp::NdpConfigurations,
+    default_ndp_config: ndp::NdpConfiguration,
     default_ipv6_config: Ipv6DeviceConfiguration,
 }
 
@@ -422,10 +422,10 @@ impl<I: Instant> DeviceLayerState<I> {
     /// MTU. The MTU will be taken as a limit on the size of Ethernet payloads -
     /// the Ethernet header is not counted towards the MTU.
     pub(crate) fn add_ethernet_device(&mut self, mac: UnicastAddr<Mac>, mtu: u32) -> DeviceId {
-        let Self { ethernet, default_ndp_configs, default_ipv6_config } = self;
+        let Self { ethernet, default_ndp_config, default_ipv6_config } = self;
 
         let mut builder = EthernetDeviceStateBuilder::new(mac, mtu);
-        builder.set_ndp_configs(default_ndp_configs.clone());
+        builder.set_ndp_config(default_ndp_config.clone());
         let mut ethernet_state = IpLinkDeviceState::new(builder.build());
         ethernet_state.ip.ipv6.config = default_ipv6_config.clone();
         let ethernet_state = DeviceState::new(ethernet_state);
@@ -1168,7 +1168,7 @@ pub(crate) fn insert_ndp_table_entry<D: EventDispatcher>(
     }
 }
 
-/// Updates the NDP Configurations for a `device`.
+/// Updates the NDP Configuration for a `device`.
 ///
 /// Note, some values may not take effect immediately, and may only take effect
 /// the next time they are used. These scenarios documented below:
@@ -1182,16 +1182,16 @@ pub(crate) fn insert_ndp_table_entry<D: EventDispatcher>(
 ///    solicitation will continue using the old value.
 // TODO(rheacock): remove `allow(dead_code)` when this is used.
 #[allow(dead_code)]
-pub fn set_ndp_configurations<D: EventDispatcher>(
+pub fn set_ndp_configuration<D: EventDispatcher>(
     ctx: &mut Ctx<D>,
     device: DeviceId,
-    configs: ndp::NdpConfigurations,
+    config: ndp::NdpConfiguration,
 ) {
     match device.protocol {
-        DeviceProtocol::Ethernet => <Ctx<_> as NdpHandler<EthernetLinkDevice>>::set_configurations(
+        DeviceProtocol::Ethernet => <Ctx<_> as NdpHandler<EthernetLinkDevice>>::set_configuration(
             ctx,
             device.id.into(),
-            configs,
+            config,
         ),
     }
 }

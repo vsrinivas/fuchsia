@@ -2606,9 +2606,9 @@ mod tests {
         let mut state_builder = StackStateBuilder::default();
         let _: &mut Ipv4StateBuilder = state_builder.ipv4_builder().forward(true);
         let _: &mut Ipv6StateBuilder = state_builder.ipv6_builder().forward(true);
-        let mut ndp_configs = crate::device::ndp::NdpConfigurations::default();
-        ndp_configs.set_max_router_solicitations(None);
-        state_builder.device_builder().set_default_ndp_configs(ndp_configs);
+        let mut ndp_config = crate::device::ndp::NdpConfiguration::default();
+        ndp_config.set_max_router_solicitations(None);
+        state_builder.device_builder().set_default_ndp_config(ndp_config);
         let mut ipv6_config = crate::device::Ipv6DeviceConfiguration::default();
         ipv6_config.set_dad_transmits(None);
         state_builder.device_builder().set_default_ipv6_config(ipv6_config);
@@ -2680,9 +2680,9 @@ mod tests {
         let dummy_config = Ipv6::DUMMY_CONFIG;
         let mut state_builder = StackStateBuilder::default();
         let _: &mut Ipv6StateBuilder = state_builder.ipv6_builder().forward(true);
-        let mut ndp_configs = crate::device::ndp::NdpConfigurations::default();
-        ndp_configs.set_max_router_solicitations(None);
-        state_builder.device_builder().set_default_ndp_configs(ndp_configs);
+        let mut ndp_config = crate::device::ndp::NdpConfiguration::default();
+        ndp_config.set_max_router_solicitations(None);
+        state_builder.device_builder().set_default_ndp_config(ndp_config);
         let mut ipv6_config = crate::device::Ipv6DeviceConfiguration::default();
         ipv6_config.set_dad_transmits(None);
         state_builder.device_builder().set_default_ipv6_config(ipv6_config);

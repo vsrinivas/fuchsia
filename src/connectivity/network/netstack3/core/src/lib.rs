@@ -45,7 +45,7 @@ mod transport;
 use log::trace;
 
 pub use crate::data_structures::{Entry, IdMap, IdMapCollection, IdMapCollectionKey};
-pub use crate::device::ndp::NdpConfigurations;
+pub use crate::device::ndp::NdpConfiguration;
 pub use crate::device::{
     get_assigned_ip_addr_subnets, initialize_device, receive_frame, remove_device, DeviceId,
     DeviceLayerEventDispatcher, Ipv6DeviceConfiguration,

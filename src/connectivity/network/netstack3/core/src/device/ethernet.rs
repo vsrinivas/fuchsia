@@ -205,7 +205,7 @@ impl<C: EthernetIpDeviceContext> MldContext<EthernetLinkDevice> for C {
 pub(crate) struct EthernetDeviceStateBuilder {
     mac: UnicastAddr<Mac>,
     mtu: u32,
-    ndp_configs: ndp::NdpConfigurations,
+    ndp_config: ndp::NdpConfiguration,
 }
 
 impl EthernetDeviceStateBuilder {
@@ -224,12 +224,12 @@ impl EthernetDeviceStateBuilder {
         //  A few questions:
         //  - How do we wire error information back up the call stack? Should
         //    this just return a Result or something?
-        Self { mac, mtu, ndp_configs: ndp::NdpConfigurations::default() }
+        Self { mac, mtu, ndp_config: ndp::NdpConfiguration::default() }
     }
 
-    /// Update the NDP configurations that will be set on the ethernet device.
-    pub(crate) fn set_ndp_configs(&mut self, v: ndp::NdpConfigurations) {
-        self.ndp_configs = v;
+    /// Update the NDP configuration that will be set on the ethernet device.
+    pub(crate) fn set_ndp_config(&mut self, v: ndp::NdpConfiguration) {
+        self.ndp_config = v;
     }
 
     /// Build the `EthernetDeviceState` from this builder.
@@ -240,7 +240,7 @@ impl EthernetDeviceStateBuilder {
             hw_mtu: self.mtu,
             link_multicast_groups: RefCountedHashSet::default(),
             ipv4_arp: ArpState::default(),
-            ndp: NdpState::new(self.ndp_configs),
+            ndp: NdpState::new(self.ndp_config),
             pending_frames: HashMap::new(),
             promiscuous_mode: false,
         }
@@ -1911,9 +1911,9 @@ mod tests {
         let _: &mut Ipv6StateBuilder = state_builder.ipv6_builder().forward(true);
         // Most tests do not need NDP's DAD or router solicitation so disable it
         // here.
-        let mut ndp_configs = ndp::NdpConfigurations::default();
-        ndp_configs.set_max_router_solicitations(None);
-        state_builder.device_builder().set_default_ndp_configs(ndp_configs);
+        let mut ndp_config = ndp::NdpConfiguration::default();
+        ndp_config.set_max_router_solicitations(None);
+        state_builder.device_builder().set_default_ndp_config(ndp_config);
         let mut ipv6_config = crate::device::Ipv6DeviceConfiguration::default();
         ipv6_config.set_dad_transmits(None);
         state_builder.device_builder().set_default_ipv6_config(ipv6_config);

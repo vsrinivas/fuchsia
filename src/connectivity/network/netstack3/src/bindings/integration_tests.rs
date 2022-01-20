@@ -365,11 +365,11 @@ impl TestStack {
         // when Duplicate Address Detection finishes or when an IPv6 address has
         // been assigned. Without such events, tests do not know how long to
         // wait for the stack to be ready for events.
-        use netstack3_core::NdpConfigurations;
+        use netstack3_core::NdpConfiguration;
         let mut builder = StackStateBuilder::default();
-        let mut config = NdpConfigurations::default();
+        let mut config = NdpConfiguration::default();
         config.set_max_router_solicitations(None);
-        builder.device_builder().set_default_ndp_configs(config);
+        builder.device_builder().set_default_ndp_config(config);
         let mut config = Ipv6DeviceConfiguration::default();
         config.set_dad_transmits(None);
         builder.device_builder().set_default_ipv6_config(config);
@@ -616,7 +616,7 @@ pub fn new_ipv6_addr_subnet(ip: [u8; 16], prefix: u8) -> AddrSubnetEither {
     AddrSubnetEither::new(IpAddr::V6(Ipv6Addr::from(ip)), prefix).unwrap()
 }
 
-/// Helper struct to create stack configurations for [`TestSetupBuilder`].
+/// Helper struct to create stack configuration for [`TestSetupBuilder`].
 #[derive(Debug)]
 pub struct StackSetupBuilder {
     endpoints: Vec<(String, Option<AddrSubnetEither>)>,
