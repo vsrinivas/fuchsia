@@ -71,7 +71,6 @@
             "fuchsia.location.position.EmergencyProvider",
             "fuchsia.logger.Log",
             "fuchsia.lowpan.device.Lookup",
-            "fuchsia.net.stack.Stack",
             "fuchsia.paver.Paver",
             "fuchsia.pkg.RepositoryManager",
             "fuchsia.power.BatteryManager",
