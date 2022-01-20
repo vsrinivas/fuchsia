@@ -287,7 +287,7 @@ impl std::iter::FromIterator<Forceable<TftpOption>> for OptionCollection {
 }
 
 /// A container with all possible [`TftpOption`] values in a message.
-#[derive(Default)]
+#[derive(Default, Eq, PartialEq, Debug)]
 pub struct AllOptions {
     pub transfer_size: Option<Forceable<u64>>,
     pub window_size: Option<Forceable<u16>>,

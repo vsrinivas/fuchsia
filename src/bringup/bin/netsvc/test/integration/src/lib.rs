@@ -5,14 +5,15 @@
 use fidl::endpoints::ProtocolMarker as _;
 use fixture::fixture;
 use fuchsia_zircon as zx;
-use futures::{FutureExt as _, Stream, StreamExt as _, TryStreamExt as _};
+use futures::{Future, FutureExt as _, StreamExt as _, TryStreamExt as _};
 use net_types::Witness as _;
 use netemul::{Endpoint as _, RealmUdpSocket as _};
 use netstack_testing_common::realms::{Netstack2, TestSandboxExt as _};
-use netsvc_proto::{debuglog, netboot};
-use packet::{FragmentedBuffer as _, InnerPacketBuilder as _, ParseBuffer as _, Serializer as _};
+use netsvc_proto::{debuglog, netboot, tftp};
+use packet::{FragmentedBuffer as _, InnerPacketBuilder as _, ParseBuffer as _, Serializer};
 use std::borrow::Cow;
-use std::convert::TryInto as _;
+use std::convert::{TryFrom as _, TryInto as _};
+use zerocopy::{FromBytes, LayoutVerified, NativeEndian, Unaligned, U32};
 
 const NETSVC_URL: &str = "#meta/netsvc.cm";
 const NETSVC_NAME: &str = "netsvc";
@@ -26,30 +27,74 @@ const DEV_ETHERNET_DIRECTORY: &str = "dev-class-ethernet";
 
 const BUFFER_SIZE: usize = 2048;
 
+const MOCK_BOARD_NAME: &str = "mock-board";
+const MOCK_BOOTLOADER_VENDOR: &str = "mock-bootloader-vendor";
+const MOCK_BOARD_REVISION: u32 = 0xDEADBEEF;
+
 fn create_netsvc_realm<'a>(
     sandbox: &'a netemul::TestSandbox,
     name: impl Into<Cow<'a, str>>,
-) -> (netemul::TestRealm<'a>, impl Stream<Item = ()> + Unpin) {
+) -> (netemul::TestRealm<'a>, impl Future<Output = ()> + Unpin) {
     use fuchsia_component::server::{ServiceFs, ServiceFsDir};
 
     let (mock_dir, server_end) = fidl::endpoints::create_endpoints().expect("create endpoints");
 
+    enum Services {
+        ReadOnlyLog(fidl_fuchsia_boot::ReadOnlyLogRequestStream),
+        SysInfo(fidl_fuchsia_sysinfo::SysInfoRequestStream),
+    }
+
     let mut fs = ServiceFs::new();
     let _: &mut ServiceFsDir<'_, _> =
-        fs.dir("svc").add_fidl_service(|rs: fidl_fuchsia_boot::ReadOnlyLogRequestStream| {
-            rs.map_ok(|fidl_fuchsia_boot::ReadOnlyLogRequest::Get { responder }| {
-                // TODO(https://fxbug.dev/91150): Move netsvc to use LogListener
-                // instead. We're temporarily using a loophole here that
-                // zx_debuglog_create accepts an invalid root resource handle,
-                // but that might not be true forever.
-                let debuglog =
-                    zx::DebugLog::create(&zx::Handle::invalid().into(), zx::DebugLogOpts::READABLE)
-                        .expect("failed to create debuglog handle");
-                let () = responder.send(debuglog).expect("failed to respond");
-            })
-        });
+        fs.dir("svc").add_fidl_service(Services::ReadOnlyLog).add_fidl_service(Services::SysInfo);
     let _: &mut ServiceFs<_> =
         fs.serve_connection(server_end.into_channel()).expect("serve connection");
+
+    let fs = fs.for_each_concurrent(None, |r| async move {
+        match r {
+            Services::ReadOnlyLog(rs) => {
+                let () = rs
+                    .map_ok(|fidl_fuchsia_boot::ReadOnlyLogRequest::Get { responder }| {
+                        // TODO(https://fxbug.dev/91150): Move netsvc to use LogListener
+                        // instead. We're temporarily using a loophole here that
+                        // zx_debuglog_create accepts an invalid root resource handle,
+                        // but that might not be true forever.
+                        let debuglog = zx::DebugLog::create(
+                            &zx::Handle::invalid().into(),
+                            zx::DebugLogOpts::READABLE,
+                        )
+                        .expect("failed to create debuglog handle");
+                        let () = responder.send(debuglog).expect("failed to respond");
+                    })
+                    .try_collect()
+                    .await
+                    .expect("handling request stream");
+            }
+            Services::SysInfo(rs) => {
+                let () = rs
+                    .map_ok(|req| {
+                        match req {
+                        fidl_fuchsia_sysinfo::SysInfoRequest::GetBoardName { responder } => {
+                            responder.send(zx::Status::OK.into_raw(), Some(MOCK_BOARD_NAME))
+                        }
+                        fidl_fuchsia_sysinfo::SysInfoRequest::GetBoardRevision { responder } => {
+                            responder.send(zx::Status::OK.into_raw(), MOCK_BOARD_REVISION)
+                        }
+                        fidl_fuchsia_sysinfo::SysInfoRequest::GetBootloaderVendor { responder } => {
+                            responder.send(zx::Status::OK.into_raw(), Some(MOCK_BOOTLOADER_VENDOR))
+                        }
+                        r @ fidl_fuchsia_sysinfo::SysInfoRequest::GetInterruptControllerInfo {
+                            ..
+                        } => panic!("unsupported request {:?}", r),
+                    }
+                    .expect("failed to send response")
+                    })
+                    .try_collect()
+                    .await
+                    .expect("handling request stream");
+            }
+        }
+    });
 
     let realm = sandbox
         .create_realm(
@@ -91,6 +136,17 @@ fn create_netsvc_realm<'a>(
                                 ..fidl_fuchsia_netemul::ChildDep::EMPTY
                             },
                         ),
+                        fidl_fuchsia_netemul::Capability::ChildDep(
+                            fidl_fuchsia_netemul::ChildDep {
+                                name: Some(MOCK_SERVICES_NAME.to_string()),
+                                capability: Some(
+                                    fidl_fuchsia_netemul::ExposedCapability::Protocol(
+                                        fidl_fuchsia_sysinfo::SysInfoMarker::NAME.to_string(),
+                                    ),
+                                ),
+                                ..fidl_fuchsia_netemul::ChildDep::EMPTY
+                            },
+                        ),
                         fidl_fuchsia_netemul::Capability::LogSink(fidl_fuchsia_netemul::Empty {}),
                     ])),
                     eager: Some(true),
@@ -123,7 +179,7 @@ fn create_netsvc_realm<'a>(
         )
         .expect("create realm");
 
-    (realm, fs.flatten().map(|r| r.expect("fs error")))
+    (realm, fs)
 }
 
 async fn with_netsvc_and_netstack_bind_port<F, Fut>(port: u16, name: &str, test: F)
@@ -180,7 +236,7 @@ where
 
     let test_fut = test(sock, interface.id().try_into().expect("interface ID doesn't fit u32"));
     futures::select! {
-        () = services.collect().fuse() => panic!("ServiceFs ended unexpectedly"),
+        () = services.fuse() => panic!("ServiceFs ended unexpectedly"),
         () =  test_fut.fuse() => (),
     }
 }
@@ -298,6 +354,37 @@ async fn discover(sock: &fuchsia_async::net::UdpSocket, scope_id: u32) -> std::n
     }
 }
 
+async fn send_message<S>(ser: S, sock: &fuchsia_async::net::UdpSocket, to: std::net::SocketAddr)
+where
+    S: Serializer + std::fmt::Debug,
+    S::Buffer: packet::ReusableBuffer + std::fmt::Debug + AsRef<[u8]>,
+{
+    let b = ser
+        .serialize_outer(|length| {
+            assert!(length <= BUFFER_SIZE, "{} > {}", length, BUFFER_SIZE);
+            Result::<_, std::convert::Infallible>::Ok(packet::Buf::new([0u8; BUFFER_SIZE], ..))
+        })
+        .expect("failed to serialize");
+    let sent = sock.send_to(b.as_ref(), to).await.expect("send to failed");
+    assert_eq!(sent, b.len());
+}
+
+async fn read_message<'a, P, B>(
+    buffer: &'a mut B,
+    sock: &fuchsia_async::net::UdpSocket,
+    expect_src: std::net::SocketAddr,
+) -> P
+where
+    P: packet::ParsablePacket<&'a [u8], ()>,
+    P::Error: std::fmt::Debug,
+    B: packet::ParseBufferMut,
+{
+    let (n, addr) = sock.recv_from(buffer.as_mut()).await.expect("recv from failed");
+    assert_eq!(addr, expect_src);
+    let () = buffer.shrink_back_to(n);
+    buffer.parse::<P>().expect("parse failed")
+}
+
 #[fixture(with_netsvc_and_netstack)]
 #[fuchsia_async::run_singlethreaded(test)]
 async fn can_discover(sock: fuchsia_async::net::UdpSocket, scope_id: u32) {
@@ -327,12 +414,12 @@ async fn debuglog(sock: fuchsia_async::net::UdpSocket, _scope_id: u32) {
 
                 match ack {
                     Ack::Yes => {
-                        let ack = debuglog::AckPacketBuilder::new(pkt.seqno())
-                            .into_serializer_with(packet::Buf::new([0u8; debuglog::ACK_SIZE], ..))
-                            .serialize_no_alloc_outer()
-                            .expect("failed to serialize");
-                        let sent = sock.send_to(ack.as_ref(), addr).await.expect("send_to failed");
-                        assert_eq!(sent, ack.len());
+                        let () = send_message(
+                            debuglog::AckPacketBuilder::new(pkt.seqno()).into_serializer(),
+                            &sock,
+                            addr,
+                        )
+                        .await;
                     }
                     Ack::No => (),
                 }
@@ -377,4 +464,114 @@ async fn debuglog(sock: fuchsia_async::net::UdpSocket, _scope_id: u32) {
                 (sock, Some(seqno))
             })
             .await;
+}
+
+#[fixture(with_netsvc_and_netstack)]
+#[fuchsia_async::run_singlethreaded(test)]
+async fn get_board_info(sock: fuchsia_async::net::UdpSocket, scope_id: u32) {
+    const BOARD_NAME_FILE: &str = "<<image>>board_info";
+    let device = discover(&sock, scope_id).await;
+    let socket_addr = std::net::SocketAddrV6::new(
+        device,
+        tftp::INCOMING_PORT.get(),
+        /* flowinfo */ 0,
+        scope_id,
+    )
+    .into();
+
+    // Request a very large timeout to make sure we don't get flakes.
+    const TIMEOUT_OPTION_SECS: u8 = std::u8::MAX;
+
+    #[repr(C)]
+    #[derive(FromBytes, Unaligned)]
+    // Defined in zircon/system/public/zircon/boot/netboot.h.
+    struct BoardInfo {
+        board_name: [u8; 32],
+        board_revision: U32<NativeEndian>,
+        mac_address: [u8; 6],
+        _padding: [u8; 2],
+    }
+
+    let () = send_message(
+        tftp::TransferRequestBuilder::new_with_options(
+            tftp::TransferDirection::Read,
+            BOARD_NAME_FILE,
+            tftp::TftpMode::OCTET,
+            [
+                tftp::TftpOption::TransferSize(std::u64::MAX).not_forced(),
+                tftp::TftpOption::Timeout(TIMEOUT_OPTION_SECS).not_forced(),
+            ],
+        )
+        .into_serializer(),
+        &sock,
+        socket_addr,
+    )
+    .await;
+
+    // After the first message, everything must happen on a different port.
+    let socket_addr = std::net::SocketAddrV6::new(
+        device,
+        tftp::OUTGOING_PORT.get(),
+        /* flowinfo */ 0,
+        scope_id,
+    )
+    .into();
+
+    let mut buffer = [0u8; BUFFER_SIZE];
+    {
+        let mut pb = &mut buffer[..];
+        let oack = read_message::<tftp::TftpPacket<_>, _>(&mut pb, &sock, socket_addr)
+            .await
+            .into_oack()
+            .expect("unexpected response");
+
+        assert_eq!(
+            oack.options().collect(),
+            tftp::AllOptions {
+                window_size: None,
+                block_size: None,
+                timeout: Some(tftp::Forceable { value: TIMEOUT_OPTION_SECS, forced: false }),
+                transfer_size: Some(tftp::Forceable {
+                    value: u64::try_from(std::mem::size_of::<BoardInfo>())
+                        .expect("doesn't fit u64"),
+                    forced: false
+                })
+            }
+        );
+    }
+
+    // Acknowledge options by sending an ack.
+    let () = send_message(
+        tftp::AckPacketBuilder::new(/* block */ 0).into_serializer(),
+        &sock,
+        socket_addr,
+    )
+    .await;
+
+    {
+        let mut pb = &mut buffer[..];
+        let data = read_message::<tftp::TftpPacket<_>, _>(&mut pb, &sock, socket_addr)
+            .await
+            .into_data()
+            .expect("unexpected message");
+        assert_eq!(data.block(), 1);
+        assert_eq!(data.payload().len(), std::mem::size_of::<BoardInfo>());
+        let board_info = LayoutVerified::<_, BoardInfo>::new(data.payload().as_ref())
+            .expect("failed to get board info");
+        let BoardInfo { board_name, board_revision, mac_address, _padding } = &*board_info;
+        // mac_address is not filled by netsvc.
+        assert_eq!(mac_address, [0u8; 6].as_ref());
+        assert_eq!(board_revision.get(), MOCK_BOARD_REVISION);
+        let board_name =
+            board_name.split(|b| *b == 0).next().expect("failed to find null termination");
+        let board_name = std::str::from_utf8(board_name).expect("failed to parse board name");
+
+        let expected_board_name = if cfg!(target_arch = "x86_64") {
+            // netsvc overrides the board name on x64 boards 🤷.
+            "x64"
+        } else {
+            MOCK_BOARD_NAME
+        };
+        assert_eq!(board_name, expected_board_name);
+    }
 }

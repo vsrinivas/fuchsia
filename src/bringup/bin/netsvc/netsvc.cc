@@ -94,6 +94,8 @@ static const char* zedboot_banner =
 
 int main(int argc, char** argv) {
   if (zx_status_t status = StdoutToDebuglog::Init(); status != ZX_OK) {
+    setbuf(stdout, nullptr);
+    setbuf(stderr, nullptr);
     printf("Failed to redirect stdout to debuglog, assuming test environment and continuing: %s\n",
            zx_status_get_string(status));
   }
