@@ -65,6 +65,9 @@ zx_status_t channel_read(fidl_handle_t handle, const ReadOptions& read_options, 
 zx_status_t channel_call(fidl_handle_t handle, CallOptions call_options,
                          const CallMethodArgs& cargs, uint32_t* out_data_actual_count,
                          uint32_t* out_handles_actual_count) {
+  ZX_DEBUG_ASSERT(cargs.out_rd_data == nullptr);
+  ZX_DEBUG_ASSERT(cargs.rd_data != nullptr);
+
   zx_handle_disposition_t hds[ZX_CHANNEL_MAX_MSG_HANDLES];
   const fidl_channel_handle_metadata_t* wr_metadata =
       reinterpret_cast<const fidl_channel_handle_metadata_t*>(cargs.wr_handle_metadata);

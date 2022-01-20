@@ -198,11 +198,77 @@ void OutgoingMessage::Write(internal::AnyUnownedTransport transport, WriteOption
   }
 }
 
-void OutgoingMessage::CallImpl(internal::AnyUnownedTransport transport,
-                               const fidl_type_t* response_type, uint8_t* result_bytes,
-                               uint32_t result_byte_capacity, fidl_handle_t* result_handles,
-                               fidl_handle_metadata_t* result_handle_metadata,
-                               uint32_t result_handle_capacity, CallOptions options) {
+void OutgoingMessage::DecodeImplForCall(const internal::CodingConfig& coding_config,
+                                        const fidl_type_t* response_type, uint8_t* bytes,
+                                        uint32_t* in_out_num_bytes, fidl_handle_t* handles,
+                                        fidl_handle_metadata_t* handle_metadata,
+                                        uint32_t num_handles) {
+  fidl_message_header_t& header = reinterpret_cast<fidl_message_header_t&>(*bytes);
+  if ((header.flags[0] & FIDL_MESSAGE_HEADER_FLAGS_0_USE_VERSION_V2) == 0 &&
+      !internal__fidl_tranform_is_noop__may_break(FIDL_TRANSFORMATION_V1_TO_V2, response_type)) {
+    auto transformer_bytes = std::make_unique<uint8_t[]>(ZX_CHANNEL_MAX_MSG_BYTES);
+
+    zx_status_t status = internal__fidl_transform__may_break(
+        FIDL_TRANSFORMATION_V1_TO_V2, response_type, bytes, *in_out_num_bytes,
+        transformer_bytes.get(), ZX_CHANNEL_MAX_MSG_BYTES, in_out_num_bytes, error_address());
+    if (status != ZX_OK) {
+      SetResult(fidl::Result::DecodeError(status, *error_address()));
+      return;
+    }
+
+    // The number of wire format v2 bytes is always upper bounded by the number of v1 bytes.
+    memcpy(bytes, transformer_bytes.get(), *in_out_num_bytes);
+  }
+
+  zx_status_t status = internal::DecodeEtc<FIDL_WIRE_FORMAT_VERSION_V2>(
+      coding_config, response_type, bytes, *in_out_num_bytes, handles, handle_metadata, num_handles,
+      error_address());
+  if (status != ZX_OK) {
+    SetResult(fidl::Result::DecodeError(status, *error_address()));
+    return;
+  }
+}
+
+void OutgoingMessage::CallImplForTransportProvidedBuffer(internal::AnyUnownedTransport transport,
+                                                         const fidl_type_t* response_type,
+                                                         uint8_t** out_bytes,
+                                                         uint32_t* out_num_bytes,
+                                                         CallOptions options) {
+  if (status() != ZX_OK) {
+    return;
+  }
+  ZX_ASSERT(transport_type() == transport.type());
+
+  fidl_handle_t* result_handles;
+  fidl_handle_metadata_t* result_handle_metadata;
+  uint32_t result_num_handles;
+  internal::CallMethodArgs args = {
+      .wr_data = iovecs(),
+      .wr_handles = handles(),
+      .wr_handle_metadata = message_.iovec.handle_metadata,
+      .wr_data_count = iovec_actual(),
+      .wr_handles_count = handle_actual(),
+      .out_rd_data = reinterpret_cast<void**>(out_bytes),
+      .out_rd_handles = &result_handles,
+      .out_rd_handle_metadata = &result_handle_metadata,
+  };
+
+  zx_status_t status = transport.call(std::move(options), args, out_num_bytes, &result_num_handles);
+  ReleaseHandles();
+  if (status != ZX_OK) {
+    SetResult(fidl::Result::TransportError(status));
+    return;
+  }
+
+  DecodeImplForCall(*transport.vtable()->encoding_configuration, response_type, *out_bytes,
+                    out_num_bytes, result_handles, result_handle_metadata, result_num_handles);
+}
+
+void OutgoingMessage::CallImplForCallerProvidedBuffer(
+    internal::AnyUnownedTransport transport, const fidl_type_t* response_type,
+    uint8_t* result_bytes, uint32_t result_byte_capacity, fidl_handle_t* result_handles,
+    fidl_handle_metadata_t* result_handle_metadata, uint32_t result_handle_capacity,
+    CallOptions options) {
   if (status() != ZX_OK) {
     return;
   }
@@ -231,36 +297,8 @@ void OutgoingMessage::CallImpl(internal::AnyUnownedTransport transport,
     return;
   }
 
-  fidl_message_header_t header;
-  memcpy(&header, result_bytes, sizeof(header));
-
-  if ((header.flags[0] & FIDL_MESSAGE_HEADER_FLAGS_0_USE_VERSION_V2) == 0 &&
-      !internal__fidl_tranform_is_noop__may_break(FIDL_TRANSFORMATION_V1_TO_V2, response_type)) {
-    auto transformer_bytes = std::make_unique<uint8_t[]>(ZX_CHANNEL_MAX_MSG_BYTES);
-
-    status = internal__fidl_transform__may_break(
-        FIDL_TRANSFORMATION_V1_TO_V2, response_type, result_bytes, actual_num_bytes,
-        transformer_bytes.get(), ZX_CHANNEL_MAX_MSG_BYTES, &actual_num_bytes, error_address());
-    if (status != ZX_OK) {
-      SetResult(fidl::Result::DecodeError(status, *error_address()));
-      return;
-    }
-
-    if (actual_num_bytes > result_byte_capacity) {
-      SetResult(fidl::Result::DecodeError(ZX_ERR_BUFFER_TOO_SMALL,
-                                          "transformed bytes exceeds message buffer capacity"));
-      return;
-    }
-    memcpy(result_bytes, transformer_bytes.get(), actual_num_bytes);
-  }
-
-  status = internal::DecodeEtc<FIDL_WIRE_FORMAT_VERSION_V2>(
-      *transport.vtable()->encoding_configuration, response_type, result_bytes, actual_num_bytes,
-      result_handles, result_handle_metadata, actual_num_handles, error_address());
-  if (status != ZX_OK) {
-    SetResult(fidl::Result::DecodeError(status, *error_address()));
-    return;
-  }
+  DecodeImplForCall(*transport.vtable()->encoding_configuration, response_type, result_bytes,
+                    &actual_num_bytes, result_handles, result_handle_metadata, actual_num_handles);
 }
 
 OutgoingMessage::CopiedBytes::CopiedBytes(const OutgoingMessage& msg) {
@@ -341,8 +379,8 @@ void IncomingMessage::Decode(const fidl_type_t* message_type,
 }
 
 void IncomingMessage::Decode(internal::WireFormatVersion wire_format_version,
-                             const fidl_type_t* message_type,
-                             std::unique_ptr<uint8_t[]>* out_transformed_buffer) {
+                              const fidl_type_t* message_type,
+                              std::unique_ptr<uint8_t[]>* out_transformed_buffer) {
   ZX_DEBUG_ASSERT(status() == ZX_OK);
 
   if (wire_format_version == internal::WireFormatVersion::kV1) {

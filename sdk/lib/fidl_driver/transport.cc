@@ -75,31 +75,31 @@ zx_status_t driver_read(fidl_handle_t handle, const ReadOptions& read_options, v
 
 zx_status_t driver_call(fidl_handle_t handle, CallOptions call_options, const CallMethodArgs& cargs,
                         uint32_t* out_data_actual_count, uint32_t* out_handles_actual_count) {
+  ZX_DEBUG_ASSERT(cargs.rd_data == nullptr);
+  ZX_DEBUG_ASSERT(cargs.out_rd_data != nullptr);
+
   // Note: in order to force the encoder to only output one iovec, only provide an iovec buffer of
   // 1 element to the encoder.
   ZX_ASSERT(cargs.wr_data_count == 1);
   const zx_channel_iovec_t& iovec = static_cast<const zx_channel_iovec_t*>(cargs.wr_data)[0];
   fdf_arena_t* arena = call_options.outgoing_transport_context.release<DriverTransport>();
-  void* arena_data = fdf_arena_allocate(arena, iovec.capacity);
-  memcpy(arena_data, const_cast<void*>(iovec.buffer), iovec.capacity);
 
   void* arena_handles = fdf_arena_allocate(arena, cargs.wr_handles_count * sizeof(fdf_handle_t));
   memcpy(arena_handles, cargs.wr_handles, cargs.wr_handles_count * sizeof(fdf_handle_t));
 
   fdf_arena_t* rd_arena;
-  void* rd_data;
   fdf_handle_t* rd_handles;
   fdf_channel_call_args args = {
       .wr_arena = arena,
-      .wr_data = arena_data,
+      .wr_data = const_cast<void*>(iovec.buffer),
       .wr_num_bytes = iovec.capacity,
       .wr_handles = static_cast<fdf_handle_t*>(arena_handles),
       .wr_num_handles = cargs.wr_handles_count,
 
       .rd_arena = &rd_arena,
-      .rd_data = &rd_data,
+      .rd_data = cargs.out_rd_data,
       .rd_num_bytes = out_data_actual_count,
-      .rd_handles = &rd_handles,
+      .rd_handles = cargs.out_rd_handles,
       .rd_num_handles = out_handles_actual_count,
   };
   zx_status_t status = fdf_channel_call(handle, 0, ZX_TIME_INFINITE, &args);
@@ -107,7 +107,6 @@ zx_status_t driver_call(fidl_handle_t handle, CallOptions call_options, const Ca
   if (status != ZX_OK) {
     return status;
   }
-  memcpy(cargs.rd_data, rd_data, *out_data_actual_count);
   memcpy(cargs.rd_handles, rd_handles, *out_handles_actual_count * sizeof(fdf_handle_t));
   *call_options.out_incoming_transport_context =
       IncomingTransportContext::Create<DriverTransport>(rd_arena);

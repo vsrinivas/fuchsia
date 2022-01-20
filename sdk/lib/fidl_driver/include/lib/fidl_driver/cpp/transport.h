@@ -46,6 +46,8 @@ struct DriverTransport {
   template <typename FidlMethod>
   using WireUnownedResult = fdf::WireUnownedResult<FidlMethod>;
 
+  static constexpr bool TransportProvidesReadBuffer = true;
+
   static const TransportVTable VTable;
   static const CodingConfig EncodingConfiguration;
 };

@@ -93,15 +93,8 @@ class {{ .WireUnownedResult }} final : public ::fidl::Result {
   {{/* TODO(fxbug.dev/86367): Factor out common buffer allocation logic once we have other instances
   of this pattern. */ -}}
 
-  {{/* Allocate one buffer for both request/response (if applicable). */ -}}
-  {{- if .HasResponse }}
-  constexpr uint32_t buffer_size = std::max(
-    ::fidl::MaxSizeInChannel<::fidl::WireRequest<{{ .Marker }}>, ::fidl::MessageDirection::kSending>(),
-    ::fidl::MaxSizeInChannel<::fidl::WireResponse<{{ .Marker }}>, ::fidl::MessageDirection::kReceiving>());
-  {{- else }}
   constexpr uint32_t buffer_size =
     ::fidl::MaxSizeInChannel<::fidl::WireRequest<{{ .Marker }}>, ::fidl::MessageDirection::kSending>();
-  {{- end }}
   uint8_t* buffer = static_cast<uint8_t*>(arena.Allocate(buffer_size));
 
   ::fidl::UnownedEncodedMessage<{{ .WireRequest }}, fidl::internal::DriverTransport> request_message(
@@ -115,9 +108,11 @@ class {{ .WireUnownedResult }} final : public ::fidl::Result {
        arena.release()),
     .out_incoming_transport_context = &incoming_context,
   };
+  uint8_t* call_result_bytes;
+  uint32_t call_result_num_bytes;
   outgoing.Call<{{ .WireResponse }}>(
-    client_end.handle(), buffer, buffer_size, std::move(call_options));
-  bytes_ = buffer;
+    client_end.handle(), &call_result_bytes, &call_result_num_bytes, std::move(call_options));
+  bytes_ = call_result_bytes;
   arena_ = fdf::Arena(incoming_context.release<fidl::internal::DriverTransport>());
 {{- else }}
   ::fidl::WriteOptions write_options = {

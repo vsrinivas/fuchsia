@@ -137,11 +137,19 @@ struct CallMethodArgs {
   uint32_t wr_data_count;
   uint32_t wr_handles_count;
 
+  // Exactly one of rd_* or out_rd_* will be populated.
+  // If Transport::TransportProvidesReadBuffer is true, the out_rd_* will be populated.
+  // Otherwise, rd_* will be populated.
+
   void* rd_data;
   fidl_handle_t* rd_handles;
   fidl_handle_metadata_t* rd_handle_metadata;
   uint32_t rd_data_capacity;
   uint32_t rd_handles_capacity;
+
+  void** out_rd_data;
+  fidl_handle_t** out_rd_handles;
+  fidl_handle_metadata_t** out_rd_handle_metadata;
 };
 
 // Generic interface for waiting on a transport (for new messages, peer close, etc).

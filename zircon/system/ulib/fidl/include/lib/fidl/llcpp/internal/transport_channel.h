@@ -48,6 +48,8 @@ struct ChannelTransport {
   using IncomingTransportContextType = struct {};
   using OutgoingTransportContextType = struct {};
 
+  static constexpr bool TransportProvidesReadBuffer = false;
+
   static const TransportVTable VTable;
   static const CodingConfig EncodingConfiguration;
 };

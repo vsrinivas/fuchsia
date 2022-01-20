@@ -183,28 +183,29 @@ class OutgoingMessage : public ::fidl::Result {
           std::move(options));
   }
 
-  // For requests with a response, uses zx_channel_call_etc to write the message.
-  // Before calling Call, Encode must be called.
-  // If the call succeed, |result_bytes| contains the decoded result.
-  template <typename FidlType>
-  void Call(internal::AnyUnownedTransport transport, uint8_t* result_bytes,
-            uint32_t result_byte_capacity, fidl_handle_t* result_handles,
-            fidl_handle_metadata_t* result_handle_metadata, uint32_t result_handle_capacity,
-            CallOptions options = {}) {
-    CallImpl(transport, FidlType::Type, result_bytes, result_byte_capacity, result_handles,
-             result_handle_metadata, result_handle_capacity, std::move(options));
-  }
-
-  template <typename FidlType, typename TransportObject>
+  template <typename FidlType, typename TransportObject,
+            typename = std::enable_if_t<
+                !internal::AssociatedTransport<TransportObject>::TransportProvidesReadBuffer>>
   void Call(TransportObject&& transport, uint8_t* result_bytes, uint32_t result_byte_capacity,
             CallOptions options = {}) {
     fidl_handle_t result_handles[ZX_CHANNEL_MAX_MSG_HANDLES];
     typename internal::AssociatedTransport<TransportObject>::HandleMetadata
         result_handle_metadata[ZX_CHANNEL_MAX_MSG_HANDLES];
-    Call<FidlType>(internal::MakeAnyUnownedTransport(std::forward<TransportObject>(transport)),
-                   result_bytes, result_byte_capacity, result_handles,
-                   reinterpret_cast<fidl_handle_metadata_t*>(result_handle_metadata),
-                   ZX_CHANNEL_MAX_MSG_HANDLES, std::move(options));
+    CallImplForCallerProvidedBuffer(
+        internal::MakeAnyUnownedTransport(std::forward<TransportObject>(transport)), FidlType::Type,
+        result_bytes, result_byte_capacity, result_handles,
+        reinterpret_cast<fidl_handle_metadata_t*>(result_handle_metadata),
+        ZX_CHANNEL_MAX_MSG_HANDLES, std::move(options));
+  }
+
+  template <typename FidlType, typename TransportObject,
+            typename = std::enable_if_t<
+                internal::AssociatedTransport<TransportObject>::TransportProvidesReadBuffer>>
+  void Call(TransportObject&& transport, uint8_t** out_bytes, uint32_t* out_num_bytes,
+            CallOptions options = {}) {
+    CallImplForTransportProvidedBuffer(
+        internal::MakeAnyUnownedTransport(std::forward<TransportObject>(transport)), FidlType::Type,
+        out_bytes, out_num_bytes, std::move(options));
   }
 
   bool is_transactional() const { return is_transactional_; }
@@ -214,11 +215,6 @@ class OutgoingMessage : public ::fidl::Result {
       : ::fidl::Result(::fidl::Result::Ok()), message_(msg), handle_capacity_(handle_capacity) {}
 
   void EncodeImpl(const fidl_type_t* message_type, void* data);
-
-  void CallImpl(internal::AnyUnownedTransport transport, const fidl_type_t* response_type,
-                uint8_t* result_bytes, uint32_t result_byte_capacity, fidl_handle_t* result_handles,
-                fidl_handle_metadata_t* result_handle_metadata, uint32_t result_handle_capacity,
-                CallOptions options);
 
   uint32_t iovec_capacity() const { return iovec_capacity_; }
   uint32_t handle_capacity() const { return handle_capacity_; }
@@ -230,6 +226,21 @@ class OutgoingMessage : public ::fidl::Result {
 
   explicit OutgoingMessage(ConstructorArgs args);
   explicit OutgoingMessage(const fidl_outgoing_msg_t* msg);
+
+  void DecodeImplForCall(const internal::CodingConfig& coding_config,
+                         const fidl_type_t* response_type, uint8_t* bytes,
+                         uint32_t* in_out_num_bytes, fidl_handle_t* handles,
+                         fidl_handle_metadata_t* handle_metadata, uint32_t num_handles);
+
+  void CallImplForCallerProvidedBuffer(internal::AnyUnownedTransport transport,
+                                       const fidl_type_t* response_type, uint8_t* result_bytes,
+                                       uint32_t result_byte_capacity, fidl_handle_t* result_handles,
+                                       fidl_handle_metadata_t* result_handle_metadata,
+                                       uint32_t result_handle_capacity, CallOptions options);
+
+  void CallImplForTransportProvidedBuffer(internal::AnyUnownedTransport transport,
+                                          const fidl_type_t* response_type, uint8_t** out_bytes,
+                                          uint32_t* out_num_bytes, CallOptions options);
 
   fidl_outgoing_msg_iovec_t& iovec_message() {
     ZX_DEBUG_ASSERT(message_.type == FIDL_OUTGOING_MSG_TYPE_IOVEC);

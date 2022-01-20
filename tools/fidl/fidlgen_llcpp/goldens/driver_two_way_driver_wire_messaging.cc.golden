@@ -17,13 +17,9 @@ extern "C" const fidl_type_t test_drivertwoway_TwoWayAddResponseMessageTable;
     ::fdf::UnownedClientEnd<::test_drivertwoway::TwoWay> client_end,
     ::fdf::Arena& arena,
     ::fidl::WireRequest<::test_drivertwoway::TwoWay::Add>* request) {
-  constexpr uint32_t buffer_size =
-      std::max(::fidl::MaxSizeInChannel<
-                   ::fidl::WireRequest<::test_drivertwoway::TwoWay::Add>,
-                   ::fidl::MessageDirection::kSending>(),
-               ::fidl::MaxSizeInChannel<
-                   ::fidl::WireResponse<::test_drivertwoway::TwoWay::Add>,
-                   ::fidl::MessageDirection::kReceiving>());
+  constexpr uint32_t buffer_size = ::fidl::MaxSizeInChannel<
+      ::fidl::WireRequest<::test_drivertwoway::TwoWay::Add>,
+      ::fidl::MessageDirection::kSending>();
   uint8_t* buffer = static_cast<uint8_t*>(arena.Allocate(buffer_size));
 
   ::fidl::UnownedEncodedMessage<
@@ -38,9 +34,12 @@ extern "C" const fidl_type_t test_drivertwoway_TwoWayAddResponseMessageTable;
               fidl::internal::DriverTransport>(arena.release()),
       .out_incoming_transport_context = &incoming_context,
   };
+  uint8_t* call_result_bytes;
+  uint32_t call_result_num_bytes;
   outgoing.Call<::fidl::WireResponse<::test_drivertwoway::TwoWay::Add>>(
-      client_end.handle(), buffer, buffer_size, std::move(call_options));
-  bytes_ = buffer;
+      client_end.handle(), &call_result_bytes, &call_result_num_bytes,
+      std::move(call_options));
+  bytes_ = call_result_bytes;
   arena_ =
       fdf::Arena(incoming_context.release<fidl::internal::DriverTransport>());
   ::fidl::Result::operator=(outgoing);
