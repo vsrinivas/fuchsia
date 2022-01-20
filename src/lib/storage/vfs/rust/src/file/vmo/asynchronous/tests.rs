@@ -527,6 +527,22 @@ fn seek_read_write() {
 }
 
 #[test]
+fn write_after_seek_beyond_capacity_fills_gap_with_zeroes() {
+    run_server_client(
+        OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
+        simple_read_write(b"Before gap", b"Before gap\0\0\0\0After gap"),
+        |proxy| {
+            async move {
+                assert_seek!(proxy, 0, End, 10);
+                assert_seek!(proxy, 4, Current, 14); // Four byte gap past original content.
+                assert_write!(proxy, "After gap");
+                assert_close!(proxy);
+            }
+        },
+    );
+}
+
+#[test]
 fn seek_valid_positions() {
     run_server_client(
         OPEN_RIGHT_READABLE,
@@ -616,7 +632,7 @@ fn seek_invalid_before_0() {
 }
 
 #[test]
-fn seek_after_truncate() {
+fn seek_after_expanding_truncate() {
     run_server_client(
         OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
         read_write(
@@ -627,8 +643,23 @@ fn seek_after_truncate() {
             //                   01234567 8 9 012
         ),
         |proxy| async move {
-            assert_truncate!(proxy, 12);
+            assert_truncate!(proxy, 12); // Increases size of the file to 12, padding with zeroes.
             assert_seek!(proxy, 10, Start);
+            assert_write!(proxy, "end");
+            assert_close!(proxy);
+        },
+    );
+}
+
+#[test]
+fn seek_beyond_size_after_shrinking_truncate() {
+    run_server_client(
+        OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
+        read_write(simple_init_vmo_resizable(b"Content"), simple_consume_vmo(b"Cont\0\0\0\0end")),
+        |proxy| async move {
+            assert_truncate!(proxy, 4); // Decrease the size of the file to four.
+            assert_seek!(proxy, 0, End, 4);
+            assert_seek!(proxy, 4, Current, 8); // Four bytes beyond the truncated end.
             assert_write!(proxy, "end");
             assert_close!(proxy);
         },
