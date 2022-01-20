@@ -210,30 +210,15 @@ void InterceptionWorkflow::Initialize(
 
   // 1) Set up symbol index.
 
-  // Stolen from zxdb/console/console_main.cc
+  // Please keep in sync with zxdb/console/console_main.cc
   auto& system_settings = session_->system().settings();
-  const char* home = std::getenv("HOME");
 
   if (symbol_cache) {
-    // Legacy usage assumes a .build-id subdirectory will be created.
-    system_settings.SetString(zxdb::ClientSettings::System::kSymbolCache,
-                              *symbol_cache + "/.build-id");
-  } else {
-    // Default value for symbol_cache.
-    if (home) {
-      system_settings.SetString(zxdb::ClientSettings::System::kSymbolCache,
-                                std::string(home) + "/.fuchsia/debug/symbol-cache");
-    }
+    system_settings.SetString(zxdb::ClientSettings::System::kSymbolCache, *symbol_cache);
   }
 
   if (!symbol_index_files.empty()) {
     system_settings.SetList(zxdb::ClientSettings::System::kSymbolIndexFiles, symbol_index_files);
-  } else {
-    // Default value for symbol_index_files.
-    if (home) {
-      system_settings.SetList(zxdb::ClientSettings::System::kSymbolIndexFiles,
-                              {std::string(home) + "/.fuchsia/debug/symbol-index"});
-    }
   }
 
   if (!symbol_servers.empty()) {

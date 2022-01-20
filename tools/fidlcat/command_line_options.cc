@@ -419,6 +419,23 @@ std::string ParseCommandLine(int argc, const char* argv[], CommandLineOptions* o
     return kHelpIntro + parser.GetHelp();
   }
 
+  // Default values for symbol_cache and symbol_index_files.
+  if (const char* home = std::getenv("HOME"); home) {
+    std::string home_str = home;
+    if (!options->symbol_cache) {
+      options->symbol_cache = home_str + "/.fuchsia/debug/symbol-cache";
+    }
+    if (options->symbol_index_files.empty()) {
+      for (const auto& path : {home_str + "/.fuchsia/debug/symbol-index.json",
+                               home_str + "/.fuchsia/debug/symbol-index"}) {
+        std::error_code ec;
+        if (std::filesystem::exists(path, ec)) {
+          options->symbol_index_files.push_back(path);
+        }
+      }
+    }
+  }
+
   decode_options->stay_alive = options->stay_alive;
   decode_options->stack_level = options->stack_level;
   if (options->syscall_filters.empty()) {
