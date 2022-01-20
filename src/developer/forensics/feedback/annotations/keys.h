@@ -14,10 +14,27 @@ constexpr const char kBuildProductKey[] = "build.product";
 constexpr const char kBuildLatestCommitDateKey[] = "build.latest-commit-date";
 constexpr const char kBuildIsDebugKey[] = "build.is_debug";
 constexpr const char kDeviceBoardNameKey[] = "device.board-name";
+constexpr const char kDeviceFeedbackIdKey[] = "device.feedback-id";
+constexpr const char kDeviceUptimeKey[] = "device.uptime";
+constexpr const char kDeviceUtcTimeKey[] = "device.utc-time";
+constexpr const char kHardwareBoardNameKey[] = "hardware.board.name";
+constexpr const char kHardwareBoardRevisionKey[] = "hardware.board.revision";
+constexpr const char kHardwareProductLanguageKey[] = "hardware.product.language";
+constexpr const char kHardwareProductLocaleListKey[] = "hardware.product.locale-list";
+constexpr const char kHardwareProductManufacturerKey[] = "hardware.product.manufacturer";
+constexpr const char kHardwareProductModelKey[] = "hardware.product.model";
+constexpr const char kHardwareProductNameKey[] = "hardware.product.name";
+constexpr const char kHardwareProductRegulatoryDomainKey[] = "hardware.product.regulatory-domain";
+constexpr const char kHardwareProductSKUKey[] = "hardware.product.sku";
+constexpr const char kOSNameKey[] = "osName";
+constexpr const char kOSVersionKey[] = "osVersion";
 constexpr const char kSystemBootIdCurrentKey[] = "system.boot-id.current";
 constexpr const char kSystemBootIdPreviousKey[] = "system.boot-id.previous";
 constexpr const char kSystemLastRebootReasonKey[] = "system.last-reboot.reason";
 constexpr const char kSystemLastRebootUptimeKey[] = "system.last-reboot.uptime";
+constexpr const char kSystemTimezonePrimaryKey[] = "system.timezone.primary";
+constexpr const char kSystemUpdateChannelCurrentKey[] = "system.update-channel.current";
+constexpr const char kSystemUpdateChannelTargetKey[] = "system.update-channel.target";
 
 }  // namespace forensics::feedback
 

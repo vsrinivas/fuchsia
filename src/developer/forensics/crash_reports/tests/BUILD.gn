@@ -84,6 +84,7 @@ executable("crash_reporter_unittest_exe") {
     "//src/developer/forensics/crash_reports:crash_reporter",
     "//src/developer/forensics/crash_reports:network_watcher",
     "//src/developer/forensics/crash_reports/info:info",
+    "//src/developer/forensics/feedback/annotations",
     "//src/developer/forensics/testing:gtest_with_syslog_main",
     "//src/developer/forensics/testing:unit_test_fixture",
     "//src/developer/forensics/testing/fakes:privacy_settings",

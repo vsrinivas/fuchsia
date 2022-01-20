@@ -33,8 +33,8 @@ AnnotationMap BuildDefaultAnnotations(const feedback::Annotations& startup_annot
   // TODO(fxbug.dev/70398): Share annotations with feedback_data so synchonous and constant
   // annotations can be added to crash reports.
   AnnotationMap default_annotations;
-  default_annotations.Set("osName", "Fuchsia")
-      .Set("osVersion", GetFromStartup(feedback::kBuildVersionKey))
+  default_annotations.Set(feedback::kOSNameKey, "Fuchsia")
+      .Set(feedback::kOSVersionKey, GetFromStartup(feedback::kBuildVersionKey))
       .Set(feedback::kBuildVersionKey, GetFromStartup(feedback::kBuildVersionKey))
       .Set(feedback::kBuildBoardKey, GetFromStartup(feedback::kBuildBoardKey))
       .Set(feedback::kBuildProductKey, GetFromStartup(feedback::kBuildProductKey))

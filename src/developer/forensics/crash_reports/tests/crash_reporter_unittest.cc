@@ -29,6 +29,7 @@
 #include "src/developer/forensics/crash_reports/constants.h"
 #include "src/developer/forensics/crash_reports/info/info_context.h"
 #include "src/developer/forensics/crash_reports/tests/stub_crash_server.h"
+#include "src/developer/forensics/feedback/annotations/keys.h"
 #include "src/developer/forensics/feedback/device_id_provider.h"
 #include "src/developer/forensics/testing/fakes/privacy_settings.h"
 #include "src/developer/forensics/testing/stubs/channel_control.h"
@@ -162,10 +163,12 @@ class CrashReporterTest : public UnitTestFixture {
     device_id_provider_ =
         std::make_unique<feedback::RemoteDeviceIdProvider>(dispatcher(), services());
 
-    crash_reporter_ = std::make_unique<CrashReporter>(
-        dispatcher(), services(), &clock_, info_context_, config,
-        AnnotationMap({{"osName", "Fuchsia"}, {"osVersion", kBuildVersion}}), crash_register_.get(),
-        &tags_, snapshot_manager_.get(), crash_server_.get(), device_id_provider_.get());
+    crash_reporter_ =
+        std::make_unique<CrashReporter>(dispatcher(), services(), &clock_, info_context_, config,
+                                        AnnotationMap({{feedback::kOSNameKey, "Fuchsia"},
+                                                       {feedback::kOSVersionKey, kBuildVersion}}),
+                                        crash_register_.get(), &tags_, snapshot_manager_.get(),
+                                        crash_server_.get(), device_id_provider_.get());
     FX_CHECK(crash_reporter_);
   }
 
@@ -228,8 +231,8 @@ class CrashReporterTest : public UnitTestFixture {
         {"version", kBuildVersion},
         {"program", testing::StartsWith("crashing_program")},
         {"ptype", testing::StartsWith("crashing_program")},
-        {"osName", "Fuchsia"},
-        {"osVersion", kBuildVersion},
+        {feedback::kOSNameKey, "Fuchsia"},
+        {feedback::kOSVersionKey, kBuildVersion},
         {"reportTimeMillis", Not(IsEmpty())},
         {"guid", kDefaultDeviceId},
         {"channel", kDefaultChannel},

@@ -41,25 +41,30 @@ constexpr const char* kAnnotationBuildProduct = feedback::kBuildProductKey;
 constexpr const char* kAnnotationBuildVersion = feedback::kBuildVersionKey;
 constexpr const char* kAnnotationBuildVersionPreviousBoot = feedback::kBuildVersionPreviousBootKey;
 constexpr const char* kAnnotationDeviceBoardName = feedback::kDeviceBoardNameKey;
-constexpr char kAnnotationDeviceFeedbackId[] = "device.feedback-id";
-constexpr char kAnnotationDeviceUptime[] = "device.uptime";
-constexpr char kAnnotationDeviceUtcTime[] = "device.utc-time";
-constexpr char kAnnotationHardwareBoardName[] = "hardware.board.name";
-constexpr char kAnnotationHardwareBoardRevision[] = "hardware.board.revision";
-constexpr char kAnnotationHardwareProductLanguage[] = "hardware.product.language";
-constexpr char kAnnotationHardwareProductLocaleList[] = "hardware.product.locale-list";
-constexpr char kAnnotationHardwareProductManufacturer[] = "hardware.product.manufacturer";
-constexpr char kAnnotationHardwareProductModel[] = "hardware.product.model";
-constexpr char kAnnotationHardwareProductName[] = "hardware.product.name";
-constexpr char kAnnotationHardwareProductRegulatoryDomain[] = "hardware.product.regulatory-domain";
-constexpr char kAnnotationHardwareProductSKU[] = "hardware.product.sku";
+constexpr const char* kAnnotationDeviceFeedbackId = feedback::kDeviceFeedbackIdKey;
+constexpr const char* kAnnotationDeviceUptime = feedback::kDeviceUptimeKey;
+constexpr const char* kAnnotationDeviceUtcTime = feedback::kDeviceUtcTimeKey;
+constexpr const char* kAnnotationHardwareBoardName = feedback::kHardwareBoardNameKey;
+constexpr const char* kAnnotationHardwareBoardRevision = feedback::kHardwareBoardRevisionKey;
+constexpr const char* kAnnotationHardwareProductLanguage = feedback::kHardwareProductLanguageKey;
+constexpr const char* kAnnotationHardwareProductLocaleList =
+    feedback::kHardwareProductLocaleListKey;
+constexpr const char* kAnnotationHardwareProductManufacturer =
+    feedback::kHardwareProductManufacturerKey;
+constexpr const char* kAnnotationHardwareProductModel = feedback::kHardwareProductModelKey;
+constexpr const char* kAnnotationHardwareProductName = feedback::kHardwareProductNameKey;
+constexpr const char* kAnnotationHardwareProductRegulatoryDomain =
+    feedback::kHardwareProductRegulatoryDomainKey;
+constexpr const char* kAnnotationHardwareProductSKU = feedback::kHardwareProductSKUKey;
 constexpr const char* kAnnotationSystemBootIdCurrent = feedback::kSystemBootIdCurrentKey;
 constexpr const char* kAnnotationSystemBootIdPrevious = feedback::kSystemBootIdPreviousKey;
 constexpr const char* kAnnotationSystemLastRebootReason = feedback::kSystemLastRebootReasonKey;
 constexpr const char* kAnnotationSystemLastRebootUptime = feedback::kSystemLastRebootUptimeKey;
-constexpr char kAnnotationSystemTimezonePrimary[] = "system.timezone.primary";
-constexpr char kAnnotationSystemUpdateChannelCurrent[] = "system.update-channel.current";
-constexpr char kAnnotationSystemUpdateChannelTarget[] = "system.update-channel.target";
+constexpr const char* kAnnotationSystemTimezonePrimary = feedback::kSystemTimezonePrimaryKey;
+constexpr const char* kAnnotationSystemUpdateChannelCurrent =
+    feedback::kSystemUpdateChannelCurrentKey;
+constexpr const char* kAnnotationSystemUpdateChannelTarget =
+    feedback::kSystemUpdateChannelTargetKey;
 
 // Reserved namespaces for platform annotations. Components are not allowed to use these namespaces
 // when supplying non-platform annotations.

@@ -19,8 +19,8 @@ using ::testing::UnorderedElementsAreArray;
 TEST(DefaultAnnotationsTest, BuildDefaultAnnotations_EmptyStartupAnnotations) {
   EXPECT_THAT(BuildDefaultAnnotations({}).Raw(),
               UnorderedElementsAreArray({
-                  Pair("osName", "Fuchsia"),
-                  Pair("osVersion", "unknown"),
+                  Pair(feedback::kOSNameKey, "Fuchsia"),
+                  Pair(feedback::kOSVersionKey, "unknown"),
                   Pair("debug.osVersion.error", "missing"),
                   Pair(feedback::kBuildVersionKey, "unknown"),
                   Pair("debug.build.version.error", "missing"),
@@ -43,8 +43,8 @@ TEST(DefaultAnnotationsTest, BuildDefaultAnnotations) {
                               })
           .Raw(),
       UnorderedElementsAreArray({
-          Pair("osName", "Fuchsia"),
-          Pair("osVersion", "version"),
+          Pair(feedback::kOSNameKey, "Fuchsia"),
+          Pair(feedback::kOSVersionKey, "version"),
           Pair(feedback::kBuildVersionKey, "version"),
           Pair(feedback::kBuildBoardKey, "board"),
           Pair(feedback::kBuildProductKey, "unknown"),
