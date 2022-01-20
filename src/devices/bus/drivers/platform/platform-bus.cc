@@ -18,6 +18,7 @@
 #include <zircon/boot/driver-config.h>
 #include <zircon/errors.h>
 #include <zircon/process.h>
+#include <zircon/status.h>
 #include <zircon/syscalls/iommu.h>
 
 #include <algorithm>
@@ -704,7 +705,12 @@ zx_status_t PlatformBus::Init() {
       {BIND_PLATFORM_DEV_VID, 0, board_info_.vid},
       {BIND_PLATFORM_DEV_PID, 0, board_info_.pid},
   };
-  return AddProtocolPassthrough("platform-passthrough", passthrough_props, zxdev());
+  status = AddProtocolPassthrough("platform-passthrough", passthrough_props, zxdev());
+  if (status != ZX_OK) {
+    // We log the error but we do nothing as we've already added the device successfully.
+    zxlogf(ERROR, "Error while adding platform-passthrough: %s", zx_status_get_string(status));
+  }
+  return ZX_OK;
 }
 
 void PlatformBus::DdkInit(ddk::InitTxn txn) {
