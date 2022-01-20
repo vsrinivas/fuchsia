@@ -9,7 +9,7 @@ type OnlyAppearsInImportingLibrary = struct {
 
 protocol ContainsDenied {
     @bindings_denylist("cpp, dart, go, hlcpp, libfuzzer, llcpp, rust, syzkaller")
-    AlwaysDenied(@bindings_denylist("cpp, dart, go, hlcpp, libfuzzer, llcpp, rust, syzkaller") struct {
+    AlwaysDenied(struct {
         arg OnlyAppearsInImportingLibrary;
     });
     Unattributed();

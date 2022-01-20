@@ -2,93 +2,6 @@
 
 #include <fidl/test.bindingsdenylist/cpp/wire_types.h>
 
-auto ::test_bindingsdenylist::wire::ShouldNeverAppearInAnyBinding9::which()
-    const
-    -> ::test_bindingsdenylist::wire::ShouldNeverAppearInAnyBinding9::Tag {
-  ZX_ASSERT(!has_invalid_tag());
-  switch (ordinal_) {
-    case ::test_bindingsdenylist::wire::ShouldNeverAppearInAnyBinding9::
-        Ordinal::kA:
-      return static_cast<
-          ::test_bindingsdenylist::wire::ShouldNeverAppearInAnyBinding9::Tag>(
-          ordinal_);
-    default:
-      return ::test_bindingsdenylist::wire::ShouldNeverAppearInAnyBinding9::
-          Tag::kUnknown;
-  }
-}
-
-void ::test_bindingsdenylist::wire::ShouldNeverAppearInAnyBinding9::
-    SizeAndOffsetAssertionHelper() {
-  static_assert(sizeof(ShouldNeverAppearInAnyBinding9) ==
-                sizeof(fidl_xunion_v2_t));
-  static_assert(offsetof(ShouldNeverAppearInAnyBinding9, ordinal_) ==
-                offsetof(fidl_xunion_v2_t, tag));
-  static_assert(offsetof(ShouldNeverAppearInAnyBinding9, envelope_) ==
-                offsetof(fidl_xunion_v2_t, envelope));
-}
-
-auto ::test_bindingsdenylist::wire::ShouldNeverAppearInAnyBinding6::which()
-    const
-    -> ::test_bindingsdenylist::wire::ShouldNeverAppearInAnyBinding6::Tag {
-  ZX_ASSERT(!has_invalid_tag());
-  switch (ordinal_) {
-    case ::test_bindingsdenylist::wire::ShouldNeverAppearInAnyBinding6::
-        Ordinal::kA:
-      return static_cast<
-          ::test_bindingsdenylist::wire::ShouldNeverAppearInAnyBinding6::Tag>(
-          ordinal_);
-    default:
-      return ::test_bindingsdenylist::wire::ShouldNeverAppearInAnyBinding6::
-          Tag::kUnknown;
-  }
-}
-
-void ::test_bindingsdenylist::wire::ShouldNeverAppearInAnyBinding6::
-    SizeAndOffsetAssertionHelper() {
-  static_assert(sizeof(ShouldNeverAppearInAnyBinding6) ==
-                sizeof(fidl_xunion_v2_t));
-  static_assert(offsetof(ShouldNeverAppearInAnyBinding6, ordinal_) ==
-                offsetof(fidl_xunion_v2_t, tag));
-  static_assert(offsetof(ShouldNeverAppearInAnyBinding6, envelope_) ==
-                offsetof(fidl_xunion_v2_t, envelope));
-}
-
-void ::test_bindingsdenylist::wire::AllowedDeniedResult::
-    SizeAndOffsetAssertionHelper() {
-  static_assert(sizeof(AllowedDeniedResult) == sizeof(fidl_xunion_v2_t));
-  static_assert(offsetof(AllowedDeniedResult, ordinal_) ==
-                offsetof(fidl_xunion_v2_t, tag));
-  static_assert(offsetof(AllowedDeniedResult, envelope_) ==
-                offsetof(fidl_xunion_v2_t, envelope));
-}
-
-auto ::test_bindingsdenylist::wire::ShouldNeverAppearInAnyBinding3::which()
-    const
-    -> ::test_bindingsdenylist::wire::ShouldNeverAppearInAnyBinding3::Tag {
-  ZX_ASSERT(!has_invalid_tag());
-  switch (ordinal_) {
-    case ::test_bindingsdenylist::wire::ShouldNeverAppearInAnyBinding3::
-        Ordinal::kA:
-      return static_cast<
-          ::test_bindingsdenylist::wire::ShouldNeverAppearInAnyBinding3::Tag>(
-          ordinal_);
-    default:
-      return ::test_bindingsdenylist::wire::ShouldNeverAppearInAnyBinding3::
-          Tag::kUnknown;
-  }
-}
-
-void ::test_bindingsdenylist::wire::ShouldNeverAppearInAnyBinding3::
-    SizeAndOffsetAssertionHelper() {
-  static_assert(sizeof(ShouldNeverAppearInAnyBinding3) ==
-                sizeof(fidl_xunion_v2_t));
-  static_assert(offsetof(ShouldNeverAppearInAnyBinding3, ordinal_) ==
-                offsetof(fidl_xunion_v2_t, tag));
-  static_assert(offsetof(ShouldNeverAppearInAnyBinding3, envelope_) ==
-                offsetof(fidl_xunion_v2_t, envelope));
-}
-
 void ::test_bindingsdenylist::wire::OnlyLlcpp::SizeAndOffsetAssertionHelper() {
   static_assert(sizeof(OnlyLlcpp) == sizeof(fidl_xunion_v2_t));
   static_assert(offsetof(OnlyLlcpp, ordinal_) ==
@@ -144,15 +57,5 @@ void ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyDartResult::
   static_assert(offsetof(DenyEachBindingOnlyDenyDartResult, ordinal_) ==
                 offsetof(fidl_xunion_v2_t, tag));
   static_assert(offsetof(DenyEachBindingOnlyDenyDartResult, envelope_) ==
-                offsetof(fidl_xunion_v2_t, envelope));
-}
-
-void ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyCppResult::
-    SizeAndOffsetAssertionHelper() {
-  static_assert(sizeof(DenyEachBindingOnlyDenyCppResult) ==
-                sizeof(fidl_xunion_v2_t));
-  static_assert(offsetof(DenyEachBindingOnlyDenyCppResult, ordinal_) ==
-                offsetof(fidl_xunion_v2_t, tag));
-  static_assert(offsetof(DenyEachBindingOnlyDenyCppResult, envelope_) ==
                 offsetof(fidl_xunion_v2_t, envelope));
 }

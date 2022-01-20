@@ -4194,43 +4194,10 @@
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/dependent.test.fidl",
         "line": 12,
-        "column": 96,
+        "column": 18,
         "length": 57
       },
       "is_request_or_response": true,
-      "maybe_attributes": [
-        {
-          "name": "bindings_denylist",
-          "arguments": [
-            {
-              "name": "value",
-              "type": "string",
-              "value": {
-                "kind": "literal",
-                "value": "cpp, dart, go, hlcpp, libfuzzer, llcpp, rust, syzkaller",
-                "expression": "\"cpp, dart, go, hlcpp, libfuzzer, llcpp, rust, syzkaller\"",
-                "literal": {
-                  "kind": "string",
-                  "value": "cpp, dart, go, hlcpp, libfuzzer, llcpp, rust, syzkaller",
-                  "expression": "\"cpp, dart, go, hlcpp, libfuzzer, llcpp, rust, syzkaller\""
-                }
-              },
-              "location": {
-                "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/dependent.test.fidl",
-                "line": 12,
-                "column": 37,
-                "length": 57
-              }
-            }
-          ],
-          "location": {
-            "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/dependent.test.fidl",
-            "line": 12,
-            "column": 18,
-            "length": 77
-          }
-        }
-      ],
       "members": [
         {
           "type": {

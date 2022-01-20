@@ -9,7 +9,7 @@
 
 namespace fuzzing {
 
-inline constexpr ::std::array<::fidl::fuzzing::DecoderEncoderForType, 29>
+inline constexpr ::std::array<::fidl::fuzzing::DecoderEncoderForType, 21>
     test_bindingsdenylist_decoder_encoders = {
 
         ::fidl::fuzzing::DecoderEncoderForType{
@@ -29,55 +29,6 @@ inline constexpr ::std::array<::fidl::fuzzing::DecoderEncoderForType, 29>
                 ::fidl::fuzzing::DecoderEncoderImpl<::fidl::WireRequest<
                     ::test_bindingsdenylist::ImportsSameNameContext::
                         AlwaysAppearsInImportingLibrary>>,
-        },
-        ::fidl::fuzzing::DecoderEncoderForType{
-            .fidl_type_name =
-                "::test_bindingsdenylist::wire::ShouldNeverAppearInAnyBinding8",
-            .has_flexible_envelope = true,
-            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<
-                ::test_bindingsdenylist::wire::ShouldNeverAppearInAnyBinding8>,
-        },
-        ::fidl::fuzzing::DecoderEncoderForType{
-            .fidl_type_name =
-                "::test_bindingsdenylist::wire::ShouldNeverAppearInAnyBinding7",
-            .has_flexible_envelope = false,
-            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<
-                ::test_bindingsdenylist::wire::ShouldNeverAppearInAnyBinding7>,
-        },
-        ::fidl::fuzzing::DecoderEncoderForType{
-            .fidl_type_name =
-                "::test_bindingsdenylist::wire::ShouldNeverAppearInAnyBinding5",
-            .has_flexible_envelope = true,
-            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<
-                ::test_bindingsdenylist::wire::ShouldNeverAppearInAnyBinding5>,
-        },
-        ::fidl::fuzzing::DecoderEncoderForType{
-            .fidl_type_name =
-                "::test_bindingsdenylist::wire::ShouldNeverAppearInAnyBinding4",
-            .has_flexible_envelope = false,
-            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<
-                ::test_bindingsdenylist::wire::ShouldNeverAppearInAnyBinding4>,
-        },
-        ::fidl::fuzzing::DecoderEncoderForType{
-            .fidl_type_name =
-                "::test_bindingsdenylist::wire::AllowedDeniedResponse",
-            .has_flexible_envelope = true,
-            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<
-                ::test_bindingsdenylist::wire::AllowedDeniedResponse>,
-        },
-        ::fidl::fuzzing::DecoderEncoderForType{
-            .fidl_type_name =
-                "::test_bindingsdenylist::wire::ShouldNeverAppearInAnyBinding2",
-            .has_flexible_envelope = true,
-            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<
-                ::test_bindingsdenylist::wire::ShouldNeverAppearInAnyBinding2>,
-        },
-        ::fidl::fuzzing::DecoderEncoderForType{
-            .fidl_type_name =
-                "::test_bindingsdenylist::wire::ShouldNeverAppearInAnyBinding1",
-            .has_flexible_envelope = false,
-            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<
-                ::test_bindingsdenylist::wire::ShouldNeverAppearInAnyBinding1>,
         },
 
         ::fidl::fuzzing::DecoderEncoderForType{
@@ -130,14 +81,6 @@ inline constexpr ::std::array<::fidl::fuzzing::DecoderEncoderForType, 29>
             .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<
                 ::test_bindingsdenylist::wire::
                     DenyEachBindingOnlyDenyRustResponse>,
-        },
-        ::fidl::fuzzing::DecoderEncoderForType{
-            .fidl_type_name = "::test_bindingsdenylist::wire::"
-                              "DenyEachBindingOnlyDenyLibfuzzerResponse",
-            .has_flexible_envelope = false,
-            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<
-                ::test_bindingsdenylist::wire::
-                    DenyEachBindingOnlyDenyLibfuzzerResponse>,
         },
         ::fidl::fuzzing::DecoderEncoderForType{
             .fidl_type_name = "::test_bindingsdenylist::wire::"

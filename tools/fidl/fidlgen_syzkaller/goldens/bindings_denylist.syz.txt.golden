@@ -50,53 +50,6 @@ test_bindingsdenylist_DenyEachBinding_OnlyDenyRust_ResponseOutOfLine {
 test_bindingsdenylist_DenyEachBinding_OnlyDenyRust_ResponseHandles {
        void void
 } [packed]
-test_bindingsdenylist_DenyEachBinding_OnlyDenySyzkaller_ResponseInLine {
-       b int32
-} [packed]
-test_bindingsdenylist_DenyEachBinding_OnlyDenySyzkaller_ResponseOutOfLine {
-       void void
-} [packed]
-test_bindingsdenylist_DenyEachBinding_OnlyDenySyzkaller_ResponseHandles {
-       void void
-} [packed]
-test_bindingsdenylist_ShouldNeverAppearInAnyBinding1InLine {
-       a int8
-} [packed]
-test_bindingsdenylist_ShouldNeverAppearInAnyBinding1OutOfLine {
-       void void
-} [packed]
-test_bindingsdenylist_ShouldNeverAppearInAnyBinding1Handles {
-       void void
-} [packed]
-test_bindingsdenylist_ShouldNeverAppearInAnyBinding4InLine {
-       a int8
-} [packed]
-test_bindingsdenylist_ShouldNeverAppearInAnyBinding4OutOfLine {
-       void void
-} [packed]
-test_bindingsdenylist_ShouldNeverAppearInAnyBinding4Handles {
-       void void
-} [packed]
-test_bindingsdenylist_Allowed_Denied_ResponseInLine {
-       should_never_appear_in_any_binding_4InLine test_bindingsdenylist_ShouldNeverAppearInAnyBinding4InLine
-        
-       should_never_appear_in_any_binding_6InLine test_bindingsdenylist_ShouldNeverAppearInAnyBinding6InLine
-} [packed]
-test_bindingsdenylist_Allowed_Denied_ResponseOutOfLine {
-       should_never_appear_in_any_binding_4OutOfLine test_bindingsdenylist_ShouldNeverAppearInAnyBinding4OutOfLine
-} [packed]
-test_bindingsdenylist_Allowed_Denied_ResponseHandles {
-       should_never_appear_in_any_binding_4 test_bindingsdenylist_ShouldNeverAppearInAnyBinding4Handles
-} [packed]
-test_bindingsdenylist_ShouldNeverAppearInAnyBinding7InLine {
-       a int8
-} [packed]
-test_bindingsdenylist_ShouldNeverAppearInAnyBinding7OutOfLine {
-       void void
-} [packed]
-test_bindingsdenylist_ShouldNeverAppearInAnyBinding7Handles {
-       void void
-} [packed]
 test_bindingsdenylist_MemberOnlyAppearsInImportingLibraryInLine {
        a int8
 } [packed]
@@ -164,53 +117,6 @@ test_bindingsdenylist_DenyEachBinding_OnlyDenyRust_ResultOutOfLine [
 ][varlen]
 test_bindingsdenylist_DenyEachBinding_OnlyDenyRust_ResultHandles [
        response test_bindingsdenylist_DenyEachBinding_OnlyDenyRust_ResponseHandles
-][varlen]
-test_bindingsdenylist_DenyEachBinding_OnlyDenySyzkaller_ResultInLine [
-       responseInLine fidl_union_member[1, test_bindingsdenylist_DenyEachBinding_OnlyDenySyzkaller_ResponseInLine]
-       err fidl_union_member[2, int32]
-]
-test_bindingsdenylist_DenyEachBinding_OnlyDenySyzkaller_ResultOutOfLine [
-       responseOutOfLine test_bindingsdenylist_DenyEachBinding_OnlyDenySyzkaller_ResponseOutOfLine
-][varlen]
-test_bindingsdenylist_DenyEachBinding_OnlyDenySyzkaller_ResultHandles [
-       response test_bindingsdenylist_DenyEachBinding_OnlyDenySyzkaller_ResponseHandles
-][varlen]
-test_bindingsdenylist_ShouldNeverAppearInAnyBinding3InLine [
-       a fidl_union_member[1, int8]
-]
-test_bindingsdenylist_ShouldNeverAppearInAnyBinding3OutOfLine [
-       void void
-][varlen]
-test_bindingsdenylist_ShouldNeverAppearInAnyBinding3Handles [
-       void void
-][varlen]
-test_bindingsdenylist_ShouldNeverAppearInAnyBinding6InLine [
-       a fidl_union_member[1, int8]
-]
-test_bindingsdenylist_ShouldNeverAppearInAnyBinding6OutOfLine [
-       void void
-][varlen]
-test_bindingsdenylist_ShouldNeverAppearInAnyBinding6Handles [
-       void void
-][varlen]
-test_bindingsdenylist_Allowed_Denied_ResultInLine [
-       responseInLine fidl_union_member[1, test_bindingsdenylist_Allowed_Denied_ResponseInLine]
-       err fidl_union_member[2, int32]
-]
-test_bindingsdenylist_Allowed_Denied_ResultOutOfLine [
-       responseOutOfLine test_bindingsdenylist_Allowed_Denied_ResponseOutOfLine
-][varlen]
-test_bindingsdenylist_Allowed_Denied_ResultHandles [
-       response test_bindingsdenylist_Allowed_Denied_ResponseHandles
-][varlen]
-test_bindingsdenylist_ShouldNeverAppearInAnyBinding9InLine [
-       a fidl_union_member[1, int8]
-]
-test_bindingsdenylist_ShouldNeverAppearInAnyBinding9OutOfLine [
-       void void
-][varlen]
-test_bindingsdenylist_ShouldNeverAppearInAnyBinding9Handles [
-       void void
 ][varlen]
 
 
