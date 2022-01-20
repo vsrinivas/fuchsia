@@ -285,9 +285,11 @@ zx_status_t VmObjectPaged::CreateContiguous(uint32_t pmm_alloc_flags, uint64_t s
     return ZX_ERR_NO_MEMORY;
   }
   Guard<Mutex> guard{&vmo->lock_};
-  // add them to the appropriate range of the object, this takes ownership of all the pages
+  // Add them to the appropriate range of the object, this takes ownership of all the pages
   // regardless of outcome.
-  status = vmo->cow_pages_locked()->AddNewPagesLocked(0, &page_list);
+  // This is a newly created VMO, so we don't expect to be overwriting anything in its page list.
+  status = vmo->cow_pages_locked()->AddNewPagesLocked(
+      0, &page_list, VmCowPages::ExistingEntryAction::OverwriteNone, nullptr);
   if (status != ZX_OK) {
     return status;
   }
@@ -338,7 +340,11 @@ zx_status_t VmObjectPaged::CreateFromWiredPages(const void* data, size_t size, b
         panic("page used to back static vmo in unusable state: paddr %#" PRIxPTR " state %zu\n", pa,
               VmPageStateIndex(page->state()));
       }
-      status = vmo->cow_pages_locked()->AddNewPageLocked(count * PAGE_SIZE, page, false, false);
+      // This is a newly created VMO, so we don't expect to be overwriting anything in its page
+      // list.
+      status = vmo->cow_pages_locked()->AddNewPageLocked(
+          count * PAGE_SIZE, page, VmCowPages::ExistingEntryAction::OverwriteNone, nullptr, false,
+          false);
       ASSERT(status == ZX_OK);
     }
 

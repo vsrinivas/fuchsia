@@ -1540,4 +1540,79 @@ TEST(PagerWriteback, WritebackWithMapping) {
   ASSERT_TRUE(check_buffer_data(vmo, 0, 1, expected.data(), true));
 }
 
+// Tests that the zero page marker cannot be overwritten by another page, unless written to at which
+// point it is forked.
+TEST(PagerWriteback, CannotOverwriteZeroPage) {
+  UserPager pager;
+  ASSERT_TRUE(pager.Init());
+
+  uint32_t create_options[] = {0, ZX_VMO_TRAP_DIRTY};
+
+  for (auto create_option : create_options) {
+    Vmo* vmo;
+    ASSERT_TRUE(pager.CreateVmoWithOptions(1, create_option, &vmo));
+
+    // Supply with empty source vmo so that the destination gets zero page markers.
+    zx::vmo vmo_src;
+    ASSERT_OK(zx::vmo::create(zx_system_get_page_size(), 0, &vmo_src));
+    ASSERT_OK(pager.pager().supply_pages(vmo->vmo(), 0, zx_system_get_page_size(), vmo_src, 0));
+
+    // Verify that the pager vmo has no committed pages, i.e. it only has markers.
+    zx_info_vmo_t info;
+    ASSERT_OK(vmo->vmo().get_info(ZX_INFO_VMO, &info, sizeof(info), nullptr, nullptr));
+    ASSERT_EQ(0, info.committed_bytes);
+
+    // Buffer to verify VMO contents later.
+    std::vector<uint8_t> expected(zx_system_get_page_size(), 0);
+
+    // No dirty pages yet.
+    ASSERT_TRUE(pager.VerifyDirtyRanges(vmo, nullptr, 0));
+    ASSERT_TRUE(check_buffer_data(vmo, 0, 1, expected.data(), true));
+
+    // Commit a page in the source to attempt another supply.
+    uint8_t data = 0xaa;
+    ASSERT_OK(vmo_src.write(&data, 0, sizeof(data)));
+
+    // Supplying the same page again should not overwrite the zero page marker. The supply will
+    // succeed as a no-op.
+    ASSERT_OK(pager.pager().supply_pages(vmo->vmo(), 0, zx_system_get_page_size(), vmo_src, 0));
+
+    // No committed pages still.
+    ASSERT_OK(vmo->vmo().get_info(ZX_INFO_VMO, &info, sizeof(info), nullptr, nullptr));
+    ASSERT_EQ(0, info.committed_bytes);
+
+    // The VMO is still all zeros.
+    ASSERT_TRUE(check_buffer_data(vmo, 0, 1, expected.data(), true));
+
+    // Now write to the VMO. This should fork the zero page.
+    TestThread t1([vmo, &expected]() -> bool {
+      uint8_t data = 0xbb;
+      expected[0] = data;
+      return vmo->vmo().write(&data, 0, sizeof(data)) == ZX_OK;
+    });
+    ASSERT_TRUE(t1.Start());
+
+    // Wait for and acknowledge the dirty request if configured to trap dirty transitions.
+    if (create_option == ZX_VMO_TRAP_DIRTY) {
+      ASSERT_TRUE(t1.WaitForBlocked());
+      ASSERT_TRUE(pager.WaitForPageDirty(vmo, 0, 1, ZX_TIME_INFINITE));
+      // Dirty the first page.
+      ASSERT_TRUE(pager.DirtyPages(vmo, 0, 1));
+    }
+
+    ASSERT_TRUE(t1.Wait());
+
+    // Verify that the pager vmo has one committed page now.
+    ASSERT_OK(vmo->vmo().get_info(ZX_INFO_VMO, &info, sizeof(info), nullptr, nullptr));
+    ASSERT_EQ(zx_system_get_page_size(), info.committed_bytes);
+
+    // Verify that the page is dirty.
+    zx_vmo_dirty_range_t range = {.offset = 0, .length = 1};
+    ASSERT_TRUE(pager.VerifyDirtyRanges(vmo, &range, 1));
+
+    // Verify written data.
+    ASSERT_TRUE(check_buffer_data(vmo, 0, 1, expected.data(), true));
+  }
+}
+
 }  // namespace pager_tests

@@ -2296,8 +2296,7 @@ TEST(Pager, FailErrorCode) {
 }
 
 // Test that writing to a forked zero pager marker does not cause a kernel panic. This is a
-// regression test for fxbug.dev/53181. Note that although writing to page backed vmo is not
-// strictly supported and has no guaranteed semantics it is still currently allowed.
+// regression test for fxbug.dev/53181.
 TEST(Pager, WritingZeroFork) {
   zx::pager pager;
   ASSERT_EQ(zx::pager::create(0, &pager), ZX_OK);
@@ -2318,10 +2317,8 @@ TEST(Pager, WritingZeroFork) {
 
   // Writing to this page may cause it to be committed, and if it was a marker it will fork from
   // the zero page.
-  // Do not assert that the write succeeds as we do not want to claim that it should, only that
-  // doing so should not crash the kernel.
   uint64_t data = 42;
-  vmo.write(&data, 0, sizeof(data));
+  ASSERT_OK(vmo.write(&data, 0, sizeof(data)));
 
   // Normally forking a zero page puts that page in a special list for one time zero page scanning
   // and merging. Once scanned it goes into the general unswappable page list. Both of these lists
@@ -2338,7 +2335,7 @@ TEST(Pager, WritingZeroFork) {
 
   // If our page did go marker->zero fork queue->unswappable this next write will crash the kernel
   // when it attempts to update our position in the pager backed list.
-  vmo.write(&data, 0, sizeof(data));
+  ASSERT_OK(vmo.write(&data, 0, sizeof(data)));
 }
 
 // Test that forcing a scanner reclamation evicts pages from pager backed VMOs. Verify that the page
