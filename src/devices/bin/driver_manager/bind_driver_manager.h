@@ -69,9 +69,10 @@ class BindDriverManager {
   zx_status_t BindDeviceWithDriverIndex(const fbl::RefPtr<Device>& dev,
                                         const DriverLoader::MatchDeviceConfig& config);
 
-  // Bind |driver| to |dev| via the Driver Index.
-  zx_status_t BindDriverToDeviceDriverIndex(const MatchedDriver& driver,
-                                            const fbl::RefPtr<Device>& dev);
+  // Only called when MatchedDriver is a composite driver. Binds the matched fragment
+  // in |driver| to |dev|. If a CompositeDevice for |driver| doesn't exists in
+  // |driver_index_composite_devices_|, this function creates and adds it.
+  zx_status_t BindDriverToFragment(const MatchedDriver& driver, const fbl::RefPtr<Device>& dev);
 
   // Owner. Must outlive BindDriverManager.
   Coordinator* coordinator_;

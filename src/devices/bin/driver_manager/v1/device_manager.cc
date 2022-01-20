@@ -141,18 +141,7 @@ zx_status_t DeviceManager::AddCompositeDevice(const fbl::RefPtr<Device>& dev, st
     if (!dev.is_bindable() && !dev.is_composite_bindable()) {
       continue;
     }
-
-    auto dev_ref = fbl::RefPtr(&dev);
-    size_t index;
-    if (new_device->TryMatchFragments(dev_ref, &index)) {
-      LOGF(INFO, "Device '%s' matched fragment %zu of composite '%s'", dev.name().data(), index,
-           new_device->name().data());
-      status = new_device->BindFragment(index, dev_ref);
-      if (status != ZX_OK) {
-        LOGF(ERROR, "Device '%s' failed to bind fragment %zu of composite '%s': %s",
-             dev.name().data(), index, new_device->name().data(), zx_status_get_string(status));
-      }
-    }
+    new_device->TryMatchBindFragments(fbl::RefPtr(&dev));
   }
 
   composite_devices_.push_back(std::move(new_device));

@@ -59,7 +59,7 @@ class CompositeDeviceFragment
 
   // Attempt to match this fragment against |dev|.  Returns true if the match
   // was successful.
-  bool TryMatch(const fbl::RefPtr<Device>& dev);
+  bool TryMatch(const fbl::RefPtr<Device>& dev) const;
 
   // Bind this fragment to the given device.
   zx_status_t Bind(const fbl::RefPtr<Device>& dev);
@@ -79,13 +79,13 @@ class CompositeDeviceFragment
   void set_fragment_device(fbl::RefPtr<Device> device) { fragment_device_ = std::move(device); }
 
  private:
-  // The CompositeDevice that this is a part of
+  // The CompositeDevice that this is a part of.
   CompositeDevice* const composite_;
 
-  // The name of this fragment within its CompositeDevice
+  // The name of this fragment within its CompositeDevice.
   const std::string name_;
 
-  // The index of this fragment within its CompositeDevice
+  // The index of this fragment within its CompositeDevice.
   const uint32_t index_;
 
   // Bind rules for the fragment.
@@ -118,6 +118,7 @@ class CompositeDevice : public fbl::DoublyLinkedListable<std::unique_ptr<Composi
   static zx_status_t Create(std::string_view name,
                             fuchsia_device_manager::wire::CompositeDeviceDescriptor comp_desc,
                             std::unique_ptr<CompositeDevice>* out);
+
   static zx_status_t CreateFromDriverIndex(MatchedDriver driver,
                                            std::unique_ptr<CompositeDevice>* out);
 
@@ -129,10 +130,8 @@ class CompositeDevice : public fbl::DoublyLinkedListable<std::unique_ptr<Composi
   // Returns a reference to the constructed composite device, if it exists.
   fbl::RefPtr<Device> device() const { return device_; }
 
-  // Attempt to match any of the unbound fragments against |dev|.  Returns true
-  // if a fragment was match.  |*fragment_out| will be set to the index of
-  // the matching fragment.
-  bool TryMatchFragments(const fbl::RefPtr<Device>& dev, size_t* index_out);
+  // Attempt to match and bind any of the unbound fragments against |dev|.
+  zx_status_t TryMatchBindFragments(const fbl::RefPtr<Device>& dev);
 
   // Bind the fragment with the given index to the specified device
   zx_status_t BindFragment(size_t index, const fbl::RefPtr<Device>& dev);
@@ -155,21 +154,29 @@ class CompositeDevice : public fbl::DoublyLinkedListable<std::unique_ptr<Composi
 
   using FragmentList = fbl::TaggedDoublyLinkedList<std::unique_ptr<CompositeDeviceFragment>,
                                                    CompositeDeviceFragment::ListTag>;
-  FragmentList& bound_fragments() { return bound_; }
+  FragmentList& bound_fragments() { return bound_fragments_; }
 
  private:
+  // Returns true if a fragment matches |dev|. Sets |*index_out| will be set to the
+  // matching fragment.
+  bool IsFragmentMatch(const fbl::RefPtr<Device>& dev, size_t* index_out) const;
+
   const fbl::String name_;
   const fbl::Array<const zx_device_prop_t> properties_;
   const fbl::Array<const StrProperty> str_properties_;
+
   const uint32_t fragments_count_;
   const uint32_t primary_fragment_index_;
+
   const bool spawn_colocated_;
   const fbl::Array<std::unique_ptr<Metadata>> metadata_;
+
+  // Driver index variables. |driver_index_driver_| is set by CreateFromDriverIndex().
   const bool from_driver_index_;
   const Driver* driver_index_driver_;
 
-  FragmentList unbound_;
-  FragmentList bound_;
+  FragmentList unbound_fragments_;
+  FragmentList bound_fragments_;
 
   // Once the composite has been assembled, this refers to the constructed
   // device.
