@@ -45,9 +45,12 @@ func (ci *debugInterfacesImpl) GetAdmin(_ fidl.Context, nicid uint64, request ad
 
 func (ci *debugInterfacesImpl) GetMac(_ fidl.Context, nicid uint64) (debug.InterfacesGetMacResult, error) {
 	if nicInfo, ok := ci.ns.stack.NICInfo()[tcpip.NICID(nicid)]; ok {
-		return debug.InterfacesGetMacResultWithResponse(debug.InterfacesGetMacResponse{
-			Mac: fidlconv.ToNetMacAddress(nicInfo.LinkAddress),
-		}), nil
+		var response debug.InterfacesGetMacResponse
+		if linkAddress := nicInfo.LinkAddress; len(linkAddress) != 0 {
+			mac := fidlconv.ToNetMacAddress(linkAddress)
+			response.Mac = &mac
+		}
+		return debug.InterfacesGetMacResultWithResponse(response), nil
 	}
 	return debug.InterfacesGetMacResultWithErr(debug.InterfacesGetMacErrorNotFound), nil
 }

@@ -616,7 +616,6 @@ type interfacesAdminInstallerImpl struct {
 }
 
 func (i *interfacesAdminInstallerImpl) InstallDevice(_ fidl.Context, device network.DeviceWithCtxInterface, deviceControl admin.DeviceControlWithCtxInterfaceRequest) error {
-
 	client, err := netdevice.NewClient(context.Background(), &device, &netdevice.SimpleSessionConfigFactory{})
 	if err != nil {
 		_ = syslog.WarnTf(controlName, "InstallDevice: %s", err)

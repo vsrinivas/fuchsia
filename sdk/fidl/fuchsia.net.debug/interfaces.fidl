@@ -27,11 +27,11 @@ protocol Interfaces {
     /// Return an interface's MAC address.
     ///
     /// + request `id` identifies the interface whose MAC is requested.
-    /// - response `mac` is the interface's MAC address.
+    /// - response `mac` is the interface's MAC address, if it has one.
     GetMac(struct {
         id fuchsia.net.interface_id;
     }) -> (struct {
-        mac fuchsia.net.MacAddress;
+        mac fuchsia.net.MacAddress:optional;
     }) error strict enum {
         /// `id` does not identify an interface.
         NOT_FOUND = 1;
