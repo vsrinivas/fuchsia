@@ -377,6 +377,37 @@
                     "/core/full-resolver",
                 ],
             },
+
+            //TODO(fxbug.dev/91765) - Remove source moniker after from target.
+            {
+                source_moniker: "/bootstrap/cr50_agent",
+                source: "component",
+                source_name: "fuchsia.tpm.cr50.PinWeaver",
+                capability: "protocol",
+                target_monikers: [
+                    "/bootstrap",
+                    "/bootstrap/cr50_agent",
+                    "/core",
+                    "/core/account",
+                    "/core/account/credential_manager",
+                ],
+            },
+
+            //TODO(fxbug.dev/91765) - Remove source moniker after from target.
+            {
+                source_moniker: "/bootstrap/cr50_agent",
+                source: "component",
+                source_name: "fuchsia.tpm.cr50.Cr50",
+                capability: "protocol",
+                target_monikers: [
+                    "/bootstrap",
+                    "/bootstrap/cr50_agent",
+                    "/bootstrap/console-launcher",
+                    "/bootstrap/miscsvc",
+                    "/core",
+                    "/core/appmgr",
+                ],
+            },
         ],
         child_policy: {
             reboot_on_terminate: [
