@@ -14,6 +14,8 @@
 #include <lib/sys/cpp/component_context.h>
 #include <zircon/device/vfs.h>
 
+#include <sdk/lib/device-watcher/cpp/device-watcher.h>
+
 #include "isolated_devmgr.h"
 #include "src/lib/files/glob.h"
 
@@ -93,7 +95,7 @@ class DevmgrTest : public ::gtest::RealLoopFixture {
   void EnableVirtualAudio(zx::channel devfs) {
     fbl::unique_fd devfs_fd, fd;
     ASSERT_EQ(ZX_OK, fdio_fd_create(devfs.release(), devfs_fd.reset_and_get_address()));
-    ASSERT_EQ(ZX_OK, devmgr_integration_test::RecursiveWaitForFile(
+    ASSERT_EQ(ZX_OK, device_watcher::RecursiveWaitForFile(
                          devfs_fd, "sys/platform/00:00:2f/virtual_audio", &fd));
 
     fdio_cpp::UnownedFdioCaller caller(devfs_fd.get());
@@ -129,12 +131,11 @@ TEST_F(DevmgrTest, DeviceEntryEnumerationTest) {
 
   fbl::unique_fd fd;
 
-  ASSERT_EQ(ZX_OK, devmgr_integration_test::RecursiveWaitForFile(devmgr->devfs_root(),
-                                                                 "sys/platform", &fd));
-  ASSERT_EQ(ZX_OK, devmgr_integration_test::RecursiveWaitForFile(
+  ASSERT_EQ(ZX_OK, device_watcher::RecursiveWaitForFile(devmgr->devfs_root(), "sys/platform", &fd));
+  ASSERT_EQ(ZX_OK, device_watcher::RecursiveWaitForFile(
                        devmgr->devfs_root(), "sys/platform/platform-passthrough/test-board", &fd));
-  ASSERT_EQ(ZX_OK, devmgr_integration_test::RecursiveWaitForFile(
-                       devmgr->devfs_root(), "sys/platform/00:00:f/fallback-rtc", &fd));
+  ASSERT_EQ(ZX_OK, device_watcher::RecursiveWaitForFile(devmgr->devfs_root(),
+                                                        "sys/platform/00:00:f/fallback-rtc", &fd));
 }
 
 TEST_F(DevmgrTest, ExceptionCallback) {
@@ -361,16 +362,16 @@ TEST_F(DevmgrTest, DiagnosticsFiles) {
   ASSERT_TRUE(devmgr);
 
   fbl::unique_fd fd;
-  ASSERT_EQ(ZX_OK, devmgr_integration_test::RecursiveWaitForFileReadOnly(devmgr->devfs_root(),
-                                                                         "diagnostics", &fd));
-  ASSERT_EQ(ZX_OK, devmgr_integration_test::RecursiveWaitForFileReadOnly(devmgr->devfs_root(),
-                                                                         "diagnostics/class", &fd));
-  ASSERT_EQ(ZX_OK, devmgr_integration_test::RecursiveWaitForFileReadOnly(
-                       devmgr->devfs_root(), "diagnostics/driver_manager", &fd));
   ASSERT_EQ(ZX_OK,
-            devmgr_integration_test::RecursiveWaitForFileReadOnly(
+            device_watcher::RecursiveWaitForFileReadOnly(devmgr->devfs_root(), "diagnostics", &fd));
+  ASSERT_EQ(ZX_OK, device_watcher::RecursiveWaitForFileReadOnly(devmgr->devfs_root(),
+                                                                "diagnostics/class", &fd));
+  ASSERT_EQ(ZX_OK, device_watcher::RecursiveWaitForFileReadOnly(devmgr->devfs_root(),
+                                                                "diagnostics/driver_manager", &fd));
+  ASSERT_EQ(ZX_OK,
+            device_watcher::RecursiveWaitForFileReadOnly(
                 devmgr->devfs_root(), "diagnostics/driver_manager/fuchsia.inspect.Tree", &fd));
-  ASSERT_EQ(ZX_OK, devmgr_integration_test::RecursiveWaitForFileReadOnly(
+  ASSERT_EQ(ZX_OK, device_watcher::RecursiveWaitForFileReadOnly(
                        devmgr->devfs_root(), "diagnostics/driver_manager/driver_host", &fd));
 
   // TODO(fxbug.dev/50569): Add test for root,sys,misc,test driver_host files once koids are

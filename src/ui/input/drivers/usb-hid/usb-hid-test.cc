@@ -88,8 +88,8 @@ void USBVirtualBus::Unbind(fbl::String devpath) {
   std::string ifc_path = usb_hid_path.substr(0, usb_hid_path.find_last_of('/'));
   fbl::unique_fd fd_usb_hid_parent(openat(GetRootFd(), ifc_path.c_str(), O_DIRECTORY | O_RDONLY));
   ASSERT_GE(fd_usb_hid_parent.get(), 0);
-  std::unique_ptr<devmgr_integration_test::DirWatcher> watcher;
-  ASSERT_OK(devmgr_integration_test::DirWatcher::Create(std::move(fd_usb_hid_parent), &watcher));
+  std::unique_ptr<device_watcher::DirWatcher> watcher;
+  ASSERT_OK(device_watcher::DirWatcher::Create(std::move(fd_usb_hid_parent), &watcher));
   auto result = fidl::WireCall<fuchsia_device::Controller>(zx::unowned_channel(usbhid_channel))
                     ->ScheduleUnbind();
   ASSERT_OK(result.status());

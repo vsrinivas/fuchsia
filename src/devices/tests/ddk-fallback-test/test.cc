@@ -34,8 +34,7 @@ class FallbackTest : public zxtest::Test {
     fbl::unique_fd fd;
     fbl::String path = fbl::StringPrintf("sys/platform/11:16:0/ddk-%s-test",
                                          fallback ? "fallback" : "not-fallback");
-    ASSERT_OK(
-        devmgr_integration_test::RecursiveWaitForFile(devmgr_.devfs_root(), path.c_str(), &fd));
+    ASSERT_OK(device_watcher::RecursiveWaitForFile(devmgr_.devfs_root(), path.c_str(), &fd));
     ASSERT_GT(fd.get(), 0);
     ASSERT_OK(fdio_get_service_handle(fd.release(), chan_.reset_and_get_address()));
     ASSERT_NE(chan_.get(), ZX_HANDLE_INVALID);

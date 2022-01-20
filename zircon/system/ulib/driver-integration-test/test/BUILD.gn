@@ -8,6 +8,7 @@ import("//build/test.gni")
 test("driver-integration") {
   sources = [ "main.cc" ]
   deps = [
+    "//sdk/lib/device-watcher/cpp",
     "//sdk/lib/fdio",
     "//src/lib/ddk",
     "//zircon/system/ulib/driver-integration-test",

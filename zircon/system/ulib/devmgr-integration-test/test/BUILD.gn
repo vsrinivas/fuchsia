@@ -10,6 +10,7 @@ test("devmgr-integration") {
   deps = [
     "//sdk/fidl/fuchsia.device.manager:fuchsia.device.manager_c",
     "//sdk/fidl/fuchsia.device.manager:fuchsia.device.manager_llcpp",
+    "//sdk/lib/device-watcher/cpp",
     "//sdk/lib/fdio",
     "//sdk/lib/sys/cpp",
     "//src/lib/files",

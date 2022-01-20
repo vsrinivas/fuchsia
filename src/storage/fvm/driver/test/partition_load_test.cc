@@ -75,8 +75,7 @@ TEST_F(FvmVPartitionLoadTest, LoadPartitionWithPlaceHolderGuidIsUpdated) {
     ASSERT_OK(fvm->Rebind({}));
 
     fbl::unique_fd fvmfd;
-    devmgr_integration_test::RecursiveWaitForFile(devmgr_->devfs_root(), partition_path.c_str(),
-                                                  &fvmfd);
+    device_watcher::RecursiveWaitForFile(devmgr_->devfs_root(), partition_path.c_str(), &fvmfd);
 
     fdio_cpp::UnownedFdioCaller caller(fvmfd.get());
     auto result =
@@ -93,8 +92,7 @@ TEST_F(FvmVPartitionLoadTest, LoadPartitionWithPlaceHolderGuidIsUpdated) {
     ASSERT_OK(fvm->Rebind({}));
 
     fbl::unique_fd fvmfd;
-    devmgr_integration_test::RecursiveWaitForFile(devmgr_->devfs_root(), partition_path.c_str(),
-                                                  &fvmfd);
+    device_watcher::RecursiveWaitForFile(devmgr_->devfs_root(), partition_path.c_str(), &fvmfd);
 
     fdio_cpp::UnownedFdioCaller caller(fvmfd.get());
     auto result =

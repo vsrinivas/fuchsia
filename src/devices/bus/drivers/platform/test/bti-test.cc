@@ -19,9 +19,8 @@
 #include <zircon/boot/image.h>
 #include <zircon/status.h>
 
+#include <sdk/lib/device-watcher/cpp/device-watcher.h>
 #include <zxtest/zxtest.h>
-
-#include "sdk/lib/device-watcher/cpp/device-watcher.h"
 
 namespace {
 

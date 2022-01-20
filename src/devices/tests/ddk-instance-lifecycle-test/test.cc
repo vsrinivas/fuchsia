@@ -36,8 +36,8 @@ class InstanceLifecycleTest : public zxtest::Test {
     zx_status_t status = IsolatedDevmgr::Create(&args, &devmgr_);
     ASSERT_OK(status);
     fbl::unique_fd fd;
-    ASSERT_OK(devmgr_integration_test::RecursiveWaitForFile(
-        devmgr_.devfs_root(), "sys/platform/11:12:0/instance-test", &fd));
+    ASSERT_OK(device_watcher::RecursiveWaitForFile(devmgr_.devfs_root(),
+                                                   "sys/platform/11:12:0/instance-test", &fd));
     ASSERT_GT(fd.get(), 0);
     ASSERT_OK(fdio_get_service_handle(fd.release(), device_.channel().reset_and_get_address()));
     ASSERT_TRUE(device_.is_valid());
@@ -172,7 +172,7 @@ TEST_F(InstanceLifecycleTest, NonPipelinedClientClose) {
   fidl::ClientEnd<InstanceDevice> instance_client;
   {
     fbl::unique_fd fd;
-    ASSERT_OK(devmgr_integration_test::RecursiveWaitForFile(
+    ASSERT_OK(device_watcher::RecursiveWaitForFile(
         devmgr_.devfs_root(), "sys/platform/11:12:0/instance-test/child", &fd));
     ASSERT_GT(fd.get(), 0);
     ASSERT_OK(
@@ -220,7 +220,7 @@ TEST_F(InstanceLifecycleTest, NonPipelinedClientRemoveAndClose) {
   fidl::ClientEnd<InstanceDevice> instance_client;
   {
     fbl::unique_fd fd;
-    ASSERT_OK(devmgr_integration_test::RecursiveWaitForFile(
+    ASSERT_OK(device_watcher::RecursiveWaitForFile(
         devmgr_.devfs_root(), "sys/platform/11:12:0/instance-test/child", &fd));
     ASSERT_GT(fd.get(), 0);
     ASSERT_OK(

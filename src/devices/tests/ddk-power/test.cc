@@ -15,6 +15,7 @@
 #include <zircon/processargs.h>
 #include <zircon/syscalls.h>
 
+#include <sdk/lib/device-watcher/cpp/device-watcher.h>
 #include <zxtest/zxtest.h>
 
 using driver_integration_test::IsolatedDevmgr;
@@ -48,14 +49,14 @@ class PowerTestCase : public zxtest::Test {
     zx_status_t status = IsolatedDevmgr::Create(&args, &devmgr);
     ASSERT_OK(status);
     fbl::unique_fd parent_fd, child_fd;
-    ASSERT_OK(devmgr_integration_test::RecursiveWaitForFile(
-        devmgr.devfs_root(), "sys/platform/11:0b:0/power-test", &parent_fd));
+    ASSERT_OK(device_watcher::RecursiveWaitForFile(devmgr.devfs_root(),
+                                                   "sys/platform/11:0b:0/power-test", &parent_fd));
     ASSERT_GT(parent_fd.get(), 0);
     ASSERT_OK(
         fdio_get_service_handle(parent_fd.release(), parent_device_handle.reset_and_get_address()));
     ASSERT_NE(parent_device_handle.get(), ZX_HANDLE_INVALID);
 
-    ASSERT_OK(devmgr_integration_test::RecursiveWaitForFile(
+    ASSERT_OK(device_watcher::RecursiveWaitForFile(
         devmgr.devfs_root(), "sys/platform/11:0b:0/power-test/power-test-child", &child_fd));
     ASSERT_GT(child_fd.get(), 0);
 
@@ -81,7 +82,7 @@ class PowerTestCase : public zxtest::Test {
     ASSERT_OK(call_status);
 
     fbl::unique_fd child2_fd;
-    ASSERT_OK(devmgr_integration_test::RecursiveWaitForFile(
+    ASSERT_OK(device_watcher::RecursiveWaitForFile(
         devmgr.devfs_root(), "sys/platform/11:0b:0/power-test/power-test-child-2", &child2_fd));
     ASSERT_GT(child2_fd.get(), 0);
     ASSERT_OK(

@@ -43,10 +43,10 @@ TEST(DeviceControllerIntegrationTest, RunCompatibilityHookSuccess) {
   zx_status_t status = IsolatedDevmgr::Create(&args, &devmgr);
   ASSERT_OK(status);
   fbl::unique_fd parent_fd, child_fd;
-  devmgr_integration_test::RecursiveWaitForFile(
-      devmgr.devfs_root(), "sys/platform/11:0a:0/compatibility-test", &parent_fd);
+  device_watcher::RecursiveWaitForFile(devmgr.devfs_root(),
+                                       "sys/platform/11:0a:0/compatibility-test", &parent_fd);
   ASSERT_GT(parent_fd.get(), 0);
-  devmgr_integration_test::RecursiveWaitForFile(
+  device_watcher::RecursiveWaitForFile(
       devmgr.devfs_root(), "sys/platform/11:0a:0/compatibility-test/compatibility-test-child",
       &child_fd);
   ASSERT_GT(child_fd.get(), 0);
@@ -87,8 +87,8 @@ TEST(DeviceControllerIntegrationTest, RunCompatibilityHookMissingAddInBind) {
   zx_status_t status = IsolatedDevmgr::Create(&args, &devmgr);
   ASSERT_OK(status);
   fbl::unique_fd parent_fd, child_fd;
-  devmgr_integration_test::RecursiveWaitForFile(
-      devmgr.devfs_root(), "sys/platform/11:0a:0/compatibility-test", &parent_fd);
+  device_watcher::RecursiveWaitForFile(devmgr.devfs_root(),
+                                       "sys/platform/11:0a:0/compatibility-test", &parent_fd);
   ASSERT_GT(parent_fd.get(), 0);
 
   zx::channel parent_device_handle;
@@ -127,8 +127,8 @@ TEST(DeviceControllerIntegrationTest, RunCompatibilityHookMissingRemoveInUnbind)
   zx_status_t status = IsolatedDevmgr::Create(&args, &devmgr);
   ASSERT_OK(status);
   fbl::unique_fd parent_fd, child_fd;
-  devmgr_integration_test::RecursiveWaitForFile(
-      devmgr.devfs_root(), "sys/platform/11:0a:0/compatibility-test", &parent_fd);
+  device_watcher::RecursiveWaitForFile(devmgr.devfs_root(),
+                                       "sys/platform/11:0a:0/compatibility-test", &parent_fd);
   ASSERT_GT(parent_fd.get(), 0);
 
   zx::channel parent_device_handle;

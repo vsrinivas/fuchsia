@@ -8,9 +8,8 @@
 #include <time.h>
 #include <zircon/assert.h>
 
+#include <sdk/lib/device-watcher/cpp/device-watcher.h>
 #include <zxtest/zxtest.h>
-
-#include "sdk/lib/device-watcher/cpp/device-watcher.h"
 
 bool gUseRamDisk = true;
 unsigned int gRandSeed = 1;

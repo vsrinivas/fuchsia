@@ -24,8 +24,8 @@
 
 namespace {
 
+using device_watcher::RecursiveWaitForFile;
 using devmgr_integration_test::IsolatedDevmgr;
-using devmgr_integration_test::RecursiveWaitForFile;
 
 TEST(PbusTest, Enumeration) {
   devmgr_launcher::Args args;

@@ -6,8 +6,7 @@
 #include <zircon/device/vfs.h>
 
 #include <gtest/gtest.h>
-
-#include "sdk/lib/device-watcher/cpp/device-watcher.h"
+#include <sdk/lib/device-watcher/cpp/device-watcher.h>
 
 TEST(AutobindTest, DriversExist) {
   fbl::unique_fd out;

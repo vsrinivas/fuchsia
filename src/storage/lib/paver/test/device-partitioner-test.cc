@@ -60,7 +60,7 @@ constexpr uint64_t kMebibyte = 1024 * 1024;
 constexpr uint64_t kGibibyte = kMebibyte * 1024;
 constexpr uint64_t kTebibyte = kGibibyte * 1024;
 
-using devmgr_integration_test::RecursiveWaitForFile;
+using device_watcher::RecursiveWaitForFile;
 using driver_integration_test::IsolatedDevmgr;
 using paver::BlockWatcherPauser;
 using paver::PartitionSpec;

@@ -42,8 +42,8 @@ zx_status_t RamNandCtl::Create(fbl::RefPtr<RamNandCtl>* out) {
   }
 
   fbl::unique_fd ctl;
-  st = devmgr_integration_test::RecursiveWaitForFile(devmgr.devfs_root(),
-                                                     "sys/platform/00:00:2e/nand-ctl", &ctl);
+  st = device_watcher::RecursiveWaitForFile(devmgr.devfs_root(), "sys/platform/00:00:2e/nand-ctl",
+                                            &ctl);
   if (st != ZX_OK) {
     fprintf(stderr, "ram_nand_ctl device failed enumerated, %d\n", st);
     return st;
@@ -84,7 +84,7 @@ zx_status_t RamNandCtl::CreateRamNand(const fuchsia_hardware_nand_RamNandInfo* c
   fprintf(stderr, "Trying to open (%s)\n", path.c_str());
 
   fbl::unique_fd fd;
-  st = devmgr_integration_test::RecursiveWaitForFile(devfs_root(), path.c_str(), &fd);
+  st = device_watcher::RecursiveWaitForFile(devfs_root(), path.c_str(), &fd);
   if (st != ZX_OK) {
     return st;
   }

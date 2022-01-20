@@ -20,10 +20,10 @@
 #include <fbl/algorithm.h>
 #include <fbl/string.h>
 #include <fbl/unique_fd.h>
+#include <sdk/lib/device-watcher/cpp/device-watcher.h>
 #include <zxtest/base/log-sink.h>
 #include <zxtest/zxtest.h>
 
-#include "sdk/lib/device-watcher/cpp/device-watcher.h"
 #include "src/lib/fsl/io/device_watcher.h"
 #include "zircon/system/utest/device-enumeration/aemu.h"
 

@@ -13,7 +13,8 @@
 #include <lib/syslog/cpp/log_settings.h>
 #include <lib/syslog/cpp/macros.h>
 
-#include "sdk/lib/device-watcher/cpp/device-watcher.h"
+#include <sdk/lib/device-watcher/cpp/device-watcher.h>
+
 #include "src/connectivity/network/testing/netemul/lib/network/network_context.h"
 
 constexpr char kTapctlRelativePath[] = "sys/test/tapctl";

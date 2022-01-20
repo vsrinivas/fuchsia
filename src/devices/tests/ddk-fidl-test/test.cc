@@ -39,7 +39,7 @@ void CheckTransaction(const board_test::DeviceEntry& entry, const char* device_f
 
   // Wait for the driver to be created
   fbl::unique_fd fd;
-  status = devmgr_integration_test::RecursiveWaitForFile(devmgr.devfs_root(), device_fs, &fd);
+  status = device_watcher::RecursiveWaitForFile(devmgr.devfs_root(), device_fs, &fd);
   ASSERT_OK(status);
 
   // Get a FIDL channel to the device

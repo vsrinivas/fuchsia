@@ -87,8 +87,8 @@ void TestDevice::SetupDevmgr() {
 
   ASSERT_EQ(driver_integration_test::IsolatedDevmgr::Create(&args, &devmgr_), ZX_OK);
   fbl::unique_fd ctl;
-  ASSERT_EQ(devmgr_integration_test::RecursiveWaitForFile(devmgr_.devfs_root(),
-                                                          "sys/platform/00:00:2d/ramctl", &ctl),
+  ASSERT_EQ(device_watcher::RecursiveWaitForFile(devmgr_.devfs_root(),
+                                                 "sys/platform/00:00:2d/ramctl", &ctl),
             ZX_OK);
 }
 
@@ -168,8 +168,7 @@ void TestDevice::Rebind() {
     ASSERT_OK(status);
     ASSERT_OK(call_status);
     fbl::unique_fd dev_root = devfs_root();
-    ASSERT_EQ(devmgr_integration_test::RecursiveWaitForFile(dev_root, fvm_part_path_, &fvm_part_),
-              ZX_OK);
+    ASSERT_EQ(device_watcher::RecursiveWaitForFile(dev_root, fvm_part_path_, &fvm_part_), ZX_OK);
     parent_caller_.reset(fvm_part_.get());
   } else {
     ASSERT_EQ(ramdisk_rebind(ramdisk_), ZX_OK);
@@ -292,8 +291,7 @@ void TestDevice::CreateRamdisk(size_t device_size, size_t block_size) {
   ASSERT_EQ(ramdisk_create_at(devfs_root_fd.get(), block_size, count, &ramdisk_), ZX_OK);
 
   fbl::unique_fd ramdisk_ignored;
-  devmgr_integration_test::RecursiveWaitForFile(devfs_root_fd, ramdisk_get_path(ramdisk_),
-                                                &ramdisk_ignored);
+  device_watcher::RecursiveWaitForFile(devfs_root_fd, ramdisk_get_path(ramdisk_), &ramdisk_ignored);
 
   parent_caller_.reset(ramdisk_get_block_fd(ramdisk_));
 
@@ -328,7 +326,7 @@ void TestDevice::CreateFvmPart(size_t device_size, size_t block_size) {
   snprintf(path, sizeof(path), "%s/fvm", ramdisk_get_path(ramdisk_));
   fbl::unique_fd dev_root = devfs_root();
   fbl::unique_fd fvm_fd;
-  ASSERT_EQ(devmgr_integration_test::RecursiveWaitForFile(dev_root, path, &fvm_fd), ZX_OK);
+  ASSERT_EQ(device_watcher::RecursiveWaitForFile(dev_root, path, &fvm_fd), ZX_OK);
 
   // Allocate a FVM partition with the last slice unallocated.
   alloc_req_t req;

@@ -7,10 +7,10 @@
 #include <lib/service/llcpp/service.h>
 #include <zircon/hw/gpt.h>
 
+#include <sdk/lib/device-watcher/cpp/device-watcher.h>
 #include <zxtest/zxtest.h>
 
 #include "parent.h"
-#include "sdk/lib/device-watcher/cpp/device-watcher.h"
 
 constexpr fuchsia_hardware_nand_Info kNandInfo = {
     .page_size = 4096,

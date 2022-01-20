@@ -45,7 +45,7 @@ std::string GetInspectInstanceGuid(const zx::vmo& inspect_vmo) {
 zx::vmo GetInspectVMOHandle(const fbl::unique_fd& devfs_root) {
   fbl::unique_fd fd;
   zx_status_t rc;
-  if ((rc = devmgr_integration_test::RecursiveWaitForFileReadOnly(
+  if ((rc = device_watcher::RecursiveWaitForFileReadOnly(
            devfs_root, "diagnostics/class/zxcrypt/000.inspect", &fd)) != ZX_OK) {
     printf("Failed in wait for inspect file: %d\n", rc);
     return zx::vmo();
@@ -64,8 +64,8 @@ TEST(ZxcryptInspect, ExportsGuid) {
   driver_integration_test::IsolatedDevmgr::Args args;
   ASSERT_EQ(driver_integration_test::IsolatedDevmgr::Create(&args, &devmgr), ZX_OK);
   fbl::unique_fd ctl;
-  ASSERT_EQ(devmgr_integration_test::RecursiveWaitForFile(devmgr.devfs_root(),
-                                                          "sys/platform/00:00:2d/ramctl", &ctl),
+  ASSERT_EQ(device_watcher::RecursiveWaitForFile(devmgr.devfs_root(),
+                                                 "sys/platform/00:00:2d/ramctl", &ctl),
             ZX_OK);
 
   fbl::unique_fd devfs_root_fd = devmgr.devfs_root().duplicate();
@@ -74,8 +74,7 @@ TEST(ZxcryptInspect, ExportsGuid) {
   ramdisk_client_t* ramdisk = nullptr;
   ASSERT_OK(ramdisk_create_at(devmgr.devfs_root().get(), kBlockSz, kBlockCnt, &ramdisk));
   fbl::unique_fd ramdisk_ignored;
-  devmgr_integration_test::RecursiveWaitForFile(devfs_root_fd, ramdisk_get_path(ramdisk),
-                                                &ramdisk_ignored);
+  device_watcher::RecursiveWaitForFile(devfs_root_fd, ramdisk_get_path(ramdisk), &ramdisk_ignored);
   fbl::unique_fd ramdisk_fd = fbl::unique_fd(dup(ramdisk_get_block_fd(ramdisk)));
 
   // Create a new zxcrypt volume manager using the ramdisk.

@@ -17,6 +17,7 @@ source_set("src") {
   public_deps = [ "//zircon/system/ulib/devmgr-integration-test" ]
 
   deps = [
+    "//sdk/lib/device-watcher/cpp",
     "//sdk/lib/fdio",
     "//sdk/lib/fit",
     "//sdk/lib/sys/cpp",
@@ -105,10 +106,10 @@ static_library("usb-virtual-bus") {
     "//sdk/fidl/fuchsia.hardware.usb.peripheral:fuchsia.hardware.usb.peripheral_llcpp",
     "//sdk/fidl/fuchsia.hardware.usb.virtual.bus:fuchsia.hardware.usb.virtual.bus_llcpp",
     "//src/lib/testing/loop_fixture",
-    "//zircon/system/ulib/devmgr-integration-test",
   ]
   deps = [
     "//sdk/fidl/fuchsia.sys",
+    "//sdk/lib/device-watcher/cpp",
     "//sdk/lib/fdio",
     "//sdk/lib/fit",
     "//sdk/lib/sys/cpp",
@@ -146,6 +147,7 @@ executable("test_bin") {
     "//sdk/fidl/fuchsia.io:fuchsia.io",
     "//sdk/fidl/fuchsia.sys",
     "//sdk/fidl/fuchsia.virtualaudio",
+    "//sdk/lib/device-watcher/cpp",
     "//sdk/lib/fdio",
     "//sdk/lib/fit",
     "//sdk/lib/sys/cpp",

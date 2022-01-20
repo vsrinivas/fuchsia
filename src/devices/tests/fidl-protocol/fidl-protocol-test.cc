@@ -7,9 +7,8 @@
 #include <lib/service/llcpp/service.h>
 
 #include <fbl/unique_fd.h>
+#include <sdk/lib/device-watcher/cpp/device-watcher.h>
 #include <zxtest/zxtest.h>
-
-#include "sdk/lib/device-watcher/cpp/device-watcher.h"
 
 namespace {
 TEST(FidlProtocolTest, ChildBinds) {

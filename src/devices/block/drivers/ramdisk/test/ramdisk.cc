@@ -45,8 +45,8 @@
 #include <fbl/unique_fd.h>
 #include <gtest/gtest.h>
 #include <ramdevice-client/ramdisk.h>
+#include <sdk/lib/device-watcher/cpp/device-watcher.h>
 
-#include "sdk/lib/device-watcher/cpp/device-watcher.h"
 #include "src/lib/storage/block_client/cpp/client.h"
 
 namespace ramdisk {

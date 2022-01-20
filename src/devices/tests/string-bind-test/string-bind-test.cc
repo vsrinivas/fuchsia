@@ -11,8 +11,8 @@
 #include <lib/sys/cpp/component_context.h>
 
 #include <gtest/gtest.h>
+#include <sdk/lib/device-watcher/cpp/device-watcher.h>
 
-#include "sdk/lib/device-watcher/cpp/device-watcher.h"
 #include "src/lib/fxl/strings/string_printf.h"
 
 const std::string kDriverBaseUrl = "fuchsia-boot:///#driver";

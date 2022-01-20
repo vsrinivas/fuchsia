@@ -40,8 +40,8 @@ USBVirtualBusBase::USBVirtualBusBase() {
   ASSERT_OK(IsolatedDevmgr::Create(&args_, &devmgr_));
 
   fbl::unique_fd fd;
-  devmgr_integration_test::RecursiveWaitForFile(devmgr_.devfs_root(),
-                                                "sys/platform/11:03:0/usb-virtual-bus", &fd);
+  device_watcher::RecursiveWaitForFile(devmgr_.devfs_root(), "sys/platform/11:03:0/usb-virtual-bus",
+                                       &fd);
   ASSERT_TRUE(fd.is_valid());
 
   zx::channel virtual_bus;

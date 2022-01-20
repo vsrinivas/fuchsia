@@ -14,11 +14,7 @@ zx_library("devmgr-integration-test") {
   sdk = "shared"
   sdk_headers = [ "lib/devmgr-integration-test/fixture.h" ]
 
-  sources = [
-    "dir-watcher.cc",
-    "file-wait.cc",
-    "launcher.cc",
-  ]
+  sources = [ "launcher.cc" ]
   public_deps = [
     ":client_includes",
 

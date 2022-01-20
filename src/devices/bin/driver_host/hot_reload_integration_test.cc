@@ -70,7 +70,7 @@ TEST(HotReloadIntegrationTest, TestRestartOneDriver) {
   fbl::unique_fd fd_driver;
   zx::channel chan_driver;
 
-  ASSERT_OK(devmgr_integration_test::RecursiveWaitForFile(
+  ASSERT_OK(device_watcher::RecursiveWaitForFile(
       devmgr.devfs_root(), "sys/platform/11:17:0/driver-host-restart-driver", &fd_driver));
   ASSERT_GT(fd_driver.get(), 0);
   ASSERT_OK(fdio_get_service_handle(fd_driver.release(), chan_driver.reset_and_get_address()));
@@ -86,8 +86,8 @@ TEST(HotReloadIntegrationTest, TestRestartOneDriver) {
   // Need to create a DirWatcher to wait for the device to close.
   fbl::unique_fd fd(
       openat(devmgr.devfs_root().get(), "sys/platform/11:17:0", O_DIRECTORY | O_RDONLY));
-  std::unique_ptr<devmgr_integration_test::DirWatcher> watcher;
-  ASSERT_OK(devmgr_integration_test::DirWatcher::Create(std::move(fd), &watcher));
+  std::unique_ptr<device_watcher::DirWatcher> watcher;
+  ASSERT_OK(device_watcher::DirWatcher::Create(std::move(fd), &watcher));
 
   // Restart the driver host of the test driver.
   fuchsia::driver::development::DriverDevelopment_RestartDriverHosts_Result result;
@@ -98,7 +98,7 @@ TEST(HotReloadIntegrationTest, TestRestartOneDriver) {
   ASSERT_OK(watcher->WaitForRemoval("driver-host-restart-driver", zx::duration::infinite()));
 
   // Get pid of driver after restarting.
-  ASSERT_OK(devmgr_integration_test::RecursiveWaitForFile(
+  ASSERT_OK(device_watcher::RecursiveWaitForFile(
       devmgr.devfs_root(), "sys/platform/11:17:0/driver-host-restart-driver", &fd_driver));
   ASSERT_GT(fd_driver.get(), 0);
   ASSERT_OK(fdio_get_service_handle(fd_driver.release(), chan_driver.reset_and_get_address()));
@@ -138,7 +138,7 @@ TEST(HotReloadIntegrationTest, TestRestartTwoDriversParent) {
   zx::channel chan_parent, chan_child;
 
   // Open parent.
-  ASSERT_OK(devmgr_integration_test::RecursiveWaitForFile(
+  ASSERT_OK(device_watcher::RecursiveWaitForFile(
       devmgr.devfs_root(), "sys/platform/11:0e:0/devhost-test-parent", &fd_parent));
   ASSERT_GT(fd_parent.get(), 0);
   ASSERT_OK(fdio_get_service_handle(fd_parent.release(), chan_parent.reset_and_get_address()));
@@ -146,7 +146,7 @@ TEST(HotReloadIntegrationTest, TestRestartTwoDriversParent) {
   ASSERT_TRUE(chan_parent.is_valid());
 
   // Open child.
-  ASSERT_OK(devmgr_integration_test::RecursiveWaitForFile(
+  ASSERT_OK(device_watcher::RecursiveWaitForFile(
       devmgr.devfs_root(), "sys/platform/11:0e:0/devhost-test-parent/devhost-test-child",
       &fd_child));
   ASSERT_GT(fd_child.get(), 0);
@@ -163,8 +163,8 @@ TEST(HotReloadIntegrationTest, TestRestartTwoDriversParent) {
   // Need to create DirWatchers to wait for the device to close.
   fbl::unique_fd fd_watcher(
       openat(devmgr.devfs_root().get(), "sys/platform/11:0e:0", O_DIRECTORY | O_RDONLY));
-  std::unique_ptr<devmgr_integration_test::DirWatcher> watcher;
-  ASSERT_OK(devmgr_integration_test::DirWatcher::Create(std::move(fd_watcher), &watcher));
+  std::unique_ptr<device_watcher::DirWatcher> watcher;
+  ASSERT_OK(device_watcher::DirWatcher::Create(std::move(fd_watcher), &watcher));
 
   // Restart the driver host of the parent driver.
   fuchsia::driver::development::DriverDevelopment_RestartDriverHosts_Result result;
@@ -176,7 +176,7 @@ TEST(HotReloadIntegrationTest, TestRestartTwoDriversParent) {
   ASSERT_OK(watcher->WaitForRemoval("devhost-test-parent", zx::duration::infinite()));
 
   // Reopen parent.
-  ASSERT_OK(devmgr_integration_test::RecursiveWaitForFile(
+  ASSERT_OK(device_watcher::RecursiveWaitForFile(
       devmgr.devfs_root(), "sys/platform/11:0e:0/devhost-test-parent", &fd_parent));
   ASSERT_GT(fd_parent.get(), 0);
   ASSERT_OK(fdio_get_service_handle(fd_parent.release(), chan_parent.reset_and_get_address()));
@@ -194,7 +194,7 @@ TEST(HotReloadIntegrationTest, TestRestartTwoDriversParent) {
             parent_after.value().result.response().pid);
 
   // Check child has reopened.
-  ASSERT_OK(devmgr_integration_test::RecursiveWaitForFile(
+  ASSERT_OK(device_watcher::RecursiveWaitForFile(
       devmgr.devfs_root(), "sys/platform/11:0e:0/devhost-test-parent/devhost-test-child",
       &fd_child));
   ASSERT_GT(fd_child.get(), 0);
@@ -227,7 +227,7 @@ TEST(HotReloadIntegrationTest, TestRestartTwoDriversChild) {
   zx::channel chan_parent, chan_child;
 
   // Open parent.
-  ASSERT_OK(devmgr_integration_test::RecursiveWaitForFile(
+  ASSERT_OK(device_watcher::RecursiveWaitForFile(
       devmgr.devfs_root(), "sys/platform/11:0e:0/devhost-test-parent", &fd_parent));
   ASSERT_GT(fd_parent.get(), 0);
   ASSERT_OK(fdio_get_service_handle(fd_parent.release(), chan_parent.reset_and_get_address()));
@@ -235,7 +235,7 @@ TEST(HotReloadIntegrationTest, TestRestartTwoDriversChild) {
   ASSERT_TRUE(chan_parent.is_valid());
 
   // Open child.
-  ASSERT_OK(devmgr_integration_test::RecursiveWaitForFile(
+  ASSERT_OK(device_watcher::RecursiveWaitForFile(
       devmgr.devfs_root(), "sys/platform/11:0e:0/devhost-test-parent/devhost-test-child",
       &fd_child));
   ASSERT_GT(fd_child.get(), 0);
@@ -246,8 +246,8 @@ TEST(HotReloadIntegrationTest, TestRestartTwoDriversChild) {
   // Need to create DirWatchers to wait for the device to close.
   fbl::unique_fd fd_watcher(
       openat(devmgr.devfs_root().get(), "sys/platform/11:0e:0", O_DIRECTORY | O_RDONLY));
-  std::unique_ptr<devmgr_integration_test::DirWatcher> watcher;
-  ASSERT_OK(devmgr_integration_test::DirWatcher::Create(std::move(fd_watcher), &watcher));
+  std::unique_ptr<device_watcher::DirWatcher> watcher;
+  ASSERT_OK(device_watcher::DirWatcher::Create(std::move(fd_watcher), &watcher));
 
   // Get pid of parent driver before restarting.
   auto parent_before = fidl::WireCall<TestDevice>(zx::unowned(chan_parent))->GetPid();
@@ -265,7 +265,7 @@ TEST(HotReloadIntegrationTest, TestRestartTwoDriversChild) {
   ASSERT_OK(watcher->WaitForRemoval("devhost-test-parent", zx::duration::infinite()));
 
   // Reopen parent.
-  ASSERT_OK(devmgr_integration_test::RecursiveWaitForFile(
+  ASSERT_OK(device_watcher::RecursiveWaitForFile(
       devmgr.devfs_root(), "sys/platform/11:0e:0/devhost-test-parent", &fd_parent));
   ASSERT_GT(fd_parent.get(), 0);
   ASSERT_OK(fdio_get_service_handle(fd_parent.release(), chan_parent.reset_and_get_address()));
@@ -283,7 +283,7 @@ TEST(HotReloadIntegrationTest, TestRestartTwoDriversChild) {
             parent_after.value().result.response().pid);
 
   // Check child has reopened.
-  ASSERT_OK(devmgr_integration_test::RecursiveWaitForFile(
+  ASSERT_OK(device_watcher::RecursiveWaitForFile(
       devmgr.devfs_root(), "sys/platform/11:0e:0/devhost-test-parent/devhost-test-child",
       &fd_child));
   ASSERT_GT(fd_child.get(), 0);

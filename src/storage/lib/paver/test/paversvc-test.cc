@@ -50,7 +50,7 @@ namespace {
 
 namespace partition = fuchsia_hardware_block_partition;
 
-using devmgr_integration_test::RecursiveWaitForFile;
+using device_watcher::RecursiveWaitForFile;
 using driver_integration_test::IsolatedDevmgr;
 
 constexpr std::string_view kFirmwareTypeBootloader("");

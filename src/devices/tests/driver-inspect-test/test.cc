@@ -40,8 +40,8 @@ class InspectTestCase : public InspectTestHelper, public zxtest::Test {
     ASSERT_OK(status);
     fbl::unique_fd fd;
 
-    ASSERT_OK(devmgr_integration_test::RecursiveWaitForFile(
-        devmgr_.devfs_root(), "sys/platform/11:13:0/inspect-test", &fd));
+    ASSERT_OK(device_watcher::RecursiveWaitForFile(devmgr_.devfs_root(),
+                                                   "sys/platform/11:13:0/inspect-test", &fd));
     ASSERT_GT(fd.get(), 0);
     ASSERT_OK(fdio_get_service_handle(fd.release(), chan_.reset_and_get_address()));
     ASSERT_NE(chan_.get(), ZX_HANDLE_INVALID);
@@ -58,10 +58,10 @@ class InspectTestCase : public InspectTestHelper, public zxtest::Test {
 TEST_F(InspectTestCase, InspectDevfs) {
   fbl::unique_fd fd;
   // Check if inspect-test device is hosted in diagnostics folder
-  ASSERT_OK(devmgr_integration_test::RecursiveWaitForFileReadOnly(devmgr().devfs_root(),
-                                                                  "diagnostics/class", &fd));
+  ASSERT_OK(device_watcher::RecursiveWaitForFileReadOnly(devmgr().devfs_root(), "diagnostics/class",
+                                                         &fd));
   ASSERT_GT(fd.get(), 0);
-  ASSERT_OK(devmgr_integration_test::RecursiveWaitForFileReadOnly(
+  ASSERT_OK(device_watcher::RecursiveWaitForFileReadOnly(
       devmgr().devfs_root(), "diagnostics/class/test/000.inspect", &fd));
   ASSERT_GT(fd.get(), 0);
 }
@@ -69,7 +69,7 @@ TEST_F(InspectTestCase, InspectDevfs) {
 TEST_F(InspectTestCase, ReadInspectData) {
   fbl::unique_fd fd;
   // Wait for inspect data to appear
-  ASSERT_OK(devmgr_integration_test::RecursiveWaitForFileReadOnly(
+  ASSERT_OK(device_watcher::RecursiveWaitForFileReadOnly(
       devmgr().devfs_root(), "diagnostics/class/test/000.inspect", &fd));
   ASSERT_GT(fd.get(), 0);
   zx_handle_t out_vmo = ZX_HANDLE_INVALID;

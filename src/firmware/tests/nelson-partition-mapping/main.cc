@@ -8,7 +8,6 @@
 #include <fidl/fuchsia.hardware.block.partition/cpp/wire.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
-#include <lib/devmgr-integration-test/fixture.h>
 #include <lib/fdio/cpp/caller.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
@@ -33,7 +32,7 @@
 
 namespace fuchsia_partition = fuchsia_hardware_block_partition;
 
-using devmgr_integration_test::RecursiveWaitForFile;
+using device_watcher::RecursiveWaitForFile;
 
 #define DEV_BLOCK "/dev/class/block"
 

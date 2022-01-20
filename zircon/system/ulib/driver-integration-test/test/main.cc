@@ -17,11 +17,12 @@
 #include <unistd.h>
 #include <zircon/status.h>
 
+#include <sdk/lib/device-watcher/cpp/device-watcher.h>
 #include <zxtest/zxtest.h>
 
 namespace {
 
-using devmgr_integration_test::RecursiveWaitForFile;
+using device_watcher::RecursiveWaitForFile;
 using driver_integration_test::IsolatedDevmgr;
 
 const board_test::DeviceEntry kDeviceEntry = []() {

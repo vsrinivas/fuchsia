@@ -16,13 +16,14 @@
 #include <zircon/status.h>
 #include <zircon/syscalls/debug.h>
 
+#include <sdk/lib/device-watcher/cpp/device-watcher.h>
 #include <sdk/lib/sys/cpp/component_context.h>
 
 namespace isolated_devmgr {
 
 zx_status_t IsolatedDevmgr::WaitForFile(const char* path) {
   fbl::unique_fd out;
-  return devmgr_integration_test::RecursiveWaitForFile(devmgr_.devfs_root(), path, &out);
+  return device_watcher::RecursiveWaitForFile(devmgr_.devfs_root(), path, &out);
 }
 
 void IsolatedDevmgr::Connect(zx::channel req) {

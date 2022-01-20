@@ -33,7 +33,7 @@ void CreateTestDevice(const IsolatedDevmgr& devmgr, const char* driver_name,
                       zx::channel* dev_channel) {
   fbl::unique_fd root_fd;
   zx_status_t status =
-      devmgr_integration_test::RecursiveWaitForFile(devmgr.devfs_root(), "sys/test/test", &root_fd);
+      device_watcher::RecursiveWaitForFile(devmgr.devfs_root(), "sys/test/test", &root_fd);
   ASSERT_OK(status);
 
   zx::status test_client_end =
@@ -134,9 +134,9 @@ TEST(DeviceControllerIntegrationTest, TestRebindChildrenAutoBind) {
 
   fbl::unique_fd test_fd, parent_fd, child_fd;
   zx::channel parent_channel;
-  status = devmgr_integration_test::RecursiveWaitForFile(devmgr.devfs_root(),
-                                                         "sys/platform/11:0e:0", &test_fd);
-  status = devmgr_integration_test::RecursiveWaitForFile(
+  status =
+      device_watcher::RecursiveWaitForFile(devmgr.devfs_root(), "sys/platform/11:0e:0", &test_fd);
+  status = device_watcher::RecursiveWaitForFile(
       devmgr.devfs_root(), "sys/platform/11:0e:0/devhost-test-parent", &parent_fd);
 
   ASSERT_OK(status);
@@ -152,9 +152,9 @@ TEST(DeviceControllerIntegrationTest, TestRebindChildrenAutoBind) {
     call_status = resp->result.err();
   }
   ASSERT_OK(call_status);
-  ASSERT_OK(devmgr_integration_test::RecursiveWaitForFile(
+  ASSERT_OK(device_watcher::RecursiveWaitForFile(
       devmgr.devfs_root(), "sys/platform/11:0e:0/devhost-test-parent", &parent_fd));
-  ASSERT_OK(devmgr_integration_test::RecursiveWaitForFile(
+  ASSERT_OK(device_watcher::RecursiveWaitForFile(
       devmgr.devfs_root(), "sys/platform/11:0e:0/devhost-test-parent/devhost-test-child",
       &child_fd));
 }
@@ -179,9 +179,9 @@ TEST(DeviceControllerIntegrationTest, TestRebindChildrenManualBind) {
 
   fbl::unique_fd test_fd, parent_fd, child_fd;
   zx::channel parent_channel;
-  ASSERT_OK(devmgr_integration_test::RecursiveWaitForFile(devmgr.devfs_root(),
-                                                          "sys/platform/11:0e:0", &test_fd));
-  ASSERT_OK(devmgr_integration_test::RecursiveWaitForFile(
+  ASSERT_OK(
+      device_watcher::RecursiveWaitForFile(devmgr.devfs_root(), "sys/platform/11:0e:0", &test_fd));
+  ASSERT_OK(device_watcher::RecursiveWaitForFile(
       devmgr.devfs_root(), "sys/platform/11:0e:0/devhost-test-parent", &parent_fd));
   ASSERT_OK(fdio_get_service_handle(parent_fd.release(), parent_channel.reset_and_get_address()));
 
@@ -198,9 +198,9 @@ TEST(DeviceControllerIntegrationTest, TestRebindChildrenManualBind) {
   }
   ASSERT_OK(call_status);
 
-  ASSERT_OK(devmgr_integration_test::RecursiveWaitForFile(
+  ASSERT_OK(device_watcher::RecursiveWaitForFile(
       devmgr.devfs_root(), "sys/platform/11:0e:0/devhost-test-parent", &parent_fd));
-  ASSERT_OK(devmgr_integration_test::RecursiveWaitForFile(
+  ASSERT_OK(device_watcher::RecursiveWaitForFile(
       devmgr.devfs_root(), "sys/platform/11:0e:0/devhost-test-parent/devhost-test-child",
       &child_fd));
 }
@@ -225,9 +225,9 @@ TEST(DeviceControllerIntegrationTest, TestUnbindChildrenSuccess) {
 
   fbl::unique_fd test_fd, parent_fd, child_fd;
   zx::channel parent_channel;
-  ASSERT_OK(devmgr_integration_test::RecursiveWaitForFile(devmgr.devfs_root(),
-                                                          "sys/platform/11:0e:0", &test_fd));
-  ASSERT_OK(devmgr_integration_test::RecursiveWaitForFile(
+  ASSERT_OK(
+      device_watcher::RecursiveWaitForFile(devmgr.devfs_root(), "sys/platform/11:0e:0", &test_fd));
+  ASSERT_OK(device_watcher::RecursiveWaitForFile(
       devmgr.devfs_root(), "sys/platform/11:0e:0/devhost-test-parent", &parent_fd));
   ASSERT_OK(fdio_get_service_handle(parent_fd.release(), parent_channel.reset_and_get_address()));
 
@@ -239,7 +239,7 @@ TEST(DeviceControllerIntegrationTest, TestUnbindChildrenSuccess) {
     call_status = resp->result.err();
   }
   ASSERT_OK(call_status);
-  ASSERT_OK(devmgr_integration_test::RecursiveWaitForFile(
+  ASSERT_OK(device_watcher::RecursiveWaitForFile(
       devmgr.devfs_root(), "sys/platform/11:0e:0/devhost-test-parent", &parent_fd));
 }
 
@@ -437,10 +437,10 @@ TEST(DeviceControllerIntegrationTest, TestRebindWithInit_Success) {
 
   fbl::unique_fd test_fd, parent_fd, child_fd;
   zx::channel test_channel, parent_channel;
-  ASSERT_OK(devmgr_integration_test::RecursiveWaitForFile(devmgr.devfs_root(),
-                                                          "sys/platform/11:0e:0", &test_fd));
+  ASSERT_OK(
+      device_watcher::RecursiveWaitForFile(devmgr.devfs_root(), "sys/platform/11:0e:0", &test_fd));
   ASSERT_OK(fdio_get_service_handle(test_fd.release(), test_channel.reset_and_get_address()));
-  ASSERT_OK(devmgr_integration_test::RecursiveWaitForFile(
+  ASSERT_OK(device_watcher::RecursiveWaitForFile(
       devmgr.devfs_root(), "sys/platform/11:0e:0/devhost-test-parent", &parent_fd));
   ASSERT_OK(fdio_get_service_handle(parent_fd.release(), parent_channel.reset_and_get_address()));
 
@@ -453,9 +453,9 @@ TEST(DeviceControllerIntegrationTest, TestRebindWithInit_Success) {
   }
   ASSERT_OK(call_status);
 
-  ASSERT_OK(devmgr_integration_test::RecursiveWaitForFile(
+  ASSERT_OK(device_watcher::RecursiveWaitForFile(
       devmgr.devfs_root(), "sys/platform/11:0e:0/devhost-test-parent", &parent_fd));
-  ASSERT_OK(devmgr_integration_test::RecursiveWaitForFile(
+  ASSERT_OK(device_watcher::RecursiveWaitForFile(
       devmgr.devfs_root(), "sys/platform/11:0e:0/devhost-test-parent/devhost-test-child",
       &child_fd));
 }
@@ -480,10 +480,10 @@ TEST(DeviceControllerIntegrationTest, TestRebindWithInit_Failure) {
 
   fbl::unique_fd test_fd, parent_fd, child_fd;
   zx::channel test_channel, parent_channel;
-  ASSERT_OK(devmgr_integration_test::RecursiveWaitForFile(devmgr.devfs_root(),
-                                                          "sys/platform/11:0e:0", &test_fd));
+  ASSERT_OK(
+      device_watcher::RecursiveWaitForFile(devmgr.devfs_root(), "sys/platform/11:0e:0", &test_fd));
   ASSERT_OK(fdio_get_service_handle(test_fd.release(), test_channel.reset_and_get_address()));
-  ASSERT_OK(devmgr_integration_test::RecursiveWaitForFile(
+  ASSERT_OK(device_watcher::RecursiveWaitForFile(
       devmgr.devfs_root(), "sys/platform/11:0e:0/devhost-test-parent", &parent_fd));
   ASSERT_OK(fdio_get_service_handle(parent_fd.release(), parent_channel.reset_and_get_address()));
 
@@ -496,7 +496,7 @@ TEST(DeviceControllerIntegrationTest, TestRebindWithInit_Failure) {
   }
   ASSERT_EQ(call_status, ZX_ERR_IO);
 
-  ASSERT_OK(devmgr_integration_test::RecursiveWaitForFile(
+  ASSERT_OK(device_watcher::RecursiveWaitForFile(
       devmgr.devfs_root(), "sys/platform/11:0e:0/devhost-test-parent", &parent_fd));
 }
 

@@ -21,9 +21,9 @@
 #include <cstring>
 #include <string>
 
+#include <sdk/lib/device-watcher/cpp/device-watcher.h>
 #include <zxtest/zxtest.h>
 
-#include "sdk/lib/device-watcher/cpp/device-watcher.h"
 #include "src/lib/storage/fs_management/cpp/fvm.h"
 
 namespace fvm {

@@ -43,8 +43,7 @@ class FallbackRTCTest : public zxtest::Test {
     ASSERT_OK(IsolatedDevmgr::Create(&args, &devmgr_));
 
     // Wait for fallback-rtc to be created
-    ASSERT_OK(
-        devmgr_integration_test::RecursiveWaitForFile(devmgr_.devfs_root(), kLandingPath, &rtc_fd));
+    ASSERT_OK(device_watcher::RecursiveWaitForFile(devmgr_.devfs_root(), kLandingPath, &rtc_fd));
 
     // Get a FIDL channel to the rtc driver
     ASSERT_OK(fdio_get_service_handle(rtc_fd.release(), rtc_fdio_channel_.reset_and_get_address()));

@@ -446,8 +446,8 @@ class FakeDev {
     ASSERT_OK(devmgr_integration_test::IsolatedDevmgr::Create(std::move(args), &devmgr_));
     // TODO(https://fxbug.dev/80815): Stop requiring this recursive wait.
     fbl::unique_fd fd;
-    ASSERT_OK(devmgr_integration_test::RecursiveWaitForFile(devmgr_.devfs_root(),
-                                                            "sys/platform/00:00:2d/ramctl", &fd));
+    ASSERT_OK(device_watcher::RecursiveWaitForFile(devmgr_.devfs_root(),
+                                                   "sys/platform/00:00:2d/ramctl", &fd));
   }
 
   devmgr_integration_test::IsolatedDevmgr devmgr_;
@@ -480,8 +480,8 @@ class PaverTest : public zxtest::Test {
 
   void SpawnBlockDevice() {
     fbl::unique_fd fd;
-    ASSERT_OK(devmgr_integration_test::RecursiveWaitForFile(fake_dev_.devmgr_.devfs_root(),
-                                                            "sys/platform/00:00:2d/ramctl", &fd));
+    ASSERT_OK(device_watcher::RecursiveWaitForFile(fake_dev_.devmgr_.devfs_root(),
+                                                   "sys/platform/00:00:2d/ramctl", &fd));
     ASSERT_OK(ramdisk_create_at(fake_dev_.devmgr_.devfs_root().get(), zx_system_get_page_size(),
                                 100, &ramdisk_));
     std::string expected = std::string("/dev/") + ramdisk_get_path(ramdisk_);

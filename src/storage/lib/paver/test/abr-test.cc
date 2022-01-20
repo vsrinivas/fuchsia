@@ -36,7 +36,7 @@
 
 namespace {
 
-using devmgr_integration_test::RecursiveWaitForFile;
+using device_watcher::RecursiveWaitForFile;
 using driver_integration_test::IsolatedDevmgr;
 using paver::BlockWatcherPauser;
 

@@ -28,8 +28,7 @@ TEST(MetadataTest, RunTests) {
   zx::channel sys_chan;
   {
     fbl::unique_fd fd;
-    ASSERT_OK(
-        devmgr_integration_test::RecursiveWaitForFile(devmgr.devfs_root(), "sys/test/test", &fd));
+    ASSERT_OK(device_watcher::RecursiveWaitForFile(devmgr.devfs_root(), "sys/test/test", &fd));
     ASSERT_OK(fdio_get_service_handle(fd.release(), sys_chan.reset_and_get_address()));
   }
   fidl::WireSyncClient<fuchsia_device::Controller> sys_dev(std::move(sys_chan));

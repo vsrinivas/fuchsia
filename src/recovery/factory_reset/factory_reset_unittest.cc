@@ -245,7 +245,7 @@ class FactoryResetTest : public Test {
 
   void WaitForDevice(const std::string& path, fbl::unique_fd* fd) {
     printf("wait for device %s\n", path.c_str());
-    ASSERT_EQ(devmgr_integration_test::RecursiveWaitForFile(devfs_root(), path.c_str(), fd), ZX_OK);
+    ASSERT_EQ(device_watcher::RecursiveWaitForFile(devfs_root(), path.c_str(), fd), ZX_OK);
 
     ASSERT_TRUE(*fd);
   }

@@ -7,7 +7,6 @@
 #include <fcntl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
-#include <lib/devmgr-integration-test/fixture.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
@@ -24,6 +23,7 @@
 #include <zircon/syscalls.h>
 
 #include <gtest/gtest.h>
+#include <sdk/lib/device-watcher/cpp/device-watcher.h>
 
 namespace usb_virtual_bus {
 
@@ -52,8 +52,7 @@ USBVirtualBusBase::USBVirtualBusBase(std::string pkg_url, std::string svc_name) 
 
 void USBVirtualBusBase::InitPeripheral() {
   fbl::unique_fd fd;
-  devmgr_integration_test::RecursiveWaitForFile(devfs_root(),
-                                                "sys/platform/11:03:0/usb-virtual-bus", &fd);
+  device_watcher::RecursiveWaitForFile(devfs_root(), "sys/platform/11:03:0/usb-virtual-bus", &fd);
   ASSERT_EQ(fd.is_valid(), true);
   zx::channel virtual_bus;
   ASSERT_EQ(fdio_get_service_handle(fd.release(), virtual_bus.reset_and_get_address()), ZX_OK);

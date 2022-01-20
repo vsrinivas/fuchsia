@@ -13,9 +13,8 @@
 #include <zircon/syscalls.h>
 
 #include <hid/boot.h>
+#include <sdk/lib/device-watcher/cpp/device-watcher.h>
 #include <zxtest/zxtest.h>
-
-#include "sdk/lib/device-watcher/cpp/device-watcher.h"
 
 namespace {
 

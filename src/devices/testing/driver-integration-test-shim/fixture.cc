@@ -15,8 +15,9 @@
 #include <lib/fdio/fdio.h>
 #include <lib/syslog/global.h>
 
+#include <sdk/lib/device-watcher/cpp/device-watcher.h>
+
 #include "lib/sys/component/cpp/testing/realm_builder.h"
-#include "sdk/lib/device-watcher/cpp/device-watcher.h"
 
 namespace driver_integration_test {
 

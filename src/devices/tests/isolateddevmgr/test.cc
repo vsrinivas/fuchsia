@@ -4,6 +4,7 @@
 
 #include <fcntl.h>
 #include <fuchsia/device/manager/test/c/fidl.h>
+#include <lib/ddk/metadata.h>
 #include <lib/ddk/platform-defs.h>
 #include <lib/driver-integration-test/fixture.h>
 #include <lib/fdio/fd.h>
@@ -14,7 +15,6 @@
 
 #include <vector>
 
-#include <lib/ddk/metadata.h>
 #include <zxtest/zxtest.h>
 
 using driver_integration_test::IsolatedDevmgr;
@@ -61,8 +61,8 @@ TEST_F(IsolatedDevMgrTest, MetadataOneDriverTest) {
 
   // Wait for Metadata-test driver to be created
   fbl::unique_fd fd;
-  status = devmgr_integration_test::RecursiveWaitForFile(devmgr.devfs_root(),
-                                                         "sys/platform/11:07:2/metadata-test", &fd);
+  status = device_watcher::RecursiveWaitForFile(devmgr.devfs_root(),
+                                                "sys/platform/11:07:2/metadata-test", &fd);
   ASSERT_OK(status);
 
   // Get a FIDL channel to the Metadata device
@@ -99,12 +99,12 @@ TEST_F(IsolatedDevMgrTest, MetadataTwoDriverTest) {
 
   // Wait for Metadata-test driver to be created
   fbl::unique_fd fd1;
-  status = devmgr_integration_test::RecursiveWaitForFile(
-      devmgr.devfs_root(), "sys/platform/11:07:2/metadata-test", &fd1);
+  status = device_watcher::RecursiveWaitForFile(devmgr.devfs_root(),
+                                                "sys/platform/11:07:2/metadata-test", &fd1);
   ASSERT_OK(status);
   fbl::unique_fd fd2;
-  status = devmgr_integration_test::RecursiveWaitForFile(
-      devmgr.devfs_root(), "sys/platform/11:07:3/metadata-test", &fd2);
+  status = device_watcher::RecursiveWaitForFile(devmgr.devfs_root(),
+                                                "sys/platform/11:07:3/metadata-test", &fd2);
   ASSERT_OK(status);
 
   // Get a FIDL channel to the Metadata device

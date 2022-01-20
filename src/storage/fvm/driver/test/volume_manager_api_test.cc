@@ -153,8 +153,8 @@ TEST_F(FvmVolumeManagerApiTest, PartitionLimit) {
   device_name.append("/fvm/");
   device_name.append(kPartitionName);
   device_name.append("-p-1/block");
-  ASSERT_OK(devmgr_integration_test::RecursiveWaitForFile(devmgr_->devfs_root(),
-                                                          device_name.c_str(), &volume_fd));
+  ASSERT_OK(
+      device_watcher::RecursiveWaitForFile(devmgr_->devfs_root(), device_name.c_str(), &volume_fd));
   fdio_cpp::UnownedFdioCaller volume(volume_fd.get());
 
   // Query the volume to check its information.
@@ -274,8 +274,8 @@ TEST_F(FvmVolumeManagerApiTest, SetPartitionName) {
   device_name.append("/fvm/");
   device_name.append(kPartitionName);
   device_name.append("-p-1/block");
-  ASSERT_OK(devmgr_integration_test::RecursiveWaitForFile(devmgr_->devfs_root(),
-                                                          device_name.c_str(), &volume_fd));
+  ASSERT_OK(
+      device_watcher::RecursiveWaitForFile(devmgr_->devfs_root(), device_name.c_str(), &volume_fd));
   fdio_cpp::UnownedFdioCaller volume(volume_fd.get());
 
   {
@@ -296,8 +296,8 @@ TEST_F(FvmVolumeManagerApiTest, SetPartitionName) {
   device_name.append("/fvm/");
   device_name.append(kNewPartitionName);
   device_name.append("-p-1/block");
-  ASSERT_OK(devmgr_integration_test::RecursiveWaitForFile(devmgr_->devfs_root(),
-                                                          device_name.c_str(), &volume_fd));
+  ASSERT_OK(
+      device_watcher::RecursiveWaitForFile(devmgr_->devfs_root(), device_name.c_str(), &volume_fd));
   volume.reset(volume_fd.get());
 
   auto get_name_result =

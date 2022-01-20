@@ -956,8 +956,7 @@ int main(int argc, char** argv) {
   }
 
   fbl::unique_fd ctl;
-  status =
-      devmgr_integration_test::RecursiveWaitForFile(devmgr.devfs_root(), "sys/test/tapctl", &ctl);
+  status = device_watcher::RecursiveWaitForFile(devmgr.devfs_root(), "sys/test/tapctl", &ctl);
   if (status != ZX_OK) {
     fprintf(stderr, "sys/test/tapctl failed to enumerate: %d\n", status);
     return status;

@@ -10,9 +10,9 @@
 #include <memory>
 
 #include <fbl/ref_ptr.h>
+#include <sdk/lib/device-watcher/cpp/device-watcher.h>
 #include <zxtest/zxtest.h>
 
-#include "sdk/lib/device-watcher/cpp/device-watcher.h"
 #include "src/lib/storage/vfs/cpp/managed_vfs.h"
 #include "src/lib/storage/vfs/cpp/pseudo_dir.h"
 #include "src/lib/storage/vfs/cpp/pseudo_file.h"

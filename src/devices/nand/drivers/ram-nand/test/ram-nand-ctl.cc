@@ -16,9 +16,8 @@
 #include <fbl/string.h>
 #include <fbl/unique_fd.h>
 #include <ramdevice-client/ramnand.h>
+#include <sdk/lib/device-watcher/cpp/device-watcher.h>
 #include <zxtest/zxtest.h>
-
-#include "sdk/lib/device-watcher/cpp/device-watcher.h"
 
 namespace {
 

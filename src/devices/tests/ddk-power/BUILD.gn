@@ -82,6 +82,7 @@ test("ddk-power") {
     "//sdk/fidl/fuchsia.device.manager:fuchsia.device.manager_llcpp",
     "//sdk/fidl/fuchsia.hardware.power.statecontrol:fuchsia.hardware.power.statecontrol_llcpp",
     "//sdk/fidl/fuchsia.process.lifecycle:fuchsia.process.lifecycle_llcpp",
+    "//sdk/lib/device-watcher/cpp",
     "//sdk/lib/fdio",
     "//src/lib/ddk",
     "//zircon/system/ulib/driver-integration-test",

@@ -13,6 +13,7 @@
 #include <lib/zx/vmo.h>
 #include <zircon/device/vfs.h>
 
+#include <sdk/lib/device-watcher/cpp/device-watcher.h>
 #include <zxtest/zxtest.h>
 
 #include "src/lib/files/glob.h"
@@ -27,8 +28,7 @@ TEST(LauncherTest, DriverSearchPath) {
   ASSERT_OK(IsolatedDevmgr::Create(std::move(args), &devmgr));
 
   fbl::unique_fd fd;
-  ASSERT_OK(
-      devmgr_integration_test::RecursiveWaitForFile(devmgr.devfs_root(), "sys/test/test", &fd));
+  ASSERT_OK(device_watcher::RecursiveWaitForFile(devmgr.devfs_root(), "sys/test/test", &fd));
 }
 
 TEST(LauncherTest, LoadDrivers) {
@@ -39,8 +39,7 @@ TEST(LauncherTest, LoadDrivers) {
   ASSERT_OK(IsolatedDevmgr::Create(std::move(args), &devmgr));
 
   fbl::unique_fd fd;
-  ASSERT_OK(
-      devmgr_integration_test::RecursiveWaitForFile(devmgr.devfs_root(), "sys/test/test", &fd));
+  ASSERT_OK(device_watcher::RecursiveWaitForFile(devmgr.devfs_root(), "sys/test/test", &fd));
 }
 
 TEST(LauncherTest, OutgoingServices) {
@@ -68,8 +67,7 @@ TEST(LauncherTest, OutgoingServices) {
   ASSERT_OK(result->status);
 
   fbl::unique_fd fd;
-  ASSERT_OK(
-      devmgr_integration_test::RecursiveWaitForFile(devmgr.devfs_root(), "sys/test/test", &fd));
+  ASSERT_OK(device_watcher::RecursiveWaitForFile(devmgr.devfs_root(), "sys/test/test", &fd));
 }
 
 }  // namespace devmgr_integration_test
