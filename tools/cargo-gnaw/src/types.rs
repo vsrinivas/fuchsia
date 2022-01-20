@@ -12,11 +12,14 @@ use {
 pub type Feature = String;
 pub type Platform = String;
 
-#[derive(Clone, Copy, Debug, Hash, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, Hash, PartialEq, Eq, PartialOrd, Ord)]
 pub enum GnRustType {
     ProcMacro,
     Library,
-    StaticLibrary,
+    Rlib,
+    Staticlib,
+    Dylib,
+    Cdylib,
     Binary,
     Example,
     Test,
@@ -24,23 +27,23 @@ pub enum GnRustType {
     BuildScript,
 }
 
-impl TryFrom<&Vec<String>> for GnRustType {
+impl<'a> TryFrom<&'a str> for GnRustType {
     type Error = Error;
 
-    fn try_from(value: &Vec<String>) -> Result<Self, Self::Error> {
-        match value.as_slice() {
-            [value] => match value.as_str() {
-                "bin" => Ok(GnRustType::Binary),
-                "lib" => Ok(GnRustType::Library),
-                "rlib" => Ok(GnRustType::StaticLibrary),
-                "proc-macro" => Ok(GnRustType::ProcMacro),
-                "test" => Ok(GnRustType::Test),
-                "example" => Ok(GnRustType::Example),
-                "bench" => Ok(GnRustType::Bench),
-                "custom-build" => Ok(GnRustType::BuildScript),
-                value => Err(anyhow!("unknown crate type: {}", value)),
-            },
-            value => Err(anyhow!("unhandled multiple crate types: {:?}", value)),
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
+        match value {
+            "bin" => Ok(GnRustType::Binary),
+            "lib" => Ok(GnRustType::Library),
+            "rlib" => Ok(GnRustType::Rlib),
+            "staticlib" => Ok(GnRustType::Staticlib),
+            "dylib" => Ok(GnRustType::Dylib),
+            "cdylib" => Ok(GnRustType::Cdylib),
+            "proc-macro" => Ok(GnRustType::ProcMacro),
+            "test" => Ok(GnRustType::Test),
+            "example" => Ok(GnRustType::Example),
+            "bench" => Ok(GnRustType::Bench),
+            "custom-build" => Ok(GnRustType::BuildScript),
+            value => Err(anyhow!("unknown crate type: {}", value)),
         }
     }
 }

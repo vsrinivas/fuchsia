@@ -7,7 +7,7 @@ use {
         target::{CustomBuildTarget, GnTarget},
         types::*,
     },
-    anyhow::{anyhow, Error},
+    anyhow::{anyhow, Context as _, Error},
     cargo_metadata::{DependencyKind, Metadata, Package, PackageId},
     std::collections::{HashMap, HashSet},
     std::convert::TryFrom,
@@ -30,9 +30,12 @@ impl<'a> GnBuildGraph<'a> {
 
     pub fn find_library_target(&self, package: &str, version: &str) -> Option<&GnTarget<'_>> {
         self.targets().find(|t| match t.target_type {
-            GnRustType::StaticLibrary | GnRustType::Library | GnRustType::ProcMacro => {
-                t.pkg_name == package && t.version() == version
-            }
+            GnRustType::Library
+            | GnRustType::Rlib
+            | GnRustType::Staticlib
+            | GnRustType::Dylib
+            | GnRustType::Cdylib
+            | GnRustType::ProcMacro => t.pkg_name == package && t.version() == version,
             _ => false,
         })
     }
@@ -66,11 +69,19 @@ impl<'a> GnBuildGraph<'a> {
         {
             // check if this crate has a build script in it
             let mut build_script = package.targets.iter().find_map(|target| {
-                if GnRustType::try_from(&target.kind).unwrap() == GnRustType::BuildScript {
-                    return Some(CustomBuildTarget {
-                        dependencies: vec![],
-                        path: &target.src_path,
-                    });
+                for kind in &target.kind {
+                    if GnRustType::try_from(kind.as_str())
+                        .with_context(|| {
+                            format!("Failed to resolve GN target type for: {:?}", &target)
+                        })
+                        .unwrap()
+                        == GnRustType::BuildScript
+                    {
+                        return Some(CustomBuildTarget {
+                            dependencies: vec![],
+                            path: &target.src_path,
+                        });
+                    }
                 }
                 None
             });
@@ -118,33 +129,39 @@ impl<'a> GnBuildGraph<'a> {
             }
 
             for rust_target in package.targets.iter() {
-                let target_type = GnRustType::try_from(&rust_target.kind)?;
-                match target_type {
-                    GnRustType::StaticLibrary
-                    | GnRustType::Library
-                    | GnRustType::ProcMacro
-                    | GnRustType::Binary => {
-                        let gn_target = GnTarget::new(
-                            &node.id,
-                            &rust_target.name,
-                            &package.name,
-                            &package.edition,
-                            &rust_target.src_path,
-                            &package.version,
-                            target_type,
-                            node.features.as_slice(),
-                            build_script.clone(),
-                            dependencies.clone(),
-                        );
-                        self.targets.insert(gn_target);
+                for kind in &rust_target.kind {
+                    let target_type = GnRustType::try_from(kind.as_str())?;
+                    match target_type {
+                        GnRustType::Library | GnRustType::ProcMacro | GnRustType::Binary => {
+                            let gn_target = GnTarget::new(
+                                &node.id,
+                                &rust_target.name,
+                                &package.name,
+                                &package.edition,
+                                &rust_target.src_path,
+                                &package.version,
+                                target_type,
+                                node.features.as_slice(),
+                                build_script.clone(),
+                                dependencies.clone(),
+                            );
+                            self.targets.insert(gn_target);
+                        }
+
+                        // FIXME(http://fxbug.dev/91791): support rlib, staticlib, dylib, and
+                        // cdylib crate types.
+                        GnRustType::Rlib
+                        | GnRustType::Staticlib
+                        | GnRustType::Dylib
+                        | GnRustType::Cdylib => (),
+
+                        // BuildScripts are handled as part of the targets
+                        GnRustType::BuildScript => (),
+
+                        // TODO support building tests. Should integrate with whatever GN
+                        // metadata collection system used by the main build.
+                        GnRustType::Example | GnRustType::Bench | GnRustType::Test => (),
                     }
-                    // BuildScripts are handled as part of the targets
-                    // TODO support building tests. Should integrate with whatever GN
-                    // metadata collection system used by the main build.
-                    GnRustType::Example
-                    | GnRustType::Bench
-                    | GnRustType::Test
-                    | GnRustType::BuildScript => (),
                 }
             }
         }

@@ -94,6 +94,11 @@ fn main() {
             golden_expected_filename: vec!["binary", "BUILD.gn"],
             skip_root: false,
         },
+        TestCase {
+            manifest_path: vec!["multiple_crate_types", "Cargo.toml"],
+            golden_expected_filename: vec!["multiple_crate_types", "BUILD.gn"],
+            skip_root: false,
+        },
     ];
 
     for test in tests {

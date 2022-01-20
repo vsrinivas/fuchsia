@@ -1,0 +1,11 @@
+[package]
+name = "multiple_crate_types"
+version = "1.0.25"
+authors = ["Erick Tryzelaar <etryzelaar@google.com>"]
+edition = "2018"
+
+[dependencies]
+sub-crate = { version = "1.0.25", path = "sub-crate" }
+
+[gn.package.sub-crate."1.0.25"]
+visibility = [":*", "//foo/bar/*"]
