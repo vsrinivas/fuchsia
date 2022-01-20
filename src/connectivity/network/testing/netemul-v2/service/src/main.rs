@@ -17,7 +17,7 @@ use {
     fuchsia_component_test::{
         self as fcomponent, ChildOptions, RealmBuilder, RouteBuilder, RouteEndpoint,
     },
-    fuchsia_driver_test::{DriverTestRealmBuilder, DriverTestRealmInstance},
+    fuchsia_driver_test::DriverTestRealmBuilder as _,
     fuchsia_zircon as zx,
     futures::{channel::mpsc, FutureExt as _, SinkExt as _, StreamExt as _, TryStreamExt as _},
     log::{debug, error, info, warn},
@@ -886,6 +886,19 @@ async fn setup_network_realm(
             )
         })?
         .add_route(
+            RouteBuilder::protocol(fidl_fuchsia_driver_test::RealmMarker::PROTOCOL_NAME)
+                .source(RouteEndpoint::component(fuchsia_driver_test::COMPONENT_NAME))
+                .targets(vec![RouteEndpoint::component(NETWORK_CONTEXT_COMPONENT_NAME)]),
+        )
+        .await
+        .with_context(|| {
+            format!(
+                "error adding route exposing capability '{}' from component '{}'",
+                fidl_fuchsia_driver_test::RealmMarker::PROTOCOL_NAME,
+                fuchsia_driver_test::COMPONENT_NAME
+            )
+        })?
+        .add_route(
             RouteBuilder::directory(DEVFS, DEVFS_PATH, fio2::R_STAR_DIR)
                 .source(RouteEndpoint::component(fuchsia_driver_test::COMPONENT_NAME))
                 .targets(vec![RouteEndpoint::component(NETWORK_CONTEXT_COMPONENT_NAME)]),
@@ -928,7 +941,6 @@ async fn setup_network_realm(
         .build_with_name(format!("{}-network-realm", sandbox_name))
         .await
         .context("error creating realm instance")?;
-    let () = instance.driver_test_realm_start(fidl_fuchsia_driver_test::RealmArgs::EMPTY).await?;
     Ok(instance)
 }
 

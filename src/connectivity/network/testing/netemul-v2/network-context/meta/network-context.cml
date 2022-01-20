@@ -16,7 +16,10 @@
             path: "/dev",
         },
         {
-            protocol: "fuchsia.net.tun.Control",
+            protocol: [
+                "fuchsia.driver.test.Realm",
+                "fuchsia.net.tun.Control",
+            ],
             from: "parent",
         },
     ],

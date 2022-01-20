@@ -9,16 +9,16 @@ executable("bin") {
   output_name = "network_context"
   sources = [ "main.cc" ]
   deps = [
+    "//sdk/fidl/fuchsia.driver.test:fuchsia.driver.test_llcpp",
     "//sdk/lib/device-watcher/cpp",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/syslog/cpp",
-    "//src/connectivity/network/testing/netemul/lib/fidl:devmgr",
-    "//src/connectivity/network/testing/netemul/lib/fidl:network",
     "//src/connectivity/network/testing/netemul/lib/network:network_service",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/fdio-caller",
+    "//zircon/system/ulib/service:service-llcpp",
   ]
 }
 
