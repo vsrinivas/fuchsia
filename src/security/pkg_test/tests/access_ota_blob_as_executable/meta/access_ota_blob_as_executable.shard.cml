@@ -11,6 +11,7 @@
 
     // Note: Manifests including this shard must provide a program binary.
     children: [
+        // Security package test-defined components.
         {
             name: "fshost",
 
@@ -28,6 +29,8 @@
             // Test instantiated running system version "v0".
             url: "#meta/fake_boot_arguments_v0.cm",
         },
+
+        // Production package delivery components.
         {
             name: "pkg-cache",
             url: "#meta/pkg-cache.cm",
@@ -46,18 +49,26 @@
         },
     ],
     use: [
+        // Control storage capabilities of this realm. See
+        // `offer: [{from: "self"}]` for routing details.
         {
             protocol: "fuchsia.sys2.StorageAdmin",
             from: "#data",
         },
+
+        // Attempt to access packages via the `pkg-cache` APIs.
         {
             protocol: "fuchsia.pkg.PackageCache",
             from: "#pkg-cache",
         },
+
+        // Attempt to access packages via the `pkg-resolver` APIs.
         {
             protocol: "fuchsia.pkg.PackageResolver",
             from: "#pkg-resolver",
         },
+
+        // Wait for locally isolated package server to be ready.
         {
             protocol: "test.security.pkg.PackageServer",
             from: "#pkg_server",
