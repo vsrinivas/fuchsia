@@ -15,6 +15,7 @@ use {
         },
         plugins::{register_plugins, Plugin},
     },
+    crate::evaluate_int_math,
     anyhow::{bail, Error},
     fidl_fuchsia_feedback::MAX_CRASH_SIGNATURE_LENGTH,
     serde::{self, Deserialize},
@@ -280,23 +281,33 @@ impl ActionContext<'_> {
     fn update_snapshots(&mut self, action: &Snapshot, namespace: &str, _name: &str) {
         match self.metric_state.eval_action_metric(namespace, &action.trigger) {
             MetricValue::Bool(true) => {
-                let interval = self.metric_state.eval_action_metric(namespace, &action.repeat);
-                match interval {
-                    MetricValue::Int(interval) => {
-                        let signature = action.signature.clone();
-                        let output = SnapshotTrigger { interval, signature };
-                        self.action_results.add_snapshot(output);
-                        true
+                if let Metric::Eval(metric_string) = &action.repeat {
+                    let interval = evaluate_int_math(metric_string);
+                    match interval {
+                        Ok(interval) => {
+                            let signature = action.signature.clone();
+                            let output = SnapshotTrigger { interval, signature };
+                            self.action_results.add_snapshot(output);
+                            true
+                        }
+                        Err(ref interval) => {
+                            self.action_results.add_warning(format!(
+                                "Bad interval in config '{}': {:?}",
+                                namespace, interval
+                            ));
+                            #[cfg(target_os = "fuchsia")]
+                            error!("Bad interval in config '{}': {:?}", namespace, interval);
+                            false
+                        }
                     }
-                    _ => {
-                        self.action_results.add_warning(format!(
-                            "Bad interval in config '{}': {:?}",
-                            namespace, interval
-                        ));
-                        #[cfg(target_os = "fuchsia")]
-                        error!("Bad interval in config '{}': {:?}", namespace, interval);
-                        false
-                    }
+                } else {
+                    self.action_results.add_warning(format!(
+                        "Interval {:?} was not an expression to Eval",
+                        &action.repeat
+                    ));
+                    #[cfg(target_os = "fuchsia")]
+                    error!("Interval {:?} was not an expression to Eval", &action.repeat);
+                    false
                 }
             }
             MetricValue::Bool(false) => false,

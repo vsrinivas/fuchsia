@@ -362,7 +362,7 @@ impl<'a> MetricState<'a> {
     }
 
     /// Fetch or compute the value of a Metric expression from an action.
-    pub fn eval_action_metric(&self, namespace: &str, metric: &Metric) -> MetricValue {
+    pub(crate) fn eval_action_metric(&self, namespace: &str, metric: &Metric) -> MetricValue {
         match metric {
             Metric::Selector(_) => {
                 syntax_error("Selectors aren't allowed in action triggers".to_owned())
