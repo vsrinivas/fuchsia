@@ -15,6 +15,7 @@ rustc_binary("bin") {
   deps = [
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:clap",
+    "//third_party/rust_crates:crc",
     "//third_party/rust_crates:libc",
     "//third_party/rust_crates:log",
     "//third_party/rust_crates:serde",

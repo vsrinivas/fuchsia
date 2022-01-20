@@ -10,6 +10,8 @@
 use {
     crate::generator::Generator,
     crate::operations::OperationType,
+    core::hash::Hasher,
+    crc::crc32::{self, Hasher32},
     std::{
         io::{self, Write},
         mem,
@@ -243,7 +245,17 @@ impl Header {
         size: u64,
         seed: u64,
     ) -> Header {
-        let header = Header {
+        let mut crc = crc32::Digest::new(crc32::IEEE);
+        crc.write_u64(magic_number);
+        crc.write_u64(process_id);
+        crc.write_u64(fd_unique_id);
+        crc.write_u64(generator_unique_id);
+        crc.write_u64(io_op_unique_id);
+        crc.write_u64(file_offset);
+        crc.write_u64(size);
+        crc.write_u64(seed);
+
+        Header {
             magic_number,
             process_id,
             fd_unique_id,
@@ -252,12 +264,8 @@ impl Header {
             file_offset,
             size,
             seed,
-            crc32: 0,
-        };
-
-        // TODO(auradkar): compute crc32 or some equivalent. Couldn't find a
-        // crate that does compute 64/32-bit checksum in the repo.
-        header
+            crc32: crc.sum32(),
+        }
     }
 
     /// Convert byte vector to header
@@ -459,5 +467,6 @@ mod tests {
         assert_eq!(header.io_op_unique_id, io_op_unique_id);
         assert_eq!(header.file_offset, io_offset_range.start);
         assert_eq!(header.size, io_offset_range.end - io_offset_range.start);
+        assert_eq!(header.crc32, 0xb9ab1797);
     }
 }

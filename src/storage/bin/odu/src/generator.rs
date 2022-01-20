@@ -237,7 +237,7 @@ impl GeneratorArgs {
 }
 
 /// Based on the input args this returns a set of allowed operations that
-/// generator is allowed to issue. For now we only allow writes.
+/// generator is allowed to issue.
 fn pick_operation_type(args: &GeneratorArgs) -> Vec<OperationType> {
     let mut operations: Vec<OperationType> = vec![];
     if args.operations.write {
