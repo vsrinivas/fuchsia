@@ -16,6 +16,7 @@ constexpr char kDeprecatedAmbientReplaceAsExecAllowList[] =
     "allowlist/deprecated_ambient_replace_as_executable.txt";
 constexpr char kComponentEventProviderAllowList[] = "allowlist/component_event_provider.txt";
 constexpr char kCpuResourceAllowList[] = "allowlist/cpu_resource.txt";
+constexpr char kCr50AllowList[] = "allowlist/cr50.txt";
 constexpr char kDebugResourceAllowList[] = "allowlist/debug_resource.txt";
 constexpr char kDurableDataAllowList[] = "allowlist/durable_data.txt";
 constexpr char kFactoryDataAllowList[] = "allowlist/factory_data.txt";
@@ -83,6 +84,11 @@ std::optional<SecurityPolicy> PolicyChecker::Check(const SandboxMetadata& sandbo
   if (sandbox.HasService("fuchsia.kernel.CpuResource") && !CheckCpuResource(pkg_url)) {
     FX_LOGS(ERROR) << "Component " << pkg_url.ToString() << " is not allowed to use "
                    << "fuchsia.kernel.CpuResource";
+    return std::nullopt;
+  }
+  if (sandbox.HasService("fuchsia.tpm.cr50.Cr50") && !CheckCr50(pkg_url)) {
+    FX_LOGS(ERROR) << "Component " << pkg_url.ToString() << " is not allowed to use "
+                   << "fuchsia.tpm.cr50.Cr50";
     return std::nullopt;
   }
   if (sandbox.HasService("fuchsia.kernel.DebugResource") && !CheckDebugResource(pkg_url)) {
@@ -207,6 +213,11 @@ bool PolicyChecker::CheckHub(const FuchsiaPkgUrl& pkg_url) {
 bool PolicyChecker::CheckCpuResource(const FuchsiaPkgUrl& pkg_url) {
   AllowList cpu_resource_allowlist(config_, kCpuResourceAllowList);
   return cpu_resource_allowlist.IsAllowed(pkg_url);
+}
+
+bool PolicyChecker::CheckCr50(const FuchsiaPkgUrl& pkg_url) {
+  AllowList cr50_allowlist(config_, kCr50AllowList);
+  return cr50_allowlist.IsAllowed(pkg_url);
 }
 
 bool PolicyChecker::CheckDebugResource(const FuchsiaPkgUrl& pkg_url) {

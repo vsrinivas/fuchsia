@@ -11,6 +11,7 @@ group("appmgr_policy_eng") {
     ":appmgr_build_info_allowlist_eng",
     ":appmgr_component_event_provider_allowlist_eng",
     ":appmgr_cpu_resource_allowlist_eng",
+    ":appmgr_cr50_allowlist_eng",
     ":appmgr_debug_resource_allowlist_eng",
     ":appmgr_deprecated_ambient_replace_as_executable_allowlist_eng",
     ":appmgr_deprecated_global_dev_allowlist_eng",
@@ -199,6 +200,12 @@ config_data("appmgr_weave_signer_allowlist_eng") {
   for_pkg = "appmgr"
   sources = [ "weave_signer_allowlist_eng.txt" ]
   outputs = [ "allowlist/weave_signer.txt" ]
+}
+
+config_data("appmgr_cr50_allowlist_eng") {
+  for_pkg = "appmgr"
+  sources = [ "cr50_allowlist_eng.txt" ]
+  outputs = [ "allowlist/cr50_allowlist.txt" ]
 }
 
 pkgfs_packages_non_static_packages_allowlist(
