@@ -17,8 +17,6 @@ use {
     },
 };
 
-// With feature(type_alias_impl_trait), boxing the future would not be necessary, which would also
-// remove the requirements that O and E are Send + 'static.
 #[pin_project]
 pub(crate) struct TaskFuture<O> {
     #[pin]
