@@ -854,8 +854,7 @@ def main():
         ### C/C++
         # Clang standard libraries, compiler runtime, etc are not strict inputs.
         os.path.join(
-            src_root, "prebuilt", "third_party", "clang", "linux-x64", "lib",
-            "clang/"),
+            src_root, "prebuilt", "third_party", "clang", "linux-x64", "lib/"),
 
         ### Python
         # Python scripts access Python prebuilts for the interpreter,
