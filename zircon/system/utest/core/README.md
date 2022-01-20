@@ -16,10 +16,13 @@ any userspace device manager, device drivers, io plumbing, etc.
 ### Example usage
 
 ```
-fx set core.x64   # any of {bringup,core}.{x64,arm64} are fine too.
+fx set core.x64 --with //zircon/system/utest/core:core-tests
 fx build
 fx core-tests [--gtest_filter=FILTER] [--gtest_repeat=REPEAT]
 ```
+
+Note that any of `{bringup,core}.{x64,arm64}` are fine for `fx set`.
+The `--with` arg remains the same.
 
 The helper fx command runs QEMU (or FEMU) providing the
 specially-built core-tests.zbi as a `-z` argument.
