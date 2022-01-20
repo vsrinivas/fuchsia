@@ -48,9 +48,6 @@ use test_rfcomm_client::RfcommManager as RfcommFacade;
 use crate::bluetooth::facade::BluetoothFacade;
 use crate::bluetooth::profile_server_facade::ProfileServerFacade;
 
-// Cpu-Ctrl related includes
-use crate::cpu_ctrl::facade::CpuCtrlFacade;
-
 // Common
 use crate::common_utils::common::{read_json_from_vmo, write_json_to_vmo};
 use crate::common_utils::error::Sl4fError;
@@ -217,7 +214,6 @@ impl Sl4f {
                 "ble_advertise_facade" => BleAdvertiseFacade::new(),
                 "bluetooth" => BluetoothFacade::new(),
                 "bt_sys_facade" => BluetoothSysFacade::new(),
-                "cpu_ctrl_facade" => CpuCtrlFacade::new(),
                 "component_facade" => ComponentFacade::new(),
                 "diagnostics_facade" => DiagnosticsFacade::new(),
                 "device_facade" => DeviceFacade::new(),

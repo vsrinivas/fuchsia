@@ -13,7 +13,6 @@ pub mod battery_simulator;
 pub mod bluetooth;
 pub mod common_utils;
 pub mod component;
-pub mod cpu_ctrl;
 pub mod device;
 pub mod diagnostics;
 pub mod factory_reset;
