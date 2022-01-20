@@ -431,7 +431,7 @@ impl Realm {
         if let Err(e) = cm_fidl_validator::validate(&component_decl) {
             return Err(RealmBuilderError::InvalidComponentDecl(e));
         }
-        let child_realm_node = RealmNode2::new_from_decl(component_decl.fidl_into_native(), true);
+        let child_realm_node = RealmNode2::new_from_decl(component_decl.fidl_into_native(), false);
         self.realm_node.add_child(name, options, child_realm_node).await
     }
 
@@ -3856,6 +3856,53 @@ mod tests {
     }
 
     #[fuchsia::test]
+    async fn add_route_does_not_mutate_children_added_from_decl() {
+        let a_decl = cm_rust::ComponentDecl {
+            program: Some(cm_rust::ProgramDecl {
+                runner: Some("hippo".try_into().unwrap()),
+                info: fdata::Dictionary::EMPTY,
+            }),
+            uses: vec![cm_rust::UseDecl::Protocol(cm_rust::UseProtocolDecl {
+                source: cm_rust::UseSource::Parent,
+                source_name: "example.Hippo".into(),
+                target_path: "/svc/non-default-path".try_into().unwrap(),
+                dependency_type: cm_rust::DependencyType::Strong,
+            })],
+            ..cm_rust::ComponentDecl::default()
+        }
+        .native_into_fidl();
+
+        let realm_and_builder_task = RealmAndBuilderTask::new();
+        realm_and_builder_task
+            .realm_proxy
+            .add_child_from_decl("a", a_decl.clone(), ftest::ChildOptions::EMPTY)
+            .await
+            .expect("failed to call add_child")
+            .expect("add_child_from_decl returned an error");
+        realm_and_builder_task
+            .add_route_or_panic(
+                vec![ftest::Capability2::Protocol(ftest::Protocol {
+                    name: Some("example.Hippo".to_owned()),
+                    type_: Some(fcdecl::DependencyType::Strong),
+                    ..ftest::Protocol::EMPTY
+                })],
+                fcdecl::Ref::Parent(fcdecl::ParentRef {}),
+                vec![fcdecl::Ref::Child(fcdecl::ChildRef {
+                    name: "a".to_owned(),
+                    collection: None,
+                })],
+            )
+            .await;
+        let resulting_a_decl = realm_and_builder_task
+            .realm_proxy
+            .get_component_decl("a")
+            .await
+            .expect("failed to call get_component_decl")
+            .expect("get_component_decl returned an error");
+        assert_eq!(a_decl, resulting_a_decl);
+    }
+
+    #[fuchsia::test]
     async fn add_local_child() {
         let mut realm_and_builder_task = RealmAndBuilderTask::new();
         realm_and_builder_task
@@ -4085,7 +4132,7 @@ mod tests {
         let mut realm_and_builder_task = RealmAndBuilderTask::new();
         realm_and_builder_task
             .realm_proxy
-            .add_child_from_decl("a", fcdecl::Component::EMPTY, ftest::ChildOptions::EMPTY)
+            .add_local_child("a", ftest::ChildOptions::EMPTY)
             .await
             .expect("failed to call AddChildFromDecl")
             .expect("call failed");
@@ -4178,6 +4225,26 @@ mod tests {
                 ftest::ChildOptions::EMPTY,
                 ComponentTree {
                     decl: cm_rust::ComponentDecl {
+                        program: Some(cm_rust::ProgramDecl {
+                            runner: Some(crate::runner::RUNNER_NAME.try_into().unwrap()),
+                            info: fdata::Dictionary {
+                                entries: Some(vec![
+                                    fdata::DictionaryEntry {
+                                        key: runner::LOCAL_COMPONENT_ID_KEY.to_string(),
+                                        value: Some(Box::new(fdata::DictionaryValue::Str(
+                                            "0".to_string(),
+                                        ))),
+                                    },
+                                    fdata::DictionaryEntry {
+                                        key: ftest::LOCAL_COMPONENT_NAME_KEY.to_string(),
+                                        value: Some(Box::new(fdata::DictionaryValue::Str(
+                                            "a".to_string(),
+                                        ))),
+                                    },
+                                ]),
+                                ..fdata::Dictionary::EMPTY
+                            },
+                        }),
                         capabilities: vec![cm_rust::CapabilityDecl::Protocol(
                             cm_rust::ProtocolDecl {
                                 name: cm_rust::CapabilityName("fuchsia.examples.Hippo".to_owned()),
@@ -4213,7 +4280,7 @@ mod tests {
 
         realm_and_builder_task
             .realm_proxy
-            .add_child_from_decl("a", fcdecl::Component::EMPTY, ftest::ChildOptions::EMPTY)
+            .add_local_child("a", ftest::ChildOptions::EMPTY)
             .await
             .expect("failed to call AddChildFromDecl")
             .expect("call failed");
@@ -4308,6 +4375,26 @@ mod tests {
                 ftest::ChildOptions::EMPTY,
                 ComponentTree {
                     decl: cm_rust::ComponentDecl {
+                        program: Some(cm_rust::ProgramDecl {
+                            runner: Some(crate::runner::RUNNER_NAME.try_into().unwrap()),
+                            info: fdata::Dictionary {
+                                entries: Some(vec![
+                                    fdata::DictionaryEntry {
+                                        key: runner::LOCAL_COMPONENT_ID_KEY.to_string(),
+                                        value: Some(Box::new(fdata::DictionaryValue::Str(
+                                            "0".to_string(),
+                                        ))),
+                                    },
+                                    fdata::DictionaryEntry {
+                                        key: ftest::LOCAL_COMPONENT_NAME_KEY.to_string(),
+                                        value: Some(Box::new(fdata::DictionaryValue::Str(
+                                            "a".to_string(),
+                                        ))),
+                                    },
+                                ]),
+                                ..fdata::Dictionary::EMPTY
+                            },
+                        }),
                         capabilities: vec![cm_rust::CapabilityDecl::Protocol(
                             cm_rust::ProtocolDecl {
                                 name: cm_rust::CapabilityName("fuchsia.examples.Echo".to_owned()),
