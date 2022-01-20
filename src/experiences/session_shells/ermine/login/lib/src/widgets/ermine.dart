@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 import 'package:flutter/material.dart';
+import 'package:flutter_mobx/flutter_mobx.dart';
 import 'package:fuchsia_scenic_flutter/fuchsia_view.dart';
 import 'package:login/src/states/oobe_state.dart';
 
@@ -14,6 +15,8 @@ class ErmineApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return FuchsiaView(controller: oobe.ermineViewConnection);
+    return Observer(builder: (_) {
+      return FuchsiaView(controller: oobe.ermineViewConnection);
+    });
   }
 }

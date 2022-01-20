@@ -70,6 +70,6 @@ class PreferencesService with Disposable {
   }
 
   static void _writePreferences(Map<String, dynamic> data) {
-    File(kPreferencesJson).writeAsStringSync(json.encode(data));
+    File(kPreferencesJson).writeAsStringSync(json.encode(data), flush: true);
   }
 }

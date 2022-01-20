@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_mobx/flutter_mobx.dart';
 import 'package:internationalization/strings.dart';
 import 'package:login/src/states/oobe_state.dart';
+import 'package:mobx/mobx.dart';
 
 /// Width of the password field widget.
 const double kOobeBodyFieldWidth = 492;
@@ -110,8 +111,8 @@ class Login extends StatelessWidget {
                                   crossAxisAlignment: CrossAxisAlignment.center,
                                   children: [
                                     Checkbox(
-                                      onChanged: (value) =>
-                                          _showPassword.value = value == true,
+                                      onChanged: (value) => runInAction(() =>
+                                          _showPassword.value = value == true),
                                       value: _showPassword.value,
                                     ),
                                     SizedBox(height: 40),

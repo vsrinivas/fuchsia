@@ -9,6 +9,7 @@ import 'package:internationalization/strings.dart';
 import 'package:login/src/states/oobe_state.dart';
 import 'package:login/src/widgets/header.dart';
 import 'package:login/src/widgets/login.dart';
+import 'package:mobx/mobx.dart';
 
 /// Defines a widget to create account password.
 class Password extends StatelessWidget {
@@ -97,8 +98,8 @@ class Password extends StatelessWidget {
                           crossAxisAlignment: CrossAxisAlignment.center,
                           children: [
                             Checkbox(
-                              onChanged: (value) =>
-                                  _showPassword.value = value == true,
+                              onChanged: (value) => runInAction(
+                                  () => _showPassword.value = value == true),
                               value: _showPassword.value,
                             ),
                             SizedBox(height: 40),

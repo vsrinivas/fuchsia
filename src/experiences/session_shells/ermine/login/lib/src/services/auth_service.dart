@@ -64,6 +64,8 @@ class AuthService {
       switch (e.value as Error) {
         case Error.failedAuthentication:
           return Strings.accountPasswordFailedAuthentication;
+        case Error.notFound:
+          return Strings.accountPartitionNotFound;
       }
     }
     return e.toString();

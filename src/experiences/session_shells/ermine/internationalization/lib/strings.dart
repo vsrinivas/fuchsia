@@ -478,6 +478,12 @@ class Strings {
         desc: 'The error text when password does fails authentication',
       );
 
+  static String get accountPartitionNotFound => Intl.message(
+        'Account partition not found. Please re-pave the device.',
+        name: 'accountPartitionNotFound',
+        desc: 'The error text when account partition is not found',
+      );
+
   static String get accountPasswordMismatch => Intl.message(
         'The passwords do not match.',
         name: 'accountPasswordMismatch',
