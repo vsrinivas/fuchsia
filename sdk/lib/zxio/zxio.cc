@@ -403,12 +403,16 @@ zx_status_t zxio_dirent_iterator_init(zxio_dirent_iterator_t* iterator, zxio_t* 
   return zio->ops->dirent_iterator_init(directory, iterator);
 }
 
-zx_status_t zxio_dirent_iterator_next(zxio_dirent_iterator_t* iterator, zxio_dirent_t** out_entry) {
+zx_status_t zxio_dirent_iterator_next(zxio_dirent_iterator_t* iterator,
+                                      zxio_dirent_t* inout_entry) {
   if (!zxio_is_valid(iterator->io)) {
     return ZX_ERR_BAD_HANDLE;
   }
+  if (inout_entry == nullptr || inout_entry->name == nullptr) {
+    return ZX_ERR_INVALID_ARGS;
+  }
   zxio_internal_t* zio = to_internal(iterator->io);
-  return zio->ops->dirent_iterator_next(iterator->io, iterator, out_entry);
+  return zio->ops->dirent_iterator_next(iterator->io, iterator, inout_entry);
 }
 
 void zxio_dirent_iterator_destroy(zxio_dirent_iterator_t* iterator) {

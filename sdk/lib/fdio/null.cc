@@ -42,7 +42,7 @@ zx_status_t fdio::dirent_iterator_init(zxio_dirent_iterator_t* iterator, zxio_t*
 }
 
 zx_status_t fdio::dirent_iterator_next(zxio_dirent_iterator_t* iterator,
-                                       zxio_dirent_t** out_entry) {
+                                       zxio_dirent_t* inout_entry) {
   return ZX_ERR_NOT_SUPPORTED;
 }
 

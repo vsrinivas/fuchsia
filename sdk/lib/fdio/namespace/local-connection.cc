@@ -98,15 +98,10 @@ struct local_connection : public base {
   }
 
   zx_status_t dirent_iterator_next(zxio_dirent_iterator_t* iterator,
-                                   zxio_dirent_t** out_entry) override {
+                                   zxio_dirent_t* inout_entry) override {
     auto& dir = local_dir();
     auto* dir_iterator = reinterpret_cast<local_dir_dirent_iterator*>(iterator);
-    zx_status_t status = dir.fs->Readdir(*dir.vn, &dir_iterator->iterator_state,
-                                         dir_iterator->buffer, dir_iterator->capacity, out_entry);
-    if (*out_entry == nullptr && status == ZX_OK) {
-      return ZX_ERR_NOT_FOUND;
-    }
-    return status;
+    return dir.fs->Readdir(*dir.vn, &dir_iterator->iterator_state, inout_entry);
   }
 
   void dirent_iterator_destroy(zxio_dirent_iterator_t* iterator) override {

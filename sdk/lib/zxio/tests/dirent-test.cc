@@ -127,12 +127,13 @@ TEST_F(DirentTest, StandardBufferSize) {
   ASSERT_OK(zxio_dirent_iterator_init(&iterator, &dir_.io));
 
   for (int count = 0; count < TestServer::kEntryCount; count++) {
-    zxio_dirent_t* entry;
+    char buf[ZXIO_MAX_FILENAME + 1];
+    zxio_dirent_t entry = {.name = buf};
     EXPECT_OK(zxio_dirent_iterator_next(&iterator, &entry));
-    EXPECT_TRUE(entry->has.id);
-    EXPECT_EQ(entry->id, count);
+    EXPECT_TRUE(entry.has.id);
+    EXPECT_EQ(entry.id, count);
     const size_t name_length = std::min(static_cast<size_t>(count) + 1, fio::wire::kMaxFilename);
-    EXPECT_EQ(entry->name_length, name_length);
+    EXPECT_EQ(entry.name_length, name_length);
   }
 
   zxio_dirent_iterator_destroy(&iterator);

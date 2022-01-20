@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 use std::convert::From;
-use std::ptr;
 
 use bitflags::bitflags;
 use fidl::endpoints::ServerEnd;
@@ -38,8 +37,6 @@ bitflags! {
 // Our dependencies create elaborate error objects, but Starnix would prefer
 // this library produce zx::Status errors for easier conversion to Errno.
 
-/// This struct is a more ergonomic way of reading zxio_dirent values, because
-/// it saves the data it points to instead of rellying on pointers.
 #[derive(Default, Debug)]
 pub struct ZxioDirent {
     pub protocols: Option<zxio::zxio_node_protocols_t>,
@@ -69,11 +66,17 @@ impl Iterator for DirentIterator {
         if self.finished {
             return None;
         }
-        let mut entry: *mut zxio_dirent_t = ptr::null_mut();
+        let mut entry = zxio_dirent_t::default();
+        let mut name_buffer = Vec::with_capacity(fio::MAX_FILENAME as usize);
+        // The FFI interface expects a pointer to std::os::raw:c_char which is i8 on Fuchsia.
+        // The Rust str and OsStr types expect raw character data to be stored in a buffer u8 values.
+        // The types are equivalent for all practical purposes and Rust permits casting between the types,
+        // so we insert a type cast here in the FFI bindings.
+        entry.name = name_buffer.as_mut_ptr() as *mut std::os::raw::c_char;
         let status = unsafe { zxio_dirent_iterator_next(&mut self.iterator, &mut entry) };
         let result = match zx::ok(status) {
             Ok(()) => {
-                let result = unsafe { ZxioDirent::from(&*entry) };
+                let result = ZxioDirent::from(entry, name_buffer);
                 Ok(result)
             }
             Err(zx::Status::NOT_FOUND) => {
@@ -95,15 +98,13 @@ impl Drop for DirentIterator {
 unsafe impl Send for DirentIterator {}
 unsafe impl Sync for DirentIterator {}
 
-impl From<&zxio_dirent_t> for ZxioDirent {
-    fn from(dirent: &zxio_dirent_t) -> ZxioDirent {
+impl ZxioDirent {
+    fn from(dirent: zxio_dirent_t, name_buffer: Vec<u8>) -> ZxioDirent {
         let protocols = if dirent.has.protocols { Some(dirent.protocols) } else { None };
         let abilities = if dirent.has.abilities { Some(dirent.abilities) } else { None };
         let id = if dirent.has.id { Some(dirent.id) } else { None };
-        let name: Vec<u8> = unsafe {
-            std::slice::from_raw_parts(dirent.name as *const u8, dirent.name_length as usize)
-                .to_owned()
-        };
+        let mut name = name_buffer;
+        unsafe { name.set_len(dirent.name_length as usize) };
         ZxioDirent { protocols, abilities, id, name }
     }
 }

@@ -175,7 +175,7 @@ struct fdio : protected fbl::RefCounted<fdio>, protected fbl::Recyclable<fdio> {
   virtual zx_status_t set_attr(const zxio_node_attributes_t* attr);
   virtual zx_status_t dirent_iterator_init(zxio_dirent_iterator_t* iterator, zxio_t* directory);
   virtual zx_status_t dirent_iterator_next(zxio_dirent_iterator_t* iterator,
-                                           zxio_dirent_t** out_entry);
+                                           zxio_dirent_t* inout_entry);
   virtual void dirent_iterator_destroy(zxio_dirent_iterator_t* iterator);
   virtual zx_status_t watch_directory(zxio_watch_directory_cb cb, zx_time_t deadline,
                                       void* context);

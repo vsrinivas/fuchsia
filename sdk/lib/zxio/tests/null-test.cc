@@ -59,7 +59,8 @@ TEST(NullTest, Default) {
 
   zxio_dirent_iterator_t iter = {};
   ASSERT_EQ(ZX_ERR_NOT_SUPPORTED, zxio_dirent_iterator_init(&iter, &io));
-  zxio_dirent_t* entry = nullptr;
+  char buf[ZXIO_MAX_FILENAME + 1];
+  zxio_dirent_t entry = {.name = buf};
   ASSERT_EQ(ZX_ERR_NOT_SUPPORTED, zxio_dirent_iterator_next(&iter, &entry));
 
   ASSERT_OK(zxio_close(&io));
@@ -119,7 +120,8 @@ TEST(NullTest, Null) {
 
   zxio_dirent_iterator_t iter = {};
   ASSERT_EQ(ZX_ERR_NOT_SUPPORTED, zxio_dirent_iterator_init(&iter, &io));
-  zxio_dirent_t* entry = nullptr;
+  char buf[ZXIO_MAX_FILENAME + 1];
+  zxio_dirent_t entry = {.name = buf};
   ASSERT_EQ(ZX_ERR_NOT_SUPPORTED, zxio_dirent_iterator_next(&iter, &entry));
 
   ASSERT_OK(zxio_close(&io));

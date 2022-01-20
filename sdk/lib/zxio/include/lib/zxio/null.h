@@ -64,7 +64,7 @@ zx_status_t zxio_default_link(zxio_t* io, const char* src_path, zx_handle_t dst_
                               const char* dst_path);
 zx_status_t zxio_default_dirent_iterator_init(zxio_t* directory, zxio_dirent_iterator_t* iterator);
 zx_status_t zxio_default_dirent_iterator_next(zxio_t* io, zxio_dirent_iterator_t* iterator,
-                                              zxio_dirent_t** out_entry);
+                                              zxio_dirent_t* inout_entry);
 void zxio_default_dirent_iterator_destroy(zxio_t* io, zxio_dirent_iterator_t* iterator);
 zx_status_t zxio_default_isatty(zxio_t* io, bool* tty);
 zx_status_t zxio_default_get_window_size(zxio_t* io, uint32_t* width, uint32_t* height);

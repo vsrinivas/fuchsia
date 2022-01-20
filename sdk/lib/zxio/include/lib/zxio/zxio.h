@@ -414,6 +414,8 @@ ZXIO_EXPORT zx_status_t zxio_link(zxio_t* src_directory, const char* src_path,
 // |zxio_dirent_iterator_next| to advance the iterator.
 //
 // Typically allocated on the stack.
+//
+// TODO(https://fxbug.dev/91172): Provide a buffer for chunks.
 typedef struct zxio_dirent_iterator {
   zxio_t* io;
   uint64_t opaque[7];
@@ -429,11 +431,12 @@ typedef struct zxio_dirent_iterator {
 ZXIO_EXPORT zx_status_t zxio_dirent_iterator_init(zxio_dirent_iterator_t* iterator,
                                                   zxio_t* directory);
 
-// Read a |zxio_dirent_t| from the given |iterator|.
+// Read a |zxio_dirent_t| from the given |iterator| into |inout_entry|.
 //
-// The |zxio_dirent_t| returned via |out_entry| is valid until either (a) the
-// next call to |zxio_dirent_iterator_next| or the |iterator| passed to
-// |zxio_dirent_iterator_init| is destroyed.
+// |inout_entry->name| must be initialized to point to a buffer of at least
+// ZXIO_MAX_FILENAME bytes. This function does not null terminate
+// |inout_entry->name| - refer to the |zxio_dirent_t| documentation in types.h
+// for more details.
 //
 // This function reads |zxio_directory_entry_t| from the server in chunks, but this
 // function returns the entries one at a time. When this function crosses into
@@ -446,7 +449,7 @@ ZXIO_EXPORT zx_status_t zxio_dirent_iterator_init(zxio_dirent_iterator_t* iterat
 // |iterator| must have been previously initialized via
 // |zxio_dirent_iterator_init|.
 ZXIO_EXPORT zx_status_t zxio_dirent_iterator_next(zxio_dirent_iterator_t* iterator,
-                                                  zxio_dirent_t** out_entry);
+                                                  zxio_dirent_t* inout_entry);
 
 // Destroys a |zxio_dirent_iterator_t|, freeing associated resources.
 //

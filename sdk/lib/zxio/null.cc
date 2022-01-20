@@ -132,7 +132,7 @@ zx_status_t zxio_default_dirent_iterator_init(zxio_t* directory, zxio_dirent_ite
 }
 
 zx_status_t zxio_default_dirent_iterator_next(zxio_t* io, zxio_dirent_iterator_t* iterator,
-                                              zxio_dirent_t** out_entry) {
+                                              zxio_dirent_t* inout_entry) {
   return ZX_ERR_NOT_SUPPORTED;
 }
 

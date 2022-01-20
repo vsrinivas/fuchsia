@@ -63,6 +63,13 @@ library_headers("inception") {
   ]
 }
 
+config("zxio_config") {
+  # This define is to provide a source code soft transition for the mesa library which uses
+  # zxio_dirent_iterator_next() and needs to transition to the new API.
+  # TODO(https://fxbug.dev/91172): Remove after mesa has updated and rolled.
+  defines = [ "ZXIO_HAS_NEW_DIRENT_ITERATOR_NEXT" ]
+}
+
 source_set("zxio") {
   sources = [
     "create.cc",
@@ -82,6 +89,7 @@ source_set("zxio") {
     "zxio.cc",
   ]
   public_deps = [ ":headers" ]
+  public_configs = [ ":zxio_config" ]
   deps = [
     "//sdk/fidl/fuchsia.hardware.pty:fuchsia.hardware.pty_llcpp",
     "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",

@@ -198,52 +198,36 @@ zx_status_t fdio_namespace::AddInotifyFilter(fbl::RefPtr<LocalVnode> vn, const c
                                  socket.release());
 }
 
-zx_status_t fdio_namespace::Readdir(const LocalVnode& vn, DirentIteratorState* state, void* buffer,
-                                    size_t length, zxio_dirent_t** out_entry) const {
+zx_status_t fdio_namespace::Readdir(const LocalVnode& vn, DirentIteratorState* state,
+                                    zxio_dirent_t* inout_entry) const {
   fbl::AutoLock lock(&lock_);
 
-  auto populate_entry = [length](zxio_dirent_t* entry, cpp17::string_view name) {
+  auto populate_entry = [](zxio_dirent_t* inout_entry, cpp17::string_view name) {
     if (name.size() > NAME_MAX) {
       return ZX_ERR_INVALID_ARGS;
     }
+    ZXIO_DIRENT_SET(*inout_entry, protocols, ZXIO_NODE_PROTOCOL_DIRECTORY);
     uint8_t name_size = static_cast<uint8_t>(name.size());
-    *entry = {};
-    ZXIO_DIRENT_SET(*entry, protocols, ZXIO_NODE_PROTOCOL_DIRECTORY);
-    if (sizeof(zxio_dirent_t) + name_size + 1 > length) {
-      return ZX_ERR_INVALID_ARGS;
-    }
-    entry->name_length = name_size;
-    entry->name = reinterpret_cast<char*>(entry) + sizeof(zxio_dirent_t);
-    memcpy(entry->name, name.data(), name_size);
-    entry->name[name_size] = '\0';
+    inout_entry->name_length = name_size;
+    memcpy(inout_entry->name, name.data(), name_size);
+    inout_entry->name[name_size] = '\0';
     return ZX_OK;
   };
 
   if (!state->encountered_dot) {
-    auto entry = reinterpret_cast<zxio_dirent_t*>(buffer);
-    zx_status_t status = populate_entry(entry, cpp17::string_view("."));
+    zx_status_t status = populate_entry(inout_entry, cpp17::string_view("."));
     if (status != ZX_OK) {
-      *out_entry = nullptr;
       return status;
     }
-    *out_entry = entry;
     state->encountered_dot = true;
     return ZX_OK;
   }
   fbl::RefPtr<LocalVnode> child_vnode;
   vn.Readdir(&state->last_seen, &child_vnode);
   if (!child_vnode) {
-    *out_entry = nullptr;
-    return ZX_OK;
+    return ZX_ERR_NOT_FOUND;
   }
-  auto entry = reinterpret_cast<zxio_dirent_t*>(buffer);
-  zx_status_t status = populate_entry(entry, child_vnode->Name());
-  if (status != ZX_OK) {
-    *out_entry = nullptr;
-    return status;
-  }
-  *out_entry = entry;
-  return ZX_OK;
+  return populate_entry(inout_entry, child_vnode->Name());
 }
 
 zx::status<fdio_ptr> fdio_namespace::CreateConnection(fbl::RefPtr<LocalVnode> vn) const {

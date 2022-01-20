@@ -29,7 +29,7 @@ struct zxio : public base {
   zx_status_t set_attr(const zxio_node_attributes_t* attr) override;
   zx_status_t dirent_iterator_init(zxio_dirent_iterator_t* iterator, zxio_t* directory) override;
   zx_status_t dirent_iterator_next(zxio_dirent_iterator_t* iterator,
-                                   zxio_dirent_t** out_entry) override;
+                                   zxio_dirent_t* inout_entry) override;
   void dirent_iterator_destroy(zxio_dirent_iterator_t* iterator) override;
   zx_status_t watch_directory(zxio_watch_directory_cb cb, zx_time_t deadline,
                               void* context) override;

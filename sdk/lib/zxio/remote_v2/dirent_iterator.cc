@@ -44,40 +44,36 @@ class DirentIteratorImpl {
 
   ~DirentIteratorImpl() = default;
 
-  zx_status_t Next(zxio_dirent_t** out_entry) {
-    if (index_ >= entries_.count()) {
+  zx_status_t Next(zxio_dirent_t* inout_entry) {
+    if (index_ >= fidl_entries_.count()) {
       zx_status_t status = ReadNextBatch();
       if (status != ZX_OK) {
         return status;
       }
-      if (entries_.count() == 0) {
+      if (fidl_entries_.count() == 0) {
         return ZX_ERR_NOT_FOUND;
       }
       index_ = 0;
     }
 
-    const auto& entry = entries_[index_];
+    const auto& fidl_entry = fidl_entries_[index_];
     index_++;
 
-    if (!entry.has_name() || entry.name().size() > fio2::wire::kMaxNameLength) {
+    if (!fidl_entry.has_name() || fidl_entry.name().size() > fio2::wire::kMaxNameLength) {
       return ZX_ERR_INVALID_ARGS;
     }
 
-    boxed_->current_entry = {};
-    boxed_->current_entry.name = boxed_->current_entry_name;
-    if (entry.has_protocols()) {
-      ZXIO_DIRENT_SET(boxed_->current_entry, protocols, ToZxioNodeProtocols(entry.protocols()));
+    if (fidl_entry.has_protocols()) {
+      ZXIO_DIRENT_SET(*inout_entry, protocols, ToZxioNodeProtocols(fidl_entry.protocols()));
     }
-    if (entry.has_abilities()) {
-      ZXIO_DIRENT_SET(boxed_->current_entry, abilities, ToZxioAbilities(entry.abilities()));
+    if (fidl_entry.has_abilities()) {
+      ZXIO_DIRENT_SET(*inout_entry, abilities, ToZxioAbilities(fidl_entry.abilities()));
     }
-    if (entry.has_id()) {
-      ZXIO_DIRENT_SET(boxed_->current_entry, id, entry.id());
+    if (fidl_entry.has_id()) {
+      ZXIO_DIRENT_SET(*inout_entry, id, fidl_entry.id());
     }
-    boxed_->current_entry.name_length = static_cast<uint8_t>(entry.name().size());
-    memcpy(boxed_->current_entry_name, entry.name().data(), entry.name().size());
-    boxed_->current_entry_name[entry.name().size()] = '\0';
-    *out_entry = &boxed_->current_entry;
+    inout_entry->name_length = static_cast<uint8_t>(fidl_entry.name().size());
+    memcpy(inout_entry->name, fidl_entry.name().data(), inout_entry->name_length);
 
     return ZX_OK;
   }
@@ -102,7 +98,7 @@ class DirentIteratorImpl {
       return result->result.err();
     }
     auto& response = result->result.mutable_response();
-    entries_ = response.entries;
+    fidl_entries_ = response.entries;
     return ZX_OK;
   }
 
@@ -113,12 +109,6 @@ class DirentIteratorImpl {
 
     // Buffer used by the FIDL calls.
     fidl::SyncClientBuffer<fio2::DirectoryIterator::GetNext> fidl_buffer;
-
-    // At each |zxio_dirent_iterator_next| call, we would extract the next
-    // dirent segment from |response_buffer|, and populate |current_entry|
-    // and |current_entry_name|.
-    zxio_dirent_t current_entry;
-    char current_entry_name[fio2::wire::kMaxNameLength + 1] = {};
   };
 
   // The first field must be some kind of |zxio_t| pointer, to be compatible
@@ -126,7 +116,7 @@ class DirentIteratorImpl {
   zxio_remote_v2_t* io_;
 
   std::unique_ptr<Boxed> boxed_;
-  fidl::VectorView<fio2::wire::DirectoryEntry> entries_ = {};
+  fidl::VectorView<fio2::wire::DirectoryEntry> fidl_entries_ = {};
   uint64_t index_ = 0;
   fidl::WireSyncClient<fio2::DirectoryIterator> iterator_;
   uint64_t opaque_[2];
@@ -143,8 +133,8 @@ zx_status_t zxio_remote_v2_dirent_iterator_init(zxio_t* directory,
 }
 
 zx_status_t zxio_remote_v2_dirent_iterator_next(zxio_t* io, zxio_dirent_iterator_t* iterator,
-                                                zxio_dirent_t** out_entry) {
-  return reinterpret_cast<DirentIteratorImpl*>(iterator)->Next(out_entry);
+                                                zxio_dirent_t* inout_entry) {
+  return reinterpret_cast<DirentIteratorImpl*>(iterator)->Next(inout_entry);
 }
 
 void zxio_remote_v2_dirent_iterator_destroy(zxio_t* io, zxio_dirent_iterator_t* iterator) {

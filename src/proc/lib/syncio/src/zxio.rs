@@ -428,7 +428,7 @@ extern "C" {
 extern "C" {
     pub fn zxio_dirent_iterator_next(
         iterator: *mut zxio_dirent_iterator_t,
-        out_entry: *mut *mut zxio_dirent_t,
+        inout_entry: *mut zxio_dirent_t,
     ) -> zx_status_t;
 }
 extern "C" {

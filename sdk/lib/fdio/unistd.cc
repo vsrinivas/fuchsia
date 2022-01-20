@@ -1671,7 +1671,6 @@ __EXPORT
 struct dirent* readdir(DIR* dir) {
   fbl::AutoLock lock(&dir->lock);
   struct dirent* de = &dir->de;
-  zxio_dirent_t* entry = nullptr;
 
   fdio_ptr io = fd_to_io(dir->fd);
 
@@ -1684,23 +1683,27 @@ struct dirent* readdir(DIR* dir) {
     }
     dir->is_iterator_initialized = true;
   }
+  // We need space for the maximum possible filename plus a null terminator.
+  static_assert(sizeof(de->d_name) >= ZXIO_MAX_FILENAME + 1);
+  zxio_dirent_t entry = {.name = de->d_name};
   zx_status_t status = io->dirent_iterator_next(&dir->iterator, &entry);
   if (status == ZX_ERR_NOT_FOUND) {
     // Reached the end.
-    ZX_DEBUG_ASSERT(!entry);
     return nullptr;
   }
   if (status != ZX_OK) {
     errno = fdio_status_to_errno(status);
     return nullptr;
   }
-  de->d_ino = entry->has.id ? entry->id : fio::wire::kInoUnknown;
+  // zxio doesn't null terminate this string, so we do.
+  de->d_name[entry.name_length] = '\0';
+  de->d_ino = entry.has.id ? entry.id : fio::wire::kInoUnknown;
   de->d_off = 0;
   // The d_reclen field is nonstandard, but existing code
   // may expect it to be useful as an upper bound on the
   // length of the name.
-  de->d_reclen = static_cast<uint16_t>(offsetof(struct dirent, d_name) + entry->name_length + 1);
-  if (entry->has.protocols) {
+  de->d_reclen = static_cast<uint16_t>(offsetof(struct dirent, d_name) + entry.name_length + 1);
+  if (entry.has.protocols) {
     de->d_type = ([](zxio_node_protocols_t protocols) -> unsigned char {
       if (protocols & ZXIO_NODE_PROTOCOL_DIRECTORY)
         return DT_DIR;
@@ -1722,12 +1725,10 @@ struct dirent* readdir(DIR* dir) {
       if (protocols & ZXIO_NODE_PROTOCOL_CONNECTOR)
         return DT_UNKNOWN;
       return DT_UNKNOWN;
-    })(entry->protocols);
+    })(entry.protocols);
   } else {
     de->d_type = DT_UNKNOWN;
   }
-  memcpy(de->d_name, entry->name, entry->name_length);
-  de->d_name[entry->name_length] = '\0';
   return de;
 }
 

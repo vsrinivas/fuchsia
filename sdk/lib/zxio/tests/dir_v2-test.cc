@@ -136,26 +136,25 @@ TEST_F(DirV2, Enumerate) {
   zxio_dirent_iterator_t iterator;
   ASSERT_OK(zxio_dirent_iterator_init(&iterator, &dir_.io));
 
-  zxio_dirent_t* entry;
+  char buf[ZXIO_MAX_FILENAME];
+  zxio_dirent_t entry = {.name = buf};
   ASSERT_OK(zxio_dirent_iterator_next(&iterator, &entry));
-  EXPECT_TRUE(entry->has.protocols);
-  EXPECT_EQ(ZXIO_NODE_PROTOCOL_DIRECTORY, entry->protocols);
-  EXPECT_TRUE(entry->has.abilities);
-  EXPECT_EQ(ZXIO_OPERATION_ENUMERATE, entry->abilities);
-  EXPECT_TRUE(entry->has.id);
-  EXPECT_EQ(0, entry->id);
-  EXPECT_STREQ("zero", entry->name);
-  EXPECT_EQ(strlen(entry->name), entry->name_length);
+  EXPECT_TRUE(entry.has.protocols);
+  EXPECT_EQ(ZXIO_NODE_PROTOCOL_DIRECTORY, entry.protocols);
+  EXPECT_TRUE(entry.has.abilities);
+  EXPECT_EQ(ZXIO_OPERATION_ENUMERATE, entry.abilities);
+  EXPECT_TRUE(entry.has.id);
+  EXPECT_EQ(0, entry.id);
+  EXPECT_EQ("zero", std::string_view(entry.name, entry.name_length));
 
   ASSERT_OK(zxio_dirent_iterator_next(&iterator, &entry));
-  EXPECT_TRUE(entry->has.protocols);
-  EXPECT_EQ(ZXIO_NODE_PROTOCOL_FILE, entry->protocols);
-  EXPECT_TRUE(entry->has.abilities);
-  EXPECT_EQ(ZXIO_OPERATION_READ_BYTES, entry->abilities);
-  EXPECT_TRUE(entry->has.id);
-  EXPECT_EQ(1, entry->id);
-  EXPECT_STREQ("one", entry->name);
-  EXPECT_EQ(strlen(entry->name), entry->name_length);
+  EXPECT_TRUE(entry.has.protocols);
+  EXPECT_EQ(ZXIO_NODE_PROTOCOL_FILE, entry.protocols);
+  EXPECT_TRUE(entry.has.abilities);
+  EXPECT_EQ(ZXIO_OPERATION_READ_BYTES, entry.abilities);
+  EXPECT_TRUE(entry.has.id);
+  EXPECT_EQ(1, entry.id);
+  EXPECT_EQ("one", std::string_view(entry.name, entry.name_length));
 
   ASSERT_EQ(ZX_ERR_NOT_FOUND, zxio_dirent_iterator_next(&iterator, &entry));
   ASSERT_EQ(ZX_ERR_NOT_FOUND, zxio_dirent_iterator_next(&iterator, &entry));

@@ -39,7 +39,7 @@ class DirentIteratorImpl {
     fidl::WireCall(fidl::UnownedClientEnd<fio::Directory>(io_->control))->Rewind();
   }
 
-  zx_status_t Next(zxio_dirent_t** out_entry) {
+  zx_status_t Next(zxio_dirent_t* inout_entry) {
     if (index_ >= count_) {
       zx_status_t status = RemoteReadDirents();
       if (status != ZX_OK) {
@@ -64,7 +64,7 @@ class DirentIteratorImpl {
       char name[0];
     } __PACKED;
 
-    auto entry = reinterpret_cast<const dirent*>(&data_[index_]);
+    auto packed_entry = reinterpret_cast<const dirent*>(&data_[index_]);
 
     // Check if we can read the entry size.
     if (index_ + sizeof(dirent) > count_) {
@@ -72,29 +72,27 @@ class DirentIteratorImpl {
       return ZX_ERR_INTERNAL;
     }
 
-    size_t entry_size = sizeof(dirent) + entry->size;
+    size_t packed_entry_size = sizeof(dirent) + packed_entry->size;
 
     // Check if we can read the whole entry.
-    if (index_ + entry_size > count_) {
+    if (index_ + packed_entry_size > count_) {
       // Should not happen
       return ZX_ERR_INTERNAL;
     }
 
     // Check that the name length is within bounds.
-    if (entry->size > fio::wire::kMaxFilename) {
+    if (packed_entry->size > fio::wire::kMaxFilename) {
       return ZX_ERR_INVALID_ARGS;
     }
 
-    index_ += entry_size;
+    index_ += packed_entry_size;
 
-    boxed_->current_entry = {};
-    boxed_->current_entry.name = boxed_->current_entry_name;
-    ZXIO_DIRENT_SET(boxed_->current_entry, protocols, DTypeToProtocols(entry->type));
-    ZXIO_DIRENT_SET(boxed_->current_entry, id, entry->ino);
-    boxed_->current_entry.name_length = entry->size;
-    memcpy(boxed_->current_entry_name, entry->name, entry->size);
-    boxed_->current_entry_name[entry->size] = '\0';
-    *out_entry = &boxed_->current_entry;
+    ZXIO_DIRENT_SET(*inout_entry, protocols, DTypeToProtocols(packed_entry->type));
+    ZXIO_DIRENT_SET(*inout_entry, id, packed_entry->ino);
+    inout_entry->name_length = packed_entry->size;
+    if (inout_entry->name != nullptr) {
+      memcpy(inout_entry->name, packed_entry->name, packed_entry->size);
+    }
 
     return ZX_OK;
   }
@@ -152,12 +150,6 @@ class DirentIteratorImpl {
 
     // Buffers used by the FIDL calls.
     fidl::SyncClientBuffer<fio::Directory::ReadDirents> fidl_buffer;
-
-    // At each |zxio_dirent_iterator_next| call, we would extract the next
-    // dirent segment from |response_buffer|, and populate |current_entry|
-    // and |current_entry_name|.
-    zxio_dirent_t current_entry;
-    char current_entry_name[fio::wire::kMaxFilename + 1] = {};
   };
 
   zxio_remote_t* io_;
@@ -891,8 +883,8 @@ zx_status_t zxio_remote_dirent_iterator_init(zxio_t* directory, zxio_dirent_iter
 }
 
 zx_status_t zxio_remote_dirent_iterator_next(zxio_t* io, zxio_dirent_iterator_t* iterator,
-                                             zxio_dirent_t** out_entry) {
-  return reinterpret_cast<DirentIteratorImpl*>(iterator)->Next(out_entry);
+                                             zxio_dirent_t* inout_entry) {
+  return reinterpret_cast<DirentIteratorImpl*>(iterator)->Next(inout_entry);
 }
 
 void zxio_remote_dirent_iterator_destroy(zxio_t* io, zxio_dirent_iterator_t* iterator) {

@@ -197,8 +197,8 @@ zx_status_t zxio::dirent_iterator_init(zxio_dirent_iterator_t* iterator, zxio_t*
 }
 
 zx_status_t zxio::dirent_iterator_next(zxio_dirent_iterator_t* iterator,
-                                       zxio_dirent_t** out_entry) {
-  return zxio_dirent_iterator_next(iterator, out_entry);
+                                       zxio_dirent_t* inout_entry) {
+  return zxio_dirent_iterator_next(iterator, inout_entry);
 }
 
 void zxio::dirent_iterator_destroy(zxio_dirent_iterator_t* iterator) {

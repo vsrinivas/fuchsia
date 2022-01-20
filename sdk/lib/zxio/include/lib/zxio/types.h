@@ -276,6 +276,9 @@ typedef uint32_t zxio_seek_origin_t;
 #define ZXIO_SEEK_ORIGIN_CURRENT ((zxio_seek_origin_t)1u)
 #define ZXIO_SEEK_ORIGIN_END ((zxio_seek_origin_t)2u)
 
+// Matches fuchsia.io/MAX_FILENAME
+#define ZXIO_MAX_FILENAME 255
+
 // An entry in a directory.
 typedef struct zxio_dirent {
   // The kinds of representations supported by the node.
@@ -301,10 +304,16 @@ typedef struct zxio_dirent {
   // The length of the name of the entry.
   uint8_t name_length;
 
-  // The name of the entry.
+  // Pointer to a buffer containing the name of this entry. This must point to a
+  // buffer of at least ZXIO_MAX_FILENAME bytes.
   //
-  // This string is null terminated. Also, |name_length| is offered
-  // as a convenience.
+  // This string is not null terminated by the zxio library. |name_length| indicates the
+  // length of the string.
+  //
+  // If this buffer will be passed to code expecting a C-style null terminated string,
+  // such as the |d_name| field of a |dirent| struct, callers should allocate a buffer
+  // of at least ZXIO_MAX_FILENAME + 1 bytes and write a null terminator after calling
+  // zxio_dirent_iterator_next().
   char* name;
 } zxio_dirent_t;
 

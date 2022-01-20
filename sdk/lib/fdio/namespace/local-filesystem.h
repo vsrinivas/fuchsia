@@ -49,12 +49,10 @@ struct fdio_namespace : public fbl::RefCounted<fdio_namespace> {
   // Export all remote references and their paths in a flat format.
   zx_status_t Export(fdio_flat_namespace_t** out) const;
 
-  // Reads a single entry from the list of directory entries into a flattened buffer.
-  // |state| contains the position of the iteration.
-  // |buffer| and |length| describe the buffer for placing the directory entry.
-  // If we have reached the end, |out_entry| is set to NULL, and ZX_OK is returned.
-  zx_status_t Readdir(const LocalVnode& vn, DirentIteratorState* state, void* buffer, size_t length,
-                      zxio_dirent_t** out_entry) const;
+  // Reads a single entry from the list of directory entries into |inout_entry|.
+  // If we have reached the end, ZX_ERR_NOT_FOUND is returned.
+  zx_status_t Readdir(const LocalVnode& vn, DirentIteratorState* state,
+                      zxio_dirent_t* inout_entry) const;
 
   // Create a new object referring to the object at |path|.
   //
