@@ -4,12 +4,11 @@
 
 use {
     anyhow::{anyhow, Error, Result},
-    fidl::endpoints::ProtocolMarker,
     fidl_fuchsia_driver_test as fdt, fidl_fuchsia_interop_test as ft, fuchsia_async as fasync,
     fuchsia_async::futures::{StreamExt, TryStreamExt},
     fuchsia_component::server::ServiceFs,
-    fuchsia_component_test::{
-        mock::MockHandles, ChildOptions, RealmBuilder, RouteBuilder, RouteEndpoint,
+    fuchsia_component_test::new::{
+        Capability, ChildOptions, LocalComponentHandles, RealmBuilder, Ref, Route,
     },
     fuchsia_driver_test::{DriverTestRealmBuilder, DriverTestRealmInstance},
     futures::channel::mpsc,
@@ -24,7 +23,10 @@ async fn waiter_serve(mut stream: ft::WaiterRequestStream, mut sender: mpsc::Sen
     }
 }
 
-async fn waiter_component(handles: MockHandles, sender: mpsc::Sender<()>) -> Result<(), Error> {
+async fn waiter_component(
+    handles: LocalComponentHandles,
+    sender: mpsc::Sender<()>,
+) -> Result<(), Error> {
     let mut fs = ServiceFs::new();
     fs.dir("svc").add_fidl_service(move |stream: ft::WaiterRequestStream| {
         fasync::Task::spawn(waiter_serve(stream, sender.clone())).detach()
@@ -39,19 +41,22 @@ async fn test_interop() -> Result<()> {
 
     // Create the RealmBuilder.
     let builder = RealmBuilder::new().await?;
-    builder
-        .driver_test_realm_manifest_setup("#meta/realm.cm")
-        .await?
-        .add_mock_child(
+    builder.driver_test_realm_manifest_setup("#meta/realm.cm").await?;
+    let waiter = builder
+        .add_local_child(
             WAITER_NAME,
-            move |handles: MockHandles| Box::pin(waiter_component(handles, sender.clone())),
+            move |handles: LocalComponentHandles| {
+                Box::pin(waiter_component(handles, sender.clone()))
+            },
             ChildOptions::new(),
         )
-        .await?
+        .await?;
+    builder
         .add_route(
-            RouteBuilder::protocol(ft::WaiterMarker::DEBUG_NAME)
-                .source(RouteEndpoint::component(WAITER_NAME))
-                .targets(vec![RouteEndpoint::component(fuchsia_driver_test::COMPONENT_NAME)]),
+            Route::new()
+                .capability(Capability::protocol::<ft::WaiterMarker>())
+                .from(&waiter)
+                .to(Ref::child(fuchsia_driver_test::COMPONENT_NAME)),
         )
         .await?;
     // Build the Realm.

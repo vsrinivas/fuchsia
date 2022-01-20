@@ -11,7 +11,7 @@ use {
     diagnostics_reader::{assert_data_tree, ArchiveReader, Logs},
     fasync::futures::StreamExt,
     fidl_fuchsia_driver_test as fdt, fuchsia_async as fasync,
-    fuchsia_component_test::RealmBuilder,
+    fuchsia_component_test::new::RealmBuilder,
     fuchsia_driver_test::{DriverTestRealmBuilder, DriverTestRealmInstance},
     std::convert::TryFrom,
 };

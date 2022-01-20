@@ -9,7 +9,7 @@ use {
         self as fasync,
         futures::{stream::FuturesUnordered, TryStreamExt},
     },
-    fuchsia_component_test::{RealmBuilder, RealmInstance},
+    fuchsia_component_test::new::{RealmBuilder, RealmInstance},
     fuchsia_driver_test::{DriverTestRealmBuilder, DriverTestRealmInstance},
     fuchsia_zircon_status as zx_status,
     lazy_static::lazy_static,

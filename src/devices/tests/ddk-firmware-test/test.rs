@@ -8,8 +8,8 @@ use {
     anyhow::Error,
     fidl::endpoints::{Proxy, ServerEnd},
     fidl_fuchsia_driver_test as fdt, fidl_fuchsia_io2 as fio2,
-    fuchsia_component_test::{
-        mock::MockHandles, ChildOptions, RealmBuilder, RouteBuilder, RouteEndpoint,
+    fuchsia_component_test::new::{
+        Capability, ChildOptions, LocalComponentHandles, RealmBuilder, Ref, Route,
     },
     fuchsia_driver_test::DriverTestRealmInstance,
 };
@@ -21,7 +21,7 @@ type Directory = std::sync::Arc<
 async fn serve_fake_filesystem(
     system: Directory,
     pkgfs: Directory,
-    handles: MockHandles,
+    handles: LocalComponentHandles,
 ) -> Result<(), anyhow::Error> {
     let fs_scope = vfs::execution_scope::ExecutionScope::new();
     let root: Directory = vfs::pseudo_directory! {
@@ -45,19 +45,21 @@ async fn serve_fake_filesystem(
 async fn create_realm(
     system: Directory,
     pkgfs: Directory,
-) -> Result<fuchsia_component_test::RealmInstance, Error> {
+) -> Result<fuchsia_component_test::new::RealmInstance, Error> {
     let builder = RealmBuilder::new().await?;
 
-    builder
-        .add_mock_child(
+    let fake_filesystem = builder
+        .add_local_child(
             "fake_filesystem",
-            move |h: MockHandles| serve_fake_filesystem(system.clone(), pkgfs.clone(), h).boxed(),
+            move |h: LocalComponentHandles| {
+                serve_fake_filesystem(system.clone(), pkgfs.clone(), h).boxed()
+            },
             ChildOptions::new().eager(),
         )
         .await
         .expect("mock component added");
 
-    builder
+    let driver_manager = builder
         .add_child(
             "driver_manager",
             "fuchsia-pkg://fuchsia.com/ddk-firmware-test#meta/driver-manager-realm.cm",
@@ -65,67 +67,45 @@ async fn create_realm(
         )
         .await?;
 
-    let fake_filesystem = RouteEndpoint::component("fake_filesystem");
-    let driver_manager = RouteEndpoint::component("driver_manager");
     builder
         .add_route(
-            RouteBuilder::directory("pkgfs-delayed", "/pkgfs", fio2::RX_STAR_DIR)
-                .source(fake_filesystem.clone())
-                .targets(vec![driver_manager.clone()]),
+            Route::new()
+                .capability(
+                    Capability::directory("pkgfs-delayed").path("/pkgfs").rights(fio2::RX_STAR_DIR),
+                )
+                .capability(
+                    Capability::directory("pkgfs-packages-delayed")
+                        .path("/pkgfs/packages")
+                        .rights(fio2::R_STAR_DIR),
+                )
+                .capability(
+                    Capability::directory("system-delayed")
+                        .path("/system")
+                        .rights(fio2::RX_STAR_DIR),
+                )
+                .capability(Capability::directory("boot").path("/boot").rights(fio2::R_STAR_DIR))
+                .from(&fake_filesystem)
+                .to(&driver_manager),
         )
-        .await?
+        .await?;
+    builder
         .add_route(
-            RouteBuilder::directory("pkgfs-packages-delayed", "/pkgfs/packages", fio2::R_STAR_DIR)
-                .source(fake_filesystem.clone())
-                .targets(vec![driver_manager.clone()]),
+            Route::new()
+                .capability(Capability::directory("dev"))
+                .capability(Capability::protocol_by_name("fuchsia.device.manager.Administrator"))
+                .capability(Capability::protocol_by_name("fuchsia.driver.test.Realm"))
+                .from(&driver_manager)
+                .to(Ref::parent()),
         )
-        .await?
+        .await?;
+    builder
         .add_route(
-            RouteBuilder::directory("system-delayed", "/system", fio2::RX_STAR_DIR)
-                .source(fake_filesystem.clone())
-                .targets(vec![driver_manager.clone()]),
-        )
-        .await?
-        .add_route(
-            RouteBuilder::directory("boot", "/boot", fio2::R_STAR_DIR)
-                .source(fake_filesystem.clone())
-                .targets(vec![driver_manager.clone()]),
-        )
-        .await?
-        .add_route(
-            RouteBuilder::directory("dev", "/dev", fio2::R_STAR_DIR)
-                .source(driver_manager.clone())
-                .targets(vec![RouteEndpoint::AboveRoot]),
-        )
-        .await?
-        .add_route(
-            RouteBuilder::protocol("fuchsia.device.manager.Administrator")
-                .source(driver_manager.clone())
-                .targets(vec![RouteEndpoint::AboveRoot]),
-        )
-        .await?
-        .add_route(
-            RouteBuilder::protocol("fuchsia.logger.LogSink")
-                .source(RouteEndpoint::AboveRoot)
-                .targets(vec![driver_manager.clone()]),
-        )
-        .await?
-        .add_route(
-            RouteBuilder::protocol("fuchsia.process.Launcher")
-                .source(RouteEndpoint::AboveRoot)
-                .targets(vec![driver_manager.clone()]),
-        )
-        .await?
-        .add_route(
-            RouteBuilder::protocol("fuchsia.sys.Launcher")
-                .source(RouteEndpoint::AboveRoot)
-                .targets(vec![driver_manager.clone()]),
-        )
-        .await?
-        .add_route(
-            RouteBuilder::protocol("fuchsia.driver.test.Realm")
-                .source(driver_manager.clone())
-                .targets(vec![RouteEndpoint::AboveRoot]),
+            Route::new()
+                .capability(Capability::protocol_by_name("fuchsia.logger.LogSink"))
+                .capability(Capability::protocol_by_name("fuchsia.process.Launcher"))
+                .capability(Capability::protocol_by_name("fuchsia.sys.Launcher"))
+                .from(Ref::parent())
+                .to(&driver_manager),
         )
         .await?;
     let realm = builder.build().await?;

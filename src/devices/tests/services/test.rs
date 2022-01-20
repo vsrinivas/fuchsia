@@ -4,11 +4,10 @@
 
 use {
     anyhow::{Context, Result},
-    fidl::endpoints::ServiceMarker,
     fidl_fuchsia_driver_test as fdt, fidl_fuchsia_services_test as ft,
     fuchsia_async::{self as fasync, DurationExt, Timer},
     fuchsia_component::client,
-    fuchsia_component_test::{RealmBuilder, RouteBuilder, RouteEndpoint},
+    fuchsia_component_test::new::{Capability, RealmBuilder, Ref, Route},
     fuchsia_driver_test::{DriverTestRealmBuilder, DriverTestRealmInstance},
     fuchsia_zircon::DurationNum,
 };
@@ -17,13 +16,13 @@ use {
 async fn test_services() -> Result<()> {
     // Create the RealmBuilder.
     let builder = RealmBuilder::new().await?;
+    builder.driver_test_realm_manifest_setup("#meta/realm.cm").await?;
     builder
-        .driver_test_realm_manifest_setup("#meta/realm.cm")
-        .await?
         .add_route(
-            RouteBuilder::service(ft::DeviceMarker::SERVICE_NAME)
-                .source(RouteEndpoint::component("driver_test_realm"))
-                .targets(vec![RouteEndpoint::AboveRoot]),
+            Route::new()
+                .capability(Capability::service::<ft::DeviceMarker>())
+                .from(Ref::child("driver_test_realm"))
+                .to(Ref::parent()),
         )
         .await?;
     // Build the Realm.
