@@ -205,7 +205,7 @@ impl CapabilityProvider for DefaultComponentCapabilityProvider {
             let path = self.path.to_path_buf().attach(relative_path);
             res?.open_outgoing(flags, open_mode, path, server_end).await?;
         } else {
-            let _ = res?;
+            res?;
         }
         Ok(())
     }
@@ -367,7 +367,9 @@ pub async fn report_routing_failure(
     err: &ModelError,
     server_end: zx::Channel,
 ) {
-    let _ = server_end.close_with_epitaph(err.as_zx_status());
+    server_end
+        .close_with_epitaph(err.as_zx_status())
+        .unwrap_or_else(|e| log::debug!("failed to send epitaph: {}", e));
     let err_str = match err {
         ModelError::RoutingError { err } => err.to_string(),
         _ => err.to_string(),

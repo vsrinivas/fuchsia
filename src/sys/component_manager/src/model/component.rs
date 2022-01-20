@@ -57,7 +57,7 @@ use {
         },
         lock::{MappedMutexGuard, Mutex, MutexGuard},
     },
-    log::warn,
+    log::{error, warn},
     moniker::{
         AbsoluteMoniker, AbsoluteMonikerBase, ChildMoniker, ChildMonikerBase, ExtendedMoniker,
         InstanceId, PartialAbsoluteMoniker, PartialChildMoniker,
@@ -810,6 +810,8 @@ impl ComponentInstance {
                         }
                     }
                     let mut actions = component.lock_actions().await;
+
+                    // This returns a Future that does not need to be polled.
                     let _ = actions
                         .register_no_wait(&component, PurgeChildAction::new(child_moniker.clone()));
                 })
@@ -1562,7 +1564,7 @@ impl ResolvedInstanceState {
         decl: &ComponentDecl,
     ) {
         for child in decl.children.iter() {
-            let _ = self.add_child(component, child, None, None, None).await;
+            self.add_child(component, child, None, None, None).await;
         }
     }
 }
@@ -1725,7 +1727,9 @@ impl Runtime {
                 async move {
                     epitaph_fut.await;
                     if let Ok(component) = component.upgrade() {
-                        let _ = ActionSet::register(component, StopAction::new(false, false)).await;
+                        ActionSet::register(component, StopAction::new(false, false))
+                            .await
+                            .unwrap_or_else(|e| error!("failed to register action: {}", e));
                     }
                 },
                 abort_server,

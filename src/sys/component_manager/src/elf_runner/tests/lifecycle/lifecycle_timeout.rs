@@ -59,7 +59,7 @@ async fn test_stop_timeouts() {
         .await
         .unwrap();
 
-        let _ = instance.connect_to_binder().unwrap();
+        instance.connect_to_binder().unwrap();
 
         // Why do we have three duplicate events sets here? We expect three things
         // to stop, the root component and its two children. The problem is that
@@ -76,7 +76,7 @@ async fn test_stop_timeouts() {
             [moniker_stem.clone(), custom_timeout_child.clone(), inherited_timeout_child.clone()];
 
         for _ in 0..target_monikers.len() {
-            let _ = EventMatcher::ok()
+            EventMatcher::ok()
                 .monikers_regex(&target_monikers)
                 .wait::<Started>(&mut event_stream_start)
                 .await

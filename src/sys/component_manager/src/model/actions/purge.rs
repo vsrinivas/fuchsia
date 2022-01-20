@@ -95,7 +95,7 @@ async fn do_purge(component: &Arc<ComponentInstance>) -> Result<(), ModelError> 
     fn wait(nf: Option<impl Future + Send + 'static>) -> BoxFuture<'static, ()> {
         Box::pin(async {
             if let Some(nf) = nf {
-                let _ = nf.await;
+                nf.await;
             }
         })
     }
@@ -336,7 +336,7 @@ pub mod tests {
             .await
             .expect("subscribe to event stream");
         {
-            let _ = event_source.take_static_event_stream("StartComponentTree".to_string()).await;
+            event_source.take_static_event_stream("StartComponentTree".to_string()).await;
         }
         let model = test.model.clone();
         fasync::Task::spawn(async move { model.start().await }).detach();
@@ -484,7 +484,8 @@ pub mod tests {
         // Cause `a` to resolve.
         let look_up_a = async {
             // This could fail if it races with deletion.
-            let _ = test.model.look_up(&vec!["a"].into()).await;
+            let _: Result<Arc<ComponentInstance>, ModelError> =
+                test.model.look_up(&vec!["a"].into()).await;
         };
         join!(
             look_up_a,
@@ -510,7 +511,8 @@ pub mod tests {
         // Cause `a` to start.
         let bind_a = async {
             // This could fail if it races with deletion.
-            let _ = test.model.bind(&vec!["a"].into(), &BindReason::Eager).await;
+            let _: Result<Arc<ComponentInstance>, ModelError> =
+                test.model.bind(&vec!["a"].into(), &BindReason::Eager).await;
         };
         join!(
             bind_a,

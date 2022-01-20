@@ -133,7 +133,8 @@ impl DirectoryEntry for ServiceInstanceDirectoryEntry {
             let source = match self.provider.route_instance(&self.component).await {
                 Ok(source) => source,
                 Err(err) => {
-                    let _ = server_end.close_with_epitaph(err.as_zx_status());
+                    server_end.close_with_epitaph(err.as_zx_status())
+                        .unwrap_or_else(|e| warn!("failed to close server end: {}", e));
                     target
                         .log(
                             log::Level::Warn,
@@ -148,7 +149,7 @@ impl DirectoryEntry for ServiceInstanceDirectoryEntry {
             };
 
             // Consume the next path segment, which is the "component,instance" portion we've already extracted.
-            let _ = path.next();
+            path.next();
 
             let mut relative_path = PathBuf::from(&self.instance);
 
@@ -167,7 +168,9 @@ impl DirectoryEntry for ServiceInstanceDirectoryEntry {
             })
             .await
             {
-                let _ = server_end.close_with_epitaph(err.as_zx_status());
+                server_end.close_with_epitaph(err.as_zx_status())
+                .unwrap_or_else(|e| warn!("failed to close server end: {}", e));
+
                 target
                     .log(
                         log::Level::Error,

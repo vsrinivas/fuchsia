@@ -13,6 +13,6 @@ async fn main() {
     info!("Rendezvous starting");
     let trigger = component::connect_to_protocol::<test_protocol::TriggerMarker>()
         .expect("failed to connect to Trigger service");
-    let _ = trigger.run().await.expect("failed to invoke Trigger");
+    trigger.run().await.expect("failed to invoke Trigger");
     info!("Rendezvous complete, exiting");
 }

@@ -601,11 +601,13 @@ impl Runner for ScopedElfRunner {
 
                 // Spawn a future that watches for the process to exit
                 fasync::Task::spawn(async move {
-                    let _ = fasync::OnSignals::new(
+                    fasync::OnSignals::new(
                         &proc_copy.as_handle_ref(),
                         zx::Signals::PROCESS_TERMINATED,
                     )
-                    .await;
+                    .await
+                    .map(|_: fidl::Signals| ()) // Discard.
+                    .unwrap_or_else(|s| warn!("error creating signal handler: {}", s));
                     // Process exit code '0' is considered a clean return.
                     // TODO (fxbug.dev/57024) If we create an epitaph that indicates
                     // intentional, non-zero exit, use that for all non-0 exit
@@ -620,7 +622,7 @@ impl Runner for ScopedElfRunner {
                             fcomp::Error::Internal.into()
                         }
                     };
-                    let _ = epitaph_tx.send(exit_status);
+                    epitaph_tx.send(exit_status).unwrap_or_else(|_| warn!("error sending epitaph"));
                 })
                 .detach();
 
@@ -1455,7 +1457,12 @@ mod tests {
         // Starting this component isn't actually possible, as start_info is missing the binary
         // field. We should panic before anything happens on the controller stream, because the
         // component is critical.
-        let _ = controller.take_event_stream().try_next().await;
+        controller
+            .take_event_stream()
+            .try_next()
+            .await
+            .map(|_: Option<fcrunner::ComponentControllerEvent>| ()) // Discard.
+            .unwrap_or_else(|e| warn!("error reading from event stream: {}", e));
     }
 
     fn hello_world_startinfo_forward_stdout_to_log(

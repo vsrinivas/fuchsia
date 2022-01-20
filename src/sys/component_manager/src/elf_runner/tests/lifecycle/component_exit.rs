@@ -39,7 +39,7 @@ async fn test_exit_detection() {
     .await
     .unwrap();
 
-    let _ = instance.connect_to_binder().unwrap();
+    instance.connect_to_binder().unwrap();
 
     let target_moniker = format!("./{}:{}", collection_name, instance.child_name());
 
@@ -81,12 +81,12 @@ async fn test_exit_after_rendezvous() {
     .await
     .unwrap();
 
-    let _ = instance.connect_to_binder().unwrap();
+    instance.connect_to_binder().unwrap();
 
     let target_moniker = format!("./{}:{}:*", collection_name, instance.child_name());
 
     // First, ensure that component has started.
-    let _ = EventMatcher::ok()
+    EventMatcher::ok()
         .moniker_regex(&target_moniker)
         .wait::<events::Started>(&mut event_stream)
         .await

@@ -139,11 +139,12 @@ async fn launch_embedded_archivist() -> SubscriptionResultsStream<Logs> {
         .unwrap()
         .split_streams();
 
-    let _ = Task::spawn(async move {
+    Task::spawn(async move {
         if let Some(error) = errors.next().await {
             panic!("{:#?}", error);
         }
-    });
+    })
+    .detach();
 
     subscription
 }
@@ -176,8 +177,7 @@ async fn start_child_component(realm: &fcomponent::RealmProxy, component: &Compo
         .expect("failed to make FIDL call")
         .expect("failed to open exposed dir of child");
 
-    let _ =
-        client::connect_to_protocol_at_dir_root::<fcomponent::BinderMarker>(&exposed_dir).unwrap();
+    client::connect_to_protocol_at_dir_root::<fcomponent::BinderMarker>(&exposed_dir).unwrap();
 }
 
 async fn wait_for_stop(event_stream: &mut EventStream, component: &Component) {

@@ -1431,7 +1431,7 @@ pub mod capability_util {
         let (_, server_end) = fidl::endpoints::create_proxy::<DirectoryMarker>().unwrap();
         let res = realm_proxy.open_exposed_dir(&mut child_ref, server_end).await;
         // Check for side effects: realm service should have received the `open_exposed_dir` call.
-        let _ = res.expect("failed to use realm service");
+        res.expect("failed to send fidl message").expect("failed to use realm service");
 
         let bind_url =
             format!("test:///{}_resolved", bind_calls.lock().await.last().expect("no bind call"));
@@ -1460,7 +1460,7 @@ pub mod capability_util {
         let mut collection_ref = fdecl::CollectionRef { name: collection.to_string() };
         let child_decl = child_decl.native_into_fidl();
         let res = realm_proxy.create_child(&mut collection_ref, child_decl, args).await;
-        let _ = res.expect("failed to create child");
+        res.expect("failed to send fidl message").expect("failed to create child");
     }
 
     /// Call `fuchsia.component.Realm.DestroyChild` to destroy a dynamic child, waiting for
@@ -1485,7 +1485,7 @@ pub mod capability_util {
         let mut child_ref =
             fdecl::ChildRef { collection: Some(collection.to_string()), name: name.to_string() };
         let res = realm_proxy.destroy_child(&mut child_ref).await;
-        let _ = res.expect("failed to destroy child");
+        res.expect("failed to send fidl message").expect("failed to destroy child");
     }
 
     pub async fn take_dir_from_namespace(

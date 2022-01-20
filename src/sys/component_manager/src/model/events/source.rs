@@ -92,7 +92,7 @@ impl EventSource {
     /// Drops the `Resolved` event stream, thereby permitting components within the
     /// realm to be started.
     pub async fn start_component_tree(&mut self) {
-        let _ = self.take_static_event_stream("StartComponentTree".to_string()).await;
+        self.take_static_event_stream("StartComponentTree".to_string()).await;
     }
 
     /// Subscribes to events provided in the `events` vector.

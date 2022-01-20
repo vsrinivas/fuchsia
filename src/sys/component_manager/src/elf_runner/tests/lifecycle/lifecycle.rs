@@ -33,11 +33,11 @@ async fn test_normal_behavior() {
         .await
         .unwrap();
 
-        let _ = instance.connect_to_binder().unwrap();
+        instance.connect_to_binder().unwrap();
 
         let moniker = format!("^./{}:{}$", collection_name, instance.child_name());
 
-        let _ = EventMatcher::ok()
+        EventMatcher::ok()
             .moniker_regex(moniker.clone())
             .wait::<Started>(&mut event_stream)
             .await

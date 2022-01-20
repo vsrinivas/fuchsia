@@ -138,14 +138,14 @@ impl<Output: Send + Sync + Clone + Debug> ActionNotifier<Output> {
 
 impl<Output: Send + Sync + Clone + Debug> Clone for ActionNotifier<Output> {
     fn clone(&self) -> Self {
-        let _ = self.refcount.fetch_add(1, Ordering::Relaxed);
+        self.refcount.fetch_add(1, Ordering::Relaxed);
         Self { fut: self.fut.clone(), refcount: self.refcount.clone() }
     }
 }
 
 impl<Output: Send + Sync + Clone + Debug> Drop for ActionNotifier<Output> {
     fn drop(&mut self) {
-        let _ = self.refcount.fetch_sub(1, Ordering::Relaxed);
+        self.refcount.fetch_sub(1, Ordering::Relaxed);
     }
 }
 
@@ -177,7 +177,7 @@ where
     /// Runs the action in a separate task and signals the `ActionNotifier` when it completes.
     pub fn spawn(self) {
         fasync::Task::spawn(async move {
-            let _ = self.tx.send(self.fut.await);
+            self.tx.send(self.fut.await).unwrap_or(()); // Ignore closed receiver.
         })
         .detach();
     }
@@ -291,7 +291,7 @@ impl ActionSet {
                     .expect("action notifier has unexpected type")
                     .clone();
                 async move {
-                    let _ = blocking_action.await;
+                    blocking_action.await;
                     handle_action.await
                 }
                 .boxed()

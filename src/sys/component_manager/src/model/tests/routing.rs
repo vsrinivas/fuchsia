@@ -1681,7 +1681,7 @@ async fn use_runner_from_environment_failed() {
             _relative_path: PathBuf,
             server_end: &mut zx::Channel,
         ) -> Result<(), ModelError> {
-            let _ = channel::take_channel(server_end);
+            channel::take_channel(server_end);
             Ok(())
         }
     }

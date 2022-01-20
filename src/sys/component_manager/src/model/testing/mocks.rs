@@ -596,7 +596,7 @@ impl MockController {
             registration,
         );
         fasync::Task::spawn(async move {
-            let _ = fut.await;
+            fut.await.unwrap_or(()); // Ignore cancellation.
         })
         .detach();
         handle

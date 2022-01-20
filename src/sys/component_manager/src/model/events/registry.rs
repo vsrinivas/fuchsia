@@ -307,7 +307,7 @@ impl EventRegistry {
                     // ensures that all the futures can be driven to completion.
                     let responder_channel = async move {
                         trace::duration!("component_manager", "events:wait_for_resume");
-                        let _ = responder_channel.await;
+                        responder_channel.await.unwrap_or(()); // Ignore cancellation.
                         trace::flow_end!("component_manager", "event", event.id);
                     };
                     responder_channels.push(responder_channel);

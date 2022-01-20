@@ -268,7 +268,7 @@ impl RealmCapabilityHost {
         match Self::get_child(component, child.clone()).await? {
             Some(child) => {
                 // Resolve child in order to instantiate exposed_dir.
-                let _ = child.resolve().await.map_err(|_| {
+                child.resolve().await.map_err(|_| {
                     return fcomponent::Error::InstanceCannotResolve;
                 })?;
                 let mut exposed_dir = exposed_dir.into_channel();
@@ -307,7 +307,7 @@ impl RealmCapabilityHost {
         // This function returns as soon as the child is marked deleted, while actual destruction
         // proceeds in the background.
         fasync::Task::spawn(async move {
-            let _ = destroy_fut.await;
+            destroy_fut.await.unwrap_or_else(|e| debug!("error waiting on destroy_fut: {}", e));
         })
         .detach();
         Ok(())
@@ -360,9 +360,7 @@ impl RealmCapabilityHost {
             fcomponent::Error::Internal
         })?;
         let decl = state.decl();
-        let _ = decl
-            .find_collection(&collection.name)
-            .ok_or_else(|| fcomponent::Error::CollectionNotFound)?;
+        decl.find_collection(&collection.name).ok_or(fcomponent::Error::CollectionNotFound)?;
         let mut children: Vec<_> = state
             .live_children()
             .filter_map(|(m, _)| match m.collection() {
@@ -599,7 +597,7 @@ mod tests {
 
             // Unblock Discovered and wait for request to complete.
             event.resume();
-            let _ = create.await.unwrap().unwrap();
+            create.await.unwrap().unwrap();
         }
 
         // Verify that the component topology matches expectations.
@@ -680,7 +678,7 @@ mod tests {
                     fcomponent::CreateChildArgs::EMPTY,
                 )
                 .await;
-            let _ = res.expect("failed to create child a");
+            res.expect("fidl call failed").expect("failed to create child a");
             let mut collection_ref = fdecl::CollectionRef { name: "coll".to_string() };
             let err = test
                 .realm_proxy
@@ -832,8 +830,7 @@ mod tests {
                     fcomponent::CreateChildArgs::EMPTY,
                 )
                 .await;
-            let _ = res
-                .unwrap_or_else(|_| panic!("failed to create child {}", name))
+            res.expect("fidl call failed")
                 .unwrap_or_else(|_| panic!("failed to create child {}", name));
             let mut child_ref =
                 fdecl::ChildRef { name: name.to_string(), collection: Some("coll".to_string()) };
@@ -893,7 +890,7 @@ mod tests {
         // Move past the 'PreDestroy' event for "a", and wait for destroy_child to return.
         event.resume();
         let res = destroy_handle.await;
-        let _ = res.expect("failed to destroy child a").expect("failed to destroy child a");
+        res.expect("fidl call failed").expect("failed to destroy child a");
 
         // Child is marked deleted now.
         {
@@ -927,7 +924,7 @@ mod tests {
             .realm_proxy
             .create_child(&mut collection_ref, child_decl, fcomponent::CreateChildArgs::EMPTY)
             .await;
-        let _ = res.expect("failed to recreate child a").expect("failed to recreate child a");
+        res.expect("fidl call failed").expect("failed to recreate child a");
 
         assert_eq!("(system(coll:a,coll:b))", test.hook.print());
         let child = get_live_child(test.component(), "coll:a").await;
@@ -953,7 +950,7 @@ mod tests {
             .realm_proxy
             .create_child(&mut collection_ref, child_decl("a"), fcomponent::CreateChildArgs::EMPTY)
             .await;
-        let _ = res.expect("failed to create child a").expect("failed to create child a");
+        res.expect("fidl call failed").expect("failed to create child a");
 
         // Invalid arguments.
         {
@@ -1030,7 +1027,7 @@ mod tests {
         // Started action completes.
         // Unblock Started and wait for requests to complete.
         event_a.resume();
-        let _ = create_a.await.unwrap().unwrap();
+        create_a.await.unwrap().unwrap();
 
         let child = {
             let state = test.component().lock_resolved_state().await.unwrap();
@@ -1126,7 +1123,7 @@ mod tests {
         let mut child_ref = fdecl::ChildRef { name: "system".to_string(), collection: None };
         let (dir_proxy, server_end) = endpoints::create_proxy::<DirectoryMarker>().unwrap();
         let res = test.realm_proxy.open_exposed_dir(&mut child_ref, server_end).await;
-        let _ = res.expect("open_exposed_dir() failed").expect("open_exposed_dir() failed");
+        res.expect("fidl call failed").expect("open_exposed_dir() failed");
 
         // Assert that child was resolved.
         let event = event_stream.wait_until(EventType::Resolved, vec!["system:0"].into()).await;
@@ -1202,14 +1199,14 @@ mod tests {
                 fcomponent::CreateChildArgs::EMPTY,
             )
             .await;
-        let _ = res.expect("failed to create child system").expect("failed to create child system");
+        res.expect("fidl call failed").expect("failed to create child system");
 
         // Open exposed directory of child.
         let mut child_ref =
             fdecl::ChildRef { name: "system".to_string(), collection: Some("coll".to_owned()) };
         let (dir_proxy, server_end) = endpoints::create_proxy::<DirectoryMarker>().unwrap();
         let res = test.realm_proxy.open_exposed_dir(&mut child_ref, server_end).await;
-        let _ = res.expect("open_exposed_dir() failed").expect("open_exposed_dir() failed");
+        res.expect("fidl call failed").expect("open_exposed_dir() failed");
 
         // Assert that child was resolved.
         let event =
@@ -1298,7 +1295,7 @@ mod tests {
                 fdecl::ChildRef { name: "unrunnable".to_string(), collection: None };
             let (dir_proxy, server_end) = endpoints::create_proxy::<DirectoryMarker>().unwrap();
             let res = test.realm_proxy.open_exposed_dir(&mut child_ref, server_end).await;
-            let _ = res.expect("open_exposed_dir() failed").expect("open_exposed_dir() failed");
+            res.expect("fidl call failed").expect("open_exposed_dir() failed");
             let node_proxy = io_util::open_node(
                 &dir_proxy,
                 &PathBuf::from("hippo"),

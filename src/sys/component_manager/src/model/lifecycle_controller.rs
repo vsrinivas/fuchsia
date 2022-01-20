@@ -151,15 +151,21 @@ impl LifecycleController {
             match operation {
                 fsys::LifecycleControllerRequest::Resolve { moniker, responder } => {
                     let mut res = self.resolve(moniker).await;
-                    let _ = responder.send(&mut res);
+                    responder
+                        .send(&mut res)
+                        .unwrap_or_else(|e| error!("response send failed: {}", e));
                 }
                 fsys::LifecycleControllerRequest::Bind { moniker, responder } => {
                     let mut res = self.bind(moniker).await;
-                    let _ = responder.send(&mut res);
+                    responder
+                        .send(&mut res)
+                        .unwrap_or_else(|e| error!("response send failed: {}", e));
                 }
                 fsys::LifecycleControllerRequest::Stop { moniker, responder, is_recursive } => {
                     let mut res = self.stop(moniker, is_recursive).await;
-                    let _ = responder.send(&mut res);
+                    responder
+                        .send(&mut res)
+                        .unwrap_or_else(|e| error!("response send failed: {}", e));
                 }
                 fsys::LifecycleControllerRequest::CreateChild {
                     parent_moniker,
@@ -169,7 +175,9 @@ impl LifecycleController {
                     responder,
                 } => {
                     let mut res = self.create_child(parent_moniker, collection, decl, args).await;
-                    let _ = responder.send(&mut res);
+                    responder
+                        .send(&mut res)
+                        .unwrap_or_else(|e| error!("response send failed: {}", e));
                 }
                 fsys::LifecycleControllerRequest::DestroyChild {
                     parent_moniker,
@@ -177,7 +185,9 @@ impl LifecycleController {
                     responder,
                 } => {
                     let mut res = self.destroy_child(parent_moniker, child).await;
-                    let _ = responder.send(&mut res);
+                    responder
+                        .send(&mut res)
+                        .unwrap_or_else(|e| error!("response send failed: {}", e));
                 }
             }
         }

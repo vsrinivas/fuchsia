@@ -93,12 +93,14 @@ impl Controllable for ElfComponent {
         if self.main_process_critical {
             warn!("killing a component with 'main_process_critical', so this will also kill component_manager and all of its components");
         }
-        let _ = self.job.kill().map_err(|e| error!("failed killing job during kill: {}", e));
+        self.job.kill().unwrap_or_else(|e| error!("failed killing job during kill: {}", e));
     }
 
     fn stop<'a>(&mut self) -> BoxFuture<'a, ()> {
         if let Some(lifecycle_chan) = self.lifecycle_channel.take() {
-            let _ = lifecycle_chan.stop();
+            lifecycle_chan
+                .stop()
+                .unwrap_or_else(|e| error!("failed to stop lifecycle_chan during stop: {}", e));
 
             let job = self.job.clone();
 
@@ -111,7 +113,7 @@ impl Controllable for ElfComponent {
                     // channel. Since there is no process it seems like killing it can't kill
                     // component manager.
                     warn!("killing job of component with 'main_process_critical' set because component has lifecycle channel, but no process main process.");
-                    let _ = self.job.kill().map_err(|e| {
+                    self.job.kill().unwrap_or_else(|e| {
                         error!("failed killing job for component with no lifecycle channel: {}", e)
                     });
                     return async {}.boxed();
@@ -121,33 +123,35 @@ impl Controllable for ElfComponent {
                 let proc_handle = self.process.take().unwrap();
 
                 async move {
-                    let _ = fasync::OnSignals::new(
+                    fasync::OnSignals::new(
                         &proc_handle.as_handle_ref(),
                         zx::Signals::PROCESS_TERMINATED,
                     )
                     .await
-                    .map_err(|e| {
+                    .map(|_: fidl::Signals| ()) // Discard.
+                    .unwrap_or_else(|e| {
                         error!(
                         "killing component's job after failure waiting on process exit, err: {}",
                         e
                     )
                     });
-                    let _ = job.kill().map_err(|e| {
+                    job.kill().unwrap_or_else(|e| {
                         error!("failed killing job in stop after lifecycle channel closed: {}", e)
                     });
                 }
                 .boxed()
             } else {
                 async move {
-                    let _ = lifecycle_chan.on_closed()
+                    lifecycle_chan.on_closed()
                     .await
-                    .map_err(|e| {
+                    .map(|_: fidl::Signals| ())  // Discard.
+                    .unwrap_or_else(|e| {
                         error!(
                         "killing component's job after failure waiting on lifecycle channel, err: {}",
                         e
                         )
                     });
-                    let _ = job.kill().map_err(|e| {
+                    job.kill().unwrap_or_else(|e| {
                         error!("failed killing job in stop after lifecycle channel closed: {}", e)
                     });
                 }
@@ -162,7 +166,7 @@ impl Controllable for ElfComponent {
                     self.component_url
                 );
             }
-            let _ = self.job.kill().map_err(|e| {
+            self.job.kill().unwrap_or_else(|e| {
                 error!("failed killing job for component with no lifecycle channel: {}", e)
             });
             async {}.boxed()
@@ -173,6 +177,6 @@ impl Controllable for ElfComponent {
 impl Drop for ElfComponent {
     fn drop(&mut self) {
         // just in case we haven't killed the job already
-        let _ = self.job.kill().map_err(|e| error!("failed to kill job in drop: {}", e));
+        self.job.kill().unwrap_or_else(|e| error!("failed to kill job in drop: {}", e));
     }
 }

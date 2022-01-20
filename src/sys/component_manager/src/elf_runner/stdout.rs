@@ -365,7 +365,7 @@ mod tests {
             .context("Failed to create ComponentNamespace")?;
         let logger = create_namespace_logger(&ns).await.context("Failed to create ScopedLogger")?;
         let mut writer = SyslogWriter::new(Arc::new(logger), Level::Info);
-        let _ = writer.write(message).await.context("Failed to write message")?;
+        writer.write(message).await.context("Failed to write message")?;
 
         Ok(())
     }

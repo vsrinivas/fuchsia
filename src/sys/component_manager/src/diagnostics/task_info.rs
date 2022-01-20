@@ -113,7 +113,10 @@ impl<T: 'static + RuntimeStatsSource + Debug + Send + Sync, U: TimeSource + std:
         let state = arc_task.clone();
         let _terminated_signal_task = fasync::Task::spawn(async move {
             if let Some(handle) = maybe_handle {
-                let _ = fasync::OnSignals::new(&handle, zx::Signals::TASK_TERMINATED).await;
+                fasync::OnSignals::new(&handle, zx::Signals::TASK_TERMINATED)
+                    .await
+                    .map(|_: fidl::Signals| ()) // Discard.
+                    .unwrap_or_else(|s| log::debug!("error creating signal handler: {}", s));
             }
             let mut state = state.lock().await;
             *state = match std::mem::replace(&mut *state, TaskState::TerminatedAndMeasured) {

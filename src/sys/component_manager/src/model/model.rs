@@ -91,7 +91,7 @@ impl Model {
                 }
             };
         }
-        let _ = cur.lock_resolved_state().await?;
+        cur.lock_resolved_state().await?;
         Ok(cur)
     }
 
@@ -101,6 +101,7 @@ impl Model {
         // since the root isn't anyone's child we need to dispatch it here.
         {
             let mut actions = self.root.lock_actions().await;
+            // This returns a Future that does not need to be polled.
             let _ = actions.register_no_wait(&self.root, DiscoverAction::new());
         }
         if let Err(e) = self.bind(&PartialAbsoluteMoniker::root(), &BindReason::Root).await {
@@ -144,6 +145,7 @@ pub mod tests {
         let TestModelResult { model, .. } =
             TestEnvironmentBuilder::new().set_components(components).build().await;
 
+        // This returns a Future that does not need to be polled.
         let _ =
             model.root().lock_actions().await.register_inner(&model.root, ShutdownAction::new());
 

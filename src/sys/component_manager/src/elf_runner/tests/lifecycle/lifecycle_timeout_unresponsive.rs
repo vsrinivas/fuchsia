@@ -60,7 +60,7 @@ async fn test_stop_timeouts() {
 
         // Make sure we start the root component, since it has no runtime, this
         // is sufficient.
-        let _ = instance.connect_to_binder().unwrap();
+        instance.connect_to_binder().unwrap();
 
         let moniker_stem = format!("./{}:{}", collection_name, instance.child_name().to_string());
         let root_moniker = format!("{}$", moniker_stem);
