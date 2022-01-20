@@ -105,7 +105,7 @@ impl Hub {
         component_url: String,
         lifecycle_controller_factory: LifecycleControllerFactory,
     ) -> Result<Self, ModelError> {
-        let mut instances_map = HashMap::new();
+        let mut instance_map = HashMap::new();
         let abs_moniker = AbsoluteMoniker::root();
 
         let lifecycle_controller = lifecycle_controller_factory.create(&abs_moniker.to_partial());
@@ -114,12 +114,12 @@ impl Hub {
             lifecycle_controller,
             &abs_moniker,
             component_url,
-            &mut instances_map,
+            &mut instance_map,
         )?
         .expect("Did not create directory.");
 
         Ok(Hub {
-            instances: Mutex::new(instances_map),
+            instances: Mutex::new(instance_map),
             scope: ExecutionScope::new(),
             lifecycle_controller_factory,
         })
@@ -160,15 +160,15 @@ impl Hub {
         relative_path: pfsPath,
         server_end: &mut zx::Channel,
     ) -> Result<(), ModelError> {
-        let instances_map = self.instances.lock().await;
-        if !instances_map.contains_key(&abs_moniker) {
+        let instance_map = self.instances.lock().await;
+        if !instance_map.contains_key(&abs_moniker) {
             return Err(ModelError::open_directory_error(
                 abs_moniker.to_partial(),
                 relative_path.into_string(),
             ));
         }
         let server_end = channel::take_channel(server_end);
-        instances_map[&abs_moniker].directory.clone().open(
+        instance_map[&abs_moniker].directory.clone().open(
             self.scope.clone(),
             flags,
             open_mode,
@@ -236,19 +236,19 @@ impl Hub {
         lifecycle_controller: LifecycleController,
         abs_moniker: &'a AbsoluteMoniker,
         component_url: String,
-        mut instances_map: &'a mut HashMap<AbsoluteMoniker, Instance>,
+        mut instance_map: &'a mut HashMap<AbsoluteMoniker, Instance>,
     ) -> Result<(), ModelError> {
         if let Some(controlled) = Hub::add_instance_if_necessary(
             lifecycle_controller,
             &abs_moniker,
             component_url,
-            &mut instances_map,
+            &mut instance_map,
         )? {
             if let (Some(leaf), Some(parent_moniker)) = (abs_moniker.leaf(), abs_moniker.parent()) {
                 // In the children directory, the child's instance id is not used
                 trace::duration!("component_manager", "hub:add_instance_to_parent");
                 let partial_moniker = leaf.to_partial();
-                instances_map[&parent_moniker].children_directory.add_node(
+                instance_map[&parent_moniker].children_directory.add_node(
                     partial_moniker.as_str(),
                     controlled.clone(),
                     &abs_moniker,
@@ -415,9 +415,9 @@ impl Hub {
         component_decl: &'a ComponentDecl,
         config: &Option<ConfigFields>,
     ) -> Result<(), ModelError> {
-        let mut instances_map = self.instances.lock().await;
+        let mut instance_map = self.instances.lock().await;
 
-        let instance = instances_map
+        let instance = instance_map
             .get_mut(target_moniker)
             .expect(&format!("Unable to find instance {} in map.", target_moniker));
 
@@ -466,9 +466,9 @@ impl Hub {
     ) -> Result<(), ModelError> {
         trace::duration!("component_manager", "hub:on_start_instance_async");
 
-        let mut instances_map = self.instances.lock().await;
+        let mut instance_map = self.instances.lock().await;
 
-        let instance = instances_map
+        let instance = instance_map
             .get_mut(target_moniker)
             .expect(&format!("Unable to find instance {} in map.", target_moniker));
 
@@ -530,13 +530,13 @@ impl Hub {
         let lifecycle_controller =
             self.lifecycle_controller_factory.create(&target_moniker.to_partial());
 
-        let mut instances_map = self.instances.lock().await;
+        let mut instance_map = self.instances.lock().await;
 
         Self::add_instance_to_parent_if_necessary(
             lifecycle_controller,
             target_moniker,
             component_url,
-            &mut instances_map,
+            &mut instance_map,
         )
         .await?;
         Ok(())
