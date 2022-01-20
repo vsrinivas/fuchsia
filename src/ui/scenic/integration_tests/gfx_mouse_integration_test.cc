@@ -331,6 +331,7 @@ class GfxMouseIntegrationTest : public gtest::TestWithEnvironmentFixture {
     config.set_device_id(kDeviceId);
     config.set_device_type(fuchsia::ui::pointerinjector::DeviceType::MOUSE);
     config.set_dispatch_policy(dispatch_policy);
+    config.set_buttons({0});
     if (!buttons.empty()) {
       config.set_buttons(buttons);
     }

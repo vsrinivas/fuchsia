@@ -625,6 +625,7 @@ TEST_F(PointerinjectorRegistryTest,
   fuchsia::ui::pointerinjector::Config config = ConfigTemplate(parent.view_ref, child.view_ref);
   config.set_device_type(DeviceType::MOUSE);
   config.set_dispatch_policy(DispatchPolicy::EXCLUSIVE_TARGET);
+  config.set_buttons({0});
   registry.Register(std::move(config), injector.NewRequest(),
                     [&register_callback_fired] { register_callback_fired = true; });
   RunLoopUntilIdle();
@@ -664,6 +665,7 @@ TEST_F(PointerinjectorRegistryTest,
   fuchsia::ui::pointerinjector::Config config = ConfigTemplate(parent.view_ref, child.view_ref);
   config.set_device_type(DeviceType::MOUSE);
   config.set_dispatch_policy(DispatchPolicy::MOUSE_HOVER_AND_LATCH_IN_TARGET);
+  config.set_buttons({0});
   registry.Register(std::move(config), injector.NewRequest(),
                     [&register_callback_fired] { register_callback_fired = true; });
   RunLoopUntilIdle();
@@ -700,6 +702,7 @@ TEST_F(PointerinjectorRegistryTest,
     fuchsia::ui::pointerinjector::Config config = ConfigTemplate(parent.view_ref, child.view_ref);
     config.set_device_type(DeviceType::MOUSE);
     config.set_dispatch_policy(DispatchPolicy::MOUSE_HOVER_AND_LATCH_IN_TARGET);
+    config.set_buttons({0});
     registry.Register(std::move(config), injector.NewRequest(),
                       [&register_callback_fired] { register_callback_fired = true; });
     RunLoopUntilIdle();
@@ -744,6 +747,7 @@ TEST_F(PointerinjectorRegistryTest,
   fuchsia::ui::pointerinjector::Config config = ConfigTemplate(parent.view_ref, child.view_ref);
   config.set_device_type(DeviceType::MOUSE);
   config.set_dispatch_policy(DispatchPolicy::MOUSE_HOVER_AND_LATCH_IN_TARGET);
+  config.set_buttons({0});
   registry.Register(std::move(config), injector.NewRequest(),
                     [&register_callback_fired] { register_callback_fired = true; });
   RunLoopUntilIdle();

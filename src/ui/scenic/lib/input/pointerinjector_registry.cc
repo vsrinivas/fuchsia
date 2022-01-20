@@ -143,6 +143,7 @@ void PointerinjectorRegistry::Register(
             std::move(on_channel_closed)));
     FX_CHECK(success) << "Injector already exists.";
   } else if (settings.device_type == fuchsia::ui::pointerinjector::DeviceType::MOUSE) {
+    settings.button_identifiers = config.buttons();
     const auto [_, success] = injectors_.emplace(
         id,
         std::make_unique<MouseInjector>(
