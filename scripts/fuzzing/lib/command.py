@@ -65,7 +65,7 @@ def start_fuzzer(args, factory):
                 'Stop manually with "fx fuzz stop {}".'.format(fuzzer))
         fuzzer.start()
         if not args.foreground:
-            cmd = [sys.executable, sys.argv[0], 'start', '--monitor']
+            cmd = ['python3.8', sys.argv[0], 'start', '--monitor']
             if fuzzer.output:
                 cmd += ['--output', fuzzer.output]
             cmd.append(str(fuzzer))
