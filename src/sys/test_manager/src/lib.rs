@@ -268,7 +268,7 @@ impl TestRunBuilder {
                 if let Ok(Some(())) = stop_recv.try_recv() {
                     break;
                 }
-                suite.run(test_map.clone()).await;
+                run_single_suite(suite, test_map.clone()).await;
             }
 
             // Collect run artifacts
@@ -852,64 +852,56 @@ impl Suite {
         }
         Ok(())
     }
+}
 
-    async fn run(self, test_map: Arc<TestMap>) {
-        let (sender, recv) = mpsc::channel(1024);
-        let (stop_sender, stop_recv) = oneshot::channel::<()>();
-        let mut instance = self.launch_suite(sender.clone(), test_map).await;
-        let Self { test_url, options, mut controller, .. } = self;
+async fn run_single_suite(suite: Suite, test_map: Arc<TestMap>) {
+    let (mut sender, recv) = mpsc::channel(1024);
+    let (stop_sender, stop_recv) = oneshot::channel::<()>();
+    let mut maybe_instance = None;
 
-        let run_test_fut = match instance.as_mut() {
-            Some(instance) => instance.run_tests(options, sender, stop_recv).boxed(),
-            None => futures::future::ready(()).boxed(),
-        };
+    let Suite { test_url, options, mut controller, resolver, above_root_capabilities_for_test } =
+        suite;
 
-        let (run_test_remote, run_test_handle) = run_test_fut.remote_handle();
-
-        let controller_fut =
-            Self::run_controller(&mut controller, stop_sender, run_test_handle, recv);
-        // Okay to ignore error in the run test result as aborted is expected when Kill is called
-        let ((), controller_ret) = futures::future::join(run_test_remote, controller_fut).await;
-
-        if let Err(e) = controller_ret {
-            warn!("Ended test {}: {:?}", test_url, e);
+    let run_test_fut = async {
+        let instance_result = facet::get_suite_facets(&test_url, &resolver)
+            .and_then(|facets| {
+                RunningSuite::launch(
+                    &test_url,
+                    facets,
+                    test_map,
+                    resolver.clone(),
+                    above_root_capabilities_for_test,
+                )
+            })
+            .await;
+        match instance_result {
+            Ok(instance) => {
+                let instance_ref = maybe_instance.insert(instance);
+                instance_ref.run_tests(options, sender, stop_recv).await;
+            }
+            Err(e) => sender.send(Err(e.into())).await.unwrap(),
         }
+    };
+    let (run_test_remote, run_test_handle) = run_test_fut.remote_handle();
 
-        if let Some(instance) = instance {
-            instance.destroy().await;
-        }
-        // Workaround to prevent zx_peer_closed error
-        // TODO(fxbug.dev/87976) once fxbug.dev/87890 is fixed, the controller should be dropped as soon as all
-        // events are drained.
-        let (inner, _) = controller.into_inner();
-        if let Err(e) =
-            fasync::OnSignals::new(inner.channel(), zx::Signals::CHANNEL_PEER_CLOSED).await
-        {
-            warn!("Error waiting for SuiteController channel to close: {:?}", e);
-        }
+    let controller_fut = Suite::run_controller(&mut controller, stop_sender, run_test_handle, recv);
+    // Okay to ignore error in the run test result as aborted is expected when Kill is called
+    let ((), controller_ret) = futures::future::join(run_test_remote, controller_fut).await;
+
+    if let Err(e) = controller_ret {
+        warn!("Ended test {}: {:?}", test_url, e);
     }
 
-    async fn launch_suite(
-        &self,
-        mut sender: mpsc::Sender<Result<FidlSuiteEvent, LaunchError>>,
-        test_map: Arc<TestMap>,
-    ) -> Option<RunningSuite> {
-        match RunningSuite::launch(
-            &self.test_url,
-            test_map,
-            self.resolver.clone(),
-            self.above_root_capabilities_for_test.clone(),
-        )
-        .await
-        {
-            Ok(test) => Some(test),
-            Err(err) => {
-                warn!(?err, "Failed to launch test");
-                sender.send(Err(err.into())).await.expect("Receiver cannot be dead");
-                sender.close_channel();
-                None
-            }
-        }
+    if let Some(instance) = maybe_instance.take() {
+        instance.destroy().await;
+    }
+    // Workaround to prevent zx_peer_closed error
+    // TODO(fxbug.dev/87976) once fxbug.dev/87890 is fixed, the controller should be dropped as soon as all
+    // events are drained.
+    let (inner, _) = controller.into_inner();
+    if let Err(e) = fasync::OnSignals::new(inner.channel(), zx::Signals::CHANNEL_PEER_CLOSED).await
+    {
+        warn!("Error waiting for SuiteController channel to close: {:?}", e);
     }
 }
 
@@ -985,14 +977,16 @@ pub async fn run_test_manager_query_server(
                         break;
                     }
                 };
-                match RunningSuite::launch(
-                    &test_url,
-                    test_map.clone(),
-                    resolver.clone(),
-                    above_root_capabilities_for_test.clone(),
-                )
-                .await
-                {
+                let launch_fut = facet::get_suite_facets(&test_url, &resolver).and_then(|facets| {
+                    RunningSuite::launch(
+                        &test_url,
+                        facets,
+                        test_map.clone(),
+                        resolver.clone(),
+                        above_root_capabilities_for_test.clone(),
+                    )
+                });
+                match launch_fut.await {
                     Ok(suite_instance) => {
                         let suite = match suite_instance.connect_to_suite() {
                             Ok(proxy) => proxy,
@@ -1131,11 +1125,11 @@ impl RunningSuite {
     /// Launch a suite component.
     async fn launch(
         test_url: &str,
+        facets: facet::SuiteFacets,
         test_map: Arc<TestMap>,
         resolver: Arc<ComponentResolverProxy>,
         above_root_capabilities_for_test: Arc<AboveRootCapabilitiesForTest>,
     ) -> Result<Self, LaunchTestError> {
-        let facets = facet::get_suite_facets(test_url, &*resolver).await?;
         info!("Starting '{}' in '{}' collection.", test_url, facets.collection);
 
         // This archive accessor will be served by the embedded archivist.
