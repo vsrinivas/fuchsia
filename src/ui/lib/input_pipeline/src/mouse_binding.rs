@@ -39,13 +39,14 @@ pub enum MousePhase {
 ///
 /// # Example
 /// The following MouseEvent represents a relative movement of 40 units in the x axis
-/// and 20 units in the y axis while holding the primary button down.
+/// and 20 units in the y axis while holding the primary button (1) down.
 ///
 /// ```
 /// let mouse_device_event = input_device::InputDeviceEvent::Mouse(MouseEvent::new(
 ///     MouseLocation::Relative(Position { x: 40.0, y: 20.0 }),
 ///     MousePhase::Move,
-///     HashSet::<mouse::MouseButton>::new(),
+///     HashSet::from_iter(vec![1]).into_iter()),
+///     HashSet::from_iter(vec![1]).into_iter()),,
 /// ));
 /// ```
 #[derive(Clone, Debug, PartialEq)]
@@ -57,7 +58,10 @@ pub struct MouseEvent {
     pub phase: MousePhase,
 
     /// The buttons relevant to this event.
-    pub buttons: HashSet<MouseButton>,
+    pub affected_buttons: HashSet<MouseButton>,
+
+    /// The complete button state including this event.
+    pub pressed_buttons: HashSet<MouseButton>,
 }
 
 impl MouseEvent {
@@ -70,9 +74,10 @@ impl MouseEvent {
     pub fn new(
         location: MouseLocation,
         phase: MousePhase,
-        buttons: HashSet<MouseButton>,
+        affected_buttons: HashSet<MouseButton>,
+        pressed_buttons: HashSet<MouseButton>,
     ) -> MouseEvent {
-        MouseEvent { location, phase, buttons }
+        MouseEvent { location, phase, affected_buttons, pressed_buttons }
     }
 }
 
@@ -218,12 +223,16 @@ impl MouseBinding {
         let event_time: input_device::EventTime =
             input_device::event_time_or_now(report.event_time);
 
-        // Send a Down event with the buttons that were pressed since the previous report,
-        // i.e. that are in the current report, but were not in the previous report.
+        // Send a Down event with:
+        // * affected_buttons: the buttons that were pressed since the previous report,
+        //   i.e. that are in the current report, but were not in the previous report.
+        // * pressed_buttons: the full set of currently pressed buttons, including the
+        //   recently pressed ones (affected_buttons).
         send_mouse_event(
             MouseLocation::Relative(Position::zero()),
             MousePhase::Down,
             current_buttons.difference(&previous_buttons).cloned().collect(),
+            current_buttons.clone(),
             device_descriptor,
             event_time,
             input_event_sender,
@@ -241,23 +250,29 @@ impl MouseBinding {
             })
         };
 
-        // Send a Move event to the location, including buttons from both the current
-        // report and the previous report.
+        // Send a Move event with buttons from both the current report and the previous report.
+        // * affected_buttons and pressed_buttons are identical in this case, since the full
+        //   set of currently pressed buttons are the same set affected by the event.
         send_mouse_event(
             location,
             MousePhase::Move,
+            current_buttons.union(&previous_buttons).cloned().collect(),
             current_buttons.union(&previous_buttons).cloned().collect(),
             device_descriptor,
             event_time,
             input_event_sender,
         );
 
-        // Send an Up event with the buttons that were released since the previous report,
-        // i.e. that were in the previous report, but are not in the current report.
+        // Send an Up event with:
+        // * affected_buttons: the buttons that were released since the previous report,
+        //   i.e. that were in the previous report, but are not in the current report.
+        // * pressed_buttons: the full set of currently pressed buttons, excluding the
+        //   recently released ones (affected_buttons).
         send_mouse_event(
             MouseLocation::Relative(Position::zero()),
             MousePhase::Up,
             previous_buttons.difference(&current_buttons).cloned().collect(),
+            current_buttons.clone(),
             device_descriptor,
             event_time,
             input_event_sender,
@@ -282,17 +297,18 @@ impl MouseBinding {
 fn send_mouse_event(
     location: MouseLocation,
     phase: MousePhase,
-    buttons: HashSet<MouseButton>,
+    affected_buttons: HashSet<MouseButton>,
+    pressed_buttons: HashSet<MouseButton>,
     device_descriptor: &input_device::InputDeviceDescriptor,
     event_time: input_device::EventTime,
     sender: &mut Sender<input_device::InputEvent>,
 ) {
-    // Only send move events when there are no buttons pressed.
-    if phase != MousePhase::Move && buttons.is_empty() {
+    // Only send Down/Up events when there are buttons affected.
+    if phase != MousePhase::Move && affected_buttons.is_empty() {
         return;
     }
 
-    // Don't send move events when there is no relative movement.
+    // Don't send Move events when there is no relative movement.
     // However, absolute movement is always reported.
     if phase == MousePhase::Move && location == MouseLocation::Relative(Position::zero()) {
         return;
@@ -300,7 +316,10 @@ fn send_mouse_event(
 
     match sender.try_send(input_device::InputEvent {
         device_event: input_device::InputDeviceEvent::Mouse(MouseEvent::new(
-            location, phase, buttons,
+            location,
+            phase,
+            affected_buttons,
+            pressed_buttons,
         )),
         device_descriptor: device_descriptor.clone(),
         event_time,
@@ -427,6 +446,7 @@ mod tests {
             location,
             MousePhase::Move,
             HashSet::new(),
+            HashSet::new(),
             event_time_u64,
             &descriptor,
         )];
@@ -455,6 +475,7 @@ mod tests {
         let expected_events = vec![testing_utilities::create_mouse_event(
             MouseLocation::Relative(Position::zero()),
             MousePhase::Down,
+            HashSet::from_iter(vec![mouse_button].into_iter()),
             HashSet::from_iter(vec![mouse_button].into_iter()),
             event_time_u64,
             &descriptor,
@@ -488,12 +509,14 @@ mod tests {
                 MouseLocation::Relative(Position::zero()),
                 MousePhase::Down,
                 HashSet::from_iter(vec![mouse_button].into_iter()),
+                HashSet::from_iter(vec![mouse_button].into_iter()),
                 event_time_u64,
                 &descriptor,
             ),
             testing_utilities::create_mouse_event(
                 location,
                 MousePhase::Move,
+                HashSet::from_iter(vec![mouse_button].into_iter()),
                 HashSet::from_iter(vec![mouse_button].into_iter()),
                 event_time_u64,
                 &descriptor,
@@ -531,6 +554,7 @@ mod tests {
                 MouseLocation::Relative(Position::zero()),
                 MousePhase::Down,
                 HashSet::from_iter(vec![button].into_iter()),
+                HashSet::from_iter(vec![button].into_iter()),
                 event_time_u64,
                 &descriptor,
             ),
@@ -538,6 +562,7 @@ mod tests {
                 MouseLocation::Relative(Position::zero()),
                 MousePhase::Up,
                 HashSet::from_iter(vec![button].into_iter()),
+                HashSet::new(),
                 event_time_u64,
                 &descriptor,
             ),
@@ -573,12 +598,14 @@ mod tests {
                 MouseLocation::Relative(Position::zero()),
                 MousePhase::Down,
                 HashSet::from_iter(vec![button].into_iter()),
+                HashSet::from_iter(vec![button].into_iter()),
                 event_time_u64,
                 &descriptor,
             ),
             testing_utilities::create_mouse_event(
                 location,
                 MousePhase::Move,
+                HashSet::from_iter(vec![button].into_iter()),
                 HashSet::from_iter(vec![button].into_iter()),
                 event_time_u64,
                 &descriptor,
@@ -587,6 +614,7 @@ mod tests {
                 MouseLocation::Relative(Position::zero()),
                 MousePhase::Up,
                 HashSet::from_iter(vec![button].into_iter()),
+                HashSet::new(),
                 event_time_u64,
                 &descriptor,
             ),
@@ -629,12 +657,14 @@ mod tests {
                 MouseLocation::Relative(Position::zero()),
                 MousePhase::Down,
                 HashSet::from_iter(vec![button].into_iter()),
+                HashSet::from_iter(vec![button].into_iter()),
                 event_time_u64,
                 &descriptor,
             ),
             testing_utilities::create_mouse_event(
                 location,
                 MousePhase::Move,
+                HashSet::from_iter(vec![button].into_iter()),
                 HashSet::from_iter(vec![button].into_iter()),
                 event_time_u64,
                 &descriptor,
@@ -643,6 +673,7 @@ mod tests {
                 MouseLocation::Relative(Position::zero()),
                 MousePhase::Up,
                 HashSet::from_iter(vec![button].into_iter()),
+                HashSet::new(),
                 event_time_u64,
                 &descriptor,
             ),
@@ -668,6 +699,7 @@ mod tests {
         let expected_events = vec![testing_utilities::create_mouse_event(
             location,
             MousePhase::Move,
+            HashSet::new(),
             HashSet::new(),
             event_time_u64,
             &descriptor,
@@ -715,9 +747,139 @@ mod tests {
             expected_location,
             MousePhase::Move,
             HashSet::new(),
+            HashSet::new(),
             event_time_u64,
             &descriptor,
         )];
+
+        assert_input_report_sequence_generates_events!(
+            input_reports: input_reports,
+            expected_events: expected_events,
+            device_descriptor: descriptor,
+            device_type: MouseBinding,
+        );
+    }
+
+    /// Tests that two separate button presses generate two separate down events with differing
+    /// sets of `affected_buttons` and `pressed_buttons`.
+    #[fasync::run_singlethreaded(test)]
+    async fn down_down() {
+        let primary_button = 1;
+        let secondary_button = 2;
+
+        let (event_time_i64, event_time_u64) = testing_utilities::event_times();
+        let first_report = testing_utilities::create_mouse_input_report(
+            MouseLocation::Relative(Position::zero()),
+            vec![primary_button],
+            event_time_i64,
+        );
+        let second_report = testing_utilities::create_mouse_input_report(
+            MouseLocation::Relative(Position::zero()),
+            vec![primary_button, secondary_button],
+            event_time_i64,
+        );
+        let descriptor = mouse_device_descriptor(DEVICE_ID);
+
+        let input_reports = vec![first_report, second_report];
+        let expected_events = vec![
+            testing_utilities::create_mouse_event(
+                MouseLocation::Relative(Position::zero()),
+                MousePhase::Down,
+                HashSet::from_iter(vec![primary_button].into_iter()),
+                HashSet::from_iter(vec![primary_button].into_iter()),
+                event_time_u64,
+                &descriptor,
+            ),
+            testing_utilities::create_mouse_event(
+                MouseLocation::Relative(Position::zero()),
+                MousePhase::Down,
+                HashSet::from_iter(vec![secondary_button].into_iter()),
+                HashSet::from_iter(vec![primary_button, secondary_button].into_iter()),
+                event_time_u64,
+                &descriptor,
+            ),
+        ];
+
+        assert_input_report_sequence_generates_events!(
+            input_reports: input_reports,
+            expected_events: expected_events,
+            device_descriptor: descriptor,
+            device_type: MouseBinding,
+        );
+    }
+
+    /// Tests that two staggered button presses followed by stagged releases generate four mouse
+    /// events with distinct `affected_buttons` and `pressed_buttons`.
+    /// Specifically, we test and expect the following in order:
+    /// | Action           | MousePhase | `affected_buttons` | `pressed_buttons` |
+    /// | ---------------- | ---------- | ------------------ | ----------------- |
+    /// | Press button 1   | Down       | [1]                | [1]               |
+    /// | Press button 2   | Down       | [2]                | [1, 2]            |
+    /// | Release button 1 | Up         | [1]                | [2]               |
+    /// | Release button 2 | Up         | [2]                | []                |
+    #[fasync::run_singlethreaded(test)]
+    async fn down_down_up_up() {
+        let primary_button = 1;
+        let secondary_button = 2;
+
+        let (event_time_i64, event_time_u64) = testing_utilities::event_times();
+        let first_report = testing_utilities::create_mouse_input_report(
+            MouseLocation::Relative(Position::zero()),
+            vec![primary_button],
+            event_time_i64,
+        );
+        let second_report = testing_utilities::create_mouse_input_report(
+            MouseLocation::Relative(Position::zero()),
+            vec![primary_button, secondary_button],
+            event_time_i64,
+        );
+        let third_report = testing_utilities::create_mouse_input_report(
+            MouseLocation::Relative(Position::zero()),
+            vec![secondary_button],
+            event_time_i64,
+        );
+        let fourth_report = testing_utilities::create_mouse_input_report(
+            MouseLocation::Relative(Position::zero()),
+            vec![],
+            event_time_i64,
+        );
+        let descriptor = mouse_device_descriptor(DEVICE_ID);
+
+        let input_reports = vec![first_report, second_report, third_report, fourth_report];
+        let expected_events = vec![
+            testing_utilities::create_mouse_event(
+                MouseLocation::Relative(Position::zero()),
+                MousePhase::Down,
+                HashSet::from_iter(vec![primary_button].into_iter()),
+                HashSet::from_iter(vec![primary_button].into_iter()),
+                event_time_u64,
+                &descriptor,
+            ),
+            testing_utilities::create_mouse_event(
+                MouseLocation::Relative(Position::zero()),
+                MousePhase::Down,
+                HashSet::from_iter(vec![secondary_button].into_iter()),
+                HashSet::from_iter(vec![primary_button, secondary_button].into_iter()),
+                event_time_u64,
+                &descriptor,
+            ),
+            testing_utilities::create_mouse_event(
+                MouseLocation::Relative(Position::zero()),
+                MousePhase::Up,
+                HashSet::from_iter(vec![primary_button].into_iter()),
+                HashSet::from_iter(vec![secondary_button].into_iter()),
+                event_time_u64,
+                &descriptor,
+            ),
+            testing_utilities::create_mouse_event(
+                MouseLocation::Relative(Position::zero()),
+                MousePhase::Up,
+                HashSet::from_iter(vec![secondary_button].into_iter()),
+                HashSet::new(),
+                event_time_u64,
+                &descriptor,
+            ),
+        ];
 
         assert_input_report_sequence_generates_events!(
             input_reports: input_reports,

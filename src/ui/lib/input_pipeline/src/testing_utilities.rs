@@ -370,14 +370,18 @@ pub fn create_mouse_input_report(
 pub fn create_mouse_event_with_handled(
     location: mouse_binding::MouseLocation,
     phase: mouse_binding::MousePhase,
-    buttons: HashSet<mouse_binding::MouseButton>,
+    affected_buttons: HashSet<mouse_binding::MouseButton>,
+    pressed_buttons: HashSet<mouse_binding::MouseButton>,
     event_time: input_device::EventTime,
     device_descriptor: &input_device::InputDeviceDescriptor,
     handled: input_device::Handled,
 ) -> input_device::InputEvent {
     input_device::InputEvent {
         device_event: input_device::InputDeviceEvent::Mouse(mouse_binding::MouseEvent::new(
-            location, phase, buttons,
+            location,
+            phase,
+            affected_buttons,
+            pressed_buttons,
         )),
         device_descriptor: device_descriptor.clone(),
         event_time,
@@ -396,14 +400,16 @@ pub fn create_mouse_event_with_handled(
 pub fn create_mouse_event(
     location: mouse_binding::MouseLocation,
     phase: mouse_binding::MousePhase,
-    buttons: HashSet<mouse_binding::MouseButton>,
+    affected_buttons: HashSet<mouse_binding::MouseButton>,
+    pressed_buttons: HashSet<mouse_binding::MouseButton>,
     event_time: input_device::EventTime,
     device_descriptor: &input_device::InputDeviceDescriptor,
 ) -> input_device::InputEvent {
     create_mouse_event_with_handled(
         location,
         phase,
-        buttons,
+        affected_buttons,
+        pressed_buttons,
         event_time,
         device_descriptor,
         input_device::Handled::No,

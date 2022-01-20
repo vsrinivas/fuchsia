@@ -21,6 +21,7 @@ use {
 struct RelativeMouseEvent {
     displacement: Position, // Change in position since the previous event
     phase: mouse_binding::MousePhase,
+    affected_buttons: HashSet<mouse_binding::MouseButton>,
     pressed_buttons: HashSet<mouse_binding::MouseButton>,
     mouse_descriptor: mouse_binding::MouseDeviceDescriptor,
     event_time: u64,
@@ -38,14 +39,16 @@ impl TryFrom<input_device::UnhandledInputEvent> for RelativeMouseEvent {
                     input_device::InputDeviceEvent::Mouse(mouse_binding::MouseEvent {
                         location: mouse_binding::MouseLocation::Relative(position),
                         phase,
-                        buttons,
+                        affected_buttons,
+                        pressed_buttons,
                     }),
                 device_descriptor: input_device::InputDeviceDescriptor::Mouse(mouse_descriptor),
                 event_time,
             } => Ok(RelativeMouseEvent {
                 displacement: position,
                 phase,
-                pressed_buttons: buttons,
+                affected_buttons,
+                pressed_buttons,
                 mouse_descriptor,
                 event_time,
                 handled: input_device::Handled::No,
@@ -61,7 +64,8 @@ impl From<RelativeMouseEvent> for input_device::InputEvent {
             device_event: input_device::InputDeviceEvent::Mouse(mouse_binding::MouseEvent {
                 location: mouse_binding::MouseLocation::Relative(relative_mouse_event.displacement),
                 phase: relative_mouse_event.phase.into(),
-                buttons: relative_mouse_event.pressed_buttons,
+                affected_buttons: relative_mouse_event.affected_buttons,
+                pressed_buttons: relative_mouse_event.pressed_buttons,
             }),
             device_descriptor: input_device::InputDeviceDescriptor::Mouse(
                 relative_mouse_event.mouse_descriptor,
@@ -387,7 +391,8 @@ mod tests {
         let event = make_unhandled_input_event(mouse_binding::MouseEvent {
             location: mouse_binding::MouseLocation::Relative(Position::zero()),
             phase: mouse_binding::MousePhase::Down,
-            buttons: hashset! {0},
+            affected_buttons: hashset! {0},
+            pressed_buttons: hashset! {0},
         });
         assert_eq!(
             handler.handle_unhandled_input_event(event.clone()).await.as_slice(),
@@ -404,7 +409,8 @@ mod tests {
                 y: SMALL_MOTION,
             }),
             phase: mouse_binding::MousePhase::Move,
-            buttons: hashset! {},
+            affected_buttons: hashset! {},
+            pressed_buttons: hashset! {},
         });
         assert_eq!(
             handler.handle_unhandled_input_event(event.clone()).await.as_slice(),
@@ -418,12 +424,14 @@ mod tests {
         let button_down_event = make_unhandled_input_event(mouse_binding::MouseEvent {
             location: mouse_binding::MouseLocation::Relative(Position::zero()),
             phase: mouse_binding::MousePhase::Down,
-            buttons: hashset! {0},
+            affected_buttons: hashset! {0},
+            pressed_buttons: hashset! {0},
         });
         let move_event = make_unhandled_input_event(mouse_binding::MouseEvent {
             location: mouse_binding::MouseLocation::Relative(Position { x: 0.0, y: SMALL_MOTION }),
             phase: mouse_binding::MousePhase::Move,
-            buttons: hashset! {0},
+            affected_buttons: hashset! {0},
+            pressed_buttons: hashset! {0},
         });
 
         // Intermediate values verified by
@@ -439,17 +447,20 @@ mod tests {
         let button_down_event = make_unhandled_input_event(mouse_binding::MouseEvent {
             location: mouse_binding::MouseLocation::Relative(Position::zero()),
             phase: mouse_binding::MousePhase::Down,
-            buttons: hashset! {0},
+            affected_buttons: hashset! {0},
+            pressed_buttons: hashset! {0},
         });
         let move_event = make_unhandled_input_event(mouse_binding::MouseEvent {
             location: mouse_binding::MouseLocation::Relative(Position { x: 0.0, y: SMALL_MOTION }),
             phase: mouse_binding::MousePhase::Move,
-            buttons: hashset! {0},
+            affected_buttons: hashset! {0},
+            pressed_buttons: hashset! {0},
         });
         let button_up_event = make_unhandled_input_event(mouse_binding::MouseEvent {
             location: mouse_binding::MouseLocation::Relative(Position::zero()),
             phase: mouse_binding::MousePhase::Up,
-            buttons: hashset! {},
+            affected_buttons: hashset! {0},
+            pressed_buttons: hashset! {},
         });
 
         // Intermediate values verified by
@@ -480,12 +491,14 @@ mod tests {
         let button_down_event = make_unhandled_input_event(mouse_binding::MouseEvent {
             location: mouse_binding::MouseLocation::Relative(Position::zero()),
             phase: mouse_binding::MousePhase::Down,
-            buttons: hashset! {0},
+            affected_buttons: hashset! {0},
+            pressed_buttons: hashset! {0},
         });
         let move_event = make_unhandled_input_event(mouse_binding::MouseEvent {
             location: mouse_binding::MouseLocation::Relative(position),
             phase: mouse_binding::MousePhase::Move,
-            buttons: hashset! {0},
+            affected_buttons: hashset! {0},
+            pressed_buttons: hashset! {0},
         });
 
         // Intermediate values verified by
@@ -503,17 +516,20 @@ mod tests {
         let button_down_event = make_unhandled_input_event(mouse_binding::MouseEvent {
             location: mouse_binding::MouseLocation::Relative(Position::zero()),
             phase: mouse_binding::MousePhase::Down,
-            buttons: hashset! {0},
+            affected_buttons: hashset! {0},
+            pressed_buttons: hashset! {0},
         });
         let move_event = make_unhandled_input_event(mouse_binding::MouseEvent {
             location: mouse_binding::MouseLocation::Relative(Position { x: 0.0, y: LARGE_MOTION }),
             phase: mouse_binding::MousePhase::Move,
-            buttons: hashset! {0},
+            affected_buttons: hashset! {0},
+            pressed_buttons: hashset! {0},
         });
         let button_up_event = make_unhandled_input_event(mouse_binding::MouseEvent {
             location: mouse_binding::MouseLocation::Relative(Position::zero()),
             phase: mouse_binding::MousePhase::Up,
-            buttons: hashset! {},
+            affected_buttons: hashset! {0},
+            pressed_buttons: hashset! {},
         });
 
         // Intermediate values verified by
@@ -533,17 +549,20 @@ mod tests {
         let button_down_event = make_unhandled_input_event(mouse_binding::MouseEvent {
             location: mouse_binding::MouseLocation::Relative(Position::zero()),
             phase: mouse_binding::MousePhase::Down,
-            buttons: hashset! {0},
+            affected_buttons: hashset! {0},
+            pressed_buttons: hashset! {0},
         });
         let first_move_event = make_unhandled_input_event(mouse_binding::MouseEvent {
             location: mouse_binding::MouseLocation::Relative(Position { x: 0.0, y: HALF_MOTION }),
             phase: mouse_binding::MousePhase::Move,
-            buttons: hashset! {0},
+            affected_buttons: hashset! {0},
+            pressed_buttons: hashset! {0},
         });
         let second_move_event = make_unhandled_input_event(mouse_binding::MouseEvent {
             location: mouse_binding::MouseLocation::Relative(Position { x: 0.0, y: HALF_MOTION }),
             phase: mouse_binding::MousePhase::Move,
-            buttons: hashset! {0},
+            affected_buttons: hashset! {0},
+            pressed_buttons: hashset! {0},
         });
 
         // Intermediate values verified by
@@ -571,22 +590,26 @@ mod tests {
         let button_down_event = make_unhandled_input_event(mouse_binding::MouseEvent {
             location: mouse_binding::MouseLocation::Relative(Position::zero()),
             phase: mouse_binding::MousePhase::Down,
-            buttons: hashset! {0},
+            affected_buttons: hashset! {0},
+            pressed_buttons: hashset! {0},
         });
         let first_move_event = make_unhandled_input_event(mouse_binding::MouseEvent {
             location: mouse_binding::MouseLocation::Relative(Position { x: 0.0, y: HALF_MOTION }),
             phase: mouse_binding::MousePhase::Move,
-            buttons: hashset! {0},
+            affected_buttons: hashset! {0},
+            pressed_buttons: hashset! {0},
         });
         let second_move_event = make_unhandled_input_event(mouse_binding::MouseEvent {
             location: mouse_binding::MouseLocation::Relative(Position { x: 0.0, y: HALF_MOTION }),
             phase: mouse_binding::MousePhase::Move,
-            buttons: hashset! {0},
+            affected_buttons: hashset! {0},
+            pressed_buttons: hashset! {0},
         });
         let third_move_event = make_unhandled_input_event(mouse_binding::MouseEvent {
             location: mouse_binding::MouseLocation::Relative(Position { x: 0.0, y: HALF_MOTION }),
             phase: mouse_binding::MousePhase::Move,
-            buttons: hashset! {0},
+            affected_buttons: hashset! {0},
+            pressed_buttons: hashset! {0},
         });
 
         // Intermediate values verified by
@@ -614,17 +637,20 @@ mod tests {
         let button_down_event = make_unhandled_input_event(mouse_binding::MouseEvent {
             location: mouse_binding::MouseLocation::Relative(Position::zero()),
             phase: mouse_binding::MousePhase::Down,
-            buttons: hashset! {0},
+            affected_buttons: hashset! {0},
+            pressed_buttons: hashset! {0},
         });
         let first_move_event = make_unhandled_input_event(mouse_binding::MouseEvent {
             location: mouse_binding::MouseLocation::Relative(first_motion),
             phase: mouse_binding::MousePhase::Move,
-            buttons: hashset! {0},
+            affected_buttons: hashset! {0},
+            pressed_buttons: hashset! {0},
         });
         let second_move_event = make_unhandled_input_event(mouse_binding::MouseEvent {
             location: mouse_binding::MouseLocation::Relative(second_motion),
             phase: mouse_binding::MousePhase::Move,
-            buttons: hashset! {0},
+            affected_buttons: hashset! {0},
+            pressed_buttons: hashset! {0},
         });
 
         // Intermediate values verified by

@@ -48,7 +48,8 @@ impl UnhandledInputHandler for PointerMotionScaleHandler {
                         location: mouse_binding::MouseLocation::Relative(raw_motion),
                         // Only the `Move` phase carries non-zero motion.
                         phase: phase @ mouse_binding::MousePhase::Move,
-                        buttons,
+                        affected_buttons,
+                        pressed_buttons,
                     }),
                 device_descriptor: device_descriptor @ input_device::InputDeviceDescriptor::Mouse(_),
                 event_time,
@@ -59,7 +60,8 @@ impl UnhandledInputHandler for PointerMotionScaleHandler {
                         mouse_binding::MouseEvent {
                             location: mouse_binding::MouseLocation::Relative(scaled_motion),
                             phase,
-                            buttons,
+                            affected_buttons,
+                            pressed_buttons,
                         },
                     ),
                     device_descriptor,
@@ -161,7 +163,8 @@ mod tests {
         let input_event = make_unhandled_input_event(mouse_binding::MouseEvent {
             location: mouse_binding::MouseLocation::Relative(Position { x: 1.5, y: 4.5 }),
             phase: mouse_binding::MousePhase::Move,
-            buttons: hashset! {},
+            affected_buttons: hashset! {},
+            pressed_buttons: hashset! {},
         });
         assert_matches!(
             handler.clone().handle_unhandled_input_event(input_event).await.as_slice(),
@@ -183,7 +186,8 @@ mod tests {
         let input_event = make_unhandled_input_event(mouse_binding::MouseEvent {
             location: mouse_binding::MouseLocation::Relative(Position { x: 1.5, y: 4.5 }),
             phase: mouse_binding::MousePhase::Move,
-            buttons: hashset! {},
+            affected_buttons: hashset! {},
+            pressed_buttons: hashset! {},
         });
         assert_matches!(
             handler.clone().handle_unhandled_input_event(input_event).await.as_slice(),
@@ -200,15 +204,16 @@ mod tests {
         let input_event = make_unhandled_input_event(mouse_binding::MouseEvent {
             location: mouse_binding::MouseLocation::Relative(Position { x: 1.5, y: 4.5 }),
             phase: mouse_binding::MousePhase::Move,
-            buttons: input_buttons.clone(),
+            affected_buttons: input_buttons.clone(),
+            pressed_buttons: input_buttons.clone(),
         });
         assert_matches!(
             handler.clone().handle_unhandled_input_event(input_event).await.as_slice(),
             [input_device::InputEvent {
                 device_event:
-                    input_device::InputDeviceEvent::Mouse(mouse_binding::MouseEvent { buttons, .. }),
+                    input_device::InputDeviceEvent::Mouse(mouse_binding::MouseEvent { affected_buttons, pressed_buttons, .. }),
                 ..
-            }] if *buttons == input_buttons
+            }] if *affected_buttons == input_buttons && *pressed_buttons == input_buttons
         );
     }
 
@@ -218,7 +223,8 @@ mod tests {
         let input_event = make_unhandled_input_event(mouse_binding::MouseEvent {
             location: mouse_binding::MouseLocation::Relative(Position { x: 1.5, y: 4.5 }),
             phase: mouse_binding::MousePhase::Move,
-            buttons: hashset! {},
+            affected_buttons: hashset! {},
+            pressed_buttons: hashset! {},
         });
         assert_matches!(
             handler.clone().handle_unhandled_input_event(input_event).await.as_slice(),
@@ -232,7 +238,8 @@ mod tests {
         let mut input_event = make_unhandled_input_event(mouse_binding::MouseEvent {
             location: mouse_binding::MouseLocation::Relative(Position { x: 1.5, y: 4.5 }),
             phase: mouse_binding::MousePhase::Move,
-            buttons: hashset! {},
+            affected_buttons: hashset! {},
+            pressed_buttons: hashset! {},
         });
         input_event.event_time = 42;
         assert_matches!(

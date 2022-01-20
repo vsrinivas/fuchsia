@@ -69,7 +69,7 @@ impl InputHandler for GfxMouseHandler {
                 self.update_cursor_visibility(!*self.immersive_mode.borrow()).await;
                 self.send_events_to_scenic(
                     fidl_ui_input::PointerEventPhase::from(mouse_event.phase),
-                    &mouse_event.buttons,
+                    &mouse_event.affected_buttons,
                     &mouse_descriptor,
                     event_time,
                 )
@@ -436,6 +436,7 @@ mod tests {
             cursor_location,
             mouse_binding::MousePhase::Move,
             HashSet::<mouse_binding::MouseButton>::new(),
+            HashSet::<mouse_binding::MouseButton>::new(),
             event_time,
             &descriptor,
         )];
@@ -496,6 +497,7 @@ mod tests {
             cursor_location,
             mouse_binding::MousePhase::Move,
             HashSet::<mouse_binding::MouseButton>::new(),
+            HashSet::<mouse_binding::MouseButton>::new(),
             event_time,
             &descriptor,
         )];
@@ -553,6 +555,7 @@ mod tests {
         let input_events = vec![create_mouse_event(
             cursor_location,
             mouse_binding::MousePhase::Move,
+            HashSet::<mouse_binding::MouseButton>::new(),
             HashSet::<mouse_binding::MouseButton>::new(),
             event_time,
             &descriptor,
@@ -632,6 +635,7 @@ mod tests {
             cursor_location,
             mouse_binding::MousePhase::Move,
             HashSet::<mouse_binding::MouseButton>::new(),
+            HashSet::<mouse_binding::MouseButton>::new(),
             event_time,
             &descriptor,
         )];
@@ -690,6 +694,7 @@ mod tests {
             cursor_location,
             mouse_binding::MousePhase::Move,
             HashSet::<mouse_binding::MouseButton>::new(),
+            HashSet::<mouse_binding::MouseButton>::new(),
             event_time,
             &descriptor,
             input_device::Handled::Yes,
@@ -731,6 +736,7 @@ mod tests {
         let input_events = vec![create_mouse_event(
             cursor_location,
             mouse_binding::MousePhase::Move,
+            HashSet::<mouse_binding::MouseButton>::new(),
             HashSet::<mouse_binding::MouseButton>::new(),
             event_time,
             &descriptor,
