@@ -6,7 +6,7 @@ use {
     anyhow::{Context, Result},
     fidl_fuchsia_driver_development as fdd, fidl_fuchsia_driver_test as fdt,
     fuchsia_async as fasync,
-    fuchsia_component_test::RealmBuilder,
+    fuchsia_component_test::new::RealmBuilder,
     fuchsia_driver_test::{DriverTestRealmBuilder, DriverTestRealmInstance},
 };
 
