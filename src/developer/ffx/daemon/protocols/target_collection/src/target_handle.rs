@@ -108,9 +108,8 @@ impl TargetHandleInner {
                 rcs.copy_to_channel(remote_control.into_channel())?;
                 responder.send().map_err(Into::into)
             }
-            bridge::TargetHandleRequest::OpenFastboot { fastboot, responder } => {
-                self.reboot_controller.spawn_fastboot(fastboot).await?;
-                responder.send().map_err(Into::into)
+            bridge::TargetHandleRequest::OpenFastboot { fastboot, .. } => {
+                self.reboot_controller.spawn_fastboot(fastboot).await.map_err(Into::into)
             }
             bridge::TargetHandleRequest::Reboot { state, responder } => {
                 self.reboot_controller.reboot(state, responder).await

@@ -190,12 +190,9 @@ protocol TargetHandle {
     }) -> ();
 
     /// Opens a Fastboot controller for a given target.
-    ///
-    /// Returns:
-    /// * Nothing on success.
     OpenFastboot(resource struct {
         fastboot server_end:Fastboot;
-    }) -> ();
+    });
 
     /// Reboots the target to the desired state.
     ///

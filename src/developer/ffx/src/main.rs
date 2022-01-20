@@ -120,29 +120,12 @@ impl Injector for Injection {
         let daemon_proxy = self.daemon_factory().await?;
         let app: Ffx = argh::from_env();
         let target = app.target().await?;
-        let proxy_timeout = proxy_timeout().await?;
         let is_default_target = app.target.is_none();
         let (target_proxy, target_proxy_fut) =
             open_target_with_fut(target.clone(), is_default_target, daemon_proxy.clone())?;
-        let mut target_proxy_fut = target_proxy_fut.boxed_local().fuse();
+        target_proxy_fut.await?;
         let (fastboot_proxy, fastboot_server_end) = create_proxy::<FastbootMarker>()?;
-        let mut fastboot_proxy_fut =
-            timeout(proxy_timeout, target_proxy.open_fastboot(fastboot_server_end))
-                .boxed_local()
-                .fuse();
-        loop {
-            select! {
-                r = fastboot_proxy_fut => {
-                    r.map_err(|_| FfxError::DaemonError {
-                        err: DaemonError::Timeout,
-                        target: target.clone(),
-                        is_default_target: app.target.is_none(),
-                    })??;
-                    break;
-                }
-                r = target_proxy_fut => r?
-            }
-        }
+        target_proxy.open_fastboot(fastboot_server_end)?;
         Ok(fastboot_proxy)
     }
 
