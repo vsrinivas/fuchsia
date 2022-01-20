@@ -6,9 +6,7 @@ use {
     anyhow::{bail, Error},
     num_traits::cast::FromPrimitive,
     std::collections::HashMap,
-    triage::{
-        analyze, ActionResultFormatter, ActionTagDirective, DiagnosticData, ParseResult, Source,
-    },
+    triage::{ActionResultFormatter, ActionTagDirective, DiagnosticData, ParseResult, Source},
 };
 
 /// Unique identifier to resources too expensive to pass between Rust/JS layer.
@@ -86,7 +84,7 @@ impl TriageManager {
             targets.push(target);
         }
 
-        let results = analyze(&targets, &context)?;
+        let results = triage::analyze(&targets, &context)?;
         let results_formatter = ActionResultFormatter::new(&results);
         Ok(results_formatter.to_text())
     }
