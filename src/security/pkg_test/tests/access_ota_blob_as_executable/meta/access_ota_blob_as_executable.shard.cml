@@ -30,6 +30,12 @@
             url: "#meta/fake_boot_arguments_v0.cm",
         },
 
+        // Non-production dependencies.
+        {
+            name: "cobalt",
+            url: "#meta/mock_cobalt.cm",
+        },
+
         // Production package delivery components.
         {
             name: "pkg-cache",
@@ -155,11 +161,20 @@
             protocol: "fuchsia.logger.LogSink",
             from: "parent",
             to: [
+                "#cobalt",
                 "#fake_boot_arguments",
                 "#fshost",
                 "#pkg-cache",
                 "#pkg-resolver",
                 "#pkg_server",
+            ],
+        },
+        {
+            protocol: "fuchsia.cobalt.LoggerFactory",
+            from: "#cobalt",
+            to: [
+                "#pkg-cache",
+                "#pkg-resolver",
             ],
         },
 
@@ -169,14 +184,6 @@
         //     protocol: "fuchsia.update.CommitStatusProvider",
         //     from: "???",
         //     to: "#pkg-cache",
-        // },
-        // {
-        //     protocol: "fuchsia.cobalt.LoggerFactory",
-        //     from: "???",
-        //     to: [
-        //         "#pkg-cache",
-        //         "#pkg-resolver",
-        //     ],
         // },
         // {
         //     protocol: [

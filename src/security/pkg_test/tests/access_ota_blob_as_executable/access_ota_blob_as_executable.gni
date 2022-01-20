@@ -141,10 +141,13 @@ template("access_ota_blob_as_executable") {
       # Mock SWD component dependencies.
       ":fake_boot_arguments_v0-component",
       ":fake_boot_arguments_v1-component",
+      "//src/cobalt/bin/testing/mock_cobalt:component_v2",
     ]
 
-    # TODO(fxbug.dev/88453): Mock `fuchsia.cobalt.LoggerFactory` to suppress ERROR
-    # logs from pkg-cache.
+    # TODO(fxbug.dev/88453): Complete test dependency composition to eliminate
+    # error logs:
+    # - Route `fuchsia.space.Manager` to `pkg-cache`;
+    # - Route name lookup and network services to `pkg-resolver`.
     test_specs = {
       log_settings = {
         max_severity = "FATAL"
