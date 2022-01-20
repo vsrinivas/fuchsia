@@ -9,7 +9,7 @@ pub mod tests {
     use async_trait::async_trait;
     use device_watcher;
     use fidl_fuchsia_io;
-    use fuchsia_component_test::{RealmBuilder, RealmInstance};
+    use fuchsia_component_test::new::{RealmBuilder, RealmInstance};
     use fuchsia_driver_test::{DriverTestRealmBuilder, DriverTestRealmInstance};
 
     use crate::configurator::Configurator;
