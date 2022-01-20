@@ -138,7 +138,8 @@ class CGenerator {
   std::map<const flat::Decl*, NamedProtocol> NameProtocols(
       const std::vector<std::unique_ptr<flat::Protocol>>& protocol_infos);
   std::map<const flat::Decl*, NamedStruct> NameStructs(
-      const std::vector<std::unique_ptr<flat::Struct>>& struct_infos);
+      const std::vector<std::unique_ptr<flat::Struct>>& struct_infos,
+      const std::vector<std::unique_ptr<flat::Protocol>>& protocol_infos);
 
   void ProduceBitsForwardDeclaration(const NamedBits& named_bits);
   void ProduceConstForwardDeclaration(const NamedConst& named_const);

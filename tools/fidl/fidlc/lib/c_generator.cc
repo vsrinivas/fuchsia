@@ -4,6 +4,8 @@
 
 #include "fidl/c_generator.h"
 
+#include <unordered_set>
+
 #include "fidl/flat_ast.h"
 #include "fidl/names.h"
 #include "fidl/type_shape.h"
@@ -1021,11 +1023,28 @@ std::map<const flat::Decl*, CGenerator::NamedProtocol> CGenerator::NameProtocols
 }
 
 std::map<const flat::Decl*, CGenerator::NamedStruct> CGenerator::NameStructs(
-    const std::vector<std::unique_ptr<flat::Struct>>& struct_infos) {
+    const std::vector<std::unique_ptr<flat::Struct>>& struct_infos,
+    const std::vector<std::unique_ptr<flat::Protocol>>& protocol_infos) {
+  std::set<const flat::Name> message_body_type_names;
+  for (const auto& protocol_info : protocol_infos) {
+    for (const auto& method_info : protocol_info->all_methods) {
+      if (method_info.method->maybe_request != nullptr) {
+        message_body_type_names.insert(method_info.method->maybe_request->name);
+      }
+      if (method_info.method->maybe_response != nullptr) {
+        message_body_type_names.insert(method_info.method->maybe_response->name);
+      }
+    }
+  }
+
   std::map<const flat::Decl*, NamedStruct> named_structs;
   for (const auto& struct_info : struct_infos) {
-    if (struct_info->is_request_or_response)
+    // If this struct is only ever used as an anonymous transactional message body definition, there
+    // is no need to name it.
+    if (struct_info->name.as_anonymous() != nullptr &&
+        message_body_type_names.find(struct_info->name) != message_body_type_names.end()) {
       continue;
+    }
     std::string c_name = NameCodedName(struct_info->name);
     std::string coded_name = c_name + "Coded";
     named_structs.emplace(struct_info.get(),
@@ -1654,7 +1673,7 @@ std::ostringstream CGenerator::ProduceHeader() {
   std::map<const flat::Decl*, NamedProtocol> named_protocols =
       NameProtocols(library_->protocol_declarations_);
   std::map<const flat::Decl*, NamedStruct> named_structs =
-      NameStructs(library_->struct_declarations_);
+      NameStructs(library_->struct_declarations_, library_->protocol_declarations_);
 
   file_ << "\n// Forward declarations\n\n";
 
