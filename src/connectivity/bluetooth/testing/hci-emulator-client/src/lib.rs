@@ -268,7 +268,7 @@ mod tests {
         super::*,
         fidl_fuchsia_bluetooth_test::EmulatorError,
         fidl_fuchsia_driver_test as fdt, fuchsia,
-        fuchsia_component_test::RealmBuilder,
+        fuchsia_component_test::new::RealmBuilder,
         fuchsia_driver_test::{DriverTestRealmBuilder, DriverTestRealmInstance},
     };
 

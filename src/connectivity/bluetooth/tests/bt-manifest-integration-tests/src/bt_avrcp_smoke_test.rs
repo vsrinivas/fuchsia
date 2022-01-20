@@ -8,8 +8,8 @@ use {
     fidl_fuchsia_bluetooth_avrcp_test::{PeerManagerExtMarker, PeerManagerExtProxy},
     fidl_fuchsia_bluetooth_bredr::{ProfileMarker, ProfileRequest},
     fuchsia_async as fasync,
-    fuchsia_component_test::{
-        mock::MockHandles, ChildOptions, RealmBuilder, RouteBuilder, RouteEndpoint,
+    fuchsia_component_test::new::{
+        Capability, ChildOptions, LocalComponentHandles, RealmBuilder, Ref, Route,
     },
     futures::{channel::mpsc, SinkExt, StreamExt},
     realmbuilder_mock_helpers::mock_component,
@@ -40,15 +40,15 @@ impl From<ProfileRequest> for Event {
 /// Represents a fake AVRCP client that requests the PeerManager and PeerManagerExt services.
 async fn mock_avrcp_client(
     mut sender: mpsc::Sender<Event>,
-    handles: MockHandles,
+    handles: LocalComponentHandles,
 ) -> Result<(), Error> {
-    let peer_manager_svc = handles.connect_to_service::<PeerManagerMarker>()?;
+    let peer_manager_svc = handles.connect_to_protocol::<PeerManagerMarker>()?;
     sender
         .send(Event::PeerManager(Some(peer_manager_svc)))
         .await
         .expect("failed sending ack to test");
 
-    let peer_manager_ext_svc = handles.connect_to_service::<PeerManagerExtMarker>()?;
+    let peer_manager_ext_svc = handles.connect_to_protocol::<PeerManagerExtMarker>()?;
     sender
         .send(Event::PeerManagerExt(Some(peer_manager_ext_svc)))
         .await
@@ -69,17 +69,17 @@ async fn avrcp_v2_component_topology() {
 
     let builder = RealmBuilder::new().await.expect("Failed to create test realm builder");
     // The v2 component under test.
-    let _ = builder
+    let avcrp = builder
         .add_child("avrcp", AVRCP_URL.to_string(), ChildOptions::new())
         .await
         .expect("Failed adding avrcp to topology");
     // Mock Profile component to receive bredr.Profile requests.
-    let _ = builder
-        .add_mock_child(
+    let fake_profile = builder
+        .add_local_child(
             "fake-profile",
-            move |mock_handles: MockHandles| {
+            move |handles: LocalComponentHandles| {
                 let sender = profile_tx.clone();
-                Box::pin(mock_component::<ProfileMarker, _>(sender, mock_handles))
+                Box::pin(mock_component::<ProfileMarker, _>(sender, handles))
             },
             ChildOptions::new(),
         )
@@ -87,12 +87,12 @@ async fn avrcp_v2_component_topology() {
         .expect("Failed adding profile mock to topology");
     // Mock AVRCP client that will request the PeerManager and PeerManagerExt services
     // which are provided by `bt-avrcp.cml`.
-    let _ = builder
-        .add_mock_child(
+    let fake_avcrp_client = builder
+        .add_local_child(
             "fake-avrcp-client",
-            move |mock_handles: MockHandles| {
+            move |handles: LocalComponentHandles| {
                 let sender = fake_client_tx.clone();
-                Box::pin(mock_avrcp_client(sender, mock_handles))
+                Box::pin(mock_avrcp_client(sender, handles))
             },
             ChildOptions::new().eager(),
         )
@@ -100,36 +100,33 @@ async fn avrcp_v2_component_topology() {
         .expect("Failed adding avrcp client mock to topology");
 
     // Set up capabilities.
-    let _ = builder
+    builder
         .add_route(
-            RouteBuilder::protocol_marker::<PeerManagerMarker>()
-                .source(RouteEndpoint::component("avrcp"))
-                .targets(vec![RouteEndpoint::component("fake-avrcp-client")]),
+            Route::new()
+                .capability(Capability::protocol::<PeerManagerMarker>())
+                .capability(Capability::protocol::<PeerManagerExtMarker>())
+                .from(&avcrp)
+                .to(&fake_avcrp_client),
         )
         .await
-        .expect("Failed adding route for PeerManager service")
+        .expect("Failed adding route for PeerManager services");
+    builder
         .add_route(
-            RouteBuilder::protocol_marker::<PeerManagerExtMarker>()
-                .source(RouteEndpoint::component("avrcp"))
-                .targets(vec![RouteEndpoint::component("fake-avrcp-client")]),
+            Route::new()
+                .capability(Capability::protocol::<ProfileMarker>())
+                .from(&fake_profile)
+                .to(&avcrp),
         )
         .await
-        .expect("Failed adding route for PeerManagerExt service")
+        .expect("Failed adding route for Profile service");
+    builder
         .add_route(
-            RouteBuilder::protocol_marker::<ProfileMarker>()
-                .source(RouteEndpoint::component("fake-profile"))
-                .targets(vec![RouteEndpoint::component("avrcp")]),
-        )
-        .await
-        .expect("Failed adding route for Profile service")
-        .add_route(
-            RouteBuilder::protocol_marker::<fidl_fuchsia_logger::LogSinkMarker>()
-                .source(RouteEndpoint::AboveRoot)
-                .targets(vec![
-                    RouteEndpoint::component("avrcp"),
-                    RouteEndpoint::component("fake-profile"),
-                    RouteEndpoint::component("fake-avrcp-client"),
-                ]),
+            Route::new()
+                .capability(Capability::protocol::<fidl_fuchsia_logger::LogSinkMarker>())
+                .from(Ref::parent())
+                .to(&avcrp)
+                .to(&fake_profile)
+                .to(&fake_avcrp_client),
         )
         .await
         .expect("Failed adding LogSink route to test components");

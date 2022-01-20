@@ -235,7 +235,7 @@ mod tests {
             DeviceSynchronousProxy, RootDeviceSynchronousProxy, CONTROL_DEVICE,
         },
         fidl_fuchsia_driver_test as fdt,
-        fuchsia_component_test::{RealmBuilder, RealmInstance},
+        fuchsia_component_test::new::{RealmBuilder, RealmInstance},
         fuchsia_driver_test::{DriverTestRealmBuilder, DriverTestRealmInstance},
         matches::assert_matches,
     };

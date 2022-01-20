@@ -2,11 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use fidl::endpoints::DiscoverableProtocolMarker;
 use fidl_fuchsia_bluetooth_bredr as bredr;
 use fidl_fuchsia_bluetooth_deviceid::*;
 use fuchsia_bluetooth::types::PeerId;
-use fuchsia_component_test::{RealmInstance, RouteBuilder};
+use fuchsia_component_test::new::{Capability, RealmInstance};
 use fuchsia_zircon as zx;
 use futures::{future::Either, pin_mut, Future, FutureExt, StreamExt};
 use mock_piconet_client_v2::{BtProfileComponent, PiconetHarness, PiconetMember};
@@ -32,7 +31,7 @@ async fn setup_test_topology() -> (RealmInstance, BtProfileComponent, PiconetMem
         .expect("failed to add mock piconet member");
 
     // Add bt-device-id which is under test.
-    let expose = vec![RouteBuilder::protocol(DeviceIdentificationMarker::PROTOCOL_NAME)];
+    let expose = vec![Capability::protocol::<DeviceIdentificationMarker>().into()];
     let di_profile = test_harness
         .add_profile_with_capabilities(
             DEVICE_ID_MONIKER.to_string(),

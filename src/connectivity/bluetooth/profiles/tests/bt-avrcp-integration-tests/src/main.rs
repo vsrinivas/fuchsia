@@ -6,9 +6,7 @@ use {
     anyhow::{format_err, Context},
     bt_avctp::{AvcPeer, AvcResponseType},
     fidl::encoding::Decodable,
-    fidl::endpoints::{
-        create_endpoints, create_proxy, create_request_stream, DiscoverableProtocolMarker,
-    },
+    fidl::endpoints::{create_endpoints, create_proxy, create_request_stream},
     fidl_fuchsia_bluetooth_avrcp::{
         AbsoluteVolumeHandlerMarker, AbsoluteVolumeHandlerRequest,
         AbsoluteVolumeHandlerRequestStream, ControllerMarker, PeerManagerMarker,
@@ -18,7 +16,7 @@ use {
     fixture::fixture,
     fuchsia_async as fasync,
     fuchsia_bluetooth::types::{Channel, Uuid},
-    fuchsia_component_test::RouteBuilder,
+    fuchsia_component_test::new::Capability,
     fuchsia_zircon as zx,
     futures::{join, stream::StreamExt, TryFutureExt},
     mock_piconet_client_v2::{BtProfileComponent, PiconetHarness, PiconetMember},
@@ -35,7 +33,7 @@ const MOCK_PEER_NAME: &str = "mock-peer";
 struct AvrcpIntegrationTest {
     avrcp_observer: BtProfileComponent,
     mock_peer: PiconetMember,
-    test_realm: fuchsia_component_test::RealmInstance,
+    test_realm: fuchsia_component_test::new::RealmInstance,
 }
 
 impl AvrcpIntegrationTest {
@@ -48,7 +46,7 @@ impl AvrcpIntegrationTest {
                 AVRCP_URL_V2.to_string(),
                 None,
                 vec![],
-                vec![RouteBuilder::protocol(PeerManagerMarker::PROTOCOL_NAME)],
+                vec![Capability::protocol::<PeerManagerMarker>().into()],
             )
             .await
             .unwrap();

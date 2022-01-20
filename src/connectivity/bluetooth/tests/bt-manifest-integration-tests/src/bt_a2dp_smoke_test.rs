@@ -23,8 +23,8 @@ use {
     fidl_fuchsia_tracing_provider::{RegistryMarker, RegistryRequestStream},
     fuchsia_async as fasync,
     fuchsia_component::server::ServiceFs,
-    fuchsia_component_test::{
-        mock::MockHandles, ChildOptions, RealmBuilder, RouteBuilder, RouteEndpoint,
+    fuchsia_component_test::new::{
+        Capability, ChildOptions, LocalComponentHandles, RealmBuilder, Ref, Route,
     },
     futures::{channel::mpsc, SinkExt, StreamExt},
     realmbuilder_mock_helpers::add_fidl_service_handler,
@@ -124,15 +124,15 @@ impl From<AllocatorRequestStream> for Event {
 /// Represents a fake A2DP client that requests the `avdtp.PeerManager` and `a2dp.AudioMode` services.
 async fn mock_a2dp_client(
     mut sender: mpsc::Sender<Event>,
-    handles: MockHandles,
+    handles: LocalComponentHandles,
 ) -> Result<(), Error> {
-    let peer_manager_svc = handles.connect_to_service::<fidl_avdtp::PeerManagerMarker>()?;
+    let peer_manager_svc = handles.connect_to_protocol::<fidl_avdtp::PeerManagerMarker>()?;
     sender.send(Event::Avdtp(Some(peer_manager_svc))).await.expect("failed sending ack to test");
 
-    let audio_mode_svc = handles.connect_to_service::<fidl_a2dp::AudioModeMarker>()?;
+    let audio_mode_svc = handles.connect_to_protocol::<fidl_a2dp::AudioModeMarker>()?;
     sender.send(Event::AudioMode(Some(audio_mode_svc))).await.expect("failed sending ack to test");
 
-    let a2dp_media_stream_svc = handles.connect_to_service::<ControllerMarker>()?;
+    let a2dp_media_stream_svc = handles.connect_to_protocol::<ControllerMarker>()?;
     sender
         .send(Event::A2dpMediaStream(Some(a2dp_media_stream_svc)))
         .await
@@ -141,7 +141,10 @@ async fn mock_a2dp_client(
 }
 
 /// The component mock that provides all the services that A2DP requires.
-async fn mock_component(sender: mpsc::Sender<Event>, handles: MockHandles) -> Result<(), Error> {
+async fn mock_component(
+    sender: mpsc::Sender<Event>,
+    handles: LocalComponentHandles,
+) -> Result<(), Error> {
     let mut fs = ServiceFs::new();
 
     add_fidl_service_handler::<fidl_avrcp::PeerManagerMarker, _>(&mut fs, sender.clone());
@@ -172,9 +175,10 @@ const SERVICE_PROVIDER_MONIKER: &str = "fake-service-provider";
 async fn add_a2dp_dependency_route<S: DiscoverableProtocolMarker>(builder: &RealmBuilder) {
     let _ = builder
         .add_route(
-            RouteBuilder::protocol_marker::<S>()
-                .source(RouteEndpoint::component(SERVICE_PROVIDER_MONIKER))
-                .targets(vec![RouteEndpoint::component(A2DP_MONIKER)]),
+            Route::new()
+                .capability(Capability::protocol::<S>())
+                .from(Ref::child(SERVICE_PROVIDER_MONIKER))
+                .to(Ref::child(A2DP_MONIKER)),
         )
         .await
         .expect("Failed adding route for service");
@@ -194,18 +198,18 @@ async fn a2dp_v2_component_topology() {
     let builder = RealmBuilder::new().await.expect("Failed to create test realm builder");
 
     // The v2 component under test.
-    let _ = builder
+    let a2dp = builder
         .add_child(A2DP_MONIKER, A2DP_URL.to_string(), ChildOptions::new())
         .await
         .expect("Failed adding a2dp to topology");
 
     // Generic backend component that provides a slew of services that will be requested.
-    let _ = builder
-        .add_mock_child(
+    let service_provider = builder
+        .add_local_child(
             SERVICE_PROVIDER_MONIKER,
-            move |mock_handles: MockHandles| {
+            move |handles: LocalComponentHandles| {
                 let sender = service_tx.clone();
-                Box::pin(mock_component(sender, mock_handles))
+                Box::pin(mock_component(sender, handles))
             },
             ChildOptions::new(),
         )
@@ -214,12 +218,12 @@ async fn a2dp_v2_component_topology() {
 
     // Mock A2DP client that will request the PeerManager and AudioMode services
     // which are provided by the A2DP component.
-    let _ = builder
-        .add_mock_child(
+    let a2dp_client = builder
+        .add_local_child(
             A2DP_CLIENT_MONIKER,
-            move |mock_handles: MockHandles| {
+            move |handles: LocalComponentHandles| {
                 let sender = fake_client_tx.clone();
-                Box::pin(mock_a2dp_client(sender, mock_handles))
+                Box::pin(mock_a2dp_client(sender, handles))
             },
             ChildOptions::new().eager(),
         )
@@ -227,28 +231,17 @@ async fn a2dp_v2_component_topology() {
         .expect("Failed adding a2dp client mock to topology");
 
     // Capabilities provided by A2DP.
-    let _ = builder
+    builder
         .add_route(
-            RouteBuilder::protocol_marker::<fidl_avdtp::PeerManagerMarker>()
-                .source(RouteEndpoint::component(A2DP_MONIKER))
-                .targets(vec![RouteEndpoint::component(A2DP_CLIENT_MONIKER)]),
+            Route::new()
+                .capability(Capability::protocol::<fidl_avdtp::PeerManagerMarker>())
+                .capability(Capability::protocol::<fidl_a2dp::AudioModeMarker>())
+                .capability(Capability::protocol::<ControllerMarker>())
+                .from(&a2dp)
+                .to(&a2dp_client),
         )
         .await
-        .expect("Failed adding route for avdtp.PeerManager service")
-        .add_route(
-            RouteBuilder::protocol_marker::<fidl_a2dp::AudioModeMarker>()
-                .source(RouteEndpoint::component(A2DP_MONIKER))
-                .targets(vec![RouteEndpoint::component(A2DP_CLIENT_MONIKER)]),
-        )
-        .await
-        .expect("Failed adding route for a2dp.AudioMode service")
-        .add_route(
-            RouteBuilder::protocol_marker::<ControllerMarker>()
-                .source(RouteEndpoint::component(A2DP_MONIKER))
-                .targets(vec![RouteEndpoint::component(A2DP_CLIENT_MONIKER)]),
-        )
-        .await
-        .expect("Failed adding route for internal.a2dp.Controller service");
+        .expect("Failed adding route for A2DP services");
 
     // Capabilities provided by the generic service provider component, which are consumed
     // by the A2DP component.
@@ -267,15 +260,14 @@ async fn a2dp_v2_component_topology() {
     add_a2dp_dependency_route::<DiscoveryMarker>(&builder).await;
 
     // Logging service, used by all children in this test.
-    let _ = builder
+    builder
         .add_route(
-            RouteBuilder::protocol_marker::<fidl_fuchsia_logger::LogSinkMarker>()
-                .source(RouteEndpoint::AboveRoot)
-                .targets(vec![
-                    RouteEndpoint::component(A2DP_MONIKER),
-                    RouteEndpoint::component(A2DP_CLIENT_MONIKER),
-                    RouteEndpoint::component(SERVICE_PROVIDER_MONIKER),
-                ]),
+            Route::new()
+                .capability(Capability::protocol::<fidl_fuchsia_logger::LogSinkMarker>())
+                .from(Ref::parent())
+                .to(&a2dp)
+                .to(&a2dp_client)
+                .to(&service_provider),
         )
         .await
         .expect("Failed adding LogSink route to test components");

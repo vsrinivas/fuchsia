@@ -9,11 +9,12 @@ use {
     fidl_fuchsia_bluetooth_snoop::SnoopMarker,
     fidl_fuchsia_bluetooth_sys as fbsys,
     fidl_fuchsia_device::NameProviderMarker,
-    fidl_fuchsia_driver_test as fdt, fidl_fuchsia_io2 as fio2,
+    fidl_fuchsia_driver_test as fdt,
     fidl_fuchsia_logger::LogSinkMarker,
     fidl_fuchsia_stash::SecureStoreMarker,
     fuchsia_component_test::{
-        ChildOptions, RealmBuilder, RealmInstance, RouteBuilder, RouteEndpoint, ScopedInstance,
+        new::{Capability, ChildOptions, RealmBuilder, RealmInstance, Ref, Route},
+        ScopedInstance,
     },
     fuchsia_driver_test::{DriverTestRealmBuilder, DriverTestRealmInstance},
     futures::FutureExt,
@@ -60,19 +61,18 @@ impl CoreRealm {
     pub async fn create() -> Result<Self, Error> {
         let builder = RealmBuilder::new().await?;
         let _ = builder.driver_test_realm_setup().await?;
-        let _ = builder
+        let bt_init = builder
             .add_child(constants::bt_init::MONIKER, constants::bt_init::URL, ChildOptions::new())
-            .await?
-            // Required by bt-init/bt-gap.
+            .await?;
+        let secure_stash = builder
             .add_child(
                 constants::secure_stash::MONIKER,
                 constants::secure_stash::URL,
                 ChildOptions::new(),
             )
-            .await?
-            // Mock components for dependencies of bt-init/bt-gap to silence warnings about
-            // missing dependencies.
-            .add_mock_child(
+            .await?;
+        let mock_name_provider = builder
+            .add_local_child(
                 constants::mock_name_provider::MONIKER,
                 |handles| {
                     stateless_mock_responder::<NameProviderMarker, _>(handles, |req| {
@@ -85,8 +85,9 @@ impl CoreRealm {
                 },
                 ChildOptions::new(),
             )
-            .await?
-            .add_mock_child(
+            .await?;
+        let mock_snoop = builder
+            .add_local_child(
                 constants::mock_snoop::MONIKER,
                 |handles| {
                     stateless_mock_responder::<SnoopMarker, _>(handles, |req| {
@@ -98,92 +99,76 @@ impl CoreRealm {
                 },
                 ChildOptions::new(),
             )
-            .await?
-            // Route required capabilities from AboveRoot to realm components.
+            .await?;
+        builder
             .add_route(
-                RouteBuilder::protocol_marker::<LogSinkMarker>()
-                    .source(RouteEndpoint::AboveRoot)
-                    .targets(vec![
-                        RouteEndpoint::component(constants::bt_init::MONIKER),
-                        RouteEndpoint::component(constants::secure_stash::MONIKER),
-                    ]),
-            )
-            .await?
-            .add_route(
-                RouteBuilder::storage("tmp", "/data")
-                    .source(RouteEndpoint::AboveRoot)
-                    .targets(vec![RouteEndpoint::component(constants::secure_stash::MONIKER)]),
-            )
-            .await?
-            // Route bt-init/bt-gap requirements to bt-init.
-            .add_route(
-                RouteBuilder::protocol_marker::<SecureStoreMarker>()
-                    .source(RouteEndpoint::component(constants::secure_stash::MONIKER))
-                    .targets(vec![RouteEndpoint::component(constants::bt_init::MONIKER)]),
-            )
-            .await?
-            .add_route(
-                RouteBuilder::protocol_marker::<NameProviderMarker>()
-                    .source(RouteEndpoint::component(constants::mock_name_provider::MONIKER))
-                    .targets(vec![RouteEndpoint::component(constants::bt_init::MONIKER)]),
-            )
-            .await?
-            .add_route(
-                RouteBuilder::protocol_marker::<SnoopMarker>()
-                    .source(RouteEndpoint::component(constants::mock_snoop::MONIKER))
-                    .targets(vec![RouteEndpoint::component(constants::bt_init::MONIKER)]),
-            )
-            .await?
-            // TODO(fxbug.dev/78757): Route /dev/class/bt-host to bt-init upon RealmBuilder support.
-            .add_route(
-                RouteBuilder::directory("dev", "/dev", fio2::RW_STAR_DIR)
-                    .source(RouteEndpoint::component(fuchsia_driver_test::COMPONENT_NAME))
-                    .targets(vec![RouteEndpoint::component(constants::bt_init::MONIKER)]),
-            )
-            .await?
-            // Route capabilities used by test code AboveRoot.
-            .add_route(
-                RouteBuilder::protocol_marker::<fbgatt::Server_Marker>()
-                    .source(RouteEndpoint::component(constants::bt_init::MONIKER))
-                    .targets(vec![RouteEndpoint::AboveRoot]),
-            )
-            .await?
-            .add_route(
-                RouteBuilder::protocol_marker::<fble::CentralMarker>()
-                    .source(RouteEndpoint::component(constants::bt_init::MONIKER))
-                    .targets(vec![RouteEndpoint::AboveRoot]),
-            )
-            .await?
-            .add_route(
-                RouteBuilder::protocol_marker::<fble::PeripheralMarker>()
-                    .source(RouteEndpoint::component(constants::bt_init::MONIKER))
-                    .targets(vec![RouteEndpoint::AboveRoot]),
-            )
-            .await?
-            .add_route(
-                RouteBuilder::protocol_marker::<fbsys::AccessMarker>()
-                    .source(RouteEndpoint::component(constants::bt_init::MONIKER))
-                    .targets(vec![RouteEndpoint::AboveRoot]),
-            )
-            .await?
-            .add_route(
-                RouteBuilder::protocol_marker::<fbsys::BootstrapMarker>()
-                    .source(RouteEndpoint::component(constants::bt_init::MONIKER))
-                    .targets(vec![RouteEndpoint::AboveRoot]),
-            )
-            .await?
-            .add_route(
-                RouteBuilder::protocol_marker::<fbsys::HostWatcherMarker>()
-                    .source(RouteEndpoint::component(constants::bt_init::MONIKER))
-                    .targets(vec![RouteEndpoint::AboveRoot]),
-            )
-            .await?
-            .add_route(
-                RouteBuilder::protocol_marker::<fbredr::ProfileMarker>()
-                    .source(RouteEndpoint::component(constants::bt_init::MONIKER))
-                    .targets(vec![RouteEndpoint::AboveRoot]),
+                Route::new()
+                    .capability(Capability::protocol::<LogSinkMarker>())
+                    .from(Ref::parent())
+                    .to(&bt_init)
+                    .to(&secure_stash),
             )
             .await?;
+        builder
+            .add_route(
+                Route::new()
+                    .capability(Capability::storage("tmp"))
+                    .from(Ref::parent())
+                    .to(&secure_stash),
+            )
+            .await?;
+        // Route bt-init/bt-gap requirements to bt-init.
+        builder
+            .add_route(
+                Route::new()
+                    .capability(Capability::protocol::<SecureStoreMarker>())
+                    .from(&secure_stash)
+                    .to(&bt_init),
+            )
+            .await?;
+        builder
+            .add_route(
+                Route::new()
+                    .capability(Capability::protocol::<NameProviderMarker>())
+                    .from(&mock_name_provider)
+                    .to(&bt_init),
+            )
+            .await?;
+        builder
+            .add_route(
+                Route::new()
+                    .capability(Capability::protocol::<SnoopMarker>())
+                    .from(&mock_snoop)
+                    .to(&bt_init),
+            )
+            .await?;
+
+        // TODO(fxbug.dev/78757): Route /dev/class/bt-host to bt-init upon RealmBuilder support.
+        builder
+            .add_route(
+                Route::new()
+                    .capability(Capability::directory("dev"))
+                    .from(Ref::child(fuchsia_driver_test::COMPONENT_NAME))
+                    .to(&bt_init),
+            )
+            .await?;
+
+        // Route capabilities used by test code AboveRoot.
+        builder
+            .add_route(
+                Route::new()
+                    .capability(Capability::protocol::<fbgatt::Server_Marker>())
+                    .capability(Capability::protocol::<fble::CentralMarker>())
+                    .capability(Capability::protocol::<fble::PeripheralMarker>())
+                    .capability(Capability::protocol::<fbsys::AccessMarker>())
+                    .capability(Capability::protocol::<fbsys::HostWatcherMarker>())
+                    .capability(Capability::protocol::<fbredr::ProfileMarker>())
+                    .capability(Capability::protocol::<fbsys::BootstrapMarker>())
+                    .from(&bt_init)
+                    .to(Ref::parent()),
+            )
+            .await?;
+
         let instance = builder.build().await?;
 
         // Start DriverTestRealm

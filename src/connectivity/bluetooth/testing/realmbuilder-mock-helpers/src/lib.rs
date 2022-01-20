@@ -11,7 +11,7 @@ use {
     fidl_fuchsia_stash::SecureStoreMarker,
     fuchsia_async as fasync,
     fuchsia_component::server::{ServiceFs, ServiceObj},
-    fuchsia_component_test::mock::MockHandles,
+    fuchsia_component_test::LocalComponentHandles,
     futures::{channel::mpsc, SinkExt, StreamExt, TryStream, TryStreamExt},
     std::sync::Arc,
     tracing::info,
@@ -63,7 +63,7 @@ pub fn add_fidl_service_handler<S, Event: 'static>(
 /// of the service is processed and any requests relayed to the provided `sender`.
 pub async fn mock_component<S, Event: 'static>(
     sender: mpsc::Sender<Event>,
-    handles: MockHandles,
+    handles: LocalComponentHandles,
 ) -> Result<(), Error>
 where
     S: DiscoverableProtocolMarker,
@@ -99,7 +99,7 @@ fn spawn_vfs(dir: Arc<dyn DirectoryEntry>) -> DirectoryProxy {
 
 /// Sets up a mock dev/ directory with the provided `dev_directory` topology.
 pub async fn mock_dev(
-    handles: MockHandles,
+    handles: LocalComponentHandles,
     dev_directory: Arc<dyn DirectoryEntry>,
 ) -> Result<(), Error> {
     let mut fs = ServiceFs::new();
@@ -112,7 +112,7 @@ pub async fn mock_dev(
 /// A mock component serving a protocol `S` on `handles`. Specifically, this services S by calling
 /// `responder` for every request of every client connection to S.
 pub async fn stateless_mock_responder<S, F>(
-    handles: MockHandles,
+    handles: LocalComponentHandles,
     responder: F,
 ) -> Result<(), anyhow::Error>
 where
@@ -148,7 +148,7 @@ where
 pub fn provide_bt_gap_uses<Event>(
     fs: &mut ServiceFs<ServiceObj<'_, ()>>,
     sender: &mpsc::Sender<Event>,
-    handles: &MockHandles,
+    handles: &LocalComponentHandles,
 ) -> Result<(), Error>
 where
     Event: From<SecureStoreMarker> + From<NameProviderRequestStream> + Send + 'static,

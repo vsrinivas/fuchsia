@@ -5,7 +5,10 @@
 use {
     anyhow::Error,
     fidl_fuchsia_driver_test as fdt,
-    fuchsia_component_test::{RealmBuilder, RealmInstance, ScopedInstance},
+    fuchsia_component_test::{
+        new::{RealmBuilder, RealmInstance},
+        ScopedInstance,
+    },
     fuchsia_driver_test::{DriverTestRealmBuilder, DriverTestRealmInstance},
 };
 

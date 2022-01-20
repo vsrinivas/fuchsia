@@ -8,8 +8,8 @@ use {
     fidl_fuchsia_bluetooth_rfcomm_test::{RfcommTestMarker, RfcommTestProxy},
     fuchsia_async as fasync,
     fuchsia_component::server::ServiceFs,
-    fuchsia_component_test::{
-        mock::MockHandles, ChildOptions, RealmBuilder, RouteBuilder, RouteEndpoint,
+    fuchsia_component_test::new::{
+        Capability, ChildOptions, LocalComponentHandles, RealmBuilder, Ref, Route,
     },
     futures::{channel::mpsc, SinkExt, StreamExt},
     realmbuilder_mock_helpers::add_fidl_service_handler,
@@ -41,12 +41,12 @@ impl From<ProfileRequestStream> for Event {
 /// Represents a fake RFCOMM client that requests the Profile service.
 async fn mock_rfcomm_client(
     mut sender: mpsc::Sender<Event>,
-    handles: MockHandles,
+    handles: LocalComponentHandles,
 ) -> Result<(), Error> {
-    let profile_svc = handles.connect_to_service::<ProfileMarker>()?;
+    let profile_svc = handles.connect_to_protocol::<ProfileMarker>()?;
     sender.send(Event::Client(Some(profile_svc))).await.expect("failed sending ack to test");
 
-    let test_svc = handles.connect_to_service::<RfcommTestMarker>()?;
+    let test_svc = handles.connect_to_protocol::<RfcommTestMarker>()?;
     sender.send(Event::Test(Some(test_svc))).await.expect("failed sending ack to test");
     Ok(())
 }
@@ -54,7 +54,7 @@ async fn mock_rfcomm_client(
 /// Simulates a component that provides the `bredr.Profile` service.
 async fn mock_profile_component(
     sender: mpsc::Sender<Event>,
-    handles: MockHandles,
+    handles: LocalComponentHandles,
 ) -> Result<(), Error> {
     let mut fs = ServiceFs::new();
     add_fidl_service_handler::<ProfileMarker, _>(&mut fs, sender.clone());
@@ -76,29 +76,29 @@ async fn rfcomm_v2_component_topology() {
 
     let builder = RealmBuilder::new().await.expect("Failed to create test realm builder");
     // The v2 component under test.
-    let _ = builder
+    let rfcomm = builder
         .add_child("rfcomm", RFCOMM_URL.to_string(), ChildOptions::new())
         .await
         .expect("Failed adding rfcomm to topology");
     // Mock Profile component to receive bredr.Profile requests.
-    let _ = builder
-        .add_mock_child(
+    let fake_profile = builder
+        .add_local_child(
             "fake-profile",
-            move |mock_handles: MockHandles| {
+            move |handles: LocalComponentHandles| {
                 let sender = profile_tx.clone();
-                Box::pin(mock_profile_component(sender, mock_handles))
+                Box::pin(mock_profile_component(sender, handles))
             },
             ChildOptions::new(),
         )
         .await
         .expect("Failed adding profile mock to topology");
     // Mock RFCOMM client that will connect to the Profile service and make a request.
-    let _ = builder
-        .add_mock_child(
+    let fake_rfcomm_client = builder
+        .add_local_child(
             "fake-rfcomm-client",
-            move |mock_handles: MockHandles| {
+            move |handles: LocalComponentHandles| {
                 let sender = fake_client_tx.clone();
-                Box::pin(mock_rfcomm_client(sender, mock_handles))
+                Box::pin(mock_rfcomm_client(sender, handles))
             },
             ChildOptions::new().eager(),
         )
@@ -106,36 +106,33 @@ async fn rfcomm_v2_component_topology() {
         .expect("Failed adding rfcomm client mock to topology");
 
     // Set up capabilities.
-    let _ = builder
+    builder
         .add_route(
-            RouteBuilder::protocol_marker::<ProfileMarker>()
-                .source(RouteEndpoint::component("fake-profile"))
-                .targets(vec![RouteEndpoint::component("rfcomm")]),
+            Route::new()
+                .capability(Capability::protocol::<ProfileMarker>())
+                .from(&fake_profile)
+                .to(&rfcomm),
         )
         .await
-        .expect("Failed adding route for profile service")
+        .expect("Failed adding route for profile service");
+    builder
         .add_route(
-            RouteBuilder::protocol_marker::<ProfileMarker>()
-                .source(RouteEndpoint::component("rfcomm"))
-                .targets(vec![RouteEndpoint::component("fake-rfcomm-client")]),
+            Route::new()
+                .capability(Capability::protocol::<ProfileMarker>())
+                .capability(Capability::protocol::<RfcommTestMarker>())
+                .from(&rfcomm)
+                .to(&fake_rfcomm_client),
         )
         .await
-        .expect("Failed adding route for RFCOMM profile service")
+        .expect("Failed adding route for RFCOMM profile service");
+    builder
         .add_route(
-            RouteBuilder::protocol_marker::<RfcommTestMarker>()
-                .source(RouteEndpoint::component("rfcomm"))
-                .targets(vec![RouteEndpoint::component("fake-rfcomm-client")]),
-        )
-        .await
-        .expect("Failed adding route for RFCOMM profile service")
-        .add_route(
-            RouteBuilder::protocol_marker::<fidl_fuchsia_logger::LogSinkMarker>()
-                .source(RouteEndpoint::AboveRoot)
-                .targets(vec![
-                    RouteEndpoint::component("rfcomm"),
-                    RouteEndpoint::component("fake-profile"),
-                    RouteEndpoint::component("fake-rfcomm-client"),
-                ]),
+            Route::new()
+                .capability(Capability::protocol::<fidl_fuchsia_logger::LogSinkMarker>())
+                .from(Ref::parent())
+                .to(&rfcomm)
+                .to(&fake_profile)
+                .to(&fake_rfcomm_client),
         )
         .await
         .expect("Failed adding LogSink route to test components");

@@ -35,8 +35,8 @@ mod tests {
     use {
         anyhow::Error,
         fidl_fuchsia_io2 as fio2, fuchsia,
-        fuchsia_component_test::{
-            mock::MockHandles, ChildOptions, RealmBuilder, RouteBuilder, RouteEndpoint,
+        fuchsia_component_test::new::{
+            Capability, ChildOptions, LocalComponentHandles, RealmBuilder, Route,
         },
         futures::{channel::mpsc, SinkExt, StreamExt},
         realmbuilder_mock_helpers::mock_dev,
@@ -50,7 +50,10 @@ mod tests {
         let _ = find_devices().await.expect_err("find devices okay");
     }
 
-    async fn mock_client(handles: MockHandles, mut sender: mpsc::Sender<()>) -> Result<(), Error> {
+    async fn mock_client(
+        handles: LocalComponentHandles,
+        mut sender: mpsc::Sender<()>,
+    ) -> Result<(), Error> {
         let proxy = handles.clone_from_namespace("dev/class/dai")?;
         let devices = find_devices_internal(proxy).await.expect("should find devices");
         assert_eq!(devices.len(), 2);
@@ -64,12 +67,12 @@ mod tests {
         let builder = RealmBuilder::new().await.expect("Failed to create test realm builder");
 
         // Add a mock that provides the dev/ directory with one input and output device.
-        let _ = builder
-            .add_mock_child(
+        let mock_dev = builder
+            .add_local_child(
                 "mock-dev",
-                move |mock_handles: MockHandles| {
+                move |handles: LocalComponentHandles| {
                     Box::pin(mock_dev(
-                        mock_handles,
+                        handles,
                         mock_dai_dev_with_io_devices("input1".to_string(), "output1".to_string()),
                     ))
                 },
@@ -79,12 +82,12 @@ mod tests {
             .expect("Failed adding mock /dev provider to topology");
 
         // Add a mock that represents a client trying to discover DAI devices.
-        let _ = builder
-            .add_mock_child(
+        let mock_client = builder
+            .add_local_child(
                 "mock-client",
-                move |mock_handles: MockHandles| {
+                move |handles: LocalComponentHandles| {
                     let s = device_sender.clone();
-                    Box::pin(mock_client(mock_handles, s.clone()))
+                    Box::pin(mock_client(handles, s.clone()))
                 },
                 ChildOptions::new().eager(),
             )
@@ -92,11 +95,16 @@ mod tests {
             .expect("Failed adding mock client to topology");
 
         // Give client access to dev/
-        let _ = builder
+        builder
             .add_route(
-                RouteBuilder::directory("dev-dai", DAI_DEVICE_DIR, fio2::RW_STAR_DIR)
-                    .source(RouteEndpoint::component("mock-dev".to_string()))
-                    .targets(vec![RouteEndpoint::component("mock-client".to_string())]),
+                Route::new()
+                    .capability(
+                        Capability::directory("dev-dai")
+                            .path(DAI_DEVICE_DIR)
+                            .rights(fio2::RW_STAR_DIR),
+                    )
+                    .from(&mock_dev)
+                    .to(&mock_client),
             )
             .await
             .expect("Failed adding route for dai device directory");

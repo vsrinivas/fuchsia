@@ -14,9 +14,8 @@ use {
     fuchsia_async::{self as fasync, futures::TryStreamExt, DurationExt, TimeoutExt},
     fuchsia_bluetooth::{types as bt_types, util::CollectExt},
     fuchsia_component::server::ServiceFs,
-    fuchsia_component_test::{
-        mock::MockHandles, ChildOptions, Moniker, RealmBuilder, RealmInstance, RouteBuilder,
-        RouteEndpoint,
+    fuchsia_component_test::new::{
+        Capability, ChildOptions, LocalComponentHandles, RealmBuilder, RealmInstance, Ref, Route,
     },
     fuchsia_zircon as zx,
     fuchsia_zircon::{Duration, DurationNum},
@@ -43,13 +42,11 @@ static PROFILE_INTERPOSER_PREFIX: &str = "profile-interposer";
 static BT_RFCOMM_PREFIX: &str = "bt-rfcomm";
 
 /// Returns the protocol name from the `capability` or an Error if it cannot be retrieved.
-fn protocol_name_from_capability(route_builder: &RouteBuilder) -> Result<String, Error> {
-    if let ftest::Capability::Protocol(ftest::ProtocolCapability { name: Some(name), .. }) =
-        route_builder.clone().into()
-    {
+fn protocol_name_from_capability(capability: &ftest::Capability2) -> Result<String, Error> {
+    if let ftest::Capability2::Protocol(ftest::Protocol { name: Some(name), .. }) = capability {
         Ok(name.clone())
     } else {
-        Err(format_err!("Not a protocol capability: {:?}", route_builder))
+        Err(format_err!("Not a protocol capability: {:?}", capability))
     }
 }
 
@@ -105,7 +102,7 @@ impl PiconetMemberSpec {
     pub fn for_profile(
         name: String,
         rfcomm_url: Option<String>,
-        expose_capabilities: Vec<RouteBuilder>,
+        expose_capabilities: Vec<ftest::Capability2>,
     ) -> Result<(Self, bredr::PeerObserverRequestStream), Error> {
         let id = bt_types::PeerId::random();
         let capability_names =
@@ -312,14 +309,14 @@ impl BtProfileComponent {
 /// This node acts as a facade between the profile under test and the Server.
 /// If the `spec` contains a channel then `PeerObserver` events will be forwarded to that
 /// channel.
-/// `additional_capabilities` specifies capability routings for any protocols used/exposed
-/// by the profile.
+/// `additional_routes` specifies capability routings for any protocols used/exposed by the
+/// profile.
 async fn add_profile_to_topology<'a>(
     builder: &RealmBuilder,
     spec: &'a mut PiconetMemberSpec,
     server_moniker: String,
     profile_url: String,
-    additional_capabilities: Vec<RouteBuilder>,
+    additional_routes: Vec<Route>,
 ) -> Result<(), Error> {
     // Specify the interposer component that will provide `Profile` to the profile under test.
     let mock_piconet_member_name = interposer_name_for_profile(&spec.name);
@@ -355,50 +352,53 @@ async fn add_profile_to_topology<'a>(
     //     accessible via the test realm service directory.
     {
         if spec.rfcomm_url.is_some() {
-            let _ = builder
+            builder
                 .add_route(
-                    RouteBuilder::protocol_marker::<bredr::ProfileMarker>()
-                        .source(RouteEndpoint::component(mock_piconet_member_name.clone()))
-                        .targets(vec![RouteEndpoint::component(rfcomm_moniker.clone())]),
+                    Route::new()
+                        .capability(Capability::protocol::<bredr::ProfileMarker>())
+                        .from(Ref::child(&mock_piconet_member_name))
+                        .to(Ref::child(&rfcomm_moniker)),
                 )
                 .await?;
-            let _ = builder
+            builder
                 .add_route(
-                    RouteBuilder::protocol_marker::<bredr::ProfileMarker>()
-                        .source(RouteEndpoint::component(rfcomm_moniker.clone()))
-                        .targets(vec![RouteEndpoint::component(spec.name.to_string())]),
+                    Route::new()
+                        .capability(Capability::protocol::<bredr::ProfileMarker>())
+                        .from(Ref::child(&rfcomm_moniker))
+                        .to(Ref::child(&spec.name)),
                 )
                 .await?;
         } else {
-            let _ = builder
+            builder
                 .add_route(
-                    RouteBuilder::protocol_marker::<bredr::ProfileMarker>()
-                        .source(RouteEndpoint::component(mock_piconet_member_name.clone()))
-                        .targets(vec![RouteEndpoint::component(spec.name.to_string())]),
+                    Route::new()
+                        .capability(Capability::protocol::<bredr::ProfileMarker>())
+                        .from(Ref::child(&mock_piconet_member_name))
+                        .to(Ref::child(&spec.name)),
                 )
                 .await?;
         }
 
-        let _ = builder
+        builder
             .add_route(
-                RouteBuilder::protocol_marker::<bredr::ProfileTestMarker>()
-                    .source(RouteEndpoint::component(&server_moniker))
-                    .targets(vec![RouteEndpoint::component(mock_piconet_member_name.clone())]),
+                Route::new()
+                    .capability(Capability::protocol::<bredr::ProfileTestMarker>())
+                    .from(Ref::child(&server_moniker))
+                    .to(Ref::child(&mock_piconet_member_name)),
             )
             .await?;
 
-        let _ = builder
+        builder
             .add_route(
-                RouteBuilder::protocol_marker::<LogSinkMarker>()
-                    .source(RouteEndpoint::AboveRoot)
-                    .targets(vec![
-                        RouteEndpoint::component(spec.name.to_string()),
-                        RouteEndpoint::component(mock_piconet_member_name.clone()),
-                    ]),
+                Route::new()
+                    .capability(Capability::protocol::<LogSinkMarker>())
+                    .from(Ref::parent())
+                    .to(Ref::child(&spec.name))
+                    .to(Ref::child(&mock_piconet_member_name)),
             )
             .await?;
 
-        for route in additional_capabilities {
+        for route in additional_routes {
             let _ = builder.add_route(route).await?;
         }
     }
@@ -446,28 +446,31 @@ async fn add_mock_piconet_member<'a, 'b>(
     //   AboveRoot at the unique path (e.g fuchsia.bluetooth.bredr.Profile-3 where "3" is the peer
     //   ID of the mock).
     {
-        let _ = builder
+        builder
             .add_route(
-                RouteBuilder::protocol_marker::<bredr::ProfileTestMarker>()
-                    .source(RouteEndpoint::component(&server_moniker))
-                    .targets(vec![RouteEndpoint::component(mock.name.clone())]),
+                Route::new()
+                    .capability(Capability::protocol::<bredr::ProfileTestMarker>())
+                    .from(Ref::child(&server_moniker))
+                    .to(Ref::child(&mock.name)),
             )
             .await?;
 
         if mock.rfcomm_url.is_some() {
-            let _ = builder
+            builder
                 .add_route(
-                    RouteBuilder::protocol(profile_path)
-                        .source(RouteEndpoint::component(mock.name.clone()))
-                        .targets(vec![RouteEndpoint::component(rfcomm_moniker.clone())]),
+                    Route::new()
+                        .capability(Capability::protocol_by_name(profile_path))
+                        .from(Ref::child(&mock.name))
+                        .to(Ref::child(&rfcomm_moniker)),
                 )
                 .await?;
         } else {
-            let _ = builder
+            builder
                 .add_route(
-                    RouteBuilder::protocol(profile_path)
-                        .source(RouteEndpoint::component(mock.name.to_string()))
-                        .targets(vec![RouteEndpoint::AboveRoot]),
+                    Route::new()
+                        .capability(Capability::protocol_by_name(profile_path))
+                        .from(Ref::child(&mock.name))
+                        .to(Ref::parent()),
                 )
                 .await?;
         }
@@ -499,9 +502,9 @@ async fn add_mock_piconet_component(
     });
 
     builder
-        .add_mock_child(
+        .add_local_child(
             name,
-            move |m: MockHandles| {
+            move |m: LocalComponentHandles| {
                 let observer = observer.clone();
                 Box::pin(piconet_member(m, id, profile_svc_path.clone(), observer))
             },
@@ -516,13 +519,13 @@ async fn add_mock_piconet_component(
 /// Profile service, attaches it to the Mock Piconet Server, and wires up the
 /// the PeerObserver.
 async fn piconet_member(
-    handles: MockHandles,
+    handles: LocalComponentHandles,
     id: bt_types::PeerId,
     profile_svc_path: String,
     peer_observer: bredr::PeerObserverProxy,
 ) -> Result<(), Error> {
     // connect to the profile service to drive the mock peer
-    let pro_test = handles.connect_to_service::<bredr::ProfileTestMarker>()?;
+    let pro_test = handles.connect_to_protocol::<bredr::ProfileTestMarker>()?;
     let mut fs = ServiceFs::new();
 
     let _ = fs.dir("svc").add_service_at(profile_svc_path, move |chan: zx::Channel| {
@@ -677,16 +680,17 @@ async fn drain_observer(mut stream: bredr::PeerObserverRequestStream) -> Result<
 async fn add_mock_piconet_server(builder: &RealmBuilder) -> String {
     let name = mock_piconet_server_moniker().to_string();
 
-    let _ = builder
+    let mock_piconet_server = builder
         .add_child(name.clone(), MOCK_PICONET_SERVER_URL_V2, ChildOptions::new())
         .await
         .expect("failed to add");
 
-    let _ = builder
+    builder
         .add_route(
-            RouteBuilder::protocol_marker::<LogSinkMarker>()
-                .source(RouteEndpoint::AboveRoot)
-                .targets(vec![RouteEndpoint::Component(name.clone())]),
+            Route::new()
+                .capability(Capability::protocol::<LogSinkMarker>())
+                .from(Ref::parent())
+                .to(&mock_piconet_server),
         )
         .await
         .unwrap();
@@ -699,20 +703,21 @@ async fn add_bt_rfcomm_intermediary(
     moniker: String,
     url: String,
 ) -> Result<(), Error> {
-    let _ = builder.add_child(moniker.clone(), url, ChildOptions::new().eager()).await?;
+    let bt_rfcomm = builder.add_child(moniker.clone(), url, ChildOptions::new().eager()).await?;
 
     let _ = builder
         .add_route(
-            RouteBuilder::protocol_marker::<LogSinkMarker>()
-                .source(RouteEndpoint::AboveRoot)
-                .targets(vec![RouteEndpoint::Component(moniker)]),
+            Route::new()
+                .capability(Capability::protocol::<LogSinkMarker>())
+                .from(Ref::parent())
+                .to(&bt_rfcomm),
         )
         .await?;
     Ok(())
 }
 
-fn mock_piconet_server_moniker() -> Moniker {
-    vec!["mock-piconet-server".to_string()].into()
+fn mock_piconet_server_moniker() -> String {
+    "mock-piconet-server".to_string()
 }
 
 fn bt_rfcomm_moniker_for_member(member_name: &'_ str) -> String {
@@ -800,8 +805,7 @@ impl PiconetHarness {
             "Building test realm with profiles: {:?} and piconet members: {:?}",
             self.profiles, self.piconet_members
         );
-        let mut root_decl =
-            self.builder.get_decl(Moniker::root()).await.expect("failed to get root");
+        let mut root_decl = self.builder.get_realm_decl().await.expect("failed to get root");
 
         let mut piconet_member_exposes =
             self.piconet_members.iter().map(|spec| spec.expose_decls.clone()).flatten().collect();
@@ -811,10 +815,7 @@ impl PiconetHarness {
         root_decl.exposes.append(&mut profile_member_exposes);
 
         // Update the root decl with the modified `expose` routes.
-        self.builder
-            .set_decl(Moniker::root(), root_decl)
-            .await
-            .expect("Should be able to set root decl");
+        self.builder.replace_realm_decl(root_decl).await.expect("Should be able to set root decl");
         Ok(())
     }
 
@@ -851,19 +852,19 @@ impl PiconetHarness {
         name: String,
         profile_url: String,
         rfcomm_url: Option<String>,
-        use_capabilities: Vec<RouteBuilder>,
-        expose_capabilities: Vec<RouteBuilder>,
+        use_capabilities: Vec<ftest::Capability2>,
+        expose_capabilities: Vec<ftest::Capability2>,
     ) -> Result<BtProfileComponent, Error> {
         let (mut spec, request_stream) =
             PiconetMemberSpec::for_profile(name, rfcomm_url, expose_capabilities.clone())?;
         // Use capabilities can be directly turned into routes.
-        let routes = routes_from_capabilities(
+        let route = route_from_capabilities(
             use_capabilities,
-            RouteEndpoint::AboveRoot,
-            vec![RouteEndpoint::Component(spec.name.clone())],
+            Ref::parent(),
+            vec![Ref::child(spec.name.clone())],
         );
 
-        self.add_profile_from_spec(&mut spec, profile_url, routes).await?;
+        self.add_profile_from_spec(&mut spec, profile_url, vec![route]).await?;
         Ok(BtProfileComponent::new(request_stream, spec.id))
     }
 
@@ -871,14 +872,14 @@ impl PiconetHarness {
         &mut self,
         spec: &mut PiconetMemberSpec,
         profile_url: String,
-        route_builders: Vec<RouteBuilder>,
+        capabilities: Vec<Route>,
     ) -> Result<(), Error> {
         add_profile_to_topology(
             &self.builder,
             spec,
             self.ps_moniker.clone(),
             profile_url,
-            route_builders,
+            capabilities,
         )
         .await?;
         self.profiles.push(spec.clone());
@@ -888,15 +889,19 @@ impl PiconetHarness {
 
 /// Builds a set of capability routes from `capabilities` that will be routed from
 /// `source` to the `targets`.
-pub fn routes_from_capabilities(
-    capabilities: Vec<RouteBuilder>,
-    source: RouteEndpoint,
-    targets: Vec<RouteEndpoint>,
-) -> Vec<RouteBuilder> {
-    capabilities
-        .into_iter()
-        .map(|route_builder| route_builder.source(source.clone()).targets(targets.clone()))
-        .collect()
+pub fn route_from_capabilities(
+    capabilities: Vec<ftest::Capability2>,
+    source: Ref,
+    targets: Vec<Ref>,
+) -> Route {
+    let mut route = Route::new().from(source);
+    for capability in capabilities {
+        route = route.capability(capability);
+    }
+    for target in targets {
+        route = route.to(target);
+    }
+    route
 }
 
 #[cfg(test)]
@@ -908,18 +913,27 @@ mod tests {
             ExposeSource, ExposeTarget, OfferDecl, OfferProtocolDecl, OfferSource, OfferTarget,
             UseDecl, UseProtocolDecl, UseSource,
         },
+        fidl_fuchsia_component_test as fctest,
+        fuchsia_component_test::error::Error as RealmBuilderError,
+        matches::assert_matches,
     };
+
+    async fn assert_realm_contains(builder: &RealmBuilder, child_name: &str) {
+        let err = builder
+            .add_child(child_name, "test://example-url", ChildOptions::new())
+            .await
+            .expect_err("failed to check realm contents");
+        assert_matches!(
+            err,
+            RealmBuilderError::ServerError(fctest::RealmBuilderError2::ChildAlreadyExists)
+        );
+    }
 
     #[fasync::run_singlethreaded(test)]
     async fn test_profile_server_added() {
         let test_harness = PiconetHarness::new().await;
         test_harness.update_routes().await.expect("should update routes");
-        let mps = test_harness
-            .builder
-            .contains(super::mock_piconet_server_moniker())
-            .await
-            .expect("failed to check realm contents");
-        assert!(mps);
+        assert_realm_contains(&test_harness.builder, &super::mock_piconet_server_moniker()).await;
         let _ = test_harness.builder.build().await.expect("build failed");
     }
 
@@ -1015,8 +1029,10 @@ mod tests {
     ) {
         // Piconet member should have an expose declaration of Profile.
         let profile_capability_name = bredr::ProfileMarker::PROTOCOL_NAME.to_string();
-        let pico_member_decl =
-            builder.get_decl(member_spec.name.clone()).await.expect("piconet member had no decl");
+        let pico_member_decl = builder
+            .get_component_decl(member_spec.name.clone())
+            .await
+            .expect("piconet member had no decl");
         let expose_profile_decl = ExposeProtocolDecl {
             source: ExposeSource::Self_,
             source_name: CapabilityName(profile_capability_name.clone()),
@@ -1039,7 +1055,7 @@ mod tests {
                 target_name: CapabilityName(custom_profile_capability_name.to_string()),
             };
             let root_expose_decl = ExposeDecl::Protocol(custom_expose_profile_decl);
-            let root = builder.get_decl(Moniker::root()).await.expect("failed to get root");
+            let root = builder.get_realm_decl().await.expect("failed to get root");
             assert!(root.exposes.contains(&root_expose_decl));
         }
     }
@@ -1050,8 +1066,10 @@ mod tests {
         member_spec: &'a PiconetMemberSpec,
     ) {
         // Check that the mock piconet member has an expose declaration for the profile protocol
-        let pico_member_decl =
-            builder.get_decl(member_spec.name.clone()).await.expect("piconet member had no decl");
+        let pico_member_decl = builder
+            .get_component_decl(member_spec.name.clone())
+            .await
+            .expect("piconet member had no decl");
         let profile_capability_name =
             CapabilityName(super::capability_path_for_mock::<bredr::ProfileMarker>(&member_spec));
         let mut expose_proto_decl = ExposeProtocolDecl {
@@ -1068,7 +1086,7 @@ mod tests {
         {
             expose_proto_decl.source = ExposeSource::Child(member_spec.name.to_string());
             let root_expose_decl = ExposeDecl::Protocol(expose_proto_decl);
-            let root = builder.get_decl(Moniker::root()).await.expect("failed to get root");
+            let root = builder.get_realm_decl().await.expect("failed to get root");
             assert!(root.exposes.contains(&root_expose_decl));
         }
     }
@@ -1079,10 +1097,7 @@ mod tests {
         member_spec: &'a PiconetMemberSpec,
     ) {
         // check that the piconet member exists
-        assert!(builder
-            .contains(member_spec.name.clone())
-            .await
-            .expect("failed to check realm contents"));
+        assert_realm_contains(builder, &member_spec.name).await;
 
         // Validate the `bredr.Profile` related routes.
         if member_spec.rfcomm_url.is_some() {
@@ -1092,8 +1107,10 @@ mod tests {
         }
 
         // check that the piconet member has a use declaration for ProfileTest
-        let pico_member_decl =
-            builder.get_decl(member_spec.name.clone()).await.expect("piconet member had no decl");
+        let pico_member_decl = builder
+            .get_component_decl(member_spec.name.clone())
+            .await
+            .expect("piconet member had no decl");
         let use_decl = UseDecl::Protocol(UseProtocolDecl {
             source: UseSource::Parent,
             source_name: CapabilityName(bredr::ProfileTestMarker::PROTOCOL_NAME.to_string()),
@@ -1108,7 +1125,7 @@ mod tests {
         // Check that the root offers ProfileTest to the piconet member from
         // the Mock Piconet Server
         let profile_test_name = CapabilityName(bredr::ProfileTestMarker::PROTOCOL_NAME.to_string());
-        let root = builder.get_decl(Moniker::root()).await.expect("failed to get root");
+        let root = builder.get_realm_decl().await.expect("failed to get root");
         let offer_profile_test = OfferDecl::Protocol(OfferProtocolDecl {
             source: OfferSource::static_child(super::mock_piconet_server_moniker().to_string()),
             source_name: profile_test_name.clone(),
@@ -1140,16 +1157,8 @@ mod tests {
             .expect("failed to add profile");
 
         test_harness.update_routes().await.expect("should update routes");
-        assert!(test_harness
-            .builder
-            .contains(profile_name)
-            .await
-            .expect("failed to check realm contents"));
-        assert!(test_harness
-            .builder
-            .contains(interposer_name.clone())
-            .await
-            .expect("failed to check realm contents"));
+        assert_realm_contains(&test_harness.builder, &profile_name).await;
+        assert_realm_contains(&test_harness.builder, &interposer_name).await;
 
         // validate routes
 
@@ -1164,7 +1173,7 @@ mod tests {
         });
         let interposer = test_harness
             .builder
-            .get_decl(interposer_name.clone())
+            .get_component_decl(interposer_name.clone())
             .await
             .expect("interposer not found!");
         assert!(interposer.exposes.contains(&profile_expose));
@@ -1190,8 +1199,7 @@ mod tests {
             target_name: profile_capability_name.clone(),
             dependency_type: DependencyType::Strong,
         });
-        let root =
-            test_harness.builder.get_decl(Moniker::root()).await.expect("unable to get root decl");
+        let root = test_harness.builder.get_realm_decl().await.expect("unable to get root decl");
         assert!(root.offers.contains(&profile_offer));
 
         // ProfileTest is offered by root to interposer from Mock Piconet Server
@@ -1239,21 +1247,9 @@ mod tests {
             .expect("failed to add profile");
 
         test_harness.update_routes().await.expect("should update routes");
-        assert!(test_harness
-            .builder
-            .contains(profile_name.clone())
-            .await
-            .expect("failed to check realm contents"));
-        assert!(test_harness
-            .builder
-            .contains(interposer_name.clone())
-            .await
-            .expect("failed to check realm contents"));
-        assert!(test_harness
-            .builder
-            .contains(bt_rfcomm_name.clone())
-            .await
-            .expect("failed to check realm contents"));
+        assert_realm_contains(&test_harness.builder, &profile_name).await;
+        assert_realm_contains(&test_harness.builder, &interposer_name).await;
+        assert_realm_contains(&test_harness.builder, &bt_rfcomm_name).await;
 
         // validate routes
         let profile_capability_name =
@@ -1275,8 +1271,7 @@ mod tests {
             target_name: profile_capability_name.clone(),
             dependency_type: DependencyType::Strong,
         });
-        let root =
-            test_harness.builder.get_decl(Moniker::root()).await.expect("unable to get root decl");
+        let root = test_harness.builder.get_realm_decl().await.expect("unable to get root decl");
         assert!(root.offers.contains(&profile_offer1));
         assert!(root.offers.contains(&profile_offer2));
     }
@@ -1290,11 +1285,11 @@ mod tests {
         let fake_cap1 = "Foo".to_string();
         let fake_cap2 = "Bar".to_string();
         let expose_capabilities = vec![
-            RouteBuilder::protocol(fake_cap1.clone()),
-            RouteBuilder::protocol(fake_cap2.clone()),
+            Capability::protocol_by_name(fake_cap1.clone()).into(),
+            Capability::protocol_by_name(fake_cap2.clone()).into(),
         ];
         let fake_cap3 = "Cat".to_string();
-        let use_capabilities = vec![RouteBuilder::protocol(fake_cap3.clone())];
+        let use_capabilities = vec![Capability::protocol_by_name(fake_cap3.clone()).into()];
         let profile_member = test_harness
             .add_profile_with_capabilities(
                 profile_name.to_string(),
@@ -1307,11 +1302,7 @@ mod tests {
             .expect("failed to add profile");
 
         test_harness.update_routes().await.expect("should update routes");
-        assert!(test_harness
-            .builder
-            .contains(profile_name)
-            .await
-            .expect("failed to check realm contents"));
+        assert_realm_contains(&test_harness.builder, &profile_name).await;
 
         // Validate the additional capability routes. See `test_add_profile` for validation
         // of Profile, ProfileTest, and LogSink routes.
@@ -1339,8 +1330,7 @@ mod tests {
             dependency_type: DependencyType::Strong,
         });
 
-        let root =
-            test_harness.builder.get_decl(Moniker::root()).await.expect("unable to get root decl");
+        let root = test_harness.builder.get_realm_decl().await.expect("unable to get root decl");
         assert!(root.exposes.contains(&fake_capability_expose1));
         assert!(root.exposes.contains(&fake_capability_expose2));
         assert!(root.offers.contains(&fake_capability_offer3));
@@ -1354,7 +1344,7 @@ mod tests {
 
         // Both profiles expose the same protocol capability.
         let fake_cap = "FooBarAmazing".to_string();
-        let expose_capabilities = vec![RouteBuilder::protocol(fake_cap.clone())];
+        let expose_capabilities = vec![Capability::protocol_by_name(fake_cap.clone()).into()];
 
         let profile_member1 = test_harness
             .add_profile_with_capabilities(
@@ -1378,16 +1368,8 @@ mod tests {
             .expect("failed to add profile2");
 
         test_harness.update_routes().await.expect("should update routes");
-        assert!(test_harness
-            .builder
-            .contains(profile_name1)
-            .await
-            .expect("failed to check for profile1 in realm"));
-        assert!(test_harness
-            .builder
-            .contains(profile_name2)
-            .await
-            .expect("failed to check for profile2 in realm"));
+        assert_realm_contains(&test_harness.builder, &profile_name1).await;
+        assert_realm_contains(&test_harness.builder, &profile_name2).await;
 
         // Validate that `fake_cap` is exposed by both profiles, and is OK.
         let profile1_expose = ExposeDecl::Protocol(ExposeProtocolDecl {
@@ -1403,8 +1385,7 @@ mod tests {
             target_name: capability_path_for_peer_id(profile_member2.peer_id(), &fake_cap).into(),
         });
 
-        let root =
-            test_harness.builder.get_decl(Moniker::root()).await.expect("unable to get root decl");
+        let root = test_harness.builder.get_realm_decl().await.expect("unable to get root decl");
         assert!(root.exposes.contains(&profile1_expose));
         assert!(root.exposes.contains(&profile2_expose));
     }
