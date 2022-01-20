@@ -5,3 +5,4 @@
 #include <fidl/test.bindingsdenylist/cpp/natural_messaging.h>
 #include <fidl/test.bindingsdenylist/cpp/natural_types.h>
 #include <fidl/test.bindingsdenylist/cpp/wire.h>
+#include <fidl/test.dependent/cpp/fidl.h>

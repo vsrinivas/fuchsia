@@ -7,7 +7,6 @@ import("//build/fidl/fidl.gni")
 standalone_libraries = [
   "anonymous.test.fidl",
   "arrays.test.fidl",
-  "bindings_denylist.test.fidl",
   "bits.test.fidl",
   "byte_and_bytes.test.fidl",
   "bits_constants.test.fidl",

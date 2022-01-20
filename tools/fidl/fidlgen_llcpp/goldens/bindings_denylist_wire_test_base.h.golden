@@ -6,6 +6,32 @@
 namespace test_bindingsdenylist {
 namespace testing {
 
+class ImportsSameNameContext_TestBase
+    : public ::fidl::WireServer<
+          ::test_bindingsdenylist::ImportsSameNameContext> {
+ public:
+  virtual ~ImportsSameNameContext_TestBase() {}
+  virtual void NotImplemented_(const std::string& name,
+                               ::fidl::CompleterBase& completer) = 0;
+  virtual void Unattributed(UnattributedRequestView request,
+                            UnattributedCompleter::Sync& _completer) override {
+    NotImplemented_("Unattributed", _completer);
+  }
+  virtual void AlwaysAppearsInImportingLibrary(
+      AlwaysAppearsInImportingLibraryRequestView request,
+      AlwaysAppearsInImportingLibraryCompleter::Sync& _completer) override {
+    NotImplemented_("AlwaysAppearsInImportingLibrary", _completer);
+  }
+};
+
+class Allowed_TestBase
+    : public ::fidl::WireServer<::test_bindingsdenylist::Allowed> {
+ public:
+  virtual ~Allowed_TestBase() {}
+  virtual void NotImplemented_(const std::string& name,
+                               ::fidl::CompleterBase& completer) = 0;
+};
+
 class OnlyLibfuzzerAndDeps_TestBase
     : public ::fidl::WireServer<::test_bindingsdenylist::OnlyLibfuzzerAndDeps> {
  public:
@@ -25,6 +51,36 @@ class OnlyCppAndDeps_TestBase
   virtual ~OnlyCppAndDeps_TestBase() {}
   virtual void NotImplemented_(const std::string& name,
                                ::fidl::CompleterBase& completer) = 0;
+};
+
+class DenyEachBinding_TestBase
+    : public ::fidl::WireServer<::test_bindingsdenylist::DenyEachBinding> {
+ public:
+  virtual ~DenyEachBinding_TestBase() {}
+  virtual void NotImplemented_(const std::string& name,
+                               ::fidl::CompleterBase& completer) = 0;
+  virtual void OnlyDenyDart(OnlyDenyDartRequestView request,
+                            OnlyDenyDartCompleter::Sync& _completer) override {
+    NotImplemented_("OnlyDenyDart", _completer);
+  }
+  virtual void OnlyDenyGo(OnlyDenyGoRequestView request,
+                          OnlyDenyGoCompleter::Sync& _completer) override {
+    NotImplemented_("OnlyDenyGo", _completer);
+  }
+  virtual void OnlyDenyLibfuzzer(
+      OnlyDenyLibfuzzerRequestView request,
+      OnlyDenyLibfuzzerCompleter::Sync& _completer) override {
+    NotImplemented_("OnlyDenyLibfuzzer", _completer);
+  }
+  virtual void OnlyDenyRust(OnlyDenyRustRequestView request,
+                            OnlyDenyRustCompleter::Sync& _completer) override {
+    NotImplemented_("OnlyDenyRust", _completer);
+  }
+  virtual void OnlyDenySyzkaller(
+      OnlyDenySyzkallerRequestView request,
+      OnlyDenySyzkallerCompleter::Sync& _completer) override {
+    NotImplemented_("OnlyDenySyzkaller", _completer);
+  }
 };
 }  // namespace testing
 }  // namespace test_bindingsdenylist

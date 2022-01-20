@@ -6,6 +6,36 @@
 
 namespace test_bindingsdenylist {
 
+class ImportsSameNameContext final {
+  ImportsSameNameContext() = delete;
+
+ public:
+  using Transport = ::fidl::internal::ChannelTransport;
+  class Unattributed final {
+    Unattributed() = delete;
+
+   public:
+    using Protocol = ::test_bindingsdenylist::ImportsSameNameContext;
+    static constexpr bool kHasRequest = true;
+    static constexpr bool kHasResponse = false;
+  };
+  class AlwaysAppearsInImportingLibrary final {
+    AlwaysAppearsInImportingLibrary() = delete;
+
+   public:
+    using Protocol = ::test_bindingsdenylist::ImportsSameNameContext;
+    static constexpr bool kHasRequest = true;
+    static constexpr bool kHasResponse = false;
+  };
+};
+
+class Allowed final {
+  Allowed() = delete;
+
+ public:
+  using Transport = ::fidl::internal::ChannelTransport;
+};
+
 class OnlyLibfuzzerAndDeps final {
   OnlyLibfuzzerAndDeps() = delete;
 
@@ -26,5 +56,52 @@ class OnlyCppAndDeps final {
 
  public:
   using Transport = ::fidl::internal::ChannelTransport;
+};
+
+class DenyEachBinding final {
+  DenyEachBinding() = delete;
+
+ public:
+  using Transport = ::fidl::internal::ChannelTransport;
+  class OnlyDenyDart final {
+    OnlyDenyDart() = delete;
+
+   public:
+    using Protocol = ::test_bindingsdenylist::DenyEachBinding;
+    static constexpr bool kHasRequest = true;
+    static constexpr bool kHasResponse = true;
+  };
+  class OnlyDenyGo final {
+    OnlyDenyGo() = delete;
+
+   public:
+    using Protocol = ::test_bindingsdenylist::DenyEachBinding;
+    static constexpr bool kHasRequest = true;
+    static constexpr bool kHasResponse = true;
+  };
+  class OnlyDenyLibfuzzer final {
+    OnlyDenyLibfuzzer() = delete;
+
+   public:
+    using Protocol = ::test_bindingsdenylist::DenyEachBinding;
+    static constexpr bool kHasRequest = true;
+    static constexpr bool kHasResponse = true;
+  };
+  class OnlyDenyRust final {
+    OnlyDenyRust() = delete;
+
+   public:
+    using Protocol = ::test_bindingsdenylist::DenyEachBinding;
+    static constexpr bool kHasRequest = true;
+    static constexpr bool kHasResponse = true;
+  };
+  class OnlyDenySyzkaller final {
+    OnlyDenySyzkaller() = delete;
+
+   public:
+    using Protocol = ::test_bindingsdenylist::DenyEachBinding;
+    static constexpr bool kHasRequest = true;
+    static constexpr bool kHasResponse = true;
+  };
 };
 }  // namespace test_bindingsdenylist

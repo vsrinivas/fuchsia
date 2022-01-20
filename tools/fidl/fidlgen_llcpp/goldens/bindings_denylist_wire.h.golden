@@ -5,3 +5,4 @@
 #include <fidl/test.bindingsdenylist/cpp/markers.h>
 #include <fidl/test.bindingsdenylist/cpp/wire_messaging.h>
 #include <fidl/test.bindingsdenylist/cpp/wire_types.h>
+#include <fidl/test.dependent/cpp/wire.h>

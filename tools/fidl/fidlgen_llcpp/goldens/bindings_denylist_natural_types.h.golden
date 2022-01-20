@@ -17,9 +17,938 @@
 
 #endif  // __Fuchsia__
 
+#include <fidl/test.dependent/cpp/natural_types.h>
+
 namespace test_bindingsdenylist {
+class ShouldNeverAppearInAnyBinding7;
+
+class ShouldNeverAppearInAnyBinding4;
+
+class Allowed_Denied_Response;
+
+class AllowedDeniedTopResponse;
+
+class ShouldNeverAppearInAnyBinding1;
+
+class DeniedShouldNeverAppearInAnyBindingRequest;
+
+class MemberOnlyAppearsInImportingLibrary;
+
+class OnlyAppearsInImportingLibrary;
+
+class DenyEachBinding_OnlyDenySyzkaller_Response;
+
+class DenyEachBindingOnlyDenySyzkallerTopResponse;
+
+class DenyEachBinding_OnlyDenyRust_Response;
+
+class DenyEachBindingOnlyDenyRustTopResponse;
+
+class DenyEachBinding_OnlyDenyLibfuzzer_Response;
+
+class DenyEachBindingOnlyDenyLibfuzzerTopResponse;
+
+class DenyEachBinding_OnlyDenyGo_Response;
+
+class DenyEachBindingOnlyDenyGoTopResponse;
+
+class DenyEachBinding_OnlyDenyDart_Response;
+
+class DenyEachBindingOnlyDenyDartTopResponse;
+
+class DenyEachBinding_OnlyDenyCpp_Response;
+
+class DenyEachBindingOnlyDenyCppTopResponse;
+
+class DenyEachBindingOnlyDenySyzkallerRequest;
+
+class DenyEachBindingOnlyDenyRustRequest;
+
+class DenyEachBindingOnlyDenyLibfuzzerRequest;
+
+class DenyEachBindingOnlyDenyGoRequest;
+
+class DenyEachBindingOnlyDenyDartRequest;
+
+class DenyEachBindingOnlyDenyCppRequest;
+
+class ShouldNeverAppearInAnyBinding8;
+
+class ShouldNeverAppearInAnyBinding5;
+
+class ShouldNeverAppearInAnyBinding2;
+
+class ShouldNeverAppearInAnyBinding9;
+
+class ShouldNeverAppearInAnyBinding6;
+
+class Allowed_Denied_Result;
+
+class ShouldNeverAppearInAnyBinding3;
 
 class OnlyLlcpp;
+
+class DenyEachBinding_OnlyDenySyzkaller_Result;
+
+class DenyEachBinding_OnlyDenyRust_Result;
+
+class DenyEachBinding_OnlyDenyLibfuzzer_Result;
+
+class DenyEachBinding_OnlyDenyGo_Result;
+
+class DenyEachBinding_OnlyDenyDart_Result;
+
+class DenyEachBinding_OnlyDenyCpp_Result;
+
+extern "C" const fidl_type_t
+    test_bindingsdenylist_ShouldNeverAppearInAnyBinding9Table;
+
+class ShouldNeverAppearInAnyBinding9 final {
+ private:
+  using Storage_ = cpp17::variant<cpp17::monostate, bool>;
+
+ public:
+  // TODO: share union tag types between wire & natural.
+  enum class Tag : fidl_union_tag_t {
+    kA = 1,  // 0x1
+    kUnknown = ::std::numeric_limits<::fidl_union_tag_t>::max(),
+  };
+
+  // Create an unknown value of this union.
+  ShouldNeverAppearInAnyBinding9() : storage_(std::make_shared<Storage_>()) {}
+
+  ShouldNeverAppearInAnyBinding9(ShouldNeverAppearInAnyBinding9&&) noexcept =
+      default;
+  ShouldNeverAppearInAnyBinding9& operator=(
+      ShouldNeverAppearInAnyBinding9&&) noexcept = default;
+  ShouldNeverAppearInAnyBinding9(
+      const ShouldNeverAppearInAnyBinding9& other) noexcept
+      : ShouldNeverAppearInAnyBinding9(other.CloneStorage_()) {}
+  ShouldNeverAppearInAnyBinding9& operator=(
+      const ShouldNeverAppearInAnyBinding9& other) noexcept {
+    storage_ = other.CloneStorage_();
+    return *this;
+  }
+
+  constexpr ::test_bindingsdenylist::ShouldNeverAppearInAnyBinding9::Tag Which()
+      const {
+    return ShouldNeverAppearInAnyBinding9::IndexToTag(storage_->index());
+  }
+  static ShouldNeverAppearInAnyBinding9 WithA(bool val) {
+    return ShouldNeverAppearInAnyBinding9(
+        std::make_shared<Storage_>(std::in_place_index_t<1>{}, std::move(val)));
+  }
+
+  const ::fidl::internal::UnionMemberView<1, Storage_> a() const {
+    return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
+  }
+  ::fidl::internal::UnionMemberView<1, Storage_> a() {
+    return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
+  }
+
+ private:
+  std::shared_ptr<Storage_> storage_;
+  std::shared_ptr<Storage_> CloneStorage_() const;
+  friend struct ::fidl::internal::NaturalUnionCodingTraits<
+      ::test_bindingsdenylist::ShouldNeverAppearInAnyBinding9>;
+  static constexpr std::array<std::optional<::fidl::HandleInformation>, 2>
+      Members = {std::nullopt, std::nullopt};
+
+  explicit ShouldNeverAppearInAnyBinding9(std::shared_ptr<Storage_> storage)
+      : storage_(std::move(storage)) {}
+
+  static constexpr size_t TagToIndex(
+      ::test_bindingsdenylist::ShouldNeverAppearInAnyBinding9::Tag tag) {
+    switch (tag) {
+      case ::test_bindingsdenylist::ShouldNeverAppearInAnyBinding9::Tag::kA:
+        return 1;
+      case ::test_bindingsdenylist::ShouldNeverAppearInAnyBinding9::Tag::
+          kUnknown:
+        return 0;
+    }
+  }
+
+  static constexpr ::test_bindingsdenylist::ShouldNeverAppearInAnyBinding9::Tag
+  IndexToTag(size_t index) {
+    switch (index) {
+      case 1:
+        return ::test_bindingsdenylist::ShouldNeverAppearInAnyBinding9::Tag::kA;
+      default:
+        return ::test_bindingsdenylist::ShouldNeverAppearInAnyBinding9::Tag::
+            kUnknown;
+    }
+  }
+};
+
+extern "C" const fidl_type_t
+    test_bindingsdenylist_ShouldNeverAppearInAnyBinding8Table;
+
+class ShouldNeverAppearInAnyBinding8 final {
+ private:
+  struct Storage_;
+
+ public:
+  ShouldNeverAppearInAnyBinding8(Storage_ storage) noexcept
+      : storage_(std::move(storage)) {}
+  ShouldNeverAppearInAnyBinding8() noexcept = default;
+  ShouldNeverAppearInAnyBinding8(ShouldNeverAppearInAnyBinding8&&) noexcept =
+      default;
+  ShouldNeverAppearInAnyBinding8& operator=(
+      ShouldNeverAppearInAnyBinding8&&) noexcept = default;
+  ShouldNeverAppearInAnyBinding8(
+      const ShouldNeverAppearInAnyBinding8& other) noexcept
+      : ShouldNeverAppearInAnyBinding8(other.CloneStorage_()) {}
+  ShouldNeverAppearInAnyBinding8& operator=(
+      const ShouldNeverAppearInAnyBinding8& other) noexcept {
+    storage_ = other.CloneStorage_();
+    return *this;
+  }
+
+  bool IsEmpty() const { return !(storage_.a.has_value()); }
+
+  const cpp17::optional<bool>& a() const { return storage_.a; }
+  ::cpp17::optional<bool>& a() { return storage_.a; }
+
+ private:
+  struct Storage_ final {
+    ::cpp17::optional<bool> a{};
+  };
+
+  // TODO(https://fxbug.dev/91252): Box the storage.
+  Storage_ storage_;
+  Storage_ CloneStorage_() const;
+  friend struct ::fidl::internal::NaturalTableCodingTraits<
+      ::test_bindingsdenylist::ShouldNeverAppearInAnyBinding8>;
+  static constexpr auto Members =
+      std::make_tuple(std::make_tuple(1, &Storage_::a, std::nullopt));
+};
+
+extern "C" const fidl_type_t
+    test_bindingsdenylist_ShouldNeverAppearInAnyBinding7Table;
+
+class ShouldNeverAppearInAnyBinding7 final
+    : public ::fidl::internal::CodableBase<ShouldNeverAppearInAnyBinding7> {
+ private:
+  struct Storage_;
+
+ public:
+  ShouldNeverAppearInAnyBinding7(Storage_ storage) noexcept
+      : storage_(std::move(storage)) {}
+  ShouldNeverAppearInAnyBinding7(bool a) noexcept
+      : storage_({.a = std::move(a)}) {}
+  ShouldNeverAppearInAnyBinding7()
+      : ShouldNeverAppearInAnyBinding7(Storage_{}) {}
+
+  ShouldNeverAppearInAnyBinding7(ShouldNeverAppearInAnyBinding7&&) noexcept =
+      default;
+  ShouldNeverAppearInAnyBinding7& operator=(
+      ShouldNeverAppearInAnyBinding7&&) noexcept = default;
+  ShouldNeverAppearInAnyBinding7(
+      const ShouldNeverAppearInAnyBinding7& other) noexcept
+      : ShouldNeverAppearInAnyBinding7(other.CloneStorage_()) {}
+  ShouldNeverAppearInAnyBinding7& operator=(
+      const ShouldNeverAppearInAnyBinding7& other) noexcept {
+    storage_ = other.CloneStorage_();
+    return *this;
+  }
+
+  bool a() const { return storage_.a; }
+
+  bool& a() { return storage_.a; }
+
+ private:
+  friend ::fidl::internal::CodableBase<ShouldNeverAppearInAnyBinding7>;
+  friend ::fidl::CodingTraits<ShouldNeverAppearInAnyBinding7>;
+  ShouldNeverAppearInAnyBinding7(::fidl::Decoder& decoder);
+  template <typename Payload>
+  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+      ::fidl::Encoder& encoder, Payload&& payload)
+      -> ::fidl::HLCPPOutgoingMessage;
+  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
+
+  struct Storage_ final {
+    bool a{};
+  };
+
+  Storage_ storage_;
+  Storage_ CloneStorage_() const;
+};
+
+extern "C" const fidl_type_t
+    test_bindingsdenylist_ShouldNeverAppearInAnyBinding6Table;
+
+class ShouldNeverAppearInAnyBinding6 final {
+ private:
+  using Storage_ = cpp17::variant<cpp17::monostate, bool>;
+
+ public:
+  // TODO: share union tag types between wire & natural.
+  enum class Tag : fidl_union_tag_t {
+    kA = 1,  // 0x1
+    kUnknown = ::std::numeric_limits<::fidl_union_tag_t>::max(),
+  };
+
+  // Create an unknown value of this union.
+  ShouldNeverAppearInAnyBinding6() : storage_(std::make_shared<Storage_>()) {}
+
+  ShouldNeverAppearInAnyBinding6(ShouldNeverAppearInAnyBinding6&&) noexcept =
+      default;
+  ShouldNeverAppearInAnyBinding6& operator=(
+      ShouldNeverAppearInAnyBinding6&&) noexcept = default;
+  ShouldNeverAppearInAnyBinding6(
+      const ShouldNeverAppearInAnyBinding6& other) noexcept
+      : ShouldNeverAppearInAnyBinding6(other.CloneStorage_()) {}
+  ShouldNeverAppearInAnyBinding6& operator=(
+      const ShouldNeverAppearInAnyBinding6& other) noexcept {
+    storage_ = other.CloneStorage_();
+    return *this;
+  }
+
+  constexpr ::test_bindingsdenylist::ShouldNeverAppearInAnyBinding6::Tag Which()
+      const {
+    return ShouldNeverAppearInAnyBinding6::IndexToTag(storage_->index());
+  }
+  static ShouldNeverAppearInAnyBinding6 WithA(bool val) {
+    return ShouldNeverAppearInAnyBinding6(
+        std::make_shared<Storage_>(std::in_place_index_t<1>{}, std::move(val)));
+  }
+
+  const ::fidl::internal::UnionMemberView<1, Storage_> a() const {
+    return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
+  }
+  ::fidl::internal::UnionMemberView<1, Storage_> a() {
+    return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
+  }
+
+ private:
+  std::shared_ptr<Storage_> storage_;
+  std::shared_ptr<Storage_> CloneStorage_() const;
+  friend struct ::fidl::internal::NaturalUnionCodingTraits<
+      ::test_bindingsdenylist::ShouldNeverAppearInAnyBinding6>;
+  static constexpr std::array<std::optional<::fidl::HandleInformation>, 2>
+      Members = {std::nullopt, std::nullopt};
+
+  explicit ShouldNeverAppearInAnyBinding6(std::shared_ptr<Storage_> storage)
+      : storage_(std::move(storage)) {}
+
+  static constexpr size_t TagToIndex(
+      ::test_bindingsdenylist::ShouldNeverAppearInAnyBinding6::Tag tag) {
+    switch (tag) {
+      case ::test_bindingsdenylist::ShouldNeverAppearInAnyBinding6::Tag::kA:
+        return 1;
+      case ::test_bindingsdenylist::ShouldNeverAppearInAnyBinding6::Tag::
+          kUnknown:
+        return 0;
+    }
+  }
+
+  static constexpr ::test_bindingsdenylist::ShouldNeverAppearInAnyBinding6::Tag
+  IndexToTag(size_t index) {
+    switch (index) {
+      case 1:
+        return ::test_bindingsdenylist::ShouldNeverAppearInAnyBinding6::Tag::kA;
+      default:
+        return ::test_bindingsdenylist::ShouldNeverAppearInAnyBinding6::Tag::
+            kUnknown;
+    }
+  }
+};
+
+extern "C" const fidl_type_t
+    test_bindingsdenylist_ShouldNeverAppearInAnyBinding5Table;
+
+class ShouldNeverAppearInAnyBinding5 final {
+ private:
+  struct Storage_;
+
+ public:
+  ShouldNeverAppearInAnyBinding5(Storage_ storage) noexcept
+      : storage_(std::move(storage)) {}
+  ShouldNeverAppearInAnyBinding5() noexcept = default;
+  ShouldNeverAppearInAnyBinding5(ShouldNeverAppearInAnyBinding5&&) noexcept =
+      default;
+  ShouldNeverAppearInAnyBinding5& operator=(
+      ShouldNeverAppearInAnyBinding5&&) noexcept = default;
+  ShouldNeverAppearInAnyBinding5(
+      const ShouldNeverAppearInAnyBinding5& other) noexcept
+      : ShouldNeverAppearInAnyBinding5(other.CloneStorage_()) {}
+  ShouldNeverAppearInAnyBinding5& operator=(
+      const ShouldNeverAppearInAnyBinding5& other) noexcept {
+    storage_ = other.CloneStorage_();
+    return *this;
+  }
+
+  bool IsEmpty() const { return !(storage_.a.has_value()); }
+
+  const cpp17::optional<bool>& a() const { return storage_.a; }
+  ::cpp17::optional<bool>& a() { return storage_.a; }
+
+ private:
+  struct Storage_ final {
+    ::cpp17::optional<bool> a{};
+  };
+
+  // TODO(https://fxbug.dev/91252): Box the storage.
+  Storage_ storage_;
+  Storage_ CloneStorage_() const;
+  friend struct ::fidl::internal::NaturalTableCodingTraits<
+      ::test_bindingsdenylist::ShouldNeverAppearInAnyBinding5>;
+  static constexpr auto Members =
+      std::make_tuple(std::make_tuple(1, &Storage_::a, std::nullopt));
+};
+
+extern "C" const fidl_type_t
+    test_bindingsdenylist_ShouldNeverAppearInAnyBinding4Table;
+
+class ShouldNeverAppearInAnyBinding4 final
+    : public ::fidl::internal::CodableBase<ShouldNeverAppearInAnyBinding4> {
+ private:
+  struct Storage_;
+
+ public:
+  ShouldNeverAppearInAnyBinding4(Storage_ storage) noexcept
+      : storage_(std::move(storage)) {}
+  ShouldNeverAppearInAnyBinding4(bool a) noexcept
+      : storage_({.a = std::move(a)}) {}
+  ShouldNeverAppearInAnyBinding4()
+      : ShouldNeverAppearInAnyBinding4(Storage_{}) {}
+
+  ShouldNeverAppearInAnyBinding4(ShouldNeverAppearInAnyBinding4&&) noexcept =
+      default;
+  ShouldNeverAppearInAnyBinding4& operator=(
+      ShouldNeverAppearInAnyBinding4&&) noexcept = default;
+  ShouldNeverAppearInAnyBinding4(
+      const ShouldNeverAppearInAnyBinding4& other) noexcept
+      : ShouldNeverAppearInAnyBinding4(other.CloneStorage_()) {}
+  ShouldNeverAppearInAnyBinding4& operator=(
+      const ShouldNeverAppearInAnyBinding4& other) noexcept {
+    storage_ = other.CloneStorage_();
+    return *this;
+  }
+
+  bool a() const { return storage_.a; }
+
+  bool& a() { return storage_.a; }
+
+ private:
+  friend ::fidl::internal::CodableBase<ShouldNeverAppearInAnyBinding4>;
+  friend ::fidl::CodingTraits<ShouldNeverAppearInAnyBinding4>;
+  ShouldNeverAppearInAnyBinding4(::fidl::Decoder& decoder);
+  template <typename Payload>
+  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+      ::fidl::Encoder& encoder, Payload&& payload)
+      -> ::fidl::HLCPPOutgoingMessage;
+  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
+
+  struct Storage_ final {
+    bool a{};
+  };
+
+  Storage_ storage_;
+  Storage_ CloneStorage_() const;
+};
+
+extern "C" const fidl_type_t test_bindingsdenylist_Allowed_Denied_ResponseTable;
+
+class Allowed_Denied_Response final
+    : public ::fidl::internal::CodableBase<Allowed_Denied_Response> {
+ private:
+  struct Storage_;
+
+ public:
+  Allowed_Denied_Response(Storage_ storage) noexcept
+      : storage_(std::move(storage)) {}
+  Allowed_Denied_Response(
+      ::test_bindingsdenylist::ShouldNeverAppearInAnyBinding4
+          should_never_appear_in_any_binding_4,
+      ::test_bindingsdenylist::ShouldNeverAppearInAnyBinding5
+          should_never_appear_in_any_binding_5,
+      ::test_bindingsdenylist::ShouldNeverAppearInAnyBinding6
+          should_never_appear_in_any_binding_6) noexcept
+      : storage_({.should_never_appear_in_any_binding_4 =
+                      std::move(should_never_appear_in_any_binding_4),
+                  .should_never_appear_in_any_binding_5 =
+                      std::move(should_never_appear_in_any_binding_5),
+                  .should_never_appear_in_any_binding_6 =
+                      std::move(should_never_appear_in_any_binding_6)}) {}
+  Allowed_Denied_Response() : Allowed_Denied_Response(Storage_{}) {}
+
+  Allowed_Denied_Response(Allowed_Denied_Response&&) noexcept = default;
+  Allowed_Denied_Response& operator=(Allowed_Denied_Response&&) noexcept =
+      default;
+  Allowed_Denied_Response(const Allowed_Denied_Response& other) noexcept
+      : Allowed_Denied_Response(other.CloneStorage_()) {}
+  Allowed_Denied_Response& operator=(
+      const Allowed_Denied_Response& other) noexcept {
+    storage_ = other.CloneStorage_();
+    return *this;
+  }
+
+  const ::test_bindingsdenylist::ShouldNeverAppearInAnyBinding4&
+  should_never_appear_in_any_binding_4() const {
+    return storage_.should_never_appear_in_any_binding_4;
+  }
+
+  ::test_bindingsdenylist::ShouldNeverAppearInAnyBinding4&
+  should_never_appear_in_any_binding_4() {
+    return storage_.should_never_appear_in_any_binding_4;
+  }
+
+  const ::test_bindingsdenylist::ShouldNeverAppearInAnyBinding5&
+  should_never_appear_in_any_binding_5() const {
+    return storage_.should_never_appear_in_any_binding_5;
+  }
+
+  ::test_bindingsdenylist::ShouldNeverAppearInAnyBinding5&
+  should_never_appear_in_any_binding_5() {
+    return storage_.should_never_appear_in_any_binding_5;
+  }
+
+  const ::test_bindingsdenylist::ShouldNeverAppearInAnyBinding6&
+  should_never_appear_in_any_binding_6() const {
+    return storage_.should_never_appear_in_any_binding_6;
+  }
+
+  ::test_bindingsdenylist::ShouldNeverAppearInAnyBinding6&
+  should_never_appear_in_any_binding_6() {
+    return storage_.should_never_appear_in_any_binding_6;
+  }
+
+ private:
+  friend ::fidl::internal::CodableBase<Allowed_Denied_Response>;
+  friend ::fidl::CodingTraits<Allowed_Denied_Response>;
+  Allowed_Denied_Response(::fidl::Decoder& decoder);
+  template <typename Payload>
+  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+      ::fidl::Encoder& encoder, Payload&& payload)
+      -> ::fidl::HLCPPOutgoingMessage;
+  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
+
+  struct Storage_ final {
+    ::test_bindingsdenylist::ShouldNeverAppearInAnyBinding4
+        should_never_appear_in_any_binding_4{};
+    ::test_bindingsdenylist::ShouldNeverAppearInAnyBinding5
+        should_never_appear_in_any_binding_5{};
+    ::test_bindingsdenylist::ShouldNeverAppearInAnyBinding6
+        should_never_appear_in_any_binding_6{};
+  };
+
+  Storage_ storage_;
+  Storage_ CloneStorage_() const;
+};
+
+extern "C" const fidl_type_t test_bindingsdenylist_Allowed_Denied_ResultTable;
+
+class Allowed_Denied_Result final {
+ private:
+  using Storage_ =
+      cpp17::variant<cpp17::monostate,
+                     ::test_bindingsdenylist::Allowed_Denied_Response,
+                     uint32_t>;
+
+ public:
+  // TODO: share union tag types between wire & natural.
+  enum class Tag : fidl_union_tag_t {
+    kResponse = 1,  // 0x1
+    kErr = 2,       // 0x2
+  };
+
+  // Create an unknown value of this union.
+  Allowed_Denied_Result() : storage_(std::make_shared<Storage_>()) {}
+
+  Allowed_Denied_Result(Allowed_Denied_Result&&) noexcept = default;
+  Allowed_Denied_Result& operator=(Allowed_Denied_Result&&) noexcept = default;
+  Allowed_Denied_Result(const Allowed_Denied_Result& other) noexcept
+      : Allowed_Denied_Result(other.CloneStorage_()) {}
+  Allowed_Denied_Result& operator=(
+      const Allowed_Denied_Result& other) noexcept {
+    storage_ = other.CloneStorage_();
+    return *this;
+  }
+
+  constexpr ::test_bindingsdenylist::Allowed_Denied_Result::Tag Which() const {
+    return Allowed_Denied_Result::IndexToTag(storage_->index());
+  }
+  static Allowed_Denied_Result WithResponse(
+      ::test_bindingsdenylist::Allowed_Denied_Response val) {
+    return Allowed_Denied_Result(
+        std::make_shared<Storage_>(std::in_place_index_t<1>{}, std::move(val)));
+  }
+
+  const ::fidl::internal::UnionMemberView<1, Storage_> response() const {
+    return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
+  }
+  ::fidl::internal::UnionMemberView<1, Storage_> response() {
+    return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
+  }
+  static Allowed_Denied_Result WithErr(uint32_t val) {
+    return Allowed_Denied_Result(
+        std::make_shared<Storage_>(std::in_place_index_t<2>{}, std::move(val)));
+  }
+
+  const ::fidl::internal::UnionMemberView<2, Storage_> err() const {
+    return ::fidl::internal::UnionMemberView<2, Storage_>(storage_);
+  }
+  ::fidl::internal::UnionMemberView<2, Storage_> err() {
+    return ::fidl::internal::UnionMemberView<2, Storage_>(storage_);
+  }
+
+ private:
+  std::shared_ptr<Storage_> storage_;
+  std::shared_ptr<Storage_> CloneStorage_() const;
+  friend struct ::fidl::internal::NaturalUnionCodingTraits<
+      ::test_bindingsdenylist::Allowed_Denied_Result>;
+  static constexpr std::array<std::optional<::fidl::HandleInformation>, 3>
+      Members = {std::nullopt, std::nullopt, std::nullopt};
+
+  explicit Allowed_Denied_Result(std::shared_ptr<Storage_> storage)
+      : storage_(std::move(storage)) {}
+
+  static constexpr size_t TagToIndex(
+      ::test_bindingsdenylist::Allowed_Denied_Result::Tag tag) {
+    switch (tag) {
+      case ::test_bindingsdenylist::Allowed_Denied_Result::Tag::kResponse:
+        return 1;
+      case ::test_bindingsdenylist::Allowed_Denied_Result::Tag::kErr:
+        return 2;
+    }
+  }
+
+  static constexpr ::test_bindingsdenylist::Allowed_Denied_Result::Tag
+  IndexToTag(size_t index) {
+    switch (index) {
+      case 1:
+        return ::test_bindingsdenylist::Allowed_Denied_Result::Tag::kResponse;
+      case 2:
+        return ::test_bindingsdenylist::Allowed_Denied_Result::Tag::kErr;
+      // TODO: what's the right thing to do here?
+      default:
+        return ::test_bindingsdenylist::Allowed_Denied_Result::Tag::kResponse;
+    }
+  }
+};
+
+extern "C" const fidl_type_t
+    test_bindingsdenylist_AllowedDeniedTopResponseTable;
+
+class AllowedDeniedTopResponse final
+    : public ::fidl::internal::CodableBase<AllowedDeniedTopResponse> {
+ private:
+  struct Storage_;
+
+ public:
+  AllowedDeniedTopResponse(Storage_ storage) noexcept
+      : storage_(std::move(storage)) {}
+  AllowedDeniedTopResponse(
+      ::test_bindingsdenylist::Allowed_Denied_Result result) noexcept
+      : storage_({.result = std::move(result)}) {}
+  AllowedDeniedTopResponse() : AllowedDeniedTopResponse(Storage_{}) {}
+
+  AllowedDeniedTopResponse(AllowedDeniedTopResponse&&) noexcept = default;
+  AllowedDeniedTopResponse& operator=(AllowedDeniedTopResponse&&) noexcept =
+      default;
+  AllowedDeniedTopResponse(const AllowedDeniedTopResponse& other) noexcept
+      : AllowedDeniedTopResponse(other.CloneStorage_()) {}
+  AllowedDeniedTopResponse& operator=(
+      const AllowedDeniedTopResponse& other) noexcept {
+    storage_ = other.CloneStorage_();
+    return *this;
+  }
+
+  const ::test_bindingsdenylist::Allowed_Denied_Result& result() const {
+    return storage_.result;
+  }
+
+  ::test_bindingsdenylist::Allowed_Denied_Result& result() {
+    return storage_.result;
+  }
+
+ private:
+  friend ::fidl::internal::CodableBase<AllowedDeniedTopResponse>;
+  friend ::fidl::CodingTraits<AllowedDeniedTopResponse>;
+  AllowedDeniedTopResponse(::fidl::Decoder& decoder);
+  template <typename Payload>
+  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+      ::fidl::Encoder& encoder, Payload&& payload)
+      -> ::fidl::HLCPPOutgoingMessage;
+  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
+
+  struct Storage_ final {
+    ::test_bindingsdenylist::Allowed_Denied_Result result{};
+  };
+
+  Storage_ storage_;
+  Storage_ CloneStorage_() const;
+};
+
+extern "C" const fidl_type_t
+    test_bindingsdenylist_ShouldNeverAppearInAnyBinding3Table;
+
+class ShouldNeverAppearInAnyBinding3 final {
+ private:
+  using Storage_ = cpp17::variant<cpp17::monostate, bool>;
+
+ public:
+  // TODO: share union tag types between wire & natural.
+  enum class Tag : fidl_union_tag_t {
+    kA = 1,  // 0x1
+    kUnknown = ::std::numeric_limits<::fidl_union_tag_t>::max(),
+  };
+
+  // Create an unknown value of this union.
+  ShouldNeverAppearInAnyBinding3() : storage_(std::make_shared<Storage_>()) {}
+
+  ShouldNeverAppearInAnyBinding3(ShouldNeverAppearInAnyBinding3&&) noexcept =
+      default;
+  ShouldNeverAppearInAnyBinding3& operator=(
+      ShouldNeverAppearInAnyBinding3&&) noexcept = default;
+  ShouldNeverAppearInAnyBinding3(
+      const ShouldNeverAppearInAnyBinding3& other) noexcept
+      : ShouldNeverAppearInAnyBinding3(other.CloneStorage_()) {}
+  ShouldNeverAppearInAnyBinding3& operator=(
+      const ShouldNeverAppearInAnyBinding3& other) noexcept {
+    storage_ = other.CloneStorage_();
+    return *this;
+  }
+
+  constexpr ::test_bindingsdenylist::ShouldNeverAppearInAnyBinding3::Tag Which()
+      const {
+    return ShouldNeverAppearInAnyBinding3::IndexToTag(storage_->index());
+  }
+  static ShouldNeverAppearInAnyBinding3 WithA(bool val) {
+    return ShouldNeverAppearInAnyBinding3(
+        std::make_shared<Storage_>(std::in_place_index_t<1>{}, std::move(val)));
+  }
+
+  const ::fidl::internal::UnionMemberView<1, Storage_> a() const {
+    return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
+  }
+  ::fidl::internal::UnionMemberView<1, Storage_> a() {
+    return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
+  }
+
+ private:
+  std::shared_ptr<Storage_> storage_;
+  std::shared_ptr<Storage_> CloneStorage_() const;
+  friend struct ::fidl::internal::NaturalUnionCodingTraits<
+      ::test_bindingsdenylist::ShouldNeverAppearInAnyBinding3>;
+  static constexpr std::array<std::optional<::fidl::HandleInformation>, 2>
+      Members = {std::nullopt, std::nullopt};
+
+  explicit ShouldNeverAppearInAnyBinding3(std::shared_ptr<Storage_> storage)
+      : storage_(std::move(storage)) {}
+
+  static constexpr size_t TagToIndex(
+      ::test_bindingsdenylist::ShouldNeverAppearInAnyBinding3::Tag tag) {
+    switch (tag) {
+      case ::test_bindingsdenylist::ShouldNeverAppearInAnyBinding3::Tag::kA:
+        return 1;
+      case ::test_bindingsdenylist::ShouldNeverAppearInAnyBinding3::Tag::
+          kUnknown:
+        return 0;
+    }
+  }
+
+  static constexpr ::test_bindingsdenylist::ShouldNeverAppearInAnyBinding3::Tag
+  IndexToTag(size_t index) {
+    switch (index) {
+      case 1:
+        return ::test_bindingsdenylist::ShouldNeverAppearInAnyBinding3::Tag::kA;
+      default:
+        return ::test_bindingsdenylist::ShouldNeverAppearInAnyBinding3::Tag::
+            kUnknown;
+    }
+  }
+};
+
+extern "C" const fidl_type_t
+    test_bindingsdenylist_ShouldNeverAppearInAnyBinding2Table;
+
+class ShouldNeverAppearInAnyBinding2 final {
+ private:
+  struct Storage_;
+
+ public:
+  ShouldNeverAppearInAnyBinding2(Storage_ storage) noexcept
+      : storage_(std::move(storage)) {}
+  ShouldNeverAppearInAnyBinding2() noexcept = default;
+  ShouldNeverAppearInAnyBinding2(ShouldNeverAppearInAnyBinding2&&) noexcept =
+      default;
+  ShouldNeverAppearInAnyBinding2& operator=(
+      ShouldNeverAppearInAnyBinding2&&) noexcept = default;
+  ShouldNeverAppearInAnyBinding2(
+      const ShouldNeverAppearInAnyBinding2& other) noexcept
+      : ShouldNeverAppearInAnyBinding2(other.CloneStorage_()) {}
+  ShouldNeverAppearInAnyBinding2& operator=(
+      const ShouldNeverAppearInAnyBinding2& other) noexcept {
+    storage_ = other.CloneStorage_();
+    return *this;
+  }
+
+  bool IsEmpty() const { return !(storage_.a.has_value()); }
+
+  const cpp17::optional<bool>& a() const { return storage_.a; }
+  ::cpp17::optional<bool>& a() { return storage_.a; }
+
+ private:
+  struct Storage_ final {
+    ::cpp17::optional<bool> a{};
+  };
+
+  // TODO(https://fxbug.dev/91252): Box the storage.
+  Storage_ storage_;
+  Storage_ CloneStorage_() const;
+  friend struct ::fidl::internal::NaturalTableCodingTraits<
+      ::test_bindingsdenylist::ShouldNeverAppearInAnyBinding2>;
+  static constexpr auto Members =
+      std::make_tuple(std::make_tuple(1, &Storage_::a, std::nullopt));
+};
+
+extern "C" const fidl_type_t
+    test_bindingsdenylist_ShouldNeverAppearInAnyBinding1Table;
+
+class ShouldNeverAppearInAnyBinding1 final
+    : public ::fidl::internal::CodableBase<ShouldNeverAppearInAnyBinding1> {
+ private:
+  struct Storage_;
+
+ public:
+  ShouldNeverAppearInAnyBinding1(Storage_ storage) noexcept
+      : storage_(std::move(storage)) {}
+  ShouldNeverAppearInAnyBinding1(bool a) noexcept
+      : storage_({.a = std::move(a)}) {}
+  ShouldNeverAppearInAnyBinding1()
+      : ShouldNeverAppearInAnyBinding1(Storage_{}) {}
+
+  ShouldNeverAppearInAnyBinding1(ShouldNeverAppearInAnyBinding1&&) noexcept =
+      default;
+  ShouldNeverAppearInAnyBinding1& operator=(
+      ShouldNeverAppearInAnyBinding1&&) noexcept = default;
+  ShouldNeverAppearInAnyBinding1(
+      const ShouldNeverAppearInAnyBinding1& other) noexcept
+      : ShouldNeverAppearInAnyBinding1(other.CloneStorage_()) {}
+  ShouldNeverAppearInAnyBinding1& operator=(
+      const ShouldNeverAppearInAnyBinding1& other) noexcept {
+    storage_ = other.CloneStorage_();
+    return *this;
+  }
+
+  bool a() const { return storage_.a; }
+
+  bool& a() { return storage_.a; }
+
+ private:
+  friend ::fidl::internal::CodableBase<ShouldNeverAppearInAnyBinding1>;
+  friend ::fidl::CodingTraits<ShouldNeverAppearInAnyBinding1>;
+  ShouldNeverAppearInAnyBinding1(::fidl::Decoder& decoder);
+  template <typename Payload>
+  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+      ::fidl::Encoder& encoder, Payload&& payload)
+      -> ::fidl::HLCPPOutgoingMessage;
+  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
+
+  struct Storage_ final {
+    bool a{};
+  };
+
+  Storage_ storage_;
+  Storage_ CloneStorage_() const;
+};
+
+extern "C" const fidl_type_t
+    test_bindingsdenylist_DeniedShouldNeverAppearInAnyBindingRequestTable;
+
+class DeniedShouldNeverAppearInAnyBindingRequest final
+    : public ::fidl::internal::CodableBase<
+          DeniedShouldNeverAppearInAnyBindingRequest> {
+ private:
+  struct Storage_;
+
+ public:
+  DeniedShouldNeverAppearInAnyBindingRequest(Storage_ storage) noexcept
+      : storage_(std::move(storage)) {}
+  DeniedShouldNeverAppearInAnyBindingRequest(
+      ::test_bindingsdenylist::ShouldNeverAppearInAnyBinding1
+          should_never_appear_in_any_binding_1,
+      ::test_bindingsdenylist::ShouldNeverAppearInAnyBinding2
+          should_never_appear_in_any_binding_2,
+      ::test_bindingsdenylist::ShouldNeverAppearInAnyBinding3
+          should_never_appear_in_any_binding_3) noexcept
+      : storage_({.should_never_appear_in_any_binding_1 =
+                      std::move(should_never_appear_in_any_binding_1),
+                  .should_never_appear_in_any_binding_2 =
+                      std::move(should_never_appear_in_any_binding_2),
+                  .should_never_appear_in_any_binding_3 =
+                      std::move(should_never_appear_in_any_binding_3)}) {}
+  DeniedShouldNeverAppearInAnyBindingRequest()
+      : DeniedShouldNeverAppearInAnyBindingRequest(Storage_{}) {}
+
+  DeniedShouldNeverAppearInAnyBindingRequest(
+      DeniedShouldNeverAppearInAnyBindingRequest&&) noexcept = default;
+  DeniedShouldNeverAppearInAnyBindingRequest& operator=(
+      DeniedShouldNeverAppearInAnyBindingRequest&&) noexcept = default;
+  DeniedShouldNeverAppearInAnyBindingRequest(
+      const DeniedShouldNeverAppearInAnyBindingRequest& other) noexcept
+      : DeniedShouldNeverAppearInAnyBindingRequest(other.CloneStorage_()) {}
+  DeniedShouldNeverAppearInAnyBindingRequest& operator=(
+      const DeniedShouldNeverAppearInAnyBindingRequest& other) noexcept {
+    storage_ = other.CloneStorage_();
+    return *this;
+  }
+
+  const ::test_bindingsdenylist::ShouldNeverAppearInAnyBinding1&
+  should_never_appear_in_any_binding_1() const {
+    return storage_.should_never_appear_in_any_binding_1;
+  }
+
+  ::test_bindingsdenylist::ShouldNeverAppearInAnyBinding1&
+  should_never_appear_in_any_binding_1() {
+    return storage_.should_never_appear_in_any_binding_1;
+  }
+
+  const ::test_bindingsdenylist::ShouldNeverAppearInAnyBinding2&
+  should_never_appear_in_any_binding_2() const {
+    return storage_.should_never_appear_in_any_binding_2;
+  }
+
+  ::test_bindingsdenylist::ShouldNeverAppearInAnyBinding2&
+  should_never_appear_in_any_binding_2() {
+    return storage_.should_never_appear_in_any_binding_2;
+  }
+
+  const ::test_bindingsdenylist::ShouldNeverAppearInAnyBinding3&
+  should_never_appear_in_any_binding_3() const {
+    return storage_.should_never_appear_in_any_binding_3;
+  }
+
+  ::test_bindingsdenylist::ShouldNeverAppearInAnyBinding3&
+  should_never_appear_in_any_binding_3() {
+    return storage_.should_never_appear_in_any_binding_3;
+  }
+
+ private:
+  friend ::fidl::internal::CodableBase<
+      DeniedShouldNeverAppearInAnyBindingRequest>;
+  friend ::fidl::CodingTraits<DeniedShouldNeverAppearInAnyBindingRequest>;
+  DeniedShouldNeverAppearInAnyBindingRequest(::fidl::Decoder& decoder);
+  template <typename Payload>
+  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+      ::fidl::Encoder& encoder, Payload&& payload)
+      -> ::fidl::HLCPPOutgoingMessage;
+  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
+
+  struct Storage_ final {
+    ::test_bindingsdenylist::ShouldNeverAppearInAnyBinding1
+        should_never_appear_in_any_binding_1{};
+    ::test_bindingsdenylist::ShouldNeverAppearInAnyBinding2
+        should_never_appear_in_any_binding_2{};
+    ::test_bindingsdenylist::ShouldNeverAppearInAnyBinding3
+        should_never_appear_in_any_binding_3{};
+  };
+
+  Storage_ storage_;
+  Storage_ CloneStorage_() const;
+};
 
 extern "C" const fidl_type_t test_bindingsdenylist_OnlyLlcppTable;
 
@@ -91,10 +1020,3041 @@ class OnlyLlcpp final {
   }
 };
 
+extern "C" const fidl_type_t
+    test_bindingsdenylist_MemberOnlyAppearsInImportingLibraryTable;
+
+class MemberOnlyAppearsInImportingLibrary final
+    : public ::fidl::internal::CodableBase<
+          MemberOnlyAppearsInImportingLibrary> {
+ private:
+  struct Storage_;
+
+ public:
+  MemberOnlyAppearsInImportingLibrary(Storage_ storage) noexcept
+      : storage_(std::move(storage)) {}
+  MemberOnlyAppearsInImportingLibrary(bool a) noexcept
+      : storage_({.a = std::move(a)}) {}
+  MemberOnlyAppearsInImportingLibrary()
+      : MemberOnlyAppearsInImportingLibrary(Storage_{}) {}
+
+  MemberOnlyAppearsInImportingLibrary(
+      MemberOnlyAppearsInImportingLibrary&&) noexcept = default;
+  MemberOnlyAppearsInImportingLibrary& operator=(
+      MemberOnlyAppearsInImportingLibrary&&) noexcept = default;
+  MemberOnlyAppearsInImportingLibrary(
+      const MemberOnlyAppearsInImportingLibrary& other) noexcept
+      : MemberOnlyAppearsInImportingLibrary(other.CloneStorage_()) {}
+  MemberOnlyAppearsInImportingLibrary& operator=(
+      const MemberOnlyAppearsInImportingLibrary& other) noexcept {
+    storage_ = other.CloneStorage_();
+    return *this;
+  }
+
+  bool a() const { return storage_.a; }
+
+  bool& a() { return storage_.a; }
+
+ private:
+  friend ::fidl::internal::CodableBase<MemberOnlyAppearsInImportingLibrary>;
+  friend ::fidl::CodingTraits<MemberOnlyAppearsInImportingLibrary>;
+  MemberOnlyAppearsInImportingLibrary(::fidl::Decoder& decoder);
+  template <typename Payload>
+  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+      ::fidl::Encoder& encoder, Payload&& payload)
+      -> ::fidl::HLCPPOutgoingMessage;
+  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
+
+  struct Storage_ final {
+    bool a{};
+  };
+
+  Storage_ storage_;
+  Storage_ CloneStorage_() const;
+};
+
+extern "C" const fidl_type_t
+    test_bindingsdenylist_OnlyAppearsInImportingLibraryTable;
+
+class OnlyAppearsInImportingLibrary final
+    : public ::fidl::internal::CodableBase<OnlyAppearsInImportingLibrary> {
+ private:
+  struct Storage_;
+
+ public:
+  OnlyAppearsInImportingLibrary(Storage_ storage) noexcept
+      : storage_(std::move(storage)) {}
+  OnlyAppearsInImportingLibrary(
+      ::test_bindingsdenylist::MemberOnlyAppearsInImportingLibrary
+          member_only_appears_in_importing_library) noexcept
+      : storage_({.member_only_appears_in_importing_library =
+                      std::move(member_only_appears_in_importing_library)}) {}
+  OnlyAppearsInImportingLibrary() : OnlyAppearsInImportingLibrary(Storage_{}) {}
+
+  OnlyAppearsInImportingLibrary(OnlyAppearsInImportingLibrary&&) noexcept =
+      default;
+  OnlyAppearsInImportingLibrary& operator=(
+      OnlyAppearsInImportingLibrary&&) noexcept = default;
+  OnlyAppearsInImportingLibrary(
+      const OnlyAppearsInImportingLibrary& other) noexcept
+      : OnlyAppearsInImportingLibrary(other.CloneStorage_()) {}
+  OnlyAppearsInImportingLibrary& operator=(
+      const OnlyAppearsInImportingLibrary& other) noexcept {
+    storage_ = other.CloneStorage_();
+    return *this;
+  }
+
+  const ::test_bindingsdenylist::MemberOnlyAppearsInImportingLibrary&
+  member_only_appears_in_importing_library() const {
+    return storage_.member_only_appears_in_importing_library;
+  }
+
+  ::test_bindingsdenylist::MemberOnlyAppearsInImportingLibrary&
+  member_only_appears_in_importing_library() {
+    return storage_.member_only_appears_in_importing_library;
+  }
+
+ private:
+  friend ::fidl::internal::CodableBase<OnlyAppearsInImportingLibrary>;
+  friend ::fidl::CodingTraits<OnlyAppearsInImportingLibrary>;
+  OnlyAppearsInImportingLibrary(::fidl::Decoder& decoder);
+  template <typename Payload>
+  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+      ::fidl::Encoder& encoder, Payload&& payload)
+      -> ::fidl::HLCPPOutgoingMessage;
+  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
+
+  struct Storage_ final {
+    ::test_bindingsdenylist::MemberOnlyAppearsInImportingLibrary
+        member_only_appears_in_importing_library{};
+  };
+
+  Storage_ storage_;
+  Storage_ CloneStorage_() const;
+};
+
+extern "C" const fidl_type_t
+    test_bindingsdenylist_DenyEachBinding_OnlyDenySyzkaller_ResponseTable;
+
+class DenyEachBinding_OnlyDenySyzkaller_Response final
+    : public ::fidl::internal::CodableBase<
+          DenyEachBinding_OnlyDenySyzkaller_Response> {
+ private:
+  struct Storage_;
+
+ public:
+  DenyEachBinding_OnlyDenySyzkaller_Response(Storage_ storage) noexcept
+      : storage_(std::move(storage)) {}
+  DenyEachBinding_OnlyDenySyzkaller_Response(int32_t b) noexcept
+      : storage_({.b = std::move(b)}) {}
+  DenyEachBinding_OnlyDenySyzkaller_Response()
+      : DenyEachBinding_OnlyDenySyzkaller_Response(Storage_{}) {}
+
+  DenyEachBinding_OnlyDenySyzkaller_Response(
+      DenyEachBinding_OnlyDenySyzkaller_Response&&) noexcept = default;
+  DenyEachBinding_OnlyDenySyzkaller_Response& operator=(
+      DenyEachBinding_OnlyDenySyzkaller_Response&&) noexcept = default;
+  DenyEachBinding_OnlyDenySyzkaller_Response(
+      const DenyEachBinding_OnlyDenySyzkaller_Response& other) noexcept
+      : DenyEachBinding_OnlyDenySyzkaller_Response(other.CloneStorage_()) {}
+  DenyEachBinding_OnlyDenySyzkaller_Response& operator=(
+      const DenyEachBinding_OnlyDenySyzkaller_Response& other) noexcept {
+    storage_ = other.CloneStorage_();
+    return *this;
+  }
+
+  int32_t b() const { return storage_.b; }
+
+  int32_t& b() { return storage_.b; }
+
+ private:
+  friend ::fidl::internal::CodableBase<
+      DenyEachBinding_OnlyDenySyzkaller_Response>;
+  friend ::fidl::CodingTraits<DenyEachBinding_OnlyDenySyzkaller_Response>;
+  DenyEachBinding_OnlyDenySyzkaller_Response(::fidl::Decoder& decoder);
+  template <typename Payload>
+  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+      ::fidl::Encoder& encoder, Payload&& payload)
+      -> ::fidl::HLCPPOutgoingMessage;
+  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
+
+  struct Storage_ final {
+    int32_t b{};
+  };
+
+  Storage_ storage_;
+  Storage_ CloneStorage_() const;
+};
+
+extern "C" const fidl_type_t
+    test_bindingsdenylist_DenyEachBinding_OnlyDenySyzkaller_ResultTable;
+
+class DenyEachBinding_OnlyDenySyzkaller_Result final {
+ private:
+  using Storage_ = cpp17::variant<
+      cpp17::monostate,
+      ::test_bindingsdenylist::DenyEachBinding_OnlyDenySyzkaller_Response,
+      uint32_t>;
+
+ public:
+  // TODO: share union tag types between wire & natural.
+  enum class Tag : fidl_union_tag_t {
+    kResponse = 1,  // 0x1
+    kErr = 2,       // 0x2
+  };
+
+  // Create an unknown value of this union.
+  DenyEachBinding_OnlyDenySyzkaller_Result()
+      : storage_(std::make_shared<Storage_>()) {}
+
+  DenyEachBinding_OnlyDenySyzkaller_Result(
+      DenyEachBinding_OnlyDenySyzkaller_Result&&) noexcept = default;
+  DenyEachBinding_OnlyDenySyzkaller_Result& operator=(
+      DenyEachBinding_OnlyDenySyzkaller_Result&&) noexcept = default;
+  DenyEachBinding_OnlyDenySyzkaller_Result(
+      const DenyEachBinding_OnlyDenySyzkaller_Result& other) noexcept
+      : DenyEachBinding_OnlyDenySyzkaller_Result(other.CloneStorage_()) {}
+  DenyEachBinding_OnlyDenySyzkaller_Result& operator=(
+      const DenyEachBinding_OnlyDenySyzkaller_Result& other) noexcept {
+    storage_ = other.CloneStorage_();
+    return *this;
+  }
+
+  constexpr ::test_bindingsdenylist::DenyEachBinding_OnlyDenySyzkaller_Result::
+      Tag
+      Which() const {
+    return DenyEachBinding_OnlyDenySyzkaller_Result::IndexToTag(
+        storage_->index());
+  }
+  static DenyEachBinding_OnlyDenySyzkaller_Result WithResponse(
+      ::test_bindingsdenylist::DenyEachBinding_OnlyDenySyzkaller_Response val) {
+    return DenyEachBinding_OnlyDenySyzkaller_Result(
+        std::make_shared<Storage_>(std::in_place_index_t<1>{}, std::move(val)));
+  }
+
+  const ::fidl::internal::UnionMemberView<1, Storage_> response() const {
+    return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
+  }
+  ::fidl::internal::UnionMemberView<1, Storage_> response() {
+    return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
+  }
+  static DenyEachBinding_OnlyDenySyzkaller_Result WithErr(uint32_t val) {
+    return DenyEachBinding_OnlyDenySyzkaller_Result(
+        std::make_shared<Storage_>(std::in_place_index_t<2>{}, std::move(val)));
+  }
+
+  const ::fidl::internal::UnionMemberView<2, Storage_> err() const {
+    return ::fidl::internal::UnionMemberView<2, Storage_>(storage_);
+  }
+  ::fidl::internal::UnionMemberView<2, Storage_> err() {
+    return ::fidl::internal::UnionMemberView<2, Storage_>(storage_);
+  }
+
+ private:
+  std::shared_ptr<Storage_> storage_;
+  std::shared_ptr<Storage_> CloneStorage_() const;
+  friend struct ::fidl::internal::NaturalUnionCodingTraits<
+      ::test_bindingsdenylist::DenyEachBinding_OnlyDenySyzkaller_Result>;
+  static constexpr std::array<std::optional<::fidl::HandleInformation>, 3>
+      Members = {std::nullopt, std::nullopt, std::nullopt};
+
+  explicit DenyEachBinding_OnlyDenySyzkaller_Result(
+      std::shared_ptr<Storage_> storage)
+      : storage_(std::move(storage)) {}
+
+  static constexpr size_t TagToIndex(
+      ::test_bindingsdenylist::DenyEachBinding_OnlyDenySyzkaller_Result::Tag
+          tag) {
+    switch (tag) {
+      case ::test_bindingsdenylist::DenyEachBinding_OnlyDenySyzkaller_Result::
+          Tag::kResponse:
+        return 1;
+      case ::test_bindingsdenylist::DenyEachBinding_OnlyDenySyzkaller_Result::
+          Tag::kErr:
+        return 2;
+    }
+  }
+
+  static constexpr ::test_bindingsdenylist::
+      DenyEachBinding_OnlyDenySyzkaller_Result::Tag
+      IndexToTag(size_t index) {
+    switch (index) {
+      case 1:
+        return ::test_bindingsdenylist::
+            DenyEachBinding_OnlyDenySyzkaller_Result::Tag::kResponse;
+      case 2:
+        return ::test_bindingsdenylist::
+            DenyEachBinding_OnlyDenySyzkaller_Result::Tag::kErr;
+      // TODO: what's the right thing to do here?
+      default:
+        return ::test_bindingsdenylist::
+            DenyEachBinding_OnlyDenySyzkaller_Result::Tag::kResponse;
+    }
+  }
+};
+
+extern "C" const fidl_type_t
+    test_bindingsdenylist_DenyEachBindingOnlyDenySyzkallerTopResponseTable;
+
+class DenyEachBindingOnlyDenySyzkallerTopResponse final
+    : public ::fidl::internal::CodableBase<
+          DenyEachBindingOnlyDenySyzkallerTopResponse> {
+ private:
+  struct Storage_;
+
+ public:
+  DenyEachBindingOnlyDenySyzkallerTopResponse(Storage_ storage) noexcept
+      : storage_(std::move(storage)) {}
+  DenyEachBindingOnlyDenySyzkallerTopResponse(
+      ::test_bindingsdenylist::DenyEachBinding_OnlyDenySyzkaller_Result
+          result) noexcept
+      : storage_({.result = std::move(result)}) {}
+  DenyEachBindingOnlyDenySyzkallerTopResponse()
+      : DenyEachBindingOnlyDenySyzkallerTopResponse(Storage_{}) {}
+
+  DenyEachBindingOnlyDenySyzkallerTopResponse(
+      DenyEachBindingOnlyDenySyzkallerTopResponse&&) noexcept = default;
+  DenyEachBindingOnlyDenySyzkallerTopResponse& operator=(
+      DenyEachBindingOnlyDenySyzkallerTopResponse&&) noexcept = default;
+  DenyEachBindingOnlyDenySyzkallerTopResponse(
+      const DenyEachBindingOnlyDenySyzkallerTopResponse& other) noexcept
+      : DenyEachBindingOnlyDenySyzkallerTopResponse(other.CloneStorage_()) {}
+  DenyEachBindingOnlyDenySyzkallerTopResponse& operator=(
+      const DenyEachBindingOnlyDenySyzkallerTopResponse& other) noexcept {
+    storage_ = other.CloneStorage_();
+    return *this;
+  }
+
+  const ::test_bindingsdenylist::DenyEachBinding_OnlyDenySyzkaller_Result&
+  result() const {
+    return storage_.result;
+  }
+
+  ::test_bindingsdenylist::DenyEachBinding_OnlyDenySyzkaller_Result& result() {
+    return storage_.result;
+  }
+
+ private:
+  friend ::fidl::internal::CodableBase<
+      DenyEachBindingOnlyDenySyzkallerTopResponse>;
+  friend ::fidl::CodingTraits<DenyEachBindingOnlyDenySyzkallerTopResponse>;
+  DenyEachBindingOnlyDenySyzkallerTopResponse(::fidl::Decoder& decoder);
+  template <typename Payload>
+  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+      ::fidl::Encoder& encoder, Payload&& payload)
+      -> ::fidl::HLCPPOutgoingMessage;
+  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
+
+  struct Storage_ final {
+    ::test_bindingsdenylist::DenyEachBinding_OnlyDenySyzkaller_Result result{};
+  };
+
+  Storage_ storage_;
+  Storage_ CloneStorage_() const;
+};
+
+extern "C" const fidl_type_t
+    test_bindingsdenylist_DenyEachBinding_OnlyDenyRust_ResponseTable;
+
+class DenyEachBinding_OnlyDenyRust_Response final
+    : public ::fidl::internal::CodableBase<
+          DenyEachBinding_OnlyDenyRust_Response> {
+ private:
+  struct Storage_;
+
+ public:
+  DenyEachBinding_OnlyDenyRust_Response(Storage_ storage) noexcept
+      : storage_(std::move(storage)) {}
+  DenyEachBinding_OnlyDenyRust_Response(int32_t b) noexcept
+      : storage_({.b = std::move(b)}) {}
+  DenyEachBinding_OnlyDenyRust_Response()
+      : DenyEachBinding_OnlyDenyRust_Response(Storage_{}) {}
+
+  DenyEachBinding_OnlyDenyRust_Response(
+      DenyEachBinding_OnlyDenyRust_Response&&) noexcept = default;
+  DenyEachBinding_OnlyDenyRust_Response& operator=(
+      DenyEachBinding_OnlyDenyRust_Response&&) noexcept = default;
+  DenyEachBinding_OnlyDenyRust_Response(
+      const DenyEachBinding_OnlyDenyRust_Response& other) noexcept
+      : DenyEachBinding_OnlyDenyRust_Response(other.CloneStorage_()) {}
+  DenyEachBinding_OnlyDenyRust_Response& operator=(
+      const DenyEachBinding_OnlyDenyRust_Response& other) noexcept {
+    storage_ = other.CloneStorage_();
+    return *this;
+  }
+
+  int32_t b() const { return storage_.b; }
+
+  int32_t& b() { return storage_.b; }
+
+ private:
+  friend ::fidl::internal::CodableBase<DenyEachBinding_OnlyDenyRust_Response>;
+  friend ::fidl::CodingTraits<DenyEachBinding_OnlyDenyRust_Response>;
+  DenyEachBinding_OnlyDenyRust_Response(::fidl::Decoder& decoder);
+  template <typename Payload>
+  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+      ::fidl::Encoder& encoder, Payload&& payload)
+      -> ::fidl::HLCPPOutgoingMessage;
+  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
+
+  struct Storage_ final {
+    int32_t b{};
+  };
+
+  Storage_ storage_;
+  Storage_ CloneStorage_() const;
+};
+
+extern "C" const fidl_type_t
+    test_bindingsdenylist_DenyEachBinding_OnlyDenyRust_ResultTable;
+
+class DenyEachBinding_OnlyDenyRust_Result final {
+ private:
+  using Storage_ = cpp17::variant<
+      cpp17::monostate,
+      ::test_bindingsdenylist::DenyEachBinding_OnlyDenyRust_Response, uint32_t>;
+
+ public:
+  // TODO: share union tag types between wire & natural.
+  enum class Tag : fidl_union_tag_t {
+    kResponse = 1,  // 0x1
+    kErr = 2,       // 0x2
+  };
+
+  // Create an unknown value of this union.
+  DenyEachBinding_OnlyDenyRust_Result()
+      : storage_(std::make_shared<Storage_>()) {}
+
+  DenyEachBinding_OnlyDenyRust_Result(
+      DenyEachBinding_OnlyDenyRust_Result&&) noexcept = default;
+  DenyEachBinding_OnlyDenyRust_Result& operator=(
+      DenyEachBinding_OnlyDenyRust_Result&&) noexcept = default;
+  DenyEachBinding_OnlyDenyRust_Result(
+      const DenyEachBinding_OnlyDenyRust_Result& other) noexcept
+      : DenyEachBinding_OnlyDenyRust_Result(other.CloneStorage_()) {}
+  DenyEachBinding_OnlyDenyRust_Result& operator=(
+      const DenyEachBinding_OnlyDenyRust_Result& other) noexcept {
+    storage_ = other.CloneStorage_();
+    return *this;
+  }
+
+  constexpr ::test_bindingsdenylist::DenyEachBinding_OnlyDenyRust_Result::Tag
+  Which() const {
+    return DenyEachBinding_OnlyDenyRust_Result::IndexToTag(storage_->index());
+  }
+  static DenyEachBinding_OnlyDenyRust_Result WithResponse(
+      ::test_bindingsdenylist::DenyEachBinding_OnlyDenyRust_Response val) {
+    return DenyEachBinding_OnlyDenyRust_Result(
+        std::make_shared<Storage_>(std::in_place_index_t<1>{}, std::move(val)));
+  }
+
+  const ::fidl::internal::UnionMemberView<1, Storage_> response() const {
+    return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
+  }
+  ::fidl::internal::UnionMemberView<1, Storage_> response() {
+    return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
+  }
+  static DenyEachBinding_OnlyDenyRust_Result WithErr(uint32_t val) {
+    return DenyEachBinding_OnlyDenyRust_Result(
+        std::make_shared<Storage_>(std::in_place_index_t<2>{}, std::move(val)));
+  }
+
+  const ::fidl::internal::UnionMemberView<2, Storage_> err() const {
+    return ::fidl::internal::UnionMemberView<2, Storage_>(storage_);
+  }
+  ::fidl::internal::UnionMemberView<2, Storage_> err() {
+    return ::fidl::internal::UnionMemberView<2, Storage_>(storage_);
+  }
+
+ private:
+  std::shared_ptr<Storage_> storage_;
+  std::shared_ptr<Storage_> CloneStorage_() const;
+  friend struct ::fidl::internal::NaturalUnionCodingTraits<
+      ::test_bindingsdenylist::DenyEachBinding_OnlyDenyRust_Result>;
+  static constexpr std::array<std::optional<::fidl::HandleInformation>, 3>
+      Members = {std::nullopt, std::nullopt, std::nullopt};
+
+  explicit DenyEachBinding_OnlyDenyRust_Result(
+      std::shared_ptr<Storage_> storage)
+      : storage_(std::move(storage)) {}
+
+  static constexpr size_t TagToIndex(
+      ::test_bindingsdenylist::DenyEachBinding_OnlyDenyRust_Result::Tag tag) {
+    switch (tag) {
+      case ::test_bindingsdenylist::DenyEachBinding_OnlyDenyRust_Result::Tag::
+          kResponse:
+        return 1;
+      case ::test_bindingsdenylist::DenyEachBinding_OnlyDenyRust_Result::Tag::
+          kErr:
+        return 2;
+    }
+  }
+
+  static constexpr ::test_bindingsdenylist::
+      DenyEachBinding_OnlyDenyRust_Result::Tag
+      IndexToTag(size_t index) {
+    switch (index) {
+      case 1:
+        return ::test_bindingsdenylist::DenyEachBinding_OnlyDenyRust_Result::
+            Tag::kResponse;
+      case 2:
+        return ::test_bindingsdenylist::DenyEachBinding_OnlyDenyRust_Result::
+            Tag::kErr;
+      // TODO: what's the right thing to do here?
+      default:
+        return ::test_bindingsdenylist::DenyEachBinding_OnlyDenyRust_Result::
+            Tag::kResponse;
+    }
+  }
+};
+
+extern "C" const fidl_type_t
+    test_bindingsdenylist_DenyEachBindingOnlyDenyRustTopResponseTable;
+
+class DenyEachBindingOnlyDenyRustTopResponse final
+    : public ::fidl::internal::CodableBase<
+          DenyEachBindingOnlyDenyRustTopResponse> {
+ private:
+  struct Storage_;
+
+ public:
+  DenyEachBindingOnlyDenyRustTopResponse(Storage_ storage) noexcept
+      : storage_(std::move(storage)) {}
+  DenyEachBindingOnlyDenyRustTopResponse(
+      ::test_bindingsdenylist::DenyEachBinding_OnlyDenyRust_Result
+          result) noexcept
+      : storage_({.result = std::move(result)}) {}
+  DenyEachBindingOnlyDenyRustTopResponse()
+      : DenyEachBindingOnlyDenyRustTopResponse(Storage_{}) {}
+
+  DenyEachBindingOnlyDenyRustTopResponse(
+      DenyEachBindingOnlyDenyRustTopResponse&&) noexcept = default;
+  DenyEachBindingOnlyDenyRustTopResponse& operator=(
+      DenyEachBindingOnlyDenyRustTopResponse&&) noexcept = default;
+  DenyEachBindingOnlyDenyRustTopResponse(
+      const DenyEachBindingOnlyDenyRustTopResponse& other) noexcept
+      : DenyEachBindingOnlyDenyRustTopResponse(other.CloneStorage_()) {}
+  DenyEachBindingOnlyDenyRustTopResponse& operator=(
+      const DenyEachBindingOnlyDenyRustTopResponse& other) noexcept {
+    storage_ = other.CloneStorage_();
+    return *this;
+  }
+
+  const ::test_bindingsdenylist::DenyEachBinding_OnlyDenyRust_Result& result()
+      const {
+    return storage_.result;
+  }
+
+  ::test_bindingsdenylist::DenyEachBinding_OnlyDenyRust_Result& result() {
+    return storage_.result;
+  }
+
+ private:
+  friend ::fidl::internal::CodableBase<DenyEachBindingOnlyDenyRustTopResponse>;
+  friend ::fidl::CodingTraits<DenyEachBindingOnlyDenyRustTopResponse>;
+  DenyEachBindingOnlyDenyRustTopResponse(::fidl::Decoder& decoder);
+  template <typename Payload>
+  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+      ::fidl::Encoder& encoder, Payload&& payload)
+      -> ::fidl::HLCPPOutgoingMessage;
+  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
+
+  struct Storage_ final {
+    ::test_bindingsdenylist::DenyEachBinding_OnlyDenyRust_Result result{};
+  };
+
+  Storage_ storage_;
+  Storage_ CloneStorage_() const;
+};
+
+extern "C" const fidl_type_t
+    test_bindingsdenylist_DenyEachBinding_OnlyDenyLibfuzzer_ResponseTable;
+
+class DenyEachBinding_OnlyDenyLibfuzzer_Response final
+    : public ::fidl::internal::CodableBase<
+          DenyEachBinding_OnlyDenyLibfuzzer_Response> {
+ private:
+  struct Storage_;
+
+ public:
+  DenyEachBinding_OnlyDenyLibfuzzer_Response(Storage_ storage) noexcept
+      : storage_(std::move(storage)) {}
+  DenyEachBinding_OnlyDenyLibfuzzer_Response(int32_t b) noexcept
+      : storage_({.b = std::move(b)}) {}
+  DenyEachBinding_OnlyDenyLibfuzzer_Response()
+      : DenyEachBinding_OnlyDenyLibfuzzer_Response(Storage_{}) {}
+
+  DenyEachBinding_OnlyDenyLibfuzzer_Response(
+      DenyEachBinding_OnlyDenyLibfuzzer_Response&&) noexcept = default;
+  DenyEachBinding_OnlyDenyLibfuzzer_Response& operator=(
+      DenyEachBinding_OnlyDenyLibfuzzer_Response&&) noexcept = default;
+  DenyEachBinding_OnlyDenyLibfuzzer_Response(
+      const DenyEachBinding_OnlyDenyLibfuzzer_Response& other) noexcept
+      : DenyEachBinding_OnlyDenyLibfuzzer_Response(other.CloneStorage_()) {}
+  DenyEachBinding_OnlyDenyLibfuzzer_Response& operator=(
+      const DenyEachBinding_OnlyDenyLibfuzzer_Response& other) noexcept {
+    storage_ = other.CloneStorage_();
+    return *this;
+  }
+
+  int32_t b() const { return storage_.b; }
+
+  int32_t& b() { return storage_.b; }
+
+ private:
+  friend ::fidl::internal::CodableBase<
+      DenyEachBinding_OnlyDenyLibfuzzer_Response>;
+  friend ::fidl::CodingTraits<DenyEachBinding_OnlyDenyLibfuzzer_Response>;
+  DenyEachBinding_OnlyDenyLibfuzzer_Response(::fidl::Decoder& decoder);
+  template <typename Payload>
+  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+      ::fidl::Encoder& encoder, Payload&& payload)
+      -> ::fidl::HLCPPOutgoingMessage;
+  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
+
+  struct Storage_ final {
+    int32_t b{};
+  };
+
+  Storage_ storage_;
+  Storage_ CloneStorage_() const;
+};
+
+extern "C" const fidl_type_t
+    test_bindingsdenylist_DenyEachBinding_OnlyDenyLibfuzzer_ResultTable;
+
+class DenyEachBinding_OnlyDenyLibfuzzer_Result final {
+ private:
+  using Storage_ = cpp17::variant<
+      cpp17::monostate,
+      ::test_bindingsdenylist::DenyEachBinding_OnlyDenyLibfuzzer_Response,
+      uint32_t>;
+
+ public:
+  // TODO: share union tag types between wire & natural.
+  enum class Tag : fidl_union_tag_t {
+    kResponse = 1,  // 0x1
+    kErr = 2,       // 0x2
+  };
+
+  // Create an unknown value of this union.
+  DenyEachBinding_OnlyDenyLibfuzzer_Result()
+      : storage_(std::make_shared<Storage_>()) {}
+
+  DenyEachBinding_OnlyDenyLibfuzzer_Result(
+      DenyEachBinding_OnlyDenyLibfuzzer_Result&&) noexcept = default;
+  DenyEachBinding_OnlyDenyLibfuzzer_Result& operator=(
+      DenyEachBinding_OnlyDenyLibfuzzer_Result&&) noexcept = default;
+  DenyEachBinding_OnlyDenyLibfuzzer_Result(
+      const DenyEachBinding_OnlyDenyLibfuzzer_Result& other) noexcept
+      : DenyEachBinding_OnlyDenyLibfuzzer_Result(other.CloneStorage_()) {}
+  DenyEachBinding_OnlyDenyLibfuzzer_Result& operator=(
+      const DenyEachBinding_OnlyDenyLibfuzzer_Result& other) noexcept {
+    storage_ = other.CloneStorage_();
+    return *this;
+  }
+
+  constexpr ::test_bindingsdenylist::DenyEachBinding_OnlyDenyLibfuzzer_Result::
+      Tag
+      Which() const {
+    return DenyEachBinding_OnlyDenyLibfuzzer_Result::IndexToTag(
+        storage_->index());
+  }
+  static DenyEachBinding_OnlyDenyLibfuzzer_Result WithResponse(
+      ::test_bindingsdenylist::DenyEachBinding_OnlyDenyLibfuzzer_Response val) {
+    return DenyEachBinding_OnlyDenyLibfuzzer_Result(
+        std::make_shared<Storage_>(std::in_place_index_t<1>{}, std::move(val)));
+  }
+
+  const ::fidl::internal::UnionMemberView<1, Storage_> response() const {
+    return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
+  }
+  ::fidl::internal::UnionMemberView<1, Storage_> response() {
+    return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
+  }
+  static DenyEachBinding_OnlyDenyLibfuzzer_Result WithErr(uint32_t val) {
+    return DenyEachBinding_OnlyDenyLibfuzzer_Result(
+        std::make_shared<Storage_>(std::in_place_index_t<2>{}, std::move(val)));
+  }
+
+  const ::fidl::internal::UnionMemberView<2, Storage_> err() const {
+    return ::fidl::internal::UnionMemberView<2, Storage_>(storage_);
+  }
+  ::fidl::internal::UnionMemberView<2, Storage_> err() {
+    return ::fidl::internal::UnionMemberView<2, Storage_>(storage_);
+  }
+
+ private:
+  std::shared_ptr<Storage_> storage_;
+  std::shared_ptr<Storage_> CloneStorage_() const;
+  friend struct ::fidl::internal::NaturalUnionCodingTraits<
+      ::test_bindingsdenylist::DenyEachBinding_OnlyDenyLibfuzzer_Result>;
+  static constexpr std::array<std::optional<::fidl::HandleInformation>, 3>
+      Members = {std::nullopt, std::nullopt, std::nullopt};
+
+  explicit DenyEachBinding_OnlyDenyLibfuzzer_Result(
+      std::shared_ptr<Storage_> storage)
+      : storage_(std::move(storage)) {}
+
+  static constexpr size_t TagToIndex(
+      ::test_bindingsdenylist::DenyEachBinding_OnlyDenyLibfuzzer_Result::Tag
+          tag) {
+    switch (tag) {
+      case ::test_bindingsdenylist::DenyEachBinding_OnlyDenyLibfuzzer_Result::
+          Tag::kResponse:
+        return 1;
+      case ::test_bindingsdenylist::DenyEachBinding_OnlyDenyLibfuzzer_Result::
+          Tag::kErr:
+        return 2;
+    }
+  }
+
+  static constexpr ::test_bindingsdenylist::
+      DenyEachBinding_OnlyDenyLibfuzzer_Result::Tag
+      IndexToTag(size_t index) {
+    switch (index) {
+      case 1:
+        return ::test_bindingsdenylist::
+            DenyEachBinding_OnlyDenyLibfuzzer_Result::Tag::kResponse;
+      case 2:
+        return ::test_bindingsdenylist::
+            DenyEachBinding_OnlyDenyLibfuzzer_Result::Tag::kErr;
+      // TODO: what's the right thing to do here?
+      default:
+        return ::test_bindingsdenylist::
+            DenyEachBinding_OnlyDenyLibfuzzer_Result::Tag::kResponse;
+    }
+  }
+};
+
+extern "C" const fidl_type_t
+    test_bindingsdenylist_DenyEachBindingOnlyDenyLibfuzzerTopResponseTable;
+
+class DenyEachBindingOnlyDenyLibfuzzerTopResponse final
+    : public ::fidl::internal::CodableBase<
+          DenyEachBindingOnlyDenyLibfuzzerTopResponse> {
+ private:
+  struct Storage_;
+
+ public:
+  DenyEachBindingOnlyDenyLibfuzzerTopResponse(Storage_ storage) noexcept
+      : storage_(std::move(storage)) {}
+  DenyEachBindingOnlyDenyLibfuzzerTopResponse(
+      ::test_bindingsdenylist::DenyEachBinding_OnlyDenyLibfuzzer_Result
+          result) noexcept
+      : storage_({.result = std::move(result)}) {}
+  DenyEachBindingOnlyDenyLibfuzzerTopResponse()
+      : DenyEachBindingOnlyDenyLibfuzzerTopResponse(Storage_{}) {}
+
+  DenyEachBindingOnlyDenyLibfuzzerTopResponse(
+      DenyEachBindingOnlyDenyLibfuzzerTopResponse&&) noexcept = default;
+  DenyEachBindingOnlyDenyLibfuzzerTopResponse& operator=(
+      DenyEachBindingOnlyDenyLibfuzzerTopResponse&&) noexcept = default;
+  DenyEachBindingOnlyDenyLibfuzzerTopResponse(
+      const DenyEachBindingOnlyDenyLibfuzzerTopResponse& other) noexcept
+      : DenyEachBindingOnlyDenyLibfuzzerTopResponse(other.CloneStorage_()) {}
+  DenyEachBindingOnlyDenyLibfuzzerTopResponse& operator=(
+      const DenyEachBindingOnlyDenyLibfuzzerTopResponse& other) noexcept {
+    storage_ = other.CloneStorage_();
+    return *this;
+  }
+
+  const ::test_bindingsdenylist::DenyEachBinding_OnlyDenyLibfuzzer_Result&
+  result() const {
+    return storage_.result;
+  }
+
+  ::test_bindingsdenylist::DenyEachBinding_OnlyDenyLibfuzzer_Result& result() {
+    return storage_.result;
+  }
+
+ private:
+  friend ::fidl::internal::CodableBase<
+      DenyEachBindingOnlyDenyLibfuzzerTopResponse>;
+  friend ::fidl::CodingTraits<DenyEachBindingOnlyDenyLibfuzzerTopResponse>;
+  DenyEachBindingOnlyDenyLibfuzzerTopResponse(::fidl::Decoder& decoder);
+  template <typename Payload>
+  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+      ::fidl::Encoder& encoder, Payload&& payload)
+      -> ::fidl::HLCPPOutgoingMessage;
+  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
+
+  struct Storage_ final {
+    ::test_bindingsdenylist::DenyEachBinding_OnlyDenyLibfuzzer_Result result{};
+  };
+
+  Storage_ storage_;
+  Storage_ CloneStorage_() const;
+};
+
+extern "C" const fidl_type_t
+    test_bindingsdenylist_DenyEachBinding_OnlyDenyGo_ResponseTable;
+
+class DenyEachBinding_OnlyDenyGo_Response final
+    : public ::fidl::internal::CodableBase<
+          DenyEachBinding_OnlyDenyGo_Response> {
+ private:
+  struct Storage_;
+
+ public:
+  DenyEachBinding_OnlyDenyGo_Response(Storage_ storage) noexcept
+      : storage_(std::move(storage)) {}
+  DenyEachBinding_OnlyDenyGo_Response(int32_t b) noexcept
+      : storage_({.b = std::move(b)}) {}
+  DenyEachBinding_OnlyDenyGo_Response()
+      : DenyEachBinding_OnlyDenyGo_Response(Storage_{}) {}
+
+  DenyEachBinding_OnlyDenyGo_Response(
+      DenyEachBinding_OnlyDenyGo_Response&&) noexcept = default;
+  DenyEachBinding_OnlyDenyGo_Response& operator=(
+      DenyEachBinding_OnlyDenyGo_Response&&) noexcept = default;
+  DenyEachBinding_OnlyDenyGo_Response(
+      const DenyEachBinding_OnlyDenyGo_Response& other) noexcept
+      : DenyEachBinding_OnlyDenyGo_Response(other.CloneStorage_()) {}
+  DenyEachBinding_OnlyDenyGo_Response& operator=(
+      const DenyEachBinding_OnlyDenyGo_Response& other) noexcept {
+    storage_ = other.CloneStorage_();
+    return *this;
+  }
+
+  int32_t b() const { return storage_.b; }
+
+  int32_t& b() { return storage_.b; }
+
+ private:
+  friend ::fidl::internal::CodableBase<DenyEachBinding_OnlyDenyGo_Response>;
+  friend ::fidl::CodingTraits<DenyEachBinding_OnlyDenyGo_Response>;
+  DenyEachBinding_OnlyDenyGo_Response(::fidl::Decoder& decoder);
+  template <typename Payload>
+  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+      ::fidl::Encoder& encoder, Payload&& payload)
+      -> ::fidl::HLCPPOutgoingMessage;
+  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
+
+  struct Storage_ final {
+    int32_t b{};
+  };
+
+  Storage_ storage_;
+  Storage_ CloneStorage_() const;
+};
+
+extern "C" const fidl_type_t
+    test_bindingsdenylist_DenyEachBinding_OnlyDenyGo_ResultTable;
+
+class DenyEachBinding_OnlyDenyGo_Result final {
+ private:
+  using Storage_ = cpp17::variant<
+      cpp17::monostate,
+      ::test_bindingsdenylist::DenyEachBinding_OnlyDenyGo_Response, uint32_t>;
+
+ public:
+  // TODO: share union tag types between wire & natural.
+  enum class Tag : fidl_union_tag_t {
+    kResponse = 1,  // 0x1
+    kErr = 2,       // 0x2
+  };
+
+  // Create an unknown value of this union.
+  DenyEachBinding_OnlyDenyGo_Result()
+      : storage_(std::make_shared<Storage_>()) {}
+
+  DenyEachBinding_OnlyDenyGo_Result(
+      DenyEachBinding_OnlyDenyGo_Result&&) noexcept = default;
+  DenyEachBinding_OnlyDenyGo_Result& operator=(
+      DenyEachBinding_OnlyDenyGo_Result&&) noexcept = default;
+  DenyEachBinding_OnlyDenyGo_Result(
+      const DenyEachBinding_OnlyDenyGo_Result& other) noexcept
+      : DenyEachBinding_OnlyDenyGo_Result(other.CloneStorage_()) {}
+  DenyEachBinding_OnlyDenyGo_Result& operator=(
+      const DenyEachBinding_OnlyDenyGo_Result& other) noexcept {
+    storage_ = other.CloneStorage_();
+    return *this;
+  }
+
+  constexpr ::test_bindingsdenylist::DenyEachBinding_OnlyDenyGo_Result::Tag
+  Which() const {
+    return DenyEachBinding_OnlyDenyGo_Result::IndexToTag(storage_->index());
+  }
+  static DenyEachBinding_OnlyDenyGo_Result WithResponse(
+      ::test_bindingsdenylist::DenyEachBinding_OnlyDenyGo_Response val) {
+    return DenyEachBinding_OnlyDenyGo_Result(
+        std::make_shared<Storage_>(std::in_place_index_t<1>{}, std::move(val)));
+  }
+
+  const ::fidl::internal::UnionMemberView<1, Storage_> response() const {
+    return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
+  }
+  ::fidl::internal::UnionMemberView<1, Storage_> response() {
+    return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
+  }
+  static DenyEachBinding_OnlyDenyGo_Result WithErr(uint32_t val) {
+    return DenyEachBinding_OnlyDenyGo_Result(
+        std::make_shared<Storage_>(std::in_place_index_t<2>{}, std::move(val)));
+  }
+
+  const ::fidl::internal::UnionMemberView<2, Storage_> err() const {
+    return ::fidl::internal::UnionMemberView<2, Storage_>(storage_);
+  }
+  ::fidl::internal::UnionMemberView<2, Storage_> err() {
+    return ::fidl::internal::UnionMemberView<2, Storage_>(storage_);
+  }
+
+ private:
+  std::shared_ptr<Storage_> storage_;
+  std::shared_ptr<Storage_> CloneStorage_() const;
+  friend struct ::fidl::internal::NaturalUnionCodingTraits<
+      ::test_bindingsdenylist::DenyEachBinding_OnlyDenyGo_Result>;
+  static constexpr std::array<std::optional<::fidl::HandleInformation>, 3>
+      Members = {std::nullopt, std::nullopt, std::nullopt};
+
+  explicit DenyEachBinding_OnlyDenyGo_Result(std::shared_ptr<Storage_> storage)
+      : storage_(std::move(storage)) {}
+
+  static constexpr size_t TagToIndex(
+      ::test_bindingsdenylist::DenyEachBinding_OnlyDenyGo_Result::Tag tag) {
+    switch (tag) {
+      case ::test_bindingsdenylist::DenyEachBinding_OnlyDenyGo_Result::Tag::
+          kResponse:
+        return 1;
+      case ::test_bindingsdenylist::DenyEachBinding_OnlyDenyGo_Result::Tag::
+          kErr:
+        return 2;
+    }
+  }
+
+  static constexpr ::test_bindingsdenylist::DenyEachBinding_OnlyDenyGo_Result::
+      Tag
+      IndexToTag(size_t index) {
+    switch (index) {
+      case 1:
+        return ::test_bindingsdenylist::DenyEachBinding_OnlyDenyGo_Result::Tag::
+            kResponse;
+      case 2:
+        return ::test_bindingsdenylist::DenyEachBinding_OnlyDenyGo_Result::Tag::
+            kErr;
+      // TODO: what's the right thing to do here?
+      default:
+        return ::test_bindingsdenylist::DenyEachBinding_OnlyDenyGo_Result::Tag::
+            kResponse;
+    }
+  }
+};
+
+extern "C" const fidl_type_t
+    test_bindingsdenylist_DenyEachBindingOnlyDenyGoTopResponseTable;
+
+class DenyEachBindingOnlyDenyGoTopResponse final
+    : public ::fidl::internal::CodableBase<
+          DenyEachBindingOnlyDenyGoTopResponse> {
+ private:
+  struct Storage_;
+
+ public:
+  DenyEachBindingOnlyDenyGoTopResponse(Storage_ storage) noexcept
+      : storage_(std::move(storage)) {}
+  DenyEachBindingOnlyDenyGoTopResponse(
+      ::test_bindingsdenylist::DenyEachBinding_OnlyDenyGo_Result
+          result) noexcept
+      : storage_({.result = std::move(result)}) {}
+  DenyEachBindingOnlyDenyGoTopResponse()
+      : DenyEachBindingOnlyDenyGoTopResponse(Storage_{}) {}
+
+  DenyEachBindingOnlyDenyGoTopResponse(
+      DenyEachBindingOnlyDenyGoTopResponse&&) noexcept = default;
+  DenyEachBindingOnlyDenyGoTopResponse& operator=(
+      DenyEachBindingOnlyDenyGoTopResponse&&) noexcept = default;
+  DenyEachBindingOnlyDenyGoTopResponse(
+      const DenyEachBindingOnlyDenyGoTopResponse& other) noexcept
+      : DenyEachBindingOnlyDenyGoTopResponse(other.CloneStorage_()) {}
+  DenyEachBindingOnlyDenyGoTopResponse& operator=(
+      const DenyEachBindingOnlyDenyGoTopResponse& other) noexcept {
+    storage_ = other.CloneStorage_();
+    return *this;
+  }
+
+  const ::test_bindingsdenylist::DenyEachBinding_OnlyDenyGo_Result& result()
+      const {
+    return storage_.result;
+  }
+
+  ::test_bindingsdenylist::DenyEachBinding_OnlyDenyGo_Result& result() {
+    return storage_.result;
+  }
+
+ private:
+  friend ::fidl::internal::CodableBase<DenyEachBindingOnlyDenyGoTopResponse>;
+  friend ::fidl::CodingTraits<DenyEachBindingOnlyDenyGoTopResponse>;
+  DenyEachBindingOnlyDenyGoTopResponse(::fidl::Decoder& decoder);
+  template <typename Payload>
+  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+      ::fidl::Encoder& encoder, Payload&& payload)
+      -> ::fidl::HLCPPOutgoingMessage;
+  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
+
+  struct Storage_ final {
+    ::test_bindingsdenylist::DenyEachBinding_OnlyDenyGo_Result result{};
+  };
+
+  Storage_ storage_;
+  Storage_ CloneStorage_() const;
+};
+
+extern "C" const fidl_type_t
+    test_bindingsdenylist_DenyEachBinding_OnlyDenyDart_ResponseTable;
+
+class DenyEachBinding_OnlyDenyDart_Response final
+    : public ::fidl::internal::CodableBase<
+          DenyEachBinding_OnlyDenyDart_Response> {
+ private:
+  struct Storage_;
+
+ public:
+  DenyEachBinding_OnlyDenyDart_Response(Storage_ storage) noexcept
+      : storage_(std::move(storage)) {}
+  DenyEachBinding_OnlyDenyDart_Response(int32_t b) noexcept
+      : storage_({.b = std::move(b)}) {}
+  DenyEachBinding_OnlyDenyDart_Response()
+      : DenyEachBinding_OnlyDenyDart_Response(Storage_{}) {}
+
+  DenyEachBinding_OnlyDenyDart_Response(
+      DenyEachBinding_OnlyDenyDart_Response&&) noexcept = default;
+  DenyEachBinding_OnlyDenyDart_Response& operator=(
+      DenyEachBinding_OnlyDenyDart_Response&&) noexcept = default;
+  DenyEachBinding_OnlyDenyDart_Response(
+      const DenyEachBinding_OnlyDenyDart_Response& other) noexcept
+      : DenyEachBinding_OnlyDenyDart_Response(other.CloneStorage_()) {}
+  DenyEachBinding_OnlyDenyDart_Response& operator=(
+      const DenyEachBinding_OnlyDenyDart_Response& other) noexcept {
+    storage_ = other.CloneStorage_();
+    return *this;
+  }
+
+  int32_t b() const { return storage_.b; }
+
+  int32_t& b() { return storage_.b; }
+
+ private:
+  friend ::fidl::internal::CodableBase<DenyEachBinding_OnlyDenyDart_Response>;
+  friend ::fidl::CodingTraits<DenyEachBinding_OnlyDenyDart_Response>;
+  DenyEachBinding_OnlyDenyDart_Response(::fidl::Decoder& decoder);
+  template <typename Payload>
+  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+      ::fidl::Encoder& encoder, Payload&& payload)
+      -> ::fidl::HLCPPOutgoingMessage;
+  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
+
+  struct Storage_ final {
+    int32_t b{};
+  };
+
+  Storage_ storage_;
+  Storage_ CloneStorage_() const;
+};
+
+extern "C" const fidl_type_t
+    test_bindingsdenylist_DenyEachBinding_OnlyDenyDart_ResultTable;
+
+class DenyEachBinding_OnlyDenyDart_Result final {
+ private:
+  using Storage_ = cpp17::variant<
+      cpp17::monostate,
+      ::test_bindingsdenylist::DenyEachBinding_OnlyDenyDart_Response, uint32_t>;
+
+ public:
+  // TODO: share union tag types between wire & natural.
+  enum class Tag : fidl_union_tag_t {
+    kResponse = 1,  // 0x1
+    kErr = 2,       // 0x2
+  };
+
+  // Create an unknown value of this union.
+  DenyEachBinding_OnlyDenyDart_Result()
+      : storage_(std::make_shared<Storage_>()) {}
+
+  DenyEachBinding_OnlyDenyDart_Result(
+      DenyEachBinding_OnlyDenyDart_Result&&) noexcept = default;
+  DenyEachBinding_OnlyDenyDart_Result& operator=(
+      DenyEachBinding_OnlyDenyDart_Result&&) noexcept = default;
+  DenyEachBinding_OnlyDenyDart_Result(
+      const DenyEachBinding_OnlyDenyDart_Result& other) noexcept
+      : DenyEachBinding_OnlyDenyDart_Result(other.CloneStorage_()) {}
+  DenyEachBinding_OnlyDenyDart_Result& operator=(
+      const DenyEachBinding_OnlyDenyDart_Result& other) noexcept {
+    storage_ = other.CloneStorage_();
+    return *this;
+  }
+
+  constexpr ::test_bindingsdenylist::DenyEachBinding_OnlyDenyDart_Result::Tag
+  Which() const {
+    return DenyEachBinding_OnlyDenyDart_Result::IndexToTag(storage_->index());
+  }
+  static DenyEachBinding_OnlyDenyDart_Result WithResponse(
+      ::test_bindingsdenylist::DenyEachBinding_OnlyDenyDart_Response val) {
+    return DenyEachBinding_OnlyDenyDart_Result(
+        std::make_shared<Storage_>(std::in_place_index_t<1>{}, std::move(val)));
+  }
+
+  const ::fidl::internal::UnionMemberView<1, Storage_> response() const {
+    return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
+  }
+  ::fidl::internal::UnionMemberView<1, Storage_> response() {
+    return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
+  }
+  static DenyEachBinding_OnlyDenyDart_Result WithErr(uint32_t val) {
+    return DenyEachBinding_OnlyDenyDart_Result(
+        std::make_shared<Storage_>(std::in_place_index_t<2>{}, std::move(val)));
+  }
+
+  const ::fidl::internal::UnionMemberView<2, Storage_> err() const {
+    return ::fidl::internal::UnionMemberView<2, Storage_>(storage_);
+  }
+  ::fidl::internal::UnionMemberView<2, Storage_> err() {
+    return ::fidl::internal::UnionMemberView<2, Storage_>(storage_);
+  }
+
+ private:
+  std::shared_ptr<Storage_> storage_;
+  std::shared_ptr<Storage_> CloneStorage_() const;
+  friend struct ::fidl::internal::NaturalUnionCodingTraits<
+      ::test_bindingsdenylist::DenyEachBinding_OnlyDenyDart_Result>;
+  static constexpr std::array<std::optional<::fidl::HandleInformation>, 3>
+      Members = {std::nullopt, std::nullopt, std::nullopt};
+
+  explicit DenyEachBinding_OnlyDenyDart_Result(
+      std::shared_ptr<Storage_> storage)
+      : storage_(std::move(storage)) {}
+
+  static constexpr size_t TagToIndex(
+      ::test_bindingsdenylist::DenyEachBinding_OnlyDenyDart_Result::Tag tag) {
+    switch (tag) {
+      case ::test_bindingsdenylist::DenyEachBinding_OnlyDenyDart_Result::Tag::
+          kResponse:
+        return 1;
+      case ::test_bindingsdenylist::DenyEachBinding_OnlyDenyDart_Result::Tag::
+          kErr:
+        return 2;
+    }
+  }
+
+  static constexpr ::test_bindingsdenylist::
+      DenyEachBinding_OnlyDenyDart_Result::Tag
+      IndexToTag(size_t index) {
+    switch (index) {
+      case 1:
+        return ::test_bindingsdenylist::DenyEachBinding_OnlyDenyDart_Result::
+            Tag::kResponse;
+      case 2:
+        return ::test_bindingsdenylist::DenyEachBinding_OnlyDenyDart_Result::
+            Tag::kErr;
+      // TODO: what's the right thing to do here?
+      default:
+        return ::test_bindingsdenylist::DenyEachBinding_OnlyDenyDart_Result::
+            Tag::kResponse;
+    }
+  }
+};
+
+extern "C" const fidl_type_t
+    test_bindingsdenylist_DenyEachBindingOnlyDenyDartTopResponseTable;
+
+class DenyEachBindingOnlyDenyDartTopResponse final
+    : public ::fidl::internal::CodableBase<
+          DenyEachBindingOnlyDenyDartTopResponse> {
+ private:
+  struct Storage_;
+
+ public:
+  DenyEachBindingOnlyDenyDartTopResponse(Storage_ storage) noexcept
+      : storage_(std::move(storage)) {}
+  DenyEachBindingOnlyDenyDartTopResponse(
+      ::test_bindingsdenylist::DenyEachBinding_OnlyDenyDart_Result
+          result) noexcept
+      : storage_({.result = std::move(result)}) {}
+  DenyEachBindingOnlyDenyDartTopResponse()
+      : DenyEachBindingOnlyDenyDartTopResponse(Storage_{}) {}
+
+  DenyEachBindingOnlyDenyDartTopResponse(
+      DenyEachBindingOnlyDenyDartTopResponse&&) noexcept = default;
+  DenyEachBindingOnlyDenyDartTopResponse& operator=(
+      DenyEachBindingOnlyDenyDartTopResponse&&) noexcept = default;
+  DenyEachBindingOnlyDenyDartTopResponse(
+      const DenyEachBindingOnlyDenyDartTopResponse& other) noexcept
+      : DenyEachBindingOnlyDenyDartTopResponse(other.CloneStorage_()) {}
+  DenyEachBindingOnlyDenyDartTopResponse& operator=(
+      const DenyEachBindingOnlyDenyDartTopResponse& other) noexcept {
+    storage_ = other.CloneStorage_();
+    return *this;
+  }
+
+  const ::test_bindingsdenylist::DenyEachBinding_OnlyDenyDart_Result& result()
+      const {
+    return storage_.result;
+  }
+
+  ::test_bindingsdenylist::DenyEachBinding_OnlyDenyDart_Result& result() {
+    return storage_.result;
+  }
+
+ private:
+  friend ::fidl::internal::CodableBase<DenyEachBindingOnlyDenyDartTopResponse>;
+  friend ::fidl::CodingTraits<DenyEachBindingOnlyDenyDartTopResponse>;
+  DenyEachBindingOnlyDenyDartTopResponse(::fidl::Decoder& decoder);
+  template <typename Payload>
+  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+      ::fidl::Encoder& encoder, Payload&& payload)
+      -> ::fidl::HLCPPOutgoingMessage;
+  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
+
+  struct Storage_ final {
+    ::test_bindingsdenylist::DenyEachBinding_OnlyDenyDart_Result result{};
+  };
+
+  Storage_ storage_;
+  Storage_ CloneStorage_() const;
+};
+
+extern "C" const fidl_type_t
+    test_bindingsdenylist_DenyEachBinding_OnlyDenyCpp_ResponseTable;
+
+class DenyEachBinding_OnlyDenyCpp_Response final
+    : public ::fidl::internal::CodableBase<
+          DenyEachBinding_OnlyDenyCpp_Response> {
+ private:
+  struct Storage_;
+
+ public:
+  DenyEachBinding_OnlyDenyCpp_Response(Storage_ storage) noexcept
+      : storage_(std::move(storage)) {}
+  DenyEachBinding_OnlyDenyCpp_Response(int32_t b) noexcept
+      : storage_({.b = std::move(b)}) {}
+  DenyEachBinding_OnlyDenyCpp_Response()
+      : DenyEachBinding_OnlyDenyCpp_Response(Storage_{}) {}
+
+  DenyEachBinding_OnlyDenyCpp_Response(
+      DenyEachBinding_OnlyDenyCpp_Response&&) noexcept = default;
+  DenyEachBinding_OnlyDenyCpp_Response& operator=(
+      DenyEachBinding_OnlyDenyCpp_Response&&) noexcept = default;
+  DenyEachBinding_OnlyDenyCpp_Response(
+      const DenyEachBinding_OnlyDenyCpp_Response& other) noexcept
+      : DenyEachBinding_OnlyDenyCpp_Response(other.CloneStorage_()) {}
+  DenyEachBinding_OnlyDenyCpp_Response& operator=(
+      const DenyEachBinding_OnlyDenyCpp_Response& other) noexcept {
+    storage_ = other.CloneStorage_();
+    return *this;
+  }
+
+  int32_t b() const { return storage_.b; }
+
+  int32_t& b() { return storage_.b; }
+
+ private:
+  friend ::fidl::internal::CodableBase<DenyEachBinding_OnlyDenyCpp_Response>;
+  friend ::fidl::CodingTraits<DenyEachBinding_OnlyDenyCpp_Response>;
+  DenyEachBinding_OnlyDenyCpp_Response(::fidl::Decoder& decoder);
+  template <typename Payload>
+  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+      ::fidl::Encoder& encoder, Payload&& payload)
+      -> ::fidl::HLCPPOutgoingMessage;
+  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
+
+  struct Storage_ final {
+    int32_t b{};
+  };
+
+  Storage_ storage_;
+  Storage_ CloneStorage_() const;
+};
+
+extern "C" const fidl_type_t
+    test_bindingsdenylist_DenyEachBinding_OnlyDenyCpp_ResultTable;
+
+class DenyEachBinding_OnlyDenyCpp_Result final {
+ private:
+  using Storage_ = cpp17::variant<
+      cpp17::monostate,
+      ::test_bindingsdenylist::DenyEachBinding_OnlyDenyCpp_Response, uint32_t>;
+
+ public:
+  // TODO: share union tag types between wire & natural.
+  enum class Tag : fidl_union_tag_t {
+    kResponse = 1,  // 0x1
+    kErr = 2,       // 0x2
+  };
+
+  // Create an unknown value of this union.
+  DenyEachBinding_OnlyDenyCpp_Result()
+      : storage_(std::make_shared<Storage_>()) {}
+
+  DenyEachBinding_OnlyDenyCpp_Result(
+      DenyEachBinding_OnlyDenyCpp_Result&&) noexcept = default;
+  DenyEachBinding_OnlyDenyCpp_Result& operator=(
+      DenyEachBinding_OnlyDenyCpp_Result&&) noexcept = default;
+  DenyEachBinding_OnlyDenyCpp_Result(
+      const DenyEachBinding_OnlyDenyCpp_Result& other) noexcept
+      : DenyEachBinding_OnlyDenyCpp_Result(other.CloneStorage_()) {}
+  DenyEachBinding_OnlyDenyCpp_Result& operator=(
+      const DenyEachBinding_OnlyDenyCpp_Result& other) noexcept {
+    storage_ = other.CloneStorage_();
+    return *this;
+  }
+
+  constexpr ::test_bindingsdenylist::DenyEachBinding_OnlyDenyCpp_Result::Tag
+  Which() const {
+    return DenyEachBinding_OnlyDenyCpp_Result::IndexToTag(storage_->index());
+  }
+  static DenyEachBinding_OnlyDenyCpp_Result WithResponse(
+      ::test_bindingsdenylist::DenyEachBinding_OnlyDenyCpp_Response val) {
+    return DenyEachBinding_OnlyDenyCpp_Result(
+        std::make_shared<Storage_>(std::in_place_index_t<1>{}, std::move(val)));
+  }
+
+  const ::fidl::internal::UnionMemberView<1, Storage_> response() const {
+    return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
+  }
+  ::fidl::internal::UnionMemberView<1, Storage_> response() {
+    return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
+  }
+  static DenyEachBinding_OnlyDenyCpp_Result WithErr(uint32_t val) {
+    return DenyEachBinding_OnlyDenyCpp_Result(
+        std::make_shared<Storage_>(std::in_place_index_t<2>{}, std::move(val)));
+  }
+
+  const ::fidl::internal::UnionMemberView<2, Storage_> err() const {
+    return ::fidl::internal::UnionMemberView<2, Storage_>(storage_);
+  }
+  ::fidl::internal::UnionMemberView<2, Storage_> err() {
+    return ::fidl::internal::UnionMemberView<2, Storage_>(storage_);
+  }
+
+ private:
+  std::shared_ptr<Storage_> storage_;
+  std::shared_ptr<Storage_> CloneStorage_() const;
+  friend struct ::fidl::internal::NaturalUnionCodingTraits<
+      ::test_bindingsdenylist::DenyEachBinding_OnlyDenyCpp_Result>;
+  static constexpr std::array<std::optional<::fidl::HandleInformation>, 3>
+      Members = {std::nullopt, std::nullopt, std::nullopt};
+
+  explicit DenyEachBinding_OnlyDenyCpp_Result(std::shared_ptr<Storage_> storage)
+      : storage_(std::move(storage)) {}
+
+  static constexpr size_t TagToIndex(
+      ::test_bindingsdenylist::DenyEachBinding_OnlyDenyCpp_Result::Tag tag) {
+    switch (tag) {
+      case ::test_bindingsdenylist::DenyEachBinding_OnlyDenyCpp_Result::Tag::
+          kResponse:
+        return 1;
+      case ::test_bindingsdenylist::DenyEachBinding_OnlyDenyCpp_Result::Tag::
+          kErr:
+        return 2;
+    }
+  }
+
+  static constexpr ::test_bindingsdenylist::DenyEachBinding_OnlyDenyCpp_Result::
+      Tag
+      IndexToTag(size_t index) {
+    switch (index) {
+      case 1:
+        return ::test_bindingsdenylist::DenyEachBinding_OnlyDenyCpp_Result::
+            Tag::kResponse;
+      case 2:
+        return ::test_bindingsdenylist::DenyEachBinding_OnlyDenyCpp_Result::
+            Tag::kErr;
+      // TODO: what's the right thing to do here?
+      default:
+        return ::test_bindingsdenylist::DenyEachBinding_OnlyDenyCpp_Result::
+            Tag::kResponse;
+    }
+  }
+};
+
+extern "C" const fidl_type_t
+    test_bindingsdenylist_DenyEachBindingOnlyDenyCppTopResponseTable;
+
+class DenyEachBindingOnlyDenyCppTopResponse final
+    : public ::fidl::internal::CodableBase<
+          DenyEachBindingOnlyDenyCppTopResponse> {
+ private:
+  struct Storage_;
+
+ public:
+  DenyEachBindingOnlyDenyCppTopResponse(Storage_ storage) noexcept
+      : storage_(std::move(storage)) {}
+  DenyEachBindingOnlyDenyCppTopResponse(
+      ::test_bindingsdenylist::DenyEachBinding_OnlyDenyCpp_Result
+          result) noexcept
+      : storage_({.result = std::move(result)}) {}
+  DenyEachBindingOnlyDenyCppTopResponse()
+      : DenyEachBindingOnlyDenyCppTopResponse(Storage_{}) {}
+
+  DenyEachBindingOnlyDenyCppTopResponse(
+      DenyEachBindingOnlyDenyCppTopResponse&&) noexcept = default;
+  DenyEachBindingOnlyDenyCppTopResponse& operator=(
+      DenyEachBindingOnlyDenyCppTopResponse&&) noexcept = default;
+  DenyEachBindingOnlyDenyCppTopResponse(
+      const DenyEachBindingOnlyDenyCppTopResponse& other) noexcept
+      : DenyEachBindingOnlyDenyCppTopResponse(other.CloneStorage_()) {}
+  DenyEachBindingOnlyDenyCppTopResponse& operator=(
+      const DenyEachBindingOnlyDenyCppTopResponse& other) noexcept {
+    storage_ = other.CloneStorage_();
+    return *this;
+  }
+
+  const ::test_bindingsdenylist::DenyEachBinding_OnlyDenyCpp_Result& result()
+      const {
+    return storage_.result;
+  }
+
+  ::test_bindingsdenylist::DenyEachBinding_OnlyDenyCpp_Result& result() {
+    return storage_.result;
+  }
+
+ private:
+  friend ::fidl::internal::CodableBase<DenyEachBindingOnlyDenyCppTopResponse>;
+  friend ::fidl::CodingTraits<DenyEachBindingOnlyDenyCppTopResponse>;
+  DenyEachBindingOnlyDenyCppTopResponse(::fidl::Decoder& decoder);
+  template <typename Payload>
+  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+      ::fidl::Encoder& encoder, Payload&& payload)
+      -> ::fidl::HLCPPOutgoingMessage;
+  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
+
+  struct Storage_ final {
+    ::test_bindingsdenylist::DenyEachBinding_OnlyDenyCpp_Result result{};
+  };
+
+  Storage_ storage_;
+  Storage_ CloneStorage_() const;
+};
+
+extern "C" const fidl_type_t
+    test_bindingsdenylist_DenyEachBindingOnlyDenySyzkallerRequestTable;
+
+class DenyEachBindingOnlyDenySyzkallerRequest final
+    : public ::fidl::internal::CodableBase<
+          DenyEachBindingOnlyDenySyzkallerRequest> {
+ private:
+  struct Storage_;
+
+ public:
+  DenyEachBindingOnlyDenySyzkallerRequest(Storage_ storage) noexcept
+      : storage_(std::move(storage)) {}
+  DenyEachBindingOnlyDenySyzkallerRequest(bool a) noexcept
+      : storage_({.a = std::move(a)}) {}
+  DenyEachBindingOnlyDenySyzkallerRequest()
+      : DenyEachBindingOnlyDenySyzkallerRequest(Storage_{}) {}
+
+  DenyEachBindingOnlyDenySyzkallerRequest(
+      DenyEachBindingOnlyDenySyzkallerRequest&&) noexcept = default;
+  DenyEachBindingOnlyDenySyzkallerRequest& operator=(
+      DenyEachBindingOnlyDenySyzkallerRequest&&) noexcept = default;
+  DenyEachBindingOnlyDenySyzkallerRequest(
+      const DenyEachBindingOnlyDenySyzkallerRequest& other) noexcept
+      : DenyEachBindingOnlyDenySyzkallerRequest(other.CloneStorage_()) {}
+  DenyEachBindingOnlyDenySyzkallerRequest& operator=(
+      const DenyEachBindingOnlyDenySyzkallerRequest& other) noexcept {
+    storage_ = other.CloneStorage_();
+    return *this;
+  }
+
+  bool a() const { return storage_.a; }
+
+  bool& a() { return storage_.a; }
+
+ private:
+  friend ::fidl::internal::CodableBase<DenyEachBindingOnlyDenySyzkallerRequest>;
+  friend ::fidl::CodingTraits<DenyEachBindingOnlyDenySyzkallerRequest>;
+  DenyEachBindingOnlyDenySyzkallerRequest(::fidl::Decoder& decoder);
+  template <typename Payload>
+  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+      ::fidl::Encoder& encoder, Payload&& payload)
+      -> ::fidl::HLCPPOutgoingMessage;
+  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
+
+  struct Storage_ final {
+    bool a{};
+  };
+
+  Storage_ storage_;
+  Storage_ CloneStorage_() const;
+};
+
+extern "C" const fidl_type_t
+    test_bindingsdenylist_DenyEachBindingOnlyDenyRustRequestTable;
+
+class DenyEachBindingOnlyDenyRustRequest final
+    : public ::fidl::internal::CodableBase<DenyEachBindingOnlyDenyRustRequest> {
+ private:
+  struct Storage_;
+
+ public:
+  DenyEachBindingOnlyDenyRustRequest(Storage_ storage) noexcept
+      : storage_(std::move(storage)) {}
+  DenyEachBindingOnlyDenyRustRequest(bool a) noexcept
+      : storage_({.a = std::move(a)}) {}
+  DenyEachBindingOnlyDenyRustRequest()
+      : DenyEachBindingOnlyDenyRustRequest(Storage_{}) {}
+
+  DenyEachBindingOnlyDenyRustRequest(
+      DenyEachBindingOnlyDenyRustRequest&&) noexcept = default;
+  DenyEachBindingOnlyDenyRustRequest& operator=(
+      DenyEachBindingOnlyDenyRustRequest&&) noexcept = default;
+  DenyEachBindingOnlyDenyRustRequest(
+      const DenyEachBindingOnlyDenyRustRequest& other) noexcept
+      : DenyEachBindingOnlyDenyRustRequest(other.CloneStorage_()) {}
+  DenyEachBindingOnlyDenyRustRequest& operator=(
+      const DenyEachBindingOnlyDenyRustRequest& other) noexcept {
+    storage_ = other.CloneStorage_();
+    return *this;
+  }
+
+  bool a() const { return storage_.a; }
+
+  bool& a() { return storage_.a; }
+
+ private:
+  friend ::fidl::internal::CodableBase<DenyEachBindingOnlyDenyRustRequest>;
+  friend ::fidl::CodingTraits<DenyEachBindingOnlyDenyRustRequest>;
+  DenyEachBindingOnlyDenyRustRequest(::fidl::Decoder& decoder);
+  template <typename Payload>
+  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+      ::fidl::Encoder& encoder, Payload&& payload)
+      -> ::fidl::HLCPPOutgoingMessage;
+  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
+
+  struct Storage_ final {
+    bool a{};
+  };
+
+  Storage_ storage_;
+  Storage_ CloneStorage_() const;
+};
+
+extern "C" const fidl_type_t
+    test_bindingsdenylist_DenyEachBindingOnlyDenyLibfuzzerRequestTable;
+
+class DenyEachBindingOnlyDenyLibfuzzerRequest final
+    : public ::fidl::internal::CodableBase<
+          DenyEachBindingOnlyDenyLibfuzzerRequest> {
+ private:
+  struct Storage_;
+
+ public:
+  DenyEachBindingOnlyDenyLibfuzzerRequest(Storage_ storage) noexcept
+      : storage_(std::move(storage)) {}
+  DenyEachBindingOnlyDenyLibfuzzerRequest(bool a) noexcept
+      : storage_({.a = std::move(a)}) {}
+  DenyEachBindingOnlyDenyLibfuzzerRequest()
+      : DenyEachBindingOnlyDenyLibfuzzerRequest(Storage_{}) {}
+
+  DenyEachBindingOnlyDenyLibfuzzerRequest(
+      DenyEachBindingOnlyDenyLibfuzzerRequest&&) noexcept = default;
+  DenyEachBindingOnlyDenyLibfuzzerRequest& operator=(
+      DenyEachBindingOnlyDenyLibfuzzerRequest&&) noexcept = default;
+  DenyEachBindingOnlyDenyLibfuzzerRequest(
+      const DenyEachBindingOnlyDenyLibfuzzerRequest& other) noexcept
+      : DenyEachBindingOnlyDenyLibfuzzerRequest(other.CloneStorage_()) {}
+  DenyEachBindingOnlyDenyLibfuzzerRequest& operator=(
+      const DenyEachBindingOnlyDenyLibfuzzerRequest& other) noexcept {
+    storage_ = other.CloneStorage_();
+    return *this;
+  }
+
+  bool a() const { return storage_.a; }
+
+  bool& a() { return storage_.a; }
+
+ private:
+  friend ::fidl::internal::CodableBase<DenyEachBindingOnlyDenyLibfuzzerRequest>;
+  friend ::fidl::CodingTraits<DenyEachBindingOnlyDenyLibfuzzerRequest>;
+  DenyEachBindingOnlyDenyLibfuzzerRequest(::fidl::Decoder& decoder);
+  template <typename Payload>
+  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+      ::fidl::Encoder& encoder, Payload&& payload)
+      -> ::fidl::HLCPPOutgoingMessage;
+  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
+
+  struct Storage_ final {
+    bool a{};
+  };
+
+  Storage_ storage_;
+  Storage_ CloneStorage_() const;
+};
+
+extern "C" const fidl_type_t
+    test_bindingsdenylist_DenyEachBindingOnlyDenyGoRequestTable;
+
+class DenyEachBindingOnlyDenyGoRequest final
+    : public ::fidl::internal::CodableBase<DenyEachBindingOnlyDenyGoRequest> {
+ private:
+  struct Storage_;
+
+ public:
+  DenyEachBindingOnlyDenyGoRequest(Storage_ storage) noexcept
+      : storage_(std::move(storage)) {}
+  DenyEachBindingOnlyDenyGoRequest(bool a) noexcept
+      : storage_({.a = std::move(a)}) {}
+  DenyEachBindingOnlyDenyGoRequest()
+      : DenyEachBindingOnlyDenyGoRequest(Storage_{}) {}
+
+  DenyEachBindingOnlyDenyGoRequest(
+      DenyEachBindingOnlyDenyGoRequest&&) noexcept = default;
+  DenyEachBindingOnlyDenyGoRequest& operator=(
+      DenyEachBindingOnlyDenyGoRequest&&) noexcept = default;
+  DenyEachBindingOnlyDenyGoRequest(
+      const DenyEachBindingOnlyDenyGoRequest& other) noexcept
+      : DenyEachBindingOnlyDenyGoRequest(other.CloneStorage_()) {}
+  DenyEachBindingOnlyDenyGoRequest& operator=(
+      const DenyEachBindingOnlyDenyGoRequest& other) noexcept {
+    storage_ = other.CloneStorage_();
+    return *this;
+  }
+
+  bool a() const { return storage_.a; }
+
+  bool& a() { return storage_.a; }
+
+ private:
+  friend ::fidl::internal::CodableBase<DenyEachBindingOnlyDenyGoRequest>;
+  friend ::fidl::CodingTraits<DenyEachBindingOnlyDenyGoRequest>;
+  DenyEachBindingOnlyDenyGoRequest(::fidl::Decoder& decoder);
+  template <typename Payload>
+  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+      ::fidl::Encoder& encoder, Payload&& payload)
+      -> ::fidl::HLCPPOutgoingMessage;
+  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
+
+  struct Storage_ final {
+    bool a{};
+  };
+
+  Storage_ storage_;
+  Storage_ CloneStorage_() const;
+};
+
+extern "C" const fidl_type_t
+    test_bindingsdenylist_DenyEachBindingOnlyDenyDartRequestTable;
+
+class DenyEachBindingOnlyDenyDartRequest final
+    : public ::fidl::internal::CodableBase<DenyEachBindingOnlyDenyDartRequest> {
+ private:
+  struct Storage_;
+
+ public:
+  DenyEachBindingOnlyDenyDartRequest(Storage_ storage) noexcept
+      : storage_(std::move(storage)) {}
+  DenyEachBindingOnlyDenyDartRequest(bool a) noexcept
+      : storage_({.a = std::move(a)}) {}
+  DenyEachBindingOnlyDenyDartRequest()
+      : DenyEachBindingOnlyDenyDartRequest(Storage_{}) {}
+
+  DenyEachBindingOnlyDenyDartRequest(
+      DenyEachBindingOnlyDenyDartRequest&&) noexcept = default;
+  DenyEachBindingOnlyDenyDartRequest& operator=(
+      DenyEachBindingOnlyDenyDartRequest&&) noexcept = default;
+  DenyEachBindingOnlyDenyDartRequest(
+      const DenyEachBindingOnlyDenyDartRequest& other) noexcept
+      : DenyEachBindingOnlyDenyDartRequest(other.CloneStorage_()) {}
+  DenyEachBindingOnlyDenyDartRequest& operator=(
+      const DenyEachBindingOnlyDenyDartRequest& other) noexcept {
+    storage_ = other.CloneStorage_();
+    return *this;
+  }
+
+  bool a() const { return storage_.a; }
+
+  bool& a() { return storage_.a; }
+
+ private:
+  friend ::fidl::internal::CodableBase<DenyEachBindingOnlyDenyDartRequest>;
+  friend ::fidl::CodingTraits<DenyEachBindingOnlyDenyDartRequest>;
+  DenyEachBindingOnlyDenyDartRequest(::fidl::Decoder& decoder);
+  template <typename Payload>
+  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+      ::fidl::Encoder& encoder, Payload&& payload)
+      -> ::fidl::HLCPPOutgoingMessage;
+  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
+
+  struct Storage_ final {
+    bool a{};
+  };
+
+  Storage_ storage_;
+  Storage_ CloneStorage_() const;
+};
+
+extern "C" const fidl_type_t
+    test_bindingsdenylist_DenyEachBindingOnlyDenyCppRequestTable;
+
+class DenyEachBindingOnlyDenyCppRequest final
+    : public ::fidl::internal::CodableBase<DenyEachBindingOnlyDenyCppRequest> {
+ private:
+  struct Storage_;
+
+ public:
+  DenyEachBindingOnlyDenyCppRequest(Storage_ storage) noexcept
+      : storage_(std::move(storage)) {}
+  DenyEachBindingOnlyDenyCppRequest(bool a) noexcept
+      : storage_({.a = std::move(a)}) {}
+  DenyEachBindingOnlyDenyCppRequest()
+      : DenyEachBindingOnlyDenyCppRequest(Storage_{}) {}
+
+  DenyEachBindingOnlyDenyCppRequest(
+      DenyEachBindingOnlyDenyCppRequest&&) noexcept = default;
+  DenyEachBindingOnlyDenyCppRequest& operator=(
+      DenyEachBindingOnlyDenyCppRequest&&) noexcept = default;
+  DenyEachBindingOnlyDenyCppRequest(
+      const DenyEachBindingOnlyDenyCppRequest& other) noexcept
+      : DenyEachBindingOnlyDenyCppRequest(other.CloneStorage_()) {}
+  DenyEachBindingOnlyDenyCppRequest& operator=(
+      const DenyEachBindingOnlyDenyCppRequest& other) noexcept {
+    storage_ = other.CloneStorage_();
+    return *this;
+  }
+
+  bool a() const { return storage_.a; }
+
+  bool& a() { return storage_.a; }
+
+ private:
+  friend ::fidl::internal::CodableBase<DenyEachBindingOnlyDenyCppRequest>;
+  friend ::fidl::CodingTraits<DenyEachBindingOnlyDenyCppRequest>;
+  DenyEachBindingOnlyDenyCppRequest(::fidl::Decoder& decoder);
+  template <typename Payload>
+  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+      ::fidl::Encoder& encoder, Payload&& payload)
+      -> ::fidl::HLCPPOutgoingMessage;
+  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
+
+  struct Storage_ final {
+    bool a{};
+  };
+
+  Storage_ storage_;
+  Storage_ CloneStorage_() const;
+};
+
 constexpr uint32_t AllBindings = 0u;
 
 }  // namespace test_bindingsdenylist
 namespace fidl {
+
+#ifdef __Fuchsia__
+extern "C" const fidl_type_t
+    test_bindingsdenylist_ShouldNeverAppearInAnyBinding7Table;
+
+template <>
+struct IsFidlType<::test_bindingsdenylist::ShouldNeverAppearInAnyBinding7>
+    : public std::true_type {};
+
+template <>
+struct ::fidl::internal::TypeTraits<
+    ::test_bindingsdenylist::ShouldNeverAppearInAnyBinding7>
+    final {
+ public:
+  static constexpr const fidl_type_t* kCodingTable =
+      &test_bindingsdenylist_ShouldNeverAppearInAnyBinding7Table;
+};
+
+template <>
+struct CodingTraits<::test_bindingsdenylist::ShouldNeverAppearInAnyBinding7> {
+  static constexpr size_t inline_size_v1_no_ee = 1;
+  static constexpr size_t inline_size_v2 = 1;
+
+  template <class EncoderImpl>
+  static void Encode(
+      EncoderImpl* encoder,
+      ::test_bindingsdenylist::ShouldNeverAppearInAnyBinding7* value,
+      size_t offset,
+      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
+    [[maybe_unused]] uint32_t field_offset;
+    field_offset =
+        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
+                                                                           : 0;
+    ::fidl::Encode(encoder, &value->storage_.a, offset + field_offset);
+  }
+
+  template <typename DecoderImpl>
+  static void Decode(
+      DecoderImpl* decoder,
+      ::test_bindingsdenylist::ShouldNeverAppearInAnyBinding7* value,
+      size_t offset) {
+    ::fidl::Decode(decoder, &value->storage_.a, offset + 0);
+  }
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+extern "C" const fidl_type_t
+    test_bindingsdenylist_ShouldNeverAppearInAnyBinding4Table;
+
+template <>
+struct IsFidlType<::test_bindingsdenylist::ShouldNeverAppearInAnyBinding4>
+    : public std::true_type {};
+
+template <>
+struct ::fidl::internal::TypeTraits<
+    ::test_bindingsdenylist::ShouldNeverAppearInAnyBinding4>
+    final {
+ public:
+  static constexpr const fidl_type_t* kCodingTable =
+      &test_bindingsdenylist_ShouldNeverAppearInAnyBinding4Table;
+};
+
+template <>
+struct CodingTraits<::test_bindingsdenylist::ShouldNeverAppearInAnyBinding4> {
+  static constexpr size_t inline_size_v1_no_ee = 1;
+  static constexpr size_t inline_size_v2 = 1;
+
+  template <class EncoderImpl>
+  static void Encode(
+      EncoderImpl* encoder,
+      ::test_bindingsdenylist::ShouldNeverAppearInAnyBinding4* value,
+      size_t offset,
+      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
+    [[maybe_unused]] uint32_t field_offset;
+    field_offset =
+        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
+                                                                           : 0;
+    ::fidl::Encode(encoder, &value->storage_.a, offset + field_offset);
+  }
+
+  template <typename DecoderImpl>
+  static void Decode(
+      DecoderImpl* decoder,
+      ::test_bindingsdenylist::ShouldNeverAppearInAnyBinding4* value,
+      size_t offset) {
+    ::fidl::Decode(decoder, &value->storage_.a, offset + 0);
+  }
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+extern "C" const fidl_type_t test_bindingsdenylist_Allowed_Denied_ResponseTable;
+
+template <>
+struct IsFidlType<::test_bindingsdenylist::Allowed_Denied_Response>
+    : public std::true_type {};
+
+template <>
+struct ::fidl::internal::TypeTraits<
+    ::test_bindingsdenylist::Allowed_Denied_Response>
+    final {
+ public:
+  static constexpr const fidl_type_t* kCodingTable =
+      &test_bindingsdenylist_Allowed_Denied_ResponseTable;
+};
+
+template <>
+struct CodingTraits<::test_bindingsdenylist::Allowed_Denied_Response> {
+  static constexpr size_t inline_size_v1_no_ee = 48;
+  static constexpr size_t inline_size_v2 = 40;
+
+  template <class EncoderImpl>
+  static void Encode(
+      EncoderImpl* encoder,
+      ::test_bindingsdenylist::Allowed_Denied_Response* value, size_t offset,
+      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
+    [[maybe_unused]] uint32_t field_offset;
+    field_offset =
+        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
+                                                                           : 0;
+    ::fidl::Encode(encoder,
+                   &value->storage_.should_never_appear_in_any_binding_4,
+                   offset + field_offset);
+    field_offset =
+        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 8
+                                                                           : 8;
+    ::fidl::Encode(encoder,
+                   &value->storage_.should_never_appear_in_any_binding_5,
+                   offset + field_offset);
+    field_offset =
+        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 24
+                                                                           : 24;
+    ::fidl::Encode(encoder,
+                   &value->storage_.should_never_appear_in_any_binding_6,
+                   offset + field_offset);
+  }
+
+  template <typename DecoderImpl>
+  static void Decode(DecoderImpl* decoder,
+                     ::test_bindingsdenylist::Allowed_Denied_Response* value,
+                     size_t offset) {
+    ::fidl::Decode(decoder,
+                   &value->storage_.should_never_appear_in_any_binding_4,
+                   offset + 0);
+    ::fidl::Decode(decoder,
+                   &value->storage_.should_never_appear_in_any_binding_5,
+                   offset + 8);
+    ::fidl::Decode(decoder,
+                   &value->storage_.should_never_appear_in_any_binding_6,
+                   offset + 24);
+  }
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+extern "C" const fidl_type_t
+    test_bindingsdenylist_AllowedDeniedTopResponseTable;
+
+template <>
+struct IsFidlType<::test_bindingsdenylist::AllowedDeniedTopResponse>
+    : public std::true_type {};
+
+template <>
+struct ::fidl::internal::TypeTraits<
+    ::test_bindingsdenylist::AllowedDeniedTopResponse>
+    final {
+ public:
+  static constexpr const fidl_type_t* kCodingTable =
+      &test_bindingsdenylist_AllowedDeniedTopResponseTable;
+};
+
+template <>
+struct CodingTraits<::test_bindingsdenylist::AllowedDeniedTopResponse> {
+  static constexpr size_t inline_size_v1_no_ee = 24;
+  static constexpr size_t inline_size_v2 = 16;
+
+  template <class EncoderImpl>
+  static void Encode(
+      EncoderImpl* encoder,
+      ::test_bindingsdenylist::AllowedDeniedTopResponse* value, size_t offset,
+      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
+    [[maybe_unused]] uint32_t field_offset;
+    field_offset =
+        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
+                                                                           : 0;
+    ::fidl::Encode(encoder, &value->storage_.result, offset + field_offset);
+  }
+
+  template <typename DecoderImpl>
+  static void Decode(DecoderImpl* decoder,
+                     ::test_bindingsdenylist::AllowedDeniedTopResponse* value,
+                     size_t offset) {
+    ::fidl::Decode(decoder, &value->storage_.result, offset + 0);
+  }
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+extern "C" const fidl_type_t
+    test_bindingsdenylist_ShouldNeverAppearInAnyBinding1Table;
+
+template <>
+struct IsFidlType<::test_bindingsdenylist::ShouldNeverAppearInAnyBinding1>
+    : public std::true_type {};
+
+template <>
+struct ::fidl::internal::TypeTraits<
+    ::test_bindingsdenylist::ShouldNeverAppearInAnyBinding1>
+    final {
+ public:
+  static constexpr const fidl_type_t* kCodingTable =
+      &test_bindingsdenylist_ShouldNeverAppearInAnyBinding1Table;
+};
+
+template <>
+struct CodingTraits<::test_bindingsdenylist::ShouldNeverAppearInAnyBinding1> {
+  static constexpr size_t inline_size_v1_no_ee = 1;
+  static constexpr size_t inline_size_v2 = 1;
+
+  template <class EncoderImpl>
+  static void Encode(
+      EncoderImpl* encoder,
+      ::test_bindingsdenylist::ShouldNeverAppearInAnyBinding1* value,
+      size_t offset,
+      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
+    [[maybe_unused]] uint32_t field_offset;
+    field_offset =
+        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
+                                                                           : 0;
+    ::fidl::Encode(encoder, &value->storage_.a, offset + field_offset);
+  }
+
+  template <typename DecoderImpl>
+  static void Decode(
+      DecoderImpl* decoder,
+      ::test_bindingsdenylist::ShouldNeverAppearInAnyBinding1* value,
+      size_t offset) {
+    ::fidl::Decode(decoder, &value->storage_.a, offset + 0);
+  }
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+extern "C" const fidl_type_t
+    test_bindingsdenylist_DeniedShouldNeverAppearInAnyBindingRequestTable;
+
+template <>
+struct IsFidlType<
+    ::test_bindingsdenylist::DeniedShouldNeverAppearInAnyBindingRequest>
+    : public std::true_type {};
+
+template <>
+struct ::fidl::internal::TypeTraits<
+    ::test_bindingsdenylist::DeniedShouldNeverAppearInAnyBindingRequest>
+    final {
+ public:
+  static constexpr const fidl_type_t* kCodingTable =
+      &test_bindingsdenylist_DeniedShouldNeverAppearInAnyBindingRequestTable;
+};
+
+template <>
+struct CodingTraits<
+    ::test_bindingsdenylist::DeniedShouldNeverAppearInAnyBindingRequest> {
+  static constexpr size_t inline_size_v1_no_ee = 48;
+  static constexpr size_t inline_size_v2 = 40;
+
+  template <class EncoderImpl>
+  static void Encode(
+      EncoderImpl* encoder,
+      ::test_bindingsdenylist::DeniedShouldNeverAppearInAnyBindingRequest*
+          value,
+      size_t offset,
+      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
+    [[maybe_unused]] uint32_t field_offset;
+    field_offset =
+        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
+                                                                           : 0;
+    ::fidl::Encode(encoder,
+                   &value->storage_.should_never_appear_in_any_binding_1,
+                   offset + field_offset);
+    field_offset =
+        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 8
+                                                                           : 8;
+    ::fidl::Encode(encoder,
+                   &value->storage_.should_never_appear_in_any_binding_2,
+                   offset + field_offset);
+    field_offset =
+        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 24
+                                                                           : 24;
+    ::fidl::Encode(encoder,
+                   &value->storage_.should_never_appear_in_any_binding_3,
+                   offset + field_offset);
+  }
+
+  template <typename DecoderImpl>
+  static void Decode(
+      DecoderImpl* decoder,
+      ::test_bindingsdenylist::DeniedShouldNeverAppearInAnyBindingRequest*
+          value,
+      size_t offset) {
+    ::fidl::Decode(decoder,
+                   &value->storage_.should_never_appear_in_any_binding_1,
+                   offset + 0);
+    ::fidl::Decode(decoder,
+                   &value->storage_.should_never_appear_in_any_binding_2,
+                   offset + 8);
+    ::fidl::Decode(decoder,
+                   &value->storage_.should_never_appear_in_any_binding_3,
+                   offset + 24);
+  }
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+extern "C" const fidl_type_t
+    test_bindingsdenylist_MemberOnlyAppearsInImportingLibraryTable;
+
+template <>
+struct IsFidlType<::test_bindingsdenylist::MemberOnlyAppearsInImportingLibrary>
+    : public std::true_type {};
+
+template <>
+struct ::fidl::internal::TypeTraits<
+    ::test_bindingsdenylist::MemberOnlyAppearsInImportingLibrary>
+    final {
+ public:
+  static constexpr const fidl_type_t* kCodingTable =
+      &test_bindingsdenylist_MemberOnlyAppearsInImportingLibraryTable;
+};
+
+template <>
+struct CodingTraits<
+    ::test_bindingsdenylist::MemberOnlyAppearsInImportingLibrary> {
+  static constexpr size_t inline_size_v1_no_ee = 1;
+  static constexpr size_t inline_size_v2 = 1;
+
+  template <class EncoderImpl>
+  static void Encode(
+      EncoderImpl* encoder,
+      ::test_bindingsdenylist::MemberOnlyAppearsInImportingLibrary* value,
+      size_t offset,
+      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
+    [[maybe_unused]] uint32_t field_offset;
+    field_offset =
+        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
+                                                                           : 0;
+    ::fidl::Encode(encoder, &value->storage_.a, offset + field_offset);
+  }
+
+  template <typename DecoderImpl>
+  static void Decode(
+      DecoderImpl* decoder,
+      ::test_bindingsdenylist::MemberOnlyAppearsInImportingLibrary* value,
+      size_t offset) {
+    ::fidl::Decode(decoder, &value->storage_.a, offset + 0);
+  }
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+extern "C" const fidl_type_t
+    test_bindingsdenylist_OnlyAppearsInImportingLibraryTable;
+
+template <>
+struct IsFidlType<::test_bindingsdenylist::OnlyAppearsInImportingLibrary>
+    : public std::true_type {};
+
+template <>
+struct ::fidl::internal::TypeTraits<
+    ::test_bindingsdenylist::OnlyAppearsInImportingLibrary>
+    final {
+ public:
+  static constexpr const fidl_type_t* kCodingTable =
+      &test_bindingsdenylist_OnlyAppearsInImportingLibraryTable;
+};
+
+template <>
+struct CodingTraits<::test_bindingsdenylist::OnlyAppearsInImportingLibrary> {
+  static constexpr size_t inline_size_v1_no_ee = 1;
+  static constexpr size_t inline_size_v2 = 1;
+
+  template <class EncoderImpl>
+  static void Encode(
+      EncoderImpl* encoder,
+      ::test_bindingsdenylist::OnlyAppearsInImportingLibrary* value,
+      size_t offset,
+      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
+    [[maybe_unused]] uint32_t field_offset;
+    field_offset =
+        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
+                                                                           : 0;
+    ::fidl::Encode(encoder,
+                   &value->storage_.member_only_appears_in_importing_library,
+                   offset + field_offset);
+  }
+
+  template <typename DecoderImpl>
+  static void Decode(
+      DecoderImpl* decoder,
+      ::test_bindingsdenylist::OnlyAppearsInImportingLibrary* value,
+      size_t offset) {
+    ::fidl::Decode(decoder,
+                   &value->storage_.member_only_appears_in_importing_library,
+                   offset + 0);
+  }
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+extern "C" const fidl_type_t
+    test_bindingsdenylist_DenyEachBinding_OnlyDenySyzkaller_ResponseTable;
+
+template <>
+struct IsFidlType<
+    ::test_bindingsdenylist::DenyEachBinding_OnlyDenySyzkaller_Response>
+    : public std::true_type {};
+
+template <>
+struct ::fidl::internal::TypeTraits<
+    ::test_bindingsdenylist::DenyEachBinding_OnlyDenySyzkaller_Response>
+    final {
+ public:
+  static constexpr const fidl_type_t* kCodingTable =
+      &test_bindingsdenylist_DenyEachBinding_OnlyDenySyzkaller_ResponseTable;
+};
+
+template <>
+struct CodingTraits<
+    ::test_bindingsdenylist::DenyEachBinding_OnlyDenySyzkaller_Response> {
+  static constexpr size_t inline_size_v1_no_ee = 4;
+  static constexpr size_t inline_size_v2 = 4;
+
+  template <class EncoderImpl>
+  static void Encode(
+      EncoderImpl* encoder,
+      ::test_bindingsdenylist::DenyEachBinding_OnlyDenySyzkaller_Response*
+          value,
+      size_t offset,
+      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
+    [[maybe_unused]] uint32_t field_offset;
+    field_offset =
+        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
+                                                                           : 0;
+    ::fidl::Encode(encoder, &value->storage_.b, offset + field_offset);
+  }
+
+  template <typename DecoderImpl>
+  static void Decode(
+      DecoderImpl* decoder,
+      ::test_bindingsdenylist::DenyEachBinding_OnlyDenySyzkaller_Response*
+          value,
+      size_t offset) {
+    ::fidl::Decode(decoder, &value->storage_.b, offset + 0);
+  }
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+extern "C" const fidl_type_t
+    test_bindingsdenylist_DenyEachBindingOnlyDenySyzkallerTopResponseTable;
+
+template <>
+struct IsFidlType<
+    ::test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerTopResponse>
+    : public std::true_type {};
+
+template <>
+struct ::fidl::internal::TypeTraits<
+    ::test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerTopResponse>
+    final {
+ public:
+  static constexpr const fidl_type_t* kCodingTable =
+      &test_bindingsdenylist_DenyEachBindingOnlyDenySyzkallerTopResponseTable;
+};
+
+template <>
+struct CodingTraits<
+    ::test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerTopResponse> {
+  static constexpr size_t inline_size_v1_no_ee = 24;
+  static constexpr size_t inline_size_v2 = 16;
+
+  template <class EncoderImpl>
+  static void Encode(
+      EncoderImpl* encoder,
+      ::test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerTopResponse*
+          value,
+      size_t offset,
+      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
+    [[maybe_unused]] uint32_t field_offset;
+    field_offset =
+        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
+                                                                           : 0;
+    ::fidl::Encode(encoder, &value->storage_.result, offset + field_offset);
+  }
+
+  template <typename DecoderImpl>
+  static void Decode(
+      DecoderImpl* decoder,
+      ::test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerTopResponse*
+          value,
+      size_t offset) {
+    ::fidl::Decode(decoder, &value->storage_.result, offset + 0);
+  }
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+extern "C" const fidl_type_t
+    test_bindingsdenylist_DenyEachBinding_OnlyDenyRust_ResponseTable;
+
+template <>
+struct IsFidlType<
+    ::test_bindingsdenylist::DenyEachBinding_OnlyDenyRust_Response>
+    : public std::true_type {};
+
+template <>
+struct ::fidl::internal::TypeTraits<
+    ::test_bindingsdenylist::DenyEachBinding_OnlyDenyRust_Response>
+    final {
+ public:
+  static constexpr const fidl_type_t* kCodingTable =
+      &test_bindingsdenylist_DenyEachBinding_OnlyDenyRust_ResponseTable;
+};
+
+template <>
+struct CodingTraits<
+    ::test_bindingsdenylist::DenyEachBinding_OnlyDenyRust_Response> {
+  static constexpr size_t inline_size_v1_no_ee = 4;
+  static constexpr size_t inline_size_v2 = 4;
+
+  template <class EncoderImpl>
+  static void Encode(
+      EncoderImpl* encoder,
+      ::test_bindingsdenylist::DenyEachBinding_OnlyDenyRust_Response* value,
+      size_t offset,
+      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
+    [[maybe_unused]] uint32_t field_offset;
+    field_offset =
+        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
+                                                                           : 0;
+    ::fidl::Encode(encoder, &value->storage_.b, offset + field_offset);
+  }
+
+  template <typename DecoderImpl>
+  static void Decode(
+      DecoderImpl* decoder,
+      ::test_bindingsdenylist::DenyEachBinding_OnlyDenyRust_Response* value,
+      size_t offset) {
+    ::fidl::Decode(decoder, &value->storage_.b, offset + 0);
+  }
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+extern "C" const fidl_type_t
+    test_bindingsdenylist_DenyEachBindingOnlyDenyRustTopResponseTable;
+
+template <>
+struct IsFidlType<
+    ::test_bindingsdenylist::DenyEachBindingOnlyDenyRustTopResponse>
+    : public std::true_type {};
+
+template <>
+struct ::fidl::internal::TypeTraits<
+    ::test_bindingsdenylist::DenyEachBindingOnlyDenyRustTopResponse>
+    final {
+ public:
+  static constexpr const fidl_type_t* kCodingTable =
+      &test_bindingsdenylist_DenyEachBindingOnlyDenyRustTopResponseTable;
+};
+
+template <>
+struct CodingTraits<
+    ::test_bindingsdenylist::DenyEachBindingOnlyDenyRustTopResponse> {
+  static constexpr size_t inline_size_v1_no_ee = 24;
+  static constexpr size_t inline_size_v2 = 16;
+
+  template <class EncoderImpl>
+  static void Encode(
+      EncoderImpl* encoder,
+      ::test_bindingsdenylist::DenyEachBindingOnlyDenyRustTopResponse* value,
+      size_t offset,
+      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
+    [[maybe_unused]] uint32_t field_offset;
+    field_offset =
+        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
+                                                                           : 0;
+    ::fidl::Encode(encoder, &value->storage_.result, offset + field_offset);
+  }
+
+  template <typename DecoderImpl>
+  static void Decode(
+      DecoderImpl* decoder,
+      ::test_bindingsdenylist::DenyEachBindingOnlyDenyRustTopResponse* value,
+      size_t offset) {
+    ::fidl::Decode(decoder, &value->storage_.result, offset + 0);
+  }
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+extern "C" const fidl_type_t
+    test_bindingsdenylist_DenyEachBinding_OnlyDenyLibfuzzer_ResponseTable;
+
+template <>
+struct IsFidlType<
+    ::test_bindingsdenylist::DenyEachBinding_OnlyDenyLibfuzzer_Response>
+    : public std::true_type {};
+
+template <>
+struct ::fidl::internal::TypeTraits<
+    ::test_bindingsdenylist::DenyEachBinding_OnlyDenyLibfuzzer_Response>
+    final {
+ public:
+  static constexpr const fidl_type_t* kCodingTable =
+      &test_bindingsdenylist_DenyEachBinding_OnlyDenyLibfuzzer_ResponseTable;
+};
+
+template <>
+struct CodingTraits<
+    ::test_bindingsdenylist::DenyEachBinding_OnlyDenyLibfuzzer_Response> {
+  static constexpr size_t inline_size_v1_no_ee = 4;
+  static constexpr size_t inline_size_v2 = 4;
+
+  template <class EncoderImpl>
+  static void Encode(
+      EncoderImpl* encoder,
+      ::test_bindingsdenylist::DenyEachBinding_OnlyDenyLibfuzzer_Response*
+          value,
+      size_t offset,
+      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
+    [[maybe_unused]] uint32_t field_offset;
+    field_offset =
+        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
+                                                                           : 0;
+    ::fidl::Encode(encoder, &value->storage_.b, offset + field_offset);
+  }
+
+  template <typename DecoderImpl>
+  static void Decode(
+      DecoderImpl* decoder,
+      ::test_bindingsdenylist::DenyEachBinding_OnlyDenyLibfuzzer_Response*
+          value,
+      size_t offset) {
+    ::fidl::Decode(decoder, &value->storage_.b, offset + 0);
+  }
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+extern "C" const fidl_type_t
+    test_bindingsdenylist_DenyEachBindingOnlyDenyLibfuzzerTopResponseTable;
+
+template <>
+struct IsFidlType<
+    ::test_bindingsdenylist::DenyEachBindingOnlyDenyLibfuzzerTopResponse>
+    : public std::true_type {};
+
+template <>
+struct ::fidl::internal::TypeTraits<
+    ::test_bindingsdenylist::DenyEachBindingOnlyDenyLibfuzzerTopResponse>
+    final {
+ public:
+  static constexpr const fidl_type_t* kCodingTable =
+      &test_bindingsdenylist_DenyEachBindingOnlyDenyLibfuzzerTopResponseTable;
+};
+
+template <>
+struct CodingTraits<
+    ::test_bindingsdenylist::DenyEachBindingOnlyDenyLibfuzzerTopResponse> {
+  static constexpr size_t inline_size_v1_no_ee = 24;
+  static constexpr size_t inline_size_v2 = 16;
+
+  template <class EncoderImpl>
+  static void Encode(
+      EncoderImpl* encoder,
+      ::test_bindingsdenylist::DenyEachBindingOnlyDenyLibfuzzerTopResponse*
+          value,
+      size_t offset,
+      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
+    [[maybe_unused]] uint32_t field_offset;
+    field_offset =
+        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
+                                                                           : 0;
+    ::fidl::Encode(encoder, &value->storage_.result, offset + field_offset);
+  }
+
+  template <typename DecoderImpl>
+  static void Decode(
+      DecoderImpl* decoder,
+      ::test_bindingsdenylist::DenyEachBindingOnlyDenyLibfuzzerTopResponse*
+          value,
+      size_t offset) {
+    ::fidl::Decode(decoder, &value->storage_.result, offset + 0);
+  }
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+extern "C" const fidl_type_t
+    test_bindingsdenylist_DenyEachBinding_OnlyDenyGo_ResponseTable;
+
+template <>
+struct IsFidlType<::test_bindingsdenylist::DenyEachBinding_OnlyDenyGo_Response>
+    : public std::true_type {};
+
+template <>
+struct ::fidl::internal::TypeTraits<
+    ::test_bindingsdenylist::DenyEachBinding_OnlyDenyGo_Response>
+    final {
+ public:
+  static constexpr const fidl_type_t* kCodingTable =
+      &test_bindingsdenylist_DenyEachBinding_OnlyDenyGo_ResponseTable;
+};
+
+template <>
+struct CodingTraits<
+    ::test_bindingsdenylist::DenyEachBinding_OnlyDenyGo_Response> {
+  static constexpr size_t inline_size_v1_no_ee = 4;
+  static constexpr size_t inline_size_v2 = 4;
+
+  template <class EncoderImpl>
+  static void Encode(
+      EncoderImpl* encoder,
+      ::test_bindingsdenylist::DenyEachBinding_OnlyDenyGo_Response* value,
+      size_t offset,
+      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
+    [[maybe_unused]] uint32_t field_offset;
+    field_offset =
+        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
+                                                                           : 0;
+    ::fidl::Encode(encoder, &value->storage_.b, offset + field_offset);
+  }
+
+  template <typename DecoderImpl>
+  static void Decode(
+      DecoderImpl* decoder,
+      ::test_bindingsdenylist::DenyEachBinding_OnlyDenyGo_Response* value,
+      size_t offset) {
+    ::fidl::Decode(decoder, &value->storage_.b, offset + 0);
+  }
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+extern "C" const fidl_type_t
+    test_bindingsdenylist_DenyEachBindingOnlyDenyGoTopResponseTable;
+
+template <>
+struct IsFidlType<::test_bindingsdenylist::DenyEachBindingOnlyDenyGoTopResponse>
+    : public std::true_type {};
+
+template <>
+struct ::fidl::internal::TypeTraits<
+    ::test_bindingsdenylist::DenyEachBindingOnlyDenyGoTopResponse>
+    final {
+ public:
+  static constexpr const fidl_type_t* kCodingTable =
+      &test_bindingsdenylist_DenyEachBindingOnlyDenyGoTopResponseTable;
+};
+
+template <>
+struct CodingTraits<
+    ::test_bindingsdenylist::DenyEachBindingOnlyDenyGoTopResponse> {
+  static constexpr size_t inline_size_v1_no_ee = 24;
+  static constexpr size_t inline_size_v2 = 16;
+
+  template <class EncoderImpl>
+  static void Encode(
+      EncoderImpl* encoder,
+      ::test_bindingsdenylist::DenyEachBindingOnlyDenyGoTopResponse* value,
+      size_t offset,
+      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
+    [[maybe_unused]] uint32_t field_offset;
+    field_offset =
+        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
+                                                                           : 0;
+    ::fidl::Encode(encoder, &value->storage_.result, offset + field_offset);
+  }
+
+  template <typename DecoderImpl>
+  static void Decode(
+      DecoderImpl* decoder,
+      ::test_bindingsdenylist::DenyEachBindingOnlyDenyGoTopResponse* value,
+      size_t offset) {
+    ::fidl::Decode(decoder, &value->storage_.result, offset + 0);
+  }
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+extern "C" const fidl_type_t
+    test_bindingsdenylist_DenyEachBinding_OnlyDenyDart_ResponseTable;
+
+template <>
+struct IsFidlType<
+    ::test_bindingsdenylist::DenyEachBinding_OnlyDenyDart_Response>
+    : public std::true_type {};
+
+template <>
+struct ::fidl::internal::TypeTraits<
+    ::test_bindingsdenylist::DenyEachBinding_OnlyDenyDart_Response>
+    final {
+ public:
+  static constexpr const fidl_type_t* kCodingTable =
+      &test_bindingsdenylist_DenyEachBinding_OnlyDenyDart_ResponseTable;
+};
+
+template <>
+struct CodingTraits<
+    ::test_bindingsdenylist::DenyEachBinding_OnlyDenyDart_Response> {
+  static constexpr size_t inline_size_v1_no_ee = 4;
+  static constexpr size_t inline_size_v2 = 4;
+
+  template <class EncoderImpl>
+  static void Encode(
+      EncoderImpl* encoder,
+      ::test_bindingsdenylist::DenyEachBinding_OnlyDenyDart_Response* value,
+      size_t offset,
+      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
+    [[maybe_unused]] uint32_t field_offset;
+    field_offset =
+        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
+                                                                           : 0;
+    ::fidl::Encode(encoder, &value->storage_.b, offset + field_offset);
+  }
+
+  template <typename DecoderImpl>
+  static void Decode(
+      DecoderImpl* decoder,
+      ::test_bindingsdenylist::DenyEachBinding_OnlyDenyDart_Response* value,
+      size_t offset) {
+    ::fidl::Decode(decoder, &value->storage_.b, offset + 0);
+  }
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+extern "C" const fidl_type_t
+    test_bindingsdenylist_DenyEachBindingOnlyDenyDartTopResponseTable;
+
+template <>
+struct IsFidlType<
+    ::test_bindingsdenylist::DenyEachBindingOnlyDenyDartTopResponse>
+    : public std::true_type {};
+
+template <>
+struct ::fidl::internal::TypeTraits<
+    ::test_bindingsdenylist::DenyEachBindingOnlyDenyDartTopResponse>
+    final {
+ public:
+  static constexpr const fidl_type_t* kCodingTable =
+      &test_bindingsdenylist_DenyEachBindingOnlyDenyDartTopResponseTable;
+};
+
+template <>
+struct CodingTraits<
+    ::test_bindingsdenylist::DenyEachBindingOnlyDenyDartTopResponse> {
+  static constexpr size_t inline_size_v1_no_ee = 24;
+  static constexpr size_t inline_size_v2 = 16;
+
+  template <class EncoderImpl>
+  static void Encode(
+      EncoderImpl* encoder,
+      ::test_bindingsdenylist::DenyEachBindingOnlyDenyDartTopResponse* value,
+      size_t offset,
+      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
+    [[maybe_unused]] uint32_t field_offset;
+    field_offset =
+        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
+                                                                           : 0;
+    ::fidl::Encode(encoder, &value->storage_.result, offset + field_offset);
+  }
+
+  template <typename DecoderImpl>
+  static void Decode(
+      DecoderImpl* decoder,
+      ::test_bindingsdenylist::DenyEachBindingOnlyDenyDartTopResponse* value,
+      size_t offset) {
+    ::fidl::Decode(decoder, &value->storage_.result, offset + 0);
+  }
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+extern "C" const fidl_type_t
+    test_bindingsdenylist_DenyEachBinding_OnlyDenyCpp_ResponseTable;
+
+template <>
+struct IsFidlType<::test_bindingsdenylist::DenyEachBinding_OnlyDenyCpp_Response>
+    : public std::true_type {};
+
+template <>
+struct ::fidl::internal::TypeTraits<
+    ::test_bindingsdenylist::DenyEachBinding_OnlyDenyCpp_Response>
+    final {
+ public:
+  static constexpr const fidl_type_t* kCodingTable =
+      &test_bindingsdenylist_DenyEachBinding_OnlyDenyCpp_ResponseTable;
+};
+
+template <>
+struct CodingTraits<
+    ::test_bindingsdenylist::DenyEachBinding_OnlyDenyCpp_Response> {
+  static constexpr size_t inline_size_v1_no_ee = 4;
+  static constexpr size_t inline_size_v2 = 4;
+
+  template <class EncoderImpl>
+  static void Encode(
+      EncoderImpl* encoder,
+      ::test_bindingsdenylist::DenyEachBinding_OnlyDenyCpp_Response* value,
+      size_t offset,
+      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
+    [[maybe_unused]] uint32_t field_offset;
+    field_offset =
+        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
+                                                                           : 0;
+    ::fidl::Encode(encoder, &value->storage_.b, offset + field_offset);
+  }
+
+  template <typename DecoderImpl>
+  static void Decode(
+      DecoderImpl* decoder,
+      ::test_bindingsdenylist::DenyEachBinding_OnlyDenyCpp_Response* value,
+      size_t offset) {
+    ::fidl::Decode(decoder, &value->storage_.b, offset + 0);
+  }
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+extern "C" const fidl_type_t
+    test_bindingsdenylist_DenyEachBindingOnlyDenyCppTopResponseTable;
+
+template <>
+struct IsFidlType<
+    ::test_bindingsdenylist::DenyEachBindingOnlyDenyCppTopResponse>
+    : public std::true_type {};
+
+template <>
+struct ::fidl::internal::TypeTraits<
+    ::test_bindingsdenylist::DenyEachBindingOnlyDenyCppTopResponse>
+    final {
+ public:
+  static constexpr const fidl_type_t* kCodingTable =
+      &test_bindingsdenylist_DenyEachBindingOnlyDenyCppTopResponseTable;
+};
+
+template <>
+struct CodingTraits<
+    ::test_bindingsdenylist::DenyEachBindingOnlyDenyCppTopResponse> {
+  static constexpr size_t inline_size_v1_no_ee = 24;
+  static constexpr size_t inline_size_v2 = 16;
+
+  template <class EncoderImpl>
+  static void Encode(
+      EncoderImpl* encoder,
+      ::test_bindingsdenylist::DenyEachBindingOnlyDenyCppTopResponse* value,
+      size_t offset,
+      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
+    [[maybe_unused]] uint32_t field_offset;
+    field_offset =
+        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
+                                                                           : 0;
+    ::fidl::Encode(encoder, &value->storage_.result, offset + field_offset);
+  }
+
+  template <typename DecoderImpl>
+  static void Decode(
+      DecoderImpl* decoder,
+      ::test_bindingsdenylist::DenyEachBindingOnlyDenyCppTopResponse* value,
+      size_t offset) {
+    ::fidl::Decode(decoder, &value->storage_.result, offset + 0);
+  }
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+extern "C" const fidl_type_t
+    test_bindingsdenylist_DenyEachBindingOnlyDenySyzkallerRequestTable;
+
+template <>
+struct IsFidlType<
+    ::test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerRequest>
+    : public std::true_type {};
+
+template <>
+struct ::fidl::internal::TypeTraits<
+    ::test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerRequest>
+    final {
+ public:
+  static constexpr const fidl_type_t* kCodingTable =
+      &test_bindingsdenylist_DenyEachBindingOnlyDenySyzkallerRequestTable;
+};
+
+template <>
+struct CodingTraits<
+    ::test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerRequest> {
+  static constexpr size_t inline_size_v1_no_ee = 8;
+  static constexpr size_t inline_size_v2 = 8;
+
+  template <class EncoderImpl>
+  static void Encode(
+      EncoderImpl* encoder,
+      ::test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerRequest* value,
+      size_t offset,
+      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
+    [[maybe_unused]] uint32_t field_offset;
+    field_offset =
+        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
+                                                                           : 0;
+    ::fidl::Encode(encoder, &value->storage_.a, offset + field_offset);
+  }
+
+  template <typename DecoderImpl>
+  static void Decode(
+      DecoderImpl* decoder,
+      ::test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerRequest* value,
+      size_t offset) {
+    ::fidl::Decode(decoder, &value->storage_.a, offset + 0);
+  }
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+extern "C" const fidl_type_t
+    test_bindingsdenylist_DenyEachBindingOnlyDenyRustRequestTable;
+
+template <>
+struct IsFidlType<::test_bindingsdenylist::DenyEachBindingOnlyDenyRustRequest>
+    : public std::true_type {};
+
+template <>
+struct ::fidl::internal::TypeTraits<
+    ::test_bindingsdenylist::DenyEachBindingOnlyDenyRustRequest>
+    final {
+ public:
+  static constexpr const fidl_type_t* kCodingTable =
+      &test_bindingsdenylist_DenyEachBindingOnlyDenyRustRequestTable;
+};
+
+template <>
+struct CodingTraits<
+    ::test_bindingsdenylist::DenyEachBindingOnlyDenyRustRequest> {
+  static constexpr size_t inline_size_v1_no_ee = 8;
+  static constexpr size_t inline_size_v2 = 8;
+
+  template <class EncoderImpl>
+  static void Encode(
+      EncoderImpl* encoder,
+      ::test_bindingsdenylist::DenyEachBindingOnlyDenyRustRequest* value,
+      size_t offset,
+      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
+    [[maybe_unused]] uint32_t field_offset;
+    field_offset =
+        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
+                                                                           : 0;
+    ::fidl::Encode(encoder, &value->storage_.a, offset + field_offset);
+  }
+
+  template <typename DecoderImpl>
+  static void Decode(
+      DecoderImpl* decoder,
+      ::test_bindingsdenylist::DenyEachBindingOnlyDenyRustRequest* value,
+      size_t offset) {
+    ::fidl::Decode(decoder, &value->storage_.a, offset + 0);
+  }
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+extern "C" const fidl_type_t
+    test_bindingsdenylist_DenyEachBindingOnlyDenyLibfuzzerRequestTable;
+
+template <>
+struct IsFidlType<
+    ::test_bindingsdenylist::DenyEachBindingOnlyDenyLibfuzzerRequest>
+    : public std::true_type {};
+
+template <>
+struct ::fidl::internal::TypeTraits<
+    ::test_bindingsdenylist::DenyEachBindingOnlyDenyLibfuzzerRequest>
+    final {
+ public:
+  static constexpr const fidl_type_t* kCodingTable =
+      &test_bindingsdenylist_DenyEachBindingOnlyDenyLibfuzzerRequestTable;
+};
+
+template <>
+struct CodingTraits<
+    ::test_bindingsdenylist::DenyEachBindingOnlyDenyLibfuzzerRequest> {
+  static constexpr size_t inline_size_v1_no_ee = 8;
+  static constexpr size_t inline_size_v2 = 8;
+
+  template <class EncoderImpl>
+  static void Encode(
+      EncoderImpl* encoder,
+      ::test_bindingsdenylist::DenyEachBindingOnlyDenyLibfuzzerRequest* value,
+      size_t offset,
+      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
+    [[maybe_unused]] uint32_t field_offset;
+    field_offset =
+        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
+                                                                           : 0;
+    ::fidl::Encode(encoder, &value->storage_.a, offset + field_offset);
+  }
+
+  template <typename DecoderImpl>
+  static void Decode(
+      DecoderImpl* decoder,
+      ::test_bindingsdenylist::DenyEachBindingOnlyDenyLibfuzzerRequest* value,
+      size_t offset) {
+    ::fidl::Decode(decoder, &value->storage_.a, offset + 0);
+  }
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+extern "C" const fidl_type_t
+    test_bindingsdenylist_DenyEachBindingOnlyDenyGoRequestTable;
+
+template <>
+struct IsFidlType<::test_bindingsdenylist::DenyEachBindingOnlyDenyGoRequest>
+    : public std::true_type {};
+
+template <>
+struct ::fidl::internal::TypeTraits<
+    ::test_bindingsdenylist::DenyEachBindingOnlyDenyGoRequest>
+    final {
+ public:
+  static constexpr const fidl_type_t* kCodingTable =
+      &test_bindingsdenylist_DenyEachBindingOnlyDenyGoRequestTable;
+};
+
+template <>
+struct CodingTraits<::test_bindingsdenylist::DenyEachBindingOnlyDenyGoRequest> {
+  static constexpr size_t inline_size_v1_no_ee = 8;
+  static constexpr size_t inline_size_v2 = 8;
+
+  template <class EncoderImpl>
+  static void Encode(
+      EncoderImpl* encoder,
+      ::test_bindingsdenylist::DenyEachBindingOnlyDenyGoRequest* value,
+      size_t offset,
+      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
+    [[maybe_unused]] uint32_t field_offset;
+    field_offset =
+        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
+                                                                           : 0;
+    ::fidl::Encode(encoder, &value->storage_.a, offset + field_offset);
+  }
+
+  template <typename DecoderImpl>
+  static void Decode(
+      DecoderImpl* decoder,
+      ::test_bindingsdenylist::DenyEachBindingOnlyDenyGoRequest* value,
+      size_t offset) {
+    ::fidl::Decode(decoder, &value->storage_.a, offset + 0);
+  }
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+extern "C" const fidl_type_t
+    test_bindingsdenylist_DenyEachBindingOnlyDenyDartRequestTable;
+
+template <>
+struct IsFidlType<::test_bindingsdenylist::DenyEachBindingOnlyDenyDartRequest>
+    : public std::true_type {};
+
+template <>
+struct ::fidl::internal::TypeTraits<
+    ::test_bindingsdenylist::DenyEachBindingOnlyDenyDartRequest>
+    final {
+ public:
+  static constexpr const fidl_type_t* kCodingTable =
+      &test_bindingsdenylist_DenyEachBindingOnlyDenyDartRequestTable;
+};
+
+template <>
+struct CodingTraits<
+    ::test_bindingsdenylist::DenyEachBindingOnlyDenyDartRequest> {
+  static constexpr size_t inline_size_v1_no_ee = 8;
+  static constexpr size_t inline_size_v2 = 8;
+
+  template <class EncoderImpl>
+  static void Encode(
+      EncoderImpl* encoder,
+      ::test_bindingsdenylist::DenyEachBindingOnlyDenyDartRequest* value,
+      size_t offset,
+      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
+    [[maybe_unused]] uint32_t field_offset;
+    field_offset =
+        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
+                                                                           : 0;
+    ::fidl::Encode(encoder, &value->storage_.a, offset + field_offset);
+  }
+
+  template <typename DecoderImpl>
+  static void Decode(
+      DecoderImpl* decoder,
+      ::test_bindingsdenylist::DenyEachBindingOnlyDenyDartRequest* value,
+      size_t offset) {
+    ::fidl::Decode(decoder, &value->storage_.a, offset + 0);
+  }
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+extern "C" const fidl_type_t
+    test_bindingsdenylist_DenyEachBindingOnlyDenyCppRequestTable;
+
+template <>
+struct IsFidlType<::test_bindingsdenylist::DenyEachBindingOnlyDenyCppRequest>
+    : public std::true_type {};
+
+template <>
+struct ::fidl::internal::TypeTraits<
+    ::test_bindingsdenylist::DenyEachBindingOnlyDenyCppRequest>
+    final {
+ public:
+  static constexpr const fidl_type_t* kCodingTable =
+      &test_bindingsdenylist_DenyEachBindingOnlyDenyCppRequestTable;
+};
+
+template <>
+struct CodingTraits<
+    ::test_bindingsdenylist::DenyEachBindingOnlyDenyCppRequest> {
+  static constexpr size_t inline_size_v1_no_ee = 8;
+  static constexpr size_t inline_size_v2 = 8;
+
+  template <class EncoderImpl>
+  static void Encode(
+      EncoderImpl* encoder,
+      ::test_bindingsdenylist::DenyEachBindingOnlyDenyCppRequest* value,
+      size_t offset,
+      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
+    [[maybe_unused]] uint32_t field_offset;
+    field_offset =
+        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
+                                                                           : 0;
+    ::fidl::Encode(encoder, &value->storage_.a, offset + field_offset);
+  }
+
+  template <typename DecoderImpl>
+  static void Decode(
+      DecoderImpl* decoder,
+      ::test_bindingsdenylist::DenyEachBindingOnlyDenyCppRequest* value,
+      size_t offset) {
+    ::fidl::Decode(decoder, &value->storage_.a, offset + 0);
+  }
+};
+#endif  // __Fuchsia__
+
+template <>
+struct IsFidlType<::test_bindingsdenylist::ShouldNeverAppearInAnyBinding8>
+    : public std::true_type {};
+
+template <>
+struct CodingTraits<::test_bindingsdenylist::ShouldNeverAppearInAnyBinding8>
+    : public ::fidl::internal::NaturalTableCodingTraits<
+          ::test_bindingsdenylist::ShouldNeverAppearInAnyBinding8> {};
+
+template <>
+struct IsFidlType<::test_bindingsdenylist::ShouldNeverAppearInAnyBinding5>
+    : public std::true_type {};
+
+template <>
+struct CodingTraits<::test_bindingsdenylist::ShouldNeverAppearInAnyBinding5>
+    : public ::fidl::internal::NaturalTableCodingTraits<
+          ::test_bindingsdenylist::ShouldNeverAppearInAnyBinding5> {};
+
+template <>
+struct IsFidlType<::test_bindingsdenylist::ShouldNeverAppearInAnyBinding2>
+    : public std::true_type {};
+
+template <>
+struct CodingTraits<::test_bindingsdenylist::ShouldNeverAppearInAnyBinding2>
+    : public ::fidl::internal::NaturalTableCodingTraits<
+          ::test_bindingsdenylist::ShouldNeverAppearInAnyBinding2> {};
+
+template <>
+struct IsFidlType<::test_bindingsdenylist::ShouldNeverAppearInAnyBinding9>
+    : public std::true_type {};
+
+template <>
+struct CodingTraits<::test_bindingsdenylist::ShouldNeverAppearInAnyBinding9>
+    final : public ::fidl::internal::NaturalUnionCodingTraits<
+                ::test_bindingsdenylist::ShouldNeverAppearInAnyBinding9> {};
+
+template <>
+struct IsFidlType<::test_bindingsdenylist::ShouldNeverAppearInAnyBinding6>
+    : public std::true_type {};
+
+template <>
+struct CodingTraits<::test_bindingsdenylist::ShouldNeverAppearInAnyBinding6>
+    final : public ::fidl::internal::NaturalUnionCodingTraits<
+                ::test_bindingsdenylist::ShouldNeverAppearInAnyBinding6> {};
+
+template <>
+struct IsFidlType<::test_bindingsdenylist::Allowed_Denied_Result>
+    : public std::true_type {};
+
+template <>
+struct CodingTraits<::test_bindingsdenylist::Allowed_Denied_Result> final
+    : public ::fidl::internal::NaturalUnionCodingTraits<
+          ::test_bindingsdenylist::Allowed_Denied_Result> {};
+
+template <>
+struct IsFidlType<::test_bindingsdenylist::ShouldNeverAppearInAnyBinding3>
+    : public std::true_type {};
+
+template <>
+struct CodingTraits<::test_bindingsdenylist::ShouldNeverAppearInAnyBinding3>
+    final : public ::fidl::internal::NaturalUnionCodingTraits<
+                ::test_bindingsdenylist::ShouldNeverAppearInAnyBinding3> {};
 
 template <>
 struct IsFidlType<::test_bindingsdenylist::OnlyLlcpp> : public std::true_type {
@@ -104,5 +4064,69 @@ template <>
 struct CodingTraits<::test_bindingsdenylist::OnlyLlcpp> final
     : public ::fidl::internal::NaturalUnionCodingTraits<
           ::test_bindingsdenylist::OnlyLlcpp> {};
+
+template <>
+struct IsFidlType<
+    ::test_bindingsdenylist::DenyEachBinding_OnlyDenySyzkaller_Result>
+    : public std::true_type {};
+
+template <>
+struct CodingTraits<
+    ::test_bindingsdenylist::DenyEachBinding_OnlyDenySyzkaller_Result>
+    final
+    : public ::fidl::internal::NaturalUnionCodingTraits<
+          ::test_bindingsdenylist::DenyEachBinding_OnlyDenySyzkaller_Result> {};
+
+template <>
+struct IsFidlType<::test_bindingsdenylist::DenyEachBinding_OnlyDenyRust_Result>
+    : public std::true_type {};
+
+template <>
+struct CodingTraits<
+    ::test_bindingsdenylist::DenyEachBinding_OnlyDenyRust_Result>
+    final : public ::fidl::internal::NaturalUnionCodingTraits<
+                ::test_bindingsdenylist::DenyEachBinding_OnlyDenyRust_Result> {
+};
+
+template <>
+struct IsFidlType<
+    ::test_bindingsdenylist::DenyEachBinding_OnlyDenyLibfuzzer_Result>
+    : public std::true_type {};
+
+template <>
+struct CodingTraits<
+    ::test_bindingsdenylist::DenyEachBinding_OnlyDenyLibfuzzer_Result>
+    final
+    : public ::fidl::internal::NaturalUnionCodingTraits<
+          ::test_bindingsdenylist::DenyEachBinding_OnlyDenyLibfuzzer_Result> {};
+
+template <>
+struct IsFidlType<::test_bindingsdenylist::DenyEachBinding_OnlyDenyGo_Result>
+    : public std::true_type {};
+
+template <>
+struct CodingTraits<::test_bindingsdenylist::DenyEachBinding_OnlyDenyGo_Result>
+    final : public ::fidl::internal::NaturalUnionCodingTraits<
+                ::test_bindingsdenylist::DenyEachBinding_OnlyDenyGo_Result> {};
+
+template <>
+struct IsFidlType<::test_bindingsdenylist::DenyEachBinding_OnlyDenyDart_Result>
+    : public std::true_type {};
+
+template <>
+struct CodingTraits<
+    ::test_bindingsdenylist::DenyEachBinding_OnlyDenyDart_Result>
+    final : public ::fidl::internal::NaturalUnionCodingTraits<
+                ::test_bindingsdenylist::DenyEachBinding_OnlyDenyDart_Result> {
+};
+
+template <>
+struct IsFidlType<::test_bindingsdenylist::DenyEachBinding_OnlyDenyCpp_Result>
+    : public std::true_type {};
+
+template <>
+struct CodingTraits<::test_bindingsdenylist::DenyEachBinding_OnlyDenyCpp_Result>
+    final : public ::fidl::internal::NaturalUnionCodingTraits<
+                ::test_bindingsdenylist::DenyEachBinding_OnlyDenyCpp_Result> {};
 
 }  // namespace fidl

@@ -3,9 +3,27 @@
 #pragma once
 
 #include <test/bindingsdenylist/cpp/fidl.h>
+#include <test/dependent/cpp/fidl.h>
 namespace test {
 namespace bindingsdenylist {
 namespace testing {
+class ImportsSameNameContext_TestBase
+    : public ::test::bindingsdenylist::ImportsSameNameContext {
+ public:
+  virtual ~ImportsSameNameContext_TestBase() {}
+  virtual void NotImplemented_(const std::string& name) = 0;
+  void Unattributed() override { NotImplemented_("Unattributed"); }
+  void AlwaysAppearsInImportingLibrary() override {
+    NotImplemented_("AlwaysAppearsInImportingLibrary");
+  }
+};
+
+class Allowed_TestBase : public ::test::bindingsdenylist::Allowed {
+ public:
+  virtual ~Allowed_TestBase() {}
+  virtual void NotImplemented_(const std::string& name) = 0;
+};
+
 class OnlyLibfuzzerAndDeps_TestBase
     : public ::test::bindingsdenylist::OnlyLibfuzzerAndDeps {
  public:
@@ -22,6 +40,28 @@ class OnlyCppAndDeps_TestBase
  public:
   virtual ~OnlyCppAndDeps_TestBase() {}
   virtual void NotImplemented_(const std::string& name) = 0;
+};
+
+class DenyEachBinding_TestBase
+    : public ::test::bindingsdenylist::DenyEachBinding {
+ public:
+  virtual ~DenyEachBinding_TestBase() {}
+  virtual void NotImplemented_(const std::string& name) = 0;
+  void OnlyDenyDart(bool a, OnlyDenyDartCallback callback) override {
+    NotImplemented_("OnlyDenyDart");
+  }
+  void OnlyDenyGo(bool a, OnlyDenyGoCallback callback) override {
+    NotImplemented_("OnlyDenyGo");
+  }
+  void OnlyDenyLibfuzzer(bool a, OnlyDenyLibfuzzerCallback callback) override {
+    NotImplemented_("OnlyDenyLibfuzzer");
+  }
+  void OnlyDenyRust(bool a, OnlyDenyRustCallback callback) override {
+    NotImplemented_("OnlyDenyRust");
+  }
+  void OnlyDenySyzkaller(bool a, OnlyDenySyzkallerCallback callback) override {
+    NotImplemented_("OnlyDenySyzkaller");
+  }
 };
 }  // namespace testing
 }  // namespace bindingsdenylist

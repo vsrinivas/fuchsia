@@ -25,7 +25,660 @@ use {
     futures::future::{self, MaybeDone, TryFutureExt},
 };
 
+const _FIDL_TRACE_BINDINGS_RUST: u32 = 6;
+
 pub const ALL_BINDINGS: u32 = 0;
+
+pub type DenyEachBindingOnlyDenyCppResult = std::result::Result<(i32), u32>;
+
+pub type DenyEachBindingOnlyDenyCppResultHandleWrapper = std::result::Result<(i32,), u32>;
+
+pub type DenyEachBindingOnlyDenyDartResult = std::result::Result<(i32), u32>;
+
+pub type DenyEachBindingOnlyDenyDartResultHandleWrapper = std::result::Result<(i32,), u32>;
+
+pub type DenyEachBindingOnlyDenyGoResult = std::result::Result<(i32), u32>;
+
+pub type DenyEachBindingOnlyDenyGoResultHandleWrapper = std::result::Result<(i32,), u32>;
+
+pub type DenyEachBindingOnlyDenyLibfuzzerResult = std::result::Result<(i32), u32>;
+
+pub type DenyEachBindingOnlyDenyLibfuzzerResultHandleWrapper = std::result::Result<(i32,), u32>;
+
+pub type DenyEachBindingOnlyDenySyzkallerResult = std::result::Result<(i32), u32>;
+
+pub type DenyEachBindingOnlyDenySyzkallerResultHandleWrapper = std::result::Result<(i32,), u32>;
+
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
+pub enum DenyEachBindingOnlyDenyRustResult {
+    Response(DenyEachBindingOnlyDenyRustResponse),
+    Err(u32),
+}
+
+impl DenyEachBindingOnlyDenyRustResult {
+    #[deprecated = "Strict unions should not use `validate`"]
+    #[inline]
+    pub fn validate(self) -> std::result::Result<Self, (u64, Vec<u8>)> {
+        Ok(self)
+    }
+
+    #[deprecated = "Strict unions should not use `is_unknown`"]
+    #[inline]
+    pub fn is_unknown(&self) -> bool {
+        false
+    }
+}
+
+impl fidl::encoding::Persistable for DenyEachBindingOnlyDenyRustResult {}
+
+fidl_union! {
+    name: DenyEachBindingOnlyDenyRustResult,
+    members: [
+        Response {
+            ty: DenyEachBindingOnlyDenyRustResponse,
+            ordinal: 1,
+        },
+        Err {
+            ty: u32,
+            ordinal: 2,
+        },
+    ],
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum ShouldNeverAppearInAnyBinding3 {
+    A(bool),
+    #[deprecated = "Use `ShouldNeverAppearInAnyBinding3::unknown()` to construct and `ShouldNeverAppearInAnyBinding3Unknown!()` to exhaustively match."]
+    #[doc(hidden)]
+    __Unknown {
+        ordinal: u64,
+        bytes: Vec<u8>,
+    },
+}
+/// Pattern that matches an unknown `ShouldNeverAppearInAnyBinding3` member.
+#[macro_export]
+macro_rules! ShouldNeverAppearInAnyBinding3Unknown {
+    () => {
+        _
+    };
+}
+
+impl ShouldNeverAppearInAnyBinding3 {
+    #[inline]
+    pub fn unknown(ordinal: u64, bytes: Vec<u8>) -> Self {
+        #[allow(deprecated)]
+        Self::__Unknown { ordinal, bytes }
+    }
+
+    #[inline]
+    pub fn validate(self) -> std::result::Result<Self, (u64, Vec<u8>)> {
+        match self {
+            #[allow(deprecated)]
+            Self::__Unknown { ordinal, bytes } => Err((ordinal, bytes)),
+            _ => Ok(self),
+        }
+    }
+
+    #[inline]
+    pub fn is_unknown(&self) -> bool {
+        match self {
+            #[allow(deprecated)]
+            Self::__Unknown { .. } => true,
+            _ => false,
+        }
+    }
+}
+
+impl fidl::encoding::Persistable for ShouldNeverAppearInAnyBinding3 {}
+
+fidl_union! {
+    name: ShouldNeverAppearInAnyBinding3,
+    members: [
+        A {
+            ty: bool,
+            ordinal: 1,
+        },
+    ],
+    value_unknown_member: __Unknown,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum ShouldNeverAppearInAnyBinding6 {
+    A(bool),
+    #[deprecated = "Use `ShouldNeverAppearInAnyBinding6::unknown()` to construct and `ShouldNeverAppearInAnyBinding6Unknown!()` to exhaustively match."]
+    #[doc(hidden)]
+    __Unknown {
+        ordinal: u64,
+        bytes: Vec<u8>,
+    },
+}
+/// Pattern that matches an unknown `ShouldNeverAppearInAnyBinding6` member.
+#[macro_export]
+macro_rules! ShouldNeverAppearInAnyBinding6Unknown {
+    () => {
+        _
+    };
+}
+
+impl ShouldNeverAppearInAnyBinding6 {
+    #[inline]
+    pub fn unknown(ordinal: u64, bytes: Vec<u8>) -> Self {
+        #[allow(deprecated)]
+        Self::__Unknown { ordinal, bytes }
+    }
+
+    #[inline]
+    pub fn validate(self) -> std::result::Result<Self, (u64, Vec<u8>)> {
+        match self {
+            #[allow(deprecated)]
+            Self::__Unknown { ordinal, bytes } => Err((ordinal, bytes)),
+            _ => Ok(self),
+        }
+    }
+
+    #[inline]
+    pub fn is_unknown(&self) -> bool {
+        match self {
+            #[allow(deprecated)]
+            Self::__Unknown { .. } => true,
+            _ => false,
+        }
+    }
+}
+
+impl fidl::encoding::Persistable for ShouldNeverAppearInAnyBinding6 {}
+
+fidl_union! {
+    name: ShouldNeverAppearInAnyBinding6,
+    members: [
+        A {
+            ty: bool,
+            ordinal: 1,
+        },
+    ],
+    value_unknown_member: __Unknown,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum AllowedDeniedResult {
+    Response(AllowedDeniedResponse),
+    Err(u32),
+}
+
+impl AllowedDeniedResult {
+    #[deprecated = "Strict unions should not use `validate`"]
+    #[inline]
+    pub fn validate(self) -> std::result::Result<Self, (u64, Vec<u8>)> {
+        Ok(self)
+    }
+
+    #[deprecated = "Strict unions should not use `is_unknown`"]
+    #[inline]
+    pub fn is_unknown(&self) -> bool {
+        false
+    }
+}
+
+impl fidl::encoding::Persistable for AllowedDeniedResult {}
+
+fidl_union! {
+    name: AllowedDeniedResult,
+    members: [
+        Response {
+            ty: AllowedDeniedResponse,
+            ordinal: 1,
+        },
+        Err {
+            ty: u32,
+            ordinal: 2,
+        },
+    ],
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum ShouldNeverAppearInAnyBinding9 {
+    A(bool),
+    #[deprecated = "Use `ShouldNeverAppearInAnyBinding9::unknown()` to construct and `ShouldNeverAppearInAnyBinding9Unknown!()` to exhaustively match."]
+    #[doc(hidden)]
+    __Unknown {
+        ordinal: u64,
+        bytes: Vec<u8>,
+    },
+}
+/// Pattern that matches an unknown `ShouldNeverAppearInAnyBinding9` member.
+#[macro_export]
+macro_rules! ShouldNeverAppearInAnyBinding9Unknown {
+    () => {
+        _
+    };
+}
+
+impl ShouldNeverAppearInAnyBinding9 {
+    #[inline]
+    pub fn unknown(ordinal: u64, bytes: Vec<u8>) -> Self {
+        #[allow(deprecated)]
+        Self::__Unknown { ordinal, bytes }
+    }
+
+    #[inline]
+    pub fn validate(self) -> std::result::Result<Self, (u64, Vec<u8>)> {
+        match self {
+            #[allow(deprecated)]
+            Self::__Unknown { ordinal, bytes } => Err((ordinal, bytes)),
+            _ => Ok(self),
+        }
+    }
+
+    #[inline]
+    pub fn is_unknown(&self) -> bool {
+        match self {
+            #[allow(deprecated)]
+            Self::__Unknown { .. } => true,
+            _ => false,
+        }
+    }
+}
+
+impl fidl::encoding::Persistable for ShouldNeverAppearInAnyBinding9 {}
+
+fidl_union! {
+    name: ShouldNeverAppearInAnyBinding9,
+    members: [
+        A {
+            ty: bool,
+            ordinal: 1,
+        },
+    ],
+    value_unknown_member: __Unknown,
+}
+
+#[derive(
+    Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, zerocopy::AsBytes, zerocopy::FromBytes,
+)]
+#[repr(C)]
+pub struct DenyEachBindingOnlyDenyCppResponse {
+    pub b: i32,
+}
+
+impl fidl::encoding::Persistable for DenyEachBindingOnlyDenyCppResponse {}
+
+fidl_struct_copy! {
+  name: DenyEachBindingOnlyDenyCppResponse,
+  members: [
+    b {
+      ty: i32,
+      offset_v1: 0,
+      offset_v2: 0,
+    },
+  ],
+  padding_v1: [],
+  padding_v2: [],
+  size_v1: 4,
+  size_v2: 4,
+  align_v1: 4,
+  align_v2: 4,
+}
+
+#[derive(
+    Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, zerocopy::AsBytes, zerocopy::FromBytes,
+)]
+#[repr(C)]
+pub struct DenyEachBindingOnlyDenyDartResponse {
+    pub b: i32,
+}
+
+impl fidl::encoding::Persistable for DenyEachBindingOnlyDenyDartResponse {}
+
+fidl_struct_copy! {
+  name: DenyEachBindingOnlyDenyDartResponse,
+  members: [
+    b {
+      ty: i32,
+      offset_v1: 0,
+      offset_v2: 0,
+    },
+  ],
+  padding_v1: [],
+  padding_v2: [],
+  size_v1: 4,
+  size_v2: 4,
+  align_v1: 4,
+  align_v2: 4,
+}
+
+#[derive(
+    Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, zerocopy::AsBytes, zerocopy::FromBytes,
+)]
+#[repr(C)]
+pub struct DenyEachBindingOnlyDenyGoResponse {
+    pub b: i32,
+}
+
+impl fidl::encoding::Persistable for DenyEachBindingOnlyDenyGoResponse {}
+
+fidl_struct_copy! {
+  name: DenyEachBindingOnlyDenyGoResponse,
+  members: [
+    b {
+      ty: i32,
+      offset_v1: 0,
+      offset_v2: 0,
+    },
+  ],
+  padding_v1: [],
+  padding_v2: [],
+  size_v1: 4,
+  size_v2: 4,
+  align_v1: 4,
+  align_v2: 4,
+}
+
+#[derive(
+    Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, zerocopy::AsBytes, zerocopy::FromBytes,
+)]
+#[repr(C)]
+pub struct DenyEachBindingOnlyDenyLibfuzzerResponse {
+    pub b: i32,
+}
+
+impl fidl::encoding::Persistable for DenyEachBindingOnlyDenyLibfuzzerResponse {}
+
+fidl_struct_copy! {
+  name: DenyEachBindingOnlyDenyLibfuzzerResponse,
+  members: [
+    b {
+      ty: i32,
+      offset_v1: 0,
+      offset_v2: 0,
+    },
+  ],
+  padding_v1: [],
+  padding_v2: [],
+  size_v1: 4,
+  size_v2: 4,
+  align_v1: 4,
+  align_v2: 4,
+}
+
+#[derive(
+    Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, zerocopy::AsBytes, zerocopy::FromBytes,
+)]
+#[repr(C)]
+pub struct DenyEachBindingOnlyDenyRustResponse {
+    pub b: i32,
+}
+
+impl fidl::encoding::Persistable for DenyEachBindingOnlyDenyRustResponse {}
+
+fidl_struct_copy! {
+  name: DenyEachBindingOnlyDenyRustResponse,
+  members: [
+    b {
+      ty: i32,
+      offset_v1: 0,
+      offset_v2: 0,
+    },
+  ],
+  padding_v1: [],
+  padding_v2: [],
+  size_v1: 4,
+  size_v2: 4,
+  align_v1: 4,
+  align_v2: 4,
+}
+
+#[derive(
+    Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, zerocopy::AsBytes, zerocopy::FromBytes,
+)]
+#[repr(C)]
+pub struct DenyEachBindingOnlyDenySyzkallerResponse {
+    pub b: i32,
+}
+
+impl fidl::encoding::Persistable for DenyEachBindingOnlyDenySyzkallerResponse {}
+
+fidl_struct_copy! {
+  name: DenyEachBindingOnlyDenySyzkallerResponse,
+  members: [
+    b {
+      ty: i32,
+      offset_v1: 0,
+      offset_v2: 0,
+    },
+  ],
+  padding_v1: [],
+  padding_v2: [],
+  size_v1: 4,
+  size_v2: 4,
+  align_v1: 4,
+  align_v2: 4,
+}
+
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
+pub struct ShouldNeverAppearInAnyBinding1 {
+    pub a: bool,
+}
+
+impl fidl::encoding::Persistable for ShouldNeverAppearInAnyBinding1 {}
+
+fidl_struct! {
+  name: ShouldNeverAppearInAnyBinding1,
+  members: [
+    a {
+      ty: bool,
+      offset_v1: 0,
+      offset_v2: 0,
+    },
+  ],
+  padding_v1: [],
+  padding_v2: [],
+  size_v1: 1,
+  size_v2: 1,
+  align_v1: 1,
+  align_v2: 1,
+}
+
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
+pub struct ShouldNeverAppearInAnyBinding4 {
+    pub a: bool,
+}
+
+impl fidl::encoding::Persistable for ShouldNeverAppearInAnyBinding4 {}
+
+fidl_struct! {
+  name: ShouldNeverAppearInAnyBinding4,
+  members: [
+    a {
+      ty: bool,
+      offset_v1: 0,
+      offset_v2: 0,
+    },
+  ],
+  padding_v1: [],
+  padding_v2: [],
+  size_v1: 1,
+  size_v2: 1,
+  align_v1: 1,
+  align_v2: 1,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct AllowedDeniedResponse {
+    pub should_never_appear_in_any_binding_4: ShouldNeverAppearInAnyBinding4,
+    pub should_never_appear_in_any_binding_5: ShouldNeverAppearInAnyBinding5,
+    pub should_never_appear_in_any_binding_6: ShouldNeverAppearInAnyBinding6,
+}
+
+impl fidl::encoding::Persistable for AllowedDeniedResponse {}
+
+fidl_struct! {
+  name: AllowedDeniedResponse,
+  members: [
+    should_never_appear_in_any_binding_4 {
+      ty: ShouldNeverAppearInAnyBinding4,
+      offset_v1: 0,
+      offset_v2: 0,
+    },
+    should_never_appear_in_any_binding_5 {
+      ty: ShouldNeverAppearInAnyBinding5,
+      offset_v1: 8,
+      offset_v2: 8,
+    },
+    should_never_appear_in_any_binding_6 {
+      ty: ShouldNeverAppearInAnyBinding6,
+      offset_v1: 24,
+      offset_v2: 24,
+    },
+  ],
+  padding_v1: [
+  {
+      ty: u64,
+      offset: 0,
+      mask: 0xffffffffffffff00u64,
+  },],
+  padding_v2: [
+  {
+      ty: u64,
+      offset: 0,
+      mask: 0xffffffffffffff00u64,
+  },],
+  size_v1: 48,
+  size_v2: 40,
+  align_v1: 8,
+  align_v2: 8,
+}
+
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
+pub struct ShouldNeverAppearInAnyBinding7 {
+    pub a: bool,
+}
+
+impl fidl::encoding::Persistable for ShouldNeverAppearInAnyBinding7 {}
+
+fidl_struct! {
+  name: ShouldNeverAppearInAnyBinding7,
+  members: [
+    a {
+      ty: bool,
+      offset_v1: 0,
+      offset_v2: 0,
+    },
+  ],
+  padding_v1: [],
+  padding_v2: [],
+  size_v1: 1,
+  size_v2: 1,
+  align_v1: 1,
+  align_v2: 1,
+}
+
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
+pub struct MemberOnlyAppearsInImportingLibrary {
+    pub a: bool,
+}
+
+impl fidl::encoding::Persistable for MemberOnlyAppearsInImportingLibrary {}
+
+fidl_struct! {
+  name: MemberOnlyAppearsInImportingLibrary,
+  members: [
+    a {
+      ty: bool,
+      offset_v1: 0,
+      offset_v2: 0,
+    },
+  ],
+  padding_v1: [],
+  padding_v2: [],
+  size_v1: 1,
+  size_v2: 1,
+  align_v1: 1,
+  align_v2: 1,
+}
+
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
+pub struct OnlyAppearsInImportingLibrary {
+    pub member_only_appears_in_importing_library: MemberOnlyAppearsInImportingLibrary,
+}
+
+impl fidl::encoding::Persistable for OnlyAppearsInImportingLibrary {}
+
+fidl_struct! {
+  name: OnlyAppearsInImportingLibrary,
+  members: [
+    member_only_appears_in_importing_library {
+      ty: MemberOnlyAppearsInImportingLibrary,
+      offset_v1: 0,
+      offset_v2: 0,
+    },
+  ],
+  padding_v1: [],
+  padding_v2: [],
+  size_v1: 1,
+  size_v2: 1,
+  align_v1: 1,
+  align_v2: 1,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct ShouldNeverAppearInAnyBinding2 {
+    pub a: Option<bool>,
+    /// (FIDL-generated) Unknown fields encountered during decoding, stored as a
+    /// map from ordinals to raw data. The `Some` case is always nonempty.
+    pub unknown_data: Option<std::collections::BTreeMap<u64, Vec<u8>>>,
+    #[deprecated = "Use `..ShouldNeverAppearInAnyBinding2::EMPTY` to construct and `..` to match."]
+    #[doc(hidden)]
+    pub __non_exhaustive: (),
+}
+
+impl ShouldNeverAppearInAnyBinding2 {
+    /// An empty table with every field set to `None`.
+    #[allow(deprecated)]
+    pub const EMPTY: Self = Self { a: None, unknown_data: None, __non_exhaustive: () };
+}
+
+impl fidl::encoding::Persistable for ShouldNeverAppearInAnyBinding2 {}
+
+fidl_table! {
+    name: ShouldNeverAppearInAnyBinding2,
+    members: [
+        a {
+            ty: bool,
+            ordinal: 1,
+        },
+    ],
+    value_unknown_member: unknown_data,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct ShouldNeverAppearInAnyBinding5 {
+    pub a: Option<bool>,
+    /// (FIDL-generated) Unknown fields encountered during decoding, stored as a
+    /// map from ordinals to raw data. The `Some` case is always nonempty.
+    pub unknown_data: Option<std::collections::BTreeMap<u64, Vec<u8>>>,
+    #[deprecated = "Use `..ShouldNeverAppearInAnyBinding5::EMPTY` to construct and `..` to match."]
+    #[doc(hidden)]
+    pub __non_exhaustive: (),
+}
+
+impl ShouldNeverAppearInAnyBinding5 {
+    /// An empty table with every field set to `None`.
+    #[allow(deprecated)]
+    pub const EMPTY: Self = Self { a: None, unknown_data: None, __non_exhaustive: () };
+}
+
+impl fidl::encoding::Persistable for ShouldNeverAppearInAnyBinding5 {}
+
+fidl_table! {
+    name: ShouldNeverAppearInAnyBinding5,
+    members: [
+        a {
+            ty: bool,
+            ordinal: 1,
+        },
+    ],
+    value_unknown_member: unknown_data,
+}
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct OnlyRust {
@@ -51,3 +704,1756 @@ fidl_table! {
     ],
     value_unknown_member: unknown_data,
 }
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct ShouldNeverAppearInAnyBinding8 {
+    pub a: Option<bool>,
+    /// (FIDL-generated) Unknown fields encountered during decoding, stored as a
+    /// map from ordinals to raw data. The `Some` case is always nonempty.
+    pub unknown_data: Option<std::collections::BTreeMap<u64, Vec<u8>>>,
+    #[deprecated = "Use `..ShouldNeverAppearInAnyBinding8::EMPTY` to construct and `..` to match."]
+    #[doc(hidden)]
+    pub __non_exhaustive: (),
+}
+
+impl ShouldNeverAppearInAnyBinding8 {
+    /// An empty table with every field set to `None`.
+    #[allow(deprecated)]
+    pub const EMPTY: Self = Self { a: None, unknown_data: None, __non_exhaustive: () };
+}
+
+impl fidl::encoding::Persistable for ShouldNeverAppearInAnyBinding8 {}
+
+fidl_table! {
+    name: ShouldNeverAppearInAnyBinding8,
+    members: [
+        a {
+            ty: bool,
+            ordinal: 1,
+        },
+    ],
+    value_unknown_member: unknown_data,
+}
+
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
+pub struct DenyEachBindingMarker;
+
+impl fidl::endpoints::ProtocolMarker for DenyEachBindingMarker {
+    type Proxy = DenyEachBindingProxy;
+    type RequestStream = DenyEachBindingRequestStream;
+    const DEBUG_NAME: &'static str = "(anonymous) DenyEachBinding";
+}
+
+pub trait DenyEachBindingProxyInterface: Send + Sync {
+    type OnlyDenyCppResponseFut: std::future::Future<Output = Result<(DenyEachBindingOnlyDenyCppResult), fidl::Error>>
+        + Send;
+    fn r#only_deny_cpp(&self, a: bool) -> Self::OnlyDenyCppResponseFut;
+    type OnlyDenyDartResponseFut: std::future::Future<Output = Result<(DenyEachBindingOnlyDenyDartResult), fidl::Error>>
+        + Send;
+    fn r#only_deny_dart(&self, a: bool) -> Self::OnlyDenyDartResponseFut;
+    type OnlyDenyGoResponseFut: std::future::Future<Output = Result<(DenyEachBindingOnlyDenyGoResult), fidl::Error>>
+        + Send;
+    fn r#only_deny_go(&self, a: bool) -> Self::OnlyDenyGoResponseFut;
+    type OnlyDenyLibfuzzerResponseFut: std::future::Future<Output = Result<(DenyEachBindingOnlyDenyLibfuzzerResult), fidl::Error>>
+        + Send;
+    fn r#only_deny_libfuzzer(&self, a: bool) -> Self::OnlyDenyLibfuzzerResponseFut;
+    type OnlyDenySyzkallerResponseFut: std::future::Future<Output = Result<(DenyEachBindingOnlyDenySyzkallerResult), fidl::Error>>
+        + Send;
+    fn r#only_deny_syzkaller(&self, a: bool) -> Self::OnlyDenySyzkallerResponseFut;
+}
+
+#[derive(Debug)]
+#[cfg(target_os = "fuchsia")]
+pub struct DenyEachBindingSynchronousProxy {
+    client: fidl::client::sync::Client,
+}
+
+#[cfg(target_os = "fuchsia")]
+impl DenyEachBindingSynchronousProxy {
+    pub fn new(channel: fidl::Channel) -> Self {
+        let protocol_name = <DenyEachBindingMarker as fidl::endpoints::ProtocolMarker>::DEBUG_NAME;
+        Self { client: fidl::client::sync::Client::new(channel, protocol_name) }
+    }
+
+    pub fn into_channel(self) -> fidl::Channel {
+        self.client.into_channel()
+    }
+
+    /// Waits until an event arrives and returns it. It is safe for other
+    /// threads to make concurrent requests while waiting for an event.
+    pub fn wait_for_event(&self, deadline: zx::Time) -> Result<DenyEachBindingEvent, fidl::Error> {
+        DenyEachBindingEvent::decode(self.client.wait_for_event(deadline)?)
+    }
+    pub fn r#only_deny_cpp(
+        &self,
+        mut a: bool,
+        ___deadline: zx::Time,
+    ) -> Result<(DenyEachBindingOnlyDenyCppResult), fidl::Error> {
+        let _value: (DenyEachBindingOnlyDenyCppResultHandleWrapper) =
+            self.client.send_query(&mut (a), 0x290bad96051b1b92, ___deadline)?;
+        Ok(_value.map(|_value| _value.0))
+    }
+    pub fn r#only_deny_dart(
+        &self,
+        mut a: bool,
+        ___deadline: zx::Time,
+    ) -> Result<(DenyEachBindingOnlyDenyDartResult), fidl::Error> {
+        let _value: (DenyEachBindingOnlyDenyDartResultHandleWrapper) =
+            self.client.send_query(&mut (a), 0x75384066a26d87d7, ___deadline)?;
+        Ok(_value.map(|_value| _value.0))
+    }
+    pub fn r#only_deny_go(
+        &self,
+        mut a: bool,
+        ___deadline: zx::Time,
+    ) -> Result<(DenyEachBindingOnlyDenyGoResult), fidl::Error> {
+        let _value: (DenyEachBindingOnlyDenyGoResultHandleWrapper) =
+            self.client.send_query(&mut (a), 0x657655b981478d99, ___deadline)?;
+        Ok(_value.map(|_value| _value.0))
+    }
+    pub fn r#only_deny_libfuzzer(
+        &self,
+        mut a: bool,
+        ___deadline: zx::Time,
+    ) -> Result<(DenyEachBindingOnlyDenyLibfuzzerResult), fidl::Error> {
+        let _value: (DenyEachBindingOnlyDenyLibfuzzerResultHandleWrapper) =
+            self.client.send_query(&mut (a), 0x1e4f89c329617b1e, ___deadline)?;
+        Ok(_value.map(|_value| _value.0))
+    }
+    pub fn r#only_deny_syzkaller(
+        &self,
+        mut a: bool,
+        ___deadline: zx::Time,
+    ) -> Result<(DenyEachBindingOnlyDenySyzkallerResult), fidl::Error> {
+        let _value: (DenyEachBindingOnlyDenySyzkallerResultHandleWrapper) =
+            self.client.send_query(&mut (a), 0x202ee614a749e98a, ___deadline)?;
+        Ok(_value.map(|_value| _value.0))
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct DenyEachBindingProxy {
+    client: fidl::client::Client,
+}
+
+impl fidl::endpoints::Proxy for DenyEachBindingProxy {
+    type Protocol = DenyEachBindingMarker;
+
+    fn from_channel(inner: fidl::AsyncChannel) -> Self {
+        Self::new(inner)
+    }
+
+    fn into_channel(self) -> Result<::fidl::AsyncChannel, Self> {
+        self.client.into_channel().map_err(|client| Self { client })
+    }
+
+    fn as_channel(&self) -> &::fidl::AsyncChannel {
+        self.client.as_channel()
+    }
+}
+
+impl DenyEachBindingProxy {
+    /// Create a new Proxy for DenyEachBinding
+    pub fn new(channel: fidl::AsyncChannel) -> Self {
+        let protocol_name = <DenyEachBindingMarker as fidl::endpoints::ProtocolMarker>::DEBUG_NAME;
+        Self { client: fidl::client::Client::new(channel, protocol_name) }
+    }
+
+    /// Get a Stream of events from the remote end of the DenyEachBinding protocol
+    ///
+    /// # Panics
+    ///
+    /// Panics if the event stream was already taken.
+    pub fn take_event_stream(&self) -> DenyEachBindingEventStream {
+        DenyEachBindingEventStream { event_receiver: self.client.take_event_receiver() }
+    }
+    pub fn r#only_deny_cpp(
+        &self,
+        mut a: bool,
+    ) -> fidl::client::QueryResponseFut<(DenyEachBindingOnlyDenyCppResult)> {
+        DenyEachBindingProxyInterface::r#only_deny_cpp(self, a)
+    }
+    pub fn r#only_deny_dart(
+        &self,
+        mut a: bool,
+    ) -> fidl::client::QueryResponseFut<(DenyEachBindingOnlyDenyDartResult)> {
+        DenyEachBindingProxyInterface::r#only_deny_dart(self, a)
+    }
+    pub fn r#only_deny_go(
+        &self,
+        mut a: bool,
+    ) -> fidl::client::QueryResponseFut<(DenyEachBindingOnlyDenyGoResult)> {
+        DenyEachBindingProxyInterface::r#only_deny_go(self, a)
+    }
+    pub fn r#only_deny_libfuzzer(
+        &self,
+        mut a: bool,
+    ) -> fidl::client::QueryResponseFut<(DenyEachBindingOnlyDenyLibfuzzerResult)> {
+        DenyEachBindingProxyInterface::r#only_deny_libfuzzer(self, a)
+    }
+    pub fn r#only_deny_syzkaller(
+        &self,
+        mut a: bool,
+    ) -> fidl::client::QueryResponseFut<(DenyEachBindingOnlyDenySyzkallerResult)> {
+        DenyEachBindingProxyInterface::r#only_deny_syzkaller(self, a)
+    }
+}
+
+impl DenyEachBindingProxyInterface for DenyEachBindingProxy {
+    type OnlyDenyCppResponseFut =
+        fidl::client::QueryResponseFut<(DenyEachBindingOnlyDenyCppResult)>;
+    fn r#only_deny_cpp(&self, mut a: bool) -> Self::OnlyDenyCppResponseFut {
+        fn transform(
+            result: Result<(DenyEachBindingOnlyDenyCppResultHandleWrapper), fidl::Error>,
+        ) -> Result<(DenyEachBindingOnlyDenyCppResult), fidl::Error> {
+            result.map(|_value| _value.map(|_value| _value.0))
+        }
+        let send_result = self.client.call_send_raw_query(&mut (a), 0x290bad96051b1b92);
+        QueryResponseFut(match send_result {
+            Ok(res_fut) => future::maybe_done(
+                res_fut.and_then(|buf| decode_transaction_body_fut(buf, transform)),
+            ),
+            Err(e) => MaybeDone::Done(Err(e)),
+        })
+    }
+    type OnlyDenyDartResponseFut =
+        fidl::client::QueryResponseFut<(DenyEachBindingOnlyDenyDartResult)>;
+    fn r#only_deny_dart(&self, mut a: bool) -> Self::OnlyDenyDartResponseFut {
+        fn transform(
+            result: Result<(DenyEachBindingOnlyDenyDartResultHandleWrapper), fidl::Error>,
+        ) -> Result<(DenyEachBindingOnlyDenyDartResult), fidl::Error> {
+            result.map(|_value| _value.map(|_value| _value.0))
+        }
+        let send_result = self.client.call_send_raw_query(&mut (a), 0x75384066a26d87d7);
+        QueryResponseFut(match send_result {
+            Ok(res_fut) => future::maybe_done(
+                res_fut.and_then(|buf| decode_transaction_body_fut(buf, transform)),
+            ),
+            Err(e) => MaybeDone::Done(Err(e)),
+        })
+    }
+    type OnlyDenyGoResponseFut = fidl::client::QueryResponseFut<(DenyEachBindingOnlyDenyGoResult)>;
+    fn r#only_deny_go(&self, mut a: bool) -> Self::OnlyDenyGoResponseFut {
+        fn transform(
+            result: Result<(DenyEachBindingOnlyDenyGoResultHandleWrapper), fidl::Error>,
+        ) -> Result<(DenyEachBindingOnlyDenyGoResult), fidl::Error> {
+            result.map(|_value| _value.map(|_value| _value.0))
+        }
+        let send_result = self.client.call_send_raw_query(&mut (a), 0x657655b981478d99);
+        QueryResponseFut(match send_result {
+            Ok(res_fut) => future::maybe_done(
+                res_fut.and_then(|buf| decode_transaction_body_fut(buf, transform)),
+            ),
+            Err(e) => MaybeDone::Done(Err(e)),
+        })
+    }
+    type OnlyDenyLibfuzzerResponseFut =
+        fidl::client::QueryResponseFut<(DenyEachBindingOnlyDenyLibfuzzerResult)>;
+    fn r#only_deny_libfuzzer(&self, mut a: bool) -> Self::OnlyDenyLibfuzzerResponseFut {
+        fn transform(
+            result: Result<(DenyEachBindingOnlyDenyLibfuzzerResultHandleWrapper), fidl::Error>,
+        ) -> Result<(DenyEachBindingOnlyDenyLibfuzzerResult), fidl::Error> {
+            result.map(|_value| _value.map(|_value| _value.0))
+        }
+        let send_result = self.client.call_send_raw_query(&mut (a), 0x1e4f89c329617b1e);
+        QueryResponseFut(match send_result {
+            Ok(res_fut) => future::maybe_done(
+                res_fut.and_then(|buf| decode_transaction_body_fut(buf, transform)),
+            ),
+            Err(e) => MaybeDone::Done(Err(e)),
+        })
+    }
+    type OnlyDenySyzkallerResponseFut =
+        fidl::client::QueryResponseFut<(DenyEachBindingOnlyDenySyzkallerResult)>;
+    fn r#only_deny_syzkaller(&self, mut a: bool) -> Self::OnlyDenySyzkallerResponseFut {
+        fn transform(
+            result: Result<(DenyEachBindingOnlyDenySyzkallerResultHandleWrapper), fidl::Error>,
+        ) -> Result<(DenyEachBindingOnlyDenySyzkallerResult), fidl::Error> {
+            result.map(|_value| _value.map(|_value| _value.0))
+        }
+        let send_result = self.client.call_send_raw_query(&mut (a), 0x202ee614a749e98a);
+        QueryResponseFut(match send_result {
+            Ok(res_fut) => future::maybe_done(
+                res_fut.and_then(|buf| decode_transaction_body_fut(buf, transform)),
+            ),
+            Err(e) => MaybeDone::Done(Err(e)),
+        })
+    }
+}
+
+pub struct DenyEachBindingEventStream {
+    event_receiver: fidl::client::EventReceiver,
+}
+
+impl std::marker::Unpin for DenyEachBindingEventStream {}
+
+impl futures::stream::FusedStream for DenyEachBindingEventStream {
+    fn is_terminated(&self) -> bool {
+        self.event_receiver.is_terminated()
+    }
+}
+
+impl futures::Stream for DenyEachBindingEventStream {
+    type Item = Result<DenyEachBindingEvent, fidl::Error>;
+
+    fn poll_next(
+        mut self: std::pin::Pin<&mut Self>,
+        cx: &mut std::task::Context<'_>,
+    ) -> std::task::Poll<Option<Self::Item>> {
+        let buf = match futures::ready!(futures::stream::StreamExt::poll_next_unpin(
+            &mut self.event_receiver,
+            cx
+        )?) {
+            Some(buf) => buf,
+            None => return std::task::Poll::Ready(None),
+        };
+
+        std::task::Poll::Ready(Some(DenyEachBindingEvent::decode(buf)))
+    }
+}
+
+#[derive(Debug)]
+pub enum DenyEachBindingEvent {}
+
+impl DenyEachBindingEvent {
+    fn decode(mut buf: fidl::MessageBufEtc) -> Result<DenyEachBindingEvent, fidl::Error> {
+        let (bytes, _handles) = buf.split_mut();
+        let (tx_header, _body_bytes) = fidl::encoding::decode_transaction_header(bytes)?;
+
+        match tx_header.ordinal() {
+            _ => Err(fidl::Error::UnknownOrdinal {
+                ordinal: tx_header.ordinal(),
+                protocol_name:
+                    <DenyEachBindingMarker as fidl::endpoints::ProtocolMarker>::DEBUG_NAME,
+            }),
+        }
+    }
+}
+
+/// A Stream of incoming requests for DenyEachBinding
+pub struct DenyEachBindingRequestStream {
+    inner: std::sync::Arc<fidl::ServeInner>,
+    is_terminated: bool,
+}
+
+impl std::marker::Unpin for DenyEachBindingRequestStream {}
+
+impl futures::stream::FusedStream for DenyEachBindingRequestStream {
+    fn is_terminated(&self) -> bool {
+        self.is_terminated
+    }
+}
+
+impl fidl::endpoints::RequestStream for DenyEachBindingRequestStream {
+    type Protocol = DenyEachBindingMarker;
+    type ControlHandle = DenyEachBindingControlHandle;
+
+    fn from_channel(channel: fidl::AsyncChannel) -> Self {
+        Self { inner: std::sync::Arc::new(fidl::ServeInner::new(channel)), is_terminated: false }
+    }
+
+    fn control_handle(&self) -> Self::ControlHandle {
+        DenyEachBindingControlHandle { inner: self.inner.clone() }
+    }
+
+    fn into_inner(self) -> (::std::sync::Arc<fidl::ServeInner>, bool) {
+        (self.inner, self.is_terminated)
+    }
+
+    fn from_inner(inner: std::sync::Arc<fidl::ServeInner>, is_terminated: bool) -> Self {
+        Self { inner, is_terminated }
+    }
+}
+
+impl futures::Stream for DenyEachBindingRequestStream {
+    type Item = Result<DenyEachBindingRequest, fidl::Error>;
+
+    fn poll_next(
+        mut self: std::pin::Pin<&mut Self>,
+        cx: &mut std::task::Context<'_>,
+    ) -> std::task::Poll<Option<Self::Item>> {
+        let this = &mut *self;
+        if this.inner.poll_shutdown(cx) {
+            this.is_terminated = true;
+            return std::task::Poll::Ready(None);
+        }
+        if this.is_terminated {
+            panic!("polled DenyEachBindingRequestStream after completion");
+        }
+        fidl::encoding::with_tls_decode_buf(|bytes, handles| {
+            match this.inner.channel().read_etc(cx, bytes, handles) {
+                std::task::Poll::Ready(Ok(())) => {}
+                std::task::Poll::Pending => return std::task::Poll::Pending,
+                std::task::Poll::Ready(Err(zx_status::Status::PEER_CLOSED)) => {
+                    this.is_terminated = true;
+                    return std::task::Poll::Ready(None);
+                }
+                std::task::Poll::Ready(Err(e)) => {
+                    return std::task::Poll::Ready(Some(Err(fidl::Error::ServerRequestRead(e))))
+                }
+            }
+
+            // A message has been received from the channel
+            let (header, _body_bytes) = fidl::encoding::decode_transaction_header(bytes)?;
+            if !header.is_compatible() {
+                return std::task::Poll::Ready(Some(Err(fidl::Error::IncompatibleMagicNumber(
+                    header.magic_number(),
+                ))));
+            }
+
+            std::task::Poll::Ready(Some(match header.ordinal() {
+                0x290bad96051b1b92 => {
+                    let mut req: (bool,) = fidl::encoding::Decodable::new_empty();
+                    fidl::duration_begin!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "test.bindingsdenylist/DenyEachBindingOnlyDenyCppRequest");
+                    fidl::trace_blob!("fidl:blob", "decode", bytes);
+                    fidl::encoding::Decoder::decode_into(&header, _body_bytes, handles, &mut req)?;
+                    fidl::duration_end!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "size" => bytes.len() as u32, "handle_count" => handles.len() as u32);
+                    let control_handle = DenyEachBindingControlHandle { inner: this.inner.clone() };
+
+                    Ok(DenyEachBindingRequest::OnlyDenyCpp {
+                        a: req.0,
+                        responder: DenyEachBindingOnlyDenyCppResponder {
+                            control_handle: std::mem::ManuallyDrop::new(control_handle),
+                            tx_id: header.tx_id(),
+                            ordinal: header.ordinal(),
+                        },
+                    })
+                }
+                0x75384066a26d87d7 => {
+                    let mut req: (bool,) = fidl::encoding::Decodable::new_empty();
+                    fidl::duration_begin!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "test.bindingsdenylist/DenyEachBindingOnlyDenyDartRequest");
+                    fidl::trace_blob!("fidl:blob", "decode", bytes);
+                    fidl::encoding::Decoder::decode_into(&header, _body_bytes, handles, &mut req)?;
+                    fidl::duration_end!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "size" => bytes.len() as u32, "handle_count" => handles.len() as u32);
+                    let control_handle = DenyEachBindingControlHandle { inner: this.inner.clone() };
+
+                    Ok(DenyEachBindingRequest::OnlyDenyDart {
+                        a: req.0,
+                        responder: DenyEachBindingOnlyDenyDartResponder {
+                            control_handle: std::mem::ManuallyDrop::new(control_handle),
+                            tx_id: header.tx_id(),
+                            ordinal: header.ordinal(),
+                        },
+                    })
+                }
+                0x657655b981478d99 => {
+                    let mut req: (bool,) = fidl::encoding::Decodable::new_empty();
+                    fidl::duration_begin!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "test.bindingsdenylist/DenyEachBindingOnlyDenyGoRequest");
+                    fidl::trace_blob!("fidl:blob", "decode", bytes);
+                    fidl::encoding::Decoder::decode_into(&header, _body_bytes, handles, &mut req)?;
+                    fidl::duration_end!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "size" => bytes.len() as u32, "handle_count" => handles.len() as u32);
+                    let control_handle = DenyEachBindingControlHandle { inner: this.inner.clone() };
+
+                    Ok(DenyEachBindingRequest::OnlyDenyGo {
+                        a: req.0,
+                        responder: DenyEachBindingOnlyDenyGoResponder {
+                            control_handle: std::mem::ManuallyDrop::new(control_handle),
+                            tx_id: header.tx_id(),
+                            ordinal: header.ordinal(),
+                        },
+                    })
+                }
+                0x1e4f89c329617b1e => {
+                    let mut req: (bool,) = fidl::encoding::Decodable::new_empty();
+                    fidl::duration_begin!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "test.bindingsdenylist/DenyEachBindingOnlyDenyLibfuzzerRequest");
+                    fidl::trace_blob!("fidl:blob", "decode", bytes);
+                    fidl::encoding::Decoder::decode_into(&header, _body_bytes, handles, &mut req)?;
+                    fidl::duration_end!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "size" => bytes.len() as u32, "handle_count" => handles.len() as u32);
+                    let control_handle = DenyEachBindingControlHandle { inner: this.inner.clone() };
+
+                    Ok(DenyEachBindingRequest::OnlyDenyLibfuzzer {
+                        a: req.0,
+                        responder: DenyEachBindingOnlyDenyLibfuzzerResponder {
+                            control_handle: std::mem::ManuallyDrop::new(control_handle),
+                            tx_id: header.tx_id(),
+                            ordinal: header.ordinal(),
+                        },
+                    })
+                }
+                0x202ee614a749e98a => {
+                    let mut req: (bool,) = fidl::encoding::Decodable::new_empty();
+                    fidl::duration_begin!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "test.bindingsdenylist/DenyEachBindingOnlyDenySyzkallerRequest");
+                    fidl::trace_blob!("fidl:blob", "decode", bytes);
+                    fidl::encoding::Decoder::decode_into(&header, _body_bytes, handles, &mut req)?;
+                    fidl::duration_end!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "size" => bytes.len() as u32, "handle_count" => handles.len() as u32);
+                    let control_handle = DenyEachBindingControlHandle { inner: this.inner.clone() };
+
+                    Ok(DenyEachBindingRequest::OnlyDenySyzkaller {
+                        a: req.0,
+                        responder: DenyEachBindingOnlyDenySyzkallerResponder {
+                            control_handle: std::mem::ManuallyDrop::new(control_handle),
+                            tx_id: header.tx_id(),
+                            ordinal: header.ordinal(),
+                        },
+                    })
+                }
+                _ => Err(fidl::Error::UnknownOrdinal {
+                    ordinal: header.ordinal(),
+                    protocol_name:
+                        <DenyEachBindingMarker as fidl::endpoints::ProtocolMarker>::DEBUG_NAME,
+                }),
+            }))
+        })
+    }
+}
+#[derive(Debug)]
+pub enum DenyEachBindingRequest {
+    OnlyDenyCpp { a: bool, responder: DenyEachBindingOnlyDenyCppResponder },
+    OnlyDenyDart { a: bool, responder: DenyEachBindingOnlyDenyDartResponder },
+    OnlyDenyGo { a: bool, responder: DenyEachBindingOnlyDenyGoResponder },
+    OnlyDenyLibfuzzer { a: bool, responder: DenyEachBindingOnlyDenyLibfuzzerResponder },
+    OnlyDenySyzkaller { a: bool, responder: DenyEachBindingOnlyDenySyzkallerResponder },
+}
+
+impl DenyEachBindingRequest {
+    #[allow(irrefutable_let_patterns)]
+    pub fn into_only_deny_cpp(self) -> Option<(bool, DenyEachBindingOnlyDenyCppResponder)> {
+        if let DenyEachBindingRequest::OnlyDenyCpp { a, responder } = self {
+            Some((a, responder))
+        } else {
+            None
+        }
+    }
+
+    #[allow(irrefutable_let_patterns)]
+    pub fn into_only_deny_dart(self) -> Option<(bool, DenyEachBindingOnlyDenyDartResponder)> {
+        if let DenyEachBindingRequest::OnlyDenyDart { a, responder } = self {
+            Some((a, responder))
+        } else {
+            None
+        }
+    }
+
+    #[allow(irrefutable_let_patterns)]
+    pub fn into_only_deny_go(self) -> Option<(bool, DenyEachBindingOnlyDenyGoResponder)> {
+        if let DenyEachBindingRequest::OnlyDenyGo { a, responder } = self {
+            Some((a, responder))
+        } else {
+            None
+        }
+    }
+
+    #[allow(irrefutable_let_patterns)]
+    pub fn into_only_deny_libfuzzer(
+        self,
+    ) -> Option<(bool, DenyEachBindingOnlyDenyLibfuzzerResponder)> {
+        if let DenyEachBindingRequest::OnlyDenyLibfuzzer { a, responder } = self {
+            Some((a, responder))
+        } else {
+            None
+        }
+    }
+
+    #[allow(irrefutable_let_patterns)]
+    pub fn into_only_deny_syzkaller(
+        self,
+    ) -> Option<(bool, DenyEachBindingOnlyDenySyzkallerResponder)> {
+        if let DenyEachBindingRequest::OnlyDenySyzkaller { a, responder } = self {
+            Some((a, responder))
+        } else {
+            None
+        }
+    }
+
+    /// Name of the method defined in FIDL
+    pub fn method_name(&self) -> &'static str {
+        match *self {
+            DenyEachBindingRequest::OnlyDenyCpp { .. } => "only_deny_cpp",
+            DenyEachBindingRequest::OnlyDenyDart { .. } => "only_deny_dart",
+            DenyEachBindingRequest::OnlyDenyGo { .. } => "only_deny_go",
+            DenyEachBindingRequest::OnlyDenyLibfuzzer { .. } => "only_deny_libfuzzer",
+            DenyEachBindingRequest::OnlyDenySyzkaller { .. } => "only_deny_syzkaller",
+        }
+    }
+}
+
+pub struct DenyEachBindingEncoder;
+
+impl DenyEachBindingEncoder {
+    pub fn encode_only_deny_cpp_request<'a>(
+        out_bytes: &'a mut Vec<u8>,
+        out_handles: &'a mut Vec<fidl::HandleDisposition<'static>>,
+        tx_id: u32,
+        mut in_a: bool,
+    ) -> Result<(), fidl::Error> {
+        let header = fidl::encoding::TransactionHeader::new(tx_id, 0x290bad96051b1b92);
+        let mut body = ((in_a),);
+        let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
+        fidl::duration_begin!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "test.bindingsdenylist/DenyEachBindingOnlyDenyCppRequest");
+        fidl::encoding::Encoder::encode(out_bytes, out_handles, &mut msg)?;
+        fidl::trace_blob!("fidl:blob", "encode", out_bytes.as_slice());
+        fidl::duration_end!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "size" => out_bytes.len() as u32, "handle_count" => out_handles.len() as u32);
+        Ok(())
+    }
+    pub fn encode_only_deny_cpp_response<'a>(
+        out_bytes: &'a mut Vec<u8>,
+        out_handles: &'a mut Vec<fidl::HandleDisposition<'static>>,
+        tx_id: u32,
+        mut in_result: &mut DenyEachBindingOnlyDenyCppResult,
+    ) -> Result<(), fidl::Error> {
+        let header = fidl::encoding::TransactionHeader::new(tx_id, 0x290bad96051b1b92);
+        let mut body = ((in_result),);
+        let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
+
+        fidl::duration_begin!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "test.bindingsdenylist/DenyEachBindingOnlyDenyCppResponse");
+        fidl::encoding::Encoder::encode(out_bytes, out_handles, &mut msg)?;
+        fidl::trace_blob!("fidl:blob", "encode", out_bytes.as_slice());
+        fidl::duration_end!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "size" => out_bytes.len() as u32, "handle_count" => out_handles.len() as u32);
+
+        Ok(())
+    }
+    pub fn encode_only_deny_dart_request<'a>(
+        out_bytes: &'a mut Vec<u8>,
+        out_handles: &'a mut Vec<fidl::HandleDisposition<'static>>,
+        tx_id: u32,
+        mut in_a: bool,
+    ) -> Result<(), fidl::Error> {
+        let header = fidl::encoding::TransactionHeader::new(tx_id, 0x75384066a26d87d7);
+        let mut body = ((in_a),);
+        let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
+        fidl::duration_begin!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "test.bindingsdenylist/DenyEachBindingOnlyDenyDartRequest");
+        fidl::encoding::Encoder::encode(out_bytes, out_handles, &mut msg)?;
+        fidl::trace_blob!("fidl:blob", "encode", out_bytes.as_slice());
+        fidl::duration_end!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "size" => out_bytes.len() as u32, "handle_count" => out_handles.len() as u32);
+        Ok(())
+    }
+    pub fn encode_only_deny_dart_response<'a>(
+        out_bytes: &'a mut Vec<u8>,
+        out_handles: &'a mut Vec<fidl::HandleDisposition<'static>>,
+        tx_id: u32,
+        mut in_result: &mut DenyEachBindingOnlyDenyDartResult,
+    ) -> Result<(), fidl::Error> {
+        let header = fidl::encoding::TransactionHeader::new(tx_id, 0x75384066a26d87d7);
+        let mut body = ((in_result),);
+        let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
+
+        fidl::duration_begin!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "test.bindingsdenylist/DenyEachBindingOnlyDenyDartResponse");
+        fidl::encoding::Encoder::encode(out_bytes, out_handles, &mut msg)?;
+        fidl::trace_blob!("fidl:blob", "encode", out_bytes.as_slice());
+        fidl::duration_end!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "size" => out_bytes.len() as u32, "handle_count" => out_handles.len() as u32);
+
+        Ok(())
+    }
+    pub fn encode_only_deny_go_request<'a>(
+        out_bytes: &'a mut Vec<u8>,
+        out_handles: &'a mut Vec<fidl::HandleDisposition<'static>>,
+        tx_id: u32,
+        mut in_a: bool,
+    ) -> Result<(), fidl::Error> {
+        let header = fidl::encoding::TransactionHeader::new(tx_id, 0x657655b981478d99);
+        let mut body = ((in_a),);
+        let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
+        fidl::duration_begin!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "test.bindingsdenylist/DenyEachBindingOnlyDenyGoRequest");
+        fidl::encoding::Encoder::encode(out_bytes, out_handles, &mut msg)?;
+        fidl::trace_blob!("fidl:blob", "encode", out_bytes.as_slice());
+        fidl::duration_end!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "size" => out_bytes.len() as u32, "handle_count" => out_handles.len() as u32);
+        Ok(())
+    }
+    pub fn encode_only_deny_go_response<'a>(
+        out_bytes: &'a mut Vec<u8>,
+        out_handles: &'a mut Vec<fidl::HandleDisposition<'static>>,
+        tx_id: u32,
+        mut in_result: &mut DenyEachBindingOnlyDenyGoResult,
+    ) -> Result<(), fidl::Error> {
+        let header = fidl::encoding::TransactionHeader::new(tx_id, 0x657655b981478d99);
+        let mut body = ((in_result),);
+        let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
+
+        fidl::duration_begin!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "test.bindingsdenylist/DenyEachBindingOnlyDenyGoResponse");
+        fidl::encoding::Encoder::encode(out_bytes, out_handles, &mut msg)?;
+        fidl::trace_blob!("fidl:blob", "encode", out_bytes.as_slice());
+        fidl::duration_end!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "size" => out_bytes.len() as u32, "handle_count" => out_handles.len() as u32);
+
+        Ok(())
+    }
+    pub fn encode_only_deny_libfuzzer_request<'a>(
+        out_bytes: &'a mut Vec<u8>,
+        out_handles: &'a mut Vec<fidl::HandleDisposition<'static>>,
+        tx_id: u32,
+        mut in_a: bool,
+    ) -> Result<(), fidl::Error> {
+        let header = fidl::encoding::TransactionHeader::new(tx_id, 0x1e4f89c329617b1e);
+        let mut body = ((in_a),);
+        let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
+        fidl::duration_begin!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "test.bindingsdenylist/DenyEachBindingOnlyDenyLibfuzzerRequest");
+        fidl::encoding::Encoder::encode(out_bytes, out_handles, &mut msg)?;
+        fidl::trace_blob!("fidl:blob", "encode", out_bytes.as_slice());
+        fidl::duration_end!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "size" => out_bytes.len() as u32, "handle_count" => out_handles.len() as u32);
+        Ok(())
+    }
+    pub fn encode_only_deny_libfuzzer_response<'a>(
+        out_bytes: &'a mut Vec<u8>,
+        out_handles: &'a mut Vec<fidl::HandleDisposition<'static>>,
+        tx_id: u32,
+        mut in_result: &mut DenyEachBindingOnlyDenyLibfuzzerResult,
+    ) -> Result<(), fidl::Error> {
+        let header = fidl::encoding::TransactionHeader::new(tx_id, 0x1e4f89c329617b1e);
+        let mut body = ((in_result),);
+        let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
+
+        fidl::duration_begin!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "test.bindingsdenylist/DenyEachBindingOnlyDenyLibfuzzerResponse");
+        fidl::encoding::Encoder::encode(out_bytes, out_handles, &mut msg)?;
+        fidl::trace_blob!("fidl:blob", "encode", out_bytes.as_slice());
+        fidl::duration_end!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "size" => out_bytes.len() as u32, "handle_count" => out_handles.len() as u32);
+
+        Ok(())
+    }
+    pub fn encode_only_deny_syzkaller_request<'a>(
+        out_bytes: &'a mut Vec<u8>,
+        out_handles: &'a mut Vec<fidl::HandleDisposition<'static>>,
+        tx_id: u32,
+        mut in_a: bool,
+    ) -> Result<(), fidl::Error> {
+        let header = fidl::encoding::TransactionHeader::new(tx_id, 0x202ee614a749e98a);
+        let mut body = ((in_a),);
+        let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
+        fidl::duration_begin!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "test.bindingsdenylist/DenyEachBindingOnlyDenySyzkallerRequest");
+        fidl::encoding::Encoder::encode(out_bytes, out_handles, &mut msg)?;
+        fidl::trace_blob!("fidl:blob", "encode", out_bytes.as_slice());
+        fidl::duration_end!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "size" => out_bytes.len() as u32, "handle_count" => out_handles.len() as u32);
+        Ok(())
+    }
+    pub fn encode_only_deny_syzkaller_response<'a>(
+        out_bytes: &'a mut Vec<u8>,
+        out_handles: &'a mut Vec<fidl::HandleDisposition<'static>>,
+        tx_id: u32,
+        mut in_result: &mut DenyEachBindingOnlyDenySyzkallerResult,
+    ) -> Result<(), fidl::Error> {
+        let header = fidl::encoding::TransactionHeader::new(tx_id, 0x202ee614a749e98a);
+        let mut body = ((in_result),);
+        let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
+
+        fidl::duration_begin!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "test.bindingsdenylist/DenyEachBindingOnlyDenySyzkallerResponse");
+        fidl::encoding::Encoder::encode(out_bytes, out_handles, &mut msg)?;
+        fidl::trace_blob!("fidl:blob", "encode", out_bytes.as_slice());
+        fidl::duration_end!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "size" => out_bytes.len() as u32, "handle_count" => out_handles.len() as u32);
+
+        Ok(())
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct DenyEachBindingControlHandle {
+    inner: std::sync::Arc<fidl::ServeInner>,
+}
+
+impl fidl::endpoints::ControlHandle for DenyEachBindingControlHandle {
+    fn shutdown(&self) {
+        self.inner.shutdown()
+    }
+
+    fn shutdown_with_epitaph(&self, status: zx_status::Status) {
+        self.inner.shutdown_with_epitaph(status)
+    }
+}
+
+impl DenyEachBindingControlHandle {}
+#[must_use = "FIDL methods require a response to be sent"]
+#[derive(Debug)]
+pub struct DenyEachBindingOnlyDenyCppResponder {
+    control_handle: std::mem::ManuallyDrop<DenyEachBindingControlHandle>,
+    tx_id: u32,
+    ordinal: u64,
+}
+
+/// Set the the channel to be shutdown (see [`DenyEachBindingControlHandle::shutdown`])
+/// if the responder is dropped without sending a response, so that the client
+/// doesn't hang. To prevent this behavior, call `drop_without_shutdown`.
+impl std::ops::Drop for DenyEachBindingOnlyDenyCppResponder {
+    fn drop(&mut self) {
+        self.control_handle.shutdown();
+        // Safety: drops once, never accessed again
+        unsafe { std::mem::ManuallyDrop::drop(&mut self.control_handle) };
+    }
+}
+
+impl fidl::endpoints::Responder for DenyEachBindingOnlyDenyCppResponder {
+    type ControlHandle = DenyEachBindingControlHandle;
+
+    fn control_handle(&self) -> &DenyEachBindingControlHandle {
+        &self.control_handle
+    }
+
+    fn drop_without_shutdown(mut self) {
+        // Safety: drops once, never accessed again due to mem::forget
+        unsafe { std::mem::ManuallyDrop::drop(&mut self.control_handle) };
+        // Prevent Drop from running (which would shut down the channel)
+        std::mem::forget(self);
+    }
+}
+
+impl DenyEachBindingOnlyDenyCppResponder {
+    /// Sends a response to the FIDL transaction.
+    ///
+    /// Sets the channel to shutdown if an error occurs.
+    pub fn send(
+        self,
+        mut result: &mut DenyEachBindingOnlyDenyCppResult,
+    ) -> Result<(), fidl::Error> {
+        let r = self.send_raw(result);
+        if r.is_err() {
+            self.control_handle.shutdown();
+        }
+        self.drop_without_shutdown();
+        r
+    }
+
+    /// Similar to "send" but does not shutdown the channel if
+    /// an error occurs.
+    pub fn send_no_shutdown_on_err(
+        self,
+        mut result: &mut DenyEachBindingOnlyDenyCppResult,
+    ) -> Result<(), fidl::Error> {
+        let r = self.send_raw(result);
+        self.drop_without_shutdown();
+        r
+    }
+
+    fn send_raw(
+        &self,
+        mut _result: &mut DenyEachBindingOnlyDenyCppResult,
+    ) -> Result<(), fidl::Error> {
+        let mut response = (_result);
+
+        let mut msg = fidl::encoding::TransactionMessage {
+            header: fidl::encoding::TransactionHeader::new(self.tx_id, self.ordinal),
+            body: &mut response,
+        };
+
+        fidl::encoding::with_tls_encode_buf(|bytes, handles| {
+            fidl::duration_begin!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "test.bindingsdenylist/DenyEachBindingOnlyDenyCppResponse");
+            fidl::encoding::Encoder::encode(bytes, handles, &mut msg)?;
+            fidl::trace_blob!("fidl:blob", "encode", bytes.as_slice());
+            fidl::duration_end!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "size" => bytes.len() as u32, "handle_count" => handles.len() as u32);
+
+            self.control_handle
+                .inner
+                .channel()
+                .write_etc(&*bytes, &mut *handles)
+                .map_err(fidl::Error::ServerResponseWrite)?;
+            Ok(())
+        })
+    }
+}
+#[must_use = "FIDL methods require a response to be sent"]
+#[derive(Debug)]
+pub struct DenyEachBindingOnlyDenyDartResponder {
+    control_handle: std::mem::ManuallyDrop<DenyEachBindingControlHandle>,
+    tx_id: u32,
+    ordinal: u64,
+}
+
+/// Set the the channel to be shutdown (see [`DenyEachBindingControlHandle::shutdown`])
+/// if the responder is dropped without sending a response, so that the client
+/// doesn't hang. To prevent this behavior, call `drop_without_shutdown`.
+impl std::ops::Drop for DenyEachBindingOnlyDenyDartResponder {
+    fn drop(&mut self) {
+        self.control_handle.shutdown();
+        // Safety: drops once, never accessed again
+        unsafe { std::mem::ManuallyDrop::drop(&mut self.control_handle) };
+    }
+}
+
+impl fidl::endpoints::Responder for DenyEachBindingOnlyDenyDartResponder {
+    type ControlHandle = DenyEachBindingControlHandle;
+
+    fn control_handle(&self) -> &DenyEachBindingControlHandle {
+        &self.control_handle
+    }
+
+    fn drop_without_shutdown(mut self) {
+        // Safety: drops once, never accessed again due to mem::forget
+        unsafe { std::mem::ManuallyDrop::drop(&mut self.control_handle) };
+        // Prevent Drop from running (which would shut down the channel)
+        std::mem::forget(self);
+    }
+}
+
+impl DenyEachBindingOnlyDenyDartResponder {
+    /// Sends a response to the FIDL transaction.
+    ///
+    /// Sets the channel to shutdown if an error occurs.
+    pub fn send(
+        self,
+        mut result: &mut DenyEachBindingOnlyDenyDartResult,
+    ) -> Result<(), fidl::Error> {
+        let r = self.send_raw(result);
+        if r.is_err() {
+            self.control_handle.shutdown();
+        }
+        self.drop_without_shutdown();
+        r
+    }
+
+    /// Similar to "send" but does not shutdown the channel if
+    /// an error occurs.
+    pub fn send_no_shutdown_on_err(
+        self,
+        mut result: &mut DenyEachBindingOnlyDenyDartResult,
+    ) -> Result<(), fidl::Error> {
+        let r = self.send_raw(result);
+        self.drop_without_shutdown();
+        r
+    }
+
+    fn send_raw(
+        &self,
+        mut _result: &mut DenyEachBindingOnlyDenyDartResult,
+    ) -> Result<(), fidl::Error> {
+        let mut response = (_result);
+
+        let mut msg = fidl::encoding::TransactionMessage {
+            header: fidl::encoding::TransactionHeader::new(self.tx_id, self.ordinal),
+            body: &mut response,
+        };
+
+        fidl::encoding::with_tls_encode_buf(|bytes, handles| {
+            fidl::duration_begin!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "test.bindingsdenylist/DenyEachBindingOnlyDenyDartResponse");
+            fidl::encoding::Encoder::encode(bytes, handles, &mut msg)?;
+            fidl::trace_blob!("fidl:blob", "encode", bytes.as_slice());
+            fidl::duration_end!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "size" => bytes.len() as u32, "handle_count" => handles.len() as u32);
+
+            self.control_handle
+                .inner
+                .channel()
+                .write_etc(&*bytes, &mut *handles)
+                .map_err(fidl::Error::ServerResponseWrite)?;
+            Ok(())
+        })
+    }
+}
+#[must_use = "FIDL methods require a response to be sent"]
+#[derive(Debug)]
+pub struct DenyEachBindingOnlyDenyGoResponder {
+    control_handle: std::mem::ManuallyDrop<DenyEachBindingControlHandle>,
+    tx_id: u32,
+    ordinal: u64,
+}
+
+/// Set the the channel to be shutdown (see [`DenyEachBindingControlHandle::shutdown`])
+/// if the responder is dropped without sending a response, so that the client
+/// doesn't hang. To prevent this behavior, call `drop_without_shutdown`.
+impl std::ops::Drop for DenyEachBindingOnlyDenyGoResponder {
+    fn drop(&mut self) {
+        self.control_handle.shutdown();
+        // Safety: drops once, never accessed again
+        unsafe { std::mem::ManuallyDrop::drop(&mut self.control_handle) };
+    }
+}
+
+impl fidl::endpoints::Responder for DenyEachBindingOnlyDenyGoResponder {
+    type ControlHandle = DenyEachBindingControlHandle;
+
+    fn control_handle(&self) -> &DenyEachBindingControlHandle {
+        &self.control_handle
+    }
+
+    fn drop_without_shutdown(mut self) {
+        // Safety: drops once, never accessed again due to mem::forget
+        unsafe { std::mem::ManuallyDrop::drop(&mut self.control_handle) };
+        // Prevent Drop from running (which would shut down the channel)
+        std::mem::forget(self);
+    }
+}
+
+impl DenyEachBindingOnlyDenyGoResponder {
+    /// Sends a response to the FIDL transaction.
+    ///
+    /// Sets the channel to shutdown if an error occurs.
+    pub fn send(self, mut result: &mut DenyEachBindingOnlyDenyGoResult) -> Result<(), fidl::Error> {
+        let r = self.send_raw(result);
+        if r.is_err() {
+            self.control_handle.shutdown();
+        }
+        self.drop_without_shutdown();
+        r
+    }
+
+    /// Similar to "send" but does not shutdown the channel if
+    /// an error occurs.
+    pub fn send_no_shutdown_on_err(
+        self,
+        mut result: &mut DenyEachBindingOnlyDenyGoResult,
+    ) -> Result<(), fidl::Error> {
+        let r = self.send_raw(result);
+        self.drop_without_shutdown();
+        r
+    }
+
+    fn send_raw(
+        &self,
+        mut _result: &mut DenyEachBindingOnlyDenyGoResult,
+    ) -> Result<(), fidl::Error> {
+        let mut response = (_result);
+
+        let mut msg = fidl::encoding::TransactionMessage {
+            header: fidl::encoding::TransactionHeader::new(self.tx_id, self.ordinal),
+            body: &mut response,
+        };
+
+        fidl::encoding::with_tls_encode_buf(|bytes, handles| {
+            fidl::duration_begin!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "test.bindingsdenylist/DenyEachBindingOnlyDenyGoResponse");
+            fidl::encoding::Encoder::encode(bytes, handles, &mut msg)?;
+            fidl::trace_blob!("fidl:blob", "encode", bytes.as_slice());
+            fidl::duration_end!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "size" => bytes.len() as u32, "handle_count" => handles.len() as u32);
+
+            self.control_handle
+                .inner
+                .channel()
+                .write_etc(&*bytes, &mut *handles)
+                .map_err(fidl::Error::ServerResponseWrite)?;
+            Ok(())
+        })
+    }
+}
+#[must_use = "FIDL methods require a response to be sent"]
+#[derive(Debug)]
+pub struct DenyEachBindingOnlyDenyLibfuzzerResponder {
+    control_handle: std::mem::ManuallyDrop<DenyEachBindingControlHandle>,
+    tx_id: u32,
+    ordinal: u64,
+}
+
+/// Set the the channel to be shutdown (see [`DenyEachBindingControlHandle::shutdown`])
+/// if the responder is dropped without sending a response, so that the client
+/// doesn't hang. To prevent this behavior, call `drop_without_shutdown`.
+impl std::ops::Drop for DenyEachBindingOnlyDenyLibfuzzerResponder {
+    fn drop(&mut self) {
+        self.control_handle.shutdown();
+        // Safety: drops once, never accessed again
+        unsafe { std::mem::ManuallyDrop::drop(&mut self.control_handle) };
+    }
+}
+
+impl fidl::endpoints::Responder for DenyEachBindingOnlyDenyLibfuzzerResponder {
+    type ControlHandle = DenyEachBindingControlHandle;
+
+    fn control_handle(&self) -> &DenyEachBindingControlHandle {
+        &self.control_handle
+    }
+
+    fn drop_without_shutdown(mut self) {
+        // Safety: drops once, never accessed again due to mem::forget
+        unsafe { std::mem::ManuallyDrop::drop(&mut self.control_handle) };
+        // Prevent Drop from running (which would shut down the channel)
+        std::mem::forget(self);
+    }
+}
+
+impl DenyEachBindingOnlyDenyLibfuzzerResponder {
+    /// Sends a response to the FIDL transaction.
+    ///
+    /// Sets the channel to shutdown if an error occurs.
+    pub fn send(
+        self,
+        mut result: &mut DenyEachBindingOnlyDenyLibfuzzerResult,
+    ) -> Result<(), fidl::Error> {
+        let r = self.send_raw(result);
+        if r.is_err() {
+            self.control_handle.shutdown();
+        }
+        self.drop_without_shutdown();
+        r
+    }
+
+    /// Similar to "send" but does not shutdown the channel if
+    /// an error occurs.
+    pub fn send_no_shutdown_on_err(
+        self,
+        mut result: &mut DenyEachBindingOnlyDenyLibfuzzerResult,
+    ) -> Result<(), fidl::Error> {
+        let r = self.send_raw(result);
+        self.drop_without_shutdown();
+        r
+    }
+
+    fn send_raw(
+        &self,
+        mut _result: &mut DenyEachBindingOnlyDenyLibfuzzerResult,
+    ) -> Result<(), fidl::Error> {
+        let mut response = (_result);
+
+        let mut msg = fidl::encoding::TransactionMessage {
+            header: fidl::encoding::TransactionHeader::new(self.tx_id, self.ordinal),
+            body: &mut response,
+        };
+
+        fidl::encoding::with_tls_encode_buf(|bytes, handles| {
+            fidl::duration_begin!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "test.bindingsdenylist/DenyEachBindingOnlyDenyLibfuzzerResponse");
+            fidl::encoding::Encoder::encode(bytes, handles, &mut msg)?;
+            fidl::trace_blob!("fidl:blob", "encode", bytes.as_slice());
+            fidl::duration_end!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "size" => bytes.len() as u32, "handle_count" => handles.len() as u32);
+
+            self.control_handle
+                .inner
+                .channel()
+                .write_etc(&*bytes, &mut *handles)
+                .map_err(fidl::Error::ServerResponseWrite)?;
+            Ok(())
+        })
+    }
+}
+#[must_use = "FIDL methods require a response to be sent"]
+#[derive(Debug)]
+pub struct DenyEachBindingOnlyDenySyzkallerResponder {
+    control_handle: std::mem::ManuallyDrop<DenyEachBindingControlHandle>,
+    tx_id: u32,
+    ordinal: u64,
+}
+
+/// Set the the channel to be shutdown (see [`DenyEachBindingControlHandle::shutdown`])
+/// if the responder is dropped without sending a response, so that the client
+/// doesn't hang. To prevent this behavior, call `drop_without_shutdown`.
+impl std::ops::Drop for DenyEachBindingOnlyDenySyzkallerResponder {
+    fn drop(&mut self) {
+        self.control_handle.shutdown();
+        // Safety: drops once, never accessed again
+        unsafe { std::mem::ManuallyDrop::drop(&mut self.control_handle) };
+    }
+}
+
+impl fidl::endpoints::Responder for DenyEachBindingOnlyDenySyzkallerResponder {
+    type ControlHandle = DenyEachBindingControlHandle;
+
+    fn control_handle(&self) -> &DenyEachBindingControlHandle {
+        &self.control_handle
+    }
+
+    fn drop_without_shutdown(mut self) {
+        // Safety: drops once, never accessed again due to mem::forget
+        unsafe { std::mem::ManuallyDrop::drop(&mut self.control_handle) };
+        // Prevent Drop from running (which would shut down the channel)
+        std::mem::forget(self);
+    }
+}
+
+impl DenyEachBindingOnlyDenySyzkallerResponder {
+    /// Sends a response to the FIDL transaction.
+    ///
+    /// Sets the channel to shutdown if an error occurs.
+    pub fn send(
+        self,
+        mut result: &mut DenyEachBindingOnlyDenySyzkallerResult,
+    ) -> Result<(), fidl::Error> {
+        let r = self.send_raw(result);
+        if r.is_err() {
+            self.control_handle.shutdown();
+        }
+        self.drop_without_shutdown();
+        r
+    }
+
+    /// Similar to "send" but does not shutdown the channel if
+    /// an error occurs.
+    pub fn send_no_shutdown_on_err(
+        self,
+        mut result: &mut DenyEachBindingOnlyDenySyzkallerResult,
+    ) -> Result<(), fidl::Error> {
+        let r = self.send_raw(result);
+        self.drop_without_shutdown();
+        r
+    }
+
+    fn send_raw(
+        &self,
+        mut _result: &mut DenyEachBindingOnlyDenySyzkallerResult,
+    ) -> Result<(), fidl::Error> {
+        let mut response = (_result);
+
+        let mut msg = fidl::encoding::TransactionMessage {
+            header: fidl::encoding::TransactionHeader::new(self.tx_id, self.ordinal),
+            body: &mut response,
+        };
+
+        fidl::encoding::with_tls_encode_buf(|bytes, handles| {
+            fidl::duration_begin!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "test.bindingsdenylist/DenyEachBindingOnlyDenySyzkallerResponse");
+            fidl::encoding::Encoder::encode(bytes, handles, &mut msg)?;
+            fidl::trace_blob!("fidl:blob", "encode", bytes.as_slice());
+            fidl::duration_end!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "size" => bytes.len() as u32, "handle_count" => handles.len() as u32);
+
+            self.control_handle
+                .inner
+                .channel()
+                .write_etc(&*bytes, &mut *handles)
+                .map_err(fidl::Error::ServerResponseWrite)?;
+            Ok(())
+        })
+    }
+}
+
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
+pub struct AllowedMarker;
+
+impl fidl::endpoints::ProtocolMarker for AllowedMarker {
+    type Proxy = AllowedProxy;
+    type RequestStream = AllowedRequestStream;
+    const DEBUG_NAME: &'static str = "(anonymous) Allowed";
+}
+
+pub trait AllowedProxyInterface: Send + Sync {}
+
+#[derive(Debug)]
+#[cfg(target_os = "fuchsia")]
+pub struct AllowedSynchronousProxy {
+    client: fidl::client::sync::Client,
+}
+
+#[cfg(target_os = "fuchsia")]
+impl AllowedSynchronousProxy {
+    pub fn new(channel: fidl::Channel) -> Self {
+        let protocol_name = <AllowedMarker as fidl::endpoints::ProtocolMarker>::DEBUG_NAME;
+        Self { client: fidl::client::sync::Client::new(channel, protocol_name) }
+    }
+
+    pub fn into_channel(self) -> fidl::Channel {
+        self.client.into_channel()
+    }
+
+    /// Waits until an event arrives and returns it. It is safe for other
+    /// threads to make concurrent requests while waiting for an event.
+    pub fn wait_for_event(&self, deadline: zx::Time) -> Result<AllowedEvent, fidl::Error> {
+        AllowedEvent::decode(self.client.wait_for_event(deadline)?)
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct AllowedProxy {
+    client: fidl::client::Client,
+}
+
+impl fidl::endpoints::Proxy for AllowedProxy {
+    type Protocol = AllowedMarker;
+
+    fn from_channel(inner: fidl::AsyncChannel) -> Self {
+        Self::new(inner)
+    }
+
+    fn into_channel(self) -> Result<::fidl::AsyncChannel, Self> {
+        self.client.into_channel().map_err(|client| Self { client })
+    }
+
+    fn as_channel(&self) -> &::fidl::AsyncChannel {
+        self.client.as_channel()
+    }
+}
+
+impl AllowedProxy {
+    /// Create a new Proxy for Allowed
+    pub fn new(channel: fidl::AsyncChannel) -> Self {
+        let protocol_name = <AllowedMarker as fidl::endpoints::ProtocolMarker>::DEBUG_NAME;
+        Self { client: fidl::client::Client::new(channel, protocol_name) }
+    }
+
+    /// Get a Stream of events from the remote end of the Allowed protocol
+    ///
+    /// # Panics
+    ///
+    /// Panics if the event stream was already taken.
+    pub fn take_event_stream(&self) -> AllowedEventStream {
+        AllowedEventStream { event_receiver: self.client.take_event_receiver() }
+    }
+}
+
+impl AllowedProxyInterface for AllowedProxy {}
+
+pub struct AllowedEventStream {
+    event_receiver: fidl::client::EventReceiver,
+}
+
+impl std::marker::Unpin for AllowedEventStream {}
+
+impl futures::stream::FusedStream for AllowedEventStream {
+    fn is_terminated(&self) -> bool {
+        self.event_receiver.is_terminated()
+    }
+}
+
+impl futures::Stream for AllowedEventStream {
+    type Item = Result<AllowedEvent, fidl::Error>;
+
+    fn poll_next(
+        mut self: std::pin::Pin<&mut Self>,
+        cx: &mut std::task::Context<'_>,
+    ) -> std::task::Poll<Option<Self::Item>> {
+        let buf = match futures::ready!(futures::stream::StreamExt::poll_next_unpin(
+            &mut self.event_receiver,
+            cx
+        )?) {
+            Some(buf) => buf,
+            None => return std::task::Poll::Ready(None),
+        };
+
+        std::task::Poll::Ready(Some(AllowedEvent::decode(buf)))
+    }
+}
+
+#[derive(Debug)]
+pub enum AllowedEvent {}
+
+impl AllowedEvent {
+    fn decode(mut buf: fidl::MessageBufEtc) -> Result<AllowedEvent, fidl::Error> {
+        let (bytes, _handles) = buf.split_mut();
+        let (tx_header, _body_bytes) = fidl::encoding::decode_transaction_header(bytes)?;
+
+        match tx_header.ordinal() {
+            _ => Err(fidl::Error::UnknownOrdinal {
+                ordinal: tx_header.ordinal(),
+                protocol_name: <AllowedMarker as fidl::endpoints::ProtocolMarker>::DEBUG_NAME,
+            }),
+        }
+    }
+}
+
+/// A Stream of incoming requests for Allowed
+pub struct AllowedRequestStream {
+    inner: std::sync::Arc<fidl::ServeInner>,
+    is_terminated: bool,
+}
+
+impl std::marker::Unpin for AllowedRequestStream {}
+
+impl futures::stream::FusedStream for AllowedRequestStream {
+    fn is_terminated(&self) -> bool {
+        self.is_terminated
+    }
+}
+
+impl fidl::endpoints::RequestStream for AllowedRequestStream {
+    type Protocol = AllowedMarker;
+    type ControlHandle = AllowedControlHandle;
+
+    fn from_channel(channel: fidl::AsyncChannel) -> Self {
+        Self { inner: std::sync::Arc::new(fidl::ServeInner::new(channel)), is_terminated: false }
+    }
+
+    fn control_handle(&self) -> Self::ControlHandle {
+        AllowedControlHandle { inner: self.inner.clone() }
+    }
+
+    fn into_inner(self) -> (::std::sync::Arc<fidl::ServeInner>, bool) {
+        (self.inner, self.is_terminated)
+    }
+
+    fn from_inner(inner: std::sync::Arc<fidl::ServeInner>, is_terminated: bool) -> Self {
+        Self { inner, is_terminated }
+    }
+}
+
+impl futures::Stream for AllowedRequestStream {
+    type Item = Result<AllowedRequest, fidl::Error>;
+
+    fn poll_next(
+        mut self: std::pin::Pin<&mut Self>,
+        cx: &mut std::task::Context<'_>,
+    ) -> std::task::Poll<Option<Self::Item>> {
+        let this = &mut *self;
+        if this.inner.poll_shutdown(cx) {
+            this.is_terminated = true;
+            return std::task::Poll::Ready(None);
+        }
+        if this.is_terminated {
+            panic!("polled AllowedRequestStream after completion");
+        }
+        fidl::encoding::with_tls_decode_buf(|bytes, handles| {
+            match this.inner.channel().read_etc(cx, bytes, handles) {
+                std::task::Poll::Ready(Ok(())) => {}
+                std::task::Poll::Pending => return std::task::Poll::Pending,
+                std::task::Poll::Ready(Err(zx_status::Status::PEER_CLOSED)) => {
+                    this.is_terminated = true;
+                    return std::task::Poll::Ready(None);
+                }
+                std::task::Poll::Ready(Err(e)) => {
+                    return std::task::Poll::Ready(Some(Err(fidl::Error::ServerRequestRead(e))))
+                }
+            }
+
+            // A message has been received from the channel
+            let (header, _body_bytes) = fidl::encoding::decode_transaction_header(bytes)?;
+            if !header.is_compatible() {
+                return std::task::Poll::Ready(Some(Err(fidl::Error::IncompatibleMagicNumber(
+                    header.magic_number(),
+                ))));
+            }
+
+            std::task::Poll::Ready(Some(match header.ordinal() {
+                _ => Err(fidl::Error::UnknownOrdinal {
+                    ordinal: header.ordinal(),
+                    protocol_name: <AllowedMarker as fidl::endpoints::ProtocolMarker>::DEBUG_NAME,
+                }),
+            }))
+        })
+    }
+}
+#[derive(Debug)]
+pub enum AllowedRequest {}
+
+impl AllowedRequest {
+    /// Name of the method defined in FIDL
+    pub fn method_name(&self) -> &'static str {
+        match *self {}
+    }
+}
+
+pub struct AllowedEncoder;
+
+impl AllowedEncoder {}
+
+#[derive(Debug, Clone)]
+pub struct AllowedControlHandle {
+    inner: std::sync::Arc<fidl::ServeInner>,
+}
+
+impl fidl::endpoints::ControlHandle for AllowedControlHandle {
+    fn shutdown(&self) {
+        self.inner.shutdown()
+    }
+
+    fn shutdown_with_epitaph(&self, status: zx_status::Status) {
+        self.inner.shutdown_with_epitaph(status)
+    }
+}
+
+impl AllowedControlHandle {}
+
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
+pub struct ImportsSameNameContextMarker;
+
+impl fidl::endpoints::ProtocolMarker for ImportsSameNameContextMarker {
+    type Proxy = ImportsSameNameContextProxy;
+    type RequestStream = ImportsSameNameContextRequestStream;
+    const DEBUG_NAME: &'static str = "(anonymous) ImportsSameNameContext";
+}
+
+pub trait ImportsSameNameContextProxyInterface: Send + Sync {
+    fn r#unattributed(&self) -> Result<(), fidl::Error>;
+    fn r#always_appears_in_importing_library(&self) -> Result<(), fidl::Error>;
+}
+
+#[derive(Debug)]
+#[cfg(target_os = "fuchsia")]
+pub struct ImportsSameNameContextSynchronousProxy {
+    client: fidl::client::sync::Client,
+}
+
+#[cfg(target_os = "fuchsia")]
+impl ImportsSameNameContextSynchronousProxy {
+    pub fn new(channel: fidl::Channel) -> Self {
+        let protocol_name =
+            <ImportsSameNameContextMarker as fidl::endpoints::ProtocolMarker>::DEBUG_NAME;
+        Self { client: fidl::client::sync::Client::new(channel, protocol_name) }
+    }
+
+    pub fn into_channel(self) -> fidl::Channel {
+        self.client.into_channel()
+    }
+
+    /// Waits until an event arrives and returns it. It is safe for other
+    /// threads to make concurrent requests while waiting for an event.
+    pub fn wait_for_event(
+        &self,
+        deadline: zx::Time,
+    ) -> Result<ImportsSameNameContextEvent, fidl::Error> {
+        ImportsSameNameContextEvent::decode(self.client.wait_for_event(deadline)?)
+    }
+    pub fn r#unattributed(&self) -> Result<(), fidl::Error> {
+        self.client.send(&mut (), 0x698380acfd29e8f)
+    }
+    pub fn r#always_appears_in_importing_library(&self) -> Result<(), fidl::Error> {
+        self.client.send(&mut (), 0x2874096c521236f8)
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct ImportsSameNameContextProxy {
+    client: fidl::client::Client,
+}
+
+impl fidl::endpoints::Proxy for ImportsSameNameContextProxy {
+    type Protocol = ImportsSameNameContextMarker;
+
+    fn from_channel(inner: fidl::AsyncChannel) -> Self {
+        Self::new(inner)
+    }
+
+    fn into_channel(self) -> Result<::fidl::AsyncChannel, Self> {
+        self.client.into_channel().map_err(|client| Self { client })
+    }
+
+    fn as_channel(&self) -> &::fidl::AsyncChannel {
+        self.client.as_channel()
+    }
+}
+
+impl ImportsSameNameContextProxy {
+    /// Create a new Proxy for ImportsSameNameContext
+    pub fn new(channel: fidl::AsyncChannel) -> Self {
+        let protocol_name =
+            <ImportsSameNameContextMarker as fidl::endpoints::ProtocolMarker>::DEBUG_NAME;
+        Self { client: fidl::client::Client::new(channel, protocol_name) }
+    }
+
+    /// Get a Stream of events from the remote end of the ImportsSameNameContext protocol
+    ///
+    /// # Panics
+    ///
+    /// Panics if the event stream was already taken.
+    pub fn take_event_stream(&self) -> ImportsSameNameContextEventStream {
+        ImportsSameNameContextEventStream { event_receiver: self.client.take_event_receiver() }
+    }
+    pub fn r#unattributed(&self) -> Result<(), fidl::Error> {
+        ImportsSameNameContextProxyInterface::r#unattributed(self)
+    }
+    pub fn r#always_appears_in_importing_library(&self) -> Result<(), fidl::Error> {
+        ImportsSameNameContextProxyInterface::r#always_appears_in_importing_library(self)
+    }
+}
+
+impl ImportsSameNameContextProxyInterface for ImportsSameNameContextProxy {
+    fn r#unattributed(&self) -> Result<(), fidl::Error> {
+        self.client.send(&mut (), 0x698380acfd29e8f)
+    }
+    fn r#always_appears_in_importing_library(&self) -> Result<(), fidl::Error> {
+        self.client.send(&mut (), 0x2874096c521236f8)
+    }
+}
+
+pub struct ImportsSameNameContextEventStream {
+    event_receiver: fidl::client::EventReceiver,
+}
+
+impl std::marker::Unpin for ImportsSameNameContextEventStream {}
+
+impl futures::stream::FusedStream for ImportsSameNameContextEventStream {
+    fn is_terminated(&self) -> bool {
+        self.event_receiver.is_terminated()
+    }
+}
+
+impl futures::Stream for ImportsSameNameContextEventStream {
+    type Item = Result<ImportsSameNameContextEvent, fidl::Error>;
+
+    fn poll_next(
+        mut self: std::pin::Pin<&mut Self>,
+        cx: &mut std::task::Context<'_>,
+    ) -> std::task::Poll<Option<Self::Item>> {
+        let buf = match futures::ready!(futures::stream::StreamExt::poll_next_unpin(
+            &mut self.event_receiver,
+            cx
+        )?) {
+            Some(buf) => buf,
+            None => return std::task::Poll::Ready(None),
+        };
+
+        std::task::Poll::Ready(Some(ImportsSameNameContextEvent::decode(buf)))
+    }
+}
+
+#[derive(Debug)]
+pub enum ImportsSameNameContextEvent {}
+
+impl ImportsSameNameContextEvent {
+    fn decode(mut buf: fidl::MessageBufEtc) -> Result<ImportsSameNameContextEvent, fidl::Error> {
+        let (bytes, _handles) = buf.split_mut();
+        let (tx_header, _body_bytes) = fidl::encoding::decode_transaction_header(bytes)?;
+
+        match tx_header.ordinal() {
+            _ => Err(fidl::Error::UnknownOrdinal {
+                ordinal: tx_header.ordinal(),
+                protocol_name:
+                    <ImportsSameNameContextMarker as fidl::endpoints::ProtocolMarker>::DEBUG_NAME,
+            }),
+        }
+    }
+}
+
+/// A Stream of incoming requests for ImportsSameNameContext
+pub struct ImportsSameNameContextRequestStream {
+    inner: std::sync::Arc<fidl::ServeInner>,
+    is_terminated: bool,
+}
+
+impl std::marker::Unpin for ImportsSameNameContextRequestStream {}
+
+impl futures::stream::FusedStream for ImportsSameNameContextRequestStream {
+    fn is_terminated(&self) -> bool {
+        self.is_terminated
+    }
+}
+
+impl fidl::endpoints::RequestStream for ImportsSameNameContextRequestStream {
+    type Protocol = ImportsSameNameContextMarker;
+    type ControlHandle = ImportsSameNameContextControlHandle;
+
+    fn from_channel(channel: fidl::AsyncChannel) -> Self {
+        Self { inner: std::sync::Arc::new(fidl::ServeInner::new(channel)), is_terminated: false }
+    }
+
+    fn control_handle(&self) -> Self::ControlHandle {
+        ImportsSameNameContextControlHandle { inner: self.inner.clone() }
+    }
+
+    fn into_inner(self) -> (::std::sync::Arc<fidl::ServeInner>, bool) {
+        (self.inner, self.is_terminated)
+    }
+
+    fn from_inner(inner: std::sync::Arc<fidl::ServeInner>, is_terminated: bool) -> Self {
+        Self { inner, is_terminated }
+    }
+}
+
+impl futures::Stream for ImportsSameNameContextRequestStream {
+    type Item = Result<ImportsSameNameContextRequest, fidl::Error>;
+
+    fn poll_next(
+        mut self: std::pin::Pin<&mut Self>,
+        cx: &mut std::task::Context<'_>,
+    ) -> std::task::Poll<Option<Self::Item>> {
+        let this = &mut *self;
+        if this.inner.poll_shutdown(cx) {
+            this.is_terminated = true;
+            return std::task::Poll::Ready(None);
+        }
+        if this.is_terminated {
+            panic!("polled ImportsSameNameContextRequestStream after completion");
+        }
+        fidl::encoding::with_tls_decode_buf(|bytes, handles| {
+            match this.inner.channel().read_etc(cx, bytes, handles) {
+                std::task::Poll::Ready(Ok(())) => {}
+                std::task::Poll::Pending => return std::task::Poll::Pending,
+                std::task::Poll::Ready(Err(zx_status::Status::PEER_CLOSED)) => {
+                    this.is_terminated = true;
+                    return std::task::Poll::Ready(None);
+                }
+                std::task::Poll::Ready(Err(e)) => {
+                    return std::task::Poll::Ready(Some(Err(fidl::Error::ServerRequestRead(e))))
+                }
+            }
+
+            // A message has been received from the channel
+            let (header, _body_bytes) = fidl::encoding::decode_transaction_header(bytes)?;
+            if !header.is_compatible() {
+                return std::task::Poll::Ready(Some(Err(fidl::Error::IncompatibleMagicNumber(
+                    header.magic_number(),
+                ))));
+            }
+
+            std::task::Poll::Ready(Some(match header.ordinal() {
+				0x698380acfd29e8f => {
+					let mut req: () = fidl::encoding::Decodable::new_empty();
+					fidl::duration_begin!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "test.bindingsdenylist/ImportsSameNameContextUnattributedRequest");
+					fidl::trace_blob!("fidl:blob", "decode", bytes);
+					fidl::encoding::Decoder::decode_into(&header, _body_bytes, handles, &mut req)?;
+					fidl::duration_end!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "size" => bytes.len() as u32, "handle_count" => handles.len() as u32);
+					let control_handle = ImportsSameNameContextControlHandle {
+						inner: this.inner.clone(),
+					};
+
+					Ok(ImportsSameNameContextRequest::Unattributed {control_handle,})
+				}
+				0x2874096c521236f8 => {
+					let mut req: () = fidl::encoding::Decodable::new_empty();
+					fidl::duration_begin!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "test.bindingsdenylist/ImportsSameNameContextAlwaysAppearsInImportingLibraryRequest");
+					fidl::trace_blob!("fidl:blob", "decode", bytes);
+					fidl::encoding::Decoder::decode_into(&header, _body_bytes, handles, &mut req)?;
+					fidl::duration_end!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "size" => bytes.len() as u32, "handle_count" => handles.len() as u32);
+					let control_handle = ImportsSameNameContextControlHandle {
+						inner: this.inner.clone(),
+					};
+
+					Ok(ImportsSameNameContextRequest::AlwaysAppearsInImportingLibrary {control_handle,})
+				}
+				_ => Err(fidl::Error::UnknownOrdinal {
+					ordinal: header.ordinal(),
+					protocol_name: <ImportsSameNameContextMarker as fidl::endpoints::ProtocolMarker>::DEBUG_NAME,
+				}),
+			}))
+        })
+    }
+}
+#[derive(Debug)]
+pub enum ImportsSameNameContextRequest {
+    Unattributed { control_handle: ImportsSameNameContextControlHandle },
+    AlwaysAppearsInImportingLibrary { control_handle: ImportsSameNameContextControlHandle },
+}
+
+impl ImportsSameNameContextRequest {
+    #[allow(irrefutable_let_patterns)]
+    pub fn into_unattributed(self) -> Option<(ImportsSameNameContextControlHandle)> {
+        if let ImportsSameNameContextRequest::Unattributed { control_handle } = self {
+            Some((control_handle))
+        } else {
+            None
+        }
+    }
+
+    #[allow(irrefutable_let_patterns)]
+    pub fn into_always_appears_in_importing_library(
+        self,
+    ) -> Option<(ImportsSameNameContextControlHandle)> {
+        if let ImportsSameNameContextRequest::AlwaysAppearsInImportingLibrary { control_handle } =
+            self
+        {
+            Some((control_handle))
+        } else {
+            None
+        }
+    }
+
+    /// Name of the method defined in FIDL
+    pub fn method_name(&self) -> &'static str {
+        match *self {
+            ImportsSameNameContextRequest::Unattributed { .. } => "unattributed",
+            ImportsSameNameContextRequest::AlwaysAppearsInImportingLibrary { .. } => {
+                "always_appears_in_importing_library"
+            }
+        }
+    }
+}
+
+pub struct ImportsSameNameContextEncoder;
+
+impl ImportsSameNameContextEncoder {
+    pub fn encode_unattributed_request<'a>(
+        out_bytes: &'a mut Vec<u8>,
+        out_handles: &'a mut Vec<fidl::HandleDisposition<'static>>,
+    ) -> Result<(), fidl::Error> {
+        let header = fidl::encoding::TransactionHeader::new(0, 0x698380acfd29e8f);
+        let mut body = ();
+        let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
+        fidl::duration_begin!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "test.bindingsdenylist/ImportsSameNameContextUnattributedRequest");
+        fidl::encoding::Encoder::encode(out_bytes, out_handles, &mut msg)?;
+        fidl::trace_blob!("fidl:blob", "encode", out_bytes.as_slice());
+        fidl::duration_end!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "size" => out_bytes.len() as u32, "handle_count" => out_handles.len() as u32);
+        Ok(())
+    }
+    pub fn encode_always_appears_in_importing_library_request<'a>(
+        out_bytes: &'a mut Vec<u8>,
+        out_handles: &'a mut Vec<fidl::HandleDisposition<'static>>,
+    ) -> Result<(), fidl::Error> {
+        let header = fidl::encoding::TransactionHeader::new(0, 0x2874096c521236f8);
+        let mut body = ();
+        let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
+        fidl::duration_begin!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "test.bindingsdenylist/ImportsSameNameContextAlwaysAppearsInImportingLibraryRequest");
+        fidl::encoding::Encoder::encode(out_bytes, out_handles, &mut msg)?;
+        fidl::trace_blob!("fidl:blob", "encode", out_bytes.as_slice());
+        fidl::duration_end!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "size" => out_bytes.len() as u32, "handle_count" => out_handles.len() as u32);
+        Ok(())
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct ImportsSameNameContextControlHandle {
+    inner: std::sync::Arc<fidl::ServeInner>,
+}
+
+impl fidl::endpoints::ControlHandle for ImportsSameNameContextControlHandle {
+    fn shutdown(&self) {
+        self.inner.shutdown()
+    }
+
+    fn shutdown_with_epitaph(&self, status: zx_status::Status) {
+        self.inner.shutdown_with_epitaph(status)
+    }
+}
+
+impl ImportsSameNameContextControlHandle {}

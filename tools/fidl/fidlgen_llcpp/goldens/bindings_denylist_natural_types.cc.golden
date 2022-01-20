@@ -2,6 +2,706 @@
 
 #include <fidl/test.bindingsdenylist/cpp/natural_types.h>
 
+#ifdef __Fuchsia__
+
+void ::test_bindingsdenylist::ShouldNeverAppearInAnyBinding7::
+    EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset) {
+  encoder.Alloc(::fidl::EncodingInlineSize<
+                ::test_bindingsdenylist::ShouldNeverAppearInAnyBinding7,
+                ::fidl::Encoder>(&encoder));
+  ::fidl::CodingTraits<
+      ::test_bindingsdenylist::ShouldNeverAppearInAnyBinding7>::Encode(&encoder,
+                                                                       this,
+                                                                       offset);
+}
+
+::test_bindingsdenylist::ShouldNeverAppearInAnyBinding7::
+    ShouldNeverAppearInAnyBinding7(::fidl::Decoder& decoder)
+    : storage_({::fidl::DecodeAs<bool>(&decoder, 0)}) {}
+#endif  // __Fuchsia__
+
+::test_bindingsdenylist::ShouldNeverAppearInAnyBinding7::Storage_
+test_bindingsdenylist::ShouldNeverAppearInAnyBinding7::CloneStorage_() const {
+  return Storage_{::fidl::internal::NaturalClone(storage_.a)};
+}
+#ifdef __Fuchsia__
+
+void ::test_bindingsdenylist::ShouldNeverAppearInAnyBinding4::
+    EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset) {
+  encoder.Alloc(::fidl::EncodingInlineSize<
+                ::test_bindingsdenylist::ShouldNeverAppearInAnyBinding4,
+                ::fidl::Encoder>(&encoder));
+  ::fidl::CodingTraits<
+      ::test_bindingsdenylist::ShouldNeverAppearInAnyBinding4>::Encode(&encoder,
+                                                                       this,
+                                                                       offset);
+}
+
+::test_bindingsdenylist::ShouldNeverAppearInAnyBinding4::
+    ShouldNeverAppearInAnyBinding4(::fidl::Decoder& decoder)
+    : storage_({::fidl::DecodeAs<bool>(&decoder, 0)}) {}
+#endif  // __Fuchsia__
+
+::test_bindingsdenylist::ShouldNeverAppearInAnyBinding4::Storage_
+test_bindingsdenylist::ShouldNeverAppearInAnyBinding4::CloneStorage_() const {
+  return Storage_{::fidl::internal::NaturalClone(storage_.a)};
+}
+#ifdef __Fuchsia__
+
+void ::test_bindingsdenylist::Allowed_Denied_Response::EncodeWithoutValidating(
+    ::fidl::Encoder& encoder, size_t offset) {
+  encoder.Alloc(
+      ::fidl::EncodingInlineSize<
+          ::test_bindingsdenylist::Allowed_Denied_Response, ::fidl::Encoder>(
+          &encoder));
+  ::fidl::CodingTraits<
+      ::test_bindingsdenylist::Allowed_Denied_Response>::Encode(&encoder, this,
+                                                                offset);
+}
+
+::test_bindingsdenylist::Allowed_Denied_Response::Allowed_Denied_Response(
+    ::fidl::Decoder& decoder)
+    : storage_({::fidl::DecodeAs<
+                    ::test_bindingsdenylist::ShouldNeverAppearInAnyBinding4>(
+                    &decoder, 0),
+                ::fidl::DecodeAs<
+                    ::test_bindingsdenylist::ShouldNeverAppearInAnyBinding5>(
+                    &decoder, 8),
+                ::fidl::DecodeAs<
+                    ::test_bindingsdenylist::ShouldNeverAppearInAnyBinding6>(
+                    &decoder, 24)}) {}
+#endif  // __Fuchsia__
+
+::test_bindingsdenylist::Allowed_Denied_Response::Storage_
+test_bindingsdenylist::Allowed_Denied_Response::CloneStorage_() const {
+  return Storage_{::fidl::internal::NaturalClone(
+                      storage_.should_never_appear_in_any_binding_4),
+                  ::fidl::internal::NaturalClone(
+                      storage_.should_never_appear_in_any_binding_5),
+                  ::fidl::internal::NaturalClone(
+                      storage_.should_never_appear_in_any_binding_6)};
+}
+#ifdef __Fuchsia__
+
+void ::test_bindingsdenylist::AllowedDeniedTopResponse::EncodeWithoutValidating(
+    ::fidl::Encoder& encoder, size_t offset) {
+  encoder.Alloc(
+      ::fidl::EncodingInlineSize<
+          ::test_bindingsdenylist::AllowedDeniedTopResponse, ::fidl::Encoder>(
+          &encoder));
+  ::fidl::CodingTraits<
+      ::test_bindingsdenylist::AllowedDeniedTopResponse>::Encode(&encoder, this,
+                                                                 offset);
+}
+
+::test_bindingsdenylist::AllowedDeniedTopResponse::AllowedDeniedTopResponse(
+    ::fidl::Decoder& decoder)
+    : storage_(
+          {::fidl::DecodeAs<::test_bindingsdenylist::Allowed_Denied_Result>(
+              &decoder, 0)}) {}
+#endif  // __Fuchsia__
+
+::test_bindingsdenylist::AllowedDeniedTopResponse::Storage_
+test_bindingsdenylist::AllowedDeniedTopResponse::CloneStorage_() const {
+  return Storage_{::fidl::internal::NaturalClone(storage_.result)};
+}
+#ifdef __Fuchsia__
+
+void ::test_bindingsdenylist::ShouldNeverAppearInAnyBinding1::
+    EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset) {
+  encoder.Alloc(::fidl::EncodingInlineSize<
+                ::test_bindingsdenylist::ShouldNeverAppearInAnyBinding1,
+                ::fidl::Encoder>(&encoder));
+  ::fidl::CodingTraits<
+      ::test_bindingsdenylist::ShouldNeverAppearInAnyBinding1>::Encode(&encoder,
+                                                                       this,
+                                                                       offset);
+}
+
+::test_bindingsdenylist::ShouldNeverAppearInAnyBinding1::
+    ShouldNeverAppearInAnyBinding1(::fidl::Decoder& decoder)
+    : storage_({::fidl::DecodeAs<bool>(&decoder, 0)}) {}
+#endif  // __Fuchsia__
+
+::test_bindingsdenylist::ShouldNeverAppearInAnyBinding1::Storage_
+test_bindingsdenylist::ShouldNeverAppearInAnyBinding1::CloneStorage_() const {
+  return Storage_{::fidl::internal::NaturalClone(storage_.a)};
+}
+#ifdef __Fuchsia__
+
+void ::test_bindingsdenylist::DeniedShouldNeverAppearInAnyBindingRequest::
+    EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset) {
+  encoder.Alloc(
+      ::fidl::EncodingInlineSize<
+          ::test_bindingsdenylist::DeniedShouldNeverAppearInAnyBindingRequest,
+          ::fidl::Encoder>(&encoder));
+  ::fidl::CodingTraits<
+      ::test_bindingsdenylist::DeniedShouldNeverAppearInAnyBindingRequest>::
+      Encode(&encoder, this, offset);
+}
+
+::test_bindingsdenylist::DeniedShouldNeverAppearInAnyBindingRequest::
+    DeniedShouldNeverAppearInAnyBindingRequest(::fidl::Decoder& decoder)
+    : storage_({::fidl::DecodeAs<
+                    ::test_bindingsdenylist::ShouldNeverAppearInAnyBinding1>(
+                    &decoder, 0),
+                ::fidl::DecodeAs<
+                    ::test_bindingsdenylist::ShouldNeverAppearInAnyBinding2>(
+                    &decoder, 8),
+                ::fidl::DecodeAs<
+                    ::test_bindingsdenylist::ShouldNeverAppearInAnyBinding3>(
+                    &decoder, 24)}) {}
+#endif  // __Fuchsia__
+
+::test_bindingsdenylist::DeniedShouldNeverAppearInAnyBindingRequest::Storage_
+test_bindingsdenylist::DeniedShouldNeverAppearInAnyBindingRequest::
+    CloneStorage_() const {
+  return Storage_{::fidl::internal::NaturalClone(
+                      storage_.should_never_appear_in_any_binding_1),
+                  ::fidl::internal::NaturalClone(
+                      storage_.should_never_appear_in_any_binding_2),
+                  ::fidl::internal::NaturalClone(
+                      storage_.should_never_appear_in_any_binding_3)};
+}
+#ifdef __Fuchsia__
+
+void ::test_bindingsdenylist::MemberOnlyAppearsInImportingLibrary::
+    EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset) {
+  encoder.Alloc(::fidl::EncodingInlineSize<
+                ::test_bindingsdenylist::MemberOnlyAppearsInImportingLibrary,
+                ::fidl::Encoder>(&encoder));
+  ::fidl::CodingTraits<
+      ::test_bindingsdenylist::MemberOnlyAppearsInImportingLibrary>::
+      Encode(&encoder, this, offset);
+}
+
+::test_bindingsdenylist::MemberOnlyAppearsInImportingLibrary::
+    MemberOnlyAppearsInImportingLibrary(::fidl::Decoder& decoder)
+    : storage_({::fidl::DecodeAs<bool>(&decoder, 0)}) {}
+#endif  // __Fuchsia__
+
+::test_bindingsdenylist::MemberOnlyAppearsInImportingLibrary::Storage_
+test_bindingsdenylist::MemberOnlyAppearsInImportingLibrary::CloneStorage_()
+    const {
+  return Storage_{::fidl::internal::NaturalClone(storage_.a)};
+}
+#ifdef __Fuchsia__
+
+void ::test_bindingsdenylist::OnlyAppearsInImportingLibrary::
+    EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset) {
+  encoder.Alloc(::fidl::EncodingInlineSize<
+                ::test_bindingsdenylist::OnlyAppearsInImportingLibrary,
+                ::fidl::Encoder>(&encoder));
+  ::fidl::CodingTraits<
+      ::test_bindingsdenylist::OnlyAppearsInImportingLibrary>::Encode(&encoder,
+                                                                      this,
+                                                                      offset);
+}
+
+::test_bindingsdenylist::OnlyAppearsInImportingLibrary::
+    OnlyAppearsInImportingLibrary(::fidl::Decoder& decoder)
+    : storage_({::fidl::DecodeAs<
+          ::test_bindingsdenylist::MemberOnlyAppearsInImportingLibrary>(
+          &decoder, 0)}) {}
+#endif  // __Fuchsia__
+
+::test_bindingsdenylist::OnlyAppearsInImportingLibrary::Storage_
+test_bindingsdenylist::OnlyAppearsInImportingLibrary::CloneStorage_() const {
+  return Storage_{::fidl::internal::NaturalClone(
+      storage_.member_only_appears_in_importing_library)};
+}
+#ifdef __Fuchsia__
+
+void ::test_bindingsdenylist::DenyEachBinding_OnlyDenySyzkaller_Response::
+    EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset) {
+  encoder.Alloc(
+      ::fidl::EncodingInlineSize<
+          ::test_bindingsdenylist::DenyEachBinding_OnlyDenySyzkaller_Response,
+          ::fidl::Encoder>(&encoder));
+  ::fidl::CodingTraits<
+      ::test_bindingsdenylist::DenyEachBinding_OnlyDenySyzkaller_Response>::
+      Encode(&encoder, this, offset);
+}
+
+::test_bindingsdenylist::DenyEachBinding_OnlyDenySyzkaller_Response::
+    DenyEachBinding_OnlyDenySyzkaller_Response(::fidl::Decoder& decoder)
+    : storage_({::fidl::DecodeAs<int32_t>(&decoder, 0)}) {}
+#endif  // __Fuchsia__
+
+::test_bindingsdenylist::DenyEachBinding_OnlyDenySyzkaller_Response::Storage_
+test_bindingsdenylist::DenyEachBinding_OnlyDenySyzkaller_Response::
+    CloneStorage_() const {
+  return Storage_{::fidl::internal::NaturalClone(storage_.b)};
+}
+#ifdef __Fuchsia__
+
+void ::test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerTopResponse::
+    EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset) {
+  encoder.Alloc(
+      ::fidl::EncodingInlineSize<
+          ::test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerTopResponse,
+          ::fidl::Encoder>(&encoder));
+  ::fidl::CodingTraits<
+      ::test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerTopResponse>::
+      Encode(&encoder, this, offset);
+}
+
+::test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerTopResponse::
+    DenyEachBindingOnlyDenySyzkallerTopResponse(::fidl::Decoder& decoder)
+    : storage_({::fidl::DecodeAs<
+          ::test_bindingsdenylist::DenyEachBinding_OnlyDenySyzkaller_Result>(
+          &decoder, 0)}) {}
+#endif  // __Fuchsia__
+
+::test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerTopResponse::Storage_
+test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerTopResponse::
+    CloneStorage_() const {
+  return Storage_{::fidl::internal::NaturalClone(storage_.result)};
+}
+#ifdef __Fuchsia__
+
+void ::test_bindingsdenylist::DenyEachBinding_OnlyDenyRust_Response::
+    EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset) {
+  encoder.Alloc(::fidl::EncodingInlineSize<
+                ::test_bindingsdenylist::DenyEachBinding_OnlyDenyRust_Response,
+                ::fidl::Encoder>(&encoder));
+  ::fidl::CodingTraits<
+      ::test_bindingsdenylist::DenyEachBinding_OnlyDenyRust_Response>::
+      Encode(&encoder, this, offset);
+}
+
+::test_bindingsdenylist::DenyEachBinding_OnlyDenyRust_Response::
+    DenyEachBinding_OnlyDenyRust_Response(::fidl::Decoder& decoder)
+    : storage_({::fidl::DecodeAs<int32_t>(&decoder, 0)}) {}
+#endif  // __Fuchsia__
+
+::test_bindingsdenylist::DenyEachBinding_OnlyDenyRust_Response::Storage_
+test_bindingsdenylist::DenyEachBinding_OnlyDenyRust_Response::CloneStorage_()
+    const {
+  return Storage_{::fidl::internal::NaturalClone(storage_.b)};
+}
+#ifdef __Fuchsia__
+
+void ::test_bindingsdenylist::DenyEachBindingOnlyDenyRustTopResponse::
+    EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset) {
+  encoder.Alloc(::fidl::EncodingInlineSize<
+                ::test_bindingsdenylist::DenyEachBindingOnlyDenyRustTopResponse,
+                ::fidl::Encoder>(&encoder));
+  ::fidl::CodingTraits<
+      ::test_bindingsdenylist::DenyEachBindingOnlyDenyRustTopResponse>::
+      Encode(&encoder, this, offset);
+}
+
+::test_bindingsdenylist::DenyEachBindingOnlyDenyRustTopResponse::
+    DenyEachBindingOnlyDenyRustTopResponse(::fidl::Decoder& decoder)
+    : storage_({::fidl::DecodeAs<
+          ::test_bindingsdenylist::DenyEachBinding_OnlyDenyRust_Result>(
+          &decoder, 0)}) {}
+#endif  // __Fuchsia__
+
+::test_bindingsdenylist::DenyEachBindingOnlyDenyRustTopResponse::Storage_
+test_bindingsdenylist::DenyEachBindingOnlyDenyRustTopResponse::CloneStorage_()
+    const {
+  return Storage_{::fidl::internal::NaturalClone(storage_.result)};
+}
+#ifdef __Fuchsia__
+
+void ::test_bindingsdenylist::DenyEachBinding_OnlyDenyLibfuzzer_Response::
+    EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset) {
+  encoder.Alloc(
+      ::fidl::EncodingInlineSize<
+          ::test_bindingsdenylist::DenyEachBinding_OnlyDenyLibfuzzer_Response,
+          ::fidl::Encoder>(&encoder));
+  ::fidl::CodingTraits<
+      ::test_bindingsdenylist::DenyEachBinding_OnlyDenyLibfuzzer_Response>::
+      Encode(&encoder, this, offset);
+}
+
+::test_bindingsdenylist::DenyEachBinding_OnlyDenyLibfuzzer_Response::
+    DenyEachBinding_OnlyDenyLibfuzzer_Response(::fidl::Decoder& decoder)
+    : storage_({::fidl::DecodeAs<int32_t>(&decoder, 0)}) {}
+#endif  // __Fuchsia__
+
+::test_bindingsdenylist::DenyEachBinding_OnlyDenyLibfuzzer_Response::Storage_
+test_bindingsdenylist::DenyEachBinding_OnlyDenyLibfuzzer_Response::
+    CloneStorage_() const {
+  return Storage_{::fidl::internal::NaturalClone(storage_.b)};
+}
+#ifdef __Fuchsia__
+
+void ::test_bindingsdenylist::DenyEachBindingOnlyDenyLibfuzzerTopResponse::
+    EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset) {
+  encoder.Alloc(
+      ::fidl::EncodingInlineSize<
+          ::test_bindingsdenylist::DenyEachBindingOnlyDenyLibfuzzerTopResponse,
+          ::fidl::Encoder>(&encoder));
+  ::fidl::CodingTraits<
+      ::test_bindingsdenylist::DenyEachBindingOnlyDenyLibfuzzerTopResponse>::
+      Encode(&encoder, this, offset);
+}
+
+::test_bindingsdenylist::DenyEachBindingOnlyDenyLibfuzzerTopResponse::
+    DenyEachBindingOnlyDenyLibfuzzerTopResponse(::fidl::Decoder& decoder)
+    : storage_({::fidl::DecodeAs<
+          ::test_bindingsdenylist::DenyEachBinding_OnlyDenyLibfuzzer_Result>(
+          &decoder, 0)}) {}
+#endif  // __Fuchsia__
+
+::test_bindingsdenylist::DenyEachBindingOnlyDenyLibfuzzerTopResponse::Storage_
+test_bindingsdenylist::DenyEachBindingOnlyDenyLibfuzzerTopResponse::
+    CloneStorage_() const {
+  return Storage_{::fidl::internal::NaturalClone(storage_.result)};
+}
+#ifdef __Fuchsia__
+
+void ::test_bindingsdenylist::DenyEachBinding_OnlyDenyGo_Response::
+    EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset) {
+  encoder.Alloc(::fidl::EncodingInlineSize<
+                ::test_bindingsdenylist::DenyEachBinding_OnlyDenyGo_Response,
+                ::fidl::Encoder>(&encoder));
+  ::fidl::CodingTraits<
+      ::test_bindingsdenylist::DenyEachBinding_OnlyDenyGo_Response>::
+      Encode(&encoder, this, offset);
+}
+
+::test_bindingsdenylist::DenyEachBinding_OnlyDenyGo_Response::
+    DenyEachBinding_OnlyDenyGo_Response(::fidl::Decoder& decoder)
+    : storage_({::fidl::DecodeAs<int32_t>(&decoder, 0)}) {}
+#endif  // __Fuchsia__
+
+::test_bindingsdenylist::DenyEachBinding_OnlyDenyGo_Response::Storage_
+test_bindingsdenylist::DenyEachBinding_OnlyDenyGo_Response::CloneStorage_()
+    const {
+  return Storage_{::fidl::internal::NaturalClone(storage_.b)};
+}
+#ifdef __Fuchsia__
+
+void ::test_bindingsdenylist::DenyEachBindingOnlyDenyGoTopResponse::
+    EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset) {
+  encoder.Alloc(::fidl::EncodingInlineSize<
+                ::test_bindingsdenylist::DenyEachBindingOnlyDenyGoTopResponse,
+                ::fidl::Encoder>(&encoder));
+  ::fidl::CodingTraits<
+      ::test_bindingsdenylist::DenyEachBindingOnlyDenyGoTopResponse>::
+      Encode(&encoder, this, offset);
+}
+
+::test_bindingsdenylist::DenyEachBindingOnlyDenyGoTopResponse::
+    DenyEachBindingOnlyDenyGoTopResponse(::fidl::Decoder& decoder)
+    : storage_({::fidl::DecodeAs<
+          ::test_bindingsdenylist::DenyEachBinding_OnlyDenyGo_Result>(&decoder,
+                                                                      0)}) {}
+#endif  // __Fuchsia__
+
+::test_bindingsdenylist::DenyEachBindingOnlyDenyGoTopResponse::Storage_
+test_bindingsdenylist::DenyEachBindingOnlyDenyGoTopResponse::CloneStorage_()
+    const {
+  return Storage_{::fidl::internal::NaturalClone(storage_.result)};
+}
+#ifdef __Fuchsia__
+
+void ::test_bindingsdenylist::DenyEachBinding_OnlyDenyDart_Response::
+    EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset) {
+  encoder.Alloc(::fidl::EncodingInlineSize<
+                ::test_bindingsdenylist::DenyEachBinding_OnlyDenyDart_Response,
+                ::fidl::Encoder>(&encoder));
+  ::fidl::CodingTraits<
+      ::test_bindingsdenylist::DenyEachBinding_OnlyDenyDart_Response>::
+      Encode(&encoder, this, offset);
+}
+
+::test_bindingsdenylist::DenyEachBinding_OnlyDenyDart_Response::
+    DenyEachBinding_OnlyDenyDart_Response(::fidl::Decoder& decoder)
+    : storage_({::fidl::DecodeAs<int32_t>(&decoder, 0)}) {}
+#endif  // __Fuchsia__
+
+::test_bindingsdenylist::DenyEachBinding_OnlyDenyDart_Response::Storage_
+test_bindingsdenylist::DenyEachBinding_OnlyDenyDart_Response::CloneStorage_()
+    const {
+  return Storage_{::fidl::internal::NaturalClone(storage_.b)};
+}
+#ifdef __Fuchsia__
+
+void ::test_bindingsdenylist::DenyEachBindingOnlyDenyDartTopResponse::
+    EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset) {
+  encoder.Alloc(::fidl::EncodingInlineSize<
+                ::test_bindingsdenylist::DenyEachBindingOnlyDenyDartTopResponse,
+                ::fidl::Encoder>(&encoder));
+  ::fidl::CodingTraits<
+      ::test_bindingsdenylist::DenyEachBindingOnlyDenyDartTopResponse>::
+      Encode(&encoder, this, offset);
+}
+
+::test_bindingsdenylist::DenyEachBindingOnlyDenyDartTopResponse::
+    DenyEachBindingOnlyDenyDartTopResponse(::fidl::Decoder& decoder)
+    : storage_({::fidl::DecodeAs<
+          ::test_bindingsdenylist::DenyEachBinding_OnlyDenyDart_Result>(
+          &decoder, 0)}) {}
+#endif  // __Fuchsia__
+
+::test_bindingsdenylist::DenyEachBindingOnlyDenyDartTopResponse::Storage_
+test_bindingsdenylist::DenyEachBindingOnlyDenyDartTopResponse::CloneStorage_()
+    const {
+  return Storage_{::fidl::internal::NaturalClone(storage_.result)};
+}
+#ifdef __Fuchsia__
+
+void ::test_bindingsdenylist::DenyEachBinding_OnlyDenyCpp_Response::
+    EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset) {
+  encoder.Alloc(::fidl::EncodingInlineSize<
+                ::test_bindingsdenylist::DenyEachBinding_OnlyDenyCpp_Response,
+                ::fidl::Encoder>(&encoder));
+  ::fidl::CodingTraits<
+      ::test_bindingsdenylist::DenyEachBinding_OnlyDenyCpp_Response>::
+      Encode(&encoder, this, offset);
+}
+
+::test_bindingsdenylist::DenyEachBinding_OnlyDenyCpp_Response::
+    DenyEachBinding_OnlyDenyCpp_Response(::fidl::Decoder& decoder)
+    : storage_({::fidl::DecodeAs<int32_t>(&decoder, 0)}) {}
+#endif  // __Fuchsia__
+
+::test_bindingsdenylist::DenyEachBinding_OnlyDenyCpp_Response::Storage_
+test_bindingsdenylist::DenyEachBinding_OnlyDenyCpp_Response::CloneStorage_()
+    const {
+  return Storage_{::fidl::internal::NaturalClone(storage_.b)};
+}
+#ifdef __Fuchsia__
+
+void ::test_bindingsdenylist::DenyEachBindingOnlyDenyCppTopResponse::
+    EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset) {
+  encoder.Alloc(::fidl::EncodingInlineSize<
+                ::test_bindingsdenylist::DenyEachBindingOnlyDenyCppTopResponse,
+                ::fidl::Encoder>(&encoder));
+  ::fidl::CodingTraits<
+      ::test_bindingsdenylist::DenyEachBindingOnlyDenyCppTopResponse>::
+      Encode(&encoder, this, offset);
+}
+
+::test_bindingsdenylist::DenyEachBindingOnlyDenyCppTopResponse::
+    DenyEachBindingOnlyDenyCppTopResponse(::fidl::Decoder& decoder)
+    : storage_({::fidl::DecodeAs<
+          ::test_bindingsdenylist::DenyEachBinding_OnlyDenyCpp_Result>(&decoder,
+                                                                       0)}) {}
+#endif  // __Fuchsia__
+
+::test_bindingsdenylist::DenyEachBindingOnlyDenyCppTopResponse::Storage_
+test_bindingsdenylist::DenyEachBindingOnlyDenyCppTopResponse::CloneStorage_()
+    const {
+  return Storage_{::fidl::internal::NaturalClone(storage_.result)};
+}
+#ifdef __Fuchsia__
+
+void ::test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerRequest::
+    EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset) {
+  encoder.Alloc(
+      ::fidl::EncodingInlineSize<
+          ::test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerRequest,
+          ::fidl::Encoder>(&encoder));
+  ::fidl::CodingTraits<
+      ::test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerRequest>::
+      Encode(&encoder, this, offset);
+}
+
+::test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerRequest::
+    DenyEachBindingOnlyDenySyzkallerRequest(::fidl::Decoder& decoder)
+    : storage_({::fidl::DecodeAs<bool>(&decoder, 0)}) {}
+#endif  // __Fuchsia__
+
+::test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerRequest::Storage_
+test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerRequest::CloneStorage_()
+    const {
+  return Storage_{::fidl::internal::NaturalClone(storage_.a)};
+}
+#ifdef __Fuchsia__
+
+void ::test_bindingsdenylist::DenyEachBindingOnlyDenyRustRequest::
+    EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset) {
+  encoder.Alloc(::fidl::EncodingInlineSize<
+                ::test_bindingsdenylist::DenyEachBindingOnlyDenyRustRequest,
+                ::fidl::Encoder>(&encoder));
+  ::fidl::CodingTraits<::test_bindingsdenylist::
+                           DenyEachBindingOnlyDenyRustRequest>::Encode(&encoder,
+                                                                       this,
+                                                                       offset);
+}
+
+::test_bindingsdenylist::DenyEachBindingOnlyDenyRustRequest::
+    DenyEachBindingOnlyDenyRustRequest(::fidl::Decoder& decoder)
+    : storage_({::fidl::DecodeAs<bool>(&decoder, 0)}) {}
+#endif  // __Fuchsia__
+
+::test_bindingsdenylist::DenyEachBindingOnlyDenyRustRequest::Storage_
+test_bindingsdenylist::DenyEachBindingOnlyDenyRustRequest::CloneStorage_()
+    const {
+  return Storage_{::fidl::internal::NaturalClone(storage_.a)};
+}
+#ifdef __Fuchsia__
+
+void ::test_bindingsdenylist::DenyEachBindingOnlyDenyLibfuzzerRequest::
+    EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset) {
+  encoder.Alloc(
+      ::fidl::EncodingInlineSize<
+          ::test_bindingsdenylist::DenyEachBindingOnlyDenyLibfuzzerRequest,
+          ::fidl::Encoder>(&encoder));
+  ::fidl::CodingTraits<
+      ::test_bindingsdenylist::DenyEachBindingOnlyDenyLibfuzzerRequest>::
+      Encode(&encoder, this, offset);
+}
+
+::test_bindingsdenylist::DenyEachBindingOnlyDenyLibfuzzerRequest::
+    DenyEachBindingOnlyDenyLibfuzzerRequest(::fidl::Decoder& decoder)
+    : storage_({::fidl::DecodeAs<bool>(&decoder, 0)}) {}
+#endif  // __Fuchsia__
+
+::test_bindingsdenylist::DenyEachBindingOnlyDenyLibfuzzerRequest::Storage_
+test_bindingsdenylist::DenyEachBindingOnlyDenyLibfuzzerRequest::CloneStorage_()
+    const {
+  return Storage_{::fidl::internal::NaturalClone(storage_.a)};
+}
+#ifdef __Fuchsia__
+
+void ::test_bindingsdenylist::DenyEachBindingOnlyDenyGoRequest::
+    EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset) {
+  encoder.Alloc(::fidl::EncodingInlineSize<
+                ::test_bindingsdenylist::DenyEachBindingOnlyDenyGoRequest,
+                ::fidl::Encoder>(&encoder));
+  ::fidl::CodingTraits<::test_bindingsdenylist::
+                           DenyEachBindingOnlyDenyGoRequest>::Encode(&encoder,
+                                                                     this,
+                                                                     offset);
+}
+
+::test_bindingsdenylist::DenyEachBindingOnlyDenyGoRequest::
+    DenyEachBindingOnlyDenyGoRequest(::fidl::Decoder& decoder)
+    : storage_({::fidl::DecodeAs<bool>(&decoder, 0)}) {}
+#endif  // __Fuchsia__
+
+::test_bindingsdenylist::DenyEachBindingOnlyDenyGoRequest::Storage_
+test_bindingsdenylist::DenyEachBindingOnlyDenyGoRequest::CloneStorage_() const {
+  return Storage_{::fidl::internal::NaturalClone(storage_.a)};
+}
+#ifdef __Fuchsia__
+
+void ::test_bindingsdenylist::DenyEachBindingOnlyDenyDartRequest::
+    EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset) {
+  encoder.Alloc(::fidl::EncodingInlineSize<
+                ::test_bindingsdenylist::DenyEachBindingOnlyDenyDartRequest,
+                ::fidl::Encoder>(&encoder));
+  ::fidl::CodingTraits<::test_bindingsdenylist::
+                           DenyEachBindingOnlyDenyDartRequest>::Encode(&encoder,
+                                                                       this,
+                                                                       offset);
+}
+
+::test_bindingsdenylist::DenyEachBindingOnlyDenyDartRequest::
+    DenyEachBindingOnlyDenyDartRequest(::fidl::Decoder& decoder)
+    : storage_({::fidl::DecodeAs<bool>(&decoder, 0)}) {}
+#endif  // __Fuchsia__
+
+::test_bindingsdenylist::DenyEachBindingOnlyDenyDartRequest::Storage_
+test_bindingsdenylist::DenyEachBindingOnlyDenyDartRequest::CloneStorage_()
+    const {
+  return Storage_{::fidl::internal::NaturalClone(storage_.a)};
+}
+#ifdef __Fuchsia__
+
+void ::test_bindingsdenylist::DenyEachBindingOnlyDenyCppRequest::
+    EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset) {
+  encoder.Alloc(::fidl::EncodingInlineSize<
+                ::test_bindingsdenylist::DenyEachBindingOnlyDenyCppRequest,
+                ::fidl::Encoder>(&encoder));
+  ::fidl::CodingTraits<::test_bindingsdenylist::
+                           DenyEachBindingOnlyDenyCppRequest>::Encode(&encoder,
+                                                                      this,
+                                                                      offset);
+}
+
+::test_bindingsdenylist::DenyEachBindingOnlyDenyCppRequest::
+    DenyEachBindingOnlyDenyCppRequest(::fidl::Decoder& decoder)
+    : storage_({::fidl::DecodeAs<bool>(&decoder, 0)}) {}
+#endif  // __Fuchsia__
+
+::test_bindingsdenylist::DenyEachBindingOnlyDenyCppRequest::Storage_
+test_bindingsdenylist::DenyEachBindingOnlyDenyCppRequest::CloneStorage_()
+    const {
+  return Storage_{::fidl::internal::NaturalClone(storage_.a)};
+}
+
+::test_bindingsdenylist::ShouldNeverAppearInAnyBinding8::Storage_
+test_bindingsdenylist::ShouldNeverAppearInAnyBinding8::CloneStorage_() const {
+  return Storage_{::fidl::internal::NaturalClone(storage_.a)};
+}
+
+::test_bindingsdenylist::ShouldNeverAppearInAnyBinding5::Storage_
+test_bindingsdenylist::ShouldNeverAppearInAnyBinding5::CloneStorage_() const {
+  return Storage_{::fidl::internal::NaturalClone(storage_.a)};
+}
+
+::test_bindingsdenylist::ShouldNeverAppearInAnyBinding2::Storage_
+test_bindingsdenylist::ShouldNeverAppearInAnyBinding2::CloneStorage_() const {
+  return Storage_{::fidl::internal::NaturalClone(storage_.a)};
+}
+
+std::shared_ptr<
+    ::test_bindingsdenylist::ShouldNeverAppearInAnyBinding9::Storage_>
+test_bindingsdenylist::ShouldNeverAppearInAnyBinding9::CloneStorage_() const {
+  const Storage_& storage = *storage_;
+  switch (storage_->index()) {
+    case 1:
+      return std::make_shared<Storage_>(
+          std::in_place_index<1>,
+          ::fidl::internal::NaturalClone(std::get<1>(storage)));
+    default:
+      return std::make_shared<Storage_>();
+  }
+}
+
+std::shared_ptr<
+    ::test_bindingsdenylist::ShouldNeverAppearInAnyBinding6::Storage_>
+test_bindingsdenylist::ShouldNeverAppearInAnyBinding6::CloneStorage_() const {
+  const Storage_& storage = *storage_;
+  switch (storage_->index()) {
+    case 1:
+      return std::make_shared<Storage_>(
+          std::in_place_index<1>,
+          ::fidl::internal::NaturalClone(std::get<1>(storage)));
+    default:
+      return std::make_shared<Storage_>();
+  }
+}
+
+std::shared_ptr<::test_bindingsdenylist::Allowed_Denied_Result::Storage_>
+test_bindingsdenylist::Allowed_Denied_Result::CloneStorage_() const {
+  const Storage_& storage = *storage_;
+  switch (storage_->index()) {
+    case 1:
+      return std::make_shared<Storage_>(
+          std::in_place_index<1>,
+          ::fidl::internal::NaturalClone(std::get<1>(storage)));
+    case 2:
+      return std::make_shared<Storage_>(
+          std::in_place_index<2>,
+          ::fidl::internal::NaturalClone(std::get<2>(storage)));
+    default:
+      return std::make_shared<Storage_>();
+  }
+}
+
+std::shared_ptr<
+    ::test_bindingsdenylist::ShouldNeverAppearInAnyBinding3::Storage_>
+test_bindingsdenylist::ShouldNeverAppearInAnyBinding3::CloneStorage_() const {
+  const Storage_& storage = *storage_;
+  switch (storage_->index()) {
+    case 1:
+      return std::make_shared<Storage_>(
+          std::in_place_index<1>,
+          ::fidl::internal::NaturalClone(std::get<1>(storage)));
+    default:
+      return std::make_shared<Storage_>();
+  }
+}
+
 std::shared_ptr<::test_bindingsdenylist::OnlyLlcpp::Storage_>
 test_bindingsdenylist::OnlyLlcpp::CloneStorage_() const {
   const Storage_& storage = *storage_;
@@ -10,6 +710,120 @@ test_bindingsdenylist::OnlyLlcpp::CloneStorage_() const {
       return std::make_shared<Storage_>(
           std::in_place_index<1>,
           ::fidl::internal::NaturalClone(std::get<1>(storage)));
+    default:
+      return std::make_shared<Storage_>();
+  }
+}
+
+std::shared_ptr<
+    ::test_bindingsdenylist::DenyEachBinding_OnlyDenySyzkaller_Result::Storage_>
+test_bindingsdenylist::DenyEachBinding_OnlyDenySyzkaller_Result::CloneStorage_()
+    const {
+  const Storage_& storage = *storage_;
+  switch (storage_->index()) {
+    case 1:
+      return std::make_shared<Storage_>(
+          std::in_place_index<1>,
+          ::fidl::internal::NaturalClone(std::get<1>(storage)));
+    case 2:
+      return std::make_shared<Storage_>(
+          std::in_place_index<2>,
+          ::fidl::internal::NaturalClone(std::get<2>(storage)));
+    default:
+      return std::make_shared<Storage_>();
+  }
+}
+
+std::shared_ptr<
+    ::test_bindingsdenylist::DenyEachBinding_OnlyDenyRust_Result::Storage_>
+test_bindingsdenylist::DenyEachBinding_OnlyDenyRust_Result::CloneStorage_()
+    const {
+  const Storage_& storage = *storage_;
+  switch (storage_->index()) {
+    case 1:
+      return std::make_shared<Storage_>(
+          std::in_place_index<1>,
+          ::fidl::internal::NaturalClone(std::get<1>(storage)));
+    case 2:
+      return std::make_shared<Storage_>(
+          std::in_place_index<2>,
+          ::fidl::internal::NaturalClone(std::get<2>(storage)));
+    default:
+      return std::make_shared<Storage_>();
+  }
+}
+
+std::shared_ptr<
+    ::test_bindingsdenylist::DenyEachBinding_OnlyDenyLibfuzzer_Result::Storage_>
+test_bindingsdenylist::DenyEachBinding_OnlyDenyLibfuzzer_Result::CloneStorage_()
+    const {
+  const Storage_& storage = *storage_;
+  switch (storage_->index()) {
+    case 1:
+      return std::make_shared<Storage_>(
+          std::in_place_index<1>,
+          ::fidl::internal::NaturalClone(std::get<1>(storage)));
+    case 2:
+      return std::make_shared<Storage_>(
+          std::in_place_index<2>,
+          ::fidl::internal::NaturalClone(std::get<2>(storage)));
+    default:
+      return std::make_shared<Storage_>();
+  }
+}
+
+std::shared_ptr<
+    ::test_bindingsdenylist::DenyEachBinding_OnlyDenyGo_Result::Storage_>
+test_bindingsdenylist::DenyEachBinding_OnlyDenyGo_Result::CloneStorage_()
+    const {
+  const Storage_& storage = *storage_;
+  switch (storage_->index()) {
+    case 1:
+      return std::make_shared<Storage_>(
+          std::in_place_index<1>,
+          ::fidl::internal::NaturalClone(std::get<1>(storage)));
+    case 2:
+      return std::make_shared<Storage_>(
+          std::in_place_index<2>,
+          ::fidl::internal::NaturalClone(std::get<2>(storage)));
+    default:
+      return std::make_shared<Storage_>();
+  }
+}
+
+std::shared_ptr<
+    ::test_bindingsdenylist::DenyEachBinding_OnlyDenyDart_Result::Storage_>
+test_bindingsdenylist::DenyEachBinding_OnlyDenyDart_Result::CloneStorage_()
+    const {
+  const Storage_& storage = *storage_;
+  switch (storage_->index()) {
+    case 1:
+      return std::make_shared<Storage_>(
+          std::in_place_index<1>,
+          ::fidl::internal::NaturalClone(std::get<1>(storage)));
+    case 2:
+      return std::make_shared<Storage_>(
+          std::in_place_index<2>,
+          ::fidl::internal::NaturalClone(std::get<2>(storage)));
+    default:
+      return std::make_shared<Storage_>();
+  }
+}
+
+std::shared_ptr<
+    ::test_bindingsdenylist::DenyEachBinding_OnlyDenyCpp_Result::Storage_>
+test_bindingsdenylist::DenyEachBinding_OnlyDenyCpp_Result::CloneStorage_()
+    const {
+  const Storage_& storage = *storage_;
+  switch (storage_->index()) {
+    case 1:
+      return std::make_shared<Storage_>(
+          std::in_place_index<1>,
+          ::fidl::internal::NaturalClone(std::get<1>(storage)));
+    case 2:
+      return std::make_shared<Storage_>(
+          std::in_place_index<2>,
+          ::fidl::internal::NaturalClone(std::get<2>(storage)));
     default:
       return std::make_shared<Storage_>();
   }

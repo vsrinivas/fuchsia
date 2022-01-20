@@ -2,6 +2,7 @@
 
 #pragma once
 
+#include <fidl/test.dependent/cpp/common_types.h>
 #include <lib/fidl/llcpp/traits.h>
 #include <lib/stdcompat/optional.h>
 

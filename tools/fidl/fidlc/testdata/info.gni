@@ -71,7 +71,8 @@ fidl_testdata_info = [
   },
   {
     name = "bindings_denylist"
-    target = "//tools/fidl/fidlc/testdata:test.bindingsdenylist"
+    target =
+        "//tools/fidl/fidlc/testdata/bindings_denylist:test.bindingsdenylist"
     host_build_denylist = [
       # TODO(fxbug.dev/62573): Add ifdefs so that protocols compile on host.
       "fidlgen_llcpp",

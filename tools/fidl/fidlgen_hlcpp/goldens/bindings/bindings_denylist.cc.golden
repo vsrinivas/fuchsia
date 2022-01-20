@@ -7,14 +7,4177 @@
 //
 // Domain objects definitions (i.e. "natural types" in unified bindings)
 //
+namespace test {
+namespace bindingsdenylist {
+extern "C" const fidl_type_t
+    test_bindingsdenylist_ShouldNeverAppearInAnyBinding9Table;
+const fidl_type_t* ShouldNeverAppearInAnyBinding9::FidlType =
+    &test_bindingsdenylist_ShouldNeverAppearInAnyBinding9Table;
+
+ShouldNeverAppearInAnyBinding9::ShouldNeverAppearInAnyBinding9() {}
+
+ShouldNeverAppearInAnyBinding9::~ShouldNeverAppearInAnyBinding9() { Destroy(); }
+
+ShouldNeverAppearInAnyBinding9::ShouldNeverAppearInAnyBinding9(
+    ShouldNeverAppearInAnyBinding9&& other)
+    : tag_(other.tag_) {
+  switch (tag_) {
+    case ::test::bindingsdenylist::ShouldNeverAppearInAnyBinding9::Tag::kA:
+      a_ = std::move(other.a_);
+      break;
+    case static_cast<fidl_xunion_tag_t>(
+        ::test::bindingsdenylist::ShouldNeverAppearInAnyBinding9::Tag::Invalid):
+      break;
+    default:
+      new (&unknown_data_) decltype(unknown_data_);
+      unknown_data_ = std::move(other.unknown_data_);
+      break;
+  }
+}
+
+ShouldNeverAppearInAnyBinding9& ShouldNeverAppearInAnyBinding9::operator=(
+    ShouldNeverAppearInAnyBinding9&& other) {
+  if (this != &other) {
+    Destroy();
+    tag_ = other.tag_;
+    switch (tag_) {
+      case ::test::bindingsdenylist::ShouldNeverAppearInAnyBinding9::Tag::kA:
+        a_ = std::move(other.a_);
+        break;
+      case static_cast<fidl_xunion_tag_t>(
+          ::test::bindingsdenylist::ShouldNeverAppearInAnyBinding9::Tag::
+              Invalid):
+        break;
+      default:
+        new (&unknown_data_) decltype(unknown_data_);
+        unknown_data_ = std::move(other.unknown_data_);
+        break;
+    }
+  }
+  return *this;
+}
+
+ShouldNeverAppearInAnyBinding9 ShouldNeverAppearInAnyBinding9::WithA(
+    bool&& val) {
+  ShouldNeverAppearInAnyBinding9 result;
+  result.set_a(std::move(val));
+  return result;
+}
+
+void ShouldNeverAppearInAnyBinding9::Encode(
+    ::fidl::Encoder* encoder, size_t offset,
+    cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
+  const size_t length_before = encoder->CurrentLength();
+  const size_t handles_before = encoder->CurrentHandleCount();
+
+  switch (Which()) {
+    case ::test::bindingsdenylist::ShouldNeverAppearInAnyBinding9::Tag::kA: {
+      switch (encoder->wire_format()) {
+        case ::fidl::internal::WireFormatVersion::kV1: {
+          ::fidl::Encode(
+              encoder, &a_,
+              encoder->Alloc(
+                  ::fidl::EncodingInlineSize<bool, ::fidl::Encoder>(encoder)));
+
+          fidl_xunion_t* xunion = encoder->GetPtr<fidl_xunion_t>(offset);
+          xunion->tag = tag_;
+          xunion->envelope.num_bytes =
+              static_cast<uint32_t>(encoder->CurrentLength() - length_before);
+          xunion->envelope.num_handles = static_cast<uint32_t>(
+              encoder->CurrentHandleCount() - handles_before);
+          xunion->envelope.presence = FIDL_ALLOC_PRESENT;
+          break;
+        }
+        case ::fidl::internal::WireFormatVersion::kV2: {
+          if (::fidl::EncodingInlineSize<bool>(encoder) <=
+              FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
+            ::fidl::Encode(encoder, &a_,
+                           offset + offsetof(fidl_xunion_v2_t, envelope));
+
+            fidl_xunion_v2_t* xunion =
+                encoder->GetPtr<fidl_xunion_v2_t>(offset);
+            xunion->tag = tag_;
+            xunion->envelope.num_handles = static_cast<uint16_t>(
+                encoder->CurrentHandleCount() - handles_before);
+            xunion->envelope.flags = FIDL_ENVELOPE_FLAGS_INLINING_MASK;
+            break;
+          }
+
+          ::fidl::Encode(
+              encoder, &a_,
+              encoder->Alloc(
+                  ::fidl::EncodingInlineSize<bool, ::fidl::Encoder>(encoder)));
+
+          fidl_xunion_v2_t* xunion = encoder->GetPtr<fidl_xunion_v2_t>(offset);
+          xunion->tag = tag_;
+          xunion->envelope.num_bytes =
+              static_cast<uint32_t>(encoder->CurrentLength() - length_before);
+          xunion->envelope.num_handles = static_cast<uint16_t>(
+              encoder->CurrentHandleCount() - handles_before);
+          xunion->envelope.flags = 0;
+          break;
+        }
+      }
+      break;
+    }
+    case ::test::bindingsdenylist::ShouldNeverAppearInAnyBinding9::Tag::
+        kUnknown: {
+      ::fidl::EncodeUnknownBytes(encoder, &unknown_data_,
+                                 offset + offsetof(fidl_xunion_t, envelope));
+      *encoder->GetPtr<uint64_t>(offset) = tag_;
+      break;
+    }
+    default:
+      break;
+  }
+}
+
+void ShouldNeverAppearInAnyBinding9::Decode(
+    ::fidl::Decoder* _decoder, ShouldNeverAppearInAnyBinding9* value,
+    size_t offset) {
+  fidl_xunion_v2_t* xunion = _decoder->GetPtr<fidl_xunion_v2_t>(offset);
+
+  if (xunion->envelope.num_bytes == 0 && xunion->envelope.num_handles == 0 &&
+      xunion->envelope.flags == 0) {
+    value->EnsureStorageInitialized(static_cast<fidl_xunion_tag_t>(
+        ::test::bindingsdenylist::ShouldNeverAppearInAnyBinding9::Tag::
+            Invalid));
+    return;
+  }
+
+  value->EnsureStorageInitialized(xunion->tag);
+
+  size_t value_offset = _decoder->EnvelopeValueOffset(&xunion->envelope);
+
+  switch (value->tag_) {
+    case ::test::bindingsdenylist::ShouldNeverAppearInAnyBinding9::Tag::kA: {
+      ::fidl::Decode(_decoder, &value->a_, value_offset);
+      break;
+    }
+    default: {
+      auto unknown_info = _decoder->EnvelopeUnknownDataInfo(&xunion->envelope);
+      value->unknown_data_.resize(unknown_info.num_bytes);
+      ::fidl::DecodeUnknownBytesContents(_decoder, &value->unknown_data_,
+                                         unknown_info.value_offset);
+      break;
+    }
+  }
+}
+
+zx_status_t ShouldNeverAppearInAnyBinding9::Clone(
+    ShouldNeverAppearInAnyBinding9* result) const {
+  result->Destroy();
+  result->tag_ = tag_;
+  switch (tag_) {
+    case ::test::bindingsdenylist::ShouldNeverAppearInAnyBinding9::Tag::Invalid:
+      return ZX_OK;
+    case ::test::bindingsdenylist::ShouldNeverAppearInAnyBinding9::Tag::kA:
+      return ::fidl::Clone(a_, &result->a_);
+    default:
+      new (&result->unknown_data_) decltype(unknown_data_);
+      return ::fidl::Clone(unknown_data_, &result->unknown_data_);
+      return ZX_OK;
+  }
+}
+
+ShouldNeverAppearInAnyBinding9& ShouldNeverAppearInAnyBinding9::set_a(
+    bool value) {
+  EnsureStorageInitialized(
+      ::test::bindingsdenylist::ShouldNeverAppearInAnyBinding9::Tag::kA);
+  a_ = std::move(value);
+  return *this;
+}
+ShouldNeverAppearInAnyBinding9& ShouldNeverAppearInAnyBinding9::SetUnknownData(
+    fidl_xunion_tag_t ordinal, std::vector<uint8_t> bytes) {
+  EnsureStorageInitialized(ordinal);
+  unknown_data_ = std::move(bytes);
+  return *this;
+}
+
+void ShouldNeverAppearInAnyBinding9::Destroy() {
+  switch (tag_) {
+    case ::test::bindingsdenylist::ShouldNeverAppearInAnyBinding9::Tag::kA:
+      break;
+
+    case static_cast<fidl_xunion_tag_t>(
+        ::test::bindingsdenylist::ShouldNeverAppearInAnyBinding9::Tag::Invalid):
+      break;
+    default:
+      unknown_data_.~decltype(unknown_data_)();
+      break;
+  }
+  tag_ = static_cast<fidl_xunion_tag_t>(
+      ::test::bindingsdenylist::ShouldNeverAppearInAnyBinding9::Tag::Invalid);
+}
+
+void ShouldNeverAppearInAnyBinding9::EnsureStorageInitialized(
+    ::fidl_xunion_tag_t tag) {
+  if (tag_ != tag) {
+    Destroy();
+    tag_ = tag;
+    switch (tag_) {
+      case static_cast<fidl_xunion_tag_t>(
+          ::test::bindingsdenylist::ShouldNeverAppearInAnyBinding9::Tag::
+              Invalid):
+        break;
+      case ::test::bindingsdenylist::ShouldNeverAppearInAnyBinding9::Tag::kA:
+        new (&a_) bool();
+        break;
+      default:
+        new (&unknown_data_) decltype(unknown_data_);
+        break;
+    }
+  }
+}
+
+extern "C" const fidl_type_t
+    test_bindingsdenylist_ShouldNeverAppearInAnyBinding8Table;
+const fidl_type_t* ShouldNeverAppearInAnyBinding8::FidlType =
+    &test_bindingsdenylist_ShouldNeverAppearInAnyBinding8Table;
+
+ShouldNeverAppearInAnyBinding8::ShouldNeverAppearInAnyBinding8() {}
+
+ShouldNeverAppearInAnyBinding8::ShouldNeverAppearInAnyBinding8(
+    ShouldNeverAppearInAnyBinding8&& other) {
+  field_presence_ = other.field_presence_;
+  if (field_presence_.IsSet<0>()) {
+    Construct(&a_value_.value, std::move(other.a_value_.value));
+  }
+  _unknown_data = std::move(other._unknown_data);
+}
+
+ShouldNeverAppearInAnyBinding8::~ShouldNeverAppearInAnyBinding8() {
+  if (field_presence_.IsSet<0>()) {
+    Destruct(&a_value_.value);
+  }
+}
+
+ShouldNeverAppearInAnyBinding8& ShouldNeverAppearInAnyBinding8::operator=(
+    ShouldNeverAppearInAnyBinding8&& other) {
+  if (other.field_presence_.IsSet<0>()) {
+    if (field_presence_.IsSet<0>()) {
+      a_value_.value = std::move(other.a_value_.value);
+    } else {
+      field_presence_.Set<0>();
+      Construct(&a_value_.value, std::move(other.a_value_.value));
+    }
+  } else if (field_presence_.IsSet<0>()) {
+    field_presence_.Clear<0>();
+    Destruct(&a_value_.value);
+  }
+  _unknown_data = std::move(other._unknown_data);
+  return *this;
+}
+
+bool ShouldNeverAppearInAnyBinding8::IsEmpty() const {
+  return field_presence_.IsEmpty() && _unknown_data.size() == 0;
+}
+
+void ShouldNeverAppearInAnyBinding8::Encode(
+    ::fidl::Encoder* _encoder, size_t _offset,
+    cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
+  size_t max_ordinal = MaxOrdinal();
+  ::fidl::EncodeVectorPointer(_encoder, max_ordinal, _offset);
+  if (max_ordinal == 0) return;
+  size_t envelope_size =
+      (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1)
+          ? sizeof(fidl_envelope_t)
+          : sizeof(fidl_envelope_v2_t);
+  size_t base = _encoder->Alloc(max_ordinal * envelope_size);
+  auto next_unknown = _unknown_data.begin();
+  if (field_presence_.IsSet<0>()) {
+    // Encode unknown fields that have an ordinal that should appear before this
+    // field.
+    while (next_unknown != _unknown_data.end() && next_unknown->first < 1) {
+      size_t envelope_base = base + (next_unknown->first - 1) * envelope_size;
+      ::fidl::EncodeUnknownBytes(_encoder, &next_unknown->second,
+                                 envelope_base);
+      std::advance(next_unknown, 1);
+    }
+
+    const size_t length_before = _encoder->CurrentLength();
+    const size_t handles_before = _encoder->CurrentHandleCount();
+
+    size_t envelope_base = base + (1 - 1) * envelope_size;
+    switch (_encoder->wire_format()) {
+      case ::fidl::internal::WireFormatVersion::kV1: {
+        ::fidl::Encode(
+            _encoder, &a_value_.value,
+            _encoder->Alloc(
+                ::fidl::EncodingInlineSize<bool, ::fidl::Encoder>(_encoder)));
+
+        fidl_envelope_t* envelope =
+            _encoder->GetPtr<fidl_envelope_t>(envelope_base);
+        envelope->num_bytes =
+            static_cast<uint32_t>(_encoder->CurrentLength() - length_before);
+        envelope->num_handles = static_cast<uint32_t>(
+            _encoder->CurrentHandleCount() - handles_before);
+        envelope->presence = FIDL_ALLOC_PRESENT;
+        break;
+      }
+      case ::fidl::internal::WireFormatVersion::kV2: {
+        if (::fidl::EncodingInlineSize<bool>(_encoder) <=
+            FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
+          ::fidl::Encode(_encoder, &a_value_.value, envelope_base);
+
+          fidl_envelope_v2_t* envelope =
+              _encoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
+          envelope->num_handles = static_cast<uint16_t>(
+              _encoder->CurrentHandleCount() - handles_before);
+          envelope->flags = FIDL_ENVELOPE_FLAGS_INLINING_MASK;
+          break;
+        }
+
+        ::fidl::Encode(
+            _encoder, &a_value_.value,
+            _encoder->Alloc(
+                ::fidl::EncodingInlineSize<bool, ::fidl::Encoder>(_encoder)));
+
+        fidl_envelope_v2_t* envelope =
+            _encoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
+        envelope->num_bytes =
+            static_cast<uint32_t>(_encoder->CurrentLength() - length_before);
+        envelope->num_handles = static_cast<uint16_t>(
+            _encoder->CurrentHandleCount() - handles_before);
+        envelope->flags = 0;
+        break;
+      }
+    }
+  }
+  // Encode any remaining unknown fields (i.e. ones that have an ordinal outside
+  // the range of known ordinals)
+  for (auto curr = next_unknown; curr != _unknown_data.end(); ++curr) {
+    size_t envelope_base = base + (curr->first - 1) * envelope_size;
+    ::fidl::EncodeUnknownBytes(_encoder, &curr->second, envelope_base);
+  }
+}
+
+void ShouldNeverAppearInAnyBinding8::Decode(
+    ::fidl::Decoder* _decoder, ShouldNeverAppearInAnyBinding8* _value,
+    size_t _offset) {
+  fidl_vector_t* encoded = _decoder->GetPtr<fidl_vector_t>(_offset);
+  size_t base;
+  size_t count;
+  if (!encoded->data) {
+    goto clear_all;
+  }
+
+  base = _decoder->GetOffset(encoded->data);
+  count = encoded->count;
+  if (count >= 1) {
+    size_t envelope_base = base + (1 - 1) * sizeof(fidl_envelope_v2_t);
+    fidl_envelope_v2_t* envelope =
+        _decoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
+    if (*reinterpret_cast<const void* const*>(envelope) != nullptr) {
+      ::fidl::Decode(_decoder, _value->mutable_a(),
+                     _decoder->EnvelopeValueOffset(envelope));
+    } else {
+      _value->clear_a();
+    }
+  } else {
+    goto done_1;
+  }
+
+  if (count > 1) {
+    for (uint64_t ordinal = 1; ordinal <= count; ordinal++) {
+      if (IsOrdinalKnown(ordinal)) continue;
+
+      size_t envelope_base = base + (ordinal - 1) * sizeof(fidl_envelope_v2_t);
+      fidl_envelope_v2_t* envelope =
+          _decoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
+      if (*reinterpret_cast<const void* const*>(envelope) != nullptr) {
+        auto unknown_info = _decoder->EnvelopeUnknownDataInfo(envelope);
+        auto result = _value->_unknown_data.emplace(
+            std::piecewise_construct, std::forward_as_tuple(ordinal),
+            std::forward_as_tuple());
+        auto iter = result.first;
+        iter->second.resize(unknown_info.num_bytes);
+        ::fidl::DecodeUnknownBytesContents(_decoder, &iter->second,
+                                           unknown_info.value_offset);
+      }
+    }
+  }
+
+  return;
+
+  // Clear unset values.
+clear_all:
+done_1:
+  _value->clear_a();
+  return;
+}
+
+zx_status_t ShouldNeverAppearInAnyBinding8::Clone(
+    ShouldNeverAppearInAnyBinding8* result) const {
+  if (field_presence_.IsSet<0>()) {
+    zx_status_t _status = ::fidl::Clone(a_value_.value, result->mutable_a());
+    if (_status != ZX_OK) return _status;
+  } else {
+    result->clear_a();
+  }
+  return ::fidl::Clone(_unknown_data, &result->_unknown_data);
+}
+
+extern "C" const fidl_type_t
+    test_bindingsdenylist_ShouldNeverAppearInAnyBinding7Table;
+const fidl_type_t* ShouldNeverAppearInAnyBinding7::FidlType =
+    &test_bindingsdenylist_ShouldNeverAppearInAnyBinding7Table;
+
+void ShouldNeverAppearInAnyBinding7::Encode(
+    ::fidl::Encoder* _encoder, size_t _offset,
+    cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
+  if (::fidl::IsMemcpyCompatible<ShouldNeverAppearInAnyBinding7>::value) {
+    memcpy(_encoder->template GetPtr<ShouldNeverAppearInAnyBinding7>(_offset),
+           this, sizeof(ShouldNeverAppearInAnyBinding7));
+  } else {
+    if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
+      ::fidl::Encode(_encoder, &a, _offset + 0);
+
+    } else {
+      ::fidl::Encode(_encoder, &a, _offset + 0);
+    }
+  }
+}
+
+void ShouldNeverAppearInAnyBinding7::Decode(
+    ::fidl::Decoder* _decoder, ShouldNeverAppearInAnyBinding7* _value,
+    size_t _offset) {
+  if (::fidl::IsMemcpyCompatible<ShouldNeverAppearInAnyBinding7>::value) {
+    memcpy(_value,
+           _decoder->template GetPtr<ShouldNeverAppearInAnyBinding7>(_offset),
+           sizeof(ShouldNeverAppearInAnyBinding7));
+  } else {
+    ::fidl::Decode(_decoder, &_value->a, _offset + 0);
+  }
+}
+
+zx_status_t ShouldNeverAppearInAnyBinding7::Clone(
+    ShouldNeverAppearInAnyBinding7* _result) const {
+  zx_status_t _status = ::fidl::Clone(a, &_result->a);
+  if (_status != ZX_OK) return _status;
+  return ZX_OK;
+}
+
+extern "C" const fidl_type_t
+    test_bindingsdenylist_ShouldNeverAppearInAnyBinding6Table;
+const fidl_type_t* ShouldNeverAppearInAnyBinding6::FidlType =
+    &test_bindingsdenylist_ShouldNeverAppearInAnyBinding6Table;
+
+ShouldNeverAppearInAnyBinding6::ShouldNeverAppearInAnyBinding6() {}
+
+ShouldNeverAppearInAnyBinding6::~ShouldNeverAppearInAnyBinding6() { Destroy(); }
+
+ShouldNeverAppearInAnyBinding6::ShouldNeverAppearInAnyBinding6(
+    ShouldNeverAppearInAnyBinding6&& other)
+    : tag_(other.tag_) {
+  switch (tag_) {
+    case ::test::bindingsdenylist::ShouldNeverAppearInAnyBinding6::Tag::kA:
+      a_ = std::move(other.a_);
+      break;
+    case static_cast<fidl_xunion_tag_t>(
+        ::test::bindingsdenylist::ShouldNeverAppearInAnyBinding6::Tag::Invalid):
+      break;
+    default:
+      new (&unknown_data_) decltype(unknown_data_);
+      unknown_data_ = std::move(other.unknown_data_);
+      break;
+  }
+}
+
+ShouldNeverAppearInAnyBinding6& ShouldNeverAppearInAnyBinding6::operator=(
+    ShouldNeverAppearInAnyBinding6&& other) {
+  if (this != &other) {
+    Destroy();
+    tag_ = other.tag_;
+    switch (tag_) {
+      case ::test::bindingsdenylist::ShouldNeverAppearInAnyBinding6::Tag::kA:
+        a_ = std::move(other.a_);
+        break;
+      case static_cast<fidl_xunion_tag_t>(
+          ::test::bindingsdenylist::ShouldNeverAppearInAnyBinding6::Tag::
+              Invalid):
+        break;
+      default:
+        new (&unknown_data_) decltype(unknown_data_);
+        unknown_data_ = std::move(other.unknown_data_);
+        break;
+    }
+  }
+  return *this;
+}
+
+ShouldNeverAppearInAnyBinding6 ShouldNeverAppearInAnyBinding6::WithA(
+    bool&& val) {
+  ShouldNeverAppearInAnyBinding6 result;
+  result.set_a(std::move(val));
+  return result;
+}
+
+void ShouldNeverAppearInAnyBinding6::Encode(
+    ::fidl::Encoder* encoder, size_t offset,
+    cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
+  const size_t length_before = encoder->CurrentLength();
+  const size_t handles_before = encoder->CurrentHandleCount();
+
+  switch (Which()) {
+    case ::test::bindingsdenylist::ShouldNeverAppearInAnyBinding6::Tag::kA: {
+      switch (encoder->wire_format()) {
+        case ::fidl::internal::WireFormatVersion::kV1: {
+          ::fidl::Encode(
+              encoder, &a_,
+              encoder->Alloc(
+                  ::fidl::EncodingInlineSize<bool, ::fidl::Encoder>(encoder)));
+
+          fidl_xunion_t* xunion = encoder->GetPtr<fidl_xunion_t>(offset);
+          xunion->tag = tag_;
+          xunion->envelope.num_bytes =
+              static_cast<uint32_t>(encoder->CurrentLength() - length_before);
+          xunion->envelope.num_handles = static_cast<uint32_t>(
+              encoder->CurrentHandleCount() - handles_before);
+          xunion->envelope.presence = FIDL_ALLOC_PRESENT;
+          break;
+        }
+        case ::fidl::internal::WireFormatVersion::kV2: {
+          if (::fidl::EncodingInlineSize<bool>(encoder) <=
+              FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
+            ::fidl::Encode(encoder, &a_,
+                           offset + offsetof(fidl_xunion_v2_t, envelope));
+
+            fidl_xunion_v2_t* xunion =
+                encoder->GetPtr<fidl_xunion_v2_t>(offset);
+            xunion->tag = tag_;
+            xunion->envelope.num_handles = static_cast<uint16_t>(
+                encoder->CurrentHandleCount() - handles_before);
+            xunion->envelope.flags = FIDL_ENVELOPE_FLAGS_INLINING_MASK;
+            break;
+          }
+
+          ::fidl::Encode(
+              encoder, &a_,
+              encoder->Alloc(
+                  ::fidl::EncodingInlineSize<bool, ::fidl::Encoder>(encoder)));
+
+          fidl_xunion_v2_t* xunion = encoder->GetPtr<fidl_xunion_v2_t>(offset);
+          xunion->tag = tag_;
+          xunion->envelope.num_bytes =
+              static_cast<uint32_t>(encoder->CurrentLength() - length_before);
+          xunion->envelope.num_handles = static_cast<uint16_t>(
+              encoder->CurrentHandleCount() - handles_before);
+          xunion->envelope.flags = 0;
+          break;
+        }
+      }
+      break;
+    }
+    case ::test::bindingsdenylist::ShouldNeverAppearInAnyBinding6::Tag::
+        kUnknown: {
+      ::fidl::EncodeUnknownBytes(encoder, &unknown_data_,
+                                 offset + offsetof(fidl_xunion_t, envelope));
+      *encoder->GetPtr<uint64_t>(offset) = tag_;
+      break;
+    }
+    default:
+      break;
+  }
+}
+
+void ShouldNeverAppearInAnyBinding6::Decode(
+    ::fidl::Decoder* _decoder, ShouldNeverAppearInAnyBinding6* value,
+    size_t offset) {
+  fidl_xunion_v2_t* xunion = _decoder->GetPtr<fidl_xunion_v2_t>(offset);
+
+  if (xunion->envelope.num_bytes == 0 && xunion->envelope.num_handles == 0 &&
+      xunion->envelope.flags == 0) {
+    value->EnsureStorageInitialized(static_cast<fidl_xunion_tag_t>(
+        ::test::bindingsdenylist::ShouldNeverAppearInAnyBinding6::Tag::
+            Invalid));
+    return;
+  }
+
+  value->EnsureStorageInitialized(xunion->tag);
+
+  size_t value_offset = _decoder->EnvelopeValueOffset(&xunion->envelope);
+
+  switch (value->tag_) {
+    case ::test::bindingsdenylist::ShouldNeverAppearInAnyBinding6::Tag::kA: {
+      ::fidl::Decode(_decoder, &value->a_, value_offset);
+      break;
+    }
+    default: {
+      auto unknown_info = _decoder->EnvelopeUnknownDataInfo(&xunion->envelope);
+      value->unknown_data_.resize(unknown_info.num_bytes);
+      ::fidl::DecodeUnknownBytesContents(_decoder, &value->unknown_data_,
+                                         unknown_info.value_offset);
+      break;
+    }
+  }
+}
+
+zx_status_t ShouldNeverAppearInAnyBinding6::Clone(
+    ShouldNeverAppearInAnyBinding6* result) const {
+  result->Destroy();
+  result->tag_ = tag_;
+  switch (tag_) {
+    case ::test::bindingsdenylist::ShouldNeverAppearInAnyBinding6::Tag::Invalid:
+      return ZX_OK;
+    case ::test::bindingsdenylist::ShouldNeverAppearInAnyBinding6::Tag::kA:
+      return ::fidl::Clone(a_, &result->a_);
+    default:
+      new (&result->unknown_data_) decltype(unknown_data_);
+      return ::fidl::Clone(unknown_data_, &result->unknown_data_);
+      return ZX_OK;
+  }
+}
+
+ShouldNeverAppearInAnyBinding6& ShouldNeverAppearInAnyBinding6::set_a(
+    bool value) {
+  EnsureStorageInitialized(
+      ::test::bindingsdenylist::ShouldNeverAppearInAnyBinding6::Tag::kA);
+  a_ = std::move(value);
+  return *this;
+}
+ShouldNeverAppearInAnyBinding6& ShouldNeverAppearInAnyBinding6::SetUnknownData(
+    fidl_xunion_tag_t ordinal, std::vector<uint8_t> bytes) {
+  EnsureStorageInitialized(ordinal);
+  unknown_data_ = std::move(bytes);
+  return *this;
+}
+
+void ShouldNeverAppearInAnyBinding6::Destroy() {
+  switch (tag_) {
+    case ::test::bindingsdenylist::ShouldNeverAppearInAnyBinding6::Tag::kA:
+      break;
+
+    case static_cast<fidl_xunion_tag_t>(
+        ::test::bindingsdenylist::ShouldNeverAppearInAnyBinding6::Tag::Invalid):
+      break;
+    default:
+      unknown_data_.~decltype(unknown_data_)();
+      break;
+  }
+  tag_ = static_cast<fidl_xunion_tag_t>(
+      ::test::bindingsdenylist::ShouldNeverAppearInAnyBinding6::Tag::Invalid);
+}
+
+void ShouldNeverAppearInAnyBinding6::EnsureStorageInitialized(
+    ::fidl_xunion_tag_t tag) {
+  if (tag_ != tag) {
+    Destroy();
+    tag_ = tag;
+    switch (tag_) {
+      case static_cast<fidl_xunion_tag_t>(
+          ::test::bindingsdenylist::ShouldNeverAppearInAnyBinding6::Tag::
+              Invalid):
+        break;
+      case ::test::bindingsdenylist::ShouldNeverAppearInAnyBinding6::Tag::kA:
+        new (&a_) bool();
+        break;
+      default:
+        new (&unknown_data_) decltype(unknown_data_);
+        break;
+    }
+  }
+}
+
+extern "C" const fidl_type_t
+    test_bindingsdenylist_ShouldNeverAppearInAnyBinding5Table;
+const fidl_type_t* ShouldNeverAppearInAnyBinding5::FidlType =
+    &test_bindingsdenylist_ShouldNeverAppearInAnyBinding5Table;
+
+ShouldNeverAppearInAnyBinding5::ShouldNeverAppearInAnyBinding5() {}
+
+ShouldNeverAppearInAnyBinding5::ShouldNeverAppearInAnyBinding5(
+    ShouldNeverAppearInAnyBinding5&& other) {
+  field_presence_ = other.field_presence_;
+  if (field_presence_.IsSet<0>()) {
+    Construct(&a_value_.value, std::move(other.a_value_.value));
+  }
+  _unknown_data = std::move(other._unknown_data);
+}
+
+ShouldNeverAppearInAnyBinding5::~ShouldNeverAppearInAnyBinding5() {
+  if (field_presence_.IsSet<0>()) {
+    Destruct(&a_value_.value);
+  }
+}
+
+ShouldNeverAppearInAnyBinding5& ShouldNeverAppearInAnyBinding5::operator=(
+    ShouldNeverAppearInAnyBinding5&& other) {
+  if (other.field_presence_.IsSet<0>()) {
+    if (field_presence_.IsSet<0>()) {
+      a_value_.value = std::move(other.a_value_.value);
+    } else {
+      field_presence_.Set<0>();
+      Construct(&a_value_.value, std::move(other.a_value_.value));
+    }
+  } else if (field_presence_.IsSet<0>()) {
+    field_presence_.Clear<0>();
+    Destruct(&a_value_.value);
+  }
+  _unknown_data = std::move(other._unknown_data);
+  return *this;
+}
+
+bool ShouldNeverAppearInAnyBinding5::IsEmpty() const {
+  return field_presence_.IsEmpty() && _unknown_data.size() == 0;
+}
+
+void ShouldNeverAppearInAnyBinding5::Encode(
+    ::fidl::Encoder* _encoder, size_t _offset,
+    cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
+  size_t max_ordinal = MaxOrdinal();
+  ::fidl::EncodeVectorPointer(_encoder, max_ordinal, _offset);
+  if (max_ordinal == 0) return;
+  size_t envelope_size =
+      (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1)
+          ? sizeof(fidl_envelope_t)
+          : sizeof(fidl_envelope_v2_t);
+  size_t base = _encoder->Alloc(max_ordinal * envelope_size);
+  auto next_unknown = _unknown_data.begin();
+  if (field_presence_.IsSet<0>()) {
+    // Encode unknown fields that have an ordinal that should appear before this
+    // field.
+    while (next_unknown != _unknown_data.end() && next_unknown->first < 1) {
+      size_t envelope_base = base + (next_unknown->first - 1) * envelope_size;
+      ::fidl::EncodeUnknownBytes(_encoder, &next_unknown->second,
+                                 envelope_base);
+      std::advance(next_unknown, 1);
+    }
+
+    const size_t length_before = _encoder->CurrentLength();
+    const size_t handles_before = _encoder->CurrentHandleCount();
+
+    size_t envelope_base = base + (1 - 1) * envelope_size;
+    switch (_encoder->wire_format()) {
+      case ::fidl::internal::WireFormatVersion::kV1: {
+        ::fidl::Encode(
+            _encoder, &a_value_.value,
+            _encoder->Alloc(
+                ::fidl::EncodingInlineSize<bool, ::fidl::Encoder>(_encoder)));
+
+        fidl_envelope_t* envelope =
+            _encoder->GetPtr<fidl_envelope_t>(envelope_base);
+        envelope->num_bytes =
+            static_cast<uint32_t>(_encoder->CurrentLength() - length_before);
+        envelope->num_handles = static_cast<uint32_t>(
+            _encoder->CurrentHandleCount() - handles_before);
+        envelope->presence = FIDL_ALLOC_PRESENT;
+        break;
+      }
+      case ::fidl::internal::WireFormatVersion::kV2: {
+        if (::fidl::EncodingInlineSize<bool>(_encoder) <=
+            FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
+          ::fidl::Encode(_encoder, &a_value_.value, envelope_base);
+
+          fidl_envelope_v2_t* envelope =
+              _encoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
+          envelope->num_handles = static_cast<uint16_t>(
+              _encoder->CurrentHandleCount() - handles_before);
+          envelope->flags = FIDL_ENVELOPE_FLAGS_INLINING_MASK;
+          break;
+        }
+
+        ::fidl::Encode(
+            _encoder, &a_value_.value,
+            _encoder->Alloc(
+                ::fidl::EncodingInlineSize<bool, ::fidl::Encoder>(_encoder)));
+
+        fidl_envelope_v2_t* envelope =
+            _encoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
+        envelope->num_bytes =
+            static_cast<uint32_t>(_encoder->CurrentLength() - length_before);
+        envelope->num_handles = static_cast<uint16_t>(
+            _encoder->CurrentHandleCount() - handles_before);
+        envelope->flags = 0;
+        break;
+      }
+    }
+  }
+  // Encode any remaining unknown fields (i.e. ones that have an ordinal outside
+  // the range of known ordinals)
+  for (auto curr = next_unknown; curr != _unknown_data.end(); ++curr) {
+    size_t envelope_base = base + (curr->first - 1) * envelope_size;
+    ::fidl::EncodeUnknownBytes(_encoder, &curr->second, envelope_base);
+  }
+}
+
+void ShouldNeverAppearInAnyBinding5::Decode(
+    ::fidl::Decoder* _decoder, ShouldNeverAppearInAnyBinding5* _value,
+    size_t _offset) {
+  fidl_vector_t* encoded = _decoder->GetPtr<fidl_vector_t>(_offset);
+  size_t base;
+  size_t count;
+  if (!encoded->data) {
+    goto clear_all;
+  }
+
+  base = _decoder->GetOffset(encoded->data);
+  count = encoded->count;
+  if (count >= 1) {
+    size_t envelope_base = base + (1 - 1) * sizeof(fidl_envelope_v2_t);
+    fidl_envelope_v2_t* envelope =
+        _decoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
+    if (*reinterpret_cast<const void* const*>(envelope) != nullptr) {
+      ::fidl::Decode(_decoder, _value->mutable_a(),
+                     _decoder->EnvelopeValueOffset(envelope));
+    } else {
+      _value->clear_a();
+    }
+  } else {
+    goto done_1;
+  }
+
+  if (count > 1) {
+    for (uint64_t ordinal = 1; ordinal <= count; ordinal++) {
+      if (IsOrdinalKnown(ordinal)) continue;
+
+      size_t envelope_base = base + (ordinal - 1) * sizeof(fidl_envelope_v2_t);
+      fidl_envelope_v2_t* envelope =
+          _decoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
+      if (*reinterpret_cast<const void* const*>(envelope) != nullptr) {
+        auto unknown_info = _decoder->EnvelopeUnknownDataInfo(envelope);
+        auto result = _value->_unknown_data.emplace(
+            std::piecewise_construct, std::forward_as_tuple(ordinal),
+            std::forward_as_tuple());
+        auto iter = result.first;
+        iter->second.resize(unknown_info.num_bytes);
+        ::fidl::DecodeUnknownBytesContents(_decoder, &iter->second,
+                                           unknown_info.value_offset);
+      }
+    }
+  }
+
+  return;
+
+  // Clear unset values.
+clear_all:
+done_1:
+  _value->clear_a();
+  return;
+}
+
+zx_status_t ShouldNeverAppearInAnyBinding5::Clone(
+    ShouldNeverAppearInAnyBinding5* result) const {
+  if (field_presence_.IsSet<0>()) {
+    zx_status_t _status = ::fidl::Clone(a_value_.value, result->mutable_a());
+    if (_status != ZX_OK) return _status;
+  } else {
+    result->clear_a();
+  }
+  return ::fidl::Clone(_unknown_data, &result->_unknown_data);
+}
+
+extern "C" const fidl_type_t
+    test_bindingsdenylist_ShouldNeverAppearInAnyBinding4Table;
+const fidl_type_t* ShouldNeverAppearInAnyBinding4::FidlType =
+    &test_bindingsdenylist_ShouldNeverAppearInAnyBinding4Table;
+
+void ShouldNeverAppearInAnyBinding4::Encode(
+    ::fidl::Encoder* _encoder, size_t _offset,
+    cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
+  if (::fidl::IsMemcpyCompatible<ShouldNeverAppearInAnyBinding4>::value) {
+    memcpy(_encoder->template GetPtr<ShouldNeverAppearInAnyBinding4>(_offset),
+           this, sizeof(ShouldNeverAppearInAnyBinding4));
+  } else {
+    if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
+      ::fidl::Encode(_encoder, &a, _offset + 0);
+
+    } else {
+      ::fidl::Encode(_encoder, &a, _offset + 0);
+    }
+  }
+}
+
+void ShouldNeverAppearInAnyBinding4::Decode(
+    ::fidl::Decoder* _decoder, ShouldNeverAppearInAnyBinding4* _value,
+    size_t _offset) {
+  if (::fidl::IsMemcpyCompatible<ShouldNeverAppearInAnyBinding4>::value) {
+    memcpy(_value,
+           _decoder->template GetPtr<ShouldNeverAppearInAnyBinding4>(_offset),
+           sizeof(ShouldNeverAppearInAnyBinding4));
+  } else {
+    ::fidl::Decode(_decoder, &_value->a, _offset + 0);
+  }
+}
+
+zx_status_t ShouldNeverAppearInAnyBinding4::Clone(
+    ShouldNeverAppearInAnyBinding4* _result) const {
+  zx_status_t _status = ::fidl::Clone(a, &_result->a);
+  if (_status != ZX_OK) return _status;
+  return ZX_OK;
+}
+
+extern "C" const fidl_type_t test_bindingsdenylist_Allowed_Denied_ResponseTable;
+const fidl_type_t* Allowed_Denied_Response::FidlType =
+    &test_bindingsdenylist_Allowed_Denied_ResponseTable;
+
+void Allowed_Denied_Response::Encode(
+    ::fidl::Encoder* _encoder, size_t _offset,
+    cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
+  if (::fidl::IsMemcpyCompatible<Allowed_Denied_Response>::value) {
+    memcpy(_encoder->template GetPtr<Allowed_Denied_Response>(_offset), this,
+           sizeof(Allowed_Denied_Response));
+  } else {
+    if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
+      ::fidl::Encode(_encoder, &should_never_appear_in_any_binding_4,
+                     _offset + 0);
+      ::fidl::Encode(_encoder, &should_never_appear_in_any_binding_5,
+                     _offset + 8);
+      ::fidl::Encode(_encoder, &should_never_appear_in_any_binding_6,
+                     _offset + 24);
+
+    } else {
+      ::fidl::Encode(_encoder, &should_never_appear_in_any_binding_4,
+                     _offset + 0);
+      ::fidl::Encode(_encoder, &should_never_appear_in_any_binding_5,
+                     _offset + 8);
+      ::fidl::Encode(_encoder, &should_never_appear_in_any_binding_6,
+                     _offset + 24);
+    }
+  }
+}
+
+void Allowed_Denied_Response::Decode(::fidl::Decoder* _decoder,
+                                     Allowed_Denied_Response* _value,
+                                     size_t _offset) {
+  if (::fidl::IsMemcpyCompatible<Allowed_Denied_Response>::value) {
+    memcpy(_value, _decoder->template GetPtr<Allowed_Denied_Response>(_offset),
+           sizeof(Allowed_Denied_Response));
+  } else {
+    ::fidl::Decode(_decoder, &_value->should_never_appear_in_any_binding_4,
+                   _offset + 0);
+    ::fidl::Decode(_decoder, &_value->should_never_appear_in_any_binding_5,
+                   _offset + 8);
+    ::fidl::Decode(_decoder, &_value->should_never_appear_in_any_binding_6,
+                   _offset + 24);
+  }
+}
+
+zx_status_t Allowed_Denied_Response::Clone(
+    Allowed_Denied_Response* _result) const {
+  zx_status_t _status =
+      ::fidl::Clone(should_never_appear_in_any_binding_4,
+                    &_result->should_never_appear_in_any_binding_4);
+  if (_status != ZX_OK) return _status;
+  _status = ::fidl::Clone(should_never_appear_in_any_binding_5,
+                          &_result->should_never_appear_in_any_binding_5);
+  if (_status != ZX_OK) return _status;
+  _status = ::fidl::Clone(should_never_appear_in_any_binding_6,
+                          &_result->should_never_appear_in_any_binding_6);
+  if (_status != ZX_OK) return _status;
+  return ZX_OK;
+}
+
+extern "C" const fidl_type_t test_bindingsdenylist_Allowed_Denied_ResultTable;
+const fidl_type_t* Allowed_Denied_Result::FidlType =
+    &test_bindingsdenylist_Allowed_Denied_ResultTable;
+
+Allowed_Denied_Result::Allowed_Denied_Result() {}
+
+Allowed_Denied_Result::~Allowed_Denied_Result() { Destroy(); }
+
+Allowed_Denied_Result::Allowed_Denied_Result(Allowed_Denied_Result&& other)
+    : tag_(other.tag_) {
+  switch (tag_) {
+    case ::test::bindingsdenylist::Allowed_Denied_Result::Tag::kResponse:
+      new (&response_)::test::bindingsdenylist::Allowed_Denied_Response();
+      response_ = std::move(other.response_);
+      break;
+    case ::test::bindingsdenylist::Allowed_Denied_Result::Tag::kErr:
+      err_ = std::move(other.err_);
+      break;
+    case static_cast<fidl_xunion_tag_t>(
+        ::test::bindingsdenylist::Allowed_Denied_Result::Tag::Invalid):
+      break;
+  }
+}
+
+Allowed_Denied_Result& Allowed_Denied_Result::operator=(
+    Allowed_Denied_Result&& other) {
+  if (this != &other) {
+    Destroy();
+    tag_ = other.tag_;
+    switch (tag_) {
+      case ::test::bindingsdenylist::Allowed_Denied_Result::Tag::kResponse:
+        new (&response_)::test::bindingsdenylist::Allowed_Denied_Response();
+        response_ = std::move(other.response_);
+        break;
+      case ::test::bindingsdenylist::Allowed_Denied_Result::Tag::kErr:
+        err_ = std::move(other.err_);
+        break;
+      case static_cast<fidl_xunion_tag_t>(
+          ::test::bindingsdenylist::Allowed_Denied_Result::Tag::Invalid):
+        break;
+    }
+  }
+  return *this;
+}
+
+Allowed_Denied_Result Allowed_Denied_Result::WithResponse(
+    ::test::bindingsdenylist::Allowed_Denied_Response&& val) {
+  Allowed_Denied_Result result;
+  result.set_response(std::move(val));
+  return result;
+}
+Allowed_Denied_Result Allowed_Denied_Result::WithErr(uint32_t&& val) {
+  Allowed_Denied_Result result;
+  result.set_err(std::move(val));
+  return result;
+}
+
+void Allowed_Denied_Result::Encode(
+    ::fidl::Encoder* encoder, size_t offset,
+    cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
+  const size_t length_before = encoder->CurrentLength();
+  const size_t handles_before = encoder->CurrentHandleCount();
+
+  switch (Which()) {
+    case ::test::bindingsdenylist::Allowed_Denied_Result::Tag::kResponse: {
+      switch (encoder->wire_format()) {
+        case ::fidl::internal::WireFormatVersion::kV1: {
+          ::fidl::Encode(
+              encoder, &response_,
+              encoder->Alloc(::fidl::EncodingInlineSize<
+                             ::test::bindingsdenylist::Allowed_Denied_Response,
+                             ::fidl::Encoder>(encoder)));
+
+          fidl_xunion_t* xunion = encoder->GetPtr<fidl_xunion_t>(offset);
+          xunion->tag = tag_;
+          xunion->envelope.num_bytes =
+              static_cast<uint32_t>(encoder->CurrentLength() - length_before);
+          xunion->envelope.num_handles = static_cast<uint32_t>(
+              encoder->CurrentHandleCount() - handles_before);
+          xunion->envelope.presence = FIDL_ALLOC_PRESENT;
+          break;
+        }
+        case ::fidl::internal::WireFormatVersion::kV2: {
+          if (::fidl::EncodingInlineSize<
+                  ::test::bindingsdenylist::Allowed_Denied_Response>(encoder) <=
+              FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
+            ::fidl::Encode(encoder, &response_,
+                           offset + offsetof(fidl_xunion_v2_t, envelope));
+
+            fidl_xunion_v2_t* xunion =
+                encoder->GetPtr<fidl_xunion_v2_t>(offset);
+            xunion->tag = tag_;
+            xunion->envelope.num_handles = static_cast<uint16_t>(
+                encoder->CurrentHandleCount() - handles_before);
+            xunion->envelope.flags = FIDL_ENVELOPE_FLAGS_INLINING_MASK;
+            break;
+          }
+
+          ::fidl::Encode(
+              encoder, &response_,
+              encoder->Alloc(::fidl::EncodingInlineSize<
+                             ::test::bindingsdenylist::Allowed_Denied_Response,
+                             ::fidl::Encoder>(encoder)));
+
+          fidl_xunion_v2_t* xunion = encoder->GetPtr<fidl_xunion_v2_t>(offset);
+          xunion->tag = tag_;
+          xunion->envelope.num_bytes =
+              static_cast<uint32_t>(encoder->CurrentLength() - length_before);
+          xunion->envelope.num_handles = static_cast<uint16_t>(
+              encoder->CurrentHandleCount() - handles_before);
+          xunion->envelope.flags = 0;
+          break;
+        }
+      }
+      break;
+    }
+    case ::test::bindingsdenylist::Allowed_Denied_Result::Tag::kErr: {
+      switch (encoder->wire_format()) {
+        case ::fidl::internal::WireFormatVersion::kV1: {
+          ::fidl::Encode(
+              encoder, &err_,
+              encoder->Alloc(
+                  ::fidl::EncodingInlineSize<uint32_t, ::fidl::Encoder>(
+                      encoder)));
+
+          fidl_xunion_t* xunion = encoder->GetPtr<fidl_xunion_t>(offset);
+          xunion->tag = tag_;
+          xunion->envelope.num_bytes =
+              static_cast<uint32_t>(encoder->CurrentLength() - length_before);
+          xunion->envelope.num_handles = static_cast<uint32_t>(
+              encoder->CurrentHandleCount() - handles_before);
+          xunion->envelope.presence = FIDL_ALLOC_PRESENT;
+          break;
+        }
+        case ::fidl::internal::WireFormatVersion::kV2: {
+          if (::fidl::EncodingInlineSize<uint32_t>(encoder) <=
+              FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
+            ::fidl::Encode(encoder, &err_,
+                           offset + offsetof(fidl_xunion_v2_t, envelope));
+
+            fidl_xunion_v2_t* xunion =
+                encoder->GetPtr<fidl_xunion_v2_t>(offset);
+            xunion->tag = tag_;
+            xunion->envelope.num_handles = static_cast<uint16_t>(
+                encoder->CurrentHandleCount() - handles_before);
+            xunion->envelope.flags = FIDL_ENVELOPE_FLAGS_INLINING_MASK;
+            break;
+          }
+
+          ::fidl::Encode(
+              encoder, &err_,
+              encoder->Alloc(
+                  ::fidl::EncodingInlineSize<uint32_t, ::fidl::Encoder>(
+                      encoder)));
+
+          fidl_xunion_v2_t* xunion = encoder->GetPtr<fidl_xunion_v2_t>(offset);
+          xunion->tag = tag_;
+          xunion->envelope.num_bytes =
+              static_cast<uint32_t>(encoder->CurrentLength() - length_before);
+          xunion->envelope.num_handles = static_cast<uint16_t>(
+              encoder->CurrentHandleCount() - handles_before);
+          xunion->envelope.flags = 0;
+          break;
+        }
+      }
+      break;
+    }
+    default:
+      break;
+  }
+}
+
+void Allowed_Denied_Result::Decode(::fidl::Decoder* _decoder,
+                                   Allowed_Denied_Result* value,
+                                   size_t offset) {
+  fidl_xunion_v2_t* xunion = _decoder->GetPtr<fidl_xunion_v2_t>(offset);
+
+  if (xunion->envelope.num_bytes == 0 && xunion->envelope.num_handles == 0 &&
+      xunion->envelope.flags == 0) {
+    value->EnsureStorageInitialized(static_cast<fidl_xunion_tag_t>(
+        ::test::bindingsdenylist::Allowed_Denied_Result::Tag::Invalid));
+    return;
+  }
+
+  value->EnsureStorageInitialized(xunion->tag);
+
+  size_t value_offset = _decoder->EnvelopeValueOffset(&xunion->envelope);
+
+  switch (value->tag_) {
+    case ::test::bindingsdenylist::Allowed_Denied_Result::Tag::kResponse: {
+      new (
+          &value->response_)::test::bindingsdenylist::Allowed_Denied_Response();
+      ::fidl::Decode(_decoder, &value->response_, value_offset);
+      break;
+    }
+    case ::test::bindingsdenylist::Allowed_Denied_Result::Tag::kErr: {
+      ::fidl::Decode(_decoder, &value->err_, value_offset);
+      break;
+    }
+    default: {
+      break;
+    }
+  }
+}
+
+zx_status_t Allowed_Denied_Result::Clone(Allowed_Denied_Result* result) const {
+  result->Destroy();
+  result->tag_ = tag_;
+  switch (tag_) {
+    case ::test::bindingsdenylist::Allowed_Denied_Result::Tag::Invalid:
+      return ZX_OK;
+    case ::test::bindingsdenylist::Allowed_Denied_Result::Tag::kResponse:
+      new (&result
+                ->response_)::test::bindingsdenylist::Allowed_Denied_Response();
+      return ::fidl::Clone(response_, &result->response_);
+    case ::test::bindingsdenylist::Allowed_Denied_Result::Tag::kErr:
+      return ::fidl::Clone(err_, &result->err_);
+    default:
+      return ZX_OK;
+  }
+}
+
+Allowed_Denied_Result& Allowed_Denied_Result::set_response(
+    ::test::bindingsdenylist::Allowed_Denied_Response value) {
+  EnsureStorageInitialized(
+      ::test::bindingsdenylist::Allowed_Denied_Result::Tag::kResponse);
+  response_ = std::move(value);
+  return *this;
+}
+
+Allowed_Denied_Result& Allowed_Denied_Result::set_err(uint32_t value) {
+  EnsureStorageInitialized(
+      ::test::bindingsdenylist::Allowed_Denied_Result::Tag::kErr);
+  err_ = std::move(value);
+  return *this;
+}
+
+void Allowed_Denied_Result::Destroy() {
+  switch (tag_) {
+    case ::test::bindingsdenylist::Allowed_Denied_Result::Tag::kResponse:
+      response_.~decltype(response_)();
+      break;
+    case ::test::bindingsdenylist::Allowed_Denied_Result::Tag::kErr:
+      break;
+
+    default:
+      break;
+  }
+  tag_ = static_cast<fidl_xunion_tag_t>(
+      ::test::bindingsdenylist::Allowed_Denied_Result::Tag::Invalid);
+}
+
+void Allowed_Denied_Result::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
+  if (tag_ != tag) {
+    Destroy();
+    tag_ = tag;
+    switch (tag_) {
+      case static_cast<fidl_xunion_tag_t>(
+          ::test::bindingsdenylist::Allowed_Denied_Result::Tag::Invalid):
+        break;
+      case ::test::bindingsdenylist::Allowed_Denied_Result::Tag::kResponse:
+        new (&response_)::test::bindingsdenylist::Allowed_Denied_Response();
+        break;
+      case ::test::bindingsdenylist::Allowed_Denied_Result::Tag::kErr:
+        new (&err_) uint32_t();
+        break;
+      default:
+        break;
+    }
+  }
+}
+
+extern "C" const fidl_type_t
+    test_bindingsdenylist_ShouldNeverAppearInAnyBinding3Table;
+const fidl_type_t* ShouldNeverAppearInAnyBinding3::FidlType =
+    &test_bindingsdenylist_ShouldNeverAppearInAnyBinding3Table;
+
+ShouldNeverAppearInAnyBinding3::ShouldNeverAppearInAnyBinding3() {}
+
+ShouldNeverAppearInAnyBinding3::~ShouldNeverAppearInAnyBinding3() { Destroy(); }
+
+ShouldNeverAppearInAnyBinding3::ShouldNeverAppearInAnyBinding3(
+    ShouldNeverAppearInAnyBinding3&& other)
+    : tag_(other.tag_) {
+  switch (tag_) {
+    case ::test::bindingsdenylist::ShouldNeverAppearInAnyBinding3::Tag::kA:
+      a_ = std::move(other.a_);
+      break;
+    case static_cast<fidl_xunion_tag_t>(
+        ::test::bindingsdenylist::ShouldNeverAppearInAnyBinding3::Tag::Invalid):
+      break;
+    default:
+      new (&unknown_data_) decltype(unknown_data_);
+      unknown_data_ = std::move(other.unknown_data_);
+      break;
+  }
+}
+
+ShouldNeverAppearInAnyBinding3& ShouldNeverAppearInAnyBinding3::operator=(
+    ShouldNeverAppearInAnyBinding3&& other) {
+  if (this != &other) {
+    Destroy();
+    tag_ = other.tag_;
+    switch (tag_) {
+      case ::test::bindingsdenylist::ShouldNeverAppearInAnyBinding3::Tag::kA:
+        a_ = std::move(other.a_);
+        break;
+      case static_cast<fidl_xunion_tag_t>(
+          ::test::bindingsdenylist::ShouldNeverAppearInAnyBinding3::Tag::
+              Invalid):
+        break;
+      default:
+        new (&unknown_data_) decltype(unknown_data_);
+        unknown_data_ = std::move(other.unknown_data_);
+        break;
+    }
+  }
+  return *this;
+}
+
+ShouldNeverAppearInAnyBinding3 ShouldNeverAppearInAnyBinding3::WithA(
+    bool&& val) {
+  ShouldNeverAppearInAnyBinding3 result;
+  result.set_a(std::move(val));
+  return result;
+}
+
+void ShouldNeverAppearInAnyBinding3::Encode(
+    ::fidl::Encoder* encoder, size_t offset,
+    cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
+  const size_t length_before = encoder->CurrentLength();
+  const size_t handles_before = encoder->CurrentHandleCount();
+
+  switch (Which()) {
+    case ::test::bindingsdenylist::ShouldNeverAppearInAnyBinding3::Tag::kA: {
+      switch (encoder->wire_format()) {
+        case ::fidl::internal::WireFormatVersion::kV1: {
+          ::fidl::Encode(
+              encoder, &a_,
+              encoder->Alloc(
+                  ::fidl::EncodingInlineSize<bool, ::fidl::Encoder>(encoder)));
+
+          fidl_xunion_t* xunion = encoder->GetPtr<fidl_xunion_t>(offset);
+          xunion->tag = tag_;
+          xunion->envelope.num_bytes =
+              static_cast<uint32_t>(encoder->CurrentLength() - length_before);
+          xunion->envelope.num_handles = static_cast<uint32_t>(
+              encoder->CurrentHandleCount() - handles_before);
+          xunion->envelope.presence = FIDL_ALLOC_PRESENT;
+          break;
+        }
+        case ::fidl::internal::WireFormatVersion::kV2: {
+          if (::fidl::EncodingInlineSize<bool>(encoder) <=
+              FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
+            ::fidl::Encode(encoder, &a_,
+                           offset + offsetof(fidl_xunion_v2_t, envelope));
+
+            fidl_xunion_v2_t* xunion =
+                encoder->GetPtr<fidl_xunion_v2_t>(offset);
+            xunion->tag = tag_;
+            xunion->envelope.num_handles = static_cast<uint16_t>(
+                encoder->CurrentHandleCount() - handles_before);
+            xunion->envelope.flags = FIDL_ENVELOPE_FLAGS_INLINING_MASK;
+            break;
+          }
+
+          ::fidl::Encode(
+              encoder, &a_,
+              encoder->Alloc(
+                  ::fidl::EncodingInlineSize<bool, ::fidl::Encoder>(encoder)));
+
+          fidl_xunion_v2_t* xunion = encoder->GetPtr<fidl_xunion_v2_t>(offset);
+          xunion->tag = tag_;
+          xunion->envelope.num_bytes =
+              static_cast<uint32_t>(encoder->CurrentLength() - length_before);
+          xunion->envelope.num_handles = static_cast<uint16_t>(
+              encoder->CurrentHandleCount() - handles_before);
+          xunion->envelope.flags = 0;
+          break;
+        }
+      }
+      break;
+    }
+    case ::test::bindingsdenylist::ShouldNeverAppearInAnyBinding3::Tag::
+        kUnknown: {
+      ::fidl::EncodeUnknownBytes(encoder, &unknown_data_,
+                                 offset + offsetof(fidl_xunion_t, envelope));
+      *encoder->GetPtr<uint64_t>(offset) = tag_;
+      break;
+    }
+    default:
+      break;
+  }
+}
+
+void ShouldNeverAppearInAnyBinding3::Decode(
+    ::fidl::Decoder* _decoder, ShouldNeverAppearInAnyBinding3* value,
+    size_t offset) {
+  fidl_xunion_v2_t* xunion = _decoder->GetPtr<fidl_xunion_v2_t>(offset);
+
+  if (xunion->envelope.num_bytes == 0 && xunion->envelope.num_handles == 0 &&
+      xunion->envelope.flags == 0) {
+    value->EnsureStorageInitialized(static_cast<fidl_xunion_tag_t>(
+        ::test::bindingsdenylist::ShouldNeverAppearInAnyBinding3::Tag::
+            Invalid));
+    return;
+  }
+
+  value->EnsureStorageInitialized(xunion->tag);
+
+  size_t value_offset = _decoder->EnvelopeValueOffset(&xunion->envelope);
+
+  switch (value->tag_) {
+    case ::test::bindingsdenylist::ShouldNeverAppearInAnyBinding3::Tag::kA: {
+      ::fidl::Decode(_decoder, &value->a_, value_offset);
+      break;
+    }
+    default: {
+      auto unknown_info = _decoder->EnvelopeUnknownDataInfo(&xunion->envelope);
+      value->unknown_data_.resize(unknown_info.num_bytes);
+      ::fidl::DecodeUnknownBytesContents(_decoder, &value->unknown_data_,
+                                         unknown_info.value_offset);
+      break;
+    }
+  }
+}
+
+zx_status_t ShouldNeverAppearInAnyBinding3::Clone(
+    ShouldNeverAppearInAnyBinding3* result) const {
+  result->Destroy();
+  result->tag_ = tag_;
+  switch (tag_) {
+    case ::test::bindingsdenylist::ShouldNeverAppearInAnyBinding3::Tag::Invalid:
+      return ZX_OK;
+    case ::test::bindingsdenylist::ShouldNeverAppearInAnyBinding3::Tag::kA:
+      return ::fidl::Clone(a_, &result->a_);
+    default:
+      new (&result->unknown_data_) decltype(unknown_data_);
+      return ::fidl::Clone(unknown_data_, &result->unknown_data_);
+      return ZX_OK;
+  }
+}
+
+ShouldNeverAppearInAnyBinding3& ShouldNeverAppearInAnyBinding3::set_a(
+    bool value) {
+  EnsureStorageInitialized(
+      ::test::bindingsdenylist::ShouldNeverAppearInAnyBinding3::Tag::kA);
+  a_ = std::move(value);
+  return *this;
+}
+ShouldNeverAppearInAnyBinding3& ShouldNeverAppearInAnyBinding3::SetUnknownData(
+    fidl_xunion_tag_t ordinal, std::vector<uint8_t> bytes) {
+  EnsureStorageInitialized(ordinal);
+  unknown_data_ = std::move(bytes);
+  return *this;
+}
+
+void ShouldNeverAppearInAnyBinding3::Destroy() {
+  switch (tag_) {
+    case ::test::bindingsdenylist::ShouldNeverAppearInAnyBinding3::Tag::kA:
+      break;
+
+    case static_cast<fidl_xunion_tag_t>(
+        ::test::bindingsdenylist::ShouldNeverAppearInAnyBinding3::Tag::Invalid):
+      break;
+    default:
+      unknown_data_.~decltype(unknown_data_)();
+      break;
+  }
+  tag_ = static_cast<fidl_xunion_tag_t>(
+      ::test::bindingsdenylist::ShouldNeverAppearInAnyBinding3::Tag::Invalid);
+}
+
+void ShouldNeverAppearInAnyBinding3::EnsureStorageInitialized(
+    ::fidl_xunion_tag_t tag) {
+  if (tag_ != tag) {
+    Destroy();
+    tag_ = tag;
+    switch (tag_) {
+      case static_cast<fidl_xunion_tag_t>(
+          ::test::bindingsdenylist::ShouldNeverAppearInAnyBinding3::Tag::
+              Invalid):
+        break;
+      case ::test::bindingsdenylist::ShouldNeverAppearInAnyBinding3::Tag::kA:
+        new (&a_) bool();
+        break;
+      default:
+        new (&unknown_data_) decltype(unknown_data_);
+        break;
+    }
+  }
+}
+
+extern "C" const fidl_type_t
+    test_bindingsdenylist_ShouldNeverAppearInAnyBinding2Table;
+const fidl_type_t* ShouldNeverAppearInAnyBinding2::FidlType =
+    &test_bindingsdenylist_ShouldNeverAppearInAnyBinding2Table;
+
+ShouldNeverAppearInAnyBinding2::ShouldNeverAppearInAnyBinding2() {}
+
+ShouldNeverAppearInAnyBinding2::ShouldNeverAppearInAnyBinding2(
+    ShouldNeverAppearInAnyBinding2&& other) {
+  field_presence_ = other.field_presence_;
+  if (field_presence_.IsSet<0>()) {
+    Construct(&a_value_.value, std::move(other.a_value_.value));
+  }
+  _unknown_data = std::move(other._unknown_data);
+}
+
+ShouldNeverAppearInAnyBinding2::~ShouldNeverAppearInAnyBinding2() {
+  if (field_presence_.IsSet<0>()) {
+    Destruct(&a_value_.value);
+  }
+}
+
+ShouldNeverAppearInAnyBinding2& ShouldNeverAppearInAnyBinding2::operator=(
+    ShouldNeverAppearInAnyBinding2&& other) {
+  if (other.field_presence_.IsSet<0>()) {
+    if (field_presence_.IsSet<0>()) {
+      a_value_.value = std::move(other.a_value_.value);
+    } else {
+      field_presence_.Set<0>();
+      Construct(&a_value_.value, std::move(other.a_value_.value));
+    }
+  } else if (field_presence_.IsSet<0>()) {
+    field_presence_.Clear<0>();
+    Destruct(&a_value_.value);
+  }
+  _unknown_data = std::move(other._unknown_data);
+  return *this;
+}
+
+bool ShouldNeverAppearInAnyBinding2::IsEmpty() const {
+  return field_presence_.IsEmpty() && _unknown_data.size() == 0;
+}
+
+void ShouldNeverAppearInAnyBinding2::Encode(
+    ::fidl::Encoder* _encoder, size_t _offset,
+    cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
+  size_t max_ordinal = MaxOrdinal();
+  ::fidl::EncodeVectorPointer(_encoder, max_ordinal, _offset);
+  if (max_ordinal == 0) return;
+  size_t envelope_size =
+      (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1)
+          ? sizeof(fidl_envelope_t)
+          : sizeof(fidl_envelope_v2_t);
+  size_t base = _encoder->Alloc(max_ordinal * envelope_size);
+  auto next_unknown = _unknown_data.begin();
+  if (field_presence_.IsSet<0>()) {
+    // Encode unknown fields that have an ordinal that should appear before this
+    // field.
+    while (next_unknown != _unknown_data.end() && next_unknown->first < 1) {
+      size_t envelope_base = base + (next_unknown->first - 1) * envelope_size;
+      ::fidl::EncodeUnknownBytes(_encoder, &next_unknown->second,
+                                 envelope_base);
+      std::advance(next_unknown, 1);
+    }
+
+    const size_t length_before = _encoder->CurrentLength();
+    const size_t handles_before = _encoder->CurrentHandleCount();
+
+    size_t envelope_base = base + (1 - 1) * envelope_size;
+    switch (_encoder->wire_format()) {
+      case ::fidl::internal::WireFormatVersion::kV1: {
+        ::fidl::Encode(
+            _encoder, &a_value_.value,
+            _encoder->Alloc(
+                ::fidl::EncodingInlineSize<bool, ::fidl::Encoder>(_encoder)));
+
+        fidl_envelope_t* envelope =
+            _encoder->GetPtr<fidl_envelope_t>(envelope_base);
+        envelope->num_bytes =
+            static_cast<uint32_t>(_encoder->CurrentLength() - length_before);
+        envelope->num_handles = static_cast<uint32_t>(
+            _encoder->CurrentHandleCount() - handles_before);
+        envelope->presence = FIDL_ALLOC_PRESENT;
+        break;
+      }
+      case ::fidl::internal::WireFormatVersion::kV2: {
+        if (::fidl::EncodingInlineSize<bool>(_encoder) <=
+            FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
+          ::fidl::Encode(_encoder, &a_value_.value, envelope_base);
+
+          fidl_envelope_v2_t* envelope =
+              _encoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
+          envelope->num_handles = static_cast<uint16_t>(
+              _encoder->CurrentHandleCount() - handles_before);
+          envelope->flags = FIDL_ENVELOPE_FLAGS_INLINING_MASK;
+          break;
+        }
+
+        ::fidl::Encode(
+            _encoder, &a_value_.value,
+            _encoder->Alloc(
+                ::fidl::EncodingInlineSize<bool, ::fidl::Encoder>(_encoder)));
+
+        fidl_envelope_v2_t* envelope =
+            _encoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
+        envelope->num_bytes =
+            static_cast<uint32_t>(_encoder->CurrentLength() - length_before);
+        envelope->num_handles = static_cast<uint16_t>(
+            _encoder->CurrentHandleCount() - handles_before);
+        envelope->flags = 0;
+        break;
+      }
+    }
+  }
+  // Encode any remaining unknown fields (i.e. ones that have an ordinal outside
+  // the range of known ordinals)
+  for (auto curr = next_unknown; curr != _unknown_data.end(); ++curr) {
+    size_t envelope_base = base + (curr->first - 1) * envelope_size;
+    ::fidl::EncodeUnknownBytes(_encoder, &curr->second, envelope_base);
+  }
+}
+
+void ShouldNeverAppearInAnyBinding2::Decode(
+    ::fidl::Decoder* _decoder, ShouldNeverAppearInAnyBinding2* _value,
+    size_t _offset) {
+  fidl_vector_t* encoded = _decoder->GetPtr<fidl_vector_t>(_offset);
+  size_t base;
+  size_t count;
+  if (!encoded->data) {
+    goto clear_all;
+  }
+
+  base = _decoder->GetOffset(encoded->data);
+  count = encoded->count;
+  if (count >= 1) {
+    size_t envelope_base = base + (1 - 1) * sizeof(fidl_envelope_v2_t);
+    fidl_envelope_v2_t* envelope =
+        _decoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
+    if (*reinterpret_cast<const void* const*>(envelope) != nullptr) {
+      ::fidl::Decode(_decoder, _value->mutable_a(),
+                     _decoder->EnvelopeValueOffset(envelope));
+    } else {
+      _value->clear_a();
+    }
+  } else {
+    goto done_1;
+  }
+
+  if (count > 1) {
+    for (uint64_t ordinal = 1; ordinal <= count; ordinal++) {
+      if (IsOrdinalKnown(ordinal)) continue;
+
+      size_t envelope_base = base + (ordinal - 1) * sizeof(fidl_envelope_v2_t);
+      fidl_envelope_v2_t* envelope =
+          _decoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
+      if (*reinterpret_cast<const void* const*>(envelope) != nullptr) {
+        auto unknown_info = _decoder->EnvelopeUnknownDataInfo(envelope);
+        auto result = _value->_unknown_data.emplace(
+            std::piecewise_construct, std::forward_as_tuple(ordinal),
+            std::forward_as_tuple());
+        auto iter = result.first;
+        iter->second.resize(unknown_info.num_bytes);
+        ::fidl::DecodeUnknownBytesContents(_decoder, &iter->second,
+                                           unknown_info.value_offset);
+      }
+    }
+  }
+
+  return;
+
+  // Clear unset values.
+clear_all:
+done_1:
+  _value->clear_a();
+  return;
+}
+
+zx_status_t ShouldNeverAppearInAnyBinding2::Clone(
+    ShouldNeverAppearInAnyBinding2* result) const {
+  if (field_presence_.IsSet<0>()) {
+    zx_status_t _status = ::fidl::Clone(a_value_.value, result->mutable_a());
+    if (_status != ZX_OK) return _status;
+  } else {
+    result->clear_a();
+  }
+  return ::fidl::Clone(_unknown_data, &result->_unknown_data);
+}
+
+extern "C" const fidl_type_t
+    test_bindingsdenylist_ShouldNeverAppearInAnyBinding1Table;
+const fidl_type_t* ShouldNeverAppearInAnyBinding1::FidlType =
+    &test_bindingsdenylist_ShouldNeverAppearInAnyBinding1Table;
+
+void ShouldNeverAppearInAnyBinding1::Encode(
+    ::fidl::Encoder* _encoder, size_t _offset,
+    cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
+  if (::fidl::IsMemcpyCompatible<ShouldNeverAppearInAnyBinding1>::value) {
+    memcpy(_encoder->template GetPtr<ShouldNeverAppearInAnyBinding1>(_offset),
+           this, sizeof(ShouldNeverAppearInAnyBinding1));
+  } else {
+    if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
+      ::fidl::Encode(_encoder, &a, _offset + 0);
+
+    } else {
+      ::fidl::Encode(_encoder, &a, _offset + 0);
+    }
+  }
+}
+
+void ShouldNeverAppearInAnyBinding1::Decode(
+    ::fidl::Decoder* _decoder, ShouldNeverAppearInAnyBinding1* _value,
+    size_t _offset) {
+  if (::fidl::IsMemcpyCompatible<ShouldNeverAppearInAnyBinding1>::value) {
+    memcpy(_value,
+           _decoder->template GetPtr<ShouldNeverAppearInAnyBinding1>(_offset),
+           sizeof(ShouldNeverAppearInAnyBinding1));
+  } else {
+    ::fidl::Decode(_decoder, &_value->a, _offset + 0);
+  }
+}
+
+zx_status_t ShouldNeverAppearInAnyBinding1::Clone(
+    ShouldNeverAppearInAnyBinding1* _result) const {
+  zx_status_t _status = ::fidl::Clone(a, &_result->a);
+  if (_status != ZX_OK) return _status;
+  return ZX_OK;
+}
+
+extern "C" const fidl_type_t
+    test_bindingsdenylist_MemberOnlyAppearsInImportingLibraryTable;
+const fidl_type_t* MemberOnlyAppearsInImportingLibrary::FidlType =
+    &test_bindingsdenylist_MemberOnlyAppearsInImportingLibraryTable;
+
+void MemberOnlyAppearsInImportingLibrary::Encode(
+    ::fidl::Encoder* _encoder, size_t _offset,
+    cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
+  if (::fidl::IsMemcpyCompatible<MemberOnlyAppearsInImportingLibrary>::value) {
+    memcpy(
+        _encoder->template GetPtr<MemberOnlyAppearsInImportingLibrary>(_offset),
+        this, sizeof(MemberOnlyAppearsInImportingLibrary));
+  } else {
+    if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
+      ::fidl::Encode(_encoder, &a, _offset + 0);
+
+    } else {
+      ::fidl::Encode(_encoder, &a, _offset + 0);
+    }
+  }
+}
+
+void MemberOnlyAppearsInImportingLibrary::Decode(
+    ::fidl::Decoder* _decoder, MemberOnlyAppearsInImportingLibrary* _value,
+    size_t _offset) {
+  if (::fidl::IsMemcpyCompatible<MemberOnlyAppearsInImportingLibrary>::value) {
+    memcpy(
+        _value,
+        _decoder->template GetPtr<MemberOnlyAppearsInImportingLibrary>(_offset),
+        sizeof(MemberOnlyAppearsInImportingLibrary));
+  } else {
+    ::fidl::Decode(_decoder, &_value->a, _offset + 0);
+  }
+}
+
+zx_status_t MemberOnlyAppearsInImportingLibrary::Clone(
+    MemberOnlyAppearsInImportingLibrary* _result) const {
+  zx_status_t _status = ::fidl::Clone(a, &_result->a);
+  if (_status != ZX_OK) return _status;
+  return ZX_OK;
+}
+
+extern "C" const fidl_type_t
+    test_bindingsdenylist_OnlyAppearsInImportingLibraryTable;
+const fidl_type_t* OnlyAppearsInImportingLibrary::FidlType =
+    &test_bindingsdenylist_OnlyAppearsInImportingLibraryTable;
+
+void OnlyAppearsInImportingLibrary::Encode(
+    ::fidl::Encoder* _encoder, size_t _offset,
+    cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
+  if (::fidl::IsMemcpyCompatible<OnlyAppearsInImportingLibrary>::value) {
+    memcpy(_encoder->template GetPtr<OnlyAppearsInImportingLibrary>(_offset),
+           this, sizeof(OnlyAppearsInImportingLibrary));
+  } else {
+    if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
+      ::fidl::Encode(_encoder, &member_only_appears_in_importing_library,
+                     _offset + 0);
+
+    } else {
+      ::fidl::Encode(_encoder, &member_only_appears_in_importing_library,
+                     _offset + 0);
+    }
+  }
+}
+
+void OnlyAppearsInImportingLibrary::Decode(
+    ::fidl::Decoder* _decoder, OnlyAppearsInImportingLibrary* _value,
+    size_t _offset) {
+  if (::fidl::IsMemcpyCompatible<OnlyAppearsInImportingLibrary>::value) {
+    memcpy(_value,
+           _decoder->template GetPtr<OnlyAppearsInImportingLibrary>(_offset),
+           sizeof(OnlyAppearsInImportingLibrary));
+  } else {
+    ::fidl::Decode(_decoder, &_value->member_only_appears_in_importing_library,
+                   _offset + 0);
+  }
+}
+
+zx_status_t OnlyAppearsInImportingLibrary::Clone(
+    OnlyAppearsInImportingLibrary* _result) const {
+  zx_status_t _status =
+      ::fidl::Clone(member_only_appears_in_importing_library,
+                    &_result->member_only_appears_in_importing_library);
+  if (_status != ZX_OK) return _status;
+  return ZX_OK;
+}
+
+extern "C" const fidl_type_t
+    test_bindingsdenylist_DenyEachBinding_OnlyDenySyzkaller_ResponseTable;
+const fidl_type_t* DenyEachBinding_OnlyDenySyzkaller_Response::FidlType =
+    &test_bindingsdenylist_DenyEachBinding_OnlyDenySyzkaller_ResponseTable;
+
+void DenyEachBinding_OnlyDenySyzkaller_Response::Encode(
+    ::fidl::Encoder* _encoder, size_t _offset,
+    cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
+  if (::fidl::IsMemcpyCompatible<
+          DenyEachBinding_OnlyDenySyzkaller_Response>::value) {
+    memcpy(
+        _encoder->template GetPtr<DenyEachBinding_OnlyDenySyzkaller_Response>(
+            _offset),
+        this, sizeof(DenyEachBinding_OnlyDenySyzkaller_Response));
+  } else {
+    if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
+      ::fidl::Encode(_encoder, &b, _offset + 0);
+
+    } else {
+      ::fidl::Encode(_encoder, &b, _offset + 0);
+    }
+  }
+}
+
+void DenyEachBinding_OnlyDenySyzkaller_Response::Decode(
+    ::fidl::Decoder* _decoder,
+    DenyEachBinding_OnlyDenySyzkaller_Response* _value, size_t _offset) {
+  if (::fidl::IsMemcpyCompatible<
+          DenyEachBinding_OnlyDenySyzkaller_Response>::value) {
+    memcpy(
+        _value,
+        _decoder->template GetPtr<DenyEachBinding_OnlyDenySyzkaller_Response>(
+            _offset),
+        sizeof(DenyEachBinding_OnlyDenySyzkaller_Response));
+  } else {
+    ::fidl::Decode(_decoder, &_value->b, _offset + 0);
+  }
+}
+
+zx_status_t DenyEachBinding_OnlyDenySyzkaller_Response::Clone(
+    DenyEachBinding_OnlyDenySyzkaller_Response* _result) const {
+  zx_status_t _status = ::fidl::Clone(b, &_result->b);
+  if (_status != ZX_OK) return _status;
+  return ZX_OK;
+}
+
+extern "C" const fidl_type_t
+    test_bindingsdenylist_DenyEachBinding_OnlyDenySyzkaller_ResultTable;
+const fidl_type_t* DenyEachBinding_OnlyDenySyzkaller_Result::FidlType =
+    &test_bindingsdenylist_DenyEachBinding_OnlyDenySyzkaller_ResultTable;
+
+DenyEachBinding_OnlyDenySyzkaller_Result::
+    DenyEachBinding_OnlyDenySyzkaller_Result() {}
+
+DenyEachBinding_OnlyDenySyzkaller_Result::
+    ~DenyEachBinding_OnlyDenySyzkaller_Result() {
+  Destroy();
+}
+
+DenyEachBinding_OnlyDenySyzkaller_Result::
+    DenyEachBinding_OnlyDenySyzkaller_Result(
+        DenyEachBinding_OnlyDenySyzkaller_Result&& other)
+    : tag_(other.tag_) {
+  switch (tag_) {
+    case ::test::bindingsdenylist::DenyEachBinding_OnlyDenySyzkaller_Result::
+        Tag::kResponse:
+      new (&response_)::test::bindingsdenylist::
+          DenyEachBinding_OnlyDenySyzkaller_Response();
+      response_ = std::move(other.response_);
+      break;
+    case ::test::bindingsdenylist::DenyEachBinding_OnlyDenySyzkaller_Result::
+        Tag::kErr:
+      err_ = std::move(other.err_);
+      break;
+    case static_cast<fidl_xunion_tag_t>(
+        ::test::bindingsdenylist::DenyEachBinding_OnlyDenySyzkaller_Result::
+            Tag::Invalid):
+      break;
+  }
+}
+
+DenyEachBinding_OnlyDenySyzkaller_Result&
+DenyEachBinding_OnlyDenySyzkaller_Result::operator=(
+    DenyEachBinding_OnlyDenySyzkaller_Result&& other) {
+  if (this != &other) {
+    Destroy();
+    tag_ = other.tag_;
+    switch (tag_) {
+      case ::test::bindingsdenylist::DenyEachBinding_OnlyDenySyzkaller_Result::
+          Tag::kResponse:
+        new (&response_)::test::bindingsdenylist::
+            DenyEachBinding_OnlyDenySyzkaller_Response();
+        response_ = std::move(other.response_);
+        break;
+      case ::test::bindingsdenylist::DenyEachBinding_OnlyDenySyzkaller_Result::
+          Tag::kErr:
+        err_ = std::move(other.err_);
+        break;
+      case static_cast<fidl_xunion_tag_t>(
+          ::test::bindingsdenylist::DenyEachBinding_OnlyDenySyzkaller_Result::
+              Tag::Invalid):
+        break;
+    }
+  }
+  return *this;
+}
+
+DenyEachBinding_OnlyDenySyzkaller_Result
+DenyEachBinding_OnlyDenySyzkaller_Result::WithResponse(
+    ::test::bindingsdenylist::DenyEachBinding_OnlyDenySyzkaller_Response&&
+        val) {
+  DenyEachBinding_OnlyDenySyzkaller_Result result;
+  result.set_response(std::move(val));
+  return result;
+}
+DenyEachBinding_OnlyDenySyzkaller_Result
+DenyEachBinding_OnlyDenySyzkaller_Result::WithErr(uint32_t&& val) {
+  DenyEachBinding_OnlyDenySyzkaller_Result result;
+  result.set_err(std::move(val));
+  return result;
+}
+
+void DenyEachBinding_OnlyDenySyzkaller_Result::Encode(
+    ::fidl::Encoder* encoder, size_t offset,
+    cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
+  const size_t length_before = encoder->CurrentLength();
+  const size_t handles_before = encoder->CurrentHandleCount();
+
+  switch (Which()) {
+    case ::test::bindingsdenylist::DenyEachBinding_OnlyDenySyzkaller_Result::
+        Tag::kResponse: {
+      switch (encoder->wire_format()) {
+        case ::fidl::internal::WireFormatVersion::kV1: {
+          ::fidl::Encode(
+              encoder, &response_,
+              encoder->Alloc(::fidl::EncodingInlineSize<
+                             ::test::bindingsdenylist::
+                                 DenyEachBinding_OnlyDenySyzkaller_Response,
+                             ::fidl::Encoder>(encoder)));
+
+          fidl_xunion_t* xunion = encoder->GetPtr<fidl_xunion_t>(offset);
+          xunion->tag = tag_;
+          xunion->envelope.num_bytes =
+              static_cast<uint32_t>(encoder->CurrentLength() - length_before);
+          xunion->envelope.num_handles = static_cast<uint32_t>(
+              encoder->CurrentHandleCount() - handles_before);
+          xunion->envelope.presence = FIDL_ALLOC_PRESENT;
+          break;
+        }
+        case ::fidl::internal::WireFormatVersion::kV2: {
+          if (::fidl::EncodingInlineSize<
+                  ::test::bindingsdenylist::
+                      DenyEachBinding_OnlyDenySyzkaller_Response>(encoder) <=
+              FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
+            ::fidl::Encode(encoder, &response_,
+                           offset + offsetof(fidl_xunion_v2_t, envelope));
+
+            fidl_xunion_v2_t* xunion =
+                encoder->GetPtr<fidl_xunion_v2_t>(offset);
+            xunion->tag = tag_;
+            xunion->envelope.num_handles = static_cast<uint16_t>(
+                encoder->CurrentHandleCount() - handles_before);
+            xunion->envelope.flags = FIDL_ENVELOPE_FLAGS_INLINING_MASK;
+            break;
+          }
+
+          ::fidl::Encode(
+              encoder, &response_,
+              encoder->Alloc(::fidl::EncodingInlineSize<
+                             ::test::bindingsdenylist::
+                                 DenyEachBinding_OnlyDenySyzkaller_Response,
+                             ::fidl::Encoder>(encoder)));
+
+          fidl_xunion_v2_t* xunion = encoder->GetPtr<fidl_xunion_v2_t>(offset);
+          xunion->tag = tag_;
+          xunion->envelope.num_bytes =
+              static_cast<uint32_t>(encoder->CurrentLength() - length_before);
+          xunion->envelope.num_handles = static_cast<uint16_t>(
+              encoder->CurrentHandleCount() - handles_before);
+          xunion->envelope.flags = 0;
+          break;
+        }
+      }
+      break;
+    }
+    case ::test::bindingsdenylist::DenyEachBinding_OnlyDenySyzkaller_Result::
+        Tag::kErr: {
+      switch (encoder->wire_format()) {
+        case ::fidl::internal::WireFormatVersion::kV1: {
+          ::fidl::Encode(
+              encoder, &err_,
+              encoder->Alloc(
+                  ::fidl::EncodingInlineSize<uint32_t, ::fidl::Encoder>(
+                      encoder)));
+
+          fidl_xunion_t* xunion = encoder->GetPtr<fidl_xunion_t>(offset);
+          xunion->tag = tag_;
+          xunion->envelope.num_bytes =
+              static_cast<uint32_t>(encoder->CurrentLength() - length_before);
+          xunion->envelope.num_handles = static_cast<uint32_t>(
+              encoder->CurrentHandleCount() - handles_before);
+          xunion->envelope.presence = FIDL_ALLOC_PRESENT;
+          break;
+        }
+        case ::fidl::internal::WireFormatVersion::kV2: {
+          if (::fidl::EncodingInlineSize<uint32_t>(encoder) <=
+              FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
+            ::fidl::Encode(encoder, &err_,
+                           offset + offsetof(fidl_xunion_v2_t, envelope));
+
+            fidl_xunion_v2_t* xunion =
+                encoder->GetPtr<fidl_xunion_v2_t>(offset);
+            xunion->tag = tag_;
+            xunion->envelope.num_handles = static_cast<uint16_t>(
+                encoder->CurrentHandleCount() - handles_before);
+            xunion->envelope.flags = FIDL_ENVELOPE_FLAGS_INLINING_MASK;
+            break;
+          }
+
+          ::fidl::Encode(
+              encoder, &err_,
+              encoder->Alloc(
+                  ::fidl::EncodingInlineSize<uint32_t, ::fidl::Encoder>(
+                      encoder)));
+
+          fidl_xunion_v2_t* xunion = encoder->GetPtr<fidl_xunion_v2_t>(offset);
+          xunion->tag = tag_;
+          xunion->envelope.num_bytes =
+              static_cast<uint32_t>(encoder->CurrentLength() - length_before);
+          xunion->envelope.num_handles = static_cast<uint16_t>(
+              encoder->CurrentHandleCount() - handles_before);
+          xunion->envelope.flags = 0;
+          break;
+        }
+      }
+      break;
+    }
+    default:
+      break;
+  }
+}
+
+void DenyEachBinding_OnlyDenySyzkaller_Result::Decode(
+    ::fidl::Decoder* _decoder, DenyEachBinding_OnlyDenySyzkaller_Result* value,
+    size_t offset) {
+  fidl_xunion_v2_t* xunion = _decoder->GetPtr<fidl_xunion_v2_t>(offset);
+
+  if (xunion->envelope.num_bytes == 0 && xunion->envelope.num_handles == 0 &&
+      xunion->envelope.flags == 0) {
+    value->EnsureStorageInitialized(static_cast<fidl_xunion_tag_t>(
+        ::test::bindingsdenylist::DenyEachBinding_OnlyDenySyzkaller_Result::
+            Tag::Invalid));
+    return;
+  }
+
+  value->EnsureStorageInitialized(xunion->tag);
+
+  size_t value_offset = _decoder->EnvelopeValueOffset(&xunion->envelope);
+
+  switch (value->tag_) {
+    case ::test::bindingsdenylist::DenyEachBinding_OnlyDenySyzkaller_Result::
+        Tag::kResponse: {
+      new (&value->response_)::test::bindingsdenylist::
+          DenyEachBinding_OnlyDenySyzkaller_Response();
+      ::fidl::Decode(_decoder, &value->response_, value_offset);
+      break;
+    }
+    case ::test::bindingsdenylist::DenyEachBinding_OnlyDenySyzkaller_Result::
+        Tag::kErr: {
+      ::fidl::Decode(_decoder, &value->err_, value_offset);
+      break;
+    }
+    default: {
+      break;
+    }
+  }
+}
+
+zx_status_t DenyEachBinding_OnlyDenySyzkaller_Result::Clone(
+    DenyEachBinding_OnlyDenySyzkaller_Result* result) const {
+  result->Destroy();
+  result->tag_ = tag_;
+  switch (tag_) {
+    case ::test::bindingsdenylist::DenyEachBinding_OnlyDenySyzkaller_Result::
+        Tag::Invalid:
+      return ZX_OK;
+    case ::test::bindingsdenylist::DenyEachBinding_OnlyDenySyzkaller_Result::
+        Tag::kResponse:
+      new (&result->response_)::test::bindingsdenylist::
+          DenyEachBinding_OnlyDenySyzkaller_Response();
+      return ::fidl::Clone(response_, &result->response_);
+    case ::test::bindingsdenylist::DenyEachBinding_OnlyDenySyzkaller_Result::
+        Tag::kErr:
+      return ::fidl::Clone(err_, &result->err_);
+    default:
+      return ZX_OK;
+  }
+}
+
+DenyEachBinding_OnlyDenySyzkaller_Result&
+DenyEachBinding_OnlyDenySyzkaller_Result::set_response(
+    ::test::bindingsdenylist::DenyEachBinding_OnlyDenySyzkaller_Response
+        value) {
+  EnsureStorageInitialized(
+      ::test::bindingsdenylist::DenyEachBinding_OnlyDenySyzkaller_Result::Tag::
+          kResponse);
+  response_ = std::move(value);
+  return *this;
+}
+
+DenyEachBinding_OnlyDenySyzkaller_Result&
+DenyEachBinding_OnlyDenySyzkaller_Result::set_err(uint32_t value) {
+  EnsureStorageInitialized(
+      ::test::bindingsdenylist::DenyEachBinding_OnlyDenySyzkaller_Result::Tag::
+          kErr);
+  err_ = std::move(value);
+  return *this;
+}
+
+void DenyEachBinding_OnlyDenySyzkaller_Result::Destroy() {
+  switch (tag_) {
+    case ::test::bindingsdenylist::DenyEachBinding_OnlyDenySyzkaller_Result::
+        Tag::kResponse:
+      response_.~decltype(response_)();
+      break;
+    case ::test::bindingsdenylist::DenyEachBinding_OnlyDenySyzkaller_Result::
+        Tag::kErr:
+      break;
+
+    default:
+      break;
+  }
+  tag_ = static_cast<fidl_xunion_tag_t>(
+      ::test::bindingsdenylist::DenyEachBinding_OnlyDenySyzkaller_Result::Tag::
+          Invalid);
+}
+
+void DenyEachBinding_OnlyDenySyzkaller_Result::EnsureStorageInitialized(
+    ::fidl_xunion_tag_t tag) {
+  if (tag_ != tag) {
+    Destroy();
+    tag_ = tag;
+    switch (tag_) {
+      case static_cast<fidl_xunion_tag_t>(
+          ::test::bindingsdenylist::DenyEachBinding_OnlyDenySyzkaller_Result::
+              Tag::Invalid):
+        break;
+      case ::test::bindingsdenylist::DenyEachBinding_OnlyDenySyzkaller_Result::
+          Tag::kResponse:
+        new (&response_)::test::bindingsdenylist::
+            DenyEachBinding_OnlyDenySyzkaller_Response();
+        break;
+      case ::test::bindingsdenylist::DenyEachBinding_OnlyDenySyzkaller_Result::
+          Tag::kErr:
+        new (&err_) uint32_t();
+        break;
+      default:
+        break;
+    }
+  }
+}
+
+extern "C" const fidl_type_t
+    test_bindingsdenylist_DenyEachBinding_OnlyDenyRust_ResponseTable;
+const fidl_type_t* DenyEachBinding_OnlyDenyRust_Response::FidlType =
+    &test_bindingsdenylist_DenyEachBinding_OnlyDenyRust_ResponseTable;
+
+void DenyEachBinding_OnlyDenyRust_Response::Encode(
+    ::fidl::Encoder* _encoder, size_t _offset,
+    cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
+  if (::fidl::IsMemcpyCompatible<
+          DenyEachBinding_OnlyDenyRust_Response>::value) {
+    memcpy(_encoder->template GetPtr<DenyEachBinding_OnlyDenyRust_Response>(
+               _offset),
+           this, sizeof(DenyEachBinding_OnlyDenyRust_Response));
+  } else {
+    if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
+      ::fidl::Encode(_encoder, &b, _offset + 0);
+
+    } else {
+      ::fidl::Encode(_encoder, &b, _offset + 0);
+    }
+  }
+}
+
+void DenyEachBinding_OnlyDenyRust_Response::Decode(
+    ::fidl::Decoder* _decoder, DenyEachBinding_OnlyDenyRust_Response* _value,
+    size_t _offset) {
+  if (::fidl::IsMemcpyCompatible<
+          DenyEachBinding_OnlyDenyRust_Response>::value) {
+    memcpy(_value,
+           _decoder->template GetPtr<DenyEachBinding_OnlyDenyRust_Response>(
+               _offset),
+           sizeof(DenyEachBinding_OnlyDenyRust_Response));
+  } else {
+    ::fidl::Decode(_decoder, &_value->b, _offset + 0);
+  }
+}
+
+zx_status_t DenyEachBinding_OnlyDenyRust_Response::Clone(
+    DenyEachBinding_OnlyDenyRust_Response* _result) const {
+  zx_status_t _status = ::fidl::Clone(b, &_result->b);
+  if (_status != ZX_OK) return _status;
+  return ZX_OK;
+}
+
+extern "C" const fidl_type_t
+    test_bindingsdenylist_DenyEachBinding_OnlyDenyRust_ResultTable;
+const fidl_type_t* DenyEachBinding_OnlyDenyRust_Result::FidlType =
+    &test_bindingsdenylist_DenyEachBinding_OnlyDenyRust_ResultTable;
+
+DenyEachBinding_OnlyDenyRust_Result::DenyEachBinding_OnlyDenyRust_Result() {}
+
+DenyEachBinding_OnlyDenyRust_Result::~DenyEachBinding_OnlyDenyRust_Result() {
+  Destroy();
+}
+
+DenyEachBinding_OnlyDenyRust_Result::DenyEachBinding_OnlyDenyRust_Result(
+    DenyEachBinding_OnlyDenyRust_Result&& other)
+    : tag_(other.tag_) {
+  switch (tag_) {
+    case ::test::bindingsdenylist::DenyEachBinding_OnlyDenyRust_Result::Tag::
+        kResponse:
+      new (&response_)::test::bindingsdenylist::
+          DenyEachBinding_OnlyDenyRust_Response();
+      response_ = std::move(other.response_);
+      break;
+    case ::test::bindingsdenylist::DenyEachBinding_OnlyDenyRust_Result::Tag::
+        kErr:
+      err_ = std::move(other.err_);
+      break;
+    case static_cast<fidl_xunion_tag_t>(
+        ::test::bindingsdenylist::DenyEachBinding_OnlyDenyRust_Result::Tag::
+            Invalid):
+      break;
+  }
+}
+
+DenyEachBinding_OnlyDenyRust_Result&
+DenyEachBinding_OnlyDenyRust_Result::operator=(
+    DenyEachBinding_OnlyDenyRust_Result&& other) {
+  if (this != &other) {
+    Destroy();
+    tag_ = other.tag_;
+    switch (tag_) {
+      case ::test::bindingsdenylist::DenyEachBinding_OnlyDenyRust_Result::Tag::
+          kResponse:
+        new (&response_)::test::bindingsdenylist::
+            DenyEachBinding_OnlyDenyRust_Response();
+        response_ = std::move(other.response_);
+        break;
+      case ::test::bindingsdenylist::DenyEachBinding_OnlyDenyRust_Result::Tag::
+          kErr:
+        err_ = std::move(other.err_);
+        break;
+      case static_cast<fidl_xunion_tag_t>(
+          ::test::bindingsdenylist::DenyEachBinding_OnlyDenyRust_Result::Tag::
+              Invalid):
+        break;
+    }
+  }
+  return *this;
+}
+
+DenyEachBinding_OnlyDenyRust_Result
+DenyEachBinding_OnlyDenyRust_Result::WithResponse(
+    ::test::bindingsdenylist::DenyEachBinding_OnlyDenyRust_Response&& val) {
+  DenyEachBinding_OnlyDenyRust_Result result;
+  result.set_response(std::move(val));
+  return result;
+}
+DenyEachBinding_OnlyDenyRust_Result
+DenyEachBinding_OnlyDenyRust_Result::WithErr(uint32_t&& val) {
+  DenyEachBinding_OnlyDenyRust_Result result;
+  result.set_err(std::move(val));
+  return result;
+}
+
+void DenyEachBinding_OnlyDenyRust_Result::Encode(
+    ::fidl::Encoder* encoder, size_t offset,
+    cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
+  const size_t length_before = encoder->CurrentLength();
+  const size_t handles_before = encoder->CurrentHandleCount();
+
+  switch (Which()) {
+    case ::test::bindingsdenylist::DenyEachBinding_OnlyDenyRust_Result::Tag::
+        kResponse: {
+      switch (encoder->wire_format()) {
+        case ::fidl::internal::WireFormatVersion::kV1: {
+          ::fidl::Encode(
+              encoder, &response_,
+              encoder->Alloc(::fidl::EncodingInlineSize<
+                             ::test::bindingsdenylist::
+                                 DenyEachBinding_OnlyDenyRust_Response,
+                             ::fidl::Encoder>(encoder)));
+
+          fidl_xunion_t* xunion = encoder->GetPtr<fidl_xunion_t>(offset);
+          xunion->tag = tag_;
+          xunion->envelope.num_bytes =
+              static_cast<uint32_t>(encoder->CurrentLength() - length_before);
+          xunion->envelope.num_handles = static_cast<uint32_t>(
+              encoder->CurrentHandleCount() - handles_before);
+          xunion->envelope.presence = FIDL_ALLOC_PRESENT;
+          break;
+        }
+        case ::fidl::internal::WireFormatVersion::kV2: {
+          if (::fidl::EncodingInlineSize<
+                  ::test::bindingsdenylist::
+                      DenyEachBinding_OnlyDenyRust_Response>(encoder) <=
+              FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
+            ::fidl::Encode(encoder, &response_,
+                           offset + offsetof(fidl_xunion_v2_t, envelope));
+
+            fidl_xunion_v2_t* xunion =
+                encoder->GetPtr<fidl_xunion_v2_t>(offset);
+            xunion->tag = tag_;
+            xunion->envelope.num_handles = static_cast<uint16_t>(
+                encoder->CurrentHandleCount() - handles_before);
+            xunion->envelope.flags = FIDL_ENVELOPE_FLAGS_INLINING_MASK;
+            break;
+          }
+
+          ::fidl::Encode(
+              encoder, &response_,
+              encoder->Alloc(::fidl::EncodingInlineSize<
+                             ::test::bindingsdenylist::
+                                 DenyEachBinding_OnlyDenyRust_Response,
+                             ::fidl::Encoder>(encoder)));
+
+          fidl_xunion_v2_t* xunion = encoder->GetPtr<fidl_xunion_v2_t>(offset);
+          xunion->tag = tag_;
+          xunion->envelope.num_bytes =
+              static_cast<uint32_t>(encoder->CurrentLength() - length_before);
+          xunion->envelope.num_handles = static_cast<uint16_t>(
+              encoder->CurrentHandleCount() - handles_before);
+          xunion->envelope.flags = 0;
+          break;
+        }
+      }
+      break;
+    }
+    case ::test::bindingsdenylist::DenyEachBinding_OnlyDenyRust_Result::Tag::
+        kErr: {
+      switch (encoder->wire_format()) {
+        case ::fidl::internal::WireFormatVersion::kV1: {
+          ::fidl::Encode(
+              encoder, &err_,
+              encoder->Alloc(
+                  ::fidl::EncodingInlineSize<uint32_t, ::fidl::Encoder>(
+                      encoder)));
+
+          fidl_xunion_t* xunion = encoder->GetPtr<fidl_xunion_t>(offset);
+          xunion->tag = tag_;
+          xunion->envelope.num_bytes =
+              static_cast<uint32_t>(encoder->CurrentLength() - length_before);
+          xunion->envelope.num_handles = static_cast<uint32_t>(
+              encoder->CurrentHandleCount() - handles_before);
+          xunion->envelope.presence = FIDL_ALLOC_PRESENT;
+          break;
+        }
+        case ::fidl::internal::WireFormatVersion::kV2: {
+          if (::fidl::EncodingInlineSize<uint32_t>(encoder) <=
+              FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
+            ::fidl::Encode(encoder, &err_,
+                           offset + offsetof(fidl_xunion_v2_t, envelope));
+
+            fidl_xunion_v2_t* xunion =
+                encoder->GetPtr<fidl_xunion_v2_t>(offset);
+            xunion->tag = tag_;
+            xunion->envelope.num_handles = static_cast<uint16_t>(
+                encoder->CurrentHandleCount() - handles_before);
+            xunion->envelope.flags = FIDL_ENVELOPE_FLAGS_INLINING_MASK;
+            break;
+          }
+
+          ::fidl::Encode(
+              encoder, &err_,
+              encoder->Alloc(
+                  ::fidl::EncodingInlineSize<uint32_t, ::fidl::Encoder>(
+                      encoder)));
+
+          fidl_xunion_v2_t* xunion = encoder->GetPtr<fidl_xunion_v2_t>(offset);
+          xunion->tag = tag_;
+          xunion->envelope.num_bytes =
+              static_cast<uint32_t>(encoder->CurrentLength() - length_before);
+          xunion->envelope.num_handles = static_cast<uint16_t>(
+              encoder->CurrentHandleCount() - handles_before);
+          xunion->envelope.flags = 0;
+          break;
+        }
+      }
+      break;
+    }
+    default:
+      break;
+  }
+}
+
+void DenyEachBinding_OnlyDenyRust_Result::Decode(
+    ::fidl::Decoder* _decoder, DenyEachBinding_OnlyDenyRust_Result* value,
+    size_t offset) {
+  fidl_xunion_v2_t* xunion = _decoder->GetPtr<fidl_xunion_v2_t>(offset);
+
+  if (xunion->envelope.num_bytes == 0 && xunion->envelope.num_handles == 0 &&
+      xunion->envelope.flags == 0) {
+    value->EnsureStorageInitialized(static_cast<fidl_xunion_tag_t>(
+        ::test::bindingsdenylist::DenyEachBinding_OnlyDenyRust_Result::Tag::
+            Invalid));
+    return;
+  }
+
+  value->EnsureStorageInitialized(xunion->tag);
+
+  size_t value_offset = _decoder->EnvelopeValueOffset(&xunion->envelope);
+
+  switch (value->tag_) {
+    case ::test::bindingsdenylist::DenyEachBinding_OnlyDenyRust_Result::Tag::
+        kResponse: {
+      new (&value->response_)::test::bindingsdenylist::
+          DenyEachBinding_OnlyDenyRust_Response();
+      ::fidl::Decode(_decoder, &value->response_, value_offset);
+      break;
+    }
+    case ::test::bindingsdenylist::DenyEachBinding_OnlyDenyRust_Result::Tag::
+        kErr: {
+      ::fidl::Decode(_decoder, &value->err_, value_offset);
+      break;
+    }
+    default: {
+      break;
+    }
+  }
+}
+
+zx_status_t DenyEachBinding_OnlyDenyRust_Result::Clone(
+    DenyEachBinding_OnlyDenyRust_Result* result) const {
+  result->Destroy();
+  result->tag_ = tag_;
+  switch (tag_) {
+    case ::test::bindingsdenylist::DenyEachBinding_OnlyDenyRust_Result::Tag::
+        Invalid:
+      return ZX_OK;
+    case ::test::bindingsdenylist::DenyEachBinding_OnlyDenyRust_Result::Tag::
+        kResponse:
+      new (&result->response_)::test::bindingsdenylist::
+          DenyEachBinding_OnlyDenyRust_Response();
+      return ::fidl::Clone(response_, &result->response_);
+    case ::test::bindingsdenylist::DenyEachBinding_OnlyDenyRust_Result::Tag::
+        kErr:
+      return ::fidl::Clone(err_, &result->err_);
+    default:
+      return ZX_OK;
+  }
+}
+
+DenyEachBinding_OnlyDenyRust_Result&
+DenyEachBinding_OnlyDenyRust_Result::set_response(
+    ::test::bindingsdenylist::DenyEachBinding_OnlyDenyRust_Response value) {
+  EnsureStorageInitialized(
+      ::test::bindingsdenylist::DenyEachBinding_OnlyDenyRust_Result::Tag::
+          kResponse);
+  response_ = std::move(value);
+  return *this;
+}
+
+DenyEachBinding_OnlyDenyRust_Result&
+DenyEachBinding_OnlyDenyRust_Result::set_err(uint32_t value) {
+  EnsureStorageInitialized(
+      ::test::bindingsdenylist::DenyEachBinding_OnlyDenyRust_Result::Tag::kErr);
+  err_ = std::move(value);
+  return *this;
+}
+
+void DenyEachBinding_OnlyDenyRust_Result::Destroy() {
+  switch (tag_) {
+    case ::test::bindingsdenylist::DenyEachBinding_OnlyDenyRust_Result::Tag::
+        kResponse:
+      response_.~decltype(response_)();
+      break;
+    case ::test::bindingsdenylist::DenyEachBinding_OnlyDenyRust_Result::Tag::
+        kErr:
+      break;
+
+    default:
+      break;
+  }
+  tag_ = static_cast<fidl_xunion_tag_t>(
+      ::test::bindingsdenylist::DenyEachBinding_OnlyDenyRust_Result::Tag::
+          Invalid);
+}
+
+void DenyEachBinding_OnlyDenyRust_Result::EnsureStorageInitialized(
+    ::fidl_xunion_tag_t tag) {
+  if (tag_ != tag) {
+    Destroy();
+    tag_ = tag;
+    switch (tag_) {
+      case static_cast<fidl_xunion_tag_t>(
+          ::test::bindingsdenylist::DenyEachBinding_OnlyDenyRust_Result::Tag::
+              Invalid):
+        break;
+      case ::test::bindingsdenylist::DenyEachBinding_OnlyDenyRust_Result::Tag::
+          kResponse:
+        new (&response_)::test::bindingsdenylist::
+            DenyEachBinding_OnlyDenyRust_Response();
+        break;
+      case ::test::bindingsdenylist::DenyEachBinding_OnlyDenyRust_Result::Tag::
+          kErr:
+        new (&err_) uint32_t();
+        break;
+      default:
+        break;
+    }
+  }
+}
+
+extern "C" const fidl_type_t
+    test_bindingsdenylist_DenyEachBinding_OnlyDenyLibfuzzer_ResponseTable;
+const fidl_type_t* DenyEachBinding_OnlyDenyLibfuzzer_Response::FidlType =
+    &test_bindingsdenylist_DenyEachBinding_OnlyDenyLibfuzzer_ResponseTable;
+
+void DenyEachBinding_OnlyDenyLibfuzzer_Response::Encode(
+    ::fidl::Encoder* _encoder, size_t _offset,
+    cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
+  if (::fidl::IsMemcpyCompatible<
+          DenyEachBinding_OnlyDenyLibfuzzer_Response>::value) {
+    memcpy(
+        _encoder->template GetPtr<DenyEachBinding_OnlyDenyLibfuzzer_Response>(
+            _offset),
+        this, sizeof(DenyEachBinding_OnlyDenyLibfuzzer_Response));
+  } else {
+    if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
+      ::fidl::Encode(_encoder, &b, _offset + 0);
+
+    } else {
+      ::fidl::Encode(_encoder, &b, _offset + 0);
+    }
+  }
+}
+
+void DenyEachBinding_OnlyDenyLibfuzzer_Response::Decode(
+    ::fidl::Decoder* _decoder,
+    DenyEachBinding_OnlyDenyLibfuzzer_Response* _value, size_t _offset) {
+  if (::fidl::IsMemcpyCompatible<
+          DenyEachBinding_OnlyDenyLibfuzzer_Response>::value) {
+    memcpy(
+        _value,
+        _decoder->template GetPtr<DenyEachBinding_OnlyDenyLibfuzzer_Response>(
+            _offset),
+        sizeof(DenyEachBinding_OnlyDenyLibfuzzer_Response));
+  } else {
+    ::fidl::Decode(_decoder, &_value->b, _offset + 0);
+  }
+}
+
+zx_status_t DenyEachBinding_OnlyDenyLibfuzzer_Response::Clone(
+    DenyEachBinding_OnlyDenyLibfuzzer_Response* _result) const {
+  zx_status_t _status = ::fidl::Clone(b, &_result->b);
+  if (_status != ZX_OK) return _status;
+  return ZX_OK;
+}
+
+extern "C" const fidl_type_t
+    test_bindingsdenylist_DenyEachBinding_OnlyDenyLibfuzzer_ResultTable;
+const fidl_type_t* DenyEachBinding_OnlyDenyLibfuzzer_Result::FidlType =
+    &test_bindingsdenylist_DenyEachBinding_OnlyDenyLibfuzzer_ResultTable;
+
+DenyEachBinding_OnlyDenyLibfuzzer_Result::
+    DenyEachBinding_OnlyDenyLibfuzzer_Result() {}
+
+DenyEachBinding_OnlyDenyLibfuzzer_Result::
+    ~DenyEachBinding_OnlyDenyLibfuzzer_Result() {
+  Destroy();
+}
+
+DenyEachBinding_OnlyDenyLibfuzzer_Result::
+    DenyEachBinding_OnlyDenyLibfuzzer_Result(
+        DenyEachBinding_OnlyDenyLibfuzzer_Result&& other)
+    : tag_(other.tag_) {
+  switch (tag_) {
+    case ::test::bindingsdenylist::DenyEachBinding_OnlyDenyLibfuzzer_Result::
+        Tag::kResponse:
+      new (&response_)::test::bindingsdenylist::
+          DenyEachBinding_OnlyDenyLibfuzzer_Response();
+      response_ = std::move(other.response_);
+      break;
+    case ::test::bindingsdenylist::DenyEachBinding_OnlyDenyLibfuzzer_Result::
+        Tag::kErr:
+      err_ = std::move(other.err_);
+      break;
+    case static_cast<fidl_xunion_tag_t>(
+        ::test::bindingsdenylist::DenyEachBinding_OnlyDenyLibfuzzer_Result::
+            Tag::Invalid):
+      break;
+  }
+}
+
+DenyEachBinding_OnlyDenyLibfuzzer_Result&
+DenyEachBinding_OnlyDenyLibfuzzer_Result::operator=(
+    DenyEachBinding_OnlyDenyLibfuzzer_Result&& other) {
+  if (this != &other) {
+    Destroy();
+    tag_ = other.tag_;
+    switch (tag_) {
+      case ::test::bindingsdenylist::DenyEachBinding_OnlyDenyLibfuzzer_Result::
+          Tag::kResponse:
+        new (&response_)::test::bindingsdenylist::
+            DenyEachBinding_OnlyDenyLibfuzzer_Response();
+        response_ = std::move(other.response_);
+        break;
+      case ::test::bindingsdenylist::DenyEachBinding_OnlyDenyLibfuzzer_Result::
+          Tag::kErr:
+        err_ = std::move(other.err_);
+        break;
+      case static_cast<fidl_xunion_tag_t>(
+          ::test::bindingsdenylist::DenyEachBinding_OnlyDenyLibfuzzer_Result::
+              Tag::Invalid):
+        break;
+    }
+  }
+  return *this;
+}
+
+DenyEachBinding_OnlyDenyLibfuzzer_Result
+DenyEachBinding_OnlyDenyLibfuzzer_Result::WithResponse(
+    ::test::bindingsdenylist::DenyEachBinding_OnlyDenyLibfuzzer_Response&&
+        val) {
+  DenyEachBinding_OnlyDenyLibfuzzer_Result result;
+  result.set_response(std::move(val));
+  return result;
+}
+DenyEachBinding_OnlyDenyLibfuzzer_Result
+DenyEachBinding_OnlyDenyLibfuzzer_Result::WithErr(uint32_t&& val) {
+  DenyEachBinding_OnlyDenyLibfuzzer_Result result;
+  result.set_err(std::move(val));
+  return result;
+}
+
+void DenyEachBinding_OnlyDenyLibfuzzer_Result::Encode(
+    ::fidl::Encoder* encoder, size_t offset,
+    cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
+  const size_t length_before = encoder->CurrentLength();
+  const size_t handles_before = encoder->CurrentHandleCount();
+
+  switch (Which()) {
+    case ::test::bindingsdenylist::DenyEachBinding_OnlyDenyLibfuzzer_Result::
+        Tag::kResponse: {
+      switch (encoder->wire_format()) {
+        case ::fidl::internal::WireFormatVersion::kV1: {
+          ::fidl::Encode(
+              encoder, &response_,
+              encoder->Alloc(::fidl::EncodingInlineSize<
+                             ::test::bindingsdenylist::
+                                 DenyEachBinding_OnlyDenyLibfuzzer_Response,
+                             ::fidl::Encoder>(encoder)));
+
+          fidl_xunion_t* xunion = encoder->GetPtr<fidl_xunion_t>(offset);
+          xunion->tag = tag_;
+          xunion->envelope.num_bytes =
+              static_cast<uint32_t>(encoder->CurrentLength() - length_before);
+          xunion->envelope.num_handles = static_cast<uint32_t>(
+              encoder->CurrentHandleCount() - handles_before);
+          xunion->envelope.presence = FIDL_ALLOC_PRESENT;
+          break;
+        }
+        case ::fidl::internal::WireFormatVersion::kV2: {
+          if (::fidl::EncodingInlineSize<
+                  ::test::bindingsdenylist::
+                      DenyEachBinding_OnlyDenyLibfuzzer_Response>(encoder) <=
+              FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
+            ::fidl::Encode(encoder, &response_,
+                           offset + offsetof(fidl_xunion_v2_t, envelope));
+
+            fidl_xunion_v2_t* xunion =
+                encoder->GetPtr<fidl_xunion_v2_t>(offset);
+            xunion->tag = tag_;
+            xunion->envelope.num_handles = static_cast<uint16_t>(
+                encoder->CurrentHandleCount() - handles_before);
+            xunion->envelope.flags = FIDL_ENVELOPE_FLAGS_INLINING_MASK;
+            break;
+          }
+
+          ::fidl::Encode(
+              encoder, &response_,
+              encoder->Alloc(::fidl::EncodingInlineSize<
+                             ::test::bindingsdenylist::
+                                 DenyEachBinding_OnlyDenyLibfuzzer_Response,
+                             ::fidl::Encoder>(encoder)));
+
+          fidl_xunion_v2_t* xunion = encoder->GetPtr<fidl_xunion_v2_t>(offset);
+          xunion->tag = tag_;
+          xunion->envelope.num_bytes =
+              static_cast<uint32_t>(encoder->CurrentLength() - length_before);
+          xunion->envelope.num_handles = static_cast<uint16_t>(
+              encoder->CurrentHandleCount() - handles_before);
+          xunion->envelope.flags = 0;
+          break;
+        }
+      }
+      break;
+    }
+    case ::test::bindingsdenylist::DenyEachBinding_OnlyDenyLibfuzzer_Result::
+        Tag::kErr: {
+      switch (encoder->wire_format()) {
+        case ::fidl::internal::WireFormatVersion::kV1: {
+          ::fidl::Encode(
+              encoder, &err_,
+              encoder->Alloc(
+                  ::fidl::EncodingInlineSize<uint32_t, ::fidl::Encoder>(
+                      encoder)));
+
+          fidl_xunion_t* xunion = encoder->GetPtr<fidl_xunion_t>(offset);
+          xunion->tag = tag_;
+          xunion->envelope.num_bytes =
+              static_cast<uint32_t>(encoder->CurrentLength() - length_before);
+          xunion->envelope.num_handles = static_cast<uint32_t>(
+              encoder->CurrentHandleCount() - handles_before);
+          xunion->envelope.presence = FIDL_ALLOC_PRESENT;
+          break;
+        }
+        case ::fidl::internal::WireFormatVersion::kV2: {
+          if (::fidl::EncodingInlineSize<uint32_t>(encoder) <=
+              FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
+            ::fidl::Encode(encoder, &err_,
+                           offset + offsetof(fidl_xunion_v2_t, envelope));
+
+            fidl_xunion_v2_t* xunion =
+                encoder->GetPtr<fidl_xunion_v2_t>(offset);
+            xunion->tag = tag_;
+            xunion->envelope.num_handles = static_cast<uint16_t>(
+                encoder->CurrentHandleCount() - handles_before);
+            xunion->envelope.flags = FIDL_ENVELOPE_FLAGS_INLINING_MASK;
+            break;
+          }
+
+          ::fidl::Encode(
+              encoder, &err_,
+              encoder->Alloc(
+                  ::fidl::EncodingInlineSize<uint32_t, ::fidl::Encoder>(
+                      encoder)));
+
+          fidl_xunion_v2_t* xunion = encoder->GetPtr<fidl_xunion_v2_t>(offset);
+          xunion->tag = tag_;
+          xunion->envelope.num_bytes =
+              static_cast<uint32_t>(encoder->CurrentLength() - length_before);
+          xunion->envelope.num_handles = static_cast<uint16_t>(
+              encoder->CurrentHandleCount() - handles_before);
+          xunion->envelope.flags = 0;
+          break;
+        }
+      }
+      break;
+    }
+    default:
+      break;
+  }
+}
+
+void DenyEachBinding_OnlyDenyLibfuzzer_Result::Decode(
+    ::fidl::Decoder* _decoder, DenyEachBinding_OnlyDenyLibfuzzer_Result* value,
+    size_t offset) {
+  fidl_xunion_v2_t* xunion = _decoder->GetPtr<fidl_xunion_v2_t>(offset);
+
+  if (xunion->envelope.num_bytes == 0 && xunion->envelope.num_handles == 0 &&
+      xunion->envelope.flags == 0) {
+    value->EnsureStorageInitialized(static_cast<fidl_xunion_tag_t>(
+        ::test::bindingsdenylist::DenyEachBinding_OnlyDenyLibfuzzer_Result::
+            Tag::Invalid));
+    return;
+  }
+
+  value->EnsureStorageInitialized(xunion->tag);
+
+  size_t value_offset = _decoder->EnvelopeValueOffset(&xunion->envelope);
+
+  switch (value->tag_) {
+    case ::test::bindingsdenylist::DenyEachBinding_OnlyDenyLibfuzzer_Result::
+        Tag::kResponse: {
+      new (&value->response_)::test::bindingsdenylist::
+          DenyEachBinding_OnlyDenyLibfuzzer_Response();
+      ::fidl::Decode(_decoder, &value->response_, value_offset);
+      break;
+    }
+    case ::test::bindingsdenylist::DenyEachBinding_OnlyDenyLibfuzzer_Result::
+        Tag::kErr: {
+      ::fidl::Decode(_decoder, &value->err_, value_offset);
+      break;
+    }
+    default: {
+      break;
+    }
+  }
+}
+
+zx_status_t DenyEachBinding_OnlyDenyLibfuzzer_Result::Clone(
+    DenyEachBinding_OnlyDenyLibfuzzer_Result* result) const {
+  result->Destroy();
+  result->tag_ = tag_;
+  switch (tag_) {
+    case ::test::bindingsdenylist::DenyEachBinding_OnlyDenyLibfuzzer_Result::
+        Tag::Invalid:
+      return ZX_OK;
+    case ::test::bindingsdenylist::DenyEachBinding_OnlyDenyLibfuzzer_Result::
+        Tag::kResponse:
+      new (&result->response_)::test::bindingsdenylist::
+          DenyEachBinding_OnlyDenyLibfuzzer_Response();
+      return ::fidl::Clone(response_, &result->response_);
+    case ::test::bindingsdenylist::DenyEachBinding_OnlyDenyLibfuzzer_Result::
+        Tag::kErr:
+      return ::fidl::Clone(err_, &result->err_);
+    default:
+      return ZX_OK;
+  }
+}
+
+DenyEachBinding_OnlyDenyLibfuzzer_Result&
+DenyEachBinding_OnlyDenyLibfuzzer_Result::set_response(
+    ::test::bindingsdenylist::DenyEachBinding_OnlyDenyLibfuzzer_Response
+        value) {
+  EnsureStorageInitialized(
+      ::test::bindingsdenylist::DenyEachBinding_OnlyDenyLibfuzzer_Result::Tag::
+          kResponse);
+  response_ = std::move(value);
+  return *this;
+}
+
+DenyEachBinding_OnlyDenyLibfuzzer_Result&
+DenyEachBinding_OnlyDenyLibfuzzer_Result::set_err(uint32_t value) {
+  EnsureStorageInitialized(
+      ::test::bindingsdenylist::DenyEachBinding_OnlyDenyLibfuzzer_Result::Tag::
+          kErr);
+  err_ = std::move(value);
+  return *this;
+}
+
+void DenyEachBinding_OnlyDenyLibfuzzer_Result::Destroy() {
+  switch (tag_) {
+    case ::test::bindingsdenylist::DenyEachBinding_OnlyDenyLibfuzzer_Result::
+        Tag::kResponse:
+      response_.~decltype(response_)();
+      break;
+    case ::test::bindingsdenylist::DenyEachBinding_OnlyDenyLibfuzzer_Result::
+        Tag::kErr:
+      break;
+
+    default:
+      break;
+  }
+  tag_ = static_cast<fidl_xunion_tag_t>(
+      ::test::bindingsdenylist::DenyEachBinding_OnlyDenyLibfuzzer_Result::Tag::
+          Invalid);
+}
+
+void DenyEachBinding_OnlyDenyLibfuzzer_Result::EnsureStorageInitialized(
+    ::fidl_xunion_tag_t tag) {
+  if (tag_ != tag) {
+    Destroy();
+    tag_ = tag;
+    switch (tag_) {
+      case static_cast<fidl_xunion_tag_t>(
+          ::test::bindingsdenylist::DenyEachBinding_OnlyDenyLibfuzzer_Result::
+              Tag::Invalid):
+        break;
+      case ::test::bindingsdenylist::DenyEachBinding_OnlyDenyLibfuzzer_Result::
+          Tag::kResponse:
+        new (&response_)::test::bindingsdenylist::
+            DenyEachBinding_OnlyDenyLibfuzzer_Response();
+        break;
+      case ::test::bindingsdenylist::DenyEachBinding_OnlyDenyLibfuzzer_Result::
+          Tag::kErr:
+        new (&err_) uint32_t();
+        break;
+      default:
+        break;
+    }
+  }
+}
+
+extern "C" const fidl_type_t
+    test_bindingsdenylist_DenyEachBinding_OnlyDenyGo_ResponseTable;
+const fidl_type_t* DenyEachBinding_OnlyDenyGo_Response::FidlType =
+    &test_bindingsdenylist_DenyEachBinding_OnlyDenyGo_ResponseTable;
+
+void DenyEachBinding_OnlyDenyGo_Response::Encode(
+    ::fidl::Encoder* _encoder, size_t _offset,
+    cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
+  if (::fidl::IsMemcpyCompatible<DenyEachBinding_OnlyDenyGo_Response>::value) {
+    memcpy(
+        _encoder->template GetPtr<DenyEachBinding_OnlyDenyGo_Response>(_offset),
+        this, sizeof(DenyEachBinding_OnlyDenyGo_Response));
+  } else {
+    if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
+      ::fidl::Encode(_encoder, &b, _offset + 0);
+
+    } else {
+      ::fidl::Encode(_encoder, &b, _offset + 0);
+    }
+  }
+}
+
+void DenyEachBinding_OnlyDenyGo_Response::Decode(
+    ::fidl::Decoder* _decoder, DenyEachBinding_OnlyDenyGo_Response* _value,
+    size_t _offset) {
+  if (::fidl::IsMemcpyCompatible<DenyEachBinding_OnlyDenyGo_Response>::value) {
+    memcpy(
+        _value,
+        _decoder->template GetPtr<DenyEachBinding_OnlyDenyGo_Response>(_offset),
+        sizeof(DenyEachBinding_OnlyDenyGo_Response));
+  } else {
+    ::fidl::Decode(_decoder, &_value->b, _offset + 0);
+  }
+}
+
+zx_status_t DenyEachBinding_OnlyDenyGo_Response::Clone(
+    DenyEachBinding_OnlyDenyGo_Response* _result) const {
+  zx_status_t _status = ::fidl::Clone(b, &_result->b);
+  if (_status != ZX_OK) return _status;
+  return ZX_OK;
+}
+
+extern "C" const fidl_type_t
+    test_bindingsdenylist_DenyEachBinding_OnlyDenyGo_ResultTable;
+const fidl_type_t* DenyEachBinding_OnlyDenyGo_Result::FidlType =
+    &test_bindingsdenylist_DenyEachBinding_OnlyDenyGo_ResultTable;
+
+DenyEachBinding_OnlyDenyGo_Result::DenyEachBinding_OnlyDenyGo_Result() {}
+
+DenyEachBinding_OnlyDenyGo_Result::~DenyEachBinding_OnlyDenyGo_Result() {
+  Destroy();
+}
+
+DenyEachBinding_OnlyDenyGo_Result::DenyEachBinding_OnlyDenyGo_Result(
+    DenyEachBinding_OnlyDenyGo_Result&& other)
+    : tag_(other.tag_) {
+  switch (tag_) {
+    case ::test::bindingsdenylist::DenyEachBinding_OnlyDenyGo_Result::Tag::
+        kResponse:
+      new (&response_)::test::bindingsdenylist::
+          DenyEachBinding_OnlyDenyGo_Response();
+      response_ = std::move(other.response_);
+      break;
+    case ::test::bindingsdenylist::DenyEachBinding_OnlyDenyGo_Result::Tag::kErr:
+      err_ = std::move(other.err_);
+      break;
+    case static_cast<fidl_xunion_tag_t>(
+        ::test::bindingsdenylist::DenyEachBinding_OnlyDenyGo_Result::Tag::
+            Invalid):
+      break;
+  }
+}
+
+DenyEachBinding_OnlyDenyGo_Result& DenyEachBinding_OnlyDenyGo_Result::operator=(
+    DenyEachBinding_OnlyDenyGo_Result&& other) {
+  if (this != &other) {
+    Destroy();
+    tag_ = other.tag_;
+    switch (tag_) {
+      case ::test::bindingsdenylist::DenyEachBinding_OnlyDenyGo_Result::Tag::
+          kResponse:
+        new (&response_)::test::bindingsdenylist::
+            DenyEachBinding_OnlyDenyGo_Response();
+        response_ = std::move(other.response_);
+        break;
+      case ::test::bindingsdenylist::DenyEachBinding_OnlyDenyGo_Result::Tag::
+          kErr:
+        err_ = std::move(other.err_);
+        break;
+      case static_cast<fidl_xunion_tag_t>(
+          ::test::bindingsdenylist::DenyEachBinding_OnlyDenyGo_Result::Tag::
+              Invalid):
+        break;
+    }
+  }
+  return *this;
+}
+
+DenyEachBinding_OnlyDenyGo_Result
+DenyEachBinding_OnlyDenyGo_Result::WithResponse(
+    ::test::bindingsdenylist::DenyEachBinding_OnlyDenyGo_Response&& val) {
+  DenyEachBinding_OnlyDenyGo_Result result;
+  result.set_response(std::move(val));
+  return result;
+}
+DenyEachBinding_OnlyDenyGo_Result DenyEachBinding_OnlyDenyGo_Result::WithErr(
+    uint32_t&& val) {
+  DenyEachBinding_OnlyDenyGo_Result result;
+  result.set_err(std::move(val));
+  return result;
+}
+
+void DenyEachBinding_OnlyDenyGo_Result::Encode(
+    ::fidl::Encoder* encoder, size_t offset,
+    cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
+  const size_t length_before = encoder->CurrentLength();
+  const size_t handles_before = encoder->CurrentHandleCount();
+
+  switch (Which()) {
+    case ::test::bindingsdenylist::DenyEachBinding_OnlyDenyGo_Result::Tag::
+        kResponse: {
+      switch (encoder->wire_format()) {
+        case ::fidl::internal::WireFormatVersion::kV1: {
+          ::fidl::Encode(encoder, &response_,
+                         encoder->Alloc(::fidl::EncodingInlineSize<
+                                        ::test::bindingsdenylist::
+                                            DenyEachBinding_OnlyDenyGo_Response,
+                                        ::fidl::Encoder>(encoder)));
+
+          fidl_xunion_t* xunion = encoder->GetPtr<fidl_xunion_t>(offset);
+          xunion->tag = tag_;
+          xunion->envelope.num_bytes =
+              static_cast<uint32_t>(encoder->CurrentLength() - length_before);
+          xunion->envelope.num_handles = static_cast<uint32_t>(
+              encoder->CurrentHandleCount() - handles_before);
+          xunion->envelope.presence = FIDL_ALLOC_PRESENT;
+          break;
+        }
+        case ::fidl::internal::WireFormatVersion::kV2: {
+          if (::fidl::EncodingInlineSize<
+                  ::test::bindingsdenylist::
+                      DenyEachBinding_OnlyDenyGo_Response>(encoder) <=
+              FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
+            ::fidl::Encode(encoder, &response_,
+                           offset + offsetof(fidl_xunion_v2_t, envelope));
+
+            fidl_xunion_v2_t* xunion =
+                encoder->GetPtr<fidl_xunion_v2_t>(offset);
+            xunion->tag = tag_;
+            xunion->envelope.num_handles = static_cast<uint16_t>(
+                encoder->CurrentHandleCount() - handles_before);
+            xunion->envelope.flags = FIDL_ENVELOPE_FLAGS_INLINING_MASK;
+            break;
+          }
+
+          ::fidl::Encode(encoder, &response_,
+                         encoder->Alloc(::fidl::EncodingInlineSize<
+                                        ::test::bindingsdenylist::
+                                            DenyEachBinding_OnlyDenyGo_Response,
+                                        ::fidl::Encoder>(encoder)));
+
+          fidl_xunion_v2_t* xunion = encoder->GetPtr<fidl_xunion_v2_t>(offset);
+          xunion->tag = tag_;
+          xunion->envelope.num_bytes =
+              static_cast<uint32_t>(encoder->CurrentLength() - length_before);
+          xunion->envelope.num_handles = static_cast<uint16_t>(
+              encoder->CurrentHandleCount() - handles_before);
+          xunion->envelope.flags = 0;
+          break;
+        }
+      }
+      break;
+    }
+    case ::test::bindingsdenylist::DenyEachBinding_OnlyDenyGo_Result::Tag::
+        kErr: {
+      switch (encoder->wire_format()) {
+        case ::fidl::internal::WireFormatVersion::kV1: {
+          ::fidl::Encode(
+              encoder, &err_,
+              encoder->Alloc(
+                  ::fidl::EncodingInlineSize<uint32_t, ::fidl::Encoder>(
+                      encoder)));
+
+          fidl_xunion_t* xunion = encoder->GetPtr<fidl_xunion_t>(offset);
+          xunion->tag = tag_;
+          xunion->envelope.num_bytes =
+              static_cast<uint32_t>(encoder->CurrentLength() - length_before);
+          xunion->envelope.num_handles = static_cast<uint32_t>(
+              encoder->CurrentHandleCount() - handles_before);
+          xunion->envelope.presence = FIDL_ALLOC_PRESENT;
+          break;
+        }
+        case ::fidl::internal::WireFormatVersion::kV2: {
+          if (::fidl::EncodingInlineSize<uint32_t>(encoder) <=
+              FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
+            ::fidl::Encode(encoder, &err_,
+                           offset + offsetof(fidl_xunion_v2_t, envelope));
+
+            fidl_xunion_v2_t* xunion =
+                encoder->GetPtr<fidl_xunion_v2_t>(offset);
+            xunion->tag = tag_;
+            xunion->envelope.num_handles = static_cast<uint16_t>(
+                encoder->CurrentHandleCount() - handles_before);
+            xunion->envelope.flags = FIDL_ENVELOPE_FLAGS_INLINING_MASK;
+            break;
+          }
+
+          ::fidl::Encode(
+              encoder, &err_,
+              encoder->Alloc(
+                  ::fidl::EncodingInlineSize<uint32_t, ::fidl::Encoder>(
+                      encoder)));
+
+          fidl_xunion_v2_t* xunion = encoder->GetPtr<fidl_xunion_v2_t>(offset);
+          xunion->tag = tag_;
+          xunion->envelope.num_bytes =
+              static_cast<uint32_t>(encoder->CurrentLength() - length_before);
+          xunion->envelope.num_handles = static_cast<uint16_t>(
+              encoder->CurrentHandleCount() - handles_before);
+          xunion->envelope.flags = 0;
+          break;
+        }
+      }
+      break;
+    }
+    default:
+      break;
+  }
+}
+
+void DenyEachBinding_OnlyDenyGo_Result::Decode(
+    ::fidl::Decoder* _decoder, DenyEachBinding_OnlyDenyGo_Result* value,
+    size_t offset) {
+  fidl_xunion_v2_t* xunion = _decoder->GetPtr<fidl_xunion_v2_t>(offset);
+
+  if (xunion->envelope.num_bytes == 0 && xunion->envelope.num_handles == 0 &&
+      xunion->envelope.flags == 0) {
+    value->EnsureStorageInitialized(static_cast<fidl_xunion_tag_t>(
+        ::test::bindingsdenylist::DenyEachBinding_OnlyDenyGo_Result::Tag::
+            Invalid));
+    return;
+  }
+
+  value->EnsureStorageInitialized(xunion->tag);
+
+  size_t value_offset = _decoder->EnvelopeValueOffset(&xunion->envelope);
+
+  switch (value->tag_) {
+    case ::test::bindingsdenylist::DenyEachBinding_OnlyDenyGo_Result::Tag::
+        kResponse: {
+      new (&value->response_)::test::bindingsdenylist::
+          DenyEachBinding_OnlyDenyGo_Response();
+      ::fidl::Decode(_decoder, &value->response_, value_offset);
+      break;
+    }
+    case ::test::bindingsdenylist::DenyEachBinding_OnlyDenyGo_Result::Tag::
+        kErr: {
+      ::fidl::Decode(_decoder, &value->err_, value_offset);
+      break;
+    }
+    default: {
+      break;
+    }
+  }
+}
+
+zx_status_t DenyEachBinding_OnlyDenyGo_Result::Clone(
+    DenyEachBinding_OnlyDenyGo_Result* result) const {
+  result->Destroy();
+  result->tag_ = tag_;
+  switch (tag_) {
+    case ::test::bindingsdenylist::DenyEachBinding_OnlyDenyGo_Result::Tag::
+        Invalid:
+      return ZX_OK;
+    case ::test::bindingsdenylist::DenyEachBinding_OnlyDenyGo_Result::Tag::
+        kResponse:
+      new (&result->response_)::test::bindingsdenylist::
+          DenyEachBinding_OnlyDenyGo_Response();
+      return ::fidl::Clone(response_, &result->response_);
+    case ::test::bindingsdenylist::DenyEachBinding_OnlyDenyGo_Result::Tag::kErr:
+      return ::fidl::Clone(err_, &result->err_);
+    default:
+      return ZX_OK;
+  }
+}
+
+DenyEachBinding_OnlyDenyGo_Result&
+DenyEachBinding_OnlyDenyGo_Result::set_response(
+    ::test::bindingsdenylist::DenyEachBinding_OnlyDenyGo_Response value) {
+  EnsureStorageInitialized(
+      ::test::bindingsdenylist::DenyEachBinding_OnlyDenyGo_Result::Tag::
+          kResponse);
+  response_ = std::move(value);
+  return *this;
+}
+
+DenyEachBinding_OnlyDenyGo_Result& DenyEachBinding_OnlyDenyGo_Result::set_err(
+    uint32_t value) {
+  EnsureStorageInitialized(
+      ::test::bindingsdenylist::DenyEachBinding_OnlyDenyGo_Result::Tag::kErr);
+  err_ = std::move(value);
+  return *this;
+}
+
+void DenyEachBinding_OnlyDenyGo_Result::Destroy() {
+  switch (tag_) {
+    case ::test::bindingsdenylist::DenyEachBinding_OnlyDenyGo_Result::Tag::
+        kResponse:
+      response_.~decltype(response_)();
+      break;
+    case ::test::bindingsdenylist::DenyEachBinding_OnlyDenyGo_Result::Tag::kErr:
+      break;
+
+    default:
+      break;
+  }
+  tag_ = static_cast<fidl_xunion_tag_t>(
+      ::test::bindingsdenylist::DenyEachBinding_OnlyDenyGo_Result::Tag::
+          Invalid);
+}
+
+void DenyEachBinding_OnlyDenyGo_Result::EnsureStorageInitialized(
+    ::fidl_xunion_tag_t tag) {
+  if (tag_ != tag) {
+    Destroy();
+    tag_ = tag;
+    switch (tag_) {
+      case static_cast<fidl_xunion_tag_t>(
+          ::test::bindingsdenylist::DenyEachBinding_OnlyDenyGo_Result::Tag::
+              Invalid):
+        break;
+      case ::test::bindingsdenylist::DenyEachBinding_OnlyDenyGo_Result::Tag::
+          kResponse:
+        new (&response_)::test::bindingsdenylist::
+            DenyEachBinding_OnlyDenyGo_Response();
+        break;
+      case ::test::bindingsdenylist::DenyEachBinding_OnlyDenyGo_Result::Tag::
+          kErr:
+        new (&err_) uint32_t();
+        break;
+      default:
+        break;
+    }
+  }
+}
+
+extern "C" const fidl_type_t
+    test_bindingsdenylist_DenyEachBinding_OnlyDenyDart_ResponseTable;
+const fidl_type_t* DenyEachBinding_OnlyDenyDart_Response::FidlType =
+    &test_bindingsdenylist_DenyEachBinding_OnlyDenyDart_ResponseTable;
+
+void DenyEachBinding_OnlyDenyDart_Response::Encode(
+    ::fidl::Encoder* _encoder, size_t _offset,
+    cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
+  if (::fidl::IsMemcpyCompatible<
+          DenyEachBinding_OnlyDenyDart_Response>::value) {
+    memcpy(_encoder->template GetPtr<DenyEachBinding_OnlyDenyDart_Response>(
+               _offset),
+           this, sizeof(DenyEachBinding_OnlyDenyDart_Response));
+  } else {
+    if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
+      ::fidl::Encode(_encoder, &b, _offset + 0);
+
+    } else {
+      ::fidl::Encode(_encoder, &b, _offset + 0);
+    }
+  }
+}
+
+void DenyEachBinding_OnlyDenyDart_Response::Decode(
+    ::fidl::Decoder* _decoder, DenyEachBinding_OnlyDenyDart_Response* _value,
+    size_t _offset) {
+  if (::fidl::IsMemcpyCompatible<
+          DenyEachBinding_OnlyDenyDart_Response>::value) {
+    memcpy(_value,
+           _decoder->template GetPtr<DenyEachBinding_OnlyDenyDart_Response>(
+               _offset),
+           sizeof(DenyEachBinding_OnlyDenyDart_Response));
+  } else {
+    ::fidl::Decode(_decoder, &_value->b, _offset + 0);
+  }
+}
+
+zx_status_t DenyEachBinding_OnlyDenyDart_Response::Clone(
+    DenyEachBinding_OnlyDenyDart_Response* _result) const {
+  zx_status_t _status = ::fidl::Clone(b, &_result->b);
+  if (_status != ZX_OK) return _status;
+  return ZX_OK;
+}
+
+extern "C" const fidl_type_t
+    test_bindingsdenylist_DenyEachBinding_OnlyDenyDart_ResultTable;
+const fidl_type_t* DenyEachBinding_OnlyDenyDart_Result::FidlType =
+    &test_bindingsdenylist_DenyEachBinding_OnlyDenyDart_ResultTable;
+
+DenyEachBinding_OnlyDenyDart_Result::DenyEachBinding_OnlyDenyDart_Result() {}
+
+DenyEachBinding_OnlyDenyDart_Result::~DenyEachBinding_OnlyDenyDart_Result() {
+  Destroy();
+}
+
+DenyEachBinding_OnlyDenyDart_Result::DenyEachBinding_OnlyDenyDart_Result(
+    DenyEachBinding_OnlyDenyDart_Result&& other)
+    : tag_(other.tag_) {
+  switch (tag_) {
+    case ::test::bindingsdenylist::DenyEachBinding_OnlyDenyDart_Result::Tag::
+        kResponse:
+      new (&response_)::test::bindingsdenylist::
+          DenyEachBinding_OnlyDenyDart_Response();
+      response_ = std::move(other.response_);
+      break;
+    case ::test::bindingsdenylist::DenyEachBinding_OnlyDenyDart_Result::Tag::
+        kErr:
+      err_ = std::move(other.err_);
+      break;
+    case static_cast<fidl_xunion_tag_t>(
+        ::test::bindingsdenylist::DenyEachBinding_OnlyDenyDart_Result::Tag::
+            Invalid):
+      break;
+  }
+}
+
+DenyEachBinding_OnlyDenyDart_Result&
+DenyEachBinding_OnlyDenyDart_Result::operator=(
+    DenyEachBinding_OnlyDenyDart_Result&& other) {
+  if (this != &other) {
+    Destroy();
+    tag_ = other.tag_;
+    switch (tag_) {
+      case ::test::bindingsdenylist::DenyEachBinding_OnlyDenyDart_Result::Tag::
+          kResponse:
+        new (&response_)::test::bindingsdenylist::
+            DenyEachBinding_OnlyDenyDart_Response();
+        response_ = std::move(other.response_);
+        break;
+      case ::test::bindingsdenylist::DenyEachBinding_OnlyDenyDart_Result::Tag::
+          kErr:
+        err_ = std::move(other.err_);
+        break;
+      case static_cast<fidl_xunion_tag_t>(
+          ::test::bindingsdenylist::DenyEachBinding_OnlyDenyDart_Result::Tag::
+              Invalid):
+        break;
+    }
+  }
+  return *this;
+}
+
+DenyEachBinding_OnlyDenyDart_Result
+DenyEachBinding_OnlyDenyDart_Result::WithResponse(
+    ::test::bindingsdenylist::DenyEachBinding_OnlyDenyDart_Response&& val) {
+  DenyEachBinding_OnlyDenyDart_Result result;
+  result.set_response(std::move(val));
+  return result;
+}
+DenyEachBinding_OnlyDenyDart_Result
+DenyEachBinding_OnlyDenyDart_Result::WithErr(uint32_t&& val) {
+  DenyEachBinding_OnlyDenyDart_Result result;
+  result.set_err(std::move(val));
+  return result;
+}
+
+void DenyEachBinding_OnlyDenyDart_Result::Encode(
+    ::fidl::Encoder* encoder, size_t offset,
+    cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
+  const size_t length_before = encoder->CurrentLength();
+  const size_t handles_before = encoder->CurrentHandleCount();
+
+  switch (Which()) {
+    case ::test::bindingsdenylist::DenyEachBinding_OnlyDenyDart_Result::Tag::
+        kResponse: {
+      switch (encoder->wire_format()) {
+        case ::fidl::internal::WireFormatVersion::kV1: {
+          ::fidl::Encode(
+              encoder, &response_,
+              encoder->Alloc(::fidl::EncodingInlineSize<
+                             ::test::bindingsdenylist::
+                                 DenyEachBinding_OnlyDenyDart_Response,
+                             ::fidl::Encoder>(encoder)));
+
+          fidl_xunion_t* xunion = encoder->GetPtr<fidl_xunion_t>(offset);
+          xunion->tag = tag_;
+          xunion->envelope.num_bytes =
+              static_cast<uint32_t>(encoder->CurrentLength() - length_before);
+          xunion->envelope.num_handles = static_cast<uint32_t>(
+              encoder->CurrentHandleCount() - handles_before);
+          xunion->envelope.presence = FIDL_ALLOC_PRESENT;
+          break;
+        }
+        case ::fidl::internal::WireFormatVersion::kV2: {
+          if (::fidl::EncodingInlineSize<
+                  ::test::bindingsdenylist::
+                      DenyEachBinding_OnlyDenyDart_Response>(encoder) <=
+              FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
+            ::fidl::Encode(encoder, &response_,
+                           offset + offsetof(fidl_xunion_v2_t, envelope));
+
+            fidl_xunion_v2_t* xunion =
+                encoder->GetPtr<fidl_xunion_v2_t>(offset);
+            xunion->tag = tag_;
+            xunion->envelope.num_handles = static_cast<uint16_t>(
+                encoder->CurrentHandleCount() - handles_before);
+            xunion->envelope.flags = FIDL_ENVELOPE_FLAGS_INLINING_MASK;
+            break;
+          }
+
+          ::fidl::Encode(
+              encoder, &response_,
+              encoder->Alloc(::fidl::EncodingInlineSize<
+                             ::test::bindingsdenylist::
+                                 DenyEachBinding_OnlyDenyDart_Response,
+                             ::fidl::Encoder>(encoder)));
+
+          fidl_xunion_v2_t* xunion = encoder->GetPtr<fidl_xunion_v2_t>(offset);
+          xunion->tag = tag_;
+          xunion->envelope.num_bytes =
+              static_cast<uint32_t>(encoder->CurrentLength() - length_before);
+          xunion->envelope.num_handles = static_cast<uint16_t>(
+              encoder->CurrentHandleCount() - handles_before);
+          xunion->envelope.flags = 0;
+          break;
+        }
+      }
+      break;
+    }
+    case ::test::bindingsdenylist::DenyEachBinding_OnlyDenyDart_Result::Tag::
+        kErr: {
+      switch (encoder->wire_format()) {
+        case ::fidl::internal::WireFormatVersion::kV1: {
+          ::fidl::Encode(
+              encoder, &err_,
+              encoder->Alloc(
+                  ::fidl::EncodingInlineSize<uint32_t, ::fidl::Encoder>(
+                      encoder)));
+
+          fidl_xunion_t* xunion = encoder->GetPtr<fidl_xunion_t>(offset);
+          xunion->tag = tag_;
+          xunion->envelope.num_bytes =
+              static_cast<uint32_t>(encoder->CurrentLength() - length_before);
+          xunion->envelope.num_handles = static_cast<uint32_t>(
+              encoder->CurrentHandleCount() - handles_before);
+          xunion->envelope.presence = FIDL_ALLOC_PRESENT;
+          break;
+        }
+        case ::fidl::internal::WireFormatVersion::kV2: {
+          if (::fidl::EncodingInlineSize<uint32_t>(encoder) <=
+              FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
+            ::fidl::Encode(encoder, &err_,
+                           offset + offsetof(fidl_xunion_v2_t, envelope));
+
+            fidl_xunion_v2_t* xunion =
+                encoder->GetPtr<fidl_xunion_v2_t>(offset);
+            xunion->tag = tag_;
+            xunion->envelope.num_handles = static_cast<uint16_t>(
+                encoder->CurrentHandleCount() - handles_before);
+            xunion->envelope.flags = FIDL_ENVELOPE_FLAGS_INLINING_MASK;
+            break;
+          }
+
+          ::fidl::Encode(
+              encoder, &err_,
+              encoder->Alloc(
+                  ::fidl::EncodingInlineSize<uint32_t, ::fidl::Encoder>(
+                      encoder)));
+
+          fidl_xunion_v2_t* xunion = encoder->GetPtr<fidl_xunion_v2_t>(offset);
+          xunion->tag = tag_;
+          xunion->envelope.num_bytes =
+              static_cast<uint32_t>(encoder->CurrentLength() - length_before);
+          xunion->envelope.num_handles = static_cast<uint16_t>(
+              encoder->CurrentHandleCount() - handles_before);
+          xunion->envelope.flags = 0;
+          break;
+        }
+      }
+      break;
+    }
+    default:
+      break;
+  }
+}
+
+void DenyEachBinding_OnlyDenyDart_Result::Decode(
+    ::fidl::Decoder* _decoder, DenyEachBinding_OnlyDenyDart_Result* value,
+    size_t offset) {
+  fidl_xunion_v2_t* xunion = _decoder->GetPtr<fidl_xunion_v2_t>(offset);
+
+  if (xunion->envelope.num_bytes == 0 && xunion->envelope.num_handles == 0 &&
+      xunion->envelope.flags == 0) {
+    value->EnsureStorageInitialized(static_cast<fidl_xunion_tag_t>(
+        ::test::bindingsdenylist::DenyEachBinding_OnlyDenyDart_Result::Tag::
+            Invalid));
+    return;
+  }
+
+  value->EnsureStorageInitialized(xunion->tag);
+
+  size_t value_offset = _decoder->EnvelopeValueOffset(&xunion->envelope);
+
+  switch (value->tag_) {
+    case ::test::bindingsdenylist::DenyEachBinding_OnlyDenyDart_Result::Tag::
+        kResponse: {
+      new (&value->response_)::test::bindingsdenylist::
+          DenyEachBinding_OnlyDenyDart_Response();
+      ::fidl::Decode(_decoder, &value->response_, value_offset);
+      break;
+    }
+    case ::test::bindingsdenylist::DenyEachBinding_OnlyDenyDart_Result::Tag::
+        kErr: {
+      ::fidl::Decode(_decoder, &value->err_, value_offset);
+      break;
+    }
+    default: {
+      break;
+    }
+  }
+}
+
+zx_status_t DenyEachBinding_OnlyDenyDart_Result::Clone(
+    DenyEachBinding_OnlyDenyDart_Result* result) const {
+  result->Destroy();
+  result->tag_ = tag_;
+  switch (tag_) {
+    case ::test::bindingsdenylist::DenyEachBinding_OnlyDenyDart_Result::Tag::
+        Invalid:
+      return ZX_OK;
+    case ::test::bindingsdenylist::DenyEachBinding_OnlyDenyDart_Result::Tag::
+        kResponse:
+      new (&result->response_)::test::bindingsdenylist::
+          DenyEachBinding_OnlyDenyDart_Response();
+      return ::fidl::Clone(response_, &result->response_);
+    case ::test::bindingsdenylist::DenyEachBinding_OnlyDenyDart_Result::Tag::
+        kErr:
+      return ::fidl::Clone(err_, &result->err_);
+    default:
+      return ZX_OK;
+  }
+}
+
+DenyEachBinding_OnlyDenyDart_Result&
+DenyEachBinding_OnlyDenyDart_Result::set_response(
+    ::test::bindingsdenylist::DenyEachBinding_OnlyDenyDart_Response value) {
+  EnsureStorageInitialized(
+      ::test::bindingsdenylist::DenyEachBinding_OnlyDenyDart_Result::Tag::
+          kResponse);
+  response_ = std::move(value);
+  return *this;
+}
+
+DenyEachBinding_OnlyDenyDart_Result&
+DenyEachBinding_OnlyDenyDart_Result::set_err(uint32_t value) {
+  EnsureStorageInitialized(
+      ::test::bindingsdenylist::DenyEachBinding_OnlyDenyDart_Result::Tag::kErr);
+  err_ = std::move(value);
+  return *this;
+}
+
+void DenyEachBinding_OnlyDenyDart_Result::Destroy() {
+  switch (tag_) {
+    case ::test::bindingsdenylist::DenyEachBinding_OnlyDenyDart_Result::Tag::
+        kResponse:
+      response_.~decltype(response_)();
+      break;
+    case ::test::bindingsdenylist::DenyEachBinding_OnlyDenyDart_Result::Tag::
+        kErr:
+      break;
+
+    default:
+      break;
+  }
+  tag_ = static_cast<fidl_xunion_tag_t>(
+      ::test::bindingsdenylist::DenyEachBinding_OnlyDenyDart_Result::Tag::
+          Invalid);
+}
+
+void DenyEachBinding_OnlyDenyDart_Result::EnsureStorageInitialized(
+    ::fidl_xunion_tag_t tag) {
+  if (tag_ != tag) {
+    Destroy();
+    tag_ = tag;
+    switch (tag_) {
+      case static_cast<fidl_xunion_tag_t>(
+          ::test::bindingsdenylist::DenyEachBinding_OnlyDenyDart_Result::Tag::
+              Invalid):
+        break;
+      case ::test::bindingsdenylist::DenyEachBinding_OnlyDenyDart_Result::Tag::
+          kResponse:
+        new (&response_)::test::bindingsdenylist::
+            DenyEachBinding_OnlyDenyDart_Response();
+        break;
+      case ::test::bindingsdenylist::DenyEachBinding_OnlyDenyDart_Result::Tag::
+          kErr:
+        new (&err_) uint32_t();
+        break;
+      default:
+        break;
+    }
+  }
+}
+
+extern "C" const fidl_type_t
+    test_bindingsdenylist_DenyEachBinding_OnlyDenyCpp_ResponseTable;
+const fidl_type_t* DenyEachBinding_OnlyDenyCpp_Response::FidlType =
+    &test_bindingsdenylist_DenyEachBinding_OnlyDenyCpp_ResponseTable;
+
+void DenyEachBinding_OnlyDenyCpp_Response::Encode(
+    ::fidl::Encoder* _encoder, size_t _offset,
+    cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
+  if (::fidl::IsMemcpyCompatible<DenyEachBinding_OnlyDenyCpp_Response>::value) {
+    memcpy(_encoder->template GetPtr<DenyEachBinding_OnlyDenyCpp_Response>(
+               _offset),
+           this, sizeof(DenyEachBinding_OnlyDenyCpp_Response));
+  } else {
+    if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
+      ::fidl::Encode(_encoder, &b, _offset + 0);
+
+    } else {
+      ::fidl::Encode(_encoder, &b, _offset + 0);
+    }
+  }
+}
+
+void DenyEachBinding_OnlyDenyCpp_Response::Decode(
+    ::fidl::Decoder* _decoder, DenyEachBinding_OnlyDenyCpp_Response* _value,
+    size_t _offset) {
+  if (::fidl::IsMemcpyCompatible<DenyEachBinding_OnlyDenyCpp_Response>::value) {
+    memcpy(_value,
+           _decoder->template GetPtr<DenyEachBinding_OnlyDenyCpp_Response>(
+               _offset),
+           sizeof(DenyEachBinding_OnlyDenyCpp_Response));
+  } else {
+    ::fidl::Decode(_decoder, &_value->b, _offset + 0);
+  }
+}
+
+zx_status_t DenyEachBinding_OnlyDenyCpp_Response::Clone(
+    DenyEachBinding_OnlyDenyCpp_Response* _result) const {
+  zx_status_t _status = ::fidl::Clone(b, &_result->b);
+  if (_status != ZX_OK) return _status;
+  return ZX_OK;
+}
+
+extern "C" const fidl_type_t
+    test_bindingsdenylist_DenyEachBinding_OnlyDenyCpp_ResultTable;
+const fidl_type_t* DenyEachBinding_OnlyDenyCpp_Result::FidlType =
+    &test_bindingsdenylist_DenyEachBinding_OnlyDenyCpp_ResultTable;
+
+DenyEachBinding_OnlyDenyCpp_Result::DenyEachBinding_OnlyDenyCpp_Result() {}
+
+DenyEachBinding_OnlyDenyCpp_Result::~DenyEachBinding_OnlyDenyCpp_Result() {
+  Destroy();
+}
+
+DenyEachBinding_OnlyDenyCpp_Result::DenyEachBinding_OnlyDenyCpp_Result(
+    DenyEachBinding_OnlyDenyCpp_Result&& other)
+    : tag_(other.tag_) {
+  switch (tag_) {
+    case ::test::bindingsdenylist::DenyEachBinding_OnlyDenyCpp_Result::Tag::
+        kResponse:
+      new (&response_)::test::bindingsdenylist::
+          DenyEachBinding_OnlyDenyCpp_Response();
+      response_ = std::move(other.response_);
+      break;
+    case ::test::bindingsdenylist::DenyEachBinding_OnlyDenyCpp_Result::Tag::
+        kErr:
+      err_ = std::move(other.err_);
+      break;
+    case static_cast<fidl_xunion_tag_t>(
+        ::test::bindingsdenylist::DenyEachBinding_OnlyDenyCpp_Result::Tag::
+            Invalid):
+      break;
+  }
+}
+
+DenyEachBinding_OnlyDenyCpp_Result&
+DenyEachBinding_OnlyDenyCpp_Result::operator=(
+    DenyEachBinding_OnlyDenyCpp_Result&& other) {
+  if (this != &other) {
+    Destroy();
+    tag_ = other.tag_;
+    switch (tag_) {
+      case ::test::bindingsdenylist::DenyEachBinding_OnlyDenyCpp_Result::Tag::
+          kResponse:
+        new (&response_)::test::bindingsdenylist::
+            DenyEachBinding_OnlyDenyCpp_Response();
+        response_ = std::move(other.response_);
+        break;
+      case ::test::bindingsdenylist::DenyEachBinding_OnlyDenyCpp_Result::Tag::
+          kErr:
+        err_ = std::move(other.err_);
+        break;
+      case static_cast<fidl_xunion_tag_t>(
+          ::test::bindingsdenylist::DenyEachBinding_OnlyDenyCpp_Result::Tag::
+              Invalid):
+        break;
+    }
+  }
+  return *this;
+}
+
+DenyEachBinding_OnlyDenyCpp_Result
+DenyEachBinding_OnlyDenyCpp_Result::WithResponse(
+    ::test::bindingsdenylist::DenyEachBinding_OnlyDenyCpp_Response&& val) {
+  DenyEachBinding_OnlyDenyCpp_Result result;
+  result.set_response(std::move(val));
+  return result;
+}
+DenyEachBinding_OnlyDenyCpp_Result DenyEachBinding_OnlyDenyCpp_Result::WithErr(
+    uint32_t&& val) {
+  DenyEachBinding_OnlyDenyCpp_Result result;
+  result.set_err(std::move(val));
+  return result;
+}
+
+void DenyEachBinding_OnlyDenyCpp_Result::Encode(
+    ::fidl::Encoder* encoder, size_t offset,
+    cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
+  const size_t length_before = encoder->CurrentLength();
+  const size_t handles_before = encoder->CurrentHandleCount();
+
+  switch (Which()) {
+    case ::test::bindingsdenylist::DenyEachBinding_OnlyDenyCpp_Result::Tag::
+        kResponse: {
+      switch (encoder->wire_format()) {
+        case ::fidl::internal::WireFormatVersion::kV1: {
+          ::fidl::Encode(
+              encoder, &response_,
+              encoder->Alloc(::fidl::EncodingInlineSize<
+                             ::test::bindingsdenylist::
+                                 DenyEachBinding_OnlyDenyCpp_Response,
+                             ::fidl::Encoder>(encoder)));
+
+          fidl_xunion_t* xunion = encoder->GetPtr<fidl_xunion_t>(offset);
+          xunion->tag = tag_;
+          xunion->envelope.num_bytes =
+              static_cast<uint32_t>(encoder->CurrentLength() - length_before);
+          xunion->envelope.num_handles = static_cast<uint32_t>(
+              encoder->CurrentHandleCount() - handles_before);
+          xunion->envelope.presence = FIDL_ALLOC_PRESENT;
+          break;
+        }
+        case ::fidl::internal::WireFormatVersion::kV2: {
+          if (::fidl::EncodingInlineSize<
+                  ::test::bindingsdenylist::
+                      DenyEachBinding_OnlyDenyCpp_Response>(encoder) <=
+              FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
+            ::fidl::Encode(encoder, &response_,
+                           offset + offsetof(fidl_xunion_v2_t, envelope));
+
+            fidl_xunion_v2_t* xunion =
+                encoder->GetPtr<fidl_xunion_v2_t>(offset);
+            xunion->tag = tag_;
+            xunion->envelope.num_handles = static_cast<uint16_t>(
+                encoder->CurrentHandleCount() - handles_before);
+            xunion->envelope.flags = FIDL_ENVELOPE_FLAGS_INLINING_MASK;
+            break;
+          }
+
+          ::fidl::Encode(
+              encoder, &response_,
+              encoder->Alloc(::fidl::EncodingInlineSize<
+                             ::test::bindingsdenylist::
+                                 DenyEachBinding_OnlyDenyCpp_Response,
+                             ::fidl::Encoder>(encoder)));
+
+          fidl_xunion_v2_t* xunion = encoder->GetPtr<fidl_xunion_v2_t>(offset);
+          xunion->tag = tag_;
+          xunion->envelope.num_bytes =
+              static_cast<uint32_t>(encoder->CurrentLength() - length_before);
+          xunion->envelope.num_handles = static_cast<uint16_t>(
+              encoder->CurrentHandleCount() - handles_before);
+          xunion->envelope.flags = 0;
+          break;
+        }
+      }
+      break;
+    }
+    case ::test::bindingsdenylist::DenyEachBinding_OnlyDenyCpp_Result::Tag::
+        kErr: {
+      switch (encoder->wire_format()) {
+        case ::fidl::internal::WireFormatVersion::kV1: {
+          ::fidl::Encode(
+              encoder, &err_,
+              encoder->Alloc(
+                  ::fidl::EncodingInlineSize<uint32_t, ::fidl::Encoder>(
+                      encoder)));
+
+          fidl_xunion_t* xunion = encoder->GetPtr<fidl_xunion_t>(offset);
+          xunion->tag = tag_;
+          xunion->envelope.num_bytes =
+              static_cast<uint32_t>(encoder->CurrentLength() - length_before);
+          xunion->envelope.num_handles = static_cast<uint32_t>(
+              encoder->CurrentHandleCount() - handles_before);
+          xunion->envelope.presence = FIDL_ALLOC_PRESENT;
+          break;
+        }
+        case ::fidl::internal::WireFormatVersion::kV2: {
+          if (::fidl::EncodingInlineSize<uint32_t>(encoder) <=
+              FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
+            ::fidl::Encode(encoder, &err_,
+                           offset + offsetof(fidl_xunion_v2_t, envelope));
+
+            fidl_xunion_v2_t* xunion =
+                encoder->GetPtr<fidl_xunion_v2_t>(offset);
+            xunion->tag = tag_;
+            xunion->envelope.num_handles = static_cast<uint16_t>(
+                encoder->CurrentHandleCount() - handles_before);
+            xunion->envelope.flags = FIDL_ENVELOPE_FLAGS_INLINING_MASK;
+            break;
+          }
+
+          ::fidl::Encode(
+              encoder, &err_,
+              encoder->Alloc(
+                  ::fidl::EncodingInlineSize<uint32_t, ::fidl::Encoder>(
+                      encoder)));
+
+          fidl_xunion_v2_t* xunion = encoder->GetPtr<fidl_xunion_v2_t>(offset);
+          xunion->tag = tag_;
+          xunion->envelope.num_bytes =
+              static_cast<uint32_t>(encoder->CurrentLength() - length_before);
+          xunion->envelope.num_handles = static_cast<uint16_t>(
+              encoder->CurrentHandleCount() - handles_before);
+          xunion->envelope.flags = 0;
+          break;
+        }
+      }
+      break;
+    }
+    default:
+      break;
+  }
+}
+
+void DenyEachBinding_OnlyDenyCpp_Result::Decode(
+    ::fidl::Decoder* _decoder, DenyEachBinding_OnlyDenyCpp_Result* value,
+    size_t offset) {
+  fidl_xunion_v2_t* xunion = _decoder->GetPtr<fidl_xunion_v2_t>(offset);
+
+  if (xunion->envelope.num_bytes == 0 && xunion->envelope.num_handles == 0 &&
+      xunion->envelope.flags == 0) {
+    value->EnsureStorageInitialized(static_cast<fidl_xunion_tag_t>(
+        ::test::bindingsdenylist::DenyEachBinding_OnlyDenyCpp_Result::Tag::
+            Invalid));
+    return;
+  }
+
+  value->EnsureStorageInitialized(xunion->tag);
+
+  size_t value_offset = _decoder->EnvelopeValueOffset(&xunion->envelope);
+
+  switch (value->tag_) {
+    case ::test::bindingsdenylist::DenyEachBinding_OnlyDenyCpp_Result::Tag::
+        kResponse: {
+      new (&value->response_)::test::bindingsdenylist::
+          DenyEachBinding_OnlyDenyCpp_Response();
+      ::fidl::Decode(_decoder, &value->response_, value_offset);
+      break;
+    }
+    case ::test::bindingsdenylist::DenyEachBinding_OnlyDenyCpp_Result::Tag::
+        kErr: {
+      ::fidl::Decode(_decoder, &value->err_, value_offset);
+      break;
+    }
+    default: {
+      break;
+    }
+  }
+}
+
+zx_status_t DenyEachBinding_OnlyDenyCpp_Result::Clone(
+    DenyEachBinding_OnlyDenyCpp_Result* result) const {
+  result->Destroy();
+  result->tag_ = tag_;
+  switch (tag_) {
+    case ::test::bindingsdenylist::DenyEachBinding_OnlyDenyCpp_Result::Tag::
+        Invalid:
+      return ZX_OK;
+    case ::test::bindingsdenylist::DenyEachBinding_OnlyDenyCpp_Result::Tag::
+        kResponse:
+      new (&result->response_)::test::bindingsdenylist::
+          DenyEachBinding_OnlyDenyCpp_Response();
+      return ::fidl::Clone(response_, &result->response_);
+    case ::test::bindingsdenylist::DenyEachBinding_OnlyDenyCpp_Result::Tag::
+        kErr:
+      return ::fidl::Clone(err_, &result->err_);
+    default:
+      return ZX_OK;
+  }
+}
+
+DenyEachBinding_OnlyDenyCpp_Result&
+DenyEachBinding_OnlyDenyCpp_Result::set_response(
+    ::test::bindingsdenylist::DenyEachBinding_OnlyDenyCpp_Response value) {
+  EnsureStorageInitialized(
+      ::test::bindingsdenylist::DenyEachBinding_OnlyDenyCpp_Result::Tag::
+          kResponse);
+  response_ = std::move(value);
+  return *this;
+}
+
+DenyEachBinding_OnlyDenyCpp_Result& DenyEachBinding_OnlyDenyCpp_Result::set_err(
+    uint32_t value) {
+  EnsureStorageInitialized(
+      ::test::bindingsdenylist::DenyEachBinding_OnlyDenyCpp_Result::Tag::kErr);
+  err_ = std::move(value);
+  return *this;
+}
+
+void DenyEachBinding_OnlyDenyCpp_Result::Destroy() {
+  switch (tag_) {
+    case ::test::bindingsdenylist::DenyEachBinding_OnlyDenyCpp_Result::Tag::
+        kResponse:
+      response_.~decltype(response_)();
+      break;
+    case ::test::bindingsdenylist::DenyEachBinding_OnlyDenyCpp_Result::Tag::
+        kErr:
+      break;
+
+    default:
+      break;
+  }
+  tag_ = static_cast<fidl_xunion_tag_t>(
+      ::test::bindingsdenylist::DenyEachBinding_OnlyDenyCpp_Result::Tag::
+          Invalid);
+}
+
+void DenyEachBinding_OnlyDenyCpp_Result::EnsureStorageInitialized(
+    ::fidl_xunion_tag_t tag) {
+  if (tag_ != tag) {
+    Destroy();
+    tag_ = tag;
+    switch (tag_) {
+      case static_cast<fidl_xunion_tag_t>(
+          ::test::bindingsdenylist::DenyEachBinding_OnlyDenyCpp_Result::Tag::
+              Invalid):
+        break;
+      case ::test::bindingsdenylist::DenyEachBinding_OnlyDenyCpp_Result::Tag::
+          kResponse:
+        new (&response_)::test::bindingsdenylist::
+            DenyEachBinding_OnlyDenyCpp_Response();
+        break;
+      case ::test::bindingsdenylist::DenyEachBinding_OnlyDenyCpp_Result::Tag::
+          kErr:
+        new (&err_) uint32_t();
+        break;
+      default:
+        break;
+    }
+  }
+}
 
 //
 // Proxies and stubs definitions
 //
 #ifdef __Fuchsia__
 
-namespace test {
-namespace bindingsdenylist {
+namespace _internal {
+__LOCAL extern "C" const fidl_type_t
+    test_bindingsdenylist_ImportsSameNameContextUnattributedRequestMessageTable;
+
+__LOCAL extern "C" const fidl_type_t
+    test_bindingsdenylist_ImportsSameNameContextAlwaysAppearsInImportingLibraryRequestMessageTable;
+
+}  // namespace _internal
+ImportsSameNameContext::~ImportsSameNameContext() = default;
+
+const fidl_type_t* ::test::bindingsdenylist::
+    ImportsSameNameContext_RequestDecoder::GetType(uint64_t ordinal,
+                                                   bool* out_needs_response) {
+  switch (ordinal) {
+    case ::test::bindingsdenylist::internal::
+        kImportsSameNameContext_Unattributed_Ordinal:
+      *out_needs_response = false;
+      return &::test::bindingsdenylist::_internal::
+          test_bindingsdenylist_ImportsSameNameContextUnattributedRequestMessageTable;
+    case ::test::bindingsdenylist::internal::
+        kImportsSameNameContext_AlwaysAppearsInImportingLibrary_Ordinal:
+      *out_needs_response = false;
+      return &::test::bindingsdenylist::_internal::
+          test_bindingsdenylist_ImportsSameNameContextAlwaysAppearsInImportingLibraryRequestMessageTable;
+    default:
+      *out_needs_response = false;
+      return nullptr;
+  }
+}
+
+const fidl_type_t* ImportsSameNameContext_ResponseDecoder::GetType(
+    uint64_t ordinal) {
+  switch (ordinal) {
+    default:
+      return nullptr;
+  }
+}
+
+ImportsSameNameContext_EventSender::~ImportsSameNameContext_EventSender() =
+    default;
+
+ImportsSameNameContext_Sync::~ImportsSameNameContext_Sync() = default;
+
+ImportsSameNameContext_Proxy::ImportsSameNameContext_Proxy(
+    ::fidl::internal::ProxyController* controller)
+    : controller_(controller) {
+  (void)controller_;
+}
+
+ImportsSameNameContext_Proxy::~ImportsSameNameContext_Proxy() = default;
+
+zx_status_t ImportsSameNameContext_Proxy::Dispatch_(
+    ::fidl::HLCPPIncomingMessage message) {
+  zx_status_t status = ZX_OK;
+  switch (message.ordinal()) {
+    default: {
+      status = ZX_ERR_NOT_SUPPORTED;
+      break;
+    }
+  }
+  return status;
+}
+
+void ImportsSameNameContext_Proxy::Unattributed() {
+  ::fidl::Encoder _encoder(::test::bindingsdenylist::internal::
+                               kImportsSameNameContext_Unattributed_Ordinal);
+  controller_->Send(
+      &::test::bindingsdenylist::_internal::
+          test_bindingsdenylist_ImportsSameNameContextUnattributedRequestMessageTable,
+      ::test::bindingsdenylist::ImportsSameNameContext_RequestEncoder::
+          Unattributed(&_encoder),
+      nullptr);
+}
+void ImportsSameNameContext_Proxy::AlwaysAppearsInImportingLibrary() {
+  ::fidl::Encoder _encoder(
+      ::test::bindingsdenylist::internal::
+          kImportsSameNameContext_AlwaysAppearsInImportingLibrary_Ordinal);
+  controller_->Send(
+      &::test::bindingsdenylist::_internal::
+          test_bindingsdenylist_ImportsSameNameContextAlwaysAppearsInImportingLibraryRequestMessageTable,
+      ::test::bindingsdenylist::ImportsSameNameContext_RequestEncoder::
+          AlwaysAppearsInImportingLibrary(&_encoder),
+      nullptr);
+}
+
+ImportsSameNameContext_Stub::ImportsSameNameContext_Stub(
+    ::test::bindingsdenylist::ImportsSameNameContext_Stub::
+        ImportsSameNameContext_clazz* impl)
+    : impl_(impl) {
+  (void)impl_;
+}
+
+ImportsSameNameContext_Stub::~ImportsSameNameContext_Stub() = default;
+
+namespace {}  // namespace
+
+zx_status_t ImportsSameNameContext_Stub::Dispatch_(
+    ::fidl::HLCPPIncomingMessage message,
+    ::fidl::internal::PendingResponse response) {
+  bool needs_response;
+  const fidl_type_t* request_type =
+      ::test::bindingsdenylist::ImportsSameNameContext_RequestDecoder::GetType(
+          message.ordinal(), &needs_response);
+  if (request_type == nullptr) {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+  if (response.needs_response() != needs_response) {
+    if (needs_response) {
+      FIDL_REPORT_DECODING_ERROR(message, request_type,
+                                 "Message needing a response with no txid");
+    } else {
+      FIDL_REPORT_DECODING_ERROR(message, request_type,
+                                 "Message not needing a response with a txid");
+    }
+    return ZX_ERR_INVALID_ARGS;
+  }
+  const char* error_msg = nullptr;
+  zx_status_t status = message.Decode(request_type, &error_msg);
+  if (status != ZX_OK) {
+    FIDL_REPORT_DECODING_ERROR(message, request_type, error_msg);
+    return status;
+  }
+  uint64_t ordinal = message.ordinal();
+  switch (ordinal) {
+    case ::test::bindingsdenylist::internal::
+        kImportsSameNameContext_Unattributed_Ordinal: {
+      impl_->Unattributed();
+      break;
+    }
+    case ::test::bindingsdenylist::internal::
+        kImportsSameNameContext_AlwaysAppearsInImportingLibrary_Ordinal: {
+      impl_->AlwaysAppearsInImportingLibrary();
+      break;
+    }
+    default: {
+      status = ZX_ERR_NOT_SUPPORTED;
+      break;
+    }
+  }
+  return status;
+}
+
+ImportsSameNameContext_SyncProxy::ImportsSameNameContext_SyncProxy(
+    ::zx::channel channel)
+    : proxy_(::std::move(channel)) {}
+
+ImportsSameNameContext_SyncProxy::~ImportsSameNameContext_SyncProxy() = default;
+
+zx_status_t ImportsSameNameContext_SyncProxy::Unattributed() {
+  ::fidl::Encoder _encoder(::test::bindingsdenylist::internal::
+                               kImportsSameNameContext_Unattributed_Ordinal);
+  return proxy_.Send(
+      &::test::bindingsdenylist::_internal::
+          test_bindingsdenylist_ImportsSameNameContextUnattributedRequestMessageTable,
+      ::test::bindingsdenylist::ImportsSameNameContext_RequestEncoder::
+          Unattributed(&_encoder));
+}
+
+zx_status_t
+ImportsSameNameContext_SyncProxy::AlwaysAppearsInImportingLibrary() {
+  ::fidl::Encoder _encoder(
+      ::test::bindingsdenylist::internal::
+          kImportsSameNameContext_AlwaysAppearsInImportingLibrary_Ordinal);
+  return proxy_.Send(
+      &::test::bindingsdenylist::_internal::
+          test_bindingsdenylist_ImportsSameNameContextAlwaysAppearsInImportingLibraryRequestMessageTable,
+      ::test::bindingsdenylist::ImportsSameNameContext_RequestEncoder::
+          AlwaysAppearsInImportingLibrary(&_encoder));
+}
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+Allowed::~Allowed() = default;
+
+const fidl_type_t* ::test::bindingsdenylist::Allowed_RequestDecoder::GetType(
+    uint64_t ordinal, bool* out_needs_response) {
+  switch (ordinal) {
+    default:
+      *out_needs_response = false;
+      return nullptr;
+  }
+}
+
+const fidl_type_t* Allowed_ResponseDecoder::GetType(uint64_t ordinal) {
+  switch (ordinal) {
+    default:
+      return nullptr;
+  }
+}
+
+Allowed_EventSender::~Allowed_EventSender() = default;
+
+Allowed_Sync::~Allowed_Sync() = default;
+
+Allowed_Proxy::Allowed_Proxy(::fidl::internal::ProxyController* controller)
+    : controller_(controller) {
+  (void)controller_;
+}
+
+Allowed_Proxy::~Allowed_Proxy() = default;
+
+zx_status_t Allowed_Proxy::Dispatch_(::fidl::HLCPPIncomingMessage message) {
+  zx_status_t status = ZX_OK;
+  switch (message.ordinal()) {
+    default: {
+      status = ZX_ERR_NOT_SUPPORTED;
+      break;
+    }
+  }
+  return status;
+}
+
+Allowed_Stub::Allowed_Stub(
+    ::test::bindingsdenylist::Allowed_Stub::Allowed_clazz* impl)
+    : impl_(impl) {
+  (void)impl_;
+}
+
+Allowed_Stub::~Allowed_Stub() = default;
+
+namespace {}  // namespace
+
+zx_status_t Allowed_Stub::Dispatch_(
+    ::fidl::HLCPPIncomingMessage message,
+    ::fidl::internal::PendingResponse response) {
+  bool needs_response;
+  const fidl_type_t* request_type =
+      ::test::bindingsdenylist::Allowed_RequestDecoder::GetType(
+          message.ordinal(), &needs_response);
+  if (request_type == nullptr) {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+  if (response.needs_response() != needs_response) {
+    if (needs_response) {
+      FIDL_REPORT_DECODING_ERROR(message, request_type,
+                                 "Message needing a response with no txid");
+    } else {
+      FIDL_REPORT_DECODING_ERROR(message, request_type,
+                                 "Message not needing a response with a txid");
+    }
+    return ZX_ERR_INVALID_ARGS;
+  }
+  const char* error_msg = nullptr;
+  zx_status_t status = message.Decode(request_type, &error_msg);
+  if (status != ZX_OK) {
+    FIDL_REPORT_DECODING_ERROR(message, request_type, error_msg);
+    return status;
+  }
+  uint64_t ordinal = message.ordinal();
+  switch (ordinal) {
+    default: {
+      status = ZX_ERR_NOT_SUPPORTED;
+      break;
+    }
+  }
+  return status;
+}
+
+Allowed_SyncProxy::Allowed_SyncProxy(::zx::channel channel)
+    : proxy_(::std::move(channel)) {}
+
+Allowed_SyncProxy::~Allowed_SyncProxy() = default;
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
 namespace _internal {
 __LOCAL extern "C" const fidl_type_t
     test_bindingsdenylist_OnlyLibfuzzerAndDepsLibfuzzerNeedsNonemptyProtocolRequestMessageTable;
@@ -209,14 +4372,10 @@ zx_status_t OnlyLibfuzzerAndDeps_SyncProxy::LibfuzzerNeedsNonemptyProtocol() {
   if (status_ != ZX_OK) return status_;
   return ZX_OK;
 }
-}  // namespace bindingsdenylist
-}  // namespace test
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 
-namespace test {
-namespace bindingsdenylist {
 OnlyCppAndDeps::~OnlyCppAndDeps() = default;
 
 const fidl_type_t* ::test::bindingsdenylist::OnlyCppAndDeps_RequestDecoder::
@@ -309,6 +4468,612 @@ OnlyCppAndDeps_SyncProxy::OnlyCppAndDeps_SyncProxy(::zx::channel channel)
     : proxy_(::std::move(channel)) {}
 
 OnlyCppAndDeps_SyncProxy::~OnlyCppAndDeps_SyncProxy() = default;
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+namespace _internal {
+__LOCAL extern "C" const fidl_type_t
+    test_bindingsdenylist_DenyEachBindingOnlyDenyDartRequestMessageTable;
+
+__LOCAL extern "C" const fidl_type_t
+    test_bindingsdenylist_DenyEachBindingOnlyDenyDartResponseMessageTable;
+
+__LOCAL extern "C" const fidl_type_t
+    test_bindingsdenylist_DenyEachBindingOnlyDenyGoRequestMessageTable;
+
+__LOCAL extern "C" const fidl_type_t
+    test_bindingsdenylist_DenyEachBindingOnlyDenyGoResponseMessageTable;
+
+__LOCAL extern "C" const fidl_type_t
+    test_bindingsdenylist_DenyEachBindingOnlyDenyLibfuzzerRequestMessageTable;
+
+__LOCAL extern "C" const fidl_type_t
+    test_bindingsdenylist_DenyEachBindingOnlyDenyLibfuzzerResponseMessageTable;
+
+__LOCAL extern "C" const fidl_type_t
+    test_bindingsdenylist_DenyEachBindingOnlyDenyRustRequestMessageTable;
+
+__LOCAL extern "C" const fidl_type_t
+    test_bindingsdenylist_DenyEachBindingOnlyDenyRustResponseMessageTable;
+
+__LOCAL extern "C" const fidl_type_t
+    test_bindingsdenylist_DenyEachBindingOnlyDenySyzkallerRequestMessageTable;
+
+__LOCAL extern "C" const fidl_type_t
+    test_bindingsdenylist_DenyEachBindingOnlyDenySyzkallerResponseMessageTable;
+
+}  // namespace _internal
+DenyEachBinding::~DenyEachBinding() = default;
+
+const fidl_type_t* ::test::bindingsdenylist::DenyEachBinding_RequestDecoder::
+    GetType(uint64_t ordinal, bool* out_needs_response) {
+  switch (ordinal) {
+    case ::test::bindingsdenylist::internal::
+        kDenyEachBinding_OnlyDenyDart_Ordinal:
+      *out_needs_response = true;
+      return &::test::bindingsdenylist::_internal::
+          test_bindingsdenylist_DenyEachBindingOnlyDenyDartRequestMessageTable;
+    case ::test::bindingsdenylist::internal::
+        kDenyEachBinding_OnlyDenyGo_Ordinal:
+      *out_needs_response = true;
+      return &::test::bindingsdenylist::_internal::
+          test_bindingsdenylist_DenyEachBindingOnlyDenyGoRequestMessageTable;
+    case ::test::bindingsdenylist::internal::
+        kDenyEachBinding_OnlyDenyLibfuzzer_Ordinal:
+      *out_needs_response = true;
+      return &::test::bindingsdenylist::_internal::
+          test_bindingsdenylist_DenyEachBindingOnlyDenyLibfuzzerRequestMessageTable;
+    case ::test::bindingsdenylist::internal::
+        kDenyEachBinding_OnlyDenyRust_Ordinal:
+      *out_needs_response = true;
+      return &::test::bindingsdenylist::_internal::
+          test_bindingsdenylist_DenyEachBindingOnlyDenyRustRequestMessageTable;
+    case ::test::bindingsdenylist::internal::
+        kDenyEachBinding_OnlyDenySyzkaller_Ordinal:
+      *out_needs_response = true;
+      return &::test::bindingsdenylist::_internal::
+          test_bindingsdenylist_DenyEachBindingOnlyDenySyzkallerRequestMessageTable;
+    default:
+      *out_needs_response = false;
+      return nullptr;
+  }
+}
+
+const fidl_type_t* DenyEachBinding_ResponseDecoder::GetType(uint64_t ordinal) {
+  switch (ordinal) {
+    case ::test::bindingsdenylist::internal::
+        kDenyEachBinding_OnlyDenyDart_Ordinal:
+      return &::test::bindingsdenylist::_internal::
+          test_bindingsdenylist_DenyEachBindingOnlyDenyDartResponseMessageTable;
+    case ::test::bindingsdenylist::internal::
+        kDenyEachBinding_OnlyDenyGo_Ordinal:
+      return &::test::bindingsdenylist::_internal::
+          test_bindingsdenylist_DenyEachBindingOnlyDenyGoResponseMessageTable;
+    case ::test::bindingsdenylist::internal::
+        kDenyEachBinding_OnlyDenyLibfuzzer_Ordinal:
+      return &::test::bindingsdenylist::_internal::
+          test_bindingsdenylist_DenyEachBindingOnlyDenyLibfuzzerResponseMessageTable;
+    case ::test::bindingsdenylist::internal::
+        kDenyEachBinding_OnlyDenyRust_Ordinal:
+      return &::test::bindingsdenylist::_internal::
+          test_bindingsdenylist_DenyEachBindingOnlyDenyRustResponseMessageTable;
+    case ::test::bindingsdenylist::internal::
+        kDenyEachBinding_OnlyDenySyzkaller_Ordinal:
+      return &::test::bindingsdenylist::_internal::
+          test_bindingsdenylist_DenyEachBindingOnlyDenySyzkallerResponseMessageTable;
+    default:
+      return nullptr;
+  }
+}
+
+DenyEachBinding_EventSender::~DenyEachBinding_EventSender() = default;
+
+DenyEachBinding_Sync::~DenyEachBinding_Sync() = default;
+
+DenyEachBinding_Proxy::DenyEachBinding_Proxy(
+    ::fidl::internal::ProxyController* controller)
+    : controller_(controller) {
+  (void)controller_;
+}
+
+DenyEachBinding_Proxy::~DenyEachBinding_Proxy() = default;
+
+zx_status_t DenyEachBinding_Proxy::Dispatch_(
+    ::fidl::HLCPPIncomingMessage message) {
+  zx_status_t status = ZX_OK;
+  switch (message.ordinal()) {
+    default: {
+      status = ZX_ERR_NOT_SUPPORTED;
+      break;
+    }
+  }
+  return status;
+}
+
+namespace {
+
+::std::unique_ptr<::fidl::internal::SingleUseMessageHandler>
+DenyEachBinding_OnlyDenyDart_ResponseHandler(
+    DenyEachBinding::OnlyDenyDartCallback&& callback) {
+  ZX_DEBUG_ASSERT_MSG(
+      callback,
+      "Callback must not be empty for DenyEachBinding::OnlyDenyDart\n");
+  return ::std::make_unique<::fidl::internal::SingleUseMessageHandler>(
+      [callback_ =
+           std::move(callback)](::fidl::HLCPPIncomingMessage&& message) {
+        ::fidl::Decoder decoder(std::move(message));
+        callback_(
+            ::fidl::DecodeAs<
+                ::test::bindingsdenylist::DenyEachBinding_OnlyDenyDart_Result>(
+                &decoder, 16));
+        return ZX_OK;
+      },
+      &::test::bindingsdenylist::_internal::
+          test_bindingsdenylist_DenyEachBindingOnlyDenyDartResponseMessageTable);
+}
+
+}  // namespace
+void DenyEachBinding_Proxy::OnlyDenyDart(bool a,
+                                         OnlyDenyDartCallback callback) {
+  ::fidl::Encoder _encoder(::test::bindingsdenylist::internal::
+                               kDenyEachBinding_OnlyDenyDart_Ordinal);
+  controller_->Send(
+      &::test::bindingsdenylist::_internal::
+          test_bindingsdenylist_DenyEachBindingOnlyDenyDartRequestMessageTable,
+      ::test::bindingsdenylist::DenyEachBinding_RequestEncoder::OnlyDenyDart(
+          &_encoder, &a),
+      DenyEachBinding_OnlyDenyDart_ResponseHandler(std::move(callback)));
+}
+namespace {
+
+::std::unique_ptr<::fidl::internal::SingleUseMessageHandler>
+DenyEachBinding_OnlyDenyGo_ResponseHandler(
+    DenyEachBinding::OnlyDenyGoCallback&& callback) {
+  ZX_DEBUG_ASSERT_MSG(
+      callback, "Callback must not be empty for DenyEachBinding::OnlyDenyGo\n");
+  return ::std::make_unique<::fidl::internal::SingleUseMessageHandler>(
+      [callback_ =
+           std::move(callback)](::fidl::HLCPPIncomingMessage&& message) {
+        ::fidl::Decoder decoder(std::move(message));
+        callback_(::fidl::DecodeAs<
+                  ::test::bindingsdenylist::DenyEachBinding_OnlyDenyGo_Result>(
+            &decoder, 16));
+        return ZX_OK;
+      },
+      &::test::bindingsdenylist::_internal::
+          test_bindingsdenylist_DenyEachBindingOnlyDenyGoResponseMessageTable);
+}
+
+}  // namespace
+void DenyEachBinding_Proxy::OnlyDenyGo(bool a, OnlyDenyGoCallback callback) {
+  ::fidl::Encoder _encoder(
+      ::test::bindingsdenylist::internal::kDenyEachBinding_OnlyDenyGo_Ordinal);
+  controller_->Send(
+      &::test::bindingsdenylist::_internal::
+          test_bindingsdenylist_DenyEachBindingOnlyDenyGoRequestMessageTable,
+      ::test::bindingsdenylist::DenyEachBinding_RequestEncoder::OnlyDenyGo(
+          &_encoder, &a),
+      DenyEachBinding_OnlyDenyGo_ResponseHandler(std::move(callback)));
+}
+namespace {
+
+::std::unique_ptr<::fidl::internal::SingleUseMessageHandler>
+DenyEachBinding_OnlyDenyLibfuzzer_ResponseHandler(
+    DenyEachBinding::OnlyDenyLibfuzzerCallback&& callback) {
+  ZX_DEBUG_ASSERT_MSG(
+      callback,
+      "Callback must not be empty for DenyEachBinding::OnlyDenyLibfuzzer\n");
+  return ::std::make_unique<::fidl::internal::SingleUseMessageHandler>(
+      [callback_ =
+           std::move(callback)](::fidl::HLCPPIncomingMessage&& message) {
+        ::fidl::Decoder decoder(std::move(message));
+        callback_(
+            ::fidl::DecodeAs<::test::bindingsdenylist::
+                                 DenyEachBinding_OnlyDenyLibfuzzer_Result>(
+                &decoder, 16));
+        return ZX_OK;
+      },
+      &::test::bindingsdenylist::_internal::
+          test_bindingsdenylist_DenyEachBindingOnlyDenyLibfuzzerResponseMessageTable);
+}
+
+}  // namespace
+void DenyEachBinding_Proxy::OnlyDenyLibfuzzer(
+    bool a, OnlyDenyLibfuzzerCallback callback) {
+  ::fidl::Encoder _encoder(::test::bindingsdenylist::internal::
+                               kDenyEachBinding_OnlyDenyLibfuzzer_Ordinal);
+  controller_->Send(
+      &::test::bindingsdenylist::_internal::
+          test_bindingsdenylist_DenyEachBindingOnlyDenyLibfuzzerRequestMessageTable,
+      ::test::bindingsdenylist::DenyEachBinding_RequestEncoder::
+          OnlyDenyLibfuzzer(&_encoder, &a),
+      DenyEachBinding_OnlyDenyLibfuzzer_ResponseHandler(std::move(callback)));
+}
+namespace {
+
+::std::unique_ptr<::fidl::internal::SingleUseMessageHandler>
+DenyEachBinding_OnlyDenyRust_ResponseHandler(
+    DenyEachBinding::OnlyDenyRustCallback&& callback) {
+  ZX_DEBUG_ASSERT_MSG(
+      callback,
+      "Callback must not be empty for DenyEachBinding::OnlyDenyRust\n");
+  return ::std::make_unique<::fidl::internal::SingleUseMessageHandler>(
+      [callback_ =
+           std::move(callback)](::fidl::HLCPPIncomingMessage&& message) {
+        ::fidl::Decoder decoder(std::move(message));
+        callback_(
+            ::fidl::DecodeAs<
+                ::test::bindingsdenylist::DenyEachBinding_OnlyDenyRust_Result>(
+                &decoder, 16));
+        return ZX_OK;
+      },
+      &::test::bindingsdenylist::_internal::
+          test_bindingsdenylist_DenyEachBindingOnlyDenyRustResponseMessageTable);
+}
+
+}  // namespace
+void DenyEachBinding_Proxy::OnlyDenyRust(bool a,
+                                         OnlyDenyRustCallback callback) {
+  ::fidl::Encoder _encoder(::test::bindingsdenylist::internal::
+                               kDenyEachBinding_OnlyDenyRust_Ordinal);
+  controller_->Send(
+      &::test::bindingsdenylist::_internal::
+          test_bindingsdenylist_DenyEachBindingOnlyDenyRustRequestMessageTable,
+      ::test::bindingsdenylist::DenyEachBinding_RequestEncoder::OnlyDenyRust(
+          &_encoder, &a),
+      DenyEachBinding_OnlyDenyRust_ResponseHandler(std::move(callback)));
+}
+namespace {
+
+::std::unique_ptr<::fidl::internal::SingleUseMessageHandler>
+DenyEachBinding_OnlyDenySyzkaller_ResponseHandler(
+    DenyEachBinding::OnlyDenySyzkallerCallback&& callback) {
+  ZX_DEBUG_ASSERT_MSG(
+      callback,
+      "Callback must not be empty for DenyEachBinding::OnlyDenySyzkaller\n");
+  return ::std::make_unique<::fidl::internal::SingleUseMessageHandler>(
+      [callback_ =
+           std::move(callback)](::fidl::HLCPPIncomingMessage&& message) {
+        ::fidl::Decoder decoder(std::move(message));
+        callback_(
+            ::fidl::DecodeAs<::test::bindingsdenylist::
+                                 DenyEachBinding_OnlyDenySyzkaller_Result>(
+                &decoder, 16));
+        return ZX_OK;
+      },
+      &::test::bindingsdenylist::_internal::
+          test_bindingsdenylist_DenyEachBindingOnlyDenySyzkallerResponseMessageTable);
+}
+
+}  // namespace
+void DenyEachBinding_Proxy::OnlyDenySyzkaller(
+    bool a, OnlyDenySyzkallerCallback callback) {
+  ::fidl::Encoder _encoder(::test::bindingsdenylist::internal::
+                               kDenyEachBinding_OnlyDenySyzkaller_Ordinal);
+  controller_->Send(
+      &::test::bindingsdenylist::_internal::
+          test_bindingsdenylist_DenyEachBindingOnlyDenySyzkallerRequestMessageTable,
+      ::test::bindingsdenylist::DenyEachBinding_RequestEncoder::
+          OnlyDenySyzkaller(&_encoder, &a),
+      DenyEachBinding_OnlyDenySyzkaller_ResponseHandler(std::move(callback)));
+}
+
+DenyEachBinding_Stub::DenyEachBinding_Stub(
+    ::test::bindingsdenylist::DenyEachBinding_Stub::DenyEachBinding_clazz* impl)
+    : impl_(impl) {
+  (void)impl_;
+}
+
+DenyEachBinding_Stub::~DenyEachBinding_Stub() = default;
+
+namespace {
+
+class DenyEachBinding_OnlyDenyDart_Responder final {
+ public:
+  DenyEachBinding_OnlyDenyDart_Responder(
+      ::fidl::internal::PendingResponse response)
+      : response_(std::move(response)) {}
+
+  void operator()(
+      ::test::bindingsdenylist::DenyEachBinding_OnlyDenyDart_Result result) {
+    ::fidl::Encoder _encoder(::test::bindingsdenylist::internal::
+                                 kDenyEachBinding_OnlyDenyDart_Ordinal);
+    response_.Send(
+        &::test::bindingsdenylist::_internal::
+            test_bindingsdenylist_DenyEachBindingOnlyDenyDartResponseMessageTable,
+        ::test::bindingsdenylist::DenyEachBinding_ResponseEncoder::OnlyDenyDart(
+            &_encoder, &result));
+  }
+
+ private:
+  ::fidl::internal::PendingResponse response_;
+};
+
+class DenyEachBinding_OnlyDenyGo_Responder final {
+ public:
+  DenyEachBinding_OnlyDenyGo_Responder(
+      ::fidl::internal::PendingResponse response)
+      : response_(std::move(response)) {}
+
+  void operator()(
+      ::test::bindingsdenylist::DenyEachBinding_OnlyDenyGo_Result result) {
+    ::fidl::Encoder _encoder(::test::bindingsdenylist::internal::
+                                 kDenyEachBinding_OnlyDenyGo_Ordinal);
+    response_.Send(
+        &::test::bindingsdenylist::_internal::
+            test_bindingsdenylist_DenyEachBindingOnlyDenyGoResponseMessageTable,
+        ::test::bindingsdenylist::DenyEachBinding_ResponseEncoder::OnlyDenyGo(
+            &_encoder, &result));
+  }
+
+ private:
+  ::fidl::internal::PendingResponse response_;
+};
+
+class DenyEachBinding_OnlyDenyLibfuzzer_Responder final {
+ public:
+  DenyEachBinding_OnlyDenyLibfuzzer_Responder(
+      ::fidl::internal::PendingResponse response)
+      : response_(std::move(response)) {}
+
+  void operator()(
+      ::test::bindingsdenylist::DenyEachBinding_OnlyDenyLibfuzzer_Result
+          result) {
+    ::fidl::Encoder _encoder(::test::bindingsdenylist::internal::
+                                 kDenyEachBinding_OnlyDenyLibfuzzer_Ordinal);
+    response_.Send(
+        &::test::bindingsdenylist::_internal::
+            test_bindingsdenylist_DenyEachBindingOnlyDenyLibfuzzerResponseMessageTable,
+        ::test::bindingsdenylist::DenyEachBinding_ResponseEncoder::
+            OnlyDenyLibfuzzer(&_encoder, &result));
+  }
+
+ private:
+  ::fidl::internal::PendingResponse response_;
+};
+
+class DenyEachBinding_OnlyDenyRust_Responder final {
+ public:
+  DenyEachBinding_OnlyDenyRust_Responder(
+      ::fidl::internal::PendingResponse response)
+      : response_(std::move(response)) {}
+
+  void operator()(
+      ::test::bindingsdenylist::DenyEachBinding_OnlyDenyRust_Result result) {
+    ::fidl::Encoder _encoder(::test::bindingsdenylist::internal::
+                                 kDenyEachBinding_OnlyDenyRust_Ordinal);
+    response_.Send(
+        &::test::bindingsdenylist::_internal::
+            test_bindingsdenylist_DenyEachBindingOnlyDenyRustResponseMessageTable,
+        ::test::bindingsdenylist::DenyEachBinding_ResponseEncoder::OnlyDenyRust(
+            &_encoder, &result));
+  }
+
+ private:
+  ::fidl::internal::PendingResponse response_;
+};
+
+class DenyEachBinding_OnlyDenySyzkaller_Responder final {
+ public:
+  DenyEachBinding_OnlyDenySyzkaller_Responder(
+      ::fidl::internal::PendingResponse response)
+      : response_(std::move(response)) {}
+
+  void operator()(
+      ::test::bindingsdenylist::DenyEachBinding_OnlyDenySyzkaller_Result
+          result) {
+    ::fidl::Encoder _encoder(::test::bindingsdenylist::internal::
+                                 kDenyEachBinding_OnlyDenySyzkaller_Ordinal);
+    response_.Send(
+        &::test::bindingsdenylist::_internal::
+            test_bindingsdenylist_DenyEachBindingOnlyDenySyzkallerResponseMessageTable,
+        ::test::bindingsdenylist::DenyEachBinding_ResponseEncoder::
+            OnlyDenySyzkaller(&_encoder, &result));
+  }
+
+ private:
+  ::fidl::internal::PendingResponse response_;
+};
+
+}  // namespace
+
+zx_status_t DenyEachBinding_Stub::Dispatch_(
+    ::fidl::HLCPPIncomingMessage message,
+    ::fidl::internal::PendingResponse response) {
+  bool needs_response;
+  const fidl_type_t* request_type =
+      ::test::bindingsdenylist::DenyEachBinding_RequestDecoder::GetType(
+          message.ordinal(), &needs_response);
+  if (request_type == nullptr) {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+  if (response.needs_response() != needs_response) {
+    if (needs_response) {
+      FIDL_REPORT_DECODING_ERROR(message, request_type,
+                                 "Message needing a response with no txid");
+    } else {
+      FIDL_REPORT_DECODING_ERROR(message, request_type,
+                                 "Message not needing a response with a txid");
+    }
+    return ZX_ERR_INVALID_ARGS;
+  }
+  const char* error_msg = nullptr;
+  zx_status_t status = message.Decode(request_type, &error_msg);
+  if (status != ZX_OK) {
+    FIDL_REPORT_DECODING_ERROR(message, request_type, error_msg);
+    return status;
+  }
+  uint64_t ordinal = message.ordinal();
+  switch (ordinal) {
+    case ::test::bindingsdenylist::internal::
+        kDenyEachBinding_OnlyDenyDart_Ordinal: {
+      ::fidl::Decoder decoder(std::move(message));
+      impl_->OnlyDenyDart(
+          ::fidl::DecodeAs<bool>(&decoder, 16),
+          DenyEachBinding_OnlyDenyDart_Responder(std::move(response)));
+      break;
+    }
+    case ::test::bindingsdenylist::internal::
+        kDenyEachBinding_OnlyDenyGo_Ordinal: {
+      ::fidl::Decoder decoder(std::move(message));
+      impl_->OnlyDenyGo(
+          ::fidl::DecodeAs<bool>(&decoder, 16),
+          DenyEachBinding_OnlyDenyGo_Responder(std::move(response)));
+      break;
+    }
+    case ::test::bindingsdenylist::internal::
+        kDenyEachBinding_OnlyDenyLibfuzzer_Ordinal: {
+      ::fidl::Decoder decoder(std::move(message));
+      impl_->OnlyDenyLibfuzzer(
+          ::fidl::DecodeAs<bool>(&decoder, 16),
+          DenyEachBinding_OnlyDenyLibfuzzer_Responder(std::move(response)));
+      break;
+    }
+    case ::test::bindingsdenylist::internal::
+        kDenyEachBinding_OnlyDenyRust_Ordinal: {
+      ::fidl::Decoder decoder(std::move(message));
+      impl_->OnlyDenyRust(
+          ::fidl::DecodeAs<bool>(&decoder, 16),
+          DenyEachBinding_OnlyDenyRust_Responder(std::move(response)));
+      break;
+    }
+    case ::test::bindingsdenylist::internal::
+        kDenyEachBinding_OnlyDenySyzkaller_Ordinal: {
+      ::fidl::Decoder decoder(std::move(message));
+      impl_->OnlyDenySyzkaller(
+          ::fidl::DecodeAs<bool>(&decoder, 16),
+          DenyEachBinding_OnlyDenySyzkaller_Responder(std::move(response)));
+      break;
+    }
+    default: {
+      status = ZX_ERR_NOT_SUPPORTED;
+      break;
+    }
+  }
+  return status;
+}
+
+DenyEachBinding_SyncProxy::DenyEachBinding_SyncProxy(::zx::channel channel)
+    : proxy_(::std::move(channel)) {}
+
+DenyEachBinding_SyncProxy::~DenyEachBinding_SyncProxy() = default;
+
+zx_status_t DenyEachBinding_SyncProxy::OnlyDenyDart(
+    bool a,
+    ::test::bindingsdenylist::DenyEachBinding_OnlyDenyDart_Result* out_result) {
+  ::fidl::Encoder _encoder(::test::bindingsdenylist::internal::
+                               kDenyEachBinding_OnlyDenyDart_Ordinal);
+  ::fidl::IncomingMessageBuffer buffer_;
+  ::fidl::HLCPPIncomingMessage response_ = buffer_.CreateEmptyIncomingMessage();
+  zx_status_t status_ = proxy_.Call(
+      &::test::bindingsdenylist::_internal::
+          test_bindingsdenylist_DenyEachBindingOnlyDenyDartRequestMessageTable,
+      &::test::bindingsdenylist::_internal::
+          test_bindingsdenylist_DenyEachBindingOnlyDenyDartResponseMessageTable,
+      ::test::bindingsdenylist::DenyEachBinding_RequestEncoder::OnlyDenyDart(
+          &_encoder, &a),
+      &response_);
+  if (status_ != ZX_OK) return status_;
+  ::fidl::Decoder decoder_(std::move(response_));
+  *out_result = ::fidl::DecodeAs<
+      ::test::bindingsdenylist::DenyEachBinding_OnlyDenyDart_Result>(&decoder_,
+                                                                     16);
+  return ZX_OK;
+}
+
+zx_status_t DenyEachBinding_SyncProxy::OnlyDenyGo(
+    bool a,
+    ::test::bindingsdenylist::DenyEachBinding_OnlyDenyGo_Result* out_result) {
+  ::fidl::Encoder _encoder(
+      ::test::bindingsdenylist::internal::kDenyEachBinding_OnlyDenyGo_Ordinal);
+  ::fidl::IncomingMessageBuffer buffer_;
+  ::fidl::HLCPPIncomingMessage response_ = buffer_.CreateEmptyIncomingMessage();
+  zx_status_t status_ = proxy_.Call(
+      &::test::bindingsdenylist::_internal::
+          test_bindingsdenylist_DenyEachBindingOnlyDenyGoRequestMessageTable,
+      &::test::bindingsdenylist::_internal::
+          test_bindingsdenylist_DenyEachBindingOnlyDenyGoResponseMessageTable,
+      ::test::bindingsdenylist::DenyEachBinding_RequestEncoder::OnlyDenyGo(
+          &_encoder, &a),
+      &response_);
+  if (status_ != ZX_OK) return status_;
+  ::fidl::Decoder decoder_(std::move(response_));
+  *out_result = ::fidl::DecodeAs<
+      ::test::bindingsdenylist::DenyEachBinding_OnlyDenyGo_Result>(&decoder_,
+                                                                   16);
+  return ZX_OK;
+}
+
+zx_status_t DenyEachBinding_SyncProxy::OnlyDenyLibfuzzer(
+    bool a, ::test::bindingsdenylist::DenyEachBinding_OnlyDenyLibfuzzer_Result*
+                out_result) {
+  ::fidl::Encoder _encoder(::test::bindingsdenylist::internal::
+                               kDenyEachBinding_OnlyDenyLibfuzzer_Ordinal);
+  ::fidl::IncomingMessageBuffer buffer_;
+  ::fidl::HLCPPIncomingMessage response_ = buffer_.CreateEmptyIncomingMessage();
+  zx_status_t status_ = proxy_.Call(
+      &::test::bindingsdenylist::_internal::
+          test_bindingsdenylist_DenyEachBindingOnlyDenyLibfuzzerRequestMessageTable,
+      &::test::bindingsdenylist::_internal::
+          test_bindingsdenylist_DenyEachBindingOnlyDenyLibfuzzerResponseMessageTable,
+      ::test::bindingsdenylist::DenyEachBinding_RequestEncoder::
+          OnlyDenyLibfuzzer(&_encoder, &a),
+      &response_);
+  if (status_ != ZX_OK) return status_;
+  ::fidl::Decoder decoder_(std::move(response_));
+  *out_result = ::fidl::DecodeAs<
+      ::test::bindingsdenylist::DenyEachBinding_OnlyDenyLibfuzzer_Result>(
+      &decoder_, 16);
+  return ZX_OK;
+}
+
+zx_status_t DenyEachBinding_SyncProxy::OnlyDenyRust(
+    bool a,
+    ::test::bindingsdenylist::DenyEachBinding_OnlyDenyRust_Result* out_result) {
+  ::fidl::Encoder _encoder(::test::bindingsdenylist::internal::
+                               kDenyEachBinding_OnlyDenyRust_Ordinal);
+  ::fidl::IncomingMessageBuffer buffer_;
+  ::fidl::HLCPPIncomingMessage response_ = buffer_.CreateEmptyIncomingMessage();
+  zx_status_t status_ = proxy_.Call(
+      &::test::bindingsdenylist::_internal::
+          test_bindingsdenylist_DenyEachBindingOnlyDenyRustRequestMessageTable,
+      &::test::bindingsdenylist::_internal::
+          test_bindingsdenylist_DenyEachBindingOnlyDenyRustResponseMessageTable,
+      ::test::bindingsdenylist::DenyEachBinding_RequestEncoder::OnlyDenyRust(
+          &_encoder, &a),
+      &response_);
+  if (status_ != ZX_OK) return status_;
+  ::fidl::Decoder decoder_(std::move(response_));
+  *out_result = ::fidl::DecodeAs<
+      ::test::bindingsdenylist::DenyEachBinding_OnlyDenyRust_Result>(&decoder_,
+                                                                     16);
+  return ZX_OK;
+}
+
+zx_status_t DenyEachBinding_SyncProxy::OnlyDenySyzkaller(
+    bool a, ::test::bindingsdenylist::DenyEachBinding_OnlyDenySyzkaller_Result*
+                out_result) {
+  ::fidl::Encoder _encoder(::test::bindingsdenylist::internal::
+                               kDenyEachBinding_OnlyDenySyzkaller_Ordinal);
+  ::fidl::IncomingMessageBuffer buffer_;
+  ::fidl::HLCPPIncomingMessage response_ = buffer_.CreateEmptyIncomingMessage();
+  zx_status_t status_ = proxy_.Call(
+      &::test::bindingsdenylist::_internal::
+          test_bindingsdenylist_DenyEachBindingOnlyDenySyzkallerRequestMessageTable,
+      &::test::bindingsdenylist::_internal::
+          test_bindingsdenylist_DenyEachBindingOnlyDenySyzkallerResponseMessageTable,
+      ::test::bindingsdenylist::DenyEachBinding_RequestEncoder::
+          OnlyDenySyzkaller(&_encoder, &a),
+      &response_);
+  if (status_ != ZX_OK) return status_;
+  ::fidl::Decoder decoder_(std::move(response_));
+  *out_result = ::fidl::DecodeAs<
+      ::test::bindingsdenylist::DenyEachBinding_OnlyDenySyzkaller_Result>(
+      &decoder_, 16);
+  return ZX_OK;
+}
+#endif  // __Fuchsia__
+
 }  // namespace bindingsdenylist
 }  // namespace test
-#endif  // __Fuchsia__

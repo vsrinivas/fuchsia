@@ -1,0 +1,20 @@
+library test.dependent;
+
+// This declaration being denylisted should not affect its appearance in a library that
+// imports it.
+@bindings_denylist("cpp, dart, go, hlcpp, libfuzzer, llcpp, rust, syzkaller")
+type OnlyAppearsInImportingLibrary = struct {
+    a bool;
+};
+
+protocol ContainsDenied {
+    @bindings_denylist("cpp, dart, go, hlcpp, libfuzzer, llcpp, rust, syzkaller")
+    AlwaysDenied(@bindings_denylist("cpp, dart, go, hlcpp, libfuzzer, llcpp, rust, syzkaller") struct {
+        arg OnlyAppearsInImportingLibrary;
+    });
+    Unattributed();
+};
+
+protocol ContainsAllowed {
+    AlwaysAppearsInImportingLibrary();
+};

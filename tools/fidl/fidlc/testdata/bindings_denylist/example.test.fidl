@@ -1,0 +1,158 @@
+library test.bindingsdenylist;
+
+using test.dependent;
+
+// This file tests that all the bindings respect BindingsDenylist, and that the
+// attribute works on all declaration kinds. Each binding should include the
+// AllBindings constant and one other declaration. The associations are chosen
+// to make this work (e.g. libfuzzer needs to have a protocol, only certain
+// bindings emit anything for an empty service, etc.).
+@bindings_deny_list("there_are_no_bindings_with_this_name")
+const AllBindings uint32 = 0;
+
+@bindings_denylist("cpp, dart, go, hlcpp, libfuzzer, llcpp, rust")
+type OnlySyzkaller = strict bits {
+    A = 1;
+};
+
+@bindings_denylist("cpp, go, hlcpp, libfuzzer, llcpp, rust, syzkaller")
+type OnlyDart = strict enum {
+    A = 1;
+};
+
+@bindings_denylist("cpp, dart, hlcpp, libfuzzer, llcpp, rust, syzkaller")
+type OnlyGo = struct {};
+
+@bindings_denylist("cpp, dart, go, hlcpp, libfuzzer, llcpp, syzkaller")
+type OnlyRust = table {};
+
+@bindings_denylist("cpp, dart, go, hlcpp, libfuzzer, rust, syzkaller")
+type OnlyLlcpp = strict union {
+    1: x uint32;
+};
+
+// TODO(fxbug.dev/72247): Libfuzzer depends on hlcpp and llcpp. A decision needs to be made on how
+// to manage these dependencies. For now, this test does not denylist the dependencies.
+@bindings_denylist("cpp, dart, go, rust, syzkaller")
+protocol OnlyLibfuzzerAndDeps {
+    LibfuzzerNeedsNonemptyProtocol() -> ();
+};
+
+// TODO(fxbug.dev/72247): Unified C++ bindings depends on hlcpp and llcpp. A decision needs to be
+// made on how to manage these dependencies. For now, this test does not denylist the dependencies.
+@bindings_denylist("dart, go, libfuzzer, rust, syzkaller")
+protocol OnlyCppAndDeps {};
+
+@bindings_denylist("cpp, dart, go, libfuzzer, llcpp, rust, syzkaller")
+service OnlyHlcpp {};
+
+// This exists to test that when a particular method is denied to a binding, it's anonymous message
+// body structs are also omitted.
+protocol DenyEachBinding {
+    @bindings_denylist("cpp, hlcpp, llcpp")
+    OnlyDenyCpp(struct {
+        a bool;
+    }) -> (struct {
+        b int32;
+    }) error uint32;
+
+    @bindings_denylist("dart")
+    OnlyDenyDart(struct {
+        a bool;
+    }) -> (struct {
+        b int32;
+    }) error uint32;
+
+    @bindings_denylist("go")
+    OnlyDenyGo(struct {
+        a bool;
+    }) -> (struct {
+        b int32;
+    }) error uint32;
+
+    @bindings_denylist("libfuzzer")
+    OnlyDenyLibfuzzer(struct {
+        a bool;
+    }) -> (struct {
+        b int32;
+    }) error uint32;
+
+    @bindings_denylist("rust")
+    OnlyDenyRust(struct {
+        a bool;
+    }) -> (struct {
+        b int32;
+    }) error uint32;
+
+    @bindings_denylist("syzkaller")
+    OnlyDenySyzkaller(struct {
+        a bool;
+    }) -> (struct {
+        b int32;
+    }) error uint32;
+};
+
+// None of the "ShouldNeverAppear..." types/methods should appear in any bindings, as they are
+// children of parent declarations that are denylisted.
+@bindings_denylist("cpp, dart, go, hlcpp, libfuzzer, llcpp, rust, syzkaller")
+protocol Denied {
+    ShouldNeverAppearInAnyBinding(struct {
+        should_never_appear_in_any_binding_1 struct {
+            a bool;
+        };
+        should_never_appear_in_any_binding_2 table {
+            1: a bool;
+        };
+        should_never_appear_in_any_binding_3 flexible union {
+            1: a bool;
+        };
+    });
+};
+
+protocol Allowed {
+    @bindings_denylist("cpp, dart, go, hlcpp, libfuzzer, llcpp, rust, syzkaller")
+    Denied() -> (struct {
+        should_never_appear_in_any_binding_4 struct {
+            a bool;
+        };
+        should_never_appear_in_any_binding_5 table {
+            1: a bool;
+        };
+        should_never_appear_in_any_binding_6 flexible union {
+            1: a bool;
+        };
+    }) error uint32;
+};
+
+@bindings_denylist("cpp, dart, go, hlcpp, libfuzzer, llcpp, rust, syzkaller")
+type DeniedAnonymous = struct {
+    should_never_appear_in_any_binding_7 struct {
+        a bool;
+    };
+    should_never_appear_in_any_binding_8 table {
+        1: a bool;
+    };
+    should_never_appear_in_any_binding_9 flexible union {
+        1: a bool;
+    };
+};
+
+// Even though this ContainsAllowed protocol is denylisted for all bindings, the one composed from
+// the imported library into ImportsSameNameContext below should still appear in generated bindings.
+// This means that all generated bindings should have an "AlwaysAppearsInImportingLibrary" method.
+@bindings_denylist("cpp, dart, go, hlcpp, libfuzzer, llcpp, rust, syzkaller")
+protocol ContainsAllowed {};
+
+// This declaration should still appear in generated bindings, even though an identically name
+// contexted and denylisted declaration is included from the dependent library via the protocol
+// "compose" clause below.
+type OnlyAppearsInImportingLibrary = struct {
+    member_only_appears_in_importing_library struct {
+        a bool;
+    };
+};
+
+protocol ImportsSameNameContext {
+    compose test.dependent.ContainsDenied;
+    compose test.dependent.ContainsAllowed;
+};

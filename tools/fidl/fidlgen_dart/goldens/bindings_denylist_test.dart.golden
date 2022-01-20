@@ -11,6 +11,7 @@ import 'package:fidl/fidl.dart' as $fidl;
 import 'package:meta/meta.dart';
 import 'package:zircon/zircon.dart' as $zircon;
 
+import 'package:fidl_test_dependent/fidl_async.dart' as lib$test_dependent;
 import './fidl_async.dart';
 
 // ignore_for_file: always_specify_types
@@ -21,3 +22,65 @@ import './fidl_async.dart';
 // ignore_for_file: unused_import
 // ignore_for_file: library_prefixes
 // ignore_for_file: unused_shown_name
+
+class DenyEachBinding$TestBase extends DenyEachBinding {
+  @override
+  $async.Future<int> onlyDenyCpp(bool a) {
+    return $async.Future.error(
+        UnimplementedError(
+            r'onlyDenyCpp not implemented on DenyEachBinding test base. Please implement.'),
+        StackTrace.current);
+  }
+
+  @override
+  $async.Future<int> onlyDenyGo(bool a) {
+    return $async.Future.error(
+        UnimplementedError(
+            r'onlyDenyGo not implemented on DenyEachBinding test base. Please implement.'),
+        StackTrace.current);
+  }
+
+  @override
+  $async.Future<int> onlyDenyLibfuzzer(bool a) {
+    return $async.Future.error(
+        UnimplementedError(
+            r'onlyDenyLibfuzzer not implemented on DenyEachBinding test base. Please implement.'),
+        StackTrace.current);
+  }
+
+  @override
+  $async.Future<int> onlyDenyRust(bool a) {
+    return $async.Future.error(
+        UnimplementedError(
+            r'onlyDenyRust not implemented on DenyEachBinding test base. Please implement.'),
+        StackTrace.current);
+  }
+
+  @override
+  $async.Future<int> onlyDenySyzkaller(bool a) {
+    return $async.Future.error(
+        UnimplementedError(
+            r'onlyDenySyzkaller not implemented on DenyEachBinding test base. Please implement.'),
+        StackTrace.current);
+  }
+}
+
+class Allowed$TestBase extends Allowed {}
+
+class ImportsSameNameContext$TestBase extends ImportsSameNameContext {
+  @override
+  $async.Future<void> unattributed() {
+    return $async.Future.error(
+        UnimplementedError(
+            r'unattributed not implemented on ImportsSameNameContext test base. Please implement.'),
+        StackTrace.current);
+  }
+
+  @override
+  $async.Future<void> alwaysAppearsInImportingLibrary() {
+    return $async.Future.error(
+        UnimplementedError(
+            r'alwaysAppearsInImportingLibrary not implemented on ImportsSameNameContext test base. Please implement.'),
+        StackTrace.current);
+  }
+}

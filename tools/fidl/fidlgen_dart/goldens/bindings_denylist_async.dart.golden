@@ -12,6 +12,7 @@ import 'package:fidl/fidl.dart' as $fidl;
 import 'package:meta/meta.dart';
 import 'package:zircon/zircon.dart' as $zircon;
 
+import 'package:fidl_test_dependent/fidl_async.dart' as lib$test_dependent;
 // ignore_for_file: always_specify_types
 // ignore_for_file: avoid_positional_boolean_parameters
 // ignore_for_file: avoid_returning_null
@@ -88,3 +89,2846 @@ class OnlyDart extends $fidl.Enum {
 
 const $fidl.EnumType<OnlyDart> kOnlyDart_Type = $fidl.EnumType<OnlyDart>(
     type: $fidl.Uint32Type(), values: {0x1: null}, ctor: OnlyDart._ctor);
+
+enum DenyEachBindingOnlyDenyCppResultTag {
+  response, // 0x1
+  err, // 0x2
+}
+
+const Map<int, DenyEachBindingOnlyDenyCppResultTag>
+    _DenyEachBindingOnlyDenyCppResultTag_map = {
+  1: DenyEachBindingOnlyDenyCppResultTag.response,
+  2: DenyEachBindingOnlyDenyCppResultTag.err,
+};
+
+class DenyEachBindingOnlyDenyCppResult extends $fidl.Union {
+  const DenyEachBindingOnlyDenyCppResult.withResponse(
+      DenyEachBindingOnlyDenyCppResponse value)
+      : _ordinal = 1,
+        _data = value;
+
+  const DenyEachBindingOnlyDenyCppResult.withErr(int value)
+      : _ordinal = 2,
+        _data = value;
+
+  DenyEachBindingOnlyDenyCppResult._(int ordinal, Object data)
+      : _ordinal = ordinal,
+        _data = data;
+
+  final int _ordinal;
+  final _data;
+
+  DenyEachBindingOnlyDenyCppResultTag get $tag =>
+      _DenyEachBindingOnlyDenyCppResultTag_map[_ordinal]!;
+
+  DenyEachBindingOnlyDenyCppResponse? get response {
+    if (_ordinal != 1) {
+      return null;
+    }
+    return _data;
+  }
+
+  int? get err {
+    if (_ordinal != 2) {
+      return null;
+    }
+    return _data;
+  }
+
+  $fidl.UnknownRawData? get $unknownData {
+    switch (_ordinal) {
+      case 1:
+      case 2:
+        return null;
+      default:
+        return _data;
+    }
+  }
+
+  @override
+  String toString() {
+    switch (_ordinal) {
+      case 1:
+        return r'DenyEachBindingOnlyDenyCppResult.response(' +
+            response.toString() +
+            ')';
+      case 2:
+        return r'DenyEachBindingOnlyDenyCppResult.err(' + err.toString() + ')';
+      default:
+        return r'DenyEachBindingOnlyDenyCppResult.<UNKNOWN>';
+    }
+  }
+
+  @override
+  int get $ordinal => _ordinal;
+
+  @override
+  Object get $data => _data;
+
+  static DenyEachBindingOnlyDenyCppResult _ctor(int ordinal, Object data) {
+    return DenyEachBindingOnlyDenyCppResult._(ordinal, data);
+  }
+}
+
+// See fxbug.dev/7644:
+// ignore: recursive_compile_time_constant
+const $fidl.UnionType<DenyEachBindingOnlyDenyCppResult>
+    kDenyEachBinding_OnlyDenyCpp_Result_Type =
+    $fidl.UnionType<DenyEachBindingOnlyDenyCppResult>(
+  members: <int, $fidl.FidlType>{
+    1: kDenyEachBinding_OnlyDenyCpp_Response_Type,
+    2: $fidl.Uint32Type(),
+  },
+  ctor: DenyEachBindingOnlyDenyCppResult._ctor,
+  flexible: false,
+  resource: false,
+);
+// See fxbug.dev/7644:
+// ignore: recursive_compile_time_constant
+const $fidl.NullableUnionType<DenyEachBindingOnlyDenyCppResult>
+    kDenyEachBinding_OnlyDenyCpp_Result_OptType =
+    $fidl.NullableUnionType<DenyEachBindingOnlyDenyCppResult>(
+  members: <int, $fidl.FidlType>{
+    1: kDenyEachBinding_OnlyDenyCpp_Response_Type,
+    2: $fidl.Uint32Type(),
+  },
+  ctor: DenyEachBindingOnlyDenyCppResult._ctor,
+  flexible: false,
+  resource: false,
+);
+
+enum DenyEachBindingOnlyDenyDartResultTag {
+  response, // 0x1
+  err, // 0x2
+}
+
+const Map<int, DenyEachBindingOnlyDenyDartResultTag>
+    _DenyEachBindingOnlyDenyDartResultTag_map = {
+  1: DenyEachBindingOnlyDenyDartResultTag.response,
+  2: DenyEachBindingOnlyDenyDartResultTag.err,
+};
+
+class DenyEachBindingOnlyDenyDartResult extends $fidl.Union {
+  const DenyEachBindingOnlyDenyDartResult.withResponse(
+      DenyEachBindingOnlyDenyDartResponse value)
+      : _ordinal = 1,
+        _data = value;
+
+  const DenyEachBindingOnlyDenyDartResult.withErr(int value)
+      : _ordinal = 2,
+        _data = value;
+
+  DenyEachBindingOnlyDenyDartResult._(int ordinal, Object data)
+      : _ordinal = ordinal,
+        _data = data;
+
+  final int _ordinal;
+  final _data;
+
+  DenyEachBindingOnlyDenyDartResultTag get $tag =>
+      _DenyEachBindingOnlyDenyDartResultTag_map[_ordinal]!;
+
+  DenyEachBindingOnlyDenyDartResponse? get response {
+    if (_ordinal != 1) {
+      return null;
+    }
+    return _data;
+  }
+
+  int? get err {
+    if (_ordinal != 2) {
+      return null;
+    }
+    return _data;
+  }
+
+  $fidl.UnknownRawData? get $unknownData {
+    switch (_ordinal) {
+      case 1:
+      case 2:
+        return null;
+      default:
+        return _data;
+    }
+  }
+
+  @override
+  String toString() {
+    switch (_ordinal) {
+      case 1:
+        return r'DenyEachBindingOnlyDenyDartResult.response(' +
+            response.toString() +
+            ')';
+      case 2:
+        return r'DenyEachBindingOnlyDenyDartResult.err(' + err.toString() + ')';
+      default:
+        return r'DenyEachBindingOnlyDenyDartResult.<UNKNOWN>';
+    }
+  }
+
+  @override
+  int get $ordinal => _ordinal;
+
+  @override
+  Object get $data => _data;
+
+  static DenyEachBindingOnlyDenyDartResult _ctor(int ordinal, Object data) {
+    return DenyEachBindingOnlyDenyDartResult._(ordinal, data);
+  }
+}
+
+// See fxbug.dev/7644:
+// ignore: recursive_compile_time_constant
+const $fidl.UnionType<DenyEachBindingOnlyDenyDartResult>
+    kDenyEachBinding_OnlyDenyDart_Result_Type =
+    $fidl.UnionType<DenyEachBindingOnlyDenyDartResult>(
+  members: <int, $fidl.FidlType>{
+    1: kDenyEachBinding_OnlyDenyDart_Response_Type,
+    2: $fidl.Uint32Type(),
+  },
+  ctor: DenyEachBindingOnlyDenyDartResult._ctor,
+  flexible: false,
+  resource: false,
+);
+// See fxbug.dev/7644:
+// ignore: recursive_compile_time_constant
+const $fidl.NullableUnionType<DenyEachBindingOnlyDenyDartResult>
+    kDenyEachBinding_OnlyDenyDart_Result_OptType =
+    $fidl.NullableUnionType<DenyEachBindingOnlyDenyDartResult>(
+  members: <int, $fidl.FidlType>{
+    1: kDenyEachBinding_OnlyDenyDart_Response_Type,
+    2: $fidl.Uint32Type(),
+  },
+  ctor: DenyEachBindingOnlyDenyDartResult._ctor,
+  flexible: false,
+  resource: false,
+);
+
+enum DenyEachBindingOnlyDenyGoResultTag {
+  response, // 0x1
+  err, // 0x2
+}
+
+const Map<int, DenyEachBindingOnlyDenyGoResultTag>
+    _DenyEachBindingOnlyDenyGoResultTag_map = {
+  1: DenyEachBindingOnlyDenyGoResultTag.response,
+  2: DenyEachBindingOnlyDenyGoResultTag.err,
+};
+
+class DenyEachBindingOnlyDenyGoResult extends $fidl.Union {
+  const DenyEachBindingOnlyDenyGoResult.withResponse(
+      DenyEachBindingOnlyDenyGoResponse value)
+      : _ordinal = 1,
+        _data = value;
+
+  const DenyEachBindingOnlyDenyGoResult.withErr(int value)
+      : _ordinal = 2,
+        _data = value;
+
+  DenyEachBindingOnlyDenyGoResult._(int ordinal, Object data)
+      : _ordinal = ordinal,
+        _data = data;
+
+  final int _ordinal;
+  final _data;
+
+  DenyEachBindingOnlyDenyGoResultTag get $tag =>
+      _DenyEachBindingOnlyDenyGoResultTag_map[_ordinal]!;
+
+  DenyEachBindingOnlyDenyGoResponse? get response {
+    if (_ordinal != 1) {
+      return null;
+    }
+    return _data;
+  }
+
+  int? get err {
+    if (_ordinal != 2) {
+      return null;
+    }
+    return _data;
+  }
+
+  $fidl.UnknownRawData? get $unknownData {
+    switch (_ordinal) {
+      case 1:
+      case 2:
+        return null;
+      default:
+        return _data;
+    }
+  }
+
+  @override
+  String toString() {
+    switch (_ordinal) {
+      case 1:
+        return r'DenyEachBindingOnlyDenyGoResult.response(' +
+            response.toString() +
+            ')';
+      case 2:
+        return r'DenyEachBindingOnlyDenyGoResult.err(' + err.toString() + ')';
+      default:
+        return r'DenyEachBindingOnlyDenyGoResult.<UNKNOWN>';
+    }
+  }
+
+  @override
+  int get $ordinal => _ordinal;
+
+  @override
+  Object get $data => _data;
+
+  static DenyEachBindingOnlyDenyGoResult _ctor(int ordinal, Object data) {
+    return DenyEachBindingOnlyDenyGoResult._(ordinal, data);
+  }
+}
+
+// See fxbug.dev/7644:
+// ignore: recursive_compile_time_constant
+const $fidl.UnionType<DenyEachBindingOnlyDenyGoResult>
+    kDenyEachBinding_OnlyDenyGo_Result_Type =
+    $fidl.UnionType<DenyEachBindingOnlyDenyGoResult>(
+  members: <int, $fidl.FidlType>{
+    1: kDenyEachBinding_OnlyDenyGo_Response_Type,
+    2: $fidl.Uint32Type(),
+  },
+  ctor: DenyEachBindingOnlyDenyGoResult._ctor,
+  flexible: false,
+  resource: false,
+);
+// See fxbug.dev/7644:
+// ignore: recursive_compile_time_constant
+const $fidl.NullableUnionType<DenyEachBindingOnlyDenyGoResult>
+    kDenyEachBinding_OnlyDenyGo_Result_OptType =
+    $fidl.NullableUnionType<DenyEachBindingOnlyDenyGoResult>(
+  members: <int, $fidl.FidlType>{
+    1: kDenyEachBinding_OnlyDenyGo_Response_Type,
+    2: $fidl.Uint32Type(),
+  },
+  ctor: DenyEachBindingOnlyDenyGoResult._ctor,
+  flexible: false,
+  resource: false,
+);
+
+enum DenyEachBindingOnlyDenyLibfuzzerResultTag {
+  response, // 0x1
+  err, // 0x2
+}
+
+const Map<int, DenyEachBindingOnlyDenyLibfuzzerResultTag>
+    _DenyEachBindingOnlyDenyLibfuzzerResultTag_map = {
+  1: DenyEachBindingOnlyDenyLibfuzzerResultTag.response,
+  2: DenyEachBindingOnlyDenyLibfuzzerResultTag.err,
+};
+
+class DenyEachBindingOnlyDenyLibfuzzerResult extends $fidl.Union {
+  const DenyEachBindingOnlyDenyLibfuzzerResult.withResponse(
+      DenyEachBindingOnlyDenyLibfuzzerResponse value)
+      : _ordinal = 1,
+        _data = value;
+
+  const DenyEachBindingOnlyDenyLibfuzzerResult.withErr(int value)
+      : _ordinal = 2,
+        _data = value;
+
+  DenyEachBindingOnlyDenyLibfuzzerResult._(int ordinal, Object data)
+      : _ordinal = ordinal,
+        _data = data;
+
+  final int _ordinal;
+  final _data;
+
+  DenyEachBindingOnlyDenyLibfuzzerResultTag get $tag =>
+      _DenyEachBindingOnlyDenyLibfuzzerResultTag_map[_ordinal]!;
+
+  DenyEachBindingOnlyDenyLibfuzzerResponse? get response {
+    if (_ordinal != 1) {
+      return null;
+    }
+    return _data;
+  }
+
+  int? get err {
+    if (_ordinal != 2) {
+      return null;
+    }
+    return _data;
+  }
+
+  $fidl.UnknownRawData? get $unknownData {
+    switch (_ordinal) {
+      case 1:
+      case 2:
+        return null;
+      default:
+        return _data;
+    }
+  }
+
+  @override
+  String toString() {
+    switch (_ordinal) {
+      case 1:
+        return r'DenyEachBindingOnlyDenyLibfuzzerResult.response(' +
+            response.toString() +
+            ')';
+      case 2:
+        return r'DenyEachBindingOnlyDenyLibfuzzerResult.err(' +
+            err.toString() +
+            ')';
+      default:
+        return r'DenyEachBindingOnlyDenyLibfuzzerResult.<UNKNOWN>';
+    }
+  }
+
+  @override
+  int get $ordinal => _ordinal;
+
+  @override
+  Object get $data => _data;
+
+  static DenyEachBindingOnlyDenyLibfuzzerResult _ctor(
+      int ordinal, Object data) {
+    return DenyEachBindingOnlyDenyLibfuzzerResult._(ordinal, data);
+  }
+}
+
+// See fxbug.dev/7644:
+// ignore: recursive_compile_time_constant
+const $fidl.UnionType<DenyEachBindingOnlyDenyLibfuzzerResult>
+    kDenyEachBinding_OnlyDenyLibfuzzer_Result_Type =
+    $fidl.UnionType<DenyEachBindingOnlyDenyLibfuzzerResult>(
+  members: <int, $fidl.FidlType>{
+    1: kDenyEachBinding_OnlyDenyLibfuzzer_Response_Type,
+    2: $fidl.Uint32Type(),
+  },
+  ctor: DenyEachBindingOnlyDenyLibfuzzerResult._ctor,
+  flexible: false,
+  resource: false,
+);
+// See fxbug.dev/7644:
+// ignore: recursive_compile_time_constant
+const $fidl.NullableUnionType<DenyEachBindingOnlyDenyLibfuzzerResult>
+    kDenyEachBinding_OnlyDenyLibfuzzer_Result_OptType =
+    $fidl.NullableUnionType<DenyEachBindingOnlyDenyLibfuzzerResult>(
+  members: <int, $fidl.FidlType>{
+    1: kDenyEachBinding_OnlyDenyLibfuzzer_Response_Type,
+    2: $fidl.Uint32Type(),
+  },
+  ctor: DenyEachBindingOnlyDenyLibfuzzerResult._ctor,
+  flexible: false,
+  resource: false,
+);
+
+enum DenyEachBindingOnlyDenyRustResultTag {
+  response, // 0x1
+  err, // 0x2
+}
+
+const Map<int, DenyEachBindingOnlyDenyRustResultTag>
+    _DenyEachBindingOnlyDenyRustResultTag_map = {
+  1: DenyEachBindingOnlyDenyRustResultTag.response,
+  2: DenyEachBindingOnlyDenyRustResultTag.err,
+};
+
+class DenyEachBindingOnlyDenyRustResult extends $fidl.Union {
+  const DenyEachBindingOnlyDenyRustResult.withResponse(
+      DenyEachBindingOnlyDenyRustResponse value)
+      : _ordinal = 1,
+        _data = value;
+
+  const DenyEachBindingOnlyDenyRustResult.withErr(int value)
+      : _ordinal = 2,
+        _data = value;
+
+  DenyEachBindingOnlyDenyRustResult._(int ordinal, Object data)
+      : _ordinal = ordinal,
+        _data = data;
+
+  final int _ordinal;
+  final _data;
+
+  DenyEachBindingOnlyDenyRustResultTag get $tag =>
+      _DenyEachBindingOnlyDenyRustResultTag_map[_ordinal]!;
+
+  DenyEachBindingOnlyDenyRustResponse? get response {
+    if (_ordinal != 1) {
+      return null;
+    }
+    return _data;
+  }
+
+  int? get err {
+    if (_ordinal != 2) {
+      return null;
+    }
+    return _data;
+  }
+
+  $fidl.UnknownRawData? get $unknownData {
+    switch (_ordinal) {
+      case 1:
+      case 2:
+        return null;
+      default:
+        return _data;
+    }
+  }
+
+  @override
+  String toString() {
+    switch (_ordinal) {
+      case 1:
+        return r'DenyEachBindingOnlyDenyRustResult.response(' +
+            response.toString() +
+            ')';
+      case 2:
+        return r'DenyEachBindingOnlyDenyRustResult.err(' + err.toString() + ')';
+      default:
+        return r'DenyEachBindingOnlyDenyRustResult.<UNKNOWN>';
+    }
+  }
+
+  @override
+  int get $ordinal => _ordinal;
+
+  @override
+  Object get $data => _data;
+
+  static DenyEachBindingOnlyDenyRustResult _ctor(int ordinal, Object data) {
+    return DenyEachBindingOnlyDenyRustResult._(ordinal, data);
+  }
+}
+
+// See fxbug.dev/7644:
+// ignore: recursive_compile_time_constant
+const $fidl.UnionType<DenyEachBindingOnlyDenyRustResult>
+    kDenyEachBinding_OnlyDenyRust_Result_Type =
+    $fidl.UnionType<DenyEachBindingOnlyDenyRustResult>(
+  members: <int, $fidl.FidlType>{
+    1: kDenyEachBinding_OnlyDenyRust_Response_Type,
+    2: $fidl.Uint32Type(),
+  },
+  ctor: DenyEachBindingOnlyDenyRustResult._ctor,
+  flexible: false,
+  resource: false,
+);
+// See fxbug.dev/7644:
+// ignore: recursive_compile_time_constant
+const $fidl.NullableUnionType<DenyEachBindingOnlyDenyRustResult>
+    kDenyEachBinding_OnlyDenyRust_Result_OptType =
+    $fidl.NullableUnionType<DenyEachBindingOnlyDenyRustResult>(
+  members: <int, $fidl.FidlType>{
+    1: kDenyEachBinding_OnlyDenyRust_Response_Type,
+    2: $fidl.Uint32Type(),
+  },
+  ctor: DenyEachBindingOnlyDenyRustResult._ctor,
+  flexible: false,
+  resource: false,
+);
+
+enum DenyEachBindingOnlyDenySyzkallerResultTag {
+  response, // 0x1
+  err, // 0x2
+}
+
+const Map<int, DenyEachBindingOnlyDenySyzkallerResultTag>
+    _DenyEachBindingOnlyDenySyzkallerResultTag_map = {
+  1: DenyEachBindingOnlyDenySyzkallerResultTag.response,
+  2: DenyEachBindingOnlyDenySyzkallerResultTag.err,
+};
+
+class DenyEachBindingOnlyDenySyzkallerResult extends $fidl.Union {
+  const DenyEachBindingOnlyDenySyzkallerResult.withResponse(
+      DenyEachBindingOnlyDenySyzkallerResponse value)
+      : _ordinal = 1,
+        _data = value;
+
+  const DenyEachBindingOnlyDenySyzkallerResult.withErr(int value)
+      : _ordinal = 2,
+        _data = value;
+
+  DenyEachBindingOnlyDenySyzkallerResult._(int ordinal, Object data)
+      : _ordinal = ordinal,
+        _data = data;
+
+  final int _ordinal;
+  final _data;
+
+  DenyEachBindingOnlyDenySyzkallerResultTag get $tag =>
+      _DenyEachBindingOnlyDenySyzkallerResultTag_map[_ordinal]!;
+
+  DenyEachBindingOnlyDenySyzkallerResponse? get response {
+    if (_ordinal != 1) {
+      return null;
+    }
+    return _data;
+  }
+
+  int? get err {
+    if (_ordinal != 2) {
+      return null;
+    }
+    return _data;
+  }
+
+  $fidl.UnknownRawData? get $unknownData {
+    switch (_ordinal) {
+      case 1:
+      case 2:
+        return null;
+      default:
+        return _data;
+    }
+  }
+
+  @override
+  String toString() {
+    switch (_ordinal) {
+      case 1:
+        return r'DenyEachBindingOnlyDenySyzkallerResult.response(' +
+            response.toString() +
+            ')';
+      case 2:
+        return r'DenyEachBindingOnlyDenySyzkallerResult.err(' +
+            err.toString() +
+            ')';
+      default:
+        return r'DenyEachBindingOnlyDenySyzkallerResult.<UNKNOWN>';
+    }
+  }
+
+  @override
+  int get $ordinal => _ordinal;
+
+  @override
+  Object get $data => _data;
+
+  static DenyEachBindingOnlyDenySyzkallerResult _ctor(
+      int ordinal, Object data) {
+    return DenyEachBindingOnlyDenySyzkallerResult._(ordinal, data);
+  }
+}
+
+// See fxbug.dev/7644:
+// ignore: recursive_compile_time_constant
+const $fidl.UnionType<DenyEachBindingOnlyDenySyzkallerResult>
+    kDenyEachBinding_OnlyDenySyzkaller_Result_Type =
+    $fidl.UnionType<DenyEachBindingOnlyDenySyzkallerResult>(
+  members: <int, $fidl.FidlType>{
+    1: kDenyEachBinding_OnlyDenySyzkaller_Response_Type,
+    2: $fidl.Uint32Type(),
+  },
+  ctor: DenyEachBindingOnlyDenySyzkallerResult._ctor,
+  flexible: false,
+  resource: false,
+);
+// See fxbug.dev/7644:
+// ignore: recursive_compile_time_constant
+const $fidl.NullableUnionType<DenyEachBindingOnlyDenySyzkallerResult>
+    kDenyEachBinding_OnlyDenySyzkaller_Result_OptType =
+    $fidl.NullableUnionType<DenyEachBindingOnlyDenySyzkallerResult>(
+  members: <int, $fidl.FidlType>{
+    1: kDenyEachBinding_OnlyDenySyzkaller_Response_Type,
+    2: $fidl.Uint32Type(),
+  },
+  ctor: DenyEachBindingOnlyDenySyzkallerResult._ctor,
+  flexible: false,
+  resource: false,
+);
+
+enum ShouldNeverAppearInAnyBinding3Tag {
+  $unknown,
+  a, // 0x1
+}
+
+const Map<int, ShouldNeverAppearInAnyBinding3Tag>
+    _ShouldNeverAppearInAnyBinding3Tag_map = {
+  1: ShouldNeverAppearInAnyBinding3Tag.a,
+};
+
+class ShouldNeverAppearInAnyBinding3 extends $fidl.Union {
+  const ShouldNeverAppearInAnyBinding3.withA(bool value)
+      : _ordinal = 1,
+        _data = value;
+  const ShouldNeverAppearInAnyBinding3.with$UnknownData(
+      this._ordinal, $fidl.UnknownRawData data)
+      : _data = data;
+
+  ShouldNeverAppearInAnyBinding3._(int ordinal, Object data)
+      : _ordinal = ordinal,
+        _data = data;
+
+  final int _ordinal;
+  final _data;
+
+  ShouldNeverAppearInAnyBinding3Tag get $tag =>
+      _ShouldNeverAppearInAnyBinding3Tag_map[_ordinal] ??
+      ShouldNeverAppearInAnyBinding3Tag.$unknown;
+
+  bool? get a {
+    if (_ordinal != 1) {
+      return null;
+    }
+    return _data;
+  }
+
+  $fidl.UnknownRawData? get $unknownData {
+    switch (_ordinal) {
+      case 1:
+        return null;
+      default:
+        return _data;
+    }
+  }
+
+  @override
+  String toString() {
+    switch (_ordinal) {
+      case 1:
+        return r'ShouldNeverAppearInAnyBinding3.a(' + a.toString() + ')';
+      default:
+        return r'ShouldNeverAppearInAnyBinding3.<UNKNOWN>';
+    }
+  }
+
+  @override
+  int get $ordinal => _ordinal;
+
+  @override
+  Object get $data => _data;
+
+  static ShouldNeverAppearInAnyBinding3 _ctor(int ordinal, Object data) {
+    return ShouldNeverAppearInAnyBinding3._(ordinal, data);
+  }
+}
+
+// See fxbug.dev/7644:
+// ignore: recursive_compile_time_constant
+const $fidl.UnionType<ShouldNeverAppearInAnyBinding3>
+    kShouldNeverAppearInAnyBinding3_Type =
+    $fidl.UnionType<ShouldNeverAppearInAnyBinding3>(
+  members: <int, $fidl.FidlType>{
+    1: $fidl.BoolType(),
+  },
+  ctor: ShouldNeverAppearInAnyBinding3._ctor,
+  flexible: true,
+  resource: false,
+);
+// See fxbug.dev/7644:
+// ignore: recursive_compile_time_constant
+const $fidl.NullableUnionType<ShouldNeverAppearInAnyBinding3>
+    kShouldNeverAppearInAnyBinding3_OptType =
+    $fidl.NullableUnionType<ShouldNeverAppearInAnyBinding3>(
+  members: <int, $fidl.FidlType>{
+    1: $fidl.BoolType(),
+  },
+  ctor: ShouldNeverAppearInAnyBinding3._ctor,
+  flexible: true,
+  resource: false,
+);
+
+enum ShouldNeverAppearInAnyBinding6Tag {
+  $unknown,
+  a, // 0x1
+}
+
+const Map<int, ShouldNeverAppearInAnyBinding6Tag>
+    _ShouldNeverAppearInAnyBinding6Tag_map = {
+  1: ShouldNeverAppearInAnyBinding6Tag.a,
+};
+
+class ShouldNeverAppearInAnyBinding6 extends $fidl.Union {
+  const ShouldNeverAppearInAnyBinding6.withA(bool value)
+      : _ordinal = 1,
+        _data = value;
+  const ShouldNeverAppearInAnyBinding6.with$UnknownData(
+      this._ordinal, $fidl.UnknownRawData data)
+      : _data = data;
+
+  ShouldNeverAppearInAnyBinding6._(int ordinal, Object data)
+      : _ordinal = ordinal,
+        _data = data;
+
+  final int _ordinal;
+  final _data;
+
+  ShouldNeverAppearInAnyBinding6Tag get $tag =>
+      _ShouldNeverAppearInAnyBinding6Tag_map[_ordinal] ??
+      ShouldNeverAppearInAnyBinding6Tag.$unknown;
+
+  bool? get a {
+    if (_ordinal != 1) {
+      return null;
+    }
+    return _data;
+  }
+
+  $fidl.UnknownRawData? get $unknownData {
+    switch (_ordinal) {
+      case 1:
+        return null;
+      default:
+        return _data;
+    }
+  }
+
+  @override
+  String toString() {
+    switch (_ordinal) {
+      case 1:
+        return r'ShouldNeverAppearInAnyBinding6.a(' + a.toString() + ')';
+      default:
+        return r'ShouldNeverAppearInAnyBinding6.<UNKNOWN>';
+    }
+  }
+
+  @override
+  int get $ordinal => _ordinal;
+
+  @override
+  Object get $data => _data;
+
+  static ShouldNeverAppearInAnyBinding6 _ctor(int ordinal, Object data) {
+    return ShouldNeverAppearInAnyBinding6._(ordinal, data);
+  }
+}
+
+// See fxbug.dev/7644:
+// ignore: recursive_compile_time_constant
+const $fidl.UnionType<ShouldNeverAppearInAnyBinding6>
+    kShouldNeverAppearInAnyBinding6_Type =
+    $fidl.UnionType<ShouldNeverAppearInAnyBinding6>(
+  members: <int, $fidl.FidlType>{
+    1: $fidl.BoolType(),
+  },
+  ctor: ShouldNeverAppearInAnyBinding6._ctor,
+  flexible: true,
+  resource: false,
+);
+// See fxbug.dev/7644:
+// ignore: recursive_compile_time_constant
+const $fidl.NullableUnionType<ShouldNeverAppearInAnyBinding6>
+    kShouldNeverAppearInAnyBinding6_OptType =
+    $fidl.NullableUnionType<ShouldNeverAppearInAnyBinding6>(
+  members: <int, $fidl.FidlType>{
+    1: $fidl.BoolType(),
+  },
+  ctor: ShouldNeverAppearInAnyBinding6._ctor,
+  flexible: true,
+  resource: false,
+);
+
+enum AllowedDeniedResultTag {
+  response, // 0x1
+  err, // 0x2
+}
+
+const Map<int, AllowedDeniedResultTag> _AllowedDeniedResultTag_map = {
+  1: AllowedDeniedResultTag.response,
+  2: AllowedDeniedResultTag.err,
+};
+
+class AllowedDeniedResult extends $fidl.Union {
+  const AllowedDeniedResult.withResponse(AllowedDeniedResponse value)
+      : _ordinal = 1,
+        _data = value;
+
+  const AllowedDeniedResult.withErr(int value)
+      : _ordinal = 2,
+        _data = value;
+
+  AllowedDeniedResult._(int ordinal, Object data)
+      : _ordinal = ordinal,
+        _data = data;
+
+  final int _ordinal;
+  final _data;
+
+  AllowedDeniedResultTag get $tag => _AllowedDeniedResultTag_map[_ordinal]!;
+
+  AllowedDeniedResponse? get response {
+    if (_ordinal != 1) {
+      return null;
+    }
+    return _data;
+  }
+
+  int? get err {
+    if (_ordinal != 2) {
+      return null;
+    }
+    return _data;
+  }
+
+  $fidl.UnknownRawData? get $unknownData {
+    switch (_ordinal) {
+      case 1:
+      case 2:
+        return null;
+      default:
+        return _data;
+    }
+  }
+
+  @override
+  String toString() {
+    switch (_ordinal) {
+      case 1:
+        return r'AllowedDeniedResult.response(' + response.toString() + ')';
+      case 2:
+        return r'AllowedDeniedResult.err(' + err.toString() + ')';
+      default:
+        return r'AllowedDeniedResult.<UNKNOWN>';
+    }
+  }
+
+  @override
+  int get $ordinal => _ordinal;
+
+  @override
+  Object get $data => _data;
+
+  static AllowedDeniedResult _ctor(int ordinal, Object data) {
+    return AllowedDeniedResult._(ordinal, data);
+  }
+}
+
+// See fxbug.dev/7644:
+// ignore: recursive_compile_time_constant
+const $fidl.UnionType<AllowedDeniedResult> kAllowed_Denied_Result_Type =
+    $fidl.UnionType<AllowedDeniedResult>(
+  members: <int, $fidl.FidlType>{
+    1: kAllowed_Denied_Response_Type,
+    2: $fidl.Uint32Type(),
+  },
+  ctor: AllowedDeniedResult._ctor,
+  flexible: false,
+  resource: false,
+);
+// See fxbug.dev/7644:
+// ignore: recursive_compile_time_constant
+const $fidl.NullableUnionType<AllowedDeniedResult>
+    kAllowed_Denied_Result_OptType =
+    $fidl.NullableUnionType<AllowedDeniedResult>(
+  members: <int, $fidl.FidlType>{
+    1: kAllowed_Denied_Response_Type,
+    2: $fidl.Uint32Type(),
+  },
+  ctor: AllowedDeniedResult._ctor,
+  flexible: false,
+  resource: false,
+);
+
+enum ShouldNeverAppearInAnyBinding9Tag {
+  $unknown,
+  a, // 0x1
+}
+
+const Map<int, ShouldNeverAppearInAnyBinding9Tag>
+    _ShouldNeverAppearInAnyBinding9Tag_map = {
+  1: ShouldNeverAppearInAnyBinding9Tag.a,
+};
+
+class ShouldNeverAppearInAnyBinding9 extends $fidl.Union {
+  const ShouldNeverAppearInAnyBinding9.withA(bool value)
+      : _ordinal = 1,
+        _data = value;
+  const ShouldNeverAppearInAnyBinding9.with$UnknownData(
+      this._ordinal, $fidl.UnknownRawData data)
+      : _data = data;
+
+  ShouldNeverAppearInAnyBinding9._(int ordinal, Object data)
+      : _ordinal = ordinal,
+        _data = data;
+
+  final int _ordinal;
+  final _data;
+
+  ShouldNeverAppearInAnyBinding9Tag get $tag =>
+      _ShouldNeverAppearInAnyBinding9Tag_map[_ordinal] ??
+      ShouldNeverAppearInAnyBinding9Tag.$unknown;
+
+  bool? get a {
+    if (_ordinal != 1) {
+      return null;
+    }
+    return _data;
+  }
+
+  $fidl.UnknownRawData? get $unknownData {
+    switch (_ordinal) {
+      case 1:
+        return null;
+      default:
+        return _data;
+    }
+  }
+
+  @override
+  String toString() {
+    switch (_ordinal) {
+      case 1:
+        return r'ShouldNeverAppearInAnyBinding9.a(' + a.toString() + ')';
+      default:
+        return r'ShouldNeverAppearInAnyBinding9.<UNKNOWN>';
+    }
+  }
+
+  @override
+  int get $ordinal => _ordinal;
+
+  @override
+  Object get $data => _data;
+
+  static ShouldNeverAppearInAnyBinding9 _ctor(int ordinal, Object data) {
+    return ShouldNeverAppearInAnyBinding9._(ordinal, data);
+  }
+}
+
+// See fxbug.dev/7644:
+// ignore: recursive_compile_time_constant
+const $fidl.UnionType<ShouldNeverAppearInAnyBinding9>
+    kShouldNeverAppearInAnyBinding9_Type =
+    $fidl.UnionType<ShouldNeverAppearInAnyBinding9>(
+  members: <int, $fidl.FidlType>{
+    1: $fidl.BoolType(),
+  },
+  ctor: ShouldNeverAppearInAnyBinding9._ctor,
+  flexible: true,
+  resource: false,
+);
+// See fxbug.dev/7644:
+// ignore: recursive_compile_time_constant
+const $fidl.NullableUnionType<ShouldNeverAppearInAnyBinding9>
+    kShouldNeverAppearInAnyBinding9_OptType =
+    $fidl.NullableUnionType<ShouldNeverAppearInAnyBinding9>(
+  members: <int, $fidl.FidlType>{
+    1: $fidl.BoolType(),
+  },
+  ctor: ShouldNeverAppearInAnyBinding9._ctor,
+  flexible: true,
+  resource: false,
+);
+
+class DenyEachBindingOnlyDenyCppResponse extends $fidl.Struct {
+  const DenyEachBindingOnlyDenyCppResponse({
+    required this.b,
+  });
+  DenyEachBindingOnlyDenyCppResponse.clone(
+    DenyEachBindingOnlyDenyCppResponse $orig, {
+    int? b,
+  }) : this(
+          b: b ?? $orig.b,
+        );
+
+  final int b;
+
+  @override
+  List<Object?> get $fields {
+    return <Object?>[
+      b,
+    ];
+  }
+
+  static const $fieldType0 = $fidl.Int32Type();
+
+  @override
+  void $encode($fidl.Encoder $encoder, int $offset, int $depth) {
+    switch ($encoder.wireFormat) {
+      case $fidl.WireFormat.v1:
+        $fieldType0.encode($encoder, b, $offset + 0, $depth);
+        break;
+      case $fidl.WireFormat.v2:
+        $fieldType0.encode($encoder, b, $offset + 0, $depth);
+        break;
+      default:
+        throw $fidl.FidlError('unknown wire format');
+    }
+  }
+
+  @override
+  String toString() {
+    return r'DenyEachBindingOnlyDenyCppResponse' r'(b: ' + b.toString() + r')';
+  }
+
+  static DenyEachBindingOnlyDenyCppResponse _structDecode(
+      $fidl.Decoder $decoder, int $offset, int $depth) {
+    switch ($decoder.wireFormat) {
+      case $fidl.WireFormat.v1:
+        return DenyEachBindingOnlyDenyCppResponse(
+            b: $fieldType0.decode($decoder, $offset + 0, $depth));
+      case $fidl.WireFormat.v2:
+        return DenyEachBindingOnlyDenyCppResponse(
+            b: $fieldType0.decode($decoder, $offset + 0, $depth));
+      default:
+        throw $fidl.FidlError('unknown wire format');
+    }
+  }
+}
+
+// See fxbug.dev/7644:
+// ignore: recursive_compile_time_constant
+const $fidl.StructType<DenyEachBindingOnlyDenyCppResponse>
+    kDenyEachBinding_OnlyDenyCpp_Response_Type =
+    $fidl.StructType<DenyEachBindingOnlyDenyCppResponse>(
+        inlineSizeV1: 4,
+        inlineSizeV2: 4,
+        structDecode: DenyEachBindingOnlyDenyCppResponse._structDecode);
+
+class DenyEachBindingOnlyDenyDartResponse extends $fidl.Struct {
+  const DenyEachBindingOnlyDenyDartResponse({
+    required this.b,
+  });
+  DenyEachBindingOnlyDenyDartResponse.clone(
+    DenyEachBindingOnlyDenyDartResponse $orig, {
+    int? b,
+  }) : this(
+          b: b ?? $orig.b,
+        );
+
+  final int b;
+
+  @override
+  List<Object?> get $fields {
+    return <Object?>[
+      b,
+    ];
+  }
+
+  static const $fieldType0 = $fidl.Int32Type();
+
+  @override
+  void $encode($fidl.Encoder $encoder, int $offset, int $depth) {
+    switch ($encoder.wireFormat) {
+      case $fidl.WireFormat.v1:
+        $fieldType0.encode($encoder, b, $offset + 0, $depth);
+        break;
+      case $fidl.WireFormat.v2:
+        $fieldType0.encode($encoder, b, $offset + 0, $depth);
+        break;
+      default:
+        throw $fidl.FidlError('unknown wire format');
+    }
+  }
+
+  @override
+  String toString() {
+    return r'DenyEachBindingOnlyDenyDartResponse' r'(b: ' + b.toString() + r')';
+  }
+
+  static DenyEachBindingOnlyDenyDartResponse _structDecode(
+      $fidl.Decoder $decoder, int $offset, int $depth) {
+    switch ($decoder.wireFormat) {
+      case $fidl.WireFormat.v1:
+        return DenyEachBindingOnlyDenyDartResponse(
+            b: $fieldType0.decode($decoder, $offset + 0, $depth));
+      case $fidl.WireFormat.v2:
+        return DenyEachBindingOnlyDenyDartResponse(
+            b: $fieldType0.decode($decoder, $offset + 0, $depth));
+      default:
+        throw $fidl.FidlError('unknown wire format');
+    }
+  }
+}
+
+// See fxbug.dev/7644:
+// ignore: recursive_compile_time_constant
+const $fidl.StructType<DenyEachBindingOnlyDenyDartResponse>
+    kDenyEachBinding_OnlyDenyDart_Response_Type =
+    $fidl.StructType<DenyEachBindingOnlyDenyDartResponse>(
+        inlineSizeV1: 4,
+        inlineSizeV2: 4,
+        structDecode: DenyEachBindingOnlyDenyDartResponse._structDecode);
+
+class DenyEachBindingOnlyDenyGoResponse extends $fidl.Struct {
+  const DenyEachBindingOnlyDenyGoResponse({
+    required this.b,
+  });
+  DenyEachBindingOnlyDenyGoResponse.clone(
+    DenyEachBindingOnlyDenyGoResponse $orig, {
+    int? b,
+  }) : this(
+          b: b ?? $orig.b,
+        );
+
+  final int b;
+
+  @override
+  List<Object?> get $fields {
+    return <Object?>[
+      b,
+    ];
+  }
+
+  static const $fieldType0 = $fidl.Int32Type();
+
+  @override
+  void $encode($fidl.Encoder $encoder, int $offset, int $depth) {
+    switch ($encoder.wireFormat) {
+      case $fidl.WireFormat.v1:
+        $fieldType0.encode($encoder, b, $offset + 0, $depth);
+        break;
+      case $fidl.WireFormat.v2:
+        $fieldType0.encode($encoder, b, $offset + 0, $depth);
+        break;
+      default:
+        throw $fidl.FidlError('unknown wire format');
+    }
+  }
+
+  @override
+  String toString() {
+    return r'DenyEachBindingOnlyDenyGoResponse' r'(b: ' + b.toString() + r')';
+  }
+
+  static DenyEachBindingOnlyDenyGoResponse _structDecode(
+      $fidl.Decoder $decoder, int $offset, int $depth) {
+    switch ($decoder.wireFormat) {
+      case $fidl.WireFormat.v1:
+        return DenyEachBindingOnlyDenyGoResponse(
+            b: $fieldType0.decode($decoder, $offset + 0, $depth));
+      case $fidl.WireFormat.v2:
+        return DenyEachBindingOnlyDenyGoResponse(
+            b: $fieldType0.decode($decoder, $offset + 0, $depth));
+      default:
+        throw $fidl.FidlError('unknown wire format');
+    }
+  }
+}
+
+// See fxbug.dev/7644:
+// ignore: recursive_compile_time_constant
+const $fidl.StructType<DenyEachBindingOnlyDenyGoResponse>
+    kDenyEachBinding_OnlyDenyGo_Response_Type =
+    $fidl.StructType<DenyEachBindingOnlyDenyGoResponse>(
+        inlineSizeV1: 4,
+        inlineSizeV2: 4,
+        structDecode: DenyEachBindingOnlyDenyGoResponse._structDecode);
+
+class DenyEachBindingOnlyDenyLibfuzzerResponse extends $fidl.Struct {
+  const DenyEachBindingOnlyDenyLibfuzzerResponse({
+    required this.b,
+  });
+  DenyEachBindingOnlyDenyLibfuzzerResponse.clone(
+    DenyEachBindingOnlyDenyLibfuzzerResponse $orig, {
+    int? b,
+  }) : this(
+          b: b ?? $orig.b,
+        );
+
+  final int b;
+
+  @override
+  List<Object?> get $fields {
+    return <Object?>[
+      b,
+    ];
+  }
+
+  static const $fieldType0 = $fidl.Int32Type();
+
+  @override
+  void $encode($fidl.Encoder $encoder, int $offset, int $depth) {
+    switch ($encoder.wireFormat) {
+      case $fidl.WireFormat.v1:
+        $fieldType0.encode($encoder, b, $offset + 0, $depth);
+        break;
+      case $fidl.WireFormat.v2:
+        $fieldType0.encode($encoder, b, $offset + 0, $depth);
+        break;
+      default:
+        throw $fidl.FidlError('unknown wire format');
+    }
+  }
+
+  @override
+  String toString() {
+    return r'DenyEachBindingOnlyDenyLibfuzzerResponse' r'(b: ' +
+        b.toString() +
+        r')';
+  }
+
+  static DenyEachBindingOnlyDenyLibfuzzerResponse _structDecode(
+      $fidl.Decoder $decoder, int $offset, int $depth) {
+    switch ($decoder.wireFormat) {
+      case $fidl.WireFormat.v1:
+        return DenyEachBindingOnlyDenyLibfuzzerResponse(
+            b: $fieldType0.decode($decoder, $offset + 0, $depth));
+      case $fidl.WireFormat.v2:
+        return DenyEachBindingOnlyDenyLibfuzzerResponse(
+            b: $fieldType0.decode($decoder, $offset + 0, $depth));
+      default:
+        throw $fidl.FidlError('unknown wire format');
+    }
+  }
+}
+
+// See fxbug.dev/7644:
+// ignore: recursive_compile_time_constant
+const $fidl.StructType<DenyEachBindingOnlyDenyLibfuzzerResponse>
+    kDenyEachBinding_OnlyDenyLibfuzzer_Response_Type =
+    $fidl.StructType<DenyEachBindingOnlyDenyLibfuzzerResponse>(
+        inlineSizeV1: 4,
+        inlineSizeV2: 4,
+        structDecode: DenyEachBindingOnlyDenyLibfuzzerResponse._structDecode);
+
+class DenyEachBindingOnlyDenyRustResponse extends $fidl.Struct {
+  const DenyEachBindingOnlyDenyRustResponse({
+    required this.b,
+  });
+  DenyEachBindingOnlyDenyRustResponse.clone(
+    DenyEachBindingOnlyDenyRustResponse $orig, {
+    int? b,
+  }) : this(
+          b: b ?? $orig.b,
+        );
+
+  final int b;
+
+  @override
+  List<Object?> get $fields {
+    return <Object?>[
+      b,
+    ];
+  }
+
+  static const $fieldType0 = $fidl.Int32Type();
+
+  @override
+  void $encode($fidl.Encoder $encoder, int $offset, int $depth) {
+    switch ($encoder.wireFormat) {
+      case $fidl.WireFormat.v1:
+        $fieldType0.encode($encoder, b, $offset + 0, $depth);
+        break;
+      case $fidl.WireFormat.v2:
+        $fieldType0.encode($encoder, b, $offset + 0, $depth);
+        break;
+      default:
+        throw $fidl.FidlError('unknown wire format');
+    }
+  }
+
+  @override
+  String toString() {
+    return r'DenyEachBindingOnlyDenyRustResponse' r'(b: ' + b.toString() + r')';
+  }
+
+  static DenyEachBindingOnlyDenyRustResponse _structDecode(
+      $fidl.Decoder $decoder, int $offset, int $depth) {
+    switch ($decoder.wireFormat) {
+      case $fidl.WireFormat.v1:
+        return DenyEachBindingOnlyDenyRustResponse(
+            b: $fieldType0.decode($decoder, $offset + 0, $depth));
+      case $fidl.WireFormat.v2:
+        return DenyEachBindingOnlyDenyRustResponse(
+            b: $fieldType0.decode($decoder, $offset + 0, $depth));
+      default:
+        throw $fidl.FidlError('unknown wire format');
+    }
+  }
+}
+
+// See fxbug.dev/7644:
+// ignore: recursive_compile_time_constant
+const $fidl.StructType<DenyEachBindingOnlyDenyRustResponse>
+    kDenyEachBinding_OnlyDenyRust_Response_Type =
+    $fidl.StructType<DenyEachBindingOnlyDenyRustResponse>(
+        inlineSizeV1: 4,
+        inlineSizeV2: 4,
+        structDecode: DenyEachBindingOnlyDenyRustResponse._structDecode);
+
+class DenyEachBindingOnlyDenySyzkallerResponse extends $fidl.Struct {
+  const DenyEachBindingOnlyDenySyzkallerResponse({
+    required this.b,
+  });
+  DenyEachBindingOnlyDenySyzkallerResponse.clone(
+    DenyEachBindingOnlyDenySyzkallerResponse $orig, {
+    int? b,
+  }) : this(
+          b: b ?? $orig.b,
+        );
+
+  final int b;
+
+  @override
+  List<Object?> get $fields {
+    return <Object?>[
+      b,
+    ];
+  }
+
+  static const $fieldType0 = $fidl.Int32Type();
+
+  @override
+  void $encode($fidl.Encoder $encoder, int $offset, int $depth) {
+    switch ($encoder.wireFormat) {
+      case $fidl.WireFormat.v1:
+        $fieldType0.encode($encoder, b, $offset + 0, $depth);
+        break;
+      case $fidl.WireFormat.v2:
+        $fieldType0.encode($encoder, b, $offset + 0, $depth);
+        break;
+      default:
+        throw $fidl.FidlError('unknown wire format');
+    }
+  }
+
+  @override
+  String toString() {
+    return r'DenyEachBindingOnlyDenySyzkallerResponse' r'(b: ' +
+        b.toString() +
+        r')';
+  }
+
+  static DenyEachBindingOnlyDenySyzkallerResponse _structDecode(
+      $fidl.Decoder $decoder, int $offset, int $depth) {
+    switch ($decoder.wireFormat) {
+      case $fidl.WireFormat.v1:
+        return DenyEachBindingOnlyDenySyzkallerResponse(
+            b: $fieldType0.decode($decoder, $offset + 0, $depth));
+      case $fidl.WireFormat.v2:
+        return DenyEachBindingOnlyDenySyzkallerResponse(
+            b: $fieldType0.decode($decoder, $offset + 0, $depth));
+      default:
+        throw $fidl.FidlError('unknown wire format');
+    }
+  }
+}
+
+// See fxbug.dev/7644:
+// ignore: recursive_compile_time_constant
+const $fidl.StructType<DenyEachBindingOnlyDenySyzkallerResponse>
+    kDenyEachBinding_OnlyDenySyzkaller_Response_Type =
+    $fidl.StructType<DenyEachBindingOnlyDenySyzkallerResponse>(
+        inlineSizeV1: 4,
+        inlineSizeV2: 4,
+        structDecode: DenyEachBindingOnlyDenySyzkallerResponse._structDecode);
+
+class ShouldNeverAppearInAnyBinding1 extends $fidl.Struct {
+  const ShouldNeverAppearInAnyBinding1({
+    required this.a,
+  });
+  ShouldNeverAppearInAnyBinding1.clone(
+    ShouldNeverAppearInAnyBinding1 $orig, {
+    bool? a,
+  }) : this(
+          a: a ?? $orig.a,
+        );
+
+  final bool a;
+
+  @override
+  List<Object?> get $fields {
+    return <Object?>[
+      a,
+    ];
+  }
+
+  static const $fieldType0 = $fidl.BoolType();
+
+  @override
+  void $encode($fidl.Encoder $encoder, int $offset, int $depth) {
+    switch ($encoder.wireFormat) {
+      case $fidl.WireFormat.v1:
+        $fieldType0.encode($encoder, a, $offset + 0, $depth);
+        break;
+      case $fidl.WireFormat.v2:
+        $fieldType0.encode($encoder, a, $offset + 0, $depth);
+        break;
+      default:
+        throw $fidl.FidlError('unknown wire format');
+    }
+  }
+
+  @override
+  String toString() {
+    return r'ShouldNeverAppearInAnyBinding1' r'(a: ' + a.toString() + r')';
+  }
+
+  static ShouldNeverAppearInAnyBinding1 _structDecode(
+      $fidl.Decoder $decoder, int $offset, int $depth) {
+    switch ($decoder.wireFormat) {
+      case $fidl.WireFormat.v1:
+        return ShouldNeverAppearInAnyBinding1(
+            a: $fieldType0.decode($decoder, $offset + 0, $depth));
+      case $fidl.WireFormat.v2:
+        return ShouldNeverAppearInAnyBinding1(
+            a: $fieldType0.decode($decoder, $offset + 0, $depth));
+      default:
+        throw $fidl.FidlError('unknown wire format');
+    }
+  }
+}
+
+// See fxbug.dev/7644:
+// ignore: recursive_compile_time_constant
+const $fidl.StructType<ShouldNeverAppearInAnyBinding1>
+    kShouldNeverAppearInAnyBinding1_Type =
+    $fidl.StructType<ShouldNeverAppearInAnyBinding1>(
+        inlineSizeV1: 1,
+        inlineSizeV2: 1,
+        structDecode: ShouldNeverAppearInAnyBinding1._structDecode);
+
+class ShouldNeverAppearInAnyBinding4 extends $fidl.Struct {
+  const ShouldNeverAppearInAnyBinding4({
+    required this.a,
+  });
+  ShouldNeverAppearInAnyBinding4.clone(
+    ShouldNeverAppearInAnyBinding4 $orig, {
+    bool? a,
+  }) : this(
+          a: a ?? $orig.a,
+        );
+
+  final bool a;
+
+  @override
+  List<Object?> get $fields {
+    return <Object?>[
+      a,
+    ];
+  }
+
+  static const $fieldType0 = $fidl.BoolType();
+
+  @override
+  void $encode($fidl.Encoder $encoder, int $offset, int $depth) {
+    switch ($encoder.wireFormat) {
+      case $fidl.WireFormat.v1:
+        $fieldType0.encode($encoder, a, $offset + 0, $depth);
+        break;
+      case $fidl.WireFormat.v2:
+        $fieldType0.encode($encoder, a, $offset + 0, $depth);
+        break;
+      default:
+        throw $fidl.FidlError('unknown wire format');
+    }
+  }
+
+  @override
+  String toString() {
+    return r'ShouldNeverAppearInAnyBinding4' r'(a: ' + a.toString() + r')';
+  }
+
+  static ShouldNeverAppearInAnyBinding4 _structDecode(
+      $fidl.Decoder $decoder, int $offset, int $depth) {
+    switch ($decoder.wireFormat) {
+      case $fidl.WireFormat.v1:
+        return ShouldNeverAppearInAnyBinding4(
+            a: $fieldType0.decode($decoder, $offset + 0, $depth));
+      case $fidl.WireFormat.v2:
+        return ShouldNeverAppearInAnyBinding4(
+            a: $fieldType0.decode($decoder, $offset + 0, $depth));
+      default:
+        throw $fidl.FidlError('unknown wire format');
+    }
+  }
+}
+
+// See fxbug.dev/7644:
+// ignore: recursive_compile_time_constant
+const $fidl.StructType<ShouldNeverAppearInAnyBinding4>
+    kShouldNeverAppearInAnyBinding4_Type =
+    $fidl.StructType<ShouldNeverAppearInAnyBinding4>(
+        inlineSizeV1: 1,
+        inlineSizeV2: 1,
+        structDecode: ShouldNeverAppearInAnyBinding4._structDecode);
+
+class AllowedDeniedResponse extends $fidl.Struct {
+  const AllowedDeniedResponse({
+    required this.shouldNeverAppearInAnyBinding4,
+    required this.shouldNeverAppearInAnyBinding5,
+    required this.shouldNeverAppearInAnyBinding6,
+  });
+  AllowedDeniedResponse.clone(
+    AllowedDeniedResponse $orig, {
+    ShouldNeverAppearInAnyBinding4? shouldNeverAppearInAnyBinding4,
+    ShouldNeverAppearInAnyBinding5? shouldNeverAppearInAnyBinding5,
+    ShouldNeverAppearInAnyBinding6? shouldNeverAppearInAnyBinding6,
+  }) : this(
+          shouldNeverAppearInAnyBinding4: shouldNeverAppearInAnyBinding4 ??
+              $orig.shouldNeverAppearInAnyBinding4,
+          shouldNeverAppearInAnyBinding5: shouldNeverAppearInAnyBinding5 ??
+              $orig.shouldNeverAppearInAnyBinding5,
+          shouldNeverAppearInAnyBinding6: shouldNeverAppearInAnyBinding6 ??
+              $orig.shouldNeverAppearInAnyBinding6,
+        );
+
+  final ShouldNeverAppearInAnyBinding4 shouldNeverAppearInAnyBinding4;
+  final ShouldNeverAppearInAnyBinding5 shouldNeverAppearInAnyBinding5;
+  final ShouldNeverAppearInAnyBinding6 shouldNeverAppearInAnyBinding6;
+
+  @override
+  List<Object?> get $fields {
+    return <Object?>[
+      shouldNeverAppearInAnyBinding4,
+      shouldNeverAppearInAnyBinding5,
+      shouldNeverAppearInAnyBinding6,
+    ];
+  }
+
+  static const $fieldType0 = kShouldNeverAppearInAnyBinding4_Type;
+  static const $fieldType1 = kShouldNeverAppearInAnyBinding5_Type;
+  static const $fieldType2 = kShouldNeverAppearInAnyBinding6_Type;
+
+  @override
+  void $encode($fidl.Encoder $encoder, int $offset, int $depth) {
+    switch ($encoder.wireFormat) {
+      case $fidl.WireFormat.v1:
+        $fieldType0.encode(
+            $encoder, shouldNeverAppearInAnyBinding4, $offset + 0, $depth);
+        $fieldType1.encode(
+            $encoder, shouldNeverAppearInAnyBinding5, $offset + 8, $depth);
+        $fieldType2.encode(
+            $encoder, shouldNeverAppearInAnyBinding6, $offset + 24, $depth);
+        break;
+      case $fidl.WireFormat.v2:
+        $fieldType0.encode(
+            $encoder, shouldNeverAppearInAnyBinding4, $offset + 0, $depth);
+        $fieldType1.encode(
+            $encoder, shouldNeverAppearInAnyBinding5, $offset + 8, $depth);
+        $fieldType2.encode(
+            $encoder, shouldNeverAppearInAnyBinding6, $offset + 24, $depth);
+        break;
+      default:
+        throw $fidl.FidlError('unknown wire format');
+    }
+  }
+
+  @override
+  String toString() {
+    return r'AllowedDeniedResponse' r'(shouldNeverAppearInAnyBinding4: ' +
+        shouldNeverAppearInAnyBinding4.toString() +
+        r', shouldNeverAppearInAnyBinding5: ' +
+        shouldNeverAppearInAnyBinding5.toString() +
+        r', shouldNeverAppearInAnyBinding6: ' +
+        shouldNeverAppearInAnyBinding6.toString() +
+        r')';
+  }
+
+  static AllowedDeniedResponse _structDecode(
+      $fidl.Decoder $decoder, int $offset, int $depth) {
+    switch ($decoder.wireFormat) {
+      case $fidl.WireFormat.v1:
+        $decoder.checkPadding($offset + 1, 7);
+        return AllowedDeniedResponse(
+            shouldNeverAppearInAnyBinding4:
+                $fieldType0.decode($decoder, $offset + 0, $depth),
+            shouldNeverAppearInAnyBinding5:
+                $fieldType1.decode($decoder, $offset + 8, $depth),
+            shouldNeverAppearInAnyBinding6:
+                $fieldType2.decode($decoder, $offset + 24, $depth));
+      case $fidl.WireFormat.v2:
+        $decoder.checkPadding($offset + 1, 7);
+        return AllowedDeniedResponse(
+            shouldNeverAppearInAnyBinding4:
+                $fieldType0.decode($decoder, $offset + 0, $depth),
+            shouldNeverAppearInAnyBinding5:
+                $fieldType1.decode($decoder, $offset + 8, $depth),
+            shouldNeverAppearInAnyBinding6:
+                $fieldType2.decode($decoder, $offset + 24, $depth));
+      default:
+        throw $fidl.FidlError('unknown wire format');
+    }
+  }
+}
+
+// See fxbug.dev/7644:
+// ignore: recursive_compile_time_constant
+const $fidl.StructType<AllowedDeniedResponse> kAllowed_Denied_Response_Type =
+    $fidl.StructType<AllowedDeniedResponse>(
+        inlineSizeV1: 48,
+        inlineSizeV2: 40,
+        structDecode: AllowedDeniedResponse._structDecode);
+
+class ShouldNeverAppearInAnyBinding7 extends $fidl.Struct {
+  const ShouldNeverAppearInAnyBinding7({
+    required this.a,
+  });
+  ShouldNeverAppearInAnyBinding7.clone(
+    ShouldNeverAppearInAnyBinding7 $orig, {
+    bool? a,
+  }) : this(
+          a: a ?? $orig.a,
+        );
+
+  final bool a;
+
+  @override
+  List<Object?> get $fields {
+    return <Object?>[
+      a,
+    ];
+  }
+
+  static const $fieldType0 = $fidl.BoolType();
+
+  @override
+  void $encode($fidl.Encoder $encoder, int $offset, int $depth) {
+    switch ($encoder.wireFormat) {
+      case $fidl.WireFormat.v1:
+        $fieldType0.encode($encoder, a, $offset + 0, $depth);
+        break;
+      case $fidl.WireFormat.v2:
+        $fieldType0.encode($encoder, a, $offset + 0, $depth);
+        break;
+      default:
+        throw $fidl.FidlError('unknown wire format');
+    }
+  }
+
+  @override
+  String toString() {
+    return r'ShouldNeverAppearInAnyBinding7' r'(a: ' + a.toString() + r')';
+  }
+
+  static ShouldNeverAppearInAnyBinding7 _structDecode(
+      $fidl.Decoder $decoder, int $offset, int $depth) {
+    switch ($decoder.wireFormat) {
+      case $fidl.WireFormat.v1:
+        return ShouldNeverAppearInAnyBinding7(
+            a: $fieldType0.decode($decoder, $offset + 0, $depth));
+      case $fidl.WireFormat.v2:
+        return ShouldNeverAppearInAnyBinding7(
+            a: $fieldType0.decode($decoder, $offset + 0, $depth));
+      default:
+        throw $fidl.FidlError('unknown wire format');
+    }
+  }
+}
+
+// See fxbug.dev/7644:
+// ignore: recursive_compile_time_constant
+const $fidl.StructType<ShouldNeverAppearInAnyBinding7>
+    kShouldNeverAppearInAnyBinding7_Type =
+    $fidl.StructType<ShouldNeverAppearInAnyBinding7>(
+        inlineSizeV1: 1,
+        inlineSizeV2: 1,
+        structDecode: ShouldNeverAppearInAnyBinding7._structDecode);
+
+class MemberOnlyAppearsInImportingLibrary extends $fidl.Struct {
+  const MemberOnlyAppearsInImportingLibrary({
+    required this.a,
+  });
+  MemberOnlyAppearsInImportingLibrary.clone(
+    MemberOnlyAppearsInImportingLibrary $orig, {
+    bool? a,
+  }) : this(
+          a: a ?? $orig.a,
+        );
+
+  final bool a;
+
+  @override
+  List<Object?> get $fields {
+    return <Object?>[
+      a,
+    ];
+  }
+
+  static const $fieldType0 = $fidl.BoolType();
+
+  @override
+  void $encode($fidl.Encoder $encoder, int $offset, int $depth) {
+    switch ($encoder.wireFormat) {
+      case $fidl.WireFormat.v1:
+        $fieldType0.encode($encoder, a, $offset + 0, $depth);
+        break;
+      case $fidl.WireFormat.v2:
+        $fieldType0.encode($encoder, a, $offset + 0, $depth);
+        break;
+      default:
+        throw $fidl.FidlError('unknown wire format');
+    }
+  }
+
+  @override
+  String toString() {
+    return r'MemberOnlyAppearsInImportingLibrary' r'(a: ' + a.toString() + r')';
+  }
+
+  static MemberOnlyAppearsInImportingLibrary _structDecode(
+      $fidl.Decoder $decoder, int $offset, int $depth) {
+    switch ($decoder.wireFormat) {
+      case $fidl.WireFormat.v1:
+        return MemberOnlyAppearsInImportingLibrary(
+            a: $fieldType0.decode($decoder, $offset + 0, $depth));
+      case $fidl.WireFormat.v2:
+        return MemberOnlyAppearsInImportingLibrary(
+            a: $fieldType0.decode($decoder, $offset + 0, $depth));
+      default:
+        throw $fidl.FidlError('unknown wire format');
+    }
+  }
+}
+
+// See fxbug.dev/7644:
+// ignore: recursive_compile_time_constant
+const $fidl.StructType<MemberOnlyAppearsInImportingLibrary>
+    kMemberOnlyAppearsInImportingLibrary_Type =
+    $fidl.StructType<MemberOnlyAppearsInImportingLibrary>(
+        inlineSizeV1: 1,
+        inlineSizeV2: 1,
+        structDecode: MemberOnlyAppearsInImportingLibrary._structDecode);
+
+class OnlyAppearsInImportingLibrary extends $fidl.Struct {
+  const OnlyAppearsInImportingLibrary({
+    required this.memberOnlyAppearsInImportingLibrary,
+  });
+  OnlyAppearsInImportingLibrary.clone(
+    OnlyAppearsInImportingLibrary $orig, {
+    MemberOnlyAppearsInImportingLibrary? memberOnlyAppearsInImportingLibrary,
+  }) : this(
+          memberOnlyAppearsInImportingLibrary:
+              memberOnlyAppearsInImportingLibrary ??
+                  $orig.memberOnlyAppearsInImportingLibrary,
+        );
+
+  final MemberOnlyAppearsInImportingLibrary memberOnlyAppearsInImportingLibrary;
+
+  @override
+  List<Object?> get $fields {
+    return <Object?>[
+      memberOnlyAppearsInImportingLibrary,
+    ];
+  }
+
+  static const $fieldType0 = kMemberOnlyAppearsInImportingLibrary_Type;
+
+  @override
+  void $encode($fidl.Encoder $encoder, int $offset, int $depth) {
+    switch ($encoder.wireFormat) {
+      case $fidl.WireFormat.v1:
+        $fieldType0.encode(
+            $encoder, memberOnlyAppearsInImportingLibrary, $offset + 0, $depth);
+        break;
+      case $fidl.WireFormat.v2:
+        $fieldType0.encode(
+            $encoder, memberOnlyAppearsInImportingLibrary, $offset + 0, $depth);
+        break;
+      default:
+        throw $fidl.FidlError('unknown wire format');
+    }
+  }
+
+  @override
+  String toString() {
+    return r'OnlyAppearsInImportingLibrary'
+            r'(memberOnlyAppearsInImportingLibrary: ' +
+        memberOnlyAppearsInImportingLibrary.toString() +
+        r')';
+  }
+
+  static OnlyAppearsInImportingLibrary _structDecode(
+      $fidl.Decoder $decoder, int $offset, int $depth) {
+    switch ($decoder.wireFormat) {
+      case $fidl.WireFormat.v1:
+        return OnlyAppearsInImportingLibrary(
+            memberOnlyAppearsInImportingLibrary:
+                $fieldType0.decode($decoder, $offset + 0, $depth));
+      case $fidl.WireFormat.v2:
+        return OnlyAppearsInImportingLibrary(
+            memberOnlyAppearsInImportingLibrary:
+                $fieldType0.decode($decoder, $offset + 0, $depth));
+      default:
+        throw $fidl.FidlError('unknown wire format');
+    }
+  }
+}
+
+// See fxbug.dev/7644:
+// ignore: recursive_compile_time_constant
+const $fidl.StructType<OnlyAppearsInImportingLibrary>
+    kOnlyAppearsInImportingLibrary_Type =
+    $fidl.StructType<OnlyAppearsInImportingLibrary>(
+        inlineSizeV1: 1,
+        inlineSizeV2: 1,
+        structDecode: OnlyAppearsInImportingLibrary._structDecode);
+
+class ShouldNeverAppearInAnyBinding2 extends $fidl.Table {
+  const ShouldNeverAppearInAnyBinding2({
+    this.$unknownData,
+    this.a,
+  });
+
+  ShouldNeverAppearInAnyBinding2._(Map<int, dynamic> argv, this.$unknownData)
+      : a = argv[1];
+
+  @override
+  final Map<int, $fidl.UnknownRawData>? $unknownData;
+  final bool? a;
+
+  @override
+  dynamic $field(int index) {
+    switch (index) {
+      case 0:
+        return a;
+    }
+    return null;
+  }
+
+  @override
+  Map<int, dynamic> get $fields {
+    return {
+      1: a,
+    };
+  }
+
+  static ShouldNeverAppearInAnyBinding2 _ctor(Map<int, dynamic> argv,
+          [Map<int, $fidl.UnknownRawData>? unknownData]) =>
+      ShouldNeverAppearInAnyBinding2._(argv, unknownData);
+}
+
+// See fxbug.dev/7644:
+// ignore: recursive_compile_time_constant
+const $fidl.TableType<ShouldNeverAppearInAnyBinding2>
+    kShouldNeverAppearInAnyBinding2_Type =
+    $fidl.TableType<ShouldNeverAppearInAnyBinding2>(
+  inlineSize: 16,
+  members: [
+    $fidl.BoolType(),
+  ],
+  ctor: ShouldNeverAppearInAnyBinding2._ctor,
+  resource: false,
+);
+
+class ShouldNeverAppearInAnyBinding5 extends $fidl.Table {
+  const ShouldNeverAppearInAnyBinding5({
+    this.$unknownData,
+    this.a,
+  });
+
+  ShouldNeverAppearInAnyBinding5._(Map<int, dynamic> argv, this.$unknownData)
+      : a = argv[1];
+
+  @override
+  final Map<int, $fidl.UnknownRawData>? $unknownData;
+  final bool? a;
+
+  @override
+  dynamic $field(int index) {
+    switch (index) {
+      case 0:
+        return a;
+    }
+    return null;
+  }
+
+  @override
+  Map<int, dynamic> get $fields {
+    return {
+      1: a,
+    };
+  }
+
+  static ShouldNeverAppearInAnyBinding5 _ctor(Map<int, dynamic> argv,
+          [Map<int, $fidl.UnknownRawData>? unknownData]) =>
+      ShouldNeverAppearInAnyBinding5._(argv, unknownData);
+}
+
+// See fxbug.dev/7644:
+// ignore: recursive_compile_time_constant
+const $fidl.TableType<ShouldNeverAppearInAnyBinding5>
+    kShouldNeverAppearInAnyBinding5_Type =
+    $fidl.TableType<ShouldNeverAppearInAnyBinding5>(
+  inlineSize: 16,
+  members: [
+    $fidl.BoolType(),
+  ],
+  ctor: ShouldNeverAppearInAnyBinding5._ctor,
+  resource: false,
+);
+
+class ShouldNeverAppearInAnyBinding8 extends $fidl.Table {
+  const ShouldNeverAppearInAnyBinding8({
+    this.$unknownData,
+    this.a,
+  });
+
+  ShouldNeverAppearInAnyBinding8._(Map<int, dynamic> argv, this.$unknownData)
+      : a = argv[1];
+
+  @override
+  final Map<int, $fidl.UnknownRawData>? $unknownData;
+  final bool? a;
+
+  @override
+  dynamic $field(int index) {
+    switch (index) {
+      case 0:
+        return a;
+    }
+    return null;
+  }
+
+  @override
+  Map<int, dynamic> get $fields {
+    return {
+      1: a,
+    };
+  }
+
+  static ShouldNeverAppearInAnyBinding8 _ctor(Map<int, dynamic> argv,
+          [Map<int, $fidl.UnknownRawData>? unknownData]) =>
+      ShouldNeverAppearInAnyBinding8._(argv, unknownData);
+}
+
+// See fxbug.dev/7644:
+// ignore: recursive_compile_time_constant
+const $fidl.TableType<ShouldNeverAppearInAnyBinding8>
+    kShouldNeverAppearInAnyBinding8_Type =
+    $fidl.TableType<ShouldNeverAppearInAnyBinding8>(
+  inlineSize: 16,
+  members: [
+    $fidl.BoolType(),
+  ],
+  ctor: ShouldNeverAppearInAnyBinding8._ctor,
+  resource: false,
+);
+
+// onlyDenyCpp: (bool a) -> (int b)
+const int _kDenyEachBinding_OnlyDenyCpp_Ordinal = 0x290bad96051b1b92;
+const $fidl.MethodType _kDenyEachBinding_OnlyDenyCpp_Type = $fidl.MethodType(
+  request: <$fidl.MemberType>[
+    $fidl.MemberType<bool>(type: $fidl.BoolType(), offsetV1: 0, offsetV2: 0),
+  ],
+  response: <$fidl.MemberType>[
+    $fidl.MemberType<DenyEachBindingOnlyDenyCppResult>(
+        type: kDenyEachBinding_OnlyDenyCpp_Result_Type,
+        offsetV1: 0,
+        offsetV2: 0),
+  ],
+  name: r"DenyEachBinding.OnlyDenyCpp",
+  requestInlineSizeV1: 8,
+  requestInlineSizeV2: 8,
+  responseInlineSizeV1: 24,
+  responseInlineSizeV2: 16,
+);
+// onlyDenyGo: (bool a) -> (int b)
+const int _kDenyEachBinding_OnlyDenyGo_Ordinal = 0x657655b981478d99;
+const $fidl.MethodType _kDenyEachBinding_OnlyDenyGo_Type = $fidl.MethodType(
+  request: <$fidl.MemberType>[
+    $fidl.MemberType<bool>(type: $fidl.BoolType(), offsetV1: 0, offsetV2: 0),
+  ],
+  response: <$fidl.MemberType>[
+    $fidl.MemberType<DenyEachBindingOnlyDenyGoResult>(
+        type: kDenyEachBinding_OnlyDenyGo_Result_Type,
+        offsetV1: 0,
+        offsetV2: 0),
+  ],
+  name: r"DenyEachBinding.OnlyDenyGo",
+  requestInlineSizeV1: 8,
+  requestInlineSizeV2: 8,
+  responseInlineSizeV1: 24,
+  responseInlineSizeV2: 16,
+);
+// onlyDenyLibfuzzer: (bool a) -> (int b)
+const int _kDenyEachBinding_OnlyDenyLibfuzzer_Ordinal = 0x1e4f89c329617b1e;
+const $fidl.MethodType _kDenyEachBinding_OnlyDenyLibfuzzer_Type =
+    $fidl.MethodType(
+  request: <$fidl.MemberType>[
+    $fidl.MemberType<bool>(type: $fidl.BoolType(), offsetV1: 0, offsetV2: 0),
+  ],
+  response: <$fidl.MemberType>[
+    $fidl.MemberType<DenyEachBindingOnlyDenyLibfuzzerResult>(
+        type: kDenyEachBinding_OnlyDenyLibfuzzer_Result_Type,
+        offsetV1: 0,
+        offsetV2: 0),
+  ],
+  name: r"DenyEachBinding.OnlyDenyLibfuzzer",
+  requestInlineSizeV1: 8,
+  requestInlineSizeV2: 8,
+  responseInlineSizeV1: 24,
+  responseInlineSizeV2: 16,
+);
+// onlyDenyRust: (bool a) -> (int b)
+const int _kDenyEachBinding_OnlyDenyRust_Ordinal = 0x339f67244edd5cb6;
+const $fidl.MethodType _kDenyEachBinding_OnlyDenyRust_Type = $fidl.MethodType(
+  request: <$fidl.MemberType>[
+    $fidl.MemberType<bool>(type: $fidl.BoolType(), offsetV1: 0, offsetV2: 0),
+  ],
+  response: <$fidl.MemberType>[
+    $fidl.MemberType<DenyEachBindingOnlyDenyRustResult>(
+        type: kDenyEachBinding_OnlyDenyRust_Result_Type,
+        offsetV1: 0,
+        offsetV2: 0),
+  ],
+  name: r"DenyEachBinding.OnlyDenyRust",
+  requestInlineSizeV1: 8,
+  requestInlineSizeV2: 8,
+  responseInlineSizeV1: 24,
+  responseInlineSizeV2: 16,
+);
+// onlyDenySyzkaller: (bool a) -> (int b)
+const int _kDenyEachBinding_OnlyDenySyzkaller_Ordinal = 0x202ee614a749e98a;
+const $fidl.MethodType _kDenyEachBinding_OnlyDenySyzkaller_Type =
+    $fidl.MethodType(
+  request: <$fidl.MemberType>[
+    $fidl.MemberType<bool>(type: $fidl.BoolType(), offsetV1: 0, offsetV2: 0),
+  ],
+  response: <$fidl.MemberType>[
+    $fidl.MemberType<DenyEachBindingOnlyDenySyzkallerResult>(
+        type: kDenyEachBinding_OnlyDenySyzkaller_Result_Type,
+        offsetV1: 0,
+        offsetV2: 0),
+  ],
+  name: r"DenyEachBinding.OnlyDenySyzkaller",
+  requestInlineSizeV1: 8,
+  requestInlineSizeV2: 8,
+  responseInlineSizeV1: 24,
+  responseInlineSizeV2: 16,
+);
+
+abstract class DenyEachBinding {
+  $fidl.ServiceData? get $serviceData => DenyEachBindingData();
+  $async.Future<int> onlyDenyCpp(bool a);
+  $async.Future<int> onlyDenyGo(bool a);
+  $async.Future<int> onlyDenyLibfuzzer(bool a);
+  $async.Future<int> onlyDenyRust(bool a);
+  $async.Future<int> onlyDenySyzkaller(bool a);
+}
+
+// TODO: Remove ServiceData for non-service
+class DenyEachBindingData implements $fidl.ServiceData<DenyEachBinding> {
+  const DenyEachBindingData();
+
+  @override
+  String getName() {
+    return "";
+  }
+
+  @override
+  $fidl.AsyncBinding getBinding() {
+    return DenyEachBindingBinding();
+  }
+}
+
+class DenyEachBindingProxy extends $fidl.AsyncProxy<DenyEachBinding>
+    implements DenyEachBinding {
+  DenyEachBindingProxy()
+      : super($fidl.AsyncProxyController<DenyEachBinding>(
+            $interfaceName: r'DenyEachBinding')) {
+    ctrl.onResponse = _handleResponse;
+  }
+  @override
+  Null get $serviceData => null;
+
+  void _handleEvent($fidl.IncomingMessage $message) {
+    switch ($message.ordinal) {
+      default:
+        $fidl.handleCtrlError(
+            ctrl, 'Unexpected message ordinal: ${$message.ordinal}');
+        break;
+    }
+  }
+
+  void _handleResponse($fidl.IncomingMessage $message) {
+    final int $txid = $message.txid;
+    if ($txid == 0) {
+      _handleEvent($message);
+      return;
+    }
+    final $async.Completer? $completer = ctrl.getCompleter($txid);
+    if ($completer == null) {
+      $message.closeHandles();
+      return;
+    }
+    switch ($message.ordinal) {
+      case _kDenyEachBinding_OnlyDenyCpp_Ordinal:
+        final String _name = _kDenyEachBinding_OnlyDenyCpp_Type.name;
+        $fidl.performCtrlWithExceptionHandling(_name, ctrl, () {
+          final List<$fidl.MemberType> $types =
+              _kDenyEachBinding_OnlyDenyCpp_Type.response!;
+          // ignore: prefer_const_declarations
+          final $response = $fidl.decodeMessage(
+              $message,
+              _kDenyEachBinding_OnlyDenyCpp_Type
+                  .responseInlineSize($message.wireFormat),
+              $types[0]);
+
+          if ($response.$tag == DenyEachBindingOnlyDenyCppResultTag.response) {
+            $completer.complete($response.response.b);
+          } else {
+            $completer.completeError($fidl.MethodException($response.err));
+          }
+        }, 'method response');
+        break;
+      case _kDenyEachBinding_OnlyDenyGo_Ordinal:
+        final String _name = _kDenyEachBinding_OnlyDenyGo_Type.name;
+        $fidl.performCtrlWithExceptionHandling(_name, ctrl, () {
+          final List<$fidl.MemberType> $types =
+              _kDenyEachBinding_OnlyDenyGo_Type.response!;
+          // ignore: prefer_const_declarations
+          final $response = $fidl.decodeMessage(
+              $message,
+              _kDenyEachBinding_OnlyDenyGo_Type
+                  .responseInlineSize($message.wireFormat),
+              $types[0]);
+
+          if ($response.$tag == DenyEachBindingOnlyDenyGoResultTag.response) {
+            $completer.complete($response.response.b);
+          } else {
+            $completer.completeError($fidl.MethodException($response.err));
+          }
+        }, 'method response');
+        break;
+      case _kDenyEachBinding_OnlyDenyLibfuzzer_Ordinal:
+        final String _name = _kDenyEachBinding_OnlyDenyLibfuzzer_Type.name;
+        $fidl.performCtrlWithExceptionHandling(_name, ctrl, () {
+          final List<$fidl.MemberType> $types =
+              _kDenyEachBinding_OnlyDenyLibfuzzer_Type.response!;
+          // ignore: prefer_const_declarations
+          final $response = $fidl.decodeMessage(
+              $message,
+              _kDenyEachBinding_OnlyDenyLibfuzzer_Type
+                  .responseInlineSize($message.wireFormat),
+              $types[0]);
+
+          if ($response.$tag ==
+              DenyEachBindingOnlyDenyLibfuzzerResultTag.response) {
+            $completer.complete($response.response.b);
+          } else {
+            $completer.completeError($fidl.MethodException($response.err));
+          }
+        }, 'method response');
+        break;
+      case _kDenyEachBinding_OnlyDenyRust_Ordinal:
+        final String _name = _kDenyEachBinding_OnlyDenyRust_Type.name;
+        $fidl.performCtrlWithExceptionHandling(_name, ctrl, () {
+          final List<$fidl.MemberType> $types =
+              _kDenyEachBinding_OnlyDenyRust_Type.response!;
+          // ignore: prefer_const_declarations
+          final $response = $fidl.decodeMessage(
+              $message,
+              _kDenyEachBinding_OnlyDenyRust_Type
+                  .responseInlineSize($message.wireFormat),
+              $types[0]);
+
+          if ($response.$tag == DenyEachBindingOnlyDenyRustResultTag.response) {
+            $completer.complete($response.response.b);
+          } else {
+            $completer.completeError($fidl.MethodException($response.err));
+          }
+        }, 'method response');
+        break;
+      case _kDenyEachBinding_OnlyDenySyzkaller_Ordinal:
+        final String _name = _kDenyEachBinding_OnlyDenySyzkaller_Type.name;
+        $fidl.performCtrlWithExceptionHandling(_name, ctrl, () {
+          final List<$fidl.MemberType> $types =
+              _kDenyEachBinding_OnlyDenySyzkaller_Type.response!;
+          // ignore: prefer_const_declarations
+          final $response = $fidl.decodeMessage(
+              $message,
+              _kDenyEachBinding_OnlyDenySyzkaller_Type
+                  .responseInlineSize($message.wireFormat),
+              $types[0]);
+
+          if ($response.$tag ==
+              DenyEachBindingOnlyDenySyzkallerResultTag.response) {
+            $completer.complete($response.response.b);
+          } else {
+            $completer.completeError($fidl.MethodException($response.err));
+          }
+        }, 'method response');
+        break;
+      default:
+        $fidl.handleCtrlError(
+            ctrl, 'Unexpected message ordinal: ${$message.ordinal}');
+        break;
+    }
+  }
+
+  @override
+  $async.Future<int> onlyDenyCpp(bool a) async {
+    if (!ctrl.isBound) {
+      return $async.Future.error(
+          $fidl.FidlStateException('Proxy<${ctrl.$interfaceName}> is closed.'),
+          StackTrace.current);
+    }
+
+    final $fidl.Encoder $encoder = $fidl.Encoder($fidl.kWireFormatDefault);
+    $encoder.encodeMessageHeader(_kDenyEachBinding_OnlyDenyCpp_Ordinal, 0);
+    final List<$fidl.MemberType> $types =
+        _kDenyEachBinding_OnlyDenyCpp_Type.request!;
+    $fidl.encodeMessageWithCallback(
+        $encoder,
+        _kDenyEachBinding_OnlyDenyCpp_Type
+            .requestInlineSize($encoder.wireFormat), () {
+      $types[0].encode($encoder, a, $fidl.kMessageHeaderSize, 1);
+    });
+    final $completer = $async.Completer<int>();
+    ctrl.sendMessageWithResponse($encoder.message, $completer);
+    return $completer.future;
+  }
+
+  @override
+  $async.Future<int> onlyDenyGo(bool a) async {
+    if (!ctrl.isBound) {
+      return $async.Future.error(
+          $fidl.FidlStateException('Proxy<${ctrl.$interfaceName}> is closed.'),
+          StackTrace.current);
+    }
+
+    final $fidl.Encoder $encoder = $fidl.Encoder($fidl.kWireFormatDefault);
+    $encoder.encodeMessageHeader(_kDenyEachBinding_OnlyDenyGo_Ordinal, 0);
+    final List<$fidl.MemberType> $types =
+        _kDenyEachBinding_OnlyDenyGo_Type.request!;
+    $fidl.encodeMessageWithCallback(
+        $encoder,
+        _kDenyEachBinding_OnlyDenyGo_Type
+            .requestInlineSize($encoder.wireFormat), () {
+      $types[0].encode($encoder, a, $fidl.kMessageHeaderSize, 1);
+    });
+    final $completer = $async.Completer<int>();
+    ctrl.sendMessageWithResponse($encoder.message, $completer);
+    return $completer.future;
+  }
+
+  @override
+  $async.Future<int> onlyDenyLibfuzzer(bool a) async {
+    if (!ctrl.isBound) {
+      return $async.Future.error(
+          $fidl.FidlStateException('Proxy<${ctrl.$interfaceName}> is closed.'),
+          StackTrace.current);
+    }
+
+    final $fidl.Encoder $encoder = $fidl.Encoder($fidl.kWireFormatDefault);
+    $encoder.encodeMessageHeader(
+        _kDenyEachBinding_OnlyDenyLibfuzzer_Ordinal, 0);
+    final List<$fidl.MemberType> $types =
+        _kDenyEachBinding_OnlyDenyLibfuzzer_Type.request!;
+    $fidl.encodeMessageWithCallback(
+        $encoder,
+        _kDenyEachBinding_OnlyDenyLibfuzzer_Type
+            .requestInlineSize($encoder.wireFormat), () {
+      $types[0].encode($encoder, a, $fidl.kMessageHeaderSize, 1);
+    });
+    final $completer = $async.Completer<int>();
+    ctrl.sendMessageWithResponse($encoder.message, $completer);
+    return $completer.future;
+  }
+
+  @override
+  $async.Future<int> onlyDenyRust(bool a) async {
+    if (!ctrl.isBound) {
+      return $async.Future.error(
+          $fidl.FidlStateException('Proxy<${ctrl.$interfaceName}> is closed.'),
+          StackTrace.current);
+    }
+
+    final $fidl.Encoder $encoder = $fidl.Encoder($fidl.kWireFormatDefault);
+    $encoder.encodeMessageHeader(_kDenyEachBinding_OnlyDenyRust_Ordinal, 0);
+    final List<$fidl.MemberType> $types =
+        _kDenyEachBinding_OnlyDenyRust_Type.request!;
+    $fidl.encodeMessageWithCallback(
+        $encoder,
+        _kDenyEachBinding_OnlyDenyRust_Type
+            .requestInlineSize($encoder.wireFormat), () {
+      $types[0].encode($encoder, a, $fidl.kMessageHeaderSize, 1);
+    });
+    final $completer = $async.Completer<int>();
+    ctrl.sendMessageWithResponse($encoder.message, $completer);
+    return $completer.future;
+  }
+
+  @override
+  $async.Future<int> onlyDenySyzkaller(bool a) async {
+    if (!ctrl.isBound) {
+      return $async.Future.error(
+          $fidl.FidlStateException('Proxy<${ctrl.$interfaceName}> is closed.'),
+          StackTrace.current);
+    }
+
+    final $fidl.Encoder $encoder = $fidl.Encoder($fidl.kWireFormatDefault);
+    $encoder.encodeMessageHeader(
+        _kDenyEachBinding_OnlyDenySyzkaller_Ordinal, 0);
+    final List<$fidl.MemberType> $types =
+        _kDenyEachBinding_OnlyDenySyzkaller_Type.request!;
+    $fidl.encodeMessageWithCallback(
+        $encoder,
+        _kDenyEachBinding_OnlyDenySyzkaller_Type
+            .requestInlineSize($encoder.wireFormat), () {
+      $types[0].encode($encoder, a, $fidl.kMessageHeaderSize, 1);
+    });
+    final $completer = $async.Completer<int>();
+    ctrl.sendMessageWithResponse($encoder.message, $completer);
+    return $completer.future;
+  }
+}
+
+class DenyEachBindingBinding extends $fidl.AsyncBinding<DenyEachBinding> {
+  DenyEachBindingBinding() : super(r"DenyEachBinding");
+
+  @override
+  void handleMessage(
+      $fidl.IncomingMessage $message, $fidl.OutgoingMessageSink $respond) {
+    switch ($message.ordinal) {
+      case _kDenyEachBinding_OnlyDenyCpp_Ordinal:
+        final String _name = _kDenyEachBinding_OnlyDenyCpp_Type.name;
+        $fidl.performWithExceptionHandling(_name, () {
+          final List<$fidl.MemberType> $types =
+              _kDenyEachBinding_OnlyDenyCpp_Type.request!;
+          // ignore: prefer_const_declarations
+          final _impl = impl!;
+          final $async.Future<int> $future = $fidl
+              .decodeMessageWithCallback<$async.Future<int>>(
+                  $message,
+                  _kDenyEachBinding_OnlyDenyCpp_Type.requestInlineSize(
+                      $message.wireFormat), ($fidl.Decoder decoder) {
+            return _impl.onlyDenyCpp(
+              $types[0].decode(decoder, $fidl.kMessageHeaderSize, 1),
+            );
+          });
+          $future.then(($responseValue) {
+            return DenyEachBindingOnlyDenyCppResult.withResponse(
+                DenyEachBindingOnlyDenyCppResponse(b: $responseValue));
+          }, onError: ($error) {
+            if ($error is $fidl.MethodException) {
+              return DenyEachBindingOnlyDenyCppResult.withErr($error.value);
+            } else {
+              return Future.error($error, StackTrace.current);
+            }
+          }).then(($response) {
+            final $fidl.Encoder $encoder =
+                $fidl.Encoder($fidl.kWireFormatDefault);
+            $encoder.encodeMessageHeader(
+                _kDenyEachBinding_OnlyDenyCpp_Ordinal, $message.txid);
+            final List<$fidl.MemberType> $types =
+                _kDenyEachBinding_OnlyDenyCpp_Type.response!;
+            $fidl.encodeMessage(
+                $encoder,
+                _kDenyEachBinding_OnlyDenyCpp_Type
+                    .responseInlineSize($encoder.wireFormat),
+                $types[0],
+                $response);
+            $respond($encoder.message);
+          }, onError: (_e) {
+            $fidl.handleException(_name, _e, close);
+          });
+        }, close);
+        break;
+      case _kDenyEachBinding_OnlyDenyGo_Ordinal:
+        final String _name = _kDenyEachBinding_OnlyDenyGo_Type.name;
+        $fidl.performWithExceptionHandling(_name, () {
+          final List<$fidl.MemberType> $types =
+              _kDenyEachBinding_OnlyDenyGo_Type.request!;
+          // ignore: prefer_const_declarations
+          final _impl = impl!;
+          final $async.Future<int> $future = $fidl
+              .decodeMessageWithCallback<$async.Future<int>>(
+                  $message,
+                  _kDenyEachBinding_OnlyDenyGo_Type.requestInlineSize(
+                      $message.wireFormat), ($fidl.Decoder decoder) {
+            return _impl.onlyDenyGo(
+              $types[0].decode(decoder, $fidl.kMessageHeaderSize, 1),
+            );
+          });
+          $future.then(($responseValue) {
+            return DenyEachBindingOnlyDenyGoResult.withResponse(
+                DenyEachBindingOnlyDenyGoResponse(b: $responseValue));
+          }, onError: ($error) {
+            if ($error is $fidl.MethodException) {
+              return DenyEachBindingOnlyDenyGoResult.withErr($error.value);
+            } else {
+              return Future.error($error, StackTrace.current);
+            }
+          }).then(($response) {
+            final $fidl.Encoder $encoder =
+                $fidl.Encoder($fidl.kWireFormatDefault);
+            $encoder.encodeMessageHeader(
+                _kDenyEachBinding_OnlyDenyGo_Ordinal, $message.txid);
+            final List<$fidl.MemberType> $types =
+                _kDenyEachBinding_OnlyDenyGo_Type.response!;
+            $fidl.encodeMessage(
+                $encoder,
+                _kDenyEachBinding_OnlyDenyGo_Type
+                    .responseInlineSize($encoder.wireFormat),
+                $types[0],
+                $response);
+            $respond($encoder.message);
+          }, onError: (_e) {
+            $fidl.handleException(_name, _e, close);
+          });
+        }, close);
+        break;
+      case _kDenyEachBinding_OnlyDenyLibfuzzer_Ordinal:
+        final String _name = _kDenyEachBinding_OnlyDenyLibfuzzer_Type.name;
+        $fidl.performWithExceptionHandling(_name, () {
+          final List<$fidl.MemberType> $types =
+              _kDenyEachBinding_OnlyDenyLibfuzzer_Type.request!;
+          // ignore: prefer_const_declarations
+          final _impl = impl!;
+          final $async.Future<int> $future = $fidl
+              .decodeMessageWithCallback<$async.Future<int>>(
+                  $message,
+                  _kDenyEachBinding_OnlyDenyLibfuzzer_Type.requestInlineSize(
+                      $message.wireFormat), ($fidl.Decoder decoder) {
+            return _impl.onlyDenyLibfuzzer(
+              $types[0].decode(decoder, $fidl.kMessageHeaderSize, 1),
+            );
+          });
+          $future.then(($responseValue) {
+            return DenyEachBindingOnlyDenyLibfuzzerResult.withResponse(
+                DenyEachBindingOnlyDenyLibfuzzerResponse(b: $responseValue));
+          }, onError: ($error) {
+            if ($error is $fidl.MethodException) {
+              return DenyEachBindingOnlyDenyLibfuzzerResult.withErr(
+                  $error.value);
+            } else {
+              return Future.error($error, StackTrace.current);
+            }
+          }).then(($response) {
+            final $fidl.Encoder $encoder =
+                $fidl.Encoder($fidl.kWireFormatDefault);
+            $encoder.encodeMessageHeader(
+                _kDenyEachBinding_OnlyDenyLibfuzzer_Ordinal, $message.txid);
+            final List<$fidl.MemberType> $types =
+                _kDenyEachBinding_OnlyDenyLibfuzzer_Type.response!;
+            $fidl.encodeMessage(
+                $encoder,
+                _kDenyEachBinding_OnlyDenyLibfuzzer_Type
+                    .responseInlineSize($encoder.wireFormat),
+                $types[0],
+                $response);
+            $respond($encoder.message);
+          }, onError: (_e) {
+            $fidl.handleException(_name, _e, close);
+          });
+        }, close);
+        break;
+      case _kDenyEachBinding_OnlyDenyRust_Ordinal:
+        final String _name = _kDenyEachBinding_OnlyDenyRust_Type.name;
+        $fidl.performWithExceptionHandling(_name, () {
+          final List<$fidl.MemberType> $types =
+              _kDenyEachBinding_OnlyDenyRust_Type.request!;
+          // ignore: prefer_const_declarations
+          final _impl = impl!;
+          final $async.Future<int> $future = $fidl
+              .decodeMessageWithCallback<$async.Future<int>>(
+                  $message,
+                  _kDenyEachBinding_OnlyDenyRust_Type.requestInlineSize(
+                      $message.wireFormat), ($fidl.Decoder decoder) {
+            return _impl.onlyDenyRust(
+              $types[0].decode(decoder, $fidl.kMessageHeaderSize, 1),
+            );
+          });
+          $future.then(($responseValue) {
+            return DenyEachBindingOnlyDenyRustResult.withResponse(
+                DenyEachBindingOnlyDenyRustResponse(b: $responseValue));
+          }, onError: ($error) {
+            if ($error is $fidl.MethodException) {
+              return DenyEachBindingOnlyDenyRustResult.withErr($error.value);
+            } else {
+              return Future.error($error, StackTrace.current);
+            }
+          }).then(($response) {
+            final $fidl.Encoder $encoder =
+                $fidl.Encoder($fidl.kWireFormatDefault);
+            $encoder.encodeMessageHeader(
+                _kDenyEachBinding_OnlyDenyRust_Ordinal, $message.txid);
+            final List<$fidl.MemberType> $types =
+                _kDenyEachBinding_OnlyDenyRust_Type.response!;
+            $fidl.encodeMessage(
+                $encoder,
+                _kDenyEachBinding_OnlyDenyRust_Type
+                    .responseInlineSize($encoder.wireFormat),
+                $types[0],
+                $response);
+            $respond($encoder.message);
+          }, onError: (_e) {
+            $fidl.handleException(_name, _e, close);
+          });
+        }, close);
+        break;
+      case _kDenyEachBinding_OnlyDenySyzkaller_Ordinal:
+        final String _name = _kDenyEachBinding_OnlyDenySyzkaller_Type.name;
+        $fidl.performWithExceptionHandling(_name, () {
+          final List<$fidl.MemberType> $types =
+              _kDenyEachBinding_OnlyDenySyzkaller_Type.request!;
+          // ignore: prefer_const_declarations
+          final _impl = impl!;
+          final $async.Future<int> $future = $fidl
+              .decodeMessageWithCallback<$async.Future<int>>(
+                  $message,
+                  _kDenyEachBinding_OnlyDenySyzkaller_Type.requestInlineSize(
+                      $message.wireFormat), ($fidl.Decoder decoder) {
+            return _impl.onlyDenySyzkaller(
+              $types[0].decode(decoder, $fidl.kMessageHeaderSize, 1),
+            );
+          });
+          $future.then(($responseValue) {
+            return DenyEachBindingOnlyDenySyzkallerResult.withResponse(
+                DenyEachBindingOnlyDenySyzkallerResponse(b: $responseValue));
+          }, onError: ($error) {
+            if ($error is $fidl.MethodException) {
+              return DenyEachBindingOnlyDenySyzkallerResult.withErr(
+                  $error.value);
+            } else {
+              return Future.error($error, StackTrace.current);
+            }
+          }).then(($response) {
+            final $fidl.Encoder $encoder =
+                $fidl.Encoder($fidl.kWireFormatDefault);
+            $encoder.encodeMessageHeader(
+                _kDenyEachBinding_OnlyDenySyzkaller_Ordinal, $message.txid);
+            final List<$fidl.MemberType> $types =
+                _kDenyEachBinding_OnlyDenySyzkaller_Type.response!;
+            $fidl.encodeMessage(
+                $encoder,
+                _kDenyEachBinding_OnlyDenySyzkaller_Type
+                    .responseInlineSize($encoder.wireFormat),
+                $types[0],
+                $response);
+            $respond($encoder.message);
+          }, onError: (_e) {
+            $fidl.handleException(_name, _e, close);
+          });
+        }, close);
+        break;
+      default:
+        throw $fidl.FidlError(
+            r'Unexpected message name for DenyEachBindingBinding');
+    }
+  }
+}
+
+abstract class Allowed {
+  $fidl.ServiceData? get $serviceData => AllowedData();
+}
+
+// TODO: Remove ServiceData for non-service
+class AllowedData implements $fidl.ServiceData<Allowed> {
+  const AllowedData();
+
+  @override
+  String getName() {
+    return "";
+  }
+
+  @override
+  $fidl.AsyncBinding getBinding() {
+    return AllowedBinding();
+  }
+}
+
+class AllowedProxy extends $fidl.AsyncProxy<Allowed> implements Allowed {
+  AllowedProxy()
+      : super($fidl.AsyncProxyController<Allowed>($interfaceName: r'Allowed')) {
+    ctrl.onResponse = _handleResponse;
+  }
+  @override
+  Null get $serviceData => null;
+
+  void _handleEvent($fidl.IncomingMessage $message) {
+    switch ($message.ordinal) {
+      default:
+        $fidl.handleCtrlError(
+            ctrl, 'Unexpected message ordinal: ${$message.ordinal}');
+        break;
+    }
+  }
+
+  void _handleResponse($fidl.IncomingMessage $message) {
+    final int $txid = $message.txid;
+    if ($txid == 0) {
+      _handleEvent($message);
+      return;
+    }
+    final $async.Completer? $completer = ctrl.getCompleter($txid);
+    if ($completer == null) {
+      $message.closeHandles();
+      return;
+    }
+    switch ($message.ordinal) {
+      default:
+        $fidl.handleCtrlError(
+            ctrl, 'Unexpected message ordinal: ${$message.ordinal}');
+        break;
+    }
+  }
+}
+
+class AllowedBinding extends $fidl.AsyncBinding<Allowed> {
+  AllowedBinding() : super(r"Allowed");
+
+  @override
+  void handleMessage(
+      $fidl.IncomingMessage $message, $fidl.OutgoingMessageSink $respond) {
+    switch ($message.ordinal) {
+      default:
+        throw $fidl.FidlError(r'Unexpected message name for AllowedBinding');
+    }
+  }
+}
+
+// unattributed: ()
+const int _kImportsSameNameContext_Unattributed_Ordinal = 0x698380acfd29e8f;
+const $fidl.MethodType _kImportsSameNameContext_Unattributed_Type =
+    $fidl.MethodType(
+  request: [],
+  response: [],
+  name: r"ImportsSameNameContext.Unattributed",
+  requestInlineSizeV1: 0,
+  requestInlineSizeV2: 0,
+  responseInlineSizeV1: 0,
+  responseInlineSizeV2: 0,
+);
+// alwaysAppearsInImportingLibrary: ()
+const int _kImportsSameNameContext_AlwaysAppearsInImportingLibrary_Ordinal =
+    0x2874096c521236f8;
+const $fidl.MethodType
+    _kImportsSameNameContext_AlwaysAppearsInImportingLibrary_Type =
+    $fidl.MethodType(
+  request: [],
+  response: [],
+  name: r"ImportsSameNameContext.AlwaysAppearsInImportingLibrary",
+  requestInlineSizeV1: 0,
+  requestInlineSizeV2: 0,
+  responseInlineSizeV1: 0,
+  responseInlineSizeV2: 0,
+);
+
+abstract class ImportsSameNameContext {
+  $fidl.ServiceData? get $serviceData => ImportsSameNameContextData();
+  $async.Future<void> unattributed();
+  $async.Future<void> alwaysAppearsInImportingLibrary();
+}
+
+// TODO: Remove ServiceData for non-service
+class ImportsSameNameContextData
+    implements $fidl.ServiceData<ImportsSameNameContext> {
+  const ImportsSameNameContextData();
+
+  @override
+  String getName() {
+    return "";
+  }
+
+  @override
+  $fidl.AsyncBinding getBinding() {
+    return ImportsSameNameContextBinding();
+  }
+}
+
+class ImportsSameNameContextProxy extends $fidl
+    .AsyncProxy<ImportsSameNameContext> implements ImportsSameNameContext {
+  ImportsSameNameContextProxy()
+      : super($fidl.AsyncProxyController<ImportsSameNameContext>(
+            $interfaceName: r'ImportsSameNameContext')) {
+    ctrl.onResponse = _handleResponse;
+  }
+  @override
+  Null get $serviceData => null;
+
+  void _handleEvent($fidl.IncomingMessage $message) {
+    switch ($message.ordinal) {
+      default:
+        $fidl.handleCtrlError(
+            ctrl, 'Unexpected message ordinal: ${$message.ordinal}');
+        break;
+    }
+  }
+
+  void _handleResponse($fidl.IncomingMessage $message) {
+    final int $txid = $message.txid;
+    if ($txid == 0) {
+      _handleEvent($message);
+      return;
+    }
+    final $async.Completer? $completer = ctrl.getCompleter($txid);
+    if ($completer == null) {
+      $message.closeHandles();
+      return;
+    }
+    switch ($message.ordinal) {
+      default:
+        $fidl.handleCtrlError(
+            ctrl, 'Unexpected message ordinal: ${$message.ordinal}');
+        break;
+    }
+  }
+
+  @override
+  $async.Future<void> unattributed() async {
+    if (!ctrl.isBound) {
+      return $async.Future.error(
+          $fidl.FidlStateException('Proxy<${ctrl.$interfaceName}> is closed.'),
+          StackTrace.current);
+    }
+
+    final $fidl.Encoder $encoder = $fidl.Encoder($fidl.kWireFormatDefault);
+    $encoder.encodeMessageHeader(
+        _kImportsSameNameContext_Unattributed_Ordinal, 0);
+    return $async.Future.sync(() {
+      ctrl.sendMessage($encoder.message);
+    });
+  }
+
+  @override
+  $async.Future<void> alwaysAppearsInImportingLibrary() async {
+    if (!ctrl.isBound) {
+      return $async.Future.error(
+          $fidl.FidlStateException('Proxy<${ctrl.$interfaceName}> is closed.'),
+          StackTrace.current);
+    }
+
+    final $fidl.Encoder $encoder = $fidl.Encoder($fidl.kWireFormatDefault);
+    $encoder.encodeMessageHeader(
+        _kImportsSameNameContext_AlwaysAppearsInImportingLibrary_Ordinal, 0);
+    return $async.Future.sync(() {
+      ctrl.sendMessage($encoder.message);
+    });
+  }
+}
+
+class ImportsSameNameContextBinding
+    extends $fidl.AsyncBinding<ImportsSameNameContext> {
+  ImportsSameNameContextBinding() : super(r"ImportsSameNameContext");
+
+  @override
+  void handleMessage(
+      $fidl.IncomingMessage $message, $fidl.OutgoingMessageSink $respond) {
+    switch ($message.ordinal) {
+      case _kImportsSameNameContext_Unattributed_Ordinal:
+        final String _name = _kImportsSameNameContext_Unattributed_Type.name;
+        $fidl.performWithExceptionHandling(_name, () {
+          final List<$fidl.MemberType> $types =
+              _kImportsSameNameContext_Unattributed_Type.request!;
+          // ignore: prefer_const_declarations
+          final _impl = impl!;
+          final $async.Future<void> $future = $fidl
+              .decodeMessageWithCallback<$async.Future<void>>(
+                  $message,
+                  _kImportsSameNameContext_Unattributed_Type.requestInlineSize(
+                      $message.wireFormat), ($fidl.Decoder decoder) {
+            return _impl.unattributed();
+          });
+        }, close);
+        break;
+      case _kImportsSameNameContext_AlwaysAppearsInImportingLibrary_Ordinal:
+        final String _name =
+            _kImportsSameNameContext_AlwaysAppearsInImportingLibrary_Type.name;
+        $fidl.performWithExceptionHandling(_name, () {
+          final List<$fidl.MemberType> $types =
+              _kImportsSameNameContext_AlwaysAppearsInImportingLibrary_Type
+                  .request!;
+          // ignore: prefer_const_declarations
+          final _impl = impl!;
+          final $async.Future<void> $future = $fidl
+              .decodeMessageWithCallback<$async.Future<void>>(
+                  $message,
+                  _kImportsSameNameContext_AlwaysAppearsInImportingLibrary_Type
+                      .requestInlineSize($message.wireFormat),
+                  ($fidl.Decoder decoder) {
+            return _impl.alwaysAppearsInImportingLibrary();
+          });
+        }, close);
+        break;
+      default:
+        throw $fidl.FidlError(
+            r'Unexpected message name for ImportsSameNameContextBinding');
+    }
+  }
+}

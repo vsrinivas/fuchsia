@@ -16,11 +16,541 @@
 
 #endif  // __Fuchsia__
 
+#include <fidl/test.dependent/cpp/wire_messaging.h>
+
 namespace test_bindingsdenylist {
+class ImportsSameNameContext;
+
+class Allowed;
+
 class OnlyLibfuzzerAndDeps;
 
 class OnlyCppAndDeps;
 
+class DenyEachBinding;
+
+__LOCAL extern "C" const fidl_type_t
+    test_bindingsdenylist_ImportsSameNameContextUnattributedRequestMessageTable;
+
+__LOCAL extern "C" const fidl_type_t
+    test_bindingsdenylist_ImportsSameNameContextUnattributedResponseMessageTable;
+
+__LOCAL extern "C" const fidl_type_t
+    test_bindingsdenylist_ImportsSameNameContextAlwaysAppearsInImportingLibraryRequestMessageTable;
+
+__LOCAL extern "C" const fidl_type_t
+    test_bindingsdenylist_ImportsSameNameContextAlwaysAppearsInImportingLibraryResponseMessageTable;
+}  // namespace test_bindingsdenylist
+template <>
+struct ::fidl::internal::WireOrdinal<
+    ::test_bindingsdenylist::ImportsSameNameContext::Unattributed>
+    final {
+  static constexpr uint64_t value = 475191379775102607lu;
+};
+template <>
+struct ::fidl::internal::WireOrdinal<
+    ::test_bindingsdenylist::ImportsSameNameContext::
+        AlwaysAppearsInImportingLibrary>
+    final {
+  static constexpr uint64_t value = 2914965219653596920lu;
+};
+
+namespace test_bindingsdenylist {}  // namespace test_bindingsdenylist
+#ifdef __Fuchsia__
+
+template <>
+struct ::fidl::internal::ProtocolDetails<
+    ::test_bindingsdenylist::ImportsSameNameContext> {};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+template <>
+struct ::fidl::internal::WireServerDispatcher<
+    ::test_bindingsdenylist::ImportsSameNameContext>
+    final {
+  WireServerDispatcher() = delete;
+  static ::fidl::DispatchResult TryDispatch(
+      ::fidl::WireServer<::test_bindingsdenylist::ImportsSameNameContext>* impl,
+      ::fidl::IncomingMessage& msg,
+      internal::IncomingTransportContext transport_context,
+      ::fidl::Transaction* txn);
+  static void Dispatch(
+      ::fidl::WireServer<::test_bindingsdenylist::ImportsSameNameContext>* impl,
+      ::fidl::IncomingMessage&& msg,
+      internal::IncomingTransportContext transport_context,
+      ::fidl::Transaction* txn);
+
+ private:
+  static const ::fidl::internal::MethodEntry entries_[];
+  static const ::fidl::internal::MethodEntry* entries_end_;
+};
+#endif  // __Fuchsia__
+
+template <>
+struct ::fidl::WireRequest<
+    ::test_bindingsdenylist::ImportsSameNameContext::Unattributed>
+    final {
+  FIDL_ALIGNDECL
+  fidl_message_header_t _hdr;
+
+  WireRequest() { _InitHeader(); }
+
+  static constexpr const fidl_type_t* Type =
+      &::fidl::_llcpp_coding_AnyZeroArgMessageTable;
+  static constexpr uint32_t MaxNumHandles = 0;
+  static constexpr uint32_t PrimarySize = 16;
+  static constexpr uint32_t PrimarySizeV1 = 16;
+  static constexpr uint32_t MaxOutOfLine = 0;
+  static constexpr uint32_t MaxOutOfLineV1 = 0;
+  static constexpr bool HasFlexibleEnvelope = false;
+  static constexpr bool HasPointer = false;
+  static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
+      ::fidl::internal::TransactionalMessageKind::kRequest;
+
+  class UnownedEncodedMessage;
+  class OwnedEncodedMessage;
+
+ public:
+  class DecodedMessage;
+
+ private:
+  void _InitHeader();
+};
+template <>
+struct ::fidl::WireRequest<::test_bindingsdenylist::ImportsSameNameContext::
+                               AlwaysAppearsInImportingLibrary>
+    final {
+  FIDL_ALIGNDECL
+  fidl_message_header_t _hdr;
+
+  WireRequest() { _InitHeader(); }
+
+  static constexpr const fidl_type_t* Type =
+      &::fidl::_llcpp_coding_AnyZeroArgMessageTable;
+  static constexpr uint32_t MaxNumHandles = 0;
+  static constexpr uint32_t PrimarySize = 16;
+  static constexpr uint32_t PrimarySizeV1 = 16;
+  static constexpr uint32_t MaxOutOfLine = 0;
+  static constexpr uint32_t MaxOutOfLineV1 = 0;
+  static constexpr bool HasFlexibleEnvelope = false;
+  static constexpr bool HasPointer = false;
+  static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
+      ::fidl::internal::TransactionalMessageKind::kRequest;
+
+  class UnownedEncodedMessage;
+  class OwnedEncodedMessage;
+
+ public:
+  class DecodedMessage;
+
+ private:
+  void _InitHeader();
+};
+#ifdef __Fuchsia__
+
+template <>
+class ::fidl::WireResult<
+    ::test_bindingsdenylist::ImportsSameNameContext::Unattributed>
+    final : public ::fidl::Result {
+ public:
+  WireResult(
+      ::fidl::UnownedClientEnd<::test_bindingsdenylist::ImportsSameNameContext>
+          client,
+      ::fidl::WireRequest<
+          ::test_bindingsdenylist::ImportsSameNameContext::Unattributed>*
+          request);
+  explicit WireResult(const ::fidl::Result& result) : ::fidl::Result(result) {}
+  WireResult(WireResult&&) = delete;
+  WireResult(const WireResult&) = delete;
+  WireResult* operator=(WireResult&&) = delete;
+  WireResult* operator=(const WireResult&) = delete;
+  ~WireResult() = default;
+
+ private:
+};
+template <>
+class ::fidl::WireUnownedResult<
+    ::test_bindingsdenylist::ImportsSameNameContext::Unattributed>
+    final : public ::fidl::Result {
+ public:
+  explicit WireUnownedResult(
+      ::fidl::UnownedClientEnd<::test_bindingsdenylist::ImportsSameNameContext>
+          client_end,
+      ::fidl::internal::AnyBufferAllocator& allocator,
+      ::fidl::WireRequest<
+          ::test_bindingsdenylist::ImportsSameNameContext::Unattributed>*
+          request);
+  explicit WireUnownedResult(const ::fidl::Result& result)
+      : ::fidl::Result(result) {}
+  WireUnownedResult(WireUnownedResult&&) = delete;
+  WireUnownedResult(const WireUnownedResult&) = delete;
+  WireUnownedResult* operator=(WireUnownedResult&&) = delete;
+  WireUnownedResult* operator=(const WireUnownedResult&) = delete;
+  ~WireUnownedResult() = default;
+};
+template <>
+class ::fidl::WireResult<::test_bindingsdenylist::ImportsSameNameContext::
+                             AlwaysAppearsInImportingLibrary>
+    final : public ::fidl::Result {
+ public:
+  WireResult(
+      ::fidl::UnownedClientEnd<::test_bindingsdenylist::ImportsSameNameContext>
+          client,
+      ::fidl::WireRequest<::test_bindingsdenylist::ImportsSameNameContext::
+                              AlwaysAppearsInImportingLibrary>* request);
+  explicit WireResult(const ::fidl::Result& result) : ::fidl::Result(result) {}
+  WireResult(WireResult&&) = delete;
+  WireResult(const WireResult&) = delete;
+  WireResult* operator=(WireResult&&) = delete;
+  WireResult* operator=(const WireResult&) = delete;
+  ~WireResult() = default;
+
+ private:
+};
+template <>
+class ::fidl::WireUnownedResult<
+    ::test_bindingsdenylist::ImportsSameNameContext::
+        AlwaysAppearsInImportingLibrary>
+    final : public ::fidl::Result {
+ public:
+  explicit WireUnownedResult(
+      ::fidl::UnownedClientEnd<::test_bindingsdenylist::ImportsSameNameContext>
+          client_end,
+      ::fidl::internal::AnyBufferAllocator& allocator,
+      ::fidl::WireRequest<::test_bindingsdenylist::ImportsSameNameContext::
+                              AlwaysAppearsInImportingLibrary>* request);
+  explicit WireUnownedResult(const ::fidl::Result& result)
+      : ::fidl::Result(result) {}
+  WireUnownedResult(WireUnownedResult&&) = delete;
+  WireUnownedResult(const WireUnownedResult&) = delete;
+  WireUnownedResult* operator=(WireUnownedResult&&) = delete;
+  WireUnownedResult* operator=(const WireUnownedResult&) = delete;
+  ~WireUnownedResult() = default;
+};
+template <>
+class ::fidl::internal::WireEventHandlerInterface<
+    ::test_bindingsdenylist::ImportsSameNameContext> {
+ public:
+  WireEventHandlerInterface() = default;
+  virtual ~WireEventHandlerInterface() = default;
+};
+
+template <>
+class ::fidl::WireAsyncEventHandler<
+    ::test_bindingsdenylist::ImportsSameNameContext>
+    : public ::fidl::internal::WireEventHandlerInterface<
+          ::test_bindingsdenylist::ImportsSameNameContext>,
+      public ::fidl::internal::AsyncEventHandler {
+ public:
+  WireAsyncEventHandler() = default;
+};
+
+template <>
+class ::fidl::WireSyncEventHandler<
+    ::test_bindingsdenylist::ImportsSameNameContext>
+    : public ::fidl::internal::WireEventHandlerInterface<
+          ::test_bindingsdenylist::ImportsSameNameContext> {
+ public:
+  WireSyncEventHandler() = default;
+
+  // Method called when an unknown event is found. This methods gives the status
+  // which, in this case, is returned by HandleOneEvent.
+  virtual zx_status_t Unknown() = 0;
+
+  // Handle all possible events defined in this protocol.
+  // Blocks to consume exactly one message from the channel, then call the
+  // corresponding virtual method.
+  ::fidl::Result HandleOneEvent(
+      ::fidl::UnownedClientEnd<::test_bindingsdenylist::ImportsSameNameContext>
+          client_end);
+};
+
+template <>
+class ::fidl::internal::WireEventDispatcher<
+    ::test_bindingsdenylist::ImportsSameNameContext>
+    final : public ::fidl::internal::IncomingEventDispatcher<
+                ::fidl::WireAsyncEventHandler<
+                    ::test_bindingsdenylist::ImportsSameNameContext>> {
+ public:
+  explicit WireEventDispatcher(
+      ::fidl::WireAsyncEventHandler<
+          ::test_bindingsdenylist::ImportsSameNameContext>* event_handler)
+      : IncomingEventDispatcher(event_handler) {}
+
+ private:
+  std::optional<::fidl::UnbindInfo> DispatchEvent(
+      ::fidl::IncomingMessage& msg,
+      ::fidl::internal::IncomingTransportContext transport_context) override;
+};
+
+// Methods to make a sync FIDL call directly on an unowned handle or a
+// const reference to a
+// |fidl::ClientEnd<::test_bindingsdenylist::ImportsSameNameContext>|, avoiding
+// setting up a client.
+template <>
+class ::fidl::internal::WireSyncClientImpl<
+    ::test_bindingsdenylist::ImportsSameNameContext>
+    final : public ::fidl::internal::SyncEndpointManagedVeneer<
+                ::fidl::internal::WireSyncClientImpl<
+                    ::test_bindingsdenylist::ImportsSameNameContext>> {
+ public:
+  // Allocates 16 bytes of message buffer on the stack. No heap allocation
+  // necessary.
+  ::fidl::WireResult<
+      ::test_bindingsdenylist::ImportsSameNameContext::Unattributed>
+  Unattributed() {
+    ::fidl::WireRequest<
+        ::test_bindingsdenylist::ImportsSameNameContext::Unattributed>
+        _request{};
+    return ::fidl::WireResult<
+        ::test_bindingsdenylist::ImportsSameNameContext::Unattributed>(
+        _client_end(), &_request);
+  }
+
+  // Allocates 16 bytes of message buffer on the stack. No heap allocation
+  // necessary.
+  ::fidl::WireResult<::test_bindingsdenylist::ImportsSameNameContext::
+                         AlwaysAppearsInImportingLibrary>
+  AlwaysAppearsInImportingLibrary() {
+    ::fidl::WireRequest<::test_bindingsdenylist::ImportsSameNameContext::
+                            AlwaysAppearsInImportingLibrary>
+        _request{};
+    return ::fidl::WireResult<::test_bindingsdenylist::ImportsSameNameContext::
+                                  AlwaysAppearsInImportingLibrary>(
+        _client_end(), &_request);
+  }
+
+ private:
+  ::fidl::UnownedClientEnd<::test_bindingsdenylist::ImportsSameNameContext>
+  _client_end() const {
+    return ::fidl::UnownedClientEnd<
+        ::test_bindingsdenylist::ImportsSameNameContext>(
+        _transport().get<::fidl::internal::ChannelTransport>());
+  }
+};
+
+template <>
+class ::fidl::internal::WireSyncBufferClientImpl<
+    ::test_bindingsdenylist::ImportsSameNameContext>
+    final : public ::fidl::internal::SyncEndpointBufferVeneer<
+                ::fidl::internal::WireSyncBufferClientImpl<
+                    ::test_bindingsdenylist::ImportsSameNameContext>> {
+ public:
+  // Caller provides the backing storage for FIDL message via an argument to
+  // `.buffer()`.
+  ::fidl::WireUnownedResult<
+      ::test_bindingsdenylist::ImportsSameNameContext::Unattributed>
+  Unattributed() {
+    ::fidl::WireRequest<
+        ::test_bindingsdenylist::ImportsSameNameContext::Unattributed>
+        _request{};
+    return ::fidl::WireUnownedResult<
+        ::test_bindingsdenylist::ImportsSameNameContext::Unattributed>(
+        _client_end(), _allocator(), &_request);
+  }
+
+  // Caller provides the backing storage for FIDL message via an argument to
+  // `.buffer()`.
+  ::fidl::WireUnownedResult<::test_bindingsdenylist::ImportsSameNameContext::
+                                AlwaysAppearsInImportingLibrary>
+  AlwaysAppearsInImportingLibrary() {
+    ::fidl::WireRequest<::test_bindingsdenylist::ImportsSameNameContext::
+                            AlwaysAppearsInImportingLibrary>
+        _request{};
+    return ::fidl::WireUnownedResult<
+        ::test_bindingsdenylist::ImportsSameNameContext::
+            AlwaysAppearsInImportingLibrary>(_client_end(), _allocator(),
+                                             &_request);
+  }
+
+ private:
+  ::fidl::UnownedClientEnd<::test_bindingsdenylist::ImportsSameNameContext>
+  _client_end() const {
+    return ::fidl::UnownedClientEnd<
+        ::test_bindingsdenylist::ImportsSameNameContext>(
+        _transport().get<::fidl::internal::ChannelTransport>());
+  }
+};
+
+// Pure-virtual interface to be implemented by a server.
+// This interface uses typed channels (i.e. |fidl::ClientEnd<SomeProtocol>|
+// and |fidl::ServerEnd<SomeProtocol>|).
+template <>
+class ::fidl::WireServer<::test_bindingsdenylist::ImportsSameNameContext>
+    : public ::fidl::internal::IncomingMessageDispatcher {
+ public:
+  WireServer() = default;
+  virtual ~WireServer() = default;
+
+  // The FIDL protocol type that is implemented by this server.
+  using _EnclosingProtocol = ::test_bindingsdenylist::ImportsSameNameContext;
+
+  using UnattributedCompleter = ::fidl::internal::WireCompleter<
+      ::test_bindingsdenylist::ImportsSameNameContext::Unattributed>;
+  using UnattributedRequestView = ::fidl::internal::WireRequestView<
+      ::test_bindingsdenylist::ImportsSameNameContext::Unattributed>;
+
+  virtual void Unattributed(UnattributedRequestView request,
+                            UnattributedCompleter::Sync& _completer) = 0;
+
+  using AlwaysAppearsInImportingLibraryCompleter =
+      ::fidl::internal::WireCompleter<
+          ::test_bindingsdenylist::ImportsSameNameContext::
+              AlwaysAppearsInImportingLibrary>;
+  using AlwaysAppearsInImportingLibraryRequestView =
+      ::fidl::internal::WireRequestView<
+          ::test_bindingsdenylist::ImportsSameNameContext::
+              AlwaysAppearsInImportingLibrary>;
+
+  virtual void AlwaysAppearsInImportingLibrary(
+      AlwaysAppearsInImportingLibraryRequestView request,
+      AlwaysAppearsInImportingLibraryCompleter::Sync& _completer) = 0;
+
+ private:
+  void dispatch_message(
+      ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
+      ::fidl::internal::IncomingTransportContext transport_context) final;
+};
+#endif  // __Fuchsia__
+
+namespace test_bindingsdenylist {}  // namespace test_bindingsdenylist
+#ifdef __Fuchsia__
+
+template <>
+struct ::fidl::internal::ProtocolDetails<::test_bindingsdenylist::Allowed> {};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+template <>
+struct ::fidl::internal::WireServerDispatcher<::test_bindingsdenylist::Allowed>
+    final {
+  WireServerDispatcher() = delete;
+  static ::fidl::DispatchResult TryDispatch(
+      ::fidl::WireServer<::test_bindingsdenylist::Allowed>* impl,
+      ::fidl::IncomingMessage& msg,
+      internal::IncomingTransportContext transport_context,
+      ::fidl::Transaction* txn);
+  static void Dispatch(
+      ::fidl::WireServer<::test_bindingsdenylist::Allowed>* impl,
+      ::fidl::IncomingMessage&& msg,
+      internal::IncomingTransportContext transport_context,
+      ::fidl::Transaction* txn);
+
+ private:
+  static const ::fidl::internal::MethodEntry entries_[];
+  static const ::fidl::internal::MethodEntry* entries_end_;
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+template <>
+class ::fidl::internal::WireEventHandlerInterface<
+    ::test_bindingsdenylist::Allowed> {
+ public:
+  WireEventHandlerInterface() = default;
+  virtual ~WireEventHandlerInterface() = default;
+};
+
+template <>
+class ::fidl::WireAsyncEventHandler<::test_bindingsdenylist::Allowed>
+    : public ::fidl::internal::WireEventHandlerInterface<
+          ::test_bindingsdenylist::Allowed>,
+      public ::fidl::internal::AsyncEventHandler {
+ public:
+  WireAsyncEventHandler() = default;
+};
+
+template <>
+class ::fidl::WireSyncEventHandler<::test_bindingsdenylist::Allowed>
+    : public ::fidl::internal::WireEventHandlerInterface<
+          ::test_bindingsdenylist::Allowed> {
+ public:
+  WireSyncEventHandler() = default;
+
+  // Method called when an unknown event is found. This methods gives the status
+  // which, in this case, is returned by HandleOneEvent.
+  virtual zx_status_t Unknown() = 0;
+
+  // Handle all possible events defined in this protocol.
+  // Blocks to consume exactly one message from the channel, then call the
+  // corresponding virtual method.
+  ::fidl::Result HandleOneEvent(
+      ::fidl::UnownedClientEnd<::test_bindingsdenylist::Allowed> client_end);
+};
+
+template <>
+class ::fidl::internal::WireEventDispatcher<::test_bindingsdenylist::Allowed>
+    final
+    : public ::fidl::internal::IncomingEventDispatcher<
+          ::fidl::WireAsyncEventHandler<::test_bindingsdenylist::Allowed>> {
+ public:
+  explicit WireEventDispatcher(
+      ::fidl::WireAsyncEventHandler<::test_bindingsdenylist::Allowed>*
+          event_handler)
+      : IncomingEventDispatcher(event_handler) {}
+
+ private:
+  std::optional<::fidl::UnbindInfo> DispatchEvent(
+      ::fidl::IncomingMessage& msg,
+      ::fidl::internal::IncomingTransportContext transport_context) override;
+};
+
+// Methods to make a sync FIDL call directly on an unowned handle or a
+// const reference to a |fidl::ClientEnd<::test_bindingsdenylist::Allowed>|,
+// avoiding setting up a client.
+template <>
+class ::fidl::internal::WireSyncClientImpl<::test_bindingsdenylist::Allowed>
+    final : public ::fidl::internal::SyncEndpointManagedVeneer<
+                ::fidl::internal::WireSyncClientImpl<
+                    ::test_bindingsdenylist::Allowed>> {
+ public:
+ private:
+  ::fidl::UnownedClientEnd<::test_bindingsdenylist::Allowed> _client_end()
+      const {
+    return ::fidl::UnownedClientEnd<::test_bindingsdenylist::Allowed>(
+        _transport().get<::fidl::internal::ChannelTransport>());
+  }
+};
+
+template <>
+class ::fidl::internal::WireSyncBufferClientImpl<
+    ::test_bindingsdenylist::Allowed>
+    final : public ::fidl::internal::SyncEndpointBufferVeneer<
+                ::fidl::internal::WireSyncBufferClientImpl<
+                    ::test_bindingsdenylist::Allowed>> {
+ public:
+ private:
+  ::fidl::UnownedClientEnd<::test_bindingsdenylist::Allowed> _client_end()
+      const {
+    return ::fidl::UnownedClientEnd<::test_bindingsdenylist::Allowed>(
+        _transport().get<::fidl::internal::ChannelTransport>());
+  }
+};
+
+// Pure-virtual interface to be implemented by a server.
+// This interface uses typed channels (i.e. |fidl::ClientEnd<SomeProtocol>|
+// and |fidl::ServerEnd<SomeProtocol>|).
+template <>
+class ::fidl::WireServer<::test_bindingsdenylist::Allowed>
+    : public ::fidl::internal::IncomingMessageDispatcher {
+ public:
+  WireServer() = default;
+  virtual ~WireServer() = default;
+
+  // The FIDL protocol type that is implemented by this server.
+  using _EnclosingProtocol = ::test_bindingsdenylist::Allowed;
+
+ private:
+  void dispatch_message(
+      ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
+      ::fidl::internal::IncomingTransportContext transport_context) final;
+};
+#endif  // __Fuchsia__
+
+namespace test_bindingsdenylist {
 __LOCAL extern "C" const fidl_type_t
     test_bindingsdenylist_OnlyLibfuzzerAndDepsLibfuzzerNeedsNonemptyProtocolRequestMessageTable;
 
@@ -619,7 +1149,1735 @@ class ::fidl::WireServer<::test_bindingsdenylist::OnlyCppAndDeps>
 };
 #endif  // __Fuchsia__
 
+namespace test_bindingsdenylist {
+__LOCAL extern "C" const fidl_type_t
+    test_bindingsdenylist_DenyEachBindingOnlyDenyDartRequestMessageTable;
+
+__LOCAL extern "C" const fidl_type_t
+    test_bindingsdenylist_DenyEachBindingOnlyDenyDartResponseMessageTable;
+
+__LOCAL extern "C" const fidl_type_t
+    test_bindingsdenylist_DenyEachBindingOnlyDenyGoRequestMessageTable;
+
+__LOCAL extern "C" const fidl_type_t
+    test_bindingsdenylist_DenyEachBindingOnlyDenyGoResponseMessageTable;
+
+__LOCAL extern "C" const fidl_type_t
+    test_bindingsdenylist_DenyEachBindingOnlyDenyLibfuzzerRequestMessageTable;
+
+__LOCAL extern "C" const fidl_type_t
+    test_bindingsdenylist_DenyEachBindingOnlyDenyLibfuzzerResponseMessageTable;
+
+__LOCAL extern "C" const fidl_type_t
+    test_bindingsdenylist_DenyEachBindingOnlyDenyRustRequestMessageTable;
+
+__LOCAL extern "C" const fidl_type_t
+    test_bindingsdenylist_DenyEachBindingOnlyDenyRustResponseMessageTable;
+
+__LOCAL extern "C" const fidl_type_t
+    test_bindingsdenylist_DenyEachBindingOnlyDenySyzkallerRequestMessageTable;
+
+__LOCAL extern "C" const fidl_type_t
+    test_bindingsdenylist_DenyEachBindingOnlyDenySyzkallerResponseMessageTable;
+}  // namespace test_bindingsdenylist
+template <>
+struct ::fidl::internal::WireOrdinal<
+    ::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>
+    final {
+  static constexpr uint64_t value = 8446571910689294295lu;
+};
+template <>
+struct ::fidl::internal::WireOrdinal<
+    ::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>
+    final {
+  static constexpr uint64_t value = 7311125300308839833lu;
+};
+template <>
+struct ::fidl::internal::WireOrdinal<
+    ::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>
+    final {
+  static constexpr uint64_t value = 2184115815603862302lu;
+};
+template <>
+struct ::fidl::internal::WireOrdinal<
+    ::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>
+    final {
+  static constexpr uint64_t value = 3719805222870932662lu;
+};
+template <>
+struct ::fidl::internal::WireOrdinal<
+    ::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>
+    final {
+  static constexpr uint64_t value = 2319043834522757514lu;
+};
+
+namespace test_bindingsdenylist {}  // namespace test_bindingsdenylist
+#ifdef __Fuchsia__
+
+template <>
+struct ::fidl::internal::ProtocolDetails<
+    ::test_bindingsdenylist::DenyEachBinding> {};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+template <>
+struct ::fidl::internal::WireServerDispatcher<
+    ::test_bindingsdenylist::DenyEachBinding>
+    final {
+  WireServerDispatcher() = delete;
+  static ::fidl::DispatchResult TryDispatch(
+      ::fidl::WireServer<::test_bindingsdenylist::DenyEachBinding>* impl,
+      ::fidl::IncomingMessage& msg,
+      internal::IncomingTransportContext transport_context,
+      ::fidl::Transaction* txn);
+  static void Dispatch(
+      ::fidl::WireServer<::test_bindingsdenylist::DenyEachBinding>* impl,
+      ::fidl::IncomingMessage&& msg,
+      internal::IncomingTransportContext transport_context,
+      ::fidl::Transaction* txn);
+
+ private:
+  static const ::fidl::internal::MethodEntry entries_[];
+  static const ::fidl::internal::MethodEntry* entries_end_;
+};
+#endif  // __Fuchsia__
+
+template <>
+struct ::fidl::WireRequest<
+    ::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>
+    final {
+  FIDL_ALIGNDECL
+  fidl_message_header_t _hdr;
+  bool a;
+
+  explicit WireRequest(bool a) : a(a) { _InitHeader(); }
+  WireRequest() { _InitHeader(); }
+
+  static constexpr const fidl_type_t* Type =
+      &::test_bindingsdenylist::
+          test_bindingsdenylist_DenyEachBindingOnlyDenyDartRequestMessageTable;
+  static constexpr uint32_t MaxNumHandles = 0;
+  static constexpr uint32_t PrimarySize = 24;
+  static constexpr uint32_t PrimarySizeV1 = 24;
+  static constexpr uint32_t MaxOutOfLine = 0;
+  static constexpr uint32_t MaxOutOfLineV1 = 0;
+  static constexpr bool HasFlexibleEnvelope = false;
+  static constexpr bool HasPointer = false;
+  static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
+      ::fidl::internal::TransactionalMessageKind::kRequest;
+  using ResponseType = ::fidl::WireResponse<
+      ::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>;
+
+  class UnownedEncodedMessage;
+  class OwnedEncodedMessage;
+
+ public:
+  class DecodedMessage;
+
+ private:
+  void _InitHeader();
+};
+template <>
+struct ::fidl::WireResponse<
+    ::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>
+    final {
+  using Result = test_bindingsdenylist::wire::DenyEachBindingOnlyDenyDartResult;
+
+  FIDL_ALIGNDECL
+  fidl_message_header_t _hdr;
+  ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyDartResult result;
+
+  explicit WireResponse(
+      ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyDartResult result)
+      : result(result) {
+    _InitHeader();
+  }
+  WireResponse() { _InitHeader(); }
+
+  static constexpr const fidl_type_t* Type =
+      &::test_bindingsdenylist::
+          test_bindingsdenylist_DenyEachBindingOnlyDenyDartResponseMessageTable;
+  static constexpr uint32_t MaxNumHandles = 0;
+  static constexpr uint32_t PrimarySize = 32;
+  static constexpr uint32_t PrimarySizeV1 = 40;
+  static constexpr uint32_t MaxOutOfLine = 0;
+  static constexpr uint32_t MaxOutOfLineV1 = 8;
+  static constexpr bool HasFlexibleEnvelope = false;
+  static constexpr bool HasPointer = true;
+  static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
+      ::fidl::internal::TransactionalMessageKind::kResponse;
+
+  class UnownedEncodedMessage;
+  class OwnedEncodedMessage;
+
+ public:
+  class DecodedMessage;
+
+ private:
+  void _InitHeader();
+};
+template <>
+struct ::fidl::WireRequest<::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>
+    final {
+  FIDL_ALIGNDECL
+  fidl_message_header_t _hdr;
+  bool a;
+
+  explicit WireRequest(bool a) : a(a) { _InitHeader(); }
+  WireRequest() { _InitHeader(); }
+
+  static constexpr const fidl_type_t* Type =
+      &::test_bindingsdenylist::
+          test_bindingsdenylist_DenyEachBindingOnlyDenyGoRequestMessageTable;
+  static constexpr uint32_t MaxNumHandles = 0;
+  static constexpr uint32_t PrimarySize = 24;
+  static constexpr uint32_t PrimarySizeV1 = 24;
+  static constexpr uint32_t MaxOutOfLine = 0;
+  static constexpr uint32_t MaxOutOfLineV1 = 0;
+  static constexpr bool HasFlexibleEnvelope = false;
+  static constexpr bool HasPointer = false;
+  static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
+      ::fidl::internal::TransactionalMessageKind::kRequest;
+  using ResponseType = ::fidl::WireResponse<
+      ::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>;
+
+  class UnownedEncodedMessage;
+  class OwnedEncodedMessage;
+
+ public:
+  class DecodedMessage;
+
+ private:
+  void _InitHeader();
+};
+template <>
+struct ::fidl::WireResponse<
+    ::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>
+    final {
+  using Result = test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoResult;
+
+  FIDL_ALIGNDECL
+  fidl_message_header_t _hdr;
+  ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoResult result;
+
+  explicit WireResponse(
+      ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoResult result)
+      : result(result) {
+    _InitHeader();
+  }
+  WireResponse() { _InitHeader(); }
+
+  static constexpr const fidl_type_t* Type =
+      &::test_bindingsdenylist::
+          test_bindingsdenylist_DenyEachBindingOnlyDenyGoResponseMessageTable;
+  static constexpr uint32_t MaxNumHandles = 0;
+  static constexpr uint32_t PrimarySize = 32;
+  static constexpr uint32_t PrimarySizeV1 = 40;
+  static constexpr uint32_t MaxOutOfLine = 0;
+  static constexpr uint32_t MaxOutOfLineV1 = 8;
+  static constexpr bool HasFlexibleEnvelope = false;
+  static constexpr bool HasPointer = true;
+  static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
+      ::fidl::internal::TransactionalMessageKind::kResponse;
+
+  class UnownedEncodedMessage;
+  class OwnedEncodedMessage;
+
+ public:
+  class DecodedMessage;
+
+ private:
+  void _InitHeader();
+};
+template <>
+struct ::fidl::WireRequest<
+    ::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>
+    final {
+  FIDL_ALIGNDECL
+  fidl_message_header_t _hdr;
+  bool a;
+
+  explicit WireRequest(bool a) : a(a) { _InitHeader(); }
+  WireRequest() { _InitHeader(); }
+
+  static constexpr const fidl_type_t* Type =
+      &::test_bindingsdenylist::
+          test_bindingsdenylist_DenyEachBindingOnlyDenyLibfuzzerRequestMessageTable;
+  static constexpr uint32_t MaxNumHandles = 0;
+  static constexpr uint32_t PrimarySize = 24;
+  static constexpr uint32_t PrimarySizeV1 = 24;
+  static constexpr uint32_t MaxOutOfLine = 0;
+  static constexpr uint32_t MaxOutOfLineV1 = 0;
+  static constexpr bool HasFlexibleEnvelope = false;
+  static constexpr bool HasPointer = false;
+  static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
+      ::fidl::internal::TransactionalMessageKind::kRequest;
+  using ResponseType = ::fidl::WireResponse<
+      ::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>;
+
+  class UnownedEncodedMessage;
+  class OwnedEncodedMessage;
+
+ public:
+  class DecodedMessage;
+
+ private:
+  void _InitHeader();
+};
+template <>
+struct ::fidl::WireResponse<
+    ::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>
+    final {
+  using Result =
+      test_bindingsdenylist::wire::DenyEachBindingOnlyDenyLibfuzzerResult;
+
+  FIDL_ALIGNDECL
+  fidl_message_header_t _hdr;
+  ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyLibfuzzerResult result;
+
+  explicit WireResponse(
+      ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyLibfuzzerResult
+          result)
+      : result(result) {
+    _InitHeader();
+  }
+  WireResponse() { _InitHeader(); }
+
+  static constexpr const fidl_type_t* Type =
+      &::test_bindingsdenylist::
+          test_bindingsdenylist_DenyEachBindingOnlyDenyLibfuzzerResponseMessageTable;
+  static constexpr uint32_t MaxNumHandles = 0;
+  static constexpr uint32_t PrimarySize = 32;
+  static constexpr uint32_t PrimarySizeV1 = 40;
+  static constexpr uint32_t MaxOutOfLine = 0;
+  static constexpr uint32_t MaxOutOfLineV1 = 8;
+  static constexpr bool HasFlexibleEnvelope = false;
+  static constexpr bool HasPointer = true;
+  static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
+      ::fidl::internal::TransactionalMessageKind::kResponse;
+
+  class UnownedEncodedMessage;
+  class OwnedEncodedMessage;
+
+ public:
+  class DecodedMessage;
+
+ private:
+  void _InitHeader();
+};
+template <>
+struct ::fidl::WireRequest<
+    ::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>
+    final {
+  FIDL_ALIGNDECL
+  fidl_message_header_t _hdr;
+  bool a;
+
+  explicit WireRequest(bool a) : a(a) { _InitHeader(); }
+  WireRequest() { _InitHeader(); }
+
+  static constexpr const fidl_type_t* Type =
+      &::test_bindingsdenylist::
+          test_bindingsdenylist_DenyEachBindingOnlyDenyRustRequestMessageTable;
+  static constexpr uint32_t MaxNumHandles = 0;
+  static constexpr uint32_t PrimarySize = 24;
+  static constexpr uint32_t PrimarySizeV1 = 24;
+  static constexpr uint32_t MaxOutOfLine = 0;
+  static constexpr uint32_t MaxOutOfLineV1 = 0;
+  static constexpr bool HasFlexibleEnvelope = false;
+  static constexpr bool HasPointer = false;
+  static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
+      ::fidl::internal::TransactionalMessageKind::kRequest;
+  using ResponseType = ::fidl::WireResponse<
+      ::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>;
+
+  class UnownedEncodedMessage;
+  class OwnedEncodedMessage;
+
+ public:
+  class DecodedMessage;
+
+ private:
+  void _InitHeader();
+};
+template <>
+struct ::fidl::WireResponse<
+    ::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>
+    final {
+  using Result = test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustResult;
+
+  FIDL_ALIGNDECL
+  fidl_message_header_t _hdr;
+  ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustResult result;
+
+  explicit WireResponse(
+      ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustResult result)
+      : result(result) {
+    _InitHeader();
+  }
+  WireResponse() { _InitHeader(); }
+
+  static constexpr const fidl_type_t* Type =
+      &::test_bindingsdenylist::
+          test_bindingsdenylist_DenyEachBindingOnlyDenyRustResponseMessageTable;
+  static constexpr uint32_t MaxNumHandles = 0;
+  static constexpr uint32_t PrimarySize = 32;
+  static constexpr uint32_t PrimarySizeV1 = 40;
+  static constexpr uint32_t MaxOutOfLine = 0;
+  static constexpr uint32_t MaxOutOfLineV1 = 8;
+  static constexpr bool HasFlexibleEnvelope = false;
+  static constexpr bool HasPointer = true;
+  static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
+      ::fidl::internal::TransactionalMessageKind::kResponse;
+
+  class UnownedEncodedMessage;
+  class OwnedEncodedMessage;
+
+ public:
+  class DecodedMessage;
+
+ private:
+  void _InitHeader();
+};
+template <>
+struct ::fidl::WireRequest<
+    ::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>
+    final {
+  FIDL_ALIGNDECL
+  fidl_message_header_t _hdr;
+  bool a;
+
+  explicit WireRequest(bool a) : a(a) { _InitHeader(); }
+  WireRequest() { _InitHeader(); }
+
+  static constexpr const fidl_type_t* Type =
+      &::test_bindingsdenylist::
+          test_bindingsdenylist_DenyEachBindingOnlyDenySyzkallerRequestMessageTable;
+  static constexpr uint32_t MaxNumHandles = 0;
+  static constexpr uint32_t PrimarySize = 24;
+  static constexpr uint32_t PrimarySizeV1 = 24;
+  static constexpr uint32_t MaxOutOfLine = 0;
+  static constexpr uint32_t MaxOutOfLineV1 = 0;
+  static constexpr bool HasFlexibleEnvelope = false;
+  static constexpr bool HasPointer = false;
+  static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
+      ::fidl::internal::TransactionalMessageKind::kRequest;
+  using ResponseType = ::fidl::WireResponse<
+      ::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>;
+
+  class UnownedEncodedMessage;
+  class OwnedEncodedMessage;
+
+ public:
+  class DecodedMessage;
+
+ private:
+  void _InitHeader();
+};
+template <>
+struct ::fidl::WireResponse<
+    ::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>
+    final {
+  using Result =
+      test_bindingsdenylist::wire::DenyEachBindingOnlyDenySyzkallerResult;
+
+  FIDL_ALIGNDECL
+  fidl_message_header_t _hdr;
+  ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenySyzkallerResult result;
+
+  explicit WireResponse(
+      ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenySyzkallerResult
+          result)
+      : result(result) {
+    _InitHeader();
+  }
+  WireResponse() { _InitHeader(); }
+
+  static constexpr const fidl_type_t* Type =
+      &::test_bindingsdenylist::
+          test_bindingsdenylist_DenyEachBindingOnlyDenySyzkallerResponseMessageTable;
+  static constexpr uint32_t MaxNumHandles = 0;
+  static constexpr uint32_t PrimarySize = 32;
+  static constexpr uint32_t PrimarySizeV1 = 40;
+  static constexpr uint32_t MaxOutOfLine = 0;
+  static constexpr uint32_t MaxOutOfLineV1 = 8;
+  static constexpr bool HasFlexibleEnvelope = false;
+  static constexpr bool HasPointer = true;
+  static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
+      ::fidl::internal::TransactionalMessageKind::kResponse;
+
+  class UnownedEncodedMessage;
+  class OwnedEncodedMessage;
+
+ public:
+  class DecodedMessage;
+
+ private:
+  void _InitHeader();
+};
+#ifdef __Fuchsia__
+
+template <>
+class ::fidl::WireResult<::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>
+    final : public ::fidl::Result {
+ public:
+  WireResult(
+      ::fidl::UnownedClientEnd<::test_bindingsdenylist::DenyEachBinding> client,
+      ::fidl::WireRequest<
+          ::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>* request);
+  WireResult(
+      ::fidl::UnownedClientEnd<::test_bindingsdenylist::DenyEachBinding> client,
+      ::fidl::WireRequest<
+          ::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>* request,
+      zx_time_t _deadline);
+  explicit WireResult(const ::fidl::Result& result) : ::fidl::Result(result) {}
+  WireResult(WireResult&&) = delete;
+  WireResult(const WireResult&) = delete;
+  WireResult* operator=(WireResult&&) = delete;
+  WireResult* operator=(const WireResult&) = delete;
+  ~WireResult() = default;
+
+  ::fidl::WireResponse<::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>*
+  Unwrap() {
+    ZX_DEBUG_ASSERT(ok());
+    return reinterpret_cast<::fidl::WireResponse<
+        ::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>*>(
+        bytes_.data());
+  }
+  const ::fidl::WireResponse<
+      ::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>*
+  Unwrap() const {
+    ZX_DEBUG_ASSERT(ok());
+    return reinterpret_cast<const ::fidl::WireResponse<
+        ::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>*>(
+        bytes_.data());
+  }
+
+  ::fidl::WireResponse<::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>&
+  value() {
+    return *Unwrap();
+  }
+  const ::fidl::WireResponse<
+      ::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>&
+  value() const {
+    return *Unwrap();
+  }
+
+  ::fidl::WireResponse<::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>*
+  operator->() {
+    return &value();
+  }
+  const ::fidl::WireResponse<
+      ::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>*
+  operator->() const {
+    return &value();
+  }
+
+  ::fidl::WireResponse<::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>&
+  operator*() {
+    return value();
+  }
+  const ::fidl::WireResponse<
+      ::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>&
+  operator*() const {
+    return value();
+  }
+
+ private:
+  ::fidl::internal::InlineMessageBuffer<48> bytes_;
+};
+template <>
+class ::fidl::WireUnownedResult<
+    ::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>
+    final : public ::fidl::Result {
+ public:
+  explicit WireUnownedResult(
+      ::fidl::UnownedClientEnd<::test_bindingsdenylist::DenyEachBinding>
+          client_end,
+      ::fidl::internal::AnyBufferAllocator& allocator,
+      ::fidl::WireRequest<
+          ::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>* request);
+  explicit WireUnownedResult(
+      ::fidl::WireResponse<
+          ::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>* response)
+      : bytes_(reinterpret_cast<uint8_t*>(response)) {}
+  explicit WireUnownedResult(const ::fidl::Result& result)
+      : ::fidl::Result(result) {}
+  explicit WireUnownedResult(
+      ::fidl::DecodedMessage<::fidl::WireResponse<
+          ::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>>&& decoded,
+      ::fidl::internal::IncomingTransportContext context)
+      : ::fidl::Result(decoded) {
+    if (decoded.ok()) {
+      bytes_ = reinterpret_cast<uint8_t*>(decoded.PrimaryObject());
+    } else {
+      bytes_ = nullptr;
+    }
+    decoded.ReleasePrimaryObject();
+  }
+  WireUnownedResult(WireUnownedResult&&) = delete;
+  WireUnownedResult(const WireUnownedResult&) = delete;
+  WireUnownedResult* operator=(WireUnownedResult&&) = delete;
+  WireUnownedResult* operator=(const WireUnownedResult&) = delete;
+  ~WireUnownedResult() = default;
+
+  ::fidl::WireResponse<::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>*
+  Unwrap() {
+    ZX_DEBUG_ASSERT(ok());
+    return reinterpret_cast<::fidl::WireResponse<
+        ::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>*>(bytes_);
+  }
+  const ::fidl::WireResponse<
+      ::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>*
+  Unwrap() const {
+    ZX_DEBUG_ASSERT(ok());
+    return reinterpret_cast<const ::fidl::WireResponse<
+        ::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>*>(bytes_);
+  }
+
+  ::fidl::WireResponse<::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>&
+  value() {
+    return *Unwrap();
+  }
+  const ::fidl::WireResponse<
+      ::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>&
+  value() const {
+    return *Unwrap();
+  }
+
+  ::fidl::WireResponse<::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>*
+  operator->() {
+    return &value();
+  }
+  const ::fidl::WireResponse<
+      ::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>*
+  operator->() const {
+    return &value();
+  }
+
+  ::fidl::WireResponse<::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>&
+  operator*() {
+    return value();
+  }
+  const ::fidl::WireResponse<
+      ::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>&
+  operator*() const {
+    return value();
+  }
+
+ private:
+  uint8_t* bytes_;
+};
+template <>
+class ::fidl::WireResult<::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>
+    final : public ::fidl::Result {
+ public:
+  WireResult(
+      ::fidl::UnownedClientEnd<::test_bindingsdenylist::DenyEachBinding> client,
+      ::fidl::WireRequest<::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>*
+          request);
+  WireResult(
+      ::fidl::UnownedClientEnd<::test_bindingsdenylist::DenyEachBinding> client,
+      ::fidl::WireRequest<::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>*
+          request,
+      zx_time_t _deadline);
+  explicit WireResult(const ::fidl::Result& result) : ::fidl::Result(result) {}
+  WireResult(WireResult&&) = delete;
+  WireResult(const WireResult&) = delete;
+  WireResult* operator=(WireResult&&) = delete;
+  WireResult* operator=(const WireResult&) = delete;
+  ~WireResult() = default;
+
+  ::fidl::WireResponse<::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>*
+  Unwrap() {
+    ZX_DEBUG_ASSERT(ok());
+    return reinterpret_cast<::fidl::WireResponse<
+        ::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>*>(bytes_.data());
+  }
+  const ::fidl::WireResponse<
+      ::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>*
+  Unwrap() const {
+    ZX_DEBUG_ASSERT(ok());
+    return reinterpret_cast<const ::fidl::WireResponse<
+        ::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>*>(bytes_.data());
+  }
+
+  ::fidl::WireResponse<::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>&
+  value() {
+    return *Unwrap();
+  }
+  const ::fidl::WireResponse<
+      ::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>&
+  value() const {
+    return *Unwrap();
+  }
+
+  ::fidl::WireResponse<::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>*
+  operator->() {
+    return &value();
+  }
+  const ::fidl::WireResponse<
+      ::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>*
+  operator->() const {
+    return &value();
+  }
+
+  ::fidl::WireResponse<::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>&
+  operator*() {
+    return value();
+  }
+  const ::fidl::WireResponse<
+      ::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>&
+  operator*() const {
+    return value();
+  }
+
+ private:
+  ::fidl::internal::InlineMessageBuffer<48> bytes_;
+};
+template <>
+class ::fidl::WireUnownedResult<
+    ::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>
+    final : public ::fidl::Result {
+ public:
+  explicit WireUnownedResult(
+      ::fidl::UnownedClientEnd<::test_bindingsdenylist::DenyEachBinding>
+          client_end,
+      ::fidl::internal::AnyBufferAllocator& allocator,
+      ::fidl::WireRequest<::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>*
+          request);
+  explicit WireUnownedResult(
+      ::fidl::WireResponse<
+          ::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>* response)
+      : bytes_(reinterpret_cast<uint8_t*>(response)) {}
+  explicit WireUnownedResult(const ::fidl::Result& result)
+      : ::fidl::Result(result) {}
+  explicit WireUnownedResult(
+      ::fidl::DecodedMessage<::fidl::WireResponse<
+          ::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>>&& decoded,
+      ::fidl::internal::IncomingTransportContext context)
+      : ::fidl::Result(decoded) {
+    if (decoded.ok()) {
+      bytes_ = reinterpret_cast<uint8_t*>(decoded.PrimaryObject());
+    } else {
+      bytes_ = nullptr;
+    }
+    decoded.ReleasePrimaryObject();
+  }
+  WireUnownedResult(WireUnownedResult&&) = delete;
+  WireUnownedResult(const WireUnownedResult&) = delete;
+  WireUnownedResult* operator=(WireUnownedResult&&) = delete;
+  WireUnownedResult* operator=(const WireUnownedResult&) = delete;
+  ~WireUnownedResult() = default;
+
+  ::fidl::WireResponse<::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>*
+  Unwrap() {
+    ZX_DEBUG_ASSERT(ok());
+    return reinterpret_cast<::fidl::WireResponse<
+        ::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>*>(bytes_);
+  }
+  const ::fidl::WireResponse<
+      ::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>*
+  Unwrap() const {
+    ZX_DEBUG_ASSERT(ok());
+    return reinterpret_cast<const ::fidl::WireResponse<
+        ::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>*>(bytes_);
+  }
+
+  ::fidl::WireResponse<::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>&
+  value() {
+    return *Unwrap();
+  }
+  const ::fidl::WireResponse<
+      ::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>&
+  value() const {
+    return *Unwrap();
+  }
+
+  ::fidl::WireResponse<::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>*
+  operator->() {
+    return &value();
+  }
+  const ::fidl::WireResponse<
+      ::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>*
+  operator->() const {
+    return &value();
+  }
+
+  ::fidl::WireResponse<::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>&
+  operator*() {
+    return value();
+  }
+  const ::fidl::WireResponse<
+      ::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>&
+  operator*() const {
+    return value();
+  }
+
+ private:
+  uint8_t* bytes_;
+};
+template <>
+class ::fidl::WireResult<
+    ::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>
+    final : public ::fidl::Result {
+ public:
+  WireResult(
+      ::fidl::UnownedClientEnd<::test_bindingsdenylist::DenyEachBinding> client,
+      ::fidl::WireRequest<
+          ::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>*
+          request);
+  WireResult(
+      ::fidl::UnownedClientEnd<::test_bindingsdenylist::DenyEachBinding> client,
+      ::fidl::WireRequest<
+          ::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>* request,
+      zx_time_t _deadline);
+  explicit WireResult(const ::fidl::Result& result) : ::fidl::Result(result) {}
+  WireResult(WireResult&&) = delete;
+  WireResult(const WireResult&) = delete;
+  WireResult* operator=(WireResult&&) = delete;
+  WireResult* operator=(const WireResult&) = delete;
+  ~WireResult() = default;
+
+  ::fidl::WireResponse<
+      ::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>*
+  Unwrap() {
+    ZX_DEBUG_ASSERT(ok());
+    return reinterpret_cast<::fidl::WireResponse<
+        ::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>*>(
+        bytes_.data());
+  }
+  const ::fidl::WireResponse<
+      ::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>*
+  Unwrap() const {
+    ZX_DEBUG_ASSERT(ok());
+    return reinterpret_cast<const ::fidl::WireResponse<
+        ::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>*>(
+        bytes_.data());
+  }
+
+  ::fidl::WireResponse<
+      ::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>&
+  value() {
+    return *Unwrap();
+  }
+  const ::fidl::WireResponse<
+      ::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>&
+  value() const {
+    return *Unwrap();
+  }
+
+  ::fidl::WireResponse<
+      ::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>*
+  operator->() {
+    return &value();
+  }
+  const ::fidl::WireResponse<
+      ::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>*
+  operator->() const {
+    return &value();
+  }
+
+  ::fidl::WireResponse<
+      ::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>&
+  operator*() {
+    return value();
+  }
+  const ::fidl::WireResponse<
+      ::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>&
+  operator*() const {
+    return value();
+  }
+
+ private:
+  ::fidl::internal::InlineMessageBuffer<48> bytes_;
+};
+template <>
+class ::fidl::WireUnownedResult<
+    ::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>
+    final : public ::fidl::Result {
+ public:
+  explicit WireUnownedResult(
+      ::fidl::UnownedClientEnd<::test_bindingsdenylist::DenyEachBinding>
+          client_end,
+      ::fidl::internal::AnyBufferAllocator& allocator,
+      ::fidl::WireRequest<
+          ::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>*
+          request);
+  explicit WireUnownedResult(
+      ::fidl::WireResponse<
+          ::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>*
+          response)
+      : bytes_(reinterpret_cast<uint8_t*>(response)) {}
+  explicit WireUnownedResult(const ::fidl::Result& result)
+      : ::fidl::Result(result) {}
+  explicit WireUnownedResult(
+      ::fidl::DecodedMessage<::fidl::WireResponse<
+          ::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>>&&
+          decoded,
+      ::fidl::internal::IncomingTransportContext context)
+      : ::fidl::Result(decoded) {
+    if (decoded.ok()) {
+      bytes_ = reinterpret_cast<uint8_t*>(decoded.PrimaryObject());
+    } else {
+      bytes_ = nullptr;
+    }
+    decoded.ReleasePrimaryObject();
+  }
+  WireUnownedResult(WireUnownedResult&&) = delete;
+  WireUnownedResult(const WireUnownedResult&) = delete;
+  WireUnownedResult* operator=(WireUnownedResult&&) = delete;
+  WireUnownedResult* operator=(const WireUnownedResult&) = delete;
+  ~WireUnownedResult() = default;
+
+  ::fidl::WireResponse<
+      ::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>*
+  Unwrap() {
+    ZX_DEBUG_ASSERT(ok());
+    return reinterpret_cast<::fidl::WireResponse<
+        ::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>*>(bytes_);
+  }
+  const ::fidl::WireResponse<
+      ::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>*
+  Unwrap() const {
+    ZX_DEBUG_ASSERT(ok());
+    return reinterpret_cast<const ::fidl::WireResponse<
+        ::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>*>(bytes_);
+  }
+
+  ::fidl::WireResponse<
+      ::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>&
+  value() {
+    return *Unwrap();
+  }
+  const ::fidl::WireResponse<
+      ::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>&
+  value() const {
+    return *Unwrap();
+  }
+
+  ::fidl::WireResponse<
+      ::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>*
+  operator->() {
+    return &value();
+  }
+  const ::fidl::WireResponse<
+      ::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>*
+  operator->() const {
+    return &value();
+  }
+
+  ::fidl::WireResponse<
+      ::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>&
+  operator*() {
+    return value();
+  }
+  const ::fidl::WireResponse<
+      ::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>&
+  operator*() const {
+    return value();
+  }
+
+ private:
+  uint8_t* bytes_;
+};
+template <>
+class ::fidl::WireResult<::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>
+    final : public ::fidl::Result {
+ public:
+  WireResult(
+      ::fidl::UnownedClientEnd<::test_bindingsdenylist::DenyEachBinding> client,
+      ::fidl::WireRequest<
+          ::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>* request);
+  WireResult(
+      ::fidl::UnownedClientEnd<::test_bindingsdenylist::DenyEachBinding> client,
+      ::fidl::WireRequest<
+          ::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>* request,
+      zx_time_t _deadline);
+  explicit WireResult(const ::fidl::Result& result) : ::fidl::Result(result) {}
+  WireResult(WireResult&&) = delete;
+  WireResult(const WireResult&) = delete;
+  WireResult* operator=(WireResult&&) = delete;
+  WireResult* operator=(const WireResult&) = delete;
+  ~WireResult() = default;
+
+  ::fidl::WireResponse<::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>*
+  Unwrap() {
+    ZX_DEBUG_ASSERT(ok());
+    return reinterpret_cast<::fidl::WireResponse<
+        ::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>*>(
+        bytes_.data());
+  }
+  const ::fidl::WireResponse<
+      ::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>*
+  Unwrap() const {
+    ZX_DEBUG_ASSERT(ok());
+    return reinterpret_cast<const ::fidl::WireResponse<
+        ::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>*>(
+        bytes_.data());
+  }
+
+  ::fidl::WireResponse<::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>&
+  value() {
+    return *Unwrap();
+  }
+  const ::fidl::WireResponse<
+      ::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>&
+  value() const {
+    return *Unwrap();
+  }
+
+  ::fidl::WireResponse<::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>*
+  operator->() {
+    return &value();
+  }
+  const ::fidl::WireResponse<
+      ::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>*
+  operator->() const {
+    return &value();
+  }
+
+  ::fidl::WireResponse<::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>&
+  operator*() {
+    return value();
+  }
+  const ::fidl::WireResponse<
+      ::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>&
+  operator*() const {
+    return value();
+  }
+
+ private:
+  ::fidl::internal::InlineMessageBuffer<48> bytes_;
+};
+template <>
+class ::fidl::WireUnownedResult<
+    ::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>
+    final : public ::fidl::Result {
+ public:
+  explicit WireUnownedResult(
+      ::fidl::UnownedClientEnd<::test_bindingsdenylist::DenyEachBinding>
+          client_end,
+      ::fidl::internal::AnyBufferAllocator& allocator,
+      ::fidl::WireRequest<
+          ::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>* request);
+  explicit WireUnownedResult(
+      ::fidl::WireResponse<
+          ::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>* response)
+      : bytes_(reinterpret_cast<uint8_t*>(response)) {}
+  explicit WireUnownedResult(const ::fidl::Result& result)
+      : ::fidl::Result(result) {}
+  explicit WireUnownedResult(
+      ::fidl::DecodedMessage<::fidl::WireResponse<
+          ::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>>&& decoded,
+      ::fidl::internal::IncomingTransportContext context)
+      : ::fidl::Result(decoded) {
+    if (decoded.ok()) {
+      bytes_ = reinterpret_cast<uint8_t*>(decoded.PrimaryObject());
+    } else {
+      bytes_ = nullptr;
+    }
+    decoded.ReleasePrimaryObject();
+  }
+  WireUnownedResult(WireUnownedResult&&) = delete;
+  WireUnownedResult(const WireUnownedResult&) = delete;
+  WireUnownedResult* operator=(WireUnownedResult&&) = delete;
+  WireUnownedResult* operator=(const WireUnownedResult&) = delete;
+  ~WireUnownedResult() = default;
+
+  ::fidl::WireResponse<::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>*
+  Unwrap() {
+    ZX_DEBUG_ASSERT(ok());
+    return reinterpret_cast<::fidl::WireResponse<
+        ::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>*>(bytes_);
+  }
+  const ::fidl::WireResponse<
+      ::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>*
+  Unwrap() const {
+    ZX_DEBUG_ASSERT(ok());
+    return reinterpret_cast<const ::fidl::WireResponse<
+        ::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>*>(bytes_);
+  }
+
+  ::fidl::WireResponse<::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>&
+  value() {
+    return *Unwrap();
+  }
+  const ::fidl::WireResponse<
+      ::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>&
+  value() const {
+    return *Unwrap();
+  }
+
+  ::fidl::WireResponse<::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>*
+  operator->() {
+    return &value();
+  }
+  const ::fidl::WireResponse<
+      ::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>*
+  operator->() const {
+    return &value();
+  }
+
+  ::fidl::WireResponse<::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>&
+  operator*() {
+    return value();
+  }
+  const ::fidl::WireResponse<
+      ::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>&
+  operator*() const {
+    return value();
+  }
+
+ private:
+  uint8_t* bytes_;
+};
+template <>
+class ::fidl::WireResult<
+    ::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>
+    final : public ::fidl::Result {
+ public:
+  WireResult(
+      ::fidl::UnownedClientEnd<::test_bindingsdenylist::DenyEachBinding> client,
+      ::fidl::WireRequest<
+          ::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>*
+          request);
+  WireResult(
+      ::fidl::UnownedClientEnd<::test_bindingsdenylist::DenyEachBinding> client,
+      ::fidl::WireRequest<
+          ::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>* request,
+      zx_time_t _deadline);
+  explicit WireResult(const ::fidl::Result& result) : ::fidl::Result(result) {}
+  WireResult(WireResult&&) = delete;
+  WireResult(const WireResult&) = delete;
+  WireResult* operator=(WireResult&&) = delete;
+  WireResult* operator=(const WireResult&) = delete;
+  ~WireResult() = default;
+
+  ::fidl::WireResponse<
+      ::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>*
+  Unwrap() {
+    ZX_DEBUG_ASSERT(ok());
+    return reinterpret_cast<::fidl::WireResponse<
+        ::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>*>(
+        bytes_.data());
+  }
+  const ::fidl::WireResponse<
+      ::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>*
+  Unwrap() const {
+    ZX_DEBUG_ASSERT(ok());
+    return reinterpret_cast<const ::fidl::WireResponse<
+        ::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>*>(
+        bytes_.data());
+  }
+
+  ::fidl::WireResponse<
+      ::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>&
+  value() {
+    return *Unwrap();
+  }
+  const ::fidl::WireResponse<
+      ::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>&
+  value() const {
+    return *Unwrap();
+  }
+
+  ::fidl::WireResponse<
+      ::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>*
+  operator->() {
+    return &value();
+  }
+  const ::fidl::WireResponse<
+      ::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>*
+  operator->() const {
+    return &value();
+  }
+
+  ::fidl::WireResponse<
+      ::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>&
+  operator*() {
+    return value();
+  }
+  const ::fidl::WireResponse<
+      ::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>&
+  operator*() const {
+    return value();
+  }
+
+ private:
+  ::fidl::internal::InlineMessageBuffer<48> bytes_;
+};
+template <>
+class ::fidl::WireUnownedResult<
+    ::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>
+    final : public ::fidl::Result {
+ public:
+  explicit WireUnownedResult(
+      ::fidl::UnownedClientEnd<::test_bindingsdenylist::DenyEachBinding>
+          client_end,
+      ::fidl::internal::AnyBufferAllocator& allocator,
+      ::fidl::WireRequest<
+          ::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>*
+          request);
+  explicit WireUnownedResult(
+      ::fidl::WireResponse<
+          ::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>*
+          response)
+      : bytes_(reinterpret_cast<uint8_t*>(response)) {}
+  explicit WireUnownedResult(const ::fidl::Result& result)
+      : ::fidl::Result(result) {}
+  explicit WireUnownedResult(
+      ::fidl::DecodedMessage<::fidl::WireResponse<
+          ::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>>&&
+          decoded,
+      ::fidl::internal::IncomingTransportContext context)
+      : ::fidl::Result(decoded) {
+    if (decoded.ok()) {
+      bytes_ = reinterpret_cast<uint8_t*>(decoded.PrimaryObject());
+    } else {
+      bytes_ = nullptr;
+    }
+    decoded.ReleasePrimaryObject();
+  }
+  WireUnownedResult(WireUnownedResult&&) = delete;
+  WireUnownedResult(const WireUnownedResult&) = delete;
+  WireUnownedResult* operator=(WireUnownedResult&&) = delete;
+  WireUnownedResult* operator=(const WireUnownedResult&) = delete;
+  ~WireUnownedResult() = default;
+
+  ::fidl::WireResponse<
+      ::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>*
+  Unwrap() {
+    ZX_DEBUG_ASSERT(ok());
+    return reinterpret_cast<::fidl::WireResponse<
+        ::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>*>(bytes_);
+  }
+  const ::fidl::WireResponse<
+      ::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>*
+  Unwrap() const {
+    ZX_DEBUG_ASSERT(ok());
+    return reinterpret_cast<const ::fidl::WireResponse<
+        ::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>*>(bytes_);
+  }
+
+  ::fidl::WireResponse<
+      ::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>&
+  value() {
+    return *Unwrap();
+  }
+  const ::fidl::WireResponse<
+      ::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>&
+  value() const {
+    return *Unwrap();
+  }
+
+  ::fidl::WireResponse<
+      ::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>*
+  operator->() {
+    return &value();
+  }
+  const ::fidl::WireResponse<
+      ::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>*
+  operator->() const {
+    return &value();
+  }
+
+  ::fidl::WireResponse<
+      ::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>&
+  operator*() {
+    return value();
+  }
+  const ::fidl::WireResponse<
+      ::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>&
+  operator*() const {
+    return value();
+  }
+
+ private:
+  uint8_t* bytes_;
+};
+template <>
+class ::fidl::internal::WireEventHandlerInterface<
+    ::test_bindingsdenylist::DenyEachBinding> {
+ public:
+  WireEventHandlerInterface() = default;
+  virtual ~WireEventHandlerInterface() = default;
+};
+
+template <>
+class ::fidl::WireAsyncEventHandler<::test_bindingsdenylist::DenyEachBinding>
+    : public ::fidl::internal::WireEventHandlerInterface<
+          ::test_bindingsdenylist::DenyEachBinding>,
+      public ::fidl::internal::AsyncEventHandler {
+ public:
+  WireAsyncEventHandler() = default;
+};
+
+template <>
+class ::fidl::WireSyncEventHandler<::test_bindingsdenylist::DenyEachBinding>
+    : public ::fidl::internal::WireEventHandlerInterface<
+          ::test_bindingsdenylist::DenyEachBinding> {
+ public:
+  WireSyncEventHandler() = default;
+
+  // Method called when an unknown event is found. This methods gives the status
+  // which, in this case, is returned by HandleOneEvent.
+  virtual zx_status_t Unknown() = 0;
+
+  // Handle all possible events defined in this protocol.
+  // Blocks to consume exactly one message from the channel, then call the
+  // corresponding virtual method.
+  ::fidl::Result HandleOneEvent(
+      ::fidl::UnownedClientEnd<::test_bindingsdenylist::DenyEachBinding>
+          client_end);
+};
+
+template <>
+class ::fidl::internal::WireEventDispatcher<
+    ::test_bindingsdenylist::DenyEachBinding>
+    final : public ::fidl::internal::IncomingEventDispatcher<
+                ::fidl::WireAsyncEventHandler<
+                    ::test_bindingsdenylist::DenyEachBinding>> {
+ public:
+  explicit WireEventDispatcher(
+      ::fidl::WireAsyncEventHandler<::test_bindingsdenylist::DenyEachBinding>*
+          event_handler)
+      : IncomingEventDispatcher(event_handler) {}
+
+ private:
+  std::optional<::fidl::UnbindInfo> DispatchEvent(
+      ::fidl::IncomingMessage& msg,
+      ::fidl::internal::IncomingTransportContext transport_context) override;
+};
+
+// Methods to make a sync FIDL call directly on an unowned handle or a
+// const reference to a
+// |fidl::ClientEnd<::test_bindingsdenylist::DenyEachBinding>|, avoiding setting
+// up a client.
+template <>
+class ::fidl::internal::WireSyncClientImpl<
+    ::test_bindingsdenylist::DenyEachBinding>
+    final : public ::fidl::internal::SyncEndpointManagedVeneer<
+                ::fidl::internal::WireSyncClientImpl<
+                    ::test_bindingsdenylist::DenyEachBinding>> {
+ public:
+  // Allocates 56 bytes of message buffer on the stack. No heap allocation
+  // necessary.
+  ::fidl::WireResult<::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>
+  OnlyDenyDart(bool a) {
+    ::fidl::WireRequest<::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>
+        _request{a};
+    return ::fidl::WireResult<
+        ::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>(_client_end(),
+                                                                &_request);
+  }
+
+  // Allocates 56 bytes of message buffer on the stack. No heap allocation
+  // necessary.
+  ::fidl::WireResult<::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>
+  OnlyDenyGo(bool a) {
+    ::fidl::WireRequest<::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>
+        _request{a};
+    return ::fidl::WireResult<
+        ::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>(_client_end(),
+                                                              &_request);
+  }
+
+  // Allocates 56 bytes of message buffer on the stack. No heap allocation
+  // necessary.
+  ::fidl::WireResult<
+      ::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>
+  OnlyDenyLibfuzzer(bool a) {
+    ::fidl::WireRequest<
+        ::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>
+        _request{a};
+    return ::fidl::WireResult<
+        ::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>(
+        _client_end(), &_request);
+  }
+
+  // Allocates 56 bytes of message buffer on the stack. No heap allocation
+  // necessary.
+  ::fidl::WireResult<::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>
+  OnlyDenyRust(bool a) {
+    ::fidl::WireRequest<::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>
+        _request{a};
+    return ::fidl::WireResult<
+        ::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>(_client_end(),
+                                                                &_request);
+  }
+
+  // Allocates 56 bytes of message buffer on the stack. No heap allocation
+  // necessary.
+  ::fidl::WireResult<
+      ::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>
+  OnlyDenySyzkaller(bool a) {
+    ::fidl::WireRequest<
+        ::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>
+        _request{a};
+    return ::fidl::WireResult<
+        ::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>(
+        _client_end(), &_request);
+  }
+
+ private:
+  ::fidl::UnownedClientEnd<::test_bindingsdenylist::DenyEachBinding>
+  _client_end() const {
+    return ::fidl::UnownedClientEnd<::test_bindingsdenylist::DenyEachBinding>(
+        _transport().get<::fidl::internal::ChannelTransport>());
+  }
+};
+
+template <>
+class ::fidl::internal::WireSyncBufferClientImpl<
+    ::test_bindingsdenylist::DenyEachBinding>
+    final : public ::fidl::internal::SyncEndpointBufferVeneer<
+                ::fidl::internal::WireSyncBufferClientImpl<
+                    ::test_bindingsdenylist::DenyEachBinding>> {
+ public:
+  // Caller provides the backing storage for FIDL message via an argument to
+  // `.buffer()`.
+  ::fidl::WireUnownedResult<
+      ::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>
+  OnlyDenyDart(bool a) {
+    ::fidl::WireRequest<::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>
+        _request{a};
+    return ::fidl::WireUnownedResult<
+        ::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>(
+        _client_end(), _allocator(), &_request);
+  }
+
+  // Caller provides the backing storage for FIDL message via an argument to
+  // `.buffer()`.
+  ::fidl::WireUnownedResult<
+      ::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>
+  OnlyDenyGo(bool a) {
+    ::fidl::WireRequest<::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>
+        _request{a};
+    return ::fidl::WireUnownedResult<
+        ::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>(
+        _client_end(), _allocator(), &_request);
+  }
+
+  // Caller provides the backing storage for FIDL message via an argument to
+  // `.buffer()`.
+  ::fidl::WireUnownedResult<
+      ::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>
+  OnlyDenyLibfuzzer(bool a) {
+    ::fidl::WireRequest<
+        ::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>
+        _request{a};
+    return ::fidl::WireUnownedResult<
+        ::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>(
+        _client_end(), _allocator(), &_request);
+  }
+
+  // Caller provides the backing storage for FIDL message via an argument to
+  // `.buffer()`.
+  ::fidl::WireUnownedResult<
+      ::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>
+  OnlyDenyRust(bool a) {
+    ::fidl::WireRequest<::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>
+        _request{a};
+    return ::fidl::WireUnownedResult<
+        ::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>(
+        _client_end(), _allocator(), &_request);
+  }
+
+  // Caller provides the backing storage for FIDL message via an argument to
+  // `.buffer()`.
+  ::fidl::WireUnownedResult<
+      ::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>
+  OnlyDenySyzkaller(bool a) {
+    ::fidl::WireRequest<
+        ::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>
+        _request{a};
+    return ::fidl::WireUnownedResult<
+        ::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>(
+        _client_end(), _allocator(), &_request);
+  }
+
+ private:
+  ::fidl::UnownedClientEnd<::test_bindingsdenylist::DenyEachBinding>
+  _client_end() const {
+    return ::fidl::UnownedClientEnd<::test_bindingsdenylist::DenyEachBinding>(
+        _transport().get<::fidl::internal::ChannelTransport>());
+  }
+};
+
+template <>
+class ::fidl::internal::WireCompleterBase<
+    ::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>
+    : public ::fidl::CompleterBase {
+ public:
+  // In the following methods, the return value indicates internal errors during
+  // the reply, such as encoding or writing to the transport.
+  // Note that any error will automatically lead to the destruction of the
+  // binding, after which the |on_unbound| callback will be triggered with a
+  // detailed reason.
+  //
+  // See //zircon/system/ulib/fidl/include/lib/fidl/llcpp/server.h.
+  //
+  // Because the reply status is identical to the unbinding status, it can be
+  // safely ignored.
+  ::fidl::Result Reply(
+      ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyDartResult result);
+  ::fidl::Result ReplySuccess(int32_t b);
+  ::fidl::Result ReplyError(uint32_t error);
+  ::fidl::Result Reply(
+      ::fidl::BufferSpan _buffer,
+      ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyDartResult result);
+  ::fidl::Result ReplySuccess(::fidl::BufferSpan _buffer, int32_t b);
+
+ protected:
+  using ::fidl::CompleterBase::CompleterBase;
+};
+
+template <>
+struct ::fidl::internal::WireMethodTypes<
+    ::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart> {
+  using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<
+      ::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>>;
+};
+
+template <>
+class ::fidl::internal::WireCompleterBase<
+    ::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>
+    : public ::fidl::CompleterBase {
+ public:
+  // In the following methods, the return value indicates internal errors during
+  // the reply, such as encoding or writing to the transport.
+  // Note that any error will automatically lead to the destruction of the
+  // binding, after which the |on_unbound| callback will be triggered with a
+  // detailed reason.
+  //
+  // See //zircon/system/ulib/fidl/include/lib/fidl/llcpp/server.h.
+  //
+  // Because the reply status is identical to the unbinding status, it can be
+  // safely ignored.
+  ::fidl::Result Reply(
+      ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoResult result);
+  ::fidl::Result ReplySuccess(int32_t b);
+  ::fidl::Result ReplyError(uint32_t error);
+  ::fidl::Result Reply(
+      ::fidl::BufferSpan _buffer,
+      ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoResult result);
+  ::fidl::Result ReplySuccess(::fidl::BufferSpan _buffer, int32_t b);
+
+ protected:
+  using ::fidl::CompleterBase::CompleterBase;
+};
+
+template <>
+struct ::fidl::internal::WireMethodTypes<
+    ::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo> {
+  using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<
+      ::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>>;
+};
+
+template <>
+class ::fidl::internal::WireCompleterBase<
+    ::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>
+    : public ::fidl::CompleterBase {
+ public:
+  // In the following methods, the return value indicates internal errors during
+  // the reply, such as encoding or writing to the transport.
+  // Note that any error will automatically lead to the destruction of the
+  // binding, after which the |on_unbound| callback will be triggered with a
+  // detailed reason.
+  //
+  // See //zircon/system/ulib/fidl/include/lib/fidl/llcpp/server.h.
+  //
+  // Because the reply status is identical to the unbinding status, it can be
+  // safely ignored.
+  ::fidl::Result Reply(
+      ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyLibfuzzerResult
+          result);
+  ::fidl::Result ReplySuccess(int32_t b);
+  ::fidl::Result ReplyError(uint32_t error);
+  ::fidl::Result Reply(
+      ::fidl::BufferSpan _buffer,
+      ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyLibfuzzerResult
+          result);
+  ::fidl::Result ReplySuccess(::fidl::BufferSpan _buffer, int32_t b);
+
+ protected:
+  using ::fidl::CompleterBase::CompleterBase;
+};
+
+template <>
+struct ::fidl::internal::WireMethodTypes<
+    ::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer> {
+  using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<
+      ::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>>;
+};
+
+template <>
+class ::fidl::internal::WireCompleterBase<
+    ::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>
+    : public ::fidl::CompleterBase {
+ public:
+  // In the following methods, the return value indicates internal errors during
+  // the reply, such as encoding or writing to the transport.
+  // Note that any error will automatically lead to the destruction of the
+  // binding, after which the |on_unbound| callback will be triggered with a
+  // detailed reason.
+  //
+  // See //zircon/system/ulib/fidl/include/lib/fidl/llcpp/server.h.
+  //
+  // Because the reply status is identical to the unbinding status, it can be
+  // safely ignored.
+  ::fidl::Result Reply(
+      ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustResult result);
+  ::fidl::Result ReplySuccess(int32_t b);
+  ::fidl::Result ReplyError(uint32_t error);
+  ::fidl::Result Reply(
+      ::fidl::BufferSpan _buffer,
+      ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustResult result);
+  ::fidl::Result ReplySuccess(::fidl::BufferSpan _buffer, int32_t b);
+
+ protected:
+  using ::fidl::CompleterBase::CompleterBase;
+};
+
+template <>
+struct ::fidl::internal::WireMethodTypes<
+    ::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust> {
+  using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<
+      ::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>>;
+};
+
+template <>
+class ::fidl::internal::WireCompleterBase<
+    ::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>
+    : public ::fidl::CompleterBase {
+ public:
+  // In the following methods, the return value indicates internal errors during
+  // the reply, such as encoding or writing to the transport.
+  // Note that any error will automatically lead to the destruction of the
+  // binding, after which the |on_unbound| callback will be triggered with a
+  // detailed reason.
+  //
+  // See //zircon/system/ulib/fidl/include/lib/fidl/llcpp/server.h.
+  //
+  // Because the reply status is identical to the unbinding status, it can be
+  // safely ignored.
+  ::fidl::Result Reply(
+      ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenySyzkallerResult
+          result);
+  ::fidl::Result ReplySuccess(int32_t b);
+  ::fidl::Result ReplyError(uint32_t error);
+  ::fidl::Result Reply(
+      ::fidl::BufferSpan _buffer,
+      ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenySyzkallerResult
+          result);
+  ::fidl::Result ReplySuccess(::fidl::BufferSpan _buffer, int32_t b);
+
+ protected:
+  using ::fidl::CompleterBase::CompleterBase;
+};
+
+template <>
+struct ::fidl::internal::WireMethodTypes<
+    ::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller> {
+  using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<
+      ::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>>;
+};
+
+// Pure-virtual interface to be implemented by a server.
+// This interface uses typed channels (i.e. |fidl::ClientEnd<SomeProtocol>|
+// and |fidl::ServerEnd<SomeProtocol>|).
+template <>
+class ::fidl::WireServer<::test_bindingsdenylist::DenyEachBinding>
+    : public ::fidl::internal::IncomingMessageDispatcher {
+ public:
+  WireServer() = default;
+  virtual ~WireServer() = default;
+
+  // The FIDL protocol type that is implemented by this server.
+  using _EnclosingProtocol = ::test_bindingsdenylist::DenyEachBinding;
+
+  using OnlyDenyDartCompleter = ::fidl::internal::WireCompleter<
+      ::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>;
+  using OnlyDenyDartRequestView = ::fidl::internal::WireRequestView<
+      ::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>;
+
+  virtual void OnlyDenyDart(OnlyDenyDartRequestView request,
+                            OnlyDenyDartCompleter::Sync& _completer) = 0;
+
+  using OnlyDenyGoCompleter = ::fidl::internal::WireCompleter<
+      ::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>;
+  using OnlyDenyGoRequestView = ::fidl::internal::WireRequestView<
+      ::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>;
+
+  virtual void OnlyDenyGo(OnlyDenyGoRequestView request,
+                          OnlyDenyGoCompleter::Sync& _completer) = 0;
+
+  using OnlyDenyLibfuzzerCompleter = ::fidl::internal::WireCompleter<
+      ::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>;
+  using OnlyDenyLibfuzzerRequestView = ::fidl::internal::WireRequestView<
+      ::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>;
+
+  virtual void OnlyDenyLibfuzzer(
+      OnlyDenyLibfuzzerRequestView request,
+      OnlyDenyLibfuzzerCompleter::Sync& _completer) = 0;
+
+  using OnlyDenyRustCompleter = ::fidl::internal::WireCompleter<
+      ::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>;
+  using OnlyDenyRustRequestView = ::fidl::internal::WireRequestView<
+      ::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>;
+
+  virtual void OnlyDenyRust(OnlyDenyRustRequestView request,
+                            OnlyDenyRustCompleter::Sync& _completer) = 0;
+
+  using OnlyDenySyzkallerCompleter = ::fidl::internal::WireCompleter<
+      ::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>;
+  using OnlyDenySyzkallerRequestView = ::fidl::internal::WireRequestView<
+      ::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>;
+
+  virtual void OnlyDenySyzkaller(
+      OnlyDenySyzkallerRequestView request,
+      OnlyDenySyzkallerCompleter::Sync& _completer) = 0;
+
+ private:
+  void dispatch_message(
+      ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
+      ::fidl::internal::IncomingTransportContext transport_context) final;
+};
+#endif  // __Fuchsia__
+
 namespace fidl {
+
+template <>
+struct IsFidlType<::fidl::WireRequest<
+    ::test_bindingsdenylist::ImportsSameNameContext::Unattributed>>
+    : public std::true_type {};
+template <>
+struct IsFidlMessage<::fidl::WireRequest<
+    ::test_bindingsdenylist::ImportsSameNameContext::Unattributed>>
+    : public std::true_type {};
+static_assert(
+    sizeof(::fidl::WireRequest<
+           ::test_bindingsdenylist::ImportsSameNameContext::Unattributed>) ==
+    ::fidl::WireRequest<::test_bindingsdenylist::ImportsSameNameContext::
+                            Unattributed>::PrimarySize);
+
+template <>
+struct IsFidlType<
+    ::fidl::WireRequest<::test_bindingsdenylist::ImportsSameNameContext::
+                            AlwaysAppearsInImportingLibrary>>
+    : public std::true_type {};
+template <>
+struct IsFidlMessage<
+    ::fidl::WireRequest<::test_bindingsdenylist::ImportsSameNameContext::
+                            AlwaysAppearsInImportingLibrary>>
+    : public std::true_type {};
+static_assert(
+    sizeof(::fidl::WireRequest<::test_bindingsdenylist::ImportsSameNameContext::
+                                   AlwaysAppearsInImportingLibrary>) ==
+    ::fidl::WireRequest<::test_bindingsdenylist::ImportsSameNameContext::
+                            AlwaysAppearsInImportingLibrary>::PrimarySize);
 
 template <>
 struct IsFidlType<
@@ -653,8 +2911,393 @@ static_assert(
     ::fidl::WireResponse<::test_bindingsdenylist::OnlyLibfuzzerAndDeps::
                              LibfuzzerNeedsNonemptyProtocol>::PrimarySize);
 
+template <>
+struct IsFidlType<
+    ::fidl::WireRequest<::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>>
+    : public std::true_type {};
+template <>
+struct IsFidlMessage<
+    ::fidl::WireRequest<::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>>
+    : public std::true_type {};
+static_assert(
+    sizeof(::fidl::WireRequest<
+           ::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>) ==
+    ::fidl::WireRequest<
+        ::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>::PrimarySize);
+static_assert(
+    offsetof(::fidl::WireRequest<
+                 ::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>,
+             a) == 16);
+
+template <>
+struct IsFidlType<::fidl::WireResponse<
+    ::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>>
+    : public std::true_type {};
+template <>
+struct IsFidlMessage<::fidl::WireResponse<
+    ::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>>
+    : public std::true_type {};
+static_assert(
+    sizeof(::fidl::WireResponse<
+           ::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>) ==
+    ::fidl::WireResponse<
+        ::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>::PrimarySize);
+static_assert(
+    offsetof(::fidl::WireResponse<
+                 ::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>,
+             result) == 16);
+
+template <>
+struct IsFidlType<
+    ::fidl::WireRequest<::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>>
+    : public std::true_type {};
+template <>
+struct IsFidlMessage<
+    ::fidl::WireRequest<::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>>
+    : public std::true_type {};
+static_assert(
+    sizeof(::fidl::WireRequest<
+           ::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>) ==
+    ::fidl::WireRequest<
+        ::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>::PrimarySize);
+static_assert(
+    offsetof(::fidl::WireRequest<
+                 ::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>,
+             a) == 16);
+
+template <>
+struct IsFidlType<
+    ::fidl::WireResponse<::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>>
+    : public std::true_type {};
+template <>
+struct IsFidlMessage<
+    ::fidl::WireResponse<::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>>
+    : public std::true_type {};
+static_assert(
+    sizeof(::fidl::WireResponse<
+           ::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>) ==
+    ::fidl::WireResponse<
+        ::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>::PrimarySize);
+static_assert(
+    offsetof(::fidl::WireResponse<
+                 ::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>,
+             result) == 16);
+
+template <>
+struct IsFidlType<::fidl::WireRequest<
+    ::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>>
+    : public std::true_type {};
+template <>
+struct IsFidlMessage<::fidl::WireRequest<
+    ::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>>
+    : public std::true_type {};
+static_assert(
+    sizeof(::fidl::WireRequest<
+           ::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>) ==
+    ::fidl::WireRequest<::test_bindingsdenylist::DenyEachBinding::
+                            OnlyDenyLibfuzzer>::PrimarySize);
+static_assert(
+    offsetof(::fidl::WireRequest<
+                 ::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>,
+             a) == 16);
+
+template <>
+struct IsFidlType<::fidl::WireResponse<
+    ::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>>
+    : public std::true_type {};
+template <>
+struct IsFidlMessage<::fidl::WireResponse<
+    ::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>>
+    : public std::true_type {};
+static_assert(
+    sizeof(::fidl::WireResponse<
+           ::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>) ==
+    ::fidl::WireResponse<::test_bindingsdenylist::DenyEachBinding::
+                             OnlyDenyLibfuzzer>::PrimarySize);
+static_assert(
+    offsetof(::fidl::WireResponse<
+                 ::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>,
+             result) == 16);
+
+template <>
+struct IsFidlType<
+    ::fidl::WireRequest<::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>>
+    : public std::true_type {};
+template <>
+struct IsFidlMessage<
+    ::fidl::WireRequest<::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>>
+    : public std::true_type {};
+static_assert(
+    sizeof(::fidl::WireRequest<
+           ::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>) ==
+    ::fidl::WireRequest<
+        ::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>::PrimarySize);
+static_assert(
+    offsetof(::fidl::WireRequest<
+                 ::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>,
+             a) == 16);
+
+template <>
+struct IsFidlType<::fidl::WireResponse<
+    ::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>>
+    : public std::true_type {};
+template <>
+struct IsFidlMessage<::fidl::WireResponse<
+    ::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>>
+    : public std::true_type {};
+static_assert(
+    sizeof(::fidl::WireResponse<
+           ::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>) ==
+    ::fidl::WireResponse<
+        ::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>::PrimarySize);
+static_assert(
+    offsetof(::fidl::WireResponse<
+                 ::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>,
+             result) == 16);
+
+template <>
+struct IsFidlType<::fidl::WireRequest<
+    ::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>>
+    : public std::true_type {};
+template <>
+struct IsFidlMessage<::fidl::WireRequest<
+    ::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>>
+    : public std::true_type {};
+static_assert(
+    sizeof(::fidl::WireRequest<
+           ::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>) ==
+    ::fidl::WireRequest<::test_bindingsdenylist::DenyEachBinding::
+                            OnlyDenySyzkaller>::PrimarySize);
+static_assert(
+    offsetof(::fidl::WireRequest<
+                 ::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>,
+             a) == 16);
+
+template <>
+struct IsFidlType<::fidl::WireResponse<
+    ::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>>
+    : public std::true_type {};
+template <>
+struct IsFidlMessage<::fidl::WireResponse<
+    ::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>>
+    : public std::true_type {};
+static_assert(
+    sizeof(::fidl::WireResponse<
+           ::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>) ==
+    ::fidl::WireResponse<::test_bindingsdenylist::DenyEachBinding::
+                             OnlyDenySyzkaller>::PrimarySize);
+static_assert(
+    offsetof(::fidl::WireResponse<
+                 ::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>,
+             result) == 16);
+
 #ifdef __Fuchsia__
 }  // namespace fidl
+template <>
+class ::fidl::internal::WireWeakOnewayClientImpl<
+    ::test_bindingsdenylist::ImportsSameNameContext>
+    : public ::fidl::internal::ClientImplBase {
+ public:
+  using ClientImplBase::ClientImplBase;
+
+  // Allocates 16 bytes of message buffer on the stack. No heap allocation
+  // necessary.
+  ::fidl::Result Unattributed();
+
+  // Allocates 16 bytes of message buffer on the stack. No heap allocation
+  // necessary.
+  ::fidl::Result AlwaysAppearsInImportingLibrary();
+};
+
+template <>
+class ::fidl::internal::WireWeakAsyncClientImpl<
+    ::test_bindingsdenylist::ImportsSameNameContext>
+    final : public ::fidl::internal::WireWeakOnewayClientImpl<
+                ::test_bindingsdenylist::ImportsSameNameContext> {
+ public:
+  using WireWeakOnewayClientImpl::WireWeakOnewayClientImpl;
+};
+
+template <>
+class ::fidl::internal::WireWeakOnewayBufferClientImpl<
+    ::test_bindingsdenylist::ImportsSameNameContext>
+    : public ::fidl::internal::BufferClientImplBase {
+ public:
+  using BufferClientImplBase::BufferClientImplBase;
+
+  // Caller provides the backing storage for FIDL message.
+  ::fidl::Result Unattributed();
+
+  // Caller provides the backing storage for FIDL message.
+  ::fidl::Result AlwaysAppearsInImportingLibrary();
+};
+
+template <>
+class ::fidl::internal::WireWeakAsyncBufferClientImpl<
+    ::test_bindingsdenylist::ImportsSameNameContext>
+    final : public ::fidl::internal::WireWeakOnewayBufferClientImpl<
+                ::test_bindingsdenylist::ImportsSameNameContext> {
+ public:
+  using WireWeakOnewayBufferClientImpl::WireWeakOnewayBufferClientImpl;
+};
+template <>
+class ::fidl::internal::WireWeakSyncClientImpl<
+    ::test_bindingsdenylist::ImportsSameNameContext>
+    final : public ::fidl::internal::WireWeakOnewayClientImpl<
+                ::test_bindingsdenylist::ImportsSameNameContext> {
+ public:
+  using WireWeakOnewayClientImpl::WireWeakOnewayClientImpl;
+};
+namespace fidl {
+#endif  // __Fuchsia__
+
+}  // namespace fidl
+#ifdef __Fuchsia__
+// |EventSender| owns a server endpoint of a channel speaking
+// the ImportsSameNameContext protocol, and can send events in that protocol.
+template <>
+class ::fidl::WireEventSender<::test_bindingsdenylist::ImportsSameNameContext> {
+ public:
+  // Constructs an event sender with an invalid channel.
+  WireEventSender() = default;
+
+  explicit WireEventSender(
+      ::fidl::ServerEnd<::test_bindingsdenylist::ImportsSameNameContext>
+          server_end)
+      : server_end_(std::move(server_end)) {}
+
+  // The underlying server channel endpoint, which may be replaced at run-time.
+  const ::fidl::ServerEnd<::test_bindingsdenylist::ImportsSameNameContext>&
+  server_end() const {
+    return server_end_;
+  }
+  ::fidl::ServerEnd<::test_bindingsdenylist::ImportsSameNameContext>&
+  server_end() {
+    return server_end_;
+  }
+
+  const ::zx::channel& channel() const { return server_end_.channel(); }
+  ::zx::channel& channel() { return server_end_.channel(); }
+
+  // Whether the underlying channel is valid.
+  bool is_valid() const { return server_end_.is_valid(); }
+
+ private:
+  ::fidl::ServerEnd<::test_bindingsdenylist::ImportsSameNameContext>
+      server_end_;
+};
+
+template <>
+class ::fidl::internal::WireWeakEventSender<
+    ::test_bindingsdenylist::ImportsSameNameContext> {
+ public:
+  WireWeakEventSender(
+      std::weak_ptr<::fidl::internal::AsyncServerBinding>&& binding)
+      : inner_(std::move(binding)) {}
+
+ private:
+  friend ServerBindingRefImpl<
+      ::test_bindingsdenylist::ImportsSameNameContext,
+      typename ::test_bindingsdenylist::ImportsSameNameContext::Transport>;
+
+  ::fidl::internal::WeakEventSenderInner inner_;
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+template <>
+class ::fidl::internal::WireWeakOnewayClientImpl<
+    ::test_bindingsdenylist::Allowed>
+    : public ::fidl::internal::ClientImplBase {
+ public:
+  using ClientImplBase::ClientImplBase;
+};
+
+template <>
+class ::fidl::internal::WireWeakAsyncClientImpl<
+    ::test_bindingsdenylist::Allowed>
+    final : public ::fidl::internal::WireWeakOnewayClientImpl<
+                ::test_bindingsdenylist::Allowed> {
+ public:
+  using WireWeakOnewayClientImpl::WireWeakOnewayClientImpl;
+};
+
+template <>
+class ::fidl::internal::WireWeakOnewayBufferClientImpl<
+    ::test_bindingsdenylist::Allowed>
+    : public ::fidl::internal::BufferClientImplBase {
+ public:
+  using BufferClientImplBase::BufferClientImplBase;
+};
+
+template <>
+class ::fidl::internal::WireWeakAsyncBufferClientImpl<
+    ::test_bindingsdenylist::Allowed>
+    final : public ::fidl::internal::WireWeakOnewayBufferClientImpl<
+                ::test_bindingsdenylist::Allowed> {
+ public:
+  using WireWeakOnewayBufferClientImpl::WireWeakOnewayBufferClientImpl;
+};
+template <>
+class ::fidl::internal::WireWeakSyncClientImpl<::test_bindingsdenylist::Allowed>
+    final : public ::fidl::internal::WireWeakOnewayClientImpl<
+                ::test_bindingsdenylist::Allowed> {
+ public:
+  using WireWeakOnewayClientImpl::WireWeakOnewayClientImpl;
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+// |EventSender| owns a server endpoint of a channel speaking
+// the Allowed protocol, and can send events in that protocol.
+template <>
+class ::fidl::WireEventSender<::test_bindingsdenylist::Allowed> {
+ public:
+  // Constructs an event sender with an invalid channel.
+  WireEventSender() = default;
+
+  explicit WireEventSender(
+      ::fidl::ServerEnd<::test_bindingsdenylist::Allowed> server_end)
+      : server_end_(std::move(server_end)) {}
+
+  // The underlying server channel endpoint, which may be replaced at run-time.
+  const ::fidl::ServerEnd<::test_bindingsdenylist::Allowed>& server_end()
+      const {
+    return server_end_;
+  }
+  ::fidl::ServerEnd<::test_bindingsdenylist::Allowed>& server_end() {
+    return server_end_;
+  }
+
+  const ::zx::channel& channel() const { return server_end_.channel(); }
+  ::zx::channel& channel() { return server_end_.channel(); }
+
+  // Whether the underlying channel is valid.
+  bool is_valid() const { return server_end_.is_valid(); }
+
+ private:
+  ::fidl::ServerEnd<::test_bindingsdenylist::Allowed> server_end_;
+};
+
+template <>
+class ::fidl::internal::WireWeakEventSender<::test_bindingsdenylist::Allowed> {
+ public:
+  WireWeakEventSender(
+      std::weak_ptr<::fidl::internal::AsyncServerBinding>&& binding)
+      : inner_(std::move(binding)) {}
+
+ private:
+  friend ServerBindingRefImpl<
+      ::test_bindingsdenylist::Allowed,
+      typename ::test_bindingsdenylist::Allowed::Transport>;
+
+  ::fidl::internal::WeakEventSenderInner inner_;
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
 template <>
 class ::fidl::internal::WireWeakOnewayClientImpl<
     ::test_bindingsdenylist::OnlyLibfuzzerAndDeps>
@@ -720,10 +3363,8 @@ class ::fidl::internal::WireWeakSyncClientImpl<
                          LibfuzzerNeedsNonemptyProtocol>
   LibfuzzerNeedsNonemptyProtocol();
 };
-namespace fidl {
 #endif  // __Fuchsia__
 
-}  // namespace fidl
 #ifdef __Fuchsia__
 // |EventSender| owns a server endpoint of a channel speaking
 // the OnlyLibfuzzerAndDeps protocol, and can send events in that protocol.
@@ -864,6 +3505,222 @@ class ::fidl::internal::WireWeakEventSender<
   friend ServerBindingRefImpl<
       ::test_bindingsdenylist::OnlyCppAndDeps,
       typename ::test_bindingsdenylist::OnlyCppAndDeps::Transport>;
+
+  ::fidl::internal::WeakEventSenderInner inner_;
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+template <>
+class ::fidl::internal::WireWeakOnewayClientImpl<
+    ::test_bindingsdenylist::DenyEachBinding>
+    : public ::fidl::internal::ClientImplBase {
+ public:
+  using ClientImplBase::ClientImplBase;
+};
+
+template <>
+class ::fidl::internal::WireWeakAsyncClientImpl<
+    ::test_bindingsdenylist::DenyEachBinding>
+    final : public ::fidl::internal::WireWeakOnewayClientImpl<
+                ::test_bindingsdenylist::DenyEachBinding> {
+ public:
+  using WireWeakOnewayClientImpl::WireWeakOnewayClientImpl;
+  // Allocates 24 bytes of request buffer on the stack. The callback is stored
+  // on the heap.
+  void OnlyDenyDart(bool a,
+                    ::fidl::WireClientCallback<
+                        ::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>
+                        _cb);
+
+  void OnlyDenyDart(
+      bool a,
+      ::fit::callback<
+          void(::fidl::WireResponse<::test_bindingsdenylist::DenyEachBinding::
+                                        OnlyDenyDart>* response)>
+          _cb);
+  // Allocates 24 bytes of request buffer on the stack. The callback is stored
+  // on the heap.
+  void OnlyDenyGo(bool a,
+                  ::fidl::WireClientCallback<
+                      ::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>
+                      _cb);
+
+  void OnlyDenyGo(
+      bool a,
+      ::fit::callback<
+          void(::fidl::WireResponse<
+               ::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>* response)>
+          _cb);
+  // Allocates 24 bytes of request buffer on the stack. The callback is stored
+  // on the heap.
+  void OnlyDenyLibfuzzer(
+      bool a, ::fidl::WireClientCallback<
+                  ::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>
+                  _cb);
+
+  void OnlyDenyLibfuzzer(
+      bool a,
+      ::fit::callback<
+          void(::fidl::WireResponse<::test_bindingsdenylist::DenyEachBinding::
+                                        OnlyDenyLibfuzzer>* response)>
+          _cb);
+  // Allocates 24 bytes of request buffer on the stack. The callback is stored
+  // on the heap.
+  void OnlyDenyRust(bool a,
+                    ::fidl::WireClientCallback<
+                        ::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>
+                        _cb);
+
+  void OnlyDenyRust(
+      bool a,
+      ::fit::callback<
+          void(::fidl::WireResponse<::test_bindingsdenylist::DenyEachBinding::
+                                        OnlyDenyRust>* response)>
+          _cb);
+  // Allocates 24 bytes of request buffer on the stack. The callback is stored
+  // on the heap.
+  void OnlyDenySyzkaller(
+      bool a, ::fidl::WireClientCallback<
+                  ::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>
+                  _cb);
+
+  void OnlyDenySyzkaller(
+      bool a,
+      ::fit::callback<
+          void(::fidl::WireResponse<::test_bindingsdenylist::DenyEachBinding::
+                                        OnlyDenySyzkaller>* response)>
+          _cb);
+};
+
+template <>
+class ::fidl::internal::WireWeakOnewayBufferClientImpl<
+    ::test_bindingsdenylist::DenyEachBinding>
+    : public ::fidl::internal::BufferClientImplBase {
+ public:
+  using BufferClientImplBase::BufferClientImplBase;
+};
+
+template <>
+class ::fidl::internal::WireWeakAsyncBufferClientImpl<
+    ::test_bindingsdenylist::DenyEachBinding>
+    final : public ::fidl::internal::WireWeakOnewayBufferClientImpl<
+                ::test_bindingsdenylist::DenyEachBinding> {
+ public:
+  using WireWeakOnewayBufferClientImpl::WireWeakOnewayBufferClientImpl;
+
+  // Caller provides the backing storage for FIDL message.
+  void OnlyDenyDart(
+      bool a,
+      ::fidl::WireResponseContext<
+          ::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>* _context);
+
+  // Caller provides the backing storage for FIDL message.
+  void OnlyDenyGo(
+      bool a,
+      ::fidl::WireResponseContext<
+          ::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>* _context);
+
+  // Caller provides the backing storage for FIDL message.
+  void OnlyDenyLibfuzzer(
+      bool a, ::fidl::WireResponseContext<
+                  ::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>*
+                  _context);
+
+  // Caller provides the backing storage for FIDL message.
+  void OnlyDenyRust(
+      bool a,
+      ::fidl::WireResponseContext<
+          ::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>* _context);
+
+  // Caller provides the backing storage for FIDL message.
+  void OnlyDenySyzkaller(
+      bool a, ::fidl::WireResponseContext<
+                  ::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>*
+                  _context);
+};
+template <>
+class ::fidl::internal::WireWeakSyncClientImpl<
+    ::test_bindingsdenylist::DenyEachBinding>
+    final : public ::fidl::internal::WireWeakOnewayClientImpl<
+                ::test_bindingsdenylist::DenyEachBinding> {
+ public:
+  using WireWeakOnewayClientImpl::WireWeakOnewayClientImpl;
+
+  // Allocates 56 bytes of message buffer on the stack. No heap allocation
+  // necessary.
+  ::fidl::WireResult<::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>
+  OnlyDenyDart(bool a);
+
+  // Allocates 56 bytes of message buffer on the stack. No heap allocation
+  // necessary.
+  ::fidl::WireResult<::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>
+  OnlyDenyGo(bool a);
+
+  // Allocates 56 bytes of message buffer on the stack. No heap allocation
+  // necessary.
+  ::fidl::WireResult<
+      ::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>
+  OnlyDenyLibfuzzer(bool a);
+
+  // Allocates 56 bytes of message buffer on the stack. No heap allocation
+  // necessary.
+  ::fidl::WireResult<::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>
+  OnlyDenyRust(bool a);
+
+  // Allocates 56 bytes of message buffer on the stack. No heap allocation
+  // necessary.
+  ::fidl::WireResult<
+      ::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>
+  OnlyDenySyzkaller(bool a);
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+// |EventSender| owns a server endpoint of a channel speaking
+// the DenyEachBinding protocol, and can send events in that protocol.
+template <>
+class ::fidl::WireEventSender<::test_bindingsdenylist::DenyEachBinding> {
+ public:
+  // Constructs an event sender with an invalid channel.
+  WireEventSender() = default;
+
+  explicit WireEventSender(
+      ::fidl::ServerEnd<::test_bindingsdenylist::DenyEachBinding> server_end)
+      : server_end_(std::move(server_end)) {}
+
+  // The underlying server channel endpoint, which may be replaced at run-time.
+  const ::fidl::ServerEnd<::test_bindingsdenylist::DenyEachBinding>&
+  server_end() const {
+    return server_end_;
+  }
+  ::fidl::ServerEnd<::test_bindingsdenylist::DenyEachBinding>& server_end() {
+    return server_end_;
+  }
+
+  const ::zx::channel& channel() const { return server_end_.channel(); }
+  ::zx::channel& channel() { return server_end_.channel(); }
+
+  // Whether the underlying channel is valid.
+  bool is_valid() const { return server_end_.is_valid(); }
+
+ private:
+  ::fidl::ServerEnd<::test_bindingsdenylist::DenyEachBinding> server_end_;
+};
+
+template <>
+class ::fidl::internal::WireWeakEventSender<
+    ::test_bindingsdenylist::DenyEachBinding> {
+ public:
+  WireWeakEventSender(
+      std::weak_ptr<::fidl::internal::AsyncServerBinding>&& binding)
+      : inner_(std::move(binding)) {}
+
+ private:
+  friend ServerBindingRefImpl<
+      ::test_bindingsdenylist::DenyEachBinding,
+      typename ::test_bindingsdenylist::DenyEachBinding::Transport>;
 
   ::fidl::internal::WeakEventSenderInner inner_;
 };

@@ -10,6 +10,107 @@ const (
 	AllBindings uint32 = 0
 )
 
+type DenyEachBindingOnlyDenyCppResponse struct {
+	_ struct{} `fidl:"s" fidl_size_v1:"4" fidl_alignment_v1:"4" fidl_size_v2:"4" fidl_alignment_v2:"4"`
+	B int32    `fidl_offset_v1:"0" fidl_offset_v2:"0"`
+}
+
+var _mDenyEachBindingOnlyDenyCppResponse = _bindings.CreateLazyMarshaler(DenyEachBindingOnlyDenyCppResponse{})
+
+func (msg *DenyEachBindingOnlyDenyCppResponse) Marshaler() _bindings.Marshaler {
+	return _mDenyEachBindingOnlyDenyCppResponse
+}
+
+type DenyEachBindingOnlyDenyDartResponse struct {
+	_ struct{} `fidl:"s" fidl_size_v1:"4" fidl_alignment_v1:"4" fidl_size_v2:"4" fidl_alignment_v2:"4"`
+	B int32    `fidl_offset_v1:"0" fidl_offset_v2:"0"`
+}
+
+var _mDenyEachBindingOnlyDenyDartResponse = _bindings.CreateLazyMarshaler(DenyEachBindingOnlyDenyDartResponse{})
+
+func (msg *DenyEachBindingOnlyDenyDartResponse) Marshaler() _bindings.Marshaler {
+	return _mDenyEachBindingOnlyDenyDartResponse
+}
+
+type DenyEachBindingOnlyDenyGoResponse struct {
+	_ struct{} `fidl:"s" fidl_size_v1:"4" fidl_alignment_v1:"4" fidl_size_v2:"4" fidl_alignment_v2:"4"`
+	B int32    `fidl_offset_v1:"0" fidl_offset_v2:"0"`
+}
+
+var _mDenyEachBindingOnlyDenyGoResponse = _bindings.CreateLazyMarshaler(DenyEachBindingOnlyDenyGoResponse{})
+
+func (msg *DenyEachBindingOnlyDenyGoResponse) Marshaler() _bindings.Marshaler {
+	return _mDenyEachBindingOnlyDenyGoResponse
+}
+
+type DenyEachBindingOnlyDenyLibfuzzerResponse struct {
+	_ struct{} `fidl:"s" fidl_size_v1:"4" fidl_alignment_v1:"4" fidl_size_v2:"4" fidl_alignment_v2:"4"`
+	B int32    `fidl_offset_v1:"0" fidl_offset_v2:"0"`
+}
+
+var _mDenyEachBindingOnlyDenyLibfuzzerResponse = _bindings.CreateLazyMarshaler(DenyEachBindingOnlyDenyLibfuzzerResponse{})
+
+func (msg *DenyEachBindingOnlyDenyLibfuzzerResponse) Marshaler() _bindings.Marshaler {
+	return _mDenyEachBindingOnlyDenyLibfuzzerResponse
+}
+
+type DenyEachBindingOnlyDenyRustResponse struct {
+	_ struct{} `fidl:"s" fidl_size_v1:"4" fidl_alignment_v1:"4" fidl_size_v2:"4" fidl_alignment_v2:"4"`
+	B int32    `fidl_offset_v1:"0" fidl_offset_v2:"0"`
+}
+
+var _mDenyEachBindingOnlyDenyRustResponse = _bindings.CreateLazyMarshaler(DenyEachBindingOnlyDenyRustResponse{})
+
+func (msg *DenyEachBindingOnlyDenyRustResponse) Marshaler() _bindings.Marshaler {
+	return _mDenyEachBindingOnlyDenyRustResponse
+}
+
+type DenyEachBindingOnlyDenySyzkallerResponse struct {
+	_ struct{} `fidl:"s" fidl_size_v1:"4" fidl_alignment_v1:"4" fidl_size_v2:"4" fidl_alignment_v2:"4"`
+	B int32    `fidl_offset_v1:"0" fidl_offset_v2:"0"`
+}
+
+var _mDenyEachBindingOnlyDenySyzkallerResponse = _bindings.CreateLazyMarshaler(DenyEachBindingOnlyDenySyzkallerResponse{})
+
+func (msg *DenyEachBindingOnlyDenySyzkallerResponse) Marshaler() _bindings.Marshaler {
+	return _mDenyEachBindingOnlyDenySyzkallerResponse
+}
+
+type ShouldNeverAppearInAnyBinding1 struct {
+	_ struct{} `fidl:"s" fidl_size_v1:"1" fidl_alignment_v1:"1" fidl_size_v2:"1" fidl_alignment_v2:"1"`
+	A bool     `fidl_offset_v1:"0" fidl_offset_v2:"0"`
+}
+
+var _mShouldNeverAppearInAnyBinding1 = _bindings.CreateLazyMarshaler(ShouldNeverAppearInAnyBinding1{})
+
+func (msg *ShouldNeverAppearInAnyBinding1) Marshaler() _bindings.Marshaler {
+	return _mShouldNeverAppearInAnyBinding1
+}
+
+type ShouldNeverAppearInAnyBinding4 struct {
+	_ struct{} `fidl:"s" fidl_size_v1:"1" fidl_alignment_v1:"1" fidl_size_v2:"1" fidl_alignment_v2:"1"`
+	A bool     `fidl_offset_v1:"0" fidl_offset_v2:"0"`
+}
+
+var _mShouldNeverAppearInAnyBinding4 = _bindings.CreateLazyMarshaler(ShouldNeverAppearInAnyBinding4{})
+
+func (msg *ShouldNeverAppearInAnyBinding4) Marshaler() _bindings.Marshaler {
+	return _mShouldNeverAppearInAnyBinding4
+}
+
+type AllowedDeniedResponse struct {
+	_                              struct{}                       `fidl:"s" fidl_size_v1:"48" fidl_alignment_v1:"8" fidl_size_v2:"40" fidl_alignment_v2:"8"`
+	ShouldNeverAppearInAnyBinding4 ShouldNeverAppearInAnyBinding4 `fidl_offset_v1:"0" fidl_offset_v2:"0"`
+	ShouldNeverAppearInAnyBinding5 ShouldNeverAppearInAnyBinding5 `fidl_offset_v1:"8" fidl_offset_v2:"8"`
+	ShouldNeverAppearInAnyBinding6 ShouldNeverAppearInAnyBinding6 `fidl_offset_v1:"24" fidl_offset_v2:"24"`
+}
+
+var _mAllowedDeniedResponse = _bindings.CreateLazyMarshaler(AllowedDeniedResponse{})
+
+func (msg *AllowedDeniedResponse) Marshaler() _bindings.Marshaler {
+	return _mAllowedDeniedResponse
+}
+
 type OnlyGo struct {
 	_ struct{} `fidl:"s" fidl_size_v1:"1" fidl_alignment_v1:"1" fidl_size_v2:"1" fidl_alignment_v2:"1"`
 }
@@ -19,3 +120,1039 @@ var _mOnlyGo = _bindings.CreateLazyMarshaler(OnlyGo{})
 func (msg *OnlyGo) Marshaler() _bindings.Marshaler {
 	return _mOnlyGo
 }
+
+type ShouldNeverAppearInAnyBinding7 struct {
+	_ struct{} `fidl:"s" fidl_size_v1:"1" fidl_alignment_v1:"1" fidl_size_v2:"1" fidl_alignment_v2:"1"`
+	A bool     `fidl_offset_v1:"0" fidl_offset_v2:"0"`
+}
+
+var _mShouldNeverAppearInAnyBinding7 = _bindings.CreateLazyMarshaler(ShouldNeverAppearInAnyBinding7{})
+
+func (msg *ShouldNeverAppearInAnyBinding7) Marshaler() _bindings.Marshaler {
+	return _mShouldNeverAppearInAnyBinding7
+}
+
+type MemberOnlyAppearsInImportingLibrary struct {
+	_ struct{} `fidl:"s" fidl_size_v1:"1" fidl_alignment_v1:"1" fidl_size_v2:"1" fidl_alignment_v2:"1"`
+	A bool     `fidl_offset_v1:"0" fidl_offset_v2:"0"`
+}
+
+var _mMemberOnlyAppearsInImportingLibrary = _bindings.CreateLazyMarshaler(MemberOnlyAppearsInImportingLibrary{})
+
+func (msg *MemberOnlyAppearsInImportingLibrary) Marshaler() _bindings.Marshaler {
+	return _mMemberOnlyAppearsInImportingLibrary
+}
+
+type OnlyAppearsInImportingLibrary struct {
+	_                                   struct{}                            `fidl:"s" fidl_size_v1:"1" fidl_alignment_v1:"1" fidl_size_v2:"1" fidl_alignment_v2:"1"`
+	MemberOnlyAppearsInImportingLibrary MemberOnlyAppearsInImportingLibrary `fidl_offset_v1:"0" fidl_offset_v2:"0"`
+}
+
+var _mOnlyAppearsInImportingLibrary = _bindings.CreateLazyMarshaler(OnlyAppearsInImportingLibrary{})
+
+func (msg *OnlyAppearsInImportingLibrary) Marshaler() _bindings.Marshaler {
+	return _mOnlyAppearsInImportingLibrary
+}
+
+type denyEachBindingWithCtxOnlyDenyCppRequest struct {
+	_ struct{} `fidl:"s" fidl_size_v1:"8" fidl_alignment_v1:"8" fidl_size_v2:"8" fidl_alignment_v2:"8"`
+	A bool     `fidl_offset_v1:"0" fidl_offset_v2:"0"`
+}
+
+var _mdenyEachBindingWithCtxOnlyDenyCppRequest = _bindings.CreateLazyMarshaler(denyEachBindingWithCtxOnlyDenyCppRequest{})
+
+func (msg *denyEachBindingWithCtxOnlyDenyCppRequest) Marshaler() _bindings.Marshaler {
+	return _mdenyEachBindingWithCtxOnlyDenyCppRequest
+}
+
+type denyEachBindingWithCtxOnlyDenyCppResponse struct {
+	_      struct{}                         `fidl:"s" fidl_size_v1:"24" fidl_alignment_v1:"8" fidl_size_v2:"16" fidl_alignment_v2:"8"`
+	Result DenyEachBindingOnlyDenyCppResult `fidl_offset_v1:"0" fidl_offset_v2:"0"`
+}
+
+var _mdenyEachBindingWithCtxOnlyDenyCppResponse = _bindings.CreateLazyMarshaler(denyEachBindingWithCtxOnlyDenyCppResponse{})
+
+func (msg *denyEachBindingWithCtxOnlyDenyCppResponse) Marshaler() _bindings.Marshaler {
+	return _mdenyEachBindingWithCtxOnlyDenyCppResponse
+}
+
+type denyEachBindingWithCtxOnlyDenyDartRequest struct {
+	_ struct{} `fidl:"s" fidl_size_v1:"8" fidl_alignment_v1:"8" fidl_size_v2:"8" fidl_alignment_v2:"8"`
+	A bool     `fidl_offset_v1:"0" fidl_offset_v2:"0"`
+}
+
+var _mdenyEachBindingWithCtxOnlyDenyDartRequest = _bindings.CreateLazyMarshaler(denyEachBindingWithCtxOnlyDenyDartRequest{})
+
+func (msg *denyEachBindingWithCtxOnlyDenyDartRequest) Marshaler() _bindings.Marshaler {
+	return _mdenyEachBindingWithCtxOnlyDenyDartRequest
+}
+
+type denyEachBindingWithCtxOnlyDenyDartResponse struct {
+	_      struct{}                          `fidl:"s" fidl_size_v1:"24" fidl_alignment_v1:"8" fidl_size_v2:"16" fidl_alignment_v2:"8"`
+	Result DenyEachBindingOnlyDenyDartResult `fidl_offset_v1:"0" fidl_offset_v2:"0"`
+}
+
+var _mdenyEachBindingWithCtxOnlyDenyDartResponse = _bindings.CreateLazyMarshaler(denyEachBindingWithCtxOnlyDenyDartResponse{})
+
+func (msg *denyEachBindingWithCtxOnlyDenyDartResponse) Marshaler() _bindings.Marshaler {
+	return _mdenyEachBindingWithCtxOnlyDenyDartResponse
+}
+
+type denyEachBindingWithCtxOnlyDenyLibfuzzerRequest struct {
+	_ struct{} `fidl:"s" fidl_size_v1:"8" fidl_alignment_v1:"8" fidl_size_v2:"8" fidl_alignment_v2:"8"`
+	A bool     `fidl_offset_v1:"0" fidl_offset_v2:"0"`
+}
+
+var _mdenyEachBindingWithCtxOnlyDenyLibfuzzerRequest = _bindings.CreateLazyMarshaler(denyEachBindingWithCtxOnlyDenyLibfuzzerRequest{})
+
+func (msg *denyEachBindingWithCtxOnlyDenyLibfuzzerRequest) Marshaler() _bindings.Marshaler {
+	return _mdenyEachBindingWithCtxOnlyDenyLibfuzzerRequest
+}
+
+type denyEachBindingWithCtxOnlyDenyLibfuzzerResponse struct {
+	_      struct{}                               `fidl:"s" fidl_size_v1:"24" fidl_alignment_v1:"8" fidl_size_v2:"16" fidl_alignment_v2:"8"`
+	Result DenyEachBindingOnlyDenyLibfuzzerResult `fidl_offset_v1:"0" fidl_offset_v2:"0"`
+}
+
+var _mdenyEachBindingWithCtxOnlyDenyLibfuzzerResponse = _bindings.CreateLazyMarshaler(denyEachBindingWithCtxOnlyDenyLibfuzzerResponse{})
+
+func (msg *denyEachBindingWithCtxOnlyDenyLibfuzzerResponse) Marshaler() _bindings.Marshaler {
+	return _mdenyEachBindingWithCtxOnlyDenyLibfuzzerResponse
+}
+
+type denyEachBindingWithCtxOnlyDenyRustRequest struct {
+	_ struct{} `fidl:"s" fidl_size_v1:"8" fidl_alignment_v1:"8" fidl_size_v2:"8" fidl_alignment_v2:"8"`
+	A bool     `fidl_offset_v1:"0" fidl_offset_v2:"0"`
+}
+
+var _mdenyEachBindingWithCtxOnlyDenyRustRequest = _bindings.CreateLazyMarshaler(denyEachBindingWithCtxOnlyDenyRustRequest{})
+
+func (msg *denyEachBindingWithCtxOnlyDenyRustRequest) Marshaler() _bindings.Marshaler {
+	return _mdenyEachBindingWithCtxOnlyDenyRustRequest
+}
+
+type denyEachBindingWithCtxOnlyDenyRustResponse struct {
+	_      struct{}                          `fidl:"s" fidl_size_v1:"24" fidl_alignment_v1:"8" fidl_size_v2:"16" fidl_alignment_v2:"8"`
+	Result DenyEachBindingOnlyDenyRustResult `fidl_offset_v1:"0" fidl_offset_v2:"0"`
+}
+
+var _mdenyEachBindingWithCtxOnlyDenyRustResponse = _bindings.CreateLazyMarshaler(denyEachBindingWithCtxOnlyDenyRustResponse{})
+
+func (msg *denyEachBindingWithCtxOnlyDenyRustResponse) Marshaler() _bindings.Marshaler {
+	return _mdenyEachBindingWithCtxOnlyDenyRustResponse
+}
+
+type denyEachBindingWithCtxOnlyDenySyzkallerRequest struct {
+	_ struct{} `fidl:"s" fidl_size_v1:"8" fidl_alignment_v1:"8" fidl_size_v2:"8" fidl_alignment_v2:"8"`
+	A bool     `fidl_offset_v1:"0" fidl_offset_v2:"0"`
+}
+
+var _mdenyEachBindingWithCtxOnlyDenySyzkallerRequest = _bindings.CreateLazyMarshaler(denyEachBindingWithCtxOnlyDenySyzkallerRequest{})
+
+func (msg *denyEachBindingWithCtxOnlyDenySyzkallerRequest) Marshaler() _bindings.Marshaler {
+	return _mdenyEachBindingWithCtxOnlyDenySyzkallerRequest
+}
+
+type denyEachBindingWithCtxOnlyDenySyzkallerResponse struct {
+	_      struct{}                               `fidl:"s" fidl_size_v1:"24" fidl_alignment_v1:"8" fidl_size_v2:"16" fidl_alignment_v2:"8"`
+	Result DenyEachBindingOnlyDenySyzkallerResult `fidl_offset_v1:"0" fidl_offset_v2:"0"`
+}
+
+var _mdenyEachBindingWithCtxOnlyDenySyzkallerResponse = _bindings.CreateLazyMarshaler(denyEachBindingWithCtxOnlyDenySyzkallerResponse{})
+
+func (msg *denyEachBindingWithCtxOnlyDenySyzkallerResponse) Marshaler() _bindings.Marshaler {
+	return _mdenyEachBindingWithCtxOnlyDenySyzkallerResponse
+}
+
+type I_denyEachBindingOnlyDenyCppResultTag uint64
+
+const (
+	DenyEachBindingOnlyDenyCppResultResponse = 1 // 0x00000001
+	DenyEachBindingOnlyDenyCppResultErr      = 2 // 0x00000002
+)
+
+type DenyEachBindingOnlyDenyCppResult struct {
+	I_denyEachBindingOnlyDenyCppResultTag `fidl:"x!" fidl_size_v1:"24" fidl_alignment_v1:"8" fidl_size_v2:"16" fidl_alignment_v2:"8" fidl_resource:"false"`
+	Response                              DenyEachBindingOnlyDenyCppResponse `fidl_ordinal:"1"`
+	Err                                   uint32                             `fidl_ordinal:"2"`
+}
+
+func (_m *DenyEachBindingOnlyDenyCppResult) reset() {
+	switch _m.I_denyEachBindingOnlyDenyCppResultTag {
+	case 1:
+		var _zeroed DenyEachBindingOnlyDenyCppResponse
+		_m.Response = _zeroed
+	case 2:
+		var _zeroed uint32
+		_m.Err = _zeroed
+	}
+}
+
+func (_m *DenyEachBindingOnlyDenyCppResult) Which() I_denyEachBindingOnlyDenyCppResultTag {
+	return _m.I_denyEachBindingOnlyDenyCppResultTag
+}
+
+func (_m *DenyEachBindingOnlyDenyCppResult) Ordinal() uint64 {
+	return uint64(_m.I_denyEachBindingOnlyDenyCppResultTag)
+}
+
+func (_m *DenyEachBindingOnlyDenyCppResult) SetResponse(response DenyEachBindingOnlyDenyCppResponse) {
+	_m.reset()
+	_m.I_denyEachBindingOnlyDenyCppResultTag = DenyEachBindingOnlyDenyCppResultResponse
+	_m.Response = response
+}
+
+func DenyEachBindingOnlyDenyCppResultWithResponse(response DenyEachBindingOnlyDenyCppResponse) DenyEachBindingOnlyDenyCppResult {
+	var _u DenyEachBindingOnlyDenyCppResult
+	_u.SetResponse(response)
+	return _u
+}
+
+func (_m *DenyEachBindingOnlyDenyCppResult) SetErr(err uint32) {
+	_m.reset()
+	_m.I_denyEachBindingOnlyDenyCppResultTag = DenyEachBindingOnlyDenyCppResultErr
+	_m.Err = err
+}
+
+func DenyEachBindingOnlyDenyCppResultWithErr(err uint32) DenyEachBindingOnlyDenyCppResult {
+	var _u DenyEachBindingOnlyDenyCppResult
+	_u.SetErr(err)
+	return _u
+}
+
+type I_denyEachBindingOnlyDenyDartResultTag uint64
+
+const (
+	DenyEachBindingOnlyDenyDartResultResponse = 1 // 0x00000001
+	DenyEachBindingOnlyDenyDartResultErr      = 2 // 0x00000002
+)
+
+type DenyEachBindingOnlyDenyDartResult struct {
+	I_denyEachBindingOnlyDenyDartResultTag `fidl:"x!" fidl_size_v1:"24" fidl_alignment_v1:"8" fidl_size_v2:"16" fidl_alignment_v2:"8" fidl_resource:"false"`
+	Response                               DenyEachBindingOnlyDenyDartResponse `fidl_ordinal:"1"`
+	Err                                    uint32                              `fidl_ordinal:"2"`
+}
+
+func (_m *DenyEachBindingOnlyDenyDartResult) reset() {
+	switch _m.I_denyEachBindingOnlyDenyDartResultTag {
+	case 1:
+		var _zeroed DenyEachBindingOnlyDenyDartResponse
+		_m.Response = _zeroed
+	case 2:
+		var _zeroed uint32
+		_m.Err = _zeroed
+	}
+}
+
+func (_m *DenyEachBindingOnlyDenyDartResult) Which() I_denyEachBindingOnlyDenyDartResultTag {
+	return _m.I_denyEachBindingOnlyDenyDartResultTag
+}
+
+func (_m *DenyEachBindingOnlyDenyDartResult) Ordinal() uint64 {
+	return uint64(_m.I_denyEachBindingOnlyDenyDartResultTag)
+}
+
+func (_m *DenyEachBindingOnlyDenyDartResult) SetResponse(response DenyEachBindingOnlyDenyDartResponse) {
+	_m.reset()
+	_m.I_denyEachBindingOnlyDenyDartResultTag = DenyEachBindingOnlyDenyDartResultResponse
+	_m.Response = response
+}
+
+func DenyEachBindingOnlyDenyDartResultWithResponse(response DenyEachBindingOnlyDenyDartResponse) DenyEachBindingOnlyDenyDartResult {
+	var _u DenyEachBindingOnlyDenyDartResult
+	_u.SetResponse(response)
+	return _u
+}
+
+func (_m *DenyEachBindingOnlyDenyDartResult) SetErr(err uint32) {
+	_m.reset()
+	_m.I_denyEachBindingOnlyDenyDartResultTag = DenyEachBindingOnlyDenyDartResultErr
+	_m.Err = err
+}
+
+func DenyEachBindingOnlyDenyDartResultWithErr(err uint32) DenyEachBindingOnlyDenyDartResult {
+	var _u DenyEachBindingOnlyDenyDartResult
+	_u.SetErr(err)
+	return _u
+}
+
+type I_denyEachBindingOnlyDenyGoResultTag uint64
+
+const (
+	DenyEachBindingOnlyDenyGoResultResponse = 1 // 0x00000001
+	DenyEachBindingOnlyDenyGoResultErr      = 2 // 0x00000002
+)
+
+type DenyEachBindingOnlyDenyGoResult struct {
+	I_denyEachBindingOnlyDenyGoResultTag `fidl:"x!" fidl_size_v1:"24" fidl_alignment_v1:"8" fidl_size_v2:"16" fidl_alignment_v2:"8" fidl_resource:"false"`
+	Response                             DenyEachBindingOnlyDenyGoResponse `fidl_ordinal:"1"`
+	Err                                  uint32                            `fidl_ordinal:"2"`
+}
+
+func (_m *DenyEachBindingOnlyDenyGoResult) reset() {
+	switch _m.I_denyEachBindingOnlyDenyGoResultTag {
+	case 1:
+		var _zeroed DenyEachBindingOnlyDenyGoResponse
+		_m.Response = _zeroed
+	case 2:
+		var _zeroed uint32
+		_m.Err = _zeroed
+	}
+}
+
+func (_m *DenyEachBindingOnlyDenyGoResult) Which() I_denyEachBindingOnlyDenyGoResultTag {
+	return _m.I_denyEachBindingOnlyDenyGoResultTag
+}
+
+func (_m *DenyEachBindingOnlyDenyGoResult) Ordinal() uint64 {
+	return uint64(_m.I_denyEachBindingOnlyDenyGoResultTag)
+}
+
+func (_m *DenyEachBindingOnlyDenyGoResult) SetResponse(response DenyEachBindingOnlyDenyGoResponse) {
+	_m.reset()
+	_m.I_denyEachBindingOnlyDenyGoResultTag = DenyEachBindingOnlyDenyGoResultResponse
+	_m.Response = response
+}
+
+func DenyEachBindingOnlyDenyGoResultWithResponse(response DenyEachBindingOnlyDenyGoResponse) DenyEachBindingOnlyDenyGoResult {
+	var _u DenyEachBindingOnlyDenyGoResult
+	_u.SetResponse(response)
+	return _u
+}
+
+func (_m *DenyEachBindingOnlyDenyGoResult) SetErr(err uint32) {
+	_m.reset()
+	_m.I_denyEachBindingOnlyDenyGoResultTag = DenyEachBindingOnlyDenyGoResultErr
+	_m.Err = err
+}
+
+func DenyEachBindingOnlyDenyGoResultWithErr(err uint32) DenyEachBindingOnlyDenyGoResult {
+	var _u DenyEachBindingOnlyDenyGoResult
+	_u.SetErr(err)
+	return _u
+}
+
+type I_denyEachBindingOnlyDenyLibfuzzerResultTag uint64
+
+const (
+	DenyEachBindingOnlyDenyLibfuzzerResultResponse = 1 // 0x00000001
+	DenyEachBindingOnlyDenyLibfuzzerResultErr      = 2 // 0x00000002
+)
+
+type DenyEachBindingOnlyDenyLibfuzzerResult struct {
+	I_denyEachBindingOnlyDenyLibfuzzerResultTag `fidl:"x!" fidl_size_v1:"24" fidl_alignment_v1:"8" fidl_size_v2:"16" fidl_alignment_v2:"8" fidl_resource:"false"`
+	Response                                    DenyEachBindingOnlyDenyLibfuzzerResponse `fidl_ordinal:"1"`
+	Err                                         uint32                                   `fidl_ordinal:"2"`
+}
+
+func (_m *DenyEachBindingOnlyDenyLibfuzzerResult) reset() {
+	switch _m.I_denyEachBindingOnlyDenyLibfuzzerResultTag {
+	case 1:
+		var _zeroed DenyEachBindingOnlyDenyLibfuzzerResponse
+		_m.Response = _zeroed
+	case 2:
+		var _zeroed uint32
+		_m.Err = _zeroed
+	}
+}
+
+func (_m *DenyEachBindingOnlyDenyLibfuzzerResult) Which() I_denyEachBindingOnlyDenyLibfuzzerResultTag {
+	return _m.I_denyEachBindingOnlyDenyLibfuzzerResultTag
+}
+
+func (_m *DenyEachBindingOnlyDenyLibfuzzerResult) Ordinal() uint64 {
+	return uint64(_m.I_denyEachBindingOnlyDenyLibfuzzerResultTag)
+}
+
+func (_m *DenyEachBindingOnlyDenyLibfuzzerResult) SetResponse(response DenyEachBindingOnlyDenyLibfuzzerResponse) {
+	_m.reset()
+	_m.I_denyEachBindingOnlyDenyLibfuzzerResultTag = DenyEachBindingOnlyDenyLibfuzzerResultResponse
+	_m.Response = response
+}
+
+func DenyEachBindingOnlyDenyLibfuzzerResultWithResponse(response DenyEachBindingOnlyDenyLibfuzzerResponse) DenyEachBindingOnlyDenyLibfuzzerResult {
+	var _u DenyEachBindingOnlyDenyLibfuzzerResult
+	_u.SetResponse(response)
+	return _u
+}
+
+func (_m *DenyEachBindingOnlyDenyLibfuzzerResult) SetErr(err uint32) {
+	_m.reset()
+	_m.I_denyEachBindingOnlyDenyLibfuzzerResultTag = DenyEachBindingOnlyDenyLibfuzzerResultErr
+	_m.Err = err
+}
+
+func DenyEachBindingOnlyDenyLibfuzzerResultWithErr(err uint32) DenyEachBindingOnlyDenyLibfuzzerResult {
+	var _u DenyEachBindingOnlyDenyLibfuzzerResult
+	_u.SetErr(err)
+	return _u
+}
+
+type I_denyEachBindingOnlyDenyRustResultTag uint64
+
+const (
+	DenyEachBindingOnlyDenyRustResultResponse = 1 // 0x00000001
+	DenyEachBindingOnlyDenyRustResultErr      = 2 // 0x00000002
+)
+
+type DenyEachBindingOnlyDenyRustResult struct {
+	I_denyEachBindingOnlyDenyRustResultTag `fidl:"x!" fidl_size_v1:"24" fidl_alignment_v1:"8" fidl_size_v2:"16" fidl_alignment_v2:"8" fidl_resource:"false"`
+	Response                               DenyEachBindingOnlyDenyRustResponse `fidl_ordinal:"1"`
+	Err                                    uint32                              `fidl_ordinal:"2"`
+}
+
+func (_m *DenyEachBindingOnlyDenyRustResult) reset() {
+	switch _m.I_denyEachBindingOnlyDenyRustResultTag {
+	case 1:
+		var _zeroed DenyEachBindingOnlyDenyRustResponse
+		_m.Response = _zeroed
+	case 2:
+		var _zeroed uint32
+		_m.Err = _zeroed
+	}
+}
+
+func (_m *DenyEachBindingOnlyDenyRustResult) Which() I_denyEachBindingOnlyDenyRustResultTag {
+	return _m.I_denyEachBindingOnlyDenyRustResultTag
+}
+
+func (_m *DenyEachBindingOnlyDenyRustResult) Ordinal() uint64 {
+	return uint64(_m.I_denyEachBindingOnlyDenyRustResultTag)
+}
+
+func (_m *DenyEachBindingOnlyDenyRustResult) SetResponse(response DenyEachBindingOnlyDenyRustResponse) {
+	_m.reset()
+	_m.I_denyEachBindingOnlyDenyRustResultTag = DenyEachBindingOnlyDenyRustResultResponse
+	_m.Response = response
+}
+
+func DenyEachBindingOnlyDenyRustResultWithResponse(response DenyEachBindingOnlyDenyRustResponse) DenyEachBindingOnlyDenyRustResult {
+	var _u DenyEachBindingOnlyDenyRustResult
+	_u.SetResponse(response)
+	return _u
+}
+
+func (_m *DenyEachBindingOnlyDenyRustResult) SetErr(err uint32) {
+	_m.reset()
+	_m.I_denyEachBindingOnlyDenyRustResultTag = DenyEachBindingOnlyDenyRustResultErr
+	_m.Err = err
+}
+
+func DenyEachBindingOnlyDenyRustResultWithErr(err uint32) DenyEachBindingOnlyDenyRustResult {
+	var _u DenyEachBindingOnlyDenyRustResult
+	_u.SetErr(err)
+	return _u
+}
+
+type I_denyEachBindingOnlyDenySyzkallerResultTag uint64
+
+const (
+	DenyEachBindingOnlyDenySyzkallerResultResponse = 1 // 0x00000001
+	DenyEachBindingOnlyDenySyzkallerResultErr      = 2 // 0x00000002
+)
+
+type DenyEachBindingOnlyDenySyzkallerResult struct {
+	I_denyEachBindingOnlyDenySyzkallerResultTag `fidl:"x!" fidl_size_v1:"24" fidl_alignment_v1:"8" fidl_size_v2:"16" fidl_alignment_v2:"8" fidl_resource:"false"`
+	Response                                    DenyEachBindingOnlyDenySyzkallerResponse `fidl_ordinal:"1"`
+	Err                                         uint32                                   `fidl_ordinal:"2"`
+}
+
+func (_m *DenyEachBindingOnlyDenySyzkallerResult) reset() {
+	switch _m.I_denyEachBindingOnlyDenySyzkallerResultTag {
+	case 1:
+		var _zeroed DenyEachBindingOnlyDenySyzkallerResponse
+		_m.Response = _zeroed
+	case 2:
+		var _zeroed uint32
+		_m.Err = _zeroed
+	}
+}
+
+func (_m *DenyEachBindingOnlyDenySyzkallerResult) Which() I_denyEachBindingOnlyDenySyzkallerResultTag {
+	return _m.I_denyEachBindingOnlyDenySyzkallerResultTag
+}
+
+func (_m *DenyEachBindingOnlyDenySyzkallerResult) Ordinal() uint64 {
+	return uint64(_m.I_denyEachBindingOnlyDenySyzkallerResultTag)
+}
+
+func (_m *DenyEachBindingOnlyDenySyzkallerResult) SetResponse(response DenyEachBindingOnlyDenySyzkallerResponse) {
+	_m.reset()
+	_m.I_denyEachBindingOnlyDenySyzkallerResultTag = DenyEachBindingOnlyDenySyzkallerResultResponse
+	_m.Response = response
+}
+
+func DenyEachBindingOnlyDenySyzkallerResultWithResponse(response DenyEachBindingOnlyDenySyzkallerResponse) DenyEachBindingOnlyDenySyzkallerResult {
+	var _u DenyEachBindingOnlyDenySyzkallerResult
+	_u.SetResponse(response)
+	return _u
+}
+
+func (_m *DenyEachBindingOnlyDenySyzkallerResult) SetErr(err uint32) {
+	_m.reset()
+	_m.I_denyEachBindingOnlyDenySyzkallerResultTag = DenyEachBindingOnlyDenySyzkallerResultErr
+	_m.Err = err
+}
+
+func DenyEachBindingOnlyDenySyzkallerResultWithErr(err uint32) DenyEachBindingOnlyDenySyzkallerResult {
+	var _u DenyEachBindingOnlyDenySyzkallerResult
+	_u.SetErr(err)
+	return _u
+}
+
+type I_shouldNeverAppearInAnyBinding3Tag uint64
+
+const (
+	ShouldNeverAppearInAnyBinding3_unknownData = 0 // 0x00000000
+	ShouldNeverAppearInAnyBinding3A            = 1 // 0x00000001
+)
+
+type ShouldNeverAppearInAnyBinding3 struct {
+	I_shouldNeverAppearInAnyBinding3Tag `fidl:"x" fidl_size_v1:"24" fidl_alignment_v1:"8" fidl_size_v2:"16" fidl_alignment_v2:"8" fidl_resource:"false"`
+	I_unknownData                       interface{}
+	A                                   bool `fidl_ordinal:"1"`
+}
+
+func (_m *ShouldNeverAppearInAnyBinding3) reset() {
+	switch _m.I_shouldNeverAppearInAnyBinding3Tag {
+	case 1:
+		var _zeroed bool
+		_m.A = _zeroed
+	default:
+		var _zeroed interface{}
+		_m.I_unknownData = _zeroed
+	}
+}
+
+func (_m *ShouldNeverAppearInAnyBinding3) Which() I_shouldNeverAppearInAnyBinding3Tag {
+	switch _m.I_shouldNeverAppearInAnyBinding3Tag {
+	case 1:
+		return ShouldNeverAppearInAnyBinding3A
+	default:
+		return ShouldNeverAppearInAnyBinding3_unknownData
+	}
+}
+
+func (_m *ShouldNeverAppearInAnyBinding3) Ordinal() uint64 {
+	return uint64(_m.I_shouldNeverAppearInAnyBinding3Tag)
+}
+
+func (_m *ShouldNeverAppearInAnyBinding3) SetA(a bool) {
+	_m.reset()
+	_m.I_shouldNeverAppearInAnyBinding3Tag = ShouldNeverAppearInAnyBinding3A
+	_m.A = a
+}
+
+func ShouldNeverAppearInAnyBinding3WithA(a bool) ShouldNeverAppearInAnyBinding3 {
+	var _u ShouldNeverAppearInAnyBinding3
+	_u.SetA(a)
+	return _u
+}
+func (_m *ShouldNeverAppearInAnyBinding3) GetUnknownData() _bindings.UnknownData {
+	return _m.I_unknownData.(_bindings.UnknownData)
+}
+
+type I_shouldNeverAppearInAnyBinding6Tag uint64
+
+const (
+	ShouldNeverAppearInAnyBinding6_unknownData = 0 // 0x00000000
+	ShouldNeverAppearInAnyBinding6A            = 1 // 0x00000001
+)
+
+type ShouldNeverAppearInAnyBinding6 struct {
+	I_shouldNeverAppearInAnyBinding6Tag `fidl:"x" fidl_size_v1:"24" fidl_alignment_v1:"8" fidl_size_v2:"16" fidl_alignment_v2:"8" fidl_resource:"false"`
+	I_unknownData                       interface{}
+	A                                   bool `fidl_ordinal:"1"`
+}
+
+func (_m *ShouldNeverAppearInAnyBinding6) reset() {
+	switch _m.I_shouldNeverAppearInAnyBinding6Tag {
+	case 1:
+		var _zeroed bool
+		_m.A = _zeroed
+	default:
+		var _zeroed interface{}
+		_m.I_unknownData = _zeroed
+	}
+}
+
+func (_m *ShouldNeverAppearInAnyBinding6) Which() I_shouldNeverAppearInAnyBinding6Tag {
+	switch _m.I_shouldNeverAppearInAnyBinding6Tag {
+	case 1:
+		return ShouldNeverAppearInAnyBinding6A
+	default:
+		return ShouldNeverAppearInAnyBinding6_unknownData
+	}
+}
+
+func (_m *ShouldNeverAppearInAnyBinding6) Ordinal() uint64 {
+	return uint64(_m.I_shouldNeverAppearInAnyBinding6Tag)
+}
+
+func (_m *ShouldNeverAppearInAnyBinding6) SetA(a bool) {
+	_m.reset()
+	_m.I_shouldNeverAppearInAnyBinding6Tag = ShouldNeverAppearInAnyBinding6A
+	_m.A = a
+}
+
+func ShouldNeverAppearInAnyBinding6WithA(a bool) ShouldNeverAppearInAnyBinding6 {
+	var _u ShouldNeverAppearInAnyBinding6
+	_u.SetA(a)
+	return _u
+}
+func (_m *ShouldNeverAppearInAnyBinding6) GetUnknownData() _bindings.UnknownData {
+	return _m.I_unknownData.(_bindings.UnknownData)
+}
+
+type I_allowedDeniedResultTag uint64
+
+const (
+	AllowedDeniedResultResponse = 1 // 0x00000001
+	AllowedDeniedResultErr      = 2 // 0x00000002
+)
+
+type AllowedDeniedResult struct {
+	I_allowedDeniedResultTag `fidl:"x!" fidl_size_v1:"24" fidl_alignment_v1:"8" fidl_size_v2:"16" fidl_alignment_v2:"8" fidl_resource:"false"`
+	Response                 AllowedDeniedResponse `fidl_ordinal:"1"`
+	Err                      uint32                `fidl_ordinal:"2"`
+}
+
+func (_m *AllowedDeniedResult) reset() {
+	switch _m.I_allowedDeniedResultTag {
+	case 1:
+		var _zeroed AllowedDeniedResponse
+		_m.Response = _zeroed
+	case 2:
+		var _zeroed uint32
+		_m.Err = _zeroed
+	}
+}
+
+func (_m *AllowedDeniedResult) Which() I_allowedDeniedResultTag {
+	return _m.I_allowedDeniedResultTag
+}
+
+func (_m *AllowedDeniedResult) Ordinal() uint64 {
+	return uint64(_m.I_allowedDeniedResultTag)
+}
+
+func (_m *AllowedDeniedResult) SetResponse(response AllowedDeniedResponse) {
+	_m.reset()
+	_m.I_allowedDeniedResultTag = AllowedDeniedResultResponse
+	_m.Response = response
+}
+
+func AllowedDeniedResultWithResponse(response AllowedDeniedResponse) AllowedDeniedResult {
+	var _u AllowedDeniedResult
+	_u.SetResponse(response)
+	return _u
+}
+
+func (_m *AllowedDeniedResult) SetErr(err uint32) {
+	_m.reset()
+	_m.I_allowedDeniedResultTag = AllowedDeniedResultErr
+	_m.Err = err
+}
+
+func AllowedDeniedResultWithErr(err uint32) AllowedDeniedResult {
+	var _u AllowedDeniedResult
+	_u.SetErr(err)
+	return _u
+}
+
+type I_shouldNeverAppearInAnyBinding9Tag uint64
+
+const (
+	ShouldNeverAppearInAnyBinding9_unknownData = 0 // 0x00000000
+	ShouldNeverAppearInAnyBinding9A            = 1 // 0x00000001
+)
+
+type ShouldNeverAppearInAnyBinding9 struct {
+	I_shouldNeverAppearInAnyBinding9Tag `fidl:"x" fidl_size_v1:"24" fidl_alignment_v1:"8" fidl_size_v2:"16" fidl_alignment_v2:"8" fidl_resource:"false"`
+	I_unknownData                       interface{}
+	A                                   bool `fidl_ordinal:"1"`
+}
+
+func (_m *ShouldNeverAppearInAnyBinding9) reset() {
+	switch _m.I_shouldNeverAppearInAnyBinding9Tag {
+	case 1:
+		var _zeroed bool
+		_m.A = _zeroed
+	default:
+		var _zeroed interface{}
+		_m.I_unknownData = _zeroed
+	}
+}
+
+func (_m *ShouldNeverAppearInAnyBinding9) Which() I_shouldNeverAppearInAnyBinding9Tag {
+	switch _m.I_shouldNeverAppearInAnyBinding9Tag {
+	case 1:
+		return ShouldNeverAppearInAnyBinding9A
+	default:
+		return ShouldNeverAppearInAnyBinding9_unknownData
+	}
+}
+
+func (_m *ShouldNeverAppearInAnyBinding9) Ordinal() uint64 {
+	return uint64(_m.I_shouldNeverAppearInAnyBinding9Tag)
+}
+
+func (_m *ShouldNeverAppearInAnyBinding9) SetA(a bool) {
+	_m.reset()
+	_m.I_shouldNeverAppearInAnyBinding9Tag = ShouldNeverAppearInAnyBinding9A
+	_m.A = a
+}
+
+func ShouldNeverAppearInAnyBinding9WithA(a bool) ShouldNeverAppearInAnyBinding9 {
+	var _u ShouldNeverAppearInAnyBinding9
+	_u.SetA(a)
+	return _u
+}
+func (_m *ShouldNeverAppearInAnyBinding9) GetUnknownData() _bindings.UnknownData {
+	return _m.I_unknownData.(_bindings.UnknownData)
+}
+
+type ShouldNeverAppearInAnyBinding2 struct {
+	_             struct{} `fidl:"t" fidl_size_v1:"16" fidl_alignment_v1:"8" fidl_size_v2:"16" fidl_alignment_v2:"8" fidl_resource:"false"`
+	I_unknownData interface{}
+	A             bool `fidl_ordinal:"1"`
+	APresent      bool
+}
+
+func (u *ShouldNeverAppearInAnyBinding2) SetA(a bool) {
+	u.A = a
+	u.APresent = true
+}
+
+func (u *ShouldNeverAppearInAnyBinding2) GetA() bool {
+	return u.A
+}
+
+func (u *ShouldNeverAppearInAnyBinding2) GetAWithDefault(_default bool) bool {
+	if !u.HasA() {
+		return _default
+	}
+	return u.A
+}
+
+func (u *ShouldNeverAppearInAnyBinding2) HasA() bool {
+	return u.APresent
+}
+
+func (u *ShouldNeverAppearInAnyBinding2) ClearA() {
+	u.APresent = false
+}
+
+func (u *ShouldNeverAppearInAnyBinding2) HasUnknownData() bool {
+	return u.I_unknownData != nil
+}
+
+func (u *ShouldNeverAppearInAnyBinding2) GetUnknownData() map[uint64]_bindings.UnknownData {
+	return u.I_unknownData.(map[uint64]_bindings.UnknownData)
+}
+
+type ShouldNeverAppearInAnyBinding5 struct {
+	_             struct{} `fidl:"t" fidl_size_v1:"16" fidl_alignment_v1:"8" fidl_size_v2:"16" fidl_alignment_v2:"8" fidl_resource:"false"`
+	I_unknownData interface{}
+	A             bool `fidl_ordinal:"1"`
+	APresent      bool
+}
+
+func (u *ShouldNeverAppearInAnyBinding5) SetA(a bool) {
+	u.A = a
+	u.APresent = true
+}
+
+func (u *ShouldNeverAppearInAnyBinding5) GetA() bool {
+	return u.A
+}
+
+func (u *ShouldNeverAppearInAnyBinding5) GetAWithDefault(_default bool) bool {
+	if !u.HasA() {
+		return _default
+	}
+	return u.A
+}
+
+func (u *ShouldNeverAppearInAnyBinding5) HasA() bool {
+	return u.APresent
+}
+
+func (u *ShouldNeverAppearInAnyBinding5) ClearA() {
+	u.APresent = false
+}
+
+func (u *ShouldNeverAppearInAnyBinding5) HasUnknownData() bool {
+	return u.I_unknownData != nil
+}
+
+func (u *ShouldNeverAppearInAnyBinding5) GetUnknownData() map[uint64]_bindings.UnknownData {
+	return u.I_unknownData.(map[uint64]_bindings.UnknownData)
+}
+
+type ShouldNeverAppearInAnyBinding8 struct {
+	_             struct{} `fidl:"t" fidl_size_v1:"16" fidl_alignment_v1:"8" fidl_size_v2:"16" fidl_alignment_v2:"8" fidl_resource:"false"`
+	I_unknownData interface{}
+	A             bool `fidl_ordinal:"1"`
+	APresent      bool
+}
+
+func (u *ShouldNeverAppearInAnyBinding8) SetA(a bool) {
+	u.A = a
+	u.APresent = true
+}
+
+func (u *ShouldNeverAppearInAnyBinding8) GetA() bool {
+	return u.A
+}
+
+func (u *ShouldNeverAppearInAnyBinding8) GetAWithDefault(_default bool) bool {
+	if !u.HasA() {
+		return _default
+	}
+	return u.A
+}
+
+func (u *ShouldNeverAppearInAnyBinding8) HasA() bool {
+	return u.APresent
+}
+
+func (u *ShouldNeverAppearInAnyBinding8) ClearA() {
+	u.APresent = false
+}
+
+func (u *ShouldNeverAppearInAnyBinding8) HasUnknownData() bool {
+	return u.I_unknownData != nil
+}
+
+func (u *ShouldNeverAppearInAnyBinding8) GetUnknownData() map[uint64]_bindings.UnknownData {
+	return u.I_unknownData.(map[uint64]_bindings.UnknownData)
+}
+
+const (
+	DenyEachBindingOnlyDenyCppOrdinal       uint64 = 0x290bad96051b1b92
+	DenyEachBindingOnlyDenyDartOrdinal      uint64 = 0x75384066a26d87d7
+	DenyEachBindingOnlyDenyLibfuzzerOrdinal uint64 = 0x1e4f89c329617b1e
+	DenyEachBindingOnlyDenyRustOrdinal      uint64 = 0x339f67244edd5cb6
+	DenyEachBindingOnlyDenySyzkallerOrdinal uint64 = 0x202ee614a749e98a
+)
+
+type DenyEachBindingWithCtxInterface _bindings.ChannelProxy
+
+func (p *DenyEachBindingWithCtxInterface) OnlyDenyCpp(ctx_ _bindings.Context, a bool) (DenyEachBindingOnlyDenyCppResult, error) {
+	req_ := &denyEachBindingWithCtxOnlyDenyCppRequest{
+		A: a,
+	}
+	resp_ := &denyEachBindingWithCtxOnlyDenyCppResponse{}
+	err_ := ((*_bindings.ChannelProxy)(p)).Call(DenyEachBindingOnlyDenyCppOrdinal, req_, resp_)
+	return resp_.Result, err_
+}
+
+func (p *DenyEachBindingWithCtxInterface) OnlyDenyDart(ctx_ _bindings.Context, a bool) (DenyEachBindingOnlyDenyDartResult, error) {
+	req_ := &denyEachBindingWithCtxOnlyDenyDartRequest{
+		A: a,
+	}
+	resp_ := &denyEachBindingWithCtxOnlyDenyDartResponse{}
+	err_ := ((*_bindings.ChannelProxy)(p)).Call(DenyEachBindingOnlyDenyDartOrdinal, req_, resp_)
+	return resp_.Result, err_
+}
+
+func (p *DenyEachBindingWithCtxInterface) OnlyDenyLibfuzzer(ctx_ _bindings.Context, a bool) (DenyEachBindingOnlyDenyLibfuzzerResult, error) {
+	req_ := &denyEachBindingWithCtxOnlyDenyLibfuzzerRequest{
+		A: a,
+	}
+	resp_ := &denyEachBindingWithCtxOnlyDenyLibfuzzerResponse{}
+	err_ := ((*_bindings.ChannelProxy)(p)).Call(DenyEachBindingOnlyDenyLibfuzzerOrdinal, req_, resp_)
+	return resp_.Result, err_
+}
+
+func (p *DenyEachBindingWithCtxInterface) OnlyDenyRust(ctx_ _bindings.Context, a bool) (DenyEachBindingOnlyDenyRustResult, error) {
+	req_ := &denyEachBindingWithCtxOnlyDenyRustRequest{
+		A: a,
+	}
+	resp_ := &denyEachBindingWithCtxOnlyDenyRustResponse{}
+	err_ := ((*_bindings.ChannelProxy)(p)).Call(DenyEachBindingOnlyDenyRustOrdinal, req_, resp_)
+	return resp_.Result, err_
+}
+
+func (p *DenyEachBindingWithCtxInterface) OnlyDenySyzkaller(ctx_ _bindings.Context, a bool) (DenyEachBindingOnlyDenySyzkallerResult, error) {
+	req_ := &denyEachBindingWithCtxOnlyDenySyzkallerRequest{
+		A: a,
+	}
+	resp_ := &denyEachBindingWithCtxOnlyDenySyzkallerResponse{}
+	err_ := ((*_bindings.ChannelProxy)(p)).Call(DenyEachBindingOnlyDenySyzkallerOrdinal, req_, resp_)
+	return resp_.Result, err_
+}
+
+type DenyEachBindingWithCtx interface {
+	OnlyDenyCpp(ctx_ _bindings.Context, a bool) (DenyEachBindingOnlyDenyCppResult, error)
+	OnlyDenyDart(ctx_ _bindings.Context, a bool) (DenyEachBindingOnlyDenyDartResult, error)
+	OnlyDenyLibfuzzer(ctx_ _bindings.Context, a bool) (DenyEachBindingOnlyDenyLibfuzzerResult, error)
+	OnlyDenyRust(ctx_ _bindings.Context, a bool) (DenyEachBindingOnlyDenyRustResult, error)
+	OnlyDenySyzkaller(ctx_ _bindings.Context, a bool) (DenyEachBindingOnlyDenySyzkallerResult, error)
+}
+
+type DenyEachBindingWithCtxTransitionalBase struct{}
+
+type DenyEachBindingWithCtxInterfaceRequest _bindings.InterfaceRequest
+
+func NewDenyEachBindingWithCtxInterfaceRequest() (DenyEachBindingWithCtxInterfaceRequest, *DenyEachBindingWithCtxInterface, error) {
+	req, cli, err := _bindings.NewInterfaceRequest()
+	return DenyEachBindingWithCtxInterfaceRequest(req), (*DenyEachBindingWithCtxInterface)(cli), err
+}
+
+type DenyEachBindingWithCtxStub struct {
+	Impl DenyEachBindingWithCtx
+}
+
+func (s_ *DenyEachBindingWithCtxStub) Dispatch(args_ _bindings.DispatchArgs) (_bindings.Message, bool, error) {
+	switch args_.Ordinal {
+	case DenyEachBindingOnlyDenyCppOrdinal:
+		in_ := denyEachBindingWithCtxOnlyDenyCppRequest{}
+		marshalerCtx, ok := _bindings.GetMarshalerContext(args_.Ctx)
+		if !ok {
+			return nil, false, _bindings.ErrMissingMarshalerContext
+		}
+		if err_ := _bindings.Unmarshal(marshalerCtx, args_.Bytes, args_.HandleInfos, &in_); err_ != nil {
+			return nil, false, err_
+		}
+		result, err_ := s_.Impl.OnlyDenyCpp(args_.Ctx, in_.A)
+		out_ := denyEachBindingWithCtxOnlyDenyCppResponse{}
+		out_.Result = result
+		return &out_, true, err_
+	case DenyEachBindingOnlyDenyDartOrdinal:
+		in_ := denyEachBindingWithCtxOnlyDenyDartRequest{}
+		marshalerCtx, ok := _bindings.GetMarshalerContext(args_.Ctx)
+		if !ok {
+			return nil, false, _bindings.ErrMissingMarshalerContext
+		}
+		if err_ := _bindings.Unmarshal(marshalerCtx, args_.Bytes, args_.HandleInfos, &in_); err_ != nil {
+			return nil, false, err_
+		}
+		result, err_ := s_.Impl.OnlyDenyDart(args_.Ctx, in_.A)
+		out_ := denyEachBindingWithCtxOnlyDenyDartResponse{}
+		out_.Result = result
+		return &out_, true, err_
+	case DenyEachBindingOnlyDenyLibfuzzerOrdinal:
+		in_ := denyEachBindingWithCtxOnlyDenyLibfuzzerRequest{}
+		marshalerCtx, ok := _bindings.GetMarshalerContext(args_.Ctx)
+		if !ok {
+			return nil, false, _bindings.ErrMissingMarshalerContext
+		}
+		if err_ := _bindings.Unmarshal(marshalerCtx, args_.Bytes, args_.HandleInfos, &in_); err_ != nil {
+			return nil, false, err_
+		}
+		result, err_ := s_.Impl.OnlyDenyLibfuzzer(args_.Ctx, in_.A)
+		out_ := denyEachBindingWithCtxOnlyDenyLibfuzzerResponse{}
+		out_.Result = result
+		return &out_, true, err_
+	case DenyEachBindingOnlyDenyRustOrdinal:
+		in_ := denyEachBindingWithCtxOnlyDenyRustRequest{}
+		marshalerCtx, ok := _bindings.GetMarshalerContext(args_.Ctx)
+		if !ok {
+			return nil, false, _bindings.ErrMissingMarshalerContext
+		}
+		if err_ := _bindings.Unmarshal(marshalerCtx, args_.Bytes, args_.HandleInfos, &in_); err_ != nil {
+			return nil, false, err_
+		}
+		result, err_ := s_.Impl.OnlyDenyRust(args_.Ctx, in_.A)
+		out_ := denyEachBindingWithCtxOnlyDenyRustResponse{}
+		out_.Result = result
+		return &out_, true, err_
+	case DenyEachBindingOnlyDenySyzkallerOrdinal:
+		in_ := denyEachBindingWithCtxOnlyDenySyzkallerRequest{}
+		marshalerCtx, ok := _bindings.GetMarshalerContext(args_.Ctx)
+		if !ok {
+			return nil, false, _bindings.ErrMissingMarshalerContext
+		}
+		if err_ := _bindings.Unmarshal(marshalerCtx, args_.Bytes, args_.HandleInfos, &in_); err_ != nil {
+			return nil, false, err_
+		}
+		result, err_ := s_.Impl.OnlyDenySyzkaller(args_.Ctx, in_.A)
+		out_ := denyEachBindingWithCtxOnlyDenySyzkallerResponse{}
+		out_.Result = result
+		return &out_, true, err_
+	}
+	return nil, false, _bindings.ErrUnknownOrdinal
+}
+
+type DenyEachBindingEventProxy _bindings.ChannelProxy
+
+const ()
+
+type AllowedWithCtxInterface _bindings.ChannelProxy
+
+type AllowedWithCtx interface {
+}
+
+type AllowedWithCtxTransitionalBase struct{}
+
+type AllowedWithCtxInterfaceRequest _bindings.InterfaceRequest
+
+func NewAllowedWithCtxInterfaceRequest() (AllowedWithCtxInterfaceRequest, *AllowedWithCtxInterface, error) {
+	req, cli, err := _bindings.NewInterfaceRequest()
+	return AllowedWithCtxInterfaceRequest(req), (*AllowedWithCtxInterface)(cli), err
+}
+
+type AllowedWithCtxStub struct {
+	Impl AllowedWithCtx
+}
+
+func (s_ *AllowedWithCtxStub) Dispatch(args_ _bindings.DispatchArgs) (_bindings.Message, bool, error) {
+	switch args_.Ordinal {
+	}
+	return nil, false, _bindings.ErrUnknownOrdinal
+}
+
+type AllowedEventProxy _bindings.ChannelProxy
+
+const (
+	ImportsSameNameContextUnattributedOrdinal                    uint64 = 0x698380acfd29e8f
+	ImportsSameNameContextAlwaysAppearsInImportingLibraryOrdinal uint64 = 0x2874096c521236f8
+)
+
+type ImportsSameNameContextWithCtxInterface _bindings.ChannelProxy
+
+func (p *ImportsSameNameContextWithCtxInterface) Unattributed(ctx_ _bindings.Context) error {
+	var req_ _bindings.Message
+	err_ := ((*_bindings.ChannelProxy)(p)).Send(ImportsSameNameContextUnattributedOrdinal, req_)
+	return err_
+}
+
+func (p *ImportsSameNameContextWithCtxInterface) AlwaysAppearsInImportingLibrary(ctx_ _bindings.Context) error {
+	var req_ _bindings.Message
+	err_ := ((*_bindings.ChannelProxy)(p)).Send(ImportsSameNameContextAlwaysAppearsInImportingLibraryOrdinal, req_)
+	return err_
+}
+
+type ImportsSameNameContextWithCtx interface {
+	Unattributed(ctx_ _bindings.Context) error
+	AlwaysAppearsInImportingLibrary(ctx_ _bindings.Context) error
+}
+
+type ImportsSameNameContextWithCtxTransitionalBase struct{}
+
+type ImportsSameNameContextWithCtxInterfaceRequest _bindings.InterfaceRequest
+
+func NewImportsSameNameContextWithCtxInterfaceRequest() (ImportsSameNameContextWithCtxInterfaceRequest, *ImportsSameNameContextWithCtxInterface, error) {
+	req, cli, err := _bindings.NewInterfaceRequest()
+	return ImportsSameNameContextWithCtxInterfaceRequest(req), (*ImportsSameNameContextWithCtxInterface)(cli), err
+}
+
+type ImportsSameNameContextWithCtxStub struct {
+	Impl ImportsSameNameContextWithCtx
+}
+
+func (s_ *ImportsSameNameContextWithCtxStub) Dispatch(args_ _bindings.DispatchArgs) (_bindings.Message, bool, error) {
+	switch args_.Ordinal {
+	case ImportsSameNameContextUnattributedOrdinal:
+		err_ := s_.Impl.Unattributed(args_.Ctx)
+		return nil, false, err_
+	case ImportsSameNameContextAlwaysAppearsInImportingLibraryOrdinal:
+		err_ := s_.Impl.AlwaysAppearsInImportingLibrary(args_.Ctx)
+		return nil, false, err_
+	}
+	return nil, false, _bindings.ErrUnknownOrdinal
+}
+
+type ImportsSameNameContextEventProxy _bindings.ChannelProxy

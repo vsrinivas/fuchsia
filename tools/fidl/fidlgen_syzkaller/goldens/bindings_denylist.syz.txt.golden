@@ -5,4 +5,329 @@
 
 include <test/bindingsdenylist/c/fidl.h>
 test_bindingsdenylist_OnlySyzkaller = test_bindingsdenylist_OnlySyzkaller_A
+test_bindingsdenylist_DenyEachBinding_OnlyDenyCpp_ResponseInLine {
+       b int32
+} [packed]
+test_bindingsdenylist_DenyEachBinding_OnlyDenyCpp_ResponseOutOfLine {
+       void void
+} [packed]
+test_bindingsdenylist_DenyEachBinding_OnlyDenyCpp_ResponseHandles {
+       void void
+} [packed]
+test_bindingsdenylist_DenyEachBinding_OnlyDenyDart_ResponseInLine {
+       b int32
+} [packed]
+test_bindingsdenylist_DenyEachBinding_OnlyDenyDart_ResponseOutOfLine {
+       void void
+} [packed]
+test_bindingsdenylist_DenyEachBinding_OnlyDenyDart_ResponseHandles {
+       void void
+} [packed]
+test_bindingsdenylist_DenyEachBinding_OnlyDenyGo_ResponseInLine {
+       b int32
+} [packed]
+test_bindingsdenylist_DenyEachBinding_OnlyDenyGo_ResponseOutOfLine {
+       void void
+} [packed]
+test_bindingsdenylist_DenyEachBinding_OnlyDenyGo_ResponseHandles {
+       void void
+} [packed]
+test_bindingsdenylist_DenyEachBinding_OnlyDenyLibfuzzer_ResponseInLine {
+       b int32
+} [packed]
+test_bindingsdenylist_DenyEachBinding_OnlyDenyLibfuzzer_ResponseOutOfLine {
+       void void
+} [packed]
+test_bindingsdenylist_DenyEachBinding_OnlyDenyLibfuzzer_ResponseHandles {
+       void void
+} [packed]
+test_bindingsdenylist_DenyEachBinding_OnlyDenyRust_ResponseInLine {
+       b int32
+} [packed]
+test_bindingsdenylist_DenyEachBinding_OnlyDenyRust_ResponseOutOfLine {
+       void void
+} [packed]
+test_bindingsdenylist_DenyEachBinding_OnlyDenyRust_ResponseHandles {
+       void void
+} [packed]
+test_bindingsdenylist_DenyEachBinding_OnlyDenySyzkaller_ResponseInLine {
+       b int32
+} [packed]
+test_bindingsdenylist_DenyEachBinding_OnlyDenySyzkaller_ResponseOutOfLine {
+       void void
+} [packed]
+test_bindingsdenylist_DenyEachBinding_OnlyDenySyzkaller_ResponseHandles {
+       void void
+} [packed]
+test_bindingsdenylist_ShouldNeverAppearInAnyBinding1InLine {
+       a int8
+} [packed]
+test_bindingsdenylist_ShouldNeverAppearInAnyBinding1OutOfLine {
+       void void
+} [packed]
+test_bindingsdenylist_ShouldNeverAppearInAnyBinding1Handles {
+       void void
+} [packed]
+test_bindingsdenylist_ShouldNeverAppearInAnyBinding4InLine {
+       a int8
+} [packed]
+test_bindingsdenylist_ShouldNeverAppearInAnyBinding4OutOfLine {
+       void void
+} [packed]
+test_bindingsdenylist_ShouldNeverAppearInAnyBinding4Handles {
+       void void
+} [packed]
+test_bindingsdenylist_Allowed_Denied_ResponseInLine {
+       should_never_appear_in_any_binding_4InLine test_bindingsdenylist_ShouldNeverAppearInAnyBinding4InLine
+        
+       should_never_appear_in_any_binding_6InLine test_bindingsdenylist_ShouldNeverAppearInAnyBinding6InLine
+} [packed]
+test_bindingsdenylist_Allowed_Denied_ResponseOutOfLine {
+       should_never_appear_in_any_binding_4OutOfLine test_bindingsdenylist_ShouldNeverAppearInAnyBinding4OutOfLine
+} [packed]
+test_bindingsdenylist_Allowed_Denied_ResponseHandles {
+       should_never_appear_in_any_binding_4 test_bindingsdenylist_ShouldNeverAppearInAnyBinding4Handles
+} [packed]
+test_bindingsdenylist_ShouldNeverAppearInAnyBinding7InLine {
+       a int8
+} [packed]
+test_bindingsdenylist_ShouldNeverAppearInAnyBinding7OutOfLine {
+       void void
+} [packed]
+test_bindingsdenylist_ShouldNeverAppearInAnyBinding7Handles {
+       void void
+} [packed]
+test_bindingsdenylist_MemberOnlyAppearsInImportingLibraryInLine {
+       a int8
+} [packed]
+test_bindingsdenylist_MemberOnlyAppearsInImportingLibraryOutOfLine {
+       void void
+} [packed]
+test_bindingsdenylist_MemberOnlyAppearsInImportingLibraryHandles {
+       void void
+} [packed]
+test_bindingsdenylist_OnlyAppearsInImportingLibraryInLine {
+       member_only_appears_in_importing_libraryInLine test_bindingsdenylist_MemberOnlyAppearsInImportingLibraryInLine
+} [packed]
+test_bindingsdenylist_OnlyAppearsInImportingLibraryOutOfLine {
+       member_only_appears_in_importing_libraryOutOfLine test_bindingsdenylist_MemberOnlyAppearsInImportingLibraryOutOfLine
+} [packed]
+test_bindingsdenylist_OnlyAppearsInImportingLibraryHandles {
+       member_only_appears_in_importing_library test_bindingsdenylist_MemberOnlyAppearsInImportingLibraryHandles
+} [packed]
+test_bindingsdenylist_DenyEachBinding_OnlyDenyCpp_ResultInLine [
+       responseInLine fidl_union_member[1, test_bindingsdenylist_DenyEachBinding_OnlyDenyCpp_ResponseInLine]
+       err fidl_union_member[2, int32]
+]
+test_bindingsdenylist_DenyEachBinding_OnlyDenyCpp_ResultOutOfLine [
+       responseOutOfLine test_bindingsdenylist_DenyEachBinding_OnlyDenyCpp_ResponseOutOfLine
+][varlen]
+test_bindingsdenylist_DenyEachBinding_OnlyDenyCpp_ResultHandles [
+       response test_bindingsdenylist_DenyEachBinding_OnlyDenyCpp_ResponseHandles
+][varlen]
+test_bindingsdenylist_DenyEachBinding_OnlyDenyDart_ResultInLine [
+       responseInLine fidl_union_member[1, test_bindingsdenylist_DenyEachBinding_OnlyDenyDart_ResponseInLine]
+       err fidl_union_member[2, int32]
+]
+test_bindingsdenylist_DenyEachBinding_OnlyDenyDart_ResultOutOfLine [
+       responseOutOfLine test_bindingsdenylist_DenyEachBinding_OnlyDenyDart_ResponseOutOfLine
+][varlen]
+test_bindingsdenylist_DenyEachBinding_OnlyDenyDart_ResultHandles [
+       response test_bindingsdenylist_DenyEachBinding_OnlyDenyDart_ResponseHandles
+][varlen]
+test_bindingsdenylist_DenyEachBinding_OnlyDenyGo_ResultInLine [
+       responseInLine fidl_union_member[1, test_bindingsdenylist_DenyEachBinding_OnlyDenyGo_ResponseInLine]
+       err fidl_union_member[2, int32]
+]
+test_bindingsdenylist_DenyEachBinding_OnlyDenyGo_ResultOutOfLine [
+       responseOutOfLine test_bindingsdenylist_DenyEachBinding_OnlyDenyGo_ResponseOutOfLine
+][varlen]
+test_bindingsdenylist_DenyEachBinding_OnlyDenyGo_ResultHandles [
+       response test_bindingsdenylist_DenyEachBinding_OnlyDenyGo_ResponseHandles
+][varlen]
+test_bindingsdenylist_DenyEachBinding_OnlyDenyLibfuzzer_ResultInLine [
+       responseInLine fidl_union_member[1, test_bindingsdenylist_DenyEachBinding_OnlyDenyLibfuzzer_ResponseInLine]
+       err fidl_union_member[2, int32]
+]
+test_bindingsdenylist_DenyEachBinding_OnlyDenyLibfuzzer_ResultOutOfLine [
+       responseOutOfLine test_bindingsdenylist_DenyEachBinding_OnlyDenyLibfuzzer_ResponseOutOfLine
+][varlen]
+test_bindingsdenylist_DenyEachBinding_OnlyDenyLibfuzzer_ResultHandles [
+       response test_bindingsdenylist_DenyEachBinding_OnlyDenyLibfuzzer_ResponseHandles
+][varlen]
+test_bindingsdenylist_DenyEachBinding_OnlyDenyRust_ResultInLine [
+       responseInLine fidl_union_member[1, test_bindingsdenylist_DenyEachBinding_OnlyDenyRust_ResponseInLine]
+       err fidl_union_member[2, int32]
+]
+test_bindingsdenylist_DenyEachBinding_OnlyDenyRust_ResultOutOfLine [
+       responseOutOfLine test_bindingsdenylist_DenyEachBinding_OnlyDenyRust_ResponseOutOfLine
+][varlen]
+test_bindingsdenylist_DenyEachBinding_OnlyDenyRust_ResultHandles [
+       response test_bindingsdenylist_DenyEachBinding_OnlyDenyRust_ResponseHandles
+][varlen]
+test_bindingsdenylist_DenyEachBinding_OnlyDenySyzkaller_ResultInLine [
+       responseInLine fidl_union_member[1, test_bindingsdenylist_DenyEachBinding_OnlyDenySyzkaller_ResponseInLine]
+       err fidl_union_member[2, int32]
+]
+test_bindingsdenylist_DenyEachBinding_OnlyDenySyzkaller_ResultOutOfLine [
+       responseOutOfLine test_bindingsdenylist_DenyEachBinding_OnlyDenySyzkaller_ResponseOutOfLine
+][varlen]
+test_bindingsdenylist_DenyEachBinding_OnlyDenySyzkaller_ResultHandles [
+       response test_bindingsdenylist_DenyEachBinding_OnlyDenySyzkaller_ResponseHandles
+][varlen]
+test_bindingsdenylist_ShouldNeverAppearInAnyBinding3InLine [
+       a fidl_union_member[1, int8]
+]
+test_bindingsdenylist_ShouldNeverAppearInAnyBinding3OutOfLine [
+       void void
+][varlen]
+test_bindingsdenylist_ShouldNeverAppearInAnyBinding3Handles [
+       void void
+][varlen]
+test_bindingsdenylist_ShouldNeverAppearInAnyBinding6InLine [
+       a fidl_union_member[1, int8]
+]
+test_bindingsdenylist_ShouldNeverAppearInAnyBinding6OutOfLine [
+       void void
+][varlen]
+test_bindingsdenylist_ShouldNeverAppearInAnyBinding6Handles [
+       void void
+][varlen]
+test_bindingsdenylist_Allowed_Denied_ResultInLine [
+       responseInLine fidl_union_member[1, test_bindingsdenylist_Allowed_Denied_ResponseInLine]
+       err fidl_union_member[2, int32]
+]
+test_bindingsdenylist_Allowed_Denied_ResultOutOfLine [
+       responseOutOfLine test_bindingsdenylist_Allowed_Denied_ResponseOutOfLine
+][varlen]
+test_bindingsdenylist_Allowed_Denied_ResultHandles [
+       response test_bindingsdenylist_Allowed_Denied_ResponseHandles
+][varlen]
+test_bindingsdenylist_ShouldNeverAppearInAnyBinding9InLine [
+       a fidl_union_member[1, int8]
+]
+test_bindingsdenylist_ShouldNeverAppearInAnyBinding9OutOfLine [
+       void void
+][varlen]
+test_bindingsdenylist_ShouldNeverAppearInAnyBinding9Handles [
+       void void
+][varlen]
+
+
+test_bindingsdenylist_DenyEachBindingOnlyDenyCppRequest {
+       hdr fidl_message_header[2957648440141224850]
+       a int8
+} [packed]
+test_bindingsdenylist_DenyEachBindingOnlyDenyCppRequestHandles {
+       void void
+} [packed]
+test_bindingsdenylist_DenyEachBindingOnlyDenyCppResponse {
+       hdr fidl_message_header[2957648440141224850]
+       resultInLine test_bindingsdenylist_DenyEachBinding_OnlyDenyCpp_ResultInLine
+       resultOutOfLine test_bindingsdenylist_DenyEachBinding_OnlyDenyCpp_ResultOutOfLine
+} [packed]
+test_bindingsdenylist_DenyEachBindingOnlyDenyCppResponseHandles {
+       result test_bindingsdenylist_DenyEachBinding_OnlyDenyCpp_ResultHandles
+} [packed]
+test_bindingsdenylist_DenyEachBindingOnlyDenyDartRequest {
+       hdr fidl_message_header[8446571910689294295]
+       a int8
+} [packed]
+test_bindingsdenylist_DenyEachBindingOnlyDenyDartRequestHandles {
+       void void
+} [packed]
+test_bindingsdenylist_DenyEachBindingOnlyDenyDartResponse {
+       hdr fidl_message_header[8446571910689294295]
+       resultInLine test_bindingsdenylist_DenyEachBinding_OnlyDenyDart_ResultInLine
+       resultOutOfLine test_bindingsdenylist_DenyEachBinding_OnlyDenyDart_ResultOutOfLine
+} [packed]
+test_bindingsdenylist_DenyEachBindingOnlyDenyDartResponseHandles {
+       result test_bindingsdenylist_DenyEachBinding_OnlyDenyDart_ResultHandles
+} [packed]
+test_bindingsdenylist_DenyEachBindingOnlyDenyGoRequest {
+       hdr fidl_message_header[7311125300308839833]
+       a int8
+} [packed]
+test_bindingsdenylist_DenyEachBindingOnlyDenyGoRequestHandles {
+       void void
+} [packed]
+test_bindingsdenylist_DenyEachBindingOnlyDenyGoResponse {
+       hdr fidl_message_header[7311125300308839833]
+       resultInLine test_bindingsdenylist_DenyEachBinding_OnlyDenyGo_ResultInLine
+       resultOutOfLine test_bindingsdenylist_DenyEachBinding_OnlyDenyGo_ResultOutOfLine
+} [packed]
+test_bindingsdenylist_DenyEachBindingOnlyDenyGoResponseHandles {
+       result test_bindingsdenylist_DenyEachBinding_OnlyDenyGo_ResultHandles
+} [packed]
+test_bindingsdenylist_DenyEachBindingOnlyDenyLibfuzzerRequest {
+       hdr fidl_message_header[2184115815603862302]
+       a int8
+} [packed]
+test_bindingsdenylist_DenyEachBindingOnlyDenyLibfuzzerRequestHandles {
+       void void
+} [packed]
+test_bindingsdenylist_DenyEachBindingOnlyDenyLibfuzzerResponse {
+       hdr fidl_message_header[2184115815603862302]
+       resultInLine test_bindingsdenylist_DenyEachBinding_OnlyDenyLibfuzzer_ResultInLine
+       resultOutOfLine test_bindingsdenylist_DenyEachBinding_OnlyDenyLibfuzzer_ResultOutOfLine
+} [packed]
+test_bindingsdenylist_DenyEachBindingOnlyDenyLibfuzzerResponseHandles {
+       result test_bindingsdenylist_DenyEachBinding_OnlyDenyLibfuzzer_ResultHandles
+} [packed]
+test_bindingsdenylist_DenyEachBindingOnlyDenyRustRequest {
+       hdr fidl_message_header[3719805222870932662]
+       a int8
+} [packed]
+test_bindingsdenylist_DenyEachBindingOnlyDenyRustRequestHandles {
+       void void
+} [packed]
+test_bindingsdenylist_DenyEachBindingOnlyDenyRustResponse {
+       hdr fidl_message_header[3719805222870932662]
+       resultInLine test_bindingsdenylist_DenyEachBinding_OnlyDenyRust_ResultInLine
+       resultOutOfLine test_bindingsdenylist_DenyEachBinding_OnlyDenyRust_ResultOutOfLine
+} [packed]
+test_bindingsdenylist_DenyEachBindingOnlyDenyRustResponseHandles {
+       result test_bindingsdenylist_DenyEachBinding_OnlyDenyRust_ResultHandles
+} [packed]
+
+resource zx_chan_test_bindingsdenylist_DenyEachBinding_client[zx_chan]
+resource zx_chan_test_bindingsdenylist_DenyEachBinding_server[zx_chan]
+
+zx_channel_create$test_bindingsdenylist_DenyEachBinding(options const[0], out0 ptr[out, zx_chan_test_bindingsdenylist_DenyEachBinding_client], out1 ptr[out, zx_chan_test_bindingsdenylist_DenyEachBinding_server])
+fdio_service_connect$test_bindingsdenylist_DenyEachBinding(path ptr[in, string["/svc/"]], handle zx_chan_test_bindingsdenylist_DenyEachBinding_server)
+zx_channel_call$test_bindingsdenylist_DenyEachBindingOnlyDenyCpp(handle zx_chan_test_bindingsdenylist_DenyEachBinding_client, options const[0], deadline zx_time, args ptr[in, fidl_call_args[test_bindingsdenylist_DenyEachBindingOnlyDenyCppRequest, test_bindingsdenylist_DenyEachBindingOnlyDenyCppRequestHandles, array[int8, ZX_CHANNEL_MAX_MSG_BYTES], test_bindingsdenylist_DenyEachBindingOnlyDenyCppResponseHandles]], actual_bytes ptr[out, int32], actual_handles ptr[out, int32])
+zx_channel_call$test_bindingsdenylist_DenyEachBindingOnlyDenyDart(handle zx_chan_test_bindingsdenylist_DenyEachBinding_client, options const[0], deadline zx_time, args ptr[in, fidl_call_args[test_bindingsdenylist_DenyEachBindingOnlyDenyDartRequest, test_bindingsdenylist_DenyEachBindingOnlyDenyDartRequestHandles, array[int8, ZX_CHANNEL_MAX_MSG_BYTES], test_bindingsdenylist_DenyEachBindingOnlyDenyDartResponseHandles]], actual_bytes ptr[out, int32], actual_handles ptr[out, int32])
+zx_channel_call$test_bindingsdenylist_DenyEachBindingOnlyDenyGo(handle zx_chan_test_bindingsdenylist_DenyEachBinding_client, options const[0], deadline zx_time, args ptr[in, fidl_call_args[test_bindingsdenylist_DenyEachBindingOnlyDenyGoRequest, test_bindingsdenylist_DenyEachBindingOnlyDenyGoRequestHandles, array[int8, ZX_CHANNEL_MAX_MSG_BYTES], test_bindingsdenylist_DenyEachBindingOnlyDenyGoResponseHandles]], actual_bytes ptr[out, int32], actual_handles ptr[out, int32])
+zx_channel_call$test_bindingsdenylist_DenyEachBindingOnlyDenyLibfuzzer(handle zx_chan_test_bindingsdenylist_DenyEachBinding_client, options const[0], deadline zx_time, args ptr[in, fidl_call_args[test_bindingsdenylist_DenyEachBindingOnlyDenyLibfuzzerRequest, test_bindingsdenylist_DenyEachBindingOnlyDenyLibfuzzerRequestHandles, array[int8, ZX_CHANNEL_MAX_MSG_BYTES], test_bindingsdenylist_DenyEachBindingOnlyDenyLibfuzzerResponseHandles]], actual_bytes ptr[out, int32], actual_handles ptr[out, int32])
+zx_channel_call$test_bindingsdenylist_DenyEachBindingOnlyDenyRust(handle zx_chan_test_bindingsdenylist_DenyEachBinding_client, options const[0], deadline zx_time, args ptr[in, fidl_call_args[test_bindingsdenylist_DenyEachBindingOnlyDenyRustRequest, test_bindingsdenylist_DenyEachBindingOnlyDenyRustRequestHandles, array[int8, ZX_CHANNEL_MAX_MSG_BYTES], test_bindingsdenylist_DenyEachBindingOnlyDenyRustResponseHandles]], actual_bytes ptr[out, int32], actual_handles ptr[out, int32])
+
+
+
+resource zx_chan_test_bindingsdenylist_Allowed_client[zx_chan]
+resource zx_chan_test_bindingsdenylist_Allowed_server[zx_chan]
+
+zx_channel_create$test_bindingsdenylist_Allowed(options const[0], out0 ptr[out, zx_chan_test_bindingsdenylist_Allowed_client], out1 ptr[out, zx_chan_test_bindingsdenylist_Allowed_server])
+fdio_service_connect$test_bindingsdenylist_Allowed(path ptr[in, string["/svc/"]], handle zx_chan_test_bindingsdenylist_Allowed_server)
+
+
+test_bindingsdenylist_ImportsSameNameContextUnattributedRequest {
+       hdr fidl_message_header[475191379775102607]
+} [packed]
+test_bindingsdenylist_ImportsSameNameContextUnattributedRequestHandles {
+       void void
+} [packed]
+test_bindingsdenylist_ImportsSameNameContextAlwaysAppearsInImportingLibraryRequest {
+       hdr fidl_message_header[2914965219653596920]
+} [packed]
+test_bindingsdenylist_ImportsSameNameContextAlwaysAppearsInImportingLibraryRequestHandles {
+       void void
+} [packed]
+
+resource zx_chan_test_bindingsdenylist_ImportsSameNameContext_client[zx_chan]
+resource zx_chan_test_bindingsdenylist_ImportsSameNameContext_server[zx_chan]
+
+zx_channel_create$test_bindingsdenylist_ImportsSameNameContext(options const[0], out0 ptr[out, zx_chan_test_bindingsdenylist_ImportsSameNameContext_client], out1 ptr[out, zx_chan_test_bindingsdenylist_ImportsSameNameContext_server])
+fdio_service_connect$test_bindingsdenylist_ImportsSameNameContext(path ptr[in, string["/svc/"]], handle zx_chan_test_bindingsdenylist_ImportsSameNameContext_server)
+zx_channel_write$test_bindingsdenylist_ImportsSameNameContextUnattributed(handle zx_chan_test_bindingsdenylist_ImportsSameNameContext_client, options const[0], bytes ptr[in, test_bindingsdenylist_ImportsSameNameContextUnattributedRequest], num_bytes bytesize[bytes], handles ptr[in, test_bindingsdenylist_ImportsSameNameContextUnattributedRequestHandles], num_handles bytesize[handles])
+zx_channel_write$test_bindingsdenylist_ImportsSameNameContextAlwaysAppearsInImportingLibrary(handle zx_chan_test_bindingsdenylist_ImportsSameNameContext_client, options const[0], bytes ptr[in, test_bindingsdenylist_ImportsSameNameContextAlwaysAppearsInImportingLibraryRequest], num_bytes bytesize[bytes], handles ptr[in, test_bindingsdenylist_ImportsSameNameContextAlwaysAppearsInImportingLibraryRequestHandles], num_handles bytesize[handles])
 
