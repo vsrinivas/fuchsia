@@ -23,4 +23,6 @@ rust_library("simple-v1_0_25") {
     "-Cmetadata=3b5ec47e038ac967",
     "-Cextra-filename=-3b5ec47e038ac967",
   ]
+
+  visibility = [ ":*" ]
 }

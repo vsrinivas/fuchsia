@@ -126,6 +126,10 @@ if (!(current_os == "fuchsia")) {
   }
 }
 
+group("cfg-if") {
+  deps = [ ":cfg-if-v1_0_0" ]
+}
+
 group("chrono") {
   deps = [ ":chrono-v0_4_11" ]
 }
@@ -206,6 +210,10 @@ if (!(current_os == "fuchsia")) {
   group("easy-parallel") {
     deps = [ ":easy-parallel-v3_1_0" ]
   }
+}
+
+group("either") {
+  deps = [ ":either-v1_5_0" ]
 }
 
 if (current_os == "fuchsia") {
@@ -388,6 +396,10 @@ if (current_os == "fuchsia") {
 
 group("log") {
   deps = [ ":log-v0_4_11" ]
+}
+
+group("lru-cache") {
+  deps = [ ":lru-cache-v0_1_2" ]
 }
 
 group("maplit") {
@@ -678,6 +690,12 @@ group("rustls") {
   deps = [ ":rustls-v0_17_0" ]
 }
 
+if (!(current_os == "fuchsia")) {
+  group("rustls-native-certs") {
+    deps = [ ":rustls-native-certs-v0_3_0" ]
+  }
+}
+
 group("scopeguard") {
   deps = [ ":scopeguard-v1_1_0" ]
 }
@@ -832,6 +850,12 @@ group("toml") {
 
 group("toml_edit") {
   deps = [ ":toml_edit-v0_2_1" ]
+}
+
+if (!(current_os == "fuchsia")) {
+  group("tower-service") {
+    deps = [ ":tower-service-v0_3_0" ]
+  }
 }
 
 group("tracing") {
@@ -1005,6 +1029,8 @@ rust_library("adler32-v1_0_4") {
     "-Cmetadata=49c7289baa3c93e2",
     "-Cextra-filename=-49c7289baa3c93e2",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("aead-v0_4_3") {
@@ -1028,6 +1054,8 @@ rust_library("aead-v0_4_3") {
     "-Cextra-filename=-af52864ec4702c1b",
     "--cfg=feature=\"alloc\"",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("aes-v0_7_5") {
@@ -1055,6 +1083,8 @@ rust_library("aes-v0_7_5") {
     "-Cmetadata=7d6cffd832fe874d",
     "-Cextra-filename=-7d6cffd832fe874d",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("aes-gcm-v0_9_4") {
@@ -1085,6 +1115,8 @@ rust_library("aes-gcm-v0_9_4") {
     "--cfg=feature=\"alloc\"",
     "--cfg=feature=\"default\"",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("aho-corasick-v0_7_10") {
@@ -1109,6 +1141,8 @@ rust_library("aho-corasick-v0_7_10") {
     "--cfg=feature=\"default\"",
     "--cfg=feature=\"std\"",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("ansi_term-v0_11_0") {
@@ -1133,6 +1167,8 @@ rust_library("ansi_term-v0_11_0") {
     "-Cmetadata=c2aacb35c8d0666a",
     "-Cextra-filename=-c2aacb35c8d0666a",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("anyhow-v1_0_38") {
@@ -1156,6 +1192,8 @@ rust_library("anyhow-v1_0_38") {
     "--cfg=feature=\"default\"",
     "--cfg=feature=\"std\"",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("arbitrary-v0_4_0") {
@@ -1180,6 +1218,8 @@ rust_library("arbitrary-v0_4_0") {
     "--cfg=feature=\"derive\"",
     "--cfg=feature=\"derive_arbitrary\"",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("argh-v0_1_7") {
@@ -1203,6 +1243,8 @@ rust_library("argh-v0_1_7") {
     "-Cmetadata=85679041d363e90a",
     "-Cextra-filename=-85679041d363e90a",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_proc_macro("argh_derive-v0_1_7") {
@@ -1229,6 +1271,8 @@ rust_proc_macro("argh_derive-v0_1_7") {
     "-Cmetadata=62ee35397190882c",
     "-Cextra-filename=-62ee35397190882c",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("argh_shared-v0_1_7") {
@@ -1250,6 +1294,8 @@ rust_library("argh_shared-v0_1_7") {
     "-Cmetadata=b579f501b1929d06",
     "-Cextra-filename=-b579f501b1929d06",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("arrayvec-v0_7_1") {
@@ -1273,6 +1319,8 @@ rust_library("arrayvec-v0_7_1") {
     "--cfg=feature=\"default\"",
     "--cfg=feature=\"std\"",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("assert_matches-v1_5_0") {
@@ -1294,6 +1342,8 @@ rust_library("assert_matches-v1_5_0") {
     "-Cmetadata=568351bf14d9d02",
     "-Cextra-filename=-568351bf14d9d02",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("async-broadcast-v0_2_0") {
@@ -1318,6 +1368,8 @@ rust_library("async-broadcast-v0_2_0") {
     "-Cmetadata=867f9c2514851758",
     "-Cextra-filename=-867f9c2514851758",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("async-channel-v1_6_1") {
@@ -1342,6 +1394,8 @@ rust_library("async-channel-v1_6_1") {
     "-Cmetadata=c9fb29c233c87151",
     "-Cextra-filename=-c9fb29c233c87151",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("async-executor-v1_4_1") {
@@ -1369,6 +1423,8 @@ rust_library("async-executor-v1_4_1") {
     "-Cmetadata=e1794cda02b66d3c",
     "-Cextra-filename=-e1794cda02b66d3c",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("async-fs-v1_5_0") {
@@ -1393,6 +1449,8 @@ rust_library("async-fs-v1_5_0") {
     "-Cmetadata=c416b168eaffeca9",
     "-Cextra-filename=-c416b168eaffeca9",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("async-io-v1_4_1") {
@@ -1430,6 +1488,8 @@ rust_library("async-io-v1_4_1") {
     "-Cmetadata=91b1974caf87c87c",
     "-Cextra-filename=-91b1974caf87c87c",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("async-lock-v2_3_0") {
@@ -1452,6 +1512,8 @@ rust_library("async-lock-v2_3_0") {
     "-Cmetadata=f387e568e95b5301",
     "-Cextra-filename=-f387e568e95b5301",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("async-net-v1_6_0") {
@@ -1477,6 +1539,8 @@ rust_library("async-net-v1_6_0") {
     "-Cmetadata=54d8e12346b1db6c",
     "-Cextra-filename=-54d8e12346b1db6c",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("async-task-v4_0_3") {
@@ -1500,6 +1564,8 @@ rust_library("async-task-v4_0_3") {
     "--cfg=feature=\"default\"",
     "--cfg=feature=\"std\"",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_proc_macro("async-trait-v0_1_51") {
@@ -1524,6 +1590,8 @@ rust_proc_macro("async-trait-v0_1_51") {
     "-Cmetadata=d25462a1cec8322c",
     "-Cextra-filename=-d25462a1cec8322c",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("atomic-waker-v1_0_0") {
@@ -1545,6 +1613,8 @@ rust_library("atomic-waker-v1_0_0") {
     "-Cmetadata=ac068411b12dd2e8",
     "-Cextra-filename=-ac068411b12dd2e8",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("atty-v0_2_11") {
@@ -1575,6 +1645,8 @@ rust_library("atty-v0_2_11") {
     "-Cmetadata=8928199b13c115d5",
     "-Cextra-filename=-8928199b13c115d5",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("backtrace-v0_3_42") {
@@ -1610,6 +1682,8 @@ rust_library("backtrace-v0_3_42") {
     "--cfg=feature=\"libunwind\"",
     "--cfg=feature=\"std\"",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("backtrace-sys-v0_1_37") {
@@ -1632,6 +1706,8 @@ rust_library("backtrace-sys-v0_1_37") {
     "-Cmetadata=76b66386b02bc30d",
     "-Cextra-filename=-76b66386b02bc30d",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("base64-v0_13_0") {
@@ -1655,6 +1731,8 @@ rust_library("base64-v0_13_0") {
     "--cfg=feature=\"default\"",
     "--cfg=feature=\"std\"",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("base64-v0_9_3") {
@@ -1678,6 +1756,8 @@ rust_library("base64-v0_9_3") {
     "-Cmetadata=4feaf160d10ad83f",
     "-Cextra-filename=-4feaf160d10ad83f",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("base64ct-v1_0_1") {
@@ -1701,6 +1781,8 @@ rust_library("base64ct-v1_0_1") {
     "--cfg=feature=\"alloc\"",
     "--cfg=feature=\"std\"",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("bincode-v1_1_1") {
@@ -1724,6 +1806,8 @@ rust_library("bincode-v1_1_1") {
     "-Cmetadata=ca4f5e63cc529fc0",
     "-Cextra-filename=-ca4f5e63cc529fc0",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("bit-set-v0_5_0") {
@@ -1748,6 +1832,8 @@ rust_library("bit-set-v0_5_0") {
     "--cfg=feature=\"default\"",
     "--cfg=feature=\"std\"",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("bit-vec-v0_5_0") {
@@ -1770,6 +1856,8 @@ rust_library("bit-vec-v0_5_0") {
     "-Cextra-filename=-56024dde80975899",
     "--cfg=feature=\"std\"",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("bitfield-v0_13_1") {
@@ -1791,6 +1879,8 @@ rust_library("bitfield-v0_13_1") {
     "-Cmetadata=1fad8370b10e06b",
     "-Cextra-filename=-1fad8370b10e06b",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("bitflags-v1_2_1") {
@@ -1814,6 +1904,8 @@ rust_library("bitflags-v1_2_1") {
     "--cfg=feature=\"default\"",
     "--cfg=bitflags_const_fn",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("block-buffer-v0_9_0") {
@@ -1836,6 +1928,8 @@ rust_library("block-buffer-v0_9_0") {
     "-Cmetadata=6c7dd64c8b827040",
     "-Cextra-filename=-6c7dd64c8b827040",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("blocking-v1_0_2") {
@@ -1863,6 +1957,8 @@ rust_library("blocking-v1_0_2") {
     "-Cmetadata=b6dd8248f836f05",
     "-Cextra-filename=-b6dd8248f836f05",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("bstr-v0_2_12") {
@@ -1896,6 +1992,8 @@ rust_library("bstr-v0_2_12") {
     "--cfg=feature=\"std\"",
     "--cfg=feature=\"unicode\"",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("bumpalo-v3_2_1") {
@@ -1918,6 +2016,8 @@ rust_library("bumpalo-v3_2_1") {
     "-Cextra-filename=-6c0f43d1ab0e9655",
     "--cfg=feature=\"default\"",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("bytecount-v0_6_0") {
@@ -1939,6 +2039,8 @@ rust_library("bytecount-v0_6_0") {
     "-Cmetadata=b4fade0a2dc4ee4a",
     "-Cextra-filename=-b4fade0a2dc4ee4a",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("byteorder-v1_3_1") {
@@ -1964,6 +2066,8 @@ rust_library("byteorder-v1_3_1") {
     "--cfg=feature=\"std\"",
     "--cfg=byteorder_i128",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("bytes-v0_5_4") {
@@ -1987,6 +2091,8 @@ rust_library("bytes-v0_5_4") {
     "--cfg=feature=\"default\"",
     "--cfg=feature=\"std\"",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("bytes-v1_0_1") {
@@ -2010,6 +2116,8 @@ rust_library("bytes-v1_0_1") {
     "--cfg=feature=\"default\"",
     "--cfg=feature=\"std\"",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("cache-padded-v1_1_1") {
@@ -2031,6 +2139,8 @@ rust_library("cache-padded-v1_1_1") {
     "-Cmetadata=d5ffac023176ef0c",
     "-Cextra-filename=-d5ffac023176ef0c",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("camino-v1_0_5") {
@@ -2056,6 +2166,8 @@ rust_library("camino-v1_0_5") {
     "--cfg=feature=\"serde1\"",
     "--cfg=path_buf_capacity",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("cargo-platform-v0_1_2") {
@@ -2078,6 +2190,8 @@ rust_library("cargo-platform-v0_1_2") {
     "-Cmetadata=1a9bc2981dd0c628",
     "-Cextra-filename=-1a9bc2981dd0c628",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("cargo_metadata-v0_14_1") {
@@ -2105,6 +2219,8 @@ rust_library("cargo_metadata-v0_14_1") {
     "-Cextra-filename=-c02c463dd45e6a7c",
     "--cfg=feature=\"default\"",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("cassowary-v0_3_0") {
@@ -2126,6 +2242,8 @@ rust_library("cassowary-v0_3_0") {
     "-Cmetadata=554c4b407c5a77fa",
     "-Cextra-filename=-554c4b407c5a77fa",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("cast-v0_2_2") {
@@ -2149,6 +2267,8 @@ rust_library("cast-v0_2_2") {
     "--cfg=feature=\"default\"",
     "--cfg=feature=\"std\"",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("cfg-if-v0_1_10") {
@@ -2170,6 +2290,8 @@ rust_library("cfg-if-v0_1_10") {
     "-Cmetadata=de3fee777d28505f",
     "-Cextra-filename=-de3fee777d28505f",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("cfg-if-v1_0_0") {
@@ -2191,6 +2313,8 @@ rust_library("cfg-if-v1_0_0") {
     "-Cmetadata=5f200286e6ae9b7a",
     "-Cextra-filename=-5f200286e6ae9b7a",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("chrono-v0_4_11") {
@@ -2221,6 +2345,8 @@ rust_library("chrono-v0_4_11") {
     "--cfg=feature=\"std\"",
     "--cfg=feature=\"time\"",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("chrono-english-v0_1_4") {
@@ -2245,6 +2371,8 @@ rust_library("chrono-english-v0_1_4") {
     "-Cmetadata=d51fdb87bc2739a0",
     "-Cextra-filename=-d51fdb87bc2739a0",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("cipher-v0_3_0") {
@@ -2267,6 +2395,8 @@ rust_library("cipher-v0_3_0") {
     "-Cmetadata=17988224231aa4cb",
     "-Cextra-filename=-17988224231aa4cb",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("clap-v2_33_0") {
@@ -2304,6 +2434,8 @@ rust_library("clap-v2_33_0") {
     "--cfg=feature=\"suggestions\"",
     "--cfg=feature=\"vec_map\"",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("cloudabi-v0_0_3") {
@@ -2328,6 +2460,8 @@ rust_library("cloudabi-v0_0_3") {
     "--cfg=feature=\"bitflags\"",
     "--cfg=feature=\"default\"",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("codespan-reporting-v0_11_1") {
@@ -2351,6 +2485,8 @@ rust_library("codespan-reporting-v0_11_1") {
     "-Cmetadata=7b67adc51c2d979a",
     "-Cextra-filename=-7b67adc51c2d979a",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("combine-v4_6_2") {
@@ -2378,6 +2514,8 @@ rust_library("combine-v4_6_2") {
     "--cfg=feature=\"default\"",
     "--cfg=feature=\"std\"",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("concurrent-queue-v1_2_2") {
@@ -2400,6 +2538,8 @@ rust_library("concurrent-queue-v1_2_2") {
     "-Cmetadata=13df2ce2106c7e2c",
     "-Cextra-filename=-13df2ce2106c7e2c",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("core-foundation-v0_7_0") {
@@ -2423,6 +2563,8 @@ rust_library("core-foundation-v0_7_0") {
     "-Cmetadata=ba67193d114fb832",
     "-Cextra-filename=-ba67193d114fb832",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("core-foundation-sys-v0_7_0") {
@@ -2447,6 +2589,8 @@ rust_library("core-foundation-sys-v0_7_0") {
   if (current_os == "mac") {
     rustflags += [ "-lframework=CoreFoundation" ]
   }
+
+  visibility = [ ":*" ]
 }
 
 rust_library("cpufeatures-v0_2_1") {
@@ -2474,6 +2618,8 @@ rust_library("cpufeatures-v0_2_1") {
     "-Cmetadata=2ca0d32e43ea13",
     "-Cextra-filename=-2ca0d32e43ea13",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("crc-v1_8_1") {
@@ -2497,6 +2643,8 @@ rust_library("crc-v1_8_1") {
     "--cfg=feature=\"default\"",
     "--cfg=feature=\"std\"",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("crc32fast-v1_2_0") {
@@ -2522,6 +2670,8 @@ rust_library("crc32fast-v1_2_0") {
     "--cfg=feature=\"std\"",
     "--cfg=crc32fast_stdarchx86",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("criterion-v0_2_11") {
@@ -2560,6 +2710,8 @@ rust_library("criterion-v0_2_11") {
     "-Cmetadata=b8034bd1e116f938",
     "-Cextra-filename=-b8034bd1e116f938",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("crossbeam-v0_8_0") {
@@ -2594,6 +2746,8 @@ rust_library("crossbeam-v0_8_0") {
     "--cfg=feature=\"default\"",
     "--cfg=feature=\"std\"",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("crossbeam-channel-v0_5_1") {
@@ -2620,6 +2774,8 @@ rust_library("crossbeam-channel-v0_5_1") {
     "--cfg=feature=\"default\"",
     "--cfg=feature=\"std\"",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("crossbeam-deque-v0_7_4") {
@@ -2645,6 +2801,8 @@ rust_library("crossbeam-deque-v0_7_4") {
     "-Cmetadata=bd42bcf5aa8a0ab0",
     "-Cextra-filename=-bd42bcf5aa8a0ab0",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("crossbeam-deque-v0_8_1") {
@@ -2672,6 +2830,8 @@ rust_library("crossbeam-deque-v0_8_1") {
     "--cfg=feature=\"crossbeam-utils\"",
     "--cfg=feature=\"std\"",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("crossbeam-epoch-v0_8_2") {
@@ -2703,6 +2863,8 @@ rust_library("crossbeam-epoch-v0_8_2") {
     "--cfg=feature=\"lazy_static\"",
     "--cfg=feature=\"std\"",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("crossbeam-epoch-v0_9_4") {
@@ -2732,6 +2894,8 @@ rust_library("crossbeam-epoch-v0_9_4") {
     "--cfg=feature=\"lazy_static\"",
     "--cfg=feature=\"std\"",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("crossbeam-queue-v0_2_1") {
@@ -2758,6 +2922,8 @@ rust_library("crossbeam-queue-v0_2_1") {
     "--cfg=feature=\"default\"",
     "--cfg=feature=\"std\"",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("crossbeam-queue-v0_3_1") {
@@ -2783,6 +2949,8 @@ rust_library("crossbeam-queue-v0_3_1") {
     "--cfg=feature=\"alloc\"",
     "--cfg=feature=\"std\"",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("crossbeam-utils-v0_7_2") {
@@ -2810,6 +2978,8 @@ rust_library("crossbeam-utils-v0_7_2") {
     "--cfg=feature=\"lazy_static\"",
     "--cfg=feature=\"std\"",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("crossbeam-utils-v0_8_4") {
@@ -2840,6 +3010,8 @@ rust_library("crossbeam-utils-v0_8_4") {
     "--cfg=has_atomic_u32",
     "--cfg=has_atomic_u64",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("crossterm-v0_19_0") {
@@ -2874,6 +3046,8 @@ rust_library("crossterm-v0_19_0") {
     "-Cextra-filename=-3fc6a95bb38daeac",
     "--cfg=feature=\"default\"",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("crossterm_winapi-v0_7_0") {
@@ -2895,6 +3069,8 @@ rust_library("crossterm_winapi-v0_7_0") {
     "-Cmetadata=e4d128a29a118570",
     "-Cextra-filename=-e4d128a29a118570",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("crypto-mac-v0_11_1") {
@@ -2918,6 +3094,8 @@ rust_library("crypto-mac-v0_11_1") {
     "-Cmetadata=c61aae76717eb909",
     "-Cextra-filename=-c61aae76717eb909",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("csv-v1_1_3") {
@@ -2944,6 +3122,8 @@ rust_library("csv-v1_1_3") {
     "-Cmetadata=c447310fd6863403",
     "-Cextra-filename=-c447310fd6863403",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("csv-core-v0_1_10") {
@@ -2967,6 +3147,8 @@ rust_library("csv-core-v0_1_10") {
     "-Cextra-filename=-736f88686751ea8f",
     "--cfg=feature=\"default\"",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("ctr-v0_8_0") {
@@ -2989,6 +3171,8 @@ rust_library("ctr-v0_8_0") {
     "-Cmetadata=8ca25ee458401261",
     "-Cextra-filename=-8ca25ee458401261",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("cxx-v1_0_50") {
@@ -3013,6 +3197,8 @@ rust_library("cxx-v1_0_50") {
     "-Cextra-filename=-618927fcf37aaeb7",
     "--cfg=feature=\"default\"",
   ]
+
+  visibility = [ ":*" ]
 }
 
 executable("cxxbridge-cmd-cxxbridge-v1_0_50") {
@@ -3039,6 +3225,8 @@ executable("cxxbridge-cmd-cxxbridge-v1_0_50") {
     "-Cmetadata=eecf4c060bb1e4c2",
     "-Cextra-filename=-eecf4c060bb1e4c2",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("cxxbridge-cmd-v1_0_50") {
@@ -3065,6 +3253,8 @@ rust_library("cxxbridge-cmd-v1_0_50") {
     "-Cmetadata=76895b4879778319",
     "-Cextra-filename=-76895b4879778319",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_proc_macro("cxxbridge-macro-v1_0_50") {
@@ -3089,6 +3279,8 @@ rust_proc_macro("cxxbridge-macro-v1_0_50") {
     "-Cmetadata=ad21b247159ca7e7",
     "-Cextra-filename=-ad21b247159ca7e7",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("darling-v0_12_0") {
@@ -3114,6 +3306,8 @@ rust_library("darling-v0_12_0") {
     "--cfg=feature=\"default\"",
     "--cfg=feature=\"suggestions\"",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("darling_core-v0_12_0") {
@@ -3143,6 +3337,8 @@ rust_library("darling_core-v0_12_0") {
     "--cfg=feature=\"strsim\"",
     "--cfg=feature=\"suggestions\"",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_proc_macro("darling_macro-v0_12_0") {
@@ -3167,6 +3363,8 @@ rust_proc_macro("darling_macro-v0_12_0") {
     "-Cmetadata=ad9e3192968cb445",
     "-Cextra-filename=-ad9e3192968cb445",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("dashmap-v4_0_2") {
@@ -3191,6 +3389,8 @@ rust_library("dashmap-v4_0_2") {
     "-Cextra-filename=-3cd01d2a224a57b",
     "--cfg=feature=\"default\"",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("data-encoding-v2_3_2") {
@@ -3215,6 +3415,8 @@ rust_library("data-encoding-v2_3_2") {
     "--cfg=feature=\"default\"",
     "--cfg=feature=\"std\"",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("deepsize-v0_2_0") {
@@ -3247,6 +3449,8 @@ rust_library("deepsize-v0_2_0") {
     "--cfg=feature=\"smallvec\"",
     "--cfg=feature=\"std\"",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_proc_macro("deepsize_derive-v0_1_1") {
@@ -3271,6 +3475,8 @@ rust_proc_macro("deepsize_derive-v0_1_1") {
     "-Cmetadata=128c85a62edd3382",
     "-Cextra-filename=-128c85a62edd3382",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("deflate-v0_7_19") {
@@ -3294,6 +3500,8 @@ rust_library("deflate-v0_7_19") {
     "-Cmetadata=65e9287bc3778641",
     "-Cextra-filename=-65e9287bc3778641",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_proc_macro("derivative-v2_1_1") {
@@ -3318,6 +3526,8 @@ rust_proc_macro("derivative-v2_1_1") {
     "-Cmetadata=e4b38514ab785324",
     "-Cextra-filename=-e4b38514ab785324",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_proc_macro("derive_arbitrary-v0_4_0") {
@@ -3342,6 +3552,8 @@ rust_proc_macro("derive_arbitrary-v0_4_0") {
     "-Cmetadata=707386e28fd45df8",
     "-Cextra-filename=-707386e28fd45df8",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("derp-v0_0_14") {
@@ -3364,6 +3576,8 @@ rust_library("derp-v0_0_14") {
     "-Cmetadata=8224201ec77eaa7",
     "-Cextra-filename=-8224201ec77eaa7",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("difference-v2_0_0") {
@@ -3386,6 +3600,8 @@ rust_library("difference-v2_0_0") {
     "-Cextra-filename=-729c4c18786eef68",
     "--cfg=feature=\"default\"",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("digest-v0_9_0") {
@@ -3410,6 +3626,8 @@ rust_library("digest-v0_9_0") {
     "--cfg=feature=\"alloc\"",
     "--cfg=feature=\"std\"",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("downcast-v0_10_0") {
@@ -3433,6 +3651,8 @@ rust_library("downcast-v0_10_0") {
     "--cfg=feature=\"default\"",
     "--cfg=feature=\"std\"",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("easy-parallel-v3_1_0") {
@@ -3454,6 +3674,8 @@ rust_library("easy-parallel-v3_1_0") {
     "-Cmetadata=87f77231f1b1949b",
     "-Cextra-filename=-87f77231f1b1949b",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("either-v1_5_0") {
@@ -3474,7 +3696,11 @@ rust_library("either-v1_5_0") {
     "--edition=2015",
     "-Cmetadata=22a1bbc0eb940e7e",
     "-Cextra-filename=-22a1bbc0eb940e7e",
+    "--cfg=feature=\"default\"",
+    "--cfg=feature=\"use_std\"",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("encode_unicode-v0_3_5") {
@@ -3498,6 +3724,8 @@ rust_library("encode_unicode-v0_3_5") {
     "--cfg=feature=\"default\"",
     "--cfg=feature=\"std\"",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_proc_macro("enum-as-inner-v0_3_0") {
@@ -3523,6 +3751,8 @@ rust_proc_macro("enum-as-inner-v0_3_0") {
     "-Cmetadata=1ccf1af5f033dd92",
     "-Cextra-filename=-1ccf1af5f033dd92",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("error-chain-v0_12_0") {
@@ -3548,6 +3778,8 @@ rust_library("error-chain-v0_12_0") {
     "--cfg=feature=\"default\"",
     "--cfg=feature=\"example_generated\"",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("euclid-v0_22_1") {
@@ -3574,6 +3806,8 @@ rust_library("euclid-v0_22_1") {
     "--cfg=feature=\"serde\"",
     "--cfg=feature=\"std\"",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("eui48-v0_4_6") {
@@ -3600,6 +3834,8 @@ rust_library("eui48-v0_4_6") {
     "--cfg=feature=\"disp_hexstring\"",
     "--cfg=feature=\"serde\"",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("event-listener-v2_5_1") {
@@ -3621,6 +3857,8 @@ rust_library("event-listener-v2_5_1") {
     "-Cmetadata=db0b634d4cbcc40b",
     "-Cextra-filename=-db0b634d4cbcc40b",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("fastrand-v1_4_0") {
@@ -3645,6 +3883,8 @@ rust_library("fastrand-v1_4_0") {
     "-Cmetadata=3e2364b5ac67c966",
     "-Cextra-filename=-3e2364b5ac67c966",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("fatfs-v0_4_0") {
@@ -3676,6 +3916,8 @@ rust_library("fatfs-v0_4_0") {
     "--cfg=feature=\"std\"",
     "--cfg=feature=\"unicode\"",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("filetime-v0_2_14") {
@@ -3711,6 +3953,7 @@ rust_library("filetime-v0_2_14") {
   aliased_deps = {
     syscall = ":redox_syscall-v0_2_5"
   }
+  visibility = [ ":*" ]
 }
 
 rust_library("fixedbitset-v0_2_0") {
@@ -3732,6 +3975,8 @@ rust_library("fixedbitset-v0_2_0") {
     "-Cmetadata=da79ca35469fac93",
     "-Cextra-filename=-da79ca35469fac93",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("flate2-v1_0_14") {
@@ -3762,6 +4007,8 @@ rust_library("flate2-v1_0_14") {
     "--cfg=feature=\"miniz_oxide\"",
     "--cfg=feature=\"rust_backend\"",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("float-cmp-v0_8_0") {
@@ -3787,6 +4034,8 @@ rust_library("float-cmp-v0_8_0") {
     "--cfg=feature=\"num-traits\"",
     "--cfg=feature=\"ratio\"",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("fnv-v1_0_6") {
@@ -3808,6 +4057,8 @@ rust_library("fnv-v1_0_6") {
     "-Cmetadata=aea2659b6e57ee72",
     "-Cextra-filename=-aea2659b6e57ee72",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("fragile-v1_0_0") {
@@ -3829,6 +4080,8 @@ rust_library("fragile-v1_0_0") {
     "-Cmetadata=4fff0e17f0e7f677",
     "-Cextra-filename=-4fff0e17f0e7f677",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("fsevent-sys-v4_0_0") {
@@ -3851,6 +4104,8 @@ rust_library("fsevent-sys-v4_0_0") {
     "-Cmetadata=2cc9241b509ff4e3",
     "-Cextra-filename=-2cc9241b509ff4e3",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("fuchsia-cprng-v0_1_1") {
@@ -3872,6 +4127,8 @@ rust_library("fuchsia-cprng-v0_1_1") {
     "-Cmetadata=2003c73715c7fc44",
     "-Cextra-filename=-2003c73715c7fc44",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("futures-v0_3_15") {
@@ -3906,6 +4163,8 @@ rust_library("futures-v0_3_15") {
     "--cfg=feature=\"futures-executor\"",
     "--cfg=feature=\"std\"",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("futures-channel-v0_3_15") {
@@ -3934,6 +4193,8 @@ rust_library("futures-channel-v0_3_15") {
     "--cfg=feature=\"sink\"",
     "--cfg=feature=\"std\"",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("futures-core-v0_3_15") {
@@ -3958,6 +4219,8 @@ rust_library("futures-core-v0_3_15") {
     "--cfg=feature=\"default\"",
     "--cfg=feature=\"std\"",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("futures-executor-v0_3_15") {
@@ -3984,6 +4247,8 @@ rust_library("futures-executor-v0_3_15") {
     "--cfg=feature=\"default\"",
     "--cfg=feature=\"std\"",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("futures-io-v0_3_15") {
@@ -4007,6 +4272,8 @@ rust_library("futures-io-v0_3_15") {
     "--cfg=feature=\"default\"",
     "--cfg=feature=\"std\"",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("futures-lite-v1_11_3") {
@@ -4042,6 +4309,8 @@ rust_library("futures-lite-v1_11_3") {
     "--cfg=feature=\"std\"",
     "--cfg=feature=\"waker-fn\"",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_proc_macro("futures-macro-v0_3_15") {
@@ -4068,6 +4337,8 @@ rust_proc_macro("futures-macro-v0_3_15") {
     "-Cextra-filename=-3a768ba51e2ff2a0",
     "--cfg=fn_like_proc_macro",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("futures-sink-v0_3_15") {
@@ -4092,6 +4363,8 @@ rust_library("futures-sink-v0_3_15") {
     "--cfg=feature=\"default\"",
     "--cfg=feature=\"std\"",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("futures-task-v0_3_15") {
@@ -4116,6 +4389,8 @@ rust_library("futures-task-v0_3_15") {
     "--cfg=feature=\"default\"",
     "--cfg=feature=\"std\"",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("futures-test-v0_3_15") {
@@ -4148,6 +4423,8 @@ rust_library("futures-test-v0_3_15") {
     "--cfg=feature=\"default\"",
     "--cfg=feature=\"std\"",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("futures-util-v0_3_15") {
@@ -4198,6 +4475,8 @@ rust_library("futures-util-v0_3_15") {
     "--cfg=feature=\"std\"",
     "--cfg=fn_like_proc_macro",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("generic-array-v0_14_4") {
@@ -4221,6 +4500,8 @@ rust_library("generic-array-v0_14_4") {
     "-Cextra-filename=-2b5f1072d48211af",
     "--cfg=relaxed_coherence",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("getopts-v0_2_18") {
@@ -4243,6 +4524,8 @@ rust_library("getopts-v0_2_18") {
     "-Cmetadata=ee306262a9b3a5b0",
     "-Cextra-filename=-ee306262a9b3a5b0",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("getrandom-v0_2_2") {
@@ -4283,6 +4566,8 @@ rust_library("getrandom-v0_2_2") {
     "--cfg=feature=\"std\"",
     "--cfg=feature=\"wasm-bindgen\"",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("ghash-v0_4_4") {
@@ -4306,6 +4591,8 @@ rust_library("ghash-v0_4_4") {
     "-Cmetadata=7822f3ab5a5b2e5d",
     "-Cextra-filename=-7822f3ab5a5b2e5d",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("glob-v0_3_0") {
@@ -4327,6 +4614,8 @@ rust_library("glob-v0_3_0") {
     "-Cmetadata=aa5b2e2c44f5f401",
     "-Cextra-filename=-aa5b2e2c44f5f401",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("gpt-v2_0_0") {
@@ -4352,6 +4641,8 @@ rust_library("gpt-v2_0_0") {
     "-Cmetadata=92cda70d62a05801",
     "-Cextra-filename=-92cda70d62a05801",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("h2-v0_2_5") {
@@ -4384,6 +4675,8 @@ rust_library("h2-v0_2_5") {
     "-Cmetadata=85a3d30816d5adab",
     "-Cextra-filename=-85a3d30816d5adab",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("half-v1_6_0") {
@@ -4405,6 +4698,8 @@ rust_library("half-v1_6_0") {
     "-Cmetadata=d9b7b38cc4103d3d",
     "-Cextra-filename=-d9b7b38cc4103d3d",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("handlebars-v3_5_4") {
@@ -4434,6 +4729,8 @@ rust_library("handlebars-v3_5_4") {
     "-Cextra-filename=-57fc345ed0913234",
     "--cfg=feature=\"default\"",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("heck-v0_3_1") {
@@ -4456,6 +4753,8 @@ rust_library("heck-v0_3_1") {
     "-Cmetadata=e3dad0497ab5b0fe",
     "-Cextra-filename=-e3dad0497ab5b0fe",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("hermit-abi-v0_1_8") {
@@ -4479,6 +4778,8 @@ rust_library("hermit-abi-v0_1_8") {
     "-Cextra-filename=-f84c675d3602a4e4",
     "--cfg=feature=\"default\"",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("hex-v0_3_2") {
@@ -4500,6 +4801,8 @@ rust_library("hex-v0_3_2") {
     "-Cmetadata=67ad4b3000c63154",
     "-Cextra-filename=-67ad4b3000c63154",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("hmac-v0_11_0") {
@@ -4523,6 +4826,8 @@ rust_library("hmac-v0_11_0") {
     "-Cmetadata=249a5a2d4f454c6b",
     "-Cextra-filename=-249a5a2d4f454c6b",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("home-v0_5_3") {
@@ -4547,6 +4852,8 @@ rust_library("home-v0_5_3") {
     "-Cmetadata=9a402443b9ac5998",
     "-Cextra-filename=-9a402443b9ac5998",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("http-v0_2_4") {
@@ -4571,6 +4878,8 @@ rust_library("http-v0_2_4") {
     "-Cmetadata=6a6e000f40845eef",
     "-Cextra-filename=-6a6e000f40845eef",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("http-body-v0_3_1") {
@@ -4594,6 +4903,8 @@ rust_library("http-body-v0_3_1") {
     "-Cmetadata=a81727a56a76505",
     "-Cextra-filename=-a81727a56a76505",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("httparse-v1_5_1") {
@@ -4618,6 +4929,8 @@ rust_library("httparse-v1_5_1") {
     "--cfg=feature=\"std\"",
     "--cfg=httparse_simd",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("httpdate-v0_3_2") {
@@ -4639,6 +4952,8 @@ rust_library("httpdate-v0_3_2") {
     "-Cmetadata=c2452022b5809a33",
     "-Cextra-filename=-c2452022b5809a33",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("humansize-v1_1_1") {
@@ -4660,6 +4975,8 @@ rust_library("humansize-v1_1_1") {
     "-Cmetadata=c6e531eb85c12cc1",
     "-Cextra-filename=-c6e531eb85c12cc1",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("hyper-v0_13_10") {
@@ -4697,6 +5014,8 @@ rust_library("hyper-v0_13_10") {
     "-Cextra-filename=-5f41561e316ec43e",
     "--cfg=feature=\"stream\"",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("hyper-rustls-v0_20_0") {
@@ -4728,6 +5047,8 @@ rust_library("hyper-rustls-v0_20_0") {
     "-Cextra-filename=-b9f204e9124022d3",
     "--cfg=feature=\"rustls-native-certs\"",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("ident_case-v1_0_1") {
@@ -4749,6 +5070,8 @@ rust_library("ident_case-v1_0_1") {
     "-Cmetadata=b27b32febfa5a05a",
     "-Cextra-filename=-b27b32febfa5a05a",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("idna-v0_1_5") {
@@ -4773,6 +5096,8 @@ rust_library("idna-v0_1_5") {
     "-Cmetadata=682a1dbddbc2bf79",
     "-Cextra-filename=-682a1dbddbc2bf79",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("idna-v0_2_3") {
@@ -4797,6 +5122,8 @@ rust_library("idna-v0_2_3") {
     "-Cmetadata=22cfd0b478d3e8bd",
     "-Cextra-filename=-22cfd0b478d3e8bd",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("indexmap-v1_0_2") {
@@ -4818,6 +5145,8 @@ rust_library("indexmap-v1_0_2") {
     "-Cmetadata=e44704bec4fb41ed",
     "-Cextra-filename=-e44704bec4fb41ed",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("indoc-v0_3_3") {
@@ -4841,6 +5170,8 @@ rust_library("indoc-v0_3_3") {
     "-Cmetadata=f092045a458190be",
     "-Cextra-filename=-f092045a458190be",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_proc_macro("indoc-impl-v0_3_3") {
@@ -4867,6 +5198,8 @@ rust_proc_macro("indoc-impl-v0_3_3") {
     "-Cmetadata=32e49cf2e672c9bc",
     "-Cextra-filename=-32e49cf2e672c9bc",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("inflate-v0_4_5") {
@@ -4890,6 +5223,8 @@ rust_library("inflate-v0_4_5") {
     "-Cextra-filename=-e2d006b321248ecb",
     "--cfg=feature=\"default\"",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("inotify-v0_9_3") {
@@ -4914,6 +5249,8 @@ rust_library("inotify-v0_9_3") {
     "-Cmetadata=95428818c5e4383a",
     "-Cextra-filename=-95428818c5e4383a",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("inotify-sys-v0_1_5") {
@@ -4936,6 +5273,8 @@ rust_library("inotify-sys-v0_1_5") {
     "-Cmetadata=5a7221e0cdb60ab6",
     "-Cextra-filename=-5a7221e0cdb60ab6",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("instant-v0_1_9") {
@@ -4958,6 +5297,8 @@ rust_library("instant-v0_1_9") {
     "-Cmetadata=83da69adfa026a2e",
     "-Cextra-filename=-83da69adfa026a2e",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("iota-v0_2_2") {
@@ -4979,6 +5320,8 @@ rust_library("iota-v0_2_2") {
     "-Cmetadata=e068e14ca4b8dd42",
     "-Cextra-filename=-e068e14ca4b8dd42",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("ipnet-v2_3_1") {
@@ -5000,6 +5343,8 @@ rust_library("ipnet-v2_3_1") {
     "-Cmetadata=f8a52ce484aace28",
     "-Cextra-filename=-f8a52ce484aace28",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("itertools-v0_10_1") {
@@ -5025,6 +5370,8 @@ rust_library("itertools-v0_10_1") {
     "--cfg=feature=\"use_alloc\"",
     "--cfg=feature=\"use_std\"",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("itertools-v0_8_0") {
@@ -5049,6 +5396,8 @@ rust_library("itertools-v0_8_0") {
     "--cfg=feature=\"default\"",
     "--cfg=feature=\"use_std\"",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("itoa-v0_4_3") {
@@ -5072,6 +5421,8 @@ rust_library("itoa-v0_4_3") {
     "--cfg=feature=\"default\"",
     "--cfg=feature=\"std\"",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("js-sys-v0_3_39") {
@@ -5098,6 +5449,8 @@ rust_library("js-sys-v0_3_39") {
     "-Cmetadata=5fe78b9b477a7acb",
     "-Cextra-filename=-5fe78b9b477a7acb",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("json5format-v0_2_0") {
@@ -5121,6 +5474,8 @@ rust_library("json5format-v0_2_0") {
     "-Cmetadata=51d5f403fa4d32fa",
     "-Cextra-filename=-51d5f403fa4d32fa",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("jsonway-v2_0_0") {
@@ -5144,6 +5499,8 @@ rust_library("jsonway-v2_0_0") {
     "-Cmetadata=5ed994a48b787f8e",
     "-Cextra-filename=-5ed994a48b787f8e",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("lazy_static-v1_4_0") {
@@ -5165,6 +5522,8 @@ rust_library("lazy_static-v1_4_0") {
     "-Cmetadata=cdf593bd3fb3d68f",
     "-Cextra-filename=-cdf593bd3fb3d68f",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("libc-v0_2_101") {
@@ -5199,6 +5558,8 @@ rust_library("libc-v0_2_101") {
   if (false) {
     rustflags += [ "--cfg=freebsd11" ]
   }
+
+  visibility = [ ":*" ]
 }
 
 rust_library("libm-v0_2_1") {
@@ -5221,6 +5582,8 @@ rust_library("libm-v0_2_1") {
     "-Cmetadata=9acc3111b7a9209b",
     "-Cextra-filename=-9acc3111b7a9209b",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("link-cplusplus-v1_0_2") {
@@ -5243,6 +5606,8 @@ rust_library("link-cplusplus-v1_0_2") {
     "-Cextra-filename=-ca3941f03f39e09b",
     "--cfg=feature=\"default\"",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("linked-hash-map-v0_5_3") {
@@ -5264,6 +5629,8 @@ rust_library("linked-hash-map-v0_5_3") {
     "-Cmetadata=b9b35caede8d8189",
     "-Cextra-filename=-b9b35caede8d8189",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("lipsum-v0_6_0") {
@@ -5286,6 +5653,8 @@ rust_library("lipsum-v0_6_0") {
     "-Cmetadata=3f3d810083da13c9",
     "-Cextra-filename=-3f3d810083da13c9",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("lock_api-v0_3_4") {
@@ -5308,6 +5677,8 @@ rust_library("lock_api-v0_3_4") {
     "-Cmetadata=12f3d9bb96757377",
     "-Cextra-filename=-12f3d9bb96757377",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("lock_api-v0_4_2") {
@@ -5330,6 +5701,8 @@ rust_library("lock_api-v0_4_2") {
     "-Cmetadata=926aab83183a93db",
     "-Cextra-filename=-926aab83183a93db",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("log-v0_4_11") {
@@ -5354,6 +5727,8 @@ rust_library("log-v0_4_11") {
     "--cfg=feature=\"std\"",
     "--cfg=atomic_cas",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("lru-cache-v0_1_2") {
@@ -5376,6 +5751,8 @@ rust_library("lru-cache-v0_1_2") {
     "-Cmetadata=d0de9f2b92e5e947",
     "-Cextra-filename=-d0de9f2b92e5e947",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("maplit-v1_0_1") {
@@ -5397,6 +5774,8 @@ rust_library("maplit-v1_0_1") {
     "-Cmetadata=42f6d562ec404170",
     "-Cextra-filename=-42f6d562ec404170",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("matches-v0_1_9") {
@@ -5418,6 +5797,8 @@ rust_library("matches-v0_1_9") {
     "-Cmetadata=c708e0b8aa4fcca4",
     "-Cextra-filename=-c708e0b8aa4fcca4",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("maybe-owned-v0_3_2") {
@@ -5439,6 +5820,8 @@ rust_library("maybe-owned-v0_3_2") {
     "-Cmetadata=cd58fab7b411c920",
     "-Cextra-filename=-cd58fab7b411c920",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("maybe-uninit-v2_0_0") {
@@ -5463,6 +5846,8 @@ rust_library("maybe-uninit-v2_0_0") {
     "--cfg=repr_transparent",
     "--cfg=native_uninit",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("memchr-v2_4_0") {
@@ -5491,6 +5876,8 @@ rust_library("memchr-v2_4_0") {
     "--cfg=memchr_runtime_sse42",
     "--cfg=memchr_runtime_avx",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("memoffset-v0_5_3") {
@@ -5512,6 +5899,8 @@ rust_library("memoffset-v0_5_3") {
     "-Cmetadata=86fca2d18c439f83",
     "-Cextra-filename=-86fca2d18c439f83",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("memoffset-v0_6_3") {
@@ -5539,6 +5928,8 @@ rust_library("memoffset-v0_6_3") {
     "--cfg=doctests",
     "--cfg=raw_ref_macros",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("miniz_oxide-v0_3_6") {
@@ -5561,6 +5952,8 @@ rust_library("miniz_oxide-v0_3_6") {
     "-Cmetadata=9a756a7abca21ed4",
     "-Cextra-filename=-9a756a7abca21ed4",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("mio-v0_7_11") {
@@ -5595,6 +5988,8 @@ rust_library("mio-v0_7_11") {
     "--cfg=feature=\"os-poll\"",
     "--cfg=feature=\"os-util\"",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("miow-v0_3_7") {
@@ -5616,6 +6011,8 @@ rust_library("miow-v0_3_7") {
     "-Cmetadata=299ced46ef99541f",
     "-Cextra-filename=-299ced46ef99541f",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("mockall-v0_9_0") {
@@ -5644,6 +6041,8 @@ rust_library("mockall-v0_9_0") {
     "-Cmetadata=101dad7ffbea75df",
     "-Cextra-filename=-101dad7ffbea75df",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_proc_macro("mockall_derive-v0_9_0") {
@@ -5669,6 +6068,8 @@ rust_proc_macro("mockall_derive-v0_9_0") {
     "-Cmetadata=6535f5e9d7922162",
     "-Cextra-filename=-6535f5e9d7922162",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("nix-v0_20_0") {
@@ -5693,6 +6094,8 @@ rust_library("nix-v0_20_0") {
     "-Cmetadata=212f6cb0e58efa58",
     "-Cextra-filename=-212f6cb0e58efa58",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("nom-v5_0_0") {
@@ -5723,6 +6126,8 @@ rust_library("nom-v5_0_0") {
     "--cfg=feature=\"regexp_macros\"",
     "--cfg=feature=\"std\"",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("nom_locate-v2_1_0") {
@@ -5750,6 +6155,8 @@ rust_library("nom_locate-v2_1_0") {
     "--cfg=feature=\"default\"",
     "--cfg=feature=\"std\"",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("nonzero_ext-v0_3_0") {
@@ -5773,6 +6180,8 @@ rust_library("nonzero_ext-v0_3_0") {
     "--cfg=feature=\"default\"",
     "--cfg=feature=\"std\"",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("normalize-line-endings-v0_3_0") {
@@ -5795,6 +6204,8 @@ rust_library("normalize-line-endings-v0_3_0") {
     "-Cmetadata=4054253ee9a0f431",
     "-Cextra-filename=-4054253ee9a0f431",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("notify-v5_0_0-pre_10") {
@@ -5831,6 +6242,8 @@ rust_library("notify-v5_0_0-pre_10") {
     "-Cmetadata=c3db97053c7ffc03",
     "-Cextra-filename=-c3db97053c7ffc03",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("ntapi-v0_3_4") {
@@ -5855,6 +6268,8 @@ rust_library("ntapi-v0_3_4") {
     "--cfg=feature=\"default\"",
     "--cfg=feature=\"user\"",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("num-v0_4_0") {
@@ -5886,6 +6301,8 @@ rust_library("num-v0_4_0") {
     "--cfg=feature=\"rand\"",
     "--cfg=feature=\"std\"",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("num-bigint-v0_4_3") {
@@ -5917,6 +6334,8 @@ rust_library("num-bigint-v0_4_3") {
   if (current_cpu == "x64") {
     rustflags += [ "--cfg=use_addcarry" ]
   }
+
+  visibility = [ ":*" ]
 }
 
 rust_library("num-complex-v0_4_0") {
@@ -5944,6 +6363,8 @@ rust_library("num-complex-v0_4_0") {
     "--cfg=has_i128",
     "--cfg=has_const_fn",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_proc_macro("num-derive-v0_3_3") {
@@ -5968,6 +6389,8 @@ rust_proc_macro("num-derive-v0_3_3") {
     "-Cmetadata=aba044aab91859c",
     "-Cextra-filename=-aba044aab91859c",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("num-integer-v0_1_44") {
@@ -5993,6 +6416,8 @@ rust_library("num-integer-v0_1_44") {
     "--cfg=feature=\"std\"",
     "--cfg=has_i128",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("num-iter-v0_1_42") {
@@ -6020,6 +6445,8 @@ rust_library("num-iter-v0_1_42") {
     "--cfg=feature=\"std\"",
     "--cfg=has_i128",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("num-rational-v0_4_0") {
@@ -6048,6 +6475,8 @@ rust_library("num-rational-v0_4_0") {
     "--cfg=feature=\"std\"",
     "--cfg=has_int_exp_fmt",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("num-traits-v0_2_14") {
@@ -6073,6 +6502,8 @@ rust_library("num-traits-v0_2_14") {
     "--cfg=feature=\"std\"",
     "--cfg=has_i128",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("num_cpus-v1_13_0") {
@@ -6098,6 +6529,8 @@ rust_library("num_cpus-v1_13_0") {
     "-Cmetadata=2a33e47c2187c1d3",
     "-Cextra-filename=-2a33e47c2187c1d3",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("numtoa-v0_1_0") {
@@ -6120,6 +6553,8 @@ rust_library("numtoa-v0_1_0") {
     "-Cextra-filename=-7acb857cdac0bf2",
     "--cfg=feature=\"std\"",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("once_cell-v1_5_2") {
@@ -6146,6 +6581,8 @@ rust_library("once_cell-v1_5_2") {
     "--cfg=feature=\"parking_lot\"",
     "--cfg=feature=\"std\"",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("opaque-debug-v0_3_0") {
@@ -6167,6 +6604,8 @@ rust_library("opaque-debug-v0_3_0") {
     "-Cmetadata=56835c6b9238e559",
     "-Cextra-filename=-56835c6b9238e559",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("openat-v0_1_17") {
@@ -6189,6 +6628,8 @@ rust_library("openat-v0_1_17") {
     "-Cmetadata=b3aae38d235053dc",
     "-Cextra-filename=-b3aae38d235053dc",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("openssl-probe-v0_1_2") {
@@ -6210,6 +6651,8 @@ rust_library("openssl-probe-v0_1_2") {
     "-Cmetadata=759570083bb12b65",
     "-Cextra-filename=-759570083bb12b65",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("owning_ref-v0_4_0") {
@@ -6232,6 +6675,8 @@ rust_library("owning_ref-v0_4_0") {
     "-Cmetadata=163177019c6dfe3a",
     "-Cextra-filename=-163177019c6dfe3a",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("parking-v2_0_0") {
@@ -6253,6 +6698,8 @@ rust_library("parking-v2_0_0") {
     "-Cmetadata=f53320ef53395fc3",
     "-Cextra-filename=-f53320ef53395fc3",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("parking_lot-v0_11_1") {
@@ -6278,6 +6725,8 @@ rust_library("parking_lot-v0_11_1") {
     "-Cextra-filename=-a739a418d82fd597",
     "--cfg=feature=\"default\"",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("parking_lot-v0_9_0") {
@@ -6302,6 +6751,8 @@ rust_library("parking_lot-v0_9_0") {
     "-Cextra-filename=-6721767503fecbee",
     "--cfg=feature=\"default\"",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("parking_lot_core-v0_6_2") {
@@ -6342,6 +6793,7 @@ rust_library("parking_lot_core-v0_6_2") {
   aliased_deps = {
     syscall = ":redox_syscall-v0_1_51"
   }
+  visibility = [ ":*" ]
 }
 
 rust_library("parking_lot_core-v0_8_3") {
@@ -6379,6 +6831,7 @@ rust_library("parking_lot_core-v0_8_3") {
   aliased_deps = {
     syscall = ":redox_syscall-v0_2_5"
   }
+  visibility = [ ":*" ]
 }
 
 rust_library("password-hash-v0_3_2") {
@@ -6406,6 +6859,8 @@ rust_library("password-hash-v0_3_2") {
     "--cfg=feature=\"rand_core\"",
     "--cfg=feature=\"std\"",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_proc_macro("paste-v1_0_0") {
@@ -6427,6 +6882,8 @@ rust_proc_macro("paste-v1_0_0") {
     "-Cmetadata=467ce9508308aa2b",
     "-Cextra-filename=-467ce9508308aa2b",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("pathdiff-v0_2_0") {
@@ -6448,6 +6905,8 @@ rust_library("pathdiff-v0_2_0") {
     "-Cmetadata=57152bbe2df0a861",
     "-Cextra-filename=-57152bbe2df0a861",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("pbkdf2-v0_9_0") {
@@ -6470,6 +6929,8 @@ rust_library("pbkdf2-v0_9_0") {
     "-Cmetadata=d4e78de98937c7ae",
     "-Cextra-filename=-d4e78de98937c7ae",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("pem-v0_8_3") {
@@ -6494,6 +6955,8 @@ rust_library("pem-v0_8_3") {
     "-Cmetadata=cdefa2bfba638b2c",
     "-Cextra-filename=-cdefa2bfba638b2c",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("percent-encoding-v1_0_1") {
@@ -6515,6 +6978,8 @@ rust_library("percent-encoding-v1_0_1") {
     "-Cmetadata=ac2a99b38019401d",
     "-Cextra-filename=-ac2a99b38019401d",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("percent-encoding-v2_1_0") {
@@ -6536,6 +7001,8 @@ rust_library("percent-encoding-v2_1_0") {
     "-Cmetadata=d6833841fde4a923",
     "-Cextra-filename=-d6833841fde4a923",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("pest-v2_1_3") {
@@ -6558,6 +7025,8 @@ rust_library("pest-v2_1_3") {
     "-Cmetadata=adcf4833e37ee85e",
     "-Cextra-filename=-adcf4833e37ee85e",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_proc_macro("pest_derive-v2_1_0") {
@@ -6581,6 +7050,8 @@ rust_proc_macro("pest_derive-v2_1_0") {
     "-Cmetadata=1b54193ee8a497b9",
     "-Cextra-filename=-1b54193ee8a497b9",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("pest_generator-v2_1_3") {
@@ -6607,6 +7078,8 @@ rust_library("pest_generator-v2_1_3") {
     "-Cmetadata=8216af62d67b03b3",
     "-Cextra-filename=-8216af62d67b03b3",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("pest_meta-v2_1_0") {
@@ -6630,6 +7103,8 @@ rust_library("pest_meta-v2_1_0") {
     "-Cmetadata=97d599c12fc59f03",
     "-Cextra-filename=-97d599c12fc59f03",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("petgraph-v0_5_1") {
@@ -6657,6 +7132,8 @@ rust_library("petgraph-v0_5_1") {
     "--cfg=feature=\"matrix_graph\"",
     "--cfg=feature=\"stable_graph\"",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("phf-v0_7_24") {
@@ -6679,6 +7156,8 @@ rust_library("phf-v0_7_24") {
     "-Cmetadata=b1c3ba777c6cb9d2",
     "-Cextra-filename=-b1c3ba777c6cb9d2",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("phf_shared-v0_7_24") {
@@ -6701,6 +7180,8 @@ rust_library("phf_shared-v0_7_24") {
     "-Cmetadata=310fac8e05c2d167",
     "-Cextra-filename=-310fac8e05c2d167",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("pin-project-v1_0_4") {
@@ -6723,6 +7204,8 @@ rust_library("pin-project-v1_0_4") {
     "-Cmetadata=22de70c7a2098ec0",
     "-Cextra-filename=-22de70c7a2098ec0",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_proc_macro("pin-project-internal-v1_0_4") {
@@ -6748,6 +7231,8 @@ rust_proc_macro("pin-project-internal-v1_0_4") {
     "-Cmetadata=f37959f5f2096c25",
     "-Cextra-filename=-f37959f5f2096c25",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("pin-project-lite-v0_1_4") {
@@ -6770,6 +7255,8 @@ rust_library("pin-project-lite-v0_1_4") {
     "-Cmetadata=56ada01194125122",
     "-Cextra-filename=-56ada01194125122",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("pin-project-lite-v0_2_4") {
@@ -6791,6 +7278,8 @@ rust_library("pin-project-lite-v0_2_4") {
     "-Cmetadata=fea8de17d894bcb8",
     "-Cextra-filename=-fea8de17d894bcb8",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("pin-utils-v0_1_0") {
@@ -6812,6 +7301,8 @@ rust_library("pin-utils-v0_1_0") {
     "-Cmetadata=f6d0191654b565d6",
     "-Cextra-filename=-f6d0191654b565d6",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("png-v0_14_0") {
@@ -6840,6 +7331,8 @@ rust_library("png-v0_14_0") {
     "--cfg=feature=\"deflate\"",
     "--cfg=feature=\"png-encoding\"",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("podio-v0_1_6") {
@@ -6861,6 +7354,8 @@ rust_library("podio-v0_1_6") {
     "-Cmetadata=9f03c94555630577",
     "-Cextra-filename=-9f03c94555630577",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("polling-v2_0_2") {
@@ -6893,6 +7388,8 @@ rust_library("polling-v2_0_2") {
     "--cfg=feature=\"default\"",
     "--cfg=feature=\"std\"",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("polyval-v0_5_3") {
@@ -6920,6 +7417,8 @@ rust_library("polyval-v0_5_3") {
     "-Cmetadata=78c07f0f8bccc1cb",
     "-Cextra-filename=-78c07f0f8bccc1cb",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("ppv-lite86-v0_2_10") {
@@ -6943,6 +7442,8 @@ rust_library("ppv-lite86-v0_2_10") {
     "--cfg=feature=\"simd\"",
     "--cfg=feature=\"std\"",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("predicates-v1_0_7") {
@@ -6974,6 +7475,8 @@ rust_library("predicates-v1_0_7") {
     "--cfg=feature=\"normalize-line-endings\"",
     "--cfg=feature=\"regex\"",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("predicates-core-v1_0_2") {
@@ -6995,6 +7498,8 @@ rust_library("predicates-core-v1_0_2") {
     "-Cmetadata=9278ecd8b23c9da2",
     "-Cextra-filename=-9278ecd8b23c9da2",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("predicates-tree-v1_0_2") {
@@ -7018,6 +7523,8 @@ rust_library("predicates-tree-v1_0_2") {
     "-Cmetadata=2fdd83d7979f6648",
     "-Cextra-filename=-2fdd83d7979f6648",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("pretty-v0_5_2") {
@@ -7040,6 +7547,8 @@ rust_library("pretty-v0_5_2") {
     "-Cmetadata=80700aa60373011",
     "-Cextra-filename=-80700aa60373011",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("pretty_assertions-v0_5_1") {
@@ -7063,6 +7572,8 @@ rust_library("pretty_assertions-v0_5_1") {
     "-Cmetadata=fcd9aa92a106be53",
     "-Cextra-filename=-fcd9aa92a106be53",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("prettytable-rs-v0_8_0") {
@@ -7093,6 +7604,8 @@ rust_library("prettytable-rs-v0_8_0") {
     "--cfg=feature=\"default\"",
     "--cfg=feature=\"win_crlf\"",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_proc_macro("proc-macro-hack-v0_5_19") {
@@ -7114,6 +7627,8 @@ rust_proc_macro("proc-macro-hack-v0_5_19") {
     "-Cmetadata=abe60bc39ac4cdbe",
     "-Cextra-filename=-abe60bc39ac4cdbe",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("proc-macro-nested-v0_1_7") {
@@ -7138,6 +7653,8 @@ rust_library("proc-macro-nested-v0_1_7") {
     "-Cmetadata=2f16aa10e567d43e",
     "-Cextra-filename=-2f16aa10e567d43e",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("proc-macro2-v0_4_27") {
@@ -7165,6 +7682,8 @@ rust_library("proc-macro2-v0_4_27") {
     "--cfg=use_proc_macro",
     "--cfg=wrap_proc_macro",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("proc-macro2-v1_0_28") {
@@ -7195,6 +7714,8 @@ rust_library("proc-macro2-v1_0_28") {
     "--cfg=use_proc_macro",
     "--cfg=wrap_proc_macro",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("proptest-v0_9_3") {
@@ -7239,6 +7760,8 @@ rust_library("proptest-v0_9_3") {
     "--cfg=feature=\"tempfile\"",
     "--cfg=feature=\"timeout\"",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_proc_macro("proptest-derive-v0_1_1") {
@@ -7263,6 +7786,8 @@ rust_proc_macro("proptest-derive-v0_1_1") {
     "-Cmetadata=c677256b817d9125",
     "-Cextra-filename=-c677256b817d9125",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("publicsuffix-v1_5_2") {
@@ -7289,6 +7814,8 @@ rust_library("publicsuffix-v1_5_2") {
     "-Cmetadata=432c80925f3efce9",
     "-Cextra-filename=-432c80925f3efce9",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("pulldown-cmark-v0_6_0") {
@@ -7316,6 +7843,8 @@ rust_library("pulldown-cmark-v0_6_0") {
     "--cfg=feature=\"default\"",
     "--cfg=feature=\"getopts\"",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("quick-error-v1_2_2") {
@@ -7337,6 +7866,8 @@ rust_library("quick-error-v1_2_2") {
     "-Cmetadata=5bd842b4b1c97fb4",
     "-Cextra-filename=-5bd842b4b1c97fb4",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("quick-error-v2_0_0") {
@@ -7358,6 +7889,8 @@ rust_library("quick-error-v2_0_0") {
     "-Cmetadata=3a3190e4aad267f3",
     "-Cextra-filename=-3a3190e4aad267f3",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("quote-v0_6_11") {
@@ -7382,6 +7915,8 @@ rust_library("quote-v0_6_11") {
     "--cfg=feature=\"default\"",
     "--cfg=feature=\"proc-macro\"",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("quote-v1_0_7") {
@@ -7406,6 +7941,8 @@ rust_library("quote-v1_0_7") {
     "--cfg=feature=\"default\"",
     "--cfg=feature=\"proc-macro\"",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("rand-v0_6_5") {
@@ -7449,6 +7986,8 @@ rust_library("rand-v0_6_5") {
     "--cfg=rustc_1_26",
     "--cfg=rustc_1_27",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("rand-v0_8_4") {
@@ -7489,6 +8028,8 @@ rust_library("rand-v0_8_4") {
     "--cfg=feature=\"std\"",
     "--cfg=feature=\"std_rng\"",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("rand_chacha-v0_1_1") {
@@ -7512,6 +8053,8 @@ rust_library("rand_chacha-v0_1_1") {
     "-Cextra-filename=-4d71541867d8f94f",
     "--cfg=rustc_1_26",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("rand_chacha-v0_3_1") {
@@ -7536,6 +8079,8 @@ rust_library("rand_chacha-v0_3_1") {
     "-Cextra-filename=-fcec8b118d26a7b7",
     "--cfg=feature=\"std\"",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("rand_core-v0_3_1") {
@@ -7558,6 +8103,8 @@ rust_library("rand_core-v0_3_1") {
     "-Cmetadata=1d548fa20a792394",
     "-Cextra-filename=-1d548fa20a792394",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("rand_core-v0_4_0") {
@@ -7581,6 +8128,8 @@ rust_library("rand_core-v0_4_0") {
     "--cfg=feature=\"alloc\"",
     "--cfg=feature=\"std\"",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("rand_core-v0_6_3") {
@@ -7606,6 +8155,8 @@ rust_library("rand_core-v0_6_3") {
     "--cfg=feature=\"getrandom\"",
     "--cfg=feature=\"std\"",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("rand_hc-v0_1_0") {
@@ -7628,6 +8179,8 @@ rust_library("rand_hc-v0_1_0") {
     "-Cmetadata=e9f4f74a87ae5d3b",
     "-Cextra-filename=-e9f4f74a87ae5d3b",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("rand_hc-v0_3_1") {
@@ -7650,6 +8203,8 @@ rust_library("rand_hc-v0_3_1") {
     "-Cmetadata=3ce129596cc19371",
     "-Cextra-filename=-3ce129596cc19371",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("rand_isaac-v0_1_1") {
@@ -7672,6 +8227,8 @@ rust_library("rand_isaac-v0_1_1") {
     "-Cmetadata=3b88f072e0dd7a40",
     "-Cextra-filename=-3b88f072e0dd7a40",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("rand_jitter-v0_1_3") {
@@ -7701,6 +8258,8 @@ rust_library("rand_jitter-v0_1_3") {
     "-Cextra-filename=-f950fa4b6ab9b786",
     "--cfg=feature=\"std\"",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("rand_os-v0_1_2") {
@@ -7738,6 +8297,8 @@ rust_library("rand_os-v0_1_2") {
     "-Cmetadata=b32b7b23928c4779",
     "-Cextra-filename=-b32b7b23928c4779",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("rand_pcg-v0_1_1") {
@@ -7761,6 +8322,8 @@ rust_library("rand_pcg-v0_1_1") {
     "-Cextra-filename=-acb26d14eb85350b",
     "--cfg=rust_1_26",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("rand_xorshift-v0_1_1") {
@@ -7783,6 +8346,8 @@ rust_library("rand_xorshift-v0_1_1") {
     "-Cmetadata=7904c04fa5190cb3",
     "-Cextra-filename=-7904c04fa5190cb3",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("rand_xorshift-v0_3_0") {
@@ -7805,6 +8370,8 @@ rust_library("rand_xorshift-v0_3_0") {
     "-Cmetadata=12b3d401a1d4e38",
     "-Cextra-filename=-12b3d401a1d4e38",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("rand_xoshiro-v0_1_0") {
@@ -7828,6 +8395,8 @@ rust_library("rand_xoshiro-v0_1_0") {
     "-Cmetadata=1085831e9652f99c",
     "-Cextra-filename=-1085831e9652f99c",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("rayon-v1_3_0") {
@@ -7852,6 +8421,8 @@ rust_library("rayon-v1_3_0") {
     "-Cmetadata=9313a85f140dc837",
     "-Cextra-filename=-9313a85f140dc837",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("rayon-core-v1_7_0") {
@@ -7878,6 +8449,8 @@ rust_library("rayon-core-v1_7_0") {
     "-Cmetadata=1bba12a11050e3f7",
     "-Cextra-filename=-1bba12a11050e3f7",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("rdrand-v0_4_0") {
@@ -7902,6 +8475,8 @@ rust_library("rdrand-v0_4_0") {
     "--cfg=feature=\"default\"",
     "--cfg=feature=\"std\"",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("redox_syscall-v0_1_51") {
@@ -7924,6 +8499,8 @@ rust_library("redox_syscall-v0_1_51") {
     "-Cmetadata=744b5901ce7227f5",
     "-Cextra-filename=-744b5901ce7227f5",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("redox_syscall-v0_2_5") {
@@ -7946,6 +8523,8 @@ rust_library("redox_syscall-v0_2_5") {
     "-Cmetadata=23505b3cf82590b2",
     "-Cextra-filename=-23505b3cf82590b2",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("redox_termios-v0_1_1") {
@@ -7972,6 +8551,7 @@ rust_library("redox_termios-v0_1_1") {
   aliased_deps = {
     syscall = ":redox_syscall-v0_1_51"
   }
+  visibility = [ ":*" ]
 }
 
 rust_library("regex-v1_3_5") {
@@ -8015,6 +8595,8 @@ rust_library("regex-v1_3_5") {
     "--cfg=feature=\"unicode-script\"",
     "--cfg=feature=\"unicode-segment\"",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("regex-automata-v0_1_9") {
@@ -8037,6 +8619,8 @@ rust_library("regex-automata-v0_1_9") {
     "-Cmetadata=cdaa0041c57f3413",
     "-Cextra-filename=-cdaa0041c57f3413",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("regex-syntax-v0_6_17") {
@@ -8067,6 +8651,8 @@ rust_library("regex-syntax-v0_6_17") {
     "--cfg=feature=\"unicode-script\"",
     "--cfg=feature=\"unicode-segment\"",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("remove_dir_all-v0_5_1") {
@@ -8091,6 +8677,8 @@ rust_library("remove_dir_all-v0_5_1") {
     "-Cmetadata=202715e376d8ea96",
     "-Cextra-filename=-202715e376d8ea96",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("ring-v0_16_12") {
@@ -8133,6 +8721,8 @@ rust_library("ring-v0_16_12") {
     "--cfg=feature=\"dev_urandom_fallback\"",
     "--cfg=feature=\"lazy_static\"",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("rust_icu_common-v2_0_0") {
@@ -8161,6 +8751,8 @@ rust_library("rust_icu_common-v2_0_0") {
     "--cfg=feature=\"icu_version_in_env\"",
     "--cfg=feature=\"renaming\"",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("rust_icu_sys-v2_0_0") {
@@ -8188,6 +8780,8 @@ rust_library("rust_icu_sys-v2_0_0") {
     "--cfg=feature=\"icu_version_in_env\"",
     "--cfg=feature=\"renaming\"",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("rust_icu_ucal-v2_0_0") {
@@ -8219,6 +8813,8 @@ rust_library("rust_icu_ucal-v2_0_0") {
     "--cfg=feature=\"icu_version_in_env\"",
     "--cfg=feature=\"renaming\"",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("rust_icu_uchar-v2_0_0") {
@@ -8248,6 +8844,8 @@ rust_library("rust_icu_uchar-v2_0_0") {
     "--cfg=feature=\"icu_version_in_env\"",
     "--cfg=feature=\"renaming\"",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("rust_icu_udat-v2_0_0") {
@@ -8280,6 +8878,8 @@ rust_library("rust_icu_udat-v2_0_0") {
     "--cfg=feature=\"icu_version_in_env\"",
     "--cfg=feature=\"renaming\"",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("rust_icu_udata-v2_0_0") {
@@ -8308,6 +8908,8 @@ rust_library("rust_icu_udata-v2_0_0") {
     "--cfg=feature=\"icu_version_in_env\"",
     "--cfg=feature=\"renaming\"",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("rust_icu_uenum-v2_0_0") {
@@ -8336,6 +8938,8 @@ rust_library("rust_icu_uenum-v2_0_0") {
     "--cfg=feature=\"icu_version_in_env\"",
     "--cfg=feature=\"renaming\"",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("rust_icu_uloc-v2_0_0") {
@@ -8367,6 +8971,8 @@ rust_library("rust_icu_uloc-v2_0_0") {
     "--cfg=feature=\"icu_version_in_env\"",
     "--cfg=feature=\"renaming\"",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("rust_icu_unorm2-v2_0_0") {
@@ -8400,6 +9006,8 @@ rust_library("rust_icu_unorm2-v2_0_0") {
     "--cfg=feature=\"icu_version_in_env\"",
     "--cfg=feature=\"renaming\"",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("rust_icu_ustring-v2_0_0") {
@@ -8429,6 +9037,8 @@ rust_library("rust_icu_ustring-v2_0_0") {
     "--cfg=feature=\"icu_version_in_env\"",
     "--cfg=feature=\"renaming\"",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("rustc-demangle-v0_1_16") {
@@ -8450,6 +9060,8 @@ rust_library("rustc-demangle-v0_1_16") {
     "-Cmetadata=79f810e86b22e50c",
     "-Cextra-filename=-79f810e86b22e50c",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("rustc-hash-v1_0_1") {
@@ -8472,6 +9084,8 @@ rust_library("rustc-hash-v1_0_1") {
     "-Cmetadata=d18fd5c05c7b0ca4",
     "-Cextra-filename=-d18fd5c05c7b0ca4",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("rustc-serialize-v0_3_24") {
@@ -8493,6 +9107,8 @@ rust_library("rustc-serialize-v0_3_24") {
     "-Cmetadata=cf1d65d911e642f1",
     "-Cextra-filename=-cf1d65d911e642f1",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("rustls-v0_17_0") {
@@ -8523,6 +9139,8 @@ rust_library("rustls-v0_17_0") {
     "--cfg=feature=\"log\"",
     "--cfg=feature=\"logging\"",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("rustls-native-certs-v0_3_0") {
@@ -8554,6 +9172,8 @@ rust_library("rustls-native-certs-v0_3_0") {
     "-Cmetadata=3145d897db9d9dcb",
     "-Cextra-filename=-3145d897db9d9dcb",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("rusty-fork-v0_2_1") {
@@ -8581,6 +9201,8 @@ rust_library("rusty-fork-v0_2_1") {
     "--cfg=feature=\"timeout\"",
     "--cfg=feature=\"wait-timeout\"",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("ryu-v1_0_3") {
@@ -8605,6 +9227,8 @@ rust_library("ryu-v1_0_3") {
     "--cfg=must_use_return",
     "--cfg=maybe_uninit",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("safemem-v0_3_0") {
@@ -8628,6 +9252,8 @@ rust_library("safemem-v0_3_0") {
     "--cfg=feature=\"default\"",
     "--cfg=feature=\"std\"",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("salsa20-v0_8_1") {
@@ -8651,6 +9277,8 @@ rust_library("salsa20-v0_8_1") {
     "-Cextra-filename=-150961e3add0052",
     "--cfg=feature=\"expose-core\"",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("same-file-v1_0_4") {
@@ -8675,6 +9303,8 @@ rust_library("same-file-v1_0_4") {
     "-Cmetadata=460d9eb4eb179eea",
     "-Cextra-filename=-460d9eb4eb179eea",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("scanlex-v0_1_4") {
@@ -8696,6 +9326,8 @@ rust_library("scanlex-v0_1_4") {
     "-Cmetadata=d586196f33c095ac",
     "-Cextra-filename=-d586196f33c095ac",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("schannel-v0_1_19") {
@@ -8719,6 +9351,8 @@ rust_library("schannel-v0_1_19") {
     "-Cmetadata=140c87c712698950",
     "-Cextra-filename=-140c87c712698950",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("scopeguard-v1_1_0") {
@@ -8742,6 +9376,8 @@ rust_library("scopeguard-v1_1_0") {
     "--cfg=feature=\"default\"",
     "--cfg=feature=\"use_std\"",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("scrypt-v0_8_0") {
@@ -8772,6 +9408,8 @@ rust_library("scrypt-v0_8_0") {
     "--cfg=feature=\"simple\"",
     "--cfg=feature=\"std\"",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("sct-v0_6_0") {
@@ -8795,6 +9433,8 @@ rust_library("sct-v0_6_0") {
     "-Cmetadata=879ad9017e22db73",
     "-Cextra-filename=-879ad9017e22db73",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("security-framework-v0_4_4") {
@@ -8821,6 +9461,8 @@ rust_library("security-framework-v0_4_4") {
     "-Cmetadata=bc94113e1496fc39",
     "-Cextra-filename=-bc94113e1496fc39",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("security-framework-sys-v0_4_3") {
@@ -8845,6 +9487,8 @@ rust_library("security-framework-sys-v0_4_3") {
     "-Cmetadata=76a9cfb3164f386",
     "-Cextra-filename=-76a9cfb3164f386",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("semver-v1_0_4") {
@@ -8870,6 +9514,8 @@ rust_library("semver-v1_0_4") {
     "--cfg=feature=\"serde\"",
     "--cfg=feature=\"std\"",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("serde-v1_0_116") {
@@ -8909,6 +9555,8 @@ rust_library("serde-v1_0_116") {
     "--cfg=std_atomic64",
     "--cfg=std_atomic",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("serde_cbor-v0_11_1") {
@@ -8934,6 +9582,8 @@ rust_library("serde_cbor-v0_11_1") {
     "--cfg=feature=\"default\"",
     "--cfg=feature=\"std\"",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_proc_macro("serde_derive-v1_0_116") {
@@ -8960,6 +9610,8 @@ rust_proc_macro("serde_derive-v1_0_116") {
     "--cfg=feature=\"default\"",
     "--cfg=underscore_consts",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("serde_json-v1_0_59") {
@@ -8988,6 +9640,8 @@ rust_library("serde_json-v1_0_59") {
     "--cfg=feature=\"unbounded_depth\"",
     "--cfg=limb_width_64",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("serde_json5-v0_1_0") {
@@ -9013,6 +9667,8 @@ rust_library("serde_json5-v0_1_0") {
     "-Cmetadata=c6c8351d886fc9d3",
     "-Cextra-filename=-c6c8351d886fc9d3",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_proc_macro("serde_repr-v0_1_7") {
@@ -9037,6 +9693,8 @@ rust_proc_macro("serde_repr-v0_1_7") {
     "-Cmetadata=2607863d914a7535",
     "-Cextra-filename=-2607863d914a7535",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("serial_test-v0_5_1") {
@@ -9061,6 +9719,8 @@ rust_library("serial_test-v0_5_1") {
     "-Cmetadata=cf7a4047894f2a7b",
     "-Cextra-filename=-cf7a4047894f2a7b",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_proc_macro("serial_test_derive-v0_5_1") {
@@ -9085,6 +9745,8 @@ rust_proc_macro("serial_test_derive-v0_5_1") {
     "-Cmetadata=349c76aef8defaba",
     "-Cextra-filename=-349c76aef8defaba",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("sha2-v0_9_8") {
@@ -9115,6 +9777,8 @@ rust_library("sha2-v0_9_8") {
     "--cfg=feature=\"default\"",
     "--cfg=feature=\"std\"",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("sharded-slab-v0_1_4") {
@@ -9137,6 +9801,8 @@ rust_library("sharded-slab-v0_1_4") {
     "-Cmetadata=feb472376bcc1d39",
     "-Cextra-filename=-feb472376bcc1d39",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("shared_child-v0_3_5") {
@@ -9164,6 +9830,8 @@ rust_library("shared_child-v0_3_5") {
     "-Cmetadata=ea65da9e08c8af24",
     "-Cextra-filename=-ea65da9e08c8af24",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("signal-hook-v0_1_17") {
@@ -9194,6 +9862,7 @@ rust_library("signal-hook-v0_1_17") {
   aliased_deps = {
     mio_0_7 = ":mio-v0_7_11"
   }
+  visibility = [ ":*" ]
 }
 
 rust_library("signal-hook-v0_3_8") {
@@ -9220,6 +9889,8 @@ rust_library("signal-hook-v0_3_8") {
     "--cfg=feature=\"default\"",
     "--cfg=feature=\"iterator\"",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("signal-hook-registry-v1_3_0") {
@@ -9243,6 +9914,8 @@ rust_library("signal-hook-registry-v1_3_0") {
     "-Cmetadata=13fb5f6650cce8dc",
     "-Cextra-filename=-13fb5f6650cce8dc",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("simplelog-v0_10_2") {
@@ -9269,6 +9942,8 @@ rust_library("simplelog-v0_10_2") {
     "--cfg=feature=\"default\"",
     "--cfg=feature=\"termcolor\"",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("siphasher-v0_2_3") {
@@ -9290,6 +9965,8 @@ rust_library("siphasher-v0_2_3") {
     "-Cmetadata=c0f71ec8ce76c479",
     "-Cextra-filename=-c0f71ec8ce76c479",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("slab-v0_4_2") {
@@ -9311,6 +9988,8 @@ rust_library("slab-v0_4_2") {
     "-Cmetadata=8335b1c9e90ee478",
     "-Cextra-filename=-8335b1c9e90ee478",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("smallvec-v0_6_13") {
@@ -9335,6 +10014,8 @@ rust_library("smallvec-v0_6_13") {
     "--cfg=feature=\"default\"",
     "--cfg=feature=\"std\"",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("smallvec-v1_6_1") {
@@ -9356,6 +10037,8 @@ rust_library("smallvec-v1_6_1") {
     "-Cmetadata=129929172b61f7b",
     "-Cextra-filename=-129929172b61f7b",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("socket2-v0_4_0") {
@@ -9384,6 +10067,8 @@ rust_library("socket2-v0_4_0") {
     "-Cextra-filename=-7e4be65d21727b28",
     "--cfg=feature=\"all\"",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("spin-v0_5_2") {
@@ -9405,6 +10090,8 @@ rust_library("spin-v0_5_2") {
     "-Cmetadata=50733eeb0bba4c8d",
     "-Cextra-filename=-50733eeb0bba4c8d",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("splines-v2_2_0") {
@@ -9428,6 +10115,8 @@ rust_library("splines-v2_2_0") {
     "--cfg=feature=\"default\"",
     "--cfg=feature=\"std\"",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("stable_deref_trait-v1_1_1") {
@@ -9451,6 +10140,8 @@ rust_library("stable_deref_trait-v1_1_1") {
     "--cfg=feature=\"default\"",
     "--cfg=feature=\"std\"",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("static_assertions-v1_1_0") {
@@ -9472,6 +10163,8 @@ rust_library("static_assertions-v1_1_0") {
     "-Cmetadata=5fff9c36214c34b7",
     "-Cextra-filename=-5fff9c36214c34b7",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("streaming-stats-v0_2_3") {
@@ -9494,6 +10187,8 @@ rust_library("streaming-stats-v0_2_3") {
     "-Cmetadata=2c02c5c2e153793",
     "-Cextra-filename=-2c02c5c2e153793",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("strsim-v0_10_0") {
@@ -9515,6 +10210,8 @@ rust_library("strsim-v0_10_0") {
     "-Cmetadata=aa21785775b7b33b",
     "-Cextra-filename=-aa21785775b7b33b",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("strsim-v0_8_0") {
@@ -9536,6 +10233,8 @@ rust_library("strsim-v0_8_0") {
     "-Cmetadata=a6895684b05e64cd",
     "-Cextra-filename=-a6895684b05e64cd",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("structopt-v0_2_14") {
@@ -9560,6 +10259,8 @@ rust_library("structopt-v0_2_14") {
     "-Cextra-filename=-282f1735ac1cc133",
     "--cfg=feature=\"default\"",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_proc_macro("structopt-derive-v0_2_14") {
@@ -9585,6 +10286,8 @@ rust_proc_macro("structopt-derive-v0_2_14") {
     "-Cmetadata=809c043d87d920da",
     "-Cextra-filename=-809c043d87d920da",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("subtle-v2_4_1") {
@@ -9606,6 +10309,8 @@ rust_library("subtle-v2_4_1") {
     "-Cmetadata=6f67d79a9c7c75a8",
     "-Cextra-filename=-6f67d79a9c7c75a8",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("syn-v0_15_26") {
@@ -9640,6 +10345,8 @@ rust_library("syn-v0_15_26") {
     "--cfg=feature=\"quote\"",
     "--cfg=feature=\"visit\"",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("syn-v1_0_74") {
@@ -9675,6 +10382,8 @@ rust_library("syn-v1_0_74") {
     "--cfg=feature=\"visit\"",
     "--cfg=feature=\"visit-mut\"",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("synstructure-v0_12_1") {
@@ -9700,6 +10409,8 @@ rust_library("synstructure-v0_12_1") {
     "-Cmetadata=379147eabfeddd75",
     "-Cextra-filename=-379147eabfeddd75",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("tar-v0_4_25") {
@@ -9735,6 +10446,7 @@ rust_library("tar-v0_4_25") {
   aliased_deps = {
     syscall = ":redox_syscall-v0_1_51"
   }
+  visibility = [ ":*" ]
 }
 
 rust_library("tempfile-v3_2_0") {
@@ -9772,6 +10484,7 @@ rust_library("tempfile-v3_2_0") {
   aliased_deps = {
     syscall = ":redox_syscall-v0_2_5"
   }
+  visibility = [ ":*" ]
 }
 
 rust_library("term-v0_5_1") {
@@ -9798,6 +10511,8 @@ rust_library("term-v0_5_1") {
     "-Cextra-filename=-2cb16ccbdf283d91",
     "--cfg=feature=\"default\"",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("termcolor-v1_1_2") {
@@ -9822,6 +10537,8 @@ rust_library("termcolor-v1_1_2") {
     "-Cmetadata=8a22f3c4f465f166",
     "-Cextra-filename=-8a22f3c4f465f166",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("termion-v1_5_3") {
@@ -9855,6 +10572,7 @@ rust_library("termion-v1_5_3") {
   aliased_deps = {
     syscall = ":redox_syscall-v0_1_51"
   }
+  visibility = [ ":*" ]
 }
 
 rust_library("termios-v0_3_2") {
@@ -9877,6 +10595,8 @@ rust_library("termios-v0_3_2") {
     "-Cmetadata=ef75c1b73286d58d",
     "-Cextra-filename=-ef75c1b73286d58d",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_proc_macro("test-case-v1_1_0") {
@@ -9903,6 +10623,8 @@ rust_proc_macro("test-case-v1_1_0") {
     "-Cextra-filename=-f2bb0d885c2bf58f",
     "--cfg=feature=\"default\"",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("textwrap-v0_11_0") {
@@ -9925,6 +10647,8 @@ rust_library("textwrap-v0_11_0") {
     "-Cmetadata=942fc263da8a1e95",
     "-Cextra-filename=-942fc263da8a1e95",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("thiserror-v1_0_23") {
@@ -9947,6 +10671,8 @@ rust_library("thiserror-v1_0_23") {
     "-Cmetadata=dcdc66d3bbb690d3",
     "-Cextra-filename=-dcdc66d3bbb690d3",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_proc_macro("thiserror-impl-v1_0_23") {
@@ -9971,6 +10697,8 @@ rust_proc_macro("thiserror-impl-v1_0_23") {
     "-Cmetadata=c420f1faeabf2d9a",
     "-Cextra-filename=-c420f1faeabf2d9a",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("thread_local-v1_0_1") {
@@ -9993,6 +10721,8 @@ rust_library("thread_local-v1_0_1") {
     "-Cmetadata=c08961bcca26f08e",
     "-Cextra-filename=-c08961bcca26f08e",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("time-v0_1_42") {
@@ -10025,6 +10755,7 @@ rust_library("time-v0_1_42") {
   aliased_deps = {
     syscall = ":redox_syscall-v0_1_51"
   }
+  visibility = [ ":*" ]
 }
 
 rust_library("tinyvec-v1_3_1") {
@@ -10050,6 +10781,8 @@ rust_library("tinyvec-v1_3_1") {
     "--cfg=feature=\"default\"",
     "--cfg=feature=\"tinyvec_macros\"",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("tinyvec_macros-v0_1_0") {
@@ -10071,6 +10804,8 @@ rust_library("tinyvec_macros-v0_1_0") {
     "-Cmetadata=de657c64f98fc831",
     "-Cextra-filename=-de657c64f98fc831",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("tokio-v0_2_21") {
@@ -10104,6 +10839,8 @@ rust_library("tokio-v0_2_21") {
     "--cfg=feature=\"stream\"",
     "--cfg=feature=\"sync\"",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("tokio-rustls-v0_13_1") {
@@ -10129,6 +10866,8 @@ rust_library("tokio-rustls-v0_13_1") {
     "-Cmetadata=4bae2a85418b59f8",
     "-Cextra-filename=-4bae2a85418b59f8",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("tokio-util-v0_3_1") {
@@ -10158,6 +10897,8 @@ rust_library("tokio-util-v0_3_1") {
     "--cfg=feature=\"codec\"",
     "--cfg=feature=\"default\"",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("toml-v0_5_6") {
@@ -10181,6 +10922,8 @@ rust_library("toml-v0_5_6") {
     "-Cextra-filename=-2563c91c8a85577d",
     "--cfg=feature=\"default\"",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("toml_edit-v0_2_1") {
@@ -10205,6 +10948,8 @@ rust_library("toml_edit-v0_2_1") {
     "-Cmetadata=21fcacc5489f3304",
     "-Cextra-filename=-21fcacc5489f3304",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("tower-service-v0_3_0") {
@@ -10226,6 +10971,8 @@ rust_library("tower-service-v0_3_0") {
     "-Cmetadata=2289a8e10b994b8a",
     "-Cextra-filename=-2289a8e10b994b8a",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("tracing-v0_1_29") {
@@ -10257,6 +11004,8 @@ rust_library("tracing-v0_1_29") {
     "--cfg=feature=\"std\"",
     "--cfg=feature=\"tracing-attributes\"",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_proc_macro("tracing-attributes-v0_1_18") {
@@ -10281,6 +11030,8 @@ rust_proc_macro("tracing-attributes-v0_1_18") {
     "-Cmetadata=e0ab8aefa16d80d7",
     "-Cextra-filename=-e0ab8aefa16d80d7",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("tracing-core-v0_1_21") {
@@ -10306,6 +11057,8 @@ rust_library("tracing-core-v0_1_21") {
     "--cfg=feature=\"lazy_static\"",
     "--cfg=feature=\"std\"",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("tracing-futures-v0_2_5") {
@@ -10333,6 +11086,8 @@ rust_library("tracing-futures-v0_2_5") {
     "--cfg=feature=\"std\"",
     "--cfg=feature=\"std-future\"",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("tracing-log-v0_1_2") {
@@ -10361,6 +11116,8 @@ rust_library("tracing-log-v0_1_2") {
     "--cfg=feature=\"std\"",
     "--cfg=feature=\"trace-logger\"",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("tracing-subscriber-v0_3_1") {
@@ -10392,6 +11149,8 @@ rust_library("tracing-subscriber-v0_3_1") {
     "--cfg=feature=\"thread_local\"",
     "--cfg=feature=\"tracing-log\"",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("treeline-v0_1_0") {
@@ -10413,6 +11172,8 @@ rust_library("treeline-v0_1_0") {
     "-Cmetadata=73b2c02cee81d97b",
     "-Cextra-filename=-73b2c02cee81d97b",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("trust-dns-proto-v0_21_0-alpha_4") {
@@ -10451,6 +11212,8 @@ rust_library("trust-dns-proto-v0_21_0-alpha_4") {
     "-Cextra-filename=-ac7f531d8a00954",
     "--cfg=feature=\"testing\"",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("trust-dns-resolver-v0_21_0-alpha_4") {
@@ -10482,6 +11245,8 @@ rust_library("trust-dns-resolver-v0_21_0-alpha_4") {
     "-Cextra-filename=-ffc6b5ee4993b09f",
     "--cfg=feature=\"testing\"",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("try-lock-v0_2_2") {
@@ -10503,6 +11268,8 @@ rust_library("try-lock-v0_2_2") {
     "-Cmetadata=d2aa576612eef943",
     "-Cextra-filename=-d2aa576612eef943",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("ttf-parser-v0_10_1") {
@@ -10527,6 +11294,8 @@ rust_library("ttf-parser-v0_10_1") {
     "--cfg=feature=\"std\"",
     "--cfg=feature=\"variable-fonts\"",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("tuf-v0_3_0-beta3") {
@@ -10572,6 +11341,7 @@ rust_library("tuf-v0_3_0-beta3") {
   aliased_deps = {
     hyper_013 = ":hyper-v0_13_10"
   }
+  visibility = [ ":*" ]
 }
 
 rust_library("tui-v0_16_0") {
@@ -10600,6 +11370,8 @@ rust_library("tui-v0_16_0") {
     "--cfg=feature=\"default\"",
     "--cfg=feature=\"termion\"",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("typed-arena-v1_4_1") {
@@ -10623,6 +11395,8 @@ rust_library("typed-arena-v1_4_1") {
     "--cfg=feature=\"default\"",
     "--cfg=feature=\"std\"",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("typenum-v1_14_0") {
@@ -10647,6 +11421,8 @@ rust_library("typenum-v1_14_0") {
     "-Cmetadata=bd565a80ebea3198",
     "-Cextra-filename=-bd565a80ebea3198",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("ucd-trie-v0_1_1") {
@@ -10670,6 +11446,8 @@ rust_library("ucd-trie-v0_1_1") {
     "--cfg=feature=\"default\"",
     "--cfg=feature=\"std\"",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("unic-char-property-v0_9_0") {
@@ -10696,6 +11474,8 @@ rust_library("unic-char-property-v0_9_0") {
     "-Cmetadata=445d81b4a0ae40c1",
     "-Cextra-filename=-445d81b4a0ae40c1",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("unic-char-range-v0_9_0") {
@@ -10722,6 +11502,8 @@ rust_library("unic-char-range-v0_9_0") {
     "-Cextra-filename=-9b60d6d5dd1543b8",
     "--cfg=feature=\"default\"",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("unic-common-v0_9_0") {
@@ -10748,6 +11530,8 @@ rust_library("unic-common-v0_9_0") {
     "-Cextra-filename=-48117e25b313876",
     "--cfg=feature=\"default\"",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("unic-ucd-block-v0_9_0") {
@@ -10776,6 +11560,8 @@ rust_library("unic-ucd-block-v0_9_0") {
     "-Cmetadata=5587140b130c5f84",
     "-Cextra-filename=-5587140b130c5f84",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("unic-ucd-version-v0_9_0") {
@@ -10802,6 +11588,8 @@ rust_library("unic-ucd-version-v0_9_0") {
     "-Cmetadata=cfee15212f1e7220",
     "-Cextra-filename=-cfee15212f1e7220",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("unicase-v2_5_1") {
@@ -10827,6 +11615,8 @@ rust_library("unicase-v2_5_1") {
     "--cfg=__unicase__const_fns",
     "--cfg=__unicase__core_and_alloc",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("unicode-bidi-v0_3_4") {
@@ -10850,6 +11640,8 @@ rust_library("unicode-bidi-v0_3_4") {
     "-Cextra-filename=-6196d3d9fc63e289",
     "--cfg=feature=\"default\"",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("unicode-normalization-v0_1_19") {
@@ -10875,6 +11667,8 @@ rust_library("unicode-normalization-v0_1_19") {
     "--cfg=feature=\"default\"",
     "--cfg=feature=\"std\"",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("unicode-segmentation-v1_2_1") {
@@ -10897,6 +11691,8 @@ rust_library("unicode-segmentation-v1_2_1") {
     "-Cmetadata=6ac80cf67426e677",
     "-Cextra-filename=-6ac80cf67426e677",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("unicode-width-v0_1_5") {
@@ -10919,6 +11715,8 @@ rust_library("unicode-width-v0_1_5") {
     "-Cextra-filename=-6f95bd0c0297e7ef",
     "--cfg=feature=\"default\"",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("unicode-xid-v0_1_0") {
@@ -10941,6 +11739,8 @@ rust_library("unicode-xid-v0_1_0") {
     "-Cextra-filename=-8c0b837e1e0cd2cd",
     "--cfg=feature=\"default\"",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("unicode-xid-v0_2_0") {
@@ -10963,6 +11763,8 @@ rust_library("unicode-xid-v0_2_0") {
     "-Cextra-filename=-8b9ce29b16dc5a7f",
     "--cfg=feature=\"default\"",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("unindent-v0_1_3") {
@@ -10984,6 +11786,8 @@ rust_library("unindent-v0_1_3") {
     "-Cmetadata=80aa0ce7cd6efa63",
     "-Cextra-filename=-80aa0ce7cd6efa63",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("universal-hash-v0_4_1") {
@@ -11007,6 +11811,8 @@ rust_library("universal-hash-v0_4_1") {
     "-Cmetadata=db42e5df18609778",
     "-Cextra-filename=-db42e5df18609778",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("untrusted-v0_7_1") {
@@ -11028,6 +11834,8 @@ rust_library("untrusted-v0_7_1") {
     "-Cmetadata=645a69efdf6d68fc",
     "-Cextra-filename=-645a69efdf6d68fc",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("url-v1_7_2") {
@@ -11052,6 +11860,10 @@ rust_library("url-v1_7_2") {
     "-Cmetadata=a33a870434d6f716",
     "-Cextra-filename=-a33a870434d6f716",
   ]
+
+  visibility = []
+  visibility += [ ":*" ]
+  visibility += [ "//build/sdk/meta:*" ]
 }
 
 rust_library("url-v2_1_0") {
@@ -11076,6 +11888,8 @@ rust_library("url-v2_1_0") {
     "-Cmetadata=10398e48bf00aca4",
     "-Cextra-filename=-10398e48bf00aca4",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("utf8parse-v0_1_1") {
@@ -11097,6 +11911,8 @@ rust_library("utf8parse-v0_1_1") {
     "-Cmetadata=ef54bf3166380f1",
     "-Cextra-filename=-ef54bf3166380f1",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("uuid-v0_7_2") {
@@ -11125,6 +11941,8 @@ rust_library("uuid-v0_7_2") {
     "--cfg=feature=\"std\"",
     "--cfg=feature=\"v4\"",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("uuid-v0_8_2") {
@@ -11151,6 +11969,8 @@ rust_library("uuid-v0_8_2") {
     "--cfg=feature=\"std\"",
     "--cfg=feature=\"v4\"",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("valico-v2_4_2") {
@@ -11181,6 +12001,8 @@ rust_library("valico-v2_4_2") {
     "-Cmetadata=179ee54e44a59467",
     "-Cextra-filename=-179ee54e44a59467",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("vec_map-v0_8_1") {
@@ -11202,6 +12024,8 @@ rust_library("vec_map-v0_8_1") {
     "-Cmetadata=d78a1471c87b7920",
     "-Cextra-filename=-d78a1471c87b7920",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("vk-sys-v0_4_0") {
@@ -11223,6 +12047,8 @@ rust_library("vk-sys-v0_4_0") {
     "-Cmetadata=64c5d0becd520497",
     "-Cextra-filename=-64c5d0becd520497",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("void-v1_0_2") {
@@ -11246,6 +12072,8 @@ rust_library("void-v1_0_2") {
     "--cfg=feature=\"default\"",
     "--cfg=feature=\"std\"",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("vte-v0_3_3") {
@@ -11268,6 +12096,8 @@ rust_library("vte-v0_3_3") {
     "-Cmetadata=8f5a30c97a835161",
     "-Cextra-filename=-8f5a30c97a835161",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("wait-timeout-v0_1_5") {
@@ -11290,6 +12120,8 @@ rust_library("wait-timeout-v0_1_5") {
     "-Cmetadata=6681f14e0f8d09c3",
     "-Cextra-filename=-6681f14e0f8d09c3",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("waker-fn-v1_1_0") {
@@ -11311,6 +12143,8 @@ rust_library("waker-fn-v1_1_0") {
     "-Cmetadata=5c6a90a186ee2ada",
     "-Cextra-filename=-5c6a90a186ee2ada",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("walkdir-v2_3_1") {
@@ -11337,6 +12171,8 @@ rust_library("walkdir-v2_3_1") {
     "-Cmetadata=3afd3201e5295e86",
     "-Cextra-filename=-3afd3201e5295e86",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("want-v0_3_0") {
@@ -11360,6 +12196,8 @@ rust_library("want-v0_3_0") {
     "-Cmetadata=7ea5f0f15ff169c0",
     "-Cextra-filename=-7ea5f0f15ff169c0",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("wasi-v0_10_1+wasi-snapshot-preview1") {
@@ -11383,6 +12221,8 @@ rust_library("wasi-v0_10_1+wasi-snapshot-preview1") {
     "--cfg=feature=\"default\"",
     "--cfg=feature=\"std\"",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("wasm-bindgen-v0_2_63") {
@@ -11409,6 +12249,8 @@ rust_library("wasm-bindgen-v0_2_63") {
     "--cfg=feature=\"spans\"",
     "--cfg=feature=\"std\"",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("wasm-bindgen-backend-v0_2_63") {
@@ -11439,6 +12281,8 @@ rust_library("wasm-bindgen-backend-v0_2_63") {
     "-Cextra-filename=-c28eac4de645d2d9",
     "--cfg=feature=\"spans\"",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_proc_macro("wasm-bindgen-macro-v0_2_63") {
@@ -11463,6 +12307,8 @@ rust_proc_macro("wasm-bindgen-macro-v0_2_63") {
     "-Cextra-filename=-1a1689162be0fefa",
     "--cfg=feature=\"spans\"",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("wasm-bindgen-macro-support-v0_2_63") {
@@ -11491,6 +12337,8 @@ rust_library("wasm-bindgen-macro-support-v0_2_63") {
     "-Cextra-filename=-3e362bc403b28171",
     "--cfg=feature=\"spans\"",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("wasm-bindgen-shared-v0_2_63") {
@@ -11512,6 +12360,8 @@ rust_library("wasm-bindgen-shared-v0_2_63") {
     "-Cmetadata=812e74ab5010cc31",
     "-Cextra-filename=-812e74ab5010cc31",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("web-sys-v0_3_36") {
@@ -11535,6 +12385,8 @@ rust_library("web-sys-v0_3_36") {
     "--cfg=feature=\"Crypto\"",
     "--cfg=feature=\"Window\"",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("webpki-v0_21_0") {
@@ -11561,6 +12413,8 @@ rust_library("webpki-v0_21_0") {
     "--cfg=feature=\"std\"",
     "--cfg=feature=\"trust_anchor_util\"",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("wepoll-sys-v3_0_1") {
@@ -11582,6 +12436,8 @@ rust_library("wepoll-sys-v3_0_1") {
     "-Cmetadata=ab562e75c3795c15",
     "-Cextra-filename=-ab562e75c3795c15",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("winapi-v0_3_9") {
@@ -11643,6 +12499,8 @@ rust_library("winapi-v0_3_9") {
     "--cfg=feature=\"ws2tcpip\"",
     "--cfg=feature=\"wtypesbase\"",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("winapi-util-v0_1_5") {
@@ -11664,6 +12522,8 @@ rust_library("winapi-util-v0_1_5") {
     "-Cmetadata=d22658bf7990adbd",
     "-Cextra-filename=-d22658bf7990adbd",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("xattr-v0_2_2") {
@@ -11688,6 +12548,8 @@ rust_library("xattr-v0_2_2") {
     "--cfg=feature=\"default\"",
     "--cfg=feature=\"unsupported\"",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("xml-rs-v0_8_0") {
@@ -11709,6 +12571,8 @@ rust_library("xml-rs-v0_8_0") {
     "-Cmetadata=9187c9c232fb3a0e",
     "-Cextra-filename=-9187c9c232fb3a0e",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("zip-v0_5_5") {
@@ -11735,6 +12599,8 @@ rust_library("zip-v0_5_5") {
     "--cfg=feature=\"deflate\"",
     "--cfg=feature=\"flate2\"",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("zstd-v0_8_0+zstd_1_4_9") {
@@ -11759,6 +12625,8 @@ rust_library("zstd-v0_8_0+zstd_1_4_9") {
     "--cfg=feature=\"default\"",
     "--cfg=feature=\"legacy\"",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("zstd-safe-v4_0_0+zstd_1_4_9") {
@@ -11785,6 +12653,8 @@ rust_library("zstd-safe-v4_0_0+zstd_1_4_9") {
     "--cfg=feature=\"legacy\"",
     "--cfg=feature=\"std\"",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("zstd-sys-v1_5_0+zstd_1_4_9") {
@@ -11809,4 +12679,6 @@ rust_library("zstd-sys-v1_5_0+zstd_1_4_9") {
     "--cfg=feature=\"legacy\"",
     "--cfg=feature=\"std\"",
   ]
+
+  visibility = [ ":*" ]
 }

@@ -292,7 +292,9 @@ pub fn write_rule<W: io::Write>(
         rustflags.add_cfg(format!("--cfg=feature=\\\"{}\\\"", feature));
     }
 
-    // From the gn custom configs, add flags and env vars
+    // From the gn custom configs, add flags, env vars, and visibility
+    let mut visibility = vec![];
+
     if let Some(custom_build) = custom_build {
         for (platform, cfg) in custom_build {
             if let Some(ref deps) = cfg.deps {
@@ -316,8 +318,19 @@ pub fn write_rule<W: io::Write>(
                     configs.add_platform_cfg(platform.cloned(), config);
                 }
             }
+            if let Some(ref vis) = cfg.visibility {
+                visibility.extend(vis.iter().map(|v| format!("  visibility += [\"{}\"]", v)));
+            }
         }
     }
+
+    let visibility = if visibility.is_empty() {
+        String::from("visibility = [\":*\"]\n")
+    } else {
+        let mut v = String::from("visibility = []\n");
+        v.extend(visibility);
+        v
+    };
 
     // making the templates more readable.
     let aliased_deps_str = if aliased_deps.len() == 0 {
@@ -355,6 +368,7 @@ pub fn write_rule<W: io::Write>(
         cfgs = configs.render_gn(),
         rustenv = rustenv.render_gn(),
         rustflags = rustflags.render_gn(),
+        visibility = visibility,
     )
     .map_err(Into::into)
 }
@@ -400,6 +414,8 @@ mod tests {
   rustflags = ["--cap-lints=allow","--edition=2018","-Cmetadata=c5bf97c44457465a","-Cextra-filename=-c5bf97c44457465a"]
 
   
+  visibility = [":*"]
+
 }
 
 "#
@@ -440,6 +456,8 @@ mod tests {
   rustflags = ["--cap-lints=allow","--edition=2018","-Cmetadata=bf8f4a806276c599","-Cextra-filename=-bf8f4a806276c599"]
 
   
+  visibility = [":*"]
+
 }
 
 "#

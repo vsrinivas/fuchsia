@@ -48,9 +48,9 @@ if (is_fuchsia) {
     ]
 
     deps = []
-    deps += [ "../..:bitflags-v1_2_1" ]
-    deps += [ "../..:cfg-if-v1_0_0" ]
-    deps += [ "../..:libc-v0_2_101" ]
+    deps += [ "../..:bitflags" ]
+    deps += [ "../..:cfg-if" ]
+    deps += [ "../..:libc" ]
 
     rustenv = []
 

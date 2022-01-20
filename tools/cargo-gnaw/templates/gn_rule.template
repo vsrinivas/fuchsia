@@ -7,4 +7,5 @@
   {rustenv}
   {rustflags}
   {aliased_deps}
+  {visibility}
 }}

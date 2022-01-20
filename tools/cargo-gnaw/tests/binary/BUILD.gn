@@ -33,6 +33,8 @@ executable("package-with-bin-foo-binary-v0_1_0") {
     "-Cmetadata=afa00503dca78ba8",
     "-Cextra-filename=-afa00503dca78ba8",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("package-with-bin-v0_1_0") {
@@ -50,4 +52,6 @@ rust_library("package-with-bin-v0_1_0") {
     "-Cmetadata=b6c5dfd7f886ecb4",
     "-Cextra-filename=-b6c5dfd7f886ecb4",
   ]
+
+  visibility = [ ":*" ]
 }

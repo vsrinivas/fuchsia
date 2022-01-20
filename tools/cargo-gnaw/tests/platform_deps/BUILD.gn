@@ -37,4 +37,6 @@ rust_library("anyhow-v1_0_27") {
     "--cfg=feature=\"std\"",
     "--cfg=backtrace",
   ]
+
+  visibility = [ ":*" ]
 }

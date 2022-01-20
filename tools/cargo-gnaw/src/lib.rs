@@ -83,6 +83,8 @@ pub struct TargetCfg {
     /// GN Configs that this crate should depend on.  Used to add
     /// crate-specific configs.
     configs: Option<Vec<String>>,
+    /// GN Visibility that controls which targets can depend on this target.
+    visibility: Option<Vec<String>>,
 }
 
 /// Configuration for a single GN executable target to generate from a Cargo binary target.

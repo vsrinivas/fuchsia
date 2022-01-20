@@ -19,7 +19,7 @@ rustc_library("fuchsia-hyper") {
     "//third_party/rust_crates:hyper",
     "//third_party/rust_crates:hyper-rustls",
     "//third_party/rust_crates:log",
-    "//third_party/rust_crates:lru-cache-v0_1_2",
+    "//third_party/rust_crates:lru-cache",
     "//third_party/rust_crates:parking_lot",
     "//third_party/rust_crates:pin-project",
     "//third_party/rust_crates:rustls",
@@ -34,8 +34,8 @@ rustc_library("fuchsia-hyper") {
   if (is_host) {
     deps += [
       "//third_party/rust_crates:async-net",
-      "//third_party/rust_crates:rustls-native-certs-v0_3_0",
-      "//third_party/rust_crates:tower-service-v0_3_0",
+      "//third_party/rust_crates:rustls-native-certs",
+      "//third_party/rust_crates:tower-service",
     ]
   } else {
     deps += [

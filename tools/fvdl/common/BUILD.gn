@@ -28,7 +28,7 @@ if (is_host) {
       "//src/developer/ffx/lib/errors:lib",
       "//src/lib/fuchsia-async",
       "//src/lib/fuchsia-hyper:fuchsia-hyper",
-      "//third_party/rust_crates:ansi_term-v0_11_0",
+      "//third_party/rust_crates:ansi_term",
       "//third_party/rust_crates:anyhow",
       "//third_party/rust_crates:argh",
       "//third_party/rust_crates:futures",

@@ -27,6 +27,8 @@ rust_library("anyhow-v1_0_27") {
     "--cfg=feature=\"std\"",
     "--cfg=backtrace",
   ]
+
+  visibility = [ ":*" ]
 }
 
 rust_library("simple_deps-v0_1_0") {
@@ -45,4 +47,6 @@ rust_library("simple_deps-v0_1_0") {
     "-Cmetadata=176a6857401f170f",
     "-Cextra-filename=-176a6857401f170f",
   ]
+
+  visibility = [ ":*" ]
 }
