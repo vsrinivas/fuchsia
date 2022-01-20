@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <lib/fasync/internal/type_traits.h>
+#include <lib/fasync/poll.h>
 #include <lib/fasync/type_traits.h>
 
 #include <zxtest/zxtest.h>
@@ -14,11 +15,8 @@ TEST(TypeTraitsTests, IsPoll) {
   static_assert(fasync::is_poll_v<fasync::poll<>>, "");
   static_assert(fasync::is_poll_v<fasync::poll<int>>, "");
   static_assert(fasync::is_poll_v<fasync::poll<std::string>>, "");
-// Needs poll.h (coming)
-#if 0
   static_assert(fasync::is_poll_v<fasync::try_poll<fitx::failed>>, "");
   static_assert(fasync::is_poll_v<fasync::try_poll<std::string, int>>, "");
-#endif
 
   static_assert(!fasync::is_poll_v<fasync::pending>, "");
   static_assert(!fasync::is_poll_v<fasync::ready<>>, "");
@@ -28,8 +26,6 @@ TEST(TypeTraitsTests, IsPoll) {
   static_assert(!fasync::is_poll_v<int>, "");
   static_assert(!fasync::is_poll_v<std::string>, "");
 
-// Needs poll.h (coming)
-#if 0
   // fasync::is_void_poll
   static_assert(fasync::is_void_poll_v<fasync::poll<>>, "");
   static_assert(!fasync::is_void_poll_v<fasync::poll<int>>, "");
@@ -39,7 +35,6 @@ TEST(TypeTraitsTests, IsPoll) {
   static_assert(fasync::is_try_poll_v<fasync::try_poll<std::string, int>>, "");
   static_assert(!fasync::is_try_poll_v<fasync::poll<>>, "");
   static_assert(!fasync::is_try_poll_v<fasync::poll<int>>, "");
-#endif
 }
 
 TEST(TypeTraitsTests, IsReady) {
@@ -47,11 +42,8 @@ TEST(TypeTraitsTests, IsReady) {
   static_assert(fasync::is_ready_v<fasync::ready<>>, "");
   static_assert(fasync::is_ready_v<fasync::ready<int>>, "");
   static_assert(fasync::is_ready_v<fasync::ready<std::string>>, "");
-// Needs poll.h (coming)
-#if 0
   static_assert(fasync::is_ready_v<fasync::try_ready<fitx::failed>>, "");
   static_assert(fasync::is_ready_v<fasync::try_ready<std::string, int>>, "");
-#endif
 
   static_assert(!fasync::is_ready_v<fasync::pending>, "");
   static_assert(!fasync::is_ready_v<fasync::poll<>>, "");
@@ -62,30 +54,28 @@ TEST(TypeTraitsTests, IsReady) {
   static_assert(!fasync::is_ready_v<std::string>, "");
 }
 
-// Needs poll.h (coming)
-#if 0
-fasync::poll<> function_future(fasync::context&) { return fasync::rdy(); }
+[[maybe_unused]] fasync::poll<> function_future(fasync::context&) { return fasync::done(); }
 
 TEST(TypeTraitsTests, IsFuture) {
   constexpr auto pending_poll = [](fasync::context&) -> fasync::poll<> {
     return fasync::pending();
   };
-  constexpr auto ready_poll = [](fasync::context&) -> fasync::poll<> { return fasync::rdy(); };
+  constexpr auto ready_poll = [](fasync::context&) -> fasync::poll<> { return fasync::done(); };
   constexpr auto pending_with_value = [](fasync::context&) -> fasync::poll<int> {
     return fasync::pending();
   };
   constexpr auto ready_with_value = [](fasync::context&) -> fasync::poll<int> {
-    return fasync::rdy(42);
+    return fasync::done(42);
   };
   constexpr auto try_pending = [](fasync::context&) -> fasync::try_poll<fitx::failed> {
     return fasync::pending();
   };
   constexpr auto try_ready = [](fasync::context&) -> fasync::try_poll<fitx::failed> {
-    return fasync::rdy(fitx::ok());
+    return fasync::done(fitx::ok());
   };
 
   struct functor {
-    fasync::poll<> operator()(fasync::context&) { return fasync::rdy(); }
+    fasync::poll<> operator()(fasync::context&) { return fasync::done(); }
   };
 
   constexpr auto no_context = []() -> fasync::poll<> { return fasync::pending(); };
@@ -99,7 +89,7 @@ TEST(TypeTraitsTests, IsFuture) {
   static_assert(fasync::is_future_v<decltype(ready_with_value)>, "");
   static_assert(fasync::is_future_v<decltype(try_pending)>, "");
   static_assert(fasync::is_future_v<decltype(try_ready)>, "");
-  static_assert(fasync::is_future_v<decltype(functor)>, "");
+  static_assert(fasync::is_future_v<functor>, "");
   static_assert(fasync::is_future_v<decltype(function_future)>, "");
   static_assert(fasync::is_future_v<decltype(std::ref(function_future))>, "");
 
@@ -110,7 +100,7 @@ TEST(TypeTraitsTests, IsFuture) {
   // fasync::is_void_future
   static_assert(fasync::is_void_future_v<decltype(pending_poll)>, "");
   static_assert(fasync::is_void_future_v<decltype(ready_poll)>, "");
-  static_assert(fasync::is_void_future_v<decltype(functor)>, "");
+  static_assert(fasync::is_void_future_v<functor>, "");
   static_assert(fasync::is_void_future_v<decltype(function_future)>, "");
   static_assert(fasync::is_void_future_v<decltype(std::ref(function_future))>, "");
 
@@ -127,17 +117,31 @@ TEST(TypeTraitsTests, IsFuture) {
   static_assert(!fasync::is_try_future_v<decltype(ready_poll)>, "");
   static_assert(!fasync::is_try_future_v<decltype(pending_with_value)>, "");
   static_assert(!fasync::is_try_future_v<decltype(ready_with_value)>, "");
-  static_assert(!fasync::is_try_future_v<decltype(functor)>, "");
+  static_assert(!fasync::is_try_future_v<functor>, "");
   static_assert(!fasync::is_try_future_v<decltype(function_future)>, "");
   static_assert(!fasync::is_try_future_v<decltype(std::ref(function_future))>, "");
 }
-#endif
 
 TEST(TypeTraitsTests, IsValue) {
-  // Needs poll.h (coming)
   // fasync::internal::is_value_result
+  static_assert(fasync::internal::is_value_result_v<fitx::result<char, int>>, "");
+  static_assert(!fasync::internal::is_value_result_v<fitx::result<char>>, "");
+
   // fasync::internal::is_value_try_poll
+  static_assert(fasync::internal::is_value_try_poll_v<fasync::try_poll<fitx::failed, std::string>>,
+                "");
+  static_assert(!fasync::internal::is_value_try_poll_v<fasync::try_poll<fitx::failed>>, "");
+
   // fasync::internal::is_value_try_future
+  constexpr auto value = [](fasync::context&) -> fasync::try_poll<fitx::failed, std::string> {
+    return fasync::done(fitx::failed());
+  };
+  constexpr auto no_value = [](fasync::context&) -> fasync::try_poll<fitx::failed> {
+    return fasync::done(fitx::ok());
+  };
+
+  static_assert(fasync::internal::is_value_try_future_v<decltype(value)>, "");
+  static_assert(!fasync::internal::is_value_try_future_v<decltype(no_value)>, "");
 }
 
 struct functor_first {
@@ -255,18 +259,15 @@ TEST(TypeTraitsTests, IsApplicable) {
                 "");
   static_assert(!fasync::internal::is_applicable_to_v<decltype(concat3), std::array<int, 3>>, "");
 
-// Needs poll.h (coming)
-#if 0
   // fasync::internal::is_future_applicable
   struct functor {
-    fasync::poll<> operator()(fasync::context&) { return fasync::rdy(); }
+    fasync::poll<> operator()(fasync::context&) { return fasync::done(); }
   };
 
   static_assert(fasync::internal::is_future_applicable_v<std::tuple<functor, functor, functor>>,
                 "");
 
   static_assert(!fasync::internal::is_future_applicable_v<std::tuple<int, int, int>>, "");
-#endif
 }
 
 }  // namespace

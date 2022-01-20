@@ -9,6 +9,7 @@ source_set("fasync-source-set") {
   sources = [
     "include/lib/fasync/internal/compiler.h",
     "include/lib/fasync/internal/type_traits.h",
+    "include/lib/fasync/poll.h",
     "include/lib/fasync/type_traits.h",
   ]
   public_deps = [ "//zircon/system/ulib/zxc" ]
@@ -22,6 +23,7 @@ zx_library("fasync") {
   sdk_headers = [
     "lib/fasync/internal/compiler.h",
     "lib/fasync/internal/type_traits.h",
+    "lib/fasync/poll.h",
     "lib/fasync/type_traits.h",
   ]
 
