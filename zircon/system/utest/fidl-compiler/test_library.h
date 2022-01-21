@@ -174,7 +174,7 @@ class TestLibrary final {
   }
 
   std::string GenerateTables() {
-    auto tables_generator = fidl::TablesGenerator(library_);
+    auto tables_generator = fidl::TablesGenerator(all_libraries_);
     auto out = tables_generator.Produce();
     return out.str();
   }
@@ -272,6 +272,7 @@ class TestLibrary final {
   void set_warnings_as_errors(bool value) { reporter_->set_warnings_as_errors(value); }
 
   fidl::flat::Library* library() const { return library_; }
+  const fidl::flat::Libraries* all_libraries() const { return all_libraries_; }
   fidl::Reporter* reporter() { return reporter_; }
   const fidl::flat::AttributeList* attributes() { return library_->attributes.get(); }
 
@@ -301,7 +302,7 @@ class TestLibrary final {
   const std::vector<std::string>& lints() const { return lints_; }
 
   std::vector<const fidl::flat::Decl*> declaration_order() const {
-    return library_->declaration_order_;
+    return library_->declaration_order();
   }
 
   SharedAmongstLibraries* OwnedShared() {

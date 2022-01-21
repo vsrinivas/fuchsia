@@ -1669,7 +1669,7 @@ std::ostringstream CGenerator::ProduceHeader() {
 
   file_ << "\n// Forward declarations\n\n";
 
-  for (const auto* decl : library_->declaration_order_) {
+  for (const auto* decl : library_->declaration_order()) {
     if (!DeclAllowed(decl)) {
       continue;
     }
@@ -1729,7 +1729,7 @@ std::ostringstream CGenerator::ProduceHeader() {
 
   file_ << "\n// Extern declarations\n\n";
 
-  for (const auto* decl : library_->declaration_order_) {
+  for (const auto* decl : library_->declaration_order()) {
     if (!DeclAllowed(decl)) {
       continue;
     }
@@ -1758,7 +1758,7 @@ std::ostringstream CGenerator::ProduceHeader() {
 
   file_ << "\n// Declarations\n\n";
 
-  for (const auto* decl : library_->declaration_order_) {
+  for (const auto* decl : library_->declaration_order()) {
     if (!DeclAllowed(decl)) {
       continue;
     }
@@ -1813,7 +1813,7 @@ std::ostringstream CGenerator::ProduceHeader() {
 
   file_ << "\n// Simple bindings \n\n";
 
-  for (const auto* decl : library_->declaration_order_) {
+  for (const auto* decl : library_->declaration_order()) {
     switch (decl->kind) {
       case flat::Decl::Kind::kBits:
       case flat::Decl::Kind::kConst:
@@ -1859,7 +1859,7 @@ std::ostringstream CGenerator::ProduceClient() {
   std::map<const flat::Decl*, NamedProtocol> named_protocols =
       NameProtocols(library_->protocol_declarations_);
 
-  for (const auto* decl : library_->declaration_order_) {
+  for (const auto* decl : library_->declaration_order()) {
     switch (decl->kind) {
       case flat::Decl::Kind::kBits:
       case flat::Decl::Kind::kConst:
@@ -1902,7 +1902,7 @@ std::ostringstream CGenerator::ProduceServer() {
   std::map<const flat::Decl*, NamedProtocol> named_protocols =
       NameProtocols(library_->protocol_declarations_);
 
-  for (const auto* decl : library_->declaration_order_) {
+  for (const auto* decl : library_->declaration_order()) {
     switch (decl->kind) {
       case flat::Decl::Kind::kBits:
       case flat::Decl::Kind::kConst:

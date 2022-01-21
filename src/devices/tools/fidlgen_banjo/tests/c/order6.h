@@ -14,22 +14,22 @@
 __BEGIN_CDECLS
 
 // Forward declarations
-typedef struct bar bar_t;
-typedef union foo foo_t;
 typedef int8_t random_t;
 #define RANDOM_ONE INT8_C(2)
 #define RANDOM_TWO INT8_C(7)
 #define RANDOM_THREE INT8_C(3)
+typedef union foo foo_t;
+typedef struct bar bar_t;
 
 // Declarations
-struct bar {
-    two_t two;
-    int32_t value;
-};
-
 union foo {
     uint64_t code;
     one_t one;
+};
+
+struct bar {
+    two_t two;
+    int32_t value;
 };
 
 

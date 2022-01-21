@@ -47,54 +47,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data_, size_t size_) {
 
   // Hardcode mutually-exclusive if blocks that selects exactly one protocol.
   [[maybe_unused]] zx_status_t status_;
-  if (protocol_selection_ == 0) {
-#if !defined(PROTOCOL_test_bindingsdenylist_ImportsSameNameContext)
-    // Selected protocol from FIDL file that is not part of this fuzzer.
-    xprintf(
-        "Early exit: Chose disabled protocol: "
-        "test_bindingsdenylist_ImportsSameNameContext\n");
-    return 0;
-#else
-
-    ::fidl::InterfacePtr< ::test::bindingsdenylist::ImportsSameNameContext>
-        protocol_;
-
-    xprintf("Starting test_bindingsdenylist_ImportsSameNameContext service\n");
-    ::fidl::fuzzing::Fuzzer< ::test::bindingsdenylist::ImportsSameNameContext>
-        fuzzer_(loop_->dispatcher());
-    if ((status_ = fuzzer_.Init()) != ZX_OK) {
-      xprintf("Early exit: fuzzer.Init returned bad status: %d\n", status_);
-      return 0;
-    }
-
-    if ((status_ = fuzzer_.BindService()) != ZX_OK) {
-      xprintf("Early exit: fuzzer.BindService returned bad status: %d\n",
-              status_);
-      return 0;
-    }
-
-    if ((status_ = fuzzer_.BindClient(&protocol_, loop_->dispatcher())) !=
-        ZX_OK) {
-      xprintf("Early exit: fuzzer.BindClient returned bad status: %d\n",
-              status_);
-      return 0;
-    }
-
-    FuzzInput src_(data_, size_);
-
-    uint8_t method_selector_ = data_[1];
-    uint8_t method_selection_ = method_selector_ % 2;
-
-    loop_->RunUntilIdle();
-
-    if ((status_ = fuzzer_.WaitForCallback()) != ZX_OK) {
-      xprintf("fuzzer.WaitForCallback returned bad status: %d\n", status_);
-    }
-
-    protocol_.Unbind();
-#endif
-  }
-  if (protocol_selection_ == 2) {
+  if (protocol_selection_ == 1) {
 #if !defined(PROTOCOL_test_bindingsdenylist_OnlyLibfuzzerAndDeps)
     // Selected protocol from FIDL file that is not part of this fuzzer.
     xprintf(
@@ -131,6 +84,53 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data_, size_t size_) {
 
     uint8_t method_selector_ = data_[1];
     uint8_t method_selection_ = method_selector_ % 1;
+
+    loop_->RunUntilIdle();
+
+    if ((status_ = fuzzer_.WaitForCallback()) != ZX_OK) {
+      xprintf("fuzzer.WaitForCallback returned bad status: %d\n", status_);
+    }
+
+    protocol_.Unbind();
+#endif
+  }
+  if (protocol_selection_ == 2) {
+#if !defined(PROTOCOL_test_bindingsdenylist_ImportsSameNameContext)
+    // Selected protocol from FIDL file that is not part of this fuzzer.
+    xprintf(
+        "Early exit: Chose disabled protocol: "
+        "test_bindingsdenylist_ImportsSameNameContext\n");
+    return 0;
+#else
+
+    ::fidl::InterfacePtr< ::test::bindingsdenylist::ImportsSameNameContext>
+        protocol_;
+
+    xprintf("Starting test_bindingsdenylist_ImportsSameNameContext service\n");
+    ::fidl::fuzzing::Fuzzer< ::test::bindingsdenylist::ImportsSameNameContext>
+        fuzzer_(loop_->dispatcher());
+    if ((status_ = fuzzer_.Init()) != ZX_OK) {
+      xprintf("Early exit: fuzzer.Init returned bad status: %d\n", status_);
+      return 0;
+    }
+
+    if ((status_ = fuzzer_.BindService()) != ZX_OK) {
+      xprintf("Early exit: fuzzer.BindService returned bad status: %d\n",
+              status_);
+      return 0;
+    }
+
+    if ((status_ = fuzzer_.BindClient(&protocol_, loop_->dispatcher())) !=
+        ZX_OK) {
+      xprintf("Early exit: fuzzer.BindClient returned bad status: %d\n",
+              status_);
+      return 0;
+    }
+
+    FuzzInput src_(data_, size_);
+
+    uint8_t method_selector_ = data_[1];
+    uint8_t method_selection_ = method_selector_ % 2;
 
     loop_->RunUntilIdle();
 

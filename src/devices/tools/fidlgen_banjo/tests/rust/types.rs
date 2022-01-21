@@ -14,6 +14,23 @@ pub const STRINGS_SIZE: u32 = 32;
 pub const ARRAYS_SIZE: u32 = 32;
 #[repr(C)]
 #[derive(Copy, Clone, Debug, PartialEq)]
+pub struct zx_types {
+    pub status: zircon_types::zx_status_t,
+    pub time: zircon_types::zx_time_t,
+    pub duration: zircon_types::zx_duration_t,
+    pub ticks: zircon_types::zx_ticks_t,
+    pub koid: zircon_types::zx_koid_t,
+    pub vaddr: zircon_types::zx_vaddr_t,
+    pub paddr: zircon_types::zx_paddr_t,
+    pub paddr32: zircon_types::zx_paddr32_t,
+    pub gpaddr: zircon_types::zx_gpaddr_t,
+    pub offset: zircon_types::zx_off_t,
+    pub procarg: zircon_types::zx_procarg_t,
+    pub signals: zircon_types::zx_signals_t,
+}
+
+#[repr(C)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub struct vectors {
     pub b_0_list: *const bool,
     pub b_0_count: usize,
@@ -258,113 +275,6 @@ pub struct vectors {
 }
 
 #[repr(C)]
-#[derive(Copy, Clone, Debug, PartialEq)]
-pub struct handles {
-    pub handle_handle: zircon_types::zx_handle_t,
-    pub process_handle: zircon_types::zx_handle_t,
-    pub thread_handle: zircon_types::zx_handle_t,
-    pub vmo_handle: zircon_types::zx_handle_t,
-    pub channel_handle: zircon_types::zx_handle_t,
-    pub event_handle: zircon_types::zx_handle_t,
-    pub port_handle: zircon_types::zx_handle_t,
-    pub interrupt_handle: zircon_types::zx_handle_t,
-    pub socket_handle: zircon_types::zx_handle_t,
-    pub resource_handle: zircon_types::zx_handle_t,
-    pub eventpair_handle: zircon_types::zx_handle_t,
-    pub job_handle: zircon_types::zx_handle_t,
-    pub vmar_handle: zircon_types::zx_handle_t,
-    pub fifo_handle: zircon_types::zx_handle_t,
-    pub guest_handle: zircon_types::zx_handle_t,
-    pub timer_handle: zircon_types::zx_handle_t,
-    pub profile_handle: zircon_types::zx_handle_t,
-    pub vcpu_handle: zircon_types::zx_handle_t,
-    pub iommu_handle: zircon_types::zx_handle_t,
-    pub pager_handle: zircon_types::zx_handle_t,
-    pub pmt_handle: zircon_types::zx_handle_t,
-    pub clock_handle: zircon_types::zx_handle_t,
-    pub nullable_handle_handle: zircon_types::zx_handle_t,
-    pub nullable_process_handle: zircon_types::zx_handle_t,
-    pub nullable_thread_handle: zircon_types::zx_handle_t,
-    pub nullable_vmo_handle: zircon_types::zx_handle_t,
-    pub nullable_channel_handle: zircon_types::zx_handle_t,
-    pub nullable_event_handle: zircon_types::zx_handle_t,
-    pub nullable_port_handle: zircon_types::zx_handle_t,
-    pub nullable_interrupt_handle: zircon_types::zx_handle_t,
-    pub nullable_socket_handle: zircon_types::zx_handle_t,
-    pub nullable_resource_handle: zircon_types::zx_handle_t,
-    pub nullable_eventpair_handle: zircon_types::zx_handle_t,
-    pub nullable_job_handle: zircon_types::zx_handle_t,
-    pub nullable_vmar_handle: zircon_types::zx_handle_t,
-    pub nullable_fifo_handle: zircon_types::zx_handle_t,
-    pub nullable_guest_handle: zircon_types::zx_handle_t,
-    pub nullable_timer_handle: zircon_types::zx_handle_t,
-    pub nullable_profile_handle: zircon_types::zx_handle_t,
-    pub nullable_vcpu_handle: zircon_types::zx_handle_t,
-    pub nullable_iommu_handle: zircon_types::zx_handle_t,
-    pub nullable_pager_handle: zircon_types::zx_handle_t,
-    pub nullable_pmt_handle: zircon_types::zx_handle_t,
-    pub nullable_clock_handle: zircon_types::zx_handle_t,
-}
-
-#[repr(C)]
-#[derive(Copy, Clone, Debug, PartialEq)]
-pub struct arrays {
-    pub b_0: [bool; 1 as usize],
-    pub i8_0: [i8; 1 as usize],
-    pub i16_0: [i16; 1 as usize],
-    pub i32_0: [i32; 1 as usize],
-    pub i64_0: [i64; 1 as usize],
-    pub u8_0: [u8; 1 as usize],
-    pub u16_0: [u16; 1 as usize],
-    pub u32_0: [u32; 1 as usize],
-    pub u64_0: [u64; 1 as usize],
-    pub f32_0: [f32; 1 as usize],
-    pub f64_0: [f64; 1 as usize],
-    pub handle_0: [zircon_types::zx_handle_t; 1 as usize],
-    pub b_1: [bool; 32 as usize],
-    pub i8_1: [i8; 32 as usize],
-    pub i16_1: [i16; 32 as usize],
-    pub i32_1: [i32; 32 as usize],
-    pub i64_1: [i64; 32 as usize],
-    pub u8_1: [u8; 32 as usize],
-    pub u16_1: [u16; 32 as usize],
-    pub u32_1: [u32; 32 as usize],
-    pub u64_1: [u64; 32 as usize],
-    pub f32_1: [f32; 32 as usize],
-    pub f64_1: [f64; 32 as usize],
-    pub handle_1: [zircon_types::zx_handle_t; 32 as usize],
-    pub b_2: [[bool; 4 as usize]; 32 as usize],
-    pub i8_2: [[i8; 4 as usize]; 32 as usize],
-    pub i16_2: [[i16; 4 as usize]; 32 as usize],
-    pub i32_2: [[i32; 4 as usize]; 32 as usize],
-    pub i64_2: [[i64; 4 as usize]; 32 as usize],
-    pub u8_2: [[u8; 4 as usize]; 32 as usize],
-    pub u16_2: [[u16; 4 as usize]; 32 as usize],
-    pub u32_2: [[u32; 4 as usize]; 32 as usize],
-    pub u64_2: [[u64; 4 as usize]; 32 as usize],
-    pub f32_2: [[f32; 4 as usize]; 32 as usize],
-    pub f64_2: [[f64; 4 as usize]; 32 as usize],
-    pub handle_2: [[zircon_types::zx_handle_t; 4 as usize]; 32 as usize],
-}
-
-#[repr(C)]
-#[derive(Copy, Clone, Debug, PartialEq)]
-pub struct zx_types {
-    pub status: zircon_types::zx_status_t,
-    pub time: zircon_types::zx_time_t,
-    pub duration: zircon_types::zx_duration_t,
-    pub ticks: zircon_types::zx_ticks_t,
-    pub koid: zircon_types::zx_koid_t,
-    pub vaddr: zircon_types::zx_vaddr_t,
-    pub paddr: zircon_types::zx_paddr_t,
-    pub paddr32: zircon_types::zx_paddr32_t,
-    pub gpaddr: zircon_types::zx_gpaddr_t,
-    pub offset: zircon_types::zx_off_t,
-    pub procarg: zircon_types::zx_procarg_t,
-    pub signals: zircon_types::zx_signals_t,
-}
-
-#[repr(C)]
 #[derive(Copy, Clone, Debug)]
 pub struct unions {
     pub s: this_is_a_union,
@@ -420,6 +330,55 @@ pub struct interfaces {
 
 #[repr(C)]
 #[derive(Copy, Clone, Debug, PartialEq)]
+pub struct handles {
+    pub handle_handle: zircon_types::zx_handle_t,
+    pub process_handle: zircon_types::zx_handle_t,
+    pub thread_handle: zircon_types::zx_handle_t,
+    pub vmo_handle: zircon_types::zx_handle_t,
+    pub channel_handle: zircon_types::zx_handle_t,
+    pub event_handle: zircon_types::zx_handle_t,
+    pub port_handle: zircon_types::zx_handle_t,
+    pub interrupt_handle: zircon_types::zx_handle_t,
+    pub socket_handle: zircon_types::zx_handle_t,
+    pub resource_handle: zircon_types::zx_handle_t,
+    pub eventpair_handle: zircon_types::zx_handle_t,
+    pub job_handle: zircon_types::zx_handle_t,
+    pub vmar_handle: zircon_types::zx_handle_t,
+    pub fifo_handle: zircon_types::zx_handle_t,
+    pub guest_handle: zircon_types::zx_handle_t,
+    pub timer_handle: zircon_types::zx_handle_t,
+    pub profile_handle: zircon_types::zx_handle_t,
+    pub vcpu_handle: zircon_types::zx_handle_t,
+    pub iommu_handle: zircon_types::zx_handle_t,
+    pub pager_handle: zircon_types::zx_handle_t,
+    pub pmt_handle: zircon_types::zx_handle_t,
+    pub clock_handle: zircon_types::zx_handle_t,
+    pub nullable_handle_handle: zircon_types::zx_handle_t,
+    pub nullable_process_handle: zircon_types::zx_handle_t,
+    pub nullable_thread_handle: zircon_types::zx_handle_t,
+    pub nullable_vmo_handle: zircon_types::zx_handle_t,
+    pub nullable_channel_handle: zircon_types::zx_handle_t,
+    pub nullable_event_handle: zircon_types::zx_handle_t,
+    pub nullable_port_handle: zircon_types::zx_handle_t,
+    pub nullable_interrupt_handle: zircon_types::zx_handle_t,
+    pub nullable_socket_handle: zircon_types::zx_handle_t,
+    pub nullable_resource_handle: zircon_types::zx_handle_t,
+    pub nullable_eventpair_handle: zircon_types::zx_handle_t,
+    pub nullable_job_handle: zircon_types::zx_handle_t,
+    pub nullable_vmar_handle: zircon_types::zx_handle_t,
+    pub nullable_fifo_handle: zircon_types::zx_handle_t,
+    pub nullable_guest_handle: zircon_types::zx_handle_t,
+    pub nullable_timer_handle: zircon_types::zx_handle_t,
+    pub nullable_profile_handle: zircon_types::zx_handle_t,
+    pub nullable_vcpu_handle: zircon_types::zx_handle_t,
+    pub nullable_iommu_handle: zircon_types::zx_handle_t,
+    pub nullable_pager_handle: zircon_types::zx_handle_t,
+    pub nullable_pmt_handle: zircon_types::zx_handle_t,
+    pub nullable_clock_handle: zircon_types::zx_handle_t,
+}
+
+#[repr(C)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub struct default_values {
     pub b1: bool,
     pub b2: bool,
@@ -432,6 +391,47 @@ pub struct default_values {
     pub u32: u32,
     pub u64: u64,
     pub s: *const std::os::raw::c_char,
+}
+
+#[repr(C)]
+#[derive(Copy, Clone, Debug, PartialEq)]
+pub struct arrays {
+    pub b_0: [bool; 1 as usize],
+    pub i8_0: [i8; 1 as usize],
+    pub i16_0: [i16; 1 as usize],
+    pub i32_0: [i32; 1 as usize],
+    pub i64_0: [i64; 1 as usize],
+    pub u8_0: [u8; 1 as usize],
+    pub u16_0: [u16; 1 as usize],
+    pub u32_0: [u32; 1 as usize],
+    pub u64_0: [u64; 1 as usize],
+    pub f32_0: [f32; 1 as usize],
+    pub f64_0: [f64; 1 as usize],
+    pub handle_0: [zircon_types::zx_handle_t; 1 as usize],
+    pub b_1: [bool; 32 as usize],
+    pub i8_1: [i8; 32 as usize],
+    pub i16_1: [i16; 32 as usize],
+    pub i32_1: [i32; 32 as usize],
+    pub i64_1: [i64; 32 as usize],
+    pub u8_1: [u8; 32 as usize],
+    pub u16_1: [u16; 32 as usize],
+    pub u32_1: [u32; 32 as usize],
+    pub u64_1: [u64; 32 as usize],
+    pub f32_1: [f32; 32 as usize],
+    pub f64_1: [f64; 32 as usize],
+    pub handle_1: [zircon_types::zx_handle_t; 32 as usize],
+    pub b_2: [[bool; 4 as usize]; 32 as usize],
+    pub i8_2: [[i8; 4 as usize]; 32 as usize],
+    pub i16_2: [[i16; 4 as usize]; 32 as usize],
+    pub i32_2: [[i32; 4 as usize]; 32 as usize],
+    pub i64_2: [[i64; 4 as usize]; 32 as usize],
+    pub u8_2: [[u8; 4 as usize]; 32 as usize],
+    pub u16_2: [[u16; 4 as usize]; 32 as usize],
+    pub u32_2: [[u32; 4 as usize]; 32 as usize],
+    pub u64_2: [[u64; 4 as usize]; 32 as usize],
+    pub f32_2: [[f32; 4 as usize]; 32 as usize],
+    pub f64_2: [[f64; 4 as usize]; 32 as usize],
+    pub handle_2: [[zircon_types::zx_handle_t; 4 as usize]; 32 as usize],
 }
 
 #[repr(C)]

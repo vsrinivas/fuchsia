@@ -611,13 +611,10 @@ void CodedTypesGenerator::CompileDecl(const flat::Decl* decl) {
 }
 
 void CodedTypesGenerator::CompileCodedTypes() {
-  for (const auto& decl : library_->declaration_order_) {
+  for (const auto& decl : all_libraries_decl_order_) {
     CompileDecl(decl);
   }
-
-  for (const auto& decl : library_->declaration_order_) {
-    if (decl->name.library() != library_)
-      continue;
+  for (const auto& decl : target_library_decl_order_) {
     CompileFields(decl);
   }
 }

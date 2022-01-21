@@ -7,17 +7,6 @@
 namespace test {
 namespace bindingsdenylist {
 namespace testing {
-class ImportsSameNameContext_TestBase
-    : public ::test::bindingsdenylist::ImportsSameNameContext {
- public:
-  virtual ~ImportsSameNameContext_TestBase() {}
-  virtual void NotImplemented_(const std::string& name) = 0;
-  void Unattributed() override { NotImplemented_("Unattributed"); }
-  void AlwaysAppearsInImportingLibrary() override {
-    NotImplemented_("AlwaysAppearsInImportingLibrary");
-  }
-};
-
 class Allowed_TestBase : public ::test::bindingsdenylist::Allowed {
  public:
   virtual ~Allowed_TestBase() {}
@@ -40,6 +29,17 @@ class OnlyCppAndDeps_TestBase
  public:
   virtual ~OnlyCppAndDeps_TestBase() {}
   virtual void NotImplemented_(const std::string& name) = 0;
+};
+
+class ImportsSameNameContext_TestBase
+    : public ::test::bindingsdenylist::ImportsSameNameContext {
+ public:
+  virtual ~ImportsSameNameContext_TestBase() {}
+  virtual void NotImplemented_(const std::string& name) = 0;
+  void Unattributed() override { NotImplemented_("Unattributed"); }
+  void AlwaysAppearsInImportingLibrary() override {
+    NotImplemented_("AlwaysAppearsInImportingLibrary");
+  }
 };
 
 class DenyEachBinding_TestBase

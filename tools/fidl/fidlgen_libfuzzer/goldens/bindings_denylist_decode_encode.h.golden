@@ -13,25 +13,6 @@ inline constexpr ::std::array<::fidl::fuzzing::DecoderEncoderForType, 21>
     test_bindingsdenylist_decoder_encoders = {
 
         ::fidl::fuzzing::DecoderEncoderForType{
-            .fidl_type_name = "::fidl::WireRequest<::test_bindingsdenylist::"
-                              "ImportsSameNameContext::Unattributed>",
-            .has_flexible_envelope = false,
-            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<
-                ::fidl::WireRequest<::test_bindingsdenylist::
-                                        ImportsSameNameContext::Unattributed>>,
-        },
-        ::fidl::fuzzing::DecoderEncoderForType{
-            .fidl_type_name =
-                "::fidl::WireRequest<::test_bindingsdenylist::"
-                "ImportsSameNameContext::AlwaysAppearsInImportingLibrary>",
-            .has_flexible_envelope = false,
-            .decoder_encoder =
-                ::fidl::fuzzing::DecoderEncoderImpl<::fidl::WireRequest<
-                    ::test_bindingsdenylist::ImportsSameNameContext::
-                        AlwaysAppearsInImportingLibrary>>,
-        },
-
-        ::fidl::fuzzing::DecoderEncoderForType{
             .fidl_type_name =
                 "::fidl::WireRequest<::test_bindingsdenylist::"
                 "OnlyLibfuzzerAndDeps::LibfuzzerNeedsNonemptyProtocol>",
@@ -65,6 +46,25 @@ inline constexpr ::std::array<::fidl::fuzzing::DecoderEncoderForType, 21>
             .has_flexible_envelope = false,
             .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<
                 ::test_bindingsdenylist::wire::OnlyAppearsInImportingLibrary>,
+        },
+
+        ::fidl::fuzzing::DecoderEncoderForType{
+            .fidl_type_name = "::fidl::WireRequest<::test_bindingsdenylist::"
+                              "ImportsSameNameContext::Unattributed>",
+            .has_flexible_envelope = false,
+            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<
+                ::fidl::WireRequest<::test_bindingsdenylist::
+                                        ImportsSameNameContext::Unattributed>>,
+        },
+        ::fidl::fuzzing::DecoderEncoderForType{
+            .fidl_type_name =
+                "::fidl::WireRequest<::test_bindingsdenylist::"
+                "ImportsSameNameContext::AlwaysAppearsInImportingLibrary>",
+            .has_flexible_envelope = false,
+            .decoder_encoder =
+                ::fidl::fuzzing::DecoderEncoderImpl<::fidl::WireRequest<
+                    ::test_bindingsdenylist::ImportsSameNameContext::
+                        AlwaysAppearsInImportingLibrary>>,
         },
         ::fidl::fuzzing::DecoderEncoderForType{
             .fidl_type_name = "::test_bindingsdenylist::wire::"

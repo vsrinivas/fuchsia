@@ -6,24 +6,6 @@
 namespace test_bindingsdenylist {
 namespace testing {
 
-class ImportsSameNameContext_TestBase
-    : public ::fidl::WireServer<
-          ::test_bindingsdenylist::ImportsSameNameContext> {
- public:
-  virtual ~ImportsSameNameContext_TestBase() {}
-  virtual void NotImplemented_(const std::string& name,
-                               ::fidl::CompleterBase& completer) = 0;
-  virtual void Unattributed(UnattributedRequestView request,
-                            UnattributedCompleter::Sync& _completer) override {
-    NotImplemented_("Unattributed", _completer);
-  }
-  virtual void AlwaysAppearsInImportingLibrary(
-      AlwaysAppearsInImportingLibraryRequestView request,
-      AlwaysAppearsInImportingLibraryCompleter::Sync& _completer) override {
-    NotImplemented_("AlwaysAppearsInImportingLibrary", _completer);
-  }
-};
-
 class Allowed_TestBase
     : public ::fidl::WireServer<::test_bindingsdenylist::Allowed> {
  public:
@@ -51,6 +33,24 @@ class OnlyCppAndDeps_TestBase
   virtual ~OnlyCppAndDeps_TestBase() {}
   virtual void NotImplemented_(const std::string& name,
                                ::fidl::CompleterBase& completer) = 0;
+};
+
+class ImportsSameNameContext_TestBase
+    : public ::fidl::WireServer<
+          ::test_bindingsdenylist::ImportsSameNameContext> {
+ public:
+  virtual ~ImportsSameNameContext_TestBase() {}
+  virtual void NotImplemented_(const std::string& name,
+                               ::fidl::CompleterBase& completer) = 0;
+  virtual void Unattributed(UnattributedRequestView request,
+                            UnattributedCompleter::Sync& _completer) override {
+    NotImplemented_("Unattributed", _completer);
+  }
+  virtual void AlwaysAppearsInImportingLibrary(
+      AlwaysAppearsInImportingLibraryRequestView request,
+      AlwaysAppearsInImportingLibraryCompleter::Sync& _completer) override {
+    NotImplemented_("AlwaysAppearsInImportingLibrary", _completer);
+  }
 };
 
 class DenyEachBinding_TestBase

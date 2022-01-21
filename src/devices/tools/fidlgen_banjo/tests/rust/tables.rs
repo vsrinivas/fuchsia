@@ -12,6 +12,12 @@ use fuchsia_zircon_types as zircon_types;
 
 #[repr(C)]
 #[derive(Copy, Clone, Debug, PartialEq)]
+pub struct F {
+    // Skipping type Identifier { identifier: CompoundIdentifier("banjo.examples.tables/E"), nullable: false }, see http:://fxbug.dev/82088
+}
+
+#[repr(C)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub struct C {
     pub baz: zircon_types::zx_handle_t,
 }
@@ -20,12 +26,6 @@ pub struct C {
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct D {
     pub qux: C,
-}
-
-#[repr(C)]
-#[derive(Copy, Clone, Debug, PartialEq)]
-pub struct F {
-    // Skipping type Identifier { identifier: CompoundIdentifier("banjo.examples.tables/E"), nullable: false }, see http:://fxbug.dev/82088
 }
 
 #[repr(C)]

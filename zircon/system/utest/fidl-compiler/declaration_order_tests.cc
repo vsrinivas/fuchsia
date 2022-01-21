@@ -369,7 +369,26 @@ type #Xunion# = union {
   }
 }
 
-TEST(DeclarationOrderTest, GoodDeclsAcrossLibraries) {
+TEST(DeclarationOrderTest, GoodAllLibrariesOrderSingle) {
+  for (int i = 0; i < kRepeatTestCount; i++) {
+    Namer namer;
+    auto source = namer.mangle(R"FIDL(
+library example;
+
+type #Foo# = struct {
+  bar vector<#Bar#>;
+};
+
+type #Bar# = struct {};
+
+)FIDL");
+    TestLibrary library(source);
+    ASSERT_COMPILED(library);
+    ASSERT_EQ(library.declaration_order(), library.all_libraries()->DeclarationOrder());
+  }
+}
+
+TEST(DeclarationOrderTest, GoodAllLibrariesOrderMultiple) {
   for (int i = 0; i < kRepeatTestCount; i++) {
     SharedAmongstLibraries shared;
     TestLibrary dependency("dependency.fidl", R"FIDL(library dependency;
@@ -395,13 +414,24 @@ protocol ExampleDecl1 {
                         &shared);
     ASSERT_COMPILED(library);
 
-    auto decl_order = library.declaration_order();
-    ASSERT_EQ(5, decl_order.size());
-    ASSERT_DECL_FQ_NAME(decl_order[0], "example/ExampleDecl2");
-    ASSERT_DECL_FQ_NAME(decl_order[1], "example/ExampleDecl0");
-    ASSERT_DECL_FQ_NAME(decl_order[2], "dependency/ExampleDecl1");
-    ASSERT_DECL_FQ_NAME(decl_order[3], "example/ExampleDecl1MethodRequest");
-    ASSERT_DECL_FQ_NAME(decl_order[4], "example/ExampleDecl1");
+    auto dependency_decl_order = dependency.declaration_order();
+    ASSERT_EQ(1, dependency_decl_order.size());
+    ASSERT_DECL_FQ_NAME(dependency_decl_order[0], "dependency/ExampleDecl1");
+
+    auto library_decl_order = library.declaration_order();
+    ASSERT_EQ(4, library_decl_order.size());
+    ASSERT_DECL_FQ_NAME(library_decl_order[0], "example/ExampleDecl2");
+    ASSERT_DECL_FQ_NAME(library_decl_order[1], "example/ExampleDecl1MethodRequest");
+    ASSERT_DECL_FQ_NAME(library_decl_order[2], "example/ExampleDecl1");
+    ASSERT_DECL_FQ_NAME(library_decl_order[3], "example/ExampleDecl0");
+
+    auto all_decl_order = shared.all_libraries.DeclarationOrder();
+    ASSERT_EQ(5, all_decl_order.size());
+    ASSERT_DECL_FQ_NAME(all_decl_order[0], "dependency/ExampleDecl1");
+    ASSERT_DECL_FQ_NAME(all_decl_order[1], "example/ExampleDecl2");
+    ASSERT_DECL_FQ_NAME(all_decl_order[2], "example/ExampleDecl1MethodRequest");
+    ASSERT_DECL_FQ_NAME(all_decl_order[3], "example/ExampleDecl1");
+    ASSERT_DECL_FQ_NAME(all_decl_order[4], "example/ExampleDecl0");
   }
 }
 

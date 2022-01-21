@@ -5623,7 +5623,6 @@
   ],
   "type_alias_declarations": [],
   "declaration_order": [
-    "test.bindingsdenylist/ImportsSameNameContext",
     "test.bindingsdenylist/ShouldNeverAppearInAnyBinding9",
     "test.bindingsdenylist/ShouldNeverAppearInAnyBinding8",
     "test.bindingsdenylist/ShouldNeverAppearInAnyBinding7",
@@ -5650,6 +5649,7 @@
     "test.bindingsdenylist/OnlyCppAndDeps",
     "test.bindingsdenylist/MemberOnlyAppearsInImportingLibrary",
     "test.bindingsdenylist/OnlyAppearsInImportingLibrary",
+    "test.bindingsdenylist/ImportsSameNameContext",
     "test.bindingsdenylist/DenyEachBinding_OnlyDenySyzkaller_Response",
     "test.bindingsdenylist/DenyEachBinding_OnlyDenySyzkaller_Result",
     "test.bindingsdenylist/DenyEachBindingOnlyDenySyzkallerTopResponse",

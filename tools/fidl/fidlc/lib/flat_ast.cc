@@ -510,6 +510,15 @@ Library* Libraries::Lookup(const std::vector<std::string_view>& library_name) co
   return iter == libraries_by_name_.end() ? nullptr : iter->second;
 }
 
+void Libraries::Remove(const Library* library) {
+  [[maybe_unused]] auto num_removed = libraries_by_name_.erase(library->name());
+  assert(num_removed == 1 && "library not in libraries_by_name_");
+  auto iter = std::find_if(libraries_.begin(), libraries_.end(),
+                           [&](auto& lib) { return lib.get() == library; });
+  assert(iter != libraries_.end() && "library not in libraries_");
+  libraries_.erase(iter);
+}
+
 AttributeSchema& Libraries::AddAttributeSchema(std::string name) {
   auto [it, inserted] = attribute_schemas_.try_emplace(std::move(name));
   assert(inserted && "do not add schemas twice");
@@ -536,6 +545,15 @@ std::set<const Library*, LibraryComparator> Libraries::Unused() const {
     }
   }
   return unused;
+}
+
+std::vector<const Decl*> Libraries::DeclarationOrder() const {
+  std::vector<const Decl*> order;
+  for (auto& library : libraries_) {
+    order.insert(order.end(), library->declaration_order().begin(),
+                 library->declaration_order().end());
+  };
+  return order;
 }
 
 static size_t EditDistance(std::string_view sequence1, std::string_view sequence2) {

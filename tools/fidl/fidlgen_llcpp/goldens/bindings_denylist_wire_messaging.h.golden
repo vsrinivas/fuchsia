@@ -19,402 +19,17 @@
 #include <fidl/test.dependent/cpp/wire_messaging.h>
 
 namespace test_bindingsdenylist {
-class ImportsSameNameContext;
-
 class Allowed;
 
 class OnlyLibfuzzerAndDeps;
 
 class OnlyCppAndDeps;
 
+class ImportsSameNameContext;
+
 class DenyEachBinding;
 
-__LOCAL extern "C" const fidl_type_t
-    test_bindingsdenylist_ImportsSameNameContextUnattributedRequestMessageTable;
-
-__LOCAL extern "C" const fidl_type_t
-    test_bindingsdenylist_ImportsSameNameContextUnattributedResponseMessageTable;
-
-__LOCAL extern "C" const fidl_type_t
-    test_bindingsdenylist_ImportsSameNameContextAlwaysAppearsInImportingLibraryRequestMessageTable;
-
-__LOCAL extern "C" const fidl_type_t
-    test_bindingsdenylist_ImportsSameNameContextAlwaysAppearsInImportingLibraryResponseMessageTable;
 }  // namespace test_bindingsdenylist
-template <>
-struct ::fidl::internal::WireOrdinal<
-    ::test_bindingsdenylist::ImportsSameNameContext::Unattributed>
-    final {
-  static constexpr uint64_t value = 475191379775102607lu;
-};
-template <>
-struct ::fidl::internal::WireOrdinal<
-    ::test_bindingsdenylist::ImportsSameNameContext::
-        AlwaysAppearsInImportingLibrary>
-    final {
-  static constexpr uint64_t value = 2914965219653596920lu;
-};
-
-namespace test_bindingsdenylist {}  // namespace test_bindingsdenylist
-#ifdef __Fuchsia__
-
-template <>
-struct ::fidl::internal::ProtocolDetails<
-    ::test_bindingsdenylist::ImportsSameNameContext> {};
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-
-template <>
-struct ::fidl::internal::WireServerDispatcher<
-    ::test_bindingsdenylist::ImportsSameNameContext>
-    final {
-  WireServerDispatcher() = delete;
-  static ::fidl::DispatchResult TryDispatch(
-      ::fidl::WireServer<::test_bindingsdenylist::ImportsSameNameContext>* impl,
-      ::fidl::IncomingMessage& msg,
-      internal::IncomingTransportContext transport_context,
-      ::fidl::Transaction* txn);
-  static void Dispatch(
-      ::fidl::WireServer<::test_bindingsdenylist::ImportsSameNameContext>* impl,
-      ::fidl::IncomingMessage&& msg,
-      internal::IncomingTransportContext transport_context,
-      ::fidl::Transaction* txn);
-
- private:
-  static const ::fidl::internal::MethodEntry entries_[];
-  static const ::fidl::internal::MethodEntry* entries_end_;
-};
-#endif  // __Fuchsia__
-
-template <>
-struct ::fidl::WireRequest<
-    ::test_bindingsdenylist::ImportsSameNameContext::Unattributed>
-    final {
-  FIDL_ALIGNDECL
-  fidl_message_header_t _hdr;
-
-  WireRequest() { _InitHeader(); }
-
-  static constexpr const fidl_type_t* Type =
-      &::fidl::_llcpp_coding_AnyZeroArgMessageTable;
-  static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 16;
-  static constexpr uint32_t PrimarySizeV1 = 16;
-  static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t MaxOutOfLineV1 = 0;
-  static constexpr bool HasFlexibleEnvelope = false;
-  static constexpr bool HasPointer = false;
-  static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
-      ::fidl::internal::TransactionalMessageKind::kRequest;
-
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-
- public:
-  class DecodedMessage;
-
- private:
-  void _InitHeader();
-};
-template <>
-struct ::fidl::WireRequest<::test_bindingsdenylist::ImportsSameNameContext::
-                               AlwaysAppearsInImportingLibrary>
-    final {
-  FIDL_ALIGNDECL
-  fidl_message_header_t _hdr;
-
-  WireRequest() { _InitHeader(); }
-
-  static constexpr const fidl_type_t* Type =
-      &::fidl::_llcpp_coding_AnyZeroArgMessageTable;
-  static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 16;
-  static constexpr uint32_t PrimarySizeV1 = 16;
-  static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t MaxOutOfLineV1 = 0;
-  static constexpr bool HasFlexibleEnvelope = false;
-  static constexpr bool HasPointer = false;
-  static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
-      ::fidl::internal::TransactionalMessageKind::kRequest;
-
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-
- public:
-  class DecodedMessage;
-
- private:
-  void _InitHeader();
-};
-#ifdef __Fuchsia__
-
-template <>
-class ::fidl::WireResult<
-    ::test_bindingsdenylist::ImportsSameNameContext::Unattributed>
-    final : public ::fidl::Result {
- public:
-  WireResult(
-      ::fidl::UnownedClientEnd<::test_bindingsdenylist::ImportsSameNameContext>
-          client,
-      ::fidl::WireRequest<
-          ::test_bindingsdenylist::ImportsSameNameContext::Unattributed>*
-          request);
-  explicit WireResult(const ::fidl::Result& result) : ::fidl::Result(result) {}
-  WireResult(WireResult&&) = delete;
-  WireResult(const WireResult&) = delete;
-  WireResult* operator=(WireResult&&) = delete;
-  WireResult* operator=(const WireResult&) = delete;
-  ~WireResult() = default;
-
- private:
-};
-template <>
-class ::fidl::WireUnownedResult<
-    ::test_bindingsdenylist::ImportsSameNameContext::Unattributed>
-    final : public ::fidl::Result {
- public:
-  explicit WireUnownedResult(
-      ::fidl::UnownedClientEnd<::test_bindingsdenylist::ImportsSameNameContext>
-          client_end,
-      ::fidl::internal::AnyBufferAllocator& allocator,
-      ::fidl::WireRequest<
-          ::test_bindingsdenylist::ImportsSameNameContext::Unattributed>*
-          request);
-  explicit WireUnownedResult(const ::fidl::Result& result)
-      : ::fidl::Result(result) {}
-  WireUnownedResult(WireUnownedResult&&) = delete;
-  WireUnownedResult(const WireUnownedResult&) = delete;
-  WireUnownedResult* operator=(WireUnownedResult&&) = delete;
-  WireUnownedResult* operator=(const WireUnownedResult&) = delete;
-  ~WireUnownedResult() = default;
-};
-template <>
-class ::fidl::WireResult<::test_bindingsdenylist::ImportsSameNameContext::
-                             AlwaysAppearsInImportingLibrary>
-    final : public ::fidl::Result {
- public:
-  WireResult(
-      ::fidl::UnownedClientEnd<::test_bindingsdenylist::ImportsSameNameContext>
-          client,
-      ::fidl::WireRequest<::test_bindingsdenylist::ImportsSameNameContext::
-                              AlwaysAppearsInImportingLibrary>* request);
-  explicit WireResult(const ::fidl::Result& result) : ::fidl::Result(result) {}
-  WireResult(WireResult&&) = delete;
-  WireResult(const WireResult&) = delete;
-  WireResult* operator=(WireResult&&) = delete;
-  WireResult* operator=(const WireResult&) = delete;
-  ~WireResult() = default;
-
- private:
-};
-template <>
-class ::fidl::WireUnownedResult<
-    ::test_bindingsdenylist::ImportsSameNameContext::
-        AlwaysAppearsInImportingLibrary>
-    final : public ::fidl::Result {
- public:
-  explicit WireUnownedResult(
-      ::fidl::UnownedClientEnd<::test_bindingsdenylist::ImportsSameNameContext>
-          client_end,
-      ::fidl::internal::AnyBufferAllocator& allocator,
-      ::fidl::WireRequest<::test_bindingsdenylist::ImportsSameNameContext::
-                              AlwaysAppearsInImportingLibrary>* request);
-  explicit WireUnownedResult(const ::fidl::Result& result)
-      : ::fidl::Result(result) {}
-  WireUnownedResult(WireUnownedResult&&) = delete;
-  WireUnownedResult(const WireUnownedResult&) = delete;
-  WireUnownedResult* operator=(WireUnownedResult&&) = delete;
-  WireUnownedResult* operator=(const WireUnownedResult&) = delete;
-  ~WireUnownedResult() = default;
-};
-template <>
-class ::fidl::internal::WireEventHandlerInterface<
-    ::test_bindingsdenylist::ImportsSameNameContext> {
- public:
-  WireEventHandlerInterface() = default;
-  virtual ~WireEventHandlerInterface() = default;
-};
-
-template <>
-class ::fidl::WireAsyncEventHandler<
-    ::test_bindingsdenylist::ImportsSameNameContext>
-    : public ::fidl::internal::WireEventHandlerInterface<
-          ::test_bindingsdenylist::ImportsSameNameContext>,
-      public ::fidl::internal::AsyncEventHandler {
- public:
-  WireAsyncEventHandler() = default;
-};
-
-template <>
-class ::fidl::WireSyncEventHandler<
-    ::test_bindingsdenylist::ImportsSameNameContext>
-    : public ::fidl::internal::WireEventHandlerInterface<
-          ::test_bindingsdenylist::ImportsSameNameContext> {
- public:
-  WireSyncEventHandler() = default;
-
-  // Method called when an unknown event is found. This methods gives the status
-  // which, in this case, is returned by HandleOneEvent.
-  virtual zx_status_t Unknown() = 0;
-
-  // Handle all possible events defined in this protocol.
-  // Blocks to consume exactly one message from the channel, then call the
-  // corresponding virtual method.
-  ::fidl::Result HandleOneEvent(
-      ::fidl::UnownedClientEnd<::test_bindingsdenylist::ImportsSameNameContext>
-          client_end);
-};
-
-template <>
-class ::fidl::internal::WireEventDispatcher<
-    ::test_bindingsdenylist::ImportsSameNameContext>
-    final : public ::fidl::internal::IncomingEventDispatcher<
-                ::fidl::WireAsyncEventHandler<
-                    ::test_bindingsdenylist::ImportsSameNameContext>> {
- public:
-  explicit WireEventDispatcher(
-      ::fidl::WireAsyncEventHandler<
-          ::test_bindingsdenylist::ImportsSameNameContext>* event_handler)
-      : IncomingEventDispatcher(event_handler) {}
-
- private:
-  std::optional<::fidl::UnbindInfo> DispatchEvent(
-      ::fidl::IncomingMessage& msg,
-      ::fidl::internal::IncomingTransportContext transport_context) override;
-};
-
-// Methods to make a sync FIDL call directly on an unowned handle or a
-// const reference to a
-// |fidl::ClientEnd<::test_bindingsdenylist::ImportsSameNameContext>|, avoiding
-// setting up a client.
-template <>
-class ::fidl::internal::WireSyncClientImpl<
-    ::test_bindingsdenylist::ImportsSameNameContext>
-    final : public ::fidl::internal::SyncEndpointManagedVeneer<
-                ::fidl::internal::WireSyncClientImpl<
-                    ::test_bindingsdenylist::ImportsSameNameContext>> {
- public:
-  // Allocates 16 bytes of message buffer on the stack. No heap allocation
-  // necessary.
-  ::fidl::WireResult<
-      ::test_bindingsdenylist::ImportsSameNameContext::Unattributed>
-  Unattributed() {
-    ::fidl::WireRequest<
-        ::test_bindingsdenylist::ImportsSameNameContext::Unattributed>
-        _request{};
-    return ::fidl::WireResult<
-        ::test_bindingsdenylist::ImportsSameNameContext::Unattributed>(
-        _client_end(), &_request);
-  }
-
-  // Allocates 16 bytes of message buffer on the stack. No heap allocation
-  // necessary.
-  ::fidl::WireResult<::test_bindingsdenylist::ImportsSameNameContext::
-                         AlwaysAppearsInImportingLibrary>
-  AlwaysAppearsInImportingLibrary() {
-    ::fidl::WireRequest<::test_bindingsdenylist::ImportsSameNameContext::
-                            AlwaysAppearsInImportingLibrary>
-        _request{};
-    return ::fidl::WireResult<::test_bindingsdenylist::ImportsSameNameContext::
-                                  AlwaysAppearsInImportingLibrary>(
-        _client_end(), &_request);
-  }
-
- private:
-  ::fidl::UnownedClientEnd<::test_bindingsdenylist::ImportsSameNameContext>
-  _client_end() const {
-    return ::fidl::UnownedClientEnd<
-        ::test_bindingsdenylist::ImportsSameNameContext>(
-        _transport().get<::fidl::internal::ChannelTransport>());
-  }
-};
-
-template <>
-class ::fidl::internal::WireSyncBufferClientImpl<
-    ::test_bindingsdenylist::ImportsSameNameContext>
-    final : public ::fidl::internal::SyncEndpointBufferVeneer<
-                ::fidl::internal::WireSyncBufferClientImpl<
-                    ::test_bindingsdenylist::ImportsSameNameContext>> {
- public:
-  // Caller provides the backing storage for FIDL message via an argument to
-  // `.buffer()`.
-  ::fidl::WireUnownedResult<
-      ::test_bindingsdenylist::ImportsSameNameContext::Unattributed>
-  Unattributed() {
-    ::fidl::WireRequest<
-        ::test_bindingsdenylist::ImportsSameNameContext::Unattributed>
-        _request{};
-    return ::fidl::WireUnownedResult<
-        ::test_bindingsdenylist::ImportsSameNameContext::Unattributed>(
-        _client_end(), _allocator(), &_request);
-  }
-
-  // Caller provides the backing storage for FIDL message via an argument to
-  // `.buffer()`.
-  ::fidl::WireUnownedResult<::test_bindingsdenylist::ImportsSameNameContext::
-                                AlwaysAppearsInImportingLibrary>
-  AlwaysAppearsInImportingLibrary() {
-    ::fidl::WireRequest<::test_bindingsdenylist::ImportsSameNameContext::
-                            AlwaysAppearsInImportingLibrary>
-        _request{};
-    return ::fidl::WireUnownedResult<
-        ::test_bindingsdenylist::ImportsSameNameContext::
-            AlwaysAppearsInImportingLibrary>(_client_end(), _allocator(),
-                                             &_request);
-  }
-
- private:
-  ::fidl::UnownedClientEnd<::test_bindingsdenylist::ImportsSameNameContext>
-  _client_end() const {
-    return ::fidl::UnownedClientEnd<
-        ::test_bindingsdenylist::ImportsSameNameContext>(
-        _transport().get<::fidl::internal::ChannelTransport>());
-  }
-};
-
-// Pure-virtual interface to be implemented by a server.
-// This interface uses typed channels (i.e. |fidl::ClientEnd<SomeProtocol>|
-// and |fidl::ServerEnd<SomeProtocol>|).
-template <>
-class ::fidl::WireServer<::test_bindingsdenylist::ImportsSameNameContext>
-    : public ::fidl::internal::IncomingMessageDispatcher {
- public:
-  WireServer() = default;
-  virtual ~WireServer() = default;
-
-  // The FIDL protocol type that is implemented by this server.
-  using _EnclosingProtocol = ::test_bindingsdenylist::ImportsSameNameContext;
-
-  using UnattributedCompleter = ::fidl::internal::WireCompleter<
-      ::test_bindingsdenylist::ImportsSameNameContext::Unattributed>;
-  using UnattributedRequestView = ::fidl::internal::WireRequestView<
-      ::test_bindingsdenylist::ImportsSameNameContext::Unattributed>;
-
-  virtual void Unattributed(UnattributedRequestView request,
-                            UnattributedCompleter::Sync& _completer) = 0;
-
-  using AlwaysAppearsInImportingLibraryCompleter =
-      ::fidl::internal::WireCompleter<
-          ::test_bindingsdenylist::ImportsSameNameContext::
-              AlwaysAppearsInImportingLibrary>;
-  using AlwaysAppearsInImportingLibraryRequestView =
-      ::fidl::internal::WireRequestView<
-          ::test_bindingsdenylist::ImportsSameNameContext::
-              AlwaysAppearsInImportingLibrary>;
-
-  virtual void AlwaysAppearsInImportingLibrary(
-      AlwaysAppearsInImportingLibraryRequestView request,
-      AlwaysAppearsInImportingLibraryCompleter::Sync& _completer) = 0;
-
- private:
-  void dispatch_message(
-      ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
-      ::fidl::internal::IncomingTransportContext transport_context) final;
-};
-#endif  // __Fuchsia__
-
-namespace test_bindingsdenylist {}  // namespace test_bindingsdenylist
 #ifdef __Fuchsia__
 
 template <>
@@ -1141,6 +756,392 @@ class ::fidl::WireServer<::test_bindingsdenylist::OnlyCppAndDeps>
 
   // The FIDL protocol type that is implemented by this server.
   using _EnclosingProtocol = ::test_bindingsdenylist::OnlyCppAndDeps;
+
+ private:
+  void dispatch_message(
+      ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
+      ::fidl::internal::IncomingTransportContext transport_context) final;
+};
+#endif  // __Fuchsia__
+
+namespace test_bindingsdenylist {
+__LOCAL extern "C" const fidl_type_t
+    test_bindingsdenylist_ImportsSameNameContextUnattributedRequestMessageTable;
+
+__LOCAL extern "C" const fidl_type_t
+    test_bindingsdenylist_ImportsSameNameContextUnattributedResponseMessageTable;
+
+__LOCAL extern "C" const fidl_type_t
+    test_bindingsdenylist_ImportsSameNameContextAlwaysAppearsInImportingLibraryRequestMessageTable;
+
+__LOCAL extern "C" const fidl_type_t
+    test_bindingsdenylist_ImportsSameNameContextAlwaysAppearsInImportingLibraryResponseMessageTable;
+}  // namespace test_bindingsdenylist
+template <>
+struct ::fidl::internal::WireOrdinal<
+    ::test_bindingsdenylist::ImportsSameNameContext::Unattributed>
+    final {
+  static constexpr uint64_t value = 475191379775102607lu;
+};
+template <>
+struct ::fidl::internal::WireOrdinal<
+    ::test_bindingsdenylist::ImportsSameNameContext::
+        AlwaysAppearsInImportingLibrary>
+    final {
+  static constexpr uint64_t value = 2914965219653596920lu;
+};
+
+namespace test_bindingsdenylist {}  // namespace test_bindingsdenylist
+#ifdef __Fuchsia__
+
+template <>
+struct ::fidl::internal::ProtocolDetails<
+    ::test_bindingsdenylist::ImportsSameNameContext> {};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+template <>
+struct ::fidl::internal::WireServerDispatcher<
+    ::test_bindingsdenylist::ImportsSameNameContext>
+    final {
+  WireServerDispatcher() = delete;
+  static ::fidl::DispatchResult TryDispatch(
+      ::fidl::WireServer<::test_bindingsdenylist::ImportsSameNameContext>* impl,
+      ::fidl::IncomingMessage& msg,
+      internal::IncomingTransportContext transport_context,
+      ::fidl::Transaction* txn);
+  static void Dispatch(
+      ::fidl::WireServer<::test_bindingsdenylist::ImportsSameNameContext>* impl,
+      ::fidl::IncomingMessage&& msg,
+      internal::IncomingTransportContext transport_context,
+      ::fidl::Transaction* txn);
+
+ private:
+  static const ::fidl::internal::MethodEntry entries_[];
+  static const ::fidl::internal::MethodEntry* entries_end_;
+};
+#endif  // __Fuchsia__
+
+template <>
+struct ::fidl::WireRequest<
+    ::test_bindingsdenylist::ImportsSameNameContext::Unattributed>
+    final {
+  FIDL_ALIGNDECL
+  fidl_message_header_t _hdr;
+
+  WireRequest() { _InitHeader(); }
+
+  static constexpr const fidl_type_t* Type =
+      &::fidl::_llcpp_coding_AnyZeroArgMessageTable;
+  static constexpr uint32_t MaxNumHandles = 0;
+  static constexpr uint32_t PrimarySize = 16;
+  static constexpr uint32_t PrimarySizeV1 = 16;
+  static constexpr uint32_t MaxOutOfLine = 0;
+  static constexpr uint32_t MaxOutOfLineV1 = 0;
+  static constexpr bool HasFlexibleEnvelope = false;
+  static constexpr bool HasPointer = false;
+  static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
+      ::fidl::internal::TransactionalMessageKind::kRequest;
+
+  class UnownedEncodedMessage;
+  class OwnedEncodedMessage;
+
+ public:
+  class DecodedMessage;
+
+ private:
+  void _InitHeader();
+};
+template <>
+struct ::fidl::WireRequest<::test_bindingsdenylist::ImportsSameNameContext::
+                               AlwaysAppearsInImportingLibrary>
+    final {
+  FIDL_ALIGNDECL
+  fidl_message_header_t _hdr;
+
+  WireRequest() { _InitHeader(); }
+
+  static constexpr const fidl_type_t* Type =
+      &::fidl::_llcpp_coding_AnyZeroArgMessageTable;
+  static constexpr uint32_t MaxNumHandles = 0;
+  static constexpr uint32_t PrimarySize = 16;
+  static constexpr uint32_t PrimarySizeV1 = 16;
+  static constexpr uint32_t MaxOutOfLine = 0;
+  static constexpr uint32_t MaxOutOfLineV1 = 0;
+  static constexpr bool HasFlexibleEnvelope = false;
+  static constexpr bool HasPointer = false;
+  static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
+      ::fidl::internal::TransactionalMessageKind::kRequest;
+
+  class UnownedEncodedMessage;
+  class OwnedEncodedMessage;
+
+ public:
+  class DecodedMessage;
+
+ private:
+  void _InitHeader();
+};
+#ifdef __Fuchsia__
+
+template <>
+class ::fidl::WireResult<
+    ::test_bindingsdenylist::ImportsSameNameContext::Unattributed>
+    final : public ::fidl::Result {
+ public:
+  WireResult(
+      ::fidl::UnownedClientEnd<::test_bindingsdenylist::ImportsSameNameContext>
+          client,
+      ::fidl::WireRequest<
+          ::test_bindingsdenylist::ImportsSameNameContext::Unattributed>*
+          request);
+  explicit WireResult(const ::fidl::Result& result) : ::fidl::Result(result) {}
+  WireResult(WireResult&&) = delete;
+  WireResult(const WireResult&) = delete;
+  WireResult* operator=(WireResult&&) = delete;
+  WireResult* operator=(const WireResult&) = delete;
+  ~WireResult() = default;
+
+ private:
+};
+template <>
+class ::fidl::WireUnownedResult<
+    ::test_bindingsdenylist::ImportsSameNameContext::Unattributed>
+    final : public ::fidl::Result {
+ public:
+  explicit WireUnownedResult(
+      ::fidl::UnownedClientEnd<::test_bindingsdenylist::ImportsSameNameContext>
+          client_end,
+      ::fidl::internal::AnyBufferAllocator& allocator,
+      ::fidl::WireRequest<
+          ::test_bindingsdenylist::ImportsSameNameContext::Unattributed>*
+          request);
+  explicit WireUnownedResult(const ::fidl::Result& result)
+      : ::fidl::Result(result) {}
+  WireUnownedResult(WireUnownedResult&&) = delete;
+  WireUnownedResult(const WireUnownedResult&) = delete;
+  WireUnownedResult* operator=(WireUnownedResult&&) = delete;
+  WireUnownedResult* operator=(const WireUnownedResult&) = delete;
+  ~WireUnownedResult() = default;
+};
+template <>
+class ::fidl::WireResult<::test_bindingsdenylist::ImportsSameNameContext::
+                             AlwaysAppearsInImportingLibrary>
+    final : public ::fidl::Result {
+ public:
+  WireResult(
+      ::fidl::UnownedClientEnd<::test_bindingsdenylist::ImportsSameNameContext>
+          client,
+      ::fidl::WireRequest<::test_bindingsdenylist::ImportsSameNameContext::
+                              AlwaysAppearsInImportingLibrary>* request);
+  explicit WireResult(const ::fidl::Result& result) : ::fidl::Result(result) {}
+  WireResult(WireResult&&) = delete;
+  WireResult(const WireResult&) = delete;
+  WireResult* operator=(WireResult&&) = delete;
+  WireResult* operator=(const WireResult&) = delete;
+  ~WireResult() = default;
+
+ private:
+};
+template <>
+class ::fidl::WireUnownedResult<
+    ::test_bindingsdenylist::ImportsSameNameContext::
+        AlwaysAppearsInImportingLibrary>
+    final : public ::fidl::Result {
+ public:
+  explicit WireUnownedResult(
+      ::fidl::UnownedClientEnd<::test_bindingsdenylist::ImportsSameNameContext>
+          client_end,
+      ::fidl::internal::AnyBufferAllocator& allocator,
+      ::fidl::WireRequest<::test_bindingsdenylist::ImportsSameNameContext::
+                              AlwaysAppearsInImportingLibrary>* request);
+  explicit WireUnownedResult(const ::fidl::Result& result)
+      : ::fidl::Result(result) {}
+  WireUnownedResult(WireUnownedResult&&) = delete;
+  WireUnownedResult(const WireUnownedResult&) = delete;
+  WireUnownedResult* operator=(WireUnownedResult&&) = delete;
+  WireUnownedResult* operator=(const WireUnownedResult&) = delete;
+  ~WireUnownedResult() = default;
+};
+template <>
+class ::fidl::internal::WireEventHandlerInterface<
+    ::test_bindingsdenylist::ImportsSameNameContext> {
+ public:
+  WireEventHandlerInterface() = default;
+  virtual ~WireEventHandlerInterface() = default;
+};
+
+template <>
+class ::fidl::WireAsyncEventHandler<
+    ::test_bindingsdenylist::ImportsSameNameContext>
+    : public ::fidl::internal::WireEventHandlerInterface<
+          ::test_bindingsdenylist::ImportsSameNameContext>,
+      public ::fidl::internal::AsyncEventHandler {
+ public:
+  WireAsyncEventHandler() = default;
+};
+
+template <>
+class ::fidl::WireSyncEventHandler<
+    ::test_bindingsdenylist::ImportsSameNameContext>
+    : public ::fidl::internal::WireEventHandlerInterface<
+          ::test_bindingsdenylist::ImportsSameNameContext> {
+ public:
+  WireSyncEventHandler() = default;
+
+  // Method called when an unknown event is found. This methods gives the status
+  // which, in this case, is returned by HandleOneEvent.
+  virtual zx_status_t Unknown() = 0;
+
+  // Handle all possible events defined in this protocol.
+  // Blocks to consume exactly one message from the channel, then call the
+  // corresponding virtual method.
+  ::fidl::Result HandleOneEvent(
+      ::fidl::UnownedClientEnd<::test_bindingsdenylist::ImportsSameNameContext>
+          client_end);
+};
+
+template <>
+class ::fidl::internal::WireEventDispatcher<
+    ::test_bindingsdenylist::ImportsSameNameContext>
+    final : public ::fidl::internal::IncomingEventDispatcher<
+                ::fidl::WireAsyncEventHandler<
+                    ::test_bindingsdenylist::ImportsSameNameContext>> {
+ public:
+  explicit WireEventDispatcher(
+      ::fidl::WireAsyncEventHandler<
+          ::test_bindingsdenylist::ImportsSameNameContext>* event_handler)
+      : IncomingEventDispatcher(event_handler) {}
+
+ private:
+  std::optional<::fidl::UnbindInfo> DispatchEvent(
+      ::fidl::IncomingMessage& msg,
+      ::fidl::internal::IncomingTransportContext transport_context) override;
+};
+
+// Methods to make a sync FIDL call directly on an unowned handle or a
+// const reference to a
+// |fidl::ClientEnd<::test_bindingsdenylist::ImportsSameNameContext>|, avoiding
+// setting up a client.
+template <>
+class ::fidl::internal::WireSyncClientImpl<
+    ::test_bindingsdenylist::ImportsSameNameContext>
+    final : public ::fidl::internal::SyncEndpointManagedVeneer<
+                ::fidl::internal::WireSyncClientImpl<
+                    ::test_bindingsdenylist::ImportsSameNameContext>> {
+ public:
+  // Allocates 16 bytes of message buffer on the stack. No heap allocation
+  // necessary.
+  ::fidl::WireResult<
+      ::test_bindingsdenylist::ImportsSameNameContext::Unattributed>
+  Unattributed() {
+    ::fidl::WireRequest<
+        ::test_bindingsdenylist::ImportsSameNameContext::Unattributed>
+        _request{};
+    return ::fidl::WireResult<
+        ::test_bindingsdenylist::ImportsSameNameContext::Unattributed>(
+        _client_end(), &_request);
+  }
+
+  // Allocates 16 bytes of message buffer on the stack. No heap allocation
+  // necessary.
+  ::fidl::WireResult<::test_bindingsdenylist::ImportsSameNameContext::
+                         AlwaysAppearsInImportingLibrary>
+  AlwaysAppearsInImportingLibrary() {
+    ::fidl::WireRequest<::test_bindingsdenylist::ImportsSameNameContext::
+                            AlwaysAppearsInImportingLibrary>
+        _request{};
+    return ::fidl::WireResult<::test_bindingsdenylist::ImportsSameNameContext::
+                                  AlwaysAppearsInImportingLibrary>(
+        _client_end(), &_request);
+  }
+
+ private:
+  ::fidl::UnownedClientEnd<::test_bindingsdenylist::ImportsSameNameContext>
+  _client_end() const {
+    return ::fidl::UnownedClientEnd<
+        ::test_bindingsdenylist::ImportsSameNameContext>(
+        _transport().get<::fidl::internal::ChannelTransport>());
+  }
+};
+
+template <>
+class ::fidl::internal::WireSyncBufferClientImpl<
+    ::test_bindingsdenylist::ImportsSameNameContext>
+    final : public ::fidl::internal::SyncEndpointBufferVeneer<
+                ::fidl::internal::WireSyncBufferClientImpl<
+                    ::test_bindingsdenylist::ImportsSameNameContext>> {
+ public:
+  // Caller provides the backing storage for FIDL message via an argument to
+  // `.buffer()`.
+  ::fidl::WireUnownedResult<
+      ::test_bindingsdenylist::ImportsSameNameContext::Unattributed>
+  Unattributed() {
+    ::fidl::WireRequest<
+        ::test_bindingsdenylist::ImportsSameNameContext::Unattributed>
+        _request{};
+    return ::fidl::WireUnownedResult<
+        ::test_bindingsdenylist::ImportsSameNameContext::Unattributed>(
+        _client_end(), _allocator(), &_request);
+  }
+
+  // Caller provides the backing storage for FIDL message via an argument to
+  // `.buffer()`.
+  ::fidl::WireUnownedResult<::test_bindingsdenylist::ImportsSameNameContext::
+                                AlwaysAppearsInImportingLibrary>
+  AlwaysAppearsInImportingLibrary() {
+    ::fidl::WireRequest<::test_bindingsdenylist::ImportsSameNameContext::
+                            AlwaysAppearsInImportingLibrary>
+        _request{};
+    return ::fidl::WireUnownedResult<
+        ::test_bindingsdenylist::ImportsSameNameContext::
+            AlwaysAppearsInImportingLibrary>(_client_end(), _allocator(),
+                                             &_request);
+  }
+
+ private:
+  ::fidl::UnownedClientEnd<::test_bindingsdenylist::ImportsSameNameContext>
+  _client_end() const {
+    return ::fidl::UnownedClientEnd<
+        ::test_bindingsdenylist::ImportsSameNameContext>(
+        _transport().get<::fidl::internal::ChannelTransport>());
+  }
+};
+
+// Pure-virtual interface to be implemented by a server.
+// This interface uses typed channels (i.e. |fidl::ClientEnd<SomeProtocol>|
+// and |fidl::ServerEnd<SomeProtocol>|).
+template <>
+class ::fidl::WireServer<::test_bindingsdenylist::ImportsSameNameContext>
+    : public ::fidl::internal::IncomingMessageDispatcher {
+ public:
+  WireServer() = default;
+  virtual ~WireServer() = default;
+
+  // The FIDL protocol type that is implemented by this server.
+  using _EnclosingProtocol = ::test_bindingsdenylist::ImportsSameNameContext;
+
+  using UnattributedCompleter = ::fidl::internal::WireCompleter<
+      ::test_bindingsdenylist::ImportsSameNameContext::Unattributed>;
+  using UnattributedRequestView = ::fidl::internal::WireRequestView<
+      ::test_bindingsdenylist::ImportsSameNameContext::Unattributed>;
+
+  virtual void Unattributed(UnattributedRequestView request,
+                            UnattributedCompleter::Sync& _completer) = 0;
+
+  using AlwaysAppearsInImportingLibraryCompleter =
+      ::fidl::internal::WireCompleter<
+          ::test_bindingsdenylist::ImportsSameNameContext::
+              AlwaysAppearsInImportingLibrary>;
+  using AlwaysAppearsInImportingLibraryRequestView =
+      ::fidl::internal::WireRequestView<
+          ::test_bindingsdenylist::ImportsSameNameContext::
+              AlwaysAppearsInImportingLibrary>;
+
+  virtual void AlwaysAppearsInImportingLibrary(
+      AlwaysAppearsInImportingLibraryRequestView request,
+      AlwaysAppearsInImportingLibraryCompleter::Sync& _completer) = 0;
 
  private:
   void dispatch_message(
@@ -2850,36 +2851,6 @@ class ::fidl::WireServer<::test_bindingsdenylist::DenyEachBinding>
 namespace fidl {
 
 template <>
-struct IsFidlType<::fidl::WireRequest<
-    ::test_bindingsdenylist::ImportsSameNameContext::Unattributed>>
-    : public std::true_type {};
-template <>
-struct IsFidlMessage<::fidl::WireRequest<
-    ::test_bindingsdenylist::ImportsSameNameContext::Unattributed>>
-    : public std::true_type {};
-static_assert(
-    sizeof(::fidl::WireRequest<
-           ::test_bindingsdenylist::ImportsSameNameContext::Unattributed>) ==
-    ::fidl::WireRequest<::test_bindingsdenylist::ImportsSameNameContext::
-                            Unattributed>::PrimarySize);
-
-template <>
-struct IsFidlType<
-    ::fidl::WireRequest<::test_bindingsdenylist::ImportsSameNameContext::
-                            AlwaysAppearsInImportingLibrary>>
-    : public std::true_type {};
-template <>
-struct IsFidlMessage<
-    ::fidl::WireRequest<::test_bindingsdenylist::ImportsSameNameContext::
-                            AlwaysAppearsInImportingLibrary>>
-    : public std::true_type {};
-static_assert(
-    sizeof(::fidl::WireRequest<::test_bindingsdenylist::ImportsSameNameContext::
-                                   AlwaysAppearsInImportingLibrary>) ==
-    ::fidl::WireRequest<::test_bindingsdenylist::ImportsSameNameContext::
-                            AlwaysAppearsInImportingLibrary>::PrimarySize);
-
-template <>
 struct IsFidlType<
     ::fidl::WireRequest<::test_bindingsdenylist::OnlyLibfuzzerAndDeps::
                             LibfuzzerNeedsNonemptyProtocol>>
@@ -2910,6 +2881,36 @@ static_assert(
                                     LibfuzzerNeedsNonemptyProtocol>) ==
     ::fidl::WireResponse<::test_bindingsdenylist::OnlyLibfuzzerAndDeps::
                              LibfuzzerNeedsNonemptyProtocol>::PrimarySize);
+
+template <>
+struct IsFidlType<::fidl::WireRequest<
+    ::test_bindingsdenylist::ImportsSameNameContext::Unattributed>>
+    : public std::true_type {};
+template <>
+struct IsFidlMessage<::fidl::WireRequest<
+    ::test_bindingsdenylist::ImportsSameNameContext::Unattributed>>
+    : public std::true_type {};
+static_assert(
+    sizeof(::fidl::WireRequest<
+           ::test_bindingsdenylist::ImportsSameNameContext::Unattributed>) ==
+    ::fidl::WireRequest<::test_bindingsdenylist::ImportsSameNameContext::
+                            Unattributed>::PrimarySize);
+
+template <>
+struct IsFidlType<
+    ::fidl::WireRequest<::test_bindingsdenylist::ImportsSameNameContext::
+                            AlwaysAppearsInImportingLibrary>>
+    : public std::true_type {};
+template <>
+struct IsFidlMessage<
+    ::fidl::WireRequest<::test_bindingsdenylist::ImportsSameNameContext::
+                            AlwaysAppearsInImportingLibrary>>
+    : public std::true_type {};
+static_assert(
+    sizeof(::fidl::WireRequest<::test_bindingsdenylist::ImportsSameNameContext::
+                                   AlwaysAppearsInImportingLibrary>) ==
+    ::fidl::WireRequest<::test_bindingsdenylist::ImportsSameNameContext::
+                            AlwaysAppearsInImportingLibrary>::PrimarySize);
 
 template <>
 struct IsFidlType<
@@ -3095,119 +3096,6 @@ static_assert(
 }  // namespace fidl
 template <>
 class ::fidl::internal::WireWeakOnewayClientImpl<
-    ::test_bindingsdenylist::ImportsSameNameContext>
-    : public ::fidl::internal::ClientImplBase {
- public:
-  using ClientImplBase::ClientImplBase;
-
-  // Allocates 16 bytes of message buffer on the stack. No heap allocation
-  // necessary.
-  ::fidl::Result Unattributed();
-
-  // Allocates 16 bytes of message buffer on the stack. No heap allocation
-  // necessary.
-  ::fidl::Result AlwaysAppearsInImportingLibrary();
-};
-
-template <>
-class ::fidl::internal::WireWeakAsyncClientImpl<
-    ::test_bindingsdenylist::ImportsSameNameContext>
-    final : public ::fidl::internal::WireWeakOnewayClientImpl<
-                ::test_bindingsdenylist::ImportsSameNameContext> {
- public:
-  using WireWeakOnewayClientImpl::WireWeakOnewayClientImpl;
-};
-
-template <>
-class ::fidl::internal::WireWeakOnewayBufferClientImpl<
-    ::test_bindingsdenylist::ImportsSameNameContext>
-    : public ::fidl::internal::BufferClientImplBase {
- public:
-  using BufferClientImplBase::BufferClientImplBase;
-
-  // Caller provides the backing storage for FIDL message.
-  ::fidl::Result Unattributed();
-
-  // Caller provides the backing storage for FIDL message.
-  ::fidl::Result AlwaysAppearsInImportingLibrary();
-};
-
-template <>
-class ::fidl::internal::WireWeakAsyncBufferClientImpl<
-    ::test_bindingsdenylist::ImportsSameNameContext>
-    final : public ::fidl::internal::WireWeakOnewayBufferClientImpl<
-                ::test_bindingsdenylist::ImportsSameNameContext> {
- public:
-  using WireWeakOnewayBufferClientImpl::WireWeakOnewayBufferClientImpl;
-};
-template <>
-class ::fidl::internal::WireWeakSyncClientImpl<
-    ::test_bindingsdenylist::ImportsSameNameContext>
-    final : public ::fidl::internal::WireWeakOnewayClientImpl<
-                ::test_bindingsdenylist::ImportsSameNameContext> {
- public:
-  using WireWeakOnewayClientImpl::WireWeakOnewayClientImpl;
-};
-namespace fidl {
-#endif  // __Fuchsia__
-
-}  // namespace fidl
-#ifdef __Fuchsia__
-// |EventSender| owns a server endpoint of a channel speaking
-// the ImportsSameNameContext protocol, and can send events in that protocol.
-template <>
-class ::fidl::WireEventSender<::test_bindingsdenylist::ImportsSameNameContext> {
- public:
-  // Constructs an event sender with an invalid channel.
-  WireEventSender() = default;
-
-  explicit WireEventSender(
-      ::fidl::ServerEnd<::test_bindingsdenylist::ImportsSameNameContext>
-          server_end)
-      : server_end_(std::move(server_end)) {}
-
-  // The underlying server channel endpoint, which may be replaced at run-time.
-  const ::fidl::ServerEnd<::test_bindingsdenylist::ImportsSameNameContext>&
-  server_end() const {
-    return server_end_;
-  }
-  ::fidl::ServerEnd<::test_bindingsdenylist::ImportsSameNameContext>&
-  server_end() {
-    return server_end_;
-  }
-
-  const ::zx::channel& channel() const { return server_end_.channel(); }
-  ::zx::channel& channel() { return server_end_.channel(); }
-
-  // Whether the underlying channel is valid.
-  bool is_valid() const { return server_end_.is_valid(); }
-
- private:
-  ::fidl::ServerEnd<::test_bindingsdenylist::ImportsSameNameContext>
-      server_end_;
-};
-
-template <>
-class ::fidl::internal::WireWeakEventSender<
-    ::test_bindingsdenylist::ImportsSameNameContext>
-    : public ::fidl::internal::WeakEventSenderBase {
- public:
-  using WeakEventSenderBase::WeakEventSenderBase;
-};
-
-template <>
-class ::fidl::internal::WireWeakBufferEventSender<
-    ::test_bindingsdenylist::ImportsSameNameContext>
-    : public ::fidl::internal::WeakBufferEventSenderBase {
- public:
-  using WeakBufferEventSenderBase::WeakBufferEventSenderBase;
-};
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-
-template <>
-class ::fidl::internal::WireWeakOnewayClientImpl<
     ::test_bindingsdenylist::Allowed>
     : public ::fidl::internal::ClientImplBase {
  public:
@@ -3246,8 +3134,10 @@ class ::fidl::internal::WireWeakSyncClientImpl<::test_bindingsdenylist::Allowed>
  public:
   using WireWeakOnewayClientImpl::WireWeakOnewayClientImpl;
 };
+namespace fidl {
 #endif  // __Fuchsia__
 
+}  // namespace fidl
 #ifdef __Fuchsia__
 // |EventSender| owns a server endpoint of a channel speaking
 // the Allowed protocol, and can send events in that protocol.
@@ -3504,6 +3394,117 @@ class ::fidl::internal::WireWeakEventSender<
 template <>
 class ::fidl::internal::WireWeakBufferEventSender<
     ::test_bindingsdenylist::OnlyCppAndDeps>
+    : public ::fidl::internal::WeakBufferEventSenderBase {
+ public:
+  using WeakBufferEventSenderBase::WeakBufferEventSenderBase;
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+template <>
+class ::fidl::internal::WireWeakOnewayClientImpl<
+    ::test_bindingsdenylist::ImportsSameNameContext>
+    : public ::fidl::internal::ClientImplBase {
+ public:
+  using ClientImplBase::ClientImplBase;
+
+  // Allocates 16 bytes of message buffer on the stack. No heap allocation
+  // necessary.
+  ::fidl::Result Unattributed();
+
+  // Allocates 16 bytes of message buffer on the stack. No heap allocation
+  // necessary.
+  ::fidl::Result AlwaysAppearsInImportingLibrary();
+};
+
+template <>
+class ::fidl::internal::WireWeakAsyncClientImpl<
+    ::test_bindingsdenylist::ImportsSameNameContext>
+    final : public ::fidl::internal::WireWeakOnewayClientImpl<
+                ::test_bindingsdenylist::ImportsSameNameContext> {
+ public:
+  using WireWeakOnewayClientImpl::WireWeakOnewayClientImpl;
+};
+
+template <>
+class ::fidl::internal::WireWeakOnewayBufferClientImpl<
+    ::test_bindingsdenylist::ImportsSameNameContext>
+    : public ::fidl::internal::BufferClientImplBase {
+ public:
+  using BufferClientImplBase::BufferClientImplBase;
+
+  // Caller provides the backing storage for FIDL message.
+  ::fidl::Result Unattributed();
+
+  // Caller provides the backing storage for FIDL message.
+  ::fidl::Result AlwaysAppearsInImportingLibrary();
+};
+
+template <>
+class ::fidl::internal::WireWeakAsyncBufferClientImpl<
+    ::test_bindingsdenylist::ImportsSameNameContext>
+    final : public ::fidl::internal::WireWeakOnewayBufferClientImpl<
+                ::test_bindingsdenylist::ImportsSameNameContext> {
+ public:
+  using WireWeakOnewayBufferClientImpl::WireWeakOnewayBufferClientImpl;
+};
+template <>
+class ::fidl::internal::WireWeakSyncClientImpl<
+    ::test_bindingsdenylist::ImportsSameNameContext>
+    final : public ::fidl::internal::WireWeakOnewayClientImpl<
+                ::test_bindingsdenylist::ImportsSameNameContext> {
+ public:
+  using WireWeakOnewayClientImpl::WireWeakOnewayClientImpl;
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+// |EventSender| owns a server endpoint of a channel speaking
+// the ImportsSameNameContext protocol, and can send events in that protocol.
+template <>
+class ::fidl::WireEventSender<::test_bindingsdenylist::ImportsSameNameContext> {
+ public:
+  // Constructs an event sender with an invalid channel.
+  WireEventSender() = default;
+
+  explicit WireEventSender(
+      ::fidl::ServerEnd<::test_bindingsdenylist::ImportsSameNameContext>
+          server_end)
+      : server_end_(std::move(server_end)) {}
+
+  // The underlying server channel endpoint, which may be replaced at run-time.
+  const ::fidl::ServerEnd<::test_bindingsdenylist::ImportsSameNameContext>&
+  server_end() const {
+    return server_end_;
+  }
+  ::fidl::ServerEnd<::test_bindingsdenylist::ImportsSameNameContext>&
+  server_end() {
+    return server_end_;
+  }
+
+  const ::zx::channel& channel() const { return server_end_.channel(); }
+  ::zx::channel& channel() { return server_end_.channel(); }
+
+  // Whether the underlying channel is valid.
+  bool is_valid() const { return server_end_.is_valid(); }
+
+ private:
+  ::fidl::ServerEnd<::test_bindingsdenylist::ImportsSameNameContext>
+      server_end_;
+};
+
+template <>
+class ::fidl::internal::WireWeakEventSender<
+    ::test_bindingsdenylist::ImportsSameNameContext>
+    : public ::fidl::internal::WeakEventSenderBase {
+ public:
+  using WeakEventSenderBase::WeakEventSenderBase;
+};
+
+template <>
+class ::fidl::internal::WireWeakBufferEventSender<
+    ::test_bindingsdenylist::ImportsSameNameContext>
     : public ::fidl::internal::WeakBufferEventSenderBase {
  public:
   using WeakBufferEventSenderBase::WeakBufferEventSenderBase;

@@ -13,13 +13,6 @@ namespace test {
 namespace bindingsdenylist {
 #ifdef __Fuchsia__
 
-class ImportsSameNameContext;
-using ImportsSameNameContextHandle =
-    ::fidl::InterfaceHandle<ImportsSameNameContext>;
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-
 class Allowed;
 using AllowedHandle = ::fidl::InterfaceHandle<Allowed>;
 #endif  // __Fuchsia__
@@ -45,6 +38,13 @@ class MemberOnlyAppearsInImportingLibrary;
 
 class OnlyAppearsInImportingLibrary;
 
+#ifdef __Fuchsia__
+
+class ImportsSameNameContext;
+using ImportsSameNameContextHandle =
+    ::fidl::InterfaceHandle<ImportsSameNameContext>;
+#endif  // __Fuchsia__
+
 class DenyEachBinding_OnlyDenySyzkaller_Response;
 
 class DenyEachBinding_OnlyDenySyzkaller_Result;
@@ -69,74 +69,6 @@ class DenyEachBinding_OnlyDenyDart_Result;
 
 class DenyEachBinding;
 using DenyEachBindingHandle = ::fidl::InterfaceHandle<DenyEachBinding>;
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-
-namespace _internal {
-__LOCAL extern "C" const fidl_type_t
-    test_bindingsdenylist_ImportsSameNameContextUnattributedRequestMessageTable;
-
-__LOCAL extern "C" const fidl_type_t
-    test_bindingsdenylist_ImportsSameNameContextAlwaysAppearsInImportingLibraryRequestMessageTable;
-
-}  // namespace _internal
-class ImportsSameNameContext_RequestEncoder {
- public:
-  static ::fidl::HLCPPOutgoingMessage Unattributed(::fidl::Encoder* _encoder) {
-    fidl_trace(WillHLCPPEncode);
-    switch (_encoder->wire_format()) {
-      case ::fidl::internal::WireFormatVersion::kV1:
-        _encoder->Alloc(16 - sizeof(fidl_message_header_t));
-        break;
-      case ::fidl::internal::WireFormatVersion::kV2:
-        _encoder->Alloc(16 - sizeof(fidl_message_header_t));
-        break;
-    }
-
-    if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
-    } else {
-    }
-
-    fidl_trace(
-        DidHLCPPEncode,
-        &::test::bindingsdenylist::_internal::
-            test_bindingsdenylist_ImportsSameNameContextUnattributedRequestMessageTable,
-        _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
-        _encoder->CurrentHandleCount());
-
-    return _encoder->GetMessage();
-  }
-  static ::fidl::HLCPPOutgoingMessage AlwaysAppearsInImportingLibrary(
-      ::fidl::Encoder* _encoder) {
-    fidl_trace(WillHLCPPEncode);
-    switch (_encoder->wire_format()) {
-      case ::fidl::internal::WireFormatVersion::kV1:
-        _encoder->Alloc(16 - sizeof(fidl_message_header_t));
-        break;
-      case ::fidl::internal::WireFormatVersion::kV2:
-        _encoder->Alloc(16 - sizeof(fidl_message_header_t));
-        break;
-    }
-
-    if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
-    } else {
-    }
-
-    fidl_trace(
-        DidHLCPPEncode,
-        &::test::bindingsdenylist::_internal::
-            test_bindingsdenylist_ImportsSameNameContextAlwaysAppearsInImportingLibraryRequestMessageTable,
-        _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
-        _encoder->CurrentHandleCount());
-
-    return _encoder->GetMessage();
-  }
-};
-
-class ImportsSameNameContext_ResponseEncoder {
- public:
-};
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -285,6 +217,74 @@ inline zx_status_t Clone(
 
 using OnlyAppearsInImportingLibraryPtr =
     ::std::unique_ptr<OnlyAppearsInImportingLibrary>;
+
+#ifdef __Fuchsia__
+
+namespace _internal {
+__LOCAL extern "C" const fidl_type_t
+    test_bindingsdenylist_ImportsSameNameContextUnattributedRequestMessageTable;
+
+__LOCAL extern "C" const fidl_type_t
+    test_bindingsdenylist_ImportsSameNameContextAlwaysAppearsInImportingLibraryRequestMessageTable;
+
+}  // namespace _internal
+class ImportsSameNameContext_RequestEncoder {
+ public:
+  static ::fidl::HLCPPOutgoingMessage Unattributed(::fidl::Encoder* _encoder) {
+    fidl_trace(WillHLCPPEncode);
+    switch (_encoder->wire_format()) {
+      case ::fidl::internal::WireFormatVersion::kV1:
+        _encoder->Alloc(16 - sizeof(fidl_message_header_t));
+        break;
+      case ::fidl::internal::WireFormatVersion::kV2:
+        _encoder->Alloc(16 - sizeof(fidl_message_header_t));
+        break;
+    }
+
+    if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
+    } else {
+    }
+
+    fidl_trace(
+        DidHLCPPEncode,
+        &::test::bindingsdenylist::_internal::
+            test_bindingsdenylist_ImportsSameNameContextUnattributedRequestMessageTable,
+        _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
+        _encoder->CurrentHandleCount());
+
+    return _encoder->GetMessage();
+  }
+  static ::fidl::HLCPPOutgoingMessage AlwaysAppearsInImportingLibrary(
+      ::fidl::Encoder* _encoder) {
+    fidl_trace(WillHLCPPEncode);
+    switch (_encoder->wire_format()) {
+      case ::fidl::internal::WireFormatVersion::kV1:
+        _encoder->Alloc(16 - sizeof(fidl_message_header_t));
+        break;
+      case ::fidl::internal::WireFormatVersion::kV2:
+        _encoder->Alloc(16 - sizeof(fidl_message_header_t));
+        break;
+    }
+
+    if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
+    } else {
+    }
+
+    fidl_trace(
+        DidHLCPPEncode,
+        &::test::bindingsdenylist::_internal::
+            test_bindingsdenylist_ImportsSameNameContextAlwaysAppearsInImportingLibraryRequestMessageTable,
+        _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
+        _encoder->CurrentHandleCount());
+
+    return _encoder->GetMessage();
+  }
+};
+
+class ImportsSameNameContext_ResponseEncoder {
+ public:
+};
+#endif  // __Fuchsia__
 
 class DenyEachBinding_OnlyDenySyzkaller_Response final {
  public:
@@ -2159,26 +2159,6 @@ namespace test {
 namespace bindingsdenylist {
 #ifdef __Fuchsia__
 
-using ImportsSameNameContextPtr = ::fidl::InterfacePtr<ImportsSameNameContext>;
-class ImportsSameNameContext_Proxy;
-class ImportsSameNameContext_Stub;
-class ImportsSameNameContext_EventSender;
-class ImportsSameNameContext_Sync;
-using ImportsSameNameContextSyncPtr =
-    ::fidl::SynchronousInterfacePtr<ImportsSameNameContext>;
-class ImportsSameNameContext_SyncProxy;
-
-namespace internal {
-constexpr uint64_t kImportsSameNameContext_Unattributed_Ordinal =
-    0x698380acfd29e8flu;
-constexpr uint64_t
-    kImportsSameNameContext_AlwaysAppearsInImportingLibrary_Ordinal =
-        0x2874096c521236f8lu;
-}  // namespace internal
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-
 using AllowedPtr = ::fidl::InterfacePtr<Allowed>;
 class Allowed_Proxy;
 class Allowed_Stub;
@@ -2225,6 +2205,26 @@ class OnlyCppAndDeps_SyncProxy;
 
 #ifdef __Fuchsia__
 
+using ImportsSameNameContextPtr = ::fidl::InterfacePtr<ImportsSameNameContext>;
+class ImportsSameNameContext_Proxy;
+class ImportsSameNameContext_Stub;
+class ImportsSameNameContext_EventSender;
+class ImportsSameNameContext_Sync;
+using ImportsSameNameContextSyncPtr =
+    ::fidl::SynchronousInterfacePtr<ImportsSameNameContext>;
+class ImportsSameNameContext_SyncProxy;
+
+namespace internal {
+constexpr uint64_t kImportsSameNameContext_Unattributed_Ordinal =
+    0x698380acfd29e8flu;
+constexpr uint64_t
+    kImportsSameNameContext_AlwaysAppearsInImportingLibrary_Ordinal =
+        0x2874096c521236f8lu;
+}  // namespace internal
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
 using DenyEachBindingPtr = ::fidl::InterfacePtr<DenyEachBinding>;
 class DenyEachBinding_Proxy;
 class DenyEachBinding_Stub;
@@ -2242,108 +2242,6 @@ constexpr uint64_t kDenyEachBinding_OnlyDenyRust_Ordinal = 0x339f67244edd5cb6lu;
 constexpr uint64_t kDenyEachBinding_OnlyDenySyzkaller_Ordinal =
     0x202ee614a749e98alu;
 }  // namespace internal
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-
-class ImportsSameNameContext {
- public:
-  using Proxy_ = ::test::bindingsdenylist::ImportsSameNameContext_Proxy;
-  using Stub_ = ::test::bindingsdenylist::ImportsSameNameContext_Stub;
-  using EventSender_ =
-      ::test::bindingsdenylist::ImportsSameNameContext_EventSender;
-  using Sync_ = ::test::bindingsdenylist::ImportsSameNameContext_Sync;
-  virtual ~ImportsSameNameContext();
-
-  virtual void Unattributed() = 0;
-
-  virtual void AlwaysAppearsInImportingLibrary() = 0;
-};
-
-class ImportsSameNameContext_RequestDecoder {
- public:
-  ImportsSameNameContext_RequestDecoder() = default;
-  virtual ~ImportsSameNameContext_RequestDecoder() = default;
-  static const fidl_type_t* GetType(uint64_t ordinal, bool* out_needs_response);
-  virtual void Unattributed() = 0;
-  virtual void AlwaysAppearsInImportingLibrary() = 0;
-};
-
-class ImportsSameNameContext_ResponseDecoder {
- public:
-  ImportsSameNameContext_ResponseDecoder() = default;
-  virtual ~ImportsSameNameContext_ResponseDecoder() = default;
-  static const fidl_type_t* GetType(uint64_t ordinal);
-};
-
-class ImportsSameNameContext_EventSender {
- public:
-  virtual ~ImportsSameNameContext_EventSender();
-};
-
-class ImportsSameNameContext_Sync {
- public:
-  using Proxy_ = ::test::bindingsdenylist::ImportsSameNameContext_SyncProxy;
-  virtual ~ImportsSameNameContext_Sync();
-  virtual zx_status_t Unattributed() = 0;
-  virtual zx_status_t AlwaysAppearsInImportingLibrary() = 0;
-};
-
-class ImportsSameNameContext_Proxy final : public ::fidl::internal::Proxy,
-                                           public ImportsSameNameContext {
- public:
-  explicit ImportsSameNameContext_Proxy(
-      ::fidl::internal::ProxyController* controller);
-  ~ImportsSameNameContext_Proxy() override;
-
-  zx_status_t Dispatch_(::fidl::HLCPPIncomingMessage message) override;
-  // cts-coverage-fidl-name:test.bindingsdenylist/ImportsSameNameContext.Unattributed
-  void Unattributed() override;
-  // cts-coverage-fidl-name:test.bindingsdenylist/ImportsSameNameContext.AlwaysAppearsInImportingLibrary
-  void AlwaysAppearsInImportingLibrary() override;
-
- private:
-  ImportsSameNameContext_Proxy(
-      const ::test::bindingsdenylist::ImportsSameNameContext_Proxy&) = delete;
-  ImportsSameNameContext_Proxy& operator=(
-      const ::test::bindingsdenylist::ImportsSameNameContext_Proxy&) = delete;
-
-  ::fidl::internal::ProxyController* controller_;
-};
-
-class ImportsSameNameContext_Stub final
-    : public ::fidl::internal::Stub,
-      public ::test::bindingsdenylist::ImportsSameNameContext_EventSender {
- public:
-  typedef class ::test::bindingsdenylist::ImportsSameNameContext
-      ImportsSameNameContext_clazz;
-  explicit ImportsSameNameContext_Stub(
-      ::test::bindingsdenylist::ImportsSameNameContext_Stub::
-          ImportsSameNameContext_clazz* impl);
-  ~ImportsSameNameContext_Stub() override;
-
-  zx_status_t Dispatch_(::fidl::HLCPPIncomingMessage message,
-                        ::fidl::internal::PendingResponse response) override;
-
- private:
-  ::test::bindingsdenylist::ImportsSameNameContext_Stub::
-      ImportsSameNameContext_clazz* impl_;
-};
-
-class ImportsSameNameContext_SyncProxy
-    : public ::test::bindingsdenylist::ImportsSameNameContext_Sync {
- public:
-  explicit ImportsSameNameContext_SyncProxy(::zx::channel channel);
-  ~ImportsSameNameContext_SyncProxy() override;
-  // cts-coverage-fidl-name:test.bindingsdenylist/ImportsSameNameContext.Unattributed
-  zx_status_t Unattributed() override;
-  // cts-coverage-fidl-name:test.bindingsdenylist/ImportsSameNameContext.AlwaysAppearsInImportingLibrary
-  zx_status_t AlwaysAppearsInImportingLibrary() override;
-
- private:
-  ::fidl::internal::SynchronousProxy proxy_;
-  friend class ::fidl::SynchronousInterfacePtr<ImportsSameNameContext>;
-};
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -2628,6 +2526,108 @@ class OnlyCppAndDeps_SyncProxy
  private:
   ::fidl::internal::SynchronousProxy proxy_;
   friend class ::fidl::SynchronousInterfacePtr<OnlyCppAndDeps>;
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+class ImportsSameNameContext {
+ public:
+  using Proxy_ = ::test::bindingsdenylist::ImportsSameNameContext_Proxy;
+  using Stub_ = ::test::bindingsdenylist::ImportsSameNameContext_Stub;
+  using EventSender_ =
+      ::test::bindingsdenylist::ImportsSameNameContext_EventSender;
+  using Sync_ = ::test::bindingsdenylist::ImportsSameNameContext_Sync;
+  virtual ~ImportsSameNameContext();
+
+  virtual void Unattributed() = 0;
+
+  virtual void AlwaysAppearsInImportingLibrary() = 0;
+};
+
+class ImportsSameNameContext_RequestDecoder {
+ public:
+  ImportsSameNameContext_RequestDecoder() = default;
+  virtual ~ImportsSameNameContext_RequestDecoder() = default;
+  static const fidl_type_t* GetType(uint64_t ordinal, bool* out_needs_response);
+  virtual void Unattributed() = 0;
+  virtual void AlwaysAppearsInImportingLibrary() = 0;
+};
+
+class ImportsSameNameContext_ResponseDecoder {
+ public:
+  ImportsSameNameContext_ResponseDecoder() = default;
+  virtual ~ImportsSameNameContext_ResponseDecoder() = default;
+  static const fidl_type_t* GetType(uint64_t ordinal);
+};
+
+class ImportsSameNameContext_EventSender {
+ public:
+  virtual ~ImportsSameNameContext_EventSender();
+};
+
+class ImportsSameNameContext_Sync {
+ public:
+  using Proxy_ = ::test::bindingsdenylist::ImportsSameNameContext_SyncProxy;
+  virtual ~ImportsSameNameContext_Sync();
+  virtual zx_status_t Unattributed() = 0;
+  virtual zx_status_t AlwaysAppearsInImportingLibrary() = 0;
+};
+
+class ImportsSameNameContext_Proxy final : public ::fidl::internal::Proxy,
+                                           public ImportsSameNameContext {
+ public:
+  explicit ImportsSameNameContext_Proxy(
+      ::fidl::internal::ProxyController* controller);
+  ~ImportsSameNameContext_Proxy() override;
+
+  zx_status_t Dispatch_(::fidl::HLCPPIncomingMessage message) override;
+  // cts-coverage-fidl-name:test.bindingsdenylist/ImportsSameNameContext.Unattributed
+  void Unattributed() override;
+  // cts-coverage-fidl-name:test.bindingsdenylist/ImportsSameNameContext.AlwaysAppearsInImportingLibrary
+  void AlwaysAppearsInImportingLibrary() override;
+
+ private:
+  ImportsSameNameContext_Proxy(
+      const ::test::bindingsdenylist::ImportsSameNameContext_Proxy&) = delete;
+  ImportsSameNameContext_Proxy& operator=(
+      const ::test::bindingsdenylist::ImportsSameNameContext_Proxy&) = delete;
+
+  ::fidl::internal::ProxyController* controller_;
+};
+
+class ImportsSameNameContext_Stub final
+    : public ::fidl::internal::Stub,
+      public ::test::bindingsdenylist::ImportsSameNameContext_EventSender {
+ public:
+  typedef class ::test::bindingsdenylist::ImportsSameNameContext
+      ImportsSameNameContext_clazz;
+  explicit ImportsSameNameContext_Stub(
+      ::test::bindingsdenylist::ImportsSameNameContext_Stub::
+          ImportsSameNameContext_clazz* impl);
+  ~ImportsSameNameContext_Stub() override;
+
+  zx_status_t Dispatch_(::fidl::HLCPPIncomingMessage message,
+                        ::fidl::internal::PendingResponse response) override;
+
+ private:
+  ::test::bindingsdenylist::ImportsSameNameContext_Stub::
+      ImportsSameNameContext_clazz* impl_;
+};
+
+class ImportsSameNameContext_SyncProxy
+    : public ::test::bindingsdenylist::ImportsSameNameContext_Sync {
+ public:
+  explicit ImportsSameNameContext_SyncProxy(::zx::channel channel);
+  ~ImportsSameNameContext_SyncProxy() override;
+  // cts-coverage-fidl-name:test.bindingsdenylist/ImportsSameNameContext.Unattributed
+  zx_status_t Unattributed() override;
+  // cts-coverage-fidl-name:test.bindingsdenylist/ImportsSameNameContext.AlwaysAppearsInImportingLibrary
+  zx_status_t AlwaysAppearsInImportingLibrary() override;
+
+ private:
+  ::fidl::internal::SynchronousProxy proxy_;
+  friend class ::fidl::SynchronousInterfacePtr<ImportsSameNameContext>;
 };
 #endif  // __Fuchsia__
 

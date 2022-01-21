@@ -17,11 +17,18 @@ namespace fidl {
 
 class CodedTypesGenerator {
  public:
-  explicit CodedTypesGenerator(const flat::Library* library) : library_(library) {}
+  explicit CodedTypesGenerator(const flat::Libraries* all_libraries)
+      : target_library_decl_order_(all_libraries->target_library()->declaration_order()),
+        all_libraries_decl_order_(all_libraries->DeclarationOrder()) {}
 
   void CompileCodedTypes();
 
-  const flat::Library* library() const { return library_; }
+  const std::vector<const flat::Decl*>& target_library_decl_order() {
+    return target_library_decl_order_;
+  }
+  const std::vector<const flat::Decl*>& all_libraries_decl_order() {
+    return all_libraries_decl_order_;
+  }
   const std::vector<std::unique_ptr<coded::Type>>& coded_types() const { return coded_types_; }
 
   const coded::Type* CodedTypeFor(flat::Name::Key name) const {
@@ -70,8 +77,6 @@ class CodedTypesGenerator {
   // struct B { int8 x; int8 z; };
   std::vector<FlattenedStructMember> FlattenedStructMembers(const flat::Struct& input);
 
-  const flat::Library* library_;
-
   template <typename FlatType, typename CodedType>
   using TypeMap = std::map<const FlatType*, const CodedType*, flat::PtrCompare<const FlatType>>;
 
@@ -90,8 +95,11 @@ class CodedTypesGenerator {
     }
   };
 
-  // All flat::Types and flat::Names here are owned by library_, and
-  // all coded::Types by the named_coded_types_ map or the coded_types_ vector.
+  const std::vector<const flat::Decl*>& target_library_decl_order_;
+  std::vector<const flat::Decl*> all_libraries_decl_order_;
+
+  // All flat::Types here are owned by all_libraries passed in the constructor,
+  // and all coded::Types are owned by by named_coded_types_ or coded_types_.
   TypeMap<flat::PrimitiveType, coded::PrimitiveType> primitive_type_map_;
   TypeMap<flat::HandleType, coded::HandleType> handle_type_map_;
   TypeMap<flat::TransportSideType, coded::Type> channel_end_map_;

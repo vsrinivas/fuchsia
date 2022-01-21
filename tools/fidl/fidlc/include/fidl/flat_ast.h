@@ -903,6 +903,12 @@ class Libraries {
   // Lookup a library by its |library_name|, or returns null if none is found.
   Library* Lookup(const std::vector<std::string_view>& library_name) const;
 
+  // Removes a library that was inserted before.
+  //
+  // TODO(fxbug.dev/90838): This is only needed to filter out the zx library,
+  // and should be deleted once that is no longer necessary.
+  void Remove(const Library* library);
+
   // Returns the target library, or null if none have been inserted.
   const Library* target_library() const {
     return libraries_.empty() ? nullptr : libraries_.back().get();
@@ -911,6 +917,10 @@ class Libraries {
   // Returns libraries that were inserted but never used, i.e. that do not occur
   // in the target libary's dependency tree. Must have inserted at least one.
   std::set<const Library*, LibraryComparator> Unused() const;
+
+  // Returns decls from all libraries in a topologically sorted order, i.e.
+  // later decls only depend on earlier ones.
+  std::vector<const Decl*> DeclarationOrder() const;
 
   // Registers a new attribute schema under the given name, and returns it.
   AttributeSchema& AddAttributeSchema(std::string name);
@@ -967,6 +977,10 @@ class Library : public Element, private ReporterMixin {
   // methods were copied and pasted into the protocol.
   std::set<const Library*, LibraryComparator> DirectAndComposedDependencies() const;
 
+  // Returns this library's decls in a topologically sorted order, i.e. later
+  // decls only depend on earlier ones.
+  const std::vector<const Decl*>& declaration_order() const { return declaration_order_; }
+
   // Returns nullptr when the |name| cannot be resolved to a
   // Name. Otherwise it returns the declaration.
   Decl* LookupDeclByName(Name::Key name) const;
@@ -982,8 +996,6 @@ class Library : public Element, private ReporterMixin {
   // underscores as delimiters.
   SourceSpan GeneratedSimpleName(std::string_view name);
 
-  std::vector<std::string_view> library_name_;
-
   // TODO(fxbug.dev/91604): Make these private.
   std::vector<std::unique_ptr<Bits>> bits_declarations_;
   std::vector<std::unique_ptr<Const>> const_declarations_;
@@ -996,19 +1008,17 @@ class Library : public Element, private ReporterMixin {
   std::vector<std::unique_ptr<Union>> union_declarations_;
   std::vector<std::unique_ptr<TypeAlias>> type_alias_declarations_;
 
-  // All Decl pointers here are non-null and are owned by the
-  // various foo_declarations_.
+ private:
+  std::vector<std::string_view> library_name_;
+  // All decls here are owned by the various foo_declarations_ of this library
+  // or one of its transitive dependencies.
+  std::map<Name::Key, Decl*> declarations_;
+  // Contains the decls from declarations_, but only those belonging to this
+  // library, sorted by the SortStep.
   std::vector<const Decl*> declaration_order_;
 
- private:
   Dependencies dependencies_;
   const Libraries* all_libraries_;
-
-  // All Decl pointers here are non-null. They are owned by the various
-  // foo_declarations_ members of this Library object, or of one of the Library
-  // objects in dependencies_.
-  std::map<Name::Key, Decl*> declarations_;
-
   Typespace* typespace_;
   const MethodHasher method_hasher_;
   const ExperimentalFlags experimental_flags_;

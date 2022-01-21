@@ -1879,179 +1879,6 @@ void DenyEachBinding_OnlyDenyDart_Result::EnsureStorageInitialized(
 //
 #ifdef __Fuchsia__
 
-namespace _internal {
-__LOCAL extern "C" const fidl_type_t
-    test_bindingsdenylist_ImportsSameNameContextUnattributedRequestMessageTable;
-
-__LOCAL extern "C" const fidl_type_t
-    test_bindingsdenylist_ImportsSameNameContextAlwaysAppearsInImportingLibraryRequestMessageTable;
-
-}  // namespace _internal
-ImportsSameNameContext::~ImportsSameNameContext() = default;
-
-const fidl_type_t* ::test::bindingsdenylist::
-    ImportsSameNameContext_RequestDecoder::GetType(uint64_t ordinal,
-                                                   bool* out_needs_response) {
-  switch (ordinal) {
-    case ::test::bindingsdenylist::internal::
-        kImportsSameNameContext_Unattributed_Ordinal:
-      *out_needs_response = false;
-      return &::test::bindingsdenylist::_internal::
-          test_bindingsdenylist_ImportsSameNameContextUnattributedRequestMessageTable;
-    case ::test::bindingsdenylist::internal::
-        kImportsSameNameContext_AlwaysAppearsInImportingLibrary_Ordinal:
-      *out_needs_response = false;
-      return &::test::bindingsdenylist::_internal::
-          test_bindingsdenylist_ImportsSameNameContextAlwaysAppearsInImportingLibraryRequestMessageTable;
-    default:
-      *out_needs_response = false;
-      return nullptr;
-  }
-}
-
-const fidl_type_t* ImportsSameNameContext_ResponseDecoder::GetType(
-    uint64_t ordinal) {
-  switch (ordinal) {
-    default:
-      return nullptr;
-  }
-}
-
-ImportsSameNameContext_EventSender::~ImportsSameNameContext_EventSender() =
-    default;
-
-ImportsSameNameContext_Sync::~ImportsSameNameContext_Sync() = default;
-
-ImportsSameNameContext_Proxy::ImportsSameNameContext_Proxy(
-    ::fidl::internal::ProxyController* controller)
-    : controller_(controller) {
-  (void)controller_;
-}
-
-ImportsSameNameContext_Proxy::~ImportsSameNameContext_Proxy() = default;
-
-zx_status_t ImportsSameNameContext_Proxy::Dispatch_(
-    ::fidl::HLCPPIncomingMessage message) {
-  zx_status_t status = ZX_OK;
-  switch (message.ordinal()) {
-    default: {
-      status = ZX_ERR_NOT_SUPPORTED;
-      break;
-    }
-  }
-  return status;
-}
-
-void ImportsSameNameContext_Proxy::Unattributed() {
-  ::fidl::Encoder _encoder(::test::bindingsdenylist::internal::
-                               kImportsSameNameContext_Unattributed_Ordinal);
-  controller_->Send(
-      &::test::bindingsdenylist::_internal::
-          test_bindingsdenylist_ImportsSameNameContextUnattributedRequestMessageTable,
-      ::test::bindingsdenylist::ImportsSameNameContext_RequestEncoder::
-          Unattributed(&_encoder),
-      nullptr);
-}
-void ImportsSameNameContext_Proxy::AlwaysAppearsInImportingLibrary() {
-  ::fidl::Encoder _encoder(
-      ::test::bindingsdenylist::internal::
-          kImportsSameNameContext_AlwaysAppearsInImportingLibrary_Ordinal);
-  controller_->Send(
-      &::test::bindingsdenylist::_internal::
-          test_bindingsdenylist_ImportsSameNameContextAlwaysAppearsInImportingLibraryRequestMessageTable,
-      ::test::bindingsdenylist::ImportsSameNameContext_RequestEncoder::
-          AlwaysAppearsInImportingLibrary(&_encoder),
-      nullptr);
-}
-
-ImportsSameNameContext_Stub::ImportsSameNameContext_Stub(
-    ::test::bindingsdenylist::ImportsSameNameContext_Stub::
-        ImportsSameNameContext_clazz* impl)
-    : impl_(impl) {
-  (void)impl_;
-}
-
-ImportsSameNameContext_Stub::~ImportsSameNameContext_Stub() = default;
-
-namespace {}  // namespace
-
-zx_status_t ImportsSameNameContext_Stub::Dispatch_(
-    ::fidl::HLCPPIncomingMessage message,
-    ::fidl::internal::PendingResponse response) {
-  bool needs_response;
-  const fidl_type_t* request_type =
-      ::test::bindingsdenylist::ImportsSameNameContext_RequestDecoder::GetType(
-          message.ordinal(), &needs_response);
-  if (request_type == nullptr) {
-    return ZX_ERR_NOT_SUPPORTED;
-  }
-  if (response.needs_response() != needs_response) {
-    if (needs_response) {
-      FIDL_REPORT_DECODING_ERROR(message, request_type,
-                                 "Message needing a response with no txid");
-    } else {
-      FIDL_REPORT_DECODING_ERROR(message, request_type,
-                                 "Message not needing a response with a txid");
-    }
-    return ZX_ERR_INVALID_ARGS;
-  }
-  const char* error_msg = nullptr;
-  zx_status_t status = message.Decode(request_type, &error_msg);
-  if (status != ZX_OK) {
-    FIDL_REPORT_DECODING_ERROR(message, request_type, error_msg);
-    return status;
-  }
-  uint64_t ordinal = message.ordinal();
-  switch (ordinal) {
-    case ::test::bindingsdenylist::internal::
-        kImportsSameNameContext_Unattributed_Ordinal: {
-      impl_->Unattributed();
-      break;
-    }
-    case ::test::bindingsdenylist::internal::
-        kImportsSameNameContext_AlwaysAppearsInImportingLibrary_Ordinal: {
-      impl_->AlwaysAppearsInImportingLibrary();
-      break;
-    }
-    default: {
-      status = ZX_ERR_NOT_SUPPORTED;
-      break;
-    }
-  }
-  return status;
-}
-
-ImportsSameNameContext_SyncProxy::ImportsSameNameContext_SyncProxy(
-    ::zx::channel channel)
-    : proxy_(::std::move(channel)) {}
-
-ImportsSameNameContext_SyncProxy::~ImportsSameNameContext_SyncProxy() = default;
-
-zx_status_t ImportsSameNameContext_SyncProxy::Unattributed() {
-  ::fidl::Encoder _encoder(::test::bindingsdenylist::internal::
-                               kImportsSameNameContext_Unattributed_Ordinal);
-  return proxy_.Send(
-      &::test::bindingsdenylist::_internal::
-          test_bindingsdenylist_ImportsSameNameContextUnattributedRequestMessageTable,
-      ::test::bindingsdenylist::ImportsSameNameContext_RequestEncoder::
-          Unattributed(&_encoder));
-}
-
-zx_status_t
-ImportsSameNameContext_SyncProxy::AlwaysAppearsInImportingLibrary() {
-  ::fidl::Encoder _encoder(
-      ::test::bindingsdenylist::internal::
-          kImportsSameNameContext_AlwaysAppearsInImportingLibrary_Ordinal);
-  return proxy_.Send(
-      &::test::bindingsdenylist::_internal::
-          test_bindingsdenylist_ImportsSameNameContextAlwaysAppearsInImportingLibraryRequestMessageTable,
-      ::test::bindingsdenylist::ImportsSameNameContext_RequestEncoder::
-          AlwaysAppearsInImportingLibrary(&_encoder));
-}
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-
 Allowed::~Allowed() = default;
 
 const fidl_type_t* ::test::bindingsdenylist::Allowed_RequestDecoder::GetType(
@@ -2436,6 +2263,179 @@ OnlyCppAndDeps_SyncProxy::OnlyCppAndDeps_SyncProxy(::zx::channel channel)
     : proxy_(::std::move(channel)) {}
 
 OnlyCppAndDeps_SyncProxy::~OnlyCppAndDeps_SyncProxy() = default;
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+namespace _internal {
+__LOCAL extern "C" const fidl_type_t
+    test_bindingsdenylist_ImportsSameNameContextUnattributedRequestMessageTable;
+
+__LOCAL extern "C" const fidl_type_t
+    test_bindingsdenylist_ImportsSameNameContextAlwaysAppearsInImportingLibraryRequestMessageTable;
+
+}  // namespace _internal
+ImportsSameNameContext::~ImportsSameNameContext() = default;
+
+const fidl_type_t* ::test::bindingsdenylist::
+    ImportsSameNameContext_RequestDecoder::GetType(uint64_t ordinal,
+                                                   bool* out_needs_response) {
+  switch (ordinal) {
+    case ::test::bindingsdenylist::internal::
+        kImportsSameNameContext_Unattributed_Ordinal:
+      *out_needs_response = false;
+      return &::test::bindingsdenylist::_internal::
+          test_bindingsdenylist_ImportsSameNameContextUnattributedRequestMessageTable;
+    case ::test::bindingsdenylist::internal::
+        kImportsSameNameContext_AlwaysAppearsInImportingLibrary_Ordinal:
+      *out_needs_response = false;
+      return &::test::bindingsdenylist::_internal::
+          test_bindingsdenylist_ImportsSameNameContextAlwaysAppearsInImportingLibraryRequestMessageTable;
+    default:
+      *out_needs_response = false;
+      return nullptr;
+  }
+}
+
+const fidl_type_t* ImportsSameNameContext_ResponseDecoder::GetType(
+    uint64_t ordinal) {
+  switch (ordinal) {
+    default:
+      return nullptr;
+  }
+}
+
+ImportsSameNameContext_EventSender::~ImportsSameNameContext_EventSender() =
+    default;
+
+ImportsSameNameContext_Sync::~ImportsSameNameContext_Sync() = default;
+
+ImportsSameNameContext_Proxy::ImportsSameNameContext_Proxy(
+    ::fidl::internal::ProxyController* controller)
+    : controller_(controller) {
+  (void)controller_;
+}
+
+ImportsSameNameContext_Proxy::~ImportsSameNameContext_Proxy() = default;
+
+zx_status_t ImportsSameNameContext_Proxy::Dispatch_(
+    ::fidl::HLCPPIncomingMessage message) {
+  zx_status_t status = ZX_OK;
+  switch (message.ordinal()) {
+    default: {
+      status = ZX_ERR_NOT_SUPPORTED;
+      break;
+    }
+  }
+  return status;
+}
+
+void ImportsSameNameContext_Proxy::Unattributed() {
+  ::fidl::Encoder _encoder(::test::bindingsdenylist::internal::
+                               kImportsSameNameContext_Unattributed_Ordinal);
+  controller_->Send(
+      &::test::bindingsdenylist::_internal::
+          test_bindingsdenylist_ImportsSameNameContextUnattributedRequestMessageTable,
+      ::test::bindingsdenylist::ImportsSameNameContext_RequestEncoder::
+          Unattributed(&_encoder),
+      nullptr);
+}
+void ImportsSameNameContext_Proxy::AlwaysAppearsInImportingLibrary() {
+  ::fidl::Encoder _encoder(
+      ::test::bindingsdenylist::internal::
+          kImportsSameNameContext_AlwaysAppearsInImportingLibrary_Ordinal);
+  controller_->Send(
+      &::test::bindingsdenylist::_internal::
+          test_bindingsdenylist_ImportsSameNameContextAlwaysAppearsInImportingLibraryRequestMessageTable,
+      ::test::bindingsdenylist::ImportsSameNameContext_RequestEncoder::
+          AlwaysAppearsInImportingLibrary(&_encoder),
+      nullptr);
+}
+
+ImportsSameNameContext_Stub::ImportsSameNameContext_Stub(
+    ::test::bindingsdenylist::ImportsSameNameContext_Stub::
+        ImportsSameNameContext_clazz* impl)
+    : impl_(impl) {
+  (void)impl_;
+}
+
+ImportsSameNameContext_Stub::~ImportsSameNameContext_Stub() = default;
+
+namespace {}  // namespace
+
+zx_status_t ImportsSameNameContext_Stub::Dispatch_(
+    ::fidl::HLCPPIncomingMessage message,
+    ::fidl::internal::PendingResponse response) {
+  bool needs_response;
+  const fidl_type_t* request_type =
+      ::test::bindingsdenylist::ImportsSameNameContext_RequestDecoder::GetType(
+          message.ordinal(), &needs_response);
+  if (request_type == nullptr) {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+  if (response.needs_response() != needs_response) {
+    if (needs_response) {
+      FIDL_REPORT_DECODING_ERROR(message, request_type,
+                                 "Message needing a response with no txid");
+    } else {
+      FIDL_REPORT_DECODING_ERROR(message, request_type,
+                                 "Message not needing a response with a txid");
+    }
+    return ZX_ERR_INVALID_ARGS;
+  }
+  const char* error_msg = nullptr;
+  zx_status_t status = message.Decode(request_type, &error_msg);
+  if (status != ZX_OK) {
+    FIDL_REPORT_DECODING_ERROR(message, request_type, error_msg);
+    return status;
+  }
+  uint64_t ordinal = message.ordinal();
+  switch (ordinal) {
+    case ::test::bindingsdenylist::internal::
+        kImportsSameNameContext_Unattributed_Ordinal: {
+      impl_->Unattributed();
+      break;
+    }
+    case ::test::bindingsdenylist::internal::
+        kImportsSameNameContext_AlwaysAppearsInImportingLibrary_Ordinal: {
+      impl_->AlwaysAppearsInImportingLibrary();
+      break;
+    }
+    default: {
+      status = ZX_ERR_NOT_SUPPORTED;
+      break;
+    }
+  }
+  return status;
+}
+
+ImportsSameNameContext_SyncProxy::ImportsSameNameContext_SyncProxy(
+    ::zx::channel channel)
+    : proxy_(::std::move(channel)) {}
+
+ImportsSameNameContext_SyncProxy::~ImportsSameNameContext_SyncProxy() = default;
+
+zx_status_t ImportsSameNameContext_SyncProxy::Unattributed() {
+  ::fidl::Encoder _encoder(::test::bindingsdenylist::internal::
+                               kImportsSameNameContext_Unattributed_Ordinal);
+  return proxy_.Send(
+      &::test::bindingsdenylist::_internal::
+          test_bindingsdenylist_ImportsSameNameContextUnattributedRequestMessageTable,
+      ::test::bindingsdenylist::ImportsSameNameContext_RequestEncoder::
+          Unattributed(&_encoder));
+}
+
+zx_status_t
+ImportsSameNameContext_SyncProxy::AlwaysAppearsInImportingLibrary() {
+  ::fidl::Encoder _encoder(
+      ::test::bindingsdenylist::internal::
+          kImportsSameNameContext_AlwaysAppearsInImportingLibrary_Ordinal);
+  return proxy_.Send(
+      &::test::bindingsdenylist::_internal::
+          test_bindingsdenylist_ImportsSameNameContextAlwaysAppearsInImportingLibraryRequestMessageTable,
+      ::test::bindingsdenylist::ImportsSameNameContext_RequestEncoder::
+          AlwaysAppearsInImportingLibrary(&_encoder));
+}
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__

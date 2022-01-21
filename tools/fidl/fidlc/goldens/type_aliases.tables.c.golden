@@ -3,8 +3,8 @@
 #include <lib/fidl/internal.h>
 
 
-__LOCAL extern const struct FidlCodedEnum test_typealiases_obj_typeTable;
 __LOCAL extern const struct FidlCodedStruct test_someotherlibrary_ReferenceMeTable;
+__LOCAL extern const struct FidlCodedEnum test_typealiases_obj_typeTable;
 __LOCAL extern const struct FidlCodedStruct test_typealiases_ExampleOfUseOfAliasesTable;
 
 

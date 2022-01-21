@@ -1008,9 +1008,8 @@ std::ostringstream JSONGenerator::Produce() {
     // transitive dependencies. The backend only needs the declaration order
     // for this specific library.
     std::vector<std::string> declaration_order;
-    for (const flat::Decl* decl : library_->declaration_order_) {
-      if (decl->name.library() == library_)
-        declaration_order.push_back(NameFlatName(decl->name));
+    for (const flat::Decl* decl : library_->declaration_order()) {
+      declaration_order.push_back(NameFlatName(decl->name));
     }
     GenerateObjectMember("declaration_order", declaration_order);
 

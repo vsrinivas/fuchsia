@@ -437,7 +437,12 @@ int compile(fidl::Reporter* reporter, fidl::flat::Typespace* typespace, std::str
   // TODO(fxbug.dev/90838): Remove this once all GN rules only include zx
   // sources when the zx library is actually used.
   if (auto zx_library = all_libraries.Lookup({"zx"})) {
-    unused_libraries.erase(zx_library);
+    if (auto iter = unused_libraries.find(zx_library); iter != unused_libraries.end()) {
+      // Remove from unused_libraries to avoid reporting an error below.
+      unused_libraries.erase(iter);
+      // Remove from all_libraries to avoid emitting it in coding tables.
+      all_libraries.Remove(zx_library);
+    }
   }
   if (!unused_libraries.empty()) {
     std::string message = "Unused libraries provided via --files: ";
@@ -502,7 +507,7 @@ int compile(fidl::Reporter* reporter, fidl::flat::Typespace* typespace, std::str
         break;
       }
       case Behavior::kTables: {
-        fidl::TablesGenerator generator(target_library);
+        fidl::TablesGenerator generator(&all_libraries);
         Write(generator.Produce(), file_path);
         break;
       }

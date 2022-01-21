@@ -6,29 +6,6 @@
 
 namespace test_bindingsdenylist {
 
-class ImportsSameNameContext final {
-  ImportsSameNameContext() = delete;
-
- public:
-  using Transport = ::fidl::internal::ChannelTransport;
-  class Unattributed final {
-    Unattributed() = delete;
-
-   public:
-    using Protocol = ::test_bindingsdenylist::ImportsSameNameContext;
-    static constexpr bool kHasRequest = true;
-    static constexpr bool kHasResponse = false;
-  };
-  class AlwaysAppearsInImportingLibrary final {
-    AlwaysAppearsInImportingLibrary() = delete;
-
-   public:
-    using Protocol = ::test_bindingsdenylist::ImportsSameNameContext;
-    static constexpr bool kHasRequest = true;
-    static constexpr bool kHasResponse = false;
-  };
-};
-
 class Allowed final {
   Allowed() = delete;
 
@@ -56,6 +33,29 @@ class OnlyCppAndDeps final {
 
  public:
   using Transport = ::fidl::internal::ChannelTransport;
+};
+
+class ImportsSameNameContext final {
+  ImportsSameNameContext() = delete;
+
+ public:
+  using Transport = ::fidl::internal::ChannelTransport;
+  class Unattributed final {
+    Unattributed() = delete;
+
+   public:
+    using Protocol = ::test_bindingsdenylist::ImportsSameNameContext;
+    static constexpr bool kHasRequest = true;
+    static constexpr bool kHasResponse = false;
+  };
+  class AlwaysAppearsInImportingLibrary final {
+    AlwaysAppearsInImportingLibrary() = delete;
+
+   public:
+    using Protocol = ::test_bindingsdenylist::ImportsSameNameContext;
+    static constexpr bool kHasRequest = true;
+    static constexpr bool kHasResponse = false;
+  };
 };
 
 class DenyEachBinding final {

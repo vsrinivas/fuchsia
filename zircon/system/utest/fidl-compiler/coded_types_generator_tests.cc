@@ -32,7 +32,7 @@ type Arrays = struct {
 };
 )FIDL");
   ASSERT_COMPILED(library);
-  fidl::CodedTypesGenerator gen(library.library());
+  fidl::CodedTypesGenerator gen(library.all_libraries());
   gen.CompileCodedTypes();
 
   ASSERT_EQ(4, gen.coded_types().size());
@@ -83,7 +83,7 @@ type Vectors = struct {
 };
 )FIDL");
   ASSERT_COMPILED(library);
-  fidl::CodedTypesGenerator gen(library.library());
+  fidl::CodedTypesGenerator gen(library.all_libraries());
   gen.CompileCodedTypes();
 
   auto name_some_struct = fidl::flat::Name::Key(library.library(), "SomeStruct");
@@ -214,7 +214,7 @@ protocol UseOfProtocol {
 };
 )FIDL");
   ASSERT_COMPILED(library);
-  fidl::CodedTypesGenerator gen(library.library());
+  fidl::CodedTypesGenerator gen(library.all_libraries());
   gen.CompileCodedTypes();
 
   ASSERT_EQ(2, gen.coded_types().size());
@@ -256,7 +256,7 @@ protocol ErrorSyntaxProtocol {
 };
 )FIDL");
   ASSERT_COMPILED(library);
-  fidl::CodedTypesGenerator gen(library.library());
+  fidl::CodedTypesGenerator gen(library.all_libraries());
   gen.CompileCodedTypes();
 
   ASSERT_EQ(4, gen.coded_types().size());
@@ -300,7 +300,7 @@ protocol UseOfProtocolEnds {
 };
 )FIDL");
   ASSERT_COMPILED(library);
-  fidl::CodedTypesGenerator gen(library.library());
+  fidl::CodedTypesGenerator gen(library.all_libraries());
   gen.CompileCodedTypes();
 
   ASSERT_EQ(8, gen.coded_types().size());
@@ -435,7 +435,7 @@ type MyXUnionStruct = struct {
 
 )FIDL");
   ASSERT_COMPILED(library);
-  fidl::CodedTypesGenerator gen(library.library());
+  fidl::CodedTypesGenerator gen(library.all_libraries());
   gen.CompileCodedTypes();
 
   ASSERT_EQ(3, gen.coded_types().size());
@@ -513,7 +513,7 @@ type Wrapper2 = struct {
 };
 )FIDL");
   ASSERT_COMPILED(library);
-  fidl::CodedTypesGenerator gen(library.library());
+  fidl::CodedTypesGenerator gen(library.all_libraries());
   gen.CompileCodedTypes();
 
   // 3 == size of {bool, int32, MyXUnion?}, which is all of the types used in
@@ -576,7 +576,7 @@ type Wrapper2 = struct {
 };
 )FIDL");
   ASSERT_COMPILED(library);
-  fidl::CodedTypesGenerator gen(library.library());
+  fidl::CodedTypesGenerator gen(library.all_libraries());
   gen.CompileCodedTypes();
 
   // 5 == size of {bool, int32, MyStruct?, MyUnion?, MyXUnion?},
@@ -609,7 +609,7 @@ type MyStruct = resource struct {
 )FIDL");
 
   ASSERT_COMPILED(library);
-  fidl::CodedTypesGenerator gen(library.library());
+  fidl::CodedTypesGenerator gen(library.all_libraries());
   gen.CompileCodedTypes();
 
   auto struct_name = fidl::flat::Name::Key(library.library(), "MyStruct");
@@ -641,7 +641,7 @@ type Complex = struct {
 };
 )FIDL");
   ASSERT_COMPILED(library);
-  fidl::CodedTypesGenerator gen(library.library());
+  fidl::CodedTypesGenerator gen(library.all_libraries());
   gen.CompileCodedTypes();
 
   ASSERT_EQ(4, gen.coded_types().size());
@@ -722,7 +722,7 @@ type Level2 = struct {
 };
 )FIDL");
   ASSERT_COMPILED(library);
-  fidl::CodedTypesGenerator gen(library.library());
+  fidl::CodedTypesGenerator gen(library.all_libraries());
   gen.CompileCodedTypes();
 
   auto name_level0 = fidl::flat::Name::Key(library.library(), "Level0");
@@ -784,7 +784,7 @@ type TwoLevelRecursiveOptionalStructB = struct {
 };
 )FIDL");
   ASSERT_COMPILED(library);
-  fidl::CodedTypesGenerator gen(library.library());
+  fidl::CodedTypesGenerator gen(library.all_libraries());
   gen.CompileCodedTypes();
 
   auto name_one_level = fidl::flat::Name::Key(library.library(), "OneLevelRecursiveOptionalStruct");
@@ -847,7 +847,7 @@ type OuterStruct = struct {
 };
 )FIDL");
   ASSERT_COMPILED(library);
-  fidl::CodedTypesGenerator gen(library.library());
+  fidl::CodedTypesGenerator gen(library.all_libraries());
   gen.CompileCodedTypes();
 
   auto name_inner_struct = fidl::flat::Name::Key(library.library(), "InnerStruct");
@@ -901,7 +901,7 @@ type OuterStruct = resource struct {
 
 )FIDL");
   ASSERT_COMPILED(library);
-  fidl::CodedTypesGenerator gen(library.library());
+  fidl::CodedTypesGenerator gen(library.all_libraries());
   gen.CompileCodedTypes();
 
   auto name_outer_struct = fidl::flat::Name::Key(library.library(), "OuterStruct");
@@ -949,7 +949,7 @@ type badlookup = struct {
 };
 )FIDL");
   ASSERT_COMPILED(library);
-  fidl::CodedTypesGenerator gen(library.library());
+  fidl::CodedTypesGenerator gen(library.all_libraries());
   gen.CompileCodedTypes();
 
   auto the_struct_name = fidl::flat::Name::Key(library.library(), "badlookup");
@@ -973,7 +973,7 @@ type MyTable = table {
 };
 )FIDL");
   ASSERT_COMPILED(library);
-  fidl::CodedTypesGenerator gen(library.library());
+  fidl::CodedTypesGenerator gen(library.all_libraries());
   gen.CompileCodedTypes();
 
   ASSERT_EQ(3, gen.coded_types().size());
@@ -1040,7 +1040,7 @@ type FlexibleBits = flexible bits : uint8 {
 };
 )FIDL");
   ASSERT_COMPILED(library);
-  fidl::CodedTypesGenerator gen(library.library());
+  fidl::CodedTypesGenerator gen(library.all_libraries());
   gen.CompileCodedTypes();
 
   ASSERT_EQ(0, gen.coded_types().size());
@@ -1084,7 +1084,7 @@ type FlexibleEnum = flexible enum : uint16 {
 };
 )FIDL");
   ASSERT_COMPILED(library);
-  fidl::CodedTypesGenerator gen(library.library());
+  fidl::CodedTypesGenerator gen(library.all_libraries());
   gen.CompileCodedTypes();
 
   ASSERT_EQ(0, gen.coded_types().size());
@@ -1130,7 +1130,7 @@ type MyUnion = strict union {
 };
 )FIDL");
   ASSERT_COMPILED(library);
-  fidl::CodedTypesGenerator gen(library.library());
+  fidl::CodedTypesGenerator gen(library.all_libraries());
   gen.CompileCodedTypes();
 
   auto name = fidl::flat::Name::Key(library.library(), "MyUnion");
@@ -1180,7 +1180,7 @@ type U2 = strict union {
 };
 )FIDL");
   ASSERT_COMPILED(library);
-  fidl::CodedTypesGenerator gen(library.library());
+  fidl::CodedTypesGenerator gen(library.all_libraries());
   gen.CompileCodedTypes();
   check_duplicate_coded_type_names(gen);
 }
@@ -1194,7 +1194,7 @@ type Union = strict union {
 };
 )FIDL");
   ASSERT_COMPILED(library);
-  fidl::CodedTypesGenerator gen(library.library());
+  fidl::CodedTypesGenerator gen(library.all_libraries());
   gen.CompileCodedTypes();
   check_duplicate_coded_type_names(gen);
 }
@@ -1208,7 +1208,7 @@ type Union = strict union {
 };
 )FIDL");
   ASSERT_COMPILED(library);
-  fidl::CodedTypesGenerator gen(library.library());
+  fidl::CodedTypesGenerator gen(library.all_libraries());
   gen.CompileCodedTypes();
   check_duplicate_coded_type_names(gen);
 }
@@ -1222,7 +1222,7 @@ type Table = table {
 };
 )FIDL");
   ASSERT_COMPILED(library);
-  fidl::CodedTypesGenerator gen(library.library());
+  fidl::CodedTypesGenerator gen(library.all_libraries());
   gen.CompileCodedTypes();
   check_duplicate_coded_type_names(gen);
 }
@@ -1239,7 +1239,7 @@ type NonResourceUnion = strict union {
 };
 )FIDL");
   ASSERT_COMPILED(library);
-  fidl::CodedTypesGenerator gen(library.library());
+  fidl::CodedTypesGenerator gen(library.all_libraries());
   gen.CompileCodedTypes();
 
   {
@@ -1275,7 +1275,7 @@ type NonResourceTable = table {
 };
 )FIDL");
   ASSERT_COMPILED(library);
-  fidl::CodedTypesGenerator gen(library.library());
+  fidl::CodedTypesGenerator gen(library.all_libraries());
   gen.CompileCodedTypes();
 
   {

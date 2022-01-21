@@ -63,19 +63,6 @@ __LOCAL extern const struct FidlCodedStruct test_bindingsdenylist_DenyEachBindin
 __LOCAL extern const struct FidlCodedStruct test_bindingsdenylist_DenyEachBindingOnlyDenyCppRequestTable;
 
 
-__LOCAL extern const struct FidlCodedStruct test_bindingsdenylist_ImportsSameNameContextAlwaysDeniedRequestMessageTable;
-static const struct FidlStructElement Fields70test_bindingsdenylist_ImportsSameNameContextAlwaysDeniedRequestMessage[] = {
-    /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_NotResource},.offset_v1=16u, .offset_v2=16u, .field_type=(fidl_type_t*)(&fidl_internal_kBoolTable)}},
-    /*FidlStructPadding*/{.padding=/*FidlStructPadding*/{.offset_v1=16u, .offset_v2=16u, .header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Padding64,.is_resource=kFidlIsResource_NotResource},.mask_64=18446744073709551360ul}}
-};
-const struct FidlCodedStruct test_bindingsdenylist_ImportsSameNameContextAlwaysDeniedRequestMessageTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_DoesNotContainEnvelope, .elements=Fields70test_bindingsdenylist_ImportsSameNameContextAlwaysDeniedRequestMessage, .element_count=2u, .size_v1=24u, .size_v2=24u, .name="test.bindingsdenylist/ImportsSameNameContextAlwaysDeniedRequestMessage"};
-
-__LOCAL extern const struct FidlCodedStruct test_bindingsdenylist_ImportsSameNameContextUnattributedRequestMessageTable;
-const struct FidlCodedStruct test_bindingsdenylist_ImportsSameNameContextUnattributedRequestMessageTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_DoesNotContainEnvelope, .elements=NULL, .element_count=0u, .size_v1=16u, .size_v2=16u, .name="test.bindingsdenylist/ImportsSameNameContextUnattributedRequestMessage"};
-
-__LOCAL extern const struct FidlCodedStruct test_bindingsdenylist_ImportsSameNameContextAlwaysAppearsInImportingLibraryRequestMessageTable;
-const struct FidlCodedStruct test_bindingsdenylist_ImportsSameNameContextAlwaysAppearsInImportingLibraryRequestMessageTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_DoesNotContainEnvelope, .elements=NULL, .element_count=0u, .size_v1=16u, .size_v2=16u, .name="test.bindingsdenylist/ImportsSameNameContextAlwaysAppearsInImportingLibraryRequestMessage"};
-
 __LOCAL extern const struct FidlCodedStruct test_bindingsdenylist_AllowedDeniedRequestMessageTable;
 const struct FidlCodedStruct test_bindingsdenylist_AllowedDeniedRequestMessageTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_DoesNotContainEnvelope, .elements=NULL, .element_count=0u, .size_v1=16u, .size_v2=16u, .name="test.bindingsdenylist/AllowedDeniedRequestMessage"};
 
@@ -99,6 +86,19 @@ const struct FidlCodedStruct test_bindingsdenylist_OnlyLibfuzzerAndDepsLibfuzzer
 
 __LOCAL extern const struct FidlCodedStruct test_bindingsdenylist_OnlyLibfuzzerAndDepsLibfuzzerNeedsNonemptyProtocolResponseMessageTable;
 const struct FidlCodedStruct test_bindingsdenylist_OnlyLibfuzzerAndDepsLibfuzzerNeedsNonemptyProtocolResponseMessageTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_DoesNotContainEnvelope, .elements=NULL, .element_count=0u, .size_v1=16u, .size_v2=16u, .name="test.bindingsdenylist/OnlyLibfuzzerAndDepsLibfuzzerNeedsNonemptyProtocolResponseMessage"};
+
+__LOCAL extern const struct FidlCodedStruct test_bindingsdenylist_ImportsSameNameContextAlwaysDeniedRequestMessageTable;
+static const struct FidlStructElement Fields70test_bindingsdenylist_ImportsSameNameContextAlwaysDeniedRequestMessage[] = {
+    /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_NotResource},.offset_v1=16u, .offset_v2=16u, .field_type=(fidl_type_t*)(&fidl_internal_kBoolTable)}},
+    /*FidlStructPadding*/{.padding=/*FidlStructPadding*/{.offset_v1=16u, .offset_v2=16u, .header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Padding64,.is_resource=kFidlIsResource_NotResource},.mask_64=18446744073709551360ul}}
+};
+const struct FidlCodedStruct test_bindingsdenylist_ImportsSameNameContextAlwaysDeniedRequestMessageTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_DoesNotContainEnvelope, .elements=Fields70test_bindingsdenylist_ImportsSameNameContextAlwaysDeniedRequestMessage, .element_count=2u, .size_v1=24u, .size_v2=24u, .name="test.bindingsdenylist/ImportsSameNameContextAlwaysDeniedRequestMessage"};
+
+__LOCAL extern const struct FidlCodedStruct test_bindingsdenylist_ImportsSameNameContextUnattributedRequestMessageTable;
+const struct FidlCodedStruct test_bindingsdenylist_ImportsSameNameContextUnattributedRequestMessageTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_DoesNotContainEnvelope, .elements=NULL, .element_count=0u, .size_v1=16u, .size_v2=16u, .name="test.bindingsdenylist/ImportsSameNameContextUnattributedRequestMessage"};
+
+__LOCAL extern const struct FidlCodedStruct test_bindingsdenylist_ImportsSameNameContextAlwaysAppearsInImportingLibraryRequestMessageTable;
+const struct FidlCodedStruct test_bindingsdenylist_ImportsSameNameContextAlwaysAppearsInImportingLibraryRequestMessageTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_DoesNotContainEnvelope, .elements=NULL, .element_count=0u, .size_v1=16u, .size_v2=16u, .name="test.bindingsdenylist/ImportsSameNameContextAlwaysAppearsInImportingLibraryRequestMessage"};
 
 __LOCAL extern const struct FidlCodedStruct test_bindingsdenylist_DenyEachBindingOnlyDenyCppRequestMessageTable;
 static const struct FidlStructElement Fields62test_bindingsdenylist_DenyEachBindingOnlyDenyCppRequestMessage[] = {
