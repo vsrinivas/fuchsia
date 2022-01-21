@@ -4,7 +4,12 @@
 
 import("//build/fidl/fidl.gni")
 
-visibility = [ "//src/developer/forensics/feedback/*" ]
+visibility = [
+  "//src/developer/forensics/crash_reports/*",
+  "//src/developer/forensics/feedback/*",
+  "//src/developer/forensics/feedback_data/*",
+  "//src/developer/forensics/last_reboot/*",
+]
 
 fidl("fuchsia.feedback.internal") {
   sources = [ "directory_migrator.internal.fidl" ]

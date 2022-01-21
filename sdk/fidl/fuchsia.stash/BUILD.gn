@@ -33,5 +33,8 @@ fidl("fuchsia.stash") {
     "//src/sys/pkg/bin/omaha-client/*",
     "//src/sys/stash/*",
     "//src/sys/tools/stash_ctl/*",
+
+    # TODO(fxb/91585): Resolve this unapproved dependency.
+    "//src/ui/scenic/bin",
   ]
 }

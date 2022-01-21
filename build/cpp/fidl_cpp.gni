@@ -394,7 +394,11 @@ template("fidl_cpp_family") {
   if (current_toolchain != fidl_toolchain) {
     # Set up an alias from ":my_lib_hlcpp" to ":my_lib"
     group(target_name) {
-      forward_variables_from(invoker, [ "testonly" ])
+      forward_variables_from(invoker,
+                             [
+                               "testonly",
+                               "visibility",
+                             ])
       public_deps = [ ":${target_name}_hlcpp" ]
     }
 
