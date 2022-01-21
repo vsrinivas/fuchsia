@@ -23,7 +23,7 @@ use serde::Serialize;
 
 use crate::audio::types::AudioInfo;
 use crate::handler::setting_handler::persist::UpdateState;
-use crate::handler::stash_inspect_logger::StashInspectLoggerHandle;
+use crate::handler::stash_inspect_logger::{StashInspectLogger, StashInspectLoggerHandle};
 
 const SETTINGS_PREFIX: &str = "settings";
 
@@ -44,6 +44,9 @@ pub struct DeviceStorage {
     /// If true, writes to the underlying storage will only occur at most every
     /// MIN_WRITE_INTERVAL_MS.
     debounce_writes: bool,
+
+    /// Handle used to write stash failures to inspect.
+    inspect_handle: StashInspectLoggerHandle,
 }
 
 /// A wrapper for managing all communication and caching for one particular type of data being
@@ -53,7 +56,7 @@ struct TypedStorage {
     flush_sender: UnboundedSender<()>,
 
     /// Cached storage managed through interior mutability.
-    cached_storage: Arc<Mutex<CachedStorage>>,
+    cached_storage: Mutex<CachedStorage>,
 }
 
 /// `CachedStorage` abstracts over a cached value that's read from and written
@@ -64,24 +67,6 @@ struct CachedStorage {
 
     /// Stash connection for this particular type's stash storage.
     stash_proxy: StoreAccessorProxy,
-
-    /// Handle to logger that records stash write failures.
-    inspect_handle: StashInspectLoggerHandle,
-}
-
-impl CachedStorage {
-    /// Triggers a flush on the given stash proxy.
-    async fn stash_flush(&mut self, setting_key: String) {
-        if matches!(self.stash_proxy.flush().await, Ok(Err(_)) | Err(_)) {
-            if setting_key == AudioInfo::KEY {
-                fx_log_info!("b/210170985: stash flush for audio failed");
-            }
-            // Record the write failure to inspect.
-            self.inspect_handle.logger.lock().await.record_flush_failure(setting_key);
-        } else if setting_key == AudioInfo::KEY {
-            fx_log_info!("b/210170985: stash flush for audio finished");
-        }
-    }
 }
 
 /// Structs that can be stored in device storage should derive the Serialize, Deserialize, and
@@ -239,14 +224,15 @@ impl DeviceStorage {
                 let (flush_sender, flush_receiver) = futures::channel::mpsc::unbounded::<()>();
                 let stash_proxy = stash_generator();
 
-                let cached_storage = Arc::new(Mutex::new(CachedStorage {
-                    current_data: None,
-                    stash_proxy: stash_proxy.clone(),
-                    inspect_handle: StashInspectLoggerHandle::new(),
-                }));
-                let storage =
-                    TypedStorage { flush_sender, cached_storage: Arc::clone(&cached_storage) };
+                let storage = TypedStorage {
+                        flush_sender,
+                        cached_storage: Mutex::new(CachedStorage {
+                            current_data: None,
+                            stash_proxy: stash_proxy.clone(),
+                        })
+                    };
 
+                let stash_proxy_clone = stash_proxy.clone();
                 // Each key has an independent flush queue.
                 Task::spawn(async move {
                     const MIN_FLUSH_DURATION: Duration =
@@ -257,6 +243,8 @@ impl DeviceStorage {
                     // current time so that the first flush always goes through, no matter the
                     // timing.
                     let mut last_flush: Instant = Instant::now().sub(MIN_FLUSH_DURATION);
+
+                    let inspect_handle = StashInspectLoggerHandle::new().logger;
 
                     // Timer for flush cooldown. OptionFuture allows us to wait on the future even
                     // if it's None.
@@ -293,7 +281,11 @@ impl DeviceStorage {
                                     if key == AudioInfo::KEY {
                                         fx_log_info!("b/210170985: flushing audio setting to stash");
                                     }
-                                    cached_storage.lock().await.stash_flush(key.into()).await;
+
+                                    DeviceStorage::stash_flush(
+                                        &stash_proxy_clone,
+                                        Arc::clone(&inspect_handle),
+                                        &key.to_string()).await;
                                     last_flush = Instant::now();
                                     has_pending_flush = false;
                                 }
@@ -307,7 +299,12 @@ impl DeviceStorage {
                 (key, storage)
             })
             .collect();
-        DeviceStorage { caching_enabled: true, debounce_writes: true, typed_storage_map }
+        DeviceStorage {
+            caching_enabled: true,
+            debounce_writes: true,
+            typed_storage_map,
+            inspect_handle: StashInspectLoggerHandle::new(),
+        }
     }
 
     #[cfg(test)]
@@ -318,6 +315,24 @@ impl DeviceStorage {
     #[cfg(test)]
     fn set_debounce_writes(&mut self, debounce: bool) {
         self.debounce_writes = debounce;
+    }
+
+    /// Triggers a flush on the given stash proxy.
+    async fn stash_flush(
+        stash_proxy: &StoreAccessorProxy,
+        inspect_handle: Arc<Mutex<StashInspectLogger>>,
+        setting_key: &String,
+    ) {
+        if matches!(stash_proxy.flush().await, Ok(Err(_)) | Err(_)) {
+            if setting_key == AudioInfo::KEY {
+                fx_log_info!("b/210170985: stash flush for audio failed");
+            }
+            // TODO(fxbug.dev/89083): save a record of the recent error messages as well.
+            // Record the write failure to inspect.
+            inspect_handle.lock().await.record_flush_failure(setting_key);
+        } else if setting_key == AudioInfo::KEY {
+            fx_log_info!("b/210170985: stash flush for audio finished");
+        }
     }
 
     async fn inner_write(
@@ -368,7 +383,12 @@ impl DeviceStorage {
             cached_storage.stash_proxy.set_value(&key, &mut serialized)?;
             if !self.debounce_writes {
                 // Not debouncing writes for testing, just flush immediately.
-                cached_storage.stash_flush(key.clone()).await;
+                DeviceStorage::stash_flush(
+                    &cached_storage.stash_proxy,
+                    Arc::clone(&self.inspect_handle.logger),
+                    &key,
+                )
+                .await;
             } else {
                 typed_storage.flush_sender.unbounded_send(()).with_context(|| {
                     format!("flush_sender failed to send flush message, associated key is {}", key)
