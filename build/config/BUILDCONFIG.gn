@@ -1669,6 +1669,16 @@ is_coverage = select_variant + [
                 "profile",
               ] != select_variant
 
+# Whether sanitizer instrumentation is enabled.
+is_asan = select_variant + [
+            "asan",
+            "asan-ubsan",
+          ] -
+          [
+            "asan",
+            "asan-ubsan",
+          ] != select_variant
+
 # Do this only once, in the default toolchain context.    Then
 # clang_toolchain_suite will just pass the results through to every
 # other toolchain via toolchain_args so the work is not repeated.

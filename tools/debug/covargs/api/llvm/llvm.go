@@ -29,6 +29,7 @@ type File struct {
 }
 
 type Summary struct {
+	Branches       Counts `json:"branches"`
 	Functions      Counts `json:"functions"`
 	Instantiations Counts `json:"instantiations"`
 	Lines          Counts `json:"lines"`
