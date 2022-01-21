@@ -79,7 +79,7 @@ zx_status_t vmm_page_fault_handler(vaddr_t addr, uint flags) {
   // get the address space object this pointer is in
   VmAspace* aspace = VmAspace::vaddr_to_aspace(addr);
   if (!aspace) {
-    printf("PageFault: Invalid virtual address\n");
+    printf("PageFault: Invalid virtual address 0x%lx\n", addr);
     return ZX_ERR_NOT_FOUND;
   }
 
@@ -88,22 +88,15 @@ zx_status_t vmm_page_fault_handler(vaddr_t addr, uint flags) {
   // page fault it
   zx_status_t status = aspace->PageFault(addr, flags);
 
-  // If it's a user fault, dump info about process memory usage.
-  // If it's a kernel fault, the kernel could possibly already
-  // hold locks on VMOs, Aspaces, etc, so we can't safely do
-  // this.
-  if ((status == ZX_ERR_NOT_FOUND) && (flags & VMM_PF_FLAG_USER)) {
-    printf("PageFault: %zu free pages\n", pmm_count_free_pages());
-    DumpProcessMemoryUsage("PageFault: MemoryUsed: ", 8 * 256);
-  } else if (status == ZX_ERR_INTERNAL_INTR_RETRY || status == ZX_ERR_INTERNAL_INTR_KILLED) {
-    // If we get this, then all checks passed but we were interrupted or killed while waiting
-    // for the request to be fulfilled. Pretend the fault was successful and let the thread re-fault
-    // after it is resumed (in case of suspension), or proceed with termination.
+  // If we get this, then all checks passed but we were interrupted or killed while waiting for the
+  // request to be fulfilled. Pretend the fault was successful and let the thread re-fault after it
+  // is resumed (in case of suspension), or proceed with termination.
+  if (status == ZX_ERR_INTERNAL_INTR_RETRY || status == ZX_ERR_INTERNAL_INTR_KILLED) {
     status = ZX_OK;
   }
 
   if (status != ZX_OK) {
-    printf("PageFault: error %d\n", status);
+    printf("PageFault: error %d for virtual address 0x%lx\n", status, addr);
   }
 
   ktrace(TAG_PAGE_FAULT_EXIT, (uint32_t)(addr >> 32), (uint32_t)addr, flags, arch_curr_cpu_num());
