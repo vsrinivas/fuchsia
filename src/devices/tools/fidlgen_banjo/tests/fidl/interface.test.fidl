@@ -55,3 +55,5 @@ protocol Baker {
     /// De-registers a cookie maker device when it's no longer available.
     DeRegister() -> ();
 };
+
+// TODO(fxbug.dev/88344): Add test case for methods with named payloads

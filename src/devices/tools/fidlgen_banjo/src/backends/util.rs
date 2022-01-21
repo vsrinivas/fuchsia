@@ -24,35 +24,45 @@ pub enum Decl<'a> {
 }
 
 pub fn get_declarations<'b>(ir: &'b FidlIr) -> Result<Vec<Decl<'b>>, Error> {
-    Ok(ir
-        .declaration_order
+    ir.declaration_order
         .iter()
         .filter_map(|ident| match ir.get_declaration(ident).ok()? {
-            Declaration::Const => Some(Decl::Const {
+            Declaration::Const => Some(Ok(Decl::Const {
                 data: ir.const_declarations.iter().filter(|c| c.name == *ident).next()?,
-            }),
-            Declaration::Enum => Some(Decl::Enum {
+            })),
+            Declaration::Enum => Some(Ok(Decl::Enum {
                 data: ir.enum_declarations.iter().filter(|e| e.name == *ident).next()?,
-            }),
-            Declaration::Interface => Some(Decl::Interface {
+            })),
+            Declaration::Interface => Some(Ok(Decl::Interface {
                 data: ir.interface_declarations.iter().filter(|e| e.name == *ident).next()?,
-            }),
-            Declaration::Struct => Some(Decl::Struct {
-                data: ir
-                    .struct_declarations
-                    .iter()
-                    .filter(|e| e.name == *ident && !e.is_request_or_response)
-                    .next()?,
-            }),
-            Declaration::TypeAlias => Some(Decl::TypeAlias {
+            })),
+            Declaration::Struct => {
+                let matched = ir.struct_declarations.iter().find_map(|e| {
+                    match ir.is_type_used_for_message_body(ident) {
+                        Ok(is_message_body) => {
+                            match e.name == *ident && !(e.is_anonymous() && is_message_body) {
+                                true => Some(Ok(e)),
+                                false => None,
+                            }
+                        }
+                        Err(err) => Some(Err(err)),
+                    }
+                })?;
+
+                Some(match matched {
+                    Ok(val) => Ok(Decl::Struct { data: val }),
+                    Err(err) => Err(err),
+                })
+            }
+            Declaration::TypeAlias => Some(Ok(Decl::TypeAlias {
                 data: ir.type_alias_declarations.iter().filter(|e| e.name == *ident).next()?,
-            }),
-            Declaration::Union => Some(Decl::Union {
+            })),
+            Declaration::Union => Some(Ok(Decl::Union {
                 data: ir.union_declarations.iter().filter(|e| e.name == *ident).next()?,
-            }),
+            })),
             _ => None,
         })
-        .collect())
+        .collect()
 }
 
 #[derive(PartialEq, Eq)]

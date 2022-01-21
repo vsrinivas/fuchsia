@@ -59,6 +59,7 @@ fn main() -> Result<(), Error> {
         BackendName::CppMock => Box::new(CppMockBackend::new(&mut output)),
         BackendName::Rust => Box::new(RustBackend::new(&mut output)),
     };
-    let ir: FidlIr = serde_json::from_reader(BufReader::new(File::open(flags.ir)?))?;
+    let mut ir: FidlIr = serde_json::from_reader(BufReader::new(File::open(flags.ir)?))?;
+    ir.build()?;
     backend.codegen(ir)
 }

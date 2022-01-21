@@ -17,7 +17,8 @@ macro_rules! codegen_test {
             use fidlgen_banjo_lib::{backends, fidl::FidlIr};
             use pretty_assertions::assert_eq;
 
-            let ir: FidlIr = serde_json::from_str(test_irs::$id::IR)?;
+            let mut ir: FidlIr = serde_json::from_str(test_irs::$id::IR)?;
+            ir.build()?;
             let mut output = vec![];
             let expected = include_str!($golden_file);
 

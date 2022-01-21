@@ -10,7 +10,7 @@ use {
     lazy_static::lazy_static,
     regex::Regex,
     serde::{Deserialize, Deserializer, Serialize},
-    std::collections::BTreeMap,
+    std::collections::{BTreeMap, HashSet},
     std::ops::Add,
     std::string::ToString,
 };
@@ -315,6 +315,7 @@ impl Constant {
 pub struct Bits {
     pub maybe_attributes: Option<Vec<Attribute>>,
     pub name: CompoundIdentifier,
+    pub naming_context: Vec<String>,
     pub location: Option<Location>,
     #[serde(rename = "type")]
     pub _type: Type,
@@ -353,6 +354,7 @@ pub struct EnumMember {
 pub struct Enum {
     pub maybe_attributes: Option<Vec<Attribute>>,
     pub name: CompoundIdentifier,
+    pub naming_context: Vec<String>,
     pub location: Option<Location>,
     #[serde(rename = "type")]
     pub _type: IntegerType,
@@ -503,12 +505,18 @@ pub struct Struct {
     pub max_handles: Option<Count>,
     pub maybe_attributes: Option<Vec<Attribute>>,
     pub name: CompoundIdentifier,
+    pub naming_context: Vec<String>,
     pub location: Option<Location>,
     pub anonymous: Option<bool>,
     pub members: Vec<StructMember>,
     pub resource: bool,
     pub type_shape_v1: TypeShape,
-    pub is_request_or_response: bool,
+}
+
+impl Struct {
+    pub fn is_anonymous(&self) -> bool {
+        self.naming_context.len() > 1
+    }
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Default, Serialize, Deserialize)]
@@ -531,6 +539,7 @@ pub struct Table {
     pub max_handles: Option<Count>,
     pub maybe_attributes: Option<Vec<Attribute>>,
     pub name: CompoundIdentifier,
+    pub naming_context: Vec<String>,
     pub location: Option<Location>,
     pub members: Vec<TableMember>,
     pub strict: bool,
@@ -557,6 +566,7 @@ pub struct Union {
     pub max_handles: Option<Count>,
     pub maybe_attributes: Option<Vec<Attribute>>,
     pub name: CompoundIdentifier,
+    pub naming_context: Vec<String>,
     pub location: Option<Location>,
     pub members: Vec<UnionMember>,
     pub strict: bool,
@@ -610,6 +620,11 @@ pub struct FidlIr {
     pub declaration_order: Vec<CompoundIdentifier>,
     pub declarations: DeclarationsMap,
     pub library_dependencies: Vec<Library>,
+
+    // A set of all FIDL types used as a message payload.  Unlike the public members of this struct,
+    // this member is an internal value, generated when the build() method is called. It serves to
+    // cache lookups for future use.
+    message_body_type_names: Option<HashSet<CompoundIdentifier>>,
 }
 
 // Additional methods for IR types.
@@ -722,6 +737,54 @@ impl FidlIr {
                     .ok_or(anyhow!("Could not find declaration: {:?}", identifier))
                     .map(|_| true)
             })
+    }
+
+    pub fn is_type_used_for_message_body(
+        &self,
+        identifier: &CompoundIdentifier,
+    ) -> Result<bool, Error> {
+        match self.message_body_type_names.as_ref() {
+            Some(set) => Ok(set.contains(&identifier)),
+            None => Err(anyhow!("Must call |build| first")),
+        }
+    }
+
+    fn build_message_body_type_names(&mut self) -> Result<(), Error> {
+        if self.message_body_type_names.is_none() {
+            let mut message_body_type_names = HashSet::<CompoundIdentifier>::new();
+            self.interface_declarations.iter().map(|protocol| {
+                protocol.methods.iter().map(|method| {
+                    if method.maybe_request_payload.is_some() {
+                        match method.maybe_request_payload.as_ref().unwrap() {
+                            Type::Identifier { identifier, .. } => {
+                                message_body_type_names.insert(identifier.clone());
+                                Ok(())
+                            }
+                            _ => Err(anyhow!("The kind of the request payload for method {:?} must be 'identifier'", method.name)),
+                        }?;
+                    }
+                    if method.maybe_response_payload.is_some() {
+                        return match method.maybe_response_payload.as_ref().unwrap() {
+                            Type::Identifier { identifier, .. } => {
+                                message_body_type_names.insert(identifier.clone());
+                                Ok(())
+                            }
+                            _ => Err(anyhow!("The kind of the response payload for method {:?} must be 'identifier'", method.name)),
+                        }
+                    }
+                    Ok(())
+                }).collect()
+            }).collect::<Result<(), Error>>()?;
+            self.message_body_type_names = Some(message_body_type_names);
+        }
+        Ok(())
+    }
+
+    // After the IR has been deserialized from JSON, certain internal properties of the IR, such as
+    // cached lookups, should be constructed by calling this method.
+    pub fn build(&mut self) -> Result<(), Error> {
+        self.build_message_body_type_names()?;
+        Ok(())
     }
 }
 
