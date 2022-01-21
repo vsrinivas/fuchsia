@@ -57,9 +57,11 @@ DataProcessor::DataProcessor(fbl::unique_fd dir_fd, async_dispatcher_t* dispatch
 
 DataProcessor::~DataProcessor() {
   // async::Wait is not threadsafe. Since we delegate processing to the processor
-  // thread, post a task to handle it's destruction there.
-  async::PostTask(dispatcher_,
-                  [processor_wait = std::move(processor_wait_)] { processor_wait->Cancel(); });
+  // thread, post a task to handle it's destruction there. The handle used to wait on the
+  // signal must still be valid when Cancel is called, so we move inner_ (which contains
+  // the handle) to the processor thread.
+  async::PostTask(dispatcher_, [processor_wait = std::move(processor_wait_),
+                                inner = std::move(inner_)] { processor_wait->Cancel(); });
 }
 
 void DataProcessor::ProcessData(std::string test_url, DataSinkDump data_sink_dump) {
