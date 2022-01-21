@@ -2036,6 +2036,11 @@ pub enum SubnetError {
     HostBitsSet,
 }
 
+/// A prefix was provided which is longer than the number of bits in the address
+/// (32 for IPv4/128 for IPv6).
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
+pub struct PrefixTooLongError;
+
 /// An IP subnet.
 ///
 /// `Subnet` is a combination of an IP network address and a prefix length.
@@ -2079,6 +2084,20 @@ impl<A: IpAddress> Subnet<A> {
         if network != network.mask(prefix) {
             return Err(SubnetError::HostBitsSet);
         }
+        Ok(Subnet { network, prefix })
+    }
+
+    /// Creates a new subnet from the address of a host in that subnet.
+    ///
+    /// Unlike [`new`], the `host` address may have host bits set.
+    ///
+    /// [`new`]: Subnet::new
+    #[inline]
+    pub fn from_host(host: A, prefix: u8) -> Result<Subnet<A>, PrefixTooLongError> {
+        if prefix > A::BYTES * 8 {
+            return Err(PrefixTooLongError);
+        }
+        let network = host.mask(prefix);
         Ok(Subnet { network, prefix })
     }
 
@@ -2165,6 +2184,19 @@ impl SubnetEither {
         Ok(match network {
             IpAddr::V4(network) => SubnetEither::V4(Subnet::new(network, prefix)?),
             IpAddr::V6(network) => SubnetEither::V6(Subnet::new(network, prefix)?),
+        })
+    }
+
+    /// Creates a new subnet from the address of a host in that subnet.
+    ///
+    /// Unlike [`new`], the `host` address may have host bits set.
+    ///
+    /// [`new`]: SubnetEither::new
+    #[inline]
+    pub fn from_host(host: IpAddr, prefix: u8) -> Result<SubnetEither, PrefixTooLongError> {
+        Ok(match host {
+            IpAddr::V4(host) => SubnetEither::V4(Subnet::from_host(host, prefix)?),
+            IpAddr::V6(host) => SubnetEither::V6(Subnet::from_host(host, prefix)?),
         })
     }
 
@@ -2503,8 +2535,17 @@ mod tests {
             Subnet::new(Ipv4Addr::new([255, 255, 0, 0]), 33),
             Err(SubnetError::PrefixTooLong)
         );
+        assert_eq!(
+            Subnet::from_host(Ipv4Addr::new([255, 255, 255, 255]), 33),
+            Err(PrefixTooLongError)
+        );
         // Network address has more than top 8 bits set
         assert_eq!(Subnet::new(Ipv4Addr::new([255, 255, 0, 0]), 8), Err(SubnetError::HostBitsSet));
+        // Host address is allowed to have host bits set
+        assert_eq!(
+            Subnet::from_host(Ipv4Addr::new([255, 255, 0, 0]), 8),
+            Ok(Subnet { network: Ipv4Addr::new([255, 0, 0, 0]), prefix: 8 })
+        );
 
         assert_eq!(
             AddrSubnet::<_, SpecifiedAddr<_>>::new(Ipv4Addr::new([1, 2, 3, 4]), 32).unwrap(),
