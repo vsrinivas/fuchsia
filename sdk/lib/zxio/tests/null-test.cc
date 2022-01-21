@@ -54,8 +54,13 @@ TEST(NullTest, Default) {
             zxio_add_inotify_filter(&io, "hello", strlen("hello"), 0u, 0, ZX_HANDLE_INVALID));
   ASSERT_EQ(ZX_ERR_NOT_SUPPORTED, zxio_unlink(&io, "hello", 0));
 
-  ASSERT_EQ(ZX_ERR_NOT_SUPPORTED, zxio_rename(&io, "one", ZX_HANDLE_INVALID, "two"));
-  ASSERT_EQ(ZX_ERR_NOT_SUPPORTED, zxio_link(&io, "one", ZX_HANDLE_INVALID, "two"));
+  constexpr std::string_view old_path("one");
+  constexpr std::string_view new_path("two");
+  ASSERT_EQ(ZX_ERR_NOT_SUPPORTED,
+            zxio_rename(&io, old_path.data(), old_path.length(), ZX_HANDLE_INVALID, new_path.data(),
+                        new_path.length()));
+  ASSERT_EQ(ZX_ERR_NOT_SUPPORTED, zxio_link(&io, old_path.data(), old_path.length(),
+                                            ZX_HANDLE_INVALID, new_path.data(), new_path.length()));
 
   zxio_dirent_iterator_t iter = {};
   ASSERT_EQ(ZX_ERR_NOT_SUPPORTED, zxio_dirent_iterator_init(&iter, &io));
@@ -115,8 +120,13 @@ TEST(NullTest, Null) {
             zxio_add_inotify_filter(&io, "hello", strlen("hello"), 0u, 0, ZX_HANDLE_INVALID));
   ASSERT_EQ(ZX_ERR_NOT_SUPPORTED, zxio_unlink(&io, "hello", 0));
 
-  ASSERT_EQ(ZX_ERR_NOT_SUPPORTED, zxio_rename(&io, "one", ZX_HANDLE_INVALID, "two"));
-  ASSERT_EQ(ZX_ERR_NOT_SUPPORTED, zxio_link(&io, "one", ZX_HANDLE_INVALID, "two"));
+  constexpr std::string_view old_path("one");
+  constexpr std::string_view new_path("two");
+  ASSERT_EQ(ZX_ERR_NOT_SUPPORTED,
+            zxio_rename(&io, old_path.data(), old_path.length(), ZX_HANDLE_INVALID, new_path.data(),
+                        new_path.length()));
+  ASSERT_EQ(ZX_ERR_NOT_SUPPORTED, zxio_link(&io, old_path.data(), old_path.length(),
+                                            ZX_HANDLE_INVALID, new_path.data(), new_path.length()));
 
   zxio_dirent_iterator_t iter = {};
   ASSERT_EQ(ZX_ERR_NOT_SUPPORTED, zxio_dirent_iterator_init(&iter, &io));

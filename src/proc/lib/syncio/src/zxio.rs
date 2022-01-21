@@ -391,16 +391,20 @@ extern "C" {
     pub fn zxio_rename(
         old_directory: *mut zxio_t,
         old_path: *const ::std::os::raw::c_char,
+        old_path_len: usize,
         new_directory_token: zx_handle_t,
         new_path: *const ::std::os::raw::c_char,
+        new_path_len: usize,
     ) -> zx_status_t;
 }
 extern "C" {
     pub fn zxio_link(
         src_directory: *mut zxio_t,
         src_path: *const ::std::os::raw::c_char,
+        src_path_len: usize,
         dst_directory_token: zx_handle_t,
         dst_path: *const ::std::os::raw::c_char,
+        dst_path_len: usize,
     ) -> zx_status_t;
 }
 #[repr(C)]

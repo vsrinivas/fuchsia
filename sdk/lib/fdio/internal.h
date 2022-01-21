@@ -122,8 +122,7 @@ void fdio_iovec_copy_to(const uint8_t* buffer, size_t buffer_size, const zx_iove
 void fdio_iovec_copy_from(const zx_iovec_t* vector, size_t vector_count, uint8_t* buffer,
                           size_t buffer_size, size_t* out_actual);
 
-using two_path_op = zx_status_t(const char* src, size_t srclen, zx_handle_t dst_token,
-                                const char* dst, size_t dstlen);
+using two_path_op = zx_status_t(std::string_view src, zx_handle_t dst_token, std::string_view dst);
 
 // Lifecycle notes:
 //

@@ -56,14 +56,12 @@ zx_status_t fdio::unlink(const char* name, size_t len, int flags) { return ZX_ER
 
 zx_status_t fdio::truncate(uint64_t off) { return ZX_ERR_NOT_SUPPORTED; }
 
-zx_status_t fdio::rename(const char* src, size_t srclen, zx_handle_t dst_token, const char* dst,
-                         size_t dstlen) {
+zx_status_t fdio::rename(std::string_view src, zx_handle_t dst_token, std::string_view dst) {
   zx_handle_close(dst_token);
   return ZX_ERR_NOT_SUPPORTED;
 }
 
-zx_status_t fdio::link(const char* src, size_t srclen, zx_handle_t dst_token, const char* dst,
-                       size_t dstlen) {
+zx_status_t fdio::link(std::string_view src, zx_handle_t dst_token, std::string_view dst) {
   zx_handle_close(dst_token);
   return ZX_ERR_NOT_SUPPORTED;
 }

@@ -853,12 +853,13 @@ zx_status_t zxio_remote_token_get(zxio_t* io, zx_handle_t* out_token) {
   return ZX_OK;
 }
 
-zx_status_t zxio_remote_rename(zxio_t* io, const char* src_path, zx_handle_t dst_token,
-                               const char* dst_path) {
+zx_status_t zxio_remote_rename(zxio_t* io, const char* old_path, size_t old_path_len,
+                               zx_handle_t dst_token, const char* new_path, size_t new_path_len) {
   Remote rio(io);
-  auto result = fidl::WireCall(fidl::UnownedClientEnd<fio::Directory>(rio.control()))
-                    ->Rename(fidl::StringView::FromExternal(src_path), zx::event(dst_token),
-                             fidl::StringView::FromExternal(dst_path));
+  auto result =
+      fidl::WireCall(fidl::UnownedClientEnd<fio::Directory>(rio.control()))
+          ->Rename(fidl::StringView::FromExternal(old_path, old_path_len), zx::event(dst_token),
+                   fidl::StringView::FromExternal(new_path, new_path_len));
   if (!result.ok()) {
     return result.status();
   }
@@ -868,12 +869,13 @@ zx_status_t zxio_remote_rename(zxio_t* io, const char* src_path, zx_handle_t dst
   return ZX_OK;
 }
 
-zx_status_t zxio_remote_link(zxio_t* io, const char* src_path, zx_handle_t dst_token,
-                             const char* dst_path) {
+zx_status_t zxio_remote_link(zxio_t* io, const char* src_path, size_t src_path_len,
+                             zx_handle_t dst_token, const char* dst_path, size_t dst_path_len) {
   Remote rio(io);
-  auto result = fidl::WireCall(fidl::UnownedClientEnd<fio::Directory>(rio.control()))
-                    ->Link(fidl::StringView::FromExternal(src_path), zx::handle(dst_token),
-                           fidl::StringView::FromExternal(dst_path));
+  auto result =
+      fidl::WireCall(fidl::UnownedClientEnd<fio::Directory>(rio.control()))
+          ->Link(fidl::StringView::FromExternal(src_path, src_path_len), zx::handle(dst_token),
+                 fidl::StringView::FromExternal(dst_path, dst_path_len));
   return result.ok() ? result.Unwrap()->s : result.status();
 }
 

@@ -35,10 +35,8 @@ struct zxio : public base {
                               void* context) override;
   zx_status_t unlink(const char* name, size_t len, int flags) override;
   zx_status_t truncate(uint64_t off) override;
-  zx_status_t rename(const char* src, size_t srclen, zx_handle_t dst_token, const char* dst,
-                     size_t dstlen) override;
-  zx_status_t link(const char* src, size_t srclen, zx_handle_t dst_token, const char* dst,
-                   size_t dstlen) override;
+  zx_status_t rename(std::string_view src, zx_handle_t dst_token, std::string_view dst) override;
+  zx_status_t link(std::string_view src, zx_handle_t dst_token, std::string_view dst) override;
   zx_status_t get_flags(uint32_t* out_flags) override;
   zx_status_t set_flags(uint32_t flags) override;
   zx_status_t recvmsg(struct msghdr* msg, int flags, size_t* out_actual,

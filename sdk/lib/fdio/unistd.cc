@@ -37,6 +37,7 @@
 #include <variant>
 
 #include <fbl/auto_lock.h>
+#include <fbl/string_buffer.h>
 
 #include "fdio_unistd.h"
 #include "internal.h"
@@ -414,13 +415,16 @@ wat:
   strcpy(fdio_cwd_path, "(unknown)");
 }
 
+// Buffer used to store a single path component and its null terminator.
+using NameBuffer = fbl::StringBuffer<NAME_MAX>;
+
 // Opens the directory containing path
 //
-// Returns the last component of the path in `out`, which must be a buffer that can fit [NAME_MAX +
-// 1] characters.  If `is_dir_out` is nullptr, a trailing slash will be added to the name
-// if the last component happens to be a directory.  Otherwise, `is_dir_out` will be set to indicate
-// whether the last component is a directory.
-zx::status<fdio_ptr> opendir_containing_at(int dirfd, const char* path, char* out,
+// Returns the last component of the path in `out`.  If `is_dir_out` is nullptr,
+// a trailing slash will be added to the name if the last component happens to
+// be a directory.  Otherwise, `is_dir_out` will be set to indicate whether the
+// last component is a directory.
+zx::status<fdio_ptr> opendir_containing_at(int dirfd, const char* path, NameBuffer* out,
                                            bool* is_dir_out) {
   if (path == nullptr) {
     return zx::error(ZX_ERR_INVALID_ARGS);
@@ -456,7 +460,8 @@ zx::status<fdio_ptr> opendir_containing_at(int dirfd, const char* path, char* ou
   }
 
   // Copy the trailing 'name' to out.
-  memcpy(out, clean + i, namelen);
+  out->Append(clean + i, namelen);
+
   if (is_dir_out) {
     *is_dir_out = is_dir;
   } else if (is_dir) {
@@ -465,9 +470,8 @@ zx::status<fdio_ptr> opendir_containing_at(int dirfd, const char* path, char* ou
     // This might require refactoring trailing backslash checks out of
     // lower filesystem layers and associated FIDL APIs.
 
-    out[namelen++] = '/';
+    out->Append('/');
   }
-  out[namelen] = 0;
 
   if (i == 0 && clean[i] != '/') {
     clean[0] = '.';
@@ -706,16 +710,16 @@ extern "C" __EXPORT zx_status_t _mmap_file(size_t offset, size_t len, zx_vm_opti
 
 __EXPORT
 int unlinkat(int dirfd, const char* path, int flags) {
-  char name[NAME_MAX + 1];
+  fdio_internal::NameBuffer name;
   bool is_dir;
-  zx::status io = fdio_internal::opendir_containing_at(dirfd, path, name, &is_dir);
+  zx::status io = fdio_internal::opendir_containing_at(dirfd, path, &name, &is_dir);
   if (io.is_error()) {
     return ERROR(io.status_value());
   }
   if (is_dir) {
     flags |= AT_REMOVEDIR;
   }
-  return STATUS(io->unlink(name, strlen(name), flags));
+  return STATUS(io->unlink(name.data(), name.length(), flags));
 }
 
 __EXPORT
@@ -1122,16 +1126,16 @@ int ftruncate(int fd, off_t len) {
 // mount points with ease.
 static int two_path_op_at(int olddirfd, const char* oldpath, int newdirfd, const char* newpath,
                           two_path_op fdio_t::*op_getter) {
-  char oldname[NAME_MAX + 1];
+  fdio_internal::NameBuffer oldname;
   zx::status io_oldparent =
-      fdio_internal::opendir_containing_at(olddirfd, oldpath, oldname, nullptr);
+      fdio_internal::opendir_containing_at(olddirfd, oldpath, &oldname, nullptr);
   if (io_oldparent.is_error()) {
     return ERROR(io_oldparent.status_value());
   }
 
-  char newname[NAME_MAX + 1];
+  fdio_internal::NameBuffer newname;
   zx::status io_newparent =
-      fdio_internal::opendir_containing_at(newdirfd, newpath, newname, nullptr);
+      fdio_internal::opendir_containing_at(newdirfd, newpath, &newname, nullptr);
   if (io_newparent.is_error()) {
     return ERROR(io_newparent.status_value());
   }
@@ -1141,8 +1145,7 @@ static int two_path_op_at(int olddirfd, const char* oldpath, int newdirfd, const
   if (status != ZX_OK) {
     return ERROR(status);
   }
-  return STATUS((io_oldparent.value().get()->*op_getter)(oldname, strlen(oldname), token, newname,
-                                                         strlen(newname)));
+  return STATUS((io_oldparent.value().get()->*op_getter)(oldname, token, newname));
 }
 
 __EXPORT

@@ -58,10 +58,10 @@ zx_status_t zxio_default_add_inotify_filter(zxio_t* io, const char* path, size_t
                                             zx_handle_t socket);
 zx_status_t zxio_default_unlink(zxio_t* io, const char* name, int flags);
 zx_status_t zxio_default_token_get(zxio_t* io, zx_handle_t* out_token);
-zx_status_t zxio_default_rename(zxio_t* io, const char* src_path, zx_handle_t dst_token,
-                                const char* dst_path);
-zx_status_t zxio_default_link(zxio_t* io, const char* src_path, zx_handle_t dst_token,
-                              const char* dst_path);
+zx_status_t zxio_default_rename(zxio_t* io, const char* old_path, size_t old_path_len,
+                                zx_handle_t dst_token, const char* new_path, size_t new_path_len);
+zx_status_t zxio_default_link(zxio_t* io, const char* src_path, size_t src_path_len,
+                              zx_handle_t dst_token, const char* dst_path, size_t dst_path_len);
 zx_status_t zxio_default_dirent_iterator_init(zxio_t* directory, zxio_dirent_iterator_t* iterator);
 zx_status_t zxio_default_dirent_iterator_next(zxio_t* io, zxio_dirent_iterator_t* iterator,
                                               zxio_dirent_t* inout_entry);

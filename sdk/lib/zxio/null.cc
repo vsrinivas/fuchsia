@@ -114,14 +114,14 @@ zx_status_t zxio_default_token_get(zxio_t* io, zx_handle_t* out_token) {
   return ZX_ERR_NOT_SUPPORTED;
 }
 
-zx_status_t zxio_default_rename(zxio_t* io, const char* src_path, zx_handle_t dst_token,
-                                const char* dst_path) {
+zx_status_t zxio_default_rename(zxio_t* io, const char* old_path, size_t old_path_len,
+                                zx_handle_t dst_token, const char* new_path, size_t new_path_len) {
   zx_handle_close(dst_token);
   return ZX_ERR_NOT_SUPPORTED;
 }
 
-zx_status_t zxio_default_link(zxio_t* io, const char* src_path, zx_handle_t dst_token,
-                              const char* dst_path) {
+zx_status_t zxio_default_link(zxio_t* io, const char* src_path, size_t src_path_len,
+                              zx_handle_t dst_token, const char* dst_path, size_t dst_path_len) {
   zx_handle_close(dst_token);
   return ZX_ERR_NOT_SUPPORTED;
 }

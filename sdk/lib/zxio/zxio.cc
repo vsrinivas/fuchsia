@@ -375,24 +375,27 @@ zx_status_t zxio_unlink(zxio_t* directory, const char* name, int flags) {
   return zio->ops->unlink(directory, name, flags);
 }
 
-zx_status_t zxio_rename(zxio_t* old_directory, const char* old_path,
-                        zx_handle_t new_directory_token, const char* new_path) {
+zx_status_t zxio_rename(zxio_t* old_directory, const char* old_path, size_t old_path_len,
+                        zx_handle_t new_directory_token, const char* new_path,
+                        size_t new_path_len) {
   if (!zxio_is_valid(old_directory)) {
     zx_handle_close(new_directory_token);
     return ZX_ERR_BAD_HANDLE;
   }
   zxio_internal_t* zio = to_internal(old_directory);
-  return zio->ops->rename(old_directory, old_path, new_directory_token, new_path);
+  return zio->ops->rename(old_directory, old_path, old_path_len, new_directory_token, new_path,
+                          new_path_len);
 }
 
-zx_status_t zxio_link(zxio_t* src_directory, const char* src_path, zx_handle_t dst_directory_token,
-                      const char* dst_path) {
+zx_status_t zxio_link(zxio_t* src_directory, const char* src_path, size_t src_path_len,
+                      zx_handle_t dst_directory_token, const char* dst_path, size_t dst_path_len) {
   if (!zxio_is_valid(src_directory)) {
     zx_handle_close(dst_directory_token);
     return ZX_ERR_BAD_HANDLE;
   }
   zxio_internal_t* zio = to_internal(src_directory);
-  return zio->ops->link(src_directory, src_path, dst_directory_token, dst_path);
+  return zio->ops->link(src_directory, src_path, src_path_len, dst_directory_token, dst_path,
+                        dst_path_len);
 }
 
 zx_status_t zxio_dirent_iterator_init(zxio_dirent_iterator_t* iterator, zxio_t* directory) {
