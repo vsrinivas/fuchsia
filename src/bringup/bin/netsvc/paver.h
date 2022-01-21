@@ -124,6 +124,7 @@ class Paver : public PaverInterface {
   std::atomic<unsigned int> buf_refcount_ = 0;
   thrd_t buf_thrd_ = 0;
   sync_completion_t data_ready_;
+  std::atomic<bool> closed_;
 
   // Timeout monitor thread uses before timing out.
   zx::duration timeout_ = zx::sec(5 * TFTP_TIMEOUT_SECS);

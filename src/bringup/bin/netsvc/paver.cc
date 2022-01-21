@@ -70,6 +70,12 @@ int Paver::StreamBuffer() {
         result = TFTP_ERR_TIMED_OUT;
         return ZX_ERR_TIMED_OUT;
       }
+      if (closed_) {
+        printf("netsvc: 1 paver closed, exiting copy thread\n");
+        exit_code_.store(ZX_ERR_CANCELED);
+        result = TFTP_ERR_BAD_STATE;
+        return ZX_ERR_CANCELED;
+      }
       sync_completion_reset(&data_ready_);
       write_offset = write_offset_.load();
     };
@@ -435,6 +441,12 @@ int Paver::MonitorBuffer() {
       result = TFTP_ERR_TIMED_OUT;
       return result;
     }
+    if (closed_) {
+      printf("netsvc: 2 paver closed, exiting copy thread\n");
+      exit_code_.store(ZX_ERR_CANCELED);
+      result = TFTP_ERR_BAD_STATE;
+      return result;
+    }
     sync_completion_reset(&data_ready_);
     write_ndx = write_offset_.load();
   } while (write_ndx < size_);
@@ -656,6 +668,7 @@ tftp_status Paver::OpenWrite(std::string_view filename, size_t size) {
   exit_code_.store(0);
   in_progress_.store(true);
 
+  closed_ = false;
   sync_completion_reset(&data_ready_);
 
   auto thread_fn = command_ == Command::kFvm
@@ -697,8 +710,8 @@ void Paver::Close() {
   if (refcount == 1) {
     buffer_mapper_.Reset();
   }
-  // TODO: Signal thread to wake up rather than wait for it to timeout if
-  // stream is closed before write is complete?
+  closed_ = true;
+  sync_completion_signal(&data_ready_);
 }
 
 }  // namespace netsvc

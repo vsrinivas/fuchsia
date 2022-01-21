@@ -118,8 +118,8 @@ TEST_F(PaverTest, WriteCompleteSingle) {
   ASSERT_EQ(paver_.OpenWrite(FirmwareFilename(), size), TFTP_NO_ERROR);
   ASSERT_EQ(paver_.Write(kFakeData, &size, 0), TFTP_NO_ERROR);
   ASSERT_EQ(size, sizeof(kFakeData));
-  paver_.Close();
   Wait();
+  paver_.Close();
   ASSERT_OK(paver_.exit_code());
 
   ValidateCommandTrace(fake_svc_.fake_paver().GetCommandTrace(),
@@ -135,8 +135,8 @@ TEST_F(PaverTest, WriteCompleteManySmallWrites) {
     ASSERT_EQ(paver_.Write(kFakeData, &size, offset), TFTP_NO_ERROR);
     ASSERT_EQ(size, std::min(sizeof(kFakeData), 1024 - offset));
   }
-  paver_.Close();
   Wait();
+  paver_.Close();
   ASSERT_OK(paver_.exit_code());
 }
 
@@ -158,8 +158,8 @@ TEST_F(PaverTest, CloseChannelBetweenWrites) {
   loop_.Shutdown();
   ASSERT_EQ(paver_.Write(kFakeData, &size, size), TFTP_NO_ERROR);
   ASSERT_EQ(size, sizeof(kFakeData));
-  paver_.Close();
   Wait();
+  paver_.Close();
   ASSERT_EQ(paver_.exit_code(), ZX_ERR_PEER_CLOSED);
 }
 
@@ -170,8 +170,8 @@ TEST_F(PaverTest, WriteFirmwareA) {
   ASSERT_EQ(paver_.OpenWrite(file_name, size), TFTP_NO_ERROR);
   ASSERT_EQ(paver_.Write(kFakeData, &size, 0), TFTP_NO_ERROR);
   ASSERT_EQ(size, sizeof(kFakeData));
-  paver_.Close();
   Wait();
+  paver_.Close();
   ASSERT_OK(paver_.exit_code());
 
   ValidateCommandTrace(fake_svc_.fake_paver().GetCommandTrace(),
@@ -184,8 +184,8 @@ TEST_F(PaverTest, WriteZirconA) {
   ASSERT_EQ(paver_.OpenWrite(NB_ZIRCONA_FILENAME, size), TFTP_NO_ERROR);
   ASSERT_EQ(paver_.Write(kFakeData, &size, 0), TFTP_NO_ERROR);
   ASSERT_EQ(size, sizeof(kFakeData));
-  paver_.Close();
   Wait();
+  paver_.Close();
   ASSERT_OK(paver_.exit_code());
 
   ValidateCommandTrace(fake_svc_.fake_paver().GetCommandTrace(),
@@ -198,8 +198,8 @@ TEST_F(PaverTest, WriteVbMetaA) {
   ASSERT_EQ(paver_.OpenWrite(NB_VBMETAA_FILENAME, size), TFTP_NO_ERROR);
   ASSERT_EQ(paver_.Write(kFakeData, &size, 0), TFTP_NO_ERROR);
   ASSERT_EQ(size, sizeof(kFakeData));
-  paver_.Close();
   Wait();
+  paver_.Close();
   ASSERT_OK(paver_.exit_code());
 
   ValidateCommandTrace(fake_svc_.fake_paver().GetCommandTrace(),
@@ -221,8 +221,8 @@ TEST_F(PaverTest, WriteFirmwareABWithABRSupported) {
     ASSERT_EQ(paver_.OpenWrite(file_name, size), TFTP_NO_ERROR);
     ASSERT_EQ(paver_.Write(kFakeData, &size, 0), TFTP_NO_ERROR);
     ASSERT_EQ(size, sizeof(kFakeData));
-    paver_.Close();
     Wait();
+    paver_.Close();
     ASSERT_OK(paver_.exit_code());
     ValidateLastCommandTrace(fake_svc_.fake_paver().GetCommandTrace(),
                              {
@@ -244,8 +244,8 @@ TEST_F(PaverTest, WriteFirmwareRWithABRSupported) {
   ASSERT_EQ(paver_.OpenWrite(file_name, size), TFTP_NO_ERROR);
   ASSERT_EQ(paver_.Write(kFakeData, &size, 0), TFTP_NO_ERROR);
   ASSERT_EQ(size, sizeof(kFakeData));
-  paver_.Close();
   Wait();
+  paver_.Close();
   ASSERT_OK(paver_.exit_code());
   ValidateLastCommandTrace(fake_svc_.fake_paver().GetCommandTrace(),
                            {
@@ -263,8 +263,8 @@ TEST_F(PaverTest, WriteZirconAWithABRSupported) {
   ASSERT_EQ(paver_.OpenWrite(NB_ZIRCONA_FILENAME, size), TFTP_NO_ERROR);
   ASSERT_EQ(paver_.Write(kFakeData, &size, 0), TFTP_NO_ERROR);
   ASSERT_EQ(size, sizeof(kFakeData));
-  paver_.Close();
   Wait();
+  paver_.Close();
   ASSERT_OK(paver_.exit_code());
 
   ValidateCommandTrace(fake_svc_.fake_paver().GetCommandTrace(),
@@ -284,8 +284,8 @@ TEST_F(PaverTest, WriteZirconBWithABRSupported) {
   ASSERT_EQ(paver_.OpenWrite(NB_ZIRCONB_FILENAME, size), TFTP_NO_ERROR);
   ASSERT_EQ(paver_.Write(kFakeData, &size, 0), TFTP_NO_ERROR);
   ASSERT_EQ(size, sizeof(kFakeData));
-  paver_.Close();
   Wait();
+  paver_.Close();
   ASSERT_OK(paver_.exit_code());
 
   ValidateCommandTrace(fake_svc_.fake_paver().GetCommandTrace(),
@@ -305,8 +305,8 @@ TEST_F(PaverTest, WriteZirconRWithABRSupported) {
   ASSERT_EQ(paver_.OpenWrite(NB_ZIRCONR_FILENAME, size), TFTP_NO_ERROR);
   ASSERT_EQ(paver_.Write(kFakeData, &size, 0), TFTP_NO_ERROR);
   ASSERT_EQ(size, sizeof(kFakeData));
-  paver_.Close();
   Wait();
+  paver_.Close();
   ASSERT_OK(paver_.exit_code());
 
   ValidateCommandTrace(fake_svc_.fake_paver().GetCommandTrace(),
@@ -325,8 +325,8 @@ TEST_F(PaverTest, WriteVbMetaAWithABRSupported) {
   ASSERT_EQ(paver_.OpenWrite(NB_VBMETAA_FILENAME, size), TFTP_NO_ERROR);
   ASSERT_EQ(paver_.Write(kFakeData, &size, 0), TFTP_NO_ERROR);
   ASSERT_EQ(size, sizeof(kFakeData));
-  paver_.Close();
   Wait();
+  paver_.Close();
   ASSERT_OK(paver_.exit_code());
 
   ValidateCommandTrace(fake_svc_.fake_paver().GetCommandTrace(),
@@ -352,8 +352,8 @@ TEST_F(PaverTest, WriteVbMetaBWithABRSupported) {
   ASSERT_EQ(paver_.OpenWrite(NB_VBMETAB_FILENAME, size), TFTP_NO_ERROR);
   ASSERT_EQ(paver_.Write(kFakeData, &size, 0), TFTP_NO_ERROR);
   ASSERT_EQ(size, sizeof(kFakeData));
-  paver_.Close();
   Wait();
+  paver_.Close();
   ASSERT_OK(paver_.exit_code());
 
   ValidateCommandTrace(fake_svc_.fake_paver().GetCommandTrace(),
@@ -379,8 +379,8 @@ TEST_F(PaverTest, WriteVbMetaRWithABRSupported) {
   ASSERT_EQ(paver_.OpenWrite(NB_VBMETAR_FILENAME, size), TFTP_NO_ERROR);
   ASSERT_EQ(paver_.Write(kFakeData, &size, 0), TFTP_NO_ERROR);
   ASSERT_EQ(size, sizeof(kFakeData));
-  paver_.Close();
   Wait();
+  paver_.Close();
   ASSERT_OK(paver_.exit_code());
 
   ValidateCommandTrace(fake_svc_.fake_paver().GetCommandTrace(),
@@ -408,8 +408,8 @@ TEST_F(PaverTest, WriteZirconAWithABRSupportedTwice) {
     ASSERT_EQ(paver_.OpenWrite(NB_ZIRCONA_FILENAME, size), TFTP_NO_ERROR);
     ASSERT_EQ(paver_.Write(kFakeData, &size, 0), TFTP_NO_ERROR);
     ASSERT_EQ(size, sizeof(kFakeData));
-    paver_.Close();
     Wait();
+    paver_.Close();
     ASSERT_OK(paver_.exit_code());
     expected_accumulative.insert(expected_accumulative.end(), expected_per_time.begin(),
                                  expected_per_time.end());
@@ -423,8 +423,8 @@ TEST_F(PaverTest, WriteSshAuth) {
   ASSERT_EQ(paver_.OpenWrite(NB_SSHAUTH_FILENAME, size), TFTP_NO_ERROR);
   ASSERT_EQ(paver_.Write(kFakeData, &size, 0), TFTP_NO_ERROR);
   ASSERT_EQ(size, sizeof(kFakeData));
-  paver_.Close();
   Wait();
+  paver_.Close();
   ASSERT_OK(paver_.exit_code());
   ValidateCommandTrace(fake_svc_.fake_paver().GetCommandTrace(), {Command::kWriteDataFile});
 }
@@ -435,8 +435,8 @@ TEST_F(PaverTest, WriteFvm) {
   ASSERT_EQ(paver_.OpenWrite(NB_FVM_FILENAME, size), TFTP_NO_ERROR);
   ASSERT_EQ(paver_.Write(kFakeData, &size, 0), TFTP_NO_ERROR);
   ASSERT_EQ(size, sizeof(kFakeData));
-  paver_.Close();
   Wait();
+  paver_.Close();
   ASSERT_OK(paver_.exit_code());
   ValidateCommandTrace(fake_svc_.fake_paver().GetCommandTrace(), {Command::kWriteVolumes});
 }
@@ -450,8 +450,8 @@ TEST_F(PaverTest, WriteFvmManySmallWrites) {
     ASSERT_EQ(paver_.Write(kFakeData, &size, offset), TFTP_NO_ERROR);
     ASSERT_EQ(size, std::min(sizeof(kFakeData), 1024 - offset));
   }
-  paver_.Close();
   Wait();
+  paver_.Close();
   ASSERT_OK(paver_.exit_code());
   ValidateCommandTrace(fake_svc_.fake_paver().GetCommandTrace(), {Command::kWriteVolumes});
 }
@@ -467,8 +467,8 @@ TEST_F(PaverTest, InitializePartitionTables) {
   ASSERT_EQ(paver_.OpenWrite(NB_INIT_PARTITION_TABLES_FILENAME, size), TFTP_NO_ERROR);
   ASSERT_EQ(paver_.Write(&partition_info, &size, 0), TFTP_NO_ERROR);
   ASSERT_EQ(size, sizeof(partition_info));
-  paver_.Close();
   Wait();
+  paver_.Close();
   ASSERT_OK(paver_.exit_code());
   ValidateCommandTrace(fake_svc_.fake_paver().GetCommandTrace(), {Command::kInitPartitionTables});
 }
@@ -484,8 +484,8 @@ TEST_F(PaverTest, WipePartitionTables) {
   ASSERT_EQ(paver_.OpenWrite(NB_WIPE_PARTITION_TABLES_FILENAME, size), TFTP_NO_ERROR);
   ASSERT_EQ(paver_.Write(&partition_info, &size, 0), TFTP_NO_ERROR);
   ASSERT_EQ(size, sizeof(partition_info));
-  paver_.Close();
   Wait();
+  paver_.Close();
   ASSERT_OK(paver_.exit_code());
   ValidateCommandTrace(fake_svc_.fake_paver().GetCommandTrace(), {Command::kWipePartitionTables});
 }
@@ -496,8 +496,8 @@ TEST_F(PaverTest, WriteFirmwareNoType) {
   ASSERT_EQ(paver_.OpenWrite(FirmwareFilename(), size), TFTP_NO_ERROR);
   ASSERT_EQ(paver_.Write(kFakeData, &size, 0), TFTP_NO_ERROR);
   ASSERT_EQ(size, sizeof(kFakeData));
-  paver_.Close();
   Wait();
+  paver_.Close();
   ASSERT_OK(paver_.exit_code());
 
   ValidateCommandTrace(fake_svc_.fake_paver().GetCommandTrace(),
@@ -513,8 +513,8 @@ TEST_F(PaverTest, WriteFirmwareSupportedType) {
   ASSERT_EQ(paver_.OpenWrite(FirmwareFilename("foo"), size), TFTP_NO_ERROR);
   ASSERT_EQ(paver_.Write(kFakeData, &size, 0), TFTP_NO_ERROR);
   ASSERT_EQ(size, sizeof(kFakeData));
-  paver_.Close();
   Wait();
+  paver_.Close();
   ASSERT_OK(paver_.exit_code());
 
   ValidateCommandTrace(fake_svc_.fake_paver().GetCommandTrace(),
@@ -530,8 +530,8 @@ TEST_F(PaverTest, WriteFirmwareUnsupportedType) {
   ASSERT_EQ(paver_.OpenWrite(FirmwareFilename("bar"), size), TFTP_NO_ERROR);
   ASSERT_EQ(paver_.Write(kFakeData, &size, 0), TFTP_NO_ERROR);
   ASSERT_EQ(size, sizeof(kFakeData));
-  paver_.Close();
   Wait();
+  paver_.Close();
   // This should still return OK so that we just skip unknown firmware types.
   ASSERT_OK(paver_.exit_code());
 
@@ -548,8 +548,8 @@ TEST_F(PaverTest, WriteFirmwareFailure) {
   ASSERT_EQ(paver_.OpenWrite(FirmwareFilename(), size), TFTP_NO_ERROR);
   ASSERT_EQ(paver_.Write(kFakeData, &size, 0), TFTP_NO_ERROR);
   ASSERT_EQ(size, sizeof(kFakeData));
-  paver_.Close();
   Wait();
+  paver_.Close();
   // This should not return OK since an actual error occurred.
   ASSERT_NOT_OK(paver_.exit_code());
 
@@ -566,8 +566,8 @@ TEST_F(PaverTest, WriteFirmwareTypeMaxLength) {
   ASSERT_EQ(paver_.OpenWrite(FirmwareFilename(type), size), TFTP_NO_ERROR);
   ASSERT_EQ(paver_.Write(kFakeData, &size, 0), TFTP_NO_ERROR);
   ASSERT_EQ(size, sizeof(kFakeData));
-  paver_.Close();
   Wait();
+  paver_.Close();
   ASSERT_OK(paver_.exit_code());
 
   ValidateCommandTrace(fake_svc_.fake_paver().GetCommandTrace(),
@@ -582,8 +582,8 @@ TEST_F(PaverTest, WriteFirmwareTypeTooLong) {
 
   EXPECT_EQ(paver_.OpenWrite(FirmwareFilename(type), size), TFTP_ERR_INVALID_ARGS);
   EXPECT_NE(paver_.Write(kFakeData, &size, 0), TFTP_NO_ERROR);
-  paver_.Close();
   Wait();
+  paver_.Close();
 
   // Make sure the WriteFirmware() call was never made.
   ValidateCommandTrace(fake_svc_.fake_paver().GetCommandTrace(), {});
@@ -595,8 +595,8 @@ TEST_F(PaverTest, BootloaderUsesWriteFirmware) {
   ASSERT_EQ(paver_.OpenWrite(NB_BOOTLOADER_FILENAME, size), TFTP_NO_ERROR);
   ASSERT_EQ(paver_.Write(kFakeData, &size, 0), TFTP_NO_ERROR);
   ASSERT_EQ(size, sizeof(kFakeData));
-  paver_.Close();
   Wait();
+  paver_.Close();
   ASSERT_OK(paver_.exit_code());
 
   // Legacy BOOTLOADER file should use WriteFirmare() FIDL with empty type.
