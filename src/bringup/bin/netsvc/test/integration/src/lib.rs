@@ -190,8 +190,23 @@ where
     type E = netemul::Ethernet;
     let netsvc_name = format!("{}-netsvc", name);
     let ns_name = format!("{}-netstack", name);
+
+    // Create an event stream watcher before starting any realms so we're sure
+    // to observe netsvc early stop events.
+    let mut component_event_stream = netstack_testing_common::get_component_stopped_event_stream()
+        .await
+        .expect("get event stream");
+
     let sandbox = netemul::TestSandbox::new().expect("create sandbox");
     let (netsvc_realm, services) = create_netsvc_realm(&sandbox, &netsvc_name);
+
+    let netsvc_stopped_fut = netstack_testing_common::wait_for_component_stopped_with_stream(
+        &mut component_event_stream,
+        &netsvc_realm,
+        NETSVC_NAME,
+        None,
+    );
+
     let network = sandbox.create_network("net").await.expect("create network");
     let ep = network
         .create_endpoint::<netemul::Ethernet, _>(&netsvc_name)
@@ -236,6 +251,10 @@ where
 
     let test_fut = test(sock, interface.id().try_into().expect("interface ID doesn't fit u32"));
     futures::select! {
+        r = netsvc_stopped_fut.fuse() => {
+            let e: component_events::events::Stopped = r.expect("failed to observe stopped event");
+            panic!("netsvc stopped unexpectedly with {:?}", e);
+        },
         () = services.fuse() => panic!("ServiceFs ended unexpectedly"),
         () =  test_fut.fuse() => (),
     }

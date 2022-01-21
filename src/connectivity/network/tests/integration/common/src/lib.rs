@@ -109,29 +109,49 @@ pub async fn write_ndp_message<
     ep.write(ser.as_ref()).await.context("failed to write to fake endpoint")
 }
 
-/// Waits for a `stopped` event to be emitted for a component in a test realm.
-///
-/// Optionally specifies a matcher for the expected exit status of the `stopped` event.
-pub async fn wait_for_component_stopped(
-    realm: &netemul::TestRealm<'_>,
-    component_moniker: &str,
-    status_matcher: Option<component_events::matcher::ExitStatusMatcher>,
-) -> Result<component_events::events::Stopped> {
+/// Gets a component event stream yielding component stopped events.
+pub async fn get_component_stopped_event_stream() -> Result<component_events::events::EventStream> {
     use component_events::events::{self, Event as _, EventMode, EventSource, EventSubscription};
 
     let event_source = EventSource::from_proxy(
         fuchsia_component::client::connect_to_protocol::<fsys2::EventSourceMarker>()
             .context("failed to connect to event source protocol")?,
     );
-    let mut event_stream = event_source
+    event_source
         .subscribe(vec![EventSubscription::new(vec![events::Stopped::NAME], EventMode::Async)])
         .await
-        .context("failed to subscribe to `Stopped` events")?;
+        .context("failed to subscribe to `Stopped` events")
+}
 
+/// Waits for a `stopped` event to be emitted for a component in a test realm.
+///
+/// Optionally specifies a matcher for the expected exit status of the `stopped`
+/// event.
+pub async fn wait_for_component_stopped_with_stream(
+    event_stream: &mut component_events::events::EventStream,
+    realm: &netemul::TestRealm<'_>,
+    component_moniker: &str,
+    status_matcher: Option<component_events::matcher::ExitStatusMatcher>,
+) -> Result<component_events::events::Stopped> {
     let matcher = get_child_component_event_matcher(realm, component_moniker)
         .await
         .context("get child component matcher")?;
-    matcher.stop(status_matcher).wait::<events::Stopped>(&mut event_stream).await
+    matcher.stop(status_matcher).wait::<component_events::events::Stopped>(event_stream).await
+}
+
+/// Like [`wait_for_component_stopped_with_stream`] but retrieves an event
+/// stream for the caller.
+///
+/// Note that this function fails to observe stop events that happen in early
+/// realm creation, which is especially true for eager components.
+pub async fn wait_for_component_stopped(
+    realm: &netemul::TestRealm<'_>,
+    component_moniker: &str,
+    status_matcher: Option<component_events::matcher::ExitStatusMatcher>,
+) -> Result<component_events::events::Stopped> {
+    let mut stream = get_component_stopped_event_stream().await?;
+    wait_for_component_stopped_with_stream(&mut stream, realm, component_moniker, status_matcher)
+        .await
 }
 
 /// Gets an event matcher for `component_moniker` in `realm`.
