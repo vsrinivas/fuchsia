@@ -18,7 +18,7 @@ FIDL structure for [Component Manager](/docs/glossary/README.md#Component-Manage
 
 ## Component manifests
 
-CML files are [JSON5](https://json5.org/){.external} files that end with a
+CML files are [JSON5](https://json5.org/){: .external} files that end with a
 `.cml` extension. Below is an example CML manifest file for a simple component
 running an ELF binary that prints a "Hello, World" message to the system log:
 

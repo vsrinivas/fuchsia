@@ -46,7 +46,7 @@ You should familiarize yourself with the following topics:
 Create a minimal CML [CML file][glossary.component-manifest] and configure it
 with GN so that it gets compiled and installed in your package.
 
-Note: Unlike CMX, CML is [JSON5][json5-external]{.external}, which allows
+Note: Unlike CMX, CML is [JSON5][json5-external]{: .external}, which allows
 comments and trailing commas. Take advantage of this when writing your CML file!
 
 1.  Determine where your CMX file is located in the source tree (for example,

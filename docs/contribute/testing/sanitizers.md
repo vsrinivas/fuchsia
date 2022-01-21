@@ -49,7 +49,7 @@ prevent bugs at runtime:
 
 
 Lastly, Fuchsia uses [libFuzzer][llvm-libfuzzer]{:.external} and
-[syzkaller][syzkaller]{:external} to perform coverage-directed
+[syzkaller][syzkaller]{: .external} to perform coverage-directed
 [fuzz testing][fuzz-testing]. Fuzzers are similar to sanitizers in that they
 attempt to expose bugs in the code at runtime, and they are usually used in
 conjunction. Fuzzers are different from sanitizers in that fuzzers attempt to

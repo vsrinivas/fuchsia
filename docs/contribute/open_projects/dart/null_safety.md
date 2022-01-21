@@ -4,7 +4,7 @@
 
 Fuchsia's Dart build [transitioned][fxr583201] from `dartanalyzer` to `dart
 analyze` in 2021. `dart analyze` supports checking
-[sound null safety][dart-null-safety]{:external}. This means runtime
+[sound null safety][dart-null-safety]{: .external}. This means runtime
 null-dereference errors can be turned into edit-time analysis errors.
 
 Dart code written before Fuchsia code was checked for null safety needs to be
@@ -31,7 +31,7 @@ int? aNullableInt = null;
 ```
 
 See Dart's
-["Understanding null safety"][dart-understanding-null-safety]{:external} for
+["Understanding null safety"][dart-understanding-null-safety]{: .external} for
 more details.
 
 ## How to help
@@ -49,13 +49,13 @@ NOTE: You may see `import_of_legacy_library_into_null_safe` from Dart analysis.
 This means one of the dependencies does not support null safety yet, and should
 be migrated first. If this happens to be a third-party dependency, we
 unfortunately have to
-[wait for them to migrate first][wait-to-migrate]{:external}.
+[wait for them to migrate first][wait-to-migrate]{: .external}.
 
 Make sure the Dart sources you are migrating are
 [included in your build](/docs/development/build/fx.md#configure-a-build).
 Remove `// @dart=2.9` and the `TODO` line above it, rebuild, then follow errors
 and suggestions from Dart analysis. See
-[Dart's migration guide][dart-migration-guide]{:external} for more suggestions.
+[Dart's migration guide][dart-migration-guide]{: .external} for more suggestions.
 
 After you are done fixing all the errors from Dart analysis, add `null_safety =
 true` to the build target in the corresponding `BUILD.gn` file containing the
@@ -65,7 +65,7 @@ sources you migrated.
 
 When your change is ready, send it out for the corresponding owners for review.
 Preferable you can create a bug in Monorail to track the progress. If you do,
-make sure to mark it blocking the [main bug 84961][fxb84961]{:external}, and
+make sure to mark it blocking the [main bug 84961][fxb84961]{: .external}, and
 close it after your change has merged.
 
 ## Examples

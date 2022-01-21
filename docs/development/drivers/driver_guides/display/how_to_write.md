@@ -234,7 +234,7 @@ tracking, fences, etc.
 ### Implementation tips
 
 The driver decides when and how a configuration passed to `ApplyConfiguration`
-takes effect. In order to avoid [tearing][tearing]{:external}, drivers should
+takes effect. In order to avoid [tearing][tearing]{: .external}, drivers should
 apply new settings just after vsync.
 
 Most devices generate interrupts for vsync events. The easiest way to
@@ -271,7 +271,7 @@ basic bootloader driver. In most cases, your roadmap will be:
  2. Initialize clocks.
  3. Discover attached displays.
  4. Program PHYs for a compatible mode.
- 5. Program layouts (framebuffer addrs, etc.) on vsync to avoid [tearing][tearing]{:external}.
+ 5. Program layouts (framebuffer addrs, etc.) on vsync to avoid [tearing][tearing]{: .external}.
  6. Integrate with [Sysmem][sysmem].
 
 <!--xrefs-->

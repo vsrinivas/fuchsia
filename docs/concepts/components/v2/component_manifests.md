@@ -26,7 +26,7 @@ Note: For complete details on component manifest attributes and syntax, see the
 A [component manifest source][glossary.component manifest source] is a file that
 encodes part of a component manifest. Component manifest sources are written in
 component manifest language (CML), which is the developer-facing source format
-for component manifests. CML files are [JSON5][json5-external]{.external}
+for component manifests. CML files are [JSON5][json5-external]{: .external}
 files that end with a `.cml` extension.
 
 The [`cmc`][src-cmc] tool compiles component manifest sources to
