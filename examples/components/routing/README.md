@@ -24,10 +24,10 @@ $ ffx component create /core/ffx-laboratory:echo_realm fuchsia-pkg://fuchsia.com
 ```
 
 Start the client component instance by passing its moniker to
-`ffx component bind`:
+`ffx component start`:
 
 ```bash
-$ ffx component bind /core/ffx-laboratory:echo_realm/echo_client
+$ ffx component start /core/ffx-laboratory:echo_realm/echo_client
 ```
 
 When the above command is run, you can see the following output with `fx log`:

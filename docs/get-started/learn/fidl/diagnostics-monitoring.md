@@ -165,7 +165,7 @@ can use <code>--remote-pid</code> to attach to an existing process.
 Initiate a FIDL connection to the server by starting an echo client instance:
 
 ```posix-terminal
-ffx component bind /core/ffx-laboratory:echo-realm/echo_client
+ffx component start /core/ffx-laboratory:echo-realm/echo_client
 ```
 
 The client binds to the server component and communicates using the `Echo`
@@ -323,11 +323,11 @@ Run the echo client component multiple times. This causes the request count in
 `echo-server` to increment with each connection:
 
 ```posix-terminal
-ffx component bind /core/ffx-laboratory:echo-realm/echo_client
+ffx component start /core/ffx-laboratory:echo-realm/echo_client
 
-ffx component bind /core/ffx-laboratory:echo-realm/echo_client
+ffx component start /core/ffx-laboratory:echo-realm/echo_client
 
-ffx component bind /core/ffx-laboratory:echo-realm/echo_client
+ffx component start /core/ffx-laboratory:echo-realm/echo_client
 ```
 
 View the available Inspect data for the echo server component with

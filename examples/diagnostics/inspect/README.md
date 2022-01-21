@@ -30,14 +30,14 @@ URL to `run`, then `bind` to the client component:
 
     ```bash
     $ ffx component run 'fuchsia-pkg://fuchsia.com/inspect-example-cpp#meta/echo_realm.cm'
-    $ ffx component bind '/core/ffx-laboratory:echo_realm/echo_client'
+    $ ffx component start '/core/ffx-laboratory:echo_realm/echo_client'
     ```
 
 -  **Rust**
 
     ```bash
     $ ffx component run 'fuchsia-pkg://fuchsia.com/inspect-example-rust#meta/echo_realm.cm'
-    $ ffx component bind '/core/ffx-laboratory:echo_realm/echo_client'
+    $ ffx component start '/core/ffx-laboratory:echo_realm/echo_client'
     ```
 
 This starts the `echo_client` component, which sends a request message to the
@@ -62,7 +62,7 @@ core/ffx-laboratory\:echo_realm/echo_server:
         status = OK
 ```
 
-You can run `ffx component bind` multiple times to watch the server metrics
+You can run `ffx component start` multiple times to watch the server metrics
 increment with each request.
 
 ## Testing

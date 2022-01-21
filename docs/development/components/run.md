@@ -113,22 +113,21 @@ Destroying component instance...
 Once a component instance exists in the tree, you can start and stop the target
 instance using `ffx component`.
 
-### Bind to the instance
+### Start the instance
 
-Use `ffx component bind` to explicitly bind to a component instance.
-This causes the instance to start if it is not already running:
+Use `ffx component start` to explicitly start a component instance:
 
 ```posix-terminal
-ffx component bind {{ '<var label="moniker">TARGET_MONIKER</var>' }}
+ffx component start {{ '<var label="moniker">TARGET_MONIKER</var>' }}
 ```
 
 Replace `TARGET_MONIKER` with the moniker of the component to start.
-The following example binds to the `hello-world` component created previously:
+The following example starts the `hello-world` component created previously:
 
 ```none {:.devsite-disable-click-to-copy}
-$ ffx component bind /core/ffx-laboratory:hello-world
+$ ffx component start /core/ffx-laboratory:hello-world
 Moniker: /core/ffx-laboratory:hello-world
-Binding to component instance...
+Starting component instance...
 ```
 
 ### Stop the instance
@@ -170,20 +169,20 @@ $ ffx component run fuchsia-pkg://fuchsia.com/hello-world#meta/hello-world-rust.
 URL: fuchsia-pkg://fuchsia.com/hello-world#meta/hello-world-rust.cm
 Moniker: /core/ffx-laboratory:hello-world-rust
 Creating component instance...
-Binding to component instance...
+Starting component instance...
 ```
 
 The `ffx component run` command automates the following steps:
 
 1.  Create a new component instance in the [`ffx-laboratory`](#ffx-laboratory)
     collection, using the component name as the target moniker.
-1.  Bind to the new instance to begin execution.
+1.  Start the new instance to begin execution.
 
 The example above is equivalent to running the following individual `ffx` commands:
 
 ```none {:.devsite-disable-click-to-copy}
 $ ffx component create /core/ffx-laboratory:hello-world-rust fuchsia-pkg://fuchsia.com/hello-world#meta/hello-world-rust.cm
-$ ffx component bind /core/ffx-laboratory:hello-world-rust
+$ ffx component start /core/ffx-laboratory:hello-world-rust
 ```
 
 ### `ffx-laboratory` {#ffx-laboratory}
@@ -214,7 +213,7 @@ components during development.
 
 ### Unable to resolve the component
 
-When using `ffx component create` or `ffx component run` you may encounter the
+When using `ffx component start` or `ffx component run` you may encounter the
 following error if component framework cannot resolve the component instance:
 
 ```none {:.devsite-disable-click-to-copy}
@@ -222,7 +221,7 @@ $ ffx component run fuchsia-pkg://fuchsia.com/hello-world#meta/hello-world.cm
 URL: fuchsia-pkg://fuchsia.com/hello-world#meta/hello-world.cm
 Moniker: /core/ffx-laboratory:hello-world
 Creating component instance...
-Binding to component instance...
+Starting component instance...
 Lifecycle protocol could not bind to component instance: InstanceCannotResolve
 ```
 
@@ -270,7 +269,7 @@ Moniker: /core/ffx-laboratory:hello-world
 Creating component instance...
 Component instance already exists. Destroying...
 Recreating component instance...
-Binding to component instance...
+Starting component instance...
 ```
 
 Alternatively, add the `--name` flag to create a new instance with a different name:
@@ -280,7 +279,7 @@ $ ffx component run fuchsia-pkg://fuchsia.com/hello-world#meta/hello-world.cm --
 URL: fuchsia-pkg://fuchsia.com/hello-world#meta/hello-world.cm
 Moniker: /core/ffx-laboratory:hello-world-2
 Creating component instance...
-Binding to component instance...
+Starting component instance...
 ```
 
 [capability-directory]: /docs/concepts/components/v2/capabilities/directory.md

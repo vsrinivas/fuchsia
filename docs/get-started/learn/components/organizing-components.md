@@ -331,10 +331,10 @@ resolved. Resolution happens when the framework attempts to start the instance.
 
 ### Start the component instance
 
-Bind to the new `echo-args` component instance using the following command:
+Start the new `echo-args` component instance using the following command:
 
 ```posix-terminal
-ffx component bind /core/ffx-laboratory:echo-args
+ffx component start /core/ffx-laboratory:echo-args
 ```
 
 This command accepts one parameter:

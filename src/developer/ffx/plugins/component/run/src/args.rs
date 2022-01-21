@@ -9,14 +9,14 @@ use {argh::FromArgs, ffx_core::ffx_command};
 #[argh(
     subcommand,
     name = "run",
-    description = "Creates and binds to a component instance",
+    description = "Creates and starts a component instance",
     example = "To create a component instance from the `hello-world-rust` component URL:
 
     $ ffx component run fuchsia-pkg://fuchsia.com/hello-world#meta/hello-world-rust.cm",
     note = "This command is a shorthand for the following:
 
     $ ffx component create /core/ffx-laboratory:<instance-name> <component-url>
-    $ ffx component bind /core/ffx-laboratory:<instance-name>
+    $ ffx component start /core/ffx-laboratory:<instance-name>
 
 To learn more about running components, visit https://fuchsia.dev/fuchsia-src/development/components/run"
 )]

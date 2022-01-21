@@ -173,7 +173,7 @@ Note: You can explore the full source for the realm component at
 1. Start the `echo_client` instance:
 
     ```posix-terminal
-    ffx component bind /core/ffx-laboratory:echo_realm/echo_client
+    ffx component start /core/ffx-laboratory:echo_realm/echo_client
     ```
 
 The server component starts when the client attempts to connect to the `Echo`

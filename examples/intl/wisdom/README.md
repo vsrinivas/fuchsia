@@ -44,7 +44,7 @@ This creates the client and server instances, routing the necessary capabilities
 To start the wisdom client, use the following command:
 
 ```bash
-$ ffx component bind /core/ffx-laboratory:intl_wisdom_realm/wisdom_client
+$ ffx component start /core/ffx-laboratory:intl_wisdom_realm/wisdom_client
 ```
 
 This starts the server component automatically. You can see the client output

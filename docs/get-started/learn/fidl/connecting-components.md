@@ -379,10 +379,10 @@ Merkle root: 666c40477785f89b0ace22b30d65f1338f1d308ecceacb0f65f5140baa889e1b
 
 ### Verify the component interactions
 
-Start the existing client component instance using `ffx component bind`:
+Start the existing client component instance using `ffx component start`:
 
 ```posix-terminal
-ffx component bind /core/ffx-laboratory:echo-realm/echo_client
+ffx component start /core/ffx-laboratory:echo-realm/echo_client
 ```
 Open another terminal window and verify the log output from the client component:
 

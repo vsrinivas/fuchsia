@@ -39,7 +39,7 @@ ffx component run fuchsia-pkg://fuchsia.com/echo-cpp-client#meta/echo_realm.cm
 Then, we can start the `echo_client` instance:
 
 ```posix-terminal
-ffx component bind /core/ffx-laboratory:echo_realm/echo_client
+ffx component start /core/ffx-laboratory:echo_realm/echo_client
 ```
 
 The server component starts when the client attempts to connect to the `Echo`
