@@ -494,8 +494,6 @@ pub enum MerkleForError {
     SerdeError(#[source] serde_json::Error),
 }
 
-pub type BlobFetcher = queue::WorkSender<BlobId, FetchBlobContext, Result<(), Arc<FetchError>>>;
-
 #[derive(Debug, PartialEq, Eq)]
 pub struct FetchBlobContext {
     opener: pkg::cache::DeferredOpenBlob,
@@ -539,45 +537,79 @@ impl queue::TryMerge for FetchBlobContext {
     }
 }
 
-pub fn make_blob_fetch_queue(
-    node: fuchsia_inspect::Node,
-    max_concurrency: usize,
-    stats: Arc<Mutex<Stats>>,
-    cobalt_sender: CobaltSender,
-    local_mirror_proxy: Option<LocalMirrorProxy>,
-    blob_fetch_params: BlobFetchParams,
-) -> (impl Future<Output = ()>, BlobFetcher) {
-    let http_client = Arc::new(fuchsia_hyper::new_https_client_from_tcp_options(
-        fuchsia_hyper::TcpOptions::keepalive_timeout(TCP_KEEPALIVE_TIMEOUT),
-    ));
-    let inspect = inspect::BlobFetcher::from_node_and_params(node, &blob_fetch_params);
+/// A clonable handle to the blob fetch queue.  When all clones of
+/// [`BlobFetcher`] are dropped, the queue will fetch all remaining blobs in
+/// the queue and terminate its output stream.
+#[derive(Clone)]
+pub struct BlobFetcher(queue::WorkSender<BlobId, FetchBlobContext, Result<(), Arc<FetchError>>>);
 
-    let (blob_fetch_queue, blob_fetcher) =
-        queue::work_queue(max_concurrency, move |merkle: BlobId, context: FetchBlobContext| {
-            let inspect = inspect.fetch(&merkle);
-            let http_client = Arc::clone(&http_client);
-            let stats = Arc::clone(&stats);
-            let cobalt_sender = cobalt_sender.clone();
-            let local_mirror_proxy = local_mirror_proxy.clone();
+impl BlobFetcher {
+    /// Creates an unbounded queue that will fetch up to  `max_concurrency`
+    /// blobs at once.
+    pub fn new(
+        node: fuchsia_inspect::Node,
+        max_concurrency: usize,
+        stats: Arc<Mutex<Stats>>,
+        cobalt_sender: CobaltSender,
+        local_mirror_proxy: Option<LocalMirrorProxy>,
+        blob_fetch_params: BlobFetchParams,
+    ) -> (impl Future<Output = ()>, BlobFetcher) {
+        let http_client = Arc::new(fuchsia_hyper::new_https_client_from_tcp_options(
+            fuchsia_hyper::TcpOptions::keepalive_timeout(TCP_KEEPALIVE_TIMEOUT),
+        ));
+        let inspect = inspect::BlobFetcher::from_node_and_params(node, &blob_fetch_params);
 
-            async move {
-                let res = fetch_blob(
-                    inspect,
-                    &http_client,
-                    stats,
-                    cobalt_sender,
-                    merkle,
-                    context,
-                    local_mirror_proxy.as_ref(),
-                    blob_fetch_params,
-                )
-                .map_err(Arc::new)
-                .await;
-                res
-            }
-        });
+        let (blob_fetch_queue, blob_fetcher) =
+            queue::work_queue(max_concurrency, move |merkle: BlobId, context: FetchBlobContext| {
+                let inspect = inspect.fetch(&merkle);
+                let http_client = Arc::clone(&http_client);
+                let stats = Arc::clone(&stats);
+                let cobalt_sender = cobalt_sender.clone();
+                let local_mirror_proxy = local_mirror_proxy.clone();
 
-    (blob_fetch_queue.into_future(), blob_fetcher)
+                async move {
+                    let res = fetch_blob(
+                        inspect,
+                        &http_client,
+                        stats,
+                        cobalt_sender,
+                        merkle,
+                        context,
+                        local_mirror_proxy.as_ref(),
+                        blob_fetch_params,
+                    )
+                    .map_err(Arc::new)
+                    .await;
+                    res
+                }
+            });
+
+        (blob_fetch_queue.into_future(), BlobFetcher(blob_fetcher))
+    }
+
+    /// Enqueue the given blob to be fetched, or attach to an existing request to
+    /// fetch the blob.
+    pub fn push(
+        &self,
+        blob_id: BlobId,
+        context: FetchBlobContext,
+    ) -> impl Future<Output = Result<Result<(), Arc<FetchError>>, queue::Closed>> {
+        self.0.push(blob_id, context)
+    }
+
+    /// Enqueue all the given blobs to be fetched, merging them with existing
+    /// known tasks if possible, returning an iterator of the futures that will
+    /// resolve to the results.
+    ///
+    /// This method is similar to, but more efficient than, mapping an iterator
+    /// to `BlobFetcher::push`.
+    pub fn push_all(
+        &self,
+        entries: impl Iterator<Item = (BlobId, FetchBlobContext)>,
+    ) -> impl Iterator<Item = impl Future<Output = Result<Result<(), Arc<FetchError>>, queue::Closed>>>
+    {
+        self.0.push_all(entries)
+    }
 }
 
 async fn fetch_blob(

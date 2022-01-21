@@ -211,7 +211,7 @@ async fn main_inner_async(startup_time: Instant, args: Args) -> Result<(), Error
         .await,
     ));
 
-    let (blob_fetch_queue, blob_fetcher) = crate::cache::make_blob_fetch_queue(
+    let (blob_fetch_queue, blob_fetcher) = crate::cache::BlobFetcher::new(
         inspector.root().create_child("blob_fetcher"),
         MAX_CONCURRENT_BLOB_FETCHES,
         repo_manager.read().await.stats(),
