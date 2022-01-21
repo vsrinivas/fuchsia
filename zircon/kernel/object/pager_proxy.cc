@@ -47,16 +47,16 @@ PagerProxy::~PagerProxy() {
 
 const PageSourceProperties& PagerProxy::properties() const { return kProperties; }
 
-void PagerProxy::SendAsyncRequest(PageRequest* request) {
+void PagerProxy::SendAsyncRequest(page_request_t* request) {
   Guard<Mutex> guard{&mtx_};
   ASSERT(!closed_);
 
   QueuePacketLocked(request);
 }
 
-void PagerProxy::QueuePacketLocked(PageRequest* request) {
+void PagerProxy::QueuePacketLocked(page_request_t* request) {
   if (packet_busy_) {
-    pending_requests_.push_back(request);
+    list_add_tail(&pending_requests_, &request->provider_node);
     return;
   }
 
@@ -66,7 +66,7 @@ void PagerProxy::QueuePacketLocked(PageRequest* request) {
   uint64_t offset, length;
   uint16_t cmd;
   if (request != &complete_request_) {
-    switch (GetRequestType(request)) {
+    switch (request->type) {
       case page_request_type::READ:
         cmd = ZX_PAGER_VMO_READ;
         break;
@@ -78,8 +78,8 @@ void PagerProxy::QueuePacketLocked(PageRequest* request) {
         // Not reached
         ASSERT(false);
     }
-    offset = GetRequestOffset(request);
-    length = GetRequestLen(request);
+    offset = request->offset;
+    length = request->length;
 
     // The vm subsystem should guarantee this
     uint64_t unused;
@@ -108,15 +108,14 @@ void PagerProxy::QueuePacketLocked(PageRequest* request) {
   ASSERT(port_->Queue(&packet_, ZX_SIGNAL_NONE) != ZX_ERR_SHOULD_WAIT);
 }
 
-void PagerProxy::ClearAsyncRequest(PageRequest* request) {
+void PagerProxy::ClearAsyncRequest(page_request_t* request) {
   Guard<Mutex> guard{&mtx_};
   ASSERT(!closed_);
 
   if (request == active_request_) {
     if (request != &complete_request_) {
       // Trace flow events require an enclosing duration.
-      VM_KTRACE_DURATION(1, "page_request_queue", GetRequestOffset(active_request_),
-                         GetRequestLen(active_request_));
+      VM_KTRACE_DURATION(1, "page_request_queue", active_request_->offset, active_request_->length);
       VM_KTRACE_FLOW_END(1, "page_request_queue", reinterpret_cast<uintptr_t>(&packet_));
     }
     // Condition on whether or not we actually cancel the packet, to make sure
@@ -124,18 +123,17 @@ void PagerProxy::ClearAsyncRequest(PageRequest* request) {
     if (port_->CancelQueued(&packet_)) {
       OnPacketFreedLocked();
     }
-  } else if (fbl::InContainer<PageProviderTag>(*request)) {
-    pending_requests_.erase(*request);
+  } else if (list_in_list(&request->provider_node)) {
+    list_delete(&request->provider_node);
   }
 }
 
-void PagerProxy::SwapAsyncRequest(PageRequest* old, PageRequest* new_req) {
+void PagerProxy::SwapAsyncRequest(page_request_t* old, page_request_t* new_req) {
   Guard<Mutex> guard{&mtx_};
   ASSERT(!closed_);
 
-  if (fbl::InContainer<PageProviderTag>(*old)) {
-    pending_requests_.insert(*old, new_req);
-    pending_requests_.erase(*old);
+  if (list_in_list(&old->provider_node)) {
+    list_replace_node(&old->provider_node, &new_req->provider_node);
   } else if (old == active_request_) {
     active_request_ = new_req;
   }
@@ -220,8 +218,7 @@ void PagerProxy::Free(PortPacket* packet) {
   Guard<Mutex> guard{&mtx_};
   if (active_request_ != &complete_request_) {
     // Trace flow events require an enclosing duration.
-    VM_KTRACE_DURATION(1, "page_request_queue", GetRequestOffset(active_request_),
-                       GetRequestLen(active_request_));
+    VM_KTRACE_DURATION(1, "page_request_queue", active_request_->offset, active_request_->length);
     VM_KTRACE_FLOW_END(1, "page_request_queue", reinterpret_cast<uintptr_t>(packet));
     OnPacketFreedLocked();
   } else {
@@ -244,8 +241,8 @@ void PagerProxy::Free(PortPacket* packet) {
 void PagerProxy::OnPacketFreedLocked() {
   packet_busy_ = false;
   active_request_ = nullptr;
-  if (!pending_requests_.is_empty()) {
-    QueuePacketLocked(pending_requests_.pop_front());
+  if (!list_is_empty(&pending_requests_)) {
+    QueuePacketLocked(list_remove_head_type(&pending_requests_, page_request, provider_node));
   }
 }
 
@@ -330,14 +327,14 @@ void PagerProxy::Dump() {
       this, pager_, page_source_.get(), key_, closed_, packet_busy_, complete_pending_);
 
   if (active_request_) {
-    printf("  active request on pager port [0x%lx, 0x%lx)\n", GetRequestOffset(active_request_),
-           GetRequestLen(active_request_));
+    printf("  active request on pager port [0x%lx, 0x%lx)\n", active_request_->offset,
+           active_request_->length);
   } else {
     printf("  no active request on pager port\n");
   }
 
-  for (auto& req : pending_requests_) {
-    printf("  pending req to queue on pager port [0x%lx, 0x%lx)\n", GetRequestOffset(&req),
-           GetRequestLen(&req));
+  page_request_t* req;
+  list_for_every_entry (&pending_requests_, req, page_request_t, provider_node) {
+    printf("  pending req to queue on pager port [0x%lx, 0x%lx)\n", req->offset, req->length);
   }
 }

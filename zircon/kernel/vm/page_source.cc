@@ -247,7 +247,6 @@ zx_status_t PageSource::PopulateRequestLocked(PageRequest* request, uint64_t off
 
   bool send_request = false;
   zx_status_t res;
-  DEBUG_ASSERT(!request->provider_owned_);
   if (request->allow_batching_ || internal_batching) {
     // If possible, append the page directly to the current request. Else have the
     // caller try again with a new request.
@@ -338,12 +337,14 @@ void PageSource::SendRequestToProviderLocked(PageRequest* request) {
     // completely contained in that node.
     overlap->overlap_.push_back(request);
   } else {
-    DEBUG_ASSERT(!request->provider_owned_);
     request->pending_size_ = request->len_;
 
-    DEBUG_ASSERT(!fbl::InContainer<PageProviderTag>(*request));
-    request->provider_owned_ = true;
-    page_provider_->SendAsyncRequest(request);
+    list_clear_node(&request->provider_request_.provider_node);
+    request->provider_request_.offset = request->offset_;
+    request->provider_request_.length = request->len_;
+    request->provider_request_.type = request->type_;
+
+    page_provider_->SendAsyncRequest(&request->provider_request_);
     outstanding_requests_[request->type_].insert(request);
   }
 #ifdef DEBUG_ASSERT_IMPLEMENTED
@@ -356,15 +357,13 @@ void PageSource::CompleteRequestLocked(PageRequest* request, zx_status_t status)
   DEBUG_ASSERT(request->type_ < page_request_type::COUNT);
   DEBUG_ASSERT(page_provider_->SupportsPageRequestType(request->type_));
 
-  // Take the request back from the provider before waking up the corresponding thread. Once the
-  // request has been taken back we are also free to modify offset_.
-  page_provider_->ClearAsyncRequest(request);
-  request->provider_owned_ = false;
+  // Take the request back from the provider before waking
+  // up the corresponding thread.
+  page_provider_->ClearAsyncRequest(&request->provider_request_);
 
   while (!request->overlap_.is_empty()) {
     auto waiter = request->overlap_.pop_front();
     VM_KTRACE_FLOW_BEGIN(1, "page_request_signal", reinterpret_cast<uintptr_t>(waiter));
-    DEBUG_ASSERT(!waiter->provider_owned_);
     waiter->offset_ = UINT64_MAX;
     waiter->event_.Signal(status);
   }
@@ -384,7 +383,7 @@ void PageSource::CancelRequest(PageRequest* request) {
   DEBUG_ASSERT(request->type_ < page_request_type::COUNT);
   DEBUG_ASSERT(page_provider_->SupportsPageRequestType(request->type_));
 
-  if (fbl::InContainer<PageSourceTag>(*request)) {
+  if (static_cast<fbl::DoublyLinkedListable<PageRequest*>*>(request)->InContainer()) {
     LTRACEF("Overlap node\n");
     // This node is overlapping some other node, so just remove the request
     auto main_node = outstanding_requests_[request->type_].upper_bound(request->offset_);
@@ -395,29 +394,29 @@ void PageSource::CancelRequest(PageRequest* request) {
     // This node is an outstanding request with overlap, so replace it with the
     // first overlap node.
     auto new_node = request->overlap_.pop_front();
-    DEBUG_ASSERT(!new_node->provider_owned_);
+
     new_node->overlap_.swap(request->overlap_);
     new_node->offset_ = request->offset_;
     new_node->len_ = request->len_;
     new_node->pending_size_ = request->pending_size_;
     DEBUG_ASSERT(new_node->type_ == request->type_);
 
-    DEBUG_ASSERT(!fbl::InContainer<PageProviderTag>(*new_node));
+    list_clear_node(&new_node->provider_request_.provider_node);
+    new_node->provider_request_.offset = request->offset_;
+    new_node->provider_request_.length = request->len_;
+    new_node->provider_request_.type = request->type_;
+
     outstanding_requests_[request->type_].erase(*request);
     outstanding_requests_[request->type_].insert(new_node);
 
-    new_node->provider_owned_ = true;
-    page_provider_->SwapAsyncRequest(request, new_node);
-    request->provider_owned_ = false;
+    page_provider_->SwapAsyncRequest(&request->provider_request_, &new_node->provider_request_);
   } else if (static_cast<fbl::WAVLTreeContainable<PageRequest*>*>(request)->InContainer()) {
     LTRACEF("Outstanding no overlap\n");
     // This node is an outstanding request with no overlap
     outstanding_requests_[request->type_].erase(*request);
-    page_provider_->ClearAsyncRequest(request);
-    request->provider_owned_ = false;
+    page_provider_->ClearAsyncRequest(&request->provider_request_);
   }
 
-  // Request has been cleared from the PageProvider, so we're free to modify the offset_
   request->offset_ = UINT64_MAX;
 }
 

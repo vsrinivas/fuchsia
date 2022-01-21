@@ -102,9 +102,9 @@ class StubPageProvider : public PageProvider {
                    paddr_t* const pa_out) override {
     return false;
   }
-  void SendAsyncRequest(PageRequest* request) override { panic("Not implemented\n"); }
-  void ClearAsyncRequest(PageRequest* request) override { panic("Not implemented\n"); }
-  void SwapAsyncRequest(PageRequest* old, PageRequest* new_req) override {
+  void SendAsyncRequest(page_request_t* request) override { panic("Not implemented\n"); }
+  void ClearAsyncRequest(page_request_t* request) override { panic("Not implemented\n"); }
+  void SwapAsyncRequest(page_request_t* old, page_request_t* new_req) override {
     panic("Not implemented\n");
   }
   bool DebugIsPageOk(vm_page_t* page, uint64_t offset) override { return true; }

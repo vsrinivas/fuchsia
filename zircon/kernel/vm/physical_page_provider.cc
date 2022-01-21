@@ -61,9 +61,9 @@ bool PhysicalPageProvider::GetPageSync(uint64_t offset, VmoDebugInfo vmo_debug_i
 
 // Called under lock of contiguous VMO that needs the pages.  The request is later processed at the
 // start of WaitOnEvent.
-void PhysicalPageProvider::SendAsyncRequest(PageRequest* request) {
+void PhysicalPageProvider::SendAsyncRequest(page_request_t* request) {
   DEBUG_ASSERT(phys_base_ != kInvalidPhysBase);
-  DEBUG_ASSERT(SupportsPageRequestType(GetRequestType(request)));
+  DEBUG_ASSERT(SupportsPageRequestType(request->type));
   Guard<Mutex> guard{&mtx_};
   ASSERT(!closed_);
 
@@ -83,38 +83,37 @@ void PhysicalPageProvider::SendAsyncRequest(PageRequest* request) {
   QueueRequestLocked(request);
 }
 
-void PhysicalPageProvider::QueueRequestLocked(PageRequest* request) {
+void PhysicalPageProvider::QueueRequestLocked(page_request_t* request) {
   DEBUG_ASSERT(phys_base_ != kInvalidPhysBase);
-  DEBUG_ASSERT(SupportsPageRequestType(GetRequestType(request)));
+  DEBUG_ASSERT(SupportsPageRequestType(request->type));
   ASSERT(!closed_);
-  pending_requests_.push_back(request);
+  list_add_tail(&pending_requests_, &request->provider_node);
 }
 
-void PhysicalPageProvider::ClearAsyncRequest(PageRequest* request) {
+void PhysicalPageProvider::ClearAsyncRequest(page_request_t* request) {
   DEBUG_ASSERT(phys_base_ != kInvalidPhysBase);
-  DEBUG_ASSERT(SupportsPageRequestType(GetRequestType(request)));
+  DEBUG_ASSERT(SupportsPageRequestType(request->type));
   Guard<Mutex> guard{&mtx_};
   ASSERT(!closed_);
 
-  if (fbl::InContainer<PageProviderTag>(*request)) {
-    pending_requests_.erase(*request);
+  if (list_in_list(&request->provider_node)) {
+    list_delete(&request->provider_node);
   }
 
   // No need to chase down any currently-processing request here, since before processing a request,
-  // we stash the values of all fields we need from the PageRequest under the lock.  So any
-  // currently-processing request is independent from the PageRequest that started it.
+  // we stash the values of all fields we need from the page_request_t under the lock.  So any
+  // currently-processing request is independent from the page_request_t that started it.
 }
 
-void PhysicalPageProvider::SwapAsyncRequest(PageRequest* old, PageRequest* new_req) {
+void PhysicalPageProvider::SwapAsyncRequest(page_request_t* old, page_request_t* new_req) {
   DEBUG_ASSERT(phys_base_ != kInvalidPhysBase);
-  DEBUG_ASSERT(SupportsPageRequestType(GetRequestType(old)));
-  DEBUG_ASSERT(SupportsPageRequestType(GetRequestType(new_req)));
+  DEBUG_ASSERT(SupportsPageRequestType(old->type));
+  DEBUG_ASSERT(SupportsPageRequestType(new_req->type));
   Guard<Mutex> guard{&mtx_};
   ASSERT(!closed_);
 
-  if (fbl::InContainer<PageProviderTag>(*old)) {
-    pending_requests_.insert(*old, new_req);
-    pending_requests_.erase(*old);
+  if (list_in_list(&old->provider_node)) {
+    list_replace_node(&old->provider_node, &new_req->provider_node);
   }
 }
 
@@ -155,16 +154,17 @@ bool PhysicalPageProvider::DequeueRequest(uint64_t* request_offset, uint64_t* re
   Guard<Mutex> guard{&mtx_};
   // closed_ can be true here, but if closed_ is true, then pending_requests_ is also empty, so
   // we won't process any more requests once closed_ is true.
-  DEBUG_ASSERT(!closed_ || pending_requests_.is_empty());
-  if (pending_requests_.is_empty()) {
+  DEBUG_ASSERT(!closed_ || list_is_empty(&pending_requests_));
+  if (list_is_empty(&pending_requests_)) {
     // Done with all requests (or remaining requests cancelled).
     return false;
   }
-  PageRequest* request = pending_requests_.pop_front();
+  page_request_t* request =
+      list_remove_head_type(&pending_requests_, page_request_t, provider_node);
   DEBUG_ASSERT(request);
-  DEBUG_ASSERT(SupportsPageRequestType(GetRequestType(request)));
-  *request_offset = GetRequestOffset(request);
-  *request_length = GetRequestLen(request);
+  DEBUG_ASSERT(SupportsPageRequestType(request->type));
+  *request_offset = request->offset;
+  *request_length = request->length;
   DEBUG_ASSERT(InRange(*request_offset, *request_length, size_));
   return true;
 }
@@ -324,9 +324,10 @@ void PhysicalPageProvider::Dump() {
   Guard<Mutex> guard{&mtx_};
   printf("physical_page_provider %p cow_pages_ %p phys_base_ 0x%" PRIx64 " closed %d", this,
          cow_pages_, phys_base_, closed_);
-  for (auto& req : pending_requests_) {
-    DEBUG_ASSERT(SupportsPageRequestType(GetRequestType(&req)));
-    printf("  pending req [0x%lx, 0x%lx)\n", GetRequestOffset(&req), GetRequestLen(&req));
+  page_request_t* req;
+  list_for_every_entry (&pending_requests_, req, page_request_t, provider_node) {
+    DEBUG_ASSERT(SupportsPageRequestType(req->type));
+    printf("  pending req [0x%lx, 0x%lx)\n", req->offset, req->length);
   }
 }
 
