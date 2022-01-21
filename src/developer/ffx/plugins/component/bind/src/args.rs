@@ -4,6 +4,8 @@
 
 use {argh::FromArgs, ffx_core::ffx_command};
 
+// Note: `ffx component bind` is being replaced by `ffx component start`. Make
+// no changes here, but instead in the equivalent../../start/ command.
 #[ffx_command()]
 #[derive(FromArgs, Debug, PartialEq)]
 #[argh(

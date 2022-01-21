@@ -22,7 +22,8 @@ use {
     },
     fidl_fuchsia_component_decl as fdecl, fidl_fuchsia_component_runner as fcrunner,
     fidl_fuchsia_io::DirectoryProxy,
-    fidl_fuchsia_mem as fmem, fuchsia_async as fasync, fuchsia_zircon as zx,
+    fidl_fuchsia_mem as fmem, fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync,
+    fuchsia_zircon as zx,
     log::*,
     moniker::PartialAbsoluteMoniker,
     std::sync::Arc,
@@ -41,10 +42,11 @@ impl StartAction {
 
 #[async_trait]
 impl Action for StartAction {
-    type Output = Result<(), ModelError>;
+    type Output = Result<fsys::StartResult, ModelError>;
     async fn handle(&self, component: &Arc<ComponentInstance>) -> Self::Output {
         do_start(component, &self.bind_reason).await
     }
+
     fn key(&self) -> ActionKey {
         ActionKey::Start
     }
@@ -58,18 +60,10 @@ struct StartContext {
     controller_server_end: ServerEnd<fcrunner::ComponentControllerMarker>,
 }
 
-/// The result of trying to configure the runtime on the instance's execution
-enum RuntimeConfigResult {
-    Success,
-    /// Configuration failed because the instance is already started
-    AlreadyStarted,
-    Error(ModelError),
-}
-
 async fn do_start(
     component: &Arc<ComponentInstance>,
     bind_reason: &BindReason,
-) -> Result<(), ModelError> {
+) -> Result<fsys::StartResult, ModelError> {
     // Pre-flight check: if the component is already started, or was shut down, return now. Note
     // that `bind_at` also performs this check before scheduling the action here. We do it again
     // while the action is registered to avoid the risk of dispatching the Started event twice.
@@ -142,8 +136,10 @@ async fn do_start(
         }
     };
 
-    match configure_component_runtime(&component, pending_runtime).await {
-        RuntimeConfigResult::Success => {
+    let res = configure_component_runtime(&component, pending_runtime).await;
+    match res {
+        Ok(fsys::StartResult::AlreadyStarted) => {}
+        Ok(fsys::StartResult::Started) => {
             // It's possible that the component is stopped before getting here. If so, that's fine: the
             // runner will start the component, but its stop or kill signal will be immediately set on the
             // component controller.
@@ -152,7 +148,7 @@ async fn do_start(
                 .start(start_context.start_info, start_context.controller_server_end)
                 .await;
         }
-        RuntimeConfigResult::Error(e) => {
+        Err(ref _e) => {
             // Since we dispatched a start event, dispatch a stop event
             // TODO(fxbug.dev/87507): It is possible this issues Stop after
             // Destroyed is issued.
@@ -163,12 +159,9 @@ async fn do_start(
                     Ok(EventPayload::Stopped { status: zx::Status::OK }),
                 ))
                 .await?;
-            return Err(e);
         }
-        RuntimeConfigResult::AlreadyStarted => {}
-    }
-
-    Ok(())
+    };
+    res
 }
 
 /// Set the Runtime in the Execution and start the exit water. From component manager's
@@ -179,19 +172,17 @@ async fn do_start(
 async fn configure_component_runtime(
     component: &Arc<ComponentInstance>,
     mut pending_runtime: Runtime,
-) -> RuntimeConfigResult {
+) -> Result<fsys::StartResult, ModelError> {
     let state = component.lock_state().await;
     let mut execution = component.lock_execution().await;
 
-    match should_return_early(&state, &execution, &component.partial_abs_moniker) {
-        Some(Result::Ok(())) => return RuntimeConfigResult::AlreadyStarted,
-        Some(Result::Err(e)) => return RuntimeConfigResult::Error(e),
-        None => {}
+    if let Some(r) = should_return_early(&state, &execution, &component.partial_abs_moniker) {
+        return r;
     }
 
     pending_runtime.watch_for_exit(component.as_weak());
     execution.runtime = Some(pending_runtime);
-    RuntimeConfigResult::Success
+    Ok(fsys::StartResult::Started)
 }
 
 /// Returns `Some(Result)` if `bind` should return early based on either of the following:
@@ -202,7 +193,7 @@ pub fn should_return_early(
     component: &InstanceState,
     execution: &ExecutionState,
     abs_moniker: &PartialAbsoluteMoniker,
-) -> Option<Result<(), ModelError>> {
+) -> Option<Result<fsys::StartResult, ModelError>> {
     match component {
         InstanceState::New | InstanceState::Discovered | InstanceState::Resolved(_) => {}
         InstanceState::Purged => {
@@ -212,7 +203,7 @@ pub fn should_return_early(
     if execution.is_shut_down() {
         Some(Err(ModelError::instance_shut_down(abs_moniker.clone())))
     } else if execution.runtime.is_some() {
-        Some(Ok(()))
+        Some(Ok(fsys::StartResult::AlreadyStarted))
     } else {
         None
     }
@@ -295,8 +286,13 @@ async fn make_execution_runtime(
 mod tests {
     use {
         crate::model::{
-            actions::{ActionSet, ShutdownAction, StartAction, StopAction},
-            component::{BindReason, ComponentInstance, InstanceState},
+            actions::{
+                start::should_return_early, ActionSet, ShutdownAction, StartAction, StopAction,
+            },
+            component::{
+                BindReason, ComponentInstance, ExecutionState, InstanceState,
+                ResolvedInstanceState, Runtime,
+            },
             error::ModelError,
             hooks::{Event, EventType, Hook, HooksRegistration},
             testing::{
@@ -304,11 +300,13 @@ mod tests {
                 test_hook::Lifecycle,
             },
         },
+        assert_matches::assert_matches,
         async_trait::async_trait,
         cm_rust::ComponentDecl,
         cm_rust_testing::{ChildDeclBuilder, ComponentDeclBuilder},
-        fuchsia, fuchsia_zircon as zx,
+        fidl_fuchsia_sys2 as fsys, fuchsia, fuchsia_zircon as zx,
         moniker::PartialAbsoluteMoniker,
+        routing::error::ComponentInstanceError,
         std::sync::{Arc, Weak},
     };
 
@@ -375,7 +373,7 @@ mod tests {
 
         {
             let timestamp = zx::Time::get_monotonic();
-            let () = ActionSet::register(child.clone(), StartAction::new(BindReason::Debug))
+            ActionSet::register(child.clone(), StartAction::new(BindReason::Debug))
                 .await
                 .expect("failed to start child");
             let execution = child.lock_execution().await;
@@ -384,7 +382,7 @@ mod tests {
         }
 
         {
-            let () = ActionSet::register(child.clone(), StopAction::new(false, false))
+            ActionSet::register(child.clone(), StopAction::new(false, false))
                 .await
                 .expect("failed to stop child");
             let execution = child.lock_execution().await;
@@ -393,7 +391,7 @@ mod tests {
 
         {
             let timestamp = zx::Time::get_monotonic();
-            let () = ActionSet::register(child.clone(), StartAction::new(BindReason::Debug))
+            ActionSet::register(child.clone(), StartAction::new(BindReason::Debug))
                 .await
                 .expect("failed to start child");
             let execution = child.lock_execution().await;
@@ -408,7 +406,7 @@ mod tests {
 
         {
             let timestamp = zx::Time::get_monotonic();
-            let () = ActionSet::register(child.clone(), StartAction::new(BindReason::Debug))
+            ActionSet::register(child.clone(), StartAction::new(BindReason::Debug))
                 .await
                 .expect("failed to start child");
             let execution = child.lock_execution().await;
@@ -431,7 +429,7 @@ mod tests {
         modified_decl.children.push(ChildDeclBuilder::new().name("foo").build());
         resolver.add_component(TEST_CHILD_NAME, modified_decl.clone());
 
-        let () = ActionSet::register(child.clone(), StartAction::new(BindReason::Debug))
+        ActionSet::register(child.clone(), StartAction::new(BindReason::Debug))
             .await
             .expect("failed to start child");
 
@@ -463,5 +461,64 @@ mod tests {
         };
 
         resolved_state.decl().clone()
+    }
+
+    #[fuchsia::test]
+    async fn check_should_return_early() {
+        let m = PartialAbsoluteMoniker::from(vec!["foo"]);
+        let es = ExecutionState::new();
+
+        // Checks based on InstanceState:
+        assert!(should_return_early(&InstanceState::New, &es, &m).is_none());
+        assert!(should_return_early(&InstanceState::Discovered, &es, &m).is_none());
+        assert_matches!(
+            should_return_early(&InstanceState::Purged, &es, &m),
+            Some(Err(ModelError::ComponentInstanceError {
+                err: ComponentInstanceError::InstanceNotFound { moniker: _ }
+            }))
+        );
+        let (_, child) = build_tree_with_single_child(TEST_CHILD_NAME).await;
+        let decl = ComponentDeclBuilder::new().add_lazy_child("bar").build();
+        let ris = ResolvedInstanceState::new(&child, decl).await.unwrap();
+        assert!(should_return_early(&InstanceState::Resolved(ris), &es, &m).is_none());
+
+        // Check for already_started:
+        {
+            let mut es = ExecutionState::new();
+            es.runtime = Some(Runtime::start_from(None, None, None, None).unwrap());
+            assert!(!es.is_shut_down());
+            assert_matches!(
+                should_return_early(&InstanceState::New, &es, &m),
+                Some(Ok(fsys::StartResult::AlreadyStarted))
+            );
+        }
+
+        // Check for shut_down:
+        let _ = child.stop_instance(true, false).await;
+        let execution = child.lock_execution().await;
+        assert!(execution.is_shut_down());
+        assert_matches!(
+            should_return_early(&InstanceState::New, &execution, &m),
+            Some(Err(ModelError::InstanceShutDown { moniker: _ }))
+        );
+    }
+
+    #[fuchsia::test]
+    async fn check_already_started() {
+        let (_test_harness, child) = build_tree_with_single_child(TEST_CHILD_NAME).await;
+
+        assert_eq!(
+            ActionSet::register(child.clone(), StartAction::new(BindReason::Debug))
+                .await
+                .expect("failed to start child"),
+            fsys::StartResult::Started
+        );
+
+        assert_eq!(
+            ActionSet::register(child.clone(), StartAction::new(BindReason::Debug))
+                .await
+                .expect("failed to start child"),
+            fsys::StartResult::AlreadyStarted
+        );
     }
 }

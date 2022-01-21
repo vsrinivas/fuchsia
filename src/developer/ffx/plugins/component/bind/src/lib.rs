@@ -12,6 +12,8 @@ use {
     moniker::{AbsoluteMonikerBase, PartialAbsoluteMoniker},
 };
 
+// Note: `ffx component bind` is being replaced by `ffx component start`. Make
+// no changes here, but instead in the equivalent../../start/ command.
 #[ffx_plugin()]
 pub async fn bind(rcs_proxy: rc::RemoteControlProxy, cmd: ComponentBindCommand) -> Result<()> {
     let lifecycle_controller = connect_to_lifecycle_controller(&rcs_proxy).await?;
@@ -32,7 +34,7 @@ async fn bind_impl<W: std::io::Write>(
     // LifecycleController accepts PartialRelativeMonikers only
     let moniker = format!(".{}", moniker.to_string_without_instances());
     match lifecycle_controller.bind(&moniker).await {
-        Ok(Ok(())) => Ok(()),
+        Ok(Ok(_)) => Ok(()),
         Ok(Err(e)) => {
             ffx_bail!("Lifecycle protocol could not bind to the component instance: {:?}", e)
         }
@@ -57,7 +59,7 @@ mod test {
             match req {
                 fsys::LifecycleControllerRequest::Bind { moniker, responder, .. } => {
                     assert_eq!(expected_moniker, moniker);
-                    responder.send(&mut Ok(())).unwrap();
+                    responder.send(&mut Ok(fsys::StartResult::Started)).unwrap();
                 }
                 _ => panic!("Unexpected Lifecycle Controller request"),
             }

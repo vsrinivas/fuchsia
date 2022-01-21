@@ -101,7 +101,7 @@ async fn run_impl<W: std::io::Write>(
         Ok(()) => {}
     }
 
-    writeln!(writer, "Binding to component instance...")?;
+    writeln!(writer, "Starting component instance...")?;
 
     // LifecycleController accepts PartialRelativeMonikers only
     let moniker = format!(".{}", moniker.to_string_without_instances());
@@ -157,7 +157,7 @@ mod test {
             match req {
                 fsys::LifecycleControllerRequest::Bind { moniker, responder, .. } => {
                     assert_eq!(expected_moniker, moniker);
-                    responder.send(&mut Ok(())).unwrap();
+                    responder.send(&mut Ok(fsys::StartResult::Started)).unwrap();
                 }
                 _ => panic!("Unexpected Lifecycle Controller request"),
             }
@@ -263,7 +263,7 @@ mod test {
             match req {
                 fsys::LifecycleControllerRequest::Bind { moniker, responder, .. } => {
                     assert_eq!(expected_moniker, moniker);
-                    responder.send(&mut Ok(())).unwrap();
+                    responder.send(&mut Ok(fsys::StartResult::Started)).unwrap();
                 }
                 _ => panic!("Unexpected Lifecycle Controller request"),
             }

@@ -76,7 +76,7 @@ impl CapabilityProvider for BinderCapabilityProvider {
                 };
 
                 match source.bind(&BindReason::Binder).await {
-                    Ok(()) => {
+                    Ok(_) => {
                         source.scope_to_runtime(server_end).await;
                     }
                     Err(err) => {

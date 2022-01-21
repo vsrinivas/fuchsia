@@ -98,16 +98,16 @@ impl LifecycleController {
         Ok(())
     }
 
-    async fn bind(&self, moniker: String) -> Result<(), fcomponent::Error> {
+    async fn bind(&self, moniker: String) -> Result<fsys::StartResult, fcomponent::Error> {
         let component = self.resolve_component(&moniker).await?;
-        component.bind(&BindReason::Debug).await.map_err(|e: ModelError| {
+        let res = component.bind(&BindReason::Debug).await.map_err(|e: ModelError| {
             debug!(
                 "lifecycle controller failed to bind to component instance {}: {:?}",
                 moniker, e
             );
             fcomponent::Error::InstanceCannotStart
         })?;
-        Ok(())
+        Ok(res)
     }
 
     async fn stop(&self, moniker: String, is_recursive: bool) -> Result<(), fcomponent::Error> {
@@ -273,5 +273,28 @@ mod tests {
             lifecycle_proxy.resolve("./cant-resolve").await.unwrap(),
             Err(fcomponent::Error::InstanceCannotResolve)
         );
+    }
+
+    #[fuchsia::test]
+    async fn lifecycle_already_started_test() {
+        let components = vec![("root", ComponentDeclBuilder::new().build())];
+
+        let test_model_result =
+            TestEnvironmentBuilder::new().set_components(components).build().await;
+
+        let lifecycle_controller =
+            LifecycleController::new(Arc::downgrade(&test_model_result.model), vec![].into());
+
+        let (lifecycle_proxy, lifecycle_request_stream) =
+            create_proxy_and_stream::<fsys::LifecycleControllerMarker>().unwrap();
+
+        // async move {} is used here because we want this to own the lifecycle_controller
+        let _lifecycle_server_task = fasync::Task::local(async move {
+            lifecycle_controller.serve(lifecycle_request_stream).await
+        });
+
+        assert_eq!(lifecycle_proxy.bind(".").await.unwrap(), Ok(fsys::StartResult::Started));
+
+        assert_eq!(lifecycle_proxy.bind(".").await.unwrap(), Ok(fsys::StartResult::AlreadyStarted));
     }
 }

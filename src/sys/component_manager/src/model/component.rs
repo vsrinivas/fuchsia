@@ -978,7 +978,10 @@ impl ComponentInstance {
     }
 
     /// Binds to the component instance in this instance, starting it if it's not already running.
-    pub async fn bind(self: &Arc<Self>, reason: &BindReason) -> Result<(), ModelError> {
+    pub async fn bind(
+        self: &Arc<Self>,
+        reason: &BindReason,
+    ) -> Result<fsys::StartResult, ModelError> {
         // Skip starting a component instance that was already started. It's important to bail out
         // here so we don't waste time binding to eager children more than once.
         {
@@ -1014,7 +1017,7 @@ impl ComponentInstance {
             ModelError::InstanceShutDown { .. } => Ok(()),
             _ => Err(e),
         })?;
-        Ok(())
+        Ok(fsys::StartResult::Started)
     }
 
     /// Binds to a list of instances, and any eager children they may return.
@@ -1027,7 +1030,10 @@ impl ComponentInstance {
                 .iter()
                 .map(|component| async move { component.bind(&BindReason::Eager).await })
                 .collect();
-            join_all(futures).await.into_iter().fold(Ok(()), |acc, r| acc.and_then(|_| r))?;
+            join_all(futures)
+                .await
+                .into_iter()
+                .fold(Ok(fsys::StartResult::Started), |acc, r| acc.and_then(|_| r))?;
             Ok(())
         };
         Box::pin(f)
@@ -2514,5 +2520,35 @@ pub mod tests {
         event_type: EventType,
     ) -> zx::Time {
         event_stream.wait_until(event_type, vec![].into()).await.unwrap().event.timestamp.clone()
+    }
+
+    #[fuchsia::test]
+    async fn already_started() {
+        let components = vec![("root", ComponentDeclBuilder::new().build())];
+
+        let instance_id = Some(gen_instance_id(&mut rand::thread_rng()));
+        let component_id_index_path = make_index_file(component_id_index::Index {
+            instances: vec![component_id_index::InstanceIdEntry {
+                instance_id: instance_id.clone(),
+                appmgr_moniker: None,
+                moniker: Some(PartialAbsoluteMoniker::root()),
+            }],
+            ..component_id_index::Index::default()
+        })
+        .unwrap();
+        let test = RoutingTestBuilder::new("root", components)
+            .set_component_id_index_path(
+                component_id_index_path.path().to_str().unwrap().to_string(),
+            )
+            .build()
+            .await;
+
+        let root_realm =
+            test.model.bind(&PartialAbsoluteMoniker::root(), &BindReason::Root).await.unwrap();
+
+        assert_eq!(
+            fsys::StartResult::AlreadyStarted,
+            root_realm.bind(&BindReason::Root).await.unwrap()
+        );
     }
 }

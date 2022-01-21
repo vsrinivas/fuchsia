@@ -6,6 +6,15 @@ library fuchsia.sys2;
 using fuchsia.component;
 using fuchsia.component.decl;
 
+/// Describes the result of the Start command.
+type StartResult = strict enum {
+    /// The component start succeeded.
+    STARTED = 0;
+
+    /// The component was already running.
+    ALREADY_STARTED = 1;
+};
+
 /// A protocol exposed in a component's hub to allow component tools
 /// to resolve, bind, stop component manifests.
 @discoverable
@@ -47,10 +56,13 @@ protocol LifecycleController {
     /// relative to the component to which the protocol is scoped.
     ///
     /// The function returns once the component is successfully bound, or the
-    /// operation fails.
+    /// operation fails. It returns a StartResult enum to indicate success or
+    /// that the component is already started.
     Bind(struct {
         moniker string:fuchsia.component.MAX_MONIKER_LENGTH;
-    }) -> (struct {}) error fuchsia.component.Error;
+    }) -> (struct {
+        result StartResult;
+    }) error fuchsia.component.Error;
 
     /// Stops the component designated by the provided relative moniker
     /// relative to the component to which the protocol is scoped.
