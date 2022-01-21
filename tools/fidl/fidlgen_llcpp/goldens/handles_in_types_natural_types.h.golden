@@ -65,9 +65,9 @@ class UnionWithHandle final {
   friend struct ::fidl::internal::NaturalUnionCodingTraits<
       ::test_handlesintypes::UnionWithHandle>;
   static constexpr std::array<std::optional<::fidl::HandleInformation>, 2>
-      Members = {std::nullopt,
-                 std::make_optional<::fidl::HandleInformation>(
-                     {.object_type = ZX_OBJ_TYPE_VMO, .rights = 0x80000000})};
+      kMembers = {std::nullopt,
+                  std::make_optional<::fidl::HandleInformation>(
+                      {.object_type = ZX_OBJ_TYPE_VMO, .rights = 0x80000000})};
 
   explicit UnionWithHandle(std::shared_ptr<Storage_> storage)
       : storage_(std::move(storage)) {}
@@ -123,10 +123,11 @@ class TableWithHandle final {
   Storage_ storage_;
   friend struct ::fidl::internal::NaturalTableCodingTraits<
       ::test_handlesintypes::TableWithHandle>;
-  static constexpr auto Members = std::make_tuple(std::make_tuple(
-      1, &Storage_::h,
-      std::make_optional<::fidl::HandleInformation>(
-          {.object_type = ZX_OBJ_TYPE_VMO, .rights = 0x80000000})));
+  static constexpr auto kMembers =
+      std::make_tuple(::fidl::internal::NaturalTableMember<Storage_, ::zx::vmo>{
+          1, &Storage_::h,
+          std::make_optional<::fidl::HandleInformation>(
+              {.object_type = ZX_OBJ_TYPE_VMO, .rights = 0x80000000})});
 };
 
 #endif  // __Fuchsia__

@@ -87,7 +87,7 @@ class StrictFoo final {
   friend struct ::fidl::internal::NaturalUnionCodingTraits<
       ::test_requestflexibleenvelope::StrictFoo>;
   static constexpr std::array<std::optional<::fidl::HandleInformation>, 3>
-      Members = {std::nullopt, std::nullopt, std::nullopt};
+      kMembers = {std::nullopt, std::nullopt, std::nullopt};
 
   explicit StrictFoo(std::shared_ptr<Storage_> storage)
       : storage_(std::move(storage)) {}
@@ -287,7 +287,7 @@ class FlexibleFoo final {
   friend struct ::fidl::internal::NaturalUnionCodingTraits<
       ::test_requestflexibleenvelope::FlexibleFoo>;
   static constexpr std::array<std::optional<::fidl::HandleInformation>, 3>
-      Members = {std::nullopt, std::nullopt, std::nullopt};
+      kMembers = {std::nullopt, std::nullopt, std::nullopt};
 
   explicit FlexibleFoo(std::shared_ptr<Storage_> storage)
       : storage_(std::move(storage)) {}

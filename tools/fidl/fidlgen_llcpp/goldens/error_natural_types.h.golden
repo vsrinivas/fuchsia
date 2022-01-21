@@ -129,7 +129,7 @@ class Example_foo_Result final {
   friend struct ::fidl::internal::NaturalUnionCodingTraits<
       ::test_error::Example_foo_Result>;
   static constexpr std::array<std::optional<::fidl::HandleInformation>, 3>
-      Members = {std::nullopt, std::nullopt, std::nullopt};
+      kMembers = {std::nullopt, std::nullopt, std::nullopt};
 
   explicit Example_foo_Result(std::shared_ptr<Storage_> storage)
       : storage_(std::move(storage)) {}

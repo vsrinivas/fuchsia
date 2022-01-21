@@ -155,7 +155,7 @@ class ExampleUseOfErrorSyntax_CallWhichMayFail_Result final {
   friend struct ::fidl::internal::NaturalUnionCodingTraits<
       ::test_errorsyntax::ExampleUseOfErrorSyntax_CallWhichMayFail_Result>;
   static constexpr std::array<std::optional<::fidl::HandleInformation>, 3>
-      Members = {std::nullopt, std::nullopt, std::nullopt};
+      kMembers = {std::nullopt, std::nullopt, std::nullopt};
 
   explicit ExampleUseOfErrorSyntax_CallWhichMayFail_Result(
       std::shared_ptr<Storage_> storage)

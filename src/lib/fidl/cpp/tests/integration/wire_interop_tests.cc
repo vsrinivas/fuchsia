@@ -68,9 +68,9 @@ fidl_cpp_wire_interop_test::wire::Node MockData::MakeWireFile(fidl::AnyArena& ar
 }
 
 void MockData::CheckNaturalFile(const fidl_cpp_wire_interop_test::Node& node) {
-  EXPECT_TRUE(node.name().has_value());
+  ASSERT_TRUE(node.name().has_value());
   EXPECT_EQ(kFileName, node.name());
-  EXPECT_TRUE(node.kind().has_value());
+  ASSERT_TRUE(node.kind().has_value());
   EXPECT_EQ(fidl_cpp_wire_interop_test::Kind::Tag::kFile, node.kind()->Which());
   EXPECT_EQ(kFileContent, node.kind()->file()->content());
 }

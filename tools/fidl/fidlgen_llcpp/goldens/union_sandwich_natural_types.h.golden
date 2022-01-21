@@ -79,7 +79,7 @@ class UnionSize8Alignment4 final {
   friend struct ::fidl::internal::NaturalUnionCodingTraits<
       ::test_unionsandwich::UnionSize8Alignment4>;
   static constexpr std::array<std::optional<::fidl::HandleInformation>, 2>
-      Members = {std::nullopt, std::nullopt};
+      kMembers = {std::nullopt, std::nullopt};
 
   explicit UnionSize8Alignment4(std::shared_ptr<Storage_> storage)
       : storage_(std::move(storage)) {}
@@ -218,7 +218,7 @@ class UnionSize36Alignment4 final {
   friend struct ::fidl::internal::NaturalUnionCodingTraits<
       ::test_unionsandwich::UnionSize36Alignment4>;
   static constexpr std::array<std::optional<::fidl::HandleInformation>, 2>
-      Members = {std::nullopt, std::nullopt};
+      kMembers = {std::nullopt, std::nullopt};
 
   explicit UnionSize36Alignment4(std::shared_ptr<Storage_> storage)
       : storage_(std::move(storage)) {}
@@ -357,7 +357,7 @@ class UnionSize12Alignment4 final {
   friend struct ::fidl::internal::NaturalUnionCodingTraits<
       ::test_unionsandwich::UnionSize12Alignment4>;
   static constexpr std::array<std::optional<::fidl::HandleInformation>, 2>
-      Members = {std::nullopt, std::nullopt};
+      kMembers = {std::nullopt, std::nullopt};
 
   explicit UnionSize12Alignment4(std::shared_ptr<Storage_> storage)
       : storage_(std::move(storage)) {}
@@ -550,7 +550,7 @@ class UnionSize24Alignment8 final {
   friend struct ::fidl::internal::NaturalUnionCodingTraits<
       ::test_unionsandwich::UnionSize24Alignment8>;
   static constexpr std::array<std::optional<::fidl::HandleInformation>, 2>
-      Members = {std::nullopt, std::nullopt};
+      kMembers = {std::nullopt, std::nullopt};
 
   explicit UnionSize24Alignment8(std::shared_ptr<Storage_> storage)
       : storage_(std::move(storage)) {}

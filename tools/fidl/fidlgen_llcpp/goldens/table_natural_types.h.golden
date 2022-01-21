@@ -67,8 +67,8 @@ class TableWithAttributes final {
   Storage_ CloneStorage_() const;
   friend struct ::fidl::internal::NaturalTableCodingTraits<
       ::test_table::TableWithAttributes>;
-  static constexpr auto Members =
-      std::make_tuple(std::make_tuple(1, &Storage_::x, std::nullopt));
+  static constexpr auto kMembers = std::make_tuple(
+      ::fidl::internal::NaturalTableMember<Storage_, int64_t>{1, &Storage_::x});
 };
 
 extern "C" const fidl_type_t test_table_SimpleTableTable;
@@ -110,9 +110,9 @@ class SimpleTable final {
   Storage_ CloneStorage_() const;
   friend struct ::fidl::internal::NaturalTableCodingTraits<
       ::test_table::SimpleTable>;
-  static constexpr auto Members =
-      std::make_tuple(std::make_tuple(1, &Storage_::x, std::nullopt),
-                      std::make_tuple(5, &Storage_::y, std::nullopt));
+  static constexpr auto kMembers = std::make_tuple(
+      ::fidl::internal::NaturalTableMember<Storage_, int64_t>{1, &Storage_::x},
+      ::fidl::internal::NaturalTableMember<Storage_, int64_t>{5, &Storage_::y});
 };
 
 extern "C" const fidl_type_t test_table_ReverseOrdinalTableTable;
@@ -160,10 +160,10 @@ class ReverseOrdinalTable final {
   Storage_ CloneStorage_() const;
   friend struct ::fidl::internal::NaturalTableCodingTraits<
       ::test_table::ReverseOrdinalTable>;
-  static constexpr auto Members =
-      std::make_tuple(std::make_tuple(1, &Storage_::z, std::nullopt),
-                      std::make_tuple(2, &Storage_::y, std::nullopt),
-                      std::make_tuple(3, &Storage_::x, std::nullopt));
+  static constexpr auto kMembers = std::make_tuple(
+      ::fidl::internal::NaturalTableMember<Storage_, int64_t>{1, &Storage_::z},
+      ::fidl::internal::NaturalTableMember<Storage_, int64_t>{2, &Storage_::y},
+      ::fidl::internal::NaturalTableMember<Storage_, int64_t>{3, &Storage_::x});
 };
 
 extern "C" const fidl_type_t test_table_OlderSimpleTableTable;
@@ -199,8 +199,8 @@ class OlderSimpleTable final {
   Storage_ CloneStorage_() const;
   friend struct ::fidl::internal::NaturalTableCodingTraits<
       ::test_table::OlderSimpleTable>;
-  static constexpr auto Members =
-      std::make_tuple(std::make_tuple(1, &Storage_::x, std::nullopt));
+  static constexpr auto kMembers = std::make_tuple(
+      ::fidl::internal::NaturalTableMember<Storage_, int64_t>{1, &Storage_::x});
 };
 
 extern "C" const fidl_type_t test_table_NewerSimpleTableTable;
@@ -247,10 +247,10 @@ class NewerSimpleTable final {
   Storage_ CloneStorage_() const;
   friend struct ::fidl::internal::NaturalTableCodingTraits<
       ::test_table::NewerSimpleTable>;
-  static constexpr auto Members =
-      std::make_tuple(std::make_tuple(1, &Storage_::x, std::nullopt),
-                      std::make_tuple(5, &Storage_::y, std::nullopt),
-                      std::make_tuple(6, &Storage_::z, std::nullopt));
+  static constexpr auto kMembers = std::make_tuple(
+      ::fidl::internal::NaturalTableMember<Storage_, int64_t>{1, &Storage_::x},
+      ::fidl::internal::NaturalTableMember<Storage_, int64_t>{5, &Storage_::y},
+      ::fidl::internal::NaturalTableMember<Storage_, int64_t>{6, &Storage_::z});
 };
 
 extern "C" const fidl_type_t test_table_ExtensionTableTable;
@@ -281,7 +281,7 @@ class ExtensionTable final {
   Storage_ CloneStorage_() const;
   friend struct ::fidl::internal::NaturalTableCodingTraits<
       ::test_table::ExtensionTable>;
-  static constexpr auto Members = std::make_tuple();
+  static constexpr auto kMembers = std::make_tuple();
 };
 
 extern "C" const fidl_type_t test_table_SixtyFourOrdinalTableTable;
@@ -608,71 +608,127 @@ class SixtyFourOrdinalTable final {
   Storage_ CloneStorage_() const;
   friend struct ::fidl::internal::NaturalTableCodingTraits<
       ::test_table::SixtyFourOrdinalTable>;
-  static constexpr auto Members =
-      std::make_tuple(std::make_tuple(1, &Storage_::v1, std::nullopt),
-                      std::make_tuple(2, &Storage_::v2, std::nullopt),
-                      std::make_tuple(3, &Storage_::v3, std::nullopt),
-                      std::make_tuple(4, &Storage_::v4, std::nullopt),
-                      std::make_tuple(5, &Storage_::v5, std::nullopt),
-                      std::make_tuple(6, &Storage_::v6, std::nullopt),
-                      std::make_tuple(7, &Storage_::v7, std::nullopt),
-                      std::make_tuple(8, &Storage_::v8, std::nullopt),
-                      std::make_tuple(9, &Storage_::v9, std::nullopt),
-                      std::make_tuple(10, &Storage_::v10, std::nullopt),
-                      std::make_tuple(11, &Storage_::v11, std::nullopt),
-                      std::make_tuple(12, &Storage_::v12, std::nullopt),
-                      std::make_tuple(13, &Storage_::v13, std::nullopt),
-                      std::make_tuple(14, &Storage_::v14, std::nullopt),
-                      std::make_tuple(15, &Storage_::v15, std::nullopt),
-                      std::make_tuple(16, &Storage_::v16, std::nullopt),
-                      std::make_tuple(17, &Storage_::v17, std::nullopt),
-                      std::make_tuple(18, &Storage_::v18, std::nullopt),
-                      std::make_tuple(19, &Storage_::v19, std::nullopt),
-                      std::make_tuple(20, &Storage_::v20, std::nullopt),
-                      std::make_tuple(21, &Storage_::v21, std::nullopt),
-                      std::make_tuple(22, &Storage_::v22, std::nullopt),
-                      std::make_tuple(23, &Storage_::v23, std::nullopt),
-                      std::make_tuple(24, &Storage_::v24, std::nullopt),
-                      std::make_tuple(25, &Storage_::v25, std::nullopt),
-                      std::make_tuple(26, &Storage_::v26, std::nullopt),
-                      std::make_tuple(27, &Storage_::v27, std::nullopt),
-                      std::make_tuple(28, &Storage_::v28, std::nullopt),
-                      std::make_tuple(29, &Storage_::v29, std::nullopt),
-                      std::make_tuple(30, &Storage_::v30, std::nullopt),
-                      std::make_tuple(31, &Storage_::v31, std::nullopt),
-                      std::make_tuple(32, &Storage_::v32, std::nullopt),
-                      std::make_tuple(33, &Storage_::v33, std::nullopt),
-                      std::make_tuple(34, &Storage_::v34, std::nullopt),
-                      std::make_tuple(35, &Storage_::v35, std::nullopt),
-                      std::make_tuple(36, &Storage_::v36, std::nullopt),
-                      std::make_tuple(37, &Storage_::v37, std::nullopt),
-                      std::make_tuple(38, &Storage_::v38, std::nullopt),
-                      std::make_tuple(39, &Storage_::v39, std::nullopt),
-                      std::make_tuple(40, &Storage_::v40, std::nullopt),
-                      std::make_tuple(41, &Storage_::v41, std::nullopt),
-                      std::make_tuple(42, &Storage_::v42, std::nullopt),
-                      std::make_tuple(43, &Storage_::v43, std::nullopt),
-                      std::make_tuple(44, &Storage_::v44, std::nullopt),
-                      std::make_tuple(45, &Storage_::v45, std::nullopt),
-                      std::make_tuple(46, &Storage_::v46, std::nullopt),
-                      std::make_tuple(47, &Storage_::v47, std::nullopt),
-                      std::make_tuple(48, &Storage_::v48, std::nullopt),
-                      std::make_tuple(49, &Storage_::v49, std::nullopt),
-                      std::make_tuple(50, &Storage_::v50, std::nullopt),
-                      std::make_tuple(51, &Storage_::v51, std::nullopt),
-                      std::make_tuple(52, &Storage_::v52, std::nullopt),
-                      std::make_tuple(53, &Storage_::v53, std::nullopt),
-                      std::make_tuple(54, &Storage_::v54, std::nullopt),
-                      std::make_tuple(55, &Storage_::v55, std::nullopt),
-                      std::make_tuple(56, &Storage_::v56, std::nullopt),
-                      std::make_tuple(57, &Storage_::v57, std::nullopt),
-                      std::make_tuple(58, &Storage_::v58, std::nullopt),
-                      std::make_tuple(59, &Storage_::v59, std::nullopt),
-                      std::make_tuple(60, &Storage_::v60, std::nullopt),
-                      std::make_tuple(61, &Storage_::v61, std::nullopt),
-                      std::make_tuple(62, &Storage_::v62, std::nullopt),
-                      std::make_tuple(63, &Storage_::v63, std::nullopt),
-                      std::make_tuple(64, &Storage_::v64, std::nullopt));
+  static constexpr auto kMembers = std::make_tuple(
+      ::fidl::internal::NaturalTableMember<Storage_, int64_t>{1, &Storage_::v1},
+      ::fidl::internal::NaturalTableMember<Storage_, int64_t>{2, &Storage_::v2},
+      ::fidl::internal::NaturalTableMember<Storage_, int64_t>{3, &Storage_::v3},
+      ::fidl::internal::NaturalTableMember<Storage_, int64_t>{4, &Storage_::v4},
+      ::fidl::internal::NaturalTableMember<Storage_, int64_t>{5, &Storage_::v5},
+      ::fidl::internal::NaturalTableMember<Storage_, int64_t>{6, &Storage_::v6},
+      ::fidl::internal::NaturalTableMember<Storage_, int64_t>{7, &Storage_::v7},
+      ::fidl::internal::NaturalTableMember<Storage_, int64_t>{8, &Storage_::v8},
+      ::fidl::internal::NaturalTableMember<Storage_, int64_t>{9, &Storage_::v9},
+      ::fidl::internal::NaturalTableMember<Storage_, int64_t>{10,
+                                                              &Storage_::v10},
+      ::fidl::internal::NaturalTableMember<Storage_, int64_t>{11,
+                                                              &Storage_::v11},
+      ::fidl::internal::NaturalTableMember<Storage_, int64_t>{12,
+                                                              &Storage_::v12},
+      ::fidl::internal::NaturalTableMember<Storage_, int64_t>{13,
+                                                              &Storage_::v13},
+      ::fidl::internal::NaturalTableMember<Storage_, int64_t>{14,
+                                                              &Storage_::v14},
+      ::fidl::internal::NaturalTableMember<Storage_, int64_t>{15,
+                                                              &Storage_::v15},
+      ::fidl::internal::NaturalTableMember<Storage_, int64_t>{16,
+                                                              &Storage_::v16},
+      ::fidl::internal::NaturalTableMember<Storage_, int64_t>{17,
+                                                              &Storage_::v17},
+      ::fidl::internal::NaturalTableMember<Storage_, int64_t>{18,
+                                                              &Storage_::v18},
+      ::fidl::internal::NaturalTableMember<Storage_, int64_t>{19,
+                                                              &Storage_::v19},
+      ::fidl::internal::NaturalTableMember<Storage_, int64_t>{20,
+                                                              &Storage_::v20},
+      ::fidl::internal::NaturalTableMember<Storage_, int64_t>{21,
+                                                              &Storage_::v21},
+      ::fidl::internal::NaturalTableMember<Storage_, int64_t>{22,
+                                                              &Storage_::v22},
+      ::fidl::internal::NaturalTableMember<Storage_, int64_t>{23,
+                                                              &Storage_::v23},
+      ::fidl::internal::NaturalTableMember<Storage_, int64_t>{24,
+                                                              &Storage_::v24},
+      ::fidl::internal::NaturalTableMember<Storage_, int64_t>{25,
+                                                              &Storage_::v25},
+      ::fidl::internal::NaturalTableMember<Storage_, int64_t>{26,
+                                                              &Storage_::v26},
+      ::fidl::internal::NaturalTableMember<Storage_, int64_t>{27,
+                                                              &Storage_::v27},
+      ::fidl::internal::NaturalTableMember<Storage_, int64_t>{28,
+                                                              &Storage_::v28},
+      ::fidl::internal::NaturalTableMember<Storage_, int64_t>{29,
+                                                              &Storage_::v29},
+      ::fidl::internal::NaturalTableMember<Storage_, int64_t>{30,
+                                                              &Storage_::v30},
+      ::fidl::internal::NaturalTableMember<Storage_, int64_t>{31,
+                                                              &Storage_::v31},
+      ::fidl::internal::NaturalTableMember<Storage_, int64_t>{32,
+                                                              &Storage_::v32},
+      ::fidl::internal::NaturalTableMember<Storage_, int64_t>{33,
+                                                              &Storage_::v33},
+      ::fidl::internal::NaturalTableMember<Storage_, int64_t>{34,
+                                                              &Storage_::v34},
+      ::fidl::internal::NaturalTableMember<Storage_, int64_t>{35,
+                                                              &Storage_::v35},
+      ::fidl::internal::NaturalTableMember<Storage_, int64_t>{36,
+                                                              &Storage_::v36},
+      ::fidl::internal::NaturalTableMember<Storage_, int64_t>{37,
+                                                              &Storage_::v37},
+      ::fidl::internal::NaturalTableMember<Storage_, int64_t>{38,
+                                                              &Storage_::v38},
+      ::fidl::internal::NaturalTableMember<Storage_, int64_t>{39,
+                                                              &Storage_::v39},
+      ::fidl::internal::NaturalTableMember<Storage_, int64_t>{40,
+                                                              &Storage_::v40},
+      ::fidl::internal::NaturalTableMember<Storage_, int64_t>{41,
+                                                              &Storage_::v41},
+      ::fidl::internal::NaturalTableMember<Storage_, int64_t>{42,
+                                                              &Storage_::v42},
+      ::fidl::internal::NaturalTableMember<Storage_, int64_t>{43,
+                                                              &Storage_::v43},
+      ::fidl::internal::NaturalTableMember<Storage_, int64_t>{44,
+                                                              &Storage_::v44},
+      ::fidl::internal::NaturalTableMember<Storage_, int64_t>{45,
+                                                              &Storage_::v45},
+      ::fidl::internal::NaturalTableMember<Storage_, int64_t>{46,
+                                                              &Storage_::v46},
+      ::fidl::internal::NaturalTableMember<Storage_, int64_t>{47,
+                                                              &Storage_::v47},
+      ::fidl::internal::NaturalTableMember<Storage_, int64_t>{48,
+                                                              &Storage_::v48},
+      ::fidl::internal::NaturalTableMember<Storage_, int64_t>{49,
+                                                              &Storage_::v49},
+      ::fidl::internal::NaturalTableMember<Storage_, int64_t>{50,
+                                                              &Storage_::v50},
+      ::fidl::internal::NaturalTableMember<Storage_, int64_t>{51,
+                                                              &Storage_::v51},
+      ::fidl::internal::NaturalTableMember<Storage_, int64_t>{52,
+                                                              &Storage_::v52},
+      ::fidl::internal::NaturalTableMember<Storage_, int64_t>{53,
+                                                              &Storage_::v53},
+      ::fidl::internal::NaturalTableMember<Storage_, int64_t>{54,
+                                                              &Storage_::v54},
+      ::fidl::internal::NaturalTableMember<Storage_, int64_t>{55,
+                                                              &Storage_::v55},
+      ::fidl::internal::NaturalTableMember<Storage_, int64_t>{56,
+                                                              &Storage_::v56},
+      ::fidl::internal::NaturalTableMember<Storage_, int64_t>{57,
+                                                              &Storage_::v57},
+      ::fidl::internal::NaturalTableMember<Storage_, int64_t>{58,
+                                                              &Storage_::v58},
+      ::fidl::internal::NaturalTableMember<Storage_, int64_t>{59,
+                                                              &Storage_::v59},
+      ::fidl::internal::NaturalTableMember<Storage_, int64_t>{60,
+                                                              &Storage_::v60},
+      ::fidl::internal::NaturalTableMember<Storage_, int64_t>{61,
+                                                              &Storage_::v61},
+      ::fidl::internal::NaturalTableMember<Storage_, int64_t>{62,
+                                                              &Storage_::v62},
+      ::fidl::internal::NaturalTableMember<Storage_, int64_t>{63,
+                                                              &Storage_::v63},
+      ::fidl::internal::NaturalTableMember<Storage_,
+                                           ::test_table::ExtensionTable>{
+          64, &Storage_::v64});
 };
 
 extern "C" const fidl_type_t test_table_EmptyTableTable;
@@ -703,7 +759,7 @@ class EmptyTable final {
   Storage_ CloneStorage_() const;
   friend struct ::fidl::internal::NaturalTableCodingTraits<
       ::test_table::EmptyTable>;
-  static constexpr auto Members = std::make_tuple();
+  static constexpr auto kMembers = std::make_tuple();
 };
 
 }  // namespace test_table

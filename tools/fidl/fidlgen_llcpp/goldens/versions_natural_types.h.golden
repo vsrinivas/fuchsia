@@ -69,7 +69,7 @@ class Union final {
   friend struct ::fidl::internal::NaturalUnionCodingTraits<
       ::test_versions::Union>;
   static constexpr std::array<std::optional<::fidl::HandleInformation>, 2>
-      Members = {std::nullopt, std::nullopt};
+      kMembers = {std::nullopt, std::nullopt};
 
   explicit Union(std::shared_ptr<Storage_> storage)
       : storage_(std::move(storage)) {}
@@ -125,8 +125,9 @@ class Table final {
   Storage_ CloneStorage_() const;
   friend struct ::fidl::internal::NaturalTableCodingTraits<
       ::test_versions::Table>;
-  static constexpr auto Members =
-      std::make_tuple(std::make_tuple(1, &Storage_::x, std::nullopt));
+  static constexpr auto kMembers =
+      std::make_tuple(::fidl::internal::NaturalTableMember<Storage_, uint32_t>{
+          1, &Storage_::x});
 };
 
 extern "C" const fidl_type_t test_versions_StructTable;

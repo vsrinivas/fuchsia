@@ -438,7 +438,7 @@ class SimpleUnion final {
   friend struct ::fidl::internal::NaturalUnionCodingTraits<
       ::test_nullable::SimpleUnion>;
   static constexpr std::array<std::optional<::fidl::HandleInformation>, 3>
-      Members = {std::nullopt, std::nullopt, std::nullopt};
+      kMembers = {std::nullopt, std::nullopt, std::nullopt};
 
   explicit SimpleUnion(std::shared_ptr<Storage_> storage)
       : storage_(std::move(storage)) {}

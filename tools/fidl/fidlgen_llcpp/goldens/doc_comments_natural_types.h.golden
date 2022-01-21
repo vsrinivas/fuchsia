@@ -70,8 +70,9 @@ class Table final {
   Storage_ CloneStorage_() const;
   friend struct ::fidl::internal::NaturalTableCodingTraits<
       ::test_doccomments::Table>;
-  static constexpr auto Members =
-      std::make_tuple(std::make_tuple(1, &Storage_::field, std::nullopt));
+  static constexpr auto kMembers =
+      std::make_tuple(::fidl::internal::NaturalTableMember<Storage_, int32_t>{
+          1, &Storage_::field});
 };
 
 extern "C" const fidl_type_t test_doccomments_StructTable;
@@ -175,7 +176,7 @@ class StrictUnion final {
   friend struct ::fidl::internal::NaturalUnionCodingTraits<
       ::test_doccomments::StrictUnion>;
   static constexpr std::array<std::optional<::fidl::HandleInformation>, 2>
-      Members = {std::nullopt, std::nullopt};
+      kMembers = {std::nullopt, std::nullopt};
 
   explicit StrictUnion(std::shared_ptr<Storage_> storage)
       : storage_(std::move(storage)) {}
@@ -248,7 +249,7 @@ class FlexibleUnion final {
   friend struct ::fidl::internal::NaturalUnionCodingTraits<
       ::test_doccomments::FlexibleUnion>;
   static constexpr std::array<std::optional<::fidl::HandleInformation>, 2>
-      Members = {std::nullopt, std::nullopt};
+      kMembers = {std::nullopt, std::nullopt};
 
   explicit FlexibleUnion(std::shared_ptr<Storage_> storage)
       : storage_(std::move(storage)) {}

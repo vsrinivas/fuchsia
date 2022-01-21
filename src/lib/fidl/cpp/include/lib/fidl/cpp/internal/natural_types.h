@@ -109,10 +109,34 @@ bool NaturalEnvelopeDecode(::fidl::Decoder* decoder, F* value, size_t offset) {
   }
 }
 
+// This holds metadata about a table member: its ordinal, a member pointer to the member's value in
+// the table's Storage_ type, and optionally handle information.
+template <typename T, typename F>
+struct NaturalTableMember final {
+  size_t ordinal;
+  std::optional<F> T::*member_ptr;
+  std::optional<fidl::HandleInformation> handle_info;
+  constexpr NaturalTableMember(
+      size_t ordinal, std::optional<F> T::*member_ptr,
+      std::optional<fidl::HandleInformation> handle_info = std::nullopt) noexcept
+      : ordinal(ordinal), member_ptr(member_ptr), handle_info(handle_info) {}
+};
+
 template <typename T>
 struct NaturalTableCodingTraits {
   static constexpr size_t inline_size_v1_no_ee = 16;
   static constexpr size_t inline_size_v2 = 16;
+
+  // Visit each of the members of the table in order.
+  template <typename F, size_t I = 0>
+  static void Visit(T* table, F func) {
+    if constexpr (I < std::tuple_size_v<decltype(T::kMembers)>) {
+      auto member_info = std::get<I>(T::kMembers);
+      auto* member_ptr = &(table->storage_.*(member_info.member_ptr));
+      func(member_ptr, member_info);
+      Visit<F, I + 1>(table, func);
+    }
+  }
 
   template <class EncoderImpl>
   static void Encode(EncoderImpl* encoder, T* value, size_t offset,
@@ -125,27 +149,16 @@ struct NaturalTableCodingTraits {
                                ? sizeof(fidl_envelope_t)
                                : sizeof(fidl_envelope_v2_t);
     size_t base = encoder->Alloc(max_ordinal * envelope_size);
-    EncodeMembers(encoder, envelope_size, value, base);
+    Visit(value, [&](auto* member, auto& member_info) {
+      size_t offset = base + (member_info.ordinal - 1) * envelope_size;
+      NaturalEnvelopeEncodeOptional(encoder, member, offset, member_info.handle_info);
+    });
   }
 
-  template <size_t I = 0>
-  static void EncodeMembers(::fidl::Encoder* encoder, size_t envelope_size, T* value, size_t base) {
-    if constexpr (I < std::tuple_size_v<decltype(T::Members)>) {
-      auto member_info = std::get<I>(T::Members);
-      size_t member_offset = base + (std::get<0>(member_info) - 1) * envelope_size;
-      auto member_member_ptr = std::get<1>(member_info);
-      auto& member_ptr = value->storage_.*(member_member_ptr);
-      std::optional<fidl::HandleInformation> handle_info = std::get<2>(member_info);
-      ::fidl::internal::NaturalEnvelopeEncodeOptional(encoder, &member_ptr, member_offset,
-                                                      handle_info);
-      // Encode the next member.
-      EncodeMembers<I + 1>(encoder, envelope_size, value, base);
-    }
-  }
-
-  template <size_t I = std::tuple_size_v<decltype(T::Members)> - 1>
+  // Returns the largest ordinal of a present table member.
+  template <size_t I = std::tuple_size_v<decltype(T::kMembers)> - 1>
   static size_t MaxOrdinal(T* value) {
-    auto T::Storage_::*member_ptr = std::get<1>(std::get<I>(T::Members));
+    auto T::Storage_::*member_ptr = std::get<I>(T::kMembers).member_ptr;
     const auto& member = value->storage_.*member_ptr;
     if (member.has_value()) {
       return I + 1;
@@ -168,25 +181,16 @@ struct NaturalTableCodingTraits {
 
     size_t base = decoder->GetOffset(encoded->data);
     size_t count = encoded->count;
+    constexpr size_t envelope_size = sizeof(fidl_envelope_v2_t);
 
-    DecodeMembers(decoder, value, base, count);
-  }
-
-  template <class DecoderImpl, size_t I = 0>
-  static void DecodeMembers(DecoderImpl* decoder, T* value, size_t base, size_t count) {
-    if constexpr (I < std::tuple_size_v<decltype(T::Members)>) {
-      auto member_info = std::get<I>(T::Members);
-      size_t member_offset = base + (std::get<0>(member_info) - 1) * sizeof(fidl_envelope_v2_t);
-      auto T::Storage_::*member_member_ptr = std::get<1>(member_info);
-      auto& member_ptr = value->storage_.*(member_member_ptr);
-      if (I < count) {
-        NaturalEnvelopeDecodeOptional(decoder, &member_ptr, member_offset);
+    Visit(value, [&](auto* member, auto& member_info) {
+      size_t member_offset = base + (member_info.ordinal - 1) * envelope_size;
+      if (member_info.ordinal <= count) {
+        NaturalEnvelopeDecodeOptional(decoder, member, member_offset);
       } else {
-        member_ptr.reset();
+        member->reset();
       }
-      // Encode the next member.
-      DecodeMembers<DecoderImpl, I + 1>(decoder, value, base, count);
-    }
+    });
   }
 };
 
@@ -203,7 +207,7 @@ struct NaturalUnionCodingTraits {
     std::visit(
         [&](auto& member_value) {
           if constexpr (!std::is_same_v<decltype(member_value), std::monostate&>) {
-            NaturalEnvelopeEncode(encoder, &member_value, envelope_offset, T::Members[index]);
+            NaturalEnvelopeEncode(encoder, &member_value, envelope_offset, T::kMembers[index]);
           }
         },
         *value->storage_);

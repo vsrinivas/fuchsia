@@ -67,19 +67,18 @@ class {{ .Name }} final {
     Storage_ CloneStorage_() const;
   {{- end }}
   friend struct ::fidl::internal::NaturalTableCodingTraits<{{ . }}>;
-  static constexpr auto Members = std::make_tuple(
+  static constexpr auto kMembers = std::make_tuple(
     {{- range $i, $m := .Members }}
       {{- if $i }}, {{ end -}}
-      std::make_tuple({{ $m.Ordinal }}, &Storage_::{{ $m.Name }},
+      ::fidl::internal::NaturalTableMember<Storage_, {{ $m.Type }}>{
+        {{ $m.Ordinal }}, &Storage_::{{ $m.Name }}
         {{- if $m.HandleInformation -}}
-          std::make_optional<::fidl::HandleInformation>({
+          , std::make_optional<::fidl::HandleInformation>({
             .object_type = {{ $m.HandleInformation.ObjectType }},
             .rights = {{ $m.HandleInformation.Rights }}
           })
-        {{- else }}
-          std::nullopt
         {{- end -}}
-      )
+      }
     {{- end -}}
   );
 };

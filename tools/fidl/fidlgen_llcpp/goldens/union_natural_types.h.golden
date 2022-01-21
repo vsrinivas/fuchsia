@@ -122,7 +122,7 @@ class UnionWithAttributes final {
   friend struct ::fidl::internal::NaturalUnionCodingTraits<
       ::test_union::UnionWithAttributes>;
   static constexpr std::array<std::optional<::fidl::HandleInformation>, 2>
-      Members = {std::nullopt, std::nullopt};
+      kMembers = {std::nullopt, std::nullopt};
 
   explicit UnionWithAttributes(std::shared_ptr<Storage_> storage)
       : storage_(std::move(storage)) {}
@@ -220,7 +220,7 @@ class Union final {
   std::shared_ptr<Storage_> CloneStorage_() const;
   friend struct ::fidl::internal::NaturalUnionCodingTraits<::test_union::Union>;
   static constexpr std::array<std::optional<::fidl::HandleInformation>, 4>
-      Members = {std::nullopt, std::nullopt, std::nullopt, std::nullopt};
+      kMembers = {std::nullopt, std::nullopt, std::nullopt, std::nullopt};
 
   explicit Union(std::shared_ptr<Storage_> storage)
       : storage_(std::move(storage)) {}
@@ -377,7 +377,7 @@ class StrictUnion final {
   friend struct ::fidl::internal::NaturalUnionCodingTraits<
       ::test_union::StrictUnion>;
   static constexpr std::array<std::optional<::fidl::HandleInformation>, 4>
-      Members = {std::nullopt, std::nullopt, std::nullopt, std::nullopt};
+      kMembers = {std::nullopt, std::nullopt, std::nullopt, std::nullopt};
 
   explicit StrictUnion(std::shared_ptr<Storage_> storage)
       : storage_(std::move(storage)) {}
@@ -479,7 +479,7 @@ class StrictSimpleXUnion final {
   friend struct ::fidl::internal::NaturalUnionCodingTraits<
       ::test_union::StrictSimpleXUnion>;
   static constexpr std::array<std::optional<::fidl::HandleInformation>, 4>
-      Members = {std::nullopt, std::nullopt, std::nullopt, std::nullopt};
+      kMembers = {std::nullopt, std::nullopt, std::nullopt, std::nullopt};
 
   explicit StrictSimpleXUnion(std::shared_ptr<Storage_> storage)
       : storage_(std::move(storage)) {}
@@ -569,7 +569,7 @@ class StrictFoo final {
   friend struct ::fidl::internal::NaturalUnionCodingTraits<
       ::test_union::StrictFoo>;
   static constexpr std::array<std::optional<::fidl::HandleInformation>, 3>
-      Members = {std::nullopt, std::nullopt, std::nullopt};
+      kMembers = {std::nullopt, std::nullopt, std::nullopt};
 
   explicit StrictFoo(std::shared_ptr<Storage_> storage)
       : storage_(std::move(storage)) {}
@@ -641,7 +641,7 @@ class StrictBoundedXUnion final {
   friend struct ::fidl::internal::NaturalUnionCodingTraits<
       ::test_union::StrictBoundedXUnion>;
   static constexpr std::array<std::optional<::fidl::HandleInformation>, 2>
-      Members = {std::nullopt, std::nullopt};
+      kMembers = {std::nullopt, std::nullopt};
 
   explicit StrictBoundedXUnion(std::shared_ptr<Storage_> storage)
       : storage_(std::move(storage)) {}
@@ -788,7 +788,7 @@ class ReverseOrdinalUnion final {
   friend struct ::fidl::internal::NaturalUnionCodingTraits<
       ::test_union::ReverseOrdinalUnion>;
   static constexpr std::array<std::optional<::fidl::HandleInformation>, 3>
-      Members = {std::nullopt, std::nullopt, std::nullopt};
+      kMembers = {std::nullopt, std::nullopt, std::nullopt};
 
   explicit ReverseOrdinalUnion(std::shared_ptr<Storage_> storage)
       : storage_(std::move(storage)) {}
@@ -960,7 +960,7 @@ class StrictPizzaOrPasta final {
   friend struct ::fidl::internal::NaturalUnionCodingTraits<
       ::test_union::StrictPizzaOrPasta>;
   static constexpr std::array<std::optional<::fidl::HandleInformation>, 3>
-      Members = {std::nullopt, std::nullopt, std::nullopt};
+      kMembers = {std::nullopt, std::nullopt, std::nullopt};
 
   explicit StrictPizzaOrPasta(std::shared_ptr<Storage_> storage)
       : storage_(std::move(storage)) {}
@@ -1047,7 +1047,7 @@ class PizzaOrPasta final {
   friend struct ::fidl::internal::NaturalUnionCodingTraits<
       ::test_union::PizzaOrPasta>;
   static constexpr std::array<std::optional<::fidl::HandleInformation>, 3>
-      Members = {std::nullopt, std::nullopt, std::nullopt};
+      kMembers = {std::nullopt, std::nullopt, std::nullopt};
 
   explicit PizzaOrPasta(std::shared_ptr<Storage_> storage)
       : storage_(std::move(storage)) {}
@@ -1133,7 +1133,7 @@ class FlexiblePizzaOrPasta final {
   friend struct ::fidl::internal::NaturalUnionCodingTraits<
       ::test_union::FlexiblePizzaOrPasta>;
   static constexpr std::array<std::optional<::fidl::HandleInformation>, 3>
-      Members = {std::nullopt, std::nullopt, std::nullopt};
+      kMembers = {std::nullopt, std::nullopt, std::nullopt};
 
   explicit FlexiblePizzaOrPasta(std::shared_ptr<Storage_> storage)
       : storage_(std::move(storage)) {}
@@ -1221,7 +1221,7 @@ class ExplicitPizzaOrPasta final {
   friend struct ::fidl::internal::NaturalUnionCodingTraits<
       ::test_union::ExplicitPizzaOrPasta>;
   static constexpr std::array<std::optional<::fidl::HandleInformation>, 3>
-      Members = {std::nullopt, std::nullopt, std::nullopt};
+      kMembers = {std::nullopt, std::nullopt, std::nullopt};
 
   explicit ExplicitPizzaOrPasta(std::shared_ptr<Storage_> storage)
       : storage_(std::move(storage)) {}
@@ -1308,7 +1308,7 @@ class OlderSimpleUnion final {
   friend struct ::fidl::internal::NaturalUnionCodingTraits<
       ::test_union::OlderSimpleUnion>;
   static constexpr std::array<std::optional<::fidl::HandleInformation>, 3>
-      Members = {std::nullopt, std::nullopt, std::nullopt};
+      kMembers = {std::nullopt, std::nullopt, std::nullopt};
 
   explicit OlderSimpleUnion(std::shared_ptr<Storage_> storage)
       : storage_(std::move(storage)) {}
@@ -1523,7 +1523,7 @@ class NewerSimpleUnion final {
   friend struct ::fidl::internal::NaturalUnionCodingTraits<
       ::test_union::NewerSimpleUnion>;
   static constexpr std::array<std::optional<::fidl::HandleInformation>, 4>
-      Members = {std::nullopt, std::nullopt, std::nullopt, std::nullopt};
+      kMembers = {std::nullopt, std::nullopt, std::nullopt, std::nullopt};
 
   explicit NewerSimpleUnion(std::shared_ptr<Storage_> storage)
       : storage_(std::move(storage)) {}
@@ -1631,7 +1631,7 @@ class FlexibleUnion final {
   friend struct ::fidl::internal::NaturalUnionCodingTraits<
       ::test_union::FlexibleUnion>;
   static constexpr std::array<std::optional<::fidl::HandleInformation>, 4>
-      Members = {std::nullopt, std::nullopt, std::nullopt, std::nullopt};
+      kMembers = {std::nullopt, std::nullopt, std::nullopt, std::nullopt};
 
   explicit FlexibleUnion(std::shared_ptr<Storage_> storage)
       : storage_(std::move(storage)) {}
@@ -1722,7 +1722,7 @@ class FlexibleFoo final {
   friend struct ::fidl::internal::NaturalUnionCodingTraits<
       ::test_union::FlexibleFoo>;
   static constexpr std::array<std::optional<::fidl::HandleInformation>, 3>
-      Members = {std::nullopt, std::nullopt, std::nullopt};
+      kMembers = {std::nullopt, std::nullopt, std::nullopt};
 
   explicit FlexibleFoo(std::shared_ptr<Storage_> storage)
       : storage_(std::move(storage)) {}
@@ -1796,7 +1796,7 @@ class FieldCollision final {
   friend struct ::fidl::internal::NaturalUnionCodingTraits<
       ::test_union::FieldCollision>;
   static constexpr std::array<std::optional<::fidl::HandleInformation>, 2>
-      Members = {std::nullopt, std::nullopt};
+      kMembers = {std::nullopt, std::nullopt};
 
   explicit FieldCollision(std::shared_ptr<Storage_> storage)
       : storage_(std::move(storage)) {}
@@ -1877,7 +1877,7 @@ class ExplicitXUnion final {
   friend struct ::fidl::internal::NaturalUnionCodingTraits<
       ::test_union::ExplicitXUnion>;
   static constexpr std::array<std::optional<::fidl::HandleInformation>, 3>
-      Members = {std::nullopt, std::nullopt, std::nullopt};
+      kMembers = {std::nullopt, std::nullopt, std::nullopt};
 
   explicit ExplicitXUnion(std::shared_ptr<Storage_> storage)
       : storage_(std::move(storage)) {}
@@ -2017,7 +2017,7 @@ class ExplicitUnion final {
   friend struct ::fidl::internal::NaturalUnionCodingTraits<
       ::test_union::ExplicitUnion>;
   static constexpr std::array<std::optional<::fidl::HandleInformation>, 3>
-      Members = {std::nullopt, std::nullopt, std::nullopt};
+      kMembers = {std::nullopt, std::nullopt, std::nullopt};
 
   explicit ExplicitUnion(std::shared_ptr<Storage_> storage)
       : storage_(std::move(storage)) {}
@@ -2101,7 +2101,7 @@ class ExplicitStrictFoo final {
   friend struct ::fidl::internal::NaturalUnionCodingTraits<
       ::test_union::ExplicitStrictFoo>;
   static constexpr std::array<std::optional<::fidl::HandleInformation>, 3>
-      Members = {std::nullopt, std::nullopt, std::nullopt};
+      kMembers = {std::nullopt, std::nullopt, std::nullopt};
 
   explicit ExplicitStrictFoo(std::shared_ptr<Storage_> storage)
       : storage_(std::move(storage)) {}
@@ -2187,7 +2187,7 @@ class ExplicitFoo final {
   friend struct ::fidl::internal::NaturalUnionCodingTraits<
       ::test_union::ExplicitFoo>;
   static constexpr std::array<std::optional<::fidl::HandleInformation>, 3>
-      Members = {std::nullopt, std::nullopt, std::nullopt};
+      kMembers = {std::nullopt, std::nullopt, std::nullopt};
 
   explicit ExplicitFoo(std::shared_ptr<Storage_> storage)
       : storage_(std::move(storage)) {}
@@ -2305,7 +2305,7 @@ class XUnionContainingEmptyStruct final {
   friend struct ::fidl::internal::NaturalUnionCodingTraits<
       ::test_union::XUnionContainingEmptyStruct>;
   static constexpr std::array<std::optional<::fidl::HandleInformation>, 2>
-      Members = {std::nullopt, std::nullopt};
+      kMembers = {std::nullopt, std::nullopt};
 
   explicit XUnionContainingEmptyStruct(std::shared_ptr<Storage_> storage)
       : storage_(std::move(storage)) {}

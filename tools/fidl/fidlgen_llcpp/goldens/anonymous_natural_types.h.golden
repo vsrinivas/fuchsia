@@ -84,7 +84,7 @@ class UnionMember final {
   friend struct ::fidl::internal::NaturalUnionCodingTraits<
       ::test_anonymous::UnionMember>;
   static constexpr std::array<std::optional<::fidl::HandleInformation>, 2>
-      Members = {std::nullopt, std::nullopt};
+      kMembers = {std::nullopt, std::nullopt};
 
   explicit UnionMember(std::shared_ptr<Storage_> storage)
       : storage_(std::move(storage)) {}
@@ -188,8 +188,10 @@ class TableMember final {
   Storage_ CloneStorage_() const;
   friend struct ::fidl::internal::NaturalTableCodingTraits<
       ::test_anonymous::TableMember>;
-  static constexpr auto Members =
-      std::make_tuple(std::make_tuple(2, &Storage_::table_data, std::nullopt));
+  static constexpr auto kMembers =
+      std::make_tuple(::fidl::internal::NaturalTableMember<
+                      Storage_, ::std::vector<::test_anonymous::TableData>>{
+          2, &Storage_::table_data});
 };
 
 extern "C" const fidl_type_t test_anonymous_SomeProtocolSomeMethodRequestTable;
@@ -379,10 +381,15 @@ class FunctionApplication final {
   Storage_ CloneStorage_() const;
   friend struct ::fidl::internal::NaturalTableCodingTraits<
       ::test_anonymous::FunctionApplication>;
-  static constexpr auto Members =
-      std::make_tuple(std::make_tuple(1, &Storage_::func, std::nullopt),
-                      std::make_tuple(3, &Storage_::args, std::nullopt),
-                      std::make_tuple(4, &Storage_::flags, std::nullopt));
+  static constexpr auto kMembers = std::make_tuple(
+      ::fidl::internal::NaturalTableMember<Storage_, ::std::string>{
+          1, &Storage_::func},
+      ::fidl::internal::NaturalTableMember<
+          Storage_,
+          ::std::vector<::std::unique_ptr<::test_anonymous::Expression>>>{
+          3, &Storage_::args},
+      ::fidl::internal::NaturalTableMember<Storage_, ::test_anonymous::Flags>{
+          4, &Storage_::flags});
 };
 
 extern "C" const fidl_type_t test_anonymous_ExpressionTable;
@@ -459,7 +466,7 @@ class Expression final {
   friend struct ::fidl::internal::NaturalUnionCodingTraits<
       ::test_anonymous::Expression>;
   static constexpr std::array<std::optional<::fidl::HandleInformation>, 4>
-      Members = {std::nullopt, std::nullopt, std::nullopt, std::nullopt};
+      kMembers = {std::nullopt, std::nullopt, std::nullopt, std::nullopt};
 
   explicit Expression(std::shared_ptr<Storage_> storage)
       : storage_(std::move(storage)) {}
@@ -612,7 +619,7 @@ class SomeProtocol_SomeMethod_Result final {
   friend struct ::fidl::internal::NaturalUnionCodingTraits<
       ::test_anonymous::SomeProtocol_SomeMethod_Result>;
   static constexpr std::array<std::optional<::fidl::HandleInformation>, 3>
-      Members = {std::nullopt, std::nullopt, std::nullopt};
+      kMembers = {std::nullopt, std::nullopt, std::nullopt};
 
   explicit SomeProtocol_SomeMethod_Result(std::shared_ptr<Storage_> storage)
       : storage_(std::move(storage)) {}

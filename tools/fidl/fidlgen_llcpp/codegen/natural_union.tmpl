@@ -77,7 +77,7 @@ class {{ .Name }} final {
     std::shared_ptr<Storage_> CloneStorage_() const;
   {{- end }}
   friend struct ::fidl::internal::NaturalUnionCodingTraits<{{ . }}>;
-  static constexpr std::array<std::optional<::fidl::HandleInformation>, {{ Add 1 (len .Members) }}> Members = {
+  static constexpr std::array<std::optional<::fidl::HandleInformation>, {{ Add 1 (len .Members) }}> kMembers = {
     std::nullopt
     {{- range .Members }}
       ,

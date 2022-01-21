@@ -111,7 +111,7 @@ class OnlyLlcpp final {
   friend struct ::fidl::internal::NaturalUnionCodingTraits<
       ::test_bindingsdenylist::OnlyLlcpp>;
   static constexpr std::array<std::optional<::fidl::HandleInformation>, 2>
-      Members = {std::nullopt, std::nullopt};
+      kMembers = {std::nullopt, std::nullopt};
 
   explicit OnlyLlcpp(std::shared_ptr<Storage_> storage)
       : storage_(std::move(storage)) {}
@@ -371,7 +371,7 @@ class DenyEachBinding_OnlyDenySyzkaller_Result final {
   friend struct ::fidl::internal::NaturalUnionCodingTraits<
       ::test_bindingsdenylist::DenyEachBinding_OnlyDenySyzkaller_Result>;
   static constexpr std::array<std::optional<::fidl::HandleInformation>, 3>
-      Members = {std::nullopt, std::nullopt, std::nullopt};
+      kMembers = {std::nullopt, std::nullopt, std::nullopt};
 
   explicit DenyEachBinding_OnlyDenySyzkaller_Result(
       std::shared_ptr<Storage_> storage)
@@ -587,7 +587,7 @@ class DenyEachBinding_OnlyDenyRust_Result final {
   friend struct ::fidl::internal::NaturalUnionCodingTraits<
       ::test_bindingsdenylist::DenyEachBinding_OnlyDenyRust_Result>;
   static constexpr std::array<std::optional<::fidl::HandleInformation>, 3>
-      Members = {std::nullopt, std::nullopt, std::nullopt};
+      kMembers = {std::nullopt, std::nullopt, std::nullopt};
 
   explicit DenyEachBinding_OnlyDenyRust_Result(
       std::shared_ptr<Storage_> storage)
@@ -805,7 +805,7 @@ class DenyEachBinding_OnlyDenyLibfuzzer_Result final {
   friend struct ::fidl::internal::NaturalUnionCodingTraits<
       ::test_bindingsdenylist::DenyEachBinding_OnlyDenyLibfuzzer_Result>;
   static constexpr std::array<std::optional<::fidl::HandleInformation>, 3>
-      Members = {std::nullopt, std::nullopt, std::nullopt};
+      kMembers = {std::nullopt, std::nullopt, std::nullopt};
 
   explicit DenyEachBinding_OnlyDenyLibfuzzer_Result(
       std::shared_ptr<Storage_> storage)
@@ -1021,7 +1021,7 @@ class DenyEachBinding_OnlyDenyGo_Result final {
   friend struct ::fidl::internal::NaturalUnionCodingTraits<
       ::test_bindingsdenylist::DenyEachBinding_OnlyDenyGo_Result>;
   static constexpr std::array<std::optional<::fidl::HandleInformation>, 3>
-      Members = {std::nullopt, std::nullopt, std::nullopt};
+      kMembers = {std::nullopt, std::nullopt, std::nullopt};
 
   explicit DenyEachBinding_OnlyDenyGo_Result(std::shared_ptr<Storage_> storage)
       : storage_(std::move(storage)) {}
@@ -1234,7 +1234,7 @@ class DenyEachBinding_OnlyDenyDart_Result final {
   friend struct ::fidl::internal::NaturalUnionCodingTraits<
       ::test_bindingsdenylist::DenyEachBinding_OnlyDenyDart_Result>;
   static constexpr std::array<std::optional<::fidl::HandleInformation>, 3>
-      Members = {std::nullopt, std::nullopt, std::nullopt};
+      kMembers = {std::nullopt, std::nullopt, std::nullopt};
 
   explicit DenyEachBinding_OnlyDenyDart_Result(
       std::shared_ptr<Storage_> storage)

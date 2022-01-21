@@ -73,7 +73,7 @@ class UnionSmallArray final {
   friend struct ::fidl::internal::NaturalUnionCodingTraits<
       ::test_arrays::UnionSmallArray>;
   static constexpr std::array<std::optional<::fidl::HandleInformation>, 2>
-      Members = {std::nullopt, std::nullopt};
+      kMembers = {std::nullopt, std::nullopt};
 
   explicit UnionSmallArray(std::shared_ptr<Storage_> storage)
       : storage_(std::move(storage)) {}
@@ -143,7 +143,7 @@ class UnionLargeArray final {
   friend struct ::fidl::internal::NaturalUnionCodingTraits<
       ::test_arrays::UnionLargeArray>;
   static constexpr std::array<std::optional<::fidl::HandleInformation>, 2>
-      Members = {std::nullopt, std::nullopt};
+      kMembers = {std::nullopt, std::nullopt};
 
   explicit UnionLargeArray(std::shared_ptr<Storage_> storage)
       : storage_(std::move(storage)) {}
@@ -202,8 +202,9 @@ class TableSmallArray final {
   Storage_ CloneStorage_() const;
   friend struct ::fidl::internal::NaturalTableCodingTraits<
       ::test_arrays::TableSmallArray>;
-  static constexpr auto Members =
-      std::make_tuple(std::make_tuple(1, &Storage_::a, std::nullopt));
+  static constexpr auto kMembers = std::make_tuple(
+      ::fidl::internal::NaturalTableMember<Storage_, ::std::array<uint32_t, 2>>{
+          1, &Storage_::a});
 };
 
 extern "C" const fidl_type_t test_arrays_TableLargeArrayTable;
@@ -241,8 +242,9 @@ class TableLargeArray final {
   Storage_ CloneStorage_() const;
   friend struct ::fidl::internal::NaturalTableCodingTraits<
       ::test_arrays::TableLargeArray>;
-  static constexpr auto Members =
-      std::make_tuple(std::make_tuple(1, &Storage_::a, std::nullopt));
+  static constexpr auto kMembers =
+      std::make_tuple(::fidl::internal::NaturalTableMember<
+                      Storage_, ::std::array<uint32_t, 100>>{1, &Storage_::a});
 };
 
 extern "C" const fidl_type_t test_arrays_StructSmallArrayTable;

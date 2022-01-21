@@ -76,7 +76,7 @@ class ExampleXUnion final {
   friend struct ::fidl::internal::NaturalUnionCodingTraits<
       ::test_placementofattributes::ExampleXUnion>;
   static constexpr std::array<std::optional<::fidl::HandleInformation>, 2>
-      Members = {std::nullopt, std::nullopt};
+      kMembers = {std::nullopt, std::nullopt};
 
   explicit ExampleXUnion(std::shared_ptr<Storage_> storage)
       : storage_(std::move(storage)) {}
@@ -147,7 +147,7 @@ class ExampleUnion final {
   friend struct ::fidl::internal::NaturalUnionCodingTraits<
       ::test_placementofattributes::ExampleUnion>;
   static constexpr std::array<std::optional<::fidl::HandleInformation>, 2>
-      Members = {std::nullopt, std::nullopt};
+      kMembers = {std::nullopt, std::nullopt};
 
   explicit ExampleUnion(std::shared_ptr<Storage_> storage)
       : storage_(std::move(storage)) {}
@@ -205,8 +205,9 @@ class ExampleTable final {
   Storage_ CloneStorage_() const;
   friend struct ::fidl::internal::NaturalTableCodingTraits<
       ::test_placementofattributes::ExampleTable>;
-  static constexpr auto Members =
-      std::make_tuple(std::make_tuple(1, &Storage_::member, std::nullopt));
+  static constexpr auto kMembers =
+      std::make_tuple(::fidl::internal::NaturalTableMember<Storage_, uint32_t>{
+          1, &Storage_::member});
 };
 
 extern "C" const fidl_type_t test_placementofattributes_ExampleStructTable;
