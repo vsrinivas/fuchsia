@@ -87,8 +87,8 @@ impl FidlProtocol for TargetCollectionProtocol {
     async fn handle(&self, cx: &Context, req: bridge::TargetCollectionRequest) -> Result<()> {
         let target_collection = cx.get_target_collection().await?;
         match req {
-            bridge::TargetCollectionRequest::ListTargets { iterator, responder, query } => {
-                let mut stream = iterator.into_stream()?;
+            bridge::TargetCollectionRequest::ListTargets { reader, query, .. } => {
+                let reader = reader.into_proxy()?;
                 let targets = match query.as_ref().map(|s| s.as_str()) {
                     None | Some("") => target_collection
                         .targets()
@@ -102,29 +102,19 @@ impl FidlProtocol for TargetCollectionProtocol {
                         None => vec![],
                     },
                 };
-                self.tasks.spawn(async move {
-                    // This was chosen arbitrarily. It's possible to determine a
-                    // better chunk size using some FIDL constant math.
-                    const TARGET_CHUNK_SIZE: usize = 20;
-                    let mut iter = targets.into_iter();
-                    while let Ok(Some(bridge::TargetCollectionIteratorRequest::GetNext {
-                        responder,
-                    })) = stream.try_next().await
-                    {
-                        let _ = responder
-                            .send(
-                                &mut iter
-                                    .by_ref()
-                                    .take(TARGET_CHUNK_SIZE)
-                                    .collect::<Vec<_>>()
-                                    .into_iter(),
-                            )
-                            .map_err(|e| {
-                                log::warn!("responding to target collection iterator: {:?}", e)
-                            });
+                // This was chosen arbitrarily. It's possible to determine a
+                // better chunk size using some FIDL constant math.
+                const TARGET_CHUNK_SIZE: usize = 20;
+                let mut iter = targets.into_iter();
+                loop {
+                    let next_chunk = iter.by_ref().take(TARGET_CHUNK_SIZE);
+                    let next_chunk_len = next_chunk.len();
+                    reader.next(&mut next_chunk.collect::<Vec<_>>().into_iter()).await?;
+                    if next_chunk_len == 0 {
+                        break;
                     }
-                });
-                responder.send().map_err(Into::into)
+                }
+                Ok(())
             }
             bridge::TargetCollectionRequest::OpenTarget { query, responder, target_handle } => {
                 let target = match target_collection.wait_for_match(query).await {
@@ -369,14 +359,18 @@ mod tests {
         query: Option<&str>,
         tc: &bridge::TargetCollectionProxy,
     ) -> Vec<bridge::Target> {
-        let (iterator_proxy, server) =
-            fidl::endpoints::create_proxy::<bridge::TargetCollectionIteratorMarker>().unwrap();
-        tc.list_targets(query, server).await.unwrap();
+        let (reader, server) =
+            fidl::endpoints::create_endpoints::<bridge::TargetCollectionReaderMarker>().unwrap();
+
+        tc.list_targets(query, reader).unwrap();
         let mut res = Vec::new();
-        loop {
-            let r = iterator_proxy.get_next().await.unwrap();
-            if r.len() > 0 {
-                res.extend(r);
+        let mut stream = server.into_stream().unwrap();
+        while let Ok(Some(bridge::TargetCollectionReaderRequest::Next { entry, responder })) =
+            stream.try_next().await
+        {
+            responder.send().unwrap();
+            if entry.len() > 0 {
+                res.extend(entry);
             } else {
                 break;
             }

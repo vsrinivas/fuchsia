@@ -4,12 +4,15 @@
 
 use {
     crate::target_formatter::{JsonTargetFormatter, TargetFormatter},
-    anyhow::{anyhow, Result},
+    anyhow::Result,
     errors::ffx_bail_with_code,
     ffx_core::ffx_plugin,
     ffx_list_args::ListCommand,
     ffx_writer::Writer,
-    fidl_fuchsia_developer_bridge::{TargetCollectionIteratorMarker, TargetCollectionProxy},
+    fidl_fuchsia_developer_bridge::{
+        TargetCollectionProxy, TargetCollectionReaderMarker, TargetCollectionReaderRequest,
+    },
+    futures::TryStreamExt,
     std::convert::TryFrom,
 };
 
@@ -21,22 +24,21 @@ pub async fn list_targets(
     #[ffx(machine = Vec<JsonTargets>)] writer: Writer,
     cmd: ListCommand,
 ) -> Result<()> {
-    let (iterator_proxy, server) =
-        fidl::endpoints::create_proxy::<TargetCollectionIteratorMarker>()?;
-    tc_proxy.list_targets(cmd.nodename.as_ref().map(|s| s.as_str()), server).await?;
+    let (reader, server) = fidl::endpoints::create_endpoints::<TargetCollectionReaderMarker>()?;
+
+    tc_proxy.list_targets(cmd.nodename.as_deref(), reader)?;
     let mut res = Vec::new();
-    loop {
-        let r = iterator_proxy
-            .get_next()
-            .await
-            .map_err(|e| anyhow!("Error listing targets: {:?}", e))?;
-        if r.len() > 0 {
-            res.extend(r);
+    let mut stream = server.into_stream()?;
+    while let Ok(Some(TargetCollectionReaderRequest::Next { entry, responder })) =
+        stream.try_next().await
+    {
+        responder.send()?;
+        if entry.len() > 0 {
+            res.extend(entry);
         } else {
             break;
         }
     }
-
     match res.len() {
         0 => {
             // Printed to stderr, so that if a user is parsing output, say from a formatted
@@ -76,7 +78,6 @@ mod test {
         fidl_fuchsia_developer_bridge::{
             RemoteControlState, Target as FidlTarget, TargetState, TargetType,
         },
-        futures_lite::stream::StreamExt,
         regex::Regex,
         std::net::IpAddr,
     };
@@ -101,7 +102,8 @@ mod test {
 
     fn setup_fake_target_collection_server(num_tests: usize) -> TargetCollectionProxy {
         setup_fake_tc_proxy(move |req| match req {
-            bridge::TargetCollectionRequest::ListTargets { query, iterator, responder } => {
+            bridge::TargetCollectionRequest::ListTargets { query, reader, .. } => {
+                let reader = reader.into_proxy().unwrap();
                 let fidl_values: Vec<FidlTarget> =
                     if query.as_ref().map(|s| s.is_empty()).unwrap_or(true) {
                         (0..num_tests)
@@ -116,23 +118,19 @@ mod test {
                             .map(|name| to_fidl_target(name))
                             .collect()
                     };
-                let mut stream = iterator.into_stream().unwrap();
+                const CHUNK_SIZE: usize = 10;
+                let mut iter = fidl_values.into_iter();
                 fuchsia_async::Task::local(async move {
-                    const CHUNK_SIZE: usize = 10;
-                    let mut iter = fidl_values.into_iter();
-                    while let Ok(Some(bridge::TargetCollectionIteratorRequest::GetNext {
-                        responder,
-                    })) = stream.try_next().await
-                    {
-                        responder
-                            .send(
-                                &mut iter.by_ref().take(CHUNK_SIZE).collect::<Vec<_>>().into_iter(),
-                            )
-                            .unwrap();
+                    loop {
+                        let next_chunk = iter.by_ref().take(CHUNK_SIZE);
+                        let next_chunk_len = next_chunk.len();
+                        reader.next(&mut next_chunk.collect::<Vec<_>>().into_iter()).await.unwrap();
+                        if next_chunk_len == 0 {
+                            break;
+                        }
                     }
                 })
                 .detach();
-                responder.send().unwrap();
             }
             r => panic!("unexpected request: {:?}", r),
         })

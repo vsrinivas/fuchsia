@@ -17,10 +17,11 @@ use {
     fidl::endpoints::create_proxy,
     fidl::endpoints::ProtocolMarker,
     fidl_fuchsia_developer_bridge::{
-        Target, TargetCollectionIteratorMarker, TargetCollectionMarker, TargetCollectionProxy,
-        TargetHandleMarker, TargetState, VersionInfo,
+        Target, TargetCollectionMarker, TargetCollectionProxy, TargetCollectionReaderMarker,
+        TargetCollectionReaderRequest, TargetHandleMarker, TargetState, VersionInfo,
     },
     fidl_fuchsia_developer_remotecontrol::RemoteControlMarker,
+    futures::TryStreamExt,
     serde_json::json,
     std::sync::Arc,
     std::{
@@ -334,14 +335,17 @@ fn get_kernel_name() -> Result<String> {
 }
 
 async fn list_targets(query: Option<&str>, tc: &TargetCollectionProxy) -> Result<Vec<Target>> {
-    let (iterator_proxy, server) =
-        fidl::endpoints::create_proxy::<TargetCollectionIteratorMarker>()?;
-    tc.list_targets(query, server).await?;
+    let (reader, server) = fidl::endpoints::create_endpoints::<TargetCollectionReaderMarker>()?;
+
+    tc.list_targets(query, reader)?;
     let mut res = Vec::new();
-    loop {
-        let r = iterator_proxy.get_next().await?;
-        if r.len() > 0 {
-            res.extend(r);
+    let mut stream = server.into_stream()?;
+    while let Ok(Some(TargetCollectionReaderRequest::Next { entry, responder })) =
+        stream.try_next().await
+    {
+        responder.send()?;
+        if entry.len() > 0 {
+            res.extend(entry);
         } else {
             break;
         }
@@ -1030,8 +1034,8 @@ mod test {
         fidl::Channel,
         fidl_fuchsia_developer_bridge::{
             DaemonProxy, DaemonRequest, OpenTargetError, RemoteControlState, Target,
-            TargetCollectionIteratorRequest, TargetCollectionRequest,
-            TargetCollectionRequestStream, TargetHandleRequest, TargetState, TargetType,
+            TargetCollectionRequest, TargetCollectionRequestStream, TargetHandleRequest,
+            TargetState, TargetType,
         },
         fidl_fuchsia_developer_remotecontrol::{
             IdentifyHostResponse, RemoteControlMarker, RemoteControlRequest,
@@ -1399,24 +1403,16 @@ mod test {
         fuchsia_async::Task::local(async move {
             while let Ok(Some(req)) = stream.try_next().await {
                 match req {
-                    TargetCollectionRequest::ListTargets { query, iterator, responder } => {
-                        let mut stream = iterator.into_stream().unwrap();
+                    TargetCollectionRequest::ListTargets { query, reader, .. } => {
+                        let reader = reader.into_proxy().unwrap();
                         let list_closure = list_closure.clone();
-                        fuchsia_async::Task::local(async move {
-                            let TargetCollectionIteratorRequest::GetNext { responder } =
-                                stream.try_next().await.unwrap().unwrap();
-                            let results = (list_closure)(query);
-                            if !results.is_empty() {
-                                responder.send(&mut results.into_iter()).unwrap();
-                                let TargetCollectionIteratorRequest::GetNext { responder } =
-                                    stream.try_next().await.unwrap().unwrap();
-                                responder.send(&mut vec![].into_iter()).unwrap();
-                            } else {
-                                responder.send(&mut vec![].into_iter()).unwrap();
-                            }
-                        })
-                        .detach();
-                        responder.send().unwrap();
+                        let results = (list_closure)(query);
+                        if !results.is_empty() {
+                            reader.next(&mut results.into_iter()).await.unwrap();
+                            reader.next(&mut vec![].into_iter()).await.unwrap();
+                        } else {
+                            reader.next(&mut vec![].into_iter()).await.unwrap();
+                        }
                     }
                     TargetCollectionRequest::OpenTarget { query, responder, target_handle } => {
                         let mut res = (open_targets_closure)(query, target_handle);

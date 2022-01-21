@@ -109,10 +109,17 @@ protocol TargetControl {
     }) -> (struct {}) error TargetRebootError;
 };
 
-protocol TargetCollectionIterator {
-    GetNext() -> (resource struct {
+/// An iterator for which the client handles calls to the `Next` function. When
+/// a client calls `ListTargets` in the `TargetCollection` protocol, the targets
+/// will be sent to the client via the `Next` function, with acknowledgements
+/// sent via the responder to handle backpressure.
+///
+/// When there are no more targets to be sent to the client, an empty vector
+/// will be sent as the last call to `Next`.
+protocol TargetCollectionReader {
+    Next(struct {
         entry vector<Target>:MAX;
-    });
+    }) -> ();
 };
 
 type OpenTargetError = strict enum {
@@ -127,10 +134,19 @@ type OpenTargetError = strict enum {
 /// and interact with fuchsia targets that the daemon has discovered.
 @discoverable
 protocol TargetCollection {
+    /// Sends a list of all active targets in the collection. An active target
+    /// is one that has responded over the network recently.
+    ///
+    /// An optional query string can be passed that will limit results to only
+    /// targets whose metadata matches. Matching is limited to partial string
+    /// matches via the target's nodename, serial number, or IP address.
+    ///
+    /// The client receives updates by handling calls to `Next` in the
+    /// `TargetCollectionReader` protocol.
     ListTargets(resource struct {
         query string:<255, optional>;
-        iterator server_end:TargetCollectionIterator;
-    }) -> ();
+        reader client_end:TargetCollectionReader;
+    });
 
     /// Opens a target handle given the query matches exactly one
     /// target. If a target does not yet exist in the cache that matches the
