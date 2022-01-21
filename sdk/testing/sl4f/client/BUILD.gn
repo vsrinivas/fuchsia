@@ -105,7 +105,6 @@ dart_test("sl4f_client_tests") {
   deps = [
     ":client",
     "//sdk/fidl/fuchsia.input",
-    "//sdk/fidl/fuchsia.ui.input",
     "//sdk/fidl/fuchsia.ui.input3",
     "//third_party/dart-pkg/pub/archive",
     "//third_party/dart-pkg/pub/glob",
