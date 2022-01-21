@@ -44,11 +44,11 @@ go_test("link_netdevice_test") {
 
 fuchsia_unittest_component("netstack-link-netdevice-test-component") {
   deps = [ ":link_netdevice_test" ]
-  manifest = "meta/link_netdevice_test.cmx"
+  manifest = "meta/link_netdevice_test.cml"
 }
 
 fuchsia_test_package("netstack-link-netdevice-gotests") {
-  deps = [ "//src/connectivity/network/tun/network-tun:component" ]
+  deps = [ "//src/connectivity/network/tun/network-tun:component-v2" ]
 
   test_components = [ ":netstack-link-netdevice-test-component" ]
 }

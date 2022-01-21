@@ -1,0 +1,12 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [
+        "//src/connectivity/network/tun/network-tun/meta/network-tun-test.shard.cml",
+        "//src/sys/test_runners/gotests/default.shard.cml",
+    ],
+    program: {
+        binary: "test/link_netdevice_test",
+    },
+}
