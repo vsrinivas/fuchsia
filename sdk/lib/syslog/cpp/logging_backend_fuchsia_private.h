@@ -99,6 +99,9 @@ class WordOffset {
 
 template <typename T>
 WordOffset<T> WritePaddedInternal(T* buffer, const void* msg, const ByteOffset& length) {
+  if (length.unsafe_get() == 0) {
+    return WordOffset<T>::FromByteOffset(ByteOffset::Unbounded(0));
+  }
   size_t needs_padding = (length.unsafe_get() % sizeof(T)) > 0;
   size_t padding = sizeof(T) - (length.unsafe_get() % sizeof(T));
   // Multiply by needs_padding to set padding to 0 if no padding

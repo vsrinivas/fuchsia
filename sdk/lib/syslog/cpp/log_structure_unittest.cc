@@ -62,6 +62,12 @@ TEST(StructuredLogging, PaddedWritePadsWithZeroes) {
   ASSERT_EQ(buffer[1], fives);
 }
 
+TEST(StructuredLogging, PaddedWriteDoesNotWriteToBufferWithZeroLength) {
+  int64_t ones = -1;
+  WritePaddedInternal(&ones, "", ByteOffset::Unbounded(0));
+  ASSERT_EQ(ones, -1);
+}
+
 TEST(ByteOffset, FromBuffer) {
   ByteOffset offset = ByteOffset::FromBuffer(5, 10);
   ASSERT_EQ(offset.unsafe_get(), static_cast<size_t>(5));
