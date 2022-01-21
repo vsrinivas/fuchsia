@@ -1235,13 +1235,11 @@ impl IpAddress for Ipv4Addr {
     #[inline]
     fn mask(&self, bits: u8) -> Self {
         assert!(bits <= 32);
-        if bits == 0 {
-            // shifting left by the size of the value is undefined
-            Ipv4Addr([0; 4])
-        } else {
-            let mask = <u32>::max_value() << (32 - bits);
-            Self::new((u32::from_be_bytes(self.0) & mask).to_be_bytes())
-        }
+        // Need to perform a checked shift left in case `bits == 32`, in which
+        // case an unchecked shift left (`u32::MAX << bits`) would overflow,
+        // causing a panic in debug mode.
+        let mask = u32::MAX.checked_shl((32 - bits).into()).unwrap_or(0);
+        Ipv4Addr((u32::from_be_bytes(self.0) & mask).to_be_bytes())
     }
 
     #[inline]
@@ -1532,13 +1530,11 @@ impl IpAddress for Ipv6Addr {
     #[inline]
     fn mask(&self, bits: u8) -> Ipv6Addr {
         assert!(bits <= 128);
-        if bits == 0 {
-            // shifting left by the size of the value is undefined
-            Ipv6Addr([0; 16])
-        } else {
-            let mask = <u128>::max_value() << (128 - bits);
-            Ipv6Addr::from((u128::from_be_bytes(self.0) & mask).to_be_bytes())
-        }
+        // Need to perform a checked shift left in case `bits == 128`, in which
+        // case an unchecked shift left (`u128::MAX << bits`) would overflow,
+        // causing a panic in debug mode.
+        let mask = u128::MAX.checked_shl((128 - bits).into()).unwrap_or(0);
+        Ipv6Addr((u128::from_be_bytes(self.0) & mask).to_be_bytes())
     }
 
     #[inline]
