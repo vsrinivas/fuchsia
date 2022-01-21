@@ -6,13 +6,13 @@
 #define LIB_FDIO_NAMESPACE_LOCAL_VNODE_H_
 
 #include <fidl/fuchsia.io/cpp/wire.h>
+#include <lib/fit/function.h>
 #include <lib/stdcompat/string_view.h>
 #include <lib/zx/channel.h>
 #include <lib/zxio/types.h>
 #include <limits.h>
 #include <zircon/types.h>
 
-#include <fbl/function.h>
 #include <fbl/intrusive_wavl_tree.h>
 #include <fbl/macros.h>
 #include <fbl/mutex.h>
@@ -23,7 +23,7 @@
 
 namespace fdio_internal {
 
-using EnumerateCallback = fbl::Function<zx_status_t(cpp17::string_view path, zxio_t* entry)>;
+using EnumerateCallback = fit::function<zx_status_t(cpp17::string_view path, zxio_t* entry)>;
 
 // Represents a mapping from a string name to a remote connection.
 //
