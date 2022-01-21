@@ -95,6 +95,7 @@ func main() {
 	packageArchiveFlag := flag.String("package-archive", "",
 		"Specify the source package archive in .tgz or directory format. If specified, no packages are downloaded from GCS.")
 	flag.Var(&level, "level", "Output verbosity, can be fatal, error, warning, info, debug or trace.")
+	getPackageRepoPathFlag := flag.Bool("get-package-repo-path", false, "Prints the package-repo path for the specific device. Doesn't start the package server.")
 
 	// target related options
 	privateKeyFlag := flag.String("private-key", "", "Uses additional private key when using ssh to access the device.")
@@ -125,7 +126,6 @@ func main() {
 	if err != nil {
 		log.Fatalf("%v", err)
 	}
-	log.Infof("Using target address: %v", deviceConfig.DeviceIP)
 
 	// Set the defaults from the SDK if not present.
 	if *repoFlag == "" {
@@ -134,6 +134,11 @@ func main() {
 			log.Fatalf("Package repository directory cannot be determined. Use --repo-dir to set, or --device-name to select the target device.")
 		}
 		flag.Set("repo-dir", deviceConfig.PackageRepo)
+	}
+
+	if *getPackageRepoPathFlag {
+		fmt.Printf("%s", *repoFlag)
+		os.Exit(0)
 	}
 
 	if *bucketFlag == "" {
@@ -180,6 +185,7 @@ func main() {
 	}
 
 	var server packageServer
+	log.Infof("Using target address: %s", deviceConfig.DeviceIP)
 	switch *serverMode {
 	case "pm":
 		if *repoPortFlag == "" {

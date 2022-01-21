@@ -808,6 +808,12 @@ func TestMain(t *testing.T) {
 			expectedRuleReplaceArgs: fmt.Sprintf(`-F %s/sshconfig -v ::1f pkgctl rule replace json '{"version":"1","content":[{"host_match":"fuchsia.com","host_replacement":"devhost","path_prefix_match":"/","path_prefix_replacement":"/"}]}'`, dataDir),
 		},
 		{
+			testName:               "server mode default, stopping after printing the default package repo path",
+			args:                   []string{os.Args[0], "-data-path", dataDir, "-get-package-repo-path", "--image", "test-image", "--version", "1.0.0"},
+			ffxTargetList:          `[{"nodename":"some-device","rcs_state":"N","serial":"<unknown>","target_type":"Unknown","target_state":"Product","addresses":["::1f"]}]`,
+			ffxTargetGetSSHAddress: `[::1f]:22`,
+		},
+		{
 			testName:                "server mode default, custom device ip address and repo dir",
 			args:                    []string{os.Args[0], "-data-path", dataDir, "--device-ip", "::2", "--image", "test-image", "--version", "1.0.0", "--repo-dir", dataDir + "/custom/packages/amber-files"},
 			expectedPMArgs:          "serve -repo " + dataDir + "/custom/packages/amber-files -c 2 -l :8083",
