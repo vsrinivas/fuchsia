@@ -620,21 +620,23 @@ void Guest::AddMagmaDeviceToContainer() {
 void Guest::SetupGPUDriversInContainer() {
   FX_CHECK(maitred_) << "Called SetupGPUDrivers without a maitre'd connection";
   FX_LOGS(INFO) << "Setup GPU drivers in container";
-  MaitredRunCommandSync(*maitred_,
-                        {"/usr/bin/lxc", "exec", kContainerName, "--", "sh", "-c",
-                         "mkdir -p /usr/share/vulkan/icd.d; /usr/bin/update-alternatives --install "
-                         "/usr/share/vulkan/icd.d/10_magma_intel_icd.x86_64.json vulkan-icd "
-                         "/opt/google/cros-containers/share/vulkan/icd.d/intel_icd.x86_64.json 20; "
-                         "/usr/bin/update-alternatives --install "
-                         "/usr/share/vulkan/icd.d/10_magma_intel_icd.i686.json vulkan-icd32 "
-                         "/opt/google/cros-containers/share/vulkan/icd.d/intel_icd.i686.json 20; "
-                         "echo /opt/google/cros-containers/drivers/lib64 > "
-                         "/etc/ld.so.conf.d/cros.conf; /sbin/ldconfig"},
-                        {
-                            {"LXD_DIR", "/mnt/stateful/lxd"},
-                            {"LXD_CONF", "/mnt/stateful/lxd_conf"},
-                            {"LXD_UNPRIVILEGED_ONLY", "true"},
-                        });
+  MaitredRunCommandSync(
+      *maitred_,
+      {"/usr/bin/lxc", "exec", kContainerName, "--", "sh", "-c",
+       "mkdir -p /usr/share/vulkan/icd.d; /usr/bin/update-alternatives --install "
+       "/usr/share/vulkan/icd.d/10_magma_intel_icd.x86_64.json vulkan-icd "
+       "/opt/google/cros-containers/share/vulkan/icd.d/intel_icd.x86_64.json 20; "
+       "/usr/bin/update-alternatives --install "
+       "/usr/share/vulkan/icd.d/10_magma_intel_icd.i686.json vulkan-icd32 "
+       "/opt/google/cros-containers/share/vulkan/icd.d/intel_icd.i686.json 20; "
+       "echo /opt/google/cros-containers/drivers/lib64 > /etc/ld.so.conf.d/cros.conf;"
+       "echo /opt/google/cros-containers/drivers/lib32 >> /etc/ld.so.conf.d/cros.conf;"
+       "/sbin/ldconfig; "},
+      {
+          {"LXD_DIR", "/mnt/stateful/lxd"},
+          {"LXD_CONF", "/mnt/stateful/lxd_conf"},
+          {"LXD_UNPRIVILEGED_ONLY", "true"},
+      });
 }
 
 void Guest::CreateContainer() {
