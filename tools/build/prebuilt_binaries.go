@@ -17,7 +17,7 @@ import (
 // binaries.
 type PrebuiltBinarySet struct {
 	// Name is the name of the set of prebuilt binaries.
-	Name string `json:"package_name"`
+	Name string `json:"name"`
 
 	// Manifest is the path to a manifest of the associated debug binaries produced
 	// by the build and in the format of binaries.json.
