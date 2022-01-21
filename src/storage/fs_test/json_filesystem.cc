@@ -43,6 +43,7 @@ zx::status<std::unique_ptr<JsonFilesystem>> JsonFilesystem::NewFilesystem(
           .supports_fs_query = ConfigGetOrDefault<bool>(config, "supports_fs_query", true),
           .supports_watch_event_deleted =
               ConfigGetOrDefault<bool>(config, "supports_watch_event_deleted", true),
+          .supports_inspect = ConfigGetOrDefault<bool>(config, "supports_inspect", false),
       },
       format, sectors_per_cluster));
 }

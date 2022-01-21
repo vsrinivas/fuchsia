@@ -542,6 +542,7 @@ zx::status<std::unique_ptr<Transaction>> Minfs::BeginTransaction(size_t reserve_
   // Reserve blocks from allocators before returning WritebackWork to client.
   auto transaction_or = Transaction::Create(this, reserve_inodes, reserve_blocks, inodes_.get());
 #ifdef __Fuchsia__
+
   if (transaction_or.status_value() == ZX_ERR_NO_SPACE &&
       (reserve_blocks > 0 || reserve_inodes > 0)) {
     // When there's no more space, flush the journal in case a recent transaction has freed blocks
@@ -552,21 +553,23 @@ zx::status<std::unique_ptr<Transaction>> Minfs::BeginTransaction(size_t reserve_
     auto sync_status = BlockingJournalSync();
     if (sync_status.is_error()) {
       FX_LOGS(ERROR) << "Failed to flush journal (status: " << sync_status.status_string() << ")";
-      OnOutOfSpace();
+      inspect_tree_.OnOutOfSpace();
       // Return the original status.
       return transaction_or.take_error();
     }
 
     transaction_or = Transaction::Create(this, reserve_inodes, reserve_blocks, inodes_.get());
     if (transaction_or.is_ok()) {
-      OnRecoveredFreeSpace();
+      inspect_tree_.OnRecoveredSpace();
     }
   }
 
   if (transaction_or.is_error()) {
     FX_LOGS(ERROR) << "Failed to reserve blocks for transaction (status: "
                    << transaction_or.status_string() << ")";
-    OnOutOfSpace();
+    if (transaction_or.error_value() == ZX_ERR_NO_SPACE) {
+      inspect_tree_.OnOutOfSpace();
+    }
   }
 #endif
 
@@ -654,6 +657,9 @@ void Minfs::CommitTransaction(std::unique_ptr<Transaction> transaction) {
     FX_LOGS(ERROR) << "CommitTransaction failed: " << zx_status_get_string(status);
   }
 
+  // Update filesystem usage information now that the transaction has been committed.
+  inspect_tree_.UpdateSpaceUsage(Info(), BlocksReserved());
+
   if (!journal_sync_task_.is_pending()) {
     // During mount, there isn't a dispatcher, so we won't queue a flush, but that won't matter
     // since the only changes will be things like whether the volume is clean and it doesn't
@@ -707,11 +713,10 @@ Minfs::Minfs(async_dispatcher_t* dispatcher, std::unique_ptr<Bcache> bc,
       block_allocator_(std::move(block_allocator)),
       inodes_(std::move(inodes)),
       journal_sync_task_([this]() { Sync(); }),
-      inspector_{},
+      inspect_tree_(bc_->device()),
       limits_(sb_->Info()),
       mount_options_(mount_options) {
   zx::event::create(0, &fs_id_);
-  inspector_.CreateStatsNode();
 }
 #else
 Minfs::Minfs(std::unique_ptr<Bcache> bc, std::unique_ptr<SuperblockManager> sb,
@@ -727,34 +732,6 @@ Minfs::Minfs(std::unique_ptr<Bcache> bc, std::unique_ptr<SuperblockManager> sb,
 #endif
 
 Minfs::~Minfs() { vnode_hash_.clear(); }
-
-#ifdef __Fuchsia__
-uint64_t Minfs::GetFreeFvmBytes() const {
-  if (!(Info().flags & kMinfsFlagFVM))
-    return 0;  // No FVM means no additional bytes can be allocated from it.
-
-  // This information is for the entire FVM volume. So the "slices allocated" counts across all
-  // partitions inside of FVM.
-  fuchsia_hardware_block_volume_VolumeManagerInfo manager;
-  fuchsia_hardware_block_volume_VolumeInfo volume;
-  if (zx_status_t status = bc_->device()->VolumeGetInfo(&manager, &volume); status != ZX_OK) {
-    FX_LOGS(WARNING) << "FVM can't report partition limit.";
-    return 0;  // Assume no free space if FVM can't respond.
-  }
-  uint64_t free_fvm_slices = manager.slice_count - manager.assigned_slice_count;
-
-  if (!volume.slice_limit)
-    return free_fvm_slices * manager.slice_size;  // No partition limit.
-
-  if (volume.partition_slice_count > volume.slice_limit) {
-    // Already beyond max size (the limit could have been set after our last resize).
-    return 0;
-  }
-
-  return std::min(free_fvm_slices, volume.slice_limit - volume.partition_slice_count) *
-         manager.slice_size;
-}
-#endif
 
 zx::status<> Minfs::InoFree(Transaction* transaction, VnodeMinfs* vn) {
   TRACE_DURATION("minfs", "Minfs::InoFree", "ino", vn->GetIno());
@@ -1382,39 +1359,13 @@ zx::status<CreateBcacheResult> CreateBcache(std::unique_ptr<block_client::BlockD
 }
 
 void Minfs::InitializeInspectTree() {
-  root_node_ = inspector_.GetRoot().CreateChild("minfs");
-  inspect_detail_.out_of_space_events = root_node_.CreateUint("out_of_space_events", 0u);
-  inspect_detail_.recovered_space_events = root_node_.CreateUint("recovered_space_events", 0u);
-}
-
-void Minfs::OnOutOfSpace() {
-  zx::time curr_time = zx::clock::get_monotonic();
-  bool record_event = false;
-  {
-    fbl::AutoLock lock(&event_lock_);
-    if (curr_time - last_out_of_space_event_ > kEventWindowDuration) {
-      last_out_of_space_event_ = curr_time;
-      record_event = true;
-    }
+  zx::status<fs::FilesystemInfo> fs_info{GetFilesystemInfo()};
+  if (fs_info.is_error()) {
+    FX_LOGS(ERROR) << "Failed to initialize Minfs inspect tree: GetFilesystemInfo returned "
+                   << fs_info.status_string();
+    return;
   }
-  if (record_event) {
-    inspect_detail_.out_of_space_events.Add(1u);
-  }
-}
-
-void Minfs::OnRecoveredFreeSpace() {
-  zx::time curr_time = zx::clock::get_monotonic();
-  bool record_event = false;
-  {
-    fbl::AutoLock lock(&event_lock_);
-    if (curr_time - last_recovered_space_event_ > kEventWindowDuration) {
-      last_recovered_space_event_ = curr_time;
-      record_event = true;
-    }
-  }
-  if (record_event) {
-    inspect_detail_.recovered_space_events.Add(1u);
-  }
+  inspect_tree_.Initialize(fs_info.value(), Info(), BlocksReserved());
 }
 
 #endif
@@ -1476,7 +1427,7 @@ zx::status<std::unique_ptr<fs::ManagedVfs>> MountAndServe(const MountOptions& mo
                                                 inspect::TreeServerSendPreference::Type::DeepCopy)};
 
   auto inspect_tree = fbl::MakeRefCounted<fs::Service>(
-      [connector = inspect::MakeTreeHandler(fs->Inspector(), dispatcher, settings)](
+      [connector = inspect::MakeTreeHandler(&fs->Inspector(), dispatcher, settings)](
           zx::channel chan) mutable {
         connector(fidl::InterfaceRequest<fuchsia::inspect::Tree>(std::move(chan)));
         return ZX_OK;
@@ -1551,18 +1502,30 @@ void Minfs::Shutdown(fs::FuchsiaVfs::ShutdownCallback cb) {
 
 zx::status<fs::FilesystemInfo> Minfs::GetFilesystemInfo() {
   fs::FilesystemInfo info;
-  size_t reserved_blocks = BlocksReserved();
+
+  info.SetFsId(fs_id_);
+  info.name = "minfs";
+  info.fs_type = VFS_TYPE_MINFS;
 
   info.block_size = static_cast<uint32_t>(BlockSize());
   info.max_filename_size = kMinfsMaxNameSize;
-  info.fs_type = VFS_TYPE_MINFS;
-  info.total_bytes = Info().block_count * Info().block_size;
-  info.used_bytes = (Info().alloc_block_count + reserved_blocks) * Info().block_size;
-  info.total_nodes = Info().inode_count;
-  info.used_nodes = Info().alloc_inode_count;
-  info.free_shared_pool_bytes = GetFreeFvmBytes();
-  info.SetFsId(fs_id_);
-  info.name = "minfs";
+
+  fs_inspect::UsageData usage = CalculateSpaceUsage(Info(), BlocksReserved());
+  info.total_bytes = usage.total_bytes;
+  info.used_bytes = usage.used_bytes;
+  info.total_nodes = usage.total_nodes;
+  info.used_nodes = usage.used_nodes;
+
+  const block_client::BlockDevice* device = bc_->device();
+  if (device) {
+    zx::status<fs_inspect::VolumeData::SizeInfo> size_info =
+        fs_inspect::VolumeData::GetSizeInfoFromDevice(*device);
+    if (size_info.is_ok()) {
+      info.free_shared_pool_bytes = size_info->available_space_bytes;
+    } else {
+      FX_LOGS(WARNING) << "Unable to obtain available space: " << size_info.status_string();
+    }
+  }
 
   return zx::ok(info);
 }

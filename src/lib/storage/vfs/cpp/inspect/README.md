@@ -84,3 +84,9 @@ them from the tree (e.g. by setting `inspect_nodes_ = {}` or when its destructor
 
 For a more detailed non-trivial implementation that is fully thread-safe, see `BlobfsInspectTree` in
 `src/storage/blobfs/blobfs_inspect_tree.h`.
+
+## Filesystem Testing
+
+A filesystem's inspect tree can be tested via `fs_test` by enabling the `supports_inspect` option.
+This will validate that the inspect tree hierarchy is consistent and that basic information is
+reported correctly.  See `src/storage/fs_test/inspect.cc` for details.

@@ -166,6 +166,23 @@ test("filename_tests") {
   ]
 }
 
+test("inspect_tests") {
+  sources = [ "inspect.cc" ]
+  deps = [
+    ":fs_test",
+    "//sdk/lib/fdio",
+    "//sdk/lib/inspect/testing/cpp",
+    "//sdk/lib/sys/inspect/cpp",
+    "//src/lib/fxl/test:gtest_main",
+    "//src/lib/storage/vfs/cpp/inspect",
+    "//third_party/googletest:gmock",
+    "//zircon/system/ulib/async:async-cpp",
+    "//zircon/system/ulib/async-loop",
+    "//zircon/system/ulib/async-loop:async-loop-default",
+    "//zircon/system/ulib/fdio-caller",
+  ]
+}
+
 test("link_tests") {
   sources = [ "link.cc" ]
   deps = [

@@ -112,6 +112,10 @@ template("fs_test_suite") {
     deps = [ "//src/storage/fs_test:filename_tests" ]
   }
 
+  storage_driver_test_realm_v2_component("${suite_name}-inspect-tests") {
+    deps = [ "//src/storage/fs_test:inspect_tests" ]
+  }
+
   storage_driver_test_realm_v2_component("${suite_name}-link-tests") {
     deps = [ "//src/storage/fs_test:link_tests" ]
   }
@@ -221,6 +225,7 @@ template("fs_test_suite") {
       ":${suite_name}-dot-dot-tests",
       ":${suite_name}-fcntl-tests",
       ":${suite_name}-filename-tests",
+      ":${suite_name}-inspect-tests",
       ":${suite_name}-link-tests",
       ":${suite_name}-lseek-tests",
       ":${suite_name}-mmap-tests",

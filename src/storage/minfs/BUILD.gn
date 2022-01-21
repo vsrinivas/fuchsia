@@ -114,6 +114,7 @@ static_library("minfs") {
       "inspector_private.h",
       "inspector_superblock.cc",
       "inspector_superblock.h",
+      "minfs_inspect_tree.cc",
       "minfs_target.cc",
       "resizeable_vmo_buffer.cc",
       "superblock.cc",
@@ -129,8 +130,14 @@ static_library("minfs") {
       # fsck.h includes block-client/cpp/block-device.h
       "//src/lib/storage/block_client/cpp",
 
+      # minfs_inspect_tree.h uses the VFS Inspect library
+      "//src/lib/storage/vfs/cpp/inspect",
+
       # minfs_inspector.h includes journal/format.h
       "//src/lib/storage/vfs/cpp/journal",
+
+      # Used by the MinfsInspectTree class
+      "//zircon/system/ulib/zx",
     ]
     deps += [
       "//sdk/fidl/fuchsia.device:fuchsia.device_c",

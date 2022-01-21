@@ -129,6 +129,11 @@
             "description": "True if hard links are supported",
             "type": "boolean"
         },
+        "supports_inspect": {
+            "default": false,
+            "description": "True if the filesystem exposes a standardized inspect tree",
+            "type": "boolean"
+        },
         "supports_mmap": {
             "default": false,
             "description": "True if mmap is supported",

@@ -68,21 +68,23 @@ zx::status<> Minfs::ContinueTransaction(size_t reserve_blocks,
     auto sync_status = BlockingJournalSync();
     if (sync_status.is_error()) {
       FX_LOGS(ERROR) << "Failed to flush journal (status: " << sync_status.status_string() << ")";
-      OnOutOfSpace();
+      inspect_tree_.OnOutOfSpace();
       // Return the original status.
       return sync_status.take_error();
     }
 
     status = (*out)->ExtendBlockReservation(reserve_blocks);
     if (status.is_ok()) {
-      OnRecoveredFreeSpace();
+      inspect_tree_.OnRecoveredSpace();
     }
   }
 
   if (status.is_error()) {
     FX_LOGS(ERROR) << "Failed to extend block reservation (status: " << status.status_string()
                    << ")";
-    OnOutOfSpace();
+    if (status.error_value() == ZX_ERR_NO_SPACE) {
+      inspect_tree_.OnOutOfSpace();
+    }
     return status.take_error();
   }
 
@@ -97,8 +99,17 @@ zx::status<> Minfs::AddDirtyBytes(uint64_t dirty_bytes, bool allocated) {
     uint32_t blocks_needed = static_cast<uint32_t>(BlocksReserved());
     uint32_t local_blocks_available = Info().block_count - Info().alloc_block_count;
     if (blocks_needed > local_blocks_available) {
-      // Check if fvm has free slices.
-      uint64_t free_fvm_bytes = GetFreeFvmBytes();
+      uint64_t free_fvm_bytes = 0;
+      // Calculate how much free space the volume can be extended by if it's backed by the FVM.
+      if (Info().flags & kMinfsFlagFVM) {
+        zx::status<fs_inspect::VolumeData::SizeInfo> size_info =
+            fs_inspect::VolumeData::GetSizeInfoFromDevice(*bc_->device());
+        if (size_info.is_ok()) {
+          free_fvm_bytes = size_info->available_space_bytes;
+        } else {
+          FX_LOGS(WARNING) << "Unable to determine FVM free space: " << size_info.status_string();
+        }
+      }
       uint64_t blocks_available = local_blocks_available + (free_fvm_bytes / Info().BlockSize());
       if (blocks_needed > blocks_available) {
         FX_LOGS_FIRST_N(WARNING, 10) << "Minfs::AddDirtyBytes can't find any free blocks.";

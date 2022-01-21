@@ -134,6 +134,7 @@ class Filesystem {
     bool is_journaled = true;
     bool supports_fs_query = true;
     bool supports_watch_event_deleted = true;
+    bool supports_inspect = false;
   };
 
   virtual ~Filesystem() = default;

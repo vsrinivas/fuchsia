@@ -24,6 +24,7 @@ class BlobfsFilesystem : public FilesystemImplWithDefaultMake<BlobfsFilesystem> 
         .in_memory = false,
         .is_case_sensitive = true,
         .supports_sparse_files = false,
+        .supports_inspect = true,
     };
     return traits;
   }
