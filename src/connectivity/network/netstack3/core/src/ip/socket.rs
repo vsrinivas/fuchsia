@@ -1270,248 +1270,230 @@ mod tests {
     use crate::ip::specialize_ip;
     use crate::testutil::*;
 
-    #[test]
-    fn test_new() {
-        // Test that `new_ip_socket` works with various edge cases.
-
-        // IPv4
-
-        let mut ctx = DummyEventDispatcherBuilder::from_config(DUMMY_CONFIG_V4)
-            .build::<DummyEventDispatcher>();
-
-        // A template socket that we can use to more concisely define sockets in
-        // various test cases.
-        let template = IpSock {
-            defn: IpSockDefinition {
-                remote_ip: DUMMY_CONFIG_V4.remote_ip,
-                local_ip: DUMMY_CONFIG_V4.local_ip,
-                proto: Ipv4Proto::Icmp,
-                hop_limit: crate::ip::DEFAULT_TTL.get(),
-                unroutable_behavior: UnroutableBehavior::Close,
-                per_proto_data: (),
-            },
-            cached: Ok(CachedInfo {
-                builder: Ipv4PacketBuilder::new(
-                    DUMMY_CONFIG_V4.local_ip,
-                    DUMMY_CONFIG_V4.remote_ip,
-                    crate::ip::DEFAULT_TTL.get(),
-                    Ipv4Proto::Icmp,
-                ),
-                device: DeviceId::new_ethernet(0),
-                next_hop: NextHop::Remote(DUMMY_CONFIG_V4.remote_ip),
-            }),
-        };
-
-        // All optional fields are `None`.
-        assert_eq!(
-            IpSocketContext::<Ipv4>::new_ip_socket(
-                &mut ctx,
-                None,
-                DUMMY_CONFIG_V4.remote_ip,
-                Ipv4Proto::Icmp,
-                UnroutableBehavior::Close,
-                None,
-            ),
-            Ok(template.clone())
-        );
-
-        // TTL is specified.
-        let mut builder = Ipv4SocketBuilder::default();
-        let _: &mut Ipv4SocketBuilder = builder.ttl(NonZeroU8::new(1).unwrap());
-        assert_eq!(
-            IpSocketContext::<Ipv4>::new_ip_socket(
-                &mut ctx,
-                None,
-                DUMMY_CONFIG_V4.remote_ip,
-                Ipv4Proto::Icmp,
-                UnroutableBehavior::Close,
-                Some(builder),
-            ),
-            {
-                // The template socket, but with the TTL set to 1.
-                let mut x = template.clone();
-                x.defn.hop_limit = 1;
-                x.cached.as_mut().unwrap().builder = Ipv4PacketBuilder::new(
-                    DUMMY_CONFIG_V4.local_ip,
-                    DUMMY_CONFIG_V4.remote_ip,
-                    1,
-                    Ipv4Proto::Icmp,
-                );
-                Ok(x)
-            }
-        );
-
-        // Local address is specified, and is a valid local address.
-        assert_eq!(
-            IpSocketContext::<Ipv4>::new_ip_socket(
-                &mut ctx,
-                Some(DUMMY_CONFIG_V4.local_ip),
-                DUMMY_CONFIG_V4.remote_ip,
-                Ipv4Proto::Icmp,
-                UnroutableBehavior::Close,
-                None,
-            ),
-            Ok(template.clone())
-        );
-
-        // Local address is specified, and is an invalid local address.
-        assert_eq!(
-            IpSocketContext::<Ipv4>::new_ip_socket(
-                &mut ctx,
-                Some(DUMMY_CONFIG_V4.remote_ip),
-                DUMMY_CONFIG_V4.remote_ip,
-                Ipv4Proto::Icmp,
-                UnroutableBehavior::Close,
-                None,
-            ),
-            Err(IpSockUnroutableError::LocalAddrNotAssigned.into())
-        );
-
-        // Loopback sockets are not yet supported.
-        assert_eq!(
-            IpSocketContext::<Ipv4>::new_ip_socket(
-                &mut ctx,
-                None,
-                Ipv4::LOOPBACK_ADDRESS,
-                Ipv4Proto::Icmp,
-                UnroutableBehavior::Close,
-                None,
-            ),
-            Err(IpSockUnroutableError::NoRouteToRemoteAddr.into())
-        );
-
-        // IPv6
-
-        let mut ctx = DummyEventDispatcherBuilder::from_config(DUMMY_CONFIG_V6)
-            .build::<DummyEventDispatcher>();
-
-        // Since the dispatcher's random number generator is deterministic, we can
-        // use a clone to assert on the sequence of flow labels it will produce.
-        let mut rng = ctx.dispatcher.rng().clone();
-
-        // A template socket that we can use to more concisely define sockets in
-        // various test cases.
-        let template = IpSock {
-            defn: IpSockDefinition {
-                remote_ip: DUMMY_CONFIG_V6.remote_ip,
-                local_ip: DUMMY_CONFIG_V6.local_ip,
-                proto: Ipv6Proto::Icmpv6,
-                hop_limit: crate::ip::DEFAULT_TTL.get(),
-                unroutable_behavior: UnroutableBehavior::Close,
-                per_proto_data: Ipv6SocketData { flow_label: 0 },
-            },
-            cached: Ok(CachedInfo {
-                builder: Ipv6PacketBuilder::new(
-                    DUMMY_CONFIG_V6.local_ip,
-                    DUMMY_CONFIG_V6.remote_ip,
-                    crate::ip::DEFAULT_TTL.get(),
-                    Ipv6Proto::Icmpv6,
-                ),
-                device: DeviceId::new_ethernet(0),
-                next_hop: NextHop::Remote(DUMMY_CONFIG_V6.remote_ip),
-            }),
-        };
-
-        let with_flow_label =
-            |mut template: IpSock<Ipv6, DeviceId>, flow_label| -> IpSock<Ipv6, DeviceId> {
-                template.defn.per_proto_data = Ipv6SocketData { flow_label };
-                template.cached.as_mut().unwrap().builder.flowlabel(flow_label);
-                template
-            };
-
-        // All optional fields are `None`.
-        assert_eq!(
-            IpSocketContext::<Ipv6>::new_ip_socket(
-                &mut ctx,
-                None,
-                DUMMY_CONFIG_V6.remote_ip,
-                Ipv6Proto::Icmpv6,
-                UnroutableBehavior::Close,
-                None,
-            ),
-            Ok(with_flow_label(template.clone(), gen_ipv6_flowlabel(&mut rng)))
-        );
-
-        // Hop Limit is specified.
-        const SPECIFIED_HOP_LIMIT: u8 = 1;
-        let mut builder = Ipv6SocketBuilder::default();
-        let _: &mut Ipv6SocketBuilder = builder.hop_limit(SPECIFIED_HOP_LIMIT);
-        assert_eq!(
-            IpSocketContext::<Ipv6>::new_ip_socket(
-                &mut ctx,
-                None,
-                DUMMY_CONFIG_V6.remote_ip,
-                Ipv6Proto::Icmpv6,
-                UnroutableBehavior::Close,
-                Some(builder),
-            ),
-            {
-                let mut template_with_hop_limit = template.clone();
-                template_with_hop_limit.defn.hop_limit = SPECIFIED_HOP_LIMIT;
-                let builder = Ipv6PacketBuilder::new(
-                    DUMMY_CONFIG_V6.local_ip,
-                    DUMMY_CONFIG_V6.remote_ip,
-                    SPECIFIED_HOP_LIMIT,
-                    Ipv6Proto::Icmpv6,
-                );
-                template_with_hop_limit.cached.as_mut().unwrap().builder = builder;
-                Ok(with_flow_label(template_with_hop_limit, gen_ipv6_flowlabel(&mut rng)))
-            }
-        );
-
-        // Local address is specified, and is a valid local address.
-        assert_eq!(
-            IpSocketContext::<Ipv6>::new_ip_socket(
-                &mut ctx,
-                Some(DUMMY_CONFIG_V6.local_ip),
-                DUMMY_CONFIG_V6.remote_ip,
-                Ipv6Proto::Icmpv6,
-                UnroutableBehavior::Close,
-                None,
-            ),
-            Ok(with_flow_label(template, gen_ipv6_flowlabel(&mut rng)))
-        );
-
-        // Local address is specified, and is an invalid local address.
-        assert_eq!(
-            IpSocketContext::<Ipv6>::new_ip_socket(
-                &mut ctx,
-                Some(DUMMY_CONFIG_V6.remote_ip),
-                DUMMY_CONFIG_V6.remote_ip,
-                Ipv6Proto::Icmpv6,
-                UnroutableBehavior::Close,
-                None,
-            ),
-            Err(IpSockUnroutableError::LocalAddrNotAssigned.into())
-        );
-
-        // Loopback sockets are not yet supported.
-        assert_eq!(
-            IpSocketContext::<Ipv6>::new_ip_socket(
-                &mut ctx,
-                None,
-                Ipv6::LOOPBACK_ADDRESS,
-                Ipv6Proto::Icmpv6,
-                UnroutableBehavior::Close,
-                None,
-            ),
-            Err(IpSockUnroutableError::NoRouteToRemoteAddr.into())
-        );
+    enum AddressType {
+        LocallyOwned,
+        Remote,
+        Unspecified,
     }
 
-    enum LocalDeliveryDestinationType {
-        SameAddress,
-        DifferentAddress,
+    struct NewSocketTestCase {
+        local_ip_type: AddressType,
+        remote_ip_type: AddressType,
+        expected_result: Result<(), IpSockCreationError>,
     }
 
     #[specialize_ip]
-    fn test_send_local<I: Ip>(destination_type: LocalDeliveryDestinationType) {
+    fn test_new<I: Ip>(test_case: NewSocketTestCase) {
+        #[ipv4]
+        let (cfg, proto, per_proto_data) = (DUMMY_CONFIG_V4, Ipv4Proto::Icmp, ());
+
+        #[ipv6]
+        let (cfg, proto, per_proto_data, with_flow_label) = (
+            DUMMY_CONFIG_V6,
+            Ipv6Proto::Icmpv6,
+            Ipv6SocketData { flow_label: 0 },
+            |mut template: IpSock<Ipv6, DeviceId>, flow_label| -> IpSock<Ipv6, DeviceId> {
+                let IpSock::<Ipv6, DeviceId> { defn, cached } = &mut template;
+                defn.per_proto_data = Ipv6SocketData { flow_label };
+                let CachedInfo::<Ipv6, DeviceId> { builder, device: _, next_hop: _ } =
+                    cached.as_mut().unwrap();
+                builder.flowlabel(flow_label);
+                template
+            },
+        );
+
+        let DummyEventDispatcherConfig {
+            local_ip,
+            remote_ip,
+            subnet: _,
+            local_mac: _,
+            remote_mac: _,
+        } = cfg;
+        let mut ctx = DummyEventDispatcherBuilder::from_config(cfg).build::<DummyEventDispatcher>();
+        let NewSocketTestCase { local_ip_type, remote_ip_type, expected_result } = test_case;
+
+        let (expected_from_ip, from_ip) = match local_ip_type {
+            AddressType::LocallyOwned => (local_ip, Some(local_ip)),
+            AddressType::Remote => (remote_ip, Some(remote_ip)),
+            AddressType::Unspecified => (local_ip, None),
+        };
+
+        let (to_ip, expected_next_hop) = match remote_ip_type {
+            AddressType::LocallyOwned => (local_ip, NextHop::Local),
+            AddressType::Remote => (remote_ip, NextHop::Remote(remote_ip)),
+            AddressType::Unspecified => panic!("remote_ip_type cannot be unspecified"),
+        };
+
+        #[ipv4]
+        let builder = Ipv4PacketBuilder::new(
+            expected_from_ip,
+            to_ip,
+            crate::ip::DEFAULT_TTL.get(),
+            Ipv4Proto::Icmp,
+        );
+
+        #[ipv6]
+        let (builder, mut rng) = (
+            Ipv6PacketBuilder::new(
+                expected_from_ip,
+                to_ip,
+                crate::ip::DEFAULT_TTL.get(),
+                Ipv6Proto::Icmpv6,
+            ),
+            // Since the dispatcher's random number generator is deterministic, we can
+            // use a clone to assert on the sequence of flow labels it will produce.
+            ctx.dispatcher.rng().clone(),
+        );
+
+        let get_expected_result = |template| expected_result.map(|()| template);
+
+        let template = IpSock {
+            defn: IpSockDefinition {
+                remote_ip: to_ip,
+                local_ip: expected_from_ip,
+                proto,
+                hop_limit: crate::ip::DEFAULT_TTL.get(),
+                unroutable_behavior: UnroutableBehavior::Close,
+                per_proto_data,
+            },
+            cached: Ok(CachedInfo {
+                builder,
+                next_hop: expected_next_hop,
+                device: DeviceId::new_ethernet(0),
+            }),
+        };
+
+        #[ipv6]
+        let template = with_flow_label(template, gen_ipv6_flowlabel(&mut rng));
+
+        let res = IpSocketContext::<I>::new_ip_socket(
+            &mut ctx,
+            from_ip,
+            to_ip,
+            proto,
+            UnroutableBehavior::Close,
+            None,
+        );
+        assert_eq!(res, get_expected_result(template.clone()));
+
+        #[ipv4]
+        {
+            // TTL is specified.
+            let mut builder = Ipv4SocketBuilder::default();
+            let _: &mut Ipv4SocketBuilder = builder.ttl(NonZeroU8::new(1).unwrap());
+            assert_eq!(
+                IpSocketContext::<Ipv4>::new_ip_socket(
+                    &mut ctx,
+                    from_ip,
+                    to_ip,
+                    proto,
+                    UnroutableBehavior::Close,
+                    Some(builder),
+                ),
+                {
+                    // The template socket, but with the TTL set to 1.
+                    let mut x = template.clone();
+                    let IpSock::<Ipv4, DeviceId> { defn, cached } = &mut x;
+                    defn.hop_limit = 1;
+                    cached.as_mut().unwrap().builder =
+                        Ipv4PacketBuilder::new(expected_from_ip, to_ip, 1, proto);
+                    get_expected_result(x)
+                }
+            );
+        }
+
+        #[ipv6]
+        {
+            // Hop Limit is specified.
+            const SPECIFIED_HOP_LIMIT: u8 = 1;
+            let mut builder = Ipv6SocketBuilder::default();
+            let _: &mut Ipv6SocketBuilder = builder.hop_limit(SPECIFIED_HOP_LIMIT);
+            assert_eq!(
+                IpSocketContext::<Ipv6>::new_ip_socket(
+                    &mut ctx,
+                    from_ip,
+                    to_ip,
+                    proto,
+                    UnroutableBehavior::Close,
+                    Some(builder),
+                ),
+                {
+                    let mut template_with_hop_limit = template.clone();
+                    let IpSock::<Ipv6, DeviceId> { defn, cached } = &mut template_with_hop_limit;
+                    defn.hop_limit = SPECIFIED_HOP_LIMIT;
+                    let builder =
+                        Ipv6PacketBuilder::new(expected_from_ip, to_ip, SPECIFIED_HOP_LIMIT, proto);
+                    cached.as_mut().unwrap().builder = builder;
+                    let template_with_hop_limit =
+                        with_flow_label(template_with_hop_limit, gen_ipv6_flowlabel(&mut rng));
+                    get_expected_result(template_with_hop_limit)
+                }
+            );
+        }
+    }
+
+    #[ip_test]
+    fn test_new_local_to_remote<I: Ip>() {
+        test_new::<I>(NewSocketTestCase {
+            local_ip_type: AddressType::LocallyOwned,
+            remote_ip_type: AddressType::Remote,
+            expected_result: Ok(()),
+        });
+    }
+
+    #[ip_test]
+    fn test_new_unspecified_to_remote<I: Ip>() {
+        test_new::<I>(NewSocketTestCase {
+            local_ip_type: AddressType::Unspecified,
+            remote_ip_type: AddressType::Remote,
+            expected_result: Ok(()),
+        });
+    }
+
+    #[ip_test]
+    fn test_new_remote_to_remote<I: Ip>() {
+        test_new::<I>(NewSocketTestCase {
+            local_ip_type: AddressType::Remote,
+            remote_ip_type: AddressType::Remote,
+            expected_result: Err(IpSockUnroutableError::LocalAddrNotAssigned.into()),
+        });
+    }
+
+    #[ip_test]
+    fn test_new_local_to_local<I: Ip>() {
+        test_new::<I>(NewSocketTestCase {
+            local_ip_type: AddressType::LocallyOwned,
+            remote_ip_type: AddressType::LocallyOwned,
+            expected_result: Ok(()),
+        });
+    }
+
+    #[ip_test]
+    fn test_new_unspecified_to_local<I: Ip>() {
+        test_new::<I>(NewSocketTestCase {
+            local_ip_type: AddressType::Unspecified,
+            remote_ip_type: AddressType::LocallyOwned,
+            expected_result: Ok(()),
+        });
+    }
+
+    #[ip_test]
+    fn test_new_remote_to_local<I: Ip>() {
+        test_new::<I>(NewSocketTestCase {
+            local_ip_type: AddressType::Remote,
+            remote_ip_type: AddressType::LocallyOwned,
+            expected_result: Err(IpSockUnroutableError::LocalAddrNotAssigned.into()),
+        });
+    }
+
+    #[specialize_ip]
+    fn test_send_local<I: Ip>(from_addr_type: AddressType, to_addr_type: AddressType) {
         set_logger_for_test();
 
         use packet_formats::icmp::{IcmpEchoRequest, IcmpPacketBuilder, IcmpUnusedCode};
 
         #[ipv4]
-        let (subnet, from_ip, to_ip, local_mac, proto, socket_builder) = {
+        let (subnet, local_ip, remote_ip, local_mac, proto, socket_builder) = {
             let DummyEventDispatcherConfig::<Ipv4Addr> {
                 subnet,
                 local_ip,
@@ -1524,7 +1506,7 @@ mod tests {
         };
 
         #[ipv6]
-        let (subnet, from_ip, to_ip, local_mac, proto, socket_builder) = {
+        let (subnet, local_ip, remote_ip, local_mac, proto, socket_builder) = {
             let DummyEventDispatcherConfig::<Ipv6Addr> {
                 subnet,
                 local_ip,
@@ -1532,6 +1514,7 @@ mod tests {
                 local_mac,
                 remote_mac: _,
             } = DUMMY_CONFIG_V6;
+
             (
                 subnet,
                 local_ip,
@@ -1545,29 +1528,35 @@ mod tests {
         let mut builder = DummyEventDispatcherBuilder::default();
         let device_id = builder.add_device(local_mac);
         let mut ctx = builder.build::<DummyEventDispatcher>();
-
-        let () = crate::device::add_ip_addr_subnet(
+        crate::device::add_ip_addr_subnet(
             &mut ctx,
             device_id.into(),
-            AddrSubnet::new(from_ip.get(), 16).unwrap(),
+            AddrSubnet::new(local_ip.get(), 16).unwrap(),
         )
         .unwrap();
-        let () = crate::device::add_ip_addr_subnet(
+        crate::device::add_ip_addr_subnet(
             &mut ctx,
             device_id.into(),
-            AddrSubnet::new(to_ip.get(), 16).unwrap(),
+            AddrSubnet::new(remote_ip.get(), 16).unwrap(),
         )
         .unwrap();
-        let () = crate::ip::add_device_route(&mut ctx, subnet, device_id.into()).unwrap();
+        crate::ip::add_device_route(&mut ctx, subnet, device_id.into()).unwrap();
 
-        let to_ip = match destination_type {
-            LocalDeliveryDestinationType::SameAddress => from_ip,
-            LocalDeliveryDestinationType::DifferentAddress => to_ip,
+        let (expected_from_ip, from_ip) = match from_addr_type {
+            AddressType::LocallyOwned => (local_ip, Some(local_ip)),
+            AddressType::Remote => panic!("from_addr_type cannot be remote"),
+            AddressType::Unspecified => (local_ip, None),
+        };
+
+        let to_ip = match to_addr_type {
+            AddressType::LocallyOwned => local_ip,
+            AddressType::Remote => remote_ip,
+            AddressType::Unspecified => panic!("to_addr_type cannot be unspecified"),
         };
 
         let sock = IpSocketContext::<I>::new_ip_socket(
             &mut ctx,
-            Some(from_ip),
+            from_ip,
             to_ip,
             proto,
             UnroutableBehavior::Close,
@@ -1579,7 +1568,7 @@ mod tests {
         let body = &[1, 2, 3, 4];
         let buffer = Buf::new(body.to_vec(), ..)
             .encapsulate(IcmpPacketBuilder::<I, &[u8], _>::new(
-                from_ip,
+                expected_from_ip,
                 to_ip,
                 IcmpUnusedCode,
                 reply,
@@ -1606,13 +1595,18 @@ mod tests {
     }
 
     #[ip_test]
-    fn test_send_local_same_address<I: Ip>() {
-        test_send_local::<I>(LocalDeliveryDestinationType::SameAddress);
+    fn test_send_local_to_local<I: Ip>() {
+        test_send_local::<I>(AddressType::LocallyOwned, AddressType::LocallyOwned);
     }
 
     #[ip_test]
-    fn test_send_local_different_address<I: Ip>() {
-        test_send_local::<I>(LocalDeliveryDestinationType::DifferentAddress);
+    fn test_send_unspecified_to_local<I: Ip>() {
+        test_send_local::<I>(AddressType::Unspecified, AddressType::LocallyOwned);
+    }
+
+    #[ip_test]
+    fn test_send_local_to_remote<I: Ip>() {
+        test_send_local::<I>(AddressType::LocallyOwned, AddressType::Remote);
     }
 
     #[ip_test]
