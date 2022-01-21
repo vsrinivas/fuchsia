@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 use {
+    anyhow::{anyhow, Context},
     diagnostics_data::Severity,
     fidl::Peered,
     fidl_fuchsia_test_manager::{
@@ -21,8 +22,7 @@ use {
     std::collections::{HashMap, HashSet, VecDeque},
     std::convert::TryInto,
     std::fmt,
-    std::io::{self, ErrorKind, Write},
-    std::path::PathBuf,
+    std::io::Write,
     std::sync::Arc,
 };
 
@@ -102,7 +102,7 @@ struct SuiteRunResult {
 }
 
 /// Parameters that specify how a single test suite should be executed.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Default)]
 pub struct TestParams {
     /// Test URL.
     pub test_url: String,
@@ -345,102 +345,41 @@ async fn run_suite_and_collect_logs<F: Future<Output = ()>>(
                                 component_moniker,
                                 ..
                             }) => {
-                                let ftest_manager::DirectoryAndToken { directory, token } =
-                                    directory_and_token.unwrap();
-                                let directory_artifact = suite_reporter
-                                    .new_directory_artifact(
-                                        &DirectoryArtifactType::Custom,
-                                        component_moniker,
-                                    )
-                                    .await?;
+                                if let Some(ftest_manager::DirectoryAndToken {
+                                    directory,
+                                    token,
+                                    ..
+                                }) = directory_and_token
+                                {
+                                    let directory = directory.into_proxy()?;
+                                    let directory_artifact = suite_reporter
+                                        .new_directory_artifact(
+                                            &DirectoryArtifactType::Custom,
+                                            component_moniker,
+                                        )
+                                        .await?;
 
-                                let directory = directory.into_proxy()?;
-                                let directory_copy_task = async move {
-                                    let directory_ref = &directory;
-                                    let files_stream =
-                                        files_async::readdir_recursive(directory_ref, None)
-                                            .map_err(|e| {
-                                                std::io::Error::new(std::io::ErrorKind::Other, e)
-                                            })
-                                            .try_filter_map(
-                                                move |files_async::DirEntry { name, kind }| {
-                                                    let res =
-                                                        match kind {
-                                                            files_async::DirentKind::File => {
-                                                                let filepath: PathBuf = name.into();
-                                                                match io_util::open_file(
-                                                            directory_ref,
-                                                            &filepath,
-                                                            io_util::OPEN_RIGHT_READABLE,
-                                                        ) {
-                                                            Ok(file) => Ok(Some((file, filepath))),
-                                                            Err(e) => Err(std::io::Error::new(
-                                                                std::io::ErrorKind::Other,
-                                                                e,
-                                                            )),
-                                                        }
-                                                            }
-                                                            _ => Ok(None),
-                                                        };
-                                                    futures::future::ready(res)
-                                                },
-                                            )
-                                            .boxed();
-
-                                    /// Max number of bytes read at once from a file.
-                                    const READ_SIZE: u64 = fidl_fuchsia_io::MAX_BUF;
-                                    let directory_artifact_ref = &directory_artifact;
-                                    files_stream
-                                        .try_for_each_concurrent(
-                                            None,
-                                            |(file_proxy, filepath)| async move {
-                                                let mut file =
-                                                    directory_artifact_ref.new_file(&filepath)?;
-                                                let mut vector = VecDeque::new();
-                                                // Arbitrary number of reads to pipeline. Works for
-                                                // a bandwidth delay product of 800kB.
-                                                const PIPELINED_READ_COUNT: u64 = 100;
-                                                for _n in 0..PIPELINED_READ_COUNT {
-                                                    vector.push_back(file_proxy.read(READ_SIZE));
-                                                }
-                                                loop {
-                                                    let (status, mut buf) =
-                                                        vector.pop_front().unwrap().await.map_err(
-                                                            |e| io::Error::new(ErrorKind::Other, e),
-                                                        )?;
-                                                    if status != 0 {
-                                                        // hack - use a wrapper here
-                                                        return Err(io::Error::new(
-                                                            ErrorKind::Other,
-                                                            fidl::Error::ClientRead(
-                                                                fidl::Status::from_raw(status),
-                                                            ),
-                                                        ));
-                                                    }
-                                                    if buf.is_empty() {
-                                                        break;
-                                                    }
-                                                    file.write_all(&mut buf)?;
-                                                    vector.push_back(file_proxy.read(READ_SIZE));
-                                                }
-                                                file.flush()
-                                            },
+                                    tasks.push(fasync::Task::spawn(async move {
+                                        if let Err(e) = read_custom_artifact_directory(
+                                            directory,
+                                            directory_artifact,
                                         )
                                         .await
-                                        .unwrap_or_else(|e| {
-                                            log::warn!("Failed to copy directory: {:?}", e)
-                                        });
-                                    // TODO(fxbug.dev/84882): Remove this signal once Overnet
-                                    // supports automatically signalling EVENTPAIR_CLOSED when the
-                                    // handle is closed.
-                                    token
-                                        .signal_peer(fidl::Signals::empty(), fidl::Signals::USER_0)
-                                        .unwrap_or_else(|e| {
-                                            log::warn!("Failed to copy directory: {:?}", e)
-                                        });
-                                };
-
-                                tasks.push(fasync::Task::spawn(directory_copy_task));
+                                        {
+                                            warn!(
+                                                "Error reading suite artifact directory: {:?}",
+                                                e
+                                            );
+                                        }
+                                        // TODO(fxbug.dev/84882): Remove this signal once Overnet
+                                        // supports automatically signalling EVENTPAIR_CLOSED when the
+                                        // handle is closed.
+                                        let _ = token.signal_peer(
+                                            fidl::Signals::empty(),
+                                            fidl::Signals::USER_0,
+                                        );
+                                    }));
+                                }
                             }
                             ftest_manager::ArtifactUnknown!() => {
                                 panic!("unknown artifact")
@@ -635,7 +574,7 @@ async fn run_tests<'a, F: 'a + Future<Output = ()>>(
     test_params: Vec<TestParams>,
     run_params: RunParams,
     min_severity_logs: Option<Severity>,
-    run_reporter: &'a mut RunReporter,
+    run_reporter: &'a RunReporter,
     cancel_fut: F,
 ) -> Result<Outcome, RunTestSuiteError> {
     let mut suite_start_futs = FuturesUnordered::new();
@@ -739,13 +678,119 @@ async fn run_tests<'a, F: 'a + Future<Output = ()>>(
             if events.len() == 0 {
                 return Ok(());
             }
-            println!("WARN: Discarding run events: {:?}", events);
+
+            for event in events.into_iter() {
+                let ftest_manager::RunEvent { payload, .. } = event;
+                match payload {
+                    // TODO(fxbug.dev/91151): Add support for RunStarted and RunStopped when test_manager sends them.
+                    Some(ftest_manager::RunEventPayload::Artifact(artifact)) => {
+                        match artifact {
+                            ftest_manager::Artifact::Custom(val) => {
+                                if let Some(ftest_manager::DirectoryAndToken {
+                                    directory,
+                                    token,
+                                    ..
+                                }) = val.directory_and_token
+                                {
+                                    let directory = directory.into_proxy()?;
+                                    let out_dir = run_reporter
+                                        .new_directory_artifact(
+                                            &output::DirectoryArtifactType::Custom,
+                                            None, /* moniker */
+                                        )
+                                        .await?;
+
+                                    if let Err(e) =
+                                        read_custom_artifact_directory(directory, out_dir).await
+                                    {
+                                        warn!("Error reading run artifact directory: {:?}", e);
+                                    }
+
+                                    // TODO(fxbug.dev/84882): Remove this signal once Overnet
+                                    // supports automatically signalling EVENTPAIR_CLOSED when the
+                                    // handle is closed.
+                                    let _ = token
+                                        .signal_peer(fidl::Signals::empty(), fidl::Signals::USER_0);
+                                }
+                            }
+                            other => {
+                                warn!("Discarding run artifact: {:?}", other);
+                            }
+                        }
+                    }
+                    e => {
+                        warn!("Discarding run event: {:?}", e);
+                    }
+                }
+            }
         }
     };
 
     futures::future::try_join(handle_suite_fut, handle_run_events_fut)
         .map_ok(|(outcome, ())| outcome)
         .await
+}
+
+async fn read_custom_artifact_directory(
+    directory: fidl_fuchsia_io::DirectoryProxy,
+    out_dir: Box<output::DynDirectoryArtifact>,
+) -> Result<(), anyhow::Error> {
+    let mut paths = vec![];
+    let mut enumerate = files_async::readdir_recursive(&directory, None);
+    while let Ok(Some(file)) = enumerate.try_next().await {
+        if file.kind == files_async::DirentKind::File {
+            paths.push(file.name);
+        }
+    }
+
+    let futs = FuturesUnordered::new();
+    paths.iter().for_each(|path| {
+        let path = std::path::PathBuf::from(path);
+        let file = io_util::open_file(&directory, &path, io_util::OPEN_RIGHT_READABLE);
+        let output_file = out_dir.new_file(&path);
+        futs.push(async move {
+            let file = file.with_context(|| format!("with path {:?}", path))?;
+            let mut output_file = output_file?;
+            read_file_to_writer(&file, &mut output_file).await
+        });
+    });
+
+    futs.for_each(|result| {
+        if let Err(e) = result {
+            warn!("Custom artifact failure: {}", e);
+        }
+        async move {}
+    })
+    .await;
+
+    Ok(())
+}
+
+async fn read_file_to_writer<T: Write>(
+    file: &fidl_fuchsia_io::FileProxy,
+    output: &mut T,
+) -> Result<(), anyhow::Error> {
+    const READ_SIZE: u64 = fidl_fuchsia_io::MAX_BUF;
+
+    let mut vector = VecDeque::new();
+    // Arbitrary number of reads to pipeline. Works for
+    // a bandwidth delay product of 800kB.
+    const PIPELINED_READ_COUNT: u64 = 100;
+    for _n in 0..PIPELINED_READ_COUNT {
+        vector.push_back(file.read(READ_SIZE));
+    }
+    loop {
+        let (status, mut buf) = vector.pop_front().unwrap().await?;
+        if status != 0 {
+            return Err(anyhow!("Read failed: {}", status));
+        }
+        if buf.is_empty() {
+            break;
+        }
+        output.write_all(&mut buf)?;
+        vector.push_back(file.read(READ_SIZE));
+    }
+    Ok(())
 }
 
 /// Runs tests specified in |test_params| and reports the results to
@@ -765,7 +810,7 @@ pub async fn run_tests_and_get_outcome<F: Future<Output = ()>>(
     test_params: Vec<TestParams>,
     run_params: RunParams,
     min_severity_logs: Option<Severity>,
-    mut run_reporter: RunReporter,
+    run_reporter: RunReporter,
     cancel_fut: F,
 ) -> Outcome {
     let test_outcome = match run_tests(
@@ -773,7 +818,7 @@ pub async fn run_tests_and_get_outcome<F: Future<Output = ()>>(
         test_params,
         run_params,
         min_severity_logs,
-        &mut run_reporter,
+        &run_reporter,
         cancel_fut,
     )
     .await
@@ -843,8 +888,16 @@ impl From<SuiteRunOptions> for fidl_fuchsia_test_manager::RunOptions {
 #[cfg(test)]
 mod test {
     use super::*;
+    use crate::output::InMemoryReporter;
     use assert_matches::assert_matches;
-    use fidl::endpoints::create_proxy_and_stream;
+    use fidl::endpoints::{create_proxy_and_stream, ServerEnd};
+    use fuchsia_zircon as zx;
+    use futures::future::join;
+    use output::EntityId;
+    use vfs::{
+        directory::entry::DirectoryEntry, execution_scope::ExecutionScope,
+        file::vmo::read_only_static, pseudo_directory,
+    };
 
     const TEST_URL: &str = "test.cm";
 
@@ -955,5 +1008,232 @@ mod test {
             Some(Err(RunTestSuiteError::Fidl(fidl::Error::ClientChannelClosed { .. })))
         );
         suite_server_task.await;
+    }
+
+    async fn fake_running_all_suites_and_return_run_events(
+        mut stream: ftest_manager::RunBuilderRequestStream,
+        events: Vec<ftest_manager::RunEvent>,
+    ) {
+        let mut suite_streams = vec![];
+
+        let mut run_controller = None;
+        while let Ok(Some(req)) = stream.try_next().await {
+            match req {
+                ftest_manager::RunBuilderRequest::AddSuite { controller, .. } => {
+                    suite_streams.push(controller.into_stream().expect("into stream"));
+                }
+                ftest_manager::RunBuilderRequest::Build { controller, .. } => {
+                    run_controller = Some(controller);
+                    break;
+                }
+            }
+        }
+        assert!(
+            run_controller.is_some(),
+            "Expected a RunController to be present. RunBuilder/Build() may not have been called."
+        );
+        let mut run_stream =
+            run_controller.expect("controller present").into_stream().expect("into stream");
+
+        // Each suite just reports that it started and passed.
+        let mut suite_streams = suite_streams
+            .into_iter()
+            .map(|mut stream| {
+                async move {
+                    let mut sent = false;
+                    while let Ok(Some(req)) = stream.try_next().await {
+                        match req {
+                            ftest_manager::SuiteControllerRequest::GetEvents {
+                                responder, ..
+                            } => {
+                                if sent {
+                                    let _ = responder.send(&mut Ok(vec![]));
+                                    continue;
+                                }
+                                sent = true;
+                                let _ = responder.send(&mut Ok(vec![
+                                    ftest_manager::SuiteEvent {
+                                        timestamp: Some(1000),
+                                        payload: Some(
+                                            ftest_manager::SuiteEventPayload::SuiteStarted(
+                                                ftest_manager::SuiteStarted,
+                                            ),
+                                        ),
+                                        ..ftest_manager::SuiteEvent::EMPTY
+                                    },
+                                    ftest_manager::SuiteEvent {
+                                        timestamp: Some(2000),
+                                        payload: Some(
+                                            ftest_manager::SuiteEventPayload::SuiteStopped(
+                                                ftest_manager::SuiteStopped {
+                                                    status: ftest_manager::SuiteStatus::Passed,
+                                                },
+                                            ),
+                                        ),
+                                        ..ftest_manager::SuiteEvent::EMPTY
+                                    },
+                                ]));
+                            }
+                            _ => {
+                                // ignore all other requests
+                            }
+                        }
+                    }
+                }
+            })
+            .collect::<FuturesUnordered<_>>();
+
+        let suite_drain_fut = async move { while let Some(_) = suite_streams.next().await {} };
+
+        let run_fut = async move {
+            let mut events = Some(events);
+            while let Ok(Some(req)) = run_stream.try_next().await {
+                match req {
+                    ftest_manager::RunControllerRequest::GetEvents { responder, .. } => {
+                        if events.is_none() {
+                            let _ = responder.send(&mut vec![].into_iter());
+                            continue;
+                        }
+                        let events = events.take().unwrap();
+                        let _ = responder.send(&mut events.into_iter());
+                    }
+                    _ => {
+                        // ignore all other requests
+                    }
+                }
+            }
+        };
+
+        join(suite_drain_fut, run_fut).await;
+    }
+
+    struct ParamsForRunTests<'a> {
+        builder_proxy: ftest_manager::RunBuilderProxy,
+        test_params: Vec<TestParams>,
+        run_reporter: &'a RunReporter,
+    }
+
+    async fn call_run_tests<'a>(
+        params: ParamsForRunTests<'a>,
+    ) -> Result<Outcome, RunTestSuiteError> {
+        run_tests(
+            params.builder_proxy,
+            params.test_params,
+            RunParams { timeout_behavior: TimeoutBehavior::Continue, stop_after_failures: None },
+            None,
+            params.run_reporter,
+            futures::future::pending(),
+        )
+        .await
+    }
+
+    #[fuchsia::test]
+    async fn empty_run_no_events() {
+        let (builder_proxy, run_builder_stream) =
+            create_proxy_and_stream::<ftest_manager::RunBuilderMarker>()
+                .expect("create builder proxy");
+
+        let reporter = InMemoryReporter::new();
+        let run_reporter = RunReporter::new(reporter.clone());
+        let run_fut = call_run_tests(ParamsForRunTests {
+            builder_proxy,
+            test_params: vec![],
+            run_reporter: &run_reporter,
+        });
+        let fake_fut = fake_running_all_suites_and_return_run_events(run_builder_stream, vec![]);
+
+        join(run_fut, fake_fut).await.0.expect("future succeeded");
+
+        let reports = reporter.get_reports();
+        assert_eq!(0usize, reports.len());
+    }
+
+    #[fuchsia::test]
+    async fn single_run_no_events() {
+        let (builder_proxy, run_builder_stream) =
+            create_proxy_and_stream::<ftest_manager::RunBuilderMarker>()
+                .expect("create builder proxy");
+
+        let reporter = InMemoryReporter::new();
+        let run_reporter = RunReporter::new(reporter.clone());
+        let run_fut = call_run_tests(ParamsForRunTests {
+            builder_proxy,
+            test_params: vec![TestParams {
+                test_url: "fuchsia-pkg://fuchsia.com/nothing#meta/nothing.cm".to_string(),
+                ..TestParams::default()
+            }],
+            run_reporter: &run_reporter,
+        });
+        let fake_fut = fake_running_all_suites_and_return_run_events(run_builder_stream, vec![]);
+
+        join(run_fut, fake_fut).await.0.expect("future succeeded");
+
+        let reports = reporter.get_reports();
+        assert_eq!(1usize, reports.len());
+        assert!(reports[0].report.artifacts.is_empty());
+        assert!(reports[0].report.directories.is_empty());
+    }
+
+    #[fuchsia::test]
+    async fn single_run_custom_directory() {
+        let (builder_proxy, run_builder_stream) =
+            create_proxy_and_stream::<ftest_manager::RunBuilderMarker>()
+                .expect("create builder proxy");
+
+        let reporter = InMemoryReporter::new();
+        let run_reporter = RunReporter::new(reporter.clone());
+        let run_fut = call_run_tests(ParamsForRunTests {
+            builder_proxy,
+            test_params: vec![TestParams {
+                test_url: "fuchsia-pkg://fuchsia.com/nothing#meta/nothing.cm".to_string(),
+                ..TestParams::default()
+            }],
+            run_reporter: &run_reporter,
+        });
+
+        let dir = pseudo_directory! {
+            "test_file.txt" => read_only_static("Hello, World!"),
+        };
+
+        let (directory_client, directory_service) =
+            fidl::endpoints::create_endpoints::<fidl_fuchsia_io::DirectoryMarker>().unwrap();
+        let scope = ExecutionScope::new();
+        dir.open(
+            scope,
+            fidl_fuchsia_io::OPEN_RIGHT_READABLE | fidl_fuchsia_io::OPEN_RIGHT_WRITABLE,
+            fidl_fuchsia_io::MODE_TYPE_DIRECTORY,
+            vfs::path::Path::dot(),
+            ServerEnd::new(directory_service.into_channel()),
+        );
+
+        let (_pair_1, pair_2) = zx::EventPair::create().unwrap();
+
+        let events = vec![ftest_manager::RunEvent {
+            payload: Some(ftest_manager::RunEventPayload::Artifact(
+                ftest_manager::Artifact::Custom(ftest_manager::CustomArtifact {
+                    directory_and_token: Some(ftest_manager::DirectoryAndToken {
+                        directory: directory_client,
+                        token: pair_2,
+                    }),
+                    ..ftest_manager::CustomArtifact::EMPTY
+                }),
+            )),
+            ..ftest_manager::RunEvent::EMPTY
+        }];
+
+        let fake_fut = fake_running_all_suites_and_return_run_events(run_builder_stream, events);
+
+        join(run_fut, fake_fut).await.0.expect("future succeeded");
+
+        let reports = reporter.get_reports();
+        assert_eq!(2usize, reports.len());
+        let run = reports.iter().find(|e| e.id == EntityId::TestRun).expect("find run report");
+        assert_eq!(1usize, run.report.directories.len());
+        let dir = &run.report.directories[0];
+        let files = dir.1.files.lock();
+        assert_eq!(1usize, files.len());
+        let (name, file) = &files[0];
+        assert_eq!(name.to_string_lossy(), "test_file.txt".to_string());
+        assert_eq!(file.get_contents(), b"Hello, World!");
     }
 }

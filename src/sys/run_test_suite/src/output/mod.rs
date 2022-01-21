@@ -9,6 +9,7 @@ use std::path::Path;
 mod directory;
 mod directory_with_stdout;
 mod line;
+mod memory;
 mod mux;
 mod noop;
 mod shell;
@@ -17,6 +18,7 @@ pub use line::AnsiFilterWriter;
 pub use directory::DirectoryReporter;
 pub use directory_with_stdout::DirectoryWithStdoutReporter;
 use fidl_fuchsia_test_manager as ftest_manager;
+pub use memory::{InMemoryArtifact, InMemoryReporter};
 pub use mux::MultiplexedReporter;
 pub use noop::NoopReporter;
 pub use shell::{ShellReporter, ShellWriterView};
@@ -253,7 +255,7 @@ impl<'a> CaseReporter<'a> {
 }
 
 /// An enumeration of different known artifact types.
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 pub enum ArtifactType {
     Stdout,
     Stderr,
@@ -262,7 +264,7 @@ pub enum ArtifactType {
 }
 
 /// An enumeration of different known artifact types consisting of multiple files.
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 pub enum DirectoryArtifactType {
     Custom,
 }

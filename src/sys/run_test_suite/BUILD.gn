@@ -48,6 +48,7 @@ rustc_library("lib") {
   }
 
   test_deps = [
+    "//src/lib/storage/vfs/rust:vfs",
     "//third_party/rust_crates:ansi_term",
     "//third_party/rust_crates:assert_matches",
     "//third_party/rust_crates:maplit",
@@ -62,6 +63,7 @@ rustc_library("lib") {
     "src/output/directory.rs",
     "src/output/directory_with_stdout.rs",
     "src/output/line.rs",
+    "src/output/memory.rs",
     "src/output/mod.rs",
     "src/output/mux.rs",
     "src/output/noop.rs",
