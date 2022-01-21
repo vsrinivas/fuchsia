@@ -742,7 +742,7 @@ future but was deemed too heavyweight for the current use-cases.
 [focuschain]: /docs/development/graphics/scenic/concepts/focus_chain.md
 [latencyreference]: https://www-user.tu-chemnitz.de/~attig/Attig-Rauh-Franke-Krems_2017_LatencyGuidelines.pdf
 [inputmethod]: https://en.wikipedia.org/wiki/Input_method
-[i18n]: /docs/concepts/internationalization/introduction.md
+[i18n]: /docs/development/internationalization/README.md
 [inclusive]: /docs/concepts/principles/inclusive.md
 [root-presenter]: /docs/development/graphics/scenic/concepts/input.md#rootpresenter_transforms_and_routes_inputs
 [input-pipeline]: /docs/concepts/session/input.md#input-pipeline

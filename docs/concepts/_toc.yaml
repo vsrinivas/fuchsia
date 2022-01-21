@@ -36,9 +36,6 @@ toc:
 - title: "FIDL"
   section:
   - include: /docs/concepts/fidl/_toc.yaml
-- title: "Internationalization"
-  section:
-  - include: /docs/concepts/internationalization/_toc.yaml
 - title: "Kernel"
   section:
   - include: /docs/concepts/kernel/_toc.yaml
