@@ -471,8 +471,6 @@ Attempts to resolve a component not in the test's package will be met with a
 failed to resolve component fuchsia-pkg://fuchsia.com/[package_name]#meta/[component_name]: package [package_name] is not in the set of allowed packages...
 ```
 
-Note: This is currently only a warning, but will start failing soon.
-
 You can avoid this error by including any components your test relies on
 to the test package - see [this CL](https://fxrev.dev/608222) for an example of
 how to do this.

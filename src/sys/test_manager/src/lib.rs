@@ -1470,7 +1470,7 @@ async fn get_realm(
                         handles,
                         allowed_package_names.clone(),
                         resolver.clone(),
-                        false,
+                        true,
                     ))
                 },
                 ChildOptions::new(),
