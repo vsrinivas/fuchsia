@@ -243,6 +243,9 @@ class FakePlatformDevice : public MsdVsiPlatformDevice {
 };
 
 TEST_F(MsdVsiDeviceTest, UnmapInvalidSram) {
+  if (!device_->HasAxiSram()) {
+    GTEST_SKIP();
+  }
   auto fake_platform_device = std::make_unique<FakePlatformDevice>();
   device_->platform_device_ = std::move(fake_platform_device);
   ASSERT_NE(device_->QuerySram(nullptr), MAGMA_STATUS_OK);
