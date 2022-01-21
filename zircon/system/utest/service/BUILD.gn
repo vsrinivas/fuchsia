@@ -29,7 +29,6 @@ test("service-llcpp-test") {
     "//zircon/system/ulib/fidl-async",
     "//zircon/system/ulib/fidl-async:fidl-async-cpp",
     "//zircon/system/ulib/service:service-llcpp",
-    "//zircon/system/ulib/sync",
     "//zircon/system/ulib/zxtest",
   ]
 

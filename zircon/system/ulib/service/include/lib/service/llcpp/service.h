@@ -25,15 +25,19 @@ zx::status<fidl::ClientEnd<fuchsia_io::Directory>> OpenServiceRoot(
 
 namespace internal {
 
-// Implementation of |service::Connect| that is independent from the actual |Protocol|.
+// Implementations of |service::Connect| that is independent from the actual |Protocol|.
 zx::status<zx::channel> ConnectRaw(const char* path);
+zx::status<> ConnectRaw(zx::channel server_end, const char* path);
 
-// Implementation of |service::ConnectAt| that is independent from the actual |Protocol|.
+// Implementations of |service::ConnectAt| that is independent from the actual |Protocol|.
 zx::status<zx::channel> ConnectAtRaw(fidl::UnownedClientEnd<fuchsia_io::Directory> svc_dir,
                                      const char* protocol_name);
+zx::status<> ConnectAtRaw(fidl::UnownedClientEnd<fuchsia_io::Directory> svc_dir,
+                          zx::channel server_end, const char* protocol_name);
 
-// Implementation of |service::Clone| that is independent from the actual |Protocol|.
+// Implementations of |service::Clone| that is independent from the actual |Protocol|.
 zx::status<zx::channel> CloneRaw(zx::unowned_channel&& node);
+zx::status<> CloneRaw(zx::unowned_channel&& node, zx::channel server_end);
 
 // Determines if |Protocol| contains a method named |Clone|.
 // TODO(fxbug.dev/65964): This template is coupled to LLCPP codegen details,
@@ -97,13 +101,12 @@ zx::status<fidl::ClientEnd<Protocol>> Connect(
   return zx::ok(fidl::ClientEnd<Protocol>(std::move(channel.value())));
 }
 
-// Typed channel wrapper around |fdio_service_connect_at|.
-//
 // Connects to the |Protocol| protocol relative to the |svc_dir| directory.
 // |protocol_name| defaults to the fully qualified name of the FIDL protocol,
 // but may be overridden to a custom value.
 //
-// See documentation on |fdio_service_connect_at| for details.
+// See `ConnectAt(UnownedClientEnd<fuchsia_io::Directory>, const char*)` for
+// details.
 template <typename Protocol>
 zx::status<fidl::ClientEnd<Protocol>> ConnectAt(
     fidl::UnownedClientEnd<fuchsia_io::Directory> svc_dir,
@@ -113,6 +116,25 @@ zx::status<fidl::ClientEnd<Protocol>> ConnectAt(
     return channel.take_error();
   }
   return zx::ok(fidl::ClientEnd<Protocol>(std::move(channel.value())));
+}
+
+// Typed channel wrapper around |fdio_service_connect_at|.
+//
+// Connects |server_end| to the |Protocol| protocol relative to the |svc_dir|
+// directory. |protocol_name| defaults to the fully qualified name of the FIDL
+// protocol, but may be overridden to a custom value.
+//
+// See documentation on |fdio_service_connect_at| for details.
+template <typename Protocol>
+zx::status<> ConnectAt(fidl::UnownedClientEnd<fuchsia_io::Directory> svc_dir,
+                       fidl::ServerEnd<Protocol> server_end,
+                       const char* protocol_name = fidl::DiscoverableProtocolName<Protocol>) {
+  if (zx::status<> status =
+          internal::ConnectAtRaw(svc_dir, server_end.TakeChannel(), protocol_name);
+      status.is_error()) {
+    return status.take_error();
+  }
+  return zx::ok();
 }
 
 // Passing this value to |service::Clone| implies opting out of any

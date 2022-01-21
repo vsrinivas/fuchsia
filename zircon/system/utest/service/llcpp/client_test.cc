@@ -7,9 +7,10 @@
 #include <lib/async-loop/default.h>
 #include <lib/fidl-async/cpp/bind.h>
 #include <lib/service/llcpp/service.h>
-#include <lib/sync/completion.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/time.h>
+
+#include <latch>
 
 #include <zxtest/zxtest.h>
 
@@ -203,9 +204,9 @@ TEST(SingletonService, ConnectAt) {
   fs::SynchronousVfs vfs(loop.dispatcher());
 
   // Set up the service directory with one fake protocol.
-  sync_completion_t connected;
+  std::latch connected(2);
   auto protocol = fbl::MakeRefCounted<fs::Service>([&connected](zx::channel request) {
-    sync_completion_signal(&connected);
+    connected.count_down();
     // Implicitly drop |request|.
     return ZX_OK;
   });
@@ -221,9 +222,19 @@ TEST(SingletonService, ConnectAt) {
   auto client_end = service::ConnectAt<MockProtocol>(directory->client);
   ASSERT_OK(client_end.status_value());
 
-  ASSERT_OK(sync_completion_wait(&connected, zx::duration::infinite().get()));
+  auto endpoints = fidl::CreateEndpoints<MockProtocol>();
+  ASSERT_OK(endpoints.status_value());
+  {
+    zx::status<> status = service::ConnectAt(directory->client, std::move(endpoints->server));
+    ASSERT_OK(status.status_value());
+  }
+
+  connected.wait();
+
   // Test that the request is dropped by the server.
   ASSERT_OK(client_end->channel().wait_one(ZX_CHANNEL_PEER_CLOSED, zx::time::infinite(), nullptr));
+  ASSERT_OK(
+      endpoints->client.channel().wait_one(ZX_CHANNEL_PEER_CLOSED, zx::time::infinite(), nullptr));
 
   loop.Shutdown();
 }

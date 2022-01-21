@@ -23,10 +23,17 @@ zx::status<zx::channel> ConnectRaw(const char* path) {
   if (zx_status_t status = zx::channel::create(0, &client_end, &server_end); status != ZX_OK) {
     return zx::error(status);
   }
+  if (zx::status<> status = ConnectRaw(std::move(server_end), path); status.is_error()) {
+    return status.take_error();
+  }
+  return zx::ok(std::move(client_end));
+}
+
+zx::status<> ConnectRaw(zx::channel server_end, const char* path) {
   if (zx_status_t status = fdio_service_connect(path, server_end.release()); status != ZX_OK) {
     return zx::error(status);
   }
-  return zx::ok(std::move(client_end));
+  return zx::ok();
 }
 
 zx::status<zx::channel> ConnectAtRaw(fidl::UnownedClientEnd<fuchsia_io::Directory> svc_dir,
@@ -35,12 +42,21 @@ zx::status<zx::channel> ConnectAtRaw(fidl::UnownedClientEnd<fuchsia_io::Director
   if (zx_status_t status = zx::channel::create(0, &client_end, &server_end); status != ZX_OK) {
     return zx::error(status);
   }
+  if (zx::status<> status = ConnectAtRaw(svc_dir, std::move(server_end), protocol_name);
+      status.is_error()) {
+    return status.take_error();
+  }
+  return zx::ok(std::move(client_end));
+}
+
+zx::status<> ConnectAtRaw(fidl::UnownedClientEnd<fuchsia_io::Directory> svc_dir,
+                          zx::channel server_end, const char* protocol_name) {
   if (zx_status_t status =
           fdio_service_connect_at(svc_dir.handle()->get(), protocol_name, server_end.release());
       status != ZX_OK) {
     return zx::error(status);
   }
-  return zx::ok(std::move(client_end));
+  return zx::ok();
 }
 
 zx::status<zx::channel> CloneRaw(zx::unowned_channel&& node) {
@@ -49,11 +65,18 @@ zx::status<zx::channel> CloneRaw(zx::unowned_channel&& node) {
   if (status != ZX_OK) {
     return zx::error(status);
   }
-  status = fdio_service_clone_to(node->get(), server_end.release());
-  if (status != ZX_OK) {
-    return zx::error(status);
+  if (zx::status<> status = CloneRaw(std::move(node), std::move(server_end)); status.is_error()) {
+    return status.take_error();
   }
   return zx::ok(std::move(client_end));
+}
+
+zx::status<> CloneRaw(zx::unowned_channel&& node, zx::channel server_end) {
+  if (zx_status_t status = fdio_service_clone_to(node->get(), server_end.release());
+      status != ZX_OK) {
+    return zx::error(status);
+  }
+  return zx::ok();
 }
 
 }  // namespace internal
