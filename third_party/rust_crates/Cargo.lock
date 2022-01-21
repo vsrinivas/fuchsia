@@ -1875,9 +1875,9 @@ dependencies = [
 
 [[package]]
 name = "json5format"
-version = "0.2.0"
+version = "0.2.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0d2fdb4e2e20d2c9a0b6fe1edb85e6ea9f19aac61fc3306179cb2571c4f9560f"
+checksum = "9594106bc3da8429e6e58081bf9f4846735438993c15a220001abacf44300064"
 dependencies = [
  "lazy_static",
  "regex",

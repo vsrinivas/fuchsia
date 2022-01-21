@@ -104,7 +104,7 @@ hyper = { version = "0.13.10", default-features = false, features = ["stream"] }
 iota = "0.2.2"
 itertools = "0.10"
 itoa = "0.4"
-json5format = "0.2.0"
+json5format = "0.2.4"
 lazy_static = "1.4"
 libc = "0.2.101"
 libm = "0.2.1"

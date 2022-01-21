@@ -30,7 +30,19 @@ impl ParsedDocument {
     /// If a filename is also provided, any parsing errors will include the filename with the line
     /// number and column where the error was encountered.
     pub fn from_str(buffer: &str, filename: Option<String>) -> Result<Self, Error> {
+        Self::from_str_with_nesting_limit(buffer, filename, Parser::DEFAULT_NESTING_LIMIT)
+    }
+
+    /// Like `from_str()` but also overrides the default nesting limit, used to
+    /// catch deeply nested JSON5 documents before overflowing the program
+    /// stack.
+    pub fn from_str_with_nesting_limit(
+        buffer: &str,
+        filename: Option<String>,
+        nesting_limit: usize,
+    ) -> Result<Self, Error> {
         let mut parser = Parser::new(&filename);
+        parser.set_nesting_limit(nesting_limit);
         let content = parser.parse(&buffer)?;
 
         Ok(Self { owned_buffer: None, filename, content })
