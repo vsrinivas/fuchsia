@@ -140,15 +140,6 @@ Additionally, it will remove segments from paths preceding a ".." segment, so an
 open of "subdir/../foo" will just result in an open of foo. (although note that
 it does not allow one to escape the current directory handle this way)
 
-### content files support `OPEN_FLAG_POSIX_WRITABLE` and `OPEN_FLAG_POSIX_EXECUTABLE`
-
-package-directory accepts the `OPEN_FLAG_POSIX_*` flags when opening content
-files, although they are ignored since the `OPEN_FLAG_POSIX_*` family of flags
-only affect the behavior of opening directories.
-
-TODO(fxbug.dev/85062): figure out and document the situations where pkgfs
-reject them.
-
 ### meta/ directories and files may not be opened with `OPEN_RIGHT_EXECUTABLE`
 
 package-directory rejects opening files and directories in meta/ with
@@ -197,3 +188,7 @@ pkgfs only supports reading from the beginning of that file.
 ### mode protection bits not set
 
 When `GetAttrs()` is called, package-directory always returns 0 for the [mode protection bits](https://cs.opensource.google/fuchsia/fuchsia/+/main:sdk/fidl/fuchsia.io/directory.fidl;l=97;drc=1cc9164ebb39d1c4b070e23f3808216403fcb526) of [NodeAttributes.mode](https://cs.opensource.google/fuchsia/fuchsia/+/main:sdk/fidl/fuchsia.io/node.fidl;l=91;drc=7fab2b7a07b1ab6c3d190cdf07daed196e3f4168), whereas pkgfs returns 0o755 for directories and 0o644 for files.
+
+### content files support `OPEN_FLAG_APPEND`
+
+blobfs allows `OPEN_FLAG_APPEND`, but pkgfs rejects the flag before forwarding the open.

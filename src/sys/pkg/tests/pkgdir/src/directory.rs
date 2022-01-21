@@ -386,38 +386,22 @@ async fn assert_open_content_file(
 
     let mut success_flags = vec![
         0,
+        OPEN_RIGHT_READABLE,
+        OPEN_RIGHT_EXECUTABLE,
         OPEN_FLAG_NO_REMOTE,
+        OPEN_FLAG_NODE_REFERENCE,
         OPEN_FLAG_DESCRIBE,
         OPEN_FLAG_POSIX_WRITABLE,
         OPEN_FLAG_POSIX_EXECUTABLE,
         OPEN_FLAG_NOT_DIRECTORY,
-        OPEN_RIGHT_READABLE,
-        OPEN_RIGHT_READABLE | OPEN_FLAG_NO_REMOTE,
-        OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE,
-        OPEN_RIGHT_READABLE | OPEN_FLAG_POSIX_WRITABLE,
-        OPEN_RIGHT_READABLE | OPEN_FLAG_POSIX_EXECUTABLE,
-        OPEN_RIGHT_READABLE | OPEN_FLAG_NOT_DIRECTORY,
-        OPEN_RIGHT_EXECUTABLE,
-        OPEN_RIGHT_EXECUTABLE | OPEN_FLAG_NO_REMOTE,
-        OPEN_RIGHT_EXECUTABLE | OPEN_FLAG_DESCRIBE,
-        OPEN_RIGHT_EXECUTABLE | OPEN_FLAG_POSIX_WRITABLE,
-        OPEN_RIGHT_EXECUTABLE | OPEN_FLAG_POSIX_EXECUTABLE,
-        OPEN_RIGHT_EXECUTABLE | OPEN_FLAG_NOT_DIRECTORY,
-        OPEN_FLAG_NODE_REFERENCE,
     ];
     if source.is_pkgdir() {
-        // "content files support OPEN_FLAG_POSIX_EXECUTABLE"
-        // TODO(fxbug.dev/85062): figure out why pkgfs rejects these flags and pkgdir doesn't
-        success_flags.push(OPEN_FLAG_POSIX_EXECUTABLE);
+        // "content files support `OPEN_FLAG_APPEND`"
         success_flags.push(OPEN_FLAG_APPEND);
     }
     if source.is_pkgfs() {
         // "OPEN_FLAG_CREATE_IF_ABSENT without OPEN_FLAG_CREATE"
-        success_flags.extend([
-            OPEN_FLAG_CREATE_IF_ABSENT,
-            OPEN_RIGHT_READABLE | OPEN_FLAG_CREATE_IF_ABSENT,
-            OPEN_RIGHT_EXECUTABLE | OPEN_FLAG_CREATE_IF_ABSENT,
-        ]);
+        success_flags.extend([OPEN_FLAG_CREATE_IF_ABSENT]);
     }
     let mut success_modes =
         vec![0, MODE_TYPE_BLOCK_DEVICE, MODE_TYPE_FILE, MODE_TYPE_SOCKET, MODE_TYPE_SERVICE];
