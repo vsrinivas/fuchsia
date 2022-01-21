@@ -48,11 +48,9 @@ Change the autorepeat settings using the following commands, for example:
 
 ```bash
 fx shell run fuchsia-pkg://fuchsia.com/setui_client#meta/setui_client.cmx keyboard \
-    --autorepeat-delay 500 --autorepeat-period 200
+    --autorepeat-delay 500{s,second,seconds,ms,millisecond,milliseconds}
+    --autorepeat-period 200{s,second,seconds,ms,millisecond,milliseconds}
 ```
-
-> NOTE: It's currently unclear what are the units for the period and delay. 
-> See http://fxbug.dev/89717 for details.
 
 Use:
 
