@@ -136,13 +136,7 @@ dart_test("experiences_ermine_simple_browser_e2e_test") {
   ]
 
   environments = [
-    {
-      dimensions = {
-        device_type = "AEMU"
-      }
-      service_account = _service_account
-      tags = [ "e2e-fyi" ]
-    },
+    # TODO(fxbug.dev/91950): Reenable on AEMU after Screenshots on Flatland is not flaky.
     {
       dimensions = {
         device_type = "Intel NUC Kit NUC7i5DNHE"
@@ -177,11 +171,7 @@ dart_test("experiences_ermine_smoke_e2e_test") {
   ]
 
   environments = [
-    {
-      dimensions = {
-        device_type = "AEMU"
-      }
-    },
+    # TODO(fxbug.dev/91950): Reenable on AEMU after Screenshots on Flatland is not flaky.
     {
       dimensions = {
         device_type = "Intel NUC Kit NUC7i5DNHE"
