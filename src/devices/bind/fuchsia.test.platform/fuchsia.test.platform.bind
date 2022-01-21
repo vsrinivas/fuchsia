@@ -19,7 +19,6 @@ extend uint fuchsia.BIND_PLATFORM_DEV_PID {
   DDKFIDL = 0x09,
   COMPATIBILITY = 0x0A,
   POWER = 0x0B,
-  FALLBACK_RTC = 0x0C,
   SCHEDULE_WORK = 0x0D,
   DEVHOST = 0x0E,
   TEL = 0x0F,
@@ -31,6 +30,7 @@ extend uint fuchsia.BIND_PLATFORM_DEV_PID {
   FIRMWARE = 0x15,
   FALLBACK = 0x16,
   RESTART = 0x17,
+  TEST = 0x18,
 };
 
 extend uint fuchsia.BIND_PLATFORM_DEV_DID {

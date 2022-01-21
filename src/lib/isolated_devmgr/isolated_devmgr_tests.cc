@@ -26,12 +26,11 @@ class DevmgrTest : public ::gtest::RealLoopFixture {
  protected:
   static constexpr const char* kSysdevDriver = "/boot/driver/sysdev.so";
   static constexpr const char* kPlatformDriver = "/boot/driver/platform-bus.so";
-  const board_test::DeviceEntry kRtcDeviceEntry = []() {
+  const board_test::DeviceEntry kTestDeviceEntry = []() {
     board_test::DeviceEntry entry = {};
-    strcpy(entry.name, "fallback-rtc");
-    entry.vid = PDEV_VID_GENERIC;
-    entry.pid = PDEV_PID_GENERIC;
-    entry.did = PDEV_DID_RTC_FALLBACK;
+    strcpy(entry.name, "test");
+    entry.vid = PDEV_VID_TEST;
+    entry.pid = PDEV_PID_TEST;
     return entry;
   }();
 
@@ -63,7 +62,7 @@ class DevmgrTest : public ::gtest::RealLoopFixture {
     args.stdio = fbl::unique_fd(open("/dev/null", O_RDWR));
     args.disable_block_watcher = true;
     args.boot_args = {{"driver-manager.driver-host-crash-policy", crash_policy}};
-    device_list_ptr->push_back(kRtcDeviceEntry);
+    device_list_ptr->push_back(kTestDeviceEntry);
     device_list_ptr->push_back(kCrashDeviceEntry);
     return IsolatedDevmgr::Create(std::move(args), std::move(device_list_ptr), dispatcher());
   }
@@ -135,7 +134,7 @@ TEST_F(DevmgrTest, DeviceEntryEnumerationTest) {
   ASSERT_EQ(ZX_OK, device_watcher::RecursiveWaitForFile(
                        devmgr->devfs_root(), "sys/platform/platform-passthrough/test-board", &fd));
   ASSERT_EQ(ZX_OK, device_watcher::RecursiveWaitForFile(devmgr->devfs_root(),
-                                                        "sys/platform/00:00:f/fallback-rtc", &fd));
+                                                        "sys/platform/11:18:0/test-device", &fd));
 }
 
 TEST_F(DevmgrTest, ExceptionCallback) {

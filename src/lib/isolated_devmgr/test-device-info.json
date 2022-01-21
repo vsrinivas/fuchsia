@@ -1,0 +1,10 @@
+{
+    "short_description": "Driver Framework isolated-devmgr test driver",
+    "manufacturer": "",
+    "families": [],
+    "models": [],
+    "areas": [
+        "DriverFramework",
+        "Test"
+    ]
+}

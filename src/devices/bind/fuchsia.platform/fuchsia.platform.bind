@@ -24,7 +24,6 @@ extend uint fuchsia.BIND_PLATFORM_DEV_DID {
   RTC_PL031 = 0x06,
   GPIO_TEST = 0x08,
   OPTEE = 0x0E,
-  FALLBACK_RTC = 0x0F,
   ETH_MAC = 0x10,
   HID_BUTTONS = 0x13,
   FAKE_DISPLAY = 0x16,

@@ -27,7 +27,6 @@ __BEGIN_CDECLS
 #define PDEV_DID_VSI_VIP            0x0C  // Verisilicon VIP
 // 0x0D unused
 #define PDEV_DID_OPTEE                  0x0E  // OP-TEE OS Driver
-#define PDEV_DID_RTC_FALLBACK           0x0F  // Synthetic RTC device
 // 0x10 unused
 // 0x11 unused
 #define PDEV_DID_CAMERA_SENSOR          0x12  // Camera Sensor
@@ -252,7 +251,6 @@ __BEGIN_CDECLS
 #define PDEV_PID_DDKFIDL_TEST       0x09
 #define PDEV_PID_COMPATIBILITY_TEST 0x0A
 #define PDEV_PID_POWER_TEST         0x0B
-#define PDEV_PID_FALLBACK_RTC_TEST  0x0C
 #define PDEV_PID_SCHEDULE_WORK_TEST 0x0D
 #define PDEV_PID_DEVHOST_TEST       0x0E
 #define PDEV_PID_TEL_TEST           0x0F
@@ -264,6 +262,7 @@ __BEGIN_CDECLS
 #define PDEV_PID_FIRMWARE_TEST      0x15
 #define PDEV_PID_FALLBACK_TEST      0x16
 #define PDEV_PID_RESTART_TEST       0x17
+#define PDEV_PID_TEST               0x18
 
 #define PDEV_DID_TEST_PARENT        0x01
 #define PDEV_DID_TEST_CHILD_1       0x02

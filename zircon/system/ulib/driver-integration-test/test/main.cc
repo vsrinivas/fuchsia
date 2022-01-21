@@ -27,10 +27,9 @@ using driver_integration_test::IsolatedDevmgr;
 
 const board_test::DeviceEntry kDeviceEntry = []() {
   board_test::DeviceEntry entry = {};
-  strcpy(entry.name, "fallback-rtc");
-  entry.vid = PDEV_VID_GENERIC;
-  entry.pid = PDEV_PID_GENERIC;
-  entry.did = PDEV_DID_RTC_FALLBACK;
+  strcpy(entry.name, "test-device");
+  entry.vid = PDEV_VID_TEST;
+  entry.pid = PDEV_PID_TEST;
   return entry;
 }();
 
@@ -47,7 +46,7 @@ TEST(DriverIntegrationTest, EnumerationTest) {
   EXPECT_OK(RecursiveWaitForFile(devmgr.devfs_root(),
                                  "sys/platform/platform-passthrough/test-board", &fd));
 
-  EXPECT_OK(RecursiveWaitForFile(devmgr.devfs_root(), "sys/platform/00:00:f/fallback-rtc", &fd));
+  EXPECT_OK(RecursiveWaitForFile(devmgr.devfs_root(), "sys/platform/11:18:0/test-device", &fd));
 }
 
 }  // namespace

@@ -24,6 +24,6 @@ fuchsia_unittest_package("driver-integration-test") {
     ":driver-integration",
     "//src/devices/board/drivers/integration-test",
     "//src/devices/bus/drivers/platform",
-    "//src/devices/rtc/drivers/fallback",
+    "//src/lib/isolated_devmgr:test-device",
   ]
 }

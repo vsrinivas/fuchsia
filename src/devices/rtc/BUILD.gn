@@ -5,7 +5,6 @@
 group("drivers") {
   testonly = true
   deps = [
-    "drivers/fallback",
     "drivers/nxp",
     "drivers/pl031-rtc",
   ]

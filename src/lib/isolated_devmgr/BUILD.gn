@@ -213,19 +213,42 @@ fuchsia_driver_component("crash-device") {
   info = "crash-device-info.json"
 }
 
+driver_bind_rules("test-device-bind") {
+  rules = "test-device.bind"
+  header_output = "test-device-bind.h"
+  deps = [ "//src/devices/bind/fuchsia.test.platform" ]
+}
+
+fuchsia_driver("test-device-driver") {
+  output_name = "test-device"
+  sources = [ "test_device.cc" ]
+  deps = [
+    ":test-device-bind",
+    "//src/devices/lib/driver",
+    "//src/lib/ddk",
+    "//src/lib/ddktl",
+  ]
+}
+
+fuchsia_driver_component("test-device") {
+  component_name = "test-device"
+  deps = [ ":test-device-driver" ]
+  info = "test-device-info.json"
+}
+
 fuchsia_component("isolated-devmgr-tests") {
   testonly = true
   manifest = "isolated-devmgr-tests.cmx"
   deps = [
     ":crash-device",
     ":ethertap-devmgr",
+    ":test-device",
     ":test_bin",
     ":virtual-audio-devmgr",
     "//src/connectivity/ethernet/drivers/ethernet",
     "//src/connectivity/ethernet/drivers/ethertap",
     "//src/devices/board/drivers/integration-test",
     "//src/devices/bus/drivers/platform",
-    "//src/devices/rtc/drivers/fallback",
   ]
 }
 

@@ -165,7 +165,6 @@
 //src/devices/pwm/drivers/pwm:pwm-driver
 //src/devices/ram/drivers/aml-ram:aml-ram-driver
 //src/devices/registers/drivers/registers:registers-driver
-//src/devices/rtc/drivers/fallback:fallback-driver
 //src/devices/rtc/drivers/nxp:nxp-driver
 //src/devices/rtc/drivers/pl031-rtc:pl031-rtc-driver
 //src/devices/securemem/drivers/aml-securemem:aml-securemem-driver
@@ -272,6 +271,7 @@
 //src/graphics/drivers/msd-vsi-vip:msd_vsi_test-driver
 //src/graphics/drivers/virtio:virtio_gpu-driver
 //src/lib/isolated_devmgr:crash-device-driver
+//src/lib/isolated_devmgr:test-device-driver
 //src/media/audio/drivers/aml-g12-pdm:aml-g12-pdm-driver
 //src/media/audio/drivers/aml-g12-tdm:aml-g12-tdm-dai-driver
 //src/media/audio/drivers/aml-g12-tdm:aml-g12-tdm-driver
