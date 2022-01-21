@@ -30,17 +30,13 @@ async fn main() {
     assert_data_tree!(data[0].payload.as_ref().unwrap(), root: contains {
         cpu_stats: contains {
             measurements: contains {
-                // 7 = realm_builder_root + root + component_manager + archivist + cleanup + parent + child
-                component_count: 7u64,
+                component_count: 4u64,
                 task_count: 4u64,
                 components: {
                     "<component_manager>": contains {},
                     "root/archivist": contains {},
                     "root/cleanup": contains {},
                     "root/cleanup/coll:parent/child": contains {}
-                    // The parent has no tasks associated, so "cleanup/coll:parent" isn't present
-                    // here. However, as the count shows it's being tracked as pending. Same for
-                    // the root.
                 }
             }
         }
@@ -79,8 +75,7 @@ async fn main() {
     assert_data_tree!(data[0].payload.as_ref().unwrap(), root: contains {
         cpu_stats: contains {
             measurements: contains {
-                // 6 = realm_builder_root + root + component_manager + archivist + cleanup + child
-                component_count: 6u64,
+                component_count: 4u64,
                 task_count: 4u64,
                 components: {
                     "<component_manager>": contains {},

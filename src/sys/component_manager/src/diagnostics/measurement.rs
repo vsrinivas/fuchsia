@@ -60,21 +60,15 @@ impl Measurement {
 
 impl AddAssign<&Measurement> for Measurement {
     fn add_assign(&mut self, other: &Measurement) {
-        *self = Self {
-            timestamp: self.timestamp,
-            cpu_time: self.cpu_time + other.cpu_time,
-            queue_time: self.queue_time + other.queue_time,
-        };
+        self.cpu_time += other.cpu_time;
+        self.queue_time += other.queue_time;
     }
 }
 
 impl SubAssign<&Measurement> for Measurement {
     fn sub_assign(&mut self, other: &Measurement) {
-        *self = Self {
-            timestamp: self.timestamp,
-            cpu_time: self.cpu_time - other.cpu_time,
-            queue_time: self.queue_time - other.queue_time,
-        };
+        self.cpu_time -= other.cpu_time;
+        self.queue_time -= other.queue_time;
     }
 }
 

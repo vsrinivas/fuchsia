@@ -75,7 +75,7 @@ pub struct TaskInfo<T: RuntimeStatsSource + Debug, U: TimeSource> {
     children: Vec<Weak<Mutex<TaskInfo<T, MonotonicTime>>>>,
     should_drop_old_measurements: bool,
     post_invalidation_measurements: usize,
-    _terminated_signal_task: fasync::Task<()>,
+    _terminated_task: fasync::Task<()>,
 }
 
 impl<T: 'static + RuntimeStatsSource + Debug + Send + Sync> TaskInfo<T, MonotonicTime> {
@@ -109,25 +109,30 @@ impl<T: 'static + RuntimeStatsSource + Debug + Send + Sync, U: TimeSource + std:
     ) -> Result<Self, zx::Status> {
         let koid = task.koid()?;
         let maybe_handle = task.handle_ref().duplicate(zx::Rights::SAME_RIGHTS).ok();
-        let arc_task = Arc::new(Mutex::new(TaskState::from(task)));
-        let state = arc_task.clone();
-        let _terminated_signal_task = fasync::Task::spawn(async move {
+        let task_state = Arc::new(Mutex::new(TaskState::from(task)));
+        let weak_task_state = Arc::downgrade(&task_state);
+        let _terminated_task = fasync::Task::spawn(async move {
             if let Some(handle) = maybe_handle {
                 fasync::OnSignals::new(&handle, zx::Signals::TASK_TERMINATED)
                     .await
                     .map(|_: fidl::Signals| ()) // Discard.
                     .unwrap_or_else(|s| log::debug!("error creating signal handler: {}", s));
             }
-            let mut state = state.lock().await;
-            *state = match std::mem::replace(&mut *state, TaskState::TerminatedAndMeasured) {
-                s @ TaskState::TerminatedAndMeasured => s,
-                TaskState::Alive(t) => TaskState::Terminated(t),
-                s @ TaskState::Terminated(_) => s,
-            };
+
+            // If we failed to duplicate the handle then still mark this task as terminated to
+            // ensure it's cleaned up.
+            if let Some(task_state) = weak_task_state.upgrade() {
+                let mut state = task_state.lock().await;
+                *state = match std::mem::replace(&mut *state, TaskState::TerminatedAndMeasured) {
+                    s @ TaskState::TerminatedAndMeasured => s,
+                    TaskState::Alive(t) => TaskState::Terminated(t),
+                    s @ TaskState::Terminated(_) => s,
+                };
+            }
         });
         Ok(Self {
             koid,
-            task: arc_task,
+            task: task_state,
             has_parent_task: false,
             measurements: MeasurementsQueue::new(),
             children: vec![],
@@ -139,7 +144,7 @@ impl<T: 'static + RuntimeStatsSource + Debug + Send + Sync, U: TimeSource + std:
             previous_cpu: zx::Duration::from_nanos(0),
             previous_histogram_timestamp: time_source.now(),
             time_source,
-            _terminated_signal_task,
+            _terminated_task,
         })
     }
 

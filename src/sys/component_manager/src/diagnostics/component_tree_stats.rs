@@ -23,7 +23,11 @@ use {
     fuchsia_inspect_contrib::nodes::BoundedListNode,
     fuchsia_zircon::sys as zx_sys,
     fuchsia_zircon::{self as zx, HandleBased},
-    futures::{channel::oneshot, lock::Mutex, FutureExt},
+    futures::{
+        channel::{mpsc, oneshot},
+        lock::Mutex,
+        FutureExt, StreamExt,
+    },
     injectable_time::MonotonicTime,
     log::warn,
     moniker::{AbsoluteMoniker, AbsoluteMonikerBase, ExtendedMoniker},
@@ -68,6 +72,10 @@ pub struct ComponentTreeStats<T: RuntimeStatsSource + Debug> {
 
     /// Aggregated CPU stats.
     totals: Mutex<AggregatedStats>,
+
+    _wait_diagnostics_drain: fasync::Task<()>,
+
+    diagnostics_waiter_task_sender: mpsc::UnboundedSender<fasync::Task<()>>,
 }
 
 impl<T: 'static + RuntimeStatsSource + Debug + Send + Sync> ComponentTreeStats<T> {
@@ -84,6 +92,7 @@ impl<T: 'static + RuntimeStatsSource + Debug + Send + Sync> ComponentTreeStats<T
 
         let histograms_node = node.create_child("histograms");
         let totals = AggregatedStats::new(node.create_child("@total"));
+        let (snd, rcv) = mpsc::unbounded();
         let this = Arc::new(Self {
             tree: Mutex::new(BTreeMap::new()),
             tasks: Mutex::new(BTreeMap::new()),
@@ -92,6 +101,10 @@ impl<T: 'static + RuntimeStatsSource + Debug + Send + Sync> ComponentTreeStats<T
             processing_times,
             sampler_task: Mutex::new(None),
             totals: Mutex::new(totals),
+            diagnostics_waiter_task_sender: snd,
+            _wait_diagnostics_drain: fasync::Task::spawn(async move {
+                rcv.for_each_concurrent(None, |rx| async move { rx.await }).await;
+            }),
         });
 
         let weak_self = Arc::downgrade(&this);
@@ -132,9 +145,12 @@ impl<T: 'static + RuntimeStatsSource + Debug + Send + Sync> ComponentTreeStats<T
         let histogram = create_cpu_histogram(&self.histograms_node, &moniker);
         if let Ok(task_info) = TaskInfo::try_from(task, Some(histogram)) {
             let koid = task_info.koid();
-            let stats = ComponentStats::ready(task_info);
-            self.tasks.lock().await.insert(koid, Arc::downgrade(&stats.tasks()[0]));
-            self.tree.lock().await.insert(moniker.clone(), Arc::new(Mutex::new(stats)));
+            let arc_task_info = Arc::new(Mutex::new(task_info));
+            let mut stats = ComponentStats::new();
+            stats.add_task(arc_task_info.clone()).await;
+            let stats = Arc::new(Mutex::new(stats));
+            self.tree.lock().await.insert(moniker.clone(), stats);
+            self.tasks.lock().await.insert(koid, Arc::downgrade(&arc_task_info));
         }
     }
 
@@ -160,28 +176,25 @@ impl<T: 'static + RuntimeStatsSource + Debug + Send + Sync> ComponentTreeStats<T
 
     async fn write_measurements(&self, node: &inspect::Node) -> (u64, u64) {
         let mut task_count = 0;
-        let mut components_count = 0;
-        for (moniker, stats) in self.tree.lock().await.iter() {
+        let tree = self.tree.lock().await;
+        for (moniker, stats) in tree.iter() {
             let stats_guard = stats.lock().await;
-            components_count += 1;
-            if stats_guard.is_measuring() {
-                // TODO(fxbug.dev/73169): unify diagnostics and component manager monikers.
-                let key = match moniker {
-                    ExtendedMoniker::ComponentManager => moniker.to_string(),
-                    ExtendedMoniker::ComponentInstance(m) => {
-                        if *m == AbsoluteMoniker::root() {
-                            "<root>".to_string()
-                        } else {
-                            m.to_string_without_instances().replacen("/", "", 1)
-                        }
+            // TODO(fxbug.dev/73171): unify diagnostics and component manager monikers.
+            let key = match moniker {
+                ExtendedMoniker::ComponentManager => moniker.to_string(),
+                ExtendedMoniker::ComponentInstance(m) => {
+                    if *m == AbsoluteMoniker::root() {
+                        "<root>".to_string()
+                    } else {
+                        m.to_string_without_instances().replacen("/", "", 1)
                     }
-                };
-                let child = node.create_child(key);
-                task_count += stats_guard.record_to_node(&child).await;
-                node.record(child);
-            }
+                }
+            };
+            let child = node.create_child(key);
+            task_count += stats_guard.record_to_node(&child).await;
+            node.record(child);
         }
-        (components_count, task_count)
+        (tree.len() as u64, task_count)
     }
 
     /// Takes a measurement of all tracked tasks and updated the totals. If any task is not alive
@@ -191,17 +204,24 @@ impl<T: 'static + RuntimeStatsSource + Debug + Send + Sync> ComponentTreeStats<T
         let start = zx::Time::get_monotonic();
 
         // Copy the stats and release the lock.
-        let stats =
-            self.tree.lock().await.iter().map(|(k, v)| (k.clone(), v.clone())).collect::<Vec<_>>();
+        let stats = self
+            .tree
+            .lock()
+            .await
+            .iter()
+            .map(|(k, v)| (k.clone(), Arc::downgrade(&v)))
+            .collect::<Vec<_>>();
         let mut aggregated = Measurement::empty(start);
         let mut stats_to_remove = vec![];
         let mut koids_to_remove = vec![];
-        for (moniker, stat) in stats.into_iter() {
-            let mut stat_guard = stat.lock().await;
-            aggregated += &stat_guard.measure().await;
-            koids_to_remove.append(&mut stat_guard.clean_stale().await);
-            if !stat_guard.is_alive().await {
-                stats_to_remove.push(moniker);
+        for (moniker, weak_stats) in stats.into_iter() {
+            if let Some(stats) = weak_stats.upgrade() {
+                let mut stat_guard = stats.lock().await;
+                aggregated += &stat_guard.measure().await;
+                koids_to_remove.append(&mut stat_guard.clean_stale().await);
+                if !stat_guard.is_alive().await {
+                    stats_to_remove.push(moniker);
+                }
             }
         }
 
@@ -245,7 +265,7 @@ impl<T: 'static + RuntimeStatsSource + Debug + Send + Sync> ComponentTreeStats<T
         P: DiagnosticsReceiverProvider<C, T>,
         C: RuntimeStatsContainer<T> + Send + Sync + 'static,
     {
-        let mut tree_guard = self.tree.lock().await;
+        let tree_guard = self.tree.lock().await;
         if tree_guard.contains_key(&moniker) {
             return;
         }
@@ -256,19 +276,7 @@ impl<T: 'static + RuntimeStatsSource + Debug + Send + Sync> ComponentTreeStats<T
                 moniker.clone(),
                 receiver,
             ));
-            tree_guard.insert(moniker, Arc::new(Mutex::new(ComponentStats::pending(task))));
-        }
-    }
-
-    async fn on_component_stopped(self: &Arc<Self>, moniker: ExtendedMoniker) {
-        // When  a component stops, remove the stats we were tracking unless we are measuring
-        // something for that component.
-        let mut tree_guard = self.tree.lock().await;
-        if let Some(stats) = tree_guard.remove(&moniker) {
-            let is_measuring = stats.lock().await.is_measuring();
-            if is_measuring {
-                tree_guard.insert(moniker, stats);
-            }
+            let _ = self.diagnostics_waiter_task_sender.unbounded_send(task);
         }
     }
 
@@ -282,23 +290,24 @@ impl<T: 'static + RuntimeStatsSource + Debug + Send + Sync> ComponentTreeStats<T
         let mut source = maybe_return!(receiver.await.ok());
         let this = maybe_return!(weak_self.upgrade());
         let mut tree_lock = this.tree.lock().await;
-        let stats = maybe_return!(tree_lock.get_mut(&moniker));
+        let stats =
+            tree_lock.entry(moniker.clone()).or_insert(Arc::new(Mutex::new(ComponentStats::new())));
         let histogram = create_cpu_histogram(&this.histograms_node, &moniker);
         let mut task_info = maybe_return!(source
             .take_component_task()
             .and_then(|task| TaskInfo::try_from(task, Some(histogram)).ok()));
 
-        let histogram = create_cpu_histogram(&this.histograms_node, &moniker);
         let parent_koid = source
             .take_parent_task()
-            .and_then(|task| TaskInfo::try_from(task, Some(histogram)).ok())
+            .and_then(|task| TaskInfo::try_from(task, None).ok())
             .map(|task| task.koid());
         let koid = task_info.koid();
-        let mut task_guard = this.tasks.lock().await;
 
         // At this point we haven't set the parent yet. We take an initial measurement of the
         // individual task.
         task_info.measure_if_no_parent().await;
+
+        let mut task_guard = this.tasks.lock().await;
 
         let task_info = match parent_koid {
             None => {
@@ -325,7 +334,7 @@ impl ComponentTreeStats<DiagnosticsTask> {
     pub fn hooks(self: &Arc<Self>) -> Vec<HooksRegistration> {
         vec![HooksRegistration::new(
             "ComponentTreeStats",
-            vec![EventType::Started, EventType::Stopped],
+            vec![EventType::Started],
             Arc::downgrade(self) as Weak<dyn Hook>,
         )]
     }
@@ -357,11 +366,6 @@ impl Hook for ComponentTreeStats<DiagnosticsTask> {
             EventType::Started => {
                 if let Some(EventPayload::Started { runtime, .. }) = event.result.as_ref().ok() {
                     self.on_component_started(target_moniker, runtime).await;
-                }
-            }
-            EventType::Stopped => {
-                if let Some(EventPayload::Stopped { .. }) = event.result.as_ref().ok() {
-                    self.on_component_stopped(target_moniker).await;
                 }
             }
             _ => {}
@@ -795,13 +799,7 @@ mod tests {
         // Wait for diagnostics data to be received since it's done in a non-blocking way on
         // started.
         loop {
-            let mut ready_count: usize = 0;
-            for stat in stats.tree.lock().await.values() {
-                if stat.lock().await.is_measuring() {
-                    ready_count += 1;
-                }
-            }
-            if ready_count == 2 {
+            if stats.tree.lock().await.len() == 2 {
                 break;
             }
             fasync::Timer::new(fasync::Time::after(100i64.millis())).await;
@@ -885,13 +883,7 @@ mod tests {
         // Wait for diagnostics data to be received since it's done in a non-blocking way on
         // started.
         loop {
-            let mut ready_count: usize = 0;
-            for stat in stats.tree.lock().await.values() {
-                if stat.lock().await.is_measuring() {
-                    ready_count += 1;
-                }
-            }
-            if ready_count == 2 {
+            if stats.tree.lock().await.len() == 2 {
                 break;
             }
             fasync::Timer::new(fasync::Time::after(100i64.millis())).await;
