@@ -59,7 +59,7 @@ void Set(const Counter& counter, PhysBootTimes::Index i) {
 void TimelineCounters(unsigned int level) {
   // This isn't really a loop in any meaningful sense, but structuring it
   // this way gets the compiler to warn about any forgotten enum entry.
-  for (size_t i = 0; i < PhysBootTimes::kCount; ++i) {
+  for (size_t i = 0; i <= PhysBootTimes::kCount; ++i) {
     const PhysBootTimes::Index when = static_cast<PhysBootTimes::Index>(i);
     switch (when) {
       case PhysBootTimes::kZbiEntry:
