@@ -439,7 +439,7 @@ class Future : public fxl::RefCountedThreadSafe<Future<Result...>> {
   //
   //   FuturePtr<> Then(fit::function<void(Result...)> callback);
   template <typename Callback, typename = typename std::enable_if_t<
-                                   internal::is_void_v<std::result_of_t<Callback(Result...)>>>>
+                                   internal::is_void_v<std::invoke_result_t<Callback, Result...>>>>
   FuturePtr<> Then(Callback callback) {
     return SubfutureCreate(Future<>::Create(trace_name_ + "(Then)"),
                            SubfutureVoidCallback<Result...>(std::move(callback)),
@@ -452,7 +452,7 @@ class Future : public fxl::RefCountedThreadSafe<Future<Result...>> {
   // completed.
   template <typename Callback, typename T,
             typename = typename std::enable_if_t<
-                internal::is_void_v<std::result_of_t<Callback(Result...)>>>>
+                internal::is_void_v<std::invoke_result_t<Callback, Result...>>>>
   FuturePtr<> WeakThen(fxl::WeakPtr<T> weak_ptr, Callback callback) {
     return SubfutureCreate(Future<>::Create(trace_name_ + "(WeakThen)"),
                            SubfutureVoidCallback<Result...>(std::move(callback)),
@@ -506,7 +506,7 @@ class Future : public fxl::RefCountedThreadSafe<Future<Result...>> {
   //
   //   FuturePtr<CallbackResult>
   //     AsyncMap(fit::function<FuturePtr<CallbackResult>(Result...)> callback);
-  template <typename Callback, typename AsyncMapResult = std::result_of_t<Callback(Result...)>,
+  template <typename Callback, typename AsyncMapResult = std::invoke_result_t<Callback, Result...>,
             typename MapResult = typename AsyncMapResult::element_type::result_tuple_type,
             typename = typename std::enable_if_t<
                 internal::is_convertible_v<FuturePtr<MapResult>, AsyncMapResult>>>
@@ -517,7 +517,7 @@ class Future : public fxl::RefCountedThreadSafe<Future<Result...>> {
   }
 
   template <typename Callback, typename T,
-            typename AsyncMapResult = std::result_of_t<Callback(Result...)>,
+            typename AsyncMapResult = std::invoke_result_t<Callback, Result...>,
             typename MapResult = typename AsyncMapResult::element_type::result_tuple_type,
             typename = typename std::enable_if_t<
                 internal::is_convertible_v<FuturePtr<MapResult>, AsyncMapResult>>>
@@ -541,13 +541,13 @@ class Future : public fxl::RefCountedThreadSafe<Future<Result...>> {
   // T                                 | FuturePtr<T>
   // std::tuple<T, U, ...>             | FuturePtr<T, U, ...>
   // std::tuple<std::tuple<T, U, ...>> | FuturePtr<std::tuple<T, U, ...>>
-  template <typename Callback, typename MapResult = std::result_of_t<Callback(Result...)>>
+  template <typename Callback, typename MapResult = std::invoke_result_t<Callback, Result...>>
   auto Map(Callback callback) {
     return Map(std::move(callback), Tag<MapResult>{});
   }
 
   template <typename Callback, typename T,
-            typename MapResult = std::result_of_t<Callback(Result...)>>
+            typename MapResult = std::invoke_result_t<Callback, Result...>>
   auto WeakMap(fxl::WeakPtr<T> weak_ptr, Callback callback) {
     return WeakMap(weak_ptr, std::move(callback), Tag<MapResult>{});
   }
