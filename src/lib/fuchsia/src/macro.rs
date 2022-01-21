@@ -11,6 +11,7 @@ use {
         parse,
         parse::{Parse, ParseStream},
         Attribute, Block, Error, Ident, ItemFn, LitBool, LitInt, LitStr, Signature, Token,
+        Visibility,
     },
 };
 
@@ -79,6 +80,7 @@ trait Finish {
 struct Transformer {
     executor: Executor,
     attrs: Vec<Attribute>,
+    vis: Visibility,
     sig: Signature,
     block: Box<Block>,
     logging: bool,
@@ -193,7 +195,7 @@ impl Transformer {
         input: TokenStream,
     ) -> Result<Transformer, Error> {
         let args: Args = parse(args)?;
-        let ItemFn { attrs, vis: _, sig, block } = parse(input)?;
+        let ItemFn { attrs, vis, sig, block } = parse(input)?;
         let is_async = sig.asyncness.is_some();
 
         let err = |message| Err(Error::new(sig.ident.span(), message));
@@ -219,6 +221,7 @@ impl Transformer {
         Ok(Transformer {
             executor,
             attrs,
+            vis,
             sig,
             block,
             logging: args.logging,
@@ -235,6 +238,7 @@ impl Finish for Transformer {
         let span = ident.span();
         let ret_type = self.sig.output;
         let attrs = self.attrs;
+        let visibility = self.vis;
         let asyncness = self.sig.asyncness;
         let block = self.block;
         let inputs = self.sig.inputs;
@@ -300,7 +304,7 @@ impl Finish for Transformer {
         // Finally build output.
         let output = quote_spanned! {span =>
             #(#attrs)* #(#func_attrs)*
-            fn #ident () #ret_type {
+            #visibility fn #ident () #ret_type {
                 // Note: `ItemFn::block` includes the function body braces. Do
                 // not add additional braces (will break source code coverage
                 // analysis).
