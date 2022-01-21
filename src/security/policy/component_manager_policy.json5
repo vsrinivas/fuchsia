@@ -408,6 +408,18 @@
                     "/core/appmgr",
                 ],
             },
+
+            // TODO(fxbug.dev/91765) - Remove source moniker after from target.
+            {
+                source_moniker: "/core/account/credential_manager",
+                source: "component",
+                source_name: "fuchsia.identity.credential.CredentialManager",
+                capability: "protocol",
+                target_monikers: [
+                    "/core/account/credential_manager",
+                    "/core/account/password_authenticator",
+                ],
+            },
         ],
         child_policy: {
             reboot_on_terminate: [
