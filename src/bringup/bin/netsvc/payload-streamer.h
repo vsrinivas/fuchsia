@@ -6,18 +6,18 @@
 #define SRC_BRINGUP_BIN_NETSVC_PAYLOAD_STREAMER_H_
 
 #include <fidl/fuchsia.paver/cpp/wire.h>
+#include <lib/fit/function.h>
 #include <lib/fzl/vmo-mapper.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/vmo.h>
 #include <zircon/types.h>
 
-#include <fbl/function.h>
 #include <fbl/unique_fd.h>
 
 namespace netsvc {
 
 // Reads the data into the vmo at offset, size. Can block.
-using ReadCallback = fbl::Function<zx_status_t(void* /*buf*/, size_t /*offset*/, size_t /*size*/,
+using ReadCallback = fit::function<zx_status_t(void* /*buf*/, size_t /*offset*/, size_t /*size*/,
                                                size_t* /*actual*/)>;
 
 class PayloadStreamer : public fidl::WireServer<fuchsia_paver::PayloadStream> {

@@ -6,13 +6,13 @@
 
 #include <inttypes.h>
 #include <lib/async/cpp/task.h>
+#include <lib/fit/function.h>
 #include <lib/trace-engine/buffer_internal.h>
 #include <lib/trace-engine/instrumentation.h>
 #include <lib/trace/event.h>
 #include <stdarg.h>
 #include <stdio.h>
 
-#include <fbl/function.h>
 #include <trace-vthread/event_vthread.h>
 
 #include "handler.h"
@@ -20,7 +20,7 @@
 
 namespace {
 
-using Benchmark = fbl::Function<void()>;
+using Benchmark = fit::function<void()>;
 
 class Runner {
  public:

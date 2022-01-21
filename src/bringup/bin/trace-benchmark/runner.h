@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_BRINGUP_BIN_TRACE_BENCHMARK_RUNNER_H_
+#define SRC_BRINGUP_BIN_TRACE_BENCHMARK_RUNNER_H_
 
-#include <stdio.h>
-#include <fbl/function.h>
-
-#include <zircon/syscalls.h>
+#include <lib/fit/function.h>
 #include <lib/zx/time.h>
+#include <stdio.h>
+#include <zircon/syscalls.h>
 
 #include <utility>
 
@@ -39,7 +39,7 @@ float Measure(unsigned iterations, const T& closure) {
   return (static_cast<float>(stop - start) * 1000000.f / static_cast<float>(zx_ticks_per_second()));
 }
 
-using thunk = fbl::Function<void()>;
+using thunk = fit::function<void()>;
 
 // Runs a closure repeatedly and prints its timing.
 template <typename T>
@@ -86,3 +86,5 @@ void RunAndMeasure(const char* test_name, const char* spec_name, const T& closur
   RunAndMeasure(test_name, spec_name, kDefaultRunIterations, closure, std::move(setup),
                 std::move(teardown));
 }
+
+#endif  // SRC_BRINGUP_BIN_TRACE_BENCHMARK_RUNNER_H_

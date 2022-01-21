@@ -21,6 +21,8 @@
 #include <algorithm>
 #include <string_view>
 
+#include <fbl/algorithm.h>
+
 #include "src/bringup/bin/netsvc/payload-streamer.h"
 
 namespace netsvc {
