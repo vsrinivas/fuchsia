@@ -667,6 +667,14 @@ Your component is now tested in Components v2.
 If your test doesn't run correctly or doesn't start at all, try following the
 advice in [Troubleshooting components][troubleshooting-components].
 
+CFv2 tests are spawned in the hermetic tests realm unless the component
+manifest explicitly specifies a `fuchsia.test` facet. Tests in this realm
+enforce hermetic resolution, which means that resolution of components outside
+of the test package is not allowed. If your test relies on this functionality,
+which is most often used to launch components from other packages, you'll need
+to package your dependencies into your test package, as described by the
+[hermetic resolution docs][hermetic-resolution].
+
 ## Add the new component {#add-component-to-topology}
 
 Now you're ready to add your new component to the
@@ -2082,6 +2090,7 @@ described in the [Vulkan documentation][vulkan].
 [glossary.components-v2]: /docs/glossary/README.md#components-v2
 [glossary.environment]: /docs/glossary/README.md#environment
 [glossary.runner]: /docs/glossary/README.md#runner
+[hermetic-resolution]: /docs/development/testing/components/test_runner_framework.md#hermetic_component_resolution
 [hub-v1]: /docs/concepts/components/v1/hub.md
 [hub-v2]: /docs/concepts/components/v2/hub.md
 [inspect]: /docs/development/diagnostics/inspect/README.md
