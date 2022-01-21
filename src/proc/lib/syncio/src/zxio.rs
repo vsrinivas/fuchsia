@@ -92,6 +92,22 @@ pub type zxio_node_attributes_t = zxio_node_attr;
 pub type zxio_seek_origin_t = u32;
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
+pub struct zxio_dirent_iterator {
+    pub io: *mut zxio_t,
+    pub opaque: [u8; 65584usize],
+}
+impl Default for zxio_dirent_iterator {
+    fn default() -> Self {
+        let mut s = ::std::mem::MaybeUninit::<Self>::uninit();
+        unsafe {
+            ::std::ptr::write_bytes(s.as_mut_ptr(), 0, 1);
+            s.assume_init()
+        }
+    }
+}
+pub type zxio_dirent_iterator_t = zxio_dirent_iterator;
+#[repr(C)]
+#[derive(Debug, Copy, Clone)]
 pub struct zxio_dirent {
     pub protocols: zxio_node_protocols_t,
     pub abilities: zxio_abilities_t,
@@ -407,22 +423,6 @@ extern "C" {
         dst_path_len: usize,
     ) -> zx_status_t;
 }
-#[repr(C)]
-#[derive(Debug, Copy, Clone)]
-pub struct zxio_dirent_iterator {
-    pub io: *mut zxio_t,
-    pub opaque: [u64; 7usize],
-}
-impl Default for zxio_dirent_iterator {
-    fn default() -> Self {
-        let mut s = ::std::mem::MaybeUninit::<Self>::uninit();
-        unsafe {
-            ::std::ptr::write_bytes(s.as_mut_ptr(), 0, 1);
-            s.assume_init()
-        }
-    }
-}
-pub type zxio_dirent_iterator_t = zxio_dirent_iterator;
 extern "C" {
     pub fn zxio_dirent_iterator_init(
         iterator: *mut zxio_dirent_iterator_t,

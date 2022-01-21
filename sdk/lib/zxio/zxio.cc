@@ -402,6 +402,9 @@ zx_status_t zxio_dirent_iterator_init(zxio_dirent_iterator_t* iterator, zxio_t* 
   if (!zxio_is_valid(directory)) {
     return ZX_ERR_BAD_HANDLE;
   }
+  if (iterator == nullptr) {
+    return ZX_ERR_INVALID_ARGS;
+  }
   zxio_internal_t* zio = to_internal(directory);
   return zio->ops->dirent_iterator_init(directory, iterator);
 }

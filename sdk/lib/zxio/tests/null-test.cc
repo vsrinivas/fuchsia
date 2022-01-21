@@ -62,11 +62,12 @@ TEST(NullTest, Default) {
   ASSERT_EQ(ZX_ERR_NOT_SUPPORTED, zxio_link(&io, old_path.data(), old_path.length(),
                                             ZX_HANDLE_INVALID, new_path.data(), new_path.length()));
 
-  zxio_dirent_iterator_t iter = {};
-  ASSERT_EQ(ZX_ERR_NOT_SUPPORTED, zxio_dirent_iterator_init(&iter, &io));
-  char buf[ZXIO_MAX_FILENAME + 1];
-  zxio_dirent_t entry = {.name = buf};
-  ASSERT_EQ(ZX_ERR_NOT_SUPPORTED, zxio_dirent_iterator_next(&iter, &entry));
+  zxio_dirent_iterator_t iterator = {};
+  ASSERT_EQ(ZX_ERR_NOT_SUPPORTED, zxio_dirent_iterator_init(&iterator, &io));
+
+  char name_buffer[ZXIO_MAX_FILENAME + 1];
+  zxio_dirent_t entry = {.name = name_buffer};
+  ASSERT_EQ(ZX_ERR_NOT_SUPPORTED, zxio_dirent_iterator_next(&iterator, &entry));
 
   ASSERT_OK(zxio_close(&io));
 }
@@ -128,11 +129,12 @@ TEST(NullTest, Null) {
   ASSERT_EQ(ZX_ERR_NOT_SUPPORTED, zxio_link(&io, old_path.data(), old_path.length(),
                                             ZX_HANDLE_INVALID, new_path.data(), new_path.length()));
 
-  zxio_dirent_iterator_t iter = {};
-  ASSERT_EQ(ZX_ERR_NOT_SUPPORTED, zxio_dirent_iterator_init(&iter, &io));
-  char buf[ZXIO_MAX_FILENAME + 1];
-  zxio_dirent_t entry = {.name = buf};
-  ASSERT_EQ(ZX_ERR_NOT_SUPPORTED, zxio_dirent_iterator_next(&iter, &entry));
+  zxio_dirent_iterator_t iterator = {};
+  ASSERT_EQ(ZX_ERR_NOT_SUPPORTED, zxio_dirent_iterator_init(&iterator, &io));
+
+  char name_buffer[ZXIO_MAX_FILENAME + 1];
+  zxio_dirent_t entry = {.name = name_buffer};
+  ASSERT_EQ(ZX_ERR_NOT_SUPPORTED, zxio_dirent_iterator_next(&iterator, &entry));
 
   ASSERT_OK(zxio_close(&io));
 }

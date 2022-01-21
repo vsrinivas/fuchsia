@@ -409,20 +409,6 @@ ZXIO_EXPORT zx_status_t zxio_link(zxio_t* src_directory, const char* src_path, s
 
 // Directory iterator
 
-// An iterator for |zxio_dirent_t| objects.
-//
-// To start iterating directory entries, call |zxio_dirent_iterator_init| to
-// initialize the contents of the iterator. Then, call
-// |zxio_dirent_iterator_next| to advance the iterator.
-//
-// Typically allocated on the stack.
-//
-// TODO(https://fxbug.dev/91172): Provide a buffer for chunks.
-typedef struct zxio_dirent_iterator {
-  zxio_t* io;
-  uint64_t opaque[7];
-} zxio_dirent_iterator_t;
-
 // Initializes a |zxio_dirent_iterator_t| for the given |directory|.
 //
 // At most one |zxio_dirent_iterator_t| can be active for a given |directory|

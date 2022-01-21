@@ -276,6 +276,22 @@ typedef uint32_t zxio_seek_origin_t;
 #define ZXIO_SEEK_ORIGIN_CURRENT ((zxio_seek_origin_t)1u)
 #define ZXIO_SEEK_ORIGIN_END ((zxio_seek_origin_t)2u)
 
+// Directory iterator
+
+// An iterator for |zxio_dirent_t| objects.
+//
+// To start iterating directory entries, call |zxio_dirent_iterator_init| to
+// initialize the contents of the iterator. Then, call
+// |zxio_dirent_iterator_next| to advance the iterator.
+//
+// Please note that this object is relatively large (slightly more than 64 KiB)
+// and callers operating on a limited stack or in library code that must be
+// conservative with stack usage should allocate this in the heap.
+typedef struct zxio_dirent_iterator {
+  zxio_t* io;
+  uint8_t opaque[ZX_CHANNEL_MAX_MSG_BYTES + 48];
+} zxio_dirent_iterator_t;
+
 // Matches fuchsia.io/MAX_FILENAME
 #define ZXIO_MAX_FILENAME 255
 

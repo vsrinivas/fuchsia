@@ -9,6 +9,7 @@
 #include <lib/zxio/cpp/inception.h>
 #include <lib/zxio/null.h>
 #include <lib/zxio/ops.h>
+#include <zircon/fidl.h>
 #include <zircon/syscalls.h>
 
 #include <type_traits>
@@ -79,18 +80,16 @@ class DirentIteratorImpl {
   }
 
  private:
-  explicit DirentIteratorImpl(zxio_t* io, fidl::WireSyncClient<fio2::DirectoryIterator> iterator)
-      : io_(reinterpret_cast<zxio_remote_v2_t*>(io)),
-        boxed_(std::make_unique<Boxed>()),
-        iterator_(std::move(iterator)) {
+  DirentIteratorImpl(zxio_t* io, fidl::WireSyncClient<fio2::DirectoryIterator> iterator)
+      : io_(reinterpret_cast<zxio_remote_v2_t*>(io)), iterator_(std::move(iterator)) {
     static_assert(offsetof(DirentIteratorImpl, io_) == 0,
                   "zxio_dirent_iterator_t requires first field of implementation to be zxio_t");
     (void)io_;
-    (void)opaque_;
   }
 
   zx_status_t ReadNextBatch() {
-    auto result = iterator_.buffer(boxed_->fidl_buffer.view())->GetNext();
+    fidl::BufferSpan fidl_buffer(buffer_, sizeof(buffer_));
+    auto result = iterator_.buffer(fidl_buffer)->GetNext();
     if (result.status() != ZX_OK) {
       return result.status();
     }
@@ -102,28 +101,22 @@ class DirentIteratorImpl {
     return ZX_OK;
   }
 
-  // This large structure is heap-allocated once, to be reused by subsequent
-  // ReadDirents calls.
-  struct Boxed {
-    Boxed() = default;
-
-    // Buffer used by the FIDL calls.
-    fidl::SyncClientBuffer<fio2::DirectoryIterator::GetNext> fidl_buffer;
-  };
-
-  // The first field must be some kind of |zxio_t| pointer, to be compatible
-  // with the layout of |zxio_dirent_iterator_t|.
   zxio_remote_v2_t* io_;
 
-  std::unique_ptr<Boxed> boxed_;
+  // Issuing a FIDL call requires storage for both the request (16 bytes) and a potentially
+  // maximally sized channel message response (64KiB).
+  // TODO(https://fxbug.dev/85843): Once overlapping request and response is allowed, reduce
+  // this allocation to a single channel message size.
+  FIDL_ALIGNDECL uint8_t
+      buffer_[fidl::SyncClientMethodBufferSizeInChannel<fio2::DirectoryIterator::GetNext>()];
+
   fidl::VectorView<fio2::wire::DirectoryEntry> fidl_entries_ = {};
   uint64_t index_ = 0;
   fidl::WireSyncClient<fio2::DirectoryIterator> iterator_;
-  uint64_t opaque_[2];
 };
 
-static_assert(sizeof(zxio_dirent_iterator_t) == sizeof(DirentIteratorImpl),
-              "zxio_dirent_iterator_t should match DirentIteratorImpl");
+static_assert(sizeof(DirentIteratorImpl) <= sizeof(zxio_dirent_iterator_t),
+              "DirentIteratorImpl must fit inside a zxio_dirent_iterator_t");
 
 }  // namespace
 

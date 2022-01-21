@@ -127,8 +127,8 @@ TEST_F(DirentTest, StandardBufferSize) {
   ASSERT_OK(zxio_dirent_iterator_init(&iterator, &dir_.io));
 
   for (int count = 0; count < TestServer::kEntryCount; count++) {
-    char buf[ZXIO_MAX_FILENAME + 1];
-    zxio_dirent_t entry = {.name = buf};
+    char name_buffer[ZXIO_MAX_FILENAME + 1];
+    zxio_dirent_t entry = {.name = name_buffer};
     EXPECT_OK(zxio_dirent_iterator_next(&iterator, &entry));
     EXPECT_TRUE(entry.has.id);
     EXPECT_EQ(entry.id, count);

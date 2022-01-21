@@ -45,9 +45,8 @@ pub struct ZxioDirent {
     pub name: Vec<u8>,
 }
 
-#[derive(Default)]
 pub struct DirentIterator {
-    iterator: zxio_dirent_iterator_t,
+    iterator: Box<zxio_dirent_iterator_t>,
 
     /// Whether the iterator has reached the end of dir entries.
     /// This is necessary because the zxio API returns only once the error code
@@ -73,7 +72,7 @@ impl Iterator for DirentIterator {
         // The types are equivalent for all practical purposes and Rust permits casting between the types,
         // so we insert a type cast here in the FFI bindings.
         entry.name = name_buffer.as_mut_ptr() as *mut std::os::raw::c_char;
-        let status = unsafe { zxio_dirent_iterator_next(&mut self.iterator, &mut entry) };
+        let status = unsafe { zxio_dirent_iterator_next(&mut *self.iterator.as_mut(), &mut entry) };
         let result = match zx::ok(status) {
             Ok(()) => {
                 let result = ZxioDirent::from(entry, name_buffer);
@@ -91,7 +90,9 @@ impl Iterator for DirentIterator {
 
 impl Drop for DirentIterator {
     fn drop(&mut self) {
-        unsafe { zxio::zxio_dirent_iterator_destroy(&mut self.iterator) };
+        unsafe {
+            zxio::zxio_dirent_iterator_destroy(&mut *self.iterator.as_mut());
+        };
     }
 }
 
@@ -263,9 +264,9 @@ impl Zxio {
     }
 
     pub fn create_dirent_iterator(&self) -> Result<DirentIterator, zx::Status> {
-        let mut iterator = DirentIterator::default();
-        let status =
-            unsafe { zxio::zxio_dirent_iterator_init(&mut iterator.iterator, self.as_ptr()) };
+        let mut zxio_iterator = Box::default();
+        let status = unsafe { zxio::zxio_dirent_iterator_init(&mut *zxio_iterator, self.as_ptr()) };
+        let iterator = DirentIterator { iterator: zxio_iterator, finished: false };
         zx::ok(status)?;
         Ok(iterator)
     }
@@ -273,7 +274,9 @@ impl Zxio {
 
 impl Drop for Zxio {
     fn drop(&mut self) {
-        unsafe { zxio::zxio_close(self.as_ptr()) };
+        unsafe {
+            zxio::zxio_close(self.as_ptr());
+        };
     }
 }
 

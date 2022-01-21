@@ -1617,13 +1617,11 @@ struct __dirstream {
   int fd;
 
   // The iterator object for reading directory entries.
-  zxio_dirent_iterator_t iterator = {};
+  // This is only allocated during an iteration.
+  std::unique_ptr<zxio_dirent_iterator_t> iterator;
 
   // A single directory entry returned to user; updated by |readdir|.
   struct dirent de = {};
-
-  // If |iterator| is initialized. The |iterator| is initialized lazily.
-  bool is_iterator_initialized = false;
 };
 
 static DIR* internal_opendir(int fd) {
@@ -1661,9 +1659,10 @@ DIR* fdopendir(int fd) {
 
 __EXPORT
 int closedir(DIR* dir) {
-  if (dir->is_iterator_initialized) {
+  if (dir->iterator) {
     fdio_ptr io = fd_to_io(dir->fd);
-    io->dirent_iterator_destroy(&dir->iterator);
+    io->dirent_iterator_destroy(dir->iterator.get());
+    dir->iterator.reset();
   }
   close(dir->fd);
   delete dir;
@@ -1678,18 +1677,18 @@ struct dirent* readdir(DIR* dir) {
   fdio_ptr io = fd_to_io(dir->fd);
 
   // Lazy initialize the iterator.
-  if (!dir->is_iterator_initialized) {
-    zx_status_t status = io->dirent_iterator_init(&dir->iterator, &io->zxio_storage().io);
+  if (!dir->iterator) {
+    dir->iterator = std::make_unique<zxio_dirent_iterator_t>();
+    zx_status_t status = io->dirent_iterator_init(dir->iterator.get(), &io->zxio_storage().io);
     if (status != ZX_OK) {
       errno = fdio_status_to_errno(status);
       return nullptr;
     }
-    dir->is_iterator_initialized = true;
   }
   // We need space for the maximum possible filename plus a null terminator.
   static_assert(sizeof(de->d_name) >= ZXIO_MAX_FILENAME + 1);
   zxio_dirent_t entry = {.name = de->d_name};
-  zx_status_t status = io->dirent_iterator_next(&dir->iterator, &entry);
+  zx_status_t status = io->dirent_iterator_next(dir->iterator.get(), &entry);
   if (status == ZX_ERR_NOT_FOUND) {
     // Reached the end.
     return nullptr;
@@ -1738,10 +1737,10 @@ struct dirent* readdir(DIR* dir) {
 __EXPORT
 void rewinddir(DIR* dir) {
   fbl::AutoLock lock(&dir->lock);
-  if (dir->is_iterator_initialized) {
+  if (dir->iterator) {
     fdio_ptr io = fd_to_io(dir->fd);
-    io->dirent_iterator_destroy(&dir->iterator);
-    dir->is_iterator_initialized = false;
+    io->dirent_iterator_destroy(dir->iterator.get());
+    dir->iterator.reset();
   }
 }
 

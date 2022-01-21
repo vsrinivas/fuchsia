@@ -136,8 +136,8 @@ TEST_F(DirV2, Enumerate) {
   zxio_dirent_iterator_t iterator;
   ASSERT_OK(zxio_dirent_iterator_init(&iterator, &dir_.io));
 
-  char buf[ZXIO_MAX_FILENAME];
-  zxio_dirent_t entry = {.name = buf};
+  char name_buffer[ZXIO_MAX_FILENAME];
+  zxio_dirent_t entry = {.name = name_buffer};
   ASSERT_OK(zxio_dirent_iterator_next(&iterator, &entry));
   EXPECT_TRUE(entry.has.protocols);
   EXPECT_EQ(ZXIO_NODE_PROTOCOL_DIRECTORY, entry.protocols);

@@ -16,6 +16,7 @@
 #include <lib/zxio/types.h>
 #include <sys/stat.h>
 #include <zircon/compiler.h>
+#include <zircon/fidl.h>
 #include <zircon/syscalls.h>
 
 #include "private.h"
@@ -28,11 +29,9 @@ namespace {
 // Implementation of |zxio_dirent_iterator_t| for |fuchsia.io| v1.
 class DirentIteratorImpl {
  public:
-  explicit DirentIteratorImpl(zxio_t* io)
-      : io_(reinterpret_cast<zxio_remote_t*>(io)), boxed_(std::make_unique<Boxed>()) {
+  explicit DirentIteratorImpl(zxio_t* io) : io_(reinterpret_cast<zxio_remote_t*>(io)) {
     static_assert(offsetof(DirentIteratorImpl, io_) == 0,
                   "zxio_dirent_iterator_t requires first field of implementation to be zxio_t");
-    (void)opaque_;
   }
 
   ~DirentIteratorImpl() {
@@ -99,8 +98,9 @@ class DirentIteratorImpl {
 
  private:
   zx_status_t RemoteReadDirents() {
+    fidl::BufferSpan fidl_buffer(buffer_, sizeof(buffer_));
     auto result = fidl::WireCall(fidl::UnownedClientEnd<fio::Directory>(io_->control))
-                      .buffer(boxed_->fidl_buffer.view())
+                      .buffer(fidl_buffer)
                       ->ReadDirents(kBufferSize);
     if (result.status() != ZX_OK) {
       return result.status();
@@ -143,25 +143,21 @@ class DirentIteratorImpl {
   // The maximum buffer size that is supported by |fuchsia.io/Directory.ReadDirents|.
   static constexpr size_t kBufferSize = fio::wire::kMaxBuf;
 
-  // This large structure is heap-allocated once, to be reused by subsequent
-  // ReadDirents calls.
-  struct Boxed {
-    Boxed() = default;
-
-    // Buffers used by the FIDL calls.
-    fidl::SyncClientBuffer<fio::Directory::ReadDirents> fidl_buffer;
-  };
-
   zxio_remote_t* io_;
-  std::unique_ptr<Boxed> boxed_;
+
+  // Issuing a FIDL call requires storage for both the request (16 bytes) and the largest possible
+  // response message (8192 bytes of payload).
+  // TODO(https://fxbug.dev/85843): Once overlapping request and response is allowed, reduce
+  // this allocation to a single channel message size.
+  FIDL_ALIGNDECL uint8_t
+      buffer_[fidl::SyncClientMethodBufferSizeInChannel<fio::Directory::ReadDirents>()];
   const uint8_t* data_ = nullptr;
   uint64_t count_ = 0;
   uint64_t index_ = 0;
-  uint64_t opaque_[3];
 };
 
-static_assert(sizeof(zxio_dirent_iterator_t) == sizeof(DirentIteratorImpl),
-              "zxio_dirent_iterator_t should match DirentIteratorImpl");
+static_assert(sizeof(DirentIteratorImpl) <= sizeof(zxio_dirent_iterator_t),
+              "DirentIteratorImpl should fit within a zxio_dirent_iterator_t");
 
 // C++ wrapper around zxio_remote_t.
 class Remote {
