@@ -63,7 +63,6 @@ rustc_library("lib") {
     "//sdk/fidl/fuchsia.net.stack:fuchsia.net.stack-rustc",
     "//sdk/fidl/fuchsia.netstack:fuchsia.netstack-rustc",
     "//sdk/fidl/fuchsia.paver:fuchsia.paver-rustc",
-    "//sdk/fidl/fuchsia.pkg:fuchsia.pkg-rustc",
     "//sdk/fidl/fuchsia.power:fuchsia.power-rustc",
     "//sdk/fidl/fuchsia.power:fuchsia.power.test-rustc",
     "//sdk/fidl/fuchsia.recovery:fuchsia.recovery-rustc",
@@ -123,7 +122,6 @@ rustc_library("lib") {
     "//src/lib/ui/input-synthesis",
     "//src/lib/zircon/rust:fuchsia-zircon",
     "//src/power/temperature-logger/fuchsia.thermal.test:fuchsia.thermal.test-rustc",
-    "//src/sys/lib/fidl-fuchsia-pkg-ext",
     "//src/testing/sl4f/fidl:fuchsia.testing.proxy-rustc",
     "//src/testing/system-metrics-logger/fuchsia.systemmetrics.test:fuchsia.systemmetrics.test-rustc",
     "//third_party/rust_crates:anyhow",
@@ -158,7 +156,6 @@ rustc_library("lib") {
   ]
 
   test_deps = [
-    "//src/lib/fuchsia-url",
     "//src/lib/test_util",
     "//src/testing/fidl:placeholders-rustc",
     "//third_party/rust_crates:log",
@@ -285,10 +282,6 @@ rustc_library("lib") {
     "src/ram/facade.rs",
     "src/ram/mod.rs",
     "src/ram/types.rs",
-    "src/repository_manager/commands.rs",
-    "src/repository_manager/facade.rs",
-    "src/repository_manager/mod.rs",
-    "src/repository_manager/types.rs",
     "src/scenic/commands.rs",
     "src/scenic/facade.rs",
     "src/scenic/mod.rs",

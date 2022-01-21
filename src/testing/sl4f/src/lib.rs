@@ -35,7 +35,6 @@ pub mod netstack;
 pub mod paver;
 pub mod proxy;
 pub mod ram;
-pub mod repository_manager;
 pub mod scenic;
 pub mod server;
 pub mod setui;

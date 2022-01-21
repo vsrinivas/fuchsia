@@ -72,7 +72,6 @@
             "fuchsia.logger.Log",
             "fuchsia.lowpan.device.Lookup",
             "fuchsia.paver.Paver",
-            "fuchsia.pkg.RepositoryManager",
             "fuchsia.power.BatteryManager",
             "fuchsia.power.test.BatterySimulator",
             "fuchsia.recovery.FactoryReset",

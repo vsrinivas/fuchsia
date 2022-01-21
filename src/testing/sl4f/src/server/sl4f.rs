@@ -110,9 +110,6 @@ use crate::netstack::facade::NetstackFacade;
 // Ram related includes
 use crate::ram::facade::RamFacade;
 
-// Repository Manager related includes
-use crate::repository_manager::facade::RepositoryManagerFacade;
-
 // Paver related includes
 use crate::paver::facade::PaverFacade;
 
@@ -237,7 +234,6 @@ impl Sl4f {
                 "logging_facade" => LoggingFacade::new(),
                 "netstack_facade" => NetstackFacade::default(),
                 "ram_facade" => RamFacade::new(),
-                "repo_facade" => RepositoryManagerFacade::new(),
                 "rfcomm_facade" => RfcommFacade::new()?,
                 "paver" => PaverFacade::new(),
                 "profile_server_facade" => ProfileServerFacade::new(),
