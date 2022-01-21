@@ -690,12 +690,10 @@ mod tests {
         let (sender1, mut receiver1) = mpsc::channel(0);
         let (sender2, mut receiver2) = mpsc::channel(0);
 
-        // client 1 will reach the event limit
         handle.add_client(MpscNotifier { sender: sender1 }).await.unwrap();
         handle.queue_event("event1").await.unwrap();
         handle.queue_event("event2").await.unwrap();
 
-        // client 2 will not
         handle.add_client(MpscNotifier { sender: sender2 }).await.unwrap();
         let flush2 = handle.try_flush(Duration::from_secs(1)).await.unwrap();
         handle.queue_event("event3").await.unwrap();
@@ -707,6 +705,7 @@ mod tests {
         assert_eq!(receiver2.next().await, Some("event1"));
         assert_eq!(receiver2.next().await, Some("event2"));
 
+        // Flush doesn't count towards client 2's limit.
         flush2.await.unwrap();
 
         assert_eq!(receiver2.next().await, Some("event3"));
