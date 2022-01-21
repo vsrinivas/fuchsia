@@ -57,36 +57,32 @@ void Set(const Counter& counter, PhysBootTimes::Index i) {
 
 // Convert early boot timeline points into zx_ticks_t values in kcounters.
 void TimelineCounters(unsigned int level) {
-  if (gPhysHandoff) {
-    // This isn't really a loop in any meaningful sense, but structuring it
-    // this way gets the compiler to warn about any forgotten enum entry.
-    for (size_t i = 0; i < PhysBootTimes::kCount; ++i) {
-      const PhysBootTimes::Index when = static_cast<PhysBootTimes::Index>(i);
-      switch (when) {
-        case PhysBootTimes::kZbiEntry:
-          Set(timeline_zbi_entry, when);
-          break;
-        case PhysBootTimes::kPhysSetup:
-          Set(timeline_physboot_setup, when);
-          break;
-        case PhysBootTimes::kDecompressStart:
-          Set(timeline_decompress_start, when);
-          break;
-        case PhysBootTimes::kDecompressEnd:
-          Set(timeline_decompress_end, when);
-          break;
-        case PhysBootTimes::kZbiDone:
-          Set(timeline_zbi_done, when);
-          break;
-        case PhysBootTimes::kCount:
-          // There is no PhysBootTimes entry corresponding to kCount.
-          // This is the first sample taken by the kernel proper after physboot handed off.
-          Set(timeline_physboot_handoff, kernel_entry_ticks);
-          break;
-      }
+  // This isn't really a loop in any meaningful sense, but structuring it
+  // this way gets the compiler to warn about any forgotten enum entry.
+  for (size_t i = 0; i < PhysBootTimes::kCount; ++i) {
+    const PhysBootTimes::Index when = static_cast<PhysBootTimes::Index>(i);
+    switch (when) {
+      case PhysBootTimes::kZbiEntry:
+        Set(timeline_zbi_entry, when);
+        break;
+      case PhysBootTimes::kPhysSetup:
+        Set(timeline_physboot_setup, when);
+        break;
+      case PhysBootTimes::kDecompressStart:
+        Set(timeline_decompress_start, when);
+        break;
+      case PhysBootTimes::kDecompressEnd:
+        Set(timeline_decompress_end, when);
+        break;
+      case PhysBootTimes::kZbiDone:
+        Set(timeline_zbi_done, when);
+        break;
+      case PhysBootTimes::kCount:
+        // There is no PhysBootTimes entry corresponding to kCount.
+        // This is the first sample taken by the kernel proper after physboot handed off.
+        Set(timeline_physboot_handoff, kernel_entry_ticks);
+        break;
     }
-  } else {
-    Set(timeline_zbi_entry, kernel_entry_ticks);
   }
   Set(timeline_virtual_entry, kernel_virtual_entry_ticks);
 }
