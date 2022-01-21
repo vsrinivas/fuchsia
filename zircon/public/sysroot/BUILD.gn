@@ -220,7 +220,7 @@ template("_create_sysroot") {
   _sysroot_dir = invoker.sysroot_dir
 
   _libc_target = sysroot_libc_target
-  _libc_file = rebase_path(sysroot_libc_unstripped, root_build_dir)
+  _libc_file = rebase_path(sysroot_libc_stub, root_build_dir)
 
   _vdso_target = "//src/zircon/lib/zircon:zircon.stub($default_toolchain)"
   _vdso_path = get_label_info(_vdso_target, "root_out_dir") + "/libzircon.so"

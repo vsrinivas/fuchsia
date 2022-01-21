@@ -140,8 +140,8 @@ if (toolchain_environment == "user.vdso") {
     abi_ifs = "//src/zircon/lib/zircon/zircon.ifs"
 
     vdso_out_dir = get_label_info(vdso_label, "root_out_dir")
-    vdso_ifs_unstripped = "$vdso_out_dir/libzircon.so.ifs"
-    vdso_ifs = "$target_out_dir/libzircon_stripped.so.ifs"
+    vdso_ifs_unstripped = "$vdso_out_dir/libzircon.ifs"
+    vdso_ifs = "$target_out_dir/libzircon_stripped.ifs"
     action("strip-abi-target") {
       visibility = [ ":*" ]
 

@@ -755,12 +755,17 @@ template("clang_toolchain") {
         # shared library if the .ifs file has actually changed, indicating
         # that the linking ABI has actually changed.
         restat = true
-        depend_output = "${outfile}.ifs"
-        link_output = string_replace(unstripped_outfile,
-                                     "{{UNSTRIPPED_DIR}}",
-                                     "lib.unstripped")
-        outputs += [ depend_output ]
-        command += " && ${prefix}/llvm-ifs --write-if-changed --output-ifs=$depend_output $link_output"
+        depend_output = "{{output_dir}}/{{target_output_name}}.ifs"
+        unstripped_output = string_replace(unstripped_outfile,
+                                           "{{UNSTRIPPED_DIR}}",
+                                           "lib.unstripped")
+        link_output = "{{output_dir}}/link_stub/{{target_output_name}}.so"
+        runtime_outputs = [ outfile ]
+        outputs += [
+          depend_output,
+          link_output,
+        ]
+        command += " && ${prefix}/llvm-ifs --write-if-changed --output-ifs=$depend_output --output-elf=$link_output $unstripped_output"
       }
     }
 
