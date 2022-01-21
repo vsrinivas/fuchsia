@@ -33,12 +33,12 @@ Type: <code>uint32</code>
 
 <table>
     <tr><th>Name</th><th>Value</th><th>Description</th></tr><tr id="MyFlexibleEnum.FOO">
-            <td><code>FOO</code></td>
+            <td><h3 id="MyFlexibleEnum.FOO" class="add-link hide-from-toc">FOO</h3></td>
             <td><code>1</code></td>
             <td>
 </td>
         </tr><tr id="MyFlexibleEnum.BAR">
-            <td><code>BAR</code></td>
+            <td><h3 id="MyFlexibleEnum.BAR" class="add-link hide-from-toc">BAR</h3></td>
             <td><code>2</code></td>
             <td>
 </td>
@@ -54,17 +54,17 @@ Type: <code>uint32</code>
 
 <table>
     <tr><th>Name</th><th>Value</th><th>Description</th></tr><tr id="MyFlexibleEnumWithCustomUnknown.FOO">
-            <td><code>FOO</code></td>
+            <td><h3 id="MyFlexibleEnumWithCustomUnknown.FOO" class="add-link hide-from-toc">FOO</h3></td>
             <td><code>1</code></td>
             <td>
 </td>
         </tr><tr id="MyFlexibleEnumWithCustomUnknown.BAR">
-            <td><code>BAR</code></td>
+            <td><h3 id="MyFlexibleEnumWithCustomUnknown.BAR" class="add-link hide-from-toc">BAR</h3></td>
             <td><code>2</code></td>
             <td>
 </td>
         </tr><tr id="MyFlexibleEnumWithCustomUnknown.CUSTOM_UNKNOWN">
-            <td><code>CUSTOM_UNKNOWN</code></td>
+            <td><h3 id="MyFlexibleEnumWithCustomUnknown.CUSTOM_UNKNOWN" class="add-link hide-from-toc">CUSTOM_UNKNOWN</h3></td>
             <td><code>3</code></td>
             <td>
 </td>
@@ -80,12 +80,12 @@ Type: <code>uint32</code>
 
 <table>
     <tr><th>Name</th><th>Value</th><th>Description</th></tr><tr id="MyStrictEnum.FOO">
-            <td><code>FOO</code></td>
+            <td><h3 id="MyStrictEnum.FOO" class="add-link hide-from-toc">FOO</h3></td>
             <td><code>1</code></td>
             <td>
 </td>
         </tr><tr id="MyStrictEnum.BAR">
-            <td><code>BAR</code></td>
+            <td><h3 id="MyStrictEnum.BAR" class="add-link hide-from-toc">BAR</h3></td>
             <td><code>2</code></td>
             <td>
 </td>

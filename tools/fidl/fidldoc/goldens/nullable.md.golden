@@ -205,8 +205,8 @@
 
 
 <table>
-    <tr><th>Ordinal</th><tr><th>Variant</th><th>Type</th><th>Description</th></tr><tr id="SimpleUnion.a">
-            <td>1</td>
+    <tr><th>Ordinal</th><th>Variant</th><th>Type</th><th>Description</th></tr><tr id="SimpleUnion.a">
+            <td><h3 id="SimpleUnion.a" class="add-link hide-from-toc">1</h3></td>
             <td><code>a</code></td>
             <td>
                 <code>int32</code>
@@ -214,7 +214,7 @@
             <td>
 </td>
         </tr><tr id="SimpleUnion.b">
-            <td>2</td>
+            <td><h3 id="SimpleUnion.b" class="add-link hide-from-toc">2</h3></td>
             <td><code>b</code></td>
             <td>
                 <code>float32</code>

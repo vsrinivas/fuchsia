@@ -65,7 +65,7 @@ Type: <code>uint32</code>
 
 <table>
     <tr><th>Name</th><th>Value</th><th>Description</th></tr><tr id="ExampleEnum.MEMBER">
-            <td><code>MEMBER</code></td>
+            <td><h3 id="ExampleEnum.MEMBER" class="add-link hide-from-toc">MEMBER</h3></td>
             <td><code>1</code></td>
             <td>
 </td>
@@ -86,7 +86,7 @@ Type: <code>uint32</code>
 <table>
     <tr><th>Ordinal</th><th>Field</th><th>Type</th><th>Description</th></tr>
     <tr id="ExampleTable.member">
-            <td>1</td>
+            <td><h3 id="ExampleTable.member" class="add-link hide-from-toc">1</h3></td>
             <td><code>member</code></td>
             <td>
                 <code>uint32</code>
@@ -105,8 +105,8 @@ Type: <code>uint32</code>
 
 
 <table>
-    <tr><th>Ordinal</th><tr><th>Variant</th><th>Type</th><th>Description</th></tr><tr id="ExampleUnion.variant">
-            <td>1</td>
+    <tr><th>Ordinal</th><th>Variant</th><th>Type</th><th>Description</th></tr><tr id="ExampleUnion.variant">
+            <td><h3 id="ExampleUnion.variant" class="add-link hide-from-toc">1</h3></td>
             <td><code>variant</code></td>
             <td>
                 <code>uint32</code>
@@ -121,8 +121,8 @@ Type: <code>uint32</code>
 
 
 <table>
-    <tr><th>Ordinal</th><tr><th>Variant</th><th>Type</th><th>Description</th></tr><tr id="ExampleXUnion.variant">
-            <td>1</td>
+    <tr><th>Ordinal</th><th>Variant</th><th>Type</th><th>Description</th></tr><tr id="ExampleXUnion.variant">
+            <td><h3 id="ExampleXUnion.variant" class="add-link hide-from-toc">1</h3></td>
             <td><code>variant</code></td>
             <td>
                 <code>uint32</code>
@@ -145,7 +145,7 @@ Type: <code>uint32</code>
 
 <table>
     <tr><th>Name</th><th>Value</th><th>Description</th></tr><tr id="ExampleBits.MEMBER">
-            <td>MEMBER</td>
+            <td><h3 id="ExampleBits.MEMBER" class="add-link hide-from-toc">MEMBER</h3></td>
             <td>1</td>
             <td>
 </td>

@@ -82,12 +82,12 @@ Type: <code>uint32</code>
 
 <table>
     <tr><th>Name</th><th>Value</th><th>Description</th></tr><tr id="obj_type.NONE">
-            <td><code>NONE</code></td>
+            <td><h3 id="obj_type.NONE" class="add-link hide-from-toc">NONE</h3></td>
             <td><code>0</code></td>
             <td>
 </td>
         </tr><tr id="obj_type.VMO">
-            <td><code>VMO</code></td>
+            <td><h3 id="obj_type.VMO" class="add-link hide-from-toc">VMO</h3></td>
             <td><code>3</code></td>
             <td>
 </td>
@@ -108,7 +108,7 @@ Type: <code>uint32</code>
 <table>
     <tr><th>Ordinal</th><th>Field</th><th>Type</th><th>Description</th></tr>
     <tr id="TableWithHandle.h">
-            <td>1</td>
+            <td><h3 id="TableWithHandle.h" class="add-link hide-from-toc">1</h3></td>
             <td><code>h</code></td>
             <td>
                 <code>handle&lt;vmo&gt;</code>
@@ -127,8 +127,8 @@ Type: <code>uint32</code>
 
 
 <table>
-    <tr><th>Ordinal</th><tr><th>Variant</th><th>Type</th><th>Description</th></tr><tr id="UnionWithHandle.h">
-            <td>1</td>
+    <tr><th>Ordinal</th><th>Variant</th><th>Type</th><th>Description</th></tr><tr id="UnionWithHandle.h">
+            <td><h3 id="UnionWithHandle.h" class="add-link hide-from-toc">1</h3></td>
             <td><code>h</code></td>
             <td>
                 <code>handle&lt;vmo&gt;</code>

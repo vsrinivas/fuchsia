@@ -181,8 +181,8 @@
 
 
 <table>
-    <tr><th>Ordinal</th><tr><th>Variant</th><th>Type</th><th>Description</th></tr><tr id="ExplicitFoo.s">
-            <td>2</td>
+    <tr><th>Ordinal</th><th>Variant</th><th>Type</th><th>Description</th></tr><tr id="ExplicitFoo.s">
+            <td><h3 id="ExplicitFoo.s" class="add-link hide-from-toc">2</h3></td>
             <td><code>s</code></td>
             <td>
                 <code>string</code>
@@ -190,7 +190,7 @@
             <td>
 </td>
         </tr><tr id="ExplicitFoo.i">
-            <td>1</td>
+            <td><h3 id="ExplicitFoo.i" class="add-link hide-from-toc">1</h3></td>
             <td><code>i</code></td>
             <td>
                 <code>int32</code>
@@ -198,7 +198,7 @@
             <td>
 </td>
         </tr><tr id="ExplicitFoo.">
-            <td>3</td>
+            <td><h3 id="ExplicitFoo." class="add-link hide-from-toc">3</h3></td>
             <td><code></code></td>
             <td>
                 <code></code>
@@ -213,8 +213,8 @@
 
 
 <table>
-    <tr><th>Ordinal</th><tr><th>Variant</th><th>Type</th><th>Description</th></tr><tr id="ExplicitPizzaOrPasta.">
-            <td>3</td>
+    <tr><th>Ordinal</th><th>Variant</th><th>Type</th><th>Description</th></tr><tr id="ExplicitPizzaOrPasta.">
+            <td><h3 id="ExplicitPizzaOrPasta." class="add-link hide-from-toc">3</h3></td>
             <td><code></code></td>
             <td>
                 <code></code>
@@ -222,7 +222,7 @@
             <td>
 </td>
         </tr><tr id="ExplicitPizzaOrPasta.">
-            <td>2</td>
+            <td><h3 id="ExplicitPizzaOrPasta." class="add-link hide-from-toc">2</h3></td>
             <td><code></code></td>
             <td>
                 <code></code>
@@ -230,7 +230,7 @@
             <td>
 </td>
         </tr><tr id="ExplicitPizzaOrPasta.pizza">
-            <td>1</td>
+            <td><h3 id="ExplicitPizzaOrPasta.pizza" class="add-link hide-from-toc">1</h3></td>
             <td><code>pizza</code></td>
             <td>
                 <code><a class='link' href='#Pizza'>Pizza</a></code>
@@ -238,7 +238,7 @@
             <td>
 </td>
         </tr><tr id="ExplicitPizzaOrPasta.pasta">
-            <td>4</td>
+            <td><h3 id="ExplicitPizzaOrPasta.pasta" class="add-link hide-from-toc">4</h3></td>
             <td><code>pasta</code></td>
             <td>
                 <code><a class='link' href='#Pasta'>Pasta</a></code>
@@ -253,8 +253,8 @@
 
 
 <table>
-    <tr><th>Ordinal</th><tr><th>Variant</th><th>Type</th><th>Description</th></tr><tr id="ExplicitStrictFoo.">
-            <td>1</td>
+    <tr><th>Ordinal</th><th>Variant</th><th>Type</th><th>Description</th></tr><tr id="ExplicitStrictFoo.">
+            <td><h3 id="ExplicitStrictFoo." class="add-link hide-from-toc">1</h3></td>
             <td><code></code></td>
             <td>
                 <code></code>
@@ -262,7 +262,7 @@
             <td>
 </td>
         </tr><tr id="ExplicitStrictFoo.s">
-            <td>3</td>
+            <td><h3 id="ExplicitStrictFoo.s" class="add-link hide-from-toc">3</h3></td>
             <td><code>s</code></td>
             <td>
                 <code>string</code>
@@ -270,7 +270,7 @@
             <td>
 </td>
         </tr><tr id="ExplicitStrictFoo.i">
-            <td>2</td>
+            <td><h3 id="ExplicitStrictFoo.i" class="add-link hide-from-toc">2</h3></td>
             <td><code>i</code></td>
             <td>
                 <code>int32</code>
@@ -285,8 +285,8 @@
 
 
 <table>
-    <tr><th>Ordinal</th><tr><th>Variant</th><th>Type</th><th>Description</th></tr><tr id="ExplicitUnion.">
-            <td>2</td>
+    <tr><th>Ordinal</th><th>Variant</th><th>Type</th><th>Description</th></tr><tr id="ExplicitUnion.">
+            <td><h3 id="ExplicitUnion." class="add-link hide-from-toc">2</h3></td>
             <td><code></code></td>
             <td>
                 <code></code>
@@ -294,7 +294,7 @@
             <td>
 </td>
         </tr><tr id="ExplicitUnion.Primitive">
-            <td>1</td>
+            <td><h3 id="ExplicitUnion.Primitive" class="add-link hide-from-toc">1</h3></td>
             <td><code>Primitive</code></td>
             <td>
                 <code>int32</code>
@@ -302,7 +302,7 @@
             <td>
 </td>
         </tr><tr id="ExplicitUnion.StringNeedsConstructor">
-            <td>3</td>
+            <td><h3 id="ExplicitUnion.StringNeedsConstructor" class="add-link hide-from-toc">3</h3></td>
             <td><code>StringNeedsConstructor</code></td>
             <td>
                 <code>string</code>
@@ -317,8 +317,8 @@
 
 
 <table>
-    <tr><th>Ordinal</th><tr><th>Variant</th><th>Type</th><th>Description</th></tr><tr id="ExplicitXUnion.">
-            <td>3</td>
+    <tr><th>Ordinal</th><th>Variant</th><th>Type</th><th>Description</th></tr><tr id="ExplicitXUnion.">
+            <td><h3 id="ExplicitXUnion." class="add-link hide-from-toc">3</h3></td>
             <td><code></code></td>
             <td>
                 <code></code>
@@ -326,7 +326,7 @@
             <td>
 </td>
         </tr><tr id="ExplicitXUnion.">
-            <td>2</td>
+            <td><h3 id="ExplicitXUnion." class="add-link hide-from-toc">2</h3></td>
             <td><code></code></td>
             <td>
                 <code></code>
@@ -334,7 +334,7 @@
             <td>
 </td>
         </tr><tr id="ExplicitXUnion.i">
-            <td>1</td>
+            <td><h3 id="ExplicitXUnion.i" class="add-link hide-from-toc">1</h3></td>
             <td><code>i</code></td>
             <td>
                 <code>int64</code>
@@ -342,7 +342,7 @@
             <td>
 </td>
         </tr><tr id="ExplicitXUnion.f">
-            <td>4</td>
+            <td><h3 id="ExplicitXUnion.f" class="add-link hide-from-toc">4</h3></td>
             <td><code>f</code></td>
             <td>
                 <code>float32</code>
@@ -357,8 +357,8 @@
 
 
 <table>
-    <tr><th>Ordinal</th><tr><th>Variant</th><th>Type</th><th>Description</th></tr><tr id="FieldCollision.field_collision_tag">
-            <td>1</td>
+    <tr><th>Ordinal</th><th>Variant</th><th>Type</th><th>Description</th></tr><tr id="FieldCollision.field_collision_tag">
+            <td><h3 id="FieldCollision.field_collision_tag" class="add-link hide-from-toc">1</h3></td>
             <td><code>field_collision_tag</code></td>
             <td>
                 <code>int32</code>
@@ -373,8 +373,8 @@
 
 
 <table>
-    <tr><th>Ordinal</th><tr><th>Variant</th><th>Type</th><th>Description</th></tr><tr id="FlexibleFoo.s">
-            <td>1</td>
+    <tr><th>Ordinal</th><th>Variant</th><th>Type</th><th>Description</th></tr><tr id="FlexibleFoo.s">
+            <td><h3 id="FlexibleFoo.s" class="add-link hide-from-toc">1</h3></td>
             <td><code>s</code></td>
             <td>
                 <code>string</code>
@@ -382,7 +382,7 @@
             <td>
 </td>
         </tr><tr id="FlexibleFoo.i">
-            <td>2</td>
+            <td><h3 id="FlexibleFoo.i" class="add-link hide-from-toc">2</h3></td>
             <td><code>i</code></td>
             <td>
                 <code>int32</code>
@@ -397,8 +397,8 @@
 
 
 <table>
-    <tr><th>Ordinal</th><tr><th>Variant</th><th>Type</th><th>Description</th></tr><tr id="FlexiblePizzaOrPasta.pizza">
-            <td>1</td>
+    <tr><th>Ordinal</th><th>Variant</th><th>Type</th><th>Description</th></tr><tr id="FlexiblePizzaOrPasta.pizza">
+            <td><h3 id="FlexiblePizzaOrPasta.pizza" class="add-link hide-from-toc">1</h3></td>
             <td><code>pizza</code></td>
             <td>
                 <code><a class='link' href='#Pizza'>Pizza</a></code>
@@ -406,7 +406,7 @@
             <td>
 </td>
         </tr><tr id="FlexiblePizzaOrPasta.pasta">
-            <td>2</td>
+            <td><h3 id="FlexiblePizzaOrPasta.pasta" class="add-link hide-from-toc">2</h3></td>
             <td><code>pasta</code></td>
             <td>
                 <code><a class='link' href='#Pasta'>Pasta</a></code>
@@ -421,8 +421,8 @@
 
 
 <table>
-    <tr><th>Ordinal</th><tr><th>Variant</th><th>Type</th><th>Description</th></tr><tr id="FlexibleUnion.Primitive">
-            <td>1</td>
+    <tr><th>Ordinal</th><th>Variant</th><th>Type</th><th>Description</th></tr><tr id="FlexibleUnion.Primitive">
+            <td><h3 id="FlexibleUnion.Primitive" class="add-link hide-from-toc">1</h3></td>
             <td><code>Primitive</code></td>
             <td>
                 <code>int32</code>
@@ -430,7 +430,7 @@
             <td>
 </td>
         </tr><tr id="FlexibleUnion.StringNeedsConstructor">
-            <td>2</td>
+            <td><h3 id="FlexibleUnion.StringNeedsConstructor" class="add-link hide-from-toc">2</h3></td>
             <td><code>StringNeedsConstructor</code></td>
             <td>
                 <code>string</code>
@@ -438,7 +438,7 @@
             <td>
 </td>
         </tr><tr id="FlexibleUnion.VectorStringAlsoNeedsConstructor">
-            <td>3</td>
+            <td><h3 id="FlexibleUnion.VectorStringAlsoNeedsConstructor" class="add-link hide-from-toc">3</h3></td>
             <td><code>VectorStringAlsoNeedsConstructor</code></td>
             <td>
                 <code>vector&lt;string&gt;</code>
@@ -453,8 +453,8 @@
 
 
 <table>
-    <tr><th>Ordinal</th><tr><th>Variant</th><th>Type</th><th>Description</th></tr><tr id="NewerSimpleUnion.i">
-            <td>1</td>
+    <tr><th>Ordinal</th><th>Variant</th><th>Type</th><th>Description</th></tr><tr id="NewerSimpleUnion.i">
+            <td><h3 id="NewerSimpleUnion.i" class="add-link hide-from-toc">1</h3></td>
             <td><code>i</code></td>
             <td>
                 <code>int64</code>
@@ -462,7 +462,7 @@
             <td>
 </td>
         </tr><tr id="NewerSimpleUnion.s">
-            <td>2</td>
+            <td><h3 id="NewerSimpleUnion.s" class="add-link hide-from-toc">2</h3></td>
             <td><code>s</code></td>
             <td>
                 <code>string</code>
@@ -470,7 +470,7 @@
             <td>
 </td>
         </tr><tr id="NewerSimpleUnion.v">
-            <td>3</td>
+            <td><h3 id="NewerSimpleUnion.v" class="add-link hide-from-toc">3</h3></td>
             <td><code>v</code></td>
             <td>
                 <code>vector&lt;string&gt;</code>
@@ -485,8 +485,8 @@
 
 
 <table>
-    <tr><th>Ordinal</th><tr><th>Variant</th><th>Type</th><th>Description</th></tr><tr id="OlderSimpleUnion.i">
-            <td>1</td>
+    <tr><th>Ordinal</th><th>Variant</th><th>Type</th><th>Description</th></tr><tr id="OlderSimpleUnion.i">
+            <td><h3 id="OlderSimpleUnion.i" class="add-link hide-from-toc">1</h3></td>
             <td><code>i</code></td>
             <td>
                 <code>int64</code>
@@ -494,7 +494,7 @@
             <td>
 </td>
         </tr><tr id="OlderSimpleUnion.f">
-            <td>2</td>
+            <td><h3 id="OlderSimpleUnion.f" class="add-link hide-from-toc">2</h3></td>
             <td><code>f</code></td>
             <td>
                 <code>float32</code>
@@ -509,8 +509,8 @@
 
 
 <table>
-    <tr><th>Ordinal</th><tr><th>Variant</th><th>Type</th><th>Description</th></tr><tr id="PizzaOrPasta.pizza">
-            <td>1</td>
+    <tr><th>Ordinal</th><th>Variant</th><th>Type</th><th>Description</th></tr><tr id="PizzaOrPasta.pizza">
+            <td><h3 id="PizzaOrPasta.pizza" class="add-link hide-from-toc">1</h3></td>
             <td><code>pizza</code></td>
             <td>
                 <code><a class='link' href='#Pizza'>Pizza</a></code>
@@ -518,7 +518,7 @@
             <td>
 </td>
         </tr><tr id="PizzaOrPasta.pasta">
-            <td>2</td>
+            <td><h3 id="PizzaOrPasta.pasta" class="add-link hide-from-toc">2</h3></td>
             <td><code>pasta</code></td>
             <td>
                 <code><a class='link' href='#Pasta'>Pasta</a></code>
@@ -533,8 +533,8 @@
 
 
 <table>
-    <tr><th>Ordinal</th><tr><th>Variant</th><th>Type</th><th>Description</th></tr><tr id="ReverseOrdinalUnion.second">
-            <td>2</td>
+    <tr><th>Ordinal</th><th>Variant</th><th>Type</th><th>Description</th></tr><tr id="ReverseOrdinalUnion.second">
+            <td><h3 id="ReverseOrdinalUnion.second" class="add-link hide-from-toc">2</h3></td>
             <td><code>second</code></td>
             <td>
                 <code>uint32</code>
@@ -542,7 +542,7 @@
             <td>
 </td>
         </tr><tr id="ReverseOrdinalUnion.first">
-            <td>1</td>
+            <td><h3 id="ReverseOrdinalUnion.first" class="add-link hide-from-toc">1</h3></td>
             <td><code>first</code></td>
             <td>
                 <code>uint32</code>
@@ -557,8 +557,8 @@
 
 
 <table>
-    <tr><th>Ordinal</th><tr><th>Variant</th><th>Type</th><th>Description</th></tr><tr id="StrictBoundedXUnion.v">
-            <td>1</td>
+    <tr><th>Ordinal</th><th>Variant</th><th>Type</th><th>Description</th></tr><tr id="StrictBoundedXUnion.v">
+            <td><h3 id="StrictBoundedXUnion.v" class="add-link hide-from-toc">1</h3></td>
             <td><code>v</code></td>
             <td>
                 <code>vector&lt;uint8&gt;[10]</code>
@@ -573,8 +573,8 @@
 
 
 <table>
-    <tr><th>Ordinal</th><tr><th>Variant</th><th>Type</th><th>Description</th></tr><tr id="StrictFoo.s">
-            <td>1</td>
+    <tr><th>Ordinal</th><th>Variant</th><th>Type</th><th>Description</th></tr><tr id="StrictFoo.s">
+            <td><h3 id="StrictFoo.s" class="add-link hide-from-toc">1</h3></td>
             <td><code>s</code></td>
             <td>
                 <code>string</code>
@@ -582,7 +582,7 @@
             <td>
 </td>
         </tr><tr id="StrictFoo.i">
-            <td>2</td>
+            <td><h3 id="StrictFoo.i" class="add-link hide-from-toc">2</h3></td>
             <td><code>i</code></td>
             <td>
                 <code>int32</code>
@@ -597,8 +597,8 @@
 
 
 <table>
-    <tr><th>Ordinal</th><tr><th>Variant</th><th>Type</th><th>Description</th></tr><tr id="StrictPizzaOrPasta.pizza">
-            <td>1</td>
+    <tr><th>Ordinal</th><th>Variant</th><th>Type</th><th>Description</th></tr><tr id="StrictPizzaOrPasta.pizza">
+            <td><h3 id="StrictPizzaOrPasta.pizza" class="add-link hide-from-toc">1</h3></td>
             <td><code>pizza</code></td>
             <td>
                 <code><a class='link' href='#Pizza'>Pizza</a></code>
@@ -606,7 +606,7 @@
             <td>
 </td>
         </tr><tr id="StrictPizzaOrPasta.pasta">
-            <td>2</td>
+            <td><h3 id="StrictPizzaOrPasta.pasta" class="add-link hide-from-toc">2</h3></td>
             <td><code>pasta</code></td>
             <td>
                 <code><a class='link' href='#Pasta'>Pasta</a></code>
@@ -621,8 +621,8 @@
 
 
 <table>
-    <tr><th>Ordinal</th><tr><th>Variant</th><th>Type</th><th>Description</th></tr><tr id="StrictSimpleXUnion.i">
-            <td>1</td>
+    <tr><th>Ordinal</th><th>Variant</th><th>Type</th><th>Description</th></tr><tr id="StrictSimpleXUnion.i">
+            <td><h3 id="StrictSimpleXUnion.i" class="add-link hide-from-toc">1</h3></td>
             <td><code>i</code></td>
             <td>
                 <code>int32</code>
@@ -630,7 +630,7 @@
             <td>
 </td>
         </tr><tr id="StrictSimpleXUnion.f">
-            <td>2</td>
+            <td><h3 id="StrictSimpleXUnion.f" class="add-link hide-from-toc">2</h3></td>
             <td><code>f</code></td>
             <td>
                 <code>float32</code>
@@ -638,7 +638,7 @@
             <td>
 </td>
         </tr><tr id="StrictSimpleXUnion.s">
-            <td>3</td>
+            <td><h3 id="StrictSimpleXUnion.s" class="add-link hide-from-toc">3</h3></td>
             <td><code>s</code></td>
             <td>
                 <code>string</code>
@@ -653,8 +653,8 @@
 
 
 <table>
-    <tr><th>Ordinal</th><tr><th>Variant</th><th>Type</th><th>Description</th></tr><tr id="StrictUnion.Primitive">
-            <td>1</td>
+    <tr><th>Ordinal</th><th>Variant</th><th>Type</th><th>Description</th></tr><tr id="StrictUnion.Primitive">
+            <td><h3 id="StrictUnion.Primitive" class="add-link hide-from-toc">1</h3></td>
             <td><code>Primitive</code></td>
             <td>
                 <code>int32</code>
@@ -662,7 +662,7 @@
             <td>
 </td>
         </tr><tr id="StrictUnion.StringNeedsConstructor">
-            <td>2</td>
+            <td><h3 id="StrictUnion.StringNeedsConstructor" class="add-link hide-from-toc">2</h3></td>
             <td><code>StringNeedsConstructor</code></td>
             <td>
                 <code>string</code>
@@ -670,7 +670,7 @@
             <td>
 </td>
         </tr><tr id="StrictUnion.VectorStringAlsoNeedsConstructor">
-            <td>3</td>
+            <td><h3 id="StrictUnion.VectorStringAlsoNeedsConstructor" class="add-link hide-from-toc">3</h3></td>
             <td><code>VectorStringAlsoNeedsConstructor</code></td>
             <td>
                 <code>vector&lt;string&gt;</code>
@@ -685,8 +685,8 @@
 
 
 <table>
-    <tr><th>Ordinal</th><tr><th>Variant</th><th>Type</th><th>Description</th></tr><tr id="Union.Primitive">
-            <td>1</td>
+    <tr><th>Ordinal</th><th>Variant</th><th>Type</th><th>Description</th></tr><tr id="Union.Primitive">
+            <td><h3 id="Union.Primitive" class="add-link hide-from-toc">1</h3></td>
             <td><code>Primitive</code></td>
             <td>
                 <code>int32</code>
@@ -694,7 +694,7 @@
             <td>
 </td>
         </tr><tr id="Union.StringNeedsConstructor">
-            <td>2</td>
+            <td><h3 id="Union.StringNeedsConstructor" class="add-link hide-from-toc">2</h3></td>
             <td><code>StringNeedsConstructor</code></td>
             <td>
                 <code>string</code>
@@ -702,7 +702,7 @@
             <td>
 </td>
         </tr><tr id="Union.VectorStringAlsoNeedsConstructor">
-            <td>3</td>
+            <td><h3 id="Union.VectorStringAlsoNeedsConstructor" class="add-link hide-from-toc">3</h3></td>
             <td><code>VectorStringAlsoNeedsConstructor</code></td>
             <td>
                 <code>vector&lt;string&gt;</code>
@@ -717,8 +717,8 @@
 
 
 <table>
-    <tr><th>Ordinal</th><tr><th>Variant</th><th>Type</th><th>Description</th></tr><tr id="UnionWithAttributes.x">
-            <td>1</td>
+    <tr><th>Ordinal</th><th>Variant</th><th>Type</th><th>Description</th></tr><tr id="UnionWithAttributes.x">
+            <td><h3 id="UnionWithAttributes.x" class="add-link hide-from-toc">1</h3></td>
             <td><code>x</code></td>
             <td>
                 <code>int64</code>
@@ -726,7 +726,7 @@
             <td>
 </td>
         </tr><tr id="UnionWithAttributes.">
-            <td>2</td>
+            <td><h3 id="UnionWithAttributes." class="add-link hide-from-toc">2</h3></td>
             <td><code></code></td>
             <td>
                 <code></code>
@@ -741,8 +741,8 @@
 
 
 <table>
-    <tr><th>Ordinal</th><tr><th>Variant</th><th>Type</th><th>Description</th></tr><tr id="XUnionContainingEmptyStruct.empty">
-            <td>1</td>
+    <tr><th>Ordinal</th><th>Variant</th><th>Type</th><th>Description</th></tr><tr id="XUnionContainingEmptyStruct.empty">
+            <td><h3 id="XUnionContainingEmptyStruct.empty" class="add-link hide-from-toc">1</h3></td>
             <td><code>empty</code></td>
             <td>
                 <code><a class='link' href='#Empty'>Empty</a></code>

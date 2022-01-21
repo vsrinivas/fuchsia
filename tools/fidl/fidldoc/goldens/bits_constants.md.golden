@@ -28,17 +28,17 @@ Type: <code>uint32</code>
 
 <table>
     <tr><th>Name</th><th>Value</th><th>Description</th></tr><tr id="BitsType.A">
-            <td>A</td>
+            <td><h3 id="BitsType.A" class="add-link hide-from-toc">A</h3></td>
             <td>1</td>
             <td>
 </td>
         </tr><tr id="BitsType.B">
-            <td>B</td>
+            <td><h3 id="BitsType.B" class="add-link hide-from-toc">B</h3></td>
             <td>128</td>
             <td>
 </td>
         </tr><tr id="BitsType.C">
-            <td>C</td>
+            <td><h3 id="BitsType.C" class="add-link hide-from-toc">C</h3></td>
             <td>2</td>
             <td>
 </td>

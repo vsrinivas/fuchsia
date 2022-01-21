@@ -98,12 +98,12 @@ Type: <code>uint32</code>
 
 <table>
     <tr><th>Name</th><th>Value</th><th>Description</th></tr><tr id="obj_type.NONE">
-            <td><code>NONE</code></td>
+            <td><h3 id="obj_type.NONE" class="add-link hide-from-toc">NONE</h3></td>
             <td><code>0</code></td>
             <td>
 </td>
         </tr><tr id="obj_type.CHANNEL">
-            <td><code>CHANNEL</code></td>
+            <td><h3 id="obj_type.CHANNEL" class="add-link hide-from-toc">CHANNEL</h3></td>
             <td><code>4</code></td>
             <td>
 </td>

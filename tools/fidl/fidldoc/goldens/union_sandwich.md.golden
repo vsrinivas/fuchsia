@@ -186,8 +186,8 @@
 
 
 <table>
-    <tr><th>Ordinal</th><tr><th>Variant</th><th>Type</th><th>Description</th></tr><tr id="UnionSize12Alignment4.variant">
-            <td>1</td>
+    <tr><th>Ordinal</th><th>Variant</th><th>Type</th><th>Description</th></tr><tr id="UnionSize12Alignment4.variant">
+            <td><h3 id="UnionSize12Alignment4.variant" class="add-link hide-from-toc">1</h3></td>
             <td><code>variant</code></td>
             <td>
                 <code>uint8[6]</code>
@@ -202,8 +202,8 @@
 
 
 <table>
-    <tr><th>Ordinal</th><tr><th>Variant</th><th>Type</th><th>Description</th></tr><tr id="UnionSize24Alignment8.variant">
-            <td>1</td>
+    <tr><th>Ordinal</th><th>Variant</th><th>Type</th><th>Description</th></tr><tr id="UnionSize24Alignment8.variant">
+            <td><h3 id="UnionSize24Alignment8.variant" class="add-link hide-from-toc">1</h3></td>
             <td><code>variant</code></td>
             <td>
                 <code><a class='link' href='#StructSize16Alignment8'>StructSize16Alignment8</a></code>
@@ -218,8 +218,8 @@
 
 
 <table>
-    <tr><th>Ordinal</th><tr><th>Variant</th><th>Type</th><th>Description</th></tr><tr id="UnionSize36Alignment4.variant">
-            <td>1</td>
+    <tr><th>Ordinal</th><th>Variant</th><th>Type</th><th>Description</th></tr><tr id="UnionSize36Alignment4.variant">
+            <td><h3 id="UnionSize36Alignment4.variant" class="add-link hide-from-toc">1</h3></td>
             <td><code>variant</code></td>
             <td>
                 <code>uint8[32]</code>
@@ -234,8 +234,8 @@
 
 
 <table>
-    <tr><th>Ordinal</th><tr><th>Variant</th><th>Type</th><th>Description</th></tr><tr id="UnionSize8Alignment4.variant">
-            <td>1</td>
+    <tr><th>Ordinal</th><th>Variant</th><th>Type</th><th>Description</th></tr><tr id="UnionSize8Alignment4.variant">
+            <td><h3 id="UnionSize8Alignment4.variant" class="add-link hide-from-toc">1</h3></td>
             <td><code>variant</code></td>
             <td>
                 <code>uint32</code>

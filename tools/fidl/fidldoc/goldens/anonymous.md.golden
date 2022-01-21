@@ -131,17 +131,17 @@ Type: <code>uint32</code>
 
 <table>
     <tr><th>Name</th><th>Value</th><th>Description</th></tr><tr id="Op.ADD">
-            <td><code>ADD</code></td>
+            <td><h3 id="Op.ADD" class="add-link hide-from-toc">ADD</h3></td>
             <td><code>1</code></td>
             <td>
 </td>
         </tr><tr id="Op.MUL">
-            <td><code>MUL</code></td>
+            <td><h3 id="Op.MUL" class="add-link hide-from-toc">MUL</h3></td>
             <td><code>2</code></td>
             <td>
 </td>
         </tr><tr id="Op.DIV">
-            <td><code>DIV</code></td>
+            <td><h3 id="Op.DIV" class="add-link hide-from-toc">DIV</h3></td>
             <td><code>3</code></td>
             <td>
 </td>
@@ -157,12 +157,12 @@ Type: <code>uint32</code>
 
 <table>
     <tr><th>Name</th><th>Value</th><th>Description</th></tr><tr id="SomeProtocol_SomeMethod_Error.ERROR_ONE">
-            <td><code>ERROR_ONE</code></td>
+            <td><h3 id="SomeProtocol_SomeMethod_Error.ERROR_ONE" class="add-link hide-from-toc">ERROR_ONE</h3></td>
             <td><code>1</code></td>
             <td>
 </td>
         </tr><tr id="SomeProtocol_SomeMethod_Error.ERROR_TWO">
-            <td><code>ERROR_TWO</code></td>
+            <td><h3 id="SomeProtocol_SomeMethod_Error.ERROR_TWO" class="add-link hide-from-toc">ERROR_TWO</h3></td>
             <td><code>2</code></td>
             <td>
 </td>
@@ -183,7 +183,7 @@ Type: <code>uint32</code>
 <table>
     <tr><th>Ordinal</th><th>Field</th><th>Type</th><th>Description</th></tr>
     <tr id="FunctionApplication.func">
-            <td>1</td>
+            <td><h3 id="FunctionApplication.func" class="add-link hide-from-toc">1</h3></td>
             <td><code>func</code></td>
             <td>
                 <code>string[100]</code>
@@ -191,7 +191,7 @@ Type: <code>uint32</code>
             <td>
 </td>
         </tr><tr id="FunctionApplication.">
-            <td>2</td>
+            <td><h3 id="FunctionApplication." class="add-link hide-from-toc">2</h3></td>
             <td><code>RESERVED</code></td>
             <td>
                 <code></code>
@@ -199,7 +199,7 @@ Type: <code>uint32</code>
             <td>
 </td>
         </tr><tr id="FunctionApplication.args">
-            <td>3</td>
+            <td><h3 id="FunctionApplication.args" class="add-link hide-from-toc">3</h3></td>
             <td><code>args</code></td>
             <td>
                 <code>vector&lt;<a class='link' href='#Expression'>Expression</a>&gt;[5]</code>
@@ -207,7 +207,7 @@ Type: <code>uint32</code>
             <td>
 </td>
         </tr><tr id="FunctionApplication.flags">
-            <td>4</td>
+            <td><h3 id="FunctionApplication.flags" class="add-link hide-from-toc">4</h3></td>
             <td><code>flags</code></td>
             <td>
                 <code><a class='link' href='#Flags'>Flags</a></code>
@@ -227,7 +227,7 @@ Type: <code>uint32</code>
 <table>
     <tr><th>Ordinal</th><th>Field</th><th>Type</th><th>Description</th></tr>
     <tr id="TableMember.">
-            <td>1</td>
+            <td><h3 id="TableMember." class="add-link hide-from-toc">1</h3></td>
             <td><code>RESERVED</code></td>
             <td>
                 <code></code>
@@ -235,7 +235,7 @@ Type: <code>uint32</code>
             <td>
 </td>
         </tr><tr id="TableMember.table_data">
-            <td>2</td>
+            <td><h3 id="TableMember.table_data" class="add-link hide-from-toc">2</h3></td>
             <td><code>table_data</code></td>
             <td>
                 <code>vector&lt;<a class='link' href='#TableData'>TableData</a>&gt;[10]</code>
@@ -254,8 +254,8 @@ Type: <code>uint32</code>
 
 
 <table>
-    <tr><th>Ordinal</th><tr><th>Variant</th><th>Type</th><th>Description</th></tr><tr id="Expression.value">
-            <td>1</td>
+    <tr><th>Ordinal</th><th>Variant</th><th>Type</th><th>Description</th></tr><tr id="Expression.value">
+            <td><h3 id="Expression.value" class="add-link hide-from-toc">1</h3></td>
             <td><code>value</code></td>
             <td>
                 <code>uint64</code>
@@ -263,7 +263,7 @@ Type: <code>uint32</code>
             <td>
 </td>
         </tr><tr id="Expression.bin_op">
-            <td>2</td>
+            <td><h3 id="Expression.bin_op" class="add-link hide-from-toc">2</h3></td>
             <td><code>bin_op</code></td>
             <td>
                 <code><a class='link' href='#OverrideTest'>OverrideTest</a></code>
@@ -271,7 +271,7 @@ Type: <code>uint32</code>
             <td>
 </td>
         </tr><tr id="Expression.function_application">
-            <td>3</td>
+            <td><h3 id="Expression.function_application" class="add-link hide-from-toc">3</h3></td>
             <td><code>function_application</code></td>
             <td>
                 <code><a class='link' href='#FunctionApplication'>FunctionApplication</a></code>
@@ -286,8 +286,8 @@ Type: <code>uint32</code>
 
 
 <table>
-    <tr><th>Ordinal</th><tr><th>Variant</th><th>Type</th><th>Description</th></tr><tr id="SomeProtocol_SomeMethod_Result.response">
-            <td>1</td>
+    <tr><th>Ordinal</th><th>Variant</th><th>Type</th><th>Description</th></tr><tr id="SomeProtocol_SomeMethod_Result.response">
+            <td><h3 id="SomeProtocol_SomeMethod_Result.response" class="add-link hide-from-toc">1</h3></td>
             <td><code>response</code></td>
             <td>
                 <code><a class='link' href='#SomeProtocol_SomeMethod_Response'>SomeProtocol_SomeMethod_Response</a></code>
@@ -295,7 +295,7 @@ Type: <code>uint32</code>
             <td>
 </td>
         </tr><tr id="SomeProtocol_SomeMethod_Result.err">
-            <td>2</td>
+            <td><h3 id="SomeProtocol_SomeMethod_Result.err" class="add-link hide-from-toc">2</h3></td>
             <td><code>err</code></td>
             <td>
                 <code><a class='link' href='#SomeProtocol_SomeMethod_Error'>SomeProtocol_SomeMethod_Error</a></code>
@@ -310,8 +310,8 @@ Type: <code>uint32</code>
 
 
 <table>
-    <tr><th>Ordinal</th><tr><th>Variant</th><th>Type</th><th>Description</th></tr><tr id="UnionMember.">
-            <td>1</td>
+    <tr><th>Ordinal</th><th>Variant</th><th>Type</th><th>Description</th></tr><tr id="UnionMember.">
+            <td><h3 id="UnionMember." class="add-link hide-from-toc">1</h3></td>
             <td><code></code></td>
             <td>
                 <code></code>
@@ -319,7 +319,7 @@ Type: <code>uint32</code>
             <td>
 </td>
         </tr><tr id="UnionMember.union_data">
-            <td>2</td>
+            <td><h3 id="UnionMember.union_data" class="add-link hide-from-toc">2</h3></td>
             <td><code>union_data</code></td>
             <td>
                 <code>uint8</code>
@@ -342,12 +342,12 @@ Type: <code>uint32</code>
 
 <table>
     <tr><th>Name</th><th>Value</th><th>Description</th></tr><tr id="BitsMember.BIT_ONE">
-            <td>BIT_ONE</td>
+            <td><h3 id="BitsMember.BIT_ONE" class="add-link hide-from-toc">BIT_ONE</h3></td>
             <td>1</td>
             <td>
 </td>
         </tr><tr id="BitsMember.BIT_TWO">
-            <td>BIT_TWO</td>
+            <td><h3 id="BitsMember.BIT_TWO" class="add-link hide-from-toc">BIT_TWO</h3></td>
             <td>2</td>
             <td>
 </td>
@@ -363,7 +363,7 @@ Type: <code>uint16</code>
 
 <table>
     <tr><th>Name</th><th>Value</th><th>Description</th></tr><tr id="Flags.INLINE">
-            <td>INLINE</td>
+            <td><h3 id="Flags.INLINE" class="add-link hide-from-toc">INLINE</h3></td>
             <td>1</td>
             <td>
 </td>

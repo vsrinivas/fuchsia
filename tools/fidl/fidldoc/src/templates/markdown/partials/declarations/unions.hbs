@@ -8,10 +8,11 @@
 
 {{#if members}}
 <table>
-    <tr><th>Ordinal</th><tr><th>Variant</th><th>Type</th><th>Description</th></tr>
+    <tr><th>Ordinal</th><th>Variant</th><th>Type</th><th>Description</th></tr>
     {{~ #each members ~}}
         <tr id="{{rpn ../name}}.{{~ name ~}}">
-            <td>{{~ ordinal ~}}</td>
+            {{!-- This uses h3 since fuchsia.dev does not apply heading style if an h2/h3 is in a table --}}
+            <td><h3 id="{{rpn ../name}}.{{~ name ~}}" class="add-link hide-from-toc">{{~ ordinal ~}}</h3></td>
             <td><code>{{~ name ~}}</code></td>
             <td>
                 <code>

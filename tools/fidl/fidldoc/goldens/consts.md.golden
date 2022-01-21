@@ -22,12 +22,12 @@ Type: <code>int32</code>
 
 <table>
     <tr><th>Name</th><th>Value</th><th>Description</th></tr><tr id="EnumType.VALUE">
-            <td><code>VALUE</code></td>
+            <td><h3 id="EnumType.VALUE" class="add-link hide-from-toc">VALUE</h3></td>
             <td><code>1</code></td>
             <td>
 </td>
         </tr><tr id="EnumType.true">
-            <td><code>true</code></td>
+            <td><h3 id="EnumType.true" class="add-link hide-from-toc">true</h3></td>
             <td><code>2</code></td>
             <td>
 </td>
@@ -51,12 +51,12 @@ Type: <code>uint32</code>
 
 <table>
     <tr><th>Name</th><th>Value</th><th>Description</th></tr><tr id="BitsType.VALUE">
-            <td>VALUE</td>
+            <td><h3 id="BitsType.VALUE" class="add-link hide-from-toc">VALUE</h3></td>
             <td>1</td>
             <td>
 </td>
         </tr><tr id="BitsType.true">
-            <td>true</td>
+            <td><h3 id="BitsType.true" class="add-link hide-from-toc">true</h3></td>
             <td>2</td>
             <td>
 </td>

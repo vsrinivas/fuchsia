@@ -81,14 +81,14 @@ Type: <code>uint32</code>
 
 <table>
     <tr><th>Name</th><th>Value</th><th>Description</th></tr><tr id="MyFlexibleEnum.FOO">
-            <td><code>FOO</code></td>
+            <td><h3 id="MyFlexibleEnum.FOO" class="add-link hide-from-toc">FOO</h3></td>
             <td><code>1</code></td>
             <td><p>FOO member comment #1</p>
 <p>FOO member comment #3</p>
 
 </td>
         </tr><tr id="MyFlexibleEnum.BAR">
-            <td><code>BAR</code></td>
+            <td><h3 id="MyFlexibleEnum.BAR" class="add-link hide-from-toc">BAR</h3></td>
             <td><code>2</code></td>
             <td><p>BAR member comment #1</p>
 <p>BAR member comment #3</p>
@@ -108,14 +108,14 @@ Type: <code>uint32</code>
 
 <table>
     <tr><th>Name</th><th>Value</th><th>Description</th></tr><tr id="MyStrictEnum.FOO">
-            <td><code>FOO</code></td>
+            <td><h3 id="MyStrictEnum.FOO" class="add-link hide-from-toc">FOO</h3></td>
             <td><code>1</code></td>
             <td><p>FOO member comment #1</p>
 <p>FOO member comment #3</p>
 
 </td>
         </tr><tr id="MyStrictEnum.BAR">
-            <td><code>BAR</code></td>
+            <td><h3 id="MyStrictEnum.BAR" class="add-link hide-from-toc">BAR</h3></td>
             <td><code>2</code></td>
             <td><p>BAR member comment #1</p>
 <p>BAR member comment #3</p>
@@ -140,7 +140,7 @@ Type: <code>uint32</code>
 <table>
     <tr><th>Ordinal</th><th>Field</th><th>Type</th><th>Description</th></tr>
     <tr id="Table.Field">
-            <td>1</td>
+            <td><h3 id="Table.Field" class="add-link hide-from-toc">1</h3></td>
             <td><code>Field</code></td>
             <td>
                 <code>int32</code>
@@ -163,8 +163,8 @@ Type: <code>uint32</code>
 
 
 <table>
-    <tr><th>Ordinal</th><tr><th>Variant</th><th>Type</th><th>Description</th></tr><tr id="FlexibleUnion.Field">
-            <td>1</td>
+    <tr><th>Ordinal</th><th>Variant</th><th>Type</th><th>Description</th></tr><tr id="FlexibleUnion.Field">
+            <td><h3 id="FlexibleUnion.Field" class="add-link hide-from-toc">1</h3></td>
             <td><code>Field</code></td>
             <td>
                 <code>int32</code>
@@ -183,8 +183,8 @@ Type: <code>uint32</code>
 
 
 <table>
-    <tr><th>Ordinal</th><tr><th>Variant</th><th>Type</th><th>Description</th></tr><tr id="StrictUnion.Field">
-            <td>1</td>
+    <tr><th>Ordinal</th><th>Variant</th><th>Type</th><th>Description</th></tr><tr id="StrictUnion.Field">
+            <td><h3 id="StrictUnion.Field" class="add-link hide-from-toc">1</h3></td>
             <td><code>Field</code></td>
             <td>
                 <code>int32</code>
@@ -211,14 +211,14 @@ Type: <code>uint32</code>
 
 <table>
     <tr><th>Name</th><th>Value</th><th>Description</th></tr><tr id="MyFlexibleBits.MY_FIRST_BIT">
-            <td>MY_FIRST_BIT</td>
+            <td><h3 id="MyFlexibleBits.MY_FIRST_BIT" class="add-link hide-from-toc">MY_FIRST_BIT</h3></td>
             <td>1</td>
             <td><p>MY_FIRST_BIT member comment #1</p>
 <p>MY_FIRST_BIT member comment #3</p>
 
 </td>
         </tr><tr id="MyFlexibleBits.MY_OTHER_BIT">
-            <td>MY_OTHER_BIT</td>
+            <td><h3 id="MyFlexibleBits.MY_OTHER_BIT" class="add-link hide-from-toc">MY_OTHER_BIT</h3></td>
             <td>2</td>
             <td><p>MY_OTHER_BIT member comment #1</p>
 <p>MY_OTHER_BIT member comment #3</p>
@@ -238,14 +238,14 @@ Type: <code>uint32</code>
 
 <table>
     <tr><th>Name</th><th>Value</th><th>Description</th></tr><tr id="MyStrictBits.MY_FIRST_BIT">
-            <td>MY_FIRST_BIT</td>
+            <td><h3 id="MyStrictBits.MY_FIRST_BIT" class="add-link hide-from-toc">MY_FIRST_BIT</h3></td>
             <td>1</td>
             <td><p>MY_FIRST_BIT member comment #1</p>
 <p>MY_FIRST_BIT member comment #3</p>
 
 </td>
         </tr><tr id="MyStrictBits.MY_OTHER_BIT">
-            <td>MY_OTHER_BIT</td>
+            <td><h3 id="MyStrictBits.MY_OTHER_BIT" class="add-link hide-from-toc">MY_OTHER_BIT</h3></td>
             <td>2</td>
             <td><p>MY_OTHER_BIT member comment #1</p>
 <p>MY_OTHER_BIT member comment #3</p>

@@ -305,152 +305,152 @@ Type: <code>uint32</code>
 
 <table>
     <tr><th>Name</th><th>Value</th><th>Description</th></tr><tr id="obj_type.NONE">
-            <td><code>NONE</code></td>
+            <td><h3 id="obj_type.NONE" class="add-link hide-from-toc">NONE</h3></td>
             <td><code>0</code></td>
             <td>
 </td>
         </tr><tr id="obj_type.PROCESS">
-            <td><code>PROCESS</code></td>
+            <td><h3 id="obj_type.PROCESS" class="add-link hide-from-toc">PROCESS</h3></td>
             <td><code>1</code></td>
             <td>
 </td>
         </tr><tr id="obj_type.THREAD">
-            <td><code>THREAD</code></td>
+            <td><h3 id="obj_type.THREAD" class="add-link hide-from-toc">THREAD</h3></td>
             <td><code>2</code></td>
             <td>
 </td>
         </tr><tr id="obj_type.VMO">
-            <td><code>VMO</code></td>
+            <td><h3 id="obj_type.VMO" class="add-link hide-from-toc">VMO</h3></td>
             <td><code>3</code></td>
             <td>
 </td>
         </tr><tr id="obj_type.CHANNEL">
-            <td><code>CHANNEL</code></td>
+            <td><h3 id="obj_type.CHANNEL" class="add-link hide-from-toc">CHANNEL</h3></td>
             <td><code>4</code></td>
             <td>
 </td>
         </tr><tr id="obj_type.EVENT">
-            <td><code>EVENT</code></td>
+            <td><h3 id="obj_type.EVENT" class="add-link hide-from-toc">EVENT</h3></td>
             <td><code>5</code></td>
             <td>
 </td>
         </tr><tr id="obj_type.PORT">
-            <td><code>PORT</code></td>
+            <td><h3 id="obj_type.PORT" class="add-link hide-from-toc">PORT</h3></td>
             <td><code>6</code></td>
             <td>
 </td>
         </tr><tr id="obj_type.INTERRUPT">
-            <td><code>INTERRUPT</code></td>
+            <td><h3 id="obj_type.INTERRUPT" class="add-link hide-from-toc">INTERRUPT</h3></td>
             <td><code>9</code></td>
             <td>
 </td>
         </tr><tr id="obj_type.PCI_DEVICE">
-            <td><code>PCI_DEVICE</code></td>
+            <td><h3 id="obj_type.PCI_DEVICE" class="add-link hide-from-toc">PCI_DEVICE</h3></td>
             <td><code>11</code></td>
             <td>
 </td>
         </tr><tr id="obj_type.LOG">
-            <td><code>LOG</code></td>
+            <td><h3 id="obj_type.LOG" class="add-link hide-from-toc">LOG</h3></td>
             <td><code>12</code></td>
             <td>
 </td>
         </tr><tr id="obj_type.SOCKET">
-            <td><code>SOCKET</code></td>
+            <td><h3 id="obj_type.SOCKET" class="add-link hide-from-toc">SOCKET</h3></td>
             <td><code>14</code></td>
             <td>
 </td>
         </tr><tr id="obj_type.RESOURCE">
-            <td><code>RESOURCE</code></td>
+            <td><h3 id="obj_type.RESOURCE" class="add-link hide-from-toc">RESOURCE</h3></td>
             <td><code>15</code></td>
             <td>
 </td>
         </tr><tr id="obj_type.EVENTPAIR">
-            <td><code>EVENTPAIR</code></td>
+            <td><h3 id="obj_type.EVENTPAIR" class="add-link hide-from-toc">EVENTPAIR</h3></td>
             <td><code>16</code></td>
             <td>
 </td>
         </tr><tr id="obj_type.JOB">
-            <td><code>JOB</code></td>
+            <td><h3 id="obj_type.JOB" class="add-link hide-from-toc">JOB</h3></td>
             <td><code>17</code></td>
             <td>
 </td>
         </tr><tr id="obj_type.VMAR">
-            <td><code>VMAR</code></td>
+            <td><h3 id="obj_type.VMAR" class="add-link hide-from-toc">VMAR</h3></td>
             <td><code>18</code></td>
             <td>
 </td>
         </tr><tr id="obj_type.FIFO">
-            <td><code>FIFO</code></td>
+            <td><h3 id="obj_type.FIFO" class="add-link hide-from-toc">FIFO</h3></td>
             <td><code>19</code></td>
             <td>
 </td>
         </tr><tr id="obj_type.GUEST">
-            <td><code>GUEST</code></td>
+            <td><h3 id="obj_type.GUEST" class="add-link hide-from-toc">GUEST</h3></td>
             <td><code>20</code></td>
             <td>
 </td>
         </tr><tr id="obj_type.VCPU">
-            <td><code>VCPU</code></td>
+            <td><h3 id="obj_type.VCPU" class="add-link hide-from-toc">VCPU</h3></td>
             <td><code>21</code></td>
             <td>
 </td>
         </tr><tr id="obj_type.TIMER">
-            <td><code>TIMER</code></td>
+            <td><h3 id="obj_type.TIMER" class="add-link hide-from-toc">TIMER</h3></td>
             <td><code>22</code></td>
             <td>
 </td>
         </tr><tr id="obj_type.IOMMU">
-            <td><code>IOMMU</code></td>
+            <td><h3 id="obj_type.IOMMU" class="add-link hide-from-toc">IOMMU</h3></td>
             <td><code>23</code></td>
             <td>
 </td>
         </tr><tr id="obj_type.BTI">
-            <td><code>BTI</code></td>
+            <td><h3 id="obj_type.BTI" class="add-link hide-from-toc">BTI</h3></td>
             <td><code>24</code></td>
             <td>
 </td>
         </tr><tr id="obj_type.PROFILE">
-            <td><code>PROFILE</code></td>
+            <td><h3 id="obj_type.PROFILE" class="add-link hide-from-toc">PROFILE</h3></td>
             <td><code>25</code></td>
             <td>
 </td>
         </tr><tr id="obj_type.PMT">
-            <td><code>PMT</code></td>
+            <td><h3 id="obj_type.PMT" class="add-link hide-from-toc">PMT</h3></td>
             <td><code>26</code></td>
             <td>
 </td>
         </tr><tr id="obj_type.SUSPEND_TOKEN">
-            <td><code>SUSPEND_TOKEN</code></td>
+            <td><h3 id="obj_type.SUSPEND_TOKEN" class="add-link hide-from-toc">SUSPEND_TOKEN</h3></td>
             <td><code>27</code></td>
             <td>
 </td>
         </tr><tr id="obj_type.PAGER">
-            <td><code>PAGER</code></td>
+            <td><h3 id="obj_type.PAGER" class="add-link hide-from-toc">PAGER</h3></td>
             <td><code>28</code></td>
             <td>
 </td>
         </tr><tr id="obj_type.EXCEPTION">
-            <td><code>EXCEPTION</code></td>
+            <td><h3 id="obj_type.EXCEPTION" class="add-link hide-from-toc">EXCEPTION</h3></td>
             <td><code>29</code></td>
             <td>
 </td>
         </tr><tr id="obj_type.CLOCK">
-            <td><code>CLOCK</code></td>
+            <td><h3 id="obj_type.CLOCK" class="add-link hide-from-toc">CLOCK</h3></td>
             <td><code>30</code></td>
             <td>
 </td>
         </tr><tr id="obj_type.STREAM">
-            <td><code>STREAM</code></td>
+            <td><h3 id="obj_type.STREAM" class="add-link hide-from-toc">STREAM</h3></td>
             <td><code>31</code></td>
             <td>
 </td>
         </tr><tr id="obj_type.MSI_ALLOCATION">
-            <td><code>MSI_ALLOCATION</code></td>
+            <td><h3 id="obj_type.MSI_ALLOCATION" class="add-link hide-from-toc">MSI_ALLOCATION</h3></td>
             <td><code>32</code></td>
             <td>
 </td>
         </tr><tr id="obj_type.MSI_INTERRUPT">
-            <td><code>MSI_INTERRUPT</code></td>
+            <td><h3 id="obj_type.MSI_INTERRUPT" class="add-link hide-from-toc">MSI_INTERRUPT</h3></td>
             <td><code>33</code></td>
             <td>
 </td>

@@ -816,12 +816,12 @@ Type: <code>uint32</code>
 
 <table>
     <tr><th>Name</th><th>Value</th><th>Description</th></tr><tr id="ErrorEnum.ERR_FOO">
-            <td><code>ERR_FOO</code></td>
+            <td><h3 id="ErrorEnum.ERR_FOO" class="add-link hide-from-toc">ERR_FOO</h3></td>
             <td><code>1</code></td>
             <td>
 </td>
         </tr><tr id="ErrorEnum.ERR_BAR">
-            <td><code>ERR_BAR</code></td>
+            <td><h3 id="ErrorEnum.ERR_BAR" class="add-link hide-from-toc">ERR_BAR</h3></td>
             <td><code>2</code></td>
             <td>
 </td>
@@ -837,12 +837,12 @@ Type: <code>uint32</code>
 
 <table>
     <tr><th>Name</th><th>Value</th><th>Description</th></tr><tr id="obj_type.NONE">
-            <td><code>NONE</code></td>
+            <td><h3 id="obj_type.NONE" class="add-link hide-from-toc">NONE</h3></td>
             <td><code>0</code></td>
             <td>
 </td>
         </tr><tr id="obj_type.SOCKET">
-            <td><code>SOCKET</code></td>
+            <td><h3 id="obj_type.SOCKET" class="add-link hide-from-toc">SOCKET</h3></td>
             <td><code>14</code></td>
             <td>
 </td>
@@ -860,8 +860,8 @@ Type: <code>uint32</code>
 
 
 <table>
-    <tr><th>Ordinal</th><tr><th>Variant</th><th>Type</th><th>Description</th></tr><tr id="TheUnion.v">
-            <td>1</td>
+    <tr><th>Ordinal</th><th>Variant</th><th>Type</th><th>Description</th></tr><tr id="TheUnion.v">
+            <td><h3 id="TheUnion.v" class="add-link hide-from-toc">1</h3></td>
             <td><code>v</code></td>
             <td>
                 <code>uint32</code>
@@ -876,8 +876,8 @@ Type: <code>uint32</code>
 
 
 <table>
-    <tr><th>Ordinal</th><tr><th>Variant</th><th>Type</th><th>Description</th></tr><tr id="WithErrorSyntax_ErrorAsEnum_Result.response">
-            <td>1</td>
+    <tr><th>Ordinal</th><th>Variant</th><th>Type</th><th>Description</th></tr><tr id="WithErrorSyntax_ErrorAsEnum_Result.response">
+            <td><h3 id="WithErrorSyntax_ErrorAsEnum_Result.response" class="add-link hide-from-toc">1</h3></td>
             <td><code>response</code></td>
             <td>
                 <code><a class='link' href='#WithErrorSyntax_ErrorAsEnum_Response'>WithErrorSyntax_ErrorAsEnum_Response</a></code>
@@ -885,7 +885,7 @@ Type: <code>uint32</code>
             <td>
 </td>
         </tr><tr id="WithErrorSyntax_ErrorAsEnum_Result.err">
-            <td>2</td>
+            <td><h3 id="WithErrorSyntax_ErrorAsEnum_Result.err" class="add-link hide-from-toc">2</h3></td>
             <td><code>err</code></td>
             <td>
                 <code><a class='link' href='#ErrorEnum'>ErrorEnum</a></code>
@@ -900,8 +900,8 @@ Type: <code>uint32</code>
 
 
 <table>
-    <tr><th>Ordinal</th><tr><th>Variant</th><th>Type</th><th>Description</th></tr><tr id="WithErrorSyntax_ErrorAsPrimitive_Result.response">
-            <td>1</td>
+    <tr><th>Ordinal</th><th>Variant</th><th>Type</th><th>Description</th></tr><tr id="WithErrorSyntax_ErrorAsPrimitive_Result.response">
+            <td><h3 id="WithErrorSyntax_ErrorAsPrimitive_Result.response" class="add-link hide-from-toc">1</h3></td>
             <td><code>response</code></td>
             <td>
                 <code><a class='link' href='#WithErrorSyntax_ErrorAsPrimitive_Response'>WithErrorSyntax_ErrorAsPrimitive_Response</a></code>
@@ -909,7 +909,7 @@ Type: <code>uint32</code>
             <td>
 </td>
         </tr><tr id="WithErrorSyntax_ErrorAsPrimitive_Result.err">
-            <td>2</td>
+            <td><h3 id="WithErrorSyntax_ErrorAsPrimitive_Result.err" class="add-link hide-from-toc">2</h3></td>
             <td><code>err</code></td>
             <td>
                 <code>uint32</code>
@@ -924,8 +924,8 @@ Type: <code>uint32</code>
 
 
 <table>
-    <tr><th>Ordinal</th><tr><th>Variant</th><th>Type</th><th>Description</th></tr><tr id="WithErrorSyntax_HandleInResult_Result.response">
-            <td>1</td>
+    <tr><th>Ordinal</th><th>Variant</th><th>Type</th><th>Description</th></tr><tr id="WithErrorSyntax_HandleInResult_Result.response">
+            <td><h3 id="WithErrorSyntax_HandleInResult_Result.response" class="add-link hide-from-toc">1</h3></td>
             <td><code>response</code></td>
             <td>
                 <code><a class='link' href='#WithErrorSyntax_HandleInResult_Response'>WithErrorSyntax_HandleInResult_Response</a></code>
@@ -933,7 +933,7 @@ Type: <code>uint32</code>
             <td>
 </td>
         </tr><tr id="WithErrorSyntax_HandleInResult_Result.err">
-            <td>2</td>
+            <td><h3 id="WithErrorSyntax_HandleInResult_Result.err" class="add-link hide-from-toc">2</h3></td>
             <td><code>err</code></td>
             <td>
                 <code>uint32</code>
@@ -948,8 +948,8 @@ Type: <code>uint32</code>
 
 
 <table>
-    <tr><th>Ordinal</th><tr><th>Variant</th><th>Type</th><th>Description</th></tr><tr id="WithErrorSyntax_ResponseAsStruct_Result.response">
-            <td>1</td>
+    <tr><th>Ordinal</th><th>Variant</th><th>Type</th><th>Description</th></tr><tr id="WithErrorSyntax_ResponseAsStruct_Result.response">
+            <td><h3 id="WithErrorSyntax_ResponseAsStruct_Result.response" class="add-link hide-from-toc">1</h3></td>
             <td><code>response</code></td>
             <td>
                 <code><a class='link' href='#WithErrorSyntax_ResponseAsStruct_Response'>WithErrorSyntax_ResponseAsStruct_Response</a></code>
@@ -957,7 +957,7 @@ Type: <code>uint32</code>
             <td>
 </td>
         </tr><tr id="WithErrorSyntax_ResponseAsStruct_Result.err">
-            <td>2</td>
+            <td><h3 id="WithErrorSyntax_ResponseAsStruct_Result.err" class="add-link hide-from-toc">2</h3></td>
             <td><code>err</code></td>
             <td>
                 <code>uint32</code>
@@ -980,12 +980,12 @@ Type: <code>uint32</code>
 
 <table>
     <tr><th>Name</th><th>Value</th><th>Description</th></tr><tr id="rights.TRANSFER">
-            <td>TRANSFER</td>
+            <td><h3 id="rights.TRANSFER" class="add-link hide-from-toc">TRANSFER</h3></td>
             <td>1</td>
             <td>
 </td>
         </tr><tr id="rights.DUPLICATE">
-            <td>DUPLICATE</td>
+            <td><h3 id="rights.DUPLICATE" class="add-link hide-from-toc">DUPLICATE</h3></td>
             <td>2</td>
             <td>
 </td>

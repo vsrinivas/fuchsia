@@ -63,7 +63,7 @@ Type: <code>uint32</code>
 
 <table>
     <tr><th>Name</th><th>Value</th><th>Description</th></tr><tr id="Enum.A">
-            <td><code>A</code></td>
+            <td><h3 id="Enum.A" class="add-link hide-from-toc">A</h3></td>
             <td><code>1</code></td>
             <td><p><b>Added:1 Deprecated:2 Removed:3</b></p>
 </td>
@@ -84,7 +84,7 @@ Type: <code>uint32</code>
 <table>
     <tr><th>Ordinal</th><th>Field</th><th>Type</th><th>Description</th></tr>
     <tr id="Table.x">
-            <td>1</td>
+            <td><h3 id="Table.x" class="add-link hide-from-toc">1</h3></td>
             <td><code>x</code></td>
             <td>
                 <code>uint32</code>
@@ -92,7 +92,7 @@ Type: <code>uint32</code>
             <td><p><b>Added:1 Deprecated:2 Removed:3</b></p>
 </td>
         </tr><tr id="Table.">
-            <td>2</td>
+            <td><h3 id="Table." class="add-link hide-from-toc">2</h3></td>
             <td><code>RESERVED</code></td>
             <td>
                 <code></code>
@@ -111,8 +111,8 @@ Type: <code>uint32</code>
 <p><b>Added:1 Deprecated:2 Removed:3</b></p>
 
 <table>
-    <tr><th>Ordinal</th><tr><th>Variant</th><th>Type</th><th>Description</th></tr><tr id="Union.x">
-            <td>1</td>
+    <tr><th>Ordinal</th><th>Variant</th><th>Type</th><th>Description</th></tr><tr id="Union.x">
+            <td><h3 id="Union.x" class="add-link hide-from-toc">1</h3></td>
             <td><code>x</code></td>
             <td>
                 <code>uint32</code>
@@ -120,7 +120,7 @@ Type: <code>uint32</code>
             <td><p><b>Added:1 Deprecated:2 Removed:3</b></p>
 </td>
         </tr><tr id="Union.">
-            <td>2</td>
+            <td><h3 id="Union." class="add-link hide-from-toc">2</h3></td>
             <td><code></code></td>
             <td>
                 <code></code>
@@ -143,7 +143,7 @@ Type: <code>uint32</code>
 
 <table>
     <tr><th>Name</th><th>Value</th><th>Description</th></tr><tr id="Bits.A">
-            <td>A</td>
+            <td><h3 id="Bits.A" class="add-link hide-from-toc">A</h3></td>
             <td>1</td>
             <td><p><b>Added:1 Deprecated:2 Removed:3</b></p>
 </td>

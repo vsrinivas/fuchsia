@@ -74,8 +74,8 @@
 
 
 <table>
-    <tr><th>Ordinal</th><tr><th>Variant</th><th>Type</th><th>Description</th></tr><tr id="Example_foo_Result.response">
-            <td>1</td>
+    <tr><th>Ordinal</th><th>Variant</th><th>Type</th><th>Description</th></tr><tr id="Example_foo_Result.response">
+            <td><h3 id="Example_foo_Result.response" class="add-link hide-from-toc">1</h3></td>
             <td><code>response</code></td>
             <td>
                 <code><a class='link' href='#Example_foo_Response'>Example_foo_Response</a></code>
@@ -83,7 +83,7 @@
             <td>
 </td>
         </tr><tr id="Example_foo_Result.err">
-            <td>2</td>
+            <td><h3 id="Example_foo_Result.err" class="add-link hide-from-toc">2</h3></td>
             <td><code>err</code></td>
             <td>
                 <code>uint32</code>
