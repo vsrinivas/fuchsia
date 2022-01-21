@@ -1,7 +1,7 @@
 # Working with devices
 
 This codelab series focuses on the
-[Fuchsia emulator](/docs/concepts/emulator/index.md) (FEMU) as the target
+[Fuchsia emulator](/docs/development/build/emulator.md) (FEMU) as the target
 device, which is built and distributed with the source tree and runs on your
 development machine. However, you can also build Fuchsia for supported hardware
 platforms, such as an [Intel NUC](/docs/development/hardware/intel_nuc.md).

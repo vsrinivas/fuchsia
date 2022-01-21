@@ -14,6 +14,8 @@ toc:
   path: /docs/development/build/build_and_pave_quickstart.md
 - title: "Retrieve build information"
   path: /docs/development/build/build_information.md
+- title: "Fuchsia emulator"
+  path: /docs/development/build/emulator.md
 - title: "Advanced"
   section:
   - title: "Build Clang toolchain"

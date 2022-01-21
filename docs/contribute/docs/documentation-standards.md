@@ -66,7 +66,7 @@ include the following:
   navigation on fuchsia.dev. See [Site navigation and TOC files](documentation-navigation-toc.md)
   for more information.
 - Cross-link documentation: Add links to documents on subjects that help readers better understand the
-  content of your document. For example, the conceptual document for the [Fuchsia emulator](/docs/concepts/emulator/index.md)
+  content of your document. For example, the conceptual document for the [Fuchsia emulator](/docs/development/build/emulator.md)
   links to relevant guides and getting started documents about the Fuchsia emulator.
 - Use consistent terminology: If you're writing about a specific concept in Fuchsia, verify that you are
   using consistent terminology. Use the [glossary](/docs/glossary/README.md) to verify terms.

@@ -286,7 +286,7 @@ of having the client pass a forgeable debug name.
 [BufferMemorySettings]: https://fuchsia.dev/reference/fidl/fuchsia.sysmem#BufferMemorySettings
 [SetName]: https://fuchsia.dev/reference/fidl/fuchsia.sysmem#BufferCollection.SetName
 [inspect]: /docs/development/diagnostics/inspect
-[FEMU]: /docs/concepts/emulator/index.md
+[FEMU]: /docs/development/build/emulator.md
 [DRM]: https://en.wikipedia.org/wiki/Digital_rights_management
 [memoryusage]: /docs/development/kernel/memory/memory.md
 [guest]: https://en.wikipedia.org/wiki/Virtualization
