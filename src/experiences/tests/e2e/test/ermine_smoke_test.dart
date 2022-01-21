@@ -19,67 +19,54 @@ void main() {
   late Sl4f sl4f;
   late ErmineDriver ermine;
 
-  /// TODO(fxbug.dev/64205): Remove parameterization when flatland is enabled by
-  /// default.
-  for (String protocol in ['gfx', 'flatland']) {
-    group('Test on $protocol:', () {
-      setUpAll(() async {
-        sl4f = Sl4f.fromEnvironment();
-        await sl4f.startServer();
+  setUpAll(() async {
+    sl4f = Sl4f.fromEnvironment();
+    await sl4f.startServer();
 
-        ermine = ErmineDriver(sl4f);
-        await ermine.setUp();
-      });
+    ermine = ErmineDriver(sl4f);
+    await ermine.setUp();
+  });
 
-      tearDownAll(() async {
-        // Any of these may end up being null if the test fails in setup.
-        await ermine.switchToGraphicsProtocol(
-            protocol == 'flatland' ? 'gfx' : 'flatland');
-        await ermine.tearDown();
-        await sl4f.stopServer();
-        sl4f.close();
-      });
+  tearDownAll(() async {
+    await ermine.tearDown();
+    await sl4f.stopServer();
+    sl4f.close();
+  });
 
-      if (protocol == 'gfx') {
-        test('Screen should not be black', () async {
-          // Generate a flutter driver screenshot to ensure the app is ready.
-          final bytes = await ermine.driver.screenshot();
-          expect(bytes.length, isPositive);
+  test('Screen should not be black', () async {
+    // Generate a flutter driver screenshot to ensure the app is ready.
+    final bytes = await ermine.driver.screenshot();
+    expect(bytes.length, isPositive);
 
-          // Take a screen shot using Scenic and make sure it is not all black.
-          final scenic = Scenic(sl4f);
-          final image =
-              await scenic.takeScreenshot(dumpName: 'screen_not_black');
-          bool isAllBlack =
-              image.data.every((pixel) => pixel & 0x00ffffff == 0);
-          expect(isAllBlack, false);
-        });
-      }
+    // Take a screen shot using Scenic and make sure it is not all black.
+    final scenic = Scenic(sl4f);
+    final image = await scenic.takeScreenshot(dumpName: 'screen_not_black');
+    bool isAllBlack = image.data.every((pixel) => pixel & 0x00ffffff == 0);
+    expect(isAllBlack, false);
+  });
 
-      test('Text input, pointer input and keyboard shortcut', () async {
-        print('Launching terminal...');
-        final terminalFinder = find.text('Terminal');
-        await ermine.driver.waitUntilNoTransientCallbacks();
-        final appResult = await ermine.driver.getText(terminalFinder);
-        expect(appResult, 'Terminal');
+  test('Text input, pointer input and keyboard shortcut', () async {
+    print('Launching terminal...');
+    final terminalFinder = find.text('Terminal');
+    await ermine.driver.waitUntilNoTransientCallbacks();
+    final appResult = await ermine.driver.getText(terminalFinder);
+    expect(appResult, 'Terminal');
 
-        // Tap on 'Terminal' app launcher entry.
-        print('Tap on terminal entry');
-        final center = await ermine.driver.getCenter(terminalFinder);
-        await ermine.tap(center);
+    // Tap on 'Terminal' app launcher entry.
+    print('Tap on terminal entry');
+    final center = await ermine.driver.getCenter(terminalFinder);
+    await ermine.tap(center);
 
-        // Check that terminal was launched.
-        print('Verifying terminal view is visible');
-        expect(await ermine.isRunning(terminalUrl), isTrue);
-        await ermine.driver.waitForAbsent(terminalFinder);
+    // Check that terminal was launched.
+    print('Verifying terminal view is visible');
+    expect(await ermine.isRunning(terminalUrl), isTrue);
+    await ermine.driver.waitForAbsent(terminalFinder);
 
-        // Use keyboard shortcut to close terminal.
-        print('Verifying Ctrl+Shift+w shortcut is closing terminal');
-        await ermine.threeKeyShortcut(Key.leftCtrl, Key.leftShift, Key.w);
-        await ermine.driver.waitUntilNoTransientCallbacks();
-        await ermine.waitForAction('close');
-        expect(await ermine.isStopped(terminalUrl), isTrue);
-      });
-    });
-  }
+    // Use keyboard shortcut to close terminal.
+    print('Verifying Ctrl+Shift+w shortcut is closing terminal');
+    await ermine.threeKeyShortcut(Key.leftCtrl, Key.leftShift, Key.w);
+    await ermine.driver.waitUntilNoTransientCallbacks();
+    await ermine.waitForAction('close');
+    expect(await ermine.isStopped(terminalUrl), isTrue);
+  });
 }
