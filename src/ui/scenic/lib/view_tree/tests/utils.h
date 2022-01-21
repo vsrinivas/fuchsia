@@ -32,6 +32,14 @@ std::shared_ptr<const view_tree::Snapshot> ThreeNodeSnapshot();
 //   D
 std::shared_ptr<const view_tree::Snapshot> FourNodeSnapshot();
 
+// Creates a snapshot having a view tree with depth 1 and |total_nodes| - 1 leaf nodes. Eg:- The
+// view tree will have the following topology when |total_nodes| is 5:
+//      A
+//   / / \ \
+//  B  C  D  E
+// Note: |total_nodes| cannot be 0.
+std::shared_ptr<const view_tree::Snapshot> SingleDepthViewTreeSnapshot(uint64_t total_nodes);
+
 }  // namespace view_tree
 
 #endif  // SRC_UI_SCENIC_LIB_VIEW_TREE_TESTS_UTILS_H_

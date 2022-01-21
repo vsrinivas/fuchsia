@@ -7,14 +7,29 @@ library fuchsia.ui.observation.geometry;
 using fuchsia.math as math;
 using zx;
 
-const BUFFER_SIZE uint32 = 512;
-const MAX_VIEW_COUNT uint32 = 1024;
+/// The maximum number of `ViewTreeSnapshot`s a client can expect in a `Watch` call's
+/// response. The number of `ViewTreeSnapshot`s can be less than `BUFFER_SIZE` when
+/// the size of a `Watch` call's response exceeds the limit of a FIDL channel.
+///
+/// There is a limit on the number of `ViewTreeSnapshot`s that can be included in a
+/// `Watch` call's response due to the size restrictions of a FIDL channel. This limit
+/// was calculated by finding out the maximum number of `ViewTreeSnapshot`s which can be
+/// included in a `Watch` call's response when `MAX_VIEW_COUNT` is 1.
+///
+/// Note: This value would have to adjusted when modifying `ViewTreeSnapshot` or
+/// `ViewDescriptor`.
+const BUFFER_SIZE uint32 = 200;
 
-/// A description of abnormal conditions.
-type Error = flexible enum {
-    /// The number of snapshots exceeded BUFFER_SIZE; pending data is discarded.
-    BUFFER_OVERFLOW = 1;
-};
+/// The maximum number of `ViewDescriptor`s a client can expect in a
+/// `ViewTreeSnapshot`.
+///
+/// There is a limit on the number of `ViewDescriptor`s that can be included in a
+/// `ViewTreeSnapshot` due to the size restrictions of a FIDL channel. This limit was
+/// calculated by finding out the maximum number of `ViewDescriptor`s which can be
+/// included in a `ViewTreeSnapshot` when the `BUFFER_SIZE` is 1.
+///
+/// Note: This value would have to adjusted when modifying `ViewDescriptor`.
+const MAX_VIEW_COUNT uint32 = 300;
 
 /// A method of obtaining view tree snapshots for a particular view, the "context
 /// view", and its child views, if any. The returned data is a sequence of
@@ -57,13 +72,24 @@ protocol Provider {
     /// Client pacing. The server will dispatch snapshots to the caller on a
     /// lossless, best-effort basis, but the caller must allocate enough time to
     /// keep up with new snapshots.
-    ///
-    /// In case of BUFFER_OVERFLOW, the most recent updates are returned. If
-    /// Error.BUFFER_OVERFLOW is returned, the client may try again.
     Watch() -> (struct {
-        epoch_end zx.time;
-        updates vector<ViewTreeSnapshot>:BUFFER_SIZE;
-    }) error Error;
+        response ProviderWatchResponse;
+    });
+};
+
+/// Response for fuchsia.ui.observation.geometry.Provider.Watch.
+type ProviderWatchResponse = table {
+    /// When the response is sent.
+    1: epoch_end zx.time;
+
+    /// A list of most recent updates for a particular view.
+    2: updates vector<ViewTreeSnapshot>:BUFFER_SIZE;
+
+    /// Set to true if every snapshot is present in the response, false if some were
+    /// dropped. Snapshots are dropped when the size of `updates` exceeds `BUFFER_SIZE`
+    /// or when the size of a `Watch` call's response exceeds the limit set by a FIDL
+    /// channel.
+    3: is_complete bool;
 };
 
 /// A description of the context view and its descendant views, if any.
@@ -73,17 +99,13 @@ type ViewTreeSnapshot = table {
 
     /// The context view (at element 0) and a complete list of its descendant views.
     ///
-    /// If MAX_VIEW_COUNT is exceeded, this field is left empty. Instead, a best
-    /// effort description of the view tree, starting from the context view, is
-    /// laid out in `incomplete`.
+    /// If `MAX_VIEW_COUNT` is exceeded, this field is left empty. Instead, a boolean
+    /// (`incomplete`) is sent to the client indicating that the data is incomplete.
     2: views vector<ViewDescriptor>:MAX_VIEW_COUNT;
 
-    /// The context view (at element 0) and an incomplete list of its descendant
-    /// views.  Undiscerning clients may log an error, ignore this field, and
-    /// continue receiving snapshots until the view tree can be described
-    /// completely. Discerning clients may try to make sense of the world with
-    /// incomplete data.
-    3: incomplete vector<ViewDescriptor>:MAX_VIEW_COUNT;
+    /// True when the size of `views` is greater than `MAX_VIEW_COUNT`, and false
+    /// otherwise.
+    3: incomplete bool;
 };
 
 /// A view's bounding box, described in the view's own coordinate system.

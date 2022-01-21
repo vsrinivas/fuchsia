@@ -4,6 +4,8 @@
 
 #include "src/ui/scenic/lib/view_tree/tests/utils.h"
 
+#include <lib/syslog/cpp/macros.h>
+
 namespace view_tree {
 
 std::shared_ptr<view_tree::Snapshot> TwoNodeSnapshot() {
@@ -38,6 +40,21 @@ std::shared_ptr<const view_tree::Snapshot> FourNodeSnapshot() {
   view_tree[kNodeC] = ViewNode{.parent = kNodeA};
   view_tree[kNodeD] = ViewNode{.parent = kNodeB};
 
+  return snapshot;
+}
+
+std::shared_ptr<const view_tree::Snapshot> SingleDepthViewTreeSnapshot(uint64_t total_nodes) {
+  FX_DCHECK(total_nodes > 0) << "precondition";
+  auto snapshot = std::make_shared<view_tree::Snapshot>();
+
+  snapshot->root = kNodeA;
+  auto& view_tree = snapshot->view_tree;
+  view_tree[kNodeA] = ViewNode{.parent = ZX_KOID_INVALID, .children = {}};
+  for (zx_koid_t i = 0; i < total_nodes - 1; i++) {
+    // The minimum node_id for a child can be 2 since node_id of the root is 1.
+    view_tree[kNodeA].children.insert(i + 2);
+    view_tree[i + 2] = ViewNode{.parent = kNodeA};
+  }
   return snapshot;
 }
 

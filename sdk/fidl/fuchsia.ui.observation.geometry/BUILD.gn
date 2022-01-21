@@ -3,6 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/fidl/fidl.gni")
+import("//tools/fidl/measure-tape/measure_tape.gni")
 
 fidl("fuchsia.ui.observation.geometry") {
   sdk_category = "internal"
@@ -10,5 +11,17 @@ fidl("fuchsia.ui.observation.geometry") {
   public_deps = [
     "//sdk/fidl/fuchsia.math",
     "//zircon/vdso/zx",
+  ]
+}
+
+measure_tape("measure_tape_for_geometry") {
+  target_binding = "hlcpp"
+  target_types = [
+    "fuchsia.ui.observation.geometry/ViewDescriptor",
+    "fuchsia.ui.observation.geometry/ViewTreeSnapshot",
+  ]
+  fidls = [
+    ":fuchsia.ui.observation.geometry",
+    "//sdk/fidl/fuchsia.math",
   ]
 }

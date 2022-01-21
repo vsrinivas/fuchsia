@@ -74,7 +74,9 @@ class GeometryProviderManager {
     // then sends the response.
     void SendResponseMaybe();
 
-    // Trigger the |pending_callback_| to send the response to the client.
+    // Trigger the |pending_callback_| to send the response to the client. If the size of the
+    // response exceeds ZX_CHANNEL_MAX_MSG_BYTES, older
+    // `fuchsia.ui.observation.geometry.ViewTreeSnapshot`s in the response are dropped.
     void SendResponse();
 
     // Closes the fidl channel. This triggers the destruction of the ProviderEndpoint object through
@@ -101,7 +103,15 @@ class GeometryProviderManager {
     // A closure which gets triggered whenever the server endpoint closes. The closure is
     // responsible for removing the ProviderEndpoint from |endpoints_|.
     fit::function<void()> destroy_instance_function_;
+
+    bool old_snapshots_dropped_ = false;
   };
+
+  // Generates a fuchsia.ui.observation.geometry.ViewDescriptor from the |snapshot|'s view node by
+  // extracting information about the |view_ref_koid| from the view node.
+  static fuchsia::ui::observation::geometry::ViewDescriptor ExtractViewDescriptor(
+      zx_koid_t view_ref_koid, zx_koid_t context_view,
+      std::shared_ptr<const view_tree::Snapshot> snapshot);
 
   std::unordered_map<ProviderEndpointId, ProviderEndpoint> endpoints_;
 

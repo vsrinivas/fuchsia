@@ -56,7 +56,9 @@ source_set("geometry_provider") {
   deps = [ ":view_tree_snapshot" ]
   public_deps = [
     "//sdk/fidl/fuchsia.ui.observation.geometry",
+    "//sdk/fidl/fuchsia.ui.observation.geometry:measure_tape_for_geometry",
     "//sdk/fidl/fuchsia.ui.views",
     "//sdk/lib/sys/cpp",
+    "//src/ui/scenic/lib/gfx:util",
   ]
 }
