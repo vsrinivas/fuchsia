@@ -1,0 +1,129 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+import("//build/test.gni")
+import("//src/storage/testing/driver_test_realm.gni")
+
+source_set("start-storage-benchmark-lib") {
+  public = [
+    "block-device.h",
+    "command-line-options.h",
+    "memfs.h",
+    "run-benchmark.h",
+    "running-filesystem.h",
+  ]
+  sources = [
+    "block-device.cc",
+    "command-line-options.cc",
+    "memfs.cc",
+    "run-benchmark.cc",
+  ]
+  public_deps = [
+    "//sdk/fidl/fuchsia.hardware.block.volume:fuchsia.hardware.block.volume_llcpp",
+    "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
+    "//sdk/fidl/fuchsia.sys:fuchsia.sys_llcpp",
+    "//src/lib/storage/fs_management",
+    "//src/storage/memfs:cpp",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/cmdline",
+    "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/fidl:fidl-llcpp",
+    "//zircon/system/ulib/zxc",
+  ]
+  deps = [
+    "//sdk/lib/fdio",
+    "//sdk/lib/sys/cpp",
+    "//sdk/lib/syslog/cpp",
+    "//src/lib/uuid",
+    "//src/security/zxcrypt:zxcrypt-client",
+    "//src/storage/lib/utils:topological_path",
+    "//zircon/system/public",
+    "//zircon/system/ulib/service:service-llcpp",
+  ]
+  data_deps = [
+    "//src/security/policy/zxcrypt:null",
+    "//src/storage/bin/f2fs",
+    "//src/storage/bin/minfs",
+    "//src/storage/fxfs",
+  ]
+}
+
+executable("start-storage-benchmark-bin") {
+  output_name = "start-storage-benchmark"
+  sources = [ "main.cc" ]
+  deps = [
+    ":start-storage-benchmark-lib",
+    "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
+    "//zircon/system/ulib/service:service-llcpp",
+    "//zircon/system/ulib/zxc",
+  ]
+}
+
+fuchsia_package_with_single_component("start-storage-benchmark") {
+  manifest = "meta/start-storage-benchmark.cmx"
+  deps = [ ":start-storage-benchmark-bin" ]
+}
+
+test("start-storage-benchmark-unittests") {
+  testonly = true
+  sources = [
+    "block-device-test.cc",
+    "command-line-options-test.cc",
+    "memfs-test.cc",
+  ]
+  deps = [
+    ":start-storage-benchmark-lib",
+    "//sdk/fidl/fuchsia.hardware.block.volume:fuchsia.hardware.block.volume_llcpp",
+    "//sdk/lib/sys/cpp",
+    "//sdk/lib/syslog/cpp",
+    "//src/lib/fxl/test:gtest_main",
+    "//src/lib/testing/predicates",
+    "//src/storage/testing:storage_driver_test_realm",
+    "//src/storage/testing:storage_driver_test_support",
+    "//third_party/googletest:gmock",
+    "//third_party/googletest:gtest",
+    "//zircon/system/ulib/service:service-llcpp",
+  ]
+}
+
+storage_driver_test_realm_v2_component(
+    "start-storage-benchmark-tests-component") {
+  component_name = "start-storage-benchmark-tests"
+  deps = [ ":start-storage-benchmark-unittests" ]
+}
+
+fuchsia_test_package("start-storage-benchmark-tests") {
+  test_specs = {
+    log_settings = {
+      max_severity = "ERROR"
+    }
+  }
+  test_components = [ ":start-storage-benchmark-tests-component" ]
+}
+
+test("run-benchmark-unittests") {
+  testonly = true
+  sources = [ "run-benchmark-test.cc" ]
+  deps = [
+    ":start-storage-benchmark-lib",
+    "//src/lib/fxl/test:gtest_main",
+    "//src/lib/testing/predicates",
+    "//third_party/googletest:gtest",
+  ]
+}
+
+fuchsia_unittest_package("start-storage-benchmark-run-benchmark-tests") {
+  manifest = "meta/run-benchmark-tests.cmx"
+  deps = [ ":run-benchmark-unittests" ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [
+    ":start-storage-benchmark-run-benchmark-tests",
+    ":start-storage-benchmark-tests",
+    "//src/storage/bin/start-storage-benchmark/testing:start-storage-benchmark-namespace-validator",
+  ]
+}

@@ -1,0 +1,19 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+
+executable("namespace-validator-bin") {
+  testonly = true
+  output_name = "namespace-validator"
+  sources = [ "namespace-validator.cc" ]
+  deps = [ "//zircon/system/ulib/fbl" ]
+}
+
+fuchsia_package_with_single_component(
+    "start-storage-benchmark-namespace-validator") {
+  testonly = true
+  manifest = "meta/namespace-validator.cmx"
+  deps = [ ":namespace-validator-bin" ]
+}

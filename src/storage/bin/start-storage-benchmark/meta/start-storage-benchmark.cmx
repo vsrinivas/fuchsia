@@ -1,0 +1,17 @@
+{
+  "include": [
+    "syslog/client.shard.cmx"
+  ],
+  "program": {
+    "binary": "bin/start-storage-benchmark"
+  },
+  "sandbox": {
+    "features": [
+      "deprecated-global-dev"
+    ],
+    "services": [
+      "fuchsia.process.Launcher",
+      "fuchsia.sys.Launcher"
+    ]
+  }
+}

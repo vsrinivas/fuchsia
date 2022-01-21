@@ -208,6 +208,7 @@ group("cmx_allowlist") {
     "//src/speech/tts/*",
     "//src/storage/bin/disk-pave/*",
     "//src/storage/bin/odu/*",
+    "//src/storage/bin/start-storage-benchmark/*",
     "//src/storage/blobfs/*",
     "//src/storage/ext4/*",
     "//src/storage/extractor/*",
