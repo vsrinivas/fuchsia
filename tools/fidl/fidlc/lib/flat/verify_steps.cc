@@ -185,7 +185,7 @@ void VerifyInlineSizeStep::RunImpl() {
   for (const Decl* decl : library_->declaration_order_) {
     if (decl->kind == Decl::Kind::kStruct) {
       auto struct_decl = static_cast<const Struct*>(decl);
-      if (struct_decl->typeshape(WireFormat::kV1NoEe).InlineSize() >= 65536) {
+      if (struct_decl->typeshape(WireFormat::kV1NoEe).inline_size >= 65536) {
         Fail(ErrInlineSizeExceeds64k, struct_decl->name.span().value());
       }
     }

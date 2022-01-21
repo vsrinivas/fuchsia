@@ -787,7 +787,7 @@ bool GetMethodParameters(const flat::Library* library, const CGenerator::NamedMe
 uint32_t CGenerator::GetMaxHandlesFor(Transport transport, const TypeShape& typeshape) {
   switch (transport) {
     case Transport::Channel:
-      return std::min(kChannelMaxMessageHandles, typeshape.MaxHandles());
+      return std::min(kChannelMaxMessageHandles, typeshape.max_handles);
   }
   assert(false && "what transport?");
   return 0u;
@@ -1224,7 +1224,7 @@ void CGenerator::ProduceProtocolClientImplementation(const NamedProtocol& named_
       response_hcount = GetMaxHandlesFor(named_protocol.transport, method_info.response->typeshape);
     }
 
-    bool has_padding = method_info.request->typeshape.HasPadding();
+    bool has_padding = method_info.request->typeshape.has_padding;
     bool encode_request = (count > 0) || (request_hcount > 0) || has_padding;
 
     EmitClientMethodDecl(&file_, method_info.c_name, request, response);
@@ -1323,7 +1323,7 @@ void CGenerator::ProduceProtocolClientImplementation(const NamedProtocol& named_
       // using |_handles| rather than trying to find them in the decoded
       // message.
       count = CountSecondaryObjects(response);
-      has_padding = method_info.response->typeshape.HasPadding();
+      has_padding = method_info.response->typeshape.has_padding;
       bool decode_response = (count > 0) || (response_hcount > 0) || has_padding;
       if (count > 0u) {
         file_ << kIndent << "if ";
@@ -1641,7 +1641,7 @@ void CGenerator::ProduceProtocolServerImplementation(const NamedProtocol& named_
     file_ << kIndent << kIndent << kIndent << ".num_handles = " << hcount << ",\n";
     file_ << kIndent << kIndent << "},\n";
     file_ << kIndent << "};\n";
-    bool has_padding = method_info.response->typeshape.HasPadding();
+    bool has_padding = method_info.response->typeshape.has_padding;
     bool encode_response = (hcount > 0) || CountSecondaryObjects(response) > 0 || has_padding;
     if (encode_response) {
       file_ << kIndent << "zx_status_t _status = fidl_encode_msg(&"

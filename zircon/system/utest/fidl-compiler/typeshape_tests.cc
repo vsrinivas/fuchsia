@@ -47,14 +47,14 @@ struct Expected {
 };
 
 void CheckTypeShape(const fidl::TypeShape& actual, Expected expected) {
-  EXPECT_EQ(expected.inline_size, actual.InlineSize());
-  EXPECT_EQ(expected.alignment, actual.Alignment());
-  EXPECT_EQ(expected.max_out_of_line, actual.MaxOutOfLine());
-  EXPECT_EQ(expected.max_handles, actual.MaxHandles());
-  EXPECT_EQ(expected.depth, actual.Depth());
-  EXPECT_EQ(expected.has_padding, actual.HasPadding());
-  EXPECT_EQ(expected.has_envelope, actual.HasEnvelope());
-  EXPECT_EQ(expected.has_flexible_envelope, actual.HasFlexibleEnvelope());
+  EXPECT_EQ(expected.inline_size, actual.inline_size);
+  EXPECT_EQ(expected.alignment, actual.alignment);
+  EXPECT_EQ(expected.max_out_of_line, actual.max_out_of_line);
+  EXPECT_EQ(expected.max_handles, actual.max_handles);
+  EXPECT_EQ(expected.depth, actual.depth);
+  EXPECT_EQ(expected.has_padding, actual.has_padding);
+  EXPECT_EQ(expected.has_envelope, actual.has_envelope);
+  EXPECT_EQ(expected.has_flexible_envelope, actual.has_flexible_envelope);
 }
 
 void CheckTypeShape(const fidl::flat::Object* actual, Expected expected_v1_no_ee,

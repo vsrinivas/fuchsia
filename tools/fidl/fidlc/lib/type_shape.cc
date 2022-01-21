@@ -191,7 +191,7 @@ class UnalignedSizeVisitor final : public TypeShapeVisitor<DataSize> {
 
     for (const auto& member : object.members) {
       const DataSize member_size =
-          UnalignedSize(member) + member.fieldshape(wire_format()).Padding();
+          UnalignedSize(member) + member.fieldshape(wire_format()).padding;
       size += member_size;
     }
 
@@ -889,7 +889,7 @@ class HasPaddingVisitor final : public TypeShapeVisitor<bool> {
   }
 
   std::any Visit(const flat::Struct::Member& object) override {
-    return object.fieldshape(wire_format()).Padding() > 0 || HasPadding(object.type_ctor->type);
+    return object.fieldshape(wire_format()).padding > 0 || HasPadding(object.type_ctor->type);
   }
 
   std::any Visit(const flat::Table& object) override {
@@ -908,7 +908,7 @@ class HasPaddingVisitor final : public TypeShapeVisitor<bool> {
 
   std::any Visit(const flat::Table::Member::Used& object) override {
     return Padding(UnalignedSize(object.type_ctor->type, wire_format()), 8) > 0 ||
-           HasPadding(object.type_ctor->type) || object.fieldshape(wire_format()).Padding() > 0;
+           HasPadding(object.type_ctor->type) || object.fieldshape(wire_format()).padding > 0;
   }
 
   std::any Visit(const flat::Union& object) override {
@@ -924,7 +924,7 @@ class HasPaddingVisitor final : public TypeShapeVisitor<bool> {
   std::any Visit(const flat::Union::Member::Used& object) override {
     // TODO(fxbug.dev/36331): This code only accounts for inline padding for the union member. We
     // also need to account for out-of-line padding.
-    return object.fieldshape(wire_format()).Padding() > 0;
+    return object.fieldshape(wire_format()).padding > 0;
   }
 
   std::any Visit(const flat::Protocol& object) override { return false; }

@@ -64,17 +64,6 @@ struct TypeShape {
   bool has_envelope;
   bool has_flexible_envelope;
 
-  // TODO(fxbug.dev/36337): These accessors are for backward compatibility with current code, and
-  // could be removed in the future.
-  uint32_t InlineSize() const { return inline_size; }
-  uint32_t Alignment() const { return alignment; }
-  uint32_t Depth() const { return depth; }
-  uint32_t MaxHandles() const { return max_handles; }
-  uint32_t MaxOutOfLine() const { return max_out_of_line; }
-  bool HasPadding() const { return has_padding; }
-  bool HasFlexibleEnvelope() const { return has_flexible_envelope; }
-  bool HasEnvelope() const { return has_envelope; }
-
   // This is a named constructor for the specific case of generating a type
   // shape to represent a method interaction kind (that is, request or response)
   // with no payload body.
@@ -104,15 +93,6 @@ struct FieldShape {
   explicit FieldShape(const flat::StructMember&, const WireFormat wire_format);
   explicit FieldShape(const flat::TableMemberUsed&, const WireFormat wire_format);
   explicit FieldShape(const flat::UnionMemberUsed&, const WireFormat wire_format);
-
-  uint32_t Offset() const { return offset; }
-  // Padding after this field until the next field or the end of the container.
-  // See
-  // https://fuchsia.dev/fuchsia-src/development/languages/fidl/reference/wire-format/README.md#size-and-alignment
-  uint32_t Padding() const { return padding; }
-
-  void SetOffset(uint32_t updated_offset) { offset = updated_offset; }
-  void SetPadding(uint32_t updated_padding) { padding = updated_padding; }
 
   uint32_t offset = 0;
   uint32_t padding = 0;

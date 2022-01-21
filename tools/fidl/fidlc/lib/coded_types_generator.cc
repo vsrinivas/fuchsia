@@ -13,8 +13,8 @@ namespace fidl {
 
 coded::MemcpyCompatibility ComputeMemcpyCompatibility(const flat::Type* type) {
   auto typeshape = type->typeshape(fidl::WireFormat::kV1NoEe);
-  if (typeshape.MaxOutOfLine() == 0 && typeshape.MaxHandles() == 0 &&
-      !typeshape.HasFlexibleEnvelope() && !typeshape.HasPadding()) {
+  if (typeshape.max_out_of_line == 0 && typeshape.max_handles == 0 &&
+      !typeshape.has_flexible_envelope && !typeshape.has_padding) {
     return coded::MemcpyCompatibility::kCanMemcpy;
   }
   return coded::MemcpyCompatibility::kCannotMemcpy;
@@ -25,7 +25,7 @@ CodedTypesGenerator::FlattenedStructMember::FlattenedStructMember(const flat::St
           member.type_ctor->type, member.name, member.typeshape(WireFormat::kV1NoEe),
           member.typeshape(WireFormat::kV2), member.fieldshape(WireFormat::kV1NoEe),
           member.fieldshape(WireFormat::kV2)) {
-  assert(padding == member.fieldshape(WireFormat::kV2).Padding());
+  assert(padding == member.fieldshape(WireFormat::kV2).padding);
 }
 
 CodedTypesGenerator::FlattenedStructMember
@@ -46,12 +46,12 @@ CodedTypesGenerator::FlattenedStructMember::FlattenedStructMember(
     fidl::TypeShape typeshape_v2, fidl::FieldShape fieldshape_v1, fidl::FieldShape fieldshape_v2)
     : type(type),
       name(name),
-      inline_size_v1(typeshape_v1.InlineSize()),
-      inline_size_v2(typeshape_v2.InlineSize()),
-      offset_v1(fieldshape_v1.Offset()),
-      offset_v2(fieldshape_v2.Offset()),
-      padding(fieldshape_v1.Padding()) {
-  assert(padding == fieldshape_v2.Padding());
+      inline_size_v1(typeshape_v1.inline_size),
+      inline_size_v2(typeshape_v2.inline_size),
+      offset_v1(fieldshape_v1.offset),
+      offset_v2(fieldshape_v2.offset),
+      padding(fieldshape_v1.padding) {
+  assert(padding == fieldshape_v2.padding);
 }
 
 CodedTypesGenerator::FlattenedStructMember::FlattenedStructMember(
@@ -141,11 +141,11 @@ const coded::Type* CodedTypesGenerator::CompileType(const flat::Type* type,
       if (iter != array_type_map_.end())
         return iter->second;
 
-      uint32_t array_size_v1 = array_type->typeshape(WireFormat::kV1NoEe).InlineSize();
-      uint32_t array_size_v2 = array_type->typeshape(WireFormat::kV2).InlineSize();
+      uint32_t array_size_v1 = array_type->typeshape(WireFormat::kV1NoEe).inline_size;
+      uint32_t array_size_v2 = array_type->typeshape(WireFormat::kV2).inline_size;
       uint32_t element_size_v1 =
-          array_type->element_type->typeshape(WireFormat::kV1NoEe).InlineSize();
-      uint32_t element_size_v2 = array_type->element_type->typeshape(WireFormat::kV2).InlineSize();
+          array_type->element_type->typeshape(WireFormat::kV1NoEe).inline_size;
+      uint32_t element_size_v2 = array_type->element_type->typeshape(WireFormat::kV2).inline_size;
       auto name = NameCodedArray(coded_element_type->coded_name, array_size_v1);
       auto coded_array_type = std::make_unique<coded::ArrayType>(
           std::move(name), coded_element_type, array_size_v1, array_size_v2, element_size_v1,
@@ -244,7 +244,7 @@ const coded::Type* CodedTypesGenerator::CompileType(const flat::Type* type,
       auto name = NameFlatName(primitive_type->name);
       auto coded_primitive_type = std::make_unique<coded::PrimitiveType>(
           std::move(name), primitive_type->subtype,
-          primitive_type->typeshape(WireFormat::kV1NoEe).InlineSize(), context);
+          primitive_type->typeshape(WireFormat::kV1NoEe).inline_size, context);
       primitive_type_map_[primitive_type] = coded_primitive_type.get();
       coded_types_.push_back(std::move(coded_primitive_type));
       return coded_types_.back().get();
@@ -480,7 +480,7 @@ void CodedTypesGenerator::CompileDecl(const flat::Decl* decl) {
           bits_decl->name,
           std::make_unique<coded::BitsType>(
               std::move(bits_name), primitive_type->subtype,
-              primitive_type->typeshape(WireFormat::kV1NoEe).InlineSize(), bits_decl->mask,
+              primitive_type->typeshape(WireFormat::kV1NoEe).inline_size, bits_decl->mask,
               NameFlatName(bits_decl->name), bits_decl->strictness));
       break;
     }
@@ -510,7 +510,7 @@ void CodedTypesGenerator::CompileDecl(const flat::Decl* decl) {
           enum_decl->name,
           std::make_unique<coded::EnumType>(
               std::move(enum_name), enum_decl->type->subtype,
-              enum_decl->type->typeshape(WireFormat::kV1NoEe).InlineSize(), std::move(members),
+              enum_decl->type->typeshape(WireFormat::kV1NoEe).inline_size, std::move(members),
               NameFlatName(enum_decl->name), enum_decl->strictness));
       break;
     }
@@ -543,7 +543,7 @@ void CodedTypesGenerator::CompileDecl(const flat::Decl* decl) {
 
           protocol_messages.push_back(std::make_unique<coded::MessageType>(
               std::move(message_name), std::vector<coded::StructElement>(),
-              typeshape_v1.InlineSize(), typeshape_v2.InlineSize(), typeshape_v1.HasEnvelope(),
+              typeshape_v1.inline_size, typeshape_v2.inline_size, typeshape_v1.has_envelope,
               std::move(message_qname)));
         };
         if (method.has_request) {
@@ -576,8 +576,8 @@ void CodedTypesGenerator::CompileDecl(const flat::Decl* decl) {
       named_coded_types_.emplace(decl->name,
                                  std::make_unique<coded::StructType>(
                                      std::move(struct_name), std::vector<coded::StructElement>(),
-                                     typeshape_v1.InlineSize(), typeshape_v2.InlineSize(),
-                                     typeshape_v1.HasEnvelope(), NameFlatName(struct_decl->name)));
+                                     typeshape_v1.inline_size, typeshape_v2.inline_size,
+                                     typeshape_v1.has_envelope, NameFlatName(struct_decl->name)));
       break;
     }
     case flat::Decl::Kind::kUnion: {

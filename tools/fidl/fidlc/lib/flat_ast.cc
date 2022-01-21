@@ -244,20 +244,20 @@ bool MaxBytesConstraint(Reporter* reporter, const Attribute* attribute, const El
     }
     case Element::Kind::kStruct: {
       auto struct_decl = static_cast<const Struct*>(element);
-      max_bytes = struct_decl->typeshape(WireFormat::kV1NoEe).InlineSize() +
-                  struct_decl->typeshape(WireFormat::kV1NoEe).MaxOutOfLine();
+      max_bytes = struct_decl->typeshape(WireFormat::kV1NoEe).inline_size +
+                  struct_decl->typeshape(WireFormat::kV1NoEe).max_out_of_line;
       break;
     }
     case Element::Kind::kTable: {
       auto table_decl = static_cast<const Table*>(element);
-      max_bytes = table_decl->typeshape(WireFormat::kV1NoEe).InlineSize() +
-                  table_decl->typeshape(WireFormat::kV1NoEe).MaxOutOfLine();
+      max_bytes = table_decl->typeshape(WireFormat::kV1NoEe).inline_size +
+                  table_decl->typeshape(WireFormat::kV1NoEe).max_out_of_line;
       break;
     }
     case Element::Kind::kUnion: {
       auto union_decl = static_cast<const Union*>(element);
-      max_bytes = union_decl->typeshape(WireFormat::kV1NoEe).InlineSize() +
-                  union_decl->typeshape(WireFormat::kV1NoEe).MaxOutOfLine();
+      max_bytes = union_decl->typeshape(WireFormat::kV1NoEe).inline_size +
+                  union_decl->typeshape(WireFormat::kV1NoEe).max_out_of_line;
       break;
     }
     default:
@@ -317,17 +317,17 @@ bool MaxHandlesConstraint(Reporter* reporter, const Attribute* attribute, const 
     }
     case Element::Kind::kStruct: {
       auto struct_decl = static_cast<const Struct*>(element);
-      max_handles = struct_decl->typeshape(WireFormat::kV1NoEe).MaxHandles();
+      max_handles = struct_decl->typeshape(WireFormat::kV1NoEe).max_handles;
       break;
     }
     case Element::Kind::kTable: {
       auto table_decl = static_cast<const Table*>(element);
-      max_handles = table_decl->typeshape(WireFormat::kV1NoEe).MaxHandles();
+      max_handles = table_decl->typeshape(WireFormat::kV1NoEe).max_handles;
       break;
     }
     case Element::Kind::kUnion: {
       auto union_decl = static_cast<const Union*>(element);
-      max_handles = union_decl->typeshape(WireFormat::kV1NoEe).MaxHandles();
+      max_handles = union_decl->typeshape(WireFormat::kV1NoEe).max_handles;
       break;
     }
     default:
