@@ -101,7 +101,7 @@ impl PackageFetcher {
 pub async fn run_resolver_service(
     repo_manager: Arc<AsyncRwLock<RepositoryManager>>,
     rewriter: Arc<AsyncRwLock<RewriteManager>>,
-    package_fetcher: Arc<PackageFetcher>,
+    package_fetcher: PackageFetcher,
     base_package_index: Arc<BasePackageIndex>,
     system_cache_list: Arc<CachePackages>,
     stream: PackageResolverRequestStream,
@@ -536,7 +536,7 @@ async fn resolve(
 /// Run a service that only resolves registered font packages.
 pub async fn run_font_resolver_service(
     font_package_manager: Arc<FontPackageManager>,
-    package_fetcher: Arc<PackageFetcher>,
+    package_fetcher: PackageFetcher,
     stream: FontResolverRequestStream,
     cobalt_sender: CobaltSender,
 ) -> Result<(), Error> {
@@ -582,7 +582,7 @@ pub async fn run_font_resolver_service(
 /// Resolve a single font package.
 async fn resolve_font<'a>(
     font_package_manager: &'a Arc<FontPackageManager>,
-    package_fetcher: &'a Arc<PackageFetcher>,
+    package_fetcher: &'a PackageFetcher,
     package_url: String,
     directory_request: ServerEnd<DirectoryMarker>,
     mut cobalt_sender: CobaltSender,
