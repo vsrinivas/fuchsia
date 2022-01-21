@@ -5,14 +5,13 @@
 #include "thread_interrupter.h"
 
 #include <lib/async/cpp/task.h>
+#include <lib/fit/function.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/syslog/global.h>
 #include <stdarg.h>
 #include <zircon/process.h>
 #include <zircon/status.h>
 #include <zircon/syscalls/debug.h>
-
-#include <fbl/function.h>
 
 #define print_error(...)                                                \
   do {                                                                  \
@@ -22,16 +21,16 @@
     }                                                                   \
   } while (0)
 
-#define log_zx_error(status, msg)                                      \
+#define log_zx_error(status, msg)                                           \
   do {                                                                      \
     fx_logger_t* logger = fx_log_get_logger();                              \
     if (logger && fx_logger_get_min_severity(logger) <= FX_LOG_ERROR) {     \
       fx_logger_logf(logger, (FX_LOG_ERROR), nullptr, "%d(%s)" msg, status, \
-                     zx_status_get_string(status));            \
+                     zx_status_get_string(status));                         \
     }                                                                       \
   } while (0)
 
-#define log_zx_error_msg(status, msg, ...)                                      \
+#define log_zx_error_msg(status, msg, ...)                                  \
   do {                                                                      \
     fx_logger_t* logger = fx_log_get_logger();                              \
     if (logger && fx_logger_get_min_severity(logger) <= FX_LOG_ERROR) {     \
@@ -232,7 +231,8 @@ void ThreadInterrupter::ThreadInterrupt() {
       status = zx_object_wait_one(thread, signals, deadline, &observed);
 
       if (status != ZX_OK) {
-        log_zx_error_msg(status, "failure waiting for thread %ld.%ld to suspend, skipping", pid, tid);
+        log_zx_error_msg(status, "failure waiting for thread %ld.%ld to suspend, skipping", pid,
+                         tid);
         continue;  // Skip this thread.
       }
 

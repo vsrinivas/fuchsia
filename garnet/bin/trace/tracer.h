@@ -24,7 +24,7 @@ namespace controller = ::fuchsia::tracing::controller;
 class Tracer {
  public:
   // These functions are for processing trace records.
-  using BytesConsumer = fbl::Function<void(const unsigned char*, size_t)>;
+  using BytesConsumer = fit::function<void(const unsigned char*, size_t)>;
   using RecordConsumer = trace::TraceReader::RecordConsumer;
   using ErrorHandler = trace::TraceReader::ErrorHandler;
 
