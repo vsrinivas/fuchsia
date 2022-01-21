@@ -72,8 +72,6 @@
             "fuchsia.logger.Log",
             "fuchsia.lowpan.device.Lookup",
             "fuchsia.paver.Paver",
-            "fuchsia.power.BatteryManager",
-            "fuchsia.power.test.BatterySimulator",
             "fuchsia.recovery.FactoryReset",
             "fuchsia.session.Launcher",
             "fuchsia.settings.Audio",

@@ -41,3 +41,24 @@ This outputs to
 ```
 GenericFacade::func:201 Really important log.
 ```
+
+# Deleted facades
+
+
+## adc
+- CL: https://fxrev.dev/631770
+
+## battery_simulator
+- CL: https://fxrev.dev/631362
+
+## boot_arguments
+- CL: https://fxrev.dev/631771
+
+## cpu_ctrl
+- CL: https://fxrev.dev/631364
+
+## repository_manager
+- CL: https://fxrev.dev/635304
+
+## update
+- CL: https://fxrev.dev/631268
