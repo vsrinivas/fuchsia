@@ -68,14 +68,14 @@ TODO(fxbug.dev/67565) - remove once external sync FD extensions fully supported
 
 **Current value (from the default):** `false`
 
-From [//third_party/mesa/src/intel/vulkan/BUILD.gn:27](https://fuchsia.googlesource.com/third_party/mesa/+/00e8b75af56c8044243e1b992d4756ad10652062/src/intel/vulkan/BUILD.gn#27)
+From [//third_party/mesa/src/intel/vulkan/BUILD.gn:27](https://fuchsia.googlesource.com/third_party/mesa/+/2666dfc74368a2120c151fc1fa26cd7e34de09fe/src/intel/vulkan/BUILD.gn#27)
 
 ### anv_use_max_ram
 Give maximum possible memory to Vulkan heap
 
 **Current value (from the default):** `false`
 
-From [//third_party/mesa/src/intel/vulkan/BUILD.gn:30](https://fuchsia.googlesource.com/third_party/mesa/+/00e8b75af56c8044243e1b992d4756ad10652062/src/intel/vulkan/BUILD.gn#30)
+From [//third_party/mesa/src/intel/vulkan/BUILD.gn:30](https://fuchsia.googlesource.com/third_party/mesa/+/2666dfc74368a2120c151fc1fa26cd7e34de09fe/src/intel/vulkan/BUILD.gn#30)
 
 ### asan_default_options
 Default [AddressSanitizer](https://clang.llvm.org/docs/AddressSanitizer.html)
@@ -947,6 +947,46 @@ From //build/images/custom_signing.gni:21
 
 From [//third_party/Vulkan-Loader/BUILD.gn:22](https://fuchsia.googlesource.com/third_party/Vulkan-Loader/+/24e8d64bb21dea82c776dbb068e515b28fb69834/BUILD.gn#22)
 
+### dart_aot_debug_build_cfg
+Builds the component in a non-product AOT build. This will
+launch the vm service in the runner.
+This configuration is not compatible with a --release build since the
+profile aot runner is built without asserts.
+
+**Current value (from the default):**
+```
+{
+  enable_asserts = true
+  is_aot = true
+  is_product = false
+  platform_name = "dart_runner"
+  runner_dep = "//src/dart:dart_aot_runner"
+  runtime_meta = "//build/dart/meta/aot_runtime.cmx"
+  runtime_meta_v2 = "//build/dart/meta/aot_runtime.cml"
+}
+```
+
+From //build/dart/dart_build_config.gni:22
+
+### dart_debug_build_cfg
+Builds the component in a non-product JIT build. This will
+launch the vm service in the runner.
+
+**Current value (from the default):**
+```
+{
+  enable_asserts = true
+  is_aot = false
+  is_product = false
+  platform_name = "dart_runner"
+  runner_dep = "//src/dart:dart_jit_runner"
+  runtime_meta = "//build/dart/meta/jit_runtime.cmx"
+  runtime_meta_v2 = "//build/dart/meta/jit_runtime.cml"
+}
+```
+
+From //build/dart/dart_build_config.gni:8
+
 ### dart_default_build_cfg
 TODO(fxbug.dev/64153) renable aot builds
  if (dart_force_product) {
@@ -977,6 +1017,44 @@ stripped down version of the VM running in AOT mode.
 **Current value (from the default):** `false`
 
 From //build/dart/config.gni:10
+
+### dart_profile_build_cfg
+Builds the component in a non-product AOT build. This will
+launch the vm service in the runner.
+
+**Current value (from the default):**
+```
+{
+  enable_asserts = false
+  is_aot = true
+  is_product = false
+  platform_name = "dart_runner"
+  runner_dep = "//src/dart:dart_aot_runner"
+  runtime_meta = "//build/dart/meta/aot_runtime.cmx"
+  runtime_meta_v2 = "//build/dart/meta/aot_runtime.cml"
+}
+```
+
+From //build/dart/dart_build_config.gni:34
+
+### dart_release_build_cfg
+Builds the component in a product AOT build. This will
+not launch the vm service in the runner.
+
+**Current value (from the default):**
+```
+{
+  enable_asserts = false
+  is_aot = true
+  is_product = true
+  platform_name = "dart_runner"
+  runner_dep = "//src/dart:dart_aot_product_runner"
+  runtime_meta = "//build/dart/meta/aot_product_runtime.cmx"
+  runtime_meta_v2 = "//build/dart/meta/aot_product_runtime.cml"
+}
+```
+
+From //build/dart/dart_build_config.gni:46
 
 ### data_filesystem_format
 Set to one of "minfs", "fxfs", "f2fs" (unstable).
@@ -1379,6 +1457,46 @@ are rendered via the GPU renderer instead of by direct DisplayController scanout
 
 From //src/ui/scenic/lib/flatland/engine/build_args.gni:8
 
+### flutter_aot_debug_build_cfg
+Builds the component in a non-product AOT build. This will
+launch the vm service in the runner.
+This configuration is not compatible with a --release build since the
+profile aot runner is built without asserts.
+
+**Current value (from the default):**
+```
+{
+  enable_asserts = true
+  is_aot = true
+  is_product = false
+  platform_name = "flutter_runner"
+  runner_dep = "//src/flutter:flutter_aot_runner"
+  runtime_meta = "//build/flutter/meta/aot_runtime.cmx"
+  runtime_meta_v2 = "//build/flutter/meta/aot_runtime.cml"
+}
+```
+
+From //build/flutter/flutter_build_config.gni:26
+
+### flutter_debug_build_cfg
+Builds the component in a non-product JIT build. This will
+launch the vm service in the runner.
+
+**Current value (from the default):**
+```
+{
+  enable_asserts = true
+  is_aot = false
+  is_product = false
+  platform_name = "flutter_runner"
+  runner_dep = "//src/flutter:flutter_jit_runner"
+  runtime_meta = "//build/flutter/meta/jit_runtime.cmx"
+  runtime_meta_v2 = "//build/flutter/meta/jit_runtime.cml"
+}
+```
+
+From //build/flutter/flutter_build_config.gni:12
+
 ### flutter_default_build_cfg
 Non-product AOT
 
@@ -1413,6 +1531,44 @@ product mode which means they will not have an exposed vm service
 **Current value (from the default):** `false`
 
 From //build/flutter/config.gni:10
+
+### flutter_profile_build_cfg
+Builds the component in a non-product AOT build. This will
+launch the vm service in the runner.
+
+**Current value (from the default):**
+```
+{
+  enable_asserts = false
+  is_aot = true
+  is_product = false
+  platform_name = "flutter_runner"
+  runner_dep = "//src/flutter:flutter_aot_runner"
+  runtime_meta = "//build/flutter/meta/aot_runtime.cmx"
+  runtime_meta_v2 = "//build/flutter/meta/aot_runtime.cml"
+}
+```
+
+From //build/flutter/flutter_build_config.gni:38
+
+### flutter_release_build_cfg
+Builds the component in a product AOT build. This will
+not launch the vm service in the runner.
+
+**Current value (from the default):**
+```
+{
+  enable_asserts = false
+  is_aot = true
+  is_product = true
+  platform_name = "flutter_runner"
+  runner_dep = "//src/flutter:flutter_aot_product_runner"
+  runtime_meta = "//build/flutter/meta/aot_product_runtime.cmx"
+  runtime_meta_v2 = "//build/flutter/meta/aot_product_runtime.cml"
+}
+```
+
+From //build/flutter/flutter_build_config.gni:50
 
 ### font_catalog_paths
 
