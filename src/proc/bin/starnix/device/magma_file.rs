@@ -272,6 +272,21 @@ impl FileOps for MagmaFile {
                 response.hdr.type_ = virtio_magma_ctrl_type_VIRTIO_MAGMA_RESP_IMPORT as u32;
                 task.mm.write_object(UserRef::new(response_address), &response)
             }
+            virtio_magma_ctrl_type_VIRTIO_MAGMA_CMD_QUERY2 => {
+                let (control, mut response): (
+                    virtio_magma_query2_ctrl_t,
+                    virtio_magma_query2_resp_t,
+                ) = read_control_and_response(task, &command)?;
+
+                let mut value_out = 0;
+                response.result_return = unsafe {
+                    magma_query2(control.device as usize, control.id, &mut value_out) as u64
+                };
+                response.value_out = value_out as usize;
+
+                response.hdr.type_ = virtio_magma_ctrl_type_VIRTIO_MAGMA_RESP_QUERY2 as u32;
+                task.mm.write_object(UserRef::new(response_address), &response)
+            }
             t => {
                 log::warn!("Got unknown request: {:?}", t);
                 error!(ENOSYS)
