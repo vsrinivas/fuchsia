@@ -315,7 +315,7 @@ class Link final {
   Link(const Link& other) = delete;
   Link(Link&& other) = default;
   Link& operator=(const Link& other) = delete;
-  Link& operator=(Link&& other) = default;
+  Link& operator=(Link&& other) noexcept;
 
   // Return true if this node is stored in a buffer. False otherwise.
   explicit operator bool() const { return state_ != nullptr; }
@@ -325,6 +325,10 @@ class Link final {
   Link(std::shared_ptr<internal::State> state, internal::BlockIndex name,
        internal::BlockIndex value, internal::BlockIndex content)
       : state_(std::move(state)), name_index_(name), value_index_(value), content_index_(content) {}
+
+  // Remove from `state_` and invalidate `state_`.
+  // This needs to be done on destruction and move.
+  void DeallocateFromVmo();
 
   // Reference to the state containing this value.
   std::shared_ptr<internal::State> state_;
@@ -350,7 +354,7 @@ class LazyNode final {
   LazyNode(const LazyNode& other) = delete;
   LazyNode(LazyNode&& other) = default;
   LazyNode& operator=(const LazyNode& other) = delete;
-  LazyNode& operator=(LazyNode&& other) = default;
+  LazyNode& operator=(LazyNode&& other) noexcept;
 
   // Return true if this value is represented in a buffer. False otherwise.
   explicit operator bool() const { return state_ != nullptr; }
@@ -361,6 +365,10 @@ class LazyNode final {
       : state_(std::move(state)),
         content_value_(std::move(content_value)),
         link_(std::move(link)) {}
+
+  // Remove from `state_` and invalidate `state_`.
+  // This needs to be done on destruction and move.
+  void DeallocateFromVmo();
 
   // Reference to the state containing this value.
   std::shared_ptr<internal::State> state_;

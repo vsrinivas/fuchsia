@@ -487,16 +487,55 @@ LazyNode Node::CreateLazyValues(BorrowedStringValue name, LazyNodeCallbackFn cal
   return LazyNode();
 }
 
-Link::~Link() {
-  if (state_) {
-    state_->FreeLink(this);
+Link& Link::operator=(Link&& other) noexcept {
+  if (this == &other) {
+    return *this;
   }
+
+  DeallocateFromVmo();
+
+  state_ = std::move(other.state_);
+  name_index_ = other.name_index_;
+  value_index_ = other.value_index_;
+  content_index_ = other.content_index_;
+
+  return *this;
 }
 
-LazyNode::~LazyNode() {
-  if (state_) {
-    state_->FreeLazyNode(this);
+void Link::DeallocateFromVmo() {
+  if (state_ == nullptr) {
+    return;
   }
+
+  state_->FreeLink(this);
+  state_ = nullptr;
 }
+
+Link::~Link() { DeallocateFromVmo(); }
+
+LazyNode& LazyNode::operator=(LazyNode&& other) noexcept {
+  if (this == &other) {
+    return *this;
+  }
+
+  DeallocateFromVmo();
+
+  state_ = std::move(other.state_);
+  content_value_ = std::move(other.content_value_);
+  link_ = std::move(other.link_);
+
+  return *this;
+}
+
+void LazyNode::DeallocateFromVmo() {
+  if (state_ == nullptr) {
+    return;
+  }
+
+  state_->FreeLazyNode(this);
+  state_ = nullptr;
+}
+
+LazyNode::~LazyNode() { DeallocateFromVmo(); }
 
 }  // namespace inspect

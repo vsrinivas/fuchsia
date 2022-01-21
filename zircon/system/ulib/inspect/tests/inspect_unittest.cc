@@ -446,6 +446,125 @@ TEST(Inspect, GetLinks) {
   EXPECT_TRUE(result.is_ok());
 }
 
+TEST(Inspect, LinksAreDestructed) {
+  Inspector inspector;
+
+  auto ln = inspector.GetRoot().CreateLazyNode("lazy", [] {
+    Inspector insp;
+    insp.GetRoot().CreateInt("val", 10, &insp);
+    return fpromise::make_ok_promise(insp);
+  });
+
+  auto children = inspector.GetChildNames();
+  ASSERT_EQ(1u, children.size());
+  EXPECT_EQ("lazy-0", children[0]);
+
+  auto stats = inspector.GetStats();
+  EXPECT_EQ(1u, stats.dynamic_child_count);
+
+  fpromise::result<Inspector> result;
+  fpromise::single_threaded_executor exec;
+  exec.schedule_task(inspector.OpenChild("lazy-0").then(
+      [&](fpromise::result<Inspector>& res) { result = std::move(res); }));
+  exec.run();
+  EXPECT_TRUE(result.is_ok());
+
+  // clear node, shouldn't be in Inspector
+  ln = inspect::LazyNode();
+
+  children = inspector.GetChildNames();
+  EXPECT_EQ(0u, children.size());
+
+  stats = inspector.GetStats();
+  EXPECT_EQ(0u, stats.dynamic_child_count);
+}
+
+TEST(Inspect, LazyNodesAreDestructed) {
+  Inspector inspector;
+
+  auto ln = inspector.GetRoot().CreateLazyNode("lazy", [] {
+    Inspector insp;
+    insp.GetRoot().CreateInt("val", 10, &insp);
+    return fpromise::make_ok_promise(std::move(insp));
+  });
+
+  fpromise::result<inspect::Hierarchy> result;
+  fpromise::single_threaded_executor exec;
+  exec.schedule_task(inspect::ReadFromInspector(inspector).then(
+      [&](fpromise::result<inspect::Hierarchy>& res) { result = std::move(res); }));
+  exec.run();
+
+  ASSERT_TRUE(result.is_ok());
+  auto hierarchy = result.take_value();
+
+  EXPECT_EQ(1, hierarchy.children().size());
+  EXPECT_EQ("lazy", hierarchy.children()[0].name());
+  EXPECT_EQ(
+      10, hierarchy.children()[0].node().properties()[0].Get<inspect::IntPropertyValue>().value());
+
+  // this should clear the node
+  ln = inspect::LazyNode();
+
+  // inspector is empty
+  exec.schedule_task(inspect::ReadFromInspector(inspector).then(
+      [&](fpromise::result<inspect::Hierarchy>& res) { result = std::move(res); }));
+  exec.run();
+
+  ASSERT_TRUE(result.is_ok());
+  hierarchy = result.take_value();
+
+  EXPECT_EQ(0, hierarchy.children().size());
+}
+
+TEST(Inspect, NamedLazyNodesAreDestructed) {
+  Inspector inspector;
+
+  auto ln = inspector.GetRoot().CreateLazyNode("lazy", [] {
+    Inspector insp;
+    insp.GetRoot().CreateInt("val", 10, &insp);
+    return fpromise::make_ok_promise(std::move(insp));
+  });
+
+  auto second = inspector.GetRoot().CreateLazyNode("lazy-2", [] {
+    Inspector insp;
+    insp.GetRoot().CreateInt("val-2", 10, &insp);
+    return fpromise::make_ok_promise(std::move(insp));
+  });
+
+  fpromise::result<inspect::Hierarchy> result;
+  fpromise::single_threaded_executor exec;
+  exec.schedule_task(inspect::ReadFromInspector(inspector).then(
+      [&](fpromise::result<inspect::Hierarchy>& res) { result = std::move(res); }));
+  exec.run();
+
+  ASSERT_TRUE(result.is_ok());
+  auto hierarchy = result.take_value();
+
+  EXPECT_EQ(2, hierarchy.children().size());
+  EXPECT_EQ("lazy", hierarchy.children()[0].name());
+  EXPECT_EQ("lazy-2", hierarchy.children()[1].name());
+  EXPECT_EQ(
+      10, hierarchy.children()[0].node().properties()[0].Get<inspect::IntPropertyValue>().value());
+  EXPECT_EQ(
+      10, hierarchy.children()[1].node().properties()[0].Get<inspect::IntPropertyValue>().value());
+
+  // remove second from VMO, replacing it with contents of ln
+  // result is as if we had removed second
+  second = std::move(ln);
+
+  exec.schedule_task(inspect::ReadFromInspector(inspector).then(
+      [&](fpromise::result<inspect::Hierarchy>& res) { result = std::move(res); }));
+  exec.run();
+
+  ASSERT_TRUE(result.is_ok());
+  hierarchy = result.take_value();
+
+  EXPECT_EQ(1, hierarchy.children().size());
+  EXPECT_EQ("lazy", hierarchy.children()[0].name());
+  EXPECT_EQ(
+      10, hierarchy.children()[0].node().properties()[0].Get<inspect::IntPropertyValue>().value());
+}
+
 TEST(Inspect, CreateCopyBytes) {
   // Make a 16MB heap.
   auto inspector = std::make_unique<Inspector>();
