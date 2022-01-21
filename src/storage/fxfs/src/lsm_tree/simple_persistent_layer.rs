@@ -9,15 +9,17 @@ use {
         },
         object_handle::{ReadObjectHandle, WriteBytes},
         round::{round_down, round_up},
-        serialized_types::Version,
+        serialized_types::{Version, VersionLatest},
     },
     anyhow::{bail, Context, Error},
     async_trait::async_trait,
     async_utils::event::Event,
     byteorder::{ByteOrder, LittleEndian, ReadBytesExt, WriteBytesExt},
+    serde::{Deserialize, Serialize},
     std::{
         cmp::Ordering,
         io::Read,
+        marker::PhantomData,
         ops::{Bound, Drop},
         sync::{Arc, Mutex},
         vec::Vec,
@@ -25,12 +27,21 @@ use {
     storage_device::buffer::Buffer,
 };
 
+// The first block of each layer contains metadata for the rest of the layer.
+#[derive(Debug, Serialize, Deserialize)]
+pub struct LayerInfo {
+    /// The version of the key and value structs serialized in this layer.
+    pub key_value_version: u32,
+    /// The block size used within this layer file. Each block starts with a 2 byte item count so
+    /// there is a 64k item limit per block.
+    pub block_size: u64,
+}
+
 /// Implements a very primitive persistent layer where items are packed into blocks and searching
-/// for items is done via a simple binary search. Each block starts with a 2 byte item count so
-/// there is a 64k item limit per block.
+/// for items is done via a simple binary search.
 pub struct SimplePersistentLayer {
     object_handle: Arc<dyn ReadObjectHandle>,
-    block_size: u64,
+    layer_info: LayerInfo,
     size: u64,
     close_event: Mutex<Option<Event>>,
 }
@@ -52,7 +63,7 @@ impl std::io::Read for BufferCursor<'_> {
     }
 }
 
-pub struct Iterator<'iter, K, V> {
+pub struct Iterator<'iter, K: Key, V: Value> {
     // Allocated out of |layer|.
     buffer: BufferCursor<'iter>,
 
@@ -71,12 +82,12 @@ pub struct Iterator<'iter, K, V> {
     item: Option<Item<K, V>>,
 }
 
-impl<K, V> Iterator<'_, K, V> {
+impl<K: Key, V: Value> Iterator<'_, K, V> {
     fn new<'iter>(layer: &'iter SimplePersistentLayer, pos: u64) -> Iterator<'iter, K, V> {
         Iterator {
             layer,
             buffer: BufferCursor {
-                buffer: layer.object_handle.allocate_buffer(layer.block_size as usize),
+                buffer: layer.object_handle.allocate_buffer(layer.layer_info.block_size as usize),
                 pos: 0,
                 len: 0,
             },
@@ -113,12 +124,20 @@ impl<'iter, K: Key, V: Value> LayerIterator<K, V> for Iterator<'iter, K, V> {
                     self.pos
                 );
             }
-            self.pos += self.layer.block_size;
+            self.pos += self.layer.layer_info.block_size;
             self.item_index = 0;
         }
         self.item = Some(Item {
-            key: K::deserialize_from(self.buffer.by_ref()).context("Corrupt layer (key)")?,
-            value: V::deserialize_from(self.buffer.by_ref()).context("Corrupt layer (value)")?,
+            key: K::deserialize_from_version(
+                self.buffer.by_ref(),
+                self.layer.layer_info.key_value_version,
+            )
+            .context("Corrupt layer (key)")?,
+            value: V::deserialize_from_version(
+                self.buffer.by_ref(),
+                self.layer.layer_info.key_value_version,
+            )
+            .context("Corrupt layer (value)")?,
             sequence: self.buffer.read_u64::<LittleEndian>().context("Corrupt layer (seq)")?,
         });
         self.item_index += 1;
@@ -139,10 +158,23 @@ impl SimplePersistentLayer {
         // TODO(ripper): Eventually we should be storing a chunk size in a header of some sort for
         // the layer file.  For now we assume the chunk size is the same as the filesystem block
         // size, although it need not be so.
-        let block_size = object_handle.block_size();
+        let physical_block_size = object_handle.block_size();
+
+        // The first block contains layer file information instead of key/value data.
+        let layer_info = {
+            let mut buffer = object_handle.allocate_buffer(physical_block_size as usize);
+            object_handle.read(0, buffer.as_mut()).await?;
+            let mut cursor = std::io::Cursor::new(buffer.as_slice());
+            let version = cursor.read_u32::<LittleEndian>()?;
+            LayerInfo::deserialize_from_version(&mut cursor, version)?
+        };
+
+        // We expect the layer block size to be a multiple of the physical block size.
+        assert_eq!(layer_info.block_size % physical_block_size, 0);
+
         Ok(Arc::new(SimplePersistentLayer {
             object_handle: Arc::new(object_handle),
-            block_size,
+            layer_info,
             size,
             close_event: Mutex::new(Some(Event::new())),
         }))
@@ -156,18 +188,20 @@ impl<K: Key, V: Value> Layer<K, V> for SimplePersistentLayer {
     }
 
     async fn seek<'a>(&'a self, bound: Bound<&K>) -> Result<BoxedLayerIterator<'a, K, V>, Error> {
+        let first_block_offset = self.layer_info.block_size;
         let (key, excluded) = match bound {
             Bound::Unbounded => {
-                let mut iterator = Iterator::new(self, 0);
+                let mut iterator = Iterator::new(self, first_block_offset);
                 iterator.advance().await?;
                 return Ok(Box::new(iterator));
             }
             Bound::Included(k) => (k, false),
             Bound::Excluded(k) => (k, true),
         };
-        let mut left_offset = 0;
+        // Skip the first block. We Store version info there for now.
+        let mut left_offset = self.layer_info.block_size;
         // TODO(csuter): Add size checks.
-        let mut right_offset = round_up(self.size, self.block_size).unwrap();
+        let mut right_offset = round_up(self.size, self.layer_info.block_size).unwrap();
         let mut left = Iterator::new(self, left_offset);
         left.advance().await?;
         match left.get() {
@@ -183,10 +217,12 @@ impl<K: Key, V: Value> Layer<K, V> for SimplePersistentLayer {
                 Ordering::Less => {}
             },
         }
-        while right_offset - left_offset > self.block_size as u64 {
+        while right_offset - left_offset > self.layer_info.block_size as u64 {
             // Pick a block midway.
-            let mid_offset =
-                round_down(left_offset + (right_offset - left_offset) / 2, self.block_size);
+            let mid_offset = round_down(
+                left_offset + (right_offset - left_offset) / 2,
+                self.layer_info.block_size,
+            );
             let mut iterator = Iterator::new(self, mid_offset);
             iterator.advance().await?;
             let item: ItemRef<'_, K, V> = iterator.get().unwrap();
@@ -239,18 +275,40 @@ impl<K: Key, V: Value> Layer<K, V> for SimplePersistentLayer {
 
 // -- Writer support --
 
-pub struct SimplePersistentLayerWriter<W> {
+pub struct SimplePersistentLayerWriter<W: WriteBytes, K: Key, V: Value> {
+    writer: W,
     block_size: u64,
     buf: Vec<u8>,
-    writer: W,
     item_count: u16,
+    _key: PhantomData<K>,
+    _value: PhantomData<V>,
 }
 
-impl<W: WriteBytes> SimplePersistentLayerWriter<W> {
+impl<W: WriteBytes, K: Key, V: Value> SimplePersistentLayerWriter<W, K, V> {
     /// Creates a new writer that will serialize items to the object accessible via |object_handle|
     /// (which provdes a write interface to the object).
-    pub fn new(writer: W, block_size: u64) -> Self {
-        SimplePersistentLayerWriter { block_size, buf: vec![0; 2], writer, item_count: 0 }
+    pub async fn new(mut writer: W, block_size: u64) -> Result<Self, Error> {
+        assert_eq!(K::version(), V::version());
+        let layer_info = LayerInfo { block_size, key_value_version: K::version() };
+        let mut buf: Vec<u8> = Vec::new();
+        let len;
+        {
+            buf.resize(layer_info.block_size as usize, 0);
+            let mut cursor = std::io::Cursor::new(&mut buf);
+            cursor.write_u32::<LittleEndian>(LayerInfo::version())?;
+            layer_info.serialize_into(&mut cursor)?;
+            len = cursor.position();
+        }
+        writer.write_bytes(&buf[..len as usize]).await?;
+        writer.skip(block_size as u64 - len as u64).await?;
+        Ok(SimplePersistentLayerWriter {
+            writer,
+            block_size,
+            buf: vec![0; 2],
+            item_count: 0,
+            _key: PhantomData,
+            _value: PhantomData,
+        })
     }
 
     async fn write_some(&mut self, len: usize) -> Result<(), Error> {
@@ -268,11 +326,10 @@ impl<W: WriteBytes> SimplePersistentLayerWriter<W> {
 }
 
 #[async_trait]
-impl<W: WriteBytes + Send> LayerWriter for SimplePersistentLayerWriter<W> {
-    async fn write<K: Send + Version + Sync, V: Send + Version + Sync>(
-        &mut self,
-        item: ItemRef<'_, K, V>,
-    ) -> Result<(), Error> {
+impl<W: WriteBytes + Send, K: Key, V: Value> LayerWriter<K, V>
+    for SimplePersistentLayerWriter<W, K, V>
+{
+    async fn write(&mut self, item: ItemRef<'_, K, V>) -> Result<(), Error> {
         // Note the length before we write this item.
         let len = self.buf.len();
         item.key.serialize_into(&mut self.buf)?;
@@ -295,7 +352,7 @@ impl<W: WriteBytes + Send> LayerWriter for SimplePersistentLayerWriter<W> {
     }
 }
 
-impl<W> Drop for SimplePersistentLayerWriter<W> {
+impl<W: WriteBytes, K: Key, V: Value> Drop for SimplePersistentLayerWriter<W, K, V> {
     fn drop(&mut self) {
         if self.item_count > 0 {
             log::warn!("Dropping unwritten items; did you forget to flush?");
@@ -325,7 +382,12 @@ mod tests {
 
         let handle = FakeObjectHandle::new(Arc::new(FakeObject::new()));
         {
-            let mut writer = SimplePersistentLayerWriter::new(Writer::new(&handle), BLOCK_SIZE);
+            let mut writer = SimplePersistentLayerWriter::<Writer<'_>, i32, i32>::new(
+                Writer::new(&handle),
+                BLOCK_SIZE,
+            )
+            .await
+            .expect("writer new");
             for i in 0..ITEM_COUNT {
                 writer.write(Item::new(i, i).as_item_ref()).await.expect("write failed");
             }
@@ -348,7 +410,12 @@ mod tests {
 
         let handle = FakeObjectHandle::new(Arc::new(FakeObject::new()));
         {
-            let mut writer = SimplePersistentLayerWriter::new(Writer::new(&handle), BLOCK_SIZE);
+            let mut writer = SimplePersistentLayerWriter::<Writer<'_>, i32, i32>::new(
+                Writer::new(&handle),
+                BLOCK_SIZE,
+            )
+            .await
+            .expect("writer new");
             for i in 0..ITEM_COUNT {
                 writer.write(Item::new(i, i).as_item_ref()).await.expect("write failed");
             }
@@ -379,7 +446,12 @@ mod tests {
 
         let handle = FakeObjectHandle::new(Arc::new(FakeObject::new()));
         {
-            let mut writer = SimplePersistentLayerWriter::new(Writer::new(&handle), BLOCK_SIZE);
+            let mut writer = SimplePersistentLayerWriter::<Writer<'_>, i32, i32>::new(
+                Writer::new(&handle),
+                BLOCK_SIZE,
+            )
+            .await
+            .expect("writer new");
             for i in 0..ITEM_COUNT {
                 writer.write(Item::new(i, i).as_item_ref()).await.expect("write failed");
             }
@@ -402,7 +474,12 @@ mod tests {
 
         let handle = FakeObjectHandle::new(Arc::new(FakeObject::new()));
         {
-            let mut writer = SimplePersistentLayerWriter::new(Writer::new(&handle), BLOCK_SIZE);
+            let mut writer = SimplePersistentLayerWriter::<Writer<'_>, i32, i32>::new(
+                Writer::new(&handle),
+                BLOCK_SIZE,
+            )
+            .await
+            .expect("writer new");
             writer.flush().await.expect("flush failed");
         }
 
@@ -423,7 +500,12 @@ mod tests {
         let handle =
             FakeObjectHandle::new_with_block_size(Arc::new(FakeObject::new()), BLOCK_SIZE as usize);
         {
-            let mut writer = SimplePersistentLayerWriter::new(Writer::new(&handle), BLOCK_SIZE);
+            let mut writer = SimplePersistentLayerWriter::<Writer<'_>, i32, i32>::new(
+                Writer::new(&handle),
+                BLOCK_SIZE,
+            )
+            .await
+            .expect("writer new");
             for i in 0..ITEM_COUNT {
                 writer.write(Item::new(i, i).as_item_ref()).await.expect("write failed");
             }
@@ -447,7 +529,12 @@ mod tests {
 
         let handle = FakeObjectHandle::new(Arc::new(FakeObject::new()));
         {
-            let mut writer = SimplePersistentLayerWriter::new(Writer::new(&handle), BLOCK_SIZE);
+            let mut writer = SimplePersistentLayerWriter::<Writer<'_>, i32, i32>::new(
+                Writer::new(&handle),
+                BLOCK_SIZE,
+            )
+            .await
+            .expect("writer new");
             for i in 0..ITEM_COUNT {
                 writer.write(Item::new(i, i).as_item_ref()).await.expect("write failed");
             }

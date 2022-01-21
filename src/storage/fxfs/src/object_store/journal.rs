@@ -51,7 +51,7 @@ use {
     },
     anyhow::{anyhow, bail, Context, Error},
     async_utils::event::Event,
-    byteorder::{ByteOrder, LittleEndian},
+    byteorder::{ByteOrder, LittleEndian, WriteBytesExt},
     futures::{self, future::poll_fn, FutureExt},
     once_cell::sync::OnceCell,
     rand::Rng,
@@ -102,12 +102,11 @@ pub struct JournalCheckpoint {
     // Starting check-sum for block that contains file_offset i.e. the checksum for the previous
     // block.
     pub checksum: Checksum,
-}
 
-impl JournalCheckpoint {
-    fn new(file_offset: u64, checksum: Checksum) -> JournalCheckpoint {
-        JournalCheckpoint { file_offset, checksum }
-    }
+    // If versioned, the version of elements stored in the journal. e.g. JournalRecord version.
+    // This can change across reset events so we store it along with the offset and checksum to
+    // know which version to deserialize.
+    pub version: u32,
 }
 
 // All journal blocks are covered by a fletcher64 checksum as the last 8 bytes in a block.
@@ -182,6 +181,10 @@ struct Inner {
     /// The writer for the journal.
     writer: JournalWriter,
 
+    /// Set when a reset is encountered during a read.
+    /// Used at write pre_commit() time to ensure we write a version first thing after a reset.
+    output_reset_version: bool,
+
     /// Waker for the flush task.
     flush_waker: Option<Waker>,
 
@@ -220,6 +223,7 @@ impl Journal {
                 device_flushed_offset: 0,
                 needs_did_flush_device: false,
                 writer: JournalWriter::new(BLOCK_SIZE as usize, starting_checksum),
+                output_reset_version: false,
                 flush_waker: None,
                 terminate: false,
                 disable_compactions: false,
@@ -356,15 +360,17 @@ impl Journal {
         let mut current_transaction = None;
         let mut device_flushed_offset = super_block.super_block_journal_file_offset;
         loop {
-            let current_checkpoint = reader.journal_file_checkpoint();
             let result = reader.deserialize().await?;
             match result {
                 ReadResult::Reset => {
+                    let version = LittleEndian::read_u32(reader.buffer());
+                    reader.consume(std::mem::size_of::<u32>());
+                    reader.set_version(version);
                     if current_transaction.is_some() {
                         current_transaction = None;
                         transactions.pop();
                     }
-                    let offset = current_checkpoint.file_offset;
+                    let offset = reader.journal_file_checkpoint().file_offset;
                     if offset > device_flushed_offset {
                         device_flushed_offset = offset;
                     }
@@ -377,7 +383,11 @@ impl Journal {
                         JournalRecord::Mutation { object_id, mutation } => {
                             let current_transaction = match current_transaction.as_mut() {
                                 None => {
-                                    transactions.push((current_checkpoint, Vec::new(), 0));
+                                    transactions.push((
+                                        reader.journal_file_checkpoint(),
+                                        Vec::new(),
+                                        0,
+                                    ));
                                     current_transaction = transactions.last_mut();
                                     current_transaction.as_mut().unwrap()
                                 }
@@ -515,9 +525,11 @@ impl Journal {
             let mut reader_checkpoint = reader.journal_file_checkpoint();
             // Reset the stream to indicate that we've remounted the journal.
             reader_checkpoint.checksum ^= RESET_XOR;
+            reader_checkpoint.version = JournalRecord::version();
             inner.flushed_offset = reader_checkpoint.file_offset;
             inner.device_flushed_offset = device_flushed_offset;
-            inner.writer.seek_to_checkpoint(reader_checkpoint);
+            inner.writer.seek(reader_checkpoint);
+            inner.output_reset_version = true;
             if last_checkpoint.file_offset < inner.flushed_offset {
                 inner.discard_offset = Some(last_checkpoint.file_offset);
             }
@@ -558,7 +570,10 @@ impl Journal {
 
         log::info!("Formatting fxfs device-size: {})", filesystem.device().size());
 
-        let checkpoint = self.inner.lock().unwrap().writer.journal_file_checkpoint();
+        let checkpoint = JournalCheckpoint {
+            version: JournalRecord::version(),
+            ..self.inner.lock().unwrap().writer.journal_file_checkpoint()
+        };
 
         let root_parent =
             ObjectStore::new_empty(None, INIT_ROOT_PARENT_STORE_OBJECT_ID, filesystem.clone());
@@ -581,6 +596,9 @@ impl Journal {
             .context("create root store")?;
         self.objects.set_root_store(root_store.clone());
 
+        // Note that creating an allocator requires a transaction to create an object...
+        // ...which requires a Journal ...which must be allocated.
+        // We get away with this because we can be lazy persisting the allocator.
         allocator.create().await?;
 
         // Create the super-block objects...
@@ -676,6 +694,11 @@ impl Journal {
 
         let (size, zero_offset) = {
             let mut inner = self.inner.lock().unwrap();
+
+            if std::mem::take(&mut inner.output_reset_version) {
+                // TODO(ripper): Change this to a 'VersionNumber' type or something with maj/min.
+                inner.writer.write_u32::<LittleEndian>(JournalRecord::version())?;
+            }
 
             if let Some(discard_offset) = inner.discard_offset {
                 JournalRecord::Discard(discard_offset).serialize_into(&mut inner.writer)?;
@@ -780,6 +803,7 @@ impl Journal {
         new_super_block.generation = new_super_block.generation.checked_add(1).unwrap();
         new_super_block.super_block_journal_file_offset = checkpoint.file_offset;
         new_super_block.journal_checkpoint = min_checkpoint.unwrap_or(checkpoint);
+        new_super_block.journal_checkpoint.version = JournalRecord::version();
         new_super_block.journal_file_offsets = journal_file_offsets;
         new_super_block.borrowed_metadata_space = borrowed;
 

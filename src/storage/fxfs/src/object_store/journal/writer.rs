@@ -5,7 +5,7 @@
 use {
     crate::{
         object_handle::ObjectHandle,
-        object_store::journal::{fletcher64, Checksum, JournalCheckpoint},
+        object_store::journal::{fletcher64, Checksum, JournalCheckpoint, JournalRecord},
         serialized_types::Version,
     },
     byteorder::{LittleEndian, WriteBytesExt},
@@ -32,12 +32,11 @@ pub struct JournalWriter {
 
 impl JournalWriter {
     pub fn new(block_size: usize, last_checksum: u64) -> Self {
-        JournalWriter {
-            block_size,
-            checkpoint: JournalCheckpoint::default(),
-            last_checksum,
-            buf: Vec::new(),
-        }
+        // We must set the correct version here because the journal is written to when
+        // formatting as part of creating the allocator and must be ready to go.
+        let checkpoint =
+            JournalCheckpoint { version: JournalRecord::version(), ..JournalCheckpoint::default() };
+        JournalWriter { block_size, checkpoint, last_checksum, buf: Vec::new() }
     }
 
     /// Serializes a new journal record to the journal stream.
@@ -62,10 +61,11 @@ impl JournalWriter {
     /// Returns the checkpoint that corresponds to the current location in the journal stream
     /// assuming that it has been flushed.
     pub(super) fn journal_file_checkpoint(&self) -> JournalCheckpoint {
-        JournalCheckpoint::new(
-            self.checkpoint.file_offset + self.buf.len() as u64,
-            self.last_checksum,
-        )
+        JournalCheckpoint {
+            file_offset: self.checkpoint.file_offset + self.buf.len() as u64,
+            checksum: self.last_checksum,
+            version: self.checkpoint.version,
+        }
     }
 
     /// Flushes any outstanding complete blocks to the journal object.  Part blocks can be flushed
@@ -87,8 +87,11 @@ impl JournalWriter {
         Some((offset, buf))
     }
 
-    /// Seeks to the given offset in the journal file, to be used once replay has finished.
-    pub fn seek_to_checkpoint(&mut self, checkpoint: JournalCheckpoint) {
+    /// Seeks to the given offset in the journal file -- to be used once replay has finished.
+    ///
+    /// Note that the Journal expects a 4-byte record version to be the first thing after a
+    /// "RESET" event, which is generally the only time we would use seek.
+    pub fn seek(&mut self, checkpoint: JournalCheckpoint) {
         assert!(self.buf.is_empty());
         self.checkpoint = checkpoint;
         self.last_checksum = self.checkpoint.checksum;
@@ -138,7 +141,7 @@ mod tests {
         super::JournalWriter,
         crate::{
             object_handle::{ObjectHandle, ReadObjectHandle, WriteObjectHandle},
-            object_store::journal::{fletcher64, Checksum, JournalCheckpoint},
+            object_store::journal::{fletcher64, Checksum, JournalCheckpoint, JournalRecord},
             serialized_types::*,
             testing::fake_object::{FakeObject, FakeObjectHandle},
         },
@@ -172,7 +175,11 @@ mod tests {
         assert_eq!(checksum, fletcher64(payload, 0));
         assert_eq!(
             writer.journal_file_checkpoint(),
-            JournalCheckpoint { file_offset: TEST_BLOCK_SIZE as u64, checksum }
+            JournalCheckpoint {
+                file_offset: TEST_BLOCK_SIZE as u64,
+                checksum,
+                version: JournalRecord::version()
+            }
         );
     }
 

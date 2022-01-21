@@ -24,11 +24,11 @@ use {
         serialized_types::Version,
     },
     anyhow::{bail, ensure, Error},
-    futures::AsyncReadExt,
+    byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt},
     serde::{Deserialize, Serialize},
     std::{
         collections::HashMap,
-        io::Write,
+        io::{Read, Write},
         ops::{Bound, Range},
         sync::Arc,
     },
@@ -198,19 +198,28 @@ impl SuperBlock {
             &JournalCheckpoint::default(),
         );
 
-        // Validate magic bytes.
-        let mut magic_bytes: [u8; 8] = [0; 8];
-        reader.async_reader().read_exact(&mut magic_bytes).await?;
-        if magic_bytes.as_slice() != SUPER_BLOCK_MAGIC.as_slice() {
-            bail!(format!("Invalid magic: {:?}", magic_bytes));
+        reader.fill_buf().await?;
+        let consumed;
+        let version;
+        {
+            let mut cursor = std::io::Cursor::new(reader.buffer());
+            // Validate magic bytes.
+            let mut magic_bytes: [u8; 8] = [0; 8];
+            cursor.read_exact(&mut magic_bytes)?;
+            if magic_bytes.as_slice() != SUPER_BLOCK_MAGIC.as_slice() {
+                bail!(format!("Invalid magic: {:?}", magic_bytes));
+            }
+            version = cursor.read_u32::<LittleEndian>()?;
+            consumed = cursor.position() as usize;
         }
-
-        let super_block = match reader.deserialize::<SuperBlock>().await? {
-            ReadResult::Reset => bail!("Unexpected reset"),
-            ReadResult::ChecksumMismatch => bail!("Checksum mismatch"),
-            ReadResult::Some(super_block) => super_block,
-        };
-        Ok((super_block, ItemReader(reader)))
+        reader.consume(consumed);
+        reader.set_version(version);
+        let result = reader.deserialize::<SuperBlock>().await?;
+        if let ReadResult::Some(super_block) = result {
+            Ok((super_block, ItemReader { reader }))
+        } else {
+            bail!("{:?}", result);
+        }
     }
 
     /// Writes the super-block and the records from the root parent store.
@@ -222,9 +231,15 @@ impl SuperBlock {
         assert_eq!(root_parent_store.store_object_id(), self.root_parent_store_object_id);
 
         let object_manager = root_parent_store.filesystem().object_manager();
+        // TODO(ripper): Don't use the same code here for Journal and SuperBlock. They aren't the
+        // same things and it is already getting convoluted. e.g of diff sstream content:
+        //   Superblock:  (Magic, Ver, Header(Ver), SuperBlockRecord(Ver)*, ...)
+        //   Journal:     (Ver, JournalRecord(Ver)*, RESET, Ver2, JournalRecord(Ver2)*, ...)
+        // We should abstract away the checksum code and implement these separately.
         let mut writer = SuperBlockWriter::new(handle, object_manager.metadata_reservation());
 
         writer.writer.write(SUPER_BLOCK_MAGIC)?;
+        writer.writer.write_u32::<LittleEndian>(SuperBlock::version())?;
         self.serialize_into(&mut writer.writer)?;
 
         let tree = root_parent_store.tree();
@@ -315,17 +330,19 @@ pub enum SuperBlockItem {
     Extent(Item<ExtentKey, ExtentValue>),
 }
 
-pub struct ItemReader(JournalReader<Handle>);
+pub struct ItemReader {
+    reader: JournalReader<Handle>,
+}
 
 impl ItemReader {
     pub async fn next_item(&mut self) -> Result<SuperBlockItem, Error> {
         loop {
-            match self.0.deserialize().await? {
+            match self.reader.deserialize().await? {
                 ReadResult::Reset => bail!("Unexpected reset"),
                 ReadResult::ChecksumMismatch => bail!("Checksum mismatch"),
                 ReadResult::Some(SuperBlockRecord::Extent(extent)) => {
                     ensure!(extent.valid(), FxfsError::Inconsistent);
-                    self.0.handle().push_extent(extent)
+                    self.reader.handle().push_extent(extent)
                 }
                 ReadResult::Some(SuperBlockRecord::ObjectItem(item)) => {
                     return Ok(SuperBlockItem::Object(item))
@@ -342,7 +359,9 @@ impl ItemReader {
 #[cfg(test)]
 mod tests {
     use {
-        super::{SuperBlock, SuperBlockCopy, SuperBlockItem, MIN_SUPER_BLOCK_SIZE},
+        super::{
+            SuperBlock, SuperBlockCopy, SuperBlockItem, SuperBlockRecord, MIN_SUPER_BLOCK_SIZE,
+        },
         crate::{
             lsm_tree::types::LayerIterator,
             object_store::{
@@ -353,6 +372,7 @@ mod tests {
                 transaction::{Options, TransactionHandler},
                 HandleOptions, ObjectHandle, ObjectStore, StoreObjectHandle,
             },
+            serialized_types::Version,
         },
         fuchsia_async as fasync,
         std::{ops::Bound, sync::Arc},
@@ -449,7 +469,11 @@ mod tests {
             fs.root_store().store_object_id(),
             fs.allocator().object_id(),
             JOURNAL_OBJECT_ID,
-            JournalCheckpoint { file_offset: 1234, checksum: 5678 },
+            JournalCheckpoint {
+                file_offset: 1234,
+                checksum: 5678,
+                version: SuperBlockRecord::version(),
+            },
         );
         super_block_a.super_block_journal_file_offset = journal_offset + 1;
         let mut super_block_b = super_block_a.clone();

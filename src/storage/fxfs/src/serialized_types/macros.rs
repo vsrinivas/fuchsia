@@ -115,7 +115,8 @@ pub fn versioned_type(input: TokenStream) -> TokenStream {
                 where R: std::io::Read, Self: Sized {
                     match version {
                         #body
-                        _ => anyhow::bail!(format!("Invalid version {} for #ident.", version)),
+                        _ => anyhow::bail!(format!(
+                                "Invalid version {} for {}.", version, stringify!(#ident))),
                     }
                 }
             }

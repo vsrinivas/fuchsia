@@ -70,19 +70,6 @@ pub use test_traits::*;
 #[cfg(test)]
 mod tests;
 
-// TODO(ripper): Organise these better.
-use crate::object_store::{
-    AllocatorInfo, AllocatorKey, AllocatorValue, ExtentKey, ExtentValue, JournalRecord, ObjectKey,
-    ObjectValue, StoreInfo, SuperBlock, SuperBlockRecord,
-};
-versioned_type! { 1 => AllocatorInfo }
-versioned_type! { 1 => AllocatorKey }
-versioned_type! { 1 => AllocatorValue }
-versioned_type! { 1 => ExtentKey }
-versioned_type! { 1 => ExtentValue }
-versioned_type! { 1 => JournalRecord }
-versioned_type! { 1 => ObjectKey }
-versioned_type! { 1 => ObjectValue }
-versioned_type! { 1 => StoreInfo }
-versioned_type! { 1 => SuperBlock }
-versioned_type! { 1 => SuperBlockRecord }
+// Re-export all types.
+mod types;
+pub use types::*;

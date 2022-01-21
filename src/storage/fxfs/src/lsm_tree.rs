@@ -28,6 +28,9 @@ use {
 
 const SKIP_LIST_LAYER_ITEMS: usize = 512;
 
+// For serialization.
+pub use simple_persistent_layer::LayerInfo;
+
 pub async fn layers_from_handles<K: Key, V: Value>(
     handles: Box<[impl ReadObjectHandle + 'static]>,
 ) -> Result<Vec<Arc<dyn Layer<K, V>>>, Error> {
@@ -128,21 +131,17 @@ impl<'tree, K: MergeableKey, V: Value> LSMTree<K, V> {
         .unwrap_err(); // wait_or_dropped returns Result<(), Dropped>
     }
 
-    pub fn new_writer<'a>(object_handle: &'a dyn WriteObjectHandle) -> impl LayerWriter + 'a {
-        SimplePersistentLayerWriter::new(Writer::new(object_handle), object_handle.block_size())
-    }
-
     // TODO(csuter): We should provide a way for the caller to skip compactions if there's nothing
     // to compact.
     /// Writes the items yielded by the iterator into the supplied object.
-    pub async fn compact_with_iterator(
+    pub async fn compact_with_iterator<W: WriteBytes + Send>(
         &self,
         mut iterator: impl LayerIterator<K, V>,
-        writer: impl WriteBytes + Send,
+        writer: W,
         block_size: u64,
     ) -> Result<(), Error> {
         trace_duration!("LSMTree::compact_with_iterator");
-        let mut writer = SimplePersistentLayerWriter::new(writer, block_size);
+        let mut writer = SimplePersistentLayerWriter::<W, K, V>::new(writer, block_size).await?;
         while let Some(item_ref) = iterator.get() {
             log::debug!("compact: writing {:?}", item_ref);
             writer.write(item_ref).await?;

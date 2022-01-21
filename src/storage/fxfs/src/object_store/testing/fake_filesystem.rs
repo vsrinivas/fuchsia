@@ -118,8 +118,11 @@ impl TransactionHandler for FakeFilesystem {
         self: Arc<Self>,
         transaction: &mut Transaction<'_>,
     ) -> Result<u64, Error> {
-        let checkpoint =
-            JournalCheckpoint { file_offset: self.num_syncs.load(Ordering::Relaxed), checksum: 0 };
+        let checkpoint = JournalCheckpoint {
+            file_offset: self.num_syncs.load(Ordering::Relaxed),
+            checksum: 0,
+            version: 987654321,
+        };
         self.lock_manager.commit_prepare(transaction).await;
         self.object_manager.apply_transaction(transaction, &checkpoint).await;
         Ok(0)

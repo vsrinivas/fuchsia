@@ -11,7 +11,8 @@ use {
         object_handle::{ObjectHandle, Writer, INVALID_OBJECT_ID},
         object_store::{
             allocator::{
-                Allocator, AllocatorKey, AllocatorValue, CoalescingIterator, SimpleAllocator,
+                Allocator, AllocatorInfo, AllocatorKey, AllocatorValue, CoalescingIterator,
+                SimpleAllocator,
             },
             crypt::InsecureCrypt,
             directory::Directory,
@@ -27,12 +28,13 @@ use {
             },
             transaction::{self, Options, TransactionHandler},
             volume::create_root_volume,
-            HandleOptions, Mutation, ObjectStore,
+            HandleOptions, Mutation, ObjectStore, StoreInfo,
         },
         round::round_down,
         serialized_types::Version,
     },
     anyhow::{Context, Error},
+    byteorder::{LittleEndian, WriteBytesExt},
     fuchsia_async as fasync,
     matches::assert_matches,
     std::{
@@ -131,8 +133,12 @@ async fn install_items_in_store<K: Key, V: Value>(
     transaction.commit().await.expect("commit failed");
 
     {
-        let mut writer =
-            SimplePersistentLayerWriter::new(Writer::new(&layer_handle), filesystem.block_size());
+        let mut writer = SimplePersistentLayerWriter::<Writer<'_>, K, V>::new(
+            Writer::new(&layer_handle),
+            filesystem.block_size(),
+        )
+        .await
+        .expect("writer new");
         for item in items.as_ref() {
             writer.write(item.as_item_ref()).await.expect("write failed");
         }
@@ -145,6 +151,7 @@ async fn install_items_in_store<K: Key, V: Value>(
         InstallTarget::ObjectTree => store_info.object_tree_layers.push(layer_handle.object_id()),
     }
     let mut store_info_vec = vec![];
+    store_info_vec.write_u32::<LittleEndian>(StoreInfo::version()).expect("version failed");
     store_info.serialize_into(&mut store_info_vec).expect("serialize failed");
     let mut buf = device.allocate_buffer(store_info_vec.len());
     buf.as_mut_slice().copy_from_slice(&store_info_vec[..]);
@@ -278,7 +285,12 @@ async fn test_malformed_allocation() {
 
         {
             let mut writer =
-                SimplePersistentLayerWriter::new(Writer::new(&layer_handle), fs.block_size());
+                SimplePersistentLayerWriter::<Writer<'_>, AllocatorKey, AllocatorValue>::new(
+                    Writer::new(&layer_handle),
+                    fs.block_size(),
+                )
+                .await
+                .expect("writer new");
             // We also need a discontiguous allocation, and some blocks will have been used up by
             // other things, so allocate the very last block.  Note that changing our allocation
             // strategy might break this test.
@@ -296,6 +308,7 @@ async fn test_malformed_allocation() {
         let mut allocator_info = fs.allocator().info();
         allocator_info.layers.push(layer_handle.object_id());
         let mut allocator_info_vec = vec![];
+        allocator_info_vec.write_u32::<LittleEndian>(AllocatorInfo::version()).expect("ver failed");
         allocator_info.serialize_into(&mut allocator_info_vec).expect("serialize failed");
         let mut buf = device.allocate_buffer(allocator_info_vec.len());
         buf.as_mut_slice().copy_from_slice(&allocator_info_vec[..]);

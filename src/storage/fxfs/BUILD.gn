@@ -90,6 +90,7 @@ fxfs_sources = [
   "src/serialized_types/test_traits.rs",
   "src/serialized_types/tests.rs",
   "src/serialized_types/traits.rs",
+  "src/serialized_types/types.rs",
   "src/testing.rs",
   "src/testing/fake_object.rs",
   "src/trace.rs",

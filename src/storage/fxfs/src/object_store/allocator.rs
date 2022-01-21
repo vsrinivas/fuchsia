@@ -28,11 +28,12 @@ use {
         },
         range::RangeExt,
         round::round_down,
-        serialized_types::Version,
+        serialized_types::{Version, VersionLatest},
         trace_duration,
     },
     anyhow::{anyhow, bail, ensure, Error},
     async_trait::async_trait,
+    byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt},
     either::Either::{Left, Right},
     merge::merge,
     serde::{Deserialize, Serialize},
@@ -465,7 +466,8 @@ impl SimpleAllocator {
         if handle.get_size() > 0 {
             let serialized_info = handle.contents(MAX_ALLOCATOR_INFO_SERIALIZED_SIZE).await?;
             let mut cursor = std::io::Cursor::new(&serialized_info[..]);
-            let info = AllocatorInfo::deserialize_from(&mut cursor)?;
+            let version = cursor.read_u32::<LittleEndian>()?;
+            let info = AllocatorInfo::deserialize_from_version(&mut cursor, version)?;
             let mut handles = Vec::new();
             let mut total_size = 0;
             for object_id in &info.layers {
@@ -1062,6 +1064,7 @@ impl Mutations for SimpleAllocator {
             }
 
             inner.info.layers = vec![object_id];
+            serialized_info.write_u32::<LittleEndian>(AllocatorInfo::version())?;
             inner.info.serialize_into(&mut serialized_info)?;
         }
         let mut buf = object_handle.allocate_buffer(serialized_info.len());

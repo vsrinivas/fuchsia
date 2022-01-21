@@ -56,12 +56,13 @@ use {
             },
         },
         range::RangeExt,
-        serialized_types::Version,
+        serialized_types::{Version, VersionLatest},
         trace_duration,
     },
     allocator::Allocator,
     anyhow::{anyhow, bail, Context, Error},
     async_trait::async_trait,
+    byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt},
     once_cell::sync::OnceCell,
     serde::{Deserialize, Serialize},
     std::{
@@ -670,7 +671,8 @@ impl ObjectStore {
             let mut info = if handle.get_size() > 0 {
                 let serialized_info = handle.contents(MAX_STORE_INFO_SERIALIZED_SIZE).await?;
                 let mut cursor = std::io::Cursor::new(&serialized_info[..]);
-                StoreInfo::deserialize_from(&mut cursor)
+                let version = cursor.read_u32::<LittleEndian>()?;
+                StoreInfo::deserialize_from_version(&mut cursor, version)
                     .context("Failed to deserialize StoreInfo")?
             } else {
                 // The store_info will be absent for a newly created and empty object store.
@@ -1074,6 +1076,7 @@ impl Mutations for ObjectStore {
             }
         }
 
+        serialized_info.write_u32::<LittleEndian>(StoreInfo::version())?;
         new_store_info.serialize_into(&mut serialized_info)?;
         let mut buf = self.device.allocate_buffer(serialized_info.len());
         buf.as_mut_slice().copy_from_slice(&serialized_info[..]);
