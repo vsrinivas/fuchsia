@@ -166,6 +166,9 @@
             "-window-size",
             "{{device.screen.width}}x{{device.screen.height}}",
         {{/if}}
+        {{#if (eq runtime.log_level "verbose")}}
+            "-verbose",
+        {{/if}}
         "-no-location-ui"
     ],
     "envs": {
