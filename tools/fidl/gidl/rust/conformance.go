@@ -21,12 +21,12 @@ var conformanceTmpl = template.Must(template.New("conformanceTmpls").Parse(`
 #![allow(unused_imports)]
 
 use {
+	assert_matches::assert_matches,
 	fidl::{AsHandleRef, Error, Handle, HandleDisposition, HandleInfo, HandleOp, ObjectType, Rights, UnknownData},
 	fidl::encoding::{Context, Decodable, Decoder, Encoder, WireFormatVersion},
 	fidl_test_conformance as test_conformance,
 	fuchsia_zircon_status::Status,
 	gidl_util::{HandleDef, HandleSubtype, create_handles, copy_handle, copy_handles_at, disown_vec, get_info_handle_valid},
-	matches::assert_matches,
 };
 
 const _V1_CONTEXT: &Context = &Context { wire_format_version: WireFormatVersion::V1 };
