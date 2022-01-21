@@ -15,6 +15,8 @@ rustc_test("driver") {
     "//sdk/fidl/fuchsia.io2:fuchsia.io2-rustc",
     "//sdk/fidl/fuchsia.logger:fuchsia.logger-rustc",
     "//sdk/fidl/fuchsia.paver:fuchsia.paver-rustc",
+    "//sdk/fidl/fuchsia.pkg:fuchsia.pkg-rustc",
+    "//sdk/fidl/fuchsia.space:fuchsia.space-rustc",
     "//sdk/fidl/fuchsia.update:fuchsia.update-rustc",
     "//sdk/fidl/fuchsia.update.channel:fuchsia.update.channel-rustc",
     "//src/lib/fidl/rust/fidl",
@@ -28,11 +30,13 @@ rustc_test("driver") {
     "//src/sys/pkg/testing/mock-installer",
     "//src/sys/pkg/testing/mock-paver",
     "//src/sys/pkg/testing/mock-resolver",
+    "//src/sys/pkg/testing/mock-space",
     "//src/sys/pkg/testing/mock-verifier:lib",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:assert_matches",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:parking_lot",
+    "//third_party/rust_crates:pretty_assertions",
     "//third_party/rust_crates:tempfile",
   ]
 

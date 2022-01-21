@@ -8,11 +8,13 @@ use {
     assert_matches::assert_matches,
     fidl_fuchsia_io2 as fio2,
     fidl_fuchsia_paver::{self as paver, PaverRequestStream},
+    fidl_fuchsia_pkg::ResolveError,
+    fidl_fuchsia_space::ErrorCode,
     fidl_fuchsia_update::{
         CheckOptions, CheckingForUpdatesData, CommitStatusProviderMarker,
         CommitStatusProviderProxy, Initiator, InstallationDeferralReason, InstallationDeferredData,
-        InstallationProgress, InstallingData, ManagerMarker, ManagerProxy, MonitorMarker,
-        MonitorRequest, MonitorRequestStream, State, UpdateInfo,
+        InstallationErrorData, InstallationProgress, InstallingData, ManagerMarker, ManagerProxy,
+        MonitorMarker, MonitorRequest, MonitorRequestStream, State, UpdateInfo,
     },
     fidl_fuchsia_update_channel::{ProviderMarker, ProviderProxy},
     fidl_fuchsia_update_installer_ext as installer, fuchsia_async as fasync,
@@ -26,9 +28,14 @@ use {
     mock_installer::MockUpdateInstallerService,
     mock_paver::{hooks as mphooks, MockPaverService, MockPaverServiceBuilder, PaverEvent},
     mock_resolver::MockResolverService,
+    mock_space::MockSpaceService,
     mock_verifier::MockVerifierService,
     parking_lot::Mutex,
-    std::sync::Arc,
+    pretty_assertions::assert_eq,
+    std::sync::{
+        atomic::{AtomicU32, Ordering},
+        Arc,
+    },
     tempfile::TempDir,
 };
 
@@ -42,6 +49,7 @@ struct Proxies {
     channel_provider: ProviderProxy,
     update_manager: ManagerProxy,
     commit_status_provider: CommitStatusProviderProxy,
+    _space: Arc<MockSpaceService>,
     _verifier: Arc<MockVerifierService>,
 }
 
@@ -57,15 +65,21 @@ impl Mounts {
 struct TestEnvBuilder {
     installer: MockUpdateInstallerService,
     paver: Option<MockPaverService>,
+    space: Option<MockSpaceService>,
 }
 
 impl TestEnvBuilder {
     fn new() -> Self {
-        Self { installer: MockUpdateInstallerService::builder().build(), paver: None }
+        Self { installer: MockUpdateInstallerService::builder().build(), paver: None, space: None }
     }
 
     fn installer(self, installer: MockUpdateInstallerService) -> Self {
         Self { installer, ..self }
+    }
+
+    fn space(self, space: MockSpaceService) -> Self {
+        assert!(self.space.is_none());
+        Self { space: Some(space), ..self }
     }
 
     fn paver(self, paver: MockPaverService) -> Self {
@@ -113,6 +127,7 @@ impl TestEnvBuilder {
         fs.dir("svc").add_fidl_service(move |stream| {
             fasync::Task::spawn(Arc::clone(&installer_clone).run_service(stream)).detach()
         });
+
         // Setup the mock paver service
         let paver = Arc::new(self.paver.unwrap_or_else(|| MockPaverServiceBuilder::new().build()));
         fs.dir("svc").add_fidl_service(move |stream: PaverRequestStream| {
@@ -123,6 +138,20 @@ impl TestEnvBuilder {
             )
             .detach();
         });
+
+        // Setup the mock space service
+        let space =
+            Arc::new(self.space.unwrap_or_else(|| MockSpaceService::new(Box::new(|| Ok(())))));
+        let space_clone = Arc::clone(&space);
+        fs.dir("svc").add_fidl_service(move |stream| {
+            fasync::Task::spawn(
+                Arc::clone(&space_clone)
+                    .run_space_service(stream)
+                    .unwrap_or_else(|e| panic!("error running space service {:?}", e)),
+            )
+            .detach()
+        });
+
         // Setup the mock verifier service.
         let verifier = Arc::new(MockVerifierService::new(|_| Ok(())));
         let verifier_clone = Arc::clone(&verifier);
@@ -189,6 +218,10 @@ impl TestEnvBuilder {
                 .source(RouteEndpoint::component("fake_capabilities"))
                 .targets(vec![ RouteEndpoint::component("system_update_checker") ])
             ).await.unwrap()
+            .add_route(RouteBuilder::protocol("fuchsia.space.Manager")
+                .source(RouteEndpoint::component("fake_capabilities"))
+                .targets(vec![ RouteEndpoint::component("system_update_checker") ])
+            ).await.unwrap()
             .add_route(RouteBuilder::protocol("fuchsia.update.channel.Provider")
                 .source(RouteEndpoint::component("system_update_checker"))
                 .targets(vec! [ RouteEndpoint::AboveRoot ])
@@ -231,6 +264,7 @@ impl TestEnvBuilder {
                 channel_provider,
                 update_manager,
                 commit_status_provider,
+                _space: space,
                 _verifier: verifier,
             },
         }
@@ -437,6 +471,126 @@ async fn test_update_manager_progress() {
         })],
     )
     .await;
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn test_update_manager_out_of_space_gc_succeeds() {
+    let called = Arc::new(AtomicU32::new(0));
+    let called_clone = Arc::clone(&called);
+    let space = MockSpaceService::new(Box::new(move || {
+        called_clone.fetch_add(1, Ordering::SeqCst);
+        Ok(())
+    }));
+
+    let env = TestEnvBuilder::new().space(space).build().await;
+
+    env.proxies.resolver.url("fuchsia-pkg://fuchsia.com/update").respond_serially(vec![
+        Err(ResolveError::NoSpace),
+        Ok(env.proxies.resolver
+            .package("update", "deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef")
+            .add_file(
+                "packages.json",
+                make_packages_json(["fuchsia-pkg://fuchsia.com/system_image/0?hash=beefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdead"]),
+            )
+            .add_file("zbi", "fake zbi"),
+        ),
+    ]);
+    env.proxies
+        .resolver.url("fuchsia-pkg://fuchsia.com/system_image/0?hash=beefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdead")
+        .resolve(
+        &env.proxies
+            .resolver
+            .package("system_image", "beefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeada")
+    );
+
+    let mut stream = env.check_now().await;
+
+    expect_states(
+        &mut stream,
+        &[
+            State::CheckingForUpdates(CheckingForUpdatesData::EMPTY),
+            State::InstallingUpdate(InstallingData {
+                update: update_info(None),
+                installation_progress: None,
+                ..InstallingData::EMPTY
+            }),
+            State::InstallationError(InstallationErrorData {
+                update: Some(UpdateInfo {
+                    version_available: Some(
+                        "beefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdead".into(),
+                    ),
+                    download_size: None,
+                    ..UpdateInfo::EMPTY
+                }),
+                installation_progress: progress(None),
+                ..InstallationErrorData::EMPTY
+            }),
+        ],
+    )
+    .await;
+
+    // Make sure we tried to call `fuchsia.space.Manager.Gc()`.
+    assert_eq!(called.load(Ordering::SeqCst), 1);
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn test_update_manager_out_of_space_gc_fails() {
+    let called = Arc::new(AtomicU32::new(0));
+    let called_clone = Arc::clone(&called);
+    let space = MockSpaceService::new(Box::new(move || {
+        called_clone.fetch_add(1, Ordering::SeqCst);
+        Err(ErrorCode::Internal)
+    }));
+
+    let env = TestEnvBuilder::new().space(space).build().await;
+
+    env.proxies.resolver.url("fuchsia-pkg://fuchsia.com/update").respond_serially(vec![
+        Err(ResolveError::NoSpace),
+        Ok(env.proxies.resolver
+            .package("update", "deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef")
+            .add_file(
+                "packages.json",
+                make_packages_json(["fuchsia-pkg://fuchsia.com/system_image/0?hash=beefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdead"]),
+            )
+            .add_file("zbi", "fake zbi"),
+        ),
+    ]);
+    env.proxies
+        .resolver.url("fuchsia-pkg://fuchsia.com/system_image/0?hash=beefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdead")
+        .resolve(
+        &env.proxies
+            .resolver
+            .package("system_image", "beefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeada")
+    );
+
+    let mut stream = env.check_now().await;
+
+    expect_states(
+        &mut stream,
+        &[
+            State::CheckingForUpdates(CheckingForUpdatesData::EMPTY),
+            State::InstallingUpdate(InstallingData {
+                update: update_info(None),
+                installation_progress: None,
+                ..InstallingData::EMPTY
+            }),
+            State::InstallationError(InstallationErrorData {
+                update: Some(UpdateInfo {
+                    version_available: Some(
+                        "beefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdead".into(),
+                    ),
+                    download_size: None,
+                    ..UpdateInfo::EMPTY
+                }),
+                installation_progress: progress(None),
+                ..InstallationErrorData::EMPTY
+            }),
+        ],
+    )
+    .await;
+
+    // Make sure we tried to call `fuchsia.space.Manager.Gc()`.
+    assert_eq!(called.load(Ordering::SeqCst), 1);
 }
 
 #[fasync::run_singlethreaded(test)]

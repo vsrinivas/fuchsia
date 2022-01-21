@@ -13,6 +13,7 @@ group("tests") {
     "mock-paver:tests",
     "mock-reboot:tests",
     "mock-resolver:tests",
+    "mock-space:tests",
     "mock-verifier:tests",
     "pkgfs-ramdisk:tests",
   ]

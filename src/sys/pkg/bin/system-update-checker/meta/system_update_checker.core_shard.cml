@@ -39,6 +39,11 @@
             to: "#system-update-checker",
         },
         {
+            protocol: "fuchsia.space.Manager",
+            from: "#pkg-cache",
+            to: "#system-update-checker",
+        },
+        {
             directory: "pkgfs",
             from: "parent",
             as: "pkgfs-system",
