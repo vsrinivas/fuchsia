@@ -5,6 +5,7 @@
 #include "src/lib/fidl_codec/library_loader.h"
 
 #include <fstream>
+#include <set>
 
 #include <rapidjson/error/en.h>
 
@@ -354,10 +355,36 @@ Library::Library(LibraryLoader* enclosing_loader, rapidjson::Document& json_defi
     : enclosing_loader_(enclosing_loader), json_definition_(std::move(json_definition)) {
   if (!json_definition_.HasMember("struct_declarations")) {
     FieldNotFound("library", name_, "struct_declarations");
+  } else if (!json_definition_.HasMember("external_struct_declarations")) {
+    FieldNotFound("library", name_, "external_struct_declarations");
   } else {
+    // Make a set of the encoded compound identifiers of all types that are used as payloads for
+    // for FIDL methods.
+    std::set<std::string> message_body_type_names;
+    for (auto& protocol : json_definition_["interface_declarations"].GetArray()) {
+      for (auto& method : protocol["methods"].GetArray()) {
+        if (method.HasMember("maybe_request_payload")) {
+          message_body_type_names.insert(method["maybe_request_payload"]["identifier"].GetString());
+        }
+        if (method.HasMember("maybe_response_payload")) {
+          message_body_type_names.insert(
+              method["maybe_response_payload"]["identifier"].GetString());
+        }
+      }
+    }
+
+    // Add all type declarations used as payloads to the payload store.
     for (auto& str : json_definition_["struct_declarations"].GetArray()) {
-      if (str.HasMember("is_request_or_response")) {
-        payloads_.emplace(std::piecewise_construct, std::forward_as_tuple(str["name"].GetString()),
+      const std::string struct_name = str["name"].GetString();
+      if (message_body_type_names.find(struct_name) != message_body_type_names.end()) {
+        payloads_.emplace(std::piecewise_construct, std::forward_as_tuple(struct_name),
+                          std::forward_as_tuple(new Struct(this, &str)));
+      }
+    }
+    for (auto& str : json_definition_["external_struct_declarations"].GetArray()) {
+      const std::string struct_name = str["name"].GetString();
+      if (message_body_type_names.find(struct_name) != message_body_type_names.end()) {
+        payloads_.emplace(std::piecewise_construct, std::forward_as_tuple(struct_name),
                           std::forward_as_tuple(new Struct(this, &str)));
       }
     }

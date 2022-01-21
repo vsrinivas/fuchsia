@@ -558,7 +558,6 @@ std::string echo_service = R"({
         "column": 16,
         "length": 45
       },
-      "is_request_or_response": true,
       "members": [
         {
           "type": {
@@ -633,7 +632,6 @@ std::string echo_service = R"({
         "column": 12,
         "length": 48
       },
-      "is_request_or_response": true,
       "members": [
         {
           "type": {
@@ -708,7 +706,6 @@ std::string echo_service = R"({
         "column": 16,
         "length": 49
       },
-      "is_request_or_response": true,
       "members": [
         {
           "type": {
@@ -786,7 +783,6 @@ std::string echo_service = R"({
         "column": 12,
         "length": 49
       },
-      "is_request_or_response": true,
       "members": [
         {
           "type": {
@@ -852,6 +848,7 @@ std::string echo_service = R"({
       }
     }
   ],
+  "external_struct_declarations": [],
   "table_declarations": [],
   "union_declarations": [],
   "type_alias_declarations": [],

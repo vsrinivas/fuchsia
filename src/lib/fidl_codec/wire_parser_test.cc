@@ -1576,7 +1576,6 @@ TEST_F(WireParserTest, BadSchemaPrintHex) {
         "line": 16,
         "column": 5
       },
-      "is_request_or_response": true,
       "members": [
         {
           "type": {
@@ -1637,6 +1636,7 @@ TEST_F(WireParserTest, BadSchemaPrintHex) {
       }
     }
   ],
+  "external_struct_declarations": [],
   "table_declarations": [],
   "union_declarations": [],
   "xunion_declarations": []
