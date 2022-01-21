@@ -65,6 +65,7 @@
 extern "C" {
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-debug.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm/mvm.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm/sta.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm/time-event.h"
 }  // extern "C"
 
@@ -153,36 +154,6 @@ void fill_band_infos(const struct iwl_nvm_data* nvm_data, const wlan_info_band_t
   }
 }
 
-static struct iwl_mvm_sta* alloc_ap_mvm_sta(const uint8_t bssid[]) {
-  auto mvm_sta = reinterpret_cast<struct iwl_mvm_sta*>(calloc(1, sizeof(struct iwl_mvm_sta)));
-  if (!mvm_sta) {
-    return NULL;
-  }
-
-  for (size_t i = 0; i < std::size(mvm_sta->txq); i++) {
-    mvm_sta->txq[i] = reinterpret_cast<struct iwl_mvm_txq*>(calloc(1, sizeof(struct iwl_mvm_txq)));
-  }
-  memcpy(mvm_sta->addr, bssid, ETH_ALEN);
-  mtx_init(&mvm_sta->lock, mtx_plain);
-
-  return mvm_sta;
-}
-
-static void free_ap_mvm_sta(void* data) {
-  struct iwl_mvm_sta* mvm_sta = (struct iwl_mvm_sta*)(data);
-  if (!mvm_sta) {
-    return;
-  }
-
-  for (size_t i = 0; i < std::size(mvm_sta->txq); i++) {
-    free(mvm_sta->txq[i]);
-  }
-  if (mvm_sta->key_conf) {
-    free(mvm_sta->key_conf);
-  }
-  free(mvm_sta);
-}
-
 /////////////////////////////////////       MAC       //////////////////////////////////////////////
 
 zx_status_t mac_query(void* ctx, uint32_t options, wlan_softmac_info_t* info) {
@@ -249,36 +220,8 @@ zx_status_t mac_start(void* ctx, const wlan_softmac_ifc_protocol_t* ifc,
   return ret;
 }
 
-void mac_stop(void* ctx) {
-  const auto mvmvif = reinterpret_cast<struct iwl_mvm_vif*>(ctx);
-  zx_status_t ret;
-
-  // Change the sta state linking to the AP.
-  if (mvmvif->ap_sta_id != IWL_MVM_INVALID_STA) {
-    // TODO(fxbug.dev/86715): this RCU-unprotected access is safe as deletions from the map are
-    // RCU-synchronized below.
-    struct iwl_mvm_sta* mvm_sta = mvmvif->mvm->fw_id_to_mac_id[mvmvif->ap_sta_id];
-    if (!mvm_sta) {
-      IWL_ERR(mvmvif, "sta info is not set before stop.\n");
-    } else {
-      ret = iwl_mvm_mac_sta_state(mvmvif, mvm_sta, IWL_STA_NONE, IWL_STA_NOTEXIST);
-      if (ret != ZX_OK) {
-        IWL_ERR(mvmvif, "Cannot set station state to NOT EXIST: %s\n", zx_status_get_string(ret));
-      }
-      iwl_rcu_call_sync(mvmvif->mvm->dev, &free_ap_mvm_sta, mvm_sta);
-    }
-  }
-
-  // Clean up other sta info.
-  for (size_t i = 0; i < std::size(mvmvif->mvm->fw_id_to_mac_id); i++) {
-    // TODO(fxbug.dev/86715): this RCU-unprotected access is safe as deletions from the map are
-    // RCU-synchronized below.
-    struct iwl_mvm_sta* mvm_sta = mvmvif->mvm->fw_id_to_mac_id[i];
-    if (mvm_sta) {
-      iwl_rcu_call_sync(mvmvif->mvm->dev, &free_ap_mvm_sta, mvm_sta);
-      mvmvif->mvm->fw_id_to_mac_id[i] = NULL;
-    }
-  }
+void mac_stop(struct iwl_mvm_vif* mvmvif) {
+  zx_status_t ret = ZX_OK;
 
   if (mvmvif->phy_ctxt) {
     ret = iwl_mvm_remove_chanctx(mvmvif->mvm, mvmvif->phy_ctxt->id);
@@ -366,12 +309,10 @@ out:
   return ret;
 }
 
-static zx_status_t mac_unconfigure_bss(struct iwl_mvm_vif* mvmvif, struct iwl_mvm_sta* mvm_sta);
-
 // This is called right after SSID scan. The MLME tells this function the channel to tune in.
 // This function configures the PHY context and binds the MAC to that PHY context.
-zx_status_t mac_set_channel(void* ctx, uint32_t options, const wlan_channel_t* channel) {
-  const auto mvmvif = reinterpret_cast<struct iwl_mvm_vif*>(ctx);
+zx_status_t mac_set_channel(struct iwl_mvm_vif* mvmvif, uint32_t options,
+                            const wlan_channel_t* channel) {
   zx_status_t ret;
 
   IWL_INFO(mvmvif, "mac_set_channel(primary:%d, bandwidth:'%s', secondary:%d)\n", channel->primary,
@@ -383,23 +324,6 @@ zx_status_t mac_set_channel(void* ctx, uint32_t options, const wlan_channel_t* c
            : channel->cbw == CHANNEL_BANDWIDTH_CBW80P80   ? "80+80"
                                                           : "unknown",
            channel->secondary80);
-
-  if (mvmvif->ap_sta_id != IWL_MVM_INVALID_STA) {
-    // We already have AP STA ID set. It probably was left from the previous association attempt
-    // (had gone through mac_configure_bss but was rejected by the AP). Remove it first.
-    IWL_INFO(mvmvif, "We already have AP STA ID set (%d). Removing it.\n", mvmvif->ap_sta_id);
-
-    // TODO(fxbug.dev/86715): this RCU-unprotected access is safe as deletions from the map are
-    // RCU-synchronized from API calls to mac_stop() in this same thread.
-    auto mvm_sta = mvmvif->mvm->fw_id_to_mac_id[mvmvif->ap_sta_id];
-    if (mvm_sta) {
-      ret = mac_unconfigure_bss(mvmvif, mvm_sta);
-      if (ret != ZX_OK) {
-        IWL_ERR(mvmvif, "Cannot unconfigure bss: %s\n", zx_status_get_string(ret));
-        return ret;
-      }
-    }
-  }
 
   if (mvmvif->phy_ctxt && mvmvif->phy_ctxt->chandef.primary != 0) {
     // The PHY context is set (the RF is on a particular channel). Remove it first. Below code
@@ -437,10 +361,9 @@ zx_status_t mac_set_channel(void* ctx, uint32_t options, const wlan_channel_t* c
 }
 
 // This is called after mac_set_channel(). The MAC (mvmvif) will be configured as a CLIENT role.
-zx_status_t mac_configure_bss(void* ctx, uint32_t options, const bss_config_t* config) {
+zx_status_t mac_configure_bss(struct iwl_mvm_vif* mvmvif, uint32_t options,
+                              const bss_config_t* config) {
   zx_status_t ret = ZX_OK;
-  const auto mvmvif = reinterpret_cast<struct iwl_mvm_vif*>(ctx);
-  struct iwl_mvm_sta* mvm_sta = nullptr;
 
   IWL_INFO(mvmvif, "mac_configure_bss(bssid=%02x:%02x:%02x:%02x:%02x:%02x, type=%d, remote=%d)\n",
            config->bssid[0], config->bssid[1], config->bssid[2], config->bssid[3], config->bssid[4],
@@ -449,11 +372,6 @@ zx_status_t mac_configure_bss(void* ctx, uint32_t options, const bss_config_t* c
   if (config->bss_type != BSS_TYPE_INFRASTRUCTURE) {
     IWL_ERR(mvmvif, "invalid bss_type requested: %d\n", config->bss_type);
     return ZX_ERR_INVALID_ARGS;
-  }
-
-  if (mvmvif->ap_sta_id != IWL_MVM_INVALID_STA) {
-    IWL_ERR(mvmvif, "The AP sta ID has been set already. ap_sta_id=%d\n", mvmvif->ap_sta_id);
-    return ZX_ERR_ALREADY_EXISTS;
   }
 
   {
@@ -474,43 +392,27 @@ zx_status_t mac_configure_bss(void* ctx, uint32_t options, const bss_config_t* c
   // Note that this would add TIME_EVENT as well.
   iwl_mvm_mac_mgd_prepare_tx(mvmvif->mvm, mvmvif, IWL_MVM_TE_SESSION_PROTECTION_MAX_TIME_MS);
 
-  // Note that 'ap_sta_id' is unset and later will be set in iwl_mvm_add_sta().
-  // Add AP into the STA table in the firmware.
-  mvm_sta = alloc_ap_mvm_sta(config->bssid);
-  if (!mvm_sta) {
-    IWL_ERR(mvmvif, "cannot allocate MVM STA for AP.\n");
-    return ZX_ERR_NO_RESOURCES;
-  }
+  return ZX_OK;
+}
 
-  // mvm_sta ownership will be transfered to mvm->fw_id_to_mac_id[] in iwl_mvm_add_sta(). It will be
-  // freed at mac_clear_assoc().
-  // Below is to how the iwl_mvm_mac_sta_state() is called.
-  ret = iwl_mvm_mac_sta_state(mvmvif, mvm_sta, IWL_STA_NOTEXIST, IWL_STA_NONE);
-  if (ret != ZX_OK) {
-    IWL_ERR(mvmvif, "cannot set MVM STA state: %s\n", zx_status_get_string(ret));
-    goto exit;
-  }
+// This function is to revert what mac_configure_bss() does.
+zx_status_t mac_unconfigure_bss(struct iwl_mvm_vif* mvmvif) {
+  zx_status_t ret = ZX_OK;
 
   {
+    // To simulate the behavior that iwl_mvm_bss_info_changed_station() would do for disassocitaion.
     auto lock = std::lock_guard(mvmvif->mvm->mutex);
-    // Allocate a Tx queue for this station.
-    ret = iwl_mvm_sta_alloc_queue(mvmvif->mvm, mvm_sta, IEEE80211_AC_BE, IWL_MAX_TID_COUNT);
+    memset(mvmvif->bss_conf.bssid, 0, ETH_ALEN);
+    memset(mvmvif->bssid, 0, ETH_ALEN);
+    // This will take the cleared BSSID from bss_conf and update the firmware.
+    ret = iwl_mvm_mac_ctxt_changed(mvmvif, false, NULL);
     if (ret != ZX_OK) {
-      IWL_ERR(mvmvif, "cannot allocate queue for STA: %s\n", zx_status_get_string(ret));
-      goto exit;
+      IWL_ERR(mvm, "failed to update MAC (clear after unassoc)\n");
+      return ret;
     }
   }
 
-exit:
-  // If it is successful, the ownership has been transferred. If not, free the resource.
-  if (ret != ZX_OK) {
-    if (mvmvif->ap_sta_id != IWL_MVM_INVALID_STA) {
-      iwl_rcu_store(mvmvif->mvm->fw_id_to_mac_id[mvmvif->ap_sta_id], NULL);
-      mvmvif->ap_sta_id = IWL_MVM_INVALID_STA;
-    }
-    iwl_rcu_call_sync(mvmvif->mvm->dev, &free_ap_mvm_sta, mvm_sta);
-  }
-  return ret;
+  return ZX_OK;
 }
 
 zx_status_t mac_enable_beaconing(void* ctx, uint32_t options, const wlan_bcn_config_t* bcn_cfg) {
@@ -524,9 +426,9 @@ zx_status_t mac_configure_beacon(void* ctx, uint32_t options,
   return ZX_ERR_NOT_SUPPORTED;
 }
 
-zx_status_t mac_set_key(void* ctx, uint32_t options, const wlan_key_config_t* key_config) {
+zx_status_t mac_set_key(struct iwl_mvm_vif* mvmvif, struct iwl_mvm_sta* mvmsta, uint32_t options,
+                        const wlan_key_config_t* key_config) {
   zx_status_t status = ZX_OK;
-  const auto mvmvif = reinterpret_cast<struct iwl_mvm_vif*>(ctx);
   iwl_mvm* mvm = mvmvif->mvm;
 
   if (key_config->key_len > WLAN_MAX_KEY_LEN) {
@@ -569,10 +471,7 @@ zx_status_t mac_set_key(void* ctx, uint32_t options, const wlan_key_config_t* ke
   key_conf->rx_seq = key_config->rsc;
   memcpy(key_conf->key, key_config->key, key_conf->keylen);
 
-  // TODO(fxbug.dev/86715): this RCU-unprotected access is safe as deletions from the map are
-  // RCU-synchronized from API calls to mac_stop() in this same thread.
-  struct iwl_mvm_sta* mvm_sta = mvmvif->mvm->fw_id_to_mac_id[mvmvif->ap_sta_id];
-  if ((status = iwl_mvm_mac_set_key(mvmvif, mvm_sta, key_conf)) != ZX_OK) {
+  if ((status = iwl_mvm_mac_set_key(mvmvif, mvmsta, key_conf)) != ZX_OK) {
     free(key_conf);
     IWL_ERR(mvmvif, "iwl_mvm_mac_set_key() failed: %s\n", zx_status_get_string(status));
     return status;
@@ -581,8 +480,8 @@ zx_status_t mac_set_key(void* ctx, uint32_t options, const wlan_key_config_t* ke
   if (key_conf->key_type == WLAN_KEY_TYPE_PAIRWISE) {
     // Save the pairwise key, for use in the TX path.  Group keys are receive-only and do not need
     // to be saved.
-    free(mvm_sta->key_conf);
-    mvm_sta->key_conf = key_conf;
+    free(mvmsta->key_conf);
+    mvmsta->key_conf = key_conf;
   } else {
     free(key_conf);
   }
@@ -596,39 +495,11 @@ zx_status_t mac_set_key(void* ctx, uint32_t options, const wlan_key_config_t* ke
 //   TODO(fxbug.dev/36683): supports HT (802.11n)
 //   TODO(fxbug.dev/36684): supports VHT (802.11ac)
 //
-zx_status_t mac_configure_assoc(void* ctx, uint32_t options, const wlan_assoc_ctx_t* assoc_ctx) {
-  const auto mvmvif = reinterpret_cast<struct iwl_mvm_vif*>(ctx);
+zx_status_t mac_configure_assoc(struct iwl_mvm_vif* mvmvif, uint32_t options,
+                                const wlan_assoc_ctx_t* assoc_ctx) {
   zx_status_t ret = ZX_OK;
 
   IWL_INFO(ctx, "Associating ...\n");
-
-  // TODO(fxbug.dev/86715): this RCU-unprotected access is safe as deletions from the map are
-  // RCU-synchronized from API calls to mac_stop() in this same thread.
-  struct iwl_mvm_sta* mvm_sta = mvmvif->mvm->fw_id_to_mac_id[mvmvif->ap_sta_id];
-  if (!mvm_sta) {
-    IWL_ERR(mvmvif, "sta info is not set before association.\n");
-    ret = ZX_ERR_BAD_STATE;
-    return ret;
-  }
-
-  // Change the station states step by step.
-
-  ret = iwl_mvm_mac_sta_state(mvmvif, mvm_sta, IWL_STA_NONE, IWL_STA_AUTH);
-  if (ret != ZX_OK) {
-    IWL_ERR(mvmvif, "cannot set state from NONE to AUTH: %s\n", zx_status_get_string(ret));
-    return ret;
-  }
-
-  ret = iwl_mvm_mac_sta_state(mvmvif, mvm_sta, IWL_STA_AUTH, IWL_STA_ASSOC);
-  if (ret != ZX_OK) {
-    IWL_ERR(mvmvif, "cannot set state from AUTH to ASSOC: %s\n", zx_status_get_string(ret));
-    return ret;
-  }
-  ret = iwl_mvm_mac_sta_state(mvmvif, mvm_sta, IWL_STA_ASSOC, IWL_STA_AUTHORIZED);
-  if (ret != ZX_OK) {
-    IWL_ERR(mvmvif, "cannot set state from ASSOC to AUTHORIZED: %s\n", zx_status_get_string(ret));
-    return ret;
-  }
 
   {
     auto lock = std::lock_guard(mvmvif->mvm->mutex);
@@ -657,95 +528,27 @@ zx_status_t mac_configure_assoc(void* ctx, uint32_t options, const wlan_assoc_ct
   return ZX_OK;
 }
 
-zx_status_t mac_clear_assoc(void* ctx, uint32_t options,
+zx_status_t mac_clear_assoc(struct iwl_mvm_vif* mvmvif, uint32_t options,
                             const uint8_t peer_addr[fuchsia_wlan_ieee80211::wire::kMacAddrLen]) {
   IWL_INFO(ctx, "Disassociating ...\n");
 
-  const auto mvmvif = reinterpret_cast<struct iwl_mvm_vif*>(ctx);
   zx_status_t ret = ZX_OK;
 
-  if (mvmvif->ap_sta_id == IWL_MVM_INVALID_STA) {
-    IWL_ERR(mvmif, "sta id has not been set yet");
-    return ZX_ERR_BAD_STATE;
-  }
-  // iwl_mvm_rm_sta() will reset the ap_sta_id value so that we have to keep it.
-  uint8_t ap_sta_id = mvmvif->ap_sta_id;
-
-  // TODO(fxbug.dev/86715): this RCU-unprotected access is safe as deletions from the map are
-  // RCU-synchronized from API calls to mac_stop() in this same thread.
-  struct iwl_mvm_sta* mvm_sta = mvmvif->mvm->fw_id_to_mac_id[ap_sta_id];
-  if (!mvm_sta) {
-    IWL_ERR(mvmvif, "sta info is not set before disassociation.\n");
-    return ZX_ERR_BAD_STATE;
-  }
-
-  // Mark the station is no longer associated. This must be set before iwl_mvm_mac_sta_state().
-  mvmvif->bss_conf.assoc = false;
-
-  // Below are to simulate the behavior of iwl_mvm_bss_info_changed_station().
-  ret = iwl_mvm_mac_sta_state(mvmvif, mvm_sta, IWL_STA_AUTHORIZED, IWL_STA_ASSOC);
-  if (ret != ZX_OK) {
-    IWL_ERR(mvmvif, "cannot set state from AUTHORIZED to ASSOC: %s\n", zx_status_get_string(ret));
-    return ret;
-  }
-  ret = iwl_mvm_mac_sta_state(mvmvif, mvm_sta, IWL_STA_ASSOC, IWL_STA_AUTH);
-  if (ret != ZX_OK) {
-    IWL_ERR(mvmvif, "cannot set state from ASSOC to AUTH: %s\n", zx_status_get_string(ret));
-    return ret;
-  }
-  ret = iwl_mvm_mac_sta_state(mvmvif, mvm_sta, IWL_STA_AUTH, IWL_STA_NONE);
-  if (ret != ZX_OK) {
-    IWL_ERR(mvmvif, "cannot set state from AUTH to NONE: %s\n", zx_status_get_string(ret));
-    return ret;
-  }
-
   {
-    // Tell firmware to flush all packets in the Tx queue. This must be done before we remove the
-    // STA (in the NONE->NOTEXIST transition).
-    // TODO(79799): understand why we need this.
     auto lock = std::lock_guard(mvmvif->mvm->mutex);
     // Remove Time event (in case assoc failed)
     ret = iwl_mvm_remove_time_event(mvmvif, &mvmvif->time_event_data);
     if (ret != ZX_OK) {
       IWL_ERR(mvmvif, "cannot remove time event: %s\n", zx_status_get_string(ret));
     }
-    iwl_mvm_flush_sta(mvmvif->mvm, mvm_sta, false, 0);
   }
 
-  ret = mac_unconfigure_bss(mvmvif, mvm_sta);
+  ret = mac_unconfigure_bss(mvmvif);
   if (ret != ZX_OK) {
     return ret;
   }
 
   return remove_chanctx(mvmvif);
-}
-
-// This function is to revert what mac_configure_bss() does.
-zx_status_t mac_unconfigure_bss(struct iwl_mvm_vif* mvmvif, struct iwl_mvm_sta* mvm_sta) {
-  // REMOVE_STA will be issued to remove the station entry in the firmware.
-  zx_status_t ret = iwl_mvm_mac_sta_state(mvmvif, mvm_sta, IWL_STA_NONE, IWL_STA_NOTEXIST);
-  if (ret != ZX_OK) {
-    IWL_ERR(mvmvif, "cannot set state from NONE to NOTEXIST: %s\n", zx_status_get_string(ret));
-    goto out;
-  }
-
-  {
-    // To simulate the behavior that iwl_mvm_bss_info_changed_station() would do for disassocitaion.
-    auto lock = std::lock_guard(mvmvif->mvm->mutex);
-    memset(mvmvif->bss_conf.bssid, 0, ETH_ALEN);
-    memset(mvmvif->bssid, 0, ETH_ALEN);
-    // This will take the cleared BSSID from bss_conf and update the firmware.
-    ret = iwl_mvm_mac_ctxt_changed(mvmvif, false, NULL);
-    if (ret != ZX_OK) {
-      IWL_ERR(mvm, "failed to update MAC (clear after unassoc)\n");
-      goto out;
-    }
-  }
-
-out:
-  free_ap_mvm_sta(mvm_sta);
-
-  return ret;
 }
 
 zx_status_t mac_start_passive_scan(void* ctx,

@@ -25,6 +25,9 @@ extern "C" {
 // A reasonable key length is <= 256 bits.
 #define WLAN_MAX_KEY_LEN ((size_t)(256 / 8))
 
+struct iwl_mvm_vif;
+struct iwl_mvm_sta;
+
 // for testing
 size_t compose_band_list(const struct iwl_nvm_data* nvm_data,
                          wlan_info_band_t bands[WLAN_INFO_BAND_COUNT]);
@@ -46,16 +49,21 @@ void phy_create_iface_undo(struct iwl_trans* iwl_trans, uint16_t idx);
 zx_status_t mac_query(void* ctx, uint32_t options, wlan_softmac_info_t* info);
 zx_status_t mac_start(void* ctx, const wlan_softmac_ifc_protocol_t* ifc,
                       zx_handle_t* out_mlme_channel);
-void mac_stop(void* ctx);
+void mac_stop(struct iwl_mvm_vif* mvmvif);
 zx_status_t mac_queue_tx(void* ctx, uint32_t options, const wlan_tx_packet_t* packet);
-zx_status_t mac_set_channel(void* ctx, uint32_t options, const wlan_channel_t* channel);
-zx_status_t mac_configure_bss(void* ctx, uint32_t options, const bss_config_t* config);
+zx_status_t mac_set_channel(struct iwl_mvm_vif* mvmvif, uint32_t options,
+                            const wlan_channel_t* channel);
+zx_status_t mac_configure_bss(struct iwl_mvm_vif* mvmvif, uint32_t options,
+                              const bss_config_t* config);
+zx_status_t mac_unconfigure_bss(struct iwl_mvm_vif* mvmvif);
 zx_status_t mac_enable_beaconing(void* ctx, uint32_t options, const wlan_bcn_config_t* bcn_cfg);
 zx_status_t mac_configure_beacon(void* ctx, uint32_t options,
                                  const wlan_tx_packet_t* packet_template);
-zx_status_t mac_set_key(void* ctx, uint32_t options, const wlan_key_config_t* key_config);
-zx_status_t mac_configure_assoc(void* ctx, uint32_t options, const wlan_assoc_ctx_t* assoc_ctx);
-zx_status_t mac_clear_assoc(void* ctx, uint32_t options,
+zx_status_t mac_set_key(struct iwl_mvm_vif* mvmvif, struct iwl_mvm_sta* mvmsta, uint32_t options,
+                        const wlan_key_config_t* key_config);
+zx_status_t mac_configure_assoc(struct iwl_mvm_vif* mvmvif, uint32_t options,
+                                const wlan_assoc_ctx_t* assoc_ctx);
+zx_status_t mac_clear_assoc(struct iwl_mvm_vif* mvmvif, uint32_t options,
                             const uint8_t peer_addr[fuchsia_wlan_ieee80211_MAC_ADDR_LEN]);
 zx_status_t mac_start_passive_scan(void* ctx,
                                    const wlan_softmac_passive_scan_args_t* passive_scan_args,

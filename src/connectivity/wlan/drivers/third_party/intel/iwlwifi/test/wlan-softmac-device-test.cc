@@ -18,6 +18,7 @@
 #include <iterator>
 #include <list>
 #include <memory>
+#include <utility>
 
 #include <zxtest/zxtest.h>
 
@@ -539,7 +540,7 @@ TEST_F(MacInterfaceTest, TestConfigureBss) {
 TEST_F(MacInterfaceTest, DuplicateConfigureBss) {
   ASSERT_EQ(ZX_OK, SetChannel(&kChannel));
   ASSERT_EQ(ZX_OK, ConfigureBss(&kBssConfig));
-  ASSERT_EQ(ZX_ERR_ALREADY_EXISTS, ConfigureBss(&kBssConfig));
+  ASSERT_EQ(ZX_ERR_ALREADY_BOUND, ConfigureBss(&kBssConfig));
 }
 
 // Test unsupported bss_type.
@@ -583,18 +584,20 @@ TEST_F(MacInterfaceTest, TestExceptionHandling) {
   mvmvif_->phy_ctxt = backup_phy_ctxt;
 
   // Test the case we run out of slots for STA.
-  //
-  // In the constructor of the test, mvmvif_sta_ had been added once. So we would expect the
-  // following (IWL_MVM_STATION_COUNT - 1) adding would be successful as well.
-  //
-  for (size_t i = 0; i < IWL_MVM_STATION_COUNT - 1; i++) {
-    // Pretent the STA is not assigned so that we can add it again.
-    mvmvif_->ap_sta_id = IWL_MVM_INVALID_STA;
+  std::list<std::unique_ptr<::wlan::iwlwifi::WlanSoftmacDevice>> devices;
+  for (size_t i = 0; i < IWL_MVM_STATION_COUNT; i++) {
+    // Pretend the STA is not assigned so that we can add it again.
+    devices.emplace_back(std::make_unique<::wlan::iwlwifi::WlanSoftmacDevice>(
+        nullptr, sim_trans_.iwl_trans(), 0, mvmvif_.get()));
+    std::swap(device_, devices.back());
     ASSERT_EQ(ZX_OK, ConfigureBss(&kBssConfig));
   }
+
   // However, the last one should fail because we run out of all slots in fw_id_to_mac_id[].
-  mvmvif_->ap_sta_id = IWL_MVM_INVALID_STA;
-  ASSERT_EQ(ZX_OK, ConfigureBss(&kBssConfig));
+  devices.emplace_back(std::make_unique<::wlan::iwlwifi::WlanSoftmacDevice>(
+      nullptr, sim_trans_.iwl_trans(), 0, mvmvif_.get()));
+  std::swap(device_, devices.back());
+  ASSERT_EQ(ZX_ERR_NO_RESOURCES, ConfigureBss(&kBssConfig));
 }
 
 // The test is used to test the typical procedure to connect to an open network.
@@ -637,53 +640,38 @@ TEST_F(MacInterfaceTest, ClearAssocAfterNoAssoc) {
   ASSERT_EQ(nullptr, mvmvif_->phy_ctxt);
   ASSERT_EQ(IWL_MVM_INVALID_STA, mvmvif_->ap_sta_id);
   ASSERT_EQ(list_length(&mvm->time_event_list), 0);
+
   // Call ClearAssoc() again to check if it is handled correctly.
   ASSERT_NE(ZX_OK, ClearAssoc());
 }
 
-TEST_F(MacInterfaceTest, AssociateToOpenNetworkNullStation) {
-  SetChannel(&kChannel);
-  ConfigureBss(&kBssConfig);
-
-  // Replace the STA pointer with NULL and expect the association will fail.
-  auto org = mvmvif_->mvm->fw_id_to_mac_id[mvmvif_->ap_sta_id];
-  mvmvif_->mvm->fw_id_to_mac_id[mvmvif_->ap_sta_id] = nullptr;
-
-  ASSERT_EQ(ZX_ERR_BAD_STATE, ConfigureAssoc(&kAssocCtx));
-
-  // Expect error while disassociating a non-existing association.
-  ASSERT_EQ(ZX_ERR_BAD_STATE, ClearAssoc());
-
-  // We have to recover the pointer so that the MAC stop function can recycle the memory.
-  mvmvif_->mvm->fw_id_to_mac_id[mvmvif_->ap_sta_id] = org;
-}
-
+// ClearAssoc() should cleanup when called after a failed Assoc
 TEST_F(MacInterfaceTest, ClearAssocAfterFailedAssoc) {
   SetChannel(&kChannel);
   ConfigureBss(&kBssConfig);
 
   struct iwl_mvm* mvm = mvmvif_->mvm;
   ASSERT_GT(list_length(&mvm->time_event_list), 0);
-  // Replace the STA pointer with NULL and expect the association will fail.
-  auto org = mvmvif_->mvm->fw_id_to_mac_id[mvmvif_->ap_sta_id];
-  mvmvif_->mvm->fw_id_to_mac_id[mvmvif_->ap_sta_id] = nullptr;
+  // Fail the association by forcing some relevant internal state.
+  auto orig = mvmvif_->uploaded;
+  mvmvif_->uploaded = false;
+  ASSERT_EQ(ZX_ERR_IO, ConfigureAssoc(&kAssocCtx));
+  mvmvif_->uploaded = orig;
 
-  ASSERT_EQ(ZX_ERR_BAD_STATE, ConfigureAssoc(&kAssocCtx));
-  // Now put back the original STA pointer so ClearAssoc runs and also
-  // to recycle allocated memory
-  mvmvif_->mvm->fw_id_to_mac_id[mvmvif_->ap_sta_id] = org;
-  ASSERT_GT(list_length(&mvm->time_event_list), 0);
-
-  // Expect error while disassociating a non-existing association.
+  // ClearAssoc will clean up the failed association.
   ASSERT_EQ(ZX_OK, ClearAssoc());
   ASSERT_EQ(nullptr, mvmvif_->phy_ctxt);
   ASSERT_EQ(IWL_MVM_INVALID_STA, mvmvif_->ap_sta_id);
   ASSERT_EQ(list_length(&mvm->time_event_list), 0);
+
   // Call ClearAssoc() again to check if it is handled correctly.
   ASSERT_NE(ZX_OK, ClearAssoc());
 }
 
 TEST_F(MacInterfaceTest, InvalidSetKeysTest) {
+  ASSERT_EQ(ZX_OK, SetChannel(&kChannel));
+  ASSERT_EQ(ZX_OK, ConfigureBss(&kBssConfig));
+
   char keybuf[sizeof(wlan_key_config_t) + 16];
   wlan_key_config_t* key_config = (wlan_key_config_t*)keybuf;
 

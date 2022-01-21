@@ -2,32 +2,33 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_PLATFORM_WLAN_SOFTMAC_DEVICE_H_
+#define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_PLATFORM_WLAN_SOFTMAC_DEVICE_H_
+
 #include <fuchsia/hardware/wlan/softmac/cpp/banjo.h>
 #include <fuchsia/wlan/ieee80211/c/banjo.h>
 #include <fuchsia/wlan/internal/cpp/banjo.h>
 #include <lib/ddk/device.h>
 
-#include <ddktl/device.h>
+#include <memory>
 
-#ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_PLATFORM_WLAN_SOFTMAC_DEVICE_H_
-#define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_PLATFORM_WLAN_SOFTMAC_DEVICE_H_
+#include <ddktl/device.h>
 
 struct iwl_mvm_vif;
 struct iwl_trans;
 
 namespace wlan::iwlwifi {
 
+class MvmSta;
 class WlanSoftmacDevice;
-using WlanSoftmacDeviceType = ddk::Device<WlanSoftmacDevice, ddk::Initializable, ddk::Unbindable>;
 
 class WlanSoftmacDevice
-    : public WlanSoftmacDeviceType,
+    : public ddk::Device<WlanSoftmacDevice, ddk::Initializable, ddk::Unbindable>,
       public ::ddk::WlanSoftmacProtocol<WlanSoftmacDevice, ::ddk::base_protocol> {
  public:
   WlanSoftmacDevice(zx_device* parent, iwl_trans* drvdata, uint16_t iface_id,
-                    struct iwl_mvm_vif* mvmvif)
-      : WlanSoftmacDeviceType(parent), mvmvif_(mvmvif), drvdata_(drvdata), iface_id_(iface_id) {}
-  ~WlanSoftmacDevice() = default;
+                    struct iwl_mvm_vif* mvmvif);
+  ~WlanSoftmacDevice();
 
   void DdkInit(ddk::InitTxn txn);
   void DdkRelease();
@@ -59,6 +60,10 @@ class WlanSoftmacDevice
  private:
   iwl_trans* drvdata_;
   uint16_t iface_id_;
+
+  // Each peer on this interface will require a MvmSta instance.  For now, as we only support client
+  // mode, we have only one peer (the AP), which simplifies things.
+  std::unique_ptr<MvmSta> ap_mvm_sta_;
 };
 
 }  // namespace wlan::iwlwifi
