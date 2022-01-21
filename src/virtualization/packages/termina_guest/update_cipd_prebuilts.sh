@@ -123,11 +123,15 @@ build_debian_32bit_icd() {
     sudo chroot ${debian_dir} bash -c 'dpkg --add-architecture i386'
     sudo chroot ${debian_dir} bash -c 'apt update'
     sudo chroot ${debian_dir} bash -c 'apt install --yes git gcc-multilib g++-multilib meson \
-      python3-setuptools python3-mako rapidjson-dev googletest libvulkan-dev:i386 pkg-config:i386 \
-      bison:i386 flex:i386 libwayland-dev:i386 wayland-protocols libxrandr-dev:i386 libdrm-dev:i386\
-      libx11-xcb-dev:i386 libxcb-dri2-0-dev:i386 libxcb-dri3-dev:i386 libxcb-present-dev:i386 \
-      libxcb-randr0 libxcb-randr0:i386 libxcb-shm0 libxcb-shm0:i386 libxshmfence-dev:i386 \
-      zlib1g-dev:i386'
+      python3-setuptools python3-mako rapidjson-dev googletest libvulkan-dev libvulkan-dev:i386 \
+      pkg-config bison flex libwayland-dev libwayland-dev:i386 wayland-protocols \
+      libxrandr-dev libxrandr-dev:i386 libdrm-dev libdrm-dev:i386 libx11-xcb-dev \
+      libx11-xcb-dev:i386 libxcb-dri2-0-dev libxcb-dri2-0-dev:i386 libxcb-dri3-dev \
+      libxcb-dri3-dev:i386 libxcb-present-dev libxcb-present-dev:i386 libxcb-randr0 \
+      libxcb-randr0:i386 libxcb-shm0 libxcb-shm0:i386 libxshmfence-dev libxshmfence-dev:i386 \
+      zlib1g-dev zlib1g-dev:i386 libxfixes-dev libxfixes-dev:i386 libxcb-glx0-dev \
+      libxcb-glx0-dev:i386 libxcb-shm0-dev libxcb-shm0-dev:i386 libxxf86vm-dev libxxf86vm-dev:i386 \
+      libdrm-dev libdrm-dev:i386'
 
     sudo chroot ${debian_dir} bash -c 'git clone https://fuchsia.googlesource.com/third_party/mesa'
     sudo chroot ${debian_dir} bash -c 'git clone https://fuchsia.googlesource.com/fuchsia mesa/subprojects/fuchsia'
@@ -138,8 +142,8 @@ build_debian_32bit_icd() {
     sudo chroot ${debian_dir} bash -c 'cd mesa/subprojects/fuchsia && ln -s src/graphics/lib/magma/meson-top/meson.build meson.build'
     sudo chroot ${debian_dir} bash -c 'cd mesa/subprojects/fuchsia && ln -s src/graphics/lib/magma/meson-top/meson_options.txt meson_options.txt'
 
-    sudo chroot ${debian_dir} bash -c "meson --cross-file mesa/build/crossfile mesa/build mesa \
-      -Dbuildtype=release \
+    sudo chroot ${debian_dir} bash -c "PKG_CONFIG_PATH=/usr/lib/i386-linux-gnu/pkgconfig \
+      meson --cross-file mesa/build/crossfile --buildtype release mesa/build mesa \
       -Ddriver-backend=magma \
       -Ddri-drivers= \
       -Dgallium-drivers= \
@@ -151,9 +155,29 @@ build_debian_32bit_icd() {
       -Degl=disabled \
       -Dprefix=/usr \
       -Dlibdir=lib/i386-linux-gnu"
+
+    sudo chroot ${debian_dir} bash -c 'git clone https://fuchsia.googlesource.com/third_party/mesa -b sandbox/zink-magma zink'
+    sudo chroot ${debian_dir} bash -c 'mkdir -p zink/build'
+    sudo chroot ${debian_dir} bash -c "echo \"${meson_cross_file}\" > zink/build/crossfile"
+
+    sudo chroot ${debian_dir} bash -c "PKG_CONFIG_PATH=/usr/lib/i386-linux-gnu/pkgconfig \
+      meson --cross-file zink/build/crossfile --buildtype release zink/build zink \
+      -Ddri-drivers= \
+      -Dgallium-drivers=zink \
+      -Dvulkan-drivers= \
+      -Dgles1=disabled \
+      -Dgles2=disabled \
+      -Dopengl=true \
+      -Dgbm=disabled \
+      -Degl=disabled \
+      -Dprefix=/usr \
+      -Dlibdir=lib/i386-linux-gnu \
+      -Ddri-search-path=/opt/google/cros-containers/drivers/lib32/dri \
+      -Dsysconfdir=/opt/google/cros-containers/etc"
   fi
 
   sudo chroot ${debian_dir} bash -c 'ninja -C mesa/build'
+  sudo chroot ${debian_dir} bash -c 'ninja -C zink/build'
 }
 
 build_angle() {
@@ -299,9 +323,12 @@ main() {
     echo "*** Prepare debian and build"
     build_debian_32bit_icd "${work_dir}/debian" "${arch}"
 
-    echo "*** Copy 32bit ICD to chromeos tree"
+    echo "*** Copy 32bit drivers to chromeos tree"
     mkdir -p "${work_dir}/cros/src/third_party/chromiumos-overlay/media-libs/mesa/files/lib32"
-    cp -f "${work_dir}/debian/mesa/build/src/intel/vulkan/libvulkan_intel.so" "${work_dir}/cros/src/third_party/chromiumos-overlay/media-libs/mesa/files/lib32/libvulkan_intel.so"
+    cp -f "${work_dir}/debian/mesa/build/src/intel/vulkan/libvulkan_intel.so" "${work_dir}/cros/src/third_party/chromiumos-overlay/media-libs/mesa/files/lib32"
+
+    cp -f "${work_dir}/debian/zink/build/src/gallium/targets/dri/libgallium_dri.so" "${work_dir}/cros/src/third_party/chromiumos-overlay/media-libs/mesa/files/lib32/zink_dri.so"
+    cp -f "${work_dir}/debian/zink/build/src/glx/libGL.so.1.2.0" "${work_dir}/cros/src/third_party/chromiumos-overlay/media-libs/mesa/files/lib32"
   fi
 
   echo "*** Prepare ANGLE and build"
