@@ -54,13 +54,13 @@ rustc_test("v2_test_runs_v1_component_bin") {
   sources = [ "v2_test_runs_v1_component.rs" ]
 }
 
-rustc_test("simple_system_realm_test_bin") {
+rustc_test("noop_test_bin") {
   testonly = true
-  name = "simple_system_realm_test"
+  name = "noop_test"
   edition = "2018"
-  source_root = "simple_system_realm_test.rs"
+  source_root = "noop_test.rs"
 
-  sources = [ "simple_system_realm_test.rs" ]
+  sources = [ "noop_test.rs" ]
 }
 
 fuchsia_component("no_suite_service") {
@@ -71,8 +71,14 @@ fuchsia_component("no_suite_service") {
 
 fuchsia_component("simple_system_realm_test") {
   testonly = true
-  deps = [ ":simple_system_realm_test_bin" ]
+  deps = [ ":noop_test_bin" ]
   manifest = "meta/simple_system_realm_test.cml"
+}
+
+fuchsia_component("simple_chromium_realm_test") {
+  testonly = true
+  deps = [ ":noop_test_bin" ]
+  manifest = "meta/simple_chromium_realm_test.cml"
 }
 
 fuchsia_component("hanging_test") {
@@ -137,6 +143,7 @@ group("test_data") {
     ":debug_data_test_v1",
     ":hanging_test",
     ":no_suite_service",
+    ":simple_chromium_realm_test",
     ":simple_system_realm_test",
     ":v2_test_runs_v1_component",
     "//examples/tests/rust:custom_artifact_user_cmp",

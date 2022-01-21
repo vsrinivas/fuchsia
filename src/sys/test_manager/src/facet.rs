@@ -94,7 +94,10 @@ fn get_suite_collection(decl: &fdecl::Component) -> Result<&'static str, FacetEr
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::{CTS_TESTS_COLLECTION, SYSTEM_TESTS_COLLECTION, VULKAN_TESTS_COLLECTION};
+    use crate::{
+        CHROMIUM_TESTS_COLLECTION, CTS_TESTS_COLLECTION, SYSTEM_TESTS_COLLECTION,
+        VULKAN_TESTS_COLLECTION,
+    };
 
     #[test]
     fn get_suite_collection_works() {
@@ -201,6 +204,23 @@ mod test {
             ..fdata::Dictionary::EMPTY
         });
         assert_eq!(get_suite_collection(&decl).unwrap(), VULKAN_TESTS_COLLECTION);
+
+        decl.facets = Some(fdata::Dictionary {
+            entries: vec![
+                fdata::DictionaryEntry { key: "somekey".into(), value: None },
+                fdata::DictionaryEntry {
+                    key: format!("{}.somekey", TEST_FACET),
+                    value: Some(fdata::DictionaryValue::Str("some_string".into()).into()),
+                },
+                fdata::DictionaryEntry {
+                    key: TEST_TYPE_FACET_KEY.into(),
+                    value: Some(fdata::DictionaryValue::Str("chromium".into()).into()),
+                },
+            ]
+            .into(),
+            ..fdata::Dictionary::EMPTY
+        });
+        assert_eq!(get_suite_collection(&decl).unwrap(), CHROMIUM_TESTS_COLLECTION);
 
         // invalid facets
         decl.facets = Some(fdata::Dictionary {

@@ -2,4 +2,7 @@ anmittal@google.com
 crjohns@google.com
 satsukiu@google.com
 
+per-file             meta/chromium_test_realm.shard.cml = grt@google.com
+# per-file-COMPONENT meta/chromium_test_realm.shard.cml = WebSupport
+
 # COMPONENT: TestRunnerFramework

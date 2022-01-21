@@ -774,3 +774,23 @@ async fn launch_non_hermetic_test() {
     assert_eq!(logs, Vec::<String>::new());
     assert_eq!(&expected_events, &events);
 }
+
+#[fuchsia_async::run_singlethreaded(test)]
+async fn launch_chromium_test() {
+    // TODO(91934): This test is launched in the chromium realm. Once we support out of tree realm
+    // definitions we should move the definition and test to chromium.
+    let test_url = "fuchsia-pkg://fuchsia.com/test_manager_test#meta/simple_chromium_realm_test.cm";
+    let (events, logs) = run_single_test(test_url, default_run_option()).await.unwrap();
+
+    let expected_events = vec![
+        RunEvent::suite_started(),
+        RunEvent::case_found("noop_test"),
+        RunEvent::case_started("noop_test"),
+        RunEvent::case_stopped("noop_test", CaseStatus::Passed),
+        RunEvent::case_finished("noop_test"),
+        RunEvent::suite_stopped(SuiteStatus::Passed),
+    ];
+
+    assert_eq!(logs, Vec::<String>::new());
+    assert_eq!(&expected_events, &events);
+}

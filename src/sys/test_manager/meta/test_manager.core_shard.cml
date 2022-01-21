@@ -50,6 +50,7 @@
         },
         {
             protocol: [
+                "fuchsia.media.ProfileProvider",
                 "fuchsia.sys.Environment",
                 "fuchsia.sys.Loader",
             ],

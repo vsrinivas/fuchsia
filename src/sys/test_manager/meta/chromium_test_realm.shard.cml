@@ -1,0 +1,54 @@
+// TODO(fxbug.dev/91934): This shard defines a realm for tests in chromium. Once we are able
+// to define these out of tree this definition should be moved to chromium.
+{
+    collections: [
+        {
+            name: "chromium-tests",
+            environment: "#test-env",
+            durability: "transient",
+        },
+    ],
+    offer: [
+        {
+            // These hermetic protocols are offered to be used by tests.
+            protocol: [
+                "fuchsia.logger.LogSink",
+                "fuchsia.process.Launcher",
+                "fuchsia.sys2.EventSource",
+            ],
+            from: "parent",
+            to: [ "#chromium-tests" ],
+        },
+
+        // These system capabilities are offered for use by the cts tests.
+        {
+            protocol: [
+                "fuchsia.media.ProfileProvider",
+
+                // TODO: add any other required capabilities
+            ],
+            from: "parent",
+            to: "#chromium-tests",
+        },
+        {
+            storage: "data",
+            from: "self",
+            to: [ "#chromium-tests" ],
+        },
+        {
+            storage: "tmp",
+            from: "self",
+            to: [ "#chromium-tests" ],
+        },
+        {
+            storage: "cache",
+            from: "self",
+            to: [ "#chromium-tests" ],
+        },
+        {
+            storage: "custom_artifacts",
+            from: "self",
+            to: "#chromium-tests",
+        },
+    ],
+}
