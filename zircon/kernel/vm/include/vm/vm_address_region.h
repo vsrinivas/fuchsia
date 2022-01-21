@@ -836,13 +836,6 @@ class VmMapping final : public VmAddressRegionOrMapping,
   zx_status_t PageFault(vaddr_t va, uint pf_flags, LazyPageRequest* page_request)
       TA_REQ(lock()) override;
 
-  // The same as PageFault with an optional |vmo_locked_callback| that needs to be called after
-  // looking up the page while the VMO lock is held.
-  zx_status_t PageFaultWithVmoCallback(
-      vaddr_t va, uint pf_flags, LazyPageRequest* page_request,
-      ktl::optional<fbl::Function<void(VmObject* vmo_locked, vm_page_t* page)>> vmo_locked_callback)
-      TA_REQ(lock());
-
   // Apis intended for use by VmObject
 
   Lock<Mutex>* object_lock() TA_RET_CAP(object_->lock()) { return object_->lock(); }
