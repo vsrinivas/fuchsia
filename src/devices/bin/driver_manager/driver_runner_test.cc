@@ -351,7 +351,7 @@ class DriverRunnerTest : public gtest::TestLoopFixture {
     driver_bindings_.AddBinding(driver_ptr, std::move(request), dispatcher(),
                                 [driver = std::move(driver)](auto) {});
     driver_ptr->set_close_bindings(
-        [this, driver_ptr]() { driver_bindings_.CloseBinding(driver_ptr, ZX_OK); });
+        [this, driver_ptr]() mutable { driver_bindings_.CloseBinding(driver_ptr, ZX_OK); });
     driver_ptr->SetStopHandler([driver_ptr]() { driver_ptr->close_binding(); });
     return driver_ptr;
   }
@@ -402,6 +402,49 @@ TEST_F(DriverRunnerTest, StartRootDriver) {
   ASSERT_EQ(ZX_OK, root_driver.status_value());
 
   StopDriverComponent(std::move(root_driver.value()));
+}
+
+// Start the root driver. Make sure that the driver is stopped before the Component is exited.
+TEST_F(DriverRunnerTest, StartRootDriver_DriverStopBeforeComponentExit) {
+  auto driver_index = CreateDriverIndex();
+  auto driver_index_client = driver_index.Connect();
+  ASSERT_EQ(ZX_OK, driver_index_client.status_value());
+  DriverRunner driver_runner(ConnectToRealm(), std::move(*driver_index_client), inspector(),
+                             dispatcher());
+
+  std::vector<size_t> event_order;
+
+  auto defer = fit::defer([this] { Unbind(); });
+
+  TestDriver* root_node = nullptr;
+  driver_host().SetStartHandler(
+      [this, &root_node, &event_order](fdf::DriverStartArgs start_args, auto request) {
+        auto& entries = start_args.program().entries();
+        EXPECT_EQ(2u, entries.size());
+        EXPECT_EQ("binary", entries[0].key);
+        EXPECT_EQ("driver/root-driver.so", entries[0].value->str());
+        EXPECT_EQ("colocate", entries[1].key);
+        EXPECT_EQ("false", entries[1].value->str());
+
+        fdf::NodePtr node;
+        EXPECT_EQ(ZX_OK, node.Bind(std::move(*start_args.mutable_node()), dispatcher()));
+        root_node = BindDriver(std::move(request), std::move(node));
+        root_node->SetStopHandler([&event_order, &root_node]() {
+          event_order.push_back(0);
+          root_node->close_binding();
+        });
+      });
+
+  auto root_driver = StartRootDriver("fuchsia-boot:///#meta/root-driver.cm", driver_runner);
+  ASSERT_EQ(ZX_OK, root_driver.status_value());
+  fidl::WireSharedClient<frunner::ComponentController> root_client(
+      std::move(*root_driver), dispatcher(), TeardownWatcher(1, event_order));
+
+  root_node->node().Unbind();
+
+  EXPECT_TRUE(RunLoopUntilIdle());
+  // Make sure the driver was stopped before we told the component framework the driver was stopped.
+  EXPECT_THAT(event_order, ElementsAre(0, 1));
 }
 
 // Start the root driver, and add a child node owned by the root driver.
@@ -1246,6 +1289,77 @@ TEST_F(DriverRunnerTest, StartSecondDriver_UnbindRootNode) {
   root_node.Unbind();
   EXPECT_TRUE(RunLoopUntilIdle());
   EXPECT_THAT(indices, ElementsAre(1, 0));
+}
+
+// Start the second driver, and then Stop the root node.
+TEST_F(DriverRunnerTest, StartSecondDriver_StopRootNode) {
+  auto driver_index = CreateDriverIndex();
+  auto driver_index_client = driver_index.Connect();
+  ASSERT_EQ(ZX_OK, driver_index_client.status_value());
+  DriverRunner driver_runner(ConnectToRealm(), std::move(*driver_index_client), inspector(),
+                             dispatcher());
+  auto defer = fit::defer([this] { Unbind(); });
+
+  fdf::NodeControllerPtr node_controller;
+
+  // These represent the order that Driver::Stop is called
+  std::vector<size_t> driver_stop_indices;
+
+  driver_host().SetStartHandler([this, &node_controller, &driver_stop_indices](
+                                    fdf::DriverStartArgs start_args, auto request) {
+    realm().SetCreateChildHandler(
+        [](fdecl::CollectionRef collection, fdecl::Child decl, auto offers) {});
+    realm().SetOpenExposedDirHandler([this](fdecl::ChildRef child, auto exposed_dir) {
+      driver_dir().Bind(std::move(exposed_dir));
+    });
+
+    fdf::NodePtr node;
+    EXPECT_EQ(ZX_OK, node.Bind(std::move(*start_args.mutable_node()), dispatcher()));
+    fdf::NodeAddArgs args;
+    args.set_name("second");
+    node->AddChild(std::move(args), node_controller.NewRequest(dispatcher()), {},
+                   [](auto result) { EXPECT_FALSE(result.is_err()); });
+    auto driver = BindDriver(std::move(request), std::move(node));
+    driver->SetStopHandler([&driver_stop_indices, driver]() {
+      driver_stop_indices.push_back(0);
+      driver->close_binding();
+    });
+  });
+  auto root_driver = StartRootDriver("fuchsia-boot:///#meta/root-driver.cm", driver_runner);
+  ASSERT_EQ(ZX_OK, root_driver.status_value());
+
+  driver_host().SetStartHandler(
+      [this, &driver_stop_indices](fdf::DriverStartArgs start_args, auto request) {
+        fdf::NodePtr second_node;
+        EXPECT_EQ(ZX_OK, second_node.Bind(std::move(*start_args.mutable_node()), dispatcher()));
+        auto driver = BindDriver(std::move(request), std::move(second_node));
+        driver->SetStopHandler([&driver_stop_indices, driver]() {
+          driver_stop_indices.push_back(1);
+          driver->close_binding();
+        });
+      });
+
+  StartDriverHost("driver-hosts", "driver-host-1");
+  auto second_driver =
+      StartDriver(driver_runner, {
+                                     .url = "fuchsia-boot:///#meta/second-driver.cm",
+                                     .binary = "driver/second-driver.so",
+                                 });
+
+  std::vector<size_t> indices;
+  fidl::WireSharedClient<frunner::ComponentController> root_client(
+      std::move(*root_driver), dispatcher(), TeardownWatcher(0, indices));
+  fidl::WireSharedClient<frunner::ComponentController> second_client(
+      std::move(second_driver), dispatcher(), TeardownWatcher(1, indices));
+
+  // Simulate the Component Framework calling Stop on the root driver.
+  root_client->Stop();
+
+  EXPECT_TRUE(RunLoopUntilIdle());
+  // Check that the driver components were shut down in order.
+  EXPECT_THAT(indices, ElementsAre(1, 0));
+  // Check that Driver::Stop was called in order.
+  EXPECT_THAT(driver_stop_indices, ElementsAre(1, 0));
 }
 
 // Start the second driver, and then stop the root driver.
