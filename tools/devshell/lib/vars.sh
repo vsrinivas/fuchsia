@@ -27,6 +27,13 @@ if [[ "${FUCHSIA_DEVSHELL_VERBOSITY:-0}" -eq 1 ]]; then
   set -x
 fi
 
+# For commands whose subprocesses may use RBE, prefix those commands
+# conditioned on 'if fx-rbe-enabled' (function).
+# This could not be made into a shell-function because it is used
+# as both a function and non-built-in command, and functions do not compose
+# by prefixing in shell.
+RBE_WRAPPER=( "$FUCHSIA_DIR"/build/rbe/fuchsia-reproxy-wrap.sh -- )
+
 # fx-is-stderr-tty exits with success if stderr is a tty.
 function fx-is-stderr-tty {
   [[ -t 2 ]]
@@ -543,6 +550,9 @@ function fx-standard-switches {
   done
 }
 
+# Use this to conditionally prefix a command with "${RBE_WRAPPER[@]}".
+# NOTE: this function depends on FUCHSIA_BUILD_DIR which is set only after
+# initialization.
 function fx-rbe-enabled {
   grep -q "^[ \t]*enable_rbe[ ]*=[ ]*true" "${FUCHSIA_BUILD_DIR}/args.gn"
 }
@@ -704,7 +714,7 @@ function fx-run-ninja {
   #
   local newpath="${PREBUILT_PYTHON3_DIR}/bin:${PATH}"
   local rbe_wrapper=()
-  if fx-rbe-enabled ; then rbe_wrapper=("$FUCHSIA_DIR"/build/rbe/fuchsia-reproxy-wrap.sh --) ; fi
+  if fx-rbe-enabled ; then rbe_wrapper=("${RBE_WRAPPER[@]}") ; fi
   full_cmdline=(env -i "TERM=${TERM}" "PATH=${newpath}" \
     ${NINJA_STATUS+"NINJA_STATUS=${NINJA_STATUS}"} \
     ${GOMA_DISABLED+"GOMA_DISABLED=$GOMA_DISABLED"} \

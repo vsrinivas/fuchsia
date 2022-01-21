@@ -150,7 +150,9 @@ function main {
     # It's not ideal that we resort to constructing the textproto file as a
     # string, but it's easier than writing a Go tool solely for the purpose of
     # constructing a protobuf with a couple top-level string fields set.
-    "$fint" -log-level=error build -static="${fint_params_path}" -context=<(echo "
+    local rbe_wrapper=()
+    if fx-rbe-enabled; then rbe_wrapper=("${RBE_WRAPPER[@]}"); fi
+    "${rbe_wrapper[@]}" "$fint" -log-level=error build -static="${fint_params_path}" -context=<(echo "
 checkout_dir: \"${FUCHSIA_DIR}\"
 build_dir: \"${FUCHSIA_BUILD_DIR}\"
 ")
