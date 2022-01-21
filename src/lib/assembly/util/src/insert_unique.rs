@@ -17,24 +17,28 @@ use std::collections::{btree_map, BTreeMap, BTreeSet};
 ///
 /// Set implementations return `Err(value)` in the case of a duplicate.
 /// ```
-/// use std::collections::BTreeSet
-/// use crate::InsertUniqueExt;
+/// use std::collections::BTreeSet;
+/// use assembly_util::InsertUniqueExt;
 ///
+/// # fn main() -> Result<(), String> {
 /// let mut set = BTreeSet::new();
 /// set.try_insert_unique("some string".to_string())?; // Ok(())
-/// let result = set.try_insert_unique("some_string".to_string());
+/// let result = set.try_insert_unique("some string".to_string());
 /// let err_value = result.unwrap_err();
-/// assert_eq!(err_value, "some_string");
+/// assert_eq!(err_value, "some string");
+/// Ok(())
+/// # }
 /// ```
 ///
 /// Map Implementations return `Err(impl DuplicateKeyError<K,V>)` in the case of
 /// attempting to insert an entry with a key that already exists in the map.
 /// ```
 /// use std::collections::BTreeMap;
-/// use crate::{InsertUniqueExt, MapEntry, DuplicateKeyError};
+/// use assembly_util::{InsertUniqueExt, MapEntry, DuplicateKeyError};
 ///
-/// let mut map = BTreeMap::<String, i32>::new();
-/// map.try_insert_unique(MapEntry("some key", 42))?;
+/// # fn main() -> Result<(), String> {
+/// let mut map = BTreeMap::<&str, i32>::new();
+/// map.try_insert_unique(MapEntry("some key", 42)).map_err(|e| e.to_string())?;
 /// let result = map.try_insert_unique(MapEntry("some key", 34));
 /// let error = result.unwrap_err();  // impl DuplicateKeyError<String, i32>
 /// println!(
@@ -42,6 +46,8 @@ use std::collections::{btree_map, BTreeMap, BTreeSet};
 ///     error.new_value(),
 ///     error.key(),
 ///     error.previous_value());
+/// # Ok(())
+/// # }
 /// ```
 pub trait InsertUniqueExt<'a, T> {
     /// The error type that is returned by an implementation of the trait, it is
@@ -65,23 +71,26 @@ pub trait InsertUniqueExt<'a, T> {
 /// # Examples
 ///
 /// ```
-/// use std::collections::BTreeSet
-/// use crate::InsertAllUniqueExt;
+/// use std::collections::BTreeSet;
+/// use assembly_util::{InsertAllUniqueExt, InsertUniqueExt};
 ///
+/// # fn main() -> Result<(), String> {
 /// let mut set = BTreeSet::new();
 /// set.try_insert_unique("some string".to_string())?; // Ok(())
 ///
-/// let items_to_insert = vec![
+/// let mut items_to_insert = vec![
 ///     "another string".to_string(),
 ///     "some string".to_string(),
 ///     "yet another string".to_string()
 /// ].into_iter();
 ///
 ///
-/// let result = set.try_insert_all_unique(items_to_insert);
+/// let result = set.try_insert_all_unique(&mut items_to_insert);
 /// let err_value = result.unwrap_err();
-/// assert_eq!(err_value, "some_string");
-/// assert_eq!(items_to_insert.next(), Some("yet another string"));
+/// assert_eq!(err_value, "some string");
+/// assert_eq!(items_to_insert.next().as_deref(), Some("yet another string"));
+/// # Ok(())
+/// # }
 /// ```
 pub trait InsertAllUniqueExt<'a, T> {
     /// The error type that is returned by an implementation of the trait, it is
