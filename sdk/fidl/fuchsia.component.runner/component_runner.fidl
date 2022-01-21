@@ -134,7 +134,9 @@ type ComponentStartInfo = resource table {
 ///  2) If after some time the ComponentController is not closed, component
 ///     manager calls `Kill()` to indicate that the ComponentRunner must halt a
 ///     component's execution immediately, and then close this connection with
-///     an epitaph.
+///     an epitaph. The component manager may wait some period of time after
+///     calling `Kill()` before closing the ComponentController channel, but
+///     makes no guarantees it will wait or for how long.
 ///
 /// Component manager first waits for the ComponentController to close, and
 /// then tears down the namespace it hosts for the stopped component. Component
