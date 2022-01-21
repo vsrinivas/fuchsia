@@ -5,6 +5,7 @@
 #ifndef SRC_ZIRCON_TESTS_FUTEX_OWNERSHIP_UTILS_H_
 #define SRC_ZIRCON_TESTS_FUTEX_OWNERSHIP_UTILS_H_
 
+#include <lib/fit/function.h>
 #include <lib/stdcompat/atomic.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/thread.h>
@@ -16,12 +17,11 @@
 
 #include <atomic>
 
-#include <fbl/function.h>
 #include <fbl/macros.h>
 
 // Allow up to 4 pointers worth of storage for any lambdas we need to capture
-// into a fbl::InlineFunction object (instead of falling back on the implicit
-// heap allocation behavior of fbl::Function or std::function)
+// into a fit::inline_function object (instead of falling back on the implicit
+// heap allocation behavior of fit::function or std::function)
 static constexpr size_t kMaxLambdaStorage = sizeof(void*) * 4;
 
 // TODO(fxbug.dev/55744): An extremely long timeout we use as a proxy for "forever".
@@ -36,7 +36,7 @@ static constexpr zx::duration kLongTimeout = zx::sec(60);
 // while we have a thread blocked via zx_futex_wait, the best we can do is have
 // the thread give us a signal, and then wait a "reasonable" amount of time for
 // the system to achieve the desired state (or not).
-using WaitFn = fbl::InlineFunction<bool(void), kMaxLambdaStorage>;
+using WaitFn = fit::inline_function<bool(void), kMaxLambdaStorage>;
 bool WaitFor(zx::duration timeout, WaitFn wait_fn);
 
 // A small helper which fetches the Koid for the current thread.
@@ -66,7 +66,7 @@ class Event {
 // the ownership tests (things like fetching a thread's KOID)
 class Thread {
  public:
-  using Thunk = fbl::InlineFunction<int(void), kMaxLambdaStorage>;
+  using Thunk = fit::inline_function<int(void), kMaxLambdaStorage>;
 
   enum class State : uint32_t {
     WAITING_TO_START,

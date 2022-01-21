@@ -9,7 +9,6 @@
 #include <zircon/process.h>
 #include <zircon/syscalls.h>
 
-#include <fbl/function.h>
 #include <zxtest/zxtest.h>
 
 #include "bench.h"

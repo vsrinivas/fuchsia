@@ -5,6 +5,7 @@
 #ifndef SRC_ZIRCON_TESTING_MUTEX_PI_EXERCISER_THREAD_H_
 #define SRC_ZIRCON_TESTING_MUTEX_PI_EXERCISER_THREAD_H_
 
+#include <lib/fit/function.h>
 #include <lib/zircon-internal/thread_annotations.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/profile.h>
@@ -15,7 +16,6 @@
 
 #include <array>
 
-#include <fbl/function.h>
 #include <fbl/macros.h>
 #include <fbl/mutex.h>
 
@@ -23,7 +23,7 @@
 
 class Thread {
  public:
-  using Thunk = fbl::InlineFunction<void(), sizeof(void*) * 4>;
+  using Thunk = fit::inline_function<void(), sizeof(void*) * 4>;
 
   explicit Thread(uint32_t prio);
   ~Thread() { Exit(); }
