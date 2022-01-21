@@ -17,11 +17,11 @@ use {
                 JournalCheckpoint,
             },
             object_record::ObjectItem,
-            serialize_into,
             transaction::Options,
             ObjectStore, StoreObjectHandle,
         },
         range::RangeExt,
+        serialized_types::Version,
     },
     anyhow::{bail, ensure, Error},
     futures::AsyncReadExt,
@@ -147,7 +147,7 @@ pub struct SuperBlock {
 }
 
 #[derive(Serialize, Deserialize)]
-enum SuperBlockRecord {
+pub enum SuperBlockRecord {
     // When reading the super-block we know the initial extent, but not subsequent extents, so these
     // records need to exist to allow us to completely read the super-block.
     Extent(Range<u64>),
@@ -225,7 +225,7 @@ impl SuperBlock {
         let mut writer = SuperBlockWriter::new(handle, object_manager.metadata_reservation());
 
         writer.writer.write(SUPER_BLOCK_MAGIC)?;
-        serialize_into(&mut writer.writer, self)?;
+        self.serialize_into(&mut writer.writer)?;
 
         let tree = root_parent_store.tree();
         let layer_set = tree.layer_set();
@@ -234,7 +234,7 @@ impl SuperBlock {
 
         while let Some(item_ref) = iter.get() {
             writer.maybe_extend().await?;
-            serialize_into(&mut writer.writer, &SuperBlockRecord::ObjectItem(item_ref.cloned()))?;
+            SuperBlockRecord::ObjectItem(item_ref.cloned()).serialize_into(&mut writer.writer)?;
             iter.advance().await?;
         }
 
@@ -245,11 +245,11 @@ impl SuperBlock {
 
         while let Some(item_ref) = iter.get() {
             writer.maybe_extend().await?;
-            serialize_into(&mut writer.writer, &SuperBlockRecord::ExtentItem(item_ref.cloned()))?;
+            SuperBlockRecord::ExtentItem(item_ref.cloned()).serialize_into(&mut writer.writer)?;
             iter.advance().await?;
         }
 
-        serialize_into(&mut writer.writer, &SuperBlockRecord::End)?;
+        SuperBlockRecord::End.serialize_into(&mut writer.writer)?;
         writer.writer.pad_to_block()?;
         writer.flush_buffer().await
     }
@@ -297,7 +297,7 @@ impl<'a, S: AsRef<ObjectStore> + Send + Sync + 'static> SuperBlockWriter<'a, S> 
         transaction.commit().await?;
         for device_range in allocated {
             self.next_extent_offset += device_range.end - device_range.start;
-            serialize_into(&mut self.writer, &SuperBlockRecord::Extent(device_range))?;
+            SuperBlockRecord::Extent(device_range).serialize_into(&mut self.writer)?;
         }
         Ok(())
     }

@@ -19,17 +19,16 @@ use {
         },
         object_handle::{ObjectHandle, ObjectHandleExt},
         object_store::{
-            deserialize_from,
             filesystem::{ApplyMode, Filesystem, Mutations, SyncOptions},
             journal::checksum_list::ChecksumList,
             object_manager::ReservationUpdate,
-            serialize_into,
             store_object_handle::DirectWriter,
             transaction::{AllocatorMutation, AssocObj, Mutation, Options, Transaction},
             tree, CachingObjectHandle, HandleOptions, ObjectStore,
         },
         range::RangeExt,
         round::round_down,
+        serialized_types::Version,
         trace_duration,
     },
     anyhow::{anyhow, bail, ensure, Error},
@@ -465,7 +464,8 @@ impl SimpleAllocator {
 
         if handle.get_size() > 0 {
             let serialized_info = handle.contents(MAX_ALLOCATOR_INFO_SERIALIZED_SIZE).await?;
-            let info: AllocatorInfo = deserialize_from(&serialized_info[..])?;
+            let mut cursor = std::io::Cursor::new(&serialized_info[..]);
+            let info = AllocatorInfo::deserialize_from(&mut cursor)?;
             let mut handles = Vec::new();
             let mut total_size = 0;
             for object_id in &info.layers {
@@ -1062,7 +1062,7 @@ impl Mutations for SimpleAllocator {
             }
 
             inner.info.layers = vec![object_id];
-            serialize_into(&mut serialized_info, &inner.info)?;
+            inner.info.serialize_into(&mut serialized_info)?;
         }
         let mut buf = object_handle.allocate_buffer(serialized_info.len());
         buf.as_mut_slice()[..serialized_info.len()].copy_from_slice(&serialized_info[..]);

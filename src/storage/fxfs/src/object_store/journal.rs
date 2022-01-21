@@ -38,15 +38,15 @@ use {
                 checksum_list::ChecksumList,
                 handle::Handle,
                 reader::{JournalReader, ReadResult},
-                super_block::{SuperBlock, SuperBlockCopy, SuperBlockItem},
+                super_block::{SuperBlockCopy, SuperBlockItem},
                 writer::JournalWriter,
             },
             object_manager::ObjectManager,
-            serialize_into,
             transaction::{AssocObj, ExtentMutation, Mutation, Options, Transaction, TxnMutation},
             HandleOptions, ObjectStore, StoreObjectHandle,
         },
         round::round_down,
+        serialized_types::Version,
         trace_duration,
     },
     anyhow::{anyhow, bail, Context, Error},
@@ -65,6 +65,9 @@ use {
     },
     storage_device::buffer::Buffer,
 };
+
+// Exposed for serialized_types.
+pub use super_block::{SuperBlock, SuperBlockRecord};
 
 // The journal file is written to in blocks of this size.
 const BLOCK_SIZE: u64 = 8192;
@@ -675,13 +678,13 @@ impl Journal {
             let mut inner = self.inner.lock().unwrap();
 
             if let Some(discard_offset) = inner.discard_offset {
-                serialize_into(&mut inner.writer, &JournalRecord::Discard(discard_offset))?;
+                JournalRecord::Discard(discard_offset).serialize_into(&mut inner.writer)?;
                 inner.discard_offset = None;
             }
 
             if inner.needs_did_flush_device {
                 let offset = inner.device_flushed_offset;
-                serialize_into(&mut inner.writer, &JournalRecord::DidFlushDevice(offset))?;
+                JournalRecord::DidFlushDevice(offset).serialize_into(&mut inner.writer)?;
                 inner.needs_did_flush_device = false;
             }
 
@@ -843,7 +846,7 @@ impl Journal {
         let mut inner = self.inner.lock().unwrap();
         let checkpoint = inner.writer.journal_file_checkpoint();
         if checkpoint.file_offset % BLOCK_SIZE != 0 {
-            serialize_into(&mut inner.writer, &JournalRecord::EndBlock)?;
+            JournalRecord::EndBlock.serialize_into(&mut inner.writer)?;
             inner.writer.pad_to_block()?;
             if let Some(waker) = inner.flush_waker.take() {
                 waker.wake();

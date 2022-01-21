@@ -5,13 +5,10 @@
 use {
     crate::{
         object_handle::ObjectHandle,
-        object_store::{
-            journal::{fletcher64, Checksum, JournalCheckpoint},
-            serialize_into,
-        },
+        object_store::journal::{fletcher64, Checksum, JournalCheckpoint},
+        serialized_types::Version,
     },
     byteorder::{LittleEndian, WriteBytesExt},
-    serde::Serialize,
     std::{cmp::min, io::Write},
     storage_device::buffer::Buffer,
 };
@@ -44,10 +41,10 @@ impl JournalWriter {
     }
 
     /// Serializes a new journal record to the journal stream.
-    pub fn write_record<T: Serialize + std::fmt::Debug>(&mut self, record: &T) {
+    pub fn write_record<T: Version + std::fmt::Debug>(&mut self, record: &T) {
         let buf_len = self.buf.len();
-        serialize_into(&mut *self, record).unwrap(); // Our write implementation cannot fail at the
-                                                     // moment.
+        record.serialize_into(&mut *self).unwrap(); // Our write implementation cannot fail at the
+                                                    // moment.
 
         // For now, our reader cannot handle records that are bigger than a block.
         assert!(self.buf.len() - buf_len <= self.block_size, "{:?}", record);
@@ -141,10 +138,8 @@ mod tests {
         super::JournalWriter,
         crate::{
             object_handle::{ObjectHandle, ReadObjectHandle, WriteObjectHandle},
-            object_store::{
-                deserialize_from,
-                journal::{fletcher64, Checksum, JournalCheckpoint},
-            },
+            object_store::journal::{fletcher64, Checksum, JournalCheckpoint},
+            serialized_types::*,
             testing::fake_object::{FakeObject, FakeObjectHandle},
         },
         byteorder::{ByteOrder, LittleEndian},
@@ -168,7 +163,8 @@ mod tests {
         let mut buf = handle.allocate_buffer(object.get_size() as usize);
         assert_eq!(buf.len(), TEST_BLOCK_SIZE);
         handle.read(0, buf.as_mut()).await.expect("read failed");
-        let value: u32 = deserialize_from(buf.as_slice()).expect("deserialize_from failed");
+        let mut cursor = std::io::Cursor::new(buf.as_slice());
+        let value: u32 = u32::deserialize_from(&mut cursor).expect("deserialize_from failed");
         assert_eq!(value, 4u32);
         let (payload, checksum_slice) =
             buf.as_slice().split_at(buf.len() - std::mem::size_of::<Checksum>());
@@ -197,8 +193,8 @@ mod tests {
         let mut buf = handle.allocate_buffer(object.get_size() as usize);
         assert_eq!(buf.len(), TEST_BLOCK_SIZE);
         handle.read(0, buf.as_mut()).await.expect("read failed");
-        let value: u64 = deserialize_from(&buf.as_slice()[checkpoint.file_offset as usize..])
-            .expect("deserialize_from failed");
+        let mut cursor = std::io::Cursor::new(&buf.as_slice()[checkpoint.file_offset as usize..]);
+        let value: u64 = u64::deserialize_from(&mut cursor).expect("deserialize_from failed");
         assert_eq!(value, 17);
     }
 }

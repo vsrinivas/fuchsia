@@ -9,12 +9,12 @@ use {
         },
         object_handle::{ReadObjectHandle, WriteBytes},
         round::{round_down, round_up},
+        serialized_types::Version,
     },
     anyhow::{bail, Context, Error},
     async_trait::async_trait,
     async_utils::event::Event,
-    byteorder::{ByteOrder, LittleEndian, ReadBytesExt},
-    serde::Serialize,
+    byteorder::{ByteOrder, LittleEndian, ReadBytesExt, WriteBytesExt},
     std::{
         cmp::Ordering,
         io::Read,
@@ -116,7 +116,11 @@ impl<'iter, K: Key, V: Value> LayerIterator<K, V> for Iterator<'iter, K, V> {
             self.pos += self.layer.block_size;
             self.item_index = 0;
         }
-        self.item = Some(bincode::deserialize_from(self.buffer.by_ref()).context("Corrupt layer")?);
+        self.item = Some(Item {
+            key: K::deserialize_from(self.buffer.by_ref()).context("Corrupt layer (key)")?,
+            value: V::deserialize_from(self.buffer.by_ref()).context("Corrupt layer (value)")?,
+            sequence: self.buffer.read_u64::<LittleEndian>().context("Corrupt layer (seq)")?,
+        });
         self.item_index += 1;
         Ok(())
     }
@@ -265,13 +269,15 @@ impl<W: WriteBytes> SimplePersistentLayerWriter<W> {
 
 #[async_trait]
 impl<W: WriteBytes + Send> LayerWriter for SimplePersistentLayerWriter<W> {
-    async fn write<K: Send + Serialize + Sync, V: Send + Serialize + Sync>(
+    async fn write<K: Send + Version + Sync, V: Send + Version + Sync>(
         &mut self,
         item: ItemRef<'_, K, V>,
     ) -> Result<(), Error> {
         // Note the length before we write this item.
         let len = self.buf.len();
-        bincode::serialize_into(&mut self.buf, &item)?;
+        item.key.serialize_into(&mut self.buf)?;
+        item.value.serialize_into(&mut self.buf)?;
+        self.buf.write_u64::<LittleEndian>(item.sequence)?;
 
         // If writing the item took us over a block, flush the bytes in the buffer prior to this
         // item.

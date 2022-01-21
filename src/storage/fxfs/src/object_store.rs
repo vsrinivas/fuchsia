@@ -44,11 +44,11 @@ use {
         object_handle::{ObjectHandle, ObjectHandleExt, INVALID_OBJECT_ID},
         object_store::{
             data_buffer::{DataBuffer, MemDataBuffer},
-            extent_record::{Checksums, ExtentKey, ExtentValue, DEFAULT_DATA_ATTRIBUTE_ID},
+            extent_record::{Checksums, DEFAULT_DATA_ATTRIBUTE_ID},
             filesystem::{ApplyMode, Filesystem, Mutations},
             journal::checksum_list::ChecksumList,
             object_manager::{ObjectManager, ReservationUpdate},
-            object_record::{EncryptionKeys, ObjectKey, ObjectKind, ObjectValue},
+            object_record::{EncryptionKeys, ObjectKind},
             store_object_handle::DirectWriter,
             transaction::{
                 AssocObj, AssociatedObject, ExtentMutation, LockKey, Mutation, NoOrd,
@@ -56,12 +56,12 @@ use {
             },
         },
         range::RangeExt,
+        serialized_types::Version,
         trace_duration,
     },
     allocator::Allocator,
     anyhow::{anyhow, bail, Context, Error},
     async_trait::async_trait,
-    bincode::{deserialize_from, serialize_into},
     once_cell::sync::OnceCell,
     serde::{Deserialize, Serialize},
     std::{
@@ -72,6 +72,12 @@ use {
     },
     storage_device::Device,
 };
+
+// Exposed for serialized_types.
+pub use allocator::{AllocatorInfo, AllocatorKey, AllocatorValue};
+pub use extent_record::{ExtentKey, ExtentValue};
+pub use journal::{JournalRecord, SuperBlock, SuperBlockRecord};
+pub use object_record::{ObjectKey, ObjectValue};
 
 /// StoreObjectHandle stores an owner that must implement this trait, which allows the handle to get
 /// back to an ObjectStore and provides a callback for creating a data buffer for the handle.
@@ -663,7 +669,9 @@ impl ObjectStore {
         let (object_tree_layer_object_ids, extent_tree_layer_object_ids) = {
             let mut info = if handle.get_size() > 0 {
                 let serialized_info = handle.contents(MAX_STORE_INFO_SERIALIZED_SIZE).await?;
-                deserialize_from(&serialized_info[..]).context("Failed to deserialize StoreInfo")?
+                let mut cursor = std::io::Cursor::new(&serialized_info[..]);
+                StoreInfo::deserialize_from(&mut cursor)
+                    .context("Failed to deserialize StoreInfo")?
             } else {
                 // The store_info will be absent for a newly created and empty object store.
                 StoreInfo::default()
@@ -1066,7 +1074,7 @@ impl Mutations for ObjectStore {
             }
         }
 
-        serialize_into(&mut serialized_info, &new_store_info)?;
+        new_store_info.serialize_into(&mut serialized_info)?;
         let mut buf = self.device.allocate_buffer(serialized_info.len());
         buf.as_mut_slice().copy_from_slice(&serialized_info[..]);
 

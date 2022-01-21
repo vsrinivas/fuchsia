@@ -636,15 +636,18 @@ impl<K: Key + Clone, V: Value + Clone> LayerIteratorMut<K, V> for SkipListLayerI
 mod tests {
     use {
         super::{SkipListLayer, SkipListLayerIterMut},
-        crate::lsm_tree::{
-            merge::{
-                ItemOp::{Discard, Replace},
-                MergeLayerIterator, MergeResult,
+        crate::{
+            lsm_tree::{
+                merge::{
+                    ItemOp::{Discard, Replace},
+                    MergeLayerIterator, MergeResult,
+                },
+                types::{
+                    DefaultOrdLowerBound, DefaultOrdUpperBound, Item, ItemRef, Layer,
+                    LayerIterator, LayerIteratorMut, MutableLayer,
+                },
             },
-            types::{
-                DefaultOrdLowerBound, DefaultOrdUpperBound, Item, ItemRef, Layer, LayerIterator,
-                LayerIteratorMut, MutableLayer,
-            },
+            serialized_types::{versioned_type, Version, VersionLatest},
         },
         fuchsia_async as fasync,
         futures::{channel::oneshot::channel, future::join_all, join},
@@ -659,6 +662,8 @@ mod tests {
         Clone, Eq, PartialEq, PartialOrd, Ord, Debug, serde::Serialize, serde::Deserialize,
     )]
     struct TestKey(i32);
+
+    versioned_type! { 1 => TestKey }
 
     impl DefaultOrdLowerBound for TestKey {}
     impl DefaultOrdUpperBound for TestKey {}

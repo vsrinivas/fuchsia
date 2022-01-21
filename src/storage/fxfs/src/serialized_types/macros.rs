@@ -44,6 +44,9 @@ impl Parse for Input {
 ///   * [Version] for all versions.
 ///   * [VersionLatest] for the most recent version.
 ///   * Transitive [From] for any version to a newer version.
+///
+/// TODO(ripper): We should look at making maintenance easier somehow. Perhaps by supporting ranges here.
+/// i.e. { 1..3 => FooV1, 3 => FooV2, 4..6 => FooV3 }.
 #[proc_macro]
 pub fn versioned_type(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as Input);

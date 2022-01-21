@@ -681,12 +681,15 @@ mod tests {
             ItemOp::{Discard, Keep, Replace},
             MergeResult, Merger,
         },
-        crate::lsm_tree::{
-            skip_list_layer::SkipListLayer,
-            types::{
-                IntoLayerRefs, Item, ItemRef, Key, Layer, LayerIterator, MutableLayer, NextKey,
-                OrdLowerBound, OrdUpperBound,
+        crate::{
+            lsm_tree::{
+                skip_list_layer::SkipListLayer,
+                types::{
+                    IntoLayerRefs, Item, ItemRef, Key, Layer, LayerIterator, MutableLayer, NextKey,
+                    OrdLowerBound, OrdUpperBound,
+                },
             },
+            serialized_types::{versioned_type, Version, VersionLatest},
         },
         fuchsia_async as fasync,
         rand::Rng,
@@ -695,6 +698,8 @@ mod tests {
 
     #[derive(Clone, Eq, PartialEq, Debug, serde::Serialize, serde::Deserialize)]
     struct TestKey(Range<u64>);
+
+    versioned_type! { 1=> TestKey }
 
     impl NextKey for TestKey {
         fn next_key(&self) -> Option<Self> {
@@ -1228,6 +1233,8 @@ mod tests {
 
     #[derive(Clone, Eq, PartialEq, Debug, serde::Serialize, serde::Deserialize)]
     struct TestKeyWithDefaultNextKey(Range<u64>);
+
+    versioned_type! { 1 => TestKeyWithDefaultNextKey }
 
     impl NextKey for TestKeyWithDefaultNextKey {}
 

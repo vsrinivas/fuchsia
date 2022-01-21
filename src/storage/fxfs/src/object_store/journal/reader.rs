@@ -5,15 +5,12 @@
 use {
     crate::{
         object_handle::{ObjectHandle, ReadObjectHandle},
-        object_store::{
-            deserialize_from,
-            journal::{fletcher64, Checksum, JournalCheckpoint, RESET_XOR},
-        },
+        object_store::journal::{fletcher64, Checksum, JournalCheckpoint, RESET_XOR},
+        serialized_types::Version,
     },
     anyhow::{bail, Error},
     byteorder::{ByteOrder, LittleEndian},
     futures::{future::BoxFuture, io::AsyncRead, ready, FutureExt},
-    serde::Deserialize,
     std::{
         pin::Pin,
         task::{Context, Poll},
@@ -102,11 +99,11 @@ impl<OH: ReadObjectHandle> JournalReader<OH> {
     /// is expected at the end of the journal stream).
     pub async fn deserialize<T>(&mut self) -> Result<ReadResult<T>, Error>
     where
-        for<'de> T: Deserialize<'de>,
+        T: Version,
     {
         self.fill_buf().await?;
         let mut cursor = std::io::Cursor::new(self.buffer());
-        match deserialize_from(&mut cursor) {
+        match T::deserialize_from(&mut cursor) {
             Ok(record) => {
                 let consumed = cursor.position() as usize;
                 self.consume(consumed);
@@ -121,7 +118,7 @@ impl<OH: ReadObjectHandle> JournalReader<OH> {
                     self.buf_range = self.buf.len() - self.block_size as usize
                         ..self.buf.len() - std::mem::size_of::<Checksum>();
                     return Ok(ReadResult::Reset);
-                } else if let bincode::ErrorKind::Io(io_error) = &*e {
+                } else if let Some(io_error) = e.downcast_ref::<std::io::Error>() {
                     if io_error.kind() == std::io::ErrorKind::UnexpectedEof && self.bad_checksum {
                         return Ok(ReadResult::ChecksumMismatch);
                     }
@@ -280,16 +277,16 @@ mod tests {
             object_store::journal::{
                 writer::JournalWriter, Checksum, JournalCheckpoint, RESET_XOR,
             },
+            serialized_types::Version,
             testing::fake_object::{FakeObject, FakeObjectHandle},
         },
         fuchsia_async as fasync,
-        serde::Serialize,
         std::{io::Write, sync::Arc},
     };
 
     const TEST_BLOCK_SIZE: u64 = 512;
 
-    async fn write_items<T: Serialize + std::fmt::Debug>(handle: FakeObjectHandle, items: &[T]) {
+    async fn write_items<T: Version + std::fmt::Debug>(handle: FakeObjectHandle, items: &[T]) {
         let mut writer = JournalWriter::new(TEST_BLOCK_SIZE as usize, 0);
         for item in items {
             writer.write_record(item);

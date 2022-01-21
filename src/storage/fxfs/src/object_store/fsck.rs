@@ -26,9 +26,9 @@ use {
             volume::root_volume,
             HandleOptions, ObjectStore, StoreInfo, MAX_STORE_INFO_SERIALIZED_SIZE,
         },
+        serialized_types::Version,
     },
     anyhow::{anyhow, Context, Error},
-    bincode::deserialize_from,
     futures::try_join,
     std::{
         ops::Bound,
@@ -331,8 +331,9 @@ impl<F: Fn(&FsckIssue)> Fsck<F> {
         let (object_layer_file_object_ids, extent_layer_file_object_ids) = {
             let info = if handle.get_size() > 0 {
                 let serialized_info = handle.contents(MAX_STORE_INFO_SERIALIZED_SIZE).await?;
+                let mut cursor = std::io::Cursor::new(&serialized_info[..]);
                 self.assert(
-                    deserialize_from(&serialized_info[..])
+                    StoreInfo::deserialize_from(&mut cursor)
                         .context("Failed to deserialize StoreInfo"),
                     FsckFatal::MalformedStore(store_id),
                 )?

@@ -13,14 +13,22 @@ pub trait Version: Serialize + for<'de> Deserialize<'de> {
         R: std::io::Read,
         for<'de> Self: serde::Deserialize<'de>,
     {
-        Ok(bincode::deserialize_from(reader)?)
+        match bincode::deserialize_from(reader) {
+            // Strip bincode wrapping. anyhow can take std::io::Error.
+            Err(e) => Err(if let bincode::ErrorKind::Io(e) = *e { e.into() } else { e.into() }),
+            Ok(t) => Ok(t),
+        }
     }
     fn serialize_into<W>(&self, writer: &mut W) -> anyhow::Result<()>
     where
         W: std::io::Write,
         Self: serde::Serialize,
     {
-        Ok(bincode::serialize_into(writer, self)?)
+        match bincode::serialize_into(writer, self) {
+            // Strip bincode wrapping. anyhow can take std::io::Error.
+            Err(e) => Err(if let bincode::ErrorKind::Io(e) = *e { e.into() } else { e.into() }),
+            Ok(t) => Ok(t),
+        }
     }
 }
 

@@ -30,9 +30,9 @@ use {
             HandleOptions, Mutation, ObjectStore,
         },
         round::round_down,
+        serialized_types::Version,
     },
     anyhow::{Context, Error},
-    bincode::serialize_into,
     fuchsia_async as fasync,
     matches::assert_matches,
     std::{
@@ -145,7 +145,7 @@ async fn install_items_in_store<K: Key, V: Value>(
         InstallTarget::ObjectTree => store_info.object_tree_layers.push(layer_handle.object_id()),
     }
     let mut store_info_vec = vec![];
-    serialize_into(&mut store_info_vec, &store_info).expect("serialize failed");
+    store_info.serialize_into(&mut store_info_vec).expect("serialize failed");
     let mut buf = device.allocate_buffer(store_info_vec.len());
     buf.as_mut_slice().copy_from_slice(&store_info_vec[..]);
 
@@ -296,7 +296,7 @@ async fn test_malformed_allocation() {
         let mut allocator_info = fs.allocator().info();
         allocator_info.layers.push(layer_handle.object_id());
         let mut allocator_info_vec = vec![];
-        serialize_into(&mut allocator_info_vec, &allocator_info).expect("serialize failed");
+        allocator_info.serialize_into(&mut allocator_info_vec).expect("serialize failed");
         let mut buf = device.allocate_buffer(allocator_info_vec.len());
         buf.as_mut_slice().copy_from_slice(&allocator_info_vec[..]);
 
