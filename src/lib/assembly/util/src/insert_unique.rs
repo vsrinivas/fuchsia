@@ -128,16 +128,16 @@ pub struct MapEntry<K, V>(pub K, pub V);
 /// Trait for consistently providing access to the duplicated key, and both the
 /// previously- and newly-inserted values for any Map insert (BTreeMap, HashMap,
 /// etc.).
-pub trait DuplicateKeyError<'a, K, V> {
+pub trait DuplicateKeyError<K, V> {
     /// Accessor for the key which had an attempt to add a duplicate value for.
-    fn key(&'a self) -> &'a K;
+    fn key(&self) -> &K;
 
     /// Accessor for the previously-stored value at that key.
-    fn previous_value(&'a self) -> &'a V;
+    fn previous_value(&self) -> &V;
 
     /// Accessor for the value that the caller was attempting to add over the
     /// previous value.
-    fn new_value(&'a self) -> &'a V;
+    fn new_value(&self) -> &V;
 }
 
 impl<'a, K: Ord + 'a, V: 'a> InsertUniqueExt<'a, MapEntry<K, V>> for BTreeMap<K, V> {
@@ -191,14 +191,14 @@ pub struct BTreeMapDuplicateKeyError<'a, K: Ord, V> {
     new_value: V,
 }
 
-impl<'a, K: 'a + Ord, V: 'a> DuplicateKeyError<'a, K, V> for BTreeMapDuplicateKeyError<'a, K, V> {
-    fn key(&'a self) -> &'a K {
+impl<'a, K: Ord, V> DuplicateKeyError<K, V> for BTreeMapDuplicateKeyError<'a, K, V> {
+    fn key(&self) -> &K {
         self.existing_entry.key()
     }
-    fn previous_value(&'a self) -> &'a V {
+    fn previous_value(&self) -> &V {
         self.existing_entry.get()
     }
-    fn new_value(&'a self) -> &'a V {
+    fn new_value(&self) -> &V {
         &self.new_value
     }
 }
