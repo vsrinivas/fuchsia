@@ -13,6 +13,7 @@ use settings::base::get_default_interfaces;
 use settings::config::base::{get_default_agent_types, AgentType};
 use settings::config::default_settings::DefaultSetting;
 use settings::handler::device_storage::StashDeviceStorageFactory;
+use settings::handler::stash_inspect_logger::StashInspectLoggerHandle;
 use settings::AgentConfiguration;
 use settings::EnabledInterfacesConfiguration;
 use settings::EnabledPoliciesConfiguration;
@@ -91,6 +92,7 @@ fn main() -> Result<(), Error> {
         STASH_IDENTITY,
         connect_to_protocol::<fidl_fuchsia_stash::StoreMarker>()
             .expect("failed to connect to stash"),
+        StashInspectLoggerHandle::new().logger,
     );
 
     // EnvironmentBuilder::spawn returns a future that can be awaited for the

@@ -23,7 +23,7 @@ use serde::Serialize;
 
 use crate::audio::types::AudioInfo;
 use crate::handler::setting_handler::persist::UpdateState;
-use crate::handler::stash_inspect_logger::{StashInspectLogger, StashInspectLoggerHandle};
+use crate::handler::stash_inspect_logger::StashInspectLogger;
 
 const SETTINGS_PREFIX: &str = "settings";
 
@@ -46,7 +46,7 @@ pub struct DeviceStorage {
     debounce_writes: bool,
 
     /// Handle used to write stash failures to inspect.
-    inspect_handle: StashInspectLoggerHandle,
+    inspect_handle: Arc<Mutex<StashInspectLogger>>,
 }
 
 /// A wrapper for managing all communication and caching for one particular type of data being
@@ -212,14 +212,20 @@ pub trait DeviceStorageAccess {
 impl DeviceStorage {
     /// Construct a device storage from the iteratable item, which will produce the keys for
     /// storage, and from a generator that will produce a stash proxy given a particular key.
-    pub(crate) fn with_stash_proxy<I, G>(iter: I, stash_generator: G) -> Self
+    pub(crate) fn with_stash_proxy<I, G>(
+        iter: I,
+        stash_generator: G,
+        inspect_handle: Arc<Mutex<StashInspectLogger>>,
+    ) -> Self
     where
         I: IntoIterator<Item = &'static str>,
         G: Fn() -> StoreAccessorProxy,
     {
         let typed_storage_map = iter
             .into_iter()
-            .map(|key| {
+            .map({
+                let inspect_handle = Arc::clone(&inspect_handle);
+                move |key| {
                 // Generate a separate stash proxy for each key.
                 let (flush_sender, flush_receiver) = futures::channel::mpsc::unbounded::<()>();
                 let stash_proxy = stash_generator();
@@ -233,6 +239,7 @@ impl DeviceStorage {
                     };
 
                 let stash_proxy_clone = stash_proxy.clone();
+                let inspect_handle = Arc::clone(&inspect_handle);
                 // Each key has an independent flush queue.
                 Task::spawn(async move {
                     const MIN_FLUSH_DURATION: Duration =
@@ -244,7 +251,6 @@ impl DeviceStorage {
                     // timing.
                     let mut last_flush: Instant = Instant::now().sub(MIN_FLUSH_DURATION);
 
-                    let inspect_handle = StashInspectLoggerHandle::new().logger;
 
                     // Timer for flush cooldown. OptionFuture allows us to wait on the future even
                     // if it's None.
@@ -297,13 +303,13 @@ impl DeviceStorage {
                 })
                 .detach();
                 (key, storage)
-            })
+            }})
             .collect();
         DeviceStorage {
             caching_enabled: true,
             debounce_writes: true,
             typed_storage_map,
-            inspect_handle: StashInspectLoggerHandle::new(),
+            inspect_handle,
         }
     }
 
@@ -385,7 +391,7 @@ impl DeviceStorage {
                 // Not debouncing writes for testing, just flush immediately.
                 DeviceStorage::stash_flush(
                     &cached_storage.stash_proxy,
-                    Arc::clone(&self.inspect_handle.logger),
+                    Arc::clone(&self.inspect_handle),
                     &key,
                 )
                 .await;
@@ -523,15 +529,21 @@ impl InitializationState {
 pub struct StashDeviceStorageFactory {
     store: StoreProxy,
     device_storage_cache: Mutex<InitializationState>,
+    inspect_handle: Arc<Mutex<StashInspectLogger>>,
 }
 
 impl StashDeviceStorageFactory {
     /// Construct a new instance of `StashDeviceStorageFactory`.
-    pub fn new(identity: &str, store: StoreProxy) -> StashDeviceStorageFactory {
+    pub fn new(
+        identity: &str,
+        store: StoreProxy,
+        inspect_handle: Arc<Mutex<StashInspectLogger>>,
+    ) -> StashDeviceStorageFactory {
         store.identify(identity).expect("was not able to identify with stash");
         StashDeviceStorageFactory {
             store,
             device_storage_cache: Mutex::new(InitializationState::new()),
+            inspect_handle,
         }
     }
 
@@ -564,15 +576,18 @@ impl DeviceStorageFactory for StashDeviceStorageFactory {
         let initialization = &mut *self.device_storage_cache.lock().await;
         match initialization {
             InitializationState::Initializing(initial_keys) => {
-                let device_storage =
-                    Arc::new(DeviceStorage::with_stash_proxy(initial_keys.drain(), || {
+                let device_storage = Arc::new(DeviceStorage::with_stash_proxy(
+                    initial_keys.drain(),
+                    || {
                         let (accessor_proxy, server_end) =
                             create_proxy().expect("failed to create proxy for stash");
                         self.store
                             .create_accessor(false, server_end)
                             .expect("failed to create accessor for stash");
                         accessor_proxy
-                    }));
+                    },
+                    Arc::clone(&self.inspect_handle),
+                ));
                 *initialization = InitializationState::Initialized(Arc::clone(&device_storage));
                 device_storage
             }
@@ -593,6 +608,8 @@ pub(crate) mod testing {
     use fuchsia_async as fasync;
     use futures::lock::Mutex;
     use futures::prelude::*;
+
+    use crate::handler::stash_inspect_logger::StashInspectLoggerHandle;
 
     use super::*;
 
@@ -621,6 +638,7 @@ pub(crate) mod testing {
     pub(crate) struct InMemoryStorageFactory {
         initial_data: HashMap<&'static str, String>,
         device_storage_cache: Mutex<InitializationState>,
+        inspect_handle: Arc<Mutex<StashInspectLogger>>,
     }
 
     impl Default for InMemoryStorageFactory {
@@ -642,6 +660,7 @@ pub(crate) mod testing {
             InMemoryStorageFactory {
                 initial_data: HashMap::new(),
                 device_storage_cache: Mutex::new(InitializationState::new()),
+                inspect_handle: StashInspectLoggerHandle::new().logger,
             }
         }
 
@@ -656,6 +675,7 @@ pub(crate) mod testing {
             InMemoryStorageFactory {
                 initial_data: map,
                 device_storage_cache: Mutex::new(InitializationState::new()),
+                inspect_handle: StashInspectLoggerHandle::new().logger,
             }
         }
 
@@ -692,11 +712,14 @@ pub(crate) mod testing {
             let initialization = &mut *self.device_storage_cache.lock().await;
             match initialization {
                 InitializationState::Initializing(initial_keys) => {
-                    let mut device_storage =
-                        DeviceStorage::with_stash_proxy(initial_keys.drain(), || {
+                    let mut device_storage = DeviceStorage::with_stash_proxy(
+                        initial_keys.drain(),
+                        || {
                             let (stash_proxy, _) = spawn_stash_proxy();
                             stash_proxy
-                        });
+                        },
+                        Arc::clone(&self.inspect_handle),
+                    );
                     device_storage.set_caching_enabled(false);
                     device_storage.set_debounce_writes(false);
 
@@ -793,6 +816,7 @@ mod tests {
 
     use testing::*;
 
+    use crate::handler::stash_inspect_logger::StashInspectLoggerHandle;
     use crate::tests::helpers::move_executor_forward_and_get;
 
     use super::*;
@@ -907,8 +931,11 @@ mod tests {
         })
         .detach();
 
-        let storage =
-            DeviceStorage::with_stash_proxy(vec![TestStruct::KEY], move || stash_proxy.clone());
+        let storage = DeviceStorage::with_stash_proxy(
+            vec![TestStruct::KEY],
+            move || stash_proxy.clone(),
+            StashInspectLoggerHandle::new().logger,
+        );
         let result = storage.get::<TestStruct>().await;
 
         assert_eq!(result.value, VALUE1);
@@ -933,8 +960,11 @@ mod tests {
         })
         .detach();
 
-        let storage =
-            DeviceStorage::with_stash_proxy(vec![TestStruct::KEY], move || stash_proxy.clone());
+        let storage = DeviceStorage::with_stash_proxy(
+            vec![TestStruct::KEY],
+            move || stash_proxy.clone(),
+            StashInspectLoggerHandle::new().logger,
+        );
         let result = storage.get::<TestStruct>().await;
 
         assert_eq!(result.value, VALUE0);
@@ -961,8 +991,11 @@ mod tests {
         })
         .detach();
 
-        let storage =
-            DeviceStorage::with_stash_proxy(vec![TestStruct::KEY], move || stash_proxy.clone());
+        let storage = DeviceStorage::with_stash_proxy(
+            vec![TestStruct::KEY],
+            move || stash_proxy.clone(),
+            StashInspectLoggerHandle::new().logger,
+        );
 
         let result = storage.get::<TestStruct>().await;
 
@@ -978,8 +1011,11 @@ mod tests {
         let (stash_proxy, mut stash_stream) =
             fidl::endpoints::create_proxy_and_stream::<StoreAccessorMarker>().unwrap();
 
-        let storage =
-            DeviceStorage::with_stash_proxy(vec![TestStruct::KEY], move || stash_proxy.clone());
+        let storage = DeviceStorage::with_stash_proxy(
+            vec![TestStruct::KEY],
+            move || stash_proxy.clone(),
+            StashInspectLoggerHandle::new().logger,
+        );
 
         // Write to device storage.
         let value_to_write = TestStruct { value: written_value };
@@ -1055,8 +1091,11 @@ mod tests {
         let (stash_proxy, mut stash_stream) =
             fidl::endpoints::create_proxy_and_stream::<StoreAccessorMarker>().unwrap();
 
-        let storage =
-            DeviceStorage::with_stash_proxy(vec![TestStruct::KEY], move || stash_proxy.clone());
+        let storage = DeviceStorage::with_stash_proxy(
+            vec![TestStruct::KEY],
+            move || stash_proxy.clone(),
+            StashInspectLoggerHandle::new().logger,
+        );
 
         // Write to device storage.
         let value_to_write = TestStruct { value: written_value };
@@ -1129,8 +1168,11 @@ mod tests {
             }
         });
 
-        let storage =
-            DeviceStorage::with_stash_proxy(vec![TestStruct::KEY], move || stash_proxy.clone());
+        let storage = DeviceStorage::with_stash_proxy(
+            vec![TestStruct::KEY],
+            move || stash_proxy.clone(),
+            StashInspectLoggerHandle::new().logger,
+        );
 
         // Write successfully to storage once.
         let result = storage.write(&TestStruct { value: VALUE2 }).await;
@@ -1157,8 +1199,11 @@ mod tests {
         let (stash_proxy, mut stash_stream) =
             fidl::endpoints::create_proxy_and_stream::<StoreAccessorMarker>().unwrap();
 
-        let storage =
-            DeviceStorage::with_stash_proxy(vec![TestStruct::KEY], move || stash_proxy.clone());
+        let storage = DeviceStorage::with_stash_proxy(
+            vec![TestStruct::KEY],
+            move || stash_proxy.clone(),
+            StashInspectLoggerHandle::new().logger,
+        );
 
         let first_value = VALUE1;
         let second_value = VALUE2;
