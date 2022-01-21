@@ -5,10 +5,7 @@
 //! Library for generating structured configuration accessors. Each generated
 //! language-specific library depends on the output of [`create_fidl_source`].
 
-use cm_rust::{
-    ConfigDecl, ConfigField, ConfigStringType, ConfigValueType, ConfigVectorElementType,
-    ConfigVectorType,
-};
+use cm_rust::{ConfigDecl, ConfigField, ConfigNestedValueType, ConfigValueType};
 use proc_macro2::{Ident, Literal, TokenStream};
 use quote::quote;
 use std::str::FromStr;
@@ -199,36 +196,34 @@ pub enum SourceGenError {
 
 fn config_value_type_to_fidl_type(value_type: &ConfigValueType) -> String {
     match value_type {
-        ConfigValueType::Bool(_) => "bool".to_string(),
-        ConfigValueType::Uint8(_) => "uint8".to_string(),
-        ConfigValueType::Uint16(_) => "uint16".to_string(),
-        ConfigValueType::Uint32(_) => "uint32".to_string(),
-        ConfigValueType::Uint64(_) => "uint64".to_string(),
-        ConfigValueType::Int8(_) => "int8".to_string(),
-        ConfigValueType::Int16(_) => "int16".to_string(),
-        ConfigValueType::Int32(_) => "int32".to_string(),
-        ConfigValueType::Int64(_) => "int64".to_string(),
-        ConfigValueType::String(ConfigStringType { max_size }) => format!("string:{}", max_size),
-        ConfigValueType::Vector(ConfigVectorType { max_count, element_type }) => format!(
-            "vector<{}>:{}",
-            config_vector_element_type_to_fidl_type(element_type),
-            max_count
-        ),
+        ConfigValueType::Bool => "bool".to_string(),
+        ConfigValueType::Uint8 => "uint8".to_string(),
+        ConfigValueType::Uint16 => "uint16".to_string(),
+        ConfigValueType::Uint32 => "uint32".to_string(),
+        ConfigValueType::Uint64 => "uint64".to_string(),
+        ConfigValueType::Int8 => "int8".to_string(),
+        ConfigValueType::Int16 => "int16".to_string(),
+        ConfigValueType::Int32 => "int32".to_string(),
+        ConfigValueType::Int64 => "int64".to_string(),
+        ConfigValueType::String { max_size } => format!("string:{}", max_size),
+        ConfigValueType::Vector { max_count, nested_type } => {
+            format!("vector<{}>:{}", config_nested_value_type_to_fidl_type(nested_type), max_count)
+        }
     }
 }
 
-fn config_vector_element_type_to_fidl_type(element_type: &ConfigVectorElementType) -> String {
-    match element_type {
-        ConfigVectorElementType::Bool(_) => "bool".to_string(),
-        ConfigVectorElementType::Uint8(_) => "uint8".to_string(),
-        ConfigVectorElementType::Uint16(_) => "uint16".to_string(),
-        ConfigVectorElementType::Uint32(_) => "uint32".to_string(),
-        ConfigVectorElementType::Uint64(_) => "uint64".to_string(),
-        ConfigVectorElementType::Int8(_) => "int8".to_string(),
-        ConfigVectorElementType::Int16(_) => "int16".to_string(),
-        ConfigVectorElementType::Int32(_) => "int32".to_string(),
-        ConfigVectorElementType::Int64(_) => "int64".to_string(),
-        ConfigVectorElementType::String(ConfigStringType { max_size }) => {
+fn config_nested_value_type_to_fidl_type(nested_type: &ConfigNestedValueType) -> String {
+    match nested_type {
+        ConfigNestedValueType::Bool => "bool".to_string(),
+        ConfigNestedValueType::Uint8 => "uint8".to_string(),
+        ConfigNestedValueType::Uint16 => "uint16".to_string(),
+        ConfigNestedValueType::Uint32 => "uint32".to_string(),
+        ConfigNestedValueType::Uint64 => "uint64".to_string(),
+        ConfigNestedValueType::Int8 => "int8".to_string(),
+        ConfigNestedValueType::Int16 => "int16".to_string(),
+        ConfigNestedValueType::Int32 => "int32".to_string(),
+        ConfigNestedValueType::Int64 => "int64".to_string(),
+        ConfigNestedValueType::String { max_size } => {
             format!("string:{}", max_size)
         }
     }
@@ -271,65 +266,65 @@ fn get_rust_field_declaration_and_conversion(
     let field = parse_str::<Ident>(&identifier)
         .map_err(|source| SourceGenError::InvalidIdentifier { input: key.to_string(), source })?;
     let decl = match value_type {
-        ConfigValueType::Bool(_) => quote! {
+        ConfigValueType::Bool => quote! {
             pub #field: bool
         },
-        ConfigValueType::Uint8(_) => quote! {
+        ConfigValueType::Uint8 => quote! {
             pub #field: u8
         },
-        ConfigValueType::Uint16(_) => quote! {
+        ConfigValueType::Uint16 => quote! {
             pub #field: u16
         },
-        ConfigValueType::Uint32(_) => quote! {
+        ConfigValueType::Uint32 => quote! {
             pub #field: u32
         },
-        ConfigValueType::Uint64(_) => quote! {
+        ConfigValueType::Uint64 => quote! {
             pub #field: u64
         },
-        ConfigValueType::Int8(_) => quote! {
+        ConfigValueType::Int8 => quote! {
             pub #field: i8
         },
-        ConfigValueType::Int16(_) => quote! {
+        ConfigValueType::Int16 => quote! {
             pub #field: i16
         },
-        ConfigValueType::Int32(_) => quote! {
+        ConfigValueType::Int32 => quote! {
             pub #field: i32
         },
-        ConfigValueType::Int64(_) => quote! {
+        ConfigValueType::Int64 => quote! {
             pub #field: i64
         },
-        ConfigValueType::String(_) => quote! {
+        ConfigValueType::String { .. } => quote! {
             pub #field: String
         },
-        ConfigValueType::Vector(ConfigVectorType { element_type, .. }) => match element_type {
-            ConfigVectorElementType::Bool(_) => quote! {
+        ConfigValueType::Vector { nested_type, .. } => match nested_type {
+            ConfigNestedValueType::Bool => quote! {
                 pub #field: Vec<bool>
             },
-            ConfigVectorElementType::Uint8(_) => quote! {
+            ConfigNestedValueType::Uint8 => quote! {
                 pub #field: Vec<u8>
             },
-            ConfigVectorElementType::Uint16(_) => quote! {
+            ConfigNestedValueType::Uint16 => quote! {
                 pub #field: Vec<u16>
             },
-            ConfigVectorElementType::Uint32(_) => quote! {
+            ConfigNestedValueType::Uint32 => quote! {
                 pub #field: Vec<u32>
             },
-            ConfigVectorElementType::Uint64(_) => quote! {
+            ConfigNestedValueType::Uint64 => quote! {
                 pub #field: Vec<u64>
             },
-            ConfigVectorElementType::Int8(_) => quote! {
+            ConfigNestedValueType::Int8 => quote! {
                 pub #field: Vec<i8>
             },
-            ConfigVectorElementType::Int16(_) => quote! {
+            ConfigNestedValueType::Int16 => quote! {
                 pub #field: Vec<i16>
             },
-            ConfigVectorElementType::Int32(_) => quote! {
+            ConfigNestedValueType::Int32 => quote! {
                 pub #field: Vec<i32>
             },
-            ConfigVectorElementType::Int64(_) => quote! {
+            ConfigNestedValueType::Int64 => quote! {
                 pub #field: Vec<i64>
             },
-            ConfigVectorElementType::String(_) => quote! {
+            ConfigNestedValueType::String { .. } => quote! {
                 pub #field: Vec<String>
             },
         },

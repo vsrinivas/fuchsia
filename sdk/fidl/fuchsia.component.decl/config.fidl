@@ -43,72 +43,40 @@ type ConfigField = table {
     2: value_type ConfigValueType;
 };
 
-/// Defines valid types for a config value
-type ConfigValueType = flexible union {
-    1: bool ConfigBooleanType;
-    2: uint8 ConfigUnsigned8Type;
-    3: uint16 ConfigUnsigned16Type;
-    4: uint32 ConfigUnsigned32Type;
-    5: uint64 ConfigUnsigned64Type;
-    6: int8 ConfigSigned8Type;
-    7: int16 ConfigSigned16Type;
-    8: int32 ConfigSigned32Type;
-    9: int64 ConfigSigned64Type;
-   10: string ConfigStringType;
-   11: vector ConfigVectorType;
+// The type of a config value
+type ConfigValueType = struct {
+    layout ConfigTypeLayout;
+    // This optional is not necessary, but without it,
+    // FIDL compilation complains because of a possible include-cycle.
+    // Bug: http://fxbug.dev/66350
+    parameters vector<LayoutParameter>:<MAX, optional>;
+    constraints vector<LayoutConstraint>:MAX;
 };
 
-/// This is an empty table for the boolean type
-type ConfigBooleanType = table {};
+// Defines valid type ids for config fields.
+type ConfigTypeLayout = flexible enum {
+    BOOL = 1;
+    UINT8 = 2;
+    UINT16 = 3;
+    UINT32 = 4;
+    UINT64 = 5;
+    INT8 = 6;
+    INT16 = 7;
+    INT32 = 8;
+    INT64 = 9;
+    STRING = 10;
+    VECTOR = 11;
+};
 
-/// This is an empty table for the uint8 type
-type ConfigUnsigned8Type = table {};
+// Parameters of a given type layout
+type LayoutParameter = flexible union {
+    // For vectors, this is the type of the nested element.
+    1: nested_type ConfigValueType;
+};
 
-/// This is an empty table for the uint16 type
-type ConfigUnsigned16Type = table {};
-
-/// This is an empty table for the uint32 type
-type ConfigUnsigned32Type = table {};
-
-/// This is an empty table for the uint64 type
-type ConfigUnsigned64Type = table {};
-
-/// This is an empty table for the int8 type
-type ConfigSigned8Type = table {};
-
-/// This is an empty table for the int16 type
-type ConfigSigned16Type = table {};
-
-/// This is an empty table for the int32 type
-type ConfigSigned32Type = table {};
-
-/// This is an empty table for the int64 type
-type ConfigSigned64Type = table {};
-
-type ConfigStringType = table {
-    /// Maximum size of the string
+// Constraints on a given type layout
+type LayoutConstraint = flexible union {
+    // For strings, this is the maximum number of bytes allowed.
+    // For vectors, this is the maximum number of elements allowed.
     1: max_size uint32;
-};
-
-type ConfigVectorType = table {
-    /// Maximum number of elements allowed in the vector
-    1: max_count uint32;
-
-    /// Type of elements stored in the vector
-    2: element_type ConfigVectorElementType;
-};
-
-/// Defines valid types for elements stored in a vector.
-/// This is different from `ConfigValueType` because vectors cannot store vectors.
-type ConfigVectorElementType = flexible union {
-    1: bool ConfigBooleanType;
-    2: uint8 ConfigUnsigned8Type;
-    3: uint16 ConfigUnsigned16Type;
-    4: uint32 ConfigUnsigned32Type;
-    5: uint64 ConfigUnsigned64Type;
-    6: int8 ConfigSigned8Type;
-    7: int16 ConfigSigned16Type;
-    8: int32 ConfigSigned32Type;
-    9: int64 ConfigSigned64Type;
-   10: string ConfigStringType;
 };

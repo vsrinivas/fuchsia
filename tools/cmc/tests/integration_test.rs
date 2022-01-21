@@ -346,32 +346,42 @@ fn main() {
             fields: Some(vec![
                 ConfigField {
                     key: Some("my_flag".to_string()),
-                    value_type: Some(ConfigValueType::Bool(ConfigBooleanType::EMPTY)),
+                    value_type: Some(ConfigValueType {
+                        layout: ConfigTypeLayout::Bool,
+                        parameters: Some(vec![]),
+                        constraints: vec![],
+                    }),
                     ..ConfigField::EMPTY
                 },
                 ConfigField {
                     key: Some("my_string".to_string()),
-                    value_type: Some(ConfigValueType::String(ConfigStringType {
-                        max_size: Some(100),
-                        ..ConfigStringType::EMPTY
-                    })),
+                    value_type: Some(ConfigValueType {
+                        layout: ConfigTypeLayout::String,
+                        constraints: vec![LayoutConstraint::MaxSize(100)],
+                        parameters: Some(vec![]),
+                    }),
                     ..ConfigField::EMPTY
                 },
                 ConfigField {
                     key: Some("my_uint8".to_string()),
-                    value_type: Some(ConfigValueType::Uint8(ConfigUnsigned8Type::EMPTY)),
+                    value_type: Some(ConfigValueType {
+                        layout: ConfigTypeLayout::Uint8,
+                        parameters: Some(vec![]),
+                        constraints: vec![],
+                    }),
                     ..ConfigField::EMPTY
                 },
                 ConfigField {
                     key: Some("my_vector_of_string".to_string()),
-                    value_type: Some(ConfigValueType::Vector(ConfigVectorType {
-                        max_count: Some(100),
-                        element_type: Some(ConfigVectorElementType::String(ConfigStringType {
-                            max_size: Some(50),
-                            ..ConfigStringType::EMPTY
-                        })),
-                        ..ConfigVectorType::EMPTY
-                    })),
+                    value_type: Some(ConfigValueType {
+                        layout: ConfigTypeLayout::Vector,
+                        constraints: vec![LayoutConstraint::MaxSize(100)],
+                        parameters: Some(vec![LayoutParameter::NestedType(ConfigValueType {
+                            layout: ConfigTypeLayout::String,
+                            constraints: vec![LayoutConstraint::MaxSize(50)],
+                            parameters: Some(vec![]),
+                        })]),
+                    }),
                     ..ConfigField::EMPTY
                 },
             ]),

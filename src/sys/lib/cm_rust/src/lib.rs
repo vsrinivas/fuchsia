@@ -800,84 +800,164 @@ pub struct ConfigField {
     pub value_type: ConfigValueType,
 }
 
-#[derive(FidlDecl, Debug, Clone, PartialEq, Eq)]
-#[fidl_decl(fidl_table = "fdecl::ConfigStringType")]
-pub struct ConfigStringType {
-    pub max_size: u32,
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum ConfigNestedValueType {
+    Bool,
+    Uint8,
+    Int8,
+    Uint16,
+    Int16,
+    Uint32,
+    Int32,
+    Uint64,
+    Int64,
+    String { max_size: u32 },
 }
 
-#[derive(FidlDecl, Debug, Clone, PartialEq, Eq)]
-#[fidl_decl(fidl_table = "fdecl::ConfigBooleanType")]
-pub struct ConfigBooleanType {}
-
-#[derive(FidlDecl, Debug, Clone, PartialEq, Eq)]
-#[fidl_decl(fidl_table = "fdecl::ConfigUnsigned8Type")]
-pub struct ConfigUnsigned8Type {}
-
-#[derive(FidlDecl, Debug, Clone, PartialEq, Eq)]
-#[fidl_decl(fidl_table = "fdecl::ConfigSigned8Type")]
-pub struct ConfigSigned8Type {}
-
-#[derive(FidlDecl, Debug, Clone, PartialEq, Eq)]
-#[fidl_decl(fidl_table = "fdecl::ConfigUnsigned16Type")]
-pub struct ConfigUnsigned16Type {}
-
-#[derive(FidlDecl, Debug, Clone, PartialEq, Eq)]
-#[fidl_decl(fidl_table = "fdecl::ConfigSigned16Type")]
-pub struct ConfigSigned16Type {}
-
-#[derive(FidlDecl, Debug, Clone, PartialEq, Eq)]
-#[fidl_decl(fidl_table = "fdecl::ConfigUnsigned32Type")]
-pub struct ConfigUnsigned32Type {}
-
-#[derive(FidlDecl, Debug, Clone, PartialEq, Eq)]
-#[fidl_decl(fidl_table = "fdecl::ConfigSigned32Type")]
-pub struct ConfigSigned32Type {}
-
-#[derive(FidlDecl, Debug, Clone, PartialEq, Eq)]
-#[fidl_decl(fidl_table = "fdecl::ConfigUnsigned64Type")]
-pub struct ConfigUnsigned64Type {}
-
-#[derive(FidlDecl, Debug, Clone, PartialEq, Eq)]
-#[fidl_decl(fidl_table = "fdecl::ConfigSigned64Type")]
-pub struct ConfigSigned64Type {}
-
-#[derive(FidlDecl, FromEnum, Debug, Clone, PartialEq, Eq)]
-#[fidl_decl(fidl_union = "fdecl::ConfigVectorElementType")]
-pub enum ConfigVectorElementType {
-    Bool(ConfigBooleanType),
-    Uint8(ConfigUnsigned8Type),
-    Int8(ConfigSigned8Type),
-    Uint16(ConfigUnsigned16Type),
-    Int16(ConfigSigned16Type),
-    Uint32(ConfigUnsigned32Type),
-    Int32(ConfigSigned32Type),
-    Uint64(ConfigUnsigned64Type),
-    Int64(ConfigSigned64Type),
-    String(ConfigStringType),
-}
-
-#[derive(FidlDecl, Debug, Clone, PartialEq, Eq)]
-#[fidl_decl(fidl_table = "fdecl::ConfigVectorType")]
-pub struct ConfigVectorType {
-    pub max_count: u32,
-    pub element_type: ConfigVectorElementType,
-}
-
-#[derive(FidlDecl, FromEnum, Debug, Clone, PartialEq, Eq)]
-#[fidl_decl(fidl_union = "fdecl::ConfigValueType")]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ConfigValueType {
-    Bool(ConfigBooleanType),
-    Uint8(ConfigUnsigned8Type),
-    Int8(ConfigSigned8Type),
-    Uint16(ConfigUnsigned16Type),
-    Int16(ConfigSigned16Type),
-    Uint32(ConfigUnsigned32Type),
-    Int32(ConfigSigned32Type),
-    Uint64(ConfigUnsigned64Type),
-    Int64(ConfigSigned64Type),
-    String(ConfigStringType),
-    Vector(ConfigVectorType),
+    Bool,
+    Uint8,
+    Int8,
+    Uint16,
+    Int16,
+    Uint32,
+    Int32,
+    Uint64,
+    Int64,
+    String { max_size: u32 },
+    Vector { nested_type: ConfigNestedValueType, max_count: u32 },
+}
+
+impl FidlIntoNative<ConfigNestedValueType> for fdecl::ConfigValueType {
+    fn fidl_into_native(mut self) -> ConfigNestedValueType {
+        match self.layout {
+            fdecl::ConfigTypeLayout::Bool => ConfigNestedValueType::Bool,
+            fdecl::ConfigTypeLayout::Uint8 => ConfigNestedValueType::Uint8,
+            fdecl::ConfigTypeLayout::Uint16 => ConfigNestedValueType::Uint16,
+            fdecl::ConfigTypeLayout::Uint32 => ConfigNestedValueType::Uint32,
+            fdecl::ConfigTypeLayout::Uint64 => ConfigNestedValueType::Uint64,
+            fdecl::ConfigTypeLayout::Int8 => ConfigNestedValueType::Int8,
+            fdecl::ConfigTypeLayout::Int16 => ConfigNestedValueType::Int16,
+            fdecl::ConfigTypeLayout::Int32 => ConfigNestedValueType::Int32,
+            fdecl::ConfigTypeLayout::Int64 => ConfigNestedValueType::Int64,
+            fdecl::ConfigTypeLayout::String => {
+                let max_size =
+                    if let fdecl::LayoutConstraint::MaxSize(s) = self.constraints.remove(0) {
+                        s
+                    } else {
+                        panic!("Unexpected constraint on String layout type for config field");
+                    };
+                ConfigNestedValueType::String { max_size }
+            }
+            fdecl::ConfigTypeLayout::Vector => {
+                panic!("Nested vectors are not supported in structured config")
+            }
+            fdecl::ConfigTypeLayoutUnknown!() => panic!("Unknown layout type for config field"),
+        }
+    }
+}
+
+impl NativeIntoFidl<fdecl::ConfigValueType> for ConfigNestedValueType {
+    fn native_into_fidl(self) -> fdecl::ConfigValueType {
+        let layout = match self {
+            ConfigNestedValueType::Bool => fdecl::ConfigTypeLayout::Bool,
+            ConfigNestedValueType::Uint8 => fdecl::ConfigTypeLayout::Uint8,
+            ConfigNestedValueType::Uint16 => fdecl::ConfigTypeLayout::Uint16,
+            ConfigNestedValueType::Uint32 => fdecl::ConfigTypeLayout::Uint32,
+            ConfigNestedValueType::Uint64 => fdecl::ConfigTypeLayout::Uint64,
+            ConfigNestedValueType::Int8 => fdecl::ConfigTypeLayout::Int8,
+            ConfigNestedValueType::Int16 => fdecl::ConfigTypeLayout::Int16,
+            ConfigNestedValueType::Int32 => fdecl::ConfigTypeLayout::Int32,
+            ConfigNestedValueType::Int64 => fdecl::ConfigTypeLayout::Int64,
+            ConfigNestedValueType::String { .. } => fdecl::ConfigTypeLayout::String,
+        };
+        let constraints = match self {
+            ConfigNestedValueType::String { max_size } => {
+                vec![fdecl::LayoutConstraint::MaxSize(max_size)]
+            }
+            _ => vec![],
+        };
+        fdecl::ConfigValueType { layout, constraints, parameters: Some(vec![]) }
+    }
+}
+
+impl FidlIntoNative<ConfigValueType> for fdecl::ConfigValueType {
+    fn fidl_into_native(mut self) -> ConfigValueType {
+        match self.layout {
+            fdecl::ConfigTypeLayout::Bool => ConfigValueType::Bool,
+            fdecl::ConfigTypeLayout::Uint8 => ConfigValueType::Uint8,
+            fdecl::ConfigTypeLayout::Uint16 => ConfigValueType::Uint16,
+            fdecl::ConfigTypeLayout::Uint32 => ConfigValueType::Uint32,
+            fdecl::ConfigTypeLayout::Uint64 => ConfigValueType::Uint64,
+            fdecl::ConfigTypeLayout::Int8 => ConfigValueType::Int8,
+            fdecl::ConfigTypeLayout::Int16 => ConfigValueType::Int16,
+            fdecl::ConfigTypeLayout::Int32 => ConfigValueType::Int32,
+            fdecl::ConfigTypeLayout::Int64 => ConfigValueType::Int64,
+            fdecl::ConfigTypeLayout::String => {
+                let max_size = if let fdecl::LayoutConstraint::MaxSize(s) =
+                    self.constraints.remove(0)
+                {
+                    s
+                } else {
+                    panic!("Unexpected constraint on String layout type for config field. Expected MaxSize.");
+                };
+                ConfigValueType::String { max_size }
+            }
+            fdecl::ConfigTypeLayout::Vector => {
+                let max_count = if let fdecl::LayoutConstraint::MaxSize(c) =
+                    self.constraints.remove(0)
+                {
+                    c
+                } else {
+                    panic!("Unexpected constraint on Vector layout type for config field. Expected MaxSize.");
+                };
+                let mut parameters =
+                    self.parameters.expect("Config field must have parameters set");
+                let nested_type = if let fdecl::LayoutParameter::NestedType(nested_type) =
+                    parameters.remove(0)
+                {
+                    nested_type.fidl_into_native()
+                } else {
+                    panic!("Unexpected parameter on Vector layout type for config field. Expected NestedType.");
+                };
+                ConfigValueType::Vector { max_count, nested_type }
+            }
+            fdecl::ConfigTypeLayoutUnknown!() => panic!("Unknown layout type for config field"),
+        }
+    }
+}
+
+impl NativeIntoFidl<fdecl::ConfigValueType> for ConfigValueType {
+    fn native_into_fidl(self) -> fdecl::ConfigValueType {
+        let layout = match self {
+            ConfigValueType::Bool => fdecl::ConfigTypeLayout::Bool,
+            ConfigValueType::Uint8 => fdecl::ConfigTypeLayout::Uint8,
+            ConfigValueType::Uint16 => fdecl::ConfigTypeLayout::Uint16,
+            ConfigValueType::Uint32 => fdecl::ConfigTypeLayout::Uint32,
+            ConfigValueType::Uint64 => fdecl::ConfigTypeLayout::Uint64,
+            ConfigValueType::Int8 => fdecl::ConfigTypeLayout::Int8,
+            ConfigValueType::Int16 => fdecl::ConfigTypeLayout::Int16,
+            ConfigValueType::Int32 => fdecl::ConfigTypeLayout::Int32,
+            ConfigValueType::Int64 => fdecl::ConfigTypeLayout::Int64,
+            ConfigValueType::String { .. } => fdecl::ConfigTypeLayout::String,
+            ConfigValueType::Vector { .. } => fdecl::ConfigTypeLayout::Vector,
+        };
+        let (constraints, parameters) = match self {
+            ConfigValueType::String { max_size } => {
+                (vec![fdecl::LayoutConstraint::MaxSize(max_size)], vec![])
+            }
+            ConfigValueType::Vector { max_count, nested_type } => {
+                let nested_type = nested_type.native_into_fidl();
+                (
+                    vec![fdecl::LayoutConstraint::MaxSize(max_count)],
+                    vec![fdecl::LayoutParameter::NestedType(nested_type)],
+                )
+            }
+            _ => (vec![], vec![]),
+        };
+        fdecl::ConfigValueType { layout, constraints, parameters: Some(parameters) }
+    }
 }
 
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
@@ -2118,7 +2198,11 @@ mod tests {
                     fields: Some(vec![
                         fdecl::ConfigField {
                             key: Some("enable_logging".to_string()),
-                            value_type: Some(fdecl::ConfigValueType::Bool(fdecl::ConfigBooleanType::EMPTY)),
+                            value_type: Some(fdecl::ConfigValueType {
+                                layout: fdecl::ConfigTypeLayout::Bool,
+                                parameters: Some(vec![]),
+                                constraints: vec![],
+                            }),
                             ..fdecl::ConfigField::EMPTY
                         }
                     ]),
@@ -2400,7 +2484,7 @@ mod tests {
                         fields: vec![
                             ConfigField {
                                 key: "enable_logging".to_string(),
-                                value_type: ConfigValueType::Bool(ConfigBooleanType {})
+                                value_type: ConfigValueType::Bool
                             }
                         ],
                         declaration_checksum: vec![

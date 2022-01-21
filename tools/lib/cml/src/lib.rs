@@ -1850,7 +1850,7 @@ pub enum ConfigValueType {
     Int32,
     Int64,
     String { max_size: NonZeroU32 },
-    Vector { max_count: NonZeroU32, element: ConfigVectorElementType },
+    Vector { max_count: NonZeroU32, element: ConfigNestedValueType },
 }
 
 impl ConfigValueType {
@@ -1882,7 +1882,7 @@ impl ConfigValueType {
 
 #[derive(Deserialize, Debug, PartialEq)]
 #[serde(tag = "type", deny_unknown_fields, rename_all = "lowercase")]
-pub enum ConfigVectorElementType {
+pub enum ConfigNestedValueType {
     Bool,
     Uint8,
     Uint16,
@@ -1895,20 +1895,20 @@ pub enum ConfigVectorElementType {
     String { max_size: NonZeroU32 },
 }
 
-impl ConfigVectorElementType {
+impl ConfigNestedValueType {
     /// Update the hasher by digesting the ConfigVectorElementType enum value
     pub fn update_digest(&self, hasher: &mut impl sha2::Digest) {
         let val = match self {
-            ConfigVectorElementType::Bool => 0u8,
-            ConfigVectorElementType::Uint8 => 1u8,
-            ConfigVectorElementType::Uint16 => 2u8,
-            ConfigVectorElementType::Uint32 => 3u8,
-            ConfigVectorElementType::Uint64 => 4u8,
-            ConfigVectorElementType::Int8 => 5u8,
-            ConfigVectorElementType::Int16 => 6u8,
-            ConfigVectorElementType::Int32 => 7u8,
-            ConfigVectorElementType::Int64 => 8u8,
-            ConfigVectorElementType::String { max_size } => {
+            ConfigNestedValueType::Bool => 0u8,
+            ConfigNestedValueType::Uint8 => 1u8,
+            ConfigNestedValueType::Uint16 => 2u8,
+            ConfigNestedValueType::Uint32 => 3u8,
+            ConfigNestedValueType::Uint64 => 4u8,
+            ConfigNestedValueType::Int8 => 5u8,
+            ConfigNestedValueType::Int16 => 6u8,
+            ConfigNestedValueType::Int32 => 7u8,
+            ConfigNestedValueType::Int64 => 8u8,
+            ConfigNestedValueType::String { max_size } => {
                 hasher.update(max_size.get().to_le_bytes());
                 9u8
             }

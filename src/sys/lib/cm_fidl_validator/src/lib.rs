@@ -234,6 +234,11 @@ impl<'a> ValidationContext<'a> {
             }
         }
 
+        // Validate "config"
+        if let Some(config) = decl.config.as_ref() {
+            self.validate_config(&config);
+        }
+
         // Check that there are no strong cyclical dependencies
         if let Err(e) = self.strong_dependencies.topological_sort() {
             self.errors.push(Error::dependency_cycle(e.format_cycle()));
@@ -254,6 +259,116 @@ impl<'a> ValidationContext<'a> {
                     self.errors.push(Error::duplicate_field("Environment", "name", name));
                 }
             }
+        }
+    }
+
+    // Validates a config schema. Checks that each field's layout matches the expected constraints
+    // and properties.
+    fn validate_config(&mut self, config: &fdecl::Config) {
+        if let Some(fields) = &config.fields {
+            for field in fields {
+                if field.key.is_none() {
+                    self.errors.push(Error::missing_field("ConfigField", "key"));
+                }
+                if let Some(value_type) = &field.value_type {
+                    self.validate_config_value_type(value_type, true);
+                } else {
+                    self.errors.push(Error::missing_field("ConfigField", "value_type"));
+                }
+            }
+        } else {
+            self.errors.push(Error::missing_field("Config", "fields"));
+        }
+
+        if config.declaration_checksum.is_none() {
+            self.errors.push(Error::missing_field("Config", "declaration_checksum"));
+        }
+
+        if config.value_source.is_none() {
+            self.errors.push(Error::missing_field("Config", "value_source"));
+        }
+    }
+
+    fn validate_config_value_type(
+        &mut self,
+        value_type: &fdecl::ConfigValueType,
+        accept_vectors: bool,
+    ) {
+        match &value_type.layout {
+            fdecl::ConfigTypeLayout::Bool
+            | fdecl::ConfigTypeLayout::Uint8
+            | fdecl::ConfigTypeLayout::Uint16
+            | fdecl::ConfigTypeLayout::Uint32
+            | fdecl::ConfigTypeLayout::Uint64
+            | fdecl::ConfigTypeLayout::Int8
+            | fdecl::ConfigTypeLayout::Int16
+            | fdecl::ConfigTypeLayout::Int32
+            | fdecl::ConfigTypeLayout::Int64 => {
+                // These layouts have no parameters or constraints
+                if let Some(parameters) = &value_type.parameters {
+                    if !parameters.is_empty() {
+                        self.errors.push(Error::extraneous_field("ConfigValueType", "parameters"));
+                    }
+                } else {
+                    self.errors.push(Error::missing_field("ConfigValueType", "parameters"));
+                }
+
+                if !value_type.constraints.is_empty() {
+                    self.errors.push(Error::extraneous_field("ConfigValueType", "constraints"));
+                }
+            }
+            fdecl::ConfigTypeLayout::String => {
+                // String has exactly one constraint and no parameter
+                if let Some(parameters) = &value_type.parameters {
+                    if !parameters.is_empty() {
+                        self.errors.push(Error::extraneous_field("ConfigValueType", "parameters"));
+                    }
+                } else {
+                    self.errors.push(Error::missing_field("ConfigValueType", "parameters"));
+                }
+
+                if value_type.constraints.is_empty() {
+                    self.errors.push(Error::missing_field("ConfigValueType", "constraints"));
+                } else if value_type.constraints.len() > 1 {
+                    self.errors.push(Error::extraneous_field("ConfigValueType", "constraints"));
+                } else if let fdecl::LayoutConstraint::MaxSize(_) = &value_type.constraints[0] {
+                } else {
+                    self.errors.push(Error::invalid_field("ConfigValueType", "constraints"));
+                }
+            }
+            fdecl::ConfigTypeLayout::Vector => {
+                if accept_vectors {
+                    // Vector has exactly one constraint and one parameter
+                    if let Some(parameters) = &value_type.parameters {
+                        if parameters.is_empty() {
+                            self.errors.push(Error::missing_field("ConfigValueType", "parameters"));
+                        } else if parameters.len() > 1 {
+                            self.errors
+                                .push(Error::extraneous_field("ConfigValueType", "parameters"));
+                        } else if let fdecl::LayoutParameter::NestedType(nested_type) =
+                            &parameters[0]
+                        {
+                            self.validate_config_value_type(nested_type, false);
+                        } else {
+                            self.errors.push(Error::invalid_field("ConfigValueType", "parameters"));
+                        }
+                    } else {
+                        self.errors.push(Error::missing_field("ConfigValueType", "parameters"))
+                    }
+
+                    if value_type.constraints.is_empty() {
+                        self.errors.push(Error::missing_field("ConfigValueType", "constraints"));
+                    } else if value_type.constraints.len() > 1 {
+                        self.errors.push(Error::extraneous_field("ConfigValueType", "constraints"));
+                    } else if let fdecl::LayoutConstraint::MaxSize(_) = &value_type.constraints[0] {
+                    } else {
+                        self.errors.push(Error::invalid_field("ConfigValueType", "constraints"));
+                    }
+                } else {
+                    self.errors.push(Error::nested_vector());
+                }
+            }
+            _ => self.errors.push(Error::invalid_field("ConfigValueType", "layout")),
         }
     }
 
@@ -6481,6 +6596,375 @@ mod tests {
             },
             result = Err(ErrorList::new(vec![
                 Error::invalid_capability("ExposeResolver", "source", "a"),
+            ])),
+        },
+
+        test_validate_config_missing_config => {
+            input = {
+                let mut decl = new_component_decl();
+                decl.config = Some(fdecl::Config {
+                    fields: None,
+                    declaration_checksum: None,
+                    value_source: None,
+                    ..fdecl::Config::EMPTY
+                });
+                decl
+            },
+            result = Err(ErrorList::new(vec![
+                Error::missing_field("Config", "fields"),
+                Error::missing_field("Config", "declaration_checksum"),
+                Error::missing_field("Config", "value_source"),
+            ])),
+        },
+
+        test_validate_config_missing_config_field => {
+            input = {
+                let mut decl = new_component_decl();
+                decl.config = Some(fdecl::Config {
+                    fields: Some(vec![
+                        fdecl::ConfigField {
+                            key: None,
+                            value_type: None,
+                            ..fdecl::ConfigField::EMPTY
+                        }
+                    ]),
+                    declaration_checksum: Some(vec![0x0, 0x0, 0x0, 0x0]),
+                    value_source: Some(fdecl::ConfigValueSource::PackagePath("config/test.cvf".to_string())),
+                    ..fdecl::Config::EMPTY
+                });
+                decl
+            },
+            result = Err(ErrorList::new(vec![
+                Error::missing_field("ConfigField", "key"),
+                Error::missing_field("ConfigField", "value_type"),
+            ])),
+        },
+
+        test_validate_config_bool => {
+            input = {
+                let mut decl = new_component_decl();
+                decl.config = Some(fdecl::Config {
+                    fields: Some(vec![
+                        fdecl::ConfigField {
+                            key: Some("test".to_string()),
+                            value_type: Some(fdecl::ConfigValueType {
+                                layout: fdecl::ConfigTypeLayout::Bool,
+                                parameters: Some(vec![]),
+                                constraints: vec![]
+                            }),
+                            ..fdecl::ConfigField::EMPTY
+                        }
+                    ]),
+                    declaration_checksum: Some(vec![0x0, 0x0, 0x0, 0x0]),
+                    value_source: Some(fdecl::ConfigValueSource::PackagePath("config/test.cvf".to_string())),
+                    ..fdecl::Config::EMPTY
+                });
+                decl
+            },
+            result = Ok(()),
+        },
+
+        test_validate_config_bool_extra_constraint => {
+            input = {
+                let mut decl = new_component_decl();
+                decl.config = Some(fdecl::Config {
+                    fields: Some(vec![
+                        fdecl::ConfigField {
+                            key: Some("test".to_string()),
+                            value_type: Some(fdecl::ConfigValueType {
+                                layout: fdecl::ConfigTypeLayout::Bool,
+                                parameters: Some(vec![]),
+                                constraints: vec![fdecl::LayoutConstraint::MaxSize(10)]
+                            }),
+                            ..fdecl::ConfigField::EMPTY
+                        }
+                    ]),
+                    declaration_checksum: Some(vec![0x0, 0x0, 0x0, 0x0]),
+                    value_source: Some(fdecl::ConfigValueSource::PackagePath("config/test.cvf".to_string())),
+                    ..fdecl::Config::EMPTY
+                });
+                decl
+            },
+            result = Err(ErrorList::new(vec![
+                Error::extraneous_field("ConfigValueType", "constraints")
+            ])),
+        },
+
+        test_validate_config_bool_missing_parameters => {
+            input = {
+                let mut decl = new_component_decl();
+                decl.config = Some(fdecl::Config {
+                    fields: Some(vec![
+                        fdecl::ConfigField {
+                            key: Some("test".to_string()),
+                            value_type: Some(fdecl::ConfigValueType {
+                                layout: fdecl::ConfigTypeLayout::Bool,
+                                parameters: None,
+                                constraints: vec![]
+                            }),
+                            ..fdecl::ConfigField::EMPTY
+                        }
+                    ]),
+                    declaration_checksum: Some(vec![0x0, 0x0, 0x0, 0x0]),
+                    value_source: Some(fdecl::ConfigValueSource::PackagePath("config/test.cvf".to_string())),
+                    ..fdecl::Config::EMPTY
+                });
+                decl
+            },
+            result = Err(ErrorList::new(vec![
+                Error::missing_field("ConfigValueType", "parameters")
+            ])),
+        },
+
+        test_validate_config_string => {
+            input = {
+                let mut decl = new_component_decl();
+                decl.config = Some(fdecl::Config {
+                    fields: Some(vec![
+                        fdecl::ConfigField {
+                            key: Some("test".to_string()),
+                            value_type: Some(fdecl::ConfigValueType {
+                                layout: fdecl::ConfigTypeLayout::String,
+                                parameters: Some(vec![]),
+                                constraints: vec![fdecl::LayoutConstraint::MaxSize(10)]
+                            }),
+                            ..fdecl::ConfigField::EMPTY
+                        }
+                    ]),
+                    declaration_checksum: Some(vec![0x0, 0x0, 0x0, 0x0]),
+                    value_source: Some(fdecl::ConfigValueSource::PackagePath("config/test.cvf".to_string())),
+                    ..fdecl::Config::EMPTY
+                });
+                decl
+            },
+            result = Ok(()),
+        },
+
+        test_validate_config_string_missing_parameter => {
+            input = {
+                let mut decl = new_component_decl();
+                decl.config = Some(fdecl::Config {
+                    fields: Some(vec![
+                        fdecl::ConfigField {
+                            key: Some("test".to_string()),
+                            value_type: Some(fdecl::ConfigValueType {
+                                layout: fdecl::ConfigTypeLayout::String,
+                                parameters: None,
+                                constraints: vec![fdecl::LayoutConstraint::MaxSize(10)]
+                            }),
+                            ..fdecl::ConfigField::EMPTY
+                        }
+                    ]),
+                    declaration_checksum: Some(vec![0x0, 0x0, 0x0, 0x0]),
+                    value_source: Some(fdecl::ConfigValueSource::PackagePath("config/test.cvf".to_string())),
+                    ..fdecl::Config::EMPTY
+                });
+                decl
+            },
+            result = Err(ErrorList::new(vec![
+                Error::missing_field("ConfigValueType", "parameters")
+            ])),
+        },
+
+        test_validate_config_string_missing_constraint => {
+            input = {
+                let mut decl = new_component_decl();
+                decl.config = Some(fdecl::Config {
+                    fields: Some(vec![
+                        fdecl::ConfigField {
+                            key: Some("test".to_string()),
+                            value_type: Some(fdecl::ConfigValueType {
+                                layout: fdecl::ConfigTypeLayout::String,
+                                parameters: Some(vec![]),
+                                constraints: vec![]
+                            }),
+                            ..fdecl::ConfigField::EMPTY
+                        }
+                    ]),
+                    declaration_checksum: Some(vec![0x0, 0x0, 0x0, 0x0]),
+                    value_source: Some(fdecl::ConfigValueSource::PackagePath("config/test.cvf".to_string())),
+                    ..fdecl::Config::EMPTY
+                });
+                decl
+            },
+            result = Err(ErrorList::new(vec![
+                Error::missing_field("ConfigValueType", "constraints")
+            ])),
+        },
+
+        test_validate_config_string_extra_constraint => {
+            input = {
+                let mut decl = new_component_decl();
+                decl.config = Some(fdecl::Config {
+                    fields: Some(vec![
+                        fdecl::ConfigField {
+                            key: Some("test".to_string()),
+                            value_type: Some(fdecl::ConfigValueType {
+                                layout: fdecl::ConfigTypeLayout::String,
+                                parameters: Some(vec![]),
+                                constraints: vec![fdecl::LayoutConstraint::MaxSize(10), fdecl::LayoutConstraint::MaxSize(10)]
+                            }),
+                            ..fdecl::ConfigField::EMPTY
+                        }
+                    ]),
+                    declaration_checksum: Some(vec![0x0, 0x0, 0x0, 0x0]),
+                    value_source: Some(fdecl::ConfigValueSource::PackagePath("config/test.cvf".to_string())),
+                    ..fdecl::Config::EMPTY
+                });
+                decl
+            },
+            result = Err(ErrorList::new(vec![
+                Error::extraneous_field("ConfigValueType", "constraints")
+            ])),
+        },
+
+        test_validate_config_vector_bool => {
+            input = {
+                let mut decl = new_component_decl();
+                decl.config = Some(fdecl::Config {
+                    fields: Some(vec![
+                        fdecl::ConfigField {
+                            key: Some("test".to_string()),
+                            value_type: Some(fdecl::ConfigValueType {
+                                layout: fdecl::ConfigTypeLayout::Vector,
+                                parameters: Some(vec![fdecl::LayoutParameter::NestedType(fdecl::ConfigValueType {
+                                    layout: fdecl::ConfigTypeLayout::Bool,
+                                    parameters: Some(vec![]),
+                                    constraints: vec![],
+                                })]),
+                                constraints: vec![fdecl::LayoutConstraint::MaxSize(10)]
+                            }),
+                            ..fdecl::ConfigField::EMPTY
+                        }
+                    ]),
+                    declaration_checksum: Some(vec![0x0, 0x0, 0x0, 0x0]),
+                    value_source: Some(fdecl::ConfigValueSource::PackagePath("config/test.cvf".to_string())),
+                    ..fdecl::Config::EMPTY
+                });
+                decl
+            },
+            result = Ok(()),
+        },
+
+        test_validate_config_vector_extra_parameter => {
+            input = {
+                let mut decl = new_component_decl();
+                decl.config = Some(fdecl::Config {
+                    fields: Some(vec![
+                        fdecl::ConfigField {
+                            key: Some("test".to_string()),
+                            value_type: Some(fdecl::ConfigValueType {
+                                layout: fdecl::ConfigTypeLayout::Vector,
+                                parameters: Some(vec![fdecl::LayoutParameter::NestedType(fdecl::ConfigValueType {
+                                    layout: fdecl::ConfigTypeLayout::Bool,
+                                    parameters: Some(vec![]),
+                                    constraints: vec![],
+                                }), fdecl::LayoutParameter::NestedType(fdecl::ConfigValueType {
+                                    layout: fdecl::ConfigTypeLayout::Uint8,
+                                    parameters: Some(vec![]),
+                                    constraints: vec![],
+                                })]),
+                                constraints: vec![fdecl::LayoutConstraint::MaxSize(10)]
+                            }),
+                            ..fdecl::ConfigField::EMPTY
+                        }
+                    ]),
+                    declaration_checksum: Some(vec![0x0, 0x0, 0x0, 0x0]),
+                    value_source: Some(fdecl::ConfigValueSource::PackagePath("config/test.cvf".to_string())),
+                    ..fdecl::Config::EMPTY
+                });
+                decl
+            },
+            result = Err(ErrorList::new(vec![
+                Error::extraneous_field("ConfigValueType", "parameters")
+            ])),
+        },
+
+        test_validate_config_vector_missing_parameter => {
+            input = {
+                let mut decl = new_component_decl();
+                decl.config = Some(fdecl::Config {
+                    fields: Some(vec![
+                        fdecl::ConfigField {
+                            key: Some("test".to_string()),
+                            value_type: Some(fdecl::ConfigValueType {
+                                layout: fdecl::ConfigTypeLayout::Vector,
+                                parameters: Some(vec![]),
+                                constraints: vec![fdecl::LayoutConstraint::MaxSize(10)]
+                            }),
+                            ..fdecl::ConfigField::EMPTY
+                        }
+                    ]),
+                    declaration_checksum: Some(vec![0x0, 0x0, 0x0, 0x0]),
+                    value_source: Some(fdecl::ConfigValueSource::PackagePath("config/test.cvf".to_string())),
+                    ..fdecl::Config::EMPTY
+                });
+                decl
+            },
+            result = Err(ErrorList::new(vec![
+                Error::missing_field("ConfigValueType", "parameters")
+            ])),
+        },
+
+        test_validate_config_vector_string => {
+            input = {
+                let mut decl = new_component_decl();
+                decl.config = Some(fdecl::Config {
+                    fields: Some(vec![
+                        fdecl::ConfigField {
+                            key: Some("test".to_string()),
+                            value_type: Some(fdecl::ConfigValueType {
+                                layout: fdecl::ConfigTypeLayout::Vector,
+                                parameters: Some(vec![fdecl::LayoutParameter::NestedType(fdecl::ConfigValueType {
+                                    layout: fdecl::ConfigTypeLayout::String,
+                                    parameters: Some(vec![]),
+                                    constraints: vec![fdecl::LayoutConstraint::MaxSize(10)]
+                                })]),
+                                constraints: vec![fdecl::LayoutConstraint::MaxSize(10)]
+                            }),
+                            ..fdecl::ConfigField::EMPTY
+                        }
+                    ]),
+                    declaration_checksum: Some(vec![0x0, 0x0, 0x0, 0x0]),
+                    value_source: Some(fdecl::ConfigValueSource::PackagePath("config/test.cvf".to_string())),
+                    ..fdecl::Config::EMPTY
+                });
+                decl
+            },
+            result = Ok(()),
+        },
+
+        test_validate_config_vector_vector => {
+            input = {
+                let mut decl = new_component_decl();
+                decl.config = Some(fdecl::Config {
+                    fields: Some(vec![
+                        fdecl::ConfigField {
+                            key: Some("test".to_string()),
+                            value_type: Some(fdecl::ConfigValueType {
+                                layout: fdecl::ConfigTypeLayout::Vector,
+                                parameters: Some(vec![fdecl::LayoutParameter::NestedType(fdecl::ConfigValueType {
+                                    layout: fdecl::ConfigTypeLayout::Vector,
+                                    parameters: Some(vec![fdecl::LayoutParameter::NestedType(fdecl::ConfigValueType {
+                                        layout: fdecl::ConfigTypeLayout::String,
+                                        parameters: Some(vec![]),
+                                        constraints: vec![fdecl::LayoutConstraint::MaxSize(10)]
+                                    })]),
+                                    constraints: vec![fdecl::LayoutConstraint::MaxSize(10)]
+                                })]),
+                                constraints: vec![fdecl::LayoutConstraint::MaxSize(10)]
+                            }),
+                            ..fdecl::ConfigField::EMPTY
+                        }
+                    ]),
+                    declaration_checksum: Some(vec![0x0, 0x0, 0x0, 0x0]),
+                    value_source: Some(fdecl::ConfigValueSource::PackagePath("config/test.cvf".to_string())),
+                    ..fdecl::Config::EMPTY
+                });
+                decl
+            },
+            result = Err(ErrorList::new(vec![
+                Error::nested_vector()
             ])),
         },
     }

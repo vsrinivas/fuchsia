@@ -682,65 +682,87 @@ mod tests {
                     fields: Some(vec![
                         fdecl::ConfigField {
                             key: Some("test1".to_string()),
-                            value_type: Some(fdecl::ConfigValueType::String(
-                                fdecl::ConfigStringType {
-                                    max_size: Some(50),
-                                    ..fdecl::ConfigStringType::EMPTY
-                                }
-                            )),
+                            value_type: Some(fdecl::ConfigValueType {
+                                layout: fdecl::ConfigTypeLayout::String,
+                                parameters: Some(vec![]),
+                                constraints: vec![fdecl::LayoutConstraint::MaxSize(50)]
+                            }),
                             ..fdecl::ConfigField::EMPTY
                         },
                         fdecl::ConfigField {
                             key: Some("test2".to_string()),
-                            value_type: Some(fdecl::ConfigValueType::Vector(
-                                fdecl::ConfigVectorType {
-                                    max_count: Some(100),
-                                    element_type: Some(fdecl::ConfigVectorElementType::String(
-                                        fdecl::ConfigStringType {
-                                            max_size: Some(50),
-                                            ..fdecl::ConfigStringType::EMPTY
-                                        }
-                                    )),
-                                    ..fdecl::ConfigVectorType::EMPTY
-                                }
-                            )),
+                            value_type: Some(fdecl::ConfigValueType {
+                                layout: fdecl::ConfigTypeLayout::Vector,
+                                parameters: Some(vec![fdecl::LayoutParameter::NestedType(
+                                    fdecl::ConfigValueType {
+                                        layout: fdecl::ConfigTypeLayout::String,
+                                        parameters: Some(vec![]),
+                                        constraints: vec![fdecl::LayoutConstraint::MaxSize(50)]
+                                    }
+                                )]),
+                                constraints: vec![fdecl::LayoutConstraint::MaxSize(100)]
+                            }),
                             ..fdecl::ConfigField::EMPTY
                         },
                         fdecl::ConfigField {
                             key: Some("test3".to_string()),
-                            value_type: Some(fdecl::ConfigValueType::Bool(fdecl::ConfigBooleanType::EMPTY)),
+                            value_type: Some(fdecl::ConfigValueType {
+                                layout: fdecl::ConfigTypeLayout::Bool,
+                                parameters: Some(vec![]),
+                                constraints: vec![]
+                            }),
                             ..fdecl::ConfigField::EMPTY
                         },
                         fdecl::ConfigField {
                             key: Some("test4".to_string()),
-                            value_type: Some(fdecl::ConfigValueType::Uint8(fdecl::ConfigUnsigned8Type::EMPTY)),
+                            value_type: Some(fdecl::ConfigValueType {
+                                layout: fdecl::ConfigTypeLayout::Uint8,
+                                parameters: Some(vec![]),
+                                constraints: vec![]
+                            }),
                             ..fdecl::ConfigField::EMPTY
                         },
                         fdecl::ConfigField {
                             key: Some("test5".to_string()),
-                            value_type: Some(fdecl::ConfigValueType::Int8(fdecl::ConfigSigned8Type::EMPTY)),
+                            value_type: Some(fdecl::ConfigValueType {
+                                layout: fdecl::ConfigTypeLayout::Int8,
+                                parameters: Some(vec![]),
+                                constraints: vec![]
+                            }),
                             ..fdecl::ConfigField::EMPTY
                         },
                         fdecl::ConfigField {
                             key: Some("test6".to_string()),
-                            value_type: Some(fdecl::ConfigValueType::Uint64(fdecl::ConfigUnsigned64Type::EMPTY)),
+                            value_type: Some(fdecl::ConfigValueType {
+                                layout: fdecl::ConfigTypeLayout::Uint64,
+                                parameters: Some(vec![]),
+                                constraints: vec![]
+                            }),
                             ..fdecl::ConfigField::EMPTY
                         },
                         fdecl::ConfigField {
                             key: Some("test7".to_string()),
-                            value_type: Some(fdecl::ConfigValueType::Int64(fdecl::ConfigSigned64Type::EMPTY)),
+                            value_type: Some(fdecl::ConfigValueType {
+                                layout: fdecl::ConfigTypeLayout::Int64,
+                                parameters: Some(vec![]),
+                                constraints: vec![]
+                            }),
                             ..fdecl::ConfigField::EMPTY
                         },
 
                         fdecl::ConfigField {
                             key: Some("test8".to_string()),
-                            value_type: Some(fdecl::ConfigValueType::Vector(
-                                fdecl::ConfigVectorType {
-                                    max_count: Some(100),
-                                    element_type: Some(fdecl::ConfigVectorElementType::Uint16(fdecl::ConfigUnsigned16Type::EMPTY)),
-                                    ..fdecl::ConfigVectorType::EMPTY
-                                }
-                            )),
+                            value_type: Some(fdecl::ConfigValueType {
+                                layout: fdecl::ConfigTypeLayout::Vector,
+                                parameters: Some(vec![fdecl::LayoutParameter::NestedType(
+                                    fdecl::ConfigValueType {
+                                        layout: fdecl::ConfigTypeLayout::Uint16,
+                                        parameters: Some(vec![]),
+                                        constraints: vec![]
+                                    }
+                                )]),
+                                constraints: vec![fdecl::LayoutConstraint::MaxSize(100)]
+                            }),
                             ..fdecl::ConfigField::EMPTY
                         },
                     ]),

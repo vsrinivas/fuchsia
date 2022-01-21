@@ -5,7 +5,7 @@
 use {
     crate::{
         error::Error, AnyRef, AsClause, Capability, CapabilityClause, Child, Collection, ConfigKey,
-        ConfigValueType, ConfigVectorElementType, DebugRegistration, Document, Environment,
+        ConfigNestedValueType, ConfigValueType, DebugRegistration, Document, Environment,
         EnvironmentExtends, EnvironmentRef, EventMode, EventModesClause, EventSubscriptionsClause,
         Expose, ExposeFromRef, ExposeToRef, FromClause, Offer, OneOrMany, Path, PathClause,
         Program, ResolverRegistration, RightsClause, RunnerRegistration, Use, UseFromRef,
@@ -607,79 +607,71 @@ fn translate_collections(
     Ok(out_collections)
 }
 
-/// Translates a vector element type string to a [`fuchsia.sys2.ConfigVectorElementType`]
-fn translate_vector_element_type(
-    element_type: &ConfigVectorElementType,
-) -> fdecl::ConfigVectorElementType {
-    match element_type {
-        ConfigVectorElementType::Bool => {
-            fdecl::ConfigVectorElementType::Bool(fdecl::ConfigBooleanType::EMPTY)
+/// Translates a nested value type to a [`fuchsia.config.decl.ConfigValueType`]
+fn translate_nested_value_type(nested_type: &ConfigNestedValueType) -> fdecl::ConfigValueType {
+    let layout = match nested_type {
+        ConfigNestedValueType::Bool => fdecl::ConfigTypeLayout::Bool,
+        ConfigNestedValueType::Uint8 => fdecl::ConfigTypeLayout::Uint8,
+        ConfigNestedValueType::Uint16 => fdecl::ConfigTypeLayout::Uint16,
+        ConfigNestedValueType::Uint32 => fdecl::ConfigTypeLayout::Uint32,
+        ConfigNestedValueType::Uint64 => fdecl::ConfigTypeLayout::Uint64,
+        ConfigNestedValueType::Int8 => fdecl::ConfigTypeLayout::Int8,
+        ConfigNestedValueType::Int16 => fdecl::ConfigTypeLayout::Int16,
+        ConfigNestedValueType::Int32 => fdecl::ConfigTypeLayout::Int32,
+        ConfigNestedValueType::Int64 => fdecl::ConfigTypeLayout::Int64,
+        ConfigNestedValueType::String { .. } => fdecl::ConfigTypeLayout::String,
+    };
+    let constraints = match nested_type {
+        ConfigNestedValueType::String { max_size } => {
+            vec![fdecl::LayoutConstraint::MaxSize(max_size.get())]
         }
-        ConfigVectorElementType::Uint8 => {
-            fdecl::ConfigVectorElementType::Uint8(fdecl::ConfigUnsigned8Type::EMPTY)
-        }
-        ConfigVectorElementType::Int8 => {
-            fdecl::ConfigVectorElementType::Int8(fdecl::ConfigSigned8Type::EMPTY)
-        }
-        ConfigVectorElementType::Uint16 => {
-            fdecl::ConfigVectorElementType::Uint16(fdecl::ConfigUnsigned16Type::EMPTY)
-        }
-        ConfigVectorElementType::Int16 => {
-            fdecl::ConfigVectorElementType::Int16(fdecl::ConfigSigned16Type::EMPTY)
-        }
-        ConfigVectorElementType::Uint32 => {
-            fdecl::ConfigVectorElementType::Uint32(fdecl::ConfigUnsigned32Type::EMPTY)
-        }
-        ConfigVectorElementType::Int32 => {
-            fdecl::ConfigVectorElementType::Int32(fdecl::ConfigSigned32Type::EMPTY)
-        }
-        ConfigVectorElementType::Uint64 => {
-            fdecl::ConfigVectorElementType::Uint64(fdecl::ConfigUnsigned64Type::EMPTY)
-        }
-        ConfigVectorElementType::Int64 => {
-            fdecl::ConfigVectorElementType::Int64(fdecl::ConfigSigned64Type::EMPTY)
-        }
-        ConfigVectorElementType::String { max_size } => {
-            fdecl::ConfigVectorElementType::String(fdecl::ConfigStringType {
-                max_size: Some(max_size.get()),
-                ..fdecl::ConfigStringType::EMPTY
-            })
-        }
+        _ => vec![],
+    };
+    fdecl::ConfigValueType {
+        layout,
+        constraints,
+        // This optional is not necessary, but without it,
+        // FIDL compilation complains because of a possible include-cycle.
+        // Bug: http://fxbug.dev/66350
+        parameters: Some(vec![]),
     }
 }
 
-/// Translates a value type string to a [`fuchsia.sys2.ConfigValueType`]
+/// Translates a value type to a [`fuchsia.sys2.ConfigValueType`]
 fn translate_value_type(value_type: &ConfigValueType) -> fdecl::ConfigValueType {
-    match value_type {
-        ConfigValueType::Bool => fdecl::ConfigValueType::Bool(fdecl::ConfigBooleanType::EMPTY),
-        ConfigValueType::Uint8 => fdecl::ConfigValueType::Uint8(fdecl::ConfigUnsigned8Type::EMPTY),
-        ConfigValueType::Int8 => fdecl::ConfigValueType::Int8(fdecl::ConfigSigned8Type::EMPTY),
-        ConfigValueType::Uint16 => {
-            fdecl::ConfigValueType::Uint16(fdecl::ConfigUnsigned16Type::EMPTY)
-        }
-        ConfigValueType::Int16 => fdecl::ConfigValueType::Int16(fdecl::ConfigSigned16Type::EMPTY),
-        ConfigValueType::Uint32 => {
-            fdecl::ConfigValueType::Uint32(fdecl::ConfigUnsigned32Type::EMPTY)
-        }
-        ConfigValueType::Int32 => fdecl::ConfigValueType::Int32(fdecl::ConfigSigned32Type::EMPTY),
-        ConfigValueType::Uint64 => {
-            fdecl::ConfigValueType::Uint64(fdecl::ConfigUnsigned64Type::EMPTY)
-        }
-        ConfigValueType::Int64 => fdecl::ConfigValueType::Int64(fdecl::ConfigSigned64Type::EMPTY),
+    let layout = match value_type {
+        ConfigValueType::Bool => fdecl::ConfigTypeLayout::Bool,
+        ConfigValueType::Uint8 => fdecl::ConfigTypeLayout::Uint8,
+        ConfigValueType::Uint16 => fdecl::ConfigTypeLayout::Uint16,
+        ConfigValueType::Uint32 => fdecl::ConfigTypeLayout::Uint32,
+        ConfigValueType::Uint64 => fdecl::ConfigTypeLayout::Uint64,
+        ConfigValueType::Int8 => fdecl::ConfigTypeLayout::Int8,
+        ConfigValueType::Int16 => fdecl::ConfigTypeLayout::Int16,
+        ConfigValueType::Int32 => fdecl::ConfigTypeLayout::Int32,
+        ConfigValueType::Int64 => fdecl::ConfigTypeLayout::Int64,
+        ConfigValueType::String { .. } => fdecl::ConfigTypeLayout::String,
+        ConfigValueType::Vector { .. } => fdecl::ConfigTypeLayout::Vector,
+    };
+    let (constraints, parameters) = match value_type {
         ConfigValueType::String { max_size } => {
-            fdecl::ConfigValueType::String(fdecl::ConfigStringType {
-                max_size: Some(max_size.get()),
-                ..fdecl::ConfigStringType::EMPTY
-            })
+            (vec![fdecl::LayoutConstraint::MaxSize(max_size.get())], vec![])
         }
         ConfigValueType::Vector { max_count, element } => {
-            let element_type = translate_vector_element_type(element);
-            fdecl::ConfigValueType::Vector(fdecl::ConfigVectorType {
-                max_count: Some(max_count.get()),
-                element_type: Some(element_type),
-                ..fdecl::ConfigVectorType::EMPTY
-            })
+            let nested_type = translate_nested_value_type(element);
+            (
+                vec![fdecl::LayoutConstraint::MaxSize(max_count.get())],
+                vec![fdecl::LayoutParameter::NestedType(nested_type)],
+            )
         }
+        _ => (vec![], vec![]),
+    };
+    fdecl::ConfigValueType {
+        layout,
+        constraints,
+        // This optional is not necessary, but without it,
+        // FIDL compilation complains because of a possible include-cycle.
+        // Bug: http://fxbug.dev/66350
+        parameters: Some(parameters),
     }
 }
 

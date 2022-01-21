@@ -691,12 +691,12 @@ mod tests {
             },
         },
         cm_rust::{
-            self, CapabilityName, CapabilityPath, ComponentDecl, ConfigBooleanType, ConfigDecl,
-            ConfigField, ConfigStringType, ConfigValueSource, ConfigValueType,
-            ConfigVectorElementType, ConfigVectorType, DependencyType, DirectoryDecl, EventMode,
-            EventSubscription, ExposeDecl, ExposeDirectoryDecl, ExposeProtocolDecl, ExposeSource,
-            ExposeTarget, ProtocolDecl, UseDecl, UseDirectoryDecl, UseEventDecl,
-            UseEventStreamDeprecatedDecl, UseProtocolDecl, UseSource,
+            self, CapabilityName, CapabilityPath, ComponentDecl, ConfigDecl, ConfigField,
+            ConfigNestedValueType, ConfigValueSource, ConfigValueType, DependencyType,
+            DirectoryDecl, EventMode, EventSubscription, ExposeDecl, ExposeDirectoryDecl,
+            ExposeProtocolDecl, ExposeSource, ExposeTarget, ProtocolDecl, UseDecl,
+            UseDirectoryDecl, UseEventDecl, UseEventStreamDeprecatedDecl, UseProtocolDecl,
+            UseSource,
         },
         cm_rust_testing::ComponentDeclBuilder,
         fidl::endpoints::ServerEnd,
@@ -967,22 +967,18 @@ mod tests {
                         fields: vec![
                             ConfigField {
                                 key: "logging".to_string(),
-                                value_type: ConfigValueType::Bool(ConfigBooleanType {}),
+                                value_type: ConfigValueType::Bool,
                             },
                             ConfigField {
                                 key: "verbosity".to_string(),
-                                value_type: ConfigValueType::String(ConfigStringType {
-                                    max_size: 10,
-                                }),
+                                value_type: ConfigValueType::String { max_size: 10 },
                             },
                             ConfigField {
                                 key: "tags".to_string(),
-                                value_type: ConfigValueType::Vector(ConfigVectorType {
+                                value_type: ConfigValueType::Vector {
                                     max_count: 10,
-                                    element_type: ConfigVectorElementType::String(
-                                        ConfigStringType { max_size: 20 },
-                                    ),
-                                }),
+                                    nested_type: ConfigNestedValueType::String { max_size: 20 },
+                                },
                             },
                         ],
                         declaration_checksum: checksum.clone(),

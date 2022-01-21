@@ -6,102 +6,94 @@
 #[macro_export]
 macro_rules! config_ty {
     (bool) => {
-        cm_rust::ConfigValueType::Bool(cm_rust::ConfigBooleanType {})
+        cm_rust::ConfigValueType::Bool
     };
     (uint8) => {
-        cm_rust::ConfigValueType::Uint8(cm_rust::ConfigUnsigned8Type {})
+        cm_rust::ConfigValueType::Uint8
     };
     (uint16) => {
-        cm_rust::ConfigValueType::Uint16(cm_rust::ConfigUnsigned16Type {})
+        cm_rust::ConfigValueType::Uint16
     };
     (uint32) => {
-        cm_rust::ConfigValueType::Uint32(cm_rust::ConfigUnsigned32Type {})
+        cm_rust::ConfigValueType::Uint32
     };
     (uint64) => {
-        cm_rust::ConfigValueType::Uint64(cm_rust::ConfigUnsigned64Type {})
+        cm_rust::ConfigValueType::Uint64
     };
     (int8) => {
-        cm_rust::ConfigValueType::Int8(cm_rust::ConfigSigned8Type {})
+        cm_rust::ConfigValueType::Int8
     };
     (int16) => {
-        cm_rust::ConfigValueType::Int16(cm_rust::ConfigSigned16Type {})
+        cm_rust::ConfigValueType::Int16
     };
     (int32) => {
-        cm_rust::ConfigValueType::Int32(cm_rust::ConfigSigned32Type {})
+        cm_rust::ConfigValueType::Int32
     };
     (int64) => {
-        cm_rust::ConfigValueType::Int64(cm_rust::ConfigSigned64Type {})
+        cm_rust::ConfigValueType::Int64
     };
     (string, max_size: $size:expr ) => {
-        cm_rust::ConfigValueType::String(cm_rust::ConfigStringType { max_size: $size })
+        cm_rust::ConfigValueType::String { max_size: $size }
     };
     (vector, element: bool, max_count: $count:expr ) => {
-        cm_rust::ConfigValueType::Vector(cm_rust::ConfigVectorType {
+        cm_rust::ConfigValueType::Vector {
             max_count: $count,
-            element_type: cm_rust::ConfigVectorElementType::Bool(cm_rust::ConfigBooleanType {}),
-        })
+            nested_type: cm_rust::ConfigNestedValueType::Bool,
+        }
     };
     (vector, element: uint8, max_count: $count:expr ) => {
-        cm_rust::ConfigValueType::Vector(cm_rust::ConfigVectorType {
+        cm_rust::ConfigValueType::Vector {
             max_count: $count,
-            element_type: cm_rust::ConfigVectorElementType::Uint8(cm_rust::ConfigUnsigned8Type {}),
-        })
+            nested_type: cm_rust::ConfigNestedValueType::Uint8,
+        }
     };
     (vector, element: uint16, max_count: $count:expr ) => {
-        cm_rust::ConfigValueType::Vector(cm_rust::ConfigVectorType {
+        cm_rust::ConfigValueType::Vector {
             max_count: $count,
-            element_type: cm_rust::ConfigVectorElementType::Uint16(
-                cm_rust::ConfigUnsigned16Type {},
-            ),
-        })
+            nested_type: cm_rust::ConfigNestedValueType::Uint16,
+        }
     };
     (vector, element: uint32, max_count: $count:expr ) => {
-        cm_rust::ConfigValueType::Vector(cm_rust::ConfigVectorType {
+        cm_rust::ConfigValueType::Vector {
             max_count: $count,
-            element_type: cm_rust::ConfigVectorElementType::Uint32(
-                cm_rust::ConfigUnsigned32Type {},
-            ),
-        })
+            nested_type: cm_rust::ConfigNestedValueType::Uint32,
+        }
     };
     (vector, element: uint64, max_count: $count:expr ) => {
-        cm_rust::ConfigValueType::Vector(cm_rust::ConfigVectorType {
+        cm_rust::ConfigValueType::Vector {
             max_count: $count,
-            element_type: cm_rust::ConfigVectorElementType::Uint64(
-                cm_rust::ConfigUnsigned64Type {},
-            ),
-        })
+            nested_type: cm_rust::ConfigNestedValueType::Uint64,
+        }
     };
     (vector, element: int8, max_count: $count:expr ) => {
-        cm_rust::ConfigValueType::Vector(cm_rust::ConfigVectorType {
+        cm_rust::ConfigValueType::Vector {
             max_count: $count,
-            element_type: cm_rust::ConfigVectorElementType::Int8(cm_rust::ConfigSigned8Type {}),
-        })
+            nested_type: cm_rust::ConfigNestedValueType::Int8,
+        }
     };
     (vector, element: int16, max_count: $count:expr ) => {
-        cm_rust::ConfigValueType::Vector(cm_rust::ConfigVectorType {
+        cm_rust::ConfigValueType::Vector {
             max_count: $count,
-            element_type: cm_rust::ConfigVectorElementType::Int16(cm_rust::ConfigSigned16Type {}),
-        })
+            nested_type: cm_rust::ConfigNestedValueType::Int16,
+        }
     };
     (vector, element: int32, max_count: $count:expr ) => {
-        cm_rust::ConfigValueType::Vector(cm_rust::ConfigVectorType {
+        cm_rust::ConfigValueType::Vector {
             max_count: $count,
-            element_type: cm_rust::ConfigVectorElementType::Int32(cm_rust::ConfigSigned32Type {}),
-        })
+            nested_type: cm_rust::ConfigNestedValueType::Int32,
+        }
     };
     (vector, element: int64, max_count: $count:expr ) => {
-        cm_rust::ConfigValueType::Vector(cm_rust::ConfigVectorType {
+        cm_rust::ConfigValueType::Vector {
             max_count: $count,
-            element_type: cm_rust::ConfigVectorElementType::Int64(cm_rust::ConfigSigned64Type {}),
-        })
+            nested_type: cm_rust::ConfigNestedValueType::Int64,
+        }
     };
     (vector, element: { string, max_size: $size:expr }, max_count: $count:expr ) => {
-        cm_rust::ConfigValueType::Vector(cm_rust::ConfigVectorType {
+        cm_rust::ConfigValueType::Vector {
             max_count: $count,
-            element_type: cm_rust::ConfigVectorElementType::String(cm_rust::ConfigStringType {
-                max_size: $size,
-            }),
-        })
+            nested_type: cm_rust::ConfigNestedValueType::String { max_size: $size },
+        }
     };
 }
 

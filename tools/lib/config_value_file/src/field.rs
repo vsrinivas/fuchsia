@@ -4,7 +4,7 @@
 
 //! Validating and encoding individual configuration fields.
 
-use cm_rust::{ConfigStringType, ConfigValueType, ConfigVectorElementType, ConfigVectorType};
+use cm_rust::{ConfigNestedValueType, ConfigValueType};
 use fidl_fuchsia_component_config::{ListValue, SingleValue, Value};
 use serde_json::Value as JsonValue;
 use std::{
@@ -20,26 +20,29 @@ pub fn config_value_from_json_value(
     value_type: &ConfigValueType,
 ) -> Result<Value, FieldError> {
     Ok(match value_type {
-        ConfigValueType::Bool(..) => Value::Single(SingleValue::Flag(val.parse_bool()?)),
-        ConfigValueType::Uint8(..) => Value::Single(SingleValue::Unsigned8(val.parse_u8()?)),
-        ConfigValueType::Uint16(..) => Value::Single(SingleValue::Unsigned16(val.parse_u16()?)),
-        ConfigValueType::Uint32(..) => Value::Single(SingleValue::Unsigned32(val.parse_u32()?)),
-        ConfigValueType::Uint64(..) => Value::Single(SingleValue::Unsigned64(val.parse_u64()?)),
-        ConfigValueType::Int8(..) => Value::Single(SingleValue::Signed8(val.parse_i8()?)),
-        ConfigValueType::Int16(..) => Value::Single(SingleValue::Signed16(val.parse_i16()?)),
-        ConfigValueType::Int32(..) => Value::Single(SingleValue::Signed32(val.parse_i32()?)),
-        ConfigValueType::Int64(..) => Value::Single(SingleValue::Signed64(val.parse_i64()?)),
-        ConfigValueType::String(ConfigStringType { max_size }) => {
+        ConfigValueType::Bool => Value::Single(SingleValue::Flag(val.parse_bool()?)),
+        ConfigValueType::Uint8 => Value::Single(SingleValue::Unsigned8(val.parse_u8()?)),
+        ConfigValueType::Uint16 => Value::Single(SingleValue::Unsigned16(val.parse_u16()?)),
+        ConfigValueType::Uint32 => Value::Single(SingleValue::Unsigned32(val.parse_u32()?)),
+        ConfigValueType::Uint64 => Value::Single(SingleValue::Unsigned64(val.parse_u64()?)),
+        ConfigValueType::Int8 => Value::Single(SingleValue::Signed8(val.parse_i8()?)),
+        ConfigValueType::Int16 => Value::Single(SingleValue::Signed16(val.parse_i16()?)),
+        ConfigValueType::Int32 => Value::Single(SingleValue::Signed32(val.parse_i32()?)),
+        ConfigValueType::Int64 => Value::Single(SingleValue::Signed64(val.parse_i64()?)),
+        ConfigValueType::String { max_size } => {
             Value::Single(SingleValue::Text(val.parse_string(*max_size)?))
         }
-        ConfigValueType::Vector(vector_ty) => Value::List(list_value_from_json(val, vector_ty)?),
+        ConfigValueType::Vector { max_count, nested_type } => {
+            Value::List(list_value_from_json(val, max_count, nested_type)?)
+        }
     })
 }
 
 /// Parse `val` as a list/vector of configuration values.
 fn list_value_from_json(
     val: &JsonValue,
-    ConfigVectorType { max_count, element_type }: &ConfigVectorType,
+    max_count: &u32,
+    nested_type: &ConfigNestedValueType,
 ) -> Result<ListValue, FieldError> {
     // define our array up here so its identifier is available for our helper macro
     let array = val.as_array().ok_or_else(|| FieldError::JsonTypeMismatch {
@@ -64,26 +67,26 @@ fn list_value_from_json(
         }};
     }
 
-    Ok(match element_type {
-        ConfigVectorElementType::Bool(..) => {
+    Ok(match nested_type {
+        ConfigNestedValueType::Bool => {
             list_from_array!(FlagList, v => v.parse_bool()?)
         }
-        ConfigVectorElementType::Uint8(..) => list_from_array!(Unsigned8List, v => v.parse_u8()?),
-        ConfigVectorElementType::Uint16(..) => {
+        ConfigNestedValueType::Uint8 => list_from_array!(Unsigned8List, v => v.parse_u8()?),
+        ConfigNestedValueType::Uint16 => {
             list_from_array!(Unsigned16List, v => v.parse_u16()?)
         }
-        ConfigVectorElementType::Uint32(..) => {
+        ConfigNestedValueType::Uint32 => {
             list_from_array!(Unsigned32List, v => v.parse_u32()?)
         }
-        ConfigVectorElementType::Uint64(..) => {
+        ConfigNestedValueType::Uint64 => {
             list_from_array!(Unsigned64List, v => v.parse_u64()?)
         }
-        ConfigVectorElementType::Int8(..) => list_from_array!(Signed8List,  v => v.parse_i8()?),
-        ConfigVectorElementType::Int16(..) => list_from_array!(Signed16List, v => v.parse_i16()?),
-        ConfigVectorElementType::Int32(..) => list_from_array!(Signed32List, v => v.parse_i32()?),
-        ConfigVectorElementType::Int64(..) => list_from_array!(Signed64List, v => v.parse_i64()?),
-        ConfigVectorElementType::String(string_ty) => {
-            list_from_array!(TextList, v => v.parse_string(string_ty.max_size)?)
+        ConfigNestedValueType::Int8 => list_from_array!(Signed8List,  v => v.parse_i8()?),
+        ConfigNestedValueType::Int16 => list_from_array!(Signed16List, v => v.parse_i16()?),
+        ConfigNestedValueType::Int32 => list_from_array!(Signed32List, v => v.parse_i32()?),
+        ConfigNestedValueType::Int64 => list_from_array!(Signed64List, v => v.parse_i64()?),
+        ConfigNestedValueType::String { max_size } => {
+            list_from_array!(TextList, v => v.parse_string(*max_size)?)
         }
     })
 }

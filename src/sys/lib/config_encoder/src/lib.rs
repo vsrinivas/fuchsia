@@ -6,10 +6,7 @@
 
 //! Library for resolving and encoding the runtime configuration values of a component.
 
-use cm_rust::{
-    ConfigDecl, ConfigField as ConfigFieldDecl, ConfigStringType, ConfigValueType,
-    ConfigVectorElementType, ConfigVectorType,
-};
+use cm_rust::{ConfigDecl, ConfigField as ConfigFieldDecl, ConfigNestedValueType, ConfigValueType};
 use dynfidl::{BasicField, Field, Structure, VectorField};
 use fidl_fuchsia_component_config::{ListValue, SingleValue, Value, ValueSpec, ValuesData};
 use thiserror::Error;
@@ -160,43 +157,34 @@ impl ConfigField {
         let key = decl_field.key.clone();
 
         match (&resolved_value, &decl_field.value_type) {
-            (Value::Single(SingleValue::Flag(_)), ConfigValueType::Bool(..))
-            | (Value::Single(SingleValue::Unsigned8(_)), ConfigValueType::Uint8(..))
-            | (Value::Single(SingleValue::Unsigned16(_)), ConfigValueType::Uint16(..))
-            | (Value::Single(SingleValue::Unsigned32(_)), ConfigValueType::Uint32(..))
-            | (Value::Single(SingleValue::Unsigned64(_)), ConfigValueType::Uint64(..))
-            | (Value::Single(SingleValue::Signed8(_)), ConfigValueType::Int8(..))
-            | (Value::Single(SingleValue::Signed16(_)), ConfigValueType::Int16(..))
-            | (Value::Single(SingleValue::Signed32(_)), ConfigValueType::Int32(..))
-            | (Value::Single(SingleValue::Signed64(_)), ConfigValueType::Int64(..)) => (),
-            (
-                Value::Single(SingleValue::Text(text)),
-                ConfigValueType::String(ConfigStringType { max_size }),
-            ) => {
+            (Value::Single(SingleValue::Flag(_)), ConfigValueType::Bool)
+            | (Value::Single(SingleValue::Unsigned8(_)), ConfigValueType::Uint8)
+            | (Value::Single(SingleValue::Unsigned16(_)), ConfigValueType::Uint16)
+            | (Value::Single(SingleValue::Unsigned32(_)), ConfigValueType::Uint32)
+            | (Value::Single(SingleValue::Unsigned64(_)), ConfigValueType::Uint64)
+            | (Value::Single(SingleValue::Signed8(_)), ConfigValueType::Int8)
+            | (Value::Single(SingleValue::Signed16(_)), ConfigValueType::Int16)
+            | (Value::Single(SingleValue::Signed32(_)), ConfigValueType::Int32)
+            | (Value::Single(SingleValue::Signed64(_)), ConfigValueType::Int64) => (),
+            (Value::Single(SingleValue::Text(text)), ConfigValueType::String { max_size }) => {
                 let max_size = *max_size as usize;
                 if text.len() > max_size {
                     return Err(ValueError::StringTooLong { max: max_size, actual: text.len() });
                 }
             }
-            (
-                Value::List(list),
-                ConfigValueType::Vector(ConfigVectorType { element_type, max_count }),
-            ) => {
+            (Value::List(list), ConfigValueType::Vector { nested_type, max_count }) => {
                 let max_count = *max_count as usize;
-                let actual_count = match (list, element_type) {
-                    (ListValue::FlagList(l), ConfigVectorElementType::Bool(_)) => l.len(),
-                    (ListValue::Unsigned8List(l), ConfigVectorElementType::Uint8(_)) => l.len(),
-                    (ListValue::Unsigned16List(l), ConfigVectorElementType::Uint16(_)) => l.len(),
-                    (ListValue::Unsigned32List(l), ConfigVectorElementType::Uint32(_)) => l.len(),
-                    (ListValue::Unsigned64List(l), ConfigVectorElementType::Uint64(_)) => l.len(),
-                    (ListValue::Signed8List(l), ConfigVectorElementType::Int8(_)) => l.len(),
-                    (ListValue::Signed16List(l), ConfigVectorElementType::Int16(_)) => l.len(),
-                    (ListValue::Signed32List(l), ConfigVectorElementType::Int32(_)) => l.len(),
-                    (ListValue::Signed64List(l), ConfigVectorElementType::Int64(_)) => l.len(),
-                    (
-                        ListValue::TextList(l),
-                        ConfigVectorElementType::String(ConfigStringType { max_size }),
-                    ) => {
+                let actual_count = match (list, nested_type) {
+                    (ListValue::FlagList(l), ConfigNestedValueType::Bool) => l.len(),
+                    (ListValue::Unsigned8List(l), ConfigNestedValueType::Uint8) => l.len(),
+                    (ListValue::Unsigned16List(l), ConfigNestedValueType::Uint16) => l.len(),
+                    (ListValue::Unsigned32List(l), ConfigNestedValueType::Uint32) => l.len(),
+                    (ListValue::Unsigned64List(l), ConfigNestedValueType::Uint64) => l.len(),
+                    (ListValue::Signed8List(l), ConfigNestedValueType::Int8) => l.len(),
+                    (ListValue::Signed16List(l), ConfigNestedValueType::Int16) => l.len(),
+                    (ListValue::Signed32List(l), ConfigNestedValueType::Int32) => l.len(),
+                    (ListValue::Signed64List(l), ConfigNestedValueType::Int64) => l.len(),
+                    (ListValue::TextList(l), ConfigNestedValueType::String { max_size }) => {
                         let max_size = *max_size as usize;
                         for (i, s) in l.iter().enumerate() {
                             if s.len() > max_size {

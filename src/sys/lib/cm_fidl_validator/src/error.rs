@@ -45,6 +45,8 @@ pub enum Error {
     InvalidPathOverlap { decl: DeclField, path: String, other_decl: DeclField, other_path: String },
     #[error("built-in capability decl {0} should not specify a source path, found \"{1}\"")]
     ExtraneousSourcePath(DeclField, String),
+    #[error("configuration schema defines a vector nested in another vector")]
+    NestedVector,
 }
 
 impl Error {
@@ -208,6 +210,10 @@ impl Error {
             DeclField { decl: decl_type.into(), field: "source_path".to_string() },
             path.into(),
         )
+    }
+
+    pub fn nested_vector() -> Self {
+        Error::NestedVector
     }
 }
 
