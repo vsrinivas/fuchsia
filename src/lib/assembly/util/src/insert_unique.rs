@@ -7,31 +7,93 @@ use std::collections::{btree_map, BTreeMap, BTreeSet};
 /// Extension trait for inserting into a collection, while validating that no
 /// duplicate values (or keys, in the case of a Map) are being inserted.
 ///
-/// This is similar to the unstable `try_insert()` fn on `BTreeMap`, but can be
+/// This is similar to the unstable [`BTreeMap::try_insert()`], but can be
 /// implemented for any collection type.
 ///
-/// # Example
+/// In Map implementations, the Error implements ['DuplicateKeyError'] to provide
+/// access to the duplicate key, the previous value, and the new value.
 ///
+/// # Examples
+///
+/// Set implementations return `Err(value)` in the case of a duplicate.
+/// ```
+/// use std::collections::BTreeSet
+/// use crate::InsertUniqueExt;
+///
+/// let mut set = BTreeSet::new();
+/// set.try_insert_unique("some string".to_string())?; // Ok(())
+/// let result = set.try_insert_unique("some_string".to_string());
+/// let err_value = result.unwrap_err();
+/// assert_eq!(err_value, "some_string");
+/// ```
+///
+/// Map Implementations return `Err(impl DuplicateKeyError<K,V>)` in the case of
+/// attempting to insert an entry with a key that already exists in the map.
 /// ```
 /// use std::collections::BTreeMap;
 /// use crate::{InsertUniqueExt, MapEntry, DuplicateKeyError};
 ///
-/// let mut map = BTreeMap::new()
+/// let mut map = BTreeMap::<String, i32>::new();
 /// map.try_insert_unique(MapEntry("some key", 42))?;
 /// let result = map.try_insert_unique(MapEntry("some key", 34));
-/// let error = result.unwrap_err();
+/// let error = result.unwrap_err();  // impl DuplicateKeyError<String, i32>
 /// println!(
 ///     "attempted to set duplicate value '{}' for key '{}', previously was '{}'",
 ///     error.new_value(),
 ///     error.key(),
 ///     error.previous_value());
+/// ```
 pub trait InsertUniqueExt<'a, T> {
     /// The error type that is returned by an implementation of the trait, it is
     /// used to provide access to the previously-set value (or key-value pair).
     type Error;
+
     /// Inserts a value into a collection, returning an error if the value to be
     /// inserted is a duplicate of an existing value.
     fn try_insert_unique(&'a mut self, value: T) -> Result<(), Self::Error>;
+}
+
+/// Extension trait for inserting into a collection, while validating that no
+/// duplicate values are being inserted.
+///
+/// In the event of a duplicate item, the iterator is consumed up to the
+/// duplicate, and the `Error` returned will contain the duplicate item.
+///
+/// In Map implementations, the Error implements [`DuplicateKeyError`] to
+/// provide access to the duplicate key, the previous value, and the new value.
+///
+/// # Examples
+///
+/// ```
+/// use std::collections::BTreeSet
+/// use crate::InsertAllUniqueExt;
+///
+/// let mut set = BTreeSet::new();
+/// set.try_insert_unique("some string".to_string())?; // Ok(())
+///
+/// let items_to_insert = vec![
+///     "another string".to_string(),
+///     "some string".to_string(),
+///     "yet another string".to_string()
+/// ].into_iter();
+///
+///
+/// let result = set.try_insert_all_unique(items_to_insert);
+/// let err_value = result.unwrap_err();
+/// assert_eq!(err_value, "some_string");
+/// assert_eq!(items_to_insert.next(), Some("yet another string"));
+/// ```
+pub trait InsertAllUniqueExt<'a, T> {
+    /// The error type that is returned by an implementation of the trait, it is
+    /// used to provide access to the previously-set value (or key-value pair).
+    type Error;
+
+    /// Inserts all items from the iterator into a collection, returning an error
+    /// if any value to be inserted is a duplicate.
+    fn try_insert_all_unique(
+        &'a mut self,
+        iter: impl IntoIterator<Item = T>,
+    ) -> Result<(), Self::Error>;
 }
 
 impl<'a, T: Ord> InsertUniqueExt<'a, T> for BTreeSet<T> {
@@ -43,6 +105,20 @@ impl<'a, T: Ord> InsertUniqueExt<'a, T> for BTreeSet<T> {
             self.insert(value);
             Ok(())
         }
+    }
+}
+
+impl<'a, T: Ord> InsertAllUniqueExt<'a, T> for BTreeSet<T> {
+    type Error = T;
+    fn try_insert_all_unique(&'a mut self, iter: impl IntoIterator<Item = T>) -> Result<(), T> {
+        for value in iter.into_iter() {
+            if self.contains(&value) {
+                return Err(value);
+            } else {
+                self.insert(value);
+            }
+        }
+        Ok(())
     }
 }
 
@@ -67,22 +143,50 @@ pub trait DuplicateKeyError<'a, K, V> {
 impl<'a, K: Ord + 'a, V: 'a> InsertUniqueExt<'a, MapEntry<K, V>> for BTreeMap<K, V> {
     type Error = BTreeMapDuplicateKeyError<'a, K, V>;
     fn try_insert_unique(&'a mut self, entry: MapEntry<K, V>) -> Result<(), Self::Error> {
-        let MapEntry(key, value) = entry;
+        let MapEntry(key, new_value) = entry;
         match self.entry(key) {
             btree_map::Entry::Vacant(entry) => {
-                entry.insert(value);
+                entry.insert(new_value);
                 Ok(())
             }
-            btree_map::Entry::Occupied(entry) => {
-                Err(BTreeMapDuplicateKeyError { existing_entry: entry, new_value: value })
+            btree_map::Entry::Occupied(existing_entry) => {
+                Err(BTreeMapDuplicateKeyError { existing_entry, new_value })
             }
         }
     }
 }
 
+impl<'a, K: Ord + 'a, V: 'a> InsertAllUniqueExt<'a, MapEntry<K, V>> for BTreeMap<K, V> {
+    type Error = BTreeMapDuplicateKeyError<'a, K, V>;
+    fn try_insert_all_unique(
+        &'a mut self,
+        iter: impl IntoIterator<Item = MapEntry<K, V>>,
+    ) -> Result<(), Self::Error> {
+        let result = iter.into_iter().try_for_each(|entry| {
+            let MapEntry(key, new_value) = entry;
+            if self.contains_key(&key) {
+                Err((key, new_value))
+            } else {
+                self.insert(key, new_value);
+                Ok(())
+            }
+        });
+        if let Err((key, new_value)) = result {
+            if let btree_map::Entry::Occupied(existing_entry) = self.entry(key) {
+                return Err(BTreeMapDuplicateKeyError { existing_entry, new_value });
+            }
+            // The result cannot be Err() and the map not have an occupied entry,
+            // based on the contains_key() check above, so this is not reachable.
+            unreachable!();
+        }
+        Ok(())
+    }
+}
+
 /// Wrapper to provide both the duplicated key (and its existing value) with the
 /// new value that was attempted to be inserted.
-pub struct BTreeMapDuplicateKeyError<'a, K, V> {
+#[derive(Debug)]
+pub struct BTreeMapDuplicateKeyError<'a, K: Ord, V> {
     existing_entry: btree_map::OccupiedEntry<'a, K, V>,
     new_value: V,
 }
@@ -97,6 +201,29 @@ impl<'a, K: 'a + Ord, V: 'a> DuplicateKeyError<'a, K, V> for BTreeMapDuplicateKe
     fn new_value(&'a self) -> &'a V {
         &self.new_value
     }
+}
+
+impl<'a, K: 'a + Ord, V: 'a> std::fmt::Display for BTreeMapDuplicateKeyError<'a, K, V>
+where
+    K: 'a + std::fmt::Display,
+    V: 'a + std::fmt::Display,
+{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "duplicate key: '{}', found while inserting value: '{}', the previous value was: '{}'",
+            self.key(),
+            self.new_value(),
+            &self.previous_value()
+        )
+    }
+}
+
+impl<'a, K: 'a + Ord, V: 'a> std::error::Error for BTreeMapDuplicateKeyError<'a, K, V>
+where
+    K: 'a + std::fmt::Display + std::fmt::Debug,
+    V: 'a + std::fmt::Display + std::fmt::Debug,
+{
 }
 
 #[cfg(test)]
@@ -125,6 +252,53 @@ mod tests {
 
         assert_eq!(set.len(), 1);
         assert!(set.contains("some string"));
+    }
+
+    #[test]
+    fn test_btrees_set_insert_all_ok() {
+        let mut set = BTreeSet::new();
+        set.insert("some string".to_string());
+
+        let items_to_insert = vec!["another string".to_string(), "yet another string".to_string()];
+        let result = set.try_insert_all_unique(items_to_insert);
+        assert!(result.is_ok());
+
+        assert_eq!(set.len(), 3);
+        assert!(set.contains("some string"));
+        assert!(set.contains("another string"));
+        assert!(set.contains("yet another string"));
+    }
+
+    #[test]
+    fn test_btrees_set_insert_all_fails_on_duplicate() {
+        let mut set = BTreeSet::new();
+        set.insert("some string".to_string());
+
+        // Setup an iterator that emits:
+        //  - a new value
+        //  - a duplicate value
+        //  - another new value
+        let mut items_to_insert = vec![
+            "another string".to_string(),
+            "some string".to_string(),
+            "yet another string".to_string(),
+        ]
+        .into_iter();
+
+        let result = set.try_insert_all_unique(&mut items_to_insert);
+
+        // Validate that the error contains the duplicate value.
+        let err = result.unwrap_err();
+        assert_eq!(err, "some string");
+
+        // Validate that the first new value was added:
+        assert_eq!(set.len(), 2);
+        assert!(set.contains("some string"));
+        assert!(set.contains("another string"));
+
+        // Validate that the iterator will still return the next value after the
+        // the duplicate.
+        assert_eq!(items_to_insert.next().unwrap(), "yet another string");
     }
 
     #[test]
@@ -160,6 +334,103 @@ mod tests {
         // And that the map hasn't changed the key (or added another)
         assert_eq!(map.len(), 1);
         assert_eq!(map.get("first_key").unwrap(), "first_value");
+    }
+
+    #[test]
+    fn test_btree_map_error_impls_display() {
+        let mut map = BTreeMap::new();
+        map.insert("first_key".to_string(), "first_value".to_string());
+        let result =
+            map.try_insert_unique(MapEntry("first_key".to_string(), "second_value".to_string()));
+
+        let error = result.unwrap_err();
+        let error_display_string = format!("{}", error);
+        assert_eq!(error_display_string, format!("duplicate key: '{}', found while inserting value: '{}', the previous value was: '{}'", "first_key", "second_value", "first_value"));
+    }
+
+    #[test]
+    fn test_btree_map_error_impls_error() {
+        let mut map = BTreeMap::new();
+        map.insert("first_key".to_string(), "first_value".to_string());
+        let result =
+            map.try_insert_unique(MapEntry("first_key".to_string(), "second_value".to_string()));
+
+        let error = result.unwrap_err();
+
+        // call Error::source as a fully qualified fn on the trait so that we
+        // know that the error returned implements Error.
+        assert!(std::error::Error::source(&error).is_none());
+    }
+
+    #[test]
+    fn test_btree_map_error_is_returnable_via_anyhow() {
+        fn inner_fn(map: &mut BTreeMap<String, String>) -> anyhow::Result<()> {
+            map.try_insert_unique(MapEntry("key".to_string(), "value".to_string()))
+                .map_err(|e| anyhow::anyhow!(e.to_string()))
+        }
+
+        let mut map = BTreeMap::new();
+        map.insert("key".to_string(), "value".to_string());
+        let result = inner_fn(&mut map);
+
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_btree_map_insert_all_ok() {
+        let mut map = BTreeMap::new();
+        map.insert("first_key".to_string(), "first_value".to_string());
+
+        let entries_to_insert = vec![
+            MapEntry("second_key".to_string(), "second_value".to_string()),
+            MapEntry("third_key".to_string(), "third_value".to_string()),
+        ];
+        let result = map.try_insert_all_unique(entries_to_insert);
+
+        // Validate that it returned ok.
+        assert!(result.is_ok());
+
+        // And that both key-value pairs are present.
+        assert_eq!(map.len(), 3);
+        assert_eq!(map.get("first_key").unwrap(), "first_value");
+        assert_eq!(map.get("second_key").unwrap(), "second_value");
+        assert_eq!(map.get("third_key").unwrap(), "third_value");
+    }
+
+    #[test]
+    fn test_btree_map_insert_all_fails_on_duplicate_key() {
+        let mut map = BTreeMap::new();
+        map.insert("some key".to_string(), "some value".to_string());
+
+        // Setup an iterator that emits:
+        //  - a new value
+        //  - a duplicate value
+        //  - another new value
+        let mut entries_to_insert = vec![
+            MapEntry("new key".to_string(), "new value".to_string()),
+            MapEntry("some key".to_string(), "duplicate key value".to_string()),
+            MapEntry("another key".to_string(), "another value".to_string()),
+        ]
+        .into_iter();
+        let result = map.try_insert_all_unique(&mut entries_to_insert);
+
+        // Validate it returned an error, referencing the duplicated key / value
+        assert!(result.is_err());
+        let entry = result.unwrap_err();
+        assert_eq!(entry.key(), "some key");
+        assert_eq!(entry.previous_value(), "some value");
+        assert_eq!(entry.new_value(), "duplicate key value");
+
+        // That both the original and the second key-value pairs are present,
+        // but not the third or fourth.
+        assert_eq!(map.len(), 2);
+        assert_eq!(map.get("some key").unwrap(), "some value");
+        assert_eq!(map.get("new key").unwrap(), "new value");
+
+        // And that the iterator still contains the item after the duplicate.
+        let MapEntry(next_key, next_value) = entries_to_insert.next().unwrap();
+        assert_eq!(next_key, "another key");
+        assert_eq!(next_value, "another value");
     }
 
     #[test]
