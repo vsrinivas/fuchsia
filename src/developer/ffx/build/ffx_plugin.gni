@@ -42,10 +42,8 @@ import("plugins.gni")
 #     location of the args library is at `./src/args.rs`, see
 #     `args_source_root` here for more details.
 #
-#   args_sources (optional)
-#     List of source files for the args library. If not provided, uses
-#     the `sources` field. Use this to prevent changes from the plugin
-#     library from triggering a full rebuild of ffx and all plugins.
+#   args_sources (required)
+#     List of source files for the args library.
 #
 #   test_deps (optional)
 #     List of rust_library GN targets on which this crate's tests depend.
@@ -180,11 +178,10 @@ template("ffx_plugin") {
              ]
       non_rust_deps = [ "//third_party/boringssl" ]
 
-      if (defined(invoker.args_sources)) {
-        sources = invoker.args_sources
-      } else {
-        sources = invoker.sources
-      }
+      assert(
+          defined(invoker.args_sources),
+          "args_sources is required to contain the sources files that provide argh structures for the plugin")
+      sources = invoker.args_sources
 
       # If the args library has tests enabled, enable them in the library.
       if (defined(invoker.args_with_unit_tests) &&

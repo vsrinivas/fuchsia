@@ -13,7 +13,7 @@ ffx_plugin("ffx_component_data") {
     "make-directory:ffx_component_data_make_directory",
   ]
 
-  sources = [ "src/args.rs" ]
+  args_sources = [ "src/args.rs" ]
 }
 
 group("tests") {

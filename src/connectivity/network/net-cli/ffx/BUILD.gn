@@ -20,8 +20,7 @@ ffx_plugin("ffx_net") {
     "//src/lib/fidl/rust/fidl",
     "//third_party/rust_crates:async-trait",
   ]
-  sources = [
-    "src/args.rs",
-    "src/lib.rs",
-  ]
+
+  args_sources = [ "src/args.rs" ]
+  sources = [ "src/lib.rs" ]
 }

@@ -17,8 +17,7 @@ ffx_plugin("ffx_target_forward_tcp") {
 
   deps = [ "//sdk/fidl/fuchsia.net:fuchsia.net-rustc" ]
 
-  sources = [
-    "src/args.rs",
-    "src/lib.rs",
-  ]
+  args_sources = [ "src/args.rs" ]
+
+  sources = [ "src/lib.rs" ]
 }

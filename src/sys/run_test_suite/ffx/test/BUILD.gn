@@ -26,9 +26,9 @@ ffx_plugin("ffx_test") {
   test_deps = [ "//third_party/rust_crates:tempfile" ]
 
   args_deps = [ "//src/lib/diagnostics/data/rust" ]
+  args_sources = [ "src/args.rs" ]
 
   sources = [
-    "src/args.rs",
     "src/lib.rs",
     "src/output_directory.rs",
     "src/suite_definition.rs",
