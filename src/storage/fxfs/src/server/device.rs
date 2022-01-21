@@ -17,32 +17,119 @@ use {
     fuchsia_zircon as zx,
     futures::{stream::TryStreamExt, try_join},
     remote_block_device::{BlockFifoRequest, BlockFifoResponse},
-    std::{collections::BTreeMap, option::Option, sync::Mutex},
+    std::{
+        collections::{BTreeMap, HashMap},
+        hash::{Hash, Hasher},
+        option::Option,
+        sync::Mutex,
+    },
     vfs::{execution_scope::ExecutionScope, file::File},
 };
 
+// Multiple Block I/O request may be sent as a group.
+// Notes:
+// - the group is identified by `group_id` in the request
+// - if using groups, a response will not be sent unless `BLOCKIO_GROUP_LAST`
+//   flag is set.
+// - when processing a request of a group fails, subsequent requests of that
+//   group will not be processed.
+//
+// Refer to sdk/banjo/fuchsia.hardware.block/block.fidl for details.
+//
+// FifoMessageGroup keeps track of the relevant BlockFifoResponse field for
+// a group requests. Only `status` and `count` needs to be updated.
+struct FifoMessageGroup {
+    group_id: u16,
+    status: zx::sys::zx_status_t,
+    count: u32,
+}
+
+impl Hash for FifoMessageGroup {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.group_id.hash(state);
+    }
+}
+
+impl FifoMessageGroup {
+    // Initialise a FifoMessageGroup given the request group ID.
+    // `count` is set to 0 as no requests has been processed yet.
+    fn new(group_id: u16) -> Self {
+        Self { group_id, status: zx::sys::ZX_OK, count: 0 }
+    }
+
+    // Takes the FifoMessageGroup and converts it to a BlockFifoResponse.
+    // Note that this doesn't return the request ID, it needs to be set
+    // after extracting the BlockFifoResponse before sending it
+    fn into_response(self) -> BlockFifoResponse {
+        return BlockFifoResponse {
+            status: self.status,
+            group_id: self.group_id,
+            count: self.count,
+            ..Default::default()
+        };
+    }
+
+    fn increment_count(&mut self) {
+        self.count += 1;
+    }
+
+    fn set_status(&mut self, status: zx::sys::zx_status_t) {
+        self.status = status;
+    }
+
+    fn is_err(&self) -> bool {
+        self.status != zx::sys::ZX_OK
+    }
+}
+
+struct FifoMessageGroups(HashMap<u16, FifoMessageGroup>);
+
+// Keeps track of all the group requests that are currently being processed
+impl FifoMessageGroups {
+    fn new() -> Self {
+        Self(HashMap::new())
+    }
+
+    // Returns the current MessageGroup with this group ID
+    fn get(&mut self, group_id: u16) -> &mut FifoMessageGroup {
+        self.0.entry(group_id).or_insert_with(|| FifoMessageGroup::new(group_id))
+    }
+
+    // Remove a group when `BLOCKIO_GROUP_LAST` flag is set.
+    fn remove(&mut self, group_id: u16) -> FifoMessageGroup {
+        match self.0.remove(&group_id) {
+            Some(group) => group,
+            // `remove(group_id)` can be called when the group has not yet been
+            // added to this FifoMessageGroups. In which case, return a default
+            // MessageGroup.
+            None => FifoMessageGroup::new(group_id),
+        }
+    }
+}
 /// Implements server to handle Block requests
 pub struct BlockServer {
     file: OpenedNode<FxFile>,
     scope: ExecutionScope,
     server_channel: Option<zx::Channel>,
-    vmos: Mutex<BTreeMap<u16, zx::Vmo>>,
     maybe_server_fifo: Mutex<Option<zx::Fifo>>,
+    message_groups: Mutex<FifoMessageGroups>,
+    vmos: Mutex<BTreeMap<u16, zx::Vmo>>,
 }
 
 impl BlockServer {
     /// Creates a new BlockServer given a server channel to listen on.
     pub fn new(
+        file: OpenedNode<FxFile>,
         scope: ExecutionScope,
         server_channel: zx::Channel,
-        file: OpenedNode<FxFile>,
     ) -> BlockServer {
         BlockServer {
             file,
             scope,
             server_channel: Some(server_channel),
-            vmos: Mutex::new(BTreeMap::new()),
             maybe_server_fifo: Mutex::new(None),
+            message_groups: Mutex::new(FifoMessageGroups::new()),
+            vmos: Mutex::new(BTreeMap::new()),
         }
     }
 
@@ -73,7 +160,7 @@ impl BlockServer {
             let vmos = self.vmos.lock().unwrap();
             let vmo = vmos.get(&request.vmoid).ok_or(FxfsError::NotFound)?;
             let mut buffer = vec![0u8; (request.block_count as u64 * block_size) as usize];
-            vmo.read(&mut buffer[..], request.vmo_block)?;
+            vmo.read(&mut buffer[..], request.vmo_block * block_size)?;
             buffer
         };
 
@@ -94,82 +181,121 @@ impl BlockServer {
 
         let vmos = self.vmos.lock().unwrap();
         let vmo = vmos.get(&request.vmoid).ok_or(FxfsError::NotFound)?;
-        vmo.write(&buffer[..], request.vmo_block)?;
+        vmo.write(&buffer[..], request.vmo_block * block_size)?;
 
         Ok(())
     }
 
-    async fn handle_fifo_request(
-        &self,
-        request: BlockFifoRequest,
-        fifo: &fasync::Fifo<BlockFifoRequest, BlockFifoResponse>,
-    ) -> Result<(), Error> {
+    async fn process_fifo_request(&self, request: &BlockFifoRequest) -> zx::sys::zx_status_t {
         fn into_raw_status(result: Result<(), Error>) -> zx::sys::zx_status_t {
             let status: zx::Status = result.map_err(|e| map_to_status(e)).into();
             status.into_raw()
         }
 
-        match request.op_code & remote_block_device::BLOCK_OP_MASK {
-            remote_block_device::BLOCKIO_CLOSE_VMO => {
-                let status = {
+        if (request.op_code
+            & (remote_block_device::BLOCK_FL_BARRIER_BEFORE
+                | remote_block_device::BLOCK_FL_BARRIER_AFTER))
+            > 0
+        {
+            zx::sys::ZX_ERR_NOT_SUPPORTED
+        } else {
+            match request.op_code & remote_block_device::BLOCK_OP_MASK {
+                remote_block_device::BLOCKIO_CLOSE_VMO => {
                     let mut vmos = self.vmos.lock().unwrap();
                     match vmos.remove(&request.vmoid) {
-                        Some(_vmo) => zx::Status::OK.into_raw(),
-                        None => zx::Status::NOT_FOUND.into_raw(),
+                        Some(_vmo) => zx::sys::ZX_OK,
+                        None => zx::sys::ZX_ERR_NOT_FOUND,
                     }
-                };
-                let response = BlockFifoResponse {
-                    status,
-                    request_id: request.request_id,
-                    ..Default::default()
-                };
-                fifo.write_entries(std::slice::from_ref(&response)).await?;
+                }
+                remote_block_device::BLOCKIO_WRITE => {
+                    into_raw_status(self.handle_blockio_write(&request).await)
+                }
+                remote_block_device::BLOCKIO_READ => {
+                    into_raw_status(self.handle_blockio_read(&request).await)
+                }
+                remote_block_device::BLOCKIO_FLUSH => into_raw_status(self.file.flush().await),
+                // TODO(fxbug.dev/89873)
+                remote_block_device::BLOCKIO_TRIM => zx::sys::ZX_OK,
+                _ => panic!("Unexpected message, request {:?}", request.op_code),
             }
-            remote_block_device::BLOCKIO_WRITE => {
-                let response = BlockFifoResponse {
-                    status: into_raw_status(self.handle_blockio_write(&request).await),
-                    request_id: request.request_id,
-                    ..Default::default()
-                };
-                fifo.write_entries(std::slice::from_ref(&response)).await?;
-            }
-            remote_block_device::BLOCKIO_READ => {
-                let response = BlockFifoResponse {
-                    status: into_raw_status(self.handle_blockio_read(&request).await),
-                    request_id: request.request_id,
-                    ..Default::default()
-                };
-                fifo.write_entries(std::slice::from_ref(&response)).await?;
-            }
-            remote_block_device::BLOCKIO_FLUSH => {
-                let response = BlockFifoResponse {
-                    status: into_raw_status(self.file.flush().await),
-                    request_id: request.request_id,
-                    ..Default::default()
-                };
-                fifo.write_entries(std::slice::from_ref(&response)).await?;
-            }
-            _ => panic!("Unexpected message, request {:?}", request.op_code),
         }
-        Ok(())
+    }
+
+    async fn handle_fifo_request(&self, request: BlockFifoRequest) -> Option<BlockFifoResponse> {
+        let is_group = (request.op_code & remote_block_device::BLOCK_GROUP_ITEM) > 0;
+        let wants_reply = (request.op_code & remote_block_device::BLOCK_GROUP_LAST) > 0;
+
+        // Set up the BlockFifoResponse for this request, but do no process request yet
+        let mut maybe_reply = {
+            if is_group {
+                let mut groups = self.message_groups.lock().unwrap();
+                if wants_reply {
+                    let mut group = groups.remove(request.group_id);
+                    group.increment_count();
+
+                    // This occurs when a previous request in this group has failed
+                    if group.is_err() {
+                        let mut reply = group.into_response();
+                        reply.request_id = request.request_id;
+                        // No need to process this request
+                        return Some(reply);
+                    }
+
+                    let mut response = group.into_response();
+                    response.request_id = request.request_id;
+                    Some(response)
+                } else {
+                    let group = groups.get(request.group_id);
+                    group.increment_count();
+
+                    if group.is_err() {
+                        // No need to process this request
+                        return None;
+                    }
+                    None
+                }
+            } else {
+                Some(BlockFifoResponse {
+                    request_id: request.request_id,
+                    count: 1,
+                    ..Default::default()
+                })
+            }
+        };
+        let status = self.process_fifo_request(&request).await;
+        // Status only needs to be updated in the reply if it's not OK
+        if status != zx::sys::ZX_OK {
+            match &mut maybe_reply {
+                None => {
+                    // maybe_reply will only be None if it's part of a group request
+                    self.message_groups.lock().unwrap().get(request.group_id).set_status(status);
+                }
+                Some(reply) => {
+                    reply.status = status;
+                }
+            }
+        }
+        maybe_reply
     }
 
     fn handle_clone_request(&self, object: ServerEnd<NodeMarker>) {
         let file = OpenedNode::new(self.file.clone());
         let scope_cloned = self.scope.clone();
         self.scope.spawn(async move {
-            let mut cloned_server = BlockServer::new(scope_cloned, object.into_channel(), file);
+            let mut cloned_server = BlockServer::new(file, scope_cloned, object.into_channel());
             let _ = cloned_server.run().await;
         });
     }
 
     async fn handle_request(&self, request: BlockAndNodeRequest) -> Result<(), Error> {
         match request {
-            // TODO(fxbug.dev/89873): replace the constants
             BlockAndNodeRequest::GetInfo { responder } => {
+                let block_size = self.file.get_block_size();
+                let block_count =
+                    (self.file.get_size().await.unwrap() + block_size - 1) / block_size;
                 let mut block_info = block::BlockInfo {
-                    block_count: 1024,
-                    block_size: self.file.get_block_size() as u32,
+                    block_count,
+                    block_size: block_size as u32,
                     max_transfer_size: 1024 * 1024,
                     flags: 0,
                     reserved: 0,
@@ -297,7 +423,15 @@ impl BlockServer {
         let fifo_future = async {
             let fifo = fasync::Fifo::<BlockFifoRequest, BlockFifoResponse>::from_fifo(server_fifo)?;
             while let Some(request) = fifo.read_entry().await? {
-                self.handle_fifo_request(request, &fifo).await?;
+                let maybe_response = self.handle_fifo_request(request).await;
+                match maybe_response {
+                    Some(maybe_response) => {
+                        fifo.write_entries(std::slice::from_ref(&maybe_response)).await?;
+                    }
+                    _ => {}
+                }
+                // if None, then there's no reply for this request. This occurs for requests part
+                // of a group request where `BLOCK_GROUP_LAST` flag is not set
             }
             Result::<_, Error>::Ok(())
         };
@@ -318,13 +452,13 @@ impl BlockServer {
 #[cfg(test)]
 mod tests {
     use {
-        crate::server::testing::TestFixture,
+        crate::server::testing::{open_file_checked, TestFixture},
         anyhow::Error,
         fidl::endpoints::{ClientEnd, ServerEnd},
         fidl_fuchsia_hardware_block::BlockAndNodeMarker,
         fidl_fuchsia_io::{
-            CLONE_FLAG_SAME_RIGHTS, MODE_TYPE_BLOCK_DEVICE, OPEN_FLAG_CREATE, OPEN_RIGHT_READABLE,
-            OPEN_RIGHT_WRITABLE,
+            CLONE_FLAG_SAME_RIGHTS, MODE_TYPE_BLOCK_DEVICE, MODE_TYPE_FILE, OPEN_FLAG_CREATE,
+            OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
         },
         fs_management::{asynchronous::Filesystem, Blobfs},
         fuchsia_async as fasync, fuchsia_zircon as zx,
@@ -342,15 +476,28 @@ mod tests {
                 let blobfs = Filesystem::from_channel(client_channel, Blobfs::default())
                     .expect("create filesystem from channel failed");
                 blobfs.format().await.expect("format blobfs failed");
+                blobfs.fsck().await.expect("fsck failed");
                 Result::<_, Error>::Ok(())
             },
             async {
                 let fixture = TestFixture::new().await;
                 let root = fixture.root();
-                root.open(
+
+                let file = open_file_checked(
+                    &root,
                     OPEN_FLAG_CREATE | OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
+                    MODE_TYPE_FILE,
+                    "block_device",
+                )
+                .await;
+                let status = file.truncate(2 * 1024 * 1024).await.expect("truncate failed");
+                zx::Status::ok(status).expect("File truncate failed");
+                assert_eq!(file.close().await.expect("FIDL call failed"), 0);
+
+                root.open(
+                    OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
                     MODE_TYPE_BLOCK_DEVICE,
-                    "foo",
+                    "block_device",
                     ServerEnd::new(server_channel),
                 )
                 .expect("open failed");
@@ -600,8 +747,9 @@ mod tests {
                 let original_block_device = ClientEnd::<BlockAndNodeMarker>::new(client_channel)
                     .into_proxy()
                     .expect("convert into proxy failed");
-                let (_status, attr) =
+                let (status, attr) =
                     original_block_device.get_attr().await.expect("get_attr failed");
+                zx::Status::ok(status).expect("block get_attr failed");
                 assert_eq!(attr.mode, MODE_TYPE_BLOCK_DEVICE);
                 Result::<_, Error>::Ok(())
             },
@@ -612,6 +760,53 @@ mod tests {
                     OPEN_FLAG_CREATE | OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
                     MODE_TYPE_BLOCK_DEVICE,
                     "foo",
+                    ServerEnd::new(server_channel),
+                )
+                .expect("open failed");
+
+                fixture.close().await;
+                Ok(())
+            }
+        )
+        .expect("client or server failed");
+    }
+
+    #[fasync::run(10, test)]
+    async fn test_get_info() {
+        let (client_channel, server_channel) =
+            zx::Channel::create().expect("Channel::create failed");
+        let file_size = 2 * 1024 * 1024;
+        try_join!(
+            async {
+                let original_block_device = ClientEnd::<BlockAndNodeMarker>::new(client_channel)
+                    .into_proxy()
+                    .expect("convert into proxy failed");
+                let (status, maybe_info) =
+                    original_block_device.get_info().await.expect("get_info failed");
+                zx::Status::ok(status).expect("block get_info failed");
+                let info = maybe_info.expect("block get_info failed");
+                assert_eq!(info.block_count * info.block_size as u64, file_size);
+                Result::<_, Error>::Ok(())
+            },
+            async {
+                let fixture = TestFixture::new().await;
+                let root = fixture.root();
+
+                let file = open_file_checked(
+                    &root,
+                    OPEN_FLAG_CREATE | OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
+                    MODE_TYPE_FILE,
+                    "block_device",
+                )
+                .await;
+                let status = file.truncate(file_size).await.expect("truncate failed");
+                zx::Status::ok(status).expect("File truncate failed");
+                assert_eq!(file.close().await.expect("FIDL call failed"), 0);
+
+                root.open(
+                    OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
+                    MODE_TYPE_BLOCK_DEVICE,
+                    "block_device",
                     ServerEnd::new(server_channel),
                 )
                 .expect("open failed");

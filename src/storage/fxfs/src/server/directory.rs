@@ -459,7 +459,7 @@ impl DirectoryEntry for FxDirectory {
                         let node = node.downcast::<FxFile>().unwrap_or_else(|_| unreachable!());
                         if mode == MODE_TYPE_BLOCK_DEVICE {
                             let mut server =
-                                BlockServer::new(scope, server_end.into_channel(), node);
+                                BlockServer::new(node, scope, server_end.into_channel());
                             let _ = server.run().await;
                         } else {
                             FxFile::create_connection(node, scope, flags, server_end, shutdown)

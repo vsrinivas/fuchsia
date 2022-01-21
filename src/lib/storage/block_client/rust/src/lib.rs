@@ -48,6 +48,12 @@ pub const BLOCKIO_FLUSH: u32 = 3;
 pub const BLOCKIO_TRIM: u32 = 4;
 pub const BLOCKIO_CLOSE_VMO: u32 = 5;
 
+pub const BLOCK_GROUP_ITEM: u32 = 0x00000400;
+pub const BLOCK_GROUP_LAST: u32 = 0x00000800;
+
+pub const BLOCK_FL_BARRIER_BEFORE: u32 = 0x00000100;
+pub const BLOCK_FL_BARRIER_AFTER: u32 = 0x00000200;
+
 pub const BLOCK_OP_MASK: u32 = 0x000000ff;
 
 fn op_code_str(op_code: u32) -> &'static str {

@@ -240,11 +240,28 @@ fs_test_config("fxfs") {
   ]
 }
 
+test("fxfs-interop-fs") {
+  sources = [ "test/fs_test.cc" ]
+  deps = [
+    "//src/lib/fxl/test:gtest_main",
+    "//src/lib/storage/block_client/cpp",
+    "//src/storage/fs_test",
+    "//src/storage/fxfs",
+    "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/fdio-caller",
+  ]
+}
+
+storage_driver_test_realm_v2_component("fxfs-interop-fs-tests") {
+  deps = [ ":fxfs-interop-fs" ]
+}
+
 fs_test_suite("fxfs") {
   deps = [
     ":fxfs_fs_test_config",
     "//src/storage/fxfs",
   ]
+  extra_components = [ ":fxfs-interop-fs-tests" ]
 }
 
 slow_fs_test_suite("fxfs") {
