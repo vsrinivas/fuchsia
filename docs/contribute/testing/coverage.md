@@ -104,12 +104,16 @@ infrequently:
 Currently, test coverage is collected only if:
 
 *   The code is written in C, C++, or Rust.
-*   The code either runs on Fuchsia devices in usermode, or is exercised by a
-    host test.
-*   The test is exercised under the `core.x64` or `core.arm64` configuration on
-    qemu. Tests that only run in other configurations, such as on hardware
-    targets, are not supported at this time.
-*   System tests, aka end-to-end (e2e) tests, are _excluded_.
+*   The code runs on Fuchsia in usermode, or runs on the host.
+    Kernel coverage is not yet supported
+    ([tracking bug](https://fxbug.dev/34196)).
+*   The test runs on qemu. Testing on hardware is not yet supported.
+*   The test runs as part of the `core` configuration. Specifically,
+    [absolute coverage](#absolute_test_coverage) is collected from `core.x64`
+    and `core.arm64` configurations, and
+    [incremental coverage](#incremental_test_coverage) is only collected in
+    `core.x64` ([tracking bug](https://fxbug.dev/91893)).
+*   End-to-end (e2e) tests are [not supported](#end-to-end_e2e_tests_exclusion).
 
 On that last note, e2e tests exercise a lot of code throughout the system, but
 they do so in a manner that's inconsistent between runs (or "flaky"). To achieve
