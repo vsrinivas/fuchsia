@@ -100,7 +100,7 @@ impl ComponentResolversVisitor {
                 Err(err) => {
                     eprintln!(
                         "Ignoring invalid resolver configuration for {}: {:#}",
-                        instance.abs_moniker(),
+                        instance.partial_abs_moniker(),
                         anyhow!(err).context("failed to route to a resolver")
                     );
                     return Ok(());
@@ -129,7 +129,7 @@ impl ComponentResolversVisitor {
 impl ComponentInstanceVisitor for ComponentResolversVisitor {
     fn visit_instance(&mut self, instance: &Arc<ComponentInstanceForAnalyzer>) -> Result<()> {
         self.check_instance(instance)
-            .with_context(|| format!("while visiting {}", instance.abs_moniker()))
+            .with_context(|| format!("while visiting {}", instance.partial_abs_moniker()))
     }
 }
 
