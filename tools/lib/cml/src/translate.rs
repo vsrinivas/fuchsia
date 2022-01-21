@@ -702,9 +702,7 @@ fn translate_config(
 
         hasher.update(key.as_str());
 
-        // TODO(fxbug.dev/88499): Compute checksum using Hash trait. Currently,
-        // the Debug trait does not provide a strong uniqueness guarantee.
-        hasher.update(format!("{:?}", value));
+        value.update_digest(&mut hasher);
     }
 
     // The SHA-256 hash must be 32 bytes in size

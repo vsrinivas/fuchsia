@@ -174,5 +174,17 @@
     config: {
         my_flag: { type: "bool" },
         my_uint8: { type: "uint8" },
+        my_string: {
+            type: "string",
+            max_size: 100,
+        },
+        my_vector_of_string: {
+            type: "vector",
+            max_count: 100,
+            element: {
+                type: "string",
+                max_size: 50,
+            },
+        },
     },
 }

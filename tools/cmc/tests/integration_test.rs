@@ -350,14 +350,34 @@ fn main() {
                     ..ConfigField::EMPTY
                 },
                 ConfigField {
+                    key: Some("my_string".to_string()),
+                    value_type: Some(ConfigValueType::String(ConfigStringType {
+                        max_size: Some(100),
+                        ..ConfigStringType::EMPTY
+                    })),
+                    ..ConfigField::EMPTY
+                },
+                ConfigField {
                     key: Some("my_uint8".to_string()),
                     value_type: Some(ConfigValueType::Uint8(ConfigUnsigned8Type::EMPTY)),
                     ..ConfigField::EMPTY
                 },
+                ConfigField {
+                    key: Some("my_vector_of_string".to_string()),
+                    value_type: Some(ConfigValueType::Vector(ConfigVectorType {
+                        max_count: Some(100),
+                        element_type: Some(ConfigVectorElementType::String(ConfigStringType {
+                            max_size: Some(50),
+                            ..ConfigStringType::EMPTY
+                        })),
+                        ..ConfigVectorType::EMPTY
+                    })),
+                    ..ConfigField::EMPTY
+                },
             ]),
             declaration_checksum: Some(vec![
-                55, 52, 9, 20, 201, 176, 179, 197, 70, 136, 134, 104, 195, 16, 66, 216, 167, 215,
-                255, 181, 57, 239, 139, 215, 76, 11, 126, 200, 78, 2, 186, 59,
+                227, 126, 183, 151, 1, 15, 67, 110, 144, 49, 222, 176, 221, 111, 19, 165, 34, 204,
+                240, 41, 165, 95, 117, 57, 203, 42, 186, 167, 84, 26, 25, 231,
             ]),
             value_source: Some(ConfigValueSource::PackagePath("meta/example.cvf".to_string())),
             ..Config::EMPTY
