@@ -1,0 +1,53 @@
+{
+    children: [
+        {
+            name: "factory_reset",
+            url: "fuchsia-pkg://fuchsia.com/factory_reset#meta/factory_reset.cm",
+        },
+    ],
+    capabilities: [
+        {
+            // TODO(https://fxbug.dev/73067): Remove this once TEE manager is migrated to CFv2.
+            protocol: [
+                "fuchsia.tee.Application.808032e0-fd9e-4e6f-8896-544735c98480",
+                "fuchsia.tee.DeviceInfo",
+            ],
+        },
+    ],
+    use: [
+        {
+            protocol: "fuchsia.recovery.FactoryReset",
+            from: "#factory_reset",
+        },
+    ],
+    offer: [
+        {
+            protocol: "fuchsia.hardware.power.statecontrol.Admin",
+            from: "parent",
+            to: "#factory_reset",
+        },
+        {
+            protocol: "fuchsia.logger.LogSink",
+            from: "parent",
+            to: "#factory_reset",
+        },
+        {
+            protocol: "fuchsia.tee.Application.808032e0-fd9e-4e6f-8896-544735c98480",
+            from: "self",
+            to: "#factory_reset",
+            dependency: "weak_for_migration",
+        },
+        {
+            protocol: "fuchsia.tee.DeviceInfo",
+            from: "self",
+            to: "#factory_reset",
+            dependency: "weak_for_migration",
+        },
+        {
+            directory: "dev",
+            from: "parent",
+            as: "dev",
+            to: "#factory_reset",
+        },
+    ],
+}

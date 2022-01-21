@@ -26,6 +26,7 @@ core_realm("core") {
     "//src/connectivity/wlan/wlancfg:wlancfg-core-shard",
     "//src/connectivity/wlan/wlandevicemonitor:wlandevicemonitor-core-shard",
     "//src/connectivity/wlan/wlanstack:wlanstack-legacy-privacy-core-shard",
+    "//src/recovery/factory_reset:factory_reset_core_shard",
   ]
 }
 
