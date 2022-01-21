@@ -48,8 +48,8 @@ impl StashInspectLogger {
     }
 
     /// Records a write failure for the given setting.
-    pub fn record_flush_failure(&mut self, key: String) {
-        match self.flush_failure_counts.get_mut(&key) {
+    pub fn record_flush_failure(&mut self, key: &String) {
+        match self.flush_failure_counts.get_mut(key) {
             Some(stash_inspect_info) => {
                 stash_inspect_info.count.add(1);
             }
@@ -71,6 +71,6 @@ pub struct StashInspectLoggerHandle {
 
 impl StashInspectLoggerHandle {
     pub fn new() -> Self {
-        Self { logger: STASH_INSPECT_LOGGER.clone() }
+        Self { logger: Arc::clone(&STASH_INSPECT_LOGGER) }
     }
 }

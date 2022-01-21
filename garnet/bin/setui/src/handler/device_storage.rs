@@ -23,7 +23,7 @@ use serde::Serialize;
 
 use crate::audio::types::AudioInfo;
 use crate::handler::setting_handler::persist::UpdateState;
-use crate::handler::stash_inspect_logger::StashInspectLoggerHandle;
+use crate::handler::stash_inspect_logger::{StashInspectLogger, StashInspectLoggerHandle};
 
 const SETTINGS_PREFIX: &str = "settings";
 
@@ -35,11 +35,7 @@ const MIN_COMMIT_INTERVAL_MS: u64 = 500;
 /// `CommitParams` specifies the behavior for a commit request to the task loop that handles
 /// committing to Stash.
 #[derive(Copy, Clone)]
-struct CommitParams {
-    /// If true, flushes to disk instead of just committing, which waits for the file to be written
-    /// to disk.
-    flush: bool,
-}
+struct CommitParams {}
 
 /// Stores device level settings in persistent storage.
 /// User level settings should not use this.
@@ -53,6 +49,9 @@ pub struct DeviceStorage {
     /// If true, writes to the underlying storage will only occur at most every
     /// MIN_WRITE_INTERVAL_MS.
     debounce_writes: bool,
+
+    /// Handle used to write stash failures to inspect.
+    inspect_handle: StashInspectLoggerHandle,
 }
 
 /// A wrapper for managing all communication and caching for one particular type of data being
@@ -62,7 +61,7 @@ struct TypedStorage {
     commit_sender: UnboundedSender<CommitParams>,
 
     /// Cached storage managed through interior mutability.
-    cached_storage: Arc<Mutex<CachedStorage>>,
+    cached_storage: Mutex<CachedStorage>,
 }
 
 /// `CachedStorage` abstracts over a cached value that's read from and written
@@ -73,31 +72,6 @@ struct CachedStorage {
 
     /// Stash connection for this particular type's stash storage.
     stash_proxy: StoreAccessorProxy,
-
-    /// Handle to logger that records stash write failures.
-    inspect_handle: StashInspectLoggerHandle,
-}
-
-impl CachedStorage {
-    /// Triggers a flush on the given stash proxy.
-    async fn stash_commit(&mut self, _flush: bool, setting_key: String) {
-        if self
-            .stash_proxy
-            .flush()
-            .await
-            .map_err(|e| format_err!("fidl call to flush on stash failed: {:?}", e))
-            .and_then(|r| r.map_err(|e| format_err!("flush call on stash failed: {:?}", e)))
-            .is_err()
-        {
-            if setting_key == AudioInfo::KEY {
-                fx_log_info!("b/210170985: stash flush for audio failed");
-            }
-            // Record the write failure to inspect.
-            self.inspect_handle.logger.lock().await.record_flush_failure(setting_key);
-        } else if setting_key == AudioInfo::KEY {
-            fx_log_info!("b/210170985: stash flush for audio finished");
-        }
-    }
 }
 
 /// Structs that can be stored in device storage should derive the Serialize, Deserialize, and
@@ -250,17 +224,16 @@ impl DeviceStorage {
             let (commit_sender, commit_receiver) = futures::channel::mpsc::unbounded::<CommitParams>();
             let stash_proxy = stash_generator();
 
-            let cached_storage = Arc::new(Mutex::new(CachedStorage {
-                current_data: None,
-                stash_proxy: stash_proxy.clone(),
-                inspect_handle: StashInspectLoggerHandle::new(),
-            }));
-            let storage = TypedStorage {
-                commit_sender,
-                cached_storage: cached_storage.clone(),
-            };
+                let storage = TypedStorage {
+                        commit_sender,
+                        cached_storage: Mutex::new(CachedStorage {
+                            current_data: None,
+                            stash_proxy: stash_proxy.clone(),
+                        })
+                    };
 
-            // Each key has an independent commit queue.
+            let stash_proxy_clone = stash_proxy.clone();
+                // Each key has an independent commit queue.
             Task::spawn(async move {
                 const MIN_COMMIT_DURATION: Duration = Duration::from_millis(MIN_COMMIT_INTERVAL_MS);
                 let mut pending_commit: Option<CommitParams> = None;
@@ -269,7 +242,9 @@ impl DeviceStorage {
                 // time so that the first commit always goes through, no matter the timing.
                 let mut last_commit: Instant = Instant::now().sub(MIN_COMMIT_DURATION);
 
-                // Timer for commit cooldown. OptionFuture allows us to wait on the future even if
+                let inspect_handle = StashInspectLoggerHandle::new().logger;
+
+                    // Timer for commit cooldown. OptionFuture allows us to wait on the future even if
                 // it's None.
                 let mut next_commit_timer: OptionFuture<Timer> = None.into();
                 let mut next_commit_timer_fuse = next_commit_timer.fuse();
@@ -299,16 +274,20 @@ impl DeviceStorage {
 
                         _ = next_commit_timer_fuse => {
                             // Timer triggered, check for pending commits.
-                            if let Some(params) = pending_commit {
+                            if let Some(_) = pending_commit {
                                     if key == AudioInfo::KEY {
                                         fx_log_info!(
                                             "b/210170985: flushing audio setting to stash");
                                     }
-                                    cached_storage.lock().await.stash_commit(params.flush, key.into()).await;
-                                last_commit = Instant::now();
-                                pending_commit = None;
+
+                                    DeviceStorage::stash_flush(
+                                        &stash_proxy_clone,
+                                        Arc::clone(&inspect_handle),
+                                        &key.to_string()).await;
+                                    last_commit = Instant::now();
+                                    pending_commit = None;
+                                }
                             }
-                        }
 
                         complete => break,
                     }
@@ -317,7 +296,12 @@ impl DeviceStorage {
                 .detach();
             (key, storage)
         }).collect();
-        DeviceStorage { caching_enabled: true, debounce_writes: true, typed_storage_map }
+        DeviceStorage {
+            caching_enabled: true,
+            debounce_writes: true,
+            typed_storage_map,
+            inspect_handle: StashInspectLoggerHandle::new(),
+        }
     }
 
     #[cfg(test)]
@@ -328,6 +312,24 @@ impl DeviceStorage {
     #[cfg(test)]
     fn set_debounce_writes(&mut self, debounce: bool) {
         self.debounce_writes = debounce;
+    }
+
+    /// Triggers a flush on the given stash proxy.
+    async fn stash_flush(
+        stash_proxy: &StoreAccessorProxy,
+        inspect_handle: Arc<Mutex<StashInspectLogger>>,
+        setting_key: &String,
+    ) {
+        if matches!(stash_proxy.flush().await, Ok(Err(_)) | Err(_)) {
+            if setting_key == AudioInfo::KEY {
+                fx_log_info!("b/210170985: stash flush for audio failed");
+            }
+            // TODO(fxbug.dev/89083): save a record of the recent error messages as well.
+            // Record the write failure to inspect.
+            inspect_handle.lock().await.record_flush_failure(setting_key);
+        } else if setting_key == AudioInfo::KEY {
+            fx_log_info!("b/210170985: stash flush for audio finished");
+        }
     }
 
     /// Write `new_value` to storage. If `flush` is true then then changes will immediately be
@@ -385,19 +387,22 @@ impl DeviceStorage {
             }
             cached_storage.stash_proxy.set_value(&key, &mut serialized)?;
             if !self.debounce_writes {
-                // Not debouncing writes for testing, just commit immediately.
-                cached_storage.stash_commit(flush, key.clone()).await;
+                // Not debouncing writes for testing, just flush immediately.
+                DeviceStorage::stash_flush(
+                    &cached_storage.stash_proxy,
+                    Arc::clone(&self.inspect_handle.logger),
+                    &key,
+                )
+                .await;
             } else {
-                typed_storage.commit_sender.unbounded_send(CommitParams { flush }).with_context(
-                    || {
-                        format!(
-                            "commit_sender failed to send commit message, associated key is {}, and\
+                typed_storage.commit_sender.unbounded_send(CommitParams {}).with_context(|| {
+                    format!(
+                        "commit_sender failed to send commit message, associated key is {}, and\
                          flush value is {}",
-                            T::KEY,
-                            flush
-                        )
-                    },
-                )?;
+                        T::KEY,
+                        flush
+                    )
+                })?;
             }
             cached_storage.current_data =
                 Some(Box::new(new_value.clone()) as Box<dyn Any + Send + Sync>);
@@ -413,13 +418,13 @@ impl DeviceStorage {
     #[cfg(test)]
     /// Test-only method to write directly to stash without touching the cache. This is used for
     /// setting up data as if it existed on disk before the connection to stash was made.
-    async fn write_str(&self, key: &'static str, value: String, flush: bool) -> Result<(), Error> {
+    async fn write_str(&self, key: &'static str, value: String, _flush: bool) -> Result<(), Error> {
         let typed_storage =
             self.typed_storage_map.get(key).expect("Did not request an initialized key");
         let cached_storage = typed_storage.cached_storage.lock().await;
         let mut value = Value::Stringval(value);
         cached_storage.stash_proxy.set_value(&prefixed(key), &mut value)?;
-        typed_storage.commit_sender.unbounded_send(CommitParams { flush }).unwrap();
+        typed_storage.commit_sender.unbounded_send(CommitParams {}).unwrap();
         Ok(())
     }
 
