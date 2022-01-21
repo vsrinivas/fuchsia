@@ -23,7 +23,10 @@ use {
     },
     fuchsia_driver_test::DriverTestRealmBuilder as _,
     fuchsia_zircon as zx,
-    futures::{channel::mpsc, FutureExt as _, SinkExt as _, StreamExt as _, TryStreamExt as _},
+    futures::{
+        channel::mpsc, FutureExt as _, SinkExt as _, StreamExt as _, TryFutureExt as _,
+        TryStreamExt as _,
+    },
     log::{debug, error, info, warn},
     pin_utils::pin_mut,
     std::{
@@ -259,6 +262,10 @@ async fn create_realm_instance(
                                 )
                                 .context("cloning directory for mock handles"),
                             )
+                            // The lifetime of the mock child component is tied
+                            // to that of this future. Make the future never
+                            // return, so that the mock child is kept alive.
+                            .and_then(|()| futures::future::pending())
                             .boxed()
                         },
                         child,
