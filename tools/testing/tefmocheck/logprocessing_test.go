@@ -73,6 +73,8 @@ ok 3 v1Test3 (27.90584341s)
 hostTest4 output line 1
 hostTest4 output line 2
 hostTest4 output mixed with testrunner output not ok 4 hostTest4 (88.8s)
+Running test 'notRecordedTest'
+ok 5 notRecordedTest (234.234s)
 2020/03/20 22:57:53.569333 botanist DEBUG: stopping or rebooting the node "upper-bacon-clock-snort"
 `
 

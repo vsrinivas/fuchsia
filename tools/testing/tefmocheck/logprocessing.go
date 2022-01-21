@@ -94,6 +94,9 @@ func splitLogByTest(input []byte, testNames []string) ([]TestLog, error) {
 	var totalTests, testsSeen uint64
 	var advance int
 	for i := tapVersionIndex + len(tapVersionBytes); i < len(input); i += advance {
+		if int(testsSeen) == len(testNames) {
+			break
+		}
 		advance = 0
 		data := input[i:]
 		// Do not require this to be at start-of-line as it sometimes appears in the middle.
