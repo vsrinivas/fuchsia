@@ -40,9 +40,9 @@ class PhysicalPageProvider : public PageProvider {
   const PageSourceProperties& properties() const final;
   bool GetPageSync(uint64_t offset, VmoDebugInfo vmo_debug_info, vm_page_t** const page_out,
                    paddr_t* const pa_out) final;
-  void SendAsyncRequest(page_request_t* request) final;
-  void ClearAsyncRequest(page_request_t* request) final;
-  void SwapAsyncRequest(page_request_t* old, page_request_t* new_req) final;
+  void SendAsyncRequest(PageRequest* request) final;
+  void ClearAsyncRequest(PageRequest* request) final;
+  void SwapAsyncRequest(PageRequest* old, PageRequest* new_req) final;
   void FreePages(list_node* pages) final;
   bool DebugIsPageOk(vm_page_t* page, uint64_t offset) final;
   // This also calls pmm_delete_lender()
@@ -83,13 +83,13 @@ class PhysicalPageProvider : public PageProvider {
 
   // Queue of page_request_t's that have come in while packet_ is busy. The
   // head of this queue is sent to the port when packet_ is freed.
-  list_node_t pending_requests_ TA_GUARDED(mtx_) = LIST_INITIAL_VALUE(pending_requests_);
+  fbl::TaggedDoublyLinkedList<PageRequest*, PageProviderTag> pending_requests_ TA_GUARDED(mtx_);
 
   bool detached_ TA_GUARDED(mtx_) = false;
   bool closed_ TA_GUARDED(mtx_) = false;
 
   // Queues the page request, putting it in pending_requests_;
-  void QueueRequestLocked(page_request_t* request) TA_REQ(mtx_);
+  void QueueRequestLocked(PageRequest* request) TA_REQ(mtx_);
 };
 
 #endif  // ZIRCON_KERNEL_VM_INCLUDE_VM_PHYSICAL_PAGE_PROVIDER_H_
