@@ -24,6 +24,7 @@ group("tests") {
     "component_test_runner:tests",
     "core:tests",
     "device_settings:tests",
+    "early_boot_instrumentation:tests",
     "fuzzing:tests",
     "installer:tests",
     "lib:tests",
