@@ -204,7 +204,9 @@ func writeManifest(bfrs []binaryRef, buildDir string) error {
 			OS:       osName,
 		})
 	}
-	file, err := osmisc.CreateFile(outputManifest, os.O_WRONLY)
+	// O_TRUNC so the file gets truncated if it already exists, as in an
+	// incremental build.
+	file, err := osmisc.CreateFile(outputManifest, os.O_WRONLY|os.O_TRUNC)
 	if err != nil {
 		return fmt.Errorf("while writing json to %s: %w", outputManifest, err)
 	}
