@@ -172,8 +172,8 @@ pub struct Accent {
 }
 
 #[allow(unused)]
-struct AccentKey {
-    alt_key: &'static Key,
+pub struct AccentKey {
+    pub alt_key: &'static Key,
     accents: &'static [&'static Accent],
 }
 
@@ -235,7 +235,7 @@ const ACCENT_TILDE: AccentKey = AccentKey {
 };
 
 #[allow(unused)]
-const ACCENTS: &'static [AccentKey] =
+pub const ACCENTS: &'static [AccentKey] =
     &[ACCENT_GRAVE, ACCENT_CIRCUMFLEX, ACCENT_ACUTE, ACCENT_RING, ACCENT_UMLAUT, ACCENT_TILDE];
 
 pub fn get_accent(alt_key: &Key, pressed_key: &Key) -> Option<&'static &'static Accent> {

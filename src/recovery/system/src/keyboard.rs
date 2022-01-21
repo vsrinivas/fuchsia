@@ -26,7 +26,7 @@ use carnelian::{
     AppContext, Message, MessageTarget, Point, Size, ViewAssistant, ViewAssistantContext, ViewKey,
 };
 use euclid::{size2, Size2D};
-use fuchsia_zircon::{Event, Time};
+use fuchsia_zircon::{Duration, Event, Time};
 use std::collections::VecDeque;
 use std::hash::{Hash, Hasher};
 use std::path::PathBuf;
@@ -80,7 +80,6 @@ impl KeyButton {
             Key::Letter(letter_key) => &letter_key.lower,
             Key::Special(_special_key, text) => text,
         };
-        //println!("New button with text: {}", text);
         let label_width = measure_text_width(&face, font_size, text);
         let label = builder.text(
             face.clone(),
@@ -138,9 +137,7 @@ impl KeyButton {
     }
 
     fn set_label(&mut self, scene: &mut Scene, shift: bool, alt: bool, _symbol: bool) {
-        // println!("Setting text of button {:#?}", self.label_text);
         if let keys::Key::Letter(key) = self.key {
-            //let mut builder = SceneBuilder::new().background_color(self.bg_color);
             self.label_text = if shift {
                 key.upper
             } else if alt {
@@ -149,7 +146,6 @@ impl KeyButton {
                 key.lower
             }
             .to_string();
-            // println!("Setting text of button to {:#?}", self.label_text);
             scene.send_message(
                 &self.label,
                 Box::new(SetTextMessage { text: self.label_text.clone() }),
@@ -188,20 +184,15 @@ impl KeyButton {
         context: &mut ViewAssistantContext,
         pointer_event: &input::pointer::Event,
     ) {
-        //println!("Button is focused: {}", self.focused);
         if !self.focused {
             return;
         }
         let bounds = scene.get_facet_bounds(&self.background);
 
         if self.tracking_pointer.is_none() {
-            // println!("====== handle_pointer_event: tracking pointer is none");
             match pointer_event.phase {
                 input::pointer::Phase::Down(location) => {
-                    //println!("Button checking if {:#?} is in {:#?}", location, bounds);
-                    //println!("====== Phase down at {:?}", location);
                     self.set_active(scene, bounds.contains(location.to_f32()));
-                    //println!("self is {}", self.label_text);
                     if self.active {
                         self.tracking_pointer = Some(pointer_event.pointer_id.clone());
                     }
@@ -209,7 +200,6 @@ impl KeyButton {
                 _ => (),
             }
         } else {
-            //println!("====== handle_pointer_event: tracking pointer is Some()");
             let tracking_pointer = self.tracking_pointer.as_ref().expect("tracking_pointer");
             if tracking_pointer == &pointer_event.pointer_id {
                 match pointer_event.phase {
@@ -273,6 +263,8 @@ pub struct KeyboardViewAssistant {
     scene_details: Option<SceneDetails>,
     #[allow(unused)]
     state_shift: bool,
+    shift_time: Time,
+    sticky_shift: bool,
     #[allow(unused)]
     accent_key: Option<&'static Key>,
     state_alt: bool,
@@ -293,6 +285,8 @@ impl KeyboardViewAssistant {
             field_name: "",
             scene_details: None,
             state_shift: false,
+            shift_time: Time::ZERO,
+            sticky_shift: false,
             state_alt: false,
             accent_key: None,
             state_symbols: false,
@@ -315,7 +309,7 @@ impl KeyboardViewAssistant {
         self.user_text = chars.as_str().to_string();
     }
 
-    fn key_press(&mut self, key: &&'static keys::Key, key_cap: &String) {
+    fn key_press(&mut self, key: &&'static keys::Key, key_cap: &String, time: &Time) {
         let mut keyboard_changed = false;
         match key {
             Key::Letter(letter_key) => {
@@ -359,6 +353,10 @@ impl KeyboardViewAssistant {
                         keyboard_changed = true;
                     }
                 }
+                if !self.sticky_shift {
+                    self.state_shift = false;
+                    keyboard_changed = true;
+                }
                 self.user_text.push_str(text);
             }
             Key::Special(key, _text) => match key {
@@ -390,9 +388,18 @@ impl KeyboardViewAssistant {
                     keyboard_changed = true;
                 }
                 SpecialKey::SHIFT => {
-                    self.state_shift = !self.state_shift;
-                    if self.state_shift {
+                    if !self.state_shift {
+                        self.shift_time = time.clone();
+                        self.state_shift = true;
                         self.state_alt = false;
+                    } else {
+                        // Is this a quick double press?
+                        if *time - self.shift_time < Duration::from_seconds(1) {
+                            self.sticky_shift = true;
+                        } else {
+                            self.sticky_shift = false;
+                            self.state_shift = false;
+                        }
                     }
                     keyboard_changed = true;
                 }
@@ -415,7 +422,15 @@ impl KeyboardViewAssistant {
                         button.set_special_action(&mut scene_details.scene, self.state_shift)
                     }
                     if let Key::Special(SpecialKey::ALT, _) = button.key {
-                        button.set_special_action(&mut scene_details.scene, self.state_alt)
+                        button.set_special_action(&mut scene_details.scene, self.state_alt);
+                    }
+                }
+                // Highlight the acccented kays
+                for key_button in &mut scene_details.buttons {
+                    for key in keys::ACCENTS {
+                        if key_button.key == key.alt_key {
+                            key_button.set_special_action(&mut scene_details.scene, self.state_alt);
+                        }
                     }
                 }
             }
@@ -521,7 +536,6 @@ impl ViewAssistant for KeyboardViewAssistant {
         ready_event: Event,
         context: &ViewAssistantContext,
     ) -> Result<(), Error> {
-        // println!("Keyboard: render");
         let mut scene_details = self.keyboard_scene(context);
 
         scene_details.scene.render(render_context, ready_event, context)?;
@@ -531,13 +545,10 @@ impl ViewAssistant for KeyboardViewAssistant {
     }
 
     fn handle_message(&mut self, message: Message) {
-        //println!("Keyboard: handle_message");
         if let Some(button_message) = message.downcast_ref::<ButtonMessages>() {
             match button_message {
-                ButtonMessages::Pressed(key, _value, letter) => {
-                    //println!("{} pressed at {:#?}", letter, value);
-                    //self.add_text(letter.clone());
-                    self.key_press(key, letter);
+                ButtonMessages::Pressed(key, time, letter) => {
+                    self.key_press(key, letter, time);
                 }
             }
         }
@@ -549,7 +560,6 @@ impl ViewAssistant for KeyboardViewAssistant {
         _event: &input::Event,
         pointer_event: &input::pointer::Event,
     ) -> Result<(), Error> {
-        // println!("Keyboard: handle_pointer_event");
         if let Some(scene_details) = self.scene_details.as_mut() {
             for button in scene_details.buttons.iter_mut() {
                 button.handle_pointer_event(&mut scene_details.scene, context, &pointer_event);
@@ -564,7 +574,6 @@ impl ViewAssistant for KeyboardViewAssistant {
         context: &mut ViewAssistantContext,
         focused: bool,
     ) -> Result<(), Error> {
-        println!("keyboard: handle_focus_event");
         self.focused = focused;
         if let Some(scene_details) = self.scene_details.as_mut() {
             for button in scene_details.buttons.iter_mut() {
