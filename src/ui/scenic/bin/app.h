@@ -59,7 +59,11 @@ class DisplayInfoDelegate : public Scenic::GetDisplayInfoDelegateDeprecated {
 struct ConfigValues {
   zx::duration min_predicted_frame_duration =
       scheduling::DefaultFrameScheduler::kMinPredictedFrameDuration;
+#if defined(USE_FLATLAND_BY_DEFAULT)
+  bool i_can_haz_flatland = true;
+#else
   bool i_can_haz_flatland = false;
+#endif  // USE_FLATLAND_BY_DEFAULT
   bool enable_allocator_for_flatland = true;
   bool pointer_auto_focus_on = true;
   flatland::BufferCollectionImportMode flatland_buffer_collection_import_mode =

@@ -7,6 +7,7 @@ import("//build/testing/environments.gni")
 import("//src/graphics/lib/magma/gnbuild/magma.gni")
 import("//src/lib/vulkan/layers.gni")
 import("//src/ui/lib/escher/build_args.gni")
+import("//src/ui/scenic/build_args.gni")
 import("//src/ui/scenic/lib/gfx/build_args.gni")
 
 # Runtime is the set of package dependencies typically desired for the
@@ -43,6 +44,13 @@ config_data("scenic_config") {
   for_pkg = "sysmgr"
   outputs = [ "scenic.config" ]
   sources = [ "services.config" ]
+}
+
+config("flatland_config") {
+  defines = []
+  if (use_flatland_by_default) {
+    defines += [ "USE_FLATLAND_BY_DEFAULT" ]
+  }
 }
 
 group("tests") {

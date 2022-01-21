@@ -4163,6 +4163,13 @@ direct.
 
 From //src/lib/ui/carnelian/BUILD.gn:29
 
+### use_flatland_by_default
+Use Flatland(2D api) for graphics in Scenic.
+
+**Current value (from the default):** `false`
+
+From //src/ui/scenic/build_args.gni:7
+
 ### use_goma
 Set to true to enable distributed compilation using Goma.
 
