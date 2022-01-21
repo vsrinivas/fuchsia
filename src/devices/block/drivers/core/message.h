@@ -6,14 +6,14 @@
 #define SRC_DEVICES_BLOCK_DRIVERS_CORE_MESSAGE_H_
 
 #include <fuchsia/hardware/block/c/banjo.h>
+#include <lib/fit/function.h>
 
-#include <fbl/function.h>
 #include <fbl/intrusive_double_list.h>
 
 class IoBuffer;
 class Server;
 
-using MessageCompleter = fbl::Function<void(zx_status_t, block_fifo_request_t&)>;
+using MessageCompleter = fit::function<void(zx_status_t, block_fifo_request_t&)>;
 
 // A single unit of work transmitted to the underlying block layer.
 // Message contains a block_op_t, which is dynamically sized. Therefore, it implements its

@@ -20,7 +20,6 @@
 #include <utility>
 
 #include <ddktl/device.h>
-#include <fbl/function.h>
 #include <fbl/mutex.h>
 #include <soc/aml-common/aml-pwm-regs.h>
 

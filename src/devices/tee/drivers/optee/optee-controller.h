@@ -14,6 +14,7 @@
 #include <lib/device-protocol/pdev.h>
 #include <lib/device-protocol/platform-device.h>
 #include <lib/fidl/llcpp/channel.h>
+#include <lib/fit/function.h>
 #include <lib/zircon-internal/thread_annotations.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/resource.h>
@@ -27,7 +28,6 @@
 #include <ddktl/device.h>
 #include <ddktl/fidl.h>
 #include <ddktl/protocol/empty-protocol.h>
-#include <fbl/function.h>
 #include <fbl/intrusive_double_list.h>
 #include <fbl/mutex.h>
 
@@ -72,7 +72,7 @@ class WaitCtx {
 
 class OpteeControllerBase {
  public:
-  using RpcHandler = fbl::Function<zx_status_t(const RpcFunctionArgs&, RpcFunctionResult*)>;
+  using RpcHandler = fit::function<zx_status_t(const RpcFunctionArgs&, RpcFunctionResult*)>;
 
   // Helper struct for the return value of CallWithMessage.
   struct CallResult {

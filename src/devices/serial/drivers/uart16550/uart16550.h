@@ -7,6 +7,7 @@
 
 #include <fuchsia/hardware/acpi/cpp/banjo.h>
 #include <fuchsia/hardware/serialimpl/cpp/banjo.h>
+#include <lib/fit/function.h>
 #include <lib/zx/fifo.h>
 #include <zircon/compiler.h>
 
@@ -16,7 +17,6 @@
 #include <vector>
 
 #include <ddktl/device.h>
-#include <fbl/function.h>
 #include <hwreg/bitfields.h>
 #include <hwreg/pio.h>
 

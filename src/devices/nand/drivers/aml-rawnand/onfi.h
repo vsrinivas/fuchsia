@@ -2,13 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_STORAGE_NAND_DRIVERS_AML_RAWNAND_ONFI_H_
-#define SRC_STORAGE_NAND_DRIVERS_AML_RAWNAND_ONFI_H_
+#ifndef SRC_DEVICES_NAND_DRIVERS_AML_RAWNAND_ONFI_H_
+#define SRC_DEVICES_NAND_DRIVERS_AML_RAWNAND_ONFI_H_
 
+#include <lib/fit/function.h>
 #include <lib/zx/time.h>
 #include <zircon/types.h>
-
-#include <fbl/function.h>
 
 static constexpr uint32_t NAND_CE0 = (0xe << 10);
 static constexpr uint32_t NAND_CE1 = (0xd << 10);
@@ -93,16 +92,16 @@ class Onfi {
                                zx::duration polling_interval);
 
   // Sets the device-specific functions to send a command and read a byte.
-  void Init(fbl::Function<void(int32_t cmd, uint32_t ctrl)> cmd_ctrl,
-            fbl::Function<uint8_t()> read_byte);
+  void Init(fit::function<void(int32_t cmd, uint32_t ctrl)> cmd_ctrl,
+            fit::function<uint8_t()> read_byte);
 
   // Finds the entry in the NAND chip table database based on manufacturer
   // id and device id.
   struct nand_chip_table* FindNandChipTable(uint8_t manuf_id, uint8_t device_id);
 
  private:
-  fbl::Function<void(int32_t cmd, uint32_t ctrl)> cmd_ctrl_;
-  fbl::Function<uint8_t()> read_byte_;
+  fit::function<void(int32_t cmd, uint32_t ctrl)> cmd_ctrl_;
+  fit::function<uint8_t()> read_byte_;
 };
 
-#endif  // SRC_STORAGE_NAND_DRIVERS_AML_RAWNAND_ONFI_H_
+#endif  // SRC_DEVICES_NAND_DRIVERS_AML_RAWNAND_ONFI_H_

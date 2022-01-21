@@ -7,12 +7,13 @@
 #include <lib/ddk/debug.h>
 #include <lib/ddk/driver.h>
 #include <lib/ddk/platform-defs.h>
+#include <lib/fit/function.h>
 
 #include <memory>
 
 #include <ddktl/device.h>
+#include <fbl/alloc_checker.h>
 #include <fbl/auto_lock.h>
-#include <fbl/function.h>
 
 #include "src/devices/tests/ddk-fidl-test/ddk-fidl-bind.h"
 

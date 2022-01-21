@@ -202,9 +202,9 @@ TEST_F(OpteeClientTest, OpenSessionsClosedOnClientUnbind) {
 
 class FakeRpmb : public fidl::WireServer<frpmb::Rpmb> {
  public:
-  using RpmbRequestCallback = fbl::Function<void(fuchsia_hardware_rpmb::wire::Request &request,
+  using RpmbRequestCallback = fit::function<void(fuchsia_hardware_rpmb::wire::Request &request,
                                                  RequestCompleter::Sync &completer)>;
-  using GetInfoCallback = fbl::Function<void(GetDeviceInfoCompleter::Sync &completer)>;
+  using GetInfoCallback = fit::function<void(GetDeviceInfoCompleter::Sync &completer)>;
   FakeRpmb() {}
 
   void GetDeviceInfo(GetDeviceInfoRequestView request,

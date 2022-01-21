@@ -17,6 +17,7 @@
 #include <lib/ddk/driver.h>
 #include <lib/fdio/fdio.h>
 #include <lib/fidl/coding.h>
+#include <lib/fit/function.h>
 #include <lib/zx/debuglog.h>
 #include <lib/zx/process.h>
 #include <lib/zx/resource.h>
@@ -40,7 +41,6 @@
 #include <vector>
 
 #include <fbl/auto_lock.h>
-#include <fbl/function.h>
 #include <fbl/string_printf.h>
 
 #include "async_loop_owned_rpc_handler.h"

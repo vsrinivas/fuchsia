@@ -73,8 +73,8 @@ struct nand_chip_table* Onfi::FindNandChipTable(uint8_t manuf_id, uint8_t device
   return NULL;
 }
 
-void Onfi::Init(fbl::Function<void(int32_t cmd, uint32_t ctrl)> cmd_ctrl,
-                fbl::Function<uint8_t()> read_byte) {
+void Onfi::Init(fit::function<void(int32_t cmd, uint32_t ctrl)> cmd_ctrl,
+                fit::function<uint8_t()> read_byte) {
   cmd_ctrl_ = std::move(cmd_ctrl);
   read_byte_ = std::move(read_byte);
 }

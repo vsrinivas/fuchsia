@@ -11,13 +11,12 @@
 #include <lib/ddk/driver.h>
 #include <lib/ddk/metadata.h>
 #include <lib/ddk/platform-defs.h>
+#include <lib/fit/function.h>
 #include <lib/zircon-internal/align.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <zircon/syscalls/resource.h>
-
-#include <fbl/function.h>
 
 #include "src/devices/bus/drivers/platform/platform-bus.h"
 

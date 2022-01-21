@@ -10,6 +10,7 @@
 #include <memory>
 
 #include <fbl/algorithm.h>
+#include <fbl/alloc_checker.h>
 #include <fbl/auto_lock.h>
 
 #include "src/devices/nand/drivers/aml-rawnand/aml-rawnand-bind.h"

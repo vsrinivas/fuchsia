@@ -6,10 +6,10 @@
 #define SRC_DEVICES_BLOCK_DRIVERS_USB_MASS_STORAGE_BLOCK_H_
 
 #include <fuchsia/hardware/block/cpp/banjo.h>
+#include <lib/fit/function.h>
 #include <stdint.h>
 
 #include <ddktl/device.h>
-#include <fbl/function.h>
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
 
@@ -50,7 +50,7 @@ class UmsBlockDevice : public DeviceType,
                        public fbl::RefCounted<UmsBlockDevice> {
  public:
   explicit UmsBlockDevice(zx_device_t* parent, uint8_t lun,
-                          fbl::Function<void(ums::Transaction*)>&& queue_callback)
+                          fit::function<void(ums::Transaction*)>&& queue_callback)
       : DeviceType(parent), queue_callback_(std::move(queue_callback)) {
     parameters_ = {};
     parameters_.lun = lun;
@@ -77,7 +77,7 @@ class UmsBlockDevice : public DeviceType,
   DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(UmsBlockDevice);
 
  private:
-  fbl::Function<void(ums::Transaction*)> queue_callback_;
+  fit::function<void(ums::Transaction*)> queue_callback_;
   BlockDeviceParameters parameters_;
 };
 }  // namespace ums

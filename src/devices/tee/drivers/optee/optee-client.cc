@@ -15,6 +15,7 @@
 #include <lib/fidl/llcpp/string_view.h>
 #include <lib/fidl/llcpp/transaction.h>
 #include <lib/fidl/llcpp/vector_view.h>
+#include <lib/stdcompat/functional.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/clock.h>
 #include <lib/zx/handle.h>
@@ -297,7 +298,7 @@ void OpteeClient::OpenSession2(OpenSession2RequestView request,
   OpenSessionMessage message = create_result.take_value();
 
   auto [call_code, peak_smc_call_duration] =
-      controller_->CallWithMessage(message, fbl::BindMember(this, &OpteeClient::HandleRpc));
+      controller_->CallWithMessage(message, cpp20::bind_front(&OpteeClient::HandleRpc, this));
 
   if (peak_smc_call_duration > kSmcCallDurationThreshold) {
     LOG(WARNING,
@@ -365,7 +366,7 @@ void OpteeClient::InvokeCommand(
   InvokeCommandMessage message = create_result.take_value();
 
   auto [call_code, peak_smc_call_duration] =
-      controller_->CallWithMessage(message, fbl::BindMember(this, &OpteeClient::HandleRpc));
+      controller_->CallWithMessage(message, cpp20::bind_front(&OpteeClient::HandleRpc, this));
 
   if (peak_smc_call_duration > kSmcCallDurationThreshold) {
     LOG(WARNING,
@@ -414,7 +415,7 @@ zx_status_t OpteeClient::CloseSession(uint32_t session_id) {
   CloseSessionMessage message = create_result.take_value();
 
   auto [call_code, peak_smc_call_duration] =
-      controller_->CallWithMessage(message, fbl::BindMember(this, &OpteeClient::HandleRpc));
+      controller_->CallWithMessage(message, cpp20::bind_front(&OpteeClient::HandleRpc, this));
 
   if (peak_smc_call_duration > kSmcCallDurationThreshold) {
     LOG(WARNING,

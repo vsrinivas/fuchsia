@@ -10,6 +10,7 @@
 #include <lib/ddk/debug.h>
 #include <lib/ddk/io-buffer.h>
 #include <lib/fit/defer.h>
+#include <lib/stdcompat/functional.h>
 #include <limits.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -127,7 +128,7 @@ void SocketDevice::SendRequest(SendRequestRequestView request,
   fbl::AllocChecker ac;
   auto conn = fbl::MakeRefCountedChecked<Connection>(
       &ac, request->addr, std::move(request->data),
-      fbl::BindMember(this, &SocketDevice::ConnectionSocketSignalled), cid_, lock_);
+      cpp20::bind_front(&SocketDevice::ConnectionSocketSignalled, this), cid_, lock_);
   if (!ac.check()) {
     completer.Reply(ZX_ERR_NO_MEMORY);
     return;
@@ -152,7 +153,7 @@ void SocketDevice::SendResponse(SendResponseRequestView request,
   fbl::AllocChecker ac;
   auto conn = fbl::MakeRefCountedChecked<Connection>(
       &ac, request->addr, std::move(request->data),
-      fbl::BindMember(this, &SocketDevice::ConnectionSocketSignalled), cid_, lock_);
+      cpp20::bind_front(&SocketDevice::ConnectionSocketSignalled, this), cid_, lock_);
   if (!ac.check()) {
     completer.Reply(ZX_ERR_NO_MEMORY);
     return;

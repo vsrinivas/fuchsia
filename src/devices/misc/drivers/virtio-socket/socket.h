@@ -11,6 +11,7 @@
 #include <lib/async/cpp/wait.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/io-buffer.h>
+#include <lib/fit/function.h>
 #include <lib/virtio/device.h>
 #include <lib/virtio/ring.h>
 #include <lib/zircon-internal/thread_annotations.h>
@@ -25,7 +26,6 @@
 #include <ddktl/protocol/empty-protocol.h>
 #include <fbl/array.h>
 #include <fbl/auto_lock.h>
-#include <fbl/function.h>
 #include <fbl/intrusive_double_list.h>
 #include <fbl/intrusive_hash_table.h>
 #include <fbl/ref_counted.h>
@@ -215,7 +215,7 @@ class SocketDevice : public Device,
 
    public:
     using SignalHandler =
-        fbl::Function<void(zx_status_t, const zx_packet_signal_t*, fbl::RefPtr<Connection>)>;
+        fit::function<void(zx_status_t, const zx_packet_signal_t*, fbl::RefPtr<Connection>)>;
     Connection(const ConnectionKey& key, zx::socket data, SignalHandler wait_handler, uint32_t cid,
                fbl::Mutex& lock);
     ~Connection() {}

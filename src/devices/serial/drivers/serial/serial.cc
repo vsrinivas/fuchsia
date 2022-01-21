@@ -7,6 +7,7 @@
 #include <fidl/fuchsia.hardware.serial/cpp/wire.h>
 #include <lib/ddk/debug.h>
 #include <lib/fidl-utils/bind.h>
+#include <lib/fit/function.h>
 #include <lib/zx/handle.h>
 #include <lib/zx/time.h>
 #include <zircon/status.h>
@@ -14,8 +15,8 @@
 
 #include <memory>
 
+#include <fbl/alloc_checker.h>
 #include <fbl/auto_lock.h>
-#include <fbl/function.h>
 
 #include "src/devices/serial/drivers/serial/serial_bind.h"
 
