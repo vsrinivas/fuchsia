@@ -6,7 +6,6 @@
 
 #include <lib/fdio/watcher.h>
 
-#include <fbl/function.h>
 #include <fbl/string.h>
 
 namespace usb_virtual_bus_helper {
