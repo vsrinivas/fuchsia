@@ -206,30 +206,7 @@ async fn test_get_driver_info_not_found_filter_vf1() -> Result<()> {
 }
 
 // DFv2
-#[fasync::run_singlethreaded(test)]
-async fn test_get_driver_info_no_filter_vf2() -> Result<()> {
-    let (_instance, driver_dev) = set_up_test_driver_realm(true).await?;
-    let driver_infos = get_driver_info(&driver_dev, &[]).await?;
-    assert_driver_urls(driver_infos, &EXPECTED_DRIVER_URLS_NO_FILTER);
-    Ok(())
-}
-
-#[fasync::run_singlethreaded(test)]
-async fn test_get_driver_info_filter_vf2() -> Result<()> {
-    let (_instance, driver_dev) = set_up_test_driver_realm(true).await?;
-    let driver_infos = get_driver_info(&driver_dev, &DRIVER_FILTER).await?;
-    assert_driver_urls(driver_infos, &EXPECTED_DRIVER_URLS_WITH_FILTER);
-    Ok(())
-}
-
-#[fasync::run_singlethreaded(test)]
-async fn test_get_driver_info_not_found_filter_vf2() -> Result<()> {
-    let (_instance, driver_dev) = set_up_test_driver_realm(true).await?;
-    let iterator = send_get_driver_info_request(&driver_dev, &NOT_FOUND_DRIVER_FILTER).await?;
-    let res = iterator.get_next().await.expect_err("A driver should not be returned");
-    assert_not_found_error(res);
-    Ok(())
-}
+// TODO(fxbug.dev/90735): Add GetDriverInfo tests using DFv2 once GetDriverInfo is implemented in DFv2.
 
 // GetDeviceInfo tests
 // DFv1
@@ -261,4 +238,4 @@ async fn test_get_device_info_not_found_filter_vf1() -> Result<()> {
     Ok(())
 }
 
-// TODO(fxbug.dev/90735): Add GetDeviceInfo tests using DFv2.
+// TODO(fxbug.dev/90735): Add GetDeviceInfo tests using DFv2 once GetDeviceInfo is implemented in DFv2.

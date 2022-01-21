@@ -370,6 +370,13 @@ int main(int argc, char** argv) {
 
   // Find and load v1 or v2 Drivers.
   if (!driver_manager_params.use_dfv2) {
+    auto publish = coordinator.PublishDriverDevelopmentService(outgoing.svc_dir());
+    if (publish.is_error()) {
+      LOGF(ERROR, "Failed to publish Driver Development service in DFv1: %s",
+           publish.status_string());
+      return publish.error_value();
+    }
+
     // V1 Drivers.
     status = system_instance.CreateDriverHostJob(root_job, &config.driver_host_job);
     if (status != ZX_OK) {

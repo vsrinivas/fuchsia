@@ -56,6 +56,7 @@
 #include "src/devices/bin/driver_manager/v1/suspend_resume_manager.h"
 #include "src/devices/bin/driver_manager/v1/suspend_task.h"
 #include "src/devices/bin/driver_manager/v1/unbind_task.h"
+#include "src/lib/storage/vfs/cpp/pseudo_dir.h"
 
 namespace statecontrol_fidl = fuchsia_hardware_power_statecontrol;
 using statecontrol_fidl::wire::SystemPowerState;
@@ -138,6 +139,7 @@ class Coordinator : public fidl::WireServer<fuchsia_driver_development::DriverDe
   ~Coordinator();
 
   zx_status_t InitOutgoingServices(const fbl::RefPtr<fs::PseudoDir>& svc_dir);
+  zx::status<> PublishDriverDevelopmentService(const fbl::RefPtr<fs::PseudoDir>& svc_dir);
 
   // Initialization functions for DFv1. InitCoreDevices() is public for testing only.
   void LoadV1Drivers(std::string_view sys_device_driver,

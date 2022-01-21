@@ -64,6 +64,7 @@
 #include "src/devices/bin/driver_manager/package_resolver.h"
 #include "src/devices/bin/driver_manager/v1/unbind_task.h"
 #include "src/devices/lib/log/log.h"
+#include "src/lib/storage/vfs/cpp/pseudo_dir.h"
 
 namespace fio = fuchsia_io;
 
@@ -1254,6 +1255,32 @@ void Coordinator::UnregisterSystemStorageForShutdown(
       [completer = completer.ToAsync()](zx_status_t status) mutable { completer.Reply(status); });
 }
 
+zx::status<> Coordinator::PublishDriverDevelopmentService(
+    const fbl::RefPtr<fs::PseudoDir>& svc_dir) {
+  const auto driver_dev = [this](fidl::ServerEnd<fdd::DriverDevelopment> request) {
+    fidl::BindServer<fidl::WireServer<fdd::DriverDevelopment>>(
+        dispatcher_, std::move(request), this,
+        [](fidl::WireServer<fdd::DriverDevelopment>* self, fidl::UnbindInfo info,
+           fidl::ServerEnd<fdd::DriverDevelopment> server_end) {
+          if (info.is_user_initiated()) {
+            return;
+          }
+          if (info.is_peer_closed()) {
+            // For this development protocol, the client is free to disconnect
+            // at any time.
+            return;
+          }
+          LOGF(ERROR, "Error serving '%s': %s",
+               fidl::DiscoverableProtocolName<fdd::DriverDevelopment>,
+               info.FormatDescription().c_str());
+        });
+    return ZX_OK;
+  };
+  zx_status_t status = svc_dir->AddEntry(fidl::DiscoverableProtocolName<fdd::DriverDevelopment>,
+                                         fbl::MakeRefCounted<fs::Service>(driver_dev));
+  return zx::make_status(status);
+}
+
 zx_status_t Coordinator::InitOutgoingServices(const fbl::RefPtr<fs::PseudoDir>& svc_dir) {
   static_assert(fdm::wire::kSuspendFlagReboot == DEVICE_SUSPEND_FLAG_REBOOT);
   static_assert(fdm::wire::kSuspendFlagPoweroff == DEVICE_SUSPEND_FLAG_POWEROFF);
@@ -1284,31 +1311,6 @@ zx_status_t Coordinator::InitOutgoingServices(const fbl::RefPtr<fs::PseudoDir>& 
   if (status != ZX_OK) {
     LOGF(ERROR, "Failed to add entry in service directory for '%s': %s",
          fidl::DiscoverableProtocolName<fdm::SystemStateTransition>, zx_status_get_string(status));
-    return status;
-  }
-
-  const auto driver_dev = [this](fidl::ServerEnd<fdd::DriverDevelopment> request) {
-    fidl::BindServer<fidl::WireServer<fdd::DriverDevelopment>>(
-        dispatcher_, std::move(request), this,
-        [](fidl::WireServer<fdd::DriverDevelopment>* self, fidl::UnbindInfo info,
-           fidl::ServerEnd<fdd::DriverDevelopment> server_end) {
-          if (info.is_user_initiated()) {
-            return;
-          }
-          if (info.is_peer_closed()) {
-            // For this development protocol, the client is free to disconnect
-            // at any time.
-            return;
-          }
-          LOGF(ERROR, "Error serving '%s': %s",
-               fidl::DiscoverableProtocolName<fdd::DriverDevelopment>,
-               info.FormatDescription().c_str());
-        });
-    return ZX_OK;
-  };
-  status = svc_dir->AddEntry(fidl::DiscoverableProtocolName<fdd::DriverDevelopment>,
-                             fbl::MakeRefCounted<fs::Service>(driver_dev));
-  if (status != ZX_OK) {
     return status;
   }
 
