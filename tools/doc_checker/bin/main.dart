@@ -24,7 +24,7 @@ const String _optionDotFile = 'dot-file';
 const String _optionLocalLinksOnly = 'local-links-only';
 
 // Documentation subdirectory to inspect.
-const String _docsDir = 'docs';
+const String _optionDocsDir = 'docs-folder';
 
 // Developer site where reference documentation is published.
 const String refDomain = 'https://fuchsia.dev';
@@ -51,6 +51,13 @@ Future<Null> main(List<String> args) async {
       defaultsTo: 'fuchsia',
     )
     ..addOption(
+      _optionDocsDir,
+      help:
+          '(Experimental) Name of the folder which contains documents to check. '
+          'This flag is experimental and is usually hardcoded to docs.',
+      defaultsTo: 'docs',
+    )
+    ..addOption(
       _optionDotFile,
       help: 'Path to the dotfile to generate',
       defaultsTo: '',
@@ -69,7 +76,8 @@ Future<Null> main(List<String> args) async {
 
   final String rootDir = path.canonicalize(options[_optionRootDir]);
   final String docsProject = options[_optionProject];
-  final String docsDir = path.canonicalize(path.join(rootDir, _docsDir));
+  final String docsDir =
+      path.canonicalize(path.join(rootDir, options[_optionDocsDir]));
 
   final List<String> docs = Directory(docsDir)
       .listSync(recursive: true)
@@ -81,7 +89,7 @@ Future<Null> main(List<String> args) async {
       .map((FileSystemEntity entity) => entity.path)
       .toList();
 
-  final String readme = path.join(docsDir, 'README.md');
+  final String readme = path.join(options[_optionDocsDir], 'README.md');
   final Graph graph = Graph();
   final List<Error> errors = <Error>[];
 
