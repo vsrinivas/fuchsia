@@ -322,6 +322,10 @@ impl ServiceLevelConnection {
         self.state.selected_codec
     }
 
+    pub fn three_way_calling(&self) -> bool {
+        self.state.three_way_calling()
+    }
+
     /// Returns `true` if the provided `procedure` is currently active.
     #[cfg(test)]
     fn is_active(&self, procedure: &ProcedureMarker) -> bool {

@@ -31,7 +31,7 @@ use {
 };
 
 use super::{
-    calls::{Call, Calls},
+    calls::{Call, CallAction, Calls},
     gain_control::GainControl,
     indicators::{AgIndicator, AgIndicators, HfIndicator},
     procedure::ProcedureMarker,
@@ -507,19 +507,7 @@ impl PeerTask {
                 self.connection.receive_ag_request(marker, response(result)).await;
             }
             SlcRequest::InitiateCall { call_action, response } => {
-                let result = match &self.handler {
-                    Some(h) => match h.request_outgoing_call(&mut call_action.into()).await {
-                        Ok(Ok(())) => Ok(()),
-                        err => {
-                            warn!(
-                                "Error initiating outgoing call by number for peer {}: {:?}",
-                                self.id, err
-                            );
-                            Err(())
-                        }
-                    },
-                    None => Err(()),
-                };
+                let result = self.handle_initiate_call(call_action).await;
                 self.connection.receive_ag_request(marker, response(result)).await;
             }
             SlcRequest::SynchronousConnectionSetup { selected, response } => {
@@ -550,6 +538,35 @@ impl PeerTask {
                 }
             }
         };
+    }
+
+    pub async fn handle_initiate_call(&mut self, call_action: CallAction) -> Result<(), ()> {
+        let three_way_calling = self.connection.three_way_calling();
+        let call_active = self.calls.is_call_active();
+        let handler = self.handler.as_ref().ok_or(())?;
+
+        if call_active && !three_way_calling {
+            warn!("Attempting to initiate unsupported outgoing call during active call.");
+            return Err(());
+        }
+
+        if call_active && three_way_calling {
+            // Hold calls, and return Err(_) if it fails.
+            self.calls.hold_active().map_err(|e| {
+                warn!(
+                    "Failed to hold active call when making outgoing call for peer {}: {}",
+                    self.id, e
+                )
+            })?;
+        }
+
+        match handler.request_outgoing_call(&mut call_action.into()).await {
+            Ok(Ok(())) => Ok(()),
+            err => {
+                warn!("Error initiating outgoing call for peer {}: {:?}", self.id, err);
+                Err(())
+            }
+        }
     }
 
     pub async fn run(mut self, mut task_channel: mpsc::Receiver<PeerRequest>) -> Self {
@@ -775,7 +792,7 @@ impl PeerTask {
                 None
             }
             Ok(token) => {
-                info!("Successfully paused aduio for peer {:}.", peer_id);
+                info!("Successfully paused audio for peer {:}.", peer_id);
                 Some(token)
             }
         };
@@ -928,7 +945,7 @@ mod tests {
 
     use crate::{
         audio::TestAudioControl,
-        features::HfFeatures,
+        features::{AgFeatures, HfFeatures},
         peer::{
             calls::Number,
             indicators::{AgIndicatorsReporting, HfIndicators},
@@ -1583,6 +1600,74 @@ mod tests {
         // Drop the peer task sender to force the PeerTask's run future to complete
         drop(sender);
         let _ = exec.run_until_stalled(&mut run_fut).expect("run_fut to complete");
+    }
+
+    #[fuchsia::test]
+    fn outgoing_call_holds_active() {
+        // Set up the executor.
+        let mut exec = fasync::TestExecutor::new().unwrap();
+
+        // Setup the peer task with the specified SlcState to enable three way calling.
+        let mut ag_features = AgFeatures::default();
+        ag_features.set(AgFeatures::THREE_WAY_CALLING, true);
+        let mut hf_features = HfFeatures::default();
+        hf_features.set(HfFeatures::THREE_WAY_CALLING, true);
+        let state = SlcState { ag_features, hf_features, ..SlcState::default() };
+        let (connection, remote) = create_and_initialize_slc(state);
+        let (peer, mut sender, receiver, mut profile) = setup_peer_task(Some(connection));
+
+        let (proxy, stream) =
+            fidl::endpoints::create_proxy_and_stream::<PeerHandlerMarker>().unwrap();
+
+        let run_fut = peer.run(receiver);
+        pin_mut!(run_fut);
+
+        // Pass in the client end connected to the call manager
+        exec.run_singlethreaded(sender.send(PeerRequest::Handle(proxy))).expect("Connecting peer");
+
+        let (mut stream, run_fut) = run_while(&mut exec, run_fut, wait_for_call_stream(stream));
+
+        // Send the incoming waiting call.
+        let (responder, run_fut) = run_while(&mut exec, run_fut, stream.next());
+        let (client_end, mut call_stream) = fidl::endpoints::create_request_stream().unwrap();
+        let next_call = NextCall {
+            call: Some(client_end),
+            remote: Some("1234567".to_string()),
+            state: Some(CallState::IncomingWaiting),
+            direction: Some(CallDirection::MobileTerminated),
+            ..NextCall::EMPTY
+        };
+        responder.unwrap().send(next_call).expect("Successfully send call information");
+
+        // Answer call.
+        let (request, run_fut) = run_while(&mut exec, run_fut, &mut call_stream.next());
+        let state_responder = match request {
+            Some(Ok(CallRequest::WatchState { responder })) => responder,
+            req => panic!("Expected WatchState, got {:?}", req),
+        };
+        state_responder.send(CallState::OngoingActive).expect("Sent OngoingActive.");
+        let (sco, run_fut) =
+            run_while(&mut exec, run_fut, expect_sco_connection(&mut profile, true, Ok(())));
+        let _sco = sco.expect("SCO Connection.");
+
+        // Make outgoing call from HF.
+        let dial_cmd = at::Command::AtdNumber { number: String::from("7654321") };
+        let mut buf = Vec::new();
+        at::Command::serialize(&mut buf, &vec![dial_cmd]).expect("serialization is ok");
+        let _ = remote.as_ref().write(&buf[..]).expect("channel write is ok");
+
+        let (watch_state_req, run_fut) = run_while(&mut exec, run_fut, &mut call_stream.next());
+        let _watch_state_resp = match watch_state_req {
+            Some(Ok(CallRequest::WatchState { responder, .. })) => responder,
+            req => panic!("Expected WatchState, got {:?}", req),
+        };
+
+        // Receive hold request from first call.
+        let (hold_req, _run_fut) = run_while(&mut exec, run_fut, &mut call_stream.next());
+        match hold_req {
+            Some(Ok(CallRequest::RequestHold { .. })) => {}
+            req => panic!("Expected RequestHold, got {:?}", req),
+        };
     }
 
     #[fuchsia::test]

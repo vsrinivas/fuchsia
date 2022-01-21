@@ -267,7 +267,7 @@ impl Calls {
     /// the CallProxy from the map if an error is returned by running `f`.
     ///
     /// Successful call requests are recorded as pending. If `txn` is Some, they are recorded
-    /// to that Transaction, otherwise they are recorded directly to a new Transaction..
+    /// to that Transaction, otherwise they are recorded directly to a new Transaction.
     ///
     /// Panics: Invalid call `state` passed to `send_call_state` will result in a panic.
     fn send_call_request(
@@ -301,7 +301,6 @@ impl Calls {
     }
 
     /// Send a request to the call manager to place the call on hold.
-    #[cfg(test)]
     fn request_hold(&mut self, index: CallIdx) -> Result<(), CallError> {
         let desired_state = CallState::OngoingHeld;
         self.send_call_request(index, desired_state, None)
@@ -498,7 +497,7 @@ impl Calls {
     }
 
     /// Perform the supplementary call service related to held or waiting calls specified by
-    /// `action`. See HFP v1.8, Section 4.22 for more information.
+    /// `action` received from the HF. See HFP v1.8, Section 4.22 for more information.
     ///
     /// Waiting calls are prioritized over held calls when an action operates on a specific call.
     /// Per 4.34.2 AT+CHLD: "Where both a held and a waiting call exist, the above procedures shall
@@ -542,6 +541,19 @@ impl Calls {
                 self.request_active(idx, false)?;
             }
             HoldAllExceptSpecified(idx) => self.request_active(idx, false)?,
+        }
+        Ok(())
+    }
+
+    // If the HF makes an outgoing call while another call is active, this call is put on hold.
+    // This behavior is implicitly implied by making the outgoing call rather than controlled by the
+    // HF, so there is no CallHoldAction.
+    // See HFP v1.8 4.22.2.
+    pub fn hold_active(&mut self) -> Result<(), CallError> {
+        let active_calls =
+            self.all_by_state(CallState::OngoingActive).map(|c| c.0).collect::<Vec<_>>();
+        for idx in active_calls {
+            self.request_hold(idx)?
         }
         Ok(())
     }
