@@ -43,7 +43,7 @@ class SimpleBrowserDriver {
     // Connects to the browser.
     // TODO(fxb/66577): Get the driver of the last isolate once it's supported by
     // [FlutterDriverConnector] in flutter_driver_sl4f.dart
-    _browser = await _connector.driverForIsolate('simple-browser');
+    _browser = await _connector.driverForIsolateBySelector('simple-browser', 'simple-browser.cmx');
     // ignore: unnecessary_null_comparison
     if (_browser == null) {
       fail('unable to connect to simple browser.');

@@ -13,7 +13,6 @@ import 'package:fidl_fuchsia_input/fidl_async.dart';
 import 'package:fidl_fuchsia_ui_input3/fidl_async.dart' hide KeyEvent;
 import 'package:flutter_driver/flutter_driver.dart';
 import 'package:flutter_driver_sl4f/flutter_driver_sl4f.dart';
-import 'package:fuchsia_remote_debug_protocol/fuchsia_remote_debug_protocol.dart';
 import 'package:image/image.dart' hide Point;
 import 'package:sl4f/sl4f.dart';
 import 'package:test/test.dart';
@@ -68,11 +67,12 @@ class ErmineDriver {
     // }
 
     // Initialize Ermine's flutter driver and web driver connectors.
-    await _connector.initialize(_Sl4fCommandRunner(sl4f));
+    await _connector.initialize();
     print('Flutter driver connector initialized');
 
     // Now connect to ermine.
-    _driver = await _connector.driverForIsolate('ermine');
+    _driver = await _connector.driverForIsolateBySelector('ermine.cm',
+        'core/session-manager/session\\:session/workstation_session/login_shell/ermine_shell');
     if (_driver == null) {
       fail('Unable to connect to ermine.');
     }
@@ -280,8 +280,8 @@ class ErmineDriver {
     // Connects to the browser.
     // TODO(fxb/66577): Get the driver of the last isolate once it's supported by
     // [FlutterDriverConnector] in flutter_driver_sl4f.dart
-    final browserDriver =
-        await browserConnector.driverForIsolate('simple-browser');
+    final browserDriver = await browserConnector.driverForIsolateBySelector(
+        'simple-browser', 'simple-browser.cmx');
     // ignore: unnecessary_null_comparison
     if (browserDriver == null) {
       fail('unable to connect to simple browser.');
@@ -573,38 +573,5 @@ class ViewSnapshot {
       );
     }
     return Rectangle(0, 0, 0, 0);
-  }
-}
-
-/// A wrapper around our Ssh class for Flutter's FuchsiaRemoteConnection class.
-class _Sl4fCommandRunner extends SshCommandRunner {
-  final Sl4f _sl4f;
-  final Ssh _ssh;
-  _Sl4fCommandRunner(this._sl4f)
-      : _ssh = _sl4f.ssh,
-        super(address: _sl4f.ssh.target);
-
-  @override
-  Future<List<String>> run(String command) async {
-    String cmd = command;
-    if (cmd == '/bin/find /hub -name vmservice-port') {
-      final snapshot = await Inspect(_sl4f)
-          .snapshot(['core/session-manager/*/flutter*:root:vm_service_port']);
-      final vmServicePort =
-          snapshot.first['payload']['root']['vm_service_port'];
-      return [vmServicePort.toString()];
-    } else if (cmd.startsWith('/bin/ls')) {
-      // cmd is of format: /bin/ls 33025
-      // split it on ' ' and return the port.
-      final tokens = cmd.split(' ');
-      return tokens.length > 1 ? [tokens.last] : [];
-    }
-
-    final result = await _ssh.run(cmd);
-    if (result.exitCode != 0) {
-      throw SshCommandError(
-          'SSH Command failed: $cmd\nstdout: ${result.stdout}\nstderr: ${result.stderr}');
-    }
-    return result.stdout.split('\n');
   }
 }
