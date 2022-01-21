@@ -346,9 +346,6 @@ void CodedTypesGenerator::CompileFields(const flat::Decl* decl) {
 
             // TODO(fxbug.dev/88343): switch on union/table when those are enabled.
             auto as_struct = static_cast<const flat::Struct*>(id->type_decl);
-
-            // TODO(fxbug.dev/76316): remove this assert once this generator is able to
-            //  properly handle empty structs as payloads.
             assert(!as_struct->members.empty() && "cannot process empty message payloads");
 
             for (const auto& no_header_parameter : FlattenedStructMembers(*as_struct)) {
@@ -538,9 +535,6 @@ void CodedTypesGenerator::CompileDecl(const flat::Decl* decl) {
 
             // TODO(fxbug.dev/88343): switch on union/table when those are enabled.
             auto as_struct = static_cast<const flat::Struct*>(id->type_decl);
-
-            // TODO(fxbug.dev/76316): remove this assert once this generator is
-            //  able to properly handle empty structs as payloads.
             assert(!as_struct->members.empty() && "cannot process empty message payloads");
 
             typeshape_v1 = as_struct->typeshape(WireFormat::kV1NoEe).PrependTransactionHeader();

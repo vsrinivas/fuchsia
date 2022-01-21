@@ -981,10 +981,6 @@ std::map<const flat::Decl*, CGenerator::NamedProtocol> CGenerator::NameProtocols
           members = &as_struct->members;
         }
 
-        // TODO(fxbug.dev/76316): remove this assert once this generator is able
-        //  to properly handle empty structs as payloads.  Since no new uses of
-        //  the C bindings are allowed, it may be prudent to leave this assert
-        //  in.
         assert(!members || (members && !members->empty()));
         named_method.request = std::make_unique<NamedMessage>(
             NamedMessage{std::move(c_name), std::move(coded_name), members, typeshape});
@@ -1005,10 +1001,6 @@ std::map<const flat::Decl*, CGenerator::NamedProtocol> CGenerator::NameProtocols
           members = &as_struct->members;
         }
 
-        // TODO(fxbug.dev/76316): remove this assert once this generator is able
-        //  to properly handle empty structs as payloads.  Since no new uses of
-        //  the C bindings are allowed, it may be prudent to leave this assert
-        //  in.
         assert(!members || (members && !members->empty()));
         named_method.response = std::make_unique<NamedMessage>(
             NamedMessage{std::move(c_name), std::move(coded_name), members, typeshape});
