@@ -38,6 +38,11 @@ func debugBinaryUploads(ctx context.Context, mods binModules, debugNamespace, bu
 		if os.IsNotExist(err) {
 			continue
 		} else if err != nil {
+			// TODO(fxbug.dev/91924): Remove this debugging info once invalid
+			// prebuilt binary manifests are fixed.
+			if b, err := os.ReadFile(filepath.Join(mods.BuildDir(), pb.Manifest)); err == nil {
+				logger.Debugf(ctx, "Contents of invalid prebuilt binary manifest %s: %s", pb.Manifest, b)
+			}
 			return nil, nil, nil, fmt.Errorf("failed to derive binaries from prebuilt binary set %q: %w", pb.Name, err)
 		}
 		bins = append(bins, prebuiltBins...)
