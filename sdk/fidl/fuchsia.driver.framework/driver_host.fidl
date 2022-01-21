@@ -44,10 +44,27 @@ type DriverStartArgs = resource table {
 
 /// Protocol through which a driver's lifecycle can be managed.
 ///
-/// Closing the protocol's channel is used to signal:
-///   1. To the driver runner that the driver has stopped.
-///   2. To the driver host that the driver should stop.
-protocol Driver {};
+/// The Driver Runner will call Stop() on this protocol to indicate that the
+/// Driver Host should stop the Driver. The Driver Host should close the
+/// server end of the channel with an epitath to signal that the driver has
+/// been stopped.
+///
+/// EPITAPH
+///
+/// This protocol sends a FIDL epitaph to indicate that the driver instance
+/// has been terminated correctly. The Driver Host must send an epitaph of
+/// ZX_OK in order to indicate the Driver was Stopped correctly.
+/// Not sending an epitaph, or sending an error, will cause Driver Runner
+/// to log an error.
+protocol Driver {
+
+    /// Request that the Driver is Stopped.
+    ///
+    /// After stopping the driver instance, the server should close this
+    /// connection with an epitath. This signals that the Driver has been
+    /// stopped.
+    Stop();
+};
 
 /// Protocol through which a driver host can be managed.
 @discoverable

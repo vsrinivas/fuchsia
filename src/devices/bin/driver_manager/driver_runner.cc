@@ -156,102 +156,56 @@ void UnbindAndReset(std::optional<fidl::ServerBindingRef<T>>& ref) {
 
 }  // namespace
 
-// Holds the state of removal operation in the driver topology.
-//
-// Removal is complicated by the fact that we need to wait for drivers that are
-// bound to nodes to stop before we continue remove nodes. Otherwise, a parent
-// driver can be removed before a child driver, and cause system instability.
-//
-// Removal of a node happens in the following steps:
-// 1. The FIDL server detects the client has unbound the node.
-// 2. Node::Remove() is called on the node.
-//    a. If an AsyncRemove is stored in the node, we jump to step 5.
-//    b. Otherwise, we continue to step 3.
-// 3. The node is removed from its parent.
-// 4. A list of the nodes children is created, ordered by depth.
-// 5. AsyncRemove::Continue() is called to remove each node, depth-first.
-// 6. When a node is removed, if it was bound to a driver, we:
-//    a. Unbind the driver. This causes the DriverComponent to be destroyed,
-//       which closes the associated Driver channel. When the Driver channel is
-//       closed, this informs the driver host (that is hosting the driver) to
-//       stop the driver.
-//    b. Store the AsyncRemove within the node.
-//    c. Stop removing any further nodes.
-//    d. Go back to step 1.
-// 7. Delete that final node at the root of the removal operation.
-class AsyncRemove {
- public:
-  AsyncRemove(std::shared_ptr<Node> root, std::vector<Node*> nodes)
-      : root_(std::move(root)), nodes_(std::move(nodes)) {}
+DriverComponent::DriverComponent(fidl::ClientEnd<fdf::Driver> driver,
+                                 async_dispatcher_t* dispatcher)
+    : driver_(std::move(driver), dispatcher, this) {}
 
-  void Continue(std::unique_ptr<AsyncRemove> self) {
-    // To unbind nodes depth-first, we traverse the list in reverse.
-    auto node = nodes_.rbegin();
-    for (auto end = nodes_.rend(); node != end; ++node) {
-      // If unbind returns true, a node has taken ownership of the async remove
-      // and is waiting for the driver bound to it to stop. We must halt removal
-      // and wait to be called again.
-      if ((*node)->Unbind(self)) {
-        break;
-      }
-    }
-    // Erase all of removed nodes.
-    nodes_.erase(node.base(), nodes_.end());
-    if (nodes_.size() == 1) {
-      // Only the root is left, so delete it.
-      root_.reset();
-    }
-  }
-
- private:
-  // In `root_`, we store root of the sub-tree we are removing. This ensures
-  // that the pointers stored in `nodes_` is valid for the life-time of `this`.
-  std::shared_ptr<Node> root_;
-  std::vector<Node*> nodes_;
-};
-
-DriverComponent::DriverComponent(fidl::ClientEnd<fdf::Driver> driver)
-    : driver_(std::move(driver)), wait_(this, driver_.channel().get(), ZX_CHANNEL_PEER_CLOSED) {}
+DriverComponent::~DriverComponent() {
+  node_->set_driver_component(std::nullopt);
+  node_->Remove();
+}
 
 void DriverComponent::set_driver_ref(
     fidl::ServerBindingRef<frunner::ComponentController> driver_ref) {
   driver_ref_.emplace(std::move(driver_ref));
 }
 
-zx::status<> DriverComponent::Watch(async_dispatcher_t* dispatcher) {
-  zx_status_t status = wait_.Begin(dispatcher);
-  return zx::make_status(status);
+void DriverComponent::on_fidl_error(fidl::UnbindInfo info) {
+  // The only valid way a driver host should shut down the Driver channel
+  // is with the ZX_OK epitaph.
+  if (info.reason() != fidl::Reason::kPeerClosed || info.status() != ZX_OK) {
+    LOGF(WARNING, "DriverComponent: driver channel shutdown with: %s",
+         info.FormatDescription().data());
+  }
+
+  // We are disconnected from the DriverHost so shut everything down.
+  StopComponent();
 }
 
 void DriverComponent::Stop(StopRequestView request,
                            DriverComponent::StopCompleter::Sync& completer) {
-  Stop();
+  RequestDriverStop();
 }
 
 void DriverComponent::Kill(KillRequestView request,
                            DriverComponent::KillCompleter::Sync& completer) {
-  Stop();
+  RequestDriverStop();
 }
 
-void DriverComponent::Stop() {
-  // Stop waiting on `driver_`, if there is a wait pending.
-  if (wait_.is_pending()) {
-    if (zx_status_t status = wait_.Cancel(); status != ZX_OK) {
-      LOGF(WARNING, "Failed to cancel watch on driver: %s", zx_status_get_string(status));
-    }
-  }
-  // Close `driver_` to signal to the driver host that the associated driver
-  // component should be stopped.
-  driver_.reset();
-}
+void DriverComponent::StopComponent() { CloseAndReset(driver_ref_); }
 
-void DriverComponent::OnPeerClosed(async_dispatcher_t* dispatcher, async::WaitBase* wait,
-                                   zx_status_t status, const zx_packet_signal_t* signal) {
-  if (status != ZX_OK) {
-    LOGF(WARNING, "Failed to watch driver: %s", zx_status_get_string(status));
-  } else if (signal->observed & ZX_CHANNEL_PEER_CLOSED) {
-    CloseAndReset(driver_ref_);
+void DriverComponent::RequestDriverStop() { node_->Remove(); }
+
+void DriverComponent::StopDriver() {
+  if (stop_in_progress_) {
+    return;
   }
+
+  auto result = driver_->Stop();
+  if (!result.ok()) {
+    LOGF(INFO, "Failed to stop a driver: %s", result.FormatDescription().data());
+  }
+  stop_in_progress_ = true;
 }
 
 DriverHostComponent::DriverHostComponent(
@@ -330,13 +284,12 @@ void Node::set_collection(Collection collection) { collection_ = collection; }
 
 void Node::set_driver_host(DriverHostComponent* driver_host) { driver_host_ = driver_host; }
 
-void Node::set_driver_ref(
-    std::optional<fidl::ServerBindingRef<frunner::ComponentController>> driver_ref) {
-  driver_ref_ = std::move(driver_ref);
-}
-
 void Node::set_controller_ref(fidl::ServerBindingRef<fdf::NodeController> controller_ref) {
   controller_ref_.emplace(std::move(controller_ref));
+}
+
+void Node::set_driver_component(std::optional<DriverComponent*> driver_component) {
+  driver_component_ = driver_component;
 }
 
 void Node::set_node_ref(fidl::ServerBindingRef<fdf::Node> node_ref) {
@@ -391,86 +344,63 @@ void Node::OnBind() const {
   }
 }
 
-bool Node::Unbind(std::unique_ptr<AsyncRemove>& async_remove) {
-  bool has_driver = driver_ref_.has_value();
-  CloseAndReset(driver_ref_);
-  if (has_driver) {
-    // If a driver was bound to this node, store the async remove and wait for
-    // the driver to stop.
-    async_remove_ = std::move(async_remove);
-  } else {
-    // Otherwise, unbind the controller and node servers.
-    UnbindAndReset(controller_ref_);
-    UnbindAndReset(node_ref_);
-  }
-  return has_driver;
-}
-
-void Node::Remove() {
-  // If we were waiting for a driver to stop, continue removal from where we
-  // left off.
-  if (async_remove_) {
-    async_remove_->Continue(std::move(async_remove_));
-    return;
-  }
-
-  // Remove this node from its parent.
-  auto this_node = shared_from_this();
-  if (!parents_.empty()) {
-    for (auto parent : parents_) {
-      auto& children = parent->children_;
-      children.erase(std::find(children.begin(), children.end(), this_node));
-      // We are removing a composite node. This means its parent nodes only
-      // exist to form a composite node, and they are not directly owned by a
-      // driver. Therefore, we should remove the parent node as well.
-      if (parents_.size() > 1) {
-        parent->Remove();
-      }
-    }
-  }
-
-  // Create list of nodes to unbind.
-  std::stack<Node*> stack{{this}};
-  std::vector<Node*> nodes;
-  std::unordered_set<Node*> unique_nodes;
-  while (!stack.empty()) {
-    auto node = stack.top();
-    stack.pop();
-    auto [_, inserted] = unique_nodes.insert(node);
-    if (!inserted) {
-      // Only insert unique nodes from the DAG.
-      continue;
-    }
-    // Disable driver binding for the node. This also prevents child nodes from
-    // being added to this node.
-    node->driver_binder_ = nullptr;
-    nodes.push_back(node);
-    for (auto& child : node->children_) {
-      stack.push(child.get());
-    }
-  }
-
-  // Begin removal of this node and its children.
-  auto new_remove = std::make_unique<AsyncRemove>(std::move(this_node), std::move(nodes));
-  new_remove->Continue(std::move(new_remove));
-}
-
-void Node::Remove(RemoveRequestView request, RemoveCompleter::Sync& completer) {
-  // When NodeController::Remove() is called, we unbind the Node. This causes
-  // the Node server to then call Node::Remove().
-  //
-  // We take this approach to avoid a use-after-free, where calling
-  // Node::Remove() directly would then cause the the Node server to do the
-  // same, after the Node has already been freed.
-  UnbindAndReset(node_ref_);
-}
-
 void Node::AddToParents() {
   auto this_node = shared_from_this();
   for (auto parent : parents_) {
     parent->children_.push_back(this_node);
   }
 }
+
+void Node::Remove() {
+  removal_in_progress_ = true;
+
+  // Disable driver binding for the node. This also prevents child nodes from
+  // being added to this node.
+  driver_binder_ = nullptr;
+
+  // Ask each of our children to remove themselves.
+  for (auto& child : children_) {
+    child->Remove();
+  }
+
+  // If we have any children, return. It's too early to remove ourselves.
+  // (The children will call back into this Remove function as they exit).
+  if (!children_.empty()) {
+    return;
+  }
+
+  // If we still have a driver bound to us, we tell it to stop.
+  // (The Driver will call back into this Remove function once it stops).
+  if (driver_component_.has_value()) {
+    (*driver_component_)->StopDriver();
+    return;
+  }
+
+  // Let the removal begin
+
+  // Erase ourselves from each parent.
+  auto this_node = shared_from_this();
+  for (auto parent : parents_) {
+    auto& children = parent->children_;
+    children.erase(std::find(children.begin(), children.end(), this_node));
+
+    // If our parent is waiting to be removed and we are its last child,
+    // then remove it.
+    // Also remove the parent if we are a composite node.
+    if ((parent->removal_in_progress_ && children.empty()) || (parents_.size() > 1)) {
+      parent->Remove();
+    }
+  }
+  // It's no longer safe to access our parents, as they can free themselves now.
+  parents_.clear();
+
+  // Remove our controller and node servers. These hold the last shared_ptr
+  // references to this node.
+  UnbindAndReset(controller_ref_);
+  UnbindAndReset(node_ref_);
+}
+
+void Node::Remove(RemoveRequestView request, RemoveCompleter::Sync& completer) { Remove(); }
 
 void Node::AddChild(AddChildRequestView request, AddChildCompleter::Sync& completer) {
   if (driver_binder_ == nullptr) {
@@ -561,7 +491,7 @@ void Node::AddChild(AddChildRequestView request, AddChildCompleter::Sync& comple
   child->set_controller_ref(std::move(bind_controller));
   if (request->node.is_valid()) {
     auto bind_node = fidl::BindServer<fidl::WireServer<fdf::Node>>(
-        dispatcher_, std::move(request->node), child.get(),
+        dispatcher_, std::move(request->node), child,
         [](fidl::WireServer<fdf::Node>* node, auto, auto) { static_cast<Node*>(node)->Remove(); });
     child->set_node_ref(std::move(bind_node));
   } else {
@@ -699,7 +629,7 @@ void DriverRunner::Start(StartRequestView request, StartCompleter::Sync& complet
     return;
   }
   auto bind_node = fidl::BindServer<fidl::WireServer<fdf::Node>>(
-      dispatcher_, std::move(endpoints->server), &node,
+      dispatcher_, std::move(endpoints->server), node.shared_from_this(),
       [](fidl::WireServer<fdf::Node>* node, auto, auto) { static_cast<Node*>(node)->Remove(); });
   node.set_node_ref(bind_node);
 
@@ -712,28 +642,13 @@ void DriverRunner::Start(StartRequestView request, StartCompleter::Sync& complet
   }
 
   // Create a DriverComponent to manage the driver.
-  auto driver = std::make_unique<DriverComponent>(std::move(*start));
+  auto driver = std::make_unique<DriverComponent>(std::move(*start), dispatcher_);
   auto bind_driver =
       fidl::BindServer(dispatcher_, std::move(request->controller), driver.get(),
-                       [this, node = node.weak_from_this()](DriverComponent* driver, auto, auto) {
-                         // When the driver is unbound, we need to inform the
-                         // associated node that its driver ref is no longer
-                         // valid, and that there is no longer a driver bound to
-                         // the node.
-                         if (auto ptr = node.lock()) {
-                           ptr->set_driver_ref({});
-                         }
-                         drivers_.erase(*driver);
-                       });
-  node.set_driver_ref(bind_driver);
+                       [this](DriverComponent* driver, auto, auto) { drivers_.erase(*driver); });
+  node.set_driver_component(driver.get());
   driver->set_driver_ref(std::move(bind_driver));
-  auto watch = driver->Watch(dispatcher_);
-  if (watch.is_error()) {
-    LOGF(ERROR, "Failed to watch channel for driver '%.*s': %s", static_cast<int>(url.size()),
-         url.data(), watch.status_string());
-    completer.Close(watch.error_value());
-    return;
-  }
+  driver->set_node(node.shared_from_this());
   drivers_.push_back(std::move(driver));
 }
 

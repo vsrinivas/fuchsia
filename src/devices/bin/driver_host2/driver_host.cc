@@ -70,15 +70,13 @@ Driver::~Driver() {
     }
   }
   dlclose(library_);
-
-  if (binding_.has_value()) {
-    binding_->Unbind();
-  }
 }
 
 void Driver::set_binding(fidl::ServerBindingRef<fuchsia_driver_framework::Driver> binding) {
   binding_.emplace(std::move(binding));
 }
+
+void Driver::Stop(StopRequestView request, StopCompleter::Sync& completer) { binding_->Unbind(); }
 
 zx::status<> Driver::Start(fidl::IncomingMessage& start_args,
                            async_dispatcher_t* driver_dispatcher) {
@@ -90,6 +88,7 @@ zx::status<> Driver::Start(fidl::IncomingMessage& start_args,
   if (status != ZX_OK) {
     return zx::error(status);
   }
+
   opaque_.emplace(opaque);
   return zx::ok();
 }
@@ -234,15 +233,21 @@ void DriverHost::Start(StartRequestView request, StartCompleter::Sync& completer
       }
       LOGF(INFO, "Started '%s'", driver->url().data());
 
-      auto unbind_callback = [this](Driver* driver, fidl::UnbindInfo info, auto) {
-        if (!info.is_user_initiated() && !info.is_peer_closed()) {
+      auto unbind_callback = [this](Driver* driver, fidl::UnbindInfo info,
+                                    fidl::ServerEnd<fuchsia_driver_framework::Driver> server) {
+        if (!info.is_user_initiated()) {
           LOGF(WARNING, "Unexpected stop of driver '%s': %s", driver->url().data(),
                info.FormatDescription().data());
         }
         // Task to stop the driver. Post this to the driver dispatcher thread.
-        auto stop_task = [this, driver] {
+        auto stop_task = [this, driver, server = std::move(server)]() mutable {
           std::lock_guard<std::mutex> lock(mutex_);
           drivers_.erase(*driver);
+
+          // Send the epitath to the driver runner letting it know we stopped
+          // the driver correctly.
+          server.Close(ZX_OK);
+
           // If this is the last driver, shutdown the driver host.
           if (drivers_.is_empty()) {
             loop_.Quit();

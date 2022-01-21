@@ -25,30 +25,64 @@
 // Note, all of the logic here assumes we are operating on a single-threaded
 // dispatcher. It is not safe to use a multi-threaded dispatcher with this code.
 
-class AsyncRemove;
 class Node;
 
 class DriverComponent : public fidl::WireServer<fuchsia_component_runner::ComponentController>,
+                        public fidl::WireAsyncEventHandler<fuchsia_driver_framework::Driver>,
                         public fbl::DoublyLinkedListable<std::unique_ptr<DriverComponent>> {
  public:
-  explicit DriverComponent(fidl::ClientEnd<fuchsia_driver_framework::Driver> driver);
+  explicit DriverComponent(fidl::ClientEnd<fuchsia_driver_framework::Driver> driver,
+                           async_dispatcher_t* dispatcher);
+  ~DriverComponent();
 
   void set_driver_ref(
       fidl::ServerBindingRef<fuchsia_component_runner::ComponentController> driver_ref);
 
-  zx::status<> Watch(async_dispatcher_t* dispatcher);
+  void set_node(std::shared_ptr<Node> node) { node_ = std::move(node); }
+
+  // Request that this Driver be stopped. This will go through and
+  // stop all of the Driver's children first.
+  void RequestDriverStop();
+
+  // Signal to the DriverHost that this Driver should be stopped.
+  // This function should only be called after all of this Driver's children
+  // have been stopped.
+  // This should only be used by the Node class.
+  void StopDriver();
 
  private:
+  // This is called when fuchsia_driver_framework::Driver is closed.
+  void on_fidl_error(fidl::UnbindInfo error) override;
+
   // fidl::WireServer<fuchsia_component_runner::ComponentController>
   void Stop(StopRequestView request, StopCompleter::Sync& completer) override;
   void Kill(KillRequestView request, KillCompleter::Sync& completer) override;
 
-  void Stop();
-  void OnPeerClosed(async_dispatcher_t* dispatcher, async::WaitBase* wait, zx_status_t status,
-                    const zx_packet_signal_t* signal);
+  // Close the component connection to signal to CF that the component has stopped.
+  // Once the component connection is closed, this class will eventually be
+  // freed.
+  void StopComponent();
 
-  fidl::ClientEnd<fuchsia_driver_framework::Driver> driver_;
-  async::WaitMethod<DriverComponent, &DriverComponent::OnPeerClosed> wait_;
+  bool stop_in_progress_ = false;
+
+  // The node that the Driver is bound to.
+  // We want to keep the Node alive as long as the Driver is alive, because
+  // the Driver must make sure that all of it's children are stopped before
+  // it is stopped.
+  // Also, a Node will not finish it's Remove process while it has a driver
+  // bound to it.
+  std::shared_ptr<Node> node_;
+
+  // This channel represents the Driver in the DriverHost. If we call
+  // Stop() on this channel, the DriverHost will call Stop on the Driver
+  // and drop its end of the channel when it is finished.
+  // When the other end of this channel is dropped, DriverComponent will
+  // signal to ComponentFramework that the component has stopped.
+  fidl::WireSharedClient<fuchsia_driver_framework::Driver> driver_;
+
+  // This represents the Driver Component within the Component Framework.
+  // When this is closed with an epitath it signals to the Component Framework
+  // that this driver component has stopped.
   std::optional<fidl::ServerBindingRef<fuchsia_component_runner::ComponentController>> driver_ref_;
 };
 
@@ -130,19 +164,25 @@ class Node : public fidl::WireServer<fuchsia_driver_framework::NodeController>,
 
   void set_collection(Collection collection);
   void set_driver_host(DriverHostComponent* driver_host);
-  void set_driver_ref(
-      std::optional<fidl::ServerBindingRef<fuchsia_component_runner::ComponentController>>
-          driver_ref);
   void set_node_ref(fidl::ServerBindingRef<fuchsia_driver_framework::Node> node_ref);
   void set_controller_ref(
       fidl::ServerBindingRef<fuchsia_driver_framework::NodeController> controller_ref);
+  void set_driver_component(std::optional<DriverComponent*> driver_component);
 
   std::string TopoName() const;
   fidl::VectorView<fuchsia_component_decl::wire::Offer> CreateOffers(fidl::AnyArena& arena) const;
   void OnBind() const;
-  bool Unbind(std::unique_ptr<AsyncRemove>& async_remove);
-  void Remove();
   void AddToParents();
+
+  // Begin the removal process for a Node. This function ensures that a Node is
+  // only removed after all of its children are removed. It also ensures that
+  // a Node is only removed after the driver that is bound to it has been stopped.
+  // This is safe to call multiple times.
+  // There are lots of reasons a Node's removal will be started:
+  //   - The Node's driver component wants to exit.
+  //   - The `node_ref` server has become unbound.
+  //   - The Node's parent is being removed.
+  void Remove();
 
  private:
   // fidl::WireServer<fuchsia_driver_framework::NodeController>
@@ -151,7 +191,7 @@ class Node : public fidl::WireServer<fuchsia_driver_framework::NodeController>,
   void AddChild(AddChildRequestView request, AddChildCompleter::Sync& completer) override;
 
   const std::string name_;
-  const std::vector<Node*> parents_;
+  std::vector<Node*> parents_;
   std::vector<std::shared_ptr<Node>> children_;
   fit::nullable<DriverBinder*> driver_binder_;
   async_dispatcher_t* const dispatcher_;
@@ -162,10 +202,15 @@ class Node : public fidl::WireServer<fuchsia_driver_framework::NodeController>,
 
   Collection collection_ = Collection::kNone;
   fit::nullable<DriverHostComponent*> driver_host_;
-  std::optional<fidl::ServerBindingRef<fuchsia_component_runner::ComponentController>> driver_ref_;
+
+  bool removal_in_progress_ = false;
+
+  // If this exists, then this `driver_component_` is bound to this node.
+  // The driver_component is not guaranteed to outlive the node, but if
+  // the driver_component is freed, it will reset this field.
+  std::optional<DriverComponent*> driver_component_;
   std::optional<fidl::ServerBindingRef<fuchsia_driver_framework::Node>> node_ref_;
   std::optional<fidl::ServerBindingRef<fuchsia_driver_framework::NodeController>> controller_ref_;
-  std::unique_ptr<AsyncRemove> async_remove_;
 };
 
 class DriverRunner : public fidl::WireServer<fuchsia_component_runner::ComponentRunner>,

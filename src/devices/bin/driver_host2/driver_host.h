@@ -27,6 +27,8 @@ class Driver : public fidl::WireServer<fuchsia_driver_framework::Driver>,
   const std::string& url() const { return url_; }
   void set_binding(fidl::ServerBindingRef<fuchsia_driver_framework::Driver> binding);
 
+  void Stop(StopRequestView request, StopCompleter::Sync& completer) override;
+
   // Starts the driver.
   //
   // The handles in `message` will be consumed.

@@ -162,8 +162,8 @@
             name: "driver-host-env",
             extends: "realm",
 
-            // 2 seconds
-            __stop_timeout_ms: 2000,
+            // 20 seconds
+            __stop_timeout_ms: 20000,
         },
         {
             name: "driver-env",
@@ -182,8 +182,8 @@
                 },
             ],
 
-            // 1 second
-            __stop_timeout_ms: 1000,
+            // 10 seconds
+            __stop_timeout_ms: 10000,
         },
     ],
 }
