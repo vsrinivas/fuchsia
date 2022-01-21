@@ -48,9 +48,6 @@ toc:
 - title: "Modular"
   section:
   - include: /docs/concepts/modular/_toc.yaml
-- title: "Networking"
-  section:
-  - include: /docs/concepts/networking/_toc.yaml
 - title: "Packages"
   section:
   - include: /docs/concepts/packages/_toc.yaml

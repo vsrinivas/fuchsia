@@ -59,6 +59,9 @@ toc:
 - title: "Languages"
   section:
   - include: /docs/development/languages/_toc.yaml
+- title: "Networking"
+  section:
+  - include: /docs/development/networking/_toc.yaml
 - title: "Internationalization"
   section:
   - include: /docs/development/internationalization/_toc.yaml
