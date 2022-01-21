@@ -4164,7 +4164,7 @@ direct.
 From //src/lib/ui/carnelian/BUILD.gn:29
 
 ### use_flatland_by_default
-Use Flatland(2D api) for graphics in Scenic.
+If true, Flatland is the default graphics protocol in Scenic.
 
 **Current value (from the default):** `false`
 
