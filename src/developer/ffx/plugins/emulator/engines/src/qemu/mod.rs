@@ -11,7 +11,7 @@ use crate::serialization::SerializingEngine;
 use anyhow::{bail, Result};
 use async_trait::async_trait;
 use ffx_emulator_common::{
-    config::{FfxConfigWrapper, QEMU_TOOL, SDK_ROOT},
+    config::{FfxConfigWrapper, QEMU_TOOL},
     process,
 };
 use ffx_emulator_config::{EmulatorConfiguration, EmulatorEngine, EngineType, PointingDevice};
@@ -46,7 +46,8 @@ impl EmulatorEngine for QemuEngine {
 
         // TODO(fxbug.dev/86737): Find the emulator executable using ffx_config::get_host_tool().
         // This is a workaround until the ffx_config::get_host_tool works.
-        let sdk_root = &self.ffx_config.file(SDK_ROOT).await?;
+        let sdk = ffx_config::get_sdk().await?;
+        let sdk_root = sdk.get_path_prefix();
         let backup_qemu = match env::consts::OS {
             "linux" => {
                 sdk_root.join("../../prebuilt/third_party/qemu/linux-x64/bin/qemu-system-x86_64")

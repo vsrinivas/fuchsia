@@ -39,20 +39,11 @@ pub const EMU_INSTANCE_ROOT_DIR: &'static str = "emu.instance_dir";
 /// for details.
 pub const EMU_UPSCRIPT_FILE: &'static str = "emu.upscript";
 
-/// The file containing the private key for SSH access to the emulator.
-pub const SSH_PRIVATE_KEY: &'static str = "ssh.priv";
-
 /// The file containing the authorized keys for SSH access.
 pub const SSH_PUBLIC_KEY: &'static str = "ssh.pub";
 
-/// The directory which contains the product bundle manifest files.
-pub const FMS_DATA_DIR: &'static str = "fms.data.dir";
-
-/// The directory which contains the product bundle manifest files.
-pub const SDK_ROOT: &'static str = "sdk.root";
-
 const ALL_KEYS: &'static [&'static str] =
-    &[EMU_UPSCRIPT_FILE, EMU_INSTANCE_ROOT_DIR, FMS_DATA_DIR, SSH_PRIVATE_KEY, SSH_PUBLIC_KEY];
+    &[EMU_UPSCRIPT_FILE, EMU_INSTANCE_ROOT_DIR, SSH_PUBLIC_KEY];
 
 macro_rules! missing_key_message {
     ($key_name:expr) => {
@@ -149,10 +140,10 @@ mod tests {
         let mut config = FfxConfigWrapper::new();
         // Add a value for ssh_public key. This causes all config queries to be resolved via
         // overrides.
-        config.overrides.insert(SSH_PRIVATE_KEY, fake_path.clone());
+        config.overrides.insert(SSH_PUBLIC_KEY, fake_path.clone());
 
         // Get the key
-        let ok_result = config.file(SSH_PRIVATE_KEY).await;
+        let ok_result = config.file(SSH_PUBLIC_KEY).await;
         assert_eq!(ok_result.unwrap(), PathBuf::from(fake_path));
 
         // Try to get a key not defined in ALL_KEYS.

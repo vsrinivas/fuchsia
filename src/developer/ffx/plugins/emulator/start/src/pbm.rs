@@ -4,9 +4,9 @@
 
 //! Utilities for Product Bundle Metadata (PBM).
 
-use anyhow::{bail, Result};
+use anyhow::{bail, Context, Result};
 use ffx_emulator_common::{
-    config::{FfxConfigWrapper, EMU_UPSCRIPT_FILE, SDK_ROOT},
+    config::{FfxConfigWrapper, EMU_UPSCRIPT_FILE},
     split_once, tap_available,
 };
 use ffx_emulator_config::{
@@ -24,9 +24,11 @@ pub(crate) async fn make_configs(
     cmd: &StartCommand,
     ffx_config: &FfxConfigWrapper,
 ) -> Result<EmulatorConfiguration> {
-    let fms_entries = fms::Entries::from_config().await?;
-    let product_bundle = fms::find_product_bundle(&fms_entries, &cmd.product_bundle)?;
-    let virtual_device = fms::find_virtual_device(&fms_entries, &product_bundle.device_refs)?;
+    let fms_entries = fms::Entries::from_config().await.context("problem with fms_entries")?;
+    let product_bundle = fms::find_product_bundle(&fms_entries, &cmd.product_bundle)
+        .context("problem with product_bundle")?;
+    let virtual_device = fms::find_virtual_device(&fms_entries, &product_bundle.device_refs)
+        .context("problem with virtual device")?;
     if cmd.verbose {
         println!(
             "Found PBM {:?}, device_refs {:?}, virtual_device {:?}.",
@@ -35,18 +37,22 @@ pub(crate) async fn make_configs(
     }
 
     // TODO(fxbug.dev/90948): Don't hard-code the image directory path, once it's in the SDK.
-    let sdk_root = ffx_config.file(SDK_ROOT).await?;
+    let sdk = ffx_config::get_sdk().await?;
+
+    let sdk_root = sdk.get_path_prefix();
     let fms_path = sdk_root.join("gen/build/images");
 
     // Apply the values from the manifest to an emulation configuration.
     let mut emu_config =
-        convert_bundle_to_configs(product_bundle, virtual_device, &sdk_root, &fms_path)?;
+        convert_bundle_to_configs(product_bundle, virtual_device, &sdk_root, &fms_path)
+            .context("problem with convert_bundle_to_configs")?;
 
     // Integrate the values from command line flags into the emulation configuration, and
     // return the result to the caller.
-    emu_config = apply_command_line_options(emu_config, cmd, ffx_config)?;
+    emu_config = apply_command_line_options(emu_config, cmd, ffx_config)
+        .context("problem with apply command lines")?;
 
-    finalize_port_mapping(&mut emu_config)?;
+    finalize_port_mapping(&mut emu_config).context("problem with port mapping")?;
 
     Ok(emu_config)
 }

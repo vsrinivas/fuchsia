@@ -6,7 +6,7 @@
 //! started via the Fuchsia emulator, Femu.
 
 use crate::{qemu::qemu_base::QemuBasedEngine, serialization::SerializingEngine};
-use anyhow::Result;
+use anyhow::{bail, Context, Result};
 use async_trait::async_trait;
 use ffx_emulator_common::{config, config::FfxConfigWrapper, process};
 use ffx_emulator_config::{EmulatorConfiguration, EmulatorEngine, EngineType};
@@ -36,26 +36,21 @@ impl EmulatorEngine for FemuEngine {
             .await
             .expect("could not stage image files");
 
-        // TODO(fxbug.dev/86737): Find the emulator executable using ffx_config::get_host_tool().
-        // This is a workaround until the ffx_config::get_host_tool works.
-        let sdk_root = &self.ffx_config.file(config::SDK_ROOT).await?;
-        let backup_aemu =
-            match env::consts::OS {
-                "linux" => sdk_root
-                    .join("../../prebuilt/third_party/android/aemu/release/linux-x64/emulator"),
-                "macos" => sdk_root
-                    .join("../../prebuilt/third_party/android/aemu/release/mac-x64/emulator"),
-                _ => panic!("Sorry. {} is not supported.", env::consts::OS),
-            }
-            .canonicalize()?;
-
         let aemu = match self.ffx_config.get_host_tool(config::FEMU_TOOL).await {
             Ok(aemu_path) => aemu_path,
             Err(e) => {
-                println!("Need to fix {:?}", e);
-                backup_aemu
+                bail!("Cannot find {} in the SDK: {:?}", config::FEMU_TOOL, e);
             }
         };
+
+        // This is done to avoid running emu in the same directory as the kernel or other files
+        // that are used by qemu. If the multiboot.bin file is in the current directory, it does
+        // not start correctly. This probably could be temporary until we know the images loaded
+        // do not have files directly in $sdk_root.
+        env::set_current_dir(
+            &self.emulator_configuration.runtime.instance_directory.parent().unwrap(),
+        )
+        .context("problem changing directory to instance dir")?;
 
         return self.run(&aemu).await;
     }
