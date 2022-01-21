@@ -11,6 +11,6 @@
 
 constexpr std::chrono::duration kTimeout = std::chrono::seconds(10);
 
-ssize_t fill_stream_send_buf(int fd, int peer_fd);
+void fill_stream_send_buf(int fd, int peer_fd, ssize_t *out_bytes_written);
 
 #endif  // SRC_CONNECTIVITY_NETWORK_TESTS_UTIL_H_

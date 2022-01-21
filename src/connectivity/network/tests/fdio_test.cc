@@ -329,7 +329,7 @@ TEST(SocketTest, CloseClonedSocketAfterTcpRst) {
   }
 
   // Fill up the rcvbuf (client-side).
-  fill_stream_send_buf(connfd.get(), clientfd.get());
+  ASSERT_NO_FATAL_FAILURE(fill_stream_send_buf(connfd.get(), clientfd.get(), nullptr));
 
   // Closing the client-side connection while it has data that has not been
   // read by the client should trigger a TCP RST.

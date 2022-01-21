@@ -2260,7 +2260,7 @@ TEST_F(NetStreamSocketsTest, PartialWriteStress) {
 }
 
 TEST_F(NetStreamSocketsTest, PeerClosedPOLLOUT) {
-  fill_stream_send_buf(server().get(), client().get());
+  ASSERT_NO_FATAL_FAILURE(fill_stream_send_buf(server().get(), client().get(), nullptr));
 
   EXPECT_EQ(close(client().release()), 0) << strerror(errno);
 
@@ -4067,7 +4067,7 @@ TEST_F(NetStreamSocketsTest, Shutdown) {
 
 TEST_F(NetStreamSocketsTest, ResetOnFullReceiveBufferShutdown) {
   // Fill the receive buffer of the client socket.
-  fill_stream_send_buf(server().get(), client().get());
+  ASSERT_NO_FATAL_FAILURE(fill_stream_send_buf(server().get(), client().get(), nullptr));
 
   // Setting SO_LINGER to 0 and `close`ing the server socket should
   // immediately send a TCP RST.
@@ -4158,7 +4158,8 @@ TEST_F(NetStreamSocketsTest, ShutdownReset) {
 TEST_F(NetStreamSocketsTest, ShutdownPendingWrite) {
   // Fill the send buffer of the server socket so that we have some
   // pending data waiting to be sent out to the remote.
-  ssize_t wrote = fill_stream_send_buf(server().get(), client().get());
+  ssize_t wrote;
+  ASSERT_NO_FATAL_FAILURE(fill_stream_send_buf(server().get(), client().get(), &wrote));
 
   // SHUT_WR should enqueue a FIN after all of the application writes.
   EXPECT_EQ(shutdown(server().get(), SHUT_WR), 0) << strerror(errno);
@@ -4212,7 +4213,7 @@ TEST_P(BlockedIOTest, CloseWhileBlocked) {
   bool close_rst = linger_enabled;
   if (is_write) {
     // Fill the send buffer of the client socket to cause write to block.
-    fill_stream_send_buf(client().get(), server().get());
+    ASSERT_NO_FATAL_FAILURE(fill_stream_send_buf(client().get(), server().get(), nullptr));
     // Buffes are full. Closing the socket will now cause a TCP RST.
     close_rst = true;
   }
