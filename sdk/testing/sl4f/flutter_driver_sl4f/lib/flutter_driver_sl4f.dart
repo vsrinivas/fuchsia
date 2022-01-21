@@ -108,7 +108,6 @@ class FlutterDriverConnector {
     bool printCommunication = false,
     bool logCommunicationToFile = false,
   }) async {
-    final isolate = await this.isolate(namePattern);
     final inspectSnapshot = await _inspect.snapshot(['$selector:root']);
     final vmServicePort = getVmServicePortFromInspectSnapshot(inspectSnapshot);
     if (vmServicePort == null) {
@@ -120,11 +119,16 @@ class FlutterDriverConnector {
     final vmUri =
         Uri(scheme: 'ws', host: _sl4f.ssh.target, port: openPort, path: '/ws');
 
-    return FlutterDriver.connect(
-        dartVmServiceUrl: vmUri.toString(),
-        isolateNumber: isolate.number,
-        printCommunication: printCommunication,
-        logCommunicationToFile: logCommunicationToFile);
+    final dartVm = await frdp.DartVm.connect(vmUri);
+    final isolates = await dartVm.getMainIsolatesByPattern(namePattern);
+
+    return isolates == null || isolates.isEmpty
+        ? null
+        : FlutterDriver.connect(
+            dartVmServiceUrl: vmUri.toString(),
+            isolateNumber: isolates.first.number,
+            printCommunication: printCommunication,
+            logCommunicationToFile: logCommunicationToFile);
   }
 
   /// Connects to [FlutterDriver] for an isolate that matches [namePattern].
