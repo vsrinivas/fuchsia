@@ -7,11 +7,11 @@
 
 #include <lib/fdio/cpp/caller.h>
 #include <lib/fdio/fdio.h>
+#include <lib/fit/function.h>
 #include <lib/zx/channel.h>
 
 #include <memory>
 
-#include <fbl/function.h>
 #include <fbl/string.h>
 #include <fbl/unique_fd.h>
 #include <fbl/vector.h>
@@ -60,7 +60,7 @@ fbl::Vector<KeySource> ComputeEffectivePolicy(KeySourcePolicy ksp, Activity acti
 // returned some error on all candidate key sources.  The caller must have
 // access to /boot/config/zxcrypt in its namespace to use this function.
 zx_status_t TryWithImplicitKeys(
-    Activity activity, fbl::Function<zx_status_t(std::unique_ptr<uint8_t[]>, size_t)> callback);
+    Activity activity, fit::function<zx_status_t(std::unique_ptr<uint8_t[]>, size_t)> callback);
 
 // |zxcrypt::EncryptedVolumeClient| represents a channel to an instance of a bound
 // zxcrypt device (named "zxcrypt" in the device tree).

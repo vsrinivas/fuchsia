@@ -147,7 +147,7 @@ fbl::Vector<KeySource> ComputeEffectivePolicy(KeySourcePolicy ksp, Activity acti
 
 __EXPORT
 zx_status_t TryWithImplicitKeys(
-    Activity activity, fbl::Function<zx_status_t(std::unique_ptr<uint8_t[]>, size_t)> callback) {
+    Activity activity, fit::function<zx_status_t(std::unique_ptr<uint8_t[]>, size_t)> callback) {
   KeySourcePolicy source;
   zx_status_t rc;
   rc = SelectKeySourcePolicy(&source);
