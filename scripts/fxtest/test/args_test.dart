@@ -506,6 +506,31 @@ void main() {
       expect(testsConfig.runnerTokens[TestType.suite], contains('22'));
     });
 
+    test('with --fail', () {
+      var testsConfig = TestsConfig.fromRawArgs(
+        rawArgs: ['--fail'],
+        fxEnv: FakeFxEnv.shared,
+      );
+      expect(testsConfig.flags.shouldFailFast, true);
+      expect(testsConfig.runnerTokens[TestType.suite],
+          contains('--stop-after-failures'));
+      expect(testsConfig.runnerTokens[TestType.suite], contains('1'));
+    });
+
+    test('with --fail and --count', () {
+      var testsConfig = TestsConfig.fromRawArgs(
+        rawArgs: ['--fail', '--count=22'],
+        fxEnv: FakeFxEnv.shared,
+      );
+      expect(testsConfig.flags.shouldFailFast, true);
+      expect(testsConfig.flags.count, '22');
+      expect(testsConfig.runnerTokens[TestType.suite],
+          contains('--stop-after-failures'));
+      expect(testsConfig.runnerTokens[TestType.suite], contains('1'));
+      expect(testsConfig.runnerTokens[TestType.suite], contains('--count'));
+      expect(testsConfig.runnerTokens[TestType.suite], contains('22'));
+    });
+
     test('with --parallel', () {
       var testsConfig = TestsConfig.fromRawArgs(
         rawArgs: ['--parallel=10'],

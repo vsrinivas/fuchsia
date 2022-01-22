@@ -241,6 +241,13 @@ class TestsConfig {
         ..add('--count')
         ..add(flags.count!);
     }
+    if (flags.shouldFailFast) {
+      // Since we partially delegate running tests multiple times to the v2 runner.
+      // we also need to instruct it to fail fast on failure too.
+      v2runnerTokens
+        ..add('--stop-after-failures')
+        ..add('1');
+    }
     // We do not add the parallel option here, as it may also be specified via
     // test spec. Instead, it is added later.
     if (flags.runDisabledTests && flags.fallbackUseRunTestSuite) {
