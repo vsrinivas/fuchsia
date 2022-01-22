@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 use fidl_fuchsia_developer_bridge::VersionInfo;
+use std::ffi::CString;
 
 const fn default_version_value() -> [u8; 64] {
     // Placeholder value to be replaced post-link: "V3RS1ONS" * 8
@@ -59,19 +60,29 @@ static BUILD_VERSION: [u8; 64] = default_build_value();
 static BUILD_VERSION: [u8; 64] = default_build_value();
 
 pub fn build_info() -> VersionInfo {
+    let null_char = |b: &u8| *b == 0;
+    let version_info =
+        &VERSION_INFO[..VERSION_INFO.iter().position(null_char).unwrap_or(VERSION_INFO.len())];
+    let build_version =
+        &BUILD_VERSION[..BUILD_VERSION.iter().position(null_char).unwrap_or(BUILD_VERSION.len())];
     build_info_impl(
-        String::from_utf8_lossy(&VERSION_INFO).to_string(),
-        String::from_utf8_lossy(&BUILD_VERSION).to_string(),
+        CString::new(version_info)
+            .expect("ffx build error: invalid version string format embedded")
+            .to_string_lossy()
+            .trim()
+            .to_string(),
+        CString::new(build_version)
+            .expect("ffx build error: invalid version string format embedded")
+            .to_string_lossy()
+            .trim()
+            .to_string(),
     )
 }
 
 fn build_info_impl(raw_version_info: String, raw_build_version: String) -> VersionInfo {
-    let split: Vec<&str> = raw_version_info.trim().split("-").collect();
+    let split: Vec<&str> = raw_version_info.split("-").collect();
     if split.len() != 2 {
-        return VersionInfo {
-            build_version: Some(raw_build_version.trim().to_string()),
-            ..VersionInfo::EMPTY
-        };
+        return VersionInfo { build_version: Some(raw_build_version), ..VersionInfo::EMPTY };
     }
 
     let raw_hash = split.get(0).unwrap().to_string();
