@@ -48,6 +48,8 @@ class WireServer;
 
 // WireEventSender owns a server endpoint and exposes methods for sending
 // events.
+//
+// TODO(fxbug.dev/85688): Replace this with |fidl::WireSendEvent|.
 template <typename FidlProtocol>
 class WireEventSender;
 
@@ -78,6 +80,16 @@ class WireWeakEventSender;
 // exposes methods for sending events using caller-controlled allocation.
 template <typename FidlProtocol>
 class WireWeakBufferEventSender;
+
+// |WireEventSender| borrows a server endpoint and exposes methods for sending
+// events using managed memory allocation.
+template <typename FidlProtocol>
+class WireEventSender;
+
+// |WireBufferEventSender| borrows a server endpoint and exposes methods for
+// sending events using caller-controlled allocation.
+template <typename FidlProtocol>
+class WireBufferEventSender;
 
 // |WireWeakAsyncClientImpl| implements one-way FIDL calls with managed buffers.
 // It borrows the transport through a weak reference when making calls.

@@ -3139,6 +3139,7 @@ namespace fidl {
 
 }  // namespace fidl
 #ifdef __Fuchsia__
+
 // |EventSender| owns a server endpoint of a channel speaking
 // the Allowed protocol, and can send events in that protocol.
 template <>
@@ -3183,6 +3184,23 @@ class ::fidl::internal::WireWeakBufferEventSender<
     : public ::fidl::internal::WeakBufferEventSenderBase {
  public:
   using WeakBufferEventSenderBase::WeakBufferEventSenderBase;
+};
+
+template <>
+class ::fidl::internal::WireEventSender<::test_bindingsdenylist::Allowed>
+    : public ::fidl::internal::SyncEndpointManagedVeneer<
+          ::fidl::internal::WireEventSender<::test_bindingsdenylist::Allowed>> {
+ public:
+  using SyncEndpointManagedVeneer::SyncEndpointManagedVeneer;
+};
+
+template <>
+class ::fidl::internal::WireBufferEventSender<::test_bindingsdenylist::Allowed>
+    : public ::fidl::internal::SyncEndpointBufferVeneer<
+          ::fidl::internal::WireBufferEventSender<
+              ::test_bindingsdenylist::Allowed>> {
+ public:
+  using SyncEndpointBufferVeneer::SyncEndpointBufferVeneer;
 };
 #endif  // __Fuchsia__
 
@@ -3256,6 +3274,7 @@ class ::fidl::internal::WireWeakSyncClientImpl<
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
+
 // |EventSender| owns a server endpoint of a channel speaking
 // the OnlyLibfuzzerAndDeps protocol, and can send events in that protocol.
 template <>
@@ -3304,6 +3323,26 @@ class ::fidl::internal::WireWeakBufferEventSender<
  public:
   using WeakBufferEventSenderBase::WeakBufferEventSenderBase;
 };
+
+template <>
+class ::fidl::internal::WireEventSender<
+    ::test_bindingsdenylist::OnlyLibfuzzerAndDeps>
+    : public ::fidl::internal::SyncEndpointManagedVeneer<
+          ::fidl::internal::WireEventSender<
+              ::test_bindingsdenylist::OnlyLibfuzzerAndDeps>> {
+ public:
+  using SyncEndpointManagedVeneer::SyncEndpointManagedVeneer;
+};
+
+template <>
+class ::fidl::internal::WireBufferEventSender<
+    ::test_bindingsdenylist::OnlyLibfuzzerAndDeps>
+    : public ::fidl::internal::SyncEndpointBufferVeneer<
+          ::fidl::internal::WireBufferEventSender<
+              ::test_bindingsdenylist::OnlyLibfuzzerAndDeps>> {
+ public:
+  using SyncEndpointBufferVeneer::SyncEndpointBufferVeneer;
+};
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -3352,6 +3391,7 @@ class ::fidl::internal::WireWeakSyncClientImpl<
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
+
 // |EventSender| owns a server endpoint of a channel speaking
 // the OnlyCppAndDeps protocol, and can send events in that protocol.
 template <>
@@ -3398,6 +3438,25 @@ class ::fidl::internal::WireWeakBufferEventSender<
  public:
   using WeakBufferEventSenderBase::WeakBufferEventSenderBase;
 };
+
+template <>
+class ::fidl::internal::WireEventSender<::test_bindingsdenylist::OnlyCppAndDeps>
+    : public ::fidl::internal::SyncEndpointManagedVeneer<
+          ::fidl::internal::WireEventSender<
+              ::test_bindingsdenylist::OnlyCppAndDeps>> {
+ public:
+  using SyncEndpointManagedVeneer::SyncEndpointManagedVeneer;
+};
+
+template <>
+class ::fidl::internal::WireBufferEventSender<
+    ::test_bindingsdenylist::OnlyCppAndDeps>
+    : public ::fidl::internal::SyncEndpointBufferVeneer<
+          ::fidl::internal::WireBufferEventSender<
+              ::test_bindingsdenylist::OnlyCppAndDeps>> {
+ public:
+  using SyncEndpointBufferVeneer::SyncEndpointBufferVeneer;
+};
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -3460,6 +3519,7 @@ class ::fidl::internal::WireWeakSyncClientImpl<
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
+
 // |EventSender| owns a server endpoint of a channel speaking
 // the ImportsSameNameContext protocol, and can send events in that protocol.
 template <>
@@ -3508,6 +3568,26 @@ class ::fidl::internal::WireWeakBufferEventSender<
     : public ::fidl::internal::WeakBufferEventSenderBase {
  public:
   using WeakBufferEventSenderBase::WeakBufferEventSenderBase;
+};
+
+template <>
+class ::fidl::internal::WireEventSender<
+    ::test_bindingsdenylist::ImportsSameNameContext>
+    : public ::fidl::internal::SyncEndpointManagedVeneer<
+          ::fidl::internal::WireEventSender<
+              ::test_bindingsdenylist::ImportsSameNameContext>> {
+ public:
+  using SyncEndpointManagedVeneer::SyncEndpointManagedVeneer;
+};
+
+template <>
+class ::fidl::internal::WireBufferEventSender<
+    ::test_bindingsdenylist::ImportsSameNameContext>
+    : public ::fidl::internal::SyncEndpointBufferVeneer<
+          ::fidl::internal::WireBufferEventSender<
+              ::test_bindingsdenylist::ImportsSameNameContext>> {
+ public:
+  using SyncEndpointBufferVeneer::SyncEndpointBufferVeneer;
 };
 #endif  // __Fuchsia__
 
@@ -3679,6 +3759,7 @@ class ::fidl::internal::WireWeakSyncClientImpl<
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
+
 // |EventSender| owns a server endpoint of a channel speaking
 // the DenyEachBinding protocol, and can send events in that protocol.
 template <>
@@ -3724,5 +3805,25 @@ class ::fidl::internal::WireWeakBufferEventSender<
     : public ::fidl::internal::WeakBufferEventSenderBase {
  public:
   using WeakBufferEventSenderBase::WeakBufferEventSenderBase;
+};
+
+template <>
+class ::fidl::internal::WireEventSender<
+    ::test_bindingsdenylist::DenyEachBinding>
+    : public ::fidl::internal::SyncEndpointManagedVeneer<
+          ::fidl::internal::WireEventSender<
+              ::test_bindingsdenylist::DenyEachBinding>> {
+ public:
+  using SyncEndpointManagedVeneer::SyncEndpointManagedVeneer;
+};
+
+template <>
+class ::fidl::internal::WireBufferEventSender<
+    ::test_bindingsdenylist::DenyEachBinding>
+    : public ::fidl::internal::SyncEndpointBufferVeneer<
+          ::fidl::internal::WireBufferEventSender<
+              ::test_bindingsdenylist::DenyEachBinding>> {
+ public:
+  using SyncEndpointBufferVeneer::SyncEndpointBufferVeneer;
 };
 #endif  // __Fuchsia__

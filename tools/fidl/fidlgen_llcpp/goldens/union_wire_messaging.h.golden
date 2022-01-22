@@ -961,6 +961,7 @@ namespace fidl {
 
 }  // namespace fidl
 #ifdef __Fuchsia__
+
 // |EventSender| owns a server endpoint of a channel speaking
 // the TestProtocol protocol, and can send events in that protocol.
 template <>
@@ -1003,5 +1004,21 @@ class ::fidl::internal::WireWeakBufferEventSender<::test_union::TestProtocol>
     : public ::fidl::internal::WeakBufferEventSenderBase {
  public:
   using WeakBufferEventSenderBase::WeakBufferEventSenderBase;
+};
+
+template <>
+class ::fidl::internal::WireEventSender<::test_union::TestProtocol>
+    : public ::fidl::internal::SyncEndpointManagedVeneer<
+          ::fidl::internal::WireEventSender<::test_union::TestProtocol>> {
+ public:
+  using SyncEndpointManagedVeneer::SyncEndpointManagedVeneer;
+};
+
+template <>
+class ::fidl::internal::WireBufferEventSender<::test_union::TestProtocol>
+    : public ::fidl::internal::SyncEndpointBufferVeneer<
+          ::fidl::internal::WireBufferEventSender<::test_union::TestProtocol>> {
+ public:
+  using SyncEndpointBufferVeneer::SyncEndpointBufferVeneer;
 };
 #endif  // __Fuchsia__

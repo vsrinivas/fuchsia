@@ -205,13 +205,12 @@ TEST(GenAPITestCase, ConsumeEventsWhenEventHandlerIsAbsent) {
   ASSERT_OK(loop.StartThread());
 
   fidl::WireSharedClient<Example> client(std::move(local), loop.dispatcher());
-  fidl::WireEventSender<Example> event_sender(std::move(remote));
 
   // Send an unhandled event. The event should be silently discarded since
   // the user did not provide an event handler.
   zx::eventpair ep1, ep2;
   ASSERT_OK(zx::eventpair::create(0, &ep1, &ep2));
-  ASSERT_OK(event_sender.OnResourceEvent(std::move(ep1)));
+  ASSERT_OK(fidl::WireSendEvent(remote)->OnResourceEvent(std::move(ep1)));
   zx_signals_t observed;
   ASSERT_OK(zx_object_wait_one(ep2.get(), ZX_EVENTPAIR_PEER_CLOSED, ZX_TIME_INFINITE, &observed));
   ASSERT_EQ(ZX_EVENTPAIR_PEER_CLOSED, observed);
@@ -229,13 +228,12 @@ TEST(GenAPITestCase, ConsumeEventsWhenEventHandlerMethodIsAbsent) {
 
   fidl::WireSharedClient<Example> client(std::move(local), loop.dispatcher(),
                                          std::make_unique<EventHandler>());
-  fidl::WireEventSender<Example> event_sender(std::move(remote));
 
   // Send an unhandled event. The event should be silently discarded since
   // the user did not provide a handler method for |OnResourceEvent|.
   zx::eventpair ep1, ep2;
   ASSERT_OK(zx::eventpair::create(0, &ep1, &ep2));
-  ASSERT_OK(event_sender.OnResourceEvent(std::move(ep1)));
+  ASSERT_OK(fidl::WireSendEvent(remote)->OnResourceEvent(std::move(ep1)));
   zx_signals_t observed;
   ASSERT_OK(zx_object_wait_one(ep2.get(), ZX_EVENTPAIR_PEER_CLOSED, ZX_TIME_INFINITE, &observed));
   ASSERT_EQ(ZX_EVENTPAIR_PEER_CLOSED, observed);
@@ -647,11 +645,10 @@ TEST(WireSharedClient, TeardownCompletesAfterUserCallbackReturns) {
 
     fidl::WireSharedClient<Example> client(std::move(local), loop.dispatcher(),
                                            std::make_unique<EventHandler>());
-    fidl::WireEventSender<Example> event_sender(std::move(remote));
 
     zx::eventpair ep1, ep2;
     ASSERT_OK(zx::eventpair::create(0, &ep1, &ep2));
-    ASSERT_OK(event_sender.OnResourceEvent(std::move(ep1)));
+    ASSERT_OK(fidl::WireSendEvent(remote)->OnResourceEvent(std::move(ep1)));
 
     zx_signals_t observed;
     ASSERT_OK(zx_object_wait_one(ep2.get(), ZX_USER_SIGNAL_0, ZX_TIME_INFINITE, &observed));
@@ -745,7 +742,10 @@ TEST(AllClients, DrainAllMessageInPeerClosedSendError) {
     ClientType client(std::move(local), loop.dispatcher(), &event_handler);
 
     // Send an event and close the server endpoint.
-    ASSERT_OK(fidl::WireEventSender<Example>(std::move(remote)).OnEvent(fidl::StringView(data)));
+    ASSERT_OK(fidl::WireSendEvent(remote)->OnEvent(fidl::StringView(data)));
+    remote.reset();
+
+    // The event should not be received unless the |loop| was polled.
     EXPECT_FALSE(event_handler.received());
 
     // Make a client method call which should fail, but not interfere with

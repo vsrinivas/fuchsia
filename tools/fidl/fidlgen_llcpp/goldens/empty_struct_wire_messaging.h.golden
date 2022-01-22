@@ -734,6 +734,7 @@ namespace fidl {
 
 }  // namespace fidl
 #ifdef __Fuchsia__
+
 // |EventSender| owns a server endpoint of a channel speaking
 // the EmptyProtocol protocol, and can send events in that protocol.
 template <>
@@ -786,6 +787,28 @@ class ::fidl::internal::WireWeakBufferEventSender<
     : public ::fidl::internal::WeakBufferEventSenderBase {
  public:
   using WeakBufferEventSenderBase::WeakBufferEventSenderBase;
+
+  fidl::Result Receive(const ::test_emptystruct::wire::Empty& e);
+};
+
+template <>
+class ::fidl::internal::WireEventSender<::test_emptystruct::EmptyProtocol>
+    : public ::fidl::internal::SyncEndpointManagedVeneer<
+          ::fidl::internal::WireEventSender<
+              ::test_emptystruct::EmptyProtocol>> {
+ public:
+  using SyncEndpointManagedVeneer::SyncEndpointManagedVeneer;
+
+  fidl::Result Receive(const ::test_emptystruct::wire::Empty& e);
+};
+
+template <>
+class ::fidl::internal::WireBufferEventSender<::test_emptystruct::EmptyProtocol>
+    : public ::fidl::internal::SyncEndpointBufferVeneer<
+          ::fidl::internal::WireBufferEventSender<
+              ::test_emptystruct::EmptyProtocol>> {
+ public:
+  using SyncEndpointBufferVeneer::SyncEndpointBufferVeneer;
 
   fidl::Result Receive(const ::test_emptystruct::wire::Empty& e);
 };

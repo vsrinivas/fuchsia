@@ -526,27 +526,13 @@ void ::fidl::WireResponse<
 
 fidl::Result fidl::WireEventSender<::test_emptystruct::EmptyProtocol>::Receive(
     const ::test_emptystruct::wire::Empty& e) const {
-  ::fidl::WireResponse<::test_emptystruct::EmptyProtocol::Receive> _response{e};
-  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::OwnedEncodedMessage<
-      ::fidl::WireResponse<::test_emptystruct::EmptyProtocol::Receive>,
-      ::fidl::internal::ChannelTransport>
-      _response_message{::fidl::internal::AllowUnownedInputRef{}, &_response};
-  auto& _message = _response_message.GetOutgoingMessage();
-  _message.Write(server_end_.channel());
-  return ::fidl::Result{_message};
+  return ::fidl::WireSendEvent(server_end_)->Receive(e);
 }
 
 fidl::Result fidl::WireEventSender<::test_emptystruct::EmptyProtocol>::Receive(
     ::fidl::BufferSpan _buffer,
     const ::test_emptystruct::wire::Empty& e) const {
-  ::fidl::WireResponse<::test_emptystruct::EmptyProtocol::Receive> _response{e};
-  ::fidl::UnownedEncodedMessage<
-      ::fidl::WireResponse<::test_emptystruct::EmptyProtocol::Receive>>
-      _response_message(_buffer.data, _buffer.capacity, &_response);
-  auto& _message = _response_message.GetOutgoingMessage();
-  _message.Write(server_end_.channel());
-  return ::fidl::Result{_message};
+  return ::fidl::WireSendEvent(server_end_).buffer(_buffer)->Receive(e);
 }
 
 fidl::Result
@@ -579,6 +565,41 @@ fidl::Result fidl::internal::
       ::fidl::internal::ChannelTransport>
       _response_message(_allocation->data, _buffer_size, &_response);
   return _inner().SendEvent(_response_message.GetOutgoingMessage());
+}
+
+fidl::Result
+fidl::internal::WireEventSender<::test_emptystruct::EmptyProtocol>::Receive(
+    const ::test_emptystruct::wire::Empty& e) {
+  ::fidl::WireResponse<::test_emptystruct::EmptyProtocol::Receive> _response{e};
+  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
+  ::fidl::OwnedEncodedMessage<
+      ::fidl::WireResponse<::test_emptystruct::EmptyProtocol::Receive>,
+      ::fidl::internal::ChannelTransport>
+      _response_message{::fidl::internal::AllowUnownedInputRef{}, &_response};
+  auto& _message = _response_message.GetOutgoingMessage();
+  _message.Write(_transport());
+  return ::fidl::Result{_message};
+}
+
+fidl::Result fidl::internal::
+    WireBufferEventSender<::test_emptystruct::EmptyProtocol>::Receive(
+        const ::test_emptystruct::wire::Empty& e) {
+  constexpr uint32_t _buffer_size = ::fidl::ServerReplyBufferSizeInChannel<
+      ::test_emptystruct::EmptyProtocol::Receive>();
+  ::fitx::result<::fidl::Error, ::fidl::BufferSpan> _allocation =
+      _allocator().TryAllocate(_buffer_size);
+  if (!_allocation.is_ok()) {
+    return _allocation.error_value();
+  }
+
+  ::fidl::WireResponse<::test_emptystruct::EmptyProtocol::Receive> _response{e};
+  ::fidl::UnownedEncodedMessage<
+      ::fidl::WireResponse<::test_emptystruct::EmptyProtocol::Receive>,
+      ::fidl::internal::ChannelTransport>
+      _response_message(_allocation->data, _buffer_size, &_response);
+  auto& _message = _response_message.GetOutgoingMessage();
+  _message.Write(_transport());
+  return ::fidl::Result{_message};
 }
 
 #endif  // __Fuchsia__

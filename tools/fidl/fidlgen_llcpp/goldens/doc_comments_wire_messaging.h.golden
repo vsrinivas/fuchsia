@@ -464,6 +464,7 @@ namespace fidl {
 
 }  // namespace fidl
 #ifdef __Fuchsia__
+
 // |EventSender| owns a server endpoint of a channel speaking
 // the Interface protocol, and can send events in that protocol.
 template <>
@@ -516,6 +517,33 @@ class ::fidl::internal::WireWeakBufferEventSender<::test_doccomments::Interface>
     : public ::fidl::internal::WeakBufferEventSenderBase {
  public:
   using WeakBufferEventSenderBase::WeakBufferEventSenderBase;
+
+  /// event comment #1
+  ///
+  /// event comment #3
+  fidl::Result OnEvent();
+};
+
+template <>
+class ::fidl::internal::WireEventSender<::test_doccomments::Interface>
+    : public ::fidl::internal::SyncEndpointManagedVeneer<
+          ::fidl::internal::WireEventSender<::test_doccomments::Interface>> {
+ public:
+  using SyncEndpointManagedVeneer::SyncEndpointManagedVeneer;
+
+  /// event comment #1
+  ///
+  /// event comment #3
+  fidl::Result OnEvent();
+};
+
+template <>
+class ::fidl::internal::WireBufferEventSender<::test_doccomments::Interface>
+    : public ::fidl::internal::SyncEndpointBufferVeneer<
+          ::fidl::internal::WireBufferEventSender<
+              ::test_doccomments::Interface>> {
+ public:
+  using SyncEndpointBufferVeneer::SyncEndpointBufferVeneer;
 
   /// event comment #1
   ///

@@ -931,6 +931,7 @@ namespace fidl {
 
 }  // namespace fidl
 #ifdef __Fuchsia__
+
 // |EventSender| owns a server endpoint of a channel speaking
 // the SecondProtocol protocol, and can send events in that protocol.
 template <>
@@ -974,6 +975,23 @@ class ::fidl::internal::WireWeakBufferEventSender<
     : public ::fidl::internal::WeakBufferEventSenderBase {
  public:
   using WeakBufferEventSenderBase::WeakBufferEventSenderBase;
+};
+
+template <>
+class ::fidl::internal::WireEventSender<::test_service::SecondProtocol>
+    : public ::fidl::internal::SyncEndpointManagedVeneer<
+          ::fidl::internal::WireEventSender<::test_service::SecondProtocol>> {
+ public:
+  using SyncEndpointManagedVeneer::SyncEndpointManagedVeneer;
+};
+
+template <>
+class ::fidl::internal::WireBufferEventSender<::test_service::SecondProtocol>
+    : public ::fidl::internal::SyncEndpointBufferVeneer<
+          ::fidl::internal::WireBufferEventSender<
+              ::test_service::SecondProtocol>> {
+ public:
+  using SyncEndpointBufferVeneer::SyncEndpointBufferVeneer;
 };
 #endif  // __Fuchsia__
 
@@ -1027,6 +1045,7 @@ class ::fidl::internal::WireWeakSyncClientImpl<::test_service::FirstProtocol>
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
+
 // |EventSender| owns a server endpoint of a channel speaking
 // the FirstProtocol protocol, and can send events in that protocol.
 template <>
@@ -1069,5 +1088,22 @@ class ::fidl::internal::WireWeakBufferEventSender<::test_service::FirstProtocol>
     : public ::fidl::internal::WeakBufferEventSenderBase {
  public:
   using WeakBufferEventSenderBase::WeakBufferEventSenderBase;
+};
+
+template <>
+class ::fidl::internal::WireEventSender<::test_service::FirstProtocol>
+    : public ::fidl::internal::SyncEndpointManagedVeneer<
+          ::fidl::internal::WireEventSender<::test_service::FirstProtocol>> {
+ public:
+  using SyncEndpointManagedVeneer::SyncEndpointManagedVeneer;
+};
+
+template <>
+class ::fidl::internal::WireBufferEventSender<::test_service::FirstProtocol>
+    : public ::fidl::internal::SyncEndpointBufferVeneer<
+          ::fidl::internal::WireBufferEventSender<
+              ::test_service::FirstProtocol>> {
+ public:
+  using SyncEndpointBufferVeneer::SyncEndpointBufferVeneer;
 };
 #endif  // __Fuchsia__

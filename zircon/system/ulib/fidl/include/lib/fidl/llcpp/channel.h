@@ -474,6 +474,17 @@ internal::WeakEventSenderVeneer<internal::WireWeakEventSender, FidlProtocol> Wir
               binding_ref)));
 }
 
+// Return an interface for sending FIDL events over |server_end|. Call it like:
+//
+//     fidl::WireSendEvent(server_end)->FooEvent(args...);
+//
+template <typename FidlProtocol>
+internal::SyncEndpointVeneer<internal::WireEventSender, FidlProtocol> WireSendEvent(
+    const ServerEnd<FidlProtocol>& server_end) {
+  return internal::SyncEndpointVeneer<internal::WireEventSender, FidlProtocol>(
+      fidl::internal::MakeAnyUnownedTransport(server_end.channel()));
+}
+
 }  // namespace fidl
 
 #endif  // LIB_FIDL_LLCPP_CHANNEL_H_

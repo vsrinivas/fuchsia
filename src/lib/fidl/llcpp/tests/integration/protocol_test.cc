@@ -156,8 +156,7 @@ TEST(MagicNumberTest, EventWrite) {
   auto endpoints = fidl::CreateEndpoints<test::Frobinator>();
   ASSERT_EQ(endpoints.status_value(), ZX_OK);
   std::string s = "hi";
-  fidl::WireEventSender<test::Frobinator> event_sender(std::move(endpoints->server));
-  event_sender.Hrob(fidl::StringView::FromExternal(s));
+  fidl::WireSendEvent(endpoints->server)->Hrob(fidl::StringView::FromExternal(s));
   char bytes[ZX_CHANNEL_MAX_MSG_BYTES];
   zx_handle_info_t handle_infos[ZX_CHANNEL_MAX_MSG_HANDLES];
 
@@ -236,8 +235,7 @@ TEST(EventSenderTest, SendEvent) {
   auto endpoints = fidl::CreateEndpoints<test::Frobinator>();
   ASSERT_EQ(endpoints.status_value(), ZX_OK);
   auto [client_end, server_end] = std::move(endpoints.value());
-  fidl::WireEventSender<test::Frobinator> event_sender(std::move(server_end));
-  ASSERT_EQ(ZX_OK, event_sender.Hrob(fidl::StringView("foo")).status());
+  ASSERT_EQ(ZX_OK, fidl::WireSendEvent(server_end)->Hrob(fidl::StringView("foo")).status());
 
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
 

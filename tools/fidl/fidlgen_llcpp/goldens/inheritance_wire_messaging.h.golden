@@ -867,6 +867,7 @@ namespace fidl {
 
 }  // namespace fidl
 #ifdef __Fuchsia__
+
 // |EventSender| owns a server endpoint of a channel speaking
 // the Super protocol, and can send events in that protocol.
 template <>
@@ -909,6 +910,22 @@ class ::fidl::internal::WireWeakBufferEventSender<::test_inheritance::Super>
     : public ::fidl::internal::WeakBufferEventSenderBase {
  public:
   using WeakBufferEventSenderBase::WeakBufferEventSenderBase;
+};
+
+template <>
+class ::fidl::internal::WireEventSender<::test_inheritance::Super>
+    : public ::fidl::internal::SyncEndpointManagedVeneer<
+          ::fidl::internal::WireEventSender<::test_inheritance::Super>> {
+ public:
+  using SyncEndpointManagedVeneer::SyncEndpointManagedVeneer;
+};
+
+template <>
+class ::fidl::internal::WireBufferEventSender<::test_inheritance::Super>
+    : public ::fidl::internal::SyncEndpointBufferVeneer<
+          ::fidl::internal::WireBufferEventSender<::test_inheritance::Super>> {
+ public:
+  using SyncEndpointBufferVeneer::SyncEndpointBufferVeneer;
 };
 #endif  // __Fuchsia__
 
@@ -969,6 +986,7 @@ class ::fidl::internal::WireWeakSyncClientImpl<::test_inheritance::Sub> final
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
+
 // |EventSender| owns a server endpoint of a channel speaking
 // the Sub protocol, and can send events in that protocol.
 template <>
@@ -1011,5 +1029,21 @@ class ::fidl::internal::WireWeakBufferEventSender<::test_inheritance::Sub>
     : public ::fidl::internal::WeakBufferEventSenderBase {
  public:
   using WeakBufferEventSenderBase::WeakBufferEventSenderBase;
+};
+
+template <>
+class ::fidl::internal::WireEventSender<::test_inheritance::Sub>
+    : public ::fidl::internal::SyncEndpointManagedVeneer<
+          ::fidl::internal::WireEventSender<::test_inheritance::Sub>> {
+ public:
+  using SyncEndpointManagedVeneer::SyncEndpointManagedVeneer;
+};
+
+template <>
+class ::fidl::internal::WireBufferEventSender<::test_inheritance::Sub>
+    : public ::fidl::internal::SyncEndpointBufferVeneer<
+          ::fidl::internal::WireBufferEventSender<::test_inheritance::Sub>> {
+ public:
+  using SyncEndpointBufferVeneer::SyncEndpointBufferVeneer;
 };
 #endif  // __Fuchsia__

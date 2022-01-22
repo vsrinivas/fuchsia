@@ -8138,6 +8138,7 @@ namespace fidl {
 
 }  // namespace fidl
 #ifdef __Fuchsia__
+
 // |EventSender| owns a server endpoint of a channel speaking
 // the HandleRightsProtocol protocol, and can send events in that protocol.
 template <>
@@ -8190,6 +8191,29 @@ class ::fidl::internal::WireWeakBufferEventSender<
     : public ::fidl::internal::WeakBufferEventSenderBase {
  public:
   using WeakBufferEventSenderBase::WeakBufferEventSenderBase;
+
+  fidl::Result AnEvent(::zx::socket&& h);
+};
+
+template <>
+class ::fidl::internal::WireEventSender<::test_protocols::HandleRightsProtocol>
+    : public ::fidl::internal::SyncEndpointManagedVeneer<
+          ::fidl::internal::WireEventSender<
+              ::test_protocols::HandleRightsProtocol>> {
+ public:
+  using SyncEndpointManagedVeneer::SyncEndpointManagedVeneer;
+
+  fidl::Result AnEvent(::zx::socket&& h);
+};
+
+template <>
+class ::fidl::internal::WireBufferEventSender<
+    ::test_protocols::HandleRightsProtocol>
+    : public ::fidl::internal::SyncEndpointBufferVeneer<
+          ::fidl::internal::WireBufferEventSender<
+              ::test_protocols::HandleRightsProtocol>> {
+ public:
+  using SyncEndpointBufferVeneer::SyncEndpointBufferVeneer;
 
   fidl::Result AnEvent(::zx::socket&& h);
 };
@@ -8353,6 +8377,7 @@ class ::fidl::internal::WireWeakSyncClientImpl<
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
+
 // |EventSender| owns a server endpoint of a channel speaking
 // the WithAndWithoutRequestResponse protocol, and can send events in that
 // protocol.
@@ -8414,6 +8439,34 @@ class ::fidl::internal::WireWeakBufferEventSender<
     : public ::fidl::internal::WeakBufferEventSenderBase {
  public:
   using WeakBufferEventSenderBase::WeakBufferEventSenderBase;
+
+  fidl::Result OnEmptyResponse();
+
+  fidl::Result OnWithResponse(::fidl::StringView ret);
+};
+
+template <>
+class ::fidl::internal::WireEventSender<
+    ::test_protocols::WithAndWithoutRequestResponse>
+    : public ::fidl::internal::SyncEndpointManagedVeneer<
+          ::fidl::internal::WireEventSender<
+              ::test_protocols::WithAndWithoutRequestResponse>> {
+ public:
+  using SyncEndpointManagedVeneer::SyncEndpointManagedVeneer;
+
+  fidl::Result OnEmptyResponse();
+
+  fidl::Result OnWithResponse(::fidl::StringView ret);
+};
+
+template <>
+class ::fidl::internal::WireBufferEventSender<
+    ::test_protocols::WithAndWithoutRequestResponse>
+    : public ::fidl::internal::SyncEndpointBufferVeneer<
+          ::fidl::internal::WireBufferEventSender<
+              ::test_protocols::WithAndWithoutRequestResponse>> {
+ public:
+  using SyncEndpointBufferVeneer::SyncEndpointBufferVeneer;
 
   fidl::Result OnEmptyResponse();
 
@@ -8493,6 +8546,7 @@ class ::fidl::internal::WireWeakSyncClientImpl<::test_protocols::Transitional>
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
+
 // |EventSender| owns a server endpoint of a channel speaking
 // the Transitional protocol, and can send events in that protocol.
 template <>
@@ -8543,6 +8597,27 @@ class ::fidl::internal::WireWeakBufferEventSender<
     : public ::fidl::internal::WeakBufferEventSenderBase {
  public:
   using WeakBufferEventSenderBase::WeakBufferEventSenderBase;
+
+  fidl::Result Event(int64_t x);
+};
+
+template <>
+class ::fidl::internal::WireEventSender<::test_protocols::Transitional>
+    : public ::fidl::internal::SyncEndpointManagedVeneer<
+          ::fidl::internal::WireEventSender<::test_protocols::Transitional>> {
+ public:
+  using SyncEndpointManagedVeneer::SyncEndpointManagedVeneer;
+
+  fidl::Result Event(int64_t x);
+};
+
+template <>
+class ::fidl::internal::WireBufferEventSender<::test_protocols::Transitional>
+    : public ::fidl::internal::SyncEndpointBufferVeneer<
+          ::fidl::internal::WireBufferEventSender<
+              ::test_protocols::Transitional>> {
+ public:
+  using SyncEndpointBufferVeneer::SyncEndpointBufferVeneer;
 
   fidl::Result Event(int64_t x);
 };
@@ -8601,6 +8676,7 @@ class ::fidl::internal::WireWeakSyncClientImpl<
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
+
 // |EventSender| owns a server endpoint of a channel speaking
 // the MethodWithUnion protocol, and can send events in that protocol.
 template <>
@@ -8645,6 +8721,24 @@ class ::fidl::internal::WireWeakBufferEventSender<
     : public ::fidl::internal::WeakBufferEventSenderBase {
  public:
   using WeakBufferEventSenderBase::WeakBufferEventSenderBase;
+};
+
+template <>
+class ::fidl::internal::WireEventSender<::test_protocols::MethodWithUnion>
+    : public ::fidl::internal::SyncEndpointManagedVeneer<
+          ::fidl::internal::WireEventSender<
+              ::test_protocols::MethodWithUnion>> {
+ public:
+  using SyncEndpointManagedVeneer::SyncEndpointManagedVeneer;
+};
+
+template <>
+class ::fidl::internal::WireBufferEventSender<::test_protocols::MethodWithUnion>
+    : public ::fidl::internal::SyncEndpointBufferVeneer<
+          ::fidl::internal::WireBufferEventSender<
+              ::test_protocols::MethodWithUnion>> {
+ public:
+  using SyncEndpointBufferVeneer::SyncEndpointBufferVeneer;
 };
 #endif  // __Fuchsia__
 
@@ -8767,6 +8861,7 @@ class ::fidl::internal::WireWeakSyncClientImpl<
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
+
 // |EventSender| owns a server endpoint of a channel speaking
 // the WithProtocolEnds protocol, and can send events in that protocol.
 template <>
@@ -8811,6 +8906,25 @@ class ::fidl::internal::WireWeakBufferEventSender<
     : public ::fidl::internal::WeakBufferEventSenderBase {
  public:
   using WeakBufferEventSenderBase::WeakBufferEventSenderBase;
+};
+
+template <>
+class ::fidl::internal::WireEventSender<::test_protocols::WithProtocolEnds>
+    : public ::fidl::internal::SyncEndpointManagedVeneer<
+          ::fidl::internal::WireEventSender<
+              ::test_protocols::WithProtocolEnds>> {
+ public:
+  using SyncEndpointManagedVeneer::SyncEndpointManagedVeneer;
+};
+
+template <>
+class ::fidl::internal::WireBufferEventSender<
+    ::test_protocols::WithProtocolEnds>
+    : public ::fidl::internal::SyncEndpointBufferVeneer<
+          ::fidl::internal::WireBufferEventSender<
+              ::test_protocols::WithProtocolEnds>> {
+ public:
+  using SyncEndpointBufferVeneer::SyncEndpointBufferVeneer;
 };
 #endif  // __Fuchsia__
 
@@ -8870,6 +8984,7 @@ class ::fidl::internal::WireWeakSyncClientImpl<::test_protocols::ManyParameters>
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
+
 // |EventSender| owns a server endpoint of a channel speaking
 // the ManyParameters protocol, and can send events in that protocol.
 template <>
@@ -8914,6 +9029,23 @@ class ::fidl::internal::WireWeakBufferEventSender<
     : public ::fidl::internal::WeakBufferEventSenderBase {
  public:
   using WeakBufferEventSenderBase::WeakBufferEventSenderBase;
+};
+
+template <>
+class ::fidl::internal::WireEventSender<::test_protocols::ManyParameters>
+    : public ::fidl::internal::SyncEndpointManagedVeneer<
+          ::fidl::internal::WireEventSender<::test_protocols::ManyParameters>> {
+ public:
+  using SyncEndpointManagedVeneer::SyncEndpointManagedVeneer;
+};
+
+template <>
+class ::fidl::internal::WireBufferEventSender<::test_protocols::ManyParameters>
+    : public ::fidl::internal::SyncEndpointBufferVeneer<
+          ::fidl::internal::WireBufferEventSender<
+              ::test_protocols::ManyParameters>> {
+ public:
+  using SyncEndpointBufferVeneer::SyncEndpointBufferVeneer;
 };
 #endif  // __Fuchsia__
 
@@ -9046,6 +9178,7 @@ class ::fidl::internal::WireWeakSyncClientImpl<
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
+
 // |EventSender| owns a server endpoint of a channel speaking
 // the WithErrorSyntax protocol, and can send events in that protocol.
 template <>
@@ -9090,6 +9223,24 @@ class ::fidl::internal::WireWeakBufferEventSender<
     : public ::fidl::internal::WeakBufferEventSenderBase {
  public:
   using WeakBufferEventSenderBase::WeakBufferEventSenderBase;
+};
+
+template <>
+class ::fidl::internal::WireEventSender<::test_protocols::WithErrorSyntax>
+    : public ::fidl::internal::SyncEndpointManagedVeneer<
+          ::fidl::internal::WireEventSender<
+              ::test_protocols::WithErrorSyntax>> {
+ public:
+  using SyncEndpointManagedVeneer::SyncEndpointManagedVeneer;
+};
+
+template <>
+class ::fidl::internal::WireBufferEventSender<::test_protocols::WithErrorSyntax>
+    : public ::fidl::internal::SyncEndpointBufferVeneer<
+          ::fidl::internal::WireBufferEventSender<
+              ::test_protocols::WithErrorSyntax>> {
+ public:
+  using SyncEndpointBufferVeneer::SyncEndpointBufferVeneer;
 };
 #endif  // __Fuchsia__
 
@@ -9146,6 +9297,7 @@ class ::fidl::internal::WireWeakSyncClientImpl<
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
+
 // |EventSender| owns a server endpoint of a channel speaking
 // the DiscoverableProtocol protocol, and can send events in that protocol.
 template <>
@@ -9191,6 +9343,25 @@ class ::fidl::internal::WireWeakBufferEventSender<
     : public ::fidl::internal::WeakBufferEventSenderBase {
  public:
   using WeakBufferEventSenderBase::WeakBufferEventSenderBase;
+};
+
+template <>
+class ::fidl::internal::WireEventSender<::test_protocols::DiscoverableProtocol>
+    : public ::fidl::internal::SyncEndpointManagedVeneer<
+          ::fidl::internal::WireEventSender<
+              ::test_protocols::DiscoverableProtocol>> {
+ public:
+  using SyncEndpointManagedVeneer::SyncEndpointManagedVeneer;
+};
+
+template <>
+class ::fidl::internal::WireBufferEventSender<
+    ::test_protocols::DiscoverableProtocol>
+    : public ::fidl::internal::SyncEndpointBufferVeneer<
+          ::fidl::internal::WireBufferEventSender<
+              ::test_protocols::DiscoverableProtocol>> {
+ public:
+  using SyncEndpointBufferVeneer::SyncEndpointBufferVeneer;
 };
 #endif  // __Fuchsia__
 
@@ -9317,6 +9488,7 @@ class ::fidl::internal::WireWeakSyncClientImpl<
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
+
 // |EventSender| owns a server endpoint of a channel speaking
 // the ChannelProtocol protocol, and can send events in that protocol.
 template <>
@@ -9368,6 +9540,28 @@ class ::fidl::internal::WireWeakBufferEventSender<
     : public ::fidl::internal::WeakBufferEventSenderBase {
  public:
   using WeakBufferEventSenderBase::WeakBufferEventSenderBase;
+
+  fidl::Result EventA(int64_t a, int64_t b);
+};
+
+template <>
+class ::fidl::internal::WireEventSender<::test_protocols::ChannelProtocol>
+    : public ::fidl::internal::SyncEndpointManagedVeneer<
+          ::fidl::internal::WireEventSender<
+              ::test_protocols::ChannelProtocol>> {
+ public:
+  using SyncEndpointManagedVeneer::SyncEndpointManagedVeneer;
+
+  fidl::Result EventA(int64_t a, int64_t b);
+};
+
+template <>
+class ::fidl::internal::WireBufferEventSender<::test_protocols::ChannelProtocol>
+    : public ::fidl::internal::SyncEndpointBufferVeneer<
+          ::fidl::internal::WireBufferEventSender<
+              ::test_protocols::ChannelProtocol>> {
+ public:
+  using SyncEndpointBufferVeneer::SyncEndpointBufferVeneer;
 
   fidl::Result EventA(int64_t a, int64_t b);
 };

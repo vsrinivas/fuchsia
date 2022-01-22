@@ -124,6 +124,13 @@ struct CallerAllocatingImpl<WireWeakEventSender, FidlProtocol> {
   using Type = WireWeakBufferEventSender<FidlProtocol>;
 };
 
+// Associate |WireEventSender| (managed) and |WireBufferEventSender|
+// (caller-allocating).
+template <typename FidlProtocol>
+struct CallerAllocatingImpl<WireEventSender, FidlProtocol> {
+  using Type = WireBufferEventSender<FidlProtocol>;
+};
+
 // A veneer interface object for client/server messaging implementations that
 // operate on a borrowed client/server endpoint, and where the implementation
 // automatically manages the buffer for message encoding/decoding. Those
@@ -222,9 +229,8 @@ class SyncEndpointVeneer final {
       : transport_(std::move(transport)) {}
 
   // Returns a veneer object for the concrete messaging implementation.
-  internal::SyncEndpointManagedVeneer<internal::WireSyncClientImpl<FidlProtocol>> operator->() && {
-    return internal::SyncEndpointManagedVeneer<internal::WireSyncClientImpl<FidlProtocol>>(
-        transport_);
+  internal::SyncEndpointManagedVeneer<SyncImpl<FidlProtocol>> operator->() && {
+    return internal::SyncEndpointManagedVeneer<SyncImpl<FidlProtocol>>(transport_);
   }
 
   // Returns a veneer object which exposes the caller-allocating API, using

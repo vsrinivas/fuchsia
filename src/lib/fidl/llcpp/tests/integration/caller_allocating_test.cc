@@ -283,18 +283,19 @@ class ExpectPeerClosedEventHandler : public fidl::WireAsyncEventHandler<test::Fr
 
 }  // namespace
 
-TEST_F(WireSendEventTest, CallerAllocate) {
+TEST_F(WireSendEventTest, ServerBindingRefCallerAllocate) {
   fidl::Arena arena;
   ExpectHrobEventHandler event_handler{"test"};
   fidl::WireClient client(std::move(client_end()), loop()->dispatcher(), &event_handler);
   fidl::Result result = fidl::WireSendEvent(binding_ref()).buffer(arena)->Hrob("test");
 
   EXPECT_OK(result.status());
+  EXPECT_TRUE(fidl_testing::ArenaChecker::DidUse(arena));
   loop()->RunUntilIdle();
   EXPECT_EQ(1, event_handler.hrob_count());
 }
 
-TEST_F(WireSendEventTest, CallerAllocateInsufficientBufferSize) {
+TEST_F(WireSendEventTest, ServerBindingRefCallerAllocateInsufficientBufferSize) {
   uint8_t small_buffer[8];
   ExpectPeerClosedEventHandler event_handler;
   fidl::WireClient client(std::move(client_end()), loop()->dispatcher(), &event_handler);
@@ -309,4 +310,40 @@ TEST_F(WireSendEventTest, CallerAllocateInsufficientBufferSize) {
   EXPECT_TRUE(event_handler.peer_closed());
   fidl::Result error = fidl::WireSendEvent(binding_ref())->Hrob("test");
   EXPECT_TRUE(error.is_canceled());
+}
+
+TEST(WireSendEventTest, ServerEndCallerAllocate) {
+  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
+  fidl::ServerEnd<test::Frobinator> server_end;
+  zx::status client_end = fidl::CreateEndpoints(&server_end);
+  ASSERT_OK(client_end.status_value());
+  ExpectHrobEventHandler event_handler{"test"};
+  fidl::WireClient client(std::move(*client_end), loop.dispatcher(), &event_handler);
+
+  fidl::Arena arena;
+  fidl::Result result = fidl::WireSendEvent(server_end).buffer(arena)->Hrob("test");
+
+  EXPECT_OK(result.status());
+  EXPECT_TRUE(fidl_testing::ArenaChecker::DidUse(arena));
+  loop.RunUntilIdle();
+  EXPECT_EQ(1, event_handler.hrob_count());
+}
+
+TEST(WireSendEventTest, ServerEndCallerAllocateInsufficientBufferSize) {
+  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
+  fidl::ServerEnd<test::Frobinator> server_end;
+  zx::status client_end = fidl::CreateEndpoints(&server_end);
+  ASSERT_OK(client_end.status_value());
+  ExpectHrobEventHandler event_handler{"test"};
+  fidl::WireClient client(std::move(*client_end), loop.dispatcher(), &event_handler);
+
+  uint8_t small_buffer[8];
+  fidl::Result result = fidl::WireSendEvent(server_end)
+                            .buffer(fidl::BufferSpan(small_buffer, sizeof(small_buffer)))
+                            ->Hrob("test");
+
+  EXPECT_STATUS(ZX_ERR_BUFFER_TOO_SMALL, result.status());
+  EXPECT_EQ(fidl::Reason::kEncodeError, result.reason());
+  loop.RunUntilIdle();
+  EXPECT_EQ(0, event_handler.hrob_count());
 }
