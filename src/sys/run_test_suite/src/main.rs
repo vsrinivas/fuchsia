@@ -30,6 +30,17 @@ struct Args {
     #[argh(switch)]
     filter_ansi: bool,
 
+    /// continue running unfinished suites if a suite times out.
+    /// By default, unfinished suites are immediately terminated if a suite times out.
+    /// This option is only relevant when multiple suites are run.
+    #[argh(switch)]
+    continue_on_timeout: bool,
+
+    /// stop running unfinished suites after the number of provided failures has occurred.
+    /// By default, all suites are run to completion if a suite fails.
+    #[argh(option)]
+    stop_after_failures: Option<u16>,
+
     /// run test cases in parallel, up to the number provided.
     #[argh(option)]
     parallel: Option<u16>,
@@ -62,6 +73,8 @@ async fn main() {
         test_url,
         test_filter,
         also_run_disabled_tests,
+        continue_on_timeout,
+        stop_after_failures,
         parallel,
         count,
         min_severity_logs,
@@ -86,6 +99,21 @@ async fn main() {
         false => run_test_suite_lib::output::RunReporter::new(reporter),
     };
 
+    let run_params = run_test_suite_lib::RunParams {
+        timeout_behavior: match continue_on_timeout {
+            false => run_test_suite_lib::TimeoutBehavior::TerminateRemaining,
+            true => run_test_suite_lib::TimeoutBehavior::Continue,
+        },
+        stop_after_failures: match stop_after_failures.map(std::num::NonZeroU16::new) {
+            None => None,
+            Some(None) => {
+                println!("--stop-after-failures should be greater than zero.");
+                std::process::exit(1);
+            }
+            Some(Some(stop_after)) => Some(stop_after),
+        },
+    };
+
     match run_test_suite_lib::run_tests_and_get_outcome(
         fuchsia_component::client::connect_to_protocol::<RunBuilderMarker>()
             .expect("connecting to RunBuilderProxy"),
@@ -101,10 +129,7 @@ async fn main() {
             };
             count as usize
         ],
-        run_test_suite_lib::RunParams {
-            timeout_behavior: run_test_suite_lib::TimeoutBehavior::TerminateRemaining,
-            stop_after_failures: None,
-        },
+        run_params,
         min_severity_logs,
         run_reporter,
         futures::future::pending(),
