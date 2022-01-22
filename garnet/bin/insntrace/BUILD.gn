@@ -38,9 +38,6 @@ executable("bin") {
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/zircon-internal",
   ]
-
-  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }
 
 install_host_tools("host_insntrace_print") {

@@ -77,7 +77,8 @@ bool AllocTrace(const IptConfig& config) {
   // Remove this once the bug is fixed.
   memset(&allocation, 0x0, sizeof(Allocation));
   allocation.mode = config.mode;
-  allocation.num_traces = (config.mode == Mode::CPU ? config.num_cpus : config.max_threads);
+  allocation.num_traces =
+      static_cast<uint16_t>(config.mode == Mode::CPU ? config.num_cpus : config.max_threads);
   FX_VLOGS(2) << fxl::StringPrintf("mode=%u, num_traces=0x%x",
                                    static_cast<unsigned>(allocation.mode), allocation.num_traces);
 
@@ -93,8 +94,8 @@ bool AllocTrace(const IptConfig& config) {
 
 static void InitIptBufferConfig(BufferConfig* ipt_config, const IptConfig& config) {
   memset(ipt_config, 0, sizeof(*ipt_config));
-  ipt_config->num_chunks = config.num_chunks;
-  ipt_config->chunk_order = config.chunk_order;
+  ipt_config->num_chunks = static_cast<uint32_t>(config.num_chunks);
+  ipt_config->chunk_order = static_cast<uint32_t>(config.chunk_order);
   ipt_config->is_circular = config.is_circular;
   ipt_config->ctl = config.CtlMsr();
   ipt_config->address_space_match = config.cr3_match;
