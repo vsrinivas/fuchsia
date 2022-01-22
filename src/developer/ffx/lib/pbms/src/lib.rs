@@ -28,12 +28,12 @@ use {
 /// Load FMS Entries from the SDK or in-tree build.
 ///
 /// Whether the sdk or local build is used is determined by ffx_config::sdk.
-pub async fn read_pbms() -> Result<Option<Entries>> {
+pub async fn read_pbms() -> Result<Entries> {
     let sdk = ffx_config::get_sdk().await.context("PBMS ffx config get sdk")?;
     match sdk.get_version() {
-        SdkVersion::Version(v) => Ok(Some(pbms_from_sdk(v).await?)),
-        SdkVersion::InTree => Ok(Some(pbms_from_tree(sdk.get_path_prefix()).await?)),
-        SdkVersion::Unknown => Ok(None),
+        SdkVersion::Version(v) => Ok(pbms_from_sdk(v).await?),
+        SdkVersion::InTree => Ok(pbms_from_tree(sdk.get_path_prefix()).await?),
+        SdkVersion::Unknown => bail!("Unable to determine SDK version vs. in-tree"),
     }
 }
 
