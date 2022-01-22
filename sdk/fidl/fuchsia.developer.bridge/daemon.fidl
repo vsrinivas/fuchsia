@@ -40,7 +40,8 @@ type DaemonError = strict enum {
 
 @discoverable
 protocol Daemon {
-    /// Make the daemon exit.
+    /// Requests for the Daemon to exit. Receives 'true' to indicate the request
+    /// was received and the Daemon will then shut down shortly thereafter.
     Quit() -> (struct {
         success bool;
     });
