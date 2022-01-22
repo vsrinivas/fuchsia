@@ -805,7 +805,7 @@ pub fn add_ip_addr_subnet<D: EventDispatcher, A: IpAddress>(
     res
 }
 
-/// Removes an IP address and associated subnet to this device.
+/// Removes an IP address and associated subnet from this device.
 ///
 /// # Panics
 ///
