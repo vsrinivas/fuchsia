@@ -211,13 +211,13 @@ First, you must implement your mock component.
 * {C++}
 
     In C++, a mock component is implemented by creating a class that inherits from
-    MockComponent interface and overrides the `Start` method.
+    LocalComponent interface and overrides the `Start` method.
 
     ```cpp
     {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="sdk/lib/sys/component/cpp/testing/realm_builder_types.h" region_tag="mock_interface_cpp" adjust_indentation="auto" %}
     ```
 
-    `MockHandles` is a class containing handles to the component's incoming
+    `LocalComponentHandles` is a class containing handles to the component's incoming
     and outgoing capabilities:
 
     ```cpp
