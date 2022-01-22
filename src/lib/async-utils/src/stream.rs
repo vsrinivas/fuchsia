@@ -43,6 +43,7 @@ pub enum StreamItem<T, E> {
 
 /// A `Stream` that returns the values of the wrapped stream until the wrapped stream is exhausted.
 /// Then it returns a single epitaph value before being exhausted
+#[cfg_attr(test, derive(Debug))]
 pub struct StreamWithEpitaph<S, E> {
     inner: S,
     epitaph: Option<E>,
@@ -127,6 +128,7 @@ where
 ///   stream.map(move |v|, (k.clone(), v)
 /// BUT the Tagged type combinator provides a statically nameable type that can easily be expressed
 /// in type signatures such as `IndexedStreams` below.
+#[cfg_attr(test, derive(Debug))]
 pub struct Tagged<K, St> {
     tag: K,
     stream: St,
@@ -254,8 +256,8 @@ mod test {
     #[fasync::run_until_stalled(test)]
     async fn stream_is_terminated_after_end() {
         let mut s = once(ready(0i32)).with_epitaph(3i64);
-        s.next().await;
-        s.next().await;
+        assert_eq!(s.next().await, Some(StreamItem::Item(0)));
+        assert_eq!(s.next().await, Some(StreamItem::Epitaph(3)));
         assert!(s.is_terminated());
     }
 
@@ -323,7 +325,7 @@ mod test {
             .iter()
             .fold((HashSet::new(), 0), |(mut terminated, closed), event| match event {
                 Event::CloseStream(k, _) => {
-                    terminated.insert(k);
+                    let _: bool = terminated.insert(k);
                     (terminated, closed)
                 }
                 Event::SendRequest(k, _) if !terminated.contains(k) => (terminated, closed + 1),
@@ -370,7 +372,7 @@ mod test {
             for event in execution {
                 match event {
                     Event::InsertStream(key, stream) => {
-                        streams.insert(key, stream.tagged(key).with_epitaph(key));
+                        assert_matches::assert_matches!(streams.insert(key, stream.tagged(key).with_epitaph(key)), None);
                         // StreamMap does *not* wake on inserting new streams, matching the
                         // behavior of streams::SelectAll. The client *must* arrange for it to be
                         // polled again after a stream is inserted; we model that here by forcing a

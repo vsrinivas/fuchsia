@@ -45,7 +45,9 @@ impl<K: Eq + Hash + Unpin, Fut: Future> FutureMap<K, Fut> {
     /// that `poll_next` is called in order to receive wake-up notifications for the given
     /// stream.
     pub fn insert(&mut self, key: K, future: Fut) -> Option<Pin<Box<Fut>>> {
-        self.inner.insert(key, Box::new(future).into())
+        let Self { inner, is_terminated } = self;
+        *is_terminated = false;
+        inner.insert(key, Box::new(future).into())
     }
 
     /// Returns `true` if the `FutureMap` contains `key`.
@@ -70,49 +72,31 @@ impl<K: Clone + Eq + Hash + Unpin, Fut: Future> Stream for FutureMap<K, Fut> {
     type Item = Fut::Output;
 
     fn poll_next(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
-        let mut result = Poll::Pending;
-        let mut to_remove = Vec::new();
         // We can pull the inner value out as FutureMap is `Unpin`
-        let this = Pin::into_inner(self);
+        let Self { inner, is_terminated } = Pin::into_inner(self);
 
-        if !this.inner.is_empty() {
-            this.is_terminated = false;
-        }
-
-        for (key, future) in this.inner.iter_mut() {
-            match Pin::new(future).poll(cx) {
-                Poll::Ready(req) => {
-                    result = Poll::Ready(Some(req));
-                    to_remove.push(key.clone());
-                    break;
-                }
-                Poll::Pending => (),
-            }
-        }
-        for key in to_remove {
-            this.remove(&key);
-        }
-
-        // If there is nothing in the map and there is not a result ready
-        // then the Stream returns None and is_terminated is set to true.
-        // Otherwise, use the result obtained above.
-        if this.inner.is_empty() && result.is_pending() {
-            this.is_terminated = true;
+        if inner.is_empty() {
+            *is_terminated = true;
             Poll::Ready(None)
         } else {
-            result
+            match inner.iter_mut().find_map(|(key, future)| match Pin::new(future).poll(cx) {
+                Poll::Ready(req) => Some((key.clone(), req)),
+                Poll::Pending => None,
+            }) {
+                Some((key, req)) => {
+                    assert!(inner.remove(&key).is_some());
+                    Poll::Ready(Some(req))
+                }
+                None => Poll::Pending,
+            }
         }
     }
 }
 
 impl<K: Clone + Eq + Hash + Unpin, Fut: Future> FusedStream for FutureMap<K, Fut> {
     fn is_terminated(&self) -> bool {
-        // If there is at least 1 Future in the map, it should not be considered terminated.
-        if !self.inner.is_empty() {
-            false
-        } else {
-            self.is_terminated
-        }
+        let Self { inner: _, is_terminated } = self;
+        *is_terminated
     }
 }
 
@@ -185,7 +169,7 @@ mod test {
                         !terminated.contains(k),
                         "There should be no more than one future per key"
                     );
-                    terminated.insert(k);
+                    let _: bool = terminated.insert(k);
                     (terminated, closed + 1)
                 }
                 _ => (terminated, closed),
@@ -225,7 +209,7 @@ mod test {
             for event in execution {
                 match event {
                     Event::InsertFuture(key, future) => {
-                        futures.insert(key, future.tagged(key));
+                        assert_matches::assert_matches!(futures.insert(key, future.tagged(key)), None);
                         // FutureMap does *not* wake on inserting new futures, matching the
                         // behavior of streams::SelectAll. The client *must* arrange for it to be
                         // polled again after a future is inserted; we model that here by forcing a

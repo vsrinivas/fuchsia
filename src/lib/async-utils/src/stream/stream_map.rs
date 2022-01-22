@@ -93,7 +93,7 @@ impl<K: Clone + Eq + Hash + Unpin, St: Stream> Stream for StreamMap<K, St> {
             }
         }
         for key in to_remove {
-            streams.remove(&key);
+            assert!(streams.remove(&key).is_some());
         }
         result
     }
@@ -202,7 +202,7 @@ mod test {
             .iter()
             .fold((HashSet::new(), 0), |(mut terminated, closed), event| match event {
                 Event::CloseStream(k, _) => {
-                    terminated.insert(k);
+                    let _: bool = terminated.insert(k);
                     (terminated, closed)
                 }
                 Event::SendRequest(k, _) if !terminated.contains(k) => (terminated, closed + 1),
@@ -249,7 +249,7 @@ mod test {
             for event in execution {
                 match event {
                     Event::InsertStream(key, stream) => {
-                        streams.insert(key, stream.tagged(key).with_epitaph(key));
+                        assert_matches::assert_matches!(streams.insert(key, stream.tagged(key).with_epitaph(key)), None);
                         // StreamMap does *not* wake on inserting new streams, matching the
                         // behavior of streams::SelectAll. The client *must* arrange for it to be
                         // polled again after a stream is inserted; we model that here by forcing a

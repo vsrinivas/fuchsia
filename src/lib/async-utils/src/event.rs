@@ -134,7 +134,7 @@ impl Drop for EventSignaler {
     fn drop(&mut self) {
         // Indicate that all `Event` clones have been dropped. This does not set the value if it
         // has already been set to `State::Signaled`.
-        self.set(State::Dropped);
+        let _: bool = self.set(State::Dropped);
     }
 }
 
@@ -256,7 +256,7 @@ mod tests {
         assert!(!event.signaled());
         assert!(!event_clone.signaled());
 
-        event.signal();
+        assert!(event.signal());
 
         assert!(event.signaled());
         assert!(event_clone.signaled());
@@ -280,7 +280,7 @@ mod tests {
         let event = Event::new();
         let mut wait = event.wait();
         let mut wait_or_dropped = event.wait_or_dropped();
-        event.signal();
+        assert!(event.signal());
         assert!(ex.run_until_stalled(&mut wait).is_ready());
         assert!(ex.run_until_stalled(&mut wait_or_dropped).is_ready());
     }
@@ -294,7 +294,7 @@ mod tests {
         let mut wait_or_dropped = event.wait_or_dropped();
         assert!(ex.run_until_stalled(&mut wait).is_pending());
         assert!(ex.run_until_stalled(&mut wait_or_dropped).is_pending());
-        event.signal();
+        assert!(event.signal());
         assert!(ex.run_until_stalled(&mut wait).is_ready());
         assert!(ex.run_until_stalled(&mut wait_or_dropped).is_ready());
     }
@@ -312,7 +312,7 @@ mod tests {
         assert!(ex.run_until_stalled(&mut wait_1).is_pending());
         assert!(ex.run_until_stalled(&mut wait_2).is_pending());
 
-        event.signal();
+        assert!(event.signal());
 
         // Both previously registered and unregistered event waiters complete correctly.
         assert!(ex.run_until_stalled(&mut wait_1).is_ready());
@@ -331,7 +331,7 @@ mod tests {
         assert!(ex.run_until_stalled(&mut wait_or_dropped).is_pending());
         assert!(!wait.is_terminated());
         assert!(!wait_or_dropped.is_terminated());
-        event.signal();
+        assert!(event.signal());
         assert!(ex.run_until_stalled(&mut wait).is_ready());
         assert!(ex.run_until_stalled(&mut wait_or_dropped).is_ready());
         assert!(wait.is_terminated());
@@ -351,7 +351,7 @@ mod tests {
         assert!(!wait_or_dropped.is_terminated());
         drop(wait);
         drop(wait_or_dropped);
-        event.signal();
+        assert!(event.signal());
     }
 
     #[test]
@@ -394,7 +394,7 @@ mod tests {
         assert_eq!(event.inner.inner.lock().wakers.len(), 1);
 
         // The waiter's waker is used.
-        event.signal();
+        assert!(event.signal());
         assert_eq!(event.inner.inner.lock().wakers.len(), 0);
 
         // Dropping a waiter without polling it is valid.

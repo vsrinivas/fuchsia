@@ -88,7 +88,7 @@ mod test {
         static COUNTER: AtomicUsize = AtomicUsize::new(0);
 
         let val = block_on(ONCE.get_or_init(async {
-            COUNTER.fetch_add(1, Ordering::SeqCst);
+            let _: usize = COUNTER.fetch_add(1, Ordering::SeqCst);
             true
         }));
 
@@ -96,7 +96,7 @@ mod test {
         assert_eq!(COUNTER.load(Ordering::SeqCst), 1);
 
         let val = block_on(ONCE.get_or_init(async {
-            COUNTER.fetch_add(1, Ordering::SeqCst);
+            let _: usize = COUNTER.fetch_add(1, Ordering::SeqCst);
             false
         }));
 
@@ -113,7 +113,7 @@ mod test {
         static COUNTER: AtomicUsize = AtomicUsize::new(0);
 
         let val = block_on(ONCE.get_or_init(async {
-            COUNTER.fetch_add(1, Ordering::SeqCst);
+            let _: usize = COUNTER.fetch_add(1, Ordering::SeqCst);
             true
         }));
 
@@ -121,7 +121,7 @@ mod test {
         assert_eq!(COUNTER.load(Ordering::SeqCst), 1);
 
         let val = block_on(ONCE.get_or_init(async {
-            COUNTER.fetch_add(1, Ordering::SeqCst);
+            let _: usize = COUNTER.fetch_add(1, Ordering::SeqCst);
             false
         }));
 
