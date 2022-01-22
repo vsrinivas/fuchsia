@@ -1546,6 +1546,37 @@ mod tests {
         mm.read_memory(unmapped_addr, &mut vec![]).expect("failed to read no data");
     }
 
+    #[fasync::run_singlethreaded(test)]
+    async fn test_read_c_string() {
+        let (_kernel, current_task) = create_kernel_and_task();
+        let mm = &current_task.mm;
+
+        let page_size = *PAGE_SIZE;
+        let mut buf = vec![0u8; 2 * page_size as usize];
+
+        // Allocate a page and write a non-terminated string at the end of it.
+        let addr = map_memory(&current_task, UserAddress::default(), page_size);
+        let test_str = b"foo!";
+        let test_addr = addr + page_size - test_str.len();
+        mm.write_memory(test_addr, test_str).expect("failed to write test string");
+
+        // Expect error if the string is not terminated.
+        assert_eq!(mm.read_c_string(UserCString::new(test_addr), &mut buf), error!(ENAMETOOLONG));
+
+        // Expect success if the string is terminated.
+        mm.write_memory(addr + (page_size - 1), b"\0").expect("failed to write nul");
+        assert_eq!(mm.read_c_string(UserCString::new(test_addr), &mut buf).unwrap(), b"foo");
+
+        // Expect error if the string does not fit in the provided buffer.
+        assert_eq!(
+            mm.read_c_string(UserCString::new(test_addr), &mut vec![0u8; 2]),
+            error!(ENAMETOOLONG)
+        );
+
+        // Expect error if the address is invalid.
+        assert_eq!(mm.read_c_string(UserCString::default(), &mut buf), error!(EFAULT));
+    }
+
     /// Maps two pages, then unmaps the first page.
     /// The second page should be re-mapped with a new child COW VMO.
     #[fasync::run_singlethreaded(test)]
