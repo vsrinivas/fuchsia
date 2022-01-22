@@ -41,7 +41,7 @@ Reporter MakeSilentReporter() { return Reporter(std::make_unique<FileLogSink>(nu
 // Test fixture that runs a given closure.
 class FakeTest : public zxtest::Test {
  public:
-  static fbl::Function<std::unique_ptr<Test>(TestDriver*)> MakeFactory(int* counter) {
+  static fit::function<std::unique_ptr<Test>(TestDriver*)> MakeFactory(int* counter) {
     return [counter](TestDriver* driver) {
       std::unique_ptr<FakeTest> test = zxtest::Test::Create<FakeTest>(driver);
       test->counter_ = counter;
@@ -57,7 +57,7 @@ class FakeTest : public zxtest::Test {
 
 class FailingTest : public zxtest::Test {
  public:
-  static fbl::Function<std::unique_ptr<Test>(TestDriver*)> MakeFactory(Runner* runner) {
+  static fit::function<std::unique_ptr<Test>(TestDriver*)> MakeFactory(Runner* runner) {
     return [runner](TestDriver* driver) {
       std::unique_ptr<FailingTest> test = zxtest::Test::Create<FailingTest>(driver);
       test->runner_ = runner;
@@ -77,7 +77,7 @@ class FailingTest : public zxtest::Test {
 // A test that generates assertions after disabling them.
 class NonFailingTest : public zxtest::Test {
  public:
-  static fbl::Function<std::unique_ptr<Test>(TestDriver*)> MakeFactory(Runner* runner) {
+  static fit::function<std::unique_ptr<Test>(TestDriver*)> MakeFactory(Runner* runner) {
     return [runner](TestDriver* driver) {
       std::unique_ptr<NonFailingTest> test = zxtest::Test::Create<NonFailingTest>(driver);
       test->runner_ = runner;
@@ -98,7 +98,7 @@ class NonFailingTest : public zxtest::Test {
 // A test that generates assertions after disabling and re-enabling.
 class FailingTest2 : public zxtest::Test {
  public:
-  static fbl::Function<std::unique_ptr<Test>(TestDriver*)> MakeFactory(Runner* runner) {
+  static fit::function<std::unique_ptr<Test>(TestDriver*)> MakeFactory(Runner* runner) {
     return [runner](TestDriver* driver) {
       std::unique_ptr<FailingTest2> test = zxtest::Test::Create<FailingTest2>(driver);
       test->runner_ = runner;
@@ -120,7 +120,7 @@ class FailingTest2 : public zxtest::Test {
 // A skipped test
 class SkippedTest : public zxtest::Test {
  public:
-  static fbl::Function<std::unique_ptr<Test>(TestDriver*)> MakeFactory(Runner* runner) {
+  static fit::function<std::unique_ptr<Test>(TestDriver*)> MakeFactory(Runner* runner) {
     return [runner](TestDriver* driver) {
       std::unique_ptr<SkippedTest> test = zxtest::Test::Create<SkippedTest>(driver);
       test->runner_ = runner;
@@ -269,7 +269,7 @@ void RunnerRunAllTests() {
 template <int fail_at>
 class FakeRepeatingTest : public zxtest::Test {
  public:
-  static fbl::Function<std::unique_ptr<Test>(TestDriver*)> MakeFactory(Runner* runner,
+  static fit::function<std::unique_ptr<Test>(TestDriver*)> MakeFactory(Runner* runner,
                                                                        int* counter) {
     return [counter, runner](TestDriver* driver) {
       std::unique_ptr<FakeRepeatingTest> test = zxtest::Test::Create<FakeRepeatingTest>(driver);

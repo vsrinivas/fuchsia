@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/fit/function.h>
 #include <zircon/assert.h>
 
 #include <cstdint>
 #include <cstring>
 
-#include <fbl/function.h>
 #include <zxtest/base/observer.h>
 #include <zxtest/base/test-case.h>
 #include <zxtest/base/test-driver.h>
@@ -26,7 +26,7 @@ void Stub() {}
 
 class FakeTest : public zxtest::Test {
  public:
-  fbl::Function<void()> body = &Stub;
+  fit::function<void()> body = &Stub;
 
  private:
   void TestBody() final { body(); }

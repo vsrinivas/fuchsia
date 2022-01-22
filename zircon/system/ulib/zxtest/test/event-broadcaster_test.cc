@@ -2,9 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/fit/function.h>
+
 #include <cstdlib>
 
-#include <fbl/function.h>
 #include <zxtest/base/assertion.h>
 #include <zxtest/base/event-broadcaster.h>
 #include <zxtest/base/observer.h>
@@ -23,7 +24,7 @@
       called = true;                                                \
     }                                                               \
                                                                     \
-    fbl::Function<void(const Runner& runner, int iter)> on_notify;  \
+    fit::function<void(const Runner& runner, int iter)> on_notify;  \
     bool called = false;                                            \
   }
 
@@ -35,7 +36,7 @@
       called = true;                                           \
     }                                                          \
                                                                \
-    fbl::Function<void(const Assertion& assertion)> on_notify; \
+    fit::function<void(const Assertion& assertion)> on_notify; \
     bool called = false;                                       \
   }
 
@@ -47,7 +48,7 @@
       called = true;                                       \
     }                                                      \
                                                            \
-    fbl::Function<void(const Message& message)> on_notify; \
+    fit::function<void(const Message& message)> on_notify; \
     bool called = false;                                   \
   }
 
@@ -59,7 +60,7 @@
       called = true;                                     \
     }                                                    \
                                                          \
-    fbl::Function<void(const Runner& runner)> on_notify; \
+    fit::function<void(const Runner& runner)> on_notify; \
     bool called = false;                                 \
   }
 
@@ -72,7 +73,7 @@
       called = true;                                          \
     }                                                         \
                                                               \
-    fbl::Function<void(const TestCase& test_case)> on_notify; \
+    fit::function<void(const TestCase& test_case)> on_notify; \
     bool called = false;                                      \
   }
 
@@ -85,7 +86,7 @@
       called = true;                                                                \
     }                                                                               \
                                                                                     \
-    fbl::Function<void(const TestCase& test_case, const TestInfo& info)> on_notify; \
+    fit::function<void(const TestCase& test_case, const TestInfo& info)> on_notify; \
     bool called = false;                                                            \
   }
 

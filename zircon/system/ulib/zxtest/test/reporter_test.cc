@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "test-registry.h"
+#include <lib/fit/function.h>
 
 #include <cstdio>
 #include <cstdlib>
@@ -10,10 +10,11 @@
 #include <memory>
 #include <utility>
 
-#include <fbl/function.h>
 #include <zxtest/base/log-sink.h>
 #include <zxtest/base/reporter.h>
 #include <zxtest/base/runner.h>
+
+#include "test-registry.h"
 
 namespace zxtest {
 namespace test {

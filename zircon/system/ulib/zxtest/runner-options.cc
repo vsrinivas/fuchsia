@@ -4,10 +4,10 @@
 
 #include <getopt.h>
 #include <lib/fit/defer.h>
+#include <lib/fit/function.h>
 
 #include <ctime>
 
-#include <fbl/function.h>
 #include <fbl/string_printf.h>
 #include <zxtest/base/log-sink.h>
 #include <zxtest/base/runner.h>

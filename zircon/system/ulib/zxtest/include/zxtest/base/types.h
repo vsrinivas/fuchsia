@@ -5,10 +5,10 @@
 #ifndef ZXTEST_BASE_TYPES_H_
 #define ZXTEST_BASE_TYPES_H_
 
+#include <lib/fit/function.h>
+
 #include <cstdint>
 #include <memory>
-
-#include <fbl/function.h>
 
 namespace zxtest {
 
@@ -27,13 +27,13 @@ namespace internal {
 class TestDriver;
 
 // Function for instantiating a TestInstance.
-using TestFactory = fbl::Function<std::unique_ptr<Test>(TestDriver*)>;
+using TestFactory = fit::function<std::unique_ptr<Test>(TestDriver*)>;
 
 // Function that definest a SetUp for a TestCase.
-using SetUpTestCaseFn = fbl::Function<void()>;
+using SetUpTestCaseFn = fit::function<void()>;
 
 // Function that definest a TearDown for a TestCase.
-using TearDownTestCaseFn = fbl::Function<void()>;
+using TearDownTestCaseFn = fit::function<void()>;
 
 }  // namespace internal
 }  // namespace zxtest

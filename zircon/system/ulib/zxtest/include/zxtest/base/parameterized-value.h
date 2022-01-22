@@ -31,7 +31,7 @@ class WithParamInterface {
   using ParamType = T;
 
   template <typename TestImpl>
-  static internal::TestFactory CreateFactory(fbl::Function<const ParamType&()> value_getter) {
+  static internal::TestFactory CreateFactory(fit::function<const ParamType&()> value_getter) {
     return [value_getter = std::move(value_getter)](
                internal::TestDriver* driver) mutable -> std::unique_ptr<TestImpl> {
       std::unique_ptr<TestImpl> test = TestImpl::template Create<TestImpl>(driver);

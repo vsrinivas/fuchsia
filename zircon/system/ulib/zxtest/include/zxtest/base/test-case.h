@@ -5,9 +5,10 @@
 #ifndef ZXTEST_BASE_TEST_CASE_H_
 #define ZXTEST_BASE_TEST_CASE_H_
 
+#include <lib/fit/function.h>
+
 #include <cstdint>
 
-#include <fbl/function.h>
 #include <fbl/string.h>
 #include <fbl/vector.h>
 #include <zxtest/base/observer.h>
@@ -23,7 +24,7 @@ class TestCase {
  public:
   // Alias for a Filter function. Parameter names are provided for clarity.
   // This function returns true if |test| in |test_case| should be selected.
-  using FilterFn = fbl::Function<bool(const fbl::String& test_case, const fbl::String test)>;
+  using FilterFn = fit::function<bool(const fbl::String& test_case, const fbl::String test)>;
 
   TestCase() = delete;
   TestCase(const fbl::String& name, internal::SetUpTestCaseFn set_up,

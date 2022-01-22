@@ -5,6 +5,7 @@
 #ifndef ZXTEST_BASE_VALUES_H_
 #define ZXTEST_BASE_VALUES_H_
 
+#include <lib/fit/function.h>
 #include <lib/stdcompat/array.h>
 #include <lib/stdcompat/span.h>
 #include <math.h>
@@ -14,7 +15,6 @@
 #include <type_traits>
 #include <vector>
 
-#include <fbl/function.h>
 #include <zxtest/base/test.h>
 
 namespace zxtest {
@@ -27,7 +27,7 @@ class ValueProvider {
  public:
   using ValueType = std::remove_cv_t<T>;
   using ConstRef = const ValueType&;
-  using Callback = typename fbl::Function<ConstRef(size_t)>;
+  using Callback = typename fit::function<ConstRef(size_t)>;
 
   ValueProvider() = delete;
   ValueProvider(Callback accessor, size_t size) : accessor_(std::move(accessor)), size_(size) {}

@@ -2,9 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/fit/function.h>
+
 #include <cstdlib>
 
-#include <fbl/function.h>
 #include <zxtest/base/assertion.h>
 #include <zxtest/base/observer.h>
 #include <zxtest/base/parameterized-value-impl.h>

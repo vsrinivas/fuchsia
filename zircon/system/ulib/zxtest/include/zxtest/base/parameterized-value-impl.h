@@ -22,7 +22,7 @@ class ParameterizedTestCaseInfoImpl : public ParameterizedTestCaseInfo {
 
   // Returns a collection of factories for all registered tests of a test case.
   using ParameterizedTestFactory =
-      fbl::Function<internal::TestFactory(fit::function<const ParamType&()>)>;
+      fit::function<internal::TestFactory(fit::function<const ParamType&()>)>;
 
   ParameterizedTestCaseInfoImpl() = default;
   explicit ParameterizedTestCaseInfoImpl(const fbl::String& test_case_name)
@@ -98,7 +98,7 @@ class ParameterizedTestCaseInfoImpl : public ParameterizedTestCaseInfo {
     }
   }
 
-  fbl::Vector<fbl::Function<void(Runner* runner)>> instantiation_fns_;
+  fbl::Vector<fit::function<void(Runner* runner)>> instantiation_fns_;
   fbl::Vector<TestInfo> test_entries_;
   fbl::String name_;
 };
