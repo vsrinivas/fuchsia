@@ -52,7 +52,9 @@ pub(crate) async fn make_configs(
     emu_config = apply_command_line_options(emu_config, cmd, ffx_config)
         .context("problem with apply command lines")?;
 
-    finalize_port_mapping(&mut emu_config).context("problem with port mapping")?;
+    if emu_config.host.networking == NetworkingMode::User {
+        finalize_port_mapping(&mut emu_config).context("problem with port mapping")?;
+    }
 
     Ok(emu_config)
 }
@@ -124,13 +126,18 @@ fn apply_command_line_options(
         emu_config.runtime.template = template_file.clone();
     }
 
-    // Reconcile the guest ports from device_spec with the host ports from the command line.
-    if let Err(e) = parse_host_port_maps(&cmd.port_map, &mut emu_config) {
-        bail!(
-            "Problem parsing the port-map values from the command line. \
-            Please check your spelling and syntax. {:?}",
-            e
-        );
+    if emu_config.host.networking == NetworkingMode::User {
+        // Reconcile the guest ports from device_spec with the host ports from the command line.
+        if let Err(e) = parse_host_port_maps(&cmd.port_map, &mut emu_config) {
+            bail!(
+                "Problem parsing the port-map values from the command line. \
+                Please check your spelling and syntax. {:?}",
+                e
+            );
+        }
+    } else {
+        // If we're not running in user mode, we don't need a port map, so clear it.
+        emu_config.host.port_map.clear();
     }
 
     // Any generated values or values from ffx_config.

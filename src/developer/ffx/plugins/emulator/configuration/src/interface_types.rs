@@ -13,6 +13,7 @@ use crate::enumerations::{
 };
 use anyhow::Result;
 use async_trait::async_trait;
+use fidl_fuchsia_developer_bridge as bridge;
 use sdk_metadata::{AudioDevice, DataAmount, PointingDevice, Screen};
 use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, path::PathBuf};
@@ -25,14 +26,14 @@ pub trait EmulatorEngine {
     /// and return. If support processes are required, or temporary files need to be written to
     /// disk, that would be handled here. When the function returns, either the emulator will be
     /// running independently, or an error will be sent back explaining the failure.
-    async fn start(&mut self) -> Result<i32>;
+    async fn start(&mut self, proxy: &bridge::TargetCollectionProxy) -> Result<i32>;
 
     /// Shut down a running emulator instance. The engine should have been instantiated from a saved
     /// and serialized instance, so no additional initialization should be needed. This function
     /// will terminate a running emulator instance, which will be specified on the command line. It
     /// may return an error if the instance doesn't exist or the shut down fails, but should succeed
     /// if it's no longer running or gets successfully shut down.
-    fn shutdown(&self) -> Result<()>;
+    async fn shutdown(&self, proxy: &bridge::TargetCollectionProxy) -> Result<()>;
 
     /// Output the details of an existing emulation instance. The engine should have been
     /// instantiated from a saved and serialized instance, so no additional initialization should be

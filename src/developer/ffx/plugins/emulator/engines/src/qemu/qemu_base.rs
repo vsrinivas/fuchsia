@@ -8,11 +8,17 @@
 use crate::{arg_templates::process_flag_template, serialization::SerializingEngine};
 use anyhow::{anyhow, bail, Result};
 use async_trait::async_trait;
-use ffx_emulator_common::{config, config::FfxConfigWrapper, process, tap_available};
+use ffx_emulator_common::{
+    config,
+    config::FfxConfigWrapper,
+    process, tap_available,
+    target::{add_target, remove_target},
+};
 use ffx_emulator_config::{
     ConsoleType, DeviceConfig, EmulatorConfiguration, EmulatorEngine, GuestConfig, LogLevel,
     NetworkingMode,
 };
+use fidl_fuchsia_developer_bridge as bridge;
 use shared_child::SharedChild;
 use std::{fs, path::PathBuf, process::Command, str, sync::Arc};
 
@@ -158,13 +164,17 @@ pub(crate) trait QemuBasedEngine: EmulatorEngine + SerializingEngine {
                 eprintln!(
                     "  sudo ip tuntap add dev qemu mode tap user $USER && sudo ip link set qemu up"
                 );
-                bail!("Configure Tun/Tap on your host or disable networking.")
+                bail!("Configure Tun/Tap on your host or try --net user.")
             }
         }
         Ok(())
     }
 
-    async fn run(&mut self, emu_binary: &PathBuf) -> Result<i32> {
+    async fn run(
+        &mut self,
+        emu_binary: &PathBuf,
+        proxy: &bridge::TargetCollectionProxy,
+    ) -> Result<i32> {
         if !emu_binary.exists() || !emu_binary.is_file() {
             bail!("Giving up finding emulator binary. Tried {:?}", emu_binary)
         }
@@ -190,6 +200,15 @@ pub(crate) trait QemuBasedEngine: EmulatorEngine + SerializingEngine {
 
         self.write_to_disk(&self.emu_config().runtime.instance_directory)?;
 
+        let ssh = self.emu_config().host.port_map.get("ssh");
+        let ssh_port = if let Some(ssh) = ssh { ssh.host } else { None };
+        if self.emu_config().host.networking == NetworkingMode::User {
+            // We only need to do this if we're running in user net mode.
+            if let Some(ssh_port) = ssh_port {
+                add_target(proxy, ssh_port).await?;
+            }
+        }
+
         if self.emu_config().runtime.console == ConsoleType::Monitor
             || self.emu_config().runtime.console == ConsoleType::Console
         {
@@ -202,7 +221,11 @@ pub(crate) trait QemuBasedEngine: EmulatorEngine + SerializingEngine {
                     return Ok(0);
                 }
                 Err(e) => {
-                    if let Some(shutdown_error) = self.shutdown().err() {
+                    let running = self.is_running();
+                    let pid = self.get_pid();
+                    if let Some(shutdown_error) =
+                        Self::shutdown_emulator(running, pid, ssh_port, proxy).await.err()
+                    {
                         log::debug!(
                             "Error encountered in shutdown when handling failed launch: {:?}",
                             shutdown_error
@@ -223,11 +246,37 @@ pub(crate) trait QemuBasedEngine: EmulatorEngine + SerializingEngine {
         Ok(0)
     }
 
-    fn shutdown_emulator(&self) -> Result<()> {
-        if self.is_running() {
-            print!("Terminating running instance {:?}", self.get_pid());
-            if let Some(terminate_error) = process::terminate(self.get_pid()).err() {
-                log::debug!("Error encountered terminating process: {:?}", terminate_error);
+    /// The parameters here may be a bit unintuitive: because shutdown_emulator is called from
+    /// run(), it can't receive "self" as a parameter. Since both are running async (required for
+    /// calls to add_target/remove_target), they run in separate threads, and self can't be safely
+    /// shared across threads. Instead, we pull only those variables we need for shutdown out of
+    /// "self" and pass them in explicitly.
+    ///
+    /// running:  Boolean to indicate that the engine specified is active.
+    ///           Typically comes from `engine::is_running();`.
+    /// pid:      The process ID of the running emulator; used to send a signal to the process to
+    ///           cause termination.
+    /// ssh_port: If the emulator is running over user-mode networking, this is the port ssh is
+    ///           mapped to. Used to issue a `ffx target remove` command. If this is "None", no
+    ///           remove command will be issued.
+    /// proxy:    The interface to the `ffx target` backend, provided by the ffx front-end as a
+    ///           parameter to the plugin subcommands. Used to issue a `ffx target remove` command.
+    async fn shutdown_emulator(
+        running: bool,
+        pid: u32,
+        ssh_port: Option<u16>,
+        proxy: &bridge::TargetCollectionProxy,
+    ) -> Result<()> {
+        if let Some(ssh_port) = ssh_port {
+            if let Err(e) = remove_target(proxy, ssh_port).await {
+                // Even if we can't remove it, still continue shutting down.
+                log::warn!("Couldn't remove target during shutdown: {:?}", e);
+            }
+        }
+        if running {
+            println!("Terminating running instance {:?}", pid);
+            if let Some(terminate_error) = process::terminate(pid).err() {
+                log::warn!("Error encountered terminating process: {:?}", terminate_error);
             }
         }
         Ok(())
@@ -274,10 +323,10 @@ mod tests {
     }
     #[async_trait]
     impl EmulatorEngine for TestEngine {
-        async fn start(&mut self) -> Result<i32> {
+        async fn start(&mut self, _: &bridge::TargetCollectionProxy) -> Result<i32> {
             todo!()
         }
-        fn shutdown(&self) -> Result<()> {
+        async fn shutdown(&self, _: &bridge::TargetCollectionProxy) -> Result<()> {
             todo!()
         }
         fn show(&self) {

@@ -10,6 +10,7 @@ use anyhow::{bail, Context, Result};
 use async_trait::async_trait;
 use ffx_emulator_common::{config, config::FfxConfigWrapper, process};
 use ffx_emulator_config::{EmulatorConfiguration, EmulatorEngine, EngineType};
+use fidl_fuchsia_developer_bridge as bridge;
 use serde::{Deserialize, Serialize};
 use std::{env, path::PathBuf, process::Command};
 
@@ -25,7 +26,7 @@ pub struct FemuEngine {
 
 #[async_trait]
 impl EmulatorEngine for FemuEngine {
-    async fn start(&mut self) -> Result<i32> {
+    async fn start(&mut self, proxy: &bridge::TargetCollectionProxy) -> Result<i32> {
         self.emulator_configuration.guest = self
             .stage_image_files(
                 &self.emulator_configuration.runtime.name,
@@ -52,13 +53,15 @@ impl EmulatorEngine for FemuEngine {
         )
         .context("problem changing directory to instance dir")?;
 
-        return self.run(&aemu).await;
+        return self.run(&aemu, proxy).await;
     }
     fn show(&self) {
         println!("{:#?}", self.emulator_configuration);
     }
-    fn shutdown(&self) -> Result<()> {
-        self.shutdown_emulator()
+    async fn shutdown(&self, proxy: &bridge::TargetCollectionProxy) -> Result<()> {
+        let ssh = self.emulator_configuration.host.port_map.get("ssh");
+        let ssh_port = if let Some(ssh) = ssh { ssh.host } else { None };
+        Self::shutdown_emulator(self.is_running(), self.get_pid(), ssh_port, proxy).await
     }
 
     fn validate(&self) -> Result<()> {

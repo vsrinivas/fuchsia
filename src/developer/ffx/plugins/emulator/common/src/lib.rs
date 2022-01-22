@@ -12,6 +12,7 @@ use std::process::Command;
 // Provides access to ffx_config properties.
 pub mod config;
 pub mod process;
+pub mod target;
 
 /// A utility function for splitting a string at a single point and converting it into a tuple.
 /// Returns an Err(anyhow) if it can't do the split.

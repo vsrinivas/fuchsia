@@ -9,19 +9,20 @@ use ffx_emulator_engines::{
     clean_up_instance_dir, get_all_instances, get_instance_dir, serialization::read_from_disk,
 };
 use ffx_emulator_shutdown_args::ShutdownCommand;
+use fidl_fuchsia_developer_bridge::TargetCollectionProxy;
 use std::path::PathBuf;
 
-async fn attempt_shutdown(instance_dir: &PathBuf) -> Result<()> {
+async fn attempt_shutdown(instance_dir: &PathBuf, proxy: &TargetCollectionProxy) -> Result<()> {
     if !instance_dir.exists() {
         // If the directory doesn't exist, we just return Ok(()) since there's nothing to shut down
         return Ok(());
     }
     let engine = read_from_disk(instance_dir)?;
-    engine.shutdown()
+    engine.shutdown(proxy).await
 }
 
-#[ffx_plugin("emu.experimental")]
-pub async fn shutdown(cmd: ShutdownCommand) -> Result<()> {
+#[ffx_plugin("emu.experimental", TargetCollectionProxy = "daemon::protocol")]
+pub async fn shutdown(cmd: ShutdownCommand, proxy: TargetCollectionProxy) -> Result<()> {
     let ffx_config = FfxConfigWrapper::new();
     let instances: Vec<PathBuf> = if cmd.all {
         get_all_instances(&ffx_config).await?
@@ -29,7 +30,7 @@ pub async fn shutdown(cmd: ShutdownCommand) -> Result<()> {
         vec![get_instance_dir(&ffx_config, &cmd.name, false).await?]
     };
     for path in instances {
-        let result = attempt_shutdown(&path).await;
+        let result = attempt_shutdown(&path, &proxy).await;
         if result.is_err() {
             println!("{:?}", result.unwrap_err());
         }

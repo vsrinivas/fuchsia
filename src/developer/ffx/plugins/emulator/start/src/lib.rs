@@ -8,12 +8,12 @@ use ffx_core::ffx_plugin;
 use ffx_emulator_common::config::FfxConfigWrapper;
 use ffx_emulator_engines::EngineBuilder;
 use ffx_emulator_start_args::StartCommand;
-use fidl_fuchsia_developer_bridge as bridge;
+use fidl_fuchsia_developer_bridge::TargetCollectionProxy;
 
 mod pbm;
 
-#[ffx_plugin("emu.experimental")]
-pub async fn start(cmd: StartCommand, _daemon_proxy: bridge::DaemonProxy) -> Result<()> {
+#[ffx_plugin("emu.experimental", TargetCollectionProxy = "daemon::protocol")]
+pub async fn start(cmd: StartCommand, proxy: TargetCollectionProxy) -> Result<()> {
     let config = FfxConfigWrapper::new();
     let emulator_configuration =
         make_configs(&cmd, &config).await.context("making configuration from metadata")?;
@@ -23,7 +23,7 @@ pub async fn start(cmd: StartCommand, _daemon_proxy: bridge::DaemonProxy) -> Res
         EngineBuilder::new().config(emulator_configuration).engine_type(cmd.engine).build().await;
 
     std::process::exit(match result {
-        Ok(mut engine) => engine.start().await?,
+        Ok(mut engine) => engine.start(&proxy).await?,
         Err(e) => {
             println!("{:?}", e);
             1

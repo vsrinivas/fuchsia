@@ -13,6 +13,7 @@ if (is_host) {
       "//src/developer/ffx/plugins/emulator/configuration:ffx_emulator_config",
     ]
     deps = [
+      "//sdk/fidl/fuchsia.developer.bridge:fuchsia.developer.bridge-rustc",
       "//src/developer/ffx/lib/fms",
       "//src/developer/ffx/lib/port_picker",
       "//src/developer/ffx/plugins/emulator/common:ffx_emulator_common",
