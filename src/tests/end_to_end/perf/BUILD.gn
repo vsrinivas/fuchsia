@@ -57,7 +57,8 @@ foreach(target_name, test_list) {
     ]
 
     # TODO(fxbug.dev/51799): Enable for all tests.
-    if (target_name == "kernel_boot_stats_test") {
+    if (target_name == "kernel_boot_stats_test" ||
+        target_name == "audio_mixer_profiler_test") {
       environments += [
         astro_env,
         sherlock_env,
