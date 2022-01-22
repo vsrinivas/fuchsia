@@ -15,9 +15,12 @@ use {
     fidl_fuchsia_wlan_device_service::DeviceServiceMarker,
     fidl_fuchsia_wlan_ieee80211 as fidl_ieee80211,
     fidl_fuchsia_wlan_sme::{self as fidl_sme, ClientSmeProxy, ConnectRequest, Credential},
+    fuchsia_async as fasync,
     fuchsia_component::client::connect_to_protocol,
     fuchsia_zircon::DurationNum,
-    futures::{channel::oneshot, future, join, stream::TryStreamExt, FutureExt, TryFutureExt},
+    futures::{
+        channel::oneshot, future, join, stream::TryStreamExt, FutureExt, StreamExt, TryFutureExt,
+    },
     pin_utils::pin_mut,
     std::{panic, thread, time},
     wlan_common::{
@@ -57,6 +60,21 @@ async fn connect(
     Err(format_err!("Server closed the ConnectTransaction channel before sending a response"))
 }
 
+// TODO(fxbug.dev/91118) - Added to help investigate hw-sim test. Remove later
+async fn canary(mut finish_receiver: oneshot::Receiver<()>) {
+    let mut interval_stream = fasync::Interval::new(fasync::Duration::from_seconds(1));
+    loop {
+        futures::select! {
+            _ = interval_stream.next() => {
+                log::info!("1 second canary");
+            }
+            _ = finish_receiver => {
+                return;
+            }
+        }
+    }
+}
+
 /// Spawn two client and one AP wlantap devices. Verify that both clients connect to the AP by
 /// sending ethernet frames.
 #[fuchsia_async::run_singlethreaded(test)]
@@ -92,6 +110,7 @@ async fn multiple_clients_ap() {
     let client2_sme = get_client_sme(&wlanstack_svc, client2_iface_id).await;
     let (client2_confirm_sender, client2_confirm_receiver) = oneshot::channel();
 
+    let (finish_sender, finish_receiver) = oneshot::channel();
     let ap_fut = ap_helper
         .run_until_complete_or_timeout(
             std::i64::MAX.nanos(),
@@ -104,8 +123,10 @@ async fn multiple_clients_ap() {
                         .then(Rx::send(&client2_proxy, WLANCFG_DEFAULT_AP_CHANNEL)),
                 )
                 .build(),
-            future::join(client1_confirm_receiver, client2_confirm_receiver)
-                .then(|_| future::ok(())),
+            future::join(client1_confirm_receiver, client2_confirm_receiver).then(|_| {
+                finish_sender.send(()).expect("sending finish notification");
+                future::ok(())
+            }),
         )
         .unwrap_or_else(|oneshot::Canceled| panic!("waiting for connect confirmation"));
 
@@ -193,7 +214,7 @@ async fn multiple_clients_ap() {
         )
         .unwrap_or_else(|e| panic!("waiting for connect confirmation: {:?}", e));
 
-    join!(ap_fut, client1_fut, client2_fut);
+    join!(ap_fut, client1_fut, client2_fut, canary(finish_receiver));
     client1_helper.stop().await;
     client2_helper.stop().await;
     ap_helper.stop().await;

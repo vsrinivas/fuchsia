@@ -289,7 +289,7 @@ impl Ap {
             }
             fidl_mlme::MlmeRequest::AuthenticateResp { resp, .. } => {
                 // TODO(fxbug.dev/91118) - Added to help investigate hw-sim test. Remove later
-                info!("Handling MLME auth resp");
+                info!("Handling MLME auth resp. self.bss.is_some()?: {}", self.bss.is_some());
                 self.bss.as_mut().ok_or_bss_err()?.handle_mlme_auth_resp(&mut self.ctx, resp)
             }
             fidl_mlme::MlmeRequest::DeauthenticateReq { req, .. } => {

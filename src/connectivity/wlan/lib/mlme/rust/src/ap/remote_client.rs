@@ -326,6 +326,8 @@ impl RemoteClient {
         ctx: &mut Context,
         result_code: fidl_mlme::AuthenticateResultCode,
     ) -> Result<(), Error> {
+        // TODO(fxbug.dev/91118) - Added to help investigate hw-sim test. Remove later
+        log::info!("enter handle_mlme_auth_resp");
         self.change_state(
             ctx,
             if result_code == fidl_mlme::AuthenticateResultCode::Success {
@@ -334,6 +336,9 @@ impl RemoteClient {
                 State::Deauthenticated
             },
         )?;
+
+        // TODO(fxbug.dev/91118) - Added to help investigate hw-sim test. Remove later
+        log::info!("creating auth frame");
 
         // We only support open system auth in the SME.
         // IEEE Std 802.11-2016, 12.3.3.2.3 & Table 9-36: Sequence number 2 indicates the response
