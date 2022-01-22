@@ -24,6 +24,7 @@ fidl("fuchsia.developer.bridge") {
     "//sdk/fidl/fuchsia.buildinfo",
     "//sdk/fidl/fuchsia.developer.remotecontrol",
     "//sdk/fidl/fuchsia.device",
+    "//sdk/fidl/fuchsia.io2",
     "//sdk/fidl/fuchsia.net",
     "//sdk/fidl/fuchsia.tracing.controller",
     "//zircon/vdso/zx",

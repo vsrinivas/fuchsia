@@ -1444,9 +1444,9 @@ mod test {
                 DaemonRequest::GetVersionInfo { responder } => {
                     responder.send(daemon_version_info()).unwrap();
                 }
-                DaemonRequest::ConnectToProtocol { responder, name: _, server_channel } => {
+                DaemonRequest::ConnectToProtocol { responder, name: _, server_end } => {
                     spawn_target_collection(
-                        server_channel,
+                        server_end,
                         |_| vec![],
                         |_query, target_handle| {
                             spawn_target_handler(target_handle, |req| match req {
@@ -1511,9 +1511,9 @@ mod test {
                 DaemonRequest::GetVersionInfo { responder } => {
                     responder.send(daemon_version_info()).unwrap();
                 }
-                DaemonRequest::ConnectToProtocol { name: _, server_channel, responder } => {
+                DaemonRequest::ConnectToProtocol { name: _, server_end, responder } => {
                     spawn_target_collection(
-                        server_channel,
+                        server_end,
                         |_| {
                             vec![Target {
                                 nodename: Some(FASTBOOT_NODENAME.to_string()),
@@ -1561,11 +1561,11 @@ mod test {
                     DaemonRequest::GetVersionInfo { responder } => {
                         responder.send(daemon_version_info()).unwrap();
                     }
-                    DaemonRequest::ConnectToProtocol { name: _, server_channel, responder } => {
+                    DaemonRequest::ConnectToProtocol { name: _, server_end, responder } => {
                         let nodename = nodename.clone();
                         let waiter = waiter.clone();
                         spawn_target_collection(
-                            server_channel,
+                            server_end,
                             move |query| {
                                 let query = query.as_deref().unwrap_or("");
                                 if !query.is_empty()
@@ -1645,8 +1645,8 @@ mod test {
                 DaemonRequest::GetVersionInfo { responder } => {
                     responder.send(daemon_version_info()).unwrap();
                 }
-                DaemonRequest::ConnectToProtocol { name: _, server_channel: _, responder } => {
-                    // Do nothing with the server_channel.
+                DaemonRequest::ConnectToProtocol { name: _, server_end: _, responder } => {
+                    // Do nothing with the server_end.
                     responder.send(&mut Ok(())).unwrap();
                 }
                 _ => {

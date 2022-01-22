@@ -561,14 +561,14 @@ impl Daemon {
                         .await?;
                 responder.send(&hash).context("error sending response")?;
             }
-            DaemonRequest::ConnectToProtocol { name, server_channel, responder } => {
+            DaemonRequest::ConnectToProtocol { name, server_end, responder } => {
                 let name_for_analytics = name.clone();
                 match self
                     .protocol_register
                     .open(
                         name,
                         protocols::Context::new(self.clone()),
-                        fidl::AsyncChannel::from_channel(server_channel)?,
+                        fidl::AsyncChannel::from_channel(server_end)?,
                     )
                     .await
                 {
