@@ -4,6 +4,7 @@
 
 #include <stdio.h>
 #include <zircon/syscalls.h>
+#include <zircon/syscalls/debug.h>
 
 int main(int argc, char** argv) {
   printf("--- syscall-check ---\n");
@@ -29,6 +30,8 @@ int main(int argc, char** argv) {
   SYSCALL_STATUS(zx_process_write_memory, (ZX_HANDLE_INVALID, 0, nullptr, 0, &actual));
   SYSCALL_STATUS(zx_system_mexec, (ZX_HANDLE_INVALID, ZX_HANDLE_INVALID, ZX_HANDLE_INVALID));
   SYSCALL_STATUS(zx_system_mexec_payload_get, (ZX_HANDLE_INVALID, nullptr, 0));
+  SYSCALL_STATUS(zx_thread_write_state,
+                 (ZX_HANDLE_INVALID, ZX_THREAD_STATE_DEBUG_REGS, nullptr, 0));
 
 #undef SYSCALL_STATUS
 

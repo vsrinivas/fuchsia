@@ -431,14 +431,16 @@ If true, will periodically poll UART and forwards its contents into the console.
 
 When disabled, certain debugging-related syscalls will fail with
 `ZX_ERR_NOT_SUPPORTED`. These are:
-- `zx_debug_send_command()`
-- `zx_ktrace_control()`
-- `zx_ktrace_init()`
-- `zx_ktrace_read()`
-- `zx_mtrace_control()`
-- `zx_process_write_memory()`
-- `zx_system_mexec()`
-- `zx_system_mexec_payload_get()
+
+* `zx_debug_send_command()`
+* `zx_ktrace_control()`
+* `zx_ktrace_init()`
+* `zx_ktrace_read()`
+* `zx_mtrace_control()`
+* `zx_process_write_memory()`
+* `zx_system_mexec()`
+* `zx_system_mexec_payload_get()`
+* `sys_thread_write_state()` (When using the `ZX_THREAD_STATE_DEBUG_REGS` kind.)
 
 ### kernel.enable-serial-syscalls=[false | true | output-only]
 **Default:** `false`

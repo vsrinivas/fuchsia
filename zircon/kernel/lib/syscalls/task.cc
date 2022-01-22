@@ -169,6 +169,10 @@ zx_status_t sys_thread_write_state(zx_handle_t handle, uint32_t kind,
                                    user_in_ptr<const void> buffer, size_t buffer_size) {
   LTRACEF("handle %x, kind %u\n", handle, kind);
 
+  if ((kind & ZX_THREAD_STATE_DEBUG_REGS) && !gBootOptions->enable_debugging_syscalls) {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+
   auto up = ProcessDispatcher::GetCurrent();
 
   // TODO(fxbug.dev/30915): debug rights

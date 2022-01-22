@@ -41,6 +41,7 @@ func TestDisableDebuggingDisableSerialSyscalls(t *testing.T) {
 	ensureContains(t, stdout, "zx_process_write_memory: disabled")
 	ensureContains(t, stdout, "zx_system_mexec: disabled")
 	ensureContains(t, stdout, "zx_system_mexec_payload_get: disabled")
+	ensureContains(t, stdout, "zx_thread_write_state: disabled")
 	if stderr != "" {
 		t.Fatal(stderr)
 	}
