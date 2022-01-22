@@ -118,13 +118,13 @@ __EXPORT void fdf_handle_close(fdf_handle_t channel_handle) {
 __EXPORT fdf_status_t fdf_dispatcher_create(uint32_t options, const char* scheduler_role,
                                             size_t scheduler_role_len,
                                             fdf_dispatcher_t** out_dispatcher) {
-  std::unique_ptr<driver_runtime::Dispatcher> dispatcher;
-  fdf_status_t status =
+  driver_runtime::Dispatcher* dispatcher;
+  auto status =
       driver_runtime::Dispatcher::Create(options, scheduler_role, scheduler_role_len, &dispatcher);
   if (status != ZX_OK) {
     return status;
   }
-  *out_dispatcher = static_cast<fdf_dispatcher_t*>(dispatcher.release());
+  *out_dispatcher = static_cast<fdf_dispatcher*>(dispatcher);
   return ZX_OK;
 }
 

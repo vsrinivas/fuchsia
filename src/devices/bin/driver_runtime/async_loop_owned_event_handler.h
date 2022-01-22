@@ -33,7 +33,10 @@ class AsyncLoopOwnedEventHandler {
   }
 
   std::unique_ptr<T> Cancel() {
-    ZX_ASSERT(wait_.Cancel() == ZX_OK);
+    zx_status_t wait = wait_.Cancel();
+    if (wait != ZX_OK) {
+      return nullptr;
+    }
     return std::unique_ptr<T>(static_cast<T*>(this));
   }
 

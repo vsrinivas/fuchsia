@@ -10,7 +10,7 @@
 #include <lib/fdf/cpp/channel_read.h>
 #include <lib/fdf/dispatcher.h>
 #include <lib/fit/defer.h>
-#include <lib/sync/completion.h>
+#include <lib/sync/cpp/completion.h>
 
 #include <thread>
 
@@ -59,7 +59,7 @@ class DispatcherTest : public RuntimeTestCase {
   fdf_handle_t remote_ch2_;
 
   async::Loop loop_;
-  std::vector<driver_runtime::Dispatcher*> dispatchers_;
+  std::vector<fdf_dispatcher_t*> dispatchers_;
 };
 
 void DispatcherTest::SetUp() {
@@ -86,18 +86,18 @@ void DispatcherTest::TearDown() {
     fdf_handle_close(remote_ch2_);
   }
   for (auto* dispatcher : dispatchers_) {
-    dispatcher->Destroy();
+    fdf_dispatcher_destroy(dispatcher);
   }
 }
 
 void DispatcherTest::CreateDispatcher(uint32_t options, const char* scheduler_role,
                                       const void* owner, fdf_dispatcher_t** out_dispatcher) {
-  std::unique_ptr<driver_runtime::Dispatcher> dispatcher;
+  driver_runtime::Dispatcher* dispatcher;
   ASSERT_EQ(ZX_OK,
             driver_runtime::Dispatcher::CreateWithLoop(
                 options, scheduler_role, strlen(scheduler_role), owner, &loop_, &dispatcher));
-  dispatchers_.push_back(dispatcher.get());
-  *out_dispatcher = static_cast<fdf_dispatcher_t*>(dispatcher.release());
+  *out_dispatcher = static_cast<fdf_dispatcher_t*>(dispatcher);
+  dispatchers_.push_back(*out_dispatcher);
 }
 
 // static
@@ -740,6 +740,41 @@ TEST_F(DispatcherTest, EmptyCallStack) {
   ASSERT_OK(sync_completion_wait(&read_completion, ZX_TIME_INFINITE));
 }
 
+TEST_F(DispatcherTest, DestroyDispatcherInAsyncLoopCallback) {
+  const void* driver = CreateFakeDriver();
+  auto scheduler_role = "scheduler_role";
+
+  driver_runtime::Dispatcher* dispatcher;
+  ASSERT_EQ(ZX_OK, driver_runtime::Dispatcher::CreateWithLoop(
+                       FDF_DISPATCHER_OPTION_UNSYNCHRONIZED, scheduler_role, strlen(scheduler_role),
+                       driver, &loop_, &dispatcher));
+
+  sync::Completion completion;
+  auto channel_read = std::make_unique<fdf::ChannelRead>(
+      remote_ch_, 0 /* options */,
+      [&](fdf_dispatcher_t* dispatcher, fdf::ChannelRead* channel_read, fdf_status_t status) {
+        ASSERT_OK(status);
+        fdf_dispatcher_destroy(dispatcher);
+        completion.Signal();
+        delete channel_read;
+      });
+  ASSERT_OK(channel_read->Begin(static_cast<fdf_dispatcher_t*>(dispatcher)));
+  channel_read.release();  // Deleted on callback.
+
+  {
+    // Make the write reentrant so it is scheduled to run on the async loop.
+    driver_context::PushDriver(driver);
+    auto pop_driver = fit::defer([]() { driver_context::PopDriver(); });
+
+    ASSERT_EQ(ZX_OK, fdf_channel_write(local_ch_, 0, nullptr, nullptr, 0, nullptr, 0));
+  }
+
+  ASSERT_OK(completion.Wait(zx::time::infinite()));
+
+  loop_.Quit();
+  loop_.JoinThreads();
+}
+
 //
 // async_dispatcher_t
 //
@@ -779,13 +814,13 @@ TEST_F(DispatcherTest, CreateUnsynchronizedAllowSyncCallsFails) {
   driver_context::PushDriver(CreateFakeDriver());
   auto pop_driver = fit::defer([]() { driver_context::PopDriver(); });
 
-  std::unique_ptr<driver_runtime::Dispatcher> dispatcher;
+  driver_runtime::Dispatcher* dispatcher;
   uint32_t options = FDF_DISPATCHER_OPTION_UNSYNCHRONIZED | FDF_DISPATCHER_OPTION_ALLOW_SYNC_CALLS;
   ASSERT_NE(ZX_OK, fdf_dispatcher::Create(options, "scheduler_role", 0, &dispatcher));
 }
 
 // Tests that you cannot create a dispatcher on a thread not managed by the driver runtime.
 TEST_F(DispatcherTest, CreateDispatcherOnNonRuntimeThreadFails) {
-  std::unique_ptr<driver_runtime::Dispatcher> dispatcher;
+  driver_runtime::Dispatcher* dispatcher;
   ASSERT_NE(ZX_OK, fdf_dispatcher::Create(0, "scheduler_role", 0, &dispatcher));
 }

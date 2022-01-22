@@ -14,6 +14,7 @@
 #include <fbl/auto_lock.h>
 #include <fbl/canary.h>
 #include <fbl/intrusive_double_list.h>
+#include <fbl/ref_counted.h>
 
 #include "src/devices/bin/driver_runtime/async_loop_owned_event_handler.h"
 #include "src/devices/bin/driver_runtime/callback_request.h"
@@ -32,7 +33,7 @@ class ProcessSharedLoop {
 
 namespace driver_runtime {
 
-class Dispatcher : public async_dispatcher_t {
+class Dispatcher : public async_dispatcher_t, public fbl::RefCounted<Dispatcher> {
  public:
   // Public for std::make_unique.
   // Use |Create| or |CreateWithLoop| instead of calling directly.
@@ -41,15 +42,20 @@ class Dispatcher : public async_dispatcher_t {
 
   // Creates a dispatcher which is backed by |loop|.
   // |loop| can be the |ProcessSharedLoop|, or a private async loop created by a test.
+  //
+  // Returns ownership of the dispatcher in |out_dispatcher|. The caller should call
+  // |Destroy| once they are done using the dispatcher. Once |Destroy| is called,
+  // the dispatcher will be deleted once all callbacks canclled or completed by the dispatcher.
   static fdf_status_t CreateWithLoop(uint32_t options, const char* scheduler_role,
                                      size_t scheduler_role_len, const void* owner,
-                                     async::Loop* loop,
-                                     std::unique_ptr<Dispatcher>* out_dispatcher);
+                                     async::Loop* loop, Dispatcher** out_dispatcher);
 
   // fdf_dispatcher_t implementation
+  // Returns ownership of the dispatcher in |out_dispatcher|. The caller should call
+  // |Destroy| once they are done using the dispatcher. Once |Destroy| is called,
+  // the dispatcher will be deleted once all callbacks cancelled or completed by the dispatcher.
   static fdf_status_t Create(uint32_t options, const char* scheduler_role,
-                             size_t scheduler_role_len,
-                             std::unique_ptr<Dispatcher>* out_dispatcher);
+                             size_t scheduler_role_len, Dispatcher** out_dispatcher);
 
   // |dispatcher| must have been retrieved via `GetAsyncDispatcher`.
   static Dispatcher* FromAsyncDispatcher(async_dispatcher_t* dispatcher);
@@ -94,7 +100,9 @@ class Dispatcher : public async_dispatcher_t {
   static constexpr uint32_t kBatchSize = 10;
 
   class EventWaiter : public AsyncLoopOwnedEventHandler<EventWaiter> {
-    using Callback = fit::inline_function<void(std::unique_ptr<EventWaiter>), sizeof(Dispatcher*)>;
+    using Callback =
+        fit::inline_function<void(std::unique_ptr<EventWaiter>, fbl::RefPtr<Dispatcher>),
+                             sizeof(Dispatcher*)>;
 
    public:
     EventWaiter(zx::event event, Callback callback)
@@ -104,6 +112,12 @@ class Dispatcher : public async_dispatcher_t {
     static void HandleEvent(std::unique_ptr<EventWaiter> event, async_dispatcher_t* dispatcher,
                             async::WaitBase* wait, zx_status_t status,
                             const zx_packet_signal_t* signal);
+
+    // Begins waiting in the underlying async dispatcher on |event->wait|.
+    // This transfers ownership of |event| and the |dispatcher| reference to the async dispatcher.
+    // The async dispatcher returns ownership when the handler is invoked.
+    static zx_status_t BeginWaitWithRef(std::unique_ptr<EventWaiter> event,
+                                        fbl::RefPtr<Dispatcher> dispatcher);
 
     bool signaled() const { return signaled_; }
 
@@ -117,19 +131,34 @@ class Dispatcher : public async_dispatcher_t {
       signaled_ = false;
     }
 
-    void InvokeCallback(std::unique_ptr<EventWaiter> event_waiter) {
-      callback_(std::move(event_waiter));
+    void InvokeCallback(std::unique_ptr<EventWaiter> event_waiter,
+                        fbl::RefPtr<Dispatcher> dispatcher_ref) {
+      callback_(std::move(event_waiter), std::move(dispatcher_ref));
+    }
+
+    void Cancel() {
+      // Cancelling may fail if the callback is happening right now, in which
+      // case the callback will take ownership of the dispatcher reference.
+      auto event = AsyncLoopOwnedEventHandler<EventWaiter>::Cancel();
+      if (event) {
+        event->dispatcher_ref_ = nullptr;
+      }
     }
 
    private:
     bool signaled_ = false;
     Callback callback_;
+
+    // The EventWaiter is provided ownership of a dispatcher reference when
+    // |BeginWaitWithRef| is called, and returns the reference with the callback.
+    fbl::RefPtr<Dispatcher> dispatcher_ref_;
   };
 
   // Calls |callback_request|.
   void DispatchCallback(std::unique_ptr<driver_runtime::CallbackRequest> callback_request);
   // Calls the callbacks in |callback_queue_|.
-  void DispatchCallbacks(std::unique_ptr<EventWaiter> event_waiter);
+  void DispatchCallbacks(std::unique_ptr<EventWaiter> event_waiter,
+                         fbl::RefPtr<Dispatcher> dispatcher_ref);
 
   // Dispatcher options set by the user.
   uint32_t options_;
@@ -151,6 +180,9 @@ class Dispatcher : public async_dispatcher_t {
   // True if currently dispatching a message.
   // This is only relevant in the synchronized mode.
   bool dispatching_sync_ __TA_GUARDED(&callback_lock_) = false;
+
+  // True if |Destroy| has been called.
+  bool shutting_down_ __TA_GUARDED(&callback_lock_) = false;
 
   fbl::Canary<fbl::magic("FDFD")> canary_;
 };
