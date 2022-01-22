@@ -191,8 +191,17 @@ void FileApi::Close() {
 }
 
 void FileApi::Abort() {
-  if (is_write_ && type_ == NetfileType::kNetCopy) {
-    netcp_->AbortWrite();
+  if (is_write_) {
+    switch (type_) {
+      case NetfileType::kNetCopy:
+        netcp_->AbortWrite();
+        break;
+      case NetfileType::kPaver:
+        paver_->Abort();
+        break;
+      default:
+        break;
+    }
   }
   Close();
 }

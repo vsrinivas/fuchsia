@@ -37,6 +37,7 @@ class PaverInterface {
   virtual tftp_status OpenWrite(std::string_view filename, size_t size) = 0;
   virtual tftp_status Write(const void* data, size_t* length, off_t offset) = 0;
   virtual void Close() = 0;
+  virtual void Abort() = 0;
 };
 
 class Paver : public PaverInterface {
@@ -51,6 +52,7 @@ class Paver : public PaverInterface {
   tftp_status OpenWrite(std::string_view filename, size_t size) final;
   tftp_status Write(const void* data, size_t* length, off_t offset) final;
   void Close() final;
+  void Abort() final;
 
   // Visible for testing.
   explicit Paver(fidl::ClientEnd<fuchsia_io::Directory> svc_root, fbl::unique_fd devfs_root)
@@ -124,7 +126,7 @@ class Paver : public PaverInterface {
   std::atomic<unsigned int> buf_refcount_ = 0;
   thrd_t buf_thrd_ = 0;
   sync_completion_t data_ready_;
-  std::atomic<bool> closed_;
+  std::atomic<bool> aborted_;
 
   // Timeout monitor thread uses before timing out.
   zx::duration timeout_ = zx::sec(5 * TFTP_TIMEOUT_SECS);

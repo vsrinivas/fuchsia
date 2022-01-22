@@ -55,13 +55,13 @@ TEST_F(PaverTest, OpenWriteInvalidSize) {
 
 TEST_F(PaverTest, OpenWriteValidFile) {
   ASSERT_EQ(paver_.OpenWrite(FirmwareFilename(), 1024), TFTP_NO_ERROR);
-  paver_.Close();
+  paver_.Abort();
 }
 
 TEST_F(PaverTest, OpenTwice) {
   ASSERT_EQ(paver_.OpenWrite(FirmwareFilename(), 1024), TFTP_NO_ERROR);
   ASSERT_NE(paver_.OpenWrite(FirmwareFilename(), 1024), TFTP_NO_ERROR);
-  paver_.Close();
+  paver_.Abort();
 }
 
 TEST_F(PaverTest, WriteWithoutOpen) {
@@ -76,11 +76,12 @@ TEST_F(PaverTest, WriteAfterClose) {
   // TODO(surajmalhotra): Should we ensure this fails?
   ASSERT_EQ(paver_.Write(kFakeData, &size, 0), TFTP_NO_ERROR);
   ASSERT_EQ(size, sizeof(kFakeData));
+  paver_.Abort();
 }
 
 TEST_F(PaverTest, TimeoutNoWrites) {
   ASSERT_EQ(paver_.OpenWrite(FirmwareFilename(), 1024), TFTP_NO_ERROR);
-  paver_.Close();
+  paver_.Abort();
   Wait();
   ASSERT_NE(paver_.exit_code(), ZX_OK);
 }
@@ -90,7 +91,7 @@ TEST_F(PaverTest, TimeoutPartialWrite) {
   ASSERT_EQ(paver_.OpenWrite(FirmwareFilename(), 1024), TFTP_NO_ERROR);
   ASSERT_EQ(paver_.Write(kFakeData, &size, 0), TFTP_NO_ERROR);
   ASSERT_EQ(size, sizeof(kFakeData));
-  paver_.Close();
+  paver_.Abort();
   Wait();
   ASSERT_NE(paver_.exit_code(), ZX_OK);
 }
@@ -144,7 +145,7 @@ TEST_F(PaverTest, Overwrite) {
   size_t size = sizeof(kFakeData);
   ASSERT_EQ(paver_.OpenWrite(FirmwareFilename(), 2), TFTP_NO_ERROR);
   ASSERT_NE(paver_.Write(kFakeData, &size, 0), TFTP_NO_ERROR);
-  paver_.Close();
+  paver_.Abort();
   Wait();
   ASSERT_NE(paver_.exit_code(), ZX_OK);
 }
@@ -582,8 +583,8 @@ TEST_F(PaverTest, WriteFirmwareTypeTooLong) {
 
   EXPECT_EQ(paver_.OpenWrite(FirmwareFilename(type), size), TFTP_ERR_INVALID_ARGS);
   EXPECT_NE(paver_.Write(kFakeData, &size, 0), TFTP_NO_ERROR);
+  paver_.Abort();
   Wait();
-  paver_.Close();
 
   // Make sure the WriteFirmware() call was never made.
   ValidateCommandTrace(fake_svc_.fake_paver().GetCommandTrace(), {});

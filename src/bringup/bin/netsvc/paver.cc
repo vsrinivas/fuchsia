@@ -70,8 +70,8 @@ int Paver::StreamBuffer() {
         result = TFTP_ERR_TIMED_OUT;
         return ZX_ERR_TIMED_OUT;
       }
-      if (closed_) {
-        printf("netsvc: 1 paver closed, exiting copy thread\n");
+      if (aborted_) {
+        printf("netsvc: 1 paver aborted, exiting copy thread\n");
         exit_code_.store(ZX_ERR_CANCELED);
         result = TFTP_ERR_BAD_STATE;
         return ZX_ERR_CANCELED;
@@ -441,8 +441,8 @@ int Paver::MonitorBuffer() {
       result = TFTP_ERR_TIMED_OUT;
       return result;
     }
-    if (closed_) {
-      printf("netsvc: 2 paver closed, exiting copy thread\n");
+    if (aborted_) {
+      printf("netsvc: 2 paver aborted, exiting copy thread\n");
       exit_code_.store(ZX_ERR_CANCELED);
       result = TFTP_ERR_BAD_STATE;
       return result;
@@ -668,7 +668,7 @@ tftp_status Paver::OpenWrite(std::string_view filename, size_t size) {
   exit_code_.store(0);
   in_progress_.store(true);
 
-  closed_ = false;
+  aborted_ = false;
   sync_completion_reset(&data_ready_);
 
   auto thread_fn = command_ == Command::kFvm
@@ -710,7 +710,11 @@ void Paver::Close() {
   if (refcount == 1) {
     buffer_mapper_.Reset();
   }
-  closed_ = true;
+}
+
+void Paver::Abort() {
+  Close();
+  aborted_ = true;
   sync_completion_signal(&data_ready_);
 }
 

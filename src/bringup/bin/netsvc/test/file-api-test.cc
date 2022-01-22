@@ -34,6 +34,7 @@ class FakePaver : public netsvc::PaverInterface {
     return TFTP_NO_ERROR;
   }
   void Close() override { in_progress_ = false; }
+  void Abort() override { ADD_FATAL_FAILURE("unexpected call to abort"); }
 
   void set_exit_code(zx_status_t exit_code) { exit_code_ = exit_code; }
 
