@@ -1519,6 +1519,33 @@ mod tests {
         assert_eq!(Ok(37), mm.write_all(&iovec, &data[..42]));
     }
 
+    #[fasync::run_singlethreaded(test)]
+    async fn test_read_write_errors() {
+        let (_kernel, current_task) = create_kernel_and_task();
+        let mm = &current_task.mm;
+
+        let page_size = *PAGE_SIZE;
+        let addr = map_memory(&current_task, UserAddress::default(), page_size);
+        let mut buf = vec![0u8; page_size as usize];
+
+        // Verify that accessing data that is only partially mapped is an error.
+        let partial_addr_before = addr - page_size / 2;
+        assert_eq!(mm.write_memory(partial_addr_before, &buf), error!(EFAULT));
+        assert_eq!(mm.read_memory(partial_addr_before, &mut buf), error!(EFAULT));
+        let partial_addr_after = addr + page_size / 2;
+        assert_eq!(mm.write_memory(partial_addr_after, &buf), error!(EFAULT));
+        assert_eq!(mm.read_memory(partial_addr_after, &mut buf), error!(EFAULT));
+
+        // Verify that accessing unmapped memory is an error.
+        let unmapped_addr = addr + 10 * page_size;
+        assert_eq!(mm.write_memory(unmapped_addr, &buf), error!(EFAULT));
+        assert_eq!(mm.read_memory(unmapped_addr, &mut buf), error!(EFAULT));
+
+        // However, accessing zero bytes in unmapped memory is not an error.
+        mm.write_memory(unmapped_addr, &vec![]).expect("failed to write no data");
+        mm.read_memory(unmapped_addr, &mut vec![]).expect("failed to read no data");
+    }
+
     /// Maps two pages, then unmaps the first page.
     /// The second page should be re-mapped with a new child COW VMO.
     #[fasync::run_singlethreaded(test)]
