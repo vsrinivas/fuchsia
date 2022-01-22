@@ -1019,29 +1019,32 @@ mod test {
         );
 
         // Walk through all the events that should occur in this setup.
-        for (abstime, done, optional_event) in vec![
+        for (abstime, woke, done, optional_event) in vec![
             (
                 0.millis(),
+                false,
                 false,
                 Some(Event::Connecting { addr: nl_addr, class: Class::NotListening }),
             ),
             (
                 10.millis(),
+                true,
                 false,
                 Some(Event::Connecting { addr: bh_addr, class: Class::Blackholed }),
             ),
-            (250.millis(), false, None),
+            (250.millis(), false, false, None),
             (
                 // N.B. 2010ms is the absolute time for the successful connection because it was
                 // scheduled 2s out from the 10ms clamp where the blackholed connection was queued.
                 2010.millis(),
+                true,
                 true,
                 Some(Event::Connecting { addr: server_addr, class: Class::Connectable }),
             ),
         ] {
             let () = executor.set_fake_time(Time::from_nanos(abstime.into_nanos()));
 
-            executor.wake_expired_timers();
+            assert_eq!(executor.wake_expired_timers(), woke);
 
             let res = executor.run_until_stalled(&mut fut);
             match done {

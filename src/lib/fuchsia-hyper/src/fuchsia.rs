@@ -374,31 +374,23 @@ mod test {
         let addr = SocketAddr::new(Ipv4Addr::LOCALHOST.into(), 0);
         let listener = TcpListener::bind(&addr).unwrap();
         let addr = listener.local_addr().unwrap();
-        let listener = listener.accept_stream();
-        fasync::Task::spawn(async move {
-            listener
-                .map(|res| {
-                    res.unwrap();
-                })
-                .collect()
-                .await
-        })
-        .detach();
 
         let idle = std::time::Duration::from_secs(36);
         let interval = std::time::Duration::from_secs(47);
         let count = 58;
         let uri = format!("https://{}", addr).parse::<hyper::Uri>().unwrap();
-        let stream = HyperConnector::from_tcp_options(TcpOptions {
-            keepalive_idle: Some(idle),
-            keepalive_interval: Some(interval),
-            keepalive_count: Some(count),
-            ..Default::default()
-        })
-        .call(uri)
+        let (TcpStream { stream }, _server) = future::try_join(
+            HyperConnector::from_tcp_options(TcpOptions {
+                keepalive_idle: Some(idle),
+                keepalive_interval: Some(interval),
+                keepalive_count: Some(count),
+                ..Default::default()
+            })
+            .call(uri),
+            listener.accept_stream().try_next(),
+        )
         .await
-        .unwrap()
-        .stream;
+        .unwrap();
 
         let stream = socket2::SockRef::from(stream.std());
 

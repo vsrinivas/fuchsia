@@ -3,7 +3,6 @@
 # found in the LICENSE file.
 
 import("//build/components.gni")
-import("//build/config.gni")
 import("//build/rust/rustc_library.gni")
 
 rustc_library("fuchsia-hyper") {
@@ -71,6 +70,8 @@ rustc_library("fuchsia-hyper") {
       "src/happy_eyeballs.rs",
     ]
   }
+
+  configs -= [ "//build/config/rust:allow_unused_results" ]
 }
 
 fuchsia_component("fuchsia-hyper-lib-test") {
