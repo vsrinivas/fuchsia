@@ -14,6 +14,8 @@ StubDevice::StubDevice() : Device(nullptr) {}
 
 StubDevice::~StubDevice() = default;
 
+void StubDevice::Shutdown() {}
+
 async_dispatcher_t* StubDevice::GetDispatcher() { return nullptr; }
 
 DeviceInspect* StubDevice::GetInspect() { return nullptr; }

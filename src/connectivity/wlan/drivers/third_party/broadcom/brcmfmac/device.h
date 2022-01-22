@@ -35,7 +35,8 @@ class DeviceInspect;
 class WlanInterface;
 
 using DeviceType =
-    ::ddk::Device<Device, ddk::Initializable, ddk::Messageable<fuchsia_factory_wlan::Iovar>::Mixin>;
+    ::ddk::Device<Device, ddk::Initializable, ddk::Messageable<fuchsia_factory_wlan::Iovar>::Mixin,
+                  ddk::Suspendable>;
 
 class Device : public DeviceType, public ::ddk::WlanphyImplProtocol<Device, ::ddk::base_protocol> {
  public:
@@ -52,6 +53,7 @@ class Device : public DeviceType, public ::ddk::WlanphyImplProtocol<Device, ::dd
   // ::ddk::Device implementation.
   void DdkInit(ddk::InitTxn txn);
   void DdkRelease();
+  void DdkSuspend(ddk::SuspendTxn txn);
 
   // WlanphyImpl interface implementation.
   zx_status_t WlanphyImplQuery(wlanphy_impl_info_t* out_info);
@@ -77,6 +79,16 @@ class Device : public DeviceType, public ::ddk::WlanphyImplProtocol<Device, ::dd
 
  protected:
   explicit Device(zx_device_t* parent);
+
+  // This will be called when the driver is being shut down, for example during a reboot, power off
+  // or suspend. It is NOT called as part of destruction of the device object (because calling
+  // virtual methods in destructors is unreliable). The device may be subject to multiple stages of
+  // shutdown, it is therefore possible for shutdown to be called multiple times. The device object
+  // may also be destructed after this as a result of the driver framework calling release. Take
+  // care that a multiple shutdowns or a shutdown followed by destruction does not result in double
+  // freeing memory or resources. Because this Device class is not Resumable there is no need to
+  // worry about coming back from a shutdown state, it's irreversible.
+  virtual void Shutdown() = 0;
 
  private:
   std::unique_ptr<brcmf_pub> brcmf_pub_;

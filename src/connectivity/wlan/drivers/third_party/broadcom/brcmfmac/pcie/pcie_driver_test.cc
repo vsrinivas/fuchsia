@@ -46,6 +46,9 @@ class StubDdkDevice : public Device {
   async_dispatcher_t* GetDispatcher() override { return nullptr; }
   DeviceInspect* GetInspect() override { return nullptr; }
   zx_status_t Init() override { return ZX_OK; }
+
+ protected:
+  void Shutdown() override {}
 };
 
 StubDdkDevice::StubDdkDevice(zx_device_t* device) : Device(device) {

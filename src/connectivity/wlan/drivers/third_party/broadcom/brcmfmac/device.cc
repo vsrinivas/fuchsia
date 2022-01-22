@@ -62,7 +62,15 @@ void Device::DdkInit(ddk::InitTxn txn) {
   txn.Reply(status);
 }
 
-void Device::DdkRelease() { delete this; }
+void Device::DdkRelease() {
+  Shutdown();
+  delete this;
+}
+
+void Device::DdkSuspend(ddk::SuspendTxn txn) {
+  Shutdown();
+  txn.Reply(ZX_OK, txn.requested_state());
+}
 
 void Device::Get(GetRequestView request, GetCompleter::Sync& _completer) {
   BRCMF_DBG(TRACE, "Enter. cmd %d, len %lu", request->cmd, request->request.count());

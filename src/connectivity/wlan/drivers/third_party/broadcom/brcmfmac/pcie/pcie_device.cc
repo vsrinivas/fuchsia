@@ -22,13 +22,18 @@ namespace brcmfmac {
 
 PcieDevice::PcieDevice(zx_device_t* parent) : Device(parent) {}
 
-PcieDevice::~PcieDevice() {
+PcieDevice::~PcieDevice() = default;
+
+void PcieDevice::Shutdown() {
   if (async_loop_) {
-    // Explicitly shut down the async loop before further destruction to prevent asynchronous tasks
+    // Explicitly destroy the async loop before further shutdown to prevent asynchronous tasks
     // from using resources as they are being deallocated.
-    async_loop_->Shutdown();
+    async_loop_.reset();
   }
-  brcmf_detach(drvr());
+  brcmf_pub* pub = drvr();
+  if (pub && pub->bus_if && pub->bus_if->state == BRCMF_BUS_UP) {
+    brcmf_detach(pub);
+  }
 }
 
 // static

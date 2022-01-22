@@ -31,9 +31,18 @@ constexpr zx_protocol_device_t kSimDeviceOps = {
 
 }  // namespace
 
-SimDevice::~SimDevice() {
+SimDevice::~SimDevice() { ShutdownImpl(); }
+
+void SimDevice::Shutdown() {
+  ShutdownImpl();
+}
+
+void SimDevice::ShutdownImpl() {
+  // Keep a separate implementation for this that's not virtual so that it can be called from the
+  // destructor.
   if (brcmf_bus_) {
     brcmf_sim_exit(brcmf_bus_.get());
+    brcmf_bus_.reset();
   }
 }
 

@@ -32,6 +32,9 @@ class StubDevice : public Device {
   void DeviceAsyncRemove(zx_device_t* dev) override;
   zx_status_t LoadFirmware(const char* path, zx_handle_t* fw, size_t* size) override;
   zx_status_t DeviceGetMetadata(uint32_t type, void* buf, size_t buflen, size_t* actual) override;
+
+ protected:
+  void Shutdown() override;
 };
 
 }  // namespace brcmfmac

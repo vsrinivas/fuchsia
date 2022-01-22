@@ -48,6 +48,8 @@ class SdioDevice : public Device {
   zx_status_t LoadFirmware(const char* path, zx_handle_t* fw, size_t* size) override;
   zx_status_t DeviceGetMetadata(uint32_t type, void* buf, size_t buflen, size_t* actual) override;
 
+ protected:
+  void Shutdown() override;
  private:
   explicit SdioDevice(zx_device_t* parent);
 

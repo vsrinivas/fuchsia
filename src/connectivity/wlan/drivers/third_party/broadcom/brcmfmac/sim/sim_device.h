@@ -55,7 +55,12 @@ class SimDevice : public Device {
 
   brcmf_simdev* GetSim();
 
+ protected:
+  void Shutdown() override;
+
  private:
+  void ShutdownImpl();
+
   simulation::FakeDevMgr* fake_dev_mgr_;
   std::shared_ptr<simulation::Environment> sim_environ_;
   std::unique_ptr<DeviceInspect> inspect_;

@@ -34,7 +34,9 @@
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/bus.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/common.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/device.h"
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/sdio/sdio_device.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/test/stub_device.h"
+#include "src/devices/testing/mock-ddk/mock-device.h"
 
 // These numbers come from real bugs.
 #define NOT_ALIGNED_SIZE 1541
@@ -505,4 +507,20 @@ TEST(Sdio, TxCtlCtrlFrameStateClearedWithError) {
       1, 0);
   EXPECT_EQ(status, ZX_ERR_NO_MEMORY);
 }
+
+TEST(Sdio, SdioDeviceMultipleShutdowns) {
+  auto parent = MockDevice::FakeRootParent();
+  wlan::brcmfmac::SdioDevice::Create(parent.get());
+
+  zx_device_t* child = parent->GetLatestChild();
+
+  // Suspend the device twice, it should not crash. Parameters shouldn't matter as the device
+  // doesn't care.
+  child->SuspendNewOp(0, false, 0);
+  child->SuspendNewOp(0, false, 0);
+
+  // Then release it, it should still not crash.
+  child->ReleaseOp();
+}
+
 }  // namespace
