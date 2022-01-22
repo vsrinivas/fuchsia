@@ -1,0 +1,33 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+import("//build/rust/rustc_library.gni")
+
+group("tests") {
+  testonly = true
+  deps = [ ":display-mocks-test" ]
+}
+
+rustc_library("display-mocks") {
+  name = "display_mocks"
+  version = "0.1.0"
+  with_unit_tests = true
+
+  sources = [ "src/lib.rs" ]
+
+  deps = [
+    "//sdk/fidl/fuchsia.hardware.display:fuchsia.hardware.display-rustc",
+    "//src/lib/fidl/rust/fidl",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:itertools",
+  ]
+
+  test_deps = [ "//src/lib/fuchsia" ]
+}
+
+fuchsia_unittest_package("display-mocks-test") {
+  deps = [ ":display-mocks_test" ]
+}
