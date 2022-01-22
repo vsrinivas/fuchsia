@@ -8,8 +8,10 @@
 
 mod insert_unique;
 mod meta_package;
+mod package_builder;
 mod path_to_string;
 
 pub use insert_unique::{DuplicateKeyError, InsertAllUniqueExt, InsertUniqueExt, MapEntry};
 pub use meta_package::create_meta_package_file;
+pub use package_builder::PackageBuilder;
 pub use path_to_string::PathToStringExt;

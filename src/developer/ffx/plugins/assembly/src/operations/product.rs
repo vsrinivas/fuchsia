@@ -29,7 +29,7 @@ pub fn assemble(args: ProductArgs) -> Result<()> {
             .context(format!("Adding input bundle: {}", bundle_path.display()))?;
     }
 
-    let image_assembly = builder.build().context("Building Image Assembly config")?;
+    let image_assembly = builder.build(&outdir).context("Building Image Assembly config")?;
     let image_assembly_path = outdir.join("image_assembly.json");
     let image_assembly_file = std::fs::File::create(&image_assembly_path).context(format!(
         "Failed to create image assembly config file: {}",

@@ -38,6 +38,7 @@ ffx_plugin("ffx_assembly") {
   deps = [
     "//src/lib/assembly/base_package",
     "//src/lib/assembly/blobfs",
+    "//src/lib/assembly/config_data",
     "//src/lib/assembly/fvm",
     "//src/lib/assembly/images_config",
     "//src/lib/assembly/images_manifest",
