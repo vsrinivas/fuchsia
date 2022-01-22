@@ -79,7 +79,7 @@ void main() {
 
     final List<MetricsSpec> metricsSpecs = [];
 
-    for (final size in ['4K', '256K', '1M']) {
+    for (final size in ['4K', '16K', '256K', '1M']) {
       for (final frequency in [
         '1hz',
         '10hz',
@@ -107,8 +107,8 @@ void main() {
         'outputTestName': 'UncontendedSnapshotTree/4K'
       }))
       ..add(MetricsSpec(name: 'duration', extraArgs: {
-        'eventName': 'UncontendedSnapshotTree/64K',
-        'outputTestName': 'UncontendedSnapshotTree/64K'
+        'eventName': 'UncontendedSnapshotTree/16K',
+        'outputTestName': 'UncontendedSnapshotTree/16K'
       }))
       ..add(MetricsSpec(name: 'duration', extraArgs: {
         'eventName': 'UncontendedSnapshotTree/256K',
