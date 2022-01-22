@@ -664,35 +664,48 @@ esac
 # The sysroot dir contains thousands of files, but only some essential libs and
 # shlibs are needed.  Include related symlinks as well.
 sysroot_files=()
-test "${#link_sysroot[@]}" = 0 || test -z "$sysroot_triple" || {
+test "${#link_sysroot[@]}" = 0 || {
   sysroot_dir="${link_sysroot[0]}"
-  # Find the correct architecture ld.so.
-  case "$sysroot_triple" in
-    aarch64-linux*) sysroot_files+=( "$sysroot_dir"/lib/"$sysroot_triple"/ld-linux-aarch64.so.1 ) ;;
-    x86_64-linux*) sysroot_files+=( "$sysroot_dir"/lib/"$sysroot_triple"/ld-linux-x86-64.so.2 ) ;;
-  esac
-  sysroot_files+=(
-    "$sysroot_dir"/lib/"$sysroot_triple"/libc.so.6
-    "$sysroot_dir"/lib/"$sysroot_triple"/libpthread.so.0
-    "$sysroot_dir"/lib/"$sysroot_triple"/libm.so.6
-    "$sysroot_dir"/lib/"$sysroot_triple"/libmvec.so.1
-    "$sysroot_dir"/lib/"$sysroot_triple"/librt.so.1
-    "$sysroot_dir"/lib/"$sysroot_triple"/libutil.so.1
-    "$sysroot_dir"/usr/lib/"$sysroot_triple"/libc.so
-    "$sysroot_dir"/usr/lib/"$sysroot_triple"/libc_nonshared.a
-    "$sysroot_dir"/usr/lib/"$sysroot_triple"/libpthread.{a,so}
-    "$sysroot_dir"/usr/lib/"$sysroot_triple"/libpthread_nonshared.a
-    "$sysroot_dir"/usr/lib/"$sysroot_triple"/libm.{a,so}
-    "$sysroot_dir"/usr/lib/"$sysroot_triple"/libmvec.{a,so}
-    "$sysroot_dir"/usr/lib/"$sysroot_triple"/libmvec_nonshared.a
-    "$sysroot_dir"/usr/lib/"$sysroot_triple"/librt.{a,so}
-    "$sysroot_dir"/usr/lib/"$sysroot_triple"/libdl.{a,so}
-    "$sysroot_dir"/usr/lib/"$sysroot_triple"/libutil.{a,so}
-    "$sysroot_dir"/usr/lib/"$sysroot_triple"/Scrt1.o
-    "$sysroot_dir"/usr/lib/"$sysroot_triple"/crt1.o
-    "$sysroot_dir"/usr/lib/"$sysroot_triple"/crti.o
-    "$sysroot_dir"/usr/lib/"$sysroot_triple"/crtn.o
-  )
+  if test -n "$sysroot_triple"
+  then
+    # Find the correct architecture ld.so.
+    case "$sysroot_triple" in
+      aarch64-linux*) sysroot_files+=( "$sysroot_dir"/lib/"$sysroot_triple"/ld-linux-aarch64.so.1 ) ;;
+      x86_64-linux*) sysroot_files+=( "$sysroot_dir"/lib/"$sysroot_triple"/ld-linux-x86-64.so.2 ) ;;
+    esac
+    sysroot_files+=(
+      "$sysroot_dir"/lib/"$sysroot_triple"/libc.so.6
+      "$sysroot_dir"/lib/"$sysroot_triple"/libpthread.so.0
+      "$sysroot_dir"/lib/"$sysroot_triple"/libm.so.6
+      "$sysroot_dir"/lib/"$sysroot_triple"/libmvec.so.1
+      "$sysroot_dir"/lib/"$sysroot_triple"/librt.so.1
+      "$sysroot_dir"/lib/"$sysroot_triple"/libutil.so.1
+      "$sysroot_dir"/usr/lib/"$sysroot_triple"/libc.so
+      "$sysroot_dir"/usr/lib/"$sysroot_triple"/libc_nonshared.a
+      "$sysroot_dir"/usr/lib/"$sysroot_triple"/libpthread.{a,so}
+      "$sysroot_dir"/usr/lib/"$sysroot_triple"/libpthread_nonshared.a
+      "$sysroot_dir"/usr/lib/"$sysroot_triple"/libm.{a,so}
+      "$sysroot_dir"/usr/lib/"$sysroot_triple"/libmvec.{a,so}
+      "$sysroot_dir"/usr/lib/"$sysroot_triple"/libmvec_nonshared.a
+      "$sysroot_dir"/usr/lib/"$sysroot_triple"/librt.{a,so}
+      "$sysroot_dir"/usr/lib/"$sysroot_triple"/libdl.{a,so}
+      "$sysroot_dir"/usr/lib/"$sysroot_triple"/libutil.{a,so}
+      "$sysroot_dir"/usr/lib/"$sysroot_triple"/Scrt1.o
+      "$sysroot_dir"/usr/lib/"$sysroot_triple"/crt1.o
+      "$sysroot_dir"/usr/lib/"$sysroot_triple"/crti.o
+      "$sysroot_dir"/usr/lib/"$sysroot_triple"/crtn.o
+    )
+  else
+    sysroot_files+=(
+      "$sysroot_dir"/lib/libc.so
+      "$sysroot_dir"/lib/libdl.so
+      "$sysroot_dir"/lib/libm.so
+      "$sysroot_dir"/lib/libpthread.so
+      "$sysroot_dir"/lib/librt.so
+      "$sysroot_dir"/lib/libzircon.so
+      "$sysroot_dir"/lib/Scrt1.o
+    )
+  fi
 }
 
 # Inputs to upload include (all relative to $project_root):
@@ -771,6 +784,7 @@ dump_vars() {
   debug_var "rt libdir" "${rt_libdir[@]}"
   debug_var "link args" "${link_arg_files[@]}"
   debug_var "link sysroot" "${link_sysroot[@]}"
+  debug_var "sysroot triple" "$sysroot_triple"
   debug_var "sysroot files" "${sysroot_files[@]}"
   debug_var "env var files" "${envvar_files[@]}"
   debug_var "depfile" "$depfile"
