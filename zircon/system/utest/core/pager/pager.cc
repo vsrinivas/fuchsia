@@ -17,7 +17,6 @@
 #include <vector>
 
 #include <fbl/algorithm.h>
-#include <fbl/function.h>
 #include <zxtest/zxtest.h>
 
 #include "test_thread.h"

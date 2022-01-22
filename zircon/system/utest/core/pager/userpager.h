@@ -5,6 +5,7 @@
 #ifndef ZIRCON_SYSTEM_UTEST_CORE_PAGER_USERPAGER_H_
 #define ZIRCON_SYSTEM_UTEST_CORE_PAGER_USERPAGER_H_
 
+#include <lib/fit/function.h>
 #include <lib/zx/event.h>
 #include <lib/zx/pager.h>
 #include <lib/zx/port.h>
@@ -17,7 +18,6 @@
 
 #include <memory>
 
-#include <fbl/function.h>
 #include <fbl/intrusive_double_list.h>
 
 #include "test_thread.h"
@@ -155,7 +155,7 @@ class UserPager {
   bool WaitForPageRequest(uint16_t command, Vmo* vmo, uint64_t page_offset, uint64_t page_count,
                           zx_time_t deadline);
   bool WaitForRequest(uint64_t key, const zx_packet_page_request_t& request, zx_time_t deadline);
-  bool WaitForRequest(fbl::Function<bool(const zx_port_packet_t& packet)> cmp_fn,
+  bool WaitForRequest(fit::function<bool(const zx_port_packet_t& packet)> cmp_fn,
                       zx_time_t deadline);
   void PageFaultHandler();
   bool VerifyDirtyRangesHelper(Vmo* paged_vmo, zx_vmo_dirty_range_t* dirty_ranges_to_verify,

@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/fit/function.h>
 #include <lib/zx/job.h>
 #include <lib/zx/process.h>
 #include <lib/zx/thread.h>
@@ -107,7 +108,7 @@ class JobFixutre : public zxtest::Test {
   static fbl::Vector<zx::process> child_processes_;
   static fbl::Vector<zx::job> child_jobs_;
 
-  fbl::Function<const zx::job&()> handle_provider = [this]() -> const zx::job& { return GetJob(); };
+  fit::function<const zx::job&()> handle_provider = [this]() -> const zx::job& { return GetJob(); };
 };
 
 zx::job JobFixutre::root_;

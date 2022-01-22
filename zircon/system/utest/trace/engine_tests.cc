@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/fit/function.h>
 #include <lib/trace-engine/handler.h>
 #include <lib/trace/event.h>
 #include <lib/zx/event.h>
@@ -11,7 +12,6 @@
 #include <iterator>
 #include <utility>
 
-#include <fbl/function.h>
 #include <fbl/string.h>
 #include <fbl/string_printf.h>
 #include <fbl/vector.h>
@@ -36,15 +36,15 @@ trace_site_state_t get_site_state(trace_site_t& site) {
 }
 
 int RunClosure(void* arg) {
-  auto closure = static_cast<fbl::Closure*>(arg);
+  auto closure = static_cast<fit::closure*>(arg);
   (*closure)();
   delete closure;
   return 0;
 }
 
-void RunThread(fbl::Closure closure) {
+void RunThread(fit::closure closure) {
   thrd_t thread;
-  int result = thrd_create(&thread, RunClosure, new fbl::Closure(std::move(closure)));
+  int result = thrd_create(&thread, RunClosure, new fit::closure(std::move(closure)));
   ZX_ASSERT(result == thrd_success);
 
   result = thrd_join(thread, nullptr);

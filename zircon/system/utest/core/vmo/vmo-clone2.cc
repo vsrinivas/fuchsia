@@ -18,7 +18,6 @@
 #include <thread>
 #include <utility>
 
-#include <fbl/function.h>
 #include <zxtest/zxtest.h>
 
 #include "helpers.h"

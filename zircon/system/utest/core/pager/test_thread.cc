@@ -4,6 +4,7 @@
 
 #include "test_thread.h"
 
+#include <lib/fit/function.h>
 #include <lib/zx/exception.h>
 #include <string.h>
 #include <threads.h>
@@ -12,7 +13,6 @@
 #include <zircon/syscalls/debug.h>
 #include <zircon/threads.h>
 
-#include <fbl/function.h>
 #include <inspector/inspector.h>
 
 namespace pager_tests {
@@ -22,7 +22,7 @@ static int test_thread_fn(void* arg) {
   return 0;
 }
 
-TestThread::TestThread(fbl::Function<bool()> fn) : fn_(std::move(fn)) {
+TestThread::TestThread(fit::function<bool()> fn) : fn_(std::move(fn)) {
 #if !defined(__x86_64__) and !defined(__aarch64__)
   static_assert(false, "Unsupported architecture");
 #endif

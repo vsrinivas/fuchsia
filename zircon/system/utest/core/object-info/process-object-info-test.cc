@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/fit/function.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/job.h>
 #include <lib/zx/process.h>
@@ -201,7 +202,7 @@ class ProcessFixture : public zxtest::Test {
   static zx::vmar vmar_;
   static MappingInfo info_;
 
-  fbl::Function<const zx::process&()> handle_provider = [this]() -> const zx::process& {
+  fit::function<const zx::process&()> handle_provider = [this]() -> const zx::process& {
     return GetProcess();
   };
 };

@@ -320,7 +320,7 @@ bool UserPager::GetPageRequest(Vmo* vmo, uint16_t command, zx_time_t deadline, u
       deadline);
 }
 
-bool UserPager::WaitForRequest(fbl::Function<bool(const zx_port_packet_t& packet)> cmp_fn,
+bool UserPager::WaitForRequest(fit::function<bool(const zx_port_packet_t& packet)> cmp_fn,
                                zx_time_t deadline) {
   for (auto& iter : requests_) {
     if (cmp_fn(iter.req)) {

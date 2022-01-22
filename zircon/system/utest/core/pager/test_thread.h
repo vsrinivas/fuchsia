@@ -5,6 +5,7 @@
 #ifndef ZIRCON_SYSTEM_UTEST_CORE_PAGER_TEST_THREAD_H_
 #define ZIRCON_SYSTEM_UTEST_CORE_PAGER_TEST_THREAD_H_
 
+#include <lib/fit/function.h>
 #include <lib/sync/completion.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/suspend_token.h>
@@ -13,7 +14,6 @@
 #include <zircon/syscalls/exception.h>
 #include <zircon/types.h>
 
-#include <fbl/function.h>
 #include <zxtest/zxtest.h>
 
 namespace pager_tests {
@@ -21,7 +21,7 @@ namespace pager_tests {
 // Class which executes the specified function on a test thread.
 class TestThread {
  public:
-  explicit TestThread(fbl::Function<bool()> fn);
+  explicit TestThread(fit::function<bool()> fn);
   ~TestThread();
 
   // Starts the test thread's execution.
@@ -56,7 +56,7 @@ class TestThread {
             zx_status_t error_status = ZX_OK);
   void PrintDebugInfo(const zx_exception_report_t& report);
 
-  const fbl::Function<bool()> fn_;
+  const fit::function<bool()> fn_;
 
   thrd_t thrd_ = 0;
   zx::thread zx_thread_;
