@@ -289,9 +289,11 @@ impl FlatlandViewStrategy {
 
             let (touch_client, touch_server) = create_endpoints()?;
             let (mouse_client, mouse_server) = create_endpoints()?;
+            let (view_ref_focused_client, view_ref_focused_server) = create_endpoints()?;
 
             view_bound_protocols.touch_source = Some(touch_server);
             view_bound_protocols.mouse_source = Some(mouse_server);
+            view_bound_protocols.view_ref_focused = Some(view_ref_focused_server);
 
             flatland.create_view2(
                 &mut view_creation_token,
@@ -363,6 +365,31 @@ impl FlatlandViewStrategy {
                         }
                         Err(fidl_error) => {
                             println!("mouse event connection closed error: {:?}", fidl_error);
+                            return;
+                        }
+                    }
+                }
+            })
+            .detach();
+
+            let view_ref_focused_proxy = view_ref_focused_client.into_proxy()?;
+            let view_ref_focused_sender = app_sender.clone();
+
+            fasync::Task::local(async move {
+                loop {
+                    let result = view_ref_focused_proxy.watch().await;
+                    match result {
+                        Ok(_) => {
+                            view_ref_focused_sender
+                                .unbounded_send(MessageInternal::Focus(view_key))
+                                .expect("failed to send MessageInternal.");
+                        }
+                        Err(fidl::Error::ClientChannelClosed { .. }) => {
+                            println!("ViewRefFocused connection closed.");
+                            return;
+                        }
+                        Err(fidl_error) => {
+                            println!("ViewRefFocused connection closed error: {:?}", fidl_error);
                             return;
                         }
                     }
