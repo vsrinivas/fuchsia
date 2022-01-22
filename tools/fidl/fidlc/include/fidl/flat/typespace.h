@@ -38,6 +38,13 @@ class TypeTemplate : protected ReporterMixin {
   struct ParamsAndConstraints {
     const std::unique_ptr<LayoutParameterList>& parameters;
     const std::unique_ptr<TypeConstraints>& constraints;
+    const std::optional<SourceSpan>& type_ctor_span;
+
+    // If we have some parameters, then return the span of that.
+    // If we have no parameters and we have type_ctor_span available, we return
+    // that.
+    // Otherwise, we return the empty span corresponding to no parameters.
+    const SourceSpan& ParametersSpan() const;
   };
 
   virtual bool Create(const LibraryMediator& lib, const ParamsAndConstraints& args,
@@ -49,6 +56,10 @@ class TypeTemplate : protected ReporterMixin {
   Typespace* typespace_;
 
   Name name_;
+
+  // Returns false if there was an error (which is reported), true otherwise.
+  bool EnsureNumberOfLayoutParams(const ParamsAndConstraints& unresolved_args,
+                                  size_t expected_params) const;
 };
 
 // Typespace provides builders for all types (e.g. array, vector, string), and
@@ -65,7 +76,7 @@ class Typespace : private ReporterMixin {
   bool Create(const LibraryMediator& lib, const flat::Name& name,
               const std::unique_ptr<LayoutParameterList>& parameters,
               const std::unique_ptr<TypeConstraints>& constraints, const Type** out_type,
-              LayoutInvocation* out_params);
+              LayoutInvocation* out_params, const std::optional<SourceSpan>& type_ctor_span);
 
   const Size* InternSize(uint32_t size);
   const Type* Intern(std::unique_ptr<Type> type);
@@ -99,7 +110,8 @@ class Typespace : private ReporterMixin {
   bool CreateNotOwned(const LibraryMediator& lib, const flat::Name& name,
                       const std::unique_ptr<LayoutParameterList>& parameters,
                       const std::unique_ptr<TypeConstraints>& constraints,
-                      std::unique_ptr<Type>* out_type, LayoutInvocation* out_params);
+                      std::unique_ptr<Type>* out_type, LayoutInvocation* out_params,
+                      const std::optional<SourceSpan>& type_ctor_span);
 
   std::map<Name::Key, std::unique_ptr<TypeTemplate>> templates_;
   std::vector<std::unique_ptr<Size>> sizes_;

@@ -277,8 +277,11 @@ bool TransportSideType::ApplyConstraints(const flat::LibraryMediator& lib,
 
   if (protocol_decl && out_params->protocol_decl)
     return lib.Fail(ErrCannotConstrainTwice, constraints.items[0]->span, layout);
-  if (!protocol_decl && !out_params->protocol_decl)
+  if (!protocol_decl && !out_params->protocol_decl) {
+    // TODO(fxbug.dev/87619): There are no constraints so this should use the
+    // layout span rather than relying on the constraints.span fallback.
     return lib.Fail(ErrProtocolConstraintRequired, constraints.span.value(), layout);
+  }
   const Decl* merged_protocol = protocol_decl;
   if (out_params->protocol_decl)
     merged_protocol = out_params->protocol_decl;

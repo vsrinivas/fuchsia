@@ -229,10 +229,11 @@ struct TypeConstraints;
 // while ensuring that users cannot refer to anonymous layouts by name.
 struct TypeConstructor final {
   TypeConstructor(Name name, std::unique_ptr<LayoutParameterList> parameters,
-                  std::unique_ptr<TypeConstraints> constraints)
+                  std::unique_ptr<TypeConstraints> constraints, std::optional<SourceSpan> span)
       : name(std::move(name)),
         parameters(std::move(parameters)),
-        constraints(std::move(constraints)) {}
+        constraints(std::move(constraints)),
+        span(span) {}
 
   // Returns a type constructor for the size type (used for bounds).
   static std::unique_ptr<TypeConstructor> CreateSizeType();
@@ -241,6 +242,7 @@ struct TypeConstructor final {
   const Name name;
   std::unique_ptr<LayoutParameterList> parameters;
   std::unique_ptr<TypeConstraints> constraints;
+  std::optional<SourceSpan> span;
 
   // Set during compilation.
   const Type* type = nullptr;
@@ -329,14 +331,6 @@ struct LayoutParameterList {
 
   std::vector<std::unique_ptr<LayoutParameter>> items;
 
-  // Span of all parameters, or of the type constructor's name if there are none
-  // (used for "too few parameters" errors when 0 are given). For example:
-  //
-  //     string    vector<bool>    array<uint32, 3>
-  //     ^~~~~~          ^~~~~~         ^~~~~~~~~~~
-  //
-  // It is null for generated types where no span is available. In these cases
-  // we should never attempt to access it for an error message.
   const std::optional<SourceSpan> span;
 };
 
@@ -346,7 +340,6 @@ struct TypeConstraints {
       : items(std::move(items)), span(span) {}
 
   std::vector<std::unique_ptr<Constant>> items;
-  // Similar to LayoutParameterList's span but for constraints.
   const std::optional<SourceSpan> span;
 };
 

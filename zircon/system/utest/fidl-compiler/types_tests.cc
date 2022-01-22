@@ -27,7 +27,7 @@ bool TypespaceCreate(Library* library, Typespace* typespace, Reporter* reporter,
       LibraryMediator(library, &compile_step, reporter), name,
       std::make_unique<LayoutParameterList>(std::move(no_params), std::nullopt),
       std::make_unique<TypeConstraints>(std::move(no_constraints), std::nullopt), out_type,
-      &invocation);
+      &invocation, std::nullopt);
 }
 
 void CheckPrimitiveType(Library* library, Typespace* typespace, const char* name,

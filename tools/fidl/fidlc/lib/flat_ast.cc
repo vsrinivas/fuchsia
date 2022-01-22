@@ -839,7 +839,8 @@ std::unique_ptr<TypeConstructor> TypeConstructor::CreateSizeType() {
   return std::make_unique<TypeConstructor>(
       Name::CreateIntrinsic("uint32"),
       std::make_unique<LayoutParameterList>(std::move(no_params), std::nullopt /* span */),
-      std::make_unique<TypeConstraints>(std::move(no_constraints), std::nullopt /* span */));
+      std::make_unique<TypeConstraints>(std::move(no_constraints), std::nullopt /* span */),
+      std::nullopt);
 }
 
 bool LibraryMediator::ResolveParamAsType(const flat::TypeTemplate* layout,
@@ -982,7 +983,7 @@ TypeConstructor* IdentifierLayoutParameter::AsTypeCtor() const {
     std::vector<std::unique_ptr<Constant>> no_constraints;
     as_type_ctor = std::make_unique<TypeConstructor>(
         name, std::make_unique<LayoutParameterList>(std::move(no_params), std::nullopt),
-        std::make_unique<TypeConstraints>(std::move(no_constraints), std::nullopt));
+        std::make_unique<TypeConstraints>(std::move(no_constraints), std::nullopt), std::nullopt);
   }
 
   return as_type_ctor.get();

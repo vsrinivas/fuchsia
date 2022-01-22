@@ -747,7 +747,8 @@ void JSONGenerator::Generate(const flat::TypeConstructor& value) {
                                         std::make_unique<flat::LayoutParameterList>(
                                             std::move(no_params), std::nullopt /* span */),
                                         std::make_unique<flat::TypeConstraints>(
-                                            std::move(no_constraints), std::nullopt /* span */));
+                                            std::move(no_constraints), std::nullopt /* span */),
+                                        std::nullopt);
         Generate(type_ctor);
       } else {
         Generate(*invocation.element_type_raw);

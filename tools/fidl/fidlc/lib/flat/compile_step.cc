@@ -1261,7 +1261,7 @@ void CompileStep::CompileTypeConstructor(TypeConstructor* type_ctor) {
   }
   if (!library_->typespace_->Create(LibraryMediator(library_, this, reporter()), type_ctor->name,
                                     type_ctor->parameters, type_ctor->constraints, &type_ctor->type,
-                                    &type_ctor->resolved_params)) {
+                                    &type_ctor->resolved_params, type_ctor->span)) {
     return;
   }
 

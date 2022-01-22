@@ -396,7 +396,7 @@ static std::unique_ptr<TypeConstructor> IdentifierTypeForDecl(const Decl* decl) 
   std::vector<std::unique_ptr<Constant>> no_constraints;
   return std::make_unique<TypeConstructor>(
       decl->name, std::make_unique<LayoutParameterList>(std::move(no_params), std::nullopt),
-      std::make_unique<TypeConstraints>(std::move(no_constraints), std::nullopt));
+      std::make_unique<TypeConstraints>(std::move(no_constraints), std::nullopt), std::nullopt);
 }
 
 bool ConsumeStep::CreateMethodResult(const std::shared_ptr<NamingContext>& err_variant_context,
@@ -885,8 +885,8 @@ bool ConsumeStep::ConsumeTypeConstructor(std::unique_ptr<raw::TypeConstructor> r
                                          std::unique_ptr<TypeConstructor>* out_type_ctor,
                                          Decl** out_inline_decl) {
   std::vector<std::unique_ptr<LayoutParameter>> params;
-  // Fallback to name span. See LayoutParameterList's comment on `span`.
-  SourceSpan params_span = raw_type_ctor->layout_ref->span();
+  std::optional<SourceSpan> params_span;
+
   if (raw_type_ctor->parameters) {
     params_span = raw_type_ctor->parameters->span();
     for (auto& p : raw_type_ctor->parameters->items) {
@@ -932,8 +932,10 @@ bool ConsumeStep::ConsumeTypeConstructor(std::unique_ptr<raw::TypeConstructor> r
   }
 
   std::vector<std::unique_ptr<Constant>> constraints;
-  // Fallback to name span. See TypeConstraints's comment on `span`.
+  // TODO(fxbug.dev/87619): Here we fall back to the type ctor span to make
+  // ErrProtocolConstraintRequired work. We should remove this.
   SourceSpan constraints_span = raw_type_ctor->layout_ref->span();
+
   if (raw_type_ctor->constraints) {
     constraints_span = raw_type_ctor->constraints->span();
     for (auto& c : raw_type_ctor->constraints->items) {
@@ -953,11 +955,13 @@ bool ConsumeStep::ConsumeTypeConstructor(std::unique_ptr<raw::TypeConstructor> r
                        is_request_or_response, out_inline_decl))
       return false;
 
-    if (out_type_ctor)
+    if (out_type_ctor) {
       *out_type_ctor = std::make_unique<TypeConstructor>(
           context->ToName(library_, raw_type_ctor->layout_ref->span()),
           std::make_unique<LayoutParameterList>(std::move(params), params_span),
-          std::make_unique<TypeConstraints>(std::move(constraints), constraints_span));
+          std::make_unique<TypeConstraints>(std::move(constraints), constraints_span),
+          raw_type_ctor->span());
+    }
     return true;
   }
 
@@ -970,7 +974,8 @@ bool ConsumeStep::ConsumeTypeConstructor(std::unique_ptr<raw::TypeConstructor> r
   *out_type_ctor = std::make_unique<TypeConstructor>(
       std::move(name.value()),
       std::make_unique<LayoutParameterList>(std::move(params), params_span),
-      std::make_unique<TypeConstraints>(std::move(constraints), constraints_span));
+      std::make_unique<TypeConstraints>(std::move(constraints), constraints_span),
+      raw_type_ctor->span());
   return true;
 }
 

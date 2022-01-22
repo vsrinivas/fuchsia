@@ -15,9 +15,10 @@ using namespace diagnostics;
 bool Typespace::Create(const LibraryMediator& lib, const flat::Name& name,
                        const std::unique_ptr<LayoutParameterList>& parameters,
                        const std::unique_ptr<TypeConstraints>& constraints, const Type** out_type,
-                       LayoutInvocation* out_params) {
+                       LayoutInvocation* out_params,
+                       const std::optional<SourceSpan>& type_ctor_span) {
   std::unique_ptr<Type> type;
-  if (!CreateNotOwned(lib, name, parameters, constraints, &type, out_params))
+  if (!CreateNotOwned(lib, name, parameters, constraints, &type, out_params, type_ctor_span))
     return false;
   types_.push_back(std::move(type));
   *out_type = types_.back().get();
@@ -27,7 +28,8 @@ bool Typespace::Create(const LibraryMediator& lib, const flat::Name& name,
 bool Typespace::CreateNotOwned(const LibraryMediator& lib, const flat::Name& name,
                                const std::unique_ptr<LayoutParameterList>& parameters,
                                const std::unique_ptr<TypeConstraints>& constraints,
-                               std::unique_ptr<Type>* out_type, LayoutInvocation* out_params) {
+                               std::unique_ptr<Type>* out_type, LayoutInvocation* out_params,
+                               const std::optional<SourceSpan>& type_ctor_span) {
   // TODO(pascallouis): lookup whether we've already created the type, and
   // return it rather than create a new one. Lookup must be by name,
   // arg_type, size, and nullability.
@@ -39,8 +41,30 @@ bool Typespace::CreateNotOwned(const LibraryMediator& lib, const flat::Name& nam
   if (type_template->HasGeneratedName() && (name.as_anonymous() == nullptr)) {
     return Fail(ErrAnonymousNameReference, name.span().value(), name);
   }
-  return type_template->Create(lib, {.parameters = parameters, .constraints = constraints},
-                               out_type, out_params);
+  return type_template->Create(
+      lib, {.parameters = parameters, .constraints = constraints, .type_ctor_span = type_ctor_span},
+      out_type, out_params);
+}
+
+const SourceSpan& TypeTemplate::ParamsAndConstraints::ParametersSpan() const {
+  auto num_params = parameters->items.size();
+  if (num_params > 0)
+    return parameters->span.value();
+  if (type_ctor_span)
+    return *type_ctor_span;
+  // Fallback empty span
+  return parameters->span.value();
+}
+
+bool TypeTemplate::EnsureNumberOfLayoutParams(const ParamsAndConstraints& unresolved_args,
+                                              size_t expected_params) const {
+  auto num_params = unresolved_args.parameters->items.size();
+  if (num_params != expected_params) {
+    Fail(ErrWrongNumberOfLayoutParameters, unresolved_args.ParametersSpan(), this, expected_params,
+         num_params);
+    return false;
+  }
+  return true;
 }
 
 const Size* Typespace::InternSize(uint32_t size) {
@@ -164,12 +188,8 @@ bool ArrayTypeTemplate::Create(const LibraryMediator& lib,
                                const ParamsAndConstraints& unresolved_args,
                                std::unique_ptr<Type>* out_type,
                                LayoutInvocation* out_params) const {
-  size_t num_params = unresolved_args.parameters->items.size();
-  size_t expected_params = 2;
-  if (num_params != expected_params) {
-    return Fail(ErrWrongNumberOfLayoutParameters, unresolved_args.parameters->span.value(), this,
-                expected_params, num_params);
-  }
+  if (!EnsureNumberOfLayoutParams(unresolved_args, 2))
+    return false;
 
   const Type* element_type = nullptr;
   if (!lib.ResolveParamAsType(this, unresolved_args.parameters->items[0], &element_type))
@@ -191,11 +211,8 @@ bool BytesTypeTemplate::Create(const LibraryMediator& lib,
                                const ParamsAndConstraints& unresolved_args,
                                std::unique_ptr<Type>* out_type,
                                LayoutInvocation* out_params) const {
-  size_t num_params = unresolved_args.parameters->items.size();
-  if (num_params != 0) {
-    return Fail(ErrWrongNumberOfLayoutParameters, unresolved_args.parameters->span.value(), this, 0,
-                num_params);
-  }
+  if (!EnsureNumberOfLayoutParams(unresolved_args, 0))
+    return false;
 
   VectorType type(name_, &uint8_type_);
   return type.ApplyConstraints(lib, *unresolved_args.constraints, this, out_type, out_params);
@@ -205,11 +222,8 @@ bool VectorTypeTemplate::Create(const LibraryMediator& lib,
                                 const ParamsAndConstraints& unresolved_args,
                                 std::unique_ptr<Type>* out_type,
                                 LayoutInvocation* out_params) const {
-  size_t num_params = unresolved_args.parameters->items.size();
-  if (num_params != 1) {
-    return Fail(ErrWrongNumberOfLayoutParameters, unresolved_args.parameters->span.value(), this, 1,
-                num_params);
-  }
+  if (!EnsureNumberOfLayoutParams(unresolved_args, 1))
+    return false;
 
   const Type* element_type = nullptr;
   if (!lib.ResolveParamAsType(this, unresolved_args.parameters->items[0], &element_type))
@@ -225,11 +239,8 @@ bool StringTypeTemplate::Create(const LibraryMediator& lib,
                                 const ParamsAndConstraints& unresolved_args,
                                 std::unique_ptr<Type>* out_type,
                                 LayoutInvocation* out_params) const {
-  size_t num_params = unresolved_args.parameters->items.size();
-  if (num_params != 0) {
-    return Fail(ErrWrongNumberOfLayoutParameters, unresolved_args.parameters->span.value(), this, 0,
-                num_params);
-  }
+  if (!EnsureNumberOfLayoutParams(unresolved_args, 0))
+    return false;
 
   StringType type(name_);
   return type.ApplyConstraints(lib, *unresolved_args.constraints, this, out_type, out_params);
@@ -241,11 +252,8 @@ bool HandleTypeTemplate::Create(const LibraryMediator& lib,
                                 const ParamsAndConstraints& unresolved_args,
                                 std::unique_ptr<Type>* out_type,
                                 LayoutInvocation* out_params) const {
-  size_t num_params = !unresolved_args.parameters->items.empty();
-  if (num_params != 0) {
-    return Fail(ErrWrongNumberOfLayoutParameters, unresolved_args.parameters->span.value(), this, 0,
-                num_params);
-  }
+  if (!EnsureNumberOfLayoutParams(unresolved_args, 0))
+    return false;
 
   HandleType type(name_, resource_decl_);
   return type.ApplyConstraints(lib, *unresolved_args.constraints, this, out_type, out_params);
@@ -255,11 +263,8 @@ bool TransportSideTypeTemplate::Create(const LibraryMediator& lib,
                                        const ParamsAndConstraints& unresolved_args,
                                        std::unique_ptr<Type>* out_type,
                                        LayoutInvocation* out_params) const {
-  size_t num_params = !unresolved_args.parameters->items.empty();
-  if (num_params != 0) {
-    return Fail(ErrWrongNumberOfLayoutParameters, unresolved_args.parameters->span.value(), this, 0,
-                num_params);
-  }
+  if (!EnsureNumberOfLayoutParams(unresolved_args, 0))
+    return false;
 
   TransportSideType type(name_, end_, protocol_transport_);
   return type.ApplyConstraints(lib, *unresolved_args.constraints, this, out_type, out_params);
@@ -277,11 +282,8 @@ bool TypeDeclTypeTemplate::Create(const LibraryMediator& lib,
     }
   }
 
-  size_t num_params = unresolved_args.parameters->items.size();
-  if (num_params != 0) {
-    return Fail(ErrWrongNumberOfLayoutParameters, unresolved_args.parameters->span.value(), this, 0,
-                num_params);
-  }
+  if (!EnsureNumberOfLayoutParams(unresolved_args, 0))
+    return false;
 
   IdentifierType type(name_, type_decl_);
   return type.ApplyConstraints(lib, *unresolved_args.constraints, this, out_type, out_params);
@@ -296,11 +298,8 @@ bool TypeAliasTypeTemplate::Create(const LibraryMediator& lib,
   }
   lib.CompileDecl(decl_);
 
-  size_t num_params = unresolved_args.parameters->items.size();
-  if (num_params != 0) {
-    return Fail(ErrWrongNumberOfLayoutParameters, unresolved_args.parameters->span.value(), this, 0,
-                num_params);
-  }
+  if (!EnsureNumberOfLayoutParams(unresolved_args, 0))
+    return false;
 
   // Compilation failed while trying to resolve something farther up the chain;
   // exit early
@@ -322,11 +321,8 @@ static bool IsStruct(const Type* boxed_type) {
 bool BoxTypeTemplate::Create(const LibraryMediator& lib,
                              const ParamsAndConstraints& unresolved_args,
                              std::unique_ptr<Type>* out_type, LayoutInvocation* out_params) const {
-  size_t num_params = unresolved_args.parameters->items.size();
-  if (num_params == 0) {
-    return Fail(ErrWrongNumberOfLayoutParameters, unresolved_args.parameters->span.value(), this, 1,
-                num_params);
-  }
+  if (!EnsureNumberOfLayoutParams(unresolved_args, 1))
+    return false;
 
   const Type* boxed_type = nullptr;
   if (!lib.ResolveParamAsType(this, unresolved_args.parameters->items[0], &boxed_type))
@@ -359,11 +355,8 @@ bool PrimitiveTypeTemplate::Create(const LibraryMediator& lib,
                                    const ParamsAndConstraints& unresolved_args,
                                    std::unique_ptr<Type>* out_type,
                                    LayoutInvocation* out_params) const {
-  size_t num_params = unresolved_args.parameters->items.size();
-  if (num_params != 0) {
-    return Fail(ErrWrongNumberOfLayoutParameters, unresolved_args.parameters->span.value(), this, 0,
-                num_params);
-  }
+  if (!EnsureNumberOfLayoutParams(unresolved_args, 0))
+    return false;
 
   // TODO(fxbug.dev/76219): Should instead use the static const types provided
   // on Typespace, e.g. Typespace::kBoolType.
