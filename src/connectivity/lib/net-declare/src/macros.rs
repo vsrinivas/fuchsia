@@ -14,7 +14,7 @@ use std::str::FromStr;
 
 /// Declares a proc_macro with `name` using `generator` to generate any of `ty`.
 macro_rules! declare_macro {
-    ($name:ident, $generator:ident, $($ty:ident),+) => {
+    ($name:ident, $generator:ident, $($ty:path),+) => {
         #[proc_macro]
         pub fn $name(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
             Emitter::<$generator, $($ty),+>::emit(input).into()
@@ -342,14 +342,15 @@ impl Generator<MacAddress> for FidlGen {
     }
 }
 
+#[derive(PartialEq, Debug)]
 /// Helper struct to parse Cidr addresses from string.
-struct CidrAddress {
-    address: std::net::IpAddr,
+struct IpAddressWithPrefix<A> {
+    address: A,
     prefix: u8,
 }
 
-#[derive(thiserror::Error, Debug)]
-enum CidrParseError {
+#[derive(thiserror::Error, PartialEq, Debug)]
+enum IpAddressWithPrefixParseError {
     #[error("missing address")]
     MissingIp,
     #[error("missing prefix length")]
@@ -364,34 +365,35 @@ enum CidrParseError {
     BadPrefix(u8, std::net::IpAddr),
 }
 
-impl FromStr for CidrAddress {
-    type Err = CidrParseError;
+impl FromStr for IpAddressWithPrefix<IpAddr> {
+    type Err = IpAddressWithPrefixParseError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let mut parse_iter = s.split('/');
-        let ip_str = parse_iter.next().ok_or(CidrParseError::MissingIp)?;
-        let prefix_str = parse_iter.next().ok_or(CidrParseError::MissingPrefix)?;
+        let ip_str = parse_iter.next().ok_or(IpAddressWithPrefixParseError::MissingIp)?;
+        let prefix_str = parse_iter.next().ok_or(IpAddressWithPrefixParseError::MissingPrefix)?;
         if let Some(trailing) = parse_iter.next() {
-            return Err(CidrParseError::TrailingInformation(trailing.to_string()));
+            return Err(IpAddressWithPrefixParseError::TrailingInformation(trailing.to_string()));
         }
         let address = std::net::IpAddr::from_str(ip_str)
-            .map_err(|e| CidrParseError::IpParseError(ip_str.to_string(), e))?;
-        let prefix = u8::from_str_radix(prefix_str, 10)
-            .map_err(|e| CidrParseError::PrefixParseError(prefix_str.to_string(), e))?;
+            .map_err(|e| IpAddressWithPrefixParseError::IpParseError(ip_str.to_string(), e))?;
+        let prefix = u8::from_str_radix(prefix_str, 10).map_err(|e| {
+            IpAddressWithPrefixParseError::PrefixParseError(prefix_str.to_string(), e)
+        })?;
         let addr_len = 8 * match address {
             std::net::IpAddr::V4(a) => a.octets().len(),
             std::net::IpAddr::V6(a) => a.octets().len(),
         };
         if usize::from(prefix) > addr_len {
-            return Err(CidrParseError::BadPrefix(prefix, address));
+            return Err(IpAddressWithPrefixParseError::BadPrefix(prefix, address));
         }
-        Ok(CidrAddress { address, prefix })
+        Ok(Self { address, prefix })
     }
 }
 
-impl Generator<CidrAddress> for FidlGen {
-    fn generate(input: CidrAddress) -> TokenStream {
-        let CidrAddress { address, prefix } = input;
+impl Generator<IpAddressWithPrefix<IpAddr>> for FidlGen {
+    fn generate(input: IpAddressWithPrefix<IpAddr>) -> TokenStream {
+        let IpAddressWithPrefix { address, prefix } = input;
         let address = Self::generate(address);
         quote! {
             fidl_fuchsia_net::Subnet {
@@ -402,34 +404,39 @@ impl Generator<CidrAddress> for FidlGen {
     }
 }
 
-/// Helper struct to parse Cidr addresses from string.
-struct Ipv4AddrWithPrefix {
-    address: std::net::Ipv4Addr,
-    prefix: u8,
+#[derive(thiserror::Error, PartialEq, Debug)]
+enum VersionedIpPrefixError {
+    #[error("wrong IP version: {0}")]
+    WrongVersion(IpAddr),
+    #[error("failed to parse")]
+    IpError(#[from] IpAddressWithPrefixParseError),
 }
 
-#[derive(thiserror::Error, Debug)]
-enum Ipv4AddrWithPrefixParseError {
-    #[error("failed to parse as CIDR address")]
-    CidrError(#[from] CidrParseError),
-    #[error("address is not IPv4")]
-    NotV4,
-}
-
-impl FromStr for Ipv4AddrWithPrefix {
-    type Err = Ipv4AddrWithPrefixParseError;
-
+impl FromStr for IpAddressWithPrefix<Ipv4Addr> {
+    type Err = VersionedIpPrefixError;
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let CidrAddress { address, prefix } = s.parse::<CidrAddress>()?;
+        let IpAddressWithPrefix { address, prefix } = s.parse::<IpAddressWithPrefix<IpAddr>>()?;
         match address {
-            IpAddr::V4(address) => return Ok(Ipv4AddrWithPrefix { address, prefix }),
-            IpAddr::V6(_) => return Err(Ipv4AddrWithPrefixParseError::NotV4),
+            IpAddr::V4(address) => Ok(Self { address, prefix }),
+            IpAddr::V6(address) => Err(VersionedIpPrefixError::WrongVersion(address.into())),
         }
     }
 }
 
-impl Generator<Ipv4AddrWithPrefix> for FidlGen {
-    fn generate(Ipv4AddrWithPrefix { address, prefix }: Ipv4AddrWithPrefix) -> TokenStream {
+impl FromStr for IpAddressWithPrefix<Ipv6Addr> {
+    type Err = VersionedIpPrefixError;
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let IpAddressWithPrefix { address, prefix } = s.parse::<IpAddressWithPrefix<IpAddr>>()?;
+        match address {
+            IpAddr::V6(address) => Ok(Self { address, prefix }),
+            IpAddr::V4(address) => Err(VersionedIpPrefixError::WrongVersion(address.into())),
+        }
+    }
+}
+
+impl Generator<IpAddressWithPrefix<Ipv4Addr>> for FidlGen {
+    fn generate(input: IpAddressWithPrefix<Ipv4Addr>) -> TokenStream {
+        let IpAddressWithPrefix { address, prefix } = input;
         let addr = Self::generate(address);
         quote! {
             fidl_fuchsia_net::Ipv4AddressWithPrefix {
@@ -442,19 +449,19 @@ impl Generator<Ipv4AddrWithPrefix> for FidlGen {
 
 declare_macro!(fidl_ip, FidlGen, IpAddr);
 declare_macro!(fidl_ip_v4, FidlGen, Ipv4Addr);
-declare_macro!(fidl_ip_v4_with_prefix, FidlGen, Ipv4AddrWithPrefix);
+declare_macro!(fidl_ip_v4_with_prefix, FidlGen, IpAddressWithPrefix<Ipv4Addr>);
 declare_macro!(fidl_ip_v6, FidlGen, Ipv6Addr);
 declare_macro!(fidl_socket_addr, FidlGen, SocketAddr);
 declare_macro!(fidl_socket_addr_v4, FidlGen, SocketAddrV4);
 declare_macro!(fidl_socket_addr_v6, FidlGen, SocketAddrV6);
 declare_macro!(fidl_mac, FidlGen, MacAddress);
-declare_macro!(fidl_subnet, FidlGen, CidrAddress);
+declare_macro!(fidl_subnet, FidlGen, IpAddressWithPrefix<IpAddr>);
 
 /// Generator for `fuchsia.net.InterfaceAddress`
 enum FidlInterfaceAddressGen {}
 
-impl Generator<Ipv4AddrWithPrefix> for FidlInterfaceAddressGen {
-    fn generate(input: Ipv4AddrWithPrefix) -> TokenStream {
+impl Generator<IpAddressWithPrefix<Ipv4Addr>> for FidlInterfaceAddressGen {
+    fn generate(input: IpAddressWithPrefix<Ipv4Addr>) -> TokenStream {
         let v4_addr_with_prefix = FidlGen::generate(input);
         quote! {
             fidl_fuchsia_net::InterfaceAddress::Ipv4(#v4_addr_with_prefix)
@@ -471,7 +478,7 @@ impl Generator<Ipv6Addr> for FidlInterfaceAddressGen {
     }
 }
 
-declare_macro!(fidl_if_addr, FidlInterfaceAddressGen, Ipv4AddrWithPrefix, Ipv6Addr);
+declare_macro!(fidl_if_addr, FidlInterfaceAddressGen, IpAddressWithPrefix<Ipv4Addr>, Ipv6Addr);
 
 /// Generator for net-types types.
 enum NetGen {}
@@ -519,3 +526,75 @@ declare_macro!(net_ip, NetGen, IpAddr);
 declare_macro!(net_ip_v4, NetGen, Ipv4Addr);
 declare_macro!(net_ip_v6, NetGen, Ipv6Addr);
 declare_macro!(net_mac, NetGen, MacAddress);
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use assert_matches::assert_matches;
+
+    #[test]
+    fn ip_address_with_prefix_valid() {
+        assert_eq!(
+            "28.19.8.91/16".parse::<IpAddressWithPrefix<IpAddr>>(),
+            Ok(IpAddressWithPrefix { address: [28, 19, 8, 91].into(), prefix: 16 })
+        );
+        assert_eq!(
+            "184f:139:84::56:3456/38".parse::<IpAddressWithPrefix<IpAddr>>(),
+            Ok(IpAddressWithPrefix {
+                address: [0x184f, 0x0139, 0x0084, 0, 0, 0, 0x56, 0x3456].into(),
+                prefix: 38
+            })
+        );
+
+        assert_eq!(
+            "1.2.3.4/5".parse::<IpAddressWithPrefix<Ipv4Addr>>(),
+            Ok(IpAddressWithPrefix { address: 0x01020304.into(), prefix: 5 })
+        );
+
+        assert_eq!(
+            "5a:e8:6695::78:4521/108".parse::<IpAddressWithPrefix<Ipv6Addr>>(),
+            Ok(IpAddressWithPrefix {
+                address: [0x5a, 0xe8, 0x6695, 0, 0, 0, 0x78, 0x4521].into(),
+                prefix: 108
+            })
+        );
+    }
+
+    #[test]
+    fn ip_address_with_prefix_invalid() {
+        assert_matches!(
+            "5.6.7.8".parse::<IpAddressWithPrefix<IpAddr>>(),
+            Err(IpAddressWithPrefixParseError::MissingPrefix)
+        );
+        assert_matches!(
+            "192.168.0.1/12/x".parse::<IpAddressWithPrefix<IpAddr>>(),
+            Err(IpAddressWithPrefixParseError::TrailingInformation(_))
+        );
+        assert_matches!(
+            "12.9.9/6".parse::<IpAddressWithPrefix<IpAddr>>(),
+            Err(IpAddressWithPrefixParseError::IpParseError(_, _))
+        );
+        assert_matches!(
+            "192.168.0.1/ff".parse::<IpAddressWithPrefix<IpAddr>>(),
+            Err(IpAddressWithPrefixParseError::PrefixParseError(_, _))
+        );
+        assert_matches!(
+            "192.168.0.1/55".parse::<IpAddressWithPrefix<IpAddr>>(),
+            Err(IpAddressWithPrefixParseError::BadPrefix(55, _))
+        );
+    }
+
+    #[test]
+    fn ip_address_with_prefix_wrong_type() {
+        assert_eq!(
+            "28.19.8.91/16".parse::<IpAddressWithPrefix<Ipv6Addr>>(),
+            Err(VersionedIpPrefixError::WrongVersion([28, 19, 8, 91].into())),
+        );
+        assert_eq!(
+            "184f:139:84::56:3456/38".parse::<IpAddressWithPrefix<Ipv4Addr>>(),
+            Err(VersionedIpPrefixError::WrongVersion(
+                [0x184f, 0x0139, 0x0084, 0, 0, 0, 0x56, 0x3456].into()
+            ))
+        );
+    }
+}
