@@ -23,10 +23,10 @@ class ArenaChecker {
   }
 
  private:
-  static bool IsPointerInArena(void* pointer, ::fidl::AnyArena& arena,
+  static bool IsPointerInArena(void* pointer, ::fidl::ArenaBase& arena,
                                const uint8_t* initial_buffer, size_t initial_capacity);
 
-  static bool DidUse(::fidl::AnyArena& arena, const uint8_t* initial_buffer);
+  static bool DidUse(::fidl::ArenaBase& arena, const uint8_t* initial_buffer);
 };
 
 }  // namespace fidl_testing

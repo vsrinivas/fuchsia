@@ -8,9 +8,9 @@
 
 namespace fidl {
 
-AnyArena::~AnyArena() { Clean(); }
+ArenaBase::~ArenaBase() { Clean(); }
 
-void AnyArena::Clean() {
+void ArenaBase::Clean() {
   // Call all the destructors (starting with the last allocated object).
   // Because we only work with views, the destructors only close handles.
   while (last_destructor_ != nullptr) {
@@ -27,8 +27,8 @@ void AnyArena::Clean() {
   }
 }
 
-uint8_t* AnyArena::Allocate(size_t size, size_t count,
-                            void (*destructor_function)(uint8_t*, size_t)) {
+uint8_t* ArenaBase::Allocate(size_t size, size_t count,
+                             void (*destructor_function)(uint8_t*, size_t)) {
   // Total size needed for the allocation (the header used for the deallocation and the data).
   size_t block_size = FIDL_ALIGN(size * count);
   // Checks that the multiplication didn't overflow.

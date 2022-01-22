@@ -6,7 +6,7 @@
 
 namespace fidl_testing {
 
-bool ArenaChecker::IsPointerInArena(void* pointer, ::fidl::AnyArena& arena,
+bool ArenaChecker::IsPointerInArena(void* pointer, ::fidl::ArenaBase& arena,
                                     const uint8_t* initial_buffer, size_t initial_capacity) {
   uint8_t* data = static_cast<uint8_t*>(pointer);
   auto in_range = [=](const uint8_t* start, size_t len) -> bool {
@@ -23,7 +23,7 @@ bool ArenaChecker::IsPointerInArena(void* pointer, ::fidl::AnyArena& arena,
     return true;
   }
   // Check presence in each extra block.
-  fidl::AnyArena::ExtraBlock* last_extra_block = arena.last_extra_block_;
+  fidl::ArenaBase::ExtraBlock* last_extra_block = arena.last_extra_block_;
   while (last_extra_block != nullptr) {
     auto* to_check = last_extra_block;
     last_extra_block = last_extra_block->next_block();
@@ -34,7 +34,7 @@ bool ArenaChecker::IsPointerInArena(void* pointer, ::fidl::AnyArena& arena,
   return false;
 }
 
-bool ArenaChecker::DidUse(::fidl::AnyArena& arena, const uint8_t* initial_buffer) {
+bool ArenaChecker::DidUse(::fidl::ArenaBase& arena, const uint8_t* initial_buffer) {
   // If we are not at the start of the initial buffer, then allocation had happened.
   return arena.next_data_available_ != initial_buffer;
 }
