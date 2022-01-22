@@ -769,6 +769,7 @@ class TxqTest : public MvmTest, public MockTrans {
         } {
     BIND_TEST(mvm_->trans);
 
+    mvm_->fw_id_to_mac_id[0] = &sta_;
     for (size_t i = 0; i < std::size(sta_.txq); ++i) {
       sta_.txq[i] = reinterpret_cast<struct iwl_mvm_txq*>(calloc(1, sizeof(struct iwl_mvm_txq)));
       ASSERT_NE(nullptr, sta_.txq[i]);
@@ -870,12 +871,37 @@ TEST_F(TxqTest, DataTxCmd) {
 
 TEST_F(TxqTest, DataTxCmdRate) {
   iwl_tx_cmd tx_cmd = {};
-  iwl_mvm_set_tx_cmd_rate(mvmvif_->mvm, &tx_cmd);
+  struct ieee80211_frame_header frame_hdr;
+  // construct a data frame, and check the rate.
+  frame_hdr.frame_ctrl |= IEEE80211_FRAME_TYPE_DATA;
+  sta_.sta_state = IWL_STA_AUTHORIZED;
+
+  iwl_mvm_set_tx_cmd_rate(mvmvif_->mvm, &tx_cmd, &frame_hdr);
+
+  // Verify tx_cmd rate fields when frame type is data frame when station is authorized, the rate
+  // should not be set.
+  EXPECT_EQ(0, tx_cmd.initial_rate_index);
+  EXPECT_GT(tx_cmd.tx_flags & cpu_to_le32(TX_CMD_FLG_STA_RATE), 0);
+  EXPECT_EQ(0, tx_cmd.rate_n_flags);
 
   EXPECT_EQ(IWL_RTS_DFAULT_RETRY_LIMIT, tx_cmd.rts_retry_limit);
-  EXPECT_EQ(IWL_RATE_6M_PLCP | BIT(mvm_->mgmt_last_antenna_idx) << RATE_MCS_ANT_POS,
-            tx_cmd.rate_n_flags);
   EXPECT_EQ(IWL_DEFAULT_TX_RETRY, tx_cmd.data_retry_limit);
+}
+
+TEST_F(TxqTest, MgmtTxCmdRate) {
+  iwl_tx_cmd tx_cmd = {};
+  struct ieee80211_frame_header frame_hdr;
+
+  // construct a non-data frame, and check the rate.
+  frame_hdr.frame_ctrl |= IEEE80211_FRAME_TYPE_MGMT;
+
+  iwl_mvm_set_tx_cmd_rate(mvmvif_->mvm, &tx_cmd, &frame_hdr);
+
+  // Because the rate which is set to non-data frame in our code is a temporary value, so this line
+  // might be changed in the future.
+  EXPECT_EQ(iwl_mvm_mac80211_idx_to_hwrate(IWL_FIRST_OFDM_RATE) |
+                (BIT(mvm_->mgmt_last_antenna_idx) << RATE_MCS_ANT_POS),
+            tx_cmd.rate_n_flags);
 }
 
 TEST_F(TxqTest, TxpktInvalidInput) {

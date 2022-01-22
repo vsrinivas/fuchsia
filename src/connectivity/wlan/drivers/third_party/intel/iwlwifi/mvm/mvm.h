@@ -1586,7 +1586,8 @@ zx_status_t iwl_mvm_tx_skb(struct iwl_mvm* mvm, struct ieee80211_mac_packet* pkt
 int iwl_mvm_tx_skb_non_sta(struct iwl_mvm* mvm, struct sk_buff* skb);
 void iwl_mvm_set_tx_cmd(struct iwl_mvm* mvm, struct ieee80211_mac_packet* pkt,
                         struct iwl_tx_cmd* tx_cmd, uint8_t sta_id);
-void iwl_mvm_set_tx_cmd_rate(struct iwl_mvm* mvm, struct iwl_tx_cmd* tx_cmd);
+void iwl_mvm_set_tx_cmd_rate(struct iwl_mvm* mvm, struct iwl_tx_cmd* tx_cmd,
+                             const struct ieee80211_frame_header* hdr);
 void iwl_mvm_mac_itxq_xmit(struct ieee80211_hw* hw, struct ieee80211_txq* txq);
 unsigned int iwl_mvm_max_amsdu_size(struct iwl_mvm* mvm, struct ieee80211_sta* sta,
                                     unsigned int tid);

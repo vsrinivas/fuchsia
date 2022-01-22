@@ -270,8 +270,8 @@ void iwl_mvm_set_tx_cmd(struct iwl_mvm* mvm, struct ieee80211_mac_packet* pkt,
 }
 
 #if 0  // NEEDS_PORTING
-static uint32_t iwl_mvm_get_tx_ant(struct iwl_mvm* mvm, struct ieee80211_tx_info* info,
-                                   struct ieee80211_sta* sta, __le16 fc) {
+static uint32_t iwl_mvm_get_tx_ant(struct iwl_mvm* mvm) {
+    // TODO(fxbug.dev/91465): Configure the ANT bit.
     if (info->band == NL80211_BAND_2GHZ && !iwl_mvm_bt_coex_is_shared_ant_avail(mvm)) {
         return mvm->cfg->non_shared_ant << RATE_MCS_ANT_POS;
     }
@@ -285,8 +285,7 @@ static uint32_t iwl_mvm_get_tx_ant(struct iwl_mvm* mvm, struct ieee80211_tx_info
     return BIT(mvm->mgmt_last_antenna_idx) << RATE_MCS_ANT_POS;
 }
 
-static uint32_t iwl_mvm_get_tx_rate(struct iwl_mvm* mvm, struct ieee80211_tx_info* info,
-                                    struct ieee80211_sta* sta) {
+static uint32_t iwl_mvm_get_tx_rate(struct iwl_mvm* mvm) {
     int rate_idx;
     uint8_t rate_plcp;
     uint32_t rate_flags = 0;
@@ -327,57 +326,70 @@ static uint32_t iwl_mvm_get_tx_rate_n_flags(struct iwl_mvm* mvm, struct ieee8021
                                             struct ieee80211_sta* sta, __le16 fc) {
     return iwl_mvm_get_tx_rate(mvm, info, sta) | iwl_mvm_get_tx_ant(mvm, info, sta, fc);
 }
+
 #endif  // NEEDS_PORTING
 
 /*
  * Sets the fields in the Tx cmd that are rate related
  */
-void iwl_mvm_set_tx_cmd_rate(struct iwl_mvm* mvm, struct iwl_tx_cmd* tx_cmd) {
+void iwl_mvm_set_tx_cmd_rate(struct iwl_mvm* mvm, struct iwl_tx_cmd* tx_cmd,
+                             const struct ieee80211_frame_header* hdr) {
   /* Set retry limit on RTS packets */
   tx_cmd->rts_retry_limit = IWL_RTS_DFAULT_RETRY_LIMIT;
+
+  /* Set retry limit on DATA packets and Probe Responses*/
+  tx_cmd->data_retry_limit = IWL_DEFAULT_TX_RETRY;
+
+#if 1  // NEEDS_PORTING
+  // Return in advance if it's a data frame(except EAPOL frame), the rate of data frame is
+  // controlled by LINK_QUALITY command.
+  if (hdr != NULL && ieee80211_is_data(hdr) &&
+      mvm->fw_id_to_mac_id[0]->sta_state >= IWL_STA_AUTHORIZED) {
+    tx_cmd->initial_rate_index = 0;
+    tx_cmd->tx_flags |= cpu_to_le32(TX_CMD_FLG_STA_RATE);
+    return;
+  }
 
   tx_cmd->rate_n_flags = iwl_mvm_mac80211_idx_to_hwrate(IWL_FIRST_OFDM_RATE) |
                          (BIT(mvm->mgmt_last_antenna_idx) << RATE_MCS_ANT_POS);
 
-  /* Set retry limit on DATA packets and Probe Responses*/
-  tx_cmd->data_retry_limit = IWL_DEFAULT_TX_RETRY;
+#else // NEEDS_PORTING
   // TODO(51120): below code needs rewrite to support QoS.
-#if 0  // NEEDS_PORTING
-    /* Set retry limit on DATA packets and Probe Responses*/
-    if (ieee80211_is_probe_resp(fc)) {
-        tx_cmd->data_retry_limit = IWL_MGMT_DFAULT_RETRY_LIMIT;
-        tx_cmd->rts_retry_limit = min(tx_cmd->data_retry_limit, tx_cmd->rts_retry_limit);
-    } else if (ieee80211_is_back_req(fc)) {
-        tx_cmd->data_retry_limit = IWL_BAR_DFAULT_RETRY_LIMIT;
-    } else {
-        tx_cmd->data_retry_limit = IWL_DEFAULT_TX_RETRY;
-    }
+  /* Set retry limit on DATA packets and Probe Responses*/
+  if (ieee80211_is_probe_resp(fc)) {
+    tx_cmd->data_retry_limit = IWL_MGMT_DFAULT_RETRY_LIMIT;
+    tx_cmd->rts_retry_limit = min(tx_cmd->data_retry_limit, tx_cmd->rts_retry_limit);
+  } else if (ieee80211_is_back_req(fc)) {
+    tx_cmd->data_retry_limit = IWL_BAR_DFAULT_RETRY_LIMIT;
+  } else {
+    tx_cmd->data_retry_limit = IWL_DEFAULT_TX_RETRY;
+  }
 
-    /*
-     * for data packets, rate info comes from the table inside the fw. This
-     * table is controlled by LINK_QUALITY commands
-     */
+  /*
+   * for data packets, rate info comes from the table inside the fw. This
+   * table is controlled by LINK_QUALITY commands
+   */
 
 #ifndef CPTCFG_IWLWIFI_FORCE_OFDM_RATE
-    if (ieee80211_is_data(fc) && sta) {
-        struct iwl_mvm_sta* mvmsta = iwl_mvm_sta_from_mac80211(sta);
+  if (ieee80211_is_data(fc) && sta) {
+    struct iwl_mvm_sta* mvmsta = iwl_mvm_sta_from_mac80211(sta);
 
-        if (mvmsta->sta_state >= IEEE80211_STA_AUTHORIZED) {
-            tx_cmd->initial_rate_index = 0;
-            tx_cmd->tx_flags |= cpu_to_le32(TX_CMD_FLG_STA_RATE);
-            return;
-        }
-    } else if (ieee80211_is_back_req(fc)) {
-        tx_cmd->tx_flags |= cpu_to_le32(TX_CMD_FLG_ACK | TX_CMD_FLG_BAR);
+    if (mvmsta->sta_state >= IEEE80211_STA_AUTHORIZED) {
+      tx_cmd->initial_rate_index = 0;
+      tx_cmd->tx_flags |= cpu_to_le32(TX_CMD_FLG_STA_RATE);
+      return;
     }
+  } else if (ieee80211_is_back_req(fc)) {
+    tx_cmd->tx_flags |= cpu_to_le32(TX_CMD_FLG_ACK | TX_CMD_FLG_BAR);
+  }
 #else
-    if (ieee80211_is_back_req(fc)) {
-        tx_cmd->tx_flags |= cpu_to_le32(TX_CMD_FLG_ACK | TX_CMD_FLG_BAR);
-    }
+  if (ieee80211_is_back_req(fc)) {
+    tx_cmd->tx_flags |= cpu_to_le32(TX_CMD_FLG_ACK | TX_CMD_FLG_BAR);
+  }
 #endif
 
-    /* Set the rate in the TX cmd */
-    tx_cmd->rate_n_flags = cpu_to_le32(iwl_mvm_get_tx_rate_n_flags(mvm, info, sta, fc));
+  /* Set the rate in the TX cmd */
+  tx_cmd->rate_n_flags = cpu_to_le32(iwl_mvm_get_tx_rate_n_flags(mvm, info, sta, fc));
 #endif  // NEEDS_PORTING
 }
 
@@ -519,7 +531,8 @@ static zx_status_t iwl_mvm_set_tx_params(struct iwl_mvm* mvm, struct ieee80211_m
     }
   }
 
-  iwl_mvm_set_tx_cmd_rate(mvm, tx_cmd);
+  // Set rate ralated fields in iwl_tx_cmd
+  iwl_mvm_set_tx_cmd_rate(mvm, tx_cmd, pkt->common_header);
 
   /* Copy MAC header from pkt into command buffer */
   memcpy(tx_cmd->hdr, pkt->common_header, pkt->header_size);
