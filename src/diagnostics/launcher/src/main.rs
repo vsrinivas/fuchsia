@@ -38,7 +38,7 @@ async fn main() -> Result<(), Error> {
     diagnostics_log::init!(&[log_tag]);
     let args = v2_argh_wrapper::load_command_line::<LauncherArgs>()?;
     match args.program {
-        CreateChildArgs::Detect(args) => detect::main(args).await,
+        CreateChildArgs::Detect(_args) => detect::main().await,
         CreateChildArgs::Persistence(args) => persistence::main(args).await,
         CreateChildArgs::LogStats(_args) => log_stats::main().await,
         CreateChildArgs::Sampler(args) => sampler::main(args).await,

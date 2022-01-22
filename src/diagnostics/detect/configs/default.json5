@@ -1,0 +1,4 @@
+{
+    check_every: "Minutes(8)",
+    test_only: false,
+}

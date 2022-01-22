@@ -26,6 +26,7 @@ use {
     snapshot::SnapshotRequest,
     std::collections::HashMap,
     tracing::{error, info, warn},
+    triage_detect_config::Config as ManifestConfig,
 };
 
 const MINIMUM_CHECK_TIME_NANOS: i64 = 60 * 1_000_000_000;
@@ -40,15 +41,7 @@ pub const PROGRAM_NAME: &str = "detect";
 /// Command line args
 #[derive(FromArgs, Debug, PartialEq)]
 #[argh(subcommand, name = "detect")]
-pub struct CommandLine {
-    /// how often to scan Diagnostic data
-    #[argh(option)]
-    check_every: Option<String>,
-
-    /// ignore minimum times for testing. Never check in code with this flag set.
-    #[argh(switch)]
-    test_only: bool,
-}
+pub struct CommandLine {}
 
 #[derive(PartialEq, Debug, Clone, Copy)]
 pub(crate) enum Mode {
@@ -97,20 +90,12 @@ fn load_configuration_files() -> Result<HashMap<String, String>, Error> {
 
 /// appropriate_check_interval determines the interval to check diagnostics, or signals error.
 ///
-/// If the command line arg is empty, the interval is set to MINIMUM_CHECK_TIME_NANOS.
 /// If the command line can't be evaluated to an integer, an error is returned.
 /// If the integer is below minimum and mode isn't Test, an error is returned.
 /// If a valid integer is determined, it is returned as a zx::Duration.
-fn appropriate_check_interval(
-    command_line_option: &Option<String>,
-    mode: &Mode,
-) -> Result<zx::Duration, Error> {
-    let check_every = match &command_line_option {
-        None => MINIMUM_CHECK_TIME_NANOS,
-        Some(expression) => triage_shim::evaluate_int_math(&expression).or_else(|e| {
-            bail!("Check_every argument must be Minutes(n), Hours(n), etc. but: {}", e)
-        })?,
-    };
+fn appropriate_check_interval(expression: &str, mode: &Mode) -> Result<zx::Duration, Error> {
+    let check_every = triage_shim::evaluate_int_math(&expression)
+        .or_else(|e| bail!("Check_every argument must be Minutes(n), Hours(n), etc. but: {}", e))?;
     if check_every < MINIMUM_CHECK_TIME_NANOS && *mode != Mode::Test {
         bail!(
             "Minimum time to check is {} seconds; {} nanos is too small",
@@ -121,7 +106,7 @@ fn appropriate_check_interval(
     info!(
         "Checking every {} seconds from command line '{:?}'",
         check_every / 1_000_000_000,
-        command_line_option
+        expression
     );
     Ok(zx::Duration::from_nanos(check_every))
 }
@@ -214,7 +199,9 @@ struct ConfigValues {
     config_file_count: usize,
 }
 
-pub async fn main(args: CommandLine) -> Result<(), Error> {
+pub async fn main() -> Result<(), Error> {
+    let manifest_config = ManifestConfig::from_args();
+
     let mut service_fs = ServiceFs::new();
     service_fs.take_and_serve_directory_handle()?;
     inspect_runtime::serve(inspect::component::inspector(), &mut service_fs)?;
@@ -224,12 +211,12 @@ pub async fn main(args: CommandLine) -> Result<(), Error> {
     .detach();
 
     let stats = Stats::new().with_inspect(inspect::component::inspector().root(), "stats")?;
-    let mode = match args.test_only {
+    let mode = match manifest_config.test_only {
         true => Mode::Test,
         false => Mode::Production,
     };
     let check_every = on_error!(
-        appropriate_check_interval(&args.check_every, &mode),
+        appropriate_check_interval(&manifest_config.check_every, &mode),
         "Invalid command line arg for check time: {}"
     )?;
     let program_config = on_error!(load_program_config(), "Error loading program config: {}")?;
@@ -323,20 +310,19 @@ mod test {
 
     #[fuchsia::test]
     fn verify_appropriate_check_interval() -> Result<(), Error> {
-        let error_a = Some("a".to_string());
-        let error_empty = Some("".to_string());
-        let raw_1 = Some("1".to_string());
+        let error_a = "a".to_string();
+        let error_empty = "".to_string();
+        let raw_1 = "1".to_string();
         let raw_1_result = zx::Duration::from_nanos(1);
-        let short_time = Some(format!("Nanos({})", MINIMUM_CHECK_TIME_NANOS - 1));
+        let short_time = format!("Nanos({})", MINIMUM_CHECK_TIME_NANOS - 1);
         let short_time_result = zx::Duration::from_nanos(MINIMUM_CHECK_TIME_NANOS - 1);
-        let minimum_time = Some(format!("Nanos({})", MINIMUM_CHECK_TIME_NANOS));
+        let minimum_time = format!("Nanos({})", MINIMUM_CHECK_TIME_NANOS);
         let minimum_time_result = zx::Duration::from_nanos(MINIMUM_CHECK_TIME_NANOS);
-        let long_time = Some(format!("Nanos({})", MINIMUM_CHECK_TIME_NANOS + 1));
+        let long_time = format!("Nanos({})", MINIMUM_CHECK_TIME_NANOS + 1);
         let long_time_result = zx::Duration::from_nanos(MINIMUM_CHECK_TIME_NANOS + 1);
 
         assert!(appropriate_check_interval(&error_a, &Mode::Test).is_err());
         assert!(appropriate_check_interval(&error_empty, &Mode::Test).is_err());
-        assert_eq!(appropriate_check_interval(&None, &Mode::Test)?, minimum_time_result);
         assert_eq!(appropriate_check_interval(&raw_1, &Mode::Test)?, raw_1_result);
         assert_eq!(appropriate_check_interval(&short_time, &Mode::Test)?, short_time_result);
         assert_eq!(appropriate_check_interval(&minimum_time, &Mode::Test)?, minimum_time_result);
@@ -344,7 +330,6 @@ mod test {
 
         assert!(appropriate_check_interval(&error_a, &Mode::Production).is_err());
         assert!(appropriate_check_interval(&error_empty, &Mode::Production).is_err());
-        assert_eq!(appropriate_check_interval(&None, &Mode::Production)?, minimum_time_result);
         assert!(appropriate_check_interval(&raw_1, &Mode::Production).is_err());
         assert!(appropriate_check_interval(&short_time, &Mode::Production).is_err());
         assert_eq!(

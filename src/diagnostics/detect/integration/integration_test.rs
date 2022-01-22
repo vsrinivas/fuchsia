@@ -42,7 +42,7 @@ use {
 };
 
 const DETECT_PROGRAM_URL: &str =
-    "fuchsia-pkg://fuchsia.com/detect-integration-test#meta/detect-component.cm";
+    "fuchsia-pkg://fuchsia.com/detect-integration-test#meta/triage-detect.cm";
 // Keep this the same as the command line arg in meta/detect.cml.
 const CHECK_PERIOD_SECONDS: u64 = 5;
 
@@ -301,7 +301,7 @@ async fn run_a_test(test_data: TestData) -> Result<(), Error> {
     let rights = fio2::R_STAR_DIR;
     builder
         .add_route(
-            RouteBuilder::directory("config-data", "/config", rights)
+            RouteBuilder::directory("config-data", "/config/data", rights)
                 .source(RouteEndpoint::component("mocks"))
                 .targets(vec![RouteEndpoint::component("detect")]),
         )

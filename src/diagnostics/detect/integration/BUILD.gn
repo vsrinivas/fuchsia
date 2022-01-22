@@ -65,14 +65,11 @@ fuchsia_component("integration-test-component") {
   deps = [ ":integration_test_bin" ]
 }
 
-fuchsia_component("detect-component") {
-  testonly = true
-  manifest = "meta/detect.cml"
-  deps = [ "//src/diagnostics/launcher:bin" ]
-}
-
 # Run with `fx test detect-integration-test`.
 fuchsia_test_package("detect-integration-test") {
   test_components = [ ":integration-test-component" ]
-  deps = [ ":detect-component" ]
+  deps = [
+    "//src/diagnostics/detect:triage-detect-component",
+    "//src/diagnostics/detect:triage-detect-test-config",
+  ]
 }

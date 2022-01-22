@@ -6,11 +6,7 @@
     program: {
         runner: "elf",
         binary: "bin/launcher",
-        args: [
-            "detect",
-            "--check-every",
-            "Minutes(8)",
-        ],
+        args: [ "detect" ],
     },
     use: [
         {
@@ -37,4 +33,11 @@
             from: "framework",
         },
     ],
+    config: {
+        check_every: {
+            type: "string",
+            max_size: 100,
+        },
+        test_only: { type: "bool" },
+    },
 }

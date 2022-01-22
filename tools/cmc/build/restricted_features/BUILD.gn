@@ -26,6 +26,7 @@ group("dynamic_offers") {
 # The allowlist of components that can use the "structured_config" feature in CML.
 group("structured_config") {
   visibility = [
+    "//src/diagnostics/detect:*",
     "//src/experiences/session_shells/ermine/session:*",
     "//src/lib/component_hub/tests:*",
     "//src/session/bin/session_manager:*",
