@@ -33,8 +33,11 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  *****************************************************************************/
+#include "_rateScaleMng.h"
 #include "mvm.h"
 #include "rs.h"
+
+#if 0   // NEEDS_PORTING
 
 static void iwl_start_agg(struct iwl_mvm* mvm, struct ieee80211_sta* sta, int tid) {
   struct iwl_mvm_sta* mvmsta = iwl_mvm_sta_from_mac80211(sta);
@@ -52,16 +55,17 @@ static void iwl_start_agg(struct iwl_mvm* mvm, struct ieee80211_sta* sta, int ti
     }
   }
 }
+#endif  // NEEDS_PORTING
 
-static uint8_t rs_fw_bw_from_sta_bw(struct ieee80211_sta* sta) {
-  switch (sta->bandwidth) {
-    case IEEE80211_STA_RX_BW_160:
+static uint8_t rs_fw_bw_from_sta_bw(struct iwl_mvm_sta* mvm_sta) {
+  switch (mvm_sta->bw) {
+    case CHANNEL_BANDWIDTH_CBW160:
       return IWL_TLC_MNG_CH_WIDTH_160MHZ;
-    case IEEE80211_STA_RX_BW_80:
+    case CHANNEL_BANDWIDTH_CBW80:
       return IWL_TLC_MNG_CH_WIDTH_80MHZ;
-    case IEEE80211_STA_RX_BW_40:
+    case CHANNEL_BANDWIDTH_CBW40:
       return IWL_TLC_MNG_CH_WIDTH_40MHZ;
-    case IEEE80211_STA_RX_BW_20:
+    case CHANNEL_BANDWIDTH_CBW20:
     default:
       return IWL_TLC_MNG_CH_WIDTH_20MHZ;
   }
@@ -83,38 +87,57 @@ static uint8_t rs_fw_set_active_chains(uint8_t chains) {
   return fw_chains;
 }
 
-static uint8_t rs_fw_sgi_cw_support(struct ieee80211_sta* sta) {
-  struct ieee80211_sta_ht_cap* ht_cap = &sta->ht_cap;
-  struct ieee80211_sta_vht_cap* vht_cap = &sta->vht_cap;
-  struct ieee80211_sta_he_cap* he_cap = &sta->he_cap;
+static uint8_t rs_fw_sgi_cw_support(struct iwl_mvm_sta* mvm_sta) {
+  struct ieee80211_ht_capabilities* ht_cap = &mvm_sta->ht_cap;
   uint8_t supp = 0;
+
+#if 0  // TODO(fxbug.dev/84773): Support HE (802.11ax)
+  struct ieee80211_sta_he_cap* he_cap = &sta->he_cap;
 
   if (he_cap && he_cap->has_he) {
     return 0;
   }
+#endif
 
-  if (ht_cap->cap & IEEE80211_HT_CAP_SGI_20) {
+  if (ht_cap->ht_capability_info & IEEE80211_HT_CAP_SGI_20) {
     supp |= BIT(IWL_TLC_MNG_CH_WIDTH_20MHZ);
   }
-  if (ht_cap->cap & IEEE80211_HT_CAP_SGI_40) {
+  if (ht_cap->ht_capability_info & IEEE80211_HT_CAP_SGI_40) {
     supp |= BIT(IWL_TLC_MNG_CH_WIDTH_40MHZ);
   }
+
+#if 0  // TODO(fxbug.dev/36684): Support VHT (802.11ac)
+  struct ieee80211_sta_vht_cap* vht_cap = &mvm_sta->vht_cap;
+
   if (vht_cap->cap & IEEE80211_VHT_CAP_SHORT_GI_80) {
     supp |= BIT(IWL_TLC_MNG_CH_WIDTH_80MHZ);
   }
   if (vht_cap->cap & IEEE80211_VHT_CAP_SHORT_GI_160) {
     supp |= BIT(IWL_TLC_MNG_CH_WIDTH_160MHZ);
   }
+#endif
 
   return supp;
 }
 
-static uint16_t rs_fw_set_config_flags(struct iwl_mvm* mvm, struct ieee80211_sta* sta) {
-  struct ieee80211_sta_ht_cap* ht_cap = &sta->ht_cap;
+static uint16_t rs_fw_set_config_flags(struct iwl_mvm* mvm, struct iwl_mvm_sta* sta) {
+  struct ieee80211_ht_capabilities* ht_cap = &sta->ht_cap;
+
+  uint16_t flags = 0;
+
+  if (mvm->cfg->ht_params->stbc && (num_of_ant(iwl_mvm_get_valid_tx_ant(mvm)) > 1)) {
+    if ((ht_cap && (ht_cap->ht_capability_info & IEEE80211_HT_CAP_RX_STBC))) {
+      flags |= IWL_TLC_MNG_CFG_FLAGS_STBC_MSK;
+    }
+  }
+
+#if 0  // NEEDS_PORTING
+  // The following code needs porting when VHT and HE are supported.
+  // TODO(fxbug.dev/84773): Support HE (802.11ax)
+  // TODO(fxbug.dev/36684): Support VHT (802.11ac)
   struct ieee80211_sta_vht_cap* vht_cap = &sta->vht_cap;
   struct ieee80211_sta_he_cap* he_cap = &sta->he_cap;
   bool vht_ena = vht_cap && vht_cap->vht_supported;
-  uint16_t flags = 0;
 
   if (mvm->cfg->ht_params->stbc && (num_of_ant(iwl_mvm_get_valid_tx_ant(mvm)) > 1)) {
     if (he_cap && he_cap->has_he) {
@@ -140,10 +163,13 @@ static uint16_t rs_fw_set_config_flags(struct iwl_mvm* mvm, struct ieee80211_sta
       (he_cap->he_cap_elem.phy_cap_info[3] & IEEE80211_HE_PHY_CAP3_DCM_MAX_CONST_RX_MASK)) {
     flags |= IWL_TLC_MNG_CFG_FLAGS_HE_DCM_NSS_1_MSK;
   }
+#endif
 
   return flags;
 }
 
+#if 0  // NEEDS_PORTING
+// TODO(fxbug.dev/36684): Support VHT (802.11ac)
 static int rs_fw_vht_highest_rx_mcs_index(const struct ieee80211_sta_vht_cap* vht_cap, int nss) {
   uint16_t rx_mcs = le16_to_cpu(vht_cap->vht_mcs.rx_mcs_map) & (0x3 << (2 * (nss - 1)));
   rx_mcs >>= (2 * (nss - 1));
@@ -223,77 +249,95 @@ static void rs_fw_he_set_enabled_rates(const struct ieee80211_sta* sta,
   }
 }
 
-static void rs_fw_set_supp_rates(struct ieee80211_sta* sta, struct ieee80211_supported_band* sband,
+#endif  // NEEDS_PORTING
+
+static void rs_fw_set_supp_rates(struct iwl_mvm_sta* mvm_sta,
                                  TLC_MNG_CONFIG_PARAMS_CMD_API_S* cmd) {
-  int i;
-  unsigned long tmp;
-  unsigned long supp;
-  const struct ieee80211_sta_ht_cap* ht_cap = &sta->ht_cap;
-  const struct ieee80211_sta_vht_cap* vht_cap = &sta->vht_cap;
-  const struct ieee80211_sta_he_cap* he_cap = &sta->he_cap;
+  uint16_t i;
+  uint64_t nonht_rates = 0;
+  uint8_t* supported_rates = mvm_sta->supp_rates;
+  const struct ieee80211_ht_capabilities* ht_cap = &mvm_sta->ht_cap;
+
+#if 0   // NEEDS_PORTING
+  // TODO(fxbug.dev/84773): Support HE (802.11ax)
+  const struct ieee80211_he_capabilities* he_cap = &sta->he_cap;
+#endif  // NEEDS_PORTING
 
   /* non HT rates */
-  supp = 0;
-  tmp = sta->supp_rates[sband->band];
-  for_each_set_bit(i, &tmp, BITS_PER_LONG) supp |= BIT(sband->bitrates[i].hw_value);
+  // We got the supported rates from MLME, and filt out the non-HT rates here.
+  for (i = 0; i < WLAN_MAC_MAX_RATES; i++) {
+    if (supported_rates[i] <= 54 && supported_rates[i] != 0)
+      nonht_rates |= nonht_rate_to_bit(supported_rates[i]);
+  }
 
-  cmd->nonHt = supp;
+  cmd->nonHt = nonht_rates;
   cmd->bestSuppMode = IWL_TLC_MNG_MODE_NON_HT;
 
   /* HT/VHT rates */
+#if 0   // NEEDS_PORTING
+  // TODO(fxbug.dev/84773): Support HE (802.11ax)
   if (he_cap && he_cap->has_he) {
     cmd->bestSuppMode = IWL_TLC_MNG_MODE_HE;
     rs_fw_he_set_enabled_rates(sta, he_cap, cmd);
-  } else if (vht_cap && vht_cap->vht_supported) {
+  } else
+
+  // TODO(fxbug.dev/36684): Support VHT (802.11ac)
+  const struct ieee80211_vht_capabilities* vht_cap = &sta->vht_cap;
+
+  if (vht_cap) {
     cmd->bestSuppMode = IWL_TLC_MNG_MODE_VHT;
     rs_fw_vht_set_enabled_rates(sta, vht_cap, cmd);
-  } else if (ht_cap && ht_cap->ht_supported) {
+  } else
+#endif  // NEEDS_PORTING
+  if (ht_cap) {
     cmd->bestSuppMode = IWL_TLC_MNG_MODE_HT;
-    cmd->mcs[0][0] = (ht_cap->mcs.rx_mask[0]);
-    cmd->mcs[1][0] = (ht_cap->mcs.rx_mask[1]);
+    cmd->mcs[0][0] = (ht_cap->supported_mcs_set.bytes[0]);
+    cmd->mcs[1][0] = (ht_cap->supported_mcs_set.bytes[1]);
   }
 }
 
-/// TODO: merge file?
-#include "rateScaleMng.c"
+static void rs_drv_rate_init(struct iwl_mvm* mvm, struct iwl_mvm_sta* mvm_sta, bool update) {
+  struct iwl_lq_sta* lq_sta = &mvm_sta->lq_sta.rs_drv;
+  struct iwl_mvm_vif* mvm_vif = mvm_sta->mvmvif;
 
-static void rs_drv_rate_init(struct iwl_mvm* mvm, struct ieee80211_sta* sta, enum nl80211_band band,
-                             bool update) {
-  struct ieee80211_hw* hw = mvm->hw;
-  struct iwl_mvm_sta* mvmsta = iwl_mvm_sta_from_mac80211(sta);
-  struct iwl_lq_sta* lq_sta = &mvmsta->lq_sta.rs_drv;
-  struct ieee80211_supported_band* sband;
   RS_MNG_STA_INFO_S* staInfo = &lq_sta->pers;
   TLC_MNG_CONFIG_PARAMS_CMD_API_S config = {};
 
 #ifdef CPTCFG_IWLWIFI_DEBUGFS
   iwl_mvm_reset_frame_stats(mvm);
 #endif
-  sband = hw->wiphy->bands[band];
 
-  mvmsta->amsdu_enabled = 0;
-  mvmsta->max_amsdu_len = sta->max_amsdu_len;
-
-  config.maxChWidth = update ? rs_fw_bw_from_sta_bw(sta) : IWL_TLC_MNG_CH_WIDTH_20MHZ;
-  config.configFlags = rs_fw_set_config_flags(mvm, sta);
+  config.maxChWidth = rs_fw_bw_from_sta_bw(mvm_sta);
+  config.configFlags = rs_fw_set_config_flags(mvm, mvm_sta);
   config.chainsEnabled = rs_fw_set_active_chains(iwl_mvm_get_valid_tx_ant(mvm));
-  config.maxMpduLen = sta->max_amsdu_len;
-  config.sgiChWidthSupport = rs_fw_sgi_cw_support(sta);
+
+  config.sgiChWidthSupport = rs_fw_sgi_cw_support(mvm_sta);
   config.amsduSupported = iwl_mvm_is_csum_supported(mvm);
-  config.band = sband->band;
-  rs_fw_set_supp_rates(sta, sband, &config);
 
-  cmdHandlerTlcMngConfig(mvm, sta, mvmsta, staInfo, &config, update);
+  mvm_sta->amsdu_enabled = 0;
+#if 0  // TODO(fxbug.dev/49528): Support Aggregation
+  mvm_sta->max_amsdu_len = sta->max_amsdu_len;
+  config.maxMpduLen = sta->max_amsdu_len;
+#endif
+
+  config.band = mvm_vif->phy_ctxt->band;
+  rs_fw_set_supp_rates(mvm_sta, &config);
+
+  cmdHandlerTlcMngConfig(mvm, mvm_sta, staInfo, &config, update);
 }
 
-void iwl_mvm_rs_rate_init(struct iwl_mvm* mvm, struct ieee80211_sta* sta, enum nl80211_band band,
-                          bool update) {
+void iwl_mvm_rs_rate_init(struct iwl_mvm* mvm, struct iwl_mvm_sta* mvm_sta, bool update) {
+#if 0  // NEEDS PORTING
   if (iwl_mvm_has_tlc_offload(mvm)) {
-    rs_fw_rate_init(mvm, sta, band, update);
+    rs_fw_rate_init(mvm, mvm_sta, band, update);
   } else {
-    rs_drv_rate_init(mvm, sta, band, update);
+    rs_drv_rate_init(mvm, mvm_sta, band, update);
   }
+#endif
+  // Only use driver rate initialization before supporting tlc offload for new firmwares.
+  rs_drv_rate_init(mvm, mvm_sta, update);
 }
+#if 0  // NEEDS_PORTING
 
 void iwl_mvm_rs_tx_status(struct iwl_mvm* mvm, struct ieee80211_sta* sta, int tid,
                           struct ieee80211_tx_info* info, bool is_ndp) {
@@ -477,3 +521,5 @@ int iwl_mvm_tx_protection(struct iwl_mvm* mvm, struct iwl_mvm_sta* mvmsta, bool 
 
 void rs_update_last_rssi(struct iwl_mvm* mvm, struct iwl_mvm_sta* mvmsta,
                          struct ieee80211_rx_status* rx_status) {}
+
+#endif  // NEEDS_PORTING

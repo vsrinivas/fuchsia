@@ -67,7 +67,6 @@ zx_status_t iwl_mvm_send_cmd(struct iwl_mvm* mvm, struct iwl_host_cmd* cmd) {
       iwl_mvm_ref(mvm, IWL_MVM_REF_SENDING_CMD);
     }
   }
-
   ret = iwl_trans_send_cmd(mvm->trans, cmd);
 
   if (!(cmd->flags & (CMD_ASYNC | CMD_SEND_IN_IDLE))) {
@@ -705,27 +704,24 @@ zx_status_t iwl_mvm_reconfig_scd(struct iwl_mvm* mvm, int queue, int fifo, int s
  * progress.
  */
 zx_status_t iwl_mvm_send_lq_cmd(struct iwl_mvm* mvm, struct iwl_lq_cmd* lq, bool sync) {
-  return ZX_ERR_NOT_SUPPORTED;
-#if 0   // NEEDS_PORTING
-    struct iwl_host_cmd cmd = {
-        .id = LQ_CMD,
-        .len =
-            {
-                sizeof(struct iwl_lq_cmd),
-            },
-        .flags = sync ? 0 : CMD_ASYNC,
-        .data =
-            {
-                lq,
-            },
-    };
+  struct iwl_host_cmd cmd = {
+      .id = LQ_CMD,
+      .len =
+          {
+              sizeof(struct iwl_lq_cmd),
+          },
+      .flags = sync ? 0 : CMD_ASYNC,
+      .data =
+          {
+              lq,
+          },
+  };
 
-    if (WARN_ON(lq->sta_id == IWL_MVM_INVALID_STA || iwl_mvm_has_tlc_offload(mvm))) {
-        return -EINVAL;
-    }
-
-    return iwl_mvm_send_cmd(mvm, &cmd);
-#endif  // NEEDS_PORTING
+  if (WARN_ON(lq->sta_id == IWL_MVM_INVALID_STA || iwl_mvm_has_tlc_offload(mvm))) {
+    return ZX_ERR_INTERNAL;
+  }
+  IWL_DEBUG_RATE(NULL, "Sending LQ_CMD data...");
+  return iwl_mvm_send_cmd(mvm, &cmd);
 }
 
 /**

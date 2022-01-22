@@ -140,13 +140,13 @@ typedef enum _TLC_MNG_CH_WIDTH_E {
 #define TLC_AMSDU_SUPPORTED 1
 
 typedef struct _TLC_MNG_CONFIG_PARAMS_CMD_API_S_VER_2 {
-  U08 maxChWidth;      // one of TLC_MNG_CH_WIDTH_E
-  U08 bestSuppMode;    // best mode supported - as defined above in TLC_MNG_MODE_E
-  U08 chainsEnabled;   // bitmask of TLC_MNG_CHAIN_[A/B]_MSK
-  U08 amsduSupported;  // TX AMSDU transmission is supported
+  uint8_t maxChWidth;      // one of TLC_MNG_CH_WIDTH_E
+  uint8_t bestSuppMode;    // best mode supported - as defined above in TLC_MNG_MODE_E
+  uint8_t chainsEnabled;   // bitmask of TLC_MNG_CHAIN_[A/B]_MSK
+  uint8_t amsduSupported;  // TX AMSDU transmission is supported
   // Use TLC_AMSDU_[NOT_]SUPPORTED
-  U16 configFlags;  // bitmask of TLC_MNG_CONFIG_FLAGS_*
-  U16 nonHt;        // bitmap of supported non-HT CCK and OFDM rates
+  uint16_t configFlags;  // bitmask of TLC_MNG_CONFIG_FLAGS_*
+  uint16_t nonHt;        // bitmap of supported non-HT CCK and OFDM rates
   /* bit   | rate
      -------|--------
      0    | R_1M   CCK
@@ -162,16 +162,16 @@ typedef struct _TLC_MNG_CONFIG_PARAMS_CMD_API_S_VER_2 {
      10   | R_48M  OFDM
      11   | R_54M  OFDM
      */
-  U16 mcs[TLC_MNG_NSS_MAX][2];  // supported HT/VHT/HE rates per nss. [0] for 80mhz width
+  uint16_t mcs[TLC_MNG_NSS_MAX][2];  // supported HT/VHT/HE rates per nss. [0] for 80mhz width
   // and lower, [1] for 160mhz.
   // This is done in order to conform with HE capabilites.
-  U16 maxMpduLen;  // Max length of MPDU, in bytes.
+  uint16_t maxMpduLen;  // Max length of MPDU, in bytes.
   // Used to calculate allowed A-MSDU sizes.
-  U08 sgiChWidthSupport;  // bitmap of SGI support per channel width.
+  uint8_t sgiChWidthSupport;  // bitmap of SGI support per channel width.
   // use 1 << BIT(TLC_MNG_CH_WIDTH_*) to indicate sgi support
   // for that channel width.
   // unused for HE.
-  U08 reserved1[1];
+  uint8_t reserved1[1];
 
   wlan_info_band_t band;
 } TLC_MNG_CONFIG_PARAMS_CMD_API_S_VER_2;

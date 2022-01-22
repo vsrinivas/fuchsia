@@ -33,9 +33,11 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  *****************************************************************************/
-#include "_rateScaleMng.h"
 
-#define BOOLEAN bool
+#include <zircon/syscalls.h>
+
+#include "_rateScaleMng.h"
+#include "mvm.h"
 
 #define SHIFT_AND_MASK(val, mask, pos) (((val) >> (pos)) & ((mask) >> (pos)))
 #define SEC_TO_USEC(x) ((x)*USEC_PER_SEC)
@@ -49,9 +51,58 @@
 #define MSB2ORD msb2ord
 #define LSB2ORD lsb2ord
 
-static inline unsigned long msb2ord(unsigned long x) { return find_last_bit(&x, BITS_PER_LONG); }
+static inline unsigned long msb2ord(unsigned long x) {
+  return find_last_bit((unsigned int*)&x, BITS_PER_LONG);
+}
 
-static inline unsigned long lsb2ord(unsigned long x) { return find_first_bit(&x, BITS_PER_LONG); }
+static inline unsigned long lsb2ord(unsigned long x) {
+  return find_first_bit((unsigned int*)&x, BITS_PER_LONG);
+}
+
+uint64_t nonht_rate_to_bit(uint8_t rate_value) {
+  uint64_t rate_bit = 0;
+  switch (rate_value) {
+    case 1:
+      rate_bit = BIT(RS_NON_HT_RATE_CCK_1M);
+      break;
+    case 2:
+      rate_bit = BIT(RS_NON_HT_RATE_CCK_2M);
+      break;
+    case 11:
+      rate_bit = BIT(RS_NON_HT_RATE_CCK_5_5M);
+      break;
+    case 22:
+      rate_bit = BIT(RS_NON_HT_RATE_CCK_11M);
+      break;
+    case 6:
+      rate_bit = BIT(RS_NON_HT_RATE_OFDM_6M);
+      break;
+    case 9:
+      rate_bit = BIT(RS_NON_HT_RATE_OFDM_9M);
+      break;
+    case 12:
+      rate_bit = BIT(RS_NON_HT_RATE_OFDM_12M);
+      break;
+    case 18:
+      rate_bit = BIT(RS_NON_HT_RATE_OFDM_18M);
+      break;
+    case 24:
+      rate_bit = BIT(RS_NON_HT_RATE_OFDM_24M);
+      break;
+    case 36:
+      rate_bit = BIT(RS_NON_HT_RATE_OFDM_36M);
+      break;
+    case 48:
+      rate_bit = BIT(RS_NON_HT_RATE_OFDM_48M);
+      break;
+    case 54:
+      rate_bit = BIT(RS_NON_HT_RATE_OFDM_54M);
+      break;
+    default:
+      IWL_WARN(NULL, "Not non-HT rate: %u", rate_value);
+  }
+  return rate_bit;
+}
 
 // TODO - move to coex.c
 static bool btCoexManagerIsAntAvailable(struct iwl_mvm* mvm, uint8_t ant) {
@@ -97,6 +148,8 @@ static const U08 RS_NON_HT_RATE_TO_API_RATE[] = {
     [RS_NON_HT_RATE_OFDM_48M] = R_48M,  [RS_NON_HT_RATE_OFDM_54M] = R_54M,
 };
 
+#if 0   // NEEDS_PORTING
+// TODO(fxbug.dev/36684): Supports VHT (802.11ac)
 // This array converts VHT rate configuration to phy rate
 // See ieee80211-2016 spec, section 21.4 tabled for reference values
 // Note the values are in bps, instead of mbps (i.e. multiplied by 2^20)
@@ -111,6 +164,7 @@ static const U32 rsMngVhtRateToBps[][10] = {
     [CHANNEL_WIDTH160] = {61341696, 122683392, 184025088, 245366784, 368050176, 490733568,
                           552075264, 613416960, 736100352, 817889280},
 };
+#endif  // NEEDS_PORTING
 
 // The array cell index is the MCS. e.g. - cell 0 - MCS0 6M. etc.
 static const U08 downColMcsToLegacy[] = {
@@ -144,6 +198,7 @@ static RS_MNG_DYN_BW_STAY g_rsMngDynBwStayMcs[][2] = {
     RS_MNG_DYN_BW_STAY_MCS(20, 0, 1, 0, 1), RS_MNG_DYN_BW_STAY_MCS(40, 2, 2, 2, 2),
     RS_MNG_DYN_BW_STAY_MCS(80, 5, 8, 4, 7), RS_MNG_DYN_BW_STAY_MCS(160, 7, 9, 6, 9)};
 
+#if 0   // NEEDS_PORTING
 /***********************************************************************/
 /*
  * The following tables contain the expected throughput metrics for all rates
@@ -690,6 +745,7 @@ static const TPT_BY_RATE_ARR expectedTptHe[2][MAX_CHANNEL_BW_INDX][3][2] = {
         },
     },
 };
+#endif  // NEEDS_PORTING
 
 /*******************************************************************************/
 
@@ -700,6 +756,7 @@ static const TPT_BY_RATE_ARR expectedTptHe[2][MAX_CHANNEL_BW_INDX][3][2] = {
 // info about the relevant fields can be found for LINK_QUAL_AGG_PARAMS_API_S
 #define RS_MNG_AGG_DISABLE_START_TH 3
 
+#if 0   // TODO(fxbug.dev/36684): Supports VHT (802.11ac)
 /*******************************************************************************/
 static const RS_MNG_STA_LIMITS_S g_rsMngStaModLimits[] = {
     {
@@ -716,21 +773,21 @@ static const RS_MNG_STA_LIMITS_S g_rsMngStaModLimits[] = {
         .statsFlushTimeLimit = RS_MNG_STATS_FLUSH_TIME_LIMIT,
         .clearTblWindowsLimit = RS_MNG_LEGACY_MOD_COUNTER_LIMIT,
     }};
+#endif  // NEEDS_PORTING
 
-static BOOLEAN _allowColAnt(const RS_MNG_STA_INFO_S* staInfo, U32 bw,
-                            const RS_MNG_COL_ELEM_S* nextCol);
-static BOOLEAN _allowColMimo(const RS_MNG_STA_INFO_S* staInfo, U32 bw,
-                             const RS_MNG_COL_ELEM_S* nextCol);
-static BOOLEAN _allowColSiso(const RS_MNG_STA_INFO_S* staInfo, U32 bw,
-                             const RS_MNG_COL_ELEM_S* nextCol);
-static BOOLEAN _allowColSgi(const RS_MNG_STA_INFO_S* staInfo, U32 bw,
-                            const RS_MNG_COL_ELEM_S* nextCol);
-static BOOLEAN _alloCol2xLTF(const RS_MNG_STA_INFO_S* staInfo, U32 bw,
-                             const RS_MNG_COL_ELEM_S* nextCol);
-static BOOLEAN _allowColHe(const RS_MNG_STA_INFO_S* staInfo, U32 bw,
+static bool _allowColAnt(const RS_MNG_STA_INFO_S* staInfo, U32 bw,
+                         const RS_MNG_COL_ELEM_S* nextCol);
+static bool _allowColMimo(const RS_MNG_STA_INFO_S* staInfo, U32 bw,
+                          const RS_MNG_COL_ELEM_S* nextCol);
+static bool _allowColSiso(const RS_MNG_STA_INFO_S* staInfo, U32 bw,
+                          const RS_MNG_COL_ELEM_S* nextCol);
+static bool _allowColSgi(const RS_MNG_STA_INFO_S* staInfo, U32 bw,
+                         const RS_MNG_COL_ELEM_S* nextCol);
+static bool _alloCol2xLTF(const RS_MNG_STA_INFO_S* staInfo, U32 bw,
+                          const RS_MNG_COL_ELEM_S* nextCol);
+static bool _allowColHe(const RS_MNG_STA_INFO_S* staInfo, U32 bw, const RS_MNG_COL_ELEM_S* nextCol);
+static bool _allowColHtVht(const RS_MNG_STA_INFO_S* staInfo, U32 bw,
                            const RS_MNG_COL_ELEM_S* nextCol);
-static BOOLEAN _allowColHtVht(const RS_MNG_STA_INFO_S* staInfo, U32 bw,
-                              const RS_MNG_COL_ELEM_S* nextCol);
 
 static const RS_MNG_COL_ELEM_S rsMngColumns[] = {
     [RS_MNG_COL_NON_HT_ANT_A] =
@@ -1059,18 +1116,20 @@ static void _rsMngRateSetGi(RS_MNG_RATE_S* rsMngRate, RS_MNG_GI_E gi) {
   rsMngRate->unset &= ~RS_MNG_RATE_GI;
 }
 
-static void _rsMngRateSetLdpc(RS_MNG_RATE_S* rsMngRate, BOOLEAN ldpc) {
+static void _rsMngRateSetLdpc(RS_MNG_RATE_S* rsMngRate, bool ldpc) {
   rsMngRate->rate.rate_n_flags &= ~RATE_MCS_LDPC_MSK;
   rsMngRate->rate.rate_n_flags |= (!!ldpc) << RATE_MCS_LDPC_POS;
   rsMngRate->unset &= ~RS_MNG_RATE_LDPC;
 }
 
+#if 0   // NEEDS_PORTING
 static BOOLEAN _rsMngRateGetStbc(const RS_MNG_RATE_S* rsMngRate) {
   _rsMngRateCheckSet(rsMngRate, RS_MNG_RATE_STBC);
   return !!(rsMngRate->rate.rate_n_flags & RATE_MCS_STBC_MSK);
 }
+#endif  // NEEDS_PORTING
 
-static void _rsMngRateSetStbc(RS_MNG_RATE_S* rsMngRate, BOOLEAN stbc) {
+static void _rsMngRateSetStbc(RS_MNG_RATE_S* rsMngRate, bool stbc) {
   WARN_ON(!(!stbc || !(rsMngRate->rate.rate_n_flags & RATE_MCS_HE_DCM_MSK)));
 
   rsMngRate->rate.rate_n_flags &= ~RATE_MCS_STBC_MSK;
@@ -1079,7 +1138,7 @@ static void _rsMngRateSetStbc(RS_MNG_RATE_S* rsMngRate, BOOLEAN stbc) {
   rsMngRate->unset |= RS_MNG_RATE_ANT;
 }
 
-static void _rsMngRateSetBfer(RS_MNG_RATE_S* rsMngRate, BOOLEAN bfer) {
+static void _rsMngRateSetBfer(RS_MNG_RATE_S* rsMngRate, bool bfer) {
   rsMngRate->rate.rate_n_flags &= ~RATE_MCS_BF_MSK;
   rsMngRate->rate.rate_n_flags |= (!!bfer) << RATE_MCS_BF_POS;
   rsMngRate->unset &= ~RS_MNG_RATE_BFER;
@@ -1161,7 +1220,7 @@ static void _rsMngRateInvalidate(RS_MNG_RATE_S* rsMngRate) {
 static U16 _rsMngGetSupportedRatesByModeAndBw(const RS_MNG_STA_INFO_S* staInfo,
                                               RS_MNG_MODULATION_E modulation,
                                               TLC_MNG_CH_WIDTH_E bw) {
-  BOOLEAN isBw160;
+  bool isBw160;
   U32 supportedRates;
 
   if (modulation == RS_MNG_MODUL_LEGACY) {
@@ -1190,11 +1249,13 @@ static TLC_MNG_CH_WIDTH_E _rsMngGetMaxChWidth(const RS_MNG_STA_INFO_S* staInfo) 
   return (TLC_MNG_CH_WIDTH_E)staInfo->config.maxChWidth;
 }
 
+#if 0   // NEEDS_PORTING
 static BOOLEAN _rsMngAreAggsSupported(TLC_MNG_MODE_E bestSuppMode) {
   return bestSuppMode > TLC_MNG_MODE_LEGACY;
 }
+#endif  // NEEDS_PORTING
 
-static BOOLEAN _rsMngIsDcmSupported(const RS_MNG_STA_INFO_S* staInfo, BOOLEAN isMimo) {
+static bool _rsMngIsDcmSupported(const RS_MNG_STA_INFO_S* staInfo, bool isMimo) {
   if (isMimo) {
     return !!(staInfo->config.configFlags & TLC_MNG_CONFIG_FLAGS_HE_DCM_NSS_2_MSK);
   }
@@ -1202,6 +1263,7 @@ static BOOLEAN _rsMngIsDcmSupported(const RS_MNG_STA_INFO_S* staInfo, BOOLEAN is
   return !!(staInfo->config.configFlags & TLC_MNG_CONFIG_FLAGS_HE_DCM_NSS_1_MSK);
 }
 
+#if 0   // NEEDS_PORTING
 static BOOLEAN _rsMngRateIsOptimal(const RS_MNG_STA_INFO_S* staInfo,
                                    const RS_MNG_RATE_S* rsMngRate) {
   U32 bw = _rsMngRateGetBw(rsMngRate);
@@ -1231,6 +1293,7 @@ static BOOLEAN _rsMngRateIsOptimal(const RS_MNG_STA_INFO_S* staInfo,
 
   return TRUE;
 }
+#endif  // NEEDS_PORTING
 
 static U08 _rsMngGetHigherRateIdx(U08 initRateIdx, U32 supportedRatesMsk) {
   U32 tmpRateMsk;
@@ -1279,34 +1342,34 @@ static U08 _rsMngGetAdjacentRateIdx(const RS_MNG_STA_INFO_S* staInfo, const RS_M
 }
 
 // TODO - check. what if bt doesn't allow?
-static BOOLEAN _rsMngIsStbcSupported(const RS_MNG_STA_INFO_S* staInfo) {
+static bool _rsMngIsStbcSupported(const RS_MNG_STA_INFO_S* staInfo) {
   return !!(staInfo->config.configFlags & TLC_MNG_CONFIG_FLAGS_STBC_MSK);
 }
 
-static BOOLEAN _rsMngIsStbcAllowed(const RS_MNG_STA_INFO_S* staInfo, const RS_MNG_RATE_S* rate) {
+static bool _rsMngIsStbcAllowed(const RS_MNG_STA_INFO_S* staInfo, const RS_MNG_RATE_S* rate) {
   if ((iwl_mvm_get_valid_tx_ant(staInfo->mvm) & rsMngGetDualAntMsk()) != rsMngGetDualAntMsk()) {
-    return FALSE;
+    return false;
   }
   return _rsMngIsStbcSupported(staInfo) && !(rate->rate.rate_n_flags & RATE_MCS_HE_DCM_MSK);
 }
 
-static BOOLEAN _rsMngCoexIsLongAggAllowed(const RS_MNG_STA_INFO_S* staInfo) {
-  if (staInfo->config.band != NL80211_BAND_2GHZ) {
-    return TRUE;
+static bool _rsMngCoexIsLongAggAllowed(const RS_MNG_STA_INFO_S* staInfo) {
+  if (staInfo->config.band != WLAN_INFO_BAND_TWO_GHZ) {
+    return true;
   }
 
   if (btCoexManagerBtOwnsAnt(staInfo->mvm)) {
-    return FALSE;
+    return false;
   }
 
-  return TRUE;
+  return true;
 }
 
-static BOOLEAN _rsMngIsLdpcAllowed(const RS_MNG_STA_INFO_S* staInfo) {
+static bool _rsMngIsLdpcAllowed(const RS_MNG_STA_INFO_S* staInfo) {
   return !!(staInfo->config.configFlags & TLC_MNG_CONFIG_FLAGS_LDPC_MSK);
 }
 
-static BOOLEAN _rsMngIsAntSupported(const RS_MNG_STA_INFO_S* staInfo, U08 ant) {
+static bool _rsMngIsAntSupported(const RS_MNG_STA_INFO_S* staInfo, U08 ant) {
   return (ant & staInfo->config.chainsEnabled) == ant &&
          (iwl_mvm_get_valid_tx_ant(staInfo->mvm) & ant) == ant;
 }
@@ -1316,28 +1379,28 @@ static BOOLEAN _rsMngIsAntSupported(const RS_MNG_STA_INFO_S* staInfo, U08 ant) {
 /*                            allowColFuncs                                         */
 /************************************************************************************/
 
-static BOOLEAN _allowColAnt(const RS_MNG_STA_INFO_S* staInfo, U32 bw,
-                            const RS_MNG_COL_ELEM_S* nextCol) {
+static bool _allowColAnt(const RS_MNG_STA_INFO_S* staInfo, U32 bw,
+                         const RS_MNG_COL_ELEM_S* nextCol) {
   if (!_rsMngIsAntSupported(staInfo, nextCol->ant)) {
-    return FALSE;
+    return false;
   }
 
   if (!_rsMngIsAntSupported(staInfo, (U08)(nextCol->ant ^ rsMngGetDualAntMsk()))) {
     // If the other antenna is disabled for some reason, this antenna is the only one allowed so
     // we must ignore possible BT-Coex restrictions. Also note that this function is only called
     // for siso columns, so nextCol->ant always has just one bit set so the xor makes sense.
-    return TRUE;
+    return true;
   }
 
-  if (staInfo->config.band != NL80211_BAND_2GHZ) {
-    return TRUE;
+  if (staInfo->config.band != WLAN_INFO_BAND_TWO_GHZ) {
+    return true;
   }
 
   if (btCoexManagerIsAntAvailable(staInfo->mvm, nextCol->ant)) {
-    return TRUE;
+    return true;
   }
 
-  return FALSE;
+  return false;
 }
 
 static U16 _rsMngGetAggTimeLimit(RS_MNG_STA_INFO_S* staInfo) {
@@ -1347,74 +1410,74 @@ static U16 _rsMngGetAggTimeLimit(RS_MNG_STA_INFO_S* staInfo) {
   }
 
   if (_rsMngCoexIsLongAggAllowed(staInfo)) {
-    staInfo->longAggEnabled = TRUE;
+    staInfo->longAggEnabled = true;
     return RS_MNG_AGG_DURATION_LIMIT;
   }
 
-  staInfo->longAggEnabled = FALSE;
+  staInfo->longAggEnabled = false;
   return RS_MNG_AGG_DURATION_LIMIT_SHORT;
 }
 
-static BOOLEAN _allowColMimo(const RS_MNG_STA_INFO_S* staInfo, U32 bw,
-                             const RS_MNG_COL_ELEM_S* nextCol) {
-  BOOLEAN isBw160 = (bw == TLC_MNG_CH_WIDTH_160MHZ);
+static bool _allowColMimo(const RS_MNG_STA_INFO_S* staInfo, U32 bw,
+                          const RS_MNG_COL_ELEM_S* nextCol) {
+  bool isBw160 = (bw == TLC_MNG_CH_WIDTH_160MHZ);
 
   // TODO - check if ht/vht supported? redundent
   // if no mimo rate is supported
   if (!(staInfo->config.mcs[TLC_MNG_NSS_2][isBw160])) {
-    return FALSE;
+    return false;
   }
 
   if (staInfo->config.chainsEnabled != rsMngGetDualAntMsk()) {
-    return FALSE;
+    return false;
   }
 
   if (iwl_mvm_get_valid_tx_ant(staInfo->mvm) != rsMngGetDualAntMsk()) {
-    return FALSE;
+    return false;
   }
 
-  return TRUE;
+  return true;
 }
 
-static BOOLEAN _allowColSiso(const RS_MNG_STA_INFO_S* staInfo, U32 bw,
-                             const RS_MNG_COL_ELEM_S* nextCol) {
-  BOOLEAN isBw160 = (bw == TLC_MNG_CH_WIDTH_160MHZ);
+static bool _allowColSiso(const RS_MNG_STA_INFO_S* staInfo, U32 bw,
+                          const RS_MNG_COL_ELEM_S* nextCol) {
+  bool isBw160 = (bw == TLC_MNG_CH_WIDTH_160MHZ);
 
   // if there are supported SISO rates - return true. else - return false
   return (!!(staInfo->config.mcs[TLC_MNG_NSS_1][isBw160]));
 }
 
-static BOOLEAN _allowColHe(const RS_MNG_STA_INFO_S* staInfo, U32 bw,
-                           const RS_MNG_COL_ELEM_S* nextCol) {
+static bool _allowColHe(const RS_MNG_STA_INFO_S* staInfo, U32 bw,
+                        const RS_MNG_COL_ELEM_S* nextCol) {
   return !!(staInfo->config.bestSuppMode == TLC_MNG_MODE_HE);
 }
 
-static BOOLEAN _allowColHtVht(const RS_MNG_STA_INFO_S* staInfo, U32 bw,
-                              const RS_MNG_COL_ELEM_S* nextCol) {
+static bool _allowColHtVht(const RS_MNG_STA_INFO_S* staInfo, U32 bw,
+                           const RS_MNG_COL_ELEM_S* nextCol) {
   return !!(staInfo->config.bestSuppMode == TLC_MNG_MODE_HT ||
             staInfo->config.bestSuppMode == TLC_MNG_MODE_VHT);
 }
 
-static BOOLEAN _allowColSgi(const RS_MNG_STA_INFO_S* staInfo, U32 bw,
-                            const RS_MNG_COL_ELEM_S* nextCol) {
+static bool _allowColSgi(const RS_MNG_STA_INFO_S* staInfo, U32 bw,
+                         const RS_MNG_COL_ELEM_S* nextCol) {
   U08 sgiChWidthSupport = staInfo->config.sgiChWidthSupport;
 
   return !!(sgiChWidthSupport & BIT(bw));
 }
 
-static BOOLEAN _alloCol2xLTF(const RS_MNG_STA_INFO_S* staInfo, U32 bw,
-                             const RS_MNG_COL_ELEM_S* nextCol) {
+static bool _alloCol2xLTF(const RS_MNG_STA_INFO_S* staInfo, U32 bw,
+                          const RS_MNG_COL_ELEM_S* nextCol) {
   return !(staInfo->config.configFlags & TLC_MNG_CONFIG_FLAGS_HE_BLOCK_2X_LTF_MSK);
 }
 
 /***************************************************************/
 
-static BOOLEAN _rsMngTpcIsActive(const RS_MNG_STA_INFO_S* staInfo) {
+static bool _rsMngTpcIsActive(const RS_MNG_STA_INFO_S* staInfo) {
   // There are 2 values for currStep that mean tpc isn't working currently - RS_MNG_TPC_INACTIVE
   // and RS_MNG_TPC_DISABLED.
   return staInfo->tpcTable.currStep < RS_MNG_TPC_NUM_STEPS;
 }
-static BOOLEAN _rsMngIsTestWindow(const RS_MNG_STA_INFO_S* staInfo) {
+static bool _rsMngIsTestWindow(const RS_MNG_STA_INFO_S* staInfo) {
   return staInfo->tryingRateUpscale || staInfo->searchBetterTbl || staInfo->tpcTable.testing;
 }
 
@@ -1422,9 +1485,14 @@ static void _rsMngFillAggParamsLQCmd(RS_MNG_STA_INFO_S* staInfo, struct iwl_lq_c
   lqCmd->agg_time_limit = cpu_to_le16(_rsMngGetAggTimeLimit(staInfo));
   lqCmd->agg_disable_start_th = RS_MNG_AGG_DISABLE_START_TH;
 
+#if 0  // NEEDS_PORTING
+  // TODO(fxbug.dev/79993): AMPDU Support
   // W/A for a HW bug that causes it to not prepare a second burst if the first one uses
   // all frames in the Fifo. W/A this by making sure there's always at least one frame left.
   lqCmd->agg_frame_cnt_limit = (U08)(staInfo->staBuffSize - 1);
+#else  // NEEDS_PORTING
+  lqCmd->agg_frame_cnt_limit = 1;
+#endif
 }
 
 // Get the next supported lower rate in the current column.
@@ -1442,6 +1510,8 @@ static U08 _rsMngSetLowerRate(const RS_MNG_STA_INFO_S* staInfo, RS_MNG_RATE_S* r
   return lowerSuppRateIdx;
 }
 
+#if 0   // NNEDS_PORTING
+// TODO(fxbug.dev/51295): Supports A-MSDU
 static void tlcMngNotifyAmsdu(const RS_MNG_STA_INFO_S* staInfo, U16 amsduSize, U16 tidBitmap) {
   int i;
 
@@ -1462,11 +1532,12 @@ static void tlcMngNotifyAmsdu(const RS_MNG_STA_INFO_S* staInfo, U16 amsduSize, U
     }
   }
 }
+#endif  // NEEDS_PORTING
 
 static void _rsMngFillNonHtRates(const RS_MNG_STA_INFO_S* staInfo, struct iwl_lq_cmd* lqCmd, U08 i,
                                  RS_MNG_RATE_S* rsMngRate) {
-  BOOLEAN togglingPossible = _rsMngIsAntSupported(staInfo, rsMngGetDualAntMsk()) &&
-                             btCoexManagerIsAntAvailable(staInfo->mvm, BT_COEX_SHARED_ANT_ID);
+  bool togglingPossible = _rsMngIsAntSupported(staInfo, rsMngGetDualAntMsk()) &&
+                          btCoexManagerIsAntAvailable(staInfo->mvm, BT_COEX_SHARED_ANT_ID);
 
   if (_rsMngRateGetMode(rsMngRate) != TLC_MNG_MODE_LEGACY) {
     U08 currIdx = _rsMngRateGetIdx(rsMngRate);
@@ -1474,8 +1545,8 @@ static void _rsMngFillNonHtRates(const RS_MNG_STA_INFO_S* staInfo, struct iwl_lq
     _rsMngRateSetMode(rsMngRate, TLC_MNG_MODE_LEGACY);
     _rsMngRateSetModulation(rsMngRate, RS_MNG_MODUL_LEGACY);
     _rsMngRateSetBw(rsMngRate, CHANNEL_WIDTH20);
-    _rsMngRateSetLdpc(rsMngRate, FALSE);
-    _rsMngRateSetStbc(rsMngRate, FALSE);
+    _rsMngRateSetLdpc(rsMngRate, false);
+    _rsMngRateSetStbc(rsMngRate, false);
 
     // Always start with the non-shared antenna if it's available. If there's toggling, it
     // doesn't make much difference, and if there's no toggling due to bt-coex it promises we'll
@@ -1547,8 +1618,9 @@ static void _rsMngBuildRatesTbl(const RS_MNG_STA_INFO_S* staInfo, struct iwl_lq_
   _rsMngFillNonHtRates(staInfo, lqCmd, i, &rsMngRate);
 }
 
-static void _rsMngFillLQCmd(RS_MNG_STA_INFO_S* staInfo, struct iwl_lq_cmd* lqCmd) {
+static void _rsMngFillLQCmd(RS_MNG_STA_INFO_S* staInfo) {
   int i;
+  struct iwl_lq_cmd* lqCmd = &staInfo->mvmsta->lq_sta.rs_drv.lq;
 
   memset(lqCmd, 0, sizeof(*lqCmd));
   lqCmd->sta_id = staInfo->mvmsta->sta_id;
@@ -1588,12 +1660,23 @@ static void _rsMngFillLQCmd(RS_MNG_STA_INFO_S* staInfo, struct iwl_lq_cmd* lqCmd
       lqCmd->rs_table[i] |= cpu_to_le32(RATE_MCS_RTS_REQUIRED_MSK);
     }
   }
+
+  DBG_PRINTF(
+      UT, TLC_OFFLOAD_DBG, INFO,
+      "---------\nLQ cmd data\nsta_id: %02x\ntpc: %02x\nflags: %02x\nmimo_delim: %02x\nssam: "
+      "%02x\ndsam: %02x\ninit_rate_idx: %02x %02x %02x %02x\nagg_time_limit: %04x\nadsh: "
+      "%02x\nafcl: %02x\nreserved2: %08x\nrs_table first: %08x\nss_params: "
+      "%08x\n-----------",
+      lqCmd->sta_id, lqCmd->reduced_tpc, lqCmd->flags, lqCmd->mimo_delim,
+      lqCmd->single_stream_ant_msk, lqCmd->dual_stream_ant_msk, lqCmd->initial_rate_index[0],
+      lqCmd->initial_rate_index[1], lqCmd->initial_rate_index[2], lqCmd->initial_rate_index[3],
+      lqCmd->agg_time_limit, lqCmd->agg_disable_start_th, lqCmd->agg_frame_cnt_limit,
+      lqCmd->reserved2, cpu_to_le32(lqCmd->rs_table[0]), lqCmd->ss_params);
 }
 
 // rs_update_rate_tbl
-static void _rsMngUpdateRateTbl(RS_MNG_STA_INFO_S* staInfo, BOOLEAN notifyHost) {
-  _rsMngFillLQCmd(staInfo, &staInfo->mvmsta->lq_sta.rs_drv.lq);
-
+static void _rsMngUpdateRateTbl(RS_MNG_STA_INFO_S* staInfo) {
+  _rsMngFillLQCmd(staInfo);
   iwl_mvm_send_lq_cmd(staInfo->mvm, &staInfo->mvmsta->lq_sta.rs_drv.lq, !staInfo->enabled);
 }
 
@@ -1623,9 +1706,8 @@ static void _rsMngSetVisitedColumn(RS_MNG_STA_INFO_S* staInfo, RS_MNG_COLUMN_DES
   BUILD_BUG_ON(!((RS_MNG_COL_HE_1_6_SISO_ANT_A ^ RS_MNG_COL_HE_1_6_SISO_ANT_B) == 1));
   BUILD_BUG_ON(!((RS_MNG_COL_HE_0_8_SISO_ANT_A ^ RS_MNG_COL_HE_0_8_SISO_ANT_B) == 1));
 
-  DBG_PRINTF(UT, TLC_OFFLOAD_DBG, INFO,
-             "_rsMngSetVisitedColumn: colId %d, stbc allowed %d, visited columns 0x%x", colId,
-             _rsMngIsStbcSupported(staInfo), staInfo->visitedColumns);
+  IWL_DEBUG_RATE(NULL, "_rsMngSetVisitedColumn: colId %d, stbc allowed %d, visited columns 0x%x",
+                 colId, _rsMngIsStbcSupported(staInfo), staInfo->visitedColumns);
 
   staInfo->visitedColumns |= BIT(colId);
   if (rsMngColumns[colId].mode == RS_MNG_MODUL_SISO && _rsMngIsStbcSupported(staInfo)) {
@@ -1636,6 +1718,7 @@ static void _rsMngSetVisitedColumn(RS_MNG_STA_INFO_S* staInfo, RS_MNG_COLUMN_DES
              staInfo->visitedColumns);
 }
 
+#if 0  // NEEDS_PORTING
 static U32 _rsMngVhtRateToPhyRate(U32 bw, RS_MCS_E mcs, RS_MNG_GI_E gi, RS_MNG_MODULATION_E nss) {
   U32 bitrate;
 
@@ -1730,6 +1813,7 @@ static U32 _rsMngRateToPhyRate(TLC_MNG_MODE_E mode, U32 bw, RS_MCS_E mcs, RS_MNG
 
   return 0;
 }
+
 
 static RS_MNG_TX_AMSDU_SIZE_E _rsMngAmsduSize(const RS_MNG_STA_INFO_S* staInfo, TLC_MNG_MODE_E mode,
                                               U32 bw, RS_MCS_E mcs, RS_MNG_GI_E gi,
@@ -2022,7 +2106,7 @@ out:
 }
 
 // return: TRUE if there is a better start rate, so need to send LQ command
-// newIdx: valid only if the return value is true
+// newIdx: valid only if the return value is TRUE
 //        RS_MNG_INVALID_RATE_IDX - if need to keep using the current index
 //        new index to use        - if there is another rate that will provide better tpt / tpc
 static RS_MNG_ACTION_E _rsMngSearchBetterStartRate(const RS_MNG_STA_INFO_S* staInfo,
@@ -2373,6 +2457,7 @@ static BOOLEAN _rsMngShouldStartUpscaleSearchCycle(const RS_MNG_STA_INFO_S* staI
   // isUpscaleSearchCycle here is referring to the type of the previous search cycle.
   // This is here to prevent two consecutive upscale search cycles (i.e. started because of
   // passing the successFramesLimit threshold) within too short a time.
+  zx_time_t cur_time = zx::clock::get_monotonic().get();
   return staInfo->totalFramesSuccess > staLimits->successFramesLimit &&
          (!staInfo->isUpscaleSearchCycle ||
           time_after(jiffies,
@@ -2405,10 +2490,11 @@ static BOOLEAN _rsMngShouldStartSearchCycle(const RS_MNG_STA_INFO_S* staInfo,
 
   return FALSE;
 }
+#endif  // NEEDS_PORTING
 
 static void _rsMngPrepareForBwChangeAttempt(RS_MNG_STA_INFO_S* staInfo,
                                             const RS_MNG_RATE_S* rsMngRate) {
-  BOOLEAN isNonHt = _rsMngRateGetMode(rsMngRate) == TLC_MNG_MODE_LEGACY;
+  bool isNonHt = _rsMngRateGetMode(rsMngRate) == TLC_MNG_MODE_LEGACY;
   RS_MCS_E mcs;
   U32 bw;
   U32 isMimo;
@@ -2437,6 +2523,7 @@ static void _rsMngPrepareForBwChangeAttempt(RS_MNG_STA_INFO_S* staInfo,
   }
 }
 
+#if 0  // NEEDS_PORTING
 static void _rsMngSetStayInCol(RS_MNG_STA_INFO_S* staInfo) {
   staInfo->rsMngState = RS_MNG_STATE_STAY_IN_COLUMN;
   staInfo->stableColumn = staInfo->rateTblInfo.column;
@@ -2606,7 +2693,6 @@ static RS_MNG_TPC_ALLOWED_REASON_E _rsMngTpcAllowed(const RS_MNG_STA_INFO_S* sta
                  "_rsMngTpcAllowed: TPC disallowed because amsdu is not yet active");
       return RS_MNG_TPC_DISALLOWED_AMSDU_INACTIVE;
     }
-
     if (time_before(jiffies,
                     staInfo->lastEnableJiffies + usecs_to_jiffies(RS_MNG_TPC_AMSDU_ENABLE))) {
       DBG_PRINTF(UT, TLC_OFFLOAD_DBG, INFO,
@@ -2646,7 +2732,7 @@ static RS_MNG_TPC_ACTION _rsMngTpcGetAction(const RS_MNG_STA_INFO_S* staInfo) {
   }
 
   if (!tpcInactive) {
-    // if testing is true, then we are now operating on results from a tpc_action_increase test
+    // if testing is TRUE, then we are now operating on results from a tpc_action_increase test
     // window. In this case we don't want to completely disable tpc even if the current SR is
     // relatively bad. Instead we will just decrease back to the last good step.
     if (currStepSR <= RS_MNG_TPC_SR_DISABLE && !tpcTbl->testing) {
@@ -2854,7 +2940,7 @@ static void _rsMngRateScalePerform(RS_MNG_STA_INFO_S* staInfo, BOOLEAN forceUpda
         updateLmac |= _rsMngStartSearchCycle(staInfo, currWin->averageTpt, &updateHost);
       } else {
         // Note that if the rate didn't really change the host-update function will not send
-        // a notification to host regadless of the value of this boolean.
+        // a notification to host regadless of the value of this BOOLEAN.
         updateHost = TRUE;
       }
     }
@@ -3272,9 +3358,10 @@ static BOOLEAN _rsMngUpdateGlobalStats(RS_MNG_STA_INFO_S* staInfo, TLC_STAT_COMM
   return FALSE;
 }
 
+// TODO(fxbug.dev/84605): Rate Selection
 static void tlcStatUpdateHandler(RS_MNG_STA_INFO_S* staInfo, TLC_STAT_COMMON_API_S* stats,
                                  struct iwl_mvm* mvm, struct ieee80211_sta* sta, int tid,
-                                 bool is_ndp) {
+                                 BOOLEAN is_ndp) {
   BOOLEAN forceLmacUpdate = FALSE;
   int i;
 
@@ -3335,6 +3422,8 @@ static void tlcStatUpdateHandler(RS_MNG_STA_INFO_S* staInfo, TLC_STAT_COMMON_API
     staInfo->ignoreNextTlcNotif = FALSE;
   }
 }
+
+#endif  // NEEDS_PORTING
 
 /*********************************************************************/
 /*      External Functions + funcs used by them                      */
@@ -3418,7 +3507,7 @@ static void _rsMngSetInitRate(RS_MNG_STA_INFO_S* staInfo, RS_MNG_RATE_S* rsMngRa
   _rsMngRateSetMode(rsMngRate, mode);
   if (mode == TLC_MNG_MODE_LEGACY) {
     _rsMngRateSetModulation(rsMngRate, RS_MNG_MODUL_LEGACY);
-    _rsMngRateSetLdpc(rsMngRate, FALSE);
+    _rsMngRateSetLdpc(rsMngRate, false);
   } else {
     _rsMngRateSetModulation(rsMngRate, RS_MNG_MODUL_SISO);
     _rsMngRateSetLdpc(rsMngRate, _rsMngIsLdpcAllowed(staInfo));
@@ -3431,20 +3520,19 @@ static void _rsMngSetInitRate(RS_MNG_STA_INFO_S* staInfo, RS_MNG_RATE_S* rsMngRa
   } else {
     _rsMngRateSetGi(rsMngRate, HT_VHT_NGI);
   }
-  _rsMngRateSetBfer(rsMngRate, FALSE);
+  _rsMngRateSetBfer(rsMngRate, false);
 
   if (mode > TLC_MNG_MODE_LEGACY && _rsMngIsStbcAllowed(staInfo, rsMngRate)) {
-    _rsMngRateSetStbc(rsMngRate, TRUE);
+    _rsMngRateSetStbc(rsMngRate, true);
     _rsMngRateSetAnt(rsMngRate, rsMngGetDualAntMsk());
   } else {
-    _rsMngRateSetStbc(rsMngRate, FALSE);
+    _rsMngRateSetStbc(rsMngRate, false);
     _rsMngRateSetAnt(rsMngRate, rsMngGetSingleAntMsk(staInfo->config.chainsEnabled));
   }
 
   if (mode > TLC_MNG_MODE_LEGACY) {
     U08 idx =
         (U08)(_rsMngGetSuppRatesSameMode(staInfo, rsMngRate) & BIT(RS_MCS_3) ? RS_MCS_3 : RS_MCS_0);
-
     _rsMngRateSetIdx(rsMngRate, idx);
   } else {
     if (LSB2ORD(nonHtRates) > RS_NON_HT_RATE_CCK_LAST) {
@@ -3472,25 +3560,25 @@ static void rsMngInitTlcTbl(RS_MNG_STA_INFO_S* staInfo, RS_MNG_TBL_INFO_S* tblIn
   tblInfo->column = _rsMngGetColByRate(&(tblInfo->rsMngRate));
   staInfo->stableColumn = tblInfo->column;
 
-  _rsMngUpdateRateTbl(staInfo, TRUE);
+  _rsMngUpdateRateTbl(staInfo);
 }
 
-static void rsMngResetStaInfo(struct iwl_mvm* mvm, struct ieee80211_sta* sta,
-                              struct iwl_mvm_sta* mvmsta, RS_MNG_STA_INFO_S* staInfo,
-                              BOOLEAN reconfigure) {
+static void rsMngResetStaInfo(struct iwl_mvm* mvm, struct iwl_mvm_sta* mvmsta,
+                              RS_MNG_STA_INFO_S* staInfo, bool reconfigure) {
   U32 fixedRate = staInfo->fixedRate;
   U16 aggDurationLimit = staInfo->aggDurationLimit;
   U08 amsduInAmpdu = staInfo->amsduInAmpdu;
-  BOOLEAN longAggEnabled = staInfo->longAggEnabled;
+  bool longAggEnabled = staInfo->longAggEnabled;
 
   _memclr(staInfo, sizeof(*staInfo));
 
+  zx_time_t cur_time = zx_clock_get_monotonic();
   staInfo->mvm = mvm;
-  staInfo->sta = sta;
+  // staInfo->sta = sta;
   staInfo->mvmsta = mvmsta;
-  staInfo->lastSearchCycleEndTimeJiffies = jiffies;
-  staInfo->lastRateUpscaleTimeJiffies = jiffies;
-  staInfo->lastEnableJiffies = jiffies;
+  staInfo->lastSearchCycleEndTimestamp = cur_time;
+  staInfo->lastRateUpscaleTimestamp = cur_time;
+  staInfo->lastEnableTimestamp = cur_time;
 
   if (reconfigure) {
     staInfo->fixedRate = fixedRate;
@@ -3511,7 +3599,7 @@ static void rsMngResetStaInfo(struct iwl_mvm* mvm, struct ieee80211_sta* sta,
   staInfo->tpcTable.currStep = RS_MNG_TPC_DISABLED;
   staInfo->staBuffSize = RS_MNG_AGG_FRAME_CNT_LIMIT;
   staInfo->amsduEnabledSize = RS_MNG_AMSDU_INVALID;
-  staInfo->amsduSupport = FALSE;
+  staInfo->amsduSupport = false;
   staInfo->failSafeCounter = 0;
   staInfo->amsduBlacklist = 0;
 }
@@ -3614,9 +3702,9 @@ static void _rsMngTlcInit(RS_MNG_STA_INFO_S* staInfo) {
 /*                        Cmd Handlers                                */
 /**********************************************************************/
 
-static void cmdHandlerTlcMngConfig(struct iwl_mvm* mvm, struct ieee80211_sta* sta,
-                                   struct iwl_mvm_sta* mvmsta, RS_MNG_STA_INFO_S* staInfo,
-                                   TLC_MNG_CONFIG_PARAMS_CMD_API_S* config, BOOLEAN reconfigure) {
+void cmdHandlerTlcMngConfig(struct iwl_mvm* mvm, struct iwl_mvm_sta* mvmsta,
+                            RS_MNG_STA_INFO_S* staInfo, TLC_MNG_CONFIG_PARAMS_CMD_API_S* config,
+                            bool reconfigure) {
   if (!_tlcMngConfigValid(config)) {
     return;
   }
@@ -3634,14 +3722,15 @@ static void cmdHandlerTlcMngConfig(struct iwl_mvm* mvm, struct ieee80211_sta* st
     }
   }
 
-  rsMngResetStaInfo(mvm, sta, mvmsta, staInfo, staInfo->enabled && reconfigure);
+  rsMngResetStaInfo(mvm, mvmsta, staInfo, staInfo->enabled && reconfigure);
   BUILD_BUG_ON(sizeof(staInfo->config) != sizeof(*config));
   memcpy(&staInfo->config, config, sizeof(staInfo->config));
 
-  rsMngInitAmsdu(staInfo);
+  // TODO(fxbug.dev/51295): Supports A-MSDU
+  // rsMngInitAmsdu(staInfo);
 
   // send LQ command with basic rates table
   _rsMngTlcInit(staInfo);
 
-  staInfo->enabled = TRUE;
+  staInfo->enabled = true;
 }

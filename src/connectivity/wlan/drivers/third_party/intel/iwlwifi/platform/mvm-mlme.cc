@@ -492,14 +492,56 @@ zx_status_t mac_set_key(struct iwl_mvm_vif* mvmvif, struct iwl_mvm_sta* mvmsta, 
 // Set the association result to the firmware.
 //
 // The current mac context is set by mac_configure_bss() with default values.
-//   TODO(fxbug.dev/36683): supports HT (802.11n)
 //   TODO(fxbug.dev/36684): supports VHT (802.11ac)
 //
 zx_status_t mac_configure_assoc(struct iwl_mvm_vif* mvmvif, uint32_t options,
                                 const wlan_assoc_ctx_t* assoc_ctx) {
   zx_status_t ret = ZX_OK;
-
   IWL_INFO(ctx, "Associating ...\n");
+
+  // TODO(fxbug.dev/86715): this RCU-unprotected access is safe as deletions from the map are
+  // RCU-synchronized from API calls to mac_stop() in this same thread.
+  struct iwl_mvm_sta* mvm_sta = mvmvif->mvm->fw_id_to_mac_id[mvmvif->ap_sta_id];
+  if (!mvm_sta) {
+    IWL_ERR(mvmvif, "sta info is not set before association.\n");
+    ret = ZX_ERR_BAD_STATE;
+    return ret;
+  }
+
+  // Save band info into interface struct for future usage.
+  mvmvif->phy_ctxt->band = iwl_mvm_get_channel_band(assoc_ctx->channel.primary);
+
+  mvm_sta->bw = assoc_ctx->channel.cbw;
+  // Record the intersection of AP and station supported rate to mvm_sta.
+  ZX_ASSERT(assoc_ctx->rates_cnt <= sizeof(mvm_sta->supp_rates));
+  memcpy(mvm_sta->supp_rates, assoc_ctx->rates, assoc_ctx->rates_cnt);
+
+  // Copy HT related fields from wlan_assoc_ctx_t.
+  mvm_sta->support_ht = assoc_ctx->has_ht_cap;
+  if (assoc_ctx->has_ht_cap) {
+    memcpy(&mvm_sta->ht_cap, &assoc_ctx->ht_cap, sizeof(struct ieee80211_ht_capabilities));
+  }
+
+  // Change the station states step by step.
+  ret = iwl_mvm_mac_sta_state(mvmvif, mvm_sta, IWL_STA_NONE, IWL_STA_AUTH);
+  if (ret != ZX_OK) {
+    IWL_ERR(mvmvif, "cannot set state from NONE to AUTH: %s\n", zx_status_get_string(ret));
+    return ret;
+  }
+
+  ret = iwl_mvm_mac_sta_state(mvmvif, mvm_sta, IWL_STA_AUTH, IWL_STA_ASSOC);
+  if (ret != ZX_OK) {
+    IWL_ERR(mvmvif, "cannot set state from AUTH to ASSOC: %s\n", zx_status_get_string(ret));
+    return ret;
+  }
+  ret = iwl_mvm_mac_sta_state(mvmvif, mvm_sta, IWL_STA_ASSOC, IWL_STA_AUTHORIZED);
+  if (ret != ZX_OK) {
+    IWL_ERR(mvmvif, "cannot set state from ASSOC to AUTHORIZED: %s\n", zx_status_get_string(ret));
+    return ret;
+  }
+
+  // Tell firmware to pass multicast packets to driver.
+  iwl_mvm_configure_filter(mvmvif->mvm);
 
   {
     auto lock = std::lock_guard(mvmvif->mvm->mutex);

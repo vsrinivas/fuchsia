@@ -14,6 +14,8 @@
 #include <string.h>
 #include <zircon/compiler.h>
 
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/debug.h"
+
 typedef uint32_t __be32;
 typedef uint16_t __be16;
 typedef uint64_t __le64;
@@ -21,6 +23,12 @@ typedef uint32_t __le32;
 typedef uint16_t __le16;
 typedef int8_t __s8;
 typedef uint8_t __u8;
+
+#define U08 uint8_t
+#define U16 uint16_t
+#define U32 uint32_t
+#define U64 uint64_t
+#define INLINE inline
 
 #if defined(__cplusplus)
 extern "C++" {
@@ -230,26 +238,17 @@ static inline int64_t atomic64_inc_return(atomic64_t* atomic) {
 #define max_t(type, a, b) MAX((type)(a), (type)(b))
 #define min_t(type, a, b) MIN((type)(a), (type)(b))
 
-// Find the first asserted LSB.
-//
-// Returns:
-//   [0, num_bits): found. The index of first asserted bit (the least significant one.
-//   num_bits: No asserted bit found in num_bits.
-//
-static inline size_t find_first_bit(unsigned* bits, const size_t num_bits) {
-  const size_t num_of_ints = DIV_ROUND_UP(num_bits, BITS_PER_INT);
-  size_t ret = num_bits;
+size_t find_first_bit(unsigned int* bits, const size_t num_bits);
 
-  for (size_t i = 0; i < num_of_ints; ++i) {
-    if (bits[i] == 0) {
-      continue;
-    }
-    ret = (i * BITS_PER_INT) + __builtin_ctz(bits[i]);
-    break;
-  }
+size_t find_last_bit(unsigned int* bits, const size_t num_bits);
 
-  return MIN(num_bits, ret);
-}
+#define BITARR_TYPE_NUM_BITS (sizeof(uint64_t) * 8)
+
+size_t find_next_bit(unsigned int* bitarr, size_t num_bits, size_t bit_offset);
+
+#define for_each_set_bit(bit, bitarr, num_bits)                          \
+  for ((bit) = find_first_bit((bitarr), (num_bits)); (bit) < (num_bits); \
+       (bit) = find_next_bit((bitarr), (num_bits), (bit) + 1))
 
 // This function calculates the hamming weight of an 8-bit bitmap.
 static inline uint8_t hweight8(uint8_t bitmap) {

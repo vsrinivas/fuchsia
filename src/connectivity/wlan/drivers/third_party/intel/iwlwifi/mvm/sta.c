@@ -125,29 +125,13 @@ zx_status_t iwl_mvm_sta_send_to_fw(struct iwl_mvm* mvm, struct iwl_mvm_sta* mvm_
     }
   }
 
-#if 1  // NEEDS_PORTING
-  add_sta_cmd.station_flags |=
-      cpu_to_le32(STA_FLG_MIMO_EN_SISO) | cpu_to_le32(STA_FLG_FAT_EN_20MHZ);
-#else
+#if 0  // NEEDS_PORTING
+// TODO(fxbug.dev/51295): Supports A-MSDU
+  mpdu_dens = sta->ht_cap.ampdu_density;
   uint32_t agg_size = 0, mpdu_dens = 0;
-  switch (sta->bandwidth) {
-    case IEEE80211_STA_RX_BW_160:
-      add_sta_cmd.station_flags |= cpu_to_le32(STA_FLG_FAT_EN_160MHZ);
-    /* fall through */
-    case IEEE80211_STA_RX_BW_80:
-      add_sta_cmd.station_flags |= cpu_to_le32(STA_FLG_FAT_EN_80MHZ);
-    /* fall through */
-    case IEEE80211_STA_RX_BW_40:
-      add_sta_cmd.station_flags |= cpu_to_le32(STA_FLG_FAT_EN_40MHZ);
-    /* fall through */
-    case IEEE80211_STA_RX_BW_20:
-      if (sta->ht_cap.ht_supported) {
-        add_sta_cmd.station_flags |= cpu_to_le32(STA_FLG_FAT_EN_20MHZ);
-      }
-      break;
-  }
 
-  switch (sta->rx_nss) {
+  //TODO(fxbug.dev/91457): Use real NSS data for filling the flag.
+  switch (mvm_sta->rx_nss) {
     case 1:
       add_sta_cmd.station_flags |= cpu_to_le32(STA_FLG_MIMO_EN_SISO);
       break;
@@ -176,14 +160,8 @@ zx_status_t iwl_mvm_sta_send_to_fw(struct iwl_mvm* mvm, struct iwl_mvm_sta* mvm_
       /* nothing */
       break;
   }
-
-  if (sta->ht_cap.ht_supported) {
-    add_sta_cmd.station_flags_msk |=
-        cpu_to_le32(STA_FLG_MAX_AGG_SIZE_MSK | STA_FLG_AGG_MPDU_DENS_MSK);
-
-    mpdu_dens = sta->ht_cap.ampdu_density;
-  }
-
+  
+  // TODO(fxbug.dev/36684): Support VHT (802.11ac)
   if (sta->vht_cap.vht_supported) {
     agg_size = sta->vht_cap.cap & IEEE80211_VHT_CAP_MAX_A_MPDU_LENGTH_EXPONENT_MASK;
     agg_size >>= IEEE80211_VHT_CAP_MAX_A_MPDU_LENGTH_EXPONENT_SHIFT;
@@ -215,6 +193,34 @@ zx_status_t iwl_mvm_sta_send_to_fw(struct iwl_mvm* mvm, struct iwl_mvm_sta* mvm_
     add_sta_cmd.uapsd_acs |= add_sta_cmd.uapsd_acs << 4;
     add_sta_cmd.sp_length = sta->max_sp ? sta->max_sp * 2 : 128;
   }
+
+#else
+  add_sta_cmd.station_flags |=
+      cpu_to_le32(STA_FLG_MIMO_EN_SISO) | cpu_to_le32(STA_FLG_FAT_EN_20MHZ);
+
+  add_sta_cmd.station_flags_msk |=
+      cpu_to_le32(STA_FLG_MAX_AGG_SIZE_MSK | STA_FLG_AGG_MPDU_DENS_MSK);
+
+  switch (mvm_sta->bw) {
+    add_sta_cmd.station_flags |= cpu_to_le32(STA_FLG_FAT_EN_160MHZ);
+    __attribute__((fallthrough));
+    case CHANNEL_BANDWIDTH_CBW80:
+      add_sta_cmd.station_flags |= cpu_to_le32(STA_FLG_FAT_EN_80MHZ);
+      __attribute__((fallthrough));
+    case CHANNEL_BANDWIDTH_CBW40:
+      add_sta_cmd.station_flags |= cpu_to_le32(STA_FLG_FAT_EN_40MHZ);
+      __attribute__((fallthrough));
+    case CHANNEL_BANDWIDTH_CBW20:
+      if (mvm_sta->support_ht) {
+        add_sta_cmd.station_flags |= cpu_to_le32(STA_FLG_FAT_EN_20MHZ);
+      }
+      break;
+    default:
+      IWL_WARN(NULL, "No bandwidth from station is indicated, hardcode it to 40mhz.");
+      add_sta_cmd.station_flags |= cpu_to_le32(STA_FLG_FAT_EN_40MHZ);
+  }
+  add_sta_cmd.station_flags |= cpu_to_le32(STA_FLG_MIMO_EN_MIMO2);
+
 #endif  // NEEDS_PORTING
 
   status = ADD_STA_SUCCESS;

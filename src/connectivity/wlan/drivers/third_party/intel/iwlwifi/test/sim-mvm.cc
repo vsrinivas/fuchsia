@@ -68,6 +68,7 @@ zx_status_t SimMvm::SendCmd(struct iwl_host_cmd* cmd, bool* notify_wait) {
         case BT_CONFIG:
         case MAC_CONTEXT_CMD:
         case TXPATH_FLUSH:
+        case LQ_CMD:
         case SCAN_OFFLOAD_REQUEST_CMD:
         case SCAN_CFG_CMD:
         case SCAN_REQ_UMAC:

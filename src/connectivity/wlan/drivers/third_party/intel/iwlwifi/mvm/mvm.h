@@ -137,6 +137,7 @@ struct iwl_mvm_phy_ctxt {
   uint32_t ref;
 
   wlan_channel_t chandef;
+  wlan_info_band_t band;
 
 #ifdef CPTCFG_IWLWIFI_FRQ_MGR
   /* Frequency Manager tx power limit*/

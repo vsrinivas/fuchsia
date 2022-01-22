@@ -11,6 +11,7 @@ visibility = [ "//src/connectivity/wlan/drivers/third_party/intel/iwlwifi/*" ]
 # Platform-support library for the iwlwifi driver.
 source_set("platform") {
   sources = [
+    "compiler.cc",
     "debug.cc",
     "device.cc",
     "ieee80211.cc",

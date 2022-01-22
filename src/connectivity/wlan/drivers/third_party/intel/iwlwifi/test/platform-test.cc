@@ -129,6 +129,49 @@ TEST_F(PlatformTest, find_first_bit) {
   EXPECT_EQ(32, find_first_bit(test2, 64));
 }
 
+TEST_F(PlatformTest, find_last_bit) {
+  unsigned test0[] = {
+      0x00000000,
+      0x00000000,
+  };
+  EXPECT_EQ(1, find_last_bit(test0, 1));    // Not found
+  EXPECT_EQ(31, find_last_bit(test0, 31));  // Not found
+  EXPECT_EQ(32, find_last_bit(test0, 32));  // Not found
+  EXPECT_EQ(64, find_last_bit(test0, 64));  // Not found
+
+  unsigned test1[] = {
+      0x40000000,
+      0x00010001,
+  };
+  ASSERT_EQ(sizeof(*test1), 4);
+  EXPECT_EQ(1, find_last_bit(test1, 1));  // Not found
+  EXPECT_EQ(30, find_last_bit(test1, 31));
+  EXPECT_EQ(30, find_last_bit(test1, 32));
+  EXPECT_EQ(32, find_last_bit(test1, 33));
+  EXPECT_EQ(32, find_last_bit(test1, 48));
+  EXPECT_EQ(48, find_last_bit(test1, 64));
+
+  unsigned test2[] = {
+      0x00000000,
+      0x80000000,
+  };
+  EXPECT_EQ(31, find_last_bit(test2, 31));  // Not found
+  EXPECT_EQ(32, find_last_bit(test2, 32));  // Not found
+  EXPECT_EQ(33, find_last_bit(test2, 33));  // Not found
+  EXPECT_EQ(63, find_last_bit(test2, 64));
+}
+
+TEST_F(PlatformTest, find_next_bit) {
+  unsigned test[] = {
+      0x00001000,
+      0x00000000,
+  };
+
+  EXPECT_EQ(32, find_next_bit(test, 32, 16));  // Not found
+  EXPECT_EQ(12, find_next_bit(test, 32, 0));
+  EXPECT_EQ(12, find_next_bit(test, 64, 0));
+}
+
 TEST_F(PlatformTest, HexDumpErrorHandling) {
   char buf[HEX_DUMP_BUF_SIZE - 1];
   uint8_t data[] = {};

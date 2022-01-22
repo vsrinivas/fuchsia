@@ -2837,8 +2837,8 @@ zx_status_t iwl_mvm_mac_sta_state(struct iwl_mvm_vif* mvmvif, struct iwl_mvm_sta
     ret = ZX_OK;
 
   } else if (old_state == IWL_STA_AUTH && new_state == IWL_STA_ASSOC) {
-#if 0   // NEEDS_PORTING
-        // TODO(36677): Supports AP role
+#if 0  // NEEDS_PORTING
+       // TODO(36677): Supports AP role
         if (mvmvif->mac_role == WLAN_INFO_MAC_ROLE_AP) {
             mvmvif->ap_assoc_sta_count++;
             iwl_mvm_mac_ctxt_changed(mvmvif, false, NULL);
@@ -2847,8 +2847,8 @@ zx_status_t iwl_mvm_mac_sta_state(struct iwl_mvm_vif* mvmvif, struct iwl_mvm_sta
             }
         }
 
-        iwl_mvm_rs_rate_init(mvm, sta, mvmvif->phy_ctxt->channel->band, false);
 #endif  // NEEDS_PORTING
+    iwl_mvm_rs_rate_init(mvm, mvm_sta, false);
 
     ret = iwl_mvm_update_sta(mvm, mvm_sta);
 

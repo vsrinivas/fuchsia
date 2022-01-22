@@ -271,9 +271,7 @@ class MacInterfaceTest : public WlanSoftmacDeviceTest, public MockTrans {
     VerifyExpectation();  // Ensure all expectations had been met.
 
     // Restore the original callback for other test cases not using the mock.
-    if (original_send_cmd) {
-      sim_trans_.iwl_trans()->ops->send_cmd = original_send_cmd;
-    }
+    ResetSendCmdFunc();
 
     // Stop the MAC to free resources we allocated.
     // This must be called after we verify the expected commands and restore the mock command
@@ -368,6 +366,17 @@ class MacInterfaceTest : public WlanSoftmacDeviceTest, public MockTrans {
     sim_trans_.iwl_trans()->ops->send_cmd = MockSendCmd;
   }
 
+  // Reset the send command function to the original one, so that the test case would stop checking
+  // commands one by one.
+  void ResetSendCmdFunc() {
+    if (original_send_cmd) {
+      IWL_INFO(nullptr, "Reseting send_cmd.");
+      sim_trans_.iwl_trans()->ops->send_cmd = original_send_cmd;
+    } else {
+      IWL_WARN(nullptr, "No original send_cmd found.");
+    }
+  }
+
   static zx_status_t MockSendCmd(struct iwl_trans* trans, struct iwl_host_cmd* cmd) {
     MacInterfaceTest* this_ = reinterpret_cast<MacInterfaceTest*>(trans->dev);
 
@@ -432,8 +441,57 @@ class MacInterfaceTest : public WlanSoftmacDeviceTest, public MockTrans {
       .bss_type = BSS_TYPE_INFRASTRUCTURE,
       .remote = true,
   };
+  // Assoc context without HT related data.
   static constexpr wlan_assoc_ctx_t kAssocCtx = {
       .listen_interval = kListenInterval,
+  };
+
+  // Assoc context with HT related data. (The values below comes from real data in manual test)
+  static constexpr wlan_assoc_ctx_t kHtAssocCtx = {
+      .listen_interval = kListenInterval,
+      .channel =
+          {
+              .primary = 157,
+              .cbw = CHANNEL_BANDWIDTH_CBW80,
+          },
+      .rates_cnt = 8,
+      .rates =
+          {
+              140,
+              18,
+              152,
+              36,
+              176,
+              72,
+              96,
+              108,
+          },
+      .has_ht_cap = true,
+      .ht_cap =
+          {
+              .supported_mcs_set =
+                  {
+                      .bytes =
+                          {
+                              255,
+                              255,
+                              0,
+                              0,
+                              0,
+                              0,
+                              0,
+                              0,
+                              0,
+                              0,
+                              0,
+                              0,
+                              1,
+                              0,
+                              0,
+                              0,
+                          },
+                  },
+          },
   };
 };
 
@@ -666,6 +724,61 @@ TEST_F(MacInterfaceTest, ClearAssocAfterFailedAssoc) {
 
   // Call ClearAssoc() again to check if it is handled correctly.
   ASSERT_NE(ZX_OK, ClearAssoc());
+}
+
+// This test case is to verify ConfigureAssoc() with HT wlan_assoc_ctx_t input can successfully
+// trigger LQ_CMD with correct data.
+TEST_F(MacInterfaceTest, AssocWithHtConfig) {
+  ASSERT_EQ(ZX_OK, SetChannel(&kChannel));
+  ASSERT_EQ(ZX_OK, ConfigureBss(&kBssConfig));
+
+  ExpectSendCmd(expected_cmd_id_list({
+      MockCommand(WIDE_ID(LONG_GROUP, ADD_STA)),
+      MockCommand(WIDE_ID(LONG_GROUP, LQ_CMD)),
+      MockCommand(WIDE_ID(LONG_GROUP, ADD_STA)),
+      MockCommand(WIDE_ID(LONG_GROUP, MAC_CONTEXT_CMD)),
+      MockCommand(WIDE_ID(LONG_GROUP, TIME_EVENT_CMD)),
+      MockCommand(WIDE_ID(LONG_GROUP, MCAST_FILTER_CMD)),
+  }));
+
+  // Extract LQ_CMD data.
+  struct iwl_mvm_sta* mvm_sta = mvmvif_->mvm->fw_id_to_mac_id[mvmvif_->ap_sta_id];
+  struct iwl_lq_cmd* lq_cmd = &mvm_sta->lq_sta.rs_drv.lq;
+
+  ASSERT_EQ(IWL_STA_NONE, mvm_sta->sta_state);
+  struct iwl_mvm* mvm = mvmvif_->mvm;
+  ASSERT_GT(list_length(&mvm->time_event_list), 0);
+
+  ASSERT_EQ(ZX_OK, ConfigureAssoc(&kHtAssocCtx));
+
+  // Verify the values in LQ_CMD API structure.
+  EXPECT_EQ(lq_cmd->sta_id, 0);
+  EXPECT_EQ(lq_cmd->reduced_tpc, 0);
+  EXPECT_EQ(lq_cmd->flags, 0);
+  EXPECT_EQ(lq_cmd->mimo_delim, 0);
+  EXPECT_EQ(lq_cmd->single_stream_ant_msk, 1);
+  EXPECT_EQ(lq_cmd->dual_stream_ant_msk, 3);
+  EXPECT_EQ(lq_cmd->initial_rate_index[0], 0);
+  EXPECT_EQ(lq_cmd->initial_rate_index[1], 0);
+  EXPECT_EQ(lq_cmd->initial_rate_index[2], 0);
+  EXPECT_EQ(lq_cmd->initial_rate_index[3], 0);
+  EXPECT_EQ(lq_cmd->agg_time_limit, 0x0fa0);
+  EXPECT_EQ(lq_cmd->agg_disable_start_th, 3);
+  EXPECT_EQ(lq_cmd->agg_frame_cnt_limit, 1);
+  EXPECT_EQ(lq_cmd->reserved2, 0);
+
+  // Verify rate_n_flags in the table.
+  EXPECT_EQ(lq_cmd->rs_table[0], 0x4103);
+  // The value of RS_MNG_RETRY_TABLE_INITIAL_RATE_NUM is 3.
+  EXPECT_EQ(lq_cmd->rs_table[3], 0x4102);
+
+  EXPECT_EQ(lq_cmd->ss_params, 0);
+
+  // Stop checking following commands one by one.
+  ResetSendCmdFunc();
+
+  // Clean up the association states.
+  ASSERT_EQ(ZX_OK, ClearAssoc());
 }
 
 TEST_F(MacInterfaceTest, InvalidSetKeysTest) {

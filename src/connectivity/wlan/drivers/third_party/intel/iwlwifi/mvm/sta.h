@@ -463,6 +463,14 @@ struct iwl_mvm_sta {
   uint8_t addr[ETH_ALEN];
 
   bool tdls;  // not really used, but add here to make code compile
+
+  channel_bandwidth_t bw;
+  bool support_ht;
+  struct ieee80211_ht_capabilities ht_cap;
+  bool support_vht;
+  struct ieee80211_vht_capabilities vht_cap;
+
+  uint8_t supp_rates[WLAN_MAC_MAX_RATES];
 };
 
 uint16_t iwl_mvm_tid_queued(struct iwl_mvm* mvm, struct iwl_mvm_tid_data* tid_data);

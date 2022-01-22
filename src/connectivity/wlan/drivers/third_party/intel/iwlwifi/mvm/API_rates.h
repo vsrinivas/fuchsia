@@ -408,14 +408,14 @@ typedef enum _MIMO_INDX_E {
 // bit-13 0==>normal guard interval 1==>short guard interval
 #define RATE_MCS_SGI_POS 13
 #define RATE_MCS_SGI_MSK (1 << RATE_MCS_SGI_POS)
-// bit-14 0==>chain A incative 1==>chain A active
+// bit-14 0==>chain A inactive 1==>chain A active
 #define RATE_MCS_ANT_A_POS 14
-// bit-15 0==>chain B incative 1==>chain B active
+// bit-15 0==>chain B inactive 1==>chain B active
 #define RATE_MCS_ANT_B_POS 15
 
 // new flags in shiloh (ext_flags)
 
-// bit-16 0==>chain B incative 1==>chain B active
+// bit-16 0==>chain B inactive 1==>chain B active
 #define RATE_MCS_ANT_C_POS 16
 // bit-15:14 mask for both ant.
 #define RATE_MCS_ANT_AB_MSK (RATE_MCS_ANT_A_MSK | RATE_MCS_ANT_B_MSK)
@@ -904,10 +904,10 @@ typedef struct _RATE_MCS_API_S_VER_0 {
 #define GET_HT_VHT_HE_RATE_CODE_API_M(c_rate) GET_HT_VHT_RATE_CODE_API_M_VER_1(c_rate)
 
 // vht supported
-#define GET_MIMO_INDEX_API_M_VER_3(c_rate)     \
-  (IS_RATE_OFDM_HT_API_M_VER_2(c_rate)         \
-       ? GET_HT_MIMO_INDEX_API_M_VER_1(c_rate) \
-       : IS_RATE_OFDM_VHT_HE_API_M(c_rate) ? GET_VHT_MIMO_INDX_API_M_VER_1(c_rate) : SISO_INDX)
+#define GET_MIMO_INDEX_API_M_VER_3(c_rate)                                     \
+  (IS_RATE_OFDM_HT_API_M_VER_2(c_rate) ? GET_HT_MIMO_INDEX_API_M_VER_1(c_rate) \
+   : IS_RATE_OFDM_VHT_HE_API_M(c_rate) ? GET_VHT_MIMO_INDX_API_M_VER_1(c_rate) \
+                                       : SISO_INDX)
 
 /**@} GroupRates */
 

@@ -36,8 +36,12 @@
 #ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_MVM__RATESCALEMNG_H_
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_MVM__RATESCALEMNG_H_
 
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-config.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm/API_rates.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm/apiGroupDatapath.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm/apiVersion.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/compiler.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/debug.h"
 
 #define RS_MNG_INVALID_VAL ((U32)-1)
 #define RS_MNG_RATE_MIN_FAILURE_TH 3
@@ -135,11 +139,11 @@ enum {
 };
 
 typedef struct _RS_MNG_STA_LIMITS_S {
-  U32 successFramesLimit;    // successfull frames threshold for starting a search cycle.
-  U32 failedFramesLimit;     // failed frames threshold for starting a search cycle.
-  U32 statsFlushTimeLimit;   // time thrshold for starting a search cycle, in usec.
-  U32 clearTblWindowsLimit;  // txed frames threshold for clearing table windows during
-                             // stay-in-col.
+  uint32_t successFramesLimit;    // successfull frames threshold for starting a search cycle.
+  uint32_t failedFramesLimit;     // failed frames threshold for starting a search cycle.
+  uint32_t statsFlushTimeLimit;   // time thrshold for starting a search cycle, in usec.
+  uint32_t clearTblWindowsLimit;  // txed frames threshold for clearing table windows during
+                                  // stay-in-col.
 } RS_MNG_STA_LIMITS_S;
 
 // TX AMSDU size
@@ -217,7 +221,7 @@ typedef enum _RS_MCS_E {
   RS_MCS_NUM,
 } RS_MCS_E;
 
-#define RS_MNG_MAX_RATES_NUM MAX((U08)RS_NON_HT_RATE_NUM, (U08)RS_MCS_NUM)
+#define RS_MNG_MAX_RATES_NUM MAX((uint8_t)RS_NON_HT_RATE_NUM, (uint8_t)RS_MCS_NUM)
 
 typedef enum _RS_MNG_STATE_E {
   RS_MNG_STATE_SEARCH_CYCLE_STARTED,
@@ -255,7 +259,7 @@ typedef enum _RS_MNG_COLUMN_DESC_E {
 } RS_MNG_COLUMN_DESC_E;
 
 /***********************************/
-typedef U16 TPT_BY_RATE_ARR[RS_MNG_MAX_RATES_NUM];
+typedef uint16_t TPT_BY_RATE_ARR[RS_MNG_MAX_RATES_NUM];
 
 /**************************************************/
 
@@ -329,14 +333,14 @@ typedef struct _RS_MNG_STA_INFO_S {
   U08 ignoreNextTlcNotif;                // The next notification recieved from lmac is irrelevant.
   // Could happen if aggregations are opened in the middle of a
   // search cycle.
-  U08 tryingRateUpscale;           // TRUE if now trying to upscale the rate.
-  U32 lastRateUpscaleTimeJiffies;  // system time of last rate upscale attempt.
-  U32 totalFramesFailed;           // total failed frames, any/all rates //total_failed
+  U08 tryingRateUpscale;               // TRUE if now trying to upscale the rate.
+  zx_time_t lastRateUpscaleTimestamp;  // system time of last rate upscale attempt.
+  U32 totalFramesFailed;               // total failed frames, any/all rates //total_failed
   U32 totalFramesSuccess;
   U16 framesSinceLastRun;  // number of frames sent since the last time rateScalePerform
   // ran.
-  U32 lastSearchCycleEndTimeJiffies;  // time since end of last search cycle
-  U32 txedFrames;                     // number of txed frames while stay in column, before clearing
+  zx_time_t lastSearchCycleEndTimestamp;  // time since end of last search cycle
+  U32 txedFrames;  // number of txed frames while stay in column, before clearing
   // the all the stat windows in the current table.
   U32 visitedColumns;  // bitmask of TX columns that were tested during this search cycle
   U32 searchBw;        // holds a new bandwidth to try before ending a search cycle,
@@ -352,11 +356,11 @@ typedef struct _RS_MNG_STA_INFO_S {
   RS_MNG_TX_AMSDU_SIZE_E amsduEnabledSize;
   U32 trafficLoad;
   U08 amsduBlacklist;
-  U32 lastTrafficLoadStatJiffies;
+  zx_time_t lastTrafficLoadStatTimestamp;
   U32 failSafeCounter;
   bool isUpscaleSearchCycle;  // TRUE if last search cycle started because of passing success
   // frame limit.
-  U32 lastEnableJiffies;  // timestamp of the last TX AMSDU enablement
+  zx_time_t lastEnableTimestamp;  // timestamp of the last TX AMSDU enablement
 
   RATE_MCS_API_U lastNotifiedRate;
 
@@ -385,18 +389,24 @@ struct _RS_MNG_COL_ELEM_S {
   ALLOW_COL_FUNC_F checks[MAX_COLUMN_CHECKS];
 };
 
+uint64_t nonht_rate_to_bit(uint8_t rate_value);
+
 static INLINE U08 rsMngGetDualAntMsk(void) { return TLC_MNG_CHAIN_A_MSK | TLC_MNG_CHAIN_B_MSK; }
 
 static INLINE U08 _rsMngGetSingleAntMsk(U08 chainsEnabled, uint8_t non_shared_ant,
                                         uint8_t valid_tx_ant) {
-  BUILD_BUG_ON(TLC_MNG_CHAIN_A_MSK != ANT_A);
-  BUILD_BUG_ON(TLC_MNG_CHAIN_B_MSK != ANT_B);
+  ZX_ASSERT(TLC_MNG_CHAIN_A_MSK == ANT_A);
+  ZX_ASSERT(TLC_MNG_CHAIN_B_MSK == ANT_B);
   // Since TLC offload only supports 2 chains, if the non-shared antenna isn't enabled,
   // chainsEnabled must have exactly one chain enabled.
   return (U08)(valid_tx_ant != rsMngGetDualAntMsk()
                    ? valid_tx_ant
                    : (non_shared_ant & chainsEnabled ? non_shared_ant : chainsEnabled));
 }
+
+void cmdHandlerTlcMngConfig(struct iwl_mvm* mvm, struct iwl_mvm_sta* mvmsta,
+                            RS_MNG_STA_INFO_S* staInfo, TLC_MNG_CONFIG_PARAMS_CMD_API_S* config,
+                            bool reconfigure);
 
 #define rsMngGetSingleAntMsk(chainsEnabled)                                  \
   (_rsMngGetSingleAntMsk((chainsEnabled), staInfo->mvm->cfg->non_shared_ant, \

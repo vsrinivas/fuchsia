@@ -39,18 +39,11 @@
 #include <fuchsia/hardware/wlan/phyinfo/c/banjo.h>
 
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-trans.h"
-#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm/fw-api.h"
-
-#define U08 uint8_t
-#define U16 uint16_t
-#define U32 uint32_t
-#define U64 uint64_t
-#define INLINE inline
-
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm/API_rates.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm/_rateScaleMng.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm/apiGroupDatapath.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm/apiVersion.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm/fw-api.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/kernel.h"
 
 #define RS_NAME "iwlwifi-rs"
@@ -92,8 +85,7 @@ struct iwl_lq_sta {
 int iwl_mvm_rate_control_register(void);
 void iwl_mvm_rate_control_unregister(void);
 int iwl_mvm_tx_protection(struct iwl_mvm* mvm, struct iwl_mvm_sta* mvmsta, bool enable);
-void iwl_mvm_rs_rate_init(struct iwl_mvm* mvm, struct ieee80211_sta* sta, wlan_info_band_t band,
-                          bool update);
+void iwl_mvm_rs_rate_init(struct iwl_mvm* mvm, struct iwl_mvm_sta* mvm_sta, bool update);
 void iwl_mvm_rs_tx_status(struct iwl_mvm* mvm, struct ieee80211_sta* sta, int tid,
                           struct ieee80211_tx_info* info, bool is_ndp);
 #ifdef CPTCFG_IWLWIFI_DEBUGFS
@@ -101,7 +93,7 @@ void iwl_mvm_reset_frame_stats(struct iwl_mvm* mvm);
 #endif
 
 void iwl_mvm_tlc_update_notif(struct iwl_mvm* mvm, struct iwl_rx_cmd_buffer* rxb);
-void rs_fw_rate_init(struct iwl_mvm* mvm, struct ieee80211_sta* sta, wlan_info_band_t band,
+void rs_fw_rate_init(struct iwl_mvm* mvm, struct iwl_mvm_sta* sta, wlan_info_band_t band,
                      bool update);
 void iwl_mvm_rs_add_sta(struct iwl_mvm* mvm, struct iwl_mvm_sta* mvmsta);
 int rs_fw_tx_protection(struct iwl_mvm* mvm, struct iwl_mvm_sta* mvmsta, bool enable);
