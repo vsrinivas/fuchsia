@@ -1930,3 +1930,16 @@
   reviewers: ['maruel@google.com', 'awolter@google.com', 'chaselatta@google.com', 'shayba@google.com', 'nsylvain@google.com', 'mangini@google.com', 'nmulcahey@google.com', 'dgilhooley@google.com', 'lijiaming@google.com', 'hjfreyer@google.com']
   submitted: '2021-12-02'
   reviewed: '2022-01-18'
+
+- name: 'RFC-0149'
+  title: 'FIDL encode validation not mandatory'
+  short_description: 'No longer require validation during FIDL encode. However, validation still will take place during decode and padding must be zeroed during encode.'
+  authors: ['bprosnitz@google.com']
+  file: '0149_fidl_encode_validation_not_mandatory.md'
+  area: ['FIDL']
+  issue: ['']
+  gerrit_change_id: ['608742']
+  status: ''
+  reviewers: [ 'pascallouis@google.com', 'yifeit@google.com', 'mkember@google.com']
+  submitted: '2021-11-19'
+  reviewed: ''
