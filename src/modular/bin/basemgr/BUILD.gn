@@ -122,9 +122,6 @@ source_set("lib") {
     "//src/modular/lib/fidl:environment",
     "//zircon/system/ulib/zx",
   ]
-
-  # TODO(fxbug.dev/58160): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-reorder-init-list" ]
 }
 
 executable("session_context_impl_unittest") {

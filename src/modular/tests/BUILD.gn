@@ -383,9 +383,6 @@ executable("stories_share_session_runners_test") {
     "//src/lib/fxl/test:gtest_main",
     "//src/modular/lib/modular_test_harness/cpp:test_harness_fixture",
   ]
-
-  # TODO(fxbug.dev/58160): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-reorder-init-list" ]
 }
 
 fuchsia_unittest_component("stories-share-session-runners-test") {

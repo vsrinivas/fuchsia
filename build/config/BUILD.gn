@@ -548,8 +548,6 @@ config("Wno-reorder-init-list") {
   visibility = [
     "//src/developer/memory/metrics/tests/*",
     "//src/lib/elflib/*",
-    "//src/modular/bin/basemgr/*",
-    "//src/modular/tests/*",
     "//third_party/*",
   ]
 }

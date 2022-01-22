@@ -141,8 +141,8 @@ class StoriesShareSessionRunnersTest : public modular_testing::TestHarnessFixtur
 // Tests that the same mod started in different stories will reuse the
 // runner started by the first mod because stories share the same environment.
 TEST_F(StoriesShareSessionRunnersTest, ModReusesRunner) {
-  auto first_intent = fuchsia::modular::Intent{.handler = kModuleWithFakeRunnerUrl,
-                                               .action = "com.google.fuchsia.module.runner"};
+  auto first_intent = fuchsia::modular::Intent{.action = "com.google.fuchsia.module.runner",
+                                               .handler = kModuleWithFakeRunnerUrl};
 
   // Add a mod that will be launched via a fake runner
   modular_testing::AddModToStory(test_harness(), "first_story", "mod_name",
@@ -153,8 +153,8 @@ TEST_F(StoriesShareSessionRunnersTest, ModReusesRunner) {
   EXPECT_EQ(1, fake_runner_->module_started_count());
 
   // Add the same mod and check that the runner wasn't launched again
-  auto second_intent = fuchsia::modular::Intent{.handler = kModuleWithFakeRunnerUrl,
-                                                .action = "com.google.fuchsia.module.runner"};
+  auto second_intent = fuchsia::modular::Intent{.action = "com.google.fuchsia.module.runner",
+                                                .handler = kModuleWithFakeRunnerUrl};
   modular_testing::AddModToStory(test_harness(), "second_story", "mod_name",
                                  std::move(second_intent));
   RunLoopUntil([&] { return fake_runner_->module_started_count() > 1 || runners_requested_ > 1; });
@@ -162,8 +162,8 @@ TEST_F(StoriesShareSessionRunnersTest, ModReusesRunner) {
   ASSERT_EQ(1, runners_requested_);
 
   // Add the same mod and check that the runner wasn't launched again
-  auto third_intent = fuchsia::modular::Intent{.handler = kModuleWithFakeRunnerUrl,
-                                               .action = "com.google.fuchsia.module.runner"};
+  auto third_intent = fuchsia::modular::Intent{.action = "com.google.fuchsia.module.runner",
+                                               .handler = kModuleWithFakeRunnerUrl};
   modular_testing::AddModToStory(test_harness(), "second_story", "mod_name_2_of_2",
                                  std::move(third_intent));
   RunLoopUntil([&] { return fake_runner_->module_started_count() > 2 || runners_requested_ > 1; });
@@ -171,8 +171,8 @@ TEST_F(StoriesShareSessionRunnersTest, ModReusesRunner) {
   ASSERT_EQ(1, runners_requested_);
 
   // Add the same mod and check that the runner wasn't launched again
-  auto fourth_intent = fuchsia::modular::Intent{.handler = kModuleWithFakeRunnerUrl,
-                                                .action = "com.google.fuchsia.module.runner"};
+  auto fourth_intent = fuchsia::modular::Intent{.action = "com.google.fuchsia.module.runner",
+                                                .handler = kModuleWithFakeRunnerUrl};
   modular_testing::AddModToStory(test_harness(), "third_story", "mod_name",
                                  std::move(fourth_intent));
   RunLoopUntil([&] { return fake_runner_->module_started_count() > 3 || runners_requested_ > 1; });
@@ -181,8 +181,8 @@ TEST_F(StoriesShareSessionRunnersTest, ModReusesRunner) {
 }
 
 TEST_F(StoriesShareSessionRunnersTest, AgentsCanConnectToRunnerComponentServices) {
-  auto intent = fuchsia::modular::Intent{.handler = kModuleWithFakeRunnerUrl,
-                                         .action = "com.google.fuchsia.module.runner"};
+  auto intent = fuchsia::modular::Intent{.action = "com.google.fuchsia.module.runner",
+                                         .handler = kModuleWithFakeRunnerUrl};
 
   // Add a mod that will be launched via a fake runner
   modular_testing::AddModToStory(test_harness(), "story", "mod_name", std::move(intent));
@@ -216,8 +216,8 @@ TEST_F(StoriesShareSessionRunnersTest, AgentsCanConnectToRunnerComponentServices
 
 // Tests that a runner can still access the fuchsia::intl::PropertyProvider from its environment.
 TEST_F(StoriesShareSessionRunnersTest, RunnerCanAccessIntlPropertyProvider) {
-  auto intent = fuchsia::modular::Intent{.handler = kModuleWithFakeRunnerUrl,
-                                         .action = "com.google.fuchsia.module.runner"};
+  auto intent = fuchsia::modular::Intent{.action = "com.google.fuchsia.module.runner",
+                                         .handler = kModuleWithFakeRunnerUrl};
 
   // Add a mod that will be launched via a fake runner
   modular_testing::AddModToStory(test_harness(), "story", "mod_name", std::move(intent));
