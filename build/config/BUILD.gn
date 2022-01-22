@@ -567,15 +567,6 @@ config("Wno-unused-function") {
   ]
 }
 
-# TODO(fxbug.dev/69507): clean up instances of this outside of third party code.
-config("Wno-deprecated-declarations") {
-  cflags = [ "-Wno-deprecated-declarations" ]
-  visibility = [
-    "//src/ui/input/lib/hid-input-report/*",
-    "//src/ui/scenic/lib/input/tests/*",
-  ]
-}
-
 config("Wno-range-loop-construct") {
   cflags = [ "-Wno-range-loop-construct" ]
   visibility = [ "//src/developer/debug/third_party/libunwindstack" ]
