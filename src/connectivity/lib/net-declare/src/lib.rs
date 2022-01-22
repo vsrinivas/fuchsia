@@ -85,6 +85,12 @@ pub use net_declare_macros::net_ip_v6;
 /// Declares a [`net_types::ethernet::Mac`] from a parsable MAC address in
 /// the form `aa:bb:cc:dd:ee:ff`.
 pub use net_declare_macros::net_mac;
+/// Declares a [`net_types::ip::Subnet<Ipv4Addr>`] from a parsable IPv4 CIDR
+/// address string.
+pub use net_declare_macros::net_subnet_v4;
+/// Declares a [`net_types::ip::Subnet<Ipv6Addr>`] from a parsable IPv6 CIDR
+/// address string.
+pub use net_declare_macros::net_subnet_v6;
 
 /// Redeclaration of macros to generate `std` types.
 pub mod std {
@@ -114,6 +120,8 @@ pub mod net {
     pub use super::net_ip_v4 as ip_v4;
     pub use super::net_ip_v6 as ip_v6;
     pub use super::net_mac as mac;
+    pub use super::net_subnet_v4 as subnet_v4;
+    pub use super::net_subnet_v6 as subnet_v6;
 }
 
 #[cfg(test)]
@@ -366,5 +374,25 @@ mod tests {
             net_types::ethernet::Mac::new([0, 1, 2, 3, 4, 5]),
             net_mac!("00:01:02:03:04:05")
         );
+    }
+
+    #[test]
+    fn test_net_subnet_v4() {
+        assert_eq!(
+            net_types::ip::Subnet::new(net_types::ip::Ipv4Addr::new([18, 6, 0, 0]), 15).unwrap(),
+            net_subnet_v4!("18.6.0.0/15")
+        )
+    }
+
+    #[test]
+    fn test_net_subnet_v6() {
+        assert_eq!(
+            net_types::ip::Subnet::new(
+                net_types::ip::Ipv6Addr::new([0xff80, 0, 0, 0, 0, 0, 0, 0]),
+                12
+            )
+            .unwrap(),
+            net_subnet_v6!("ff80::/12")
+        )
     }
 }

@@ -6,6 +6,7 @@ extern crate proc_macro;
 #[macro_use]
 extern crate quote;
 
+use net_types::ip::SubnetError;
 use proc_macro2::TokenStream;
 use std::fmt::Formatter;
 use std::net::{IpAddr, Ipv4Addr, Ipv6Addr, SocketAddr, SocketAddrV4, SocketAddrV6};
@@ -480,6 +481,55 @@ impl Generator<Ipv6Addr> for FidlInterfaceAddressGen {
 
 declare_macro!(fidl_if_addr, FidlInterfaceAddressGen, IpAddressWithPrefix<Ipv4Addr>, Ipv6Addr);
 
+#[derive(PartialEq, Debug)]
+/// Helper struct to parse Cidr addresses from string.
+struct StrictSubnet<A> {
+    address: A,
+    prefix: u8,
+}
+
+#[derive(thiserror::Error, PartialEq, Debug)]
+enum SubnetParseError {
+    #[error(transparent)]
+    IpError(#[from] VersionedIpPrefixError),
+    #[error("host bits set in {0}/{1}")]
+    HostBitsSet(IpAddr, u8),
+}
+
+impl FromStr for StrictSubnet<Ipv4Addr> {
+    type Err = SubnetParseError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let IpAddressWithPrefix { address, prefix } = s.parse::<IpAddressWithPrefix<Ipv4Addr>>()?;
+        match net_types::ip::Subnet::<net_types::ip::Ipv4Addr>::new(address.into(), prefix) {
+            Ok(_) => Ok(StrictSubnet { address, prefix }),
+            Err(SubnetError::HostBitsSet) => {
+                Err(SubnetParseError::HostBitsSet(address.into(), prefix))
+            }
+            Err(SubnetError::PrefixTooLong) => {
+                unreachable!("checked by IpAddressWithPrefix")
+            }
+        }
+    }
+}
+
+impl FromStr for StrictSubnet<Ipv6Addr> {
+    type Err = SubnetParseError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let IpAddressWithPrefix { address, prefix } = s.parse::<IpAddressWithPrefix<Ipv6Addr>>()?;
+        match net_types::ip::Subnet::<net_types::ip::Ipv6Addr>::new(address.into(), prefix) {
+            Ok(_) => Ok(StrictSubnet { address, prefix }),
+            Err(SubnetError::HostBitsSet) => {
+                Err(SubnetParseError::HostBitsSet(address.into(), prefix))
+            }
+            Err(SubnetError::PrefixTooLong) => {
+                unreachable!("checked by IpAddressWithPrefix")
+            }
+        }
+    }
+}
+
 /// Generator for net-types types.
 enum NetGen {}
 
@@ -522,10 +572,26 @@ impl Generator<MacAddress> for NetGen {
     }
 }
 
+impl<I> Generator<StrictSubnet<I>> for NetGen
+where
+    Self: Generator<I>,
+{
+    fn generate(input: StrictSubnet<I>) -> TokenStream {
+        let StrictSubnet { address, prefix } = input;
+        let network = Self::generate(address);
+        // SAFETY: Subnet's invariants were already checked.
+        quote! {
+            unsafe { net_types::ip::Subnet::new_unchecked(#network, #prefix) }
+        }
+    }
+}
+
 declare_macro!(net_ip, NetGen, IpAddr);
 declare_macro!(net_ip_v4, NetGen, Ipv4Addr);
 declare_macro!(net_ip_v6, NetGen, Ipv6Addr);
 declare_macro!(net_mac, NetGen, MacAddress);
+declare_macro!(net_subnet_v4, NetGen, StrictSubnet<Ipv4Addr>);
+declare_macro!(net_subnet_v6, NetGen, StrictSubnet<Ipv6Addr>);
 
 #[cfg(test)]
 mod tests {
@@ -595,6 +661,46 @@ mod tests {
             Err(VersionedIpPrefixError::WrongVersion(
                 [0x184f, 0x0139, 0x0084, 0, 0, 0, 0x56, 0x3456].into()
             ))
+        );
+    }
+
+    #[test]
+    fn test_strict_subnet_prefix_valid() {
+        assert_eq!(
+            "192.168.0.1/32".parse::<StrictSubnet<Ipv4Addr>>(),
+            Ok(StrictSubnet { prefix: 32, address: [192, 168, 0, 1].into() })
+        );
+        assert_eq!(
+            "192.168.0.0/24".parse::<StrictSubnet<Ipv4Addr>>(),
+            Ok(StrictSubnet { prefix: 24, address: [192, 168, 0, 0].into() })
+        );
+    }
+
+    #[test]
+    fn test_strict_subnet_prefix_too_large() {
+        assert_eq!(
+            "192.168.0.0/33".parse::<StrictSubnet<Ipv4Addr>>(),
+            Err(SubnetParseError::IpError(VersionedIpPrefixError::IpError(
+                IpAddressWithPrefixParseError::BadPrefix(33, [192, 168, 0, 0].into())
+            )))
+        );
+        assert_eq!(
+            "ff:00:ff::/130".parse::<StrictSubnet<Ipv6Addr>>(),
+            Err(SubnetParseError::IpError(VersionedIpPrefixError::IpError(
+                IpAddressWithPrefixParseError::BadPrefix(130, "ff:00:ff::".parse().unwrap())
+            )))
+        );
+    }
+
+    #[test]
+    fn test_strict_subnet_prefix_host_bits_set() {
+        assert_eq!(
+            "192.168.0.0/8".parse::<StrictSubnet<Ipv4Addr>>(),
+            Err(SubnetParseError::HostBitsSet([192, 168, 0, 0].into(), 8))
+        );
+        assert_eq!(
+            "ff:00:ff::/14".parse::<StrictSubnet<Ipv6Addr>>(),
+            Err(SubnetParseError::HostBitsSet("ff:00:ff::".parse().unwrap(), 14))
         );
     }
 }
