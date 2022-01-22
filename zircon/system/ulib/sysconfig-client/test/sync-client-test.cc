@@ -11,6 +11,7 @@
 #include <lib/zx/channel.h>
 #include <zircon/hw/gpt.h>
 
+#include <fbl/algorithm.h>
 #include <ramdevice-client-test/ramnandctl.h>
 #include <zxtest/zxtest.h>
 

@@ -5,6 +5,7 @@
 #ifndef TRACE_READER_READER_H_
 #define TRACE_READER_READER_H_
 
+#include <lib/fit/function.h>
 #include <zircon/assert.h>
 
 #include <memory>
@@ -14,7 +15,6 @@
 #include <utility>
 
 #include <fbl/algorithm.h>
-#include <fbl/function.h>
 #include <fbl/intrusive_hash_table.h>
 #include <fbl/macros.h>
 #include <fbl/string.h>
@@ -39,10 +39,10 @@ class TraceReader {
   // Called once for each record read by |ReadRecords|.
   // TODO(jeffbrown): It would be nice to get rid of this by making |ReadRecords|
   // return std::optional<Record> as an out parameter.
-  using RecordConsumer = fbl::Function<void(Record)>;
+  using RecordConsumer = fit::function<void(Record)>;
 
   // Callback invoked when decoding errors are detected in the trace.
-  using ErrorHandler = fbl::Function<void(fbl::String)>;
+  using ErrorHandler = fit::function<void(fbl::String)>;
 
   explicit TraceReader(RecordConsumer record_consumer, ErrorHandler error_handler);
 

@@ -5,6 +5,9 @@
 #ifndef PERFTEST_RUNNER_H_
 #define PERFTEST_RUNNER_H_
 
+#include <lib/fit/function.h>
+
+#include <fbl/string.h>
 #include <fbl/vector.h>
 #include <perftest/perftest.h>
 
@@ -16,7 +19,7 @@ namespace internal {
 
 struct NamedTest {
   fbl::String name;
-  fbl::Function<TestFunc> test_func;
+  fit::function<TestFunc> test_func;
 };
 
 typedef fbl::Vector<NamedTest> TestList;

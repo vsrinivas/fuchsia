@@ -13,6 +13,7 @@
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
 #include <lib/fdio/watcher.h>
+#include <lib/fit/function.h>
 #include <lib/sysmem-connector/sysmem-connector.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/process.h>
@@ -22,7 +23,6 @@
 #include <queue>
 
 #include <fbl/auto_lock.h>
-#include <fbl/function.h>
 #include <fbl/mutex.h>
 #include <fbl/unique_fd.h>
 
@@ -60,7 +60,7 @@ class SysmemConnector : public sysmem_connector {
     zx::channel service_directory;
   };
 
-  void Post(fbl::Closure to_run);
+  void Post(fit::closure to_run);
 
   static zx_status_t DeviceAddedShim(int dirfd, int event, const char* fn, void* cookie);
   zx_status_t DeviceAdded(int dirfd, int event, const char* fn);
@@ -146,7 +146,7 @@ void SysmemConnector::Stop() {
   process_queue_loop_.Shutdown();
 }
 
-void SysmemConnector::Post(fbl::Closure to_run) {
+void SysmemConnector::Post(fit::closure to_run) {
   zx_status_t post_status = async::PostTask(process_queue_loop_.dispatcher(), std::move(to_run));
   // We don't expect this post to ever fail.
   ZX_ASSERT(post_status == ZX_OK);

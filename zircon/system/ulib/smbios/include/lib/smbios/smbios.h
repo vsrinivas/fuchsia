@@ -5,10 +5,10 @@
 #ifndef LIB_SMBIOS_SMBIOS_H_
 #define LIB_SMBIOS_SMBIOS_H_
 
+#include <lib/fit/function.h>
 #include <stdint.h>
 #include <zircon/types.h>
 
-#include <fbl/function.h>
 #include <fbl/macros.h>
 #include <fbl/ref_ptr.h>
 
@@ -106,8 +106,7 @@ enum class EntryPointVersion {
 // For any other return, the walk is aborted and returns the error returned by
 // the callback.
 using StructWalkCallback =
-    fbl::InlineFunction<zx_status_t(SpecVersion version, const Header* h, const StringTable& st),
-                        fbl::kDefaultInlineCallableSize>;
+    fit::inline_function<zx_status_t(SpecVersion version, const Header* h, const StringTable& st)>;
 
 // System structure identifying where the SMBIOS structs are in memory.
 struct EntryPoint2_1 {

@@ -18,6 +18,7 @@
 #endif
 
 #include <lib/fit/defer.h>
+#include <lib/fit/function.h>
 #include <pthread.h>
 #include <regex.h>
 
@@ -27,7 +28,6 @@
 #include <optional>
 #include <random>
 
-#include <fbl/function.h>
 #include <fbl/string.h>
 #include <fbl/string_printf.h>
 #include <fbl/vector.h>
@@ -146,7 +146,7 @@ class RepeatStateImpl : public RepeatState {
   }
 
   // Returns nullptr on success, or an error string on failure.
-  const char* RunTestFunc(const char* test_name, const fbl::Function<TestFunc>& test_func) {
+  const char* RunTestFunc(const char* test_name, const fit::function<TestFunc>& test_func) {
     TRACE_DURATION("perftest", "test_group", "test_name", test_name);
     overall_start_time_ = Now();
     bool result = test_func(this);
@@ -312,7 +312,7 @@ bool CompareTestNames(internal::NamedTest* test1, internal::NamedTest* test2) {
 
 }  // namespace
 
-void RegisterTest(const char* name, fbl::Function<TestFunc> test_func) {
+void RegisterTest(const char* name, fit::function<TestFunc> test_func) {
   if (!g_tests) {
     g_tests = new internal::TestList;
   }
@@ -321,7 +321,7 @@ void RegisterTest(const char* name, fbl::Function<TestFunc> test_func) {
 }
 
 bool RunTest(const char* test_suite, const char* test_name,
-             const fbl::Function<TestFunc>& test_func, uint32_t run_count, ResultsSet* results_set,
+             const fit::function<TestFunc>& test_func, uint32_t run_count, ResultsSet* results_set,
              fbl::String* error_out) {
   RepeatStateImpl state(run_count);
   const char* error = state.RunTestFunc(test_name, test_func);

@@ -12,13 +12,13 @@
 #include <lib/async-loop/default.h>
 #include <lib/async/cpp/wait.h>
 #include <lib/fidl/cpp/message_buffer.h>
+#include <lib/fit/function.h>
 #include <lib/zx/channel.h>
 #include <stdint.h>
 
 #include <memory>
 #include <string_view>
 
-#include <fbl/function.h>
 #include <fbl/string.h>
 #include <fbl/vector.h>
 
@@ -52,8 +52,8 @@ enum ExporterLaunchError {
 //    l->StartThread();
 class LogExporter {
  public:
-  using ErrorHandler = fbl::Function<void(zx_status_t)>;
-  using FileErrorHandler = fbl::Function<void(const char* error)>;
+  using ErrorHandler = fit::function<void(zx_status_t)>;
+  using FileErrorHandler = fit::function<void(const char* error)>;
 
   // Creates object and starts listening for msgs on channel written by Log
   // interface in logger fidl.

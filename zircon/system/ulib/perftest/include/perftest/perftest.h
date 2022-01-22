@@ -2,15 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef PERFTEST_PERFTEST_H_
+#define PERFTEST_PERFTEST_H_
 
+#include <lib/fit/function.h>
 #include <stdint.h>
 
-#include <fbl/function.h>
+#include <utility>
+
 #include <fbl/string.h>
 #include <perftest/results.h>
-
-#include <utility>
 
 // This is a library for writing performance tests.  It supports
 // performance tests that involve running an operation repeatedly,
@@ -152,7 +153,7 @@ class RepeatState {
 typedef bool TestFunc(RepeatState* state);
 typedef bool SimpleTestFunc();
 
-void RegisterTest(const char* name, fbl::Function<TestFunc> test_func);
+void RegisterTest(const char* name, fit::function<TestFunc> test_func);
 
 // Convenience routine for registering parameterized perf tests.
 template <typename Func, typename Arg, typename... Args>
@@ -197,7 +198,7 @@ int PerfTestMain(int argc, char** argv, const char* test_suite);
 // command line arguments, or for test cases that reuse some shared state
 // and must be run in a particular order.
 bool RunTest(const char* test_suite, const char* test_name,
-             const fbl::Function<TestFunc>& test_func, uint32_t run_count, ResultsSet* results_set,
+             const fit::function<TestFunc>& test_func, uint32_t run_count, ResultsSet* results_set,
              fbl::String* error_out);
 
 // DoNotOptimize() can be used to prevent the computation of |value| from
@@ -222,3 +223,5 @@ inline void DoNotOptimize(const Type& value) {
     FuncCaller_##func() { func(); } \
   } global;                         \
   }
+
+#endif  // PERFTEST_PERFTEST_H_

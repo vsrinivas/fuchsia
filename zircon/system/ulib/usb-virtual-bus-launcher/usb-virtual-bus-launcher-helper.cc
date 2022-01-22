@@ -5,13 +5,13 @@
 #include "lib/usb-virtual-bus-launcher-helper/usb-virtual-bus-launcher-helper.h"
 
 #include <lib/fdio/watcher.h>
+#include <lib/fit/function.h>
 
-#include <fbl/function.h>
 #include <fbl/string.h>
 
 namespace usb_virtual_bus {
 
-using Callback = fbl::Function<zx_status_t(int, const char*)>;
+using Callback = fit::function<zx_status_t(int, const char*)>;
 zx_status_t WatcherCallback(int dirfd, int event, const char* fn, void* cookie) {
   return (*reinterpret_cast<Callback*>(cookie))(event, fn);
 }

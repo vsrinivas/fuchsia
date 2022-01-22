@@ -13,6 +13,7 @@
 #include <lib/async/task.h>
 #include <lib/async/time.h>
 #include <lib/async/wait.h>
+#include <lib/fit/function.h>
 #include <lib/zx/clock.h>
 #include <lib/zx/event.h>
 #include <lib/zx/interrupt.h>
@@ -29,7 +30,6 @@
 #include <utility>
 
 #include <fbl/auto_lock.h>
-#include <fbl/function.h>
 #include <fbl/mutex.h>
 #include <zxtest/zxtest.h>
 
@@ -212,12 +212,12 @@ class RepeatingTask : public TestTask {
   RepeatingTask(zx::duration interval, uint32_t repeat_count)
       : interval_(interval), repeat_count_(repeat_count) {}
 
-  void set_finish_callback(fbl::Closure callback) { finish_callback_ = std::move(callback); }
+  void set_finish_callback(fit::closure callback) { finish_callback_ = std::move(callback); }
 
  protected:
   zx::duration interval_;
   uint32_t repeat_count_;
-  fbl::Closure finish_callback_;
+  fit::closure finish_callback_;
 
   void Handle(async_dispatcher_t* dispatcher, zx_status_t status) override {
     TestTask::Handle(dispatcher, status);

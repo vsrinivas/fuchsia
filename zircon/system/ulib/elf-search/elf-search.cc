@@ -19,6 +19,8 @@
 #include <memory>
 #include <optional>
 
+#include <fbl/alloc_checker.h>
+
 namespace elf_search {
 namespace {
 

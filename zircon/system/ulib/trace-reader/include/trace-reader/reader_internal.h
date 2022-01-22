@@ -117,10 +117,10 @@ class BufferHeaderReader {
 class TraceBufferReader {
  public:
   // Called once for each chunk read by |ReadChunks|.
-  using ChunkConsumer = fbl::Function<void(Chunk)>;
+  using ChunkConsumer = fit::function<void(Chunk)>;
 
   // Callback invoked when an error is detected.
-  using ErrorHandler = fbl::Function<void(fbl::String)>;
+  using ErrorHandler = fit::function<void(fbl::String)>;
 
   TraceBufferReader(ChunkConsumer chunk_consumer, ErrorHandler error_handler);
   ~TraceBufferReader() = default;

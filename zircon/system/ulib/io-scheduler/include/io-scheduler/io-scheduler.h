@@ -12,7 +12,6 @@
 #include <vector>
 
 #include <fbl/condition_variable.h>
-#include <fbl/function.h>
 #include <fbl/intrusive_double_list.h>
 #include <fbl/mutex.h>
 #include <fbl/vector.h>

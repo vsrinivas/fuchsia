@@ -6,13 +6,12 @@
 #define ELF_SEARCH_H_
 
 #include <elf.h>
+#include <lib/fit/function.h>
 #include <lib/stdcompat/span.h>
 #include <lib/zx/process.h>
 #include <stdint.h>
 
 #include <string_view>
-
-#include <fbl/function.h>
 
 namespace elf_search {
 
@@ -30,7 +29,7 @@ struct ModuleInfo {
   cpp20::span<const Elf64_Phdr> phdrs;
 };
 
-using ModuleAction = fbl::Function<void(const ModuleInfo&)>;
+using ModuleAction = fit::function<void(const ModuleInfo&)>;
 extern zx_status_t ForEachModule(const zx::process&, ModuleAction);
 
 }  // namespace elf_search
