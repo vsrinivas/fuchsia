@@ -10,14 +10,16 @@ use {
     boringssl_sys::{
         BN_CTX_free, BN_CTX_new, BN_add, BN_asc2bn, BN_bin2bn, BN_bn2bin, BN_bn2dec, BN_cmp,
         BN_copy, BN_equal_consttime, BN_free, BN_is_odd, BN_is_one, BN_is_zero, BN_mod_add,
-        BN_mod_exp, BN_mod_mul, BN_mod_sqrt, BN_new, BN_num_bits, BN_num_bytes, BN_one,
-        BN_rand_range, BN_rshift1, BN_set_u64, BN_sub, BN_zero, EC_GROUP_free,
-        EC_GROUP_get_curve_GFp, EC_GROUP_get_order, EC_GROUP_new_by_curve_name, EC_POINT_add,
-        EC_POINT_free, EC_POINT_get_affine_coordinates_GFp, EC_POINT_invert,
-        EC_POINT_is_at_infinity, EC_POINT_mul, EC_POINT_new, EC_POINT_set_affine_coordinates_GFp,
-        ERR_get_error, ERR_reason_error_string, NID_X9_62_prime256v1, OPENSSL_free, BIGNUM, BN_CTX,
-        EC_GROUP, EC_POINT,
+        BN_mod_exp, BN_mod_inverse, BN_mod_mul, BN_mod_sqr, BN_mod_sqrt, BN_new, BN_nnmod,
+        BN_num_bits, BN_num_bytes, BN_one, BN_rand_range, BN_rshift1, BN_set_negative, BN_set_u64,
+        BN_sub, BN_zero, EC_GROUP_free, EC_GROUP_get_curve_GFp, EC_GROUP_get_order,
+        EC_GROUP_new_by_curve_name, EC_POINT_add, EC_POINT_free,
+        EC_POINT_get_affine_coordinates_GFp, EC_POINT_invert, EC_POINT_is_at_infinity,
+        EC_POINT_mul, EC_POINT_new, EC_POINT_set_affine_coordinates_GFp, ERR_get_error,
+        ERR_reason_error_string, NID_X9_62_prime256v1, OPENSSL_free, BIGNUM, BN_CTX, EC_GROUP,
+        EC_POINT,
     },
+    num_derive::{FromPrimitive, ToPrimitive},
     std::{cmp::Ordering, convert::TryInto, ffi::CString, fmt, ptr::NonNull},
 };
 
@@ -126,6 +128,12 @@ impl Bignum {
         Ok(bignum)
     }
 
+    /// Sets the sign of Bignum to negative, iff it is nonzero.  Consumes and returns itself.
+    pub fn set_negative(self) -> Self {
+        unsafe { BN_set_negative(self.0.as_ptr(), 1) };
+        self
+    }
+
     pub fn copy(&self) -> Result<Self, Error> {
         let mut copy = Self::new()?;
         ptr_or_error(unsafe { BN_copy(copy.0.as_mut(), self.0.as_ptr()) })?;
@@ -146,6 +154,15 @@ impl Bignum {
         Ok(b)
     }
 
+    /// Returns the result of `self mod m`, where both m and the result are non-negative.
+    pub fn mod_nonnegative(&self, m: &Self, ctx: &BignumCtx) -> Result<Self, Error> {
+        let mut result = Self::new()?;
+        one_or_error(unsafe {
+            BN_nnmod(result.0.as_mut(), self.0.as_ptr(), m.0.as_ptr(), ctx.0.as_ptr())
+        })?;
+        Ok(result)
+    }
+
     /// Returns the result of `self + b mod m`.
     pub fn mod_add(&self, b: &Self, m: &Self, ctx: &BignumCtx) -> Result<Self, Error> {
         let mut result = Self::new()?;
@@ -161,7 +178,7 @@ impl Bignum {
         Ok(result)
     }
 
-    /// Retursn the result of `self * b mod m`.
+    /// Returns the result of `self * b mod m`.
     pub fn mod_mul(&self, b: &Self, m: &Self, ctx: &BignumCtx) -> Result<Self, Error> {
         let mut result = Self::new()?;
         one_or_error(unsafe {
@@ -172,6 +189,15 @@ impl Bignum {
                 m.0.as_ptr(),
                 ctx.0.as_ptr(),
             )
+        })?;
+        Ok(result)
+    }
+
+    /// Returns the result of `self^-1 mod m`.
+    pub fn mod_inverse(&self, m: &Self, ctx: &BignumCtx) -> Result<Self, Error> {
+        let mut result = Self::new()?;
+        ptr_or_error(unsafe {
+            BN_mod_inverse(result.0.as_mut(), self.0.as_ptr(), m.0.as_ptr(), ctx.0.as_ptr())
         })?;
         Ok(result)
     }
@@ -187,6 +213,15 @@ impl Bignum {
                 m.0.as_ptr(),
                 ctx.0.as_ptr(),
             )
+        })?;
+        Ok(result)
+    }
+
+    /// Returns the result of `self^2 mod m`.
+    pub fn mod_square(&self, m: &Self, ctx: &BignumCtx) -> Result<Self, Error> {
+        let mut result = Self::new()?;
+        one_or_error(unsafe {
+            BN_mod_sqr(result.0.as_mut(), self.0.as_ptr(), m.0.as_ptr(), ctx.0.as_ptr())
         })?;
         Ok(result)
     }
@@ -284,9 +319,9 @@ impl fmt::Debug for Bignum {
 }
 
 /// Supported elliptic curve groups.
-#[derive(Clone)]
+#[derive(Clone, FromPrimitive, ToPrimitive)]
 pub enum EcGroupId {
-    P256,
+    P256 = 19,
 }
 
 impl EcGroupId {
@@ -475,6 +510,13 @@ mod tests {
     }
 
     #[test]
+    fn bignum_set_negative() {
+        assert_eq!(bn("100").set_negative(), bn("-100"));
+        assert_eq!(bn("-100").set_negative(), bn("-100"));
+        assert_eq!(bn("0").set_negative(), bn("0"));
+    }
+
+    #[test]
     fn bignum_format() {
         // Bignum::from_string should support both decimal and hex formats.
         assert_eq!(format!("{}", bn("100")), "100");
@@ -495,6 +537,33 @@ mod tests {
     }
 
     #[test]
+    fn bignum_sub() {
+        let bn1 = bn("3000000000000987654321");
+        let bn2 = bn("2000000000000000000000");
+        let diff = bn1.sub(bn2).unwrap();
+        assert_eq!(diff, bn("1000000000000987654321"));
+
+        let bn1 = bn("2000000000000012345678");
+        let bn2 = bn("-3000000000000987654321");
+        let diff = bn1.sub(bn2).unwrap();
+        assert_eq!(diff, bn("5000000000000999999999"));
+    }
+
+    #[test]
+    fn bignum_mod_nonnegative() {
+        let mut ctx = BignumCtx::new().unwrap();
+        let bn1 = bn("12");
+        let bn2 = bn("5");
+        let mod_nonnegative = bn1.mod_nonnegative(&bn2, &ctx).unwrap();
+        assert_eq!(mod_nonnegative, bn("2"));
+
+        let bn1 = bn("-12");
+        let bn2 = bn("5");
+        let mod_nonnegative = bn1.mod_nonnegative(&bn2, &ctx).unwrap();
+        assert_eq!(mod_nonnegative, bn("3"));
+    }
+
+    #[test]
     fn bignum_mod_add() {
         let mut ctx = BignumCtx::new().unwrap();
         let bn1 = bn("1000000000000000000000");
@@ -512,10 +581,22 @@ mod tests {
     }
 
     #[test]
+    fn bignum_mod_inverse() {
+        let ctx = BignumCtx::new().unwrap();
+        assert_eq!(bn("3").mod_inverse(&bn("7"), &ctx).unwrap(), bn("5"));
+    }
+
+    #[test]
     fn bignum_mod_exp() {
         let ctx = BignumCtx::new().unwrap();
         let value = bn("4").mod_exp(&bn("2"), &bn("10"), &ctx).unwrap();
         assert_eq!(value, bn("6"));
+    }
+
+    #[test]
+    fn bigum_mod_square() {
+        let ctx = BignumCtx::new().unwrap();
+        assert_eq!(bn("11").mod_square(&bn("17"), &ctx).unwrap(), bn("2"));
     }
 
     #[test]
