@@ -11,7 +11,6 @@ import("//build/images/assembly/generated_images_config.gni")
 import("//build/images/assembly/generated_partitions_config.gni")
 import("//build/images/assembly/generated_product_config.gni")
 import("//build/images/fvm.gni")
-import("//build/images/pkgfs.gni")
 import("//build/images/shell_commands.gni")
 import("//build/info/info.gni")
 import("//build/packages/package_metadata.gni")
@@ -212,6 +211,7 @@ template("assemble_system") {
     shell_commands = "${image_name}_shell_commands"
     assembly_inputs = "${image_name}_assembly_inputs"
     fshost_config = "${image_name}_fshost_config"
+    pkgfs_package_label = "//src/sys/pkg/bin/pkgfs"
   }
 
   # Intermediate files produced for Image Assembly.
@@ -433,7 +433,7 @@ template("assemble_system") {
     if (generate_fvm) {
       base_packages = _base_packages
       base_packages += _meta_packages
-      base_packages += [ pkgfs_package_label ]
+      base_packages += [ labels.pkgfs_package_label ]
       cache_packages = _cache_packages
     }
 
