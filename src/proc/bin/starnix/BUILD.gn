@@ -76,6 +76,7 @@ if (target_cpu == "x64") {
     test_deps = [
       "//garnet/lib/rust/io_util",
       "//src/lib/fuchsia",
+      "//third_party/rust_crates:itertools",
     ]
 
     sources = [

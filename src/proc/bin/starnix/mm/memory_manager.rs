@@ -124,27 +124,6 @@ impl Mapping {
         })
     }
 
-    /// Reads bytes starting at `addr`, continuing until either `bytes.len()` bytes have been read
-    /// or the end of the VMO containing `addr` is reached.
-    ///
-    /// This is used, for example, to read null-terminated strings where the exact length is not
-    /// known, only the maximum length is.
-    ///
-    /// # Parameters
-    /// - `addr`: The address to read data from.
-    /// - `bytes`: The byte array to read into.
-    fn read_memory_partial(&self, addr: UserAddress, bytes: &mut [u8]) -> Result<usize, Errno> {
-        let offset = self.address_to_offset(addr);
-        let max_read_length = (self.vmo.get_size().map_err(|_| errno!(EFAULT))? - offset) as usize;
-        let num_bytes_to_read = std::cmp::min(max_read_length, bytes.len());
-        let bytes: &mut [u8] = &mut bytes[..num_bytes_to_read];
-        self.vmo.read(bytes, offset).map_err(|e| {
-            log::warn!("Got an error when reading from vmo: {:?}", e);
-            errno!(EFAULT)
-        })?;
-        Ok(num_bytes_to_read)
-    }
-
     /// Writes the provided bytes to `addr`.
     ///
     /// # Parameters
@@ -617,69 +596,122 @@ impl MemoryManagerState {
         UserAddress::from_ptr(self.user_vmar_info.base + self.user_vmar_info.len)
     }
 
-    /// Returns a mapping to read or write at `addr`.
+    /// Returns all the mappings starting at `addr`, and continuing until either `length` bytes have
+    /// been covered or an unmapped page is reached.
     ///
-    /// A `Ok(None)` indicates that the address was within range, but there was no mapping.
-    /// An `EFAULT` indicates that the address was invalid.
-    fn get_mapping_for_read_write(
+    /// Mappings are returned in ascending order along with the number of bytes that intersect the
+    /// requested range. The returned mappings are guaranteed to be contiguous and the total length
+    /// corresponds to the number of contiguous mapped bytes starting from `addr`, i.e.:
+    /// - 0 (empty iterator) if `addr` is not mapped.
+    /// - exactly `length` if the requested range is fully mapped.
+    /// - the offset of the first unmapped page (between 0 and `length`) if the requested range is
+    ///   only partially mapped.
+    ///
+    /// Returns EFAULT if the requested range overflows or extends past the end of the vmar.
+    fn get_contiguous_mappings_at(
         &self,
         addr: UserAddress,
-        bytes: &[u8],
-    ) -> Result<Option<&Mapping>, Errno> {
-        if addr > self.max_address() {
+        length: usize,
+    ) -> Result<impl Iterator<Item = (&Mapping, usize)>, Errno> {
+        let end_addr = addr.checked_add(length).ok_or_else(|| errno!(EFAULT))?;
+        if end_addr > self.max_address() {
             return error!(EFAULT);
         }
 
-        match self.mappings.get(&addr) {
-            Some((_range, mapping)) => Ok(Some(mapping)),
-            None => {
-                // It's ok for a read of 0 bytes to have an invalid address, as long as the address
-                // is within the bounds of the VMAR.
-                return if bytes.len() == 0 { Ok(None) } else { error!(EFAULT) };
+        // Iterate over all contiguous mappings intersecting the requested range.
+        let mut mappings = self.mappings.intersection(addr..end_addr);
+        let mut prev_range_end = None;
+        let mut offset = 0;
+        let result = std::iter::from_fn(move || {
+            if offset != length {
+                if let Some((range, mapping)) = mappings.next() {
+                    return match prev_range_end {
+                        // If this is the first mapping that we are considering, it may not actually
+                        // contain `addr` at all.
+                        None if range.start > addr => None,
+
+                        // Subsequent mappings may not be contiguous.
+                        Some(prev_range_end) if range.start != prev_range_end => None,
+
+                        // This mapping can be returned.
+                        _ => {
+                            let mapping_length = std::cmp::min(length, range.end - addr) - offset;
+                            offset += mapping_length;
+                            prev_range_end = Some(range.end);
+                            Some((mapping, mapping_length))
+                        }
+                    };
+                }
             }
-        }
+
+            None
+        });
+
+        Ok(result)
     }
 
-    /// Reads exactly `bytes.len()` bytes of memory from this mapping's VMO.
+    /// Reads exactly `bytes.len()` bytes of memory.
     ///
     /// # Parameters
-    /// - `addr`: The address to read data from. Note that this address should be provided without
-    /// adjusting for this mapping's offsets.
+    /// - `addr`: The address to read data from.
     /// - `bytes`: The byte array to read into.
     fn read_memory(&self, addr: UserAddress, bytes: &mut [u8]) -> Result<(), Errno> {
-        match self.get_mapping_for_read_write(addr, bytes)? {
-            None => Ok(()),
-            Some(mapping) => mapping.read_memory(addr, bytes),
+        let mut bytes_read = 0;
+        for (mapping, len) in self.get_contiguous_mappings_at(addr, bytes.len())? {
+            let next_offset = bytes_read + len;
+            mapping.read_memory(addr + bytes_read, &mut bytes[bytes_read..next_offset])?;
+            bytes_read = next_offset;
+        }
+
+        if bytes_read != bytes.len() {
+            error!(EFAULT)
+        } else {
+            Ok(())
         }
     }
 
     /// Reads bytes starting at `addr`, continuing until either `bytes.len()` bytes have been read
-    /// or the end of the VMO is reached.
+    /// or the end of the mapped area is reached.
     ///
     /// This is used, for example, to read null-terminated strings where the exact length is not
     /// known, only the maximum length is.
     ///
     /// # Parameters
-    /// - `addr`: The address to read data from. Note that this address should be provided without
-    /// adjusting for this mapping's offsets.
+    /// - `addr`: The address to read data from.
     /// - `bytes`: The byte array to read into.
     fn read_memory_partial(&self, addr: UserAddress, bytes: &mut [u8]) -> Result<usize, Errno> {
-        match self.get_mapping_for_read_write(addr, bytes)? {
-            None => Ok(0),
-            Some(mapping) => mapping.read_memory_partial(addr, bytes),
+        let mut bytes_read = 0;
+        for (mapping, len) in self.get_contiguous_mappings_at(addr, bytes.len())? {
+            let next_offset = bytes_read + len;
+            mapping.read_memory(addr + bytes_read, &mut bytes[bytes_read..next_offset])?;
+            bytes_read = next_offset;
+        }
+
+        // If at least one byte was requested but we got none, it means that `addr` was invalid.
+        if bytes.len() != 0 && bytes_read == 0 {
+            error!(EFAULT)
+        } else {
+            Ok(bytes_read)
         }
     }
 
-    /// Writes the provided bytes to this mapping's VMO.
+    /// Writes the provided bytes.
     ///
     /// # Parameters
-    /// - `addr`: The address to write to. Note that this address should be provided without
-    /// adjusting for this mapping's offsets.
-    /// - `bytes`: The bytes to write to the VMO.
+    /// - `addr`: The address to write to.
+    /// - `bytes`: The bytes to write.
     fn write_memory(&self, addr: UserAddress, bytes: &[u8]) -> Result<(), Errno> {
-        match self.get_mapping_for_read_write(addr, bytes)? {
-            None => Ok(()),
-            Some(mapping) => mapping.write_memory(addr, bytes),
+        let mut bytes_written = 0;
+        for (mapping, len) in self.get_contiguous_mappings_at(addr, bytes.len())? {
+            let next_offset = bytes_written + len;
+            mapping.write_memory(addr + bytes_written, &bytes[bytes_written..next_offset])?;
+            bytes_written = next_offset;
+        }
+
+        if bytes_written != bytes.len() {
+            error!(EFAULT)
+        } else {
+            Ok(())
         }
     }
 }
@@ -1277,6 +1309,7 @@ impl FileOps for ProcStatFile {
 mod tests {
     use super::*;
     use fuchsia_async as fasync;
+    use itertools::assert_equal;
 
     use crate::testing::*;
 
@@ -1368,6 +1401,100 @@ mod tests {
         assert_eq!(brk_addr, brk_addr2);
         let mapped_addr2 = map_memory(&current_task, mapped_addr, *PAGE_SIZE);
         assert_eq!(mapped_addr, mapped_addr2);
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_get_contiguous_mappings_at() {
+        let (_kernel, current_task) = create_kernel_and_task();
+        let mm = &current_task.mm;
+
+        // Create four one-page mappings with a hole between the third one and the fourth one.
+        let page_size = *PAGE_SIZE as usize;
+        let addr_a = mm.base_addr + 10 * page_size;
+        let addr_b = mm.base_addr + 11 * page_size;
+        let addr_c = mm.base_addr + 12 * page_size;
+        let addr_d = mm.base_addr + 14 * page_size;
+        assert_eq!(map_memory(&current_task, addr_a, *PAGE_SIZE), addr_a);
+        assert_eq!(map_memory(&current_task, addr_b, *PAGE_SIZE), addr_b);
+        assert_eq!(map_memory(&current_task, addr_c, *PAGE_SIZE), addr_c);
+        assert_eq!(map_memory(&current_task, addr_d, *PAGE_SIZE), addr_d);
+        assert_eq!(mm.get_mapping_count(), 4);
+
+        // Obtain references to the mappings.
+        let mm_state = mm.state.read();
+        let (map_a, map_b, map_c, map_d) = {
+            let mut it = mm_state.mappings.iter();
+            (it.next().unwrap().1, it.next().unwrap().1, it.next().unwrap().1, it.next().unwrap().1)
+        };
+
+        // Verify result when requesting a whole mapping or portions of it.
+        assert_equal(
+            mm_state.get_contiguous_mappings_at(addr_a, page_size).unwrap(),
+            vec![(map_a, page_size)],
+        );
+        assert_equal(
+            mm_state.get_contiguous_mappings_at(addr_a, page_size / 2).unwrap(),
+            vec![(map_a, page_size / 2)],
+        );
+        assert_equal(
+            mm_state.get_contiguous_mappings_at(addr_a + page_size / 2, page_size / 2).unwrap(),
+            vec![(map_a, page_size / 2)],
+        );
+        assert_equal(
+            mm_state.get_contiguous_mappings_at(addr_a + page_size / 4, page_size / 8).unwrap(),
+            vec![(map_a, page_size / 8)],
+        );
+
+        // Verify result when requesting a range spanning more than one mapping.
+        assert_equal(
+            mm_state.get_contiguous_mappings_at(addr_a + page_size / 2, page_size).unwrap(),
+            vec![(map_a, page_size / 2), (map_b, page_size / 2)],
+        );
+        assert_equal(
+            mm_state.get_contiguous_mappings_at(addr_a + page_size / 2, page_size * 3 / 2).unwrap(),
+            vec![(map_a, page_size / 2), (map_b, page_size)],
+        );
+        assert_equal(
+            mm_state.get_contiguous_mappings_at(addr_a, page_size * 3 / 2).unwrap(),
+            vec![(map_a, page_size), (map_b, page_size / 2)],
+        );
+        assert_equal(
+            mm_state.get_contiguous_mappings_at(addr_a + page_size / 2, page_size * 2).unwrap(),
+            vec![(map_a, page_size / 2), (map_b, page_size), (map_c, page_size / 2)],
+        );
+        assert_equal(
+            mm_state.get_contiguous_mappings_at(addr_b + page_size / 2, page_size * 3 / 2).unwrap(),
+            vec![(map_b, page_size / 2), (map_c, page_size)],
+        );
+
+        // Verify that results stop if there is a hole.
+        assert_equal(
+            mm_state.get_contiguous_mappings_at(addr_a + page_size / 2, page_size * 10).unwrap(),
+            vec![(map_a, page_size / 2), (map_b, page_size), (map_c, page_size)],
+        );
+
+        // Verify that results stop at the last mapped page.
+        assert_equal(
+            mm_state.get_contiguous_mappings_at(addr_d, page_size * 10).unwrap(),
+            vec![(map_d, page_size)],
+        );
+
+        // Verify that requesting an unmapped address returns an empty iterator.
+        assert_equal(mm_state.get_contiguous_mappings_at(addr_a - 100u64, 50).unwrap(), vec![]);
+        assert_equal(mm_state.get_contiguous_mappings_at(addr_a - 100u64, 200).unwrap(), vec![]);
+
+        // Verify that requesting zero bytes returns an empty iterator.
+        assert_equal(mm_state.get_contiguous_mappings_at(addr_a, 0).unwrap(), vec![]);
+
+        // Verify errors.
+        assert_eq!(
+            mm_state.get_contiguous_mappings_at(UserAddress::from(100), usize::MAX).err().unwrap(),
+            errno!(EFAULT)
+        );
+        assert_eq!(
+            mm_state.get_contiguous_mappings_at(mm_state.max_address() + 1u64, 0).err().unwrap(),
+            errno!(EFAULT)
+        );
     }
 
     #[fasync::run_singlethreaded(test)]
@@ -1520,6 +1647,29 @@ mod tests {
     }
 
     #[fasync::run_singlethreaded(test)]
+    async fn test_read_write_crossing_mappings() {
+        let (_kernel, current_task) = create_kernel_and_task();
+        let mm = &current_task.mm;
+
+        // Map two contiguous pages at fixed addresses, but backed by distinct mappings.
+        let page_size = *PAGE_SIZE;
+        let addr = mm.base_addr + 10 * page_size;
+        assert_eq!(map_memory(&current_task, addr, page_size), addr);
+        assert_eq!(map_memory(&current_task, addr + page_size, page_size), addr + page_size);
+        assert_eq!(mm.get_mapping_count(), 2);
+
+        // Write a pattern crossing our two mappings.
+        let test_addr = addr + page_size / 2;
+        let data: Vec<u8> = (0..page_size).map(|i| (i % 256) as u8).collect();
+        mm.write_memory(test_addr, &data).expect("failed to write test data");
+
+        // Read it back.
+        let mut data_readback = vec![0u8; data.len()];
+        mm.read_memory(test_addr, &mut data_readback).expect("failed to read test data");
+        assert_eq!(&data, &data_readback);
+    }
+
+    #[fasync::run_singlethreaded(test)]
     async fn test_read_write_errors() {
         let (_kernel, current_task) = create_kernel_and_task();
         let mm = &current_task.mm;
@@ -1553,9 +1703,10 @@ mod tests {
 
         let page_size = *PAGE_SIZE;
         let mut buf = vec![0u8; 2 * page_size as usize];
+        let addr = mm.base_addr + 10 * page_size;
 
-        // Allocate a page and write a non-terminated string at the end of it.
-        let addr = map_memory(&current_task, UserAddress::default(), page_size);
+        // Map a page at a fixed address and write an unterminated string at the end of it.
+        assert_eq!(map_memory(&current_task, addr, page_size), addr);
         let test_str = b"foo!";
         let test_addr = addr + page_size - test_str.len();
         mm.write_memory(test_addr, test_str).expect("failed to write test string");
@@ -1566,6 +1717,12 @@ mod tests {
         // Expect success if the string is terminated.
         mm.write_memory(addr + (page_size - 1), b"\0").expect("failed to write nul");
         assert_eq!(mm.read_c_string(UserCString::new(test_addr), &mut buf).unwrap(), b"foo");
+
+        // Expect success if the string spans over two mappings.
+        assert_eq!(map_memory(&current_task, addr + page_size, page_size), addr + page_size);
+        assert_eq!(mm.get_mapping_count(), 2);
+        mm.write_memory(addr + (page_size - 1), b"bar\0").expect("failed to write extra chars");
+        assert_eq!(mm.read_c_string(UserCString::new(test_addr), &mut buf).unwrap(), b"foobar");
 
         // Expect error if the string does not fit in the provided buffer.
         assert_eq!(
