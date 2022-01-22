@@ -438,6 +438,13 @@ build_api_module("fuzzers") {
 #     The tuple of ($name, $type, $cpu) should be unique.
 #     Type: string
 #
+#   fastboot_flash
+#     Optional: the partition(s) to fastboot flash this image to. As a special
+#     case, this can be an empty list to indicate a file that may be needed for
+#     flashing but doesn't necessarily get flashed to a partition, for example
+#     bootloader unlock credentials.
+#     Type: list(string)
+#
 #   label
 #     Required: The GN label of the image target.
 #     Type: label_with_toolchain

@@ -415,6 +415,7 @@ foreach(file, bootstrap_files) {
           name = get_path_info(file.path, "name")
           path = rebase_path(out_path, root_build_dir)
           type = get_path_info(file.path, "extension")
+          fastboot_flash = []
         },
       ]
     }
@@ -596,6 +597,7 @@ foreach(cred_path, board_fastboot_unlock_credentials) {
           name = name
           path = out_path
           type = ext
+          fastboot_flash = []
         },
       ]
     }
