@@ -8,6 +8,7 @@
 #include <fidl/fuchsia.hardware.block.partition/cpp/wire.h>
 #include <fidl/fuchsia.hardware.skipblock/cpp/wire.h>
 #include <fidl/fuchsia.io/cpp/wire.h>
+#include <lib/fit/function.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/status.h>
 
@@ -15,7 +16,6 @@
 #include <optional>
 #include <string_view>
 
-#include <fbl/function.h>
 #include <fbl/unique_fd.h>
 
 #include "src/lib/uuid/uuid.h"
@@ -57,7 +57,7 @@ std::unique_ptr<T> WrapUnique(T* ptr) {
 // |fuchsia.hardware.skipblock/SkipBlock|, depending on the filter rules
 // defined in |should_filter_file|.
 zx::status<zx::channel> OpenPartition(const fbl::unique_fd& devfs_root, const char* path,
-                                      fbl::Function<bool(const zx::channel&)> should_filter_file,
+                                      fit::function<bool(const zx::channel&)> should_filter_file,
                                       zx_duration_t timeout);
 
 zx::status<fidl::ClientEnd<fuchsia_hardware_block_partition::Partition>> OpenBlockPartition(

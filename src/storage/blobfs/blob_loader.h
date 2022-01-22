@@ -5,6 +5,7 @@
 #ifndef SRC_STORAGE_BLOBFS_BLOB_LOADER_H_
 #define SRC_STORAGE_BLOBFS_BLOB_LOADER_H_
 
+#include <lib/fit/function.h>
 #include <lib/fzl/owned-vmo-mapper.h>
 #include <lib/zx/status.h>
 #include <lib/zx/vmo.h>
@@ -12,7 +13,6 @@
 
 #include <memory>
 
-#include <fbl/function.h>
 #include <fbl/macros.h>
 #include <storage/buffer/owned_vmoid.h>
 

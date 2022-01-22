@@ -8,9 +8,9 @@
 #ifndef SRC_STORAGE_MINFS_ALLOCATOR_STORAGE_H_
 #define SRC_STORAGE_MINFS_ALLOCATOR_STORAGE_H_
 
+#include <lib/fit/function.h>
 #include <lib/zx/status.h>
 
-#include <fbl/function.h>
 #include <fbl/macros.h>
 #include <storage/operation/operation.h>
 
@@ -28,7 +28,7 @@
 
 namespace minfs {
 
-using GrowMapCallback = fbl::Function<zx::status<size_t>(size_t pool_size)>;
+using GrowMapCallback = fit::function<zx::status<size_t>(size_t pool_size)>;
 
 // Interface for an Allocator's underlying storage.
 class AllocatorStorage {
@@ -79,7 +79,7 @@ class AllocatorStorage {
 class PersistentStorage : public AllocatorStorage {
  public:
   // Callback invoked after the data portion of the allocator grows.
-  using GrowHandler = fbl::Function<zx_status_t(uint32_t pool_size)>;
+  using GrowHandler = fit::function<zx_status_t(uint32_t pool_size)>;
 
   PersistentStorage() = delete;
   PersistentStorage(const PersistentStorage&) = delete;

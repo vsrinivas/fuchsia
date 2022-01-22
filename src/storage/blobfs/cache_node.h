@@ -9,7 +9,8 @@
 #error Fuchsia-only Header
 #endif
 
-#include <fbl/function.h>
+#include <lib/fit/function.h>
+
 #include <fbl/intrusive_wavl_tree.h>
 #include <fbl/mutex.h>
 #include <fbl/ref_ptr.h>

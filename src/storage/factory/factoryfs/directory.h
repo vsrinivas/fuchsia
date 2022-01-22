@@ -6,13 +6,13 @@
 #define SRC_STORAGE_FACTORY_FACTORYFS_DIRECTORY_H_
 
 #include <fidl/fuchsia.io/cpp/wire.h>
+#include <lib/fit/function.h>
 #include <lib/sync/completion.h>
 
 #include <map>
 #include <string>
 #include <string_view>
 
-#include <fbl/function.h>
 #include <fbl/intrusive_hash_table.h>
 #include <fbl/intrusive_single_list.h>
 

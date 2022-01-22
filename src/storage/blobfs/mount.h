@@ -9,12 +9,12 @@
 #include <fidl/fuchsia.process.lifecycle/cpp/wire.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
+#include <lib/fit/function.h>
 #include <lib/zx/resource.h>
 
 #include <optional>
 
 #include <cobalt-client/cpp/collector.h>
-#include <fbl/function.h>
 
 #include "src/lib/storage/block_client/cpp/block_device.h"
 #include "src/storage/blobfs/cache_policy.h"

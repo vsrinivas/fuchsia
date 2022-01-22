@@ -5,13 +5,12 @@
 #ifndef SRC_STORAGE_BLOBFS_ITERATOR_BLOCK_ITERATOR_H_
 #define SRC_STORAGE_BLOBFS_ITERATOR_BLOCK_ITERATOR_H_
 
+#include <lib/fit/function.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <zircon/types.h>
 
 #include <memory>
-
-#include <fbl/function.h>
 
 #include "src/storage/blobfs/format.h"
 #include "src/storage/blobfs/iterator/allocated_extent_iterator.h"
@@ -51,7 +50,7 @@ class BlockIterator {
 
 // StreamBlocks is a utility function which reads up to |block_count| blocks, dumping continuous
 // blocks encountered from |iterator| to the callback function |stream|.
-using StreamFn = fbl::Function<zx_status_t(uint64_t local_off, uint64_t dev_off, uint32_t length)>;
+using StreamFn = fit::function<zx_status_t(uint64_t local_off, uint64_t dev_off, uint32_t length)>;
 zx_status_t StreamBlocks(BlockIterator* iterator, uint32_t block_count, StreamFn stream);
 
 // IterateToBlock is a utility function which moves the iterator to block number |block_num|.

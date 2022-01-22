@@ -67,7 +67,7 @@ class Factoryfs {
  private:
   // The callback is used by ParseEntries.  If a callback returns ZX_OK, the
   // iteration stops.
-  using Callback = fbl::Function<zx_status_t(const DirectoryEntry* entry)>;
+  using Callback = fit::function<zx_status_t(const DirectoryEntry* entry)>;
 
   Factoryfs(std::unique_ptr<BlockDevice> device, const Superblock* info, fs::FuchsiaVfs* vfs);
 

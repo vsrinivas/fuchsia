@@ -5,13 +5,12 @@
 #ifndef SRC_STORAGE_BLOBFS_ITERATOR_NODE_POPULATOR_H_
 #define SRC_STORAGE_BLOBFS_ITERATOR_NODE_POPULATOR_H_
 
+#include <lib/fit/function.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <zircon/types.h>
 
 #include <vector>
-
-#include <fbl/function.h>
 
 #include "src/storage/blobfs/allocator/base_allocator.h"
 #include "src/storage/blobfs/allocator/extent_reserver.h"
@@ -38,8 +37,8 @@ class NodePopulator {
     Stop,
   };
 
-  using OnNodeCallback = fbl::Function<void(uint32_t node_index)>;
-  using OnExtentCallback = fbl::Function<IterationCommand(ReservedExtent& extent)>;
+  using OnNodeCallback = fit::function<void(uint32_t node_index)>;
+  using OnExtentCallback = fit::function<IterationCommand(ReservedExtent& extent)>;
 
   // Utilizes the |allocator| to locate all nodes provided by |nodes|, and allocate each node the
   // appropriate |extent|.

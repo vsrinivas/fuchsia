@@ -25,7 +25,7 @@ constexpr uint32_t kDiskBlockRatio = kBlockSize / kDeviceBlockSize;
 // Callback for MockTransactionManager to invoke on calls to Transaction(). |request| is performed
 // on the provided |vmo|.
 using TransactionCallback =
-    fbl::Function<zx_status_t(const block_fifo_request_t& request, const zx::vmo& vmo)>;
+    fit::function<zx_status_t(const block_fifo_request_t& request, const zx::vmo& vmo)>;
 
 using block_client::BlockDevice;
 

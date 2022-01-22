@@ -8,13 +8,14 @@
 #ifndef SRC_STORAGE_MINFS_ALLOCATOR_ALLOCATOR_H_
 #define SRC_STORAGE_MINFS_ALLOCATOR_ALLOCATOR_H_
 
+#include <lib/fit/function.h>
+
 #include <memory>
 #include <mutex>
 
 #include <bitmap/raw-bitmap.h>
 #include <bitmap/rle-bitmap.h>
 #include <bitmap/storage.h>
-#include <fbl/function.h>
 #include <fbl/macros.h>
 
 #include "src/lib/storage/vfs/cpp/transaction/buffered_operations_builder.h"

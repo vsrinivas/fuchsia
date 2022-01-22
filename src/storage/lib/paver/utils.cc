@@ -19,6 +19,7 @@
 
 #include <string_view>
 
+#include <fbl/algorithm.h>
 #include <gpt/gpt.h>
 
 #include "src/lib/uuid/uuid.h"
@@ -74,13 +75,13 @@ zx::status<> BlockWatcherPauser::Pause() {
 }
 
 zx::status<zx::channel> OpenPartition(const fbl::unique_fd& devfs_root, const char* path,
-                                      fbl::Function<bool(const zx::channel&)> should_filter_file,
+                                      fit::function<bool(const zx::channel&)> should_filter_file,
                                       zx_duration_t timeout) {
   ZX_ASSERT(path != nullptr);
 
   struct CallbackInfo {
     zx::channel out_partition;
-    fbl::Function<bool(const zx::channel&)> should_filter_file;
+    fit::function<bool(const zx::channel&)> should_filter_file;
   };
 
   CallbackInfo info = {

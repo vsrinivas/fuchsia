@@ -7,8 +7,7 @@
 
 #include <fidl/fuchsia.io/cpp/wire.h>
 #include <lib/async-loop/default.h>
-
-#include <fbl/function.h>
+#include <lib/fit/function.h>
 
 #include "src/lib/storage/block_client/cpp/block_device.h"
 

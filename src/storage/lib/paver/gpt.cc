@@ -11,6 +11,7 @@
 
 #include <string_view>
 
+#include <fbl/algorithm.h>
 #include <gpt/c/gpt.h>
 
 #include "src/storage/lib/paver/pave-logging.h"

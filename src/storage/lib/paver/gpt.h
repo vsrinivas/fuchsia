@@ -6,12 +6,12 @@
 
 #include <lib/fdio/cpp/caller.h>
 #include <lib/fdio/directory.h>
+#include <lib/fit/function.h>
 #include <lib/service/llcpp/service.h>
 #include <lib/zx/channel.h>
 
 #include <string_view>
 
-#include <fbl/function.h>
 #include <gpt/gpt.h>
 
 #include "src/lib/uuid/uuid.h"
@@ -25,7 +25,7 @@ using gpt::GptDevice;
 // utility functions.
 class GptDevicePartitioner {
  public:
-  using FilterCallback = fbl::Function<bool(const gpt_partition_t&)>;
+  using FilterCallback = fit::function<bool(const gpt_partition_t&)>;
 
   struct InitializeGptResult {
     std::unique_ptr<GptDevicePartitioner> gpt;

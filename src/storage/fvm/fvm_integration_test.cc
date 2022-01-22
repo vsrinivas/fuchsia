@@ -19,6 +19,7 @@
 #include <lib/fdio/directory.h>
 #include <lib/fdio/namespace.h>
 #include <lib/fdio/unsafe.h>
+#include <lib/fit/function.h>
 #include <lib/zircon-internal/thread_annotations.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/fifo.h>
@@ -48,7 +49,6 @@
 
 #include <fbl/algorithm.h>
 #include <fbl/auto_lock.h>
-#include <fbl/function.h>
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
 #include <fbl/unique_fd.h>

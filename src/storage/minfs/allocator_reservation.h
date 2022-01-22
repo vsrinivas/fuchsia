@@ -8,9 +8,9 @@
 #ifndef SRC_STORAGE_MINFS_ALLOCATOR_RESERVATION_H_
 #define SRC_STORAGE_MINFS_ALLOCATOR_RESERVATION_H_
 
+#include <lib/fit/function.h>
 #include <lib/zx/status.h>
 
-#include <fbl/function.h>
 #include <fbl/macros.h>
 
 #include "src/storage/minfs/format.h"

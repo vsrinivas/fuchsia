@@ -5,8 +5,9 @@
 #ifndef SRC_STORAGE_MINFS_ALLOCATOR_METADATA_H_
 #define SRC_STORAGE_MINFS_ALLOCATOR_METADATA_H_
 
+#include <lib/fit/function.h>
+
 #include <bitmap/storage.h>
-#include <fbl/function.h>
 #include <fbl/macros.h>
 
 #include "src/storage/minfs/format.h"

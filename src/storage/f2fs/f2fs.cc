@@ -103,7 +103,7 @@ zx::status<std::unique_ptr<F2fs>> CreateFsAndRoot(const MountOptions& mount_opti
                                                   async_dispatcher_t* dispatcher,
                                                   std::unique_ptr<f2fs::Bcache> bcache,
                                                   fidl::ServerEnd<fuchsia_io::Directory> root,
-                                                  fbl::Closure on_unmount,
+                                                  fit::closure on_unmount,
                                                   ServeLayout serve_layout) {
 #else   // __Fuchsia__
 zx::status<std::unique_ptr<F2fs>> CreateFsAndRoot(const MountOptions& mount_options,

@@ -30,10 +30,10 @@
 
 #include <lib/syslog/cpp/macros.h>
 #include <lib/fit/defer.h>
+#include <lib/fit/function.h>
 #include <lib/zx/status.h>
 
 #include <fbl/algorithm.h>
-#include <fbl/function.h>
 #include <fbl/intrusive_wavl_tree.h>
 #include <fbl/intrusive_double_list.h>
 #include <fbl/macros.h>
@@ -90,7 +90,7 @@ zx::status<std::unique_ptr<F2fs>> CreateFsAndRoot(const MountOptions &mount_opti
                                                   async_dispatcher_t *dispatcher,
                                                   std::unique_ptr<f2fs::Bcache> bcache,
                                                   fidl::ServerEnd<fuchsia_io::Directory> root,
-                                                  fbl::Closure on_unmount,
+                                                  fit::closure on_unmount,
                                                   ServeLayout serve_layout);
 
 using SyncCallback = fs::Vnode::SyncCallback;
@@ -126,7 +126,7 @@ class F2fs : public fs::Vfs {
                                           std::unique_ptr<f2fs::Bcache> bc,
                                           const MountOptions &options, std::unique_ptr<F2fs> *out);
 
-  void SetUnmountCallback(fbl::Closure closure) { on_unmount_ = std::move(closure); }
+  void SetUnmountCallback(fit::closure closure) { on_unmount_ = std::move(closure); }
   void Shutdown(fs::FuchsiaVfs::ShutdownCallback cb) final;
   void OnNoConnections() final;
 
@@ -258,7 +258,7 @@ class F2fs : public fs::Vfs {
   std::unique_ptr<f2fs::Bcache> bc_;
 
   fbl::RefPtr<VnodeF2fs> root_vnode_;
-  fbl::Closure on_unmount_;
+  fit::closure on_unmount_;
   MountOptions mount_options_;
 
   std::shared_ptr<Superblock> raw_sb_;

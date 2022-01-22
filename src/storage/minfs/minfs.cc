@@ -1399,7 +1399,7 @@ zx::status<std::unique_ptr<fs::ManagedVfs>> MountAndServe(const MountOptions& mo
                                                           async_dispatcher_t* dispatcher,
                                                           std::unique_ptr<minfs::Bcache> bcache,
                                                           zx::channel mount_channel,
-                                                          fbl::Closure on_unmount) {
+                                                          fit::closure on_unmount) {
   TRACE_DURATION("minfs", "MountAndServe");
 
   fbl::RefPtr<VnodeMinfs> data_root;

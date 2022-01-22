@@ -32,10 +32,10 @@
 #include "src/storage/minfs/minfs_inspect_tree.h"
 #endif
 
+#include <lib/fit/function.h>
 #include <lib/zircon-internal/fnv1hash.h>
 
 #include <fbl/algorithm.h>
-#include <fbl/function.h>
 #include <fbl/intrusive_hash_table.h>
 #include <fbl/intrusive_single_list.h>
 #include <fbl/macros.h>
@@ -283,7 +283,7 @@ class Minfs :
     return 10 * (1 << 20) / kMinfsBlockSize;
   }
 
-  void SetUnmountCallback(fbl::Closure closure) { on_unmount_ = std::move(closure); }
+  void SetUnmountCallback(fit::closure closure) { on_unmount_ = std::move(closure); }
 
   // FuchsiaVfs overrides.
   void Shutdown(fs::FuchsiaVfs::ShutdownCallback cb) final;
@@ -482,7 +482,7 @@ class Minfs :
   HashTable vnode_hash_ __TA_GUARDED(hash_lock_){};
 
 #ifdef __Fuchsia__
-  fbl::Closure on_unmount_{};
+  fit::closure on_unmount_{};
   MinfsMetrics metrics_ = {};
   std::unique_ptr<fs::Journal> journal_;
 

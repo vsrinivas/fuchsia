@@ -6,13 +6,13 @@
 #define SRC_STORAGE_MINFS_MINFS_H_
 
 #include <inttypes.h>
+#include <lib/fit/function.h>
 #include <lib/zx/status.h>
 
 #include <functional>
 #include <memory>
 
 #include <fbl/algorithm.h>
-#include <fbl/function.h>
 #include <fbl/intrusive_hash_table.h>
 #include <fbl/intrusive_single_list.h>
 #include <fbl/macros.h>
@@ -116,7 +116,7 @@ zx::status<std::unique_ptr<fs::ManagedVfs>> MountAndServe(const MountOptions& op
                                                           async_dispatcher_t* dispatcher,
                                                           std::unique_ptr<minfs::Bcache> bcache,
                                                           zx::channel mount_channel,
-                                                          fbl::Closure on_unmount);
+                                                          fit::closure on_unmount);
 #endif
 
 }  // namespace minfs

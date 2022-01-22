@@ -43,7 +43,7 @@ class VnodeCache {
   // dirty_list_ is empty.
   void Reset();
 
-  using Callback = fbl::Function<zx_status_t(fbl::RefPtr<VnodeF2fs>&)>;
+  using Callback = fit::function<zx_status_t(fbl::RefPtr<VnodeF2fs>&)>;
 
   // It traverses dirty_lists and executes cb for the dirty vnodes with
   // which cb_if returns ZX_OK.

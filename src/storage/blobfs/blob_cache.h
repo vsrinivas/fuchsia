@@ -9,8 +9,9 @@
 #error Fuchsia-only Header
 #endif
 
+#include <lib/fit/function.h>
+
 #include <fbl/condition_variable.h>
-#include <fbl/function.h>
 #include <fbl/intrusive_wavl_tree.h>
 #include <fbl/mutex.h>
 #include <fbl/ref_ptr.h>
@@ -58,7 +59,7 @@ class BlobCache {
   //
   // Returns the first error encountered, or ZX_OK once finished. |callback| respects flow control
   // status codes (i.e. ZX_ERR_STOP, ZX_ERR_NEXT).
-  using NextNodeCallback = fbl::Function<zx_status_t(fbl::RefPtr<CacheNode>)>;
+  using NextNodeCallback = fit::function<zx_status_t(fbl::RefPtr<CacheNode>)>;
   zx_status_t ForAllOpenNodes(NextNodeCallback callback);
 
   // Searches for a blob by |digest|.
