@@ -553,6 +553,34 @@ macro_rules! reader_bench_fn {
     };
 }
 
+// Generates a function for benchmarking read of a VMO filled to a specified size.
+macro_rules! reader_tree_filled_vmo_bench_fn {
+    ($name:ident, $size:expr, $fill_until:expr, $label:expr) => {
+        async fn $name(iterations: usize) {
+            let inspector = Inspector::new_with_size($size);
+            // inspector clones all refer to same VMO
+            let proxy = spawn_server(inspector.clone()).unwrap();
+            let mut nodes = vec![];
+            if $fill_until > 0 {
+                let ints_for_filling: i64 = $fill_until / 64;
+                for i in 0..ints_for_filling {
+                    nodes.push(inspector.root().create_int("i", i));
+                }
+            }
+
+            for _ in 0..iterations {
+                ftrace::duration!("benchmark", $label);
+
+                loop {
+                    if let Ok(_) = SnapshotTree::try_from(&proxy).await {
+                        break;
+                    }
+                }
+            }
+        }
+    };
+}
+
 reader_tree_uncontended_bench_fn!(uncontended_snapshot_tree_4k, 4096, "UncontendedSnapshotTree/4K");
 reader_tree_uncontended_bench_fn!(
     uncontended_snapshot_tree_16k,
@@ -606,6 +634,32 @@ reader_bench_fn!(bench_1m_10hz, 4096 * 256, 10, "Snapshot/1M/10hz");
 reader_bench_fn!(bench_1m_100hz, 4096 * 256, 100, "Snapshot/1M/100hz");
 reader_bench_fn!(bench_1m_1khz, 4096 * 256, 1000, "Snapshot/1M/1khz");
 
+reader_tree_filled_vmo_bench_fn!(snapshot_tree_empty_vmo, 4096 * 256, 0, "SnapshotTree/EmptyVMO");
+reader_tree_filled_vmo_bench_fn!(
+    snapshot_tree_quarter_filled_vmo,
+    4096 * 256,
+    4096 * 64,
+    "SnapshotTree/QuarterFilledVMO"
+);
+reader_tree_filled_vmo_bench_fn!(
+    snapshot_tree_half_filled_vmo,
+    4096 * 256,
+    4096 * 128,
+    "SnapshotTree/HalfFilledVMO"
+);
+reader_tree_filled_vmo_bench_fn!(
+    snapshot_tree_three_quarter_filled_vmo,
+    4096 * 256,
+    4096 * 192,
+    "SnapshotTree/ThreeQuarterFilledVMO"
+);
+reader_tree_filled_vmo_bench_fn!(
+    snapshot_tree_full_vmo,
+    4096 * 256,
+    4096 * 256,
+    "SnapshotTree/FullVMO"
+);
+
 async fn reader_benchmark(iterations: usize) {
     // TODO(fxbug.dev/43505): Implement benchmarks where the real size doesn't match the inspector size.
     // TODO(fxbug.dev/43505): Enforce threads starting before benches run.
@@ -650,6 +704,12 @@ async fn reader_benchmark(iterations: usize) {
     uncontended_snapshot_tree_16k(iterations).await;
     uncontended_snapshot_tree_256k(iterations).await;
     uncontended_snapshot_tree_1m(iterations).await;
+
+    snapshot_tree_empty_vmo(iterations).await;
+    snapshot_tree_quarter_filled_vmo(iterations).await;
+    snapshot_tree_half_filled_vmo(iterations).await;
+    snapshot_tree_three_quarter_filled_vmo(iterations).await;
+    snapshot_tree_full_vmo(iterations).await;
 }
 
 fn writer_benchmark(iterations: usize) {

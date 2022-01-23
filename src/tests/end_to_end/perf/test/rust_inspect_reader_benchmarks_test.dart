@@ -117,6 +117,26 @@ void main() {
       ..add(MetricsSpec(name: 'duration', extraArgs: {
         'eventName': 'UncontendedSnapshotTree/1M',
         'outputTestName': 'UncontendedSnapshotTree/1M'
+      }))
+      ..add(MetricsSpec(name: 'duration', extraArgs: {
+        'eventName': 'SnapshotTree/EmptyVMO',
+        'outputTestName': 'SnapshotTree/EmptyVMO'
+      }))
+      ..add(MetricsSpec(name: 'duration', extraArgs: {
+        'eventName': 'SnapshotTree/QuarterFilledVMO',
+        'outputTestName': 'SnapshotTree/QuarterFilledVMO'
+      }))
+      ..add(MetricsSpec(name: 'duration', extraArgs: {
+        'eventName': 'SnapshotTree/HalfFilledVMO',
+        'outputTestName': 'SnapshotTree/HalfFilled_VMO'
+      }))
+      ..add(MetricsSpec(name: 'duration', extraArgs: {
+        'eventName': 'SnapshotTree/ThreeQuarterFilledVMO',
+        'outputTestName': 'SnapshotTree/ThreeQuarterFilledVMO'
+      }))
+      ..add(MetricsSpec(name: 'duration', extraArgs: {
+        'eventName': 'SnapshotTree/FullVMO',
+        'outputTestName': 'SnapshotTree/FullVMO'
       }));
 
     await helper.performance.processTrace(
