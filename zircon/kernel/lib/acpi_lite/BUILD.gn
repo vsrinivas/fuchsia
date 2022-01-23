@@ -5,7 +5,7 @@
 # https://opensource.org/licenses/MIT
 
 import("//build/toolchain/toolchain_environment.gni")
-import("//build/unification/zx_library.gni")
+import("//build/zircon/zx_library.gni")
 
 # Generic parts of acpi_lite.
 zx_library("acpi_lite") {

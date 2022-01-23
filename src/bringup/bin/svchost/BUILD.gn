@@ -5,7 +5,7 @@
 import("//build/dist/component_manifest_resources.gni")
 import("//build/test.gni")
 import("//build/testing/bootfs_test.gni")
-import("//build/unification/zx_library.gni")
+import("//build/zircon/zx_library.gni")
 
 group("bootfs") {
   deps = [

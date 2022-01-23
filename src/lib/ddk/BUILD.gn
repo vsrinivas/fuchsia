@@ -4,7 +4,7 @@
 
 import("//build/cpp/library_headers.gni")
 import("//build/cpp/sdk_static_library.gni")
-import("//build/unification/zx_library.gni")
+import("//build/zircon/zx_library.gni")
 
 group("tests") {
   testonly = true

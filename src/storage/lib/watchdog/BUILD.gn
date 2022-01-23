@@ -5,7 +5,7 @@
 import("//build/components.gni")
 import("//build/test.gni")
 import("//build/testing/bootfs_test.gni")
-import("//build/unification/zx_library.gni")
+import("//build/zircon/zx_library.gni")
 
 group("tests") {
   testonly = true

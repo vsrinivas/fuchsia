@@ -4,8 +4,8 @@
 # license that can be found in the LICENSE file or at
 # https://opensource.org/licenses/MIT
 
-import("//build/unification/zx_library.gni")
 import("//build/zircon/zircon_cpu.gni")
+import("//build/zircon/zx_library.gni")
 import("//zircon/system/ulib/hwreg/hwreg_asm_header.gni")
 
 zx_library("arch") {
