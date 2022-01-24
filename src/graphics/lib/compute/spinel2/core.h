@@ -965,6 +965,8 @@
 #define SPN_RASTER_COHORT_META_ALLOC_OFFSET_SK_READS  0 // alloc[0] - block holding first ttsk (head)
 #define SPN_RASTER_COHORT_META_ALLOC_OFFSET_PK_READS  1 // alloc[1] - block holding first ttpk (head/node)
 
+#define SPN_RASTER_COHORT_MAX_SIZE                    (SPN_RASTER_COHORT_METAS_SIZE - 1)
+
 //
 // STYLING STRUCTS
 //

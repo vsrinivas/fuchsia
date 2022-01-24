@@ -83,6 +83,10 @@ struct spinel_device_vk;
 //
 // Declare the max number of timeline semaphores.
 //
+// FIXME(allanmac): These are likely larger than necessary and can be lowered
+// specific platforms (e.g. ARM SoCs).  Alternatively, just select a smaller
+// number.
+//
 // clang-format off
 #define SPN_DEPS_IMMEDIATE_SEMAPHORE_MAX  128
 #define SPN_DEPS_DELAYED_SEMAPHORE_MAX    128
@@ -204,6 +208,10 @@ typedef VkPipelineStageFlags (*spinel_deps_immediate_record_pfn_t)(VkCommandBuff
 //
 // Fixed size limits on the immediate submit info structure.
 //
+// FIXME(allanmac): Adjust the immediate count to its limit.  The composition
+// might be the only object needing to wait on more than a few PLACE immediate
+// submissions.
+//
 #define SPN_DEPS_IMMEDIATE_SUBMIT_SIZE_WAIT_IMMEDIATE 33
 #define SPN_DEPS_IMMEDIATE_SUBMIT_SIZE_SIGNAL_DELAYED 1
 
@@ -233,8 +241,8 @@ struct spinel_deps_immediate_submit_info
       {
         spinel_handle_t const * extent;
         uint32_t                size;
-        uint32_t                span;
         uint32_t                head;
+        uint32_t                span;
       } handles;
     } delayed;
 
@@ -276,23 +284,6 @@ spinel_deps_create(struct spinel_deps_create_info const * info, struct spinel_de
 //
 void
 spinel_deps_dispose(struct spinel_deps * deps, struct spinel_device_vk const * vk);
-
-//
-// Wait for at most one submission to complete starting from the oldest to
-// youngest submission.
-//
-// Returns true if a dependency was drained.
-//
-bool
-spinel_deps_drain_1(struct spinel_deps *            deps,
-                    struct spinel_device_vk const * vk,
-                    uint64_t                        timeout);
-
-//
-// Drain all submissions
-//
-void
-spinel_deps_drain_all(struct spinel_deps * deps, struct spinel_device_vk const * vk);
 
 //
 // Acquire a "delayed" semaphore
@@ -338,10 +329,11 @@ spinel_deps_delayed_flush(struct spinel_deps * deps, spinel_deps_delayed_semapho
 // An immediate submission will only ever wait on small number of prior
 // immediate semaphores.  This is statically known.
 //
-spinel_deps_immediate_semaphore_t
+void
 spinel_deps_immediate_submit(struct spinel_deps *                             deps,
                              struct spinel_device_vk *                        vk,
-                             struct spinel_deps_immediate_submit_info const * info);
+                             struct spinel_deps_immediate_submit_info const * info,
+                             spinel_deps_immediate_semaphore_t *              p_immediate);
 
 //
 // Get the final stage of the submission associated with `immediate`
@@ -349,6 +341,24 @@ spinel_deps_immediate_submit(struct spinel_deps *                             de
 VkPipelineStageFlags
 spinel_deps_immediate_get_stage(struct spinel_deps *              deps,
                                 spinel_deps_immediate_semaphore_t immediate);
+
+//
+// Blocks until:
+//
+//   * At least one completion action is executed
+//   * Or a submission is completed and its action is executed.
+//
+// Returns true if either case is true.
+//
+bool
+spinel_deps_drain_1(struct spinel_deps * deps, struct spinel_device_vk const * vk);
+
+//
+// Blocks until all submissions and actions are drained.
+//
+void
+spinel_deps_drain_all(struct spinel_deps *            deps,  //
+                      struct spinel_device_vk const * vk);
 
 //
 //

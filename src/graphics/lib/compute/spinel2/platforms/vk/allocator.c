@@ -186,9 +186,9 @@ spinel_allocator_free_dbi_dm(struct spinel_allocator *     allocator,
                              VkAllocationCallbacks const * ac,
                              struct spinel_dbi_dm *        dbi_dm)
 {
-  vkFreeMemory(d, dbi_dm->dm, ac);
-
   vkDestroyBuffer(d, dbi_dm->dbi.buffer, ac);
+
+  vkFreeMemory(d, dbi_dm->dm, ac);
 }
 
 //
@@ -207,6 +207,24 @@ void
 spinel_dbi_dm_devaddr_init_devaddr(VkDevice d, struct spinel_dbi_dm_devaddr * dbi_dm_devaddr)
 {
   dbi_dm_devaddr->devaddr = spinel_dbi_to_devaddr(d, &dbi_dm_devaddr->dbi_dm.dbi);
+}
+
+//
+//
+//
+VkDeviceAddress
+spinel_dbi_to_devaddr(VkDevice d, VkDescriptorBufferInfo const * dbi)
+{
+  VkBufferDeviceAddressInfo const bdai = {
+
+    .sType  = VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO,
+    .pNext  = NULL,
+    .buffer = dbi->buffer
+  };
+
+  VkDeviceAddress const devaddr = vkGetBufferDeviceAddress(d, &bdai) + dbi->offset;
+
+  return devaddr;
 }
 
 //
@@ -232,17 +250,3 @@ spinel_dbi_devaddr_from_dbi(VkDevice                       d,
 //
 //
 //
-VkDeviceAddress
-spinel_dbi_to_devaddr(VkDevice d, VkDescriptorBufferInfo const * dbi)
-{
-  VkBufferDeviceAddressInfo const bdai = {
-
-    .sType  = VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO,
-    .pNext  = NULL,
-    .buffer = dbi->buffer
-  };
-
-  VkDeviceAddress const devaddr = vkGetBufferDeviceAddress(d, &bdai) + dbi->offset;
-
-  return devaddr;
-}

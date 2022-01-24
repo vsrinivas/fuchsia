@@ -1504,7 +1504,7 @@ spn_tile_color_acc_over_background(SPN_SUBGROUP_UNIFORM const uint32_t rg32,
 //     (X,0)                              (Y,0)
 //
 void
-spn_tile_color_acc_store_to_surface()
+spn_tile_color_acc_store_to_surface_rgba8()
 {
   SPN_SUBGROUP_UNIFORM const uint32_t tile_x = SPN_TTCK_GET_X(lgf_lxy) * SPN_TILE_WIDTH;
   SPN_SUBGROUP_UNIFORM const uint32_t tile_y = SPN_TTCK_GET_Y(lgf_lxy) * SPN_TILE_HEIGHT;
@@ -1524,8 +1524,7 @@ spn_tile_color_acc_store_to_surface()
 #undef SPN_EXPAND_X
 #define SPN_EXPAND_X(I, N, P, L)                                                                   \
   {                                                                                                \
-    const uint32_t abgr32       = packUnorm4x8(color_acc##I);                                      \
-    surface.extent[I * subtile] = abgr32;                                                          \
+    surface.extent[I * subtile] = packUnorm4x8(SPN_DEVICE_RENDER_SURFACE_SWIZZLE(color_acc##I)); \
   }
 
   SPN_RENDER_SUBTILE_WIDTH_EXPAND()
@@ -2213,8 +2212,8 @@ main()
                     }
                     break;
 
-                  case SPN_STYLING_OPCODE_COLOR_ACC_STORE_TO_SURFACE:
-                    spn_tile_color_acc_store_to_surface();
+                  case SPN_STYLING_OPCODE_COLOR_ACC_STORE_TO_SURFACE_RGBA8:
+                    spn_tile_color_acc_store_to_surface_rgba8();
                     break;
 
                   case SPN_STYLING_OPCODE_COLOR_ACC_TEST_OPACITY:

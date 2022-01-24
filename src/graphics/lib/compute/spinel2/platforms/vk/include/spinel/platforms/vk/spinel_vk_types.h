@@ -51,7 +51,7 @@ typedef struct spinel_vk_context_create_info_vk_queue
 } spinel_vk_context_create_info_vk_queue_t;
 
 //
-// Spinel Vulkan shared queue family indices.
+// Spinel Vulkan queue family indices for shared resources.
 //
 #define SPN_VK_CONTEXT_CREATE_INFO_VK_QUEUE_SHARED_MAX_FAMILIES 2
 
@@ -93,35 +93,35 @@ typedef struct spinel_vk_context_create_info
 //
 // Possible rendering use cases supported by these extensions include:
 //
-//  1) Render to a storage buffer.
-//  2) Render to a storage buffer and store the rendered tiles to an image.
+//  1) Render and then copy the results to a debug buffer.
+//  2) Render and then copy all altered tiles to an image.
 //
 // These buffer rendering extensions can be chained in any order but will always
-// be executed in the following order on each queue:
+// be executed in listed order on the queues.
+//
+// The compute extensions are submitted to the Spinel-managed compute queue.
+//
+// Optional graphics extensions are submitted to the provided graphics-capable
+// queue.
 //
 //  COMPUTE QUEUE:
 //
 //   * COMPUTE_WAIT    : Wait before executing compute queue submission.
-//   * COMPUTE_ACQUIRE : Acquire compute resources from present queue.
+//   * COMPUTE_ACQUIRE : Acquire swapchain resources back from a queue family.
 //   * COMPUTE_FILL    : Fill buffer.  This is a convenience extension.
-//   * COMPUTE_RENDER  : Render to buffer.
+//   * COMPUTE_RENDER  : Render tiles to a Spinel-managed surface.
 //   * COMPUTE_COPY    : Copy to buffer for debugging.
-//   * COMPUTE_RELEASE : Release compute resources to present queue.
+//   * COMPUTE_RELEASE : Release swapchain resources to another queue family.
 //   * COMPUTE_SIGNAL  : Signal compute queue submission is complete.
 //
 //  GRAPHICS QUEUE:
 //
-//   * GRAPHICS_WAIT    : Wait before executing present queue submission.
-//   * GRAPHICS_ACQUIRE : Acquire compute resources from compute queue.
-//   * GRAPHICS_CLEAR   : Clear image.  This is a convenience extension.
-//   * GRAPHICS_STORE   : Store rendered buffer to image.
-//   * GRAPHICS_RELEASE : Release compute resources to compute queue.
-//   * GRAPHICS_SIGNAL  : Signal submission is complete.
+//   * GRAPHICS_WAIT   : Wait before executing the graphics queue submission.
+//   * GRAPHICS_CLEAR  : Clear the image before storing altered tiles.
+//   * GRAPHICS_STORE  : Store altered tiles to an image.
+//   * GRAPHICS_SIGNAL : Signal submission is complete.
 //
 // TODO(allanmac):
-//
-//  * The WAIT/SIGNAL and ACQUIRE/RELEASE extensions can be combined once the
-//    compute storage buffer surface is managed by Spinel.
 //
 //  * Copy changed buffer tiles to an image via a vertex+fragment pass in
 //    order to benefit from fast clear and frame buffer compression.
@@ -176,7 +176,7 @@ typedef struct spinel_vk_semaphore_import_wait
 //
 // Note that binary semaphores ignore associated values.
 //
-#define SPN_VK_SEMAPHORE_IMPORT_SIGNAL_SIZE 1
+#define SPN_VK_SEMAPHORE_IMPORT_SIGNAL_SIZE 2
 
 typedef struct spinel_vk_semaphore_import_signal
 {
@@ -291,7 +291,8 @@ typedef struct spinel_vk_swapchain_submit_ext_graphics_wait
 //
 // GRAPHICS CLEAR
 //
-// Clears `graphics_store.image`.
+// Fast clears `graphics_store.image` before storing changed swapchain tiles to
+// the image.
 //
 typedef struct spinel_vk_swapchain_submit_ext_graphics_clear
 {
@@ -303,18 +304,19 @@ typedef struct spinel_vk_swapchain_submit_ext_graphics_clear
 //
 // GRAPHICS STORE
 //
-// Stores swapchain storage buffer at `.extent_index` to `.image`.
+// Stores changed swapchain tiles to `.image`.
 //
-// Queue ownership transfers and layout transisitions are implicitly handled.
+// Necessary queue ownership transfers and layout transisitions are implicitly
+// handled.
 //
 typedef struct spinel_vk_swapchain_submit_ext_graphics_store
 {
   void *                                ext;
   spinel_vk_swapchain_submit_ext_type_e type;
-  uint32_t                              queue_family_index;
-  VkQueue                               queue;
-  VkCommandBuffer                       cb;
   uint32_t                              extent_index;
+  VkCommandBuffer                       cb;
+  VkQueue                               queue;
+  uint32_t                              queue_family_index;
   VkImageLayout                         old_layout;
   VkImage                               image;
   VkDescriptorImageInfo                 image_info;

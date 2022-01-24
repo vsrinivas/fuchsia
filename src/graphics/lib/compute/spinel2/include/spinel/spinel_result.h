@@ -41,7 +41,6 @@ extern "C" {
                                                                                                    \
   SPN_RESULT(SPN_ERROR_RASTER_BUILDER_LOST)                                                        \
   SPN_RESULT(SPN_ERROR_RASTER_BUILDER_SEALED)                                                      \
-  SPN_RESULT(SPN_ERROR_RASTER_BUILDER_TOO_MANY_PATHS)                                              \
                                                                                                    \
   SPN_RESULT(SPN_ERROR_SWAPCHAIN_SUBMIT_INVALID)                                                   \
                                                                                                    \

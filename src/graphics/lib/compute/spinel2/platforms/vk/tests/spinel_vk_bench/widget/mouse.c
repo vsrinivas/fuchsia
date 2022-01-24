@@ -38,22 +38,22 @@ struct impl_vec2
 
 struct widget_mouse
 {
-  // clang-format off
-  struct widget          widget;
+  struct widget widget;
 
-  struct impl_vec2       position;
+  struct impl_vec2 position;
 
-  struct {
-    spinel_path_t           extent[2];
-    uint32_t             count;
+  struct
+  {
+    spinel_path_t extent[2];
+    uint32_t      count;
   } paths;
 
-  struct {
-    spinel_raster_t         extent[2];
-    uint32_t             count;
-    bool                 is_valid;
+  struct
+  {
+    spinel_raster_t extent[2];
+    uint32_t        count;
+    bool            is_valid;
   } rasters;
-  // clang-format on
 
   //
   // FIXME(allanmac): Eventually decide whether or not the mouse always

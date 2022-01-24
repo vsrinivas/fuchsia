@@ -62,7 +62,6 @@ struct spinel_target_config
       struct spinel_target_allocator drw;         // device read-write
       struct spinel_target_allocator hw_dr;       // host write / device read
       struct spinel_target_allocator hrw_dr;      // host read-write / device read
-      struct spinel_target_allocator hr_dw;       // host read / device write
       struct spinel_target_allocator drw_shared;  // device read-write on 1 or 2 queue families
     } device;
   } allocator;
@@ -136,16 +135,14 @@ struct spinel_target_config
   //
   struct
   {
-    uint32_t no_staging;  // flag: do not create a command staging ring on discrete GPUs
-
     struct
     {
       uint32_t dispatches;  // number of in-flight dispatches
-      uint32_t ring;        // number of commands in ring
-      uint32_t eager;       // number of commands that will force an eager launch
-      uint32_t cohort;      // max number of rasters in ring
-      uint32_t cmds;        // max number of rast cmds that can be emitted by FILLS_EXPAND
-      uint32_t ttrks;       // max number of ttrks that can be emitted by RASTERIZE_XXX
+      uint32_t ring;        // number of fill commands in ring shared across all dispatches
+      uint32_t eager;       // number of fill commands that will force an eager launch of a dispatch
+      uint32_t cohort;      // max number of rasters in a cohort
+      uint32_t cmds;        // max rast cmds per dispatch emitted by FILLS_EXPAND without error
+      uint32_t ttrks;       // max ttrks per dispatch emitted by RASTERIZE_XXX without error
     } size;
 
     struct
@@ -159,8 +156,6 @@ struct spinel_target_config
   //
   struct
   {
-    uint32_t no_staging;  // flag : do not create a command staging ring on discrete GPUs
-
     struct
     {
       uint32_t dispatches;  // number of in-flight dispatches
@@ -177,7 +172,7 @@ struct spinel_target_config
   struct
   {
     VkSharingMode sharing_mode;  // Exclusive or concurrent
-    uint32_t      texel_size;    // How many bytes per texel
+    uint32_t      texel_size;    // How many bytes per texel?
   } swapchain;
 
   //

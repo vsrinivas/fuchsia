@@ -682,7 +682,7 @@ spinel_svg_layers_decode_n(uint32_t const                svg_count,
     // cmds[0-2]
     spinel_styling_background_over_encoder(cmds_leave, background);
 
-    cmds_leave[3] = SPN_STYLING_OPCODE_COLOR_ACC_STORE_TO_SURFACE;
+    cmds_leave[3] = SPN_STYLING_OPCODE_COLOR_ACC_STORE_TO_SURFACE_RGBA8;
   }
 
   // the top group has no parents

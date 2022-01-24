@@ -85,7 +85,7 @@ STATIC_ASSERT_MACRO_1(sizeof(union spinel_path_header) == SPN_PATH_HEAD_DWORDS *
 // The number of dispatch records is defined in the target's config data
 // structure.
 //
-struct spinel_pbi_span_head
+struct spinel_pbi_head_span
 {
   uint32_t head;
   uint32_t span;
@@ -93,12 +93,15 @@ struct spinel_pbi_span_head
 
 struct spinel_pbi_dispatch
 {
-  struct spinel_pbi_span_head blocks;
-  struct spinel_pbi_span_head paths;
+  struct spinel_pbi_head_span blocks;
+  struct spinel_pbi_head_span paths;
 
   uint32_t rolling;  // FIXME(allanmac): move to wip
 
-  spinel_deps_delayed_semaphore_t delayed;
+  struct
+  {
+    spinel_deps_delayed_semaphore_t delayed;
+  } signal;
 };
 
 //
@@ -210,13 +213,13 @@ struct spinel_path_builder_impl
 //
 //
 static spinel_result_t
-spinel_pbi_lost_begin(struct spinel_path_builder_impl * const impl)
+spinel_pbi_lost_begin(struct spinel_path_builder_impl * impl)
 {
   return SPN_ERROR_PATH_BUILDER_LOST;
 }
 
 static spinel_result_t
-spinel_pbi_lost_end(struct spinel_path_builder_impl * const impl, spinel_path_t * const path)
+spinel_pbi_lost_end(struct spinel_path_builder_impl * impl, spinel_path_t * path)
 {
   *path = SPN_PATH_INVALID;
 
@@ -224,10 +227,10 @@ spinel_pbi_lost_end(struct spinel_path_builder_impl * const impl, spinel_path_t 
 }
 
 static spinel_result_t
-spinel_pbi_release(struct spinel_path_builder_impl * const impl);
+spinel_pbi_release(struct spinel_path_builder_impl * impl);
 
 static spinel_result_t
-spinel_pbi_lost_release(struct spinel_path_builder_impl * const impl)
+spinel_pbi_lost_release(struct spinel_path_builder_impl * impl)
 {
   //
   // FIXME -- releasing a lost path builder might eventually require a
@@ -237,7 +240,7 @@ spinel_pbi_lost_release(struct spinel_path_builder_impl * const impl)
 }
 
 static spinel_result_t
-spinel_pbi_lost_flush(struct spinel_path_builder_impl * const impl)
+spinel_pbi_lost_flush(struct spinel_path_builder_impl * impl)
 {
   return SPN_ERROR_PATH_BUILDER_LOST;
 }
@@ -249,7 +252,7 @@ spinel_pbi_lost_flush(struct spinel_path_builder_impl * const impl)
 
 #undef SPN_PATH_BUILDER_PRIM_TYPE_EXPAND_X
 #define SPN_PATH_BUILDER_PRIM_TYPE_EXPAND_X(_p, _i, _n)                                            \
-  static spinel_result_t SPN_PBI_PFN_LOST_NAME(_p)(struct spinel_path_builder_impl * const impl)   \
+  static spinel_result_t SPN_PBI_PFN_LOST_NAME(_p)(struct spinel_path_builder_impl * impl)         \
   {                                                                                                \
     return SPN_ERROR_PATH_BUILDER_LOST;                                                            \
   }
@@ -262,9 +265,9 @@ SPN_PATH_BUILDER_PRIM_TYPE_EXPAND()
 // released and a new one created.
 //
 static void
-spinel_pbi_lost(struct spinel_path_builder_impl * const impl)
+spinel_pbi_lost(struct spinel_path_builder_impl * impl)
 {
-  struct spinel_path_builder * const pb = impl->path_builder;
+  struct spinel_path_builder * pb = impl->path_builder;
 
   pb->begin   = spinel_pbi_lost_begin;
   pb->end     = spinel_pbi_lost_end;
@@ -282,8 +285,7 @@ spinel_pbi_lost(struct spinel_path_builder_impl * const impl)
 // implicitly "clocked" by the mapped.ring.
 //
 static void
-spinel_pbi_path_append(struct spinel_path_builder_impl * const impl,
-                       spinel_path_t const * const             path)
+spinel_pbi_path_append(struct spinel_path_builder_impl * impl, spinel_path_t const * path)
 {
   uint32_t const idx = spinel_next_acquire_1(&impl->paths.next);
 
@@ -295,39 +297,36 @@ spinel_pbi_path_append(struct spinel_path_builder_impl * const impl,
 // the work-in-progress compute grid.
 //
 static struct spinel_pbi_dispatch *
-spinel_pbi_dispatch_idx(struct spinel_path_builder_impl * const impl, uint32_t const idx)
+spinel_pbi_dispatch_head(struct spinel_path_builder_impl * impl)
 {
-  return impl->dispatches.extent + idx;
+  assert(!spinel_ring_is_empty(&impl->dispatches.ring));
+
+  return impl->dispatches.extent + impl->dispatches.ring.head;
 }
 
 static struct spinel_pbi_dispatch *
-spinel_pbi_dispatch_head(struct spinel_path_builder_impl * const impl)
+spinel_pbi_dispatch_tail(struct spinel_path_builder_impl * impl)
 {
-  return spinel_pbi_dispatch_idx(impl, impl->dispatches.ring.head);
-}
+  assert(!spinel_ring_is_full(&impl->dispatches.ring));
 
-static struct spinel_pbi_dispatch *
-spinel_pbi_dispatch_tail(struct spinel_path_builder_impl * const impl)
-{
-  return spinel_pbi_dispatch_idx(impl, impl->dispatches.ring.tail);
+  return impl->dispatches.extent + impl->dispatches.ring.tail;
 }
 
 static void
-spinel_pbi_dispatch_head_init(struct spinel_path_builder_impl * const impl)
+spinel_pbi_dispatch_head_init(struct spinel_path_builder_impl * impl)
 {
   *spinel_pbi_dispatch_head(impl) = (struct spinel_pbi_dispatch){
-
-    .blocks  = { .head = impl->wip.head.idx,     // head is the wip path's head idx
+    .blocks  = { .head = impl->wip.head.idx,     //
                  .span = 0 },                    //
-    .paths   = { .head = impl->paths.next.head,  // no paths have been appended
+    .paths   = { .head = impl->paths.next.head,  //
                  .span = 0 },                    //
-    .rolling = impl->wip.head.rolling,           // rolling is the wip's path's rolling counter
-    .delayed = SPN_DEPS_DELAYED_SEMAPHORE_INVALID,
+    .rolling = impl->wip.head.rolling,           //
+    .signal  = { .delayed = SPN_DEPS_DELAYED_SEMAPHORE_INVALID },
   };
 }
 
 static void
-spinel_pbi_dispatch_drop(struct spinel_path_builder_impl * const impl)
+spinel_pbi_dispatch_drop(struct spinel_path_builder_impl * impl)
 {
   struct spinel_ring * const ring = &impl->dispatches.ring;
 
@@ -335,23 +334,23 @@ spinel_pbi_dispatch_drop(struct spinel_path_builder_impl * const impl)
 }
 
 static void
-spinel_pbi_dispatch_acquire(struct spinel_path_builder_impl * const impl)
+spinel_pbi_dispatch_acquire(struct spinel_path_builder_impl * impl)
 {
   struct spinel_ring * const   ring   = &impl->dispatches.ring;
   struct spinel_device * const device = impl->device;
 
   while (spinel_ring_is_empty(ring))
     {
-      spinel_deps_drain_1(device->deps, &device->vk, UINT64_MAX);
+      spinel_deps_drain_1(device->deps, &device->vk);
     }
 
   spinel_pbi_dispatch_head_init(impl);
 }
 
 static void
-spinel_pbi_dispatch_append(struct spinel_path_builder_impl * const impl,
-                           struct spinel_pbi_dispatch * const      dispatch,
-                           spinel_path_t const * const             path)
+spinel_pbi_dispatch_append(struct spinel_path_builder_impl * impl,
+                           struct spinel_pbi_dispatch *      dispatch,
+                           spinel_path_t const *             path)
 {
   spinel_pbi_path_append(impl, path);
 
@@ -368,7 +367,7 @@ static void
 spinel_pbi_flush_complete(void * data0, void * data1)
 {
   struct spinel_path_builder_impl * const impl     = data0;
-  struct spinel_pbi_dispatch *            dispatch = data1;
+  struct spinel_pbi_dispatch * const      dispatch = data1;
   struct spinel_device * const            device   = impl->device;
 
   //
@@ -395,14 +394,14 @@ spinel_pbi_flush_complete(void * data0, void * data1)
   // Note that kernels can complete in any order so the release
   // records need to add to the mapped.ring.tail in order.
   //
-  dispatch->delayed = SPN_DEPS_DELAYED_SEMAPHORE_INVALID;
+  dispatch->signal.delayed = SPN_DEPS_DELAYED_SEMAPHORE_INVALID;
 
-  dispatch = spinel_pbi_dispatch_tail(impl);
+  struct spinel_pbi_dispatch * tail = spinel_pbi_dispatch_tail(impl);
 
-  while (dispatch->delayed == SPN_DEPS_DELAYED_SEMAPHORE_INVALID)
+  while (tail->signal.delayed == SPN_DEPS_DELAYED_SEMAPHORE_INVALID)
     {
       // release the blocks and cmds
-      spinel_ring_release_n(&impl->mapped.ring, dispatch->blocks.span);
+      spinel_ring_release_n(&impl->mapped.ring, tail->blocks.span);
 
       // release the dispatch
       spinel_ring_release_n(&impl->dispatches.ring, 1);
@@ -414,7 +413,7 @@ spinel_pbi_flush_complete(void * data0, void * data1)
         }
 
       // get new tail
-      dispatch = spinel_pbi_dispatch_tail(impl);
+      tail = spinel_pbi_dispatch_tail(impl);
     }
 }
 
@@ -524,6 +523,8 @@ spinel_pbi_flush_submit(void * data0, void * data1)
   struct spinel_path_builder_impl * const impl     = data0;
   struct spinel_pbi_dispatch * const      dispatch = data1;
 
+  assert(dispatch->paths.span > 0);
+
   //
   // Acquire an immediate semaphore
   //
@@ -547,20 +548,23 @@ spinel_pbi_flush_submit(void * data0, void * data1)
       .delayed = {
         .count      = 1,
         .semaphores = {
-          dispatch->delayed ,
+          dispatch->signal.delayed,
         },
       },
     },
   };
 
-  struct spinel_device * const device = impl->device;
-
-  (void)spinel_deps_immediate_submit(device->deps, &device->vk, &disi);
-
   //
   // The current dispatch is now sealed so drop it
   //
   spinel_pbi_dispatch_drop(impl);
+
+  //
+  // We don't need to save the returned immediate semaphore.
+  //
+  struct spinel_device * const device = impl->device;
+
+  spinel_deps_immediate_submit(device->deps, &device->vk, &disi, NULL);
 
   //
   // Acquire and initialize the next dispatch
@@ -572,15 +576,14 @@ spinel_pbi_flush_submit(void * data0, void * data1)
 //
 //
 static spinel_result_t
-spinel_pbi_flush(struct spinel_path_builder_impl * const impl)
+spinel_pbi_flush(struct spinel_path_builder_impl * impl)
 {
   //
   // Anything to launch?
   //
   struct spinel_pbi_dispatch * const dispatch = spinel_pbi_dispatch_head(impl);
 
-  // Equivalent to testing if (dispatch->span == 0)
-  if (dispatch->delayed == SPN_DEPS_DELAYED_SEMAPHORE_INVALID)
+  if (dispatch->paths.span == 0)
     {
       return SPN_SUCCESS;
     }
@@ -588,7 +591,7 @@ spinel_pbi_flush(struct spinel_path_builder_impl * const impl)
   //
   // Invoke the delayed submission action
   //
-  spinel_deps_delayed_flush(impl->device->deps, dispatch->delayed);
+  spinel_deps_delayed_flush(impl->device->deps, dispatch->signal.delayed);
 
   return SPN_SUCCESS;
 }
@@ -616,7 +619,7 @@ spinel_pb_cn_coords_finalize(float * coords[], uint32_t coords_len, uint32_t con
 }
 
 static void
-spinel_pb_finalize_subgroups(struct spinel_path_builder_impl * const impl)
+spinel_pb_finalize_subgroups(struct spinel_path_builder_impl * impl)
 {
   struct spinel_path_builder * const pb = impl->path_builder;
 
@@ -643,9 +646,9 @@ spinel_pb_finalize_subgroups(struct spinel_path_builder_impl * const impl)
 //
 //
 static void
-spinel_pbi_cmd_append(struct spinel_path_builder_impl * const impl,
-                      uint32_t const                          idx,
-                      uint32_t const                          type)
+spinel_pbi_cmd_append(struct spinel_path_builder_impl * impl,
+                      uint32_t const                    idx,
+                      uint32_t const                    type)
 {
   uint32_t const rolling = impl->mapped.rolling;
   uint32_t const cmd     = rolling | type;
@@ -660,7 +663,7 @@ spinel_pbi_cmd_append(struct spinel_path_builder_impl * const impl,
 //
 //
 static void
-spinel_pbi_node_append_next(struct spinel_path_builder_impl * const impl)
+spinel_pbi_node_append_next(struct spinel_path_builder_impl * impl)
 {
   // no need to increment the node pointer
   *impl->wip.node = impl->mapped.rolling | SPN_BLOCK_ID_TAG_PATH_NEXT;
@@ -670,7 +673,7 @@ spinel_pbi_node_append_next(struct spinel_path_builder_impl * const impl)
 //
 //
 static uint32_t
-spinel_pbi_acquire_head_block(struct spinel_path_builder_impl * const impl)
+spinel_pbi_acquire_head_block(struct spinel_path_builder_impl * impl)
 {
   struct spinel_ring * const ring = &impl->mapped.ring;
 
@@ -685,7 +688,7 @@ spinel_pbi_acquire_head_block(struct spinel_path_builder_impl * const impl)
       do
         {
           // wait for at least one dispatch to complete
-          spinel_deps_drain_1(device->deps, &device->vk, UINT64_MAX);
+          spinel_deps_drain_1(device->deps, &device->vk);
 
       } while (spinel_ring_is_empty(ring));
     }
@@ -694,8 +697,7 @@ spinel_pbi_acquire_head_block(struct spinel_path_builder_impl * const impl)
 }
 
 static spinel_result_t
-spinel_pbi_acquire_node_segs_block(struct spinel_path_builder_impl * const impl,
-                                   uint32_t * const                        idx)
+spinel_pbi_acquire_node_segs_block(struct spinel_path_builder_impl * impl, uint32_t * idx)
 {
   struct spinel_ring * const ring = &impl->mapped.ring;
 
@@ -726,7 +728,7 @@ spinel_pbi_acquire_node_segs_block(struct spinel_path_builder_impl * const impl,
       do
         {
           // wait for at least one dispatch to complete
-          spinel_deps_drain_1(device->deps, &device->vk, UINT64_MAX);
+          spinel_deps_drain_1(device->deps, &device->vk);
 
       } while (spinel_ring_is_empty(ring));
     }
@@ -740,7 +742,7 @@ spinel_pbi_acquire_node_segs_block(struct spinel_path_builder_impl * const impl,
 //
 //
 static void
-spinel_pbi_acquire_head(struct spinel_path_builder_impl * const impl)
+spinel_pbi_acquire_head(struct spinel_path_builder_impl * impl)
 {
   uint32_t const idx = spinel_pbi_acquire_head_block(impl);
 
@@ -754,7 +756,7 @@ spinel_pbi_acquire_head(struct spinel_path_builder_impl * const impl)
 }
 
 static spinel_result_t
-spinel_pbi_acquire_node(struct spinel_path_builder_impl * const impl)
+spinel_pbi_acquire_node(struct spinel_path_builder_impl * impl)
 {
   spinel_pbi_node_append_next(impl);
 
@@ -779,7 +781,7 @@ spinel_pbi_acquire_node(struct spinel_path_builder_impl * const impl)
 }
 
 static spinel_result_t
-spinel_pbi_acquire_segs(struct spinel_path_builder_impl * const impl)
+spinel_pbi_acquire_segs(struct spinel_path_builder_impl * impl)
 {
   uint32_t idx;
 
@@ -806,7 +808,7 @@ spinel_pbi_acquire_segs(struct spinel_path_builder_impl * const impl)
 //
 //
 static void
-spinel_pbi_node_append_segs(struct spinel_path_builder_impl * const impl, uint32_t const tag)
+spinel_pbi_node_append_segs(struct spinel_path_builder_impl * impl, uint32_t const tag)
 {
   uint32_t const subgroup_idx = impl->config.block_subgroups - impl->mapped.subgroups.rem;
   uint32_t const subblock_idx = subgroup_idx * impl->config.subgroup_subblocks;
@@ -822,10 +824,10 @@ spinel_pbi_node_append_segs(struct spinel_path_builder_impl * const impl, uint32
 //
 //
 static spinel_result_t
-spinel_pbi_prim_acquire_subgroups(struct spinel_path_builder_impl * const impl,
-                                  uint32_t const                          tag,
-                                  float **                                coords,
-                                  uint32_t                                coords_len)
+spinel_pbi_prim_acquire_subgroups(struct spinel_path_builder_impl * impl,
+                                  uint32_t const                    tag,
+                                  float **                          coords,
+                                  uint32_t                          coords_len)
 {
   //
   // Write a tagged block id to the node that records:
@@ -898,7 +900,7 @@ spinel_pbi_prim_acquire_subgroups(struct spinel_path_builder_impl * const impl,
 
 #undef SPN_PATH_BUILDER_PRIM_TYPE_EXPAND_X
 #define SPN_PATH_BUILDER_PRIM_TYPE_EXPAND_X(_p, _i, _n)                                            \
-  static spinel_result_t SPN_PBI_PFN_NAME(_p)(struct spinel_path_builder_impl * const impl)        \
+  static spinel_result_t SPN_PBI_PFN_NAME(_p)(struct spinel_path_builder_impl * impl)              \
   {                                                                                                \
     return spinel_pbi_prim_acquire_subgroups(impl, _i, impl->path_builder->cn.coords._p, _n);      \
   }
@@ -912,7 +914,7 @@ STATIC_ASSERT_MACRO_1(sizeof(union spinel_path_header) ==
                       MEMBER_SIZE_MACRO(union spinel_path_header, array));
 
 static void
-spinel_pbi_wip_reset(struct spinel_path_builder_impl * const impl)
+spinel_pbi_wip_reset(struct spinel_path_builder_impl * impl)
 {
   struct spinel_path_builder * const pb = impl->path_builder;
 
@@ -947,7 +949,7 @@ spinel_pbi_wip_reset(struct spinel_path_builder_impl * const impl)
 //
 //
 static spinel_result_t
-spinel_pbi_begin(struct spinel_path_builder_impl * const impl)
+spinel_pbi_begin(struct spinel_path_builder_impl * impl)
 {
   // acquire head block
   spinel_pbi_acquire_head(impl);
@@ -961,7 +963,7 @@ spinel_pbi_begin(struct spinel_path_builder_impl * const impl)
 STATIC_ASSERT_MACRO_1(SPN_TAGGED_BLOCK_ID_INVALID == UINT32_MAX);
 
 static spinel_result_t
-spinel_pbi_end(struct spinel_path_builder_impl * const impl, spinel_path_t * const path)
+spinel_pbi_end(struct spinel_path_builder_impl * impl, spinel_path_t * path)
 {
   // finalize all incomplete active subgroups -- note that we don't
   // care about unused remaining subblocks in a block
@@ -977,7 +979,7 @@ spinel_pbi_end(struct spinel_path_builder_impl * const impl, spinel_path_t * con
   struct spinel_pbi_dispatch * const dispatch = spinel_pbi_dispatch_head(impl);
 
   // do we need to acquire a delayed semaphore?
-  if (dispatch->delayed == SPN_DEPS_DELAYED_SEMAPHORE_INVALID)
+  if (dispatch->signal.delayed == SPN_DEPS_DELAYED_SEMAPHORE_INVALID)
     {
       struct spinel_deps_acquire_delayed_info const dadi = {
 
@@ -986,7 +988,7 @@ spinel_pbi_end(struct spinel_path_builder_impl * const impl, spinel_path_t * con
                         .data1 = dispatch }
       };
 
-      dispatch->delayed = spinel_deps_delayed_acquire(device->deps, &device->vk, &dadi);
+      dispatch->signal.delayed = spinel_deps_delayed_acquire(device->deps, &device->vk, &dadi);
     }
 
   // acquire path host id
@@ -996,7 +998,7 @@ spinel_pbi_end(struct spinel_path_builder_impl * const impl, spinel_path_t * con
   impl->wip.header.named.handle = path->handle;
 
   // associate delayed semaphore with handle
-  spinel_deps_delayed_attach(device->deps, path->handle, dispatch->delayed);
+  spinel_deps_delayed_attach(device->deps, path->handle, dispatch->signal.delayed);
 
   // append path to dispatch
   spinel_pbi_dispatch_append(impl, dispatch, path);
@@ -1013,7 +1015,7 @@ spinel_pbi_end(struct spinel_path_builder_impl * const impl, spinel_path_t * con
   // eagerly flush?
   if (dispatch->blocks.span >= impl->config.eager_size)
     {
-      spinel_deps_delayed_flush(device->deps, dispatch->delayed);
+      spinel_deps_delayed_flush(device->deps, dispatch->signal.delayed);
     }
 
   return SPN_SUCCESS;
@@ -1023,7 +1025,7 @@ spinel_pbi_end(struct spinel_path_builder_impl * const impl, spinel_path_t * con
 //
 //
 static spinel_result_t
-spinel_pbi_release(struct spinel_path_builder_impl * const impl)
+spinel_pbi_release(struct spinel_path_builder_impl * impl)
 {
   //
   // Launch any wip dispatch
@@ -1038,7 +1040,7 @@ spinel_pbi_release(struct spinel_path_builder_impl * const impl)
 
   while (!spinel_ring_is_full(ring))
     {
-      spinel_deps_drain_1(device->deps, &device->vk, UINT64_MAX);
+      spinel_deps_drain_1(device->deps, &device->vk);
     }
 
   //
@@ -1073,8 +1075,8 @@ spinel_pbi_release(struct spinel_path_builder_impl * const impl)
 //
 //
 spinel_result_t
-spinel_path_builder_impl_create(struct spinel_device * const        device,
-                                struct spinel_path_builder ** const path_builder)
+spinel_path_builder_impl_create(struct spinel_device *        device,
+                                struct spinel_path_builder ** path_builder)
 {
   spinel_context_retain(device->context);
 

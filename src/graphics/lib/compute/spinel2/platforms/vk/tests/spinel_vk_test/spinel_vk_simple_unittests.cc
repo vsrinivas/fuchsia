@@ -116,7 +116,7 @@ struct test_spinel_vk_simple : test_spinel_vk_render
       // cmds[0-2]
       spinel_styling_background_over_encoder(cmds_leave, background);
 
-      cmds_leave[3] = SPN_STYLING_OPCODE_COLOR_ACC_STORE_TO_SURFACE;
+      cmds_leave[3] = SPN_STYLING_OPCODE_COLOR_ACC_STORE_TO_SURFACE_RGBA8;
     }
 
     // this is the root group

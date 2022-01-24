@@ -291,7 +291,7 @@ widget_regen_styling_root(struct widget_control const * const control,
         // cmds[0-2]
         spinel_styling_background_over_encoder(cmds_leave, rgba);
 
-        cmds_leave[3] = SPN_STYLING_OPCODE_COLOR_ACC_STORE_TO_SURFACE;
+        cmds_leave[3] = SPN_STYLING_OPCODE_COLOR_ACC_STORE_TO_SURFACE_RGBA8;
       }
     }
 }

@@ -9,7 +9,6 @@
 #include "raster_builder_impl.h"
 
 #include <memory.h>
-#include <stdio.h>
 #include <stdlib.h>
 
 #include "block_pool.h"
@@ -60,8 +59,8 @@
 //                   ----------
 //                   18 dwords
 //
-// There are a maximum of 8192 rasters in a single cohort so a worst case
-// allocation of single path fills would occupy 576 KB.
+// There are a maximum of (SPN_RASTER_COHORT_METAS_SIZE-1) rasters in a single
+// cohort.
 //
 // A single raster will necessarily have a maximum number of
 // paths/transforms/clips.
@@ -126,36 +125,56 @@ struct spinel_cmd_fill
 STATIC_ASSERT_MACRO_1(sizeof(struct spinel_cmd_fill) == sizeof(uint32_t[4]));
 
 //
+// Ring work span
+//
+struct spinel_rbi_head_span
+{
+  uint32_t head;
+  uint32_t span;
+};
+
+//
+// Dispatch states
+//
+typedef enum spinel_rbi_dispatch_state_e
+{
+  SPN_RBI_DISPATCH_STATE_INVALID,
+  SPN_RBI_DISPATCH_STATE_RECORDING,
+  SPN_RBI_DISPATCH_STATE_PENDING,
+  SPN_RBI_DISPATCH_STATE_COMPLETE,
+
+} spinel_rbi_dispatch_state_e;
+
+//
 // There are always as many dispatch records as there are fences in
 // the fence pool.  This simplifies reasoning about concurrency.
 //
-struct spinel_rbi_span_head
-{
-  uint32_t span;
-  uint32_t head;
-};
-
+// FIXME(allanmac): We don't have to track tc/rc once submitted
+// FIXME(allanmac): We probably can drop most of the dbi structs
+//
 struct spinel_rbi_dispatch
 {
   struct
   {
-    struct spinel_dbi_devaddr ttrks;             // ttrks + ttrks_keyvals_even
-    struct spinel_dbi_devaddr fill_scan;         // used before sorting
-    struct spinel_dbi_devaddr rast_cmds;         // used before sorting
-    struct spinel_dbi_devaddr ttrk_keyvals_odd;  // used by radix and post-sort
-
     struct
     {
       struct spinel_dbi_devaddr internal;
       struct spinel_dbi_devaddr indirect;
     } rs;
+
+    struct spinel_dbi_devaddr ttrks;             // ttrks + ttrks_keyvals_even
+    struct spinel_dbi_devaddr fill_scan;         // used before sorting
+    struct spinel_dbi_devaddr rast_cmds;         // used before sorting
+    struct spinel_dbi_devaddr ttrk_keyvals_odd;  // used by radix and post-sort
   } vk;
 
-  struct spinel_rbi_span_head cf;  // fills and paths are 1:1
-  struct spinel_rbi_span_head tc;  // transform quads and clips
-  struct spinel_rbi_span_head rc;  // rasters in cohort
+  struct spinel_rbi_head_span cf;  // fills and paths are 1:1
+  struct spinel_rbi_head_span tc;  // transform quads and clips
+  struct spinel_rbi_head_span rc;  // rasters in cohort
 
   spinel_deps_delayed_semaphore_t delayed;
+
+  spinel_rbi_dispatch_state_e state;
 };
 
 //
@@ -251,15 +270,8 @@ struct spinel_raster_builder_impl
   //
   struct
   {
-    struct
-    {
-      uint32_t span;
-    } cf;  // fills
-
-    struct
-    {
-      uint32_t span;
-    } tc;  // transforms and clips
+    struct spinel_rbi_head_span cf;  // fill commands
+    struct spinel_rbi_head_span tc;  // transforms and clips
   } wip;
 
   //
@@ -296,23 +308,22 @@ struct spinel_raster_builder_impl
 //
 //
 static bool
-spinel_rbi_is_staged(struct spinel_target_config const * const config)
+spinel_rbi_is_staged(struct spinel_target_config const * config)
 {
-  return ((config->allocator.device.hw_dr.properties & VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT) == 0) &&
-         (config->raster_builder.no_staging == 0);
+  return ((config->allocator.device.hw_dr.properties & VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT) == 0);
 }
 
 //
 // These pfns are installed when the Spinel context is lost
 //
 static spinel_result_t
-spinel_rbi_lost_begin(struct spinel_raster_builder_impl * const impl)
+spinel_rbi_lost_begin(struct spinel_raster_builder_impl * impl)
 {
   return SPN_ERROR_RASTER_BUILDER_LOST;
 }
 
 static spinel_result_t
-spinel_rbi_lost_end(struct spinel_raster_builder_impl * const impl, spinel_raster_t * const raster)
+spinel_rbi_lost_end(struct spinel_raster_builder_impl * impl, spinel_raster_t * raster)
 {
   *raster = SPN_RASTER_INVALID;  // FIXME -- SPN_TYPED_HANDLE_INVALID
 
@@ -320,10 +331,10 @@ spinel_rbi_lost_end(struct spinel_raster_builder_impl * const impl, spinel_raste
 }
 
 static spinel_result_t
-spinel_rbi_release(struct spinel_raster_builder_impl * const impl);
+spinel_rbi_release(struct spinel_raster_builder_impl * impl);
 
 static spinel_result_t
-spinel_rbi_lost_release(struct spinel_raster_builder_impl * const impl)
+spinel_rbi_lost_release(struct spinel_raster_builder_impl * impl)
 {
   //
   // FIXME -- releasing a lost path builder might eventually require a
@@ -333,19 +344,19 @@ spinel_rbi_lost_release(struct spinel_raster_builder_impl * const impl)
 }
 
 static spinel_result_t
-spinel_rbi_lost_flush(struct spinel_raster_builder_impl * const impl)
+spinel_rbi_lost_flush(struct spinel_raster_builder_impl * impl)
 {
   return SPN_ERROR_RASTER_BUILDER_LOST;
 }
 
 static spinel_result_t
-spinel_rbi_lost_add(struct spinel_raster_builder_impl * const impl,
-                    spinel_path_t const *                     paths,
-                    spinel_transform_weakref_t *              transform_weakrefs,
-                    spinel_transform_t const *                transforms,
-                    spinel_clip_weakref_t *                   clip_weakrefs,
-                    spinel_clip_t const *                     clips,
-                    uint32_t                                  count)
+spinel_rbi_lost_add(struct spinel_raster_builder_impl * impl,
+                    spinel_path_t const *               paths,
+                    spinel_transform_weakref_t *        transform_weakrefs,
+                    spinel_transform_t const *          transforms,
+                    spinel_clip_weakref_t *             clip_weakrefs,
+                    spinel_clip_t const *               clips,
+                    uint32_t                            count)
 {
   return SPN_ERROR_RASTER_BUILDER_LOST;
 }
@@ -356,7 +367,7 @@ spinel_rbi_lost_add(struct spinel_raster_builder_impl * const impl,
 // be released and a new one created.
 //
 static void
-spinel_rbi_lost(struct spinel_raster_builder_impl * const impl)
+spinel_rbi_lost(struct spinel_raster_builder_impl * impl)
 {
   struct spinel_raster_builder * const rb = impl->raster_builder;
 
@@ -368,13 +379,12 @@ spinel_rbi_lost(struct spinel_raster_builder_impl * const impl)
 }
 
 static void
-spinel_rbi_raster_append(struct spinel_raster_builder_impl * const impl,
-                         spinel_raster_t const * const             raster)
+spinel_rbi_raster_append(struct spinel_raster_builder_impl * impl, spinel_handle_t handle)
 {
   uint32_t const idx = spinel_next_acquire_1(&impl->mapped.rc.next);
 
-  impl->mapped.rc.extent[idx] = raster->handle;  // device
-  impl->rasters.extent[idx]   = raster->handle;  // host
+  impl->mapped.rc.extent[idx] = handle;  // device
+  impl->rasters.extent[idx]   = handle;  // host
 }
 
 //
@@ -382,25 +392,23 @@ spinel_rbi_raster_append(struct spinel_raster_builder_impl * const impl,
 // the work-in-progress compute grid.
 //
 static struct spinel_rbi_dispatch *
-spinel_rbi_dispatch_idx(struct spinel_raster_builder_impl * const impl, uint32_t const idx)
+spinel_rbi_dispatch_head(struct spinel_raster_builder_impl * impl)
 {
-  return impl->dispatches.extent + idx;
+  assert(!spinel_ring_is_empty(&impl->dispatches.ring));
+
+  return impl->dispatches.extent + impl->dispatches.ring.head;
 }
 
 static struct spinel_rbi_dispatch *
-spinel_rbi_dispatch_head(struct spinel_raster_builder_impl * const impl)
+spinel_rbi_dispatch_tail(struct spinel_raster_builder_impl * impl)
 {
-  return spinel_rbi_dispatch_idx(impl, impl->dispatches.ring.head);
-}
+  assert(!spinel_ring_is_full(&impl->dispatches.ring));
 
-static struct spinel_rbi_dispatch *
-spinel_rbi_dispatch_tail(struct spinel_raster_builder_impl * const impl)
-{
-  return spinel_rbi_dispatch_idx(impl, impl->dispatches.ring.tail);
+  return impl->dispatches.extent + impl->dispatches.ring.tail;
 }
 
 static void
-spinel_rbi_dispatch_drop(struct spinel_raster_builder_impl * const impl)
+spinel_rbi_dispatch_drop(struct spinel_raster_builder_impl * impl)
 {
   struct spinel_ring * const ring = &impl->dispatches.ring;
 
@@ -408,65 +416,81 @@ spinel_rbi_dispatch_drop(struct spinel_raster_builder_impl * const impl)
 }
 
 static void
-spinel_rbi_dispatch_head_init(struct spinel_raster_builder_impl * const impl)
+spinel_rbi_dispatch_head_init(struct spinel_raster_builder_impl * impl)
 {
+  //
+  // Don't initialize this with a spinel_rbi_dispatch struct and designated
+  // initializers because each dispatch structure has precalculated .dbi
+  // buffers.
+  //
+  // Per-member initializers are fine.
+  //
   struct spinel_rbi_dispatch * const dispatch = spinel_rbi_dispatch_head(impl);
 
-  // clang-format off
-  dispatch->cf       = (struct spinel_rbi_span_head){ .span = 0, .head = impl->mapped.cf.ring.head };
-  dispatch->tc       = (struct spinel_rbi_span_head){ .span = 0, .head = impl->mapped.tc.next.head };
-  dispatch->rc       = (struct spinel_rbi_span_head){ .span = 0, .head = impl->mapped.rc.next.head };
-  dispatch->delayed  = SPN_DEPS_DELAYED_SEMAPHORE_INVALID;
-  // clang-format on
+  assert(dispatch->state == SPN_RBI_DISPATCH_STATE_INVALID);
+
+  dispatch->cf = impl->wip.cf;
+  dispatch->tc = impl->wip.tc;
+  dispatch->rc = (struct spinel_rbi_head_span){ .head = impl->mapped.rc.next.head, .span = 0 };
+
+  dispatch->delayed = SPN_DEPS_DELAYED_SEMAPHORE_INVALID;
+  dispatch->state   = SPN_RBI_DISPATCH_STATE_RECORDING;
 }
 
 static void
-spinel_rbi_dispatch_acquire(struct spinel_raster_builder_impl * const impl)
+spinel_rbi_dispatch_acquire(struct spinel_raster_builder_impl * impl)
 {
   struct spinel_ring * const   ring   = &impl->dispatches.ring;
   struct spinel_device * const device = impl->device;
 
   while (spinel_ring_is_empty(ring))
     {
-      spinel_deps_drain_1(device->deps, &device->vk, UINT64_MAX);
+      spinel_deps_drain_1(device->deps, &device->vk);
     }
 
   spinel_rbi_dispatch_head_init(impl);
 }
 
+//
+//
+//
 static void
-spinel_rbi_dispatch_append(struct spinel_raster_builder_impl * const impl,
-                           struct spinel_rbi_dispatch * const        dispatch,
-                           spinel_raster_t const * const             raster)
+spinel_rbi_dispatch_append_wip(struct spinel_raster_builder_impl * impl,
+                               struct spinel_rbi_dispatch *        dispatch)
 {
   dispatch->cf.span += impl->wip.cf.span;
   dispatch->tc.span += impl->wip.tc.span;
   dispatch->rc.span += 1;
 }
 
-static bool
-spinel_rbi_is_wip_dispatch_empty(struct spinel_rbi_dispatch const * const dispatch)
+//
+// We record where the *next* work-in-progress raster will start in the ring
+// along with its rolling counter.
+//
+static void
+spinel_rbi_wip_reset(struct spinel_raster_builder_impl * impl)
 {
-  return (dispatch->rc.span == 0);
+  impl->wip.cf = (struct spinel_rbi_head_span){ .head = impl->mapped.cf.ring.head, .span = 0 };
+  impl->wip.tc = (struct spinel_rbi_head_span){ .head = impl->mapped.tc.next.head, .span = 0 };
 }
 
 //
 //
 //
 static void
-spinel_rbi_copy_ring(VkCommandBuffer                           cb,
-                     VkDescriptorBufferInfo const *            h,
-                     VkDescriptorBufferInfo const *            d,
-                     VkDeviceSize const                        elem_size,
-                     uint32_t const                            ring_size,
-                     struct spinel_rbi_span_head const * const span_head)
+spinel_rbi_copy_ring(VkCommandBuffer                     cb,
+                     VkDescriptorBufferInfo const *      h,
+                     VkDescriptorBufferInfo const *      d,
+                     VkDeviceSize                        elem_size,
+                     uint32_t                            ring_size,
+                     struct spinel_rbi_head_span const * head_span)
 {
   VkBufferCopy bcs[2];
   uint32_t     bc_count;
 
-  bool const     is_wrap   = (span_head->span + span_head->head) > ring_size;
-  uint32_t const span_hi   = is_wrap ? (ring_size - span_head->head) : span_head->span;
-  VkDeviceSize   offset_hi = elem_size * span_head->head;
+  bool const     is_wrap   = (head_span->span + head_span->head) > ring_size;
+  uint32_t const span_hi   = is_wrap ? (ring_size - head_span->head) : head_span->span;
+  VkDeviceSize   offset_hi = elem_size * head_span->head;
 
   bcs[0].srcOffset = h->offset + offset_hi;
   bcs[0].dstOffset = d->offset + offset_hi;
@@ -474,7 +498,7 @@ spinel_rbi_copy_ring(VkCommandBuffer                           cb,
 
   if (is_wrap)
     {
-      uint32_t const span_lo = span_head->span - span_hi;
+      uint32_t const span_lo = head_span->span - span_hi;
 
       bcs[1].srcOffset = h->offset;
       bcs[1].dstOffset = d->offset;
@@ -497,11 +521,11 @@ static void
 spinel_rbi_flush_complete(void * data0, void * data1)
 {
   struct spinel_raster_builder_impl * const impl     = data0;
-  struct spinel_rbi_dispatch *              dispatch = data1;
+  struct spinel_rbi_dispatch * const        dispatch = data1;
   struct spinel_device * const              device   = impl->device;
 
   //
-  // These raster handles are now materialized so invalidate them.
+  // These raster handles are now materialized so invalidate their dependencies.
   //
   spinel_deps_delayed_detach_ring(device->deps,
                                   impl->rasters.extent,
@@ -512,8 +536,8 @@ spinel_rbi_flush_complete(void * data0, void * data1)
   //
   // Release paths -- may invoke wait()
   //
-  // NOTE: That they could be released much earlier if we're willing to launch
-  // an additional command buffer.
+  // FIXME(allanmac): Paths could be released much earlier if we're willing to
+  // complicate the submission and launch an additional command buffer.
   //
   spinel_device_release_d_paths_ring(device,
                                      impl->paths.extent,
@@ -529,32 +553,40 @@ spinel_rbi_flush_complete(void * data0, void * data1)
                                        dispatch->rc.head,
                                        dispatch->rc.span);
   //
-  // If the dispatch is the tail of the ring then try to release as
-  // many dispatch records as possible...
+  // If the dispatch is the tail of the ring then try to release as many
+  // dispatch records as possible...
   //
-  // Note that kernels can complete in any order so the release
-  // records need to add to the mapped.ring.tail in order.
+  // Note that dispatches can complete in any order but the ring releases need
+  // to occur in order.
   //
-  dispatch->delayed = SPN_DEPS_DELAYED_SEMAPHORE_INVALID;
+  assert(dispatch->state != SPN_RBI_DISPATCH_STATE_COMPLETE);
 
-  dispatch = spinel_rbi_dispatch_tail(impl);
+  dispatch->state = SPN_RBI_DISPATCH_STATE_COMPLETE;
 
-  while (dispatch->delayed == SPN_DEPS_DELAYED_SEMAPHORE_INVALID)
+  struct spinel_rbi_dispatch * tail = spinel_rbi_dispatch_tail(impl);
+
+  while (tail->state == SPN_RBI_DISPATCH_STATE_COMPLETE)
     {
+      // will always be true
+      assert(impl->mapped.cf.ring.tail == tail->cf.head);
+
       // release the blocks and cmds
-      spinel_ring_release_n(&impl->mapped.cf.ring, dispatch->cf.span);
+      spinel_ring_release_n(&impl->mapped.cf.ring, tail->cf.span);
 
       // release the dispatch
       spinel_ring_release_n(&impl->dispatches.ring, 1);
 
-      // any dispatches in flight?
+      // mark as invalid
+      tail->state = SPN_RBI_DISPATCH_STATE_INVALID;
+
+      // any dispatches still in flight?
       if (spinel_ring_is_full(&impl->dispatches.ring))
         {
           break;
         }
 
       // get new tail
-      dispatch = spinel_rbi_dispatch_tail(impl);
+      tail = spinel_rbi_dispatch_tail(impl);
     }
 }
 
@@ -774,6 +806,17 @@ spinel_rbi_flush_record(VkCommandBuffer cb, void * data0, void * data1)
 
   ////////////////////////////////////////////////////////////////
   //
+  // BARRIER: COMPUTE>COMPUTE
+  //
+  // Note that FILL_EXPAND reads the u32vec4 initialized by FILL_DISPATCH but
+  // only RASTERIZE_XXX indirectly dispatches off of the u32vec4.
+  //
+  ////////////////////////////////////////////////////////////////
+
+  vk_barrier_compute_w_to_compute_r(cb);
+
+  ////////////////////////////////////////////////////////////////
+  //
   // PIPELINE: FILL_EXPAND
   //
   // NOTE: PUSH CONSTANTS ARE MOSTLY COMPATIBLE WITH FILL_SCAN
@@ -804,6 +847,8 @@ spinel_rbi_flush_record(VkCommandBuffer cb, void * data0, void * data1)
   ////////////////////////////////////////////////////////////////
   //
   // BARRIER: COMPUTE>INDIRECT|COMPUTE
+  //
+  // Note that the indirect dispatch was initialized by `fill_dispatch`.
   //
   ////////////////////////////////////////////////////////////////
 
@@ -939,7 +984,6 @@ spinel_rbi_flush_record(VkCommandBuffer cb, void * data0, void * data1)
   ////////////////////////////////////////////////////////////////
 
   struct spinel_push_ttrks_segment_dispatch const push_ttrks_segment_dispatch = {
-
     .devaddr_ttrks_header = dispatch->vk.ttrks.devaddr,
   };
 
@@ -974,7 +1018,6 @@ spinel_rbi_flush_record(VkCommandBuffer cb, void * data0, void * data1)
   ////////////////////////////////////////////////////////////////
 
   struct spinel_push_ttrks_segment const push_ttrks_segment = {
-
     .devaddr_ttrks_header = dispatch->vk.ttrks.devaddr,
     .devaddr_ttrk_keyvals = devaddr_ttrk_keyvals_out,
   };
@@ -1008,7 +1051,6 @@ spinel_rbi_flush_record(VkCommandBuffer cb, void * data0, void * data1)
   ////////////////////////////////////////////////////////////////
 
   struct spinel_push_rasters_alloc const push_rasters_alloc = {
-
     .devaddr_raster_ids          = impl->vk.rings.rc.d.devaddr,
     .devaddr_ttrks_header        = dispatch->vk.ttrks.devaddr,
     .devaddr_block_pool_ids      = device->block_pool.vk.dbi_devaddr.ids.devaddr,
@@ -1092,7 +1134,7 @@ spinel_rbi_flush_record(VkCommandBuffer cb, void * data0, void * data1)
   // delayed semaphores always end with a with a compute shader
   // (VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT).
   //
-  // Only the path builder and raster builder acquire delayes semaphores.
+  // Only the path builder and raster builder acquire delayed semaphores.
   //
   return VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
 }
@@ -1105,6 +1147,10 @@ spinel_rbi_flush_submit(void * data0, void * data1)
 {
   struct spinel_raster_builder_impl * const impl     = data0;
   struct spinel_rbi_dispatch * const        dispatch = data1;
+
+  assert(dispatch->cf.span > 0);
+  assert(dispatch == spinel_rbi_dispatch_head(impl));
+  assert(dispatch->state == SPN_RBI_DISPATCH_STATE_RECORDING);
 
   //
   // Acquire an immediate semaphore
@@ -1120,8 +1166,8 @@ spinel_rbi_flush_submit(void * data0, void * data1)
         .handles = {
           .extent = impl->paths.extent,
           .size   = impl->mapped.cf.ring.size,
-          .span   = dispatch->cf.span,
           .head   = dispatch->cf.head,
+          .span   = dispatch->cf.span,
         },
       },
     },
@@ -1132,7 +1178,7 @@ spinel_rbi_flush_submit(void * data0, void * data1)
     },
     .signal = {
       .delayed = {
-        .count = 1,
+        .count      = 1,
         .semaphores = {
           dispatch->delayed,
         },
@@ -1140,19 +1186,27 @@ spinel_rbi_flush_submit(void * data0, void * data1)
     },
   };
 
-  struct spinel_device * const device = impl->device;
-
-  (void)spinel_deps_immediate_submit(device->deps, &device->vk, &disi);
-
-  //
-  // The current dispatch is now sealed so drop it
-  //
-  spinel_rbi_dispatch_drop(impl);
-
   //
   // Invalidate all outstanding transform and clip weakrefs
   //
   spinel_weakref_epoch_increment(&impl->epoch);
+
+  //
+  // The current dispatch is in flight so drop it
+  //
+  spinel_rbi_dispatch_drop(impl);
+
+  //
+  // Move to pending state
+  //
+  dispatch->state = SPN_RBI_DISPATCH_STATE_PENDING;
+
+  //
+  // We don't need to save the immediate semaphore
+  //
+  struct spinel_device * const device = impl->device;
+
+  spinel_deps_immediate_submit(device->deps, &device->vk, &disi, NULL);
 
   //
   // Acquire and initialize the next dispatch
@@ -1164,14 +1218,19 @@ spinel_rbi_flush_submit(void * data0, void * data1)
 //
 //
 static spinel_result_t
-spinel_rbi_flush(struct spinel_raster_builder_impl * const impl)
+spinel_rbi_flush(struct spinel_raster_builder_impl * impl)
 {
+  //
   // Anything to launch?
+  //
   struct spinel_rbi_dispatch const * const dispatch = spinel_rbi_dispatch_head(impl);
 
-  // Equivalent to testing if (dispatch->span == 0)
-  if (dispatch->delayed == SPN_DEPS_DELAYED_SEMAPHORE_INVALID)
+  assert(dispatch->state == SPN_RBI_DISPATCH_STATE_RECORDING);
+
+  if (dispatch->rc.span == 0)
     {
+      assert(dispatch->cf.span == 0);
+
       return SPN_SUCCESS;
     }
 
@@ -1184,21 +1243,10 @@ spinel_rbi_flush(struct spinel_raster_builder_impl * const impl)
 }
 
 //
-// We record where the *next* work-in-progress path will start in the
-// ring along with its rolling counter.
-//
-static void
-spinel_rbi_wip_reset(struct spinel_raster_builder_impl * const impl)
-{
-  impl->wip.cf.span = 0;
-  impl->wip.tc.span = 0;
-}
-
-//
 //
 //
 static spinel_result_t
-spinel_rbi_begin(struct spinel_raster_builder_impl * const impl)
+spinel_rbi_begin(struct spinel_raster_builder_impl * impl)
 {
   return SPN_SUCCESS;
 }
@@ -1207,54 +1255,56 @@ spinel_rbi_begin(struct spinel_raster_builder_impl * const impl)
 //
 //
 static spinel_result_t
-spinel_rbi_end(struct spinel_raster_builder_impl * const impl, spinel_raster_t * const raster)
+spinel_rbi_end(struct spinel_raster_builder_impl * impl, spinel_raster_t * raster)
 {
-  // device
+  //
+  // acquire raster host id
+  //
   struct spinel_device * const device = impl->device;
 
+  raster->handle = spinel_device_handle_acquire(device);
+
+  //
   // get the head dispatch
+  //
   struct spinel_rbi_dispatch * const dispatch = spinel_rbi_dispatch_head(impl);
 
-  // do we need to acquire a delayed semaphore?
-  if (dispatch->delayed == SPN_DEPS_DELAYED_SEMAPHORE_INVALID)
+  assert(dispatch->state == SPN_RBI_DISPATCH_STATE_RECORDING);
+
+  //
+  // do we need to acquire a delayed semaphore for the dispatch?
+  //
+  if (dispatch->rc.span == 0)
     {
       struct spinel_deps_acquire_delayed_info const dadi = {
-
         .submission = { .pfn   = spinel_rbi_flush_submit,  //
                         .data0 = impl,
-                        .data1 = dispatch }
+                        .data1 = dispatch },
       };
 
       dispatch->delayed = spinel_deps_delayed_acquire(device->deps, &device->vk, &dadi);
     }
 
-  // acquire raster host id
-  raster->handle = spinel_device_handle_acquire(device);
-
   // associate delayed semaphore with handle
   spinel_deps_delayed_attach(device->deps, raster->handle, dispatch->delayed);
 
-  // save raster to ring
-  spinel_rbi_raster_append(impl, raster);
+  // save raster handle to ring
+  spinel_rbi_raster_append(impl, raster->handle);
 
-  // update head dispatch record
-  spinel_rbi_dispatch_append(impl, dispatch, raster);
+  // update head dispatch's span
+  spinel_rbi_dispatch_append_wip(impl, dispatch);
 
   // reset wip
   spinel_rbi_wip_reset(impl);
 
   //
-  // TODO(allanmac): we're not going to flush eagerly so get rid of config value
-  //
-  // if (spinel_rbi_dispatch_head(impl)->blocks.span >= config.raster_builder.size.eager)
-  //   ...
+  // * flush if the raster cohort size limit has been reached
+  // * flush if the fill command "eager" limit has been reached
   //
   struct spinel_target_config const * const config = &device->ti.config;
 
-  // flush if the cohort size limit has been reached
-  bool const is_full = (dispatch->rc.span == config->raster_builder.size.cohort);
-
-  if (is_full)
+  if ((dispatch->rc.span >= config->raster_builder.size.cohort) ||  // "is_rc_full"
+      (dispatch->cf.span >= config->raster_builder.size.eager))     // "is_cf_eager"
     {
       return spinel_rbi_flush(impl);
     }
@@ -1275,12 +1325,13 @@ spinel_rbi_end(struct spinel_raster_builder_impl * const impl, spinel_raster_t *
 // index is *potentially* valid -- the weakref might still be
 // invalidated by about-to-happen spinel_rbi_flush().
 //
+// clang-format off
 static spinel_result_t
-spinel_rbi_validate_transform_weakref_indices(
-  struct spinel_ring const * const         cf_ring,
-  struct spinel_rbi_dispatch const * const dispatch,
-  spinel_transform_weakref_t const * const transform_weakrefs,
-  uint32_t const                           count)
+spinel_rbi_validate_transform_weakref_indices(struct spinel_ring const *         cf_ring,
+                                              struct spinel_rbi_dispatch const * dispatch,
+                                              spinel_transform_weakref_t const * transform_weakrefs,
+                                              uint32_t const                           count)
+// clang-format on
 {
   //
   // FIXME(allanmac)
@@ -1291,10 +1342,10 @@ spinel_rbi_validate_transform_weakref_indices(
 }
 
 static spinel_result_t
-spinel_rbi_validate_clip_weakref_indices(struct spinel_ring const * const         cf_ring,
-                                         struct spinel_rbi_dispatch const * const dispatch,
-                                         spinel_clip_weakref_t const * const      clip_weakrefs,
-                                         uint32_t const                           count)
+spinel_rbi_validate_clip_weakref_indices(struct spinel_ring const *         cf_ring,
+                                         struct spinel_rbi_dispatch const * dispatch,
+                                         spinel_clip_weakref_t const *      clip_weakrefs,
+                                         uint32_t const                     count)
 {
   //
   // FIXME(allanmac)
@@ -1311,7 +1362,7 @@ spinel_rbi_validate_clip_weakref_indices(struct spinel_ring const * const       
 // dst: { sx shx shy sy  tx ty w0 w1 } // GPU-friendly ordering
 //
 static void
-spinel_rbi_transform_copy_lo(SPN_TYPE_F32VEC4 * const dst, spinel_transform_t const * const src)
+spinel_rbi_transform_copy_lo(SPN_TYPE_F32VEC4 * dst, spinel_transform_t const * src)
 {
   dst->x = src->sx;
   dst->y = src->shx;
@@ -1320,7 +1371,7 @@ spinel_rbi_transform_copy_lo(SPN_TYPE_F32VEC4 * const dst, spinel_transform_t co
 }
 
 static void
-spinel_rbi_transform_copy_hi(SPN_TYPE_F32VEC4 * const dst, spinel_transform_t const * const src)
+spinel_rbi_transform_copy_hi(SPN_TYPE_F32VEC4 * dst, spinel_transform_t const * src)
 {
   dst->x = src->tx;
   dst->y = src->ty;
@@ -1332,13 +1383,13 @@ spinel_rbi_transform_copy_hi(SPN_TYPE_F32VEC4 * const dst, spinel_transform_t co
 //
 //
 static spinel_result_t
-spinel_rbi_add(struct spinel_raster_builder_impl * const impl,
-               spinel_path_t const *                     paths,
-               spinel_transform_weakref_t *              transform_weakrefs,
-               spinel_transform_t const *                transforms,
-               spinel_clip_weakref_t *                   clip_weakrefs,
-               spinel_clip_t const *                     clips,
-               uint32_t                                  count)
+spinel_rbi_add(struct spinel_raster_builder_impl * impl,
+               spinel_path_t const *               paths,
+               spinel_transform_weakref_t *        transform_weakrefs,
+               spinel_transform_t const *          transforms,
+               spinel_clip_weakref_t *             clip_weakrefs,
+               spinel_clip_t const *               clips,
+               uint32_t                            count)
 {
   // Anything to do?
   if (count == 0)
@@ -1346,39 +1397,39 @@ spinel_rbi_add(struct spinel_raster_builder_impl * const impl,
       return SPN_SUCCESS;
     }
 
-  // If the number of paths is larger than the ring then fail!
+  //
+  // If the number of work-in-progress paths is larger than the ring then fail
+  // hard and lose the raster builder.
+  //
   struct spinel_ring * const cf_ring = &impl->mapped.cf.ring;
 
-  if (count > cf_ring->size)
+  if (impl->wip.cf.span + count > cf_ring->size)
     {
-      return SPN_ERROR_RASTER_BUILDER_TOO_MANY_PATHS;
+      spinel_rbi_lost(impl);
+
+      return SPN_ERROR_RASTER_BUILDER_LOST;
     }
 
-  // If not enough entries are left in the command ring then flush now!
-  struct spinel_rbi_dispatch * const dispatch = spinel_rbi_dispatch_head(impl);
-  struct spinel_device * const       device   = impl->device;
+  //
+  // If not enough entries are left in the command ring then flush now and wait
+  // for cf slots to be made available.
+  //
+  struct spinel_device * const device = impl->device;
 
   if (count > cf_ring->rem)
     {
-      // If dispatch is empty and the work-in-progress is going to exceed the
-      // size of the ring then this is a fatal error. At this point, we can kill
-      // the raster builder instead of the device.
-      if (spinel_rbi_is_wip_dispatch_empty(dispatch) || (impl->wip.cf.span + count > cf_ring->size))
-        {
-          spinel_rbi_lost(impl);
-
-          return SPN_ERROR_RASTER_BUILDER_LOST;
-        }
-
       //
-      // otherwise, launch whatever is in the ring and wait for space
+      // Launch whatever is in the ring and then wait for cf slots...
       //
       spinel_rbi_flush(impl);
 
-      do
-        {
-          spinel_deps_drain_1(device->deps, &device->vk, UINT64_MAX);
-      } while (cf_ring->rem < count);
+      // clang-format off
+      do {
+
+        spinel_deps_drain_1(device->deps, &device->vk);
+
+      } while (count > cf_ring->rem);
+      // clang-format on
     }
 
   //
@@ -1396,6 +1447,10 @@ spinel_rbi_add(struct spinel_raster_builder_impl * const impl,
   //
   // Validate the transform and clip weakref indices -- this is cheap!
   //
+  struct spinel_rbi_dispatch * const dispatch = spinel_rbi_dispatch_head(impl);
+
+  assert(dispatch->state == SPN_RBI_DISPATCH_STATE_RECORDING);
+
   result = spinel_rbi_validate_transform_weakref_indices(cf_ring,  //
                                                          dispatch,
                                                          transform_weakrefs,
@@ -1405,7 +1460,10 @@ spinel_rbi_add(struct spinel_raster_builder_impl * const impl,
       return result;
     }
 
-  result = spinel_rbi_validate_clip_weakref_indices(cf_ring, dispatch, clip_weakrefs, count);
+  result = spinel_rbi_validate_clip_weakref_indices(cf_ring,  //
+                                                    dispatch,
+                                                    clip_weakrefs,
+                                                    count);
 
   if (result != SPN_SUCCESS)
     {
@@ -1443,7 +1501,7 @@ spinel_rbi_add(struct spinel_raster_builder_impl * const impl,
       uint32_t const cf_idx = spinel_ring_acquire_1(cf_ring);
 
       //
-      // Cet the path
+      // Get the path
       //
       uint32_t const handle = paths->handle;
 
@@ -1464,16 +1522,17 @@ spinel_rbi_add(struct spinel_raster_builder_impl * const impl,
       //
       if (!spinel_transform_weakrefs_get_index(transform_weakrefs, 0, &impl->epoch, &cf.transform))
         {
-          uint32_t const t_idx = spinel_next_acquire_2(tc_next);
+          uint32_t       span;
+          uint32_t const t_idx = spinel_next_acquire_2(tc_next, &span);
+
+          impl->wip.tc.span += span;
 
           spinel_transform_weakrefs_init(transform_weakrefs, 0, &impl->epoch, t_idx);
-
-          cf.transform = t_idx;
 
           spinel_rbi_transform_copy_lo(impl->mapped.tc.extent + t_idx + 0, transforms);
           spinel_rbi_transform_copy_hi(impl->mapped.tc.extent + t_idx + 1, transforms);
 
-          impl->wip.tc.span += 2;
+          cf.transform = t_idx;
         }
 
       //
@@ -1483,13 +1542,13 @@ spinel_rbi_add(struct spinel_raster_builder_impl * const impl,
         {
           uint32_t const c_idx = spinel_next_acquire_1(tc_next);
 
-          spinel_clip_weakrefs_init(clip_weakrefs, 0, &impl->epoch, c_idx);
+          impl->wip.tc.span += 1;
 
-          cf.clip = c_idx;
+          spinel_clip_weakrefs_init(clip_weakrefs, 0, &impl->epoch, c_idx);
 
           memcpy(impl->mapped.tc.extent + c_idx, clips, sizeof(*impl->mapped.tc.extent));
 
-          impl->wip.tc.span += 1;
+          cf.clip = c_idx;
         }
 
       //
@@ -1511,21 +1570,21 @@ spinel_rbi_add(struct spinel_raster_builder_impl * const impl,
       // FIXME(allanmac): This will be updated with an argument "template"
       // struct.
       //
-      paths++;
+      paths += 1;
 
       if (transform_weakrefs != NULL)
         {
-          transform_weakrefs++;
+          transform_weakrefs += 1;
         }
 
-      transforms++;
+      transforms += 1;
 
       if (clip_weakrefs != NULL)
         {
-          clip_weakrefs++;
+          clip_weakrefs += 1;
         }
 
-      clips++;
+      clips += 1;
     }
 
   return SPN_SUCCESS;
@@ -1535,10 +1594,10 @@ spinel_rbi_add(struct spinel_raster_builder_impl * const impl,
 //
 //
 static spinel_result_t
-spinel_rbi_release(struct spinel_raster_builder_impl * const impl)
+spinel_rbi_release(struct spinel_raster_builder_impl * impl)
 {
   //
-  // launch any wip dispatch
+  // launch any undispatched rasters
   //
   spinel_rbi_flush(impl);
 
@@ -1550,7 +1609,7 @@ spinel_rbi_release(struct spinel_raster_builder_impl * const impl)
 
   while (!spinel_ring_is_full(ring))
     {
-      spinel_deps_drain_1(device->deps, &device->vk, UINT64_MAX);
+      spinel_deps_drain_1(device->deps, &device->vk);
     }
 
   //
@@ -1637,8 +1696,8 @@ spinel_rbi_release(struct spinel_raster_builder_impl * const impl)
 //
 //
 spinel_result_t
-spinel_raster_builder_impl_create(struct spinel_device * const    device,
-                                  spinel_raster_builder_t * const raster_builder)
+spinel_raster_builder_impl_create(struct spinel_device *    device,
+                                  spinel_raster_builder_t * raster_builder)
 {
   spinel_context_retain(device->context);
 
@@ -1681,31 +1740,51 @@ spinel_raster_builder_impl_create(struct spinel_device * const    device,
   //
   struct spinel_target_config const * const config = &device->ti.config;
 
+  assert(config->raster_builder.size.eager <= config->raster_builder.size.ring);
+
   //
   // CF: 1 ring entry per command
   //
-  spinel_ring_init(&impl->mapped.cf.ring, config->raster_builder.size.ring);
+  uint32_t const cf_ring_size = config->raster_builder.size.ring;
+
+  spinel_ring_init(&impl->mapped.cf.ring, cf_ring_size);
 
   //
   // TC: 1 transform + 1 clip = 3 quads
   //
-  // NOTE(allanmac): one additional quad is required because transforms
-  // require 2 consecutive quads and the worst case would be a full ring
-  // of commands each with a transform and clip.
+  // Worst case is 3 quads per command.
   //
-  uint32_t const tc_ring_size = config->raster_builder.size.ring * 3 + 1;
+  // NOTE(allanmac): One additional quad is required because transforms require
+  // 2 consecutive quads and the worst case would be a full ring of commands
+  // each with a transform and clip.
+  //
+  uint32_t const tc_ring_size = cf_ring_size * 3 + 1;
 
   spinel_next_init(&impl->mapped.tc.next, tc_ring_size);
 
   //
-  // RC:  worst case 1:1 (cmds:rasters)
+  // How many dispatches?
   //
-  spinel_next_init(&impl->mapped.rc.next, config->raster_builder.size.ring);
+  uint32_t const max_in_flight = config->raster_builder.size.dispatches;
+
+  //
+  // RC: Worst case is (cohort size * dispatches) rasters.
+  //
+  assert(config->raster_builder.size.cohort <= SPN_RASTER_COHORT_MAX_SIZE);
+
+  uint32_t const rc_ring_size = config->raster_builder.size.cohort * max_in_flight;
+
+  spinel_next_init(&impl->mapped.rc.next, rc_ring_size);
+
+  //
+  // FIXME(allanmac): Allocate one buffer for all rings and one buffer for all
+  // staging buffers.
+  //
 
   //
   // Allocate and map CF
   //
-  VkDeviceSize const cf_size = sizeof(*impl->mapped.cf.extent) * config->raster_builder.size.ring;
+  VkDeviceSize const cf_size = sizeof(*impl->mapped.cf.extent) * cf_ring_size;
 
   spinel_allocator_alloc_dbi_dm_devaddr(&device->allocator.device.perm.hw_dr,
                                         device->vk.pd,
@@ -1745,7 +1824,7 @@ spinel_raster_builder_impl_create(struct spinel_device * const    device,
   //
   // Allocate and map RC
   //
-  VkDeviceSize const rc_size = sizeof(*impl->mapped.rc.extent) * config->raster_builder.size.ring;
+  VkDeviceSize const rc_size = sizeof(*impl->mapped.rc.extent) * rc_ring_size;
 
   spinel_allocator_alloc_dbi_dm_devaddr(&device->allocator.device.perm.hw_dr,
                                         device->vk.pd,
@@ -1763,7 +1842,7 @@ spinel_raster_builder_impl_create(struct spinel_device * const    device,
                (void **)&impl->mapped.rc.extent));
 
   //
-  // Discrete GPU?
+  // Are host-writable rings used as staging buffers?
   //
   if (spinel_rbi_is_staged(config))
     {
@@ -1799,6 +1878,25 @@ spinel_raster_builder_impl_create(struct spinel_device * const    device,
     }
 
   //
+  // Allocate dispatches and path/raster release extents
+  //
+  // Implicitly sets state to SPN_RBI_DISPATCH_STATE_INVALID.
+  //
+  impl->dispatches.extent = calloc(max_in_flight, sizeof(*impl->dispatches.extent));
+
+  //
+  // Allocate paths
+  //
+  size_t const paths_size = sizeof(*impl->paths.extent) * config->raster_builder.size.ring;
+
+  impl->paths.extent = malloc(paths_size);
+
+  //
+  // Allocate rasters
+  //
+  impl->rasters.extent = malloc(rc_size);  // same size as mapped size
+
+  //
   // Get radix sort memory requirements
   //
   struct radix_sort_vk_memory_requirements rs_mr;
@@ -1806,30 +1904,8 @@ spinel_raster_builder_impl_create(struct spinel_device * const    device,
   radix_sort_vk_get_memory_requirements(device->ti.rs, config->raster_builder.size.ttrks, &rs_mr);
 
   assert(SPN_MEMBER_ALIGN_LIMIT >= rs_mr.keyvals_alignment);
-
-  //
-  // Allocate per-dispatch radix sort internal and indirect buffers
-  //
-  //   internal = max_in_flight * rs_mr.internal_size
-  //   indirect = max_in_flight * rs_mr.indirect_size
-  //
-  uint32_t const max_in_flight = config->raster_builder.size.dispatches;
-
-  spinel_allocator_alloc_dbi_dm(&device->allocator.device.perm.drw,
-                                device->vk.pd,
-                                device->vk.d,
-                                device->vk.ac,
-                                max_in_flight * rs_mr.internal_size,
-                                NULL,
-                                &impl->vk.dispatch.rs.internal);
-
-  spinel_allocator_alloc_dbi_dm(&device->allocator.device.perm.drw,
-                                device->vk.pd,
-                                device->vk.d,
-                                device->vk.ac,
-                                max_in_flight * rs_mr.indirect_size,
-                                NULL,
-                                &impl->vk.dispatch.rs.indirect);
+  assert(SPN_MEMBER_ALIGN_LIMIT >= rs_mr.internal_alignment);
+  assert(SPN_MEMBER_ALIGN_LIMIT >= rs_mr.indirect_alignment);
 
   //
   // What is rounded-up size of ttrks buffer?
@@ -1838,7 +1914,7 @@ spinel_raster_builder_impl_create(struct spinel_device * const    device,
   VkDeviceSize const ttrks_size_ru = ROUND_UP_POW2_MACRO(ttrks_size, SPN_MEMBER_ALIGN_LIMIT);
 
   //
-  // Allocate memory shared across dispatches
+  // Allocate memory shared across dispatches:
   //
   //   ttrks = max_in_flight * sizeof(ttrks)
   //
@@ -1849,41 +1925,6 @@ spinel_raster_builder_impl_create(struct spinel_device * const    device,
                                 max_in_flight * ttrks_size_ru,
                                 NULL,
                                 &impl->vk.dispatch.ttrks);
-
-  // clang-format off
-  VkDeviceSize const rfs_size            = SPN_BUFFER_OFFSETOF(rasterize_fill_scan, prefix) +
-                                           config->raster_builder.size.ring * sizeof(SPN_TYPE_U32VEC4) * 2;
-
-  VkDeviceSize const rfs_size_ru         = ROUND_UP_POW2_MACRO(rfs_size, SPN_MEMBER_ALIGN_LIMIT);
-
-  VkDeviceSize const rrc_size            = config->raster_builder.size.cmds * sizeof(SPN_TYPE_U32VEC4);
-
-  VkDeviceSize const rrc_size_ru         = ROUND_UP_POW2_MACRO(rrc_size, SPN_MEMBER_ALIGN_LIMIT);
-
-  VkDeviceSize const rfs_rrc_size_ru     = rfs_size_ru + rrc_size_ru;
-
-  VkDeviceSize const rfs_rrc_tko_size_ru = MAX_MACRO(VkDeviceSize, rfs_rrc_size_ru, rs_mr.keyvals_size);
-  // clang-format on
-
-  spinel_allocator_alloc_dbi_dm(&device->allocator.device.perm.drw,
-                                device->vk.pd,
-                                device->vk.d,
-                                device->vk.ac,
-                                max_in_flight * rfs_rrc_tko_size_ru,
-                                NULL,
-                                &impl->vk.dispatch.rfs_rrc_tko);
-
-  //
-  // Allocate dispatches and path/raster release extents
-  //
-  size_t const dispatches_size = sizeof(*impl->dispatches.extent) * max_in_flight;
-  size_t const paths_size      = sizeof(*impl->paths.extent) * config->raster_builder.size.ring;
-  size_t const rasters_size    = sizeof(*impl->rasters.extent) * config->raster_builder.size.ring;
-
-  impl->dispatches.extent = malloc(dispatches_size);
-  impl->paths.extent      = malloc(paths_size);
-  impl->rasters.extent    = malloc(rasters_size);
-
   //
   // Assign bufrefs to dispatches
   //
@@ -1900,6 +1941,109 @@ spinel_raster_builder_impl_create(struct spinel_device * const    device,
                                   &impl->vk.dispatch.ttrks.dbi,
                                   ii * ttrks_size_ru,
                                   ttrks_size_ru);
+    }
+
+  //
+  // Allocate per-dispatch radix sort internal and indirect buffers
+  //
+  //   internal = max_in_flight * rs_mr.internal_size
+  //   indirect = max_in_flight * rs_mr.indirect_size
+  //
+  // clang-format off
+  VkDeviceSize const rs_internal_size_ru = ROUND_UP_POW2_MACRO(rs_mr.internal_size, SPN_MEMBER_ALIGN_LIMIT);
+  VkDeviceSize const rs_indirect_size_ru = ROUND_UP_POW2_MACRO(rs_mr.indirect_size, SPN_MEMBER_ALIGN_LIMIT);
+  // clang-format on
+
+  spinel_allocator_alloc_dbi_dm(&device->allocator.device.perm.drw,
+                                device->vk.pd,
+                                device->vk.d,
+                                device->vk.ac,
+                                max_in_flight * rs_internal_size_ru,
+                                NULL,
+                                &impl->vk.dispatch.rs.internal);
+
+  spinel_allocator_alloc_dbi_dm(&device->allocator.device.perm.drw,
+                                device->vk.pd,
+                                device->vk.d,
+                                device->vk.ac,
+                                max_in_flight * rs_indirect_size_ru,
+                                NULL,
+                                &impl->vk.dispatch.rs.indirect);
+
+  //
+  // Assign bufrefs to dispatches
+  //
+  // FIXME(allanmac): Do all VK objects need both their .dbis and .devaddrs
+  // initialized?
+  //
+  for (uint32_t ii = 0; ii < max_in_flight; ii++)
+    {
+      struct spinel_rbi_dispatch * const dispatch = impl->dispatches.extent + ii;
+
+      // vk.rs.internal
+      spinel_dbi_devaddr_from_dbi(device->vk.d,
+                                  &dispatch->vk.rs.internal,
+                                  &impl->vk.dispatch.rs.internal.dbi,
+                                  ii * rs_internal_size_ru,
+                                  rs_internal_size_ru);
+
+      // vk.rs.indirect
+      spinel_dbi_devaddr_from_dbi(device->vk.d,
+                                  &dispatch->vk.rs.indirect,
+                                  &impl->vk.dispatch.rs.indirect.dbi,
+                                  ii * rs_indirect_size_ru,
+                                  rs_indirect_size_ru);
+    }
+
+  //
+  // More per-dispatch buffers:
+  //
+  //   rfs: rasterize fill scan
+  //   rrc: rasterize rast cmds
+  //   tko: ttrk keys odd
+  //
+  // We conservatively round them up to ensure the buffers are properly aligned
+  // on the device.
+  //
+  // The rfs/rrc extents can be safely aliased by the later-used tko extent.
+  //
+  // TODO(allanmac): The rounding and aliasing can be refined.
+  //
+  // clang-format off
+  uint32_t     const rfs_sg_size         = 1u << config->group_sizes.named.fill_scan.subgroup_log2;
+  VkDeviceSize const rfs_block_size_pow2 = sizeof(SPN_TYPE_U32VEC4) * 2 * rfs_sg_size;
+  VkDeviceSize const rfs_prefix_size     = config->raster_builder.size.ring * sizeof(SPN_TYPE_U32VEC4) * 2;
+  VkDeviceSize const rfs_prefix_size_ru  = ROUND_UP_POW2_MACRO(rfs_prefix_size, rfs_block_size_pow2);
+  VkDeviceSize const rfs_size            = SPN_BUFFER_OFFSETOF(rasterize_fill_scan, prefix) + rfs_prefix_size_ru;
+  VkDeviceSize const rfs_size_ru         = ROUND_UP_POW2_MACRO(rfs_size, SPN_MEMBER_ALIGN_LIMIT);
+
+  VkDeviceSize const rrc_size            = config->raster_builder.size.cmds * sizeof(SPN_TYPE_U32VEC4);
+  VkDeviceSize const rrc_size_ru         = ROUND_UP_POW2_MACRO(rrc_size, SPN_MEMBER_ALIGN_LIMIT);
+
+  VkDeviceSize const rfs_rrc_size_ru     = rfs_size_ru + rrc_size_ru;
+
+  VkDeviceSize const tko_size_ru         = ROUND_UP_POW2_MACRO(rs_mr.keyvals_size, SPN_MEMBER_ALIGN_LIMIT);
+
+  VkDeviceSize const rfs_rrc_tko_size_ru = MAX_MACRO(VkDeviceSize, rfs_rrc_size_ru, tko_size_ru);
+  // clang-format on
+
+  spinel_allocator_alloc_dbi_dm(&device->allocator.device.perm.drw,
+                                device->vk.pd,
+                                device->vk.d,
+                                device->vk.ac,
+                                max_in_flight * rfs_rrc_tko_size_ru,
+                                NULL,
+                                &impl->vk.dispatch.rfs_rrc_tko);
+
+  //
+  // Assign bufrefs to dispatches
+  //
+  // FIXME(allanmac): Do all VK objects need both their .dbis and .devaddrs
+  // initialized?
+  //
+  for (uint32_t ii = 0; ii < max_in_flight; ii++)
+    {
+      struct spinel_rbi_dispatch * const dispatch = impl->dispatches.extent + ii;
 
       // vk.fill_scan
       spinel_dbi_devaddr_from_dbi(device->vk.d,
@@ -1920,31 +2064,17 @@ spinel_raster_builder_impl_create(struct spinel_device * const    device,
                                   &dispatch->vk.ttrk_keyvals_odd,
                                   &impl->vk.dispatch.rfs_rrc_tko.dbi,
                                   ii * rfs_rrc_tko_size_ru,
-                                  rfs_rrc_tko_size_ru);
-
-      // vk.rs.internal
-      spinel_dbi_devaddr_from_dbi(device->vk.d,
-                                  &dispatch->vk.rs.internal,
-                                  &impl->vk.dispatch.rs.internal.dbi,
-                                  ii * rs_mr.internal_size,
-                                  rs_mr.internal_size);
-
-      // vk.rs.indirect
-      spinel_dbi_devaddr_from_dbi(device->vk.d,
-                                  &dispatch->vk.rs.indirect,
-                                  &impl->vk.dispatch.rs.indirect.dbi,
-                                  ii * rs_mr.indirect_size,
-                                  rs_mr.indirect_size);
+                                  tko_size_ru);
     }
 
   //
-  // Initialize dispatches
+  // Initialize rings and first dispatch
   //
   spinel_ring_init(&impl->dispatches.ring, max_in_flight);
 
-  spinel_rbi_dispatch_head_init(impl);
-
   spinel_rbi_wip_reset(impl);
+
+  spinel_rbi_dispatch_head_init(impl);
 
   spinel_weakref_epoch_init(&impl->epoch);
 

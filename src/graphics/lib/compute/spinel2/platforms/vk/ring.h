@@ -40,53 +40,50 @@ struct spinel_next
 //
 
 void
-spinel_ring_init(struct spinel_ring * const ring, uint32_t const size);
+spinel_ring_init(struct spinel_ring * ring, uint32_t size);
 
 bool
-spinel_ring_is_empty(struct spinel_ring const * const ring);
+spinel_ring_is_empty(struct spinel_ring const * ring);
 
 bool
-spinel_ring_is_full(struct spinel_ring const * const ring);
-
-bool
-spinel_ring_is_tail(struct spinel_ring const * const ring, uint32_t const idx);
+spinel_ring_is_full(struct spinel_ring const * ring);
 
 uint32_t
-spinel_ring_dropped(struct spinel_ring const * const ring);
+spinel_ring_dropped(struct spinel_ring const * ring);
 
 uint32_t
-spinel_ring_head_nowrap(struct spinel_ring const * const ring);
+spinel_ring_head_nowrap(struct spinel_ring const * ring);
 
 uint32_t
-spinel_ring_tail_nowrap(struct spinel_ring const * const ring);
+spinel_ring_tail_nowrap(struct spinel_ring const * ring);
 
 uint32_t
-spinel_ring_acquire_1(struct spinel_ring * const ring);
+spinel_ring_acquire_1(struct spinel_ring * ring);
 
 void
-spinel_ring_drop_1(struct spinel_ring * const ring);
+spinel_ring_drop_1(struct spinel_ring * ring);
 
 void
-spinel_ring_drop_n(struct spinel_ring * const ring, uint32_t const n);
+spinel_ring_drop_n(struct spinel_ring * ring, uint32_t n);
 
 void
-spinel_ring_release_n(struct spinel_ring * const ring, uint32_t const n);
+spinel_ring_release_n(struct spinel_ring * ring, uint32_t n);
 
 //
 //
 //
 
 void
-spinel_next_init(struct spinel_next * const next, uint32_t const size);
+spinel_next_init(struct spinel_next * next, uint32_t size);
 
 uint32_t
-spinel_next_acquire_1(struct spinel_next * const next);
+spinel_next_acquire_1(struct spinel_next * next);
 
 uint32_t
-spinel_next_acquire_2(struct spinel_next * const next);
+spinel_next_acquire_2(struct spinel_next * next, uint32_t * span);
 
 void
-spinel_next_drop_n(struct spinel_next * const next, uint32_t const n);
+spinel_next_drop_n(struct spinel_next * next, uint32_t n);
 
 //
 //

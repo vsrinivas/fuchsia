@@ -156,11 +156,6 @@ struct spinel_composition_impl
       spinel_deps_immediate_semaphore_t immediate;
     } sealing;
   } signal;
-
-  //
-  // staging buffers activated?
-  //
-  bool is_staged;
 };
 
 //
@@ -169,32 +164,27 @@ struct spinel_composition_impl
 static bool
 spinel_ci_is_staged(struct spinel_target_config const * config)
 {
-  return                                                                                         //
-    ((config->allocator.device.hw_dr.properties & VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT) == 0) &&  //
-    (config->composition.no_staging == 0);                                                       //
+  return ((config->allocator.device.hw_dr.properties & VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT) == 0);
 }
 
 //
 // A dispatch captures how many paths and blocks are in a dispatched or
 // the work-in-progress compute grid.
 //
-
-static struct spinel_ci_dispatch *
-spinel_ci_dispatch_idx(struct spinel_composition_impl * impl, uint32_t const idx)
-{
-  return impl->dispatches.extent + idx;
-}
-
 static struct spinel_ci_dispatch *
 spinel_ci_dispatch_head(struct spinel_composition_impl * impl)
 {
-  return spinel_ci_dispatch_idx(impl, impl->dispatches.ring.head);
+  assert(!spinel_ring_is_empty(&impl->dispatches.ring));
+
+  return impl->dispatches.extent + impl->dispatches.ring.head;
 }
 
 static struct spinel_ci_dispatch *
 spinel_ci_dispatch_tail(struct spinel_composition_impl * impl)
 {
-  return spinel_ci_dispatch_idx(impl, impl->dispatches.ring.tail);
+  assert(!spinel_ring_is_full(&impl->dispatches.ring));
+
+  return impl->dispatches.extent + impl->dispatches.ring.tail;
 }
 
 static bool
@@ -231,10 +221,10 @@ spinel_ci_dispatch_acquire(struct spinel_composition_impl * impl)
 
   while (spinel_ring_is_empty(ring))
     {
-      spinel_deps_drain_1(device->deps, &device->vk, UINT64_MAX);
+      spinel_deps_drain_1(device->deps, &device->vk);
     }
 
-  struct spinel_ci_dispatch * const dispatch = spinel_ci_dispatch_idx(impl, ring->head);
+  struct spinel_ci_dispatch * const dispatch = spinel_ci_dispatch_head(impl);
 
   spinel_ci_dispatch_init(impl, dispatch);
 }
@@ -289,7 +279,7 @@ spinel_ci_place_flush_record(VkCommandBuffer cb, void * data0, void * data1)
   struct spinel_target_config const * const config   = &device->ti.config;
   struct spinel_ci_dispatch * const         dispatch = data1;
 
-  if (impl->is_staged)
+  if (spinel_ci_is_staged(config))
     {
       VkDeviceSize const head_offset = dispatch->cp.head * sizeof(struct spinel_cmd_place);
 
@@ -423,8 +413,8 @@ spinel_ci_place_flush(struct spinel_composition_impl * impl)
         .handles = {
           .extent = impl->rasters.extent,
           .size   = impl->rasters.size,
-          .span   = dispatch->cp.span,
           .head   = dispatch->rd.head,
+          .span   = dispatch->cp.span,
         },
       },
     },
@@ -435,14 +425,21 @@ spinel_ci_place_flush(struct spinel_composition_impl * impl)
     },
   };
 
-  struct spinel_device * const device = impl->device;
-
-  dispatch->signal.immediate = spinel_deps_immediate_submit(device->deps, &device->vk, &disi);
-
+  //
   // The current dispatch is now sealed so drop it
+  //
   spinel_ci_dispatch_drop(impl);
 
-  // Agcquire and initialize the next dispatch
+  //
+  // Submit!
+  //
+  struct spinel_device * const device = impl->device;
+
+  spinel_deps_immediate_submit(device->deps, &device->vk, &disi, &dispatch->signal.immediate);
+
+  //
+  // Acquire and initialize the next dispatch
+  //
   spinel_ci_dispatch_acquire(impl);
 }
 
@@ -663,9 +660,7 @@ spinel_ci_unsealed_to_sealed(struct spinel_composition_impl * impl)
   //
   // Acquire an immediate semaphore
   //
-  impl->signal.sealing.immediate = spinel_deps_immediate_submit(device->deps,  //
-                                                                &device->vk,
-                                                                &disi);
+  spinel_deps_immediate_submit(device->deps, &device->vk, &disi, &impl->signal.sealing.immediate);
 }
 
 //
@@ -753,9 +748,7 @@ spinel_ci_unsealed_reset(struct spinel_composition_impl * impl)
     },
   };
 
-  impl->signal.resetting.immediate = spinel_deps_immediate_submit(device->deps,  //
-                                                                  &device->vk,
-                                                                  &disi);
+  spinel_deps_immediate_submit(device->deps, &device->vk, &disi, &impl->signal.resetting.immediate);
 }
 
 //
@@ -768,7 +761,7 @@ spinel_ci_block_until_sealed(struct spinel_composition_impl * impl)
 
   while (impl->state != SPN_CI_STATE_SEALED)
     {
-      spinel_deps_drain_1(device->deps, &device->vk, UINT64_MAX);
+      spinel_deps_drain_1(device->deps, &device->vk);
     }
 }
 
@@ -782,7 +775,7 @@ spinel_ci_block_while_resetting(struct spinel_composition_impl * impl)
 
   while (impl->state == SPN_CI_STATE_RESETTING)
     {
-      spinel_deps_drain_1(device->deps, &device->vk, UINT64_MAX);
+      spinel_deps_drain_1(device->deps, &device->vk);
     }
 }
 
@@ -796,7 +789,7 @@ spinel_ci_sealed_unseal(struct spinel_composition_impl * impl)
 
   while (impl->lock_count > 0)
     {
-      spinel_deps_drain_1(device->deps, &device->vk, UINT64_MAX);
+      spinel_deps_drain_1(device->deps, &device->vk);
     }
 
   impl->state = SPN_CI_STATE_UNSEALED;
@@ -1023,7 +1016,7 @@ spinel_ci_place(struct spinel_composition_impl * impl,
       //
       if (avail == 0)
         {
-          spinel_deps_drain_1(device->deps, &device->vk, UINT64_MAX);
+          spinel_deps_drain_1(device->deps, &device->vk);
           continue;
         }
 
@@ -1117,7 +1110,7 @@ spinel_ci_release(struct spinel_composition_impl * impl)
   //
   while (!spinel_ring_is_full(&impl->dispatches.ring))
     {
-      spinel_deps_drain_1(device->deps, &device->vk, UINT64_MAX);
+      spinel_deps_drain_1(device->deps, &device->vk);
     }
 
   //
@@ -1125,7 +1118,7 @@ spinel_ci_release(struct spinel_composition_impl * impl)
   //
   while (impl->lock_count > 0)
     {
-      spinel_deps_drain_1(device->deps, &device->vk, UINT64_MAX);
+      spinel_deps_drain_1(device->deps, &device->vk);
     }
 
   //
@@ -1167,7 +1160,7 @@ spinel_ci_release(struct spinel_composition_impl * impl)
   //
   // free rings
   //
-  if (impl->is_staged)
+  if (spinel_ci_is_staged(&device->ti.config))
     {
       spinel_allocator_free_dbi_dm(&device->allocator.device.perm.drw,
                                    device->vk.d,
@@ -1276,7 +1269,7 @@ spinel_composition_impl_create(struct spinel_device *       device,
                0,
                (void **)&impl->mapped.cp.extent));
 
-  if ((impl->is_staged = spinel_ci_is_staged(config)))
+  if (spinel_ci_is_staged(config))
     {
       spinel_allocator_alloc_dbi_dm_devaddr(&device->allocator.device.perm.drw,
                                             device->vk.pd,

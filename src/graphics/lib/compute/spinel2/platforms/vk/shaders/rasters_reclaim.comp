@@ -10,6 +10,7 @@
 //
 // FIXME(allanmac): use one inclusive bitcount
 //
+#extension GL_EXT_debug_printf : enable
 
 //
 //
@@ -113,19 +114,19 @@ main()
   //
   // Which subgroup in the grid is this?
   //
+  // clang-format off
 #if (SPN_RASTERS_RECLAIM_SUBGROUPS == 1)
   SPN_SUBGROUP_UNIFORM uint32_t sid = gl_WorkGroupID.x;
 #else
-  SPN_SUBGROUP_UNIFORM uint32_t sid =
-    gl_WorkGroupID.x * SPN_RASTERS_RECLAIM_SUBGROUPS + gl_SubgroupID;
+  SPN_SUBGROUP_UNIFORM uint32_t sid = gl_WorkGroupID.x * SPN_RASTERS_RECLAIM_SUBGROUPS + gl_SubgroupID;
 
-  // this an empty subgroup?
+  // Return from any empty subgroups
   if (sid >= push.ring_span)
     {
       return;
     }
-
 #endif
+  // clang-format on
 
   //
   // Which slot in the ring?
@@ -261,7 +262,9 @@ main()
                                                                                                    \
       if (is_block)                                                                                \
         {                                                                                          \
-          bp_ids.ids[bp_ids_off & push.bp_mask] = SPN_TTXK_LO_GET_TTXB_ID(h##I);                   \
+          const uint32_t ids_idx = bp_ids_off & push.bp_mask;                                      \
+                                                                                                   \
+          bp_ids.ids[ids_idx] = SPN_TTXK_LO_GET_TTXB_ID(h##I);                                     \
         }                                                                                          \
                                                                                                    \
       bp_ids_base += subgroupBallotBitCount(block_ballot);                                         \
@@ -320,12 +323,14 @@ main()
                                                                                                    \
     if (is_block)                                                                                  \
       {                                                                                            \
-        bp_ids.ids[bp_ids_off & push.bp_mask] = SPN_TTXK_LO_GET_TTXB_ID(n##I);                     \
+        const uint32_t ids_idx = bp_ids_off & push.bp_mask;                                        \
+                                                                                                   \
+        bp_ids.ids[ids_idx] = SPN_TTXK_LO_GET_TTXB_ID(n##I);                                       \
       }                                                                                            \
                                                                                                    \
     bp_ids_base += subgroupBallotBitCount(block_ballot);                                           \
                                                                                                    \
-    if (bp_ids_base == bp_ids_max)                                                                 \
+    if (bp_ids_base == bp_ids_max) /* equality test works with ring wraparound */                  \
       {                                                                                            \
         return;                                                                                    \
       }                                                                                            \

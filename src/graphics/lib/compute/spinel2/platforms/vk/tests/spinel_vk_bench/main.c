@@ -71,7 +71,7 @@
 
 #define SPN_PLATFORM_EXTENSION_NAMES         VK_KHR_SWAPCHAIN_MUTABLE_FORMAT_EXTENSION_NAME
 
-#define SPN_PLATFORM_MIN_IMAGE_COUNT         2
+#define SPN_PLATFORM_MIN_IMAGE_COUNT         3
 
 #define SPN_PLATFORM_PRESENT_MODE            VK_PRESENT_MODE_IMMEDIATE_KHR
                                              // VK_PRESENT_MODE_MAILBOX_KHR
@@ -129,14 +129,34 @@
 // clang-format on
 
 //
+// What are the max number of queues?
+//
+// FIXME(allanmac): There should be no limits.
+//
+
+#define SPN_VK_Q_COMPUTE_MAX_QUEUES UINT32_MAX
+#define SPN_VK_Q_PRESENT_MAX_QUEUES 1
+
+//
 //
 //
 
 #define SPN_ACQUIRE_DEFAULT_TIMEOUT ((uint64_t)15e9)  // 15 seconds
 
+//
+// Support acquiring either a fenced or unfenced presentable
+//
+typedef VkResult  //
+  (*spinel_acquire_presentable_pfn_t)(VkDevice                                  vk_d,
+                                      struct surface * const                    surface,
+                                      struct surface_presentable const ** const presentable,
+                                      void *                                    payload);
+
+//
+// Acquire a fenced presentable
+//
 static VkResult
 spinel_acquire_fenced_presentable(VkDevice                            vk_d,
-                                  spinel_context_t                    context,
                                   struct surface *                    surface,
                                   struct surface_presentable const ** presentable,
                                   void *                              payload)
@@ -166,7 +186,7 @@ spinel_acquire_fenced_presentable(VkDevice                            vk_d,
     }
 
   //
-  // fence is signaled -- block to acquire a presentable
+  // Fence is signaled so attempt to acquire a presentable
   //
   result = surface_acquire(surface, SPN_ACQUIRE_DEFAULT_TIMEOUT, presentable, payload);
 
@@ -174,12 +194,10 @@ spinel_acquire_fenced_presentable(VkDevice                            vk_d,
 }
 
 //
+// Acquire an unfenced presentable
 //
-//
-
 static VkResult
 spinel_acquire_unfenced_presentable(VkDevice                            vk_d,
-                                    spinel_context_t                    context,
                                     struct surface *                    surface,
                                     struct surface_presentable const ** presentable,
                                     void *                              payload)
@@ -195,67 +213,6 @@ spinel_acquire_unfenced_presentable(VkDevice                            vk_d,
 //
 //
 //
-
-typedef VkResult  //
-  (*spinel_acquire_presentable_pfn_t)(VkDevice                                  vk_d,
-                                      spinel_context_t                          context,
-                                      struct surface * const                    surface,
-                                      struct surface_presentable const ** const presentable,
-                                      void *                                    payload);
-
-//
-//
-//
-
-#if 0
-static void
-spinel_render_submitter(VkQueue queue, VkFence fence, VkCommandBuffer const cb, void * data)
-{
-  struct surface_presentable const * presentable            = data;
-  bool const                         is_layout_undefined    = (presentable->acquire_count == 1);
-  bool const                         is_clear_before_render = *(bool *)presentable->payload;
-
-  // are we clearing the image?
-  VkPipelineStageFlags const dst_stage_mask = (is_layout_undefined || is_clear_before_render)
-                                                ? VK_PIPELINE_STAGE_TRANSFER_BIT
-                                                : VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
-
-  struct VkSubmitInfo const si = {
-
-    .sType                = VK_STRUCTURE_TYPE_SUBMIT_INFO,
-    .waitSemaphoreCount   = 1,
-    .pWaitSemaphores      = &presentable->wait.semaphore,
-    .pWaitDstStageMask    = &dst_stage_mask,
-    .commandBufferCount   = 1,
-    .pCommandBuffers      = &cb,
-    .signalSemaphoreCount = 1,
-    .pSignalSemaphores    = &presentable->signal
-  };
-
-  // submit
-  vk(QueueSubmit(queue, 1, &si, fence));
-
-  // present
-  VkPresentInfoKHR const pi = {
-
-    .sType              = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR,
-    .pNext              = NULL,
-    .waitSemaphoreCount = 1,
-    .pWaitSemaphores    = &presentable->signal,
-    .swapchainCount     = 1,
-    .pSwapchains        = &presentable->swapchain,
-    .pImageIndices      = &presentable->image_index,
-    .pResults           = NULL
-  };
-
-  (void)vkQueuePresentKHR(queue, &pi);
-}
-#endif
-
-//
-//
-//
-
 static void
 spinel_usage(char * const argv[])
 {
@@ -263,42 +220,47 @@ spinel_usage(char * const argv[])
                                       "VK_PRESENT_MODE_MAILBOX_KHR",
                                       "VK_PRESENT_MODE_FIFO_KHR",
                                       "VK_PRESENT_MODE_FIFO_RELAXED_KHR" };
-  fprintf(
-    stderr,
-    "\n"
-    "Usage: %s -f <filename> [-h] [-d:] [-i:] [-n:] [-p:] [-s:] [-q] [-F] [-Q] [-D] [-X]\n"
-    " -f <filename>             Filename of SVG file.\n"
-    " -h                        Print usage.\n"
-    " -d <vendorID>:<deviceID>  Execute on a specific Vulkan physical device.  Defaults to first device.\n"
-    " -i <min image count>      Minimum number of images in swapchain. Defaults to %u.\n"
-    " -n <iterations>           Maximum iterations before exiting. Defaults to UINT_MAX\n"
-    " -p <present mode>         Select present mode [0-3]*. Defaults to %u/%s.\n"
-    " -q <compute>:<present>    Select the compute and presentation queue family indices.  Defaults to `0:0`\n"
-    " -s <pipeline stage>       Select which pipeline stages are enabled on the first loop.    Defaults to `11111`.\n"
-    " -t <pipeline stage>       Select which pipeline stages are enabled after the first loop. Defaults to `11111`.\n"
-    " -v                        Verbose SVG parsing output.  Quiet by default.\n"
-    " -r                        Rotate the SVG file around the origin.  Disabled by default.\n"
-    " -F                        Use VkFences to meter swapchain image acquires.\n"
-    " -Q                        Disable Vulkan validation layers.  Enabled by default.\n"
-    " -D                        Disable Vulkan debug info labels.  Enabled by default.\n"
-    " -X                        Skip clearing the image entirely before every render.\n"
-    "\n"
-    " * Present Modes\n"
-    "   -------------\n"
-    "   0 : %s *\n"
-    "   1 : %s\n"
-    "   2 : %s\n"
-    "   3 : %s *\n"
-    "   * may result in tearing\n"
-    "\n",
-    argv[0],
-    SPN_PLATFORM_MIN_IMAGE_COUNT,
-    SPN_PLATFORM_PRESENT_MODE,
-    pms[SPN_PLATFORM_PRESENT_MODE],
-    pms[0],
-    pms[1],
-    pms[2],
-    pms[3]);
+  //
+  // clang-format off
+  //
+  fprintf(stderr,
+          "\n"
+          "Usage: %s -f <filename> [-h] [-d:] [-i:] [-n:] [-p:] [-s:] [-q] [-F] [-Q] [-D] [-X]\n"
+          " -f <filename>             Filename of SVG file.\n"
+          " -h                        Print usage.\n"
+          " -d <vendorID>:<deviceID>  Execute on a specific Vulkan physical device.  Defaults to first device.\n"
+          " -i <min image count>      Minimum number of images in swapchain. Defaults to %u.\n"
+          " -n <iterations>           Maximum iterations before exiting. Defaults to UINT_MAX\n"
+          " -p <present mode>         Select present mode [0-3]*. Defaults to %u/%s.\n"
+          " -q <compute>:<present>    Select the compute and presentation queue family indices.  Defaults to `0:0`\n"
+          " -s <pipeline stage>       Select which pipeline stages are enabled on the first loop.    Defaults to `11111`.\n"
+          " -t <pipeline stage>       Select which pipeline stages are enabled after the first loop. Defaults to `11111`.\n"
+          " -v                        Verbose SVG parsing output.  Quiet by default.\n"
+          " -r                        Rotate the SVG file around the origin.  Disabled by default.\n"
+          " -F                        Use VkFences to meter swapchain image acquires.\n"
+          " -Q                        Disable Vulkan validation layers.  Enabled by default.\n"
+          " -D                        Disable Vulkan debug info labels.  Enabled by default.\n"
+          " -X                        Skip clearing the image entirely before every render.\n"
+          "\n"
+          " * Present Modes\n"
+          "   -------------\n"
+          "   0 : %s *\n"
+          "   1 : %s\n"
+          "   2 : %s\n"
+          "   3 : %s *\n"
+          "   * may result in tearing\n"
+          "\n",
+          argv[0],
+          SPN_PLATFORM_MIN_IMAGE_COUNT,
+          SPN_PLATFORM_PRESENT_MODE,
+          pms[SPN_PLATFORM_PRESENT_MODE],
+          pms[0],
+          pms[1],
+          pms[2],
+          pms[3]);
+  //
+  // clang-format on
+  //
 }
 
 //
@@ -318,13 +280,14 @@ spinel_usage(char * const argv[])
 //
 //
 //
-
 struct spinel_state
 {
-  struct widget_control initial;
-  struct widget_control control;
+  spinel_context_t      context;
   spinel_swapchain_t    swapchain;
   VkExtent2D            extent;
+  uint32_t              image_count;
+  struct widget_control initial;
+  struct widget_control control;
   bool                  is_rotate;
   bool                  is_exit;
 };
@@ -332,7 +295,228 @@ struct spinel_state
 //
 //
 //
+struct spinel_vk
+{
+  VkInstance                    i;
+  VkPhysicalDevice              pd;
+  VkDevice                      d;
+  VkAllocationCallbacks const * ac;
 
+  struct
+  {
+    struct
+    {
+      uint32_t                index;
+      VkQueueFamilyProperties props;
+    } compute;
+
+    struct
+    {
+      uint32_t                index;
+      VkQueueFamilyProperties props;
+
+      struct
+      {
+        uint32_t count;
+        uint32_t next;
+        VkQueue  queues[SPN_VK_Q_PRESENT_MAX_QUEUES];
+      } pool;
+    } present;
+  } q;
+
+  struct
+  {
+    uint32_t          count;
+    uint32_t          next;
+    VkCommandPool *   pools;
+    VkCommandBuffer * buffers;
+    VkSemaphore *     timelines;
+    uint64_t *        values;
+  } cmd;
+};
+
+//
+// NOTE(allanmac): Validation layers either correctly or incorrectly identifying
+// that the presentation queue submissions are hanging on to the command buffers
+// a little longer than expected.
+//
+// The "+2" appears to resolve this when I expected a "+1" to be all that was
+// required given the self-clocking behavior of the render loop.
+//
+// The assumption was that every swapchain image could be "in flight" and its
+// associated command buffer in the post-submission "pending" state.  Adding one
+// more command buffer enabled recording while the pending command buffers are
+// in flight.
+//
+// Acquiring a fenced presentable doesn't impact this observation.
+//
+static void
+spinel_vk_cmd_create(struct spinel_vk * vk, uint32_t image_count)
+{
+  uint32_t const count = image_count + 2;
+
+  vk->cmd.count     = count;
+  vk->cmd.next      = 0;
+  vk->cmd.pools     = malloc(count * sizeof(*vk->cmd.pools));
+  vk->cmd.buffers   = malloc(count * sizeof(*vk->cmd.buffers));
+  vk->cmd.timelines = malloc(count * sizeof(*vk->cmd.timelines));
+  vk->cmd.values    = calloc(count, sizeof(*vk->cmd.values));
+
+  VkCommandPoolCreateInfo const cpci = {
+
+    .sType            = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
+    .pNext            = NULL,
+    .flags            = 0,
+    .queueFamilyIndex = vk->q.present.index,
+  };
+
+  VkCommandBufferAllocateInfo cbai = {
+
+    .sType              = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
+    .pNext              = NULL,
+    .level              = VK_COMMAND_BUFFER_LEVEL_PRIMARY,
+    .commandBufferCount = 1,
+    /* .commandPool     =  */  // updated on each iteration
+  };
+
+  VkSemaphoreTypeCreateInfo const stci = {
+
+    .sType         = VK_STRUCTURE_TYPE_SEMAPHORE_TYPE_CREATE_INFO_KHR,
+    .pNext         = NULL,
+    .semaphoreType = VK_SEMAPHORE_TYPE_TIMELINE,
+    .initialValue  = 0UL
+  };
+
+  VkSemaphoreCreateInfo const sci = {
+
+    .sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,
+    .pNext = &stci,
+    .flags = 0
+  };
+
+  for (uint32_t ii = 0; ii < count; ii++)
+    {
+      vk(CreateCommandPool(vk->d, &cpci, vk->ac, vk->cmd.pools + ii));
+
+      cbai.commandPool = vk->cmd.pools[ii];
+
+      vk(AllocateCommandBuffers(vk->d, &cbai, vk->cmd.buffers + ii));
+
+      vk(CreateSemaphore(vk->d, &sci, vk->ac, vk->cmd.timelines + ii));
+    }
+}
+
+//
+//
+//
+static void
+spinel_vk_cmd_destroy(struct spinel_vk * vk)
+{
+  // VkCommand*
+  for (uint32_t ii = 0; ii < vk->cmd.count; ii++)
+    {
+      vkDestroySemaphore(vk->d, vk->cmd.timelines[ii], vk->ac);
+      vkFreeCommandBuffers(vk->d, vk->cmd.pools[ii], 1, vk->cmd.buffers + ii);
+      vkDestroyCommandPool(vk->d, vk->cmd.pools[ii], vk->ac);
+    }
+
+  free(vk->cmd.values);
+  free(vk->cmd.timelines);
+  free(vk->cmd.buffers);
+  free(vk->cmd.pools);
+}
+
+//
+//
+//
+static void
+spinel_vk_cmd_regen(struct spinel_vk * vk, uint32_t image_count)
+{
+  spinel_vk_cmd_destroy(vk);
+
+  spinel_vk_cmd_create(vk, image_count);
+}
+
+//
+//
+//
+static void
+spinel_vk_q_cmd_create(struct spinel_vk * vk, uint32_t image_count)
+{
+  vk->q.present.pool.count = MIN_MACRO(uint32_t,  //
+                                       SPN_VK_Q_PRESENT_MAX_QUEUES,
+                                       vk->q.present.props.queueCount);
+  vk->q.present.pool.next  = 0;
+
+  for (uint32_t ii = 0; ii < vk->q.present.pool.count; ii++)
+    {
+      vkGetDeviceQueue(vk->d, vk->q.present.index, ii, vk->q.present.pool.queues + ii);
+    }
+
+  spinel_vk_cmd_create(vk, image_count);
+}
+
+//
+//
+//
+static VkQueue
+spinel_vk_q_next(struct spinel_vk * vk)
+{
+  return vk->q.present.pool.queues[vk->q.present.pool.next++ % vk->q.present.pool.count];
+}
+
+//
+// This is very simple and is only possible because Spinel and the surface
+// module will meter access to images.
+//
+static void
+spinel_vk_cb_next(struct spinel_vk * vk,
+                  VkCommandBuffer *  cb,
+                  VkSemaphore *      timeline,
+                  uint64_t *         value)
+{
+  uint32_t const next = vk->cmd.next++ % vk->cmd.count;
+
+  VkSemaphoreWaitInfo const swi = {
+    .sType          = VK_STRUCTURE_TYPE_SEMAPHORE_WAIT_INFO,
+    .pNext          = NULL,
+    .flags          = 0,
+    .semaphoreCount = 1,
+    .pSemaphores    = vk->cmd.timelines + next,
+    .pValues        = vk->cmd.values + next,
+  };
+
+  vk(WaitSemaphores(vk->d, &swi, UINT64_MAX));
+
+  vk(ResetCommandPool(vk->d, vk->cmd.pools[next], 0));
+
+  *cb       = vk->cmd.buffers[next];
+  *timeline = vk->cmd.timelines[next];
+  *value    = ++vk->cmd.values[next];
+}
+
+//
+//
+//
+static void
+spinel_vk_destroy(struct spinel_vk * vk)
+{
+  // VkQueue
+  // -- nothing to destroy
+
+  // VkCommand*
+  spinel_vk_cmd_destroy(vk);
+
+  // VkDevice
+  vkDestroyDevice(vk->d, NULL);
+
+  // VkInstance
+  vkDestroyInstance(vk->i, NULL);
+}
+
+//
+//
+//
 static void
 spinel_state_input(void * data, struct surface_event const * event)
 {
@@ -408,13 +592,9 @@ spinel_state_input(void * data, struct surface_event const * event)
 // Regen will either succeed or terminally fail
 //
 static void
-spinel_surface_regen(spinel_context_t      context,
-                     struct surface *      surface,
-                     struct spinel_state * state)
+spinel_surface_regen(struct surface * surface, struct spinel_state * state)
 {
-  uint32_t image_count;
-
-  VkResult result = surface_regen(surface, &state->extent, &image_count);
+  VkResult result = surface_regen(surface, &state->extent, &state->image_count);
 
   switch (result)
     {
@@ -448,34 +628,20 @@ spinel_surface_regen(spinel_context_t      context,
       .width  = state->extent.width,
       .height = state->extent.height,
     },
-    .count = image_count,
+    .count = state->image_count,
   };
 
-  spinel(swapchain_create(context, &create_info, &state->swapchain));
+  spinel(swapchain_create(state->context, &create_info, &state->swapchain));
 }
 
 //
 //
 //
-
 int
 main(int argc, char * const argv[])
 {
-#if defined(__Fuchsia__)
-  // putenv("VK_LAYER_SETTINGS_PATH=/cache/vulkan/settings.d");
-  // setenv("VK_LAYER_SETTINGS_PATH", "/cache/vulkan/settings.d", true);
-#endif
-
-#ifndef NDEBUG
-#define LOG_ENV(str_) fprintf(stderr, str_ "=%s\n", getenv(str_))
-  LOG_ENV("VK_LOADER_DEBUG");
-  LOG_ENV("VK_LAYER_LUNARG_override");
-  LOG_ENV("VK_LAYER_PATH");
-  LOG_ENV("VK_LAYER_SETTINGS_PATH");
-#endif
-
   //
-  // set up defaults
+  // set defaults
   //
   uint32_t         vendor_id              = 0;
   uint32_t         device_id              = 0;
@@ -490,6 +656,9 @@ main(int argc, char * const argv[])
   bool             is_clear_before_render = true;
   char const *     filename               = NULL;
 
+  //
+  // initial state of widgets
+  //
   struct spinel_state state =  //
     {                          //
       .initial = WIDGET_CONTROL_PRSCR(),
@@ -510,9 +679,9 @@ main(int argc, char * const argv[])
             {
               char * str_end;
 
-              vendor_id = (uint32_t)strtoul(argv[1], &str_end, 16);  // returns 0 on error
+              vendor_id = (uint32_t)strtoul(optarg, &str_end, 16);  // returns 0 on error
 
-              if (str_end != argv[1])
+              if (str_end != optarg)
                 {
                   if (*str_end == ':')
                     {
@@ -586,6 +755,11 @@ main(int argc, char * const argv[])
     }
 
   //
+  // Vulkan handles that we'll need until shutdown
+  //
+  struct spinel_vk vk = { 0 };
+
+  //
   // define Vulkan 1.2 app
   //
   VkApplicationInfo const app_info = {
@@ -642,18 +816,6 @@ main(int argc, char * const argv[])
     .enabledExtensionCount   = instance_extension_count,
     .ppEnabledExtensionNames = instance_extensions
   };
-
-  //
-  // Vulkan handles that we'll need until shutdown
-  //
-  struct
-  {
-    VkInstance                    i;
-    VkPhysicalDevice              pd;
-    VkDevice                      d;
-    VkPipelineCache               pc;
-    VkAllocationCallbacks const * ac;
-  } vk = { 0 };
 
   vk(CreateInstance(&ici, NULL, &vk.i));
 
@@ -837,6 +999,18 @@ main(int argc, char * const argv[])
     }
 
   //
+  // Validate a graphics-capable queue has been selected.
+  //
+  if ((qfp[qfis[1]].queueFlags & VK_QUEUE_GRAPHICS_BIT) == 0)
+    {
+      fprintf(stderr,
+              "Error -- .queueFamilyIndex %u does not not support VK_QUEUE_GRAPHICS_BIT.\n",
+              qfis[0]);
+
+      exit(EXIT_FAILURE);
+    }
+
+  //
   // Validate a presentable queue has been selected.
   //
   VkBool32 is_queue_presentable;
@@ -856,12 +1030,28 @@ main(int argc, char * const argv[])
     }
 
   //
+  // save queue props and index
+  //
+  vk.q.compute.index = qfis[0];
+  vk.q.compute.props = qfp[qfis[0]];
+  vk.q.present.index = qfis[1];
+  vk.q.present.props = qfp[qfis[1]];
+
+  //
+  // max queue sizes
+  //
+  uint32_t const vk_q_compute_count = MIN_MACRO(uint32_t,  //
+                                                SPN_VK_Q_COMPUTE_MAX_QUEUES,
+                                                vk.q.compute.props.queueCount);
+
+  uint32_t const vk_q_present_count = MIN_MACRO(uint32_t,  //
+                                                SPN_VK_Q_PRESENT_MAX_QUEUES,
+                                                vk.q.present.props.queueCount);
+
+  //
   // find max queue count
   //
-  uint32_t const queue_compute_count = qfp[qfis[0]].queueCount;
-  uint32_t const queue_present_count = qfp[qfis[1]].queueCount;
-
-  uint32_t const qps_size = MAX_MACRO(uint32_t, queue_compute_count, queue_present_count);
+  uint32_t const qps_size = MAX_MACRO(uint32_t, vk_q_compute_count, vk_q_present_count);
 
   //
   // default queue priorities
@@ -880,22 +1070,22 @@ main(int argc, char * const argv[])
     { .sType            = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
       .pNext            = NULL,
       .flags            = 0,
-      .queueFamilyIndex = qfis[0],
-      .queueCount       = queue_compute_count,
+      .queueFamilyIndex = vk.q.compute.index,
+      .queueCount       = vk_q_compute_count,
       .pQueuePriorities = qps },
 
     { .sType            = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
       .pNext            = NULL,
       .flags            = 0,
-      .queueFamilyIndex = qfis[1],
-      .queueCount       = queue_present_count,
+      .queueFamilyIndex = vk.q.present.index,
+      .queueCount       = vk_q_present_count,
       .pQueuePriorities = qps },
   };
 
   //
   // Are the queue families the same?  If so, then only list one.
   //
-  bool const is_same_queue = (dqcis[0].queueFamilyIndex == dqcis[1].queueFamilyIndex);
+  bool const is_same_queue = (vk.q.compute.index == vk.q.present.index);
 
   //
   // probe Spinel device requirements for this target
@@ -972,10 +1162,12 @@ main(int argc, char * const argv[])
   //
   // create pipeline cache
   //
+  VkPipelineCache vk_pc;
+
   vk_ok(vk_pipeline_cache_create(vk.d,
                                  NULL,
                                  SPN_PLATFORM_PIPELINE_CACHE_PREFIX_STRING "spinel_vk_bench_cache",
-                                 &vk.pc));
+                                 &vk_pc));
 
   //
   // save compute queue index and count
@@ -984,7 +1176,7 @@ main(int argc, char * const argv[])
     .vk = {
       .pd = vk.pd,
       .d  = vk.d,
-      .pc = vk.pc,
+      .pc = vk_pc,
       .ac = vk.ac,
       .q  = {
         .compute = {
@@ -1006,9 +1198,9 @@ main(int argc, char * const argv[])
     .handle_count    = 1 << 18,      // 256K handles
   };
 
-  spinel_context_t context = spinel_vk_context_create(&cci);
+  state.context = spinel_vk_context_create(&cci);
 
-  if (context == NULL)
+  if (state.context == NULL)
     {
       fprintf(stderr, "Error: failed to create context!\n");
 
@@ -1026,14 +1218,14 @@ main(int argc, char * const argv[])
   vk_ok(vk_pipeline_cache_destroy(vk.d,
                                   NULL,
                                   SPN_PLATFORM_PIPELINE_CACHE_PREFIX_STRING "spinel_vk_bench_cache",
-                                  vk.pc));
+                                  vk_pc));
 
   //
   // Get context limits
   //
   spinel_context_limits_t limits;
 
-  spinel(context_get_limits(context, &limits));
+  spinel(context_get_limits(state.context, &limits));
 
   //
   // create surface presentables
@@ -1057,18 +1249,18 @@ main(int argc, char * const argv[])
       image_view_format = SPN_PLATFORM_IMAGE_VIEW_FORMAT;
     }
 
-  VkImageUsageFlags const image_usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT |  //
+  VkImageUsageFlags const image_usage = VK_IMAGE_USAGE_TRANSFER_SRC_BIT |  //
+                                        VK_IMAGE_USAGE_TRANSFER_DST_BIT |  //
                                         VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
 
   VkExtent2D const max_image_extent = { limits.extent.width,  //
                                         limits.extent.height };
 
   VkComponentMapping const image_view_components = {
-
     .r = VK_COMPONENT_SWIZZLE_IDENTITY,
     .g = VK_COMPONENT_SWIZZLE_IDENTITY,
     .b = VK_COMPONENT_SWIZZLE_IDENTITY,
-    .a = VK_COMPONENT_SWIZZLE_IDENTITY
+    .a = VK_COMPONENT_SWIZZLE_IDENTITY,
   };
 
   vk_ok(surface_attach(surface,
@@ -1098,11 +1290,11 @@ main(int argc, char * const argv[])
   //
   spinel_path_builder_t pb;
 
-  spinel(path_builder_create(context, &pb));
+  spinel(path_builder_create(state.context, &pb));
 
   spinel_raster_builder_t rb;
 
-  spinel(raster_builder_create(context, &rb));
+  spinel(raster_builder_create(state.context, &rb));
 
   //
   // create widgets
@@ -1131,7 +1323,7 @@ main(int argc, char * const argv[])
 
   spinel_composition_t composition;
 
-  spinel(composition_create(context, &composition));
+  spinel(composition_create(state.context, &composition));
 
   //
   // Create styling
@@ -1149,13 +1341,13 @@ main(int argc, char * const argv[])
 
   spinel_styling_t styling;
 
-  spinel(styling_create(context, &styling_create_info, &styling));
+  spinel(styling_create(state.context, &styling_create_info, &styling));
 
   //
   //
   //
   struct widget_context w_context = {
-    .context          = context,
+    .context          = state.context,
     .pb               = pb,
     .rb               = rb,
     .ts               = ts,
@@ -1172,41 +1364,75 @@ main(int argc, char * const argv[])
   //
   // set up rendering extensions
   //
-  spinel_vk_swapchain_submit_ext_graphics_signal_t graphics_signal = {
+  spinel_vk_swapchain_submit_ext_graphics_signal_t ext_graphics_signal = {
     .ext    = NULL,
     .type   = SPN_VK_SWAPCHAIN_SUBMIT_EXT_TYPE_GRAPHICS_SIGNAL,
-    .signal = { 0 },
+    .signal = {
+      .count = 2,
+      //
+      // .semaphores[]
+      // .values[]
+      //
+    },
   };
 
-  spinel_vk_swapchain_submit_ext_graphics_store_t graphics_store = {
-    .ext        = &graphics_signal,
-    .type       = SPN_VK_SWAPCHAIN_SUBMIT_EXT_TYPE_GRAPHICS_STORE,
-    .image      = VK_NULL_HANDLE,
-    .image_info = { 0 },
-    .old_layout = VK_IMAGE_LAYOUT_UNDEFINED,
+  spinel_vk_swapchain_submit_ext_graphics_store_t ext_graphics_store = {
+    .ext                    = &ext_graphics_signal,
+    .type                   = SPN_VK_SWAPCHAIN_SUBMIT_EXT_TYPE_GRAPHICS_STORE,
+    .queue_family_index     = qfis[1],
+    .image_info.imageLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
+    //
+    // .extent_index
+    // .cb
+    // .queue
+    // .old_layout
+    // .image
+    // .image_info
+    //
   };
 
-  spinel_vk_swapchain_submit_ext_graphics_wait_t graphics_wait = {
-    .ext  = &graphics_store,
+  spinel_vk_swapchain_submit_ext_graphics_wait_t ext_graphics_wait = {
+    .ext  = &ext_graphics_store,
     .type = SPN_VK_SWAPCHAIN_SUBMIT_EXT_TYPE_GRAPHICS_WAIT,
-    .wait = { 0 },
+    .wait = {
+      .count  = 1,
+      .stages = { VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT },
+      //
+      // .semaphores[]
+      // .values[]
+      //
+    },
   };
 
-  spinel_vk_swapchain_submit_ext_compute_fill_t compute_fill = {
-    .ext   = &graphics_wait,
+  spinel_vk_swapchain_submit_ext_compute_acquire_t ext_compute_acquire = {
+    .ext                     = &ext_graphics_wait,
+    .type                    = SPN_VK_SWAPCHAIN_SUBMIT_EXT_TYPE_COMPUTE_ACQUIRE,
+    .from_queue_family_index = qfis[1],
+  };
+
+  spinel_vk_swapchain_submit_ext_compute_fill_t ext_compute_fill = {
+    .ext   = NULL,  // &ext_graphics_wait or &ext_compute_acquire
     .type  = SPN_VK_SWAPCHAIN_SUBMIT_EXT_TYPE_COMPUTE_FILL,
     .dword = 0xFFFFFFFF,
   };
 
-  spinel_vk_swapchain_submit_ext_compute_render_t compute_render = {
-    .ext          = NULL,  // &compute_fill or &graphics_wait,
-    .type         = SPN_VK_SWAPCHAIN_SUBMIT_EXT_TYPE_COMPUTE_RENDER,
-    .clip         = { 0, 0, UINT32_MAX, UINT32_MAX },
-    .extent_index = 0,
+  spinel_vk_swapchain_submit_ext_compute_render_t ext_compute_render = {
+    .ext  = NULL,  // &ext_compute_fill or &ext_compute_acquire,
+    .type = SPN_VK_SWAPCHAIN_SUBMIT_EXT_TYPE_COMPUTE_RENDER,
+    //
+    // .clip = { 0, 0, ... },
+    // .extent_index
+    //
+  };
+
+  spinel_vk_swapchain_submit_ext_compute_release_t ext_compute_release = {
+    .ext                   = &ext_compute_render,
+    .type                  = SPN_VK_SWAPCHAIN_SUBMIT_EXT_TYPE_COMPUTE_RELEASE,
+    .to_queue_family_index = qfis[1],
   };
 
   spinel_swapchain_submit_t swapchain_submit = {
-    .ext         = &compute_render,
+    .ext         = &ext_compute_release,
     .styling     = styling,
     .composition = composition,
   };
@@ -1214,7 +1440,12 @@ main(int argc, char * const argv[])
   //
   // refresh the platform surface and spinel swapchain
   //
-  spinel_surface_regen(context, surface, &state);
+  spinel_surface_regen(surface, &state);
+
+  //
+  // create presentation queue pool and command buffers
+  //
+  spinel_vk_q_cmd_create(&vk, state.image_count);
 
   //
   // which "acquire_presentable" function?
@@ -1225,77 +1456,62 @@ main(int argc, char * const argv[])
       : spinel_acquire_unfenced_presentable;
 
   //
+  // RENDER/INPUT LOOP
+  //
   // render and process input
   //
   for (uint32_t ii = 0; ii < loop_count; ii++)
     {
       //
-      // anything to do?
+      // Explicit flushing is only for accurately benchmarking a path declaration.
       //
-      if (w_control.flags != 0)
+      if (w_control.paths)
         {
+          spinel(path_builder_flush(pb));
+        }
+
+      //
+      // Explicit flushing is only for accurately benchmarking rasterization.
+      //
+      if (w_control.rasters)
+        {
+          spinel(raster_builder_flush(rb));
+        }
+
+      //
+      // RESET WIDGET COMPOSITION?
+      //
+      if (w_control.composition)
+        {
+          // unseal and reset composition
+          spinel(composition_unseal(composition));
+          spinel(composition_reset(composition));
+
+          // update clip
+          spinel_pixel_clip_t const clip = {
+            .x0 = 0,
+            .y0 = 0,
+            .x1 = state.extent.width,
+            .y1 = state.extent.height,
+          };
+
+          spinel(composition_set_clip(composition, &clip));
+        }
+
+      //
+      // RESET WIDGET STYLING?
+      //
+      if (w_control.styling)
+        {
+          // unseal and reset styling
+          spinel(styling_unseal(styling));
+          spinel(styling_reset(styling));
+
           //
-          // A composition, styling or swapchain will implicitly meter
-          // the frequency of this loop and unbounded path and raster
-          // allocation.
+          // until there is a container widget to implicitly initialize the
+          // root, explicitly initialize the styling root group
           //
-          // If none of them are activated and either paths or rasters
-          // are being created then this loop will likely generate paths
-          // or rasters faster than they can be reclaimed.
-          //
-          // In this case, the Vulkan queue is explicitly drained.
-          //
-          static struct widget_control const paths_or_rasters = { .paths = 1, .rasters = 1 };
-
-          if (w_control.flags <= paths_or_rasters.flags)
-            {
-              spinel(path_builder_flush(pb));
-              spinel(raster_builder_flush(rb));
-
-              //
-              // FIXME(allanmac): This isn't required anymore.
-              //
-              // spinel(vk_context_drain(context, UINT64_MAX));
-              //
-            }
-          else
-            {
-              //
-              // RESET WIDGET COMPOSITION?
-              //
-              if (w_control.composition)
-                {
-                  // unseal and reset composition
-                  spinel(composition_unseal(composition));
-                  spinel(composition_reset(composition));
-
-                  // update clip
-                  spinel_pixel_clip_t const clip = {
-                    .x0 = 0,
-                    .y0 = 0,
-                    .x1 = state.extent.width,
-                    .y1 = state.extent.height,
-                  };
-
-                  spinel(composition_set_clip(composition, &clip));
-                }
-
-              //
-              // RESET WIDGET STYLING?
-              //
-              if (w_control.styling)
-                {
-                  // unseal and reset styling
-                  spinel(styling_unseal(styling));
-                  spinel(styling_reset(styling));
-
-                  //
-                  // until there is a container widget to implicitly initialize the
-                  // root, explicitly initialize the styling root group
-                  //
-                  widget_regen_styling_root(&w_control, &w_context, &w_layout);
-                }
-            }
+          widget_regen_styling_root(&w_control, &w_context, &w_layout);
         }
 
       //
@@ -1306,8 +1522,9 @@ main(int argc, char * const argv[])
       //
       // SEAL COMPOSITION & STYLING
       //
-      // The composition and styling are implicitly sealed by render()
-      // but let's explicitly seal them here.
+      // The composition and styling are implicitly sealed by render() but let's
+      // explicitly seal them here in case we're skipping rendering in the
+      // benchmark.
       //
       // NOTE(allanmac): the composition/styling/render API is in flux.
       //
@@ -1325,10 +1542,9 @@ main(int argc, char * const argv[])
           struct surface_presentable const * presentable;
 
           VkResult const acquire_result = acquire_presentable_pfn(vk.d,  //
-                                                                  context,
                                                                   surface,
                                                                   &presentable,
-                                                                  &is_clear_before_render);
+                                                                  NULL);
           //
           // Possible results:
           //
@@ -1381,6 +1597,7 @@ main(int argc, char * const argv[])
           if (is_fatal)
             {
               vk_ok(acquire_result);
+
               break;
             }
 
@@ -1390,45 +1607,86 @@ main(int argc, char * const argv[])
           if (is_render)
             {
               //
-              // update render clip
-              //
-              compute_render.clip.x1 = state.extent.width;
-              compute_render.clip.y1 = state.extent.height;
-
-              //
-              // Is this the first time this image has even been acquired?
+              // Is this a new presentable with an implicit undefined layout?
               //
               bool const is_layout_undefined = (presentable->acquire_count == 1);
 
-              graphics_store.old_layout = is_layout_undefined  //
-                                            ? VK_IMAGE_LAYOUT_UNDEFINED
-                                            : VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
-
-              //
-              // Clear before rendering?
-              //
-              bool const is_fill = (is_clear_before_render || is_layout_undefined);
-
-              if (is_fill)
+              if (is_layout_undefined)
                 {
-                  compute_render.ext = &compute_fill;
+                  // compute_render -> compute_fill -> graphics_wait -> ...
+                  ext_compute_render.ext = &ext_compute_fill;
+                  ext_compute_fill.ext   = &ext_graphics_wait;
+                }
+              else if (is_clear_before_render)
+                {
+                  // compute_render -> compute_fill -> compute_acquire -> graphics_wait -> ...
+                  ext_compute_render.ext = &ext_compute_fill;
+                  ext_compute_fill.ext   = &ext_compute_acquire;
                 }
               else
                 {
-                  compute_render.ext = &graphics_wait;
+                  // compute_render -> compute_acquire -> graphics_wait -> ...
+                  ext_compute_render.ext = &ext_compute_acquire;
                 }
 
               //
-              // Update image
+              // Update compute render extension for this presentable
               //
-              graphics_store.image                  = presentable->image;
-              graphics_store.image_info.imageView   = presentable->image_view;
-              graphics_store.image_info.imageLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+              ext_compute_render.clip.x1      = state.extent.width;
+              ext_compute_render.clip.y1      = state.extent.height;
+              ext_compute_render.extent_index = presentable->image_index;
 
               //
-              // Submit
+              // Wait on presentable's "wait" semaphore
+              //
+              ext_graphics_wait.wait.semaphores[0] = presentable->wait.semaphore;
+
+              //
+              // Update graphics store extension for this presentable
+              //
+              VkImageLayout const old_layout = is_layout_undefined  //
+                                                 ? VK_IMAGE_LAYOUT_UNDEFINED
+                                                 : VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+
+              ext_graphics_store.extent_index         = presentable->image_index;
+              ext_graphics_store.queue                = spinel_vk_q_next(&vk);
+              ext_graphics_store.old_layout           = old_layout;
+              ext_graphics_store.image                = presentable->image;
+              ext_graphics_store.image_info.imageView = presentable->image_view;
+
+              //
+              // Signal presentable's "signal" semaphore
+              //
+              ext_graphics_signal.signal.semaphores[0] = presentable->signal;
+
+              //
+              // Get a command buffer and its associated availability semaphore
+              //
+              spinel_vk_cb_next(&vk,
+                                &ext_graphics_store.cb,
+                                ext_graphics_signal.signal.semaphores + 1,
+                                ext_graphics_signal.signal.values + 1);
+
+              //
+              // Submit compute work
               //
               spinel(swapchain_submit(state.swapchain, &swapchain_submit));
+
+              //
+              // Present graphics work
+              //
+              VkPresentInfoKHR const pi = {
+                .sType              = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR,
+                .pNext              = NULL,
+                .waitSemaphoreCount = 1,
+                .pWaitSemaphores    = &presentable->signal,  // wait on "signal" semaphore
+                .swapchainCount     = 1,
+                .pSwapchains        = &presentable->swapchain,
+                .pImageIndices      = &presentable->image_index,
+                .pResults           = NULL,
+              };
+
+              (void)vkQueuePresentKHR(ext_graphics_store.queue, &pi);
             }
 
           //
@@ -1436,7 +1694,20 @@ main(int argc, char * const argv[])
           //
           if (is_regen)
             {
-              spinel_surface_regen(context, surface, &state);
+              spinel_surface_regen(surface, &state);
+
+              //
+              // Why regenerate the command buffers?  It seems unlikely that
+              // swapchain image count will ever change -- even when resized --
+              // but the spec says nothing about this.  The only way to
+              // determine the actual image count is through
+              // vkGetSwapchainImagesKHR() after creation of a new swapchain.
+              //
+              // Note that there is a vkDeviceWaitIdle() hiding in
+              // spinel_surface_regen() so we know the queue command buffers
+              // aren't executing.
+              //
+              spinel_vk_cmd_regen(&vk, state.image_count);
             }
         }
 
@@ -1454,38 +1725,20 @@ main(int argc, char * const argv[])
 
       if (state.is_rotate)
         {
-          widget_svg_rotate(svg, &state.control, (float)((ii % 360) * M_PI * 2.0 / 360.0));
+          widget_svg_rotate(svg, &w_control, (float)((ii % 360) * (M_PI * 2.0 / 360.0)));
         }
 
       //
       // EXIT?
       //
-      if (state.is_exit || ((ii + 1) == loop_count))
+      if (state.is_exit)
         {
-#if 0
-          // drain context to get accurate block pool stats
-          // spinel(vk_context_wait(context, 0, NULL, true, UINT64_MAX, NULL));
-
-          //
-          // dump block pool stats
-          //
-          spinel_vk_status_ext_block_pool_t status_block_pool = {
-            .type = SPN_VK_STATUS_EXT_TYPE_BLOCK_POOL
-          };
-
-          spinel_status_t const status = { .ext = &status_block_pool };
-
-          spinel(context_status(context, &status));
-
-          fprintf(stderr,
-                  "avail / alloc: %9.3f / %9.3f MB\n",
-                  (double)status_block_pool.avail / (1024.0 * 1024.0),
-                  (double)status_block_pool.inuse / (1024.0 * 1024.0));
-#endif
-
           break;
         }
     }
+
+  // done with swapchain
+  spinel_swapchain_release(state.swapchain);
 
   // unseal Spinel composition and styling to ensure rendering is complete
   spinel(composition_unseal(composition));
@@ -1504,7 +1757,7 @@ main(int argc, char * const argv[])
   spinel_transform_stack_release(ts);
 
   // release the Spinel context
-  spinel(context_release(context));
+  spinel(context_release(state.context));
 
   ////////////////////////////////////
   //
@@ -1517,11 +1770,8 @@ main(int argc, char * const argv[])
   // surface
   surface_destroy(surface);  // will implicitly `detach(surface)`
 
-  // VkDevice
-  vkDestroyDevice(vk.d, NULL);
-
-  // VkInstance
-  vkDestroyInstance(vk.i, NULL);
+  // destroy vk handles
+  spinel_vk_destroy(&vk);
 
   return EXIT_SUCCESS;
 }

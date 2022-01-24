@@ -246,10 +246,10 @@ main()
     }
 
   //
-  // Load the fill cmd from the ring.
+  // Broadcast load the fill cmd from the ring.
   //
-  // The cmd is not subgroup uniform and may be repeatedly updated by
-  // each subgroup invocation.
+  // The fill cmd is not marked as subgroup uniform because it's
+  // transformed into a rast cmd.
   //
   SPN_BUFREF_DEFINE(SPN_BUFFER_TYPE(rasterize_fill_cmds),
                     fill_cmds,
@@ -434,7 +434,9 @@ main()
   if (!SPN_PATH_HEAD_ENTIRELY_HEADER(SPN_FILL_EXPAND_SUBGROUP_SIZE, I))                            \
     {                                                                                              \
       if (h##I <= SPN_BLOCK_ID_TAG_PATH_RAT_CUBIC)                                                 \
-        h##I += SPN_RAST_TYPE_LINE;                                                                \
+        {                                                                                          \
+          h##I += SPN_RAST_TYPE_LINE;                                                              \
+        }                                                                                          \
     }
 
       SPN_FILL_EXPAND_BLOCK_EXPAND();
@@ -446,7 +448,9 @@ main()
   if (!SPN_PATH_HEAD_ENTIRELY_HEADER(SPN_FILL_EXPAND_SUBGROUP_SIZE, I))                            \
     {                                                                                              \
       if (SPN_FILL_EXPAND_TAG_IS_RAT(h##I))                                                        \
-        h##I += (SPN_RAST_TYPE_RAT_QUAD - SPN_BLOCK_ID_TAG_PATH_RAT_QUAD);                         \
+        {                                                                                          \
+          h##I += (SPN_RAST_TYPE_RAT_QUAD - SPN_BLOCK_ID_TAG_PATH_RAT_QUAD);                       \
+        }                                                                                          \
     }
 
       SPN_FILL_EXPAND_BLOCK_EXPAND();
@@ -500,7 +504,9 @@ main()
                                                                                                    \
       /* Early exit? */                                                                            \
       if (subgroupAll(!is_valid))                                                                  \
-        return;                                                                                    \
+        {                                                                                          \
+          return;                                                                                  \
+        }                                                                                          \
                                                                                                    \
       uvec4 part;                                                                                  \
                                                                                                    \
@@ -572,7 +578,9 @@ main()
 #undef SPN_EXPAND_X
 #define SPN_EXPAND_X(I, N, P, L)                                                                   \
   if (n##I <= SPN_BLOCK_ID_TAG_PATH_RAT_CUBIC)                                                     \
-    n##I += SPN_RAST_TYPE_LINE;
+    {                                                                                              \
+      n##I += SPN_RAST_TYPE_LINE;                                                                  \
+    }
 
           SPN_FILL_EXPAND_BLOCK_EXPAND();
         }
@@ -581,7 +589,9 @@ main()
 #undef SPN_EXPAND_X
 #define SPN_EXPAND_X(I, N, P, L)                                                                   \
   if (SPN_FILL_EXPAND_TAG_IS_RAT(n##I))                                                            \
-    n##I += (SPN_RAST_TYPE_RAT_QUAD - SPN_BLOCK_ID_TAG_PATH_RAT_QUAD);
+    {                                                                                              \
+      n##I += (SPN_RAST_TYPE_RAT_QUAD - SPN_BLOCK_ID_TAG_PATH_RAT_QUAD);                           \
+    }
 
           SPN_FILL_EXPAND_BLOCK_EXPAND();
         }
@@ -596,7 +606,9 @@ main()
                                                                                                    \
     /* Early exit? */                                                                              \
     if (subgroupAll(!is_valid))                                                                    \
-      return;                                                                                      \
+      {                                                                                            \
+        return;                                                                                    \
+      }                                                                                            \
                                                                                                    \
     uvec4 part;                                                                                    \
                                                                                                    \

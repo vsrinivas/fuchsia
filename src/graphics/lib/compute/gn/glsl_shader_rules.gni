@@ -44,7 +44,7 @@ declare_args() {
   # include debug info in combination with skipping the spirv-opt and
   # spirv-reduce pass.
   #
-  graphics_compute_generate_spirv_debug_info = true
+  graphics_compute_generate_spirv_debug_info = false
 }
 
 #

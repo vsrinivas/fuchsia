@@ -117,7 +117,7 @@ param const params[] = {
     .name      = "red_square_2x2",
     .surface   = { 1024, 1024 },
     .checksums = {
-      { 0xFBF00400, {} }
+      { 0xFFEC0004, {} }
     },
     .test = std::make_shared<test>(
       "<svg xmlns=\"http://www.w3.org/2000/svg\">\n"
@@ -236,7 +236,7 @@ param const params[] = {
           { param::INTEL,  {}                    }  // all intel
         }
       },
-      { 0xF994BD80, {
+      { 0x91582546, {
           { param::NVIDIA, {}                    }  // all nvidia
         }
       },
@@ -301,7 +301,7 @@ param const params[] = {
           { param::INTEL,  {}                    }  // all intel
         }
       },
-      { 0xC5127B22, {
+      { 0x8836B7D6, {
           { param::NVIDIA, {}                    }  // all nvidia
         }
       },
@@ -351,7 +351,7 @@ param const params[] = {
           { param::INTEL,  {}                    }  // all intel
         }
       },
-      { 0xB783B9A6, {
+      { 0x7156912, {
           { param::NVIDIA, {}                    }  // all nvidia
         }
       },
@@ -416,7 +416,7 @@ param const params[] = {
           { param::INTEL,  {}                    }  // all intel
         }
       },
-      { 0x138093C0, {
+      { 0xF24EB49E, {
           { param::NVIDIA, {}                    }  // all nvidia
         }
       },
@@ -505,7 +505,7 @@ param const params[] = {
           { param::INTEL,  {}                    }  // all intel
         }
       },
-      { 0xC2E7CDA9, {
+      { 0x7F1D1193, {
           { param::NVIDIA, {}                    }  // all nvidia
         }
       },

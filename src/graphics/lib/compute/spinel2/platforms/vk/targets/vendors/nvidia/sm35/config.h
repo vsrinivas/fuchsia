@@ -95,7 +95,7 @@
 #define SPN_DEVICE_RASTERIZE_SUBGROUP_SIZE_LOG2                   SPN_DEVICE_SUBGROUP_SIZE_LOG2
 #define SPN_DEVICE_RASTERIZE_WORKGROUP_SIZE                       ((1 << SPN_DEVICE_RASTERIZE_SUBGROUP_SIZE_LOG2) * 1)
 // can reduce this to force earlier launches of smaller grids
-#define SPN_DEVICE_RASTERIZE_COHORT_SIZE                          (SPN_RASTER_COHORT_METAS_SIZE - 1)
+#define SPN_DEVICE_RASTERIZE_COHORT_SIZE                          SPN_RASTER_COHORT_MAX_SIZE
 // enable nvidia partition extension
 #define SPN_DEVICE_RASTERIZE_ENABLE_SUBGROUP_PARTITION_NV         1
 
@@ -148,14 +148,14 @@
 //
 #define SPN_DEVICE_RENDER_SUBGROUP_SIZE_LOG2                      SPN_DEVICE_SUBGROUP_SIZE_LOG2
 #define SPN_DEVICE_RENDER_WORKGROUP_SIZE                          ((1 << SPN_DEVICE_RENDER_SUBGROUP_SIZE_LOG2) * 1)
+
 // config switches
 #define SPN_DEVICE_RENDER_LGF_USE_SHUFFLE
 #define SPN_DEVICE_RENDER_TTCKS_USE_SHUFFLE
 #define SPN_DEVICE_RENDER_STYLING_CMDS_USE_SHUFFLE
 #define SPN_DEVICE_RENDER_COVERAGE_USE_SHUFFLE
-//
+
 // TODO(allanmac): generate a new target for NVIDIA devices that support fp16
-//
 #if 1
 #define SPN_DEVICE_RENDER_TILE_CHANNEL_IS_FLOAT32                 // CC: 3.0, 3.2, 3.5, 3.7, 5.0, 5.2, 6.1
 #else
@@ -163,6 +163,13 @@
 #endif
 // expecting VK_FORMAT_R8G8B8A8_UNORM or equivalent
 #define SPN_DEVICE_RENDER_SURFACE_TYPE                            rgba8
+
+// TODO(allanmac): The vertex shader tile copy pass will take care of this
+#if defined(__Fuchsia__)
+#define SPN_DEVICE_RENDER_SURFACE_SWIZZLE(rgba_)                  (rgba_)
+#else
+#define SPN_DEVICE_RENDER_SURFACE_SWIZZLE(rgba_)                  (rgba_).bgra
+#endif
 
 //
 // KERNEL: RENDER DISPATCH

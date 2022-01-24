@@ -119,7 +119,7 @@ spinel_device_block_pool_init(struct spinel_device * device)
   // NOTE: We don't need to save the immediate semaphore handle because context
   // creation will block and drain all submissions before returning.
   //
-  (void)spinel_deps_immediate_submit(device->deps, &device->vk, &disi);
+  spinel_deps_immediate_submit(device->deps, &device->vk, &disi, NULL);
 }
 
 //
@@ -142,30 +142,32 @@ spinel_device_block_pool_create(struct spinel_device * device,
   uint32_t const block_count        = (block_pool_dwords + block_dwords - 1) >> block_dwords_log2;
 
   // The `bp_ids` extent is always a power-of-two.
-  uint32_t const id_count = spinel_pow2_ru_u32(block_count);
+  uint32_t const id_count_pow2 = spinel_pow2_ru_u32(block_count);
 
   struct spinel_block_pool * const block_pool = &device->block_pool;
 
   block_pool->bp_size = block_count;
-  block_pool->bp_mask = id_count - 1;  // ids ring is power-of-two
+  block_pool->bp_mask = id_count_pow2 - 1;  // ids ring is power-of-two
 
   //
   // Allocate in one buffer:
   //
   //   [ `bp_blocks` | `bp_ids` | `bp_host_map` ]
   //
-  // Note that `bp_blocks` is first to robustify alignment.
+  // Note that `bp_blocks` is first in order to robustify alignment.
   //
   // Even though we're using device addresses inside of Spinel, we keep the
   // intermediate VkDescriptorBufferInfo structures around in case we need to
   // interfact with descriptor sets.
   //
-  uint32_t const bp_dwords         = block_count * block_dwords;
-  size_t const   bp_blocks_size    = bp_dwords * sizeof(uint32_t);
-  size_t const   bp_ids_offset_ids = SPN_BUFFER_OFFSETOF(block_pool_ids, ids);
-  size_t const   bp_ids_size       = bp_ids_offset_ids + id_count * sizeof(spinel_block_id_t);
-  size_t const   bp_host_map_size  = handle_count * sizeof(spinel_handle_t);
-  size_t const   bp_size           = bp_blocks_size + bp_ids_size + bp_host_map_size;
+  // clang-format off
+  uint32_t     const bp_dwords         = block_count * block_dwords;
+  VkDeviceSize const bp_blocks_size    = bp_dwords * sizeof(uint32_t);
+  VkDeviceSize const bp_ids_offset_ids = SPN_BUFFER_OFFSETOF(block_pool_ids, ids);
+  VkDeviceSize const bp_ids_size       = bp_ids_offset_ids + id_count_pow2 * sizeof(spinel_block_id_t);
+  VkDeviceSize const bp_host_map_size  = handle_count * sizeof(spinel_handle_t);
+  VkDeviceSize const bp_size           = bp_blocks_size + bp_ids_size + bp_host_map_size;
+  // clang-format on
 
   spinel_allocator_alloc_dbi_dm(&device->allocator.device.perm.drw,
                                 device->vk.pd,

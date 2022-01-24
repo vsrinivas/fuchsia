@@ -9,12 +9,14 @@
 #include "deps.h"
 
 #include <assert.h>
+#include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
 
 #include "common/vk/assert.h"
 #include "device.h"
 #include "queue_pool.h"
+#include "ring.h"
 
 //
 // Utility struct and functions for accumulating a wait set from a bag of
@@ -37,10 +39,10 @@ struct spinel_deps_waitset_gather
 //
 // Stack allocated store of waiting semaphores totals:
 //
-//  * Every in-flight delayed semaphore
-//  * In-flight immediate semaphores
-//  * Internal transfer waiting timelines
-//  * Imported waiting timelines
+//  * Every in-flight delayed semaphore    |  128
+//  * In-flight immediate semaphores       |   33
+//  * Internal transfer waiting timelines  |    1
+//  * Imported waiting timelines           |    1
 //
 #define SPN_DEPS_WAITSET_SIZE (SPN_DEPS_DELAYED_SEMAPHORE_MAX                + \
                                SPN_DEPS_IMMEDIATE_SUBMIT_SIZE_WAIT_IMMEDIATE + \
@@ -84,19 +86,33 @@ struct spinel_deps_signalset
 //
 struct spinel_deps
 {
+  //
+  // A new path or raster builder dispatch immediately acquires a "delayed"
+  // timeline.
+  //
+  struct
+  {
+    struct spinel_next                next;
+    VkSemaphore *                     semaphores;
+    uint64_t *                        values;
+    struct spinel_deps_action *       submissions;
+    spinel_deps_delayed_semaphore_t * handle_map;
+  } delayed;
+
+  //
+  // Immediately acquire a timeline and command buffer and submit to the
+  // VkDevice.
+  //
   struct
   {
     struct
     {
-      uint32_t        size;   // size of a pool
-      uint32_t        count;  // number of pools in extent
-      VkCommandPool * extent;
+      uint32_t        size;    // pool.size          - number of cbs per pool
+      uint32_t        count;   // pool.count         - number of pools
+      VkCommandPool * extent;  // extent[pool.count] - extent of pools
     } pool;
 
-    uint32_t                    size;  // (pool.size * pool.count)
-    uint32_t                    head;
-    uint32_t                    tail;
-    uint32_t                    submissions;
+    struct spinel_ring          ring;
     VkPipelineStageFlags *      stages;
     VkSemaphore *               semaphores;
     uint64_t *                  values;
@@ -104,15 +120,17 @@ struct spinel_deps
     struct spinel_deps_action * completions;
   } immediate;
 
+  //
+  // Completed submission actions are only executed:
+  //
+  //   * After an immediate timeline has been acquired.
+  //   * Or when waiting for submitted dispatches to complete.
+  //
   struct
   {
-    uint32_t                          size;
-    uint32_t                          next;
-    VkSemaphore *                     semaphores;
-    uint64_t *                        values;
-    struct spinel_deps_action *       submissions;
-    spinel_deps_delayed_semaphore_t * handle_map;
-  } delayed;
+    struct spinel_ring          ring;
+    struct spinel_deps_action * extent;
+  } completion;
 };
 
 //
@@ -121,56 +139,62 @@ struct spinel_deps
 struct spinel_deps *
 spinel_deps_create(struct spinel_deps_create_info const * info, struct spinel_device_vk const * vk)
 {
+  assert(info->semaphores.delayed.size <= SPN_DEPS_DELAYED_SEMAPHORE_MAX);
+
+  struct spinel_deps * deps = malloc(sizeof(*deps));
+
+  //////////////////////////////////////////////////////////////////////////////
+  //
+  // Delayed timelines and submission actions.
+  //
+  size_t const handle_map_size = info->handle_count * sizeof(*deps->delayed.handle_map);
+
+  spinel_next_init(&deps->delayed.next, info->semaphores.delayed.size);
+
+  // clang-format off
+  deps->delayed.semaphores  = malloc(info->semaphores.delayed.size * sizeof(*deps->delayed.semaphores));
+  deps->delayed.values      = calloc(info->semaphores.delayed.size, sizeof(*deps->delayed.values));
+  deps->delayed.submissions = calloc(info->semaphores.delayed.size, sizeof(*deps->delayed.submissions));
+  deps->delayed.handle_map  = malloc(handle_map_size);
+  // clang-format on
+
+  // invalidate handle map
+  memset(deps->delayed.handle_map, 0xFF, handle_map_size);
+
+  //////////////////////////////////////////////////////////////////////////////
+  //
+  // Immediate command pools, command buffers, timelines and completion actions.
+  //
   uint32_t const immediate_size = info->semaphores.immediate.pool.size *  //
                                   info->semaphores.immediate.pool.count;
 
   assert(immediate_size <= SPN_DEPS_IMMEDIATE_SEMAPHORE_MAX);
-  assert(info->semaphores.delayed.size <= SPN_DEPS_DELAYED_SEMAPHORE_MAX);
-
-  //
-  // alloc deps
-  //
-  struct spinel_deps * deps = malloc(sizeof(*deps));
-
-  //
-  // constants and counters
-  //
-  deps->immediate.pool.size   = info->semaphores.immediate.pool.size;
-  deps->immediate.pool.count  = info->semaphores.immediate.pool.count;
-  deps->immediate.size        = immediate_size;
-  deps->immediate.head        = 0;
-  deps->immediate.tail        = 0;
-  deps->immediate.submissions = 0;
-
-  deps->delayed.size = info->semaphores.delayed.size;
-  deps->delayed.next = 0;
-
-  //
-  // allocations
-  //
-  size_t const handle_map_size = info->handle_count * sizeof(*deps->delayed.handle_map);
 
   // clang-format off
+  deps->immediate.pool.size   = info->semaphores.immediate.pool.size;
+  deps->immediate.pool.count  = info->semaphores.immediate.pool.count;
   deps->immediate.pool.extent = malloc(info->semaphores.immediate.pool.count * sizeof(*deps->immediate.pool.extent));
+
+  spinel_ring_init(&deps->immediate.ring, immediate_size);
+
   deps->immediate.stages      = malloc(immediate_size * sizeof(*deps->immediate.stages));
   deps->immediate.semaphores  = malloc(immediate_size * sizeof(*deps->immediate.semaphores));
-  deps->immediate.values      = calloc(immediate_size, sizeof(*deps->immediate.values));
+  deps->immediate.values      = calloc(immediate_size, sizeof(*deps->immediate.values));      // zeroed
   deps->immediate.cbs         = malloc(immediate_size * sizeof(*deps->immediate.cbs));
-  deps->immediate.completions = calloc(immediate_size, sizeof(*deps->immediate.completions));
-
-  deps->delayed.semaphores    = malloc(info->semaphores.delayed.size * sizeof(*deps->delayed.semaphores));
-  deps->delayed.values        = calloc(info->semaphores.delayed.size, sizeof(*deps->delayed.values));
-  deps->delayed.submissions   = calloc(info->semaphores.delayed.size, sizeof(*deps->delayed.submissions));
-  deps->delayed.handle_map    = malloc(handle_map_size);
+  deps->immediate.completions = malloc(immediate_size * sizeof(*deps->immediate.completions));
   // clang-format on
 
+  //////////////////////////////////////////////////////////////////////////////
   //
-  // Invalidate handle map
+  // Completion ring
   //
-  memset(deps->delayed.handle_map, 0xFF, handle_map_size);
+  spinel_ring_init(&deps->completion.ring, immediate_size);
 
+  deps->completion.extent = malloc(immediate_size * sizeof(*deps->completion.extent));
+
+  //////////////////////////////////////////////////////////////////////////////
   //
-  // Create command pool
+  // Create Vulkan objects: command pools, command buffers, timelines.
   //
   VkCommandPoolCreateInfo const cpci = {
 
@@ -249,12 +273,12 @@ spinel_deps_dispose(struct spinel_deps * deps, struct spinel_device_vk const * v
   //
   // Destroy semaphores
   //
-  for (uint32_t ii = 0; ii < deps->immediate.size; ii++)
+  for (uint32_t ii = 0; ii < deps->immediate.ring.size; ii++)
     {
       vkDestroySemaphore(vk->d, deps->immediate.semaphores[ii], vk->ac);
     }
 
-  for (uint32_t ii = 0; ii < deps->delayed.size; ii++)
+  for (uint32_t ii = 0; ii < deps->delayed.next.size; ii++)
     {
       vkDestroySemaphore(vk->d, deps->delayed.semaphores[ii], vk->ac);
     }
@@ -283,17 +307,19 @@ spinel_deps_dispose(struct spinel_deps * deps, struct spinel_device_vk const * v
   //
   // Arrays
   //
-  free(deps->immediate.pool.extent);
-  free(deps->immediate.stages);
-  free(deps->immediate.semaphores);
-  free(deps->immediate.values);
-  free(deps->immediate.cbs);
-  free(deps->immediate.completions);
+  free(deps->completion.extent);
 
-  free(deps->delayed.semaphores);
-  free(deps->delayed.values);
-  free(deps->delayed.submissions);
+  free(deps->immediate.completions);
+  free(deps->immediate.cbs);
+  free(deps->immediate.values);
+  free(deps->immediate.semaphores);
+  free(deps->immediate.stages);
+  free(deps->immediate.pool.extent);
+
   free(deps->delayed.handle_map);
+  free(deps->delayed.submissions);
+  free(deps->delayed.values);
+  free(deps->delayed.semaphores);
 
   free(deps);
 }
@@ -350,7 +376,10 @@ spinel_deps_delayed_detach_ring(struct spinel_deps *    deps,
 }
 
 //
+// Actions only need two args.
 //
+// Note that we clear the action to keep delayed semaphore actions from being
+// reexecuted.
 //
 static void
 spinel_deps_action_invoke(struct spinel_deps_action * action)
@@ -375,6 +404,22 @@ spinel_deps_delayed_flush(struct spinel_deps * deps, spinel_deps_delayed_semapho
 }
 
 //
+//
+//
+static void
+spinel_deps_waitset_gather_set(struct spinel_deps_waitset_gather *   gather,
+                               spinel_deps_delayed_semaphore_t const delayed)
+{
+  if (delayed != SPN_DEPS_DELAYED_SEMAPHORE_INVALID)
+    {
+      uint32_t const delayed_base = (delayed >> 5);
+      uint32_t const delayed_bit  = (1u << (delayed & 0x1F));
+
+      gather->delayed.bitmap[delayed_base] |= delayed_bit;
+    }
+}
+
+//
 // Gather the delayed semaphores of a linear span of handles
 //
 static void
@@ -388,13 +433,7 @@ spinel_deps_waitset_gather_init(struct spinel_deps const *          deps,
       spinel_handle_t const                 handle  = handles[ii];
       spinel_deps_delayed_semaphore_t const delayed = deps->delayed.handle_map[handle];
 
-      if (delayed != SPN_DEPS_DELAYED_SEMAPHORE_INVALID)
-        {
-          uint32_t const delayed_base = (delayed >> 5);
-          uint32_t const delayed_bit  = (1u << (delayed & 0x1F));
-
-          gather->delayed.bitmap[delayed_base] |= delayed_bit;
-        }
+      spinel_deps_waitset_gather_set(gather, delayed);
     }
 }
 
@@ -412,8 +451,8 @@ spinel_deps_waitset_init(struct spinel_deps const *                       deps,
   uint32_t wait_count = 0;
 
   //
-  // First append info->wait.immediate[] array because we know the latest
-  // (signal) value is valid.
+  // First append info->wait.immediate[] array because we know the latest signal
+  // value is valid.
   //
   for (uint32_t ii = 0; ii < info->wait.immediate.count; ii++)
     {
@@ -427,18 +466,25 @@ spinel_deps_waitset_init(struct spinel_deps const *                       deps,
     }
 
   //
-  // Gather the delayed semaphores of a ring of handles
+  // Which delayed semaphores need to be waited upon?
   //
-  if (info->wait.delayed.handles.span > 0)
+  bool const is_wait_delayed_handles = (info->wait.delayed.handles.span > 0);
+
+  if (is_wait_delayed_handles)
     {
       //
-      // Gather bitmap of valid (in-flight) handles
+      // Gather bitmap of delayed semaphores
       //
       struct spinel_deps_waitset_gather gather = { 0 };
 
-      uint32_t const head_max   = info->wait.delayed.handles.head + info->wait.delayed.handles.span;
-      uint32_t const head_clamp = MIN_MACRO(uint32_t, head_max, info->wait.delayed.handles.size);
-      uint32_t       count_lo   = head_clamp - info->wait.delayed.handles.head;
+      //
+      // Gather the delayed semaphores of a ring of handles
+      //
+      // clang-format off
+          uint32_t const head_max   = info->wait.delayed.handles.head + info->wait.delayed.handles.span;
+          uint32_t const head_clamp = MIN_MACRO(uint32_t, head_max, info->wait.delayed.handles.size);
+          uint32_t       count_lo   = head_clamp - info->wait.delayed.handles.head;
+      // clang-format on
 
       spinel_handle_t const * handle_head = info->wait.delayed.handles.extent +  //
                                             info->wait.delayed.handles.head;
@@ -468,17 +514,20 @@ spinel_deps_waitset_init(struct spinel_deps const *                       deps,
               continue;
             }
 
-          uint32_t delayed_base = ii * 32;
+          uint32_t const delayed_base = ii * 32;
 
           do
             {
-              uint32_t const lsb_plus_1 = __builtin_ffs(dword);  // [1,32]
+              //
+              // The dword is non-zero so __builtin_ffs() returns [1,32].
+              //
+              // TODO(allanmac): Support _MSC_VER compiler.
+              //
+              uint32_t const lsb_plus_1 = __builtin_ffs(dword);
 
-              dword >>= lsb_plus_1;  // shift away bits
+              dword ^= (1u << (lsb_plus_1 - 1));
 
-              delayed_base += lsb_plus_1;  // update delayed semaphore index
-
-              uint32_t const delayed = delayed_base - 1;
+              uint32_t const delayed = delayed_base + lsb_plus_1 - 1;
 
               spinel_deps_action_invoke(deps->delayed.submissions + delayed);
 
@@ -532,17 +581,43 @@ spinel_deps_waitset_append_import(struct spinel_deps const *                    
 }
 
 //
+// Drain all completion actions
+//
+static bool
+spinel_deps_completion_drain_all(struct spinel_deps * deps)
+{
+  if (spinel_ring_is_full(&deps->completion.ring))
+    {
+      return false;
+    }
+
+  do
+    {
+      uint32_t const tail = deps->completion.ring.tail;
+
+      spinel_ring_release_n(&deps->completion.ring, 1);
+
+      spinel_deps_action_invoke(deps->completion.extent + tail);
+
+  } while (!spinel_ring_is_full(&deps->completion.ring));
+
+  return true;
+}
+
+//
 // Drains the submission at deps->immediate.tail.
 //
-// NOTE: Assumes (deps->immediate.submissions > 0)
+// NOTE: Assumes there are submissions.
 //
 // FIXME(allanmac): Refactor to support VK_ERROR_DEVICE_LOST
 //
 static bool
-spinel_deps_drain_tail(struct spinel_deps *            deps,
-                       struct spinel_device_vk const * vk,
-                       uint64_t                        timeout)
+spinel_deps_immediate_drain_tail(struct spinel_deps *            deps,
+                                 struct spinel_device_vk const * vk,
+                                 uint64_t                        timeout)
 {
+  assert(!spinel_ring_is_full(&deps->immediate.ring));
+
   //
   // Wait for this timeline to complete...
   //
@@ -550,12 +625,12 @@ spinel_deps_drain_tail(struct spinel_deps *            deps,
   // lost then we fail.  The proper way to handle this is to replace all context
   // pfns with device lost operations.
   //
-  uint32_t const immediate = deps->immediate.tail;
+  uint32_t const immediate = deps->immediate.ring.tail;
 
   VkSemaphoreWaitInfo const swi = {
     .sType          = VK_STRUCTURE_TYPE_SEMAPHORE_WAIT_INFO,
     .pNext          = NULL,
-    .flags          = 0,  // defaults to "wait_all"
+    .flags          = 0,  // flag doesn't matter when there is 1 semaphore
     .semaphoreCount = 1,
     .pSemaphores    = deps->immediate.semaphores + immediate,
     .pValues        = deps->immediate.values + immediate,
@@ -570,53 +645,78 @@ spinel_deps_drain_tail(struct spinel_deps *            deps,
     }
 
   //
-  // Execute the post-wait pfn *after* releasing the semaphore.
+  // Copy the immediate's completion action to the completions ring.
   //
-  // clang-format off
-  deps->immediate.submissions -= 1;
-  deps->immediate.tail        += 1;
-  // clang-format on
+  uint32_t const completions_idx = spinel_ring_acquire_1(&deps->completion.ring);
 
-  if (deps->immediate.tail == deps->immediate.size)
-    {
-      deps->immediate.tail = 0;
-    }
+  deps->completion.extent[completions_idx] = deps->immediate.completions[immediate];
 
-  spinel_deps_action_invoke(deps->immediate.completions + immediate);
+  //
+  // Release the semaphore.
+  //
+  spinel_ring_release_n(&deps->immediate.ring, 1);
 
   return true;
 }
 
 //
-// Drain one immediate submission at a time
+// Acquire an immediate semaphore and its associated resources.
 //
-// FIXME(allanmac): Refactor to support VK_ERROR_DEVICE_LOST
-//
-bool
-spinel_deps_drain_1(struct spinel_deps * deps, struct spinel_device_vk const * vk, uint64_t timeout)
+static uint32_t
+spinel_deps_immediate_acquire(struct spinel_deps * deps, struct spinel_device_vk const * vk)
 {
   //
-  // Anything to do?
+  // Opportunistically drain all completed submissions and append their
+  // completion actions to the completion ring.
   //
-  if (deps->immediate.submissions == 0)
+  // clang-format off
+  //
+  while (!spinel_ring_is_full(&deps->immediate.ring) && spinel_deps_immediate_drain_tail(deps, vk, 0UL))
     {
-      return false;
+      ;
     }
 
-  return spinel_deps_drain_tail(deps, vk, timeout);
-}
-
-//
-// Drain all submissions
-//
-// FIXME(allanmac): Refactor to support VK_ERROR_DEVICE_LOST
-//
-void
-spinel_deps_drain_all(struct spinel_deps * deps, struct spinel_device_vk const * vk)
-{
-  while (deps->immediate.submissions > 0)
+  //
+  // clang-format on
+  //
+  // If head is the first entry of a pool and there are active submissions in
+  // the same pool then drain the tail entries until the pool has no active
+  // submissions.
+  //
+  while (true)
     {
-      spinel_deps_drain_tail(deps, vk, UINT64_MAX);  // ignore return value
+      div_t const pool_quot_rem = div(deps->immediate.ring.head, deps->immediate.pool.size);
+
+      if (pool_quot_rem.rem == 0)
+        {
+          bool const is_active = (deps->immediate.ring.rem < deps->immediate.pool.size);
+
+          if (is_active)
+            {
+              //
+              // This command pool is active so block and drain the oldest
+              // submitted command buffer.
+              //
+              (void)spinel_deps_immediate_drain_tail(deps, vk, UINT64_MAX);
+
+              //
+              // ... and try again!
+              //
+              continue;
+            }
+          else
+            {
+              //
+              // This command pool isn't active so reset and proceed.
+              //
+              vk(ResetCommandPool(vk->d, deps->immediate.pool.extent[pool_quot_rem.quot], 0));
+            }
+        }
+
+      //
+      // Return the head entry.
+      //
+      return spinel_ring_acquire_1(&deps->immediate.ring);
     }
 }
 
@@ -631,15 +731,10 @@ spinel_deps_delayed_acquire(struct spinel_deps *                            deps
   //
   // Wrap to zero?
   //
-  uint32_t const delayed = deps->delayed.next++;
-
-  if (deps->delayed.next >= deps->delayed.size)
-    {
-      deps->delayed.next = 0;
-    }
+  uint32_t const delayed = spinel_next_acquire_1(&deps->delayed.next);
 
   //
-  // Invoke the submission action.
+  // Invoke uninvoked submission actions.
   //
   // This implicitly:
   //
@@ -661,85 +756,12 @@ spinel_deps_delayed_acquire(struct spinel_deps *                            deps
 }
 
 //
-// 1. If head is the first entry of a pool and there are active submissions in
-//    the same pool then drain the tail entries until the pool has no active
-//    submissions.
-//
-// 2. Probe remaining submissions until there is a timeout.
-//
-// 3. Return the head entry.
-//
-static spinel_deps_immediate_semaphore_t
-spinel_deps_immediate_acquire(struct spinel_deps * deps, struct spinel_device_vk const * vk)
-{
-  while (true)
-    {
-      //
-      // 1. If head is the first entry of a pool and there are active
-      //    submissions in the same pool then drain the tail entries until the
-      //    pool has no active submissions.
-      //
-      div_t const pool_quot_rem = div(deps->immediate.head, deps->immediate.pool.size);
-
-      if (pool_quot_rem.rem == 0)
-        {
-          uint32_t const available = deps->immediate.size - deps->immediate.submissions;
-          bool const     is_active = (available < deps->immediate.pool.size);
-
-          if (is_active)
-            {
-              //
-              // This command pool is active so drain the oldest and continue.
-              //
-              spinel_deps_drain_1(deps, vk, UINT64_MAX);
-
-              continue;
-            }
-          else
-            {
-              //
-              // This command pool isn't active so reset and proceed.
-              //
-              vk(ResetCommandPool(vk->d, deps->immediate.pool.extent[pool_quot_rem.quot], 0));
-            }
-        }
-
-      //
-      // 2. Probe remaining submissions until there is a timeout.
-      //
-      if (spinel_deps_drain_1(deps, vk, 0UL))
-        {
-          continue;
-        }
-
-      //
-      // 3. Return the head entry.
-      //
-      deps->immediate.submissions += 1;
-
-      uint32_t const immediate = deps->immediate.head++;
-
-      if (deps->immediate.head >= deps->immediate.size)
-        {
-          deps->immediate.head = 0;
-        }
-
-      //
-      // 4. Increment to future signal value
-      //
-      deps->immediate.values[immediate] += 1;
-
-      return (spinel_deps_immediate_semaphore_t)immediate;
-    }
-}
-
-//
 // Note that this is the only place delayed semaphores are incremented.
 //
 static void
-spinel_deps_signalset_append_delayed(struct spinel_deps const *                       deps,
-                                     struct spinel_deps_signalset *                   signalset,
-                                     struct spinel_deps_immediate_submit_info const * info)
+spinel_deps_signalset_init_delayed(struct spinel_deps const *                       deps,
+                                   struct spinel_deps_signalset *                   signalset,
+                                   struct spinel_deps_immediate_submit_info const * info)
 
 {
   for (uint32_t ii = 0; ii < info->signal.delayed.count; ii++)
@@ -760,10 +782,10 @@ static void
 spinel_deps_signalset_append_immediate(struct spinel_deps const *                       deps,
                                        struct spinel_deps_signalset *                   signalset,
                                        struct spinel_deps_immediate_submit_info const * info,
-                                       spinel_deps_immediate_semaphore_t                immediate)
+                                       uint32_t                                         immediate)
 {
   signalset->semaphores[signalset->count] = deps->immediate.semaphores[immediate];
-  signalset->values[signalset->count]     = deps->immediate.values[immediate];
+  signalset->values[signalset->count]     = ++deps->immediate.values[immediate];
 
   signalset->count += 1;
 
@@ -812,10 +834,11 @@ spinel_deps_signalset_append_import(struct spinel_deps const *                  
 // But delayed semaphores associated with handles (info.handles) may not have
 // been submitted.
 //
-spinel_deps_immediate_semaphore_t
+void
 spinel_deps_immediate_submit(struct spinel_deps *                             deps,
                              struct spinel_device_vk *                        vk,
-                             struct spinel_deps_immediate_submit_info const * info)
+                             struct spinel_deps_immediate_submit_info const * info,
+                             spinel_deps_immediate_semaphore_t *              p_immediate)
 {
   assert(info->wait.immediate.count <= SPN_DEPS_IMMEDIATE_SUBMIT_SIZE_WAIT_IMMEDIATE);
   assert(info->signal.delayed.count <= SPN_DEPS_IMMEDIATE_SUBMIT_SIZE_SIGNAL_DELAYED);
@@ -824,7 +847,7 @@ spinel_deps_immediate_submit(struct spinel_deps *                             de
   // Gather immediate semaphores as well as delayed semaphores associated with a
   // ring span of handles.  Ensure all are submitted before continuing.
   //
-  struct spinel_deps_waitset waitset;
+  struct spinel_deps_waitset waitset;  // Do not zero-initialize
 
   spinel_deps_waitset_init(deps, &waitset, info);
 
@@ -835,17 +858,23 @@ spinel_deps_immediate_submit(struct spinel_deps *                             de
   spinel_deps_waitset_append_import(deps, &waitset, info);
 
   //
-  // Flush any delayed semaphores that must be signalled and save their updated
-  // values.
+  // Gather delayed signalling semaphores and their incremented values.
   //
-  struct spinel_deps_signalset signalset;
+  // Note that the
+  //
+  struct spinel_deps_signalset signalset;  // Do not zero-initialize
 
-  spinel_deps_signalset_append_delayed(deps, &signalset, info);
+  spinel_deps_signalset_init_delayed(deps, &signalset, info);
 
   //
   // Acquire immediate semaphore
   //
-  spinel_deps_immediate_semaphore_t const immediate = spinel_deps_immediate_acquire(deps, vk);
+  uint32_t const immediate = spinel_deps_immediate_acquire(deps, vk);
+
+  if (p_immediate != NULL)
+    {
+      *p_immediate = (spinel_deps_immediate_semaphore_t)immediate;
+    }
 
   //
   // Append signalling acquired immediate semaphore, its new value, and
@@ -891,17 +920,15 @@ spinel_deps_immediate_submit(struct spinel_deps *                             de
   // Submit the command buffer with its associated wait and signal timelines.
   //
   VkTimelineSemaphoreSubmitInfo const tssi = {
-
     .sType                     = VK_STRUCTURE_TYPE_TIMELINE_SEMAPHORE_SUBMIT_INFO,
     .pNext                     = NULL,
     .waitSemaphoreValueCount   = waitset.count,
     .pWaitSemaphoreValues      = waitset.values,
     .signalSemaphoreValueCount = signalset.count,
-    .pSignalSemaphoreValues    = signalset.values
+    .pSignalSemaphoreValues    = signalset.values,
   };
 
   VkSubmitInfo const submit_info = {
-
     .sType                = VK_STRUCTURE_TYPE_SUBMIT_INFO,
     .pNext                = &tssi,
     .waitSemaphoreCount   = waitset.count,
@@ -910,14 +937,19 @@ spinel_deps_immediate_submit(struct spinel_deps *                             de
     .commandBufferCount   = 1,
     .pCommandBuffers      = &cb,
     .signalSemaphoreCount = signalset.count,
-    .pSignalSemaphores    = signalset.semaphores
+    .pSignalSemaphores    = signalset.semaphores,
   };
 
   VkQueue q = spinel_queue_pool_get_next(&vk->q.compute);
 
   vk(QueueSubmit(q, 1, &submit_info, VK_NULL_HANDLE));
 
-  return immediate;
+  //
+  // Drain enqueue completion actions.
+  //
+  // Ignore return value.
+  //
+  (void)spinel_deps_completion_drain_all(deps);
 }
 
 //
@@ -928,6 +960,42 @@ spinel_deps_immediate_get_stage(struct spinel_deps *              deps,
                                 spinel_deps_immediate_semaphore_t immediate)
 {
   return deps->immediate.stages[immediate];
+}
+
+//
+// Blocks until:
+//
+//   * At least one completion action is executed
+//   * Or a submission is completed and its action is executed.//
+// Returns true if either case is true.
+//
+// FIXME(allanmac): Refactor to support VK_ERROR_DEVICE_LOST
+//
+bool
+spinel_deps_drain_1(struct spinel_deps * deps, struct spinel_device_vk const * vk)
+{
+  return spinel_deps_completion_drain_all(deps) ||
+         (!spinel_ring_is_full(&deps->immediate.ring) &&
+          spinel_deps_immediate_drain_tail(deps, vk, UINT64_MAX) &&
+          spinel_deps_completion_drain_all(deps));
+}
+
+//
+// Blocks until all submissions and actions are drained.
+//
+// FIXME(allanmac): Refactor to support VK_ERROR_DEVICE_LOST
+//
+void
+spinel_deps_drain_all(struct spinel_deps * deps, struct spinel_device_vk const * vk)
+{
+  spinel_deps_completion_drain_all(deps);
+
+  while ((!spinel_ring_is_full(&deps->immediate.ring) &&
+          spinel_deps_immediate_drain_tail(deps, vk, UINT64_MAX) &&
+          spinel_deps_completion_drain_all(deps)))
+    {
+      ;
+    }
 }
 
 //

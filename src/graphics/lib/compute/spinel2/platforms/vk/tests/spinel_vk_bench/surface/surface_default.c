@@ -374,8 +374,17 @@ surface_default_regen(struct surface * surface, VkExtent2D * extent, uint32_t * 
                            active_swapchain,
                            &new_image_count,
                            images));
+
   //
-  // initialize remaining swapchain state
+  // save image count
+  //
+  device->swapchain.image_count = new_image_count;
+
+  //
+  // allocate as many waits as in-flight images plus one that is work-in-progress
+  //
+  // NOTE(allanmac): This is *not* backed by concrete understanding of how all
+  // Vulkan swapchain implementations yield new presentables.
   //
   uint32_t const wait_count = new_image_count + 1;
 
@@ -384,7 +393,6 @@ surface_default_regen(struct surface * surface, VkExtent2D * extent, uint32_t * 
   device->swapchain.presentables = malloc(sizeof(*device->swapchain.presentables) * new_image_count);
   device->swapchain.wait_count   = wait_count;
   device->swapchain.wait_next    = 0;
-  device->swapchain.image_count  = new_image_count;
   // clang-format on
 
   //

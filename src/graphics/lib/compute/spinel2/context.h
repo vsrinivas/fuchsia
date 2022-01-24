@@ -30,11 +30,6 @@ struct spinel_context
 
   //
   //
-  spinel_result_t (*drain)(struct spinel_device * device,  //
-                           uint64_t               timeout);
-
-  //
-  //
   //
   spinel_result_t (*get_limits)(struct spinel_device *    device,  //
                                 spinel_context_limits_t * limits);

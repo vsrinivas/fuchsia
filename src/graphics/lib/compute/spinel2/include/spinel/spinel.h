@@ -34,9 +34,6 @@ spinel_result_t
 spinel_context_reset(spinel_context_t context);
 
 spinel_result_t
-spinel_context_drain(spinel_context_t context, uint64_t timeout);
-
-spinel_result_t
 spinel_context_get_limits(spinel_context_t context, spinel_context_limits_t * limits);
 
 //

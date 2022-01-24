@@ -143,6 +143,18 @@ struct spinel_handle_pool_handle_ring
 };
 
 //
+// Dispatch states
+//
+typedef enum spinel_hp_dispatch_state_e
+{
+  SPN_HP_DISPATCH_STATE_INVALID,
+  SPN_HP_DISPATCH_STATE_RECORDING,
+  SPN_HP_DISPATCH_STATE_PENDING,
+  SPN_HP_DISPATCH_STATE_COMPLETE,
+
+} spinel_hp_dispatch_state_e;
+
+//
 // Dispatches can complete in any order but are reclaimed in ring order.
 //
 struct spinel_handle_pool_dispatch
@@ -153,7 +165,7 @@ struct spinel_handle_pool_dispatch
     uint32_t span;
   } ring;
 
-  bool complete;
+  spinel_hp_dispatch_state_e state;
 };
 
 //
@@ -186,11 +198,10 @@ struct spinel_handle_pool_reclaim
 struct spinel_handle_pool
 {
   //
-  // The handles, refcnts, and semaphore indices
+  // The handles and their refcnts
   //
   struct spinel_handle_pool_handle_ring handles;
   union spinel_handle_refcnt *          refcnts;
-  spinel_deps_delayed_semaphore_t *     semaphores;
 
   //
   // Separate reclamation accounting for paths and rasters
@@ -200,39 +211,61 @@ struct spinel_handle_pool
 };
 
 //
+// The handle pool is reentrant.  This means that a handle pool completion
+// routine could invoke a handle pool flush and/or submission.
 //
+// Delaying acquisition and initialization until actually needing the head
+// dispatch dodges a lot of complexity.
 //
 static struct spinel_handle_pool_dispatch *
-spinel_handle_pool_reclaim_dispatch_head(struct spinel_handle_pool_reclaim * reclaim)
+spinel_handle_pool_reclaim_dispatch_head(struct spinel_handle_pool_reclaim * reclaim,
+                                         struct spinel_device *              device)
 {
-  return (reclaim->dispatches.extent + reclaim->dispatches.ring.head);
+  //
+  // Wait for an available dispatch
+  //
+  struct spinel_ring * const ring = &reclaim->dispatches.ring;
+
+  while (spinel_ring_is_empty(ring))
+    {
+      spinel_deps_drain_1(device->deps, &device->vk);
+    }
+
+  //
+  // Get "work in progress" (wip) dispatch.  This implicitly the head dispatch.
+  //
+  struct spinel_handle_pool_dispatch * const wip = reclaim->dispatches.extent + ring->head;
+
+  assert(wip->state != SPN_HP_DISPATCH_STATE_PENDING);
+  assert(wip->state != SPN_HP_DISPATCH_STATE_COMPLETE);
+
+  //
+  // Acquiring and initializing a dispatch is reentrant so we track
+  // initialization.
+  //
+  if (wip->state == SPN_HP_DISPATCH_STATE_INVALID)
+    {
+      *wip = (struct spinel_handle_pool_dispatch){
+        .ring = {
+          .head = reclaim->mapped.ring.head,
+          .span = 0,
+        },
+        .state = SPN_HP_DISPATCH_STATE_RECORDING,
+      };
+    }
+
+  return wip;
 }
 
+//
+//
+//
 static struct spinel_handle_pool_dispatch *
 spinel_handle_pool_reclaim_dispatch_tail(struct spinel_handle_pool_reclaim * reclaim)
 {
+  assert(!spinel_ring_is_full(&reclaim->dispatches.ring));
+
   return (reclaim->dispatches.extent + reclaim->dispatches.ring.tail);
-}
-
-//
-//
-//
-static void
-spinel_handle_pool_reclaim_dispatch_init(struct spinel_handle_pool_reclaim * reclaim)
-{
-  // clang-format off
-  struct spinel_handle_pool_dispatch * const wip = spinel_handle_pool_reclaim_dispatch_head(reclaim);
-  // clang-format on
-
-  //
-  // Don't acquire a semaphore until necessary!
-  //
-  *wip = (struct spinel_handle_pool_dispatch){
-
-    .ring.head = reclaim->mapped.ring.head,
-    .ring.span = 0,
-    .complete  = false,
-  };
 }
 
 //
@@ -244,31 +277,6 @@ spinel_handle_pool_reclaim_dispatch_drop(struct spinel_handle_pool_reclaim * rec
   struct spinel_ring * const ring = &reclaim->dispatches.ring;
 
   spinel_ring_drop_1(ring);
-}
-
-//
-//
-//
-static void
-spinel_handle_pool_reclaim_dispatch_acquire(struct spinel_handle_pool_reclaim * reclaim,
-                                            struct spinel_device *              device)
-{
-  //
-  // Is there a dispatch available?
-  //
-  // If not, drain the deps ring until the head dispatch is marked complete.
-  //
-  struct spinel_ring * const ring = &reclaim->dispatches.ring;
-
-  while (spinel_ring_is_empty(ring) && (reclaim->dispatches.extent[ring->head].complete == false))
-    {
-      spinel_deps_drain_1(device->deps, &device->vk, UINT64_MAX);
-    }
-
-  //
-  // Initialize the head dispatch
-  //
-  spinel_handle_pool_reclaim_dispatch_init(reclaim);
 }
 
 //
@@ -312,16 +320,11 @@ spinel_handle_pool_reclaim_create(struct spinel_handle_pool_reclaim * reclaim,
   //
   // allocate and init dispatch ring
   //
+  // implicitly sets .state to SPN_HP_DISPATCH_STATE_INVALID
+  //
   spinel_ring_init(&reclaim->dispatches.ring, count_dispatches);
 
-  size_t const size_dispatches = sizeof(*reclaim->dispatches.extent) * count_dispatches;
-
-  reclaim->dispatches.extent = malloc(size_dispatches);
-
-  //
-  // init first dispatch
-  //
-  spinel_handle_pool_reclaim_dispatch_init(reclaim);
+  reclaim->dispatches.extent = calloc(count_dispatches, sizeof(*reclaim->dispatches.extent));
 }
 
 //
@@ -375,13 +378,10 @@ spinel_handle_pool_copy(struct spinel_ring *    from_ring,
 //
 //
 static void
-spinel_handle_pool_reclaim_flush_paths_complete(void * data0, void * data1)
+spinel_handle_pool_reclaim_flush_complete(struct spinel_handle_pool *          handle_pool,
+                                          struct spinel_handle_pool_reclaim *  reclaim,
+                                          struct spinel_handle_pool_dispatch * dispatch)
 {
-  struct spinel_device *               device      = data0;
-  struct spinel_handle_pool_dispatch * dispatch    = data1;
-  struct spinel_handle_pool *          handle_pool = device->handle_pool;
-  struct spinel_handle_pool_reclaim *  reclaim     = &handle_pool->paths;
-
   //
   // If the dispatch is the tail of the ring then release as many completed
   // dispatch records as possible.
@@ -389,40 +389,38 @@ spinel_handle_pool_reclaim_flush_paths_complete(void * data0, void * data1)
   // Note that kernels can complete in any order so the release records need to
   // be added to release ring slots in order.
   //
-  if (reclaim->mapped.ring.tail == dispatch->ring.head)
+  // FIXME(allanmac): The handles can be returned early.
+  //
+  dispatch->state = SPN_HP_DISPATCH_STATE_COMPLETE;
+
+  struct spinel_handle_pool_dispatch * tail = spinel_handle_pool_reclaim_dispatch_tail(reclaim);
+
+  while (tail->state == SPN_HP_DISPATCH_STATE_COMPLETE)
     {
-      while (true)
+      // will always be true
+      assert(reclaim->mapped.ring.tail == tail->ring.head);
+
+      // copy from mapped to handles and release slots
+      spinel_handle_pool_copy(&reclaim->mapped.ring,
+                              reclaim->mapped.extent,
+                              &handle_pool->handles.ring,
+                              handle_pool->handles.extent,
+                              tail->ring.span);
+
+      // release the dispatch
+      spinel_ring_release_n(&reclaim->dispatches.ring, 1);
+
+      // mark as invalid
+      tail->state = SPN_HP_DISPATCH_STATE_INVALID;
+
+      // any remaining dispatches in flight?
+      if (spinel_ring_is_full(&reclaim->dispatches.ring))
         {
-          // copy from mapped to handles
-          spinel_handle_pool_copy(&reclaim->mapped.ring,
-                                  reclaim->mapped.extent,
-                                  &handle_pool->handles.ring,
-                                  handle_pool->handles.extent,
-                                  dispatch->ring.span);
-
-          // release the dispatch
-          spinel_ring_release_n(&reclaim->dispatches.ring, 1);
-
-          // any dispatches in flight?
-          if (spinel_ring_is_full(&reclaim->dispatches.ring))
-            {
-              break;
-            }
-
-          // get next dispatch
-          dispatch = spinel_handle_pool_reclaim_dispatch_tail(reclaim);
-
-          // is this dispatch still in flight?
-          if (!dispatch->complete)
-            {
-              break;
-            }
+          break;
         }
-    }
-  else
-    {
-      // out-of-order completion
-      dispatch->complete = true;
+
+      // get next dispatch
+      tail = spinel_handle_pool_reclaim_dispatch_tail(reclaim);
     }
 }
 
@@ -430,55 +428,25 @@ spinel_handle_pool_reclaim_flush_paths_complete(void * data0, void * data1)
 //
 //
 static void
+spinel_handle_pool_reclaim_flush_paths_complete(void * data0, void * data1)
+{
+  struct spinel_device *               device      = data0;
+  struct spinel_handle_pool *          handle_pool = device->handle_pool;
+  struct spinel_handle_pool_reclaim *  reclaim     = &handle_pool->paths;
+  struct spinel_handle_pool_dispatch * dispatch    = data1;
+
+  spinel_handle_pool_reclaim_flush_complete(handle_pool, reclaim, dispatch);
+}
+
+static void
 spinel_handle_pool_reclaim_flush_rasters_complete(void * data0, void * data1)
 {
   struct spinel_device *               device      = data0;
-  struct spinel_handle_pool_dispatch * dispatch    = data1;
   struct spinel_handle_pool *          handle_pool = device->handle_pool;
   struct spinel_handle_pool_reclaim *  reclaim     = &handle_pool->rasters;
+  struct spinel_handle_pool_dispatch * dispatch    = data1;
 
-  //
-  // If the dispatch is the tail of the ring then release as many completed
-  // dispatch records as possible.
-  //
-  // Note that kernels can complete in any order so the release records need to
-  // be added to release ring slots in order.
-  //
-  if (reclaim->mapped.ring.tail == dispatch->ring.head)
-    {
-      while (true)
-        {
-          // copy from mapped to handles
-          spinel_handle_pool_copy(&reclaim->mapped.ring,
-                                  reclaim->mapped.extent,
-                                  &handle_pool->handles.ring,
-                                  handle_pool->handles.extent,
-                                  dispatch->ring.span);
-
-          // release the dispatch
-          spinel_ring_release_n(&reclaim->dispatches.ring, 1);
-
-          // any dispatches in flight?
-          if (spinel_ring_is_full(&reclaim->dispatches.ring))
-            {
-              break;
-            }
-
-          // get next dispatch
-          dispatch = spinel_handle_pool_reclaim_dispatch_tail(reclaim);
-
-          // is this dispatch still in flight?
-          if (!dispatch->complete)
-            {
-              break;
-            }
-        }
-    }
-  else
-    {
-      // out-of-order completion
-      dispatch->complete = true;
-    }
+  spinel_handle_pool_reclaim_flush_complete(handle_pool, reclaim, dispatch);
 }
 
 //
@@ -526,24 +494,35 @@ spinel_handle_pool_reclaim_flush_mapped(VkDevice       vk_d,  //
 }
 
 //
+//
+//
+static bool
+spinel_handle_pool_reclaim_is_noncoherent(struct spinel_target_config const * config)
+{
+  return ((config->allocator.device.hrw_dr.properties & VK_MEMORY_PROPERTY_HOST_COHERENT_BIT) == 0);
+}
+
+//
 // Record path reclamation commands
 //
 static VkPipelineStageFlags
 spinel_handle_pool_reclaim_flush_paths_record(VkCommandBuffer cb, void * data0, void * data1)
 {
   // clang-format off
-  struct spinel_device * const                 device      = data0;
-  struct spinel_handle_pool * const            handle_pool = device->handle_pool;
-  struct spinel_handle_pool_reclaim * const    reclaim     = &handle_pool->paths;
-  struct spinel_handle_pool_dispatch * const   wip         = spinel_handle_pool_reclaim_dispatch_head(reclaim);
+  struct spinel_device * const               device      = data0;
+  struct spinel_handle_pool * const          handle_pool = device->handle_pool;
+  struct spinel_handle_pool_reclaim * const  reclaim     = &handle_pool->paths;
+  struct spinel_handle_pool_dispatch * const wip         = data1;
   // clang-format on
+
+  assert(wip->ring.span > 0);
 
   //
   // If ring is not coherent then flush
   //
   struct spinel_target_config const * const config = &device->ti.config;
 
-  if ((config->allocator.device.hrw_dr.properties & VK_MEMORY_PROPERTY_HOST_COHERENT_BIT) == 0)
+  if (spinel_handle_pool_reclaim_is_noncoherent(config))
     {
       spinel_handle_pool_reclaim_flush_mapped(device->vk.d,
                                               reclaim->vk.dbi_dm.dm,
@@ -559,8 +538,8 @@ spinel_handle_pool_reclaim_flush_paths_record(VkCommandBuffer cb, void * data0, 
 
   struct spinel_push_reclaim const push = {
     .devaddr_reclaim             = handle_pool->paths.vk.devaddr,
-    .devaddr_block_pool_blocks   = block_pool->vk.dbi_devaddr.blocks.devaddr,
     .devaddr_block_pool_ids      = block_pool->vk.dbi_devaddr.ids.devaddr,
+    .devaddr_block_pool_blocks   = block_pool->vk.dbi_devaddr.blocks.devaddr,
     .devaddr_block_pool_host_map = block_pool->vk.dbi_devaddr.host_map.devaddr,
     .ring_size                   = reclaim->mapped.ring.size,
     .ring_head                   = wip->ring.head,
@@ -578,7 +557,7 @@ spinel_handle_pool_reclaim_flush_paths_record(VkCommandBuffer cb, void * data0, 
   vkCmdBindPipeline(cb, VK_PIPELINE_BIND_POINT_COMPUTE, device->ti.pipelines.named.paths_reclaim);
 
   //
-  // dispatch a subgroup per span element
+  // Dispatch a subgroup per span element
   //
   uint32_t const sgs_per_wg = config->group_sizes.named.paths_reclaim.workgroup >>
                               config->group_sizes.named.paths_reclaim.subgroup_log2;
@@ -600,38 +579,58 @@ spinel_handle_pool_reclaim_flush_paths_record(VkCommandBuffer cb, void * data0, 
 static void
 spinel_handle_pool_reclaim_flush_paths(struct spinel_device * device)
 {
-  struct spinel_handle_pool * const         handle_pool = device->handle_pool;
-  struct spinel_handle_pool_reclaim * const reclaim     = &handle_pool->paths;
+  // clang-format off
+  struct spinel_handle_pool * const          handle_pool = device->handle_pool;
+  struct spinel_handle_pool_reclaim * const  reclaim     = &handle_pool->paths;
+  struct spinel_handle_pool_dispatch * const wip         = spinel_handle_pool_reclaim_dispatch_head(reclaim, device);
+  // clang-format on
+
+  //
+  // Anything to do?
+  //
+  if (wip->ring.span == 0)
+    {
+      return;
+    }
 
   //
   // Acquire an immediate semaphore
   //
   struct spinel_deps_immediate_submit_info const disi = {
-    .record     = {
+    .record = {
       .pfn   = spinel_handle_pool_reclaim_flush_paths_record,
       .data0 = device,
+      .data1 = wip,
     },
     .completion = {
       .pfn   = spinel_handle_pool_reclaim_flush_paths_complete,
       .data0 = device,
+      .data1 = wip,
     },
   };
 
   //
-  // NOTE: We don't need to save the immediate semaphore handle because context
-  // creation will block and drain all submissions before returning.
-  //
-  (void)spinel_deps_immediate_submit(device->deps, &device->vk, &disi);
-
-  //
   // The current dispatch is now "in flight" so drop it
+  //
+  // Note that usually it doesn't matter if you drop the dispatch before or
+  // after submission but because handle reclamation is reentrant it does matter
+  // and instead a submission will simply work on the head dispatch and any
+  // prior submissions may potentially submit smaller than "eager" sized or
+  // empty dispatches.
   //
   spinel_handle_pool_reclaim_dispatch_drop(reclaim);
 
   //
-  // Acquire and initialize the next dispatch
+  // Move to pending state
   //
-  spinel_handle_pool_reclaim_dispatch_acquire(reclaim, device);
+  wip->state = SPN_HP_DISPATCH_STATE_PENDING;
+
+  //
+  // Submit!
+  //
+  spinel_deps_immediate_semaphore_t immediate;
+
+  spinel_deps_immediate_submit(device->deps, &device->vk, &disi, &immediate);
 }
 
 //
@@ -641,18 +640,20 @@ static VkPipelineStageFlags
 spinel_handle_pool_reclaim_flush_rasters_record(VkCommandBuffer cb, void * data0, void * data1)
 {
   // clang-format off
-  struct spinel_device * const                 device      = data0;
-  struct spinel_handle_pool * const            handle_pool = device->handle_pool;
-  struct spinel_handle_pool_reclaim * const    reclaim     = &handle_pool->rasters;
-  struct spinel_handle_pool_dispatch * const   wip         = spinel_handle_pool_reclaim_dispatch_head(reclaim);
+  struct spinel_device * const               device      = data0;
+  struct spinel_handle_pool * const          handle_pool = device->handle_pool;
+  struct spinel_handle_pool_reclaim * const  reclaim     = &handle_pool->rasters;
+  struct spinel_handle_pool_dispatch * const wip         = data1;
   // clang-format on
 
+  assert(wip->ring.span > 0);
+
   //
-  // if ring is not coherent then flush
+  // If ring is not coherent then flush
   //
   struct spinel_target_config const * const config = &device->ti.config;
 
-  if ((config->allocator.device.hrw_dr.properties & VK_MEMORY_PROPERTY_HOST_COHERENT_BIT) == 0)
+  if (spinel_handle_pool_reclaim_is_noncoherent(config))
     {
       spinel_handle_pool_reclaim_flush_mapped(device->vk.d,
                                               reclaim->vk.dbi_dm.dm,
@@ -668,8 +669,8 @@ spinel_handle_pool_reclaim_flush_rasters_record(VkCommandBuffer cb, void * data0
 
   struct spinel_push_reclaim const push = {
     .devaddr_reclaim             = handle_pool->rasters.vk.devaddr,
-    .devaddr_block_pool_blocks   = block_pool->vk.dbi_devaddr.blocks.devaddr,
     .devaddr_block_pool_ids      = block_pool->vk.dbi_devaddr.ids.devaddr,
+    .devaddr_block_pool_blocks   = block_pool->vk.dbi_devaddr.blocks.devaddr,
     .devaddr_block_pool_host_map = block_pool->vk.dbi_devaddr.host_map.devaddr,
     .ring_size                   = reclaim->mapped.ring.size,
     .ring_head                   = wip->ring.head,
@@ -687,7 +688,7 @@ spinel_handle_pool_reclaim_flush_rasters_record(VkCommandBuffer cb, void * data0
   vkCmdBindPipeline(cb, VK_PIPELINE_BIND_POINT_COMPUTE, device->ti.pipelines.named.rasters_reclaim);
 
   //
-  // dispatch a subgroup per span element
+  // Dispatch a subgroup per span element
   //
   uint32_t const sgs_per_wg = config->group_sizes.named.rasters_reclaim.workgroup >>
                               config->group_sizes.named.rasters_reclaim.subgroup_log2;
@@ -709,8 +710,19 @@ spinel_handle_pool_reclaim_flush_rasters_record(VkCommandBuffer cb, void * data0
 static void
 spinel_handle_pool_reclaim_flush_rasters(struct spinel_device * device)
 {
-  struct spinel_handle_pool * const         handle_pool = device->handle_pool;
-  struct spinel_handle_pool_reclaim * const reclaim     = &handle_pool->rasters;
+  // clang-format off
+  struct spinel_handle_pool * const          handle_pool = device->handle_pool;
+  struct spinel_handle_pool_reclaim * const  reclaim     = &handle_pool->rasters;
+  struct spinel_handle_pool_dispatch * const wip         = spinel_handle_pool_reclaim_dispatch_head(reclaim, device);
+  // clang-format on
+
+  //
+  // Anything to do?
+  //
+  if (wip->ring.span == 0)
+    {
+      return;
+    }
 
   //
   // Acquire an immediate semaphore
@@ -719,28 +731,37 @@ spinel_handle_pool_reclaim_flush_rasters(struct spinel_device * device)
     .record = {
       .pfn   = spinel_handle_pool_reclaim_flush_rasters_record,
       .data0 = device,
+      .data1 = wip,
     },
     .completion = {
       .pfn   = spinel_handle_pool_reclaim_flush_rasters_complete,
       .data0 = device,
+      .data1 = wip,
     },
   };
 
   //
-  // NOTE: We don't need to save the immediate semaphore handle because context
-  // creation will block and drain all submissions before returning.
-  //
-  (void)spinel_deps_immediate_submit(device->deps, &device->vk, &disi);
-
-  //
   // The current dispatch is now "in flight" so drop it
+  //
+  // Note that usually it doesn't matter if you drop the dispatch before or
+  // after submission but because handle reclamation is reentrant it does matter
+  // and instead a submission will simply work on the head dispatch and any
+  // prior submissions may potentially submit smaller than "eager" sized or
+  // empty dispatches.
   //
   spinel_handle_pool_reclaim_dispatch_drop(reclaim);
 
   //
-  // Acquire and initialize the next dispatch
+  // Move to pending state
   //
-  spinel_handle_pool_reclaim_dispatch_acquire(reclaim, device);
+  wip->state = SPN_HP_DISPATCH_STATE_PENDING;
+
+  //
+  // Submit!
+  //
+  spinel_deps_immediate_semaphore_t immediate;
+
+  spinel_deps_immediate_submit(device->deps, &device->vk, &disi, &immediate);
 }
 
 //
@@ -756,7 +777,6 @@ spinel_device_handle_pool_create(struct spinel_device * device, uint32_t handle_
 
   device->handle_pool = handle_pool;
 
-  //
   //
   // allocate and init handles
   //
@@ -777,10 +797,19 @@ spinel_device_handle_pool_create(struct spinel_device * device, uint32_t handle_
   handle_pool->refcnts = calloc(handle_count, sizeof(*handle_pool->refcnts));
 
   //
-  // initialize the reclamation rings
+  // some target invariants
   //
   struct spinel_target_config const * const config = &device->ti.config;
 
+  //
+  // A single reclamation invocation must never fill the entire reclamation ring.
+  //
+  assert(config->reclaim.size.paths > config->reclaim.size.eager);
+  assert(config->reclaim.size.rasters > config->reclaim.size.eager);
+
+  //
+  // initialize the reclamation rings
+  //
   spinel_handle_pool_reclaim_create(&handle_pool->paths,
                                     device,
                                     config->reclaim.size.paths,
@@ -799,6 +828,19 @@ void
 spinel_device_handle_pool_dispose(struct spinel_device * device)
 {
   struct spinel_handle_pool * const handle_pool = device->handle_pool;
+
+  //
+  // There is no reason to reclaim undispatched handles in the reclamation rings
+  // because we're about to drop the entire block pool.
+  //
+  // So don't do this:
+  //
+  //   spinel_handle_pool_reclaim_flush_paths(device);
+  //   spinel_handle_pool_reclaim_flush_rasters(device);
+  //
+  // But we do need to drain all in-flight reclamation dispatches.
+  //
+  spinel_deps_drain_all(device->deps, &device->vk);
 
   // free reclamation rings
   spinel_handle_pool_reclaim_dispose(&handle_pool->rasters, device);
@@ -822,11 +864,20 @@ spinel_handle_pool_get_handle_count(struct spinel_handle_pool const * handle_poo
 }
 
 //
+// Reclaim host ref-counted handles.
 //
+// Note that spinel_handle_pool_reclaim_[h|d] are invoked in path, raster and
+// composition completion routines.
+//
+// For this reason, the function needs to be reentrant.
+//
+// This simply requires a check to see a "dispatch" is available before
+// proceeding in each iteration because the `flush_pfn()` may have kicked off
+// additional reclamations.
 //
 static void
 spinel_handle_pool_reclaim_h(struct spinel_handle_pool_reclaim *  reclaim,
-                             spinel_handle_pool_reclaim_flush_pfn flush,
+                             spinel_handle_pool_reclaim_flush_pfn flush_pfn,
                              struct spinel_device *               device,
                              union spinel_handle_refcnt *         refcnts,
                              spinel_handle_t const *              handles,
@@ -835,36 +886,56 @@ spinel_handle_pool_reclaim_h(struct spinel_handle_pool_reclaim *  reclaim,
   struct spinel_target_config const * const config = &device->ti.config;
 
   //
-  // add handles to linear ring spans until done
+  // Append handles to linear ring spans until done
   //
   while (count > 0)
     {
       //
-      // how many ring slots are available?
+      // How many linear ring slots are available in the reclaim ring?
       //
       uint32_t head_nowrap;
 
       while ((head_nowrap = spinel_ring_head_nowrap(&reclaim->mapped.ring)) == 0)
         {
           // no need to flush here -- a flush would've already occurred
-          spinel_deps_drain_1(device->deps, &device->vk, UINT64_MAX);
+          spinel_deps_drain_1(device->deps, &device->vk);
         }
 
       //
-      // copy all releasable handles to the linear ring span
+      // What is the maximum linear span that can be copied to the ring's head?
       //
-      spinel_handle_t * extent = reclaim->mapped.extent + reclaim->mapped.ring.head;
-      uint32_t          rem    = head_nowrap;
+      uint32_t const span_max = MIN_MACRO(uint32_t, count, head_nowrap);
 
-      do
+      //
+      // Always scan the full linear span of handles
+      //
+      count -= span_max;
+
+      //
+      // We have to reload wip in case it was flushed by a reentrant
+      // reclamation.  We know the span is less than eager or else it would've
+      // already been flushed.
+      //
+      // clang-format off
+    struct spinel_handle_pool_dispatch * const wip = spinel_handle_pool_reclaim_dispatch_head(reclaim, device);
+      // clang-format on
+
+      //
+      // Append to reclaim extent and update wip dispatch
+      //
+      spinel_handle_t * extent    = reclaim->mapped.extent + reclaim->mapped.ring.head;
+      uint32_t          reclaimed = 0;
+
+      //
+      // Copy all releasable handles to a linear ring span
+      //
+      for (uint32_t ii = 0; ii < span_max; ii++)
         {
-          count -= 1;
-
           spinel_handle_t const              handle     = *handles++;
           union spinel_handle_refcnt * const refcnt_ptr = refcnts + handle;
           union spinel_handle_refcnt         refcnt     = *refcnt_ptr;
 
-          refcnt.h--;
+          refcnt.h -= 1;
 
           *refcnt_ptr = refcnt;
 
@@ -872,46 +943,45 @@ spinel_handle_pool_reclaim_h(struct spinel_handle_pool_reclaim *  reclaim,
             {
               *extent++ = handle;
 
-              if (--rem == 0)
-                break;
+              reclaimed += 1;
             }
-      } while (count > 0);
+        }
 
       //
-      // were no handles appended?
+      // How many handles were reclaimed in this iteration?
       //
-      uint32_t const span = head_nowrap - rem;
-
-      if (span == 0)
-        return;
-
-      //
-      // update ring
-      //
-      spinel_ring_drop_n(&reclaim->mapped.ring, span);
-
-      // clang-format off
-      struct spinel_handle_pool_dispatch * const wip = spinel_handle_pool_reclaim_dispatch_head(reclaim);
-      // clang-format on
-
-      wip->ring.span += span;
-
-      //
-      // eager flush?
-      //
-      if (wip->ring.span >= config->reclaim.size.eager)
+      if (reclaimed > 0)
         {
-          flush(device);
+          //
+          // Drop entries from head of reclamation ring
+          //
+          spinel_ring_drop_n(&reclaim->mapped.ring, reclaimed);
+
+          wip->ring.span += reclaimed;
+
+          if (wip->ring.span >= config->reclaim.size.eager)
+            {
+              flush_pfn(device);
+            }
         }
     }
 }
 
 //
+// Reclaim device ref-counted handles.
 //
+// Note that spinel_handle_pool_reclaim_[h|d] are invoked in path, raster and
+// composition completion routines.
+//
+// For this reason, the function needs to be reentrant.
+//
+// This simply requires a check to see a "dispatch" is available before
+// proceeding in each iteration because the `flush_pfn()` may have kicked off
+// additional reclamations.
 //
 static void
 spinel_handle_pool_reclaim_d(struct spinel_handle_pool_reclaim *  reclaim,
-                             spinel_handle_pool_reclaim_flush_pfn flush,
+                             spinel_handle_pool_reclaim_flush_pfn flush_pfn,
                              struct spinel_device *               device,
                              spinel_handle_t const *              handles,
                              uint32_t                             count)
@@ -921,36 +991,56 @@ spinel_handle_pool_reclaim_d(struct spinel_handle_pool_reclaim *  reclaim,
   struct spinel_target_config const * const config      = &device->ti.config;
 
   //
-  // add handles to linear ring spans until done
+  // Add handles to linear ring spans until done
   //
   while (count > 0)
     {
       //
-      // how many ring slots are available?
+      // How many linear ring slots are available in the reclaim ring?
       //
       uint32_t head_nowrap;
 
       while ((head_nowrap = spinel_ring_head_nowrap(&reclaim->mapped.ring)) == 0)
         {
-          // no need to flush here -- a flush would've already occurred
-          spinel_deps_drain_1(device->deps, &device->vk, UINT64_MAX);
+          // no need to flush here -- a flush would have already occurred
+          spinel_deps_drain_1(device->deps, &device->vk);
         }
 
       //
-      // copy all releasable handles to the linear ring span
+      // What is the maximum linear span that can be copied to the ring's head?
       //
-      spinel_handle_t * extent = reclaim->mapped.extent + reclaim->mapped.ring.head;
-      uint32_t          rem    = head_nowrap;
+      uint32_t const span_max = MIN_MACRO(uint32_t, count, head_nowrap);
 
-      do
+      //
+      // Always scan the full linear span of handles
+      //
+      count -= span_max;
+
+      //
+      // We have to reload wip in case it was flushed by a reentrant
+      // reclamation.  We know the span is less than eager or else it would've
+      // already been flushed.
+      //
+      // clang-format off
+      struct spinel_handle_pool_dispatch * const wip = spinel_handle_pool_reclaim_dispatch_head(reclaim, device);
+      // clang-format on
+
+      //
+      // Append to reclaim extent and update wip dispatch
+      //
+      spinel_handle_t * extent    = reclaim->mapped.extent + reclaim->mapped.ring.head;
+      uint32_t          reclaimed = 0;
+
+      //
+      // Copy all releasable handles to a linear ring span
+      //
+      for (uint32_t ii = 0; ii < span_max; ii++)
         {
-          count -= 1;
-
           spinel_handle_t const              handle     = *handles++;
           union spinel_handle_refcnt * const refcnt_ptr = refcnts + handle;
           union spinel_handle_refcnt         refcnt     = *refcnt_ptr;
 
-          refcnt.d--;
+          refcnt.d -= 1;
 
           *refcnt_ptr = refcnt;
 
@@ -958,36 +1048,26 @@ spinel_handle_pool_reclaim_d(struct spinel_handle_pool_reclaim *  reclaim,
             {
               *extent++ = handle;
 
-              if (--rem == 0)
-                break;
+              reclaimed += 1;
             }
-      } while (count > 0);
+        }
 
       //
-      // were no handles appended?
+      // How many handles were reclaimed in this iteration?
       //
-      uint32_t const span = head_nowrap - rem;
-
-      if (span == 0)
-        return;
-
-      //
-      // update ring
-      //
-      spinel_ring_drop_n(&reclaim->mapped.ring, span);
-
-      // clang-format off
-      struct spinel_handle_pool_dispatch * const wip = spinel_handle_pool_reclaim_dispatch_head(reclaim);
-      // clang-format on
-
-      wip->ring.span += span;
-
-      //
-      // eager flush?
-      //
-      if (wip->ring.span >= config->reclaim.size.eager)
+      if (reclaimed > 0)
         {
-          flush(device);
+          //
+          // Drop entries from head of reclamation ring
+          //
+          spinel_ring_drop_n(&reclaim->mapped.ring, reclaimed);
+
+          wip->ring.span += reclaimed;
+
+          if (wip->ring.span >= config->reclaim.size.eager)
+            {
+              flush_pfn(device);
+            }
         }
     }
 }
@@ -1017,34 +1097,39 @@ spinel_device_handle_acquire(struct spinel_device * device)
   while (ring->rem == 0)
     {
       //
-      // flush both reclamation rings
+      // Drain all submissions
       //
-      bool const flushable_paths   = !spinel_ring_is_full(&handle_pool->paths.mapped.ring);
-      bool const flushable_rasters = !spinel_ring_is_full(&handle_pool->rasters.mapped.ring);
+      spinel_deps_drain_all(device->deps, &device->vk);
 
-      if (!flushable_paths && !flushable_rasters)
+      //
+      // Are there unreclaimed handles in the reclamation rings?
+      //
+      bool const no_unreclaimed_paths   = spinel_ring_is_full(&handle_pool->paths.mapped.ring);
+      bool const no_unreclaimed_rasters = spinel_ring_is_full(&handle_pool->rasters.mapped.ring);
+
+      if (no_unreclaimed_paths && no_unreclaimed_rasters)
         {
+          //
+          // FIXME(allanmac): Harmonize "device lost" handling
+          //
           spinel_device_lost(device);
         }
       else
         {
-          if (flushable_paths)
+          if (!no_unreclaimed_paths)
             {
               spinel_handle_pool_reclaim_flush_paths(device);
             }
 
-          if (flushable_rasters)
+          if (!no_unreclaimed_rasters)
             {
               spinel_handle_pool_reclaim_flush_rasters(device);
             }
-
-          spinel_deps_drain_1(device->deps, &device->vk, UINT64_MAX);
         }
     }
 
-  uint32_t const idx = spinel_ring_acquire_1(ring);
-
-  spinel_handle_t handle = handle_pool->handles.extent[idx];
+  uint32_t const        idx    = spinel_ring_acquire_1(ring);
+  spinel_handle_t const handle = handle_pool->handles.extent[idx];
 
   handle_pool->refcnts[handle] = (union spinel_handle_refcnt){ .h = 1, .d = 1 };
 
@@ -1116,6 +1201,11 @@ spinel_device_validate_retain_h_paths(struct spinel_device *     device,
                                       struct spinel_path const * paths,
                                       uint32_t                   count)
 {
+  if (count == 0)
+    {
+      return SPN_SUCCESS;
+    }
+
   union spinel_paths_to_handles const p2h = { paths };
 
   return spinel_device_validate_retain_h(device, p2h.handles, count);
@@ -1126,6 +1216,11 @@ spinel_device_validate_retain_h_rasters(struct spinel_device *       device,
                                         struct spinel_raster const * rasters,
                                         uint32_t                     count)
 {
+  if (count == 0)
+    {
+      return SPN_SUCCESS;
+    }
+
   union spinel_rasters_to_handles const r2h = { rasters };
 
   return spinel_device_validate_retain_h(device, r2h.handles, count);
@@ -1185,6 +1280,11 @@ spinel_device_validate_release_h_paths(struct spinel_device *     device,
                                        struct spinel_path const * paths,
                                        uint32_t                   count)
 {
+  if (count == 0)
+    {
+      return SPN_SUCCESS;
+    }
+
   struct spinel_handle_pool * const   handle_pool = device->handle_pool;
   union spinel_handle_refcnt * const  refcnts     = handle_pool->refcnts;
   union spinel_paths_to_handles const p2h         = { paths };
@@ -1197,7 +1297,7 @@ spinel_device_validate_release_h_paths(struct spinel_device *     device,
   if (result == SPN_SUCCESS)
     {
       spinel_handle_pool_reclaim_h(&handle_pool->paths,
-                                   spinel_handle_pool_reclaim_flush_rasters,
+                                   spinel_handle_pool_reclaim_flush_paths,
                                    device,
                                    refcnts,
                                    p2h.handles,
@@ -1212,6 +1312,11 @@ spinel_device_validate_release_h_rasters(struct spinel_device *       device,
                                          struct spinel_raster const * rasters,
                                          uint32_t                     count)
 {
+  if (count == 0)
+    {
+      return SPN_SUCCESS;
+    }
+
   struct spinel_handle_pool * const     handle_pool = device->handle_pool;
   union spinel_handle_refcnt * const    refcnts     = handle_pool->refcnts;
   union spinel_rasters_to_handles const r2h         = { rasters };
@@ -1246,6 +1351,8 @@ spinel_device_validate_retain_d(struct spinel_device *  device,
                                 spinel_handle_t const * handles,
                                 uint32_t const          count)
 {
+  assert(count > 0);
+
   struct spinel_handle_pool * const  handle_pool = device->handle_pool;
   union spinel_handle_refcnt * const refcnts     = handle_pool->refcnts;
   uint32_t const                     handle_max  = handle_pool->handles.ring.size;
@@ -1281,6 +1388,8 @@ spinel_device_validate_d_paths(struct spinel_device *     device,
                                struct spinel_path const * paths,
                                uint32_t const             count)
 {
+  assert(count > 0);
+
   union spinel_paths_to_handles const p2h = { paths };
 
   return spinel_device_validate_retain_d(device, p2h.handles, count);
@@ -1291,6 +1400,8 @@ spinel_device_validate_d_rasters(struct spinel_device *       device,
                                  struct spinel_raster const * rasters,
                                  uint32_t const               count)
 {
+  assert(count > 0);
+
   union spinel_rasters_to_handles const r2h = { rasters };
 
   return spinel_device_validate_retain_d(device, r2h.handles, count);
@@ -1305,6 +1416,8 @@ spinel_device_retain_d(struct spinel_device *  device,
                        uint32_t const          count)
 
 {
+  assert(count > 0);
+
   struct spinel_handle_pool * const  handle_pool = device->handle_pool;
   union spinel_handle_refcnt * const refcnts     = handle_pool->refcnts;
 
@@ -1321,6 +1434,8 @@ spinel_device_retain_d_paths(struct spinel_device *     device,
                              struct spinel_path const * paths,
                              uint32_t const             count)
 {
+  assert(count > 0);
+
   union spinel_paths_to_handles const p2h = { paths };
 
   spinel_device_retain_d(device, p2h.handles, count);
@@ -1331,6 +1446,8 @@ spinel_device_retain_d_rasters(struct spinel_device *       device,
                                struct spinel_raster const * rasters,
                                uint32_t const               count)
 {
+  assert(count > 0);
+
   union spinel_rasters_to_handles const r2h = { rasters };
 
   spinel_device_retain_d(device, r2h.handles, count);
@@ -1344,6 +1461,8 @@ spinel_device_release_d_paths(struct spinel_device *  device,
                               spinel_handle_t const * handles,
                               uint32_t                count)
 {
+  assert(count > 0);
+
   spinel_handle_pool_reclaim_d(&device->handle_pool->paths,
                                spinel_handle_pool_reclaim_flush_paths,
                                device,
@@ -1356,6 +1475,8 @@ spinel_device_release_d_rasters(struct spinel_device *  device,
                                 spinel_handle_t const * handles,
                                 uint32_t                count)
 {
+  assert(count > 0);
+
   spinel_handle_pool_reclaim_d(&device->handle_pool->rasters,
                                spinel_handle_pool_reclaim_flush_rasters,
                                device,
@@ -1373,6 +1494,8 @@ spinel_device_release_d_paths_ring(struct spinel_device *  device,
                                    uint32_t const          head,
                                    uint32_t const          span)
 {
+  assert(span > 0);
+
   uint32_t const head_max   = head + span;
   uint32_t const head_clamp = MIN_MACRO(uint32_t, head_max, size);
   uint32_t const count_lo   = head_clamp - head;
@@ -1394,6 +1517,8 @@ spinel_device_release_d_rasters_ring(struct spinel_device *  device,
                                      uint32_t const          head,
                                      uint32_t const          span)
 {
+  assert(span > 0);
+
   uint32_t const head_max   = head + span;
   uint32_t const head_clamp = MIN_MACRO(uint32_t, head_max, size);
   uint32_t const count_lo   = head_clamp - head;

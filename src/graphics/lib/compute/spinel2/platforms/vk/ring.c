@@ -14,7 +14,7 @@
 // A barebones ring
 //
 void
-spinel_ring_init(struct spinel_ring * const ring, uint32_t const size)
+spinel_ring_init(struct spinel_ring * ring, uint32_t size)
 {
   assert(size >= 1);
 
@@ -25,31 +25,25 @@ spinel_ring_init(struct spinel_ring * const ring, uint32_t const size)
 }
 
 bool
-spinel_ring_is_empty(struct spinel_ring const * const ring)
+spinel_ring_is_empty(struct spinel_ring const * ring)
 {
   return ring->rem == 0;
 }
 
 bool
-spinel_ring_is_full(struct spinel_ring const * const ring)
+spinel_ring_is_full(struct spinel_ring const * ring)
 {
   return ring->rem == ring->size;
 }
 
-bool
-spinel_ring_is_tail(struct spinel_ring const * const ring, uint32_t const idx)
-{
-  return ring->tail == idx;
-}
-
 uint32_t
-spinel_ring_dropped(struct spinel_ring const * const ring)
+spinel_ring_dropped(struct spinel_ring const * ring)
 {
   return ring->size - ring->rem;
 }
 
 uint32_t
-spinel_ring_head_nowrap(struct spinel_ring const * const ring)
+spinel_ring_head_nowrap(struct spinel_ring const * ring)
 {
   uint32_t const nowrap = ring->size - ring->head;
 
@@ -57,7 +51,7 @@ spinel_ring_head_nowrap(struct spinel_ring const * const ring)
 }
 
 uint32_t
-spinel_ring_tail_nowrap(struct spinel_ring const * const ring)
+spinel_ring_tail_nowrap(struct spinel_ring const * ring)
 {
   uint32_t const nowrap  = ring->size - ring->tail;
   uint32_t const dropped = spinel_ring_dropped(ring);
@@ -66,52 +60,60 @@ spinel_ring_tail_nowrap(struct spinel_ring const * const ring)
 }
 
 uint32_t
-spinel_ring_acquire_1(struct spinel_ring * const ring)
+spinel_ring_acquire_1(struct spinel_ring * ring)
 {
+  assert(ring->rem >= 1);
+
   //
   // CAUTION: this is unguarded so always test before acquiring
   //
   ring->rem -= 1;
 
-  uint32_t const idx  = ring->head;
-  uint32_t const head = idx + 1;
+  uint32_t const head     = ring->head;
+  uint32_t const new_head = head + 1;
 
-  ring->head = (head < ring->size) ? head : 0;
+  ring->head = (new_head < ring->size) ? new_head : 0;
 
-  return idx;
+  return head;
 }
 
 void
-spinel_ring_drop_1(struct spinel_ring * const ring)
+spinel_ring_drop_1(struct spinel_ring * ring)
 {
+  assert(ring->rem >= 1);
+
   //
   // CAUTION: this is unguarded so always test before acquiring
   //
   ring->rem -= 1;
 
-  uint32_t const idx  = ring->head;
-  uint32_t const head = idx + 1;
+  uint32_t const head     = ring->head;
+  uint32_t const new_head = head + 1;
 
-  ring->head = (head < ring->size) ? head : 0;
+  ring->head = (new_head < ring->size) ? new_head : 0;
 }
 
 void
-spinel_ring_drop_n(struct spinel_ring * const ring, uint32_t const n)
+spinel_ring_drop_n(struct spinel_ring * ring, uint32_t n)
 {
+  assert(ring->rem >= n);
+
   //
   // CAUTION: this is unguarded so always test before acquiring
   //
   ring->rem -= n;
 
-  uint32_t const idx  = ring->head;
-  uint32_t const head = idx + n;
+  uint32_t const head     = ring->head;
+  uint32_t const new_head = head + n;
 
-  ring->head = (head < ring->size) ? head : head - ring->size;
+  ring->head = (new_head < ring->size) ? new_head : new_head - ring->size;
 }
 
 void
-spinel_ring_release_n(struct spinel_ring * const ring, uint32_t const n)
+spinel_ring_release_n(struct spinel_ring * ring, uint32_t n)
 {
+  assert(ring->rem + n <= ring->size);
+
   //
   // CAUTION: assumes conservation so no need to test before release
   //
@@ -127,51 +129,55 @@ spinel_ring_release_n(struct spinel_ring * const ring, uint32_t const n)
 // available.
 //
 void
-spinel_next_init(struct spinel_next * const next, uint32_t const size)
+spinel_next_init(struct spinel_next * next, uint32_t size)
 {
   next->size = size;
   next->head = 0;
 }
 
 uint32_t
-spinel_next_acquire_1(struct spinel_next * const next)
+spinel_next_acquire_1(struct spinel_next * next)
 {
-  uint32_t const idx  = next->head;
-  uint32_t const head = idx + 1;
+  uint32_t const head     = next->head;
+  uint32_t const new_head = head + 1;
 
-  next->head = (head < next->size) ? head : 0;
+  next->head = (new_head < next->size) ? new_head : 0;
 
-  return idx;
+  return head;
 }
 
 uint32_t
-spinel_next_acquire_2(struct spinel_next * const next)
+spinel_next_acquire_2(struct spinel_next * next, uint32_t * span)
 {
-  uint32_t const idx = next->head;
+  uint32_t const head = next->head;
 
-  if (idx + 1 < next->size)
+  if (head + 1 < next->size)
     {
-      uint32_t const head = idx + 2;
+      uint32_t const new_head = head + 2;
 
-      next->head = (head < next->size) ? head : 0;
+      next->head = (new_head < next->size) ? new_head : 0;
 
-      return idx;
+      *span = 2;
+
+      return head;
     }
   else  // we need two contiguous slots
     {
       next->head = 2;
+
+      *span = 3;
 
       return 0;
     }
 }
 
 void
-spinel_next_drop_n(struct spinel_next * const next, uint32_t const n)
+spinel_next_drop_n(struct spinel_next * next, uint32_t n)
 {
-  uint32_t const idx  = next->head;
-  uint32_t const head = idx + n;
+  uint32_t const head     = next->head;
+  uint32_t const new_head = head + n;
 
-  next->head = (head < next->size) ? head : head - next->size;
+  next->head = (new_head < next->size) ? new_head : new_head - next->size;
 }
 
 //

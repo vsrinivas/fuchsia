@@ -156,6 +156,8 @@ spinel_sc_exts_validate(struct spinel_swapchain_impl * impl, struct spinel_sc_ex
 }
 
 //
+// BUFFER EXTENSIONS
+//
 // NOTE(allanmac): The extensions are always processed in the enum order.
 //
 static VkPipelineStageFlags
@@ -166,52 +168,73 @@ spinel_sc_render_record(VkCommandBuffer cb, void * data0, void * data1)
   struct spinel_device * const         device = impl->device;
 
   //
-  // Returned at end
-  //
-  VkPipelineStageFlags src_stage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
-
-  //
-  // which extent?
+  // Which extent?
   //
   VkDescriptorBufferInfo const dbi = {
-
     .buffer = impl->vk.dbi_dm.dbi.buffer,
     .offset = impl->vk.extent.range * exts->named.compute.render->extent_index,
-    .range  = impl->vk.extent.range
+    .range  = impl->vk.extent.range,
   };
 
   //
-  // BUFFER EXTENSIONS
+  // Starting stage/access
   //
+  VkPipelineStageFlags src_stage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+  VkAccessFlags        src_mask  = VK_ACCESS_NONE_KHR;
 
   //
-  // Starting access
-  //
-  VkAccessFlags src_mask = VK_ACCESS_NONE_KHR;
-
-  //
-  // Are buffers exclusive?
+  // Are swapchain resources exclusive or concurrent?
   //
   bool const is_exclusive = (device->ti.config.swapchain.sharing_mode == VK_SHARING_MODE_EXCLUSIVE);
 
   //
   // SPN_VK_SWAPCHAIN_SUBMIT_EXT_TYPE_COMPUTE_ACQUIRE
   //
-  if (exts->named.compute.acquire != NULL && is_exclusive)
+  // FIXME(allanmac): It's more elegant to have each stage initiate the prior
+  // barrier on demand.  Turn this into a function and push it downward.
+  //
+  if ((exts->named.compute.acquire != NULL) && is_exclusive)
     {
-#if 0
-      VkBufferMemoryBarrier const bmb = {
-        .sType               = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER,
-        .pNext               = NULL,
-        .srcAccessMask       = VK_ACCESS_NONE_KHR,
-        .dstAccessMask       = VK_ACCESS_NONE_KHR, // FIXME(allanmac)
-        .srcQueueFamilyIndex = exts->name.compute.acquire.from_queue_family_index,
-        .dstQueueFamilyIndex = device->q.compute.create_info.family_index,
-        .buffer              = dbi.buffer,
-        .offset              = dbi.offset,
-        .size                = dbi.range,
-      };
-#endif
+      // clang-format off
+      bool const is_queue_neq = (device->vk.q.compute.create_info.family_index != exts->named.compute.acquire->from_queue_family_index);
+      bool const is_qfo_xfer  = (is_exclusive && is_queue_neq);
+      // clang-format on
+
+      //
+      // Skip the queue family ownership transfer if it's a noop
+      //
+      if (is_qfo_xfer)
+        {
+          bool const is_fill = (exts->named.compute.fill != NULL);
+
+          // clang-format off
+          VkAccessFlags        xfer_mask  = is_fill ? VK_ACCESS_TRANSFER_WRITE_BIT   : VK_ACCESS_SHADER_WRITE_BIT;
+          VkPipelineStageFlags xfer_stage = is_fill ? VK_PIPELINE_STAGE_TRANSFER_BIT : VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
+          // clang-format on
+
+          VkBufferMemoryBarrier const bmb = {
+            .sType               = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER,
+            .pNext               = NULL,
+            .srcAccessMask       = VK_ACCESS_NONE_KHR,
+            .dstAccessMask       = xfer_mask,
+            .srcQueueFamilyIndex = exts->named.compute.acquire->from_queue_family_index,
+            .dstQueueFamilyIndex = device->vk.q.compute.create_info.family_index,
+            .buffer              = dbi.buffer,
+            .offset              = dbi.offset,
+            .size                = dbi.range,
+          };
+
+          vkCmdPipelineBarrier(cb,
+                               VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+                               xfer_stage,
+                               0,
+                               0,
+                               NULL,
+                               1,
+                               &bmb,
+                               0,
+                               NULL);
+        }
     }
 
   //
@@ -222,7 +245,7 @@ spinel_sc_render_record(VkCommandBuffer cb, void * data0, void * data1)
       vkCmdFillBuffer(cb, dbi.buffer, dbi.offset, dbi.range, exts->named.compute.fill->dword);
 
       //
-      // Outgoing barrier
+      // Outgoing stage/access
       //
       src_stage = VK_PIPELINE_STAGE_TRANSFER_BIT;
       src_mask  = VK_ACCESS_TRANSFER_WRITE_BIT;
@@ -236,10 +259,14 @@ spinel_sc_render_record(VkCommandBuffer cb, void * data0, void * data1)
     // Push:   push.ttcks
     // Direct: render dispatch pipeline
     //
-    // FIXME(allanmac): This should return the src_stage and src_mask.
+    // FIXME(allanmac): Is there a better way to discover the src_stage and
+    // src_mask versus inspection of this function?
     //
     spinel_composition_push_render_dispatch_record(exts->submit->composition, cb);
 
+    //
+    // Outgoing stage/access
+    //
     // clang-format off
     src_stage |= VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
     src_mask  |= VK_ACCESS_SHADER_WRITE_BIT;
@@ -301,7 +328,8 @@ spinel_sc_render_record(VkCommandBuffer cb, void * data0, void * data1)
     //
     // Inits: push.styling
     //
-    // FIXME(allanmac): This should return the src_stage and src_mask.
+    // FIXME(allanmac): Is there a better way to discover the src_stage and
+    // src_mask versus inspection of this function?
     //
     spinel_styling_push_render_init(exts->submit->styling, &push_render);
 
@@ -310,12 +338,13 @@ spinel_sc_render_record(VkCommandBuffer cb, void * data0, void * data1)
     //           push.ttck_keyvals
     // Indirect: render pipeline
     //
-    // FIXME(allanmac): This should return the src_stage and src_mask.
+    // FIXME(allanmac): Is there a better way to discover the src_stage and
+    // src_mask versus inspection of this function?
     //
     spinel_composition_push_render_init_record(exts->submit->composition, &push_render, cb);
 
     //
-    // Outgoing barrier
+    // Outgoing stage/access
     //
     src_stage = VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
     src_mask  = VK_ACCESS_SHADER_WRITE_BIT;
@@ -332,16 +361,21 @@ spinel_sc_render_record(VkCommandBuffer cb, void * data0, void * data1)
                         VK_PIPELINE_STAGE_TRANSFER_BIT,
                         VK_ACCESS_TRANSFER_READ_BIT);
 
+      // Copy the smaller range
+      VkDeviceSize const range = MIN_MACRO(VkDeviceSize,  //
+                                           dbi.range,
+                                           exts->named.compute.copy->dst.range);
+
       VkBufferCopy const bcs[] = {
         { .srcOffset = dbi.offset,
           .dstOffset = exts->named.compute.copy->dst.offset,
-          .size      = exts->named.compute.copy->dst.range },
+          .size      = range },
       };
 
       vkCmdCopyBuffer(cb, dbi.buffer, exts->named.compute.copy->dst.buffer, 1, bcs);
 
       //
-      // Outgoing barrier
+      // Outgoing stage/access
       //
       src_stage = VK_PIPELINE_STAGE_TRANSFER_BIT;
       src_mask  = VK_ACCESS_TRANSFER_WRITE_BIT;
@@ -350,21 +384,41 @@ spinel_sc_render_record(VkCommandBuffer cb, void * data0, void * data1)
   //
   // SPN_VK_SWAPCHAIN_SUBMIT_EXT_TYPE_COMPUTE_RELEASE
   //
-  if (exts->named.compute.release != NULL && is_exclusive)
+  if ((exts->named.compute.release != NULL) && is_exclusive)
     {
-#if 0
-      VkBufferMemoryBarrier const bmb = {
-        .sType               = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER,
-        .pNext               = NULL,
-        .srcAccessMask       = VK_ACCESS_NONE_KHR,
-        .dstAccessMask       = VK_ACCESS_NONE_KHR, // FIXME(allanmac)
-        .dstQueueFamilyIndex = device->q.compute.create_info.family_index,
-        .srcQueueFamilyIndex = exts->name.compute.acquire.to_queue_family_index,
-        .buffer              = dbi.buffer,
-        .offset              = dbi.offset,
-        .size                = dbi.range,
-      };
-#endif
+      // clang-format off
+      bool const is_queue_neq = (device->vk.q.compute.create_info.family_index != exts->named.compute.release->to_queue_family_index);
+      bool const is_qfo_xfer  = (is_exclusive && is_queue_neq);
+      // clang-format on
+
+      //
+      // Skip the queue family ownership transfer if it's a noop
+      //
+      if (is_qfo_xfer)
+        {
+          VkBufferMemoryBarrier const bmb = {
+            .sType               = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER,
+            .pNext               = NULL,
+            .srcAccessMask       = src_mask,
+            .dstAccessMask       = VK_ACCESS_NONE_KHR,
+            .srcQueueFamilyIndex = device->vk.q.compute.create_info.family_index,
+            .dstQueueFamilyIndex = exts->named.compute.release->to_queue_family_index,
+            .buffer              = dbi.buffer,
+            .offset              = dbi.offset,
+            .size                = dbi.range,
+          };
+
+          vkCmdPipelineBarrier(cb,
+                               src_stage,
+                               VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
+                               0,
+                               0,
+                               NULL,
+                               1,
+                               &bmb,
+                               0,
+                               NULL);
+        }
     }
 
   //
@@ -401,65 +455,76 @@ spinel_sc_graphics(struct spinel_swapchain_impl * impl, struct spinel_sc_exts co
   vk(BeginCommandBuffer(cb, &cbbi));
 
   //
-  // Is an exclusive transfer of the compute extent to the graphics queue
-  // required?
+  // Which extent?
   //
-  bool const is_exclusive =
-    (device->ti.config.swapchain.sharing_mode == VK_SHARING_MODE_EXCLUSIVE) &&
-    (device->vk.q.compute.create_info.family_index !=
-     exts->named.graphics.store->queue_family_index);
+  VkDescriptorBufferInfo const dbi = {
+    .buffer = impl->vk.dbi_dm.dbi.buffer,
+    .offset = impl->vk.extent.range * exts->named.graphics.store->extent_index,
+    .range  = impl->vk.extent.range,
+  };
 
   //
-  // QUEUE OWNERSHIP TRANSFER OF SWAPCHAIN STORAGE BUFFER EXTENT
+  // Is a queue family ownership transfer of the compute extent to the graphics
+  // queue required?
   //
-  if (is_exclusive)
+  // clang-format off
+  bool const is_exclusive = (device->ti.config.swapchain.sharing_mode == VK_SHARING_MODE_EXCLUSIVE);
+  bool const is_queue_neq = (device->vk.q.compute.create_info.family_index != exts->named.graphics.store->queue_family_index);
+  bool const is_qfo_xfer  = (is_exclusive && is_queue_neq);
+  // clang-format on
+
+  //
+  // Is a queue family ownership transfer "acquire" required?
+  //
+  if (is_qfo_xfer)
     {
-#if 0
       VkBufferMemoryBarrier const bmb = {
         .sType               = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER,
         .pNext               = NULL,
         .srcAccessMask       = VK_ACCESS_NONE_KHR,
-        .dstAccessMask       = VK_ACCESS_NONE_KHR, // FIXME(allanmac)
-        .srcQueueFamilyIndex = exts->name.compute.acquire.from_queue_family_index,
-        .dstQueueFamilyIndex = device->vk.q.compute.create_info.family_index,
+        .dstAccessMask       = VK_ACCESS_TRANSFER_READ_BIT,
+        .srcQueueFamilyIndex = device->vk.q.compute.create_info.family_index,
+        .dstQueueFamilyIndex = exts->named.graphics.store->queue_family_index,
         .buffer              = dbi.buffer,
         .offset              = dbi.offset,
         .size                = dbi.range,
       };
-#endif
+
+      vkCmdPipelineBarrier(cb,
+                           VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+                           VK_PIPELINE_STAGE_TRANSFER_BIT,
+                           0,
+                           0,
+                           NULL,
+                           1,
+                           &bmb,
+                           0,
+                           NULL);
     }
 
   //
   // Accumulate barrier state
   //
-  // NOTE(allanmac): top-of-pipe and zeroes in the member are exactly
-  // what we want to start with.
-  //
-  // NOTE(allanmac): realize that all memory is visible -- image layout
-  // transitions and transfers are all we're concerned with.
-  //
-  // NOTE(allanmac): the imgbar is implicitly:
-  //   {
-  //     .oldLayout = VK_IMAGE_LAYOUT_UNDEFINED
-  //   }
+  // Top-of-pipe and zeroes in the member are exactly what we want to start
+  // with.
   //
   VkPipelineStageFlags src_stage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
   VkImageMemoryBarrier imgbar    = {
 
     .sType               = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
     .pNext               = NULL,
-    .srcAccessMask       = 0,
-    .dstAccessMask       = exts->named.graphics.store->image_info.imageLayout,
-    .oldLayout           = exts->named.graphics.store->image_info.imageLayout,
-    .newLayout           = VK_IMAGE_LAYOUT_UNDEFINED,
-    .srcQueueFamilyIndex = device->vk.q.compute.create_info.family_index,
-    .dstQueueFamilyIndex = 0,  // FIXME
+    .srcAccessMask       = VK_ACCESS_NONE_KHR,
+    .dstAccessMask       = VK_ACCESS_NONE_KHR,
+    .oldLayout           = exts->named.graphics.store->old_layout,
+    .newLayout           = exts->named.graphics.store->image_info.imageLayout,
+    .srcQueueFamilyIndex = exts->named.graphics.store->queue_family_index,
+    .dstQueueFamilyIndex = exts->named.graphics.store->queue_family_index,
     .image               = exts->named.graphics.store->image,
-    .subresourceRange    = (VkImageSubresourceRange){ .aspectMask     = VK_IMAGE_ASPECT_COLOR_BIT,
-                                                      .baseMipLevel   = 0,
-                                                      .levelCount     = 1,
-                                                      .baseArrayLayer = 0,
-                                                      .layerCount     = 1 },
+    .subresourceRange    = { .aspectMask     = VK_IMAGE_ASPECT_COLOR_BIT,
+                             .baseMipLevel   = 0,
+                             .levelCount     = 1,
+                             .baseArrayLayer = 0,
+                             .layerCount     = 1 },
   };
 
   //
@@ -489,14 +554,17 @@ spinel_sc_graphics(struct spinel_swapchain_impl * impl, struct spinel_sc_exts co
                            &imgbar.subresourceRange);
 
       src_stage = VK_PIPELINE_STAGE_TRANSFER_BIT;
+
+      imgbar.srcAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
+      imgbar.oldLayout     = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
     }
 
   //
   // GRAPHICS STORE
   //
   {
-    imgbar.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
-    imgbar.newLayout     = exts->named.graphics.store->image_info.imageLayout;
+    imgbar.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+    imgbar.newLayout     = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
 
     vkCmdPipelineBarrier(cb,
                          src_stage,
@@ -510,7 +578,7 @@ spinel_sc_graphics(struct spinel_swapchain_impl * impl, struct spinel_sc_exts co
                          &imgbar);
 
     VkBufferImageCopy const bic = {
-      .bufferOffset      = impl->vk.extent.range * exts->named.compute.render->extent_index,
+      .bufferOffset      = dbi.offset,
       .bufferRowLength   = impl->vk.extent.size.width,
       .bufferImageHeight = impl->vk.extent.size.height,
       .imageSubresource  = { .aspectMask     = VK_IMAGE_ASPECT_COLOR_BIT,
@@ -524,15 +592,65 @@ spinel_sc_graphics(struct spinel_swapchain_impl * impl, struct spinel_sc_exts co
     };
 
     vkCmdCopyBufferToImage(cb,
-                           impl->vk.dbi_dm.dbi.buffer,
+                           dbi.buffer,
                            exts->named.graphics.store->image,
                            imgbar.newLayout,
                            1,
                            &bic);
 
     src_stage = VK_PIPELINE_STAGE_TRANSFER_BIT;
+
+    imgbar.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+    imgbar.oldLayout     = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
   }
 
+  //
+  // Final layout transition
+  //
+  {
+    imgbar.dstAccessMask = VK_ACCESS_NONE_KHR;
+    imgbar.newLayout     = exts->named.graphics.store->image_info.imageLayout;
+
+    vkCmdPipelineBarrier(cb,
+                         src_stage,
+                         VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
+                         0,
+                         0,
+                         NULL,
+                         0,
+                         NULL,
+                         1,
+                         &imgbar);
+  }
+
+  //
+  // Is a queue family ownership transfer "release" required?
+  //
+  if (is_qfo_xfer)
+    {
+      VkBufferMemoryBarrier const bmb = {
+        .sType               = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER,
+        .pNext               = NULL,
+        .srcAccessMask       = VK_ACCESS_TRANSFER_WRITE_BIT,
+        .dstAccessMask       = VK_ACCESS_NONE_KHR,
+        .srcQueueFamilyIndex = exts->named.graphics.store->queue_family_index,
+        .dstQueueFamilyIndex = device->vk.q.compute.create_info.family_index,
+        .buffer              = dbi.buffer,
+        .offset              = dbi.offset,
+        .size                = dbi.range,
+      };
+
+      vkCmdPipelineBarrier(cb,
+                           VK_PIPELINE_STAGE_TRANSFER_BIT,
+                           VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
+                           0,
+                           0,
+                           NULL,
+                           1,
+                           &bmb,
+                           0,
+                           NULL);
+    }
   //
   // End command buffer
   //
@@ -551,9 +669,9 @@ spinel_sc_graphics(struct spinel_swapchain_impl * impl, struct spinel_sc_exts co
   VkSemaphore          wait_semaphores  [SPN_VK_SEMAPHORE_IMPORT_WAIT_SIZE + 1] = { impl->vk.timeline.semaphores[extent_index] };
   uint64_t             wait_values      [SPN_VK_SEMAPHORE_IMPORT_WAIT_SIZE + 1] = { impl->vk.timeline.values[extent_index]++   }; // increment!
 
-  uint32_t const       signal_count                                             = 1 + exts->named.graphics.signal->signal.count;
-  VkSemaphore          signal_semaphores[SPN_VK_SEMAPHORE_IMPORT_WAIT_SIZE + 1] = { impl->vk.timeline.semaphores[extent_index] };
-  uint64_t             signal_values    [SPN_VK_SEMAPHORE_IMPORT_WAIT_SIZE + 1] = { impl->vk.timeline.values[extent_index]     };
+  uint32_t const       signal_count                                               = 1 + exts->named.graphics.signal->signal.count;
+  VkSemaphore          signal_semaphores[SPN_VK_SEMAPHORE_IMPORT_SIGNAL_SIZE + 1] = { impl->vk.timeline.semaphores[extent_index] };
+  uint64_t             signal_values    [SPN_VK_SEMAPHORE_IMPORT_SIGNAL_SIZE + 1] = { impl->vk.timeline.values[extent_index]     };
   // clang-format on
 
   VkTimelineSemaphoreSubmitInfo const tssi = {
@@ -604,7 +722,7 @@ spinel_sc_graphics(struct spinel_swapchain_impl * impl, struct spinel_sc_exts co
              exts->named.graphics.signal->signal.semaphores,
              sizeof(signal_semaphores[0]) * exts->named.graphics.signal->signal.count);
 
-      memcpy(wait_values + 1,
+      memcpy(signal_values + 1,
              exts->named.graphics.signal->signal.values,
              sizeof(signal_values[0]) * exts->named.graphics.signal->signal.count);
     }
@@ -708,6 +826,9 @@ spinel_sc_submit(struct spinel_swapchain_impl * impl, spinel_swapchain_submit_t 
   //
   // Explicitly set the transfer timeline semaphores
   //
+  // TODO: combine .transfer with .import and just size it to handle all use
+  // cases.
+  //
 
   // Wait
   disi.wait.transfer.count         = 1,
@@ -760,9 +881,10 @@ spinel_sc_submit(struct spinel_swapchain_impl * impl, spinel_swapchain_submit_t 
   //
   struct spinel_device * const device = impl->device;
 
-  spinel_deps_immediate_semaphore_t const immediate = spinel_deps_immediate_submit(device->deps,  //
-                                                                                   &device->vk,
-                                                                                   &disi);
+  spinel_deps_immediate_semaphore_t immediate;
+
+  spinel_deps_immediate_submit(device->deps, &device->vk, &disi, &immediate);
+
   //
   // Save wait mask
   //
@@ -785,14 +907,24 @@ static spinel_result_t
 spinel_sc_release(struct spinel_swapchain_impl * impl)
 {
   //
+  //
+  //
+  struct spinel_device * const device = impl->device;
+
+  //
   // Wait for timeline semaphores.
   //
   // For now, just block until all outstanding renders are complete.
+  //
+  // Note that it's not strong enough of a guarantee to wait upon the the
+  // swapchain's timeline semaphores as the extent maybe still be in use by a
+  // compute-to-graphics copy.
   //
   // TODO(allanmac): It may be useful to release these resources asynchronously
   // using the `deps` logic (with some modifications).  This might reduce
   // latency of disposal and reallocation of a swapchain during window resize.
   //
+#if 0
   VkSemaphoreWaitInfo const swi = {
     .sType          = VK_STRUCTURE_TYPE_SEMAPHORE_WAIT_INFO,
     .pNext          = NULL,
@@ -803,11 +935,13 @@ spinel_sc_release(struct spinel_swapchain_impl * impl)
   };
 
   vk(WaitSemaphores(impl->device->vk.d, &swi, UINT64_MAX));
+#else
+  vk(DeviceWaitIdle(device->vk.d));
+#endif
 
   //
   // Free swapchain
   //
-  struct spinel_device * const device = impl->device;
 
   spinel_allocator_free_dbi_dm(&device->allocator.device.perm.drw_shared,
                                device->vk.d,

@@ -159,9 +159,10 @@ spinel_si_seal(struct spinel_styling_impl * const impl)
 
       struct spinel_device * const device = impl->device;
 
-      impl->signal.sealing.immediate = spinel_deps_immediate_submit(device->deps,  //
-                                                                    &device->vk,
-                                                                    &disi);
+      spinel_deps_immediate_submit(device->deps,
+                                   &device->vk,
+                                   &disi,
+                                   &impl->signal.sealing.immediate);
     }
   else
     {
@@ -197,7 +198,7 @@ spinel_si_unseal(struct spinel_styling_impl * const impl)
   while (impl->state != SPN_SI_STATE_SEALED)
     {
       // wait for SEALING > SEALED transition ...
-      spinel_deps_drain_1(device->deps, &device->vk, UINT64_MAX);
+      spinel_deps_drain_1(device->deps, &device->vk);
     }
 
   //
@@ -205,7 +206,7 @@ spinel_si_unseal(struct spinel_styling_impl * const impl)
   //
   while (impl->lock_count > 0)
     {
-      spinel_deps_drain_1(device->deps, &device->vk, UINT64_MAX);
+      spinel_deps_drain_1(device->deps, &device->vk);
     }
 
   //
@@ -229,7 +230,7 @@ spinel_si_release(struct spinel_styling_impl * const impl)
 
   while (impl->lock_count > 0)
     {
-      spinel_deps_drain_1(device->deps, &device->vk, UINT64_MAX);
+      spinel_deps_drain_1(device->deps, &device->vk);
     }
 
   //

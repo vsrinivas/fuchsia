@@ -112,16 +112,6 @@ spinel_device_create(struct spinel_vk_context_create_info const * create_info)
                           NULL);
 
   //
-  // "perm host read / device write"
-  //
-  spinel_allocator_create(&device->allocator.device.perm.hr_dw,
-                          config->allocator.device.hr_dw.properties,
-                          config->allocator.device.hr_dw.usage,
-                          VK_SHARING_MODE_EXCLUSIVE,
-                          0,
-                          NULL);
-
-  //
   // "perm device read-write on 1 or 2 queue families"
   //
   spinel_allocator_create(&device->allocator.device.perm.drw_shared,
@@ -188,15 +178,23 @@ spinel_device_dispose(struct spinel_device * const device)
   //
 
   //
-  // Drain all submitted deps...
+  // There should be zero in-flight dispatches because every Spinel user-object
+  // (path builder, raster builder, styling, compute, etc.) should be draining
+  // its own submissions before destruction.
   //
-  spinel_deps_drain_all(device->deps, &device->vk);
+  // The handle pool implicitly drains its in-flight dispatchse.
+  //
+  spinel_device_handle_pool_dispose(device);
+
+  //
+  // make sure there are no undrained dispatches
+  //
+  assert(!spinel_deps_drain_1(device->deps, &device->vk));
 
   //
   // shut down each major module in reverse order
   //
   spinel_device_block_pool_dispose(device);
-  spinel_device_handle_pool_dispose(device);
   spinel_deps_dispose(device->deps, &device->vk);
   spinel_queue_pool_dispose(&device->vk.q.compute);
 
@@ -214,21 +212,6 @@ spinel_device_dispose(struct spinel_device * const device)
   // free device
   //
   free(device);
-
-  return SPN_SUCCESS;
-}
-
-//
-// FIXME(allanmac):
-//
-//  - Handle DEVICE_LOST here as well
-//  - These result codes aren't quite correct
-//  - Go back to returning a bool?
-//
-static spinel_result_t
-spinel_device_drain(struct spinel_device * device, uint64_t timeout)
-{
-  (void)spinel_deps_drain_1(device->deps, &device->vk, timeout);
 
   return SPN_SUCCESS;
 }
@@ -292,7 +275,6 @@ spinel_vk_context_create(struct spinel_vk_context_create_info const * create_inf
   *context = (struct spinel_context){
 
     .dispose        = spinel_device_dispose,
-    .drain          = spinel_device_drain,
     .get_limits     = spinel_device_get_limits,
     .path_builder   = spinel_path_builder_impl_create,
     .path_retain    = spinel_device_validate_retain_h_paths,

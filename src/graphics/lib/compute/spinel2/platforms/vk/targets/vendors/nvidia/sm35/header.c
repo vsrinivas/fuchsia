@@ -59,14 +59,6 @@ static struct spinel_target_header const header __attribute__((used)) =
           .usage            = (VK_BUFFER_USAGE_STORAGE_BUFFER_BIT   |
                                VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT)
         },
-        .hr_dw = {
-          .properties       = (VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT  |
-                               VK_MEMORY_PROPERTY_HOST_COHERENT_BIT |
-                               VK_MEMORY_PROPERTY_HOST_CACHED_BIT),
-          .usage            = (VK_BUFFER_USAGE_STORAGE_BUFFER_BIT   |
-                               VK_BUFFER_USAGE_TRANSFER_DST_BIT     |
-                               VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT)
-        },
         .drw_shared = {
           .properties       = (VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT),
           .usage            = (VK_BUFFER_USAGE_STORAGE_BUFFER_BIT   |
@@ -83,11 +75,11 @@ static struct spinel_target_header const header __attribute__((used)) =
         .immediate = {
           .pool = {
             .size           = 1,
-            .count          = 1
+            .count          = 32,
           },
         },
         .delayed = {
-          .size             = 1
+          .size             = 32,
         }
       }
     },
@@ -110,18 +102,16 @@ static struct spinel_target_header const header __attribute__((used)) =
 
     .path_builder = {
       .size = {
-        .dispatches         = 32,
-        .ring               = 16384, // blocks
-        .eager              = 4096
+        .dispatches         = 4,     // FIXME(allanmac): size correctly
+        .ring               = 4096,  // These are block/cmd pairs
+        .eager              = 1024
       }
     },
 
     .raster_builder = {
-      .no_staging           = 0,
-
       .size = {
-        .dispatches         = 4, // NOTE: every dispatch allocates additional memory
-        .ring               = 8192,
+        .dispatches         = 4,     // NOTE: every dispatch has dedicated allocations
+        .ring               = 4096,
         .eager              = 1024,
         .cohort             = SPN_DEVICE_RASTERIZE_COHORT_SIZE,
         .cmds               = 1 << 18,
@@ -133,11 +123,9 @@ static struct spinel_target_header const header __attribute__((used)) =
     },
 
     .composition = {
-      .no_staging           = 0,
-
       .size = {
-        .dispatches         = 32,
-        .ring               = 8192,
+        .dispatches         = 8,     // FIXME(allanmac): size correctly
+        .ring               = 8192,  // These are commands
         .eager              = 1024,
         .ttcks              = 1 << 20,
         .rasters            = 1 << 17
@@ -146,15 +134,15 @@ static struct spinel_target_header const header __attribute__((used)) =
 
     .swapchain = {
       .sharing_mode         = VK_SHARING_MODE_EXCLUSIVE,
-      .texel_size           = 4, // 32-bits per pixel for now
+      .texel_size           = 4,     // 32-bits per pixel for now
     },
 
     .reclaim = {
       .size = {
-        .dispatches         = 32,
-        .paths              = 16384,
-        .rasters            = 16384,
-        .eager              = 1024
+        .dispatches         = 8,     // FIXME(allanmac): size correctly
+        .paths              = 8192,  // These are handles
+        .rasters            = 8192,  // These are handles
+        .eager              = 1024   // Must be less than handle rings
       }
     },
 

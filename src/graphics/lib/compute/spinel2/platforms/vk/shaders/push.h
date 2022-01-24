@@ -266,7 +266,7 @@ struct spinel_mat2x2
 
 //
 // Align C99 and GLSL buffer members so the variable-sized arrays are
-// conservatively aligned to an architectural memory transaction boundary.
+// conservatively aligned to a device's memory transaction boundary.
 //
 #define SPN_MEMBER_ALIGN_LIMIT 256  // (64 * 4)
 
