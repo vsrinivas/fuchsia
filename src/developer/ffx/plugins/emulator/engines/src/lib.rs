@@ -116,22 +116,27 @@ impl EngineBuilder {
     ///  and return the built engine.
     pub async fn build(mut self) -> Result<Box<dyn EmulatorEngine>> {
         // Set up the instance directory, now that we have enough information.
+        let name = &self.emulator_configuration.runtime.name;
         self.emulator_configuration.runtime.instance_directory =
-            get_instance_dir(&self.ffx_config, &self.emulator_configuration.runtime.name, true)
-                .await?;
+            get_instance_dir(&self.ffx_config, name, true).await?;
 
         // Make sure we don't overwrite an existing instance.
         let filepath =
             self.emulator_configuration.runtime.instance_directory.join(SERIALIZE_FILE_NAME);
         if filepath.exists() {
-            let engine = read_from_disk(&self.emulator_configuration.runtime.instance_directory)?;
+            let engine = read_from_disk(&self.emulator_configuration.runtime.instance_directory)
+                .context(format!(
+                    "Found an existing emulator with the name {}, but couldn't load it from disk. \
+                    Use `ffx emu shutdown {}` to terminate and clean up the existing emulator.",
+                    name, name
+                ))?;
             if engine.is_running() {
                 bail!(
-                    "Emulator named {} is already running. \
-                        Use a different name, or run `ffx emu shutdown {}` \
-                        to shutdown the running emulator.",
-                    self.emulator_configuration.runtime.name,
-                    self.emulator_configuration.runtime.name
+                    "An emulator named {} is already running. \
+                    Use a different name, or run `ffx emu shutdown {}` \
+                    to shutdown the running emulator.",
+                    name,
+                    name
                 );
             }
         }

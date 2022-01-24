@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use anyhow::Result;
+use anyhow::{Context, Result};
 use ffx_core::ffx_plugin;
 use ffx_emulator_common::config::FfxConfigWrapper;
 use ffx_emulator_engines::{
@@ -17,8 +17,14 @@ async fn attempt_shutdown(instance_dir: &PathBuf, proxy: &TargetCollectionProxy)
         // If the directory doesn't exist, we just return Ok(()) since there's nothing to shut down
         return Ok(());
     }
-    let engine = read_from_disk(instance_dir)?;
-    engine.shutdown(proxy).await
+    let engine = read_from_disk(instance_dir).context(
+        "Couldn't deserialize engine from disk. \
+        Continuing shutdown, but you may need to terminate the emulator process manually.",
+    );
+    match engine {
+        Ok(engine) => engine.shutdown(proxy).await,
+        Err(e) => Err(e),
+    }
 }
 
 #[ffx_plugin("emu.experimental", TargetCollectionProxy = "daemon::protocol")]

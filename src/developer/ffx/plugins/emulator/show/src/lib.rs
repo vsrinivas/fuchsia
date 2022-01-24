@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use anyhow::{anyhow, Result};
+use anyhow::{anyhow, Context, Result};
 use ffx_core::ffx_plugin;
 use ffx_emulator_common::config::FfxConfigWrapper;
 use ffx_emulator_engines::{get_instance_dir, serialization::read_from_disk};
@@ -17,15 +17,14 @@ async fn show_internal(ffx_config: &FfxConfigWrapper, name: &str) -> Result<()> 
             name
         ))
     } else {
-        let engine = read_from_disk(&instance_dir);
-        if let Ok(engine) = engine {
-            engine.show();
-            Ok(())
-        } else {
-            Err(anyhow!(
-                "Couldn't read the emulator information from disk. \
-                    The file was likely corrupted or removed."
-            ))
+        let engine = read_from_disk(&instance_dir)
+            .context("Couldn't read the emulator information from disk.");
+        match engine {
+            Ok(engine) => {
+                engine.show();
+                Ok(())
+            }
+            Err(e) => Err(e),
         }
     }
 }
