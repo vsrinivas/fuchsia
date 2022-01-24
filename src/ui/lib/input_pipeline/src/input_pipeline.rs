@@ -474,6 +474,7 @@ mod tests {
         fuchsia_async as fasync, fuchsia_zircon as zx,
         futures::channel::mpsc::Sender,
         futures::FutureExt,
+        pretty_assertions::assert_eq,
         rand::Rng,
         std::collections::HashSet,
         vfs::{

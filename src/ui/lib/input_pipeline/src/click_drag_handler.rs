@@ -353,7 +353,7 @@ impl ClickDragHandler {
 
 #[cfg(test)]
 mod tests {
-    use {super::*, maplit::hashset, test_case::test_case};
+    use {super::*, maplit::hashset, pretty_assertions::assert_eq, test_case::test_case};
 
     const DEVICE_DESCRIPTOR: input_device::InputDeviceDescriptor =
         input_device::InputDeviceDescriptor::Mouse(mouse_binding::MouseDeviceDescriptor {
@@ -504,7 +504,7 @@ mod tests {
         // Intermediate values verified by
         // * button_down_is_passed_through_when_no_button_was_previously_clicked()
         handler.clone().handle_unhandled_input_event(button_down_event).await;
-        assert_eq!(
+        pretty_assertions::assert_eq!(
             handler.clone().handle_unhandled_input_event(move_event.clone()).await.as_slice(),
             [move_event.into()]
         );
@@ -658,7 +658,7 @@ mod tests {
         // * button_down_then_small_motion_yields_no_move_events()
         handler.clone().handle_unhandled_input_event(button_down_event).await;
         handler.clone().handle_unhandled_input_event(first_move_event.clone()).await;
-        assert_eq!(
+        pretty_assertions::assert_eq!(
             handler.clone().handle_unhandled_input_event(second_move_event).await.as_slice(),
             []
         );

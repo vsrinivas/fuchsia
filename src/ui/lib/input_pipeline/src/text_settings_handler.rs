@@ -158,6 +158,7 @@ mod tests {
     use fidl_fuchsia_ui_input3;
     use fuchsia_async as fasync;
     use fuchsia_zircon as zx;
+    use pretty_assertions::assert_eq;
     use std::convert::TryFrom as _;
 
     fn input_event_from(

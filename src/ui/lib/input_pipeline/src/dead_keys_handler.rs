@@ -749,6 +749,7 @@ mod tests {
     use crate::testing_utilities;
     use fidl_fuchsia_input::Key;
     use fidl_fuchsia_ui_input3::{KeyEventType, KeyMeaning};
+    use pretty_assertions::assert_eq;
     use std::convert::TryFrom as _;
 
     // Creates a new keyboard event for testing.

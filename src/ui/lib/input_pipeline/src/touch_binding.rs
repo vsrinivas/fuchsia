@@ -410,6 +410,7 @@ mod tests {
         crate::utils::Position,
         fuchsia_async as fasync,
         futures::StreamExt,
+        pretty_assertions::assert_eq,
     };
 
     #[fasync::run_singlethreaded(test)]

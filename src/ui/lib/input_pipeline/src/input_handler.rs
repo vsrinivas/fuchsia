@@ -86,6 +86,7 @@ mod tests {
             Handled, InputDeviceDescriptor, InputDeviceEvent, InputEvent, UnhandledInputEvent,
         },
         futures::{channel::mpsc, StreamExt as _},
+        pretty_assertions::assert_eq,
         test_case::test_case,
     };
 
@@ -147,7 +148,7 @@ mod tests {
             handled: Handled::No,
         };
         let expected_propagated_event = input_event.clone().into_handled_if(mark_events_handled);
-        assert_eq!(
+        pretty_assertions::assert_eq!(
             handler.clone().handle_input_event(input_event).await.as_slice(),
             [expected_propagated_event]
         );

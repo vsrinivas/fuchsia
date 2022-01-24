@@ -562,6 +562,7 @@ mod tests {
         futures::{channel::mpsc, StreamExt},
         maplit::hashmap,
         matches::assert_matches,
+        pretty_assertions::assert_eq,
         std::collections::HashSet,
         test_case::test_case,
     };
@@ -910,7 +911,7 @@ mod tests {
         let (handle_result, _, _) = futures::join!(handle_event_fut, registry_fut, device_fut);
         match receiver.next().await {
             Some(CursorMessage::SetPosition(position)) => {
-                assert_eq!(position, expected_position);
+                pretty_assertions::assert_eq!(position, expected_position);
             }
             Some(CursorMessage::SetVisibility(_)) => {
                 panic!("Received unexpected cursor visibility update.")
@@ -1121,7 +1122,7 @@ mod tests {
         let (handle_result, _, _) = futures::join!(handle_event_fut, registry_fut, device_fut);
         match receiver.next().await {
             Some(CursorMessage::SetPosition(position)) => {
-                assert_eq!(position, expected_position);
+                pretty_assertions::assert_eq!(position, expected_position);
             }
             Some(CursorMessage::SetVisibility(_)) => {
                 panic!("Received unexpected cursor visibility update.")
@@ -1525,7 +1526,9 @@ mod tests {
 
         // Touch event should hide the cursor.
         match receiver.next().await {
-            Some(CursorMessage::SetVisibility(visible)) => assert_eq!(visible, false),
+            Some(CursorMessage::SetVisibility(visible)) => {
+                assert_eq!(visible, false)
+            }
             _ => panic!("Touch event did not hide the cursor."),
         };
     }

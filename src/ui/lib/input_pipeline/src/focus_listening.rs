@@ -72,6 +72,7 @@ mod tests {
         super::*, fidl_fuchsia_ui_focus as fidl_ui_focus,
         fidl_fuchsia_ui_shortcut as fidl_ui_shortcut, fidl_fuchsia_ui_views as fidl_ui_views,
         fuchsia_scenic as scenic, fuchsia_zircon::AsHandleRef, futures::join,
+        pretty_assertions::assert_eq,
     };
 
     /// Listens for a ViewRef from a view focus change request on `request_stream`.

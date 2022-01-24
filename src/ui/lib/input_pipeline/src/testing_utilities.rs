@@ -14,10 +14,6 @@ use {
     fidl_fuchsia_ui_input3 as fidl_ui_input3, fidl_fuchsia_ui_pointerinjector as pointerinjector,
     fuchsia_zircon as zx,
     futures::FutureExt as _,
-    itertools::{
-        EitherOrBoth::{Both, Left, Right},
-        Itertools,
-    },
     maplit::hashmap,
     matches::assert_matches,
     std::collections::HashMap,
@@ -53,33 +49,6 @@ pub fn create_keyboard_input_report(
         trace_id: None,
         ..fidl_input_report::InputReport::EMPTY
     }
-}
-
-/// Produces a string diff of two sequences.  Useful for test output printing.
-///
-/// The debug format for the input events is kind of long, so some help with
-/// diffing is most welcome.  The output format is simplistic, but mostly enough
-/// for spotting small differences quickly.
-pub fn diff_input_events<T>(one: &[T], other: &[T]) -> String
-where
-    T: std::cmp::PartialEq + std::fmt::Debug,
-{
-    let diff: String = one
-        .iter()
-        .zip_longest(other)
-        .map(|result| match result {
-            Both(a, b) => {
-                if a == b {
-                    format!("  (_, _)\n")
-                } else {
-                    format!("  (\n    left: {:?},\n    right: {:?}\n  )\n", a, b)
-                }
-            }
-            Left(a) => format!("  ({:?}, ?)\n", a),
-            Right(b) => format!("  (?, {:?})\n", b),
-        })
-        .collect();
-    format!("[\n{}]", diff)
 }
 
 /// Creates a new [input_device::InputEvent] from the provided components.
@@ -601,7 +570,9 @@ macro_rules! assert_input_report_sequence_generates_events {
         for expected_event in $expected_events {
             let input_event = event_receiver.next().await;
             match input_event {
-                Some(received_event) => assert_eq!(expected_event, received_event),
+                Some(received_event) => {
+                    pretty_assertions::assert_eq!(expected_event, received_event)
+                }
                 _ => assert!(false),
             };
         }
@@ -689,7 +660,7 @@ macro_rules! assert_input_event_sequence_generates_media_buttons_events {
                         responder,
                     }) => {
                         let expected_command = expected_command_iter.next().unwrap();
-                        assert_eq!(event, expected_command);
+                        pretty_assertions::assert_eq!(event, expected_command);
                         let _ = responder.send();
 
                         // All the expected events have been received, so make sure no more

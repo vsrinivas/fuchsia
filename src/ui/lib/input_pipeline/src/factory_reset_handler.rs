@@ -394,6 +394,7 @@ mod tests {
         fuchsia_async::TestExecutor,
         matches::assert_matches,
         pin_utils::pin_mut,
+        pretty_assertions::assert_eq,
         std::task::Poll,
     };
 

@@ -192,6 +192,7 @@ mod tests {
         futures::StreamExt,
         maplit::hashmap,
         matches::assert_matches,
+        pretty_assertions::assert_eq,
     };
 
     const SCENIC_COMPOSITOR_ID: u32 = 1;

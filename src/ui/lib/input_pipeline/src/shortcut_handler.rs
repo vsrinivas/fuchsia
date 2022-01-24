@@ -101,7 +101,7 @@ mod tests {
     use {
         super::*, crate::keyboard_binding, crate::testing_utilities,
         fidl_fuchsia_ui_input3 as fidl_ui_input3, fuchsia_async as fasync, fuchsia_zircon as zx,
-        futures::StreamExt, matches::assert_matches,
+        futures::StreamExt, matches::assert_matches, pretty_assertions::assert_eq,
     };
 
     /// Creates an [`ShortcutHandler`] for tests.

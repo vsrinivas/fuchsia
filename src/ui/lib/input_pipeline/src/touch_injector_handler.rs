@@ -391,6 +391,7 @@ mod tests {
         futures::StreamExt,
         maplit::hashmap,
         matches::assert_matches,
+        pretty_assertions::assert_eq,
         std::convert::TryFrom as _,
     };
 

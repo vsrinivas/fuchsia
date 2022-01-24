@@ -423,6 +423,7 @@ mod tests {
     use fuchsia_zircon as zx;
     use futures::Future;
     use pin_utils::pin_mut;
+    use pretty_assertions::assert_eq;
     use std::task::Poll;
 
     // Default autorepeat settings used for test.  If these settings are changed,
@@ -495,8 +496,7 @@ mod tests {
         wait_for_duration(SLACK_DURATION).await;
         assert_eq!(
             remove_event_time(output.take(expected.len()).collect::<Vec<InputEvent>>().await),
-            expected,
-            "left => actual; right => expected"
+            expected
         );
     }
 

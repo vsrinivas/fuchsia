@@ -65,6 +65,7 @@ rustc_library("input_pipeline") {
 
   test_deps = [
     "//src/intl:icudtl",
+    "//third_party/rust_crates:pretty_assertions",
     "//third_party/rust_crates:test-case",
   ]
 

@@ -308,6 +308,7 @@ mod tests {
         futures::StreamExt,
         maplit::hashmap,
         matches::assert_matches,
+        pretty_assertions::assert_eq,
     };
 
     const SCENIC_COMPOSITOR_ID: u32 = 1;
@@ -808,7 +809,9 @@ mod tests {
 
         // Touch event should hide the cursor.
         match receiver.next().await {
-            Some(CursorMessage::SetVisibility(visible)) => assert_eq!(visible, false),
+            Some(CursorMessage::SetVisibility(visible)) => {
+                assert_eq!(visible, false)
+            }
             _ => assert!(false),
         };
     }

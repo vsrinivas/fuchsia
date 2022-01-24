@@ -101,6 +101,7 @@ mod tests {
     use super::*;
     use crate::{consumer_controls_binding, testing_utilities};
     use fuchsia_async as fasync;
+    use pretty_assertions::assert_eq;
     use std::convert::TryFrom as _;
 
     // A mod-specific version of `testing_utilities::create_keyboard_event`.
@@ -239,11 +240,7 @@ mod tests {
                     .collect();
                 actual.append(&mut result);
             }
-            assert_eq!(
-                test.expected, actual,
-                "\n\texpected: {:?}\n\tactual: {:?}\n\ttest: {:?}",
-                &test.expected, &actual, &test
-            );
+            assert_eq!(test.expected, actual);
         }
     }
 }

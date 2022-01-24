@@ -345,7 +345,7 @@ impl InputEvent {
 mod tests {
     use {
         super::*, fidl::endpoints::spawn_stream_handler, matches::assert_matches,
-        std::convert::TryFrom as _, test_case::test_case,
+        pretty_assertions::assert_eq, std::convert::TryFrom as _, test_case::test_case,
     };
 
     #[test]
@@ -704,7 +704,7 @@ mod tests {
             event_time: 1,
             handled: initially_handled,
         };
-        assert_eq!(event.into_handled_if(true).handled, Handled::Yes);
+        pretty_assertions::assert_eq!(event.into_handled_if(true).handled, Handled::Yes);
     }
 
     #[test_case(Handled::No; "initially not handled")]
@@ -716,7 +716,7 @@ mod tests {
             event_time: 1,
             handled: initially_handled.clone(),
         };
-        assert_eq!(event.into_handled_if(false).handled, initially_handled);
+        pretty_assertions::assert_eq!(event.into_handled_if(false).handled, initially_handled);
     }
 
     #[test_case(Handled::No; "initially not handled")]
@@ -728,6 +728,6 @@ mod tests {
             event_time: 1,
             handled: initially_handled,
         };
-        assert_eq!(event.into_handled().handled, Handled::Yes);
+        pretty_assertions::assert_eq!(event.into_handled().handled, Handled::Yes);
     }
 }

@@ -207,11 +207,7 @@ mod tests {
             ..
         })) = request_stream.next().await
         {
-            assert_eq!(
-                &key_event,
-                expected_events_iter.next().unwrap(),
-                "left == actual; right == expected"
-            );
+            pretty_assertions::assert_eq!(&key_event, expected_events_iter.next().unwrap());
 
             // All the expected events have been received, so make sure no more events
             // are present before returning.

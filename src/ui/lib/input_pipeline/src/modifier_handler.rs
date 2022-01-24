@@ -74,10 +74,10 @@ mod tests {
     use super::*;
     use crate::input_device::{EventTime, InputDeviceDescriptor, InputDeviceEvent, InputEvent};
     use crate::keyboard_binding::KeyboardEvent;
-    use crate::testing_utilities::diff_input_events;
     use fidl_fuchsia_input::Key;
     use fidl_fuchsia_ui_input3::{KeyEventType, LockState, Modifiers};
     use fuchsia_async as fasync;
+    use pretty_assertions::assert_eq;
 
     fn get_unhandled_input_event(event: KeyboardEvent) -> UnhandledInputEvent {
         UnhandledInputEvent {
@@ -155,7 +155,7 @@ mod tests {
         .map(InputEvent::from)
         .collect::<Vec<_>>();
 
-        assert_eq!(expected, result, "diff:\n{}", diff_input_events(&expected, &result));
+        assert_eq!(expected, result);
     }
 
     // CapsLock  """"""\______/"""""""""""""""""""
@@ -209,6 +209,6 @@ mod tests {
         ])
         .map(InputEvent::from)
         .collect::<Vec<_>>();
-        assert_eq!(expected, result, "\n\ndiff:\n{}", diff_input_events(&expected, &result));
+        assert_eq!(expected, result);
     }
 }
