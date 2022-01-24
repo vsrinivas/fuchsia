@@ -32,5 +32,10 @@
             from: "parent",
             to: "#test_manager",
         },
+        {
+            storage: "tmp",
+            from: "parent",
+            to: "#test_manager",
+        },
     ],
 }

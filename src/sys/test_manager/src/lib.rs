@@ -12,7 +12,7 @@ use {
     cm_rust,
     diagnostics_bridge::ArchiveReaderManager,
     fdiagnostics::ArchiveAccessorProxy,
-    fidl::endpoints::{create_proxy, ClientEnd},
+    fidl::endpoints::{create_endpoints, create_proxy, ClientEnd},
     fidl::prelude::*,
     fidl_fuchsia_component_decl as fdecl,
     fidl_fuchsia_component_test::Capability2 as RBCapability,
@@ -259,27 +259,62 @@ impl TestRunBuilder {
         }
     }
 
-    async fn run(self, controller: RunControllerRequestStream, test_map: Arc<TestMap>) {
+    async fn run(
+        self,
+        controller: RunControllerRequestStream,
+        debug_controller: ftest_internal::DebugDataSetControllerProxy,
+        debug_iterator: ClientEnd<ftest_manager::DebugDataIteratorMarker>,
+        test_map: Arc<TestMap>,
+    ) {
         let (stop_sender, mut stop_recv) = oneshot::channel::<()>();
         let (event_sender, event_recv) = mpsc::channel::<RunEvent>(16);
-        let task = fuchsia_async::Task::spawn(async move {
+
+        let debug_event_fut = send_debug_data_if_produced(
+            debug_controller.take_event_stream(),
+            debug_iterator,
+            event_sender.clone(),
+        );
+
+        // Generate a random number in an attempt to prevent realm name collisions between runs.
+        let run_id: u32 = rand::random();
+        let run_suites_fut = async move {
             // run test suites serially for now
-            for suite in self.suites {
+            for (suite_idx, suite) in self.suites.into_iter().enumerate() {
                 // only check before running the test. We should complete the test run for
                 // running tests, if stop is called.
                 if let Ok(Some(())) = stop_recv.try_recv() {
                     break;
                 }
-                run_single_suite(suite, test_map.clone()).await;
+                let instance_name = format!("{:?}-{:?}", run_id, suite_idx);
+                run_single_suite(suite, &debug_controller, &instance_name, test_map.clone()).await;
             }
+            debug_controller
+                .finish()
+                .unwrap_or_else(|e| warn!("Error finishing debug data set: {:?}", e));
 
             // Collect run artifacts
-            let mut debug_tasks = vec![];
-            debug_tasks.push(send_kernel_debug_data(event_sender.clone()));
-            join_all(debug_tasks).await;
+            let mut kernel_debug_tasks = vec![];
+            kernel_debug_tasks.push(send_kernel_debug_data(event_sender.clone()));
+            join_all(kernel_debug_tasks).await;
+        };
+        let task = fuchsia_async::Task::spawn(async move {
+            futures::future::join(debug_event_fut, run_suites_fut).await;
         });
 
         Self::run_controller(controller, task, stop_sender, event_recv).await;
+    }
+}
+
+async fn send_debug_data_if_produced(
+    mut controller_events: ftest_internal::DebugDataSetControllerEventStream,
+    debug_iterator: ClientEnd<ftest_manager::DebugDataIteratorMarker>,
+    mut event_sender: mpsc::Sender<RunEvent>,
+) {
+    match controller_events.next().await {
+        Some(Ok(ftest_internal::DebugDataSetControllerEvent::OnDebugDataProduced {})) => {
+            let _ = event_sender.send(RunEvent::debug_data(debug_iterator).into()).await;
+        }
+        Some(Err(_)) | None => (),
     }
 }
 
@@ -295,7 +330,7 @@ async fn send_kernel_debug_data(mut event_sender: mpsc::Sender<RunEvent>) {
                     name: "zircon.elf.profraw".to_string(),
                     contents,
                 }]);
-                let _ = event_sender.send(RunEvent::kernel_profile(client).into()).await;
+                let _ = event_sender.send(RunEvent::debug_data(client).into()).await;
                 task.await;
             }
             Err(e) => {
@@ -408,7 +443,7 @@ fn concat_suite_status(initial: SuiteStatus, new: SuiteStatus) -> SuiteStatus {
 }
 
 enum RunEventPayload {
-    KernelProfile(ClientEnd<DebugDataIteratorMarker>),
+    DebugData(ClientEnd<DebugDataIteratorMarker>),
 }
 
 struct RunEvent {
@@ -419,7 +454,7 @@ struct RunEvent {
 impl Into<FidlRunEvent> for RunEvent {
     fn into(self) -> FidlRunEvent {
         match self.payload {
-            RunEventPayload::KernelProfile(client) => FidlRunEvent {
+            RunEventPayload::DebugData(client) => FidlRunEvent {
                 timestamp: Some(self.timestamp),
                 payload: Some(FidlRunEventPayload::Artifact(ftest_manager::Artifact::DebugData(
                     client,
@@ -431,10 +466,10 @@ impl Into<FidlRunEvent> for RunEvent {
 }
 
 impl RunEvent {
-    fn kernel_profile(client: ClientEnd<DebugDataIteratorMarker>) -> Self {
+    fn debug_data(client: ClientEnd<DebugDataIteratorMarker>) -> Self {
         Self {
             timestamp: zx::Time::get_monotonic().into_nanos(),
-            payload: RunEventPayload::KernelProfile(client),
+            payload: RunEventPayload::DebugData(client),
         }
     }
 }
@@ -856,7 +891,12 @@ impl Suite {
     }
 }
 
-async fn run_single_suite(suite: Suite, test_map: Arc<TestMap>) {
+async fn run_single_suite(
+    suite: Suite,
+    debug_controller: &ftest_internal::DebugDataSetControllerProxy,
+    instance_name: &str,
+    test_map: Arc<TestMap>,
+) {
     let (mut sender, recv) = mpsc::channel(1024);
     let (stop_sender, stop_recv) = oneshot::channel::<()>();
     let mut maybe_instance = None;
@@ -865,29 +905,40 @@ async fn run_single_suite(suite: Suite, test_map: Arc<TestMap>) {
         suite;
 
     let run_test_fut = async {
-        let instance_result = facet::get_suite_facets(&test_url, &resolver)
-            .and_then(|facets| {
-                RunningSuite::launch(
-                    &test_url,
-                    facets,
-                    test_map,
-                    resolver.clone(),
-                    above_root_capabilities_for_test,
-                )
-            })
-            .await;
-        match instance_result {
+        let facets = match facet::get_suite_facets(&test_url, &resolver).await {
+            Ok(facets) => facets,
+            Err(e) => {
+                sender.send(Err(e.into())).await.unwrap();
+                return;
+            }
+        };
+        let realm_moniker = format!("./{}:{}", facets.collection, instance_name);
+        if let Err(e) = debug_controller.add_realm(&realm_moniker, &test_url).await {
+            warn!("Failed to add realm {} to debug data: {:?}", realm_moniker, e);
+        }
+        match RunningSuite::launch(
+            &test_url,
+            facets,
+            Some(instance_name),
+            test_map,
+            resolver,
+            above_root_capabilities_for_test,
+        )
+        .await
+        {
             Ok(instance) => {
                 let instance_ref = maybe_instance.insert(instance);
                 instance_ref.run_tests(options, sender, stop_recv).await;
             }
-            Err(e) => sender.send(Err(e.into())).await.unwrap(),
+            Err(e) => {
+                let _ = debug_controller.remove_realm(&realm_moniker);
+                sender.send(Err(e.into())).await.unwrap();
+            }
         }
     };
     let (run_test_remote, run_test_handle) = run_test_fut.remote_handle();
 
     let controller_fut = Suite::run_controller(&mut controller, stop_sender, run_test_handle, recv);
-    // Okay to ignore error in the run test result as aborted is expected when Kill is called
     let ((), controller_ret) = futures::future::join(run_test_remote, controller_fut).await;
 
     if let Err(e) = controller_ret {
@@ -912,6 +963,7 @@ pub async fn run_test_manager(
     mut stream: ftest_manager::RunBuilderRequestStream,
     test_map: Arc<TestMap>,
     resolver: Arc<ComponentResolverProxy>,
+    debug_data_controller: Arc<ftest_internal::DebugDataControllerProxy>,
     above_root_capabilities_for_test: Arc<AboveRootCapabilitiesForTest>,
 ) -> Result<(), TestManagerError> {
     let mut builder = TestRunBuilder { suites: vec![] };
@@ -952,8 +1004,13 @@ pub async fn run_test_manager(
                         break;
                     }
                 };
-                builder.run(controller, test_map).await;
-                // clients needs to reconnect to run new tests.
+                let (debug_set_controller, set_controller_server) =
+                    create_proxy::<ftest_internal::DebugDataSetControllerMarker>().unwrap();
+                let (debug_iterator, iterator_server) =
+                    create_endpoints::<ftest_manager::DebugDataIteratorMarker>().unwrap();
+                debug_data_controller.new_set(iterator_server, set_controller_server).unwrap();
+                builder.run(controller, debug_set_controller, debug_iterator, test_map).await;
+                // clients should reconnect to run new tests.
                 break;
             }
         }
@@ -983,6 +1040,7 @@ pub async fn run_test_manager_query_server(
                     RunningSuite::launch(
                         &test_url,
                         facets,
+                        None,
                         test_map.clone(),
                         resolver.clone(),
                         above_root_capabilities_for_test.clone(),
@@ -1128,6 +1186,7 @@ impl RunningSuite {
     async fn launch(
         test_url: &str,
         facets: facet::SuiteFacets,
+        instance_name: Option<&str>,
         test_map: Arc<TestMap>,
         resolver: Arc<ComponentResolverProxy>,
         above_root_capabilities_for_test: Arc<AboveRootCapabilitiesForTest>,
@@ -1154,7 +1213,11 @@ impl RunningSuite {
         )
         .await
         .map_err(LaunchTestError::InitializeTestRealm)?;
-        let instance = builder.build().await.map_err(LaunchTestError::CreateTestRealm)?;
+        let instance = match instance_name {
+            None => builder.build().await,
+            Some(name) => builder.build_with_name(name).await,
+        }
+        .map_err(LaunchTestError::CreateTestRealm)?;
         let test_name = instance.root.child_name().to_string();
         test_map.insert(test_name.clone(), test_url.to_string());
         let test_map_clone = test_map.clone();

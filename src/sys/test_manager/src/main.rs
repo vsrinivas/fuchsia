@@ -4,7 +4,8 @@
 
 use {
     anyhow::Error,
-    fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync,
+    fidl_fuchsia_sys2 as fsys, fidl_fuchsia_test_internal as ftest_internal,
+    fuchsia_async as fasync,
     fuchsia_component::client::connect_to_protocol,
     fuchsia_component::server::ServiceFs,
     fuchsia_zircon as zx,
@@ -59,17 +60,23 @@ async fn main() -> Result<(), Error> {
         connect_to_protocol::<fsys::ComponentResolverMarker>()
             .expect("Cannot connect to component resolver"),
     );
+    let debug_data_controller = Arc::new(
+        connect_to_protocol::<ftest_internal::DebugDataControllerMarker>()
+            .expect("Cannnot connect to debug data control"),
+    );
     let resolver_clone = resolver.clone();
     fs.dir("svc")
         .add_fidl_service(move |stream| {
             let test_map = test_map_clone2.clone();
             let routing_info_for_task = routing_info_clone.clone();
             let resolver = resolver.clone();
+            let debug_data_controller = debug_data_controller.clone();
             fasync::Task::spawn(async move {
                 test_manager_lib::run_test_manager(
                     stream,
                     test_map.clone(),
                     resolver,
+                    debug_data_controller,
                     routing_info_for_task,
                 )
                 .await

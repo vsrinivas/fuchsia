@@ -13,7 +13,7 @@ use {
     fuchsia_component::client,
     futures::{channel::mpsc, prelude::*},
     pretty_assertions::assert_eq,
-    test_manager_test_lib::{GroupRunEventByTestCase, RunEvent, TestBuilder},
+    test_manager_test_lib::{GroupRunEventByTestCase, RunEvent, TestBuilder, TestRunEventPayload},
 };
 
 async fn connect_test_manager() -> Result<ftest_manager::RunBuilderProxy, Error> {
@@ -663,6 +663,50 @@ async fn custom_artifact_test() {
     .group_by_test_case_unordered();
 
     assert_eq!(&expected_events, &events);
+}
+
+#[fuchsia_async::run_singlethreaded(test)]
+async fn debug_data_test() {
+    let test_url = "fuchsia-pkg://fuchsia.com/test_manager_test#meta/debug_data_write_test.cm";
+
+    let builder = TestBuilder::new(
+        connect_test_manager().await.expect("cannot connect to run builder proxy"),
+    );
+    let suite_instance = builder
+        .add_suite(test_url, default_run_option())
+        .await
+        .expect("Cannot create suite instance");
+    let (run_events_result, suite_events_result) =
+        futures::future::join(builder.run(), collect_suite_events(suite_instance)).await;
+
+    let suite_events = suite_events_result.unwrap().0;
+    let expected_events = vec![
+        RunEvent::suite_started(),
+        RunEvent::case_found("publish_debug_data"),
+        RunEvent::case_started("publish_debug_data"),
+        RunEvent::case_stopped("publish_debug_data", CaseStatus::Passed),
+        RunEvent::case_finished("publish_debug_data"),
+        RunEvent::suite_stopped(SuiteStatus::Passed),
+    ];
+
+    assert_eq!(
+        suite_events.into_iter().group_by_test_case_unordered(),
+        expected_events.into_iter().group_by_test_case_unordered(),
+    );
+
+    let test_run_events = run_events_result.unwrap();
+    // There may be a number of files in debug data due to the processing done
+    // in debug data. In addition, the names of the files are set by some libraries
+    // which we aren't concerned about. So here, we'll just check that a file that contains
+    // the content our test wrote exists.
+    assert!(
+        test_run_events.iter().any(|run_event| {
+            let TestRunEventPayload::DebugData { contents, .. } = &run_event.payload;
+            contents == "Debug data from test\n"
+        }),
+        "Actual events: {:?}",
+        test_run_events
+    );
 }
 
 #[fuchsia_async::run_singlethreaded(test)]

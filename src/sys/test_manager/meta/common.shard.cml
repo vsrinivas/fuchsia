@@ -67,7 +67,7 @@
         },
         {
             name: "debug_data",
-            url: "fuchsia-pkg://fuchsia.com/test_manager#meta/debug_data.cm",
+            url: "fuchsia-pkg://fuchsia.com/test_manager#meta/debug_data_rust.cm",
         },
     ],
     collections: [
@@ -134,6 +134,10 @@
             rights: [ "r*" ],
             path: "/kernel_data",
         },
+        {
+            protocol: "fuchsia.test.internal.DebugDataController",
+            from: "#debug_data",
+        },
     ],
     offer: [
         {
@@ -156,11 +160,6 @@
         {
             protocol: [ "fuchsia.sys2.EventSource" ],
             from: "parent",
-            to: "#debug_data",
-        },
-        {
-            protocol: [ "fuchsia.test.internal.Info" ],
-            from: "self",
             to: "#debug_data",
         },
 
@@ -256,6 +255,16 @@
             from: "framework",
             to: "#debug_data",
             filter: { name: "fuchsia.debugdata.DebugData" },
+        },
+        {
+            event: "started",
+            from: "framework",
+            to: "#debug_data",
+        },
+        {
+            event: "destroyed",
+            from: "framework",
+            to: "#debug_data",
         },
         {
             protocol: "fuchsia.diagnostics.ArchiveAccessor",

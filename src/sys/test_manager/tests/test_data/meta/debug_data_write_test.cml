@@ -1,0 +1,24 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [
+        "//src/sys/test_runners/rust/default.shard.cml",
+        "syslog/client.shard.cml",
+    ],
+    program: {
+        binary: "bin/debug_data_write_test",
+    },
+    use: [
+        {
+            // Note that tests normally access debug data via a debug
+            // capability injected into the environment. Here we use it
+            // as a normal capability as it is not possible to enable debug
+            // capabilities for test_manager_for_test. See test_manager_for_test
+            // for more details.
+            protocol: "fuchsia.debugdata.DebugData",
+            from: "parent",
+            path: "/svc/fuchsia.debugdata.DebugDataForTest",
+        },
+    ],
+}

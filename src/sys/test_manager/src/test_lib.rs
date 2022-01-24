@@ -5,7 +5,7 @@
 //! This crate provides helper functions for testing architecture tests.
 
 use {
-    anyhow::{Context as _, Error},
+    anyhow::{bail, Context as _, Error},
     fidl_fuchsia_io as fio,
     fidl_fuchsia_test_manager::{
         self as ftest_manager, SuiteControllerProxy, SuiteEvent as FidlSuiteEvent,
@@ -46,18 +46,75 @@ impl TestBuilder {
         Ok(SuiteRunInstance { controller_proxy: controller_proxy.into() })
     }
 
-    /// Runs all tests to completion.
-    pub async fn run(self) -> Result<(), Error> {
+    /// Runs all tests to completion and collects events.
+    pub async fn run(self) -> Result<Vec<TestRunEvent>, Error> {
         let (controller_proxy, controller) =
             fidl::endpoints::create_proxy().context("Cannot create proxy")?;
         self.proxy.build(controller).context("Error starting tests")?;
         // wait for test to end
-        let v = controller_proxy.get_events().await.context("Cannot wait for tests to end")?;
-        if v.len() != 0 {
-            return Err(anyhow::format_err!("The vector should have been empty, something wrong with test manager. Please file bug."));
+        let mut events = vec![];
+        loop {
+            let fidl_events = controller_proxy.get_events().await.context("Get run events")?;
+            if fidl_events.is_empty() {
+                break;
+            }
+            for fidl_event in fidl_events {
+                match fidl_event.payload.expect("Payload cannot be empty") {
+                    ftest_manager::RunEventPayload::Artifact(
+                        ftest_manager::Artifact::DebugData(iterator),
+                    ) => {
+                        let proxy = iterator.into_proxy().context("Create proxy")?;
+                        loop {
+                            let data = proxy.get_next().await?;
+                            if data.is_empty() {
+                                break;
+                            }
+                            for data_file in data {
+                                let file_proxy =
+                                    data_file.file.expect("File cannot be empty").into_proxy()?;
+                                events.push(TestRunEvent::debug_data(
+                                    fidl_event.timestamp,
+                                    data_file.name.expect("Name cannot be empty"),
+                                    io_util::read_file(&file_proxy)
+                                        .await
+                                        .context("Read debugdata file")?,
+                                ));
+                            }
+                        }
+                    }
+                    other => bail!("Expected only debug data run events but got {:?}", other),
+                }
+            }
         }
-        Ok(())
+        Ok(events)
     }
+}
+
+#[derive(PartialEq, Debug)]
+pub struct TestRunEvent {
+    pub timestamp: Option<i64>,
+    pub payload: TestRunEventPayload,
+}
+
+impl TestRunEvent {
+    pub fn debug_data<S: Into<String>, T: Into<String>>(
+        timestamp: Option<i64>,
+        filename: S,
+        contents: T,
+    ) -> Self {
+        Self {
+            timestamp,
+            payload: TestRunEventPayload::DebugData {
+                filename: filename.into(),
+                contents: contents.into(),
+            },
+        }
+    }
+}
+
+#[derive(PartialEq, Debug)]
+pub enum TestRunEventPayload {
+    DebugData { filename: String, contents: String },
 }
 
 /// Events produced by test suite.

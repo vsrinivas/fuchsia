@@ -87,6 +87,7 @@ rustc_library("lib") {
     "//third_party/rust_crates:glob",
     "//third_party/rust_crates:lazy_static",
     "//third_party/rust_crates:maplit",
+    "//third_party/rust_crates:rand",
     "//third_party/rust_crates:regex",
     "//third_party/rust_crates:serde_json",
     "//third_party/rust_crates:thiserror",
@@ -116,6 +117,7 @@ rustc_binary("bin") {
   deps = [
     ":lib",
     "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
+    "//sdk/fidl/fuchsia.test.internal:fuchsia.test.internal-rustc",
     "//src/lib/fuchsia",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
