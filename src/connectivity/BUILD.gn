@@ -34,7 +34,6 @@ group("tools") {
     "lowpan/tools",
     "network/mdns/bundles:utils",
     "network/net-cli",
-    "network/netdump",
     "network/tools",
     "overnet/overnetstack",
     "overnet/tools",

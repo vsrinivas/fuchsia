@@ -97,7 +97,6 @@ group("tests") {
     "mdns:tests",
     "net-cli:tests",
     "netcfg:tests",
-    "netdump:tests",
     "netstack:tests",
     "netstack3:tests",
     "testing:tests",
