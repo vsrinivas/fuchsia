@@ -113,7 +113,7 @@ fn read_only_read_no_status() {
             use futures::{FutureExt as _, StreamExt as _};
             // Make sure `open()` call is complete, before we start checking.
             check_event_recv.await.unwrap();
-            matches::assert_matches!(proxy.take_event_stream().next().now_or_never(), None);
+            assert_matches::assert_matches!(proxy.take_event_stream().next().now_or_never(), None);
         }
     })
     .coordinator(|mut controller| {

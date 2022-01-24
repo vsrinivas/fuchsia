@@ -349,7 +349,7 @@ mod test {
                 .expect("failed to send fake INVALID address removal reason event");
         }
 
-        matches::assert_matches!(
+        assert_matches::assert_matches!(
             state_stream.try_collect::<Vec<_>>().await,
             Err(AddressStateProviderError::AddressRemoved(got)) if got == REMOVAL_REASON_INVALID
         );
@@ -370,7 +370,7 @@ mod test {
 
         // Use collect rather than try_collect to ensure that we don't observe
         // multiple errors on this stream.
-        matches::assert_matches!(
+        assert_matches::assert_matches!(
             state_stream
                 .collect::<Vec<_>>()
                 .now_or_never()
@@ -394,7 +394,7 @@ mod test {
             fnet_interfaces_admin::InterfaceRemovedReason::BadPort;
         let ((), ()) = futures::future::join(
             async move {
-                matches::assert_matches!(
+                assert_matches::assert_matches!(
                     control.get_id().await,
                     Err(super::TerminalError::Terminal(EXPECTED_EVENT))
                 );
@@ -431,7 +431,7 @@ mod test {
         let control = super::Control::new(control);
         let ((), ()) = futures::future::join(
             async move {
-                matches::assert_matches!(
+                assert_matches::assert_matches!(
                     control.get_id().await,
                     Err(super::TerminalError::Fidl(fidl::Error::ClientRead(
                         zx::Status::PEER_CLOSED
@@ -469,14 +469,14 @@ mod test {
             .send_on_interface_removed(CLOSE_REASON)
             .expect("send terminal event");
         std::mem::drop(request_stream);
-        matches::assert_matches!(control.or_terminal_event_no_return(Ok(())), Ok(()));
-        matches::assert_matches!(
+        assert_matches::assert_matches!(control.or_terminal_event_no_return(Ok(())), Ok(()));
+        assert_matches::assert_matches!(
             control
                 .or_terminal_event_no_return(Err(fidl::Error::ClientWrite(zx::Status::INTERNAL))),
             Err(super::TerminalError::Fidl(fidl::Error::ClientWrite(zx::Status::INTERNAL)))
         );
         #[cfg(target_os = "fuchsia")]
-        matches::assert_matches!(
+        assert_matches::assert_matches!(
             control
                 .or_terminal_event_no_return(Err(fidl::Error::ClientRead(zx::Status::PEER_CLOSED))),
             Err(super::TerminalError::Terminal(CLOSE_REASON))
@@ -496,7 +496,7 @@ mod test {
             .send_on_interface_removed(CLOSE_REASON)
             .expect("send terminal event");
         std::mem::drop(request_stream);
-        matches::assert_matches!(
+        assert_matches::assert_matches!(
             control.wait_termination().await,
             super::TerminalError::Terminal(CLOSE_REASON)
         );

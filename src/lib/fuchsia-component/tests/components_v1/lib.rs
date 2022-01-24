@@ -8,6 +8,7 @@
 
 use {
     anyhow::{Context as _, Error},
+    assert_matches::assert_matches,
     fidl::endpoints::{create_proxy, ServerEnd, ServiceMarker},
     fidl_fuchsia_component_test::{
         CounterRequest, CounterRequestStream, CounterServiceMarker, CounterServiceRequest,
@@ -21,7 +22,6 @@ use {
     fuchsia_component::server::{ServiceFs, ServiceFsDir, ServiceObj},
     fuchsia_zircon::{self as zx, HandleBased as _},
     futures::{future::try_join, stream::TryStreamExt, FutureExt, StreamExt},
-    matches::assert_matches,
     std::{future::Future, path::Path, sync::atomic},
     vfs::{
         directory::entry::DirectoryEntry, execution_scope::ExecutionScope,

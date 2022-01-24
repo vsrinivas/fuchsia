@@ -247,9 +247,9 @@ fn multi_finger_tap(fingers: Option<Vec<Touch>>, time: u64) -> InputReport {
 #[cfg(test)]
 mod tests {
     use {
-        super::*, fidl::endpoints, fidl_fuchsia_ui_input::InputDeviceRequest,
-        fuchsia_async as fasync, futures::StreamExt, matches::assert_matches, std::task::Poll,
-        synthesizer::InputDevice as _,
+        super::*, assert_matches::assert_matches, fidl::endpoints,
+        fidl_fuchsia_ui_input::InputDeviceRequest, fuchsia_async as fasync, futures::StreamExt,
+        std::task::Poll, synthesizer::InputDevice as _,
     };
 
     #[fasync::run_until_stalled(test)]

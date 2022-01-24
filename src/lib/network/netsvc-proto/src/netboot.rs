@@ -290,7 +290,7 @@ mod tests {
 
     use super::*;
 
-    use matches::assert_matches;
+    use assert_matches::assert_matches;
     use packet::{InnerPacketBuilder as _, ParseBuffer as _, Serializer as _};
 
     #[test]

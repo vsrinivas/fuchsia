@@ -979,12 +979,15 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn test_svc_connector_svc_does_not_exist() -> Result<(), Error> {
         let req = new_protocol_connector::<ServiceAMarker>().context("error probing service")?;
-        matches::assert_matches!(req.exists().await.context("error checking service"), Ok(false));
+        assert_matches::assert_matches!(
+            req.exists().await.context("error checking service"),
+            Ok(false)
+        );
         let _: ServiceAProxy = req.connect().context("error connecting to service")?;
 
         let req = new_protocol_connector_at::<ServiceAMarker>(SVC_DIR)
             .context("error probing service at svc dir")?;
-        matches::assert_matches!(
+        assert_matches::assert_matches!(
             req.exists().await.context("error checking service at svc dir"),
             Ok(false)
         );
@@ -1010,14 +1013,17 @@ mod tests {
         );
 
         let req = new_protocol_connector_in_dir::<ServiceAMarker>(&dir_proxy);
-        matches::assert_matches!(
+        assert_matches::assert_matches!(
             req.exists().await.context("error probing invalid service"),
             Ok(false)
         );
         let _: ServiceAProxy = req.connect().context("error connecting to invalid service")?;
 
         let req = new_protocol_connector_in_dir::<ServiceBMarker>(&dir_proxy);
-        matches::assert_matches!(req.exists().await.context("error probing service"), Ok(true));
+        assert_matches::assert_matches!(
+            req.exists().await.context("error probing service"),
+            Ok(true)
+        );
         let _: ServiceBProxy = req.connect().context("error connecting to service")?;
 
         Ok(())

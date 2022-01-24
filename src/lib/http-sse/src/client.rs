@@ -93,6 +93,7 @@ pub enum ClientPollError {
 mod tests {
     use {
         super::*,
+        assert_matches::assert_matches,
         fuchsia_async::{self as fasync, net::TcpListener},
         fuchsia_hyper::new_https_client,
         futures::{
@@ -104,7 +105,6 @@ mod tests {
             service::{make_service_fn, service_fn},
             Response,
         },
-        matches::assert_matches,
         std::{
             convert::Infallible,
             net::{Ipv4Addr, SocketAddr},

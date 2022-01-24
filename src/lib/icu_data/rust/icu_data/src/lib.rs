@@ -233,7 +233,7 @@ impl Loader {
 
 #[cfg(test)]
 mod tests {
-    use {super::*, matches::assert_matches, rust_icu_uenum as uenum};
+    use {super::*, assert_matches::assert_matches, rust_icu_uenum as uenum};
 
     // [START loader_example]
     #[test]

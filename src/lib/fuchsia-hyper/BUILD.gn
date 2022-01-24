@@ -26,7 +26,7 @@ rustc_library("fuchsia-hyper") {
   ]
   test_deps = [
     "//third_party/rust_crates:anyhow",
-    "//third_party/rust_crates:matches",
+    "//third_party/rust_crates:assert_matches",
     "//third_party/rust_crates:rand",
     "//third_party/rust_crates:webpki",
   ]

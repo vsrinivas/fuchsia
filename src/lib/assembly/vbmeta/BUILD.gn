@@ -27,7 +27,7 @@ if (is_host) {
 
     test_deps = [
       "//src/lib/assembly/test_keys",
-      "//third_party/rust_crates:matches",
+      "//third_party/rust_crates:assert_matches",
     ]
 
     sources = [

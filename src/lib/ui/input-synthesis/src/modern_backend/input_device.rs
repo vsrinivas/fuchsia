@@ -352,9 +352,9 @@ mod tests {
                 utils::{make_input_device_proxy_and_struct, make_keyboard_descriptor},
                 *,
             },
+            assert_matches::assert_matches,
             fidl_fuchsia_input_report::InputReportsReaderMarker,
             futures::{pin_mut, task::Poll},
-            matches::assert_matches,
         };
 
         #[fasync::run_until_stalled(test)]
@@ -441,7 +441,7 @@ mod tests {
                 *,
             },
             crate::usages::Usages,
-            matches::assert_matches,
+            assert_matches::assert_matches,
             std::convert::TryInto as _,
         };
 
@@ -878,7 +878,7 @@ mod tests {
         };
 
         mod yields_ok_after_all_reports_are_sent_to_input_reports_reader {
-            use {super::*, matches::assert_matches};
+            use {super::*, assert_matches::assert_matches};
 
             #[test]
             fn if_device_request_channel_was_closed() {
@@ -934,7 +934,7 @@ mod tests {
 
         mod yields_err_if_peer_closed_device_channel_without_calling_get_input_reports_reader {
             use super::*;
-            use matches::assert_matches;
+            use assert_matches::assert_matches;
 
             #[test]
             fn if_reports_were_available() {
@@ -967,7 +967,7 @@ mod tests {
 
         mod is_pending_if_peer_has_device_channel_open_and_has_not_called_get_input_reports_reader {
             use super::*;
-            use matches::assert_matches;
+            use assert_matches::assert_matches;
 
             #[test]
             fn if_reports_were_available() {
@@ -1001,7 +1001,7 @@ mod tests {
 
         mod is_pending_if_peer_has_not_read_any_reports_when_a_report_is_available {
             use super::*;
-            use matches::assert_matches;
+            use assert_matches::assert_matches;
 
             #[test]
             fn if_device_request_channel_is_open() {
@@ -1035,8 +1035,8 @@ mod tests {
 
         mod is_pending_if_peer_did_not_read_all_reports {
             use {
-                super::*, fidl_fuchsia_input_report::MAX_DEVICE_REPORT_COUNT,
-                matches::assert_matches,
+                super::*, assert_matches::assert_matches,
+                fidl_fuchsia_input_report::MAX_DEVICE_REPORT_COUNT,
             };
 
             #[test]
@@ -1089,8 +1089,8 @@ mod tests {
     mod unsupported_fidl_requests {
         use {
             super::{utils::make_input_device_proxy_and_struct, *},
+            assert_matches::assert_matches,
             fidl_fuchsia_input_report::{FeatureReport, OutputReport},
-            matches::assert_matches,
         };
 
         #[fasync::run_until_stalled(test)]
@@ -1138,8 +1138,8 @@ mod tests {
     mod unsupported_use_cases {
         use {
             super::{utils::make_input_device_proxy_and_struct, *},
+            assert_matches::assert_matches,
             fidl_fuchsia_input_report::InputReportsReaderMarker,
-            matches::assert_matches,
         };
 
         #[fasync::run_until_stalled(test)]

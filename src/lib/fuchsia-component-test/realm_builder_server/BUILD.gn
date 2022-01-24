@@ -49,7 +49,7 @@ rustc_binary("realm_builder_server_bin") {
     "//third_party/rust_crates:tracing",
     "//third_party/rust_crates:url",
   ]
-  test_deps = [ "//third_party/rust_crates:matches" ]
+  test_deps = [ "//third_party/rust_crates:assert_matches" ]
 }
 
 fuchsia_component("realm_builder_server_component") {

@@ -450,13 +450,13 @@ mod tests {
     use {
         super::*,
         crate::directory::immutable::simple::simple,
+        assert_matches::assert_matches,
         fidl_fuchsia_io::{
             DirectoryMarker, NodeEvent, MODE_TYPE_DIRECTORY, MODE_TYPE_FILE, OPEN_FLAG_DESCRIBE,
             OPEN_FLAG_DIRECTORY, OPEN_RIGHT_READABLE,
         },
         fuchsia_async as fasync, fuchsia_zircon as zx,
         futures::prelude::*,
-        matches::assert_matches,
     };
 
     #[fasync::run_singlethreaded(test)]

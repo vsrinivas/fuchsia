@@ -2844,6 +2844,7 @@ fn get_capability_name(capability: &ftest::Capability) -> Result<String, Error> 
 mod tests {
     use {
         super::*,
+        assert_matches::assert_matches,
         fidl::endpoints::{
             create_endpoints, create_proxy, create_proxy_and_stream, create_request_stream,
             ClientEnd,
@@ -2851,7 +2852,6 @@ mod tests {
         fidl_fuchsia_io2 as fio2, fidl_fuchsia_mem as fmem, fuchsia_async as fasync,
         fuchsia_zircon as zx,
         maplit::hashmap,
-        matches::assert_matches,
         std::convert::TryInto,
         test_case::test_case,
     };

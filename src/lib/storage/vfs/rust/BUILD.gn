@@ -107,7 +107,7 @@ rustc_library("vfs") {
 
   test_deps = [
     "//src/testing/fidl:placeholders-rustc",
-    "//third_party/rust_crates:matches",
+    "//third_party/rust_crates:assert_matches",
   ]
 }
 

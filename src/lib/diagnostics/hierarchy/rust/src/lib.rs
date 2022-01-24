@@ -937,7 +937,7 @@ pub struct LinearHistogramParams<T: Clone> {
 
 #[cfg(test)]
 mod tests {
-    use {super::*, matches::assert_matches, selectors::VerboseError};
+    use {super::*, assert_matches::assert_matches, selectors::VerboseError};
 
     fn validate_hierarchy_iteration(
         mut results_vec: Vec<(Vec<String>, Option<Property>)>,

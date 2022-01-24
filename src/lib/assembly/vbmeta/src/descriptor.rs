@@ -241,7 +241,7 @@ impl Salt {
 mod tests {
     use super::*;
     use crate::descriptor::builder::RawHashDescriptorBuilder;
-    use matches::assert_matches;
+    use assert_matches::assert_matches;
     use std::convert::TryFrom;
 
     /// Holds the set of inputs for a test.

@@ -226,12 +226,12 @@ mod tests {
     mod fuchsia {
         use {
             super::*,
+            assert_matches::assert_matches,
             fidl_fuchsia_diagnostics::{
                 BatchIteratorMarker, BatchIteratorRequest, FormattedContent, ReaderError,
             },
             fidl_fuchsia_mem as fmem, fuchsia_zircon as zx,
             futures::StreamExt,
-            matches::assert_matches,
         };
 
         fn create_log_stream() -> Result<(LogStream, ftest_manager::LogsIterator), fidl::Error> {
@@ -312,11 +312,11 @@ mod tests {
     mod host {
         use {
             super::*,
+            assert_matches::assert_matches,
             fidl_fuchsia_developer_remotecontrol::{
                 ArchiveIteratorEntry, ArchiveIteratorError, ArchiveIteratorMarker,
                 ArchiveIteratorRequest, DiagnosticsData, InlineData,
             },
-            matches::assert_matches,
             std::collections::VecDeque,
         };
 

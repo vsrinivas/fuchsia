@@ -304,9 +304,9 @@ mod tests {
     mod stdout {
         use {
             super::*,
+            assert_matches::assert_matches,
             fuchsia_async::{pin_mut, TestExecutor},
             fuchsia_zircon::DurationNum,
-            matches::assert_matches,
             pretty_assertions::assert_eq,
             std::ops::Add,
         };

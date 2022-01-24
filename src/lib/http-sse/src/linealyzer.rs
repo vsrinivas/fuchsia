@@ -91,7 +91,7 @@ impl<'l, 'a> std::iter::FusedIterator for LinealyzerIter<'l, 'a> {}
 
 #[cfg(test)]
 mod tests {
-    use {super::*, matches::assert_matches, proptest::prelude::*};
+    use {super::*, assert_matches::assert_matches, proptest::prelude::*};
 
     fn assert_all_3_partitionings_owned(input: &[u8], expected: Vec<Vec<u8>>) {
         for i in 0..=input.len() {

@@ -1300,7 +1300,7 @@ mod tests {
     }
 
     mod device_registration {
-        use {super::*, matches::assert_matches};
+        use {super::*, assert_matches::assert_matches};
 
         #[derive(Debug)]
         enum DeviceType {

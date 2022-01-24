@@ -1194,9 +1194,9 @@ impl Drop for ScopedInstance {
 mod tests {
     use {
         super::*,
+        assert_matches::assert_matches,
         fidl_fuchsia_component as fcomponent,
         futures::{channel::oneshot, future::pending, lock::Mutex, select},
-        matches::assert_matches,
         std::sync::Arc,
     };
 

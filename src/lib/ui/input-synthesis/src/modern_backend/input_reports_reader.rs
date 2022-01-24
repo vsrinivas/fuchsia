@@ -191,7 +191,7 @@ mod tests {
 
     mod future_resolution {
         use super::*;
-        use matches::assert_matches;
+        use assert_matches::assert_matches;
 
         #[fasync::run_until_stalled(test)]
         async fn resolves_to_ok_when_all_reports_are_written() -> Result<(), Error> {
@@ -265,8 +265,8 @@ mod tests {
     mod fidl_interactions {
         use {
             super::*,
+            assert_matches::assert_matches,
             futures::{pin_mut, task::Poll},
-            matches::assert_matches,
             std::convert::TryFrom,
         };
 

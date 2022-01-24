@@ -147,7 +147,7 @@ impl StoresClientSessions for C4CapableSessionCache {
 mod test {
     use {
         crate::C4CapableSessionCache,
-        matches::assert_matches,
+        assert_matches::assert_matches,
         rand::{thread_rng, Rng},
         rustls::{
             internal::msgs::{

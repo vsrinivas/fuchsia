@@ -123,9 +123,9 @@ impl Client {
 mod tests {
     use {
         super::*,
+        assert_matches::assert_matches,
         fuchsia_async::{self as fasync},
         futures::StreamExt,
-        matches::assert_matches,
     };
 
     #[fasync::run_singlethreaded(test)]

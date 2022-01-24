@@ -6,6 +6,7 @@
 
 use {
     super::*,
+    assert_matches::assert_matches,
     fuchsia_async::{self as fasync, net::TcpListener},
     fuchsia_hyper::new_https_client,
     futures::{
@@ -16,7 +17,6 @@ use {
         server::{accept::from_stream, Server},
         service::{make_service_fn, service_fn},
     },
-    matches::assert_matches,
     std::{
         convert::Infallible,
         net::{Ipv4Addr, SocketAddr},

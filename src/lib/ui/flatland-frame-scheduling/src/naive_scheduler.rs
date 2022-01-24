@@ -72,7 +72,7 @@ impl SchedulingLib for NaiveScheduler {
 
 #[cfg(test)]
 mod tests {
-    use {super::*, fuchsia_async as fasync, matches::assert_matches, std::task::Poll};
+    use {super::*, assert_matches::assert_matches, fuchsia_async as fasync, std::task::Poll};
 
     #[fasync::run_until_stalled(test)]
     async fn first_wait_completes_immediately() {

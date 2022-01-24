@@ -251,11 +251,11 @@ mod tests {
     use crate::cprng_draw;
     // The unit tests are built with a different crate name, but fdio and fuchsia_runtime return a
     // "real" fuchsia_zircon::Process that we need to use.
+    use assert_matches::assert_matches;
     use fuchsia_zircon::{
         sys, system_get_page_size, AsHandleRef, ProcessInfo, ProcessInfoFlags, ProcessMapsInfo,
         Signals, Task, TaskStatsInfo, Time, VmarFlags, Vmo,
     };
-    use matches::assert_matches;
     use std::ffi::CString;
 
     #[test]

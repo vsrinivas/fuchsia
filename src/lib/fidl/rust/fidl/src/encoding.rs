@@ -4340,7 +4340,7 @@ mod test {
     #![allow(dead_code)]
 
     use super::*;
-    use matches::assert_matches;
+    use assert_matches::assert_matches;
     use std::{f32, f64, fmt, i64, u64};
 
     pub const CONTEXTS: &[&Context] = &[&Context { wire_format_version: WireFormatVersion::V1 }];

@@ -579,6 +579,7 @@ impl<T: 'static + File> FileConnection<T> {
 mod tests {
     use {
         super::*,
+        assert_matches::assert_matches,
         async_trait::async_trait,
         fidl_fuchsia_io::{
             FileEvent, FileInfo, FileProxy, NodeInfo, Representation, CLONE_FLAG_SAME_RIGHTS,
@@ -588,7 +589,6 @@ mod tests {
         fuchsia_async as fasync, fuchsia_zircon as zx,
         futures::prelude::*,
         lazy_static::lazy_static,
-        matches::assert_matches,
         std::sync::Mutex,
     };
 

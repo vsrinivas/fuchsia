@@ -61,7 +61,7 @@ fn with_tcp_stream(f: impl FnOnce(std::net::TcpStream) -> ()) {
 #[test]
 fn user_timeout_errors_on_negative_duration() {
     with_tcp_stream(|stream| {
-        matches::assert_matches!(
+        assert_matches::assert_matches!(
             stream.user_timeout(),
             Err(tcp_stream_ext::Error::NegativeDuration(TCP_USER_TIMEOUT_OPTION_VALUE))
         )

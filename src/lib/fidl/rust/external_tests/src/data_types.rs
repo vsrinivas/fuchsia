@@ -4,12 +4,12 @@
 
 //! This file tests the public APIs of FIDL data types.
 
+use assert_matches::assert_matches;
 use fidl_fidl_rust_test_external::{
     FlexibleAnimal, FlexibleButtons, FlexibleEmptyEnum, FlexibleResourceThing, FlexibleValueThing,
     ResourceRecord, StrictAnimal, StrictButtons, StrictResourceThing, StrictValueThing,
     ValueRecord,
 };
-use matches::assert_matches;
 
 #[test]
 fn strict_bits() {

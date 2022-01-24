@@ -371,9 +371,9 @@ pub fn wait_for_device_at(
 mod tests {
     use {
         super::*,
+        assert_matches::assert_matches,
         fidl_fuchsia_io::{NodeInfo, NodeProxy},
         fuchsia_async as fasync,
-        matches::assert_matches,
     };
 
     // Note that if these tests flake, all downstream tests that depend on this crate may too.

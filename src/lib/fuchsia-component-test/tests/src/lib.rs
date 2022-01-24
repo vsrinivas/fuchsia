@@ -4,6 +4,7 @@
 
 use {
     anyhow::{format_err, Error},
+    assert_matches::assert_matches,
     cm_rust, cm_types,
     fidl_fidl_examples_routing_echo::{self as fecho, EchoMarker as EchoClientStatsMarker},
     fidl_fuchsia_component as fcomponent, fidl_fuchsia_component_decl as fcdecl,
@@ -20,7 +21,6 @@ use {
     },
     futures::{channel::mpsc, future::pending, FutureExt, SinkExt, StreamExt, TryStreamExt},
     io_util,
-    matches::assert_matches,
     std::convert::TryInto,
 };
 

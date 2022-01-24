@@ -476,7 +476,7 @@ fn parse_query_pairs(pairs: url::form_urlencoded::Parse<'_>) -> Result<Option<Ha
 
 #[cfg(test)]
 mod tests {
-    use {super::*, crate::errors::ResourcePathError, matches::assert_matches};
+    use {super::*, crate::errors::ResourcePathError, assert_matches::assert_matches};
 
     macro_rules! test_parse_ok {
         (

@@ -88,7 +88,7 @@ impl InverseKeymap {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use matches::assert_matches;
+    use assert_matches::assert_matches;
 
     #[test]
     fn returns_correct_shift_level() {

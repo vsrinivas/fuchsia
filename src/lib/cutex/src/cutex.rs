@@ -375,11 +375,11 @@ impl<'a, T> std::ops::DerefMut for CutexGuard<'a, T> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use assert_matches::assert_matches;
     use futures::executor::block_on;
     use futures::future::join;
     use futures::prelude::*;
     use futures::task::noop_waker_ref;
-    use matches::assert_matches;
 
     #[test]
     fn noop() {

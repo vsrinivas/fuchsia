@@ -308,8 +308,8 @@ fn elf_to_vmar_perm_flags(elf_flags: &elf::SegmentFlags) -> zx::VmarFlags {
 #[cfg(test)]
 mod tests {
     use {
-        super::*, crate::elf_parse, anyhow::Error, fidl::HandleBased, matches::assert_matches,
-        std::cell::RefCell, std::mem::size_of,
+        super::*, crate::elf_parse, anyhow::Error, assert_matches::assert_matches,
+        fidl::HandleBased, std::cell::RefCell, std::mem::size_of,
     };
 
     #[test]

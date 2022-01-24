@@ -82,13 +82,13 @@ mod poll_cutex_test {
     use super::CutexTicket;
     use crate::Cutex;
     use anyhow::{format_err, Error};
+    use assert_matches::assert_matches;
     use fuchsia_async::Timer;
     use futures::{
         channel::oneshot,
         future::{poll_fn, try_join},
         task::noop_waker_ref,
     };
-    use matches::assert_matches;
     use std::{
         task::{Context, Poll},
         time::Duration,

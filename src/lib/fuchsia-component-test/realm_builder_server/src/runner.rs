@@ -351,9 +351,9 @@ async fn run_builtin_controller(
 mod tests {
     use {
         super::*,
+        assert_matches::assert_matches,
         fidl::endpoints::{create_endpoints, create_proxy_and_stream},
         futures::{channel::mpsc, FutureExt, SinkExt, StreamExt},
-        matches::assert_matches,
     };
 
     // There are two separate `fuchsia.component.runner/ComponentRunner` channels for every local

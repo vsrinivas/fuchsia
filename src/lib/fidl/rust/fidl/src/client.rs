@@ -890,13 +890,13 @@ mod tests {
         crate::encoding::MAGIC_NUMBER_INITIAL,
         crate::epitaph::{self, ChannelEpitaphExt},
         anyhow::{Context as _, Error},
+        assert_matches::assert_matches,
         fuchsia_async as fasync,
         fuchsia_async::{DurationExt, TimeoutExt},
         fuchsia_zircon as zx,
         fuchsia_zircon::{AsHandleRef, DurationNum},
         futures::{join, FutureExt, StreamExt},
         futures_test::task::new_count_waker,
-        matches::assert_matches,
         std::thread,
     };
 

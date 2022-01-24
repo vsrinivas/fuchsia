@@ -340,12 +340,12 @@ mod test {
     use {
         super::*,
         crate::*,
+        assert_matches::assert_matches,
         fidl::endpoints::create_proxy_and_stream,
         fidl_fuchsia_net_name::{LookupError, LookupRequest},
         fidl_fuchsia_posix_socket::ProviderRequest,
         fuchsia_async::{self as fasync, net::TcpListener, LocalExecutor},
         futures::prelude::*,
-        matches::assert_matches,
         std::cell::RefCell,
     };
 

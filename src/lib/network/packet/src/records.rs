@@ -2564,7 +2564,7 @@ pub mod options {
             // remaining buffer was >= 1, but it should've been a check for
             // >= 2, and the case below would have caused it to panic while
             // trying to access the length byte, which was a DoS vulnerability.
-            matches::assert_matches!(
+            assert_matches::assert_matches!(
                 Options::<_, DummyOptionsImpl>::parse(&[0x03, 0x03, 0x01, 0x03][..]),
                 Err(OptionParseErr::Internal)
             );

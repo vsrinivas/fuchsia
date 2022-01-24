@@ -133,7 +133,7 @@ impl SchedulingFutureState for WakeupData {
 
 #[cfg(test)]
 mod tests {
-    use {super::*, fuchsia_async as fasync, matches::assert_matches, std::task::Poll};
+    use {super::*, assert_matches::assert_matches, fuchsia_async as fasync, std::task::Poll};
 
     #[test]
     fn wait_without_request_present_never_completes() {

@@ -164,7 +164,7 @@ mod tests {
             Poll::Ready(reqs) => reqs,
             Poll::Pending => return Err(format_err!("request_stream did not terminate")),
         };
-        matches::assert_matches!(
+        assert_matches::assert_matches!(
             requests.as_slice(),
             [Ok(InputDeviceRegistryRequest::Register { .. })]
         );

@@ -1112,10 +1112,10 @@ impl From<DirectoryContents> for ftest::DirectoryContents {
 mod tests {
     use {
         super::*,
+        assert_matches::assert_matches,
         fidl::endpoints::create_proxy_and_stream,
         fidl_fuchsia_component as fcomponent,
         futures::{channel::mpsc, future::pending, FutureExt, SinkExt, StreamExt, TryStreamExt},
-        matches::assert_matches,
     };
 
     #[fuchsia::test]

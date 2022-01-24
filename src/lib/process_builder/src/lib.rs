@@ -989,11 +989,11 @@ mod tests {
     use {
         super::*,
         anyhow::Error,
+        assert_matches::assert_matches,
         fidl::endpoints::{ProtocolMarker, Proxy, ServerEnd},
         fidl_fuchsia_io as fio,
         fidl_test_processbuilder::{UtilMarker, UtilProxy},
         fuchsia_async as fasync,
-        matches::assert_matches,
         std::mem,
         vfs::{
             directory::entry::DirectoryEntry, execution_scope::ExecutionScope,
