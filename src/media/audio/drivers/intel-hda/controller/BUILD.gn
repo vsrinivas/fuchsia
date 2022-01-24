@@ -7,7 +7,7 @@ import("//build/components.gni")
 import("//build/drivers.gni")
 import("//build/fuzzing/fuzzer.gni")
 import("//build/test.gni")
-import("//build/unification/firmware.gni")
+import("//zircon/prebuilt/firmware.gni")
 
 driver_bind_rules("ihda_controller_bind") {
   rules = "intel_hda.bind"

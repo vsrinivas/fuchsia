@@ -6,7 +6,7 @@ import("//build/bind/bind.gni")
 import("//build/components.gni")
 import("//build/drivers.gni")
 import("//build/test.gni")
-import("//build/unification/firmware.gni")
+import("//zircon/prebuilt/firmware.gni")
 
 driver_bind_rules("bt-hci-mediatek-bind") {
   rules = "bt-hci-mediatek.bind"
