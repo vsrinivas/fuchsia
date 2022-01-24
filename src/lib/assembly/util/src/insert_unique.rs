@@ -49,14 +49,14 @@ use std::collections::{btree_map, BTreeMap, BTreeSet};
 /// # Ok(())
 /// # }
 /// ```
-pub trait InsertUniqueExt<'a, T> {
+pub trait InsertUniqueExt<T> {
     /// The error type that is returned by an implementation of the trait, it is
     /// used to provide access to the previously-set value (or key-value pair).
     type Error;
 
     /// Inserts a value into a collection, returning an error if the value to be
     /// inserted is a duplicate of an existing value.
-    fn try_insert_unique(&'a mut self, value: T) -> Result<(), Self::Error>;
+    fn try_insert_unique(self, value: T) -> Result<(), Self::Error>;
 }
 
 /// Extension trait for inserting into a collection, while validating that no
@@ -92,22 +92,19 @@ pub trait InsertUniqueExt<'a, T> {
 /// # Ok(())
 /// # }
 /// ```
-pub trait InsertAllUniqueExt<'a, T> {
+pub trait InsertAllUniqueExt<T> {
     /// The error type that is returned by an implementation of the trait, it is
     /// used to provide access to the previously-set value (or key-value pair).
     type Error;
 
     /// Inserts all items from the iterator into a collection, returning an error
     /// if any value to be inserted is a duplicate.
-    fn try_insert_all_unique(
-        &'a mut self,
-        iter: impl IntoIterator<Item = T>,
-    ) -> Result<(), Self::Error>;
+    fn try_insert_all_unique(self, iter: impl IntoIterator<Item = T>) -> Result<(), Self::Error>;
 }
 
-impl<'a, T: Ord> InsertUniqueExt<'a, T> for BTreeSet<T> {
+impl<T: Ord> InsertUniqueExt<T> for &mut BTreeSet<T> {
     type Error = T;
-    fn try_insert_unique(&'a mut self, value: T) -> Result<(), T> {
+    fn try_insert_unique(self, value: T) -> Result<(), T> {
         if self.contains(&value) {
             Err(value)
         } else {
@@ -117,9 +114,9 @@ impl<'a, T: Ord> InsertUniqueExt<'a, T> for BTreeSet<T> {
     }
 }
 
-impl<'a, T: Ord> InsertAllUniqueExt<'a, T> for BTreeSet<T> {
+impl<T: Ord> InsertAllUniqueExt<T> for &mut BTreeSet<T> {
     type Error = T;
-    fn try_insert_all_unique(&'a mut self, iter: impl IntoIterator<Item = T>) -> Result<(), T> {
+    fn try_insert_all_unique(self, iter: impl IntoIterator<Item = T>) -> Result<(), T> {
         for value in iter.into_iter() {
             if self.contains(&value) {
                 return Err(value);
@@ -149,9 +146,9 @@ pub trait DuplicateKeyError<K, V> {
     fn new_value(&self) -> &V;
 }
 
-impl<'a, K: Ord + 'a, V: 'a> InsertUniqueExt<'a, MapEntry<K, V>> for BTreeMap<K, V> {
+impl<'a, K: Ord, V> InsertUniqueExt<MapEntry<K, V>> for &'a mut BTreeMap<K, V> {
     type Error = BTreeMapDuplicateKeyError<'a, K, V>;
-    fn try_insert_unique(&'a mut self, entry: MapEntry<K, V>) -> Result<(), Self::Error> {
+    fn try_insert_unique(self, entry: MapEntry<K, V>) -> Result<(), Self::Error> {
         let MapEntry(key, new_value) = entry;
         match self.entry(key) {
             btree_map::Entry::Vacant(entry) => {
@@ -165,10 +162,10 @@ impl<'a, K: Ord + 'a, V: 'a> InsertUniqueExt<'a, MapEntry<K, V>> for BTreeMap<K,
     }
 }
 
-impl<'a, K: Ord + 'a, V: 'a> InsertAllUniqueExt<'a, MapEntry<K, V>> for BTreeMap<K, V> {
+impl<'a, K: Ord, V> InsertAllUniqueExt<MapEntry<K, V>> for &'a mut BTreeMap<K, V> {
     type Error = BTreeMapDuplicateKeyError<'a, K, V>;
     fn try_insert_all_unique(
-        &'a mut self,
+        self,
         iter: impl IntoIterator<Item = MapEntry<K, V>>,
     ) -> Result<(), Self::Error> {
         let result = iter.into_iter().try_for_each(|entry| {
