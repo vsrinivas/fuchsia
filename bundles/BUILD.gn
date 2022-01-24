@@ -28,8 +28,6 @@ group("tools") {
     "//src/developer/ffx:runtime",
     "//src/developer/forensics/exceptions/limbo_client:limbo-client",
     "//src/developer/memory/mem",
-    "//src/developer/system_monitor/bin/dockyard_host:host_tools",
-    "//src/developer/system_monitor/bin/harvester:system_monitor_harvester",
     "//src/devices/lib/bind",
     "//src/diagnostics/tool:diag_tool_host($host_toolchain)",
     "//src/diagnostics/triage:install($host_toolchain)",

@@ -1,2 +1,0 @@
-# Ignore magic number warnings in dockyard_test.cc.
-Checks: '-readability-magic-numbers'

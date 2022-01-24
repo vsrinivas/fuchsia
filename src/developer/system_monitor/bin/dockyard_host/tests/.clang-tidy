@@ -1,2 +1,0 @@
-# Ignore some checks in test code.
-Checks: '-readability-convert-member-functions-to-static'

@@ -29,8 +29,6 @@ group("core-tools") {
     "//src/connectivity:tools",
     "//src/dart",
     "//src/developer/memory/mem",
-    "//src/developer/system_monitor/bin/dockyard_host:host_tools",
-    "//src/developer/system_monitor/bin/harvester:system_monitor_harvester",
     "//src/graphics/lib/magma:magma-tools",
     "//src/recovery/factory_reset:tools",
     "//src/sys/locate",
