@@ -50,13 +50,14 @@ static constexpr bool kMagmaDretEnable = kDebug;
 #define DRET(ret)                                                                     \
   (magma::kMagmaDretEnable && (ret) != 0                                              \
    ? magma::PlatformLogger::Log(magma::PlatformLogger::LOG_ERROR, __FILE__, __LINE__, \
-                                "Returning error %ld", (int64_t)(ret)),               \
+                                "Returning error %" PRId64, (int64_t)(ret)),          \
    (ret) : (ret))
 
-#define DRET_MSG(ret, format, ...)                                                              \
-  (magma::kMagmaDretEnable && (ret) != 0                                                        \
-   ? magma::PlatformLogger::Log(magma::PlatformLogger::LOG_ERROR, __FILE__, __LINE__,           \
-                                "Returning error %ld: " format, (int64_t)(ret), ##__VA_ARGS__), \
+#define DRET_MSG(ret, format, ...)                                                      \
+  (magma::kMagmaDretEnable && (ret) != 0                                                \
+   ? magma::PlatformLogger::Log(magma::PlatformLogger::LOG_ERROR, __FILE__, __LINE__,   \
+                                "Returning error %" PRId64 ": " format, (int64_t)(ret), \
+                                ##__VA_ARGS__),                                         \
    (ret) : (ret))
 
 #define DRETF(ret, format, ...)                                                       \
