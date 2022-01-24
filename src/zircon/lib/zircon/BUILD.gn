@@ -5,7 +5,6 @@
 import("//build/sdk/sdk_noop_atom.gni")
 import("//build/toolchain/ifs_shared_library.gni")
 import("//build/toolchain/toolchain_environment.gni")
-import("//build/unification/global_variables.gni")
 
 # The vDSO ABI is provided at link time by a stub.  The actual runtime image
 # comes from the kernel and is not part of the build or SDK for userland at
